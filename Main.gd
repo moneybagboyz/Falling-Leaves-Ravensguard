@@ -11,9 +11,8 @@ const GameEnums = preload("res://src/core/GameEnums.gd")
 @onready var log_label = $MainLayout/LogPanel/LogLabel
 @onready var battle_ui = $BattleUI
 var mouse_cursor
-var tile_map: TileMap
-var graphical_mode = true
-var world_viewport  # New viewport-based rendering system
+var world_viewport  # Viewport-based rendering system
+var tile_set: TileSet  # Shared TileSet for viewport rendering
 
 @onready var overworld_ctrl = $OverworldController
 @onready var battle_ctrl = $BattleController
@@ -140,9 +139,8 @@ func _ready():
 	mono_font = SystemFont.new()
 	mono_font.font_names = PackedStringArray(["Consolas", "Courier New", "Monospace"])
 	
-	setup_tile_map()
+	setup_tile_set()
 	setup_world_viewport()
-	GameState.graphical_mode_active = graphical_mode
 	
 	var header_node = $MainLayout/ScreenHeader
 	var battle_info = $BattleUI/VBoxContainer/BattleInfo
@@ -454,14 +452,10 @@ func setup_classic_ui():
 	# Apply spacing to the Layout container
 	$MainLayout/ContentLayout.add_theme_constant_override("separation", 0)
 
-func setup_tile_map():
-	tile_map = TileMap.new()
-	tile_map.name = "BackgroundGrid"
-	$MainLayout/ContentLayout/MapPanel.add_child(tile_map)
-	$MainLayout/ContentLayout/MapPanel.move_child(tile_map, 0)
-	
-	var ts = TileSet.new()
-	ts.tile_size = Vector2i(TILE_SIZE, TILE_SIZE)
+func setup_tile_set():
+	# Create TileSet for WorldViewport rendering
+	tile_set = TileSet.new()
+	tile_set.tile_size = Vector2i(TILE_SIZE, TILE_SIZE)
 	
 	# LAYER 0: White Solid Tile for Backgrounds
 	var img = Image.create(TILE_SIZE, TILE_SIZE, false, Image.FORMAT_RGBA8)
@@ -471,19 +465,11 @@ func setup_tile_map():
 	source_bg.texture = tex
 	source_bg.texture_region_size = Vector2i(TILE_SIZE, TILE_SIZE)
 	source_bg.create_tile(Vector2i(0, 0))
-	ts.add_source(source_bg, 0)
+	tile_set.add_source(source_bg, 0)
 	
 	# LAYER 1: Character Atlas (Generated at runtime)
-	# We use a Label to bake characters into a texture
-	var char_tex_size = TILE_SIZE
-	
-	# Instead of complex baking, we use Font.draw_char if possible, 
-	# but for maximum compatibility with the Pure TileMap request, 
-	# we'll build a character source.
-	# We'll use a secondary atlas source for characters.
-	# I will bake the characters into an image using a hidden Label/SubViewport
 	var bake_vp = SubViewport.new()
-	bake_vp.size = Vector2i(char_tex_size * 16, char_tex_size * 16)
+	bake_vp.size = Vector2i(TILE_SIZE * 16, TILE_SIZE * 16)
 	bake_vp.transparent_bg = true
 	bake_vp.render_target_update_mode = SubViewport.UPDATE_ONCE
 	add_child(bake_vp)
@@ -500,14 +486,14 @@ func setup_tile_map():
 		l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		l.autowrap_mode = TextServer.AUTOWRAP_OFF
 		l.add_theme_font_override("font", mono_font)
-		l.add_theme_font_size_override("font_size", TILE_SIZE - 2) # Leave tiny bleed margin
+		l.add_theme_font_size_override("font_size", TILE_SIZE - 2)
 		l.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
 		l.custom_minimum_size = Vector2(TILE_SIZE, TILE_SIZE)
 		l.position = Vector2((i % 16) * TILE_SIZE, (i / 16) * TILE_SIZE)
 		l.size = Vector2(TILE_SIZE, TILE_SIZE)
 		bake_node.add_child(l)
 	
-	# Wait for a frame to bake
+	# Wait for frames to bake
 	await get_tree().process_frame
 	await get_tree().process_frame
 	
@@ -517,59 +503,17 @@ func setup_tile_map():
 	source_chars.texture_region_size = Vector2i(TILE_SIZE, TILE_SIZE)
 	for i in range(256):
 		source_chars.create_tile(Vector2i(i % 16, i / 16))
-	ts.add_source(source_chars, 1)
-	
-	tile_map.tile_set = ts
-	tile_map.add_layer(1) # Character layer
-	tile_map.add_layer(2) # Selection/UI layer
-	tile_map.visible = false
+	tile_set.add_source(source_chars, 1)
 	
 	# Cleanup bake system
 	bake_vp.queue_free()
 
-var color_tile_cache = {}
-var char_tile_cache = {}
-
-func get_tile_for_color(color: Color) -> int:
-	var c_key = color.to_html()
-	if color_tile_cache.has(c_key):
-		return color_tile_cache[c_key]
-	
-	var source = tile_map.tile_set.get_source(0) as TileSetAtlasSource
-	var alt_id = source.create_alternative_tile(Vector2i(0, 0))
-	var tile_data = source.get_tile_data(Vector2i(0, 0), alt_id)
-	if tile_data:
-		tile_data.modulate = color
-	
-	color_tile_cache[c_key] = alt_id
-	return alt_id
-
-func get_tile_for_char_color(atlas_pos: Vector2i, color: Color) -> int:
-	var key = str(atlas_pos) + "_" + color.to_html()
-	if char_tile_cache.has(key):
-		return char_tile_cache[key]
-	
-	var source = tile_map.tile_set.get_source(1) as TileSetAtlasSource
-	var alt_id = source.create_alternative_tile(atlas_pos)
-	var tile_data = source.get_tile_data(atlas_pos, alt_id)
-	if tile_data:
-		tile_data.modulate = color
-	
-	char_tile_cache[key] = alt_id
-	return alt_id
+# Legacy tile map setup removed - using WorldViewport system
 
 func _input(event):
 	if event is InputEventKey and event.pressed:
 		if event.keycode == KEY_F12:
 			GameState.run_turbo_simulation()
-			return
-		if event.keycode == KEY_F11:
-			GameState.run_annual_simulation()
-			return
-		if event.keycode == KEY_G:
-			graphical_mode = !graphical_mode
-			GameState.add_log("Toggled Graphical Mode: %s" % ("ON" if graphical_mode else "OFF"))
-			_on_map_updated()
 			return
 		
 		# ZOOM SYSTEM (Font Scaling)
@@ -2393,255 +2337,17 @@ func render_to_world_viewport():
 	
 	# Update terrain (chunk-based, only dirty regions)
 	var camera_chunk_pos = Vector2i(int(camera_pos.x) / 16, int(camera_pos.y) / 16)
-	world_viewport.update_visible_terrain(camera_chunk_pos, grid_ref, width, height, tile_map.tile_set)
+	world_viewport.update_visible_terrain(camera_chunk_pos, grid_ref, width, height, tile_set)
 	
 	# Update entities (separate layer)
-	world_viewport.update_entities(entities, tile_map.tile_set)
+	world_viewport.update_entities(entities, tile_set)
 	
 	# Update minimap (only for overworld/preview, periodically)
 	if state in [GameEnums.GameMode.OVERWORLD, GameEnums.GameMode.WORLD_PREVIEW]:
 		if Engine.get_frames_drawn() % 60 == 0:
 			world_viewport.update_minimap(grid_ref, width, height)
 
-func render_to_tilemap():
-	if not graphical_mode or not tile_map:
-		if tile_map: tile_map.visible = false
-		map_display.visible = true
-		return
-		
-	tile_map.visible = true
-	if state in ["overworld", "battle", "dungeon", "city", "world_preview"]:
-		map_display.visible = false
-	else:
-		map_display.visible = true
-		tile_map.visible = false
-		return
-
-	tile_map.clear()
-	
-	var dims = get_char_dims()
-	var vw = dims.x
-	var vh = dims.y
-	
-	var font_size = map_display.get_theme_font_size("normal_font_size")
-	var font = map_display.get_theme_font("normal_font")
-	var char_w = int(font.get_string_size("█", HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x)
-	
-	tile_map.tile_set.tile_size = Vector2i(TILE_SIZE, TILE_SIZE)
-	tile_map.position = Vector2(10, 10)
-	tile_map.scale = Vector2(char_w / float(TILE_SIZE), char_w / float(TILE_SIZE))
-	
-	var center = Vector2i.ZERO
-	var g_w = 0
-	var g_h = 0
-	var grid_ref = []
-	var scope = "global"
-	var start_x = 0
-	var start_y = 0
-	
-	if state == GameEnums.GameMode.OVERWORLD:
-		center = GameState.player.pos + GameState.player.camera_offset
-		g_w = GameState.width
-		g_h = GameState.height
-		grid_ref = GameState.grid
-		scope = "world"
-		start_x = center.x - vw / 2
-		start_y = center.y - vh / 2
-	elif state == GameEnums.GameMode.CITY:
-		center = city_ctrl.player_pos
-		g_w = city_ctrl.width
-		g_h = city_ctrl.height
-		grid_ref = city_ctrl.grid
-		scope = "local"
-		start_x = center.x - vw / 2
-		start_y = center.y - vh / 2
-	elif state == GameEnums.GameMode.DUNGEON:
-		center = dungeon_ctrl.player_pos
-		g_w = dungeon_ctrl.width
-		g_h = dungeon_ctrl.height
-		grid_ref = dungeon_ctrl.grid
-		scope = "local"
-		start_x = center.x - vw / 2
-		start_y = center.y - vh / 2
-	elif state == GameEnums.GameMode.BATTLE:
-		if is_instance_valid(battle_ctrl.player_unit):
-			center = battle_ctrl.player_unit.pos
-		else:
-			center = Vector2i(battle_ctrl.MAP_W / 2, battle_ctrl.MAP_H / 2)
-		g_w = battle_ctrl.MAP_W
-		g_h = battle_ctrl.MAP_H
-		grid_ref = battle_ctrl.grid
-		scope = "battle"
-		start_x = center.x - vw / 2
-		start_y = center.y - vh / 2
-	elif state == GameEnums.GameMode.WORLD_PREVIEW:
-		center = preview_pos
-		g_w = GameState.width
-		g_h = GameState.height
-		grid_ref = GameState.grid
-		scope = "world"
-		# Adjust tile map scale for preview zoom
-		tile_map.scale = Vector2(preview_zoom, preview_zoom)
-		# We need to recalculate vw/vh based on new scale
-		vw = int(map_display.size.x / (TILE_SIZE * preview_zoom)) - 2
-		vh = int(map_display.size.y / (TILE_SIZE * preview_zoom)) - 2
-		start_x = center.x - vw / 2
-		start_y = center.y - vh / 2
-	elif state == GameEnums.GameMode.LOADING:
-		center = Vector2i(GameState.width / 2, GameState.height / 2)
-		g_w = GameState.width
-		g_h = GameState.height
-		grid_ref = GameState.grid
-		scope = "world"
-		
-		# Auto-calculate zoom to fit the whole world on screen during loading
-		var panel_size = $MainLayout/ContentLayout/MapPanel.size - Vector2(40, 40)
-		if panel_size.x <= 0 or panel_size.y <= 0: panel_size = Vector2(800, 600)
-		
-		var fit_zoom_x = panel_size.x / (g_w * TILE_SIZE)
-		var fit_zoom_y = panel_size.y / (g_h * TILE_SIZE)
-		var loading_zoom = max(0.01, min(fit_zoom_x, fit_zoom_y))
-		
-		tile_map.scale = Vector2(loading_zoom, loading_zoom)
-		vw = g_w
-		vh = g_h
-		# Adjust start_x/y to center the world-map exactly
-		start_x = 0
-		start_y = 0
-		# Override position to truly center it
-		tile_map.position = (panel_size - Vector2(g_w, g_h) * TILE_SIZE * loading_zoom) / 2.0 + Vector2(20, 20)
-	else:
-		tile_map.visible = false
-		map_display.visible = true
-		return
-	
-	# 11. PRE-FETCH Entities (Entities that override terrain)
-	var entities = {}
-	if state == GameEnums.GameMode.OVERWORLD or state == GameEnums.GameMode.WORLD_PREVIEW or state == GameEnums.GameMode.LOADING:
-		if GameState.player:
-			entities[GameState.player.pos] = {"char": "@", "col": Color.YELLOW}
-		for army in GameState.armies:
-			var col = Color.RED
-			if army.faction == "player" or (GameState.player and army.faction == GameState.player.faction):
-				col = Color.CYAN
-			entities[army.pos] = {"char": "A", "col": col}
-		for pos in GameState.settlements:
-			var s = GameState.settlements[pos]
-			var sym = "v"
-			match s.type:
-				"hamlet": sym = "h"
-				"village": sym = "v"
-				"town": sym = "T"
-				"city": sym = "C"
-				"metropolis": sym = "M"
-				"castle": sym = "S"
-			entities[pos] = {"char": sym, "col": Color.WHITE}
-	elif state == GameEnums.GameMode.BATTLE:
-		for pos in battle_ctrl.unit_lookup:
-			var u = battle_ctrl.unit_lookup[pos]
-			var color = Color.RED
-			if u.faction == GameState.player.faction or u.faction == "player":
-				color = Color.CYAN
-			
-			var sym = u.symbol
-			if u.status.get("is_prone", false): sym = "_"
-			elif u.status.get("is_dead", false): sym = "%"
-			entities[pos] = {"char": sym, "col": color}
-			
-		for p in battle_ctrl.projectiles:
-			var p_pos = Vector2i(p.pos)
-			var color = Color.YELLOW
-			if p.has("engine"): color = Color.ORANGE
-			entities[p_pos] = {"char": p.symbol, "col": color}
-	elif state == GameEnums.GameMode.DUNGEON:
-		entities[dungeon_ctrl.player_pos] = {"char": "@", "col": Color.YELLOW}
-		for e in dungeon_ctrl.enemies:
-			if e.hp > 0:
-				entities[Vector2i(e.pos)] = {"char": e.type[0].to_upper(), "col": Color.RED}
-		for i in dungeon_ctrl.items:
-			entities[Vector2i(i.pos)] = {"char": "$", "col": Color.GOLD}
-	elif state == GameEnums.GameMode.CITY:
-		entities[city_ctrl.player_pos] = {"char": "@", "col": Color.YELLOW}
-		for eng in city_ctrl.engines:
-			entities[Vector2i(eng.pos)] = {"char": eng.type, "col": Color.ORANGE}
-	
-	for y in range(vh):
-		for x in range(vw):
-			var wx = start_x + x
-			var wy = start_y + y
-			if wx < 0 or wx >= g_w or wy < 0 or wy >= g_h:
-				continue
-				
-			var pos = Vector2i(wx, wy)
-			var terrain_char = grid_ref[wy][wx]
-			
-			var tile_color = UIPanels._get_terrain_color(GameState, pos, terrain_char, scope)
-			
-			if state == GameEnums.GameMode.OVERWORLD or state == GameEnums.GameMode.WORLD_PREVIEW:
-				if GameState.map_mode == "province" or GameState.map_mode == "political":
-					if GameState.province_grid.size() > wy and GameState.province_grid[wy].size() > wx:
-						var p_id = GameState.province_grid[wy][wx]
-						if p_id != -1:
-							var p_colors = [Color.RED, Color.BLUE, Color.GREEN, Color.YELLOW, Color.PURPLE, Color.ORANGE, Color.CYAN, Color.MAGENTA, Color.PINK, Color.TEAL]
-							tile_color = p_colors[p_id % p_colors.size()]
-			
-			# Background (Layer 0)
-			var bg_alt = get_tile_for_color(tile_color)
-			tile_map.set_cell(0, Vector2i(x, y), 0, Vector2i(0, 0), bg_alt)
-			
-			# Character (Layer 1)
-			var char_to_draw = ""
-			var char_color = Color.WHITE
-			
-			if entities.has(pos):
-				char_to_draw = entities[pos].char
-				char_color = entities[pos].col
-			elif GameState.render_mode != "grid":
-				char_to_draw = terrain_char
-			
-			if char_to_draw != "" and char_to_draw != " ":
-				var ascii_val = char_to_draw.unicode_at(0)
-				if ascii_val < 256:
-					var char_atlas_pos = Vector2i(ascii_val % 16, ascii_val / 16)
-					var alt_id = get_tile_for_char_color(char_atlas_pos, char_color)
-					tile_map.set_cell(1, Vector2i(x, y), 1, char_atlas_pos, alt_id)
-			
-			# Selection & Highlights (Layer 2)
-			var highlight_color = Color(0,0,0,0)
-			
-			if pos == last_hover_world_pos:
-				highlight_color = Color(1, 1, 1, 0.4)
-			
-			if state == GameEnums.GameMode.BATTLE and is_instance_valid(battle_ctrl.player_unit):
-				var dist = (Vector2(pos) - Vector2(battle_ctrl.player_unit.pos)).length()
-				var u_range = battle_ctrl.get_unit_range(battle_ctrl.player_unit)
-				
-				# If in range, show light tint
-				if dist <= u_range and dist > 0.1:
-					if battle_ctrl.targeting_mode:
-						highlight_color = Color(1, 0.2, 0.2, 0.15) # Red for attack
-					else:
-						highlight_color = Color(0.2, 0.5, 1.0, 0.1) # Blue for movement/presence
-				
-				# Highlight target
-				if battle_ctrl.targeting_mode and battle_ctrl.targeting_target:
-					if pos == battle_ctrl.targeting_target.pos:
-						highlight_color = Color(1, 0.8, 0, 0.4) # Bright Gold for target
-				
-				if pos == battle_ctrl.player_unit.pos:
-					highlight_color = Color(0, 1, 1, 0.2) # Teal for player
-			
-			elif state == GameEnums.GameMode.DUNGEON:
-				var d_pos = dungeon_ctrl.player_pos
-				var d_dist = (Vector2(pos) - Vector2(d_pos)).length()
-				if d_dist < 4.5: # Simple torch view range
-					var alpha = clamp(0.25 * (1.0 - d_dist/4.5), 0.0, 0.25)
-					if alpha > 0.02:
-						highlight_color = Color(1, 0.9, 0.7, alpha) # Warm torch glow
-
-			if highlight_color.a > 0.01:
-				var alt = get_tile_for_color(highlight_color)
-				tile_map.set_cell(2, Vector2i(x, y), 0, Vector2i(0, 0), alt)
+# Legacy render_to_tilemap removed - using WorldViewport system
 
 func _on_map_updated():
 	if state == GameEnums.GameMode.MENU:
@@ -2649,7 +2355,6 @@ func _on_map_updated():
 		map_display.text = UIPanels.render_menu(menu_options, menu_idx, generated_world != null, saved_character != null)
 		$MainLayout/ContentLayout/SidePanel.visible = false
 		$MainLayout/LogPanel.visible = false
-		if tile_map: tile_map.visible = false
 		map_display.visible = true
 		$MainLayout/ScreenHeader.text = "[center]FALLING LEAVES[/center]"
 		return
@@ -2658,7 +2363,6 @@ func _on_map_updated():
 		map_display.text = UIPanels.render_city_studio(GameState.city_studio_config, GameState.city_studio_idx)
 		$MainLayout/ContentLayout/SidePanel.visible = false
 		$MainLayout/LogPanel.visible = false
-		if tile_map: tile_map.visible = false
 		map_display.visible = true
 		$MainLayout/ScreenHeader.text = "[center]CITY DESIGN STUDIO[/center]"
 		return
@@ -2667,42 +2371,23 @@ func _on_map_updated():
 		var frame = UIPanels.render_loading_screen(loading_stage, GameState if (GameState.grid.size() > 0) else null)
 		$MainLayout/ScreenHeader.text = frame.header
 		info_label.text = frame.side
-		
-		# Clear map display to ensure no ghosting from previous states
-		map_display.text = "" 
-		
-		if graphical_mode and GameState.grid.size() > 0:
-			map_display.visible = false
-			tile_map.visible = true
-			# Only update tilemap occasionally during generation to avoid stalls
-			if Engine.get_frames_drawn() % 2 == 0:
-				render_to_tilemap()
-		else:
-			map_display.bbcode_enabled = true # Ensure tags are parsed
-			map_display.text = frame.map
-			if tile_map: tile_map.visible = false
-			map_display.visible = true
-			
+		map_display.bbcode_enabled = true
+		map_display.text = frame.map
+		map_display.visible = true
 		$MainLayout/ContentLayout/SidePanel.visible = true
 		$MainLayout/LogPanel.visible = false
 		return
 
-	# Handle Map Views (Overworld, Battle, Dungeon, City, World Preview, Loading)
-	var graphical_states = [GameEnums.GameMode.OVERWORLD, GameEnums.GameMode.BATTLE, GameEnums.GameMode.DUNGEON, GameEnums.GameMode.CITY, GameEnums.GameMode.WORLD_PREVIEW, GameEnums.GameMode.LOADING]
-	var use_new_viewport = state in [GameEnums.GameMode.OVERWORLD, GameEnums.GameMode.WORLD_PREVIEW, GameEnums.GameMode.BATTLE, GameEnums.GameMode.DUNGEON, GameEnums.GameMode.CITY]
+	# Handle Map Views (Overworld, Battle, Dungeon, City, World Preview)
+	var graphical_states = [GameEnums.GameMode.OVERWORLD, GameEnums.GameMode.BATTLE, GameEnums.GameMode.DUNGEON, GameEnums.GameMode.CITY, GameEnums.GameMode.WORLD_PREVIEW]
 	
-	if use_new_viewport and world_viewport:
-		# Use new viewport system for all graphical modes
+	if state in graphical_states and world_viewport:
+		# Use viewport system for all graphical modes
 		world_viewport.visible = true
-		if tile_map: tile_map.visible = false
 		map_display.visible = false
 		render_to_world_viewport()
-	elif graphical_mode and state in graphical_states:
-		if world_viewport: world_viewport.visible = false
-		render_to_tilemap()
 	else:
 		if world_viewport: world_viewport.visible = false
-		if tile_map: tile_map.visible = false
 		map_display.visible = true
 
 	match state:
@@ -2861,14 +2546,6 @@ func _on_map_updated():
 		$MainLayout/ScreenHeader.text = "[center]%s[/center]" % frame.header
 		# Ensure tile info is synced immediately if we are in the overworld
 		_sync_tile_info()
-	
-	if graphical_mode and (state == GameEnums.GameMode.OVERWORLD or state == GameEnums.GameMode.DUNGEON or state == GameEnums.GameMode.BATTLE):
-		GameState.graphical_mode_active = true
-		render_to_tilemap()
-	else:
-		GameState.graphical_mode_active = false
-		if tile_map: tile_map.visible = false
-		map_display.visible = true
 
 func _sync_tile_info():
 	var cursor = GameState.player.pos + GameState.player.camera_offset
@@ -2888,9 +2565,6 @@ func get_char_dims() -> Vector2i:
 	
 	if GameState.render_mode == "grid":
 		char_h = char_w
-
-	if graphical_mode:
-		return Vector2i(int(panel_size.x / char_w), int(panel_size.y / char_w))
 
 	return Vector2i(int(panel_size.x / char_w), int(panel_size.y / char_h))
 
