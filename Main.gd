@@ -2,6 +2,7 @@ extends Control
 
 const UIPanels = preload("res://src/utils/UIPanels.gd")
 const CodexData = preload("res://src/data/CodexData.gd")
+const GameEnums = preload("res://src/core/GameEnums.gd")
 
 @onready var map_display = $MainLayout/ContentLayout/MapPanel/MapDisplay
 @onready var info_label = $MainLayout/ContentLayout/SidePanel/InfoLabel
@@ -20,7 +21,7 @@ var city_ctrl
 var region_ctrl
 var mono_font
 
-var state = "menu" # overworld, battle, management, dungeon, dialogue, loading, menu, battle_config, codex, city, world_creation, world_preview, character_creation, play_select
+var state: GameEnums.GameMode = GameEnums.GameMode.MENU
 var loading_stage = ""
 var history_offset = 0
 var menu_idx = 0
@@ -188,7 +189,7 @@ func _ready():
 	map_display.mouse_exited.connect(func(): mouse_in_map = false)
 	
 	# Initial render
-	if state == "loading":
+	if state == GameEnums.GameMode.LOADING:
 		_on_world_gen_updated("CONNECTING TO AEQUOR...")
 	else:
 		call_deferred("_on_map_updated")
@@ -254,16 +255,16 @@ func _update_all_ui_themes():
 		battle_map.autowrap_mode = TextServer.AUTOWRAP_OFF
 
 func _on_map_display_gui_input(event):
-	if state == "loading": return
+	if state == GameEnums.GameMode.LOADING: return
 	
 	if event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
-			if state == "overworld":
+			if state == GameEnums.GameMode.OVERWORLD:
 				GameState.player.camera_zoom = clamp(GameState.player.camera_zoom + 0.1, 0.5, 3.0)
 				_on_map_updated()
 				return
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-			if state == "overworld":
+			if state == GameEnums.GameMode.OVERWORLD:
 				GameState.player.camera_zoom = clamp(GameState.player.camera_zoom - 0.1, 0.5, 3.0)
 				_on_map_updated()
 				return
@@ -290,7 +291,7 @@ func _on_map_display_gui_input(event):
 				_handle_mouse_click(world_pos, Vector2i(grid_x, grid_y))
 
 func _handle_mouse_hover(world_pos, grid_pos):
-	if state == "overworld":
+	if state == GameEnums.GameMode.OVERWORLD:
 		if world_pos != last_hover_world_pos:
 			last_hover_world_pos = world_pos
 			_sync_info_at(world_pos)
@@ -301,21 +302,21 @@ func _handle_mouse_hover(world_pos, grid_pos):
 			else:
 				last_calculated_path = []
 			_on_map_updated()
-	elif state == "dialogue":
+	elif state == GameEnums.GameMode.DIALOGUE:
 		# Dialogue start offset is roughly 10 lines down (2 top, 1 title, 2 encounter, 1 rel, 1 inv, 1 prompt, 1 space)
 		var option_idx = grid_pos.y - 9 
 		if option_idx >= 0 and option_idx < dialogue_options.size():
 			if dialogue_idx != option_idx:
 				dialogue_idx = option_idx
 				_on_map_updated()
-	elif state == "menu":
+	elif state == GameEnums.GameMode.MENU:
 		# Menu starts roughly at line 4
 		var option_idx = grid_pos.y - 4
 		if option_idx >= 0 and option_idx < menu_options.size():
 			if menu_idx != option_idx:
 				menu_idx = option_idx
 				_on_map_updated()
-	elif state == "management":
+	elif state == GameEnums.GameMode.MANAGEMENT:
 		_handle_mgmt_hover(grid_pos)
 
 func _handle_mgmt_hover(grid_pos):
@@ -336,7 +337,7 @@ func _sync_info_at(pos: Vector2i):
 	info_label.text = UIPanels.get_tile_info(GameState, pos)
 
 func _handle_mouse_click(world_pos, grid_pos):
-	if state == "overworld":
+	if state == GameEnums.GameMode.OVERWORLD:
 		if GameState.is_walkable(world_pos):
 			if world_pos == GameState.player.pos:
 				overworld_ctrl.try_interact()
@@ -346,19 +347,19 @@ func _handle_mouse_click(world_pos, grid_pos):
 					var next = path[1]
 					var diff = next - GameState.player.pos
 					overworld_ctrl.handle_movement_delta(diff)
-	elif state == "battle":
+	elif state == GameEnums.GameMode.BATTLE:
 		_handle_battle_click(world_pos)
-	elif state == "dialogue":
+	elif state == GameEnums.GameMode.DIALOGUE:
 		var option_idx = grid_pos.y - 9
 		if option_idx >= 0 and option_idx < dialogue_options.size():
 			dialogue_idx = option_idx
 			handle_dialogue_choice(dialogue_options[dialogue_idx])
-	elif state == "menu":
+	elif state == GameEnums.GameMode.MENU:
 		var option_idx = grid_pos.y - 4
 		if option_idx >= 0 and option_idx < menu_options.size():
 			menu_idx = option_idx
 			handle_dialogue_choice(menu_options[menu_idx])
-	elif state == "management":
+	elif state == GameEnums.GameMode.MANAGEMENT:
 		_on_map_updated() # Update to show selection
 
 func _handle_battle_click(world_pos):
@@ -384,12 +385,12 @@ func _get_actual_char_size() -> Vector2:
 
 func _screen_to_world(grid_pos: Vector2i) -> Vector2i:
 	var dims = get_char_dims()
-	if state == "overworld":
+	if state == GameEnums.GameMode.OVERWORLD:
 		var center = GameState.player.pos + GameState.player.camera_offset
 		var start_x = clamp(center.x - dims.x / 2.0, 0, max(0, GameState.width - dims.x))
 		var start_y = clamp(center.y - dims.y / 2.0, 0, max(0, GameState.height - dims.y))
 		return Vector2i(int(start_x + grid_pos.x), int(start_y + grid_pos.y))
-	elif state == "battle" and is_instance_valid(battle_ctrl):
+	elif state == GameEnums.GameMode.BATTLE and is_instance_valid(battle_ctrl):
 		var center = Vector2(battle_ctrl.MAP_W/2, battle_ctrl.MAP_H/2)
 		if battle_ctrl.camera_locked and battle_ctrl.player_unit:
 			center = Vector2(battle_ctrl.player_unit.pos)
@@ -399,11 +400,11 @@ func _screen_to_world(grid_pos: Vector2i) -> Vector2i:
 		var start_x = clamp(center.x - dims.x / 2.0, 0, max(0, battle_ctrl.MAP_W - dims.x))
 		var start_y = clamp(center.y - dims.y / 2.0, 0, max(0, battle_ctrl.MAP_H - dims.y))
 		return Vector2i(int(start_x + grid_pos.x), int(start_y + grid_pos.y))
-	elif state == "dungeon":
+	elif state == GameEnums.GameMode.DUNGEON:
 		var start_x = clamp(dungeon_ctrl.player_pos.x - dims.x / 2.0, 0, max(0, dungeon_ctrl.width - dims.x))
 		var start_y = clamp(dungeon_ctrl.player_pos.y - dims.y / 2.0, 0, max(0, dungeon_ctrl.height - dims.y))
 		return Vector2i(int(start_x + grid_pos.x), int(start_y + grid_pos.y))
-	elif state == "city":
+	elif state == GameEnums.GameMode.CITY:
 		var start_x = clamp(city_ctrl.player_pos.x - dims.x / 2.0, 0, max(0, city_ctrl.width - dims.x))
 		var start_y = clamp(city_ctrl.player_pos.y - dims.y / 2.0, 0, max(0, city_ctrl.height - dims.y))
 		return Vector2i(int(start_x + grid_pos.x), int(start_y + grid_pos.y))
@@ -413,7 +414,7 @@ func _on_world_gen_updated(stage: String):
 	loading_stage = stage
 	_on_map_updated()
 	if stage == "FINISHING...": 
-		state = "world_preview"
+		state = GameEnums.GameMode.WORLD_PREVIEW
 		_on_map_updated()
 
 func setup_classic_ui():
@@ -569,59 +570,59 @@ func _input(event):
 
 	if event.is_action_pressed("ui_cancel"): # ESC
 		if state in ["world_creation", "character_creation", "battle_config", "codex", "management", "party_info", "fief_info", "history", "dialogue"]:
-			state = "overworld"
+			state = GameEnums.GameMode.OVERWORLD
 			_on_map_updated()
 		party_panel.visible = false
 		fief_panel.visible = false
 		return
 
-	elif state == "menu":
+	elif state == GameEnums.GameMode.MENU:
 		handle_menu_input(event)
 	
-	elif state == "battle_config":
+	elif state == GameEnums.GameMode.BATTLE_CONFIG:
 		handle_battle_config_input(event)
 		
-	elif state == "world_creation":
+	elif state == GameEnums.GameMode.WORLD_CREATION:
 		handle_world_creation_input(event)
 		
-	elif state == "world_preview":
+	elif state == GameEnums.GameMode.WORLD_PREVIEW:
 		handle_world_preview_input(event)
 		
-	elif state == "character_creation":
+	elif state == GameEnums.GameMode.CHARACTER_CREATION:
 		handle_character_creation_input(event)
 		
-	elif state == "location_select":
+	elif state == GameEnums.GameMode.PLAY_SELECT:
 		handle_location_select_input(event)
 		
-	elif state == "city_studio":
+	elif state == GameEnums.GameMode.CITY:
 		handle_city_studio_input(event)
 		
-	elif state == "overworld":
+	elif state == GameEnums.GameMode.OVERWORLD:
 		overworld_ctrl.handle_input(event)
 		if event is InputEventKey and event.pressed and event.keycode == KEY_K:
 			_try_open_codex_contextual()
 		# Update info label based on cursor/player
 		_sync_tile_info()
-	elif state == "region":
+	elif state == GameEnums.GameMode.REGION:
 		if region_ctrl:
 			region_ctrl.handle_input(event)
-			if not region_ctrl.active and state == "region":
+			if not region_ctrl.active and state == GameEnums.GameMode.REGION:
 				if saved_character and generated_world:
-					state = "overworld"
+					state = GameEnums.GameMode.OVERWORLD
 				else:
-					state = "world_preview"
+					state = GameEnums.GameMode.WORLD_PREVIEW
 					preview_pos = GameState.player.pos
 				_on_map_updated()
-	elif state == "world_map":
+	elif state == GameEnums.GameMode.WORLD_PREVIEW:
 		if event.is_action_pressed("ui_cancel") or (event is InputEventKey and event.pressed and event.keycode == KEY_TAB):
-			state = "overworld"
+			state = GameEnums.GameMode.OVERWORLD
 			_on_map_updated()
 		
-	elif state == "history":
+	elif state == GameEnums.GameMode.OVERWORLD:
 		if event is InputEventKey and event.pressed:
 			match event.keycode:
 				KEY_ESCAPE, KEY_H:
-					state = "overworld"
+					state = GameEnums.GameMode.OVERWORLD
 					_on_map_updated()
 				KEY_PAGEDOWN:
 					history_offset += 25
@@ -630,34 +631,34 @@ func _input(event):
 					history_offset = max(0, history_offset - 25)
 					_on_map_updated()
 
-	elif state == "battle":
+	elif state == GameEnums.GameMode.BATTLE:
 		if battle_ctrl: battle_ctrl.handle_input(event)
 		
-	elif state == "dungeon":
+	elif state == GameEnums.GameMode.DUNGEON:
 		if dungeon_ctrl: dungeon_ctrl.handle_input(event)
 		
-	elif state == "city":
+	elif state == GameEnums.GameMode.CITY:
 		if city_ctrl:
 			city_ctrl.handle_input(event)
 			if event.is_action_pressed("ui_cancel"):
-				state = "menu"
+				state = GameEnums.GameMode.MENU
 				_on_map_updated()
 				return
 				
 			if not city_ctrl.active:
-				state = "menu"
+				state = GameEnums.GameMode.MENU
 				_on_map_updated()
 		else:
-			state = "overworld"
+			state = GameEnums.GameMode.OVERWORLD
 			_on_map_updated()
 		
-	elif state == "management":
+	elif state == GameEnums.GameMode.MANAGEMENT:
 		handle_management_input(event)
 	
-	elif state == "codex":
+	elif state == GameEnums.GameMode.CODEX:
 		handle_codex_input(event)
 		
-	elif state == "dialogue":
+	elif state == GameEnums.GameMode.DIALOGUE:
 		if event.is_action_pressed("ui_up"):
 			dialogue_idx = posmod(dialogue_idx - 1, dialogue_options.size())
 			_on_map_updated()
@@ -667,7 +668,7 @@ func _input(event):
 		elif event.is_action_pressed("ui_accept"):
 			handle_dialogue_choice(dialogue_options[dialogue_idx])
 		elif event.is_action_pressed("ui_cancel"):
-			state = "overworld"
+			state = GameEnums.GameMode.OVERWORLD
 			_on_map_updated()
 
 func _try_open_codex_contextual():
@@ -700,12 +701,12 @@ func _try_open_codex_contextual():
 			codex_cat_idx = indices.x
 			codex_entry_idx = indices.y
 			codex_focus = 1 # Focus on entries
-			state = "codex"
+			state = GameEnums.GameMode.CODEX
 			_on_map_updated()
 			return
 
 	# Fallback to default
-	state = "codex"
+	state = GameEnums.GameMode.CODEX
 	codex_cat_idx = 0
 	codex_entry_idx = 0
 	codex_focus = 0
@@ -713,7 +714,7 @@ func _try_open_codex_contextual():
 
 func handle_codex_input(event):
 	if event.is_action_pressed("ui_cancel"):
-		state = "overworld"
+		state = GameEnums.GameMode.OVERWORLD
 		_on_map_updated()
 		return
 
@@ -782,7 +783,7 @@ func _start_tournament_round():
 		var opp = GameState.find_npc(opp_id)
 		if opp:
 			GameState.add_log("[color=yellow]TOURNAMENT:[/color] Round %d vs %s!" % [r, opp.name])
-			state = "battle"
+			state = GameEnums.GameMode.BATTLE
 			battle_ctrl.start(opp, true, s.tournament_prize_pool)
 		else:
 			GameState.player.tournament_round += 1
@@ -808,7 +809,7 @@ func handle_dialogue_choice(choice):
 				loot_str += "%d %s, " % [amt, item]
 			
 			GameState.add_log("HUNT: You killed the %s. Collected: %s" % [data.name, loot_str.trim_suffix(", ")])
-			state = "overworld"
+			state = GameEnums.GameMode.OVERWORLD
 			_on_map_updated()
 			return
 		
@@ -830,12 +831,12 @@ func handle_dialogue_choice(choice):
 			else:
 				GameState.add_log("CAPTURE: The %s evaded your grasp!" % data.name)
 			
-			state = "overworld"
+			state = GameEnums.GameMode.OVERWORLD
 			_on_map_updated()
 			return
 			
 		if choice == "Leave":
-			state = "overworld"
+			state = GameEnums.GameMode.OVERWORLD
 			_on_map_updated()
 			return
 
@@ -848,7 +849,7 @@ func handle_dialogue_choice(choice):
 			"expires_day": GameState.day + 14
 		}
 		GameState.add_log("Contract Signed: You are now a mercenary for %s." % f_data.name)
-		state = "overworld"
+		state = GameEnums.GameMode.OVERWORLD
 		_on_map_updated()
 		return
 
@@ -874,7 +875,7 @@ func handle_dialogue_choice(choice):
 		else:
 			GameState.add_log("FEALTY: You have sworn fealty to %s!" % f_data.name)
 		
-		state = "overworld"
+		state = GameEnums.GameMode.OVERWORLD
 		_on_map_updated()
 		return
 
@@ -887,14 +888,14 @@ func handle_dialogue_choice(choice):
 		GameState.player.charters += 1
 		GameState.add_log("FEALTY: You have accepted a Royal Charter and sworn an oath to %s!" % f_data.name)
 		
-		state = "overworld"
+		state = GameEnums.GameMode.OVERWORLD
 		_on_map_updated()
 		return
 
 	if choice == "COMMAND: Follow Me":
 		dialogue_target.set_meta("player_command", "follow")
 		GameState.add_log("The lord bows. 'We follow your lead, Commander.'")
-		state = "overworld"
+		state = GameEnums.GameMode.OVERWORLD
 		_on_map_updated()
 		return
 
@@ -913,14 +914,14 @@ func handle_dialogue_choice(choice):
 			dialogue_target.set_meta("player_command", "defend")
 			dialogue_target.set_meta("command_target", best_s)
 			GameState.add_log("The lord nods. 'We will secure the walls of %s.'" % GameState.settlements[best_s].name)
-		state = "overworld"
+		state = GameEnums.GameMode.OVERWORLD
 		_on_map_updated()
 		return
 
 	if choice == "COMMAND: Resume duties":
 		dialogue_target.set_meta("player_command", "")
 		GameState.add_log("'As you command. We return to our previous patrol.'")
-		state = "overworld"
+		state = GameEnums.GameMode.OVERWORLD
 		_on_map_updated()
 		return
 
@@ -931,7 +932,7 @@ func handle_dialogue_choice(choice):
 			GameState.add_log("CHARTER: You have purchased a Royal Charter for 2500 Crowns. You may now found another settlement.")
 		else:
 			GameState.add_log("The King looks at your empty purse with disapproval.")
-		state = "overworld"
+		state = GameEnums.GameMode.OVERWORLD
 		_on_map_updated()
 		return
 
@@ -949,7 +950,7 @@ func handle_dialogue_choice(choice):
 			_start_tournament_round()
 		else:
 			GameState.add_log("Master: 'No coin, no glory. Come back when you're solvent.'")
-			state = "overworld"
+			state = GameEnums.GameMode.OVERWORLD
 			_on_map_updated()
 		return
 
@@ -965,20 +966,20 @@ func handle_dialogue_choice(choice):
 		GameState.player.fame += 100
 		s.tournament_active = false
 		GameState.add_log("[color=yellow]CHAMPION![/color] You have won the tournament and %d Crowns!" % p)
-		state = "overworld"
+		state = GameEnums.GameMode.OVERWORLD
 		_on_map_updated()
 		return
 
 	if choice == "Join Attacker":
 		var b = dialogue_target
-		state = "battle"
+		state = GameEnums.GameMode.BATTLE
 		battle_ctrl.start(b.defender, false, 0, b.attacker)
 		_on_map_updated()
 		return
 		
 	if choice == "Join Defender":
 		var b = dialogue_target
-		state = "battle"
+		state = GameEnums.GameMode.BATTLE
 		battle_ctrl.start(b.attacker, false, 0, b.defender)
 		_on_map_updated()
 		return
@@ -1015,21 +1016,21 @@ func handle_dialogue_choice(choice):
 			# Trigger battle via GameState signal
 			GameState.emit_signal("battle_started", dialogue_target)
 		"Leave":
-			state = "overworld"
+			state = GameEnums.GameMode.OVERWORLD
 			_on_map_updated()
 		"Trade":
 			# Future: Open trade menu
 			GameState.add_log("Trade not yet implemented.")
-			state = "overworld"
+			state = GameEnums.GameMode.OVERWORLD
 			_on_map_updated()
 		"Demand Toll":
 			# Future: Intimidate for gold
 			GameState.add_log("Intimidation not yet implemented.")
-			state = "overworld"
+			state = GameEnums.GameMode.OVERWORLD
 			_on_map_updated()
 
 func toggle_management_ui():
-	state = "management"
+	state = GameEnums.GameMode.MANAGEMENT
 	mgmt_tab = "CHARACTER"
 	mgmt_focus = 0
 	mgmt_idx_l = 0
@@ -1046,12 +1047,12 @@ func handle_menu_input(event):
 	elif event.is_action_pressed("ui_accept"):
 		match menu_idx:
 			0: # NEW WORLD GEN
-				state = "world_creation"
+				state = GameEnums.GameMode.WORLD_CREATION
 				world_config_idx = 0
 				world_config["seed"] = randi()
 				_on_map_updated()
 			1: # CHARACTER CREATOR
-				state = "character_creation"
+				state = GameEnums.GameMode.CHARACTER_CREATION
 				player_config_idx = 0
 				cc_tab = 0 # Start at Background
 				_ensure_valid_cc_material()
@@ -1066,18 +1067,18 @@ func handle_menu_input(event):
 					_on_map_updated()
 				elif not saved_character:
 					GameState.add_log("No character created yet!")
-					state = "character_creation"
+					state = GameEnums.GameMode.CHARACTER_CREATION
 					_on_map_updated()
 			3: # BATTLE SIMULATOR
-				state = "battle_config"
+				state = GameEnums.GameMode.BATTLE_CONFIG
 				sim_config_idx = 0
 				_on_map_updated()
 			4: # CITY GENERATOR
-				state = "city_studio"
+				state = GameEnums.GameMode.CITY
 				GameState.city_studio_idx = 0
 				_on_map_updated()
 			5: # THE GREAT ARCHIVE
-				state = "codex"
+				state = GameEnums.GameMode.CODEX
 				codex_cat_idx = 0
 				codex_entry_idx = 0
 				codex_focus = 0
@@ -1145,7 +1146,7 @@ func _test_city_generator():
 	
 	# 6. Start Battle Controller in local mode
 	# We can pass null as enemy to just wander
-	state = "battle"
+	state = GameEnums.GameMode.BATTLE
 	battle_ctrl.start(null) 
 	_on_map_updated()
 
@@ -1199,7 +1200,7 @@ func handle_battle_config_input(event):
 	if event.is_action_pressed("ui_accept") and sim_config_idx == (max_entries * 2):
 		setup_battle_simulator()
 	elif event.is_action_pressed("ui_cancel"):
-		state = "menu"
+		state = GameEnums.GameMode.MENU
 		_on_map_updated()
 
 func handle_world_creation_input(event):
@@ -1220,7 +1221,7 @@ func handle_world_creation_input(event):
 	
 	elif event.is_action_pressed("ui_accept"):
 		if world_config_idx == keys.size(): # START GENERATION
-			state = "loading"
+			state = GameEnums.GameMode.LOADING
 			GameState.init_world(world_config)
 			_on_map_updated()
 		elif keys[world_config_idx] == "seed":
@@ -1271,13 +1272,13 @@ func handle_world_preview_input(event):
 			_on_map_updated()
 
 		KEY_T:
-			state = "region"
+			state = GameEnums.GameMode.REGION
 			region_ctrl.activate(preview_pos)
 			_on_map_updated()
 
 		KEY_ENTER: # ACCEPT
 			generated_world = world_config.duplicate()
-			state = "menu"
+			state = GameEnums.GameMode.MENU
 			GameState.add_log("World '%s' accepted!" % world_config["name"])
 			_on_map_updated()
 		KEY_R: # REROLL
@@ -1285,7 +1286,7 @@ func handle_world_preview_input(event):
 			GameState.init_world(world_config)
 			_on_map_updated()
 		KEY_ESCAPE: # BACK TO SETTINGS
-			state = "world_creation"
+			state = GameEnums.GameMode.WORLD_CREATION
 			_on_map_updated()
 	
 	preview_pos.x = clamp(preview_pos.x, 0, GameState.width)
@@ -1393,7 +1394,7 @@ func _build_studio_city():
 	
 	# Set player into region map near city
 	region_ctrl.activate(s.pos)
-	state = "region"
+	state = GameEnums.GameMode.REGION
 	
 	# Restore seed if we were mid-game (unlikely but safe)
 	GameState.world_seed = old_seed
@@ -1607,7 +1608,7 @@ func _save_character_and_return():
 	saved_character = player_config.duplicate()
 	saved_character["purchases"] = cc_purchases.duplicate()
 	saved_character["final_crowns"] = calculate_available_crowns()
-	state = "menu"
+	state = GameEnums.GameMode.MENU
 	GameState.add_log("Character '%s' saved!" % saved_character["name"])
 	_on_map_updated()
 
@@ -1621,7 +1622,7 @@ func handle_location_select_input(event):
 	elif event.is_action_pressed("ui_accept"):
 		_confirm_embark()
 	elif event.is_action_pressed("ui_cancel"):
-		state = "menu"
+		state = GameEnums.GameMode.MENU
 		_on_map_updated()
 
 func _start_adventure():
@@ -1637,7 +1638,7 @@ func _start_adventure():
 		location_list = [{"pos": GameState.start_pos, "name": "Wilderness Embark", "type": "wilds", "faction": "None"}]
 	
 	location_idx = 0
-	state = "location_select"
+	state = GameEnums.GameMode.PLAY_SELECT
 	_on_map_updated()
 
 func _confirm_embark():
@@ -1712,7 +1713,7 @@ func _confirm_embark():
 	# Traits
 	GameState.player.commander.traits = saved_character["traits"].duplicate()
 	
-	state = "overworld"
+	state = GameEnums.GameMode.OVERWORLD
 	GameState.add_log("The adventure of %s (%s %s) begins in %s at %s!" % [saved_character["name"], prof.name, sce.name, generated_world["name"], loc.name])
 	_on_map_updated()
 
@@ -1798,7 +1799,7 @@ func setup_battle_simulator():
 			for x in range(GameState.width):
 				GameState.geology[Vector2i(x,y)] = {"elevation": 0.5, "temp": 0.5, "rain": 0.5}
 
-	state = "battle"
+	state = GameEnums.GameMode.BATTLE
 	# Reset battle controller state
 	battle_ctrl.active = false
 	battle_ctrl.units.clear()
@@ -1823,13 +1824,13 @@ func setup_dungeon_simulator():
 		"type": "tomb",
 		"depth": 3
 	}
-	state = "dungeon"
+	state = GameEnums.GameMode.DUNGEON
 	GameState.active_ruin_pos = Vector2i(0, 0)
 	GameState.emit_signal("dungeon_started", ruin)
 	_on_map_updated()
 
 func setup_city_simulator():
-	state = "city"
+	state = GameEnums.GameMode.CITY
 	city_ctrl.generate_test_city()
 	_on_map_updated()
 
@@ -1858,7 +1859,7 @@ func setup_test_siege():
 	for i in range(30): enemy.roster.append({"type": "infantry", "archetype": "guardsman"})
 	
 	# 4. Trigger Siege
-	state = "battle"
+	state = GameEnums.GameMode.BATTLE
 	var siege_data = {
 		"grid": city_ctrl.grid,
 		"wall_segments": city_ctrl.wall_segments,
@@ -1870,25 +1871,25 @@ func setup_test_siege():
 	_on_map_updated()
 
 func toggle_party_info():
-	if state == "party_info":
-		state = "overworld"
+	if state == GameEnums.GameMode.MANAGEMENT:
+		state = GameEnums.GameMode.OVERWORLD
 	else:
-		state = "party_info"
+		state = GameEnums.GameMode.MANAGEMENT
 	_on_map_updated()
 
 func toggle_fief_info():
-	if state == "management" and mgmt_tab == "FIEF":
-		state = "overworld"
+	if state == GameEnums.GameMode.MANAGEMENT and mgmt_tab == "FIEF":
+		state = GameEnums.GameMode.OVERWORLD
 	else:
-		state = "management"
+		state = GameEnums.GameMode.MANAGEMENT
 		mgmt_tab = "FIEF"
 	_on_map_updated()
 
 func toggle_history():
-	if state == "history":
-		state = "overworld"
+	if state == GameEnums.GameMode.OVERWORLD:
+		state = GameEnums.GameMode.OVERWORLD
 	else:
-		state = "history"
+		state = GameEnums.GameMode.OVERWORLD
 	history_offset = 0
 	_on_map_updated()
 
@@ -2281,7 +2282,7 @@ func render_to_tilemap():
 	var start_x = 0
 	var start_y = 0
 	
-	if state == "overworld":
+	if state == GameEnums.GameMode.OVERWORLD:
 		center = GameState.player.pos + GameState.player.camera_offset
 		g_w = GameState.width
 		g_h = GameState.height
@@ -2289,7 +2290,7 @@ func render_to_tilemap():
 		scope = "world"
 		start_x = center.x - vw / 2
 		start_y = center.y - vh / 2
-	elif state == "city":
+	elif state == GameEnums.GameMode.CITY:
 		center = city_ctrl.player_pos
 		g_w = city_ctrl.width
 		g_h = city_ctrl.height
@@ -2297,7 +2298,7 @@ func render_to_tilemap():
 		scope = "local"
 		start_x = center.x - vw / 2
 		start_y = center.y - vh / 2
-	elif state == "dungeon":
+	elif state == GameEnums.GameMode.DUNGEON:
 		center = dungeon_ctrl.player_pos
 		g_w = dungeon_ctrl.width
 		g_h = dungeon_ctrl.height
@@ -2305,7 +2306,7 @@ func render_to_tilemap():
 		scope = "local"
 		start_x = center.x - vw / 2
 		start_y = center.y - vh / 2
-	elif state == "battle":
+	elif state == GameEnums.GameMode.BATTLE:
 		if is_instance_valid(battle_ctrl.player_unit):
 			center = battle_ctrl.player_unit.pos
 		else:
@@ -2316,7 +2317,7 @@ func render_to_tilemap():
 		scope = "battle"
 		start_x = center.x - vw / 2
 		start_y = center.y - vh / 2
-	elif state == "world_preview":
+	elif state == GameEnums.GameMode.WORLD_PREVIEW:
 		center = preview_pos
 		g_w = GameState.width
 		g_h = GameState.height
@@ -2329,7 +2330,7 @@ func render_to_tilemap():
 		vh = int(map_display.size.y / (TILE_SIZE * preview_zoom)) - 2
 		start_x = center.x - vw / 2
 		start_y = center.y - vh / 2
-	elif state == "loading":
+	elif state == GameEnums.GameMode.LOADING:
 		center = Vector2i(GameState.width / 2, GameState.height / 2)
 		g_w = GameState.width
 		g_h = GameState.height
@@ -2359,7 +2360,7 @@ func render_to_tilemap():
 	
 	# 11. PRE-FETCH Entities (Entities that override terrain)
 	var entities = {}
-	if state == "overworld" or state == "world_preview" or state == "loading":
+	if state == GameEnums.GameMode.OVERWORLD or state == GameEnums.GameMode.WORLD_PREVIEW or state == GameEnums.GameMode.LOADING:
 		if GameState.player:
 			entities[GameState.player.pos] = {"char": "@", "col": Color.YELLOW}
 		for army in GameState.armies:
@@ -2378,7 +2379,7 @@ func render_to_tilemap():
 				"metropolis": sym = "M"
 				"castle": sym = "S"
 			entities[pos] = {"char": sym, "col": Color.WHITE}
-	elif state == "battle":
+	elif state == GameEnums.GameMode.BATTLE:
 		for pos in battle_ctrl.unit_lookup:
 			var u = battle_ctrl.unit_lookup[pos]
 			var color = Color.RED
@@ -2395,14 +2396,14 @@ func render_to_tilemap():
 			var color = Color.YELLOW
 			if p.has("engine"): color = Color.ORANGE
 			entities[p_pos] = {"char": p.symbol, "col": color}
-	elif state == "dungeon":
+	elif state == GameEnums.GameMode.DUNGEON:
 		entities[dungeon_ctrl.player_pos] = {"char": "@", "col": Color.YELLOW}
 		for e in dungeon_ctrl.enemies:
 			if e.hp > 0:
 				entities[Vector2i(e.pos)] = {"char": e.type[0].to_upper(), "col": Color.RED}
 		for i in dungeon_ctrl.items:
 			entities[Vector2i(i.pos)] = {"char": "$", "col": Color.GOLD}
-	elif state == "city":
+	elif state == GameEnums.GameMode.CITY:
 		entities[city_ctrl.player_pos] = {"char": "@", "col": Color.YELLOW}
 		for eng in city_ctrl.engines:
 			entities[Vector2i(eng.pos)] = {"char": eng.type, "col": Color.ORANGE}
@@ -2419,7 +2420,7 @@ func render_to_tilemap():
 			
 			var tile_color = UIPanels._get_terrain_color(GameState, pos, terrain_char, scope)
 			
-			if state == "overworld" or state == "world_preview":
+			if state == GameEnums.GameMode.OVERWORLD or state == GameEnums.GameMode.WORLD_PREVIEW:
 				if GameState.map_mode == "province" or GameState.map_mode == "political":
 					if GameState.province_grid.size() > wy and GameState.province_grid[wy].size() > wx:
 						var p_id = GameState.province_grid[wy][wx]
@@ -2454,7 +2455,7 @@ func render_to_tilemap():
 			if pos == last_hover_world_pos:
 				highlight_color = Color(1, 1, 1, 0.4)
 			
-			if state == "battle" and is_instance_valid(battle_ctrl.player_unit):
+			if state == GameEnums.GameMode.BATTLE and is_instance_valid(battle_ctrl.player_unit):
 				var dist = (Vector2(pos) - Vector2(battle_ctrl.player_unit.pos)).length()
 				var u_range = battle_ctrl.get_unit_range(battle_ctrl.player_unit)
 				
@@ -2473,7 +2474,7 @@ func render_to_tilemap():
 				if pos == battle_ctrl.player_unit.pos:
 					highlight_color = Color(0, 1, 1, 0.2) # Teal for player
 			
-			elif state == "dungeon":
+			elif state == GameEnums.GameMode.DUNGEON:
 				var d_pos = dungeon_ctrl.player_pos
 				var d_dist = (Vector2(pos) - Vector2(d_pos)).length()
 				if d_dist < 4.5: # Simple torch view range
@@ -2486,7 +2487,7 @@ func render_to_tilemap():
 				tile_map.set_cell(2, Vector2i(x, y), 0, Vector2i(0, 0), alt)
 
 func _on_map_updated():
-	if state == "menu":
+	if state == GameEnums.GameMode.MENU:
 		# Render as simple menu
 		map_display.text = UIPanels.render_menu(menu_options, menu_idx, generated_world != null, saved_character != null)
 		$MainLayout/ContentLayout/SidePanel.visible = false
@@ -2496,7 +2497,7 @@ func _on_map_updated():
 		$MainLayout/ScreenHeader.text = "[center]FALLING LEAVES[/center]"
 		return
 
-	if state == "city_studio":
+	if state == GameEnums.GameMode.CITY:
 		map_display.text = UIPanels.render_city_studio(GameState.city_studio_config, GameState.city_studio_idx)
 		$MainLayout/ContentLayout/SidePanel.visible = false
 		$MainLayout/LogPanel.visible = false
@@ -2505,7 +2506,7 @@ func _on_map_updated():
 		$MainLayout/ScreenHeader.text = "[center]CITY DESIGN STUDIO[/center]"
 		return
 
-	if state == "loading":
+	if state == GameEnums.GameMode.LOADING:
 		var frame = UIPanels.render_loading_screen(loading_stage, GameState if (GameState.grid.size() > 0) else null)
 		$MainLayout/ScreenHeader.text = frame.header
 		info_label.text = frame.side
@@ -2582,11 +2583,11 @@ func _on_map_updated():
 
 	# Update font size FIRST based on state, so get_char_dims() is accurate
 	var target_font_size = current_font_size
-	if state == "world_map":
+	if state == GameEnums.GameMode.WORLD_PREVIEW:
 		target_font_size = 4
-	elif state == "overworld":
+	elif state == GameEnums.GameMode.OVERWORLD:
 		GameState.player.camera_zoom = current_font_size / 16.0
-	elif state == "battle" and is_instance_valid(battle_ctrl):
+	elif state == GameEnums.GameMode.BATTLE and is_instance_valid(battle_ctrl):
 		battle_ctrl.camera_zoom = current_font_size / 16.0
 	
 	map_display.add_theme_font_size_override("normal_font_size", target_font_size)
@@ -2606,21 +2607,21 @@ func _on_map_updated():
 	$MainLayout/LogPanel.visible = true
 	info_label.visible = true
 	
-	if state == "management":
+	if state == GameEnums.GameMode.MANAGEMENT:
 		var content = UIPanels.get_management_screen(GameState, mgmt_tab, mgmt_focus, mgmt_idx_l, mgmt_idx_r, mgmt_is_designing, mgmt_design_slot, mgmt_design_prop)
 		map_display.text = content
 		$MainLayout/ContentLayout/SidePanel.visible = false
 		$MainLayout/LogPanel.visible = false
-	elif state == "world_map":
+	elif state == GameEnums.GameMode.WORLD_PREVIEW:
 		var world_lines = UIPanels.render_world_map(GameState)
 		map_display.text = "\n".join(world_lines)
 		$MainLayout/ContentLayout/SidePanel.visible = false
 		$MainLayout/LogPanel.visible = false
-	elif state == "history":
+	elif state == GameEnums.GameMode.OVERWORLD:
 		map_display.text = UIPanels.render_history(GameState, history_offset)
 		$MainLayout/ContentLayout/SidePanel.visible = false
 		$MainLayout/LogPanel.visible = false
-	elif state == "city":
+	elif state == GameEnums.GameMode.CITY:
 		var map_lines = UIPanels.render_city(GameState, city_ctrl, vw, vh)
 		var side_lines = ["City: " + city_ctrl.city_name, "Pos: " + str(city_ctrl.player_pos)]
 		var header = "[ CITY EXPLORER - %s ]" % city_ctrl.city_name.to_upper()
@@ -2629,7 +2630,7 @@ func _on_map_updated():
 		info_label.text = frame.side
 		log_label.text = frame.log
 		$MainLayout/ScreenHeader.text = "[center]%s[/center]" % frame.header
-	elif state == "dungeon":
+	elif state == GameEnums.GameMode.DUNGEON:
 		var map_lines = UIPanels.render_dungeon(GameState, dungeon_ctrl, vw, vh)
 		var side_lines = UIPanels.get_side_panel(GameState, dungeon_ctrl)
 		var header = "[ %s - Floor %d ]" % [dungeon_ctrl.dungeon_name.to_upper(), dungeon_ctrl.current_floor]
@@ -2638,7 +2639,7 @@ func _on_map_updated():
 		info_label.text = frame.side
 		log_label.text = frame.log
 		$MainLayout/ScreenHeader.text = "[center]%s[/center]" % frame.header
-	elif state == "battle":
+	elif state == GameEnums.GameMode.BATTLE:
 		var map_lines = UIPanels.render_battle(GameState, battle_ctrl, vw, vh)
 		var side_lines = UIPanels.get_battle_side_panel(GameState, battle_ctrl)
 		var e_type = "battle"
@@ -2653,19 +2654,19 @@ func _on_map_updated():
 		info_label.text = frame.side
 		log_label.text = frame.log
 		$MainLayout/ScreenHeader.text = "[center]%s[/center]" % frame.header
-	elif state == "codex":
+	elif state == GameEnums.GameMode.CODEX:
 		map_display.text = UIPanels.render_codex(GameState, CodexData, codex_cat_idx, codex_entry_idx, codex_focus)
 		$MainLayout/ContentLayout/SidePanel.visible = false
 		$MainLayout/LogPanel.visible = false
-	elif state == "party_info":
+	elif state == GameEnums.GameMode.MANAGEMENT:
 		map_display.text = UIPanels.get_party_info_screen(GameState)
 		$MainLayout/ContentLayout/SidePanel.visible = false
 		$MainLayout/LogPanel.visible = false
-	elif state == "dialogue":
+	elif state == GameEnums.GameMode.DIALOGUE:
 		map_display.text = UIPanels.get_dialogue_screen(GameState, dialogue_target, dialogue_options, dialogue_idx)
 		$MainLayout/ContentLayout/SidePanel.visible = false
 		$MainLayout/LogPanel.visible = false
-	elif state == "region":
+	elif state == GameEnums.GameMode.REGION:
 		var map_lines = UIPanels.render_region(GameState, region_ctrl, vw, vh)
 		var side_lines = UIPanels.get_side_panel(GameState)
 		var p_pos_i = Vector2i(region_ctrl.player_pos)
@@ -2678,7 +2679,7 @@ func _on_map_updated():
 	else:
 		var map_lines = []
 		var header_override = ""
-		if state == "overworld" and GameState.travel_mode == GameState.TravelMode.LOCAL:
+		if state == GameEnums.GameMode.OVERWORLD and GameState.travel_mode == GameState.TravelMode.LOCAL:
 			if battle_ctrl.last_map_pos != GameState.player.pos:
 				battle_ctrl.generate_map()
 			map_lines = UIPanels.render_local_viewport(GameState, battle_ctrl, vw, vh)
@@ -2695,7 +2696,7 @@ func _on_map_updated():
 		# Ensure tile info is synced immediately if we are in the overworld
 		_sync_tile_info()
 	
-	if graphical_mode and (state == "overworld" or state == "dungeon" or state == "battle"):
+	if graphical_mode and (state == GameEnums.GameMode.OVERWORLD or state == GameEnums.GameMode.DUNGEON or state == GameEnums.GameMode.BATTLE):
 		GameState.graphical_mode_active = true
 		render_to_tilemap()
 	else:
@@ -2735,7 +2736,7 @@ func _on_log_updated():
 	log_label.text = "\n".join(GameState.event_log)
 
 func _on_battle_started(enemy):
-	state = "battle"
+	state = GameEnums.GameMode.BATTLE
 	$MainLayout.visible = true # Keep layout visible for unified UI
 	$MainLayout/LogPanel.visible = false
 	battle_ui.visible = false # Hide old battle UI
@@ -2743,7 +2744,7 @@ func _on_battle_started(enemy):
 
 func _on_battle_ended(win):
 	if not generated_world:
-		state = "battle_config"
+		state = GameEnums.GameMode.BATTLE_CONFIG
 		GameState.add_log("Simulation finished. Returned to config.")
 		battle_ui.visible = false
 		$MainLayout.visible = true
@@ -2753,7 +2754,7 @@ func _on_battle_ended(win):
 	if battle_ctrl.is_tournament:
 		if win:
 			GameState.player.tournament_round += 1
-			state = "dialogue"
+			state = GameEnums.GameMode.DIALOGUE
 			var s = GameState.settlements.get(GameState.player.pos)
 			if GameState.player.tournament_round > s.tournament_participants.size():
 				dialogue_options = ["Claim Prize"]
@@ -2763,9 +2764,9 @@ func _on_battle_ended(win):
 			dialogue_idx = 0
 		else:
 			GameState.add_log("Master: 'Better luck next time. You are eliminated.'")
-			state = "overworld"
+			state = GameEnums.GameMode.OVERWORLD
 	else:
-		state = "overworld"
+		state = GameEnums.GameMode.OVERWORLD
 	
 	battle_ui.visible = false
 	$MainLayout.visible = true
@@ -2773,12 +2774,12 @@ func _on_battle_ended(win):
 	_on_map_updated()
 
 func _on_dungeon_started(ruin):
-	state = "dungeon"
+	state = GameEnums.GameMode.DUNGEON
 	dungeon_ctrl.start(ruin, GameState.player.pos)
 	_on_map_updated()
 
 func _on_settlement_entered(s):
-	state = "city"
+	state = GameEnums.GameMode.CITY
 	if city_ctrl.has_method("activate"):
 		city_ctrl.activate(s, s.pos, GameState.world_seed)
 	elif city_ctrl.has_method("generate_from_settlement"):
@@ -2786,11 +2787,11 @@ func _on_settlement_entered(s):
 	_on_map_updated()
 
 func _on_dungeon_ended():
-	state = "overworld"
+	state = GameEnums.GameMode.OVERWORLD
 	_on_map_updated()
 
 func _on_dialogue_started(target, options):
-	state = "dialogue"
+	state = GameEnums.GameMode.DIALOGUE
 	dialogue_target = target
 	dialogue_options = options
 	dialogue_idx = 0

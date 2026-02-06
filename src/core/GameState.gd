@@ -15,21 +15,20 @@ signal dialogue_started(target, options)
 
 # Use direct references to Globals to avoid constant expression issues during parsing
 
-var grid = [] # 2D array [y][x]
+var grid: Array = [] # 2D array [y][x] - Array of Arrays
 var width: int = 0
 var height: int = 0
-var resources = {} # Vector2i -> String (e.g. "iron", "gold")
-var geology = {} # Vector2i -> Dict (temp, rain, layers)
+var resources: Dictionary = {} # Vector2i -> String (e.g. "iron", "gold")
+var geology: Dictionary = {} # Vector2i -> Dict (temp, rain, layers)
 var settlements: Dictionary = {} # Vector2i -> GDSettlement
-var ruins = {} # Vector2i -> Dict
+var ruins: Dictionary = {} # Vector2i -> Dict
 var armies: Array[GDArmy] = []
-var ongoing_battles: Array = [] # List of GDBattle objects
+var ongoing_battles: Array[GDBattle] = []
 var caravans: Array[GDCaravan] = []
-var trade_contracts = [] # Array of {id, seller_pos, buyer_pos, resource, amount, price, status}
-var military_campaigns = [] # Array of {id, faction, target_pos, type, participants: [], status}
-var villagers = [] # Deprecated: Use logistical_pulses
-var logistical_pulses = [] # Array of {target_pos, resource, amount, arrival_turn, origin_pos}
-var migrants = [] # Array of Dicts (Population Movement)
+var trade_contracts: Array[Dictionary] = [] # {id, seller_pos, buyer_pos, resource, amount, price, status}
+var military_campaigns: Array[Dictionary] = [] # {id, faction, target_pos, type, participants: [], status}
+var logistical_pulses: Array[Dictionary] = [] # {target_pos, resource, amount, arrival_turn, origin_pos}
+var migrants: Array[Dictionary] = [] # Population Movement
 var astar = AStarGrid2D.new()
 
 # World Identity
@@ -78,87 +77,17 @@ var local_step_count = 0
 var factions: Array[GDFaction] = []
 
 var player: GDPlayer
-var active_quests: Array = [] # Array of GDQuest
-var event_log = []
-var history = [] # Array of {turn, day, month, year, text}
-var active_ruin_pos = Vector2i(-1, -1)
+var active_quests: Array[GDQuest] = []
+var event_log: Array[String] = []
+var history: Array[Dictionary] = [] # {turn, day, month, year, text}
+var active_ruin_pos: Vector2i = Vector2i(-1, -1)
 var is_resting = false
 # var rng = RandomNumberGenerator.new() -- Moved to existing declaration down below
 # var total_battles = 0 -- Moved to existing declaration down below
 
-# --- FAUNA SYSTEM ---
-const FAUNA_TABLE = {
-	"forest": [
-		{"name": "Deer", "symbol": "d", "color": "white", "loot": {"meat": 3, "hides": 1}, "chance": 15, "herd_range": [3, 8]},
-		{"name": "Boar", "symbol": "b", "color": "chocolate", "loot": {"meat": 5, "hides": 1}, "chance": 8, "herd_range": [1, 3]},
-		{"name": "Wolf", "symbol": "w", "color": "gray", "loot": {"meat": 2, "hides": 1}, "chance": 5, "herd_range": [2, 5]},
-		{"name": "Elk", "symbol": "E", "color": "gray", "loot": {"meat": 6, "hides": 2}, "chance": 5, "herd_range": [3, 6]},
-		{"name": "Pheasant", "symbol": "p", "color": "tan", "loot": {"meat": 1}, "chance": 10, "herd_range": [1, 4]},
-		{"name": "Fox", "symbol": "f", "color": "sienna", "loot": {"furs": 1}, "chance": 4, "herd_range": [1, 1]},
-		{"name": "Black Bear", "symbol": "u", "color": "chocolate", "loot": {"meat": 8, "furs": 1}, "chance": 2, "herd_range": [1, 2]}
-	],
-	"desert": [
-		{"name": "Gazelle", "symbol": "g", "color": "sandy_brown", "loot": {"meat": 2, "hides": 1}, "chance": 12, "herd_range": [4, 10]},
-		{"name": "Scorpion", "symbol": "s", "color": "red", "loot": {"spices": 1}, "chance": 3, "herd_range": [1, 1]},
-		{"name": "Camel", "symbol": "C", "color": "sandy_brown", "loot": {"meat": 8, "hides": 2}, "chance": 5, "capturable": true, "herd_range": [2, 5]},
-		{"name": "Hyena", "symbol": "y", "color": "gray", "loot": {"hides": 1}, "chance": 6, "herd_range": [3, 7]},
-		{"name": "Rattlesnake", "symbol": "r", "color": "khaki", "loot": {"spices": 1}, "chance": 4, "herd_range": [1, 1]},
-		{"name": "Ostrich", "symbol": "O", "color": "peru", "loot": {"meat": 4, "furs": 1}, "chance": 4, "herd_range": [2, 4]}
-	],
-	"plains": [
-		{"name": "Antelope", "symbol": "a", "color": "tan", "loot": {"meat": 3, "hides": 1}, "chance": 18, "herd_range": [5, 12]},
-		{"name": "Wild Horse", "symbol": "h", "color": "peru", "loot": {"meat": 5}, "chance": 4, "capturable": true, "herd_range": [2, 6]},
-		{"name": "Zebra", "symbol": "z", "color": "silver", "loot": {"meat": 5, "hides": 2}, "chance": 8, "herd_range": [6, 15]},
-		{"name": "Lion", "symbol": "L", "color": "gold", "loot": {"furs": 2}, "chance": 4, "herd_range": [2, 4]},
-		{"name": "Bison", "symbol": "B", "color": "peru", "loot": {"meat": 12, "hides": 3}, "chance": 5, "herd_range": [8, 20]},
-		{"name": "Kangaroo", "symbol": "k", "color": "gray", "loot": {"meat": 3, "hides": 1}, "chance": 6, "herd_range": [3, 10]},
-		{"name": "Elephant", "symbol": "E", "color": "dark_gray", "loot": {"meat": 20, "hides": 5, "ivory": 2}, "chance": 3, "herd_range": [3, 8]}
-	],
-	"mountain": [
-		{"name": "Ram", "symbol": "r", "color": "white", "loot": {"meat": 4, "ivory": 1}, "chance": 10, "herd_range": [2, 5]},
-		{"name": "Bear", "symbol": "B", "color": "sienna", "loot": {"meat": 10, "furs": 2}, "chance": 2, "herd_range": [1, 1]},
-		{"name": "Snow Leopard", "symbol": "v", "color": "silver", "loot": {"furs": 3}, "chance": 1, "herd_range": [1, 1]}
-	],
-	"peaks": [
-		{"name": "Ram", "symbol": "r", "color": "white", "loot": {"meat": 4, "ivory": 1}, "chance": 10, "herd_range": [2, 5]},
-		{"name": "Bear", "symbol": "B", "color": "sienna", "loot": {"meat": 10, "furs": 2}, "chance": 2, "herd_range": [1, 1]},
-		{"name": "Condor", "symbol": "C", "color": "white", "loot": {"meat": 2}, "chance": 3, "herd_range": [1, 2]},
-		{"name": "Snow Leopard", "symbol": "v", "color": "silver", "loot": {"furs": 3}, "chance": 1, "herd_range": [1, 1]},
-		{"name": "Mountain Gorilla", "symbol": "M", "color": "sienna", "loot": {"meat": 8}, "chance": 2, "herd_range": [4, 8]},
-		{"name": "Yak", "symbol": "y", "color": "gray", "loot": {"meat": 10, "hides": 3}, "chance": 4, "herd_range": [3, 6]}
-	],
-	"tundra": [
-		{"name": "Snow Hare", "symbol": "r", "color": "alice_blue", "loot": {"meat": 1}, "chance": 15, "herd_range": [1, 3]},
-		{"name": "Mammoth", "symbol": "M", "color": "gray", "loot": {"meat": 30, "ivory": 4}, "chance": 1, "herd_range": [1, 2]},
-		{"name": "Polar Bear", "symbol": "W", "color": "white", "loot": {"meat": 15, "furs": 3}, "chance": 1, "herd_range": [1, 1]},
-		{"name": "Arctic Fox", "symbol": "v", "color": "gray", "loot": {"furs": 2}, "chance": 3, "herd_range": [1, 2]},
-		{"name": "Penguin", "symbol": "P", "color": "silver", "loot": {"meat": 1}, "chance": 10, "herd_range": [10, 30]},
-		{"name": "Musk Ox", "symbol": "O", "color": "alice_blue", "loot": {"meat": 10, "hides": 3}, "chance": 5, "herd_range": [5, 12]}
-	],
-	"arctic": [
-		{"name": "Frost Strider", "symbol": "X", "color": "alice_blue", "loot": {"ivory": 2}, "chance": 1, "herd_range": [1, 1]}
-	],
-	"jungle": [
-		{"name": "Jaguar", "symbol": "j", "color": "gold", "loot": {"meat": 4, "furs": 1}, "chance": 5, "herd_range": [1, 1]},
-		{"name": "Monkey", "symbol": "m", "color": "chocolate", "loot": {"meat": 1}, "chance": 20, "herd_range": [3, 10]},
-		{"name": "Tiger", "symbol": "T", "color": "gold", "loot": {"furs": 3}, "chance": 1, "herd_range": [1, 1]},
-		{"name": "Parrot", "symbol": "P", "color": "green", "loot": {"meat": 1}, "chance": 15, "herd_range": [5, 15]},
-		{"name": "Gorilla", "symbol": "G", "color": "chocolate", "loot": {"meat": 8}, "chance": 5, "herd_range": [5, 10]},
-		{"name": "Constrictor", "symbol": "s", "color": "dark_green", "loot": {"meat": 5}, "chance": 2, "herd_range": [1, 1]},
-		{"name": "Elephant", "symbol": "e", "color": "gray", "loot": {"meat": 15, "hides": 4, "ivory": 2}, "chance": 2, "herd_range": [1, 3]}
-	],
-	"hills": [
-		{"name": "Goat", "symbol": "g", "color": "white", "loot": {"meat": 3, "hides": 1}, "chance": 12, "herd_range": [3, 7]},
-		{"name": "Hill Lion", "symbol": "l", "color": "gold", "loot": {"meat": 5, "furs": 1}, "chance": 4, "herd_range": [1, 1]}
-	],
-	"water": [
-		{"name": "Crab", "symbol": "c", "color": "tan", "loot": {"meat": 1}, "chance": 10, "herd_range": [5, 10]},
-		{"name": "Seal", "symbol": "S", "color": "gray", "loot": {"meat": 4, "hides": 1}, "chance": 8, "herd_range": [4, 12]},
-		{"name": "Fish", "symbol": "f", "color": "deep_sky_blue", "loot": {"fish": 1}, "chance": 20, "herd_range": [10, 30]},
-		{"name": "Whale", "symbol": "W", "color": "gray", "loot": {"meat": 50}, "chance": 1, "herd_range": [1, 3]}
-	]
-}
-var killed_fauna = {} # Vector2i (world) -> Array of Vector2i (local)
+# --- FAUNA SYSTEM (DATA MOVED TO res://data/fauna_table.json) ---
+# Use FaunaData.get_fauna_table() or FaunaData.get_fauna_for_biome(biome)
+var killed_fauna: Dictionary = {} # Vector2i (world) -> Array of Vector2i (local)
 
 const FLORA_TABLE = {
 	"plains": [

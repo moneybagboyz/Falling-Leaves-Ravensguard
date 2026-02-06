@@ -1,5 +1,7 @@
 extends Node
 
+const FaunaData = preload("res://src/data/FaunaData.gd")
+
 func handle_input(event: InputEvent):
 	var gs = GameState
 	var _moved = false
@@ -252,7 +254,7 @@ func trigger_ambient_message():
 func get_animal_at(world_pos: Vector2i, alx: int, aly: int):
 	var gs = GameState
 	var tile_type = gs.get_tile_type(world_pos)
-	var world_fauna = gs.FAUNA_TABLE.get(tile_type, [])
+	var world_fauna = FaunaData.get_fauna_for_biome(tile_type)
 	if world_fauna.is_empty(): return null
 	
 	var a_rng = RandomNumberGenerator.new()
@@ -456,8 +458,9 @@ func try_interact():
 				if alx >= 0 and alx < gs.LOCAL_GRID_W and aly >= 0 and aly < gs.LOCAL_GRID_H:
 					var tile = battle_ctrl.grid[aly][alx]
 					# Check if tile matches any fauna symbol
-					for habitat in gs.FAUNA_TABLE:
-						for f in gs.FAUNA_TABLE[habitat]:
+					var fauna_table = FaunaData.get_fauna_table()
+					for habitat in fauna_table:
+						for f in fauna_table[habitat]:
 							if tile == f["symbol"]:
 								_handle_animal_interaction(f, Vector2i(alx, aly))
 								return

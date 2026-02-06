@@ -1,5 +1,7 @@
 extends Node
 
+const FaunaData = preload("res://src/data/FaunaData.gd")
+
 const MAP_W = 500
 const MAP_H = 500
 const CHUNK_SIZE = 50
@@ -2462,7 +2464,8 @@ func _generate_chunk(chunk_pos: Vector2i):
 	# 6. Populate Fauna (Simplified Pass)
 	var biome_at_center = "plains"
 	var fauna_list = []
-	if gs.FAUNA_TABLE.has(biome_at_center): fauna_list = gs.FAUNA_TABLE.get(biome_at_center, [])
+	var fauna_table = FaunaData.get_fauna_table()
+	if fauna_table.has(biome_at_center): fauna_list = fauna_table.get(biome_at_center, [])
 	
 	if not fauna_list.is_empty():
 		var s_rng = RandomNumberGenerator.new()
