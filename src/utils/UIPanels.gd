@@ -1,155 +1,29 @@
 class_name UIPanels
-# Force Refresh 1.3
+# Force Refresh 1.4 - Refactored to use modular architecture
 extends Object
 
+const TerrainColors = preload("res://src/ui/core/TerrainColors.gd")
+const UIFormatting = preload("res://src/ui/core/UIFormatting.gd")
+
+# Legacy cache vars kept for compatibility (unused now)
 static var terrain_color_cache = {}
 static var color_hex_cache = {}
 
 static func _c_to_bb(c: Color) -> String:
-	if color_hex_cache.has(c):
-		return color_hex_cache[c]
-	var h = "#" + c.to_html(false)
-	color_hex_cache[c] = h
-	return h
+	return UIFormatting.color_to_hex(c)
 
 static func _wrap_grid(gs, terrain_color: Color, content: String) -> String:
-	if gs.render_mode == "grid" and not gs.get("graphical_mode_active"):
-		return "[bgcolor=%s]%s[/bgcolor]" % [_c_to_bb(terrain_color), content]
-	return content
+	return UIFormatting.wrap_grid(gs, terrain_color, content)
 
 static func _get_terrain_color(gs, pos: Vector2i, t: String, scope: String = "global") -> Color:
-	# Check cache first - use hash for efficient key generation
-	var scope_idx = 0
-	match scope:
-		"local": scope_idx = 1
-		"battle": scope_idx = 2
-		"region": scope_idx = 3
-	
-	# Use hash instead of string concatenation for cache key
-	var cache_key = hash(Vector3i(pos.x, pos.y, (scope_idx << 8) | t.unicode_at(0)))
-	if terrain_color_cache.has(cache_key):
-		return terrain_color_cache[cache_key]
-
-	# Get geology data for tinting
-	var geo = gs.geology.get(pos, {"temp": 0.5, "rain": 0.5, "elevation": 0.3})
-	
-	# QUANTIZATION: Reduce unique colors to prevent RichTextLabel "Zebra Stripe" rendering artifacts
-	var temp = snappedf(geo.get("temp", 0.5), 0.1)
-	var rain = snappedf(geo.get("rain", 0.5), 0.1)
-	var elev = snappedf(geo.get("elevation", 0.3), 0.1)
-	
-	var final_col = Color.WHITE
-	
-	match t:
-		"~", "≈", "/", "\\", "water": # Water
-			var v = clamp(0.3 + (elev * 0.4), 0.2, 0.8)
-			final_col = Color.from_hsv(0.6, 0.7, v)
-		".", ",", "plains", "desert": # Plains / Grassland / Desert
-			var hue = clamp(0.25 + (temp * 0.08), 0.2, 0.35)
-			if t == "desert" or temp > 0.8: hue = 0.12 # Shifting to yellow/orange
-			var sat = clamp(0.3 + (rain * 0.5), 0.2, 0.9)
-			var val = clamp(0.6 + (rain * 0.2), 0.4, 0.9)
-			final_col = Color.from_hsv(hue, sat, val)
-		"#", "T", "&", "forest", "jungle", "hills": # Forest / Jungle / Hills
-			var hue = clamp(0.28 - (rain * 0.05), 0.2, 0.35)
-			if t == "hills": hue = 0.22 # Slightly more olive
-			var sat = clamp(0.4 + (rain * 0.5), 0.3, 0.9)
-			var val = clamp(0.3 + (rain * 0.3), 0.2, 0.7)
-			final_col = Color.from_hsv(hue, sat, val)
-		"o", "O", "^", "peaks": # Mountains / Peaks
-			if elev > 0.85 or t == "peaks": 
-				final_col = Color.WHITE # Snowcaps
-			else:
-				var v = clamp(0.7 - (elev * 0.5), 0.1, 0.8)
-				final_col = Color(v, v, v)
-		"S", "\"", "savanna": # Savanna / Dry
-			var hue = 0.12 - (temp * 0.04)
-			var sat = 0.4 + (temp * 0.2)
-			final_col = Color.from_hsv(hue, sat, 0.8)
-		"*", "tundra": # Tundra
-			final_col = Color(0.88, 0.94, 1.0) # e0f0ff
-		"farms", "\"": # Agriculture
-			final_col = Color(0.18, 0.28, 0.15) # Dark Green Crop Rows
-		"fallow": # Brown Plots (DF Style)
-			final_col = Color(0.45, 0.35, 0.25) # Earthy Brown
-		"orchard", "f": # Orchards
-			final_col = Color.FOREST_GREEN
-		"pasture", ",": # Grazing lands
-			final_col = Color.DARK_SEA_GREEN
-		"docks": # Waterfront
-			final_col = Color(0.4, 0.25, 0.15)
-		"keep", "K": # The Keep
-			final_col = Color.MEDIUM_PURPLE
-		"market", "M":
-			final_col = Color.GOLDENROD
-		"industrial", "S":
-			final_col = Color.MAROON
-		"slum":
-			final_col = Color.SADDLE_BROWN
-		"residential", "urban", "n": # City Buildings (Orange roofs)
-			final_col = Color(0.85, 0.45, 0.15) # Burnt Orange Roofs
-		"urban_block": # Developed Land
-			final_col = Color(0.35, 0.35, 0.35) # Dark Concrete/Stone
-		"walls_outer", "bridge_rail": # Stone Works
-			final_col = Color.DIM_GRAY
-		"=", "road", "bridge": # Road / Bridge
-			final_col = Color(0.65, 0.6, 0.55) # Light Gravel/Stone Gray
-		_:
-			final_col = Color.WHITE
-	
-	terrain_color_cache[cache_key] = final_col
-	return final_col
+	# Delegate to TerrainColors module
+	var geo := gs.geology.get(pos, {"temp": 0.5, "rain": 0.5, "elevation": 0.3})
+	return TerrainColors.get_color(pos, t, geo, scope)
 
 static func _get_tile_colors(gs, pos: Vector2i, t: String, scope: String = "global") -> Dictionary:
-	var bg = _get_terrain_color(gs, pos, t, scope)
-	var fg = Color.WHITE
-	
-	match t:
-		"keep", "K":
-			bg = Color(0.3, 0.3, 0.35) # Dark Slate Ground
-			fg = Color.MEDIUM_PURPLE    # Purple Tower
-		"market", "M":
-			bg = Color(0.35, 0.32, 0.3)
-			fg = Color.GOLDENROD
-		"industrial", "S":
-			bg = Color(0.32, 0.28, 0.28)
-			fg = Color.MAROON
-		"H": # Warehouses / Docks
-			bg = Color(0.3, 0.2, 0.1)
-			fg = Color(0.6, 0.45, 0.3)
-		"slum":
-			bg = Color(0.25, 0.2, 0.15)
-			fg = Color.SADDLE_BROWN
-		"residential", "urban", "n", "o", "B":
-			bg = Color(0.4, 0.4, 0.4)    # Stone Ground
-			fg = Color(0.85, 0.45, 0.15) # Orange Roofs / Walls
-		"urban_block":
-			bg = Color(0.38, 0.38, 0.38)
-			fg = Color(0.3, 0.3, 0.3)    # Subtle internal grid
-		"walls_outer", "wall", "#":
-			bg = Color(0.2, 0.2, 0.2)
-			fg = Color.DIM_GRAY
-		"farms", "f":
-			bg = Color(0.15, 0.22, 0.12)
-			fg = Color(0.25, 0.4, 0.2)
-		"fallow", "\"":
-			# Noise-based dithering for fields
-			var noise_val = abs(sin(pos.x * 0.77 + pos.y * 1.33))
-			bg = Color(0.45, 0.35, 0.25)
-			fg = bg.darkened(0.2) if noise_val > 0.5 else bg.lightened(0.1)
-		"road", "=", "+":
-			bg = Color(0.5, 0.45, 0.4)
-			fg = Color(0.7, 0.65, 0.6)
-		"docks":
-			bg = Color(0.35, 0.22, 0.12) # Darker wood ground
-			fg = Color(0.7, 0.55, 0.35)   # Lighter plank lines
-		"water", "~":
-			bg = Color(0.1, 0.2, 0.4)
-			fg = Color(0.2, 0.4, 0.6)
-		_:
-			fg = bg.lightened(0.5) if bg.v < 0.5 else bg.darkened(0.5)
-
-	return {"bg": bg, "fg": fg}
+	# Delegate to TerrainColors module
+	var geo := gs.geology.get(pos, {"temp": 0.5, "rain": 0.5, "elevation": 0.3})
+	return TerrainColors.get_tile_colors(pos, t, geo, scope)
 
 static func get_tile_info(gs, pos: Vector2i) -> String:
 	if pos.x < 0 or pos.y < 0 or pos.y >= gs.height or pos.x >= gs.width:
@@ -208,14 +82,7 @@ static func get_tile_info(gs, pos: Vector2i) -> String:
 	return "".join(info)
 
 static func render_menu(options, idx, has_world, has_char) -> String:
-	var parts = PackedStringArray()
-	parts.append("[center][b]FALLING LEAVES[/b]\n\n")
-	for i in range(options.size()):
-		var prefix = " > " if i == idx else "   "
-		var suffix = " < " if i == idx else "   "
-		parts.append(prefix + options[i] + suffix + "\n")
-	parts.append("\n[/center]")
-	return "".join(parts)
+	return UIFormatting.build_menu("FALLING LEAVES", options, idx)
 
 static func render_battle_config(config, idx) -> String:
 	var parts = PackedStringArray()
@@ -265,20 +132,9 @@ static func render_battle_config(config, idx) -> String:
 	return "".join(parts)
 
 static func render_world_creation(config, idx) -> String:
-	var parts = PackedStringArray()
-	parts.append("[center][b]WORLD GENERATION[/b][/center]\n\n")
-	var keys = config.keys()
-	for i in range(keys.size()):
-		var k = keys[i]
-		var val = config[k]
-		var prefix = " > " if i == idx else "   "
-		parts.append("%s[b]%s:[/b] %s\n" % [prefix, k.capitalize(), str(val)])
-	
-	parts.append("\n")
-	var start_prefix = " > " if idx == keys.size() else "   "
-	parts.append("%s[b][ GENERATE WORLD ][/b]\n" % start_prefix)
-	parts.append("[color=gray](Use Arrows to adjust, ENTER to Start)[/color][/center]")
-	return "".join(parts)
+	var result := UIFormatting.build_config("WORLD GENERATION", config, idx, true)
+	result += "\n[center][color=gray](Use Arrows to adjust, ENTER to Start)[/color][/center]"
+	return result
 
 static func render_city_studio(config, idx) -> String:
 	var parts = PackedStringArray()
@@ -1060,25 +916,8 @@ static func render_city(gs, city_ctrl, vw, vh) -> Array:
 	return lines
 
 static func _get_dungeon_color(t: String) -> Color:
-	match t:
-		"#": return Color.DIM_GRAY
-		".": return Color.GRAY
-		"+": return Color.SADDLE_BROWN
-		"=": return Color.SLATE_GRAY
-		">", "<": return Color.MAGENTA
-		"~": return Color.BLUE
-		"\"": return Color.DARK_GREEN
-		"f": return Color.FOREST_GREEN
-		",": return Color.DARK_OLIVE_GREEN
-		"B": return Color.CHOCOLATE
-		"S": return Color.MAROON
-		"M": return Color.GOLDENROD
-		"K": return Color.DARK_SLATE_GRAY
-		"G": return Color.SADDLE_BROWN
-		"D": return Color.PERU
-		"T": return Color.DARK_GREEN
-		"X", "C": return Color.BURLYWOOD
-	return Color.GRAY
+	# Delegate to TerrainColors module
+	return TerrainColors.get_dungeon_color(t)
 
 static func render_dungeon(gs, dungeon_ctrl, vw, vh) -> Array:
 	if not dungeon_ctrl.grid:
