@@ -152,8 +152,10 @@ static func increment_prod(s_data, res_name, amount, geology = null):
 
 @warning_ignore("shadowed_global_identifier")
 static func process_daily_pulse(gs, s_data):
-	# Refresh Cache
-	s_data.cache_prices.clear()
+	# Invalidate price cache (prices change daily based on supply/demand)
+	s_data.invalidate_cache("prices")
+	
+	# Refresh efficiency and housing caches (invalidated when buildings/unrest changes)
 	s_data.cache_efficiency = s_data.get_workforce_efficiency()
 	s_data.cache_housing_cap = s_data.get_housing_capacity()
 	

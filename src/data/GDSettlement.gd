@@ -84,8 +84,25 @@ var siege_attacker_faction: String = ""
 var cache_efficiency: float = 1.0
 var cache_housing_cap: int = 50
 var cache_prices: Dictionary = {} # Resource Name -> Cached Price
+var cache_dirty_flags: Dictionary = {
+	"efficiency": false,
+	"housing": false,
+	"prices": false
+}
 
 var last_labor_allocation: Dictionary = {}
+
+func invalidate_cache(cache_type: String = "all"):
+	"""Invalidate specific cache or all caches"""
+	if cache_type == "all" or cache_type == "efficiency":
+		cache_dirty_flags["efficiency"] = true
+		cache_efficiency = -1.0  # Mark as invalid
+	if cache_type == "all" or cache_type == "housing":
+		cache_dirty_flags["housing"] = true
+		cache_housing_cap = -1  # Mark as invalid
+	if cache_type == "all" or cache_type == "prices":
+		cache_dirty_flags["prices"] = true
+		cache_prices.clear()
 
 func _init(_pos: Vector2i = Vector2i.ZERO):
 	pos = _pos
@@ -192,18 +209,31 @@ func get_food_stock() -> int:
 	return inventory.get("grain", 0) + inventory.get("fish", 0) + inventory.get("meat", 0)
 
 func get_housing_capacity() -> int:
+	if cache_housing_cap >= 0 and not cache_dirty_flags["housing"]:
+		return cache_housing_cap
+	
 	var base = houses * 5
 	var district_lvl = buildings.get("housing_district", 0)
 	var civil_lvl = buildings.get("town_hall", 0)
 	
 	var cap = base + (district_lvl * 200)
 	cap = int(cap * (1.0 + (civil_lvl * 0.1)))
+	
+	cache_housing_cap = cap
+	cache_dirty_flags["housing"] = false
 	return cap
 
 func get_workforce_efficiency() -> float:
+	if cache_efficiency >= 0.0 and not cache_dirty_flags["efficiency"]:
+		return cache_efficiency
+	
 	# In the infrastructure multiplier model, workforce efficiency is primarily
 	# a measure of Burgher happiness and social stability.
 	var base = 1.0
 	if get("burgher_unhappy"): base *= 0.8
 	if unrest > 50: base *= (1.0 - ((unrest - 50) / 100.0))
-	return clamp(base, 0.1, 1.0)
+	
+	var efficiency = clamp(base, 0.1, 1.0)
+	cache_efficiency = efficiency
+	cache_dirty_flags["efficiency"] = false
+	return efficiency
