@@ -1,6 +1,7 @@
 extends Node
 
 const MaterialsData = preload("res://src/data/MaterialsData.gd")
+const NamesData = preload("res://src/data/NamesData.gd")
 
 # --- MATERIALS (Dwarf Fortress Depth) ---
 # Loaded from data/materials.json
@@ -1602,14 +1603,18 @@ const ARCHETYPES = {
 }
 
 # --- CALENDAR & NAMES ---
-const MONTH_NAMES = [
-	"Ice-Moon", "Deep-Frost", "Seed-Time", "Rain-Hand", 
-	"Green-Sun", "High-Sun", "Golden-Grain", "Harvest-Moon", 
-	"Leaf-Fall", "Red-Mist", "First-Snow", "Year-End"
-]
+# Loaded from data/names.json
+static var MONTH_NAMES: Array:
+	get:
+		return NamesData.get_month_names()
 
-const FIRST_NAMES = ["Alden", "Beric", "Cedric", "Doran", "Edric", "Finn", "Garrick", "Hakon", "Ivor", "Joram", "Kael", "Ludo", "Mace", "Njal", "Osric", "Piers", "Quill", "Rolf", "Stig", "Tycho", "Ulf", "Vane", "Wulf", "Xander", "Yoric", "Zane"]
-const LAST_NAMES = ["the Bold", "the Cruel", "the Wise", "the Tall", "the Fair", "the Grim", "the Stout", "the Swift", "the Old", "the Young", "Iron-Foot", "Wolf-Slayer", "Gold-Tooth", "Half-Hand", "the Pious", "the Vile", "the Just", "the Silent"]
+static var FIRST_NAMES: Array:
+	get:
+		return NamesData.get_first_names()
+
+static var LAST_NAMES: Array:
+	get:
+		return NamesData.get_last_names()
 
 func get_default_body(hp_scale: float = 1.0) -> Dictionary:
 	var body = {}
