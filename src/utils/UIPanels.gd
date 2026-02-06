@@ -169,21 +169,22 @@ static func get_tile_info(gs, pos: Vector2i) -> String:
 		"=": terrain_name = "Road"
 		_: terrain_name = "Tile '%s'" % t_char
 
-	var info = "[b]Position:[/b] (%d, %d)\n[b]Terrain:[/b] %s" % [pos.x, pos.y, terrain_name]
+	var info = PackedStringArray()
+	info.append("[b]Position:[/b] (%d, %d)\n[b]Terrain:[/b] %s" % [pos.x, pos.y, terrain_name])
 	
 	if gs.resources.has(pos):
-		info += "\n[color=yellow]Resource:[/color] %s" % gs.resources[pos]
+		info.append("\n[color=yellow]Resource:[/color] %s" % gs.resources[pos])
 	
 	# Geology
 	if gs.geology.has(pos):
 		var geo = gs.geology[pos]
-		info += "\nTemp: %.2f | Rain: %.2f" % [geo.get("temp", 0.0), geo.get("rain", 0.0)]
+		info.append("\nTemp: %.2f | Rain: %.2f" % [geo.get("temp", 0.0), geo.get("rain", 0.0)])
 	
 	if gs.settlements.has(pos):
 		var s = gs.settlements[pos]
-		info += "\n\n[color=cyan]Settlement: %s[/color]" % s.name
-		info += "\nType: %s (Tier %d)" % [s.type, s.tier]
-		info += "\nPop: %d | Faction: %s" % [s.population, s.faction]
+		info.append("\n\n[color=cyan]Settlement: %s[/color]" % s.name)
+		info.append("\nType: %s (Tier %d)" % [s.type, s.tier])
+		info.append("\nPop: %d | Faction: %s" % [s.population, s.faction])
 	
 	# Check armies
 	var armies_here = []
@@ -192,9 +193,9 @@ static func get_tile_info(gs, pos: Vector2i) -> String:
 			armies_here.append(army)
 			
 	if armies_here.size() > 0:
-		info += "\n\n[color=red]Armies (%d):[/color]" % armies_here.size()
+		info.append("\n\n[color=red]Armies (%d):[/color]" % armies_here.size())
 		for a in armies_here:
-			info += "\n- %s (%d units)" % [a.name, a.roster.size()]
+			info.append("\n- %s (%d units)" % [a.name, a.roster.size()])
 
 	# Check caravans
 	var caravans_here = []
@@ -202,9 +203,9 @@ static func get_tile_info(gs, pos: Vector2i) -> String:
 		if Vector2i(c.pos) == pos:
 			caravans_here.append(c)
 	if caravans_here.size() > 0:
-		info += "\n\n[color=green]Caravans: %d[/color]" % caravans_here.size()
+		info.append("\n\n[color=green]Caravans: %d[/color]" % caravans_here.size())
 
-	return info
+	return "".join(info)
 
 static func render_menu(options, idx, has_world, has_char) -> String:
 	var parts = PackedStringArray()
@@ -217,16 +218,17 @@ static func render_menu(options, idx, has_world, has_char) -> String:
 	return "".join(parts)
 
 static func render_battle_config(config, idx) -> String:
-	var s = "[center][b]BATTLE SIMULATOR CONFIG[/b][/center]\n\n"
+	var parts = PackedStringArray()
+	parts.append("[center][b]BATTLE SIMULATOR CONFIG[/b][/center]\n\n")
 	
 	var max_entries = 4
 	
-	s += "[table=2]"
-	s += "[cell][center][b]PLAYER TEAM[/b][/center][/cell]"
-	s += "[cell][center][b]ENEMY TEAM[/b][/center][/cell]"
+	parts.append("[table=2]")
+	parts.append("[cell][center][b]PLAYER TEAM[/b][/center][/cell]")
+	parts.append("[cell][center][b]ENEMY TEAM[/b][/center][/cell]")
 	
-	var left_col = ""
-	var right_col = ""
+	var left_col = PackedStringArray()
+	var right_col = PackedStringArray()
 	
 	for i in range(max_entries):
 		# Player Entry (Left)
@@ -235,9 +237,9 @@ static func render_battle_config(config, idx) -> String:
 		var p_color = "yellow" if idx == p_idx else "white"
 		var p_pre = "> " if idx == p_idx else "  "
 		if p_data["type"] == "none":
-			left_col += "[color=%s]%s[Empty Slot][/color]\n" % [p_color, p_pre]
+			left_col.append("[color=%s]%s[Empty Slot][/color]\n" % [p_color, p_pre])
 		else:
-			left_col += "[color=%s]%s%s x%d (Lvl %d)[/color]\n" % [p_color, p_pre, p_data["type"].capitalize(), p_data["cnt"], p_data["lvl"]]
+			left_col.append("[color=%s]%s%s x%d (Lvl %d)[/color]\n" % [p_color, p_pre, p_data["type"].capitalize(), p_data["cnt"], p_data["lvl"]])
 			
 		# Enemy Entry (Right)
 		var e_idx = i + max_entries
@@ -245,54 +247,56 @@ static func render_battle_config(config, idx) -> String:
 		var e_color = "yellow" if idx == e_idx else "white"
 		var e_pre = "> " if idx == e_idx else "  "
 		if e_data["type"] == "none":
-			right_col += "[color=%s]%s[Empty Slot][/color]\n" % [e_color, e_pre]
+			right_col.append("[color=%s]%s[Empty Slot][/color]\n" % [e_color, e_pre])
 		else:
-			right_col += "[color=%s]%s%s x%d (Lvl %d)[/color]\n" % [e_color, e_pre, e_data["type"].capitalize(), e_data["cnt"], e_data["lvl"]]
+			right_col.append("[color=%s]%s%s x%d (Lvl %d)[/color]\n" % [e_color, e_pre, e_data["type"].capitalize(), e_data["cnt"], e_data["lvl"]])
 			
-	s += "[cell]%s[/cell]" % left_col
-	s += "[cell]%s[/cell]" % right_col
-	s += "[/table]\n\n"
+	parts.append("[cell]%s[/cell]" % "".join(left_col))
+	parts.append("[cell]%s[/cell]" % "".join(right_col))
+	parts.append("[/table]\n\n")
 	
 	var start_idx = max_entries * 2
 	var start_pre = " > " if idx == start_idx else "   "
 	var start_col = "yellow" if idx == start_idx else "white"
-	s += "[center][color=%s]%sSTART BATTLE[/color][/center]" % [start_col, start_pre]
+	parts.append("[center][color=%s]%sSTART BATTLE[/color][/center]" % [start_col, start_pre])
 	
-	s += "\n\n[center][color=gray]Controls: WASD Navigate | 1 Type | A/D Count | Q/E Level[/color][/center]"
+	parts.append("\n\n[center][color=gray]Controls: WASD Navigate | 1 Type | A/D Count | Q/E Level[/color][/center]")
 	
-	return s
+	return "".join(parts)
 
 static func render_world_creation(config, idx) -> String:
-	var s = "[center][b]WORLD GENERATION[/b][/center]\n\n"
+	var parts = PackedStringArray()
+	parts.append("[center][b]WORLD GENERATION[/b][/center]\n\n")
 	var keys = config.keys()
 	for i in range(keys.size()):
 		var k = keys[i]
 		var val = config[k]
 		var prefix = " > " if i == idx else "   "
-		s += "%s[b]%s:[/b] %s\n" % [prefix, k.capitalize(), str(val)]
+		parts.append("%s[b]%s:[/b] %s\n" % [prefix, k.capitalize(), str(val)])
 	
-	s += "\n"
+	parts.append("\n")
 	var start_prefix = " > " if idx == keys.size() else "   "
-	s += "%s[b][ GENERATE WORLD ][/b]\n" % start_prefix
-	s += "[color=gray](Use Arrows to adjust, ENTER to Start)[/color][/center]"
-	return s
+	parts.append("%s[b][ GENERATE WORLD ][/b]\n" % start_prefix)
+	parts.append("[color=gray](Use Arrows to adjust, ENTER to Start)[/color][/center]")
+	return "".join(parts)
 
 static func render_city_studio(config, idx) -> String:
-	var s = "[center][b]CITY DESIGN STUDIO[/b][/center]\n\n"
+	var parts = PackedStringArray()
+	parts.append("[center][b]CITY DESIGN STUDIO[/b][/center]\n\n")
 	var keys = config.keys()
 	for i in range(keys.size()):
 		var k = keys[i]
 		var val = config[k]
 		var prefix = " > " if i == idx else "   "
-		s += "%s[b]%s:[/b] %s\n" % [prefix, k.capitalize(), str(val)]
+		parts.append("%s[b]%s:[/b] %s\n" % [prefix, k.capitalize(), str(val)])
 	
 	var generate_idx = keys.size()
 	var g_prefix = " > " if idx == generate_idx else "   "
 	var g_color = "yellow" if idx == generate_idx else "white"
-	s += "\n[center][color=%s]%s[ GENERATE SETTLEMENT ]%s[/color][/center]\n" % [g_color, g_prefix, g_prefix.reverse()]
+	parts.append("\n[center][color=%s]%s[ GENERATE SETTLEMENT ]%s[/color][/center]\n" % [g_color, g_prefix, g_prefix.reverse()])
 	
-	s += "\n[center][color=gray]W/S: Navigate | A/D: Change Values | ENTER: Build | ESC: Back[/color][/center]"
-	return s
+	parts.append("\n[center][color=gray]W/S: Navigate | A/D: Change Values | ENTER: Build | ESC: Back[/color][/center]")
+	return "".join(parts)
 
 static func render_world_map(gs, vw=100, vh=50, center_override=null) -> Array:
 	var center = center_override
@@ -541,54 +545,55 @@ static func get_master_frame(gs, map_lines, side_lines, header, vw, log_msgs=[],
 
 static func render_character_creation_tabbed(p_conf, p_idx, t_idx, pts, tab, shop_items, purchases, crowns, mat_name, qual_name) -> String:
 	var tabs = ["1: Background", "2: Stats & Traits", "3: Loadout", "4: Summary"]
-	var header = "[center][b]CHARACTER CREATION[/b]\n"
+	var parts = PackedStringArray()
+	parts.append("[center][b]CHARACTER CREATION[/b]\n")
 	for i in range(tabs.size()):
-		if i == tab: header += "[color=green]%s[/color]   " % tabs[i]
-		else: header += "%s   " % tabs[i]
-	header += "[/center]\n\n"
+		if i == tab: parts.append("[color=green]%s[/color]   " % tabs[i])
+		else: parts.append("%s   " % tabs[i])
+	parts.append("[/center]\n\n")
 	
-	var content = ""
+	var content = PackedStringArray()
 	
 	if tab == 0:
-		content += "Name: %s\n" % p_conf["name"]
-		content += "Points Remaining: %d\n\n" % pts
-		content += "[b]Scenario:[/b] (determines starting resources)\n"
+		content.append("Name: %s\n" % p_conf["name"])
+		content.append("Points Remaining: %d\n\n" % pts)
+		content.append("[b]Scenario:[/b] (determines starting resources)\n")
 		var scenarios = ["trader_caravan", "lone_survivor", "noble_exile", "bandit_warlord"]
 		for i in range(scenarios.size()):
 			var s = scenarios[i]
 			var pre = " > " if p_idx == i else "   " # Assumes p_idx tracks scenario list in this mode
 			var mark = "[x]" if p_conf["scenario"] == s else "[ ]"
-			content += "%s%s %s\n" % [pre, mark, s.capitalize().replace("_", " ")]
+			content.append("%s%s %s\n" % [pre, mark, s.capitalize().replace("_", " ")])
 		
-		content += "\n[b]Profession:[/b] (determines skill bonuses)\n"
+		content.append("\n[b]Profession:[/b] (determines skill bonuses)\n")
 		var profs = ["mercenary", "merchant", "blacksmith", "hunter", "scholar"]
 		for i in range(profs.size()):
 			var p = profs[i]
 			var pre = " > " if p_idx == (i + scenarios.size()) else "   "
 			var mark = "[x]" if p_conf["profession"] == p else "[ ]"
-			content += "%s%s %s\n" % [pre, mark, p.capitalize()]
+			content.append("%s%s %s\n" % [pre, mark, p.capitalize()])
 			
 	elif tab == 1:
-		content += "[b]Attributes[/b] (Cost 5 pts each)\n"
+		content.append("[b]Attributes[/b] (Cost 5 pts each)\n")
 		var stats = ["strength", "agility", "endurance", "intelligence"]
 		for i in range(stats.size()):
 			var s = stats[i]
 			var val = p_conf[s]
 			var pre = " > " if i == p_idx else "   " 
-			content += "%s%s: %d\n" % [pre, s.capitalize(), val]
+			content.append("%s%s: %d\n" % [pre, s.capitalize(), val])
 			
-		content += "\n[b]Traits[/b] (Cost varies)\n"
+		content.append("\n[b]Traits[/b] (Cost varies)\n")
 		var traits = ["strong", "quick", "tough", "brilliant", "charismatic", "brave"]
 		for i in range(traits.size()):
 			var t = traits[i]
 			var has = p_conf["traits"].has(t)
 			var pre = " > " if (i == t_idx and p_idx >= stats.size()) else "   "
 			var check = "[x]" if has else "[ ]"
-			content += "%s%s %s\n" % [pre, check, t.capitalize()]
+			content.append("%s%s %s\n" % [pre, check, t.capitalize()])
 			
 	elif tab == 2:
-		content += "Start Gold: %d\n" % crowns
-		content += "Material (Q/E): %s | Quality (Z/C): %s\n\n" % [mat_name.capitalize(), qual_name.capitalize()]
+		content.append("Start Gold: %d\n" % crowns)
+		content.append("Material (Q/E): %s | Quality (Z/C): %s\n\n" % [mat_name.capitalize(), qual_name.capitalize()])
 		
 		var half = (shop_items.size() + 1) / 2
 		for i in range(half):
@@ -602,25 +607,26 @@ static func render_character_creation_tabbed(p_conf, p_idx, t_idx, pts, tab, sho
 				var pre2 = " > " if (i + half) == p_idx else "   "
 				col2 = "%s%s" % [pre2, item2.capitalize()]
 			
-			content += "%-35s %s\n" % [col1, col2]
+			content.append("%-35s %s\n" % [col1, col2])
 			
-		content += "\n[b]Cart Contents:[/b]\n"
+		content.append("\n[b]Cart Contents:[/b]\n")
 		if purchases.size() == 0:
-			content += " (Empty)"
+			content.append(" (Empty)")
 		else:
 			for p in purchases:
-				content += "- %s %s %s\n" % [p.qual.capitalize(), p.mat.capitalize(), p.id.capitalize()]
+				content.append("- %s %s %s\n" % [p.qual.capitalize(), p.mat.capitalize(), p.id.capitalize()])
 				
 	elif tab == 3:
-		content += "\nName: %s\n" % p_conf["name"]
-		content += "Scenario: %s\n" % p_conf["scenario"].capitalize().replace("_", " ")
-		content += "Profession: %s\n" % p_conf["profession"].capitalize()
-		content += "\nStats: STR %d | AGI %d | END %d | INT %d\n" % [p_conf["strength"], p_conf["agility"], p_conf["endurance"], p_conf["intelligence"]]
-		content += "Traits: %s\n" % ", ".join(p_conf["traits"])
-		content += "Items: %d\n" % purchases.size()
-		content += "\n[center]Ready to embark?\nPress ENTER to start your adventure![/center]"
-		
-	return header + content
+		content.append("\nName: %s\n" % p_conf["name"])
+		content.append("Scenario: %s\n" % p_conf["scenario"].capitalize().replace("_", " "))
+		content.append("Profession: %s\n" % p_conf["profession"].capitalize())
+		content.append("\nStats: STR %d | AGI %d | END %d | INT %d\n" % [p_conf["strength"], p_conf["agility"], p_conf["endurance"], p_conf["intelligence"]])
+		content.append("Traits: %s\n" % ", ".join(p_conf["traits"]))
+		content.append("Items: %d\n" % purchases.size())
+		content.append("\n[center]Ready to embark?\nPress ENTER to start your adventure![/center]")
+	
+	parts.append("".join(content))
+	return "".join(parts)
 
 static func render_location_select(gs, loc) -> String:
 	return "[center]Select Starting Location:\n%s[/center]" % str(loc)
