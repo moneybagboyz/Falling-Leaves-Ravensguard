@@ -3,6 +3,8 @@ extends SubViewportContainer
 const CHUNK_SIZE = 16
 const TILE_SIZE = 16
 
+enum RenderMode { OVERWORLD, BATTLE, DUNGEON, CITY, WORLD_PREVIEW }
+
 var camera: Camera2D
 var terrain_layer: TileMapLayer
 var entity_layer: TileMapLayer
@@ -12,6 +14,7 @@ var viewport: SubViewport
 var dirty_chunks = {}  # Track which chunks need updating
 var current_camera_chunk = Vector2i(-999, -999)
 var last_entity_positions = {}  # Track entity positions for dirty updates
+var current_mode = RenderMode.OVERWORLD
 
 func _ready():
 	viewport = $SubViewport
@@ -31,6 +34,12 @@ func _on_resized():
 func set_camera_position(pos: Vector2):
 	if camera:
 		camera.position = pos * TILE_SIZE
+
+func set_render_mode(mode: RenderMode):
+	current_mode = mode
+	# Clear dirty chunks when switching modes
+	dirty_chunks.clear()
+	current_camera_chunk = Vector2i(-999, -999)
 
 func get_camera_chunk() -> Vector2i:
 	if not camera:
@@ -122,14 +131,8 @@ func update_minimap(grid: Array, width: int, height: int):
 				image.set_pixel(x, y, color)
 	
 	var texture = ImageTexture.create_from_image(image)
-	minimap.texture = texture
-
-func _get_tile_atlas_coords(tile: String) -> Vector2i:
-	# Map terrain characters to atlas positions
-	match tile:
-		'~': return Vector2i(0, 0)  # Ocean
-		'.': return Vector2i(1, 0)  # Plains
-		'#': return Vector2i(2, 0)  # Forest
+	minimap.texture = texture/Floor
+		'#': return Vector2i(2, 0)  # Forest/Wall
 		'&': return Vector2i(3, 0)  # Jungle
 		'"': return Vector2i(4, 0)  # Desert
 		'*': return Vector2i(5, 0)  # Tundra
@@ -139,11 +142,13 @@ func _get_tile_atlas_coords(tile: String) -> Vector2i:
 		'/': return Vector2i(9, 0)  # River
 		'\\': return Vector2i(10, 0)  # River
 		'=': return Vector2i(11, 0)  # Road
-		_: return Vector2i(1, 0)  # Default to plains
+		'+': return Vector2i(12, 0)  # Door (dungeon)
+		'%': return Vector2i(13, 0)  # Debris (battle)
+		'X': return Vector2i(14, 0)  # Obstacle (battle)
+		_: return Vector2i(1, 0)  # Default to plains/floor
 
 func _get_entity_atlas_coords(char: String, color: Color) -> Vector2i:
 	# Map entity characters to atlas positions
-	# This needs to match your tile atlas setup
 	match char:
 		'@': return Vector2i(0, 1)  # Player
 		'A': return Vector2i(1, 1)  # Army
@@ -152,11 +157,28 @@ func _get_entity_atlas_coords(char: String, color: Color) -> Vector2i:
 		'T': return Vector2i(4, 1)  # Town
 		'v', 'V': return Vector2i(5, 1)  # Village
 		'h': return Vector2i(6, 1)  # Hamlet
-		_: return Vector2i(0, 1)
-
-func _get_terrain_color(tile: String) -> Color:
-	match tile:
-		'~': return Color(0.2, 0.4, 0.8)  # Blue ocean
+		'S': return Vector2i(7, 1)  # Spearman/Soldier
+		'B': return Vector2i(8, 1)  # Bowman
+		'K': return Vector2i(9, 1)  # Knight
+		'G': return Vector2i(10, 1)  # Goblin
+		'O': return Vector2i(11, 1)  # Orc
+		'D': return Vector2i(12, 1)  # Dragon/Enemy
+		'$': return Vector2i(13, 1)  # Item/Loot
+		'*': return Vector2i(14, 1)  # Projectile
+		'A': return Vector2i(1, 1)  # Army
+		'M': return Vector2i(2, 1)  # Metropolis/floor
+		'#': return Color(0.2, 0.5, 0.2)  # Dark green forest/wall
+		'&': return Color(0.3, 0.6, 0.3)  # Jungle
+		'"': return Color(0.9, 0.8, 0.5)  # Tan desert
+		'*': return Color(0.8, 0.9, 0.9)  # White tundra
+		'o': return Color(0.6, 0.6, 0.4)  # Brown hills
+		'^': return Color(0.6, 0.6, 0.6)  # Gray mountains
+		'≈': return Color(0.4, 0.6, 0.9)  # Light blue lake
+		'/', '\\': return Color(0.3, 0.5, 0.9)  # River
+		'=': return Color(0.7, 0.6, 0.4)  # Road
+		'+': return Color(0.5, 0.3, 0.1)  # Brown door
+		'%': return Color(0.4, 0.4, 0.4)  # Gray debris
+		'X': return Color(0.3, 0.3, 0.3)  # Dark obstacle ocean
 		'.': return Color(0.6, 0.8, 0.4)  # Green plains
 		'#': return Color(0.2, 0.5, 0.2)  # Dark green forest
 		'&': return Color(0.3, 0.6, 0.3)  # Jungle

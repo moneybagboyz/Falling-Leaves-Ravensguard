@@ -2275,46 +2275,133 @@ func render_to_world_viewport():
 	if not world_viewport:
 		return
 	
-	# Update camera position to follow player
-	if state == GameEnums.GameMode.OVERWORLD and GameState.player:
-		var player_pos = GameState.player.pos + GameState.player.camera_offset
-		world_viewport.set_camera_position(Vector2(player_pos))
-	elif state == GameEnums.GameMode.WORLD_PREVIEW:
-		world_viewport.set_camera_position(Vector2(preview_pos))
-	
-	# Collect entities (player, armies, settlements)
+	# Set render mode and camera position based on game state
+	var camera_pos = Vector2.ZERO
+	var grid_ref = []
+	var width = 0
+	var height = 0
 	var entities = {}
-	if GameState.player:
-		entities[GameState.player.pos] = {"char": "@", "col": Color.YELLOW}
 	
-	for army in GameState.armies:
-		var col = Color.RED
-		if army.faction == "player" or (GameState.player and army.faction == GameState.player.faction):
-			col = Color.CYAN
-		entities[army.pos] = {"char": "A", "col": col}
+	if state == GameEnums.GameMode.OVERWORLD:
+		world_viewport.set_render_mode(world_viewport.RenderMode.OVERWORLD)
+		if GameState.player:
+			camera_pos = Vector2(GameState.player.pos + GameState.player.camera_offset)
+		grid_ref = GameState.grid
+		width = GameState.width
+		height = GameState.height
+		
+		# Collect overworld entities
+		if GameState.player:
+			entities[GameState.player.pos] = {"char": "@", "col": Color.YELLOW}
+		
+		for army in GameState.armies:
+			var col = Color.RED
+			if army.faction == "player" or (GameState.player and army.faction == GameState.player.faction):
+				col = Color.CYAN
+			entities[army.pos] = {"char": "A", "col": col}
+		
+		for pos in GameState.settlements:
+			var s = GameState.settlements[pos]
+			var sym = "v"
+			match s.type:
+				"hamlet": sym = "h"
+				"village": sym = "v"
+				"town": sym = "T"
+				"city", "capital": sym = "C"
+				"metropolis": sym = "M"
+				"castle": sym = "S"
+			entities[pos] = {"char": sym, "col": Color.WHITE}
 	
-	for pos in GameState.settlements:
-		var s = GameState.settlements[pos]
-		var sym = "v"
-		match s.type:
-			"hamlet": sym = "h"
-			"village": sym = "v"
-			"town": sym = "T"
-			"city", "capital": sym = "C"
-			"metropolis": sym = "M"
-			"castle": sym = "S"
-		entities[pos] = {"char": sym, "col": Color.WHITE}
+	elif state == GameEnums.GameMode.WORLD_PREVIEW:
+		world_viewport.set_render_mode(world_viewport.RenderMode.WORLD_PREVIEW)
+		camera_pos = Vector2(preview_pos)
+		grid_ref = GameState.grid
+		width = GameState.width
+		height = GameState.height
+		
+		# Same entities as overworld
+		if GameState.player:
+			entities[GameState.player.pos] = {"char": "@", "col": Color.YELLOW}
+		for army in GameState.armies:
+			var col = Color.RED
+			if army.faction == "player" or (GameState.player and army.faction == GameState.player.faction):
+				col = Color.CYAN
+			entities[army.pos] = {"char": "A", "col": col}
+		for pos in GameState.settlements:
+			var s = GameState.settlements[pos]
+			var sym = "C"
+			if s.type == "hamlet": sym = "h"
+			elif s.type == "village": sym = "v"
+			elif s.type == "town": sym = "T"
+			entities[pos] = {"char": sym, "col": Color.WHITE}
+	
+	elif state == GameEnums.GameMode.BATTLE:
+		world_viewport.set_render_mode(world_viewport.RenderMode.BATTLE)
+		if is_instance_valid(battle_ctrl.player_unit):
+			camera_pos = Vector2(battle_ctrl.player_unit.pos)
+		else:
+			camera_pos = Vector2(battle_ctrl.MAP_W / 2, battle_ctrl.MAP_H / 2)
+		grid_ref = battle_ctrl.grid
+		width = battle_ctrl.MAP_W
+		height = battle_ctrl.MAP_H
+		
+		# Collect battle entities
+		for pos in battle_ctrl.unit_lookup:
+			var u = battle_ctrl.unit_lookup[pos]
+			var color = Color.RED
+			if u.faction == GameState.player.faction or u.faction == "player":
+				color = Color.CYAN
+			
+			var sym = u.symbol
+			if u.status.get("is_prone", false): sym = "_"
+			elif u.status.get("is_dead", false): sym = "%"
+			entities[pos] = {"char": sym, "col": color}
+		
+		for p in battle_ctrl.projectiles:
+			var p_pos = Vector2i(p.pos)
+			var color = Color.YELLOW
+			if p.has("engine"): color = Color.ORANGE
+			entities[p_pos] = {"char": p.symbol, "col": color}
+	
+	elif state == GameEnums.GameMode.DUNGEON:
+		world_viewport.set_render_mode(world_viewport.RenderMode.DUNGEON)
+		camera_pos = Vector2(dungeon_ctrl.player_pos)
+		grid_ref = dungeon_ctrl.grid
+		width = dungeon_ctrl.width
+		height = dungeon_ctrl.height
+		
+		# Collect dungeon entities
+		entities[dungeon_ctrl.player_pos] = {"char": "@", "col": Color.YELLOW}
+		for e in dungeon_ctrl.enemies:
+			if e.hp > 0:
+				entities[Vector2i(e.pos)] = {"char": e.type[0].to_upper(), "col": Color.RED}
+		for i in dungeon_ctrl.items:
+			entities[Vector2i(i.pos)] = {"char": "$", "col": Color.GOLD}
+	
+	elif state == GameEnums.GameMode.CITY:
+		world_viewport.set_render_mode(world_viewport.RenderMode.CITY)
+		camera_pos = Vector2(city_ctrl.player_pos)
+		grid_ref = city_ctrl.grid
+		width = city_ctrl.width
+		height = city_ctrl.height
+		
+		# Collect city entities
+		entities[city_ctrl.player_pos] = {"char": "@", "col": Color.YELLOW}
+	
+	# Update camera
+	world_viewport.set_camera_position(camera_pos)
 	
 	# Update terrain (chunk-based, only dirty regions)
-	var camera_chunk_pos = Vector2i(GameState.player.pos.x / 16, GameState.player.pos.y / 16) if GameState.player else Vector2i.ZERO
-	world_viewport.update_visible_terrain(camera_chunk_pos, GameState.grid, GameState.width, GameState.height, tile_map.tile_set)
+	var camera_chunk_pos = Vector2i(int(camera_pos.x) / 16, int(camera_pos.y) / 16)
+	world_viewport.update_visible_terrain(camera_chunk_pos, grid_ref, width, height, tile_map.tile_set)
 	
 	# Update entities (separate layer)
 	world_viewport.update_entities(entities, tile_map.tile_set)
 	
-	# Update minimap (only on world gen complete or periodically)
-	if state == GameEnums.GameMode.WORLD_PREVIEW or Engine.get_frames_drawn() % 60 == 0:
-		world_viewport.update_minimap(GameState.grid, GameState.width, GameState.height)
+	# Update minimap (only for overworld/preview, periodically)
+	if state in [GameEnums.GameMode.OVERWORLD, GameEnums.GameMode.WORLD_PREVIEW]:
+		if Engine.get_frames_drawn() % 60 == 0:
+			world_viewport.update_minimap(grid_ref, width, height)
 
 func render_to_tilemap():
 	if not graphical_mode or not tile_map:
@@ -2602,10 +2689,10 @@ func _on_map_updated():
 
 	# Handle Map Views (Overworld, Battle, Dungeon, City, World Preview, Loading)
 	var graphical_states = [GameEnums.GameMode.OVERWORLD, GameEnums.GameMode.BATTLE, GameEnums.GameMode.DUNGEON, GameEnums.GameMode.CITY, GameEnums.GameMode.WORLD_PREVIEW, GameEnums.GameMode.LOADING]
-	var use_new_viewport = state in [GameEnums.GameMode.OVERWORLD, GameEnums.GameMode.WORLD_PREVIEW]
+	var use_new_viewport = state in [GameEnums.GameMode.OVERWORLD, GameEnums.GameMode.WORLD_PREVIEW, GameEnums.GameMode.BATTLE, GameEnums.GameMode.DUNGEON, GameEnums.GameMode.CITY]
 	
 	if use_new_viewport and world_viewport:
-		# Use new viewport system for overworld and world preview
+		# Use new viewport system for all graphical modes
 		world_viewport.visible = true
 		if tile_map: tile_map.visible = false
 		map_display.visible = false
