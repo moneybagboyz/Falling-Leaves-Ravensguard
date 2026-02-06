@@ -473,6 +473,7 @@ static func process_migration(gs):
 			if gs.settlements[p].parent_city == pos: targets.append(p)
 			
 		var best_target = null
+		var best_happiness = -1
 		for t_pos in targets:
 			var t = gs.settlements.get(t_pos)
 			if not t: continue
@@ -481,9 +482,9 @@ static func process_migration(gs):
 			var t_cap = t.get_housing_capacity()
 			var t_hap = t.happiness
 			
-			if t_pop < t_cap: 
-				if best_target == null or t_hap > gs.settlements[best_target].happiness:
-					best_target = t_pos
+			if t_pop < t_cap and t_hap > best_happiness: 
+				best_happiness = t_hap
+				best_target = t_pos
 		
 		if best_target:
 			var actual = min(migrants_count, pop - 10) 

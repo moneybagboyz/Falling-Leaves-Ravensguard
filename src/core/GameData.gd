@@ -640,7 +640,7 @@ func get_damage_estimate(attacker: GDUnit, defender: GDUnit, part_key: String, a
 	if not weapon: weapon = ITEMS["fist"]
 	
 	var attacks = weapon.get("attacks", [])
-	if attacks.size() == 0:
+	if attacks.is_empty():
 		attacks = [{"name": "Strike", "dmg_mult": 1.0, "dmg_type": weapon.get("dmg_type", "blunt"), "contact": weapon.get("contact", 10), "penetration": weapon.get("penetration", 10)}]
 	
 	var attack = attacks[clamp(attack_idx, 0, attacks.size() - 1)]
@@ -1992,7 +1992,7 @@ func generate_recruit(rng: RandomNumberGenerator, tier: int) -> GDUnit:
 		if a_tier <= tier and a_tier >= max_found_tier - 1:
 			valid_archetypes.append(a_key)
 	
-	if valid_archetypes.size() == 0:
+	if valid_archetypes.is_empty():
 		valid_archetypes.append("spearman")
 		
 	var a_key = valid_archetypes[rng.randi() % valid_archetypes.size()]

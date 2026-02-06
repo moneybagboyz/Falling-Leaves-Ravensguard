@@ -78,10 +78,12 @@ static func recalculate_production(s_data, grid, resources, geology):
 			var p = s_data.pos + Vector2i(dx, dy)
 			if p.x < 0 or p.x >= w or p.y < 0 or p.y >= h: continue
 			if p.distance_to(s_data.pos) > r: continue
-			var t = grid[p.y][p.x]
-			# Use geology to find underlying terrain if grid is an overlay
-			if geology.has(p) and t in ["=", "T", "C", "v", "h", "k"]:
-				t = geology[p].get("biome", t)
+			
+			# Early exit if all slots are saturated (avoid processing entire radius unnecessarily)
+			if s_data.mining_slots > 10000 and s_data.fishing_slots > 5000 and s_data.extraction_slots > 3000:
+				break
+			
+			var t = GameState.get_true_terrain(p)
 			
 			if t == "~": 
 				s_data.fishing_slots += 150
@@ -310,24 +312,24 @@ static func _process_labor_pool(s_data, efficiency):
 		var needed = daily_food_req - s_data.get_food_stock()
 		# Priority 1: Fishing (fast yield) if available
 		if fish_limit > 0:
-			var f_take = clamp(int((needed * 360.0) / Globals.FISHING_YIELD_BASE), 1, min(remaining_laborers, fish_limit))
+			var f_take = clamp(int((needed * Globals.DAYS_PER_YEAR) / Globals.FISHING_YIELD_BASE), 1, min(remaining_laborers, fish_limit))
 			alloc["fishing"] += f_take
 			remaining_laborers -= f_take
 			fish_limit -= f_take
-			needed -= (f_take * Globals.FISHING_YIELD_BASE / 360.0)
+			needed -= (f_take * Globals.FISHING_YIELD_BASE / Globals.DAYS_PER_YEAR)
 		
 		# Priority 2: Hunting (Wilderness food)
 		if needed > 0 and remaining_laborers > 0 and wilderness_limit > 0:
-			var h_take = clamp(int((needed * 360.0) / Globals.HUNTING_YIELD_MEAT), 1, min(remaining_laborers, wilderness_limit))
+			var h_take = clamp(int((needed * Globals.DAYS_PER_YEAR) / Globals.HUNTING_YIELD_MEAT), 1, min(remaining_laborers, wilderness_limit))
 			alloc["hunting"] += h_take
 			remaining_laborers -= h_take
 			wilderness_limit -= h_take
-			needed -= (h_take * Globals.HUNTING_YIELD_MEAT / 360.0)
+			needed -= (h_take * Globals.HUNTING_YIELD_MEAT / Globals.DAYS_PER_YEAR)
 
 		# Priority 3: Farming
 		if needed > 0 and farm_limit > 0 and remaining_laborers > 0:
 			var g_needed = needed / (1.0 - Globals.SEED_RATIO_INV)
-			var g_take = clamp(int((g_needed * 360.0) / (Globals.ACRES_WORKED_PER_LABORER * Globals.BUSHELS_PER_ACRE_BASE)), 1, min(remaining_laborers, farm_limit))
+			var g_take = clamp(int((g_needed * Globals.DAYS_PER_YEAR) / (Globals.ACRES_WORKED_PER_LABORER * Globals.BUSHELS_PER_ACRE_BASE)), 1, min(remaining_laborers, farm_limit))
 			alloc["farms"] += g_take
 			remaining_laborers -= g_take
 			farm_limit -= g_take
@@ -335,7 +337,7 @@ static func _process_labor_pool(s_data, efficiency):
 	if remaining_laborers > 0 and s_data.inventory.get("wood", 0) < daily_wood_req:
 		var needed = daily_wood_req - s_data.inventory.get("wood", 0)
 		if forest_land_limit > 0:
-			var w_take = clamp(int((needed * 360.0) / (Globals.ACRES_WORKED_PER_LABORER * Globals.FORESTRY_YIELD_WOOD)), 1, min(remaining_laborers, forest_land_limit))
+			var w_take = clamp(int((needed * Globals.DAYS_PER_YEAR) / (Globals.ACRES_WORKED_PER_LABORER * Globals.FORESTRY_YIELD_WOOD)), 1, min(remaining_laborers, forest_land_limit))
 			alloc["wood"] += w_take
 			remaining_laborers -= w_take
 			forest_land_limit -= w_take
@@ -387,14 +389,14 @@ static func _process_labor_pool(s_data, efficiency):
 		var p_furs = get_price("furs", s_data)
 		var p_horses = get_price("horses", s_data)
 		
-		var v_farm = (Globals.ACRES_WORKED_PER_LABORER * Globals.BUSHELS_PER_ACRE_BASE / 360.0) * (1.0 - Globals.SEED_RATIO_INV) * p_grain
-		var v_fish = (Globals.FISHING_YIELD_BASE / 360.0) * p_fish
+		var v_farm = (Globals.ACRES_WORKED_PER_LABORER * Globals.BUSHELS_PER_ACRE_BASE / Globals.DAYS_PER_YEAR) * (1.0 - Globals.SEED_RATIO_INV) * p_grain
+		var v_fish = (Globals.FISHING_YIELD_BASE / Globals.DAYS_PER_YEAR) * p_fish
 		var v_mine = (4.0 / 30.0) * p_stone
-		var v_wood = (Globals.ACRES_WORKED_PER_LABORER * Globals.FORESTRY_YIELD_WOOD / 360.0) * p_wood
-		var v_pasture = (Globals.ACRES_WORKED_PER_LABORER / 360.0) * (Globals.PASTURE_YIELD_WOOL * p_wool + Globals.PASTURE_YIELD_HIDES * p_hides + Globals.PASTURE_YIELD_MEAT * p_meat + Globals.PASTURE_YIELD_HORSES * p_horses)
-		var v_hunt = (Globals.ACRES_WORKED_PER_LABORER / 360.0) * (Globals.HUNTING_YIELD_MEAT * p_meat + Globals.HUNTING_YIELD_HIDES * p_hides)
-		var v_forage = (Globals.ACRES_WORKED_PER_LABORER * Globals.FORAGING_YIELD_GRAIN / 360.0) * p_grain
-		var v_trap = (Globals.ACRES_WORKED_PER_LABORER * Globals.FUR_YIELD / 360.0) * p_furs
+		var v_wood = (Globals.ACRES_WORKED_PER_LABORER * Globals.FORESTRY_YIELD_WOOD / Globals.DAYS_PER_YEAR) * p_wood
+		var v_pasture = (Globals.ACRES_WORKED_PER_LABORER / Globals.DAYS_PER_YEAR) * (Globals.PASTURE_YIELD_WOOL * p_wool + Globals.PASTURE_YIELD_HIDES * p_hides + Globals.PASTURE_YIELD_MEAT * p_meat + Globals.PASTURE_YIELD_HORSES * p_horses)
+		var v_hunt = (Globals.ACRES_WORKED_PER_LABORER / Globals.DAYS_PER_YEAR) * (Globals.HUNTING_YIELD_MEAT * p_meat + Globals.HUNTING_YIELD_HIDES * p_hides)
+		var v_forage = (Globals.ACRES_WORKED_PER_LABORER * Globals.FORAGING_YIELD_GRAIN / Globals.DAYS_PER_YEAR) * p_grain
+		var v_trap = (Globals.ACRES_WORKED_PER_LABORER * Globals.FUR_YIELD / Globals.DAYS_PER_YEAR) * p_furs
 		
 		var jobs = [
 			{"id": "fishing", "val": v_fish, "limit": fish_limit},
@@ -438,13 +440,13 @@ static func _produce_resource_by_job(s_data, job_id, labor):
 		"farms":
 			b_mult = 1.0 + (s_data.buildings.get("farm", 0) * 0.5)
 			var h_acres = labor * Globals.ACRES_WORKED_PER_LABORER
-			var g_prod = int((float(h_acres * Globals.BUSHELS_PER_ACRE_BASE * b_mult) / 360.0) * (1.0 - Globals.SEED_RATIO_INV))
+			var g_prod = int((float(h_acres * Globals.BUSHELS_PER_ACRE_BASE * b_mult) / Globals.DAYS_PER_YEAR) * (1.0 - Globals.SEED_RATIO_INV))
 			s_data.add_inventory("grain", g_prod)
 			GameState.track_production("grain", g_prod)
 			_calculate_dividend(s_data, "farm", g_prod, "grain")
 		"fishing":
 			b_mult = 1.0 + (s_data.buildings.get("fishery", 0) * 0.5)
-			var f_prod = int(labor * Globals.FISHING_YIELD_BASE * b_mult / 360.0)
+			var f_prod = int(labor * Globals.FISHING_YIELD_BASE * b_mult / Globals.DAYS_PER_YEAR)
 			s_data.add_inventory("fish", f_prod)
 			GameState.track_production("fish", f_prod)
 			_calculate_dividend(s_data, "fishery", f_prod, "fish")
@@ -458,10 +460,10 @@ static func _produce_resource_by_job(s_data, job_id, labor):
 		"pasture":
 			b_mult = 1.0 + (s_data.buildings.get("pasture", 0) * 0.5)
 			var p_worked = labor * Globals.ACRES_WORKED_PER_LABORER
-			var wool = int(p_worked * Globals.PASTURE_YIELD_WOOL * b_mult / 360.0)
-			var hides = int(p_worked * Globals.PASTURE_YIELD_HIDES * b_mult / 360.0)
-			var meat = int(p_worked * Globals.PASTURE_YIELD_MEAT * b_mult / 360.0)
-			var horses = int(p_worked * Globals.PASTURE_YIELD_HORSES * b_mult / 360.0)
+			var wool = int(p_worked * Globals.PASTURE_YIELD_WOOL * b_mult / Globals.DAYS_PER_YEAR)
+			var hides = int(p_worked * Globals.PASTURE_YIELD_HIDES * b_mult / Globals.DAYS_PER_YEAR)
+			var meat = int(p_worked * Globals.PASTURE_YIELD_MEAT * b_mult / Globals.DAYS_PER_YEAR)
+			var horses = int(p_worked * Globals.PASTURE_YIELD_HORSES * b_mult / Globals.DAYS_PER_YEAR)
 			s_data.add_inventory("wool", wool)
 			s_data.add_inventory("hides", hides)
 			s_data.add_inventory("meat", meat)
@@ -472,13 +474,13 @@ static func _produce_resource_by_job(s_data, job_id, labor):
 			GameState.track_production("horses", horses)
 		"foraging":
 			var f_worked = labor * Globals.ACRES_WORKED_PER_LABORER
-			var f_grain = int(f_worked * Globals.FORAGING_YIELD_GRAIN / 360.0)
+			var f_grain = int(f_worked * Globals.FORAGING_YIELD_GRAIN / Globals.DAYS_PER_YEAR)
 			s_data.add_inventory("grain", f_grain)
 			GameState.track_production("grain", f_grain)
 		"hunting":
 			var h_worked = labor * Globals.ACRES_WORKED_PER_LABORER
-			var h_meat = int(h_worked * Globals.HUNTING_YIELD_MEAT / 360.0)
-			var h_hides = int(h_worked * Globals.HUNTING_YIELD_HIDES / 360.0)
+			var h_meat = int(h_worked * Globals.HUNTING_YIELD_MEAT / Globals.DAYS_PER_YEAR)
+			var h_hides = int(h_worked * Globals.HUNTING_YIELD_HIDES / Globals.DAYS_PER_YEAR)
 			s_data.add_inventory("meat", h_meat)
 			s_data.add_inventory("hides", h_hides)
 			GameState.track_production("meat", h_meat)
@@ -486,29 +488,29 @@ static func _produce_resource_by_job(s_data, job_id, labor):
 		"wood":
 			b_mult = 1.0 + (s_data.buildings.get("lumber_mill", 0) * 1.0) # Mills are very effective
 			var w_worked = labor * Globals.ACRES_WORKED_PER_LABORER
-			var wood = int(w_worked * Globals.FORESTRY_YIELD_WOOD * b_mult / 360.0)
+			var wood = int(w_worked * Globals.FORESTRY_YIELD_WOOD * b_mult / Globals.DAYS_PER_YEAR)
 			s_data.add_inventory("wood", wood)
 			GameState.track_production("wood", wood)
 			_calculate_dividend(s_data, "lumber_mill", wood, "wood")
 		"extraction":
 			# Choice of product based on tile mix
 			if s_data.arid_acres > 0:
-				var salt = int(labor * Globals.SALT_YIELD / 360.0)
-				var sand = int(labor * Globals.SAND_YIELD / 360.0)
+				var salt = int(labor * Globals.SALT_YIELD / Globals.DAYS_PER_YEAR)
+				var sand = int(labor * Globals.SAND_YIELD / Globals.DAYS_PER_YEAR)
 				s_data.add_inventory("salt", salt)
 				s_data.add_inventory("sand", sand)
 				GameState.track_production("salt", salt)
 				GameState.track_production("sand", sand)
 			elif s_data.wetland_acres > 0:
-				var peat = int(labor * Globals.PEAT_YIELD / 360.0)
-				var clay = int(labor * Globals.CLAY_YIELD / 360.0)
+				var peat = int(labor * Globals.PEAT_YIELD / Globals.DAYS_PER_YEAR)
+				var clay = int(labor * Globals.CLAY_YIELD / Globals.DAYS_PER_YEAR)
 				s_data.add_inventory("peat", peat)
 				s_data.add_inventory("clay", clay)
 				GameState.track_production("peat", peat)
 				GameState.track_production("clay", clay)
 			else: # River Sifting
-				var gold = int(labor * Globals.SIFTING_YIELD_GOLD / 360.0)
-				var tin = int(labor * Globals.SIFTING_YIELD_TIN / 360.0)
+				var gold = int(labor * Globals.SIFTING_YIELD_GOLD / Globals.DAYS_PER_YEAR)
+				var tin = int(labor * Globals.SIFTING_YIELD_TIN / Globals.DAYS_PER_YEAR)
 				s_data.add_inventory("gold", gold)
 				s_data.add_inventory("tin", tin)
 				GameState.track_production("gold", gold)

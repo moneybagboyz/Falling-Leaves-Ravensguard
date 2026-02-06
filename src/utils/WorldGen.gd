@@ -117,16 +117,24 @@ func generate(w: int, h: int, rng: RandomNumberGenerator, live_grid: Array = [],
 	await (Engine.get_main_loop() as SceneTree).process_frame # Extra pause to see it
 	
 	step_completed.emit("RAISING MOUNTAINS...") # Changed from Atmosphere to align with elevation logic
+	var tiles_processed = 0
+	var total_tiles = w * h
+	var update_interval = 3000  # Update UI every 3000 tiles for smoother progress
+	
 	for y in range(h):
-		if y % 15 == 0:
-			step_completed.emit("RAISING MOUNTAINS [%d%%]" % [int((float(y)/h)*100)])
-			await (Engine.get_main_loop() as SceneTree).process_frame
 		elevation_map.append([])
 		temp_map.append([])
 		moisture_map.append([])
 		drainage_map.append([])
 		strata_map.append([])
 		for x in range(w):
+			tiles_processed += 1
+			
+			# Batched await: Update UI periodically based on tiles processed
+			if tiles_processed % update_interval == 0:
+				step_completed.emit("RAISING MOUNTAINS [%d%%]" % [int((float(tiles_processed)/total_tiles)*100)])
+				await (Engine.get_main_loop() as SceneTree).process_frame
+			
 			var pos_v = Vector2(x, y)
 			
 			# 1. Find two nearest plates

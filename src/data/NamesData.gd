@@ -33,7 +33,7 @@ static func get_last_names() -> Array:
 static func get_random_name(rng: RandomNumberGenerator) -> String:
 	var first = get_first_names()
 	var last = get_last_names()
-	if first.size() == 0 or last.size() == 0:
+	if first.is_empty() or last.is_empty():
 		return "Unknown"
 	return first[rng.randi() % first.size()] + " " + last[rng.randi() % last.size()]
 

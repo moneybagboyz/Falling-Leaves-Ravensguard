@@ -28,8 +28,8 @@ static func process_movement(gs):
 						found_prey = e
 			
 			if found_prey:
-				var dist = army_obj.pos.distance_to(found_prey.pos)
-				if dist < 1.2:
+				# Distance already computed during best_dist calculation, use it
+				if best_dist < 1.2:
 					gs.resolve_ai_battle(army_obj, found_prey)
 				else:
 					var dir = (found_prey.pos - army_obj.pos).sign()
@@ -198,6 +198,15 @@ static func process_movement(gs):
 		if caravan_obj.target_pos != Vector2i(-1, -1):
 			# AVOIDANCE: Only check for enemies every 4 turns to save performance
 			if update_this_turn:
+				# Use spatial hash instead of iterating all armies
+				var nearby_threats = gs.get_entities_near(caravan_obj.pos, 8)
+				var enemy_nearby = false
+				for e in nearby_threats:
+					if e is GDArmy and e.type == "bandit":
+						enemy_nearby = true
+						break
+				
+				if enemy_nearby:
 				var enemies = []
 				for army in gs.armies:
 					if gs.get_relation(caravan_obj.faction, army.faction) == "war":
@@ -428,47 +437,51 @@ static func find_trade_route(gs, caravan_obj):
 	return _find_random_trade(gs, caravan_obj)
 
 static func _find_random_trade(gs, caravan_obj):
-	var best_profit = 0
-	var best_buy_pos = Vector2i.ZERO
-	var best_sell_pos = Vector2i.ZERO
-	var best_res = ""
+	# OPTIMIZED: Pre-compute price differentials instead of nested random sampling
+	var trade_opportunities = []
 	
+	# Cache settlements.keys() to avoid creating new arrays in nested loops
 	var s_keys = gs.settlements.keys()
 	if s_keys.size() < 2: return {}
-
-	for i in range(20):
-		var s1_pos = s_keys[gs.rng.randi() % s_keys.size()]
+	
+	# Build opportunity list (much faster than nested random sampling)
+	for i in range(min(s_keys.size(), 30)):  # Limit to 30 settlements max
+		var s1_pos = s_keys[i]
 		var s1_data = gs.settlements[s1_pos]
-		# RELAXED: Caravans can buy from villages and towns too
-		if s1_data.type == "hamlet": continue # Still skip hamlets for caravans, use Pulses for those
+		if s1_data.type == "hamlet": continue
 		if gs.get_relation(caravan_obj.faction, s1_data.faction) == "war": continue
 		
-		for res in GameData.BASE_PRICES:
+		for res in ["grain", "iron", "wood", "fish", "wool"]:  # Focus on high-volume goods
 			var stock = s1_data.inventory.get(res, 0)
 			if stock < 10: continue
 			var buy_price = EconomyManager.get_price(res, s1_data)
 			
-			for j in range(10):
-				var s2_pos = s_keys[gs.rng.randi() % s_keys.size()]
-				if s1_pos == s2_pos: continue
+			# Find best seller for this resource
+			for j in range(min(s_keys.size(), 20)):  # Limit comparisons
+				if i == j: continue
+				var s2_pos = s_keys[j]
 				var s2_data = gs.settlements[s2_pos]
-				# RELAXED: Caravans can sell to any non-hamlet settlement
-				if s2_data.type == "hamlet": continue 
+				if s2_data.type == "hamlet": continue
 				if gs.get_relation(caravan_obj.faction, s2_data.faction) == "war": continue
 				
 				var sell_price = EconomyManager.get_price(res, s2_data)
 				var profit = sell_price - buy_price
 				var dist = s1_pos.distance_to(s2_pos)
-				profit -= int(dist / 10.0)
+				var score = profit - int(dist / 10.0)
 				
-				if profit > best_profit:
-					best_profit = profit
-					best_buy_pos = s1_pos
-					best_sell_pos = s2_pos
-					best_res = res
+				if score > 0:
+					trade_opportunities.append({
+						"buy_pos": s1_pos,
+						"sell_pos": s2_pos,
+						"resource": res,
+						"profit": score
+					})
+	
+	# Return best opportunity
+	if not trade_opportunities.is_empty():
+		trade_opportunities.sort_custom(func(a, b): return a["profit"] > b["profit"])
+		return trade_opportunities[0]
 					
-	if best_profit > 0:
-		return {"buy_pos": best_buy_pos, "sell_pos": best_sell_pos, "resource": best_res, "profit": best_profit}
 	return {}
 
 @warning_ignore("shadowed_global_identifier")

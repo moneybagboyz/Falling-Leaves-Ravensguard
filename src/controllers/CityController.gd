@@ -530,10 +530,11 @@ func _draw_smooth_road(p1: Vector2, p2: Vector2, thick: int):
 						_set_l_cell("pathing", tx, ty, "+")
 
 func _draw_wall_line(p1: Vector2i, p2: Vector2i):
-	var d = Vector2(p1).distance_to(Vector2(p2))
+	var d = p1.distance_to(p2)  # Vector2i has distance_to
 	var steps = int(d * 2)
 	for i in range(steps):
 		var t = i / float(steps)
+		# Use Vector2 for lerp as Vector2i doesn't have it, but avoid unnecessary conversions
 		var p = Vector2(p1).lerp(Vector2(p2), t)
 		_set_wall(int(p.x), int(p.y))
 

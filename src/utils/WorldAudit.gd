@@ -628,7 +628,7 @@ static func render_diagnostic_report(gs):
 	if b_rate < 20.0: alerts.append("MARKET STAGNATION: Fulfillment rate under 20%.")
 	if ledger.get("deaths_war", 0) > 100: alerts.append("TOTAL WAR: High combat casualties this month.")
 	
-	if alerts.size() == 0:
+	if alerts.is_empty():
 		print("Simulation steady. No major anomalies detected.")
 	else:
 		for a in alerts: print("!! %s" % a)

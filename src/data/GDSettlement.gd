@@ -121,10 +121,7 @@ func initialize_acres(grid, _resources, geology):
 			if p.x < 0 or p.x >= w or p.y < 0 or p.y >= h: continue
 			if p.distance_to(pos) > radius: continue
 			
-			var t = grid[p.y][p.x]
-			# Use geology to find underlying terrain if grid is an overlay (Road, Town, etc.)
-			if geology.has(p) and t in ["=", "T", "C", "v", "h", "k", "?"]:
-				t = geology[p].get("biome", t)
+			var t = GameState.get_true_terrain(p)
 				
 			var tile_acres = Globals.ACRES_PER_TILE
 			

@@ -243,7 +243,7 @@ func _paint_blueprint_on_grid(bp: Dictionary, city_pos: Vector2i):
 			
 			for y in range(max(0, cy_i - rad_i), min(height, cy_i + rad_i + 1)):
 				for x in range(max(0, cx_i - rad_i), min(width, cx_i + rad_i + 1)):
-					if Vector2(x, y).distance_to(d_pos) <= d_rad:
+					if Vector2i(x, y).distance_to(Vector2i(int(d_pos.x), int(d_pos.y))) <= d_rad:
 						if d.type == "keep": grid[y][x] = "keep"
 						elif d.type == "market": grid[y][x] = "market"
 						elif d.type == "docks": grid[y][x] = "docks"

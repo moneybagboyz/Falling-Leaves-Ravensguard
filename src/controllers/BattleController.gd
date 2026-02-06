@@ -1612,7 +1612,8 @@ func resolve_aoe_damage(attacker, pos: Vector2i, radius: int, engine_data: Dicti
 		# Find distance to closest point of victim
 		var dist = 9999.0
 		for offset in victim.footprint:
-			dist = min(dist, Vector2(pos).distance_to(Vector2(victim.pos + offset)))
+			# Vector2i has distance_to - no need to convert to Vector2
+			dist = min(dist, pos.distance_to(victim.pos + offset))
 			
 		var fallout = 1.0 - (dist / (radius + 1.0))
 		if fallout > 0:

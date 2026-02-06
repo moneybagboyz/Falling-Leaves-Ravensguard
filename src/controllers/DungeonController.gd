@@ -220,7 +220,7 @@ func generate_floor():
 				if ruin_type.to_lower() in v["tags"]:
 					relevant_vaults.append(v)
 			
-			if relevant_vaults.size() == 0: relevant_vaults = VAULTS
+			if relevant_vaults.is_empty(): relevant_vaults = VAULTS
 			
 			var vault = relevant_vaults[GameState.rng.randi() % relevant_vaults.size()]
 			if leaf.size.x >= vault.width and leaf.size.y >= vault.height:

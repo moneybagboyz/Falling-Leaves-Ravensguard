@@ -778,8 +778,10 @@ func advance_time():
 			run_world_audit()
 
 	# STAGGERED SETTLEMENT UPDATES (Optimization 2)
+	# Use hash for better distribution than (x+y) % TURNS_PER_DAY
 	for pos in settlements:
-		if (pos.x + pos.y) % Globals.TURNS_PER_DAY == hour:
+		var pos_hash = (pos.x * 73856093) ^ (pos.y * 19349663)  # Spatial hash function
+		if abs(pos_hash) % Globals.TURNS_PER_DAY == hour:
 			process_settlement_pulse(settlements[pos])
 
 	# 1. Party Food Consumption (Twice a day)
@@ -910,6 +912,15 @@ func get_entity_name(entity):
 
 func is_in_bounds(pos: Vector2i) -> bool:
 	return pos.x >= 0 and pos.x < width and pos.y >= 0 and pos.y < height
+
+func get_true_terrain(pos: Vector2i) -> String:
+	"""Get actual terrain type, using geology to override settlement/road tiles"""
+	if not is_in_bounds(pos): return "~"
+	var t = grid[pos.y][pos.x]
+	# Use geology to find underlying terrain if grid is an overlay (Roads, Towns, etc.)
+	if geology.has(pos) and t in ["=", "T", "C", "v", "h", "k", "?"]:
+		return geology[pos].get("biome", t)
+	return t
 
 func is_walkable(pos: Vector2i) -> bool:
 	if not is_in_bounds(pos): return false

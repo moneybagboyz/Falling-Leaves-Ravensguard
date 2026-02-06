@@ -75,14 +75,20 @@ static func _update_campaigns(gs):
 		
 		# Strategic Marshal: Find most vulnerable enemy border city
 		var potential_targets = []
+		
+		# First, find faction settlements for distance calculation
+		var faction_settlements = []
+		for s_pos in gs.settlements:
+			if gs.settlements[s_pos].faction == f.id:
+				faction_settlements.append(s_pos)
+		
 		for s_pos in gs.settlements:
 			var s_data = gs.settlements[s_pos]
 			if gs.get_relation(f.id, s_data.faction) == "war":
-				# Calculate vulnerability
+				# Calculate vulnerability using cached faction settlements
 				var dist_to_f = 999
-				for fs_pos in gs.settlements:
-					if gs.settlements[fs_pos].faction == f.id:
-						dist_to_f = min(dist_to_f, s_pos.distance_to(fs_pos))
+				for fs_pos in faction_settlements:
+					dist_to_f = min(dist_to_f, s_pos.distance_to(fs_pos))
 				
 				if dist_to_f < 30: # Within strike distance
 					var vulnerability = 100 - s_data.garrison

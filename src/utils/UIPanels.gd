@@ -610,7 +610,7 @@ static func render_character_creation_tabbed(p_conf, p_idx, t_idx, pts, tab, sho
 			content.append("%-35s %s\n" % [col1, col2])
 			
 		content.append("\n[b]Cart Contents:[/b]\n")
-		if purchases.size() == 0:
+		if purchases.is_empty():
 			content.append(" (Empty)")
 		else:
 			for p in purchases:

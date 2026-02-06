@@ -11,6 +11,7 @@ const MAX_BANDITS = 15
 const TURNS_PER_DAY = 24
 const DAYS_PER_MONTH = 30
 const MONTHS_PER_YEAR = 12
+const DAYS_PER_YEAR = 360  # DAYS_PER_MONTH * MONTHS_PER_YEAR
 
 # --- POPULATION & GROWTH ---
 const STARVATION_DEATH_RATE = 0.02 # Lowered from 0.1 to allow more time for rescue/trade
