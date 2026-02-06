@@ -1,0 +1,109 @@
+[gd_scene load_steps=4 format=3 uid="uid://b3680s00fak3w"]
+
+[ext_resource type="Script" uid="uid://cf16neka4361r" path="res://Main.gd" id="1_main"]
+[ext_resource type="Script" uid="uid://bcovhtdes4ij5" path="res://OverworldController.gd" id="2_overworld"]
+[ext_resource type="Script" uid="uid://d1onqmi6jcnwl" path="res://BattleController.gd" id="3_battle"]
+
+[node name="GameRoot" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_main")
+
+[node name="OverworldController" type="Node" parent="."]
+script = ExtResource("2_overworld")
+
+[node name="BattleController" type="Node" parent="."]
+script = ExtResource("3_battle")
+
+[node name="MainLayout" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 0
+
+[node name="ScreenHeader" type="RichTextLabel" parent="MainLayout"]
+layout_mode = 2
+bbcode_enabled = true
+fit_content = true
+autowrap_mode = 0
+
+[node name="ContentLayout" type="HBoxContainer" parent="MainLayout"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 0
+
+[node name="MapPanel" type="PanelContainer" parent="MainLayout/ContentLayout"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="MapDisplay" type="RichTextLabel" parent="MainLayout/ContentLayout/MapPanel"]
+layout_mode = 2
+bbcode_enabled = true
+scroll_active = false
+autowrap_mode = 0
+
+[node name="SidePanel" type="VBoxContainer" parent="MainLayout/ContentLayout"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 0.3
+
+[node name="InfoLabel" type="RichTextLabel" parent="MainLayout/ContentLayout/SidePanel"]
+layout_mode = 2
+size_flags_vertical = 3
+bbcode_enabled = true
+autowrap_mode = 0
+
+[node name="PartyPanel" type="RichTextLabel" parent="MainLayout/ContentLayout/SidePanel"]
+visible = false
+layout_mode = 2
+size_flags_vertical = 3
+bbcode_enabled = true
+autowrap_mode = 0
+
+[node name="FiefPanel" type="RichTextLabel" parent="MainLayout/ContentLayout/SidePanel"]
+visible = false
+layout_mode = 2
+size_flags_vertical = 3
+bbcode_enabled = true
+autowrap_mode = 0
+
+[node name="LogPanel" type="PanelContainer" parent="MainLayout"]
+custom_minimum_size = Vector2(0, 150)
+layout_mode = 2
+
+[node name="LogLabel" type="RichTextLabel" parent="MainLayout/LogPanel"]
+layout_mode = 2
+bbcode_enabled = true
+scroll_following = true
+autowrap_mode = 0
+
+[node name="BattleUI" type="PanelContainer" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="BattleUI"]
+layout_mode = 2
+
+[node name="BattleMap" type="RichTextLabel" parent="BattleUI/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+bbcode_enabled = true
+autowrap_mode = 0
+
+[node name="BattleInfo" type="RichTextLabel" parent="BattleUI/VBoxContainer"]
+layout_mode = 2
+bbcode_enabled = true
+fit_content = true
+autowrap_mode = 0

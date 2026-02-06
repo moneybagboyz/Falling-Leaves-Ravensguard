@@ -1,0 +1,70 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Append render_dungeon to UIPanels.gd",
+			"type": "shell",
+			"command": "Add-Content -Path \"c:\\Users\\patri\\Documents\\falling-leaves\\UIPanels.gd\" -Value '\nstatic func render_dungeon(gs, dc) -> String:\n\tvar buffer = \"[ %s - Floor %d ]\\n\" % [dc.dungeon_name.to_upper(), dc.current_floor]\n\tbuffer += \"WASD: Move/Attack | ,: Pick Up | .: Wait | ESC: Exit (Floor 1)\\n\"\n\tbuffer += \"--------------------------------------------------------------------------------\\n\"\n\t\n\tvar view_w = 60\n\tvar view_h = 25\n\tvar start_x = dc.player_pos.x - view_w / 2\n\tvar start_y = dc.player_pos.y - view_h / 2\n\t\n\tvar map_lines = []\n\tfor y in range(start_y, start_y + view_h):\n\t\tvar line = \"\"\n\t\tfor x in range(start_x, start_x + view_w):\n\t\t\tvar p = Vector2i(x, y)\n\t\t\tif x < 0 or x >= dc.width or y < 0 or y >= dc.height:\n\t\t\t\tline += \" \"\n\t\t\t\tcontinue\n\t\t\t\n\t\t\tif not dc.fog_of_war[y][x]:\n\t\t\t\tline += \" \"\n\t\t\t\tcontinue\n\t\t\t\t\n\t\t\tif p == dc.player_pos:\n\t\t\t\tline += \"[color=yellow]@[/color]\"\n\t\t\t\tcontinue\n\t\t\t\t\n\t\t\tvar enemy = dc.get_enemy_at(p)\n\t\t\tif enemy:\n\t\t\t\tline += \"[color=red]%s[/color]\" % enemy.symbol\n\t\t\t\tcontinue\n\t\t\t\t\n\t\t\tvar item_found = false\n\t\t\tfor it in dc.items:\n\t\t\t\tif it.pos == p:\n\t\t\t\t\tline += \"[color=cyan]*[/color]\"\n\t\t\t\t\titem_found = true\n\t\t\t\t\tbreak\n\t\t\tif item_found: continue\n\t\t\t\n\t\t\tvar t = dc.grid[y][x]\n\t\t\tif t == \"#\": line += \"[color=gray]#[/color]\"\n\t\t\telif t == \".\": line += \"[color=dim_gray].[/color]\"\n\t\t\telif t == \"<\": line += \"[color=white]<[/color]\"\n\t\t\telif t == \">\": line += \"[color=white]>[/color]\"\n\t\t\telse: line += t\n\t\tmap_lines.append(line)\n\t\n\t# Side Info\n\tvar info_col = []\n\tvar cmd = gs.player.commander\n\tinfo_col.append(\"COMMANDER\")\n\tinfo_col.append(\"HP: %d/%d\" % [cmd.hp, cmd.hp_max])\n\tinfo_col.append(\"\")\n\tinfo_col.append(\"BODY STATUS\")\n\tfor p_key in cmd.body:\n\t\tvar part = cmd.body[p_key]\n\t\tinfo_col.append(\"%-8s: %d/%d\" % [part.name.capitalize(), part.hp, part.hp_max])\n\t\n\t# Combine map and info\n\tfor i in range(view_h):\n\t\tvar map_line = map_lines[i]\n\t\tvar info_line = info_col[i] if i < info_col.size() else \"\"\n\t\tbuffer += \"%-80s | %s\\n\" % [map_line, info_line]\n\t\t\n\treturn buffer'"
+		},
+		{
+			"label": "Cleanup EconomyManager files",
+			"type": "shell",
+			"command": "cmd /c \"del c:\\Users\\patri\\Documents\\falling-leaves\\src\\managers\\EconomyManager.gd.tmp c:\\Users\\patri\\Documents\\falling-leaves\\src\\managers\\EconomyManager.gd.new c:\\Users\\patri\\Documents\\falling-leaves\\src\\managers\\EconomyManager.gd.fixed\""
+		},
+		{
+			"label": "cleanup-files",
+			"type": "shell",
+			"command": "del c:\\Users\\patri\\Documents\\falling-leaves\\src\\core\\Constants.gd c:\\Users\\patri\\Documents\\falling-leaves\\src\\core\\Constants.gd.uid c:\\Users\\patri\\Documents\\falling-leaves\\src\\data\\Army.gd c:\\Users\\patri\\Documents\\falling-leaves\\src\\data\\Army.gd.uid c:\\Users\\patri\\Documents\\falling-leaves\\src\\data\\Settlement.gd c:\\Users\\patri\\Documents\\falling-leaves\\src\\data\\Settlement.gd.uid c:\\Users\\patri\\Documents\\falling-leaves\\src\\data\\Faction.gd c:\\Users\\patri\\Documents\\falling-leaves\\src\\data\\Faction.gd.uid c:\\Users\\patri\\Documents\\falling-leaves\\src\\data\\Player.gd c:\\Users\\patri\\Documents\\falling-leaves\\src\\data\\Player.gd.uid c:\\Users\\patri\\Documents\\falling-leaves\\src\\data\\Entity.gd c:\\Users\\patri\\Documents\\falling-leaves\\src\\data\\Entity.gd.uid c:\\Users\\patri\\Documents\\falling-leaves\\src\\data\\Unit.gd c:\\Users\\patri\\Documents\\falling-leaves\\src\\data\\Unit.gd.uid"
+		},
+		{
+			"label": "del-test",
+			"type": "shell",
+			"command": "del /f /q c:\\Users\\patri\\Documents\\falling-leaves\\src\\data\\Army.gd"
+		},
+		{
+			"label": "cleanup-old-files-comma",
+			"type": "shell",
+			"command": "Remove-Item -Path \"c:\\Users\\patri\\Documents\\falling-leaves\\src\\core\\Constants.gd\", \"c:\\Users\\patri\\Documents\\falling-leaves\\src\\core\\Constants.gd.uid\", \"c:\\Users\\patri\\Documents\\falling-leaves\\src\\data\\Army.gd\", \"c:\\Users\\patri\\Documents\\falling-leaves\\src\\data\\Army.gd.uid\", \"c:\\Users\\patri\\Documents\\falling-leaves\\src\\data\\Settlement.gd\", \"c:\\Users\\patri\\Documents\\falling-leaves\\src\\data\\Settlement.gd.uid\", \"c:\\Users\\patri\\Documents\\falling-leaves\\src\\data\\Faction.gd\", \"c:\\Users\\patri\\Documents\\falling-leaves\\src\\data\\Faction.gd.uid\", \"c:\\Users\\patri\\Documents\\falling-leaves\\src\\data\\Player.gd\", \"c:\\Users\\patri\\Documents\\falling-leaves\\src\\data\\Player.gd.uid\", \"c:\\Users\\patri\\Documents\\falling-leaves\\src\\data\\Entity.gd\", \"c:\\Users\\patri\\Documents\\falling-leaves\\src\\data\\Entity.gd.uid\", \"c:\\Users\\patri\\Documents\\falling-leaves\\src\\data\\Unit.gd\", \"c:\\Users\\patri\\Documents\\falling-leaves\\src\\data\\Unit.gd.uid\" -Force -ErrorAction SilentlyContinue"
+		},
+		{
+			"label": "Python Cleanup Task",
+			"type": "shell",
+			"command": "python c:\\Users\\patri\\Documents\\falling-leaves\\cleanup_script.py"
+		},
+		{
+			"label": "Py Cleanup Task",
+			"type": "shell",
+			"command": "py c:\\Users\\patri\\Documents\\falling-leaves\\cleanup_script.py"
+		},
+		{
+			"label": "Python3 Cleanup Task",
+			"type": "shell",
+			"command": "python3 c:\\Users\\patri\\Documents\\falling-leaves\\cleanup_script.py"
+		},
+		{
+			"label": "CMD Cleanup Task",
+			"type": "shell",
+			"command": "cmd /c \"del /f /q c:\\Users\\patri\\Documents\\falling-leaves\\src\\core\\Constants.gd c:\\Users\\patri\\Documents\\falling-leaves\\src\\core\\Constants.gd.uid c:\\Users\\patri\\Documents\\falling-leaves\\src\\data\\Army.gd c:\\Users\\patri\\Documents\\falling-leaves\\src\\data\\Army.gd.uid c:\\Users\\patri\\Documents\\falling-leaves\\src\\data\\Faction.gd c:\\Users\\patri\\Documents\\falling-leaves\\src\\data\\Faction.gd.uid c:\\Users\\patri\\Documents\\falling-leaves\\src\\data\\Player.gd c:\\Users\\patri\\Documents\\falling-leaves\\src\\data\\Player.gd.uid c:\\Users\\patri\\Documents\\falling-leaves\\src\\data\\Settlement.gd c:\\Users\\patri\\Documents\\falling-leaves\\src\\data\\Settlement.gd.uid c:\\Users\\patri\\Documents\\falling-leaves\\src\\data\\Caravan.gd c:\\Users\\patri\\Documents\\falling-leaves\\src\\data\\Caravan.gd.uid c:\\Users\\patri\\Documents\\falling-leaves\\src\\data\\Entity.gd c:\\Users\\patri\\Documents\\falling-leaves\\src\\data\\Entity.gd.uid c:\\Users\\patri\\Documents\\falling-leaves\\src\\data\\Unit.gd c:\\Users\\patri\\Documents\\falling-leaves\\src\\data\\Unit.gd.uid\""
+		},
+		{
+			"label": "Rename Files Task",
+			"type": "shell",
+			"command": "python c:\\Users\\patri\\Documents\\falling-leaves\\rename_files.py > c:\\Users\\patri\\Documents\\falling-leaves\\rename_log.txt 2>&1"
+		},
+		{
+			"label": "Rename Files Task Py",
+			"type": "shell",
+			"command": "py c:\\Users\\patri\\Documents\\falling-leaves\\rename_files.py > c:\\Users\\patri\\Documents\\falling-leaves\\rename_log.txt 2>&1"
+		},
+		{
+			"label": "Rename Files Task Python3",
+			"type": "shell",
+			"command": "python3 c:\\Users\\patri\\Documents\\falling-leaves\\rename_files.py > c:\\Users\\patri\\Documents\\falling-leaves\\rename_log.txt 2>&1"
+		},
+		{
+			"label": "Rename Files PowerShell Task",
+			"type": "shell",
+			"command": "$files = @(\n    \"src/core/globals.gd\", \"src/core/globals.gd.uid\",\n    \"src/data/army_obj.gd\", \"src/data/army_obj.gd.uid\",\n    \"src/data/caravan_obj.gd\", \"src/data/caravan_obj.gd.uid\",\n    \"src/data/entity_obj.gd\", \"src/data/entity_obj.gd.uid\",\n    \"src/data/faction_data.gd\", \"src/data/faction_data.gd.uid\",\n    \"src/data/player_data.gd\", \"src/data/player_data.gd.uid\",\n    \"src/data/settlement_obj.gd\", \"src/data/settlement_obj.gd.uid\",\n    \"src/data/unit_obj.gd\", \"src/data/unit_obj.gd.uid\"\n)\n\nforeach ($oldRel in $files) {\n    $oldPath = \"c:\\Users\\patri\\Documents\\falling-leaves\\\" + $oldRel.Replace(\"/\", \"\\\")\n    if (Test-Path $oldPath) {\n        $dir = Split-Path $oldPath\n        $name = Split-Path $oldPath -Leaf\n        if ($name -eq \"globals.gd\") { $newName = \"Globals.gd\" }\n        elseif ($name -eq \"globals.gd.uid\") { $newName = \"Globals.gd.uid\" }\n        else {\n            $newName = (Get-Culture).TextInfo.ToTitleCase($name.Replace(\"_\", \" \")).Replace(\" \", \"\")\n        }\n        $tempPath = $oldPath + \".rename_tmp\"\n        # Force rename using temp file\n        Move-Item -LiteralPath $oldPath -Destination $tempPath -Force\n        Move-Item -LiteralPath $tempPath -Destination (Join-Path $dir $newName) -Force\n    }\n}"
+		}
+	]
+}
