@@ -214,8 +214,10 @@ static func process_movement(gs):
 							enemies.append(army)
 				
 				if not enemies.is_empty():
-					enemies.sort_custom(func(a, b): return caravan_obj.pos.distance_to(a.pos) < caravan_obj.pos.distance_to(b.pos))
-					var e = enemies[0]
+				# Pre-compute distances once to avoid redundant calculations during sort
+				var enemy_distances = enemies.map(func(e): return {"army": e, "dist": caravan_obj.pos.distance_to(e.pos)})
+				enemy_distances.sort_custom(func(a, b): return a.dist < b.dist)
+				var e = enemy_distances[0].army
 					var run_dir = (caravan_obj.pos - e.pos).sign()
 					if run_dir == Vector2i.ZERO: run_dir = Vector2i(1, 0)
 					var run_pos = caravan_obj.pos + run_dir

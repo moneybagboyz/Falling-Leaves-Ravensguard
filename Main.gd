@@ -685,8 +685,9 @@ func _try_open_codex_contextual():
 	
 	# 2. Check for armies/lords (Search near pos)
 	if target_entry == "":
-		for a in GameState.armies:
-			if a.pos.distance_to(search_pos) < 2 and a.lord_id != "":
+		var nearby_armies = GameState.get_entities_near(search_pos, 2)
+		for a in nearby_armies:
+			if a.type == "army" and a.lord_id != "":
 				target_entry = "NPC:" + a.lord_id
 				break
 				
@@ -901,15 +902,25 @@ func handle_dialogue_choice(choice):
 		return
 
 	if choice == "COMMAND: Garrison Nearest":
-		var best_dist = 9999
+		var best_dist = 9999.0
 		var best_s = null
-		for s_pos in GameState.settlements:
-			var s = GameState.settlements[s_pos]
-			if s.faction == dialogue_target.faction:
-				var d = dialogue_target.pos.distance_to(s_pos)
+		# Use spatial hash to get nearby settlements first
+		var nearby_entities = GameState.get_entities_near(dialogue_target.pos, 20)
+		for entity in nearby_entities:
+			if entity.type == "settlement" and entity.faction == dialogue_target.faction:
+				var d = dialogue_target.pos.distance_to(entity.pos)
 				if d < best_dist:
 					best_dist = d
-					best_s = s_pos
+					best_s = entity.pos
+		# Fallback to full scan if no nearby settlements found
+		if best_s == null:
+			for s_pos in GameState.settlements:
+				var s = GameState.settlements[s_pos]
+				if s.faction == dialogue_target.faction:
+					var d = dialogue_target.pos.distance_to(s_pos)
+					if d < best_dist:
+						best_dist = d
+						best_s = s_pos
 		
 		if best_s:
 			dialogue_target.set_meta("player_command", "defend")
