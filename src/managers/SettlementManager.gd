@@ -519,7 +519,7 @@ static func hire_recruit(gs, s_pos, pool_idx):
 	if gs.player.crowns >= recruit.cost:
 		gs.player.crowns -= recruit.cost
 		pool.remove_at(pool_idx)
-		gs.player.roster.append(recruit)
+		gs.player.add_to_roster(recruit)
 		gs.add_log("Hired %s for %d Crowns." % [recruit.name, recruit.cost])
 		gs.emit_signal("map_updated")
 	else:
@@ -534,7 +534,7 @@ static func recruit_prisoner(gs, idx):
 	if gs.player.crowns >= fee:
 		gs.player.crowns -= fee
 		gs.player.prisoners.remove_at(idx)
-		gs.player.roster.append(p)
+		gs.player.add_to_roster(p)
 		gs.add_log("Recruited prisoner %s for %d Crowns." % [p.name, fee])
 		gs.emit_signal("map_updated")
 	else:

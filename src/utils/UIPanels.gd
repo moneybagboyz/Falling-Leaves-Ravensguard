@@ -18,15 +18,15 @@ static func _wrap_grid(gs, terrain_color: Color, content: String) -> String:
 	return content
 
 static func _get_terrain_color(gs, pos: Vector2i, t: String, scope: String = "global") -> Color:
-	# Check cache first - include tile type in key to prevent stale terrain colors
+	# Check cache first - use hash for efficient key generation
 	var scope_idx = 0
 	match scope:
 		"local": scope_idx = 1
 		"battle": scope_idx = 2
 		"region": scope_idx = 3
-		
-	# Hash with tile type character to ensure updates when terrain changes
-	var cache_key = str(pos.x, ",", pos.y, ",", scope_idx, ",", t)
+	
+	# Use hash instead of string concatenation for cache key
+	var cache_key = hash(Vector3i(pos.x, pos.y, (scope_idx << 8) | t.unicode_at(0)))
 	if terrain_color_cache.has(cache_key):
 		return terrain_color_cache[cache_key]
 
@@ -207,13 +207,14 @@ static func get_tile_info(gs, pos: Vector2i) -> String:
 	return info
 
 static func render_menu(options, idx, has_world, has_char) -> String:
-	var s = "[center][b]FALLING LEAVES[/b]\n\n"
+	var parts = PackedStringArray()
+	parts.append("[center][b]FALLING LEAVES[/b]\n\n")
 	for i in range(options.size()):
 		var prefix = " > " if i == idx else "   "
 		var suffix = " < " if i == idx else "   "
-		s += prefix + options[i] + suffix + "\n"
-	s += "\n[/center]"
-	return s
+		parts.append(prefix + options[i] + suffix + "\n")
+	parts.append("\n[/center]")
+	return "".join(parts)
 
 static func render_battle_config(config, idx) -> String:
 	var s = "[center][b]BATTLE SIMULATOR CONFIG[/b][/center]\n\n"

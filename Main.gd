@@ -1677,7 +1677,7 @@ func _confirm_embark():
 	
 	# Initial Items & Roster
 	GameState.player.stash.clear()
-	GameState.player.roster.clear() 
+	GameState.player.clear_roster() 
 	
 	# Spawn Scenario Roster
 	for u_info in sce.get("start_roster", []):
@@ -1691,7 +1691,7 @@ func _confirm_embark():
 			u = GameData.generate_recruit(GameState.rng, tier)
 		
 		if u:
-			GameState.player.roster.append(u)
+			GameState.player.add_to_roster(u)
 	
 	# Scenario & Profession equipment (Defaults)
 	var default_items = sce.get("items", []).duplicate()
@@ -1754,7 +1754,7 @@ func setup_battle_simulator():
 		GameState.player.commander.name = "Sim Commander"
 
 	# 1. Prepare Player Roster
-	GameState.player.roster.clear()
+	GameState.player.clear_roster()
 	for entry in sim_config["p_lineup"]:
 		if entry["type"] == "none" or entry["cnt"] <= 0: continue
 		for i in range(entry["cnt"]):
@@ -1766,7 +1766,7 @@ func setup_battle_simulator():
 				if entry["type"] == "siege_engine": u.engine_type = "catapult" # Fallback
 			else:
 				u = GameData.generate_unit(entry["type"], entry["lvl"])
-			GameState.player.roster.append(u)
+			GameState.player.add_to_roster(u)
 
 	# 2. Prepare Enemy
 	var enemy = GDArmy.new(Vector2i.ZERO, "bandits")
