@@ -1,6 +1,7 @@
 extends Node
 
 const FaunaData = preload("res://src/data/FaunaData.gd")
+const FloraData = preload("res://src/data/FloraData.gd")
 
 func handle_input(event: InputEvent):
 	var gs = GameState
@@ -466,8 +467,9 @@ func try_interact():
 								return
 					
 					# Check for Flora
-					for climate in gs.FLORA_TABLE:
-						for f in gs.FLORA_TABLE[climate]:
+					var flora_table = FloraData.get_flora_table()
+					for climate in flora_table:
+						for f in flora_table[climate]:
 							if tile == f["symbol"]:
 								_handle_flora_harvest(f, Vector2i(alx, aly))
 								return

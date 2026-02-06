@@ -1,6 +1,7 @@
 extends Node
 
 const FaunaData = preload("res://src/data/FaunaData.gd")
+const FloraData = preload("res://src/data/FloraData.gd")
 
 const MAP_W = 500
 const MAP_H = 500
@@ -2404,11 +2405,11 @@ func _generate_chunk(chunk_pos: Vector2i):
 			var roll = (abs(cell_hash) % 10000) / 10000.0
 			
 			if tile in [".", "o", "t", "\""]:
-				if gs.FLORA_TABLE.has(biome):
-					for f in gs.FLORA_TABLE[biome]:
-						if roll < f["chance"]:
-							tile = f["symbol"]
-							break
+				var flora_list = FloraData.get_flora_for_biome(biome)
+				for f in flora_list:
+					if roll < f["chance"]:
+						tile = f["symbol"]
+						break
 			
 			var resource_type = gs.resources.get(p_pos, "")
 			if resource_type != "" and tile in [".", "o", "^", "\""]:
