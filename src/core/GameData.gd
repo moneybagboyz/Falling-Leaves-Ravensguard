@@ -2,6 +2,7 @@ extends Node
 
 const MaterialsData = preload("res://src/data/MaterialsData.gd")
 const NamesData = preload("res://src/data/NamesData.gd")
+const AIConfigData = preload("res://src/data/AIConfigData.gd")
 
 # --- MATERIALS (Dwarf Fortress Depth) ---
 # Loaded from data/materials.json
@@ -1269,16 +1270,19 @@ func part_hit_name(key: String) -> String:
 		"gut": return "abdomen"
 	return key
 
-const GOVERNOR_PERSONALITIES = ["builder", "greedy", "balanced", "cautious"]
-const LORD_DOCTRINES = ["conqueror", "defender", "raider", "merchant_prince"]
+# --- AI CONFIGURATION ---
+# Loaded from data/ai_config.json
+static var GOVERNOR_PERSONALITIES: Array:
+	get:
+		return AIConfigData.get_governor_personalities()
 
-const MATERIAL_TIERS = {
-	1: "leather",
-	2: "copper",
-	3: "bronze",
-	4: "iron",
-	5: "steel"
-}
+static var LORD_DOCTRINES: Array:
+	get:
+		return AIConfigData.get_lord_doctrines()
+
+static var MATERIAL_TIERS: Dictionary:
+	get:
+		return AIConfigData.get_material_tiers()
 
 # --- CHARACTER CREATION DATA (CDDA + KENSHI STYLE) ---
 
