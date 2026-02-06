@@ -17,8 +17,8 @@ config/icon="res://icon.svg"
 
 [autoload]
 
-GameData="*res://GameData.gd"
-GameState="*res://GameState.gd"
+GameData="*res://src/core/GameData.gd"
+GameState="*res://src/core/GameState.gd"
 
 [rendering]
 

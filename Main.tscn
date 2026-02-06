@@ -1,8 +1,8 @@
 [gd_scene load_steps=4 format=3 uid="uid://b3680s00fak3w"]
 
 [ext_resource type="Script" uid="uid://cf16neka4361r" path="res://Main.gd" id="1_main"]
-[ext_resource type="Script" uid="uid://bcovhtdes4ij5" path="res://OverworldController.gd" id="2_overworld"]
-[ext_resource type="Script" uid="uid://d1onqmi6jcnwl" path="res://BattleController.gd" id="3_battle"]
+[ext_resource type="Script" uid="uid://bcovhtdes4ij5" path="res://src/controllers/OverworldController.gd" id="2_overworld"]
+[ext_resource type="Script" uid="uid://d1onqmi6jcnwl" path="res://src/controllers/BattleController.gd" id="3_battle"]
 
 [node name="GameRoot" type="Control"]
 layout_mode = 3

@@ -1,6 +1,6 @@
 extends Control
 
-const UIPanels = preload("res://UIPanels.gd")
+const UIPanels = preload("res://src/utils/UIPanels.gd")
 const CodexData = preload("res://src/data/CodexData.gd")
 
 @onready var map_display = $MainLayout/ContentLayout/MapPanel/MapDisplay
@@ -162,13 +162,13 @@ func _ready():
 		b_map.autowrap_mode = TextServer.AUTOWRAP_OFF
 		_update_node_theme(b_map)
 
-	dungeon_ctrl = load("res://DungeonController.gd").new()
+	dungeon_ctrl = load("res://src/controllers/DungeonController.gd").new()
 	add_child(dungeon_ctrl)
 
-	city_ctrl = load("res://CityController.gd").new()
+	city_ctrl = load("res://src/controllers/CityController.gd").new()
 	add_child(city_ctrl)
 
-	region_ctrl = load("res://RegionController.gd").new()
+	region_ctrl = load("res://src/controllers/RegionController.gd").new()
 	add_child(region_ctrl)
 	GameState.region_ctrl = region_ctrl
 	region_ctrl.settlement_entered.connect(_on_settlement_entered)
