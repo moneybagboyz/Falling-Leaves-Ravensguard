@@ -13,6 +13,7 @@ const GameEnums = preload("res://src/core/GameEnums.gd")
 var mouse_cursor
 var tile_map: TileMap
 var graphical_mode = true
+var world_viewport  # New viewport-based rendering system
 
 @onready var overworld_ctrl = $OverworldController
 @onready var battle_ctrl = $BattleController
@@ -140,6 +141,7 @@ func _ready():
 	mono_font.font_names = PackedStringArray(["Consolas", "Courier New", "Monospace"])
 	
 	setup_tile_map()
+	setup_world_viewport()
 	GameState.graphical_mode_active = graphical_mode
 	
 	var header_node = $MainLayout/ScreenHeader
@@ -217,6 +219,16 @@ func _set_view_mode(mode):
 	while GameState.travel_mode != mode and safety < 4:
 		overworld_ctrl.toggle_travel_mode()
 		safety += 1
+
+func setup_world_viewport():
+	# Load and instance the world viewport system
+	var viewport_scene = load("res://WorldViewport.tscn")
+	if viewport_scene:
+		world_viewport = viewport_scene.instantiate()
+		world_viewport.name = "WorldViewport"
+		world_viewport.size = $MainLayout/ContentLayout/MapPanel.size
+		$MainLayout/ContentLayout/MapPanel.add_child(world_viewport)
+		world_viewport.visible = false  # Hidden by default, shown when needed
 
 func _update_node_theme(node: RichTextLabel, force_fs: int = -1):
 	# If we are in loading/menu/creation states, we don't want the squished grid logic
@@ -2259,6 +2271,51 @@ func handle_designer_input(event):
 	
 	_on_map_updated()
 
+func render_to_world_viewport():
+	if not world_viewport:
+		return
+	
+	# Update camera position to follow player
+	if state == GameEnums.GameMode.OVERWORLD and GameState.player:
+		var player_pos = GameState.player.pos + GameState.player.camera_offset
+		world_viewport.set_camera_position(Vector2(player_pos))
+	elif state == GameEnums.GameMode.WORLD_PREVIEW:
+		world_viewport.set_camera_position(Vector2(preview_pos))
+	
+	# Collect entities (player, armies, settlements)
+	var entities = {}
+	if GameState.player:
+		entities[GameState.player.pos] = {"char": "@", "col": Color.YELLOW}
+	
+	for army in GameState.armies:
+		var col = Color.RED
+		if army.faction == "player" or (GameState.player and army.faction == GameState.player.faction):
+			col = Color.CYAN
+		entities[army.pos] = {"char": "A", "col": col}
+	
+	for pos in GameState.settlements:
+		var s = GameState.settlements[pos]
+		var sym = "v"
+		match s.type:
+			"hamlet": sym = "h"
+			"village": sym = "v"
+			"town": sym = "T"
+			"city", "capital": sym = "C"
+			"metropolis": sym = "M"
+			"castle": sym = "S"
+		entities[pos] = {"char": sym, "col": Color.WHITE}
+	
+	# Update terrain (chunk-based, only dirty regions)
+	var camera_chunk_pos = Vector2i(GameState.player.pos.x / 16, GameState.player.pos.y / 16) if GameState.player else Vector2i.ZERO
+	world_viewport.update_visible_terrain(camera_chunk_pos, GameState.grid, GameState.width, GameState.height, tile_map.tile_set)
+	
+	# Update entities (separate layer)
+	world_viewport.update_entities(entities, tile_map.tile_set)
+	
+	# Update minimap (only on world gen complete or periodically)
+	if state == GameEnums.GameMode.WORLD_PREVIEW or Engine.get_frames_drawn() % 60 == 0:
+		world_viewport.update_minimap(GameState.grid, GameState.width, GameState.height)
+
 func render_to_tilemap():
 	if not graphical_mode or not tile_map:
 		if tile_map: tile_map.visible = false
@@ -2545,9 +2602,19 @@ func _on_map_updated():
 
 	# Handle Map Views (Overworld, Battle, Dungeon, City, World Preview, Loading)
 	var graphical_states = [GameEnums.GameMode.OVERWORLD, GameEnums.GameMode.BATTLE, GameEnums.GameMode.DUNGEON, GameEnums.GameMode.CITY, GameEnums.GameMode.WORLD_PREVIEW, GameEnums.GameMode.LOADING]
-	if graphical_mode and state in graphical_states:
+	var use_new_viewport = state in [GameEnums.GameMode.OVERWORLD, GameEnums.GameMode.WORLD_PREVIEW]
+	
+	if use_new_viewport and world_viewport:
+		# Use new viewport system for overworld and world preview
+		world_viewport.visible = true
+		if tile_map: tile_map.visible = false
+		map_display.visible = false
+		render_to_world_viewport()
+	elif graphical_mode and state in graphical_states:
+		if world_viewport: world_viewport.visible = false
 		render_to_tilemap()
 	else:
+		if world_viewport: world_viewport.visible = false
 		if tile_map: tile_map.visible = false
 		map_display.visible = true
 
@@ -2569,13 +2636,11 @@ func _on_map_updated():
 		GameEnums.GameMode.WORLD_PREVIEW:
 			var frame = UIPanels.render_world_preview(GameState, preview_pos)
 			$MainLayout/ScreenHeader.text = frame.header
-			map_display.bbcode_enabled = true
-			map_display.text = frame.map
 			info_label.text = frame.side
 			$MainLayout/ContentLayout/SidePanel.visible = true
 			$MainLayout/LogPanel.visible = true
 			log_label.text = "WASD: Pan | +/-: Zoom | ENTER: Accept | R: Reroll"
-			return
+			# Don't return - let it fall through to render the tilemap below
 		GameEnums.GameMode.CHARACTER_CREATION:
 			map_display.bbcode_enabled = true
 			map_display.text = UIPanels.render_character_creation_tabbed(

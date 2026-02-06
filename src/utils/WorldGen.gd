@@ -1134,6 +1134,9 @@ func generate(w: int, h: int, rng: RandomNumberGenerator, live_grid: Array = [],
 	step_completed.emit("GENERATION COMPLETE!")
 	await (Engine.get_main_loop() as SceneTree).process_frame
 
+	return {
+		"grid": world_grid, "resources": world_resources, "geology": geology,
+		"settlements": world_settlements, "ruins": ruins, "start_pos": start_pos,
 		"armies": armies, "caravans": caravans,
 		"province_grid": province_grid, "provinces": provinces,
 		"factions": faction_list
