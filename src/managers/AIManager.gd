@@ -207,25 +207,24 @@ static func process_movement(gs):
 						break
 				
 				if enemy_nearby:
-				var enemies = []
-				for army in gs.armies:
-					if gs.get_relation(caravan_obj.faction, army.faction) == "war":
-						if caravan_obj.pos.distance_to(army.pos) < 8:
-							enemies.append(army)
-				
-				if not enemies.is_empty():
-				# Pre-compute distances once to avoid redundant calculations during sort
-				var enemy_distances = enemies.map(func(e): return {"army": e, "dist": caravan_obj.pos.distance_to(e.pos)})
-				enemy_distances.sort_custom(func(a, b): return a.dist < b.dist)
-				var e = enemy_distances[0].army
-					var run_dir = (caravan_obj.pos - e.pos).sign()
-					if run_dir == Vector2i.ZERO: run_dir = Vector2i(1, 0)
-					var run_pos = caravan_obj.pos + run_dir
-					if gs.is_walkable(run_pos):
-						caravan_obj.pos = run_pos
-						caravan_obj.path = [] # Force path recalc
-						continue
-
+					var enemies = []
+					for army in gs.armies:
+						if gs.get_relation(caravan_obj.faction, army.faction) == "war":
+							if caravan_obj.pos.distance_to(army.pos) < 8:
+								enemies.append(army)
+					
+					if not enemies.is_empty():
+						# Pre-compute distances once to avoid redundant calculations during sort
+						var enemy_distances = enemies.map(func(e): return {"army": e, "dist": caravan_obj.pos.distance_to(e.pos)})
+						enemy_distances.sort_custom(func(a, b): return a.dist < b.dist)
+						var e = enemy_distances[0].army
+						var run_dir = (caravan_obj.pos - e.pos).sign()
+						if run_dir == Vector2i.ZERO: run_dir = Vector2i(1, 0)
+						var run_pos = caravan_obj.pos + run_dir
+						if gs.is_walkable(run_pos):
+							caravan_obj.pos = run_pos
+							caravan_obj.path = [] # Force path recalc
+							continue
 			# If no path or target changed, calculate path
 			if caravan_obj.path.is_empty() or caravan_obj.path[caravan_obj.path.size()-1] != caravan_obj.target_pos:
 				caravan_obj.path = gs.astar.get_id_path(caravan_obj.pos, caravan_obj.target_pos)

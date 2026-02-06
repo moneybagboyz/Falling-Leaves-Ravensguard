@@ -414,8 +414,9 @@ func _screen_to_world(grid_pos: Vector2i) -> Vector2i:
 func _on_world_gen_updated(stage: String):
 	loading_stage = stage
 	_on_map_updated()
-	if stage == "FINISHING...": 
+	if stage == "COMPLETE" or stage == "GENERATION COMPLETE!": 
 		state = GameEnums.GameMode.WORLD_PREVIEW
+		preview_pos = Vector2i(GameState.width / 2, GameState.height / 2)
 		_on_map_updated()
 
 func setup_classic_ui():
@@ -2586,7 +2587,7 @@ func _on_map_updated():
 			$MainLayout/ContentLayout/SidePanel.visible = false
 			$MainLayout/LogPanel.visible = false
 			return
-		GameEnums.GameMode.LOCATION_SELECT:
+		GameEnums.GameMode.PLAY_SELECT:
 			var current_loc = location_list[location_idx]
 			map_display.bbcode_enabled = true
 			map_display.text = UIPanels.render_location_select(GameState, current_loc)

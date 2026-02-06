@@ -273,19 +273,22 @@ func generate(w: int, h: int, rng: RandomNumberGenerator, live_grid: Array = [],
 	var lake_map = {}
 	
 	# Pass 1: Simple Flow Accumulation 
-	# (Sort tiles by elevation and flow from top to bottom)
+	# Build list of land tiles with elevation for sorting
 	var sort_tiles = []
 	for y in range(h):
 		for x in range(w):
-			if elevation_map[y][x] > 0.32:
-				sort_tiles.append(Vector2i(x, y))
+			var e = elevation_map[y][x]
+			if e > 0.32:
+				sort_tiles.append({"pos": Vector2i(x, y), "e": e})
 	
-	sort_tiles.sort_custom(func(a, b): return elevation_map[a.y][a.x] > elevation_map[b.y][b.x])
+	# Sort by elevation (higher first) - single key access is faster
+	sort_tiles.sort_custom(func(a, b): return a.e > b.e)
 	
 	var processed = 0
 	var total_land = sort_tiles.size()
 	
-	for pos in sort_tiles:
+	for tile_data in sort_tiles:
+		var pos = tile_data.pos
 		processed += 1
 		if processed % 5000 == 0:
 			step_completed.emit("TRACING WATERWAYS [%d%%]" % [int((float(processed)/total_land)*100)])
@@ -533,15 +536,15 @@ func generate(w: int, h: int, rng: RandomNumberGenerator, live_grid: Array = [],
 		
 	queue.sort_custom(func(a, b): return a[0] > b[0])
 	var tiles_finished = 0
-	var loop_time_limit = Time.get_ticks_msec() + 15
+	var tiles_since_update = 0
 	var MAX_REACH = 50.0 # Economic transport limit
 	
 	while not queue.is_empty():
-		if Time.get_ticks_msec() > loop_time_limit:
+		if tiles_since_update >= 3000:
 			queue.sort_custom(func(a, b): return a[0] > b[0])
 			step_completed.emit("EXPANDING CATCHMENTS... [%d%%]" % int((float(tiles_finished)/total_land)*100))
 			await (Engine.get_main_loop() as SceneTree).process_frame
-			loop_time_limit = Time.get_ticks_msec() + 15
+			tiles_since_update = 0
 			
 		var curr = queue.pop_back()
 		var d = curr[0]
@@ -553,6 +556,7 @@ func generate(w: int, h: int, rng: RandomNumberGenerator, live_grid: Array = [],
 		
 		province_grid[pos.y][pos.x] = p_id
 		tiles_finished += 1
+		tiles_since_update += 1
 		provinces[p_id].tiles.append(pos)
 		if world_resources.has(pos): provinces[p_id].resources.append(pos)
 		
@@ -1127,9 +1131,9 @@ func generate(w: int, h: int, rng: RandomNumberGenerator, live_grid: Array = [],
 							break
 					break
 
-	return {
-		"grid": world_grid, "resources": world_resources, "geology": geology,
-		"settlements": world_settlements, "ruins": ruins, "start_pos": start_pos,
+	step_completed.emit("GENERATION COMPLETE!")
+	await (Engine.get_main_loop() as SceneTree).process_frame
+
 		"armies": armies, "caravans": caravans,
 		"province_grid": province_grid, "provinces": provinces,
 		"factions": faction_list

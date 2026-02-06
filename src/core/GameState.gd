@@ -425,8 +425,6 @@ func init_world(config: Dictionary = {}):
 		factions.append(bandit_f)
 		factions.append(neutral_f)
 	
-	world_gen_updated.emit("FINISHING...")
-	
 	# Initialize AStar
 	astar.region = Rect2i(0, 0, width, height)
 	astar.cell_size = Vector2(1, 1)
@@ -469,6 +467,7 @@ func init_world(config: Dictionary = {}):
 	update_spatial_grid()
 	
 	add_log("Welcome to the ASCII Realms. WASD to move.")
+	world_gen_updated.emit("COMPLETE")
 	map_updated.emit()
 	emit_signal("map_updated")
 
