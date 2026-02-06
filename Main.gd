@@ -386,7 +386,8 @@ func _get_actual_char_size() -> Vector2:
 func _screen_to_world(grid_pos: Vector2i) -> Vector2i:
 	var dims = get_char_dims()
 	if state == GameEnums.GameMode.OVERWORLD:
-		var center = GameState.player.pos + GameState.player.camera_offset
+		var player = GameState.player # Cache player reference
+		var center = player.pos + player.camera_offset
 		var start_x = clamp(center.x - dims.x / 2.0, 0, max(0, GameState.width - dims.x))
 		var start_y = clamp(center.y - dims.y / 2.0, 0, max(0, GameState.height - dims.y))
 		return Vector2i(int(start_x + grid_pos.x), int(start_y + grid_pos.y))
@@ -2531,28 +2532,29 @@ func _on_map_updated():
 		return
 
 	# Handle Map Views (Overworld, Battle, Dungeon, City, World Preview, Loading)
-	if graphical_mode and state in ["overworld", "battle", "dungeon", "city", "world_preview", "loading"]:
+	var graphical_states = [GameEnums.GameMode.OVERWORLD, GameEnums.GameMode.BATTLE, GameEnums.GameMode.DUNGEON, GameEnums.GameMode.CITY, GameEnums.GameMode.WORLD_PREVIEW, GameEnums.GameMode.LOADING]
+	if graphical_mode and state in graphical_states:
 		render_to_tilemap()
 	else:
 		if tile_map: tile_map.visible = false
 		map_display.visible = true
 
 	match state:
-		"world_creation":
+		GameEnums.GameMode.WORLD_CREATION:
 			map_display.bbcode_enabled = true
 			map_display.text = UIPanels.render_world_creation(world_config, world_config_idx)
 			$MainLayout/ContentLayout/SidePanel.visible = false
 			$MainLayout/LogPanel.visible = false
 			$MainLayout/ScreenHeader.text = "[center]WORLD GENERATOR[/center]"
 			return
-		"battle_config":
+		GameEnums.GameMode.BATTLE_CONFIG:
 			map_display.bbcode_enabled = true
 			map_display.text = UIPanels.render_battle_config(sim_config, sim_config_idx)
 			$MainLayout/ContentLayout/SidePanel.visible = false
 			$MainLayout/LogPanel.visible = false
 			$MainLayout/ScreenHeader.text = "[center]BATTLE SIMULATOR[/center]"
 			return
-		"world_preview":
+		GameEnums.GameMode.WORLD_PREVIEW:
 			var frame = UIPanels.render_world_preview(GameState, preview_pos)
 			$MainLayout/ScreenHeader.text = frame.header
 			map_display.bbcode_enabled = true
@@ -2562,7 +2564,7 @@ func _on_map_updated():
 			$MainLayout/LogPanel.visible = true
 			log_label.text = "WASD: Pan | +/-: Zoom | ENTER: Accept | R: Reroll"
 			return
-		"character_creation":
+		GameEnums.GameMode.CHARACTER_CREATION:
 			map_display.bbcode_enabled = true
 			map_display.text = UIPanels.render_character_creation_tabbed(
 				player_config, player_config_idx, trait_selection_idx, 
@@ -2573,7 +2575,7 @@ func _on_map_updated():
 			$MainLayout/ContentLayout/SidePanel.visible = false
 			$MainLayout/LogPanel.visible = false
 			return
-		"location_select":
+		GameEnums.GameMode.LOCATION_SELECT:
 			var current_loc = location_list[location_idx]
 			map_display.bbcode_enabled = true
 			map_display.text = UIPanels.render_location_select(GameState, current_loc)
