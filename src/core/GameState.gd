@@ -1,6 +1,40 @@
 extends Node
-# class_name GameState
 
+# ============================================================================
+# REFACTORED GAMESTATE - FACADE PATTERN
+# Delegates to specialized modules: WorldState, EntityRegistry, PlayerState, GameClock
+# ============================================================================
+
+const WorldState = preload("res://src/state/WorldState.gd")
+const EntityRegistry = preload("res://src/state/EntityRegistry.gd")
+const PlayerState = preload("res://src/state/PlayerState.gd")
+const GameClock = preload("res://src/state/GameClock.gd")
+const GameEnums = preload("res://src/core/GameEnums.gd")
+const StateManager = preload("res://src/core/StateManager.gd")
+
+# Managers (existing)
+const EconomyManager = preload("res://src/managers/EconomyManager.gd")
+const SettlementManager = preload("res://src/managers/SettlementManager.gd")
+const FactionManager = preload("res://src/managers/FactionManager.gd")
+const CombatManager = preload("res://src/managers/CombatManager.gd")
+const AIManager = preload("res://src/managers/AIManager.gd")
+const WarManager = preload("res://src/managers/WarManager.gd")
+
+const GameData = preload("res://src/core/GameData.gd")
+const WorldAudit = preload("res://src/utils/WorldAudit.gd")
+const Globals = preload("res://src/core/Globals.gd")
+
+# Data Classes
+const GDPlayer = preload("res://src/data/GDPlayer.gd")
+const GDUnit = preload("res://src/data/GDUnit.gd")
+const GDQuest = preload("res://src/data/GDQuest.gd")
+const GDFaction = preload("res://src/data/GDFaction.gd")
+const GDArmy = preload("res://src/data/GDArmy.gd")
+const GDBattle = preload("res://src/data/GDBattle.gd")
+const GDNPC = preload("res://src/data/GDNPC.gd")
+const GDSettlement = preload("res://src/data/GDSettlement.gd")
+
+# Signals
 signal log_updated
 signal map_updated
 signal world_gen_updated(stage_name)
@@ -13,32 +47,17 @@ signal dungeon_ended
 @warning_ignore("unused_signal")
 signal dialogue_started(target, options)
 
-# Use direct references to Globals to avoid constant expression issues during parsing
+# Core State Modules
+var world: WorldState
+var entities: EntityRegistry
+var player_state: PlayerState
+var clock: GameClock
+var state_manager: StateManager
 
-var grid: Array = [] # 2D array [y][x] - Array of Arrays
-var width: int = 0
-var height: int = 0
-var resources: Dictionary = {} # Vector2i -> String (e.g. "iron", "gold")
-var geology: Dictionary = {} # Vector2i -> Dict (temp, rain, layers)
-var settlements: Dictionary = {} # Vector2i -> GDSettlement
-var ruins: Dictionary = {} # Vector2i -> Dict
-var armies: Array[GDArmy] = []
-var ongoing_battles: Array[GDBattle] = []
-var caravans: Array[GDCaravan] = []
-var trade_contracts: Array[Dictionary] = [] # {id, seller_pos, buyer_pos, resource, amount, price, status}
-var military_campaigns: Array[Dictionary] = [] # {id, faction, target_pos, type, participants: [], status}
-var logistical_pulses: Array[Dictionary] = [] # {target_pos, resource, amount, arrival_turn, origin_pos}
-var migrants: Array[Dictionary] = [] # Population Movement
-var astar = AStarGrid2D.new()
+# Temporary controller reference (for backwards compat)
+var region_ctrl = null
 
-# World Identity
-var world_seed: int = 0
-var world_name: String = "Unknown Land"
-
-# Region Data
-var region_ctrl = null # Set when Region view active
-
-# City Studio Data
+# City Studio Config (TODO: Move to appropriate module)
 var city_studio_config = {
 	"type": "city",
 	"size": 200,
@@ -49,187 +68,363 @@ var city_studio_config = {
 }
 var city_studio_idx = 0
 
-# Province/Political Data
-var province_grid = []
-var provinces = {}
-var map_mode = "terrain" # "terrain", "political", "province", "resource"
-var render_mode = "grid" # "ascii", "grid"
-var graphical_mode_active = false
+# === PROPERTY FORWARDING FOR BACKWARD COMPATIBILITY ===
+# These properties forward to the appropriate module
 
-# Travel Mode Data
-enum TravelMode { FAST, REGION, LOCAL }
-var travel_mode = TravelMode.FAST
+# World properties
+var grid: Array:
+	get: return world.grid
+	set(value): world.grid = value
 
-# --- SECTOR PAGING CONSTANTS ---
-const WORLD_TILE_SIZE = 1000.0 # Meters per side
-const METERS_PER_LOCAL_TILE = 2.0 # Tactical scale (DF standard)
-const SECTOR_SIZE_METERS = 1000.0 # 500 tiles * 2m (Matches World Tile)
-const PAGING_THRESHOLD = 50.0 # Regenerate if player moves too far from center
+var width: int:
+	get: return world.width
+	set(value): world.width = value
 
-var local_offset = Vector2(500.0, 500.0) # Meters within current world tile
-var last_gen_offset = Vector2(-999, -999) # Tracking for re-generation
+var height: int:
+	get: return world.height
+	set(value): world.height = value
 
-const LOCAL_GRID_W = 500 # Matches BattleController.MAP_W
-const LOCAL_GRID_H = 500 # Matches BattleController.MAP_H
-var local_step_count = 0 
+var resources: Dictionary:
+	get: return world.resources
+	set(value): world.resources = value
 
-# Faction Definitions
-var factions: Array[GDFaction] = []
+var geology: Dictionary:
+	get: return world.geology
+	set(value): world.geology = value
 
-var player: GDPlayer
-var active_quests: Array[GDQuest] = []
-var event_log: Array[String] = []
-var history: Array[Dictionary] = [] # {turn, day, month, year, text}
-var active_ruin_pos: Vector2i = Vector2i(-1, -1)
-var is_resting = false
-# var rng = RandomNumberGenerator.new() -- Moved to existing declaration down below
-# var total_battles = 0 -- Moved to existing declaration down below
+var ruins: Dictionary:
+	get: return world.ruins
+	set(value): world.ruins = value
 
-# --- FAUNA SYSTEM (DATA MOVED TO res://data/fauna_table.json) ---
-# Use FaunaData.get_fauna_table() or FaunaData.get_fauna_for_biome(biome)
-var killed_fauna: Dictionary = {} # Vector2i (world) -> Array of Vector2i (local)
+var world_seed: int:
+	get: return world.world_seed
+	set(value): world.world_seed = value
 
-var is_turbo = false
-var monthly_ledger = {}
+var world_name: String:
+	get: return world.world_name
+	set(value): world.world_name = value
+
+var province_grid:
+	get: return world.province_grid
+	set(value): world.province_grid = value
+
+var provinces:
+	get: return world.provinces
+	set(value): world.provinces = value
+
+var map_mode: String:
+	get: return world.map_mode
+	set(value): world.map_mode = value
+
+var render_mode: String:
+	get: return world.render_mode
+	set(value): world.render_mode = value
+
+var travel_mode:
+	get: return world.travel_mode
+	set(value): world.travel_mode = value
+
+var local_offset: Vector2:
+	get: return world.local_offset
+	set(value): world.local_offset = value
+
+var last_gen_offset: Vector2:
+	get: return world.last_gen_offset
+	set(value): world.last_gen_offset = value
+
+var local_step_count: int:
+	get: return world.local_step_count
+	set(value): world.local_step_count = value
+
+var astar:
+	get: return world.astar
+	set(value): world.astar = value
+
+var killed_fauna: Dictionary:
+	get: return world.killed_fauna
+	set(value): world.killed_fauna = value
+
+var spatial_grid: Dictionary:
+	get: return world.spatial_grid
+	set(value): world.spatial_grid = value
+
+var distance_cache: Dictionary:
+	get: return world.distance_cache
+	set(value): world.distance_cache = value
+
+# Entity properties
+var settlements: Dictionary:
+	get: return entities.settlements
+	set(value): entities.settlements = value
+
+var armies: Array:
+	get: return entities.armies
+
+var ongoing_battles: Array:
+	get: return entities.ongoing_battles
+
+var caravans: Array:
+	get: return entities.caravans
+
+var factions: Array:
+	get: return entities.factions
+
+var trade_contracts: Array:
+	get: return entities.trade_contracts
+
+var military_campaigns: Array:
+	get: return entities.military_campaigns
+
+var logistical_pulses: Array:
+	get: return entities.logistical_pulses
+
+var migrants: Array:
+	get: return entities.migrants
+
+var world_market_orders:
+	get: return entities.world_market_orders
+
+var total_battles: int:
+	get: return entities.total_battles
+	set(value): entities.total_battles = value
+
+var total_sieges: int:
+	get: return entities.total_sieges
+	set(value): entities.total_sieges = value
+
+var total_captures: int:
+	get: return entities.total_captures
+	set(value): entities.total_captures = value
+
+var total_caravan_raids: int:
+	get: return entities.total_caravan_raids
+	set(value): entities.total_caravan_raids = value
+
+var total_trade_volume: int:
+	get: return entities.total_trade_volume
+	set(value): entities.total_trade_volume = value
+
+# Player properties
+var player: GDPlayer:
+	get: return player_state.player
+	set(value): player_state.player = value
+
+var active_quests: Array:
+	get: return player_state.active_quests
+	set(value): player_state.active_quests = value
+
+var active_ruin_pos: Vector2i:
+	get: return player_state.active_ruin_pos
+	set(value): player_state.active_ruin_pos = value
+
+var is_resting: bool:
+	get: return player_state.is_resting
+	set(value): player_state.is_resting = value
+
+# Clock properties
+var turn: int:
+	get: return clock.turn
+	set(value): clock.turn = value
+
+var hour: int:
+	get: return clock.hour
+	set(value): clock.hour = value
+
+var day: int:
+	get: return clock.day
+	set(value): clock.day = value
+
+var month: int:
+	get: return clock.month
+	set(value): clock.month = value
+
+var year: int:
+	get: return clock.year
+	set(value): clock.year = value
+
+var is_turbo: bool:
+	get: return clock.is_turbo
+	set(value): clock.is_turbo = value
+
+var event_log: Array:
+	get: return clock.event_log
+	set(value): clock.event_log = value
+
+var history: Array:
+	get: return clock.history
+	set(value): clock.history = value
+
+var monthly_ledger: Dictionary:
+	get: return clock.monthly_ledger
+	set(value): clock.monthly_ledger = value
+
+# RNG
 var rng = RandomNumberGenerator.new()
-var turn = 0
-var hour = 0
-var day = 1
 
-# --- SPATIAL HASHING ---
+# Constants forwarding
+const WORLD_TILE_SIZE = 1000.0
+const METERS_PER_LOCAL_TILE = 2.0
+const SECTOR_SIZE_METERS = 1000.0
+const PAGING_THRESHOLD = 50.0
+const LOCAL_GRID_W = 500
+const LOCAL_GRID_H = 500
 const SPATIAL_CELL_SIZE = 10
-var spatial_grid: Dictionary = {} # Vector2i (cell) -> Array of Entities
+enum TravelMode { FAST, REGION, LOCAL }
 
-# Statistics and Tracking
-var world_market_orders = [] # Array of {buyer_pos, resource, amount, price_offered, faction}
-var total_battles = 0
-var total_sieges = 0
-var total_captures = 0
-var total_caravan_raids = 0
-var total_trade_volume = 0 # Crowns traded this month
-
-# --- PERFORMANCE CACHE ---
-var distance_cache: Dictionary = {} # Vector2i_pair_key -> float
-
-func get_party_size() -> int:
-	var count = 1 # Commander
-	for u_obj in player.roster:
-		if not u_obj.status.get("is_dead", false):
-			count += 1
-	return count
-
-func get_max_weight() -> float:
-	# Base 100kg + 20kg per unit in roster
-	var base = 100.0
-	base += player.roster.size() * 20.0
-	
-	# Add bonus from transport items in stash
-	for item in player.stash:
-		if typeof(item) == TYPE_DICTIONARY:
-			base += item.get("capacity_bonus", 0.0)
-			
-	return base
-
-func get_total_weight() -> float:
-	var total = 0.0
-	
-	# Inventory weight (Resource stocks like grain, iron)
-	for k in player.inventory:
-		total += player.inventory[k] * 0.5 # 0.5kg per unit of resource
-	
-	# Stash (Items in the party inventory)
-	for item in player.stash:
-		total += item.get("weight", 1.0)
-	
-	# Equipped gear (Commander)
-	total += get_unit_equipment_weight(player.commander)
-	
-	# Equipped gear (Roster)
-	for u_obj in player.roster:
-		total += get_unit_equipment_weight(u_obj)
-		
-	return total
-
-func get_unit_equipment_weight(u_obj: GDUnit) -> float:
-	var w = 0.0
-	var eq = u_obj.equipment
-	if eq.get("main_hand"): w += eq["main_hand"].get("weight", 0.0)
-	if eq.get("off_hand"): w += eq["off_hand"].get("weight", 0.0)
-	
-	for slot in ["head", "torso", "l_arm", "r_arm", "l_hand", "r_hand", "l_leg", "r_leg", "l_foot", "r_foot"]:
-		var s = eq.get(slot)
-		if s:
-			if s.get("under"): w += s["under"].get("weight", 0.0)
-			if s.get("over"): w += s["over"].get("weight", 0.0)
-			if s.get("armor"): w += s["armor"].get("weight", 0.0)
-			if s.get("cover"): w += s["cover"].get("weight", 0.0)
-	return w
+# === INITIALIZATION ===
 
 func _ready():
-	player = GDPlayer.new()
-	# Initialize Factions
-	var faction_data = {
-		"player": ["Player's Band", 1000, "yellow"],
-		"royalists": ["The Royalist League", 5000, "blue"],
-		"mercenaries": ["Iron Mercenary Company", 5000, "red"],
-		"merchants": ["Coster's Trade Guild", 5000, "green"],
-		"church": ["Order of the Sacred Flame", 5000, "white"],
-		"commonwealth": ["The Free Commonwealth", 5000, "purple"],
-		"bandits": ["Outlaws", 0, "gray"],
-		"neutral": ["Independent", 0, "white"]
-	}
-	for f_id in faction_data:
-		var d = faction_data[f_id]
-		factions.append(GDFaction.new(f_id, d[0], d[1], d[2]))
-
+	# Initialize modules
+	world = WorldState.new()
+	entities = EntityRegistry.new()
+	player_state = PlayerState.new()
+	clock = GameClock.new()
+	state_manager = StateManager.new()
+	
+	# Forward clock signals
+	clock.log_updated.connect(func(): log_updated.emit())
+	clock.time_advanced.connect(_on_time_advanced)
+	clock.day_changed.connect(_on_day_changed)
+	clock.month_changed.connect(_on_month_changed)
+	
+	# Initialize RNG
 	rng.randomize()
 	print("World Seed: ", rng.seed)
-	# init_world called manually from menu
 	
-	player.commander.body = GameData.get_default_body(1.5)
-	player.commander.hp_max = GameData.get_total_hp(player.commander.body)
-	player.commander.hp = player.commander.hp_max
-	player.commander.blood_max = 500.0
-	player.commander.blood_current = 500.0
-	player.commander.bleed_rate = 0.0
-	player.commander.status["is_prone"] = false
-	player.commander.is_hero = true
+	# Connect battle ended (for compatibility)
+	battle_ended.connect(_on_battle_ended)
 	
-	# Hero Attributes
-	player.commander.attributes = {
-		"strength": 16,
-		"endurance": 16,
-		"agility": 16,
-		"balance": 16,
-		"pain_tolerance": 18
-	}
-	# Hero Skills
-	player.commander.skills = {
-		"swordsmanship": 40,
-		"axe_fighting": 20,
-		"spear_use": 20,
-		"mace_hammer": 20,
-		"dagger_knife": 20,
-		"improvised": 10,
-		"shield_use": 35,
-		"dodging": 30,
-		"armor_handling": 25,
-		"archery": 15,
-		"crossbows": 10
-	}
-	
-	connect("battle_ended", _on_battle_ended)
-	
-	# Initial equipment and roster are now handled by the Character Creator in _confirm_embark
-	# (See Main.gd for logic)
-	
-	# player.commander.speed = GameData.calculate_unit_speed(player.commander)
-	# player.commander.base_speed = player.commander.speed
+	# Validate initialization
+	_validate_initialization()
 
-func create_item(type_key, material_key, quality = "standard"):
-	return EconomyManager.create_item(type_key, material_key, quality)
+func _validate_initialization() -> bool:
+	"""Validate that all critical components are properly initialized"""
+	var errors = []
+	
+	# Check modules
+	if not world:
+		errors.append("WorldState module not initialized")
+	if not entities:
+		errors.append("EntityRegistry module not initialized")
+	if not player_state:
+		errors.append("PlayerState module not initialized")
+	if not clock:
+		errors.append("GameClock module not initialized")
+	if not state_manager:
+		errors.append("StateManager module not initialized")
+	
+	# Check player initialization
+	if player_state:
+		if not player_state.player:
+			errors.append("Player object not initialized")
+		elif not player_state.player.commander:
+			errors.append("Player commander not initialized")
+	
+	if errors.size() > 0:
+		push_error("GameState initialization failed:")
+		for err in errors:
+			push_error("  - " + err)
+		return false
+	
+	print("GameState: All modules initialized successfully")
+	return true
 
+func _on_time_advanced(h: int, d: int, m: int, y: int):
+	pass # Custom logic if needed
 
+func _on_day_changed(d: int):
+	pass # Custom logic if needed
+
+func _on_month_changed(m: int):
+	if not is_turbo:
+		run_world_audit()
+
+# === DELEGATED PLAYER METHODS ===
+
+func get_party_size() -> int:
+	return player_state.get_party_size()
+
+func get_max_weight() -> float:
+	return player_state.get_max_weight()
+
+func get_total_weight() -> float:
+	return player_state.get_total_weight()
+
+func get_unit_equipment_weight(u_obj: GDUnit) -> float:
+	return player_state.get_unit_equipment_weight(u_obj)
+
+func create_item(type_key: String, material_key: String, quality: String = "standard"):
+	return player_state.create_item(type_key, material_key, quality)
+
+# === DELEGATED WORLD METHODS ===
+
+func get_tile_type(pos: Vector2i) -> String:
+	var biome = world.get_biome(pos)
+	match biome:
+		"forest": return "forest"
+		"ocean": return "water"
+		"mountain": return "mountain"
+		"desert": return "desert"
+		_: return "plains"
+
+func get_true_terrain(pos: Vector2i) -> String:
+	"""Get actual terrain type, using geology to override settlement/road tiles"""
+	return world.get_true_terrain(pos)
+
+func get_total_population() -> int:
+	"""Get total population across all settlements"""
+	var total = 0
+	for pos in settlements:
+		total += settlements[pos].population
+	return total
+
+func get_entities_near(pos: Vector2i, radius: int = 1) -> Array:
+	return world.get_entities_near(pos, radius)
+
+func update_spatial_grid():
+	"""Rebuild spatial grid from current entity positions"""
+	world.spatial_grid.clear()
+	for army in entities.armies:
+		world.add_to_spatial_grid(army, army.pos)
+	for caravan in entities.caravans:
+		world.add_to_spatial_grid(caravan, caravan.pos)
+
+# === DELEGATED ENTITY METHODS ===
+
+func get_faction(id: String) -> GDFaction:
+	return entities.get_faction_by_id(id)
+
+func find_npc(npc_id: String) -> GDNPC:
+	for pos in settlements:
+		var s = settlements[pos]
+		for npc in s.npcs:
+			if npc.id == npc_id:
+				return npc
+	return null
+
+# === DELEGATED CLOCK METHODS ===
+
+func add_log(message: String):
+	clock.add_log("[Turn %d] %s" % [turn, message])
+
+func add_history_event(msg: String):
+	clock.add_history(msg)
+	add_log("[color=orange][HISTORY][/color] " + msg)
+
+func get_date_string() -> String:
+	return clock.get_full_datetime()
+
+func get_time_of_day() -> String:
+	return "Day" if clock.is_day() else "Night"
+
+func is_night() -> bool:
+	return clock.is_night()
+
+func advance_time():
+	clock.advance_time(1)
+	_process_turn_logic()
+
+# === ECONOMY/SETTLEMENT DELEGATION ===
 
 func hire_recruit(s_pos, pool_idx):
 	SettlementManager.hire_recruit(self, s_pos, pool_idx)
@@ -299,8 +494,6 @@ func sell_resource(s_pos, res_name, amount = 10):
 	else:
 		add_log("Insufficient stock or town cannot afford.")
 
-# --- Blueprint & Commission Logic ---
-
 func get_item_price(type_key, mat_key, qual, is_commission = false) -> int:
 	return EconomyManager.get_item_price(type_key, mat_key, qual, is_commission)
 
@@ -331,14 +524,6 @@ func auto_equip_all():
 func commission_items(s_pos, type_key, mat_key, qual, count):
 	EconomyManager.commission_items(self, s_pos, type_key, mat_key, qual, count)
 
-func set_relation(f1, f2, status):
-	get_faction(f1).relations[f2] = status
-	get_faction(f2).relations[f1] = status
-	if status == "war":
-		# Only log major wars
-		if f1 != "bandits" and f2 != "bandits":
-			add_log("WAR! %s declared war on %s!" % [get_faction(f1).name, get_faction(f2).name])
-
 func equip_commander_item(_slot_key: String, stash_idx: int):
 	EconomyManager.perform_equip(self, player.commander, stash_idx)
 
@@ -367,14 +552,94 @@ func unequip_item(unit_idx: int, slot: String, layer: String = ""):
 	if unit_idx < 0 or unit_idx >= player.roster.size(): return
 	EconomyManager.perform_unequip(self, player.roster[unit_idx], slot, layer)
 
+func get_price(s, res):
+	if not s: return 0
+	return EconomyManager.get_price(res, s)
+
+func get_buy_price(s, res):
+	var val = get_price(s, res)
+	return int(val * 1.1) # 10% markup for player buying from town
+
+func get_sell_price(s, res):
+	var val = get_price(s, res)
+	return int(val * 0.9) # 10% margin for player selling to town
+
+func get_market_info(s, res):
+	return EconomyManager.get_market_info(s, res)
+
+func sponsor_building(s_pos, b_name):
+	SettlementManager.sponsor_building(self, s_pos, b_name)
+
+func donate_resource(s_pos, res, amount):
+	SettlementManager.donate_resource(self, s_pos, res, amount)
+
+func accept_quest(s_pos, npc_idx, quest_idx):
+	var s = settlements.get(s_pos)
+	if not s: return
+	
+	if npc_idx >= s.npcs.size(): return
+	var npc = s.npcs[npc_idx]
+	
+	if quest_idx >= npc.quests.size(): return
+	var q = npc.quests[quest_idx]
+	
+	q.status = GDQuest.Status.ACTIVE
+	active_quests.append(q)
+	npc.quests.remove_at(quest_idx)
+	
+	add_log("Accepted Quest: [color=cyan]%s[/color] from %s." % [q.title, npc.name])
+
+# === FACTION/COMBAT DELEGATION ===
+
+func set_relation(f1, f2, status):
+	get_faction(f1).relations[f2] = status
+	get_faction(f2).relations[f1] = status
+	if status == "war":
+		# Only log major wars
+		if f1 != "bandits" and f2 != "bandits":
+			add_log("WAR! %s declared war on %s!" % [get_faction(f1).name, get_faction(f2).name])
+
+func get_relation(f1, f2):
+	return FactionManager.get_relation(f1, f2, factions)
+
+func resolve_ai_battle(att, def):
+	# Check if a battle already exists at this location or involving these parties
+	for b in ongoing_battles:
+		if (b.attacker == att and b.defender == def) or (b.attacker == def and b.defender == att):
+			return # Already in battle
+	
+	var new_battle = GDBattle.new(def.pos, att, def)
+	ongoing_battles.append(new_battle)
+	att.is_in_battle = true
+	def.is_in_battle = true
+	add_log("[color=red]BATTLE:[/color] %s and %s are engaged at %v!" % [att.name, def.name, def.pos])
+
+func resolve_siege(army_obj, town, _t_pos):
+	return CombatManager.resolve_siege(army_obj, town, self)
+
+# === TRACKING ===
+
+func track_production(res: String, amount: int):
+	monthly_ledger["production_" + res] = monthly_ledger.get("production_" + res, 0) + amount
+
+func track_tax(amount: int):
+	monthly_ledger["taxes"] = monthly_ledger.get("taxes", 0) + amount
+
+func track_upkeep(amount: int):
+	monthly_ledger["upkeep"] = monthly_ledger.get("upkeep", 0) + amount
+
+func run_world_audit():
+	WorldAudit.print_monthly_report(self)
+	monthly_ledger.clear()
+
+# === WORLD GENERATION ===
+
 func init_world(config: Dictionary = {}):
 	# Clear previous game state
-	player = GDPlayer.new()
-	history.clear()
-	event_log.clear()
-	day = 1
-	turn = 0
-	hour = 0
+	world.clear()
+	entities.clear()
+	player_state.clear()
+	clock.clear()
 	
 	var gen = WorldGen.new()
 	# Connect to world gen signal to relay it to UI
@@ -409,14 +674,26 @@ func init_world(config: Dictionary = {}):
 	settlements = data["settlements"]
 	ruins = data.get("ruins", {})
 	player.pos = data["start_pos"]
-	armies = data["armies"]
-	caravans = data["caravans"]
+	
+	# Populate armies array (cannot reassign typed arrays directly)
+	armies.clear()
+	for army in data.get("armies", []):
+		armies.append(army)
+	
+	# Populate caravans array
+	caravans.clear()
+	for caravan in data.get("caravans", []):
+		caravans.append(caravan)
+	
 	province_grid = data.get("province_grid", [])
 	provinces = data.get("provinces", {})
 	
 	# Capture dynamic factions
 	if data.has("factions"):
-		factions = data["factions"]
+		# Clear and repopulate factions array
+		factions.clear()
+		for faction in data["factions"]:
+			factions.append(faction)
 		# Keep player and special factions
 		var player_f = GDFaction.new("player", "Player's Band", 1000, "yellow")
 		var bandit_f = GDFaction.new("bandits", "Outlaws", 0, "gray")
@@ -471,6 +748,8 @@ func init_world(config: Dictionary = {}):
 	map_updated.emit()
 	emit_signal("map_updated")
 
+# === XP & LEVELING ===
+
 func get_xp_for_next_level(lvl: int) -> int:
 	return lvl * lvl * 100
 
@@ -493,51 +772,7 @@ func grant_xp(unit: GDUnit, amount: int):
 		needed = get_xp_for_next_level(unit.level)
 	map_updated.emit()
 
-func add_log(msg: String):
-	# Core Game Log (UI)
-	event_log.append("[Turn %d] %s" % [turn, msg])
-	if event_log.size() > 500: # Slightly larger buffer for history
-		event_log.pop_front()
-	
-	if not is_turbo:
-		emit_signal("log_updated")
-	
-	# Internal Event Tracking for Report (Optional critical events only)
-	if is_turbo:
-		if msg.contains("Starvation!") or msg.contains("at WAR"):
-			if monthly_ledger.has("events"):
-				monthly_ledger["events"].append(msg)
-
-func add_history_event(msg: String):
-	var d_idx = day - 1
-	var year = int(float(d_idx) / (Globals.DAYS_PER_MONTH * Globals.MONTHS_PER_YEAR)) + 1
-	var month_idx = int(float(d_idx) / Globals.DAYS_PER_MONTH) % Globals.MONTHS_PER_YEAR
-	var m_day = (d_idx % Globals.DAYS_PER_MONTH) + 1
-	
-	history.append({
-		"turn": turn,
-		"day": m_day,
-		"month": GameData.MONTH_NAMES[month_idx],
-		"year": year,
-		"text": msg
-	})
-	# If also want it in the current log
-	add_log("[color=orange][HISTORY][/color] " + msg)
-
-func get_date_string() -> String:
-	var d_idx = day - 1
-	var year = int(float(d_idx) / (Globals.DAYS_PER_MONTH * Globals.MONTHS_PER_YEAR)) + 1
-	var month_idx = int(float(d_idx) / Globals.DAYS_PER_MONTH) % Globals.MONTHS_PER_YEAR
-	var m_day = (d_idx % Globals.DAYS_PER_MONTH) + 1
-	
-	return "Day %d of %s, Year %d (%02d:00)" % [m_day, GameData.MONTH_NAMES[month_idx], year, hour]
-
-func get_time_of_day() -> String:
-	if hour >= 6 and hour < 20: return "Day"
-	return "Night"
-
-func is_night() -> bool:
-	return hour < 6 or hour >= 20
+# === HEALING ===
 
 func process_daily_healing():
 	var heal_amt = 1 if not is_resting else 5
@@ -579,6 +814,211 @@ func _heal_unit(u_obj, amt):
 		# Optional: add log or effect
 		pass
 
+# === PROVINCE DATA ===
+
+func get_province_at(pos: Vector2i) -> Dictionary:
+	if province_grid.size() > pos.y and province_grid[pos.y].size() > pos.x:
+		var p_id = province_grid[pos.y][pos.x]
+		return provinces.get(p_id, {})
+	return {}
+
+func get_province_owner_faction(p_id: int) -> String:
+	var p_data = provinces.get(p_id, {})
+	return p_data.get("faction", "neutral")
+
+# === TURN PROCESSING ===
+
+func _process_turn_logic():
+	"""Process all turn-based game logic"""
+	# Update spatial hash at the start of every hour for AI lookups
+	update_spatial_grid()
+	
+	# Update World Market and Trade Contracts
+	EconomyManager.update_trade_networks(self)
+	
+	# SIEGE LOGIC: Advance timers and handle abandonment
+	_process_sieges()
+	
+	# Day rollover logic
+	if hour == 0:
+		_process_new_day()
+	
+	# STAGGERED SETTLEMENT UPDATES (Optimization 2)
+	_process_settlement_updates()
+	
+	# Party Food Consumption (Twice a day)
+	if hour == 8 or hour == 20:
+		_process_food_consumption()
+	
+	# Hourly Logic (Movement, Construction, Healing)
+	_process_hourly_logic()
+	
+	# BATTLES
+	_process_battles()
+	
+	# Commissions
+	_process_commissions()
+	
+	AIManager.process_movement(self)
+	
+	if not is_turbo:
+		emit_signal("map_updated")
+
+func _process_sieges():
+	for s_pos in settlements:
+		var s = settlements[s_pos]
+		if s.is_under_siege:
+			var nearby = get_entities_near(s_pos, 2)
+			var still_active = false
+			for e in nearby:
+				if "faction" in e and e.faction == s.siege_attacker_faction:
+					if "type" in e and e.type in ["army", "lord", "player"]:
+						still_active = true
+						break
+			
+			if still_active:
+				s.siege_timer += 1
+			else:
+				# Abandonment: If no one is near, timer ticks down. At 0, siege breaks.
+				s.siege_timer = max(0, s.siege_timer - 2)
+				if s.siege_timer <= 0:
+					s.is_under_siege = false
+					s.siege_attacker_faction = ""
+					add_log("The siege of %s has been abandoned." % s.name)
+
+func _process_new_day():
+	add_log("--- Day %d ---" % day)
+	
+	SettlementManager.process_migration(self)
+	AIManager.spawn_bandit_party(self)
+	WarManager.process_diplomacy(self)
+	
+	# --- FACTION STIPENDS ---
+	_process_faction_stipends()
+	
+	# --- LORD UPKEEP ---
+	_process_lord_upkeep()
+	
+	_process_player_contract()
+	
+	if player.founding_timer > 0:
+		player.founding_timer -= 1
+		if player.founding_timer == 0:
+			SettlementManager.finalize_player_settlement(self, player.founding_pos, player.founding_type)
+			player.founding_pos = Vector2i(-1, -1)
+			player.founding_type = ""
+
+func _process_faction_stipends():
+	"""Distribute 20% of faction treasury back to lords and settlements daily"""
+	for f in factions:
+		if f.id in ["neutral", "bandits", "player"]: continue
+		if f.treasury > 5000:
+			var payout = int(f.treasury * 0.20)
+			f.treasury -= payout
+			
+			# find lords and settlements
+			var f_lords = []
+			for a in armies:
+				if a.type == "lord" and a.faction == f.id: f_lords.append(a)
+			
+			var f_settlements = []
+			for s in settlements.values():
+				if s.faction_id == f.id: f_settlements.append(s)
+			
+			if not f_lords.is_empty() or not f_settlements.is_empty():
+				var share = payout / (f_lords.size() + f_settlements.size())
+				for l in f_lords: l.crowns += share
+				for s in f_settlements: s.crown_stock += share
+
+func _process_lord_upkeep():
+	"""Process upkeep costs for lord armies"""
+	for a in armies:
+		if a.type == "lord":
+			# SYNC: Pull taxes/stipends from the political NPC record into the field army
+			if a.lord_id != "":
+				var lord_npc = find_npc(a.lord_id)
+				if lord_npc and lord_npc.crowns > 0:
+					a.crowns += lord_npc.crowns
+					lord_npc.crowns = 0
+					
+			var upkeep = a.roster.size() * Globals.LORD_UPKEEP_PER_UNIT
+			if a.crowns >= upkeep:
+				a.crowns -= upkeep
+				track_upkeep(upkeep)
+			elif a.home_fief != Vector2i(-1, -1):
+				var s = settlements[a.home_fief]
+				var take = min(upkeep, max(0, s.crown_stock - 1000))
+				s.crown_stock -= take
+				a.crowns += take
+				track_upkeep(take)
+				if a.crowns < upkeep:
+					a.roster.resize(int(a.roster.size() * (1.0 - Globals.LORD_DESERTION_RATE)))
+
+func _process_player_contract():
+	if player.active_contract.has("daily_wage"):
+		var wage = player.active_contract["daily_wage"]
+		var f_id = player.active_contract.get("faction_id", "")
+		var f_data = get_faction(f_id)
+		
+		if f_data and f_data.treasury >= wage:
+			f_data.treasury -= wage
+			player.crowns += wage
+			add_log("Mercenary Pay: Received %d Crowns from %s." % [wage, f_data.name])
+			
+			var h = player.service_history.get(f_id, 0)
+			player.service_history[f_id] = h + 1
+		else:
+			add_log("Mercenary Pay: %s failed to pay your daily wage!" % (f_data.name if f_data else "Faction"))
+		
+		if day >= player.active_contract.get("expires_day", 999999):
+			add_log("Contract Expired: Your service with %s has ended." % (f_data.name if f_data else "Faction"))
+			player.active_contract = {}
+
+func _process_settlement_updates():
+	"""STAGGERED SETTLEMENT UPDATES - Use hash for better distribution"""
+	for pos in settlements:
+		var pos_hash = (pos.x * 73856093) ^ (pos.y * 19349663)  # Spatial hash function
+		if abs(pos_hash) % Globals.TURNS_PER_DAY == hour:
+			process_settlement_pulse(settlements[pos])
+
+func _process_food_consumption():
+	var consumption = max(1, player.roster.size() + 1)
+	player.provisions -= consumption
+	if player.provisions < 0:
+		player.provisions = 0
+		player.morale = max(0, player.morale - 10)
+		add_log("Starvation! Morale drops.")
+	else:
+		process_daily_healing()
+
+func _process_hourly_logic():
+	for pos in settlements:
+		var s = settlements[pos]
+		if not s.construction_queue.is_empty():
+			SettlementManager.process_construction(s)
+
+	# Healing
+	var heal_rate = 0.5 if player.provisions > 0 else 0.1
+	_heal_unit(player.commander, heal_rate * 0.5)
+	for u in player.roster: _heal_unit(u, heal_rate * 0.5)
+
+func _process_battles():
+	for i in range(ongoing_battles.size() - 1, -1, -1):
+		var b = ongoing_battles[i]
+		b.process_turn(self)
+		if b.is_finished:
+			ongoing_battles.remove_at(i)
+
+func _process_commissions():
+	for i in range(player.commissions.size() - 1, -1, -1):
+		var c = player.commissions[i]
+		c["remaining_turns"] -= 1
+		if c["remaining_turns"] <= 0:
+			for j in range(c["count"]): 
+				player.stash.append(c["item_data"].duplicate())
+			player.commissions.remove_at(i)
+			add_log("Commission delivered.")
+
 func process_settlement_pulse(s: GDSettlement):
 	if grid.is_empty(): return
 	
@@ -610,7 +1050,7 @@ func process_settlement_pulse(s: GDSettlement):
 			var f_cut = daily_tax - s_cut - l_cut
 			
 			s.crown_stock += s_cut
-			land_lord.crowns += l_cut # Unified: NPC and Army now use Lord wealth Record
+			land_lord.crowns += l_cut
 			if f_data: f_data.treasury += f_cut
 			track_tax(daily_tax)
 		else:
@@ -628,6 +1068,9 @@ func process_settlement_pulse(s: GDSettlement):
 		SettlementManager.check_promotions(s)
 		
 	# --- TOURNAMENT SYSTEM ---
+	_process_tournaments(s)
+
+func _process_tournaments(s: GDSettlement):
 	if s.tournament_active:
 		s.tournament_days_left -= 1
 		if s.tournament_days_left <= 0:
@@ -643,450 +1086,44 @@ func process_settlement_pulse(s: GDSettlement):
 				s.tournament_participants.append(npc.id)
 		add_log("[color=yellow]TOURNAMENT:[/color] A grand tournament has begun in %s!" % s.name)
 
-func _process_player_contract():
-	if player.active_contract.has("daily_wage"):
-		var wage = player.active_contract["daily_wage"]
-		var f_id = player.active_contract.get("faction_id", "")
-		var f_data = get_faction(f_id)
+# === BATTLE ENDED HANDLER ===
+
+func _on_battle_ended(result):
+	# Handle post-battle cleanup
+	pass
+
+# === A* PATHFINDING ===
+
+func rebuild_astar():
+	"""Rebuild the A* pathfinding grid after loading a world"""
+	if not astar:
+		push_error("rebuild_astar: astar object is null")
+		return
 		
-		if f_data and f_data.treasury >= wage:
-			f_data.treasury -= wage
-			player.crowns += wage
-			add_log("Mercenary Pay: Received %d Crowns from %s." % [wage, f_data.name])
+	# Configure A* grid
+	astar.region = Rect2i(0, 0, width, height)
+	astar.cell_size = Vector2(1, 1)
+	astar.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_NEVER
+	astar.update()
+	
+	# Set terrain-based weights
+	for y in range(height):
+		for x in range(width):
+			var t = grid[y][x]
+			var weight = 1.0
+			if t == '#': weight = 3.0 # Forest
+			elif t == '&': weight = 5.0 # Jungle/Swamp
+			elif t == '"': weight = 2.0 # Desert
+			elif t == '*': weight = 1.2 # Tundra
+			elif t == 'o': weight = 2.5 # Hills
+			elif t == 'O': weight = 7.0 # Peaks
+			elif t == '^': weight = 15.0 # Mountain
+			elif t == '~': 
+				astar.set_point_solid(Vector2i(x, y), true)
+				continue
+			elif t == '≈': weight = 8.0 # Large River
+			elif t == '/': weight = 4.0 # Small River
+			elif t == '\\': weight = 4.0
+			elif t == '=': weight = 0.5 # Roads
 			
-			var h = player.service_history.get(f_id, 0)
-			player.service_history[f_id] = h + 1
-		else:
-			add_log("Mercenary Pay: %s failed to pay your daily wage!" % (f_data.name if f_data else "Faction"))
-		
-		if day >= player.active_contract.get("expires_day", 999999):
-			add_log("Contract Expired: Your service with %s has ended." % (f_data.name if f_data else "Faction"))
-			player.active_contract = {}
-
-func get_tile_type(pos: Vector2i) -> String:
-	if pos.y < 0 or pos.y >= height or pos.x < 0 or pos.x >= width:
-		return "water"
-	var t = grid[pos.y][pos.x]
-	match t:
-		'#': return "forest"
-		'&': return "jungle"
-		'"': return "desert"
-		'*': return "tundra"
-		'o': return "hills"
-		'O': return "peaks"
-		'^': return "mountain"
-		'~', '≈': return "water"
-		'=', '/', '\\': return "road"
-	return "plains"
-
-func advance_time():
-	turn += 1
-	hour = (hour + 1) % Globals.TURNS_PER_DAY
-	
-	# Update spatial hash at the start of every hour for AI lookups
-	update_spatial_grid()
-	
-	# Update World Market and Trade Contracts
-	EconomyManager.update_trade_networks(self)
-	
-	# SIEGE LOGIC: Advance timers and handle abandonment
-	for s_pos in settlements:
-		var s = settlements[s_pos]
-		if s.is_under_siege:
-			var nearby = get_entities_near(s_pos, 2)
-			var still_active = false
-			for e in nearby:
-				if "faction" in e and e.faction == s.siege_attacker_faction:
-					if "type" in e and e.type in ["army", "lord", "player"]:
-						still_active = true
-						break
-			
-			if still_active:
-				s.siege_timer += 1
-			else:
-				# Abandonment: If no one is near, timer ticks down. At 0, siege breaks.
-				# This allows for a 12-turn "Grace Period" if a lord moves or respawns.
-				s.siege_timer = max(0, s.siege_timer - 2) # Ticks down twice as fast as it ticks up
-				if s.siege_timer <= 0:
-					s.is_under_siege = false
-					s.siege_attacker_faction = ""
-					add_log("The siege of %s has been abandoned." % s.name)
-	
-	if hour == 0:
-		day += 1
-		add_log("--- Day %d ---" % day)
-		
-		SettlementManager.process_migration(self)
-		AIManager.spawn_bandit_party(self)
-		WarManager.process_diplomacy(self)
-		
-		# --- FACTION STIPENDS ---
-		# Distribute 20% of faction treasury back to lords and settlements daily
-		for f in factions:
-			if f.id in ["neutral", "bandits", "player"]: continue
-			if f.treasury > 5000:
-				var payout = int(f.treasury * 0.20)
-				f.treasury -= payout
-				
-				# find lords and settlements
-				var f_lords = []
-				for a in armies:
-					if a.type == "lord" and a.faction == f.id: f_lords.append(a)
-				
-				var f_settlements = []
-				for s in settlements.values():
-					if s.faction == f.id: f_settlements.append(s)
-				
-				if not f_lords.is_empty() or not f_settlements.is_empty():
-					var share = payout / (f_lords.size() + f_settlements.size())
-					for l in f_lords: l.crowns += share
-					for s in f_settlements: s.crown_stock += share
-
-		for a in armies:
-			if a.type == "lord":
-				# SYNC: Pull taxes/stipends from the political NPC record into the field army
-				if a.lord_id != "":
-					var lord_npc = find_npc(a.lord_id)
-					if lord_npc and lord_npc.crowns > 0:
-						a.crowns += lord_npc.crowns
-						lord_npc.crowns = 0
-						
-				var upkeep = a.roster.size() * Globals.LORD_UPKEEP_PER_UNIT
-				if a.crowns >= upkeep:
-					a.crowns -= upkeep
-					track_upkeep(upkeep)
-				elif a.home_fief != Vector2i(-1, -1):
-					var s = settlements[a.home_fief]
-					var take = min(upkeep, max(0, s.crown_stock - 1000))
-					s.crown_stock -= take
-					a.crowns += take
-					track_upkeep(take)
-					if a.crowns < upkeep:
-						a.roster.resize(int(a.roster.size() * (1.0 - Globals.LORD_DESERTION_RATE)))
-		
-		_process_player_contract()
-		
-		if player.founding_timer > 0:
-			player.founding_timer -= 1
-			if player.founding_timer == 0:
-				SettlementManager.finalize_player_settlement(self, player.founding_pos, player.founding_type)
-				player.founding_pos = Vector2i(-1, -1)
-				player.founding_type = ""
-
-		if not is_turbo and day % Globals.DAYS_PER_MONTH == 0:
-			run_world_audit()
-
-	# STAGGERED SETTLEMENT UPDATES (Optimization 2)
-	# Use hash for better distribution than (x+y) % TURNS_PER_DAY
-	for pos in settlements:
-		var pos_hash = (pos.x * 73856093) ^ (pos.y * 19349663)  # Spatial hash function
-		if abs(pos_hash) % Globals.TURNS_PER_DAY == hour:
-			process_settlement_pulse(settlements[pos])
-
-	# 1. Party Food Consumption (Twice a day)
-	if hour == 8 or hour == 20:
-		var consumption = max(1, player.roster.size() + 1)
-		player.provisions -= consumption
-		if player.provisions < 0:
-			player.provisions = 0
-			player.morale = max(0, player.morale - 10)
-			add_log("Starvation! Morale drops.")
-		else:
-			process_daily_healing()
-	
-	# 2. Hourly Logic (Movement, Construction, Healing)
-	for pos in settlements:
-		var s = settlements[pos]
-		if not s.construction_queue.is_empty():
-			SettlementManager.process_construction(s)
-
-	# Healing
-	var heal_rate = 0.5 if player.provisions > 0 else 0.1
-	_heal_unit(player.commander, heal_rate * 0.5)
-	for u in player.roster: _heal_unit(u, heal_rate * 0.5)
-
-	# BATTLES
-	for i in range(ongoing_battles.size() - 1, -1, -1):
-		var b = ongoing_battles[i]
-		b.process_turn(self)
-		if b.is_finished:
-			ongoing_battles.remove_at(i)
-
-	# Commissions
-	for i in range(player.commissions.size() - 1, -1, -1):
-		var c = player.commissions[i]
-		c["remaining_turns"] -= 1
-		if c["remaining_turns"] <= 0:
-			for j in range(c["count"]): 
-				player.stash.append(c["item_data"].duplicate())
-			player.commissions.remove_at(i)
-			add_log("Commission delivered.")
-
-	AIManager.process_movement(self)
-	if not is_turbo:
-		emit_signal("map_updated")
-
-
-func sponsor_building(s_pos, b_name):
-	SettlementManager.sponsor_building(self, s_pos, b_name)
-
-func donate_resource(s_pos, res, amount):
-	SettlementManager.donate_resource(self, s_pos, res, amount)
-
-func accept_quest(s_pos, npc_idx, quest_idx):
-	var s = settlements.get(s_pos)
-	if not s: return
-	
-	if npc_idx >= s.npcs.size(): return
-	var npc = s.npcs[npc_idx]
-	
-	if quest_idx >= npc.quests.size(): return
-	var q = npc.quests[quest_idx]
-	
-	q.status = GDQuest.Status.ACTIVE
-	active_quests.append(q)
-	npc.quests.remove_at(quest_idx)
-	
-	add_log("Accepted Quest: [color=cyan]%s[/color] from %s." % [q.title, npc.name])
-
-func get_price(s, res):
-	if not s: return 0
-	return EconomyManager.get_price(res, s)
-
-func get_buy_price(s, res):
-	var val = get_price(s, res)
-	return int(val * 1.1) # 10% markup for player buying from town
-
-func get_sell_price(s, res):
-	var val = get_price(s, res)
-	return int(val * 0.9) # 10% margin for player selling to town
-
-func get_market_info(s, res):
-	return EconomyManager.get_market_info(s, res)
-
-
-func get_relation(f1, f2):
-	return FactionManager.get_relation(f1, f2, factions)
-
-func resolve_ai_battle(att, def):
-	# Check if a battle already exists at this location or involving these parties
-	for b in ongoing_battles:
-		if (b.attacker == att and b.defender == def) or (b.attacker == def and b.defender == att):
-			return # Already in battle
-	
-	var new_battle = GDBattle.new(def.pos, att, def)
-	ongoing_battles.append(new_battle)
-	att.is_in_battle = true
-	def.is_in_battle = true
-	add_log("[color=red]BATTLE:[/color] %s and %s are engaged at %v!" % [att.name, def.name, def.pos])
-
-func resolve_siege(army_obj, town, _t_pos):
-	return CombatManager.resolve_siege(army_obj, town, self)
-
-func get_faction(id: String) -> GDFaction:
-	return FactionManager.get_faction(id, factions)
-
-func find_npc(npc_id: String) -> GDNPC:
-	for pos in settlements:
-		var s = settlements[pos]
-		for npc in s.npcs:
-			if npc.id == npc_id:
-				return npc
-	return null
-
-func get_province_at(pos: Vector2i) -> Dictionary:
-	if province_grid.size() > pos.y and province_grid[pos.y].size() > pos.x:
-		var p_id = province_grid[pos.y][pos.x]
-		return provinces.get(p_id, {})
-	return {}
-
-func get_province_owner_faction(p_id: int) -> String:
-	var p = provinces.get(p_id)
-	if p and p.has("owner"):
-		return p.owner
-	return "neutral"
-
-func get_entity_name(entity):
-	return FactionManager.get_entity_name(entity, factions)
-
-func is_in_bounds(pos: Vector2i) -> bool:
-	return pos.x >= 0 and pos.x < width and pos.y >= 0 and pos.y < height
-
-func get_true_terrain(pos: Vector2i) -> String:
-	"""Get actual terrain type, using geology to override settlement/road tiles"""
-	if not is_in_bounds(pos): return "~"
-	var t = grid[pos.y][pos.x]
-	# Use geology to find underlying terrain if grid is an overlay (Roads, Towns, etc.)
-	if geology.has(pos) and t in ["=", "T", "C", "v", "h", "k", "?"]:
-		return geology[pos].get("biome", t)
-	return t
-
-func is_walkable(pos: Vector2i) -> bool:
-	if not is_in_bounds(pos): return false
-	if settlements.has(pos): return true # Can always visit settlements
-	var t = grid[pos.y][pos.x]
-	return t != '~' and t != '^'
-
-# --- SPATIAL GRID METHODS ---
-
-func update_spatial_grid():
-	spatial_grid.clear()
-	# Add Armies
-	for a in armies:
-		_add_to_spatial(a)
-	# Add Caravans
-	for c in caravans:
-		_add_to_spatial(c)
-	# Add Migrants
-	for m in migrants:
-		if m is Dictionary: # Migrants are sometimes dicts
-			_add_to_spatial(m)
-	# Add player
-	_add_to_spatial(player)
-
-func _add_to_spatial(entity):
-	var pos = entity.pos if "pos" in entity else Vector2i(-1, -1)
-	if pos == Vector2i(-1, -1): return
-	var cell = pos / SPATIAL_CELL_SIZE
-	if not spatial_grid.has(cell):
-		spatial_grid[cell] = []
-	spatial_grid[cell].append(entity)
-
-func get_entities_near(pos: Vector2i, radius: int) -> Array:
-	var result = []
-	var cell_pos = pos / SPATIAL_CELL_SIZE
-	var cell_radius = int(ceil(float(radius) / SPATIAL_CELL_SIZE))
-	
-	for dy in range(-cell_radius, cell_radius + 1):
-		for dx in range(-cell_radius, cell_radius + 1):
-			var cell = cell_pos + Vector2i(dx, dy)
-			if spatial_grid.has(cell):
-				for entity in spatial_grid[cell]:
-					# Use Chebyshev distance as it's faster for grid games
-					var dist = max(abs(entity.pos.x - pos.x), abs(entity.pos.y - pos.y))
-					if dist <= radius:
-						result.append(entity)
-	return result
-
-func get_entity_at(pos: Vector2i):
-	# Prioritize dynamic entities over static ones for inspection
-	var nearby = get_entities_near(pos, 0)
-	for e in nearby:
-		if not (e is Dictionary) and e == player: return {"type": "player", "data": e}
-		if e is GDArmy and e in armies: return {"type": "army", "data": e}
-		if e is GDCaravan and e in caravans: return {"type": "caravan", "data": e}
-		# Handle migrant dicts
-		if e is Dictionary and migrants.has(e): return {"type": "migrants", "data": e}
-	
-	for s_pos in settlements:
-		if s_pos == pos: return {"type": "settlement", "data": settlements[s_pos]}
-	
-	if ruins.has(pos):
-		return {"type": "ruin", "data": ruins[pos]}
-		
-	return null
-
-func erase_army(army):
-	# Check for quest targets
-	for q in active_quests:
-		if q.type == GDQuest.Type.EXTERMINATE and q.objective_data.get("target_id") == army.get_instance_id():
-			q.status = GDQuest.Status.COMPLETED
-			add_log("[color=green]QUEST COMPLETE: %s[/color]" % q.title)
-	
-	armies.erase(army)
-
-func _on_battle_ended(win):
-	if win and active_ruin_pos != Vector2i(-1, -1):
-		# Check for quest targets (Ruins)
-		for q in active_quests:
-			if q.type == GDQuest.Type.EXTERMINATE and q.target_pos == active_ruin_pos:
-				q.status = GDQuest.Status.COMPLETED
-				add_log("[color=green]QUEST COMPLETE: %s[/color]" % q.title)
-		
-		AIManager._reward_ruin(self, active_ruin_pos)
-	active_ruin_pos = Vector2i(-1, -1)
-
-# --- AUDIT & SIMULATION TOOLS ---
-
-func run_world_audit():
-	WorldAudit.run_audit(self)
-
-func run_turbo_simulation():
-	WorldAudit.run_turbo_simulation(self)
-
-func run_annual_simulation():
-	WorldAudit.run_annual_simulation(self)
-
-func get_total_population() -> int:
-	var total = 0
-	for pos in settlements:
-		total += settlements[pos].population
-	return total
-
-func track_production(res, amount):
-	if not is_turbo: return
-	var p = monthly_ledger["production"]
-	p[res] = p.get(res, 0) + amount
-
-func track_consumption(res, amount):
-	if not is_turbo: return
-	var c = monthly_ledger["consumption"]
-	c[res] = c.get(res, 0) + amount
-
-func track_idle(building):
-	if not is_turbo: return
-	monthly_ledger["idle_buildings"][building] = monthly_ledger["idle_buildings"].get(building, 0) + 1
-
-func track_starvation(deaths):
-	if not is_turbo: return
-	monthly_ledger["starvation_deaths"] = monthly_ledger.get("starvation_deaths", 0) + deaths
-
-func track_migration(amount):
-	if not is_turbo: return
-	monthly_ledger["migration_net"] = monthly_ledger.get("migration_net", 0) + amount
-
-func track_tax(amount):
-	if not is_turbo: return
-	monthly_ledger["tax_collected"] = monthly_ledger.get("tax_collected", 0) + amount
-
-func track_upkeep(amount):
-	if not is_turbo: return
-	monthly_ledger["upkeep_paid"] = monthly_ledger.get("upkeep_paid", 0) + amount
-
-func track_births(amount):
-	if not is_turbo: return
-	monthly_ledger["births"] = monthly_ledger.get("births", 0) + amount
-
-func track_war_deaths(amount):
-	if not is_turbo: return
-	monthly_ledger["deaths_war"] = monthly_ledger.get("deaths_war", 0) + amount
-
-func track_war_event(type: String, actor: String, victim: String):
-	# Track major war events for historical ledger
-	var event_msg = ""
-	match type:
-		"capture":
-			event_msg = "%s has captured a territory from %s!" % [actor, victim]
-			add_log(event_msg)
-		"defeat":
-			event_msg = "%s was defeated in battle by %s!" % [victim, actor]
-	
-	if event_msg != "":
-		add_history_event(event_msg)
-
-func track_trade_volume(amount):
-	total_trade_volume += amount
-	if not is_turbo: return
-	monthly_ledger["trade_volume"] = monthly_ledger.get("trade_volume", 0) + amount
-
-func track_logistical_pulse(type):
-	if not is_turbo: return
-	# type: "generated", "delivered", "dropped"
-	var key = "pulses_" + type
-	monthly_ledger[key] = monthly_ledger.get(key, 0) + 1
-
-func track_buy_order(type):
-	if not is_turbo: return
-	# type: "placed", "fulfilled"
-	var key = "buy_orders_" + type
-	monthly_ledger[key] = monthly_ledger.get(key, 0) + 1
+			astar.set_point_weight_scale(Vector2i(x, y), weight)

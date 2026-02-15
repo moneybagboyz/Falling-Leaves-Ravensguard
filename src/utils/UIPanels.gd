@@ -4,10 +4,7 @@ extends Object
 
 const TerrainColors = preload("res://src/ui/core/TerrainColors.gd")
 const UIFormatting = preload("res://src/ui/core/UIFormatting.gd")
-
-# Legacy cache vars kept for compatibility (unused now)
-static var terrain_color_cache = {}
-static var color_hex_cache = {}
+const UIConstants = preload("res://src/ui/core/UIConstants.gd")
 
 static func _c_to_bb(c: Color) -> String:
 	return UIFormatting.color_to_hex(c)
@@ -17,12 +14,12 @@ static func _wrap_grid(gs, terrain_color: Color, content: String) -> String:
 
 static func _get_terrain_color(gs, pos: Vector2i, t: String, scope: String = "global") -> Color:
 	# Delegate to TerrainColors module
-	var geo := gs.geology.get(pos, {"temp": 0.5, "rain": 0.5, "elevation": 0.3})
+	var geo: Dictionary = gs.geology.get(pos, {"temp": 0.5, "rain": 0.5, "elevation": 0.3})
 	return TerrainColors.get_color(pos, t, geo, scope)
 
 static func _get_tile_colors(gs, pos: Vector2i, t: String, scope: String = "global") -> Dictionary:
 	# Delegate to TerrainColors module
-	var geo := gs.geology.get(pos, {"temp": 0.5, "rain": 0.5, "elevation": 0.3})
+	var geo: Dictionary = gs.geology.get(pos, {"temp": 0.5, "rain": 0.5, "elevation": 0.3})
 	return TerrainColors.get_tile_colors(pos, t, geo, scope)
 
 static func get_tile_info(gs, pos: Vector2i) -> String:
@@ -485,7 +482,32 @@ static func render_character_creation_tabbed(p_conf, p_idx, t_idx, pts, tab, sho
 	return "".join(parts)
 
 static func render_location_select(gs, loc) -> String:
-	return "[center]Select Starting Location:\n%s[/center]" % str(loc)
+	var parts = []
+	parts.append("[center][b]SELECT STARTING LOCATION[/b][/center]\n\n")
+	
+	# Handle both GDSettlement objects and fallback dictionary format
+	var loc_name = loc.name if typeof(loc.name) != TYPE_NIL else "Unknown"
+	var loc_type = loc.type if typeof(loc.type) != TYPE_NIL else "wilds"
+	var loc_faction = loc.faction if typeof(loc.faction) != TYPE_NIL else "None"
+	var loc_pop = loc.population if ("population" in loc) else 0
+	var loc_pos = loc.pos if typeof(loc.pos) != TYPE_NIL else Vector2i(0, 0)
+	
+	parts.append("[center][color=cyan]%s[/color][/center]\n" % loc_name)
+	parts.append("[center]Type: %s[/center]\n" % loc_type.capitalize())
+	parts.append("[center]Faction: %s[/center]\n" % loc_faction)
+	
+	if loc_pop > 0:
+		parts.append("[center]Population: %d[/center]\n" % loc_pop)
+	
+	parts.append("[center]Position: (%d, %d)[/center]\n\n" % [loc_pos.x, loc_pos.y])
+	
+	# Show available settlements count if in GameState
+	if gs and gs.settlements:
+		parts.append("[center][color=gray]%d settlements available[/color][/center]\n" % gs.settlements.size())
+	
+	parts.append("\n[center][color=yellow]← → to navigate | ENTER to confirm[/color][/center]")
+	
+	return "".join(parts)
 
 static func render_loading_screen(status: String, gs = null) -> Dictionary:
 	var header = "[center][b]GENERATING WORLD[/b][/center]"
@@ -505,13 +527,67 @@ static func render_world_preview(gs, preview_pos) -> Dictionary:
 	var header = "[center][b]WORLD PREVIEW[/b] - Press [b]ENTER[/b] to Start | [b]R[/b] to Re-roll[/center]"
 	var side = "[b]WORLD DATA[/b]\n\n"
 	side += "Size: %dx%d\n" % [gs.width, gs.height]
-	side += "Seed: %s\n" % str(gs.seed_value if "seed_value" in gs else "Unknown")
+	side += "Seed: %s\n" % str(gs.world_seed if gs.world_seed else "Unknown")
+	
+	# Calculate statistics
+	var total_settlements = gs.settlements.size()
+	var total_population = 0
+	var settlement_types = {"metropolis": 0, "city": 0, "town": 0, "village": 0, "hamlet": 0}
+	var total_provinces = gs.provinces.size()
+	var total_factions = 0
+	
+	# Count settlements and population
+	for s_pos in gs.settlements:
+		var s = gs.settlements[s_pos]
+		total_population += s.population
+		if s.type in settlement_types:
+			settlement_types[s.type] += 1
+	
+	# Count factions
+	var faction_set = {}
+	for s_pos in gs.settlements:
+		var s = gs.settlements[s_pos]
+		if s.faction != "neutral" and s.faction != "bandits":
+			faction_set[s.faction] = true
+	total_factions = faction_set.size()
+	
+	side += "\n[b]CIVILIZATION[/b]\n"
+	side += "Population: %s\n" % _format_number(total_population)
+	side += "Settlements: %d\n" % total_settlements
+	if settlement_types.metropolis > 0:
+		side += "  Metropolises: %d\n" % settlement_types.metropolis
+	if settlement_types.city > 0:
+		side += "  Cities: %d\n" % settlement_types.city
+	if settlement_types.town > 0:
+		side += "  Towns: %d\n" % settlement_types.town
+	if settlement_types.village > 0:
+		side += "  Villages: %d\n" % settlement_types.village
+	if settlement_types.hamlet > 0:
+		side += "  Hamlets: %d\n" % settlement_types.hamlet
+	
+	side += "\n[b]POLITICS[/b]\n"
+	side += "Provinces: %d\n" % total_provinces
+	side += "Factions: %d\n" % total_factions
+	side += "Armies: %d\n" % gs.armies.size()
+	
 	side += "\n[b]CONTROLS[/b]\n"
 	side += "Arrows: Scroll\n"
 	side += "Zoom: +/-"
 	
-	# The map itself is rendered via TileMap in Main.gd, so we just return a frame
+	# The map itself is rendered via shader or text
 	return {"header": header, "map": "", "side": side}
+
+static func _format_number(num: int) -> String:
+	"""Format number with thousand separators"""
+	var str_num = str(num)
+	var result = ""
+	var count = 0
+	for i in range(str_num.length() - 1, -1, -1):
+		if count > 0 and count % 3 == 0:
+			result = "," + result
+		result = str_num[i] + result
+		count += 1
+	return result
 
 static func render_minimap(gs, w, h) -> String:
 	# Downscale grid to fit fit in w x h
@@ -540,7 +616,7 @@ static func render_minimap(gs, w, h) -> String:
 				"\"", "S": sym = "\""
 				_: sym = t[0] if t.length() > 0 else " "
 			
-			if gs.render_mode == "grid" and not gs.get("graphical_mode_active"):
+			if gs.render_mode == "grid":
 				sym = "█"
 				
 			var col_str = _c_to_bb(col)
@@ -551,16 +627,19 @@ static func render_minimap(gs, w, h) -> String:
 	return "\n".join(lines)
 
 static func get_management_screen(gs, tab, focus, idx_l, idx_r, designing, design_slot, design_prop) -> String:
-	var s = "[center][b]COMMODORE MANAGEMENT[/b][/center]\n"
+	# Header with visual flair
+	var s = "[center][bgcolor=%s][b] %s COMMODORE MANAGEMENT %s [/b][/bgcolor][/center]\n" % [
+		UIConstants.Colors.BG_HEADER, UIConstants.Symbols.MENU, UIConstants.Symbols.MENU
+	]
 	s += "[center][color=gray]"
 	var tabs = ["CHARACTER", "TRAINING", "ROSTER", "MARKET", "RECRUIT"]
 	if not gs.player.fief_ids.is_empty(): tabs.append("FIEF")
 	tabs.append_array(["TRADE", "WORLD", "OFFICE", "SQUARE"])
 	
 	for t in tabs:
-		if t == tab: s += "[b][color=white][%s][/color][/b] " % t
-		else: s += "%s " % t
-	s += "[/color][/center]\n\n"
+		s += UIConstants.highlight_tab(t, t == tab)
+	s += "[/color][/center]\n"
+	s += UIConstants.get_separator(60)
 	
 	if tab == "CHARACTER":
 		var p = gs.player
@@ -623,9 +702,9 @@ static func get_management_screen(gs, tab, focus, idx_l, idx_r, designing, desig
 	elif tab == "RECRUIT":
 		var s_pos = gs.player.pos
 		var set = gs.settlements.get(s_pos)
-		s += "[b]RECRUITMENT HUB[/b] | Tavern & Prisons\n"
+		s += "[bgcolor=%s][b] RECRUITMENT HUB [/b][/bgcolor] [color=gray]Tavern & Prisons[/color]\n\n" % UIConstants.Colors.BG_RECRUIT
 		
-		var left = "[b]Available Recruits[/b]\n"
+		var left = "[bgcolor=#1a3a1a][b] Available Recruits [/b][/bgcolor]\n"
 		if not set or set.recruit_pool.is_empty():
 			left += " No recruits at this location.\n"
 		else:
@@ -635,7 +714,7 @@ static func get_management_screen(gs, tab, focus, idx_l, idx_r, designing, desig
 				var col = "yellow" if (focus == 0 and idx_l == i) else "white"
 				left += "[color=%s]%s%s (Lvl %d) - %d Crowns[/color]\n" % [col, pre, u.name, u.level, u.cost]
 		
-		var right = "[b]Prisoners[/b]\n"
+		var right = "[bgcolor=#3a2a1a][b] Prisoners [/b][/bgcolor]\n"
 		if gs.player.prisoners.is_empty():
 			right += " No captives in the train.\n"
 		else:
@@ -646,14 +725,16 @@ static func get_management_screen(gs, tab, focus, idx_l, idx_r, designing, desig
 				right += "[color=%s]%s%s (%s)[/color]\n" % [col, pre, u.name, u.type.capitalize()]
 		
 		s += "[table=2]\n[cell]%s[/cell][cell]%s[/cell][/table]" % [left, right]
-		s += "\n[color=gray]H: Hire | R: Ransom | U: Recruit from Prisoners[/color]"
+		s += "\n[center][bgcolor=%s][color=yellow] H [/color] Hire [color=yellow] R [/color] Ransom [color=yellow] U [/color] Recruit from Prisoners[/bgcolor][/center]" % UIConstants.Colors.BG_SECTION
 
 	elif tab == "TRADE":
 		var s_pos = gs.player.pos
 		var set = gs.settlements.get(s_pos)
-		if not set: return s + "[center]\nYou are not at a settlement.[/center]"
+		if not set: return s + "[center][bgcolor=%s]\n%s You are not at a settlement %s\n[/bgcolor][/center]" % [
+			UIConstants.Colors.BG_WARNING, UIConstants.Symbols.WARNING, UIConstants.Symbols.WARNING
+		]
 		
-		s += "[b]COMMODITY EXCHANGE: %s[/b]\n" % set.name
+		s += "[bgcolor=%s][b] COMMODITY EXCHANGE [/b][/bgcolor] [color=cyan]%s[/color]\n" % [UIConstants.Colors.BG_TRADE, set.name]
 		var table = "[table=4]"
 		table += "[cell][b]Local Resource[/b][/cell][cell][b]Local Stock[/b][/cell][cell][b]Local Price[/b][/cell][cell][b]Your Inventory[/b][/cell]"
 		
@@ -672,16 +753,22 @@ static func get_management_screen(gs, tab, focus, idx_l, idx_r, designing, desig
 			table += "[cell][color=%s]%d[/color][/cell]" % [row_col, price]
 			table += "[cell][color=%s]%d[/color][/cell]" % [row_col, player_amt]
 		
-		s += table + "[/table]"
-		s += "\n[color=gray]ENTER: Buy / Sell selected resource (10 units)[/color]"
+		s += table + "[/table]\n"
+		s += UIConstants.format_control("BUY_SELL", {
+			"up": UIConstants.Symbols.ARROW_UP,
+			"down": UIConstants.Symbols.ARROW_DOWN,
+			"note": "10 units per transaction"
+		})
 
 	elif tab == "SQUARE":
 		var s_pos = gs.player.pos
 		var set = gs.settlements.get(s_pos)
-		if not set: return s + "[center]\nYou are not at a settlement.[/center]"
+		if not set: return s + "[center][bgcolor=%s]\n%s You are not at a settlement %s\n[/bgcolor][/center]" % [
+			UIConstants.Colors.BG_WARNING, UIConstants.Symbols.WARNING, UIConstants.Symbols.WARNING
+		]
 		
-		s += "[b]TOWN SQUARE: %s[/b]\n" % set.name
-		var left = "[b]Notable People[/b]\n"
+		s += "[bgcolor=%s][b] TOWN SQUARE [/b][/bgcolor] [color=orange]%s[/color]\n" % [UIConstants.Colors.BG_SQUARE, set.name]
+		var left = "[bgcolor=#2a2a1a][b] Notable People [/b][/bgcolor]\n"
 		if set.npcs.is_empty():
 			left += " No NPCs present.\n"
 		else:
@@ -691,12 +778,12 @@ static func get_management_screen(gs, tab, focus, idx_l, idx_r, designing, desig
 				var col = "yellow" if (focus == 0 and idx_l == i) else "white"
 				left += "[color=%s]%s%s (%s)[/color]\n" % [col, pre, npc.name, npc.title.capitalize()]
 		
-		var right = "[b]Rumors & Quests[/b]\n"
+		var right = "[bgcolor=#2a2a3a][b] Rumors & Quests [/b][/bgcolor]\n"
 		# Logic to show quests for focused NPC
-		right += " No active assignments.\n"
+		right += "[color=gray] No active assignments.[/color]\n"
 		
 		s += "[table=2]\n[cell]%s[/cell][cell]%s[/cell][/table]" % [left, right]
-		s += "\n[color=gray]ENTER: Interact with NPCs[/color]"
+		s += "\n" + UIConstants.format_control("ACTION", {"key": "ENTER", "action": "Interact with NPCs"})
 
 	elif tab == "FIEF":
 		var s_pos = gs.player.pos
@@ -738,11 +825,14 @@ static func get_management_screen(gs, tab, focus, idx_l, idx_r, designing, desig
 	elif tab == "MARKET":
 		var s_pos = gs.player.pos
 		var set = gs.settlements.get(s_pos)
-		var gold_col = "white"
-		if gs.player.gold < 100: gold_col = "red"
-		s += "Crowns: [color=%s]%d[/color] | Total Weight: %d/%d kg\n\n" % [gold_col, gs.player.gold, int(gs.get_total_weight()), int(gs.get_max_weight())]
 		
-		var left = "[b]Your Inventory[/b]\n"
+		var gold_display = UIConstants.format_money(gs.player.gold, 100, 20)
+		var weight_display = UIConstants.format_weight(gs.get_total_weight(), gs.get_max_weight())
+		s += "[bgcolor=%s] Crowns: %s | Weight: %s [/bgcolor]\n\n" % [
+			UIConstants.Colors.BG_MARKET_INV, gold_display, weight_display
+		]
+		
+		var left = "[bgcolor=%s][b] Your Inventory [/b][/bgcolor]\n" % UIConstants.Colors.BG_MARKET_INV
 		var inv_table = "[table=2]"
 		var inv_keys = gs.player.inventory.keys()
 		var active_keys = []
@@ -756,9 +846,9 @@ static func get_management_screen(gs, tab, focus, idx_l, idx_r, designing, desig
 			inv_table += "[cell][color=%s]%s%s[/color][/cell][cell][color=%s]%d[/color][/cell]" % [col, pre, k.capitalize(), col, v]
 		left += inv_table + "[/table]"
 		
-		var right = "[b]Local Shop[/b]\n"
+		var right = "[bgcolor=%s][b] Local Shop [/b][/bgcolor]\n" % UIConstants.Colors.BG_MARKET_SHOP
 		if not set:
-			right += " No shop in the wilderness."
+			right += "[color=gray] No shop in the wilderness.[/color]"
 		else:
 			var shop_table = "[table=2]"
 			for i in range(set.shop_inventory.size()):
@@ -769,12 +859,16 @@ static func get_management_screen(gs, tab, focus, idx_l, idx_r, designing, desig
 			right += shop_table + "[/table]"
 			
 		s += "[table=2]\n[cell]%s[/cell][cell]%s[/cell][/table]" % [left, right]
-		s += "\n[color=gray]LEFT/RIGHT: Switch Focus | ENTER: Buy/Sell[/color]"
-			
+		s += "\n" + UIConstants.format_control("NAVIGATION", {
+			"left": UIConstants.Symbols.ARROW_LEFT,
+			"right": UIConstants.Symbols.ARROW_RIGHT,
+			"action": "Buy/Sell"
+		})
 	elif tab == "OFFICE":
-		s += "[b]Founding Permits:[/b] %d\n" % gs.player.charters
-		s += "[b]Fame:[/b] %d\n\n" % gs.player.fame
-		s += "[b]Active Contracts[/b]\n"
+		s += "[bgcolor=%s][b] ADMINISTRATIVE OFFICE [/b][/bgcolor]\n\n" % UIConstants.Colors.BG_OFFICE
+		s += "[color=cyan][b]Founding Permits:[/b][/color] %d\n" % gs.player.charters
+		s += "[color=gold][b]Fame:[/b][/color] %d\n\n" % gs.player.fame
+		s += "[bgcolor=#2a2a1a][b] Active Contracts [/b][/bgcolor]\n"
 		if gs.player.active_contract.is_empty():
 			s += " - No current mercenary contracts.\n"
 		else:
@@ -783,15 +877,15 @@ static func get_management_screen(gs, tab, focus, idx_l, idx_r, designing, desig
 			s += " - Wage: %d per day\n" % c.get("daily_wage", 0)
 			s += " - Expires: Day %d\n" % c.get("expires_day", 0)
 			
-		s += "\n[b]Fiefs List[/b]\n"
+		s += "\n[bgcolor=#1a2a2a][b] Fiefs List [/b][/bgcolor]\n"
 		for pos in gs.player.fief_ids:
 			var set = gs.settlements.get(pos)
 			if set:
 				s += " - %s (%s) | Pop: %d\n" % [set.name, set.type.capitalize(), set.population]
 
 	elif tab == "WORLD":
-		s += "[b]REALM LOGISTICS & GLOBAL MARKET[/b]\n\n"
-		var left = "[b]Market Orders[/b]\n"
+		s += "[bgcolor=%s][b] REALM LOGISTICS & GLOBAL MARKET [/b][/bgcolor]\n\n" % UIConstants.Colors.BG_WORLD
+		var left = "[bgcolor=#1a2a1a][b] Market Orders [/b][/bgcolor]\n"
 		if gs.get("world_market_orders", []).is_empty():
 			left += " No active global trade orders.\n"
 		else:
@@ -801,7 +895,7 @@ static func get_management_screen(gs, tab, focus, idx_l, idx_r, designing, desig
 				var col = "yellow" if (focus == 0 and idx_l == i) else "white"
 				left += "[color=%s]%s%s (%d) @ %d[/color]\n" % [col, pre, o.resource.capitalize(), o.amount, o.price]
 		
-		var right = "[b]Logistical Pulses[/b]\n"
+		var right = "[bgcolor=#1a1a2a][b] Logistical Pulses [/b][/bgcolor]\n"
 		if gs.get("logistical_pulses", []).is_empty():
 			right += " No pulses in transit.\n"
 		else:
@@ -837,7 +931,7 @@ static func render_history(gs, offset) -> String:
 static func _format_run(gs, bg: Color, fg_hex: String, text: String) -> String:
 	if text == "": return ""
 	var s = "[color=%s]%s[/color]" % [fg_hex, text]
-	if gs.render_mode == "grid" and not gs.get("graphical_mode_active"):
+	if gs.render_mode == "grid":
 		return "[bgcolor=%s]%s[/bgcolor]" % [_c_to_bb(bg), s]
 	return s
 
@@ -1288,15 +1382,18 @@ static func render_codex(gs, CodexData, cat_idx, entry_idx, focus) -> String:
 	var cat_key = cats[cat_idx]
 	var entries = CodexData.CATEGORIES[cat_key]
 	
+	var header = "[center][bgcolor=%s][b] THE GREAT ARCHIVE [/b][/bgcolor][/center]\n" % UIConstants.Colors.BG_CODEX
+	header += "[center][color=#505050]" + UIConstants.get_separator(60) + "[/color][/center]\n\n"
+	
 	var left_col = ""
 	var center_col = ""
 	
 	# Left Column: Categories
-	left_col += "[b]ARCHIVE SECTIONS[/b]\n"
+	left_col += "[bgcolor=#1a2a1a][b] Sections [/b][/bgcolor]\n"
 	for i in range(cats.size()):
 		var c = cats[i]
-		var pre = " > " if (focus == 0 and i == cat_idx) else "   "
-		var color = "white"
+		var pre = " %s " % UIConstants.Symbols.ARROW_RIGHT if (focus == 0 and i == cat_idx) else "   "
+		var color = "yellow" if (focus == 0 and i == cat_idx) else "#808080"
 		if i == cat_idx: color = "yellow"
 		left_col += "[color=%s]%s%s[/color]\n" % [color, pre, c.capitalize()]
 
@@ -1378,6 +1475,7 @@ static func get_party_info_screen(gs) -> String:
 static func get_dialogue_screen(gs, target, options, idx) -> String:
 	var target_name = "Unknown"
 	var target_desc = "You stand before someone."
+	var portrait = ""
 	
 	if target is String:
 		target_name = target
@@ -1385,19 +1483,24 @@ static func get_dialogue_screen(gs, target, options, idx) -> String:
 		target_name = target.get("name")
 		if target.get("type") == "army":
 			target_desc = "You have encountered an army commanded by %s." % target_name
+			portrait = "[bgcolor=#3a2a2a]  X\n [O]\n/|\\\n/ \\  [/bgcolor]"
 		elif target.get("type") == "caravan":
 			target_desc = "You hail a merchant caravan."
+			portrait = "[bgcolor=#2a3a2a]  #\n [o]\n<|>\n/ \\  [/bgcolor]"
+	else:
+		portrait = "[bgcolor=#2a2a3a]  ?\n [O]\n/|\\\n/ \\  [/bgcolor]"
 	
-	var content = "[center][b]DIALOGUE: %s[/b][/center]\n\n" % target_name.to_upper()
-	content += "%s\n\n" % target_desc
+	var content = "[center][bgcolor=%s][b] DIALOGUE: %s [/b][/bgcolor][/center]\n\n" % [UIConstants.Colors.BG_DIALOGUE, target_name.to_upper()]
+	content += "[table=2][cell]%s[/cell][cell][color=gray]%s[/color][/cell][/table]\n\n" % [portrait, target_desc]
 	
-	content += "[b]How do you respond?[/b]\n"
+	content += "[bgcolor=#2a2a1a][b] How do you respond? [/b][/bgcolor]\n"
 	for i in range(options.size()):
 		var opt = options[i]
 		var text = opt.text if opt is Dictionary else str(opt)
-		var pre = " > " if i == idx else "   "
-		var color = "white"
+		var pre = " %s " % UIConstants.Symbols.ARROW_RIGHT if i == idx else "   "
+		var color = "yellow"
 		if i == idx: color = "yellow"
+		else: color = "#808080"
 		
 		content += "[color=%s]%s%s[/color]\n" % [color, pre, text]
 		

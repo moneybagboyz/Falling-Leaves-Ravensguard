@@ -22,37 +22,37 @@ static func get_color(pos: Vector2i, terrain_char: String, geology: Dictionary, 
 
 static func _calculate_color(t: String, geo: Dictionary) -> Color:
 	# Quantize values to reduce cache bloat and improve consistency
-	var temp := snappedf(geo.get("temp", 0.5), 0.1)
-	var rain := snappedf(geo.get("rain", 0.5), 0.1)
-	var elev := snappedf(geo.get("elevation", 0.3), 0.1)
+	var temp: float = snappedf(geo.get("temp", 0.5), 0.1)
+	var rain: float = snappedf(geo.get("rain", 0.5), 0.1)
+	var elev: float = snappedf(geo.get("elevation", 0.3), 0.1)
 	
 	var final_col := Color.WHITE
 	
 	match t:
 		"~", "≈", "/", "\\", "water": # Water
-			var v := clamp(0.3 + (elev * 0.4), 0.2, 0.8)
+			var v: float = clamp(0.3 + (elev * 0.4), 0.2, 0.8)
 			final_col = Color.from_hsv(0.6, 0.7, v)
 		".", ",", "plains", "desert": # Plains / Grassland / Desert
-			var hue := clamp(0.25 + (temp * 0.08), 0.2, 0.35)
+			var hue: float = clamp(0.25 + (temp * 0.08), 0.2, 0.35)
 			if t == "desert" or temp > 0.8: hue = 0.12 # Shifting to yellow/orange
-			var sat := clamp(0.3 + (rain * 0.5), 0.2, 0.9)
-			var val := clamp(0.6 + (rain * 0.2), 0.4, 0.9)
+			var sat: float = clamp(0.3 + (rain * 0.5), 0.2, 0.9)
+			var val: float = clamp(0.6 + (rain * 0.2), 0.4, 0.9)
 			final_col = Color.from_hsv(hue, sat, val)
 		"#", "T", "&", "forest", "jungle", "hills": # Forest / Jungle / Hills
-			var hue := clamp(0.28 - (rain * 0.05), 0.2, 0.35)
+			var hue: float = clamp(0.28 - (rain * 0.05), 0.2, 0.35)
 			if t == "hills": hue = 0.22 # Slightly more olive
-			var sat := clamp(0.4 + (rain * 0.5), 0.3, 0.9)
-			var val := clamp(0.3 + (rain * 0.3), 0.2, 0.7)
+			var sat: float = clamp(0.4 + (rain * 0.5), 0.3, 0.9)
+			var val: float = clamp(0.3 + (rain * 0.3), 0.2, 0.7)
 			final_col = Color.from_hsv(hue, sat, val)
 		"o", "O", "^", "peaks": # Mountains / Peaks
 			if elev > 0.85 or t == "peaks": 
 				final_col = Color.WHITE # Snowcaps
 			else:
-				var v := clamp(0.7 - (elev * 0.5), 0.1, 0.8)
+				var v: float = clamp(0.7 - (elev * 0.5), 0.1, 0.8)
 				final_col = Color(v, v, v)
 		"S", "\"", "savanna": # Savanna / Dry
-			var hue := 0.12 - (temp * 0.04)
-			var sat := 0.4 + (temp * 0.2)
+			var hue: float = 0.12 - (temp * 0.04)
+			var sat: float = 0.4 + (temp * 0.2)
 			final_col = Color.from_hsv(hue, sat, 0.8)
 		"*", "tundra": # Tundra
 			final_col = Color(0.88, 0.94, 1.0) # e0f0ff
@@ -127,7 +127,7 @@ static func get_tile_colors(pos: Vector2i, t: String, geo: Dictionary, scope: St
 			fg = Color(0.25, 0.4, 0.2)
 		"fallow", "\"":
 			# Noise-based dithering for fields
-			var noise_val := abs(sin(pos.x * 0.77 + pos.y * 1.33))
+			var noise_val: float = abs(sin(pos.x * 0.77 + pos.y * 1.33))
 			bg = Color(0.45, 0.35, 0.25)
 			fg = bg.darkened(0.2) if noise_val > 0.5 else bg.lightened(0.1)
 		"road", "=", "+":

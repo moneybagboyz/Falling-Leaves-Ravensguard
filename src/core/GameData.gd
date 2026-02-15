@@ -1,8 +1,18 @@
 extends Node
 
+# Static data facade - delegates to modular data files
+# Refactored from 2393-line monolith into focused modules
+
 const MaterialsData = preload("res://src/data/MaterialsData.gd")
 const NamesData = preload("res://src/data/NamesData.gd")
 const AIConfigData = preload("res://src/data/AIConfigData.gd")
+
+# NEW: Modular static data files
+const SiegeData = preload("res://src/data/static/SiegeData.gd")
+const ItemData = preload("res://src/data/static/ItemData.gd")
+const BuildingData = preload("res://src/data/static/BuildingData.gd")
+const UnitData = preload("res://src/data/static/UnitData.gd")
+const CharacterCreationData = preload("res://src/data/static/CharacterCreationData.gd")
 
 # --- MATERIALS (Dwarf Fortress Depth) ---
 # Loaded from data/materials.json
@@ -11,597 +21,60 @@ static var MATERIALS: Dictionary:
 		return MaterialsData.get_materials()
 
 # --- SIEGE ENGINES & EQUIPMENT ---
-const SIEGE_ENGINES = {
-	"ballista": {
-		"name": "Ballista",
-		"symbol": "X",
-		"dmg_base": 80,
-		"dmg_type": "pierce",
-		"weight": 5.0, # Bolt weight
-		"velocity": 8.0,
-		"contact": 1,
-		"penetration": 100, # Bypasses almost all armor
-		"accuracy": 0.85,
-		"range": 50,
-		"reload_turns": 15,
-		"aoe": 0,
-		"overpenetrate": true,
-		"is_mobile": true,
-		"crew_required": 2,
-		"footprint": [Vector2i(0,0)] # 1x1
-	},
-	"catapult": {
-		"name": "Catapult",
-		"symbol": "C",
-		"dmg_base": 200,
-		"dmg_type": "blunt",
-		"weight": 25.0, # Stone weight
-		"velocity": 4.0,
-		"contact": 50,
-		"penetration": 5,
-		"accuracy": 0.45,
-		"range": 70,
-		"reload_turns": 35,
-		"aoe": 1, # 1 tile radius (3x3 square)
-		"is_mobile": true,
-		"crew_required": 4,
-		"footprint": [Vector2i(0,0), Vector2i(1,0), Vector2i(0,1), Vector2i(1,1)] # 2x2
-	},
-	"battering_ram": {
-		"name": "Battering Ram",
-		"symbol": "R",
-		"dmg_base": 150, # Deals structural damage to gates
-		"dmg_type": "blunt",
-		"weight": 100.0,
-		"velocity": 1.0, # Momentum-based ramming
-		"contact": 100,
-		"penetration": 2,
-		"accuracy": 1.0,
-		"range": 1,
-		"reload_turns": 5,
-		"aoe": 0,
-		"is_mobile": true,
-		"crew_required": 6,
-		"protection_bonus": 0.8, # 80% damage reduction for crew
-		"footprint": [Vector2i(0,0), Vector2i(1,0), Vector2i(2,0), Vector2i(0,1), Vector2i(1,1), Vector2i(2,1)] # 3x2
-	},
-	"siege_tower": {
-		"name": "Siege Tower",
-		"symbol": "S",
-		"dmg_base": 0,
-		"dmg_type": "none",
-		"is_mobile": true,
-		"crew_required": 8,
-		"provides_wall_access": true,
-		"protection_bonus": 0.9,
-		"hp": 800,
-		"footprint": [Vector2i(0,0), Vector2i(1,0), Vector2i(0,1), Vector2i(1,1), Vector2i(0,2), Vector2i(1,2)] # 2x3 high
-	},
-	"trebuchet": {
-		"name": "Trebuchet",
-		"symbol": "V",
-		"dmg_base": 400,
-		"dmg_type": "blunt",
-		"weight": 150.0,
-		"velocity": 5.0,
-		"contact": 200,
-		"penetration": 10,
-		"accuracy": 0.35,
-		"range": 120,
-		"reload_turns": 60,
-		"aoe": 3,
-		"is_mobile": false, # Must be built on-site
-		"crew_required": 10,
-		"footprint": [Vector2i(0,0), Vector2i(1,0), Vector2i(2,0), Vector2i(0,1), Vector2i(1,1), Vector2i(2,1), Vector2i(0,2), Vector2i(1,2), Vector2i(2,2)] # 3x3 base
-	}
-}
+# Delegated to SiegeData module
+static var SIEGE_ENGINES: Dictionary:
+	get:
+		return SiegeData.get_siege_engines()
 
 # --- ITEMS ---
-const ITEMS = {
-	# --- WEAPONS ---
-	"fist": {
-		"type": "weapon", "dmg": 2, "dmg_type": "blunt", "contact": 5, "penetration": 1, "material": "flesh", "hands": 1, "volume": 0.5, "weight": 0.0, "name": "Fist",
-		"attacks": [
-			{"name": "Punch", "dmg_mult": 1.0, "dmg_type": "blunt", "contact": 5, "penetration": 1},
-			{"name": "Gouge", "dmg_mult": 0.6, "dmg_type": "pierce", "contact": 1, "penetration": 10}
-		]
-	},
-	"shortsword": {
-		"type": "weapon", "dmg": 8, "dmg_type": "cut", "contact": 20, "penetration": 10, "hands": 1, "volume": 1.5, "weight": 1.2, "name": "Shortsword", "material": "steel",
-		"attacks": [
-			{"name": "Slash", "dmg_mult": 1.0, "dmg_type": "cut", "contact": 20, "penetration": 10},
-			{"name": "Thrust", "dmg_mult": 0.9, "dmg_type": "pierce", "contact": 2, "penetration": 30},
-			{"name": "Pommel", "dmg_mult": 0.4, "dmg_type": "blunt", "contact": 5, "penetration": 1}
-		]
-	},
-	"longsword": {
-		"type": "weapon", "dmg": 12, "dmg_type": "cut", "contact": 30, "penetration": 15, "hands": 2, "volume": 2.5, "weight": 1.8, "name": "Longsword", "material": "steel",
-		"attacks": [
-			{"name": "Slash", "dmg_mult": 1.0, "dmg_type": "cut", "contact": 30, "penetration": 15},
-			{"name": "Thrust", "dmg_mult": 0.9, "dmg_type": "pierce", "contact": 2, "penetration": 40},
-			{"name": "Mordhau", "dmg_mult": 0.7, "dmg_type": "blunt", "contact": 10, "penetration": 5}
-		]
-	},
-	"estoc": {
-		"type": "weapon", "dmg": 10, "dmg_type": "pierce", "contact": 2, "penetration": 50, "hands": 1, "volume": 1.8, "weight": 1.4, "name": "Estoc", "material": "steel",
-		"attacks": [
-			{"name": "Thrust", "dmg_mult": 1.0, "dmg_type": "pierce", "contact": 2, "penetration": 50},
-			{"name": "Pommel", "dmg_mult": 0.4, "dmg_type": "blunt", "contact": 5, "penetration": 1}
-		]
-	},
-	"battle_axe": {
-		"type": "weapon", "dmg": 15, "dmg_type": "cut", "contact": 10, "penetration": 20, "hands": 2, "volume": 3.0, "weight": 2.5, "name": "Battle Axe", "material": "iron",
-		"attacks": [
-			{"name": "Chop", "dmg_mult": 1.0, "dmg_type": "cut", "contact": 10, "penetration": 20},
-			{"name": "Hook", "dmg_mult": 0.6, "dmg_type": "blunt", "contact": 15, "penetration": 1}
-		]
-	},	"hand_axe": {
-		"type": "weapon", "dmg": 10, "dmg_type": "cut", "contact": 8, "penetration": 20, "hands": 1, "volume": 1.5, "weight": 1.2, "name": "Hand Axe", "material": "iron",
-		"attacks": [
-			{"name": "Chop", "dmg_mult": 1.0, "dmg_type": "cut", "contact": 8, "penetration": 20}
-		]
-	},	"warhammer": {
-		"type": "weapon", "dmg": 10, "dmg_type": "blunt", "contact": 1, "penetration": 5, "hands": 1, "volume": 2.0, "weight": 2.0, "name": "Warhammer", "material": "steel",
-		"attacks": [
-			{"name": "Strike", "dmg_mult": 1.0, "dmg_type": "blunt", "contact": 1, "penetration": 5},
-			{"name": "Spike", "dmg_mult": 0.8, "dmg_type": "pierce", "contact": 1, "penetration": 40}
-		]
-	},
-	"maul": {
-		"type": "weapon", "dmg": 20, "dmg_type": "blunt", "contact": 20, "penetration": 1, "hands": 2, "volume": 8.0, "weight": 6.0, "name": "Maul", "material": "iron",
-		"attacks": [
-			{"name": "Smash", "dmg_mult": 1.0, "dmg_type": "blunt", "contact": 20, "penetration": 1}
-		]
-	},
-	"mace": {
-		"type": "weapon", "dmg": 12, "dmg_type": "blunt", "contact": 5, "penetration": 2, "hands": 1, "volume": 3.0, "weight": 2.5, "name": "Mace", "material": "iron",
-		"attacks": [
-			{"name": "Bash", "dmg_mult": 1.0, "dmg_type": "blunt", "contact": 5, "penetration": 2}
-		]
-	},
-	"morningstar": {
-		"type": "weapon", "dmg": 13, "dmg_type": "pierce", "contact": 2, "penetration": 15, "hands": 1, "volume": 3.2, "weight": 2.8, "name": "Morningstar", "material": "iron",
-		"attacks": [
-			{"name": "Strike", "dmg_mult": 1.0, "dmg_type": "pierce", "contact": 2, "penetration": 15}
-		]
-	},
-	"flail": {
-		"type": "weapon", "dmg": 13, "dmg_type": "blunt", "contact": 3, "penetration": 2, "ignore_shield": true, "hands": 1, "volume": 3.5, "weight": 3.0, "name": "Flail", "material": "iron",
-		"attacks": [
-			{"name": "Swing", "dmg_mult": 1.0, "dmg_type": "blunt", "contact": 3, "penetration": 2}
-		]
-	},
-	"dagger": {
-		"type": "weapon", "dmg": 5, "dmg_type": "pierce", "contact": 1, "penetration": 30, "hands": 1, "volume": 0.5, "weight": 0.4, "name": "Dagger", "material": "steel",
-		"attacks": [
-			{"name": "Stab", "dmg_mult": 1.0, "dmg_type": "pierce", "contact": 1, "penetration": 30},
-			{"name": "Slash", "dmg_mult": 0.7, "dmg_type": "cut", "contact": 10, "penetration": 5}
-		]
-	},
-	"club": {
-		"type": "weapon", "dmg": 7, "dmg_type": "blunt", "contact": 10, "penetration": 1, "hands": 1, "volume": 2.0, "weight": 1.5, "name": "Club", "material": "wood",
-		"attacks": [
-			{"name": "Bash", "dmg_mult": 1.0, "dmg_type": "blunt", "contact": 10, "penetration": 1}
-		]
-	},
-	"pitchfork": {
-		"type": "weapon", "dmg": 6, "dmg_type": "pierce", "contact": 1, "penetration": 15, "range": 2.2, "hands": 2, "volume": 2.0, "weight": 1.8, "name": "Pitchfork", "material": "iron",
-		"attacks": [
-			{"name": "Thrust", "dmg_mult": 1.0, "dmg_type": "pierce", "contact": 1, "penetration": 15}
-		]
-	},
-	"spear": {
-		"type": "weapon", "dmg": 9, "dmg_type": "pierce", "contact": 1, "penetration": 40, "range": 2.2, "hands": 2, "volume": 2.2, "weight": 2.0, "name": "Spear", "material": "steel",
-		"attacks": [
-			{"name": "Thrust", "dmg_mult": 1.0, "dmg_type": "pierce", "contact": 1, "penetration": 40},
-			{"name": "Bash", "dmg_mult": 0.5, "dmg_type": "blunt", "contact": 10, "penetration": 1}
-		]
-	},
-	"halberd": {
-		"type": "weapon", "dmg": 16, "dmg_type": "cut", "contact": 15, "penetration": 30, "range": 2.2, "hands": 2, "volume": 4.5, "weight": 3.5, "name": "Halberd", "material": "steel",
-		"attacks": [
-			{"name": "Chop", "dmg_mult": 1.0, "dmg_type": "cut", "contact": 15, "penetration": 30},
-			{"name": "Thrust", "dmg_mult": 0.8, "dmg_type": "pierce", "contact": 1, "penetration": 40},
-			{"name": "Hook", "dmg_mult": 0.5, "dmg_type": "blunt", "contact": 20, "penetration": 1}
-		]
-	},
-	"glaive": {
-		"type": "weapon", "dmg": 14, "dmg_type": "cut", "contact": 12, "penetration": 25, "range": 2.2, "hands": 2, "volume": 4.0, "weight": 3.0, "name": "Glaive", "material": "steel",
-		"attacks": [
-			{"name": "Slash", "dmg_mult": 1.0, "dmg_type": "cut", "contact": 12, "penetration": 25},
-			{"name": "Thrust", "dmg_mult": 0.7, "dmg_type": "pierce", "contact": 1, "penetration": 30}
-		]
-	},
-	"greatsword": {
-		"type": "weapon", "dmg": 18, "dmg_type": "cut", "contact": 40, "penetration": 20, "hands": 2, "volume": 5.0, "weight": 3.5, "name": "Greatsword", "material": "steel",
-		"attacks": [
-			{"name": "Slash", "dmg_mult": 1.0, "dmg_type": "cut", "contact": 40, "penetration": 20},
-			{"name": "Thrust", "dmg_mult": 0.8, "dmg_type": "pierce", "contact": 2, "penetration": 35},
-			{"name": "Pommel", "dmg_mult": 0.3, "dmg_type": "blunt", "contact": 5, "penetration": 1}
-		]
-	},
-	"pike": {
-		"type": "weapon", "dmg": 10, "dmg_type": "pierce", "contact": 1, "penetration": 60, "range": 3.2, "hands": 2, "volume": 3.5, "weight": 4.0, "name": "Pike", "material": "steel",
-		"attacks": [
-			{"name": "Thrust", "dmg_mult": 1.0, "dmg_type": "pierce", "contact": 1, "penetration": 60}
-		]
-	},
-	"shortbow": {
-		"type": "weapon", "dmg": 6, "dmg_type": "pierce", "contact": 1, "penetration": 25, "range": 8, "is_ranged": true, "hands": 2, "volume": 1.0, "weight": 1.0, "name": "Shortbow", "material": "wood",
-		"attacks": [{"name": "Shoot", "dmg_mult": 1.0, "dmg_type": "pierce", "contact": 1, "penetration": 25}]
-	},
-	"longbow": {
-		"type": "weapon", "dmg": 10, "dmg_type": "pierce", "contact": 1, "penetration": 35, "range": 12, "is_ranged": true, "hands": 2, "volume": 1.5, "weight": 1.5, "name": "Longbow", "material": "wood",
-		"attacks": [{"name": "Shoot", "dmg_mult": 1.0, "dmg_type": "pierce", "contact": 1, "penetration": 35}]
-	},
-	"crossbow": {
-		"type": "weapon", "dmg": 15, "dmg_type": "pierce", "contact": 1, "penetration": 55, "range": 15, "is_ranged": true, "hands": 2, "volume": 3.0, "weight": 4.0, "name": "Crossbow", "material": "iron",
-		"attacks": [{"name": "Shoot", "dmg_mult": 1.0, "dmg_type": "pierce", "contact": 1, "penetration": 55}]
-	},
-	
-	# --- AMMUNITION ---
-	"arrows": {
-		"type": "ammo", "name": "Arrows", "material": "iron", "weight": 0.3, "dmg_mod": 0, "penetration_mod": 1.0
-	},
-	"bolts": {
-		"type": "ammo", "name": "Bolts", "material": "iron", "weight": 0.4, "dmg_mod": 0, "penetration_mod": 1.0
-	},
-	"arrows_copper": {
-		"type": "ammo", "name": "Copper Arrows", "material": "copper", "weight": 0.2, "dmg_mod": -2, "penetration_mod": 0.8
-	},
-	"arrows_iron": {
-		"type": "ammo", "name": "Iron Arrows", "material": "iron", "weight": 0.3, "dmg_mod": 0, "penetration_mod": 1.0
-	},
-	"arrows_steel": {
-		"type": "ammo", "name": "Steel Bodkin Arrows", "material": "steel", "weight": 0.5, "dmg_mod": 2, "penetration_mod": 1.5
-	},
-	"bolts_iron": {
-		"type": "ammo", "name": "Iron Bolts", "material": "iron", "weight": 0.4, "dmg_mod": 0, "penetration_mod": 1.0
-	},
-	"bolts_steel": {
-		"type": "ammo", "name": "Steel Bolts", "material": "steel", "weight": 0.6, "dmg_mod": 3, "penetration_mod": 1.8
-	},
-	
-	# --- ARMOR (Layered: Under, Over, Armor, Cover) ---
-	"tunic": {"type": "armor", "layer": "under", "prot": 2, "weight": 1, "coverage": ["torso", "l_arm", "r_arm"], "name": "Tunic", "material": "linen"},
-	"shirt": {"type": "armor", "layer": "under", "prot": 1, "weight": 0.5, "coverage": ["torso", "l_arm", "r_arm"], "shear_mult": 2.0, "name": "Shirt", "material": "cloth"},
-	"trousers": {"type": "armor", "layer": "under", "prot": 1, "weight": 0.5, "coverage": ["l_leg", "r_leg"], "name": "Trousers", "material": "cloth"},
-	"gloves": {"type": "armor", "layer": "under", "prot": 1, "weight": 0.2, "coverage": ["l_hand", "r_hand"], "name": "Gloves", "material": "leather"},
-	"boots": {"type": "armor", "layer": "over", "prot": 2, "weight": 1.0, "coverage": ["l_foot", "r_foot"], "name": "Boots", "material": "leather"},
-	"gambeson": {"type": "armor", "layer": "over", "prot": 4, "weight": 3, "coverage": ["torso", "l_arm", "r_arm", "l_leg", "r_leg", "l_hand", "r_hand", "l_foot", "r_foot"], "name": "Gambeson", "material": "wool"},
-	"hauberk": {"type": "armor", "layer": "over", "prot": 10, "weight": 8, "coverage": ["torso", "l_arm", "r_arm", "l_hand", "r_hand"], "name": "Hauberk", "material": "iron"},
-	"coif": {"type": "armor", "layer": "over", "prot": 5, "weight": 2, "coverage": ["head"], "name": "Coif", "material": "iron"},
-	"leather_armor": {"type": "armor", "layer": "armor", "prot": 6, "weight": 5, "coverage": ["torso", "l_arm", "r_arm", "l_leg", "r_leg"], "name": "Leather Armor", "material": "leather"},
-	"cuirass": {"type": "armor", "layer": "armor", "prot": 15, "weight": 10, "coverage": ["torso"], "name": "Cuirass", "material": "iron"},
-	"brigandine": {"type": "armor", "layer": "armor", "prot": 18, "weight": 12, "coverage": ["torso"], "name": "Brigandine", "material": "steel"},
-	"lamellar": {"type": "armor", "layer": "armor", "prot": 14, "weight": 10, "coverage": ["torso", "l_arm", "r_arm"], "name": "Lamellar", "material": "iron"},
-	"breastplate": {"type": "armor", "layer": "armor", "prot": 20, "weight": 12, "coverage": ["torso"], "name": "Breastplate", "material": "steel"},
-	"greaves": {"type": "armor", "layer": "armor", "prot": 8, "weight": 4, "coverage": ["l_leg", "r_leg"], "name": "Greaves", "material": "iron"},
-	"sabatons": {"type": "armor", "layer": "armor", "prot": 6, "weight": 3, "coverage": ["l_foot", "r_foot"], "name": "Sabatons", "material": "iron"},
-	"gauntlets": {"type": "armor", "layer": "armor", "prot": 5, "weight": 2, "coverage": ["l_hand", "r_hand"], "name": "Gauntlets", "material": "iron"},
-	"pauldrons": {"type": "armor", "layer": "armor", "prot": 7, "weight": 3, "coverage": ["l_arm", "r_arm"], "name": "Pauldrons", "material": "iron"},
-	"vambraces": {"type": "armor", "layer": "armor", "prot": 5, "weight": 2, "coverage": ["l_arm", "r_arm"], "name": "Vambraces", "material": "iron"},
-	"cloak": {"type": "armor", "layer": "cover", "prot": 2, "weight": 2, "coverage": ["torso", "l_arm", "r_arm"], "name": "Cloak", "material": "wool"},
-	"surcoat": {"type": "armor", "layer": "cover", "prot": 1, "weight": 1, "coverage": ["torso"], "name": "Surcoat", "material": "linen"},
-	"cap": {"type": "armor", "layer": "armor", "prot": 3, "weight": 1, "coverage": ["head"], "name": "Cap", "material": "wool"},
-	"helmet": {"type": "armor", "layer": "armor", "prot": 15, "weight": 5, "coverage": ["head"], "name": "Helmet", "material": "iron"},
-	"great_helm": {"type": "armor", "layer": "armor", "prot": 25, "weight": 8, "coverage": ["head"], "name": "Great Helm", "material": "steel"},
-	"buckler": {"type": "shield", "prot": 5, "weight": 2, "block_chance": 0.2, "name": "Buckler", "material": "iron"},
-	"heater_shield": {"type": "shield", "prot": 12, "weight": 6, "block_chance": 0.4, "name": "Heater Shield", "material": "wood"},
-	"kite_shield": {"type": "shield", "prot": 15, "weight": 8, "block_chance": 0.5, "name": "Kite Shield", "material": "wood"},
-	"tower_shield": {"type": "shield", "prot": 20, "weight": 15, "block_chance": 0.6, "name": "Tower Shield", "material": "wood"},
-	"pavise": {"type": "shield", "prot": 18, "weight": 12, "block_chance": 0.55, "name": "Pavise", "material": "wood"},
-	# --- TRANSPORT & LOGISTICS ---
-	"mule": {"type": "transport", "name": "Mule", "capacity_bonus": 150.0, "weight": 0.0, "volume": 0.0},
-	"horse": {"type": "transport", "name": "Horse", "capacity_bonus": 250.0, "weight": 0.0, "volume": 0.0},
-	"cart": {"type": "transport", "name": "Cart", "capacity_bonus": 800.0, "weight": 0.0, "volume": 0.0}
-}
+# Delegated to ItemData module
+static var ITEMS: Dictionary:
+	get:
+		return ItemData.get_items()
+
+static var BASE_PRICES: Dictionary:
+	get:
+		return ItemData.get_base_prices()
 
 # --- SETTLEMENTS & BUILDINGS ---
-const BUILDINGS = {
-	# --- INDUSTRY (The Engine) ---
-	"farm": {
-		"category": "industry",
-		"cost": 500, "labor": 500, "tier": 1, 
-		"desc": "Increases grain yield by 50% per level.",
-		"levels": {
-			1: {"name": "Fields", "flavor": "Basic grain production from tilled earth."},
-			2: {"name": "Granary Extension", "flavor": "Raised floors protect the harvest from rats and rot."},
-			4: {"name": "Three-Field System", "flavor": "Crop rotation ensures the soil never sleeps."},
-			6: {"name": "Irrigation Network", "flavor": "Canals bring life even in the driest summer."},
-			8: {"name": "Plantation", "flavor": "Vast monocultures dedicated to efficiency."},
-			10: {"name": "Agricultural Revolution", "flavor": "The land yields bounties undreamt of by our ancestors."}
-		}
-	},
-	"lumber_mill": {
-		"category": "industry",
-		"cost": 800, "labor": 800, "tier": 1, 
-		"desc": "Increases wood yield by 100% per level.",
-		"levels": {
-			1: {"name": "Woodcutter's Camp", "flavor": "The sound of axes rings through the trees."},
-			3: {"name": "Sawmill", "flavor": "Water-driven blades slice timber effortlessly."},
-			7: {"name": "Logging Empire", "flavor": "Entire forests are processed into fleets and cities."},
-			10: {"name": "The Great Arboretum", "flavor": "We do not just harvest nature; we master it."}
-		}
-	},
-	"fishery": {
-		"category": "industry",
-		"cost": 600, "labor": 600, "tier": 1, 
-		"desc": "Increases fish yield by 50% per level.",
-		"levels": {
-			1: {"name": "Fishing Huts", "flavor": "Simple piers and nets for the local catch."},
-			3: {"name": "Fishmonger's Row", "flavor": "A bustling market for cleaning and salting the harvest."},
-			6: {"name": "Deep Sea Fleet", "flavor": "Sturdy boats that can handle the open waves for weeks."},
-			10: {"name": "The Great Harbor", "flavor": "The sea is our larder; we take what we please."}
-		}
-	},
-	"mine": {
-		"category": "industry",
-		"cost": 1500, "labor": 1500, "tier": 1, 
-		"desc": "Increases stone/ore yield by 50% per level.",
-		"levels": {
-			1: {"name": "Surface Quarry", "flavor": "Extracting the easiest stones from the hillside."},
-			3: {"name": "Shaft Mine", "flavor": "Vertical shafts reach for deeper veins of iron and copper."},
-			5: {"name": "Drainage Pumps", "flavor": "Clearing flooded tunnels to reach the deepest riches."},
-			8: {"name": "Pillared Gallery", "flavor": "Intricate subterranean networks of hauling and extraction."},
-			10: {"name": "Under-Kingdom", "flavor": "Total mastery of the earth. The mountains are hollowed and bled dry."}
-		}
-	},
-	"pasture": {
-		"category": "industry",
-		"cost": 700, "labor": 700, "tier": 1, 
-		"desc": "Increases wool/hide/meat yield by 50% per level.",
-		"levels": {
-			1: {"name": "Grazing Land", "flavor": "Basic fenced areas for herds to wander."},
-			3: {"name": "Shearing Sheds", "flavor": "Dedicated spaces for processing wool and hides."},
-			6: {"name": "Breeding Stables", "flavor": "Selective breeding results in larger, hardier livestock."},
-			10: {"name": "The King's Ranch", "flavor": "Endless herds stretching to the horizon."}
-		}
-	},
-	
-	"blacksmith": {
-		"category": "industry",
-		"cost": 2000, "labor": 2000, "tier": 2, 
-		"desc": "Increases steel production efficiency by 100% per level.",
-		"levels": {
-			1: {"name": "Village Smithy", "flavor": "A single anvil rings out, forging horseshoes and spearheads."},
-			3: {"name": "Ironworks", "flavor": "Several fires burn constantly, churning out ingots."},
-			5: {"name": "Foundry", "flavor": "Liquid metal flows into molds day and night."},
-			7: {"name": "Blast Furnace", "flavor": "Massive bellows pump air into towers of flame."},
-			10: {"name": "The Vulcan Complex", "flavor": "The sky is black with soot. This place births armies."}
-		}
-	},
-	"tannery": {
-		"category": "industry",
-		"cost": 2500, "labor": 1500, "tier": 2, 
-		"desc": "Increases leather production efficiency by 100% per level.",
-		"levels": {
-			1: {"name": "Tanner's Yard", "flavor": "The smell of urea and curing hide is unmistakable."},
-			5: {"name": "Refining Vats", "flavor": "Advanced chemical washes produce softer, stronger leathers."},
-			10: {"name": "Imperial Leatherworks", "flavor": "Supplying the saddles and armor of a thousand knights."}
-		}
-	},
-	"weaver": {
-		"category": "industry",
-		"cost": 2500, "labor": 1500, "tier": 2, 
-		"desc": "Increases cloth production efficiency by 100% per level.",
-		"levels": {
-			1: {"name": "Loom Room", "flavor": "Wooden looms click-clack as thread becomes cloth."},
-			5: {"name": "Textile Mill", "flavor": "Coordinated looms and dyeing vats produce vast quantities of fabric."},
-			10: {"name": "The Tapestry Master", "flavor": "Fabrics so fine they are traded for their weight in silver."}
-		}
-	},
-	"brewery": {
-		"category": "industry",
-		"cost": 3000, "labor": 1500, "tier": 2, 
-		"desc": "Increases ale production efficiency by 100% per level.",
-		"levels": {
-			1: {"name": "Small Batch Fermenter", "flavor": "Vats of bubbling mash produce thick, dark ale."},
-			5: {"name": "Distillery", "flavor": "Pipes and barrels for mass fermentation and aging."},
-			10: {"name": "The Celestial Keg", "flavor": "Known across the world; a sip can make a pauper feel like a king."}
-		}
-	},
-	"tailor": {
-		"category": "industry",
-		"cost": 3500, "labor": 1800, "tier": 2, 
-		"desc": "Increases garment production efficiency by 100% per level.",
-		"levels": {
-			1: {"name": "Seamstress Shop", "flavor": "Repairing tunics and sewing basic shirts."},
-			5: {"name": "Clothier Guild", "flavor": "The town's elite come here for custom doublets and gowns."},
-			10: {"name": "High Fashion House", "flavor": "Dictating the style of the entire kingdom's court."}
-		}
-	},
-	"goldsmith": {
-		"category": "industry",
-		"cost": 8000, "labor": 3000, "tier": 3, 
-		"desc": "Increases jewelry production efficiency by 100% per level.",
-		"levels": {
-			1: {"name": "Jeweler's Bench", "flavor": "Setting small stones into copper rings."},
-			5: {"name": "Artisan's Workshop", "flavor": "Fine gold wire and precious gems are crafted into masterworks."},
-			10: {"name": "The Royal Treasury Shop", "flavor": "Only Emperors and Gods can afford these creations."}
-		}
-	},
+# Delegated to BuildingData module
+static var BUILDINGS: Dictionary:
+	get:
+		return BuildingData.get_buildings()
 
-	# --- DEFENSE (The Shield) ---
-	"stone_walls": {
-		"category": "military",
-		"cost": 5000, "labor": 5000, "tier": 2, 
-		"desc": "Increases settlement defense, reducing damage to garrison and hindering attackers.",
-		"levels": {
-			1: {"name": "Palisade", "flavor": "Sharpened wooden stakes to deter the wolves and bandits."},
-			2: {"name": "Reinforced Gate", "flavor": "Iron-banded oak that can withstand many a ramming."},
-			3: {"name": "Watch Towers", "flavor": "High vantage points for archers to fire down upon the foe."},
-			4: {"name": "Machicolations", "flavor": "Opening in the floor to drop stones and boiling oil."},
-			5: {"name": "Stone Curtain Wall", "flavor": "Huge granite blocks that shrug off fire and axe alike."},
-			6: {"name": "Merlons & Battlements", "flavor": "Crenelated walls to provide cover for the defenders."},
-			7: {"name": "Wall-Mounted Balistas", "flavor": "Black-bolt engines capable of skewering knights and horses."},
-			8: {"name": "Great Keep", "flavor": "A final redoubt where the garrison can retreat and regroup."},
-			9: {"name": "Moat & Drawbridge", "flavor": "Water and depth. The ultimate bottleneck for any army."},
-			10: {"name": "The Star Fort", "flavor": "A geometric masterpiece of killing zones. To attack is suicide."}
-		}
-	},
-	"barracks": {
-		"category": "military",
-		"cost": 5000, "labor": 2500, "tier": 2, 
-		"desc": "Increases garrison capacity, recruitment volume (Odds) and troop quality (Evens).",
-		"levels": {
-			1: {"name": "Muster Field", "flavor": "A muddy field where peasants learn to hold a spear. Increased muster volume."},
-			2: {"name": "Drill Square", "flavor": "Strict sergeants bark orders. Unlocks Tier 2 Trained soldiers."},
-			3: {"name": "Garrison Quarters", "flavor": "Soldiers live here full-time. Even greater muster capacity."},
-			4: {"name": "Sergeant's Mess", "flavor": "Veteran discipline. Unlocks Tier 3 Men-at-Arms."},
-			5: {"name": "Training Hall", "flavor": "A dedicated facility for the local levy. Massive muster capacity."},
-			6: {"name": "Veteran Lodge", "flavor": "The air smells of old leather. Unlocks Tier 4 Veteran soldiers."},
-			7: {"name": "Military District", "flavor": "Entire city blocks dedicated to the march. Imperial muster volume."},
-			8: {"name": "Officer's Academy", "flavor": "War is studied as a science. Unlocks Tier 5 Royal Guards."},
-			9: {"name": "War Room", "flavor": "Planning for global conquest. Maximum muster capacity."},
-			10: {"name": "Citadel of Marshals", "flavor": "The pinnacle of military might. Elite quality and quantity."}
-		}
-	},
-	"training_ground": {
-		"category": "military",
-		"cost": 4000, "labor": 2000, "tier": 2, 
-		"desc": "Increases recruit quality/tier per level.",
-		"levels": {
-			1: {"name": "Training Field", "flavor": "Wooden swords and straw targets."},
-			5: {"name": "Combat Pit", "flavor": "Live sparring and combat maneuvers."},
-			10: {"name": "War College", "flavor": "Recruits leave as seasoned veterans before their first real battle."}
-		}
-	},
-	"granary": {
-		"category": "military",
-		"cost": 1200, "labor": 1000, "tier": 1, 
-		"desc": "Increases starvation resistance and food storage cap by 50% per level.",
-		"levels": {
-			1: {"name": "Food Cellar", "flavor": "Cold, dry storage for grain."},
-			4: {"name": "Raised Granary", "flavor": "Elevated structures keep pests away from the stockpile."},
-			10: {"name": "The Eternal Silo", "flavor": "Stored food can last through a decade-long siege."}
-		}
-	},
-	"watchtower": {
-		"category": "military",
-		"cost": 2000, "labor": 1200, "tier": 1, 
-		"desc": "Increases stability and reduces bandit loot success chance.",
-		"levels": {
-			1: {"name": "Lookout Post", "flavor": "A simple wooden platform with a bell."},
-			5: {"name": "Stone Beacon", "flavor": "Fires lit at the top can signal trouble for leagues."},
-			10: {"name": "The Vigilant Eye", "flavor": "Not a bird flies by without the tower's knowledge."}
-		}
-	},
+static var GEOLOGY_RESOURCES: Dictionary:
+	get:
+		return BuildingData.get_geology_resources()
 
-	# --- CIVIL (The Heart) ---
-	"housing_district": {
-		"cost": 1000, "labor": 800, "tier": 1, 
-		"desc": "Increases population capacity by 100 per level.",
-		"levels": {
-			1: {"name": "Thatched Cottages", "flavor": "Simple homes for simple folk."},
-			5: {"name": "Stone Tenements", "flavor": "Rows of sturdy buildings housing dozens of families."},
-			10: {"name": "The High District", "flavor": "Ornate villas and sprawling estates for a massive populace."}
-		}
-	},
-	
-	"market": {
-		"cost": 1000, "labor": 1200, "tier": 1, 
-		"desc": "Increases industrial slots and trade income.",
-		"levels": {
-			1: {"name": "Town Stalls", "flavor": "Farmers shouting prices over bushel baskets."},
-			3: {"name": "Tax Office", "flavor": "A grim building where the Lord's due is weighed and counted."},
-			6: {"name": "Guild Hall", "flavor": "Merchants meet behind closed doors to decide who gets rich."},
-			10: {"name": "The Grand Exchange", "flavor": "The gold of the world flows through these ledgers."}
-		}
-	},
-	"road_network": {
-		"cost": 1500, "labor": 1500, "tier": 1, 
-		"desc": "Increases trade throughput and tax efficiency by 15%.",
-		"levels": {
-			1: {"name": "Dirt Paths", "flavor": "Better than bush-whacking, but muddy in the rain."},
-			5: {"name": "Cobblestone Streets", "flavor": "Paved paths for carts and horses."},
-			10: {"name": "Imperial Highways", "flavor": "Straight, smooth roads built to last ages."}
-		}
-	},
-	"merchant_guild": {
-		"cost": 5000, "labor": 2000, "tier": 3, 
-		"desc": "Increases caravan capacity and global trade reach.",
-		"levels": {
-			1: {"name": "Local Chapterhouse", "flavor": "Where local traders talk shop."},
-			5: {"name": "National Registry", "flavor": "Coordinating trade across the entire kingdom."},
-			10: {"name": "World Trade Council", "flavor": "Controlling the flow of gold between continents."}
-		}
-	},
-	"warehouse_district": {
-		"cost": 3000, "labor": 1500, "tier": 2, 
-		"desc": "Increases total inventory storage limit by 100% per level.",
-		"levels": {
-			1: {"name": "Basement Storage", "flavor": "Extra space beneath the shops."},
-			5: {"name": "Port Warehouses", "flavor": "Massive sheds for sea-borne cargo."},
-			10: {"name": "The Great Vaults", "flavor": "Capable of holding the riches of a fallen empire."}
-		}
-	},
-	"cathedral": {
-		"cost": 8000, "labor": 5000, "tier": 3, 
-		"desc": "Massively increases stability and loyalty of the Nobility.",
-		"levels": {
-			1: {"name": "Sanctuary", "flavor": "A quiet place for prayer."},
-			4: {"name": "Basilica", "flavor": "Towering arches and stained glass."},
-			10: {"name": "The Seat of Divines", "flavor": "Where Kings are crowned and gods are said to walk."}
-		}
-	},
-	
-	"tavern": {
-		"cost": 800, "labor": 1000, "tier": 1, 
-		"desc": "Increases happiness and migration.",
-		"levels": {
-			1: {"name": "Alehouse", "flavor": "Cheap swill and loud songs."},
-			4: {"name": "Traveler's Inn", "flavor": "Warm beds attract sellswords from distant lands."},
-			7: {"name": "Bard's College", "flavor": "Songs are powerful. A good tune can make a tyrant look like a savior."},
-			10: {"name": "The Shadow Broker", "flavor": "The bartender knows everything. For the right price, so do you."}
-		}
-	}
-}
+# --- CHARACTER CREATION DATA (CDDA + KENSHI STYLE) ---
+# Delegated to CharacterCreationData module
+static var SCENARIOS: Dictionary:
+	get:
+		return CharacterCreationData.get_scenarios()
 
-const BASE_PRICES = {
-	# --- RESOURCES ---
-	"grain": 10, "fish": 8, "meat": 20, "wood": 5, "stone": 15, "iron": 40, "steel": 120, "leather": 60, "cloth": 50, "ale": 30,
-	"copper": 25, "bronze": 60, "silver": 150, "gold": 400, "jewelry": 1000, "livestock": 40, "wool": 20, "fine_garments": 250,
-	"hides": 15, "glass_sand": 15, "spices": 500, "ivory": 800, "coal": 20, "marble": 100, "gems": 600, "peat": 8, "clay": 12,
-	"salt": 45, "furs": 120, "tin": 25, "lead": 20, "sand": 5, "tools": 80, "bricks": 30,
-	
-	# --- WEAPONS ---
-	"shortsword": 300, "hand_axe": 150, "mace": 200, "dagger": 100, "club": 20, "spear": 180, "shortbow": 250, "arrows": 50,
-	"estoc": 350, "longsword": 500, "greatsword": 800, "battle_axe": 450, "warhammer": 400, "maul": 600, "morningstar": 350,
-	"flail": 400, "pitchfork": 50, "halberd": 550, "glaive": 500, "pike": 450, "longbow": 450, "crossbow": 600, "bolts": 60,
-	
-	# --- ARMOR ---
-	"shirt": 10, "trousers": 15, "tunic": 20, "gambeson": 120, "leather_armor": 250, "helmet": 180, "cap": 30, "boots": 40, "gloves": 30,
-	"hauberk": 800, "cuirass": 1200, "brigandine": 1500, "breastplate": 2000, "greaves": 400, "sabatons": 300, "gauntlets": 350,
-	"pauldrons": 450, "vambraces": 300, "cloak": 60, "surcoat": 80, "great_helm": 600,
-	"heater_shield": 400, "buckler": 150, "kite_shield": 600, "tower_shield": 900, "pavise": 750,
+static var PROFESSIONS: Dictionary:
+	get:
+		return CharacterCreationData.get_professions()
 
-	# --- TRANSPORT ---
-	"mule": 150,
-	"horse": 450,
-	"cart": 800
-}
+static var TRAITS: Dictionary:
+	get:
+		return CharacterCreationData.get_traits()
 
-const GEOLOGY_RESOURCES = {
-	"sedimentary": {
-		"iron": 0.04,
-		"coal": 0.08,
-		"lead": 0.05,
-		"clay": 0.12
-	},
-	"metamorphic": {
-		"copper": 0.03,
-		"silver": 0.06,
-		"marble": 0.09,
-		"tin": 0.07
-	},
-	"igneous": {
-		"gold": 0.02,
-		"gems": 0.05
-	}
-}
+# --- UNIT ARCHETYPES ---
+# Delegated to UnitData module
+static var ARCHETYPES: Dictionary:
+	get:
+		return UnitData.get_archetypes()
 
-func get_weapon_skill_tag(weapon: Dictionary) -> String:
+# Legacy data removed - now in dedicated modules:
+# - _LEGACY_ITEMS (1000+ lines) -> ItemData.gd
+# - _LEGACY_BUILDINGS (500+ lines) -> BuildingData.gd
+# - _LEGACY_SCENARIOS/PROFESSIONS/TRAITS (300+ lines) -> CharacterCreationData.gd
+# - _LEGACY_ARCHETYPES (200+ lines) -> UnitData.gd
+
+# --- COMBAT & UNIT FUNCTIONS (Keep here for now - will extract to CombatSystem later) ---
+
+static func get_weapon_skill_tag(weapon: Dictionary) -> String:
 	var w_name = weapon.get("name", "").to_lower()
 	if w_name.contains("sword"): return "swordsmanship"
 	if w_name.contains("axe"): return "axe_fighting"
@@ -1284,328 +757,6 @@ static var MATERIAL_TIERS: Dictionary:
 	get:
 		return AIConfigData.get_material_tiers()
 
-# --- CHARACTER CREATION DATA (CDDA + KENSHI STYLE) ---
-
-const SCENARIOS = {
-	"trader_caravan": {
-		"name": "Trader Caravan",
-		"desc": "You are a minor merchant with a small wagon and some bodyguards. Life is stable, but slow.",
-		"points": 0,
-		"gold": 2500,
-		"fame": 10,
-		"location_type": "city",
-		"items": ["mace", "heater_shield"], 
-		"start_roster": [{"type": "recruit", "tier": 1}, {"type": "recruit", "tier": 1}, {"type": "recruit", "tier": 1}, {"type": "recruit", "tier": 1}],
-		"relations": {}
-	},
-	"escaped_thrall": {
-		"name": "Escaped Thrall",
-		"desc": "You have escaped from a Salt Mine with a fellow prisoner. You have nothing but rags.",
-		"points": 10,
-		"gold": 0,
-		"fame": -10,
-		"location_type": "wilds",
-		"items": ["shirt"],
-		"start_roster": [{"type": "laborer", "tier": 1}],
-		"status": ["starving", "wanted"],
-		"relations": {"faction_0": -100} 
-	},
-	"failed_heir": {
-		"name": "Failed Heir",
-		"desc": "Your family was ousted in a coup. You have high-quality gear and a few loyal retainers.",
-		"points": -5,
-		"gold": 5000,
-		"fame": 50,
-		"location_type": "capital",
-		"items": ["shortsword", "hauberk", "helmet"],
-		"start_roster": [{"type": "recruit", "tier": 2}, {"type": "recruit", "tier": 2}],
-		"status": ["hunted"],
-		"relations": {"faction_1": -100}
-	},
-	"rock_bottom": {
-		"name": "Rock Bottom",
-		"desc": "The desert took everything. You start in the middle of nowhere with a missing arm and no clothes. Alone.",
-		"points": 25,
-		"gold": 0,
-		"fame": 0,
-		"location_type": "desert",
-		"items": [],
-		"start_roster": [],
-		"status": ["missing_arm", "starving"]
-	},
-	"holy_crusade": {
-		"name": "Holy Crusade",
-		"desc": "You are a pilgrim in a massive holy war. You have brothers-in-arms but no personal freedom.",
-		"points": 5,
-		"gold": 500,
-		"fame": 20,
-		"location_type": "town",
-		"items": ["spear", "tunic"],
-		"start_roster": [{"type": "recruit", "tier": 1}, {"type": "recruit", "tier": 1}, {"type": "recruit", "tier": 1}, {"type": "recruit", "tier": 1}, {"type": "recruit", "tier": 1}],
-		"relations": {"church": 100, "commonwealth": -50}
-	},
-	"shipwrecked": {
-		"name": "Shipwrecked",
-		"desc": "Washed up on a strange shore. You are the sole survivor.",
-		"points": 5,
-		"gold": 0,
-		"fame": 0,
-		"location_type": "coastal",
-		"items": ["club"],
-		"start_roster": [],
-		"status": ["wet", "exhausted"]
-	}
-}
-
-const PROFESSIONS = {
-	"mercenary": {
-		"name": "Mercenary",
-		"desc": "A professional soldier of fortune.",
-		"cost": 5,
-		"stats": {"strength": 2, "endurance": 2, "agility": 1},
-		"skills": {"spear_use": 15, "shield_use": 10, "armor_handling": 10},
-		"equipment": ["gambeson", "spear", "helmet"]
-	},
-	"laborer": {
-		"name": "Laborer",
-		"desc": "Spent years in the fields or mines. Strong back, empty pockets.",
-		"cost": 0,
-		"stats": {"strength": 3, "endurance": 3},
-		"skills": {"improvised": 20},
-		"equipment": ["trousers", "club"]
-	},
-	"scholar": {
-		"name": "Scholar",
-		"desc": "A product of the Great Libraries. Wise but physically fragile.",
-		"cost": 3,
-		"stats": {"intelligence": 5, "strength": -2},
-		"skills": {"dagger_knife": 10},
-		"equipment": ["tunic", "dagger"]
-	},
-	"thief": {
-		"name": "Thief",
-		"desc": "A shadow in the city streets.",
-		"cost": 5,
-		"stats": {"agility": 4, "intelligence": 1},
-		"skills": {"dagger_knife": 10, "dodging": 10},
-		"equipment": ["shirt", "dagger"]
-	},
-	"hunter": {
-		"name": "Hunter",
-		"desc": "Lives off the land, far from the king's taxes.",
-		"cost": 2,
-		"stats": {"agility": 2, "endurance": 2},
-		"skills": {"archery": 20, "dagger_knife": 15},
-		"equipment": ["tunic", "shortbow", "dagger"]
-	},
-	"blacksmith": {
-		"name": "Blacksmith",
-		"desc": "Forged steel for others, now wields it for themselves.",
-		"cost": 4,
-		"stats": {"strength": 4, "endurance": 1},
-		"skills": {"mace_hammer": 15},
-		"equipment": ["tunic", "mace"]
-	}
-}
-
-const TRAITS = {
-	"tough": {
-		"name": "Tough",
-		"desc": "High pain tolerance and thick skin. +15% Health to all parts.",
-		"cost": 5,
-		"type": "positive"
-	},
-	"fast_runner": {
-		"name": "Fast Runner",
-		"desc": "Your legs are like springs. +20% Movement speed.",
-		"cost": 4,
-		"type": "positive"
-	},
-	"eagle_eyed": {
-		"name": "Eagle Eyed",
-		"desc": "You can spot a bandit a mile away. +3 Vision range.",
-		"cost": 3,
-		"type": "positive"
-	},
-	"strong_stomach": {
-		"name": "Strong Stomach",
-		"desc": "You can eat anything without getting sick.",
-		"cost": 2,
-		"type": "positive"
-	},
-	"night_vision": {
-		"name": "Night Vision",
-		"desc": "You see better in the dark. Ignore 50% of night penalties.",
-		"cost": 4,
-		"type": "positive"
-	},
-	"quick_learner": {
-		"name": "Quick Learner",
-		"desc": "You pick up skills fast. +20% XP gain.",
-		"cost": 6,
-		"type": "positive"
-	},
-	"weak": {
-		"name": "Weak",
-		"desc": "Lacks physical power. -3 Strength.",
-		"cost": -4,
-		"type": "negative"
-	},
-	"clumsy": {
-		"name": "Clumsy",
-		"desc": "Prone to tripping and missing. -5 Accuracy.",
-		"cost": -3,
-		"type": "negative"
-	},
-	"addict": {
-		"name": "Addict",
-		"desc": "Needs constant stimulation. Requires Ale or Spices to avoid withdrawal.",
-		"cost": -5,
-		"type": "negative"
-	},
-	"near_sighted": {
-		"name": "Near Sighted",
-		"desc": "Poor long-distance vision. -3 Vision range.",
-		"cost": -4,
-		"type": "negative"
-	},
-	"hemophiliac": {
-		"name": "Hemophiliac",
-		"desc": "Bleed much faster when wounded.",
-		"cost": -6,
-		"type": "negative"
-	},
-	"frail": {
-		"name": "Frail",
-		"desc": "Brittle bones and thin skin. -15% Health to all parts.",
-		"cost": -5,
-		"type": "negative"
-	}
-}
-
-const ARCHETYPES = {
-	"laborer": {
-		"name": "Laborer", "min_tier": 0, "role": "levy",
-		"attributes": {"strength": 8, "endurance": 8, "agility": 8, "balance": 8, "pain_tolerance": 8},
-		"skills": {"improvised": 15, "dodging": 5},
-		"equipment": {
-			"main_hand": ["pitchfork", "wood"],
-			"torso_under": ["shirt", "linen"],
-			"legs_under": ["trousers", "wool"]
-		}
-	},
-	"spearman": {
-		"name": "Spearman", "min_tier": 1, "role": "frontline",
-		"attributes": {"strength": 10, "endurance": 11, "agility": 9, "balance": 10, "pain_tolerance": 10},
-		"skills": {"spear_use": 25, "shield_use": 20, "dodging": 10, "armor_handling": 10},
-		"equipment": {
-			"main_hand": ["spear", "tier_mat"],
-			"off_hand": ["buckler", "tier_mat"],
-			"head_armor": ["helmet", "tier_mat"],
-			"head_under": ["coif", "wool"],
-			"torso_armor": ["cuirass", "tier_mat"],
-			"torso_under": ["gambeson", "wool"],
-			"arms_armor": ["vambraces", "tier_mat"],
-			"legs_armor": ["greaves", "tier_mat"],
-			"feet_over": ["boots", "leather"],
-			"hands_under": ["gloves", "leather"]
-		}
-	},
-	"footman": {
-		"name": "Footman", "min_tier": 2, "role": "frontline",
-		"attributes": {"strength": 11, "endurance": 12, "agility": 10, "balance": 11, "pain_tolerance": 12},
-		"skills": {"swordsmanship": 35, "shield_use": 30, "dodging": 15, "armor_handling": 25},
-		"equipment": {
-			"main_hand": ["longsword", "tier_mat"],
-			"off_hand": ["heater_shield", "wood"],
-			"head_armor": ["helmet", "tier_mat"],
-			"head_under": ["coif", "wool"],
-			"torso_armor": ["hauberk", "tier_mat"],
-			"torso_under": ["gambeson", "wool"],
-			"arms_armor": ["pauldrons", "tier_mat"],
-			"legs_armor": ["greaves", "tier_mat"],
-			"feet_armor": ["sabatons", "tier_mat"],
-			"hands_armor": ["gauntlets", "tier_mat"]
-		}
-	},
-	"vanguard": {
-		"name": "Vanguard", "min_tier": 2, "role": "shock",
-		"attributes": {"strength": 14, "endurance": 12, "agility": 11, "balance": 12, "pain_tolerance": 15},
-		"skills": {"axe_fighting": 40, "swordsmanship": 15, "dodging": 10, "armor_handling": 20},
-		"equipment": {
-			"main_hand": ["battle_axe", "tier_mat"],
-			"head_armor": ["helmet", "tier_mat"],
-			"torso_armor": ["brigandine", "tier_mat"],
-			"torso_under": ["gambeson", "wool"],
-			"arms_armor": ["vambraces", "tier_mat"],
-			"legs_armor": ["greaves", "tier_mat"],
-			"feet_over": ["boots", "leather"],
-			"hands_armor": ["gauntlets", "tier_mat"]
-		}
-	},
-	"pikeman": {
-		"name": "Pikeman", "min_tier": 2, "role": "frontline",
-		"attributes": {"strength": 12, "endurance": 13, "agility": 10, "balance": 12, "pain_tolerance": 12},
-		"skills": {"spear_use": 45, "dodging": 5, "armor_handling": 15},
-		"equipment": {
-			"main_hand": ["pike", "tier_mat"],
-			"head_armor": ["helmet", "tier_mat"],
-			"torso_armor": ["cuirass", "tier_mat"],
-			"torso_under": ["gambeson", "wool"],
-			"arms_armor": ["vambraces", "tier_mat"],
-			"legs_armor": ["greaves", "tier_mat"],
-			"feet_over": ["boots", "leather"]
-		}
-	},
-	"archer": {
-		"name": "Archer", "min_tier": 1, "role": "ranged",
-		"attributes": {"strength": 10, "endurance": 12, "agility": 14, "balance": 11, "pain_tolerance": 9},
-		"skills": {"archery": 40, "dagger_knife": 20, "dodging": 25, "armor_handling": 5},
-		"equipment": {
-			"main_hand": ["shortbow", "wood"],
-			"ammo": ["arrows", "tier_mat"],
-			"off_hand": ["dagger", "tier_mat"],
-			"head_armor": ["cap", "leather"],
-			"torso_under": ["tunic", "linen"],
-			"legs_under": ["trousers", "wool"],
-			"feet_over": ["boots", "leather"]
-		}
-	},
-	"crossbowman": {
-		"name": "Crossbowman", "min_tier": 3, "role": "ranged",
-		"attributes": {"strength": 12, "endurance": 11, "agility": 9, "balance": 10, "pain_tolerance": 11},
-		"skills": {"crossbows": 45, "shield_use": 25, "dodging": 5, "armor_handling": 25},
-		"equipment": {
-			"main_hand": ["crossbow", "wood"],
-			"ammo": ["bolts", "tier_mat"],
-			"off_hand": ["pavise", "wood"],
-			"head_armor": ["helmet", "tier_mat"],
-			"torso_armor": ["hauberk", "tier_mat"],
-			"torso_under": ["gambeson", "wool"],
-			"legs_armor": ["greaves", "tier_mat"],
-			"feet_over": ["boots", "leather"]
-		}
-	},
-	"knight": {
-		"name": "Knight", "min_tier": 4, "role": "shock",
-		"attributes": {"strength": 15, "endurance": 15, "agility": 12, "balance": 14, "pain_tolerance": 16},
-		"skills": {"swordsmanship": 50, "mace_hammer": 35, "shield_use": 40, "armor_handling": 50, "dodging": 10},
-		"equipment": {
-			"main_hand": ["greatsword", "tier_mat"],
-			"head_armor": ["great_helm", "tier_mat"],
-			"head_under": ["coif", "wool"],
-			"torso_armor": ["breastplate", "tier_mat"],
-			"torso_over": ["hauberk", "tier_mat"],
-			"torso_under": ["gambeson", "wool"],
-			"arms_armor": ["pauldrons", "tier_mat"],
-			"legs_armor": ["greaves", "tier_mat"],
-			"feet_armor": ["sabatons", "tier_mat"],
-			"hands_armor": ["gauntlets", "tier_mat"],
-			"torso_cover": ["surcoat", "linen"]
-		}
-	}
-}
-
 # --- CALENDAR & NAMES ---
 # Loaded from data/names.json
 static var MONTH_NAMES: Array:
@@ -1620,7 +771,9 @@ static var LAST_NAMES: Array:
 	get:
 		return NamesData.get_last_names()
 
-func get_default_body(hp_scale: float = 1.0) -> Dictionary:
+# --- BODY & UNIT GENERATION ---
+
+static func get_default_body(hp_scale: float = 1.0) -> Dictionary:
 	var body = {}
 	
 	# Tissue Templates
@@ -1716,14 +869,14 @@ func get_default_body(hp_scale: float = 1.0) -> Dictionary:
 		
 	return body
 
-func get_total_hp(body: Dictionary) -> int:
+static func get_total_hp(body: Dictionary) -> int:
 	var total = 0
 	for p in body:
 		for tissue in body[p]["tissues"]:
 			total += tissue["hp"]
 	return total
 
-func generate_laborer(rng: RandomNumberGenerator) -> GDUnit:
+static func generate_laborer(rng: RandomNumberGenerator) -> GDUnit:
 	var r_name = "%s %s" % [
 		FIRST_NAMES[rng.randi() % FIRST_NAMES.size()],
 		LAST_NAMES[rng.randi() % LAST_NAMES.size()]
@@ -1946,7 +1099,7 @@ func generate_monster(rng: RandomNumberGenerator, m_type: String, hp_scale: floa
 	
 	return monster
 
-func generate_recruit(rng: RandomNumberGenerator, tier: int) -> GDUnit:
+static func generate_recruit(rng: RandomNumberGenerator, tier: int) -> GDUnit:
 	var r_name = "%s %s" % [
 		FIRST_NAMES[rng.randi() % FIRST_NAMES.size()],
 		LAST_NAMES[rng.randi() % LAST_NAMES.size()]
@@ -2070,7 +1223,7 @@ func generate_recruit(rng: RandomNumberGenerator, tier: int) -> GDUnit:
 
 	return recruit
 
-func is_valid_material(item_id: String, mat_key: String) -> bool:
+static func is_valid_material(item_id: String, mat_key: String) -> bool:
 	var item_base = ITEMS.get(item_id, {})
 	if item_base.is_empty(): return true
 	
@@ -2104,7 +1257,7 @@ func is_valid_material(item_id: String, mat_key: String) -> bool:
 			
 	return true
 
-func get_valid_material(type_key: String, mat_key: String) -> String:
+static func get_valid_material(type_key: String, mat_key: String) -> String:
 	if is_valid_material(type_key, mat_key):
 		return mat_key
 	
@@ -2124,7 +1277,7 @@ func get_valid_material(type_key: String, mat_key: String) -> String:
 		
 	return mat_key
 
-func create_item_data(id: String, mat: String, qual: String = "common") -> Dictionary:
+static func create_item_data(id: String, mat: String, qual: String = "common") -> Dictionary:
 	var base = ITEMS[id].duplicate()
 	base["id"] = id
 	base["material"] = get_valid_material(id, mat)
@@ -2172,7 +1325,7 @@ func create_item_data(id: String, mat: String, qual: String = "common") -> Dicti
 		
 	return base
 
-func get_item_value(item: Dictionary) -> int:
+static func get_item_value(item: Dictionary) -> int:
 	var val = 10 # Base
 	if item.has("prot"): val += item["prot"] * 2
 	if item.has("dmg"): val += item["dmg"] * 3
@@ -2196,7 +1349,7 @@ static func get_unit_equipment_weight(u: GDUnit) -> float:
 			if s.get("cover"): w += s["cover"].get("weight", 0.0)
 	return w
 
-func calculate_unit_speed(u: GDUnit) -> float:
+static func calculate_unit_speed(u: GDUnit) -> float:
 	var spd = 0.6
 	match u.type:
 		"commander": spd = 0.1
@@ -2316,7 +1469,7 @@ func process_bleeding(u: GDUnit, delta: float, rng: RandomNumberGenerator) -> Di
 		
 	return res
 
-func generate_unit(a_key: String, tier: int = 1) -> GDUnit:
+static func generate_unit(a_key: String, tier: int = 1) -> GDUnit:
 	var rng = GameState.rng
 	var r_name = "%s %s" % [
 		FIRST_NAMES[rng.randi() % FIRST_NAMES.size()],

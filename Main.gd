@@ -3,6 +3,14 @@ extends Control
 const UIPanels = preload("res://src/utils/UIPanels.gd")
 const CodexData = preload("res://src/data/CodexData.gd")
 const GameEnums = preload("res://src/core/GameEnums.gd")
+const GameStateMachine = preload("res://src/core/GameStateMachine.gd")
+const InputRouter = preload("res://src/input/InputRouter.gd")
+const SaveManager = preload("res://src/managers/SaveManager.gd")
+const UILibraries = preload("res://src/ui/UILibraries.gd")
+const UIRenderer = preload("res://src/ui/UIRenderer.gd")
+const UIConstants = preload("res://src/ui/core/UIConstants.gd")
+const ShaderGridRenderer = preload("res://src/rendering/ShaderGridRenderer.gd")
+const BattleShaderRenderer = preload("res://src/rendering/BattleShaderRenderer.gd")
 
 @onready var map_display = $MainLayout/ContentLayout/MapPanel/MapDisplay
 @onready var info_label = $MainLayout/ContentLayout/SidePanel/InfoLabel
@@ -12,6 +20,8 @@ const GameEnums = preload("res://src/core/GameEnums.gd")
 @onready var battle_ui = $BattleUI
 var mouse_cursor
 var world_viewport  # Viewport-based rendering system
+var shader_grid_renderer: ShaderGridRenderer  # Shader-based grid renderer
+var battle_shader_renderer: BattleShaderRenderer  # Shader-based battle renderer
 var tile_set: TileSet  # Shared TileSet for viewport rendering
 
 @onready var overworld_ctrl = $OverworldController
@@ -20,12 +30,14 @@ var dungeon_ctrl
 var city_ctrl
 var region_ctrl
 var mono_font
+var input_router: InputRouter  # Centralized input routing
 
 var state: GameEnums.GameMode = GameEnums.GameMode.MENU
+var state_machine: GameStateMachine  # Formal state machine for validation and tracking
 var loading_stage = ""
 var history_offset = 0
 var menu_idx = 0
-var menu_options = ["NEW WORLD GEN", "CHARACTER CREATOR", "START ADVENTURE", "BATTLE SIMULATOR", "CITY GENERATOR", "THE GREAT ARCHIVE", "RENDERING: SOLID GRID"]
+var menu_options = ["NEW GAME", "WORLD LIBRARY", "CHARACTER LIBRARY", "BATTLE SIMULATOR", "CITY GENERATOR", "THE GREAT ARCHIVE", "RENDERING: SOLID GRID"]
 
 var world_config = {
 	"name": "Aequor",
@@ -41,7 +53,18 @@ var world_config = {
 	"seed": 0
 }
 var world_config_idx = 0
-var generated_world = null # Store successful world data
+
+# DF/CDDA Style Save System  
+var saved_worlds: Array = []        # List of world metadata from SaveManager
+var saved_characters: Array = []   # List of character metadata from SaveManager
+var selected_world_id: String = ""  # Currently selected world for new game
+var selected_char_id: String = ""   # Currently selected character for new game
+var world_library_idx: int = 0      # Selected index in world library
+var char_library_idx: int = 0       # Selected index in character library
+var library_focus: int = 0          # Focus for library screens
+var game_setup_focus: int = 0       # 0 = world, 1 = character
+var generated_world: Dictionary = {}  # Currently generated/selected world data
+var saved_character: Dictionary = {}  # Currently created/selected character data
 
 var player_config = {
 	"name": "Survivor",
@@ -70,12 +93,15 @@ var cc_shop_items = [
 	"heater_shield", "buckler",
 	"mule", "horse", "cart"
 ]
-var saved_character = null # Store custom character
+
 var location_list = []
 var location_idx = 0
 
 var preview_zoom = 1.0
 var preview_pos = Vector2i(100, 100)
+var target_preview_pos = Vector2i(100, 100)
+var smooth_camera_enabled = true
+var camera_lerp_speed = 8.0
 
 var sim_config = {
 	"p_lineup": [
@@ -128,8 +154,9 @@ func _ready():
 	# Mouse Cursor setup
 	var rect_cursor = ColorRect.new()
 	rect_cursor.name = "MouseCursor"
-	rect_cursor.color = Color(1, 1, 1, 0.15)
+	rect_cursor.color = UIConstants.Colors.CURSOR_HOVER
 	rect_cursor.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	rect_cursor.z_index = 5  # ZIndex.CURSOR
 	$MainLayout/ContentLayout/MapPanel.add_child(rect_cursor)
 	mouse_cursor = rect_cursor
 	
@@ -141,6 +168,15 @@ func _ready():
 	
 	setup_tile_set()
 	setup_world_viewport()
+	
+	# Initialize input router
+	input_router = InputRouter.new(self)
+	
+	# Initialize state machine
+	state_machine = GameStateMachine.new(state)
+	state_machine.state_changed.connect(_on_state_changed)
+	state_machine.state_enter.connect(_on_state_enter)
+	state_machine.state_exit.connect(_on_state_exit)
 	
 	var header_node = $MainLayout/ScreenHeader
 	var battle_info = $BattleUI/VBoxContainer/BattleInfo
@@ -173,6 +209,10 @@ func _ready():
 	add_child(region_ctrl)
 	GameState.region_ctrl = region_ctrl
 	region_ctrl.settlement_entered.connect(_on_settlement_entered)
+	
+	# Connect minimap click signal if world_viewport exists
+	if world_viewport:
+		world_viewport.minimap_clicked.connect(_on_minimap_clicked)
 
 	GameState.connect("map_updated", _on_map_updated)
 	GameState.connect("log_updated", _on_log_updated)
@@ -184,12 +224,58 @@ func _ready():
 	GameState.world_gen_updated.connect(_on_world_gen_updated)
 	get_viewport().size_changed.connect(_on_map_updated)
 	
+	# Load saved worlds and characters
+	_refresh_save_libraries()
+	
 	map_display.gui_input.connect(_on_map_display_gui_input)
 	map_display.mouse_entered.connect(func(): mouse_in_map = true)
 	map_display.mouse_exited.connect(func(): mouse_in_map = false)
 	
 	# Initial render
-	if state == GameEnums.GameMode.LOADING:
+	_on_map_updated()
+
+# State Machine Callbacks
+func _on_state_changed(old_state: GameEnums.GameMode, new_state: GameEnums.GameMode):
+	"""Called when state transitions occur"""
+	print("State transition: %s -> %s" % [
+		GameEnums.state_to_string(old_state),
+		GameEnums.state_to_string(new_state)
+	])
+
+func _on_state_enter(new_state: GameEnums.GameMode):
+	"""Called when entering a new state"""
+	# Override in subclass or connect to signal for custom behavior
+	pass
+
+func _on_state_exit(old_state: GameEnums.GameMode):
+	"""Called when exiting a state"""
+	# Override in subclass or connect to signal for custom behavior
+	pass
+
+func change_state(new_state: GameEnums.GameMode, force: bool = false):
+	"""Safely transition to a new state using the state machine"""
+	if state_machine.transition_to(new_state, force):
+		state = new_state
+		_on_map_updated()
+
+func _process(delta):
+	# Smooth camera interpolation for world preview
+	if state == GameEnums.GameMode.WORLD_PREVIEW and smooth_camera_enabled:
+		var current = Vector2(preview_pos)
+		var target = Vector2(target_preview_pos)
+		var new_pos = current.lerp(target, delta * camera_lerp_speed)
+		preview_pos = Vector2i(new_pos)
+		
+		if preview_pos.distance_to(target_preview_pos) > 0.5:
+			_on_map_updated()
+
+func _on_minimap_clicked(world_pos: Vector2i):
+	"""Handle minimap clicks - jump camera to clicked position"""
+	if state == GameEnums.GameMode.WORLD_PREVIEW:
+		target_preview_pos = world_pos
+		if not smooth_camera_enabled:
+			preview_pos = target_preview_pos
+		_on_map_updated()
 		_on_world_gen_updated("CONNECTING TO AEQUOR...")
 	else:
 		call_deferred("_on_map_updated")
@@ -197,6 +283,20 @@ func _ready():
 		# Force initial info label update
 		var cursor = GameState.player.pos + GameState.player.camera_offset
 		info_label.text = UIPanels.get_tile_info(GameState, cursor)
+
+func _input(event):
+	# F3 for debug info
+	if event is InputEventKey and event.pressed and event.keycode == KEY_F3:
+		_debug_key_pressed()
+		return
+	
+	# F4 to toggle renderer modes (debug)
+	if event is InputEventKey and event.pressed and event.keycode == KEY_F4:
+		_debug_renderer_toggle()
+		return
+	
+	if input_router:
+		input_router.route_input(event, state)
 
 func _setup_view_buttons():
 	var hbox = HBoxContainer.new()
@@ -227,6 +327,47 @@ func setup_world_viewport():
 		world_viewport.size = $MainLayout/ContentLayout/MapPanel.size
 		$MainLayout/ContentLayout/MapPanel.add_child(world_viewport)
 		world_viewport.visible = false  # Hidden by default, shown when needed
+	
+	# Create shader-based grid renderer
+	var map_panel = $MainLayout/ContentLayout/MapPanel
+	
+	shader_grid_renderer = ShaderGridRenderer.new()
+	shader_grid_renderer.name = "ShaderGridRenderer"
+	# Make it fill the entire MapPanel
+	shader_grid_renderer.anchor_left = 0.0
+	shader_grid_renderer.anchor_top = 0.0
+	shader_grid_renderer.anchor_right = 1.0
+	shader_grid_renderer.anchor_bottom = 1.0
+	shader_grid_renderer.offset_left = 0.0
+	shader_grid_renderer.offset_top = 0.0
+	shader_grid_renderer.offset_right = 0.0
+	shader_grid_renderer.offset_bottom = 0.0
+	shader_grid_renderer.z_index = 10  # ZIndex.SHADER
+	shader_grid_renderer.mouse_filter = Control.MOUSE_FILTER_IGNORE  # Allow mouse through
+	map_panel.add_child(shader_grid_renderer)
+	shader_grid_renderer.visible = false  # Hidden by default
+	
+	# Create battle shader renderer
+	battle_shader_renderer = BattleShaderRenderer.new()
+	battle_shader_renderer.name = "BattleShaderRenderer"
+	battle_shader_renderer.anchor_left = 0.0
+	battle_shader_renderer.anchor_top = 0.0
+	battle_shader_renderer.anchor_right = 1.0
+	battle_shader_renderer.anchor_bottom = 1.0
+	battle_shader_renderer.offset_left = 0.0
+	battle_shader_renderer.offset_top = 0.0
+	battle_shader_renderer.offset_right = 0.0
+	battle_shader_renderer.offset_bottom = 0.0
+	battle_shader_renderer.z_index = 11  # Above shader grid
+	battle_shader_renderer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	map_panel.add_child(battle_shader_renderer)
+	battle_shader_renderer.visible = false  # Hidden by default
+	
+	# Force resize after layout is ready
+	await get_tree().process_frame
+	shader_grid_renderer.size = map_panel.size
+	battle_shader_renderer.size = map_panel.size
+	print("[SETUP] Shader renderers initialized: %s" % map_panel.size)
 
 func _update_node_theme(node: RichTextLabel, force_fs: int = -1):
 	# If we are in loading/menu/creation states, we don't want the squished grid logic
@@ -305,6 +446,7 @@ func _handle_mouse_hover(world_pos, grid_pos):
 		if world_pos != last_hover_world_pos:
 			last_hover_world_pos = world_pos
 			_sync_info_at(world_pos)
+			_update_cursor_style(world_pos)
 			
 			# TASK 5: Path Visualization
 			if GameState.player.pos.distance_to(world_pos) < 50: 
@@ -345,6 +487,24 @@ func _handle_mgmt_hover(grid_pos):
 
 func _sync_info_at(pos: Vector2i):
 	info_label.text = UIPanels.get_tile_info(GameState, pos)
+
+func _update_cursor_style(world_pos: Vector2i):
+	"""Update cursor appearance based on what's being hovered"""
+	if not is_instance_valid(mouse_cursor):
+		return
+	
+	if state == GameEnums.GameMode.OVERWORLD:
+		# Check for interactive elements
+		if GameState.settlements.has(world_pos):
+			mouse_cursor.color = UIConstants.Colors.CURSOR_INTERACT
+		elif GameState.armies.has(world_pos) or GameState.caravans.has(world_pos):
+			mouse_cursor.color = UIConstants.Colors.CURSOR_SELECT
+		elif world_pos == GameState.player.pos:
+			mouse_cursor.color = UIConstants.Colors.CURSOR_SELECT
+		else:
+			mouse_cursor.color = UIConstants.Colors.CURSOR_HOVER
+	else:
+		mouse_cursor.color = UIConstants.Colors.CURSOR_HOVER
 
 func _handle_mouse_click(world_pos, grid_pos):
 	if state == GameEnums.GameMode.OVERWORLD:
@@ -427,30 +587,65 @@ func _on_world_gen_updated(stage: String):
 	if stage == "COMPLETE" or stage == "GENERATION COMPLETE!": 
 		state = GameEnums.GameMode.WORLD_PREVIEW
 		preview_pos = Vector2i(GameState.width / 2, GameState.height / 2)
+		# Upload grid texture once when world completes
+		if shader_grid_renderer and GameState.grid:
+			print("[DEBUG] World generation complete - uploading grid")
+			shader_grid_renderer.update_grid_for_mode(GameState.grid, GameState.province_grid, GameState.map_mode)
+		_debug_world_state()
 		_on_map_updated()
 
 func setup_classic_ui():
-	var style = StyleBoxFlat.new()
-	style.bg_color = Color.BLACK
-	style.border_width_left = 2
-	style.border_width_top = 2
-	style.border_width_right = 2
-	style.border_width_bottom = 2
-	style.border_color = Color.GRAY
-	style.content_margin_left = 10
-	style.content_margin_top = 10
-	style.content_margin_right = 10
-	style.content_margin_bottom = 10
+	# Create color-coded panel styles for visual hierarchy
+	var map_style = StyleBoxFlat.new()
+	map_style.bg_color = Color.BLACK
+	map_style.border_width_left = 2
+	map_style.border_width_top = 2
+	map_style.border_width_right = 2
+	map_style.border_width_bottom = 2
+	map_style.border_color = UIConstants.Colors.MAP_BORDER
+	map_style.content_margin_left = 10
+	map_style.content_margin_top = 10
+	map_style.content_margin_right = 10
+	map_style.content_margin_bottom = 10
 	
-	# Add a border-only style for separators
+	var info_style = StyleBoxFlat.new()
+	info_style.bg_color = Color.BLACK
+	info_style.border_width_left = 2
+	info_style.border_width_top = 2
+	info_style.border_width_right = 2
+	info_style.border_width_bottom = 2
+	info_style.border_color = UIConstants.Colors.INFO_BORDER
+	info_style.content_margin_left = 10
+	info_style.content_margin_top = 10
+	info_style.content_margin_right = 10
+	info_style.content_margin_bottom = 10
 	
-	$MainLayout/ContentLayout/MapPanel.add_theme_stylebox_override("panel", style)
+	var log_style = StyleBoxFlat.new()
+	log_style.bg_color = Color.BLACK
+	log_style.border_width_left = 2
+	log_style.border_width_top = 2
+	log_style.border_width_right = 2
+	log_style.border_width_bottom = 2
+	log_style.border_color = UIConstants.Colors.LOG_BORDER
+	log_style.content_margin_left = 10
+	log_style.content_margin_top = 10
+	log_style.content_margin_right = 10
+	log_style.content_margin_bottom = 10
+	
+	$MainLayout/ContentLayout/MapPanel.add_theme_stylebox_override("panel", map_style)
 	$MainLayout/ContentLayout/MapPanel.clip_contents = true
-	$MainLayout/ContentLayout/SidePanel.mouse_filter = Control.MOUSE_FILTER_IGNORE # Purely visual
-	$MainLayout/LogPanel.add_theme_stylebox_override("panel", style)
+	$MainLayout/ContentLayout/SidePanel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	$MainLayout/LogPanel.add_theme_stylebox_override("panel", log_style)
 	
 	# Apply spacing to the Layout container
 	$MainLayout/ContentLayout.add_theme_constant_override("separation", 0)
+
+func set_panels_visible(side: bool = true, log: bool = true, header: String = ""):
+	"""Centralized panel visibility management"""
+	$MainLayout/ContentLayout/SidePanel.visible = side
+	$MainLayout/LogPanel.visible = log
+	if header != "":
+		$MainLayout/ScreenHeader.text = header
 
 func setup_tile_set():
 	# Create TileSet for WorldViewport rendering
@@ -507,127 +702,6 @@ func setup_tile_set():
 	
 	# Cleanup bake system
 	bake_vp.queue_free()
-
-# Legacy tile map setup removed - using WorldViewport system
-
-func _input(event):
-	if event is InputEventKey and event.pressed:
-		if event.keycode == KEY_F12:
-			GameState.run_turbo_simulation()
-			return
-		
-		# ZOOM SYSTEM (Font Scaling)
-		if event.keycode == KEY_EQUAL or event.keycode == KEY_KP_ADD: # Usually + is on Equal key
-			current_font_size = min(current_font_size + 2, 48)
-			_on_map_updated()
-			return
-		if event.keycode == KEY_MINUS or event.keycode == KEY_KP_SUBTRACT:
-			current_font_size = max(current_font_size - 2, 4)
-			_on_map_updated()
-			return
-
-	if event.is_action_pressed("ui_cancel"): # ESC
-		if state in ["world_creation", "character_creation", "battle_config", "codex", "management", "party_info", "fief_info", "history", "dialogue"]:
-			state = GameEnums.GameMode.OVERWORLD
-			_on_map_updated()
-		party_panel.visible = false
-		fief_panel.visible = false
-		return
-
-	elif state == GameEnums.GameMode.MENU:
-		handle_menu_input(event)
-	
-	elif state == GameEnums.GameMode.BATTLE_CONFIG:
-		handle_battle_config_input(event)
-		
-	elif state == GameEnums.GameMode.WORLD_CREATION:
-		handle_world_creation_input(event)
-		
-	elif state == GameEnums.GameMode.WORLD_PREVIEW:
-		handle_world_preview_input(event)
-		
-	elif state == GameEnums.GameMode.CHARACTER_CREATION:
-		handle_character_creation_input(event)
-		
-	elif state == GameEnums.GameMode.PLAY_SELECT:
-		handle_location_select_input(event)
-		
-	elif state == GameEnums.GameMode.CITY:
-		handle_city_studio_input(event)
-		
-	elif state == GameEnums.GameMode.OVERWORLD:
-		overworld_ctrl.handle_input(event)
-		if event is InputEventKey and event.pressed and event.keycode == KEY_K:
-			_try_open_codex_contextual()
-		# Update info label based on cursor/player
-		_sync_tile_info()
-	elif state == GameEnums.GameMode.REGION:
-		if region_ctrl:
-			region_ctrl.handle_input(event)
-			if not region_ctrl.active and state == GameEnums.GameMode.REGION:
-				if saved_character and generated_world:
-					state = GameEnums.GameMode.OVERWORLD
-				else:
-					state = GameEnums.GameMode.WORLD_PREVIEW
-					preview_pos = GameState.player.pos
-				_on_map_updated()
-	elif state == GameEnums.GameMode.WORLD_PREVIEW:
-		if event.is_action_pressed("ui_cancel") or (event is InputEventKey and event.pressed and event.keycode == KEY_TAB):
-			state = GameEnums.GameMode.OVERWORLD
-			_on_map_updated()
-		
-	elif state == GameEnums.GameMode.OVERWORLD:
-		if event is InputEventKey and event.pressed:
-			match event.keycode:
-				KEY_ESCAPE, KEY_H:
-					state = GameEnums.GameMode.OVERWORLD
-					_on_map_updated()
-				KEY_PAGEDOWN:
-					history_offset += 25
-					_on_map_updated()
-				KEY_PAGEUP:
-					history_offset = max(0, history_offset - 25)
-					_on_map_updated()
-
-	elif state == GameEnums.GameMode.BATTLE:
-		if battle_ctrl: battle_ctrl.handle_input(event)
-		
-	elif state == GameEnums.GameMode.DUNGEON:
-		if dungeon_ctrl: dungeon_ctrl.handle_input(event)
-		
-	elif state == GameEnums.GameMode.CITY:
-		if city_ctrl:
-			city_ctrl.handle_input(event)
-			if event.is_action_pressed("ui_cancel"):
-				state = GameEnums.GameMode.MENU
-				_on_map_updated()
-				return
-				
-			if not city_ctrl.active:
-				state = GameEnums.GameMode.MENU
-				_on_map_updated()
-		else:
-			state = GameEnums.GameMode.OVERWORLD
-			_on_map_updated()
-		
-	elif state == GameEnums.GameMode.MANAGEMENT:
-		handle_management_input(event)
-	
-	elif state == GameEnums.GameMode.CODEX:
-		handle_codex_input(event)
-		
-	elif state == GameEnums.GameMode.DIALOGUE:
-		if event.is_action_pressed("ui_up"):
-			dialogue_idx = posmod(dialogue_idx - 1, dialogue_options.size())
-			_on_map_updated()
-		elif event.is_action_pressed("ui_down"):
-			dialogue_idx = posmod(dialogue_idx + 1, dialogue_options.size())
-			_on_map_updated()
-		elif event.is_action_pressed("ui_accept"):
-			handle_dialogue_choice(dialogue_options[dialogue_idx])
-		elif event.is_action_pressed("ui_cancel"):
-			state = GameEnums.GameMode.OVERWORLD
-			_on_map_updated()
 
 func _try_open_codex_contextual():
 	var search_pos = last_hover_world_pos
@@ -1015,29 +1089,23 @@ func handle_menu_input(event):
 		_on_map_updated()
 	elif event.is_action_pressed("ui_accept"):
 		match menu_idx:
-			0: # NEW WORLD GEN
-				state = GameEnums.GameMode.WORLD_CREATION
-				world_config_idx = 0
-				world_config["seed"] = randi()
+			0: # NEW GAME
+				state = GameEnums.GameMode.GAME_SETUP
+				game_setup_focus = 0
+				_refresh_save_libraries()
 				_on_map_updated()
-			1: # CHARACTER CREATOR
-				state = GameEnums.GameMode.CHARACTER_CREATION
-				player_config_idx = 0
-				cc_tab = 0 # Start at Background
-				_ensure_valid_cc_material()
+			1: # WORLD LIBRARY
+				state = GameEnums.GameMode.WORLD_LIBRARY
+				library_focus = 0
+				world_library_idx = 0
+				_refresh_save_libraries()
 				_on_map_updated()
-			2: # START ADVENTURE
-				# In a real game, this might open "play_select"
-				# For now, we'll start if world and char exist
-				if generated_world and saved_character:
-					_start_adventure()
-				elif not generated_world:
-					GameState.add_log("No world generated yet!")
-					_on_map_updated()
-				elif not saved_character:
-					GameState.add_log("No character created yet!")
-					state = GameEnums.GameMode.CHARACTER_CREATION
-					_on_map_updated()
+			2: # CHARACTER LIBRARY
+				state = GameEnums.GameMode.CHARACTER_LIBRARY
+				library_focus = 0
+				char_library_idx = 0
+				_refresh_save_libraries()
+				_on_map_updated()
 			3: # BATTLE SIMULATOR
 				state = GameEnums.GameMode.BATTLE_CONFIG
 				sim_config_idx = 0
@@ -1191,75 +1259,129 @@ func handle_world_creation_input(event):
 	elif event.is_action_pressed("ui_accept"):
 		if world_config_idx == keys.size(): # START GENERATION
 			state = GameEnums.GameMode.LOADING
-			GameState.init_world(world_config)
 			_on_map_updated()
+			await GameState.init_world(world_config)
 		elif keys[world_config_idx] == "seed":
 			world_config["seed"] = randi()
 			_on_map_updated()
 
-func handle_world_preview_input(event):
+func handle_world_preview_input(event) -> bool:
 	if event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
 			preview_zoom = clamp(preview_zoom + 0.1, 0.5, 4.0)
 			_on_map_updated()
+			return true
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 			preview_zoom = clamp(preview_zoom - 0.1, 0.5, 4.0)
 			_on_map_updated()
-		return
+			return true
+		return false
 
-	if not event is InputEventKey or not event.pressed: return
+	if not event is InputEventKey or not event.pressed: return false
 	
 	var move_speed = 5
 	if preview_zoom > 2.0: move_speed = 2
 	
 	match event.keycode:
 		KEY_W, KEY_UP:
-			preview_pos.y -= move_speed
+			target_preview_pos.y -= move_speed
+			if not smooth_camera_enabled:
+				preview_pos = target_preview_pos
 			_on_map_updated()
+			return true
 		KEY_S, KEY_DOWN:
-			preview_pos.y += move_speed
+			target_preview_pos.y += move_speed
+			if not smooth_camera_enabled:
+				preview_pos = target_preview_pos
 			_on_map_updated()
+			return true
 		KEY_A, KEY_LEFT:
-			preview_pos.x -= move_speed
+			target_preview_pos.x -= move_speed
+			if not smooth_camera_enabled:
+				preview_pos = target_preview_pos
 			_on_map_updated()
+			return true
 		KEY_D, KEY_RIGHT:
-			preview_pos.x += move_speed
+			target_preview_pos.x += move_speed
+			if not smooth_camera_enabled:
+				preview_pos = target_preview_pos
 			_on_map_updated()
+			return true
+		
+		# Grid lines toggle
+		KEY_G:
+			if shader_grid_renderer:
+				shader_grid_renderer.toggle_grid_lines()
+			return true
+		
+		# Graphics mode toggle
+		KEY_P:
+			if shader_grid_renderer:
+				shader_grid_renderer.toggle_graphics_mode()
+			_on_map_updated()
+			return true
+		
+		# ZOOM CONTROLS
+		KEY_EQUAL, KEY_PLUS, KEY_KP_ADD:  # + or = key (same key on keyboard)
+			preview_zoom = clamp(preview_zoom + 0.1, 0.5, 4.0)
+			_on_map_updated()
+			return true
+		KEY_MINUS, KEY_KP_SUBTRACT:  # - key
+			preview_zoom = clamp(preview_zoom - 0.1, 0.5, 4.0)
+			_on_map_updated()
+			return true
 		
 		# MAP FILTERS
 		KEY_1:
 			GameState.map_mode = "terrain"
+			if shader_grid_renderer and GameState.grid:
+				shader_grid_renderer.update_grid_for_mode(GameState.grid, GameState.province_grid, GameState.map_mode)
 			_on_map_updated()
+			return true
 		KEY_2:
 			GameState.map_mode = "political"
+			if shader_grid_renderer and GameState.grid:
+				shader_grid_renderer.update_grid_for_mode(GameState.grid, GameState.province_grid, GameState.map_mode)
 			_on_map_updated()
+			return true
 		KEY_3:
 			GameState.map_mode = "province"
+			if shader_grid_renderer and GameState.grid:
+				shader_grid_renderer.update_grid_for_mode(GameState.grid, GameState.province_grid, GameState.map_mode)
 			_on_map_updated()
+			return true
 		KEY_4:
 			GameState.map_mode = "resource"
+			if shader_grid_renderer and GameState.grid:
+				shader_grid_renderer.update_grid_for_mode(GameState.grid, GameState.province_grid, GameState.map_mode)
 			_on_map_updated()
-
-		KEY_T:
-			state = GameEnums.GameMode.REGION
-			region_ctrl.activate(preview_pos)
-			_on_map_updated()
+			return true
 
 		KEY_ENTER: # ACCEPT
-			generated_world = world_config.duplicate()
-			state = GameEnums.GameMode.MENU
-			GameState.add_log("World '%s' accepted!" % world_config["name"])
+			if _save_current_world():
+				state = GameEnums.GameMode.WORLD_LIBRARY
+			else:
+				# If save failed, at least keep the world in memory
+				state = GameEnums.GameMode.MENU
 			_on_map_updated()
+			return true
+		
 		KEY_R: # REROLL
 			world_config["seed"] = randi()
 			GameState.init_world(world_config)
 			_on_map_updated()
+			return true
+		
 		KEY_ESCAPE: # BACK TO SETTINGS
 			state = GameEnums.GameMode.WORLD_CREATION
 			_on_map_updated()
+			return true
 	
 	preview_pos.x = clamp(preview_pos.x, 0, GameState.width)
 	preview_pos.y = clamp(preview_pos.y, 0, GameState.height)
+	target_preview_pos.x = clamp(target_preview_pos.x, 0, GameState.width)
+	target_preview_pos.y = clamp(target_preview_pos.y, 0, GameState.height)
+	return false
 
 func handle_city_studio_input(event):
 	var config = GameState.city_studio_config
@@ -1574,11 +1696,8 @@ func calculate_creation_points() -> int:
 	return total
 
 func _save_character_and_return():
-	saved_character = player_config.duplicate()
-	saved_character["purchases"] = cc_purchases.duplicate()
-	saved_character["final_crowns"] = calculate_available_crowns()
-	state = GameEnums.GameMode.MENU
-	GameState.add_log("Character '%s' saved!" % saved_character["name"])
+	_save_current_character()
+	state = GameEnums.GameMode.CHARACTER_LIBRARY
 	_on_map_updated()
 
 func handle_location_select_input(event):
@@ -1611,11 +1730,49 @@ func _start_adventure():
 	_on_map_updated()
 
 func _confirm_embark():
+	# Validate prerequisites
+	if location_list.is_empty():
+		push_error("Cannot embark: No locations available")
+		return
+	
+	if location_idx < 0 or location_idx >= location_list.size():
+		push_error("Cannot embark: Invalid location index")
+		return
+	
+	if not saved_character:
+		push_error("Cannot embark: No character created")
+		return
+	
 	var loc = location_list[location_idx]
+	
+	# Validate location data
+	if not loc.has("pos"):
+		push_error("Cannot embark: Location missing position data")
+		return
+	
 	GameState.player.pos = loc.pos
 	
-	var sce = GameData.SCENARIOS[saved_character["scenario"]]
-	var prof = GameData.PROFESSIONS[saved_character["profession"]]
+	# Validate scenario and profession exist
+	var scenario_key = saved_character.get("scenario", "")
+	var profession_key = saved_character.get("profession", "")
+	
+	if not GameData.SCENARIOS.has(scenario_key):
+		push_error("Cannot embark: Invalid scenario '%s'" % scenario_key)
+		return
+	
+	if not GameData.PROFESSIONS.has(profession_key):
+		push_error("Cannot embark: Invalid profession '%s'" % profession_key)
+		return
+	
+	var sce = GameData.SCENARIOS[scenario_key]
+	var prof = GameData.PROFESSIONS[profession_key]
+	
+	# Create the player commander if it doesn't exist
+	if not GameState.player.commander:
+		GameState.player.commander = GameData.generate_unit("mercenary_captain", 1)
+		if not GameState.player.commander:
+			push_error("Cannot embark: Failed to create commander unit")
+			return
 	
 	# Apply Basic Data
 	GameState.player.commander.name = saved_character["name"]
@@ -2347,204 +2504,70 @@ func render_to_world_viewport():
 		if Engine.get_frames_drawn() % 60 == 0:
 			world_viewport.update_minimap(grid_ref, width, height)
 
-# Legacy render_to_tilemap removed - using WorldViewport system
-
 func _on_map_updated():
-	if state == GameEnums.GameMode.MENU:
-		# Render as simple menu
-		map_display.text = UIPanels.render_menu(menu_options, menu_idx, generated_world != null, saved_character != null)
-		$MainLayout/ContentLayout/SidePanel.visible = false
-		$MainLayout/LogPanel.visible = false
-		map_display.visible = true
-		$MainLayout/ScreenHeader.text = "[center]FALLING LEAVES[/center]"
-		return
-
-	if state == GameEnums.GameMode.CITY:
-		map_display.text = UIPanels.render_city_studio(GameState.city_studio_config, GameState.city_studio_idx)
-		$MainLayout/ContentLayout/SidePanel.visible = false
-		$MainLayout/LogPanel.visible = false
-		map_display.visible = true
-		$MainLayout/ScreenHeader.text = "[center]CITY DESIGN STUDIO[/center]"
-		return
-
-	if state == GameEnums.GameMode.LOADING:
-		var frame = UIPanels.render_loading_screen(loading_stage, GameState if (GameState.grid.size() > 0) else null)
-		$MainLayout/ScreenHeader.text = frame.header
-		info_label.text = frame.side
-		map_display.bbcode_enabled = true
-		map_display.text = frame.map
-		map_display.visible = true
-		$MainLayout/ContentLayout/SidePanel.visible = true
-		$MainLayout/LogPanel.visible = false
-		return
-
-	# Handle Map Views (Overworld, Battle, Dungeon, City, World Preview)
-	var graphical_states = [GameEnums.GameMode.OVERWORLD, GameEnums.GameMode.BATTLE, GameEnums.GameMode.DUNGEON, GameEnums.GameMode.CITY, GameEnums.GameMode.WORLD_PREVIEW]
-	
-	if state in graphical_states and world_viewport:
-		# Use viewport system for all graphical modes
+	# Handle viewport rendering for graphical states
+	if UIRenderer.should_use_viewport(state) and world_viewport:
 		world_viewport.visible = true
 		map_display.visible = false
+		if shader_grid_renderer: shader_grid_renderer.visible = false
+		if battle_shader_renderer: battle_shader_renderer.visible = false
 		render_to_world_viewport()
+	elif state == GameEnums.GameMode.BATTLE and battle_shader_renderer and battle_ctrl.active:
+		# Use shader renderer for battles (5-10x speedup)
+		battle_shader_renderer.visible = true
+		map_display.visible = false
+		if world_viewport: world_viewport.visible = false
+		if shader_grid_renderer: shader_grid_renderer.visible = false
+		
+		# Update battle state on GPU
+		battle_shader_renderer.update_battle(battle_ctrl)
+	elif state == GameEnums.GameMode.WORLD_PREVIEW and shader_grid_renderer:
+		# Use shader renderer for world preview (grid already uploaded)
+		shader_grid_renderer.visible = true
+		map_display.visible = false
+		if world_viewport: world_viewport.visible = false
+		if battle_shader_renderer: battle_shader_renderer.visible = false
+		
+		# Hide MouseCursor during shader rendering
+		if is_instance_valid(mouse_cursor):
+			mouse_cursor.visible = false
+		
+		# Ensure proper size (handles window resize)
+		var map_panel = $MainLayout/ContentLayout/MapPanel
+		if shader_grid_renderer.size != map_panel.size:
+			print("[RESIZE] Adjusting shader renderer: %s -> %s" % [shader_grid_renderer.size, map_panel.size])
+			shader_grid_renderer.size = map_panel.size
+		
+		# Only update zoom and camera position (don't re-upload texture)
+		shader_grid_renderer.set_zoom(preview_zoom)
+		shader_grid_renderer.set_camera(preview_pos)
 	else:
 		if world_viewport: world_viewport.visible = false
+		if shader_grid_renderer: shader_grid_renderer.visible = false
+		if battle_shader_renderer: battle_shader_renderer.visible = false
 		map_display.visible = true
-
-	match state:
-		GameEnums.GameMode.WORLD_CREATION:
-			map_display.bbcode_enabled = true
-			map_display.text = UIPanels.render_world_creation(world_config, world_config_idx)
-			$MainLayout/ContentLayout/SidePanel.visible = false
-			$MainLayout/LogPanel.visible = false
-			$MainLayout/ScreenHeader.text = "[center]WORLD GENERATOR[/center]"
-			return
-		GameEnums.GameMode.BATTLE_CONFIG:
-			map_display.bbcode_enabled = true
-			map_display.text = UIPanels.render_battle_config(sim_config, sim_config_idx)
-			$MainLayout/ContentLayout/SidePanel.visible = false
-			$MainLayout/LogPanel.visible = false
-			$MainLayout/ScreenHeader.text = "[center]BATTLE SIMULATOR[/center]"
-			return
-		GameEnums.GameMode.WORLD_PREVIEW:
-			var frame = UIPanels.render_world_preview(GameState, preview_pos)
-			$MainLayout/ScreenHeader.text = frame.header
-			info_label.text = frame.side
-			$MainLayout/ContentLayout/SidePanel.visible = true
-			$MainLayout/LogPanel.visible = true
-			log_label.text = "WASD: Pan | +/-: Zoom | ENTER: Accept | R: Reroll"
-			# Don't return - let it fall through to render the tilemap below
-		GameEnums.GameMode.CHARACTER_CREATION:
-			map_display.bbcode_enabled = true
-			map_display.text = UIPanels.render_character_creation_tabbed(
-				player_config, player_config_idx, trait_selection_idx, 
-				calculate_creation_points(), cc_tab, cc_shop_items, 
-				cc_purchases, calculate_available_crowns(),
-				CC_MATERIALS[cc_mat_idx], CC_QUALITIES[cc_qual_idx]
-			)
-			$MainLayout/ContentLayout/SidePanel.visible = false
-			$MainLayout/LogPanel.visible = false
-			return
-		GameEnums.GameMode.PLAY_SELECT:
-			var current_loc = location_list[location_idx]
-			map_display.bbcode_enabled = true
-			map_display.text = UIPanels.render_location_select(GameState, current_loc)
-			$MainLayout/ContentLayout/SidePanel.visible = false
-			$MainLayout/LogPanel.visible = false
-			return
-
-	# Update font size FIRST based on state, so get_char_dims() is accurate
-	var target_font_size = current_font_size
-	if state == GameEnums.GameMode.WORLD_PREVIEW:
-		target_font_size = 4
-	elif state == GameEnums.GameMode.OVERWORLD:
-		GameState.player.camera_zoom = current_font_size / 16.0
-	elif state == GameEnums.GameMode.BATTLE and is_instance_valid(battle_ctrl):
-		battle_ctrl.camera_zoom = current_font_size / 16.0
+		
+		# Show MouseCursor in text modes
+		if is_instance_valid(mouse_cursor):
+			mouse_cursor.visible = true
 	
+	# Update font size based on state
+	var target_font_size = UIRenderer.get_target_font_size(self, state)
 	map_display.add_theme_font_size_override("normal_font_size", target_font_size)
 	map_display.add_theme_font_size_override("bold_font_size", target_font_size)
 	_update_node_theme(map_display, target_font_size)
 	
-	# Explicitly reset info and log label font sizes to standard 16
-	info_label.add_theme_font_size_override("normal_font_size", 16)
-	log_label.add_theme_font_size_override("normal_font_size", 16)
-
+	# Calculate viewport dimensions
 	var dims = get_char_dims()
 	var vw = max(10, dims.x)
-	var vh = max(5, dims.y - 12) # Major buffer increase to ensure centering
+	var vh = max(5, dims.y - 12)
 	
-	# Show panels (Godot UI handles the layout)
-	$MainLayout/ContentLayout/SidePanel.visible = true
-	$MainLayout/LogPanel.visible = true
-	info_label.visible = true
+	# Render UI using appropriate renderer (skip for WORLD_PREVIEW when using shader)
+	if not (state == GameEnums.GameMode.WORLD_PREVIEW and shader_grid_renderer):
+		UIRenderer.render(self, state, Vector2i(vw, vh))
 	
-	if state == GameEnums.GameMode.MANAGEMENT:
-		var content = UIPanels.get_management_screen(GameState, mgmt_tab, mgmt_focus, mgmt_idx_l, mgmt_idx_r, mgmt_is_designing, mgmt_design_slot, mgmt_design_prop)
-		map_display.text = content
-		$MainLayout/ContentLayout/SidePanel.visible = false
-		$MainLayout/LogPanel.visible = false
-	elif state == GameEnums.GameMode.WORLD_PREVIEW:
-		var world_lines = UIPanels.render_world_map(GameState)
-		map_display.text = "\n".join(world_lines)
-		$MainLayout/ContentLayout/SidePanel.visible = false
-		$MainLayout/LogPanel.visible = false
-	elif state == GameEnums.GameMode.OVERWORLD:
-		map_display.text = UIPanels.render_history(GameState, history_offset)
-		$MainLayout/ContentLayout/SidePanel.visible = false
-		$MainLayout/LogPanel.visible = false
-	elif state == GameEnums.GameMode.CITY:
-		var map_lines = UIPanels.render_city(GameState, city_ctrl, vw, vh)
-		var side_lines = ["City: " + city_ctrl.city_name, "Pos: " + str(city_ctrl.player_pos)]
-		var header = "[ CITY EXPLORER - %s ]" % city_ctrl.city_name.to_upper()
-		var frame = UIPanels.get_master_frame(GameState, map_lines, side_lines, header, vw, GameState.event_log, 10)
-		map_display.text = frame.map
-		info_label.text = frame.side
-		log_label.text = frame.log
-		$MainLayout/ScreenHeader.text = "[center]%s[/center]" % frame.header
-	elif state == GameEnums.GameMode.DUNGEON:
-		var map_lines = UIPanels.render_dungeon(GameState, dungeon_ctrl, vw, vh)
-		var side_lines = UIPanels.get_side_panel(GameState, dungeon_ctrl)
-		var header = "[ %s - Floor %d ]" % [dungeon_ctrl.dungeon_name.to_upper(), dungeon_ctrl.current_floor]
-		var frame = UIPanels.get_master_frame(GameState, map_lines, side_lines, header, vw, dungeon_ctrl.messages, 10, dungeon_ctrl.log_offset)
-		map_display.text = frame.map
-		info_label.text = frame.side
-		log_label.text = frame.log
-		$MainLayout/ScreenHeader.text = "[center]%s[/center]" % frame.header
-	elif state == GameEnums.GameMode.BATTLE:
-		var map_lines = UIPanels.render_battle(GameState, battle_ctrl, vw, vh)
-		var side_lines = UIPanels.get_battle_side_panel(GameState, battle_ctrl)
-		var e_type = "battle"
-		if battle_ctrl.enemy_ref is Dictionary:
-			e_type = battle_ctrl.enemy_ref.get("type", "battle")
-		elif battle_ctrl.enemy_ref:
-			e_type = battle_ctrl.enemy_ref.type
-			
-		var header = "[ BATTLE - %s ]" % e_type.to_upper()
-		var frame = UIPanels.get_master_frame(GameState, map_lines, side_lines, header, vw, battle_ctrl.battle_log, 10, battle_ctrl.log_offset)
-		map_display.text = frame.map
-		info_label.text = frame.side
-		log_label.text = frame.log
-		$MainLayout/ScreenHeader.text = "[center]%s[/center]" % frame.header
-	elif state == GameEnums.GameMode.CODEX:
-		map_display.text = UIPanels.render_codex(GameState, CodexData, codex_cat_idx, codex_entry_idx, codex_focus)
-		$MainLayout/ContentLayout/SidePanel.visible = false
-		$MainLayout/LogPanel.visible = false
-	elif state == GameEnums.GameMode.MANAGEMENT:
-		map_display.text = UIPanels.get_party_info_screen(GameState)
-		$MainLayout/ContentLayout/SidePanel.visible = false
-		$MainLayout/LogPanel.visible = false
-	elif state == GameEnums.GameMode.DIALOGUE:
-		map_display.text = UIPanels.get_dialogue_screen(GameState, dialogue_target, dialogue_options, dialogue_idx)
-		$MainLayout/ContentLayout/SidePanel.visible = false
-		$MainLayout/LogPanel.visible = false
-	elif state == GameEnums.GameMode.REGION:
-		var map_lines = UIPanels.render_region(GameState, region_ctrl, vw, vh)
-		var side_lines = UIPanels.get_side_panel(GameState)
-		var p_pos_i = Vector2i(region_ctrl.player_pos)
-		var header = "[ REGION VIEW - %d, %d ]" % [p_pos_i.x, p_pos_i.y]
-		var frame = UIPanels.get_master_frame(GameState, map_lines, side_lines, header, vw, GameState.event_log, 10)
-		map_display.text = frame.map
-		info_label.text = frame.side
-		log_label.text = frame.log
-		$MainLayout/ScreenHeader.text = "[center]%s[/center]" % frame.header
-	else:
-		var map_lines = []
-		var header_override = ""
-		if state == GameEnums.GameMode.OVERWORLD and GameState.travel_mode == GameState.TravelMode.LOCAL:
-			if battle_ctrl.last_map_pos != GameState.player.pos:
-				battle_ctrl.generate_map()
-			map_lines = UIPanels.render_local_viewport(GameState, battle_ctrl, vw, vh)
-			header_override = "[ TRAVEL - LOCAL MODE ]"
-		else:
-			map_lines = UIPanels.render_viewport(GameState, vw, vh, last_calculated_path)
-			
-		var side_lines = UIPanels.get_side_panel(GameState)
-		var frame = UIPanels.get_master_frame(GameState, map_lines, side_lines, header_override, vw, GameState.event_log, 10)
-		map_display.text = frame.map
-		info_label.text = frame.side
-		log_label.text = frame.log
-		$MainLayout/ScreenHeader.text = "[center]%s[/center]" % frame.header
-		# Ensure tile info is synced immediately if we are in the overworld
+	# Sync tile info for overworld
+	if state == GameEnums.GameMode.OVERWORLD:
 		_sync_tile_info()
 
 func _sync_tile_info():
@@ -2567,10 +2590,6 @@ func get_char_dims() -> Vector2i:
 		char_h = char_w
 
 	return Vector2i(int(panel_size.x / char_w), int(panel_size.y / char_h))
-
-func update_side_panels():
-	# This function is now mostly redundant but we'll keep it for specific toggles if needed
-	pass
 
 func _on_log_updated():
 	log_label.text = "\n".join(GameState.event_log)
@@ -2620,10 +2639,7 @@ func _on_dungeon_started(ruin):
 
 func _on_settlement_entered(s):
 	state = GameEnums.GameMode.CITY
-	if city_ctrl.has_method("activate"):
-		city_ctrl.activate(s, s.pos, GameState.world_seed)
-	elif city_ctrl.has_method("generate_from_settlement"):
-		city_ctrl.generate_from_settlement(s)
+	city_ctrl.activate(s, s.pos, GameState.world_seed)
 	_on_map_updated()
 
 func _on_dungeon_ended():
@@ -2636,3 +2652,373 @@ func _on_dialogue_started(target, options):
 	dialogue_options = options
 	dialogue_idx = 0
 	_on_map_updated()
+
+# ============================================================================
+# SAVE/LOAD SYSTEM
+# ============================================================================
+
+# Input handlers for library screens
+func handle_world_library_input(event):
+	if event.is_action_pressed("ui_up") or (event is InputEventKey and event.keycode == KEY_W):
+		world_library_idx = posmod(world_library_idx - 1, max(1, saved_worlds.size()))
+		_on_map_updated()
+	elif event.is_action_pressed("ui_down") or (event is InputEventKey and event.keycode == KEY_S):
+		world_library_idx = posmod(world_library_idx + 1, max(1, saved_worlds.size()))
+		_on_map_updated()
+	elif event.is_action_pressed("ui_accept"):
+		if not saved_worlds.is_empty() and world_library_idx < saved_worlds.size():
+			var world = saved_worlds[world_library_idx]
+			selected_world_id = world.get("id", "")
+			# Load and preview selected world
+			if _load_world_by_id(selected_world_id):
+				state = GameEnums.GameMode.WORLD_PREVIEW
+				preview_pos = Vector2i(GameState.width / 2, GameState.height / 2)
+				if shader_grid_renderer and GameState.grid:
+					shader_grid_renderer.update_grid_for_mode(GameState.grid, GameState.province_grid, GameState.map_mode)
+				_on_map_updated()
+	elif event is InputEventKey and event.pressed:
+		match event.keycode:
+			KEY_N: # New World
+				state = GameEnums.GameMode.WORLD_CREATION
+				world_config_idx = 0
+				world_config["seed"] = randi()
+				_on_map_updated()
+			KEY_D: # Delete World
+				if not saved_worlds.is_empty() and world_library_idx < saved_worlds.size():
+					var world = saved_worlds[world_library_idx]
+					if SaveManager.delete_world(world.get("id", "")):
+						GameState.add_log("World '%s' deleted" % world.get("name", "Unknown"))
+						_refresh_save_libraries()
+						world_library_idx = clamp(world_library_idx, 0, max(0, saved_worlds.size() - 1))
+						_on_map_updated()
+
+func handle_character_library_input(event):
+	if event.is_action_pressed("ui_up") or (event is InputEventKey and event.keycode == KEY_W):
+		char_library_idx = posmod(char_library_idx - 1, max(1, saved_characters.size()))
+		_on_map_updated()
+	elif event.is_action_pressed("ui_down") or (event is InputEventKey and event.keycode == KEY_S):
+		char_library_idx = posmod(char_library_idx + 1, max(1, saved_characters.size()))
+		_on_map_updated()
+	elif event.is_action_pressed("ui_accept"):
+		if not saved_characters.is_empty() and char_library_idx < saved_characters.size():
+			var char = saved_characters[char_library_idx]
+			selected_char_id = char.get("id", "")
+			GameState.add_log("Character '%s' selected" % char.get("name", "Unknown"))
+			# Return to game setup or just stay in library
+			_on_map_updated()
+	elif event is InputEventKey and event.pressed:
+		match event.keycode:
+			KEY_N: # New Character
+				state = GameEnums.GameMode.CHARACTER_CREATION
+				player_config_idx = 0
+				cc_tab = 0
+				_ensure_valid_cc_material()
+				_on_map_updated()
+			KEY_D: # Delete Character
+				if not saved_characters.is_empty() and char_library_idx < saved_characters.size():
+					var char = saved_characters[char_library_idx]
+					if SaveManager.delete_character(char.get("id", "")):
+						GameState.add_log("Character '%s' deleted" % char.get("name", "Unknown"))
+						_refresh_save_libraries()
+						char_library_idx = clamp(char_library_idx, 0, max(0, saved_characters.size() - 1))
+						_on_map_updated()
+
+func handle_game_setup_input(event):
+	if event.is_action_pressed("ui_accept") or (event is InputEventKey and event.keycode == KEY_ENTER):
+		# Open appropriate library based on focus
+		if game_setup_focus == 0:
+			# Select world
+			if saved_worlds.is_empty():
+				GameState.add_log("No worlds available! Create one first.")
+				state = GameEnums.GameMode.WORLD_LIBRARY
+			else:
+				state = GameEnums.GameMode.WORLD_LIBRARY
+			_on_map_updated()
+		elif game_setup_focus == 1:
+			# Select character
+			if saved_characters.is_empty():
+				GameState.add_log("No characters available! Create one first.")
+				state = GameEnums.GameMode.CHARACTER_LIBRARY
+			else:
+				state = GameEnums.GameMode.CHARACTER_LIBRARY
+			_on_map_updated()
+	elif event is InputEventKey and event.pressed:
+		match event.keycode:
+			KEY_TAB: # Switch focus
+				game_setup_focus = 1 if game_setup_focus == 0 else 0
+				_on_map_updated()
+			KEY_SPACE: # Start game (if both selected)
+				var world_ready = selected_world_id != "" and not saved_worlds.is_empty()
+				var char_ready = selected_char_id != "" and not saved_characters.is_empty()
+				
+				if world_ready and char_ready:
+					_start_new_game()
+				else:
+					GameState.add_log("Select both world and character first!")
+					_on_map_updated()
+			KEY_UP, KEY_W:
+				# Navigate within current focus (future enhancement)
+				pass
+			KEY_DOWN, KEY_S:
+				# Navigate within current focus (future enhancement)
+				pass
+
+func _start_new_game():
+	"""Start a new game with selected world and character"""
+	# Load world
+	if not _load_world_by_id(selected_world_id):
+		GameState.add_log("Failed to load world!")
+		return
+	
+	# Load and apply character
+	var char_data = _load_character_by_id(selected_char_id)
+	if char_data.is_empty():
+		GameState.add_log("Failed to load character!")
+		return
+	
+	_apply_character_to_player(char_data)
+	
+	# Transition to location select or directly to overworld
+	state = GameEnums.GameMode.PLAY_SELECT
+	location_list = GameState.settlements.values()
+	location_list.sort_custom(func(a, b): return a.population > b.population)
+	
+	if location_list.is_empty():
+		location_list = [{"pos": GameState.start_pos, "name": "Wilderness Embark", "type": "wilds", "faction": "None"}]
+	
+	location_idx = 0
+	_on_map_updated()
+
+func _refresh_save_libraries():
+	"""Reload the lists of saved worlds and characters"""
+	saved_worlds = SaveManager.list_worlds()
+	saved_characters = SaveManager.list_characters()
+	print("Loaded %d worlds and %d characters from saves" % [saved_worlds.size(), saved_characters.size()])
+
+func _save_current_world():
+	"""Save the currently generated world to disk"""
+	if GameState.grid.is_empty():
+		push_error("Cannot save world: No world generated")
+		return false
+	
+	var world_data = {
+		"name": world_config.get("name", "Unnamed World"),
+		"width": GameState.width,
+		"height": GameState.height,
+		"seed": GameState.world_seed,
+		"grid": GameState.grid,
+		"settlements": GameState.settlements,
+		"factions": GameState.factions,
+		"armies": GameState.armies,
+		"caravans": GameState.caravans,
+		"resources": GameState.resources,
+		"geology": GameState.geology,
+		"ruins": GameState.ruins,
+		"provinces": GameState.provinces,
+		"province_grid": GameState.province_grid,
+		"config": world_config.duplicate()
+	}
+	
+	if SaveManager.save_world(world_data):
+		_refresh_save_libraries()
+		GameState.add_log("World '%s' saved successfully!" % world_data["name"])
+		return true
+	else:
+		GameState.add_log("Failed to save world!")
+		return false
+
+func _load_world_by_id(world_id: String):
+	"""Load a world from disk and apply to GameState"""
+	var world_data = SaveManager.load_world(world_id)
+	
+	if world_data.is_empty():
+		push_error("Failed to load world %s" % world_id)
+		return false
+	
+	# Apply world data to GameState
+	GameState.width = world_data.get("width", 200)
+	GameState.height = world_data.get("height", 200)
+	GameState.world_seed = world_data.get("seed", 0)
+	GameState.grid = world_data.get("grid", [])
+	GameState.settlements = world_data.get("settlements", {})
+	# Populate typed arrays (cannot reassign directly)
+	GameState.factions.clear()
+	for faction in world_data.get("factions", []):
+		GameState.factions.append(faction)
+	
+	GameState.armies.clear()
+	for army in world_data.get("armies", []):
+		GameState.armies.append(army)
+	
+	GameState.caravans.clear()
+	for caravan in world_data.get("caravans", []):
+		GameState.caravans.append(caravan)
+	GameState.resources = world_data.get("resources", {})
+	GameState.geology = world_data.get("geology", {})
+	GameState.ruins = world_data.get("ruins", {})
+	GameState.provinces = world_data.get("provinces", {})
+	GameState.province_grid = world_data.get("province_grid", [])
+	world_config = world_data.get("config", {})
+	
+	# Rebuild A* pathfinding
+	GameState.rebuild_astar()
+	
+	# Upload grid texture to shader renderer for preview
+	if shader_grid_renderer and GameState.grid:
+		print("[DEBUG] Uploading grid texture: %dx%d" % [GameState.width, GameState.height])
+		shader_grid_renderer.update_grid_for_mode(GameState.grid, GameState.province_grid, GameState.map_mode)
+	else:
+		push_warning("[DEBUG] Shader grid renderer not available or grid empty")
+	
+	print("World '%s' loaded successfully" % world_data.get("name", "Unknown"))
+	_debug_world_state()
+	return true
+
+func _save_current_character():
+	"""Save the current character to disk"""
+	var char_data = player_config.duplicate()
+	char_data["purchases"] = cc_purchases.duplicate()
+	char_data["final_crowns"] = calculate_available_crowns()
+	
+	if SaveManager.save_character(char_data):
+		_refresh_save_libraries()
+		GameState.add_log("Character '%s' saved successfully!" % char_data.get("name", "Unnamed"))
+		return true
+	else:
+		GameState.add_log("Failed to save character!")
+		return false
+
+func _load_character_by_id(char_id: String) -> Dictionary:
+	"""Load a character from disk"""
+	return SaveManager.load_character(char_id)
+
+func _apply_character_to_player(char_data: Dictionary):
+	"""Apply loaded character data to GameState.player"""
+	if char_data.is_empty():
+		push_error("Cannot apply empty character data")
+		return
+	
+	var scenario_key = char_data.get("scenario", "")
+	var profession_key = char_data.get("profession", "")
+	
+	if not GameData.SCENARIOS.has(scenario_key):
+		push_error("Invalid scenario: %s" % scenario_key)
+		return
+	
+	if not GameData.PROFESSIONS.has(profession_key):
+		push_error("Invalid profession: %s" % profession_key)
+		return
+	
+	var sce = GameData.SCENARIOS[scenario_key]
+	var prof = GameData.PROFESSIONS[profession_key]
+	
+	# Ensure commander exists
+	if not GameState.player.commander:
+		GameState.player.commander = GameData.generate_unit("mercenary_captain", 1)
+	
+	# Apply character attributes
+	GameState.player.commander.name = char_data.get("name", "Hero")
+	GameState.player.commander.attributes["strength"] = char_data.get("strength", 10) + prof.stats.get("strength", 0)
+	GameState.player.commander.attributes["agility"] = char_data.get("agility", 10) + prof.stats.get("agility", 0)
+	GameState.player.commander.attributes["endurance"] = char_data.get("endurance", 10) + prof.stats.get("endurance", 0)
+	GameState.player.commander.attributes["intelligence"] = char_data.get("intelligence", 10) + prof.stats.get("intelligence", 0)
+	
+	# Apply traits
+	var traits = char_data.get("traits", [])
+	GameState.player.commander.traits = traits.duplicate()
+	
+	# Apply starting equipment from purchases
+	var purchases = char_data.get("purchases", [])
+	for item_def in purchases:
+		var item = GameData.create_item_data(item_def.get("id", ""), item_def.get("mat", "iron"), item_def.get("qual", "average"))
+		if item:
+			GameState.player.stash.append(item)
+	
+	# Apply scenario resources
+	GameState.player.gold = sce.get("gold", 1000)
+	GameState.player.crowns = char_data.get("final_crowns", 100)
+	GameState.player.provisions = sce.get("provisions", 500)
+	
+	print("Character '%s' applied to player" % char_data.get("name", "Hero"))
+
+# ============================================================================
+# DEBUG FUNCTIONS
+# ============================================================================
+
+func _debug_world_state():
+	"""Print comprehensive world state for debugging - outputs to Godot console"""
+	print_rich("[color=cyan]=== WORLD STATE DEBUG ===[/color]")
+	print("Grid Dimensions: %dx%d" % [GameState.width, GameState.height])
+	print("Grid Data: %s" % ("Valid" if GameState.grid.size() > 0 else "EMPTY"))
+	if GameState.grid.size() > 0:
+		print("  First row length: %d" % GameState.grid[0].size())
+		print("  Total rows: %d" % GameState.grid.size())
+		print("  Sample tiles: [0,0]='%s' [100,100]='%s'" % [GameState.grid[0][0], GameState.grid[100][100] if GameState.grid.size() > 100 else "N/A"])
+	print("Settlements: %d" % GameState.settlements.size())
+	print("Factions: %d" % GameState.factions.size())
+	print("Armies: %d" % GameState.armies.size())
+	print("Caravans: %d" % GameState.caravans.size())
+	print("Provinces: %d" % GameState.provinces.size())
+	print("Province Grid: %s" % ("Valid" if GameState.province_grid.size() > 0 else "EMPTY"))
+	print("World Seed: %d" % GameState.world_seed)
+	print("Map Mode: %s" % GameState.map_mode)
+	print("Render Mode: %s" % GameState.render_mode)
+	print("\nRenderer Status:")
+	print("  shader_grid_renderer: %s" % ("Valid" if shader_grid_renderer else "NULL"))
+	if shader_grid_renderer:
+		print("    - Visible: %s" % shader_grid_renderer.visible)
+		print("    - Size: %s" % shader_grid_renderer.size)
+		print("    - Global Position: %s" % shader_grid_renderer.global_position)
+		print("    - Z-Index: %d" % shader_grid_renderer.z_index)
+		var map_panel = $MainLayout/ContentLayout/MapPanel
+		print("    - MapPanel Size: %s" % map_panel.size)
+	print("  world_viewport: %s" % ("Valid" if world_viewport else "NULL"))
+	if world_viewport:
+		print("    - Visible: %s" % world_viewport.visible)
+	print("  battle_shader_renderer: %s" % ("Valid" if battle_shader_renderer else "NULL"))
+	if battle_shader_renderer:
+		print("    - Visible: %s" % battle_shader_renderer.visible)
+	print("  map_display: %s" % ("Valid" if map_display else "NULL"))
+	if map_display:
+		print("    - Visible: %s" % map_display.visible)
+	if GameState.player:
+		print("\nPlayer Status:")
+		print("  Position: %s" % GameState.player.pos)
+		print("  Name: %s" % (GameState.player.commander.name if GameState.player.commander else "No Commander"))
+	print_rich("[color=cyan]========================[/color]")
+
+func _debug_key_pressed():
+	"""Call this from input handler to debug on demand (F3 key) - outputs to Godot console"""
+	print_rich("[color=yellow][F3 DEBUG] Current State: %s[/color]" % GameEnums.state_to_string(state))
+	_debug_world_state()
+	if state == GameEnums.GameMode.WORLD_PREVIEW:
+		print("\n[PREVIEW DEBUG]")
+		print("  Preview Position: %s" % preview_pos)
+		print("  Preview Zoom: %.2f" % preview_zoom)
+		print("  Target Position: %s" % target_preview_pos)
+		if shader_grid_renderer:
+			print("  Shader visible: %s, size: %s" % [shader_grid_renderer.visible, shader_grid_renderer.size])
+
+func _debug_renderer_toggle():
+	"""F4: Toggle between rendering methods for debugging"""
+	if state != GameEnums.GameMode.WORLD_PREVIEW:
+		print("[F4] Renderer toggle only works in WORLD_PREVIEW mode")
+		return
+	
+	if shader_grid_renderer and shader_grid_renderer.visible:
+		# Switch to viewport
+		print("[F4] Switching to viewport renderer")
+		shader_grid_renderer.visible = false
+		if world_viewport:
+			world_viewport.visible = true
+			render_to_world_viewport()
+	else:
+		# Switch to shader
+		print("[F4] Switching to shader renderer")
+		if world_viewport: world_viewport.visible = false
+		if shader_grid_renderer:
+			shader_grid_renderer.visible = true
+			var map_panel = $MainLayout/ContentLayout/MapPanel
+			shader_grid_renderer.size = map_panel.size
+			shader_grid_renderer.set_zoom(preview_zoom)
+			shader_grid_renderer.set_camera(preview_pos)

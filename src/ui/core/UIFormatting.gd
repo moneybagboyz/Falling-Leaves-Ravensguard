@@ -81,8 +81,8 @@ static func build_config(title: String, config: Dictionary, selected_idx: int, s
 	
 	var keys := config.keys()
 	for i in range(keys.size()):
-		var k := keys[i]
-		var val := config[k]
+		var k: String = keys[i]
+		var val: Variant = config[k]
 		var prefix := " > " if i == selected_idx else "   "
 		parts.append("%s%s: %s\n" % [prefix, k.capitalize(), str(val)])
 	

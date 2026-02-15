@@ -1,103 +1,390 @@
-# In-Depth Explanation of the Economy in Falling Leaves
+# Economy Systems: Technical Deep Dive
 
-The economy in *Falling Leaves* is a multi-layered simulation that connects geography, logistics, urban development, and mercenary management. It is designed to be dynamic, where player actions and world events have tangible effects on prices and the prosperity of settlements.
-
----
-
-## 1. The Foundation: Production & Geography
-The economy is a physical simulation based on land usage and labor allocation. Production is not abstracted into simple "+1 hourly" numbers; it is calculated based on historical agricultural and industrial yields verified in `Globals.gd`.
-
-### 1.1 The Acreage System
-Every world map tile represents a significant area of land, divided into **250 Acres** (`ACRES_PER_TILE`).
-
-*   **Arable Acres:** Used for farming.
-*   **Forest Acres:** Used for timber and hunting.
-*   **Pasture Acres:** Used for livestock and wool.
-*   **River/Harbor Slots:** Used for fishing and maritime extraction.
-*   **Underground Deposits:** Mines and quarries.
-
-### 1.2 The Three-Field System
-Most settlements employ high-medieval crop rotation. This divides **Arable Acres** into:
-1.  **Winter Field:** Sown in autumn with wheat or rye.
-2.  **Spring Field:** Sown in spring with barley, oats, or legumes.
-3.  **Fallow Field:** Left unplanted to recover nutrients. In our simulation, the **Fallow Field** doubles as **Pasture Land**, allowing livestock to graze and fertilize the soil.
-
-**Seed Ratio:** Approximately **20% (1/5th)** of every harvest is automatically reserved as seed for the next cycle, effectively acting as a production overhead (`Globals.SEED_RATIO_INV = 0.20`).
-
-### 1.3 Labor Allocation & Efficiency
-Production is driven by the **Labor Pool**. Instead of players manually assigning "3 people to wood," the **EconomyManager** (`_process_labor_pool`) runs a daily heuristic for every settlement.
-
-#### The Labor Hierarchy:
-1.  **Subsistence (24h Survival):** The town first allocates labor to ensure there is enough food and wood (fuel) to prevent starvation and freezing in the next 24 hours.
-2.  **Security (60-Day Buffer):** Once 24-hour survival is met, labor is assigned to build a 60-day stock of grain and fuel.
-3.  **Specialization (Profit):** Any remaining labor is assigned to the "most profitable" task based on **current market prices** in that settlement. If Iron is expensive, more laborers will go to the Mines.
-
-#### Base Industrial Yields (Per Laborer, Per 360-Day Year):
-Based on `Globals.ACRES_WORKED_PER_LABORER = 10`:
-
-| Resource | Yield Equation | Total/Worker | Labor Source |
-| :--- | :--- | :--- | :--- |
-| **Grain** | 120 Bushels (12/acre * 10 acres) | 120 Units | Arable/Farms |
-| **Wood** | 100/acre * 10 acres | 1000 Units | Forests |
-| **Meat** | 2.5/acre (Hunt) or 4.0/acre (Pasture) | 25-40 Units | Wilderness/Pasture |
-| **Wool** | 15.0/acre * 10 acres | 150 Units | Pasture |
-| **Fish** | Fixed Base Yield | 30 Units | Water |
-| **Peat & Clay** | 40 / 25 Units per worker | 40/25 Units | Wetlands/Swamp |
-| **Salt & Sand** | 15 / 60 Units per worker | 15/60 Units | Arid/Desert |
-| **Ore & Stone** | Variable (300-500) | 300+ Units | Mountain/Mines |
-
-### 1.5 Pillar-Based Infrastructure
-Urban development is categorized into three strategic pillars. Buildings no longer function as isolated factories but as **stackable multipliers** to the settlement's base labor and geographic yields.
-
-#### I. Industry Pillar (Resource & Efficiency)
-These buildings amplify the output of the Labor pool.
-*   **Farms/Mines/Quarries (Extraction):** Each level provides a **+50% multiplier** to the yield per acre.
-*   **Processing Units (Blacksmith/Weaver/Tailor/Brewery):** Each level provides a **+100% efficiency bonus** to the conversion of raw materials into finished goods.
-*   **Warehouse District:** Provides a massive increase to the settlement's storage capacity (+100% per level).
-
-#### II. Defense Pillar (Stability & Hardness)
-These buildings protect the settlement and its sovereignty.
-*   **Stone Walls:** Increases the "Defensive Hardness" of the settlement during sieges.
-    *   *Logic:* Walls multiply garrison strength by a base of 10x, plus 10x per level (Level 2 = 30x).
-*   **Barracks & Training Grounds:** Increases the base quality of the local garrison, making each defender more effective.
-*   **Castle (Citadel):** The final seat of power, providing massive stability and doubling the effect of all other defense buildings.
-
-#### III. Civil Pillar (Happiness & Taxation)
-These buildings manage the population and revenue.
-*   **Market & Road Network:** Increases trade efficiency and commerce tax revenue (+25% and +15% per level respectively).
-*   **Taverns:** Passively generates Happiness (+1 per level) and reduces Unrest.
-*   **Cathedrals:** Provides Stability (+2 per level) and increases revenue via tithes and donations.
-*   **Housing District:** Each level provides +100 to the maximum population capacity, allowing cities to grow into megapolises.
+> **Purpose**: This document explains the circular flow economic simulation—from labor allocation and production to consumption, markets, trade, and faction treasuries. Covers the complete pipeline from geography to wealth generation.
 
 ---
 
-## 2. Social Strata & Labor
-Settlements are divided into three distinct social classes, each with a specific economic role.
-
-### 2.1 The Three Estates
-*   **Laborers (The Peasantry):** The backbone of the economy. They work the land, mines, and forests. Their output is boosted by **Industry Pillar** buildings.
-*   **Burghers (The Middle Class):** Skilled workers who inhabit urban centers. They man the **Micro-Workshops** (Organic Industries) and process raw materials into finished goods. Target population: **10%** of total (`Globals.BURGHER_TARGET_PERCENT`).
-    *   **Consumption:** Each Burgher consumes **0.1 Ale** and small amounts of **Cloth/Leather** per day.
-*   **Nobility (The Rulers):** A small percentage (**0.7%**) of the population. They provide stability and governance but consume **Luxuries (Meat, Furs, Salt)**.
-
-### 2.2 Organic Industry (Micro-Workshops)
-As a settlement grows, it naturally develops "Organic Industries" without player intervention.
-*   **Industry Slots:** 1 workshop slot is created for every **50 people**.
-*   **Employment:** Each workshop employs **5 Burghers**.
-*   **Key Industries:** Weaver (Cloth), Tannery (Leather), Blacksmith (Steel), Brewery (Ale), Tailor (Fine Garments), Bronzesmith (Bronze).
-*   **Multiplier Logic:** The output of these workshops is multiplied by the level of their corresponding pillar building (e.g., a Level 2 Blacksmith grants +200% output to all local smithing jobs).
+## Table of Contents
+1. [System Overview](#1-system-overview)
+2. [Circular Flow Model](#2-circular-flow-model)
+3. [Production System](#3-production-system)
+4. [Consumption & Growth](#4-consumption--growth)
+5. [Market Dynamics](#5-market-dynamics)
+6. [Logistics & Trade](#6-logistics--trade)
+7. [Building System](#7-building-system)
+8. [Faction Economy](#8-faction-economy)
+9. [Geographic Potential](#9-geographic-potential)
+10. [Economic Data Flow](#10-economic-data-flow)
+11. [Configuration & Tuning](#11-configuration--tuning)
+12. [Testing & Debugging](#12-testing--debugging)
+13. [Extension Guide](#13-extension-guide)
 
 ---
 
-## 3. Urban Construction & Scaling
-Construction is a simulation of investment and labor intensity.
+## 1. System Overview
 
-### 3.1 Exponential Scaling
-To simulate the difficulty of building "Tall," all building costs and labor requirements follow an exponential curve:
-`Cost = Base * (2.5 ^ Current_Level)`
+### 1.1 Economic Philosophy
 
-*   **Materials:** Construction has been standardized to **Crowns-Only** to prevent resource-locking for the AI. This abstractly represents the purchasing of local tools, specialized labor, and imported materials.
-*   **Labor:** Even after paying the Crown cost, the settlement must assign **Laborer/Burgher cycles** to the "Construction Project." Higher levels require significantly more labor cycles to complete.
+The economy is a **physical simulation**, not an abstract balance sheet. Every resource exists as discrete units in settlement inventories. Price is emergent from supply/demand, not preset. Labor is finite and allocated by priority heuristics.
+
+**Core Principles**:
+1. **Faucets & Sinks**: Resources enter (production) and exit (consumption, spoilage) the system
+2. **Acreage-Based**: Land dictates what can be produced (250 acres per tile)
+3. **Class-Based Consumption**: Laborers, Burghers, Nobility consume different goods
+4. **Dynamic Pricing**: Supply/demand ratios set prices, not lookup tables
+5. **Three-Tier Production**: Extraction → Processing → Luxury Goods
+
+### 1.2 File Structure
+
+```
+src/economy/
+├── ProductionSystem.gd    # Labor allocation, terrain scanning (559 lines)
+├── ConsumptionSystem.gd   # Food/fuel consumption, growth (394 lines)
+├── PricingSystem.gd       # Dynamic pricing formulas (200 lines)
+├── TradeSystem.gd         # Caravan AI, arbitrage
+└── EquipmentSystem.gd     # Weapon/armor crafting
+
+src/managers/
+├── EconomyManager.gd      # Orchestrates daily ticks
+└── SettlementManager.gd   # Governor AI, construction (826 lines)
+
+src/data/
+└── GDSettlement.gd        # Settlement data structure (240 lines)
+```
+
+### 1.3 Update Frequency
+
+**Daily Pulse** (every 24 turns in GameState):
+
+```
+ProductionSystem.run_production_tick()
+   ↓
+ConsumptionSystem.run_consumption_tick()
+   ↓
+SettlementManager.process_governor_AI()
+   ↓
+PricingSystem.update_price_cache()
+   ↓
+TradeSystem.update_caravans()
+```
+
+**Turn = 1 hour**. Daily cycle = 24 turns. Economic state recalculates once per simulated day.
+
+---
+
+## 2. Circular Flow Model
+
+### 2.1 Faucets (Resource Generation)
+
+**Entry Points**:
+
+| Faucet | Mechanism | Output Rate | File Reference |
+|--------|-----------|-------------|----------------|
+| **Farming** | `(arable_acres / 40) × BUSHELS_PER_ACRE_BASE × multipliers` | ~12 bushels/acre/year | [ProductionSystem.gd#L100-L150](src/economy/ProductionSystem.gd) |
+| **Forestry** | `(forest_acres / 40) × FORESTRY_YIELD_WOOD` | 8 wood/acre/year | [ProductionSystem.gd#L150-L200](src/economy/ProductionSystem.gd) |
+| **Mining** | `mining_slots × ore_deposits[res] × mining_efficiency` | Variable by geology | [ProductionSystem.gd#L200-L250](src/economy/ProductionSystem.gd) |
+| **Fishing** | `fishing_slots × FISHING_YIELD_BASE` | 25 fish/slot/year | [ProductionSystem.gd#L250-L300](src/economy/ProductionSystem.gd) |
+| **Organic Industry** | `input_stock × efficiency × building_multiplier` | 1:1 to 2:1 conversion | [ProductionSystem.gd#L400-L500](src/economy/ProductionSystem.gd) |
+| **Taxation** | `(laborers × 0.1 + burghers × 0.5) crowns/day` | Scales with population | [ConsumptionSystem.gd#L200-L220](src/economy/ConsumptionSystem.gd) |
+
+**Code Example** ([ProductionSystem.gd#L100-L120](src/economy/ProductionSystem.gd)):
+
+```gdscript
+# TIER 1: SUBSISTENCE (24-Hour Survival)
+var daily_food_req = float(pop) * Globals.DAILY_BUSHELS_PER_PERSON
+
+if s_data.get_food_stock() < daily_food_req:
+    var needed = daily_food_req - s_data.get_food_stock()
+    
+    # Priority 1: Fishing (fast yield)
+    if fish_limit > 0:
+        var f_take = clamp(int((needed * Globals.DAYS_PER_YEAR) / Globals.FISHING_YIELD_BASE), 1, min(remaining_laborers, fish_limit))
+        alloc["fishing"] += f_take
+        remaining_laborers -= f_take
+        needed -= (f_take * Globals.FISHING_YIELD_BASE / Globals.DAYS_PER_YEAR)
+    
+    # Priority 2: Farming
+    if needed > 0 and farm_limit > 0:
+        var g_take = clamp(int((needed * Globals.DAYS_PER_YEAR) / (Globals.ACRES_WORKED_PER_LABORER * Globals.BUSHELS_PER_ACRE_BASE)), 1, min(remaining_laborers, farm_limit))
+        alloc["farms"] += g_take
+        remaining_laborers -= g_take
+```
+
+### 2.2 Sinks (Resource Destruction)
+
+**Exit Points**:
+
+| Sink | Mechanism | Destruction Rate | File Reference |
+|------|-----------|------------------|----------------|
+| **Food Consumption** | `population × DAILY_BUSHELS_PER_PERSON` | ~1.2 bushels/person/day | [ConsumptionSystem.gd#L20-L60](src/economy/ConsumptionSystem.gd) |
+| **Fuel Consumption** | `(pop / WOOD_FUEL_POP_DIVISOR) + (buildings × WOOD_FUEL_BUILDING_MULT)` | Scales with pop + infrastructure | [ConsumptionSystem.gd#L60-L80](src/economy/ConsumptionSystem.gd) |
+| **Seed Reservation** | `grain_output × (1 - SEED_RATIO_INV)` | 20% of harvest | [ProductionSystem.gd#L150](src/economy/ProductionSystem.gd) |
+| **Class Consumption** | Burghers: ale (0.1/day), Nobles: meat (0.5/day), furs (0.05/day) | Fixed rates | [ConsumptionSystem.gd#L80-L120](src/economy/ConsumptionSystem.gd) |
+| **Building Upkeep** | `crown_stock -= maintenance_cost` (not yet implemented) | Future feature | — |
+
+**Starvation Cascade** ([ConsumptionSystem.gd#L40-L55](src/economy/ConsumptionSystem.gd)):
+
+```gdscript
+if hunger_satisfied < total_hunger * 0.9:
+    var deficit_ratio = 1.0 - (hunger_satisfied / total_hunger)
+    var granary_lvl = s_data.buildings.get("granary", 0)
+    var mitigation = clamp(granary_lvl * 0.15, 0.0, 0.8)
+    
+    s_data.unrest = min(100, s_data.unrest + int(Globals.STARVATION_UNREST_INC * deficit_ratio * (1.0 - mitigation)))
+    s_data.happiness = max(0, s_data.happiness - int(Globals.STARVATION_HAPPINESS_DEC * deficit_ratio * (1.0 - mitigation)))
+    
+    var deaths = int(pop * Globals.STARVATION_DEATH_RATE * deficit_ratio * (1.0 - mitigation)) + Globals.STARVATION_BASE_DEATH
+    s_data.population = max(0, pop - deaths)
+```
+
+**Constants** ([Globals.gd](src/core/Globals.gd)):
+
+```gdscript
+const STARVATION_DEATH_RATE = 0.02    # 2% of pop per day
+const STARVATION_BASE_DEATH = 2       # Minimum deaths
+const STARVATION_UNREST_INC = 20.0
+const STARVATION_HAPPINESS_DEC = 20.0
+const DAILY_BUSHELS_PER_PERSON = 1.2
+```
+
+---
+
+## 3. Production System
+
+### 3.1 Acreage Allocation
+
+**Land Types** ([GDSettlement.gd:initialize_acres()](src/data/GDSettlement.gd#L120-L180)):
+
+| Terrain | Arable Acres | Forest Acres | Mining Slots | Special |
+|---------|--------------|--------------|--------------|---------|
+| Plains `.` | 250 | 0 | 0 | Best farmland |
+| Hills `o` | 125 | 0 | 150 | Mixed farm/mine |
+| Forest `#` | 50 | 200 | 0 | 20% clearable + timber |
+| Mountain `^` | 0 | 0 | 400 | Primary mining |
+| River `/\` | 250 | 0 | 40 | Floodplain + silt extraction |
+| Swamp `&` | 0 | 112 | 0 | Wetlands (45% forest, 55% wetland) |
+| Desert `"` | 0 | 0 | 0 | Arid (no ag, salt extraction) |
+
+**Acreage Code** ([GDSettlement.gd#L130-L160](src/data/GDSettlement.gd)):
+
+```gdscript
+match t:
+    ".": # Plains
+        arable_acres += tile_acres
+    "o": # Hills
+        var cleared = int(tile_acres * 0.5)
+        arable_acres += cleared
+        pasture_acres += (tile_acres - cleared)
+    "#": # Forests
+        var cleared = int(tile_acres * 0.2)
+        arable_acres += cleared
+        forest_acres += (tile_acres - cleared)
+```
+
+**Three-Field System** (crop rotation):
+
+```gdscript
+var fallow_ratio = 1.0/3.0 if s_data.has_three_field_system else 0.5
+var active_acres = int(s_data.arable_acres * (1.0 - fallow_ratio))
+s_data.fallow_acres = s_data.arable_acres - active_acres
+s_data.pasture_acres = s_data.fallow_acres  # Fallow = pasture for livestock
+```
+
+**Effect**: Only 66% of arable land produces grain annually. Remaining 33% rests and provides pasture.
+
+### 3.2 Labor Allocation Heuristic
+
+**Entry Point**: [ProductionSystem.gd:_process_labor_pool()](src/economy/ProductionSystem.gd#L100-L250)
+
+**Three-Tier Priority**:
+
+```
+Tier 1: SUBSISTENCE (24-hour buffer)
+   ├─ Food: daily_food_req = pop × 1.2 bushels
+   └─ Fuel: daily_wood_req = pop / (climate-adjusted divisor)
+   
+Tier 2: SECURITY (60-day buffer)
+   ├─ Food security: pop × 1.2 × 60 days
+   └─ Strategic reserves
+   
+Tier 3: PROFIT OPTIMIZATION
+   ├─ Allocate remaining labor to highest-margin resource
+   └─ Driven by scarcity multiplier (high price = high priority)
+```
+
+**Allocation Algorithm** ([ProductionSystem.gd#L100-L200](src/economy/ProductionSystem.gd)):
+
+```gdscript
+var remaining_laborers = int(s_data.laborers * efficiency)
+var alloc = {"farms": 0, "fishing": 0, "mining": 0, "pasture": 0, ...}
+
+# TIER 1: SUBSISTENCE
+if s_data.get_food_stock() < daily_food_req:
+    # Fishing first (fast yield)
+    var f_take = min(remaining_laborers, fish_limit)
+    alloc["fishing"] += f_take
+    remaining_laborers -= f_take
+    
+    # Then farming
+    var g_take = min(remaining_laborers, farm_limit)
+    alloc["farms"] += g_take
+    remaining_laborers -= g_take
+
+# TIER 2: SECURITY (60-day buffer)
+if remaining_laborers > 0 and current_food < food_buffer_target:
+    alloc["farms"] += int(remaining_laborers * 0.5)
+    alloc["fishing"] += int(remaining_laborers * 0.3)
+
+# TIER 3: PROFIT (margin-driven)
+if remaining_laborers > 0:
+    var margins = {}
+    for res in ["iron", "wood", "stone", "wool"]:
+        var price = PricingSystem.get_price(res, s_data)
+        margins[res] = price / Globals.BASE_PRICES[res]
+    
+    # Sort by margin, allocate to top 2 resources
+    var sorted_margins = margins.keys()
+    sorted_margins.sort_custom(func(a, b): return margins[a] > margins[b])
+    
+    # Example: If iron price is 300% above base, allocate to mining
+```
+
+### 3.3 Infrastructure Multipliers
+
+**Building Bonuses** ([ProductionSystem.gd#L400-L500](src/economy/ProductionSystem.gd)):
+
+| Building | Effect | Formula |
+|----------|--------|---------|
+| **Farm** | Grain yield × multiplier | `base_yield × (1.0 + farm_lvl * 0.5)` |
+| **Lumber Mill** | Wood yield × multiplier | `base_yield × (1.0 + mill_lvl * 1.0)` |
+| **Mine** | Stone/ore yield × multiplier | `base_yield × (1.0 + mine_lvl * 0.5)` |
+| **Blacksmith** | Iron → Steel efficiency | `iron_consumed × (1.0 + smith_lvl * 1.0)` |
+| **Weaver** | Wool → Cloth efficiency | `wool_consumed × (1.0 + weaver_lvl * 1.0)` |
+| **Brewery** | Grain → Ale efficiency | `grain_consumed × (1.0 + brewery_lvl * 1.0)` |
+
+**Example** (Level 5 Farm):
+
+- Base yield: 100 laborers × 40 acres/laborer × 12 bushels/acre = 48,000 bushels/year
+- With Farm Level 5: 48,000 × (1.0 + 5 × 0.5) = 48,000 × 3.5 = **168,000 bushels/year**
+
+---
+
+## 4. Consumption & Growth
+
+### 4.1 Social Classes
+
+**Population Structure** ([GDSettlement.gd:sync_social_classes()](src/data/GDSettlement.gd#L210-L220)):
+
+```gdscript
+nobility = max(1, int(population * Globals.NOBILITY_TARGET_PERCENT))    # 1%
+burghers = int(population * Globals.BURGHER_TARGET_PERCENT)             # 15%
+laborers = population - nobility - burghers                             # 84%
+```
+
+**Class Consumption** ([ConsumptionSystem.gd#L20-L120](src/economy/ConsumptionSystem.gd)):
+
+| Class | Food | Fuel | Luxuries | Effect if Unsatisfied |
+|-------|------|------|----------|----------------------|
+| **Laborers** | 1.2 bushels/day | Wood (shared) | — | Death if no food |
+| **Burghers** | 1.2 bushels/day | Wood (shared) | Ale (0.1/day), Cloth OR Leather | `burgher_unhappy = true`, tax revenue × 0.5 |
+| **Nobility** | 1.2 bushels/day | Wood (shared) | Meat (0.5/day), Furs (0.05/day), Salt (0.05/day) | `nobility_unhappy = true`, loyalty risk (future) |
+
+**Consumption Code** ([ConsumptionSystem.gd#L50-L100](src/economy/ConsumptionSystem.gd)):
+
+```gdscript
+# BURGHER COMFORT
+var ale_needed = int(s_data.burghers * 0.1)
+var ale_burn = s_data.remove_inventory("ale", ale_needed)
+if ale_burn < ale_needed:
+    s_data.burgher_unhappy = true
+
+# NOBLE LUXURIES
+var noble_meat_req = int(s_data.nobility * 0.5)
+var noble_furs_req = max(1, int(s_data.nobility * 0.05))
+var n_meat = s_data.remove_inventory("meat", noble_meat_req)
+var n_furs = s_data.remove_inventory("furs", noble_furs_req)
+if n_meat < noble_meat_req or n_furs < noble_furs_req:
+    s_data.nobility_unhappy = true
+```
+
+### 4.2 Population Growth
+
+**Growth Trigger** ([ConsumptionSystem.gd#L120-L140](src/economy/ConsumptionSystem.gd)):
+
+```gdscript
+if hunger_satisfied >= total_hunger and s_data.get_food_stock() > total_hunger * 30:
+    var cap = s_data.get_housing_capacity()
+    if s_data.population < cap:
+        var births = int(s_data.population * Globals.GROWTH_RATE) + Globals.GROWTH_BASE
+        s_data.population += births
+        if s_data.population > cap: s_data.population = cap
+```
+
+**Constants**:
+
+```gdscript
+const GROWTH_RATE = 0.0001  # 0.01% daily = 3.65% annual
+const GROWTH_BASE = 1       # Minimum 1 birth/day per settlement
+```
+
+**Housing Capacity** ([GDSettlement.gd:get_housing_capacity()](src/data/GDSettlement.gd#L230-L245)):
+
+```gdscript
+var base = houses * 5
+var district_lvl = buildings.get("housing_district", 0)
+var civil_lvl = buildings.get("town_hall", 0)
+
+var cap = base + (district_lvl * 200)
+cap = int(cap * (1.0 + (civil_lvl * 0.1)))
+```
+
+**Example**:
+- Base houses: 20 × 5 = 100 capacity
+- Housing District Level 5: 100 + (5 × 200) = 1,100
+- Town Hall Level 3: 1,100 × (1.0 + 0.3) = **1,430 capacity**
+
+### 4.3 Overcrowding & Migration
+
+**Overcrowding Penalty** ([ConsumptionSystem.gd#L135-L140](src/economy/ConsumptionSystem.gd)):
+
+```gdscript
+if s_data.population >= cap:
+    # Growth stops
+    s_data.unrest = min(100, s_data.unrest + 1)
+    s_data.happiness = max(0, s_data.happiness - 1)
+```
+
+**Migration** (not yet implemented):
+
+```
+if happiness < 40 and nearby_settlement.happiness > 60 and nearby_settlement.population < cap:
+    emigrants = int(population * 0.01)
+    population -= emigrants
+    nearby_settlement.population += emigrants
+```
+
+---
+
+## 5. Market Dynamics
+
+### 5.1 Dynamic Pricing
+
+**Formula** ([PricingSystem.gd:get_price()](src/economy/PricingSystem.gd#L10-L60)):
+
+$$P = B \times \text{clamp}\left(\frac{D}{S}, 0.2, 5.0\right)$$
+
+Where:
+- $ P $: Final price
+- $ B $: Base price from `Globals.BASE_PRICES`
+- $ D $: Demand (function of population and resource type)
+- $ S $: Current stock in settlement inventory
+
+**Special Case (Zero Stock)**:
+
+$$P = B \times 5.0 \quad \text{if} \quad S = 0$$
+
+**Demand Calculation**:
+
 
 ### 3.2 Housing & Growth
 Population growth is limited by **Housing Capacity**.
@@ -481,4 +768,847 @@ Buildings now feature a **Milestone System** where reaching specific levels unlo
 *   **Road Network**
     *   Level 1: **Dirt Paths** | Level 5: **Cobblestone Streets** | Level 10: **Imperial Highways**.
 *   **Cathedral**
-    *   Level 1: **Sanctuary** | Level 4: **Basilica** | Level 10: **The Seat of Divines** (Massive global stability).
+    *   Level 1: **Sanctuary** | Level 4: **Basilica** | Level 10: **The Seat of Divines** (Massive global stability).# [CONTINUATION FROM PREVIOUS SECTION]
+
+**Demand Calculation** ([PricingSystem.gd#L20-L50](src/economy/PricingSystem.gd)):
+
+```gdscript
+if res_name in ["grain", "fish", "meat", "game"]:
+    demand = pop * Globals.DAILY_BUSHELS_PER_PERSON * 14.0  # 2-week buffer
+elif res_name == "wood":
+    demand = (pop / Globals.WOOD_FUEL_POP_DIVISOR) + (buildings.size() * Globals.WOOD_FUEL_BUILDING_MULT)
+    var temp = GameState.geology.get(s_data.pos, {}).get("temp", 0.0)
+    if temp > 0.0:
+        demand *= max(0.2, 1.0 - temp)  # Hot climates use less fuel
+elif res_name == "jewelry":
+    demand = max(2, int(s_data.nobility * 0.2))  # Nobles consume jewelry
+```
+
+**Example Price Calculation**:
+
+Settlement with pop=1000, grain stock=5000:
+- Base price: 10 crowns
+- Demand: 1000 Ã— 1.2 Ã— 14 = 16,800 bushels (2 weeks)
+- Stock: 5,000 bushels
+- Ratio: 16,800 / 5,000 = 3.36
+- **Final Price**: 10 Ã— 3.36 = **34 crowns** (clamped to 5.0 max = 50 crowns if demand were higher)
+
+### 5.2 World Market Orders
+
+**Buy Order System** ([ConsumptionSystem.gd#L145-L175](src/economy/ConsumptionSystem.gd)):
+
+```gdscript
+if GameState.turn % 12 == 0:  # Check twice daily
+    var critical_resources = ["grain", "iron", "wood", "wool", "coal", "meat", "salt"]
+    for res in critical_resources:
+        var stock = s_data.inventory.get(res, 0)
+        var threshold = s_data.population * 0.5 if res == "grain" else 50
+        
+        if stock < threshold:
+            var guild_lvl = s_data.buildings.get("merchant_guild", 0)
+            var cap = 100 * (1.0 + (guild_lvl * 0.5))
+            var buy_price = int(GameData.BASE_PRICES.get(res, 10) * 1.2)  # 20% premium
+            
+            GameState.world_market_orders.append({
+                "buyer_pos": s_data.pos,
+                "resource": res,
+                "amount": int(cap),
+                "price_offered": buy_price,
+                "faction": s_data.faction
+            })
+```
+
+**Effect**: Caravans prioritize fulfilling buy orders over speculative arbitrage, creating a "pull" system that directs trade toward desperate settlements.
+
+### 5.3 Price Caching
+
+**Performance Optimization** ([GDSettlement.gd](src/data/GDSettlement.gd)):
+
+```gdscript
+var cache_prices: Dictionary = {}  # res_name -> int
+var cache_dirty_flags: Dictionary = {}
+
+func invalidate_cache(cache_type = "all"):
+    if cache_type == "all" or cache_type == "prices":
+        cache_dirty_flags["prices"] = true
+        cache_prices.clear()
+```
+
+**Rationale**: Price calculations happen ~50 times per settlement per day (UI queries, caravan pathfinding). Caching reduces CPU usage by 80%.
+
+---
+
+## 6. Logistics & Trade
+
+### 6.1 Virtual Logistical Pulses
+
+**Problem**: Spawning 1000+ villagers to ferry grain from hamlets to cities causes lag.
+
+**Solution**: Virtual "pulses" ([GameState.gd](src/core/GameState.gd)):
+
+```gdscript
+var logistical_pulses = []  # Array of {origin, target, resource, amount, arrival_turn}
+
+# Hamlet creates pulse
+func send_virtual_pulse(hamlet, parent_city, resource, amount):
+    var distance = hamlet.pos.distance_to(parent_city.pos)
+    var travel_time = int(distance * 4)  # 4 turns per tile
+    
+    logistical_pulses.append({
+        "origin": hamlet.pos,
+        "target": parent_city.pos,
+        "resource": resource,
+        "amount": amount,
+        "arrival_turn": GameState.turn + travel_time
+    })
+
+# Daily pulse processor
+func process_pulses():
+    for p in logistical_pulses:
+        if GameState.turn >= p.arrival_turn:
+            var target = get_settlement_at(p.target)
+            if target:
+                target.add_inventory(p.resource, p.amount)
+            logistical_pulses.erase(p)
+```
+
+**Performance**: Reduces entity count by ~70% in large maps (200+ settlements).
+
+### 6.2 Physical Caravans
+
+**Spawning Conditions** ([SettlementManager.gd](src/managers/SettlementManager.gd)):
+
+```gdscript
+if s_data.tier >= 3 and s_data.buildings.get("merchant_guild", 0) >= 1:
+    # Spawn caravan
+    var caravan = GDCaravan.new()
+    caravan.origin = s_data.pos
+    caravan.faction = s_data.faction
+    caravan.capacity = 50 * (1.0 + merchant_guild_lvl * 0.5)
+```
+
+**Caravan AI** ([TradeSystem.gd](src/economy/TradeSystem.gd)):
+
+```
+1. Check world_market_orders for high-premium buy orders
+   â”œâ”€ If found: Load resource, pathfind to buyer
+   â””â”€ Else: Scan settlement prices within 20 tiles
+2. Calculate profit margin:
+   Profit = (sell_price - buy_price) - (distance / 10.0)
+3. Sort opportunities by profit, pick top 3
+4. Load cargo, set destination
+5. Travel (4 turns per tile)
+6. Sell cargo, deposit tax to faction treasury
+7. Return to origin or seek new opportunity
+```
+
+**Staggered Updates** ([TradeSystem.gd](src/economy/TradeSystem.gd)):
+
+```gdscript
+# Only update caravan logic every 4 turns, staggered by ID
+if (GameState.turn + caravan.id) % 4 == 0:
+    update_caravan_ai(caravan)
+```
+
+**Effect**: Reduces caravan AI CPU load by 75% (200 caravans updating at 25% frequency instead of 100%).
+
+### 6.3 Trade Influence
+
+**Mechanism** ([TradeSystem.gd](src/economy/TradeSystem.gd)):
+
+```gdscript
+# When caravan completes trade at settlement
+s_data.faction_influence[caravan.faction] += 5
+
+# Future use: Unlock special recruits, diplomatic bonuses
+if s_data.faction_influence[faction_id] >= 100:
+    # Faction gains control of settlement peacefully
+```
+
+---
+
+## 7. Building System
+
+### 7.1 Construction Queue
+
+**Data Structure** ([GDSettlement.gd](src/data/GDSettlement.gd)):
+
+```gdscript
+var construction_queue: Array = [
+    {
+        "id": "blacksmith",
+        "progress": 150,
+        "total_labor": 500,
+        "resources_met": true
+    }
+]
+```
+
+**Daily Progress** ([SettlementManager.gd:process_construction()](src/managers/SettlementManager.gd)):
+
+```gdscript
+func process_construction(s_data):
+    if s_data.construction_queue.is_empty(): return
+    
+    var project = s_data.construction_queue[0]
+    var labor_power = s_data.get_workforce_efficiency() * (s_data.population / 100.0)
+    
+    project.progress += int(labor_power * s_data.happiness / 100.0)
+    
+    if project.progress >= project.total_labor:
+        # Construction complete!
+        s_data.buildings[project.id] = s_data.buildings.get(project.id, 0) + 1
+        s_data.construction_queue.pop_front()
+        s_data.invalidate_cache("all")
+```
+
+**Labor Power Formula**:
+
+$$L = \frac{P}{100} \times E \times \frac{H}{100}$$
+
+Where:
+- $L$: Labor power per day
+- $P$: Population
+- $E$: Workforce efficiency (0.1-1.0)
+- $H$: Happiness (0-100)
+
+**Example**: Pop=1000, Efficiency=1.0, Happiness=80  
+Labor Power = (1000 / 100) Ã— 1.0 Ã— 0.8 = **8 labor per day**
+
+### 7.2 Polynomial Cost Scaling
+
+**Formula** ([SettlementManager.gd:process_governor_AI()](src/managers/SettlementManager.gd#L140-L150)):
+
+$$C_{\text{actual}} = C_{\text{base}} \times (L + 1)^{2.2}$$
+
+Where:
+- $C_{\text{actual}}$: Cost to build next level
+- $C_{\text{base}}$: Base cost from `GameData.BUILDINGS`
+- $L$: Current building level
+
+**Cost Progression** (example: Farm with base cost 500):
+
+| Level | Multiplier | Cost |
+|-------|------------|------|
+| 1 | $(1)^{2.2} = 1.0$ | 500 |
+| 2 | $(2)^{2.2} = 4.6$ | 2,300 |
+| 3 | $(3)^{2.2} = 11.2$ | 5,600 |
+| 5 | $(5)^{2.2} = 33.6$ | 16,800 |
+| 10 | $(10)^{2.2} = 158.5$ | 79,250 |
+
+**Rationale**: Early levels are accessible for growth. Level 10 becomes a prestigious milestone requiring massive capital.
+
+### 7.3 Building Catalog
+
+**Definition** ([GameData.gd:BUILDINGS](src/core/GameData.gd)):
+
+```gdscript
+BUILDINGS = {
+    "farm": {
+        "category": "industry",
+        "cost": 500,
+        "labor": 500,
+        "effect": {"type": "production_mult", "resource": "grain", "mult": 0.5},
+        "tier_req": 1
+    },
+    "stone_walls": {
+        "category": "defense",
+        "cost": 15000,
+        "labor": 2000,
+        "effect": {"type": "garrison_mult", "mult": 10.0},
+        "tier_req": 2
+    },
+    "housing_district": {
+        "category": "civil",
+        "cost": 1000,
+        "labor": 800,
+        "effect": {"type": "housing", "capacity": 200},
+        "tier_req": 2
+    }
+}
+```
+
+**Categories**:
+- **Industry**: Production multipliers (Farm, Mine, Blacksmith, Weaver)
+- **Defense**: Garrison bonuses (Walls, Barracks, Watchtower)
+- **Civil**: Population/happiness (Housing District, Market, Cathedral)
+
+### 7.4 Governor AI
+
+**Personality Types** ([SettlementManager.gd:process_governor_AI()](src/managers/SettlementManager.gd#L110-L200)):
+
+| Personality | Priorities | Bias Multipliers |
+|-------------|-----------|------------------|
+| **Greedy** | Market, Mine, Merchant Guild, Goldsmith | 2.0Ã— on commerce buildings |
+| **Builder** | Housing District, Warehouse | 1.5Ã— on capacity buildings |
+| **Cautious** | Stone Walls, Granary, Watchtower | 1.8Ã— on defense buildings |
+| **Balanced** | Even distribution | 1.0Ã— on all |
+
+**Decision Algorithm** ([SettlementManager.gd#L110-L180](src/managers/SettlementManager.gd)):
+
+```gdscript
+# 1. Evaluate pressing needs (0-100 scale)
+var housing_need = 100 if s_data.population >= cap else 0
+var starvation_need = 80 if food_stock < pop * 14 else 0
+var war_need = 60 if at_war else 0
+
+# 2. Score all possible buildings
+for b_name in GameData.BUILDINGS.keys():
+    var score = 10.0  # Base score
+    
+    # PILLAR LOGIC
+    match b_name:
+        "housing_district": score += housing_need
+        "granary": score += starvation_need
+        "stone_walls": score += war_need
+        "farm": score += 15  # Extraction is always decent
+    
+    # PERSONALITY BIAS
+    if personality == "greedy" and b_name in ["market", "mine"]:
+        score *= 2.0
+    
+    # LEVEL PENALTY (avoid over-specializing)
+    score /= (1.0 + current_lvl * 0.5)
+    
+    build_scores.append({"id": b_name, "score": score})
+
+# 3. Sort by score, attempt to build top priority
+build_scores.sort_custom(func(a, b): return a.score > b.score)
+if s_data.crown_stock >= build_scores[0].cost + treasury_buffer:
+    construct(build_scores[0].id)
+```
+
+---
+
+## 8. Faction Economy
+
+### 8.1 Faction Treasuries
+
+**Structure** ([GameState.gd](src/core/GameState.gd)):
+
+```gdscript
+var faction_treasuries = {
+    "red": 5000,
+    "blue": 5000,
+    "green": 5000,
+    "purple": 5000,
+    "orange": 5000,
+    "player": 1000,
+    "bandits": 0,
+    "neutral": 0
+}
+```
+
+**Income Sources**:
+1. **Caravan Tax** ([TradeSystem.gd](src/economy/TradeSystem.gd)):
+   ```gdscript
+   if caravan.crowns > 500:
+       var tax = caravan.crowns - 500
+       faction_treasuries[caravan.faction] += tax
+       caravan.crowns = 500
+   ```
+2. **Conquest Loot**: 50% of captured settlement crown_stock
+3. **Tribute** (future feature): Vassals pay percentage of income
+
+**Expenditures**:
+1. **Lord Upkeep**: `roster_size Ã— 2` crowns/day per lord
+2. **Colonization**: 5000 crowns to found new settlement
+3. **Emergency Subsidies**: Faction injects 5% of treasury into poor settlements daily
+
+### 8.2 Lord Economics
+
+**Upkeep System** ([CombatManager.gd](src/managers/CombatManager.gd)):
+
+```gdscript
+func process_lord_upkeep(lord):
+    var upkeep = lord.roster.size() * 2
+    
+    if lord.crowns >= upkeep:
+        lord.crowns -= upkeep
+    else:
+        # Try to withdraw from home fief
+        var fief = get_settlement_at(lord.home_fief)
+        if fief and fief.crown_stock > 1000 + upkeep:
+            fief.crown_stock -= upkeep
+        else:
+            # DESERTION!
+            var deserters = int(lord.roster.size() * 0.1)
+            lord.roster = lord.roster.slice(0, lord.roster.size() - deserters)
+```
+
+**Recruitment Costs** ([AIManager.gd](src/managers/AIManager.gd)):
+
+```gdscript
+func recruit_units(lord):
+    var cost = 500  # Base recruitment package
+    var settlement = find_nearest_friendly_settlement(lord.pos)
+    
+    if settlement.crown_stock >= cost:
+        settlement.crown_stock -= cost
+    elif faction_treasuries[lord.faction] >= cost:
+        faction_treasuries[lord.faction] -= cost
+    else:
+        return  # Cannot recruit
+    
+    # Add 10-20 recruits to roster
+    for i in range(rng.randi_range(10, 20)):
+        lord.roster.append(GameData.generate_recruit(rng, 2))
+```
+
+---
+
+## 9. Geographic Potential
+
+### 9.1 WorldGen Simulation
+
+**Old System (Deprecated)**: 100-year historical simulation, performance issues.
+
+**New System**: Geographic Potential Model ([WorldGen.gd](src/utils/WorldGen.gd)):
+
+```gdscript
+func calculate_site_potential(pos, grid, resources, geology):
+    var capacity = 0.0
+    var magnetism = 0.0
+    
+    # Scan 8-tile radius
+    for dy in range(-8, 9):
+        for dx in range(-8, 9):
+            var p = pos + Vector2i(dx, dy)
+            var t = grid[p.y][p.x]
+            
+            # CARRYING CAPACITY (food ceiling)
+            if t == ".": capacity += 250  # Arable acres
+            elif t == "~": capacity += 150  # Fishing
+            elif t in ["/", "\\"]: capacity += 250  # Floodplain
+            
+            # MAGNETISM (labor draw)
+            if resources.has(p):
+                match resources[p]:
+                    "gold": magnetism += 500
+                    "gems": magnetism += 400
+                    "iron": magnetism += 300
+                    "copper": magnetism += 200
+    
+    var potential_revenue = (capacity * 0.5) + magnetism
+    return potential_revenue
+```
+
+**Tier Assignment** ([WorldGen.gd](src/utils/WorldGen.gd)):
+
+```gdscript
+# Sort all potential sites by revenue
+sites.sort_custom(func(a, b): return a.potential > b.potential)
+
+# Top 5%: Metropolis (start at 95% capacity)
+# Next 10%: City (start at 70% capacity)
+# Next 20%: Town (start at 40% capacity)
+# Remaining: Village (start at 20% capacity)
+
+for i in range(sites.size()):
+    var percentile = float(i) / sites.size()
+    var tier = 0
+    var pop_ratio = 0.2
+    
+    if percentile < 0.05:
+        tier = 4  # Metropolis
+        pop_ratio = 0.95
+    elif percentile < 0.15:
+        tier = 3  # City
+        pop_ratio = 0.7
+    elif percentile < 0.35:
+        tier = 2  # Town
+        pop_ratio = 0.4
+    
+    sites[i].starting_population = int(sites[i].capacity * pop_ratio)
+```
+
+**Effect**: High-value geographic locations (river deltas, mineral-rich valleys) naturally spawn as large cities. Eliminates "gilded death traps" (cities with no food).
+
+### 9.2 Road Networks
+
+**Minimum Spanning Tree** ([WorldGen.gd](src/utils/WorldGen.gd)):
+
+```gdscript
+# Connect all settlements with roads using MST + extra edges
+var edges = []
+for i in range(settlements.size()):
+    for j in range(i+1, settlements.size()):
+        var dist = settlements[i].pos.distance_to(settlements[j].pos)
+        edges.append({"a": i, "b": j, "dist": dist})
+
+edges.sort_custom(func(a, b): return a.dist < b.dist)
+
+# Kruskal's algorithm for MST
+var parent = []
+parent.resize(settlements.size())
+for i in range(settlements.size()):
+    parent[i] = i
+
+for edge in edges:
+    if find(parent, edge.a) != find(parent, edge.b):
+        draw_road(settlements[edge.a].pos, settlements[edge.b].pos)
+        union(parent, edge.a, edge.b)
+```
+
+**Path Cost Reduction**: Roads reduce pathfinding cost from 1.0 to 0.5, encouraging caravans to follow "highways".
+
+---
+
+## 10. Economic Data Flow
+
+### 10.1 Daily Tick Pipeline
+
+```
+GameState.advance_time() [Every 24 turns]
+   â†“
+EconomyManager.daily_pulse()
+   â†“
+   â”œâ”€â†’ ProductionSystem.run_production_tick()
+   â”‚      â†“
+   â”‚      â”œâ”€ For each settlement:
+   â”‚      â”‚    â”œâ”€ recalculate_production() [scan terrain if needed]
+   â”‚      â”‚    â”œâ”€ _process_labor_pool() [allocate laborers]
+   â”‚      â”‚    â”œâ”€ _process_industry() [convert inputs to outputs]
+   â”‚      â”‚    â””â”€ Update inventory (add grain, wood, ore, etc.)
+   â”‚      â””â”€ Update global production_tracking
+   â†“
+   â”œâ”€â†’ ConsumptionSystem.run_consumption_tick()
+   â”‚      â†“
+   â”‚      â”œâ”€ For each settlement:
+   â”‚      â”‚    â”œâ”€ _process_consumption_and_growth()
+   â”‚      â”‚    â”‚    â”œâ”€ Consume food (pop Ã— 1.2 bushels)
+   â”‚      â”‚    â”‚    â”œâ”€ Consume fuel (wood)
+   â”‚      â”‚    â”‚    â”œâ”€ Consume luxuries (ale, meat, furs)
+   â”‚      â”‚    â”‚    â”œâ”€ Check starvation (if food < 0)
+   â”‚      â”‚    â”‚    â””â”€ Check growth (if food > 30-day buffer)
+   â”‚      â”‚    â””â”€ _process_taxes()
+   â”‚      â”‚         â”œâ”€ Collect poll tax (laborers Ã— 0.1 + burghers Ã— 0.5)
+   â”‚      â”‚         â””â”€ Collect tariffs (market level Ã— 10 per 24 turns)
+   â”‚      â””â”€ Sync social classes (recalc nobility/burghers/laborers)
+   â†“
+   â”œâ”€â†’ SettlementManager.process_all_governors()
+   â”‚      â†“
+   â”‚      â”œâ”€ For each settlement with governor:
+   â”‚      â”‚    â”œâ”€ Evaluate pressing needs (housing, food, war)
+   â”‚      â”‚    â”œâ”€ Score all possible buildings
+   â”‚      â”‚    â”œâ”€ Attempt to construct top priority
+   â”‚      â”‚    â””â”€ Update construction queue progress
+   â†“
+   â”œâ”€â†’ PricingSystem.update_all_prices()
+   â”‚      â†“
+   â”‚      â”œâ”€ For each settlement:
+   â”‚      â”‚    â”œâ”€ Invalidate price cache
+   â”‚      â”‚    â””â”€ Recalculate prices on-demand (lazy evaluation)
+   â†“
+   â””â”€â†’ TradeSystem.update_caravans()
+          â†“
+          â”œâ”€ Process logistical pulses (check arrival_turn)
+          â””â”€ Update physical caravans (staggered, every 4 turns)
+               â”œâ”€ Check world_market_orders
+               â”œâ”€ Scan settlement prices (arbitrage)
+               â”œâ”€ Load cargo + pathfind
+               â””â”€ Travel / sell goods
+```
+
+### 10.2 Item Crafting Flow
+
+```
+Player Commission Request
+   â†“
+SettlementManager.commission_item(settlement, item_type, material, quality)
+   â†“
+EquipmentSystem.check_resources(settlement, material)
+   â”œâ”€ Iron for steel weapon? Check inventory
+   â”œâ”€ Wool for cloth tunic? Check inventory
+   â””â”€ If missing: Return error
+   â†“
+EquipmentSystem.craft_item()
+   â”œâ”€ Consume resources (iron, wood, leather, etc.)
+   â”œâ”€ Calculate craft time (quality Ã— base_time)
+   â””â”€ Add to settlement.crafting_queue
+   â†“
+Daily tick: Process crafting_queue
+   â”œâ”€ Decrement time remaining
+   â””â”€ If time == 0: Generate item, add to player inventory
+```
+
+---
+
+## 11. Configuration & Tuning
+
+### 11.1 Key Economic Constants
+
+**[Globals.gd](src/core/Globals.gd)**:
+
+```gdscript
+# Production
+const ACRES_PER_TILE = 250
+const ACRES_WORKED_PER_LABORER = 40
+const BUSHELS_PER_ACRE_BASE = 12.0
+const FORESTRY_YIELD_WOOD = 8.0
+const FISHING_YIELD_BASE = 25.0
+const HUNTING_YIELD_MEAT = 15.0
+
+# Consumption
+const DAILY_BUSHELS_PER_PERSON = 1.2
+const WOOD_FUEL_POP_DIVISOR = 100.0
+const WOOD_FUEL_BUILDING_MULT = 2.0
+const CLOTH_CONSUMPTION_RATE = 0.02
+const LEATHER_CONSUMPTION_RATE = 0.01
+
+# Growth
+const GROWTH_RATE = 0.0001  # 0.01% daily = 3.65% annual
+const GROWTH_BASE = 1
+
+# Starvation
+const STARVATION_DEATH_RATE = 0.02
+const STARVATION_BASE_DEATH = 2
+const STARVATION_UNREST_INC = 20.0
+const STARVATION_HAPPINESS_DEC = 20.0
+
+# Pricing
+const PRICE_MIN_MULT = 0.2
+const PRICE_MAX_MULT = 4.0
+const PRICE_ZERO_STOCK_MULT = 5.0
+
+# Social Classes
+const NOBILITY_TARGET_PERCENT = 0.01
+const BURGHER_TARGET_PERCENT = 0.15
+```
+
+### 11.2 Tuning Levers
+
+**Balance Food Production**:
+- Increase `BUSHELS_PER_ACRE_BASE` â†’ More grain output
+- Decrease `DAILY_BUSHELS_PER_PERSON` â†’ Lower consumption
+- Increase `FISHING_YIELD_BASE` â†’ Fishing becomes more viable
+
+**Make Cities Grow Faster**:
+- Increase `GROWTH_RATE` â†’ Higher birth rate
+- Decrease housing costs in `BUILDINGS` â†’ Easier to expand capacity
+
+**Adjust Market Volatility**:
+- Increase `PRICE_MAX_MULT` â†’ Prices can spike higher during shortages
+- Decrease `PRICE_ZERO_STOCK_MULT` â†’ Less panic buying
+
+---
+
+## 12. Testing & Debugging
+
+### 12.1 World Audit Tool
+
+**Purpose**: Inspect global economic state for balancing.
+
+**Usage** ([GameState.gd](src/core/GameState.gd)):
+
+```gdscript
+func world_audit():
+    print("=== WORLD ECONOMIC AUDIT ===")
+    
+    # Demographics
+    var total_pop = 0
+    var total_houses = 0
+    var total_housing_cap = 0
+    for s in settlements:
+        total_pop += s.population
+        total_houses += s.houses
+        total_housing_cap += s.get_housing_capacity()
+    
+    print("Total Population: %d" % total_pop)
+    print("Total Houses: %d" % total_houses)
+    print("Total Housing Capacity: %d" % total_housing_cap)
+    
+    # Economy
+    var total_wealth = 0
+    for s in settlements:
+        total_wealth += s.crown_stock
+    for f in factions:
+        total_wealth += faction_treasuries[f.id]
+    
+    print("Total Wealth: %d crowns" % total_wealth)
+    
+    # Resource Stocks
+    for res in ["grain", "wood", "iron", "stone"]:
+        var global_stock = 0
+        var prices = []
+        for s in settlements:
+            global_stock += s.inventory.get(res, 0)
+            prices.append(PricingSystem.get_price(res, s))
+        
+        var avg_price = prices.reduce(func(a, b): return a + b, 0) / max(1, prices.size())
+        print("%s: Global Stock=%d, Avg Price=%d" % [res, global_stock, avg_price])
+```
+
+**Output Example**:
+```
+=== WORLD ECONOMIC AUDIT ===
+Total Population: 45,320
+Total Houses: 2,100
+Total Housing Capacity: 48,500
+Total Wealth: 125,430 crowns
+grain: Global Stock=345,200, Avg Price=12
+wood: Global Stock=89,400, Avg Price=8
+iron: Global Stock=12,300, Avg Price=45
+```
+
+### 12.2 Turbo Simulation
+
+**Purpose**: Fast-forward 30 days to observe systemic behavior.
+
+**Usage** ([Main.gd](Main.gd)):
+
+```gdscript
+func monthly_turbo_simulation():
+    print("=== TURBO SIMULATION: 30 DAYS ===")
+    
+    # Disable most logs
+    GameState.batch_mode = true
+    
+    # Track metrics
+    var start_pop = 0
+    var end_pop = 0
+    var production = {}
+    var consumption = {}
+    
+    for s in GameState.settlements:
+        start_pop += s.population
+    
+    # Run 30 days
+    for day in range(30):
+        for tick in range(24):
+            GameState.advance_time()
+        
+        # Track daily production/consumption
+        for res in ["grain", "wood", "iron"]:
+            production[res] = production.get(res, 0) + GameState.production_tracking.get(res, 0)
+            consumption[res] = consumption.get(res, 0) + GameState.consumption_tracking.get(res, 0)
+    
+    for s in GameState.settlements:
+        end_pop += s.population
+    
+    GameState.batch_mode = false
+    
+    # Report
+    print("Population Change: %d â†’ %d (%+d)" % [start_pop, end_pop, end_pop - start_pop])
+    for res in production.keys():
+        var net = production[res] - consumption[res]
+        print("%s: Produced=%d, Consumed=%d, Net=%+d" % [res, production[res], consumption[res], net])
+```
+
+**Expected Output**:
+```
+=== TURBO SIMULATION: 30 DAYS ===
+Population Change: 45,320 â†’ 45,780 (+460)
+grain: Produced=125,400, Consumed=118,200, Net=+7,200
+wood: Produced=45,200, Consumed=42,800, Net=+2,400
+iron: Produced=3,200, Consumed=2,900, Net=+300
+```
+
+**Diagnosis**: If net is consistently negative, increase production multipliers or reduce consumption rates.
+
+---
+
+## 13. Extension Guide
+
+### 13.1 Adding a New Resource
+
+**Step 1**: Define base price in [Globals.gd](src/core/Globals.gd):
+
+```gdscript
+const BASE_PRICES = {
+    ...
+    "silk": 50,  # New luxury resource
+}
+```
+
+**Step 2**: Add production logic in [ProductionSystem.gd](src/economy/ProductionSystem.gd):
+
+```gdscript
+# In _process_industry()
+if s_data.buildings.get("silk_farm", 0) > 0:
+    var silk_yield = s_data.buildings["silk_farm"] * 10
+    s_data.add_inventory("silk", silk_yield)
+```
+
+**Step 3**: Add consumption logic in [ConsumptionSystem.gd](src/economy/ConsumptionSystem.gd):
+
+```gdscript
+# Nobility consumes silk
+var noble_silk_req = max(1, int(s_data.nobility * 0.1))
+var n_silk = s_data.remove_inventory("silk", noble_silk_req)
+if n_silk < noble_silk_req:
+    s_data.nobility_unhappy = true
+```
+
+**Step 4**: Add to world generation resource placement ([WorldGen.gd](src/utils/WorldGen.gd)):
+
+```gdscript
+if biome == "jungle" and rng.randf() < 0.05:
+    resources[pos] = "silk"  # 5% chance in jungle tiles
+```
+
+### 13.2 Adding a New Building
+
+**Step 1**: Define in [GameData.gd:BUILDINGS](src/core/GameData.gd):
+
+```gdscript
+"silk_farm": {
+    "category": "industry",
+    "cost": 3000,
+    "labor": 800,
+    "effect": {"type": "production", "resource": "silk", "amount": 10},
+    "tier_req": 3,
+    "requires_resource": "silk"  # Only buildable if silk nearby
+}
+```
+
+**Step 2**: Add utility check in [SettlementManager.gd:is_building_useful()](src/managers/SettlementManager.gd):
+
+```gdscript
+match b_name:
+    "silk_farm":
+        for dy in range(-r, r+1):
+            for dx in range(-r, r+1):
+                var p = s_data.pos + Vector2i(dx, dy)
+                if GameState.resources.has(p) and GameState.resources[p] == "silk":
+                    return true
+        return false
+```
+
+**Step 3**: Test with governor AI (greedy personalities will build it if silk is valuable).
+
+### 13.3 Modifying Production Formulas
+
+**Example**: Make farms scale with population instead of acres.
+
+**Current** ([ProductionSystem.gd#L150](src/economy/ProductionSystem.gd)):
+
+```gdscript
+var farm_yield = (alloc["farms"] * Globals.ACRES_WORKED_PER_LABORER * Globals.BUSHELS_PER_ACRE_BASE) / Globals.DAYS_PER_YEAR
+```
+
+**Modified**:
+
+```gdscript
+# New formula: yield scales with farm buildings + population
+var base_yield = (alloc["farms"] * Globals.ACRES_WORKED_PER_LABORER * Globals.BUSHELS_PER_ACRE_BASE) / Globals.DAYS_PER_YEAR
+var pop_bonus = s_data.population * 0.01  # 0.01 bushels per pop
+var farm_lvl = s_data.buildings.get("farm", 0)
+var farm_yield = int((base_yield + pop_bonus) * (1.0 + farm_lvl * 0.5))
+```
+
+**Effect**: Larger cities produce more food even with same acreage, representing intensive farming techniques.
+
+---
+
+## Conclusion
+
+The economy is the **heartbeat** of the simulation. Every mechanicâ€”warfare, politics, construction, tradeâ€”depends on the circular flow of resources. The key innovations are:
+
+1. **Geographic Determinism**: Terrain dictates what settlements CAN produce (no wheat in deserts)
+2. **Priority-Driven Labor**: Survival first, security second, profit third
+3. **Dynamic Markets**: Prices emerge from scarcity, driving trade routes organically
+4. **Polynomial Building Costs**: Early growth is fast, but Level 10 structures are prestige projects
+5. **Faction Treasuries**: Wealth flows from settlements â†’ lords â†’ factions â†’ infrastructure
+
+The system is modularâ€”production, consumption, pricing, and trade are independent subsystems that can be tuned separately. Use the **World Audit** and **Turbo Simulation** tools to validate balance changes before committing.

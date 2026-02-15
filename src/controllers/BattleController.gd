@@ -1,67 +1,73 @@
 extends Node
 
+const BattlePhysics = preload("res://src/battle/BattlePhysics.gd")
+const BattleTerrain = preload("res://src/battle/BattleTerrain.gd")
+const BattleCombat = preload("res://src/battle/BattleCombat.gd")
+const BattleSiege = preload("res://src/battle/BattleSiege.gd")
+const BattleAI = preload("res://src/battle/BattleAI.gd")
+const BattleState = preload("res://src/battle/BattleState.gd")
 const FaunaData = preload("res://src/data/FaunaData.gd")
 const FloraData = preload("res://src/data/FloraData.gd")
 
-const MAP_W = 500
-const MAP_H = 500
-const CHUNK_SIZE = 50
+const MAP_W = BattlePhysics.MAP_W
+const MAP_H = BattlePhysics.MAP_H
+const CHUNK_SIZE = BattlePhysics.CHUNK_SIZE
+const SPATIAL_BUCKET_SIZE = BattlePhysics.SPATIAL_BUCKET_SIZE
 const TICK_RATE = 0.1 # How fast the game updates (lower = faster)
 
 # -----------------------------
+
+# Battle Systems
+var physics: BattlePhysics
+var terrain: BattleTerrain
+var combat: BattleCombat
+var siege: BattleSiege
+var ai: BattleAI
+var state: BattleState
 
 var active = false
 var is_tournament = false
 var is_siege = false
 var siege_data = {}
-var structure_hp = {} # Key: Vector2i, Value: float
 var last_map_pos = Vector2i(-999, -999)
 
-var grid = [] # 2D array of chars, pre-sized but filled lazily
-var generated_chunks: Dictionary = {} # chunk_pos (Vector2i) -> bool
+# Physics system manages these via delegation:
+var grid: Array: get = _get_grid, set = _set_grid
+var generated_chunks: Dictionary: get = _get_generated_chunks
+var structural_cache: Dictionary: get = _get_structural_cache
+var spatial_grid: Dictionary: get = _get_spatial_grid
+var spatial_team_mask: Dictionary: get = _get_spatial_team_mask
+var unit_lookup: Dictionary: get = _get_unit_lookup
 
-# Structural Cache (Optimization 5)
-var structural_cache = {} # char -> Array of Vector2i
+func _get_grid() -> Array: return physics.grid if physics else []
+func _set_grid(value: Array): if physics: physics.grid = value
+func _get_generated_chunks() -> Dictionary: return physics.generated_chunks if physics else {}
+func _get_structural_cache() -> Dictionary: return physics.structural_cache if physics else {}
+func _get_spatial_grid() -> Dictionary: return physics.spatial_grid if physics else {}
+func _get_spatial_team_mask() -> Dictionary: return physics.spatial_team_mask if physics else {}
+func _get_unit_lookup() -> Dictionary: return physics.unit_lookup if physics else {}
 
-# Spatial Hashing (Optimization 3)
-const SPATIAL_BUCKET_SIZE = 10
-var spatial_grid = {} # Integer Key -> Array of GDUnit
-var spatial_team_mask = {} # Integer Key -> int (Bitmask of teams present: 1=player, 2=enemy, 4=ally)
-
-# DOD-Lite Cache (Optimization 4)
-var cached_pos = PackedVector2Array() # Index matches 'units' array
-var cached_team = PackedInt32Array()   # 0: player, 1: enemy, 2: ally
-var cached_alive = PackedByteArray()    # 1: alive, 0: dead
+func _ready():
+	physics = BattlePhysics.new()
+	terrain = BattleTerrain.new()
+	combat = BattleCombat.new()
+	siege = BattleSiege.new()
+	ai = BattleAI.new()
+	state = BattleState.new()
 
 func initialize_grid():
-	grid = []
-	for y in range(MAP_H):
-		var row = []
-		row.resize(MAP_W)
-		row.fill(" ") # Ungenerated tile
-		grid.append(row)
-	generated_chunks.clear()
-	spatial_grid.clear()
-	structural_cache.clear()
+	physics.initialize_grid()
 
 func ensure_chunk_at(pos: Vector2i):
-	var chunk_pos = Vector2i(pos.x / CHUNK_SIZE, pos.y / CHUNK_SIZE)
-	if not generated_chunks.has(chunk_pos):
-		_generate_chunk(chunk_pos)
+	physics.ensure_chunk_at(pos, _generate_chunk)
 
 func get_tile(x: int, y: int) -> String:
-	if x < 0 or x >= MAP_W or y < 0 or y >= MAP_H:
-		return " "
-		
-	var pos = Vector2i(x, y)
-	ensure_chunk_at(pos)
-	return grid[y][x]
+	ensure_chunk_at(Vector2i(x, y))
+	return physics.get_tile(x, y)
 
 var tournament_prize = 0
 var units = [] 
-var unit_lookup = {} # Vector2i -> GDUnit
 var battalions = {} # id -> {team, type, pivot_pos, target_pos, order}
-var battalion_uid = 0
 var projectiles = [] # Array of {pos, target_pos, symbol, attacker, defender, damage_data}
 var battle_log = []
 
@@ -78,9 +84,6 @@ var allies_ref = null # Used for joint battles
 # Turn-based state
 var turn = 1
 var player_unit = null
-var current_order = "CHARGE" # CHARGE, FOLLOW, HOLD
-var enemy_center_mass = Vector2.ZERO
-var player_center_mass = Vector2.ZERO
 var simulation_time = 0.0
 var ui_timer = 0.0
 var logic_timer = 0.0
@@ -109,7 +112,7 @@ func start(enemy, _is_tournament = false, _prize = 0, allies = null, _is_siege =
 	is_siege = _is_siege
 	siege_data = _siege_data
 	tournament_prize = _prize
-	current_order = "ADVANCE"
+	ai.current_order = "ADVANCE"
 	turn = 1
 	targeting_mode = false
 	log_offset = 0
@@ -174,6 +177,23 @@ func handle_input(event):
 		if(!camera_locked and player_unit):
 			camera_pos = Vector2(player_unit.pos)
 		add_log("[color=cyan]Free Camera: %s[/color]" % ("OFF" if camera_locked else "ON"))
+		GameState.emit_signal("map_updated")
+		return
+	elif event.keycode == KEY_G:
+		# Toggle grid lines in battle shader renderer
+		var main = get_tree().root.get_node_or_null("Main")
+		if main and main.battle_shader_renderer:
+			main.battle_shader_renderer.toggle_grid_lines()
+			add_log("[color=cyan]Grid Lines: %s[/color]" % ("ON" if main.battle_shader_renderer.show_grid else "OFF"))
+		GameState.emit_signal("map_updated")
+		return
+	elif event.keycode == KEY_P:
+		# Toggle graphics mode in battle shader renderer
+		var main = get_tree().root.get_node_or_null("Main")
+		if main and main.battle_shader_renderer:
+			main.battle_shader_renderer.toggle_graphics_mode()
+			var mode_name = "PROCEDURAL" if main.battle_shader_renderer.graphics_mode == 1 else "SOLID"
+			add_log("[color=cyan]Graphics Mode: %s[/color]" % mode_name)
 		GameState.emit_signal("map_updated")
 		return
 	elif event.keycode == KEY_PAGEUP:
@@ -268,26 +288,10 @@ func execute_player_attack(target):
 		GameState.emit_signal("map_updated")
 
 func get_unit_range(u):
-	var range_val = 1.5
-	if u.is_siege_engine:
-		return float(u.engine_stats.get("range", 1.5))
-		
-	var wpn = u.equipment["main_hand"]
-	if wpn:
-		range_val = float(wpn.get("range", 1.5))
-	elif u.type == "archer":
-		range_val = 18.0
-	return range_val
+	return combat.get_unit_range(u)
 
 func is_unit_ranged(u):
-	if u.is_siege_engine:
-		return u.engine_stats.get("range", 1.5) > 2.0
-	var wpn = u.equipment["main_hand"]
-	if wpn and wpn.get("is_ranged", false):
-		return true
-	if u.type == "archer":
-		return true
-	return false
+	return combat.is_unit_ranged(u)
 
 func enter_targeting_mode():
 	# Find nearest enemy within range
@@ -359,55 +363,12 @@ func perform_targeted_attack(attacker, defender, part_key, attack_idx = 0):
 	resolve_complex_damage(attacker, defender, part_key, attack_idx)
 
 func is_fleeing(u):
-	if u == player_unit: return false
-	var total_hp = 0
-	var total_max = 0
-	for p_key in u.body:
-		for tissue in u.body[p_key]["tissues"]:
-			total_hp += tissue["hp"]
-			total_max += tissue["hp_max"]
-	return total_hp < total_max * 0.2 or u.type == "merchant"
+	return combat.is_fleeing(u, player_unit)
 
 func update_ai_step(delta):
 	is_batch_processing = true
 	# 1. Update Projectiles (Smooth motion during simulation burst)
-	var to_remove = []
-	for p in projectiles:
-		var dir = (p["target_pos"] - p["pos"]).normalized()
-		var move = dir * p["speed"] * delta
-		var old_pos = p["pos"]
-		p["pos"] += move
-		
-		# Check if reached or passed target
-		var dist_to_target = p["pos"].distance_to(p["target_pos"])
-		if dist_to_target < 0.5 or (p["target_pos"] - old_pos).dot(p["target_pos"] - p["pos"]) < 0:
-			# Hit!
-			if is_instance_valid(p["defender"]) and p["defender"].hp > 0:
-				var res = resolve_complex_damage(p["attacker"], p["defender"], p.get("forced_part", ""), p.get("attack_idx", 0))
-				
-				# Siege Engine Extra Logic
-				if p.has("engine"):
-					var e_key = p["engine"]
-					var e_info = GameData.SIEGE_ENGINES.get(e_key, {})
-					
-					# AOE Handling
-					if e_info.get("aoe", 0) > 0:
-						resolve_aoe_damage(p["attacker"], Vector2i(p["target_pos"]), e_info["aoe"], e_info)
-						to_remove.append(p)
-						continue
-					
-					# Over-penetration Handling (Ballista)
-					if e_info.get("overpenetrate", false) and res.get("remaining_energy", 0.0) > 20.0:
-						var next = _find_unit_along_line(p["target_pos"], dir, 15.0, [p["defender"]])
-						if next:
-							p["defender"] = next
-							p["target_pos"] = Vector2(next.pos)
-							continue
-			
-			to_remove.append(p)
-	
-	for p in to_remove:
-		projectiles.erase(p)
+	combat.update_projectiles(projectiles, delta, resolve_complex_damage, resolve_aoe_damage, _find_unit_along_line, add_log, battle_debug_enabled)
 
 	# 2. Check Win/Loss logic occasionally (Optimization: logic_timer)
 	logic_timer -= delta
@@ -432,17 +393,7 @@ func _check_battle_end_conditions():
 		elif p_count == 0:
 			end_battle(false)
 func perform_attack_on(u, target):
-	if is_instance_valid(target) and target.hp > 0:
-		if is_unit_ranged(u):
-			spawn_projectile(u, target, "torso", 0, "engine:" + u.engine_type if u.is_siege_engine else "")
-			if u.is_siege_engine:
-				u.reload_timer = int(u.engine_stats.get("reload_turns", 4))
-			else:
-				# Archer Nerf: Add a reload timer for standard ranged units
-				# Standard bowmen now fire roughly every 4-5 rounds
-				u.reload_timer = 4
-		else:
-			resolve_complex_damage(u, target, "torso", 0)
+	combat.perform_attack_on(u, target, add_log, spawn_projectile, resolve_complex_damage)
 
 func execute_round():
 	turn += 1
@@ -475,7 +426,7 @@ func execute_round():
 					u.status["is_prone"] = true
 
 	# 2. Update global tactical state (Centers of mass, battalion targets)
-	_update_global_battle_state()
+	ai.update_global_battle_state(units, battalions, unit_lookup, battle_debug_enabled, add_log, is_fleeing)
 	
 	# 3. Sequential AI Phase (Optimization 7: Sorted Initiative breaks deadlocks)
 	var sorted_units = []
@@ -594,634 +545,48 @@ func execute_round():
 	is_batch_processing = false
 	GameState.emit_signal("map_updated")
 
-func _update_global_battle_state():
-	var b_data = {} # id -> {sum, count, slowest_speed}
-	var e_sum = Vector2.ZERO
-	var p_sum = Vector2.ZERO
-	var e_count = 0
-	var p_count = 0
-	
-	for u in units:
-		if u.hp <= 0 or u.status["is_downed"] or u.status["is_dead"]: continue
-		if is_fleeing(u): continue
-		
-		if u.team == "enemy":
-			e_sum += Vector2(u.pos)
-			e_count += 1
-		else:
-			p_sum += Vector2(u.pos)
-			p_count += 1
-		
-		if u.formation_id != -1:
-			if not b_data.has(u.formation_id):
-				b_data[u.formation_id] = {"sum": Vector2.ZERO, "count": 0, "slowest": 2.0, "engaged": 0}
-			b_data[u.formation_id].sum += Vector2(u.pos)
-			b_data[u.formation_id].count += 1
-			# Keep track of slowest unit for cohesion (high value = slow in this engine's action_timer logic)
-			if u.speed > b_data[u.formation_id].slowest:
-				b_data[u.formation_id].slowest = u.speed
-			
-			# Count engaged units for Pivot Braking (Optimization: Use direct lookup for adjacent melee)
-			var engaged = false
-			for dx in range(-1, 2):
-				for dy in range(-1, 2):
-					if dx == 0 and dy == 0: continue
-					var check_pos = u.pos + Vector2i(dx, dy)
-					if unit_lookup.has(check_pos):
-						var other = unit_lookup[check_pos]
-						if other.team != u.team and other.hp > 0:
-							engaged = true; break
-				if engaged: break
-			
-			if engaged:
-				b_data[u.formation_id].engaged += 1
-	
-	if e_count > 0: enemy_center_mass = e_sum / e_count
-	if p_count > 0: player_center_mass = p_sum / p_count
-
-	var b_centers = {}
-	for b_id in b_data:
-		if b_data[b_id].count > 0:
-			b_centers[b_id] = b_data[b_id].sum / b_data[b_id].count
-
-	# Pre-calculate attacker counts for each battalion
-	var attacker_counts = {} # target_id -> count
-	for b_id in battalions:
-		var target_id = battalions[b_id].target_id
-		if target_id != -1:
-			attacker_counts[target_id] = attacker_counts.get(target_id, 0) + 1
-
-	# Update Battalion Pivots
-	for b_id in battalions:
-		var b = battalions[b_id]
-		var b_center = b_centers.get(b_id, b.pivot)
-		
-		# TARGET ASSIGNMENT
-		var target_valid = false
-		if b.target_id != -1 and battalions.has(b.target_id):
-			if b_data.has(b.target_id) and b_data[b.target_id].count > 0:
-				target_valid = true
-		
-		if not target_valid:
-			var best_target = -1
-			var min_dist = 99999.0
-			var min_attackers = 999
-			
-			for other_id in battalions:
-				var other = battalions[other_id]
-				if other.team != b.team and b_data.has(other_id) and b_data[other_id].count > 0:
-					var attackers = attacker_counts.get(other_id, 0)
-					var dist = b_center.distance_to(b_centers.get(other_id, other.pivot))
-					
-					if attackers < min_attackers:
-						min_attackers = attackers
-						min_dist = dist
-						best_target = other_id
-					elif attackers == min_attackers and dist < min_dist:
-						min_dist = dist
-						best_target = other_id
-			
-			b.target_id = best_target
-			if b.target_id != -1:
-				attacker_counts[b.target_id] = attacker_counts.get(b.target_id, 0) + 1
-		
-		# CALCULATE PIVOT TARGET
-		var b_target = Vector2.ZERO
-		if b.target_id != -1:
-			var target_b = battalions[b.target_id]
-			var target_center = b_centers.get(b.target_id, target_b.pivot)
-			
-			# "TOTAL WAR" SQUARING UP: 
-			# We adjust the "Gap" based on the unit type and current order
-			var dir_to_target = (target_center - b_center).normalized()
-			var gap = 1.0
-			
-			if b.type == "siege_engine":
-				# Standoff only if battalion is PURELY or HEAVILY artillery
-				var artillery_count = 0
-				var melee_count = 0
-				for u in units:
-					if u.formation_id == b_id and u.hp > 0:
-						if u.is_siege_engine and u.engine_stats.get("range", 0) > 3.0:
-							artillery_count += 1
-						elif not u.is_siege_engine:
-							melee_count += 1
-				
-				if artillery_count > 0 and melee_count < 2: # Mostly engines
-					gap = 25.0 
-					if b.team == "player" and current_order == "CHARGE": gap = 8.0
-				else:
-					gap = 1.0 # Support infantry move closer
-			elif b.type == "archer":
-				gap = 8.0
-				if b.team == "player" and (current_order == "CHARGE" or current_order == "ADVANCE"): gap = 2.0
-			elif b.team == "player":
-				match current_order:
-					"CHARGE": gap = -0.5
-					"ADVANCE": gap = 1.0
-					"HOLD": gap = 15.0
-					_: gap = 1.5
-			elif b.team == "enemy":
-				gap = 0.0 # Full aggression
-			
-			b_target = target_center - (dir_to_target * gap)
-		else:
-			# Fallback to general center of mass
-			b_target = player_center_mass if b.team == "enemy" else enemy_center_mass
-		
-		# Override based on orders
-		if b.team == "player":
-			match current_order:
-				"FOLLOW":
-					if player_unit: b_target = Vector2(player_unit.pos)
-				"RETREAT":
-					var dir_away = (Vector2(b.pivot) - enemy_center_mass).normalized()
-					b_target = Vector2(b.pivot) + (dir_away * 30.0)
-				"HOLD":
-					b_target = Vector2(b.pivot)
-		
-		b["target_pos"] = b_target # Cache for units
-		var b_pivot_v2 = Vector2(b.pivot)
-		if b_pivot_v2.distance_to(b_target) > 0.1:
-			var move_dir = (b_target - b_pivot_v2).normalized()
-			
-			var step_size = 1.0 
-			
-			# PIVOT BRAKING: If more than 40% of units are engaged, the formation slows/stops to wait
-			# This creates the "Bannerlord" front-line anchor effect.
-			if b_data.has(b_id):
-				var engaged_percent = float(b_data[b_id].engaged) / float(b_data[b_id].count)
-				if engaged_percent > 0.40:
-					step_size = 0.0 # Anchor holds
-					if battle_debug_enabled:
-						add_log("[color=yellow]DEBUG: B-ID %d ANCHORED[/color]" % b_id)
-				elif engaged_percent > 0.15:
-					step_size = 0.5 # Slowing down
-					if battle_debug_enabled:
-						add_log("[color=yellow]DEBUG: B-ID %d SLOWING[/color]" % b_id)
-					
-			b.pivot = b_pivot_v2 + (move_dir * step_size) 
-			if battle_debug_enabled and b_pivot_v2.distance_to(b_target) <= 0.5:
-				add_log("[color=yellow]DEBUG: B-ID %d AT TARGET[/color]" % b_id)
-		
-		# Shield Wall / Bracing Logic:
-		# Units keep their shield wall as long as they are in an active formation.
-		# This allows for a "Roman-style" slow push or shielded march.
-		if b.type in ["infantry", "commander", "archer", "recruit", "heavy_infantry"]:
-			b["is_braced"] = true
-		else:
-			b["is_braced"] = false
-
 func set_order(new_order):
-	if current_order != new_order:
-		current_order = new_order
-		add_log("[color=cyan]Order: %s![/color]" % new_order)
-		GameState.emit_signal("map_updated")
+	ai.set_order(new_order, add_log, func(): GameState.emit_signal("map_updated"))
 
 func plan_ai_decision(u):
-	if u.is_siege_engine:
-		# Siege Engine Manning Check (Fast lookup optimization)
-		var manned = false
-		for offset in u.footprint:
-			var base_p = u.pos + offset
-			for dy in range(-1, 2):
-				for dx in range(-1, 2):
-					var crew = unit_lookup.get(base_p + Vector2i(dx, dy))
-					if crew and crew != u and crew.team == u.team and crew.hp > 0:
-						if crew.type in ["infantry", "recruit", "laborer", "commander"]:
-							manned = true; break
-				if manned: break
-			if manned: break
-		
-		if not manned: return
-
-		# Reloading logic: Tick down if manned
-		if u.reload_timer > 0:
-			u.reload_timer -= 1
-			u.planned_action = "none"
-			return
-	else:
-		# Archer/Infantry reload logic
-		if u.reload_timer > 0:
-			u.reload_timer -= 1
-			# Allowing movement while reloading for regular units, just not attacking
-			# (Engineers have to stay with the engine to reload it)
-
-	if u.is_siege_engine:
-		var range_val = u.engine_stats.get("range", 1.5)
-		
-		if u.engine_type == "siege_tower":
-			# Search for walls
-			var target_wall = _find_nearest_tile_char(u.pos, "#", 100)
-			if target_wall != Vector2i(-1, -1):
-				if u.pos.distance_to(target_wall) <= 1.5: return
-				u.planned_action = "move"
-				u.planned_target_pos = target_wall
-				return
-
-		if u.engine_type == "battering_ram":
-			var target_gate = _find_nearest_tile_char(u.pos, "G", 100)
-			if target_gate != Vector2i(-1, -1):
-				if u.pos.distance_to(target_gate) <= 2.5:
-					u.planned_action = "special"
-					u.planned_target_pos = target_gate
-					return
-				u.planned_action = "move"
-				u.planned_target_pos = target_gate
-				return
-
-		# Targeted firing
-		var target = null
-		var best_dist = range_val + 1.0
-		# Find nearest enemy via spatial grid for efficiency
-		var target_b_id = -1
-		if u.formation_id != -1 and battalions.has(u.formation_id):
-			target_b_id = battalions[u.formation_id].target_id
-			
-		target = _find_nearest_enemy_spatial(u, range_val + 30, target_b_id, true) # Engines prioritize clusters
-		
-		if target:
-			var d = u.pos.distance_to(target.pos)
-			if d <= range_val:
-				u.planned_action = "attack"
-				u.planned_target = target
-			else:
-				u.planned_action = "move"
-				u.planned_target_pos = target.pos
-		return
-
-	if u.assigned_engine_id != -1:
-		var engine = null
-		# Quick linear scan (Assigned crew is usually a small subset)
-		for potential in units:
-			if potential.id == u.assigned_engine_id:
-				engine = potential; break
-		
-		if engine and engine.hp > 0:
-			# Stay on engine footprint
-			var on_footprint = false
-			for offset in engine.footprint:
-				if u.pos == engine.pos + offset:
-					on_footprint = true; break
-			
-			if not on_footprint:
-				u.planned_action = "move"
-				# Move to the most vacant footprint tile
-				var target_p = engine.pos
-				for offset in engine.footprint:
-					var p = engine.pos + offset
-					if not unit_lookup.has(p):
-						target_p = p; break
-				u.planned_target_pos = target_p
-				return
-			
-			# Check for melee threats within 1.5 tiles
-			var threat = _find_nearest_enemy_spatial(u, 1.5, -1)
-			if threat:
-				u.planned_action = "attack"
-				u.planned_target = threat
-			return 
-		else:
-			u.assigned_engine_id = -1
-
-	# 3. Standard Unit Behavior
-	if is_fleeing(u):
-		var flee_target = Vector2i(player_center_mass if u.team == "enemy" else enemy_center_mass)
-		u.planned_action = "move"
-		u.planned_target_pos = flee_target
-		return
-
-	var is_ranged = is_unit_ranged(u)
-	var u_range = get_unit_range(u)
-	
-	if u.reload_timer > 0:
-		# If we are in formation, we still want to move to our slot even if reloading
-		# But we can't do anything else (like attack)
-		if u.formation_id != -1 and battalions.has(u.formation_id):
-			var b = battalions[u.formation_id]
-			var slot_pos = Vector2i(Vector2(b.pivot) + Vector2(u.formation_offset))
-			if u.pos != slot_pos:
-				u.planned_action = "move"
-				u.planned_target_pos = slot_pos
-			else:
-				u.planned_action = "none"
-		else:
-			u.planned_action = "none"
-		return
-
-	var target_b_id = -1
-	if u.formation_id != -1 and battalions.has(u.formation_id):
-		target_b_id = battalions[u.formation_id].target_id
-		
-	# --- COHESION RULE: Formation Steering ---
-	if u.formation_id != -1 and battalions.has(u.formation_id):
-		var b = battalions[u.formation_id]
-		var slot_pos = Vector2i(Vector2(b.pivot) + Vector2(u.formation_offset))
-		
-		# 1. STICKY ENGAGEMENT (Adjacency check is much faster than spatial search)
-		var adj_enemy = null
-		for dy in range(-1, 2):
-			for dx in range(-1, 2):
-				if dx == 0 and dy == 0: continue
-				var p = u.pos + Vector2i(dx, dy)
-				var other = unit_lookup.get(p)
-				if other and other.team != u.team and other.hp > 0 and not other.status["is_dead"]:
-					adj_enemy = other; break
-			if adj_enemy: break
-			
-		if adj_enemy:
-			u.planned_action = "attack"
-			u.planned_target = adj_enemy
-			return
-		
-		# 2. THE LEASH (Bannerlord order-based behavior)
-		# If the order is ADVANCE, the leash is tight (High discipline).
-		# If the order is CHARGE, the leash is loose (Aggressive pursuit).
-		var leash_dist = 4.0
-		if u.team == "player":
-			if current_order == "ADVANCE": leash_dist = 2.0
-			elif current_order == "CHARGE": leash_dist = 10.0
-			elif current_order == "RETREAT": leash_dist = 0.5 # Run directly to the backing pivot
-		
-		var dist_to_slot = u.pos.distance_to(slot_pos)
-		if dist_to_slot > leash_dist:
-			u.planned_action = "move"
-			u.planned_target_pos = slot_pos
-			return
-		
-		# 3. TACTICAL ENGAGEMENT
-		# If we are within the leash, search for a target to engage
-		var target = _find_nearest_enemy_spatial(u, 30, target_b_id)
-		if target:
-			var d_to_target = u.pos.distance_to(target.pos)
-			if d_to_target <= u_range:
-				u.planned_action = "attack"
-				u.planned_target = target
-				return
-		
-		# 4. REFORM
-		# If idle and not at slot, return to formation.
-		if u.pos != slot_pos:
-			u.planned_action = "move"
-			u.planned_target_pos = slot_pos
-			return
-			
-		return
-
-	# --- Individual/Skirmish logic (Broken Formation or Regular Army) ---
-	var target = _find_nearest_enemy_spatial(u, 30, target_b_id)
-	var target_pos = Vector2i.ZERO
-	var dist = 999.0
-	
-	if target:
-		target_pos = target.pos
-		dist = u.pos.distance_to(target_pos)
-	else:
-		target_pos = Vector2i(player_center_mass if u.team == "enemy" else enemy_center_mass)
-		dist = u.pos.distance_to(target_pos)
-
-	if is_siege and u.team == "enemy":
-		if grid[u.pos.y][u.pos.x] in ["#", "T"]:
-			if target and dist <= u_range:
-				u.planned_action = "attack"
-				u.planned_target = target
-			return
-
-	if u.team == "enemy":
-		if target:
-			if (is_ranged or u.type == "merchant") and dist < 3.0:
-				u.planned_action = "move"
-				u.planned_target_pos = target.pos
-			elif dist <= u_range:
-				u.planned_action = "attack"
-				u.planned_target = target
-			else:
-				u.planned_action = "move"
-				u.planned_target_pos = target.pos
-		else:
-			u.planned_action = "move"
-			u.planned_target_pos = target_pos
-				
-	else: # Player team
-		match current_order:
-			"CHARGE":
-				if target:
-					if is_ranged and dist < 2.0:
-						u.planned_action = "move"
-						u.planned_target_pos = target.pos
-					elif dist <= u_range:
-						u.planned_action = "attack"
-						u.planned_target = target
-					else:
-						u.planned_action = "move"
-						u.planned_target_pos = target.pos
-				else:
-					u.planned_action = "move"
-					u.planned_target_pos = target_pos
-			"FOLLOW":
-				if player_unit:
-					var d_to_p = u.pos.distance_to(player_unit.pos)
-					if d_to_p > 3:
-						u.planned_action = "move"
-						u.planned_target_pos = player_unit.pos
-					elif target and dist <= u_range:
-						u.planned_action = "attack"
-						u.planned_target = target
-			"HOLD":
-				if target and dist <= u_range:
-					u.planned_action = "attack"
-					u.planned_target = target
+	ai.plan_ai_decision(u, units, player_unit, battalions, unit_lookup, is_siege, grid, 
+						get_unit_range, is_unit_ranged, is_fleeing, _find_nearest_enemy_spatial, _find_nearest_tile_char)
 
 # --- AI Helper Methods (Optimization 2: Pure Calculation) ---
 
 func get_step_towards(u, t_pos):
-	var dir = (Vector2(t_pos) - Vector2(u.pos)).normalized()
-	return u.pos + Vector2i(round(dir.x), round(dir.y))
+	return physics.get_step_towards(u, t_pos)
 
 func get_step_away(u, t_pos):
-	var dir = (Vector2(u.pos) - Vector2(t_pos)).normalized()
-	if dir == Vector2.ZERO: dir = Vector2(1, 0)
-	return u.pos + Vector2i(round(dir.x), round(dir.y))
+	return physics.get_step_away(u, t_pos)
 
 func _find_nearest_enemy_spatial(u, max_dist, target_b_id = -1, prioritize_clusters = false):
-	var best_target_match = null
-	var min_d_target = max_dist
-	
-	var best_any_match = null
-	var min_d_any = max_dist
-	
-	# For Cluster Prioritization (Siege)
-	var best_cluster_score = -1.0
-	var best_cluster_target = null
-	
-	var bx = int(u.pos.x / SPATIAL_BUCKET_SIZE)
-	var by = int(u.pos.y / SPATIAL_BUCKET_SIZE)
-	var r = int(ceil(max_dist / float(SPATIAL_BUCKET_SIZE)))
-	
-	# BITMASK OPTIMIZATION (Optimization 3)
-	var enemy_bit = 2 if u.team == "player" else (1 if u.team == "enemy" else 7) 
-	
-	for ny in range(by - r, by + r + 1):
-		for nx in range(bx - r, bx + r + 1):
-			var key = (nx << 16) | (ny & 0xFFFF)
-			
-			# Skip entire buckets if the mask says no enemies are here
-			if spatial_team_mask.get(key, 0) & enemy_bit == 0:
-				continue
-				
-			var bucket = spatial_grid.get(key, null)
-			if bucket:
-				for e in bucket:
-					if e.team != u.team and e.hp > 0 and not e.status["is_dead"]:
-						var d = u.pos.distance_to(e.pos)
-						
-						if prioritize_clusters:
-							# Siege engines love Shield Walls and packed formations
-							# We give a score based on how many enemies are in the same bucket
-							# This is a extremely fast proxy for density
-							var density = bucket.size()
-							var score = float(density) / (d * 0.5) # Prefer closer AND denser
-							if score > best_cluster_score:
-								best_cluster_score = score
-								best_cluster_target = e
-						
-						# Track closest in target battalion
-						if target_b_id != -1 and e.formation_id == target_b_id:
-							if d < min_d_target:
-								min_d_target = d
-								best_target_match = e
-						
-						# Track closest overall for self-defense fallback
-						if d < min_d_any:
-							min_d_any = d
-							best_any_match = e
-	
-	if prioritize_clusters and best_cluster_target:
-		return best_cluster_target
-		
-	if best_target_match:
-		return best_target_match
-	return best_any_match
+	return physics.find_nearest_enemy_spatial(u, max_dist, target_b_id, prioritize_clusters)
 
 func _find_nearest_tile_char(pos, char_to_find, max_dist):
-	# Optimized Structural Cache check (Optimization 5)
-	if structural_cache.has(char_to_find):
-		var best = Vector2i(-1, -1)
-		var min_d = max_dist
-		for target in structural_cache[char_to_find]:
-			var d = pos.distance_to(target)
-			if d < min_d:
-				min_d = d
-				best = target
-		return best
-
-	# Fallback for structural targets (static grid) - Should rarely trigger now
-	var best = Vector2i(-1, -1)
-	var min_d = max_dist
-	for dy in range(-max_dist, max_dist + 1):
-		for dx in range(-max_dist, max_dist + 1):
-			var wx = pos.x + dx
-			var wy = pos.y + dy
-			if wx >= 0 and wx < MAP_W and wy >= 0 and wy < MAP_H:
-				if grid[wy][wx] == char_to_find:
-					var d = pos.distance_to(Vector2i(wx, wy))
-					if d < min_d:
-						min_d = d
-						best = Vector2i(wx, wy)
-	return best
+	return physics.find_nearest_tile_char(pos, char_to_find, max_dist)
 
 func move_towards(u, target_pos):
-	if u.is_siege_engine and not u.engine_stats.get("is_mobile", true): return
-	
-	var diff = target_pos - u.pos
-	var dir = diff.sign()
-	
-	# 1. Primary Path (Diagonal if possible)
-	if dir.x != 0 and dir.y != 0:
-		if try_move(u, u.pos + Vector2i(dir.x, dir.y)): return
-
-	# 2. Orthogonal Path (Straight lines)
-	if dir.x != 0 and try_move(u, u.pos + Vector2i(dir.x, 0)): return
-	if dir.y != 0 and try_move(u, u.pos + Vector2i(0, dir.y)): return
-	
-	# 3. Smart Sliding (Pathfinding around allies/terrain)
-	if u.pos.distance_to(target_pos) > get_unit_range(u):
-		# If moving along an axis is blocked, try "niggling" sideways
-		if dir.x != 0: 
-			if try_move(u, u.pos + Vector2i(dir.x, 1)): return
-			if try_move(u, u.pos + Vector2i(dir.x, -1)): return
-		if dir.y != 0:
-			if try_move(u, u.pos + Vector2i(1, dir.y)): return
-			if try_move(u, u.pos + Vector2i(-1, dir.y)): return
+	physics.move_towards(u, target_pos)
 
 func move_away_from(u, target_pos):
-	var diff = u.pos - target_pos
-	var dir = diff.sign()
-	if dir == Vector2i.ZERO: dir = Vector2i(GameState.rng.randi_range(-1, 1), GameState.rng.randi_range(-1, 1))
-	if dir == Vector2i.ZERO: dir = Vector2i(1, 0)
-	
-	# Try escape path
-	if try_move(u, u.pos + dir): return
-	# Try sliding escape
-	if dir.x != 0 and try_move(u, u.pos + Vector2i(dir.x, 0)): return
-	if dir.y != 0 and try_move(u, u.pos + Vector2i(0, dir.y)): return
-	# Try Y axis
-	if dir.y != 0 and try_move(u, u.pos + Vector2i(0, dir.y)): return
+	physics.move_away_from(u, target_pos)
 
 func register_unit(u):
-	for offset in u.footprint:
-		unit_lookup[u.pos + offset] = u
-	update_unit_spatial(u)
+	physics.register_unit(u)
 
 func unregister_unit(u):
-	for offset in u.footprint:
-		unit_lookup.erase(u.pos + offset)
-	remove_unit_spatial(u)
+	physics.unregister_unit(u)
 
 func update_unit_spatial(u):
-	var bx = int(u.pos.x / SPATIAL_BUCKET_SIZE)
-	var by = int(u.pos.y / SPATIAL_BUCKET_SIZE)
-	var key = (bx << 16) | (by & 0xFFFF)
-	
-	if not spatial_grid.has(key):
-		spatial_grid[key] = []
-		spatial_team_mask[key] = 0
-	
-	if not u in spatial_grid[key]:
-		spatial_grid[key].append(u)
-		
-		# Update Team Mask (Optimization 3)
-		var team_bit = 1 if u.team == "player" else (2 if u.team == "enemy" else 4)
-		spatial_team_mask[key] |= team_bit
+	physics.update_unit_spatial(u)
 
 func remove_unit_spatial(u):
-	var bx = int(u.pos.x / SPATIAL_BUCKET_SIZE)
-	var by = int(u.pos.y / SPATIAL_BUCKET_SIZE)
-	var key = (bx << 16) | (by & 0xFFFF)
-	if spatial_grid.has(key):
-		spatial_grid[key].erase(u)
-		# NOTE: We don't clear the team mask bit lazily for performance, 
-		# it gets fully cleared in refresh_all_spatial() anyway.
+	physics.remove_unit_spatial(u)
 
 func refresh_all_spatial():
-	spatial_grid.clear()
-	spatial_team_mask.clear()
-	
-	# Also update DOD Cache here (Optimization 4)
-	cached_pos.resize(units.size())
-	cached_team.resize(units.size())
-	cached_alive.resize(units.size())
-	
-	for i in range(units.size()):
-		var u = units[i]
-		var is_alive = u.hp > 0 and not u.status["is_dead"]
-		
-		cached_pos[i] = Vector2(u.pos)
-		cached_team[i] = 0 if u.team == "player" else (1 if u.team == "enemy" else 2)
-		cached_alive[i] = 1 if is_alive else 0
-		
-		if is_alive:
-			update_unit_spatial(u)
+	physics.refresh_all_spatial(units)
+	ai.refresh_caches(units)
 
 func try_move(u, new_pos):
 	if u.status.get("is_prone", false) or u.status.get("is_paralyzed", false):
@@ -1297,341 +662,33 @@ func escape_unit(u):
 		add_log("[color=gray]%s has fled the battlefield![/color]" % u.type)
 
 func damage_structure(pos: Vector2i, amount: float):
-	if not structure_hp.has(pos):
-		var tile = grid[pos.y][pos.x]
-		var base_hp = 100.0
-		match tile:
-			"G": base_hp = 300.0 # Gate
-			"#": base_hp = 500.0 # Wall
-			"H": base_hp = 1000.0 # Heavy Wall
-			"K": base_hp = 2000.0 # Keep
-		structure_hp[pos] = base_hp
-	
-	structure_hp[pos] -= amount
-	if structure_hp[pos] <= 0:
-		var old_tile = grid[pos.y][pos.x]
-		grid[pos.y][pos.x] = "%" # Rubble
-		# Update structural cache
-		if structural_cache.has(old_tile):
-			structural_cache[old_tile].erase(pos)
-		add_log("[color=red]The %s has been destroyed![/color]" % _get_structure_name(old_tile))
-		
+	siege.damage_structure(pos, amount, grid, structural_cache, add_log)
+
 func _get_structure_name(tile: String) -> String:
-	match tile:
-		"G": return "Gate"
-		"#": return "Wall"
-		"H": return "Heavy Wall"
-		"K": return "Keep"
-	return "Structure"
+	return siege._get_structure_name(tile)
 
 func perform_attack(u):
-	# Find target in front or range
-	var hits = []
 	var range_val = get_unit_range(u)
 	var is_ranged = is_unit_ranged(u)
-	
-	# Optimized Attack Scan (Spiral/Box Search instead of global)
-	var r = int(ceil(range_val))
-	for dy in range(-r, r+1):
-		for dx in range(-r, r+1):
-			var check_pos = u.pos + Vector2i(dx, dy)
-			if unit_lookup.has(check_pos):
-				var other = unit_lookup[check_pos]
-				if other.team != u.team and other.hp > 0 and not other.status["is_downed"] and not other.status["is_dead"]:
-					if not is_fleeing(other):
-						if u.pos.distance_to(other.pos) <= range_val:
-							hits.append(other)
-							if not is_ranged: break # Melee hits one
-			if hits.size() > 0 and not is_ranged: break
-		if hits.size() > 0 and not is_ranged: break
-	
-	if hits.size() > 0:
-		var target = hits[0] # Just hit first found
-		
-		# Update Facing
-		var attack_diff = target.pos - u.pos
-		if attack_diff != Vector2i.ZERO:
-			u.facing = Vector2i(int(sign(float(attack_diff.x))), int(sign(float(attack_diff.y))))
-
-		# Check if attacking arm is functional
-		if not u.status.get("r_arm_functional", true):
-			if u == player_unit:
-				add_log("[color=orange]Your right arm is useless! You can't strike![/color]")
-			return
-
-		# Choose attack index (random for AI)
-		var attack_idx = 0
-		var wpn = u.equipment["main_hand"]
-		var attacks = wpn.get("attacks", []) if wpn else []
-		if attacks.size() > 0:
-			attack_idx = GameState.rng.randi() % attacks.size()
-			
-		if is_ranged:
-			spawn_projectile(u, target, "", attack_idx)
-		else:
-			resolve_complex_damage(u, target, "", attack_idx)
-	elif u == player_unit:
-		add_log("[color=gray]You missed! Get closer![/color]")
+	combat.perform_attack(u, unit_lookup, range_val, is_ranged, player_unit, add_log, spawn_projectile, resolve_complex_damage)
 
 func spawn_projectile(attacker, defender, forced_part = "", attack_idx = 0, mode = "standard"):
-	var sym = "*"
-	var p_data = {}
-	
-	if mode.begins_with("engine:"):
-		var engine_key = mode.split(":")[1]
-		var e_info = GameData.SIEGE_ENGINES.get(engine_key, {})
-		sym = e_info.get("symbol", "X")
-		p_data["engine"] = engine_key
-		p_data["remaining_energy"] = e_info.get("dmg_base", 50) + (e_info.get("weight", 5) * e_info.get("velocity", 5))
-	else:
-		# Dynamic Symbol Selection based on orientation
-		var diff = Vector2(defender.pos - attacker.pos)
-		if abs(diff.x) > abs(diff.y) * 2: sym = "-"
-		elif abs(diff.y) > abs(diff.x) * 2: sym = "|"
-		elif diff.x * diff.y > 0: sym = "\\"
-		else: sym = "/"
-	
-	var projectile = {
-		"pos": Vector2(attacker.pos),
-		"target_pos": Vector2(defender.pos),
-		"symbol": sym,
-		"attacker": attacker,
-		"defender": defender,
-		"forced_part": forced_part,
-		"attack_idx": attack_idx,
-		"speed": 35.0, # Increased speed for smoother frame-by-frame visibility
-		"mode": mode,
-		"traveled": 0.0
-	}
-	
-	for k in p_data:
-		projectile[k] = p_data[k]
-		
+	var projectile = combat.spawn_projectile(attacker, defender, forced_part, attack_idx, mode)
 	projectiles.append(projectile)
 
 func resolve_complex_damage(attacker, defender, forced_part = "", attack_idx = 0):
-	# Siege Engine Physics Integration
-	var res = {}
-	if attacker.is_siege_engine:
-		res = GameData.resolve_engine_damage(attacker.engine_type, defender, GameState.rng)
-		# Siege engines break the formation's bracing upon impact
-		if defender.formation_id != -1:
-			var b = battalions.get(defender.formation_id)
-			if b and b.get("is_braced", false):
-				b["is_braced"] = false
-				if battle_debug_enabled:
-					add_log("[color=red]DEBUG: FORMATION %d BRACING BROKEN BY %s[/color]" % [defender.formation_id, attacker.engine_type.to_upper()])
-	else:
-		var sw_bonus = _get_shield_wall_bonus(defender)
-		res = GameData.resolve_attack(attacker, defender, GameState.rng, forced_part, attack_idx, sw_bonus)
-	
-	# Weapon / Attacker Name Construction
-	var wpn = attacker.equipment["main_hand"]
-	var wpn_part = "fists"
-	var is_plural = true
-	if wpn:
-		var ammo = attacker.equipment.get("ammo")
-		if wpn.get("is_ranged", false) and ammo:
-			wpn_part = ammo.get("name", "arrow")
-		else:
-			var mat = wpn.get("material", "").capitalize()
-			var w_name = wpn.get("name", "weapon")
-			if w_name.begins_with(mat):
-				wpn_part = w_name
-			else:
-				wpn_part = (mat + " " + w_name).strip_edges()
-		is_plural = false
-	
-	var wpn_owner = ""
-	if attacker.name == "You":
-		wpn_owner = "Your %s" % wpn_part
-	else:
-		wpn_owner = "The %s's %s" % [attacker.name, wpn_part]
-
-	if not res["hit"]:
-		var miss_color = "green" if attacker.team == "player" else "red"
-		var is_ranged = wpn.get("is_ranged", false) if wpn else false
-		var miss_verb = "misses" if not is_plural else "miss"
-		var action_verb = "flies wide" if is_ranged else "swings wide"
-		add_log("[color=%s]%s %s and %s %s![/color]" % [miss_color, wpn_owner, action_verb, miss_verb, defender.name])
-		return
-
-	if res["blocked"]:
-		var block_color = "green" if defender.team == "player" else "red"
-		add_log("[color=%s]%s raises their %s and deflects the blow![/color]" % [block_color, defender.name, res["shield_name"]])
-		return
-
-	# Main Hit Log
-	var log_color = "green" if attacker.team == "player" else "red"
-	var part_display = "[color=yellow]%s[/color]" % res["part_hit"]
-	
-	# Determine descriptive verb and action
-	var desc_verb = "hits"
-	var dt = res.get("dmg_type", "blunt")
-	var tissue = "skin"
-	if res["tissues_hit"].size() > 0:
-		tissue = res["tissues_hit"][-1]
-	
-	var armor_action = "deflected"
-	if dt == "blunt":
-		armor_action = "absorbed"
-		if tissue == "bone": desc_verb = "smashes"
-		elif tissue == "organ": desc_verb = "crushes"
-		else: desc_verb = "bashes"
-	elif dt == "pierce":
-		armor_action = "pierced"
-		if tissue == "bone": desc_verb = "pierces"
-		elif tissue == "organ": desc_verb = "punctures"
-		else: desc_verb = "stabs"
-	elif dt == "cut":
-		armor_action = "deflected"
-		if tissue == "bone": desc_verb = "hacks"
-		elif tissue == "organ": desc_verb = "cleaves"
-		else: desc_verb = "cuts"
-
-	var armor_desc = ""
-	if res["armor_layers"].size() > 0:
-		var top_armor = res["armor_layers"][-1]
-		armor_desc = " (partially %s by the [i]%s[/i])" % [armor_action, top_armor]
-	
-	var final_verb = desc_verb
-	if is_plural:
-		match final_verb:
-			"hits": final_verb = "hit"
-			"smashes": final_verb = "smash"
-			"punctures": final_verb = "puncture"
-			"cuts": final_verb = "cut"
-			"bashes": final_verb = "bash"
-			"crushes": final_verb = "crush"
-			"pierces": final_verb = "pierce"
-			"stabs": final_verb = "stab"
-			"hacks": final_verb = "hack"
-			"cleaves": final_verb = "cleave"
-	
-	# Descriptive tissue impact
-	var impact_desc = ""
-	match tissue:
-		"skin":
-			if dt == "cut": impact_desc = "nicking the skin"
-			elif dt == "pierce": impact_desc = "puncturing the skin"
-			else: impact_desc = "bruising the skin"
-		"fat":
-			if dt == "cut": impact_desc = "slicing into the fat"
-			elif dt == "pierce": impact_desc = "stabbing the fat"
-			else: impact_desc = "bruising the fat"
-		"muscle":
-			if dt == "cut": impact_desc = "tearing through the muscle"
-			elif dt == "pierce": impact_desc = "puncturing the muscle"
-			else: impact_desc = "bruising the muscle"
-		"bone":
-			if dt == "cut": impact_desc = "hacking the bone"
-			elif dt == "pierce": impact_desc = "piercing the bone"
-			else: impact_desc = "shattering the bone"
-		"organ":
-			if dt == "cut": impact_desc = "cleaving the organ"
-			elif dt == "pierce": impact_desc = "puncturing the organ"
-			else: impact_desc = "rupturing the organ"
-		"tendon": 
-			impact_desc = "tearing the tendon" if dt != "blunt" else "crushing the tendon"
-		"nerve": 
-			impact_desc = "shredding the nerve" if dt != "blunt" else "compressing the nerve"
-
-	var log_msg = "[color=%s]%s %s %s's %s, %s%s![/color]" % [log_color, wpn_owner, final_verb, defender.name, part_display, impact_desc, armor_desc]
-	if res["final_dmg"] > 0:
-		log_msg += " [color=yellow](-%d HP)[/color]" % res["final_dmg"]
-	add_log(log_msg)
-
-	# Log Critical Events
-	for event in res["critical_events"]:
-		match event:
-			"artery_severed":
-				add_log("[color=red]  [CRITICAL] An artery in the %s has been severed! Blood sprays![/color]" % res["part_hit"])
-			"vein_opened":
-				add_log("[color=red]  A major vein in the %s has been opened![/color]" % res["part_hit"])
-			"tendon_snapped":
-				add_log("[color=orange]  [CRITICAL] The tendon in the %s snaps with a sickening pop![/color]" % [res["part_hit"]])
-			"nerve_destroyed":
-				add_log("[color=red]  [CRITICAL] The nerve in the %s is shredded, leaving it limp![/color]" % [res["part_hit"]])
-			"bone_fractured":
-				add_log("[color=orange]  [CRITICAL] The bone in the %s shatters under the impact![/color]" % [res["part_hit"]])
-			"brain_destroyed":
-				add_log("[color=red]  [FATAL] The brain is pulverized! %s dies instantly![/color]" % defender.name)
-			"heart_burst":
-				add_log("[color=red]  [FATAL] The heart is burst! %s's life-blood sprays![/color]" % defender.name)
-			"eye_gouged":
-				add_log("[color=red]  [CRITICAL] %s's eye is gouged out, leaving a bloody socket![/color]" % defender.name)
-			"decapitated":
-				add_log("[color=red]  [FATAL] %s's head is completely severed from their body![/color]" % defender.name)
-			"part_destroyed":
-				add_log("[color=red]  [FATAL] The %s is completely obliterated![/color]" % [res["part_hit"]])
-		
-		if event.begins_with("organ_failure:"):
-			var organ_name = event.split(":")[1]
-			add_log("[color=red]  [FATAL] The %s has failed! %s's life fades...[/color]" % [organ_name, defender.name])
-
-	if res["downed_occurred"]:
-		add_log("[color=orange]  %s collapses from the agonizing pain![/color]" % defender.name)
-	
-	if res["prone_occurred"]:
-		add_log("[color=orange]  %s is knocked violently to the ground![/color]" % defender.name)
-
-	if (defender.status["is_dead"] or defender.status["is_downed"]) and unit_lookup.has(defender.pos):
-		# Non-lethal intercept for tournaments
-		if is_tournament and defender.status["is_dead"]:
-			defender.status["is_dead"] = false
-			defender.status["is_downed"] = true
-			add_log("[color=yellow]The fight is stopped! %s has been knocked out.[/color]" % defender.name)
-
-		unregister_unit(defender)
-		if defender == player_unit:
-			if defender.status["is_dead"]: add_log("[color=red][b]YOU HAVE DIED.[/b][/color]")
-			else: add_log("[color=orange][b]YOU HAVE BEEN KNOCKED UNCONSCIOUS.[/b][/color]")
-			add_log("[color=cyan]Tactical Mode: You can no longer move, but you can still issue orders.[/color]")
-	
-	for msg in GameData.check_functional_integrity(defender):
-		add_log("  " + msg)
-	
-	return res
+	return combat.resolve_complex_damage(attacker, defender, forced_part, attack_idx, battalions, is_tournament, battle_debug_enabled, add_log, _get_shield_wall_bonus, unregister_unit, player_unit)
 
 
 func resolve_aoe_damage(attacker, pos: Vector2i, radius: int, engine_data: Dictionary):
-	add_log("[color=orange]  The %s impact creates a massive shockwave![/color]" % engine_data["name"])
-	
-	var victims = []
-	# Check a box around the impact
-	for dy in range(-radius, radius + 1):
-		for dx in range(-radius, radius + 1):
-			var target_pos = pos + Vector2i(dx, dy)
-			if unit_lookup.has(target_pos):
-				var victim = unit_lookup[target_pos]
-				if victim.hp > 0 and not victim in victims:
-					victims.append(victim)
-	
-	for victim in victims:
-		# AOE damage is slightly lower than direct hit but hits everyone
-		# Find distance to closest point of victim
-		var dist = 9999.0
-		for offset in victim.footprint:
-			# Vector2i has distance_to - no need to convert to Vector2
-			dist = min(dist, pos.distance_to(victim.pos + offset))
-			
-		var fallout = 1.0 - (dist / (radius + 1.0))
-		if fallout > 0:
-			# We simulate a "blunt" impact for AOE
-			resolve_complex_damage(attacker, victim, "torso", 0)
+	combat.resolve_aoe_damage(attacker, pos, radius, engine_data, unit_lookup, resolve_complex_damage, add_log)
 
 func _find_unit_along_line(start_pos: Vector2, dir: Vector2, max_dist: float, exclude: Array) -> GDUnit:
-	for i in range(1, int(max_dist)):
-		var check_pos = Vector2i(start_pos + (dir * i))
-		if unit_lookup.has(check_pos):
-			var u = unit_lookup[check_pos]
-			if u.hp > 0 and not u in exclude:
-				return u
-	return null
+	return physics.find_unit_along_line(start_pos, dir, max_dist, exclude)
 
 
 func is_in_bounds(pos):
-	return pos.x >= 0 and pos.x < MAP_W and pos.y >= 0 and pos.y < MAP_H
+	return physics.is_in_bounds(pos)
 
 func _find_spawn_pos(target: Vector2i) -> Vector2i:
 	if not is_in_bounds(target): return target
@@ -1653,157 +710,17 @@ func _find_spawn_pos(target: Vector2i) -> Vector2i:
 	return target # Should not happen usually
 
 func _create_battalion(troop_list, team, b_type, pivot_pos, uid_start):
-	var b_id = battalion_uid
-	battalion_uid += 1
-	var b = {
-		"team": team, 
-		"type": b_type, 
-		"pivot": Vector2(pivot_pos), 
-		"is_braced": false,
-		"target_pos": Vector2(pivot_pos),
-		"target_id": -1,
-		"order": "ADVANCE"
-	}
-	battalions[b_id] = b
-	
-	var current_uid = uid_start
-	var width = 10 # 10 Rows (Vertical)
-	
-	for i in range(troop_list.size()):
-		var rank = i / width # Columns (Horizontal depth)
-		var file = i % width # Rows (Vertical index)
-		
-		# Close formation
-		var spacing = 1
-		if b_type == "siege_engine":
-			spacing = 6 # Reduced from 6 for better cohesion
-		
-		var dx = (-rank if team == "player" else rank) * spacing
-		var dy = (file - (width / 2)) * spacing 
-		
-		var offset = Vector2i(dx, dy)
-		var pos = _find_spawn_pos(Vector2i(b.pivot) + offset)
-		
-		var u = create_unit(current_uid, troop_list[i], team, pos, b_id, offset)
-		units.append(u)
-		register_unit(u)
-		current_uid += 1
-		
-		# Auto-spawn crew for siege engines if not in siege mode
-		if u.is_siege_engine:
-			var req = u.engine_stats.get("crew_required", 2)
-			for j in range(req):
-				var c_pos = _find_spawn_pos(u.pos + Vector2i(randi_range(-1, 1), randi_range(-1, 1)))
-				var c_data = GameData.generate_unit("laborer", u.tier)
-				var crew = create_unit(current_uid, c_data, team, c_pos, b_id)
-				crew.assigned_engine_id = u.id
-				crew.symbol = "e" # Engine Crew
-				u.crew_ids.append(crew.id)
-				units.append(crew)
-				register_unit(crew)
-				current_uid += 1
-	return current_uid
+	return siege.create_battalion(troop_list, team, b_type, pivot_pos, uid_start, battalions, units, create_unit, register_unit, _find_spawn_pos)
 
 func spawn_siege_units():
-	var uid = 0
-	var center_y = MAP_H / 2
-	
-	# 1. Distribute Attackers (Player)
-	var roster = GameState.player.roster
-	var att_inf = []
-	var att_arc = []
-	var att_siege = []
-	var att_cav = []
-	
-	for troop in roster:
-		if troop.type == "siege_engine": att_siege.append(troop)
-		elif troop.type == "archer": att_arc.append(troop)
-		elif troop.type == "cavalry": att_cav.append(troop)
-		else: att_inf.append(troop)
-		
-	# Attackers spawn on the far left (assuming city is central)
-	uid = _create_battalion(att_siege, "player", "siege_engine", Vector2i(15, center_y), uid)
-	uid = _create_battalion(att_inf, "player", "infantry", Vector2i(10, center_y), uid)
-	uid = _create_battalion(att_arc, "player", "archer", Vector2i(5, center_y), uid)
-	uid = _create_battalion(att_cav, "player", "cavalry", Vector2i(5, center_y - 20), uid)
-	
-	# Player Commander
-	var p_cmd_pos = _find_spawn_pos(Vector2i(12, center_y))
-	player_unit = create_unit(uid, GameState.player.commander, "player", p_cmd_pos)
-	units.append(player_unit)
-	register_unit(player_unit)
-	uid += 1
-
-	# 2. Distribute Defenders (Enemy)
-	var e_roster = enemy_ref.roster
-	var def_inf = []
-	var def_arc = []
-	
-	for troop in e_roster:
-		if troop.type == "archer": def_arc.append(troop)
-		else: def_inf.append(troop)
-	
-	# Find fortification positions
-	var towers = siege_data.get("towers", [])
-	var walls = siege_data.get("wall_segments", [])
-	var gates = siege_data.get("gates", [])
-	var keep_pos = siege_data.get("keep_pos", Vector2i(MAP_W - 10, center_y))
-	
-	if towers.is_empty():
-		for wy in range(MAP_H):
-			for wx in range(MAP_W):
-				var tile = grid[wy][wx]
-				if tile == "T": towers.append(Vector2i(wx, wy))
-				elif tile == "#": walls.append(Vector2i(wx, wy))
-				elif tile == "G": gates.append(Vector2i(wx, wy))
-				elif tile == "K": keep_pos = Vector2i(wx, wy)
-	
-	# Place Archers on Towers
-	for t_pos in towers:
-		if def_arc.is_empty(): break
-		var u = create_unit(uid, def_arc.pop_back(), "enemy", t_pos)
-		units.append(u)
-		register_unit(u)
-		uid += 1
-	
-	# Place remaining Archers on Walls (spread out)
-	var wall_step = 3
-	for i in range(0, walls.size(), wall_step):
-		if def_arc.is_empty(): break
-		var u = create_unit(uid, def_arc.pop_back(), "enemy", walls[i])
-		units.append(u)
-		register_unit(u)
-		uid += 1
-		
-	# Place Infantry at Gates
-	for g_pos in gates:
-		if def_inf.is_empty(): break
-		var spawn_p = _find_spawn_pos(g_pos + Vector2i(1, 0)) # Inside gate
-		var u = create_unit(uid, def_inf.pop_back(), "enemy", spawn_p)
-		units.append(u)
-		register_unit(u)
-		uid += 1
-		
-	# Place Enemy Leader and rest of Infantry at Keep
-	var leader = enemy_ref.get("commander", e_roster[0])
-	var u_leader = create_unit(uid, leader, "enemy", keep_pos)
-	units.append(u_leader)
-	register_unit(u_leader)
-	uid += 1
-	
-	while not def_inf.is_empty():
-		var p = _find_spawn_pos(keep_pos + Vector2i(randi_range(-2, 2), randi_range(-2, 2)))
-		var u = create_unit(uid, def_inf.pop_back(), "enemy", p)
-		units.append(u)
-		register_unit(u)
-		uid += 1
+	player_unit = siege.spawn_siege_units(enemy_ref, siege_data, grid, units, battalions, MAP_W, MAP_H, create_unit, register_unit, _find_spawn_pos)
 
 func spawn_units():
 	units = []
 	unit_lookup.clear()
 	spatial_grid.clear()
 	battalions.clear()
-	battalion_uid = 0
+	siege.battalion_uid = 0
 	
 	if is_siege and siege_data:
 		spawn_siege_units()
@@ -2265,242 +1182,19 @@ func create_unit(id, data, team, pos, f_id = -1, f_offset = Vector2i.ZERO):
 
 
 func generate_map():
-	# Lazy generation via get_tile() will handle it, but we pre-spawn the starting area
+	# Siege mode uses pre-built map
 	if is_siege and siege_data:
-		grid = siege_data.grid.duplicate(true)
+		physics.grid = siege_data.grid.duplicate(true)
 		return
 	
-	if grid.size() != MAP_H:
+	if physics.grid.size() != MAP_H:
 		initialize_grid()
 	
-	var center = Vector2i(MAP_W/2, MAP_H/2)
-	var start_cx = (center.x - 100) / CHUNK_SIZE
-	var end_cx = (center.x + 100) / CHUNK_SIZE
-	var start_cy = (center.y - 100) / CHUNK_SIZE
-	var end_cy = (center.y + 100) / CHUNK_SIZE
-	
-	for cy in range(start_cy, end_cy + 1):
-		for cx in range(start_cx, end_cx + 1):
-			_generate_chunk(Vector2i(cx, cy))
+	# Delegate to terrain system
+	terrain.generate_initial_area(physics.grid, physics.generated_chunks, physics.structural_cache, _generate_chunk)
 
 func _generate_chunk(chunk_pos: Vector2i):
-	if chunk_pos in generated_chunks: return
-	if chunk_pos.x < 0 or chunk_pos.x >= (MAP_W/CHUNK_SIZE) or chunk_pos.y < 0 or chunk_pos.y >= (MAP_H/CHUNK_SIZE): return
-	
-	generated_chunks[chunk_pos] = true
-	var gs = GameState
-	var p_pos = gs.player.pos
-	var l_off = gs.local_offset
-	
-	var world_tile = gs.grid[p_pos.y][p_pos.x] # Default world tile
-	var local_rng = RandomNumberGenerator.new()
-	var noise = FastNoiseLite.new()
-	noise.seed = (p_pos.x * 73856093) ^ (p_pos.y * 19349663)
-	noise.frequency = 0.08
-
-	var neighborhood = {} 
-	var default_geo = {"elevation": 0.5, "temp": 0.5, "rain": 0.5}
-	for dy in range(-1, 2):
-		for dx in range(-1, 2):
-			var w_pos_n = p_pos + Vector2i(dx, dy)
-			if w_pos_n.x < 0 or w_pos_n.x >= gs.width or w_pos_n.y < 0 or w_pos_n.y >= gs.height:
-				w_pos_n = p_pos
-			var geo = gs.geology.get(w_pos_n, default_geo)
-			neighborhood[Vector2i(dx, dy)] = geo
-
-	var center_wx = l_off.x / gs.WORLD_TILE_SIZE - 0.5
-	var center_wy = l_off.y / gs.WORLD_TILE_SIZE - 0.5
-	
-	var is_river = (world_tile == "~" or world_tile == "≈")
-	var has_road = (world_tile == "=" or world_tile == "/" or world_tile == "\\")
-	
-	# IMPROVEMENT: Road/River Continuity Neighbors
-	var neighbors_road = [false, false, false, false] # N, E, S, W
-	var neighbors_river = [false, false, false, false]
-	for idx in range(4):
-		var dir = [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT][idx]
-		var n_wpos = p_pos + dir
-		if n_wpos.x >= 0 and n_wpos.x < gs.width and n_wpos.y >= 0 and n_wpos.y < gs.height:
-			var n_char = gs.grid[n_wpos.y][n_wpos.x]
-			if n_char in ["=", "/", "\\"]: neighbors_road[idx] = true
-			if n_char in ["~", "≈"]: neighbors_river[idx] = true
-
-	for ly in range(chunk_pos.y * CHUNK_SIZE, (chunk_pos.y + 1) * CHUNK_SIZE):
-		for lx in range(chunk_pos.x * CHUNK_SIZE, (chunk_pos.x + 1) * CHUNK_SIZE):
-			if lx < 0 or lx >= MAP_W or ly < 0 or ly >= MAP_H: continue
-			
-			var m_off_x = (lx - (MAP_W/2.0)) * gs.METERS_PER_LOCAL_TILE
-			var m_off_y = (ly - (MAP_H/2.0)) * gs.METERS_PER_LOCAL_TILE
-			
-			var wv_x = center_wx + (m_off_x / gs.WORLD_TILE_SIZE)
-			var wv_y = center_wy + (m_off_y / gs.WORLD_TILE_SIZE)
-			
-			var interp_e = _interp_neighborhood(neighborhood, "elevation", wv_x, wv_y)
-			var interp_t = _interp_neighborhood(neighborhood, "temp", wv_x, wv_y)
-			var interp_r = _interp_neighborhood(neighborhood, "rain", wv_x, wv_y)
-			
-			# Simulator Flat Map Override
-			var is_sim = false
-			if enemy_ref is Dictionary and enemy_ref.get("name") == "Simulator Rivals":
-				is_sim = true
-			elif enemy_ref is GDArmy and enemy_ref.name == "Simulator Rivals":
-				is_sim = true
-				
-			if is_sim:
-				interp_e = 0.5
-				interp_r = 0.4
-				interp_t = 0.5
-			
-			var abs_x = p_pos.x * gs.WORLD_TILE_SIZE + l_off.x + m_off_x
-			var abs_y = p_pos.y * gs.WORLD_TILE_SIZE + l_off.y + m_off_y
-			var detail = noise.get_noise_2d(abs_x, abs_y) * 0.05
-			
-			if is_sim: detail = 0.0 # Perfectly flat for sim
-			
-			var final_e = interp_e + detail
-			
-			var tile = "."
-			var veg_roll = local_rng.randf()
-			
-			if final_e < 0.35: tile = "~"
-			elif final_e > 0.65: tile = "^"
-			elif final_e > 0.50: tile = "o"
-			else:
-				if interp_r > 0.7 and interp_t > 0.6 and veg_roll > 0.7: tile = "&" 
-				elif interp_r > 0.5 and veg_roll > 0.8: tile = "T" 
-				elif interp_r < 0.2 and interp_t > 0.7: tile = "\"" 
-				elif interp_t < 0.3: tile = "*" 
-			
-			var biome = "plains"
-			if interp_r > 0.7 and interp_t > 0.6: biome = "jungle"
-			elif interp_r > 0.5: biome = "forest"
-			elif interp_r < 0.2 and interp_t > 0.7: biome = "desert"
-			elif interp_t < 0.3: biome = "plains" # Mountain/Tundra can use plains table for now
-			
-			var l_norm = Vector2(wv_x * 2.0, wv_y * 2.0)
-			
-			# CONTINUITY RENDERING
-			if is_river:
-				var river_width = 0.3
-				var in_river = false
-				if l_norm.length() < river_width: in_river = true
-				if neighbors_river[0] and wv_x > -river_width and wv_x < river_width and wv_y < 0: in_river = true
-				if neighbors_river[1] and wv_y > -river_width and wv_y < river_width and wv_x > 0: in_river = true
-				if neighbors_river[2] and wv_x > -river_width and wv_x < river_width and wv_y > 0: in_river = true
-				if neighbors_river[3] and wv_y > -river_width and wv_y < river_width and wv_x < 0: in_river = true
-				if in_river: tile = "~"
-				
-			if has_road and tile != "~":
-				var road_width = 0.08
-				var in_road = false
-				if l_norm.length() < road_width: in_road = true
-				if neighbors_road[0] and wv_x > -road_width and wv_x < road_width and wv_y < 0: in_road = true
-				if neighbors_road[1] and wv_y > -road_width and wv_y < road_width and wv_x > 0: in_road = true
-				if neighbors_road[2] and wv_x > -road_width and wv_x < road_width and wv_y > 0: in_road = true
-				if neighbors_road[3] and wv_y > -road_width and wv_y < road_width and wv_x < 0: in_road = true
-				if in_road: tile = "+"
-			
-			var abs_cell_x = int(abs_x / 2.0)
-			var abs_cell_y = int(abs_y / 2.0)
-			var cell_hash = (abs_cell_x * 73856093) ^ (abs_cell_y * 19349663)
-			var roll = (abs(cell_hash) % 10000) / 10000.0
-			
-			if tile in [".", "o", "t", "\""]:
-				var flora_list = FloraData.get_flora_for_biome(biome)
-				for f in flora_list:
-					if roll < f["chance"]:
-						tile = f["symbol"]
-						break
-			
-			var resource_type = gs.resources.get(p_pos, "")
-			if resource_type != "" and tile in [".", "o", "^", "\""]:
-				var res_roll = (abs(cell_hash ^ 999) % 1000) / 1000.0
-				if res_roll < 0.01:
-					tile = resource_type.substr(0, 1).to_upper()
-			
-			# Settlement logic 
-			for ny in range(-1, 2):
-				for nx in range(-1, 2):
-					var s_w_pos = p_pos + Vector2i(nx, ny)
-					if gs.settlements.has(s_w_pos):
-						var s = gs.settlements[s_w_pos]
-						var s_cx = s_w_pos.x * 1000.0 + 500.0
-						var s_cy = s_w_pos.y * 1000.0 + 500.0
-						var sdx = abs_x - s_cx
-						var sdy = abs_y - s_cy
-						var s_dist_c = Vector2(sdx, sdy).length()
-						var settlement_radius = clamp(50.0 + (s.population / 1000.0) * 40.0, 50.0, 480.0)
-						if s_dist_c < settlement_radius + 20.0:
-							var is_major = s.type in ["town", "city", "metropolis", "castle"]
-							var wall_lvl = s.buildings.get("wall", 0) 
-							if is_major and wall_lvl == 0 and s.tier >= 2: wall_lvl = 1
-							if wall_lvl > 0:
-								var wall_thick = 2.0 + (wall_lvl * 1.5)
-								if (abs(abs(sdx) - settlement_radius) < wall_thick or abs(abs(sdy) - settlement_radius) < wall_thick) and s_dist_c < settlement_radius + 5:
-									if not (abs(sdx) < 8.0 or abs(sdy) < 8.0):
-										tile = "#" if wall_lvl < 3 else "H"
-							var street_w = 2.5 + (s.tier * 0.5) 
-							if abs(sdx) < street_w or abs(sdy) < street_w:
-								if s_dist_c < settlement_radius + 10.0: tile = "+"
-							if s_dist_c < 12.0 + (s.tier * 4.0):
-								if s.buildings.get("keep", 0) > 0 or is_major: tile = "K"
-								else: tile = "o"
-							if tile == "." and s_dist_c < settlement_radius:
-								var b_h = (int(abs_x/20.0) * 73856093) ^ (int(abs_y/20.0) * 19349663)
-								var b_lx = fmod(abs_x, 20.0)
-								var b_ly = fmod(abs_y, 20.0)
-								var d_f = 1.0 - (s_dist_c / settlement_radius)
-								var occ = 10 + (d_f * 40.0)
-								if (abs(b_h) % 100) < occ:
-									if b_lx > 6.0 and b_lx < 14.0 and b_ly > 6.0 and b_ly < 14.0:
-										tile = "B" if is_major else "#" 
-			
-			grid[ly][lx] = tile
-			
-			# Cache structural targets (Optimization 5)
-			if tile in ["#", "H", "G", "K", "B"]:
-				if not structural_cache.has(tile):
-					structural_cache[tile] = []
-				structural_cache[tile].append(Vector2i(lx, ly))
-
-	# 6. Populate Fauna (Simplified Pass)
-	var biome_at_center = "plains"
-	var fauna_list = []
-	var fauna_table = FaunaData.get_fauna_table()
-	if fauna_table.has(biome_at_center): fauna_list = fauna_table.get(biome_at_center, [])
-	
-	if not fauna_list.is_empty():
-		var s_rng = RandomNumberGenerator.new()
-		s_rng.seed = (chunk_pos.x * 73856093) ^ (chunk_pos.y * 19349663)
-		for f in fauna_list:
-			if s_rng.randf() < f["chance"] * 0.1:
-				var num = s_rng.randi_range(f["herd_range"][0], f["herd_range"][1])
-				for i in range(num):
-					var gx = chunk_pos.x * CHUNK_SIZE + s_rng.randi_range(0, CHUNK_SIZE-1)
-					var gy = chunk_pos.y * CHUNK_SIZE + s_rng.randi_range(0, CHUNK_SIZE-1)
-					if gx >= 0 and gx < MAP_W and gy >= 0 and gy < MAP_H:
-						if grid[gy][gx] in [".", "o", "t", "\"", "*"]:
-							grid[gy][gx] = f["symbol"]
-
-func _interp_neighborhood(nb, key, wx, wy):
-	# Determine which 4 tiles to interp between
-	var x0 = -1 if wx < 0 else 0
-	var x1 = 0 if wx < 0 else 1
-	var y0 = -1 if wy < 0 else 0
-	var y1 = 0 if wy < 0 else 1
-	
-	# Local weights 0 to 1 between the two tiles
-	var tx = wx + 1.0 if wx < 0 else wx
-	var ty = wy + 1.0 if wy < 0 else wy
-	
-	var v00 = nb[Vector2i(x0, y0)].get(key, 0.5)
-	var v10 = nb[Vector2i(x1, y0)].get(key, 0.5)
-	var v01 = nb[Vector2i(x0, y1)].get(key, 0.5)
-	var v11 = nb[Vector2i(x1, y1)].get(key, 0.5)
-	
-	var top = lerp(v00, v10, tx)
-	var bot = lerp(v01, v11, tx)
-	return lerp(top, bot, ty)
+	terrain.generate_chunk(chunk_pos, physics.grid, physics.generated_chunks, physics.structural_cache, enemy_ref)
 
 func _dist_to_segment(p: Vector2, a: Vector2, b: Vector2) -> float:
 	var pa = p - a
@@ -2509,11 +1203,7 @@ func _dist_to_segment(p: Vector2, a: Vector2, b: Vector2) -> float:
 	return (pa - ba * h).length()
 
 func get_unit_at(p):
-	if unit_lookup.has(p):
-		var u = unit_lookup[p]
-		if u.hp > 0 and not u.status["is_downed"] and not u.status["is_dead"]:
-			return u
-	return null
+	return physics.get_unit_at(p)
 
 func end_battle(win):
 	active = false
@@ -2789,34 +1479,4 @@ func end_battle(win):
 	GameState.emit_signal("battle_ended", win)
 
 func _get_shield_wall_bonus(u) -> float:
-	if u.formation_id == -1 or not battalions.has(u.formation_id): return 0.0
-	var b = battalions[u.formation_id]
-	if not b.get("is_braced", false): return 0.0
-	
-	# Only infantry/archers can form a wall
-	if not u.type in ["infantry", "commander", "archer", "recruit"]: return 0.0
-	
-	# Check if unit has a shield
-	var off_hand = u.equipment.get("off_hand")
-	if not off_hand or off_hand.get("type") != "shield": return 0.0
-	
-	var bonus = 0.0
-	var my_offset = u.formation_offset
-	
-	# Check adjacency in the formation grid (sideways neighbors)
-	# 3x10 grid: 10 is the width (y-axis in formation_offset calculation)
-	var neighbors = [Vector2i(0, 1), Vector2i(0, -1)]
-	
-	for offset_dir in neighbors:
-		var target_offset = my_offset + offset_dir
-		
-		# Optimization: Instead of searching all units, we check absolute neighbor pos in unit_lookup
-		var n_abs_pos = Vector2i(Vector2(b.pivot) + Vector2(target_offset))
-		var other = unit_lookup.get(n_abs_pos)
-		
-		if other and other.hp > 0 and other.formation_id == u.formation_id:
-			var other_shield = other.equipment.get("off_hand")
-			if other_shield and other_shield.get("type") == "shield":
-				bonus += 0.15 # 15% block bonus per shielded neighbor
-					
-	return bonus
+	return ai.get_shield_wall_bonus(u, battalions, unit_lookup)

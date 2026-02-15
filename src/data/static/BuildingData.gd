@@ -1,0 +1,293 @@
+class_name BuildingData
+extends RefCounted
+
+# Settlement buildings: industry, military, and civil infrastructure
+# Extracted from GameData.gd for better modularity
+
+const BUILDINGS = {
+	# --- INDUSTRY (The Engine) ---
+	"farm": {
+		"category": "industry",
+		"cost": 500, "labor": 500, "tier": 1, 
+		"desc": "Increases grain yield by 50% per level.",
+		"levels": {
+			1: {"name": "Fields", "flavor": "Basic grain production from tilled earth."},
+			2: {"name": "Granary Extension", "flavor": "Raised floors protect the harvest from rats and rot."},
+			4: {"name": "Three-Field System", "flavor": "Crop rotation ensures the soil never sleeps."},
+			6: {"name": "Irrigation Network", "flavor": "Canals bring life even in the driest summer."},
+			8: {"name": "Plantation", "flavor": "Vast monocultures dedicated to efficiency."},
+			10: {"name": "Agricultural Revolution", "flavor": "The land yields bounties undreamt of by our ancestors."}
+		}
+	},
+	"lumber_mill": {
+		"category": "industry",
+		"cost": 800, "labor": 800, "tier": 1, 
+		"desc": "Increases wood yield by 100% per level.",
+		"levels": {
+			1: {"name": "Woodcutter's Camp", "flavor": "The sound of axes rings through the trees."},
+			3: {"name": "Sawmill", "flavor": "Water-driven blades slice timber effortlessly."},
+			7: {"name": "Logging Empire", "flavor": "Entire forests are processed into fleets and cities."},
+			10: {"name": "The Great Arboretum", "flavor": "We do not just harvest nature; we master it."}
+		}
+	},
+	"fishery": {
+		"category": "industry",
+		"cost": 600, "labor": 600, "tier": 1, 
+		"desc": "Increases fish yield by 50% per level.",
+		"levels": {
+			1: {"name": "Fishing Huts", "flavor": "Simple piers and nets for the local catch."},
+			3: {"name": "Fishmonger's Row", "flavor": "A bustling market for cleaning and salting the harvest."},
+			6: {"name": "Deep Sea Fleet", "flavor": "Sturdy boats that can handle the open waves for weeks."},
+			10: {"name": "The Great Harbor", "flavor": "The sea is our larder; we take what we please."}
+		}
+	},
+	"mine": {
+		"category": "industry",
+		"cost": 1500, "labor": 1500, "tier": 1, 
+		"desc": "Increases stone/ore yield by 50% per level.",
+		"levels": {
+			1: {"name": "Surface Quarry", "flavor": "Extracting the easiest stones from the hillside."},
+			3: {"name": "Shaft Mine", "flavor": "Vertical shafts reach for deeper veins of iron and copper."},
+			5: {"name": "Drainage Pumps", "flavor": "Clearing flooded tunnels to reach the deepest riches."},
+			8: {"name": "Pillared Gallery", "flavor": "Intricate subterranean networks of hauling and extraction."},
+			10: {"name": "Under-Kingdom", "flavor": "Total mastery of the earth. The mountains are hollowed and bled dry."}
+		}
+	},
+	"pasture": {
+		"category": "industry",
+		"cost": 700, "labor": 700, "tier": 1, 
+		"desc": "Increases wool/hide/meat yield by 50% per level.",
+		"levels": {
+			1: {"name": "Grazing Land", "flavor": "Basic fenced areas for herds to wander."},
+			3: {"name": "Shearing Sheds", "flavor": "Dedicated spaces for processing wool and hides."},
+			6: {"name": "Breeding Stables", "flavor": "Selective breeding results in larger, hardier livestock."},
+			10: {"name": "The King's Ranch", "flavor": "Endless herds stretching to the horizon."}
+		}
+	},
+	
+	"blacksmith": {
+		"category": "industry",
+		"cost": 2000, "labor": 2000, "tier": 2, 
+		"desc": "Increases steel production efficiency by 100% per level.",
+		"levels": {
+			1: {"name": "Village Smithy", "flavor": "A single anvil rings out, forging horseshoes and spearheads."},
+			3: {"name": "Ironworks", "flavor": "Several fires burn constantly, churning out ingots."},
+			5: {"name": "Foundry", "flavor": "Liquid metal flows into molds day and night."},
+			7: {"name": "Blast Furnace", "flavor": "Massive bellows pump air into towers of flame."},
+			10: {"name": "The Vulcan Complex", "flavor": "The sky is black with soot. This place births armies."}
+		}
+	},
+	"tannery": {
+		"category": "industry",
+		"cost": 2500, "labor": 1500, "tier": 2, 
+		"desc": "Increases leather production efficiency by 100% per level.",
+		"levels": {
+			1: {"name": "Tanner's Yard", "flavor": "The smell of urea and curing hide is unmistakable."},
+			5: {"name": "Refining Vats", "flavor": "Advanced chemical washes produce softer, stronger leathers."},
+			10: {"name": "Imperial Leatherworks", "flavor": "Supplying the saddles and armor of a thousand knights."}
+		}
+	},
+	"weaver": {
+		"category": "industry",
+		"cost": 2500, "labor": 1500, "tier": 2, 
+		"desc": "Increases cloth production efficiency by 100% per level.",
+		"levels": {
+			1: {"name": "Loom Room", "flavor": "Wooden looms click-clack as thread becomes cloth."},
+			5: {"name": "Textile Mill", "flavor": "Coordinated looms and dyeing vats produce vast quantities of fabric."},
+			10: {"name": "The Tapestry Master", "flavor": "Fabrics so fine they are traded for their weight in silver."}
+		}
+	},
+	"brewery": {
+		"category": "industry",
+		"cost": 3000, "labor": 1500, "tier": 2, 
+		"desc": "Increases ale production efficiency by 100% per level.",
+		"levels": {
+			1: {"name": "Small Batch Fermenter", "flavor": "Vats of bubbling mash produce thick, dark ale."},
+			5: {"name": "Distillery", "flavor": "Pipes and barrels for mass fermentation and aging."},
+			10: {"name": "The Celestial Keg", "flavor": "Known across the world; a sip can make a pauper feel like a king."}
+		}
+	},
+	"tailor": {
+		"category": "industry",
+		"cost": 3500, "labor": 1800, "tier": 2, 
+		"desc": "Increases garment production efficiency by 100% per level.",
+		"levels": {
+			1: {"name": "Seamstress Shop", "flavor": "Repairing tunics and sewing basic shirts."},
+			5: {"name": "Clothier Guild", "flavor": "The town's elite come here for custom doublets and gowns."},
+			10: {"name": "High Fashion House", "flavor": "Dictating the style of the entire kingdom's court."}
+		}
+	},
+	"goldsmith": {
+		"category": "industry",
+		"cost": 8000, "labor": 3000, "tier": 3, 
+		"desc": "Increases jewelry production efficiency by 100% per level.",
+		"levels": {
+			1: {"name": "Jeweler's Bench", "flavor": "Setting small stones into copper rings."},
+			5: {"name": "Artisan's Workshop", "flavor": "Fine gold wire and precious gems are crafted into masterworks."},
+			10: {"name": "The Royal Treasury Shop", "flavor": "Only Emperors and Gods can afford these creations."}
+		}
+	},
+
+	# --- DEFENSE (The Shield) ---
+	"stone_walls": {
+		"category": "military",
+		"cost": 5000, "labor": 5000, "tier": 2, 
+		"desc": "Increases settlement defense, reducing damage to garrison and hindering attackers.",
+		"levels": {
+			1: {"name": "Palisade", "flavor": "Sharpened wooden stakes to deter the wolves and bandits."},
+			2: {"name": "Reinforced Gate", "flavor": "Iron-banded oak that can withstand many a ramming."},
+			3: {"name": "Watch Towers", "flavor": "High vantage points for archers to fire down upon the foe."},
+			4: {"name": "Machicolations", "flavor": "Opening in the floor to drop stones and boiling oil."},
+			5: {"name": "Stone Curtain Wall", "flavor": "Huge granite blocks that shrug off fire and axe alike."},
+			6: {"name": "Merlons & Battlements", "flavor": "Crenelated walls to provide cover for the defenders."},
+			7: {"name": "Wall-Mounted Balistas", "flavor": "Black-bolt engines capable of skewering knights and horses."},
+			8: {"name": "Great Keep", "flavor": "A final redoubt where the garrison can retreat and regroup."},
+			9: {"name": "Moat & Drawbridge", "flavor": "Water and depth. The ultimate bottleneck for any army."},
+			10: {"name": "The Star Fort", "flavor": "A geometric masterpiece of killing zones. To attack is suicide."}
+		}
+	},
+	"barracks": {
+		"category": "military",
+		"cost": 5000, "labor": 2500, "tier": 2, 
+		"desc": "Increases garrison capacity, recruitment volume (Odds) and troop quality (Evens).",
+		"levels": {
+			1: {"name": "Muster Field", "flavor": "A muddy field where peasants learn to hold a spear. Increased muster volume."},
+			2: {"name": "Drill Square", "flavor": "Strict sergeants bark orders. Unlocks Tier 2 Trained soldiers."},
+			3: {"name": "Garrison Quarters", "flavor": "Soldiers live here full-time. Even greater muster capacity."},
+			4: {"name": "Sergeant's Mess", "flavor": "Veteran discipline. Unlocks Tier 3 Men-at-Arms."},
+			5: {"name": "Training Hall", "flavor": "A dedicated facility for the local levy. Massive muster capacity."},
+			6: {"name": "Veteran Lodge", "flavor": "The air smells of old leather. Unlocks Tier 4 Veteran soldiers."},
+			7: {"name": "Military District", "flavor": "Entire city blocks dedicated to the march. Imperial muster volume."},
+			8: {"name": "Officer's Academy", "flavor": "War is studied as a science. Unlocks Tier 5 Royal Guards."},
+			9: {"name": "War Room", "flavor": "Planning for global conquest. Maximum muster capacity."},
+			10: {"name": "Citadel of Marshals", "flavor": "The pinnacle of military might. Elite quality and quantity."}
+		}
+	},
+	"training_ground": {
+		"category": "military",
+		"cost": 4000, "labor": 2000, "tier": 2, 
+		"desc": "Increases recruit quality/tier per level.",
+		"levels": {
+			1: {"name": "Training Field", "flavor": "Wooden swords and straw targets."},
+			5: {"name": "Combat Pit", "flavor": "Live sparring and combat maneuvers."},
+			10: {"name": "War College", "flavor": "Recruits leave as seasoned veterans before their first real battle."}
+		}
+	},
+	"granary": {
+		"category": "military",
+		"cost": 1200, "labor": 1000, "tier": 1, 
+		"desc": "Increases starvation resistance and food storage cap by 50% per level.",
+		"levels": {
+			1: {"name": "Food Cellar", "flavor": "Cold, dry storage for grain."},
+			4: {"name": "Raised Granary", "flavor": "Elevated structures keep pests away from the stockpile."},
+			10: {"name": "The Eternal Silo", "flavor": "Stored food can last through a decade-long siege."}
+		}
+	},
+	"watchtower": {
+		"category": "military",
+		"cost": 2000, "labor": 1200, "tier": 1, 
+		"desc": "Increases stability and reduces bandit loot success chance.",
+		"levels": {
+			1: {"name": "Lookout Post", "flavor": "A simple wooden platform with a bell."},
+			5: {"name": "Stone Beacon", "flavor": "Fires lit at the top can signal trouble for leagues."},
+			10: {"name": "The Vigilant Eye", "flavor": "Not a bird flies by without the tower's knowledge."}
+		}
+	},
+
+	# --- CIVIL (The Heart) ---
+	"housing_district": {
+		"cost": 1000, "labor": 800, "tier": 1, 
+		"desc": "Increases population capacity by 100 per level.",
+		"levels": {
+			1: {"name": "Thatched Cottages", "flavor": "Simple homes for simple folk."},
+			5: {"name": "Stone Tenements", "flavor": "Rows of sturdy buildings housing dozens of families."},
+			10: {"name": "The High District", "flavor": "Ornate villas and sprawling estates for a massive populace."}
+		}
+	},
+	
+	"market": {
+		"cost": 1000, "labor": 1200, "tier": 1, 
+		"desc": "Increases industrial slots and trade income.",
+		"levels": {
+			1: {"name": "Town Stalls", "flavor": "Farmers shouting prices over bushel baskets."},
+			3: {"name": "Tax Office", "flavor": "A grim building where the Lord's due is weighed and counted."},
+			6: {"name": "Guild Hall", "flavor": "Merchants meet behind closed doors to decide who gets rich."},
+			10: {"name": "The Grand Exchange", "flavor": "The gold of the world flows through these ledgers."}
+		}
+	},
+	"road_network": {
+		"cost": 1500, "labor": 1500, "tier": 1, 
+		"desc": "Increases trade throughput and tax efficiency by 15%.",
+		"levels": {
+			1: {"name": "Dirt Paths", "flavor": "Better than bush-whacking, but muddy in the rain."},
+			5: {"name": "Cobblestone Streets", "flavor": "Paved paths for carts and horses."},
+			10: {"name": "Imperial Highways", "flavor": "Straight, smooth roads built to last ages."}
+		}
+	},
+	"merchant_guild": {
+		"cost": 5000, "labor": 2000, "tier": 3, 
+		"desc": "Increases caravan capacity and global trade reach.",
+		"levels": {
+			1: {"name": "Local Chapterhouse", "flavor": "Where local traders talk shop."},
+			5: {"name": "National Registry", "flavor": "Coordinating trade across the entire kingdom."},
+			10: {"name": "World Trade Council", "flavor": "Controlling the flow of gold between continents."}
+		}
+	},
+	"warehouse_district": {
+		"cost": 3000, "labor": 1500, "tier": 2, 
+		"desc": "Increases total inventory storage limit by 100% per level.",
+		"levels": {
+			1: {"name": "Basement Storage", "flavor": "Extra space beneath the shops."},
+			5: {"name": "Port Warehouses", "flavor": "Massive sheds for sea-borne cargo."},
+			10: {"name": "The Great Vaults", "flavor": "Capable of holding the riches of a fallen empire."}
+		}
+	},
+	"cathedral": {
+		"cost": 8000, "labor": 5000, "tier": 3, 
+		"desc": "Massively increases stability and loyalty of the Nobility.",
+		"levels": {
+			1: {"name": "Sanctuary", "flavor": "A quiet place for prayer."},
+			4: {"name": "Basilica", "flavor": "Towering arches and stained glass."},
+			10: {"name": "The Seat of Divines", "flavor": "Where Kings are crowned and gods are said to walk."}
+		}
+	},
+	
+	"tavern": {
+		"cost": 800, "labor": 1000, "tier": 1, 
+		"desc": "Increases happiness and migration.",
+		"levels": {
+			1: {"name": "Alehouse", "flavor": "Cheap swill and loud songs."},
+			4: {"name": "Traveler's Inn", "flavor": "Warm beds attract sellswords from distant lands."},
+			7: {"name": "Bard's College", "flavor": "Songs are powerful. A good tune can make a tyrant look like a savior."},
+			10: {"name": "The Shadow Broker", "flavor": "The bartender knows everything. For the right price, so do you."}
+		}
+	}
+}
+
+const GEOLOGY_RESOURCES = {
+	"sedimentary": {
+		"iron": 0.04,
+		"coal": 0.08,
+		"lead": 0.05,
+		"clay": 0.12
+	},
+	"metamorphic": {
+		"copper": 0.03,
+		"silver": 0.06,
+		"marble": 0.09,
+		"tin": 0.07
+	},
+	"igneous": {
+		"gold": 0.02,
+		"gems": 0.05
+	}
+}
+
+static func get_buildings() -> Dictionary:
+	return BUILDINGS
+
+static func get_building(building_id: String) -> Dictionary:
+	return BUILDINGS.get(building_id, {})
+
+static func get_geology_resources() -> Dictionary:
+	return GEOLOGY_RESOURCES

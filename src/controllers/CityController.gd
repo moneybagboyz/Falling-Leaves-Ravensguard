@@ -322,10 +322,6 @@ func activate(s: GDSettlement, w_pos: Vector2i, w_seed: int):
 	blueprint = build_blueprint(s, w_seed)
 	_generate_tactical_from_blueprint(s)
 
-# Legacy wrapper for older signals
-func generate_from_settlement(s: GDSettlement):
-	activate(s, GameState.player.pos, GameState.world_seed)
-
 func generate_test_city():
 	active = true
 	city_name = "Test City"

@@ -109,7 +109,9 @@ func update_entities(entities: Dictionary, tile_set):
 	
 	last_entity_positions = entities.duplicate()
 
-func update_minimap(grid: Array, width: int, height: int):
+signal minimap_clicked(world_pos: Vector2i)
+
+func update_minimap(grid: Array, width: int, height: int, camera_pos: Vector2i = Vector2i.ZERO, visible_size: Vector2i = Vector2i.ZERO):
 	if not minimap:
 		return
 	
@@ -130,8 +132,53 @@ func update_minimap(grid: Array, width: int, height: int):
 				var color = _get_terrain_color(tile)
 				image.set_pixel(x, y, color)
 	
+	# Draw visible area rectangle if camera_pos provided
+	if visible_size.x > 0 and visible_size.y > 0:
+		var rect_x = camera_pos.x / sample_rate
+		var rect_y = camera_pos.y / sample_rate
+		var rect_w = visible_size.x / sample_rate
+		var rect_h = visible_size.y / sample_rate
+		
+		# Draw white border for visible area
+		for x in range(max(0, rect_x), min(mini_w, rect_x + rect_w)):
+			if rect_y >= 0 and rect_y < mini_h:
+				image.set_pixel(x, rect_y, Color.WHITE)
+			if rect_y + rect_h >= 0 and rect_y + rect_h < mini_h:
+				image.set_pixel(x, rect_y + rect_h, Color.WHITE)
+		
+		for y in range(max(0, rect_y), min(mini_h, rect_y + rect_h)):
+			if rect_x >= 0 and rect_x < mini_w:
+				image.set_pixel(rect_x, y, Color.WHITE)
+			if rect_x + rect_w >= 0 and rect_x + rect_w < mini_w:
+				image.set_pixel(rect_x + rect_w, y, Color.WHITE)
+	
 	var texture = ImageTexture.create_from_image(image)
-	minimap.texture = texture/Floor
+	minimap.texture = texture
+
+func _gui_input(event):
+	if not minimap or not minimap.visible:
+		return
+	
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		var minimap_rect = minimap.get_global_rect()
+		if minimap_rect.has_point(event.global_position):
+			# Click on minimap - calculate world position
+			var local_pos = event.global_position - minimap_rect.position
+			var minimap_size = minimap_rect.size
+			
+			if minimap_size.x > 0 and minimap_size.y > 0:
+				var world_x = int((local_pos.x / minimap_size.x) * 200)  # Assuming 200x200 world
+				var world_y = int((local_pos.y / minimap_size.y) * 200)
+				
+				# Jump camera to clicked position
+				print("Minimap clicked: ", Vector2i(world_x, world_y))
+				minimap_clicked.emit(Vector2i(world_x, world_y))
+				get_viewport().set_input_as_handled()
+
+func _get_tile_atlas_coords(tile: String) -> Vector2i:
+	# Map terrain characters to atlas positions
+	match tile:
+		'.': return Vector2i(0, 0)  # Plains/Floor
 		'#': return Vector2i(2, 0)  # Forest/Wall
 		'&': return Vector2i(3, 0)  # Jungle
 		'"': return Vector2i(4, 0)  # Desert
@@ -165,20 +212,11 @@ func _get_entity_atlas_coords(char: String, color: Color) -> Vector2i:
 		'D': return Vector2i(12, 1)  # Dragon/Enemy
 		'$': return Vector2i(13, 1)  # Item/Loot
 		'*': return Vector2i(14, 1)  # Projectile
-		'A': return Vector2i(1, 1)  # Army
-		'M': return Vector2i(2, 1)  # Metropolis/floor
-		'#': return Color(0.2, 0.5, 0.2)  # Dark green forest/wall
-		'&': return Color(0.3, 0.6, 0.3)  # Jungle
-		'"': return Color(0.9, 0.8, 0.5)  # Tan desert
-		'*': return Color(0.8, 0.9, 0.9)  # White tundra
-		'o': return Color(0.6, 0.6, 0.4)  # Brown hills
-		'^': return Color(0.6, 0.6, 0.6)  # Gray mountains
-		'≈': return Color(0.4, 0.6, 0.9)  # Light blue lake
-		'/', '\\': return Color(0.3, 0.5, 0.9)  # River
-		'=': return Color(0.7, 0.6, 0.4)  # Road
-		'+': return Color(0.5, 0.3, 0.1)  # Brown door
-		'%': return Color(0.4, 0.4, 0.4)  # Gray debris
-		'X': return Color(0.3, 0.3, 0.3)  # Dark obstacle ocean
+		_: return Vector2i(0, 0)  # Default
+
+func _get_terrain_color(tile: String) -> Color:
+	# Map terrain characters to colors for minimap
+	match tile:
 		'.': return Color(0.6, 0.8, 0.4)  # Green plains
 		'#': return Color(0.2, 0.5, 0.2)  # Dark green forest
 		'&': return Color(0.3, 0.6, 0.3)  # Jungle
@@ -189,4 +227,7 @@ func _get_entity_atlas_coords(char: String, color: Color) -> Vector2i:
 		'≈': return Color(0.4, 0.6, 0.9)  # Light blue lake
 		'/', '\\': return Color(0.3, 0.5, 0.9)  # River
 		'=': return Color(0.7, 0.6, 0.4)  # Road
+		'+': return Color(0.5, 0.3, 0.1)  # Brown door
+		'%': return Color(0.4, 0.4, 0.4)  # Gray debris
+		'X': return Color(0.3, 0.3, 0.3)  # Dark obstacle
 		_: return Color(0.5, 0.5, 0.5)  # Gray default
