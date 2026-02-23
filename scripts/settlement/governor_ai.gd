@@ -25,12 +25,12 @@ static func _balanced(settlement: Settlement) -> void:
 	if settlement.happiness < 60.0 and not _has_building(settlement, "tavern"):
 		settlement.add_or_upgrade_building("tavern")
 		return
-	_build_next_priority(settlement, ["farm", "lumber_mill", "mine", "market"])
+	_build_next_priority(settlement, ["farm", "lumber_mill", "mine", "forge", "market"])
 
 
 static func _greedy(settlement: Settlement) -> void:
 	# Maximise treasury income — build markets and high-value extractors first
-	_build_next_priority(settlement, ["market", "mine", "fishery", "farm"])
+	_build_next_priority(settlement, ["market", "mine", "forge", "fishery", "farm"])
 
 
 static func _militant(settlement: Settlement) -> void:
@@ -78,12 +78,17 @@ static func _build_next_priority(settlement: Settlement, priority: Array) -> voi
 ## Called after the daily tick so it reflects the current-day population.
 static func collect_taxes(settlement: Settlement) -> void:
 	var tax_rate: float = _tax_rate(settlement)
-	var revenue:  float = settlement.burghers * 0.05 * tax_rate \
-						+ settlement.nobility  * 0.20 * tax_rate
+	# Unhappy burghers withhold half their taxes.
+	var burgher_rate: float = tax_rate * (0.5 if settlement.burgher_unhappy else 1.0)
+	var revenue: float = settlement.burghers * 0.05 * burgher_rate \
+					  + settlement.nobility  * 0.20 * tax_rate
 	settlement.treasury += revenue
-	# High taxes erode happiness over time
+	# High taxes erode happiness over time.
 	if tax_rate > 0.5:
 		settlement.happiness = maxf(0.0, settlement.happiness - (tax_rate - 0.5) * 2.0)
+	# Unhappy nobility destabilises faster.
+	if settlement.nobility_unhappy:
+		settlement.unrest = minf(100.0, settlement.unrest + 1.0)
 
 
 static func _tax_rate(settlement: Settlement) -> float:

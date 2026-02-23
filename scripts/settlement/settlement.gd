@@ -39,7 +39,10 @@ var housing_capacity: int             = 200
 var connectivity_rate: float = 1.0  ## 1.0 = isolated; 2.0+ = road junction
 
 # ── Flags ─────────────────────────────────────────────────────────────────────
-var has_three_field: bool = false   # unlocked at Farm level 4+
+var has_three_field:    bool = false   # unlocked at Farm level 4+
+## Set each tick by Market.consume(); used by GovernorAI.collect_taxes().
+var burgher_unhappy:    bool = false
+var nobility_unhappy:   bool = false
 
 
 # ── Initialisation ────────────────────────────────────────────────────────────

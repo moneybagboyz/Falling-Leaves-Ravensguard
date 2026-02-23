@@ -64,6 +64,10 @@ func update_prices(settlement: Object) -> void:
 
 ## Deducts food and luxuries from inventory. Applies starvation / unrest if short.
 func consume(settlement: Object) -> void:
+	# Reset per-tick class flags.
+	settlement.burgher_unhappy  = false
+	settlement.nobility_unhappy = false
+
 	# --- Food (all classes) ---
 	var food_needed: float = settlement.population * 1.2
 	var food_given:  float = deduct_stock("grain", food_needed)
@@ -76,24 +80,50 @@ func consume(settlement: Object) -> void:
 		settlement.population = maxi(0, settlement.population - deaths)
 		settlement._init_population()
 	else:
-		# Slow recovery when food is plentiful
+		# Slow recovery when food is plentiful.
 		settlement.unrest    = maxf(0.0, settlement.unrest    - 1.0)
 		settlement.happiness = minf(100.0, settlement.happiness + 0.5)
 
 	# --- Fuel (wood) ---
-	deduct_stock("wood", settlement.population * 0.02)
+	var wood_needed: float = settlement.population * 0.02
+	var wood_given:  float = deduct_stock("wood", wood_needed)
+	if wood_needed > 0.0 and wood_given < wood_needed:
+		var shortage: float = 1.0 - (wood_given / maxf(wood_needed, 1.0))
+		settlement.happiness = maxf(0.0,   settlement.happiness - 10.0 * shortage)
+		settlement.unrest    = minf(100.0, settlement.unrest    +  5.0 * shortage)
 
-	# --- Luxuries ---
-	_consume_luxury(settlement, "ale",  settlement.burghers * 0.1,  3.0)
-	_consume_luxury(settlement, "meat", settlement.nobility  * 0.5,  5.0)
-	_consume_luxury(settlement, "furs", settlement.nobility  * 0.05, 3.0)
-	_consume_luxury(settlement, "salt", settlement.population * 0.03, 2.0)
+	# --- Tavern bonus ---
+	# An active tavern with ale stocked boosts happiness slightly.
+	if settlement._building_level("tavern") > 0 and get_stock("ale") > 0.0:
+		settlement.happiness = minf(100.0, settlement.happiness + 2.0)
+
+	# --- Burgher luxuries (cloth/leather maintenance when produced) ---
+	# Currently deferred — cloth and leather have no production chain yet.
+	# When added, flag settlement.burgher_unhappy if unmet.
+
+	# --- Noble luxuries ---
+	var noble_met: bool = true
+	noble_met = _consume_luxury(settlement, "meat", settlement.nobility * 0.5,  5.0) and noble_met
+	noble_met = _consume_luxury(settlement, "furs", settlement.nobility * 0.05, 3.0) and noble_met
+	noble_met = _consume_luxury(settlement, "salt", settlement.nobility * 0.05, 2.0) and noble_met
+	if not noble_met:
+		settlement.nobility_unhappy = true
+
+	# --- Burgher luxuries ---
+	var burgher_met: bool = true
+	burgher_met = _consume_luxury(settlement, "ale",  settlement.burghers * 0.1,  3.0) and burgher_met
+	burgher_met = _consume_luxury(settlement, "salt", settlement.population * 0.03, 2.0) and burgher_met
+	if not burgher_met:
+		settlement.burgher_unhappy = true
 
 
-func _consume_luxury(settlement: Object, rid: String, needed: float, happiness_impact: float) -> void:
+## Returns true if demand was reasonably met (>= 50%), false otherwise.
+func _consume_luxury(settlement: Object, rid: String, needed: float, happiness_impact: float) -> bool:
 	var given: float = deduct_stock(rid, needed)
 	if needed > 0.0 and given < needed * 0.5:
 		settlement.happiness = maxf(0.0, settlement.happiness - happiness_impact)
+		return false
+	return true
 
 
 # ── Diagnostics ───────────────────────────────────────────────────────────────

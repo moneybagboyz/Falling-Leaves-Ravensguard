@@ -22,6 +22,7 @@ const DEFINITIONS: Dictionary = {
 	"barracks":    { "name": "Barracks",     "per_level_bonus": 0.25 },
 	"church":      { "name": "Church",       "per_level_bonus": 0.15 },
 	"market":      { "name": "Market Stall", "per_level_bonus": 0.20 },
+	"forge":       { "name": "Forge",        "per_level_bonus": 0.40 },
 }
 
 

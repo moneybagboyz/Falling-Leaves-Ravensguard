@@ -6,7 +6,7 @@
 
 ---
 
-## Build Status  *(updated 2026-02-22)*
+## Build Status  *(updated 2026-02-23)*
 
 | # | Component | Status | Notes |
 |---|---|---|---|
@@ -16,12 +16,14 @@
 | 1d | `world_generator.gd` — tectonic 3-noise pipeline | ✅ Done | 3-noise blend (base FBM + crust plate + tectonic spike), radial falloff, sea_ratio quantile |
 | 1e | `hydrology.gd` — rivers + lakes | ✅ Done | D8 single-flow accumulation; BFS lake flood-fill with drain-abort guard |
 | 1f | `map_renderer.gd` — 8 view modes | ✅ Done | BIOME (altitude-shaded), ALTITUDE, TEMPERATURE, PRECIPITATION, DRAINAGE, PROSPERITY, FLOW, PROVINCES |
-| 1g | `world_map.gd` — interactive UI | ✅ Done | Sidebar with 13 HSliders (5 sections incl. Province Count 8–60), 15 preset buttons, 8 view-mode buttons [Q]=Provinces, zoom/pan, hover/pin |
+| 1g | `world_map.gd` — interactive UI | ✅ Done | Sidebar with 13 HSliders (5 sections incl. Province Count 8–60), 15 preset buttons, 8 view-mode buttons [Q]=Provinces, zoom/pan, hover/pin; dual-mode (generator + play) with ▶ Start Game button |
 | 1h | Three-tier map system (Region + Local) | ✅ Done | See §4.9; adjacency-based coast fix applied |
 | 2a | `province_generator.gd` — two-tier Poisson placement | ✅ Done | Hub Poisson (min-sep 6) → Dijkstra provinces → spoke Poisson (min-sep 3); 2–5 spokes/province |
 | 2b | `road_generator.gd` — two-phase Dijkstra road network | ✅ Done | Phase 1: hub→spoke intra-province; Phase 2: hub→2 nearest hub in adjacent provinces; ROAD_DISCOUNT corridor merging; `connectivity_rate` + population bonuses; `assign_tiers()` (Hamlet→Metropolis) |
 | 2c | Road overlays — world, region, and local maps | ✅ Done | World map: Bresenham 1-px tan lines; Region map: 1-px centre→edge per connected neighbour; Local map: 3-px wide corridors (±1 perpendicular offset) |
-| 2d | Settlements + Economy core | ⬜ | Scripts scaffolded; see §5 — **this is the next milestone** |
+| 2d | `Start Game` play mode | ✅ Done | `world_map.gd` dual-mode: generator sidebar ↔ play HUD; `GameClock` starts paused, unpauses on Start; ⏸/1×/5×/25× speed controls; Space = pause toggle |
+| 2e | Economy core — production + market + governor | ✅ Done | 8 raw resources produced (grain/wood/ore/fish/stone/coal/meat/furs); 3 processing chains (ale, timber, iron via forge); `burgher_unhappy`/`nobility_unhappy` flags; fuel shortage penalty; tavern happiness bonus; 30-day world audit printed to Output |
+| 2f | Governor AI | ✅ Done | 4 personalities (balanced/greedy/militant/builder); tax rates with unhappy-class penalty; build priority queues including forge |
 | 3 | Factions + Overworld Agents | ⬜ | See §6 |
 | 4 | Player Character | ⬜ | See §7 |
 | 5 | Tactical Battle | ⬜ | See §8 |
@@ -30,52 +32,46 @@
 
 ---
 
-## What's Next  *(as of 2026-02-22)*
+## What's Next  *(as of 2026-02-23)*
 
-World generation (Phase 1 + 1.5) and the road/province infrastructure (Phase 2a–2c) are complete. The next work block is **Phase 2d — Settlements and Economy** (§5).
+Phases 1–2 (world generation, roads, settlements, economy core, play mode) are complete and running. The simulation ticks every in-game day, produces 8 raw resources, runs 3 processing chains, and prints a structured world audit every 30 days.
 
 ### Game flow overview
 
 ```
 Main Menu  →  World Generator (sliders + presets + generate)
-                └─ "Start Game" button
-                      └─ Overworld (play mode: same map, no sliders, GameClock ticking)
+                └─ "▶ Start Game" button  (enabled once a world exists)
+                      └─ Overworld play mode (same map, generator sidebar hidden)
+                              ├─ GameClock ticking at 1×/5×/25× or paused (Space)
                               ├─ double-click world tile  →  Region view
                               │       └─ double-click region tile  →  Local / City view
                               └─ Pause / Save / Quit
 ```
 
-`main.tscn` currently goes **directly** to the world generator with no menu. When Phase 2 starts, `world_map.gd` needs a **"Start Game"** button that:
-1. Hides the generator sidebar (sliders, presets, mode buttons).
-2. Shows the overworld HUD (GameClock display, settlement list, etc.).
-3. Calls `WorldState.start_game()` which wires `GameClock.daily_pulse` to `WorldState._on_daily_pulse()` and begins ticking.
-
-A proper **Main Menu** scene (New Game / Load / Quit) is scheduled for Phase 7 UI pass. Until then, the world generator *is* the "new game" screen, and "Start Game" is the only button that matters.
+A proper **Main Menu** scene (New Game / Load / Quit) is scheduled for the Phase 7 UI pass.
 
 ### Immediate next steps (in order)
 
-1. **Add "Start Game" button to `world_map.gd`** — visible only after a world has been generated; on press, hide the generator sidebar and call `WorldState.start_game()`.
-2. **Wire `Settlement` into `WorldState`** — `WorldState.settlements` is already populated by `ProvinceGenerator.place_settlements()`; confirm the array is reachable from the play-mode tick.
-3. **Implement `Production.calculate(settlement)`** — farming, mining, fishing, and forestry formulas using `arable_acres`, `mining_slots`, etc. (see §5.3).
-4. **Implement `Market.consume(settlement)` and `Market.update_prices(settlement)`** — 14-day rolling price history, supply/demand curve (see §5.4).
-5. **Implement `GovernorAI.decide(settlement)`** — build-queue logic, labor allocation (see §5.5).
-6. **Hook everything into `GameClock.daily_pulse`** — the signal chain in §2.3 is the target wiring.
-7. **Console smoke-test** — print daily totals to Output so the tick loop is confirmed working before any UI work.
+1. **Salt production** — add `has_salt_deposit: bool` flag to `Settlement` (set by `ProvinceGenerator` for coastal/geological tiles); salt rate in `Production.gd`.
+2. **Cloth + leather chains** — wool from pasture (needs `pasture` building) → cloth via weaver; meat surplus → hides → leather via tannery. Adds two more buildings and completes all 14 resources.
+3. **Settlement UI panel** — click a settlement dot on the world map to open a `CityScreen` showing population, buildings, market prices, treasury. (Phase 7, but useful for debugging now.)
+4. **Trade system** — inter-settlement caravans, world market buy orders, logistical pulses (see §6 origin repo `TradeSystem.gd`). Phase 3.
+5. **Factions** — assign settlements to factions, implement war/peace relations, caravan faction checks. Phase 3.
 
-### Backlog (do after Phase 2 tick is running)
+### Backlog
 
-- `SiteGenerator` — scatter resource sites (farmsteads, mines, camps) that feed `arable_acres` / `mining_slots` into settlements (§4.10).
-- Name generation — replace placeholder settlement/province names with Markov-chain generated names (TODO §1).
-- Culture zones — needed before factions can inherit expansion type and language (TODO §2).
-- Sea routes — coastal settlement connectivity via `sea_route_network` (TODO §5).
-- Street-level local map layout — stamp real town grids into `LocalMapData` based on settlement tier (TODO §6).
+- Name generation — Markov-chain settlement/province names (currently "Settlement 0", "Province 3").
+- Culture zones — needed before factions inherit language and expansion type.
+- Sea routes — coastal settlement connectivity via `sea_route_network`.
+- Street-level local map — stamp town grids into `LocalMapData` based on tier.
+- `SiteGenerator` — scatter farmsteads, mines, logging camps that feed `arable_acres`/`mining_slots`.
 
 ---
 
 ## Table of Contents
 
 1. [Project Folder Architecture](#1-project-folder-architecture)  
-2. [Build Status](#build-status--updated-2026-02-22)  
+2. [Build Status](#build-status--updated-2026-02-23)  
 3. [Core Architecture Patterns](#2-core-architecture-patterns)  
 4. [Phase Roadmap](#3-phase-roadmap)  
 5. [Phase 1 — World Generation ✅](#4-phase-1--world-generation--complete)  
@@ -957,18 +953,18 @@ Sites are painted after settlement dots, 1×1 px, only when the map zoom is ≥ 
 ### 5.1 Settlement Class
 
 ```gdscript
-# scripts/settlement/settlement.gd
+# scripts/settlement/settlement.gd  (actual implementation)
 class_name Settlement extends Resource
 
 # --- Identity ---
-var id:           int
-var name:         String
-var tile_x:       int
-var tile_y:       int
-var province_id:  int
-var faction_id:   int = -1
-var tier:         int = 1       # 0 = Hamlet ... 4 = Metropolis
-var settlement_type: String = "village"  # village, town, city, castle, port, hamlet
+var id:                   int
+var name:                 String
+var tile_x:               int
+var tile_y:               int
+var province_id:          int
+var faction_id:           int    = -1
+var tier:                 int    = 1    # 0=Hamlet 1=Village 2=Town 3=City 4=Metropolis
+var settlement_type:      String = "village"
 var governor_personality: String = "balanced"  # balanced, greedy, militant, builder
 
 # --- Population ---
@@ -977,61 +973,42 @@ var laborers:    int = 84
 var burghers:    int = 15
 var nobility:    int = 1
 
-# --- Land (calculated once on init, based on surrounding tiles) ---
+# --- Land ---
 var arable_acres:  float = 0.0
 var forest_acres:  float = 0.0
 var mining_slots:  int   = 0
 var fishing_slots: int   = 0
 
 # --- Economy ---
-var market: Market = null
-var buildings: Array[Building] = []
-var happiness: float = 75.0
-var unrest:    float = 0.0
-var housing_capacity: int = 200
+var market:           Market          = null
+var buildings:        Array[Building] = []
+var happiness:        float           = 75.0
+var unrest:           float           = 0.0
+var treasury:         float           = 100.0
+var housing_capacity: int             = 200
+var connectivity_rate: float          = 1.0   # 1.0 = isolated; 2.0+ = road junction
+
+# --- Per-tick flags (reset by Market.consume each day) ---
+var burgher_unhappy:  bool = false   # ale/cloth/leather demand unmet
+var nobility_unhappy: bool = false   # meat/furs/salt demand unmet
 
 # --- Flags ---
 var has_three_field: bool = false   # unlocked at Farm level 4+
 
-func initialize(tx: int, ty: int, pid: int, data: WorldData) -> void:
-    tile_x = tx
-    tile_y = ty
-    province_id = pid
-    market = Market.new()
-    _calculate_land(data)
-    _init_population()
-
-func _calculate_land(data: WorldData) -> void:
-    var radius: int = [1, 2, 3, 4, 5][tier]
-    for dy in range(-radius, radius + 1):
-        for dx in range(-radius, radius + 1):
-            var nx: int = tile_x + dx
-            var ny: int = tile_y + dy
-            if nx < 0 or nx >= data.width or ny < 0 or ny >= data.height:
-                continue
-            match data.terrain[ny][nx]:
-                WorldData.TerrainType.PLAINS:   arable_acres  += 250.0
-                WorldData.TerrainType.HILLS:    arable_acres  += 125.0;  mining_slots += 150
-                WorldData.TerrainType.FOREST:   arable_acres  += 50.0;   forest_acres += 200.0
-                WorldData.TerrainType.MOUNTAIN: mining_slots  += 400
-                WorldData.TerrainType.RIVER:    arable_acres  += 250.0;  fishing_slots += 150; mining_slots += 40
-                WorldData.TerrainType.SWAMP:    forest_acres  += 112.0
-
-func _init_population() -> void:
-    laborers = int(population * 0.84)
-    burghers = int(population * 0.15)
-    nobility = population - laborers - burghers  # ensures sum == population
-
 func daily_tick() -> void:
-    Production.run(self)
-    market.consume(self)
-    GovernorAI.decide(self)
-    market.update_prices(self)
-    _update_population()
+    Production.run(self)        # labour → raw resources + processing chains
+    market.consume(self)        # food/fuel/luxuries deducted; flags set
+    GovernorAI.decide(self)     # build queue decisions
+    GovernorAI.collect_taxes(self)  # treasury += tax revenue (halved if burgher_unhappy)
+    market.update_prices(self)  # 14-day rolling price history
+    _update_population()        # births if well-fed + within housing cap
 
 func _update_population() -> void:
-    if market.get_stock("grain") > population * 30 and population < housing_capacity:
-        var births: int = maxi(1, int(population * 0.0001))
+    # Grow if grain stock > 30 days, below housing cap, and happy.
+    if market.get_stock("grain") > population * 1.2 * 30.0 \
+            and population < housing_capacity \
+            and happiness > 60.0:
+        var births: int = maxi(1, int(population * 0.0002))
         population += births
         _init_population()
 ```
@@ -1039,208 +1016,133 @@ func _update_population() -> void:
 ### 5.2 Market Class
 
 ```gdscript
-# scripts/settlement/market.gd
+# scripts/settlement/market.gd  (actual implementation)
 class_name Market extends RefCounted
 
-# inventory: resource_id -> quantity (never goes negative)
-var inventory:     Dictionary = {}
-# price history ring buffer: resource_id -> Array[float] (14 entries)
-var price_history: Dictionary = {}
+var inventory:     Dictionary = {}   # resource_id -> float
+var price_history: Dictionary = {}   # resource_id -> Array[float] (14 entries)
 var current_price: Dictionary = {}
 
-func get_stock(resource_id: String) -> float:
-    return inventory.get(resource_id, 0.0)
-
-func add_stock(resource_id: String, amount: float) -> void:
-    inventory[resource_id] = maxf(0.0, get_stock(resource_id) + amount)
-
-func deduct_stock(resource_id: String, amount: float) -> float:
-    # Returns how much was actually deducted (may be less than requested)
-    var available: float = get_stock(resource_id)
-    var deducted: float = minf(available, amount)
-    inventory[resource_id] = available - deducted
-    return deducted
-
-func get_price(resource_id: String) -> float:
-    return current_price.get(resource_id, ResourceRegistry.base_price(resource_id))
-
-func update_prices(settlement: Settlement) -> void:
-    for rid in ResourceRegistry.ALL_RESOURCES:
-        var base:   float = ResourceRegistry.base_price(rid)
-        var supply: float = get_stock(rid)
-        var demand: float = ResourceRegistry.daily_demand(rid, settlement)
-        var raw:    float = base * clampf(demand / maxf(supply, 1.0), 0.2, 5.0)
-
-        if not price_history.has(rid):
-            price_history[rid] = []
-        price_history[rid].append(raw)
-        if price_history[rid].size() > 14:
-            price_history[rid].pop_front()
-
-        var avg: float = 0.0
-        for v in price_history[rid]:
-            avg += v
-        current_price[rid] = avg / price_history[rid].size()
-
 func consume(settlement: Settlement) -> void:
-    # Food: all classes eat 1.2 bushels/day each
+    # Reset per-tick unhappy flags.
+    settlement.burgher_unhappy  = false
+    settlement.nobility_unhappy = false
+
+    # --- Food ---
     var food_needed: float = settlement.population * 1.2
     var food_given:  float = deduct_stock("grain", food_needed)
     if food_given < food_needed * 0.90:
-        var deficit: float = 1.0 - (food_given / food_needed)
-        settlement.unrest    += 20.0 * deficit
-        settlement.happiness -= 20.0 * deficit
+        var deficit: float = 1.0 - (food_given / maxf(food_needed, 1.0))
+        settlement.unrest    = minf(100.0, settlement.unrest    + 20.0 * deficit)
+        settlement.happiness = maxf(0.0,   settlement.happiness - 20.0 * deficit)
         var deaths: int = int(settlement.population * 0.02 * deficit) + 2
         settlement.population = maxi(0, settlement.population - deaths)
         settlement._init_population()
+    else:
+        settlement.unrest    = maxf(0.0,   settlement.unrest    - 1.0)
+        settlement.happiness = minf(100.0, settlement.happiness + 0.5)
 
-    # Luxury: Burghers need ale; Nobility need meat/furs/salt
-    _consume_luxury(settlement, "ale",  settlement.burghers * 0.1,  "burgher_happiness")
-    _consume_luxury(settlement, "meat", settlement.nobility * 0.5,  "noble_happiness")
-    _consume_luxury(settlement, "furs", settlement.nobility * 0.05, "noble_happiness")
-    _consume_luxury(settlement, "salt", settlement.nobility * 0.05, "noble_happiness")
+    # --- Fuel (wood) — shortage applies happiness/unrest penalty ---
+    var wood_needed: float = settlement.population * 0.02
+    var wood_given:  float = deduct_stock("wood", wood_needed)
+    if wood_needed > 0.0 and wood_given < wood_needed:
+        var shortage: float = 1.0 - (wood_given / maxf(wood_needed, 1.0))
+        settlement.happiness = maxf(0.0,   settlement.happiness - 10.0 * shortage)
+        settlement.unrest    = minf(100.0, settlement.unrest    +  5.0 * shortage)
 
-func _consume_luxury(settlement: Settlement, rid: String, needed: float, mood: String) -> void:
+    # --- Tavern bonus: +2 happiness if tavern active and ale in stock ---
+    if settlement._building_level("tavern") > 0 and get_stock("ale") > 0.0:
+        settlement.happiness = minf(100.0, settlement.happiness + 2.0)
+
+    # --- Noble luxuries (meat / furs / salt) ---
+    var noble_met: bool = true
+    noble_met = _consume_luxury(settlement, "meat", settlement.nobility * 0.5,  5.0) and noble_met
+    noble_met = _consume_luxury(settlement, "furs", settlement.nobility * 0.05, 3.0) and noble_met
+    noble_met = _consume_luxury(settlement, "salt", settlement.nobility * 0.05, 2.0) and noble_met
+    if not noble_met:
+        settlement.nobility_unhappy = true   # → unrest +1/day in collect_taxes()
+
+    # --- Burgher luxuries (ale / salt) ---
+    var burgher_met: bool = true
+    burgher_met = _consume_luxury(settlement, "ale",  settlement.burghers * 0.1,  3.0) and burgher_met
+    burgher_met = _consume_luxury(settlement, "salt", settlement.population * 0.03, 2.0) and burgher_met
+    if not burgher_met:
+        settlement.burgher_unhappy = true    # → halves burgher tax in collect_taxes()
+
+    # Cloth + leather maintenance deferred — no production chain yet.
+
+## Returns true if >= 50% of demand was met.
+func _consume_luxury(settlement: Object, rid: String, needed: float, happiness_impact: float) -> bool:
     var given: float = deduct_stock(rid, needed)
-    if given < needed * 0.5:
-        settlement.happiness -= 5.0
+    if needed > 0.0 and given < needed * 0.5:
+        settlement.happiness = maxf(0.0, settlement.happiness - happiness_impact)
+        return false
+    return true
 ```
 
 ### 5.3 Production
 
+Labour priority: **(1)** 24h food survival → **(2)** fuel → **(3)** 60-day grain buffer → **(4)** top-2 profit resources → **(5)** processing chains.
+
+**Raw resource rates** (all scale with building level):
+
+| Resource | Source | Building | Notes |
+|---|---|---|---|
+| grain | `arable_acres` | farm (×0.5/lv) | three-field rotation at farm lv4+ |
+| wood | `forest_acres` | lumber_mill (×1.0/lv) | |
+| ore | `mining_slots` | mine (×0.5/lv) | |
+| fish | `fishing_slots` | fishery (×0.5/lv) | not labour-divided; flat daily rate |
+| stone | `mining_slots` | mine (×0.3/lv) | surface quarrying alongside ore |
+| coal | `mining_slots` | mine lv2+ only | deep seam; output ∝ (level−1) |
+| meat | `arable_acres` × 0.20 | farm (×0.3/lv) | pasture fraction of arable land |
+| furs | `forest_acres` | none | trapping; not labour-divided |
+
+**Processing chains** (run after labour, converting surplus raw stock):
+
+| Output | Recipe | Building required |
+|---|---|---|
+| ale | 4 grain → 1 ale | tavern (any level); only converts grain above 7-day buffer |
+| timber | 3 wood → 1 timber | lumber_mill lv2+; only converts wood above 7-day buffer |
+| iron | 3 ore → 1 iron | forge (any level); consumes all available ore |
+
+**Deferred** (no production chain yet): salt, cloth, leather.
+
 ```gdscript
-# scripts/economy/production.gd
-class_name Production
-
-static func run(settlement: Settlement) -> void:
-    var available_laborers: int = settlement.laborers
-
-    # ── Priority 1: Food survival buffer (24h) ───────────────────────
-    var food_needed_24h: float = settlement.population * 1.2
-    available_laborers = _assign_food(settlement, available_laborers, food_needed_24h)
-
-    # ── Fuel survival buffer ─────────────────────────────────────────
-    var fuel_needed: float = settlement.population / 50.0
-    var wood_per_laborer: float = _wood_rate(settlement)
-    var fuel_workers: int = mini(available_laborers, ceili(fuel_needed / wood_per_laborer))
-    settlement.market.add_stock("wood", fuel_workers * wood_per_laborer)
-    available_laborers -= fuel_workers
-
-    # ── Priority 2: 60-day security buffer ───────────────────────────
-    var food_60d: float = settlement.population * 1.2 * 60.0
-    var current_food: float = settlement.market.get_stock("grain")
-    if current_food < food_60d:
-        available_laborers = _assign_food(settlement, available_laborers, food_60d - current_food)
-
-    # ── Priority 3: Profit — best 2 resources by margin ──────────────
-    if available_laborers > 0:
-        _assign_profit(settlement, available_laborers)
-
-static func _grain_rate(settlement: Settlement) -> float:
-    var fallow_factor: float = 0.67 if settlement.has_three_field else 0.50
-    var farm_level: int = settlement._building_level("farm")
-    var building_mult: float = 1.0 + farm_level * 0.5
-    return settlement.arable_acres * fallow_factor * 12.0 / 360.0 * building_mult
-
-static func _wood_rate(settlement: Settlement) -> float:
-    var mill_level: int = settlement._building_level("lumber_mill")
-    var building_mult: float = 1.0 + mill_level * 1.0
-    return settlement.forest_acres / 40.0 * 8.0 / 360.0 * building_mult
-
-static func _assign_food(settlement: Settlement, workers_available: int, target: float) -> int:
-    var rate_per_worker: float = _grain_rate(settlement) / maxf(settlement.laborers, 1.0)
-    var workers_needed: int = ceili(target / maxf(rate_per_worker, 0.0001))
-    var assigned: int = mini(workers_available, workers_needed)
-    settlement.market.add_stock("grain", assigned * rate_per_worker)
-    return workers_available - assigned
-
-static func _assign_profit(settlement: Settlement, workers: int) -> void:
-    var margins: Array = []
-    for rid in ResourceRegistry.ALL_RESOURCES:
-        var base:  float = ResourceRegistry.base_price(rid)
-        var price: float = settlement.market.get_price(rid)
-        margins.append([price / base, rid])
-    margins.sort_custom(func(a, b): return a[0] > b[0])
-
-    var split: int = workers / 2
-    for i in range(mini(2, margins.size())):
-        var rid: String = margins[i][1]
-        var output: float = _produce_resource(settlement, rid, split)
-        settlement.market.add_stock(rid, output)
-
-static func _produce_resource(settlement: Settlement, rid: String, workers: int) -> float:
-    match rid:
-        "grain": return _grain_rate(settlement) / maxf(settlement.laborers, 1.0) * workers
-        "wood":  return _wood_rate(settlement) / maxf(settlement.laborers, 1.0) * workers
-        "ore":
-            var mine_level: int = settlement._building_level("mine")
-            return settlement.mining_slots * 0.005 / 360.0 * (1.0 + mine_level * 0.5)
-        "fish":
-            return settlement.fishing_slots * 25.0 / 360.0
-    return 0.0
+# Key function signatures (scripts/economy/production.gd)
+static func run(settlement: Settlement) -> void      # entry point
+static func _run_processing(settlement: Settlement) -> void  # chains after labour
+static func _rate_per_worker(settlement: Settlement, rid: String) -> float
 ```
 
 ### 5.4 Building
 
-```gdscript
-# scripts/settlement/building.gd
-class_name Building extends RefCounted
+MAX_LEVEL = 5. Upgrade cost = `50 × (level+1)²`. Buildings are stored inline — no JSON dependency.
 
-## 23 building types, 3 categories, max 10 levels each.
-## Source of truth: data/buildings.json
-## Categories:
-##   industry — farm, lumber_mill, fishery, mine, pasture, blacksmith, tannery, weaver, brewery, tailor, goldsmith
-##   military — stone_walls, barracks, training_ground, granary, watchtower
-##   civil    — housing_district, market, road_network, merchant_guild, warehouse_district, cathedral, tavern
-##
-## Each entry in buildings.json has:
-##   cost      — gold cost for level 1 construction
-##   labor     — labour-hours to build (level 1)
-##   tier      — minimum settlement tier required (1 = hamlet+, 2 = town+, 3 = city+)
-##   desc      — one-line effect description
-##   levels    — object keyed by level number (not every level listed; use nearest-lower for unlisted)
-##     levels[n].name   — building name at that level
-##     levels[n].flavor — flavour text
-##
-## Multiplier formula (industry buildings): 1.0 + level × per_level_bonus  (varies by type)
-## Cost to upgrade to level N: 50.0 × N²
+| Type | per_level_bonus | Effect |
+|---|---|---|
+| `farm` | 0.50 | grain rate; unlocks three-field at lv4 |
+| `lumber_mill` | 1.00 | wood rate; timber processing at lv2+ |
+| `mine` | 0.50 | ore + stone rate; coal at lv2+ |
+| `fishery` | 0.40 | fish rate |
+| `forge` | 0.40 | ore → iron processing (3:1 per level/day) |
+| `tavern` | 0.30 | grain → ale processing; +2 happiness/day when ale stocked |
+| `warehouse` | 0.20 | (future: inventory cap bonus) |
+| `barracks` | 0.25 | (Phase 3: garrison / recruit quality) |
+| `church` | 0.15 | (future: unrest reduction) |
+| `market` | 0.20 | tax throughput bonus (Phase 3) |
 
-var building_type: String   # matches key in buildings.json
-var level: int = 1
+**Governor AI build priorities** (by personality):
+- `balanced` — farm → lumber_mill → mine → forge → market
+- `greedy` — market → mine → forge → fishery → farm
+- `militant` — barracks first, then balanced
+- `builder` — upgrades the lowest-level existing building first
 
-const DEFINITIONS: Dictionary = {
-    "farm":             {"per_level_bonus": 0.50, "boosts": "grain"},
-    "lumber_mill":      {"per_level_bonus": 1.00, "boosts": "wood"},
-    "fishery":          {"per_level_bonus": 0.50, "boosts": "fish"},
-    "mine":             {"per_level_bonus": 0.50, "boosts": "ore"},
-    "pasture":          {"per_level_bonus": 0.50, "boosts": "meat"},
-    "blacksmith":       {"per_level_bonus": 1.00, "boosts": "steel"},
-    "tannery":          {"per_level_bonus": 1.00, "boosts": "leather"},
-    "weaver":           {"per_level_bonus": 1.00, "boosts": "cloth"},
-    "brewery":          {"per_level_bonus": 1.00, "boosts": "ale"},
-    "tailor":           {"per_level_bonus": 1.00, "boosts": "fine_garments"},
-    "goldsmith":        {"per_level_bonus": 1.00, "boosts": "jewelry"},
-    "stone_walls":      {"per_level_bonus": 0.00, "boosts": "defense"},
-    "barracks":         {"per_level_bonus": 0.00, "boosts": "garrison"},
-    "training_ground":  {"per_level_bonus": 0.00, "boosts": "recruit_quality"},
-    "granary":          {"per_level_bonus": 0.50, "boosts": "food_storage"},
-    "watchtower":       {"per_level_bonus": 0.00, "boosts": "stability"},
-    "housing_district": {"per_level_bonus": 0.00, "boosts": "housing"},
-    "market":           {"per_level_bonus": 0.00, "boosts": "trade_slots"},
-    "road_network":     {"per_level_bonus": 0.00, "boosts": "trade_throughput"},
-    "merchant_guild":   {"per_level_bonus": 0.00, "boosts": "caravan_capacity"},
-    "warehouse_district":{"per_level_bonus": 0.00, "boosts": "inventory_cap"},
-    "cathedral":        {"per_level_bonus": 0.00, "boosts": "stability"},
-    "tavern":           {"per_level_bonus": 0.00, "boosts": "happiness"},
-}
-
-func get_multiplier() -> float:
-    var bonus: float = DEFINITIONS.get(building_type, {}).get("per_level_bonus", 0.0)
-    return 1.0 + level * bonus
-
-func upgrade_cost() -> float:
-    return 50.0 * (level + 1) * (level + 1)
-```
+**Tax collection** (`GovernorAI.collect_taxes`):
+- Laborers: 84% of pop, not directly taxed
+- Burghers: `burghers × 0.05 × tax_rate` (halved if `burgher_unhappy`)
+- Nobility: `nobility × 0.20 × tax_rate`; `unrest +1/day` if `nobility_unhappy`
+- Tax rates: greedy = 0.80, militant = 0.60, balanced/builder = 0.40
+- High tax (>0.5) erodes happiness by `(rate − 0.5) × 2` per day
 
 ---
 

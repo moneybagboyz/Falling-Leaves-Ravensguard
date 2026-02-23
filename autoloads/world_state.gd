@@ -32,34 +32,128 @@ func update_world(data: WorldData) -> void:
 func _on_daily_pulse(turn: int) -> void:
 	for s in settlements:
 		s.daily_tick()
-	# Print a summary to the Output console every 30 in-game days.
-	# Remove or increase the interval once the UI shows this data.
+	# Print a world audit every 30 in-game days.
 	var day: int = turn / 24
-	if day % 30 == 0:
-		_print_daily_summary(day)
+	if day > 0 and day % 30 == 0:
+		_print_world_audit(day)
 
 
-func _print_daily_summary(day: int) -> void:
-	var total_pop: int   = 0
-	var total_grain: float = 0.0
+# ===========================================================================
+# World Audit — printed every 30 in-game days to the Godot Output console.
+# Replace with an in-game UI panel once the observability UI pass begins.
+# ===========================================================================
+func _print_world_audit(day: int) -> void:
+	if settlements.is_empty():
+		return
+
+	# ── Aggregate data ──────────────────────────────────────────────────────
+	var total_pop:      int   = 0
 	var total_treasury: float = 0.0
-	var avg_happiness: float  = 0.0
+	var total_happy:    float = 0.0
+	var total_unrest:   float = 0.0
+	var tier_counts:    Array = [0, 0, 0, 0, 0]   # index = tier 0..4
+	var resource_totals: Dictionary = {}
+	for rid in ResourceRegistry.ALL_RESOURCES:
+		resource_totals[rid] = 0.0
+	var building_counts:    Dictionary = {}  # building_type -> count
+	var building_max_level: Dictionary = {}  # building_type -> highest level
+
+	var starving:     Array = []   # settlements with < 7 days of grain
+	var unrest_hot:   Array = []   # settlements with unrest > 50
+	var richest:    Settlement = null
+	var poorest:    Settlement = null
+	var happiest:   Settlement = null
+	var saddest:    Settlement = null
+
 	for s: Settlement in settlements:
 		total_pop      += s.population
-		total_grain    += s.market.get_stock("grain")
 		total_treasury += s.treasury
-		avg_happiness  += s.happiness
-	if settlements.size() > 0:
-		avg_happiness /= float(settlements.size())
-	print("\n─── Day %d ──────────────────────────────" % day)
-	print("  Settlements : %d" % settlements.size())
-	print("  Total pop   : %d" % total_pop)
-	print("  Total grain  : %.0f" % total_grain)
-	print("  Avg happiness: %.1f" % avg_happiness)
-	print("  Total treasury: %.0fg" % total_treasury)
-	print("  ── Per settlement ──")
-	for s: Settlement in settlements:
-		print("  %s" % s.summary())
+		total_happy    += s.happiness
+		total_unrest   += s.unrest
+		tier_counts[clampi(s.tier, 0, 4)] += 1
+
+		# Per-resource stock totals
+		for rid in ResourceRegistry.ALL_RESOURCES:
+			resource_totals[rid] += s.market.get_stock(rid)
+
+		# Building census
+		for b: Building in s.buildings:
+			building_counts[b.building_type] = building_counts.get(b.building_type, 0) + 1
+			if not building_max_level.has(b.building_type) or b.level > building_max_level[b.building_type]:
+				building_max_level[b.building_type] = b.level
+
+		# Food security: 7 days = population * 1.2 * 7
+		var grain_days: float = s.market.get_stock("grain") / maxf(s.population * 1.2, 1.0)
+		if grain_days < 7.0:
+			starving.append([s.name, grain_days])
+
+		if s.unrest > 50.0:
+			unrest_hot.append([s.name, s.unrest])
+
+		if richest  == null or s.treasury  > richest.treasury:   richest  = s
+		if poorest  == null or s.treasury  < poorest.treasury:   poorest  = s
+		if happiest == null or s.happiness > happiest.happiness:  happiest = s
+		if saddest  == null or s.happiness < saddest.happiness:   saddest  = s
+
+	var n:          int   = settlements.size()
+	var avg_happy:  float = total_happy  / n
+	var avg_unrest: float = total_unrest / n
+	const TIER_NAMES: PackedStringArray = ["Hamlet","Village","Town","City","Metropolis"]
+
+	# ── Print ───────────────────────────────────────────────────────────────
+	print("\n╔══════════════════════════════════════════════════════════════")
+	print("║  WORLD AUDIT — Day %d" % day)
+	print("╠══════════════════════════════════════════════════════════════")
+
+	print("║  SUMMARY")
+	print("║    Settlements  : %d        Population : %d" % [n, total_pop])
+	print("║    Avg Happiness: %.1f%%      Avg Unrest : %.1f" % [avg_happy, avg_unrest])
+	print("║    World Treasury: %.0fg" % total_treasury)
+
+	print("║")
+	print("║  TIER CENSUS")
+	for t in range(5):
+		if tier_counts[t] > 0:
+			print("║    %-12s : %d" % [TIER_NAMES[t], tier_counts[t]])
+
+	print("║")
+	print("║  FOOD SECURITY")
+	if starving.is_empty():
+		print("║    All settlements have >= 7 days of grain  OK")
+	else:
+		print("║    %d settlement(s) at starvation risk:" % starving.size())
+		for entry in starving:
+			print("║      %-22s  %.1f days remaining" % [entry[0], entry[1]])
+
+	if not unrest_hot.is_empty():
+		print("║")
+		print("║  UNREST HOTSPOTS  (unrest > 50)")
+		for entry in unrest_hot:
+			print("║    %-22s  unrest: %.0f" % [entry[0], entry[1]])
+
+	print("║")
+	print("║  NOTABLE SETTLEMENTS")
+	if richest  != null: print("║    Richest   : %-20s  %.0fg" % [richest.name,  richest.treasury])
+	if poorest  != null: print("║    Poorest   : %-20s  %.0fg" % [poorest.name,  poorest.treasury])
+	if happiest != null: print("║    Happiest  : %-20s  %.0f%%" % [happiest.name, happiest.happiness])
+	if saddest  != null: print("║    Saddest   : %-20s  %.0f%%" % [saddest.name,  saddest.happiness])
+
+	print("║")
+	print("║  GLOBAL RESOURCES")
+	for rid in ResourceRegistry.ALL_RESOURCES:
+		var qty: float = resource_totals[rid]
+		if qty > 0.0:
+			print("║    %-14s : %.0f" % [rid, qty])
+
+	print("║")
+	print("║  BUILDING CENSUS")
+	var btypes: Array = building_counts.keys()
+	btypes.sort()
+	for bt in btypes:
+		var max_lv: int = building_max_level.get(bt, 1)
+		print("║    %-16s : %d built  (max lv %d)" % [bt, building_counts[bt], max_lv])
+
+	print("╚══════════════════════════════════════════════════════════════")
 
 
 ## Returns the settlement at world tile (tx, ty), or null.
