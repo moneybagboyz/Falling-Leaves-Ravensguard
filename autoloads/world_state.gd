@@ -29,9 +29,37 @@ func update_world(data: WorldData) -> void:
 
 
 ## Daily simulation tick — drives all settlements.
-func _on_daily_pulse(_turn: int) -> void:
+func _on_daily_pulse(turn: int) -> void:
 	for s in settlements:
 		s.daily_tick()
+	# Print a summary to the Output console every 30 in-game days.
+	# Remove or increase the interval once the UI shows this data.
+	var day: int = turn / 24
+	if day % 30 == 0:
+		_print_daily_summary(day)
+
+
+func _print_daily_summary(day: int) -> void:
+	var total_pop: int   = 0
+	var total_grain: float = 0.0
+	var total_treasury: float = 0.0
+	var avg_happiness: float  = 0.0
+	for s: Settlement in settlements:
+		total_pop      += s.population
+		total_grain    += s.market.get_stock("grain")
+		total_treasury += s.treasury
+		avg_happiness  += s.happiness
+	if settlements.size() > 0:
+		avg_happiness /= float(settlements.size())
+	print("\n─── Day %d ──────────────────────────────" % day)
+	print("  Settlements : %d" % settlements.size())
+	print("  Total pop   : %d" % total_pop)
+	print("  Total grain  : %.0f" % total_grain)
+	print("  Avg happiness: %.1f" % avg_happiness)
+	print("  Total treasury: %.0fg" % total_treasury)
+	print("  ── Per settlement ──")
+	for s: Settlement in settlements:
+		print("  %s" % s.summary())
 
 
 ## Returns the settlement at world tile (tx, ty), or null.

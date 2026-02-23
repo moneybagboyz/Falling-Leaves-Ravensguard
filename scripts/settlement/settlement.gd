@@ -178,6 +178,10 @@ func add_or_upgrade_building(btype: String) -> bool:
 # ── Debug ─────────────────────────────────────────────────────────────────────
 
 func summary() -> String:
-	return "[%s] pop:%d  happy:%.0f  unrest:%.0f  treasury:%.0fg\n%s" % [
-		name, population, happiness, unrest, treasury, market.summary()
+	var bldg_parts: PackedStringArray = []
+	for b: Building in buildings:
+		bldg_parts.append("%s lv%d" % [b.building_type, b.level])
+	var bldg_str: String = ", ".join(bldg_parts) if bldg_parts.size() > 0 else "none"
+	return "[%s | tier %d] pop:%d  happy:%.0f  unrest:%.0f  treasury:%.0fg\n    buildings: %s\n%s" % [
+		name, tier, population, happiness, unrest, treasury, bldg_str, market.summary()
 	]
