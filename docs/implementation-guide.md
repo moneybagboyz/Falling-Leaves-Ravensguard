@@ -19,12 +19,37 @@
 | 1g | `world_map.gd` — interactive UI | ✅ Done | Sidebar with 13 HSliders (5 sections incl. Province Count 8–60), 15 preset buttons, 8 view-mode buttons [Q]=Provinces, zoom/pan, hover/pin |
 | 1h | Three-tier map system (Region + Local) | ✅ Done | See §4.9; adjacency-based coast fix applied |
 | 2a | `province_generator.gd` — two-tier Poisson placement | ✅ Done | Hub Poisson (min-sep 6) → Dijkstra provinces → spoke Poisson (min-sep 3); 2–5 spokes/province |
-| 2b | Settlements + Economy core | ⬜ | Scripts scaffolded; see §5 |
+| 2b | `road_generator.gd` — two-phase Dijkstra road network | ✅ Done | Phase 1: hub→spoke intra-province; Phase 2: hub→2 nearest hub in adjacent provinces; ROAD_DISCOUNT corridor merging; `connectivity_rate` + population bonuses; `assign_tiers()` (Hamlet→Metropolis) |
+| 2c | Road overlays — world, region, and local maps | ✅ Done | World map: Bresenham 1-px tan lines; Region map: 1-px centre→edge per connected neighbour; Local map: 3-px wide corridors (±1 perpendicular offset) |
+| 2d | Settlements + Economy core | ⬜ | Scripts scaffolded; see §5 — **this is the next milestone** |
 | 3 | Factions + Overworld Agents | ⬜ | See §6 |
 | 4 | Player Character | ⬜ | See §7 |
 | 5 | Tactical Battle | ⬜ | See §8 |
 | 6 | Siege + Auto-resolution | ⬜ | See §9 |
 | 7 | Full UI Pass | ⬜ | See §10 |
+
+---
+
+## What's Next  *(as of 2026-02-22)*
+
+World generation (Phase 1 + 1.5) and the road/province infrastructure (Phase 2a–2c) are complete. The next work block is **Phase 2d — Settlements and Economy** (§5).
+
+### Immediate next steps (in order)
+
+1. **Wire `Settlement` into `WorldState`** — `WorldState.settlements` is already populated by `ProvinceGenerator.place_settlements()`; confirm the array is reachable and serialisable.
+2. **Implement `Production.calculate(settlement)`** — farming, mining, fishing, and forestry formulas using `arable_acres`, `mining_slots`, etc. (see §5.3).
+3. **Implement `Market.consume(settlement)` and `Market.update_prices(settlement)`** — 14-day rolling price history, supply/demand curve (see §5.4).
+4. **Implement `GovernorAI.decide(settlement)`** — build-queue logic, labor allocation (see §5.5).
+5. **Hook everything into `GameClock.daily_pulse`** — the signal chain in §2.3 is the target wiring.
+6. **Console smoke-test** — print daily totals to Output so the tick loop is confirmed working before any UI work.
+
+### Backlog (do after Phase 2 tick is running)
+
+- `SiteGenerator` — scatter resource sites (farmsteads, mines, camps) that feed `arable_acres` / `mining_slots` into settlements (§4.10).
+- Name generation — replace placeholder settlement/province names with Markov-chain generated names (TODO §1).
+- Culture zones — needed before factions can inherit expansion type and language (TODO §2).
+- Sea routes — coastal settlement connectivity via `sea_route_network` (TODO §5).
+- Street-level local map layout — stamp real town grids into `LocalMapData` based on settlement tier (TODO §6).
 
 ---
 
@@ -717,7 +742,7 @@ Each segment is a `Button` that calls the appropriate `drill_up()` depth. The pr
 #### Limitations and Deferred Work
 
 - **Border biome blending** (smooth transitions at region tile edges) — implement after initial drill-down works.
-- **Road rendering in Region view** — deferred to Phase 3 when trade routes exist.
+- **Road rendering in Region and Local views** — ✅ Done (2026-02-22). Region view draws 1-px corridors from centre to edge midpoints/corners; Local view draws 3-px-wide corridors matching the same direction. Both read directly from `WorldData.road_network`.
 - **Art assets on Local map** — Phase 7 UI pass replaces `ImageTexture` raster with a `TileMap`.
 - **Local map size** — 48×48 is hardcoded for now. When battles need larger arenas, generate multiple adjacent world tiles and stitch.
 
