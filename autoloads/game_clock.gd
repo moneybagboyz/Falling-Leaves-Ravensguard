@@ -19,7 +19,8 @@ var turn: int = 0
 var time_scale: float = 1.0
 
 ## Whether the clock is paused by the player (separate from time_scale).
-var paused: bool = false
+## Starts true so the world generator does not tick the simulation.
+var paused: bool = true
 
 var _accumulator: float = 0.0
 

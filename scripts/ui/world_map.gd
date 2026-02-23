@@ -44,10 +44,14 @@ var _width_spin:    SpinBox     = null
 var _height_spin:   SpinBox     = null
 var _mode_buttons:  Array[Button] = []
 var _gen_button:    Button      = null
+var _start_btn:     Button         = null   ## "Start Game" — enabled after first gen
 
-# ----- Simulation UI -----
-var _sim_label:  Label  = null
-var _pause_btn:  Button = null
+# ----- Play mode -----
+var _play_mode: bool           = false
+var _gen_panel: PanelContainer = null   ## generator sidebar (hidden in play mode)
+var _play_panel: PanelContainer = null  ## overworld HUD (shown in play mode)
+var _play_day_lbl:   Label     = null
+var _play_hover_lbl: Label     = null
 
 # ----- World-settings sliders -----
 var _sl_sea_ratio:       HSlider = null
@@ -111,11 +115,13 @@ func _process(_delta: float) -> void:
 			world_data.world_seed, world_data.width, world_data.height]
 		_gen_button.disabled = false
 		_gen_button.text = "Generate  [R]"
-	# Update simulation day counter.
-	if _sim_label != null:
-		var d: int = (GameClock.day() - 1) % 360 + 1
-		var y: int = (GameClock.day() - 1) / 360 + 1
-		_sim_label.text = "Day %d  Year %d" % [d, y]
+		_start_btn.disabled = false
+
+	# Update play HUD clock display each frame.
+	if _play_mode and _play_day_lbl != null:
+		_play_day_lbl.text = "Day %d — %02d:00" % [GameClock.day(), GameClock.hour_of_day()]
+		var paused_tag: String = "  |  PAUSED" if GameClock.paused else ""
+		_status_label.text = "Day %d  |  %02d:00%s" % [GameClock.day(), GameClock.hour_of_day(), paused_tag]
 
 
 # ==================================================================
@@ -136,7 +142,10 @@ func _build_ui() -> void:
 	hbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_world_ui.add_child(hbox)
 
-	_build_sidebar(hbox)
+	_gen_panel = _build_sidebar(hbox)
+	_play_panel = _build_play_sidebar()
+	_play_panel.hide()
+	hbox.add_child(_play_panel)
 	_build_map_area(hbox)
 
 	# ── Status bar ───────────────────────────────────────────────
@@ -151,7 +160,7 @@ func _build_ui() -> void:
 	status_panel.add_child(_status_label)
 
 
-func _build_sidebar(parent: HBoxContainer) -> void:
+func _build_sidebar(parent: HBoxContainer) -> PanelContainer:
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = Vector2(SIDEBAR_WIDTH, 0)
 	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -193,6 +202,12 @@ func _build_sidebar(parent: HBoxContainer) -> void:
 	_gen_button.text = "Generate  [R]"
 	_gen_button.pressed.connect(_generate_world)
 	vbox.add_child(_gen_button)
+
+	_start_btn = Button.new()
+	_start_btn.text = "▶  Start Game"
+	_start_btn.disabled = true
+	_start_btn.pressed.connect(_start_game)
+	vbox.add_child(_start_btn)
 
 	vbox.add_child(HSeparator.new())
 
@@ -322,36 +337,6 @@ func _build_sidebar(parent: HBoxContainer) -> void:
 
 	vbox.add_child(HSeparator.new())
 
-	# ── Simulation ────────────────────────────────────────────────
-	vbox.add_child(_make_section_label("── Simulation"))
-
-	_sim_label = Label.new()
-	_sim_label.text = "Day 1  Year 1"
-	_sim_label.add_theme_font_size_override("font_size", 12)
-	vbox.add_child(_sim_label)
-
-	_pause_btn = Button.new()
-	_pause_btn.text = "⏸ Pause"
-	_pause_btn.toggle_mode = true
-	_pause_btn.button_pressed = GameClock.paused
-	_pause_btn.toggled.connect(func(p: bool) -> void:
-		GameClock.paused = p
-		_pause_btn.text = "▶ Resume" if p else "⏸ Pause")
-	vbox.add_child(_pause_btn)
-
-	var speed_box := HBoxContainer.new()
-	vbox.add_child(speed_box)
-	for entry: Array in [["1×", 1.0], ["10×", 0.1], ["100×", 0.01]]:
-		var sbtn := Button.new()
-		sbtn.text = entry[0]
-		sbtn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		sbtn.add_theme_font_size_override("font_size", 11)
-		var spd: float = entry[1]
-		sbtn.pressed.connect(func() -> void: GameClock.time_scale = spd)
-		speed_box.add_child(sbtn)
-
-	vbox.add_child(HSeparator.new())
-
 	# ── Tips ──────────────────────────────────────────────────────
 	var tips := Label.new()
 	tips.text = "Scroll: zoom\nMiddle-drag: pan\nRight-click: reset view"
@@ -359,6 +344,95 @@ func _build_sidebar(parent: HBoxContainer) -> void:
 	tips.modulate = Color(0.7, 0.7, 0.7)
 	tips.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	vbox.add_child(tips)
+
+	return panel
+
+
+# ==================================================================
+# Play sidebar and Start Game
+# ==================================================================
+
+func _build_play_sidebar() -> PanelContainer:
+	var panel := PanelContainer.new()
+	panel.custom_minimum_size = Vector2(SIDEBAR_WIDTH, 0)
+	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+
+	var vbox := VBoxContainer.new()
+	vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	vbox.add_theme_constant_override("separation", 6)
+	panel.add_child(vbox)
+
+	var title := Label.new()
+	title.text = "OVERWORLD"
+	title.add_theme_font_size_override("font_size", 15)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(title)
+
+	vbox.add_child(HSeparator.new())
+
+	_play_day_lbl = Label.new()
+	_play_day_lbl.text = "Day 1 — 00:00"
+	_play_day_lbl.add_theme_font_size_override("font_size", 13)
+	_play_day_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(_play_day_lbl)
+
+	vbox.add_child(HSeparator.new())
+
+	vbox.add_child(_make_label("Speed"))
+	var speed_row := HBoxContainer.new()
+	speed_row.add_theme_constant_override("separation", 3)
+	vbox.add_child(speed_row)
+
+	# Pause toggle
+	var pause_btn := Button.new()
+	pause_btn.text = "⏸"
+	pause_btn.toggle_mode = true
+	pause_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pause_btn.toggled.connect(func(on: bool): GameClock.paused = on)
+	speed_row.add_child(pause_btn)
+
+	# Speed presets
+	for entry: Array in [["1×", 1.0], ["5×", 0.2], ["25×", 0.04]]:
+		var btn := Button.new()
+		btn.text = entry[0]
+		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var sv: float = entry[1]
+		btn.pressed.connect(func():
+			GameClock.time_scale = sv
+			GameClock.paused = false
+			pause_btn.button_pressed = false
+		)
+		speed_row.add_child(btn)
+
+	vbox.add_child(HSeparator.new())
+
+	vbox.add_child(_make_label("Tile Info"))
+	_play_hover_lbl = Label.new()
+	_play_hover_lbl.text = "—"
+	_play_hover_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_play_hover_lbl.add_theme_font_size_override("font_size", 12)
+	vbox.add_child(_play_hover_lbl)
+
+	vbox.add_child(HSeparator.new())
+
+	var play_tips := Label.new()
+	play_tips.text = "Scroll: zoom\nMiddle-drag: pan\nRight-click: reset view\nDouble-click: drill in\nSpace: pause / unpause"
+	play_tips.add_theme_font_size_override("font_size", 11)
+	play_tips.modulate = Color(0.7, 0.7, 0.7)
+	play_tips.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	vbox.add_child(play_tips)
+
+	return panel
+
+
+func _start_game() -> void:
+	if world_data == null:
+		return
+	_play_mode = true
+	_gen_panel.hide()
+	_play_panel.show()
+	GameClock.paused = false
+	_status_label.text = "Day 1 — overworld simulation running  |  Space to pause"
 
 
 func _build_map_area(parent: HBoxContainer) -> void:
@@ -556,7 +630,12 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	if not event is InputEventKey or not event.pressed:
 		return
 	match event.keycode:
-		KEY_R: _generate_world()
+		KEY_R:
+			if not _play_mode:
+				_generate_world()
+		KEY_SPACE:
+			if _play_mode:
+				GameClock.paused = not GameClock.paused
 		KEY_B: _set_mode(MapRenderer.ViewMode.BIOME)
 		KEY_A: _set_mode(MapRenderer.ViewMode.ALTITUDE)
 		KEY_T: _set_mode(MapRenderer.ViewMode.TEMPERATURE)
@@ -636,6 +715,8 @@ func _pin_tile(mouse_pos: Vector2) -> void:
 		"[%d, %d] ● PINNED\n%s%s\n\nAlt:   %.2f\nTemp:  %.2f\nRain:  %.2f\nDrain: %.2f\nProsp: %.2f\nFlow:  %.2f\n\n[click to unpin]"
 		% [tx, ty, biome_name, water_tag, alt, temp, precip, drain, prosp, flow_v]
 	)
+	if _play_hover_lbl != null:
+		_play_hover_lbl.text = _hover_label.text
 
 
 func _update_hover(mouse_pos: Vector2) -> void:
@@ -673,6 +754,8 @@ func _update_hover(mouse_pos: Vector2) -> void:
 		"[%d, %d]\n%s%s\n\nAlt:   %.2f\nTemp:  %.2f\nRain:  %.2f\nDrain: %.2f\nProsp: %.2f\nFlow:  %.2f"
 		% [tx, ty, biome_name, water_tag, alt, temp, precip, drain, prosp, flow_v]
 	)
+	if _play_hover_lbl != null:
+		_play_hover_lbl.text = _hover_label.text
 
 
 # ==================================================================
