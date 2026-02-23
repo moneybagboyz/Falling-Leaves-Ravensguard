@@ -1,0 +1,47 @@
+{
+  "grain":         { "category": "food",         "weight": 1.0, "produced_by": ["farm", "foraging"],                  "consumed_by": ["all"],      "base_price": 10,  "desc": "Staple crop. Primary source of calories for the population." },
+  "fish":          { "category": "food",         "weight": 0.8, "produced_by": ["fishing"],                           "consumed_by": ["all"],      "base_price": 8,   "desc": "Salted or fresh catch. Supplements grain in coastal and riverside settlements." },
+  "meat":          { "category": "food",         "weight": 1.2, "produced_by": ["hunting", "pasture"],                "consumed_by": ["all", "nobility"], "base_price": 20, "desc": "Butchered livestock or hunted game. Nobles demand it as a staple." },
+  "game":          { "category": "food",         "weight": 1.0, "produced_by": ["hunting", "foraging"],               "consumed_by": ["all"],      "base_price": 15,  "desc": "Wild animal meat from the forests and plains." },
+
+  "wood":          { "category": "fuel",         "weight": 2.0, "produced_by": ["forestry"],                          "consumed_by": ["all"],      "base_price": 5,   "desc": "Cut timber. Consumed daily by the population for heat and cooking." },
+  "coal":          { "category": "fuel",         "weight": 3.0, "produced_by": ["mining"],                            "consumed_by": ["industry"], "base_price": 20,  "desc": "Mined sedimentary fuel. Burns hotter than wood; used in smelting." },
+  "peat":          { "category": "fuel",         "weight": 1.5, "produced_by": ["extraction"],                        "consumed_by": ["all"],      "base_price": 8,   "desc": "Bog fuel. Inferior to wood but available in swampy terrain." },
+
+  "wool":          { "category": "textile",      "weight": 0.5, "produced_by": ["pasture"],                           "consumed_by": ["all"],      "base_price": 20,  "desc": "Shorn from sheep. Refined into cloth or sold raw." },
+  "cloth":         { "category": "textile",      "weight": 0.4, "produced_by": ["craft"],                             "consumed_by": ["all"],      "base_price": 50,  "desc": "Woven wool or linen. Required for garments and basic population maintenance." },
+  "linen":         { "category": "textile",      "weight": 0.3, "produced_by": ["farm", "craft"],                     "consumed_by": ["all"],      "base_price": 40,  "desc": "Woven flax. Lighter and finer than wool cloth." },
+  "silk":          { "category": "textile",      "weight": 0.2, "produced_by": ["trade"],                             "consumed_by": ["nobility"], "base_price": 200, "desc": "Imported luxury fabric. Only the nobility wears it." },
+  "leather":       { "category": "textile",      "weight": 1.0, "produced_by": ["hunting", "pasture", "craft"],       "consumed_by": ["all"],      "base_price": 60,  "desc": "Tanned hide. Used in armor, boots, and general maintenance." },
+  "hides":         { "category": "textile",      "weight": 1.5, "produced_by": ["hunting", "pasture"],                "consumed_by": ["craft"],    "base_price": 15,  "desc": "Raw untanned animal hides. Refined into leather." },
+  "furs":          { "category": "luxury",       "weight": 0.8, "produced_by": ["trapping", "hunting"],               "consumed_by": ["nobility"], "base_price": 120, "desc": "Pelts from cold-climate animals. A noble luxury and status marker." },
+  "fine_garments": { "category": "luxury",       "weight": 0.5, "produced_by": ["craft"],                             "consumed_by": ["nobility"], "base_price": 250, "desc": "Tailored silk and fine cloth garments. Purely a luxury good." },
+
+  "ale":           { "category": "luxury",       "weight": 1.5, "produced_by": ["craft"],                             "consumed_by": ["burghers"], "base_price": 30,  "desc": "Brewed grain beverage. Burghers demand it; shortage causes burgher unrest." },
+  "salt":          { "category": "luxury",       "weight": 2.0, "produced_by": ["extraction", "trade"],               "consumed_by": ["nobility"], "base_price": 45,  "desc": "Preservative and flavouring. Nobles require it; also vital for preservation." },
+  "spices":        { "category": "luxury",       "weight": 0.2, "produced_by": ["trade"],                             "consumed_by": ["nobility"], "base_price": 500, "desc": "Rare imported flavouring. Only reachable via long-distance trade routes." },
+  "ivory":         { "category": "luxury",       "weight": 3.0, "produced_by": ["trade"],                             "consumed_by": ["nobility"], "base_price": 800, "desc": "Carved tusks. Purely a prestige commodity." },
+  "jewelry":       { "category": "luxury",       "weight": 0.1, "produced_by": ["craft"],                             "consumed_by": ["nobility"], "base_price": 1000,"desc": "Crafted gold and gem trinkets. Nobility demand scales with their population." },
+
+  "iron":          { "category": "raw_metal",    "weight": 5.0, "produced_by": ["mining"],                            "consumed_by": ["craft", "industry"], "base_price": 40,  "desc": "Smelted from iron ore. Backbone of tools, weapons, and armor." },
+  "copper":        { "category": "raw_metal",    "weight": 5.5, "produced_by": ["mining"],                            "consumed_by": ["craft"],    "base_price": 25,  "desc": "Soft metal from metamorphic rock. Alloyed into bronze." },
+  "tin":           { "category": "raw_metal",    "weight": 4.5, "produced_by": ["mining"],                            "consumed_by": ["craft"],    "base_price": 25,  "desc": "Soft metal from metamorphic rock. Combined with copper to make bronze." },
+  "lead":          { "category": "raw_metal",    "weight": 6.0, "produced_by": ["mining"],                            "consumed_by": ["craft"],    "base_price": 20,  "desc": "Dense sedimentary metal. Used in roofing and for crossbow bolts." },
+  "silver":        { "category": "raw_metal",    "weight": 8.0, "produced_by": ["mining"],                            "consumed_by": ["craft"],    "base_price": 150, "desc": "Precious metal from metamorphic rock. Used in coinage and fine jewelry." },
+  "gold":          { "category": "raw_metal",    "weight": 10.0,"produced_by": ["mining"],                            "consumed_by": ["craft"],    "base_price": 400, "desc": "Rarest igneous metal. Primary source of high-value coinage and jewelry." },
+  "bronze":        { "category": "refined_metal","weight": 5.0, "produced_by": ["craft"],                             "consumed_by": ["craft"],    "base_price": 60,  "desc": "Copper-tin alloy. Used in early-tier weapons and armor." },
+  "steel":         { "category": "refined_metal","weight": 5.5, "produced_by": ["craft"],                             "consumed_by": ["craft"],    "base_price": 120, "desc": "Refined iron alloy. Required for high-quality weapons and armor." },
+
+  "stone":         { "category": "mineral",      "weight": 8.0, "produced_by": ["mining", "quarrying"],               "consumed_by": ["industry"], "base_price": 15,  "desc": "Quarried rock. Used in wall and building construction." },
+  "marble":        { "category": "mineral",      "weight": 9.0, "produced_by": ["mining"],                            "consumed_by": ["industry"], "base_price": 100, "desc": "Metamorphic decorative stone. Used in prestige buildings and cathedrals." },
+  "clay":          { "category": "mineral",      "weight": 3.0, "produced_by": ["extraction"],                        "consumed_by": ["craft"],    "base_price": 12,  "desc": "Found near rivers and swamps. Fired into bricks." },
+  "sand":          { "category": "mineral",      "weight": 2.5, "produced_by": ["extraction"],                        "consumed_by": ["craft"],    "base_price": 5,   "desc": "Desert or riverbed granule. Melted into glass." },
+  "glass_sand":    { "category": "mineral",      "weight": 2.5, "produced_by": ["extraction"],                        "consumed_by": ["craft"],    "base_price": 15,  "desc": "High-purity sand suitable for glassmaking." },
+  "gems":          { "category": "mineral",      "weight": 0.1, "produced_by": ["mining"],                            "consumed_by": ["craft"],    "base_price": 600, "desc": "Precious stones from igneous deposits. Used in high-end jewelry." },
+
+  "tools":         { "category": "crafted",      "weight": 3.0, "produced_by": ["craft"],                             "consumed_by": ["industry"], "base_price": 80,  "desc": "Iron implements for farming and mining. Increase labor efficiency." },
+  "bricks":        { "category": "crafted",      "weight": 6.0, "produced_by": ["craft"],                             "consumed_by": ["industry"], "base_price": 30,  "desc": "Fired clay blocks. Alternative to stone for construction." },
+
+  "horses":        { "category": "animal",       "weight": 0.0, "produced_by": ["pasture", "foraging"],               "consumed_by": ["military"], "base_price": 300, "desc": "Trained horses for cavalry and transport. Cannot be carried in a caravan." },
+  "livestock":     { "category": "animal",       "weight": 5.0, "produced_by": ["pasture"],                           "consumed_by": ["all"],      "base_price": 40,  "desc": "Cattle, pigs, and sheep kept for meat and byproducts." }
+}
