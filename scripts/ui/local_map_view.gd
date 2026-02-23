@@ -70,8 +70,64 @@ func _render() -> void:
 			# Feature overlay
 			c = _apply_feature(c, feat)
 			img.set_pixel(x, y, c)
+	# Road overlay: draw corridors toward connected world-tile neighbours.
+	_paint_roads(img)
 	_map_display.texture = ImageTexture.create_from_image(img)
 	_fit_map()
+
+
+## Overlay road corridors for the local map (48×48).
+## Roads are 3 px wide so they remain visible at this scale.
+func _paint_roads(img: Image) -> void:
+	var wd: WorldData = WorldState.world_data
+	if wd == null:
+		return
+	var wkey := Vector2i(_wx, _wy)
+	if not wd.road_network.has(wkey):
+		return
+	const ROAD_COL: Color = Color(0.76, 0.60, 0.35)
+	var iw: int = _local.width
+	var ih: int = _local.height
+	var cx: int = iw / 2
+	var cy: int = ih / 2
+	var dir_to_edge: Dictionary = {
+		Vector2i( 0, -1): Vector2i(iw / 2,        0),
+		Vector2i( 1, -1): Vector2i(iw - 1,        0),
+		Vector2i( 1,  0): Vector2i(iw - 1,  ih / 2),
+		Vector2i( 1,  1): Vector2i(iw - 1,  ih - 1),
+		Vector2i( 0,  1): Vector2i(iw / 2,  ih - 1),
+		Vector2i(-1,  1): Vector2i(0,        ih - 1),
+		Vector2i(-1,  0): Vector2i(0,        ih / 2),
+		Vector2i(-1, -1): Vector2i(0,             0),
+	}
+	for nb: Vector2i in wd.road_network[wkey]:
+		var dv := Vector2i(signi(nb.x - _wx), signi(nb.y - _wy))
+		var ep: Vector2i = dir_to_edge.get(dv, Vector2i(cx, cy))
+		# Draw a 3-pixel-wide corridor using three parallel Bresenham lines
+		for offset in [0, -1, 1]:
+			var perp_x: int = 0
+			var perp_y: int = 0
+			if dv.x == 0:   perp_x = offset  # vertical road → widen horizontally
+			else:           perp_y = offset  # horizontal/diagonal → widen vertically
+			var x0: int = cx + perp_x; var y0: int = cy + perp_y
+			var x1: int = ep.x + perp_x; var y1: int = ep.y + perp_y
+			var bx: int = absi(x1 - x0)
+			var by_: int = absi(y1 - y0)
+			var sx: int = 1 if x0 < x1 else -1
+			var sy: int = 1 if y0 < y1 else -1
+			var err: int = bx - by_
+			while true:
+				if x0 >= 0 and x0 < iw and y0 >= 0 and y0 < ih:
+					img.set_pixel(x0, y0, ROAD_COL)
+				if x0 == x1 and y0 == y1:
+					break
+				var e2: int = 2 * err
+				if e2 > -by_:
+					err -= by_
+					x0 += sx
+				if e2 < bx:
+					err += bx
+					y0 += sy
 
 
 static func _apply_feature(base: Color, feat: int) -> Color:
