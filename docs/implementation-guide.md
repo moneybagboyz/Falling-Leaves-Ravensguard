@@ -21,7 +21,7 @@
 | 2a | `province_generator.gd` — two-tier Poisson placement | ✅ Done | Hub Poisson (min-sep 6) → Dijkstra provinces → spoke Poisson (min-sep 3); 2–5 spokes/province |
 | 2b | `road_generator.gd` — two-phase Dijkstra road network | ✅ Done | Phase 1: hub→spoke intra-province; Phase 2: hub→2 nearest hub in adjacent provinces; ROAD_DISCOUNT corridor merging; `connectivity_rate` + population bonuses; `assign_tiers()` (Hamlet→Metropolis) |
 | 2c | Road overlays — world, region, and local maps | ✅ Done | World map: Bresenham 1-px tan lines; Region map: 1-px centre→edge per connected neighbour; Local map: 3-px wide corridors (±1 perpendicular offset) |
-| 2d | Settlements + Economy core | ⬜ | Scripts scaffolded; see §5 — **this is the next milestone** |
+| 2d | Settlements + Economy core | ✅ Done | Full daily tick: `Production.run` → `Market.consume` → `GovernorAI.decide/collect_taxes` → `Market.update_prices` → population growth; weekly digest + clock controls in sidebar |
 | 3 | Factions + Overworld Agents | ⬜ | See §6 |
 | 4 | Player Character | ⬜ | See §7 |
 | 5 | Tactical Battle | ⬜ | See §8 |
@@ -36,12 +36,13 @@ World generation (Phase 1 + 1.5) and the road/province infrastructure (Phase 2a�
 
 ### Immediate next steps (in order)
 
-1. **Wire `Settlement` into `WorldState`** — `WorldState.settlements` is already populated by `ProvinceGenerator.place_settlements()`; confirm the array is reachable and serialisable.
-2. **Implement `Production.calculate(settlement)`** — farming, mining, fishing, and forestry formulas using `arable_acres`, `mining_slots`, etc. (see §5.3).
-3. **Implement `Market.consume(settlement)` and `Market.update_prices(settlement)`** — 14-day rolling price history, supply/demand curve (see §5.4).
-4. **Implement `GovernorAI.decide(settlement)`** — build-queue logic, labor allocation (see §5.5).
-5. **Hook everything into `GameClock.daily_pulse`** — the signal chain in §2.3 is the target wiring.
-6. **Console smoke-test** — print daily totals to Output so the tick loop is confirmed working before any UI work.
+1. ✅ **Wire `Settlement` into `WorldState`** — `WorldState.settlements` populated by `ProvinceGenerator.place_settlements()`; `_on_daily_pulse` drives `s.daily_tick()`.
+2. ✅ **Implement `Production.run(settlement)`** — farming, mining, fishing, and forestry formulas using `arable_acres`, `mining_slots`, labour priority queue (see §5.3).
+3. ✅ **Implement `Market.consume(settlement)` and `Market.update_prices(settlement)`** — 14-day rolling price history, supply/demand curve (see §5.4).
+4. ✅ **Implement `GovernorAI.decide(settlement)`** — build-queue logic, labour allocation, tax collection by personality (see §5.5).
+5. ✅ **Hook everything into `GameClock.daily_pulse`** — signal chain in §2.3 fully wired.
+6. ✅ **Console smoke-test** — `WorldState._on_weekly_pulse` prints weekly economy digest (total pop, grain, treasury) + full `summary()` for the 2 highest-tier settlements to the Output console.
+7. ✅ **Simulation clock controls** — "Simulation" panel added to the world map sidebar: Day/Year label (updated every frame), ⏸ Pause toggle, and 1× / 10× / 100× speed buttons (maps to `GameClock.time_scale`).
 
 ### Backlog (do after Phase 2 tick is running)
 

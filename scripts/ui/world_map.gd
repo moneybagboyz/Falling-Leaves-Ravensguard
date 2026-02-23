@@ -45,6 +45,10 @@ var _height_spin:   SpinBox     = null
 var _mode_buttons:  Array[Button] = []
 var _gen_button:    Button      = null
 
+# ----- Simulation UI -----
+var _sim_label:  Label  = null
+var _pause_btn:  Button = null
+
 # ----- World-settings sliders -----
 var _sl_sea_ratio:       HSlider = null
 var _sl_falloff:         HSlider = null
@@ -107,6 +111,11 @@ func _process(_delta: float) -> void:
 			world_data.world_seed, world_data.width, world_data.height]
 		_gen_button.disabled = false
 		_gen_button.text = "Generate  [R]"
+	# Update simulation day counter.
+	if _sim_label != null:
+		var d: int = (GameClock.day() - 1) % 360 + 1
+		var y: int = (GameClock.day() - 1) / 360 + 1
+		_sim_label.text = "Day %d  Year %d" % [d, y]
 
 
 # ==================================================================
@@ -310,6 +319,36 @@ func _build_sidebar(parent: HBoxContainer) -> void:
 	_hover_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_hover_label.add_theme_font_size_override("font_size", 12)
 	vbox.add_child(_hover_label)
+
+	vbox.add_child(HSeparator.new())
+
+	# ── Simulation ────────────────────────────────────────────────
+	vbox.add_child(_make_section_label("── Simulation"))
+
+	_sim_label = Label.new()
+	_sim_label.text = "Day 1  Year 1"
+	_sim_label.add_theme_font_size_override("font_size", 12)
+	vbox.add_child(_sim_label)
+
+	_pause_btn = Button.new()
+	_pause_btn.text = "⏸ Pause"
+	_pause_btn.toggle_mode = true
+	_pause_btn.button_pressed = GameClock.paused
+	_pause_btn.toggled.connect(func(p: bool) -> void:
+		GameClock.paused = p
+		_pause_btn.text = "▶ Resume" if p else "⏸ Pause")
+	vbox.add_child(_pause_btn)
+
+	var speed_box := HBoxContainer.new()
+	vbox.add_child(speed_box)
+	for entry: Array in [["1×", 1.0], ["10×", 0.1], ["100×", 0.01]]:
+		var sbtn := Button.new()
+		sbtn.text = entry[0]
+		sbtn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		sbtn.add_theme_font_size_override("font_size", 11)
+		var spd: float = entry[1]
+		sbtn.pressed.connect(func() -> void: GameClock.time_scale = spd)
+		speed_box.add_child(sbtn)
 
 	vbox.add_child(HSeparator.new())
 

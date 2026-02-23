@@ -17,6 +17,7 @@ var _region_cache: Dictionary = {}
 func _ready() -> void:
 	# Connect to GameClock once it is available (it is an autoload, so always ready).
 	GameClock.daily_pulse.connect(_on_daily_pulse)
+	GameClock.weekly_pulse.connect(_on_weekly_pulse)
 
 
 ## Called by world_map.gd whenever a new map finishes generating.
@@ -32,6 +33,28 @@ func update_world(data: WorldData) -> void:
 func _on_daily_pulse(_turn: int) -> void:
 	for s in settlements:
 		s.daily_tick()
+
+
+## Weekly digest — printed to the Output console as the smoke-test.
+func _on_weekly_pulse(turn: int) -> void:
+	if settlements.is_empty():
+		return
+	var week: int    = turn / 168
+	var total_pop:      int   = 0
+	var total_grain:    float = 0.0
+	var total_treasury: float = 0.0
+	for s: Settlement in settlements:
+		total_pop      += s.population
+		total_grain    += s.market.get_stock("grain")
+		total_treasury += s.treasury
+	print("[Week %d] settlements:%d  pop:%d  grain:%.0f  treasury:%.0fg" % [
+		week, settlements.size(), total_pop, total_grain, total_treasury
+	])
+	# Print full detail for the two highest-tier settlements
+	var sample: Array = settlements.duplicate()
+	sample.sort_custom(func(a: Settlement, b: Settlement) -> bool: return a.tier > b.tier)
+	for i in range(mini(2, sample.size())):
+		print(sample[i].summary())
 
 
 ## Returns the settlement at world tile (tx, ty), or null.
