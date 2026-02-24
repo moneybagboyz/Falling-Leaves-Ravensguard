@@ -6,22 +6,48 @@ class_name ResourceRegistry
 
 # ── Master resource list ──────────────────────────────────────────────────────
 const ALL_RESOURCES: PackedStringArray = [
-	"grain", "wood", "stone", "ore", "coal",
-	"fish",  "meat", "furs", "salt",
-	"ale",   "cloth", "leather", "iron", "timber",
+	# Subsistence
+	"grain", "wood", "fish",
+	# Surface mining (all rocky terrain)
+	"stone",
+	# Geological minerals — sedimentary belt
+	"ore", "coal", "lead", "clay",
+	# Geological minerals — metamorphic belt
+	"copper", "silver", "marble", "tin",
+	# Geological minerals — igneous belt
+	"gold", "gems",
+	# Organic raw
+	"meat", "furs", "salt",
+	# Processed goods
+	"ale", "cloth", "leather", "iron", "timber",
 ]
 
 # ── Base prices (silver coins per unit) ──────────────────────────────────────
 const _BASE_PRICE: Dictionary = {
+	# Subsistence
 	"grain":   2.0,
 	"wood":    3.0,
+	"fish":    3.0,
+	# Surface mining
 	"stone":   4.0,
+	# Sedimentary minerals
 	"ore":     8.0,
 	"coal":    5.0,
-	"fish":    3.0,
+	"lead":    6.0,
+	"clay":    3.0,
+	# Metamorphic minerals
+	"copper":  12.0,
+	"silver":  30.0,
+	"marble":  10.0,
+	"tin":     9.0,
+	# Igneous minerals
+	"gold":    80.0,
+	"gems":    60.0,
+	# Organic raw
 	"meat":    6.0,
 	"furs":    12.0,
 	"salt":    7.0,
+	# Processed goods
 	"ale":     5.0,
 	"cloth":   10.0,
 	"leather": 9.0,
@@ -72,4 +98,9 @@ static func display_name(resource_id: String) -> String:
 
 ## Whether a resource is a raw material (vs. processed good).
 static func is_raw(resource_id: String) -> bool:
-	return resource_id in ["grain", "wood", "stone", "ore", "coal", "fish"]
+	return resource_id in [
+		"grain", "wood", "stone", "fish",
+		"ore", "coal", "lead", "clay",
+		"copper", "silver", "marble", "tin",
+		"gold", "gems",
+	]

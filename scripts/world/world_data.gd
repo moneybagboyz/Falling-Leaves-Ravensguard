@@ -43,6 +43,7 @@ var is_lake:  Array      ## bool
 
 ## Phase 1.5 layers — populated by TerrainClassifier and ProvinceGenerator
 var terrain:            Array      ## TerrainType int, one per tile
+var geology:            Array      ## String: "sedimentary"/"metamorphic"/"igneous"/"" per tile
 var province_id:        Array      ## int; -1 = unassigned (ocean / unclassified)
 var settlement_score:   Array      ## float; desirability score for settlements
 var province_adjacency: Dictionary = {}  ## province_id -> {neighbour_id: true}
@@ -68,6 +69,7 @@ func _init(w: int, h: int, seed_val: int = 0) -> void:
 	is_river      = _make_grid(w, h, false)
 	is_lake       = _make_grid(w, h, false)
 	terrain          = _make_grid(w, h, 0)    # TerrainType.OCEAN = 0
+	geology          = _make_grid(w, h, "")   # assigned by GeologyGenerator
 	province_id      = _make_grid(w, h, -1)
 	settlement_score = _make_grid(w, h, 0.0)
 	province_names    = []

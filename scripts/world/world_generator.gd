@@ -21,8 +21,11 @@ static func generate(width: int, height: int, seed_val: int = 0, params: WorldGe
 	Hydrology.process(data, params)
 
 	# Phase 1.5 — terrain + province layers
+	# GeologyGenerator runs immediately after terrain so that settlements can
+	# read geology during _calculate_land().
 	# ProvinceGenerator.generate() calls score_settlement_sites() internally.
 	TerrainClassifier.classify(data)
+	GeologyGenerator.assign(data, s + 10)
 	ProvinceGenerator.generate(data, s + 9, params)
 
 	# Phase 2 — place settlements (hub towns + spoke hamlets)

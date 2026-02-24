@@ -22,10 +22,15 @@ var burghers:    int = 15
 var nobility:    int = 1
 
 # ── Land (calculated once on init from surrounding world tiles) ───────────────
-var arable_acres:  float = 0.0
-var forest_acres:  float = 0.0
-var mining_slots:  int   = 0
-var fishing_slots: int   = 0
+var arable_acres:     float = 0.0
+var forest_acres:     float = 0.0
+var mining_slots:     int   = 0    ## total rocky terrain capacity (used for stone)
+var fishing_slots:    int   = 0
+## Geology-specific mineral deposit capacities (rid → effective slot count).
+## Populated by _calculate_land() via GeologyGenerator.
+## Only MOUNTAIN and HILLS tiles have geology; the specific mix depends on the
+## geology type of each tile (sedimentary/metamorphic/igneous).
+var mineral_deposits: Dictionary = {}
 
 # ── Economy ───────────────────────────────────────────────────────────────────
 var market:           Market          = null
@@ -68,23 +73,33 @@ func _calculate_land(data: WorldData) -> void:
 			var ny: int = tile_y + dy
 			if nx < 0 or nx >= data.width or ny < 0 or ny >= data.height:
 				continue
+			var raw_slots: int = 0
 			match data.terrain[ny][nx]:
 				WorldData.TerrainType.PLAINS:
 					arable_acres += 250.0
 				WorldData.TerrainType.HILLS:
-					arable_acres  += 125.0
-					mining_slots  += 150
+					arable_acres += 125.0
+					raw_slots     = 150
+					mining_slots += 150
 				WorldData.TerrainType.FOREST:
 					arable_acres  += 50.0
 					forest_acres  += 200.0
 				WorldData.TerrainType.MOUNTAIN:
-					mining_slots  += 400
+					raw_slots     = 400
+					mining_slots += 400
 				WorldData.TerrainType.RIVER:
 					arable_acres  += 250.0
 					fishing_slots += 150
-					mining_slots  += 40
+					raw_slots     = 40
+					mining_slots += 40
 				WorldData.TerrainType.COAST:
 					fishing_slots += 80
+			# Accumulate geology-specific mineral deposits for rocky tiles.
+			if raw_slots > 0:
+				var geo: String = data.geology[ny][nx]
+				var tile_deposits: Dictionary = GeologyGenerator.mineral_deposits_for(geo, raw_slots)
+				for rid: String in tile_deposits:
+					mineral_deposits[rid] = mineral_deposits.get(rid, 0) + tile_deposits[rid]
 
 
 ## Called once by RoadGenerator after connectivity_rate is set.

@@ -1,0 +1,18 @@
+{
+  "sedimentary": {
+    "iron": 0.04,
+    "coal": 0.08,
+    "lead": 0.05,
+    "clay": 0.12
+  },
+  "metamorphic": {
+    "copper": 0.03,
+    "silver": 0.06,
+    "marble": 0.09,
+    "tin":    0.07
+  },
+  "igneous": {
+    "gold": 0.02,
+    "gems": 0.05
+  }
+}

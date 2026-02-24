@@ -70,14 +70,6 @@ static func _wood_rate(settlement: Settlement) -> float:
 	return settlement.forest_acres * 0.025 * mult
 
 
-## Daily ore output if ALL laborers work the mines.
-## 400 mining_slots (1 mountain tile) → ~21/day at mine lv1.
-static func _ore_rate(settlement: Settlement) -> float:
-	var mine_level: int   = settlement._building_level("mine")
-	var mult:       float = 1.0 + mine_level * 0.5
-	return settlement.mining_slots * 0.035 * mult
-
-
 ## Daily fish output (flat rate — not divided by laborers).
 ## 80 fishing_slots (1 coast tile) → ~11/day at fishery lv1.
 static func _fish_rate(settlement: Settlement) -> float:
@@ -86,19 +78,26 @@ static func _fish_rate(settlement: Settlement) -> float:
 	return settlement.fishing_slots * 0.14 * mult
 
 
-## Surface quarrying alongside ore extraction.
+## Daily ore output if ALL laborers work the mines.
+## 400 mining_slots (1 mountain tile) → ~18/day stone at mine lv1.
 static func _stone_rate(settlement: Settlement) -> float:
 	var mine_level: int   = settlement._building_level("mine")
 	var mult:       float = 1.0 + mine_level * 0.30
 	return settlement.mining_slots * 0.045 * mult
 
 
-## Deep-seam coal; only accessible from mine level 2+.
-static func _coal_rate(settlement: Settlement) -> float:
-	var mine_level: int = settlement._building_level("mine")
-	if mine_level < 2:
+## Daily output for a geology-specific mineral if ALL labourers work the mine.
+## deposit_slots come from Settlement.mineral_deposits, which were assigned at
+## world-gen time by GeologyGenerator based on the tile's geology type.
+## Rate constant 0.35 per slot gives roughly 5-12 units/day for a typical
+## mountain settlement at mine level 1, scaling with building level.
+static func _mineral_rate(settlement: Settlement, rid: String) -> float:
+	var deposit: int = settlement.mineral_deposits.get(rid, 0)
+	if deposit == 0:
 		return 0.0
-	return settlement.mining_slots * 0.020 * float(mine_level - 1)
+	var mine_level: int   = settlement._building_level("mine")
+	var mult:       float = 1.0 + mine_level * 0.5
+	return float(deposit) * 0.35 * mult
 
 
 ## Livestock output from a fraction of arable land set aside for pasture.
@@ -116,17 +115,21 @@ static func _furs_rate(settlement: Settlement) -> float:
 ## Per-labourer daily output for a given resource.
 ## Fish and furs are flat-rate (auto-produced in step 0) so return 0.0 here
 ## to prevent workers being erroneously assigned to them in _assign_profit.
+## All geological minerals route through _mineral_rate (reads mineral_deposits).
 static func _rate_per_worker(settlement: Settlement, rid: String) -> float:
 	var total_workers: int = maxi(settlement.laborers, 1)
 	match rid:
 		"grain": return _grain_rate(settlement) / total_workers
 		"wood":  return _wood_rate(settlement)  / total_workers
-		"ore":   return _ore_rate(settlement)   / total_workers
 		"fish":  return 0.0  # flat-rate: auto-produced in step 0
 		"stone": return _stone_rate(settlement) / total_workers
-		"coal":  return _coal_rate(settlement)  / total_workers
 		"meat":  return _meat_rate(settlement)  / total_workers
 		"furs":  return 0.0  # flat-rate: auto-produced in step 0
+		# Geological minerals — contribution depends on mineral_deposits
+		"ore", "coal", "lead", "clay", \
+		"copper", "silver", "marble", "tin", \
+		"gold", "gems":
+			return _mineral_rate(settlement, rid) / total_workers
 	return 0.0
 
 
