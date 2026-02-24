@@ -20,6 +20,9 @@ static func run(settlement: Settlement) -> void:
 	settlement.market.add_stock("wool",  _wool_rate(settlement))
 	settlement.market.add_stock("hides", _hides_rate(settlement))
 	settlement.market.add_stock("game",  _game_rate(settlement))
+	settlement.market.add_stock("meat",  _meat_rate(settlement))
+	if settlement.mining_slots > 0:
+		settlement.market.add_stock("stone", _stone_rate(settlement))
 	if settlement.coast_tiles > 0:
 		settlement.market.add_stock("salt", _salt_rate(settlement))
 
@@ -83,7 +86,7 @@ static func _fish_rate(settlement: Settlement) -> float:
 	return settlement.fishing_slots * 0.14 * mult
 
 
-## Daily ore output if ALL laborers work the mines.
+## Daily stone output from surface quarrying (flat rate alongside mining).
 ## 400 mining_slots (1 mountain tile) → ~18/day stone at mine lv1.
 static func _stone_rate(settlement: Settlement) -> float:
 	var mine_level: int   = settlement._building_level("mine")
@@ -151,10 +154,8 @@ static func _rate_per_worker(settlement: Settlement, rid: String) -> float:
 	match rid:
 		"grain": return _grain_rate(settlement) / total_workers
 		"wood":  return _wood_rate(settlement)  / total_workers
-		"stone": return _stone_rate(settlement) / total_workers
-		"meat":  return _meat_rate(settlement)  / total_workers
 		# Flat-rate produced in step 0 — workers cannot be assigned to these
-		"fish", "furs", "wool", "hides", "game":
+		"fish", "furs", "wool", "hides", "game", "meat", "stone":
 			return 0.0
 		# Geological minerals — contribution depends on mineral_deposits
 		"iron", "coal", "lead", "clay", \

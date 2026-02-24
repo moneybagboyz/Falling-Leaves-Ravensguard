@@ -26,10 +26,9 @@ const ALL_RESOURCES: PackedStringArray = [
 	"ale",
 	# Processed — textiles & materials
 	"cloth", "leather", "timber", "bricks",
-	# Processed — tools & luxury
-	"tools", "jewelry",
-	# Animals
-	"livestock",
+	# Processed — luxury
+	"jewelry",
+	# Deferred (no production chain yet): tools, livestock, silk, spices, horses
 ]
 
 # ── Base prices (silver coins per unit) ──────────────────────────────────────
@@ -70,10 +69,7 @@ const _BASE_PRICE: Dictionary = {
 	"leather":   12.0,
 	"timber":    6.0,
 	"bricks":    5.0,
-	"tools":     16.0,
 	"jewelry":   200.0,
-	# Animals
-	"livestock": 8.0,
 }
 
 # ── Daily consumption per capita (units/person/day) ──────────────────────────
@@ -100,15 +96,19 @@ static func daily_demand(resource_id: String, settlement: Object) -> float:
 		"ale":
 			return settlement.burghers * 0.1 + settlement.nobility * 0.2
 		"meat":
-			return settlement.nobility * 0.5 + settlement.burghers * 0.05
+			return settlement.nobility * 0.5 + settlement.population * 0.05
 		"game":
 			return settlement.population * 0.05 if settlement.forest_acres > 0.0 else 0.0
 		"furs":
 			return settlement.nobility * 0.05
 		"wool":
-			return float(settlement._building_level("workshop")) * 6.0
+			# Floor ensures price doesn't deflate before a workshop exists.
+			return maxf(settlement.population * 0.002, float(settlement._building_level("workshop")) * 6.0)
 		"hides":
-			return float(settlement._building_level("workshop")) * 4.0
+			return maxf(settlement.population * 0.001, float(settlement._building_level("workshop")) * 4.0)
+		"stone":
+			# Construction demand: every settlement slowly uses stone
+			return settlement.population * 0.01
 		"salt":
 			return settlement.population * 0.03
 		"cloth":
