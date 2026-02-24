@@ -25,7 +25,7 @@ static func _balanced(settlement: Settlement) -> void:
 	if settlement.happiness < 60.0 and not _has_building(settlement, "tavern"):
 		settlement.add_or_upgrade_building("tavern")
 		return
-	_build_next_priority(settlement, ["farm", "lumber_mill", "mine", "forge", "market"])
+	_build_next_priority(settlement, ["farm", "lumber_mill", "mine", "forge", "workshop", "market"])
 
 
 static func _greedy(settlement: Settlement) -> void:

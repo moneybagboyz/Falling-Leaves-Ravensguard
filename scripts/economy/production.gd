@@ -14,9 +14,14 @@ static func run(settlement: Settlement) -> void:
 	var available_laborers: int = settlement.laborers
 
 	# ── 0. Flat-rate resources (no labour required) ───────────────────────────
-	# Fish and furs produce automatically regardless of worker allocation.
-	settlement.market.add_stock("fish", _fish_rate(settlement))
-	settlement.market.add_stock("furs", _furs_rate(settlement))
+	# These produce automatically regardless of worker allocation.
+	settlement.market.add_stock("fish",  _fish_rate(settlement))
+	settlement.market.add_stock("furs",  _furs_rate(settlement))
+	settlement.market.add_stock("wool",  _wool_rate(settlement))
+	settlement.market.add_stock("hides", _hides_rate(settlement))
+	settlement.market.add_stock("game",  _game_rate(settlement))
+	if settlement.coast_tiles > 0:
+		settlement.market.add_stock("salt", _salt_rate(settlement))
 
 	# ── 1. Immediate food need (1 day) ───────────────────────────────────────
 	var food_24h: float = settlement.population * 1.2
@@ -112,21 +117,47 @@ static func _furs_rate(settlement: Settlement) -> float:
 	return settlement.forest_acres * 0.005
 
 
+## Wool from pasture alongside grain farming (flat rate).
+## A hamlet on plains (arable_acres ≈ 2250) produces ~5/day at farm lv1.
+static func _wool_rate(settlement: Settlement) -> float:
+	var farm_level: int   = settlement._building_level("farm")
+	var mult:       float = 1.0 + farm_level * 0.30
+	return settlement.arable_acres * 0.002 * mult
+
+
+## Raw hides as slaughter byproduct alongside meat (flat rate).
+static func _hides_rate(settlement: Settlement) -> float:
+	var farm_level: int   = settlement._building_level("farm")
+	var mult:       float = 1.0 + farm_level * 0.30
+	return settlement.arable_acres * 0.001 * mult
+
+
+## Wild game hunted from forest land (flat rate, no labour).
+static func _game_rate(settlement: Settlement) -> float:
+	return settlement.forest_acres * 0.004
+
+
+## Coastal salt pans — evaporative production, no labour required.
+## Each COAST tile contributes 0.5 units per day.
+static func _salt_rate(settlement: Settlement) -> float:
+	return settlement.coast_tiles * 0.5
+
+
 ## Per-labourer daily output for a given resource.
-## Fish and furs are flat-rate (auto-produced in step 0) so return 0.0 here
-## to prevent workers being erroneously assigned to them in _assign_profit.
+## Flat-rate resources return 0.0 here (produced in step 0, not assignable).
 ## All geological minerals route through _mineral_rate (reads mineral_deposits).
 static func _rate_per_worker(settlement: Settlement, rid: String) -> float:
 	var total_workers: int = maxi(settlement.laborers, 1)
 	match rid:
 		"grain": return _grain_rate(settlement) / total_workers
 		"wood":  return _wood_rate(settlement)  / total_workers
-		"fish":  return 0.0  # flat-rate: auto-produced in step 0
 		"stone": return _stone_rate(settlement) / total_workers
 		"meat":  return _meat_rate(settlement)  / total_workers
-		"furs":  return 0.0  # flat-rate: auto-produced in step 0
+		# Flat-rate produced in step 0 — workers cannot be assigned to these
+		"fish", "furs", "wool", "hides", "game":
+			return 0.0
 		# Geological minerals — contribution depends on mineral_deposits
-		"ore", "coal", "lead", "clay", \
+		"iron", "coal", "lead", "clay", \
 		"copper", "silver", "marble", "tin", \
 		"gold", "gems":
 			return _mineral_rate(settlement, rid) / total_workers
@@ -173,14 +204,61 @@ static func _run_processing(settlement: Settlement) -> void:
 			settlement.market.deduct_stock("wood",  wood_used)
 			settlement.market.add_stock("timber",   wood_used / 3.0)
 
-	# Iron: forge converts ore → iron (3 ore per iron, per forge level per day).
+	# Steel: forge converts iron → steel (2 iron per steel, per forge level per day).
+	# Iron is now mined directly from sedimentary geology deposits.
 	var forge_level: int = settlement._building_level("forge")
 	if forge_level > 0:
-		var iron_target: float = float(forge_level)
-		var ore_used:    float = minf(settlement.market.get_stock("ore"), iron_target * 3.0)
-		if ore_used > 0.0:
-			settlement.market.deduct_stock("ore",  ore_used)
-			settlement.market.add_stock("iron",    ore_used / 3.0)
+		var steel_target: float = float(forge_level)
+		var iron_used:    float = minf(settlement.market.get_stock("iron"), steel_target * 2.0)
+		if iron_used > 0.0:
+			settlement.market.deduct_stock("iron",  iron_used)
+			settlement.market.add_stock("steel",    iron_used / 2.0)
+
+	# Bronze: forge lv2+ alloys copper + tin → bronze (1 copper + 1 tin per bronze).
+	if forge_level >= 2:
+		var bronze_target: float = float(forge_level - 1)
+		var bronze_made:   float = minf(bronze_target,
+			minf(settlement.market.get_stock("copper"), settlement.market.get_stock("tin")))
+		if bronze_made > 0.0:
+			settlement.market.deduct_stock("copper", bronze_made)
+			settlement.market.deduct_stock("tin",    bronze_made)
+			settlement.market.add_stock("bronze",    bronze_made)
+
+	# Cloth: workshop converts wool → cloth (3:1, workshop level × 2 cloth/day).
+	var workshop_level: int = settlement._building_level("workshop")
+	if workshop_level > 0:
+		var cloth_target:   float = float(workshop_level) * 2.0
+		var wool_used:      float = minf(settlement.market.get_stock("wool"), cloth_target * 3.0)
+		if wool_used > 0.0:
+			settlement.market.deduct_stock("wool",  wool_used)
+			settlement.market.add_stock("cloth",    wool_used / 3.0)
+
+		# Leather: workshop converts hides → leather (2:1).
+		var leather_target: float = float(workshop_level) * 2.0
+		var hides_used:     float = minf(settlement.market.get_stock("hides"), leather_target * 2.0)
+		if hides_used > 0.0:
+			settlement.market.deduct_stock("hides",  hides_used)
+			settlement.market.add_stock("leather",   hides_used / 2.0)
+
+		# Bricks: workshop lv2+ fires clay → bricks (2 clay per brick).
+		if workshop_level >= 2:
+			var bricks_target: float = float(workshop_level - 1) * 2.0
+			var clay_used:     float = minf(settlement.market.get_stock("clay"), bricks_target * 2.0)
+			if clay_used > 0.0:
+				settlement.market.deduct_stock("clay",   clay_used)
+				settlement.market.add_stock("bricks",    clay_used / 2.0)
+
+	# Jewelry: jeweler converts gold + gems → jewelry (5 gold + 2 gems per piece/day/level).
+	var jeweler_level: int = settlement._building_level("jeweler")
+	if jeweler_level > 0:
+		var jewelry_target: float = float(jeweler_level) * 0.5
+		var jewelry_made:   float = minf(jewelry_target,
+			minf(settlement.market.get_stock("gold") / 5.0,
+				 settlement.market.get_stock("gems") / 2.0))
+		if jewelry_made > 0.0:
+			settlement.market.deduct_stock("gold",    jewelry_made * 5.0)
+			settlement.market.deduct_stock("gems",    jewelry_made * 2.0)
+			settlement.market.add_stock("jewelry",    jewelry_made)
 
 
 ## Splits remaining workers across the top-2 highest-margin resources.

@@ -25,8 +25,7 @@ var nobility:    int = 1
 var arable_acres:     float = 0.0
 var forest_acres:     float = 0.0
 var mining_slots:     int   = 0    ## total rocky terrain capacity (used for stone)
-var fishing_slots:    int   = 0
-## Geology-specific mineral deposit capacities (rid → effective slot count).
+var fishing_slots:    int   = 0var coast_tiles:      int   = 0    ## number of COAST tiles in radius; drives salt production## Geology-specific mineral deposit capacities (rid → effective slot count).
 ## Populated by _calculate_land() via GeologyGenerator.
 ## Only MOUNTAIN and HILLS tiles have geology; the specific mix depends on the
 ## geology type of each tile (sedimentary/metamorphic/igneous).
@@ -94,6 +93,7 @@ func _calculate_land(data: WorldData) -> void:
 					mining_slots += 40
 				WorldData.TerrainType.COAST:
 					fishing_slots += 80
+					coast_tiles   += 1
 			# Accumulate geology-specific mineral deposits for rocky tiles.
 			if raw_slots > 0:
 				var geo: String = data.geology[ny][nx]

@@ -97,15 +97,17 @@ func consume(settlement: Object) -> void:
 	if settlement._building_level("tavern") > 0 and get_stock("ale") > 0.0:
 		settlement.happiness = minf(100.0, settlement.happiness + 2.0)
 
-	# --- Burgher luxuries (cloth/leather maintenance when produced) ---
-	# Currently deferred — cloth and leather have no production chain yet.
-	# When added, flag settlement.burgher_unhappy if unmet.
+	# --- Garment maintenance (all classes) ---
+	# Cloth and leather are consumed slowly as the population maintains garments.
+	_consume_luxury(settlement, "cloth",   settlement.population * 0.005, 2.0)
+	_consume_luxury(settlement, "leather", settlement.population * 0.003, 1.0)
 
 	# --- Noble luxuries ---
 	var noble_met: bool = true
-	noble_met = _consume_luxury(settlement, "meat", settlement.nobility * 0.5,  5.0) and noble_met
-	noble_met = _consume_luxury(settlement, "furs", settlement.nobility * 0.05, 3.0) and noble_met
-	noble_met = _consume_luxury(settlement, "salt", settlement.nobility * 0.05, 2.0) and noble_met
+	noble_met = _consume_luxury(settlement, "meat",    settlement.nobility * 0.5,  5.0) and noble_met
+	noble_met = _consume_luxury(settlement, "furs",    settlement.nobility * 0.05, 3.0) and noble_met
+	noble_met = _consume_luxury(settlement, "salt",    settlement.nobility * 0.05, 2.0) and noble_met
+	noble_met = _consume_luxury(settlement, "jewelry", settlement.nobility * 0.01, 5.0) and noble_met
 	if not noble_met:
 		settlement.nobility_unhappy = true
 

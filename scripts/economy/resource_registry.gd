@@ -8,51 +8,72 @@ class_name ResourceRegistry
 const ALL_RESOURCES: PackedStringArray = [
 	# Subsistence
 	"grain", "wood", "fish",
-	# Surface mining (all rocky terrain)
+	# Organic raw — food & materials
+	"meat", "game", "wool", "hides", "furs",
+	# Surface mining
 	"stone",
 	# Geological minerals — sedimentary belt
-	"ore", "coal", "lead", "clay",
+	"coal", "lead", "clay",
 	# Geological minerals — metamorphic belt
 	"copper", "silver", "marble", "tin",
 	# Geological minerals — igneous belt
 	"gold", "gems",
-	# Organic raw
-	"meat", "furs", "salt",
-	# Processed goods
-	"ale", "cloth", "leather", "iron", "timber",
+	# Preserved
+	"salt",
+	# Metals (mined raw + processed)
+	"iron", "bronze", "steel",
+	# Processed — food & drink
+	"ale",
+	# Processed — textiles & materials
+	"cloth", "leather", "timber", "bricks",
+	# Processed — tools & luxury
+	"tools", "jewelry",
+	# Animals
+	"livestock",
 ]
 
 # ── Base prices (silver coins per unit) ──────────────────────────────────────
 const _BASE_PRICE: Dictionary = {
 	# Subsistence
-	"grain":   2.0,
-	"wood":    3.0,
-	"fish":    3.0,
-	# Surface mining
-	"stone":   4.0,
-	# Sedimentary minerals
-	"ore":     8.0,
-	"coal":    5.0,
-	"lead":    6.0,
-	"clay":    3.0,
-	# Metamorphic minerals
-	"copper":  12.0,
-	"silver":  30.0,
-	"marble":  10.0,
-	"tin":     9.0,
-	# Igneous minerals
-	"gold":    80.0,
-	"gems":    60.0,
+	"grain":     2.0,
+	"wood":      3.0,
+	"fish":      3.0,
 	# Organic raw
-	"meat":    6.0,
-	"furs":    12.0,
-	"salt":    7.0,
-	# Processed goods
-	"ale":     5.0,
-	"cloth":   10.0,
-	"leather": 9.0,
-	"iron":    15.0,
-	"timber":  6.0,
+	"meat":      6.0,
+	"game":      3.0,
+	"wool":      4.0,
+	"hides":     3.0,
+	"furs":      24.0,
+	# Surface mining
+	"stone":     4.0,
+	# Sedimentary minerals
+	"coal":      5.0,
+	"lead":      6.0,
+	"clay":      3.0,
+	# Metamorphic minerals
+	"copper":    12.0,
+	"silver":    30.0,
+	"marble":    20.0,
+	"tin":       9.0,
+	# Igneous minerals
+	"gold":      80.0,
+	"gems":      120.0,
+	# Preserved
+	"salt":      9.0,
+	# Metals
+	"iron":      8.0,
+	"bronze":    12.0,
+	"steel":     24.0,
+	# Processed
+	"ale":       6.0,
+	"cloth":     10.0,
+	"leather":   12.0,
+	"timber":    6.0,
+	"bricks":    5.0,
+	"tools":     16.0,
+	"jewelry":   200.0,
+	# Animals
+	"livestock": 8.0,
 }
 
 # ── Daily consumption per capita (units/person/day) ──────────────────────────
@@ -80,14 +101,28 @@ static func daily_demand(resource_id: String, settlement: Object) -> float:
 			return settlement.burghers * 0.1 + settlement.nobility * 0.2
 		"meat":
 			return settlement.nobility * 0.5 + settlement.burghers * 0.05
+		"game":
+			return settlement.population * 0.05 if settlement.forest_acres > 0.0 else 0.0
 		"furs":
 			return settlement.nobility * 0.05
+		"wool":
+			return float(settlement._building_level("workshop")) * 6.0
+		"hides":
+			return float(settlement._building_level("workshop")) * 4.0
 		"salt":
 			return settlement.population * 0.03
 		"cloth":
-			return settlement.population * 0.01
+			return settlement.population * 0.005
+		"leather":
+			return settlement.population * 0.003
+		"jewelry":
+			return settlement.nobility * 0.01
 		"fish":
 			return settlement.population * 0.3 if settlement.fishing_slots > 0 else 0.0
+		"iron":
+			return float(settlement._building_level("forge")) * 2.0
+		"coal":
+			return settlement.population * 0.01
 	return 0.0
 
 
@@ -100,7 +135,8 @@ static func display_name(resource_id: String) -> String:
 static func is_raw(resource_id: String) -> bool:
 	return resource_id in [
 		"grain", "wood", "stone", "fish",
-		"ore", "coal", "lead", "clay",
+		"iron", "coal", "lead", "clay",
 		"copper", "silver", "marble", "tin",
 		"gold", "gems",
+		"meat", "game", "wool", "hides", "furs",
 	]
