@@ -1,0 +1,14 @@
+{
+  "$schema": "../schemas/trait.schema.json",
+  "id": "suspicious",
+  "name": "Suspicious",
+  "description": "People usually want something. You assume so until proven otherwise.",
+  "tags": ["social", "neutral"],
+  "flags": ["deception_resistance", "befriend_harder"],
+  "attribute_modifiers": {
+    "perception": 1
+  },
+  "skill_xp_multipliers": {
+    "scouting": 1.10
+  }
+}

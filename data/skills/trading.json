@@ -1,0 +1,11 @@
+{
+  "$schema": "../schemas/skill.schema.json",
+  "id": "trading",
+  "name": "Trading",
+  "description": "Reading markets, negotiating prices, and identifying value. Higher levels shift buy/sell margins in the player's favour.",
+  "category": "knowledge",
+  "governing_attribute": "intelligence",
+  "max_level": 20,
+  "xp_per_level": 100,
+  "tags": ["commerce", "social", "market"]
+}

@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "res://data/schemas/skill.schema.json",
+  "title": "Skill",
+  "description": "A learnable skill that improves through use.",
+  "type": "object",
+  "required": ["id", "name", "category", "governing_attribute"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "name":        { "type": "string" },
+    "description": { "type": "string" },
+    "category": {
+      "type": "string",
+      "enum": ["craft", "combat", "social", "survival", "knowledge"],
+      "description": "High-level grouping used in the character creation UI."
+    },
+    "governing_attribute": {
+      "type": "string",
+      "description": "Primary attribute ID that provides a bonus to this skill's checks.",
+      "enum": ["strength", "endurance", "agility", "perception", "intelligence", "charisma"]
+    },
+    "max_level": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 20,
+      "description": "Hard cap on skill level. Default 20."
+    },
+    "xp_per_level": {
+      "type": "number",
+      "minimum": 1,
+      "description": "XP required for each level increment. Default 100."
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

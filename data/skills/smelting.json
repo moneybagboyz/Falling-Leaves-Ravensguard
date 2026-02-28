@@ -1,0 +1,11 @@
+{
+  "$schema": "../schemas/skill.schema.json",
+  "id": "smelting",
+  "name": "Smelting",
+  "description": "Processing raw ore into usable metal. Requires fire management and knowledge of flux ratios.",
+  "category": "craft",
+  "governing_attribute": "intelligence",
+  "max_level": 20,
+  "xp_per_level": 120,
+  "tags": ["metallurgy", "production", "labor"]
+}

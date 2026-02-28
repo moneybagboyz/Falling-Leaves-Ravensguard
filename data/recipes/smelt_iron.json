@@ -1,0 +1,11 @@
+{
+  "$schema": "../schemas/recipe.schema.json",
+  "id": "smelt_iron",
+  "name": "Smelt Iron",
+  "recipe_type": "standard",
+  "inputs": { "iron_ore": 2, "timber_log": 1 },
+  "outputs": { "iron_ingot": 1 },
+  "worker_days_per_batch": 1,
+  "required_building": "iron_smelter",
+  "tags": ["metalworking", "refining"]
+}

@@ -1,0 +1,101 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "res://data/schemas/building.schema.json",
+  "title": "Building",
+  "description": "A building template defining construction costs, upkeep, and production.",
+  "type": "object",
+  "required": ["id", "name", "category", "footprint_cells", "construction_cost"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "name": { "type": "string" },
+    "description": { "type": "string" },
+    "category": {
+      "type": "string",
+      "enum": [
+        "production", "storage", "housing", "military",
+        "civic", "religious", "trade", "infrastructure"
+      ]
+    },
+    "footprint_cells": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Settlement grid cells occupied. 1 = standard. Multi-cell via template only."
+    },
+    "construction_cost": {
+      "type": "object",
+      "description": "Required goods and labor. Keys are good IDs or 'labor_days'.",
+      "additionalProperties": { "type": "number", "minimum": 0 }
+    },
+    "upkeep_per_season": {
+      "type": "object",
+      "description": "Recurring seasonal cost. Keys are good IDs or 'coin'.",
+      "additionalProperties": { "type": "number", "minimum": 0 }
+    },
+    "max_workers": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Maximum number of worker slots available."
+    },
+    "housing_capacity": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of residents this building can house."
+    },
+    "production": {
+      "type": "object",
+      "description": "Production configuration. Only present for production-category buildings.",
+      "required": ["recipe"],
+      "properties": {
+        "recipe": { "type": "string", "description": "Recipe ID (from /data/recipes/)." },
+        "workers_required": { "type": "integer", "minimum": 1 },
+        "output_per_worker_day": { "type": "number", "minimum": 0 }
+      }
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "tier_min": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Minimum settlement tier required to place this building."
+    },
+    "local_tile_category": {
+      "type": "string",
+      "description": "Hint for the LocalView tile renderer — which tileset category to use for the 25×25 sub-grid fill."
+    },
+    "labor_slots": {
+      "type": "array",
+      "description": "Work slot templates produced by BuildingPlacer when this building is stamped.",
+      "items": {
+        "type": "object",
+        "required": ["slot_id", "count"],
+        "additionalProperties": false,
+        "properties": {
+          "slot_id":        { "type": "string" },
+          "skill_required": { "type": "string" },
+          "count":          { "type": "integer", "minimum": 1 },
+          "wage_per_day":   { "type": "number",  "minimum": 0 }
+        }
+      }
+    },
+    "z_levels": {
+      "type": "array",
+      "description": "Z-levels present in this building. 0=ground, 1=upper, -1=cellar. Omit for single-floor buildings.",
+      "items": { "type": "integer" },
+      "default": [0]
+    },
+    "local_layout": {
+      "type": "array",
+      "description": "25×25 ASCII floor plan. Each string is one row of 25 chars. Key: # wall  . floor  + door  ~ water  , dirt  _ open ground  b bed  t table  c counter  s shelf/crate  f forge/fire  ^ stairs-up  v stairs-down  % crop  * rubble  x chest  A anvil  M millstone  p pillar",
+      "items": { "type": "string", "minLength": 25, "maxLength": 25 },
+      "minItems": 25,
+      "maxItems": 25
+    }
+  }
+}

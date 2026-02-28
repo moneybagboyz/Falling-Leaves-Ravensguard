@@ -1,0 +1,122 @@
+[
+  {
+    "id": "deep_ocean",
+    "name": "Deep Ocean",
+    "base_fertility": 0.0,
+    "temperature_range": [0.0, 1.0],
+    "precipitation_range": [0.0, 1.0],
+    "description": "Open deep-water zone. Cannot be settled."
+  },
+  {
+    "id": "ocean",
+    "name": "Ocean",
+    "base_fertility": 0.0,
+    "temperature_range": [0.0, 1.0],
+    "precipitation_range": [0.0, 1.0],
+    "description": "Standard ocean tile."
+  },
+  {
+    "id": "shallow_water",
+    "name": "Shallow Water",
+    "base_fertility": 0.05,
+    "temperature_range": [0.0, 1.0],
+    "precipitation_range": [0.0, 1.0],
+    "description": "Coastal shallows. Rich fishing grounds."
+  },
+  {
+    "id": "beach",
+    "name": "Beach",
+    "base_fertility": 0.10,
+    "temperature_range": [0.3, 1.0],
+    "precipitation_range": [0.0, 1.0],
+    "description": "Sandy coastal strip."
+  },
+  {
+    "id": "mountain_snow",
+    "name": "Snow-Capped Mountain",
+    "base_fertility": 0.0,
+    "temperature_range": [0.0, 0.25],
+    "precipitation_range": [0.0, 1.0],
+    "description": "Permanently glaciated peaks."
+  },
+  {
+    "id": "mountain_rock",
+    "name": "Rocky Mountain",
+    "base_fertility": 0.02,
+    "temperature_range": [0.0, 0.45],
+    "precipitation_range": [0.0, 1.0],
+    "description": "Bare rocky highland. Rich in ore deposits."
+  },
+  {
+    "id": "snow",
+    "name": "Snowfield",
+    "base_fertility": 0.02,
+    "temperature_range": [0.0, 0.20],
+    "precipitation_range": [0.4, 1.0],
+    "description": "Permanently snow-covered flatlands."
+  },
+  {
+    "id": "tundra",
+    "name": "Tundra",
+    "base_fertility": 0.08,
+    "temperature_range": [0.0, 0.30],
+    "precipitation_range": [0.0, 0.5],
+    "description": "Frost-bound open ground with limited vegetation."
+  },
+  {
+    "id": "boreal_forest",
+    "name": "Boreal Forest",
+    "base_fertility": 0.20,
+    "temperature_range": [0.10, 0.40],
+    "precipitation_range": [0.3, 0.7],
+    "description": "Spruce and pine stands. Good timber, poor farmland."
+  },
+  {
+    "id": "grassland",
+    "name": "Grassland",
+    "base_fertility": 0.72,
+    "temperature_range": [0.30, 0.75],
+    "precipitation_range": [0.15, 0.55],
+    "description": "Open prairie. Excellent for grain and livestock."
+  },
+  {
+    "id": "woodland",
+    "name": "Woodland",
+    "base_fertility": 0.40,
+    "temperature_range": [0.25, 0.75],
+    "precipitation_range": [0.30, 0.65],
+    "description": "Mixed light forest with decent arable pockets."
+  },
+  {
+    "id": "temperate_forest",
+    "name": "Temperate Forest",
+    "base_fertility": 0.35,
+    "temperature_range": [0.30, 0.70],
+    "precipitation_range": [0.50, 0.90],
+    "description": "Dense broadleaf forest. Timber-rich, labour-intensive to clear."
+  },
+  {
+    "id": "desert",
+    "name": "Desert",
+    "base_fertility": 0.04,
+    "temperature_range": [0.65, 1.0],
+    "precipitation_range": [0.0, 0.20],
+    "description": "Arid dune and gravel waste. Rare oasis settlements."
+  },
+  {
+    "id": "savanna",
+    "name": "Savanna",
+    "base_fertility": 0.30,
+    "temperature_range": [0.60, 1.0],
+    "precipitation_range": [0.15, 0.45],
+    "description": "Tropical grassland with scattered trees and seasonal rains."
+  },
+  {
+    "id": "tropical_rainforest",
+    "name": "Tropical Rainforest",
+    "base_fertility": 0.45,
+    "temperature_range": [0.75, 1.0],
+    "precipitation_range": [0.70, 1.0],
+    "description": "Dense equatorial jungle. High biodiversity, poor soil once cleared."
+  }
+]

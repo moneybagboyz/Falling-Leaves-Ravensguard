@@ -1,0 +1,12 @@
+{
+  "$schema": "../schemas/trait.schema.json",
+  "id": "healthy",
+  "name": "Healthy",
+  "description": "Illness bounces off you. Your body repairs itself with remarkable stubbornness.",
+  "tags": ["physical", "positive"],
+  "attribute_modifiers": {
+    "endurance": 1
+  },
+  "flags": ["illness_resistance", "healing_rate_bonus"],
+  "conflicts": ["frail"]
+}

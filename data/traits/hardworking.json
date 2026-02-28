@@ -1,0 +1,15 @@
+{
+  "$schema": "../schemas/trait.schema.json",
+  "id": "hardworking",
+  "name": "Hardworking",
+  "description": "Steady effort and reliable output. You don't tire of honest labor.",
+  "tags": ["mental", "positive"],
+  "skill_xp_multipliers": {
+    "farming": 1.15,
+    "logging": 1.15,
+    "smelting": 1.10,
+    "smithing": 1.10,
+    "cooking": 1.10
+  },
+  "conflicts": ["cowardly"]
+}

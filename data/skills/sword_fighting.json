@@ -1,0 +1,11 @@
+{
+  "$schema": "../schemas/skill.schema.json",
+  "id": "sword_fighting",
+  "name": "Sword Fighting",
+  "description": "Combat technique with single-edged and double-edged blades. Footwork, parry timing, and strike selection.",
+  "category": "combat",
+  "governing_attribute": "agility",
+  "max_level": 20,
+  "xp_per_level": 150,
+  "tags": ["combat", "melee", "bladed"]
+}

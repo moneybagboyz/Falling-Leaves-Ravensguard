@@ -1,0 +1,48 @@
+{
+  "$schema": "../schemas/building.schema.json",
+  "id": "lumber_camp",
+  "name": "Lumber Camp",
+  "category": "production",
+  "footprint_cells": 1,
+  "construction_cost": { "timber_log": 10, "labor_days": 15 },
+  "upkeep_per_season": { "coin": 1 },
+  "max_workers": 6,
+  "production": {
+    "recipe": "log_timber",
+    "workers_required": 2,
+    "output_per_worker_day": 0.5
+  },
+  "tier_min": 0,
+  "local_tile_category": "camp",
+  "labor_slots": [
+    { "slot_id": "woodcutter", "skill_required": "survival", "count": 6, "wage_per_day": 1 }
+  ],
+  "local_layout": [
+    "_________________________",
+    "_________________________",
+    "__#####__________________",
+    "__#ss.#__________________",
+    "__#xx.#__________________",
+    "__#..+#__________________",
+    "__#####__________________",
+    "__,,,,,,,,,,,,,,,,,,,,,__",
+    "__,,xxx,,xxx,,xxx,,xxx,__",
+    "__,,xxx,,xxx,,xxx,,xxx,__",
+    "__,,,,,,,,,,,,,,,,,,,,,__",
+    "__,,xxx,,xxx,,xxx,,xxx,__",
+    "__,,xxx,,xxx,,xxx,,xxx,__",
+    "__,,,,,,,,,,,,,,,,,,,,,__",
+    "_________________________",
+    "_________________________",
+    "_________________________",
+    "_________________________",
+    "_________________________",
+    "_________________________",
+    "_________________________",
+    "_________________________",
+    "_________________________",
+    "_________________________",
+    "_________________________"
+  ],
+  "tags": ["extraction", "forestry", "wood"]
+}

@@ -1,0 +1,49 @@
+{
+  "$schema": "../schemas/building.schema.json",
+  "id": "farm_plot",
+  "name": "Farm Plot",
+  "description": "A managed field or small holding — tilled strips of land with a tool shed. The backbone of rural food production.",
+  "category": "production",
+  "footprint_cells": 1,
+  "construction_cost": { "labor_days": 5 },
+  "upkeep_per_season": { "coin": 0 },
+  "max_workers": 2,
+  "tier_min": 0,
+  "local_tile_category": "field",
+  "production": {
+    "recipe": "farm_grain",
+    "workers_required": 1,
+    "output_per_worker_day": 1
+  },
+  "labor_slots": [
+    { "slot_id": "farm_hand", "skill_required": "farming", "count": 2, "wage_per_day": 1 }
+  ],
+  "local_layout": [
+    "_________________________",
+    "_,,,,,,,,,,,,,,,,,,,,,,,_",
+    "_%%%%%%%%%%%%%%%%%%%%%%%_",
+    "_,,,,,,,,,,,,,,,,,,,,,,,_",
+    "_%%%%%%%%%%%%%%%%%%%%%%%_",
+    "_,,,,,,,,,,,,,,,,,,,,,,,_",
+    "_%%%%%%%%%%%%%%%%%%%%%%%_",
+    "_,,,,,,,,,,,,,,,,,,,,,,,_",
+    "_%%%%%%%%%%%%%%%%%%%%%%%_",
+    "_,,,,,,,,,,,,,,,,,,,,,,,_",
+    "_%%%%%%%%%%%%%%%%%%%%%%%_",
+    "_,,,,,,,,,,,,,,,,,,,,,,,_",
+    "_%%%%%%%%%%%%%%%%%%%%%%%_",
+    "_,,,,,,,,,,,,,,,,,,,,,,,_",
+    "_%%%%%%%%%%%%%%%%%%%%%%%_",
+    "_,,,,,,,,,,,,,,,,,,,,,,,_",
+    "_%%%%%%%%%%%%%%%%%%%%%%%_",
+    "_,,,,,,,,,,,,,,,,,,,,,,,_",
+    "_%%%%%%%%%%%%%%%%%%%%%%%_",
+    "_,,,,,,,,,,,,,,,,,,,#####",
+    "_%%%%%,,,,,,,,,,,,,,#.s.#",
+    "_,,,,,,,,,,,,,,,,,,,#...#",
+    "_%%%%%,,,,,,,,,,,,,,#.+.#",
+    "_,,,,,,,,,,,,,,,,,,,#####",
+    "_________________________"
+  ],
+  "tags": ["agriculture", "food", "labor"]
+}

@@ -1,0 +1,68 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "res://data/schemas/recipe.schema.json",
+  "title": "Recipe",
+  "description": "A production recipe. recipe_type controls which fields are active.",
+  "type": "object",
+  "required": ["id", "name", "recipe_type"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "description": "Unique snake_case identifier."
+    },
+    "name": { "type": "string" },
+    "recipe_type": {
+      "type": "string",
+      "enum": ["acreage", "standard", "extraction"],
+      "description": "acreage=farm yield per acre; standard=input→output; extraction=resource tag yield."
+    },
+
+    "output_good": {
+      "type": "string",
+      "description": "For acreage and extraction: ID of the good produced."
+    },
+    "base_yield_per_acre_per_tick": {
+      "type": "number",
+      "minimum": 0,
+      "description": "acreage only. Bushels/logs/etc per worked acre per tick."
+    },
+
+    "inputs": {
+      "type": "object",
+      "description": "standard only. Good IDs → quantity consumed per batch.",
+      "additionalProperties": { "type": "number", "minimum": 0 }
+    },
+    "outputs": {
+      "type": "object",
+      "description": "standard only. Good IDs → quantity produced per batch.",
+      "additionalProperties": { "type": "number", "minimum": 0 }
+    },
+    "worker_days_per_batch": {
+      "type": "number",
+      "minimum": 0,
+      "description": "standard only. Labor days needed to complete one batch."
+    },
+
+    "yield_per_worker_day": {
+      "type": "number",
+      "minimum": 0,
+      "description": "extraction only. Units of output_good per worker-day."
+    },
+    "required_resource_tag": {
+      "type": "string",
+      "description": "extraction only. The resource_tag the region cell must have."
+    },
+
+    "required_building": {
+      "type": "string",
+      "description": "Building ID required for this recipe to run. Null = no building needed."
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

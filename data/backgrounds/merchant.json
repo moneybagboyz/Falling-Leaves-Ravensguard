@@ -1,0 +1,17 @@
+{
+  "$schema": "../schemas/background.schema.json",
+  "id": "merchant",
+  "name": "Merchant",
+  "description": "You worked the markets — buying low, selling high, reading people. You know prices, routes, and the subtle art of making others feel they got the better deal.",
+  "attribute_bonuses": {
+    "charisma": 2,
+    "intelligence": 2,
+    "strength": -1
+  },
+  "starting_traits": ["greedy"],
+  "starting_skills": {
+    "trading": 3,
+    "persuasion": 2
+  },
+  "narrative_tags": ["urban", "wealthy_start", "social"]
+}

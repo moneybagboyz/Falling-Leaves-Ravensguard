@@ -1,0 +1,12 @@
+{
+  "$schema": "../schemas/trait.schema.json",
+  "id": "loyal",
+  "name": "Loyal",
+  "description": "You keep your word. Those who earn your trust are difficult to shake from it.",
+  "tags": ["social", "positive"],
+  "flags": ["bribe_resistance", "follower_retention_bonus"],
+  "skill_xp_multipliers": {
+    "persuasion": 1.05
+  },
+  "conflicts": ["greedy", "cowardly"]
+}

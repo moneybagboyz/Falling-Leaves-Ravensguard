@@ -1,0 +1,11 @@
+{
+  "$schema": "../schemas/skill.schema.json",
+  "id": "spear_fighting",
+  "name": "Spear Fighting",
+  "description": "Use of polearms and spears. Reach, thrust timing, and formation discipline.",
+  "category": "combat",
+  "governing_attribute": "strength",
+  "max_level": 20,
+  "xp_per_level": 150,
+  "tags": ["combat", "melee", "polearm", "formation"]
+}

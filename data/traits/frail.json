@@ -1,0 +1,13 @@
+{
+  "$schema": "../schemas/trait.schema.json",
+  "id": "frail",
+  "name": "Frail",
+  "description": "Your body is a liability. Cold, hunger, and wounds press harder on you than on most.",
+  "tags": ["physical", "negative"],
+  "attribute_modifiers": {
+    "endurance": -2,
+    "strength": -1
+  },
+  "flags": ["illness_susceptibility", "wound_severity_increased"],
+  "conflicts": ["strong", "healthy"]
+}

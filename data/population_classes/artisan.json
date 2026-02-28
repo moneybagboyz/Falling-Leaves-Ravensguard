@@ -1,0 +1,14 @@
+{
+  "$schema": "../schemas/population_class.schema.json",
+  "id": "artisan",
+  "name": "Artisan",
+  "consumption_per_head_per_tick": {
+    "wheat_bushel": 0.015
+  },
+  "coin_income_per_head_per_tick": 0.05,
+  "labor_days_per_head_per_tick": 0.6,
+  "luxury_demand_fraction": 0.1,
+  "unrest_per_food_shortage": 0.003,
+  "min_tier": 1,
+  "tags": ["craftsman", "skilled_laborer"]
+}

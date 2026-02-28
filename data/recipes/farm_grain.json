@@ -1,0 +1,9 @@
+{
+  "$schema": "../schemas/recipe.schema.json",
+  "id": "farm_grain",
+  "name": "Farm Grain",
+  "recipe_type": "acreage",
+  "output_good": "wheat_bushel",
+  "base_yield_per_acre_per_tick": 0.02,
+  "tags": ["agriculture", "food", "year_round"]
+}

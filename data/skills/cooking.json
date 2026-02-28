@@ -1,0 +1,11 @@
+{
+  "$schema": "../schemas/skill.schema.json",
+  "id": "cooking",
+  "name": "Cooking",
+  "description": "Turning raw ingredients into nutritious meals. Better cooks reduce waste and can improve the morale effect of food.",
+  "category": "craft",
+  "governing_attribute": "intelligence",
+  "max_level": 20,
+  "xp_per_level": 80,
+  "tags": ["food_production", "labor", "morale"]
+}

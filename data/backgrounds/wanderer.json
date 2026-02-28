@@ -1,0 +1,19 @@
+{
+  "$schema": "../schemas/background.schema.json",
+  "id": "wanderer",
+  "name": "Wanderer",
+  "description": "Roads and wilderness have been your home. You trust no one easily, observe everything, and move before anyone can ask too many questions.",
+  "attribute_bonuses": {
+    "agility": 2,
+    "perception": 2,
+    "endurance": 1,
+    "charisma": -1
+  },
+  "starting_traits": ["suspicious"],
+  "starting_skills": {
+    "scouting": 2,
+    "survival": 2,
+    "archery": 1
+  },
+  "narrative_tags": ["outdoors", "neutral_start", "loner"]
+}

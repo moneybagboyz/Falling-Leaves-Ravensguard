@@ -1,0 +1,11 @@
+{
+  "$schema": "../schemas/skill.schema.json",
+  "id": "survival",
+  "name": "Survival",
+  "description": "Finding food, water, and shelter in the wild. Managing the body's basic needs under pressure.",
+  "category": "survival",
+  "governing_attribute": "endurance",
+  "max_level": 20,
+  "xp_per_level": 100,
+  "tags": ["outdoors", "needs_management", "wilderness"]
+}

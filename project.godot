@@ -1,0 +1,35 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[application]
+
+config/name="Ravensguard"
+config/features=PackedStringArray("4.5", "Forward Plus")
+config/icon="res://icon.svg"
+run/main_scene="res://src/ui/main_menu/main_menu_screen.tscn"
+
+[display]
+
+window/size/viewport_width=1400
+window/size/viewport_height=900
+window/size/resizable=true
+
+[autoload]
+
+ContentRegistry="*res://src/core/registry/content_registry.gd"
+EntityRegistry="*res://src/core/registry/entity_registry.gd"
+DataLoader="*res://src/core/registry/data_loader.gd"
+EventQueue="*res://src/core/events/event_queue.gd"
+SimulationClock="*res://src/core/time/simulation_clock.gd"
+MigrationRunner="*res://src/core/save/migration_runner.gd"
+SaveManager="*res://src/core/save/save_manager.gd"
+TickScheduler="*res://src/core/time/tick_scheduler.gd"
+Bootstrap="*res://src/main/bootstrap.gd"
+SceneManager="*res://src/core/scene_manager.gd"

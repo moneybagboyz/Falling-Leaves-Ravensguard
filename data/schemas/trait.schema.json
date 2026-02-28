@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "res://data/schemas/trait.schema.json",
+  "title": "Trait",
+  "description": "A permanent character trait affecting attributes, skill progression, or behaviour.",
+  "type": "object",
+  "required": ["id", "name", "description", "tags"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "name":        { "type": "string" },
+    "description": { "type": "string" },
+    "tags": {
+      "type": "array",
+      "description": "Classification tags: physical, mental, social, positive, negative, neutral.",
+      "items": { "type": "string" }
+    },
+    "attribute_modifiers": {
+      "type": "object",
+      "description": "Attribute ID → flat integer modifier added to the base attribute.",
+      "additionalProperties": { "type": "integer" }
+    },
+    "skill_xp_multipliers": {
+      "type": "object",
+      "description": "Skill ID → XP gain multiplier (1.0 = normal; 1.1 = 10% faster).",
+      "additionalProperties": { "type": "number", "minimum": 0 }
+    },
+    "flags": {
+      "type": "array",
+      "description": "Behaviour flags checked by simulation systems (e.g. 'combat_morale_penalty').",
+      "items": { "type": "string" }
+    },
+    "conflicts": {
+      "type": "array",
+      "description": "Trait IDs that cannot coexist with this trait.",
+      "items": { "type": "string" }
+    }
+  }
+}

@@ -1,0 +1,90 @@
+[
+  {
+    "id": "plains",
+    "name": "Plains",
+    "movement_cost": 1.0,
+    "settlement_score_bonus": 4.0,
+    "passable": true,
+    "description": "Open flat land. Easiest movement and highest agricultural value."
+  },
+  {
+    "id": "coast",
+    "name": "Coast",
+    "movement_cost": 1.5,
+    "settlement_score_bonus": 2.0,
+    "passable": true,
+    "description": "Land tile adjacent to water. Good trade access."
+  },
+  {
+    "id": "river",
+    "name": "River",
+    "movement_cost": 1.5,
+    "settlement_score_bonus": 3.0,
+    "passable": true,
+    "description": "River-crossed land. Irrigation benefit, fording penalty."
+  },
+  {
+    "id": "hills",
+    "name": "Hills",
+    "movement_cost": 3.0,
+    "settlement_score_bonus": 1.0,
+    "passable": true,
+    "description": "Rolling elevated terrain. Defensible but slow."
+  },
+  {
+    "id": "forest",
+    "name": "Forest",
+    "movement_cost": 3.0,
+    "settlement_score_bonus": 1.0,
+    "passable": true,
+    "description": "Dense woodland. Timber-rich, movement-impeding."
+  },
+  {
+    "id": "desert",
+    "name": "Desert",
+    "movement_cost": 2.5,
+    "settlement_score_bonus": -2.0,
+    "passable": true,
+    "description": "Arid terrain. Slow travel, poor settlement prospects."
+  },
+  {
+    "id": "tundra",
+    "name": "Tundra",
+    "movement_cost": 4.0,
+    "settlement_score_bonus": -3.0,
+    "passable": true,
+    "description": "Frozen ground. Very slow; limited habitability."
+  },
+  {
+    "id": "mountain",
+    "name": "Mountain",
+    "movement_cost": 9.0,
+    "settlement_score_bonus": -8.0,
+    "passable": true,
+    "description": "High-altitude rock. Near-impassable without established paths."
+  },
+  {
+    "id": "shallow_water",
+    "name": "Shallow Water",
+    "movement_cost": 99999.0,
+    "settlement_score_bonus": 0.0,
+    "passable": false,
+    "description": "Coastal shallows. Impassable on foot."
+  },
+  {
+    "id": "ocean",
+    "name": "Ocean",
+    "movement_cost": 99999.0,
+    "settlement_score_bonus": 0.0,
+    "passable": false,
+    "description": "Open sea. Impassable on foot."
+  },
+  {
+    "id": "lake",
+    "name": "Lake",
+    "movement_cost": 99999.0,
+    "settlement_score_bonus": 0.0,
+    "passable": false,
+    "description": "Inland lake. Impassable on foot."
+  }
+]

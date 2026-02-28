@@ -1,0 +1,11 @@
+{
+  "$schema": "../schemas/skill.schema.json",
+  "id": "smithing",
+  "name": "Smithing",
+  "description": "Shaping metal into tools, weapons, and fittings. Quality and output both improve with level.",
+  "category": "craft",
+  "governing_attribute": "strength",
+  "max_level": 20,
+  "xp_per_level": 150,
+  "tags": ["metallurgy", "production", "labor", "weapons"]
+}

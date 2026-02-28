@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "res://data/schemas/background.schema.json",
+  "title": "Background",
+  "description": "A character background defining starting attributes, traits, and skills.",
+  "type": "object",
+  "required": ["id", "name", "description"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "name":        { "type": "string" },
+    "description": { "type": "string" },
+    "attribute_bonuses": {
+      "type": "object",
+      "description": "Attribute ID → integer bonus applied at character creation.",
+      "additionalProperties": { "type": "integer" }
+    },
+    "starting_traits": {
+      "type": "array",
+      "description": "Trait IDs automatically granted by this background.",
+      "items": { "type": "string" }
+    },
+    "starting_skills": {
+      "type": "object",
+      "description": "Skill ID → starting level (1-based).",
+      "additionalProperties": { "type": "integer", "minimum": 1, "maximum": 5 }
+    },
+    "narrative_tags": {
+      "type": "array",
+      "description": "Flavor tags used in character creation UI filtering.",
+      "items": { "type": "string" }
+    }
+  }
+}

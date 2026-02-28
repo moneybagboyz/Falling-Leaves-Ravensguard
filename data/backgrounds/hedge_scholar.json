@@ -1,0 +1,19 @@
+{
+  "$schema": "../schemas/background.schema.json",
+  "id": "hedge_scholar",
+  "name": "Hedge Scholar",
+  "description": "You studied at a minor scriptorium, a traveling monk's knee, or by stealing books. You know a little about everything and not enough about anything — yet.",
+  "attribute_bonuses": {
+    "intelligence": 3,
+    "perception": 1,
+    "strength": -2
+  },
+  "starting_traits": ["cautious"],
+  "starting_skills": {
+    "persuasion": 2,
+    "trading": 1,
+    "survival": 1,
+    "farming": 1
+  },
+  "narrative_tags": ["educated", "urban", "versatile_start"]
+}

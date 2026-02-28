@@ -1,0 +1,11 @@
+{
+  "$schema": "../schemas/recipe.schema.json",
+  "id": "mill_grain",
+  "name": "Mill Grain",
+  "recipe_type": "standard",
+  "inputs": { "wheat_bushel": 1 },
+  "outputs": { "flour_sack": 1 },
+  "worker_days_per_batch": 0.5,
+  "required_building": "grain_mill",
+  "tags": ["food_processing", "grain"]
+}

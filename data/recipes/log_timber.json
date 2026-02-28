@@ -1,0 +1,10 @@
+{
+  "$schema": "../schemas/recipe.schema.json",
+  "id": "log_timber",
+  "name": "Log Timber",
+  "recipe_type": "extraction",
+  "output_good": "timber_log",
+  "yield_per_worker_day": 0.5,
+  "required_resource_tag": "timber",
+  "tags": ["extraction", "forestry"]
+}

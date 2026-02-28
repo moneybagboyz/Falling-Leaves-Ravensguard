@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://main_menu_screen"]
+
+[ext_resource type="Script" path="res://src/ui/main_menu/main_menu_screen.gd" id="1_main_menu"]
+
+[node name="MainMenuScreen" type="Control"]
+script = ExtResource("1_main_menu")
+anchor_right = 1.0
+anchor_bottom = 1.0

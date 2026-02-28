@@ -1,0 +1,52 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "res://data/schemas/population_class.schema.json",
+  "title": "PopulationClass",
+  "description": "A population class definition with consumption demands and labor contribution.",
+  "type": "object",
+  "required": ["id", "name", "consumption_per_head_per_tick", "labor_days_per_head_per_tick"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "name": { "type": "string" },
+    "consumption_per_head_per_tick": {
+      "type": "object",
+      "description": "Good IDs → units consumed per head per simulation tick.",
+      "additionalProperties": { "type": "number", "minimum": 0 }
+    },
+    "labor_days_per_head_per_tick": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Worker-days of labor contributed per head per tick."
+    },
+    "coin_income_per_head_per_tick": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Coin generated per head per tick from wages, rents, and market activity. Coin circulates; it is not consumed like a commodity."
+    },
+    "luxury_demand_fraction": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Fraction of this class's income spent on luxury goods. Drives unrest if unmet."
+    },
+    "unrest_per_food_shortage": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Unrest added per unit of food shortfall per head."
+    },
+    "min_tier": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Minimum settlement tier for this class to exist. 0=all sizes."
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

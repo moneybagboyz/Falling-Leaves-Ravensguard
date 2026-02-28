@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "res://data/schemas/good.schema.json",
+  "title": "Good",
+  "description": "A tradeable commodity or resource definition.",
+  "type": "object",
+  "required": ["id", "name", "category", "base_weight_kg", "base_value"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "description": "Unique snake_case identifier."
+    },
+    "name": {
+      "type": "string",
+      "description": "Human-readable display name."
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "food_grain", "food_livestock", "food_processed",
+        "raw_material", "refined_material",
+        "tool", "weapon", "armour",
+        "cloth", "luxury", "fuel", "coin"
+      ]
+    },
+    "base_weight_kg": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Weight of one unit in kilograms."
+    },
+    "base_value": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Base trade value in coin units."
+    },
+    "spoilage_days": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Days until the good spoils at room temperature. Omit or 0 = non-perishable."
+    },
+    "bulk": {
+      "type": "boolean",
+      "description": "If true, simulated in ledger quantities rather than discrete items."
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Optional tags for recipe filtering (e.g. raw_ore, livestock_feed)."
+    }
+  }
+}

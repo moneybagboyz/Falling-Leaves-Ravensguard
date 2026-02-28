@@ -1,0 +1,11 @@
+{
+  "$schema": "../schemas/good.schema.json",
+  "id": "iron_ingot",
+  "name": "Iron Ingot",
+  "category": "refined_material",
+  "base_weight_kg": 5,
+  "base_value": 12,
+  "spoilage_days": 0,
+  "bulk": true,
+  "tags": ["metal", "smithing_input"]
+}

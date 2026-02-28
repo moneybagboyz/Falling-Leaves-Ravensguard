@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TerrainType",
+  "type": "object",
+  "required": ["id", "name", "movement_cost"],
+  "properties": {
+    "id":            { "type": "string" },
+    "name":          { "type": "string" },
+    "movement_cost": { "type": "number", "minimum": 0.1 },
+    "settlement_score_bonus": { "type": "number" },
+    "passable":      { "type": "boolean" },
+    "description":   { "type": "string" }
+  }
+}

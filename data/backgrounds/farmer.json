@@ -1,0 +1,18 @@
+{
+  "$schema": "../schemas/background.schema.json",
+  "id": "farmer",
+  "name": "Farmer",
+  "description": "You grew up working the land. Hard seasons and harder work have made you strong and enduring, with a practical knowledge of soil, crops, and weather.",
+  "attribute_bonuses": {
+    "strength": 2,
+    "endurance": 2,
+    "intelligence": -1
+  },
+  "starting_traits": ["hardworking"],
+  "starting_skills": {
+    "farming": 3,
+    "survival": 1,
+    "cooking": 1
+  },
+  "narrative_tags": ["rural", "laborer", "peaceful_start"]
+}

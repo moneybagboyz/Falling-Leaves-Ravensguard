@@ -1,0 +1,13 @@
+{
+  "$schema": "../schemas/trait.schema.json",
+  "id": "cowardly",
+  "name": "Cowardly",
+  "description": "When danger appears, your first instinct is retreat. Not always wrong — but visible.",
+  "tags": ["mental", "negative"],
+  "flags": ["combat_morale_penalty", "social_reputation_penalty_military"],
+  "skill_xp_multipliers": {
+    "sword_fighting": 0.80,
+    "spear_fighting": 0.80
+  },
+  "conflicts": ["hardworking", "loyal"]
+}

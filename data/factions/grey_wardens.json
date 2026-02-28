@@ -1,0 +1,17 @@
+{
+  "$schema": "../schemas/faction.schema.json",
+  "id": "grey_wardens",
+  "name": "Grey Wardens",
+  "type": "civic",
+  "color_hex": "#708090",
+  "default_relations": {
+    "iron_lords":   0.1,
+    "river_guild":  0.4
+  },
+  "starting_attributes": {
+    "aggression":  0.3,
+    "trade_bias":  0.5,
+    "tax_rate":    0.15
+  },
+  "tags": ["frontier", "garrison"]
+}

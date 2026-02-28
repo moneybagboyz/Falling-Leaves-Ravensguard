@@ -1,0 +1,15 @@
+{
+  "$schema": "../schemas/population_class.schema.json",
+  "id": "noble",
+  "name": "Noble",
+  "consumption_per_head_per_tick": {
+    "wheat_bushel": 0.04,
+    "cloth_bolt": 0.003
+  },
+  "coin_income_per_head_per_tick": 0.30,
+  "labor_days_per_head_per_tick": 0.0,
+  "luxury_demand_fraction": 0.5,
+  "unrest_per_food_shortage": 0.008,
+  "min_tier": 2,
+  "tags": ["ruling_class", "non_laborer"]
+}

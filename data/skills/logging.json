@@ -1,0 +1,11 @@
+{
+  "$schema": "../schemas/skill.schema.json",
+  "id": "logging",
+  "name": "Logging",
+  "description": "Felling, trimming, and hauling timber. Efficiency and safety improve with practice.",
+  "category": "craft",
+  "governing_attribute": "strength",
+  "max_level": 20,
+  "xp_per_level": 100,
+  "tags": ["resource_extraction", "labor"]
+}

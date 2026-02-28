@@ -1,0 +1,11 @@
+{
+  "$schema": "../schemas/skill.schema.json",
+  "id": "scouting",
+  "name": "Scouting",
+  "description": "Reading terrain, spotting threats before they spot you, and navigating efficiently through open country.",
+  "category": "survival",
+  "governing_attribute": "perception",
+  "max_level": 20,
+  "xp_per_level": 100,
+  "tags": ["outdoors", "exploration", "stealth"]
+}

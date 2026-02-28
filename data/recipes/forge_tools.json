@@ -1,0 +1,11 @@
+{
+  "$schema": "../schemas/recipe.schema.json",
+  "id": "forge_tools",
+  "name": "Forge Iron Tools",
+  "recipe_type": "standard",
+  "inputs": { "iron_ingot": 3, "timber_log": 1 },
+  "outputs": { "iron_tools": 1 },
+  "worker_days_per_batch": 2,
+  "required_building": "smithy",
+  "tags": ["metalworking", "toolmaking"]
+}

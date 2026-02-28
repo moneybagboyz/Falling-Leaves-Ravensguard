@@ -1,0 +1,11 @@
+{
+  "$schema": "../schemas/good.schema.json",
+  "id": "flour_sack",
+  "name": "Flour (sack)",
+  "category": "food_processed",
+  "base_weight_kg": 25,
+  "base_value": 7,
+  "spoilage_days": 90,
+  "bulk": true,
+  "tags": ["grain", "processed_food", "staple", "mill_output"]
+}

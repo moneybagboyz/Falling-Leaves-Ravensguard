@@ -1,0 +1,11 @@
+{
+  "$schema": "../schemas/good.schema.json",
+  "id": "iron_ore",
+  "name": "Iron Ore",
+  "category": "raw_material",
+  "base_weight_kg": 8,
+  "base_value": 5,
+  "spoilage_days": 0,
+  "bulk": true,
+  "tags": ["ore", "mining_output"]
+}

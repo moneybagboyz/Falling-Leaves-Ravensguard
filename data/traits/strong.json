@@ -1,0 +1,17 @@
+{
+  "$schema": "../schemas/trait.schema.json",
+  "id": "strong",
+  "name": "Strong",
+  "description": "Your body carries more than most. Doors that slow others don't slow you.",
+  "tags": ["physical", "positive"],
+  "attribute_modifiers": {
+    "strength": 2
+  },
+  "skill_xp_multipliers": {
+    "logging": 1.10,
+    "smithing": 1.10,
+    "sword_fighting": 1.05,
+    "spear_fighting": 1.05
+  },
+  "conflicts": ["frail"]
+}

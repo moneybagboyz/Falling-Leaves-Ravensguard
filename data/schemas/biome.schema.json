@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Biome",
+  "type": "object",
+  "required": ["id", "name", "base_fertility"],
+  "properties": {
+    "id":             { "type": "string" },
+    "name":           { "type": "string" },
+    "base_fertility": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+    "temperature_range": {
+      "type": "array",
+      "items": { "type": "number" },
+      "minItems": 2, "maxItems": 2
+    },
+    "precipitation_range": {
+      "type": "array",
+      "items": { "type": "number" },
+      "minItems": 2, "maxItems": 2
+    },
+    "description": { "type": "string" }
+  }
+}

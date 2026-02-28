@@ -1,0 +1,11 @@
+{
+  "$schema": "../schemas/skill.schema.json",
+  "id": "archery",
+  "name": "Archery",
+  "description": "Accuracy and rate of fire with bows. Wind reading, ranging, and keeping calm under pressure.",
+  "category": "combat",
+  "governing_attribute": "perception",
+  "max_level": 20,
+  "xp_per_level": 150,
+  "tags": ["combat", "ranged", "precision"]
+}

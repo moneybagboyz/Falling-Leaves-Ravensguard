@@ -1,0 +1,11 @@
+{
+  "$schema": "../schemas/recipe.schema.json",
+  "id": "mine_iron",
+  "name": "Mine Iron Ore",
+  "recipe_type": "extraction",
+  "output_good": "iron_ore",
+  "yield_per_worker_day": 0.8,
+  "required_resource_tag": "ore",
+  "required_building": "iron_mine",
+  "tags": ["extraction", "mining"]
+}

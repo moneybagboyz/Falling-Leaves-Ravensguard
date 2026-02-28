@@ -1,0 +1,11 @@
+{
+  "$schema": "../schemas/good.schema.json",
+  "id": "coin",
+  "name": "Coin",
+  "category": "coin",
+  "base_weight_kg": 0.01,
+  "base_value": 1,
+  "spoilage_days": 0,
+  "bulk": true,
+  "tags": ["currency", "trade_medium"]
+}

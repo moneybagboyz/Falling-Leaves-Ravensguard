@@ -1,0 +1,12 @@
+{
+  "$schema": "../schemas/trait.schema.json",
+  "id": "greedy",
+  "name": "Greedy",
+  "description": "Profit is the honest measure of a good decision. Loyalty and principle are negotiable.",
+  "tags": ["social", "negative"],
+  "flags": ["coin_bonus_minor", "loyalty_gain_harder"],
+  "skill_xp_multipliers": {
+    "trading": 1.15
+  },
+  "conflicts": ["loyal"]
+}

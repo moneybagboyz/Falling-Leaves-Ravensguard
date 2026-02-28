@@ -1,0 +1,11 @@
+{
+  "$schema": "../schemas/good.schema.json",
+  "id": "livestock_head",
+  "name": "Livestock (head)",
+  "category": "food_livestock",
+  "base_weight_kg": 250,
+  "base_value": 20,
+  "spoilage_days": 0,
+  "bulk": true,
+  "tags": ["livestock", "food_source", "draft_animal"]
+}

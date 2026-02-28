@@ -1,0 +1,12 @@
+{
+  "$schema": "../schemas/trait.schema.json",
+  "id": "cautious",
+  "name": "Cautious",
+  "description": "You think before you act. Injuries happen to people who don't.",
+  "tags": ["mental", "positive"],
+  "flags": ["injury_chance_reduced", "initiative_penalty_minor"],
+  "skill_xp_multipliers": {
+    "scouting": 1.10,
+    "survival": 1.10
+  }
+}

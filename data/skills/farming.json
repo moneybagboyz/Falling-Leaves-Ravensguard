@@ -1,0 +1,11 @@
+{
+  "$schema": "../schemas/skill.schema.json",
+  "id": "farming",
+  "name": "Farming",
+  "description": "Knowledge of planting, tending, and harvesting crops. Higher levels improve yield and allow cultivation of difficult soils.",
+  "category": "craft",
+  "governing_attribute": "endurance",
+  "max_level": 20,
+  "xp_per_level": 100,
+  "tags": ["agriculture", "food_production", "labor"]
+}

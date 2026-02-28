@@ -1,0 +1,11 @@
+{
+  "$schema": "../schemas/good.schema.json",
+  "id": "wheat_bushel",
+  "name": "Wheat (bushel)",
+  "category": "food_grain",
+  "base_weight_kg": 27,
+  "base_value": 4,
+  "spoilage_days": 180,
+  "bulk": true,
+  "tags": ["grain", "staple", "livestock_feed"]
+}

@@ -1,0 +1,11 @@
+{
+  "$schema": "../schemas/good.schema.json",
+  "id": "timber_log",
+  "name": "Timber (log)",
+  "category": "raw_material",
+  "base_weight_kg": 80,
+  "base_value": 3,
+  "spoilage_days": 0,
+  "bulk": true,
+  "tags": ["wood", "construction_material"]
+}

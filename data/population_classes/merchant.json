@@ -1,0 +1,15 @@
+{
+  "$schema": "../schemas/population_class.schema.json",
+  "id": "merchant",
+  "name": "Merchant",
+  "consumption_per_head_per_tick": {
+    "wheat_bushel": 0.020,
+    "cloth_bolt": 0.001
+  },
+  "coin_income_per_head_per_tick": 0.15,
+  "labor_days_per_head_per_tick": 0.2,
+  "luxury_demand_fraction": 0.2,
+  "unrest_per_food_shortage": 0.004,
+  "min_tier": 1,
+  "tags": ["trader", "market_participant"]
+}

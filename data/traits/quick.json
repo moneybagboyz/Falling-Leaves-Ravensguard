@@ -1,0 +1,15 @@
+{
+  "$schema": "../schemas/trait.schema.json",
+  "id": "quick",
+  "name": "Quick",
+  "description": "You move and react faster than expected. On the road or in a crisis, you're already ahead.",
+  "tags": ["physical", "positive"],
+  "attribute_modifiers": {
+    "agility": 2
+  },
+  "skill_xp_multipliers": {
+    "archery": 1.10,
+    "scouting": 1.10,
+    "sword_fighting": 1.05
+  }
+}

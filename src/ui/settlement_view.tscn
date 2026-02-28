@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://bsv7d2k4p1xna"]
+
+[ext_resource type="Script" path="res://src/ui/settlement_view.gd" id="1_settview"]
+
+[node name="SettlementView" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_settview")

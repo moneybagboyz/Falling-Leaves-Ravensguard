@@ -1,0 +1,11 @@
+{
+  "$schema": "../schemas/good.schema.json",
+  "id": "iron_tools",
+  "name": "Iron Tools",
+  "category": "tool",
+  "base_weight_kg": 3,
+  "base_value": 15,
+  "spoilage_days": 0,
+  "bulk": true,
+  "tags": ["tool", "farm_equipment", "blacksmith_output"]
+}

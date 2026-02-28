@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "res://data/schemas/faction.schema.json",
+  "title": "Faction",
+  "description": "A faction definition — static template loaded from data.",
+  "type": "object",
+  "required": ["id", "name", "type"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "name": { "type": "string" },
+    "type": {
+      "type": "string",
+      "enum": ["noble_house", "merchant_guild", "religious_order", "outlaw_band", "tribal_clan", "civic"]
+    },
+    "color_hex": {
+      "type": "string",
+      "pattern": "^#[0-9a-fA-F]{6}$",
+      "description": "Faction color for map overlays."
+    },
+    "default_relations": {
+      "type": "object",
+      "description": "Starting relation scores vs. other faction IDs. -1.0 = hostile, 1.0 = allied.",
+      "additionalProperties": { "type": "number", "minimum": -1.0, "maximum": 1.0 }
+    },
+    "starting_attributes": {
+      "type": "object",
+      "description": "Faction-level starting modifiers (aggression, trade_bias, etc.).",
+      "additionalProperties": { "type": "number" }
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

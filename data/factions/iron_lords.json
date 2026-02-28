@@ -1,0 +1,17 @@
+{
+  "$schema": "../schemas/faction.schema.json",
+  "id": "iron_lords",
+  "name": "The Iron Lords",
+  "type": "noble_house",
+  "color_hex": "#8B0000",
+  "default_relations": {
+    "river_guild":   -0.3,
+    "grey_wardens":   0.1
+  },
+  "starting_attributes": {
+    "aggression":   0.6,
+    "trade_bias":   0.2,
+    "tax_rate":     0.25
+  },
+  "tags": ["militaristic", "iron_region"]
+}

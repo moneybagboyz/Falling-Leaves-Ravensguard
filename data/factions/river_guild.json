@@ -1,0 +1,17 @@
+{
+  "$schema": "../schemas/faction.schema.json",
+  "id": "river_guild",
+  "name": "River Merchants' Guild",
+  "type": "merchant_guild",
+  "color_hex": "#4169E1",
+  "default_relations": {
+    "iron_lords":   -0.3,
+    "grey_wardens":  0.4
+  },
+  "starting_attributes": {
+    "aggression":  0.1,
+    "trade_bias":  0.9,
+    "tax_rate":    0.05
+  },
+  "tags": ["trading", "riverine"]
+}
