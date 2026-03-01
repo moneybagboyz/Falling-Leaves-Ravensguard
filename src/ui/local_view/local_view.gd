@@ -630,17 +630,11 @@ func _item_name(item_id: String) -> String:
 
 
 func _exit_to_settlement() -> void:
-	# Deactivate reality bubble — disconnect clock and clear local tile positions.
+	# Deactivate reality bubble — disconnect clock only.
+	# NPC local coords are intentionally kept so they persist between visits.
 	if SimulationClock.tick_completed.is_connected(_on_local_tick):
 		SimulationClock.tick_completed.disconnect(_on_local_tick)
 	if _world_state != null:
-		for pid: String in _npc_rects:
-			var npc: PersonState = _world_state.npc_pool.get(pid)
-			if npc != null:
-				npc.local_lx     = -1
-				npc.local_ly     = -1
-				npc.local_reg_rx = -1
-				npc.local_reg_ry = -1
 		# Persist the player's final local-view region cell so SettlementView
 		# restores them at the correct tile rather than the entry cell.
 		_world_state.player_location["rx"] = _reg_rx
@@ -670,6 +664,11 @@ func _spawn_local_npcs() -> void:
 		var npc: PersonState = _world_state.npc_pool[pid]
 		if npc.home_settlement_id != _settlement_id:
 			continue
+		# If this NPC already has a valid position from a previous visit, keep it.
+		if npc.local_lx >= 0 and npc.local_reg_rx >= 0:
+			_create_npc_pawn(pid, npc)
+			continue
+		# First visit — find an appropriate anchor tile.
 		var key: String = npc.active_role + "_" + npc.schedule_state
 		var offset: int = role_counters.get(key, 0)
 		role_counters[key] = offset + 1
