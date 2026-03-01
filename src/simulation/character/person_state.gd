@@ -4,7 +4,7 @@
 ## traits, skills, body state, needs, social links, reputation, and location.
 ##
 ## Must never be owned by a scene. All scene access is read-only.
-## Serialised/deserialised as part of WorldState.characters (and npc_pool).
+## Serialised/deserialised as part of WorldState.characters.
 class_name PersonState
 extends RefCounted
 
@@ -74,14 +74,6 @@ var equipment_refs: Dictionary = {}
 ## Populated by picking up items from chest tiles in LocalView (P4-10).
 var carried_items: Array = []
 
-## Local tile position within a 25×25 building layout.
-## -1 means the NPC is not currently placed in a local view.
-var local_lx: int = -1
-var local_ly: int = -1
-## Region cell the NPC is placed in (0..249 within the world tile).
-var local_reg_rx: int = -1
-var local_reg_ry: int = -1
-
 # ── Needs ─────────────────────────────────────────────────────────────────────
 ## Persistent need values managed by NeedsComponent (P3-11).
 ## hunger: 0.0 (full) → 1.0 (starving).
@@ -118,15 +110,18 @@ var shelter_status: String = ""
 ## cell_id of the labor slot building (if active_role is set).
 var work_cell_id: String = ""
 
-## Full positional location.
-## cell_id: world tile key (matches WorldState.world_tiles key).
-## rx, ry:  region cell coords within the world tile (0–249).
-## lx, ly:  local tile coords within the region cell (0–24). Unused until P4-01.
-## z_level: 0 = ground, 1 = upper floor, -1 = cellar.
+## Full positional location — same schema as WorldState.player_location.
+## wt_x/wt_y: world-tile coordinates. -1 = not yet placed.
+## rx/ry:     region cell within that tile (0–249). -1 = unresolved.
+## lx/ly:     local tile within the region cell (0–24). -1 = unresolved.
+## z_level:   0 = ground, 1 = upper floor, -1 = cellar.
 var location: Dictionary = {
-	"cell_id": "",
-	"lx":      0,
-	"ly":      0,
+	"wt_x":    -1,
+	"wt_y":    -1,
+	"rx":      -1,
+	"ry":      -1,
+	"lx":      -1,
+	"ly":      -1,
 	"z_level": 0,
 }
 
@@ -226,10 +221,6 @@ func to_dict() -> Dictionary:
 		"stamina":             stamina,
 		"equipment_refs":      equipment_refs.duplicate(),
 		"carried_items":       carried_items.duplicate(),
-		"local_lx":            local_lx,
-		"local_ly":            local_ly,
-		"local_reg_rx":        local_reg_rx,
-		"local_reg_ry":        local_reg_ry,
 	}
 
 
@@ -260,15 +251,21 @@ static func from_dict(d: Dictionary) -> PersonState:
 	p.work_cell_id        = d.get("work_cell_id",        "")
 	p.home_building_id    = d.get("home_building_id",    "")
 	p.location            = d.get("location", {
-		"cell_id": "", "lx": 0, "ly": 0, "z_level": 0,
+		"wt_x": -1, "wt_y": -1, "rx": -1, "ry": -1, "lx": -1, "ly": -1, "z_level": 0,
 	}).duplicate()
+	# Migrate old saves: if location uses legacy cell_id key, convert to wt_x/wt_y.
+	if p.location.has("cell_id") and not p.location.has("wt_x"):
+		var _parts := (p.location.get("cell_id", "") as String).split(",")
+		p.location["wt_x"] = int(_parts[0]) if _parts.size() == 2 else -1
+		p.location["wt_y"] = int(_parts[1]) if _parts.size() == 2 else -1
+		p.location["rx"]   = -1
+		p.location["ry"]   = -1
+		p.location["lx"]   = d.get("local_lx", -1)
+		p.location["ly"]   = d.get("local_ly", -1)
+		p.location.erase("cell_id")
 	p.schedule_state      = d.get("schedule_state",   "idle")
 	p.pending_perk_unlocks = d.get("pending_perk_unlocks", []).duplicate(true)
 	p.stamina             = float(d.get("stamina", 1.0))
 	p.equipment_refs       = d.get("equipment_refs", {}).duplicate()
 	p.carried_items        = d.get("carried_items",  []).duplicate()
-	p.local_lx             = d.get("local_lx", -1)
-	p.local_ly             = d.get("local_ly", -1)
-	p.local_reg_rx         = d.get("local_reg_rx", -1)
-	p.local_reg_ry         = d.get("local_reg_ry", -1)
 	return p

@@ -1,16 +1,15 @@
-## NpcScheduleSystem — daily schedule state transitions for pooled NPCs (P3-13).
+## NpcScheduleSystem — daily schedule state transitions for all NPC characters.
 ##
 ## Registered on MOVEMENT phase (every tick).
 ##
-## Uses tick % TICKS_PER_DAY to determine the current time-of-day,
-## then assigns schedule_state to all NPCs in world_state.npc_pool:
+## CDDA-style reality bubble: only NPCs on the same world tile as the player
+## receive AI ticks. All others are frozen (no cost, no drift).
+##
+## Uses tick % TICKS_PER_DAY to determine time-of-day and sets schedule_state:
 ##   - "working"   — daytime, work hours
 ##   - "wandering" — midday break (short wander window)
 ##   - "resting"   — night hours
 ##   - "idle"      — pre-dawn window before work starts
-##
-## NPCs with active_role = "" are set to "wandering" during work hours
-## (no job to go to) or "resting" at night.
 class_name NpcScheduleSystem
 extends RefCounted
 
@@ -45,8 +44,21 @@ func tick_schedules(tick: int) -> void:
 	var tod: int = tick % TICKS_PER_DAY
 	var default_state: String = _tod_to_schedule(tod)
 
-	for pid: String in _world_state.npc_pool:
-		var npc: PersonState = _world_state.npc_pool[pid]
+	# Reality bubble: only tick NPCs on the player's current world tile.
+	var player_wt_x: int = _world_state.player_location.get("wt_x", -999)
+	var player_wt_y: int = _world_state.player_location.get("wt_y", -999)
+
+	for pid: String in _world_state.characters:
+		if pid == _world_state.player_character_id:
+			continue  # skip the player
+		var npc: PersonState = _world_state.characters[pid]
+		if npc.home_settlement_id == "":
+			continue  # skip non-NPC characters (e.g. bandits mid-battle)
+		# Freeze NPCs outside the reality bubble.
+		var loc_wt_x: int = npc.location.get("wt_x", -999)
+		var loc_wt_y: int = npc.location.get("wt_y", -999)
+		if loc_wt_x != player_wt_x or loc_wt_y != player_wt_y:
+			continue
 		if npc.active_role == "":
 			# Unemployed — wander during day, rest at night.
 			npc.schedule_state = "wandering" if tod < REST_START else "resting"

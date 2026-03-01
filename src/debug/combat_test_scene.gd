@@ -55,10 +55,10 @@ static func _build_fake_world_state() -> WorldState:
 	ws.player_character_id = "player_1"
 	ws.characters["player_1"] = player
 	ws.characters["player_2"] = ally
-	ws.npc_pool["enemy_1"] = bandit1
-	ws.npc_pool["enemy_2"] = bandit2
-	ws.npc_pool["enemy_3"] = bandit3
-	ws.npc_pool["enemy_4"] = bandit4
+	ws.characters["enemy_1"] = bandit1
+	ws.characters["enemy_2"] = bandit2
+	ws.characters["enemy_3"] = bandit3
+	ws.characters["enemy_4"] = bandit4
 
 	return ws
 
@@ -96,19 +96,19 @@ static func _build_test_battle(world_state: WorldState) -> BattleState:
 
 	# ── Enemy combatants ───────────────────────────────────────────────────
 	var ce1 := CombatantState.from_person(
-		world_state.npc_pool["enemy_1"], "enemy", "e_alpha")
+		world_state.characters["enemy_1"], "enemy", "e_alpha")
 	ce1.tile_pos = Vector2i(5, 20)
 
 	var ce2 := CombatantState.from_person(
-		world_state.npc_pool["enemy_2"], "enemy", "e_alpha")
+		world_state.characters["enemy_2"], "enemy", "e_alpha")
 	ce2.tile_pos = Vector2i(6, 20)
 
 	var ce3 := CombatantState.from_person(
-		world_state.npc_pool["enemy_3"], "enemy", "e_beta")
+		world_state.characters["enemy_3"], "enemy", "e_beta")
 	ce3.tile_pos = Vector2i(14, 20)
 
 	var ce4 := CombatantState.from_person(
-		world_state.npc_pool["enemy_4"], "enemy", "e_beta")
+		world_state.characters["enemy_4"], "enemy", "e_beta")
 	ce4.tile_pos = Vector2i(15, 20)
 
 	for c: CombatantState in [cp1, cp2, ce1, ce2, ce3, ce4]:

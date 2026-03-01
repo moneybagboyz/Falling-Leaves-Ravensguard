@@ -1,11 +1,11 @@
-## NpcPoolManager — generates and culls NPC records for SettlementView.
+## NpcPoolManager — spawns persistent NPC characters for all settlements.
 ##
-## Called on map entry to populate WorldState.npc_pool with up to 40 NPC
-## PersonState records per settlement (generated from headcount data).
-## Called on map exit to cull transient NPCs (keeping only those in the
-## player's social_links, which are merged into WorldState.characters).
+## CDDA-style: NPCs are born once at world-gen time and stored permanently in
+## WorldState.characters. There is no transient pool, no cull, no re-generation.
 ##
-## Static class — no instance required.
+## Entry points:
+##   spawn_all(ws, seed)      — called once by RegionGenerator at end of world-gen.
+##   ensure_spawned(ws, seed) — idempotent; called on save load for old-save migration.
 class_name NpcPoolManager
 
 # ── Name tables ───────────────────────────────────────────────────────────────
@@ -28,8 +28,8 @@ const SURNAMES: Array[String] = [
 	"Turner",   "Harper", "Ward",   "Garrett", "Finch",   "Hollow",
 ]
 
-## Maximum NPCs to instantiate per settlement.
-const MAX_NPC_POOL: int = 40
+## Maximum NPCs to spawn per settlement.
+const MAX_NPC_PER_SETTLEMENT: int = 40
 
 ## Maps population_class → compatible labor slot_ids (first-match assignment).
 const CLASS_SLOTS: Dictionary = {
@@ -47,25 +47,48 @@ const CLASS_BACKGROUND: Dictionary = {
 }
 
 
-# ── Entry point: populate ─────────────────────────────────────────────────────
+# ── Entry point: spawn_all ────────────────────────────────────────────────────
 
-## If no NPCs for settlement_id are in world_state.npc_pool, generate them.
-## world_seed is combined with settlement_id for determinism.
-static func populate(
+## Spawn NPCs for every settlement into world_state.characters.
+## Called once at the end of world generation.
+static func spawn_all(world_state: WorldState, world_seed: int) -> void:
+	for sid: String in world_state.settlements:
+		var ss: SettlementState = world_state.get_settlement(sid)
+		if ss != null:
+			_spawn_settlement(world_state, ss, world_seed)
+
+
+# ── Entry point: ensure_spawned ───────────────────────────────────────────────
+
+## Idempotent version: only spawns NPCs for settlements that have none yet.
+## Called after loading a save to transparently migrate old saves created before
+## the persistent-NPC system was introduced.
+static func ensure_spawned(world_state: WorldState, world_seed: int) -> void:
+	# Build the set of settlement IDs that already have at least one NPC.
+	var populated: Dictionary = {}
+	for pid: String in world_state.characters:
+		var p: PersonState = world_state.characters[pid]
+		if p.home_settlement_id != "":
+			populated[p.home_settlement_id] = true
+
+	for sid: String in world_state.settlements:
+		if populated.has(sid):
+			continue
+		var ss: SettlementState = world_state.get_settlement(sid)
+		if ss != null:
+			_spawn_settlement(world_state, ss, world_seed)
+
+
+# ── Per-settlement spawner ────────────────────────────────────────────────────
+
+static func _spawn_settlement(
 		world_state: WorldState,
 		ss: SettlementState,
 		world_seed: int) -> void:
 
-	# Check if already populated.
-	for pid: String in world_state.npc_pool:
-		var npc: PersonState = world_state.npc_pool[pid]
-		if npc.home_settlement_id == ss.settlement_id:
-			return  # already done
-
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(ss.settlement_id) ^ world_seed
 
-	# Compute how many NPCs of each class to spawn (proportional to headcount).
 	var total_pop: int = ss.total_population()
 	if total_pop == 0:
 		return
@@ -73,62 +96,28 @@ static func populate(
 	var class_counts: Dictionary = {}
 	for cls: String in ss.population:
 		var frac: float = float(ss.population[cls]) / float(total_pop)
-		class_counts[cls] = maxi(1, int(frac * MAX_NPC_POOL)) if ss.population[cls] > 0 else 0
-	# Cap total to MAX_NPC_POOL.
+		class_counts[cls] = maxi(1, int(frac * MAX_NPC_PER_SETTLEMENT)) if ss.population[cls] > 0 else 0
+
+	# Cap total to MAX_NPC_PER_SETTLEMENT.
 	var actual_total := 0
 	for cls: String in class_counts:
 		actual_total += class_counts[cls]
-	if actual_total > MAX_NPC_POOL:
-		# Scale down proportionally.
+	if actual_total > MAX_NPC_PER_SETTLEMENT:
 		for cls: String in class_counts:
-			class_counts[cls] = int(float(class_counts[cls]) / float(actual_total) * MAX_NPC_POOL)
+			class_counts[cls] = int(float(class_counts[cls]) / float(actual_total) * MAX_NPC_PER_SETTLEMENT)
 
-	# Build an inventory of unassigned labor slots.
+	# Build the list of unfilled labor slots.
 	var open_slots: Array = []
 	for slot: Dictionary in ss.labor_slots:
 		if not bool(slot.get("is_filled", false)):
 			open_slots.append(slot)
 
-	# Spawn NPCs.
+	# Spawn NPCs and register them as permanent characters.
 	for cls: String in class_counts:
 		var count: int = class_counts[cls]
 		for _i: int in count:
 			var npc := _make_npc(rng, ss, cls, open_slots, world_seed)
-			world_state.npc_pool[npc.person_id] = npc
-
-
-# ── Entry point: cull ─────────────────────────────────────────────────────────
-
-## Remove all NPCs for settlement_id from npc_pool.
-## NPCs that appear in player_state.social_links are preserved in
-## world_state.characters so they persist between visits.
-static func cull(
-		world_state: WorldState,
-		settlement_id: String,
-		player_state: PersonState) -> void:
-
-	if player_state == null:
-		return
-
-	# Build known set from player social_links.
-	var known_ids: Dictionary = {}
-	for link: Dictionary in player_state.social_links:
-		var pid: String = link.get("person_id", "")
-		if pid != "":
-			known_ids[pid] = true
-
-	var to_remove: Array[String] = []
-	for pid: String in world_state.npc_pool:
-		var npc: PersonState = world_state.npc_pool[pid]
-		if npc.home_settlement_id != settlement_id:
-			continue
-		if known_ids.has(pid):
-			# Promote to persistent characters.
-			world_state.characters[pid] = npc
-		to_remove.append(pid)
-
-	for pid: String in to_remove:
-		world_state.npc_pool.erase(pid)
+			world_state.characters[npc.person_id] = npc
 
 
 # ── NPC factory ───────────────────────────────────────────────────────────────
@@ -141,14 +130,14 @@ static func _make_npc(
 		_world_seed: int) -> PersonState:
 
 	var npc := PersonState.new()
-	npc.person_id         = EntityRegistry.generate_id("person")
-	npc.name              = _random_name(rng)
-	npc.population_class  = pop_class
+	npc.person_id          = EntityRegistry.generate_id("person")
+	npc.name               = _random_name(rng)
+	npc.population_class   = pop_class
 	npc.home_settlement_id = ss.settlement_id
-	npc.background_id     = CLASS_BACKGROUND.get(pop_class, "wanderer")
-	npc.active_role       = pop_class
+	npc.background_id      = CLASS_BACKGROUND.get(pop_class, "wanderer")
+	npc.active_role        = pop_class
 
-	# Assign to a labor slot if compatible open slot exists.
+	# Assign to a compatible labor slot if one is available.
 	var preferred_slots: Array = CLASS_SLOTS.get(pop_class, [])
 	var assigned_slot_idx: int = -1
 	for si: int in open_slots.size():
@@ -157,28 +146,33 @@ static func _make_npc(
 			assigned_slot_idx = si
 			break
 
-	var home_cell: String = ss.cell_id  # default to anchor cell
+	var home_wt_key: String = ss.cell_id  # "wt_x,wt_y" world-tile key
 
 	if assigned_slot_idx >= 0:
 		var slot: Dictionary = open_slots[assigned_slot_idx]
 		npc.work_cell_id     = slot.get("cell_id",     ss.cell_id)
 		npc.active_role      = slot.get("slot_id",     pop_class)
 		npc.home_building_id = slot.get("building_id", "")
-		home_cell            = npc.work_cell_id
-		# Mark slot as filled in the open_slots list (not the SettlementState copy).
+		home_wt_key          = npc.work_cell_id
 		open_slots.remove_at(assigned_slot_idx)
 	else:
-		# Pick a random territory cell.
+		# Unassigned — pick a random territory cell as home.
 		if not ss.territory_cell_ids.is_empty():
 			var idx := rng.randi_range(0, ss.territory_cell_ids.size() - 1)
-			home_cell = ss.territory_cell_ids[idx]
-		npc.work_cell_id = home_cell
+			home_wt_key = ss.territory_cell_ids[idx]
+		npc.work_cell_id = home_wt_key
 
+	# Parse wt_x / wt_y from the key for the location dict.
+	var parts := home_wt_key.split(",")
+	var wt_x: int = int(parts[0]) if parts.size() == 2 else ss.tile_x
+	var wt_y: int = int(parts[1]) if parts.size() == 2 else ss.tile_y
+
+	# NPC starts on their home world tile; region/local coords resolved lazily.
 	npc.location = {
-		"cell_id":  home_cell,
-		"lx":       0,
-		"ly":       0,
-		"z_level":  0,
+		"wt_x": wt_x, "wt_y": wt_y,
+		"rx":   -1,   "ry":   -1,   # resolved when the region grid is first generated
+		"lx":   -1,   "ly":   -1,   # resolved when entering LocalView
+		"z_level": 0,
 	}
 	npc.schedule_state = "working"
 

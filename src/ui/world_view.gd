@@ -623,7 +623,7 @@ func _trigger_camp_combat(cid: String) -> void:
 			"main_hand": wpn_pool[rng.randi() % wpn_pool.size()],
 			"torso":     arm_pool[rng.randi() % arm_pool.size()],
 		}
-		_world_state.npc_pool[eid] = ep
+		_world_state.characters[eid] = ep
 
 		var ec := CombatantState.from_person(ep, "enemy", "e_main")
 		var spread_x: int = (i % 5)

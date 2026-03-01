@@ -361,6 +361,9 @@ static func _build_world_state(
 				if ws.world_tiles.has(cid):
 					ws.world_tiles[cid]["has_road"] = true
 
+	# Spawn persistent NPCs for every settlement (CDDA-style: born once, live forever).
+	NpcPoolManager.spawn_all(ws, ws.world_seed)
+
 	return ws
 
 

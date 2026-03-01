@@ -123,14 +123,6 @@ func _load_state() -> void:
 		push_error("SettlementView: no settlement found for id '%s'" % _settlement_id)
 		return
 
-	# Populate NPC pool for this settlement.
-	var boot2 := get_node_or_null("/root/Bootstrap")
-	var ws_seed: int = _world_state.world_seed if _world_state != null else 0
-	if _world_state == null and boot2:
-		_world_state = boot2.get("world_state")
-	if _world_state != null and _ss != null:
-		NpcPoolManager.populate(_world_state, _ss, ws_seed)
-
 	# Restore world tile from saved player location; fall back to settlement anchor.
 	if _world_state != null:
 		var loc: Dictionary = _world_state.player_location
@@ -509,15 +501,10 @@ func _handle_world_tile_change(new_sid: String) -> void:
 	if new_sid == _settlement_id:
 		return  # no change
 
-	# Cull NPC pool for the old settlement.
-	if _world_state != null and _settlement_id != "":
-		NpcPoolManager.cull(_world_state, _settlement_id, _get_player())
-
 	_settlement_id = new_sid
 
 	if new_sid != "" and _world_state != null:
 		_ss = _world_state.get_settlement(new_sid)
-		NpcPoolManager.populate(_world_state, _ss, _world_state.world_seed)
 		var boot := get_node_or_null("/root/Bootstrap")
 		if boot != null:
 			_work_system = boot.get("_work_system")
@@ -715,8 +702,8 @@ func _refresh_panel() -> void:
 	_panel_title.text = _ss.name
 	var npc_count := 0
 	if _world_state != null:
-		for pid in _world_state.npc_pool:
-			var npc: PersonState = _world_state.npc_pool[pid]
+		for pid in _world_state.characters:
+			var npc: PersonState = _world_state.characters[pid]
 			if npc.home_settlement_id == _settlement_id:
 				npc_count += 1
 	var lines := "[color=#88aacc]Tier %d — Pop %d[/color]\n" % [_ss.tier, _ss.total_population()]
@@ -888,13 +875,15 @@ func _get_player() -> PersonState:
 	return _world_state.characters.get(_world_state.player_character_id)
 
 
-func _npcs_at_cell(cid: String) -> Array:
+func _npcs_at_cell(wt_key: String) -> Array:
 	var result: Array = []
 	if _world_state == null:
 		return result
-	for pid: String in _world_state.npc_pool:
-		var npc: PersonState = _world_state.npc_pool[pid]
-		if npc.work_cell_id == cid:
+	for pid: String in _world_state.characters:
+		var npc: PersonState = _world_state.characters[pid]
+		if npc.home_settlement_id == "" or pid == _world_state.player_character_id:
+			continue
+		if npc.work_cell_id == wt_key:
 			result.append(npc)
 	return result
 
@@ -1080,12 +1069,6 @@ func _dlg_rent_inn() -> void:
 
 
 func _exit_view() -> void:
-	## Cull NPC pool and pop the scene.
-	if _world_state != null:
-		var player_state: PersonState = null
-		if _world_state.player_character_id != "":
-			player_state = _world_state.characters.get(_world_state.player_character_id)
-		NpcPoolManager.cull(_world_state, _settlement_id, player_state)
 	SceneManager.pop_scene()
 
 

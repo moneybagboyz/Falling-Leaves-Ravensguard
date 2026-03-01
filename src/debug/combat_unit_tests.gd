@@ -232,7 +232,7 @@ static func test_wego_terminates() -> Dictionary:
 	var p2      := PersonState.new()
 	p2.person_id = "e1"
 	p2.name      = "TestEnemy"
-	ws.npc_pool["e1"] = p2
+	ws.characters["e1"] = p2
 
 	# Build FormationStates first so we know the formation_ids.
 	var f1 := FormationState.single("p1", "player", "Player", Vector2i(5, 5))

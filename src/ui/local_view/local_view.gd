@@ -647,7 +647,7 @@ func _exit_to_settlement() -> void:
 ## How many clock ticks between NPC tile moves (keeps movement readable).
 const LOCAL_MOVE_EVERY: int = 4
 
-## Filter npc_pool to NPCs of this settlement; place them on matching anchor tiles.
+## Filter characters to NPCs of this settlement; place them on matching anchor tiles.
 func _spawn_local_npcs() -> void:
 	for old_rect in _npc_rects.values():
 		if is_instance_valid(old_rect):
@@ -660,12 +660,12 @@ func _spawn_local_npcs() -> void:
 	## Track placement count per (role+schedule) key for spreading NPCs.
 	var role_counters: Dictionary = {}
 
-	for pid: String in _world_state.npc_pool:
-		var npc: PersonState = _world_state.npc_pool[pid]
+	for pid: String in _world_state.characters:
+		var npc: PersonState = _world_state.characters[pid]
 		if npc.home_settlement_id != _settlement_id:
 			continue
 		# If this NPC already has a valid position from a previous visit, keep it.
-		if npc.local_lx >= 0 and npc.local_reg_rx >= 0:
+		if npc.location.get("lx", -1) >= 0 and npc.location.get("rx", -1) >= 0:
 			_create_npc_pawn(pid, npc)
 			continue
 		# First visit — find the region cell that contains the NPC's home building.
@@ -685,10 +685,12 @@ func _spawn_local_npcs() -> void:
 		var offset: int = role_counters.get(key, 0)
 		role_counters[key] = offset + 1
 		var tile_pos := _find_anchor_tile(target_rx, target_ry, npc.active_role, npc.schedule_state, offset)
-		npc.local_lx     = tile_pos.x
-		npc.local_ly     = tile_pos.y
-		npc.local_reg_rx = target_rx
-		npc.local_reg_ry = target_ry
+		npc.location["lx"]  = tile_pos.x
+		npc.location["ly"]  = tile_pos.y
+		npc.location["rx"]  = target_rx
+		npc.location["ry"]  = target_ry
+		npc.location["wt_x"] = _entry_wx
+		npc.location["wt_y"] = _entry_wy
 		_create_npc_pawn(pid, npc)
 
 
@@ -757,7 +759,7 @@ func _find_anchor_tile(rx: int, ry: int, role: String, schedule: String, offset:
 
 ## Instantiate a coloured pawn node for one NPC.
 func _create_npc_pawn(pid: String, npc: PersonState) -> void:
-	if _map_area == null or npc.local_lx < 0:
+	if _map_area == null or npc.location.get("lx", -1) < 0:
 		return
 	var rect := ColorRect.new()
 	@warning_ignore("integer_division")
@@ -790,14 +792,14 @@ func _refresh_npc_pawn_pos(pid: String, npc: PersonState) -> void:
 	var rect: ColorRect = _npc_rects.get(pid) as ColorRect
 	if rect == null or not is_instance_valid(rect):
 		return
-	if npc.local_lx < 0 or npc.local_ly < 0 or npc.local_reg_rx < 0:
+	if npc.location.get("lx", -1) < 0 or npc.location.get("ly", -1) < 0 or npc.location.get("rx", -1) < 0:
 		rect.visible = false
 		return
 	# Convert both player and NPC to absolute tile coords, then project to screen.
 	var player_ax := _reg_rx * GRID_W + _player_lx
 	var player_ay := _reg_ry * GRID_H + _player_ly
-	var npc_ax    := npc.local_reg_rx * GRID_W + npc.local_lx
-	var npc_ay    := npc.local_reg_ry * GRID_H + npc.local_ly
+	var npc_ax    := npc.location.get("rx", 0) * GRID_W + npc.location.get("lx", 0)
+	var npc_ay    := npc.location.get("ry", 0) * GRID_H + npc.location.get("ly", 0)
 	@warning_ignore("integer_division")
 	var vx: int = _map_cols / 2 + (npc_ax - player_ax)
 	@warning_ignore("integer_division")
@@ -821,24 +823,24 @@ func _on_local_tick(tick: int) -> void:
 	if tick % LOCAL_MOVE_EVERY != 0:
 		return
 	for pid: String in _npc_rects:
-		var npc: PersonState = _world_state.npc_pool.get(pid)
-		if npc == null or npc.local_lx < 0:
+		var npc: PersonState = _world_state.characters.get(pid)
+		if npc == null or npc.location.get("lx", -1) < 0:
 			continue
 		_tick_npc_movement(npc)
 		_refresh_npc_pawn_pos(pid, npc)
 
 
 func _tick_npc_movement(npc: PersonState) -> void:
-	if npc.local_reg_rx < 0:
+	if npc.location.get("rx", -1) < 0:
 		return
 	match npc.schedule_state:
 		"resting":
-			var bed := _find_nearest_tile(npc.local_reg_rx, npc.local_reg_ry, npc.local_lx, npc.local_ly, ["b"])
-			if bed != Vector2i(npc.local_lx, npc.local_ly):
+			var bed := _find_nearest_tile(npc.location.get("rx", 0), npc.location.get("ry", 0), npc.location.get("lx", 0), npc.location.get("ly", 0), ["b"])
+			if bed != Vector2i(npc.location.get("lx", 0), npc.location.get("ly", 0)):
 				_step_npc_toward(npc, bed)
 		"working":
-			var anchor := _find_anchor_tile(npc.local_reg_rx, npc.local_reg_ry, npc.active_role, "working")
-			if Vector2i(npc.local_lx, npc.local_ly) != anchor:
+			var anchor := _find_anchor_tile(npc.location.get("rx", 0), npc.location.get("ry", 0), npc.active_role, "working")
+			if Vector2i(npc.location.get("lx", 0), npc.location.get("ly", 0)) != anchor:
 				_step_npc_toward(npc, anchor)
 		"wandering":
 			_wander_npc(npc)
@@ -849,10 +851,10 @@ func _tick_npc_movement(npc: PersonState) -> void:
 ## Attempt one tile step for an NPC, allowing cell-boundary crossing.
 ## Returns true if the step succeeded.
 func _try_step_npc(npc: PersonState, dx: int, dy: int) -> bool:
-	var nx := npc.local_lx + dx
-	var ny := npc.local_ly + dy
-	var nrx := npc.local_reg_rx
-	var nry := npc.local_reg_ry
+	var nx := npc.location.get("lx", 0) + dx
+	var ny := npc.location.get("ly", 0) + dy
+	var nrx := npc.location.get("rx", 0)
+	var nry := npc.location.get("ry", 0)
 	if nx < 0:          nrx -= 1; nx += GRID_W
 	elif nx >= GRID_W:  nrx += 1; nx -= GRID_W
 	if ny < 0:          nry -= 1; ny += GRID_H
@@ -861,17 +863,17 @@ func _try_step_npc(npc: PersonState, dx: int, dy: int) -> bool:
 		return false
 	var def: Array = TILE_DEFS.get(_get_cell_char(nrx, nry, nx, ny), TILE_FALLBACK)
 	if def[1]:
-		npc.local_lx     = nx
-		npc.local_ly     = ny
-		npc.local_reg_rx = nrx
-		npc.local_reg_ry = nry
+		npc.location["lx"] = nx
+		npc.location["ly"] = ny
+		npc.location["rx"] = nrx
+		npc.location["ry"] = nry
 		return true
 	return false
 
 
 func _step_npc_toward(npc: PersonState, target: Vector2i) -> void:
-	var dx: int = sign(target.x - npc.local_lx)
-	var dy: int = sign(target.y - npc.local_ly)
+	var dx: int = sign(target.x - npc.location.get("lx", 0))
+	var dy: int = sign(target.y - npc.location.get("ly", 0))
 	for attempt: Vector2i in [Vector2i(dx, dy), Vector2i(dx, 0), Vector2i(0, dy)]:
 		if attempt == Vector2i.ZERO:
 			continue
@@ -881,7 +883,7 @@ func _step_npc_toward(npc: PersonState, target: Vector2i) -> void:
 
 func _wander_npc(npc: PersonState) -> void:
 	# XOR with millisecond time so the same NPC doesn't cycle the same path.
-	var h: int = npc.person_id.hash() ^ npc.local_lx ^ (npc.local_ly << 5) ^ Time.get_ticks_msec()
+	var h: int = npc.person_id.hash() ^ npc.location.get("lx", 0) ^ (npc.location.get("ly", 0) << 5) ^ Time.get_ticks_msec()
 	var dirs: Array[Vector2i] = [
 		Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1),
 	]

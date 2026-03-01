@@ -4,7 +4,7 @@
 ## Handles:
 ##   1. Write wounds from CombatantState back to PersonState.body_state.
 ##   2. Write stamina back to PersonState.stamina.
-##   3. Remove dead entities from WorldState.characters / npc_pool.
+##   3. Remove dead entities from WorldState.characters.
 ##   4. Remove dead bandit formations — erase bandit_camp from world tile if cleared.
 ##   5. Build loot pool from defeated combatants' equipment_refs.
 ##   6. Update player location to remain at the battle tile.
@@ -58,7 +58,6 @@ static func resolve(battle: BattleState, world_state: WorldState) -> Dictionary:
 						summary["loot"].append(item_id)
 			# Remove from world state.
 			world_state.characters.erase(cid)
-			world_state.npc_pool.erase(cid)
 
 	# ── 2. Remove cleared bandit camps from the world tile ─────────────────
 	if battle.result == "player_victory" and battle.map_tile != "":
@@ -81,11 +80,7 @@ static func resolve(battle: BattleState, world_state: WorldState) -> Dictionary:
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 static func _find_person(person_id: String, world_state: WorldState) -> PersonState:
-	if world_state.characters.has(person_id):
-		return world_state.characters[person_id]
-	if world_state.npc_pool.has(person_id):
-		return world_state.npc_pool[person_id]
-	return null
+	return world_state.characters.get(person_id, null)
 
 
 static func _death_cause(c: CombatantState) -> String:

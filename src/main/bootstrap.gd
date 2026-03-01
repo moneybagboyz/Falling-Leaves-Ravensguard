@@ -79,6 +79,8 @@ func continue_game() -> void:
 	if world_state == null:
 		push_error("[Bootstrap] continue_game: failed to load default save.")
 		return
+	# Migrate old saves: spawn NPCs for any settlement that has none yet.
+	NpcPoolManager.ensure_spawned(world_state, world_state.world_seed)
 	_setup_economy(world_state)
 	SimulationClock.resume()
 	SceneManager.replace_scene("res://src/ui/world_view.tscn")

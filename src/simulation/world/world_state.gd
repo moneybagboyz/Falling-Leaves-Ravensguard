@@ -56,11 +56,6 @@ var trade_parties: Dictionary = {}
 ## All named characters (player + any persisted NPCs): person_id -> PersonState.
 var characters: Dictionary = {}
 
-## Transient NPC pool for the currently-loaded settlement.
-## person_id -> PersonState. Populated on SettlementView entry; culled on exit.
-## Only NPCs in the player's social_links survive the cull to the characters dict.
-var npc_pool: Dictionary = {}
-
 ## EntityRegistry ID of the player's PersonState in `characters`.
 var player_character_id: String = ""
 
@@ -143,7 +138,7 @@ func to_dict() -> Dictionary:
 		"chest_contents":     chest_contents.duplicate(true),
 		"active_battle":      active_battle.to_dict() if active_battle != null else null,
 		# Serialise all characters (player + persisted NPCs).
-		# npc_pool is transient and intentionally excluded.
+		# npc_pool removed (CDDA rewrite): all NPCs now live in characters.
 		"characters": (func() -> Dictionary:
 			var cd: Dictionary = {}
 			for pid in characters:

@@ -36,14 +36,9 @@ func setup(ws: WorldState) -> void:
 func tick_work(_tick: int) -> void:
 	if _world_state == null:
 		return
-	# Process characters + npc_pool.
+	# Process all characters (player + persistent NPCs).
 	for pid: String in _world_state.characters:
 		var person: PersonState = _world_state.characters[pid]
-		if person.active_role == "" or person.work_cell_id == "":
-			continue
-		_process_worker(person)
-	for pid: String in _world_state.npc_pool:
-		var person: PersonState = _world_state.npc_pool[pid]
 		if person.active_role == "" or person.work_cell_id == "":
 			continue
 		_process_worker(person)
