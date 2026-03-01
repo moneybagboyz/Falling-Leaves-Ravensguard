@@ -1,0 +1,61 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Armor",
+  "description": "Data definition for a piece of armor providing zone coverage in combat.",
+  "type": "object",
+  "required": ["id", "name", "material", "coverage_zones", "encumbrance", "durability"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "id":   { "type": "string" },
+    "name": { "type": "string" },
+    "description": { "type": "string" },
+    "material": {
+      "type": "string",
+      "enum": ["gambeson", "leather", "mail", "plate"],
+      "description": "Material determines damage-type resistances: gambeson=blunt, leather=slash, mail=pierce+slash, plate=all."
+    },
+    "coverage_zones": {
+      "type": "object",
+      "description": "body_zone_id -> coverage float (0.0 = no protection, 1.0 = full protection). Unlisted zones have 0 coverage.",
+      "additionalProperties": { "type": "number", "minimum": 0, "maximum": 1 }
+    },
+    "damage_reduction": {
+      "type": "object",
+      "description": "Per damage_type flat reduction applied before coverage. Keys: slash, pierce, blunt.",
+      "properties": {
+        "slash":  { "type": "number", "minimum": 0 },
+        "pierce": { "type": "number", "minimum": 0 },
+        "blunt":  { "type": "number", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "encumbrance": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Movement penalty contribution. Total encumbrance above threshold reduces speed and stamina regen."
+    },
+    "durability": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Max durability points. Each hit that penetrates coverage reduces durability by 1. At 0, armor is destroyed."
+    },
+    "equip_slot": {
+      "type": "string",
+      "enum": ["head", "torso", "arms", "legs", "hands", "feet"],
+      "description": "Equipment slot this piece occupies."
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "weight_kg": {
+      "type": "number",
+      "minimum": 0
+    },
+    "value_coin": {
+      "type": "number",
+      "minimum": 0
+    }
+  }
+}

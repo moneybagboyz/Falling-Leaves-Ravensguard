@@ -1,0 +1,14 @@
+{
+  "$schema": "../schemas/body_zone.schema.json",
+  "id": "neck",
+  "name": "Neck",
+  "hit_weight": 0.05,
+  "wound_thresholds": { "graze": 1, "wound": 3, "severe": 7, "lethal": 12 },
+  "critical_effects": [
+    { "at_severity": "wound",  "effect": "bleed_heavy" },
+    { "at_severity": "severe", "effect": "bleed_heavy" },
+    { "at_severity": "lethal", "effect": "death" }
+  ],
+  "pain_multiplier": 1.5,
+  "blocks_reach_if_wounded": false
+}

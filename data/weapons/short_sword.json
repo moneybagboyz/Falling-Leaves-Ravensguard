@@ -1,0 +1,17 @@
+{
+  "$schema": "../schemas/weapon.schema.json",
+  "id": "short_sword",
+  "name": "Short Sword",
+  "description": "A versatile one-handed blade. Balanced between slash and thrust. The standard sidearm of soldiers and merchants alike.",
+  "reach_class": "medium",
+  "damage_type": "slash",
+  "swing_momentum": 10,
+  "thrust_momentum": 8,
+  "attack_speed": 1.2,
+  "stamina_cost": 0.12,
+  "min_skill": 1,
+  "two_handed": false,
+  "tags": ["military", "common"],
+  "weight_kg": 1.0,
+  "value_coin": 18
+}

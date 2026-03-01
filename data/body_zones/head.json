@@ -1,0 +1,14 @@
+{
+  "$schema": "../schemas/body_zone.schema.json",
+  "id": "head",
+  "name": "Head",
+  "hit_weight": 0.10,
+  "wound_thresholds": { "graze": 2, "wound": 5, "severe": 10, "lethal": 18 },
+  "critical_effects": [
+    { "at_severity": "wound",  "effect": "vision_impaired" },
+    { "at_severity": "severe", "effect": "knockout" },
+    { "at_severity": "lethal", "effect": "death" }
+  ],
+  "pain_multiplier": 2.0,
+  "blocks_reach_if_wounded": false
+}

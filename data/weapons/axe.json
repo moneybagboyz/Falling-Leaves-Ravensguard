@@ -1,0 +1,17 @@
+{
+  "$schema": "../schemas/weapon.schema.json",
+  "id": "axe",
+  "name": "Hand Axe",
+  "description": "A single-headed chopping axe. Brutal slash damage; tears through lighter armor but tires the arm quickly.",
+  "reach_class": "medium",
+  "damage_type": "slash",
+  "swing_momentum": 14,
+  "thrust_momentum": 3,
+  "attack_speed": 0.9,
+  "stamina_cost": 0.18,
+  "min_skill": 0,
+  "two_handed": false,
+  "tags": ["common", "tool"],
+  "weight_kg": 1.5,
+  "value_coin": 10
+}

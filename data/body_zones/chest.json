@@ -1,0 +1,14 @@
+{
+  "$schema": "../schemas/body_zone.schema.json",
+  "id": "chest",
+  "name": "Chest",
+  "hit_weight": 0.25,
+  "wound_thresholds": { "graze": 3, "wound": 7, "severe": 14, "lethal": 24 },
+  "critical_effects": [
+    { "at_severity": "wound",  "effect": "bleed_moderate" },
+    { "at_severity": "severe", "effect": "bleed_heavy" },
+    { "at_severity": "lethal", "effect": "death" }
+  ],
+  "pain_multiplier": 1.0,
+  "blocks_reach_if_wounded": false
+}

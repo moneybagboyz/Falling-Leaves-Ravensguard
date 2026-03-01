@@ -56,6 +56,16 @@ var skills: Dictionary = {}
 ## phase3: kept as empty dict; NeedsComponent uses 'needs' below.
 var body_state: Dictionary = {}
 
+# ── Tactical combat state ─────────────────────────────────────────────────────
+## Stamina: fast tactical resource consumed by attacks; recovers each WEGO turn.
+## 1.0 = fresh, 0.0 = exhausted. Separate from needs.fatigue (strategic drain).
+## At stamina < 0.3: −20% accuracy. At stamina 0.0: attacks always miss.
+var stamina: float = 1.0
+
+## Equipped item IDs (weapon slot, armour slots). Populated by inventory UI (P4-10).
+## Format: { "main_hand": "short_sword", "head": "iron_helm", "torso": "mail_hauberk" }
+var equipment_refs: Dictionary = {}
+
 # ── Needs ─────────────────────────────────────────────────────────────────────
 ## Persistent need values managed by NeedsComponent (P3-11).
 ## hunger: 0.0 (full) → 1.0 (starving).
@@ -196,6 +206,8 @@ func to_dict() -> Dictionary:
 		"location":            location.duplicate(),
 		"schedule_state":      schedule_state,
 		"pending_perk_unlocks": pending_perk_unlocks.duplicate(true),
+		"stamina":             stamina,
+		"equipment_refs":      equipment_refs.duplicate(),
 	}
 
 
@@ -229,4 +241,6 @@ static func from_dict(d: Dictionary) -> PersonState:
 	}).duplicate()
 	p.schedule_state      = d.get("schedule_state",   "idle")
 	p.pending_perk_unlocks = d.get("pending_perk_unlocks", []).duplicate(true)
+	p.stamina             = float(d.get("stamina", 1.0))
+	p.equipment_refs       = d.get("equipment_refs", {}).duplicate()
 	return p

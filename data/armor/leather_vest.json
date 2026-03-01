@@ -1,0 +1,18 @@
+{
+  "$schema": "../schemas/armor.schema.json",
+  "id": "leather_vest",
+  "name": "Leather Vest",
+  "description": "Hardened boiled leather. Better slash resistance than gambeson; lighter than mail.",
+  "material": "leather",
+  "coverage_zones": {
+    "chest":   0.75,
+    "abdomen": 0.60
+  },
+  "damage_reduction": { "slash": 3, "pierce": 2, "blunt": 1 },
+  "encumbrance": 1.5,
+  "durability": 18,
+  "equip_slot": "torso",
+  "tags": ["common", "light"],
+  "weight_kg": 2.5,
+  "value_coin": 12
+}

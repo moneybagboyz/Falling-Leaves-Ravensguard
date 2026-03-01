@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://cv3bm9kx7tp2q"]
+
+[ext_resource type="Script" path="res://src/ui/combat_view/combat_view.gd" id="1_combview"]
+
+[node name="CombatView" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_combview")

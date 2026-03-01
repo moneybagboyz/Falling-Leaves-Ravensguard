@@ -1,0 +1,71 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Weapon",
+  "description": "Data definition for a weapon usable in combat.",
+  "type": "object",
+  "required": ["id", "name", "reach_class", "damage_type", "swing_momentum", "thrust_momentum", "attack_speed", "stamina_cost"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "id":   { "type": "string" },
+    "name": { "type": "string" },
+    "description": { "type": "string" },
+    "reach_class": {
+      "type": "string",
+      "enum": ["unarmed", "short", "medium", "long", "polearm"],
+      "description": "Melee reach in tiles: unarmed=0, short=1, medium=1, long=2, polearm=2. Polearm also denies adjacent attack bonus."
+    },
+    "damage_type": {
+      "type": "string",
+      "enum": ["slash", "pierce", "blunt"],
+      "description": "Determines which armor material resistances apply."
+    },
+    "swing_momentum": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Base damage value when delivering a swinging attack."
+    },
+    "thrust_momentum": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Base damage value when delivering a thrusting attack."
+    },
+    "attack_speed": {
+      "type": "number",
+      "minimum": 0.1,
+      "maximum": 3.0,
+      "description": "Attacks per WEGO turn. Values > 1.0 allow multiple strikes per turn."
+    },
+    "stamina_cost": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Stamina drained per attack (0–1 range)."
+    },
+    "min_skill": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 0,
+      "description": "Minimum melee skill level to use without a penalty."
+    },
+    "two_handed": {
+      "type": "boolean",
+      "default": false,
+      "description": "If true, occupies both hand slots."
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "e.g. ['military', 'common', 'throwable']"
+    },
+    "weight_kg": {
+      "type": "number",
+      "minimum": 0
+    },
+    "value_coin": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Base trade value in coin."
+    }
+  }
+}

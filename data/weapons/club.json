@@ -1,0 +1,17 @@
+{
+  "$schema": "../schemas/weapon.schema.json",
+  "id": "club",
+  "name": "Club",
+  "description": "A heavy wooden bludgeon. Cheap and brutal. Excellent at delivering shock through armor; poor against unarmored targets.",
+  "reach_class": "medium",
+  "damage_type": "blunt",
+  "swing_momentum": 12,
+  "thrust_momentum": 4,
+  "attack_speed": 0.85,
+  "stamina_cost": 0.16,
+  "min_skill": 0,
+  "two_handed": false,
+  "tags": ["common", "improvised"],
+  "weight_kg": 1.8,
+  "value_coin": 3
+}

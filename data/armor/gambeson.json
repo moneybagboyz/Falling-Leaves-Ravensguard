@@ -1,0 +1,20 @@
+{
+  "$schema": "../schemas/armor.schema.json",
+  "id": "gambeson",
+  "name": "Gambeson",
+  "description": "A quilted padded garment. Light, quiet, and cheap. Absorbs blunt force well; poor against cutting edges.",
+  "material": "gambeson",
+  "coverage_zones": {
+    "chest":   0.70,
+    "abdomen": 0.65,
+    "left_arm":  0.40,
+    "right_arm": 0.40
+  },
+  "damage_reduction": { "slash": 1, "pierce": 1, "blunt": 4 },
+  "encumbrance": 1.0,
+  "durability": 20,
+  "equip_slot": "torso",
+  "tags": ["common", "light"],
+  "weight_kg": 3.5,
+  "value_coin": 6
+}

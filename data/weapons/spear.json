@@ -1,0 +1,17 @@
+{
+  "$schema": "../schemas/weapon.schema.json",
+  "id": "spear",
+  "name": "Spear",
+  "description": "A long-shafted thrusting weapon. Superior reach; denies the gap. Weak if the enemy closes in.",
+  "reach_class": "polearm",
+  "damage_type": "pierce",
+  "swing_momentum": 5,
+  "thrust_momentum": 14,
+  "attack_speed": 0.9,
+  "stamina_cost": 0.14,
+  "min_skill": 1,
+  "two_handed": true,
+  "tags": ["military", "common"],
+  "weight_kg": 2.2,
+  "value_coin": 12
+}

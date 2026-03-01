@@ -49,7 +49,9 @@ var _map_w: int = 0
 var _map_h: int = 0
 
 # Click detection: tile Vector2i → settlement_id
-var _tile_to_sid: Dictionary = {}
+var _tile_to_sid:  Dictionary = {}
+# Click detection: tile Vector2i → world_tile cid string (bandit camps)
+var _tile_to_camp: Dictionary = {}
 
 # ── UI refs ───────────────────────────────────────────────────────────────────
 var _map_texture: TextureRect      = null
@@ -66,6 +68,8 @@ var _info_panel:  VBoxContainer    = null
 var _info_title:  Label            = null
 var _info_body:   Label            = null
 var _enter_btn:   Button           = null  # "► ENTER SETTLEMENT" button
+var _attack_btn:  Button           = null  # "⚔ ATTACK CAMP" button
+var _selected_camp_cid: String     = ""    # world-tile cid of selected bandit camp
 
 
 # ── Lifecycle ─────────────────────────────────────────────────────────────────
@@ -195,6 +199,16 @@ func _build_ui() -> void:
 	_enter_btn.pressed.connect(_on_enter_settlement_pressed)
 	left.add_child(_enter_btn)
 
+	# Attack camp button — only enabled when a bandit camp tile is selected.
+	_attack_btn = Button.new()
+	_attack_btn.text = "⚔ ATTACK CAMP"
+	_attack_btn.disabled = true
+	_attack_btn.visible = false
+	_attack_btn.custom_minimum_size = Vector2(0, 36)
+	_attack_btn.add_theme_color_override("font_color", Color(1.0, 0.3, 0.3))
+	_attack_btn.pressed.connect(_on_attack_camp_pressed)
+	left.add_child(_attack_btn)
+
 	# ── RIGHT: Map ────────────────────────────────────────────────────────────
 	var right := VBoxContainer.new()
 	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -308,6 +322,15 @@ func _build_tile_index() -> void:
 		if tx >= 0 and ty >= 0:
 			_tile_to_sid[Vector2i(tx, ty)] = sid
 
+	# Index bandit camp world tiles.
+	_tile_to_camp.clear()
+	for cid: String in _world_state.world_tiles:
+		var cell: Dictionary = _world_state.world_tiles[cid]
+		if cell.get("hostile", false) and cell.get("building_id", "") == "bandit_camp":
+			var parts := cid.split(",")
+			if parts.size() == 2:
+				_tile_to_camp[Vector2i(int(parts[0]), int(parts[1]))] = cid
+
 
 # ── Settlement info ───────────────────────────────────────────────────────────
 func _show_world_summary() -> void:
@@ -320,7 +343,8 @@ func _show_world_summary() -> void:
 
 
 func _show_settlement(sid: String) -> void:
-	_selected_sid = sid
+	_selected_sid      = sid
+	_selected_camp_cid = ""   # deselect any camp
 	var sv = _world_state.settlements.get(sid)
 	if sv == null:
 		return
@@ -332,9 +356,12 @@ func _show_settlement(sid: String) -> void:
 
 	var tier_name: String = TIER_NAMES[clampi(ss.tier, 0, TIER_NAMES.size() - 1)]
 	_info_title.text = "%s  (%s)" % [ss.name, tier_name]
-	# Enable the enter button now that a settlement is selected.
+	# Enable the enter button; hide the attack button.
 	if _enter_btn != null:
 		_enter_btn.disabled = false
+	if _attack_btn != null:
+		_attack_btn.disabled = true
+		_attack_btn.visible  = false
 
 	var pop: int = ss.total_population()
 	var lines: PackedStringArray = []
@@ -417,7 +444,19 @@ func _handle_map_click(local_pos: Vector2) -> void:
 	var world_y: float = (local_pos.y + _map_scroll.scroll_vertical)   / _zoom_level
 	var tile: Vector2i = Vector2i(int(world_x), int(world_y))
 
-	# Find the nearest settlement within a search radius.
+	# ── Check bandit camps first (exact or near-exact match) ──────────────
+	var best_camp_cid:  String = ""
+	var best_camp_dist: float  = 999.0
+	for search_tile: Vector2i in _tile_to_camp.keys():
+		var d: float = float(tile.distance_to(search_tile))
+		if d < best_camp_dist:
+			best_camp_dist = d
+			best_camp_cid  = _tile_to_camp[search_tile]
+	if best_camp_cid != "" and best_camp_dist <= 2.0:
+		_show_camp_tile(best_camp_cid, _world_state.world_tiles[best_camp_cid])
+		return
+
+	# ── Find the nearest settlement within a search radius ────────────────
 	var best_sid:  String = ""
 	var best_dist: float  = 999.0
 	for search_tile: Vector2i in _tile_to_sid.keys():
@@ -499,6 +538,110 @@ func _on_enter_settlement_pressed() -> void:
 	SceneManager.push_scene(
 		"res://src/ui/settlement_view.tscn",
 		{"settlement_id": _selected_sid}
+	)
+
+
+func _show_camp_tile(cid: String, tile_data: Dictionary) -> void:
+	_selected_sid      = ""   # deselect any settlement
+	_selected_camp_cid = cid
+
+	if _enter_btn != null:
+		_enter_btn.disabled = true
+	if _attack_btn != null:
+		_attack_btn.disabled = false
+		_attack_btn.visible  = true
+
+	var group_size: int    = int(tile_data.get("bandit_group_size", 0))
+	var gear_tier:  String = tile_data.get("bandit_gear_tier", "unknown")
+	var parts              = cid.split(",")
+	var tx: int = int(parts[0]) if parts.size() == 2 else 0
+	var ty: int = int(parts[1]) if parts.size() == 2 else 0
+
+	_info_title.text = "⚔ Bandit Camp  [%d, %d]" % [tx, ty]
+	_info_body.text  = (
+		"Hostile encampment outside any settled territory.\n\n"
+		+ "Estimated fighters: %d\nGear quality: %s\n\n"
+		+ "Attacking will trigger a tactical battle.\n"
+		+ "Victory clears the camp permanently."
+	) % [group_size, gear_tier]
+
+
+func _on_attack_camp_pressed() -> void:
+	if _selected_camp_cid == "" or _world_state == null:
+		return
+	_trigger_camp_combat(_selected_camp_cid)
+
+
+func _trigger_camp_combat(cid: String) -> void:
+	var tile_data: Dictionary = _world_state.world_tiles.get(cid, {})
+	var group_size: int    = int(tile_data.get("bandit_group_size", 4))
+	var gear_tier:  String = tile_data.get("bandit_gear_tier", "ragged")
+
+	# ── Create combatants ──────────────────────────────────────────────────
+	var battle := BattleState.new()
+	battle.battle_id  = "camp_%s" % cid.replace(",", "_")
+	battle.map_type   = "subregion"
+	battle.map_tile   = cid
+	battle.phase      = BattleState.PHASE_PLANNING
+	battle.turn       = 0
+
+	# Player side — all characters that belong to player (simple: use player_character_id + allies if any).
+	var player_member_ids: Array[String] = []
+	var player_person: PersonState = _world_state.characters.get(
+		_world_state.player_character_id)
+	if player_person != null:
+		var pc := CombatantState.from_person(player_person, "player", "p_main")
+		pc.tile_pos = Vector2i(12, 5)   # south edge of a 25×25 grid
+		battle.combatants[pc.combatant_id] = pc
+		player_member_ids.append(pc.combatant_id)
+
+	var player_formation := FormationState.make(
+		"p_main", "player", "Your Party", player_member_ids, Vector2i(12, 5))
+	player_formation.order = FormationState.ORDER_ADVANCE
+	battle.formations[player_formation.formation_id] = player_formation
+
+	# Enemy side — spawn group_size bandits with gear seeded from gear_tier.
+	var weapon_pool_ragged:  Array = ["club", "dagger"]
+	var weapon_pool_modest:  Array = ["short_sword", "axe", "club"]
+	var armor_pool_ragged:   Array = ["gambeson", "leather_vest"]
+	var armor_pool_modest:   Array = ["gambeson", "leather_vest", "mail_hauberk"]
+
+	var wpn_pool: Array = weapon_pool_ragged if gear_tier == "ragged" else weapon_pool_modest
+	var arm_pool: Array = armor_pool_ragged  if gear_tier == "ragged" else armor_pool_modest
+
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(cid) ^ _world_state.world_seed
+
+	var enemy_member_ids: Array[String] = []
+	for i: int in range(group_size):
+		var ep := PersonState.new()
+		var eid := "bandit_%s_%d" % [cid.replace(",", "_"), i]
+		ep.person_id      = eid
+		ep.name           = "Bandit %d" % (i + 1)
+		ep.stamina        = 1.0
+		ep.equipment_refs = {
+			"main_hand": wpn_pool[rng.randi() % wpn_pool.size()],
+			"torso":     arm_pool[rng.randi() % arm_pool.size()],
+		}
+		_world_state.npc_pool[eid] = ep
+
+		var ec := CombatantState.from_person(ep, "enemy", "e_main")
+		var spread_x: int = (i % 5)
+		var spread_y: int = (i / 5)
+		ec.tile_pos = Vector2i(10 + spread_x, 19 - spread_y)
+		battle.combatants[ec.combatant_id] = ec
+		enemy_member_ids.append(ec.combatant_id)
+
+	var enemy_formation := FormationState.make(
+		"e_main", "enemy", "Bandit Camp", enemy_member_ids, Vector2i(12, 19))
+	enemy_formation.order = FormationState.ORDER_ADVANCE
+	battle.formations[enemy_formation.formation_id] = enemy_formation
+
+	# ── Set active battle and open CombatView ─────────────────────────────
+	_world_state.active_battle = battle
+	SceneManager.push_scene(
+		"res://src/ui/combat_view/combat_view.tscn",
+		{"battle_id": battle.battle_id}
 	)
 
 

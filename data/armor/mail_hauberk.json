@@ -1,0 +1,21 @@
+{
+  "$schema": "../schemas/armor.schema.json",
+  "id": "mail_hauberk",
+  "name": "Mail Hauberk",
+  "description": "Interlocking iron rings covering torso and arms. Excellent against slashing and piercing; heavy.",
+  "material": "mail",
+  "coverage_zones": {
+    "chest":     0.90,
+    "abdomen":   0.85,
+    "left_arm":  0.75,
+    "right_arm": 0.75,
+    "neck":      0.40
+  },
+  "damage_reduction": { "slash": 6, "pierce": 5, "blunt": 2 },
+  "encumbrance": 5.0,
+  "durability": 40,
+  "equip_slot": "torso",
+  "tags": ["military", "medium"],
+  "weight_kg": 8.0,
+  "value_coin": 60
+}

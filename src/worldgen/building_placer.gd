@@ -52,6 +52,8 @@ static func place(world_state: WorldState, world_seed: int) -> void:
 			push_warning("BuildingPlacer: settlement '%s' is null — skipping." % sid)
 			continue
 		_place_settlement(world_state, ss, world_seed)
+	# After all settlements are placed, scatter bandit camps on unclaimed land.
+	place_bandit_camps(world_state, world_seed)
 
 
 # ── Per-settlement placement ──────────────────────────────────────────────────
@@ -158,3 +160,67 @@ static func _place_settlement(
 	for good: String in MARKET_STARTER:
 		market[good] = MARKET_STARTER[good] * tier_mult
 	ss.market_inventory = market
+
+
+# ── Bandit camp placement (called after all settlements are placed) ────────────
+
+## For each tier-1+ settlement, try to place 1–2 bandit camps on unclaimed,
+## non-water cells just outside the settlement's territory radius.
+## Bandit camps are never placed on settlement territory.
+static func place_bandit_camps(world_state: WorldState, world_seed: int) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = world_seed ^ 0xB4ND17
+
+	for sid: String in world_state.settlements:
+		var ss: SettlementState = world_state.get_settlement(sid)
+		if ss == null or ss.tier < 1:
+			continue
+
+		var radius: int  = TIER_RADIUS[clampi(ss.tier, 0, TIER_RADIUS.size() - 1)]
+		var tx: int      = ss.tile_x
+		var ty: int      = ss.tile_y
+		# Search a ring just outside the territory radius.
+		var ring_r: int  = radius + 1
+		var candidates: Array[String] = []
+		for cx: int in range(tx - ring_r - 1, tx + ring_r + 2):
+			for cy: int in range(ty - ring_r - 1, ty + ring_r + 2):
+				var dist: int = maxi(absi(cx - tx), absi(cy - ty))
+				if dist < ring_r or dist > ring_r + 1:
+					continue
+				var cid := "%d,%d" % [cx, cy]
+				if not world_state.world_tiles.has(cid):
+					continue
+				var cell: Dictionary = world_state.world_tiles[cid]
+				if cell.get("is_water", true):
+					continue
+				if cell.get("owner_settlement_id", "") != "":
+					continue
+				if cell.get("building_id", "") != "":
+					continue
+				candidates.append(cid)
+
+		if candidates.is_empty():
+			continue
+
+		# Place 1 camp for tier 1–2, 2 for tier 3+.
+		var camp_count: int = 1 if ss.tier < 3 else 2
+		var placed: int = 0
+		# Shuffle candidates.
+		for i: int in range(candidates.size() - 1, 0, -1):
+			var j: int = rng.randi_range(0, i)
+			var tmp: String = candidates[i]
+			candidates[i] = candidates[j]
+			candidates[j] = tmp
+
+		for cid: String in candidates:
+			if placed >= camp_count:
+				break
+			world_state.world_tiles[cid]["building_id"] = "bandit_camp"
+			world_state.world_tiles[cid]["hostile"]     = true
+			# Randomise group size from the camp template.
+			var camp_def: Dictionary = ContentRegistry.get_content("building", "bandit_camp")
+			var g_min: int = int(camp_def.get("group_size_min", 4))
+			var g_max: int = int(camp_def.get("group_size_max", 12))
+			world_state.world_tiles[cid]["bandit_group_size"] = rng.randi_range(g_min, g_max)
+			world_state.world_tiles[cid]["bandit_gear_tier"]  = camp_def.get("gear_tier", "ragged")
+			placed += 1

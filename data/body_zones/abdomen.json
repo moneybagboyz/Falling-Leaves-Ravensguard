@@ -1,0 +1,14 @@
+{
+  "$schema": "../schemas/body_zone.schema.json",
+  "id": "abdomen",
+  "name": "Abdomen",
+  "hit_weight": 0.15,
+  "wound_thresholds": { "graze": 2, "wound": 6, "severe": 12, "lethal": 20 },
+  "critical_effects": [
+    { "at_severity": "wound",  "effect": "bleed_moderate" },
+    { "at_severity": "severe", "effect": "bleed_heavy" },
+    { "at_severity": "lethal", "effect": "death" }
+  ],
+  "pain_multiplier": 1.2,
+  "blocks_reach_if_wounded": false
+}

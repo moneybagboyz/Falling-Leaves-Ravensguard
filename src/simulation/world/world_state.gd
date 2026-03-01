@@ -58,6 +58,10 @@ var npc_pool: Dictionary = {}
 ## EntityRegistry ID of the player's PersonState in `characters`.
 var player_character_id: String = ""
 
+## Active tactical battle. Null when no battle is in progress (the normal state).
+## Set by the combat trigger (P4-11); cleared by post-battle resolution (P4-19).
+var active_battle: BattleState = null
+
 ## Player's current position in the world.
 ## cell_id (wt_key):  world tile key in the 512×512 grid ("wt_x,wt_y").
 ## wt_x / wt_y:       world tile coords (mirrors cell_id for convenience).
@@ -130,6 +134,7 @@ func to_dict() -> Dictionary:
 		"province_adjacency": province_adjacency.duplicate(true),
 		"player_character_id": player_character_id,
 		"player_location":    player_location.duplicate(),
+		"active_battle":      active_battle.to_dict() if active_battle != null else null,
 		# Serialise all characters (player + persisted NPCs).
 		# npc_pool is transient and intentionally excluded.
 		"characters": (func() -> Dictionary:
@@ -157,6 +162,9 @@ static func from_dict(data: Dictionary) -> WorldState:
 	ws.player_location    = data.get("player_location", {
 		"cell_id": "", "wt_x": 0, "wt_y": 0, "rx": 125, "ry": 125, "lx": 0, "ly": 0, "z_level": 0
 	}).duplicate()
+	var battle_data = data.get("active_battle", null)
+	if battle_data is Dictionary:
+		ws.active_battle = BattleState.from_dict(battle_data)
 	var chars_data: Dictionary = data.get("characters", {})
 	for pid in chars_data:
 		var pv = chars_data[pid]
