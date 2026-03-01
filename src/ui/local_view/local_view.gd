@@ -668,16 +668,37 @@ func _spawn_local_npcs() -> void:
 		if npc.local_lx >= 0 and npc.local_reg_rx >= 0:
 			_create_npc_pawn(pid, npc)
 			continue
-		# First visit — find an appropriate anchor tile.
+		# First visit — find the region cell that contains the NPC's home building.
+		var target_rx := _reg_rx
+		var target_ry := _reg_ry
+		if npc.work_cell_id != "":
+			var home_rc := _find_region_cell_for_wt_key(npc.work_cell_id)
+			if home_rc.x >= 0:
+				target_rx = home_rc.x
+				target_ry = home_rc.y
 		var key: String = npc.active_role + "_" + npc.schedule_state
 		var offset: int = role_counters.get(key, 0)
 		role_counters[key] = offset + 1
-		var tile_pos := _find_anchor_tile(_reg_rx, _reg_ry, npc.active_role, npc.schedule_state, offset)
+		var tile_pos := _find_anchor_tile(target_rx, target_ry, npc.active_role, npc.schedule_state, offset)
 		npc.local_lx     = tile_pos.x
 		npc.local_ly     = tile_pos.y
-		npc.local_reg_rx = _reg_rx
-		npc.local_reg_ry = _reg_ry
+		npc.local_reg_rx = target_rx
+		npc.local_reg_ry = target_ry
 		_create_npc_pawn(pid, npc)
+
+
+## Return the region cell (rx, ry) that was stamped from the given world-tile territory key.
+## Returns Vector2i(-1, -1) if the key has no matching cell in the current world tile's grid.
+func _find_region_cell_for_wt_key(wt_key: String) -> Vector2i:
+	if _world_state == null:
+		return Vector2i(-1, -1)
+	var wk := "%d,%d" % [_entry_wx, _entry_wy]
+	var grid: Dictionary = _world_state.region_grids.get(wk, {})
+	for ck: String in grid:
+		if grid[ck].get("source_wt_key", "") == wt_key:
+			var parts := ck.split(",")
+			return Vector2i(int(parts[0]), int(parts[1]))
+	return Vector2i(-1, -1)
 
 
 ## Find a role/schedule-appropriate walkable tile in the given region cell's layout.

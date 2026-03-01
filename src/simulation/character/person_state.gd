@@ -24,6 +24,9 @@ var background_id: String = ""
 ## Which settlement this person considers home. Empty = wanderer.
 var home_settlement_id: String = ""
 
+## Building type this person works/lives in (e.g. "smithy", "inn"). Empty = unassigned.
+var home_building_id: String = ""
+
 ## Population class this person belongs to (peasant/artisan/merchant/noble).
 ## For player characters, set to their primary background's class.
 var population_class: String = ""
@@ -216,6 +219,7 @@ func to_dict() -> Dictionary:
 		"active_role":         active_role,
 		"shelter_status":      shelter_status,
 		"work_cell_id":        work_cell_id,
+		"home_building_id":    home_building_id,
 		"location":            location.duplicate(),
 		"schedule_state":      schedule_state,
 		"pending_perk_unlocks": pending_perk_unlocks.duplicate(true),
@@ -254,6 +258,7 @@ static func from_dict(d: Dictionary) -> PersonState:
 	p.active_role         = d.get("active_role",         "")
 	p.shelter_status      = d.get("shelter_status",      "")
 	p.work_cell_id        = d.get("work_cell_id",        "")
+	p.home_building_id    = d.get("home_building_id",    "")
 	p.location            = d.get("location", {
 		"cell_id": "", "lx": 0, "ly": 0, "z_level": 0,
 	}).duplicate()

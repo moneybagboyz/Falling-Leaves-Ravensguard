@@ -161,9 +161,10 @@ static func _make_npc(
 
 	if assigned_slot_idx >= 0:
 		var slot: Dictionary = open_slots[assigned_slot_idx]
-		npc.work_cell_id = slot.get("cell_id", ss.cell_id)
-		npc.active_role  = slot.get("slot_id", pop_class)
-		home_cell        = npc.work_cell_id
+		npc.work_cell_id     = slot.get("cell_id",     ss.cell_id)
+		npc.active_role      = slot.get("slot_id",     pop_class)
+		npc.home_building_id = slot.get("building_id", "")
+		home_cell            = npc.work_cell_id
 		# Mark slot as filled in the open_slots list (not the SettlementState copy).
 		open_slots.remove_at(assigned_slot_idx)
 	else:
