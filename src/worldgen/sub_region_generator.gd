@@ -199,17 +199,28 @@ static func generate(
 				if nv > rock_thresh:
 					result[ck]["terrain_type"] = "mountain"
 
-	# ── Stamp roads only in directions connected to road-bearing neighbours ────
+	# ── Stamp roads using stored edge directions (exact route topology) ─────────
+	# road_dirs is set by RegionGenerator for new worlds. Old saves that lack it
+	# fall back to the neighbour-check method for compatibility.
 	if has_road and not is_water:
-		var road_n: bool = world_tiles.get("%d,%d" % [wtx,     wty - 1], {}).get("has_road", false)
-		var road_s: bool = world_tiles.get("%d,%d" % [wtx,     wty + 1], {}).get("has_road", false)
-		var road_w: bool = world_tiles.get("%d,%d" % [wtx - 1, wty    ], {}).get("has_road", false)
-		var road_e: bool = world_tiles.get("%d,%d" % [wtx + 1, wty    ], {}).get("has_road", false)
-
-		# If no directional neighbours have roads, this tile is a terminal — draw
-		# a short stub outward in all 4 directions so the road visually ends here.
-		if not road_n and not road_s and not road_w and not road_e:
-			road_n = true; road_s = true; road_w = true; road_e = true
+		var road_dirs: Array = wt_data.get("road_dirs", [])
+		var road_n: bool
+		var road_s: bool
+		var road_w: bool
+		var road_e: bool
+		if not road_dirs.is_empty():
+			road_n = road_dirs.has("n")
+			road_s = road_dirs.has("s")
+			road_w = road_dirs.has("w")
+			road_e = road_dirs.has("e")
+		else:
+			# Fallback: infer from neighbours (old saves / missing data).
+			road_n = world_tiles.get("%d,%d" % [wtx,     wty - 1], {}).get("has_road", false)
+			road_s = world_tiles.get("%d,%d" % [wtx,     wty + 1], {}).get("has_road", false)
+			road_w = world_tiles.get("%d,%d" % [wtx - 1, wty    ], {}).get("has_road", false)
+			road_e = world_tiles.get("%d,%d" % [wtx + 1, wty    ], {}).get("has_road", false)
+			if not road_n and not road_s and not road_w and not road_e:
+				road_n = true; road_s = true; road_w = true; road_e = true
 
 		if road_n:
 			for ry: int in range(0, CY + 1):

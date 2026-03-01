@@ -77,8 +77,11 @@ var _map_cols: int = 0
 var _map_rows: int = 0
 
 ## Context tag for the single action button.
-## "exit_building" | "open_chest" | "stairs_up" | "stairs_down" | ""
+## "exit_building" | "open_chest" | "stairs_up" | "stairs_down" | "talk_npc" | ""
 var _pending_local_action: String = ""
+
+## NPC person_id targeted by the current "talk_npc" action, or "".
+var _pending_npc_id: String = ""
 
 ## Whether the inventory panel is currently visible.
 var _inv_visible: bool = false
@@ -466,9 +469,9 @@ func _try_move(dx: int, dy: int) -> void:
 	elif nx >= GRID_W:  new_rx += 1; nx -= GRID_W
 	if ny < 0:          new_ry -= 1; ny += GRID_H
 	elif ny >= GRID_H:  new_ry += 1; ny -= GRID_H
-	# World tile boundary — exit to settlement map
+	# World tile boundary — attempt seamless crossing.
 	if new_rx < 0 or new_rx >= 250 or new_ry < 0 or new_ry >= 250:
-		_exit_to_settlement()
+		_cross_world_tile_boundary(new_rx, new_ry, nx, ny)
 		return
 	# Check walkability of target tile
 	var ch := _get_cell_char(new_rx, new_ry, nx, ny)
@@ -486,6 +489,7 @@ func _try_move(dx: int, dy: int) -> void:
 		_building_def = ContentRegistry.get_content("building", _building_id) if _building_id != "" else {}
 	_render_viewport()
 	_update_pawn_visual()
+	_refresh_all_npc_pawns()
 	_refresh_tile_info()
 
 
@@ -546,6 +550,7 @@ func _update_action_button(ch: String) -> void:
 	if _action_btn == null:
 		return
 	_pending_local_action = ""
+	_pending_npc_id = ""
 	match ch:
 		"+":
 			_pending_local_action = "exit_building"
@@ -555,6 +560,13 @@ func _update_action_button(ch: String) -> void:
 			_pending_local_action = "stairs_up"
 		"v":
 			_pending_local_action = "stairs_down"
+
+	# Adjacent NPC talk — only when no tile action already set.
+	if _pending_local_action == "":
+		var adj := _npc_adjacent_to_player()
+		if adj != "":
+			_pending_npc_id       = adj
+			_pending_local_action = "talk_npc"
 
 	if _pending_local_action == "":
 		_action_btn.visible = false
@@ -569,6 +581,12 @@ func _action_label(tag: String) -> String:
 		"open_chest":    return "📦 Open Chest  [↵]"
 		"stairs_up":     return "▲ Climb Stairs  [↵]"
 		"stairs_down":   return "▼ Descend Stairs  [↵]"
+		"talk_npc":
+			if _pending_npc_id != "" and _world_state != null:
+				var npc: PersonState = _world_state.characters.get(_pending_npc_id)
+				if npc != null:
+					return "💬 Talk to %s  [↵]" % npc.name
+			return "💬 Talk  [↵]"
 	return tag
 
 
@@ -582,9 +600,56 @@ func _on_action_pressed() -> void:
 		"stairs_up", "stairs_down":
 			if _tile_info != null:
 				_tile_info.text += "\n[color=#aaaaff](Multi-floor nav coming soon)[/color]"
+		"talk_npc":
+			_do_talk_npc(_pending_npc_id)
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────────────
+
+## Return the person_id of the first NPC adjacent to the player (Chebyshev dist ≤ 1),
+## or "" if none found.
+func _npc_adjacent_to_player() -> String:
+	if _world_state == null:
+		return ""
+	var player_abs_x: int = _reg_rx * GRID_W + _player_lx
+	var player_abs_y: int = _reg_ry * GRID_H + _player_ly
+	for pid: String in _npc_rects:
+		var npc: PersonState = _world_state.characters.get(pid)
+		if npc == null:
+			continue
+		var lx: int = npc.location.get("lx", -1)
+		var ly: int = npc.location.get("ly", -1)
+		var rx: int = npc.location.get("rx", -1)
+		if lx < 0 or ly < 0 or rx < 0:
+			continue
+		var npc_abs_x: int = rx * GRID_W + lx
+		var npc_abs_y: int = npc.location.get("ry", 0) * GRID_H + ly
+		if absi(npc_abs_x - player_abs_x) <= 1 and absi(npc_abs_y - player_abs_y) <= 1:
+			return pid
+	return ""
+
+
+## Show NPC info in the tile panel.  Trade / dialogue will expand this later.
+func _do_talk_npc(pid: String) -> void:
+	if _world_state == null or _tile_info == null:
+		return
+	var npc: PersonState = _world_state.characters.get(pid)
+	if npc == null:
+		return
+	var greeting: String
+	match npc.schedule_state:
+		"working":  greeting = "I can't chat long — got work to do."
+		"resting":  greeting = "*yawns* What is it?"
+		"wandering":greeting = "Lovely day, isn't it?"
+		_:          greeting = "Hmm?"
+	var pop_label: String = npc.pop_class.capitalize() if npc.get("pop_class") != null else ""
+	var role_label: String = npc.active_role.replace("_", " ").capitalize() if npc.active_role != "" else "Idle"
+	_tile_info.text = (
+		"[color=#f0c96e][b]%s[/b][/color]\n" % npc.name +
+		"[color=#aaaaaa]%s · %s[/color]\n\n" % [pop_label, role_label] +
+		"[color=#dddddd]\"%s\"[/color]" % greeting
+	)
+
 
 func _get_player() -> PersonState:
 	if _world_state == null or _world_state.player_character_id == "":
@@ -641,6 +706,95 @@ func _exit_to_settlement() -> void:
 		_world_state.player_location["ry"] = _reg_ry
 	# Pass settlement_id back so SettlementView can reload correctly.
 	SceneManager.pop_scene({"settlement_id": _settlement_id})
+
+
+## Attempt a seamless crossing into an adjacent world tile.
+## new_rx/new_ry are the out-of-range region coords; lx/ly are the local-tile coords.
+## Exits to settlement if the adjacent world tile does not exist or is blocked.
+func _cross_world_tile_boundary(new_rx: int, new_ry: int, lx: int, ly: int) -> void:
+	if _world_state == null:
+		_exit_to_settlement()
+		return
+
+	# Work out which world tile we are crossing into.
+	var new_wx := _entry_wx
+	var new_wy := _entry_wy
+	var wrapped_rx := new_rx
+	var wrapped_ry := new_ry
+	if new_rx < 0:
+		new_wx   -= 1
+		wrapped_rx = 249
+	elif new_rx >= 250:
+		new_wx   += 1
+		wrapped_rx = 0
+	if new_ry < 0:
+		new_wy   -= 1
+		wrapped_ry = 249
+	elif new_ry >= 250:
+		new_wy   += 1
+		wrapped_ry = 0
+
+	var new_wt_key := "%d,%d" % [new_wx, new_wy]
+	if not _world_state.world_tiles.has(new_wt_key):
+		# Edge of world — fall back to the settlement exit.
+		_exit_to_settlement()
+		return
+
+	# Ensure the neighbouring world tile has a generated region grid.
+	if not _world_state.region_grids.has(new_wt_key):
+		var wt: Dictionary    = _world_state.world_tiles[new_wt_key]
+		var tile_owner: String = wt.get("owner_settlement_id", "")
+		var ss_tile            = _world_state.get_settlement(tile_owner) if tile_owner != "" else null
+		_world_state.region_grids[new_wt_key] = SubRegionGenerator.generate(
+			wt, ss_tile, _world_state.world_tiles, _world_state.world_seed, new_wx, new_wy
+		)
+
+	# Temporarily adopt the new world tile so layout helpers read the right grid.
+	var old_wx := _entry_wx
+	var old_wy := _entry_wy
+	_entry_wx = new_wx
+	_entry_wy = new_wy
+
+	# Build the target cell layout and check if the landing tile is walkable.
+	var target_layout: Array = _build_cell_layout(wrapped_rx, wrapped_ry)
+	var target_char: String = "#"
+	if ly >= 0 and ly < target_layout.size():
+		var row: String = target_layout[ly]
+		if lx >= 0 and lx < row.length():
+			target_char = row[lx]
+	if not (TILE_DEFS.get(target_char, TILE_FALLBACK) as Array)[1]:
+		# Target tile blocked — roll back.
+		_entry_wx = old_wx
+		_entry_wy = old_wy
+		return
+
+	# Commit: clear tile layout cache (keys are rx,ry with no wt prefix).
+	_layout_cache.clear()
+	_reg_rx    = wrapped_rx
+	_reg_ry    = wrapped_ry
+	_player_lx = lx
+	_player_ly = ly
+
+	# Update settlement context.
+	var new_owner: String = _world_state.world_tiles[new_wt_key].get("owner_settlement_id", "")
+	_settlement_id = new_owner
+
+	# Update player_location world tile fields so the simulation stays consistent.
+	if _world_state.player_location != null:
+		_world_state.player_location["wt_x"] = new_wx
+		_world_state.player_location["wt_y"] = new_wy
+
+	_preload_neighbourhood(_reg_rx, _reg_ry)
+	_building_id  = _cell_building_id(_reg_rx, _reg_ry)
+	_building_def = ContentRegistry.get_content("building", _building_id) if _building_id != "" else {}
+
+	# Rebuild NPC pawns for the new settlement.
+	_spawn_local_npcs()
+
+	_render_viewport()
+	_update_pawn_visual()
+	_refresh_all_npc_pawns()
+	_refresh_tile_info()
 
 
 # ── Reality bubble — NPC local simulation ─────────────────────────────────────
@@ -788,6 +942,15 @@ func _npc_pawn_color(pop_class: String) -> Color:
 	return Color(0.60, 0.60, 0.60, 0.88)
 
 
+func _refresh_all_npc_pawns() -> void:
+	if _world_state == null:
+		return
+	for pid: String in _npc_rects:
+		var npc: PersonState = _world_state.characters.get(pid)
+		if npc != null:
+			_refresh_npc_pawn_pos(pid, npc)
+
+
 func _refresh_npc_pawn_pos(pid: String, npc: PersonState) -> void:
 	var rect: ColorRect = _npc_rects.get(pid) as ColorRect
 	if rect == null or not is_instance_valid(rect):
@@ -798,8 +961,8 @@ func _refresh_npc_pawn_pos(pid: String, npc: PersonState) -> void:
 	# Convert both player and NPC to absolute tile coords, then project to screen.
 	var player_ax := _reg_rx * GRID_W + _player_lx
 	var player_ay := _reg_ry * GRID_H + _player_ly
-	var npc_ax    := npc.location.get("rx", 0) * GRID_W + npc.location.get("lx", 0)
-	var npc_ay    := npc.location.get("ry", 0) * GRID_H + npc.location.get("ly", 0)
+	var npc_ax: int = npc.location.get("rx", 0) * GRID_W + npc.location.get("lx", 0)
+	var npc_ay: int = npc.location.get("ry", 0) * GRID_H + npc.location.get("ly", 0)
 	@warning_ignore("integer_division")
 	var vx: int = _map_cols / 2 + (npc_ax - player_ax)
 	@warning_ignore("integer_division")
@@ -851,10 +1014,10 @@ func _tick_npc_movement(npc: PersonState) -> void:
 ## Attempt one tile step for an NPC, allowing cell-boundary crossing.
 ## Returns true if the step succeeded.
 func _try_step_npc(npc: PersonState, dx: int, dy: int) -> bool:
-	var nx := npc.location.get("lx", 0) + dx
-	var ny := npc.location.get("ly", 0) + dy
-	var nrx := npc.location.get("rx", 0)
-	var nry := npc.location.get("ry", 0)
+	var nx: int = npc.location.get("lx", 0) + dx
+	var ny: int = npc.location.get("ly", 0) + dy
+	var nrx: int = npc.location.get("rx", 0)
+	var nry: int = npc.location.get("ry", 0)
 	if nx < 0:          nrx -= 1; nx += GRID_W
 	elif nx >= GRID_W:  nrx += 1; nx -= GRID_W
 	if ny < 0:          nry -= 1; ny += GRID_H
@@ -1103,7 +1266,7 @@ func _area_label_for_cell(rx: int, ry: int) -> String:
 			if bname != "":
 				return bname
 		return bid.replace("_", " ").capitalize()
-	if cell.get("is_road", false):
+	if cell.get("has_road", false):
 		return "Road"
 	var terrain: String = cell.get("terrain_type", "")
 	if terrain != "":
@@ -1194,16 +1357,16 @@ func _generate_layout_for_cell(rx: int, ry: int, cell: Dictionary, region: Dicti
 			row[_x] = base_char
 		rows.append(row)
 
-	var road_self: bool = cell.get("is_road", false)
+	var road_self: bool = cell.get("has_road", false)
 	if road_self:
 		var nc_n: Dictionary = region.get("%d,%d" % [rx,     ry - 1], {})
 		var nc_s: Dictionary = region.get("%d,%d" % [rx,     ry + 1], {})
 		var nc_e: Dictionary = region.get("%d,%d" % [rx + 1, ry    ], {})
 		var nc_w: Dictionary = region.get("%d,%d" % [rx - 1, ry    ], {})
-		var road_n: bool = nc_n.get("is_road", false)
-		var road_s: bool = nc_s.get("is_road", false)
-		var road_e: bool = nc_e.get("is_road", false)
-		var road_w: bool = nc_w.get("is_road", false)
+		var road_n: bool = nc_n.get("has_road", false)
+		var road_s: bool = nc_s.get("has_road", false)
+		var road_e: bool = nc_e.get("has_road", false)
+		var road_w: bool = nc_w.get("has_road", false)
 
 		if road_n or road_s:
 			var v_top    := CY if not road_n else 0

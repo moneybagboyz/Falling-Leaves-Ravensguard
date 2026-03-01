@@ -353,13 +353,29 @@ static func _build_world_state(
 				})
 		ws.routes[sid] = route_edges
 
-	# Stamp has_road onto every region cell that lies on a route path.
+	# Stamp has_road and road_dirs onto every tile that lies on a route path.
+	# road_dirs records which edges the route actually crosses ("n","s","e","w"),
+	# so SubRegionGenerator draws the road in exactly the right direction rather
+	# than guessing from which neighbours also happen to have roads.
 	for i in range(raw_routes.size()):
 		for edge: Dictionary in raw_routes[i]:
-			for v: Vector2i in edge.get("path", []):
+			var path: Array = edge.get("path", [])
+			for pi: int in range(path.size()):
+				var v: Vector2i = path[pi]
 				var cid := "%d,%d" % [v.x, v.y]
-				if ws.world_tiles.has(cid):
-					ws.world_tiles[cid]["has_road"] = true
+				if not ws.world_tiles.has(cid):
+					continue
+				ws.world_tiles[cid]["has_road"] = true
+				var dirs: Array = ws.world_tiles[cid].get("road_dirs", [])
+				if pi > 0:
+					var d := _edge_dir(v, path[pi - 1])
+					if not dirs.has(d):
+						dirs.append(d)
+				if pi < path.size() - 1:
+					var d := _edge_dir(v, path[pi + 1])
+					if not dirs.has(d):
+						dirs.append(d)
+				ws.world_tiles[cid]["road_dirs"] = dirs
 
 	# Spawn persistent NPCs for every settlement (CDDA-style: born once, live forever).
 	NpcPoolManager.spawn_all(ws, ws.world_seed)
@@ -373,3 +389,12 @@ static func _serialize_path(path: Array) -> Array:
 	for v: Vector2i in path:
 		out.append([v.x, v.y])
 	return out
+
+
+## Returns the compass letter ("n","s","e","w") for the edge of tile `from`
+## that faces toward tile `to`.
+static func _edge_dir(from: Vector2i, to: Vector2i) -> String:
+	if to.x > from.x: return "e"
+	if to.x < from.x: return "w"
+	if to.y < from.y: return "n"
+	return "s"

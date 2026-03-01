@@ -81,6 +81,17 @@ func continue_game() -> void:
 		return
 	# Migrate old saves: spawn NPCs for any settlement that has none yet.
 	NpcPoolManager.ensure_spawned(world_state, world_state.world_seed)
+	# Migrate old saves: if any road tile is missing road_dirs the region road
+	# layout was generated with the old neighbour-guess algorithm. Wipe the
+	# cached region grids so they regenerate correctly on next visit.
+	var needs_road_regen := false
+	for cid: String in world_state.world_tiles:
+		var tile: Dictionary = world_state.world_tiles[cid]
+		if tile.get("has_road", false) and not tile.has("road_dirs"):
+			needs_road_regen = true
+			break
+	if needs_road_regen:
+		world_state.region_grids.clear()
 	_setup_economy(world_state)
 	SimulationClock.resume()
 	SceneManager.replace_scene("res://src/ui/world_view.tscn")
