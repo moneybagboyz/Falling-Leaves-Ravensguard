@@ -60,6 +60,46 @@
       "type": "boolean",
       "default": false,
       "description": "If true, a wound of severity >= 'wound' disables use of items held in this limb."
+    },
+    "tissue_layers": {
+      "type": "array",
+      "description": "Ordered tissue stack from outermost (skin) to innermost (organ). When present, tissue penetration model supersedes wound_thresholds for severity derivation.",
+      "items": {
+        "type": "object",
+        "required": ["type", "yield_strength", "thickness_mm", "blunt_factor"],
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["skin", "fat", "muscle", "bone", "organ"],
+            "description": "Tissue type. Determines wound severity contribution and special flags."
+          },
+          "yield_strength": {
+            "type": "number", "minimum": 0,
+            "description": "Material yield strength. resistance = yield_strength × thickness_mm, compared to pressure = remaining_momentum / contact_area_cm2."
+          },
+          "thickness_mm": {
+            "type": "number", "minimum": 0,
+            "description": "Layer thickness in millimetres."
+          },
+          "blunt_factor": {
+            "type": "number", "minimum": 0, "maximum": 1,
+            "description": "Fraction of remaining momentum that propagates as blunt shock when this layer stops physical penetration."
+          },
+          "fracture_threshold": {
+            "type": "number", "minimum": 0,
+            "description": "Bone only. If accumulated blunt momentum reaching this layer >= fracture_threshold, the bone fractures (severe wound flag). Absent on non-bone layers."
+          },
+          "organ_id": {
+            "type": "string",
+            "description": "Organ only. References an organ in the body_plan's organs array. If reached via physical penetration, organ damage is recorded."
+          },
+          "vital": {
+            "type": "boolean",
+            "description": "Organ only. If true, penetrating this organ triggers an immediate death effect."
+          }
+        }
+      }
     }
   }
 }

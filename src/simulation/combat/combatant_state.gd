@@ -57,6 +57,9 @@ var team_id: String = ""
 ## Display name (copied from PersonState.name).
 var display_name: String = ""
 
+## Body plan ID from PersonState. Determines zone set and organ roster.
+var body_plan_id: String = "human"
+
 # ── Position ──────────────────────────────────────────────────────────────────
 ## Current tile position on the battle map.
 var tile_pos: Vector2i = Vector2i.ZERO
@@ -86,9 +89,18 @@ var is_dead: bool = false
 
 # ── Wounds ────────────────────────────────────────────────────────────────────
 ## zone_id (String) → Array of wound dicts.
-## Each wound dict: { "severity": String, "bleed": float, "pain": float, "effects": Array }
+## Each wound dict: { "severity": String, "bleed": float, "pain": float, "effects": Array,
+##                    "tissues_reached": Array[String], "bone_fractured": bool, "organ_damaged": String }
 ## Severity levels: "graze" | "wound" | "severe" | "lethal"
 var body_zones: Dictionary = {}
+
+## zone_id → true when the bone in that zone has been fractured.
+## Fractures persist after battle and affect mobility permanently until healed.
+var bone_fractures: Dictionary = {}
+
+## organ_id → "damaged" | "destroyed" for each damaged organ.
+## Damaged organs add bleed and pain each tick; destroyed vital organs mean death.
+var organ_damage: Dictionary = {}
 
 # ── Equipment ─────────────────────────────────────────────────────────────────
 ## Slot → item_id. Copied from PersonState.equipment_refs at combat entry.
@@ -120,34 +132,73 @@ static func from_person(p: PersonState, team: String, formation: String) -> Comb
 	c.formation_id   = formation
 	c.team_id        = team
 	c.display_name   = p.name
+	c.body_plan_id   = p.body_plan_id
 	c.stamina        = p.stamina
 	c.equipment_refs = p.equipment_refs.duplicate()
-	c.melee_skill    = p.skill_level("melee")
+	# Derive melee_skill from the highest combat-relevant skill the person has.
+	c.melee_skill    = maxi(p.skill_level("sword_fighting"),
+				maxi(p.skill_level("spear_fighting"),
+				maxi(p.skill_level("axe_fighting"),
+				     p.skill_level("club_fighting"))))
 	c.agility        = p.effective_attribute("agility")
-	# Initialise body zones from data. Zones load lazily — start clean.
+	# Initialise body zones from body plan data. Fall back to hardcoded human list.
 	c.body_zones = {}
-	for zone_id: String in ["head", "neck", "chest", "abdomen",
-							  "left_arm", "right_arm", "left_leg", "right_leg",
-							  "left_hand", "right_hand", "left_foot", "right_foot"]:
-		c.body_zones[zone_id] = []
+	var plan_def: Dictionary = ContentRegistry.get_content("body_plan", c.body_plan_id)
+	var zone_list: Array = []
+	if not plan_def.is_empty():
+		for entry: Dictionary in plan_def.get("zones", []):
+			zone_list.append(entry.get("zone_id", ""))
+	if zone_list.is_empty():
+		zone_list = ["head", "neck", "chest", "abdomen",
+					 "left_arm", "right_arm", "left_leg", "right_leg",
+					 "left_hand", "right_hand", "left_foot", "right_foot"]
+	for zone_id: String in zone_list:
+		if zone_id != "":
+			c.body_zones[zone_id] = []
 	return c
 
 
 # ── Wound helpers ─────────────────────────────────────────────────────────────
 
 ## Apply a wound to a body zone. Updates pain, bleeding, shock, and death/incap flags.
-func apply_wound(zone_id: String, severity: String, bleed_amount: float, pain_amount: float, effects: Array) -> void:
+## bone_frac: whether the bone in this zone was fractured by this attack.
+## organ_hit:  organ_id that was physically penetrated, or "" if none.
+## tissues:    list of tissue types reached (e.g. ["skin", "fat", "muscle"]).
+func apply_wound(zone_id: String, severity: String, bleed_amount: float, pain_amount: float,
+		effects: Array, bone_frac: bool = false, organ_hit: String = "",
+		tissues: Array = []) -> void:
 	if not body_zones.has(zone_id):
 		body_zones[zone_id] = []
 	body_zones[zone_id].append({
-		"severity": severity,
-		"bleed":    bleed_amount,
-		"pain":     pain_amount,
-		"effects":  effects.duplicate(),
+		"severity":       severity,
+		"bleed":          bleed_amount,
+		"pain":           pain_amount,
+		"effects":        effects.duplicate(),
+		"tissues_reached": tissues.duplicate(),
+		"bone_fractured": bone_frac,
+		"organ_damaged":  organ_hit,
 	})
+	# Record structural damage flags.
+	if bone_frac:
+		bone_fractures[zone_id] = true
+	if organ_hit != "":
+		var plan_def: Dictionary = ContentRegistry.get_content("body_plan", body_plan_id)
+		var vital: bool = false
+		for organ: Dictionary in plan_def.get("organs", []):
+			if organ.get("id", "") == organ_hit:
+				vital = organ.get("vital", false)
+				break
+		var dmg_level: String = "destroyed" if severity == "lethal" else "damaged"
+		organ_damage[organ_hit] = dmg_level
+		if vital and dmg_level == "destroyed":
+			effects = effects.duplicate()
+			effects.append("death")
 	# Immediately apply pain spike.
 	pain     = clampf(pain     + pain_amount,   0.0, 2.0)
 	bleeding = clampf(bleeding + bleed_amount,  0.0, 2.0)
+	# Bone fracture adds pain and mobility impairment.
+	if bone_frac:
+		pain = clampf(pain + 0.15, 0.0, 2.0)
 	_recalc_shock()
 	_check_death(zone_id, severity)
 	_apply_effects(effects)
@@ -168,6 +219,15 @@ func _check_death(zone_id: String, severity: String) -> void:
 				is_dead = true
 				is_incapacitated = true
 				return
+	# Organ damage can also kill — checked via apply_wound's vital flag path.
+	for organ_id: String in organ_damage:
+		if organ_damage[organ_id] == "destroyed":
+			var plan_def: Dictionary = ContentRegistry.get_content("body_plan", body_plan_id)
+			for organ: Dictionary in plan_def.get("organs", []):
+				if organ.get("id", "") == organ_id and organ.get("vital", false):
+					is_dead         = true
+					is_incapacitated = true
+					return
 
 
 func _apply_effects(effects: Array) -> void:
@@ -181,10 +241,14 @@ func _apply_effects(effects: Array) -> void:
 
 
 ## Bleed tick: called each WEGO turn. Increases shock from ongoing blood loss.
+## Organ damage adds extra bleed per turn.
 func tick_bleed() -> void:
 	if is_dead:
 		return
-	shock = clampf(shock + bleeding * 0.1, 0.0, 2.0)
+	var extra_organ_bleed: float = 0.0
+	for organ_id: String in organ_damage:
+		extra_organ_bleed += 0.04 if organ_damage[organ_id] == "damaged" else 0.08
+	shock = clampf(shock + (bleeding + extra_organ_bleed) * 0.1, 0.0, 2.0)
 	if shock >= 1.0:
 		is_incapacitated = true
 
@@ -313,6 +377,7 @@ func to_dict() -> Dictionary:
 		"formation_id":    formation_id,
 		"team_id":         team_id,
 		"display_name":    display_name,
+		"body_plan_id":    body_plan_id,
 		"tile_pos":        { "x": tile_pos.x, "y": tile_pos.y },
 		"z_level":         z_level,
 		"stamina":         stamina,
@@ -322,6 +387,8 @@ func to_dict() -> Dictionary:
 		"is_incapacitated": is_incapacitated,
 		"is_dead":         is_dead,
 		"body_zones":      body_zones.duplicate(true),
+		"bone_fractures":  bone_fractures.duplicate(),
+		"organ_damage":    organ_damage.duplicate(),
 		"equipment_refs":  equipment_refs.duplicate(),
 		"current_order":   current_order,
 		"resolved_actions": resolved_actions.duplicate(true),
@@ -336,6 +403,7 @@ static func from_dict(d: Dictionary) -> CombatantState:
 	c.formation_id    = d.get("formation_id",    "")
 	c.team_id         = d.get("team_id",         "")
 	c.display_name    = d.get("display_name",    "")
+	c.body_plan_id    = d.get("body_plan_id",    "human")
 	var tp: Dictionary = d.get("tile_pos", {"x": 0, "y": 0})
 	c.tile_pos        = Vector2i(int(tp.get("x", 0)), int(tp.get("y", 0)))
 	c.z_level         = int(d.get("z_level",         0))
@@ -346,6 +414,8 @@ static func from_dict(d: Dictionary) -> CombatantState:
 	c.is_incapacitated = bool(d.get("is_incapacitated", false))
 	c.is_dead         = bool(d.get("is_dead",         false))
 	c.body_zones      = d.get("body_zones",      {}).duplicate(true)
+	c.bone_fractures  = d.get("bone_fractures",  {}).duplicate()
+	c.organ_damage    = d.get("organ_damage",    {}).duplicate()
 	c.equipment_refs  = d.get("equipment_refs",  {}).duplicate()
 	c.current_order   = d.get("current_order",   "")
 	c.resolved_actions = d.get("resolved_actions", []).duplicate(true)

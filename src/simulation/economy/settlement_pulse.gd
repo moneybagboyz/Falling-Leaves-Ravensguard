@@ -72,6 +72,12 @@ func _tick_one(ss: SettlementState, ws: WorldState, delta_ticks: int) -> void:
 	ProductionLedger.run(ss, ws, delta_ticks)
 	# ── 3b. Coin income (wages, rents, market fees from artisans/merchants/nobles) ─
 	_generate_coin(ss, delta_ticks)
+	# ── 3c. Property ownership income/upkeep redirect ────────────────────────
+	PropertyCore.apply_income_and_upkeep(ss, ws, delta_ticks)
+	if ss.is_player_camp:
+		var camp_owner: String = ws.property_ledger.get("camp:" + ss.settlement_id, "")
+		if camp_owner != "":
+			PropertyCore.apply_camp_income(ss, ws, camp_owner)
 	# ── 4. Consumption ───────────────────────────────────────────────────────
 	_consume(ss, delta_ticks)
 
@@ -82,10 +88,14 @@ func _tick_one(ss: SettlementState, ws: WorldState, delta_ticks: int) -> void:
 	_update_prosperity_unrest(ss)
 
 	# ── 6b. Population growth / decline ─────────────────────────────────────
-	_update_population(ss)
+	# Player camps do not grow organically; skip to avoid phantom populations.
+	if not ss.is_player_camp:
+		_update_population(ss)
 
 	# ── 7. Worked-acre adjustment ────────────────────────────────────────────
-	_adjust_worked_acres(ss)
+	# Player camps also skip this; acreage is managed manually via construction.
+	if not ss.is_player_camp:
+		_adjust_worked_acres(ss)
 
 
 # ── Starter stock ─────────────────────────────────────────────────────────────

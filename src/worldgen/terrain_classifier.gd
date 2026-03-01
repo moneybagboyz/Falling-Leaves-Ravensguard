@@ -94,7 +94,7 @@ static func move_cost(terrain_id: String) -> float:
 	const TABLE: Dictionary = {
 		"plains":        1.0,
 		"coast":         1.5,
-		"river":         1.5,
+		"river":         8.0,
 		"hills":         3.0,
 		"forest":        3.0,
 		"desert":        2.5,

@@ -28,6 +28,9 @@ static func try_spawn_all(ws: WorldState, tick: int) -> void:
 		var ss := _as_ss(ws, sid)
 		if ss == null:
 			continue
+		# Player camps source goods for the owner directly; skip trade spawning.
+		if ss.is_player_camp:
+			continue
 		_try_spawn_from(ss, sid, ws, tick)
 
 

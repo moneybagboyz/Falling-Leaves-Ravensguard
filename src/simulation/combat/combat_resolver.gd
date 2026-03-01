@@ -253,7 +253,7 @@ static func _do_attack(
 			continue
 
 		# ── Hit location ─────────────────────────────────────────────
-		var zone_id: String = _roll_hit_zone(rng)
+		var zone_id: String = _roll_hit_zone(rng, target.body_plan_id)
 
 		# ── Momentum and damage type ──────────────────────────────────
 		var damage_type: String  = weapon.get("damage_type", "slash")
@@ -289,20 +289,79 @@ static func _do_attack(
 				pressure = momentum / maxf(contact_area, 0.001)
 				stopped  = true
 				break
-		# Silence unused-variable warnings.
-		var _stopped: bool = stopped
-		var _p: float = pressure
+		# ── Tissue penetration / wound severity ──────────────────────────
+		# Two paths depending on whether armor physically stopped the weapon:
+		#   Physical path (stopped=false): remaining momentum passes through
+		#     tissue layers outside-in (skin→fat→muscle→bone→organ).
+		#   Blunt path (stopped=true): `momentum` already = weapon × armor
+		#     blunt_transfer; check if it fractures bone.
+		var zone_def: Dictionary       = ContentRegistry.get_content("body_zone", zone_id)
+		var tissue_layers: Array       = zone_def.get("tissue_layers", [])
 
-		# ── Wound severity ────────────────────────────────────────────
-		var zone_def: Dictionary = ContentRegistry.get_content("body_zone", zone_id)
-		var thresholds: Dictionary = zone_def.get("wound_thresholds",
-			{"graze": 2, "wound": 6, "severe": 12, "lethal": 99})
+		var severity:           String        = "none"
+		var tissues_penetrated: Array[String] = []
+		var bone_fractured:     bool          = false
+		var organ_hit:          String        = ""
 
-		var severity: String = "none"
-		if   momentum >= float(thresholds.get("lethal", 99)):  severity = "lethal"
-		elif momentum >= float(thresholds.get("severe", 12)):  severity = "severe"
-		elif momentum >= float(thresholds.get("wound",   6)):  severity = "wound"
-		elif momentum >= float(thresholds.get("graze",   2)):  severity = "graze"
+		if not tissue_layers.is_empty():
+			if not stopped:
+				# Physical penetration through tissue ──────────────────
+				var t_rem: float = momentum
+				var t_prs: float = t_rem / maxf(contact_area, 0.001)
+				for layer: Dictionary in tissue_layers:
+					var t_type:   String = layer.get("type", "")
+					var t_yield:  float  = float(layer.get("yield_strength", 0.02))
+					var t_thick:  float  = float(layer.get("thickness_mm", 2.0))
+					var t_blunt_f: float = float(layer.get("blunt_factor", 0.80))
+					var t_resist: float  = t_yield * t_thick
+					if t_prs >= t_resist:
+						t_rem  = maxf(0.0, t_rem - t_resist * contact_area)
+						t_prs  = t_rem / maxf(contact_area, 0.001)
+						tissues_penetrated.append(t_type)
+						if t_type == "bone":
+							bone_fractured = true
+						elif t_type == "organ":
+							organ_hit = layer.get("organ_id", "unknown")
+							break  # organ is deepest — stop here
+					else:
+						t_rem  = t_rem * t_blunt_f
+						t_prs  = t_rem / maxf(contact_area, 0.001)
+						break
+			else:
+				# Blunt trauma: armor stopped penetration ──────────────
+				var b_rem: float = momentum
+				for layer: Dictionary in tissue_layers:
+					var t_type:    String = layer.get("type", "")
+					var t_blunt_f: float  = float(layer.get("blunt_factor", 0.80))
+					if t_type == "bone":
+						var frac_thr: float = float(layer.get("fracture_threshold", 999.0))
+						if b_rem >= frac_thr:
+							bone_fractured = true
+						break
+					else:
+						b_rem *= t_blunt_f
+
+			# Severity from deepest tissue / structural damage ─────────
+			var deepest: String = (tissues_penetrated.back()
+				if not tissues_penetrated.is_empty() else "")
+			if organ_hit != "":
+				severity = "lethal"
+			elif bone_fractured:
+				severity = "severe"
+			elif deepest == "muscle":
+				severity = "wound"
+			elif deepest in ["skin", "fat"]:
+				severity = "graze"
+			else:
+				severity = "none"
+		else:
+			# Fallback: threshold model for zones without tissue_layers ─
+			var thresholds: Dictionary = zone_def.get("wound_thresholds",
+				{"graze": 2, "wound": 6, "severe": 12, "lethal": 99})
+			if   momentum >= float(thresholds.get("lethal", 99)):  severity = "lethal"
+			elif momentum >= float(thresholds.get("severe", 12)):  severity = "severe"
+			elif momentum >= float(thresholds.get("wound",   6)):  severity = "wound"
+			elif momentum >= float(thresholds.get("graze",   2)):  severity = "graze"
 
 		if severity == "none":
 			attacker.resolved_actions.append({
@@ -312,14 +371,15 @@ static func _do_attack(
 			continue
 
 		# ── Apply wound ───────────────────────────────────────────────
-		var sev_stats: Dictionary  = SEVERITY_STATS.get(severity, {"bleed": 0.0, "pain": 0.0})
-		var pain_mult: float       = float(zone_def.get("pain_multiplier", 1.0))
-		var effects: Array         = _effects_for(zone_def, severity)
+		var sev_stats: Dictionary = SEVERITY_STATS.get(severity, {"bleed": 0.0, "pain": 0.0})
+		var pain_mult: float      = float(zone_def.get("pain_multiplier", 1.0))
+		var effects: Array        = _effects_for(zone_def, severity)
 
 		target.apply_wound(zone_id, severity,
 			float(sev_stats["bleed"]),
 			float(sev_stats["pain"]) * pain_mult,
-			effects)
+			effects, bone_fractured, organ_hit,
+			tissues_penetrated)
 
 		attacker.resolved_actions.append({
 			"type":      "hit",
@@ -343,8 +403,8 @@ static func _do_attack(
 
 # ── Hit zone roll ─────────────────────────────────────────────────────────────
 
-## Weighted random zone selection. Weights must match body_zone data.
-const ZONE_WEIGHTS: Dictionary = {
+## Fallback zone weights used when no body plan is available.
+const ZONE_WEIGHTS_FALLBACK: Dictionary = {
 	"head":       0.10,
 	"neck":       0.05,
 	"chest":      0.23,
@@ -359,11 +419,27 @@ const ZONE_WEIGHTS: Dictionary = {
 	"right_foot": 0.02,
 }
 
-static func _roll_hit_zone(rng: RandomNumberGenerator) -> String:
+## Build a zone-weight dictionary from a creature's body plan.
+## Falls back to ZONE_WEIGHTS_FALLBACK if the plan isn't loaded.
+static func _get_zone_weights(body_plan_id: String) -> Dictionary:
+	var plan: Dictionary = ContentRegistry.get_content("body_plan", body_plan_id)
+	if plan.is_empty():
+		return ZONE_WEIGHTS_FALLBACK
+	var weights: Dictionary = {}
+	for entry: Dictionary in plan.get("zones", []):
+		var zid: String = entry.get("zone_id", "")
+		var w: float    = float(entry.get("hit_weight", 0.0))
+		if zid != "" and w > 0.0:
+			weights[zid] = w
+	return weights if not weights.is_empty() else ZONE_WEIGHTS_FALLBACK
+
+## Weighted random zone selection using the target's body plan.
+static func _roll_hit_zone(rng: RandomNumberGenerator, body_plan_id: String = "human") -> String:
+	var weights: Dictionary = _get_zone_weights(body_plan_id)
 	var r: float = rng.randf()
 	var cumulative: float = 0.0
-	for zone: String in ZONE_WEIGHTS:
-		cumulative += float(ZONE_WEIGHTS[zone])
+	for zone: String in weights:
+		cumulative += float(weights[zone])
 		if r <= cumulative:
 			return zone
 	return "chest"  # fallback

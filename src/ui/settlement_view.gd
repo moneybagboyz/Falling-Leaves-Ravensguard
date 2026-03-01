@@ -87,6 +87,7 @@ var _cell_info:   RichTextLabel = null
 var _floor_label: Label         = null   ## Shows current z-level name
 var _player_info: RichTextLabel = null   ## Coin + needs readout
 var _interact_btn: Button       = null   ## Context-sensitive action button
+var _ledger_btn:   Button       = null   ## Opens OwnershipView (asset ledger)
 var _dialogue_panel: Control    = null   ## Full-screen dialogue overlay (P3-14)
 var _dlg_body:    RichTextLabel = null   ## Dialogue NPC text
 var _dlg_options: VBoxContainer = null   ## Dialogue choice buttons
@@ -206,10 +207,15 @@ func _build_ui() -> void:
 	panel_bg.custom_minimum_size = Vector2(PANEL_W, 0)
 	hbox.add_child(panel_bg)
 
+	var panel_scroll := ScrollContainer.new()
+	panel_scroll.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	panel_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	panel_bg.add_child(panel_scroll)
+
 	var panel_vbox := VBoxContainer.new()
-	panel_vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	panel_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	panel_vbox.add_theme_constant_override("separation", 6)
-	panel_bg.add_child(panel_vbox)
+	panel_scroll.add_child(panel_vbox)
 
 	var back_btn := Button.new()
 	back_btn.text = "◀ Back to World"
@@ -290,6 +296,13 @@ func _build_ui() -> void:
 	_interact_btn.custom_minimum_size = Vector2(0, 28)
 	_interact_btn.pressed.connect(_on_interact_pressed)
 	panel_vbox.add_child(_interact_btn)
+
+	# ── Ledger button ──────────────────────────────────────────────────────
+	_ledger_btn = Button.new()
+	_ledger_btn.text = "Ledger"
+	_ledger_btn.custom_minimum_size = Vector2(0, 28)
+	_ledger_btn.pressed.connect(_on_ledger_pressed)
+	panel_vbox.add_child(_ledger_btn)
 
 	# ── Right: dynamic-size viewport clip box ───────────────────────────────
 	# The player is always centred; tile size is driven by _cell_px.
@@ -801,6 +814,12 @@ func _update_interact_button(cid: String, bid: String) -> void:
 			if player.shelter_status == "":
 				_pending_interaction = "claim_shelter"
 
+	# 6. Open land outside all settlement territories → found a camp.
+	if _pending_interaction == "" and (bid == "" or bid == "open_land") and _world_state != null:
+		var wt_key_c := "%d,%d" % [_wt_x, _wt_y]
+		if _world_state.world_tiles.get(wt_key_c, {}).get("owner_settlement_id", "") == "":
+			_pending_interaction = "found_camp"
+
 	if _pending_interaction == "":
 		_interact_btn.visible = false
 	else:
@@ -828,6 +847,7 @@ func _interaction_label(tag: String) -> String:
 		"leave_work":    return "◀ Leave work"
 		"rent_inn":      return "🛏 Rent room (2 coin/day)"
 		"claim_shelter": return "🏠 Claim as shelter (free)"
+		"found_camp":    return "⛺ Found camp here  (5× timber_log)"
 	return tag
 
 
@@ -851,6 +871,19 @@ func _on_interact_pressed() -> void:
 
 	elif _pending_interaction == "claim_shelter":
 		player.shelter_status = "derelict_claimed"
+
+	elif _pending_interaction == "found_camp":
+		var camp_cell := "%d,%d" % [_wt_x, _wt_y]
+		var camp_rng := RandomNumberGenerator.new()
+		camp_rng.seed = hash(camp_cell)
+		var camp_err := CampManager.found_camp(player, camp_cell, _world_state, camp_rng)
+		if camp_err != "":
+			if _cell_info != null:
+				_cell_info.text = "[color=#dd4444]%s[/color]" % camp_err
+			return
+		_refresh_cell_info()
+		_refresh_player_info()
+		return
 
 	elif _pending_interaction.begins_with("enter_building:"):
 		var eid: String = _pending_interaction.split(":")[1]
@@ -959,15 +992,41 @@ func _open_dialogue() -> void:
 	_dlg_body.text = header_txt
 
 	# ── Dialogue options ───────────────────────────────────────────────────
+	var player_dlg: PersonState = _get_player()
+
 	if not npcs.is_empty():
 		_add_dlg_option("Inquire about work", _dlg_inquire_work)
 		_add_dlg_option("Ask about the settlement", _dlg_inquire_settlement)
+		# Phase 5: recruit as follower.
+		var npc_dlg: PersonState = npcs[0]
+		if player_dlg != null \
+				and npc_dlg.person_id not in player_dlg.follower_ids \
+				and npc_dlg.active_role not in ["guard", "laborer", "assistant"]:
+			var nc := npc_dlg.person_id
+			_add_dlg_option("Contract %s as follower" % npc_dlg.name, func(): _dlg_recruit(nc))
 
 	if bid == "market_stall" and _ss != null:
 		_add_dlg_option("Browse goods", _dlg_browse_market)
 
 	if bid == "inn":
 		_add_dlg_option("Rent a room (2 coin/day)", _dlg_rent_inn)
+
+	# Phase 5: buy / sell goods at any location with a market inventory.
+	if _ss != null and not _ss.market_inventory.is_empty():
+		_add_dlg_option("Buy goods  [Trading skill]", _dlg_buy_goods)
+		if player_dlg != null and not player_dlg.carried_items.is_empty():
+			_add_dlg_option("Sell goods  [Trading skill]", _dlg_sell_goods)
+
+	# Phase 5: purchase an unowned production building.
+	if _ss != null and _world_state != null and player_dlg != null and bid != "":
+		var bdef_dlg: Dictionary = ContentRegistry.get_content("building", bid)
+		if bdef_dlg.get("category", "") in WorkshopManager.PRODUCTION_CATEGORIES:
+			var ikey_dlg := "%s:%s" % [bid, cid]
+			var bowner: String = PropertyCore.owner_of(_world_state, ikey_dlg)
+			if bowner == "":
+				_add_dlg_option("Purchase this building", func(): _dlg_purchase_building(ikey_dlg, bid))
+			elif bowner == player_dlg.person_id:
+				_add_dlg_option("(You own this building)", func(): pass)
 
 	_add_dlg_option("[Esc / F] Close", _close_dialogue)
 
@@ -1066,6 +1125,128 @@ func _dlg_rent_inn() -> void:
 	_dlg_body.text = "[color=#88dd88]Room booked. Rent: 2 coin/day.[/color]"
 	_refresh_player_info()
 	_refresh_cell_info()
+
+
+# ── Phase 5 dialogue handlers ─────────────────────────────────────────────────
+
+func _dlg_recruit(npc_id: String) -> void:
+	if _world_state == null:
+		return
+	var player: PersonState = _get_player()
+	var npc:    PersonState = _world_state.characters.get(npc_id)
+	if player == null or npc == null:
+		return
+	var min_w: float = RecruitmentManager._min_wage(npc, _world_state)
+	var err := RecruitmentManager.recruit(player, npc_id, min_w, _world_state)
+	for child in _dlg_options.get_children():
+		child.queue_free()
+	if err == "":
+		_dlg_body.text = "[color=#88dd88]%s has agreed to follow you for %.2f coin/tick.[/color]" % [npc.name, min_w]
+	else:
+		_dlg_body.text = "[color=#dd4444]%s[/color]" % err
+	_add_dlg_option("◀ Back", _open_dialogue)
+	_add_dlg_option("[Esc / F] Close", _close_dialogue)
+
+
+func _dlg_buy_goods() -> void:
+	if _ss == null:
+		return
+	var player: PersonState = _get_player()
+	var listing: Array = PlayerTrade.market_listing(player, _ss) if player != null else []
+	for child in _dlg_options.get_children():
+		child.queue_free()
+	if listing.is_empty():
+		_dlg_body.text = "[color=#888888]Nothing available to buy.[/color]"
+	else:
+		var txt := "[color=#ffdd88]Market — select an item to buy:[/color]\n"
+		for entry: Dictionary in listing:
+			txt += "  %s  ×%.0f  @  %.1f coin\n" % [entry["good_id"], entry["quantity"], entry["unit_price"]]
+		_dlg_body.text = txt
+		for entry: Dictionary in listing:
+			var gid_b: String  = entry["good_id"]
+			var price_b: float = entry["unit_price"]
+			_add_dlg_option("Buy 1×  %s  (%.1f coin)" % [gid_b, price_b], func(): _dlg_buy_item(gid_b))
+	_add_dlg_option("◀ Back", _open_dialogue)
+	_add_dlg_option("[Esc / F] Close", _close_dialogue)
+
+
+func _dlg_buy_item(good_id: String) -> void:
+	var player: PersonState = _get_player()
+	if player == null or _ss == null:
+		return
+	var err := PlayerTrade.buy(player, _ss, good_id, 1.0)
+	if err == "":
+		_dlg_body.text = "[color=#88dd88]Bought 1×  %s.[/color]" % good_id
+		_refresh_player_info()
+	else:
+		_dlg_body.text = "[color=#dd4444]%s[/color]" % err
+	_dlg_buy_goods()
+
+
+func _dlg_sell_goods() -> void:
+	if _ss == null:
+		return
+	var player: PersonState = _get_player()
+	if player == null:
+		return
+	var unique_goods: Array = []
+	for item: String in player.carried_items:
+		if item not in unique_goods:
+			unique_goods.append(item)
+	for child in _dlg_options.get_children():
+		child.queue_free()
+	if unique_goods.is_empty():
+		_dlg_body.text = "[color=#888888]You have nothing to sell.[/color]"
+	else:
+		var txt := "[color=#ffdd88]Your carried goods:[/color]\n"
+		for gid: String in unique_goods:
+			var cnt: int   = player.carried_items.count(gid)
+			var sp: float  = float(_ss.prices.get(gid, 1.0))
+			txt += "  %s  ×%d  @  %.1f coin each\n" % [gid, cnt, sp]
+		_dlg_body.text = txt
+		for gid: String in unique_goods:
+			var g_sell: String = gid
+			var sp_sell: float = float(_ss.prices.get(gid, 1.0))
+			_add_dlg_option("Sell 1×  %s  (%.1f coin)" % [gid, sp_sell], func(): _dlg_sell_item(g_sell))
+	_add_dlg_option("◀ Back", _open_dialogue)
+	_add_dlg_option("[Esc / F] Close", _close_dialogue)
+
+
+func _dlg_sell_item(good_id: String) -> void:
+	var player: PersonState = _get_player()
+	if player == null or _ss == null:
+		return
+	var err := PlayerTrade.sell(player, _ss, good_id, 1.0)
+	if err == "":
+		_dlg_body.text = "[color=#88dd88]Sold 1×  %s.[/color]" % good_id
+		_refresh_player_info()
+	else:
+		_dlg_body.text = "[color=#dd4444]%s[/color]" % err
+	_dlg_sell_goods()
+
+
+func _dlg_purchase_building(instance_key: String, bid: String) -> void:
+	if _ss == null or _world_state == null:
+		return
+	var player: PersonState = _get_player()
+	if player == null:
+		return
+	var bdef: Dictionary = ContentRegistry.get_content("building", bid)
+	var price: float = float((bdef.get("construction_cost", {}) as Dictionary).get("coin", 50.0))
+	var err := WorkshopManager.purchase(player, instance_key, _ss, _world_state)
+	for child in _dlg_options.get_children():
+		child.queue_free()
+	if err == "":
+		_dlg_body.text = "[color=#88dd88]You now own %s (paid %.0f coin).[/color]" % [bdef.get("name", bid), price]
+	else:
+		_dlg_body.text = "[color=#dd4444]%s[/color]" % err
+	_add_dlg_option("◀ Back", _open_dialogue)
+	_add_dlg_option("[Esc / F] Close", _close_dialogue)
+	_refresh_player_info()
+
+
+func _on_ledger_pressed() -> void:
+	SceneManager.push_scene("res://src/ui/ownership_view/ownership_view.tscn")
 
 
 func _exit_view() -> void:

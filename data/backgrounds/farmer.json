@@ -14,5 +14,7 @@
     "survival": 1,
     "cooking": 1
   },
-  "narrative_tags": ["rural", "laborer", "peaceful_start"]
+  "narrative_tags": ["rural", "laborer", "peaceful_start"],
+  "starting_coin": 8,
+  "starting_items": ["wheat_bushel", "wheat_bushel", "iron_tools"]
 }

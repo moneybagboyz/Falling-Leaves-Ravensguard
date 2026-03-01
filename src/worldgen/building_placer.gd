@@ -18,18 +18,19 @@ class_name BuildingPlacer
 const TIER_RADIUS: Array[int] = [1, 2, 3, 4, 5]
 
 ## Tier-scaled building counts. -1 = "fill remaining with this type".
+## house is NOT listed here — count is calculated from population at placement time.
 ## Key: building_id. Value: count (or -1 = remainder fill).
 const TIER_DISTRIBUTION: Array[Dictionary] = [
 	# tier 0 — hamlet
-	{"inn": 1, "well": 1, "farm_plot": 2, "house": 2, "open_land": -1},
+	{"inn": 1, "well": 1, "farm_plot": 2, "lumber_camp": 1, "derelict": 1, "open_land": -1},
 	# tier 1 — village
-	{"inn": 1, "well": 1, "farm_plot": 5, "granary": 1, "house": 5, "open_land": -1},
+	{"inn": 1, "well": 1, "farm_plot": 5, "granary": 1, "smithy": 1, "grain_mill": 1, "derelict": 1, "open_land": -1},
 	# tier 2 — town
-	{"inn": 2, "well": 2, "farm_plot": 8, "granary": 2, "market_stall": 1, "open_land": 4, "house": -1},
+	{"inn": 2, "well": 2, "farm_plot": 8, "granary": 2, "market": 1, "market_stall": 2, "smithy": 2, "grain_mill": 1, "lumber_camp": 1, "derelict": 2, "open_land": -1},
 	# tier 3 — city
-	{"inn": 3, "well": 3, "farm_plot": 14, "granary": 3, "market_stall": 3, "open_land": 6, "house": -1},
+	{"inn": 3, "well": 3, "farm_plot": 14, "granary": 3, "market": 2, "market_stall": 3, "smithy": 3, "grain_mill": 2, "lumber_camp": 2, "iron_mine": 1, "derelict": 3, "open_land": -1},
 	# tier 4 — metropolis
-	{"inn": 5, "well": 4, "farm_plot": 24, "granary": 5, "market_stall": 6, "open_land": 8, "house": -1},
+	{"inn": 5, "well": 4, "farm_plot": 24, "granary": 5, "market": 3, "market_stall": 6, "smithy": 5, "grain_mill": 3, "lumber_camp": 3, "iron_mine": 2, "iron_smelter": 1, "derelict": 4, "open_land": -1},
 ]
 
 ## Starter market goods and per-tier base quantities (multiplied by tier+1).
@@ -103,6 +104,13 @@ static func _place_settlement(
 		for _i: int in dist[btype]:
 			to_place.append(btype)
 
+	# Population-driven house count: ceil(total_pop / housing_capacity).
+	var house_def: Dictionary = ContentRegistry.get_content("building", "house")
+	var housing_cap: int = maxi(1, int(house_def.get("housing_capacity", 4)))
+	var houses_needed: int = ceili(float(ss.total_population()) / float(housing_cap))
+	for _h: int in houses_needed:
+		to_place.append("house")
+
 	# Fisher-Yates shuffle of to_place using seeded rng.
 	for i: int in range(to_place.size() - 1, 0, -1):
 		var j: int = rng.randi_range(0, i)
@@ -121,6 +129,7 @@ static func _place_settlement(
 			ordered_territory.append(cid)
 
 	var labor_slots: Array = []
+	var housing_slots: Array = []
 	var place_idx: int = 0
 
 	for cid: String in ordered_territory:
@@ -150,9 +159,18 @@ static func _place_settlement(
 						"is_filled":      false,
 						"worker_id":      "",
 					})
+			# Harvest housing slots.
+			var cap: int = int(bdef.get("housing_capacity", 0))
+			if cap > 0:
+				housing_slots.append({
+					"building_id": bid,
+					"cell_id":     cid,
+					"capacity":    cap,
+				})
 		world_state.world_tiles[cid]["z_levels"] = z_lev
 
-	ss.labor_slots = labor_slots
+	ss.labor_slots    = labor_slots
+	ss.housing_slots  = housing_slots
 
 	# ── 5. Seed market inventory ───────────────────────────────────────────
 	var tier_mult: float = float(ss.tier + 1)

@@ -12,7 +12,7 @@ class_name RouteGenerator
 extends RefCounted
 
 const ROAD_DISCOUNT: float = 0.7   # movement cost ×0.7 along existing roads
-const INF_COST: float      = 1e18
+const INF_COST: float      = 9000.0   # any terrain cost >= this is impassable
 
 
 ## settlement_records: Array[Dictionary] as produced by SettlementPlacer.place()

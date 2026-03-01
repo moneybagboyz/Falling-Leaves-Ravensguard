@@ -4,7 +4,7 @@
   "name": "Lumber Camp",
   "category": "production",
   "footprint_cells": 1,
-  "construction_cost": { "timber_log": 10, "labor_days": 15 },
+  "construction_cost": { "timber_log": 10, "coin": 80, "labor_days": 15 },
   "upkeep_per_season": { "coin": 1 },
   "max_workers": 6,
   "production": {

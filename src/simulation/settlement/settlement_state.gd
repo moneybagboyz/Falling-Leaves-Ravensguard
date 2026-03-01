@@ -20,6 +20,10 @@ var tile_y: int = 0
 ## Whether this is a province hub (true) or spoke (false).
 var is_hub: bool = false
 
+## True for camps founded by the player (tier-0). Disables trade-party
+## spawning and NPC population growth in SettlementPulse.
+var is_player_camp: bool = false
+
 ## Province ID (string form of province int index).
 var province_id: String = ""
 
@@ -59,6 +63,11 @@ var buildings: Array = []
 ## Each entry: {slot_id, building_id, cell_id, role_id, is_filled: bool, worker_id: String}
 ## Built by BuildingPlacer (P3-06) and updated as workers are hired.
 var labor_slots: Array = []
+
+## Housing slots — one entry per building that has housing_capacity > 0.
+## Each entry: {building_id, cell_id, capacity}
+## Built by BuildingPlacer alongside labor_slots.
+var housing_slots: Array = []
 
 ## Player-visible market stock: good_id -> float quantity.
 ## Refreshed each production pulse as a fraction of the ledger inventory surplus.
@@ -101,6 +110,7 @@ func to_dict() -> Dictionary:
 		"tile_x":           tile_x,
 		"tile_y":           tile_y,
 		"is_hub":           is_hub,
+		"is_player_camp":   is_player_camp,
 		"province_id":      province_id,
 		"connectivity_rate": connectivity_rate,
 		"population":       population.duplicate(),
@@ -112,6 +122,7 @@ func to_dict() -> Dictionary:
 		"production_log":   production_log.duplicate(),
 		"buildings":        buildings.duplicate(),
 		"labor_slots":      labor_slots.duplicate(true),
+		"housing_slots":    housing_slots.duplicate(true),
 		"market_inventory": market_inventory.duplicate(),
 		"territory_cell_ids": territory_cell_ids.duplicate(),
 		"acreage":          acreage.duplicate(),
@@ -128,6 +139,7 @@ static func from_dict(data: Dictionary) -> SettlementState:
 	s.tile_x            = data.get("tile_x",           0)
 	s.tile_y            = data.get("tile_y",           0)
 	s.is_hub            = data.get("is_hub",           false)
+	s.is_player_camp    = data.get("is_player_camp",   false)
 	s.province_id       = data.get("province_id",      "")
 	s.connectivity_rate = data.get("connectivity_rate", 0.0)
 	s.population        = data.get("population",       {})
@@ -139,6 +151,7 @@ static func from_dict(data: Dictionary) -> SettlementState:
 	s.production_log    = data.get("production_log",    [])
 	s.buildings         = data.get("buildings",         [])
 	s.labor_slots       = data.get("labor_slots",       []).duplicate(true)
+	s.housing_slots     = data.get("housing_slots",     []).duplicate(true)
 	s.market_inventory  = data.get("market_inventory",  {}).duplicate()
 	s.territory_cell_ids.assign(data.get("territory_cell_ids", []))
 	s.acreage           = data.get("acreage",          {

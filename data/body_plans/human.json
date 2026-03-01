@@ -1,0 +1,28 @@
+{
+  "$schema": "../schemas/body_plan.schema.json",
+  "id": "human",
+  "name": "Human",
+  "description": "Standard adult human anatomy. Used by all human characters and NPCs.",
+  "zones": [
+    { "zone_id": "head",        "hit_weight": 0.10 },
+    { "zone_id": "neck",        "hit_weight": 0.05 },
+    { "zone_id": "chest",       "hit_weight": 0.23 },
+    { "zone_id": "abdomen",     "hit_weight": 0.13 },
+    { "zone_id": "left_arm",    "hit_weight": 0.09 },
+    { "zone_id": "right_arm",   "hit_weight": 0.09 },
+    { "zone_id": "left_leg",    "hit_weight": 0.105 },
+    { "zone_id": "right_leg",   "hit_weight": 0.105 },
+    { "zone_id": "left_hand",   "hit_weight": 0.03 },
+    { "zone_id": "right_hand",  "hit_weight": 0.03 },
+    { "zone_id": "left_foot",   "hit_weight": 0.02 },
+    { "zone_id": "right_foot",  "hit_weight": 0.02 }
+  ],
+  "organs": [
+    { "id": "brain",       "name": "Brain",        "vital": true  },
+    { "id": "spinal_cord", "name": "Spinal Cord",  "vital": true  },
+    { "id": "heart",       "name": "Heart",        "vital": true  },
+    { "id": "lung",        "name": "Lung",         "vital": false },
+    { "id": "intestines",  "name": "Intestines",   "vital": false },
+    { "id": "liver",       "name": "Liver",        "vital": false }
+  ]
+}

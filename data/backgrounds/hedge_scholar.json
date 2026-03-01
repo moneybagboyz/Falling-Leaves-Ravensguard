@@ -15,5 +15,7 @@
     "survival": 1,
     "farming": 1
   },
-  "narrative_tags": ["educated", "urban", "versatile_start"]
+  "narrative_tags": ["educated", "urban", "versatile_start"],
+  "starting_coin": 15,
+  "starting_items": ["wheat_bushel", "cloth_bolt"]
 }

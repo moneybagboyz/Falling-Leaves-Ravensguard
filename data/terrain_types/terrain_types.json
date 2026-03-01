@@ -18,10 +18,10 @@
   {
     "id": "river",
     "name": "River",
-    "movement_cost": 1.5,
+    "movement_cost": 8.0,
     "settlement_score_bonus": 3.0,
     "passable": true,
-    "description": "River-crossed land. Irrigation benefit, fording penalty."
+    "description": "River crossing. Costly to ford; roads bridge only when no other route exists."
   },
   {
     "id": "hills",

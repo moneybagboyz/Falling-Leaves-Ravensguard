@@ -4,7 +4,7 @@
   "name": "Iron Mine",
   "category": "production",
   "footprint_cells": 1,
-  "construction_cost": { "timber_log": 20, "iron_ingot": 5, "labor_days": 40 },
+  "construction_cost": { "timber_log": 20, "iron_ingot": 5, "coin": 200, "labor_days": 40 },
   "upkeep_per_season": { "coin": 3, "timber_log": 2 },
   "max_workers": 8,
   "production": {

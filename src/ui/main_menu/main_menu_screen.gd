@@ -17,11 +17,14 @@ const COLOR_DIM     := Color(0.38, 0.38, 0.42)
 const COLOR_VIGNETTE:= Color(0.0, 0.0, 0.0, 0.55)
 
 # ── Node refs ──────────────────────────────────────────────────────────────────
-var _continue_btn: Button = null
-var _new_game_btn: Button = null
-var _quit_btn:     Button = null
-var _loading_lbl:  Label  = null
-var _version_lbl:  Label  = null
+var _continue_btn:    Button = null
+var _new_game_btn:    Button = null
+var _quit_btn:        Button = null
+var _test_combat_btn: Button = null
+var _run_tests_btn:   Button = null
+var _continue_gap:    Control = null
+var _loading_lbl:     Label  = null
+var _version_lbl:     Label  = null
 
 
 func _ready() -> void:
@@ -84,7 +87,11 @@ func _build_ui() -> void:
 	_continue_btn.pressed.connect(_on_continue_pressed)
 	centre.add_child(_continue_btn)
 
-	_add_gap(centre, 10)
+	# Gap only shown alongside Continue.
+	_continue_gap = Control.new()
+	_continue_gap.custom_minimum_size = Vector2(0, 10)
+	_continue_gap.visible = false
+	centre.add_child(_continue_gap)
 
 	# New Game button.
 	_new_game_btn = _make_button("⊕  New Game")
@@ -99,6 +106,20 @@ func _build_ui() -> void:
 	_quit_btn.pressed.connect(_on_quit_pressed)
 	centre.add_child(_quit_btn)
 
+	# Test Combat button — debug builds only.
+	if OS.has_feature("debug"):
+		_add_gap(centre, 24)
+		_test_combat_btn = _make_button("⚔  Test Combat")
+		_test_combat_btn.add_theme_color_override("font_color", Color(1.0, 0.55, 0.20))
+		_test_combat_btn.pressed.connect(_on_test_combat_pressed)
+		centre.add_child(_test_combat_btn)
+
+		_add_gap(centre, 8)
+		_run_tests_btn = _make_button("✓  Run Tests")
+		_run_tests_btn.add_theme_color_override("font_color", Color(0.50, 1.0, 0.50))
+		_run_tests_btn.pressed.connect(_on_run_tests_pressed)
+		centre.add_child(_run_tests_btn)
+
 	_add_gap(centre, 40)
 
 	# Loading label (shown while Bootstrap is loading data).
@@ -111,7 +132,7 @@ func _build_ui() -> void:
 
 	# Version label — bottom-right corner.
 	_version_lbl = Label.new()
-	_version_lbl.text = "pre-alpha  ·  Phase 3"
+	_version_lbl.text = "pre-alpha  ·  Phase 5"
 	_version_lbl.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	_version_lbl.offset_left   = -180
 	_version_lbl.offset_top    =  -28
@@ -146,6 +167,7 @@ func _on_bootstrap_ready() -> void:
 	var save_exists: bool = boot != null and boot.has_save()
 
 	_continue_btn.visible  = save_exists
+	_continue_gap.visible  = save_exists
 	_new_game_btn.disabled = false
 
 
@@ -164,3 +186,11 @@ func _on_new_game_pressed() -> void:
 
 func _on_quit_pressed() -> void:
 	get_tree().quit()
+
+
+func _on_test_combat_pressed() -> void:
+	SceneManager.push_scene("res://src/debug/combat_test_scene.tscn", {})
+
+
+func _on_run_tests_pressed() -> void:
+	SceneManager.push_scene("res://src/debug/combat_unit_tests.tscn", {})

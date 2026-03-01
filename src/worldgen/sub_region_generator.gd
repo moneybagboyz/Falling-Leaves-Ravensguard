@@ -246,13 +246,12 @@ static func generate(
 
 	# ── Place settlement buildings scaled to population and industry ───────────
 	# 1. Collect all real buildings from territory, tagged by category/zone.
-	# 2. Synthesise extra house plots so residential density reflects population
-	#    (1 rendered house ≈ 20 residents; capped at 80 so the grid stays sane).
-	# 3. Sort plots by zone priority: trade/civic → storage → production → housing.
+	#    Houses are pre-calculated by BuildingPlacer (ceil(pop/housing_cap)) so
+	#    every house cell has a valid source_wt_key — no synthesis needed.
+	# 2. Sort plots by zone priority: trade/civic → storage → production → housing.
 	#    This creates organic districts — market near the centre, industry behind
-	#    it, residential blocks on the outside. Same approach CDDA uses.
-	# 4. Lay out in a compact grid; production plots get PROD_STEP spacing so
-	#    smelters/mines feel industrial rather than tightly packed.
+	#    it, residential blocks on the outside.
+	# 3. Lay out in a compact grid adjacent to one another.
 	if ss != null and not is_water:
 		var open_terrain := "plains" if base_terrain != "desert" else "desert"
 
@@ -269,7 +268,6 @@ static func generate(
 
 		# ── Gather real buildings from territory ──────────────────────────────
 		var plots: Array = []
-		var house_count: int = 0
 		for cid: String in ss.territory_cell_ids:
 			var bid: String = world_tiles.get(cid, {}).get("building_id", "")
 			if bid == "" or bid == "open_land":
@@ -278,14 +276,6 @@ static func generate(
 			var cat: String  = bdef.get("category", "infrastructure")
 			var zone: int    = ZONE_ORDER.get(cat, 3)
 			plots.append({"cid": cid, "bid": bid, "zone": zone, "prod": cat == "production"})
-			if cat == "housing":
-				house_count += 1
-
-		# ── Synthesise houses from population data ────────────────────────────
-		var total_pop: int = ss.total_population()
-		var target_houses: int = ceili(float(total_pop) / 5.0)
-		for _h: int in range(maxi(0, target_houses - house_count)):
-			plots.append({"cid": "", "bid": "house", "zone": 3, "prod": false})
 
 		# ── Sort so districts cluster: trade → storage → production → housing ─
 		plots.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
@@ -311,14 +301,11 @@ static func generate(
 						candidates.append(ck)
 
 			for i: int in range(mini(n, candidates.size())):
-				var bk: String = candidates[i]
+				var bk: String  = candidates[i]
 				var cid: String = plots[i]["cid"]
-				if cid != "":
-					result[bk]["building_id"]   = world_tiles.get(cid, {}).get("building_id", "")
-					result[bk]["z_levels"]      = world_tiles.get(cid, {}).get("z_levels", [0])
-					result[bk]["source_wt_key"] = cid
-				else:
-					result[bk]["building_id"] = "house"
-				result[bk]["terrain_type"] = open_terrain
+				result[bk]["building_id"]   = world_tiles.get(cid, {}).get("building_id", "")
+				result[bk]["z_levels"]      = world_tiles.get(cid, {}).get("z_levels", [0])
+				result[bk]["source_wt_key"] = cid
+				result[bk]["terrain_type"]  = open_terrain
 
 	return result

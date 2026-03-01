@@ -4,7 +4,7 @@
   "name": "Farmstead",
   "category": "production",
   "footprint_cells": 1,
-  "construction_cost": { "timber_log": 15, "labor_days": 20 },
+  "construction_cost": { "timber_log": 15, "coin": 60, "labor_days": 20 },
   "upkeep_per_season": { "coin": 1 },
   "max_workers": 4,
   "production": {

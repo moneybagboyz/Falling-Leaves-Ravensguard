@@ -63,10 +63,8 @@ var _drag_scroll: Vector2          = Vector2.ZERO
 
 var _sim_bar:     Label            = null
 var _pause_btn:   Button           = null
-@warning_ignore("UNUSED_PRIVATE_CLASS_VARIABLE")
-var _info_panel:  VBoxContainer    = null
 var _info_title:  Label            = null
-var _info_body:   Label            = null
+var _info_body:   RichTextLabel    = null
 var _enter_btn:   Button           = null  # "► ENTER SETTLEMENT" button
 var _attack_btn:  Button           = null  # "⚔ ATTACK CAMP" button
 var _selected_camp_cid: String     = ""    # world-tile cid of selected bandit camp
@@ -118,9 +116,14 @@ func _build_ui() -> void:
 	add_child(split)
 
 	# ── LEFT: Info & controls panel ───────────────────────────────────────────
+	var left_scroll := ScrollContainer.new()
+	left_scroll.custom_minimum_size = Vector2(280, 0)
+	left_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	split.add_child(left_scroll)
+
 	var left := VBoxContainer.new()
-	left.custom_minimum_size = Vector2(280, 0)
-	split.add_child(left)
+	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	left_scroll.add_child(left)
 
 	var title := Label.new()
 	title.text = "WORLD VIEW"
@@ -184,11 +187,12 @@ func _build_ui() -> void:
 	_info_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	left.add_child(_info_title)
 
-	_info_body = Label.new()
-	_info_body.text = ""
-	_info_body.add_theme_font_size_override("font_size", 11)
-	_info_body.modulate = Color(0.85, 0.85, 0.85)
-	_info_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_info_body = RichTextLabel.new()
+	_info_body.bbcode_enabled = true
+	_info_body.fit_content = true
+	_info_body.scroll_active = false
+	_info_body.add_theme_color_override("default_color", Color(0.85, 0.85, 0.85))
+	_info_body.add_theme_font_size_override("normal_font_size", 11)
 	left.add_child(_info_body)
 
 	# Enter settlement button — only enabled when a settlement is selected.
@@ -365,19 +369,19 @@ func _show_settlement(sid: String) -> void:
 
 	var pop: int = ss.total_population()
 	var lines: PackedStringArray = []
-	lines.append("Pop: %d   Tier: %d" % [pop, ss.tier])
-	lines.append("Prosperity: %.3f   Unrest: %.3f" % [ss.prosperity, ss.unrest])
-	lines.append("Province: %s" % ss.province_id)
+	lines.append("[color=#88aacc]Pop:[/color] %d   [color=#88aacc]Tier:[/color] %d" % [pop, ss.tier])
+	lines.append("[color=#88dd88]Prosperity:[/color] %.3f   [color=#dd8888]Unrest:[/color] %.3f" % [ss.prosperity, ss.unrest])
+	lines.append("[color=#888888]Province:[/color] %s" % ss.province_id)
 	lines.append("")
-	lines.append("── Inventory ──")
+	lines.append("[color=#ccaa44]── Inventory ──[/color]")
 
 	var goods: Array = ss.inventory.keys()
 	goods.sort()
 	for good: String in goods:
 		var qty: float   = float(ss.inventory[good])
 		var price: float = float(ss.prices.get(good, 0.0))
-		var shortage_marker: String = " !" if ss.shortages.get(good, 0.0) > 0.1 else ""
-		lines.append("  %-20s %8.1f  @%.2f%s" % [good, qty, price, shortage_marker])
+		var shortage_marker: String = "  [color=#ff5555]⚠ shortage[/color]" if ss.shortages.get(good, 0.0) > 0.1 else ""
+		lines.append("  [color=#dddddd]%s[/color]  [color=#ffffff]%.0f[/color]  [color=#6688bb]@%.2f[/color]%s" % [good, qty, price, shortage_marker])
 
 	_info_body.text = "\n".join(lines)
 
@@ -585,7 +589,7 @@ func _trigger_camp_combat(cid: String) -> void:
 	battle.phase      = BattleState.PHASE_PLANNING
 	battle.turn       = 0
 
-	# Player side — all characters that belong to player (simple: use player_character_id + allies if any).
+	# Player side — player character + any followers.
 	var player_member_ids: Array[String] = []
 	var player_person: PersonState = _world_state.characters.get(
 		_world_state.player_character_id)
@@ -594,6 +598,18 @@ func _trigger_camp_combat(cid: String) -> void:
 		pc.tile_pos = Vector2i(12, 5)   # south edge of a 25×25 grid
 		battle.combatants[pc.combatant_id] = pc
 		player_member_ids.append(pc.combatant_id)
+
+		# Add followers to player's formation.
+		var fol_x: int = 0
+		for fid: String in player_person.follower_ids:
+			var follower: PersonState = _world_state.characters.get(fid)
+			if follower == null:
+				continue
+			var fc := CombatantState.from_person(follower, "player", "p_main")
+			fc.tile_pos = Vector2i(10 + (fol_x % 5), 4 - (fol_x / 5))
+			battle.combatants[fc.combatant_id] = fc
+			player_member_ids.append(fc.combatant_id)
+			fol_x += 1
 
 	var player_formation := FormationState.make(
 		"p_main", "player", "Your Party", player_member_ids, Vector2i(12, 5))

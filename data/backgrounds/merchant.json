@@ -13,5 +13,7 @@
     "trading": 3,
     "persuasion": 2
   },
-  "narrative_tags": ["urban", "wealthy_start", "social"]
+  "narrative_tags": ["urban", "wealthy_start", "social"],
+  "starting_coin": 50,
+  "starting_items": ["cloth_bolt", "cloth_bolt", "iron_tools"]
 }

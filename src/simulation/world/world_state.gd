@@ -53,6 +53,17 @@ var province_adjacency: Dictionary = {}
 ## Active trade parties: party_id -> TradePartyState dict.
 var trade_parties: Dictionary = {}
 
+## Ownership ledger: building_instance_id (or cell_id) -> owner_person_id.
+## Written and read exclusively by PropertyCore.
+var property_ledger: Dictionary = {}
+
+## Active construction jobs: job_id -> ConstructionJob dict.
+## Written by ConstructionSystem (P5-10).
+var construction_jobs: Dictionary = {}
+
+## Player's armed group state (GroupState serialised to dict). Empty dict = no group.
+var player_group: Dictionary = {}
+
 ## All named characters (player + any persisted NPCs): person_id -> PersonState.
 var characters: Dictionary = {}
 
@@ -131,6 +142,9 @@ func to_dict() -> Dictionary:
 		"world_flags":        world_flags.duplicate(true),
 		"routes":             routes.duplicate(true),
 		"trade_parties":      trade_parties.duplicate(true),
+		"property_ledger":    property_ledger.duplicate(),
+		"construction_jobs":  construction_jobs.duplicate(true),
+		"player_group":       player_group.duplicate(true),
 		"province_names":     province_names.duplicate(),
 		"province_adjacency": province_adjacency.duplicate(true),
 		"player_character_id": player_character_id,
@@ -158,6 +172,9 @@ static func from_dict(data: Dictionary) -> WorldState:
 	ws.world_flags    = data.get("world_flags",     {})
 	ws.routes             = data.get("routes",             {})
 	ws.trade_parties      = data.get("trade_parties",      {})
+	ws.property_ledger    = data.get("property_ledger",    {}).duplicate()
+	ws.construction_jobs  = data.get("construction_jobs",  {}).duplicate(true)
+	ws.player_group       = data.get("player_group",       {}).duplicate(true)
 	ws.province_names     = data.get("province_names",     [])
 	ws.province_adjacency = data.get("province_adjacency", {})
 	ws.player_character_id = data.get("player_character_id", "")

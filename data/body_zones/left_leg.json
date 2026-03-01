@@ -10,5 +10,11 @@
     { "at_severity": "lethal", "effect": "limb_lost" }
   ],
   "pain_multiplier": 0.9,
-  "blocks_reach_if_wounded": false
+  "blocks_reach_if_wounded": false,
+  "tissue_layers": [
+    { "type": "skin",   "yield_strength": 0.02, "thickness_mm":  2, "blunt_factor": 0.90 },
+    { "type": "fat",    "yield_strength": 0.02, "thickness_mm": 10, "blunt_factor": 0.85 },
+    { "type": "muscle", "yield_strength": 0.04, "thickness_mm": 25, "blunt_factor": 0.70 },
+    { "type": "bone",   "yield_strength": 0.20, "thickness_mm":  9, "blunt_factor": 0.20, "fracture_threshold": 4.0 }
+  ]
 }

@@ -7,6 +7,7 @@
   "construction_cost": {
     "timber_log": 20,
     "iron_ingot": 4,
+    "coin": 80,
     "labor_days": 30
   },
   "upkeep_per_season": {

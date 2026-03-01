@@ -4,7 +4,7 @@
   "name": "Smithy",
   "category": "production",
   "footprint_cells": 1,
-  "construction_cost": { "timber_log": 10, "iron_ingot": 8, "labor_days": 25 },
+  "construction_cost": { "timber_log": 10, "iron_ingot": 8, "coin": 120, "labor_days": 25 },
   "upkeep_per_season": { "coin": 2 },
   "max_workers": 2,
   "production": {

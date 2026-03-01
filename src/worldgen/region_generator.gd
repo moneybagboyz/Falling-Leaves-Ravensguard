@@ -76,6 +76,13 @@ static func generate(
 	BuildingPlacer.place(world_state, world_seed)
 	if on_step.is_valid(): on_step.call_deferred("13 · Buildings", data)
 
+	# ── Step 14: NPC spawn ────────────────────────────────────────────────────
+	# Must run AFTER BuildingPlacer so housing_slots are populated before
+	# residents are created. (Previously inside _build_world_state which ran
+	# before BuildingPlacer, so housing_slots were always empty.)
+	NpcPoolManager.spawn_all(world_state, world_seed)
+	if on_step.is_valid(): on_step.call_deferred("14 · NPCs", data)
+
 	return world_state
 
 
@@ -376,9 +383,6 @@ static func _build_world_state(
 					if not dirs.has(d):
 						dirs.append(d)
 				ws.world_tiles[cid]["road_dirs"] = dirs
-
-	# Spawn persistent NPCs for every settlement (CDDA-style: born once, live forever).
-	NpcPoolManager.spawn_all(ws, ws.world_seed)
 
 	return ws
 

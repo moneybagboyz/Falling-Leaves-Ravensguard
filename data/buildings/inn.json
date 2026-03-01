@@ -8,6 +8,7 @@
   "construction_cost": { "timber_log": 20, "labor_days": 30 },
   "upkeep_per_season": { "coin": 2, "wheat_bushel": 5 },
   "max_workers": 3,
+  "housing_capacity": 2,
   "tier_min": 0,
   "local_tile_category": "building_interior",
   "labor_slots": [

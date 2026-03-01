@@ -28,10 +28,7 @@ const SURNAMES: Array[String] = [
 	"Turner",   "Harper", "Ward",   "Garrett", "Finch",   "Hollow",
 ]
 
-## Maximum NPCs to spawn per settlement.
-const MAX_NPC_PER_SETTLEMENT: int = 40
-
-## Maps population_class → compatible labor slot_ids (first-match assignment).
+## Maps population_class → compatible labor slot_ids.
 const CLASS_SLOTS: Dictionary = {
 	"peasant":  ["farm_hand", "grain_keeper", "woodcutter", "laborer"],
 	"artisan":  ["smith",     "carpenter",    "tanner",    "brewer"],
@@ -60,26 +57,65 @@ static func spawn_all(world_state: WorldState, world_seed: int) -> void:
 
 # ── Entry point: ensure_spawned ───────────────────────────────────────────────
 
-## Idempotent version: only spawns NPCs for settlements that have none yet.
+## Idempotent version: spawns NPCs for settlements with missing coverage.
 ## Called after loading a save to transparently migrate old saves created before
 ## the persistent-NPC system was introduced.
+##   • Settlements with zero NPCs → full _spawn_settlement (workers + residents).
+##   • Settlements with workers but zero residents → residents-only pass from
+##     housing_slots (handles saves from before the resident system was added).
 static func ensure_spawned(world_state: WorldState, world_seed: int) -> void:
-	# Build the set of settlement IDs that already have at least one NPC.
-	var populated: Dictionary = {}
+	# Build per-settlement presence flags.
+	var has_workers:   Dictionary = {}
+	var has_residents: Dictionary = {}
 	for pid: String in world_state.characters:
 		var p: PersonState = world_state.characters[pid]
-		if p.home_settlement_id != "":
-			populated[p.home_settlement_id] = true
+		if p.home_settlement_id == "":
+			continue
+		if p.active_role == "resident":
+			has_residents[p.home_settlement_id] = true
+		else:
+			has_workers[p.home_settlement_id] = true
 
 	for sid: String in world_state.settlements:
-		if populated.has(sid):
-			continue
 		var ss: SettlementState = world_state.get_settlement(sid)
-		if ss != null:
+		if ss == null:
+			continue
+		if not has_workers.has(sid) and not has_residents.has(sid):
+			# No NPCs at all — full spawn.
 			_spawn_settlement(world_state, ss, world_seed)
+		elif not has_residents.has(sid):
+			# Workers exist but residents were never created.
+			# Use ss.housing_slots if available; otherwise re-harvest from world_tiles
+			# (handles saves created before housing_slots was persisted).
+			var slots: Array = ss.housing_slots
+			if slots.is_empty() and ss.territory_cell_ids.size() > 0:
+				for cid: String in ss.territory_cell_ids:
+					var bid: String = world_state.world_tiles.get(cid, {}).get("building_id", "")
+					if bid == "" or bid == "open_land" or bid == "derelict":
+						continue
+					var bdef: Dictionary = ContentRegistry.get_content("building", bid)
+					var cap: int = int(bdef.get("housing_capacity", 0))
+					if cap > 0:
+						slots.append({"building_id": bid, "cell_id": cid, "capacity": cap})
+			if slots.is_empty():
+				continue
+			var rng := RandomNumberGenerator.new()
+			rng.seed = hash(ss.settlement_id) ^ world_seed
+			for slot: Dictionary in slots:
+				var capacity: int   = int(slot.get("capacity", 0))
+				var cell_id: String = slot.get("cell_id",     ss.cell_id)
+				var bid: String     = slot.get("building_id", "")
+				for _i: int in capacity:
+					var pop_class := _pick_resident_class(rng, ss)
+					var npc := _make_resident(rng, ss, pop_class, cell_id, bid)
+					world_state.characters[npc.person_id] = npc
 
 
 # ── Per-settlement spawner ────────────────────────────────────────────────────
+## NPC count is driven entirely by placed buildings — no flat cap.
+##   Workers: one NPC per unfilled labor slot (class from slot type).
+##   Residents: one NPC per housing_capacity unit (class proportional to population).
+## Total is naturally bounded by the settlement's physical footprint.
 
 static func _spawn_settlement(
 		world_state: WorldState,
@@ -89,45 +125,35 @@ static func _spawn_settlement(
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(ss.settlement_id) ^ world_seed
 
-	var total_pop: int = ss.total_population()
-	if total_pop == 0:
-		return
+	# 1. One NPC per unfilled labor slot.
+	for idx: int in ss.labor_slots.size():
+		var slot: Dictionary = ss.labor_slots[idx]
+		if slot.get("is_filled", false):
+			continue
+		var pop_class := _class_for_slot(slot.get("slot_id", ""))
+		var npc := _make_worker(rng, ss, pop_class, slot)
+		world_state.characters[npc.person_id] = npc
+		ss.labor_slots[idx]["is_filled"] = true
+		ss.labor_slots[idx]["worker_id"] = npc.person_id
 
-	var class_counts: Dictionary = {}
-	for cls: String in ss.population:
-		var frac: float = float(ss.population[cls]) / float(total_pop)
-		class_counts[cls] = maxi(1, int(frac * MAX_NPC_PER_SETTLEMENT)) if ss.population[cls] > 0 else 0
-
-	# Cap total to MAX_NPC_PER_SETTLEMENT.
-	var actual_total := 0
-	for cls: String in class_counts:
-		actual_total += class_counts[cls]
-	if actual_total > MAX_NPC_PER_SETTLEMENT:
-		for cls: String in class_counts:
-			class_counts[cls] = int(float(class_counts[cls]) / float(actual_total) * MAX_NPC_PER_SETTLEMENT)
-
-	# Build the list of unfilled labor slots.
-	var open_slots: Array = []
-	for slot: Dictionary in ss.labor_slots:
-		if not bool(slot.get("is_filled", false)):
-			open_slots.append(slot)
-
-	# Spawn NPCs and register them as permanent characters.
-	for cls: String in class_counts:
-		var count: int = class_counts[cls]
-		for _i: int in count:
-			var npc := _make_npc(rng, ss, cls, open_slots, world_seed)
+	# 2. Residents per housing slot.
+	for slot: Dictionary in ss.housing_slots:
+		var capacity: int   = int(slot.get("capacity", 0))
+		var cell_id: String = slot.get("cell_id",     ss.cell_id)
+		var bid: String     = slot.get("building_id", "")
+		for _i: int in capacity:
+			var pop_class := _pick_resident_class(rng, ss)
+			var npc := _make_resident(rng, ss, pop_class, cell_id, bid)
 			world_state.characters[npc.person_id] = npc
 
 
-# ── NPC factory ───────────────────────────────────────────────────────────────
+# ── NPC factories ─────────────────────────────────────────────────────────────
 
-static func _make_npc(
+static func _make_worker(
 		rng: RandomNumberGenerator,
 		ss: SettlementState,
 		pop_class: String,
-		open_slots: Array,
-		_world_seed: int) -> PersonState:
+		slot: Dictionary) -> PersonState:
 
 	var npc := PersonState.new()
 	npc.person_id          = EntityRegistry.generate_id("person")
@@ -135,48 +161,76 @@ static func _make_npc(
 	npc.population_class   = pop_class
 	npc.home_settlement_id = ss.settlement_id
 	npc.background_id      = CLASS_BACKGROUND.get(pop_class, "wanderer")
-	npc.active_role        = pop_class
+	npc.active_role        = slot.get("slot_id", pop_class)
+	npc.work_cell_id       = slot.get("cell_id", ss.cell_id)
+	npc.home_building_id   = slot.get("building_id", "")
 
-	# Assign to a compatible labor slot if one is available.
-	var preferred_slots: Array = CLASS_SLOTS.get(pop_class, [])
-	var assigned_slot_idx: int = -1
-	for si: int in open_slots.size():
-		var slot: Dictionary = open_slots[si]
-		if slot.get("slot_id", "") in preferred_slots:
-			assigned_slot_idx = si
-			break
-
-	var home_wt_key: String = ss.cell_id  # "wt_x,wt_y" world-tile key
-
-	if assigned_slot_idx >= 0:
-		var slot: Dictionary = open_slots[assigned_slot_idx]
-		npc.work_cell_id     = slot.get("cell_id",     ss.cell_id)
-		npc.active_role      = slot.get("slot_id",     pop_class)
-		npc.home_building_id = slot.get("building_id", "")
-		home_wt_key          = npc.work_cell_id
-		open_slots.remove_at(assigned_slot_idx)
-	else:
-		# Unassigned — pick a random territory cell as home.
-		if not ss.territory_cell_ids.is_empty():
-			var idx := rng.randi_range(0, ss.territory_cell_ids.size() - 1)
-			home_wt_key = ss.territory_cell_ids[idx]
-		npc.work_cell_id = home_wt_key
-
-	# Parse wt_x / wt_y from the key for the location dict.
-	var parts := home_wt_key.split(",")
-	var wt_x: int = int(parts[0]) if parts.size() == 2 else ss.tile_x
-	var wt_y: int = int(parts[1]) if parts.size() == 2 else ss.tile_y
-
-	# NPC starts on their home world tile; region/local coords resolved lazily.
+	var parts := npc.work_cell_id.split(",")
 	npc.location = {
-		"wt_x": wt_x, "wt_y": wt_y,
-		"rx":   -1,   "ry":   -1,   # resolved when the region grid is first generated
-		"lx":   -1,   "ly":   -1,   # resolved when entering LocalView
+		"wt_x": int(parts[0]) if parts.size() == 2 else ss.tile_x,
+		"wt_y": int(parts[1]) if parts.size() == 2 else ss.tile_y,
+		"rx": -1, "ry": -1,
+		"lx": -1, "ly": -1,
 		"z_level": 0,
 	}
 	npc.schedule_state = "working"
-
 	return npc
+
+
+static func _make_resident(
+		rng: RandomNumberGenerator,
+		ss: SettlementState,
+		pop_class: String,
+		cell_id: String,
+		building_id: String) -> PersonState:
+
+	var npc := PersonState.new()
+	npc.person_id          = EntityRegistry.generate_id("person")
+	npc.name               = _random_name(rng)
+	npc.population_class   = pop_class
+	npc.home_settlement_id = ss.settlement_id
+	npc.background_id      = CLASS_BACKGROUND.get(pop_class, "wanderer")
+	npc.active_role        = "resident"
+	npc.work_cell_id       = cell_id   # home cell doubles as "where they spend time"
+	npc.home_building_id   = building_id
+
+	var parts := cell_id.split(",")
+	npc.location = {
+		"wt_x": int(parts[0]) if parts.size() == 2 else ss.tile_x,
+		"wt_y": int(parts[1]) if parts.size() == 2 else ss.tile_y,
+		"rx": -1, "ry": -1,
+		"lx": -1, "ly": -1,
+		"z_level": 0,
+	}
+	npc.schedule_state = "resting"
+	return npc
+
+
+## Map a labor slot_id to the population class that fills it.
+static func _class_for_slot(slot_id: String) -> String:
+	if slot_id in ["farm_hand", "grain_keeper", "woodcutter", "laborer"]:
+		return "peasant"
+	if slot_id in ["smith", "carpenter", "tanner", "brewer"]:
+		return "artisan"
+	if slot_id in ["innkeeper", "server", "trader", "market_keeper"]:
+		return "merchant"
+	if slot_id in ["steward", "guard_captain", "official"]:
+		return "noble"
+	return "peasant"
+
+
+## Pick a resident population class weighted by the settlement's headcounts.
+static func _pick_resident_class(rng: RandomNumberGenerator, ss: SettlementState) -> String:
+	var total := ss.total_population()
+	if total <= 0:
+		return "peasant"
+	var roll := rng.randi_range(0, total - 1)
+	var acc := 0
+	for cls: String in ss.population:
+		acc += ss.population[cls]
+		if roll < acc:
+			return cls
+	return "peasant"
 
 
 static func _random_name(rng: RandomNumberGenerator) -> String:

@@ -10,5 +10,11 @@
     { "at_severity": "lethal", "effect": "death" }
   ],
   "pain_multiplier": 1.2,
-  "blocks_reach_if_wounded": false
+  "blocks_reach_if_wounded": false,
+  "tissue_layers": [
+    { "type": "skin",   "yield_strength": 0.02, "thickness_mm":  2, "blunt_factor": 0.90 },
+    { "type": "fat",    "yield_strength": 0.02, "thickness_mm": 20, "blunt_factor": 0.85 },
+    { "type": "muscle", "yield_strength": 0.04, "thickness_mm": 20, "blunt_factor": 0.70 },
+    { "type": "organ",  "yield_strength": 0.01, "thickness_mm": 30, "blunt_factor": 0.00, "organ_id": "intestines", "vital": false }
+  ]
 }

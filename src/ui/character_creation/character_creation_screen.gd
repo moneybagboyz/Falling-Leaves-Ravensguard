@@ -495,6 +495,11 @@ func _on_confirm() -> void:
 			"progress": 0.0,
 		}
 
+	# Apply starting coin and items
+	person.coin = float(bg.get("starting_coin", 0))
+	for item_id: String in bg.get("starting_items", []):
+		person.carried_items.append(item_id)
+
 	# Pick a starting cell — prefer highest-tier settlement, fall back to first
 	var start_cell_id: String = _pick_start_cell()
 	person.home_settlement_id = _cell_to_settlement(start_cell_id)

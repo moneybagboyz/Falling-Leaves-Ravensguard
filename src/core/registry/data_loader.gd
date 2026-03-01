@@ -22,6 +22,11 @@ const DIR_TO_TYPE: Dictionary = {
 	"population_classes": "population_class",
 	"biomes":             "biome",
 	"terrain_types":      "terrain_type",
+	"armor":              "armor",
+	"weapons":            "weapon",
+	"materials":          "material",
+	"body_zones":         "body_zone",
+	"body_plans":         "body_plan",
 }
 
 # Loaded schemas: type_key -> schema dict (JSON Schema subset)

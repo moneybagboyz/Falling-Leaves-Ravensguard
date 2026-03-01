@@ -16,12 +16,14 @@ extends Node
 var world_state: WorldState = null
 
 ## Economy subsystem instances (kept on Bootstrap so hooks stay registered).
-var _settlement_pulse:   SettlementPulse    = null
-var _party_core:         PartyCore          = null
-var _world_audit:        WorldAudit         = null
-var _work_system:        WorkSystem         = null
-var _needs_system:       NeedsSystem        = null
-var _npc_schedule_system: NpcScheduleSystem = null
+var _settlement_pulse:    SettlementPulse     = null
+var _party_core:          PartyCore           = null
+var _world_audit:         WorldAudit          = null
+var _work_system:         WorkSystem          = null
+var _needs_system:        NeedsSystem         = null
+var _npc_schedule_system: NpcScheduleSystem   = null
+var _construction_system: ConstructionSystem  = null
+var _follower_system:     FollowerSystem      = null
 
 ## True once DataLoader.load_all() has completed. Read by MainMenuScreen.
 var data_loaded: bool = false
@@ -132,6 +134,12 @@ func _setup_economy(ws: WorldState) -> void:
 	if _npc_schedule_system != null:
 		TickScheduler.unregister_hook(TickScheduler.Phase.MOVEMENT,
 				_npc_schedule_system.tick_schedules)
+	if _construction_system != null:
+		TickScheduler.unregister_hook(TickScheduler.Phase.PRODUCTION_PULSE,
+				_construction_system.tick_construction)
+	if _follower_system != null:
+		TickScheduler.unregister_hook(TickScheduler.Phase.PRODUCTION_PULSE,
+				_follower_system.tick_followers)
 
 	_settlement_pulse = SettlementPulse.new()
 	_settlement_pulse.setup(ws)
@@ -163,4 +171,14 @@ func _setup_economy(ws: WorldState) -> void:
 	TickScheduler.register_hook(TickScheduler.Phase.MOVEMENT,
 			_npc_schedule_system.tick_schedules)
 
-	print("[Bootstrap] Economy hooks registered (SettlementPulse + PartyCore + WorldAudit + WorkSystem + NeedsSystem + NpcScheduleSystem).")
+	_construction_system = ConstructionSystem.new()
+	_construction_system.setup(ws)
+	TickScheduler.register_hook(TickScheduler.Phase.PRODUCTION_PULSE,
+			_construction_system.tick_construction)
+
+	_follower_system = FollowerSystem.new()
+	_follower_system.setup(ws)
+	TickScheduler.register_hook(TickScheduler.Phase.PRODUCTION_PULSE,
+			_follower_system.tick_followers)
+
+	print("[Bootstrap] Economy hooks registered (SettlementPulse + PartyCore + WorldAudit + WorkSystem + NeedsSystem + NpcScheduleSystem + ConstructionSystem + FollowerSystem).")

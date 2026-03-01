@@ -33,6 +33,16 @@
       "type": "array",
       "description": "Flavor tags used in character creation UI filtering.",
       "items": { "type": "string" }
+    },
+    "starting_coin": {
+      "type": "number",
+      "description": "Coin given to the player at the start of the game.",
+      "minimum": 0
+    },
+    "starting_items": {
+      "type": "array",
+      "description": "Item IDs placed in carried_items at character creation (weapons, armor, goods).",
+      "items": { "type": "string" }
     }
   }
 }

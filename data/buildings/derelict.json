@@ -8,6 +8,7 @@
   "construction_cost": { "labor_days": 0 },
   "upkeep_per_season": { "coin": 0 },
   "max_workers": 0,
+  "housing_capacity": 2,
   "tier_min": 0,
   "local_tile_category": "ruin",
   "labor_slots": [],

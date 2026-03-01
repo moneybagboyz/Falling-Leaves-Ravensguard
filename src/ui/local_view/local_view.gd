@@ -92,6 +92,7 @@ var _tile_labels:  Array           = []
 var _player_rect:  ColorRect       = null
 var _cursor_rect:  ColorRect       = null
 var _bld_title:    Label           = null
+var _bld_desc:     RichTextLabel   = null
 var _tile_info:    RichTextLabel   = null
 var _action_btn:   Button          = null
 var _map_area:     Control         = null
@@ -163,10 +164,15 @@ func _build_ui() -> void:
 	panel_bg.custom_minimum_size = Vector2(PANEL_W, 0)
 	hbox.add_child(panel_bg)
 
+	var panel_scroll := ScrollContainer.new()
+	panel_scroll.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	panel_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	panel_bg.add_child(panel_scroll)
+
 	var pvbox := VBoxContainer.new()
-	pvbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	pvbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pvbox.add_theme_constant_override("separation", 6)
-	panel_bg.add_child(pvbox)
+	panel_scroll.add_child(pvbox)
 
 	var back_btn := Button.new()
 	back_btn.text = "◀ Return to Map  [Esc]"
@@ -183,14 +189,14 @@ func _build_ui() -> void:
 	_bld_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	pvbox.add_child(_bld_title)
 
-	var desc_lbl := RichTextLabel.new()
-	desc_lbl.bbcode_enabled = true
-	desc_lbl.fit_content = true
-	desc_lbl.scroll_active = false
-	desc_lbl.add_theme_color_override("default_color", COLOR_DIM)
-	desc_lbl.add_theme_font_size_override("normal_font_size", 11)
-	desc_lbl.text = _building_def.get("description", "").left(160)
-	pvbox.add_child(desc_lbl)
+	_bld_desc = RichTextLabel.new()
+	_bld_desc.bbcode_enabled = true
+	_bld_desc.fit_content = true
+	_bld_desc.scroll_active = false
+	_bld_desc.add_theme_color_override("default_color", COLOR_DIM)
+	_bld_desc.add_theme_font_size_override("normal_font_size", 11)
+	_bld_desc.text = _building_def.get("description", "").left(160)
+	pvbox.add_child(_bld_desc)
 
 	pvbox.add_child(_make_sep())
 
@@ -487,6 +493,9 @@ func _try_move(dx: int, dy: int) -> void:
 		_preload_neighbourhood(_reg_rx, _reg_ry)
 		_building_id  = _cell_building_id(_reg_rx, _reg_ry)
 		_building_def = ContentRegistry.get_content("building", _building_id) if _building_id != "" else {}
+		_bld_title.text = _area_label_for_cell(_reg_rx, _reg_ry)
+		if _bld_desc != null:
+			_bld_desc.text = _building_def.get("description", "").left(160)
 	_render_viewport()
 	_update_pawn_visual()
 	_refresh_all_npc_pawns()
@@ -801,7 +810,15 @@ func _cross_world_tile_boundary(new_rx: int, new_ry: int, lx: int, ly: int) -> v
 ## How many clock ticks between NPC tile moves (keeps movement readable).
 const LOCAL_MOVE_EVERY: int = 4
 
-## Filter characters to NPCs of this settlement; place them on matching anchor tiles.
+## Assign every settlement NPC to their building cell across the full world-tile
+## grid, then create pawn nodes for all of them.
+##
+## Called once on world-tile entry and on grid rebuild (zoom/resize).
+## On intra-tile cell changes, _refresh_all_npc_pawns() repositions pawns;
+## _refresh_npc_pawn_pos() already hides any pawn outside the current viewport.
+##
+## Assignment is lazy-sticky: once npc.home_rc_key is set it is never changed
+## unless the NPC moves to a different settlement.
 func _spawn_local_npcs() -> void:
 	for old_rect in _npc_rects.values():
 		if is_instance_valid(old_rect):
@@ -811,60 +828,121 @@ func _spawn_local_npcs() -> void:
 	if _world_state == null or _map_area == null or _settlement_id == "":
 		return
 
-	## Track placement count per (role+schedule) key for spreading NPCs.
-	var role_counters: Dictionary = {}
+	var wk := "%d,%d" % [_entry_wx, _entry_wy]
+	var grid: Dictionary = _world_state.region_grids.get(wk, {})
+	if grid.is_empty():
+		return
+
+	# ── Pre-bucket unassigned NPCs for fast per-cell lookup ──────────────────
+	# assigned_by_key:   compound_key      → [pid, ...]
+	# workers_by_cell:   work_cell_id       → [pid, ...]
+	# residents_by_bid:  home_building_id   → [pid, ...] (pool consumed per cell)
+	var assigned_by_key:  Dictionary = {}
+	var workers_by_cell:  Dictionary = {}
+	var residents_by_bid: Dictionary = {}
 
 	for pid: String in _world_state.characters:
 		var npc: PersonState = _world_state.characters[pid]
 		if npc.home_settlement_id != _settlement_id:
 			continue
-		# If this NPC already has a valid position from a previous visit, keep it.
-		if npc.location.get("lx", -1) >= 0 and npc.location.get("rx", -1) >= 0:
-			_create_npc_pawn(pid, npc)
+		if npc.home_rc_key != "":
+			if not assigned_by_key.has(npc.home_rc_key):
+				assigned_by_key[npc.home_rc_key] = []
+			(assigned_by_key[npc.home_rc_key] as Array).append(pid)
+		elif npc.active_role == "resident":
+			if not residents_by_bid.has(npc.home_building_id):
+				residents_by_bid[npc.home_building_id] = []
+			(residents_by_bid[npc.home_building_id] as Array).append(pid)
+		else:
+			if not workers_by_cell.has(npc.work_cell_id):
+				workers_by_cell[npc.work_cell_id] = []
+			(workers_by_cell[npc.work_cell_id] as Array).append(pid)
+
+	# ── Iterate every building cell in the grid ──────────────────────────────
+	for rc_cid: String in grid:
+		var rc_data: Dictionary = grid[rc_cid]
+		var bid: String = rc_data.get("building_id", "")
+		if bid == "" or bid == "open_land":
 			continue
-		# First visit — find the region cell that contains the NPC's home building.
-		# Only use the home cell if it's within the visible viewport radius so the
-		# NPC pawn isn't immediately hidden off-screen.
-		var target_rx := _reg_rx
-		var target_ry := _reg_ry
-		if npc.work_cell_id != "":
-			var home_rc := _find_region_cell_for_wt_key(npc.work_cell_id)
-			if home_rc.x >= 0:
-				@warning_ignore("integer_division")
-				var vis_radius: int = maxi(1, ceili((_map_cols / 2.0) / GRID_W))
-				if absi(home_rc.x - _reg_rx) <= vis_radius and absi(home_rc.y - _reg_ry) <= vis_radius:
-					target_rx = home_rc.x
-					target_ry = home_rc.y
-		var key: String = npc.active_role + "_" + npc.schedule_state
-		var offset: int = role_counters.get(key, 0)
-		role_counters[key] = offset + 1
-		var tile_pos := _find_anchor_tile(target_rx, target_ry, npc.active_role, npc.schedule_state, offset)
-		npc.location["lx"]  = tile_pos.x
-		npc.location["ly"]  = tile_pos.y
-		npc.location["rx"]  = target_rx
-		npc.location["ry"]  = target_ry
-		npc.location["wt_x"] = _entry_wx
-		npc.location["wt_y"] = _entry_wy
-		_create_npc_pawn(pid, npc)
 
+		var parts := rc_cid.split(",")
+		if parts.size() != 2:
+			continue
+		var rx: int = int(parts[0])
+		var ry: int = int(parts[1])
+		var compound_key: String = "%d,%d:%d,%d" % [_entry_wx, _entry_wy, rx, ry]
+		var source_wt_key: String = rc_data.get("source_wt_key", "")
+		var bdef: Dictionary = ContentRegistry.get_content("building", bid)
+		var housing_cap: int = int(bdef.get("housing_capacity", 0))
 
-## Return the region cell (rx, ry) that was stamped from the given world-tile territory key.
-## Returns Vector2i(-1, -1) if the key has no matching cell in the current world tile's grid.
-func _find_region_cell_for_wt_key(wt_key: String) -> Vector2i:
-	if _world_state == null:
-		return Vector2i(-1, -1)
-	var wk := "%d,%d" % [_entry_wx, _entry_wy]
-	var grid: Dictionary = _world_state.region_grids.get(wk, {})
-	for ck: String in grid:
-		if grid[ck].get("source_wt_key", "") == wt_key:
-			var parts := ck.split(",")
-			return Vector2i(int(parts[0]), int(parts[1]))
-	return Vector2i(-1, -1)
+		# Ensure layout is cached so _find_anchor_tile works for every cell.
+		var lk := "%d,%d" % [rx, ry]
+		if not _layout_cache.has(lk):
+			_layout_cache[lk] = _build_cell_layout(rx, ry)
+
+		# Collect already-assigned NPCs for this cell.
+		var cell_npcs: Array[String] = []
+		if assigned_by_key.has(compound_key):
+			cell_npcs.assign(assigned_by_key[compound_key])
+
+		# Assign workers whose work_cell_id points here.
+		if source_wt_key != "" and workers_by_cell.has(source_wt_key):
+			for pid: String in (workers_by_cell[source_wt_key] as Array):
+				var npc: PersonState = _world_state.characters[pid]
+				npc.home_rc_key    = compound_key
+				npc.location["lx"] = -1
+				npc.location["ly"] = -1
+				npc.location["rx"] = -1
+				npc.location["ry"] = -1
+				cell_npcs.append(pid)
+			workers_by_cell.erase(source_wt_key)
+
+		# Assign residents up to housing_cap.
+		if housing_cap > 0 and residents_by_bid.has(bid):
+			var residents_placed: int = 0
+			for pid: String in cell_npcs:
+				if (_world_state.characters[pid] as PersonState).active_role == "resident":
+					residents_placed += 1
+			var pool: Array = residents_by_bid[bid]
+			var give: int = mini(housing_cap - residents_placed, pool.size())
+			for i: int in give:
+				var pid: String = pool[i]
+				var npc: PersonState = _world_state.characters[pid]
+				npc.home_rc_key    = compound_key
+				npc.location["lx"] = -1
+				npc.location["ly"] = -1
+				npc.location["rx"] = -1
+				npc.location["ry"] = -1
+				cell_npcs.append(pid)
+			if give >= pool.size():
+				residents_by_bid.erase(bid)
+			else:
+				residents_by_bid[bid] = pool.slice(give)
+
+		# Place / refresh every NPC in this cell — no two may share the same tile.
+		# Seed occupied set from NPCs already placed in a previous session.
+		var occupied: Array[Vector2i] = []
+		for pid: String in cell_npcs:
+			var npc: PersonState = _world_state.characters[pid]
+			if npc.location.get("lx", -1) >= 0 and npc.location.get("rx", -1) >= 0:
+				occupied.append(Vector2i(npc.location["lx"], npc.location["ly"]))
+		for pid: String in cell_npcs:
+			var npc: PersonState = _world_state.characters[pid]
+			if npc.location.get("lx", -1) < 0 or npc.location.get("rx", -1) < 0:
+				var tile_pos := _find_anchor_tile(rx, ry, npc.active_role, npc.schedule_state, occupied)
+				npc.location["lx"]   = tile_pos.x
+				npc.location["ly"]   = tile_pos.y
+				npc.location["rx"]   = rx
+				npc.location["ry"]   = ry
+				npc.location["wt_x"] = _entry_wx
+				npc.location["wt_y"] = _entry_wy
+				occupied.append(tile_pos)
+			_create_npc_pawn(pid, npc)
 
 
 ## Find a role/schedule-appropriate walkable tile in the given region cell's layout.
-## offset spreads multiple NPCs with the same role across available candidates.
-func _find_anchor_tile(rx: int, ry: int, role: String, schedule: String, offset: int = 0) -> Vector2i:
+## excluded is the set of Vector2i positions already taken by other NPCs this session.
+func _find_anchor_tile(rx: int, ry: int, role: String, schedule: String, excluded: Array[Vector2i] = []) -> Vector2i:
 	var preferred: Array[String] = []
 	if schedule == "resting":
 		preferred = ["b"]
@@ -884,31 +962,35 @@ func _find_anchor_tile(rx: int, ry: int, role: String, schedule: String, offset:
 		for tx: int in range(GRID_W):
 			var ch := _get_cell_char(rx, ry, tx, ty)
 			var def: Array = TILE_DEFS.get(ch, TILE_FALLBACK)
-			if def[1] and ch in preferred:
+			if def[1] and ch in preferred and not Vector2i(tx, ty) in excluded:
 				candidates.append(Vector2i(tx, ty))
 
 	if candidates.is_empty():
 		for ty2: int in range(GRID_H):
 			for tx2: int in range(GRID_W):
 				var def2: Array = TILE_DEFS.get(_get_cell_char(rx, ry, tx2, ty2), TILE_FALLBACK)
-				if def2[1]:
+				if def2[1] and not Vector2i(tx2, ty2) in excluded:
 					candidates.append(Vector2i(tx2, ty2))
+
+	# Final fallback: ignore exclusions entirely if the cell is packed full.
+	if candidates.is_empty():
+		for ty3: int in range(GRID_H):
+			for tx3: int in range(GRID_W):
+				var def3: Array = TILE_DEFS.get(_get_cell_char(rx, ry, tx3, ty3), TILE_FALLBACK)
+				if def3[1]:
+					candidates.append(Vector2i(tx3, ty3))
 
 	if candidates.is_empty():
 		return Vector2i(GRID_W >> 1, GRID_H >> 1)
 
 	# Sort by Manhattan distance from the cell centre so NPCs spawn near the
-	# player's entry point rather than clustering at row 0 (row-major order).
+	# middle of the building rather than clustering at row 0 (row-major order).
 	var cx := GRID_W >> 1
 	var cy := GRID_H >> 1
 	candidates.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
 		return (absi(a.x - cx) + absi(a.y - cy)) < (absi(b.x - cx) + absi(b.y - cy)))
 
-	# Use a prime stride so successive offsets spread across the whole list
-	# rather than bunching consecutively.
-	@warning_ignore("integer_division")
-	var stride: int = maxi(1, candidates.size() / 7)
-	return candidates[(offset * stride) % candidates.size()]
+	return candidates[0]
 
 
 ## Instantiate a coloured pawn node for one NPC.

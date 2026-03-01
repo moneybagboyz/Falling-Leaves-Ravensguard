@@ -27,16 +27,7 @@ class_name CombatView
 extends Control
 
 # ── Constants ─────────────────────────────────────────────────────────────────
-const CELL_PX:       int = 24   # pixel size per tile cell
-const MAP_COLS:      int = 25
-const MAP_ROWS:      int = 25
-const SIDEBAR_W:     int = 260
-
-const COLOR_PLAYER:  Color = Color(0.30, 0.80, 1.00)
-const COLOR_ENEMY:   Color = Color(1.00, 0.30, 0.30)
-const COLOR_DEAD:    Color = Color(0.35, 0.35, 0.35)
-const COLOR_GROUND:  Color = Color(0.10, 0.12, 0.10)
-const COLOR_CELL_BG: Color = Color(0.08, 0.10, 0.08)
+const SIDEBAR_W: int = 260
 
 # ── State ─────────────────────────────────────────────────────────────────────
 var _world_state:       WorldState  = null
@@ -45,20 +36,20 @@ var _selected_fid:      String      = ""   # formation currently selected in sid
 var _order_for_fid:     Dictionary  = {}   # formation_id → order string (planned this turn)
 
 # ── UI ────────────────────────────────────────────────────────────────────────
-var _phase_label:    Label         = null
-var _turn_label:     Label         = null
-var _confirm_btn:    Button        = null
+var _phase_label:    Label          = null
+var _turn_label:     Label          = null
+var _confirm_btn:    Button         = null
 var _result_panel:   PanelContainer = null
 
 # Sidebar formation buttons (formation_id → Button)
-var _formation_btns: Dictionary    = {}
+var _formation_btns: Dictionary     = {}
 
 # Order dropdown and target label
-var _order_option:   OptionButton  = null
-var _detail_label:   Label         = null
+var _order_option:   OptionButton   = null
+var _detail_label:   Label          = null
 
-# Map grid: row × col → Label
-var _map_cells:      Array         = []   # Array[Array[Label]]
+# Canvas map renderer (replaces Label grid).
+var _map_canvas:     CombatMapCanvas = null
 
 # ── Lifecycle ─────────────────────────────────────────────────────────────────
 func _ready() -> void:
@@ -221,30 +212,14 @@ func _make_map_panel() -> Control:
 	map_hdr.modulate = Color(0.6, 0.6, 0.6)
 	top_bar.add_child(map_hdr)
 
-	# Grid scroll.
+	# Canvas-based map renderer.
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.size_flags_vertical   = Control.SIZE_EXPAND_FILL
 	outer.add_child(scroll)
 
-	var grid := GridContainer.new()
-	grid.columns = MAP_COLS
-	scroll.add_child(grid)
-
-	_map_cells.clear()
-	for row: int in range(MAP_ROWS):
-		var row_arr: Array = []
-		for col: int in range(MAP_COLS):
-			var lbl := Label.new()
-			lbl.custom_minimum_size = Vector2(CELL_PX, CELL_PX)
-			lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			lbl.vertical_alignment   = VERTICAL_ALIGNMENT_CENTER
-			lbl.add_theme_font_size_override("font_size", 9)
-			lbl.modulate = Color(0.15, 0.15, 0.15)
-			lbl.text     = "·"
-			grid.add_child(lbl)
-			row_arr.append(lbl)
-		_map_cells.append(row_arr)
+	_map_canvas = CombatMapCanvas.new()
+	scroll.add_child(_map_canvas)
 
 	return outer
 
@@ -350,58 +325,8 @@ func _find_node_by_name(root: Node, target: String) -> Node:
 
 
 func _refresh_map() -> void:
-	if _battle == null:
-		return
-	# Reset all cells.
-	for row: int in range(MAP_ROWS):
-		for col: int in range(MAP_COLS):
-			var lbl: Label = _map_cells[row][col]
-			lbl.text    = "·"
-			lbl.modulate = Color(0.18, 0.18, 0.18)
-
-	# Draw formations at their anchor_pos.
-	for fid: String in _battle.formations:
-		var f: FormationState = _battle.formations[fid]
-		var pos: Vector2i = f.anchor_pos
-		if pos.y < 0 or pos.y >= MAP_ROWS or pos.x < 0 or pos.x >= MAP_COLS:
-			continue
-		var lbl: Label = _map_cells[pos.y][pos.x]
-		var is_selected: bool = fid == _selected_fid
-		var alive: int = _count_alive(f)
-		if alive == 0:
-			lbl.text    = "✕"
-			lbl.modulate = COLOR_DEAD
-		elif f.team_id == "player":
-			lbl.text    = "★" if is_selected else "P"
-			lbl.modulate = Color(1.0, 1.0, 0.2) if is_selected else COLOR_PLAYER
-		else:
-			lbl.text    = "E"
-			lbl.modulate = COLOR_ENEMY
-
-	# Draw individual combatants (small dots) if their tile differs from anchor.
-	for cid: String in _battle.combatants:
-		var c: CombatantState = _battle.combatants[cid]
-		var pos: Vector2i = c.tile_pos
-		if pos.y < 0 or pos.y >= MAP_ROWS or pos.x < 0 or pos.x >= MAP_COLS:
-			continue
-		# Skip if already drawn by formation anchor at same position.
-		var skip: bool = false
-		for fid: String in _battle.formations:
-			if _battle.formations[fid].anchor_pos == pos:
-				skip = true
-				break
-		if skip:
-			continue
-		var lbl: Label = _map_cells[pos.y][pos.x]
-		if c.is_dead:
-			lbl.text    = "x"
-			lbl.modulate = COLOR_DEAD
-		elif c.team_id == "player":
-			lbl.text    = "p"
-			lbl.modulate = COLOR_PLAYER
-		else:
-			lbl.text    = "e"
-			lbl.modulate = COLOR_ENEMY
+	if _map_canvas != null:
+		_map_canvas.refresh(_battle, _selected_fid)
 
 
 # ── Interaction ───────────────────────────────────────────────────────────────

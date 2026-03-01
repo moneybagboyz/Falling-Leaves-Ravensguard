@@ -1,0 +1,44 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "BodyPlan",
+  "description": "Anatomical layout for a creature type. Defines which body zones exist, their hit probability weights, and the organ roster. Referenced by CombatantState.body_plan_id.",
+  "type": "object",
+  "required": ["id", "name", "zones"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "id":    { "type": "string", "description": "Unique identifier, e.g. 'human', 'wolf', 'skeleton'." },
+    "name":  { "type": "string" },
+    "description": { "type": "string" },
+    "zones": {
+      "type": "array",
+      "description": "Ordered list of body zone references with per-creature hit weights. Hit weights are normalised at runtime.",
+      "items": {
+        "type": "object",
+        "required": ["zone_id", "hit_weight"],
+        "additionalProperties": false,
+        "properties": {
+          "zone_id":    { "type": "string" },
+          "hit_weight": { "type": "number", "minimum": 0 }
+        }
+      }
+    },
+    "organs": {
+      "type": "array",
+      "description": "Organs present in this body plan. Each organ is referenced by organ_id in tissue_layers.",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "vital"],
+        "additionalProperties": false,
+        "properties": {
+          "id":    { "type": "string" },
+          "name":  { "type": "string" },
+          "vital": {
+            "type": "boolean",
+            "description": "If true, damage to this organ triggers an immediate death effect."
+          }
+        }
+      }
+    }
+  }
+}

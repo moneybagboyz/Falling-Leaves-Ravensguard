@@ -15,5 +15,7 @@
     "spear_fighting": 1,
     "survival": 2
   },
-  "narrative_tags": ["combat", "military", "dangerous_start"]
+  "narrative_tags": ["combat", "military", "dangerous_start"],
+  "starting_coin": 20,
+  "starting_items": ["short_sword", "gambeson"]
 }

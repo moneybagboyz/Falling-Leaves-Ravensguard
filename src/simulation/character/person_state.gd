@@ -59,6 +59,11 @@ var skills: Dictionary = {}
 ## phase3: kept as empty dict; NeedsComponent uses 'needs' below.
 var body_state: Dictionary = {}
 
+## Anatomical body plan for this character. Determines which zones exist,
+## hit weights, and organ roster. Default "human" for all human characters.
+## Set at character creation; never changes except for transformation/undead.
+var body_plan_id: String = "human"
+
 # ── Tactical combat state ─────────────────────────────────────────────────────
 ## Stamina: fast tactical resource consumed by attacks; recovers each WEGO turn.
 ## 1.0 = fresh, 0.0 = exhausted. Separate from needs.fatigue (strategic drain).
@@ -97,6 +102,10 @@ var reputation: Dictionary = {}
 ## EntityRegistry IDs of owned buildings/assets.
 var ownership_refs: Array[String] = []
 
+## IDs of NPCs currently following (employed by) this character.
+## Each entry must also be a key in WorldState.characters.
+var follower_ids: Array[String] = []
+
 ## Personal coin balance (earned from wages, trade, etc.).
 var coin: float = 0.0
 
@@ -109,6 +118,11 @@ var shelter_status: String = ""
 
 ## cell_id of the labor slot building (if active_role is set).
 var work_cell_id: String = ""
+
+## Compound region-cell key this NPC is permanently assigned to.
+## Format: "wt_x,wt_y:rx,ry"  (e.g. "14,22:130,132").
+## Empty = not yet assigned; set lazily on first LocalView visit.
+var home_rc_key: String = ""
 
 ## Full positional location — same schema as WorldState.player_location.
 ## wt_x/wt_y: world-tile coordinates. -1 = not yet placed.
@@ -206,15 +220,18 @@ func to_dict() -> Dictionary:
 		"traits":              traits.duplicate(),
 		"skills":              skills.duplicate(true),
 		"body_state":          body_state.duplicate(true),
+		"body_plan_id":        body_plan_id,
 		"needs":               needs.duplicate(),
 		"social_links":        social_links.duplicate(true),
 		"reputation":          reputation.duplicate(),
 		"ownership_refs":      ownership_refs.duplicate(),
+		"follower_ids":        follower_ids.duplicate(),
 		"coin":                coin,
 		"active_role":         active_role,
 		"shelter_status":      shelter_status,
 		"work_cell_id":        work_cell_id,
 		"home_building_id":    home_building_id,
+		"home_rc_key":         home_rc_key,
 		"location":            location.duplicate(),
 		"schedule_state":      schedule_state,
 		"pending_perk_unlocks": pending_perk_unlocks.duplicate(true),
@@ -239,17 +256,20 @@ static func from_dict(d: Dictionary) -> PersonState:
 	p.traits.assign(d.get("traits", []))
 	p.skills              = d.get("skills",         {}).duplicate(true)
 	p.body_state          = d.get("body_state",     {}).duplicate(true)
+	p.body_plan_id        = d.get("body_plan_id",   "human")
 	p.needs               = d.get("needs", {
 		"hunger": 0.0, "fatigue": 0.0, "temperature_stress": 0.0,
 	}).duplicate()
 	p.social_links        = d.get("social_links",   []).duplicate(true)
 	p.reputation          = d.get("reputation",     {}).duplicate()
 	p.ownership_refs.assign(d.get("ownership_refs", []))
+	p.follower_ids.assign(d.get("follower_ids",   []))
 	p.coin                = float(d.get("coin", 0.0))
 	p.active_role         = d.get("active_role",         "")
 	p.shelter_status      = d.get("shelter_status",      "")
 	p.work_cell_id        = d.get("work_cell_id",        "")
 	p.home_building_id    = d.get("home_building_id",    "")
+	p.home_rc_key         = d.get("home_rc_key",         "")
 	p.location            = d.get("location", {
 		"wt_x": -1, "wt_y": -1, "rx": -1, "ry": -1, "lx": -1, "ly": -1, "z_level": 0,
 	}).duplicate()
