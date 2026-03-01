@@ -13,7 +13,7 @@ class_name SettlementView
 extends Control
 
 # ── Layout constants ───────────────────────────────────────────────────────────
-const CELL_SIZE        := 64
+const ZOOM_STEPS: Array[int] = [32, 48, 64, 80, 96]
 const PANEL_W          := 260
 ## Cells visible in each direction from the player (viewport = 2R+1 square).
 const VIEWPORT_RADIUS  := 8
@@ -68,11 +68,16 @@ var _player_ry: int = SubRegionGenerator.CY
 ## Current z-level: 0 = ground, 1 = upper, -1 = cellar.
 var _current_z: int = 0
 
+## Zoom: current tile pixel size and index into ZOOM_STEPS.
+var _cell_px:  int = 64
+var _zoom_idx: int = 2
+
 ## Flat arrays of the (2R+1)² viewport tile nodes, row-major (slot_y * dim + slot_x).
 var _viewport_rects:  Array = []
 var _viewport_labels: Array = []
 
 # ── Node refs (built in _ready) ────────────────────────────────────────────────
+var _clip_box:    Control     = null   ## Clipping container for the map area
 var _map_area:    Control     = null   ## Container that holds tile rects and the pawn
 var _player_rect: ColorRect  = null    ## Player pawn visual
 var _cursor_rect: ColorRect  = null    ## Yellow highlight on player's cell
@@ -183,6 +188,12 @@ func _input(event: InputEvent) -> void:
 			KEY_ENTER, KEY_KP_ENTER:
 				if _interact_btn != null and _interact_btn.visible:
 					_on_interact_pressed()
+			KEY_EQUAL, KEY_KP_ADD:
+				_change_zoom(1)
+				get_viewport().set_input_as_handled()
+			KEY_MINUS, KEY_KP_SUBTRACT:
+				_change_zoom(-1)
+				get_viewport().set_input_as_handled()
 
 
 # ── UI construction ─────────────────────────────────────────────────────────────
@@ -256,7 +267,7 @@ func _build_ui() -> void:
 	panel_vbox.add_child(_make_sep())
 
 	var hint := Label.new()
-	hint.text = "WASD/Arrows = move\nDiagonals: Q E Z C\nPgUp/PgDn = floor\nF/T = talk  ↵ = interact\nEsc = back to world"
+	hint.text = "WASD/Arrows = move\nDiagonals: Q E Z C\nPgUp/PgDn = floor\nF/T = talk  ↵ = interact\n+/- = zoom  Esc = back"
 	hint.add_theme_color_override("font_color", COLOR_DIM)
 	hint.add_theme_font_size_override("font_size", 10)
 	panel_vbox.add_child(hint)
@@ -288,22 +299,17 @@ func _build_ui() -> void:
 	_interact_btn.pressed.connect(_on_interact_pressed)
 	panel_vbox.add_child(_interact_btn)
 
-	# ── Right: fixed-size viewport clip box ───────────────────────────────
-	# The player is always centred; no scrolling is needed.
-	var dim := 2 * VIEWPORT_RADIUS + 1
-	var vp_px := dim * CELL_SIZE
-
-	var clip_box := Control.new()
-	clip_box.clip_contents = true
-	clip_box.custom_minimum_size = Vector2(vp_px, vp_px)
-	clip_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	clip_box.size_flags_vertical   = Control.SIZE_EXPAND_FILL
-	hbox.add_child(clip_box)
+	# ── Right: dynamic-size viewport clip box ───────────────────────────────
+	# The player is always centred; tile size is driven by _cell_px.
+	_clip_box = Control.new()
+	_clip_box.clip_contents = true
+	_clip_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_clip_box.size_flags_vertical   = Control.SIZE_EXPAND_FILL
+	hbox.add_child(_clip_box)
 
 	_map_area = Control.new()
 	_map_area.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_map_area.custom_minimum_size = Vector2(vp_px, vp_px)
-	clip_box.add_child(_map_area)
+	_clip_box.add_child(_map_area)
 
 	_build_dialogue_panel()
 
@@ -355,23 +361,43 @@ func _make_sep() -> HSeparator:
 
 
 # ── Map rendering ─────────────────────────────────────────────────────────────
+## Tear down and recreate all tile nodes at the new _cell_px size.
+func _rebuild_grid() -> void:
+	# Free all existing tile + pawn nodes.
+	for child in _map_area.get_children():
+		child.queue_free()
+	_viewport_rects.clear()
+	_viewport_labels.clear()
+	_cursor_rect = null
+	_player_rect = null
+	_render_cells()
+	_update_viewport_content()
+	_update_pawn_visual()
+
+
+func _change_zoom(delta: int) -> void:
+	_zoom_idx = clamp(_zoom_idx + delta, 0, ZOOM_STEPS.size() - 1)
+	_cell_px   = ZOOM_STEPS[_zoom_idx]
+	_rebuild_grid()
+
+
 func _render_cells() -> void:
 	_viewport_rects.clear()
 	_viewport_labels.clear()
 
-	# Build a fixed (2R+1)² grid of ColorRect nodes at stable pixel positions.
+	# Build a (2R+1)² grid of ColorRect nodes sized by _cell_px.
 	# Content is set by _update_viewport_content() once player position is known.
 	var dim := 2 * VIEWPORT_RADIUS + 1
-	_map_area.custom_minimum_size = Vector2(dim * CELL_SIZE, dim * CELL_SIZE)
+	_map_area.custom_minimum_size = Vector2(dim * _cell_px, dim * _cell_px)
 
 	for slot_y: int in range(dim):
 		for slot_x: int in range(dim):
-			var px := slot_x * CELL_SIZE
-			var py := slot_y * CELL_SIZE
+			var px := slot_x * _cell_px
+			var py := slot_y * _cell_px
 
 			var rect := ColorRect.new()
 			rect.position = Vector2(px + 1, py + 1)
-			rect.size     = Vector2(CELL_SIZE - 2, CELL_SIZE - 2)
+			rect.size     = Vector2(_cell_px - 2, _cell_px - 2)
 			rect.color    = Color(0.08, 0.08, 0.10)  # default void colour
 			_map_area.add_child(rect)
 			_viewport_rects.append(rect)
@@ -381,13 +407,13 @@ func _render_cells() -> void:
 			lbl.add_theme_font_size_override("font_size", 9)
 			lbl.add_theme_color_override("font_color", Color(0, 0, 0, 0.7))
 			lbl.position = Vector2(2, 2)
-			lbl.size     = Vector2(CELL_SIZE - 4, CELL_SIZE - 4)
+			lbl.size     = Vector2(_cell_px - 4, _cell_px - 4)
 			rect.add_child(lbl)
 			_viewport_labels.append(lbl)
 
 	# Cursor rect (yellow highlight on player's tile) — above cells, below pawn
 	_cursor_rect = ColorRect.new()
-	_cursor_rect.size    = Vector2(CELL_SIZE - 2, CELL_SIZE - 2)
+	_cursor_rect.size    = Vector2(_cell_px - 2, _cell_px - 2)
 	_cursor_rect.color   = COLOR_CURSOR
 	_cursor_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_map_area.add_child(_cursor_rect)
@@ -662,11 +688,11 @@ func _update_pawn_visual() -> void:
 	if _player_rect == null or _cursor_rect == null:
 		return
 	# Player pawn always sits at the centre slot of the viewport grid.
-	var cx := VIEWPORT_RADIUS * CELL_SIZE
-	var cy := VIEWPORT_RADIUS * CELL_SIZE
+	var cx := VIEWPORT_RADIUS * _cell_px
+	var cy := VIEWPORT_RADIUS * _cell_px
 	_player_rect.position = Vector2(
-		cx + (CELL_SIZE - 24) / 2.0,
-		cy + (CELL_SIZE - 24) / 2.0
+		cx + (_cell_px - 24) / 2.0,
+		cy + (_cell_px - 24) / 2.0
 	)
 	_cursor_rect.position = Vector2(cx + 1, cy + 1)
 
