@@ -1111,14 +1111,16 @@ func _build_cell_layout(rx: int, ry: int) -> Array:
 	var bid := _cell_building_id(rx, ry)
 	var layout: Array = []
 	if bid != "open_land":
-		var path := "res://data/local_layouts/%s.json" % bid
+		var path := "res://data/buildings/%s.json" % bid
 		if ResourceLoader.exists(path):
 			var f := FileAccess.open(path, FileAccess.READ)
 			if f != null:
 				var parsed = JSON.parse_string(f.get_as_text())
 				f.close()
-				if parsed is Array:
-					layout = parsed
+				if parsed is Dictionary:
+					var ll = parsed.get("local_layout", [])
+					if ll is Array:
+						layout = ll
 	if layout.is_empty():
 		var wk: String = "%d,%d" % [_entry_wx, _entry_wy]
 		var grid: Dictionary = {}
