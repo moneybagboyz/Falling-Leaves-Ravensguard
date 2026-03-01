@@ -1,12 +1,13 @@
-## LocalView — interior view for buildings that define a local_layout grid.
+## LocalView — seamless local-tile view of the world at building interior scale.
 ##
 ## Entered via SceneManager.push_scene("res://src/ui/local_view/local_view.tscn",
-##   { "building_id": String, "entry_wx": int, "entry_wy": int })
+##   { "entry_wx": int, "entry_wy": int, "entry_rx": int, "entry_ry": int,
+##     "settlement_id": String })
 ## Exits back to SettlementView via SceneManager.pop_scene() (Esc key or door).
 ##
-## Renders the 25 × 25 tile grid stored in the building JSON field
-## "local_layout" as an array of 25 single-char strings (one per row).
-## No art assets — flat colour tiles with single-char labels.
+## The viewport fills the available map area. Adjacent buildings are always
+## visible — no chunk switching. + / - keys zoom; the tile count adjusts to
+## always fill the screen with the player centred.
 ##
 ## P4-10 inventory / equipment sidebar:
 ##   'x' chest tile → [↵] opens inventory panel  (also [I] / [Tab] to toggle)
@@ -16,9 +17,11 @@ class_name LocalView
 extends Control
 
 # ── Layout constants ─────────────────────────────────────────────────────────
+## Size of each building cell's local layout, in tiles. Never changes.
 const GRID_W      := 25
 const GRID_H      := 25
-const TILE_SIZE   := 28          ## pixels per tile  (25 * 28 = 700 px)
+## Zoom steps — pixels per tile.
+const ZOOM_STEPS: Array[int] = [8, 12, 16, 24, 28, 32, 40, 48]
 const PANEL_W     := 230
 const INV_PANEL_W := 230
 
@@ -64,8 +67,14 @@ var _entry_wy:     int         = 0
 var _building_def: Dictionary  = {}
 var _world_state:  WorldState  = null
 
-var _player_lx: int = 12   ## local X within the 25×25 grid
+var _player_lx: int = 12   ## local X within the 25×25 layout of the current region cell
 var _player_ly: int = 12   ## local Y
+
+## Pixels per tile — the zoom level. Changed by + / - keys.
+var _tile_px:  int = 28
+## Tile columns / rows currently rendered (recomputed from map area size ÷ _tile_px).
+var _map_cols: int = 0
+var _map_rows: int = 0
 
 ## Context tag for the single action button.
 ## "exit_building" | "open_chest" | "stairs_up" | "stairs_down" | ""
@@ -95,10 +104,11 @@ var _settlement_id: String    = ""
 ## Reality bubble — person_id → ColorRect pawn for each local NPC.
 var _npc_rects:    Dictionary = {}
 
-## Sliding-window: region cell the player is currently in (0..249 within world tile).
+## Region cell the player is currently in (0..249 within world tile).
 var _reg_rx: int = 125
 var _reg_ry: int = 125
 ## Layout cache: "rx,ry" → Array[String] (25 rows of 25 chars each).
+## Pre-loaded as a 3×3 neighbourhood; refreshed on every cell boundary crossing.
 var _layout_cache: Dictionary = {}
 
 
@@ -120,12 +130,16 @@ func _ready() -> void:
 	_building_id  = _cell_building_id(_reg_rx, _reg_ry)
 	_building_def = ContentRegistry.get_content("building", _building_id) if _building_id != "" else {}
 
+	# Pre-load neighbourhood so every layout lookup is a cache hit.
+	_preload_neighbourhood(_reg_rx, _reg_ry)
+
 	_build_ui()
-	_build_grid()
 	_place_player_at_entry()
-	_spawn_local_npcs()
 	SimulationClock.tick_completed.connect(_on_local_tick)
 	_refresh_tile_info()
+	# Await one frame so _map_area has a valid size, then build the tile grid.
+	await get_tree().process_frame
+	_rebuild_grid()
 
 
 # ── UI construction ────────────────────────────────────────────────────────────
@@ -194,7 +208,7 @@ func _build_ui() -> void:
 	pvbox.add_child(_make_sep())
 
 	var hint := Label.new()
-	hint.text = "WASD / Arrows = move\nDiagonals: Q E Z C\n↵ Enter = interact\nI / Tab = inventory\nEsc = close / exit"
+	hint.text = "WASD / Arrows = move\nDiagonals: Q E Z C\n↵ Enter = interact\nI / Tab = inventory\n+ / - = zoom\nEsc = close / exit"
 	hint.add_theme_color_override("font_color", COLOR_DIM)
 	hint.add_theme_font_size_override("font_size", 10)
 	pvbox.add_child(hint)
@@ -207,16 +221,20 @@ func _build_ui() -> void:
 	_action_btn.pressed.connect(_on_action_pressed)
 	pvbox.add_child(_action_btn)
 
-	# ── Right: scrollable map area ───────────────────────────────────────────
-	var scroll := ScrollContainer.new()
-	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.size_flags_vertical   = Control.SIZE_EXPAND_FILL
-	hbox.add_child(scroll)
+	# ── Centre: map area fills remaining space ────────────────────────────────
+	var map_clip := Control.new()
+	map_clip.clip_contents         = true
+	map_clip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	map_clip.size_flags_vertical   = Control.SIZE_EXPAND_FILL
+	hbox.add_child(map_clip)
 
 	_map_area = Control.new()
-	_map_area.mouse_filter        = Control.MOUSE_FILTER_IGNORE
-	_map_area.custom_minimum_size = Vector2(GRID_W * TILE_SIZE, GRID_H * TILE_SIZE)
-	scroll.add_child(_map_area)
+	_map_area.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_map_area.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	map_clip.add_child(_map_area)
+
+	# Rebuild tile nodes whenever the map area is resized (e.g. window resize).
+	map_clip.resized.connect(_on_map_area_resized)
 
 	# ── Inventory panel (right, hidden by default) ────────────────────────────
 	_inv_panel = ColorRect.new()
@@ -297,50 +315,97 @@ func _make_sep() -> HSeparator:
 
 
 # ── Grid construction ─────────────────────────────────────────────────────────
-func _build_grid() -> void:
+## Called when the clip container is resized (e.g. window resize or inv panel toggle).
+func _on_map_area_resized() -> void:
+	if _map_area != null and _map_area.size != Vector2.ZERO:
+		_rebuild_grid()
+
+
+## Rebuild tile nodes for the current map area size and _tile_px zoom level.
+## Also re-spawns NPC pawns. Called on entry, zoom change, and window resize.
+func _rebuild_grid() -> void:
+	for r in _tile_rects:
+		if is_instance_valid(r):
+			r.queue_free()
 	_tile_rects.clear()
 	_tile_labels.clear()
+	if _cursor_rect != null and is_instance_valid(_cursor_rect):
+		_cursor_rect.queue_free()
+		_cursor_rect = null
+	if _player_rect != null and is_instance_valid(_player_rect):
+		_player_rect.queue_free()
+		_player_rect = null
+	for rect in _npc_rects.values():
+		if is_instance_valid(rect):
+			rect.queue_free()
+	_npc_rects.clear()
 
-	for ty: int in range(GRID_H):
-		for tx: int in range(GRID_W):
+	if _map_area == null or _map_area.size == Vector2.ZERO:
+		return
+	_map_cols = max(1, int(_map_area.size.x / _tile_px))
+	_map_rows = max(1, int(_map_area.size.y / _tile_px))
+	_build_tile_nodes()
+	_render_viewport()
+	_update_pawn_visual()
+	_spawn_local_npcs()
+
+
+## Instantiate _map_cols × _map_rows ColorRect tile nodes plus cursor and player pawn.
+func _build_tile_nodes() -> void:
+	for ty: int in range(_map_rows):
+		for tx: int in range(_map_cols):
 			var rect := ColorRect.new()
-			rect.position = Vector2(tx * TILE_SIZE + 1, ty * TILE_SIZE + 1)
-			rect.size     = Vector2(TILE_SIZE - 2, TILE_SIZE - 2)
-			rect.color    = Color(0.20, 0.18, 0.16)  ## placeholder, overwritten by _render_viewport
+			rect.position = Vector2(tx * _tile_px + 1, ty * _tile_px + 1)
+			rect.size     = Vector2(_tile_px - 2, _tile_px - 2)
+			rect.color    = Color(0.20, 0.18, 0.16)
 			_map_area.add_child(rect)
 			_tile_rects.append(rect)
 
 			var lbl := Label.new()
 			lbl.text = ""
-			lbl.add_theme_font_size_override("font_size", 9)
+			@warning_ignore("integer_division")
+			lbl.add_theme_font_size_override("font_size", clamp(_tile_px / 3, 7, 13))
 			lbl.add_theme_color_override("font_color", Color(0, 0, 0, 0.55))
 			lbl.position = Vector2(2, 2)
-			lbl.size     = Vector2(TILE_SIZE - 4, TILE_SIZE - 4)
+			lbl.size     = Vector2(_tile_px - 4, _tile_px - 4)
 			rect.add_child(lbl)
 			_tile_labels.append(lbl)
 
-	# Cursor highlight (behind pawn)
+	# Cursor highlight.
 	_cursor_rect = ColorRect.new()
-	_cursor_rect.size        = Vector2(TILE_SIZE - 2, TILE_SIZE - 2)
-	_cursor_rect.color       = COLOR_CURSOR
+	_cursor_rect.size         = Vector2(_tile_px - 2, _tile_px - 2)
+	_cursor_rect.color        = COLOR_CURSOR
 	_cursor_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_map_area.add_child(_cursor_rect)
 
-	# Player pawn
+	# Player pawn.
+	@warning_ignore("integer_division")
+	var pawn_sz: int = maxi(8, _tile_px - 8)
 	_player_rect = ColorRect.new()
-	_player_rect.size        = Vector2(18, 18)
-	_player_rect.color       = COLOR_PLAYER
+	_player_rect.size         = Vector2(pawn_sz, pawn_sz)
+	_player_rect.color        = COLOR_PLAYER
 	_player_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_map_area.add_child(_player_rect)
 
 	var pawn_lbl := Label.new()
 	pawn_lbl.text = "@"
-	pawn_lbl.add_theme_font_size_override("font_size", 12)
+	@warning_ignore("integer_division")
+	pawn_lbl.add_theme_font_size_override("font_size", clamp(_tile_px / 2, 8, 16))
 	pawn_lbl.add_theme_color_override("font_color", Color(0.1, 0.1, 0.1))
 	pawn_lbl.position = Vector2(2, 1)
 	_player_rect.add_child(pawn_lbl)
 
-	_render_viewport()
+
+# ── Zoom ─────────────────────────────────────────────────────────────────────────
+func _zoom(direction: int) -> void:
+	var idx := ZOOM_STEPS.find(_tile_px)
+	if idx == -1: idx = ZOOM_STEPS.find(28)
+	idx = clampi(idx + direction, 0, ZOOM_STEPS.size() - 1)
+	if ZOOM_STEPS[idx] == _tile_px:
+		return
+	_tile_px = ZOOM_STEPS[idx]
+	_preload_neighbourhood(_reg_rx, _reg_ry)
+	_rebuild_grid()
 
 
 # ── Player placement ──────────────────────────────────────────────────────────
@@ -385,6 +450,10 @@ func _input(event: InputEvent) -> void:
 		KEY_ENTER, KEY_KP_ENTER:
 			if _action_btn != null and _action_btn.visible:
 				_on_action_pressed()
+		KEY_EQUAL, KEY_KP_ADD:
+			_zoom(1)
+		KEY_MINUS, KEY_KP_SUBTRACT:
+			_zoom(-1)
 
 
 func _try_move(dx: int, dy: int) -> void:
@@ -412,6 +481,7 @@ func _try_move(dx: int, dy: int) -> void:
 	_player_lx = nx
 	_player_ly = ny
 	if cell_changed:
+		_preload_neighbourhood(_reg_rx, _reg_ry)
 		_building_id  = _cell_building_id(_reg_rx, _reg_ry)
 		_building_def = ContentRegistry.get_content("building", _building_id) if _building_id != "" else {}
 	_render_viewport()
@@ -420,13 +490,17 @@ func _try_move(dx: int, dy: int) -> void:
 
 
 # ── Visual update ─────────────────────────────────────────────────────────────
+## Player pawn is always drawn at the centre of the map area.
 func _update_pawn_visual() -> void:
-	if _player_rect == null or _cursor_rect == null:
+	if _player_rect == null or _cursor_rect == null or _map_cols == 0 or _map_rows == 0:
 		return
-	var px := _player_lx * TILE_SIZE
-	var py := _player_ly * TILE_SIZE
-	_cursor_rect.position  = Vector2(px + 1, py + 1)
-	_player_rect.position  = Vector2(px + (TILE_SIZE - 18) / 2.0, py + (TILE_SIZE - 18) / 2.0)
+	@warning_ignore("integer_division")
+	var cx: int = (_map_cols / 2) * _tile_px
+	@warning_ignore("integer_division")
+	var cy: int = (_map_rows / 2) * _tile_px
+	var pawn_sz: float = _player_rect.size.x
+	_cursor_rect.position = Vector2(cx + 1, cy + 1)
+	_player_rect.position = Vector2(cx + (_tile_px - pawn_sz) / 2.0, cy + (_tile_px - pawn_sz) / 2.0)
 
 
 # ── Info panel ────────────────────────────────────────────────────────────────
@@ -554,9 +628,6 @@ func _item_name(item_id: String) -> String:
 		return wdef.get("name", item_id)
 	return item_id
 
-func _get_tile_char(tx: int, ty: int) -> String:
-	return _get_cell_char(_reg_rx, _reg_ry, tx, ty)
-
 
 func _exit_to_settlement() -> void:
 	# Deactivate reality bubble — disconnect clock and clear local tile positions.
@@ -641,7 +712,18 @@ func _find_anchor_tile(rx: int, ry: int, role: String, schedule: String, offset:
 	if candidates.is_empty():
 		return Vector2i(GRID_W >> 1, GRID_H >> 1)
 
-	return candidates[offset % candidates.size()]
+	# Sort by Manhattan distance from the cell centre so NPCs spawn near the
+	# player's entry point rather than clustering at row 0 (row-major order).
+	var cx := GRID_W >> 1
+	var cy := GRID_H >> 1
+	candidates.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
+		return (absi(a.x - cx) + absi(a.y - cy)) < (absi(b.x - cx) + absi(b.y - cy)))
+
+	# Use a prime stride so successive offsets spread across the whole list
+	# rather than bunching consecutively.
+	@warning_ignore("integer_division")
+	var stride: int = maxi(1, candidates.size() / 7)
+	return candidates[(offset * stride) % candidates.size()]
 
 
 ## Instantiate a coloured pawn node for one NPC.
@@ -649,14 +731,17 @@ func _create_npc_pawn(pid: String, npc: PersonState) -> void:
 	if _map_area == null or npc.local_lx < 0:
 		return
 	var rect := ColorRect.new()
-	rect.size         = Vector2(14, 14)
+	@warning_ignore("integer_division")
+	var pawn_sz: int = maxi(8, _tile_px - 8)
+	rect.size         = Vector2(pawn_sz, pawn_sz)
 	rect.color        = _npc_pawn_color(npc.population_class)
 	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_map_area.add_child(rect)
 	_npc_rects[pid] = rect
 	var lbl := Label.new()
 	lbl.text = npc.active_role.left(1).to_upper() if npc.active_role != "" else "?"
-	lbl.add_theme_font_size_override("font_size", 8)
+	@warning_ignore("integer_division")
+	lbl.add_theme_font_size_override("font_size", clamp(_tile_px / 3, 6, 10))
 	lbl.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 0.9))
 	lbl.position = Vector2(2, 0)
 	rect.add_child(lbl)
@@ -679,16 +764,23 @@ func _refresh_npc_pawn_pos(pid: String, npc: PersonState) -> void:
 	if npc.local_lx < 0 or npc.local_ly < 0 or npc.local_reg_rx < 0:
 		rect.visible = false
 		return
-	# Project NPC absolute position into viewport space (player is always at tile 12,12).
-	var vx: int = (npc.local_reg_rx - _reg_rx) * GRID_W + (npc.local_lx - _player_lx) + 12
-	var vy: int = (npc.local_reg_ry - _reg_ry) * GRID_H + (npc.local_ly - _player_ly) + 12
-	if vx < 0 or vx >= GRID_W or vy < 0 or vy >= GRID_H:
+	# Convert both player and NPC to absolute tile coords, then project to screen.
+	var player_ax := _reg_rx * GRID_W + _player_lx
+	var player_ay := _reg_ry * GRID_H + _player_ly
+	var npc_ax    := npc.local_reg_rx * GRID_W + npc.local_lx
+	var npc_ay    := npc.local_reg_ry * GRID_H + npc.local_ly
+	@warning_ignore("integer_division")
+	var vx: int = _map_cols / 2 + (npc_ax - player_ax)
+	@warning_ignore("integer_division")
+	var vy: int = _map_rows / 2 + (npc_ay - player_ay)
+	if vx < 0 or vx >= _map_cols or vy < 0 or vy >= _map_rows:
 		rect.visible = false
 		return
+	var pawn_sz := rect.size.x
 	rect.visible  = true
 	rect.position = Vector2(
-		vx * TILE_SIZE + (TILE_SIZE - 14) / 2.0 + 3.0,
-		vy * TILE_SIZE + (TILE_SIZE - 14) / 2.0 - 3.0,
+		vx * _tile_px + (_tile_px - pawn_sz) / 2.0,
+		vy * _tile_px + (_tile_px - pawn_sz) / 2.0,
 	)
 
 
@@ -788,7 +880,7 @@ func _refresh_inv_panel() -> void:
 		return
 
 	var player: PersonState     = _get_player()
-	var on_chest: bool          = (_get_tile_char(_player_lx, _player_ly) == "x")
+	var on_chest: bool = (_get_cell_char(_reg_rx, _reg_ry, _player_lx, _player_ly) == "x")
 
 	# ── Chest ──────────────────────────────────────────────────────────────
 	if _chest_hdr != null:
@@ -813,7 +905,7 @@ func _refresh_inv_panel() -> void:
 				_chest_vbox.add_child(row)
 				var lbl := Label.new()
 				lbl.text = "%s \u00d7%d" % [_item_name(iid), counted[iid]] \
-				           if counted[iid] > 1 else _item_name(iid)
+						   if counted[iid] > 1 else _item_name(iid)
 				lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 				lbl.add_theme_font_size_override("font_size", 10)
 				lbl.add_theme_color_override("font_color", COLOR_TEXT)
@@ -940,7 +1032,7 @@ func _unequip_item(slot: String) -> void:
 	_refresh_inv_panel()
 
 
-# ── Sliding-window helpers ────────────────────────────────────────────────────
+# ── Layout helpers ───────────────────────────────────────────────────────────
 
 ## Return the building_id for region cell (rx,ry) in the current world tile.
 func _cell_building_id(rx: int, ry: int) -> String:
@@ -963,11 +1055,17 @@ func _area_label_for_cell(rx: int, ry: int) -> String:
 	var cell: Dictionary = grid.get(ck, {})
 	var bid: String = cell.get("building_id", "")
 	if bid != "" and bid != "open_land":
-		# Try to get the building name from definitions.
-		var bdef: Dictionary = _world_state.building_defs.get(bid, {})
-		var bname: String = bdef.get("name", "")
-		if bname != "":
-			return bname
+		# Load building name from JSON definition file.
+		var bpath := "res://data/buildings/%s.json" % bid
+		if ResourceLoader.exists(bpath):
+			var f := FileAccess.open(bpath, FileAccess.READ)
+			if f != null:
+				var parsed = JSON.parse_string(f.get_as_text())
+				f.close()
+				if parsed is Dictionary:
+					var bname: String = parsed.get("name", "")
+					if bname != "":
+						return bname
 		return bid.replace("_", " ").capitalize()
 	if cell.get("is_road", false):
 		return "Road"
@@ -986,17 +1084,33 @@ func _get_cell_char(rx: int, ry: int, lx: int, ly: int) -> String:
 		return "#"
 	return row[lx]
 
-## Load (or generate and cache) the 25×25 layout for cell (rx, ry).
+## Return the cached 25×25 layout for cell (rx, ry).
+## The 3×3 neighbourhood is always pre-loaded, so this is always a cache hit.
+## Returns an empty array for out-of-range boundary tiles (rendered as '#' walls).
 func _load_cell_layout(rx: int, ry: int) -> Array:
-	var key: String = "%d,%d" % [rx, ry]
-	if _layout_cache.has(key):
-		return _layout_cache[key]
+	return _layout_cache.get("%d,%d" % [rx, ry], [])
 
+## Pre-load the neighbourhood of region cells centred on (rx, ry) into _layout_cache.
+## Radius scales with zoom so cells at the viewport edge are always ready.
+func _preload_neighbourhood(rx: int, ry: int) -> void:
+	@warning_ignore("integer_division")
+	var radius: int = (maxi(1, ceili((_map_cols / 2.0) / GRID_W) + 1)) if _map_cols > 0 else 1
+	for dy: int in range(-radius, radius + 1):
+		for dx: int in range(-radius, radius + 1):
+			var cx := rx + dx
+			var cy := ry + dy
+			if cx < 0 or cy < 0 or cx >= 250 or cy >= 250:
+				continue
+			var key: String = "%d,%d" % [cx, cy]
+			if not _layout_cache.has(key):
+				_layout_cache[key] = _build_cell_layout(cx, cy)
+
+## Build (without caching) the 25×25 layout for region cell (rx, ry).
+## Tries a static JSON file in data/local_layouts/, then falls back to procedural generation.
+func _build_cell_layout(rx: int, ry: int) -> Array:
 	var bid := _cell_building_id(rx, ry)
 	var layout: Array = []
-
 	if bid != "open_land":
-		# Named building — try static JSON.
 		var path := "res://data/local_layouts/%s.json" % bid
 		if ResourceLoader.exists(path):
 			var f := FileAccess.open(path, FileAccess.READ)
@@ -1006,16 +1120,12 @@ func _load_cell_layout(rx: int, ry: int) -> Array:
 				if parsed is Array:
 					layout = parsed
 	if layout.is_empty():
-		# Procedural fallback.
 		var wk: String = "%d,%d" % [_entry_wx, _entry_wy]
 		var grid: Dictionary = {}
 		if _world_state != null:
 			grid = _world_state.region_grids.get(wk, {})
-		var ck: String = key
-		var cell: Dictionary = grid.get(ck, {})
+		var cell: Dictionary = grid.get("%d,%d" % [rx, ry], {})
 		layout = _generate_layout_for_cell(rx, ry, cell, grid)
-
-	_layout_cache[key] = layout
 	return layout
 
 ## Procedurally generate a 25×25 layout for cell (rx, ry) from its cell dict
@@ -1079,27 +1189,32 @@ func _generate_layout_for_cell(rx: int, ry: int, cell: Dictionary, region: Dicti
 		result.append("".join(row))
 	return result
 
-## Redraw the entire 25×25 viewport from the layout cache.
-## Player is always at viewport tile (12, 12); the camera slides around them.
+## Redraw every tile node. Player is always at the centre; the world scrolls around them.
 func _render_viewport() -> void:
-	for i: int in range(GRID_W * GRID_H):
-		var vx: int = i % GRID_W
+	if _map_cols == 0 or _map_rows == 0 or _tile_rects.size() != _map_cols * _map_rows:
+		return
+	@warning_ignore("integer_division")
+	var half_cols: int = _map_cols / 2
+	@warning_ignore("integer_division")
+	var half_rows: int = _map_rows / 2
+	var player_ax := _reg_rx * GRID_W + _player_lx
+	var player_ay := _reg_ry * GRID_H + _player_ly
+	for i: int in range(_map_cols * _map_rows):
+		var vx: int = i % _map_cols
 		@warning_ignore("integer_division")
-		var vy: int = i / GRID_W
-		# Absolute local position this viewport tile corresponds to.
-		var ax: int = _player_lx + (vx - 12)
-		var ay: int = _player_ly + (vy - 12)
-		# Which region cell does this absolute position belong to?
-		var crx: int = _reg_rx + floori(ax / float(GRID_W))
-		var cry: int = _reg_ry + floori(ay / float(GRID_H))
-		var lx: int  = ax - (crx - _reg_rx) * GRID_W
-		var ly: int  = ay - (cry - _reg_ry) * GRID_H
+		var vy: int = i / _map_cols
+		var ax: int = player_ax + (vx - half_cols)
+		var ay: int = player_ay + (vy - half_rows)
+		var crx: int = floori(ax / float(GRID_W))
+		var cry: int = floori(ay / float(GRID_H))
+		var lx: int  = ax - crx * GRID_W
+		var ly: int  = ay - cry * GRID_H
 		var ch: String
-		if crx < 0 or cry < 0 or lx < 0 or ly < 0 or lx >= GRID_W or ly >= GRID_H:
+		if crx < 0 or cry < 0 or crx >= 250 or cry >= 250:
 			ch = "#"
 		else:
 			ch = _get_cell_char(crx, cry, lx, ly)
 		var def: Array = TILE_DEFS.get(ch, TILE_FALLBACK)
 		_tile_rects[i].color = def[0]
 		if _tile_labels[i] != null:
-			_tile_labels[i].text = ch
+			_tile_labels[i].text = ch if _tile_px >= 16 else ""
