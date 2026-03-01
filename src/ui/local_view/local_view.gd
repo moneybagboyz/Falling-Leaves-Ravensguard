@@ -669,13 +669,18 @@ func _spawn_local_npcs() -> void:
 			_create_npc_pawn(pid, npc)
 			continue
 		# First visit — find the region cell that contains the NPC's home building.
+		# Only use the home cell if it's within the visible viewport radius so the
+		# NPC pawn isn't immediately hidden off-screen.
 		var target_rx := _reg_rx
 		var target_ry := _reg_ry
 		if npc.work_cell_id != "":
 			var home_rc := _find_region_cell_for_wt_key(npc.work_cell_id)
 			if home_rc.x >= 0:
-				target_rx = home_rc.x
-				target_ry = home_rc.y
+				@warning_ignore("integer_division")
+				var vis_radius: int = maxi(1, ceili((_map_cols / 2.0) / GRID_W))
+				if absi(home_rc.x - _reg_rx) <= vis_radius and absi(home_rc.y - _reg_ry) <= vis_radius:
+					target_rx = home_rc.x
+					target_ry = home_rc.y
 		var key: String = npc.active_role + "_" + npc.schedule_state
 		var offset: int = role_counters.get(key, 0)
 		role_counters[key] = offset + 1
