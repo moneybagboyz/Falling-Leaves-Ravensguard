@@ -1,0 +1,13 @@
+{
+  "$schema": "../../schemas/material.schema.json",
+  "id": "leather",
+  "name": "Leather",
+  "description": "Tanned animal hide. Flexible and quiet. Good slash resistance, modest pierce resistance, poor against crushing blows.",
+  "category": "leather",
+  "dr_bonus":               { "slash": 1, "pierce": 0, "blunt": 0 },
+  "weapon_momentum_bonus":  0,
+  "edge_retention":         0.7,
+  "durability_mod":         0.8,
+  "weight_mod":             0.7,
+  "value_mod":              0.8
+}

@@ -1,0 +1,23 @@
+{
+  "$schema": "../schemas/armor.schema.json",
+  "id": "wool_tunic",
+  "name": "Wool Tunic",
+  "description": "A thick wool garment worn over the base layer. Modest padding against blunt trauma. Most common civilian torso wear.",
+  "material": "gambeson",
+  "material_id": "cloth",
+  "layer": "clothing",
+  "quality": "standard",
+  "coverage_zones": {
+    "chest":     0.85,
+    "abdomen":   0.80,
+    "left_arm":  0.55,
+    "right_arm": 0.55
+  },
+  "damage_reduction": { "slash": 0, "pierce": 0, "blunt": 1 },
+  "encumbrance": 0.3,
+  "durability": 12,
+  "equip_slot": "torso",
+  "tags": ["common", "clothing"],
+  "weight_kg": 0.7,
+  "value_coin": 2
+}

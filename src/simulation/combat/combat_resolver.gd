@@ -25,6 +25,8 @@ const COHESION_BONUS:   float = 0.10
 const LOW_STAMINA_PENALTY: float = 0.20
 ## Elevation advantage bonus.
 const ELEVATION_BONUS:  float = 0.15
+## Masterwork weapon accuracy bonus.
+const MASTERWORK_HIT_BONUS: float = 0.05
 
 # ── Reach tile distances by class ─────────────────────────────────────────────
 const REACH_DISTANCE: Dictionary = {
@@ -224,6 +226,10 @@ static func _do_attack(
 	if attacker.stamina <= 0.0:
 		hit_chance = 0.0
 
+	# Masterwork weapon bonus.
+	if attacker.get_weapon_data().get("quality", "standard") == "masterwork":
+		hit_chance += MASTERWORK_HIT_BONUS
+
 	# Formation cohesion: any adjacent ally confers bonus.
 	if _has_adjacent_ally(attacker, f, battle, pos_snap):
 		hit_chance += COHESION_BONUS
@@ -251,16 +257,18 @@ static func _do_attack(
 
 		# ── Momentum and damage type ──────────────────────────────────
 		var damage_type: String  = weapon.get("damage_type", "slash")
-		var momentum: float      = float(weapon.get("swing_momentum", 6))
+		# Momentum = swing_momentum × material_bonus × quality_mult.
+		var momentum: float      = attacker.get_effective_weapon_momentum()
 
-		# ── Armor mitigation ──────────────────────────────────────────
-		var armor: Dictionary = target.get_armor_for_zone(zone_id, damage_type)
-		var coverage: float   = float(armor.get("coverage",  0.0))
-		var reduction: float  = float(armor.get("reduction", 0.0))
-
-		# If the hit lands on covered zone, roll whether armor blocks.
-		if coverage > 0.0 and rng.randf() < coverage:
-			momentum = maxf(0.0, momentum - reduction)
+		# ── Layered armor mitigation ─────────────────────────────────
+		# Each layer rolls its coverage independently.
+		# Momentum is reduced by each layer that covers the hit zone.
+		var layers: Array = target.get_layered_armor_for_zone(zone_id, damage_type)
+		for layer_data: Dictionary in layers:
+			var lcov: float = float(layer_data.get("coverage",  0.0))
+			var ldr:  float = float(layer_data.get("reduction", 0.0))
+			if lcov > 0.0 and rng.randf() < lcov:
+				momentum = maxf(0.0, momentum - ldr)
 
 		# ── Wound severity ────────────────────────────────────────────
 		var zone_def: Dictionary = ContentRegistry.get_content("body_zone", zone_id)

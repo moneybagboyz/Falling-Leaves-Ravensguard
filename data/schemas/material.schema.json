@@ -1,0 +1,59 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Material",
+  "description": "Physical material that a weapon or armor piece is made from. Contributes DR bonuses (armor) and momentum bonuses (weapons) on top of the item's base stats.",
+  "type": "object",
+  "required": ["id", "name", "category"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "id":   { "type": "string" },
+    "name": { "type": "string" },
+    "description": { "type": "string" },
+    "category": {
+      "type": "string",
+      "enum": ["textile", "leather", "metal", "wood", "bone", "stone"],
+      "description": "Broad category used by crafting and trade logic."
+    },
+    "dr_bonus": {
+      "type": "object",
+      "description": "Flat DR added to armor made of this material, on top of the item's base damage_reduction values.",
+      "properties": {
+        "slash":  { "type": "number", "minimum": 0 },
+        "pierce": { "type": "number", "minimum": 0 },
+        "blunt":  { "type": "number", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "weapon_momentum_bonus": {
+      "type": "number",
+      "default": 0,
+      "description": "Flat momentum added to weapons made of this material."
+    },
+    "edge_retention": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 2.0,
+      "default": 1.0,
+      "description": "Multiplier on slash/pierce effectiveness per quality step. Steel holds an edge better than iron."
+    },
+    "durability_mod": {
+      "type": "number",
+      "minimum": 0.1,
+      "default": 1.0,
+      "description": "Multiplier on item durability."
+    },
+    "weight_mod": {
+      "type": "number",
+      "minimum": 0.1,
+      "default": 1.0,
+      "description": "Multiplier on item weight_kg."
+    },
+    "value_mod": {
+      "type": "number",
+      "minimum": 0,
+      "default": 1.0,
+      "description": "Multiplier on item base value_coin."
+    }
+  }
+}

@@ -169,7 +169,7 @@ static func _place_settlement(
 ## Bandit camps are never placed on settlement territory.
 static func place_bandit_camps(world_state: WorldState, world_seed: int) -> void:
 	var rng := RandomNumberGenerator.new()
-	rng.seed = world_seed ^ 0xB4ND17
+	rng.seed = world_seed ^ 0xBAD517
 
 	for sid: String in world_state.settlements:
 		var ss: SettlementState = world_state.get_settlement(sid)

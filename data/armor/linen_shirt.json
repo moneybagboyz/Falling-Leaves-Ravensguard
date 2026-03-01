@@ -1,0 +1,23 @@
+{
+  "$schema": "../schemas/armor.schema.json",
+  "id": "linen_shirt",
+  "name": "Linen Shirt",
+  "description": "A loose woven linen undergarment. Provides essentially no protection but reduces chafing under heavier armor and counts as clothing for warmth.",
+  "material": "gambeson",
+  "material_id": "cloth",
+  "layer": "base_layer",
+  "quality": "standard",
+  "coverage_zones": {
+    "chest":     0.95,
+    "abdomen":   0.95,
+    "left_arm":  0.70,
+    "right_arm": 0.70
+  },
+  "damage_reduction": { "slash": 0, "pierce": 0, "blunt": 0 },
+  "encumbrance": 0.1,
+  "durability": 8,
+  "equip_slot": "torso",
+  "tags": ["common", "base_layer"],
+  "weight_kg": 0.3,
+  "value_coin": 1
+}

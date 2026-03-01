@@ -224,29 +224,6 @@ static func generate(
 			for rx: int in range(CX, REGION_W):
 				result["%d,%d" % [rx, CY]]["has_road"] = true
 
-		# ── Inner-city parallel streets (settlement tiles only) ──────────────
-		# Two N-S avenues and two E-W avenues on each side of the main cross,
-		# limited to a district-sized zone around the centre.
-		if ss != null:
-			var street_offsets: Array = [12, 24]
-			const STREET_EXTENT: int = 40   # half-length perpendicular to each street
-			# N-S parallels: vertical lines at CX ± offset
-			for off: int in street_offsets:
-				for dx: int in [-off, off]:
-					var sx: int = CX + dx
-					if sx < 0 or sx >= REGION_W:
-						continue
-					for sry: int in range(maxi(0, CY - STREET_EXTENT), mini(REGION_H, CY + STREET_EXTENT + 1)):
-						result["%d,%d" % [sx, sry]]["has_road"] = true
-			# E-W parallels: horizontal lines at CY ± offset
-			for off: int in street_offsets:
-				for dy: int in [-off, off]:
-					var sy: int = CY + dy
-					if sy < 0 or sy >= REGION_H:
-						continue
-					for srx: int in range(maxi(0, CX - STREET_EXTENT), mini(REGION_W, CX + STREET_EXTENT + 1)):
-						result["%d,%d" % [srx, sy]]["has_road"] = true
-
 	# ── Bridge: clear river water on road cells so roads are always passable ──
 	for ry: int in range(REGION_H):
 		for rx: int in range(REGION_W):
@@ -307,7 +284,9 @@ static func generate(
 		if n > 0:
 			var cols: int     = ceili(sqrt(float(n)))
 			var rows: int     = ceili(float(n) / float(cols))
+			@warning_ignore("INTEGER_DIVISION")
 			var origin_x: int = CX - (cols * PLOT_STEP) / 2
+			@warning_ignore("INTEGER_DIVISION")
 			var origin_y: int = CY - (rows * PLOT_STEP) / 2
 
 			# Build candidate list, skipping any cell the road already occupies.

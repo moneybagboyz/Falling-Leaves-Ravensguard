@@ -3,17 +3,32 @@
   "title": "Armor",
   "description": "Data definition for a piece of armor providing zone coverage in combat.",
   "type": "object",
-  "required": ["id", "name", "material", "coverage_zones", "encumbrance", "durability"],
+  "required": ["id", "name", "material_id", "layer", "coverage_zones", "encumbrance", "durability"],
   "additionalProperties": false,
   "properties": {
     "$schema": { "type": "string" },
     "id":   { "type": "string" },
     "name": { "type": "string" },
     "description": { "type": "string" },
+    "material_id": {
+      "type": "string",
+      "description": "Reference to data/materials/<id>.json. Determines DR bonuses on top of item base stats."
+    },
     "material": {
       "type": "string",
       "enum": ["gambeson", "leather", "mail", "plate"],
-      "description": "Material determines damage-type resistances: gambeson=blunt, leather=slash, mail=pierce+slash, plate=all."
+      "description": "Legacy broad category (kept for backwards compat). Prefer material_id."
+    },
+    "layer": {
+      "type": "string",
+      "enum": ["base_layer", "clothing", "armor", "shield"],
+      "description": "Wear layer. base_layer = innermost (linen shirt); clothing = mid (wool tunic, padded jack); armor = outer protective (mail, plate); shield = held in off-hand."
+    },
+    "quality": {
+      "type": "string",
+      "enum": ["poor", "standard", "fine", "masterwork"],
+      "default": "standard",
+      "description": "Crafting quality. Modifies DR: poor=×0.75, standard=×1.0, fine=×1.25, masterwork=×1.5."
     },
     "coverage_zones": {
       "type": "object",

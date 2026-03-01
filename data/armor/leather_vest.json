@@ -4,6 +4,9 @@
   "name": "Leather Vest",
   "description": "Hardened boiled leather. Better slash resistance than gambeson; lighter than mail.",
   "material": "leather",
+  "material_id": "leather",
+  "layer": "armor",
+  "quality": "standard",
   "coverage_zones": {
     "chest":   0.75,
     "abdomen": 0.60

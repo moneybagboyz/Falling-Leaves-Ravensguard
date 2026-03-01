@@ -3,6 +3,8 @@
   "id": "axe",
   "name": "Hand Axe",
   "description": "A single-headed chopping axe. Brutal slash damage; tears through lighter armor but tires the arm quickly.",
+  "material_id": "iron",
+  "quality": "standard",
   "reach_class": "medium",
   "damage_type": "slash",
   "swing_momentum": 14,

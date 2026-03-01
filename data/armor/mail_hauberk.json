@@ -4,6 +4,9 @@
   "name": "Mail Hauberk",
   "description": "Interlocking iron rings covering torso and arms. Excellent against slashing and piercing; heavy.",
   "material": "mail",
+  "material_id": "iron",
+  "layer": "armor",
+  "quality": "standard",
   "coverage_zones": {
     "chest":     0.90,
     "abdomen":   0.85,

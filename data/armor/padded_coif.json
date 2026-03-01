@@ -1,0 +1,21 @@
+{
+  "$schema": "../schemas/armor.schema.json",
+  "id": "padded_coif",
+  "name": "Padded Coif",
+  "description": "A quilted cloth hood worn under a helm. Dramatically reduces blunt trauma to the skull; required to make a helm fully effective.",
+  "material": "gambeson",
+  "material_id": "cloth",
+  "layer": "clothing",
+  "quality": "standard",
+  "coverage_zones": {
+    "head": 0.85,
+    "neck": 0.50
+  },
+  "damage_reduction": { "slash": 1, "pierce": 0, "blunt": 3 },
+  "encumbrance": 0.4,
+  "durability": 14,
+  "equip_slot": "head",
+  "tags": ["military", "clothing"],
+  "weight_kg": 0.4,
+  "value_coin": 4
+}

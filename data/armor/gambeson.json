@@ -4,6 +4,9 @@
   "name": "Gambeson",
   "description": "A quilted padded garment. Light, quiet, and cheap. Absorbs blunt force well; poor against cutting edges.",
   "material": "gambeson",
+  "material_id": "cloth",
+  "layer": "clothing",
+  "quality": "standard",
   "coverage_zones": {
     "chest":   0.70,
     "abdomen": 0.65,

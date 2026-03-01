@@ -3,6 +3,8 @@
   "id": "club",
   "name": "Club",
   "description": "A heavy wooden bludgeon. Cheap and brutal. Excellent at delivering shock through armor; poor against unarmored targets.",
+  "material_id": "wood",
+  "quality": "standard",
   "reach_class": "medium",
   "damage_type": "blunt",
   "swing_momentum": 12,

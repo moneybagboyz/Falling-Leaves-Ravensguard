@@ -1,0 +1,13 @@
+{
+  "$schema": "../../schemas/material.schema.json",
+  "id": "iron",
+  "name": "Iron",
+  "description": "Smelted iron. Sturdy but heavier than steel, and holds an edge less well. The workhorse metal of most settlements.",
+  "category": "metal",
+  "dr_bonus":               { "slash": 1, "pierce": 1, "blunt": 1 },
+  "weapon_momentum_bonus":  1,
+  "edge_retention":         0.9,
+  "durability_mod":         1.0,
+  "weight_mod":             1.0,
+  "value_mod":              1.5
+}

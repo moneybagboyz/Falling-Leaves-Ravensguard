@@ -10,6 +10,31 @@
 class_name CombatantState
 extends RefCounted
 
+# ── Quality multiplier tables ─────────────────────────────────────────────────
+## DR multiplier per armor quality tier.
+const QUALITY_DR_MULTIPLIER: Dictionary = {
+	"poor":       0.75,
+	"standard":   1.00,
+	"fine":        1.25,
+	"masterwork": 1.50,
+}
+
+## Momentum multiplier per weapon quality tier.
+const QUALITY_MOMENTUM_MULTIPLIER: Dictionary = {
+	"poor":       0.80,
+	"standard":   1.00,
+	"fine":        1.20,
+	"masterwork": 1.50,
+}
+
+## Layer resolution order (outermost = lowest value = resolved first).
+const LAYER_SORT_ORDER: Dictionary = {
+	"shield":     -1,
+	"armor":       0,
+	"clothing":    1,
+	"base_layer":  2,
+}
+
 # ── Identity ──────────────────────────────────────────────────────────────────
 ## Unique ID for this combatant within the battle. Matches the source PersonState.person_id.
 var combatant_id: String = ""
@@ -188,14 +213,38 @@ func get_weapon_data() -> Dictionary:
 		"damage_type": "blunt", "swing_momentum": 3,
 		"thrust_momentum": 2, "attack_speed": 1.2,
 		"stamina_cost": 0.06, "min_skill": 0,
+		"material_id": "", "quality": "standard",
 	}
 
 
-## Returns the combined armor coverage for a given zone and damage type.
-## Returns: { "coverage": float, "reduction": float }
-func get_armor_for_zone(zone_id: String, damage_type: String) -> Dictionary:
-	var best_coverage: float = 0.0
-	var total_reduction: float = 0.0
+## Returns effective swing momentum for the equipped weapon, incorporating
+## material weapon_momentum_bonus and quality multiplier.
+func get_effective_weapon_momentum() -> float:
+	var wdef: Dictionary = get_weapon_data()
+	var base_m: float = float(wdef.get("swing_momentum", 3))
+
+	# Material flat bonus.
+	var mat_id: String = wdef.get("material_id", "")
+	var mat_bonus: float = 0.0
+	if mat_id != "":
+		var mdef: Dictionary = ContentRegistry.get_content("material", mat_id)
+		if not mdef.is_empty():
+			mat_bonus = float(mdef.get("weapon_momentum_bonus", 0.0))
+
+	# Quality multiplier.
+	var quality: String = wdef.get("quality", "standard")
+	var q_mod: float = QUALITY_MOMENTUM_MULTIPLIER.get(quality, 1.0)
+
+	return (base_m + mat_bonus) * q_mod
+
+
+## Returns layered armor data for a given zone and damage type, sorted
+## outermost-first (armor → clothing → base_layer).
+## Each element: { "coverage": float, "reduction": float, "layer": String }
+## The resolver rolls each layer independently and subtracts its reduction
+## from remaining momentum before applying wound thresholds.
+func get_layered_armor_for_zone(zone_id: String, damage_type: String) -> Array:
+	var layers: Array = []
 	for slot: String in equipment_refs:
 		var item_id: String = equipment_refs[slot]
 		var adef: Dictionary = ContentRegistry.get_content("armor", item_id)
@@ -203,11 +252,34 @@ func get_armor_for_zone(zone_id: String, damage_type: String) -> Dictionary:
 			continue
 		var cz: Dictionary = adef.get("coverage_zones", {})
 		var cov: float = float(cz.get(zone_id, 0.0))
-		if cov > best_coverage:
-			best_coverage = cov
+		if cov <= 0.0:
+			continue
+		# Base DR from item definition.
 		var dr: Dictionary = adef.get("damage_reduction", {})
-		total_reduction += float(dr.get(damage_type, 0.0))
-	return { "coverage": best_coverage, "reduction": total_reduction }
+		var base_dr: float = float(dr.get(damage_type, 0.0))
+		# Material DR bonus.
+		var mat_id: String = adef.get("material_id", "")
+		var mat_bonus: float = 0.0
+		if mat_id != "":
+			var mdef: Dictionary = ContentRegistry.get_content("material", mat_id)
+			if not mdef.is_empty():
+				var mdr: Dictionary = mdef.get("dr_bonus", {})
+				mat_bonus = float(mdr.get(damage_type, 0.0))
+		# Quality multiplier.
+		var quality: String = adef.get("quality", "standard")
+		var q_mod: float = QUALITY_DR_MULTIPLIER.get(quality, 1.0)
+		var final_dr: float = (base_dr + mat_bonus) * q_mod
+		var layer: String = adef.get("layer", "armor")
+		layers.append({
+			"coverage":  cov,
+			"reduction": final_dr,
+			"layer":     layer,
+		})
+	# Sort outermost first so momentum passes through outer layers before inner ones.
+	layers.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return LAYER_SORT_ORDER.get(a["layer"], 1) < LAYER_SORT_ORDER.get(b["layer"], 1)
+	)
+	return layers
 
 
 # ── Serialisation ─────────────────────────────────────────────────────────────

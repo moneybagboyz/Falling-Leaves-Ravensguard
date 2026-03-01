@@ -627,6 +627,7 @@ func _trigger_camp_combat(cid: String) -> void:
 
 		var ec := CombatantState.from_person(ep, "enemy", "e_main")
 		var spread_x: int = (i % 5)
+		@warning_ignore("INTEGER_DIVISION")
 		var spread_y: int = (i / 5)
 		ec.tile_pos = Vector2i(10 + spread_x, 19 - spread_y)
 		battle.combatants[ec.combatant_id] = ec

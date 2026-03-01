@@ -10,6 +10,16 @@
     "id":   { "type": "string" },
     "name": { "type": "string" },
     "description": { "type": "string" },
+    "material_id": {
+      "type": "string",
+      "description": "Reference to data/materials/<id>.json. Adds weapon_momentum_bonus and edge_retention to attack calculation."
+    },
+    "quality": {
+      "type": "string",
+      "enum": ["poor", "standard", "fine", "masterwork"],
+      "default": "standard",
+      "description": "Crafting quality. Multiplies effective momentum: poor=\u00d70.80, standard=\u00d71.0, fine=\u00d71.20, masterwork=\u00d71.50. Masterwork also grants +5% hit chance."
+    },
     "reach_class": {
       "type": "string",
       "enum": ["unarmed", "short", "medium", "long", "polearm"],

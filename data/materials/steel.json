@@ -1,0 +1,13 @@
+{
+  "$schema": "../../schemas/material.schema.json",
+  "id": "steel",
+  "name": "Steel",
+  "description": "Carbon steel. Lighter and harder than iron, holds a superior edge, and requires skilled smithing to produce.",
+  "category": "metal",
+  "dr_bonus":               { "slash": 2, "pierce": 2, "blunt": 1 },
+  "weapon_momentum_bonus":  2,
+  "edge_retention":         1.3,
+  "durability_mod":         1.4,
+  "weight_mod":             0.85,
+  "value_mod":              4.0
+}

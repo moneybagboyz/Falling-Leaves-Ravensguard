@@ -3,6 +3,8 @@
   "id": "spear",
   "name": "Spear",
   "description": "A long-shafted thrusting weapon. Superior reach; denies the gap. Weak if the enemy closes in.",
+  "material_id": "iron",
+  "quality": "standard",
   "reach_class": "polearm",
   "damage_type": "pierce",
   "swing_momentum": 5,

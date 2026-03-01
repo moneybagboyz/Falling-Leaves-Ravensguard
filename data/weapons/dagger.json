@@ -3,6 +3,8 @@
   "id": "dagger",
   "name": "Dagger",
   "description": "A short double-edged blade. Fast but limited reach. Effective at piercing gaps in armor.",
+  "material_id": "iron",
+  "quality": "standard",
   "reach_class": "short",
   "damage_type": "pierce",
   "swing_momentum": 4,

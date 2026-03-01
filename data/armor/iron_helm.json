@@ -4,6 +4,9 @@
   "name": "Iron Helm",
   "description": "A simple iron bowl helm. Minimal coverage but significantly reduces lethal head wounds.",
   "material": "plate",
+  "material_id": "iron",
+  "layer": "armor",
+  "quality": "standard",
   "coverage_zones": {
     "head": 0.80
   },

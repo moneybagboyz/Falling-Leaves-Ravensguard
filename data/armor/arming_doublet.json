@@ -1,0 +1,23 @@
+{
+  "$schema": "../schemas/armor.schema.json",
+  "id": "arming_doublet",
+  "name": "Arming Doublet",
+  "description": "A fitted padded garment with gussets at the joints designed specifically to be worn under mail or plate armor. Better coverage than a wool tunic.",
+  "material": "gambeson",
+  "material_id": "cloth",
+  "layer": "clothing",
+  "quality": "standard",
+  "coverage_zones": {
+    "chest":     0.90,
+    "abdomen":   0.85,
+    "left_arm":  0.75,
+    "right_arm": 0.75
+  },
+  "damage_reduction": { "slash": 1, "pierce": 0, "blunt": 2 },
+  "encumbrance": 0.8,
+  "durability": 18,
+  "equip_slot": "torso",
+  "tags": ["military", "clothing"],
+  "weight_kg": 1.2,
+  "value_coin": 8
+}

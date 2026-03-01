@@ -3,6 +3,8 @@
   "id": "short_sword",
   "name": "Short Sword",
   "description": "A versatile one-handed blade. Balanced between slash and thrust. The standard sidearm of soldiers and merchants alike.",
+  "material_id": "iron",
+  "quality": "standard",
   "reach_class": "medium",
   "damage_type": "slash",
   "swing_momentum": 10,

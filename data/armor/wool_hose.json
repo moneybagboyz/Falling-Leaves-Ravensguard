@@ -1,0 +1,21 @@
+{
+  "$schema": "../schemas/armor.schema.json",
+  "id": "wool_hose",
+  "name": "Wool Hose",
+  "description": "Standard wool leg coverings. Worn as a base layer under leather or mail leg armour.",
+  "material": "gambeson",
+  "material_id": "cloth",
+  "layer": "base_layer",
+  "quality": "standard",
+  "coverage_zones": {
+    "left_leg":  0.90,
+    "right_leg": 0.90
+  },
+  "damage_reduction": { "slash": 0, "pierce": 0, "blunt": 0 },
+  "encumbrance": 0.1,
+  "durability": 8,
+  "equip_slot": "legs",
+  "tags": ["common", "base_layer"],
+  "weight_kg": 0.4,
+  "value_coin": 1
+}

@@ -1,0 +1,13 @@
+{
+  "$schema": "../../schemas/material.schema.json",
+  "id": "wood",
+  "name": "Wood",
+  "description": "Hardwood such as ash or oak. Used for weapon hafts, clubs, and staves. Good blunt delivery, poor edge.",
+  "category": "wood",
+  "dr_bonus":               { "slash": 0, "pierce": 0, "blunt": 1 },
+  "weapon_momentum_bonus":  1,
+  "edge_retention":         0.3,
+  "durability_mod":         0.7,
+  "weight_mod":             0.6,
+  "value_mod":              0.2
+}

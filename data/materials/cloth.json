@@ -1,0 +1,13 @@
+{
+  "$schema": "../../schemas/material.schema.json",
+  "id": "cloth",
+  "name": "Cloth",
+  "description": "Woven linen or wool. Provides minimal physical protection but insulates against cold and reduces chafing under heavier armor.",
+  "category": "textile",
+  "dr_bonus":               { "slash": 0, "pierce": 0, "blunt": 0 },
+  "weapon_momentum_bonus":  0,
+  "edge_retention":         0.5,
+  "durability_mod":         0.6,
+  "weight_mod":             0.4,
+  "value_mod":              0.3
+}
