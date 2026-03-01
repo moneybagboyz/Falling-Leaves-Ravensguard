@@ -817,39 +817,50 @@ func _tick_npc_movement(npc: PersonState) -> void:
 			pass  # idle: no movement
 
 
+## Attempt one tile step for an NPC, allowing cell-boundary crossing.
+## Returns true if the step succeeded.
+func _try_step_npc(npc: PersonState, dx: int, dy: int) -> bool:
+	var nx := npc.local_lx + dx
+	var ny := npc.local_ly + dy
+	var nrx := npc.local_reg_rx
+	var nry := npc.local_reg_ry
+	if nx < 0:          nrx -= 1; nx += GRID_W
+	elif nx >= GRID_W:  nrx += 1; nx -= GRID_W
+	if ny < 0:          nry -= 1; ny += GRID_H
+	elif ny >= GRID_H:  nry += 1; ny -= GRID_H
+	if nrx < 0 or nrx >= 250 or nry < 0 or nry >= 250:
+		return false
+	var def: Array = TILE_DEFS.get(_get_cell_char(nrx, nry, nx, ny), TILE_FALLBACK)
+	if def[1]:
+		npc.local_lx     = nx
+		npc.local_ly     = ny
+		npc.local_reg_rx = nrx
+		npc.local_reg_ry = nry
+		return true
+	return false
+
+
 func _step_npc_toward(npc: PersonState, target: Vector2i) -> void:
 	var dx: int = sign(target.x - npc.local_lx)
 	var dy: int = sign(target.y - npc.local_ly)
 	for attempt: Vector2i in [Vector2i(dx, dy), Vector2i(dx, 0), Vector2i(0, dy)]:
 		if attempt == Vector2i.ZERO:
 			continue
-		var nx := npc.local_lx + attempt.x
-		var ny := npc.local_ly + attempt.y
-		if nx >= 0 and nx < GRID_W and ny >= 0 and ny < GRID_H:
-			var def: Array = TILE_DEFS.get(_get_cell_char(npc.local_reg_rx, npc.local_reg_ry, nx, ny), TILE_FALLBACK)
-			if def[1]:
-				npc.local_lx = nx
-				npc.local_ly = ny
-				return
+		if _try_step_npc(npc, attempt.x, attempt.y):
+			return
 
 
 func _wander_npc(npc: PersonState) -> void:
-	## Deterministic direction based on person_id hash XOR tile position.
-	var h: int = npc.person_id.hash() ^ npc.local_lx ^ (npc.local_ly << 5)
+	# XOR with millisecond time so the same NPC doesn't cycle the same path.
+	var h: int = npc.person_id.hash() ^ npc.local_lx ^ (npc.local_ly << 5) ^ Time.get_ticks_msec()
 	var dirs: Array[Vector2i] = [
 		Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1),
 	]
 	var start: int = h & 3
 	for i: int in 4:
 		var d: Vector2i = dirs[(start + i) & 3]
-		var nx := npc.local_lx + d.x
-		var ny := npc.local_ly + d.y
-		if nx >= 0 and nx < GRID_W and ny >= 0 and ny < GRID_H:
-			var def: Array = TILE_DEFS.get(_get_cell_char(npc.local_reg_rx, npc.local_reg_ry, nx, ny), TILE_FALLBACK)
-			if def[1]:
-				npc.local_lx = nx
-				npc.local_ly = ny
-				return
+		if _try_step_npc(npc, d.x, d.y):
+			return
 
 
 func _find_nearest_tile(reg_rx: int, reg_ry: int, ox: int, oy: int, chars: Array[String]) -> Vector2i:
@@ -1055,17 +1066,11 @@ func _area_label_for_cell(rx: int, ry: int) -> String:
 	var cell: Dictionary = grid.get(ck, {})
 	var bid: String = cell.get("building_id", "")
 	if bid != "" and bid != "open_land":
-		# Load building name from JSON definition file.
-		var bpath := "res://data/buildings/%s.json" % bid
-		if ResourceLoader.exists(bpath):
-			var f := FileAccess.open(bpath, FileAccess.READ)
-			if f != null:
-				var parsed = JSON.parse_string(f.get_as_text())
-				f.close()
-				if parsed is Dictionary:
-					var bname: String = parsed.get("name", "")
-					if bname != "":
-						return bname
+		var bdef: Dictionary = ContentRegistry.get_content("building", bid)
+		if not bdef.is_empty():
+			var bname: String = bdef.get("name", "")
+			if bname != "":
+				return bname
 		return bid.replace("_", " ").capitalize()
 	if cell.get("is_road", false):
 		return "Road"
