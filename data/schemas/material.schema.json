@@ -1,9 +1,9 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Material",
-  "description": "Physical material that a weapon or armor piece is made from. Contributes DR bonuses (armor) and momentum bonuses (weapons) on top of the item's base stats.",
+  "description": "Physical material. Weapons and armor reference a material_id; the combat engine reads these properties directly instead of hard-coding damage numbers.",
   "type": "object",
-  "required": ["id", "name", "category"],
+  "required": ["id", "name", "category", "yield_strength", "blunt_transfer"],
   "additionalProperties": false,
   "properties": {
     "$schema": { "type": "string" },
@@ -12,30 +12,36 @@
     "description": { "type": "string" },
     "category": {
       "type": "string",
-      "enum": ["textile", "leather", "metal", "wood", "bone", "stone"],
-      "description": "Broad category used by crafting and trade logic."
+      "enum": ["textile", "leather", "metal", "wood", "bone", "stone"]
     },
-    "dr_bonus": {
-      "type": "object",
-      "description": "Flat DR added to armor made of this material, on top of the item's base damage_reduction values.",
-      "properties": {
-        "slash":  { "type": "number", "minimum": 0 },
-        "pierce": { "type": "number", "minimum": 0 },
-        "blunt":  { "type": "number", "minimum": 0 }
-      },
-      "additionalProperties": false
+    "density_kg_m3": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Physical density in kg/m\u00b3. Used to derive striking_mass from geometry when not overridden on the weapon."
     },
-    "weapon_momentum_bonus": {
+    "yield_strength": {
       "type": "number",
+      "minimum": 0,
+      "description": "Resistance to penetration. Layer resistance = yield_strength \u00d7 thickness_mm. Scale: cloth ~0.03, leather ~0.20, wood ~0.35, iron ~1.0, steel ~1.80."
+    },
+    "shear_strength": {
+      "type": "number",
+      "minimum": 0,
       "default": 0,
-      "description": "Flat momentum added to weapons made of this material."
+      "description": "Additional resistance to slash/pierce specifically (edge weapons exploit this less than blunt). steel ~0.5, leather ~0.25, cloth ~0."
+    },
+    "blunt_transfer": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1.0,
+      "description": "Fraction of momentum that transfers through an un-penetrated layer as concussive shock. cloth=0.95, leather=0.65, mail=0.45, plate=0.20."
     },
     "edge_retention": {
       "type": "number",
       "minimum": 0,
       "maximum": 2.0,
       "default": 1.0,
-      "description": "Multiplier on slash/pierce effectiveness per quality step. Steel holds an edge better than iron."
+      "description": "Multiplier on effective contact_area_cm2 for slash/pierce attacks made from this material. High = blade stays sharp longer per quality tier."
     },
     "durability_mod": {
       "type": "number",

@@ -11,6 +11,7 @@
     "head": 0.85,
     "neck": 0.50
   },
+  "thickness_mm": 5.0,
   "damage_reduction": { "slash": 1, "pierce": 0, "blunt": 3 },
   "encumbrance": 0.4,
   "durability": 14,

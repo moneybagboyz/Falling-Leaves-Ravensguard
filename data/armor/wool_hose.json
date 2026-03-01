@@ -11,6 +11,7 @@
     "left_leg":  0.90,
     "right_leg": 0.90
   },
+  "thickness_mm": 2.0,
   "damage_reduction": { "slash": 0, "pierce": 0, "blunt": 0 },
   "encumbrance": 0.1,
   "durability": 8,

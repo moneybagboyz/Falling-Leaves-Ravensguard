@@ -1,7 +1,7 @@
 {
   "$schema": "../schemas/armor.schema.json",
-  "id": "iron_helm",
-  "name": "Iron Helm",
+  "id": "helm",
+  "name": "Helm",
   "description": "A simple iron bowl helm. Minimal coverage but significantly reduces lethal head wounds.",
   "material": "plate",
   "material_id": "iron",
@@ -10,6 +10,7 @@
   "coverage_zones": {
     "head": 0.80
   },
+  "thickness_mm": 4.0,
   "damage_reduction": { "slash": 5, "pierce": 4, "blunt": 5 },
   "encumbrance": 1.5,
   "durability": 25,

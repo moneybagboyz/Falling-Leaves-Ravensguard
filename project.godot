@@ -11,15 +11,9 @@ config_version=5
 [application]
 
 config/name="Ravensguard"
+run/main_scene="res://src/ui/main_menu/main_menu_screen.tscn"
 config/features=PackedStringArray("4.5", "Forward Plus")
 config/icon="res://icon.svg"
-run/main_scene="res://src/ui/main_menu/main_menu_screen.tscn"
-
-[display]
-
-window/size/viewport_width=1400
-window/size/viewport_height=900
-window/size/resizable=true
 
 [autoload]
 
@@ -33,3 +27,8 @@ SaveManager="*res://src/core/save/save_manager.gd"
 TickScheduler="*res://src/core/time/tick_scheduler.gd"
 Bootstrap="*res://src/main/bootstrap.gd"
 SceneManager="*res://src/core/scene_manager.gd"
+
+[display]
+
+window/size/viewport_width=1400
+window/size/viewport_height=900

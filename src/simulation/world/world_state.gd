@@ -29,6 +29,12 @@ var world_tiles: Dictionary = {}
 ## Populated on demand by SubRegionGenerator when the player enters a tile.
 var region_grids: Dictionary = {}
 
+## Persistent inventory of chest tiles in the world, keyed by
+## "wt_x,wt_y:building_id" (one chest per building per world tile).
+## Value: Array of item-type ID strings. Populated from building default
+## chest_items on first visit; mutated as the player takes or deposits items.
+var chest_contents: Dictionary = {}
+
 ## faction_id -> faction runtime state dict.
 var factions: Dictionary = {}
 
@@ -134,6 +140,7 @@ func to_dict() -> Dictionary:
 		"province_adjacency": province_adjacency.duplicate(true),
 		"player_character_id": player_character_id,
 		"player_location":    player_location.duplicate(),
+		"chest_contents":     chest_contents.duplicate(true),
 		"active_battle":      active_battle.to_dict() if active_battle != null else null,
 		# Serialise all characters (player + persisted NPCs).
 		# npc_pool is transient and intentionally excluded.
@@ -162,6 +169,7 @@ static func from_dict(data: Dictionary) -> WorldState:
 	ws.player_location    = data.get("player_location", {
 		"cell_id": "", "wt_x": 0, "wt_y": 0, "rx": 125, "ry": 125, "lx": 0, "ly": 0, "z_level": 0
 	}).duplicate()
+	ws.chest_contents     = data.get("chest_contents", {}).duplicate(true)
 	var battle_data = data.get("active_battle", null)
 	if battle_data is Dictionary:
 		ws.active_battle = BattleState.from_dict(battle_data)

@@ -1,0 +1,21 @@
+{
+  "$schema": "../schemas/armor.schema.json",
+  "id": "coif",
+  "name": "Coif",
+  "description": "A hood of interlocked iron rings. Worn over a padded coif or arming cap. Covers the neck fully and protects the sides of the head not shielded by a helm.",
+  "material_id": "iron",
+  "layer": "armor",
+  "quality": "standard",
+  "coverage_zones": {
+    "head": 0.60,
+    "neck": 0.85
+  },
+  "thickness_mm": 5.0,
+  "damage_reduction": { "slash": 5, "pierce": 4, "blunt": 1 },
+  "encumbrance": 1.5,
+  "durability": 28,
+  "equip_slot": "head",
+  "tags": ["military", "medium"],
+  "weight_kg": 1.2,
+  "value_coin": 22
+}

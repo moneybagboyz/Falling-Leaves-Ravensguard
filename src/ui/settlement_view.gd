@@ -107,6 +107,10 @@ func _load_state() -> void:
 	var params := SceneManager.take_params()
 	_settlement_id = params.get("settlement_id", "")
 
+	# Fallback: restore from player_location if params were empty (e.g. popped back from LocalView).
+	if _settlement_id == "" and _world_state != null:
+		_settlement_id = _world_state.player_location.get("settlement_id", "")
+
 	if _world_state != null and _settlement_id != "":
 		_ss = _world_state.get_settlement(_settlement_id)
 
@@ -122,8 +126,17 @@ func _load_state() -> void:
 	if _world_state != null and _ss != null:
 		NpcPoolManager.populate(_world_state, _ss, ws_seed)
 
-	# Set initial world tile from the settlement's anchor tile.
-	if _ss != null:
+	# Restore world tile from saved player location; fall back to settlement anchor.
+	if _world_state != null:
+		var loc: Dictionary = _world_state.player_location
+		var saved_sid: String = loc.get("settlement_id", "")
+		if saved_sid == _settlement_id and loc.has("wt_x"):
+			_wt_x = loc.get("wt_x", _ss.tile_x)
+			_wt_y = loc.get("wt_y", _ss.tile_y)
+		else:
+			_wt_x = _ss.tile_x
+			_wt_y = _ss.tile_y
+	else:
 		_wt_x = _ss.tile_x
 		_wt_y = _ss.tile_y
 
@@ -167,6 +180,9 @@ func _input(event: InputEvent) -> void:
 				get_viewport().set_input_as_handled()
 			KEY_F, KEY_T:
 				_open_dialogue()
+			KEY_ENTER, KEY_KP_ENTER:
+				if _interact_btn != null and _interact_btn.visible:
+					_on_interact_pressed()
 
 
 # ── UI construction ─────────────────────────────────────────────────────────────
@@ -240,7 +256,7 @@ func _build_ui() -> void:
 	panel_vbox.add_child(_make_sep())
 
 	var hint := Label.new()
-	hint.text = "WASD/Arrows = move\nDiagonals: Q E Z C\nPgUp/PgDn = floor\nF/T = talk/interact\nEsc = back to world"
+	hint.text = "WASD/Arrows = move\nDiagonals: Q E Z C\nPgUp/PgDn = floor\nF/T = talk  ↵ = interact\nEsc = back to world"
 	hint.add_theme_color_override("font_color", COLOR_DIM)
 	hint.add_theme_font_size_override("font_size", 10)
 	panel_vbox.add_child(hint)
@@ -506,6 +522,29 @@ func _get_or_gen_region(wtx: int, wty: int) -> Dictionary:
 	return region
 
 
+## Get a region cell by absolute rx/ry, transparently crossing world-tile
+## boundaries. Returns {} if the neighbour world tile doesn't exist.
+func _sample_region_cell(base_rx: int, base_ry: int) -> Dictionary:
+	var wtx := _wt_x
+	var wty := _wt_y
+	var cx  := base_rx
+	var cy  := base_ry
+	if base_rx < 0:
+		wtx -= 1
+		cx   = SubRegionGenerator.REGION_W - 1
+	elif base_rx >= SubRegionGenerator.REGION_W:
+		wtx += 1
+		cx   = 0
+	if base_ry < 0:
+		wty -= 1
+		cy   = SubRegionGenerator.REGION_H - 1
+	elif base_ry >= SubRegionGenerator.REGION_H:
+		wty += 1
+		cy   = 0
+	var r := _get_or_gen_region(wtx, wty)
+	return r.get("%d,%d" % [cx, cy], {})
+
+
 # ── Player placement and movement ─────────────────────────────────────────────
 func _place_player_at_start() -> void:
 	if _world_state == null:
@@ -525,11 +564,12 @@ func _place_player_at_start() -> void:
 		_player_ry = SubRegionGenerator.CY
 
 	# Write canonical position back.
-	_world_state.player_location["cell_id"] = "%d,%d" % [_wt_x, _wt_y]
-	_world_state.player_location["wt_x"]    = _wt_x
-	_world_state.player_location["wt_y"]    = _wt_y
-	_world_state.player_location["rx"]      = _player_rx
-	_world_state.player_location["ry"]      = _player_ry
+	_world_state.player_location["cell_id"]       = "%d,%d" % [_wt_x, _wt_y]
+	_world_state.player_location["wt_x"]          = _wt_x
+	_world_state.player_location["wt_y"]          = _wt_y
+	_world_state.player_location["rx"]            = _player_rx
+	_world_state.player_location["ry"]            = _player_ry
+	_world_state.player_location["settlement_id"] = _settlement_id
 	_update_pawn_visual()
 
 
@@ -578,11 +618,12 @@ func _try_move(dx: int, dy: int) -> void:
 	_player_ry = new_ry
 
 	# Persist in player_location.
-	_world_state.player_location["cell_id"] = "%d,%d" % [_wt_x, _wt_y]
-	_world_state.player_location["wt_x"]    = _wt_x
-	_world_state.player_location["wt_y"]    = _wt_y
-	_world_state.player_location["rx"]      = _player_rx
-	_world_state.player_location["ry"]      = _player_ry
+	_world_state.player_location["cell_id"]       = "%d,%d" % [_wt_x, _wt_y]
+	_world_state.player_location["wt_x"]          = _wt_x
+	_world_state.player_location["wt_y"]          = _wt_y
+	_world_state.player_location["rx"]            = _player_rx
+	_world_state.player_location["ry"]            = _player_ry
+	_world_state.player_location["settlement_id"] = _settlement_id
 	_update_viewport_content()
 	_update_pawn_visual()
 	_refresh_cell_info()
@@ -714,22 +755,35 @@ func _update_interact_button(cid: String, bid: String) -> void:
 	var player: PersonState = _get_player()
 	_pending_interaction = ""
 
-	if player != null:
-		# 1. Work: currently working here → offer to leave.
+	# Guard: never show interactions on water cells.
+	var _cur_region := _get_or_gen_region(_wt_x, _wt_y)
+	var _cur_rcell: Dictionary = _cur_region.get("%d,%d" % [_player_rx, _player_ry], {})
+	if _cur_rcell.get("is_water", false):
+		_interact_btn.visible = false
+		return
+
+	# 1. Building with local_layout (or open_land fallback for road/empty tiles).
+	var _local_bid: String = bid if bid != "" else "open_land"
+	var _lbdef: Dictionary = ContentRegistry.get_content("building", _local_bid)
+	if _lbdef.has("local_layout"):
+		_pending_interaction = "enter_building:%s" % _local_bid
+
+	if player != null and _pending_interaction == "":
+		# 2. Work: currently working here → offer to leave.
 		if player.active_role != "" and player.work_cell_id == cid:
 			_pending_interaction = "leave_work"
-		# 2. Open slot at this cell → offer to apply.
+		# 3. Open slot at this cell → offer to apply.
 		elif _ss != null:
 			for i: int in _ss.labor_slots.size():
 				var slot: Dictionary = _ss.labor_slots[i]
 				if slot.get("cell_id", "") == cid and not bool(slot.get("is_filled", false)):
 					_pending_interaction = "apply_work:%d" % i
 					break
-		# 3. Inn — offer to rent (if not already sheltered here).
+		# 4. Inn — offer to rent (if not already sheltered here).
 		if _pending_interaction == "" and bid == "inn":
 			if player.shelter_status != "rented":
 				_pending_interaction = "rent_inn"
-		# 4. Derelict — free shelter claim.
+		# 5. Derelict — free shelter claim.
 		if _pending_interaction == "" and bid == "derelict":
 			if player.shelter_status == "":
 				_pending_interaction = "claim_shelter"
@@ -742,6 +796,12 @@ func _update_interact_button(cid: String, bid: String) -> void:
 
 
 func _interaction_label(tag: String) -> String:
+	if tag.begins_with("enter_building:"):
+		var eid: String = tag.split(":")[1]
+		if eid == "open_land":
+			return "► Enter Area  [↵]"
+		var bdef: Dictionary = ContentRegistry.get_content("building", eid)
+		return "► Enter %s  [↵]" % bdef.get("name", eid)
 	if tag.begins_with("apply_work:"):
 		if _ss != null:
 			var idx: int = int(tag.split(":")[1])
@@ -778,6 +838,18 @@ func _on_interact_pressed() -> void:
 
 	elif _pending_interaction == "claim_shelter":
 		player.shelter_status = "derelict_claimed"
+
+	elif _pending_interaction.begins_with("enter_building:"):
+		var eid: String = _pending_interaction.split(":")[1]
+		SceneManager.push_scene("res://src/ui/local_view/local_view.tscn", {
+			"building_id":   eid,
+			"entry_wx":      _wt_x,
+			"entry_wy":      _wt_y,
+			"entry_rx":      _player_rx,
+			"entry_ry":      _player_ry,
+			"settlement_id": _settlement_id,
+		})
+		return  # scene is changing — skip refresh
 
 	_refresh_cell_info()
 	_refresh_player_info()

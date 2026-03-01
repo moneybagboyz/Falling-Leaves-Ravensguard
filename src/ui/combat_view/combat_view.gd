@@ -487,8 +487,8 @@ func _on_confirm_turn_pressed() -> void:
 	_refresh_phase_bar()
 
 	# resolve_turn returns true when battle is over.
-	var seed: int = _world_state.world_seed if _world_state != null else 0
-	var done: bool = CombatResolver.resolve_turn(_battle, {}, seed)
+	var world_seed_val: int = _world_state.world_seed if _world_state != null else 0
+	var done: bool = CombatResolver.resolve_turn(_battle, {}, world_seed_val)
 
 	if done or _battle.result != "":
 		_battle.phase = BattleState.PHASE_RESULTS

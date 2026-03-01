@@ -42,5 +42,6 @@
     "_________________________",
     "_________________________"
   ],
-  "tags": ["shelter", "social", "lodging"]
+  "tags": ["shelter", "social", "lodging"],
+  "chest_items": ["dagger", "wool_tunic", "wool_hose", "boots"]
 }

@@ -35,6 +35,15 @@ const LAYER_SORT_ORDER: Dictionary = {
 	"base_layer":  2,
 }
 
+## Velocity factors: metres-per-second proxy, multiplied by striking_mass_kg to get momentum.
+## Values calibrated so that a sword (0.4 kg, fast) gives ~14 momentum vs bare skin → wound.
+const VELOCITY_FACTORS: Dictionary = {
+	"slow":      15.0,
+	"medium":    25.0,
+	"fast":      35.0,
+	"very_fast": 50.0,
+}
+
 # ── Identity ──────────────────────────────────────────────────────────────────
 ## Unique ID for this combatant within the battle. Matches the source PersonState.person_id.
 var combatant_id: String = ""
@@ -83,7 +92,7 @@ var body_zones: Dictionary = {}
 
 # ── Equipment ─────────────────────────────────────────────────────────────────
 ## Slot → item_id. Copied from PersonState.equipment_refs at combat entry.
-## e.g. { "main_hand": "short_sword", "torso": "mail_hauberk", "head": "iron_helm" }
+## e.g. { "main_hand": "short_sword", "torso": "mail_hauberk", "head": "helm" }
 var equipment_refs: Dictionary = {}
 
 # ── Orders ────────────────────────────────────────────────────────────────────
@@ -118,7 +127,8 @@ static func from_person(p: PersonState, team: String, formation: String) -> Comb
 	# Initialise body zones from data. Zones load lazily — start clean.
 	c.body_zones = {}
 	for zone_id: String in ["head", "neck", "chest", "abdomen",
-							  "left_arm", "right_arm", "left_leg", "right_leg"]:
+							  "left_arm", "right_arm", "left_leg", "right_leg",
+							  "left_hand", "right_hand", "left_foot", "right_foot"]:
 		c.body_zones[zone_id] = []
 	return c
 
@@ -210,40 +220,48 @@ func get_weapon_data() -> Dictionary:
 	# Unarmed fallback.
 	return {
 		"id": "unarmed", "reach_class": "unarmed",
-		"damage_type": "blunt", "swing_momentum": 3,
-		"thrust_momentum": 2, "attack_speed": 1.2,
-		"stamina_cost": 0.06, "min_skill": 0,
-		"material_id": "", "quality": "standard",
+		"damage_type": "blunt",
+		"striking_mass_kg": 0.08, "contact_area_cm2": 20.0, "velocity_class": "slow",
+		"swing_momentum": 3, "thrust_momentum": 2,
+		"attack_speed": 1.2, "stamina_cost": 0.06,
+		"min_skill": 0, "material_id": "", "quality": "standard",
 	}
 
 
-## Returns effective swing momentum for the equipped weapon, incorporating
-## material weapon_momentum_bonus and quality multiplier.
+## Returns effective striking momentum for the equipped weapon.
+## Physics model: momentum = striking_mass_kg × VELOCITY_FACTORS[velocity_class] × quality_mult × edge_retention
+## Falls back to legacy swing_momentum if striking_mass_kg is absent (backwards compat).
 func get_effective_weapon_momentum() -> float:
 	var wdef: Dictionary = get_weapon_data()
-	var base_m: float = float(wdef.get("swing_momentum", 3))
 
-	# Material flat bonus.
-	var mat_id: String = wdef.get("material_id", "")
-	var mat_bonus: float = 0.0
+	# Legacy fallback: if no striking_mass_kg, use old flat swing_momentum.
+	var mass_kg: float = float(wdef.get("striking_mass_kg", 0.0))
+	if mass_kg == 0.0:
+		var base_m: float = float(wdef.get("swing_momentum", 3))
+		var q_mod: float = QUALITY_MOMENTUM_MULTIPLIER.get(wdef.get("quality", "standard"), 1.0)
+		return base_m * q_mod
+
+	# Physics path.
+	var vel_factor: float = VELOCITY_FACTORS.get(wdef.get("velocity_class", "medium"), 25.0)
+	var q_mult: float     = QUALITY_MOMENTUM_MULTIPLIER.get(wdef.get("quality", "standard"), 1.0)
+
+	# Material edge_retention scales effective sharpness for edged weapons.
+	var mat_id: String    = wdef.get("material_id", "")
+	var edge_ret: float   = 1.0
 	if mat_id != "":
 		var mdef: Dictionary = ContentRegistry.get_content("material", mat_id)
 		if not mdef.is_empty():
-			mat_bonus = float(mdef.get("weapon_momentum_bonus", 0.0))
+			edge_ret = float(mdef.get("edge_retention", 1.0))
 
-	# Quality multiplier.
-	var quality: String = wdef.get("quality", "standard")
-	var q_mod: float = QUALITY_MOMENTUM_MULTIPLIER.get(quality, 1.0)
-
-	return (base_m + mat_bonus) * q_mod
+	return mass_kg * vel_factor * q_mult * edge_ret
 
 
-## Returns layered armor data for a given zone and damage type, sorted
-## outermost-first (armor → clothing → base_layer).
-## Each element: { "coverage": float, "reduction": float, "layer": String }
-## The resolver rolls each layer independently and subtracts its reduction
-## from remaining momentum before applying wound thresholds.
-func get_layered_armor_for_zone(zone_id: String, damage_type: String) -> Array:
+## Returns physics layer data for a given zone, sorted outermost-first.
+## Each element: { "coverage": float, "yield_strength": float, "thickness_mm": float,
+##                 "blunt_transfer": float, "layer": String }
+## The resolver computes pressure = momentum / contact_area, then checks
+## pressure >= yield_strength × thickness_mm per layer.
+func get_layered_armor_for_zone(zone_id: String, _damage_type: String) -> Array:
 	var layers: Array = []
 	for slot: String in equipment_refs:
 		var item_id: String = equipment_refs[slot]
@@ -254,28 +272,33 @@ func get_layered_armor_for_zone(zone_id: String, damage_type: String) -> Array:
 		var cov: float = float(cz.get(zone_id, 0.0))
 		if cov <= 0.0:
 			continue
-		# Base DR from item definition.
-		var dr: Dictionary = adef.get("damage_reduction", {})
-		var base_dr: float = float(dr.get(damage_type, 0.0))
-		# Material DR bonus.
-		var mat_id: String = adef.get("material_id", "")
-		var mat_bonus: float = 0.0
+
+		# Physics properties come from the material definition.
+		var mat_id: String      = adef.get("material_id", "")
+		var yield_str: float    = 0.0
+		var blunt_xfer: float   = 1.0
 		if mat_id != "":
 			var mdef: Dictionary = ContentRegistry.get_content("material", mat_id)
 			if not mdef.is_empty():
-				var mdr: Dictionary = mdef.get("dr_bonus", {})
-				mat_bonus = float(mdr.get(damage_type, 0.0))
-		# Quality multiplier.
-		var quality: String = adef.get("quality", "standard")
-		var q_mod: float = QUALITY_DR_MULTIPLIER.get(quality, 1.0)
-		var final_dr: float = (base_dr + mat_bonus) * q_mod
+				yield_str  = float(mdef.get("yield_strength",  0.0))
+				blunt_xfer = float(mdef.get("blunt_transfer",  1.0))
+
+		var thickness: float = float(adef.get("thickness_mm", 0.0))
+
+		# Quality multiplier scales effective thickness (better craft → tighter weave/forging).
+		var quality: String  = adef.get("quality", "standard")
+		var q_mod: float     = QUALITY_DR_MULTIPLIER.get(quality, 1.0)
+		var eff_thickness: float = thickness * q_mod
+
 		var layer: String = adef.get("layer", "armor")
 		layers.append({
-			"coverage":  cov,
-			"reduction": final_dr,
-			"layer":     layer,
+			"coverage":      cov,
+			"yield_strength": yield_str,
+			"thickness_mm":  eff_thickness,
+			"blunt_transfer": blunt_xfer,
+			"layer":         layer,
 		})
-	# Sort outermost first so momentum passes through outer layers before inner ones.
+	# Sort outermost first.
 	layers.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		return LAYER_SORT_ORDER.get(a["layer"], 1) < LAYER_SORT_ORDER.get(b["layer"], 1)
 	)

@@ -3,7 +3,7 @@
   "title": "Armor",
   "description": "Data definition for a piece of armor providing zone coverage in combat.",
   "type": "object",
-  "required": ["id", "name", "material_id", "layer", "coverage_zones", "encumbrance", "durability"],
+  "required": ["id", "name", "material_id", "layer", "coverage_zones", "thickness_mm", "encumbrance", "durability"],
   "additionalProperties": false,
   "properties": {
     "$schema": { "type": "string" },
@@ -35,9 +35,14 @@
       "description": "body_zone_id -> coverage float (0.0 = no protection, 1.0 = full protection). Unlisted zones have 0 coverage.",
       "additionalProperties": { "type": "number", "minimum": 0, "maximum": 1 }
     },
+    "thickness_mm": {
+      "type": "number",
+      "minimum": 0.1,
+      "description": "Physical thickness of this layer in millimetres. Used with material.yield_strength to compute penetration resistance: resistance = yield_strength × thickness_mm."
+    },
     "damage_reduction": {
       "type": "object",
-      "description": "Per damage_type flat reduction applied before coverage. Keys: slash, pierce, blunt.",
+      "description": "LEGACY: per damage_type flat reduction. Retained for backwards compat. Physics model uses thickness_mm + material.yield_strength instead.",
       "properties": {
         "slash":  { "type": "number", "minimum": 0 },
         "pierce": { "type": "number", "minimum": 0 },

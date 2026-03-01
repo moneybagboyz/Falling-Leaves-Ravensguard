@@ -1,0 +1,21 @@
+{
+  "$schema": "../schemas/armor.schema.json",
+  "id": "chausses",
+  "name": "Chausses",
+  "description": "Hardened leather leg armour covering the thighs and shins. Laced over wool hose. Decent protection against slashing blows to the legs.",
+  "material_id": "leather",
+  "layer": "armor",
+  "quality": "standard",
+  "coverage_zones": {
+    "left_leg":  0.75,
+    "right_leg": 0.75
+  },
+  "thickness_mm": 3.5,
+  "damage_reduction": { "slash": 3, "pierce": 2, "blunt": 1 },
+  "encumbrance": 1.5,
+  "durability": 20,
+  "equip_slot": "legs",
+  "tags": ["common", "light"],
+  "weight_kg": 2.0,
+  "value_coin": 14
+}

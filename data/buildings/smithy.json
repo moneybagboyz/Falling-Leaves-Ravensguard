@@ -44,5 +44,6 @@
     "_________________________",
     "_________________________"
   ],
-  "tags": ["metalworking", "crafting"]
+  "tags": ["metalworking", "crafting"],
+  "chest_items": ["helm", "short_sword", "mail_hauberk", "gloves"]
 }

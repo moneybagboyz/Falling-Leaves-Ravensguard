@@ -1,0 +1,21 @@
+{
+  "$schema": "../schemas/armor.schema.json",
+  "id": "gloves",
+  "name": "Gloves",
+  "description": "Thick leather work gloves. Modest protection for the hands; primarily prevent grip_lost from minor cuts.",
+  "material_id": "leather",
+  "layer": "clothing",
+  "quality": "standard",
+  "coverage_zones": {
+    "left_hand":  0.90,
+    "right_hand": 0.90
+  },
+  "thickness_mm": 1.5,
+  "damage_reduction": { "slash": 1, "pierce": 1, "blunt": 0 },
+  "encumbrance": 0.2,
+  "durability": 10,
+  "equip_slot": "hands",
+  "tags": ["common", "clothing"],
+  "weight_kg": 0.2,
+  "value_coin": 3
+}

@@ -3,7 +3,7 @@
   "title": "Weapon",
   "description": "Data definition for a weapon usable in combat.",
   "type": "object",
-  "required": ["id", "name", "reach_class", "damage_type", "swing_momentum", "thrust_momentum", "attack_speed", "stamina_cost"],
+  "required": ["id", "name", "reach_class", "damage_type", "striking_mass_kg", "contact_area_cm2", "velocity_class", "attack_speed", "stamina_cost"],
   "additionalProperties": false,
   "properties": {
     "$schema": { "type": "string" },
@@ -12,13 +12,38 @@
     "description": { "type": "string" },
     "material_id": {
       "type": "string",
-      "description": "Reference to data/materials/<id>.json. Adds weapon_momentum_bonus and edge_retention to attack calculation."
+      "description": "Reference to data/materials/<id>.json. Provides density (mass scaling) and edge_retention."
     },
     "quality": {
       "type": "string",
       "enum": ["poor", "standard", "fine", "masterwork"],
       "default": "standard",
-      "description": "Crafting quality. Multiplies effective momentum: poor=\u00d70.80, standard=\u00d71.0, fine=\u00d71.20, masterwork=\u00d71.50. Masterwork also grants +5% hit chance."
+      "description": "Crafting quality. Multiplies effective momentum: poor=\u00d70.80, standard=\u00d71.0, fine=\u00d71.20, masterwork=\u00d71.50 and +5% hit chance."
+    },
+    "striking_mass_kg": {
+      "type": "number",
+      "minimum": 0.01,
+      "description": "Mass of the striking head or blade edge in kg. Combined with velocity_class to produce momentum. E.g. dagger blade ~0.12, sword blade ~0.40, axe head ~0.55, club head ~0.90."
+    },
+    "contact_area_cm2": {
+      "type": "number",
+      "minimum": 0.01,
+      "description": "Striking surface area in cm\u00b2. Small area = concentrated pressure (dagger point ~0.05, sword edge ~0.30). Large area = spread force (club face ~12, fist ~8). pressure = momentum / contact_area_cm2."
+    },
+    "velocity_class": {
+      "type": "string",
+      "enum": ["slow", "medium", "fast", "very_fast"],
+      "description": "Speed of attack delivery. Maps to velocity factor in resolver: slow=15, medium=25, fast=35, very_fast=50. momentum = striking_mass_kg \u00d7 velocity_factor."
+    },
+    "swing_momentum": {
+      "type": "number",
+      "minimum": 0,
+      "description": "LEGACY: optional override. If present, bypasses striking_mass_kg \u00d7 velocity_class calculation."
+    },
+    "thrust_momentum": {
+      "type": "number",
+      "minimum": 0,
+      "description": "LEGACY: optional override for thrusting attacks."
     },
     "reach_class": {
       "type": "string",

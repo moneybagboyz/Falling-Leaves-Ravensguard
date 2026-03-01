@@ -2,12 +2,14 @@
   "$schema": "../../schemas/material.schema.json",
   "id": "bronze",
   "name": "Bronze",
-  "description": "Copper-tin alloy. Softer than iron but easier to work and corrosion-resistant. Common in older or isolated settlements.",
+  "description": "Copper-tin alloy. Softer than iron but corrosion-resistant and easier to cast into complex shapes.",
   "category": "metal",
-  "dr_bonus":               { "slash": 1, "pierce": 1, "blunt": 0 },
-  "weapon_momentum_bonus":  0,
-  "edge_retention":         0.8,
-  "durability_mod":         0.85,
-  "weight_mod":             1.05,
-  "value_mod":              1.2
+  "density_kg_m3": 8960,
+  "yield_strength": 0.80,
+  "shear_strength": 0.28,
+  "blunt_transfer": 0.50,
+  "edge_retention": 0.75,
+  "durability_mod": 0.85,
+  "weight_mod":     1.05,
+  "value_mod":      1.2
 }

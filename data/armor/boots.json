@@ -1,0 +1,21 @@
+{
+  "$schema": "../schemas/armor.schema.json",
+  "id": "boots",
+  "name": "Boots",
+  "description": "Sturdy leather boots with a thick sole. Standard footwear for soldiers and travellers. Reduces foot wounds from cuts and crushing.",
+  "material_id": "leather",
+  "layer": "clothing",
+  "quality": "standard",
+  "coverage_zones": {
+    "left_foot":  0.90,
+    "right_foot": 0.90
+  },
+  "thickness_mm": 2.5,
+  "damage_reduction": { "slash": 2, "pierce": 1, "blunt": 1 },
+  "encumbrance": 0.4,
+  "durability": 14,
+  "equip_slot": "feet",
+  "tags": ["common", "clothing"],
+  "weight_kg": 0.8,
+  "value_coin": 5
+}

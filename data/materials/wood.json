@@ -2,12 +2,14 @@
   "$schema": "../../schemas/material.schema.json",
   "id": "wood",
   "name": "Wood",
-  "description": "Hardwood such as ash or oak. Used for weapon hafts, clubs, and staves. Good blunt delivery, poor edge.",
+  "description": "Dense hardwood (ash, oak). Low yield against blades but excellent mass-to-cost for bludgeoning heads.",
   "category": "wood",
-  "dr_bonus":               { "slash": 0, "pierce": 0, "blunt": 1 },
-  "weapon_momentum_bonus":  1,
-  "edge_retention":         0.3,
-  "durability_mod":         0.7,
-  "weight_mod":             0.6,
-  "value_mod":              0.2
+  "density_kg_m3": 650,
+  "yield_strength": 0.35,
+  "shear_strength": 0.05,
+  "blunt_transfer": 0.75,
+  "edge_retention": 0.30,
+  "durability_mod": 0.7,
+  "weight_mod":     0.6,
+  "value_mod":      0.2
 }

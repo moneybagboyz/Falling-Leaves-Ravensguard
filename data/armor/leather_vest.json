@@ -11,6 +11,7 @@
     "chest":   0.75,
     "abdomen": 0.60
   },
+  "thickness_mm": 4.0,
   "damage_reduction": { "slash": 3, "pierce": 2, "blunt": 1 },
   "encumbrance": 1.5,
   "durability": 18,

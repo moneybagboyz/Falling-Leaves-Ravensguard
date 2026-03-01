@@ -13,6 +13,7 @@
     "left_arm":  0.75,
     "right_arm": 0.75
   },
+  "thickness_mm": 7.0,
   "damage_reduction": { "slash": 1, "pierce": 0, "blunt": 2 },
   "encumbrance": 0.8,
   "durability": 18,

@@ -208,7 +208,7 @@ static func _do_attack(
 		f:         FormationState,
 		battle:    BattleState,
 		pos_snap:  Dictionary,
-		map_data:  Dictionary,
+		_map_data: Dictionary,
 		rng:       RandomNumberGenerator) -> void:
 
 	var weapon: Dictionary = attacker.get_weapon_data()
@@ -260,15 +260,38 @@ static func _do_attack(
 		# Momentum = swing_momentum × material_bonus × quality_mult.
 		var momentum: float      = attacker.get_effective_weapon_momentum()
 
-		# ── Layered armor mitigation ─────────────────────────────────
-		# Each layer rolls its coverage independently.
-		# Momentum is reduced by each layer that covers the hit zone.
+		# ── Layered armor mitigation (physics pressure model) ────────
+		# pressure = momentum / contact_area_cm2
+		# Each outer layer is checked first (outermost-first sort in get_layered_armor_for_zone).
+		#   penetrate: pressure >= yield_strength × thickness_mm
+		#     → momentum reduced by resistance × contact_area; continues to inner layers
+		#   absorbed:  pressure < resistance
+		#     → only blunt shock (momentum × blunt_transfer) propagates; stops here
+		var contact_area: float = float(weapon.get("contact_area_cm2", 8.0))
+		var pressure: float     = momentum / maxf(contact_area, 0.001)
 		var layers: Array = target.get_layered_armor_for_zone(zone_id, damage_type)
+		var stopped: bool  = false
 		for layer_data: Dictionary in layers:
-			var lcov: float = float(layer_data.get("coverage",  0.0))
-			var ldr:  float = float(layer_data.get("reduction", 0.0))
-			if lcov > 0.0 and rng.randf() < lcov:
-				momentum = maxf(0.0, momentum - ldr)
+			var lcov: float  = float(layer_data.get("coverage",       0.0))
+			var yield_str: float = float(layer_data.get("yield_strength", 0.0))
+			var thick: float = float(layer_data.get("thickness_mm",   0.0))
+			var bt: float    = float(layer_data.get("blunt_transfer",  1.0))
+			if lcov <= 0.0 or rng.randf() >= lcov:
+				continue  # layer doesn't cover this hit
+			var resistance: float = yield_str * thick
+			if pressure >= resistance:
+				# Penetrates — shed the resistance energy and keep going.
+				momentum = maxf(0.0, momentum - resistance * contact_area)
+				pressure = momentum / maxf(contact_area, 0.001)
+			else:
+				# Stopped — only blunt shock carries through; inner layers not reached.
+				momentum = momentum * bt
+				pressure = momentum / maxf(contact_area, 0.001)
+				stopped  = true
+				break
+		# Silence unused-variable warnings.
+		var _stopped: bool = stopped
+		var _p: float = pressure
 
 		# ── Wound severity ────────────────────────────────────────────
 		var zone_def: Dictionary = ContentRegistry.get_content("body_zone", zone_id)
@@ -322,14 +345,18 @@ static func _do_attack(
 
 ## Weighted random zone selection. Weights must match body_zone data.
 const ZONE_WEIGHTS: Dictionary = {
-	"head":      0.10,
-	"neck":      0.05,
-	"chest":     0.25,
-	"abdomen":   0.15,
-	"left_arm":  0.10,
-	"right_arm": 0.10,
-	"left_leg":  0.125,
-	"right_leg": 0.125,
+	"head":       0.10,
+	"neck":       0.05,
+	"chest":      0.23,
+	"abdomen":    0.13,
+	"left_arm":   0.09,
+	"right_arm":  0.09,
+	"left_leg":   0.105,
+	"right_leg":  0.105,
+	"left_hand":  0.03,
+	"right_hand": 0.03,
+	"left_foot":  0.02,
+	"right_foot": 0.02,
 }
 
 static func _roll_hit_zone(rng: RandomNumberGenerator) -> String:

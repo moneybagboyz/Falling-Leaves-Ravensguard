@@ -1,0 +1,13 @@
+{
+  "$schema": "../schemas/body_zone.schema.json",
+  "id": "right_hand",
+  "name": "Right Hand",
+  "hit_weight": 0.03,
+  "wound_thresholds": { "graze": 1, "wound": 3, "severe": 7, "lethal": 12 },
+  "critical_effects": [
+    { "at_severity": "severe", "effect": "grip_lost" },
+    { "at_severity": "lethal", "effect": "limb_lost" }
+  ],
+  "pain_multiplier": 1.1,
+  "blocks_reach_if_wounded": true
+}
