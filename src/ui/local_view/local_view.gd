@@ -641,6 +641,10 @@ func _exit_to_settlement() -> void:
 				npc.local_ly     = -1
 				npc.local_reg_rx = -1
 				npc.local_reg_ry = -1
+		# Persist the player's final local-view region cell so SettlementView
+		# restores them at the correct tile rather than the entry cell.
+		_world_state.player_location["rx"] = _reg_rx
+		_world_state.player_location["ry"] = _reg_ry
 	# Pass settlement_id back so SettlementView can reload correctly.
 	SceneManager.pop_scene({"settlement_id": _settlement_id})
 
