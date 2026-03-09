@@ -1,0 +1,22 @@
+{
+  "$schema": "../schemas/weapon.schema.json",
+  "id": "mace",
+  "name": "Mace",
+  "description": "A flanged iron club. Delivers concussive blows that can stun and fracture bones through armour.",
+  "material_id": "iron",
+  "quality": "standard",
+  "reach_class": "medium",
+  "damage_type": "blunt",
+  "striking_mass_kg": 0.80,
+  "contact_area_cm2": 5.0,
+  "velocity_class": "medium",
+  "swing_momentum": 14,
+  "thrust_momentum": 2,
+  "attack_speed": 1.00,
+  "stamina_cost": 0.16,
+  "min_skill": 1,
+  "two_handed": false,
+  "tags": ["military", "common"],
+  "weight_kg": 2.0,
+  "value_coin": 20
+}

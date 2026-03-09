@@ -1,0 +1,22 @@
+{
+  "$schema": "../schemas/weapon.schema.json",
+  "id": "pitchfork",
+  "name": "Pitchfork",
+  "description": "A farmer's tool repurposed for war. Two iron tines concentrate force well enough to punch through light armour.",
+  "material_id": "iron",
+  "quality": "standard",
+  "reach_class": "polearm",
+  "damage_type": "pierce",
+  "striking_mass_kg": 0.25,
+  "contact_area_cm2": 0.08,
+  "velocity_class": "fast",
+  "swing_momentum": 3,
+  "thrust_momentum": 12,
+  "attack_speed": 0.90,
+  "stamina_cost": 0.13,
+  "min_skill": 0,
+  "two_handed": true,
+  "tags": ["common", "improvised", "tool"],
+  "weight_kg": 1.8,
+  "value_coin": 4
+}

@@ -1,0 +1,18 @@
+{
+  "id": "arrows",
+  "name": "Arrows",
+  "description": "A quiver of iron-tipped arrows. Ammunition for shortbows and longbows.",
+  "ammo_type": "arrow",
+  "material": "iron",
+  "quantity_per_bundle": 20,
+  "reach_class": "short",
+  "damage_type": "pierce",
+  "striking_mass_kg": 0.05,
+  "contact_area_cm2": 0.05,
+  "velocity_class": "very_fast",
+  "attack_speed": 1.0,
+  "stamina_cost": 0.0,
+  "tags": ["ammo", "ranged"],
+  "weight": 0.3,
+  "value_coin": 4
+}

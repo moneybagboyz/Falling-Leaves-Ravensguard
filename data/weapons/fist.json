@@ -1,0 +1,22 @@
+{
+  "$schema": "../schemas/weapon.schema.json",
+  "id": "fist",
+  "name": "Fist",
+  "description": "Bare knuckles. Ineffective against armour but always available.",
+  "material_id": "iron",
+  "quality": "standard",
+  "reach_class": "unarmed",
+  "damage_type": "blunt",
+  "striking_mass_kg": 0.40,
+  "contact_area_cm2": 8.0,
+  "velocity_class": "fast",
+  "swing_momentum": 5,
+  "thrust_momentum": 3,
+  "attack_speed": 1.50,
+  "stamina_cost": 0.08,
+  "min_skill": 0,
+  "two_handed": false,
+  "tags": ["unarmed", "improvised"],
+  "weight_kg": 0.0,
+  "value_coin": 0
+}

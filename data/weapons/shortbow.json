@@ -1,0 +1,22 @@
+{
+  "$schema": "../schemas/weapon.schema.json",
+  "id": "shortbow",
+  "name": "Shortbow",
+  "description": "A compact recurve bow. Easy to learn; outranges any melee fighter. Poor penetration against plate.",
+  "material_id": "iron",
+  "quality": "standard",
+  "reach_class": "long",
+  "damage_type": "pierce",
+  "striking_mass_kg": 0.04,
+  "contact_area_cm2": 0.03,
+  "velocity_class": "very_fast",
+  "swing_momentum": 0,
+  "thrust_momentum": 18,
+  "attack_speed": 1.20,
+  "stamina_cost": 0.12,
+  "min_skill": 1,
+  "two_handed": true,
+  "tags": ["ranged", "common"],
+  "weight_kg": 1.0,
+  "value_coin": 22
+}

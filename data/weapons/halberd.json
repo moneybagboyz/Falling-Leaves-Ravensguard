@@ -1,0 +1,22 @@
+{
+  "$schema": "../schemas/weapon.schema.json",
+  "id": "halberd",
+  "name": "Halberd",
+  "description": "A polearm combining an axe blade, a hook, and a spike. Versatile and lethal; the weapon of disciplined infantry.",
+  "material_id": "iron",
+  "quality": "standard",
+  "reach_class": "polearm",
+  "damage_type": "slash",
+  "striking_mass_kg": 0.80,
+  "contact_area_cm2": 0.70,
+  "velocity_class": "medium",
+  "swing_momentum": 18,
+  "thrust_momentum": 12,
+  "attack_speed": 0.75,
+  "stamina_cost": 0.22,
+  "min_skill": 2,
+  "two_handed": true,
+  "tags": ["military", "polearm"],
+  "weight_kg": 3.5,
+  "value_coin": 55
+}

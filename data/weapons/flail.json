@@ -1,0 +1,22 @@
+{
+  "$schema": "../schemas/weapon.schema.json",
+  "id": "flail",
+  "name": "Flail",
+  "description": "An iron ball on a chain. The flexible head wraps around shields. Difficult to master; devastating in the right hands.",
+  "material_id": "iron",
+  "quality": "standard",
+  "reach_class": "medium",
+  "damage_type": "blunt",
+  "striking_mass_kg": 0.90,
+  "contact_area_cm2": 8.0,
+  "velocity_class": "fast",
+  "swing_momentum": 16,
+  "thrust_momentum": 0,
+  "attack_speed": 0.85,
+  "stamina_cost": 0.20,
+  "min_skill": 2,
+  "two_handed": false,
+  "tags": ["military"],
+  "weight_kg": 2.2,
+  "value_coin": 28
+}

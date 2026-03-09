@@ -1,0 +1,22 @@
+{
+  "$schema": "../schemas/weapon.schema.json",
+  "id": "battle_axe",
+  "name": "Battle Axe",
+  "description": "A heavy two-handed war axe with a broad bearded head. Crushes through shields and rends armour alike.",
+  "material_id": "iron",
+  "quality": "standard",
+  "reach_class": "long",
+  "damage_type": "slash",
+  "striking_mass_kg": 1.10,
+  "contact_area_cm2": 0.80,
+  "velocity_class": "slow",
+  "swing_momentum": 20,
+  "thrust_momentum": 3,
+  "attack_speed": 0.70,
+  "stamina_cost": 0.24,
+  "min_skill": 2,
+  "two_handed": true,
+  "tags": ["military", "heavy"],
+  "weight_kg": 3.2,
+  "value_coin": 38
+}

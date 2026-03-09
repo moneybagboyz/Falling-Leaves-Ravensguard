@@ -1,0 +1,22 @@
+{
+  "$schema": "../schemas/weapon.schema.json",
+  "id": "estoc",
+  "name": "Estoc",
+  "description": "A long, narrow thrusting sword with no cutting edge. Designed specifically to find gaps in plate armour.",
+  "material_id": "iron",
+  "quality": "standard",
+  "reach_class": "long",
+  "damage_type": "pierce",
+  "striking_mass_kg": 0.30,
+  "contact_area_cm2": 0.05,
+  "velocity_class": "fast",
+  "swing_momentum": 4,
+  "thrust_momentum": 16,
+  "attack_speed": 1.10,
+  "stamina_cost": 0.14,
+  "min_skill": 2,
+  "two_handed": false,
+  "tags": ["military", "anti_armour"],
+  "weight_kg": 1.6,
+  "value_coin": 35
+}

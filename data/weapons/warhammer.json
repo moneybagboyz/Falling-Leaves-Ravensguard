@@ -1,0 +1,22 @@
+{
+  "$schema": "../schemas/weapon.schema.json",
+  "id": "warhammer",
+  "name": "Warhammer",
+  "description": "A war hammer with a blunt face and a hardened spike. Effective against plate on the spike end.",
+  "material_id": "iron",
+  "quality": "standard",
+  "reach_class": "medium",
+  "damage_type": "blunt",
+  "striking_mass_kg": 0.70,
+  "contact_area_cm2": 0.50,
+  "velocity_class": "medium",
+  "swing_momentum": 12,
+  "thrust_momentum": 6,
+  "attack_speed": 1.00,
+  "stamina_cost": 0.16,
+  "min_skill": 1,
+  "two_handed": false,
+  "tags": ["military", "anti_armour"],
+  "weight_kg": 1.8,
+  "value_coin": 30
+}

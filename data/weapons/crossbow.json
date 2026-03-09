@@ -1,0 +1,22 @@
+{
+  "$schema": "../schemas/weapon.schema.json",
+  "id": "crossbow",
+  "name": "Crossbow",
+  "description": "A mechanically-drawn ranged weapon. Massive penetration; slow to reload. Requires minimal skill to use effectively.",
+  "material_id": "iron",
+  "quality": "standard",
+  "reach_class": "long",
+  "damage_type": "pierce",
+  "striking_mass_kg": 0.08,
+  "contact_area_cm2": 0.02,
+  "velocity_class": "very_fast",
+  "swing_momentum": 0,
+  "thrust_momentum": 32,
+  "attack_speed": 0.40,
+  "stamina_cost": 0.22,
+  "min_skill": 0,
+  "two_handed": true,
+  "tags": ["ranged", "military"],
+  "weight_kg": 4.0,
+  "value_coin": 55
+}

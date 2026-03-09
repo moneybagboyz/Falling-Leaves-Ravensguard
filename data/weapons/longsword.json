@@ -1,0 +1,22 @@
+{
+  "$schema": "../schemas/weapon.schema.json",
+  "id": "longsword",
+  "name": "Longsword",
+  "description": "A long, double-edged sword. Equally effective as a slasher or a thrusting weapon. The weapon of choice for knights.",
+  "material_id": "iron",
+  "quality": "standard",
+  "reach_class": "long",
+  "damage_type": "slash",
+  "striking_mass_kg": 0.60,
+  "contact_area_cm2": 0.40,
+  "velocity_class": "medium",
+  "swing_momentum": 15,
+  "thrust_momentum": 14,
+  "attack_speed": 0.90,
+  "stamina_cost": 0.18,
+  "min_skill": 2,
+  "two_handed": true,
+  "tags": ["military", "knightly"],
+  "weight_kg": 2.0,
+  "value_coin": 45
+}

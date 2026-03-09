@@ -1,0 +1,18 @@
+{
+  "id": "bolts",
+  "name": "Crossbow Bolts",
+  "description": "A case of iron crossbow bolts. Short, heavy, and devastating at close-to-medium range.",
+  "ammo_type": "bolt",
+  "material": "iron",
+  "quantity_per_bundle": 20,
+  "reach_class": "short",
+  "damage_type": "pierce",
+  "striking_mass_kg": 0.08,
+  "contact_area_cm2": 0.08,
+  "velocity_class": "very_fast",
+  "attack_speed": 1.0,
+  "stamina_cost": 0.0,
+  "tags": ["ammo", "ranged"],
+  "weight": 0.45,
+  "value_coin": 5
+}

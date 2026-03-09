@@ -1,0 +1,22 @@
+{
+  "$schema": "../schemas/weapon.schema.json",
+  "id": "morningstar",
+  "name": "Morningstar",
+  "description": "A spiked iron ball on a wooden handle. Combines crushing force with armour-piercing spikes.",
+  "material_id": "iron",
+  "quality": "standard",
+  "reach_class": "medium",
+  "damage_type": "pierce",
+  "striking_mass_kg": 0.85,
+  "contact_area_cm2": 0.80,
+  "velocity_class": "medium",
+  "swing_momentum": 14,
+  "thrust_momentum": 5,
+  "attack_speed": 0.95,
+  "stamina_cost": 0.18,
+  "min_skill": 1,
+  "two_handed": false,
+  "tags": ["military"],
+  "weight_kg": 2.5,
+  "value_coin": 32
+}
