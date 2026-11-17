@@ -21,6 +21,9 @@ public partial class ScreenRouter : Control
         SetAnchorsPreset(LayoutPreset.FullRect);
         Theme = PixelTheme.Build();
         TextureFilter = TextureFilterEnum.Nearest;
+        var backdrop = new ColorRect { Name = "Backdrop", Color = PixelTheme.Backdrop, MouseFilter = MouseFilterEnum.Ignore };
+        backdrop.SetAnchorsPreset(LayoutPreset.FullRect);
+        AddChild(backdrop);
         _screens = new Control { Name = "Screens", MouseFilter = MouseFilterEnum.Ignore };
         _screens.SetAnchorsPreset(LayoutPreset.FullRect);
         AddChild(_screens);
@@ -127,14 +130,15 @@ public partial class ScreenRouter : Control
     /// <summary>Button with a right-aligned key hint such as "[N]".</summary>
     public static Button HintButton(string text, string actionId)
     {
-        var b = new Button { Text = text, CustomMinimumSize = new Vector2(280, 0), Alignment = HorizontalAlignment.Left };
+        var b = new Button { Text = text, CustomMinimumSize = new Vector2(320, 40), Alignment = HorizontalAlignment.Left };
         b.AddChild(new Label
         {
             Text = InputBootstrap.Hint(actionId),
             ThemeTypeVariation = "HintLabel",
             MouseFilter = MouseFilterEnum.Ignore,
             HorizontalAlignment = HorizontalAlignment.Right,
-            AnchorRight = 1, AnchorBottom = 1, OffsetRight = -10,
+            AnchorRight = 1, AnchorBottom = 1, OffsetRight = -12,
+            VerticalAlignment = VerticalAlignment.Center,
         });
         return b;
     }

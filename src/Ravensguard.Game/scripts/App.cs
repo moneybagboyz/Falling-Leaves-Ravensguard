@@ -23,7 +23,9 @@ public partial class App : Node
         }
 
         Settings.Load();
-        Settings.ApplyScale(GetWindow());
+        var win = GetWindow();
+        Settings.ApplyScale(win);
+        win.SizeChanged += () => Settings.ApplyScale(win);
         InputBootstrap.Init();
 
         Router = new ScreenRouter { Name = "ScreenRouter" };

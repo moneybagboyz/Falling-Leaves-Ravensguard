@@ -13,11 +13,12 @@ public partial class MainMenu : Control
         center.SetAnchorsPreset(LayoutPreset.FullRect);
         AddChild(center);
         var v = new VBoxContainer();
-        v.AddThemeConstantOverride("separation", 10);
+        v.AddThemeConstantOverride("separation", 12);
+        v.CustomMinimumSize = new Vector2(320, 0);
         center.AddChild(v);
         v.AddChild(new Label { Text = L.T("MENU_TITLE"), ThemeTypeVariation = "TitleLabel", HorizontalAlignment = HorizontalAlignment.Center });
         v.AddChild(new Label { Text = L.T("MENU_SUBTITLE"), ThemeTypeVariation = "HintLabel", HorizontalAlignment = HorizontalAlignment.Center });
-        v.AddChild(new Control { CustomMinimumSize = new Vector2(0, 16) });
+        v.AddChild(new Control { CustomMinimumSize = new Vector2(0, 24) });
 
         var newGame = ScreenRouter.HintButton(L.T("MENU_NEW_GAME"), "menu.new_game");
         newGame.Pressed += DoNewGame;

@@ -5,6 +5,7 @@ namespace Ravensguard.Game.UI;
 /// <summary>Builds the pixel UI theme in code: 9-slice pixel panels, no rounded corners, nearest filtering.</summary>
 public static class PixelTheme
 {
+    public static readonly Color Backdrop = new("141118");
     public static readonly Color Fill = new("2b2420");
     public static readonly Color Border = new("1a1418");
     public static readonly Color Rim = new("6b5a48");

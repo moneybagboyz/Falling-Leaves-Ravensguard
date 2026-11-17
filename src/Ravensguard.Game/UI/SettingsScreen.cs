@@ -157,9 +157,10 @@ public partial class SettingsScreen : Control
         var row = new HBoxContainer();
         row.AddChild(new Label { Text = L.T("DISPLAY_UI_SCALE"), SizeFlagsHorizontal = SizeFlags.ExpandFill });
         var opt = new OptionButton();
+        opt.AddItem(L.T("DISPLAY_SCALE_AUTO"));
         for (int s = 1; s <= 3; s++) opt.AddItem($"{s}x");
-        opt.Selected = Settings.UiScale - 1;
-        opt.ItemSelected += i => { Settings.UiScale = (int)i + 1; Settings.ApplyScale(GetWindow()); Settings.Save(); };
+        opt.Selected = Settings.UiScale;
+        opt.ItemSelected += i => { Settings.UiScale = (int)i; Settings.ApplyScale(GetWindow()); Settings.Save(); };
         row.AddChild(opt);
         v.AddChild(row);
 

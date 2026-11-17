@@ -9,13 +9,14 @@ config/features=PackedStringArray("4.7", "C#", "GL Compatibility")
 [display]
 window/size/viewport_width=1920
 window/size/viewport_height=1080
-window/stretch/mode="canvas_items"
-window/stretch/aspect="expand"
+window/stretch/mode="disabled"
 
 [dotnet]
 project/assembly_name="Ravensguard.Game"
 
 [rendering]
+
+environment/defaults/default_clear_color=Color(0.0784314, 0.0666667, 0.0941176, 1)
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 textures/canvas_textures/default_texture_filter=0
