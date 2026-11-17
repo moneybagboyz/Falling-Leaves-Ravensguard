@@ -133,9 +133,9 @@ public static class EmbarkSite
             }
             // distance in metres between cell centres, squared against the km limits (cells are 2 km)
             long km2x100 = best * 4 * 100; // (2 * cells)^2 km^2, x100
-            if (km2x100 >= 7L * 7 * 100 && km2x100 <= 9L * 9 * 100) pts += 80;          // the middle of 6-10 km survives the jitter of where each town stands in its cell
-            else if (km2x100 >= 6L * 6 * 100 && km2x100 <= 10L * 10 * 100) pts += 25;
-            else pts -= 80;
+            if (km2x100 >= 7L * 7 * 100 && km2x100 <= 9L * 9 * 100) pts += 40;          // the middle of 6-10 km survives the jitter of where each town stands in its cell
+            else if (km2x100 >= 6L * 6 * 100 && km2x100 <= 10L * 10 * 100) pts += 15;
+            else pts -= 40;
         }
         return pts;
     }

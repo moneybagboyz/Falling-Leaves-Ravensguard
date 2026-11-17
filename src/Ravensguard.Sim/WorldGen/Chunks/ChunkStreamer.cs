@@ -14,12 +14,14 @@ public sealed class ChunkStreamerSettings
     public int SyncRadius { get; set; } = 1;
     /// <summary>Milliseconds of generation per Update call beyond the sync ring (plan 2.11: 4 ms).</summary>
     public double BudgetMs { get; set; } = 4.0;
+    /// <summary>Most chunks generated on worker threads at once when <see cref="ChunkStreamer.Update"/> is asked to work in the background.</summary>
+    public int MaxBackgroundJobs { get; set; } = 4;
 }
 
 /// <summary>
 /// Keeps the chunks around the hero loaded (plan 2.2, 2.3, 2.11). A chunk is generated on its first visit and snapshotted into the
 /// <see cref="ChunkStore"/>; every later visit rebuilds it from snapshot plus deltas, so a changed tile survives unloading. Generation is
-/// time-sliced by <see cref="Update"/>; <see cref="LoadSync"/> and <see cref="LoadAround"/> are the synchronous path for tests and start-up.
+/// time-sliced by <see cref="Update"/> (optionally on worker threads); <see cref="LoadSync"/> and <see cref="LoadAround"/> are the synchronous path for tests and start-up.
 /// </summary>
 public sealed class ChunkStreamer
 {
@@ -27,6 +29,9 @@ public sealed class ChunkStreamer
     private readonly (int Dx, int Dy)[] _order;
     private readonly Stopwatch _sw = new();
     private double _avgLoadMs = 1.0;
+    private readonly Dictionary<(int X, int Y), Task<Prepared>> _prefetch = [];
+    /// <summary>Chunks whose generation ran on a worker and was picked up by the main thread.</summary>
+    public long PrefetchedCount { get; private set; }
 
     /// <summary>Chunks per region side (32 km / 32 m); chunk coordinates outside 0..RegionChunks-1 are off the region.</summary>
     public const int RegionChunks = 1000;
@@ -89,10 +94,12 @@ public sealed class ChunkStreamer
         }
         else
         {
-            var gen = Generator.GenerateLevels(cx, cy);
+            var prep = TakePrefetched(cx, cy);
+            var gen = prep?.Gen ?? Generator.GenerateLevels(cx, cy);
             foreach (var (z, content) in gen.Levels)
             {
-                Store.RecordFirstVisit(new ChunkKey(cx, cy, z), ChunkGenerator.Version, gen.ContentHash, content);
+                if (prep != null && prep.Snapshots.TryGetValue(z, out var snap)) Store.RecordFirstVisit(new ChunkKey(cx, cy, z), snap, content);
+                else Store.RecordFirstVisit(new ChunkKey(cx, cy, z), ChunkGenerator.Version, gen.ContentHash, content);
                 LoadedChunk.Decode(c, z, content);
             }
             GeneratedCount++;
@@ -102,6 +109,25 @@ public sealed class ChunkStreamer
         _loaded[(cx, cy)] = c;
         Revision++;
         return c;
+    }
+
+    /// <summary>A chunk made on a worker: the generated levels and their stored snapshots (the expensive part of recording a first visit).</summary>
+    private sealed record Prepared(GeneratedChunk Gen, Dictionary<int, ChunkSnapshot> Snapshots);
+
+    private Prepared Prepare(int cx, int cy)
+    {
+        var gen = Generator.GenerateLevels(cx, cy);
+        var snaps = new Dictionary<int, ChunkSnapshot>();
+        foreach (var (z, content) in gen.Levels) if (!content.IsEmpty) snaps[z] = ChunkSnapshot.Create(ChunkGenerator.Version, gen.ContentHash, content);
+        return new Prepared(gen, snaps);
+    }
+
+    /// <summary>The generated chunk a worker made (waiting for it if it is still running), or null when none was started or it failed.</summary>
+    private Prepared? TakePrefetched(int cx, int cy)
+    {
+        if (!_prefetch.Remove((cx, cy), out var task)) return null;
+        try { var r = task.GetAwaiter().GetResult(); PrefetchedCount++; return r; }
+        catch (Exception) { return null; } // generate it here instead
     }
 
     /// <summary>Loads every chunk within the radius now.</summary>
@@ -114,7 +140,7 @@ public sealed class ChunkStreamer
     /// One frame of streaming around the hero's chunk: the sync ring is loaded regardless; further chunks nearest first until the budget
     /// (default 4 ms) is spent, at least one per call while any are missing; chunks past the keep radius unload. Returns how many were loaded.
     /// </summary>
-    public int Update(int heroChunkX, int heroChunkY, double? budgetMs = null)
+    public int Update(int heroChunkX, int heroChunkY, double? budgetMs = null, bool background = false)
     {
         int loaded = 0;
         double budget = budgetMs ?? Settings.BudgetMs;
@@ -130,12 +156,26 @@ public sealed class ChunkStreamer
         {
             if (Math.Max(Math.Abs(dx), Math.Abs(dy)) <= sync) continue;
             if (_loaded.ContainsKey((heroChunkX + dx, heroChunkY + dy))) continue;
+            if (background && InRegion(heroChunkX + dx, heroChunkY + dy) && !Store.Contains(new ChunkKey(heroChunkX + dx, heroChunkY + dy, 0)))
+            {
+                // a chunk that has to be generated is made on a worker; the main thread only records and decodes it once it is ready
+                var key = (heroChunkX + dx, heroChunkY + dy);
+                if (!_prefetch.TryGetValue(key, out var job))
+                {
+                    if (_prefetch.Count < Settings.MaxBackgroundJobs) { var (gx, gy) = key; _prefetch[key] = Task.Run(() => Prepare(gx, gy)); }
+                    continue;
+                }
+                if (!job.IsCompleted) continue;
+            }
             // do not start a chunk that is expected to run past the budget (the average of the loads so far), except the first one beyond the sync ring
             if (extra > 0 && Stopwatch.GetElapsedTime(t0).TotalMilliseconds + _avgLoadMs > budget) break;
             LoadSync(heroChunkX + dx, heroChunkY + dy); loaded++; extra++;
             if (Stopwatch.GetElapsedTime(t0).TotalMilliseconds >= budget) break;
         }
         int keep = Settings.KeepRadius;
+        if (_prefetch.Count > 0)
+            foreach (var k in _prefetch.Keys.ToArray())
+                if (Math.Max(Math.Abs(k.X - heroChunkX), Math.Abs(k.Y - heroChunkY)) > keep) _prefetch.Remove(k);
         List<(int, int)>? gone = null;
         foreach (var k in _loaded.Keys)
             if (Math.Max(Math.Abs(k.X - heroChunkX), Math.Abs(k.Y - heroChunkY)) > keep) (gone ??= []).Add(k);

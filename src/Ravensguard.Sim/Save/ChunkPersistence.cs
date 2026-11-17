@@ -197,18 +197,25 @@ public sealed class ChunkStore
     /// A delta-only entry (ops that landed before any snapshot) gets the snapshot attached and keeps its ops.
     /// </summary>
     public bool RecordFirstVisit(ChunkKey key, int generatorVersion, string contentHash, ChunkContent content)
+        => RecordFirstVisit(key, content, () => ChunkSnapshot.Create(generatorVersion, contentHash, content));
+
+    /// <summary>Same, with the snapshot already built (it can be made on a worker thread: serialising and compressing a town chunk takes milliseconds).</summary>
+    public bool RecordFirstVisit(ChunkKey key, ChunkSnapshot snapshot, ChunkContent content) => RecordFirstVisit(key, content, () => snapshot);
+
+    private bool RecordFirstVisit(ChunkKey key, ChunkContent content, Func<ChunkSnapshot> snapshot)
     {
         Check(key);
         if (content.IsEmpty) return false;
         if (_chunks.TryGetValue(key, out var e))
         {
             if (e.Snapshot != null) return false;
-            e.Delta.ApplyTo(ChunkSnapshot.Create(generatorVersion, contentHash, content).Decode()); // the old ops must still apply cleanly
-            e.Snapshot = ChunkSnapshot.Create(generatorVersion, contentHash, content);
+            var snap = snapshot();
+            e.Delta.ApplyTo(snap.Decode()); // the old ops must still apply cleanly
+            e.Snapshot = snap;
             e.Bump();
             return true;
         }
-        _chunks[key] = new ChunkEntry { Key = key, Snapshot = ChunkSnapshot.Create(generatorVersion, contentHash, content) };
+        _chunks[key] = new ChunkEntry { Key = key, Snapshot = snapshot() };
         return true;
     }
 

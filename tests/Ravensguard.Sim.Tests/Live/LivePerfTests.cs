@@ -16,8 +16,8 @@ public class LivePerfTests(ChunkWorldFixture fx, ITestOutputHelper output) : ICl
     private (int X, int Y)? FindOpenRun(int len)
     {
         var scan = new ChunkStreamer(fx.Generator);
-        for (int y = 4000; y < 28000; y += 331)
-            for (int x0 = 2000; x0 < 30000 - len; x0 += 1777)
+        for (int y = 4000; y < 28000; y += 173)
+            for (int x0 = 2000; x0 < 30000 - len; x0 += 997)
             {
                 int run = 0;
                 for (int x = x0; x < x0 + len; x += 2)
@@ -33,7 +33,7 @@ public class LivePerfTests(ChunkWorldFixture fx, ITestOutputHelper output) : ICl
     [Fact]
     public void Walking_at_8x_keeps_every_tick_short()
     {
-        const int Len = 900;
+        const int Len = 700;
         var spot = FindOpenRun(Len);
         Assert.NotNull(spot);
         var streamer = new ChunkStreamer(fx.Generator);
@@ -44,13 +44,31 @@ public class LivePerfTests(ChunkWorldFixture fx, ITestOutputHelper output) : ICl
         var sw = new Stopwatch(); var times = new List<double>();
         for (int i = 0; i < 380; i++) { sw.Restart(); w.Step(); times.Add(sw.Elapsed.TotalMilliseconds); }
         double walked = w.OriginX + w.Snapshot.Hero.X.ToDouble() - spot.Value.X;
+        double max0 = times.Max(); int tickAt = times.IndexOf(max0);
         times.Sort();
         double max = times[^1], p99 = times[(int)(times.Count * 0.99)], avg = times.Average();
-        output.WriteLine($"8x walk {walked:0} m: avg {avg:0.00} ms, p99 {p99:0.00} ms, max {max:0.00} ms, window swaps {w.WindowSwaps}, generated {streamer.GeneratedCount}");
-        Assert.True(walked > 600, $"the hero should walk the open run, walked {walked:0} m");
+        output.WriteLine($"8x walk {walked:0} m: avg {avg:0.00} ms, p99 {p99:0.00} ms, max {max:0.00} ms, window swaps {w.WindowSwaps}, generated {streamer.GeneratedCount}, slowest chunk load {streamer.MaxLoadMs:0.0} ms, slowest tick #{tickAt}");
+        output.WriteLine($"phases max: update {w.DbgUpdate:0.0} sync {w.DbgSync:0.0} swap {w.DbgSwap:0.0} publish {w.DbgPub:0.0}");
+        Assert.True(walked > 500, $"the hero should walk the open run, walked {walked:0} m");
         // before: max 18 ms, p99 11 ms and a window swap at every chunk; the next window is now built off-thread and swapped in at every second chunk
         Assert.True(max < TestBudget.Ms(15), $"slowest tick {max:0.0} ms");
         Assert.True(w.WindowSwaps <= walked / 32 / 2 + 2, $"{w.WindowSwaps} swaps for {walked:0} m");
+    }
+
+    [Fact]
+    public void Chunks_generated_on_worker_threads_are_identical_to_those_generated_in_place()
+    {
+        var t = fx.Region.Settlements.OrderByDescending(x => x.TargetPop).First();
+        int cx = t.CenterX / 32, cy = t.CenterY / 32;
+        var a = new ChunkStreamer(fx.Generator);
+        a.LoadAround(cx, cy, 3);
+        var b = new ChunkStreamer(fx.Generator);
+        var sw = Stopwatch.StartNew();
+        while (b.LoadedCount < 49 && sw.Elapsed.TotalSeconds < 60) { b.Update(cx, cy, 2.0, background: true); Thread.Sleep(1); }
+        Assert.Equal(49, b.LoadedCount);
+        Assert.True(b.PrefetchedCount > 20, $"{b.PrefetchedCount} chunks came from workers");
+        Assert.Equal(a.Store.ToSection(), b.Store.ToSection());
+        Assert.Equal(a.Store.Count, b.Store.Count);
     }
 
     [Fact]

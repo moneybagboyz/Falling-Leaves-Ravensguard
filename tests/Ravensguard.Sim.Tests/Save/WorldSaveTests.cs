@@ -30,6 +30,7 @@ public class WorldSaveTests(ITestOutputHelper output)
         var h = HistoryGenerator.Generate(c, hs);
         var pick = EmbarkSite.AutoPick(c, h);
         var r = RegionGenerator.Generate(c, h, pick.CellX, pick.CellY, rs);
+        LandmarkPlacer.Place(r, h, load.Database); // the game places landmarks right after the region; a loaded world always has them
         var pop = Populator.Populate(r, h, load.Database);
 
         var ids = new IdAllocator();

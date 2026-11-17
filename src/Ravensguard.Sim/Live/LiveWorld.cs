@@ -241,7 +241,7 @@ public sealed class LiveWorld
     {
         var w = Window!;
         int hcx = ChunkStreamer.FloorDiv(w.OriginX + _x.Floor(), 32), hcy = ChunkStreamer.FloorDiv(w.OriginY + _y.Floor(), 32);
-        Streamer!.Update(hcx, hcy);
+        Streamer!.Update(hcx, hcy, background: !SynchronousStreaming);
         int dist = Math.Max(Math.Abs(hcx - w.CenterChunkX), Math.Abs(hcy - w.CenterChunkY));
         if (_pending != null && Math.Max(Math.Abs(hcx - _pendingCx), Math.Abs(hcy - _pendingCy)) > RecentreDistance) _pending = null; // the hero went another way; the finished window is no use
         if (dist >= 1 && _pending == null && !SynchronousStreaming)
