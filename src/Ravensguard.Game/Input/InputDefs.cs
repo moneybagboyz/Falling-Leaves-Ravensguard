@@ -172,8 +172,8 @@ public static class InputDefs
         A(E, "clear_level", K(Key.Delete));
         A(E, "add_room", K(Key.A));
         A(E, "delete_room", K(Key.Backspace));
-        A(E, "piece_prev", K(Key.Bracketleft));
-        A(E, "piece_next", K(Key.Bracketright));
+        A(E, "piece_prev", K(Key.Comma));
+        A(E, "piece_next", K(Key.Period));
         A(E, "rotate", K(Key.T));
         A(E, "mirror_x", K(Key.M));
         A(E, "mirror_y", K(Key.U));

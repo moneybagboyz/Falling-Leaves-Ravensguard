@@ -22,7 +22,7 @@ public partial class EditorCanvas : Control
     Vector2 _origin = new(24, 24);
     (int X, int Y)? _hover;
     (int X, int Y)? _start, _last;
-    bool _stroke, _eraseStroke;
+    bool _stroke, _eraseStroke, _autoFit = true;
     int _builtRevision = -1;
     HamletMap? _map;
     BuildingGrid? _drawGrid;
@@ -69,10 +69,14 @@ public partial class EditorCanvas : Control
         for (int i = 0; i < Zooms.Length; i++) if (_m.Width * Tile * Zooms[i] + 48 <= Size.X && _m.Height * Tile * Zooms[i] + 48 <= Size.Y) best = i;
         _zoomIx = best;
         _origin = ((Size - new Vector2(_m.Width, _m.Height) * Cell) / 2).Floor();
+        _autoFit = true;
         QueueRedraw();
     }
 
-    public void Pan(Vector2 d) { _origin += d; QueueRedraw(); }
+    /// <summary>Screen position of the middle of a cell (for synthetic input in the screenshot and tests).</summary>
+    public Vector2 CellCenter(int x, int y) => GlobalPosition + _origin + new Vector2((x + 0.5f) * Cell, (y + 0.5f) * Cell);
+
+    public void Pan(Vector2 d) { _origin += d; _autoFit = false; QueueRedraw(); }
 
     public void ZoomBy(int dir, Vector2? around = null)
     {
@@ -82,12 +86,13 @@ public partial class EditorCanvas : Control
         var cellPos = (at - _origin) / Cell;
         _zoomIx = n;
         _origin = at - cellPos * Cell;
+        _autoFit = false;
         QueueRedraw();
     }
 
     public override void _Notification(int what)
     {
-        if (what == NotificationResized) { if (_builtRevision < 0) Fit(); QueueRedraw(); }
+        if (what == NotificationResized) { if (_autoFit) Fit(); QueueRedraw(); }
     }
 
     (int X, int Y) CellAt(Vector2 p) => ((int)MathF.Floor((p.X - _origin.X) / Cell), (int)MathF.Floor((p.Y - _origin.Y) / Cell));

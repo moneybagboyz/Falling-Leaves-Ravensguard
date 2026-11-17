@@ -94,10 +94,16 @@ public static class EditorSelfTest
                 screen.Invoke("blueprinteditor.level_down");
                 screen.Invoke("blueprinteditor.tool_line");
                 check(m.Tool == EditTool.Line, "tool_line key action did not select the line tool");
+                foreach (var dlg in new[] { "open", "resize", "new", "save_as" })
+                {
+                    check(screen.Invoke("blueprinteditor." + dlg), "no key action " + dlg);
+                    screen.Invoke("blueprinteditor.close"); // closes the dialog
+                }
                 host.RemoveChild(screen);
                 screen.Free();
             }
         }
+        GD.Print("selftest: blueprint editor ok (cottage painted, validated, saved, reloaded, screen driven)");
         return tmp;
     }
 }

@@ -104,9 +104,7 @@ jobs:
           timeout 120 "$GODOT" --headless -- --smoke 2>&1 | tee smoke.log
           code=${PIPESTATUS[0]}
           set -e
-          # Engine shutdown reports of text-server RIDs leaked at exit are tracked in docs/reviews/phase-1-open.md; warn, don't fail.
-          if grep -E "RID allocations of type .*TextServer.* were leaked at exit" smoke.log; then echo "::warning::text-server RIDs leaked at exit (known, tracked)"; fi
-          if grep -E "ERROR|SCRIPT ERROR|Unhandled exception" smoke.log | grep -vE "RID allocations of type .*TextServer.* were leaked at exit"; then echo "::error::smoke run logged errors"; exit 1; fi
+          if grep -E "ERROR|SCRIPT ERROR|Unhandled exception" smoke.log; then echo "::error::smoke run logged errors"; exit 1; fi
           exit $code
       - name: Key-map conflict check
         working-directory: src/Ravensguard.Game

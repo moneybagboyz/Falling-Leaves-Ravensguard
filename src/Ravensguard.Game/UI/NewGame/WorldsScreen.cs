@@ -48,7 +48,8 @@ public partial class WorldsScreen : Control
         bottom.AddChild(back); bottom.AddChild(_delete);
         bottom.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
         bottom.AddChild(_legends);
-        if (!_legendsMode) bottom.AddChild(_play);
+        bottom.AddChild(_play);
+        _play.Visible = !_legendsMode; // never left unparented: an orphan button keeps its text-server RIDs alive past shutdown
         root.AddChild(bottom);
         Reload();
     }

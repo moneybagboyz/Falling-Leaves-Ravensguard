@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Godot;
+using Ravensguard.Content;
 using Ravensguard.Game.UI;
 using Ravensguard.Sim.Building;
 
@@ -34,11 +35,26 @@ public static class EditorShot
             m.SetPiece("wall_timber");
             m.BeginEdit(); m.Apply(d.X, d.Y, false); m.EndEdit();
         }
-        m.SetPiece("bench");
-        m.Layer = EditLayer.Fixtures;
-        await Frames(10);
+        await Frames(4);
+        // a real drag with the mouse: tables along the bottom of the hearth room
+        m.SetPiece("table");
+        m.Tool = EditTool.Paint;
+        var a = screen.Canvas.CellCenter(1, 4); var b = screen.Canvas.CellCenter(3, 4);
+        void Mouse(InputEvent e) { Input.ParseInputEvent(e); }
+        Mouse(new InputEventMouseMotion { Position = a, GlobalPosition = a });
+        await Frames(2);
+        GD.Print($"bpedit-shot: a={a} hover={screen.Canvas.Hover} layer={m.Layer} piece={m.Piece} tool={m.Tool}");
+        Mouse(new InputEventMouseButton { ButtonIndex = MouseButton.Left, Pressed = true, Position = a, GlobalPosition = a });
+        await Frames(2);
+        Mouse(new InputEventMouseMotion { Position = b, GlobalPosition = b, Relative = b - a });
+        await Frames(2);
+        Mouse(new InputEventMouseButton { ButtonIndex = MouseButton.Left, Pressed = false, Position = b, GlobalPosition = b });
+        await Frames(2);
+        GD.Print($"bpedit-shot: mouse drag painted {(m.Level(0)!.Fixture.Count(f => f == "table"))} table cells (expected 3 new), undo steps ok={m.CanUndo}");
+        await Frames(6);
         screen.Refresh();
-        screen.DebugClickProblem(0);
+        screen.DebugClickProblem(1);
+        if (Array.IndexOf(args, "--bpedit-dialog") >= 0) { screen.Invoke("blueprinteditor." + Arg("--bpedit-dialog", "open")); await Frames(4); }
         await Frames(6);
         var img = tree.Root.GetViewport().GetTexture().GetImage();
         img.SavePng(outPath);

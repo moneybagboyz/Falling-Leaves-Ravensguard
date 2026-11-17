@@ -201,6 +201,7 @@ public sealed class EditorModel
 
     public void SetPiece(string? id)
     {
+        if (id != null && !Pieces.TryGet(id, out _)) { Say($"Unknown piece '{id}'"); return; }
         Piece = id;
         if (id == null) return;
         var k = Pieces.KindOf(id);

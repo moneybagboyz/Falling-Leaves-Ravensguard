@@ -418,7 +418,7 @@ BPEDIT_SEC_WALLS,Walls
 BPEDIT_SEC_POSTS,Posts
 BPEDIT_SEC_DOORS,Doors
 BPEDIT_SEC_WINDOWS,Windows
-BPEDIT_SEC_STAIRS,"Stairs, ladders and trapdoors"
+BPEDIT_SEC_STAIRS,Stairs and ladders
 BPEDIT_SEC_FURNITURE,Furniture
 BPEDIT_SEC_WORKSTATIONS,Workstations
 BPEDIT_SEC_GROUND,Ground
@@ -446,9 +446,9 @@ BPEDIT_PREVIEW_STYLE,Preview style
 BPEDIT_OFF,off
 BPEDIT_REGIONS,Room letters
 BPEDIT_GRID,Grid
-BPEDIT_PIECE_PREV,Previous piece
-BPEDIT_PIECE_NEXT,Next piece
-BPEDIT_FIT,Fit
+BPEDIT_PIECE_PREV,Prev
+BPEDIT_PIECE_NEXT,Next
+BPEDIT_FIT,Fit view
 BPEDIT_HELP,"Left click paints, right click erases, Shift+drag with Rectangle draws only the outline, middle drag or arrows pan, wheel zooms."
 BPEDIT_ROOMS,Room letters and purposes
 BPEDIT_ROOM_ADD,Add room
@@ -521,3 +521,4 @@ ACTION_BLUEPRINTEDITOR_OPEN,Open blueprint
 ACTION_BLUEPRINTEDITOR_SAVE,Save
 ACTION_BLUEPRINTEDITOR_SAVE_AS,Save as
 ACTION_BLUEPRINTEDITOR_CLOSE,Close editor
+BPEDIT_LAYER,Active layer

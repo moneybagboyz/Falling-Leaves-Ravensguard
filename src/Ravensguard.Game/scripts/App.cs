@@ -79,13 +79,12 @@ public partial class App : Node
         try
         {
             async Task Frames(int n) { for (int i = 0; i < n; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame); }
-            string sk = System.Environment.GetEnvironmentVariable("SMK") ?? "";
             await Frames(1); // MainMenu (pushed in _Ready)
-            if (sk.Contains('s')) { Router.Push(new SettingsScreen(Router)); await Frames(1);
-            Router.Pop(); await Frames(1); }
-            if (sk.Contains('v')) { Router.Push(new World.StreetView(Router)); await Frames(2);
-            Router.Pop(); await Frames(1); }
-            if (sk.Contains('n')) await UI.NewGame.NewGameDebug.Smoke(GetTree(), Router);
+            Router.Push(new SettingsScreen(Router)); await Frames(1);
+            Router.Pop(); await Frames(1);
+            Router.Push(new World.StreetView(Router)); await Frames(2);
+            Router.Pop(); await Frames(1);
+            await UI.NewGame.NewGameDebug.Smoke(GetTree(), Router);
         }
         catch (Exception ex)
         {
@@ -101,7 +100,6 @@ public partial class App : Node
         // Free every screen before quitting, so text and font resources are released and the exit is clean.
         foreach (var child in GetChildren()) child.QueueFree();
         for (int i = 0; i < 2; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
-        if (System.Environment.GetEnvironmentVariable("SMK_ORPH") != null) { Node.PrintOrphanNodes(); }
         GetTree().Quit(code);
     }
 }

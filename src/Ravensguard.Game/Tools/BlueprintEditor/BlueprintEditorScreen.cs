@@ -86,7 +86,7 @@ public partial class BlueprintEditorScreen : Control
         string id = Ctx + action;
         var b = ScreenRouter.HintButton(text, id);
         int hintLen = InputBootstrap.Hint(id).Length;
-        b.CustomMinimumSize = new Vector2(Math.Max(64, text.Length * 9 + hintLen * 9 + 34), 30);
+        b.CustomMinimumSize = new Vector2(Math.Max(56, (int)(text.Length * 8.5f + hintLen * 8.5f) + 30), 28);
         b.TooltipText = text + " " + InputBootstrap.Hint(id);
         b.FocusMode = FocusModeEnum.None;
         b.Pressed += () => press();
@@ -138,7 +138,7 @@ public partial class BlueprintEditorScreen : Control
 
     Control BuildLeft()
     {
-        var panel = new PanelContainer { CustomMinimumSize = new Vector2(262, 0) };
+        var panel = new PanelContainer { CustomMinimumSize = new Vector2(250, 0) };
         var v = new VBoxContainer();
         v.AddThemeConstantOverride("separation", 4);
         panel.AddChild(v);
@@ -167,6 +167,11 @@ public partial class BlueprintEditorScreen : Control
 
         v.AddChild(new HSeparator());
         v.AddChild(Hint(T("BPEDIT_PALETTE")));
+        var cyc = new HBoxContainer();
+        cyc.AddThemeConstantOverride("separation", 4);
+        cyc.AddChild(HintBtn(T("BPEDIT_PIECE_PREV"), "piece_prev", () => Model.CyclePiece(-1)));
+        cyc.AddChild(HintBtn(T("BPEDIT_PIECE_NEXT"), "piece_next", () => Model.CyclePiece(+1)));
+        v.AddChild(cyc);
         var scroll = new ScrollContainer { SizeFlagsVertical = SizeFlags.ExpandFill, HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
         v.AddChild(scroll);
         var list = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
@@ -227,11 +232,6 @@ public partial class BlueprintEditorScreen : Control
         ToolBtn(T("BPEDIT_TOOL_FLOOD"), "tool_flood", EditTool.Flood);
         ToolBtn(T("BPEDIT_TOOL_ERASE"), "tool_erase", EditTool.Erase);
         ToolBtn(T("BPEDIT_TOOL_PICK"), "tool_eyedropper", EditTool.Eyedropper);
-        tools.AddChild(new VSeparator());
-        void LayerBtn(string text, string action, EditLayer layer) => AddToggle(tools, HintBtn(text, action, () => { Model.Layer = layer; OnChanged(); }, true), () => Model.Layer == layer);
-        LayerBtn(T("BPEDIT_LAYER_STRUCTURE"), "layer_structure", EditLayer.Structure);
-        LayerBtn(T("BPEDIT_LAYER_FIXTURES"), "layer_fixtures", EditLayer.Fixtures);
-        LayerBtn(T("BPEDIT_LAYER_ROOMS"), "layer_rooms", EditLayer.Rooms);
 
         var level = new HFlowContainer();
         level.AddThemeConstantOverride("h_separation", 4);
@@ -243,11 +243,15 @@ public partial class BlueprintEditorScreen : Control
         level.AddChild(HintBtn(T("BPEDIT_LEVEL_DOWN"), "level_down", () => Model.SetZ(Model.Z - 1)));
         level.AddChild(HintBtn(T("BPEDIT_COPY_BELOW"), "copy_below", Model.CopyFromBelow));
         level.AddChild(HintBtn(T("BPEDIT_CLEAR_LEVEL"), "clear_level", Model.ClearLevel));
-        level.AddChild(new VSeparator());
-        level.AddChild(HintBtn(T("BPEDIT_ROTATE"), "rotate", Model.Rotate));
-        level.AddChild(HintBtn(T("BPEDIT_MIRROR_X"), "mirror_x", Model.MirrorX));
-        level.AddChild(HintBtn(T("BPEDIT_MIRROR_Y"), "mirror_y", Model.MirrorY));
-        level.AddChild(HintBtn(T("BPEDIT_RESIZE"), "resize", ShowResize));
+        var xform = new HFlowContainer();
+        xform.AddThemeConstantOverride("h_separation", 4);
+        xform.AddThemeConstantOverride("v_separation", 4);
+        v.AddChild(xform);
+        xform.AddChild(HintBtn(T("BPEDIT_ROTATE"), "rotate", Model.Rotate));
+        xform.AddChild(HintBtn(T("BPEDIT_MIRROR_X"), "mirror_x", Model.MirrorX));
+        xform.AddChild(HintBtn(T("BPEDIT_MIRROR_Y"), "mirror_y", Model.MirrorY));
+        xform.AddChild(HintBtn(T("BPEDIT_RESIZE"), "resize", ShowResize));
+        xform.AddChild(HintBtn(T("BPEDIT_FIT"), "fit", () => Canvas.Fit()));
 
         var view = new HFlowContainer();
         view.AddThemeConstantOverride("h_separation", 4);
@@ -261,16 +265,15 @@ public partial class BlueprintEditorScreen : Control
         _gridBtn = HintBtn(T("BPEDIT_GRID"), "toggle_grid", () => { Canvas.ShowGrid = !Canvas.ShowGrid; OnChanged(); Canvas.QueueRedraw(); }, true);
         view.AddChild(_regionsBtn);
         view.AddChild(_gridBtn);
-        view.AddChild(HintBtn(T("BPEDIT_PIECE_PREV"), "piece_prev", () => Model.CyclePiece(-1)));
-        view.AddChild(HintBtn(T("BPEDIT_PIECE_NEXT"), "piece_next", () => Model.CyclePiece(+1)));
-        view.AddChild(HintBtn(T("BPEDIT_FIT"), "fit", () => Canvas.Fit()));
 
         Canvas = new EditorCanvas(Model);
         Canvas.HoverChanged += OnHover;
         var frame = new PanelContainer { SizeFlagsVertical = SizeFlags.ExpandFill, SizeFlagsHorizontal = SizeFlags.ExpandFill };
         frame.AddChild(Canvas);
         v.AddChild(frame);
-        v.AddChild(Hint(T("BPEDIT_HELP")));
+        var help = Hint(T("BPEDIT_HELP"));
+        help.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        v.AddChild(help);
         return v;
     }
 
@@ -282,13 +285,22 @@ public partial class BlueprintEditorScreen : Control
 
     Control BuildRight()
     {
-        var panel = new PanelContainer { CustomMinimumSize = new Vector2(330, 0) };
+        var panel = new PanelContainer { CustomMinimumSize = new Vector2(340, 0) };
         var v = new VBoxContainer();
         v.AddThemeConstantOverride("separation", 4);
         panel.AddChild(v);
 
+        var layers = new HFlowContainer();
+        layers.AddThemeConstantOverride("h_separation", 4);
+        v.AddChild(new Label { Text = T("BPEDIT_LAYER"), ThemeTypeVariation = "GoldLabel" });
+        v.AddChild(layers);
+                void LayerBtn(string text, string action, EditLayer layer) => AddToggle(layers, HintBtn(text, action, () => { Model.Layer = layer; OnChanged(); }, true), () => Model.Layer == layer);
+        LayerBtn(T("BPEDIT_LAYER_STRUCTURE"), "layer_structure", EditLayer.Structure);
+        LayerBtn(T("BPEDIT_LAYER_FIXTURES"), "layer_fixtures", EditLayer.Fixtures);
+        LayerBtn(T("BPEDIT_LAYER_ROOMS"), "layer_rooms", EditLayer.Rooms);
+
         v.AddChild(new Label { Text = T("BPEDIT_ROOMS"), ThemeTypeVariation = "GoldLabel" });
-        _roomList = new ItemList { CustomMinimumSize = new Vector2(0, 92), SizeFlagsHorizontal = SizeFlags.ExpandFill, FocusMode = FocusModeEnum.None };
+        _roomList = new ItemList { CustomMinimumSize = new Vector2(0, 70), SizeFlagsHorizontal = SizeFlags.ExpandFill, FocusMode = FocusModeEnum.None };
         _roomList.ItemSelected += i => { if (!_syncing) { Model.Letter = _roomList.GetItemText((int)i)[0]; Model.Layer = EditLayer.Rooms; OnChanged(); } };
         v.AddChild(_roomList);
         _purpose = new OptionButton { SizeFlagsHorizontal = SizeFlags.ExpandFill, FocusMode = FocusModeEnum.None };
@@ -304,11 +316,11 @@ public partial class BlueprintEditorScreen : Control
 
         _summary = new Label { Text = "", ThemeTypeVariation = "GoldLabel" };
         v.AddChild(_summary);
-        _problemList = new ItemList { SizeFlagsVertical = SizeFlags.ExpandFill, SizeFlagsHorizontal = SizeFlags.ExpandFill, CustomMinimumSize = new Vector2(0, 150), AllowReselect = true, FocusMode = FocusModeEnum.None };
+        _problemList = new ItemList { SizeFlagsVertical = SizeFlags.ExpandFill, SizeFlagsHorizontal = SizeFlags.ExpandFill, CustomMinimumSize = new Vector2(0, 90), AllowReselect = true, FocusMode = FocusModeEnum.None };
         _problemList.ItemSelected += i => ClickProblem((int)i);
         v.AddChild(_problemList);
         v.AddChild(new Label { Text = T("BPEDIT_DETECTED"), ThemeTypeVariation = "GoldLabel" });
-        _roomInfoList = new ItemList { SizeFlagsVertical = SizeFlags.ExpandFill, SizeFlagsHorizontal = SizeFlags.ExpandFill, CustomMinimumSize = new Vector2(0, 110), AllowReselect = true, FocusMode = FocusModeEnum.None };
+        _roomInfoList = new ItemList { SizeFlagsVertical = SizeFlags.ExpandFill, SizeFlagsHorizontal = SizeFlags.ExpandFill, CustomMinimumSize = new Vector2(0, 70), AllowReselect = true, FocusMode = FocusModeEnum.None };
         _roomInfoList.ItemSelected += i => ClickRoom((int)i);
         v.AddChild(_roomInfoList);
         return panel;
@@ -353,8 +365,8 @@ public partial class BlueprintEditorScreen : Control
         foreach (var (id, b) in _pieceButtons) b.SetPressedNoSignal(id == Model.Piece);
         _previewWealthBtn.Text = T("BPEDIT_PREVIEW_WEALTH") + (Model.PreviewWealth is { } w ? ": " + w : ": " + T("BPEDIT_OFF"));
         _previewStyleBtn.Text = T("BPEDIT_PREVIEW_STYLE") + (Model.PreviewStyle is { } s ? ": " + s : ": " + T("BPEDIT_OFF"));
-        _previewWealthBtn.CustomMinimumSize = new Vector2(_previewWealthBtn.Text.Length * 9 + 80, 30);
-        _previewStyleBtn.CustomMinimumSize = new Vector2(_previewStyleBtn.Text.Length * 9 + 80, 30);
+        _previewWealthBtn.CustomMinimumSize = new Vector2(_previewWealthBtn.Text.Length * 8.5f + 80, 28);
+        _previewStyleBtn.CustomMinimumSize = new Vector2(_previewStyleBtn.Text.Length * 8.5f + 80, 28);
         // room list selection
         for (int i = 0; i < _roomList.ItemCount; i++) if (_roomList.GetItemText(i)[0] == Model.Letter) { _roomList.Select(i); break; }
         if (Model.Letter != '\0' && Model.Rooms.TryGetValue(Model.Letter, out var pur))
