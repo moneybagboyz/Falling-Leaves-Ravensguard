@@ -37,8 +37,13 @@ public abstract class StreetSource
 
     /// <summary>The generated region as a street source. Chunks generate on first visit; pass the save's chunk store to resume where the world was left.</summary>
     public static StreetSource ForRegion(RegionData region, Population population, ContentDatabase content, ChunkStore? store = null, Cell3? spawn = null, string? poi = null,
-        Ravensguard.Sim.Characters.HeroRecord? hero = null, Ravensguard.Sim.Codex.CodexBook? codex = null, WorldHistory? history = null)
-        => new RegionSource(region, population, content, store, spawn) { Poi = poi, Hero = hero, Codex = codex, History = history };
+        Ravensguard.Sim.Characters.HeroRecord? hero = null, Ravensguard.Sim.Codex.CodexBook? codex = null, WorldHistory? history = null, Continent? continent = null)
+        => new RegionSource(region, population, content, store, spawn)
+        {
+            Poi = poi, Hero = hero, Codex = codex, History = history,
+            // the world's own (possibly customised) continent drives the weather, not one regenerated from default settings
+            WeatherInit = continent == null ? null : new Ravensguard.Sim.Weather.RegionWeather(continent, new Ravensguard.Sim.Weather.ContinentalWeather(region.Seed, Ravensguard.Sim.Weather.WeatherSettings.LoadDefaults(StreetView.ContentDir()))),
+        };
 
     /// <summary>Dev: builds continent, history, embark region and population from a seed (seconds), then streams it.</summary>
     public static StreetSource FromSeed(ulong seed, string? poi = null)

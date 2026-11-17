@@ -14,6 +14,7 @@ using Ravensguard.Sim.Lighting;
 using Ravensguard.Sim.Live;
 using Ravensguard.Sim.People;
 using Ravensguard.Sim.Save;
+using Ravensguard.Sim.WorldGen;
 using Ravensguard.Sim.WorldGen.Region;
 using Ravensguard.Sim.Weather;
 using Ravensguard.Sim.WorldGen.Chunks;
@@ -107,8 +108,8 @@ public partial class StreetView : Control, IHandlesBack
     /// </summary>
     public static StreetView ForRegion(Region region, Population population, ContentDatabase content, ScreenRouter? router = null, StreetOptions? opt = null,
         ChunkStore? store = null, (int X, int Y, int Z)? spawn = null, Ravensguard.Sim.Characters.HeroRecord? hero = null, Ravensguard.Sim.Codex.CodexBook? codex = null,
-        Ravensguard.Sim.WorldGen.History.WorldHistory? history = null)
-        => new(router, opt, StreetSource.ForRegion(region, population, content, store, spawn is { } p ? new Cell3(p.X, p.Y, p.Z) : null, opt?.Poi, hero, codex, history));
+        Ravensguard.Sim.WorldGen.History.WorldHistory? history = null, Continent? continent = null)
+        => new(router, opt, StreetSource.ForRegion(region, population, content, store, spawn is { } p ? new Cell3(p.X, p.Y, p.Z) : null, opt?.Poi, hero, codex, history, continent));
 
     // ------------------------------------------------------------------ setup
 
