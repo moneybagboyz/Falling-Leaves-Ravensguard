@@ -1,0 +1,22 @@
+// Stone, earth and building materials. All mechanical numbers are estimates (brittle: high impact yield, tiny strain),
+// to be checked against the DF stone raws when walls become destructible (Phase 6-7).
+[
+  { "type": "material", "id": "granite", "name": "Granite", "category": "stone", "density_kg_m3": 2650, "value_per_kg": 0.02,
+    "impact_yield_kpa": 15000, "impact_fracture_kpa": 15000, "impact_strain_at_yield": 100,
+    "shear_yield_kpa": 15000, "shear_fracture_kpa": 15000, "shear_strain_at_yield": 100,
+    "max_edge": 0.1 },
+  { "type": "material", "id": "limestone", "name": "Limestone", "category": "stone", "copy_from": "granite", "density_kg_m3": 2300, "value_per_kg": 0.02,
+    "impact_yield_kpa": 10000, "impact_fracture_kpa": 10000, "shear_yield_kpa": 10000, "shear_fracture_kpa": 10000 },
+  { "type": "material", "id": "sandstone", "name": "Sandstone", "category": "stone", "copy_from": "granite", "density_kg_m3": 2200, "value_per_kg": 0.02,
+    "impact_yield_kpa": 8000, "impact_fracture_kpa": 8000, "shear_yield_kpa": 8000, "shear_fracture_kpa": 8000 },
+  { "type": "material", "id": "fired_brick", "name": "Fired brick", "category": "stone", "copy_from": "granite", "density_kg_m3": 1900, "value_per_kg": 0.03,
+    "impact_yield_kpa": 6000, "impact_fracture_kpa": 6000, "shear_yield_kpa": 6000, "shear_fracture_kpa": 6000 },
+  { "type": "material", "id": "daub", "name": "Wattle and daub", "category": "earth", "density_kg_m3": 1600, "value_per_kg": 0.005,
+    "impact_yield_kpa": 1500, "impact_fracture_kpa": 1500, "impact_strain_at_yield": 500,
+    "shear_yield_kpa": 1500, "shear_fracture_kpa": 1500, "shear_strain_at_yield": 500,
+    "max_edge": 0.1 },
+  { "type": "material", "id": "thatch", "name": "Thatch", "category": "plant", "density_kg_m3": 150, "value_per_kg": 0.01,
+    "impact_yield_kpa": 500, "impact_fracture_kpa": 500, "impact_strain_at_yield": 50000,
+    "shear_yield_kpa": 500, "shear_fracture_kpa": 500, "shear_strain_at_yield": 50000,
+    "max_edge": 0.1, "ignition_point_c": 220 }
+]

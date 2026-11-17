@@ -1,18 +1,18 @@
 // Building pieces (plan §2.9). Kind drives the room detector, pathing and structural support; `glyph` is the text-dump character.
 // Walls and posts hold up the floor above (plan §2.2a). Tags are what room types look for; workstations also get "station:<id>".
-// No stone material exists in content/base/materials yet, so stone pieces carry no material (open issue).
+// Stone pieces use granite by default; culture styles can swap in local stone.
 [
   // ground and floors
   { "type": "build_piece", "id": "ground_dirt",          "name": "Dirt ground",       "kind": "ground", "glyph": "," },
   { "type": "build_piece", "id": "floor_packed_earth",   "name": "Packed earth floor", "kind": "floor", "glyph": "." },
   { "type": "build_piece", "id": "floor_plank",          "name": "Plank floor",       "kind": "floor", "glyph": ":", "material": "oak" },
-  { "type": "build_piece", "id": "floor_flagstone",      "name": "Flagstone floor",   "kind": "floor", "glyph": ";" },
+  { "type": "build_piece", "id": "floor_flagstone",      "name": "Flagstone floor",   "kind": "floor", "glyph": ";", "material": "granite" },
   { "type": "build_piece", "id": "floor_wall_walk",      "name": "Wall-walk",         "kind": "floor", "glyph": "~", "tags": ["wall_walk"] },
 
   // walls by material
-  { "type": "build_piece", "id": "wall_wattle",          "name": "Wattle-and-daub wall", "kind": "wall", "glyph": "%" },
+  { "type": "build_piece", "id": "wall_wattle",          "name": "Wattle-and-daub wall", "kind": "wall", "glyph": "%", "material": "daub" },
   { "type": "build_piece", "id": "wall_timber",          "name": "Timber wall",       "kind": "wall", "glyph": "#", "material": "oak" },
-  { "type": "build_piece", "id": "wall_stone",           "name": "Stone wall",        "kind": "wall", "glyph": "S" },
+  { "type": "build_piece", "id": "wall_stone",           "name": "Stone wall",        "kind": "wall", "glyph": "S", "material": "granite" },
   { "type": "build_piece", "id": "post_timber",          "name": "Timber post",       "kind": "post", "glyph": "|", "material": "oak" },
 
   // doors and windows
