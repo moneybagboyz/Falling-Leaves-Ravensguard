@@ -18,8 +18,8 @@
     "lake_min_tiles": 8,
     // population (the history's rural folk plus its settlements, clamped to the plan's ~25,000)
     "min_region_population": 16000,
-    "max_region_population": 30000,
-    "rural_scale_pct": 130,
+    "max_region_population": 26000,
+    "rural_scale_pct": 100,
     "town_min_pop": 500,
     "town_household_size_x10": 42,
     "village_household_size_x10": 53,
@@ -27,7 +27,7 @@
     // settlements
     "village_min": 40, "village_max": 80,
     "village_pop_min": 80, "village_pop_max": 320,
-    "village_spacing_min_m": 3000, "village_spacing_max_m": 4000,
+    "village_spacing_min_m": 2400, "village_spacing_max_m": 3400,
     "town_clearance_m": 2200,
     "farmstead_min": 150, "farmstead_max": 300,
     "farmstead_spacing_m": 900,

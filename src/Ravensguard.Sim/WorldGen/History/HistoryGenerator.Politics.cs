@@ -88,7 +88,11 @@ public sealed partial class HistoryGenerator
                 Incident(a, b);
             }
 
-        // war declarations (utility, plan §4A.4)
+        // war declarations (utility, plan §4A.4); a crowded continent does not fight proportionally more
+        int alive = Math.Max(1, _h.Realms.Count(q => q.Alive));
+        // an age at peace grows restless; an age of war grows weary
+        long expected = (long)_s.WarPacePerCentury * (_tick + 1) / 400;
+        int pace = _h.Wars.Count + 2 < expected ? 400 : _h.Wars.Count > expected * 105 / 100 + 1 ? 0 : 100;
         for (int a = 0; a < nr; a++)
         {
             var ra = Rm(a);
@@ -102,7 +106,7 @@ public sealed partial class HistoryGenerator
                 int u = WarUtility(ra, Rm(b), cb);
                 if (u > bestU) { bestU = u; bestB = b; }
             }
-            if (bestB >= 0 && bestU >= _s.WarUtilityThreshold && Pct(ra.Id.Value, S.War, _s.WarChancePct)) DeclareWar(ra, Rm(bestB), _cb[a * _R + bestB]);
+            if (bestB >= 0 && bestU >= _s.WarUtilityThreshold && Chance(ra.Id.Value, S.War, _s.WarChancePct * 10_000L * pace / 100 * Math.Min(alive, _s.WarRealmsRef) / Math.Max(alive, _s.WarRealmsRef))) DeclareWar(ra, Rm(bestB), _cb[a * _R + bestB]);
         }
     }
 
@@ -144,7 +148,7 @@ public sealed partial class HistoryGenerator
             string note = $"raiding by the border lords of {ra.Name}";
             var ev = Ev("border_raid", $"The Raid on {s.Name}", $"Riders from {ra.Name} burn the outskirts of {s.Name} in {rv.Name}; {Num(loss)} killed or carried off", s.Cell, [ra.Id, rv.Id, s.Id], Cz(CauseKind.Raid, EntityId.None, note));
             s.LastBlow = ev; s.LastBlowTick = _tick;
-            if (Pct(s.Id.Value, S.Incident, 55))
+            if (Pct(s.Id.Value, S.Incident, 100))
             {
                 // the local levy catches the raiders on the way home
                 int site = s.Cell;
@@ -245,6 +249,9 @@ public sealed partial class HistoryGenerator
     ];
     private static readonly string[] NavalWarForms = ["The Sea-War of {A} and {B}", "The {A} Corsairs' War", "The Sea-Wolves' War", "The Longship War of {A}", "War of the Burned Harbours"];
 
+    /// <summary>War names keep their own "The"; sentences add the article themselves.</summary>
+    private static string Bare(string n) => n.StartsWith("The ", StringComparison.Ordinal) ? n[4..] : n;
+
     private string WarName(RealmState a, RealmState b, CasusBelliKind kind, bool naval)
     {
         var forms = naval ? NavalWarForms : WarNameForms[Math.Clamp((int)kind, 1, 4)];
@@ -255,7 +262,7 @@ public sealed partial class HistoryGenerator
             if (_usedWarNames.Add(nm)) return nm;
         }
         string last = forms[start].Replace("{A}", a.Name).Replace("{B}", b.Name).Replace("{C}", Culture(a.CultureId));
-        return $"Second {last}";
+        return $"Second {Bare(last)}";
     }
 
     private void DeclareWar(RealmState a, RealmState b, CbState cb)
@@ -268,7 +275,7 @@ public sealed partial class HistoryGenerator
             Name = $"{baseName} ({_year})", ArmyA = Levy(a), ArmyD = Levy(b) * 11 / 10,
         };
         string verb = naval ? "sends its ships against" : cb.Kind switch { CasusBelliKind.Succession => "claims the throne of", CasusBelliKind.BorderClaim => "marches to take back lands from", CasusBelliKind.Raid => "answers the raids of", _ => "avenges an insult against" };
-        w.DeclEvent = Ev("war_declared", $"The {w.Name} begins", $"{a.Name} {verb} {b.Name}; {Num(w.ArmyA)} levies muster against {Num(w.ArmyD)}", Cap(a), [a.Id, b.Id],
+        w.DeclEvent = Ev("war_declared", $"The {Bare(w.Name)} begins", $"{a.Name} {verb} {b.Name}; {Num(w.ArmyA)} levies muster against {Num(w.ArmyD)}", Cap(a), [a.Id, b.Id],
             Cz(CauseKind.War, cb.Event, cb.Note));
         _h.Wars.Add(w);
         _atWar[a.Index] = _atWar[b.Index] = w.Index;
@@ -308,7 +315,7 @@ public sealed partial class HistoryGenerator
         int fightPct = (_season == 2 ? 35 : 60) * (w.Naval ? _s.SeaRaidPct : 100) / 100;
         if (!Pct(w.DeclEvent.Value + (ulong)w.Index, S.Battle, fightPct))
         {
-            if (Pct(w.DeclEvent.Value + (ulong)w.Index, S.Battle, w.Naval ? 20 : 50)) Skirmish(w, inv, vic, t, attInv);
+            if (Pct(w.DeclEvent.Value + (ulong)w.Index, S.Battle, w.Naval ? 30 : 80)) Skirmish(w, inv, vic, t, attInv);
             if (w.Score * (attInv ? 1 : -1) >= 10 && armyInv * 10 >= armyVic * 8 && Pct(w.DeclEvent.Value, S.Siege, 35)) BeginSiege(w, inv, vic, t, w.DeclEvent, "the enemy gives no battle");
             return;
         }
@@ -375,8 +382,41 @@ public sealed partial class HistoryGenerator
         }
         var ruler = _h.GetNotable(lose.Ruler);
         if (margin > 45 && ruler is { Alive: true } && Pct(ruler.Id.Value, S.Battle, 12)) Die(ruler, $"slain at the Battle of {bname}", bev);
+        if (Pct(w.DeclEvent.Value + (ulong)_tick, S.Battle, 35)) Skirmish(w, inv, vic, t, attInv);
         // a decisive win lets the invader invest a town
         if (invWins && w.Target >= 0 && Pct(w.DeclEvent.Value, S.Siege, 70)) BeginSiege(w, inv, vic, t, bev, "the victory in the field");
+    }
+
+    /// <summary>Fields of wars fought before the chronicle opens: the plough still turns up the dead.</summary>
+    private void AncientBattles()
+    {
+        int made = 0;
+        for (int a = 0; a < _s.AncientBattles * 60 && made < _s.AncientBattles; a++)
+        {
+            int cell = Roll((ulong)a + 3_000_000UL, S.Battle, 0, A);
+            if (_c.Ocean[cell] || _c.Lake[cell] || _K[cell] < 10 || _settleAt[cell] >= 0) continue;
+            // the nearest living settlement within 6 cells names the field and gives it a realm
+            int x = Cx(cell), y = Cy(cell), near = -1, bd = 7;
+            for (int dy = -6; dy <= 6; dy++)
+                for (int dx = -6; dx <= 6; dx++)
+                {
+                    if (!In(x + dx, y + dy)) continue;
+                    int si = _settleAt[(y + dy) * N + x + dx];
+                    int d = Math.Max(Math.Abs(dx), Math.Abs(dy));
+                    if (si >= 0 && !_h.Settlements[si].IsRuin && d < bd) { bd = d; near = si; }
+                }
+            if (near < 0) continue;
+            var t = _h.Settlements[near];
+            string bname = BattleName(cell, t);
+            int deaths = Roll((ulong)a, S.Battle, 150, 2400);
+            int yearsAgo = Roll((ulong)a, S.Battle, 15, 220);
+            string host = t.Realm >= 0 ? Rm(t.Realm).Name : "the old kings";
+            EntityId[] subj = t.Realm >= 0 ? [Rm(t.Realm).Id, t.Id] : [t.Id];
+            var ev = Ev("old_battle", $"The Battle of {bname}", $"Some {yearsAgo} years before the records begin, the host of {host} meets its rivals at {bname}; {Num(deaths)} lie in the ground there",
+                cell, subj, new Cause(CauseKind.War, null, "an old war between the early kings, before the records begin"));
+            _h.Battlefields.Add(new Battlefield(cell, ev, bname, -yearsAgo * 4, -1, deaths));
+            made++;
+        }
     }
 
     /// <summary>A short fight between foraging parties and the local levy; it leaves a small battlefield and sometimes a burned farm.</summary>
@@ -395,7 +435,7 @@ public sealed partial class HistoryGenerator
         var win = invWins ? inv : vic; var lose = invWins ? vic : inv;
         int deaths = Roll(w.DeclEvent.Value, S.Battle, 20, 160);
         Kill(site, deaths, 3);
-        string what = w.Naval ? "A landing party" : Roll(w.DeclEvent.Value, S.Battle, 0, 3) switch { 0 => "Foragers", 1 => "A scouting column", _ => "Raiding horse" };
+        string what = w.Naval ? "A landing party" : Roll(w.DeclEvent.Value, S.Battle, 0, 3) switch { 0 => "A foraging party", 1 => "A scouting column", _ => "A troop of raiding horse" };
         var ev = Ev("skirmish", $"The Skirmish at {bname}", $"{what} of {inv.Name} meets the levy of {vic.Name}; {win.Name} holds the field and {Num(deaths)} die", site,
             [win.Id, lose.Id, t.Id], Cz(CauseKind.War, w.DeclEvent, w.CbNote));
         _h.Battlefields.Add(new Battlefield(site, ev, bname, _tick, w.Index, deaths));
@@ -411,10 +451,10 @@ public sealed partial class HistoryGenerator
             {
                 var v = _h.Settlements[i];
                 if (v.IsRuin || v.Kind > SettlementKind.Village || v.Id == target.Id || Dist(v.Cell, site) != d) continue;
-                if (!Pct(v.Id.Value + (ulong)_tick, S.Battle, v.Manor ? 25 : 12)) continue;
+                if (!Pct(v.Id.Value + (ulong)_tick, S.Battle, v.Manor ? 20 : 9)) continue;
                 hits++;
                 int loss = v.Pop;
-                bool burn = v.Kind == SettlementKind.Hamlet || v.Manor || Pct(v.Id.Value, S.Battle, 35);
+                bool burn = (v.Kind == SettlementKind.Hamlet || v.Manor || Pct(v.Id.Value, S.Battle, 35)) && !RuinCrowded(v.Cell);
                 string kind = v.Manor ? "sacked" : "razed";
                 var ev = Ev("settlement_pillaged", burn ? (v.Manor ? $"{v.Name} is stormed" : $"{v.Name} is burned") : $"{v.Name} is plundered",
                     burn ? (v.Manor ? $"The soldiers of {win.Name} storm {v.Name} and put it to the torch; its {Num(loss)} people flee or die" : $"The soldiers of {win.Name} put {v.Name} to the torch after the fighting; its {Num(loss)} people flee or die") : $"Foragers from the army strip {v.Name} of grain and stock",
@@ -531,6 +571,14 @@ public sealed partial class HistoryGenerator
         w.SiegeTicks = -1; w.Target = -1;
     }
 
+    private void Assault(WarRecord w, RealmState inv, RealmState vic, Settlement t, EntityId cause)
+    {
+        int deaths = Math.Max(20, t.Pop / 12 + Roll(t.Id.Value, S.Siege, 10, 90));
+        string name = $"{t.Name} Walls";
+        if (!_usedBattleNames.Add(name)) name = $"{name} ({_year})";
+        _h.Battlefields.Add(new Battlefield(t.Cell, cause, name, _tick, w.Index, deaths));
+    }
+
     private void Sack(WarRecord w, RealmState inv, RealmState vic, Settlement t, bool attInv)
     {
         int ti = SIdx(t.Id);
@@ -542,6 +590,7 @@ public sealed partial class HistoryGenerator
             razed ? $"{inv.Name}'s army burns {t.Name} to the ground; {Num(loss)} perish and none are left to rebuild" : $"{inv.Name}'s army storms {t.Name} in {vic.Name}; {Num(loss)} are slain and the town is plundered",
             t.Cell, [inv.Id, vic.Id, t.Id], Cz(CauseKind.War, w.SiegeEvent, "the town fell to storm"));
         t.LastBlow = ev; t.LastBlowTick = _tick;
+        Assault(w, inv, vic, t, ev);
         vic.LastLossEvent = ev; vic.Unrest = Math.Min(100, vic.Unrest + 10);
         inv.Treasury += loss * 2;
         w.Score = Math.Clamp(w.Score + (attInv ? 20 : -20), -100, 100);
@@ -577,6 +626,7 @@ public sealed partial class HistoryGenerator
         var ev = Ev("settlement_captured", $"The Fall of {t.Name}", $"{inv.Name} takes {t.Name} from {vic.Name}; some {Num(cells.Count * 4)} km2 of land change hands", t.Cell, [inv.Id, vic.Id, t.Id],
             Cz(CauseKind.War, w.SiegeEvent, w.CbNote));
         t.LastBlow = ev; t.LastBlowTick = _tick;
+        Assault(w, inv, vic, t, ev);
         vic.LastLossEvent = ev; vic.Unrest = Math.Min(100, vic.Unrest + 20);
         if (wasCapital) FixCapital(vic);
         w.Score = Math.Clamp(w.Score + (attInv ? 30 : -30), -100, 100);
@@ -607,13 +657,13 @@ public sealed partial class HistoryGenerator
         RealmState? winner = w.Score >= 40 ? A : w.Score <= -40 ? D : null;
         var loser = winner == null ? null : winner == A ? D : A;
         string place = D.Capital >= 0 ? _h.Settlements[D.Capital].Name : D.Name;
-        string text = winner == null ? $"The {w.Name} ends in a weary stalemate between {A.Name} and {D.Name}" : $"The {w.Name} ends: {winner.Name} prevails over {loser!.Name}";
+        string text = winner == null ? $"The {Bare(w.Name)} ends in a weary stalemate between {A.Name} and {D.Name}" : $"The {Bare(w.Name)} ends: {winner.Name} prevails over {loser!.Name}";
         if (winner != null && loser != null)
         {
             int tribute = loser.Treasury * 30 / 100; loser.Treasury -= tribute; winner.Treasury += tribute;
             text += $"; {Num(tribute)} marks of tribute are paid";
         }
-        var ev = Ev("peace_signed", $"The Peace of {place}", text, Cap(D), [A.Id, D.Id], Cz(CauseKind.War, w.DeclEvent, winner != null ? $"{winner.Name}'s victory in the {w.Name}" : $"the exhaustion of both sides in the {w.Name}"));
+        var ev = Ev("peace_signed", $"The Peace of {place}", text, Cap(D), [A.Id, D.Id], Cz(CauseKind.War, w.DeclEvent, winner != null ? $"{winner.Name}'s victory in the {Bare(w.Name)}" : $"the exhaustion of both sides in the {Bare(w.Name)}"));
         int truceYears = Roll(w.DeclEvent.Value, S.War, _s.TruceYearsMin, _s.TruceYearsMax + 1);
         _truce[A.Index * _R + D.Index] = _truce[D.Index * _R + A.Index] = _tick + truceYears * 4;
         _h.Treaties.Add(new Treaty(A.Index, D.Index, TreatyKind.Truce, _tick, _tick + truceYears * 4, ev));
@@ -621,7 +671,7 @@ public sealed partial class HistoryGenerator
         if (winner != null && loser != null)
         {
             winner.WarsWon++; loser.WarsLost++; loser.Unrest = Math.Min(100, loser.Unrest + 10); winner.Unrest = Math.Max(0, winner.Unrest - 5);
-            AddGrudge(loser.Index, winner.Index, 25 + Math.Abs(w.Score) / 3, ev, $"defeat in the {w.Name}");
+            AddGrudge(loser.Index, winner.Index, 25 + Math.Abs(w.Score) / 3, ev, $"defeat in the {Bare(w.Name)}");
         }
         Op(A.Index, D.Index, 10);
         w.Outcome = outcome; w.EndTick = _tick; w.EndEvent = ev;
@@ -644,13 +694,13 @@ public sealed partial class HistoryGenerator
         {
             title = $"{loser.Name} kneels to {winner.Name}";
             text = $"The ruler of {loser.Name} swears fealty to {winner.Name} for a generation and sends the first fruits of the harvest";
-            note = $"{winner.Name}'s victory in the {w.Name}";
+            note = $"{winner.Name}'s victory in the {Bare(w.Name)}";
         }
         else
         {
             title = $"{loser.Name} agrees to pay tribute";
             text = $"{loser.Name} binds itself to pay {winner.Name} a yearly tribute for {years} years";
-            note = $"the terms of the Peace after the {w.Name}";
+            note = $"the terms of the Peace after the {Bare(w.Name)}";
         }
         var tev = Ev(kind == TreatyKind.Vassalage ? "vassalage_sworn" : "tribute_imposed", title, text, Cap(loser), [winner.Id, loser.Id], Cz(CauseKind.War, peaceEv, note));
         _h.Treaties.Add(new Treaty(winner.Index, loser.Index, kind, _tick, expiry, tev));
@@ -849,6 +899,7 @@ public sealed partial class HistoryGenerator
         r.Unrest = Math.Min(100, r.Unrest + 8);
         if (Pct(rebel.Id.Value, S.Rebel, 45) && SplitRealm(r, rebel, rising, "a successful rebellion")) return;
         var ev = Ev("rebellion_crushed", $"The Rising at {seat.Name} is crushed", $"{rebel.Full}'s rebels are broken by the army of {r.Name}; the leader is hanged and {seat.Name} is made to pay", seat.Cell, [rebel.Id, seat.Id, r.Id], Cz(CauseKind.War, rising, "the rebellion's defeat"));
+        { string rn = BattleName(seat.Cell, seat); int rd = Roll(seat.Id.Value, S.Rebel, 40, 300); Kill(seat.Cell, rd, 3); _h.Battlefields.Add(new Battlefield(seat.Cell, ev, rn, _tick, -1, rd)); }
         seat.Pop -= seat.Pop * 12 / 100;
         MarkDead(rebel, "hanged for rebellion", ev);
         r.Unrest = Math.Max(0, r.Unrest - 20);

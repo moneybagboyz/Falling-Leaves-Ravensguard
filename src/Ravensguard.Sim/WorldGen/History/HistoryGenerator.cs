@@ -163,6 +163,7 @@ public sealed partial class HistoryGenerator
         MinorFoundingPass(true);
         for (int k = 0; k < _h.Realms.Count; k++) InitRuler(_h.Realms[k]);
         foreach (var s in _h.Settlements) s.PeakKind = s.Kind;
+        AncientBattles();
         RoutesPass();
         long total = 0;
         for (int i = 0; i < A; i++) total += _pop[i];

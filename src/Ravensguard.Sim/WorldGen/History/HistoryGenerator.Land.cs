@@ -135,7 +135,7 @@ public sealed partial class HistoryGenerator
                         s.Realm >= 0 ? [s.Id, Rm(s.Realm).Id] : [s.Id], Cz(CauseKind.Other, EntityId.None, note));
                 }
             }
-            if (s.Minor && _tick > 0 && Chance(s.Id.Value, S.Misc, _s.MinorAbandonPermilleYear * 250L)) AbandonHardship(i);
+            if (s.Minor && _tick > 0 && Chance(s.Id.Value, S.Misc, _s.MinorAbandonPer10kYear * 25L) && !RuinCrowded(s.Cell)) AbandonHardship(i);
             else if (s.Pop < 5 && _tick > 0) AbandonQuiet(i);
             else if (_season == 0 && !s.Minor && s.Kind <= SettlementKind.Village && s.Hinterland > 0 && RuralPop25(s) * 100 < s.Hinterland * 33 && Pct(s.Id.Value, S.Misc, 5)) AbandonQuiet(i);
         }
@@ -203,6 +203,20 @@ public sealed partial class HistoryGenerator
         if (cause.Value == 0) cause = Ev("emigration", $"Families leave {s.Name}", $"The people of {s.Name} drift away", s.Cell, subj, Cz(CauseKind.Other, EntityId.None, "poor soil and failing harvests"));
         var ev = Ev("settlement_abandoned", $"{s.Name} is abandoned", $"{ruinText}; {s.Name} falls silent", s.Cell, subj, Cz(CauseKind.Other, cause, why));
         MakeRuin(i, kind, ev, cause);
+    }
+
+    /// <summary>True when the ground around <paramref name="cell"/> already holds as many ruins as the land plausibly keeps (about 8 km across).</summary>
+    private bool RuinCrowded(int cell)
+    {
+        int x = Cx(cell), y = Cy(cell), n = 0;
+        for (int dy = -4; dy <= 4; dy++)
+            for (int dx = -4; dx <= 4; dx++)
+            {
+                if (!In(x + dx, y + dy)) continue;
+                int si = _settleAt[(y + dy) * N + x + dx];
+                if (si >= 0 && _h.Settlements[si].IsRuin && ++n >= _s.RuinCrowdMax) return true;
+            }
+        return false;
     }
 
     private void MakeRuin(int i, string kind, EntityId ruinEv, EntityId causeEv)
@@ -273,19 +287,17 @@ public sealed partial class HistoryGenerator
                     hint += _K[j]; rural += _pop[j];
                 }
             bool river = SettledRiver(x, y);
-            bool rich = river && hint >= _s.FoundRichHinterland;
-            if (rich)
-            {
-                int near = 0;
-                for (int dy = -6; dy <= 6; dy++)
-                    for (int dx = -6; dx <= 6; dx++)
-                    {
-                        if (!In(x + dx, y + dy)) continue;
-                        int si0 = _settleAt[(y + dy) * N + x + dx];
-                        if (si0 >= 0 && !_h.Settlements[si0].IsRuin && !_h.Settlements[si0].Minor) near++;
-                    }
-                rich = near < _s.FoundRichCluster;
-            }
+            bool rich = (river || _c.CoastDistance[cell] <= 2) && hint >= _s.FoundRichHinterland;
+            int near = 0;
+            for (int dy = -6; dy <= 6; dy++)
+                for (int dx = -6; dx <= 6; dx++)
+                {
+                    if (!In(x + dx, y + dy)) continue;
+                    int si0 = _settleAt[(y + dy) * N + x + dx];
+                    if (si0 >= 0 && !_h.Settlements[si0].IsRuin && !_h.Settlements[si0].Minor) near++;
+                }
+            if (near >= _s.FoundCrowdMax) continue;
+            rich = rich && near < _s.FoundRichCluster;
             int sp = rich ? _s.FoundSpacingRich : _s.FoundSpacing;
             bool clash = false;
             for (int dy = -_s.FoundSpacing; dy <= _s.FoundSpacing && !clash; dy++)
@@ -329,7 +341,7 @@ public sealed partial class HistoryGenerator
                     int si = _settleAt[(y + dy) * N + x + dx];
                     if (si < 0) continue;
                     var other = _h.Settlements[si];
-                    if (!other.IsRuin || (Math.Abs(dx) <= 1 && Math.Abs(dy) <= 1)) { clash = true; break; }
+                    if (!other.IsRuin) { clash = true; break; }   // an empty ruin only holds its own cell; people settle among old ruins
                 }
             if (clash) continue;
             int rural = 0, cnt = 0;
@@ -489,7 +501,7 @@ public sealed partial class HistoryGenerator
         int mort = s.Kind >= SettlementKind.Town ? _s.PlagueTownMortalityPct : _s.PlagueTownMortalityPct * 55 / 100;
         mort = Math.Max(3, mort * Roll(s.Id.Value, S.Plague, 70, 131) / 100);
         int dead = s.Pop * mort / 100;
-        if (s.Minor && Pct(s.Id.Value, S.Plague, _s.PlagueEmptyPct)) { PlagueEmpties(i); return; }
+        if (s.Minor && Pct(s.Id.Value, S.Plague, _s.PlagueEmptyPct) && !RuinCrowded(s.Cell)) { PlagueEmpties(i); return; }
         s.Pop -= dead;
         int rural = Kill(s.Cell, RuralPop25(s) * 5 / 100, 2);
         _plagueDead += dead + rural;
@@ -558,7 +570,7 @@ public sealed partial class HistoryGenerator
                 var s = _h.Settlements[i];
                 if (s.IsRuin || _c.CultureId[s.Cell] != c) continue;
                 s.LastBlow = ev; s.LastBlowTick = _tick;
-                if (s.Minor && Pct(s.Id.Value, S.Famine, _s.FamineEmptyPct * (100 + _badStreak[c] * 40) / 100))
+                if (s.Minor && Chance(s.Id.Value, S.Famine, _s.FamineEmptyPermille * 1000L * (100 + _badStreak[c] * 40) / 100) && !RuinCrowded(s.Cell))
                 {
                     var starved = Ev("settlement_starved", $"{s.Name} starves", $"Hunger empties {s.Name}; the survivors take to the roads", s.Cell, [s.Id], Cz(CauseKind.Famine, ev, "the famine's toll on a small place"));
                     MakeRuin(i, "famine", starved, ev);
