@@ -9,6 +9,13 @@ public sealed record EmbarkScore(
 {
     /// <summary>What made up <see cref="Total"/>: (part key, points), in the order they were added. Empty for excluded windows.</summary>
     public IReadOnlyList<ScorePart> Parts { get; init; } = [];
+
+    // Record equality would compare Parts by reference; compare it by value so equal scores stay equal.
+    public bool Equals(EmbarkScore? o) => o is not null && CellX == o.CellX && CellY == o.CellY && Total == o.Total && Excluded == o.Excluded && Reason == o.Reason
+        && Towns == o.Towns && Villages == o.Villages && Ruins == o.Ruins && RiverCells == o.RiverCells && BiomeCount == o.BiomeCount && LandPct == o.LandPct
+        && Population == o.Population && Realms == o.Realms && NearestWarKm == o.NearestWarKm && Parts.SequenceEqual(o.Parts);
+
+    public override int GetHashCode() => HashCode.Combine(CellX, CellY, Total, Towns, Villages, Ruins, Parts.Count);
 }
 
 public readonly record struct ScorePart(string Key, int Points);
