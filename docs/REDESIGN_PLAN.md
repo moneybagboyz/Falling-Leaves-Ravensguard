@@ -260,7 +260,7 @@ Every strike goes through one resolver: melee, missiles, thrown objects, falls, 
    - The attack type: edge, point or blunt.
    - The target zone, the target's body plan, and the target's worn layers.
 2. **Hit.** Hit chance is computed **per targeted zone, before** any redirect:
-   - P(hit) = zone area × (0.5 + Δskill/200);
+   - P(hit) = zone factor × (0.5 + Δskill/200), where zone factor = 0.2 + 0.8 × (zone size ÷ largest zone). The 0.2 floor keeps aimed blows at small parts (head 5.4%, hand 1.4%) possible, but still much harder than the body;
    - ×0.6 against a zone the defender is guarding;
    - ×0.35 against armour gaps;
    - flank attacks get +25%, rear attacks +50%, and neither can be blocked by a shield;
