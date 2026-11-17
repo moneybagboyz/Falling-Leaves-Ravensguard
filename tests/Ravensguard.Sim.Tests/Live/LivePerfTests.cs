@@ -93,7 +93,7 @@ public class LivePerfTests(ChunkWorldFixture fx, ITestOutputHelper output) : ICl
         w.SetInput(MoveInput.None); w.SetSpeed(SimSpeed.X1);
         var here = w.Snapshot.Hero.Cell;
         Assert.True(w.CommandMoveTo(new Cell3(here.X + 2, here.Y, here.Z)), "a short path on the new grid");
-        for (int i = 0; i < 60 && w.Snapshot.Hero.PathRemaining > 0; i++) w.Step();
+        for (int i = 0; i < 60; i++) w.Step();
         Assert.True(w.Snapshot.Hero.CellX >= here.X + 1, "the hero walked the path on the swapped-in grid");
     }
 
