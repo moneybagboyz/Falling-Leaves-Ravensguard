@@ -45,7 +45,7 @@ public sealed partial class Populator
         // Dwelling lots available to ordinary households (the lord's lot is taken).
         var ordinary = new List<int>();
         foreach (var l in plan.Lots)
-            if (l.Dwelling is DwellingType.Cottage or DwellingType.Longhouse or DwellingType.Burgage && l.Index != _lordLot[si]) ordinary.Add(l.Index);
+            if (!l.Vacant && l.Dwelling is DwellingType.Cottage or DwellingType.Longhouse or DwellingType.Burgage && l.Index != _lordLot[si]) ordinary.Add(l.Index);
         int hCount = Math.Min(s.Households - (_lordPeople[si] > 0 ? 1 : 0), ordinary.Count);
         hCount = Math.Min(hCount, Q);
         if (hCount <= 0) { BuildVagrants(si, Q, culture, np, r); return; }

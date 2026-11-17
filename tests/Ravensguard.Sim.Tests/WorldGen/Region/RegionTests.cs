@@ -278,7 +278,7 @@ public class RegionTests(ITestOutputHelper output)
         var w = Get(seed);
         output.WriteLine($"seed {seed}: pick {w.Pick}");
         Assert.False(w.Pick.Excluded);
-        Assert.InRange(w.Pick.Towns, 1, 3);
+        Assert.InRange(w.Pick.Towns, 1, 4);
         Assert.True(w.Pick.RiverCells > 0);
         Assert.True(w.Pick.BiomeCount >= 2);
         Assert.True(w.Pick.NearestWarKm < 0 || w.Pick.NearestWarKm >= 10);

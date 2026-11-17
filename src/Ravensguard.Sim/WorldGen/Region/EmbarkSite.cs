@@ -77,7 +77,7 @@ public static class EmbarkSite
         else if (warKm < 10) reason = "active war within 10 km of the centre";
         else if (towns == 0 && villages == 0) reason = "no settlements";
         int total = 0;
-        total += towns switch { 0 => 0, 1 => 250, 2 => 300, 3 => 260, 4 => 100, _ => -100 * (towns - 4) };
+        total += towns switch { 0 => 0, 1 => 150, 2 => 250, 3 => 320, 4 => 300, _ => -100 * (towns - 4) };
         total += riverCells >= 8 ? 150 : riverCells > 0 ? 60 : -50;
         total += biomeCount >= 2 ? 80 * Math.Min(biomeCount, 3) : 0;
         int mount = biomes[(int)Biome.Mountain] * 100 / Math.Max(1, land);
@@ -94,7 +94,7 @@ public static class EmbarkSite
         return new EmbarkScore(cx, cy, excluded ? Excl : total, excluded, reason, towns, villages, ruins, riverCells, biomeCount, landPct, (int)Math.Min(pop, int.MaxValue), realmCount, warKm == int.MaxValue ? -1 : warKm);
     }
 
-    /// <summary>Best window by <see cref="Score"/> (ties go to the lowest y then x): one to three history towns, a river, mixed biomes, clear of active wars.</summary>
+    /// <summary>Best window by <see cref="Score"/> (ties go to the lowest y then x): three or four history towns preferred (plan §1), a river, mixed biomes, clear of active wars.</summary>
     public static EmbarkScore AutoPick(Continent c, WorldHistory h)
     {
         var wars = ActiveWarCells(h);

@@ -62,7 +62,10 @@ public enum LotUse : byte { Cottage, Longhouse, Burgage, Manor, Chapel, Church, 
 /// </summary>
 public sealed record Lot(int Index, LotUse Use, DwellingType Dwelling, string BlueprintId, RectM Rect, byte Facing, byte Wealth)
 {
-    public bool IsDwelling => Dwelling != DwellingType.None;
+    /// <summary>A house that stands empty because the settlement shrank (too little farmland). Not a home for anyone.</summary>
+    public bool Vacant { get; init; }
+    /// <summary>A lived-in house plot (vacant houses excluded).</summary>
+    public bool IsDwelling => Dwelling != DwellingType.None && !Vacant;
 }
 
 public sealed record Street(PointM A, PointM B, int WidthM);

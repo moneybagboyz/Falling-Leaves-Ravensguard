@@ -104,6 +104,7 @@ internal sealed partial class RegionBuilder
                 if (pop < S[i].TargetPop) S[i].TargetPop = pop;
                 S[i].FieldAcresDemand = S[i].TargetPop * _s.AcresPerPersonX10 / 10;
                 S[i].Households = Math.Min(S[i].Households, HouseholdsFor(S[i].Class, S[i].TargetPop));
+                VacateSurplusDwellings(S[i]);
             }
         }
 
@@ -258,5 +259,22 @@ internal sealed partial class RegionBuilder
     {
         int r = (int)(Hash(StField, 77, t) % 100);
         return r < 45 ? Crop.Barley : r < 70 ? Crop.Oats : r < 85 ? Crop.Peas : Crop.Beans;
+    }
+
+    /// <summary>
+    /// The plan was laid out for the history's population; when farmland caps it lower, the outermost houses stand
+    /// empty (deterministic: farthest from the square first, ties by lot index).
+    /// </summary>
+    private static void VacateSurplusDwellings(RegionSettlement st)
+    {
+        var plan = st.Plan;
+        if (plan == null) return;
+        int surplus = plan.DwellingCount - st.Households;
+        if (surplus <= 0) return;
+        long cx = plan.Square.X + plan.Square.W / 2, cy = plan.Square.Y + plan.Square.H / 2;
+        var order = plan.Lots.Where(l => l.IsDwelling && l.Dwelling != DwellingType.Manor)
+            .OrderByDescending(l => { long dx = l.Rect.X + l.Rect.W / 2 - cx, dy = l.Rect.Y + l.Rect.H / 2 - cy; return dx * dx + dy * dy; })
+            .ThenBy(l => l.Index).Take(surplus).Select(l => l.Index).ToList();
+        foreach (int idx in order) plan.Lots[idx] = plan.Lots[idx] with { Vacant = true };
     }
 }
