@@ -38,6 +38,7 @@ internal static class ContentFileParser
                 var tt = reader.TokenType;
                 if (depth == 0)
                 {
+                    if (tt == JsonTokenType.EndArray) continue;
                     if (tt != JsonTokenType.StartArray)
                     {
                         report.Error(Loc(reader.TokenStartIndex), "Content file must contain a JSON array of definition objects");
@@ -47,7 +48,6 @@ internal static class ContentFileParser
                 else if (depth == 1 && tt is not (JsonTokenType.EndObject or JsonTokenType.EndArray))
                 {
                     elements.Add((reader.TokenStartIndex, tt == JsonTokenType.StartObject, []));
-                    if (tt is JsonTokenType.StartObject or JsonTokenType.StartArray) { }
                 }
                 else if (depth == 2 && tt == JsonTokenType.PropertyName && elements.Count > 0 && elements[^1].IsObject)
                 {
