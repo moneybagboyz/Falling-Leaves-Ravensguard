@@ -104,7 +104,7 @@ public sealed class StrikeResolver(CombatTables tables)
         bool deflected = false;
 
         // --- worn layers, outside in: cover, armour, over, under; coverage roll per piece ---
-        var pieces = def.Worn.Select(i => Tables.Armour(i.ShapeId, i.MaterialId) is var a ? (Item: i, Stats: a) : default)
+        var pieces = def.Worn.Select(i => (Item: i, Stats: Tables.Armour(i.ShapeId, i.MaterialId)))
             .OrderByDescending(x => (int)x.Stats.Shape.Layer).ThenByDescending(x => x.Stats.Shape.Order)
             .ThenBy(x => x.Item.ShapeId, StringComparer.Ordinal).ToList();
         foreach (var (item, stats) in pieces)
