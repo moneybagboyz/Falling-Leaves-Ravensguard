@@ -36,7 +36,8 @@ The game today is a deep simulation hidden behind a hard-to-use interface: BBCod
 | Time | Real time with pause. **Movement and combat run in real seconds; the world clock runs at 1:20** (a game day lasts 72 real minutes at 1x) |
 | Progression | Staged: wanderer → sellsword → householder → vassal → lord → founder. UI layers unlock when relevant |
 | Control | Direct control of your hero; squad and formation orders; mouse and keyboard equal, rebindable, always shown |
-| Combat | Anatomy, called shots on a paper-doll, juicy feedback, filterable log, slow motion on key moments |
+| Combat | Anatomy, called shots on a paper-doll (pick the body part and the attack type, as in Dwarf Fortress), juicy feedback, a filterable log of flavour text, slow motion on key moments |
+| AI play | **Watch mode** hands a fight to the AI in real time; **autopilot** runs your hero's life on directives with interrupts. Both are allowed in Ironman (§3i) |
 | Army scale | Up to 1,000–2,000 soldiers live (a setting), with reinforcement waves; formations + hero; physical marching, supply, levies from your land, sieges with engines |
 | Sandbox | Buy lots and houses, claim wild land, zone fiefs, free-placement building, businesses (hands-on and passive shares) |
 | NPCs | Everyone is a person; anyone can be recruited; crime with witnesses; factions react; you can found a faction |
@@ -572,6 +573,11 @@ There is no double-click to interact.
 6. **Combat anywhere** (see §2.6).
    - Morale, rout, surrender and retreat; knock-outs, capture and loot.
    - Feedback: hit flashes, part callouts, shake, persistent blood, and slow motion on crits, kills and hits on your hero.
+   - **Flavour text, Dwarf Fortress style.** Each blow becomes a line of prose built from the resolver's layer trace, for example: *"Aldric's axe bites through the bronze mail and tears into the muscle of Bram's upper arm. An artery is opened; blood sprays."*
+     - Lines come from localisable templates, varied by weapon, material, attack type, outcome and severity, so the same blow doesn't read the same way twice.
+     - The plain wound list is shown in a tooltip and on the paper-doll.
+     - The log is filterable (your hero only, your side, kills and serious wounds) and is kept for the after-fight report and the chronicle.
+   - **Watch mode and autopilot:** see §3i.
 7. **Failure** is the same in both modes.
    - If you're knocked out, what happens depends on who won:
      - bandits rob you and leave you;
@@ -603,7 +609,7 @@ There is no double-click to interact.
     - Every chronicle entry has either a specific cause or that explicit label. Coverage is measured.
 13. **Warnings before failure:** encounter strength and odds, a starvation timeline, the injury consequences shown on the paper-doll, and "seen" or "unseen".
 14. **Authored content:** landmarks, unique NPCs and faction leaders, placed by a landmark generation phase.
-15. **Armies and war at scale:** see §3d. **Horses:** see §3e. **Learning the game:** see §3f. **Crafting:** see §3g. **Vehicles and ships:** see §3h.
+15. **Armies and war at scale:** see §3d. **Horses:** see §3e. **Learning the game:** see §3f. **Crafting:** see §3g. **Vehicles and ships:** see §3h. **Watch mode and autopilot:** see §3i.
 16. **Audio:** see §2.11.
 
 **Cut or folded in:**
@@ -921,6 +927,37 @@ Like Cataclysm's vehicle construction: a vehicle is a grid of parts that you des
   - Phase 3: fixed template carts and wagons (no designer).
   - Phase 5: the designer, building, repair, river boats, and the wheelwright, cartwright and shipwright proficiencies.
   - Phase 7: war wagons and wagon forts, chariot combat, siege engines built from the designer, sea ships, harbours, sea raids and naval combat.
+
+### 3i. Watch mode and autopilot: letting the AI play your hero
+The player's hero can be handed to the same AI that runs every NPC, for one fight or for whole stretches of life. It's a convenience and a way to watch the world, not a cheat.
+- **Watch mode for fights** (toggle with a key and a button on the combat HUD).
+  - When a fight starts, or at any point during it, your hero and your side are fought by AI in real time. Your hero picks targets, attacks, blocks, parries, uses called shots and retreats on the same utility AI and timings as everyone else (§2.6, §4A.3).
+  - Squads and formations follow your captains' Tactics skill (§3d).
+  - You watch with the normal speed controls, and **can take back control or give orders at any moment**.
+  - There is no instant skip: watch mode is real-time and uses the real resolver. Battles outside any bubble still use the abstract resolver as reports (§2.3).
+  - **Stance settings** for the hero's combat AI: aggressive, defensive, protect a target, no lethal blows (knock out and capture), flee when badly hurt.
+- **Autopilot for life.** Your hero runs on the NPC utility AI (§2.5), steered by **directives** you set:
+  - work a job;
+  - run a trade or caravan route;
+  - tend your business or fields;
+  - train a skill;
+  - pursue an ambition step (§3.11);
+  - guard a place, escort someone, or travel to a destination;
+  - rest and recover.
+  
+  You can also set limits: a spending cap, no crimes, avoid danger above a chosen risk, and come home by nightfall.
+- **Interrupts.** Autopilot stops, pauses the game and alerts you on events you choose:
+  - attacked or threatened, injured, low on food or money;
+  - a contract offer, a big choice (an offer of marriage, fealty, a bribe);
+  - a companion in trouble;
+  - reaching the destination.
+  
+  Each interrupt can be set to pause, notify, or let the AI handle it.
+- **One AI for everyone.** Autopilot uses the same decision code and data as NPCs, so it makes the same kinds of mistakes a person would, and its outcomes stick.
+  - It is **allowed in Ironman**, under the same rules.
+  - The chronicle records what the hero did on autopilot like anything else.
+- **Zero-player watching.** With autopilot on and interrupts set to "notify", the world plays itself around your hero like a living story, Dwarf Fortress style. You can step back in at any time.
+- **Party members** you control (§3.4) use the same directives and stances, so a squad can work, train or travel on its own while you lead another group.
 
 ### 3f. Learning the game (brutal, but learnable)
 - **No tutorial level.** You learn in the real world during the first hour:
@@ -1286,14 +1323,14 @@ Estimates assume one developer working with an AI assistant. Every phase ends in
 | 0 | Foundations, art toolchain, risk spikes | 5–7 mo | ~6 mo |
 | 1 | The world: continent, history, region, levels, blueprints | 12–16 mo | ~20 mo |
 | 2 | Economy, farming and the abstract world | 5–7 mo | ~26 mo |
-| 3 | People | 8–10 mo | ~35 mo |
-| 4 | Combat anywhere and exploration | 9–12 mo | ~46 mo |
-| 5 | Property, building, crafting, businesses, vehicle designer | 7–10 mo | ~54 mo |
-| 6 | Society, factions, rule | 7–9 mo | ~62 mo |
-| 7 | Armies, war at scale, ships and naval war | 15–20 mo | ~80 mo |
-| 8 | Depth, onboarding, polish, 1.0 | 8–12 mo | ~90 mo |
+| 3 | People, autopilot v1 | 9–11 mo | ~36 mo |
+| 4 | Combat anywhere and exploration | 9–12 mo | ~47 mo |
+| 5 | Property, building, crafting, businesses, vehicle designer | 7–10 mo | ~56 mo |
+| 6 | Society, factions, rule | 7–9 mo | ~64 mo |
+| 7 | Armies, war at scale, ships and naval war | 15–20 mo | ~81 mo |
+| 8 | Depth, onboarding, polish, 1.0 | 8–12 mo | ~91 mo |
 
-**Total: about 6.5–8.5 years (76–103 months).** The vehicle designer and ships (§3h) added about 4–7 months.
+**Total: about 6.5–8.5 years (77–104 months).** The vehicle designer and ships (§3h) added about 4–7 months, and autopilot (§3i) about 1 month.
 - The concept book's first hour becomes playable end to end at the end of Phase 5, about 4.5 years in.
 - **After 1.0, as free updates:** travelling to other regions (§1A, "Later"), C# script mods, and anything cut by the overrun rule (§7).
 
@@ -1385,7 +1422,7 @@ Estimates assume one developer working with an AI assistant. Every phase ends in
 - 1-year and 100-year headless soaks pass: stable prices, no collapse, population within ±10%, coin conserved except documented sources and sinks.
 - Caravans pass visibly through the region.
 
-### Phase 3: People (8–10 months)
+### Phase 3: People, autopilot v1 (9–11 months)
 - **Behaviour:** live behaviour, utility AI, schedules across levels; the job and reservation system, including **paid odd jobs** (haul, guard, escort).
 - **Talking and trading:**
   - Dialogue templates and barks (about 300 lines).
@@ -1402,6 +1439,7 @@ Estimates assume one developer working with an AI assistant. Every phase ends in
 - **Basic crafting (§3g):** fire, torches, bandages, simple meals, simple repairs; recipe steps, including unattended ones such as rising dough; practice recipes; the crafting screen; unfinished items; learning from a master.
 - The first unique NPCs.
 - **Onboarding v1 (§3f):** contextual hints, the controls overlay, the practice yard, mentor NPCs.
+- **Autopilot v1 (§3i):** the hero and party members on the NPC utility AI with directives (work, trade route, travel, train, guard, escort, rest), limits and interrupts; zero-player watching.
 - **Private testers start**, with crash reports (§2.11).
 
 **Done when:** residents keep schedules across floors; you can talk to, trade with, hire and recruit anyone; a rumour traces back to its source; testers can get through the first ride and the first odd job without help.
@@ -1420,6 +1458,8 @@ Estimates assume one developer working with an AI assistant. Every phase ends in
   - **Ironman succession** by kinship. Property passes over fully in Phase 5, reputation in Phase 6.
 - **Mounted combat** at skirmish scale.
 - **Feel:** feedback effects, placeholder audio, slow motion.
+- **Flavour text** from layer traces with localisable templates; the filterable log and after-fight report.
+- **Watch mode (§3i):** hand any fight to the AI in real time, with hero combat stances, and take back control at any moment.
 - **Bigger picture:** the abstract battle resolver v1; combat cause chains.
 - **Exploration (§3b):** site contents for caves, mines, ruins, crypts, barrows and battlefields; hazards; torches and light; traps; the auto-map; **2 monster types**.
 - **Weather in combat.**
@@ -1490,7 +1530,7 @@ Estimates assume one developer working with an AI assistant. Every phase ends in
 - Raiders land from a ship and you fight them on the beach and on the deck.
 
 ### Phase 8: Depth, onboarding, polish, 1.0 (8–12 months)
-- **Depth:** the full ambition tree; more authored landmarks (~40) and unique NPCs (~30).
+- **Depth:** the full ambition tree, with autopilot able to pursue ambition steps (§3i); more authored landmarks (~40) and unique NPCs (~30).
 - **The full bestiary** (3–6 types) and more site templates.
 - **The full Codex**; onboarding v2.
 - **Polish:**
@@ -1514,7 +1554,8 @@ Estimates assume one developer working with an AI assistant. Every phase ends in
   - **Blueprints:** IDs resolve, rooms are reachable, purposes can be satisfied, RoomDetector agrees.
   - **Conservation:** LOD promote and demote conserves people, items, coin and material mass.
   - **Derived stats:** golden tests on the derived-stats tables.
-  - **Combat:** seeded fights; near and far soldiers equivalent; the abstract resolver within ±10% of tactical.
+  - **Combat:** seeded fights; near and far soldiers equivalent; the abstract resolver within ±10% of tactical; the hero on watch mode uses exactly the NPC combat AI (same seed gives the same fight); every resolver outcome has a flavour-text template.
+  - **Autopilot:** directives and limits are obeyed (spending cap, no crimes); every interrupt kind fires; a year-long autopilot soak keeps the hero alive and solvent in a peaceful region.
   - **Material science:** golden tests reproducing the DF wiki's worked results. Examples: the battle-axe momentum table; mail converting cuts to blunt without dampening; rigid metal soaking 98–99% of a stopped blow; light weapons deflecting off dense armour; severing when penetration exceeds part size.
   - **Vehicles:** design validation (supported parts, steering, pull, draft against river depth, stability); speed against mass, surface and slope; people and items aboard move with the vehicle; part damage and repair; abstract and live travel times agree.
   - **Crafting:** recipe data validation (components, alternatives, qualities, requirement sets, proficiency graph without cycles); unattended steps ruin the batch past their deadline plus grace; proficiency penalties apply below 100%; disassembly returns the recorded components; practice recipes train without producing items.
