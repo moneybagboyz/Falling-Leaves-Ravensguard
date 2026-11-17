@@ -1,0 +1,28 @@
+// Weather tunables (plan §3c). Arrays are [spring, summer, autumn, winter]. Percentages and permille are integers; temperatures in tenths of a degree C.
+[
+  {
+    "type": "weather_settings", "id": "weather_defaults",
+    "latitude_north_tenths": 660, "latitude_south_tenths": 300,   // north edge of the continent / south edge; mid-continent ~48 N gives ~16 h / ~8 h days
+    "seasonal_amp_base_tenths": 70, "seasonal_amp_north_extra_tenths": 70,  // seasonal swing: 7 C in the south, 14 C in the north
+    "daily_amp_tenths": 60, "synoptic_amp_tenths": 25,
+    "heatwave_tenths": 300, "snow_below_tenths": 10,
+    "front_count_min": [4, 3, 4, 5], "front_count_max": [7, 6, 7, 8],   // fronts spawned per 15-day season
+    "cold_front_pct": [40, 30, 45, 55], "front_strength_pct": [95, 70, 100, 110],
+    "front_speed_min_cells_day": 16, "front_speed_max_cells_day": 30,   // 2 km cells per day, moving west to east
+    "drought_permille_year": 70, "wet_year_permille_year": 70, "cold_summer_permille_year": 60,
+    "heavy_rain_mm_h_tenths": 25, "heavy_day_mm": 12, "ford_closed_days": 3, "ford_recede_days": 2,
+    "biomes": [
+      { "biome": "Desert", "rain_scale_pct": 55, "season_rain_pct": [110, 60, 90, 140], "cloud_bias_permille": [-150, -200, -150, -100], "fog_day_pct": [4, 3, 6, 6], "thunder_pct": [6, 25, 4, 0] },
+      { "biome": "Steppe", "rain_scale_pct": 85, "season_rain_pct": [120, 95, 90, 90], "cloud_bias_permille": [-60, -80, -40, 0], "fog_day_pct": [8, 6, 12, 10], "thunder_pct": [10, 30, 6, 0] },
+      { "biome": "Grassland", "rain_scale_pct": 100, "season_rain_pct": [110, 95, 105, 90], "cloud_bias_permille": [0, -20, 20, 40], "fog_day_pct": [20, 15, 35, 28], "thunder_pct": [10, 30, 8, 0] },
+      { "biome": "TemperateForest", "rain_scale_pct": 100, "season_rain_pct": [105, 90, 115, 100], "cloud_bias_permille": [30, 0, 50, 70], "fog_day_pct": [28, 20, 45, 35], "thunder_pct": [10, 28, 8, 0] },
+      { "biome": "Taiga", "rain_scale_pct": 90, "season_rain_pct": [90, 115, 105, 90], "cloud_bias_permille": [40, 20, 70, 90], "fog_day_pct": [22, 20, 35, 25], "thunder_pct": [4, 18, 3, 0] },
+      { "biome": "Tundra", "rain_scale_pct": 75, "season_rain_pct": [80, 110, 110, 80], "cloud_bias_permille": [60, 40, 90, 70], "fog_day_pct": [20, 25, 30, 25], "thunder_pct": [2, 10, 2, 0] },
+      { "biome": "Marsh", "rain_scale_pct": 110, "season_rain_pct": [100, 100, 110, 90], "cloud_bias_permille": [40, 20, 60, 60], "fog_day_pct": [50, 38, 65, 50], "thunder_pct": [8, 25, 6, 0] },
+      { "biome": "RiverValley", "rain_scale_pct": 100, "season_rain_pct": [105, 95, 105, 95], "cloud_bias_permille": [10, 0, 30, 50], "fog_day_pct": [45, 35, 60, 45], "thunder_pct": [10, 28, 8, 0] },
+      { "biome": "Mountain", "rain_scale_pct": 125, "season_rain_pct": [100, 105, 100, 100], "cloud_bias_permille": [60, 40, 70, 80], "fog_day_pct": [20, 15, 25, 20], "thunder_pct": [14, 40, 8, 0] },
+      { "biome": "Lake", "rain_scale_pct": 100, "season_rain_pct": [100, 90, 110, 100], "cloud_bias_permille": [20, 0, 50, 60], "fog_day_pct": [50, 38, 65, 50], "thunder_pct": [8, 25, 6, 0] },
+      { "biome": "Sea", "rain_scale_pct": 100, "season_rain_pct": [100, 90, 110, 100], "cloud_bias_permille": [20, 0, 50, 60], "fog_day_pct": [50, 38, 65, 50], "thunder_pct": [8, 25, 6, 0] }
+    ]
+  }
+]
