@@ -8,6 +8,7 @@ internal sealed partial class RegionBuilder
     {
         public int U0, V0, W, D, Ratio;
         public byte Type; // 0 cottage, 1 longhouse, 2 burgage
+        public bool Grid; // on a parallel street (not facing the market place), so its back may face a back lane
         public int Side;
         public long Rank;
     }
@@ -79,7 +80,7 @@ internal sealed partial class RegionBuilder
         bool town = s.Class == SettlementClass.Town;
         bool horiz = plan.Horizontal = HorizontalFor(s);
         int cx = s.CenterX, cy = s.CenterY;
-        int sw = town ? 6 : 5, D = town ? 30 : 40, pitch = 2 * D + sw;
+        int sw = town ? 6 : 5, D = town ? 30 : 40, bl = town ? 3 : 0, pitch = 2 * D + sw + bl; // bl: the back lane between two rows of burgage plots
         int sqU = town ? 36 : 38, sqV = town ? 18 : 20; // a modest market place (or a green), not a parade ground
         int pop = s.TargetPop;
         bool seat = s.FiefIndex >= 0 && _r.Fiefs[s.FiefIndex].SeatSettlement == index;
@@ -196,16 +197,21 @@ internal sealed partial class RegionBuilder
         }
         // Cross lanes run perpendicular to the main street, every so often, never through the market place or over a reserved plot.
         int lw = town ? 4 : 3;
-        var lanes = new List<int>(); // signed positions along the main street
+        // In a town the lane jogs where it crosses the main street (a staggered crossroads), so the grid is not a perfect comb.
+        var lanes = new List<(int A, int B)>(); // signed centre along the main street: A for the side v < 0, B for v >= 0
         for (int sgn = -1; sgn <= 1; sgn += 2)
         {
             int lu = sqU / 2 + 8 + (int)(Hash(StPlan, (long)s.Id.Value, 40 + sgn) % 10);
             for (int k = 0; lu < umax; k++)
             {
-                var a = new RectM(sgn > 0 ? lu - lw / 2 : -lu - lw / 2, -umax, lw, 2 * umax);
+                int off = 0;
+                if (town) { ulong hj = Hash(StPlan, (long)s.Id.Value, 80 + k * 2 + sgn + 1); off = (int)(hj % 3) + 2; if ((hj >> 8 & 1) == 0) off = -off; }
+                int ca = sgn * lu, cb = sgn * (lu + off);
+                var ra = new RectM(ca - lw / 2, -umax, lw, umax);
+                var rb = new RectM(cb - lw / 2, 0, lw, umax);
                 bool ok = true;
-                foreach (var rsv in reserved) if (rsv.Overlaps(a)) ok = false;
-                if (ok) { lanes.Add(sgn * lu); reserved.Add(a); }
+                foreach (var rsv in reserved) if (rsv.Overlaps(ra) || rsv.Overlaps(rb)) ok = false;
+                if (ok) { lanes.Add((ca, cb)); reserved.Add(ra); reserved.Add(rb); }
                 lu += (town ? 44 : 64) + (int)(Hash(StPlan, (long)s.Id.Value, 60 + k * 2 + sgn + 1) % 36);
             }
         }
@@ -254,8 +260,9 @@ internal sealed partial class RegionBuilder
                     {
                         long key = ((long)(j + 64) << 24) | ((long)(side + 1) << 20) | ((long)(dir + 1) << 16) | (uint)k;
                         MakeSlot(key, u, dir, vlo, D, side, out var sl, out int w);
+                        sl.Grid = true;
                         bool moved = false;
-                        foreach (int l in lanes) { int lu = Math.Abs(l); if ((l > 0) == (dir > 0) && u < lu + lw / 2 && u + w > lu - lw / 2) { u = lu + lw / 2; moved = true; break; } }
+                        foreach (var (la, lb) in lanes) { int l = vlo < 0 ? la : lb, lu = Math.Abs(l); if ((l > 0) == (dir > 0) && u < lu + lw / 2 && u + w > lu - lw / 2) { u = lu + lw / 2; moved = true; break; } }
                         if (moved) continue;
                         slots.Add(sl);
                         u += w;
@@ -328,12 +335,32 @@ internal sealed partial class RegionBuilder
             plan.Streets.Add(new Street(P(kv.Value.Lo, kv.Key * pitch), P(kv.Value.Hi, kv.Key * pitch), sw));
         int jlo = perStreet.Keys.Min(), jhi = perStreet.Keys.Max();
         if (jhi > jlo || town)
-            foreach (int l in lanes)
+            foreach (var (la, lb) in lanes)
             {
-                int ext = l > 0 ? maxU : -minU;
-                if (Math.Abs(l) > ext - 6) continue;
-                plan.Streets.Add(new Street(P(l, jlo * pitch), P(l, jhi * pitch), lw));
+                int ext = la > 0 ? maxU : -minU;
+                if (Math.Abs(la) > ext - 6) continue;
+                if (jlo < 0) plan.Streets.Add(new Street(P(la, jlo * pitch), P(la, 0), lw));
+                if (jhi > 0) plan.Streets.Add(new Street(P(lb, 0), P(lb, jhi * pitch), lw));
             }
+        // Back lanes: a narrow track in the gap between two rows of burgage plots, so the plots do not simply back onto each other.
+        if (bl > 0)
+        {
+            var back = new Dictionary<int, (int Lo, int Hi)>();
+            foreach (var (sl, _) in chosen)
+            {
+                if (!sl.Grid) continue;
+                int vs = sl.Side > 0 ? sl.V0 - sw / 2 : sl.V0 + D + sw / 2;
+                int j = (int)Math.Round(vs / (double)pitch);
+                int lane = sl.Side > 0 ? j : j - 1;
+                var cur = back.TryGetValue(lane, out var c) ? c : (int.MaxValue, int.MinValue);
+                back[lane] = (Math.Min(cur.Item1, sl.U0), Math.Max(cur.Item2, sl.U0 + sl.W));
+            }
+            foreach (var kv in back.OrderBy(k => k.Key))
+            {
+                int v = kv.Key * pitch + sw / 2 + D + bl / 2;
+                if (kv.Value.Hi - kv.Value.Lo >= 12) plan.Streets.Add(new Street(P(kv.Value.Lo, v), P(kv.Value.Hi, v), bl));
+            }
+        }
         plan.RadiusM = 0;
         foreach (var l in plan.Lots) plan.RadiusM = Math.Max(plan.RadiusM, Dist(cx, cy, l.Rect.CenterX, l.Rect.CenterY));
     }

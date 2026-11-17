@@ -92,11 +92,33 @@ public sealed class Objects
         }
     });
 
+    /// <summary>Straw bales, stacked: streaky straw, twine round each, ragged ends. Reads as hay, not as a crate.</summary>
     public PixelBuffer Hay() => Obj(32, 32, b =>
     {
-        b.Shade(4, 12, 24, 16, Rp("au1", "au2", "f3", "f4"), Top);
-        for (int x = 5; x < 27; x += 2) b.Set(x, 13 + (x % 5), P["au1"]);
-        b.Rect(4, 18, 24, 1, P["br2"]);
+        var g = R["gold"];
+        void Bale(int x0, int y0, int w, int h, int seed)
+        {
+            for (int y = 0; y < h; y++)
+                for (int x = 0; x < w; x++)
+                {
+                    int k = y < 2 ? 3 : y >= h - 3 ? 0 : y >= h - 5 ? 1 : 2;
+                    double n = Hash(x / 3, y, seed) * .7 + Hash(x, y, seed + 1) * .3;
+                    if (n < .18) k = Math.Max(0, k - 1); else if (n > .86) k = Math.Min(3, k + 1);
+                    if (x == 0 || x == w - 1) k = Math.Max(0, k - 1);
+                    b.Set(x0 + x, y0 + y, g[k]);
+                }
+            foreach (int tx in new[] { w / 4, w - 1 - w / 4 }) for (int y = 0; y < h; y++) { b.Set(x0 + tx, y0 + y, P["br2"]); if (y % 4 == 1) b.Set(x0 + tx + 1, y0 + y, P["br3"]); }
+            for (int i = 0; i < 9; i++)
+            {
+                int ey = y0 + 1 + (int)(Hash(i, 3, seed) * (h - 2)); bool left = (i & 1) == 0;
+                int len = 1 + (int)(Hash(i, 4, seed) * 2.5);
+                for (int k = 0; k < len; k++) b.Set(left ? x0 - 1 - k : x0 + w + k, ey - (k >> 1), g[1 + (i + k) % 3]);
+            }
+            for (int i = 0; i < 5; i++) b.Set(x0 + 1 + (int)(Hash(i, 5, seed) * (w - 2)), y0 - 1, g[2 + i % 2]);
+        }
+        Bale(3, 17, 17, 11, 1151);
+        Bale(12, 7, 17, 10, 1157);
+        Bale(10, 20, 19, 9, 1163);
     });
 
     public PixelBuffer Well() => Obj(32, 32, b =>

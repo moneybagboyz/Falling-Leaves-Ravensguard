@@ -362,8 +362,70 @@ public sealed class Props
         }
     }
 
+    /// <summary>Apple crown dressing by season: "blossom" (spring: white and pink), "green" (summer: a few small unripe apples), "ripe" (autumn: red apples, some fallen at the foot).</summary>
+    private void AppleFruit(PixelBuffer b, string fruit)
+    {
+        if (fruit == "blossom")
+        {
+            for (int i = 0; i < 70; i++)
+            {
+                int x = 14 + (int)(Hash(i, 1, 1181) * 38), y = 14 + (int)(Hash(i, 2, 1181) * 28);
+                if (!b.Opaque(x, y)) continue;
+                bool pink = Hash(i, 3, 1181) < .45;
+                b.Set(x, y, pink ? P["fp"] : P["pl4"]);
+                if (Hash(i, 4, 1181) < .6) b.Set(x + 1, y, pink ? P["pl4"] : P["fp"]);
+                if (Hash(i, 5, 1181) < .3) b.Set(x, y + 1, P["pl4"]);
+            }
+        }
+        else if (fruit == "green")
+        {
+            for (int i = 0; i < 7; i++)
+            {
+                int x = 17 + (int)(Hash(i, 1, 1191) * 30), y = 18 + (int)(Hash(i, 2, 1191) * 22);
+                if (b.Opaque(x, y) && b.Opaque(x + 1, y + 1)) { b.Set(x, y, P["gs4"]); b.Set(x + 1, y, P["gs3"]); b.Set(x, y + 1, P["gs3"]); }
+            }
+        }
+        else if (fruit == "ripe")
+        {
+            for (int i = 0; i < 20; i++)
+            {
+                int x = 15 + (int)(Hash(i, 1, 1171) * 34), y = 15 + (int)(Hash(i, 2, 1171) * 26);
+                if (!b.Opaque(x, y) || !b.Opaque(x + 1, y + 1)) continue;
+                b.Set(x, y, P["r4"]); b.Set(x + 1, y, P["r3"]); b.Set(x, y + 1, P["r3"]); b.Set(x + 1, y + 1, P["r2"]);
+            }
+            for (int i = 0; i < 4; i++) { int x = 19 + i * 6 + (i & 1) * 2, y = 76 + (i % 2); b.Set(x, y, P["r3"]); b.Set(x + 1, y, P["r2"]); b.Set(x, y - 1, P["r4"]); }
+        }
+    }
+
+    /// <summary>A timber lychgate (64 x 48): two posts one cell apart, a cross beam and a tiled gable, open between the posts so the path shows through.</summary>
+    public PixelBuffer Lychgate() => Obj(64, 48, b =>
+    {
+        var t = R["tile"];
+        foreach (int px in new[] { 17, 43 }) { b.Rect(px, 15, 4, 32, P["w2"]); b.Rect(px, 15, 1, 32, P["w4"]); b.Rect(px + 3, 15, 1, 32, P["w1"]); }
+        b.Rect(15, 45, 8, 2, P["s3"]); b.Rect(41, 45, 8, 2, P["s3"]); b.Rect(15, 45, 8, 1, P["s4"]); b.Rect(41, 45, 8, 1, P["s4"]);
+        b.Rect(17, 15, 30, 3, P["w3"]); b.Rect(17, 15, 30, 1, P["w4"]); b.Rect(17, 17, 30, 1, P["w1"]);
+        b.Line(21, 26, 27, 18, P["w3"]); b.Line(22, 26, 28, 18, P["w2"]); b.Line(42, 26, 36, 18, P["w3"]); b.Line(41, 26, 35, 18, P["w2"]);
+        for (int y = 4; y <= 14; y++)
+        {
+            int hw = 5 + (y - 4) * 22 / 10;
+            for (int x = 32 - hw; x <= 32 + hw; x++)
+            {
+                bool edge = x - (32 - hw) < 3 || (32 + hw) - x < 3 || y >= 13;
+                if (edge)
+                {
+                    int course = (y + (x >> 1)) % 4 == 0 ? 0 : 1;
+                    int k = x < 32 ? 2 + course : 1 + course; if (y >= 13) k = 0;
+                    b.Set(x, y, t[Math.Clamp(k, 0, 3)]);
+                }
+                else b.Set(x, y, (x + y) % 7 == 0 ? P["pl2"] : P["pl3"]);
+            }
+        }
+        b.Rect(31, 5, 2, 8, P["w2"]);
+        for (int x = 29; x <= 35; x++) b.Set(x, 3, t[3]);
+    });
+
     /// <summary>species: oak ash birch pine apple; style: summer | winter. Autumn = Seasons recolour of the summer sprite.</summary>
-    public PixelBuffer Tree(string species, bool winter)
+    public PixelBuffer Tree(string species, bool winter, string fruit = "")
     {
         var b = new PixelBuffer(64, 80);
         int seed = 1200 + species.Length * 17 + species[0];
@@ -405,7 +467,7 @@ public sealed class Props
                     case "birch": Blobs(b, f, seed, 12, 32, 28, 12, 13, 6, 9); for (int i = 0; i < 10; i++) { int x = 20 + (int)(Hash(i, 1, seed) * 24); for (int j = 0; j < 4; j++) b.Set(x, 38 + j + (int)(Hash(i, 2, seed) * 5), j == 3 ? f[3] : f[1]); } break;
                     default: Blobs(b, f, seed, 12, 32, 31, 17, 9, 8, 11); break;
                 }
-                if (species == "apple") for (int i = 0; i < 11; i++) { int x = 16 + (int)(Hash(i, 1, 1171) * 32), y = 16 + (int)(Hash(i, 2, 1171) * 24); if (b.Opaque(x, y)) { b.Set(x, y, P["r3"]); b.Set(x + 1, y, P["r2"]); b.Set(x, y - 1, P["r4"]); } }
+                if (species == "apple") AppleFruit(b, fruit == "" ? "green" : fruit);
             }
         }
         else

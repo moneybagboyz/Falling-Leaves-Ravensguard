@@ -122,6 +122,8 @@ public partial class WorldMapScreen : Control
         var r = _map.Region;
         foreach (var s in r.Settlements)
             if (Math.Abs(s.TileX - tx) <= 1 && Math.Abs(s.TileY - ty) <= 1) { _hover = $"{s.Name}  ({s.Class}, pop {s.TargetPop})"; return; }
+        foreach (var lm in r.Landmarks ?? [])
+            if (Math.Abs(lm.TileX - tx) <= 1 && Math.Abs(lm.TileY - ty) <= 1 && _map.IsExplored(lm.TileX, lm.TileY)) { _hover = $"{lm.Name}  ({L.T("MAP_LEGEND_LANDMARK")})"; return; }
         foreach (var s in r.Sites)
             if (Math.Abs(s.TileX - tx) <= 1 && Math.Abs(s.TileY - ty) <= 1) { _hover = _map.IsExplored(s.TileX, s.TileY) ? $"{s.Name}  ({s.Kind})" : L.T("MAP_UNKNOWN_SITE"); return; }
         int i = RegionData.Index(tx, ty);
@@ -151,6 +153,15 @@ public partial class WorldMapScreen : Control
             DrawIcon(icon, pos, seen ? 1f : 0.7f);
             if (seen && _scale >= 2) Label(site.Name, pos + new Vector2(0, 14), 12, PixelTheme.Body);
         }
+        // authored landmarks show once the hero has been near them (the same explored tiles the fog uses)
+        foreach (var lm in r.Landmarks ?? [])
+        {
+            if (!_map.IsExplored(lm.TileX, lm.TileY)) continue;
+            var pos = ToScreen(new Vector2(lm.X / (float)RegionData.TileM * RegionMap.Px, lm.Y / (float)RegionData.TileM * RegionMap.Px)).Floor();
+            if (!view.HasPoint(pos)) continue;
+            DrawLandmark(pos);
+            if (_scale >= 2) Label(lm.Name, pos + new Vector2(0, 14), 12, PixelTheme.Gold);
+        }
         foreach (var st in r.Settlements)
         {
             var pos = ToScreen(new Vector2(st.CenterX / (float)RegionData.TileM * RegionMap.Px, st.CenterY / (float)RegionData.TileM * RegionMap.Px));
@@ -172,17 +183,26 @@ public partial class WorldMapScreen : Control
         if (_hover.Length > 0) DrawString(_font, new Vector2(Size.X - 12, Size.Y - 9), _hover, HorizontalAlignment.Right, Size.X * 0.45f, 14, PixelTheme.Body);
         // legend
         float lx = Size.X - 150, ly = 42;
-        DrawRect(new Rect2(lx - 8, ly - 10, 150, 5 * 18 + 6), new Color(0.08f, 0.07f, 0.09f, 0.8f));
+        DrawRect(new Rect2(lx - 8, ly - 10, 150, 6 * 18 + 6), new Color(0.08f, 0.07f, 0.09f, 0.8f));
         foreach (var (ic, key) in new[] { (MapIcon.Town, "MAP_LEGEND_TOWN"), (MapIcon.Village, "MAP_LEGEND_VILLAGE"), (MapIcon.Ruin, "MAP_LEGEND_SITE"), (MapIcon.Unknown, "MAP_LEGEND_UNKNOWN") })
         {
             DrawTexture(PixelIcons.Map(ic), new Vector2(lx, ly - 8));
             DrawString(_font, new Vector2(lx + 18, ly + 2), L.T(key), HorizontalAlignment.Left, -1, 13, PixelTheme.Body);
             ly += 18;
         }
+        DrawLandmark(new Vector2(lx + 6, ly - 2)); DrawString(_font, new Vector2(lx + 18, ly + 2), L.T("MAP_LEGEND_LANDMARK"), HorizontalAlignment.Left, -1, 13, PixelTheme.Body);
+        ly += 18;
         DrawRect(new Rect2(lx + 2, ly - 6, 8, 8), new Color("fde27a")); DrawString(_font, new Vector2(lx + 18, ly + 2), L.T("MAP_LEGEND_YOU"), HorizontalAlignment.Left, -1, 13, PixelTheme.Body);
     }
 
     static string H(string id) => InputBootstrap.Hint(id).Trim('[', ']');
+
+    /// <summary>The map mark of an authored landmark: a small gold diamond with a dark edge.</summary>
+    void DrawLandmark(Vector2 pos)
+    {
+        for (int d = -4; d <= 4; d++) { int w = 4 - Math.Abs(d); DrawRect(new Rect2(pos.X - w - 1, pos.Y + d, 2 * w + 2, 1), PixelTheme.Border); }
+        for (int d = -3; d <= 3; d++) { int w = 3 - Math.Abs(d); DrawRect(new Rect2(pos.X - w, pos.Y + d, 2 * w + 1, 1), PixelTheme.Gold); }
+    }
 
     void DrawIcon(Texture2D tex, Vector2 centre, float alpha, int mult = 1)
     {

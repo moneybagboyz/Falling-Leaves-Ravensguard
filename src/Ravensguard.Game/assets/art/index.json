@@ -48,7 +48,7 @@
     "terrain2_32": {
       "file": "terrain2_32.png",
       "width": 1024,
-      "height": 320,
+      "height": 352,
       "cell": [
         32,
         32
@@ -3540,6 +3540,118 @@
       "w": 32,
       "h": 32
     },
+    "autotile.wall_churchyard.o": {
+      "atlas": "terrain2_32",
+      "x": 960,
+      "y": 288,
+      "w": 32,
+      "h": 32
+    },
+    "autotile.wall_churchyard.n": {
+      "atlas": "terrain2_32",
+      "x": 992,
+      "y": 288,
+      "w": 32,
+      "h": 32
+    },
+    "autotile.wall_churchyard.e": {
+      "atlas": "terrain2_32",
+      "x": 0,
+      "y": 320,
+      "w": 32,
+      "h": 32
+    },
+    "autotile.wall_churchyard.ne": {
+      "atlas": "terrain2_32",
+      "x": 32,
+      "y": 320,
+      "w": 32,
+      "h": 32
+    },
+    "autotile.wall_churchyard.s": {
+      "atlas": "terrain2_32",
+      "x": 64,
+      "y": 320,
+      "w": 32,
+      "h": 32
+    },
+    "autotile.wall_churchyard.ns": {
+      "atlas": "terrain2_32",
+      "x": 96,
+      "y": 320,
+      "w": 32,
+      "h": 32
+    },
+    "autotile.wall_churchyard.es": {
+      "atlas": "terrain2_32",
+      "x": 128,
+      "y": 320,
+      "w": 32,
+      "h": 32
+    },
+    "autotile.wall_churchyard.nes": {
+      "atlas": "terrain2_32",
+      "x": 160,
+      "y": 320,
+      "w": 32,
+      "h": 32
+    },
+    "autotile.wall_churchyard.w": {
+      "atlas": "terrain2_32",
+      "x": 192,
+      "y": 320,
+      "w": 32,
+      "h": 32
+    },
+    "autotile.wall_churchyard.nw": {
+      "atlas": "terrain2_32",
+      "x": 224,
+      "y": 320,
+      "w": 32,
+      "h": 32
+    },
+    "autotile.wall_churchyard.ew": {
+      "atlas": "terrain2_32",
+      "x": 256,
+      "y": 320,
+      "w": 32,
+      "h": 32
+    },
+    "autotile.wall_churchyard.new": {
+      "atlas": "terrain2_32",
+      "x": 288,
+      "y": 320,
+      "w": 32,
+      "h": 32
+    },
+    "autotile.wall_churchyard.sw": {
+      "atlas": "terrain2_32",
+      "x": 320,
+      "y": 320,
+      "w": 32,
+      "h": 32
+    },
+    "autotile.wall_churchyard.nsw": {
+      "atlas": "terrain2_32",
+      "x": 352,
+      "y": 320,
+      "w": 32,
+      "h": 32
+    },
+    "autotile.wall_churchyard.esw": {
+      "atlas": "terrain2_32",
+      "x": 384,
+      "y": 320,
+      "w": 32,
+      "h": 32
+    },
+    "autotile.wall_churchyard.nesw": {
+      "atlas": "terrain2_32",
+      "x": 416,
+      "y": 320,
+      "w": 32,
+      "h": 32
+    },
     "roof.thatch.n": {
       "atlas": "roofs_32",
       "x": 0,
@@ -4282,51 +4394,65 @@
       "w": 64,
       "h": 80
     },
-    "object.stall_yellow": {
+    "object.tree.apple.spring": {
       "atlas": "props_64",
       "x": 960,
       "y": 0,
       "w": 64,
-      "h": 48
+      "h": 80
     },
-    "object.stall_brown": {
+    "object.lychgate": {
       "atlas": "props_64",
       "x": 0,
       "y": 80,
       "w": 64,
       "h": 48
     },
-    "object.stall_plain": {
+    "object.stall_yellow": {
       "atlas": "props_64",
       "x": 64,
       "y": 80,
       "w": 64,
       "h": 48
     },
-    "object.cart_hay": {
+    "object.stall_brown": {
       "atlas": "props_64",
       "x": 128,
       "y": 80,
       "w": 64,
       "h": 48
     },
-    "object.cart_barrels": {
+    "object.stall_plain": {
       "atlas": "props_64",
       "x": 192,
       "y": 80,
       "w": 64,
       "h": 48
     },
-    "object.cart_goods": {
+    "object.cart_hay": {
       "atlas": "props_64",
       "x": 256,
       "y": 80,
       "w": 64,
       "h": 48
     },
-    "object.barrow": {
+    "object.cart_barrels": {
       "atlas": "props_64",
       "x": 320,
+      "y": 80,
+      "w": 64,
+      "h": 48
+    },
+    "object.cart_goods": {
+      "atlas": "props_64",
+      "x": 384,
+      "y": 80,
+      "w": 64,
+      "h": 48
+    },
+    "object.barrow": {
+      "atlas": "props_64",
+      "x": 448,
       "y": 80,
       "w": 64,
       "h": 48

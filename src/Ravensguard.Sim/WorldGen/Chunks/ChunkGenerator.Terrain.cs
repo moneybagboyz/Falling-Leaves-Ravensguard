@@ -190,9 +190,10 @@ public sealed partial class ChunkGenerator
             }
             foreach (var st in plan.Streets)
             {
+                var skind = s.Class == SettlementClass.Town && st.WidthM <= 3 ? GroundKind.Dirt : kind; // a town's back lanes are beaten earth, not cobbles
                 int w = Math.Max(2, st.WidthM);
                 int x0 = Math.Min(st.A.X, st.B.X) - w / 2, y0 = Math.Min(st.A.Y, st.B.Y) - w / 2;
-                Pave(b, new RectM(x0, y0, Math.Abs(st.A.X - st.B.X) + w, Math.Abs(st.A.Y - st.B.Y) + w), kind);
+                Pave(b, new RectM(x0, y0, Math.Abs(st.A.X - st.B.X) + w, Math.Abs(st.A.Y - st.B.Y) + w), skind);
             }
         }
     }

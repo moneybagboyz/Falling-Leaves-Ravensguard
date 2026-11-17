@@ -67,6 +67,7 @@ public static class CatalogV2
         Set("fence_wattle", m => Autotile2.BuildLine(grass0, Autotile2.Wattle(pal), m));
         Set("wall_field", m => Autotile2.BuildLine(grass0, Autotile2.FieldWall(pal), m));
         Set("palisade", m => Autotile2.BuildLine(grass0, Autotile2.Palisade(pal), m));
+        Set("wall_churchyard", m => Autotile2.BuildLine(grass0, Autotile2.ChurchWall(pal), m));
 
         // ---- roofs (Field / Command zoom, world map)
         foreach (var m in Roofs.Mats) foreach (var k in Roofs.Kinds) { var mm = m; var kk = k; l.Add(new SpriteDef($"roof.{m}.{k}", SpriteKind.Terrain, "roofs_32", "roof." + m, 32, 32, () => rf.Roof(mm, kk))); }
@@ -107,9 +108,11 @@ public static class CatalogV2
         {
             var s = sp;
             O64($"object.tree.{sp}.summer", 80, () => pr.Tree(s, false));
-            O64($"object.tree.{sp}.autumn", 80, () => Seasons.Apply(pal, pr.Tree(s, false), "autumn"));
+            O64($"object.tree.{sp}.autumn", 80, () => Seasons.Apply(pal, pr.Tree(s, false, s == "apple" ? "ripe" : ""), "autumn"));
             O64($"object.tree.{sp}.winter", 80, () => pr.Tree(s, true));
         }
+        O64("object.tree.apple.spring", 80, () => pr.Tree("apple", false, "blossom"));
+        O64("object.lychgate", 48, pr.Lychgate);
         foreach (var k in new[] { "yellow", "brown", "plain" }) { var kk = k; O64($"object.stall_{k}", 48, () => pr.Stall(kk)); }
         foreach (var k in new[] { "hay", "barrels", "goods" }) { var kk = k; O64($"object.cart_{k}", 48, () => pr.CartLoaded(kk)); }
         O64("object.barrow", 48, pr.Barrow);

@@ -3,6 +3,8 @@ using System.Text;
 using System.Text.Json;
 using MessagePack;
 using Ravensguard.Content;
+using Ravensguard.Sim.Characters;
+using Ravensguard.Sim.Codex;
 using Ravensguard.Sim.Core;
 using Ravensguard.Sim.People;
 using Ravensguard.Sim.WorldGen;
@@ -30,6 +32,10 @@ public sealed class WorldState
     public required IdAllocator Ids { get; init; }
     public required ChunkStore Chunks { get; init; }
     public required Chronicle Chronicle { get; init; }
+    /// <summary>The player character (saved in the "hero" section when present).</summary>
+    public HeroRecord? Hero { get; init; }
+    /// <summary>The unlocked Codex entries (saved in the "codex" section when present).</summary>
+    public CodexProgress? Codex { get; init; }
     public ulong Seed => ContinentSettings.Seed;
 }
 
@@ -153,7 +159,7 @@ public sealed class ChronicleData
 /// </summary>
 public static class WorldSave
 {
-    public const string MetaSection = "meta", PeopleSection = "people", LotsSection = "region.lots", ChunksSection = ChunkStore.SectionName, ChronicleSection = "chronicle";
+    public const string MetaSection = "meta", PeopleSection = "people", LotsSection = "region.lots", ChunksSection = ChunkStore.SectionName, ChronicleSection = "chronicle", HeroSection = "hero", CodexSection = "codex";
 
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = false };
 
@@ -177,14 +183,18 @@ public static class WorldSave
             ClockSeconds = w.Clock.Now.Seconds, ClockMsRemainder = w.Clock.GameMsRemainder, ClockSpeed = (int)w.Clock.Speed,
             IdState = w.Ids.GetState(),
         };
-        return new SaveFile(header, new KeyValuePair<string, byte[]>[]
+        var sections = new List<KeyValuePair<string, byte[]>>
         {
             new(MetaSection, SaveCodec.Serialize(meta)),
             new(PeopleSection, SaveCodec.SerializeCompressed(EncodePeople(w.Population))),
             new(LotsSection, SaveCodec.SerializeCompressed(EncodeLots(w.Population))),
             new(ChunksSection, w.Chunks.ToSection()),
             new(ChronicleSection, SaveCodec.SerializeCompressed(EncodeChronicle(w.Chronicle))),
-        });
+        };
+        // additive sections: absent for worlds that have no hero or Codex yet, so older saves and tests keep their bytes
+        if (w.Hero != null) sections.Add(new(HeroSection, SaveCodec.Serialize(w.Hero.ToSave())));
+        if (w.Codex != null) sections.Add(new(CodexSection, SaveCodec.Serialize(new CodexSave { Unlocked = w.Codex.Unlocked.ToArray() })));
+        return new SaveFile(header, sections);
     }
 
     // ---------- restore ----------
@@ -211,14 +221,23 @@ public static class WorldSave
         Verify("history", meta.HistoryHash, history.ComputeHash());
         var region = RegionGenerator.Generate(continent, history, meta.EmbarkCellX, meta.EmbarkCellY, rs);
         Verify("region", meta.RegionHash, region.ComputeHash());
+        LandmarkPlacer.Place(region, history, content); // the landmark phase is a pure function of region, history and content, so it is not stored
 
         var pop = DecodePeople(Decode<PeopleData>(file, PeopleSection, true), Decode<RegionLotsData>(file, LotsSection, true), region);
         Verify("population", meta.PopulationHash, pop.ComputeHash());
 
         var chunks = file.Sections.TryGetValue(ChunksSection, out var cb) ? ChunkStore.FromSection(cb) : new ChunkStore();
         var chronicle = DecodeChronicle(Decode<ChronicleData>(file, ChronicleSection, true));
+        HeroRecord? hero = file.Sections.ContainsKey(HeroSection) ? HeroRecord.FromSave(Decode<HeroSave>(file, HeroSection, compressed: false)) : null;
+        CodexProgress? codex = null;
+        if (file.Sections.ContainsKey(CodexSection))
+        {
+            codex = new CodexProgress();
+            foreach (var id in Decode<CodexSave>(file, CodexSection, compressed: false).Unlocked) codex.Unlocked.Add(id);
+        }
         return new WorldState
         {
+            Hero = hero, Codex = codex,
             ContinentSettings = cs, HistorySettings = hs, RegionSettings = rs, EmbarkCellX = meta.EmbarkCellX, EmbarkCellY = meta.EmbarkCellY,
             Continent = continent, History = history, Population = pop,
             Clock = new SimClock(new GameTime(meta.ClockSeconds), meta.ClockMsRemainder) { Speed = (SimSpeed)meta.ClockSpeed },

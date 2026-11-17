@@ -32,6 +32,13 @@ public partial class MainMenu : Control
         var quit = ScreenRouter.HintButton(L.T("MENU_QUIT"), "menu.quit");
         quit.Pressed += () => GetTree().Quit();
         v.AddChild(newGame); v.AddChild(worlds); v.AddChild(legends); v.AddChild(settings); v.AddChild(quit);
+        if (OS.IsDebugBuild()) // dev tools exist in debug builds only
+        {
+            var dev = ScreenRouter.HintButton(L.T("MENU_DEV_BLUEPRINTS"), "menu.dev_blueprints");
+            dev.Pressed += DoBlueprints;
+            v.AddChild(dev);
+            v.MoveChild(dev, quit.GetIndex());
+        }
         newGame.GrabFocus();
     }
 
@@ -39,6 +46,7 @@ public partial class MainMenu : Control
     void DoWorlds() => _router.Push(new NewGame.WorldsScreen(_router, legendsMode: false));
     void DoLegends() => _router.Push(new NewGame.WorldsScreen(_router, legendsMode: true));
     void DoSettings() => _router.Push(new SettingsScreen(_router));
+    void DoBlueprints() { var msg = Tools.BlueprintEditor.BlueprintEditorScreen.Launch(_router, null); if (!msg.StartsWith("blueprint editor opened")) _router.ShowToast(msg); }
 
     public override void _UnhandledInput(InputEvent e)
     {
@@ -48,6 +56,7 @@ public partial class MainMenu : Control
         else if (Actions.Pressed(e, "menu.legends")) DoLegends();
         else if (Actions.Pressed(e, "menu.settings")) DoSettings();
         else if (Actions.Pressed(e, "menu.quit")) GetTree().Quit();
+        else if (OS.IsDebugBuild() && Actions.Pressed(e, "menu.dev_blueprints")) DoBlueprints();
         else return;
         GetViewport().SetInputAsHandled();
     }

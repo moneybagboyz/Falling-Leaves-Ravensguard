@@ -38,9 +38,12 @@ public partial class LegendsScreen : Control
     RichTextLabel _detail = null!;
     VBoxContainer _links = null!;
 
-    public LegendsScreen(ScreenRouter router, LoadedWorld w, EntityId? focus = null)
+    public LegendsScreen(ScreenRouter router, LoadedWorld w, EntityId? focus = null) : this(router, w.History, focus) { }
+
+    /// <summary>The viewer over a history alone (the in-game Codex opens it on an entry's source event).</summary>
+    public LegendsScreen(ScreenRouter router, WorldHistory history, EntityId? focus = null)
     {
-        _router = router; _h = w.History; _all = _h.Chronicle.All; _focus = focus;
+        _router = router; _h = history; _all = _h.Chronicle.All; _focus = focus;
         _blob = new string[_all.Count]; _realms = new int[_all.Count][]; _subjects = new string[_all.Count];
 
         var realmOf = new Dictionary<EntityId, int>();

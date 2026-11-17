@@ -1,0 +1,115 @@
+// Authored landmark templates (REDESIGN_PLAN Direction, 1A, section 3 item 14). They are only ever placed into a generated world by the landmark phase
+// (src/Ravensguard.Sim/WorldGen/Region/LandmarkPlacer.cs), each because something happened there. "props" is the footprint: prop kinds (the sim's PropKind)
+// at metre offsets from the centre. "attach_events" lists the history event types a template can hang on; "require_attach" makes the event mandatory.
+// Lore tokens: {place} nearest settlement, {event} event title, {year}, {text} event text, {person} first person the event names, {realm} first realm it names.
+[
+  { "type": "landmark", "id": "standing_stone_ring", "name": "Standing stone ring", "weight": 12,
+    "biomes": [ "grassland", "steppe", "tundra", "mountain", "taiga" ], "min_settlement_m": 1200,
+    "lore": "A ring of grey stones older than any kingdom the records name. The people of {place} leave bread here at midsummer and cannot say why.",
+    "props": [
+      { "kind": "boulder", "dx": 0, "dy": -5 }, { "kind": "boulder", "dx": 3, "dy": -4 }, { "kind": "boulder", "dx": 5, "dy": -1 }, { "kind": "boulder", "dx": 4, "dy": 3 },
+      { "kind": "boulder", "dx": 0, "dy": 5 }, { "kind": "boulder", "dx": -4, "dy": 3 }, { "kind": "boulder", "dx": -5, "dy": -1 }, { "kind": "boulder", "dx": -3, "dy": -4 },
+      { "kind": "rocks", "dx": 0, "dy": 0 } ] },
+
+  { "type": "landmark", "id": "hermits_cell", "name": "Hermit's cell", "weight": 10,
+    "attach_events": [ "saint_died", "saint_rises" ],
+    "biomes": [ "temperate_forest", "taiga", "mountain", "marsh", "tundra" ], "min_settlement_m": 1000, "max_settlement_m": 6000,
+    "lore": "A one-room cell of turf and stone where a hermit kept vigil after {event}. {text}. Pilgrims from {place} still bring whoever keeps it a loaf and a candle, in memory of {person}.",
+    "lore_unattached": "A one-room cell of turf and stone, a day's walk from {place}. A hermit has lived here as long as anyone remembers, though not always the same one.",
+    "props": [
+      { "kind": "low_wall", "dx": -2, "dy": -2 }, { "kind": "low_wall", "dx": -1, "dy": -2 }, { "kind": "low_wall", "dx": 1, "dy": -2 }, { "kind": "low_wall", "dx": 2, "dy": -2 },
+      { "kind": "low_wall", "dx": -2, "dy": -1 }, { "kind": "low_wall", "dx": 2, "dy": -1 }, { "kind": "low_wall", "dx": -2, "dy": 0 }, { "kind": "low_wall", "dx": 2, "dy": 0 },
+      { "kind": "low_wall", "dx": -2, "dy": 1 }, { "kind": "low_wall", "dx": -1, "dy": 1 }, { "kind": "low_wall", "dx": 2, "dy": 1 },
+      { "kind": "brazier", "dx": 0, "dy": -1 }, { "kind": "woodpile", "dx": 4, "dy": 0 }, { "kind": "bush", "dx": -4, "dy": 2 }, { "kind": "stump", "dx": 3, "dy": 3 } ] },
+
+  { "type": "landmark", "id": "ruined_watchtower", "name": "Ruined watchtower", "weight": 9, "on_hill": true,
+    "attach_events": [ "war_declared", "siege_begins", "border_raid", "battle" ],
+    "min_settlement_m": 900, "max_settlement_m": 7000,
+    "lore": "The stump of a watchtower on the hill, left to the crows since {event} in year {year}. {text}. Shepherds from {place} take stone from it for their folds.",
+    "lore_unattached": "The stump of a watchtower on the hill. Nobody in {place} remembers who kept it or what they were watching for.",
+    "props": [
+      { "kind": "low_wall", "dx": -2, "dy": -2 }, { "kind": "low_wall", "dx": -1, "dy": -2 }, { "kind": "low_wall", "dx": 0, "dy": -2 }, { "kind": "low_wall", "dx": 1, "dy": -2 },
+      { "kind": "low_wall", "dx": 2, "dy": -2 }, { "kind": "low_wall", "dx": -2, "dy": -1 }, { "kind": "low_wall", "dx": -2, "dy": 0 }, { "kind": "low_wall", "dx": 2, "dy": 1 },
+      { "kind": "low_wall", "dx": 2, "dy": 2 }, { "kind": "low_wall", "dx": 0, "dy": 2 }, { "kind": "low_wall", "dx": -1, "dy": 2 },
+      { "kind": "site_ruin", "dx": 0, "dy": 0, "variant": 1 }, { "kind": "site_ruin", "dx": 4, "dy": 3 }, { "kind": "site_ruin", "dx": -4, "dy": 2 }, { "kind": "rocks", "dx": 3, "dy": -3 } ] },
+
+  { "type": "landmark", "id": "holy_well", "name": "Holy well", "weight": 14, "max_per_region": 2,
+    "attach_events": [ "saint_rises", "saint_died", "saint_martyred" ],
+    "min_settlement_m": 150, "max_settlement_m": 1800,
+    "lore": "A spring with a stone kerb, hallowed after {event}. {text}. The sick of {place} drink here and hang strips of cloth on the thorn.",
+    "lore_unattached": "A spring with a stone kerb. The women of {place} say it heals sore eyes and hang strips of cloth on the thorn beside it.",
+    "props": [
+      { "kind": "well", "dx": 0, "dy": 0 }, { "kind": "bench", "dx": 3, "dy": 1 }, { "kind": "headstone", "dx": -3, "dy": 0 }, { "kind": "fruit_tree", "dx": -3, "dy": -3 },
+      { "kind": "bush", "dx": 3, "dy": -3 }, { "kind": "bush", "dx": -2, "dy": 3 } ] },
+
+  { "type": "landmark", "id": "gallows_crossroads", "name": "Gallows crossroads", "weight": 9, "near_road": true,
+    "attach_events": [ "outlaw_slain", "rebellion_crushed", "claimant_executed" ],
+    "min_settlement_m": 700, "max_settlement_m": 5000,
+    "lore": "A gibbet at the crossing, put up after {event} in year {year}. {text}. Carters from {place} touch their caps to it and quicken their step.",
+    "lore_unattached": "A gibbet at the crossing, where the justice of {place} hangs what it cannot afford to keep. Carters touch their caps and quicken their step.",
+    "props": [
+      { "kind": "signpost", "dx": 0, "dy": 0 }, { "kind": "rail", "dx": 1, "dy": 0 }, { "kind": "rail", "dx": 2, "dy": 0 }, { "kind": "rail", "dx": -1, "dy": 0 },
+      { "kind": "stump", "dx": 3, "dy": 2 }, { "kind": "grave_mound", "dx": -3, "dy": 3 }, { "kind": "rocks", "dx": 2, "dy": -2 } ] },
+
+  { "type": "landmark", "id": "battle_cairn", "name": "Battle cairn", "weight": 16, "require_attach": true, "max_per_region": 2,
+    "attach_events": [ "battle", "old_battle", "skirmish" ],
+    "min_settlement_m": 400,
+    "lore": "A cairn heaped over the dead of {event} in year {year}. {text}. Travellers from {place} add a stone as they pass, for luck or for shame.",
+    "props": [
+      { "kind": "boulder", "dx": 0, "dy": 0 }, { "kind": "rocks", "dx": -1, "dy": 0 }, { "kind": "rocks", "dx": 1, "dy": 0 }, { "kind": "rocks", "dx": 0, "dy": -1 },
+      { "kind": "rocks", "dx": 0, "dy": 1 }, { "kind": "rocks", "dx": 2, "dy": 1 }, { "kind": "rocks", "dx": -2, "dy": -1 }, { "kind": "grave_mound", "dx": 4, "dy": 2 },
+      { "kind": "grave_mound", "dx": -4, "dy": -2 }, { "kind": "headstone", "dx": 3, "dy": -3 } ] },
+
+  { "type": "landmark", "id": "giants_grave", "name": "Giant's grave", "weight": 8, "on_hill": true,
+    "attach_events": [ "old_battle" ],
+    "min_settlement_m": 1000,
+    "lore": "A barrow forty paces long. The old folk of {place} say a giant lies in it; the records say only that {event} was fought nearby and that the dead were buried where they fell. {text}.",
+    "lore_unattached": "A barrow forty paces long. The old folk of {place} say a giant lies in it, and nobody has dared to dig.",
+    "props": [
+      { "kind": "site_barrow", "dx": 0, "dy": 0 }, { "kind": "grave_mound", "dx": -3, "dy": 0 }, { "kind": "grave_mound", "dx": 3, "dy": 0 }, { "kind": "grave_mound", "dx": -6, "dy": 0 },
+      { "kind": "grave_mound", "dx": 6, "dy": 0 }, { "kind": "boulder", "dx": -9, "dy": 0 }, { "kind": "boulder", "dx": 9, "dy": 0 } ] },
+
+  { "type": "landmark", "id": "ribboned_oak", "name": "Lone oak with ribbons", "weight": 11,
+    "attach_events": [ "marriage", "heir_born" ],
+    "min_settlement_m": 400, "max_settlement_m": 4000,
+    "lore": "A lone oak hung with faded ribbons. Couples of {place} tie one here, a custom some say began with {event}. {text}.",
+    "lore_unattached": "A lone oak hung with faded ribbons. Couples of {place} tie one here when they wed, and the tree has outlived most of the marriages.",
+    "props": [
+      { "kind": "tree", "dx": 0, "dy": 0, "variant": 1 }, { "kind": "bench", "dx": 2, "dy": 2 }, { "kind": "bush", "dx": -3, "dy": 1 }, { "kind": "stump", "dx": 3, "dy": -2 } ] },
+
+  { "type": "landmark", "id": "old_bridge_of_the_first_kings", "name": "The old bridge of the first kings", "weight": 15, "near_crossing": true,
+    "attach_events": [ "realm_founded" ],
+    "min_settlement_m": 200,
+    "lore": "A bridge whose stonework was old before {realm} was founded in year {year}. The first kings built the roads and left them to everyone else to maintain. {place} keeps it up, grudgingly.",
+    "lore_unattached": "A bridge whose stonework was old when the oldest records began. The first kings built the roads and left them to everyone else to maintain. {place} keeps it up, grudgingly.",
+    "props": [
+      { "kind": "boulder", "dx": -4, "dy": -4 }, { "kind": "boulder", "dx": 4, "dy": 4 }, { "kind": "signpost", "dx": 3, "dy": -4 }, { "kind": "low_wall", "dx": -5, "dy": 3 },
+      { "kind": "low_wall", "dx": 5, "dy": -3 }, { "kind": "rocks", "dx": 0, "dy": 5 } ] },
+
+  { "type": "landmark", "id": "charcoal_burners_clearing", "name": "Charcoal burners' clearing", "weight": 10,
+    "biomes": [ "temperate_forest", "taiga" ], "min_settlement_m": 900, "max_settlement_m": 7000,
+    "lore": "A black ring in the wood where the burners of {place} keep their clamps. They are gone more often than not, and they do not like to be asked what they have seen on the roads.",
+    "props": [
+      { "kind": "woodpile", "dx": -3, "dy": -2 }, { "kind": "woodpile", "dx": 3, "dy": -2 }, { "kind": "woodpile", "dx": 0, "dy": 3 }, { "kind": "stump", "dx": -2, "dy": 2 },
+      { "kind": "stump", "dx": 2, "dy": 2 }, { "kind": "stump", "dx": 0, "dy": -3 }, { "kind": "brazier", "dx": 0, "dy": 0 }, { "kind": "hay", "dx": 4, "dy": 1 } ] },
+
+  { "type": "landmark", "id": "smugglers_cove", "name": "Smugglers' cove", "weight": 12, "coastal": true,
+    "attach_events": [ "border_raid", "bandit_raid", "outlaw_raid" ],
+    "min_settlement_m": 800, "max_settlement_m": 9000,
+    "lore": "A shingle cove below the cliffs, used since {event} by men who prefer not to meet the customs of {place}. {text}.",
+    "lore_unattached": "A shingle cove below the cliffs, used by men who prefer not to meet the customs of {place}.",
+    "props": [
+      { "kind": "barrel", "dx": 0, "dy": 0 }, { "kind": "barrel", "dx": 1, "dy": 0 }, { "kind": "crate", "dx": 0, "dy": 1 }, { "kind": "crate", "dx": -1, "dy": 1 },
+      { "kind": "rocks", "dx": 3, "dy": -1 }, { "kind": "boulder", "dx": -3, "dy": -2 }, { "kind": "sacks", "dx": 2, "dy": 2 } ] },
+
+  { "type": "landmark", "id": "plague_pit", "name": "Plague pit", "weight": 16, "require_attach": true, "max_per_region": 2,
+    "attach_events": [ "plague_spreads" ],
+    "min_settlement_m": 250, "max_settlement_m": 2500,
+    "lore": "A fenced hollow outside {place} where the dead of {event} were laid in year {year}. {text}. Nothing is planted over it and the sheep are not let near.",
+    "props": [
+      { "kind": "grave_mound", "dx": -2, "dy": -1 }, { "kind": "grave_mound", "dx": 0, "dy": -1 }, { "kind": "grave_mound", "dx": 2, "dy": -1 }, { "kind": "grave_mound", "dx": -2, "dy": 1 },
+      { "kind": "grave_mound", "dx": 0, "dy": 1 }, { "kind": "grave_mound", "dx": 2, "dy": 1 }, { "kind": "headstone", "dx": 0, "dy": -3 },
+      { "kind": "hurdle", "dx": -4, "dy": -3 }, { "kind": "hurdle", "dx": -2, "dy": -3 }, { "kind": "hurdle", "dx": 2, "dy": -3 }, { "kind": "hurdle", "dx": 4, "dy": -3 },
+      { "kind": "hurdle", "dx": -4, "dy": 3 }, { "kind": "hurdle", "dx": -2, "dy": 3 }, { "kind": "hurdle", "dx": 0, "dy": 3 }, { "kind": "hurdle", "dx": 2, "dy": 3 }, { "kind": "hurdle", "dx": 4, "dy": 3 },
+      { "kind": "hurdle", "dx": -4, "dy": -1 }, { "kind": "hurdle", "dx": -4, "dy": 1 }, { "kind": "hurdle", "dx": 4, "dy": -1 }, { "kind": "hurdle", "dx": 4, "dy": 1 } ] }
+]

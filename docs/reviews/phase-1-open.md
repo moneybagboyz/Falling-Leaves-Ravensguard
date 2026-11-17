@@ -9,7 +9,4 @@ This list gets folded into the Phase 1 code and bug check (plan §6).
 - **Snow overlay:** green strips show at hedge and road edges under snow.
 - **Origins:** an origin's skills, kit and ambition are stored in the run info but not yet applied to a hero entity. That arrives with the hero record in Phase 3, or earlier if it's needed for Quick Start.
 - **Legends viewer:** cause links haven't been exercised in a screenshot or test.
-- **Fences:** fences and hedges in chunks are placed as separate post sprites, so they read as dotted columns. Use the art's fence and hedge autotile sets so runs join up.
-- **Dark wedge:** after panning, a large dark wedge shows at noon at the window edge in the village shot. It is probably chunks not yet streamed, drawn as darkness. Draw a neutral fog instead, and stream ahead of the camera.
-- **Settlements:** town streets are still a grid and burgage plots back onto each other with no back lanes. Farmsteads have no fence round the whole holding.
-- **Sprites wanted:** seasonal apple trees, a distinct hay sprite (`object.hay` reads as a crate), a lychgate, and a low churchyard wall.
+- **Settlements:** town cross lanes now jog at the main street and burgage plots have back lanes, but the parallel streets are still dead straight (no bends) and villages keep their single street. Farmsteads now have a fenced holding with a gate.

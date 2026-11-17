@@ -45,6 +45,11 @@ public sealed partial class ChunkGenerator
                 }
             }
 
+        // a farmstead's holding: a hedge, wattle fence or (on stony ground) dry-stone wall round house, yard and barn, with a gate at the front
+        if (_settlementsAt.TryGetValue(Key(chunkX, chunkY), out var farms))
+            foreach (int si in farms)
+                if (Region.Settlements[si].Class == SettlementClass.Farmstead) HoldingFence(si, props, In);
+
         // yards, fences and farm goods of the lots on this chunk
         foreach (var st in b.Stamps)
             foreach (var (x, y, k, v) in st.Props)
@@ -80,7 +85,7 @@ public sealed partial class ChunkGenerator
                 if (!boundary) continue;
                 ulong h = H(StHedge, wx >> 3 << 3 | (vx ? 0 : 1), wy >> 3 << 3 | (vx ? 1 : 0));
                 if ((h & 7) == 0) continue; // a gateway every so often
-                props.Add(new PendingProp(wx, wy, PropKind.Hedge, (byte)(H(StHedge, wx, wy) & 3), PHedge));
+                props.Add(new PendingProp(wx, wy, Region.Biomes[t] == Biome.Mountain || Region.SlopePermille[t] > 120 ? PropKind.FieldWall : PropKind.Hedge, (byte)(H(StHedge, wx, wy) & 3), PHedge));
             }
 
         // trees on a jittered 3 m lattice: density follows the forest layer
@@ -117,6 +122,30 @@ public sealed partial class ChunkGenerator
                 int p = 3 + slope / 8 + (mountain ? 22 : 0);
                 if ((int)(h >> 16 & 255) < p) props.Add(new PendingProp(px, py, (mountain || slope > 140) && (h >> 40 & 3) == 0 ? PropKind.Boulder : PropKind.Rocks, 0, PBush));
             }
+    }
+
+    /// <summary>The boundary of a farmstead holding, two metres outside its lots. The front (street side) gets a gate in the middle; every cell is a prop, so the view joins them into one run.</summary>
+    private void HoldingFence(int si, List<PendingProp> props, Func<int, int, bool> inChunk)
+    {
+        var s = Region.Settlements[si];
+        var lots = s.Plan.Lots;
+        if (lots.Count == 0) return;
+        int x0 = int.MaxValue, y0 = int.MaxValue, x1 = int.MinValue, y1 = int.MinValue;
+        foreach (var l in lots) { x0 = Math.Min(x0, l.Rect.X); y0 = Math.Min(y0, l.Rect.Y); x1 = Math.Max(x1, l.Rect.Right); y1 = Math.Max(y1, l.Rect.Bottom); }
+        x0 -= 2; y0 -= 2; x1 += 1; y1 += 1; // inclusive cell bounds of the ring
+        int facing = lots[0].Facing & 3;
+        int gx = facing == 3 ? x0 : facing == 1 ? x1 : (x0 + x1) / 2, gy = facing == 0 ? y0 : facing == 2 ? y1 : (y0 + y1) / 2;
+        var t = Math.Clamp(s.TileY * RegionData.Size + s.TileX, 0, RegionData.Tiles - 1);
+        ulong hs = H(StHedge, si * 977L, 5);
+        PropKind kind = Region.Biomes[t] == Biome.Mountain || Region.SlopePermille[t] > 120 ? PropKind.FieldWall : hs % 3 == 0 ? PropKind.Hurdle : PropKind.Hedge;
+        void Put(int x, int y)
+        {
+            if (!inChunk(x, y)) return;
+            if (x == gx && y == gy) props.Add(new PendingProp(x, y, PropKind.Gate, 0, PFixed));
+            else props.Add(new PendingProp(x, y, kind, (byte)(H(StHedge, x, y) & 3), PHedge));
+        }
+        for (int x = x0; x <= x1; x++) { Put(x, y0); Put(x, y1); }
+        for (int y = y0 + 1; y < y1; y++) { Put(x0, y); Put(x1, y); }
     }
 
     private List<FixedProp> FixedOf(int si) => _fixed.GetOrAdd(si, _ =>

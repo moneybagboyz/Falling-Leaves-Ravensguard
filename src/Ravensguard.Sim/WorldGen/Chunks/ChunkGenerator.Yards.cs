@@ -77,6 +77,16 @@ public sealed partial class ChunkGenerator
             return true;
         }
 
+        /// <summary>A boundary piece (wall, gate) that may stand on a door path: only the building itself keeps it out.</summary>
+        public bool Line(int a, int d, PropKind k)
+        {
+            if (!Inside(a, d) || OnBuilding(a, d, 0)) return false;
+            var (x, y) = W(a, d);
+            _used.Add((x, y));
+            St.Props.Add((x, y, k, 0));
+            return true;
+        }
+
         /// <summary>Marks cells as taken without drawing (a gate gap, a path).</summary>
         public void Reserve(int a, int d) { if (Inside(a, d)) _used.Add(W(a, d)); }
     }
@@ -285,11 +295,11 @@ public sealed partial class ChunkGenerator
         if (c.St.FrontDoors.Count > 0) { var (dx, dy) = c.St.FrontDoors[0]; gateA = c.Loc(dx, dy).A; }
         for (int a = 0; a < c.FL; a++)
         {
-            if (Math.Abs(a - gateA) > 1) c.Prop(a, 0, PropKind.LowWall, 0, false, 0);
-            c.Prop(a, c.DL - 1, PropKind.LowWall, 0, false, 0);
+            if (a != gateA) c.Line(a, 0, PropKind.LowWall);
+            c.Line(a, c.DL - 1, PropKind.LowWall);
         }
-        for (int d = 1; d < c.DL - 1; d++) { c.Prop(0, d, PropKind.LowWall, 0, false, 0); c.Prop(c.FL - 1, d, PropKind.LowWall, 0, false, 0); }
-        c.Prop(gateA, 0, PropKind.Gate, 0, false, 0);
+        for (int d = 1; d < c.DL - 1; d++) { c.Line(0, d, PropKind.LowWall); c.Line(c.FL - 1, d, PropKind.LowWall); }
+        c.Line(gateA, 0, PropKind.Lychgate);
         // the path from the gate to the door
         for (int d = 0; d < Math.Max(1, c.Bd0); d++) c.Ground(gateA, d, GroundKind.Gravel, d & 3, 0);
         // graves in rows, the headstone at the head, a mound before it, leaning a little out of true by variant
@@ -318,11 +328,11 @@ public sealed partial class ChunkGenerator
         if (c.St.FrontDoors.Count > 0) { var (dx, dy) = c.St.FrontDoors[0]; gate = c.Loc(dx, dy).A; }
         for (int a = 0; a < c.FL; a++)
         {
-            if (Math.Abs(a - gate) > 1) c.Prop(a, 0, PropKind.LowWall, 0, false, 0);
-            c.Prop(a, c.DL - 1, PropKind.LowWall, 0, false, 0);
+            if (Math.Abs(a - gate) > 1) c.Line(a, 0, PropKind.LowWall);
+            c.Line(a, c.DL - 1, PropKind.LowWall);
         }
-        for (int d = 1; d < c.DL - 1; d++) { c.Prop(0, d, PropKind.LowWall, 0, false, 0); c.Prop(c.FL - 1, d, PropKind.LowWall, 0, false, 0); }
-        c.Prop(gate, 0, PropKind.Gate, 0, false, 0);
+        for (int d = 1; d < c.DL - 1; d++) { c.Line(0, d, PropKind.LowWall); c.Line(c.FL - 1, d, PropKind.LowWall); }
+        c.Line(gate, 0, PropKind.Gate);
         // cobbled court in front, a wide trampled yard to the side with the working goods
         for (int d = 0; d < c.Bd0; d++) for (int a = Math.Max(1, c.Ba0 - 2); a <= Math.Min(c.FL - 2, c.Ba1 + 2); a++) c.Ground(a, d, GroundKind.Cobble, (a + d) & 3, 0);
         int back = c.Bd1 + 1;

@@ -65,7 +65,7 @@ public partial class StreetView : Control
     float _wxDim = 1f;
     FarLayer? _far;
     RegionMap? _regionMap;
-    ColorRect _ambient = null!;
+    ColorRect _ambient = null!, _ground = null!;
     ShaderMaterial _ambientMat = null!;
     readonly List<FarPerson> _people = new();
     HashSet<(int, int)> _exploredTile = new();
@@ -77,6 +77,9 @@ public partial class StreetView : Control
     readonly Dictionary<string, (int Src, Vector2I Cell)> _terrainCells = new(), _objectCells = new(), _decalCells = new();
 
     // hud
+    // the player character and the Codex (hero record, plan 3 items 1 and 2; Codex, plan 3f)
+    Ravensguard.Sim.Characters.HeroRecord? _hero;
+    Ravensguard.Sim.Codex.CodexBook? _codex;
     Label _dateLabel = null!, _phaseLabel = null!, _levelLabel = null!, _hintLabel = null!, _perfLabel = null!, _weatherLabel = null!, _bandLabel = null!;
     TextureRect _weatherIcon = null!;
     Minimap? _minimap;
@@ -96,8 +99,9 @@ public partial class StreetView : Control
     /// Pass the save's <paramref name="store"/> to resume (visited chunks come back from snapshot plus deltas).
     /// </summary>
     public static StreetView ForRegion(Region region, Population population, ContentDatabase content, ScreenRouter? router = null, StreetOptions? opt = null,
-        ChunkStore? store = null, (int X, int Y, int Z)? spawn = null)
-        => new(router, opt, StreetSource.ForRegion(region, population, content, store, spawn is { } p ? new Cell3(p.X, p.Y, p.Z) : null, opt?.Poi));
+        ChunkStore? store = null, (int X, int Y, int Z)? spawn = null, Ravensguard.Sim.Characters.HeroRecord? hero = null, Ravensguard.Sim.Codex.CodexBook? codex = null,
+        Ravensguard.Sim.WorldGen.History.WorldHistory? history = null)
+        => new(router, opt, StreetSource.ForRegion(region, population, content, store, spawn is { } p ? new Cell3(p.X, p.Y, p.Z) : null, opt?.Poi, hero, codex, history));
 
     // ------------------------------------------------------------------ setup
 
@@ -106,6 +110,7 @@ public partial class StreetView : Control
         _art = ArtAtlas.Load();
         _rig = RigAtlas.Load();
         _source ??= _opt.RegionSeed is { } seed ? StreetSource.FromSeed(seed, _opt.Poi) : StreetSource.Hamlet();
+        _hero = _source.Hero; _codex = _source.Codex;
         var season = _opt.Season switch { "summer" => Season.Summer, "autumn" => Season.Autumn, "winter" => Season.Winter, _ => Season.Spring };
         var t0 = GameTime.FromCalendar(1, season, _opt.Day ?? 8, _opt.Hour ?? 9, 0);
         _world = _source.CreateWorld(_opt.Start is { } s ? new Cell3(s.X, s.Y, s.Z) : null, t0);
@@ -172,6 +177,12 @@ public partial class StreetView : Control
         AddChild(_box);
         _vp = new SubViewport { Name = "World", HandleInputLocally = false, GuiDisableInput = true, RenderTargetUpdateMode = SubViewport.UpdateMode.Always, Size = new Vector2I(1280, 720) };
         _box.AddChild(_vp);
+        // behind everything: a neutral ground colour, so a cell whose chunk has not arrived yet (or lies off the map) reads as open country, never as a black hole
+        var under = new CanvasLayer { Name = "Ground", Layer = -10 };
+        _ground = new ColorRect { Color = new Color(0.36f, 0.43f, 0.31f), MouseFilter = MouseFilterEnum.Ignore };
+        _ground.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        under.AddChild(_ground);
+        _vp.AddChild(under);
         var root = new Node2D { Name = "Root" };
         _vp.AddChild(root);
         _street = new Node2D { Name = "Street" };
@@ -208,6 +219,7 @@ public partial class StreetView : Control
         _ysort.AddChild(_heroSprite);
         _torchSprite = new Sprite2D { Texture = _art.Texture("item.torch"), Centered = false, Offset = new Vector2(-3, -34), TextureFilter = TextureFilterEnum.Nearest, Visible = false };
         _heroSprite.AddChild(_torchSprite);
+        if (_hero != null) _heroSprite.AddChild(new Label { Name = "Nameplate", Text = _hero.Name, Position = new Vector2(-60, -84), CustomMinimumSize = new Vector2(120, 0), HorizontalAlignment = HorizontalAlignment.Center, ThemeTypeVariation = "HintLabel", MouseFilter = MouseFilterEnum.Ignore, ZIndex = 50 });
 
         // light: one texel per tile, filtered linearly so light fades smoothly, multiplied over everything below it
         // the hamlet lights its whole grid; a streamed window is 224 m across, so the light texture is a 128 x 96 m patch that follows the hero
@@ -287,6 +299,7 @@ public partial class StreetView : Control
         v.AddChild(wrow);
         _bandLabel = new Label { ThemeTypeVariation = "HintLabel" };
         v.AddChild(_bandLabel);
+        if (_hero != null) v.AddChild(new Label { Text = L.F("STREET_HERO_HINT", _hero.Name, H("world.panel_character"), H("world.panel_codex")), ThemeTypeVariation = "HintLabel" });
         hud.AddChild(top);
 
         if (_regionMap != null)
@@ -336,6 +349,28 @@ public partial class StreetView : Control
         return (_world.Snapshot.OriginX + h.X.ToFloat(), _world.Snapshot.OriginY + h.Y.ToFloat());
     }
 
+    /// <summary>The hero walked onto a new tile: landmarks within sight open their Codex pages (and the legends they hang on).</summary>
+    void NoteVisit(float wx, float wy)
+    {
+        if (_codex == null) return;
+        foreach (var e in _codex.Visit((int)wx, (int)wy)) _router?.ShowToast(L.F("CODEX_NEW_ENTRY", e.Title));
+    }
+
+    void OpenCharacter()
+    {
+        if (_router == null || _hero == null || _source?.Content == null) { _router?.ShowToast(L.T("MAP_NONE")); return; }
+        _router.Push(new CharacterScreen(_router, _hero, _source.Content) { ShotPath = _opt.Panel == "character" ? _opt.ShotPath : null });
+    }
+
+    void OpenCodex()
+    {
+        if (_router == null || _codex == null) { _router?.ShowToast(L.T("MAP_NONE")); return; }
+        _router.Push(new CodexScreen(_router, _codex, _source?.History)
+        {
+            ShotPath = _opt.Panel == "codex" ? _opt.ShotPath : null, StartCategory = _opt.PanelCategory, StartEntry = _opt.PanelEntry,
+        });
+    }
+
     void OpenMap()
     {
         if (_router == null || _regionMap == null) { _router?.ShowToast(L.T("MAP_NONE")); return; }
@@ -370,6 +405,9 @@ public partial class StreetView : Control
     readonly Dictionary<(int X, int Y), int> _drawn = new();
     sealed class PropNode { public Sprite2D Node = null!; public string Base = ""; public float H; public string Shown = ""; }
     readonly Dictionary<(int X, int Y), List<PropNode>> _chunkProps = new();
+    // fences, hedges and walls are props in the sim but one tile line in the view: world cell -> autotile set ("*" = a gate the line runs into)
+    readonly Dictionary<(int X, int Y), string> _lines = new();
+    readonly Dictionary<(int X, int Y), List<(int X, int Y)>> _chunkLines = new();
     readonly Dictionary<string, string?> _terrainPick = new(), _objectPick = new(), _propPick = new();
     HamletMap? _syncedMap; int _syncedRev = -1;
 
@@ -379,7 +417,7 @@ public partial class StreetView : Control
         var sw = Stopwatch.StartNew();
         _baseT.Clear(); _baseO.Clear(); _belowT.Clear(); _belowO.Clear(); _baseG.Clear(); _decal.Clear();
         foreach (var l in _chunkProps.Values) foreach (var n in l) n.Node.QueueFree();
-        _chunkProps.Clear(); _drawn.Clear();
+        _chunkProps.Clear(); _drawn.Clear(); _lines.Clear(); _chunkLines.Clear();
         _syncedMap = null;
         SyncTiles();
         _shownTick = -1;
@@ -497,10 +535,17 @@ public partial class StreetView : Control
     void AddProps(HamletMap m, (int X, int Y) key, List<Prop> props)
     {
         var list = new List<PropNode>();
+        List<(int X, int Y)>? lineCells = null;
         foreach (var p in props)
         {
             if (p.Z != _viewZ) continue;
             int px = p.X + m.OriginX, py = p.Y + m.OriginY;
+            if (!p.Wide && TileSprites.LineFamily(p.Sprite) is { } fam && _terrainCells.Count > 0)
+            {
+                _lines[(px, py)] = fam; (lineCells ??= new()).Add((px, py));
+                continue;
+            }
+            if (TileSprites.LineConnector(p.Sprite)) { _lines[(px, py)] = "*"; (lineCells ??= new()).Add((px, py)); }
             float h = (float)Hash2(px, py, 313);
             var id = PropSprite(p.Sprite, h);
             if (id == null) continue;
@@ -512,6 +557,28 @@ public partial class StreetView : Control
             list.Add(new PropNode { Node = sp, Base = p.Sprite, H = h, Shown = id });
         }
         _chunkProps[key] = list;
+        if (lineCells != null)
+        {
+            _chunkLines[key] = lineCells;
+            foreach (var c in lineCells)
+            {
+                RefreshLine(c);
+                RefreshLine((c.X, c.Y - 1)); RefreshLine((c.X + 1, c.Y)); RefreshLine((c.X, c.Y + 1)); RefreshLine((c.X - 1, c.Y)); // a neighbour in an earlier chunk now has something to join
+            }
+        }
+    }
+
+    /// <summary>Draws one cell of a fence, hedge or wall run with the autotile piece that matches which neighbours are part of the same run.</summary>
+    void RefreshLine((int X, int Y) c)
+    {
+        if (!_lines.TryGetValue(c, out var fam) || fam == "*") return;
+        bool Joined(int dx, int dy) => _lines.TryGetValue((c.X + dx, c.Y + dy), out var f) && (f == fam || f == "*");
+        int mask = (Joined(0, -1) ? 1 : 0) | (Joined(1, 0) ? 2 : 0) | (Joined(0, 1) ? 4 : 0) | (Joined(-1, 0) ? 8 : 0);
+        if (Pick($"autotile.{fam}.{TileSprites.MaskName(mask)}", _terrainCells, _terrainPick) is not { } id) return;
+        var cell = new Vector2I(c.X, c.Y);
+        var (src, tile) = _terrainCells[id];
+        _baseG.SetCell(cell, src, tile);
+        _decal.EraseCell(cell);
     }
 
     /// <summary>The sprite a prop shows right now. Generator trees (object.tree.N) become species trees: summer foliage, or the bare winter sprite once the leaves are down
@@ -531,6 +598,13 @@ public partial class StreetView : Control
                 if (_art.Has(cand)) return cand;
             }
             else if (_art.Has("object.tree.pine.winter")) return "object.tree.pine.winter";
+        }
+        if (baseId == "object.tree.apple.summer")
+        {
+            // orchard trees follow the year: blossom in spring, leaves in summer, ripe apples in autumn, bare wood once the leaves are down
+            bool bare = st.Season == 3 || (st.Season == 2 && st.Frac > 0.55f + 0.45f * h);
+            string cand = bare ? "object.tree.apple.winter" : st.Season switch { 0 => "object.tree.apple.spring", 2 => "object.tree.apple.autumn", _ => "object.tree.apple.summer" };
+            if (_art.Has(cand)) return cand;
         }
         if (baseId is "object.bush" or "object.hedge")
         {
@@ -579,6 +653,7 @@ public partial class StreetView : Control
                 _baseT.EraseCell(c); _baseG.EraseCell(c); _baseO.EraseCell(c); _belowT.EraseCell(c); _belowO.EraseCell(c); _decal.EraseCell(c);
             }
         if (_chunkProps.Remove(k, out var l)) foreach (var n in l) n.Node.QueueFree();
+        if (_chunkLines.Remove(k, out var lc)) foreach (var c in lc) _lines.Remove(c);
         _drawn.Remove(k);
     }
 
@@ -610,8 +685,10 @@ public partial class StreetView : Control
 
         if (_opt.Click is { } c && _frames == 2) ClickMove(new Vector2(c.X, c.Y));
         if (_opt.MapShot && _frames == 3) OpenMap();
+        if (_opt.Panel == "character" && _frames == 3) OpenCharacter();
+        if (_opt.Panel == "codex" && _frames == 3) OpenCodex();
         if (_opt.IsShot && _opt.Weather == "storm" && _frames == Math.Max(2, _opt.Frames - 1)) _wover.Strike(); // dev: catch a lightning flash in the picture
-        if (_opt.IsShot && !_opt.MapShot && !_quitting && _frames >= _opt.Frames && ShotReady()) Shoot();
+        if (_opt.IsShot && !_opt.MapShot && _opt.Panel == null && !_quitting && _frames >= _opt.Frames && ShotReady()) Shoot();
         if (bench && _benchT >= _opt.BenchSeconds) Finish();
         if (bench && _perfLabel.Visible && _frames % 30 == 0)
             _perfLabel.Text = $"tick {_tickMsSum / Math.Max(1, _tickCount):F3} ms (max {_tickMsMax:F2})  draw {_drawMsSum / Math.Max(1, _drawCount):F3} ms (max {_drawMsMax:F2})  fps {Engine.GetFramesPerSecond()}";
@@ -669,6 +746,7 @@ public partial class StreetView : Control
         float fx = h.PrevX.ToFloat() + (h.X.ToFloat() - h.PrevX.ToFloat()) * alpha;
         float fy = h.PrevY.ToFloat() + (h.Y.ToFloat() - h.PrevY.ToFloat()) * alpha;
         if (h.Z != h.PrevZ) { fx = h.X.ToFloat(); fy = h.Y.ToFloat(); }
+        StreamAhead();
         SyncTiles();
         var feet = new Vector2(Mathf.Round((fx + s.OriginX) * Tile), Mathf.Round((fy + s.OriginY) * Tile));
         _heroSprite.Position = feet;
@@ -701,6 +779,25 @@ public partial class StreetView : Control
         _wover.Update(GetProcessDeltaTime(), _wx, _vp.Size, _band == Band.Close ? 2 : 1);
     }
 
+    /// <summary>The hero's chunks stream around the hero; a panned camera can look past them. Chunks under (and just ahead of) the camera in the window load now, one per frame.</summary>
+    void StreamAhead()
+    {
+        var st = _world.Streamer; var win = _world.Window;
+        if (st == null || win == null || _band >= Band.Field) return;
+        int ccx = Div((int)Math.Floor(_cam.Position.X / Tile), 32), ccy = Div((int)Math.Floor(_cam.Position.Y / Tile), 32);
+        // look ahead in the direction the camera sits from the hero as well
+        int ax = Math.Sign(_pan.X), ay = Math.Sign(_pan.Y);
+        for (int r = 0; r <= 1; r++)
+            for (int dy = -r; dy <= r; dy++)
+                for (int dx = -r; dx <= r; dx++)
+                {
+                    int cx = ccx + dx + (r == 1 ? ax : 0), cy = ccy + dy + (r == 1 ? ay : 0);
+                    if (!win.Contains(cx, cy) || st.IsLoaded(cx, cy)) continue;
+                    st.LoadSync(cx, cy);
+                    return;
+                }
+    }
+
     Vector2I _heroTile = new(-1, -1);
     /// <summary>Once per sim tick: the weather at the hero, the season and snow state for the shaders, the props' season sprites, the explored tiles of the map.</summary>
     void UpdateWorld(LiveSnapshot s)
@@ -714,7 +811,7 @@ public partial class StreetView : Control
         if (_regionMap != null)
         {
             var tile = new Vector2I((int)(wx / 64), (int)(wy / 64));
-            if (tile != _heroTile) { _heroTile = tile; _regionMap.Explore(wx, wy); }
+            if (tile != _heroTile) { _heroTile = tile; _regionMap.Explore(wx, wy); NoteVisit(wx, wy); }
         }
     }
 
@@ -746,6 +843,7 @@ public partial class StreetView : Control
         double hfx = s.Hero.X.ToDouble(), hfy = s.Hero.Y.ToDouble();
         var (tr, tg, tb) = AmbientTint(s);
         _ambientMat.SetShaderParameter("tint", new Color(Math.Max(tr, 0.16f), Math.Max(tg, 0.17f), Math.Max(tb, 0.24f)));
+        _ground.Color = new Color(0.36f * Math.Max(tr, 0.16f), 0.43f * Math.Max(tg, 0.17f), 0.31f * Math.Max(tb, 0.24f));
         const float wr = 1.0f, wg = 0.62f, wb = 0.30f; // firelight
         int viewZ = z;
         var buf = _lightBytes;
@@ -759,6 +857,7 @@ public partial class StreetView : Control
                 int a = amb[i], p = pt[i], total = Math.Min(255, a + p);
                 double dx = x + px0 + 0.5 - hfx, dy = y + py0 + 0.5 - hfy;
                 int r = LightModel.VisionRadius(total);
+                if (a >= 128) r = Math.Max(r, 96); // open daylight: distance hides nothing outdoors, so no dark wedge at the edge of a panned view
                 double d2 = dx * dx + dy * dy;
                 float vis = 1f;
                 if (d2 > (double)r * r) vis = 0f;
@@ -808,6 +907,8 @@ public partial class StreetView : Control
         else if (Actions.Pressed(e, "world.zoom_in")) SetBand(_band - 1);
         else if (Actions.Pressed(e, "world.zoom_out")) SetBand(_band + 1);
         else if (Actions.Pressed(e, "world.map")) OpenMap();
+        else if (Actions.Pressed(e, "world.panel_character")) OpenCharacter();
+        else if (Actions.Pressed(e, "world.panel_codex")) OpenCodex();
         else if (Actions.Pressed(e, "world.camera_home")) { _pan = Vector2.Zero; if (_viewZ != _world.Snapshot.Hero.Z) { _viewZ = _world.Snapshot.Hero.Z; RebuildLevel(); } }
         else if (e is InputEventKey && Actions.Pressed(e, "world.act")) _world.UsePortal();
         else return;

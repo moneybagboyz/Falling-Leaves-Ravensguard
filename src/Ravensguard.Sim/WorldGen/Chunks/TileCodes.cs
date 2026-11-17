@@ -59,6 +59,7 @@ public enum PropKind : byte
     Woodpile, Stump, Signpost, SiteBarrow, SiteCave, SiteMine, SiteRuin, SiteBattlefield, SiteHoard,
     // settlement dressing (appended, so stored records keep their numbers)
     Headstone, GraveMound, FruitTree, Trough, LowWall, Rail, Sacks, Bench, Gate,
+    Lychgate, FieldWall,
 }
 
 /// <summary>How a prop looks and behaves. Sprite is the preferred baked sprite id; the view falls back when the atlas lacks it.</summary>
@@ -92,7 +93,7 @@ public static class PropTable
         PropKind.Bush => new("object.bush", false, true, 0, 0),
         PropKind.Rocks => new("object.rocks", false, false, 0, 0),
         PropKind.Boulder => new("object.boulder", false, true, 0, 0),
-        PropKind.Hedge => new("object.bush", false, true, 0, 0),
+        PropKind.Hedge => new("object.hedge", false, true, 0, 0),
         PropKind.Hurdle => new("object.hurdle", false, true, 0, 0),
         PropKind.Well => new("object.well", false, true, 0, 0),
         PropKind.Stall => new((variant & 7) switch { 0 => "object.stall_red", 1 => "object.stall_blue", 2 => "object.stall_green", 3 => "object.stall_yellow", 4 => "object.stall_brown", _ => "object.stall_plain" }, true, true, 0, 0),
@@ -111,11 +112,13 @@ public static class PropTable
         PropKind.GraveMound => new("object.grave_mound", false, false, 0, 0),
         PropKind.FruitTree => new("object.tree.apple.summer", false, true, 0, 0),
         PropKind.Trough => new((variant & 1) == 0 ? "object.trough_water" : "object.trough_feed", false, true, 0, 0),
-        PropKind.LowWall => new("object.ruin_wall_low", false, true, 0, 0),
-        PropKind.Rail => new("object.hurdle", false, true, 0, 0),
+        PropKind.LowWall => new("object.wall_low", false, true, 0, 0),
+        PropKind.Rail => new("object.rail", false, true, 0, 0),
         PropKind.Sacks => new((variant & 1) == 0 ? "object.sack_pile" : "object.sacks", false, true, 0, 0),
         PropKind.Bench => new("object.bench", false, false, 0, 0),
         PropKind.Gate => new("object.gate_open", false, false, 0, 0),
+        PropKind.Lychgate => new("object.lychgate", false, false, 0, 0),
+        PropKind.FieldWall => new("object.wall_field", false, true, 0, 0),
         PropKind.Signpost => new("object.signpost", false, true, 0, 0),
         PropKind.SiteBarrow => new("object.barrow", false, false, 0, 0),
         PropKind.SiteCave => new("object.boulder", false, false, 0, 0),

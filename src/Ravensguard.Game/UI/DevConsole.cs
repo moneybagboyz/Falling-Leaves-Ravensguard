@@ -60,6 +60,11 @@ public partial class DevConsole : CanvasLayer
         Register("fps", L.T("CONSOLE_HELP_FPS"), _ => $"{Engine.GetFramesPerSecond()} fps");
         Register("quit", L.T("CONSOLE_HELP_QUIT"), _ => { GetTree().Quit(); return ""; });
         DevContext.RegisterBuiltins(Registry, Clear);
+        Register("bpedit", L.T("CONSOLE_HELP_BPEDIT"), a =>
+        {
+            if (a.Length > 1) return "usage: bpedit [blueprint_id]";
+            return Tools.BlueprintEditor.BlueprintEditorScreen.Launch((GetParent() as App)?.Router, a.Length == 1 ? a[0] : null);
+        });
         Print(L.T("CONSOLE_WELCOME"));
     }
 

@@ -360,3 +360,164 @@ MAP_LEGEND_VILLAGE,Village
 MAP_LEGEND_SITE,Seen site
 MAP_LEGEND_UNKNOWN,Not yet seen
 MAP_LEGEND_YOU,You
+CODEX_TITLE,Codex
+CODEX_SEARCH,"Search the Codex"
+CODEX_CATEGORY,Category: {0}
+CODEX_COUNT,You know {0} of {1}
+CODEX_LOCKED,Not yet heard of
+CODEX_LOCKED_TEXT,"You have not heard of this yet. Entries open as you meet people, places and landmarks, and as you learn the history of the lands around you."
+CODEX_EMPTY,Nothing found.
+CODEX_KIND,{0}
+CODEX_YEAR,year {0}
+CODEX_OPEN_LEGENDS,Open in the legends viewer
+CODEX_CLOSE_HINT,{0} closes the Codex
+CODEX_CAT_LEGEND,Legends
+CODEX_CAT_PLACE,Places
+CODEX_CAT_PERSON,People
+CODEX_CAT_LANDMARK,Landmarks
+CODEX_CAT_RULE,Rules
+CODEX_NEW_ENTRY,Codex: {0}
+CODEX_BASICS_TITLE,How to play
+CODEX_BASICS_TEXT,"You walk the lands of a world that already has a long history. Talk to people, visit landmarks and read the signs of what happened where you stand. Open your character with {0}, this Codex with {1} and the map with {2}. The Codex fills as you learn: legends of the realms around you, the places and people they name, and the landmarks you find."
+CODEX_CONTROLS,Controls: {0}
+CHAR_ATTRIBUTES,Attributes
+CHAR_SKILLS,Skills
+CHAR_NO_SKILLS,No trained skills yet.
+CHAR_UNTRAINED,{0} more skills untrained
+CHAR_KIT,Kit
+CHAR_NO_KIT,You carry nothing.
+CHAR_COIN,{0} crowns
+CHAR_AMBITION,Ambition
+CHAR_AMBITION_DONE,Every step is done.
+CHAR_NO_AMBITION,You have no ambition yet.
+CHAR_CLOSE_HINT,{0} closes this page
+ATTR_STRENGTH,Strength
+ATTR_TOUGHNESS,Toughness
+ATTR_DEXTERITY,Dexterity
+ATTR_PERCEPTION,Perception
+ATTR_WITS,Wits
+MAP_LEGEND_LANDMARK,Landmark
+STREET_HERO_HINT,{0}   {1} character   {2} Codex
+BPEDIT_TITLE,Blueprint editor
+BPEDIT_NEW,New
+BPEDIT_OPEN,Open
+BPEDIT_SAVE,Save
+BPEDIT_SAVE_AS,Save as
+BPEDIT_UNDO,Undo
+BPEDIT_REDO,Redo
+BPEDIT_CLOSE,Close
+BPEDIT_F_ID,Id
+BPEDIT_F_NAME,Name
+BPEDIT_F_WEALTH,Wealth
+BPEDIT_F_STYLE,Style
+BPEDIT_F_KIND,Kind
+BPEDIT_F_DWELLING,Dwelling
+BPEDIT_PALETTE,Pieces (click to pick)
+BPEDIT_SEC_FLOORS,Floors
+BPEDIT_SEC_WALLS,Walls
+BPEDIT_SEC_POSTS,Posts
+BPEDIT_SEC_DOORS,Doors
+BPEDIT_SEC_WINDOWS,Windows
+BPEDIT_SEC_STAIRS,"Stairs, ladders and trapdoors"
+BPEDIT_SEC_FURNITURE,Furniture
+BPEDIT_SEC_WORKSTATIONS,Workstations
+BPEDIT_SEC_GROUND,Ground
+BPEDIT_TOOL_PAINT,Paint
+BPEDIT_TOOL_RECT,Rectangle
+BPEDIT_TOOL_LINE,Line
+BPEDIT_TOOL_FLOOD,Fill
+BPEDIT_TOOL_ERASE,Erase
+BPEDIT_TOOL_PICK,Eyedropper
+BPEDIT_LAYER_STRUCTURE,Structure
+BPEDIT_LAYER_FIXTURES,Fixtures
+BPEDIT_LAYER_ROOMS,Rooms
+BPEDIT_LEVEL_UP,Level up
+BPEDIT_LEVEL_DOWN,Level down
+BPEDIT_COPY_BELOW,Copy level below
+BPEDIT_CLEAR_LEVEL,Clear level
+BPEDIT_GROUND,(ground)
+BPEDIT_EMPTY,(empty)
+BPEDIT_ROTATE,Rotate
+BPEDIT_MIRROR_X,Mirror left-right
+BPEDIT_MIRROR_Y,Mirror top-bottom
+BPEDIT_RESIZE,Resize
+BPEDIT_PREVIEW_WEALTH,Preview wealth
+BPEDIT_PREVIEW_STYLE,Preview style
+BPEDIT_OFF,off
+BPEDIT_REGIONS,Room letters
+BPEDIT_GRID,Grid
+BPEDIT_PIECE_PREV,Previous piece
+BPEDIT_PIECE_NEXT,Next piece
+BPEDIT_FIT,Fit
+BPEDIT_HELP,"Left click paints, right click erases, Shift+drag with Rectangle draws only the outline, middle drag or arrows pan, wheel zooms."
+BPEDIT_ROOMS,Room letters and purposes
+BPEDIT_ROOM_ADD,Add room
+BPEDIT_ROOM_DELETE,Delete room
+BPEDIT_VALID,Valid: no problems
+BPEDIT_PROBLEMS,{0} problem(s) - click one to show it
+BPEDIT_DETECTED,Rooms the detector found
+BPEDIT_UNSAVED_TITLE,Unsaved changes
+BPEDIT_UNSAVED,This blueprint has changes that are not saved. Discard them?
+BPEDIT_DISCARD,Discard
+BPEDIT_KEEP_EDITING,Keep editing
+BPEDIT_CANCEL,Cancel
+BPEDIT_CREATE,Create
+BPEDIT_WIDTH,Width
+BPEDIT_HEIGHT,Height
+BPEDIT_FILTER,Filter by id or name
+BPEDIT_SAVE_WHERE,Write into this file:
+BPEDIT_NEW_USER_FILE,(new file in the user mod folder)
+BPEDIT_NEW_FILE_NAME,File name for a new file:
+BPEDIT_SAVE_HINT,"The entry is replaced in place if the file has it, otherwise appended. Content is reloaded after saving."
+BPEDIT_APPLY,Apply
+BPEDIT_ANCHOR,Keep
+BPEDIT_ANCHOR_TL,Top-left corner
+BPEDIT_ANCHOR_TR,Top-right corner
+BPEDIT_ANCHOR_BL,Bottom-left corner
+BPEDIT_ANCHOR_BR,Bottom-right corner
+BPEDIT_ANCHOR_C,Centre
+MENU_DEV_BLUEPRINTS,Blueprint editor (dev)
+CONSOLE_HELP_BPEDIT,bpedit [id] - open the dev blueprint editor
+CONTEXT_BLUEPRINTEDITOR,Blueprint editor (dev)
+ACTION_MENU_DEV_BLUEPRINTS,Blueprint editor (dev)
+ACTION_BLUEPRINTEDITOR_PRIMARY,Paint / select
+ACTION_BLUEPRINTEDITOR_SECONDARY,Erase
+ACTION_BLUEPRINTEDITOR_ZOOM_IN,Zoom in
+ACTION_BLUEPRINTEDITOR_ZOOM_OUT,Zoom out
+ACTION_BLUEPRINTEDITOR_PAN_UP,Pan up
+ACTION_BLUEPRINTEDITOR_PAN_DOWN,Pan down
+ACTION_BLUEPRINTEDITOR_PAN_LEFT,Pan left
+ACTION_BLUEPRINTEDITOR_PAN_RIGHT,Pan right
+ACTION_BLUEPRINTEDITOR_TOOL_PAINT,Paint tool
+ACTION_BLUEPRINTEDITOR_TOOL_RECT,Rectangle tool
+ACTION_BLUEPRINTEDITOR_TOOL_LINE,Line tool
+ACTION_BLUEPRINTEDITOR_TOOL_FLOOD,Fill tool
+ACTION_BLUEPRINTEDITOR_TOOL_ERASE,Erase tool
+ACTION_BLUEPRINTEDITOR_TOOL_EYEDROPPER,Eyedropper
+ACTION_BLUEPRINTEDITOR_LAYER_STRUCTURE,Structure layer
+ACTION_BLUEPRINTEDITOR_LAYER_FIXTURES,Fixtures layer
+ACTION_BLUEPRINTEDITOR_LAYER_ROOMS,Rooms layer
+ACTION_BLUEPRINTEDITOR_LEVEL_UP,Level up
+ACTION_BLUEPRINTEDITOR_LEVEL_DOWN,Level down
+ACTION_BLUEPRINTEDITOR_COPY_BELOW,Copy level below
+ACTION_BLUEPRINTEDITOR_CLEAR_LEVEL,Clear level
+ACTION_BLUEPRINTEDITOR_ADD_ROOM,Add room
+ACTION_BLUEPRINTEDITOR_DELETE_ROOM,Delete room
+ACTION_BLUEPRINTEDITOR_PIECE_PREV,Previous piece
+ACTION_BLUEPRINTEDITOR_PIECE_NEXT,Next piece
+ACTION_BLUEPRINTEDITOR_ROTATE,Rotate
+ACTION_BLUEPRINTEDITOR_MIRROR_X,Mirror left-right
+ACTION_BLUEPRINTEDITOR_MIRROR_Y,Mirror top-bottom
+ACTION_BLUEPRINTEDITOR_RESIZE,Resize
+ACTION_BLUEPRINTEDITOR_PREVIEW_WEALTH,Preview wealth
+ACTION_BLUEPRINTEDITOR_PREVIEW_STYLE,Preview style
+ACTION_BLUEPRINTEDITOR_TOGGLE_REGIONS,Room letters
+ACTION_BLUEPRINTEDITOR_TOGGLE_GRID,Grid
+ACTION_BLUEPRINTEDITOR_FIT,Fit view
+ACTION_BLUEPRINTEDITOR_UNDO,Undo
+ACTION_BLUEPRINTEDITOR_REDO,Redo
+ACTION_BLUEPRINTEDITOR_NEW,New blueprint
+ACTION_BLUEPRINTEDITOR_OPEN,Open blueprint
+ACTION_BLUEPRINTEDITOR_SAVE,Save
+ACTION_BLUEPRINTEDITOR_SAVE_AS,Save as
+ACTION_BLUEPRINTEDITOR_CLOSE,Close editor

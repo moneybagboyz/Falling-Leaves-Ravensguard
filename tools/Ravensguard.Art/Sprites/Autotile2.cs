@@ -106,6 +106,16 @@ public static class Autotile2
             P["g1"], P["out"]);
     }
 
+    /// <summary>Low churchyard wall: dressed ashlar courses under a pale coping, lower and neater than the dry-stone field wall.</summary>
+    public static LineStyle ChurchWall(Palette pal)
+    {
+        var P = pal.P; var R = pal.R; var s = R["stone"];
+        return new LineStyle(3, 13, 7,
+            (x, y, v, lvl) => { int i = v ? y % 6 : x % 6; if (i == 0) return s[2]; if (Hash(x, y, 831) < .08) return s[3]; return lvl > 0 ? s[4] : s[3]; },
+            (x, d) => { int row = d / 3; int i = (x + (row & 1) * 3) % 6; if (d == 0) return s[1]; if (i == 5) return s[0]; int k = d % 3 == 2 ? 1 : 2; if (Hash(x + row * 5, d, 832) < .12) k = Math.Max(0, k - 1); return s[k + 1]; },
+            P["g1"], P["out"]);
+    }
+
     public static LineStyle Palisade(Palette pal)
     {
         var P = pal.P; var R = pal.R; var w = R["wood"];

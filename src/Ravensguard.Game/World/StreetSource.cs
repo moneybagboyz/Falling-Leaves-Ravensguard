@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Godot;
 using Ravensguard.Content;
 using Ravensguard.Sim.Building;
@@ -26,12 +27,18 @@ public abstract class StreetSource
     public virtual RegionData? Region => null;
     /// <summary>The continent weather for the region, when it is already at hand (a seed start); otherwise the view rebuilds it from the region's seed in the background.</summary>
     public virtual Ravensguard.Sim.Weather.RegionWeather? Weather => null;
+    /// <summary>The player character and the Codex the street view shows panels for (null for the test hamlet), the world's history for the Codex links, and the content for names.</summary>
+    public Ravensguard.Sim.Characters.HeroRecord? Hero { get; set; }
+    public Ravensguard.Sim.Codex.CodexBook? Codex { get; set; }
+    public WorldHistory? History { get; set; }
+    public ContentDatabase? Content { get; protected set; }
 
     public static StreetSource Hamlet() => new HamletSource();
 
     /// <summary>The generated region as a street source. Chunks generate on first visit; pass the save's chunk store to resume where the world was left.</summary>
-    public static StreetSource ForRegion(RegionData region, Population population, ContentDatabase content, ChunkStore? store = null, Cell3? spawn = null, string? poi = null)
-        => new RegionSource(region, population, content, store, spawn) { Poi = poi };
+    public static StreetSource ForRegion(RegionData region, Population population, ContentDatabase content, ChunkStore? store = null, Cell3? spawn = null, string? poi = null,
+        Ravensguard.Sim.Characters.HeroRecord? hero = null, Ravensguard.Sim.Codex.CodexBook? codex = null, WorldHistory? history = null)
+        => new RegionSource(region, population, content, store, spawn) { Poi = poi, Hero = hero, Codex = codex, History = history };
 
     /// <summary>Dev: builds continent, history, embark region and population from a seed (seconds), then streams it.</summary>
     public static StreetSource FromSeed(ulong seed, string? poi = null)
@@ -47,10 +54,18 @@ public abstract class StreetSource
         var h = HistoryGenerator.Generate(c, hs);
         var pick = EmbarkSite.AutoPick(c, h);
         var region = RegionGenerator.Generate(c, h, pick.CellX, pick.CellY, rs);
+        Ravensguard.Sim.WorldGen.Region.LandmarkPlacer.Place(region, h, load.Database);
         var pop = Populator.Populate(region, h, load.Database);
         GD.Print($"[street] region for seed {seed}: cell ({pick.CellX},{pick.CellY}), {region.Towns.Count()} towns, {region.Villages.Count()} villages, pop {pop.People.Count}, built in {sw.ElapsedMilliseconds} ms");
         var weather = new Ravensguard.Sim.Weather.RegionWeather(c, new Ravensguard.Sim.Weather.ContinentalWeather(seed, Ravensguard.Sim.Weather.WeatherSettings.LoadDefaults(dir)));
-        return new RegionSource(region, pop, load.Database, null, null) { Poi = poi, WeatherInit = weather };
+        // dev: a hero from the first origin, and the Codex of this world, so the panels can be opened from a seed start
+        var origin = load.Database.All<OriginDef>().OrderBy(o => o.Order).First();
+        return new RegionSource(region, pop, load.Database, null, null)
+        {
+            Poi = poi, WeatherInit = weather, History = h,
+            Hero = Ravensguard.Sim.Characters.HeroRecord.FromOrigin("Aldric Vane", false, origin),
+            Codex = Ravensguard.Sim.Codex.CodexBook.Build(h, region, Ravensguard.Game.UI.CodexRules.FromInput()),
+        };
     }
 
     sealed class HamletSource : StreetSource
@@ -82,7 +97,7 @@ public abstract class StreetSource
         public ChunkStreamer? Streamer { get; private set; }
 
         public RegionSource(RegionData region, Population pop, ContentDatabase content, ChunkStore? store, Cell3? spawn)
-        { _region = region; _pop = pop; _content = content; _store = store; _spawn = spawn; }
+        { _region = region; _pop = pop; _content = content; _store = store; _spawn = spawn; Content = content; }
 
         public override string Name => $"region {_region.Seed}";
         public override Cell3 DefaultStart => _spawn ?? _found ?? new Cell3(RegionData.Meters / 2, RegionData.Meters / 2, 0);
@@ -94,7 +109,8 @@ public abstract class StreetSource
             var spot = start ?? _spawn;
             if (spot == null)
             {
-                spot = Poi != null && Poi.StartsWith("at:", StringComparison.Ordinal) ? RegionSpawn.AtSettlement(Streamer, _region, Poi[3..]) : Poi switch
+                spot = Poi != null && Poi.StartsWith("at:", StringComparison.Ordinal) ? RegionSpawn.AtSettlement(Streamer, _region, Poi[3..])
+                    : Poi != null && Poi.StartsWith("landmark", StringComparison.Ordinal) ? RegionSpawn.AtLandmark(Streamer, _region, Poi.Length > 9 && int.TryParse(Poi[9..], out var li) ? li : -1) : Poi switch
                 {
                     "village" => RegionSpawn.VillageEdge(Streamer, _region),
                     "river" => RegionSpawn.RiverCrossing(Streamer, _region),

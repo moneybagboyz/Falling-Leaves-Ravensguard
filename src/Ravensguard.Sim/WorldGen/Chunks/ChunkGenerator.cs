@@ -270,6 +270,7 @@ public sealed partial class ChunkGenerator
         PlaceBuildings(buf);
         var props = new List<PendingProp>();
         CollectProps(buf, props);
+        CollectLandmarkProps(buf, props);
         EmitLevels(buf, props, res);
         res.ContentHash = HashOf(res);
         return res;

@@ -32,6 +32,10 @@ public static class HashesCommand
             Console.WriteLine($"seed {seed} embark {pick.CellX},{pick.CellY} score {pick.Total}");
             var region = RegionGenerator.Generate(continent, history, pick.CellX, pick.CellY, rs);
             Console.WriteLine($"seed {seed} region {region.ComputeHash()}");
+            var marks = LandmarkPlacer.Place(region, history, db);
+            region.Landmarks = marks;
+            var markText = string.Join("|", marks.Select(m => $"{m.TemplateId}@{m.X},{m.Y}#{m.Event.Value}:{m.Name}:{m.Props.Count}"));
+            Console.WriteLine($"seed {seed} landmarks {marks.Count} {Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(markText)))}");
             var pop = Populator.Populate(region, history, db);
             Console.WriteLine($"seed {seed} people {pop.ComputeHash()}");
             // a few chunks: the largest town's centre and three fixed spots across the region

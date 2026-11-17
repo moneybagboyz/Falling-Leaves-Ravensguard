@@ -49,6 +49,15 @@ public static class RegionSpawn
         return best == null ? null : NearestWalkable(s, best.At.X, best.At.Y, 14, paved: false);
     }
 
+    /// <summary>A walkable cell a few metres south of an authored landmark (the one with this index, else the first that hangs on a history event, else the first), where its footprint is in view.</summary>
+    public static Cell3? AtLandmark(ChunkStreamer s, RegionData r, int index)
+    {
+        var marks = r.Landmarks;
+        if (marks == null || marks.Count == 0) return null;
+        var m = index >= 0 && index < marks.Count ? marks[index] : marks.FirstOrDefault(l => l.Attached) ?? marks[0];
+        return NearestWalkable(s, m.X, m.Y + m.Radius + 5, 14, paved: false);
+    }
+
     /// <summary>A walkable street cell in the named settlement: its square if it has one, else its centre. Null if no such settlement.</summary>
     public static Cell3? AtSettlement(ChunkStreamer s, RegionData r, string name)
     {

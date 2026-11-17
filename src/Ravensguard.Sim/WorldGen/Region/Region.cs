@@ -64,6 +64,8 @@ public sealed class Region
     public List<RegionVein> Veins { get; } = [];
     public List<RegionRealm> Realms { get; } = [];
     public List<ActiveWarMarker> ActiveWars { get; } = [];
+    /// <summary>Authored landmarks placed by <see cref="LandmarkPlacer"/> (a separate phase after generation; null until it has run). Not part of <see cref="ComputeHash"/>.</summary>
+    public IReadOnlyList<PlacedLandmark>? Landmarks { get; set; }
 
     public static int Index(int x, int y) => y * Size + x;
     public static bool InBounds(int x, int y) => (uint)x < Size && (uint)y < Size;

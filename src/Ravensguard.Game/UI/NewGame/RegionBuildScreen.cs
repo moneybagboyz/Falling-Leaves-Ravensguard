@@ -14,7 +14,7 @@ using RegionData = Ravensguard.Sim.WorldGen.Region.Region;
 namespace Ravensguard.Game.UI.NewGame;
 
 /// <summary>What the new-game flow hands to the street view: the populated world, the choices, and where the run was saved.</summary>
-public sealed record RunStart(WorldState World, NewGameDraft Draft, EmbarkScore Site, string StartSettlement, string? SavePath);
+public sealed record RunStart(WorldState World, NewGameDraft Draft, EmbarkScore Site, string StartSettlement, string? SavePath, Ravensguard.Sim.Codex.CodexBook? Codex = null);
 
 /// <summary>Region build step: terrain, settlements and people for the chosen square on a worker thread with progress, then the first save and the street view.</summary>
 public partial class RegionBuildScreen : Control
@@ -70,12 +70,18 @@ public partial class RegionBuildScreen : Control
         var rs = RegionSettings.LoadDefaults(content.Dir);
         rs.Seed = w.Info.Seed;
         var region = RegionGenerator.Generate(w.Continent, w.History, site.CellX, site.CellY, rs);
+        Ravensguard.Sim.WorldGen.Region.LandmarkPlacer.Place(region, w.History, content.Db); // authored landmarks go into the generated region (plan: landmark phase)
         _at = 2;
         var pop = Populator.Populate(region, w.History, content.Db);
         _at = 3;
         var start = ChooseStart(region, d);
+        // the player character from the Quick Start origin, and the Codex of this world with what the embark region already knows
+        var hero = content.Db.TryGet<Ravensguard.Content.OriginDef>(d.OriginId, out var heroOrigin)
+            ? Ravensguard.Sim.Characters.HeroRecord.FromOrigin(d.Name, d.Female, heroOrigin) : null;
+        var codex = Ravensguard.Sim.Codex.CodexBook.Build(w.History, region, CodexRules.FromInput());
         var world = new WorldState
         {
+            Hero = hero, Codex = codex.ToProgress(),
             ContinentSettings = w.Info.File.Continent, HistorySettings = w.Info.File.History, RegionSettings = rs, EmbarkCellX = site.CellX, EmbarkCellY = site.CellY,
             Continent = w.Continent, History = w.History, Population = pop,
             Clock = new SimClock(GameTime.FromCalendar(pop.NowYear, Season.Spring, 1, 8)),
@@ -94,7 +100,7 @@ public partial class RegionBuildScreen : Control
         }
         catch (Exception e) { GD.PushWarning("could not write the first save: " + e.Message); }
         _at = 4;
-        return new RunStart(world, d, site, start, path);
+        return new RunStart(world, d, site, start, path, codex);
     }
 
     /// <summary>The settlement the character starts in: the kind the origin asks for if it is clear of active wars (10 km) and monster lairs (3 km), else any safe one (plan §3f).</summary>
@@ -126,6 +132,7 @@ public partial class RegionBuildScreen : Control
         // Walk the generated region, starting in the settlement the origin asked for (plan §3f safe start).
         var w = Latest.World;
         var opt = new Ravensguard.Game.World.StreetOptions { Poi = "at:" + Latest.StartSettlement };
-        _router.Replace(Ravensguard.Game.World.StreetView.ForRegion(w.Population.Region, w.Population, NewGameServices.Content().Db, _router, opt, w.Chunks));
+        _router.Replace(Ravensguard.Game.World.StreetView.ForRegion(w.Population.Region, w.Population, NewGameServices.Content().Db, _router, opt, w.Chunks,
+            hero: w.Hero, codex: Latest.Codex, history: w.History));
     }
 }

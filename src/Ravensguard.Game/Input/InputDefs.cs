@@ -17,7 +17,7 @@ public static class InputDefs
     static InputDefs()
     {
         const InputContext G = InputContext.Global, W = InputContext.World, C = InputContext.CombatStance,
-            S = InputContext.CalledShot, B = InputContext.Build, U = InputContext.Menu;
+            S = InputContext.CalledShot, B = InputContext.Build, U = InputContext.Menu, E = InputContext.BlueprintEditor;
 
         // Global
         A(G, "console", Binding.P(Key.Quoteleft)); // physical: the backtick key position on any layout
@@ -146,5 +146,49 @@ public static class InputDefs
         A(U, "follow_cause", K(Key.F));
         A(U, "follow_effect", K(Key.D));
         A(U, "open_here", K(Key.O));
+        A(U, "dev_blueprints", K(Key.B)); // dev-only entry: the blueprint editor (debug builds)
+
+        // Blueprint editor (dev tool, plan 2.11). A standalone context like Menu: only Global stays live beside it.
+        A(E, "primary", M(MouseButton.Left), M(MouseButton.Left, Mods.Shift)); // Shift on rectangles = outline only
+        A(E, "secondary", M(MouseButton.Right)); // erase with any tool
+        A(E, "zoom_in", K(Key.Equal), M(MouseButton.WheelUp));
+        A(E, "zoom_out", K(Key.Minus), M(MouseButton.WheelDown));
+        A(E, "pan_up", K(Key.Up));
+        A(E, "pan_down", K(Key.Down));
+        A(E, "pan_left", K(Key.Left));
+        A(E, "pan_right", K(Key.Right));
+        A(E, "tool_paint", K(Key.B));
+        A(E, "tool_rect", K(Key.R));
+        A(E, "tool_line", K(Key.L));
+        A(E, "tool_flood", K(Key.F));
+        A(E, "tool_erase", K(Key.E));
+        A(E, "tool_eyedropper", K(Key.I));
+        A(E, "layer_structure", K(Key.Key1));
+        A(E, "layer_fixtures", K(Key.Key2));
+        A(E, "layer_rooms", K(Key.Key3));
+        A(E, "level_up", K(Key.Pageup));
+        A(E, "level_down", K(Key.Pagedown));
+        A(E, "copy_below", K(Key.D));
+        A(E, "clear_level", K(Key.Delete));
+        A(E, "add_room", K(Key.A));
+        A(E, "delete_room", K(Key.Backspace));
+        A(E, "piece_prev", K(Key.Bracketleft));
+        A(E, "piece_next", K(Key.Bracketright));
+        A(E, "rotate", K(Key.T));
+        A(E, "mirror_x", K(Key.M));
+        A(E, "mirror_y", K(Key.U));
+        A(E, "resize", K(Key.X));
+        A(E, "preview_wealth", K(Key.W));
+        A(E, "preview_style", K(Key.H));
+        A(E, "toggle_regions", K(Key.V));
+        A(E, "toggle_grid", K(Key.G));
+        A(E, "fit", K(Key.Home));
+        A(E, "undo", K(Key.Z, Mods.Ctrl));
+        A(E, "redo", K(Key.Y, Mods.Ctrl));
+        A(E, "new", K(Key.N, Mods.Ctrl));
+        A(E, "open", K(Key.O, Mods.Ctrl));
+        A(E, "save", K(Key.S, Mods.Ctrl));
+        A(E, "save_as", K(Key.F2));
+        A(E, "close", K(Key.Escape));
     }
 }

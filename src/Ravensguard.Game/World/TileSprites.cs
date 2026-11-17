@@ -140,6 +140,19 @@ public static class TileSprites
         return m.GroundAt(x, y, 0) is GroundKind.Water or GroundKind.DeepWater or GroundKind.Ford or GroundKind.Bridge or GroundKind.None;
     }
 
+    /// <summary>The autotile set a linear prop (fence, hedge, wall) is drawn with, or null for anything else. Runs of these props join into one tile line with ends, corners and T pieces.</summary>
+    public static string? LineFamily(string sprite) => sprite switch
+    {
+        "object.hedge" => "hedge",
+        "object.hurdle" => "fence_wattle",
+        "object.wall_field" => "wall_field",
+        "object.wall_low" => "wall_churchyard",
+        _ => null,
+    };
+
+    /// <summary>Props a fence line runs into and joins with (a gate or lychgate in the line).</summary>
+    public static bool LineConnector(string sprite) => sprite is "object.gate_open" or "object.gate_closed" or "object.lychgate";
+
     public static string MaskName(int mk) =>
         (mk == 0 ? "o" : "") + ((mk & 1) != 0 ? "n" : "") + ((mk & 2) != 0 ? "e" : "") + ((mk & 4) != 0 ? "s" : "") + ((mk & 8) != 0 ? "w" : "");
 
@@ -168,6 +181,11 @@ public static class TileSprites
         ["terrain.farm.barley_ripe"] = ["terrain.farm.wheat_ripe", "terrain.wheat"],
         ["autotile.pond_water"] = ["terrain.water"],
         ["object.hurdle"] = ["object.bush", "object.stake"],
+        ["object.hedge"] = ["object.bush"],
+        ["object.rail"] = ["object.hurdle"],
+        ["object.wall_low"] = ["object.ruin_wall_low"],
+        ["object.wall_field"] = ["object.ruin_wall_low"],
+        ["object.lychgate"] = ["object.gate_open"],
         ["object.haystack"] = ["object.hay"],
         ["object.sheaves"] = ["object.hay"],
         ["object.scarecrow"] = ["object.stake"],
