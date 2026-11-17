@@ -1279,7 +1279,7 @@ This section comes from a full read of the legacy code by four auditors (economy
 Everything in this audit is scheduled in §5.
 
 ## 5. Phases (breadth first; the single source of truth for scheduling)
-Estimates assume one developer working with an AI assistant. Every phase ends in a playable build plus a fun check. Every other section's "when" refers here.
+Estimates assume one developer working with an AI assistant. Every phase ends in a playable build, a fun check and a **code and bug check** (§6). Every other section's "when" refers here.
 
 | # | Phase | Estimate | Cumulative (midpoint) |
 |---|---|---|---|
@@ -1530,6 +1530,10 @@ Estimates assume one developer working with an AI assistant. Every phase ends in
   - A headless smoke-boot in CI.
   - Screenshots from a scripted playthrough (`--autoplay`), captured locally or under Xvfb with the Compatibility renderer.
 - **Keys:** a duplicate binding in any context (world, combat stance, called shot, build, menus) fails CI.
+- **Code and bug check at the end of every phase** (a phase is not done until this passes):
+  - **Review:** a review of all code added or changed in the phase. It looks for correctness bugs, determinism leaks (floats, `Math.Sin`/`Pow`, wall-clock time, unseeded random, dictionary or hash-order iteration in the sim), game state held in Godot nodes, missing units on rates, content that bypasses the loader, swallowed exceptions, and tests that can't fail.
+  - **Health:** the full test suite and CI are green, with no skipped or quarantined tests. The build has no warnings that hide bugs. A save → load → save round trip is byte-identical.
+  - **Close-out:** each finding is fixed, or written into `docs/reviews/phase-N.md` with a reason and the phase it moves to. Nothing is silently dropped.
 - **Fun checks:**
   - At the end of each phase, a 20–30 minute checklist session recorded in `docs/playtests/`.
   - From Phase 3, 2–3 private testers, always asked: "did you understand why?".
