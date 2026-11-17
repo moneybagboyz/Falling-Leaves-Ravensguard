@@ -302,7 +302,11 @@ public class WeatherTests(ITestOutputHelper output)
         sw.Restart();
         for (int h = 0; h < 24; h++) foreach (var c in cells) w.At(c, Hour(2, 10, 0) + h);
         output.WriteLine($"cold day: {sw.Elapsed.TotalMilliseconds / 24:0.000} ms per game hour averaged over a day");
+#if DEBUG
+        Assert.True(ms < 4.0, $"{ms} ms (debug build; the 1 ms budget applies to Release)");
+#else
         Assert.True(ms < 1.0, $"{ms} ms");
+#endif
     }
 
     // ---------- year statistics ----------

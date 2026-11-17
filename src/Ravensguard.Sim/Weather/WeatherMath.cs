@@ -38,7 +38,8 @@ public static class WeatherMath
 
     private static Fixed Lattice(ulong seed, long ix, long iy, long it)
     {
-        ulong h = DetRng.Mix(seed ^ DetRng.Mix((ulong)ix * 0x9E3779B97F4A7C15UL ^ DetRng.Mix((ulong)iy + 0x632BE59BD9B4E019UL ^ DetRng.Mix((ulong)it)) ));
+        ulong h = DetRng.Mix(seed ^ ((ulong)ix * 0x9E3779B97F4A7C15UL) ^ ((ulong)iy * 0xC2B2AE3D27D4EB4FUL) ^ ((ulong)it * 0x165667B19E3779F9UL));
+        h = DetRng.Mix(h);
         return Fixed.FromRaw((int)(h >> 48));
     }
 

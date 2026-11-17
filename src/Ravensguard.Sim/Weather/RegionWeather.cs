@@ -35,6 +35,7 @@ public sealed class RegionWeather
     private readonly byte[] _nearWater = new byte[Continent.Cells];
     private readonly ConcurrentDictionary<long, DaySummary> _days = new();
     private readonly ConcurrentDictionary<long, int> _snow = new();
+    private readonly ConcurrentDictionary<long, int> _river = new();
     private readonly Fixed _snowBelow, _heatwave, _heavyMmH;
 
     public ContinentalWeather Fronts => _w;
@@ -223,9 +224,14 @@ public sealed class RegionWeather
 
     public int RiverHighDays(int cell, long day)
     {
+        long key = DayKey(cell, day);
+        if (_river.TryGetValue(key, out int v)) return v;
         Span<Fixed> hist = stackalloc Fixed[12];
         for (int i = 0; i < hist.Length; i++) hist[i] = Day(cell, day - 1 - i).RainMm;
-        return HeavyRun(hist, _s.HeavyDayMm, _s.FordRecedeDays);
+        v = HeavyRun(hist, _s.HeavyDayMm, _s.FordRecedeDays);
+        if (_river.Count > 400_000) _river.Clear();
+        _river[key] = v;
+        return v;
     }
 
     /// <summary>Total rain (mm) on a game day, as used for the river rule. Exposed for tools and tests.</summary>
@@ -236,7 +242,12 @@ public sealed class RegionWeather
 
     public WeatherSample At(int cell, GameTime t) => At(cell, t.TotalHours);
 
-    public WeatherSample At(int cell, long gameHour)
+    public WeatherSample At(int cell, long gameHour) => AtCore(cell, gameHour, true);
+
+    /// <summary>Same as <see cref="At(int,long)"/> but skips snow cover and river history (cheap; for whole-continent maps).</summary>
+    public WeatherSample AtLite(int cell, long gameHour) => AtCore(cell, gameHour, false);
+
+    private WeatherSample AtCore(int cell, long gameHour, bool full)
     {
         var a = Atmosphere(cell, gameHour);
         var row = _s.Row(a.Biome);
@@ -262,10 +273,10 @@ public sealed class RegionWeather
             }
         }
 
-        Fixed snowDepth = SnowDepthEndOfDay(cell, day - 1);
+        Fixed snowDepth = full ? SnowDepthEndOfDay(cell, day - 1) : Fixed.Zero;
         bool snowFall = a.Snow && a.PrecipMmH.Raw > 0;
-        if (snowFall) snowDepth += Fixed.Min(a.PrecipMmH, Fixed.FromInt(3));
-        int riverDays = RiverHighDays(cell, day);
+        if (snowFall && full) snowDepth += Fixed.Min(a.PrecipMmH, Fixed.FromInt(3));
+        int riverDays = full ? RiverHighDays(cell, day) : 0;
         bool ford = riverDays >= _s.FordClosedDays;
 
         WeatherState st;
