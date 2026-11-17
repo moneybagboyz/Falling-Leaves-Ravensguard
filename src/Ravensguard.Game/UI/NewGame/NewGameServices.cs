@@ -47,13 +47,34 @@ public static class NewGameServices
     {
         int i = Array.IndexOf(args, "--ng-library");
         if (i >= 0 && i + 1 < args.Length) _libraryOverride = args[i + 1];
+        Tools.BlueprintEditor.EditorLibrary.ContentReloaded -= OnBlueprintsReloaded;
+        Tools.BlueprintEditor.EditorLibrary.ContentReloaded += OnBlueprintsReloaded; // hot reload: the next region is generated from the saved blueprints
         i = Array.IndexOf(args, "--ng-throttle-ms");
         if (i >= 0 && i + 1 < args.Length && int.TryParse(args[i + 1], out var ms)) ThrottleMsPerYear = ms;
     }
 
     public static WorldLibrary Library => new(_libraryOverride ?? ProjectSettings.GlobalizePath("user://worlds"));
 
+    /// <summary>Null when the library root can be created and written to; otherwise the reason. Checked on the main thread before generation starts, so a long build never ends in a lost world.</summary>
+    public static string? CheckLibraryWritable(WorldLibrary? lib = null)
+    {
+        try
+        {
+            var root = (lib ?? Library).Root;
+            Directory.CreateDirectory(root);
+            var probe = Path.Combine(root, ".write-test-" + System.Environment.ProcessId);
+            File.WriteAllText(probe, "x");
+            File.Delete(probe);
+            return null;
+        }
+        catch (Exception e) { return e.Message; }
+    }
+
     public static string NowText() => Time.GetDatetimeStringFromSystem(false, true);
+
+    /// <summary>Forgets the loaded content, so the next <see cref="Content"/> call reads base plus the user blueprint mod again (the blueprint editor calls this after a save: hot reload).</summary>
+    static void OnBlueprintsReloaded(Ravensguard.Sim.Building.BuildingLibrary _) => InvalidateContent();
+    public static void InvalidateContent() => _content = null;
 
     public static ContentBundle Content()
     {
@@ -69,7 +90,15 @@ public static class NewGameServices
             var cache = ProjectSettings.GlobalizePath("user://content_cache");
             var r = new ModLoader(ContentTypeRegistry.Default, BaseVocabulary.Create()).Load([full], cache);
             if (!r.Success) throw new InvalidOperationException("content failed to load: " + r.Report);
-            return _content = new ContentBundle(r.Database, r.Hash ?? "", full);
+            var db = r.Database;
+            // the user blueprint mod (saved by the blueprint editor) is part of what regions are generated from; the hash stays the base content's, so library worlds keep loading
+            var userMod = Tools.BlueprintEditor.EditorLibrary.UserModDir;
+            if (File.Exists(Path.Combine(userMod, "mod.json")))
+            {
+                var all = new ModLoader(ContentTypeRegistry.Default, BaseVocabulary.Create()).Load([full, userMod]);
+                if (all.Success) db = all.Database; else GD.PushWarning("user blueprints not loaded: " + all.Report);
+            }
+            return _content = new ContentBundle(db, r.Hash ?? "", full);
         }
         throw new InvalidOperationException("content/base not found");
     }
@@ -116,12 +145,17 @@ public sealed class WorldJob : IDisposable
         if (NewGameServices.ThrottleMsPerYear > 0 && p.Phase == WorldGenPhase.History && p.Entry == null) Thread.Sleep(NewGameServices.ThrottleMsPerYear);
     }
 
-    static WorldJob Run(Func<WorldJob, LoadedWorld> work)
+    static WorldJob Run(Func<WorldJob, LoadedWorld> work, Action<LoadedWorld>? discard = null)
     {
         var job = new WorldJob();
         Task.Run(() =>
         {
-            try { job.Result = work(job); }
+            try
+            {
+                var r = work(job);
+                if (job._cts.IsCancellationRequested) { discard?.Invoke(r); throw new OperationCanceledException(); } // finished just as the player left: leave nothing behind
+                job.Result = r;
+            }
             catch (OperationCanceledException) { job.Error = new OperationCanceledException(); }
             catch (Exception e) { job.Error = e; }
             finally { job.Finished = true; }
@@ -132,7 +166,7 @@ public sealed class WorldJob : IDisposable
     public static WorldJob Create(string name, ContinentSettings cs, HistorySettings hs, string contentHash, string created)
     {
         var lib = NewGameServices.Library;
-        return Run(j => lib.Create(name, cs, hs, contentHash, created, j.Report, j._cts.Token));
+        return Run(j => lib.Create(name, cs, hs, contentHash, created, j.Report, j._cts.Token), w => { try { lib.Delete(w.Info.Id); } catch (Exception e) { GD.PushWarning("could not remove the cancelled world: " + e.Message); } });
     }
 
     public static WorldJob Open(string id, string contentHash)

@@ -71,6 +71,9 @@ jobs:
           merge-multiple: true
       - name: Compare
         run: |
+          for f in hashes-ubuntu-latest.txt hashes-windows-latest.txt; do
+            test -s "$f" || { echo "::error::$f is missing or empty"; exit 1; }
+          done
           diff -u hashes-ubuntu-latest.txt hashes-windows-latest.txt \
             && echo "Windows and Linux generate identical worlds" \
             || { echo "::error::world hashes differ between Windows and Linux (determinism leak, plan §2.4)"; exit 1; }
@@ -109,6 +112,12 @@ jobs:
       - name: Key-map conflict check
         working-directory: src/Ravensguard.Game
         run: timeout 120 "$GODOT" --headless -- --check-keymap
-      - name: Headless self-test (KeyMap, bindings, UI scale)
+      - name: Headless self-test (KeyMap, bindings, UI scale, street click, editor)
         working-directory: src/Ravensguard.Game
-        run: timeout 120 "$GODOT" --headless -- --selftest
+        run: |
+          set +e
+          timeout 120 "$GODOT" --headless -- --selftest 2>&1 | tee selftest.log
+          code=${PIPESTATUS[0]}
+          set -e
+          if grep -E "ERROR|SCRIPT ERROR|Unhandled exception|FAILED" selftest.log; then echo "::error::selftest logged errors"; exit 1; fi
+          exit $code

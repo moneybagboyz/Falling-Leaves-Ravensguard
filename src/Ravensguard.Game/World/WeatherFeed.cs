@@ -58,19 +58,23 @@ public sealed class WeatherFeed
     public WeatherFeed(RegionData? region, RegionWeather? known, WeatherView? forced)
     {
         _region = region; _rw = known; _forced = forced;
-        if (region != null && known == null && forced == null) Task.Run(Build);
+        if (region != null && known == null && forced == null)
+        {
+            string dir = StreetView.ContentDir(); // engine paths are read here, on the main thread; the worker only touches plain data
+            ulong seed = region.Seed;
+            Task.Run(() => Build(dir, seed));
+        }
     }
 
     public bool Ready => _forced != null || _region == null || _rw != null;
 
-    void Build()
+    void Build(string dir, ulong seed)
     {
         try
         {
-            var dir = StreetView.ContentDir();
-            var cs = ContinentSettings.LoadDefaults(dir); cs.Seed = _region!.Seed;
+            var cs = ContinentSettings.LoadDefaults(dir); cs.Seed = seed;
             var continent = ContinentGenerator.Generate(cs);
-            _rw = new RegionWeather(continent, new ContinentalWeather(_region.Seed, WeatherSettings.LoadDefaults(dir)));
+            _rw = new RegionWeather(continent, new ContinentalWeather(seed, WeatherSettings.LoadDefaults(dir)));
             GD.Print("[weather] continent rebuilt for the region's seed");
         }
         catch (Exception e) { GD.PushWarning("weather unavailable: " + e.Message); }

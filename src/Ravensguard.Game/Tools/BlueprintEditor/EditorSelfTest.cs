@@ -80,6 +80,26 @@ public static class EditorSelfTest
         // saving again replaces the entry in place
         check(m.SaveTo(file, out msg) && File.ReadAllText(file) == text, "second save changed the file");
 
+        // errors block the save (file untouched), "Save anyway" writes it, then the fix is saved again
+        m.SetPiece("wall_timber");
+        m.BeginEdit(); m.Apply(2, 4, false); m.EndEdit();
+        string cleanText = File.ReadAllText(file);
+        check(!m.SaveTo(file, out msg) && msg.StartsWith("Not saved") && File.ReadAllText(file) == cleanText && !File.Exists(file + ".tmp"), "a blueprint with errors was saved without 'Save anyway': " + msg);
+        m.SaveAnyway = true;
+        check(m.SaveTo(file, out msg) && File.ReadAllText(file) != cleanText, "'Save anyway' did not write: " + msg);
+        m.SaveAnyway = false;
+        m.Undo(); m.Validate();
+        check(m.SaveTo(file, out msg) && File.ReadAllText(file) == cleanText, "re-save of the fixed drawing differs: " + msg);
+
+        // a save whose content cannot be read back is rolled back: file removed, FilePath and Dirty untouched
+        var orphan = new EditorModel(m.Lib);
+        orphan.New("selftest_orphan", 4, 4);
+        orphan.SaveAnyway = true;
+        string orphanFile = Path.Combine(Path.GetTempPath(), "rg_bped_orphan_" + Guid.NewGuid().ToString("N"), "x.jsonc"); // no mod.json above it: its entries are never loaded
+        bool dirtyBefore = orphan.Dirty;
+        check(!orphan.SaveTo(orphanFile, out msg) && !File.Exists(orphanFile) && orphan.FilePath == null && orphan.Dirty == dirtyBefore, "failed save left the file or changed the model: " + msg);
+        try { Directory.Delete(Path.GetDirectoryName(orphanFile)!, true); } catch { }
+
         // the screen builds (palette with real sprites, panels) and answers key actions
         if (Engine.GetMainLoop() is SceneTree tree)
         {

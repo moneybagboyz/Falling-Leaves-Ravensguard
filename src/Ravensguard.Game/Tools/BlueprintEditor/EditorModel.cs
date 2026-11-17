@@ -595,30 +595,55 @@ public sealed class EditorModel
     /// <summary>Default file for a blueprint that has none yet: the user mod folder.</summary>
     public string DefaultFile() => Path.Combine(EditorLibrary.EnsureUserMod(), "blueprints", Meta.Id + ".jsonc");
 
+    /// <summary>When set, a blueprint with validation errors is written anyway (a work in progress); otherwise errors block the save.</summary>
+    public bool SaveAnyway { get; set; }
+
     /// <summary>
     /// Writes the blueprint into <paramref name="path"/> (replacing its entry in place when the file has one, keeping other entries and comments),
-    /// then re-reads the content so the rest of the game sees it.
+    /// then re-reads the content so the rest of the game sees it. The drawing is validated first (errors block the save unless <see cref="SaveAnyway"/>);
+    /// the text goes to a .tmp file and is moved over the target; if the content then fails to load or lacks the entry, the previous file text is restored and
+    /// nothing about the model (<see cref="FilePath"/>, <see cref="Dirty"/>, the library) changes.
     /// </summary>
     public bool SaveTo(string path, out string message)
     {
+        string? backup = null; bool had = false; string? full = null;
         try
         {
             if (!Regex.IsMatch(Meta.Id, "^[a-z][a-z0-9_]*$")) { message = $"id '{Meta.Id}' must be lower_snake_case"; Say(message); return false; }
-            path = Path.GetFullPath(path);
-            string existing = File.Exists(path) ? File.ReadAllText(path) : "";
-            string text = BlueprintWriter.Upsert(existing, Meta.Id, EntryText(), BlueprintWriter.DefaultHeader(Meta.Name));
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            File.WriteAllText(path, text, new UTF8Encoding(false));
-            FilePath = path;
-            Reload(path);
+            Validate();
+            int errors = Problems.Count(p => p.IsError);
+            if (errors > 0 && !SaveAnyway)
+            {
+                message = $"Not saved: {errors} problem(s) to fix first (first: {Problems.First(p => p.IsError).Message}). Tick 'Save anyway' to write it regardless.";
+                Say(message); return false;
+            }
+            full = Path.GetFullPath(path);
+            had = File.Exists(full);
+            backup = had ? File.ReadAllText(full) : null;
+            string text = BlueprintWriter.Upsert(backup ?? "", Meta.Id, EntryText(), BlueprintWriter.DefaultHeader(Meta.Name));
+            Directory.CreateDirectory(Path.GetDirectoryName(full)!);
+            string tmp = full + ".tmp";
+            File.WriteAllText(tmp, text, new UTF8Encoding(false));
+            File.Move(tmp, full, overwrite: true);
+            Reload(full); // throws if the content no longer loads, or the entry is missing: nothing below runs and the file is put back
+            FilePath = full;
             Dirty = false;
-            message = $"Saved {Meta.Id} to {EditorLibrary.Describe(path)}";
+            message = $"Saved {Meta.Id} to {EditorLibrary.Describe(full)}" + (errors > 0 ? $" with {errors} problem(s)" : "");
             Say(message);
             Raise(false);
             return true;
         }
         catch (Exception ex)
         {
+            if (full != null)
+            {
+                try
+                {
+                    if (File.Exists(full + ".tmp")) File.Delete(full + ".tmp");
+                    if (had) File.WriteAllText(full, backup!, new UTF8Encoding(false)); else if (File.Exists(full)) File.Delete(full);
+                }
+                catch (Exception undo) { ex = new Exception(ex.Message + " (and the previous text could not be restored: " + undo.Message + ")"); }
+            }
             message = "Save failed: " + ex.Message;
             Say(message);
             return false;
@@ -631,9 +656,12 @@ public sealed class EditorModel
     void Reload(string writtenFile)
     {
         var root = EditorLibrary.ModRootOf(writtenFile);
-        if (root != null && !_extraMods.Contains(root, StringComparer.OrdinalIgnoreCase)) _extraMods.Add(root);
-        Lib = EditorLibrary.Load(EditorLibrary.ModFolders(_extraMods), out _);
-        if (Lib.Blueprints.FirstOrDefault(b => b.Def.Id == Meta.Id) is { } e) Meta = e.Def;
+        var extra = new List<string>(_extraMods);
+        if (root != null && !extra.Contains(root, StringComparer.OrdinalIgnoreCase)) extra.Add(root);
+        var lib = EditorLibrary.Load(EditorLibrary.ModFolders(extra), out _); // throws when the content does not load
+        var entry = lib.Blueprints.FirstOrDefault(b => b.Def.Id == Meta.Id) ?? throw new InvalidOperationException($"the saved file does not define blueprint '{Meta.Id}' when read back");
+        _extraMods.Clear(); _extraMods.AddRange(extra);
+        Lib = lib; Meta = entry.Def;
         EditorLibrary.RaiseReloaded(Lib);
     }
 }

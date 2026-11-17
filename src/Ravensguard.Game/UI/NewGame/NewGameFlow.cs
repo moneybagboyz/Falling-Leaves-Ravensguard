@@ -16,7 +16,8 @@ public static class NewGameFlow
 
     public static void AfterWorld(ScreenRouter router, NewGameDraft d, LoadedWorld w, bool replace)
     {
-        Ravensguard.Game.UI.NewGame.NewGameServices.Remember(w);
+        NewGameServices.Remember(w);
+        d.LibraryWorldId = w.Info.Id; // Back then Start reuses this world instead of creating a second one
         Godot.Control next = d.ChooseRegion ? new EmbarkMapScreen(router, d, w) : new RegionBuildScreen(router, d, w);
         if (replace) router.Replace(next); else router.Push(next);
     }

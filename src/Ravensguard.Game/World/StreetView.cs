@@ -5,7 +5,9 @@ using Godot;
 using Ravensguard.Content;
 using Ravensguard.Game.Debug;
 using Ravensguard.Game.Inputs;
+using Ravensguard.Game.Tools.BlueprintEditor;
 using Ravensguard.Game.UI;
+using Ravensguard.Game.UI.NewGame;
 using Ravensguard.Sim.Building;
 using Ravensguard.Sim.Core;
 using Ravensguard.Sim.Lighting;
@@ -25,7 +27,7 @@ namespace Ravensguard.Game.World;
 /// y-sorted sprites, and the light grid as a multiplicative overlay. Buildings are roofless; the level below shows through openings one shade darker.
 /// Zoom is whole-number only: 1x is Street (32 px/m), 2x is Close (64 px/m).
 /// </summary>
-public partial class StreetView : Control
+public partial class StreetView : Control, IHandlesBack
 {
     const int Tile = 32;
     const double Step = LiveWorld.TickSeconds;
@@ -88,8 +90,13 @@ public partial class StreetView : Control
     // timing / shot
     readonly Stopwatch _sw = new();
     double _tickMsSum, _tickMsMax, _drawMsSum, _drawMsMax; long _tickCount, _drawCount;
-    int _frames; double _benchT; bool _quitting;
+    int _frames; double _benchT; bool _quitting; double _stepMsFrame;
     static readonly byte[] Tone = BuildTone();
+
+    /// <summary>The run being played (null for the dev hamlet and seed starts): the pause menu saves through it.</summary>
+    public RunSession? Run { get; set; }
+    /// <summary>Called once when this view leaves the tree (the owner clears what it kept for the hand-off).</summary>
+    public Action? OnExit { get; set; }
 
     public StreetView(ScreenRouter? router, StreetOptions? opt = null, StreetSource? source = null) { _router = router; _opt = opt ?? new StreetOptions(); _source = source; }
 
@@ -135,10 +142,11 @@ public partial class StreetView : Control
         Resized += FitViewport;
         GetWindow().SizeChanged += FitViewport;
         FitViewport();
-        RebuildLevel();
+        RebuildLevel(now: true); // the first picture is complete; later level switches fill in over a few frames
         _world.Step();
         if (_opt.BenchSeconds > 0) _perfLabel.Visible = true;
         MouseFilter = MouseFilterEnum.Stop;
+        EditorLibrary.ContentReloaded += OnBlueprintsReloaded;
         GD.Print($"[street] ready ({_source.Name}): {Map.Props.Count} props, {Map.Buildings.Count} buildings, {_world.Grid.CellCount} cells, level {_viewZ}, hero at world ({_world.OriginX + start.X},{_world.OriginY + start.Y})");
     }
 
@@ -146,7 +154,12 @@ public partial class StreetView : Control
     {
         if (GetWindow() != null) GetWindow().SizeChanged -= FitViewport;
         if (DevContext.Clock == _world?.Clock) DevContext.Clock = null;
+        EditorLibrary.ContentReloaded -= OnBlueprintsReloaded;
+        var exit = OnExit; OnExit = null;
+        exit?.Invoke();
     }
+
+    void OnBlueprintsReloaded(BuildingLibrary _) => _router?.ShowToast(L.T("STREET_BLUEPRINTS_RELOADED"), 4f);
 
     static bool IsNight(GameTime t) => LightModel.AmbientAt(t, 480).Phase == DayPhase.Night;
 
@@ -166,7 +179,7 @@ public partial class StreetView : Control
 
     public static BuildingLibrary LoadLibrary()
     {
-        var r = new ModLoader(ContentTypeRegistry.Default).Load([ContentDir()]);
+        var r = new ModLoader(ContentTypeRegistry.Default).Load(EditorLibrary.ModFolders()); // base plus the user blueprint mod: a saved blueprint shows up on the next use
         if (!r.Success) throw new InvalidOperationException("content failed to load: " + r.Report);
         return BuildingLibrary.FromDatabase(r.Database);
     }
@@ -411,27 +424,48 @@ public partial class StreetView : Control
     readonly Dictionary<string, string?> _terrainPick = new(), _objectPick = new(), _propPick = new();
     HamletMap? _syncedMap; int _syncedRev = -1;
 
-    /// <summary>The view level changed (or first draw): forget everything and draw the current map's chunks at this level.</summary>
-    void RebuildLevel()
+    // Tile drawing is time-sliced: a new or changed chunk is queued and drawn a band of rows at a time, nearest the camera first, within DrawBudgetMs per frame
+    // (one 32 x 32 chunk is ~2.3 ms; seven arrive at once when the hero crosses a chunk edge, and a level switch redraws 49).
+    const double DrawBudgetMs = 3.0;
+    const int BandRows = 8;
+    readonly List<(int X, int Y)> _todo = new(), _erase = new();
+    (int X, int Y, int Ver, int Row)? _cur;
+    Dictionary<(int X, int Y), List<Prop>>? _propsByChunk; HamletMap? _propsMap; int _propsRev = -1;
+    readonly Stopwatch _drawSw = new();
+
+    /// <summary>True when every chunk of the window is drawn.</summary>
+    bool TilesSettled => _todo.Count == 0 && _erase.Count == 0 && _cur == null && _syncedMap == Map && _syncedRev == Map.StreamRevision;
+
+    /// <summary>The view level changed (or first draw): forget everything and queue the current map's chunks at this level. <paramref name="now"/> draws them all before returning (the first draw); otherwise they fill in over the next frames, the ones under the camera first.</summary>
+    void RebuildLevel(bool now = false)
     {
         var sw = Stopwatch.StartNew();
         _baseT.Clear(); _baseO.Clear(); _belowT.Clear(); _belowO.Clear(); _baseG.Clear(); _decal.Clear();
         foreach (var l in _chunkProps.Values) foreach (var n in l) n.Node.QueueFree();
         _chunkProps.Clear(); _drawn.Clear(); _lines.Clear(); _chunkLines.Clear();
+        _todo.Clear(); _erase.Clear(); _cur = null;
         _syncedMap = null;
-        SyncTiles();
+        SyncTiles(now ? double.MaxValue : DrawBudgetMs);
         _shownTick = -1;
-        GD.Print($"[street] level {_viewZ} tiles rebuilt in {sw.Elapsed.TotalMilliseconds:F1} ms ({_drawn.Count} chunks)");
+        GD.Print($"[street] level {_viewZ} tiles {(now ? "rebuilt" : "queued")} in {sw.Elapsed.TotalMilliseconds:F1} ms ({_drawn.Count} chunks drawn, {_todo.Count} queued)");
     }
 
-    /// <summary>Draws chunks that are new or changed in the current window and erases those that left it.</summary>
-    void SyncTiles()
+    /// <summary>Chunk coordinates (fractional) of the spot the view looks at: the hero plus the camera pan.</summary>
+    (float X, float Y) FocusChunk()
+    {
+        var s = _world.Snapshot;
+        float wx = s.OriginX + s.Hero.X.ToFloat() + _pan.X / Tile, wy = s.OriginY + s.Hero.Y.ToFloat() + _pan.Y / Tile;
+        return (wx / 32f, wy / 32f);
+    }
+
+    /// <summary>Queues chunks that are new or changed in the current window, erases those that left it, and draws queued work until <paramref name="budgetMs"/> is spent (always at least one band).</summary>
+    void SyncTiles(double budgetMs)
     {
         var m = Map;
-        if (m == _syncedMap && m.StreamRevision == _syncedRev) return;
-        _syncedMap = m; _syncedRev = m.StreamRevision;
         if (m.ChunkVersions == null)
         {
+            if (m == _syncedMap && m.StreamRevision == _syncedRev) return;
+            _syncedMap = m; _syncedRev = m.StreamRevision;
             if (_drawn.Count > 0) return; // the hamlet never changes
             DrawCells(m, 0, 0, m.Grid.Width, m.Grid.Height);
             var all = new List<Prop>(m.Props);
@@ -439,28 +473,65 @@ public partial class StreetView : Control
             _drawn[(0, 0)] = 0;
             return;
         }
-        List<(int X, int Y)>? stale = null;
-        foreach (var k in _drawn.Keys) if (!m.ChunkVersions.ContainsKey(k)) (stale ??= new()).Add(k);
-        if (stale != null) foreach (var k in stale) EraseChunk(m, k);
-        Dictionary<(int X, int Y), List<Prop>>? byChunk = null;
-        foreach (var (k, ver) in m.ChunkVersions)
+        if (m != _syncedMap || m.StreamRevision != _syncedRev)
         {
-            if (_drawn.TryGetValue(k, out int dv) && dv == ver) continue;
-            if (byChunk == null)
+            _syncedMap = m; _syncedRev = m.StreamRevision;
+            foreach (var k in _drawn.Keys) if (!m.ChunkVersions.ContainsKey(k) && !_erase.Contains(k)) _erase.Add(k);
+            _todo.Clear();
+            foreach (var (k, ver) in m.ChunkVersions)
+                if (!(_drawn.TryGetValue(k, out int dv) && dv == ver)) _todo.Add(k);
+            if (_cur is { } c && (!m.ChunkVersions.TryGetValue((c.X, c.Y), out int cv) || cv != c.Ver)) _cur = null; // changed or gone while half drawn: start over from the queue
+            if (_cur is { } c2) _todo.Remove((c2.X, c2.Y));
+        }
+        if (_todo.Count == 0 && _erase.Count == 0 && _cur == null) return;
+        _drawSw.Restart();
+        while (true)
+        {
+            if (_erase.Count > 0)
             {
-                byChunk = new();
-                foreach (var p in m.Props)
-                {
-                    var ck = (Div(p.X + m.OriginX, 32), Div(p.Y + m.OriginY, 32));
-                    if (!byChunk.TryGetValue(ck, out var l)) byChunk[ck] = l = new();
-                    l.Add(p);
-                }
+                var k = _erase[^1]; _erase.RemoveAt(_erase.Count - 1);
+                if (!m.ChunkVersions.ContainsKey(k) && _drawn.ContainsKey(k)) EraseChunk(k);
             }
-            if (_drawn.ContainsKey(k)) EraseChunk(m, k);
-            int lx = k.X * 32 - m.OriginX, ly = k.Y * 32 - m.OriginY;
-            DrawCells(m, lx, ly, lx + 32, ly + 32);
-            if (byChunk.TryGetValue(k, out var props)) AddProps(m, k, props);
-            _drawn[k] = ver;
+            else
+            {
+                if (_cur == null)
+                {
+                    if (_todo.Count == 0) break;
+                    var (fx, fy) = FocusChunk();
+                    int best = 0; float bd = float.MaxValue;
+                    for (int i = 0; i < _todo.Count; i++)
+                    {
+                        float dx = _todo[i].X + 0.5f - fx, dy = _todo[i].Y + 0.5f - fy, d = dx * dx + dy * dy;
+                        if (d < bd) { bd = d; best = i; }
+                    }
+                    var nk = _todo[best]; _todo.RemoveAt(best);
+                    _cur = (nk.X, nk.Y, m.ChunkVersions[nk], 0);
+                }
+                var cur = _cur!.Value;
+                int lx = cur.X * 32 - m.OriginX, ly = cur.Y * 32 - m.OriginY, row = cur.Row;
+                DrawCells(m, lx, ly + row, lx + 32, ly + row + BandRows);
+                row += BandRows;
+                if (row >= 32)
+                {
+                    var key = (cur.X, cur.Y);
+                    ClearChunkObjects(key); // a redrawn chunk: its old props and fence pieces go as the new ones arrive
+                    if (_propsMap != m || _propsRev != m.StreamRevision)
+                    {
+                        _propsByChunk = new(); _propsMap = m; _propsRev = m.StreamRevision;
+                        foreach (var p in m.Props)
+                        {
+                            var ck = (Div(p.X + m.OriginX, 32), Div(p.Y + m.OriginY, 32));
+                            if (!_propsByChunk.TryGetValue(ck, out var l)) _propsByChunk[ck] = l = new();
+                            l.Add(p);
+                        }
+                    }
+                    if (_propsByChunk!.TryGetValue(key, out var props)) AddProps(m, key, props);
+                    _drawn[key] = cur.Ver;
+                    _cur = null;
+                }
+                else _cur = (cur.X, cur.Y, cur.Ver, row);
+            }
+            if (_drawSw.Elapsed.TotalMilliseconds >= budgetMs) break;
         }
     }
 
@@ -643,7 +714,7 @@ public partial class StreetView : Control
             }
     }
 
-    void EraseChunk(HamletMap m, (int X, int Y) k)
+    void EraseChunk((int X, int Y) k)
     {
         int cx = k.X * 32, cy = k.Y * 32;
         for (int y = 0; y < 32; y++)
@@ -652,9 +723,14 @@ public partial class StreetView : Control
                 var c = new Vector2I(cx + x, cy + y);
                 _baseT.EraseCell(c); _baseG.EraseCell(c); _baseO.EraseCell(c); _belowT.EraseCell(c); _belowO.EraseCell(c); _decal.EraseCell(c);
             }
+        ClearChunkObjects(k);
+        _drawn.Remove(k);
+    }
+
+    void ClearChunkObjects((int X, int Y) k)
+    {
         if (_chunkProps.Remove(k, out var l)) foreach (var n in l) n.Node.QueueFree();
         if (_chunkLines.Remove(k, out var lc)) foreach (var c in lc) _lines.Remove(c);
-        _drawn.Remove(k);
     }
 
     // ------------------------------------------------------------------ frame
@@ -662,18 +738,19 @@ public partial class StreetView : Control
     public override void _Process(double delta)
     {
         _frames++;
+        if (_toSettings && _router?.Top == this) { _toSettings = false; ResumeAfterMenu(); } // back from Settings
         var bench = _opt.BenchSeconds > 0;
         if (bench) { _benchT += delta; ScriptedWalk(); }
         if (!_quitting) HandleHeldInput(delta);
 
         _acc += Math.Min(delta, 0.25);
-        int steps = 0;
+        int steps = 0; _stepMsFrame = 0;
         while (_acc >= Step && steps < 5)
         {
             _sw.Restart();
             _world.Step();
             double ms = _sw.Elapsed.TotalMilliseconds;
-            _tickMsSum += ms; _tickMsMax = Math.Max(_tickMsMax, ms); _tickCount++;
+            _tickMsSum += ms; _tickMsMax = Math.Max(_tickMsMax, ms); _tickCount++; _stepMsFrame += ms;
             _acc -= Step; steps++;
         }
         if (steps == 5) _acc = 0;
@@ -746,8 +823,8 @@ public partial class StreetView : Control
         float fx = h.PrevX.ToFloat() + (h.X.ToFloat() - h.PrevX.ToFloat()) * alpha;
         float fy = h.PrevY.ToFloat() + (h.Y.ToFloat() - h.PrevY.ToFloat()) * alpha;
         if (h.Z != h.PrevZ) { fx = h.X.ToFloat(); fy = h.Y.ToFloat(); }
-        StreamAhead();
-        SyncTiles();
+        StreamAhead(Math.Max(0.0, (_world.Streamer?.Settings.BudgetMs ?? 0) - _stepMsFrame));
+        SyncTiles(DrawBudgetMs);
         var feet = new Vector2(Mathf.Round((fx + s.OriginX) * Tile), Mathf.Round((fy + s.OriginY) * Tile));
         _heroSprite.Position = feet;
         _heroSprite.Visible = h.Z == _viewZ;
@@ -779,22 +856,26 @@ public partial class StreetView : Control
         _wover.Update(GetProcessDeltaTime(), _wx, _vp.Size, _band == Band.Close ? 2 : 1);
     }
 
-    /// <summary>The hero's chunks stream around the hero; a panned camera can look past them. Chunks under (and just ahead of) the camera in the window load now, one per frame.</summary>
-    void StreamAhead()
+    /// <summary>The hero's chunks stream around the hero; a panned camera can look past them. Chunks under (and just ahead of) the camera in the window load now, the nearest first,
+    /// within the streamer's own per-frame budget less what the sim step already spent (a chunk under the camera always loads, at least one per frame).</summary>
+    void StreamAhead(double budgetMs)
     {
         var st = _world.Streamer; var win = _world.Window;
         if (st == null || win == null || _band >= Band.Field) return;
         int ccx = Div((int)Math.Floor(_cam.Position.X / Tile), 32), ccy = Div((int)Math.Floor(_cam.Position.Y / Tile), 32);
         // look ahead in the direction the camera sits from the hero as well
         int ax = Math.Sign(_pan.X), ay = Math.Sign(_pan.Y);
+        long t0 = Stopwatch.GetTimestamp(); int loaded = 0;
         for (int r = 0; r <= 1; r++)
             for (int dy = -r; dy <= r; dy++)
                 for (int dx = -r; dx <= r; dx++)
                 {
                     int cx = ccx + dx + (r == 1 ? ax : 0), cy = ccy + dy + (r == 1 ? ay : 0);
                     if (!win.Contains(cx, cy) || st.IsLoaded(cx, cy)) continue;
+                    if (loaded > 0 || r > 0)
+                        if (Stopwatch.GetElapsedTime(t0).TotalMilliseconds >= budgetMs) return;
                     st.LoadSync(cx, cy);
-                    return;
+                    loaded++;
                 }
     }
 
@@ -886,6 +967,12 @@ public partial class StreetView : Control
     public override void _UnhandledInput(InputEvent e)
     {
         if (!Visible) return;
+        if (_router != null && Actions.Pressed(e, "world.back"))
+        {
+            // Esc belongs to this view: the pause menu. With the menu already open the router closes it (Resume) and this view stays.
+            if (!_router.HasModal && !_leaving) OpenPauseMenu();
+            GetViewport().SetInputAsHandled(); return;
+        }
         if (e is InputEventMouseButton { Pressed: true, ShiftPressed: true } wheel && (wheel.ButtonIndex is MouseButton.WheelUp or MouseButton.WheelDown))
         {
             ChangeView(wheel.ButtonIndex == MouseButton.WheelUp ? 1 : -1);
@@ -930,6 +1017,69 @@ public partial class StreetView : Control
         _pan = _pan.Clamp(new Vector2(-lim, -lim), new Vector2(lim, lim));
     }
 
+    // ------------------------------------------------------------------ pause menu (Esc)
+
+    bool _menuPaused, _toSettings, _leaving;
+
+    SimSpeed EffectiveSpeed => _menuPaused ? _speedBeforePause : _world.Clock.Speed;
+
+    void OpenPauseMenu()
+    {
+        if (_router == null) return;
+        if (_world.Clock.Speed != SimSpeed.Paused) { _speedBeforePause = _world.Clock.Speed; _world.SetSpeed(SimSpeed.Paused); _menuPaused = true; }
+        var buttons = new List<(string, Action?)> { (L.T("PAUSE_RESUME"), null) };
+        if (Run != null) buttons.Add((L.T("PAUSE_SAVE"), () => { var (ok, msg) = SaveNow(); if (ok) _router.ShowToast(L.F("PAUSE_SAVED", System.IO.Path.GetFileName(msg))); }));
+        buttons.Add((L.T("PAUSE_SETTINGS"), () => { _toSettings = true; _router.Push(new SettingsScreen(_router)); }));
+        buttons.Add((L.T("PAUSE_QUIT"), QuitToMenu));
+        string body = Run is { Ironman: true } ? L.T("PAUSE_BODY_IRONMAN") : L.T("PAUSE_BODY");
+        _router.ShowModal(L.T("PAUSE_TITLE"), body, () => CallDeferred(nameof(ResumeAfterMenu)), buttons.ToArray());
+    }
+
+    /// <summary>Runs after the pause modal closed: Resume, Save and Esc all end here; Settings and Quit keep the sim paused (Settings until this view shows again).</summary>
+    void ResumeAfterMenu()
+    {
+        if (!_menuPaused || _toSettings || _leaving || (_router?.HasModal ?? false)) return;
+        _menuPaused = false;
+        _world.SetSpeed(_speedBeforePause);
+    }
+
+    (bool Ok, string Message) SaveNow()
+    {
+        if (Run == null) return (false, "no run to save");
+        var r = Run.Save(_world.Snapshot.Time, EffectiveSpeed, _codex);
+        if (!r.Ok) _router?.ShowModal(L.T("PAUSE_SAVE_FAILED_TITLE"), L.F("PAUSE_SAVE_FAILED", r.Message), ResumeAfterMenuDeferred, (L.T("UI_OK"), null));
+        return r;
+    }
+
+    void QuitToMenu()
+    {
+        if (_router == null) return;
+        if (Run == null) { LeaveToMenu(); return; }
+        if (Run.Ironman)
+        {
+            // an Ironman run saves itself on the way out; if that fails, the player decides
+            var r = Run.Save(_world.Snapshot.Time, EffectiveSpeed, _codex);
+            if (r.Ok) LeaveToMenu();
+            else _router.ShowModal(L.T("PAUSE_SAVE_FAILED_TITLE"), L.F("PAUSE_SAVE_FAILED", r.Message), ResumeAfterMenuDeferred, (L.T("PAUSE_QUIT_ANYWAY"), LeaveToMenu), (L.T("UI_CANCEL"), null));
+            return;
+        }
+        _router.ShowModal(L.T("PAUSE_QUIT_TITLE"), L.T("PAUSE_QUIT_BODY"), ResumeAfterMenuDeferred,
+            (L.T("PAUSE_SAVE_QUIT"), () => { var (ok, _) = SaveNow(); if (ok) LeaveToMenu(); }),
+            (L.T("PAUSE_QUIT_NOSAVE"), LeaveToMenu),
+            (L.T("UI_CANCEL"), null));
+    }
+
+    void ResumeAfterMenuDeferred() => CallDeferred(nameof(ResumeAfterMenu));
+
+    void LeaveToMenu()
+    {
+        _leaving = true;
+        _router!.ReturnToMainMenu();
+    }
+
+    /// <summary>Self-test hook: press Esc as the player would. True when the pause menu is up and this view is still the top screen.</summary>
+    public bool DebugEsc() { var k = new InputEventKey { Keycode = Key.Escape, PhysicalKeycode = Key.Escape, Pressed = true }; _UnhandledInput(k); return _router != null && _router.HasModal && _router.Top == this; }
+
     void TogglePause()
     {
         if (_world.Clock.Speed == SimSpeed.Paused) _world.SetSpeed(_speedBeforePause);
@@ -944,22 +1094,56 @@ public partial class StreetView : Control
         RebuildLevel();
     }
 
-    void ClickMove(Vector2 local)
+    /// <summary>Screen position (this control's local pixels) to the cell of the grid the sim runs on. The camera works in world cells; the sim's grid is the streamed window, whose cell (0,0) is world cell (OriginX, OriginY).</summary>
+    Vector2I ScreenToCell(Vector2 local)
     {
         float f = GetWindow().ContentScaleFactor;
         var vpPos = local * f - new Vector2(_vp.Size.X, _vp.Size.Y) / 2f;
         var world = _cam.Position + vpPos / _zoom;
         float unit = _band switch { Band.Command => 2f, Band.Field => 8f, _ => Tile };
-        int cx = Mathf.FloorToInt(world.X / unit), cy = Mathf.FloorToInt(world.Y / unit);
-        if (!_world.Grid.InBounds(cx, cy, _viewZ)) return;
-        if (_viewZ != _world.Snapshot.Hero.Z) { _router?.ShowToast(L.T("STREET_WRONG_LEVEL")); return; }
-        if (!_world.CommandMoveTo(new Cell3(cx, cy, _viewZ))) _router?.ShowToast(L.T("STREET_NO_PATH"));
+        return new Vector2I(Mathf.FloorToInt(world.X / unit) - _world.OriginX, Mathf.FloorToInt(world.Y / unit) - _world.OriginY);
+    }
+
+    /// <summary>Inverse of <see cref="ScreenToCell"/>: the centre of a window cell on screen.</summary>
+    Vector2 CellToScreen(int cx, int cy)
+    {
+        float f = GetWindow().ContentScaleFactor;
+        float unit = _band switch { Band.Command => 2f, Band.Field => 8f, _ => Tile };
+        var world = new Vector2(cx + _world.OriginX + 0.5f, cy + _world.OriginY + 0.5f) * unit;
+        return ((world - _cam.Position) * _zoom + new Vector2(_vp.Size.X, _vp.Size.Y) / 2f) / f;
+    }
+
+    /// <summary>Walk to the clicked cell. True when the hero set off.</summary>
+    bool ClickMove(Vector2 local)
+    {
+        var c = ScreenToCell(local);
+        if (!_world.Grid.InBounds(c.X, c.Y, _viewZ)) return false;
+        if (_viewZ != _world.Snapshot.Hero.Z) { _router?.ShowToast(L.T("STREET_WRONG_LEVEL")); return false; }
+        if (!_world.CommandMoveTo(new Cell3(c.X, c.Y, _viewZ))) { _router?.ShowToast(L.T("STREET_NO_PATH")); return false; }
+        return true;
+    }
+
+    /// <summary>Self-test hook: click on screen the cells around the hero until one accepts a path. Returns (accepted, cell clicked, tick steps taken, cells moved).</summary>
+    public (bool Accepted, Vector2I Clicked, int Moved) DebugClickAround(int steps = 40)
+    {
+        var h0 = _world.Snapshot.Hero;
+        foreach (int d in new[] { 4, -4, 6, -6, 3, -3, 8, -8 })
+        {
+            var cell = new Vector2I(h0.CellX + d, h0.CellY);
+            var back = ScreenToCell(CellToScreen(cell.X, cell.Y));
+            if (back != cell) return (false, cell, -1); // the screen mapping does not round-trip
+            if (!ClickMove(CellToScreen(cell.X, cell.Y))) continue;
+            for (int i = 0; i < steps; i++) _world.Step();
+            var h1 = _world.Snapshot.Hero;
+            return (true, cell, Math.Abs(h1.CellX - h0.CellX) + Math.Abs(h1.CellY - h0.CellY));
+        }
+        return (false, new Vector2I(h0.CellX, h0.CellY), 0);
     }
 
     // ------------------------------------------------------------------ shot / bench
 
     /// <summary>A screenshot waits for the weather lookup and, at Field and Command, for the visible chunk images to finish baking (or the settle limit).</summary>
-    bool ShotReady() => _frames > _opt.Settle || (_wfeed.Ready && (_band < Band.Field || _far == null || _far.Settled));
+    bool ShotReady() => _frames > _opt.Settle || (_wfeed.Ready && TilesSettled && (_band < Band.Field || _far == null || _far.Settled));
 
     void Shoot()
     {

@@ -31,9 +31,12 @@ if (args.Length == 0 || args[0] is "-h" or "--help")
 if (args[0] == "same")
 {
     if (args.Length < 3) { Console.Error.WriteLine("usage: same <dirA> <dirB>"); return 2; }
-    static string[] Files(string d) => Directory.GetFiles(d).Select(Path.GetFileName).Where(f => !f!.EndsWith(".import", StringComparison.Ordinal)).OrderBy(f => f, StringComparer.Ordinal).ToArray()!;
+    // recursive; paths relative to the folder with '/' separators so both sides compare equal on Windows and Linux
+    static string[] Files(string d) => !Directory.Exists(d) ? Array.Empty<string>()
+        : Directory.GetFiles(d, "*", SearchOption.AllDirectories).Select(f => Path.GetRelativePath(d, f).Replace('\\', '/')).Where(f => !f.EndsWith(".import", StringComparison.Ordinal)).OrderBy(f => f, StringComparer.Ordinal).ToArray();
     var fa = Files(args[1]); var fb = Files(args[2]);
     int diffs = 0;
+    if (fa.Length == 0 || fb.Length == 0) { Console.Error.WriteLine($"same: nothing to compare ({args[1]}: {fa.Length} files, {args[2]}: {fb.Length} files)"); return 1; }
     foreach (var f in fa.Except(fb)) { Console.WriteLine($"only in {args[1]}: {f}"); diffs++; }
     foreach (var f in fb.Except(fa)) { Console.WriteLine($"only in {args[2]}: {f}"); diffs++; }
     foreach (var f in fa.Intersect(fb))

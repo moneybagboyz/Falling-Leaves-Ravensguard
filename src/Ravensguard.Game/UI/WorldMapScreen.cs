@@ -24,7 +24,9 @@ public partial class WorldMapScreen : Control
     Vector2 _mouse;
     double _t;
     Font _font = null!;
-    string _hover = "";
+    string _hover = "", _titleText = "", _hintText = "";
+    (MapIcon Icon, string Text)[] _legend = Array.Empty<(MapIcon, string)>();
+    string _landmarkText = "", _youText = "", _buildingText = "";
     int _shotWait;
     /// <summary>Dev: when set, the screen saves its own picture to this path once the map is drawn and quits.</summary>
     public string? ShotPath { get; init; }
@@ -42,8 +44,21 @@ public partial class WorldMapScreen : Control
         TextureFilter = TextureFilterEnum.Nearest;
         _font = GetThemeDefaultFont();
         _scale = Math.Clamp(StartScale, 1, 6);
+        RefreshTexts();
+        InputBootstrap.Hints.Changed += RefreshTexts; // a rebind shows in the hint line
         CenterOnHero();
         ClampOrigin();
+    }
+
+    public override void _ExitTree() => InputBootstrap.Hints.Changed -= RefreshTexts;
+
+    /// <summary>Translated strings are built here, not in every _Draw.</summary>
+    void RefreshTexts()
+    {
+        _titleText = L.F("MAP_TITLE", _map.Region.Seed);
+        _hintText = L.F("MAP_HINTS", H("world.camera_up") + "/" + H("world.camera_left") + "/" + H("world.camera_down") + "/" + H("world.camera_right"), H("world.zoom_in") + "/" + H("world.zoom_out"), H("world.camera_home"), H("world.map"));
+        _legend = new[] { (MapIcon.Town, L.T("MAP_LEGEND_TOWN")), (MapIcon.Village, L.T("MAP_LEGEND_VILLAGE")), (MapIcon.Ruin, L.T("MAP_LEGEND_SITE")), (MapIcon.Unknown, L.T("MAP_LEGEND_UNKNOWN")) };
+        _landmarkText = L.T("MAP_LEGEND_LANDMARK"); _youText = L.T("MAP_LEGEND_YOU"); _buildingText = L.T("MAP_BUILDING");
     }
 
     void CenterOnHero()
@@ -134,7 +149,7 @@ public partial class WorldMapScreen : Control
     public override void _Draw()
     {
         DrawRect(new Rect2(Vector2.Zero, Size), new Color("141118"));
-        if (_map.Texture == null) { DrawString(_font, Size / 2f - new Vector2(60, 0), L.T("MAP_BUILDING"), HorizontalAlignment.Left, -1, 16, PixelTheme.Body); return; }
+        if (_map.Texture == null) { DrawString(_font, Size / 2f - new Vector2(60, 0), _buildingText, HorizontalAlignment.Left, -1, 16, PixelTheme.Body); return; }
         float s = _scale;
         var tl = ToScreen(Vector2.Zero);
         DrawTextureRect(_map.Texture, new Rect2(tl, new Vector2(RegionMap.Size, RegionMap.Size) * s), false);
@@ -176,23 +191,24 @@ public partial class WorldMapScreen : Control
 
         // frame and hints
         DrawRect(new Rect2(0, 0, Size.X, 30), new Color(0.08f, 0.07f, 0.09f, 0.88f));
-        DrawString(_font, new Vector2(12, 21), L.F("MAP_TITLE", r.Seed), HorizontalAlignment.Left, -1, 16, PixelTheme.Gold);
-        string hint = L.F("MAP_HINTS", H("world.camera_up") + "/" + H("world.camera_left") + "/" + H("world.camera_down") + "/" + H("world.camera_right"), H("world.zoom_in") + "/" + H("world.zoom_out"), H("world.camera_home"), H("world.map"));
+        DrawString(_font, new Vector2(12, 21), _titleText, HorizontalAlignment.Left, -1, 16, PixelTheme.Gold);
         DrawRect(new Rect2(0, Size.Y - 28, Size.X, 28), new Color(0.08f, 0.07f, 0.09f, 0.88f));
-        DrawString(_font, new Vector2(12, Size.Y - 9), hint, HorizontalAlignment.Left, Size.X - 260, 14, PixelTheme.Dim);
-        if (_hover.Length > 0) DrawString(_font, new Vector2(Size.X - 12, Size.Y - 9), _hover, HorizontalAlignment.Right, Size.X * 0.45f, 14, PixelTheme.Body);
+        // the hint takes the left part of the bar; the hover text the right part, never over it
+        float hoverW = _hover.Length > 0 ? Math.Min(Size.X * 0.4f, _font.GetStringSize(_hover, HorizontalAlignment.Left, -1, 14).X) : 0;
+        DrawString(_font, new Vector2(12, Size.Y - 9), _hintText, HorizontalAlignment.Left, Math.Max(60, Size.X - 36 - hoverW), 14, PixelTheme.Dim);
+        if (_hover.Length > 0) DrawString(_font, new Vector2(Size.X - 12, Size.Y - 9), _hover, HorizontalAlignment.Right, hoverW + 2, 14, PixelTheme.Body);
         // legend
         float lx = Size.X - 150, ly = 42;
         DrawRect(new Rect2(lx - 8, ly - 10, 150, 6 * 18 + 6), new Color(0.08f, 0.07f, 0.09f, 0.8f));
-        foreach (var (ic, key) in new[] { (MapIcon.Town, "MAP_LEGEND_TOWN"), (MapIcon.Village, "MAP_LEGEND_VILLAGE"), (MapIcon.Ruin, "MAP_LEGEND_SITE"), (MapIcon.Unknown, "MAP_LEGEND_UNKNOWN") })
+        foreach (var (ic, text) in _legend)
         {
             DrawTexture(PixelIcons.Map(ic), new Vector2(lx, ly - 8));
-            DrawString(_font, new Vector2(lx + 18, ly + 2), L.T(key), HorizontalAlignment.Left, -1, 13, PixelTheme.Body);
+            DrawString(_font, new Vector2(lx + 18, ly + 2), text, HorizontalAlignment.Left, -1, 13, PixelTheme.Body);
             ly += 18;
         }
-        DrawLandmark(new Vector2(lx + 6, ly - 2)); DrawString(_font, new Vector2(lx + 18, ly + 2), L.T("MAP_LEGEND_LANDMARK"), HorizontalAlignment.Left, -1, 13, PixelTheme.Body);
+        DrawLandmark(new Vector2(lx + 6, ly - 2)); DrawString(_font, new Vector2(lx + 18, ly + 2), _landmarkText, HorizontalAlignment.Left, -1, 13, PixelTheme.Body);
         ly += 18;
-        DrawRect(new Rect2(lx + 2, ly - 6, 8, 8), new Color("fde27a")); DrawString(_font, new Vector2(lx + 18, ly + 2), L.T("MAP_LEGEND_YOU"), HorizontalAlignment.Left, -1, 13, PixelTheme.Body);
+        DrawRect(new Rect2(lx + 2, ly - 6, 8, 8), new Color("fde27a")); DrawString(_font, new Vector2(lx + 18, ly + 2), _youText, HorizontalAlignment.Left, -1, 13, PixelTheme.Body);
     }
 
     static string H(string id) => InputBootstrap.Hint(id).Trim('[', ']');

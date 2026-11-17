@@ -117,6 +117,9 @@ public partial class BlueprintEditorScreen : Control
         top.AddChild(HintBtn(T("BPEDIT_OPEN"), "open", AskOpen));
         top.AddChild(HintBtn(T("BPEDIT_SAVE"), "save", Save));
         top.AddChild(HintBtn(T("BPEDIT_SAVE_AS"), "save_as", ShowSaveAs));
+        var anyway = new CheckBox { Text = T("BPEDIT_SAVE_ANYWAY"), ButtonPressed = Model.SaveAnyway, TooltipText = T("BPEDIT_SAVE_ANYWAY_TIP") };
+        anyway.Toggled += on => Model.SaveAnyway = on;
+        top.AddChild(anyway);
         top.AddChild(HintBtn(T("BPEDIT_UNDO"), "undo", Model.Undo));
         top.AddChild(HintBtn(T("BPEDIT_REDO"), "redo", Model.Redo));
         top.AddChild(HintBtn(T("BPEDIT_CLOSE"), "close", RequestClose));

@@ -4,7 +4,10 @@ using Ravensguard.Game.Inputs;
 
 namespace Ravensguard.Game.UI;
 
-/// <summary>Stack of screens (Control scenes) plus an overlay layer for modals and toasts. Esc ("menu.back") pops.</summary>
+/// <summary>Marker for a screen that handles Esc ("menu.back" / its own back action) itself, e.g. the street view's pause menu. The router never pops such a screen on back.</summary>
+public interface IHandlesBack { }
+
+/// <summary>Stack of screens (Control scenes) plus an overlay layer for modals and toasts. Esc ("menu.back") pops, unless the top screen is <see cref="IHandlesBack"/>.</summary>
 public partial class ScreenRouter : Control
 {
     readonly List<Control> _stack = new();
@@ -12,7 +15,9 @@ public partial class ScreenRouter : Control
     Control _overlay = null!;
     VBoxContainer _toasts = null!;
     Control? _modal;
+    System.Action? _modalClosed;
 
+    public bool HasModal => _modal != null;
     public int Depth => _stack.Count;
     public Control? Top => _stack.Count > 0 ? _stack[^1] : null;
 
@@ -65,6 +70,14 @@ public partial class ScreenRouter : Control
         Push(screen);
     }
 
+    /// <summary>Pops every screen above the main menu, or (when the stack does not start with one, e.g. a dev street-view launch) replaces the stack with a fresh main menu.</summary>
+    public void ReturnToMainMenu()
+    {
+        CloseModal();
+        while (_stack.Count > 1) Pop();
+        if (_stack.Count == 0 || _stack[0] is not MainMenu) Replace(new MainMenu(this));
+    }
+
     static void SetActive(Control c, bool active)
     {
         c.Visible = active;
@@ -83,9 +96,13 @@ public partial class ScreenRouter : Control
     }
 
     /// <summary>Modal dialog with one button per entry. Esc closes it without choosing.</summary>
-    public void ShowModal(string title, string body, params (string label, System.Action? onPress)[] buttons)
+    public void ShowModal(string title, string body, params (string label, System.Action? onPress)[] buttons) => ShowModal(title, body, null, buttons);
+
+    /// <summary>Modal dialog that also tells <paramref name="onClosed"/> when it closes for any reason (a button or Esc), before the pressed button's own callback runs.</summary>
+    public void ShowModal(string title, string body, System.Action? onClosed, params (string label, System.Action? onPress)[] buttons)
     {
         CloseModal();
+        _modalClosed = onClosed;
         var dim = new ColorRect { Color = new Color(0, 0, 0, 0.6f), MouseFilter = MouseFilterEnum.Stop };
         dim.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         var center = new CenterContainer();
@@ -118,13 +135,15 @@ public partial class ScreenRouter : Control
     {
         _modal?.QueueFree();
         _modal = null;
+        var cb = _modalClosed; _modalClosed = null;
+        cb?.Invoke();
     }
 
     public override void _UnhandledInput(InputEvent e)
     {
         if (!Actions.Pressed(e, "menu.back")) return;
         if (_modal != null) { CloseModal(); GetViewport().SetInputAsHandled(); }
-        else if (_stack.Count > 1) { Pop(); GetViewport().SetInputAsHandled(); }
+        else if (_stack.Count > 1 && Top is not IHandlesBack) { Pop(); GetViewport().SetInputAsHandled(); }
     }
 
     /// <summary>Button with a right-aligned key hint such as "[N]". The hint follows rebinds.</summary>

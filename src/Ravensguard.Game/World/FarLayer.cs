@@ -26,8 +26,10 @@ public sealed partial class FarLayer : Node2D
         public int Version = int.MinValue;
         public bool Busy;
         public long Used;
+        public int Fails;      // consecutive bake failures; the retry waits longer each time
+        public long RetryAt;   // frame (layer tick) before which a failed chunk is not tried again
     }
-    readonly record struct Result((int X, int Y) Key, bool Command, int Version, Rgba Ground, Rgba? Top);
+    readonly record struct Result((int X, int Y) Key, bool Command, int Version, Rgba? Ground, Rgba? Top, string? Error = null);
 
     public const int MaxFieldChunks = 220, MaxCommandChunks = 2400;
 
@@ -42,6 +44,7 @@ public sealed partial class FarLayer : Node2D
     readonly Markers _markers;
     int _busy;
     long _tick;
+    readonly List<(float D, int X, int Y)> _want = new();
     public int BakedField => _field.Count;
     public int BakedCommand => _cmd.Count;
     public int Pending => _busy;
@@ -75,7 +78,7 @@ public sealed partial class FarLayer : Node2D
         var dict = command ? _cmd : _field; var parent = command ? _cmdRoot : _fieldRoot;
         int px = command ? 64 : 256;
 
-        var want = new List<(float D, int X, int Y)>();
+        var want = _want; want.Clear();
         foreach (var (k, e) in dict) if (e.G != null) { e.G.Visible = k.X >= x0 && k.X <= x1 && k.Y >= y0 && k.Y <= y1; if (e.T != null) e.T.Visible = e.G.Visible; }
         bool missing = false;
         for (int cy = y0; cy <= y1; cy++)
@@ -85,7 +88,8 @@ public sealed partial class FarLayer : Node2D
                 e.Used = _tick;
                 int v = VersionOf(cx, cy);
                 bool fresh = e.Version == v || (e.Version == -1 && v == 0);
-                if (!fresh) { missing = true; if (!e.Busy) want.Add((Mathf.Pow(cx * 32 + 16 - centre.X, 2) + Mathf.Pow(cy * 32 + 16 - centre.Y, 2), cx, cy)); }
+                bool waiting = e.Fails > 0 && _tick < e.RetryAt; // failed to bake: leave it alone until its backoff is over (it stays an empty hole meanwhile, not a "baked" blank)
+                if (!fresh) { if (!waiting) missing = true; if (!e.Busy && !waiting) want.Add((Mathf.Pow(cx * 32 + 16 - centre.X, 2) + Mathf.Pow(cy * 32 + 16 - centre.Y, 2), cx, cy)); }
                 else if (e.G != null) { e.G.Visible = true; if (e.T != null) e.T.Visible = true; }
             }
         want.Sort((a, b) => a.D.CompareTo(b.D));
@@ -102,7 +106,15 @@ public sealed partial class FarLayer : Node2D
             took++; _busy--;
             var d = r.Command ? _cmd : _field;
             if (!d.TryGetValue(r.Key, out var e)) continue;
-            e.Busy = false; e.Version = r.Version;
+            e.Busy = false;
+            if (r.Ground == null)
+            {
+                // a failed bake is never cached as a fresh (blank) image: stay stale, retry after 30, 60, 120 ... frames (capped at ~16 s at 60 fps)
+                e.Fails++; e.RetryAt = _tick + 30L * (1L << Math.Min(e.Fails - 1, 5));
+                if (e.Fails <= 3) GD.PushWarning($"far bake of chunk ({r.Key.X},{r.Key.Y}) failed ({e.Fails}x), retrying: {r.Error}");
+                continue;
+            }
+            e.Fails = 0; e.Version = r.Version;
             var par = r.Command ? _cmdRoot : _fieldRoot; int size = r.Command ? 64 : 256;
             Place(par, ref e.G, r.Ground, r.Key.X * size, r.Key.Y * size, _groundMat, 0);
             if (r.Top != null) Place(par, ref e.T, r.Top, r.Key.X * size - FarBake.Pad, r.Key.Y * size - FarBake.Pad, _topMat, 1);
@@ -162,11 +174,7 @@ public sealed partial class FarLayer : Node2D
                 if (command) done.Enqueue(new Result((cx, cy), true, version, FarBake.BakeCommand(inp, art), null));
                 else { var (g, t) = FarBake.BakeField(inp, art); done.Enqueue(new Result((cx, cy), false, version, g, t)); }
             }
-            catch (Exception ex)
-            {
-                GD.PushWarning($"far bake of chunk ({cx},{cy}) failed: {ex.Message}");
-                done.Enqueue(new Result((cx, cy), command, version, new Rgba(command ? 64 : 256, command ? 64 : 256), null));
-            }
+            catch (Exception ex) { done.Enqueue(new Result((cx, cy), command, version, null, null, ex.Message)); }
         });
     }
 
@@ -202,7 +210,17 @@ public sealed partial class FarLayer : Node2D
             ["neutral"] = new("8e6842"), ["red"] = new("b33a2c"), ["blue"] = new("3d6b9a"), ["green"] = new("56873a"), ["gold"] = new("e0b450"), ["iron"] = new("75747c"),
         };
         public Markers(ArtAtlas art) { _art = art; }
-        public void Set(bool command, IReadOnlyList<FarPerson> people) { _command = command; _people = people; QueueRedraw(); }
+        readonly List<FarPerson> _shown = new();
+        bool _has;
+        /// <summary>Redraws only when the band or somebody's marker moved (the hero standing still costs nothing per frame).</summary>
+        public void Set(bool command, IReadOnlyList<FarPerson> people)
+        {
+            bool same = _has && command == _command && people.Count == _shown.Count;
+            for (int i = 0; same && i < people.Count; i++) same = people[i] == _shown[i];
+            if (same) return;
+            _has = true; _command = command; _shown.Clear(); foreach (var p in people) _shown.Add(p); _people = _shown;
+            QueueRedraw();
+        }
 
         public override void _Draw()
         {

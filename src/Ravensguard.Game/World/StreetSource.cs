@@ -44,7 +44,7 @@ public abstract class StreetSource
     public static StreetSource FromSeed(ulong seed, string? poi = null)
     {
         var dir = StreetView.ContentDir();
-        var load = new ModLoader(ContentTypeRegistry.Default).Load([dir]);
+        var load = new ModLoader(ContentTypeRegistry.Default).Load(Ravensguard.Game.Tools.BlueprintEditor.EditorLibrary.ModFolders()); // base plus the user blueprint mod (hot reload: read afresh each start)
         if (!load.Success) throw new InvalidOperationException("content failed to load: " + load.Report);
         var cs = ContinentSettings.LoadDefaults(dir); cs.Seed = seed;
         var hs = HistorySettings.LoadDefaults(dir); hs.Seed = seed;

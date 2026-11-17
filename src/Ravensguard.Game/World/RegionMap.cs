@@ -28,6 +28,8 @@ public sealed class RegionMap
     Task<byte[]>? _building;
 
     public bool Ready => Texture != null;
+    /// <summary>Bumps whenever the image or the fog changed, so views that cache their drawing know to redraw.</summary>
+    public int Revision { get; private set; }
 
     public RegionMap(RegionData region)
     {
@@ -44,7 +46,7 @@ public sealed class RegionMap
             if (b.IsFaulted) { GD.PushWarning("region map failed: " + b.Exception!.GetBaseException().Message); _pixels = new byte[Size * Size * 4]; }
             else _pixels = b.Result;
             Texture = ImageTexture.CreateFromImage(Image.CreateFromData(Size, Size, false, Image.Format.Rgba8, _pixels));
-            _fogDirty = true;
+            _fogDirty = true; Revision++;
         }
         if (_fogDirty && Texture != null)
         {
@@ -53,6 +55,7 @@ public sealed class RegionMap
             for (int i = 0; i < Tiles * Tiles; i++) { d[i * 4 + 3] = Explored[i] ? (byte)0 : (byte)72; d[i * 4] = 8; d[i * 4 + 1] = 10; d[i * 4 + 2] = 24; }
             _fogImg = Image.CreateFromData(Tiles, Tiles, false, Image.Format.Rgba8, d);
             if (Fog == null) Fog = ImageTexture.CreateFromImage(_fogImg); else Fog.Update(_fogImg);
+            Revision++;
         }
     }
 
