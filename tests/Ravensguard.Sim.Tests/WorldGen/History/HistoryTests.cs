@@ -84,7 +84,7 @@ public class HistoryTests(ITestOutputHelper output)
         var h = Get(seed);
         output.WriteLine($"seed {seed}: pop {h.StartPopulation:N0} -> {h.EndPopulation:N0}");
         Assert.True(h.EndPopulation * 100 > h.StartPopulation * 30);
-        Assert.True(h.Realms.Any(r => r.Alive));
+        Assert.Contains(h.Realms, r => r.Alive);
     }
 
     [Theory, MemberData(nameof(SeedCases))]

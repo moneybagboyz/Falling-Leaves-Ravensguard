@@ -80,7 +80,7 @@ public class RegionTests(ITestOutputHelper output)
     public void Every_river_reaches_the_edge_or_a_lake(ulong seed)
     {
         var r = Get(seed).R;
-        Assert.NotEmpty(r.Waterways.Where(w => w.Kind == WaterKind.River));
+        Assert.Contains(r.Waterways, w => w.Kind == WaterKind.River);
         foreach (var w in r.Waterways.Where(w => w.Kind == WaterKind.River))
         {
             var cur = w; int hops = 0;

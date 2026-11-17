@@ -37,7 +37,7 @@ public class LevelsSpike(ITestOutputHelper output)
         {
             var a = r.Cells[i - 1]; var b = r.Cells[i];
             if (a.Z == b.Z) Assert.True(Math.Abs(a.X - b.X) <= 1 && Math.Abs(a.Y - b.Y) <= 1);
-            else Assert.True(g.Portals.Any(p => (p.A == a && p.B == b) || (p.A == b && p.B == a)));
+            else Assert.Contains(g.Portals, p => (p.A == a && p.B == b) || (p.A == b && p.B == a));
         }
         output.WriteLine($"cellar->tower top: {r.Cells.Count} cells, cost {r.Cost}, expanded {r.Expanded}");
         var ab = pf.FindPathAbstract(new(15, 15, -1), new(15, 15, 2));

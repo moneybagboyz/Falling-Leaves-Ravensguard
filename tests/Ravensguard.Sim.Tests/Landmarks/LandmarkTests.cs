@@ -72,8 +72,8 @@ public class LandmarkTests(ITestOutputHelper output)
                 Assert.DoesNotContain("{", m.Lore);
                 Assert.False(string.IsNullOrWhiteSpace(m.Place));
                 Assert.InRange(m.Lore.Length, 40, 900);
-                if (d.Coastal) Assert.True(Enumerable.Range(-4, 9).SelectMany(dy => Enumerable.Range(-4, 9).Select(dx => (dx, dy)))
-                    .Any(p => Ravensguard.Sim.WorldGen.Region.Region.InBounds(m.TileX + p.dx, m.TileY + p.dy) && (w.Region.Water[(m.TileY + p.dy) * Ravensguard.Sim.WorldGen.Region.Region.Size + m.TileX + p.dx] & WaterFlags.Sea) != 0));
+                if (d.Coastal) Assert.Contains(Enumerable.Range(-4, 9).SelectMany(dy => Enumerable.Range(-4, 9).Select(dx => (dx, dy))),
+                    p => Ravensguard.Sim.WorldGen.Region.Region.InBounds(m.TileX + p.dx, m.TileY + p.dy) && (w.Region.Water[(m.TileY + p.dy) * Ravensguard.Sim.WorldGen.Region.Region.Size + m.TileX + p.dx] & WaterFlags.Sea) != 0);
             }
             Assert.Equal(marks.Count, marks.Select(m => m.Event).Where(e => e != EntityId.None).Count() + marks.Count(m => !m.Attached));
             Assert.Equal(marks.Count(m => m.Attached), marks.Where(m => m.Attached).Select(m => m.Event).Distinct().Count()); // one landmark per event

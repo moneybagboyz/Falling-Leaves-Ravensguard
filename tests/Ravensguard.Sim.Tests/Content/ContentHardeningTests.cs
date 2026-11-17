@@ -78,7 +78,7 @@ public class ContentHardeningTests : IDisposable
         var dir = Path.Combine(_t.Path, "cache");
         Directory.CreateDirectory(Path.Combine(dir, "h.cache")); // the target name is taken by a directory: the final move fails
         Assert.ThrowsAny<Exception>(() => new ContentCache(dir).Store("h", db));
-        Assert.Empty(Directory.GetFiles(dir, "*", SearchOption.AllDirectories).Where(f => f.EndsWith(".tmp")));
+        Assert.DoesNotContain(Directory.GetFiles(dir, "*", SearchOption.AllDirectories), f => f.EndsWith(".tmp"));
     }
 
     [Fact]

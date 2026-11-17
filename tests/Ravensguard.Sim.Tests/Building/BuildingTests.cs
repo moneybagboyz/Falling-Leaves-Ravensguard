@@ -379,7 +379,7 @@ public class BuildingTests(BuildingFixture fx, ITestOutputHelper output) : IClas
         var g = Lib.Grid("burgage_townhouse");
         var world = new LevelGrid(20, 20, -5, 3);
         var placed = BlueprintPlacer.Place(g, Lib.Pieces, world, 5, 4);
-        Assert.Equal(new Cell3(7, 4, 0), Assert.Single(placed.ExteriorDoors.Where(d => d.Y == 4)));
+        Assert.Equal(new Cell3(7, 4, 0), Assert.Single(placed.ExteriorDoors, d => d.Y == 4));
         Assert.Equal(3, placed.Portals.Count); // up to +1, up to +2, down to the cellar
         var path = new LevelPathfinder(world);
         var street = new Cell3(7, 4, 0);

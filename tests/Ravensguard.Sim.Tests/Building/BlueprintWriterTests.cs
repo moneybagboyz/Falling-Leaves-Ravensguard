@@ -55,7 +55,7 @@ public class BlueprintWriterTests(BuildingFixture fx, ITestOutputHelper output) 
                 var g2 = lib2.Parse(e2, issues);
                 Assert.True(g2 != null, string.Join("\n", issues));
                 AssertSameGrid(g1, g2!, e.Def.Id);
-                Assert.Empty(BlueprintValidator.Validate(e2, lib2).Where(i => !BlueprintValidator.Validate(e, Lib).Any(j => j.Code == i.Code)));
+                Assert.DoesNotContain(BlueprintValidator.Validate(e2, lib2), i => !BlueprintValidator.Validate(e, Lib).Any(j => j.Code == i.Code));
             }
         }
         finally { Directory.Delete(dir, true); }
