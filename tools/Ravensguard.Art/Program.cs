@@ -22,9 +22,30 @@ if (args.Length == 0 || args[0] is "-h" or "--help")
           preview  [--out art/out/preview.png] [--set v2] [--filter id-prefix,..] [--scale 2] [--width 1500]   contact sheet (--set v2: tileset v2 only)
           scene    [--out dir] [--scale 2]             village-corner composites scene-summer.png / scene-winter.png (season recolour demo)
           rig      [--out art/out] [--out-game dir]    bake the posed paper-doll rig: rig_32x64.png + rig_index.json
+          same     <dirA> <dirB>                      compare two atlas folders: PNGs by decoded pixels, other files by bytes (*.import ignored); exit 1 on any difference
           rig-preview [--out path] [--scale 3] [--outfits soldier,peasant] [--cols idle:0,walk:1,..]   contact sheet of rig outfits, 4 directions
         """);
     return args.Length == 0 ? 2 : 0;
+}
+
+if (args[0] == "same")
+{
+    if (args.Length < 3) { Console.Error.WriteLine("usage: same <dirA> <dirB>"); return 2; }
+    static string[] Files(string d) => Directory.GetFiles(d).Select(Path.GetFileName).Where(f => !f!.EndsWith(".import", StringComparison.Ordinal)).OrderBy(f => f, StringComparer.Ordinal).ToArray()!;
+    var fa = Files(args[1]); var fb = Files(args[2]);
+    int diffs = 0;
+    foreach (var f in fa.Except(fb)) { Console.WriteLine($"only in {args[1]}: {f}"); diffs++; }
+    foreach (var f in fb.Except(fa)) { Console.WriteLine($"only in {args[2]}: {f}"); diffs++; }
+    foreach (var f in fa.Intersect(fb))
+    {
+        string pa = Path.Combine(args[1], f), pb = Path.Combine(args[2], f);
+        bool same = f.EndsWith(".png", StringComparison.Ordinal)
+            ? Png.ReadPixels(pa) is var x && Png.ReadPixels(pb) is var y && x.W == y.W && x.H == y.H && x.Rgba.AsSpan().SequenceEqual(y.Rgba)
+            : File.ReadAllBytes(pa).AsSpan().SequenceEqual(File.ReadAllBytes(pb));
+        if (!same) { Console.WriteLine($"differs: {f}"); diffs++; }
+    }
+    Console.WriteLine(diffs == 0 ? $"same: {fa.Length} files match" : $"{diffs} difference(s)");
+    return diffs == 0 ? 0 : 1;
 }
 
 var root = FindRoot() ?? Directory.GetCurrentDirectory();

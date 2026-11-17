@@ -33,8 +33,8 @@ jobs:
           tmp="$(mktemp -d)"
           dotnet run --project tools/Ravensguard.Art -c Release --no-build -- bake --out "$tmp/out" --out-game "$tmp/game"
           dotnet run --project tools/Ravensguard.Art -c Release --no-build -- rig --out "$tmp/out" --out-game "$tmp/game"
-          # .import files are Godot-generated; everything else must be byte-identical to the committed assets.
-          diff -rq --exclude='*.import' "$tmp/game" src/Ravensguard.Game/assets/art \
+          # .import files are Godot-generated. PNGs are compared by decoded pixels (zlib output differs between machines); other files by bytes.
+          dotnet run --project tools/Ravensguard.Art -c Release --no-build -- same "$tmp/game" src/Ravensguard.Game/assets/art \
             || { echo "::error::src/Ravensguard.Game/assets/art is out of date. Re-run 'bake --out-game' and 'rig --out-game' (see tools/Ravensguard.Art/README.md) and commit."; exit 1; }
 
   godot-smoke:
