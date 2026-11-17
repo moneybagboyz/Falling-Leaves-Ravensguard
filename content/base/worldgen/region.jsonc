@@ -1,0 +1,50 @@
+// Stage 3 (embark region) tunables; see docs/REDESIGN_PLAN.md §1, §1A Stage 3, §3a, §3b, §4A.4.
+// Lengths are metres (m) or centimetres (cm); *_x10 values are tenths; pct/permille as named.
+[
+  {
+    "type": "worldgen_region", "id": "region_defaults",
+    // terrain: coarse elevation (0..1 above sea) maps to relief_m, then fixed-point detail noise is added
+    "relief_m": 2400,
+    "detail_base_cm": 2500,              // detail noise amplitude on flat land
+    "detail_rel_permille": 100,          // plus this share of the coarse height
+    "detail_wavelength_m": 1600,
+    "detail_octaves": 6,
+    "lake_depress_cm": 700,              // continental lake cells dig this deep so the priority flood fills a lake
+    // hydrology: a stream starts at ~2 km2 of catchment, a river (15-40 m) at ~50 km2
+    "stream_catchment_tenths_km2": 20,
+    "river_catchment_km2": 50,
+    "lake_min_depth_cm": 60,
+    "lake_min_core_depth_cm": 200,
+    "lake_min_tiles": 8,
+    // population (the history's rural folk plus its settlements, clamped to the plan's ~25,000)
+    "min_region_population": 20000,
+    "max_region_population": 30000,
+    "rural_scale_pct": 100,
+    "town_min_pop": 500,
+    "town_household_size_x10": 42,
+    "village_household_size_x10": 53,
+    "farmstead_pop": 6,
+    // settlements
+    "village_min": 40, "village_max": 80,
+    "village_pop_min": 80, "village_pop_max": 320,
+    "village_spacing_min_m": 3000, "village_spacing_max_m": 4000,
+    "town_clearance_m": 2200,
+    "farmstead_min": 150, "farmstead_max": 300,
+    "farmstead_spacing_m": 900,
+    // fields (plan §3a): ~2.3 arable acres per person, one acre per 64 m tile
+    "acres_per_person_x10": 23,
+    "min_field_fertility": 28,
+    "max_field_slope_permille": 100,
+    "parcel_min_tiles": 3, "parcel_max_tiles": 12,
+    "demesne_pct": 22, "glebe_pct": 7,
+    "fief_max_villages": 3,
+    // sites (plan §3b)
+    "cave_min": 10, "cave_max": 20,
+    "barrow_min": 3, "barrow_max": 8,
+    "mine_min": 2, "mine_max": 5,
+    "lair_min": 1, "lair_max": 3,
+    // start safety (plan §3f), exposed as data
+    "war_safe_km": 10,
+    "lair_safe_km": 3
+  }
+]
