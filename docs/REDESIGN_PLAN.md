@@ -32,7 +32,7 @@ The game today is a deep simulation hidden behind a hard-to-use interface: BBCod
 |---|---|
 | Engine / language | Godot 4.7.x .NET (C#). PC first: Windows and Linux, Steam Deck later. No web build (Godot can't export C# to web as of 4.7.2) |
 | Look | **Top-down pixel art in the style of CDDA's UltiCa tileset:** 32×32 terrain tiles (1 tile = 1 m), 32×64 layered characters drawn from the front, back and side (the fourth direction is the side mirrored), 16×16 items, all original medieval art **drawn by Claude** (no UltiCa assets reused). **Dark nights and underground lit only by torches and fire.** UI in a matching pixel style. Title: **Falling Leaves: Ravensguard** |
-| World | **Randomly generated, Dwarf-Fortress style:** a whole continent (~512 km) with plates, climate, realms and cultures, then **100–250 years of simulated history**, then you **pick a region to play** (embark). The region is one continuous walkable world **32 km across** with about **25,000 people**; the rest of the continent keeps running abstractly. Worlds are kept in a library and can be replayed with new characters. Battles happen in place |
+| World | **Randomly generated, Dwarf-Fortress style:** a whole continent (~512 km) with plates, climate, realms and cultures, then **100–250 years of simulated history**, then you **pick where to start** (embark). **The whole continent is one seamless walkable world:** your starting region (32 km, about 25,000 people) is built in full detail, and neighbouring regions are generated in the background as you approach, so you can walk, ride or sail from one end of the continent to the other without a loading screen (§1B). Regions you haven't reached keep running abstractly. Worlds are kept in a library and can be replayed with new characters. Battles happen in place |
 | Time | Real time with pause. **Movement and combat run in real seconds; the world clock runs at 1:20** (a game day lasts 72 real minutes at 1x) |
 | Progression | Staged: wanderer → sellsword → householder → vassal → lord → founder. UI layers unlock when relevant |
 | Control | Direct control of your hero; squad and formation orders; mouse and keyboard equal, rebindable, always shown |
@@ -51,7 +51,7 @@ The game today is a deep simulation hidden behind a hard-to-use interface: BBCod
 | Horses | Riding and carts for travel, plus mounted combat and cavalry with full horse anatomy (§3e) |
 | Vehicles | A Cataclysm-style **vehicle designer** for carts, wagons, chariots (open to every culture), sledges, siege engines and war wagons, river boats and **sea ships with naval combat**; one part-grid system (§3h) |
 | Weather | Seasons, day length and live weather from continental fronts, with effects on travel, combat, farming, the economy and war (§3c) |
-| Timeline | Everything above stays in 1.0; the plan is estimated at **about 6.5–8.5 years** (§5) |
+| Timeline | Everything above stays in 1.0; the plan is estimated at **about 6.5–9 years** (§5) |
 | Sequencing | **Breadth first**, every phase playable |
 | Release | **No public builds until 1.0** |
 
@@ -63,7 +63,7 @@ All values are constants in `content/base/world.json`, so they are tunable and m
 | Quantity | Value | What it implies |
 |---|---|---|
 | Continent | ~512 × 512 km on a coarse grid of 2 km cells (256 × 256) | Generated once per world: plates, climate, rivers, biomes, minerals, cultures, realms, then history |
-| Playable region | 32 × 32 km, picked on the continent map (16 × 16 continental cells) | Built at full detail from the continent data plus its history; more regions can be generated later (see §1A) |
+| Region (unit of detail) | 32 × 32 km, 16 × 16 continental cells; the start region is picked on the continent map | Built at full detail from the continent data plus its history. **Neighbouring regions are generated seamlessly as you approach** (§1B); the playable world is the whole continent |
 | Cell | 1 m; 32 px at street zoom | |
 | Chunk | 32 × 32 cells | 1,000 × 1,000 chunks in the region; generated on first visit |
 | Region tile | 64 m (≈ 1 acre) | 500 × 500 tiles in the region |
@@ -144,9 +144,24 @@ Every world is random from a seed, like Dwarf Fortress. Hand-made content (landm
 - they can find your old hero's grave, smithy and enemies;
 - the chronicle carries on.
 
-**Later (Phase 8 or after 1.0).** Travelling out through a border road generates a *second* region on demand. You arrive there by a "journey" (abstract travel time and road encounters), and each region you visit is persisted. Until then, the one region is the playable area.
+**Beyond the start region:** see §1B. Travel across the continent is seamless.
 
 ---
+
+## 1B. A seamless continent
+You can walk, ride or sail from one end of the continent to the other without stopping. There is no journey screen and no loading screen at region borders.
+- **Regions are the unit of detail, not of play.** The continent is a grid of 16 × 16 regions (each 32 km, 16 × 16 continental cells). Any region can be built at full detail on demand from the continent data plus history, with the same generator as the start region.
+- **Generated ahead of you.** When the hero (or any active squad, army or ship) comes within about 4 km of a region border, the neighbouring region is generated on a worker thread. That covers its terrain, settlements, people, sites and landmarks, which takes about 2 s. By the time you reach the border, chunks on both sides stream like any others. Diagonal corners queue both neighbours.
+- **Borders join up.** Heights already match across edges (a Phase 1 test). Rivers come from the continent's flow network, so they continue across borders. **Roads must also cross borders:** border gate positions are derived from the continental road network between settlements, never chosen per region, so a road leaving one region arrives where the next region expects it. Realm and fief borders come from history, so they're independent of region edges.
+- **Records are keyed by region.** Every record (person, household, field, settlement, business, chunk) carries its region id. People move between regions as records, so migrants, caravans, armies and the hero can walk across borders.
+- **Three levels of detail.**
+  - **Live bubble:** around you and active squads (§2.3).
+  - **Detailed regions:** every region that has been generated keeps full records and runs the hourly abstract tick while it is near the player (within one region). Regions further away fall back to a cheaper daily tick over the same records.
+  - **Abstract continent:** regions that have never been visited stay as continental numbers in the seasonal tick (§1A), until you come near.
+- **Persistence.** Each visited region is saved in its own save section and is loaded and unloaded independently. Only the region you're in and its neighbours stay in memory; others are paged to disk.
+- **Budgets.** About 1 MB per detailed region in the save (people, lots, fields) plus visited chunks (§2.11). At most 9 detailed regions in memory (the current one and its 8 neighbours), about 300 MB. Generating a neighbour region takes ≤ 3 s on a worker thread, with no frame hitch.
+- **What it changes elsewhere.** The world map shows the whole continent, with detail where generated. Armies and caravans in the continent tick can cross into detailed regions and appear on the road through the LODBridge. Weather fronts already cover the continent. Sea travel (§3h) uses the same rule along coasts.
+- **Determinism.** A region's content depends only on the seed, content and history, never on the order in which regions are visited. A test generates regions in different orders and compares hashes, and CI compares them across Windows and Linux.
 
 ## 2. Technical architecture
 
@@ -503,7 +518,7 @@ There is no double-click to interact.
   - **Autosave** every 15 real minutes and before major moments (a battle starting, going underground, a long journey), rotating three autosave slots.
   - **Ironman** uses one save slot plus two rotating backups. The backups are only for crash recovery, not for reloading. It also saves on quit.
   - **Saving never stalls the game.** A save is written on a worker thread from a sim snapshot, with a hitch of at most 100 ms.
-  - **Budgets:** under 150 MB after 10 game years; save in under 3 s and load in under 10 s on the reference PC.
+  - **Budgets:** under 150 MB after 10 game years for a player who stays near home, and under 400 MB for one who has crossed the continent (about 1 MB per detailed region plus visited chunks); save in under 3 s and load in under 10 s on the reference PC.
   - **World-library compatibility:** worlds and saves from older versions load through `SaveMigrator`. If content or mods are missing, a readable report lists what's affected before loading.
 - **Performance budgets** (reference PC: 6-core CPU, RTX 3060-class GPU, 16 GB RAM, 1080p, 60 fps):
 
@@ -1322,17 +1337,17 @@ Estimates assume one developer working with an AI assistant. Every phase ends in
 |---|---|---|---|
 | 0 | Foundations, art toolchain, risk spikes | 5–7 mo | ~6 mo |
 | 1 | The world: continent, history, region, levels, blueprints | 12–16 mo | ~20 mo |
-| 2 | Economy, farming and the abstract world | 5–7 mo | ~26 mo |
-| 3 | People, autopilot v1 | 9–11 mo | ~36 mo |
-| 4 | Combat anywhere and exploration | 9–12 mo | ~47 mo |
-| 5 | Property, building, crafting, businesses, vehicle designer | 7–10 mo | ~56 mo |
-| 6 | Society, factions, rule | 7–9 mo | ~64 mo |
-| 7 | Armies, war at scale, ships and naval war | 15–20 mo | ~81 mo |
-| 8 | Depth, onboarding, polish, 1.0 | 8–12 mo | ~91 mo |
+| 2 | Economy, farming, the abstract world, seamless continent | 7–10 mo | ~29 mo |
+| 3 | People, autopilot v1 | 9–11 mo | ~39 mo |
+| 4 | Combat anywhere and exploration | 9–12 mo | ~49 mo |
+| 5 | Property, building, crafting, businesses, vehicle designer | 7–10 mo | ~58 mo |
+| 6 | Society, factions, rule | 7–9 mo | ~66 mo |
+| 7 | Armies, war at scale, ships and naval war | 15–20 mo | ~83 mo |
+| 8 | Depth, onboarding, polish, 1.0 | 8–12 mo | ~93 mo |
 
-**Total: about 6.5–8.5 years (77–104 months).** The vehicle designer and ships (§3h) added about 4–7 months, and autopilot (§3i) about 1 month.
+**Total: about 6.5–9 years (79–107 months).** The vehicle designer and ships (§3h) added about 4–7 months, autopilot (§3i) about 1 month, and the seamless continent (§1B) about 2–3 months.
 - The concept book's first hour becomes playable end to end at the end of Phase 5, about 4.5 years in.
-- **After 1.0, as free updates:** travelling to other regions (§1A, "Later"), C# script mods, and anything cut by the overrun rule (§7).
+- **After 1.0, as free updates:** C# script mods, and anything cut by the overrun rule (§7).
 
 ### Phase 0: Foundations, art toolchain, risk spikes (5–7 months)
 - **Infrastructure:**
@@ -1405,7 +1420,7 @@ Estimates assume one developer working with an AI assistant. Every phase ends in
 - The same seed gives the same continent, history and region hashes on Windows and Linux.
 - The reference PC holds 60 fps at street zoom.
 
-### Phase 2: Economy, farming and the abstract world (5–7 months)
+### Phase 2: Economy, farming, the abstract world, seamless continent (7–10 months)
 - **Money and markets:** the closed money supply, mints, purses and chests; markets with per-unit pricing.
 - **Production:** workers with employers and workplaces; **abstract business recipes**; resource stocks per tile (§4A.1).
 - **Farming (§3a):** fields, rotation, seasons, harvest, granaries; weather's effects on farming and the economy.
@@ -1416,11 +1431,13 @@ Estimates assume one developer working with an AI assistant. Every phase ends in
   - Continent tick v1 (trade, migration and news into the region).
   - Caravans: abstract on the road, physical in the bubble via the LODBridge.
   - Faction treasuries; basic tax transfers.
+- **Seamless continent (§1B):** records keyed by region; border gates from the continental road network; neighbour regions generated ahead of the hero on a worker thread; chunks streaming across borders; detailed versus daily versus abstract region ticks; per-region save sections with paging; the world map for the whole continent.
 - **Content:** about 120 materials and items; about 40 business recipes.
 
 **Done when:**
 - 1-year and 100-year headless soaks pass: stable prices, no collapse, population within ±10%, coin conserved except documented sources and sinks.
 - Caravans pass visibly through the region.
+- **You can walk across three regions in a straight line with no stop and no frame over budget.** Roads and rivers continue across each border. Regions generated in any order give the same hashes, on Windows and Linux.
 
 ### Phase 3: People, autopilot v1 (9–11 months)
 - **Behaviour:** live behaviour, utility AI, schedules across levels; the job and reservation system, including **paid odd jobs** (haul, guard, escort).
@@ -1580,7 +1597,7 @@ Estimates assume one developer working with an AI assistant. Every phase ends in
   - From Phase 3, 2–3 private testers, always asked: "did you understand why?".
 
 ## 7. Risks
-- **Scope (about 6.5–8.5 years, accepted).**
+- **Scope (about 6.5–9 years, accepted).**
   - Each phase has an estimate.
   - **Overrun rule:** if a phase runs more than 50% over, stop and move features to the after-1.0 list rather than letting the whole timeline slip.
   - Content volume is scaled separately from systems.
