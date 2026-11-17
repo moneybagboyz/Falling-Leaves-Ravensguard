@@ -1,0 +1,1016 @@
+<title>Ravensguard Concept Book</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=IM+Fell+English:ital@0;1&family=Alegreya+Sans:ital,wght@0,400;0,500;0,700;1,400&family=Alegreya+Sans+SC:wght@500;700&display=swap">
+<style>
+/* Layout: a field journal of "plates". Each plate is a 16:9 game screen mockup with numbered pins, captioned like a bound book's illustration. One committed dark look: ink, parchment, rust. */
+:root{
+  --ink:#14120e; --soot:#1c1914; --char:#26221b; --line:rgba(216,202,166,.16); --line-strong:rgba(216,202,166,.32);
+  --parchment:#d8caa6; --bone:#efe5cc; --dim:#a2977a; --rust:#b0582c; --blood:#9a2a1f; --moss:#7d8a4a; --amber:#c9913c; --iron:#8d9294;
+  --f-display:"IM Fell English SC", "Iowan Old Style", Georgia, serif;
+  --f-italic:"IM Fell English", "Iowan Old Style", Georgia, serif;
+  --f-body:"Alegreya Sans", "Segoe UI", system-ui, sans-serif;
+  --f-sc:"Alegreya Sans SC", "Alegreya Sans", "Segoe UI", sans-serif;
+  --i-P:#9c4a25; --i-S:#dccca5; --i-M:#8f9496; --i-W:#7a5534; --i-G:#c29a48; --i-K:#17140f; --i-B:#7f1d17; --i-L:#b5642b; --i-F:#c79a55; --i-N:none;
+  color-scheme: dark;
+}
+html{background:var(--ink)}
+body{background:var(--ink);color:var(--parchment);font-family:var(--f-body);font-size:17px;line-height:1.6;margin:0}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--ink)}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px))}
+a{color:var(--bone)}
+h1,h2,h3{font-family:var(--f-display);font-weight:400;color:var(--bone);text-wrap:balance;margin:0}
+p{margin:0}
+.eyebrow{font-family:var(--f-sc);font-weight:700;letter-spacing:.14em;font-size:.78rem;color:var(--rust);text-transform:lowercase}
+.lede{font-size:1.15rem;max-width:62ch;color:var(--parchment)}
+.muted{color:var(--dim)}
+:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+
+/* Hero */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero-art{position:relative;aspect-ratio:5/2;min-height:320px;max-height:560px;width:100%}
+.hero-art canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.hero-copy{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(to top, rgba(20,18,14,.96) 0%, rgba(20,18,14,.7) 55%, rgba(20,18,14,0) 100%)}
+.hero-copy .wrap{padding-block:48px 28px;display:grid;gap:10px}
+.hero h1{display:grid;line-height:.95}
+.hero h1 .a{font-size:clamp(1.1rem,2.6vw,1.6rem);color:var(--parchment);letter-spacing:.06em}
+.hero h1 .b{font-size:clamp(2.6rem,8vw,5.6rem);color:var(--bone)}
+.hero .sub{font-family:var(--f-italic);font-style:italic;font-size:clamp(1.05rem,2vw,1.3rem);max-width:56ch;color:var(--parchment)}
+
+/* Sections */
+section{padding-block:56px;border-bottom:1px solid var(--line)}
+.sec-head{display:grid;gap:8px;margin-bottom:28px;max-width:72ch}
+.sec-head h2{font-size:clamp(1.7rem,4vw,2.5rem)}
+.clocks{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px}
+.clock{border-top:2px solid var(--rust);padding-top:12px;display:grid;gap:6px;min-width:0}
+.clock h3{font-size:1.3rem}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);margin:28px 0 0}
+.facts div{background:var(--soot);padding:14px 16px;display:grid;gap:2px;min-width:0}
+.facts dt{font-family:var(--f-sc);font-weight:700;letter-spacing:.1em;font-size:.78rem;color:var(--dim);text-transform:lowercase}
+.facts dd{margin:0;color:var(--bone)}
+.clock .scale{font-family:var(--f-sc);font-size:.8rem;letter-spacing:.1em;color:var(--dim)}
+
+/* Plates */
+.plate{display:grid;gap:18px}
+.plate-cap{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 16px}
+.plate-cap .no{font-family:var(--f-display);color:var(--rust);font-size:1.1rem}
+.plate-cap h2{font-size:clamp(1.6rem,3.6vw,2.3rem)}
+.plate-cap .what{font-family:var(--f-italic);font-style:italic;color:var(--dim);flex-basis:100%}
+.plate-view{overflow-x:auto;border:1px solid var(--line-strong);background:#000;box-shadow:0 18px 40px rgba(0,0,0,.45)}
+.screen{position:relative;aspect-ratio:16/9;container-type:inline-size;min-width:720px;width:100%;overflow:hidden;background:#0d0c0a}
+.screen > canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px 32px;list-style:none;margin:0;padding:0;counter-reset:n}
+.notes li{display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:start;min-width:0}
+.notes li::before{counter-increment:n;content:counter(n);width:24px;height:24px;border-radius:50%;background:var(--rust);color:var(--bone);font:700 .82rem/24px var(--f-sc);text-align:center;margin-top:2px}
+.notes b{color:var(--bone);font-weight:500}
+.play{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;margin-top:6px}
+.play > div{min-width:0;display:grid;gap:8px}
+.play h3{font-size:1.25rem}
+
+/* In-game HUD (scales with the screen via container units) */
+.hud{position:absolute;background:rgba(17,15,11,.88);border:1px solid rgba(216,202,166,.30);box-shadow:0 0 0 1px rgba(0,0,0,.75),0 .4cqw 1.4cqw rgba(0,0,0,.5);color:var(--parchment);font-family:var(--f-body);font-size:1.05cqw;line-height:1.35;padding:.6cqw .8cqw;border-radius:.25cqw}
+.hud h4{font-family:var(--f-sc);font-weight:700;letter-spacing:.09em;font-size:.86cqw;color:var(--dim);margin:0 0 .35cqw;text-transform:lowercase}
+.hud .big{font-family:var(--f-display);font-size:1.45cqw;color:var(--bone);line-height:1.1}
+.hud .row{display:flex;align-items:center;gap:.6cqw;flex-wrap:wrap}
+.hud .stat{display:flex;align-items:center;gap:.3cqw;font-variant-numeric:tabular-nums}
+.chip{display:inline-grid;place-items:center;width:1.8cqw;height:1.8cqw;background:var(--parchment);border-radius:.2cqw;box-shadow:inset 0 0 0 1px rgba(0,0,0,.5)}
+.chip svg{width:1.5cqw;height:1.5cqw}
+.key{display:inline-block;min-width:1.25cqw;padding:0 .3cqw;border:1px solid rgba(216,202,166,.5);border-bottom-width:.18cqw;border-radius:.2cqw;font:700 .8cqw/1.45 var(--f-sc);text-align:center;color:var(--bone);background:rgba(255,255,255,.05)}
+.why{color:var(--amber);border-bottom:1px dotted var(--amber);cursor:help}
+.bad{color:#d06a52}
+.good{color:#a6b46a}
+.bar{height:.45cqw;background:rgba(255,255,255,.1);border-radius:1cqw;overflow:hidden}
+.bar > i{display:block;height:100%;background:var(--amber)}
+.pin{position:absolute;z-index:5;width:2cqw;height:2cqw;border-radius:50%;background:var(--rust);color:var(--bone);font:700 1.05cqw/2cqw var(--f-sc);text-align:center;box-shadow:0 0 0 .22cqw rgba(17,15,11,.9),0 0 1cqw rgba(176,88,44,.7);transform:translate(-50%,-50%)}
+.label{position:absolute;font-family:var(--f-sc);font-weight:700;font-size:.9cqw;letter-spacing:.06em;color:var(--bone);text-shadow:0 0 .4cqw #000,0 0 .2cqw #000;white-space:nowrap;transform:translate(-50%,-50%)}
+.menu{padding:0;min-width:15cqw}
+.menu .mh{padding:.6cqw .8cqw;border-bottom:1px solid rgba(216,202,166,.2)}
+.menu ul{list-style:none;margin:0;padding:.3cqw 0}
+.menu li{display:flex;justify-content:space-between;gap:1cqw;padding:.28cqw .8cqw}
+.menu li.on{background:rgba(176,88,44,.28)}
+.menu li.crime{color:#d06a52}
+.menu .mf{padding:.45cqw .8cqw;border-top:1px solid rgba(216,202,166,.2);font-size:.85cqw;color:var(--dim)}
+.btns{display:flex;gap:.25cqw}
+.btns span{padding:.1cqw .5cqw;border:1px solid rgba(216,202,166,.35);border-radius:.2cqw;font:700 .85cqw/1.5 var(--f-sc)}
+.btns span.on{background:var(--rust);border-color:var(--rust);color:var(--bone)}
+.tabs{display:flex;gap:.2cqw;font:700 .85cqw/1.5 var(--f-sc);letter-spacing:.04em}
+.tabs span{padding:.1cqw .55cqw;border-bottom:.15cqw solid transparent;color:var(--dim)}
+.tabs span.on{color:var(--bone);border-color:var(--rust)}
+.log p{margin:.12cqw 0}
+.log .t{color:var(--dim);font-variant-numeric:tabular-nums;margin-right:.4cqw}
+.hotbar{display:flex;gap:.35cqw;padding:.4cqw}
+.hotbar .slot{display:grid;justify-items:center;gap:.15cqw;width:3.4cqw;font:700 .72cqw/1.1 var(--f-sc);color:var(--dim)}
+.hotbar .slot .chip{width:2.4cqw;height:2.4cqw}
+.hotbar .slot .chip svg{width:2cqw;height:2cqw}
+.hotbar .slot.locked{opacity:.38}
+.cards{display:flex;gap:.45cqw}
+.fcard{width:11.5cqw;display:grid;gap:.25cqw;padding:.5cqw .6cqw;border:1px solid rgba(216,202,166,.28);border-radius:.25cqw;background:rgba(255,255,255,.03)}
+.fcard.on{border-color:var(--rust);background:rgba(176,88,44,.2)}
+.fcard .o{color:var(--amber);font-size:.9cqw}
+.fcard .n{display:flex;justify-content:space-between;align-items:baseline}
+.ledger table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.ledger td{padding:.12cqw 0}
+.ledger td:last-child{text-align:right}
+.ledger tr.sum td{border-top:1px solid rgba(216,202,166,.35);padding-top:.3cqw;color:var(--bone);font-weight:700}
+.buildbar{display:grid;gap:.4cqw}
+.items{display:flex;gap:.4cqw}
+.item{display:grid;justify-items:center;gap:.2cqw;width:5.2cqw;padding:.35cqw .2cqw;border:1px solid rgba(216,202,166,.22);border-radius:.25cqw;font-size:.82cqw;text-align:center;line-height:1.15}
+.item.on{border-color:var(--rust);background:rgba(176,88,44,.22)}
+.item .chip{width:2.6cqw;height:2.6cqw}
+.item .chip svg{width:2.2cqw;height:2.2cqw}
+.doll{display:grid;grid-template-columns:7cqw 1fr;gap:.8cqw;align-items:start}
+.doll svg{width:7cqw;height:auto}
+.parts{display:grid;gap:.12cqw;font-variant-numeric:tabular-nums}
+.parts div{display:flex;justify-content:space-between;gap:.6cqw;padding:.08cqw .3cqw;border-radius:.15cqw}
+.parts div.on{background:rgba(176,88,44,.35);color:var(--bone)}
+.callout{position:absolute;font-family:var(--f-display);font-size:2cqw;color:var(--bone);letter-spacing:.04em;text-shadow:0 0 .6cqw #000,0 0 .3cqw #000;transform:translate(-50%,-50%) rotate(-4deg);white-space:nowrap}
+.callout small{display:block;font-family:var(--f-sc);font-size:.9cqw;color:#e08a6e;letter-spacing:.08em;text-align:center}
+.badge{position:absolute;font:700 1cqw/1 var(--f-sc);letter-spacing:.1em;color:var(--bone);background:rgba(154,42,31,.85);padding:.45cqw .9cqw;border-radius:2cqw;transform:translateX(-50%)}
+.cartouche{position:absolute;background:#dccfaa;color:#2a2219;border:.25cqw double #3a2e22;padding:.7cqw 1.4cqw;text-align:center;box-shadow:0 .3cqw 1cqw rgba(0,0,0,.4)}
+.cartouche .t1{font-family:var(--f-display);font-size:2.1cqw;line-height:1}
+.cartouche .t2{font-family:var(--f-italic);font-style:italic;font-size:1.05cqw}
+.tip{max-width:19cqw}
+.tip p{margin:.1cqw 0}
+
+/* Icon sheet */
+.sheet-tools{display:flex;flex-wrap:wrap;gap:10px 22px;align-items:center;margin-bottom:16px}
+.seg{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.seg .lbl{font-family:var(--f-sc);font-weight:700;letter-spacing:.1em;font-size:.8rem;color:var(--dim);margin-right:4px}
+.seg button{font:500 .95rem var(--f-body);color:var(--parchment);background:var(--soot);border:1px solid var(--line-strong);border-radius:3px;padding:6px 12px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--rust);border-color:var(--rust);color:var(--bone)}
+.sheet{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:12px;background:#cfc09a;padding:16px;border-radius:2px;box-shadow:inset 0 0 60px rgba(90,60,30,.35)}
+.icon{display:grid;justify-items:center;gap:4px;padding:10px 6px 8px;border:1px solid rgba(40,30,20,.18);background:rgba(255,248,230,.25)}
+.icon svg{width:64px;height:64px}
+.icon span{font-family:var(--f-sc);font-weight:700;font-size:.78rem;letter-spacing:.05em;color:#2a2219;text-align:center;line-height:1.2}
+.icon em{font-style:normal;font-family:var(--f-body);font-size:.72rem;color:#5c4c38}
+
+/* Timeline & ladder */
+.timeline{list-style:none;margin:0;padding:0;display:grid;gap:0}
+.timeline li{display:grid;grid-template-columns:76px 1fr;gap:18px;padding:18px 0;border-top:1px solid var(--line)}
+.timeline .when{font-family:var(--f-display);font-size:1.3rem;color:var(--rust);font-variant-numeric:tabular-nums}
+.timeline h3{font-size:1.2rem;margin-bottom:4px}
+.timeline li > div{min-width:0;max-width:70ch}
+.chron{font-family:var(--f-italic);font-style:italic;color:var(--bone);border-left:2px solid var(--amber);padding-left:12px;margin-top:8px}
+.ladder{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:2px;background:var(--line);border:1px solid var(--line)}
+.rung{background:var(--ink);padding:16px;display:grid;gap:8px;align-content:start;min-width:0}
+.rung h3{font-size:1.25rem}
+.rung .how{font-size:.95rem}
+.rung .un{font-family:var(--f-sc);font-weight:700;font-size:.78rem;letter-spacing:.08em;color:var(--amber)}
+.why-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
+.why-card{border:1px solid var(--line-strong);padding:16px;display:grid;gap:10px;background:var(--soot);min-width:0}
+.why-card .what{color:var(--bone);font-weight:500}
+.why-card ol{margin:0;padding-left:20px;color:var(--parchment)}
+.ctrl{overflow-x:auto}
+.ctrl table{width:100%;border-collapse:collapse;min-width:520px}
+.ctrl th,.ctrl td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line)}
+.ctrl th{font-family:var(--f-sc);font-weight:700;letter-spacing:.08em;font-size:.82rem;color:var(--dim)}
+.ctrl kbd{font:700 .85rem var(--f-sc);border:1px solid var(--line-strong);border-bottom-width:2px;border-radius:3px;padding:1px 7px;color:var(--bone)}
+footer{padding-block:36px 56px;color:var(--dim);font-size:.95rem}
+@media (prefers-reduced-motion: reduce){ .pulse{animation:none!important} }
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+.pulse{animation:pulse 1.6s ease-in-out infinite}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs id="iconDefs"></defs></svg>
+
+<header class="hero">
+  <div class="hero-art"><canvas id="heroCv" aria-hidden="true"></canvas><canvas id="leafCv" aria-hidden="true"></canvas></div>
+  <div class="hero-copy"><div class="wrap">
+    <p class="eyebrow">look &amp; play concept</p>
+    <h1><span class="a">Falling Leaves</span><span class="b">Ravensguard</span></h1>
+    <p class="sub">A walkable medieval valley where everyone has a body, a home and a price. You start with nothing. You can end with a banner.</p>
+  </div></div>
+</header>
+
+<main>
+<section><div class="wrap">
+  <div class="sec-head">
+    <p class="eyebrow">the game in one breath</p>
+    <h2>You are one person in a valley that keeps going without you</h2>
+    <p class="lede">Walk it, work it, fight in it, buy it. Nothing glows on the map unless you pin it there. Your ambition tells you what you want, and the world shows you how people get it. It runs in real time with pause, and three clocks tick at once.</p>
+  </div>
+  <div class="clocks">
+    <div class="clock"><span class="scale">seconds</span><h3>With your own hands</h3><p>Walk the street, talk, haggle, steal, fight. Space pauses everything. Every action is a click or a key, and the key is always printed on the button.</p></div>
+    <div class="clock"><span class="scale">hours and days</span><h3>Jobs and journeys</h3><p>Guard a caravan to Ashby, haul hides for 2 crowns a day, pay your squad on Sunday. Food runs down. Your workers keep their shifts while you are away.</p></div>
+    <div class="clock"><span class="scale">weeks and seasons</span><h3>Wars and fortunes</h3><p>Harvests set bread prices. Lords raise levies from their villages and march. Your smithy turns a profit or goes idle. Your ambition moves forward or slips away.</p></div>
+  </div>
+  <dl class="facts">
+    <div><dt>world</dt><dd>32 km across, about 25,000 people</dd></div>
+    <div><dt>clock</dt><dd>A game day lasts 72 minutes at 1×</dd></div>
+    <div><dt>between towns</dt><dd>6–10 km: about 45 minutes jogging at 1×, 6 at 8×</dd></div>
+    <div><dt>battles</dt><dd>Up to 2,000 soldiers, fought where the armies meet</dd></div>
+  </dl>
+</div></section>
+
+<section><div class="wrap plate">
+  <div class="plate-cap"><span class="no">Plate I</span><h2>The Street at Oakford</h2><span class="what">Late afternoon on day 4, after your first caravan job. Street zoom, 32 pixels per metre. Everyone here is a real person with a job, a home and an opinion of you.</span></div>
+  <div class="plate-view"><div class="screen" id="townScreen">
+    <canvas id="townCv" role="img" aria-label="Top-down painted town street with market square, roofs, a lot for sale and townsfolk"></canvas>
+    <div class="hud" style="left:1.2%;top:2.2%;width:27%">
+      <div class="row" style="justify-content:space-between"><span class="big">Aldric of Hollin</span><span class="muted" style="font-size:.85cqw">disgraced squire</span></div>
+      <div class="row" style="margin-top:.4cqw">
+        <span class="stat"><span class="chip"><svg><use href="#ic-coins"/></svg></span>191</span>
+        <span class="stat"><span class="chip"><svg><use href="#ic-bread"/></svg></span>6 days</span>
+        <span class="stat"><span class="chip"><svg><use href="#ic-cart"/></svg></span>31/60 kg</span>
+      </div>
+      <div class="row" style="margin-top:.45cqw;font-size:.9cqw">
+        <span>Aldric <span style="color:var(--amber)">●</span> <span class="muted">arm splinted</span></span><span>Brann <span class="good">●</span></span>
+      </div>
+    </div>
+    <div class="hud" style="right:1.2%;top:2.2%;width:22%">
+      <div class="row" style="justify-content:space-between"><span class="big">Day 4 · 17:40</span><span class="muted">autumn</span></div>
+      <div class="row" style="margin-top:.35cqw;justify-content:space-between"><div class="btns"><span>❚❚</span><span class="on">1×</span><span>2×</span><span>4×</span><span>8×</span></div><span class="key">Space</span></div>
+      <canvas id="miniCv" width="240" height="240" style="display:block;width:100%;aspect-ratio:1;margin-top:.5cqw;border-radius:50%;border:1px solid rgba(216,202,166,.35)"></canvas>
+    </div>
+    <div class="hud" style="left:1.2%;top:21%;width:21%">
+      <h4>ambition</h4>
+      <div class="big" style="font-size:1.25cqw">Own a smithy in Oakford</div>
+      <div style="margin-top:.35cqw;display:grid;gap:.2cqw">
+        <div><span class="good">✓</span> Reach Oakford</div>
+        <div>◻ Earn 450 crowns <span class="muted">191/450</span><div class="bar" style="margin-top:.15cqw"><i style="width:42%"></i></div></div>
+        <div>◻ Buy the lot on Tanner's Row <span class="muted">from the reeve</span></div>
+        <div>◻ Hire a smith</div>
+      </div>
+      <p class="muted" style="margin-top:.4cqw;font-size:.88cqw">Guard work pays well. Caravan masters hire at the Ashby road gate.</p>
+    </div>
+    <div class="hud menu" id="ctxMenu" style="left:57.5%;top:24%">
+      <div class="mh"><div class="big" style="font-size:1.2cqw">Hedda Voss</div><div class="muted" style="font-size:.88cqw">Tanner · Oakford · likes you a little (+12)</div></div>
+      <ul>
+        <li class="on"><span>Talk</span><span class="key">E</span></li>
+        <li><span>Trade</span><span class="muted">hides, leather</span></li>
+        <li><span>Hire for a job…</span><span class="muted">2 c/day</span></li>
+        <li><span>Ask to join</span><span class="muted">wants 20 c/week</span></li>
+        <li class="crime"><span>Pickpocket</span><span>crime · seen by 3</span></li>
+        <li class="crime"><span>Attack</span><span></span></li>
+      </ul>
+      <div class="mf">Lives at Tanner's Row no. 4 · works until 19:00</div>
+    </div>
+    <div class="hud log" style="left:1.2%;bottom:2.4%;width:42%">
+      <p><span class="t">17:32</span>Hedda wants 4 crowns for tanned hides. <span class="why">Why so dear?</span></p>
+      <p><span class="t">17:20</span>A House Vell recruiter is drafting levies in Coldridge. <span class="why">Why?</span></p>
+      <p><span class="t">17:05</span>You earned 1 crown hauling hides for the tannery.</p>
+    </div>
+    <div class="hud hotbar" style="right:1.2%;bottom:2.4%">
+      <div class="slot"><span class="chip"><svg><use href="#ic-helm"/></svg></span>C</div>
+      <div class="slot"><span class="chip"><svg><use href="#ic-purse"/></svg></span>I</div>
+      <div class="slot"><span class="chip"><svg><use href="#ic-banner"/></svg></span>P</div>
+      <div class="slot"><span class="chip"><svg><use href="#ic-deed"/></svg></span>J</div>
+      <div class="slot"><span class="chip"><svg><use href="#ic-eye"/></svg></span>M</div>
+      <div class="slot locked" title="Unlocks when you own property"><span class="chip"><svg><use href="#ic-scales"/></svg></span>L</div>
+      <div class="slot locked" title="Unlocks when you own a deed or plant a claim banner"><span class="chip"><svg><use href="#ic-hammer"/></svg></span>B</div>
+      <div class="slot locked" title="Unlocks when you serve a lord"><span class="chip"><svg><use href="#ic-crown"/></svg></span>F</div>
+    </div>
+    <div class="label" style="left:60.5%;top:66.4%">Lot for sale · 450 c</div>
+    <div class="label" style="left:47.6%;top:91.4%;color:var(--dim);font-size:.8cqw">Osric's smithy (roof hidden: Brann is inside)</div>
+    <span class="pin" style="left:29.6%;top:6%">1</span>
+    <span class="pin" style="left:75.4%;top:11%">2</span>
+    <span class="pin" style="left:22.4%;top:22.4%">3</span>
+    <span class="pin" style="left:56%;top:25.5%">4</span>
+    <span class="pin" style="left:39.8%;top:72%">5</span>
+    <span class="pin" style="left:68.8%;top:66.4%">6</span>
+    <span class="pin" style="left:43.4%;top:84%">7</span>
+    <span class="pin" style="left:71.6%;top:90%">8</span>
+  </div></div>
+  <ol class="notes">
+    <li><span><b>Party bar.</b> Crowns, food in days rather than units, and carry weight. Your companions' health is a coloured dot; hover one to see the wound.</span></li>
+    <li><span><b>Time.</b> Pause, 1×, 2×, 4×, and 8× when nothing hostile is in sight. A game hour passes in 3 real minutes at 1×. The minimap is the painted world map, zoomed in.</span></li>
+    <li><span><b>Ambition.</b> Your own goal, with steps. The hint says where people find that kind of work. Pin it to the map if you want a marker; nothing is pinned by default.</span></li>
+    <li><span><b>Right-click anyone.</b> Every person has the same menu: talk, trade, hire, recruit, rob, attack. Before you commit a crime, it shows whether you are seen.</span></li>
+    <li><span><b>Roofs lift</b> when your people go inside, so you can see what they are doing.</span></li>
+    <li><span><b>Property is physical.</b> Staked lots with signs. You buy this one from the reeve, then build on it yourself.</span></li>
+    <li><span><b>The log explains itself.</b> Anything surprising has a "why" link that opens the cause in the chronicle.</span></li>
+    <li><span><b>Screens unlock as your life grows.</b> Build and Ledger open with your first deed or claim banner, Faction when you serve a lord.</span></li>
+  </ol>
+  <div class="play">
+    <div><h3>How this moment plays</h3><p>You click Hedda, or walk up and press E. She has hides to sell and a job hauling them to the tannery for 2 crowns a day. You could pick her purse, but three people are watching, and the menu tells you so. Your goal is the staked lot across the street. It costs 450 crowns and you have 191.</p></div>
+    <div><h3>What makes it a game</h3><p>The town is not a menu. Shops are people with stock that comes from the real economy, so prices move for reasons you can trace. When Hedda finishes work at 19:00 she walks home to no. 4, and you can follow her, hire her, or rob her house.</p></div>
+  </div>
+</div></section>
+
+<section><div class="wrap plate">
+  <div class="plate-cap"><span class="no">Plate II</span><h2>The Clash at Cold Ford</h2><span class="what">You are in the front rank. About 700 soldiers are on this field, shown at field zoom (8 pixels per metre), and every one has bones, organs and armour that can fail.</span></div>
+  <div class="plate-view"><div class="screen">
+    <canvas id="battleCv" role="img" aria-label="Top-down field battle between two formations with blood decals, bodies and arrows"></canvas>
+    <div class="hud" style="left:50%;top:2.2%;transform:translateX(-50%);width:44%">
+      <div class="row" style="justify-content:space-between"><span class="big">Ravensguard · 293</span><span class="big">410 · House Vell</span></div>
+      <div style="display:flex;height:.7cqw;margin:.35cqw 0;border-radius:1cqw;overflow:hidden"><i style="width:44%;background:var(--rust)"></i><i style="width:56%;background:#4b5d73"></i></div>
+      <div class="row" style="justify-content:space-between;font-size:.9cqw"><span>Morale <span class="good">holding</span></span><span>Their left flank <span class="bad">wavering ▾</span></span></div>
+    </div>
+    <div class="badge pulse" style="left:50%;top:16.5%">Paused · aiming a called shot</div>
+    <div class="callout" style="left:52%;top:39%">Left arm disabled<small>thrust through the armpit gap</small></div>
+    <div class="label" style="left:46.8%;top:57.2%">You</div>
+    <div class="hud" style="right:1.2%;top:14%;width:25.5%">
+      <h4>called shot</h4>
+      <div class="big" style="font-size:1.15cqw">Vell man-at-arms</div>
+      <div class="muted" style="font-size:.86cqw;margin-bottom:.4cqw">Mail hauberk, open helm, bleeding from the right thigh</div>
+      <div class="doll">
+        <svg viewBox="0 0 100 210" aria-label="Paper-doll of the target, armoured parts hatched, left armpit selected">
+          <defs><pattern id="mail" width="4" height="4" patternUnits="userSpaceOnUse"><rect width="4" height="4" fill="#666b6e"/><circle cx="2" cy="2" r="1.3" fill="none" stroke="#a7acae" stroke-width=".6"/></pattern></defs>
+          <g stroke="#0e0c09" stroke-width="1.6" stroke-linejoin="round">
+            <circle cx="50" cy="20" r="13" fill="#c9a888"/><path d="M37 19 C37 6 63 6 63 19 Z" fill="#7d8285"/><rect x="48.5" y="16" width="3" height="11" fill="#7d8285"/>
+            <rect x="44" y="32" width="12" height="9" fill="url(#mail)"/>
+            <path d="M30 40 H70 L74 80 H26 Z" fill="url(#mail)"/>
+            <path d="M28 80 H72 L70 104 H30 Z" fill="url(#mail)"/>
+            <path d="M28 42 L18 46 L16 82 L26 82 Z" fill="url(#mail)"/>
+            <path d="M72 42 L82 46 L84 82 L74 82 Z" fill="url(#mail)"/>
+            <path d="M26 84 L16 84 L14 116 L22 116 Z" fill="#7a6650"/><path d="M74 84 L84 84 L86 116 L78 116 Z" fill="#7a6650"/>
+            <circle cx="18" cy="122" r="5" fill="#c9a888"/><circle cx="82" cy="122" r="5" fill="#c9a888"/>
+            <path d="M31 106 H49 L47 150 H33 Z" fill="#8a3326"/><path d="M51 106 H69 L67 150 H53 Z" fill="#6e5e48"/>
+            <path d="M33 152 H47 L46 192 H35 Z" fill="#6e5e48"/><path d="M53 152 H67 L65 192 H54 Z" fill="#6e5e48"/>
+            <ellipse cx="40" cy="198" rx="8" ry="4" fill="#3b2f22"/><ellipse cx="60" cy="198" rx="8" ry="4" fill="#3b2f22"/>
+          </g>
+          <g class="pulse"><circle cx="74" cy="46" r="7" fill="none" stroke="#e0703f" stroke-width="2.4"/><path d="M74 36 V41 M74 51 V56 M64 46 H69 M79 46 H84" stroke="#e0703f" stroke-width="2"/></g>
+        </svg>
+        <div class="parts">
+          <div><span>Head</span><span>22%</span></div>
+          <div><span>Neck</span><span>12%</span></div>
+          <div><span>Torso</span><span>71%</span></div>
+          <div class="on"><span>Left armpit (gap)</span><span>18%</span></div>
+          <div><span>Right arm</span><span>46%</span></div>
+          <div><span>Thighs</span><span>52%</span></div>
+          <div style="margin-top:.3cqw" class="tabs"><span class="on">Thrust</span><span>Swing</span><span>Shield bash</span></div>
+        </div>
+      </div>
+      <p style="margin-top:.5cqw;font-size:.92cqw">On a hit: <b style="color:var(--bone)">arm disabled</b> (likely), heavy bleeding. The gap is small, so it is hard to hit, but the mail won't stop the point.</p>
+      <p class="muted" style="margin-top:.3cqw;font-size:.85cqw"><span class="key">↑</span><span class="key">↓</span> part · <span class="key">←</span><span class="key">→</span> attack · <span class="key">F</span> strike · <span class="key">Esc</span> cancel · 2 enemies can reach you</p>
+    </div>
+    <div class="hud" style="left:50%;bottom:2.4%;transform:translateX(-50%)">
+      <div class="cards">
+        <div class="fcard"><div class="n"><span class="big" style="font-size:1.05cqw">I · Foot</span><span class="key">F1</span></div><span class="muted">178 · shield wall</span><span class="o">Hold the line</span><div class="bar"><i style="width:72%;background:#a6b46a"></i></div></div>
+        <div class="fcard"><div class="n"><span class="big" style="font-size:1.05cqw">II · Bows</span><span class="key">F2</span></div><span class="muted">80 · loose order</span><span class="o">Loose at will</span><div class="bar"><i style="width:85%;background:#a6b46a"></i></div></div>
+        <div class="fcard on"><div class="n"><span class="big" style="font-size:1.05cqw">III · Horse</span><span class="key">F3</span></div><span class="muted">24 · wedge</span><span class="o">Flank left ↗</span><div class="bar"><i style="width:90%;background:#a6b46a"></i></div></div>
+        <div class="fcard"><div class="n"><span class="big" style="font-size:1.05cqw">IV · Retinue</span><span class="key">F4</span></div><span class="muted">11 · with you</span><span class="o">Follow me</span><div class="bar"><i style="width:58%;background:var(--amber)"></i></div></div>
+        <div class="fcard" style="width:6cqw;place-content:center;text-align:center"><span class="key" style="justify-self:center">R</span><span class="muted" style="font-size:.8cqw">order wheel</span></div>
+      </div>
+    </div>
+    <div class="hud log" style="left:1.2%;top:14%;width:27%">
+      <div class="tabs" style="margin-bottom:.3cqw"><span class="on">Mine</span><span>Allies</span><span>All</span></div>
+      <p>You thrust through the gap at his left armpit. <span class="bad">The arm goes limp.</span></p>
+      <p>Brann blocks a mace on his shield. The shield splits.</p>
+      <p>An arrow strikes Ceolric in the right thigh. <span class="bad">He is slowed.</span></p>
+      <p>House Vell's left flank has lost 22% and is wavering.</p>
+    </div>
+    <span class="pin" style="left:26.6%;top:6%">1</span>
+    <span class="pin" style="left:38.6%;top:17.6%">2</span>
+    <span class="pin" style="left:43.6%;top:52.4%">3</span>
+    <span class="pin" style="left:72.4%;top:18%">4</span>
+    <span class="pin" style="left:24.6%;top:84%">5</span>
+    <span class="pin" style="left:56.4%;top:66%">6</span>
+    <span class="pin" style="left:1.6%;top:15%">7</span>
+  </div></div>
+  <ol class="notes">
+    <li><span><b>Strength and morale</b> for both sides. Battles end when a side breaks, not when the last man dies.</span></li>
+    <li><span><b>Pause to aim.</b> T freezes the field while you choose. Without pausing, the game slows down by itself on crits, kills and when your hero is hit.</span></li>
+    <li><span><b>You fight in the line</b> as your own character. WASD to move, click to attack.</span></li>
+    <li><span><b>Called shots on a paper-doll.</b> Armour shows as hatching, wounds in red. The odds come from the real armour and the real gap.</span></li>
+    <li><span><b>Formation orders</b> while you fight: F1–F4 picks a formation, the wheel on R gives orders. Captains run whatever you don't touch.</span></li>
+    <li><span><b>Nothing is cleaned up.</b> Bodies, severed limbs, blood and spent arrows stay on the ground after the battle and into the next week.</span></li>
+    <li><span><b>A log you can read</b>, filtered to what happened to you, your allies, or everyone.</span></li>
+  </ol>
+  <div class="play">
+    <div><h3>How this moment plays</h3><p>Vell's host caught your levies at the ford. You hold the centre with your retinue and send the horse round their left. A man-at-arms reaches you; you press T, see the gap in his mail at the armpit, and thrust. The callout tells you what happened in plain words.</p></div>
+    <div><h3>What happens after</h3><p>No HP bar resets. Ceolric limps for a week. The men you levied from Hollin are not harvesting, so Hollin's grain falls short this autumn. Prisoners can be ransomed or recruited. The chronicle writes it down: <em>"Day 31: Aldric broke House Vell's left at Cold Ford."</em></p></div>
+  </div>
+</div></section>
+
+<section><div class="wrap plate">
+  <div class="plate-cap"><span class="no">Plate III</span><h2>The Vale of Aequor</h2><span class="what">The world map: press M. It is the same world you walk, drawn as a painted survey 32 km across.</span></div>
+  <div class="plate-view"><div class="screen" id="mapScreen">
+    <canvas id="mapCv" role="img" aria-label="Painted parchment map with coastlines, mountains, forests, rivers, roads, towns and faction borders"></canvas>
+    <div class="cartouche" style="left:2%;top:3%"><div class="t1">The Vale of Aequor</div><div class="t2">surveyed in the autumn of the year 412</div></div>
+    <div class="hud" style="right:1.2%;top:2.2%">
+      <div class="tabs"><span class="on">Terrain</span><span>Factions</span><span>Trade</span><span>Bounties</span><span>Ambition</span></div>
+      <div class="row" style="margin-top:.4cqw;font-size:.88cqw;gap:1cqw"><span><span style="color:#b0582c">■</span> Ravensguard</span><span><span style="color:#5a6f88">■</span> House Vell</span><span><span style="color:#7d8a4a">■</span> Ashby Free Towns</span></div>
+    </div>
+    <div class="hud tip" id="mapTip" style="left:50%;top:50%">
+      <div class="big" style="font-size:1.25cqw">Oakford</div>
+      <p class="muted" id="mapTipSub">market town · pop. 1,240</p>
+      <p>Grain <b>2 c</b> <span class="good">cheap</span></p>
+      <p>Iron <b>14 c</b> <span class="bad">dear</span> <span class="why">Coldridge mine flooded, day 9</span></p>
+      <p>Your goal: <b>lot on Tanner's Row</b>, 450 c</p>
+    </div>
+    <div class="label" id="armyLbl" style="left:50%;top:50%;color:#e7b3a0">House Vell host · ~410 · reaches Oakford in ~3 days</div>
+    <div class="label" id="youLbl" style="left:50%;top:50%">You · 2 people</div>
+    <span class="pin" style="left:1.6%;top:4%">1</span>
+    <span class="pin" id="mpin2" style="left:68%;top:4%">2</span>
+    <span class="pin" id="mpin3" style="left:50%;top:50%">3</span>
+    <span class="pin" id="mpin4" style="left:50%;top:50%">4</span>
+    <span class="pin" id="mpin5" style="left:50%;top:50%">5</span>
+    <span class="pin" style="left:62.6%;top:94.5%">6</span>
+  </div></div>
+  <ol class="notes">
+    <li><span><b>A survey, not a menu.</b> Coasts, ridges, forests and rivers come from the world generator's own height and moisture data.</span></li>
+    <li><span><b>Map modes</b> repaint the same parchment: who owns what, where goods are cheap, where you are wanted, and where your ambition leads.</span></li>
+    <li><span><b>Hover a town</b> to see prices you have heard about, each with its cause.</span></li>
+    <li><span><b>Armies are real.</b> That host is about 410 men marching on the road. You can ride out to scout it, warn Oakford, or sell bread to its camp.</span></li>
+    <li><span><b>Click anywhere to travel.</b> Your party walks the real road in real time; the map just sets the waypoint.</span></li>
+    <li><span><b>Real distances.</b> The scale bar is true. Towns 6–10 km apart take about 45 real minutes at a jog, most of a game day.</span></li>
+  </ol>
+</div></section>
+
+<section><div class="wrap plate">
+  <div class="plate-cap"><span class="no">Plate IV</span><h2>Raising the Smithy</h2><span class="what">You bought the lot. Now you build it wall by wall, and the room becomes a smithy once it holds the right things.</span></div>
+  <div class="plate-view"><div class="screen">
+    <canvas id="buildCv" role="img" aria-label="Top-down building site with stone walls, ghost blueprints, a stockpile and workers"></canvas>
+    <div class="hud" style="left:20%;top:13.5%;padding:.4cqw .7cqw">
+      <span class="big" style="font-size:1.1cqw">Smithy</span> <span class="muted">· room detected</span>
+      <div class="row" style="font-size:.9cqw;margin-top:.15cqw"><span><span class="good">✓</span> anvil</span><span>◻ forge</span><span>◻ quench trough</span><span>roof 40%</span></div>
+    </div>
+    <div class="hud" style="left:47%;top:28%;max-width:20cqw">
+      <div class="big" style="font-size:1.1cqw">Forge</div>
+      <p>40 stone · 6 iron · 12 bricks</p>
+      <p class="muted">About 2 days with 2 workers</p>
+      <p style="margin-top:.2cqw"><span class="key">Click</span> place · <span class="key">Z</span><span class="key">X</span> rotate · <span class="key">Esc</span> cancel</p>
+    </div>
+    <div class="hud ledger" style="right:1.2%;top:2.2%;width:25%">
+      <h4>ledger · week 3 of autumn</h4>
+      <div class="big" style="font-size:1.15cqw">Market stall, Oakford square</div>
+      <p class="muted" style="font-size:.86cqw;margin-bottom:.35cqw">Sells nails and tools you buy in Ashby</p>
+      <table>
+        <tr><td>Sales</td><td class="good">+212</td></tr>
+        <tr><td>Stock bought in Ashby</td><td>−118</td></tr>
+        <tr><td>Edwy's wage (clerk)</td><td>−35</td></tr>
+        <tr><td>Stall rent</td><td>−14</td></tr>
+        <tr><td>Oakford tax (8%)</td><td>−17</td></tr>
+        <tr class="sum"><td>Profit</td><td>+28 c</td></tr>
+      </table>
+      <div style="margin-top:.5cqw;display:grid;gap:.25cqw;font-size:.9cqw">
+        <div><span class="bad">●</span> Nails run out in 2 days.</div>
+        <div><span style="color:var(--amber)">●</span> Iron is dear this week. <span class="why">Why?</span></div>
+        <div class="muted">Smithy: under construction (61%)</div>
+      </div>
+    </div>
+    <div class="hud buildbar" style="left:50%;bottom:2.4%;transform:translateX(-50%)">
+      <div class="tabs"><span>Walls</span><span>Floors</span><span>Doors</span><span>Roofs</span><span class="on">Workstations</span><span>Storage</span><span>Furniture</span><span>Defences</span></div>
+      <div class="items">
+        <div class="item"><span class="chip"><svg><use href="#ic-anvil"/></svg></span>Anvil<span class="muted">built</span></div>
+        <div class="item on"><span class="chip"><svg><use href="#ic-tower"/></svg></span>Forge<span class="muted">40 stone</span></div>
+        <div class="item"><span class="chip"><svg><use href="#ic-ale"/></svg></span>Quench trough<span class="muted">10 wood</span></div>
+        <div class="item"><span class="chip"><svg><use href="#ic-hammer"/></svg></span>Workbench<span class="muted">20 wood</span></div>
+        <div class="item"><span class="chip"><svg><use href="#ic-timber"/></svg></span>Log pile<span class="muted">free</span></div>
+        <div class="item"><span class="chip"><svg><use href="#ic-wall"/></svg></span>Stone wall<span class="muted">4 stone</span></div>
+      </div>
+    </div>
+    <span class="pin" style="left:39%;top:72%">1</span>
+    <span class="pin" style="left:19.4%;top:13.5%">2</span>
+    <span class="pin" style="left:61.8%;top:46%">3</span>
+    <span class="pin" style="left:24.6%;top:84.5%">4</span>
+    <span class="pin" style="left:72.6%;top:8%">5</span>
+    <span class="pin" style="left:46.4%;top:29%">6</span>
+  </div></div>
+  <ol class="notes">
+    <li><span><b>Ghost blueprints.</b> You place walls, doors and floors piece by piece. Ghosts turn solid as workers finish them.</span></li>
+    <li><span><b>Rooms are recognised by what's in them.</b> Four walls, a roof, an anvil and a forge make a smithy. Beds make a bedroom.</span></li>
+    <li><span><b>Everything is hauled.</b> Stone, timber and iron come from the stockpile in someone's arms. You can carry too.</span></li>
+    <li><span><b>Build menu</b> by category, each item with its cost. Defences hold palisades, gates and murder holes.</span></li>
+    <li><span><b>The ledger</b> shows each property's week in crowns, with alerts that explain themselves.</span></li>
+    <li><span><b>Cost at the cursor</b> before you click.</span></li>
+  </ol>
+  <div class="play">
+    <div><h3>How this moment plays</h3><p>You lay out the walls, drop an anvil, and hire two labourers from the street. They haul stone while you buy iron in Ashby. When the forge is in, you hire a smith, choose what he makes and what you charge, and leave. The smithy keeps working while you're gone, using the same recipe numbers.</p></div>
+    <div><h3>Where it can go</h3><p>The same tools build a homestead in a wild clearing, a palisade around it, and one day the walls of your own town. Walls you build are real in sieges: a ram breaks the segment it hits, and the breach stays until you repair it.</p></div>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <div class="sec-head">
+    <p class="eyebrow">plate v · drawn by hand</p>
+    <h2>The icon sheet</h2>
+    <p class="lede">Every icon is drawn as vector art in one woodcut style: thick ink outline, flat fills, parchment ground. Parts of each drawing are marked as "faction colour" or "metal", so one drawing covers every banner and every material. Try it.</p>
+  </div>
+  <div class="sheet-tools">
+    <div class="seg" role="group" aria-label="Faction colours"><span class="lbl">faction</span>
+      <button type="button" id="fac-rg" aria-pressed="true">Ravensguard</button>
+      <button type="button" id="fac-vell" aria-pressed="false">House Vell</button>
+      <button type="button" id="fac-ash" aria-pressed="false">Ashby Free Towns</button>
+    </div>
+    <div class="seg" role="group" aria-label="Metal"><span class="lbl">metal</span>
+      <button type="button" id="met-iron" aria-pressed="true">Iron</button>
+      <button type="button" id="met-bronze" aria-pressed="false">Bronze</button>
+      <button type="button" id="met-black" aria-pressed="false">Blackened steel</button>
+    </div>
+  </div>
+  <div class="sheet" id="sheet"></div>
+</div></section>
+
+<section><div class="wrap">
+  <div class="sec-head">
+    <p class="eyebrow">how it plays</p>
+    <h2>Your first hour or so</h2>
+    <p class="lede">One possible start, about 75 real minutes across two game days, playing mostly at 1× and 4× and sleeping at 8×. Nothing here is scripted except where you begin and the ambition you picked.</p>
+  </div>
+  <ol class="timeline">
+    <li><span class="when">0:00</span><div><h3>Day 1, 08:00 · One screen, then you're in the world</h3><p>Pick a name and an origin: disgraced squire, tanner's widow, or deserter. Each comes with an ambition. Tick Ironman if you want one life. Under a minute later you are on the road into Oakford with 45 crowns.</p></div></li>
+    <li><span class="when">0:05</span><div><h3>Day 1, 09:40 · Oakford doesn't care that you arrived</h3><p>People go to work. The notice board at the reeve's house lists a lot on Tanner's Row for 450 crowns. Your ambition says <em>own a smithy</em>, so now you know what the money is for.</p></div></li>
+    <li><span class="when">0:20</span><div><h3>Day 1, afternoon · Earn it somehow</h3><p>Hauling hides for Hedda pays 2 crowns a day: safe, and far too slow for a 450-crown lot. You haul until noon and make 1. A caravan master at the gate pays 40 to guard tomorrow's run to Ashby, which is fast and dangerous. You sign on, and hire Brann, a deserter drinking in the tavern, for 20 a week.</p></div></li>
+    <li><span class="when">0:40</span><div><h3>Day 2, 09:00 · The ford</h3><p>Six bandits at a river crossing 4 km out. The game slows when you are hit. You aim at an unarmoured thigh and the man goes down. Brann is knocked out; you drag him onto the cart and the caravan gets through.</p><p class="chron">Day 2: Bandits ambushed the Ashby caravan at the ford. The cart survived because Aldric held the crossing.</p></div></li>
+    <li><span class="when">1:00</span><div><h3>Day 2, evening · Paid and patched</h3><p>You collect your 40 and sell the bandits' gear for 130. A surgeon splints your arm, and the paper-doll shows it: swings are 30% weaker for six days. Iron is dear in Ashby, and its "why" link says the Coldridge mine flooded. You spend 26 on nails to sell in Oakford.</p></div></li>
+    <li><span class="when">1:15</span><div><h3>Day 3, morning · A real choice</h3><p>You have 190 crowns. Rent a market stall now and start earning, or take a bigger contract that risks Brann's life. In the Ashby tavern you overhear that House Vell is drafting levies two valleys over. Nobody told you. You heard it.</p></div></li>
+  </ol>
+</div></section>
+
+<section><div class="wrap">
+  <div class="sec-head">
+    <p class="eyebrow">the long game</p>
+    <h2>From wanderer to banner</h2>
+    <p class="lede">These are not levels you grind. You reach each one by doing something in the world, like signing a deed or swearing fealty, and you can fall back down. New screens appear when they become relevant.</p>
+  </div>
+  <div class="ladder">
+    <div class="rung"><h3>Wanderer</h3><p class="how">You own what you carry. Odd jobs, trade, hunting, and a companion or two.</p><span class="un">C · I · J · M, and P once someone joins you</span></div>
+    <div class="rung"><h3>Sellsword</h3><p class="how">Contracts from towns and lords. A squad of up to eight who need paying.</p><span class="un">unlocks R orders</span></div>
+    <div class="rung"><h3>Householder</h3><p class="how">Buy a lot, or plant a claim banner in a clearing. Build, hire, open a business.</p><span class="un">unlocks B build · L ledger</span></div>
+    <div class="rung"><h3>Vassal</h3><p class="how">Swear to a lord for land and duties. Lead levies in his wars.</p><span class="un">unlocks F faction · formations</span></div>
+    <div class="rung"><h3>Lord</h3><p class="how">Your own fief. Zone fields, set taxes, raise levies, wall your town.</p><span class="un">unlocks fief ledger · siege works</span></div>
+    <div class="rung"><h3>Founder</h3><p class="how">Break away under your own banner, with your own laws and enemies.</p><span class="un">unlocks diplomacy · laws</span></div>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <div class="sec-head">
+    <p class="eyebrow">brutal, but never random</p>
+    <h2>Every loss has a reason you can read</h2>
+    <p class="lede">The world is harsh by design. The rule that keeps it fair: the game never hides why something happened. Click any "why" and the chronicle shows the chain of causes. When nothing specific caused a change, it says so: market drift.</p>
+  </div>
+  <div class="why-grid">
+    <div class="why-card"><span class="what">Bread in Oakford costs three times its usual price.</span><ol><li>The mill at Grimsby burned (day 9).</li><li>The Ashby grain caravan was raided at the ford (day 11).</li><li>Oakford's granary is down to 4 days.</li></ol></div>
+    <div class="why-card"><span class="what">Oakford's guards attack you on sight.</span><ol><li>Two people saw you take a purse in the square (day 14).</li><li>Bounty: 60 crowns, House Ravensguard.</li><li>Pay it at the reeve's, or stay out of town.</li></ol></div>
+    <div class="why-card"><span class="what">You lost the fight at Cold Ford.</span><ol><li>Your left leg was crushed: movement −60%.</li><li>Brann fell, and your retinue's morale broke.</li><li>The encounter readout put the odds at 1 to 3 before you charged.</li></ol></div>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <div class="sec-head">
+    <p class="eyebrow">controls</p>
+    <h2>Mouse and keyboard, equally</h2>
+    <p class="lede">Every action works both ways, every key can be rebound, and the key is printed on the button that does the same thing. Each mode has its own key map, checked so no key does two things at once.</p>
+  </div>
+  <div class="ctrl"><table>
+    <thead><tr><th>Do this</th><th>Keyboard</th><th>Mouse</th></tr></thead>
+    <tbody>
+      <tr><td>Move your hero</td><td><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd></td><td>Left-click the ground</td></tr>
+      <tr><td>Do the obvious thing to a target</td><td><kbd>E</kbd></td><td>Left-click it: a person or object is used, an enemy is attacked</td></tr>
+      <tr><td>Everything you can do to a target</td><td><kbd>Q</kbd> on what you're hovering</td><td>Right-click</td></tr>
+      <tr><td>Select your own people</td><td><kbd>Tab</kbd> to cycle</td><td>Shift-click or drag a box</td></tr>
+      <tr><td>Pause and speed</td><td><kbd>Space</kbd>, then <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>4</kbd> for 1×, 2×, 4×, 8×</td><td>Time buttons</td></tr>
+      <tr><td>Called shot (pauses)</td><td><kbd>T</kbd>, then <kbd>↑</kbd> <kbd>↓</kbd> part, <kbd>←</kbd> <kbd>→</kbd> attack, <kbd>F</kbd> strike</td><td>Right-click an enemy, Aim, click a body part</td></tr>
+      <tr><td>Orders</td><td><kbd>F1</kbd>–<kbd>F4</kbd> formation, hold <kbd>R</kbd> for the wheel</td><td>Formation cards, wheel</td></tr>
+      <tr><td>Build mode</td><td><kbd>B</kbd>, rotate with <kbd>Z</kbd> <kbd>X</kbd></td><td>Click to place, right-click to remove a ghost</td></tr>
+      <tr><td>Character, inventory, squad, journal</td><td><kbd>C</kbd> <kbd>I</kbd> <kbd>P</kbd> <kbd>J</kbd></td><td>Hotbar</td></tr>
+      <tr><td>Map, ledger, faction, codex, chronicle</td><td><kbd>M</kbd> <kbd>L</kbd> <kbd>F</kbd> <kbd>K</kbd> <kbd>H</kbd></td><td>Hotbar</td></tr>
+      <tr><td>Back out of anything</td><td><kbd>Esc</kbd></td><td>The ✕ on every panel</td></tr>
+    </tbody>
+  </table></div>
+</div></section>
+</main>
+
+<footer><div class="wrap">
+  <p>These plates are drawn live in your browser with canvas code. They use the same ideas the game would use (ground painted from noise, people built from body parts, hand-drawn vector icons), but not the game engine itself. They show the intended look, layout and numbers, not finished art.</p>
+</div></footer>
+
+<script>
+(function(){
+"use strict";
+const W=1280,H=720;
+const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---------- noise & helpers ---------- */
+function hash(x,y,s){let h=(Math.imul(x|0,374761393)+Math.imul(y|0,668265263)+Math.imul(s|0,1442695041))|0;h=Math.imul(h^(h>>>13),1274126177);h^=h>>>16;return (h>>>0)/4294967296;}
+function vnoise(x,y,s){const xi=Math.floor(x),yi=Math.floor(y),xf=x-xi,yf=y-yi;const u=xf*xf*(3-2*xf),v=yf*yf*(3-2*yf);const a=hash(xi,yi,s),b=hash(xi+1,yi,s),c=hash(xi,yi+1,s),d=hash(xi+1,yi+1,s);return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v;}
+function fbm(x,y,s,o){let t=0,a=.5,f=1,n=0;for(let i=0;i<o;i++){t+=a*vnoise(x*f,y*f,s+i*17);n+=a;a*=.5;f*=2;}return t/n;}
+function rngOf(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+const ss=(a,b,x)=>{const t=clamp((x-a)/(b-a),0,1);return t*t*(3-2*t);};
+const mix=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];
+const rgb=(c,a)=>a===undefined?`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`:`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`;
+const INK='#16130e';
+
+function setup(id){const c=document.getElementById(id);c.width=W;c.height=H;return c.getContext('2d');}
+function paintField(ctx,fn,scale){
+  const w=W/scale,h=H/scale,off=document.createElement('canvas');off.width=w;off.height=h;
+  const o=off.getContext('2d'),img=o.createImageData(w,h),d=img.data;
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){const c=fn(x*scale,y*scale);const i=(y*w+x)*4;d[i]=c[0];d[i+1]=c[1];d[i+2]=c[2];d[i+3]=255;}
+  o.putImageData(img,0,0);ctx.imageSmoothingEnabled=true;ctx.drawImage(off,0,0,W,H);
+}
+function grain(ctx,n,seed){const r=rngOf(seed);for(let i=0;i<n;i++){ctx.fillStyle=r()<.5?'rgba(0,0,0,.07)':'rgba(255,240,210,.05)';ctx.fillRect(r()*W,r()*H,1+r()*1.5,1+r()*1.5);}}
+function finish(ctx,warm,red){
+  const g=ctx.createLinearGradient(0,0,W,H);g.addColorStop(0,`rgba(255,190,110,${warm})`);g.addColorStop(1,'rgba(25,18,40,.2)');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  const v=ctx.createRadialGradient(W/2,H/2,H*.35,W/2,H/2,H*.95);v.addColorStop(0,'rgba(0,0,0,0)');v.addColorStop(1,red?'rgba(40,4,2,.62)':'rgba(0,0,0,.5)');ctx.fillStyle=v;ctx.fillRect(0,0,W,H);
+}
+function blob(ctx,x,y,r,col,rng,n){ctx.fillStyle=col;for(let i=0;i<(n||6);i++){ctx.beginPath();ctx.arc(x+(rng()-.5)*r*1.4,y+(rng()-.5)*r*1.1,r*(.35+rng()*.45),0,7);ctx.fill();}}
+
+/* people from body parts, top-down; facing +x */
+function person(ctx,x,y,ang,o){
+  ctx.save();ctx.translate(x,y);ctx.rotate(ang);const s=o.s||1;ctx.scale(s,s);
+  if(o.shadow!==false){ctx.fillStyle='rgba(0,0,0,.3)';ctx.beginPath();ctx.ellipse(3,4,8.5,6,0,0,7);ctx.fill();}
+  ctx.lineWidth=1.1;ctx.strokeStyle=INK;
+  if(o.weapon){ctx.strokeStyle='#9aa0a2';ctx.lineWidth=1.8;ctx.beginPath();ctx.moveTo(4,6);ctx.lineTo(o.weapon,8);ctx.stroke();ctx.strokeStyle=INK;ctx.lineWidth=1.1;}
+  if(o.bow){ctx.strokeStyle='#6b4a2c';ctx.lineWidth=1.6;ctx.beginPath();ctx.arc(4,0,9,-1.1,1.1);ctx.stroke();ctx.strokeStyle=INK;ctx.lineWidth=1.1;}
+  if(o.sev!=='l'){ctx.fillStyle=o.sleeve||o.body;ctx.beginPath();ctx.ellipse(1.5,-7.6,4,2.5,.35,0,7);ctx.fill();ctx.stroke();}
+  else{ctx.fillStyle='#7a1a12';ctx.beginPath();ctx.arc(0,-7,2.6,0,7);ctx.fill();}
+  ctx.fillStyle=o.sleeve||o.body;ctx.beginPath();ctx.ellipse(1.5,7.6,4,2.5,-.35,0,7);ctx.fill();ctx.stroke();
+  ctx.fillStyle=o.body;ctx.beginPath();ctx.ellipse(0,0,4.6,8.2,0,0,7);ctx.fill();ctx.stroke();
+  if(o.shield){ctx.fillStyle=o.shield;ctx.beginPath();ctx.ellipse(5.2,-7.5,2.2,5.6,.2,0,7);ctx.fill();ctx.stroke();}
+  if(o.carry){ctx.fillStyle=o.carry;ctx.fillRect(4,-5,6,10);ctx.strokeRect(4,-5,6,10);}
+  ctx.fillStyle=o.helm?'#7d8285':(o.head||'#b48d6c');ctx.beginPath();ctx.arc(.8,0,3.7,0,7);ctx.fill();ctx.stroke();
+  if(o.helm){ctx.strokeStyle='#c3c8ca';ctx.lineWidth=.8;ctx.beginPath();ctx.moveTo(-1.5,0);ctx.lineTo(3.5,0);ctx.stroke();}
+  ctx.restore();
+}
+function corpse(ctx,x,y,ang,body,rng,blood){
+  ctx.save();ctx.translate(x,y);ctx.rotate(ang);
+  if(blood!==false){ctx.fillStyle='rgba(105,16,12,.55)';for(let i=0;i<5;i++){ctx.beginPath();ctx.ellipse((rng()-.5)*14,(rng()-.5)*10,6+rng()*8,4+rng()*6,rng()*3,0,7);ctx.fill();}}
+  ctx.strokeStyle=INK;ctx.lineWidth=1.1;ctx.fillStyle=body;
+  ctx.beginPath();ctx.moveTo(-6,-2);ctx.lineTo(-15,-5);ctx.moveTo(-6,2);ctx.lineTo(-15,4);ctx.strokeStyle='#3b2f22';ctx.lineWidth=3;ctx.stroke();
+  ctx.strokeStyle=INK;ctx.lineWidth=1.1;ctx.beginPath();ctx.ellipse(0,0,8,4.5,0,0,7);ctx.fill();ctx.stroke();
+  ctx.beginPath();ctx.ellipse(2,-6,2.4,4,.9,0,7);ctx.fill();ctx.stroke();ctx.beginPath();ctx.ellipse(1,6.5,2.4,4,-1.2,0,7);ctx.fill();ctx.stroke();
+  ctx.fillStyle='#b48d6c';ctx.beginPath();ctx.arc(10.5,0,3.5,0,7);ctx.fill();ctx.stroke();
+  ctx.restore();
+}
+function ring(ctx,x,y,r,col,dash){ctx.save();ctx.strokeStyle=col;ctx.lineWidth=2;if(dash)ctx.setLineDash(dash);ctx.beginPath();ctx.ellipse(x,y+2,r,r*.72,0,0,7);ctx.stroke();ctx.restore();}
+function tree(ctx,x,y,r,rng){
+  ctx.fillStyle='rgba(0,0,0,.32)';ctx.beginPath();ctx.ellipse(x+r*.5,y+r*.6,r*1.05,r*.8,0,0,7);ctx.fill();
+  const cols=[[50,56,32],[78,82,42],[150,84,36],[176,118,52],[112,62,30]];
+  for(let i=0;i<9;i++){const c=cols[(rng()*cols.length)|0];blob(ctx,x+(rng()-.5)*r*.8,y+(rng()-.5)*r*.8,r*.55,rgb(c),rng,2);}
+  ctx.fillStyle='rgba(255,226,170,.12)';ctx.beginPath();ctx.arc(x-r*.3,y-r*.3,r*.5,0,7);ctx.fill();
+  ctx.strokeStyle='rgba(22,19,14,.8)';ctx.lineWidth=1.8;ctx.beginPath();ctx.arc(x,y,r*.95,0,7);ctx.stroke();
+}
+function hatch(ctx,x,y,w,h,step,alpha){ctx.save();ctx.beginPath();ctx.rect(x,y,w,h);ctx.clip();ctx.strokeStyle=`rgba(18,14,10,${alpha})`;ctx.lineWidth=1;for(let k=-h;k<w;k+=step){ctx.beginPath();ctx.moveTo(x+k,y+h);ctx.lineTo(x+k+h,y);ctx.stroke();}ctx.restore();}
+function roof(ctx,x,y,w,h,type){
+  ctx.fillStyle='rgba(0,0,0,.30)';ctx.fillRect(x+9,y+11,w,h);hatch(ctx,x+9,y+11,w,h,4,.45);
+  const base={tile:[118,58,38],slate:[78,74,72],thatch:[128,102,62]}[type];
+  ctx.fillStyle=rgb(base);ctx.fillRect(x,y,w,h);
+  ctx.save();ctx.beginPath();ctx.rect(x,y,w,h);ctx.clip();
+  const horiz=w>=h,hw=(horiz?h:w)/2;
+  if(type==='thatch'){const r=rngOf(x*7+y);ctx.strokeStyle='rgba(60,42,20,.35)';ctx.lineWidth=1;for(let i=0;i<w*h/18;i++){const px=x+r()*w,py=y+r()*h;ctx.beginPath();ctx.moveTo(px,py);if(horiz)ctx.lineTo(px+(r()-.5)*2,py+(py<y+h/2?5:-5));else ctx.lineTo(px+(px<x+w/2?5:-5),py+(r()-.5)*2);ctx.stroke();}}
+  else{ctx.strokeStyle='rgba(20,14,10,.28)';ctx.lineWidth=1;const st=type==='tile'?6:7;
+    if(horiz){for(let yy=y;yy<y+h;yy+=st){ctx.beginPath();ctx.moveTo(x,yy);ctx.lineTo(x+w,yy);ctx.stroke();}
+      for(let yy=y,k=0;yy<y+h;yy+=st,k++)for(let xx=x+(k%2)*5;xx<x+w;xx+=10){ctx.beginPath();ctx.moveTo(xx,yy);ctx.lineTo(xx,yy+st);ctx.stroke();}}
+    else{for(let xx=x;xx<x+w;xx+=st){ctx.beginPath();ctx.moveTo(xx,y);ctx.lineTo(xx,y+h);ctx.stroke();}}}
+  ctx.fillStyle='rgba(255,225,170,.10)';if(horiz)ctx.fillRect(x,y,w,h/2);else ctx.fillRect(x,y,w/2,h);
+  ctx.fillStyle='rgba(0,0,0,.18)';if(horiz)ctx.fillRect(x,y+h/2,w,h/2);else ctx.fillRect(x+w/2,y,w/2,h);
+  if(horiz)hatch(ctx,x,y+h/2,w,h/2,5,.32);else hatch(ctx,x+w/2,y,w/2,h,5,.32);
+  ctx.restore();
+  ctx.strokeStyle=INK;ctx.lineWidth=2;
+  if(type!=='thatch'||true){ctx.beginPath();
+    if(horiz){const ry=y+h/2;ctx.moveTo(x+hw,ry);ctx.lineTo(x+w-hw,ry);ctx.moveTo(x,y);ctx.lineTo(x+hw,ry);ctx.lineTo(x,y+h);ctx.moveTo(x+w,y);ctx.lineTo(x+w-hw,ry);ctx.lineTo(x+w,y+h);}
+    else{const rx=x+w/2;ctx.moveTo(rx,y+hw);ctx.lineTo(rx,y+h-hw);ctx.moveTo(x,y);ctx.lineTo(rx,y+hw);ctx.lineTo(x+w,y);ctx.moveTo(x,y+h);ctx.lineTo(rx,y+h-hw);ctx.lineTo(x+w,y+h);}
+    ctx.stroke();}
+  ctx.lineWidth=2.4;ctx.strokeRect(x,y,w,h);
+  const cx=x+w*.72,cy=y+h*.22;ctx.fillStyle='#5b544c';ctx.fillRect(cx,cy,10,10);ctx.lineWidth=1.5;ctx.strokeRect(cx,cy,10,10);
+}
+function leaves(ctx,n,rng,box){const cols=['#a4532a','#c0803a','#8a3a1e','#b99446','#6f2a18'];for(let i=0;i<n;i++){const x=box?box[0]+rng()*box[2]:rng()*W,y=box?box[1]+rng()*box[3]:rng()*H;ctx.save();ctx.translate(x,y);ctx.rotate(rng()*6.3);ctx.fillStyle=cols[(rng()*cols.length)|0];ctx.globalAlpha=.75;ctx.beginPath();ctx.ellipse(0,0,2.6,1.3,0,0,7);ctx.fill();ctx.restore();}}
+function stones(ctx,mask,rng){ctx.lineWidth=1;for(let y=0;y<H;y+=7){const off=(y/7)%2?4:0;for(let x=off;x<W;x+=9){if(!mask(x,y))continue;ctx.fillStyle=`rgba(255,240,210,${.03+rng()*.05})`;ctx.strokeStyle='rgba(30,24,18,.32)';ctx.beginPath();ctx.roundRect?ctx.roundRect(x+.5,y+.5,7.5,5.5,2):ctx.rect(x+.5,y+.5,7.5,5.5);ctx.fill();ctx.stroke();}}}
+
+/* ---------- PLATE I: town ---------- */
+function drawTown(){
+  const ctx=setup('townCv'),rng=rngOf(14);
+  const yc=x=>400+40*Math.sin(x/260);
+  paintField(ctx,(x,y)=>{
+    const n=fbm(x/110,y/110,3,4),n2=fbm(x/22,y/22,7,3);
+    let c=mix([66,72,40],[108,102,58],n);c=mix(c,[116,94,62],Math.max(0,n2-.55)*1.6);
+    const d=Math.abs(y-yc(x)),sq=Math.hypot(x-230,y-400);
+    const edge=Math.max(1-ss(56,96,d),1-ss(112,165,sq));c=mix(c,[100,82,58],edge*.6);
+    const s=Math.max(1-ss(48,62,d),1-ss(104,122,sq));c=mix(c,mix([104,96,84],[136,126,108],n2),s);
+    return c;
+  },2);
+  stones(ctx,(x,y)=>Math.abs(y-yc(x))<50||Math.hypot(x-230,y-400)<108,rng);
+  // gardens behind north houses
+  for(let gx=430;gx<1090;gx+=110){const gw=96,gy=28+(rng()*14|0),gh=96;ctx.fillStyle='#4a3a28';ctx.fillRect(gx,gy,gw,gh);
+    for(let r=gy+8;r<gy+gh-4;r+=10){ctx.strokeStyle='rgba(120,130,60,.8)';ctx.lineWidth=3;ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(gx+6,r);ctx.lineTo(gx+gw-6,r);ctx.stroke();}
+    ctx.setLineDash([]);ctx.strokeStyle='#5e4630';ctx.lineWidth=2;ctx.strokeRect(gx,gy,gw,gh);}
+  leaves(ctx,900,rng);
+  // trees
+  [[70,70,46],[150,40,38],[60,170,34],[1230,60,44],[1180,140,30],[70,640,48],[160,690,36],[980,690,40],[1240,650,42],[360,60,30]].forEach(t=>tree(ctx,t[0],t[1],t[2],rng));
+  // market square: well, stalls
+  ctx.fillStyle='#6d665c';ctx.beginPath();ctx.arc(230,400,20,0,7);ctx.fill();ctx.strokeStyle=INK;ctx.lineWidth=2;ctx.stroke();
+  ctx.fillStyle='#1f2a2e';ctx.beginPath();ctx.arc(230,400,11,0,7);ctx.fill();ctx.stroke();
+  ctx.strokeStyle='#5b4330';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(206,400);ctx.lineTo(254,400);ctx.stroke();
+  for(let i=0;i<7;i++){const a=i/7*6.283+.3,sx=230+Math.cos(a)*78,sy=400+Math.sin(a)*70;ctx.save();ctx.translate(sx,sy);ctx.rotate(a+1.57);
+    ctx.fillStyle='rgba(0,0,0,.35)';ctx.fillRect(-21,-11,46,28);
+    for(let k=0;k<6;k++){ctx.fillStyle=k%2?'#d9c9a2':(i%2?'#8c3b22':'#4f5d3a');ctx.fillRect(-24+k*8,-14,8,26);}
+    ctx.strokeStyle=INK;ctx.lineWidth=1.6;ctx.strokeRect(-24,-14,48,26);ctx.restore();}
+  for(let i=0;i<10;i++){const a=rng()*6.28,r=130+rng()*20;const bx=230+Math.cos(a)*r,by=400+Math.sin(a)*r*.9;ctx.fillStyle=i%2?'#6b4a2c':'#5a3d24';ctx.beginPath();ctx.arc(bx,by,6,0,7);ctx.fill();ctx.strokeStyle=INK;ctx.lineWidth=1.2;ctx.stroke();ctx.beginPath();ctx.arc(bx,by,3,0,7);ctx.stroke();}
+  // north buildings
+  [[420,170,120,110,'slate'],[560,190,90,100,'thatch'],[670,150,140,120,'tile'],[830,180,100,90,'thatch'],[950,160,130,120,'slate'],[1100,175,110,100,'tile']].forEach(b=>roof(ctx,...b));
+  // south buildings
+  [[380,505,110,100,'thatch'],[880,520,120,100,'tile'],[1030,500,140,110,'slate'],[1180,520,100,90,'thatch']].forEach(b=>roof(ctx,...b));
+  // smithy interior (roof faded)
+  const sx=520,sy=505,sw=150,sh=110;
+  ctx.fillStyle='rgba(0,0,0,.35)';ctx.fillRect(sx+9,sy+11,sw,sh);
+  ctx.fillStyle='#5f4630';ctx.fillRect(sx,sy,sw,sh);ctx.strokeStyle='rgba(20,14,10,.4)';ctx.lineWidth=1;for(let yy=sy+7;yy<sy+sh;yy+=8){ctx.beginPath();ctx.moveTo(sx,yy);ctx.lineTo(sx+sw,yy);ctx.stroke();}
+  const fx=sx+sw-46,fy=sy+18;const glow=ctx.createRadialGradient(fx+15,fy+15,2,fx+15,fy+15,60);glow.addColorStop(0,'rgba(255,170,70,.75)');glow.addColorStop(1,'rgba(255,120,40,0)');ctx.fillStyle=glow;ctx.fillRect(sx,sy,sw,sh);
+  ctx.fillStyle='#4a4644';ctx.fillRect(fx,fy,30,30);ctx.strokeStyle=INK;ctx.lineWidth=1.6;ctx.strokeRect(fx,fy,30,30);ctx.fillStyle='#e0782e';ctx.fillRect(fx+8,fy+8,14,14);
+  ctx.fillStyle='#3d4245';ctx.beginPath();ctx.moveTo(sx+40,sy+60);ctx.lineTo(sx+70,sy+60);ctx.lineTo(sx+76,sy+54);ctx.lineTo(sx+70,sy+70);ctx.lineTo(sx+44,sy+70);ctx.closePath();ctx.fill();ctx.stroke();
+  ctx.fillStyle='#2b3a40';ctx.fillRect(sx+12,sy+80,30,14);ctx.strokeRect(sx+12,sy+80,30,14);
+  ctx.strokeStyle='#8f8a82';ctx.lineWidth=7;ctx.strokeRect(sx+3,sy+3,sw-6,sh-6);ctx.strokeStyle=INK;ctx.lineWidth=1.5;ctx.strokeRect(sx,sy,sw,sh);ctx.strokeRect(sx+7,sy+7,sw-14,sh-14);
+  ctx.fillStyle='#5f4630';ctx.fillRect(sx+60,sy-1,30,9);
+  ctx.save();ctx.setLineDash([6,5]);ctx.strokeStyle='rgba(239,229,204,.55)';ctx.lineWidth=1.5;ctx.strokeRect(sx-6,sy-6,sw+12,sh+12);ctx.restore();
+  person(ctx,sx+58,sy+48,1.6,{body:'#4b4038',sleeve:'#4b4038',weapon:14,s:1});
+  person(ctx,sx+100,sy+70,3.4,{body:'#6e5a3c',head:'#c09a7a'});
+  ring(ctx,sx+100,sy+70,13,'rgba(239,229,204,.8)');
+  // lot for sale
+  const lx=700,ly=500,lw=150,lh=120;
+  ctx.fillStyle='rgba(84,92,48,.35)';ctx.fillRect(lx,ly,lw,lh);
+  for(let i=0;i<14;i++){ctx.fillStyle='rgba(120,112,98,.8)';ctx.beginPath();ctx.ellipse(lx+10+rng()*(lw-20),ly+10+rng()*(lh-20),2+rng()*3,1.5+rng()*2,rng()*3,0,7);ctx.fill();}
+  ctx.save();ctx.setLineDash([7,5]);ctx.strokeStyle='#cbb68a';ctx.lineWidth=1.8;ctx.strokeRect(lx,ly,lw,lh);ctx.restore();
+  [[lx,ly],[lx+lw,ly],[lx,ly+lh],[lx+lw,ly+lh]].forEach(p=>{ctx.fillStyle='#3a2a1c';ctx.fillRect(p[0]-3,p[1]-3,6,6);});
+  ctx.fillStyle='#3a2a1c';ctx.fillRect(lx+73,ly-2,4,14);ctx.fillStyle='#8c6a44';ctx.fillRect(lx+58,ly-12,34,12);ctx.strokeStyle=INK;ctx.lineWidth=1.4;ctx.strokeRect(lx+58,ly-12,34,12);
+  // townsfolk
+  const clothes=['#5d4a36','#6e5a3c','#4b5544','#5a4f63','#7a5a3a','#3f4a52','#6b3b2a','#8a7650'];
+  const heads=['#b48d6c','#c09a7a','#9a7458','#d0b090','#7a5a44','#4a3a2c'];
+  const hero={x:560,y:422};
+  for(let i=0;i<46;i++){let x=330+rng()*890,y=yc(x)+(rng()-.5)*92;if(Math.hypot(x-hero.x,y-hero.y)<70||Math.hypot(x-690,y-385)<40)continue;
+    person(ctx,x,y,(rng()<.5?0:Math.PI)+(rng()-.5)*.6,{body:clothes[(rng()*8)|0],head:heads[(rng()*6)|0],carry:rng()<.2?'#7a5534':null});}
+  for(let i=0;i<16;i++){const a=rng()*6.28,r=30+rng()*60;person(ctx,230+Math.cos(a)*r,400+Math.sin(a)*r,rng()*6.28,{body:clothes[(rng()*8)|0],head:heads[(rng()*6)|0]});}
+  person(ctx,300,330,2.2,{body:'#7f1d17',helm:true,weapon:18});person(ctx,320,470,-2.4,{body:'#7f1d17',helm:true,weapon:18});
+  // Hedda (hovered)
+  person(ctx,690,385,Math.PI,{body:'#6b3b2a',head:'#c09a7a',carry:'#9a7a52'});ring(ctx,690,385,14,'#e0703f');
+  // hero + squad
+  ring(ctx,hero.x,hero.y,16,'#efe5cc',[5,3]);
+  person(ctx,hero.x,hero.y,-.25,{body:'#965c30',sleeve:'#5a4030',head:'#c09a7a',weapon:16,s:1.15});
+  ctx.save();ctx.setLineDash([4,6]);ctx.strokeStyle='rgba(239,229,204,.6)';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(hero.x+14,hero.y-6);ctx.quadraticCurveTo(630,360,675,382);ctx.stroke();ctx.restore();
+  grain(ctx,9000,3);finish(ctx,.13,false);
+}
+
+/* ---------- PLATE II: battle ---------- */
+function drawBattle(){
+  const ctx=setup('battleCv'),rng=rngOf(31);
+  const mud=(x,y)=>ss(80,10,Math.abs(x-(640+28*(fbm(y/90,1,5,3)-.5)*2)));
+  paintField(ctx,(x,y)=>{const n=fbm(x/140,y/140,21,4),n2=fbm(x/18,y/18,9,3);let c=mix([70,78,44],[112,108,62],n);c=mix(c,[96,90,52],n2*.4);
+    const m=Math.max(mud(x,y)*(.7+.6*n2),0);c=mix(c,[78,58,40],clamp(m,0,1));
+    const trod=Math.max(ss(160,40,Math.abs(x-535))*.35,ss(170,40,Math.abs(x-760))*.35);c=mix(c,[96,84,56],trod*n2);return c;},2);
+  ctx.fillStyle='rgba(30,40,46,.85)';ctx.beginPath();ctx.moveTo(0,690);for(let x=0;x<=W;x+=20)ctx.lineTo(x,690+10*Math.sin(x/90));ctx.lineTo(W,H);ctx.lineTo(0,H);ctx.fill();
+  const P={body:'#965c30',sleeve:'#5a4030'},E={body:'#46566a',sleeve:'#323e4c'};
+  // blood & bodies in the contact zone
+  for(let i=0;i<70;i++){ctx.fillStyle=`rgba(${95+rng()*30|0},14,10,${.25+rng()*.35})`;ctx.beginPath();ctx.ellipse(590+rng()*110,200+rng()*340,4+rng()*12,3+rng()*8,rng()*3,0,7);ctx.fill();}
+  for(let i=0;i<34;i++){const side=rng()<.55?E:P;corpse(ctx,560+rng()*160,200+rng()*350,rng()*6.28,side.body,rng);}
+  // arrows stuck in the ground
+  ctx.lineWidth=1.2;for(let i=0;i<120;i++){const x=320+rng()*300,y=190+rng()*380;ctx.strokeStyle='#4a3622';ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+4,y-3);ctx.stroke();ctx.fillStyle='#d9c9a2';ctx.fillRect(x+3,y-4,2,2);}
+  // player archers
+  for(let c=0;c<5;c++)for(let r=0;r<16;r++)person(ctx,330+c*16+(rng()-.5)*4,250+r*16+(rng()-.5)*4,(rng()-.5)*.2,{body:'#7a5a3a',sleeve:'#5a4030',bow:true,s:.85});
+  // player infantry
+  for(let c=0;c<10;c++)for(let r=0;r<22;r++){if(rng()<.04)continue;person(ctx,462+c*14+(rng()-.5)*3,200+r*15+(rng()-.5)*3,(rng()-.5)*.25,{...P,helm:rng()<.8,shield:'#9c4a25',weapon:c===9?15:0,s:.86});}
+  // enemy infantry
+  for(let c=0;c<11;c++)for(let r=0;r<24;r++){if(rng()<.05)continue;person(ctx,700+c*14+(rng()-.5)*3,190+r*15+(rng()-.5)*3,Math.PI+(rng()-.5)*.25,{...E,helm:rng()<.85,shield:'#2e3a48',weapon:c===0?15:0,s:.86});}
+  // enemy archers
+  for(let c=0;c<4;c++)for(let r=0;r<18;r++)person(ctx,925+c*16+(rng()-.5)*4,230+r*16+(rng()-.5)*4,Math.PI+(rng()-.5)*.2,{body:'#3f4a52',sleeve:'#323e4c',bow:true,s:.85});
+  // melee clumps
+  for(let i=0;i<46;i++){const side=i%2?P:E;const x=612+rng()*70,y=205+rng()*330;person(ctx,x,y,(side===P?0:Math.PI)+(rng()-.5)*1.2,{...side,helm:true,weapon:13,shield:side===P?'#9c4a25':'#2e3a48',s:.86});}
+  // horses
+  function horse(x,y,a,b,s){ctx.save();ctx.translate(x,y);ctx.rotate(a);ctx.scale(s,s);ctx.fillStyle='rgba(0,0,0,.3)';ctx.beginPath();ctx.ellipse(3,4,14,7,0,0,7);ctx.fill();
+    ctx.fillStyle='#4a3424';ctx.strokeStyle=INK;ctx.lineWidth=1.1;ctx.beginPath();ctx.ellipse(0,0,13,5.5,0,0,7);ctx.fill();ctx.stroke();ctx.beginPath();ctx.ellipse(14,0,5,2.6,0,0,7);ctx.fill();ctx.stroke();ctx.restore();
+    person(ctx,x-1,y,a,{...b,helm:true,weapon:20,s:.82*s,shadow:false});}
+  for(let r=0;r<3;r++)for(let c=0;c<8;c++)horse(430+c*20+r*8,595+r*22+(rng()-.5)*4,-.35,P,1);
+  for(let r=0;r<2;r++)for(let c=0;c<8;c++)horse(860+c*20,95+r*22+(rng()-.5)*4,Math.PI-.5,E,1);
+  // severed arm prop
+  ctx.save();ctx.translate(664,318);ctx.rotate(.7);ctx.fillStyle='rgba(120,16,10,.75)';ctx.beginPath();ctx.ellipse(-4,1,12,6,0,0,7);ctx.fill();ctx.fillStyle='#323e4c';ctx.strokeStyle=INK;ctx.lineWidth=1.1;ctx.beginPath();ctx.ellipse(0,0,7,2.8,0,0,7);ctx.fill();ctx.stroke();ctx.fillStyle='#b48d6c';ctx.beginPath();ctx.arc(8,0,2.4,0,7);ctx.fill();ctx.stroke();ctx.restore();
+  // the target (arm already gone) and hero
+  person(ctx,640,350,Math.PI,{...E,helm:true,shield:'#2e3a48',s:1.05});
+  ring(ctx,640,350,15,'#e0703f');
+  ring(ctx,604,362,18,'#efe5cc',[5,3]);
+  person(ctx,604,362,-.15,{...P,helm:true,weapon:19,shield:'#9c4a25',s:1.2});
+  // arrows in flight
+  for(let i=0;i<70;i++){const x=420+rng()*470,y=170+rng()*400,a=Math.PI+.15+(rng()-.5)*.3;ctx.save();ctx.translate(x,y);ctx.rotate(a);const g=ctx.createLinearGradient(-22,0,4,0);g.addColorStop(0,'rgba(60,44,30,0)');g.addColorStop(1,'rgba(40,30,20,.9)');ctx.strokeStyle=g;ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(-22,0);ctx.lineTo(4,0);ctx.stroke();ctx.fillStyle='#d9c9a2';ctx.fillRect(-10,-1.5,4,3);ctx.restore();}
+  // banners
+  function banner(x,y,col){ctx.strokeStyle='#3a2a1c';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(x,y+30);ctx.lineTo(x,y-10);ctx.stroke();ctx.fillStyle=col;ctx.strokeStyle=INK;ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(x,y-10);ctx.lineTo(x+26,y-6);ctx.lineTo(x+20,y+2);ctx.lineTo(x+26,y+10);ctx.lineTo(x,y+8);ctx.closePath();ctx.fill();ctx.stroke();}
+  banner(560,190,'#9c4a25');banner(790,176,'#3e5266');banner(360,236,'#9c4a25');
+  grain(ctx,9000,5);finish(ctx,.06,true);
+  // desaturate wash (paused)
+  ctx.fillStyle='rgba(120,110,95,.10)';ctx.fillRect(0,0,W,H);
+}
+
+/* ---------- PLATE III: map ---------- */
+let mapData=null;
+function E_(x,y){const n=fbm(x/260,y/260,11,5),r=1-Math.abs(fbm(x/140,y/140,19,3)*2-1);const dx=(x-640)/700,dy=(y-370)/420;return n*.9+r*.25-Math.sqrt(dx*dx+dy*dy)*.55+.05;}
+function M_(x,y){return fbm(x/170,y/170,29,4);}
+const SEA=.33;
+function drawMap(){
+  const ctx=setup('mapCv'),rng=rngOf(412);
+  paintField(ctx,(x,y)=>{const e=E_(x,y),g=fbm(x/9,y/9,3,2);
+    if(e<SEA){const deep=clamp((SEA-e)/.25,0,1);let c=mix([96,108,104],[52,64,70],deep);return mix(c,[40,48,52],g*.15);}
+    const m=M_(x,y);let c=mix([214,198,158],[178,174,124],clamp((m-.42)*2.2,0,1));c=mix(c,[190,176,146],clamp((e-.5)*2.4,0,1));
+    const sh=(E_(x-4,y-4)-e)*9;c=mix(c,sh>0?[236,224,190]:[120,104,80],clamp(Math.abs(sh),0,.55));
+    if(e-SEA<.012)c=mix(c,[40,32,24],.55);return mix(c,[160,140,104],g*.12);},2);
+  // coastal hatching
+  ctx.strokeStyle='rgba(30,36,40,.35)';ctx.lineWidth=1;
+  for(let y=4;y<H;y+=6)for(let x=0;x<W;x+=14){const e=E_(x,y);if(e<SEA&&e>SEA-.06){ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+8,y);ctx.stroke();}}
+  // faction territories
+  const caps=[];const towns=[];const names=["Raven's Hold","Vell's Keep","Ashby","Oakford","Coldridge","Harrowmere","Grimsby Mill","Tanner's Cross","Saltmarsh","Hollin"];
+  let tries=0;while(towns.length<names.length&&tries<6000){tries++;const x=150+rng()*980,y=110+rng()*520,e=E_(x,y);if(e<SEA+.04||e>.6)continue;if(towns.some(t=>Math.hypot(t.x-x,t.y-y)<(towns.length<3?(tries<3000?330:200):(tries<4500?125:80))))continue;towns.push({x,y,name:names[towns.length]});}
+  const facCol=['#b0582c','#5a6f88','#7d8a4a'],facName=['Ravensguard','House Vell','Ashby Free Towns'];
+  towns.forEach((t,i)=>{if(i<3){t.f=i;t.cap=true;}});
+  const nearest=(x,y)=>{let b=0,bd=1e9;for(let i=0;i<3&&i<towns.length;i++){const d=Math.hypot(towns[i].x-x,towns[i].y-y);if(d<bd){bd=d;b=i;}}return b;};
+  towns.forEach((t,i)=>{if(i>=3)t.f=nearest(t.x,t.y);});
+  const cs=8,gw=W/cs,gh=H/cs,fac=new Int8Array(gw*gh).fill(-1);
+  for(let gy=0;gy<gh;gy++)for(let gx=0;gx<gw;gx++){const x=gx*cs+4,y=gy*cs+4;if(E_(x,y)>=SEA)fac[gy*gw+gx]=nearest(x,y);}
+  for(let gy=0;gy<gh;gy++)for(let gx=0;gx<gw;gx++){const f=fac[gy*gw+gx];if(f<0)continue;ctx.fillStyle=facCol[f];ctx.globalAlpha=.10;ctx.fillRect(gx*cs,gy*cs,cs,cs);ctx.globalAlpha=1;
+    const rt=gx+1<gw?fac[gy*gw+gx+1]:f,dn=gy+1<gh?fac[(gy+1)*gw+gx]:f;
+    if((rt>=0&&rt!==f)||(dn>=0&&dn!==f)){ctx.fillStyle='rgba(60,30,20,.75)';ctx.beginPath();ctx.arc(gx*cs+cs,gy*cs+cs,1.6,0,7);ctx.fill();}}
+  // forests
+  for(let y=10;y<H;y+=11)for(let x=6;x<W;x+=11){const jx=x+(hash(x,y,1)-.5)*8,jy=y+(hash(x,y,2)-.5)*8,e=E_(jx,jy),m=M_(jx,jy);if(e<SEA+.02||e>.6||m<.56)continue;
+    ctx.fillStyle='#6f7442';ctx.strokeStyle='rgba(30,28,18,.8)';ctx.lineWidth=.9;ctx.beginPath();ctx.arc(jx,jy,3.6,0,7);ctx.fill();ctx.stroke();ctx.beginPath();ctx.moveTo(jx,jy+3.6);ctx.lineTo(jx,jy+6.5);ctx.stroke();}
+  // mountains
+  for(let y=10;y<H;y+=17)for(let x=8;x<W;x+=19){const jx=x+(hash(x,y,3)-.5)*10,jy=y+(hash(x,y,4)-.5)*8,e=E_(jx,jy);if(e<.64)continue;const s=7+clamp((e-.64)*60,0,9);
+    ctx.fillStyle='rgba(120,104,82,.55)';ctx.beginPath();ctx.moveTo(jx-s,jy+s*.6);ctx.lineTo(jx,jy-s);ctx.lineTo(jx+s,jy+s*.6);ctx.fill();
+    ctx.strokeStyle='rgba(30,24,18,.85)';ctx.lineWidth=1.3;ctx.beginPath();ctx.moveTo(jx-s,jy+s*.6);ctx.lineTo(jx,jy-s);ctx.lineTo(jx+s,jy+s*.6);ctx.stroke();
+    ctx.lineWidth=.8;for(let k=1;k<4;k++){ctx.beginPath();ctx.moveTo(jx-k*s/4,jy-s+k*s*.4);ctx.lineTo(jx-k*s/4+2,jy+s*.5);ctx.stroke();}}
+  // rivers
+  let made=0;for(let t=0;t<400&&made<5;t++){let x=200+rng()*880,y=120+rng()*480;if(E_(x,y)<.6)continue;const pts=[[x,y]];let px=0,py=0;
+    for(let s=0;s<600;s++){let best=null,bv=1e9;for(let k=0;k<16;k++){const a=k/16*6.283,nx=x+Math.cos(a)*5,ny=y+Math.sin(a)*5;const v=E_(nx,ny)-(Math.cos(a)*px+Math.sin(a)*py)*.004;if(v<bv){bv=v;best=[nx,ny,Math.cos(a),Math.sin(a)];}}
+      if(!best)break;x=best[0];y=best[1];px=best[2];py=best[3];pts.push([x,y]);if(E_(x,y)<SEA)break;if(x<0||y<0||x>W||y>H)break;}
+    if(pts.length<40||E_(x,y)>=SEA)continue;made++;
+    for(let i=1;i<pts.length;i++){const w=1+2.6*i/pts.length;ctx.strokeStyle='rgba(30,36,40,.9)';ctx.lineWidth=w+1.6;ctx.beginPath();ctx.moveTo(pts[i-1][0],pts[i-1][1]);ctx.lineTo(pts[i][0],pts[i][1]);ctx.stroke();}
+    for(let i=1;i<pts.length;i++){const w=1+2.6*i/pts.length;ctx.strokeStyle='#6f8590';ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(pts[i-1][0],pts[i-1][1]);ctx.lineTo(pts[i][0],pts[i][1]);ctx.stroke();}}
+  // roads
+  const pairs=new Set();ctx.save();ctx.setLineDash([7,5]);ctx.strokeStyle='#6b4a2e';ctx.lineWidth=2.2;
+  towns.forEach((a,i)=>{const near=towns.map((b,j)=>({j,d:Math.hypot(a.x-b.x,a.y-b.y)})).filter(o=>o.j!==i).sort((p,q)=>p.d-q.d).slice(0,2);
+    near.forEach(o=>{const key=Math.min(i,o.j)+'-'+Math.max(i,o.j);if(pairs.has(key))return;pairs.add(key);const b=towns[o.j];const mx=(a.x+b.x)/2,my=(a.y+b.y)/2,nx=-(b.y-a.y),ny=b.x-a.x,k=(hash(i,o.j,9)-.5)*.35;
+      ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.quadraticCurveTo(mx+nx*k,my+ny*k,b.x,b.y);ctx.stroke();});});
+  ctx.restore();
+  // towns
+  towns.forEach(t=>{ctx.save();ctx.translate(t.x,t.y);ctx.strokeStyle=INK;ctx.lineWidth=1.4;
+    if(t.cap){ctx.fillStyle='#dccfaa';ctx.beginPath();ctx.moveTo(-10,8);ctx.lineTo(-10,-6);for(let k=0;k<5;k++){ctx.lineTo(-10+k*5,-6);ctx.lineTo(-10+k*5,-10);ctx.lineTo(-10+k*5+2.5,-10);ctx.lineTo(-10+k*5+2.5,-6);}ctx.lineTo(10,-6);ctx.lineTo(10,8);ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.fillStyle=facCol[t.f];ctx.beginPath();ctx.moveTo(0,-10);ctx.lineTo(0,-22);ctx.lineTo(10,-19);ctx.lineTo(0,-16);ctx.fill();ctx.stroke();}
+    else{for(const [dx,dy] of [[-6,2],[4,-2],[2,6]]){ctx.fillStyle='#dccfaa';ctx.fillRect(dx-4,dy-3,8,6);ctx.strokeRect(dx-4,dy-3,8,6);ctx.fillStyle=facCol[t.f];ctx.beginPath();ctx.moveTo(dx-5,dy-3);ctx.lineTo(dx,dy-7);ctx.lineTo(dx+5,dy-3);ctx.closePath();ctx.fill();ctx.stroke();}}
+    ctx.font=(t.cap?'22px':'18px')+' "IM Fell English SC", Georgia, serif';ctx.textAlign='center';ctx.lineWidth=4;ctx.strokeStyle='rgba(220,207,170,.9)';ctx.strokeText(t.name,0,t.cap?30:26);ctx.fillStyle='#231b13';ctx.fillText(t.name,0,t.cap?30:26);ctx.restore();});
+  // army march
+  const vk=towns[1],ok=towns[3];const ax=vk.x+(ok.x-vk.x)*.38,ay=vk.y+(ok.y-vk.y)*.38;
+  ctx.save();ctx.strokeStyle='#8a2219';ctx.lineWidth=3;ctx.setLineDash([2,6]);ctx.lineCap='round';ctx.beginPath();ctx.moveTo(vk.x,vk.y);ctx.lineTo(ok.x+(vk.x-ok.x)*.12,ok.y+(vk.y-ok.y)*.12);ctx.stroke();ctx.restore();
+  const ang=Math.atan2(ok.y-vk.y,ok.x-vk.x),hx=ok.x+(vk.x-ok.x)*.12,hy=ok.y+(vk.y-ok.y)*.12;ctx.fillStyle='#8a2219';ctx.beginPath();ctx.moveTo(hx+Math.cos(ang)*10,hy+Math.sin(ang)*10);ctx.lineTo(hx+Math.cos(ang+2.5)*10,hy+Math.sin(ang+2.5)*10);ctx.lineTo(hx+Math.cos(ang-2.5)*10,hy+Math.sin(ang-2.5)*10);ctx.fill();
+  ctx.fillStyle='#3e5266';ctx.strokeStyle=INK;ctx.lineWidth=2;ctx.beginPath();ctx.arc(ax,ay,13,0,7);ctx.fill();ctx.stroke();ctx.fillStyle='#efe5cc';ctx.font='700 11px "Alegreya Sans SC", sans-serif';ctx.textAlign='center';ctx.fillText('410',ax,ay+4);
+  // party
+  const yx=ok.x+26,yy=ok.y-22;ctx.strokeStyle='#3a2a1c';ctx.lineWidth=2.4;ctx.beginPath();ctx.moveTo(yx,yy+14);ctx.lineTo(yx,yy-12);ctx.stroke();ctx.fillStyle='#9c4a25';ctx.strokeStyle=INK;ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(yx,yy-12);ctx.lineTo(yx+16,yy-8);ctx.lineTo(yx,yy-3);ctx.closePath();ctx.fill();ctx.stroke();
+  ctx.strokeStyle='rgba(239,229,204,.95)';ctx.setLineDash([3,3]);ctx.lineWidth=2;ctx.beginPath();ctx.arc(yx,yy+2,16,0,7);ctx.stroke();ctx.setLineDash([]);
+  // compass
+  const cx=90,cy=630;ctx.save();ctx.translate(cx,cy);ctx.strokeStyle=INK;ctx.lineWidth=1.4;ctx.beginPath();ctx.arc(0,0,34,0,7);ctx.stroke();ctx.beginPath();ctx.arc(0,0,28,0,7);ctx.stroke();
+  for(let k=0;k<4;k++){ctx.rotate(Math.PI/2);ctx.fillStyle=k%2?'#231b13':'#dccfaa';ctx.beginPath();ctx.moveTo(0,-40);ctx.lineTo(6,0);ctx.lineTo(-6,0);ctx.closePath();ctx.fill();ctx.stroke();}
+  ctx.restore();ctx.fillStyle='#231b13';ctx.font='18px "IM Fell English SC", Georgia, serif';ctx.textAlign='center';ctx.fillText('N',cx,cy-46);
+  // scale bar: map is 32 km wide = 40 px per km; bar is 10 km
+  const pk=40,sx=W-460,sy=672;for(let k=0;k<4;k++){ctx.fillStyle=k%2?'#dccfaa':'#231b13';ctx.fillRect(sx+k*pk*2.5,sy,pk*2.5,7);}ctx.strokeStyle=INK;ctx.lineWidth=1.2;ctx.strokeRect(sx,sy,pk*10,7);
+  ctx.fillStyle='#231b13';ctx.font='15px "IM Fell English", Georgia, serif';ctx.textAlign='center';ctx.fillText('0',sx,sy-5);ctx.fillText('5',sx+pk*5,sy-5);ctx.fillText('10 km',sx+pk*10,sy-5);
+  // paper edges
+  const v=ctx.createRadialGradient(W/2,H/2,H*.45,W/2,H/2,H*1.05);v.addColorStop(0,'rgba(60,40,20,0)');v.addColorStop(1,'rgba(60,36,16,.55)');ctx.fillStyle=v;ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='rgba(80,60,40,.18)';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(W/2,0);ctx.lineTo(W/2,H);ctx.moveTo(0,H/2);ctx.lineTo(W,H/2);ctx.stroke();
+  grain(ctx,7000,8);
+  mapData={ok,ax,ay,yx,yy,okF:facName[ok.f]};
+  const pct=(x,y,el,dx,dy)=>{el.style.left=((x+(dx||0))/W*100)+'%';el.style.top=((y+(dy||0))/H*100)+'%';};
+  const tip=document.getElementById('mapTip');const right=ok.x<W*.62;
+  tip.style.transform=right?'translate(0,-50%)':'translate(-100%,-50%)';pct(ok.x,ok.y,tip,right?44:-44,0);
+  document.getElementById('mapTipSub').textContent='market town · pop. 1,240 · '+facName[ok.f];
+  { // march time from the real scale: 40 px per km, column 1.3 m/s, clock 1:20
+    const km=Math.hypot(ok.x-ax,ok.y-ay)/40, gameH=km*1000/1.3*20/3600;
+    const eta=gameH>=36?('~'+Math.round(gameH/24)+' days'):('~'+Math.round(gameH)+' hours');
+    const el=document.getElementById('armyLbl');el.textContent='House Vell host · ~410 · '+km.toFixed(0)+' km out · reaches Oakford in '+eta;
+    pct(ax,ay,el,0,28);}pct(yx,yy,document.getElementById('youLbl'),0,-38);
+  pct(ok.x,ok.y,document.getElementById('mpin3'),right?44:-44,58);pct(ax,ay,document.getElementById('mpin4'),-22,-16);pct(yx,yy,document.getElementById('mpin5'),-20,-30);
+}
+function drawMini(){
+  const mc=document.getElementById('miniCv'),m=mc.getContext('2d'),src=document.getElementById('mapCv');if(!mapData)return;
+  m.save();m.beginPath();m.arc(120,120,120,0,7);m.clip();const s=110;m.drawImage(src,mapData.ok.x-s,mapData.ok.y-s,s*2,s*2,0,0,240,240);
+  m.strokeStyle='#efe5cc';m.lineWidth=3;m.strokeRect(108,110,24,18);m.restore();
+}
+
+/* ---------- PLATE IV: build ---------- */
+function drawBuild(){
+  const ctx=setup('buildCv'),rng=rngOf(77);
+  paintField(ctx,(x,y)=>{const n=fbm(x/120,y/120,41,4),n2=fbm(x/16,y/16,13,3);let c=mix([72,78,42],[106,100,58],n);
+    const inLot=x>150&&x<910&&y>110&&y<610;if(inLot)c=mix(c,[110,90,62],.55+n2*.3);
+    const st=ss(620,650,y);c=mix(c,mix([104,96,84],[134,124,106],n2),st);return c;},2);
+  stones(ctx,(x,y)=>y>652,rng);
+  // neighbours
+  roof(ctx,-20,140,150,170,'tile');roof(ctx,-20,350,140,180,'slate');roof(ctx,960,130,170,150,'thatch');roof(ctx,960,330,200,160,'slate');roof(ctx,1170,140,140,300,'tile');
+  tree(ctx,1180,560,44,rng);tree(ctx,940,560,30,rng);
+  leaves(ctx,400,rng);
+  // grid in lot
+  ctx.strokeStyle='rgba(239,229,204,.07)';ctx.lineWidth=1;for(let x=160;x<=896;x+=32){ctx.beginPath();ctx.moveTo(x,112);ctx.lineTo(x,608);ctx.stroke();}for(let y=128;y<=608;y+=32){ctx.beginPath();ctx.moveTo(152,y);ctx.lineTo(908,y);ctx.stroke();}
+  const cg=ctx.createRadialGradient(560,280,10,560,280,140);cg.addColorStop(0,'rgba(239,229,204,.12)');cg.addColorStop(1,'rgba(239,229,204,0)');ctx.fillStyle=cg;ctx.fillRect(400,140,320,280);
+  ctx.save();ctx.setLineDash([7,5]);ctx.strokeStyle='#cbb68a';ctx.lineWidth=1.8;ctx.strokeRect(150,110,760,500);ctx.restore();
+  // floor planks (built left part), ghost right part
+  const X0=256,Y0=192,X1=704,Y1=480;
+  ctx.fillStyle='#6a4d33';ctx.fillRect(X0,Y0,224,Y1-Y0);ctx.strokeStyle='rgba(20,14,10,.4)';for(let y=Y0+8;y<Y1;y+=8){ctx.beginPath();ctx.moveTo(X0,y);ctx.lineTo(X0+224,y);ctx.stroke();}
+  ctx.fillStyle='rgba(239,229,204,.08)';ctx.fillRect(X0+224,Y0,X1-X0-224,Y1-Y0);ctx.save();ctx.setLineDash([3,6]);ctx.strokeStyle='rgba(239,229,204,.25)';for(let y=Y0+8;y<Y1;y+=8){ctx.beginPath();ctx.moveTo(X0+224,y);ctx.lineTo(X1,y);ctx.stroke();}ctx.restore();
+  // walls: built segments
+  function wallSeg(x0,y0,x1,y1){const len=Math.hypot(x1-x0,y1-y0),n=Math.max(1,Math.round(len/16)),dx=(x1-x0)/n,dy=(y1-y0)/n;for(let i=0;i<n;i++){const x=x0+dx*i,y=y0+dy*i;ctx.fillStyle=rgb(mix([118,112,102],[146,140,128],rng()));const w=Math.abs(dx)||14,h=Math.abs(dy)||14;ctx.fillRect(x-(dx?0:7),y-(dy?0:7),w,h);ctx.strokeStyle=INK;ctx.lineWidth=1.2;ctx.strokeRect(x-(dx?0:7),y-(dy?0:7),w,h);}}
+  function ghostSeg(x0,y0,x1,y1){ctx.save();ctx.fillStyle='rgba(239,229,204,.16)';ctx.strokeStyle='rgba(239,229,204,.75)';ctx.setLineDash([5,4]);ctx.lineWidth=1.5;const x=Math.min(x0,x1)-(x0===x1?7:0),y=Math.min(y0,y1)-(y0===y1?7:0),w=Math.abs(x1-x0)||14,h=Math.abs(y1-y0)||14;ctx.fillRect(x,y,w,h);ctx.strokeRect(x,y,w,h);ctx.restore();}
+  ctx.fillStyle='rgba(0,0,0,.3)';ctx.fillRect(X0+6,Y0+8,X1-X0,10);
+  wallSeg(X0,Y0,X1,Y0);wallSeg(X0,Y0,X0,Y1);wallSeg(X1,Y0,X1,Y0+128);
+  ghostSeg(X1,Y0+128,X1,Y1);ghostSeg(X0,Y1,X0+192,Y1);ghostSeg(X0+256,Y1,X1,Y1);
+  ctx.save();ctx.setLineDash([4,4]);ctx.strokeStyle='rgba(239,229,204,.7)';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(X0+192,Y1,64,-Math.PI/2,0);ctx.stroke();ctx.restore();
+  // anvil (built)
+  ctx.fillStyle='#3d4245';ctx.strokeStyle=INK;ctx.lineWidth=1.6;ctx.beginPath();ctx.moveTo(340,290);ctx.lineTo(386,290);ctx.lineTo(396,282);ctx.lineTo(388,304);ctx.lineTo(346,304);ctx.closePath();ctx.fill();ctx.stroke();ctx.fillStyle='#5a3d24';ctx.fillRect(352,304,24,14);ctx.strokeRect(352,304,24,14);
+  // forge ghost at cursor
+  ctx.save();ctx.fillStyle='rgba(239,229,204,.18)';ctx.strokeStyle='rgba(239,229,204,.9)';ctx.setLineDash([5,4]);ctx.lineWidth=1.8;ctx.fillRect(528,248,64,64);ctx.strokeRect(528,248,64,64);ctx.setLineDash([]);ctx.strokeRect(544,264,32,32);ctx.restore();
+  ctx.save();ctx.translate(596,316);ctx.fillStyle='#efe5cc';ctx.strokeStyle=INK;ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(0,18);ctx.lineTo(5,13);ctx.lineTo(9,21);ctx.lineTo(12,19);ctx.lineTo(8,12);ctx.lineTo(14,12);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();
+  // stockpile
+  ctx.save();ctx.setLineDash([3,4]);ctx.strokeStyle='rgba(203,182,138,.7)';ctx.strokeRect(744,150,140,180);ctx.restore();
+  for(let i=0;i<14;i++){const x=756+(i%5)*16,y=166+((i/5)|0)*16;ctx.fillStyle=rgb(mix([118,112,102],[150,144,132],rng()));ctx.fillRect(x,y,14,12);ctx.strokeStyle=INK;ctx.lineWidth=1;ctx.strokeRect(x,y,14,12);}
+  for(let i=0;i<5;i++){const y=226+i*10;ctx.fillStyle='#7a5534';ctx.fillRect(756,y,70,8);ctx.strokeStyle=INK;ctx.strokeRect(756,y,70,8);ctx.fillStyle='#c79a55';ctx.beginPath();ctx.arc(756,y+4,4,0,7);ctx.fill();ctx.stroke();}
+  for(let i=0;i<6;i++){const x=840+(i%2)*18,y=170+((i/2)|0)*12;ctx.fillStyle='#8f9496';ctx.beginPath();ctx.moveTo(x,y+8);ctx.lineTo(x+3,y);ctx.lineTo(x+13,y);ctx.lineTo(x+16,y+8);ctx.closePath();ctx.fill();ctx.strokeStyle=INK;ctx.stroke();}
+  for(let i=0;i<4;i++){ctx.fillStyle='#2d2a26';ctx.beginPath();ctx.ellipse(846+(i%2)*20,290+((i/2)|0)*20,9,7,0,0,7);ctx.fill();ctx.strokeStyle=INK;ctx.stroke();}
+  // workers
+  person(ctx,790,420,2.6,{body:'#5d4a36',head:'#b48d6c',carry:'#8a857c'});
+  ctx.save();ctx.setLineDash([3,5]);ctx.strokeStyle='rgba(239,229,204,.45)';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(780,330);ctx.quadraticCurveTo(800,380,790,410);ctx.moveTo(778,428);ctx.quadraticCurveTo(720,470,690,486);ctx.stroke();ctx.restore();
+  person(ctx,430,500,-1.57,{body:'#4b5544',head:'#9a7458',weapon:12});
+  person(ctx,690,280,3.0,{body:'#6e5a3c',head:'#c09a7a',carry:'#8a857c'});
+  person(ctx,830,500,2.8,{body:'#965c30',sleeve:'#5a4030',head:'#c09a7a',s:1.15});ring(ctx,830,500,16,'#efe5cc',[5,3]);
+  // street folk
+  for(let i=0;i<9;i++)person(ctx,40+rng()*1200,670+rng()*36,rng()<.5?0:Math.PI,{body:['#5d4a36','#4b5544','#6b3b2a','#3f4a52'][i%4],head:'#b48d6c'});
+  grain(ctx,8000,9);finish(ctx,.12,false);
+}
+
+/* ---------- hero ---------- */
+function drawHero(){
+  const c=document.getElementById('heroCv'),HW=1600,HH=640;c.width=HW;c.height=HH;const ctx=c.getContext('2d');
+  const g=ctx.createLinearGradient(0,0,0,HH);g.addColorStop(0,'#1e1c1a');g.addColorStop(.45,'#5a4430');g.addColorStop(.72,'#b07f4a');g.addColorStop(1,'#c99a5e');ctx.fillStyle=g;ctx.fillRect(0,0,HW,HH);
+  const sun=ctx.createRadialGradient(1170,330,10,1170,330,260);sun.addColorStop(0,'rgba(245,214,150,.85)');sun.addColorStop(.18,'rgba(236,190,120,.35)');sun.addColorStop(1,'rgba(236,190,120,0)');ctx.fillStyle=sun;ctx.fillRect(0,0,HW,HH);
+  const layers=[[330,40,[120,100,86],.0016,1],[380,50,[92,80,66],.0022,2],[430,60,[68,62,48],.0028,3],[500,50,[44,40,30],.0034,4],[570,36,[24,21,17],.004,5]];
+  const ridge=(l,x)=>l[0]+l[1]*(fbm(x*l[3],l[4]*3.1,l[4]*7,4)-.5)*2.4;
+  layers.forEach((l,li)=>{ctx.fillStyle=rgb(l[2]);ctx.beginPath();ctx.moveTo(0,HH);for(let x=0;x<=HW;x+=6)ctx.lineTo(x,ridge(l,x));ctx.lineTo(HW,HH);ctx.closePath();ctx.fill();
+    const mist=ctx.createLinearGradient(0,l[0]-30,0,l[0]+90);mist.addColorStop(0,'rgba(210,160,100,0)');mist.addColorStop(1,`rgba(210,160,100,${.12-li*.02})`);ctx.fillStyle=mist;ctx.fillRect(0,l[0]-30,HW,140);
+    if(li===1){const col=rgb(mix(l[2],[0,0,0],.25));ctx.fillStyle=col;for(let x=980;x<1200;x+=22+(hash(x,1,2)*14|0)){const by=ridge(l,x)+6,h=16+hash(x,2,2)*14;ctx.fillRect(x,by-h,18,h+10);ctx.beginPath();ctx.moveTo(x-3,by-h);ctx.lineTo(x+9,by-h-10);ctx.lineTo(x+21,by-h);ctx.fill();if(hash(x,3,2)>.5){ctx.fillStyle='rgba(255,190,100,.85)';ctx.fillRect(x+7,by-h+6,3,3);ctx.fillStyle=col;}}
+      const tx=1090,ty=ridge(l,tx)+4;ctx.fillRect(tx,ty-70,26,76);for(let k=0;k<4;k++)ctx.fillRect(tx-2+k*8,ty-78,5,9);ctx.fillRect(tx+11,ty-104,2,30);ctx.fillStyle='#8c3b22';ctx.beginPath();ctx.moveTo(tx+13,ty-104);ctx.lineTo(tx+34,ty-98);ctx.lineTo(tx+13,ty-92);ctx.fill();}
+    if(li>=3){for(let x=0;x<HW;x+=li===3?26:44){if(hash(x,li,5)<.45)continue;const by=ridge(l,x)+4,r=(li===3?12:22)*(0.7+hash(x,li,6)*.6);ctx.fillStyle=rgb(l[2]);ctx.beginPath();ctx.arc(x,by-r*.9,r,0,7);ctx.fill();ctx.fillRect(x-2,by-r*.4,4,r*.6);
+      if(li===3){ctx.fillStyle=`rgba(${120+hash(x,7,1)*60|0},${50+hash(x,8,1)*30|0},24,.5)`;ctx.beginPath();ctx.arc(x-r*.3,by-r*1.1,r*.45,0,7);ctx.fill();}}}});
+  ctx.strokeStyle='rgba(20,16,12,.85)';ctx.lineWidth=2;[[420,150,9],[455,170,7],[480,140,8],[1320,210,6]].forEach(b=>{ctx.beginPath();ctx.moveTo(b[0]-b[2],b[1]-b[2]*.4);ctx.quadraticCurveTo(b[0]-b[2]*.4,b[1]-b[2]*.6,b[0],b[1]);ctx.quadraticCurveTo(b[0]+b[2]*.4,b[1]-b[2]*.6,b[0]+b[2],b[1]-b[2]*.4);ctx.stroke();});
+  const r=rngOf(5);for(let i=0;i<5000;i++){ctx.fillStyle=r()<.5?'rgba(0,0,0,.06)':'rgba(255,230,190,.04)';ctx.fillRect(r()*HW,r()*HH,1.4,1.4);}
+}
+function leafAnim(){
+  const c=document.getElementById('leafCv'),ctx=c.getContext('2d');let w=0,h=0;
+  function size(){const r=c.getBoundingClientRect(),d=Math.min(window.devicePixelRatio||1,2);w=r.width;h=r.height;c.width=w*d;c.height=h*d;ctx.setTransform(d,0,0,d,0,0);}
+  size();window.addEventListener('resize',size);
+  const rr=rngOf(99),cols=['#a4532a','#c0803a','#8a3a1e','#b99446','#6f2a18','#d09a4a'];
+  const L=Array.from({length:42},()=>({x:rr()*1,y:rr()*1,s:4+rr()*6,v:.012+rr()*.03,a:rr()*6.3,va:(rr()-.5)*.05,ph:rr()*6.3,c:cols[(rr()*cols.length)|0]}));
+  function leaf(l,t){const x=(l.x*w+Math.sin(t*.0006+l.ph)*40)%w,y=l.y*h;ctx.save();ctx.translate(x,y);ctx.rotate(l.a);ctx.scale(1,Math.abs(Math.sin(t*.002+l.ph))*.7+.3);ctx.fillStyle=l.c;ctx.globalAlpha=.85;ctx.beginPath();ctx.moveTo(-l.s,0);ctx.quadraticCurveTo(0,-l.s*.7,l.s,0);ctx.quadraticCurveTo(0,l.s*.7,-l.s,0);ctx.fill();ctx.strokeStyle='rgba(30,16,8,.5)';ctx.lineWidth=.6;ctx.beginPath();ctx.moveTo(-l.s,0);ctx.lineTo(l.s,0);ctx.stroke();ctx.restore();}
+  if(reduceMotion){ctx.clearRect(0,0,w,h);L.forEach(l=>leaf(l,0));return;}
+  let vis=true;try{new IntersectionObserver(e=>{vis=e[0].isIntersecting;}).observe(c);}catch(e){}
+  let last=performance.now();
+  function tick(t){const dt=Math.min(50,t-last);last=t;if(vis){ctx.clearRect(0,0,w,h);L.forEach(l=>{l.y+=l.v*dt/1000*2.2;l.x+=.004*dt/1000;l.a+=l.va;if(l.y>1.05){l.y=-.05;l.x=rr();}leaf(l,t);});}requestAnimationFrame(tick);}
+  requestAnimationFrame(tick);
+}
+
+/* ---------- icons ---------- */
+const ICONS=[
+ ['sword','Sword','weapon','<g transform="rotate(45 32 32)"><path f="M" d="M32 4 L36 10 L36 38 L28 38 L28 10 Z"/><path f="N" d="M32 12 V34" style="stroke-width:1.2"/><rect f="W" x="19" y="38" width="26" height="5" rx="1.5"/><rect f="W" x="29.5" y="43" width="5" height="11"/><circle f="M" cx="32" cy="57" r="3.5"/></g>'],
+ ['axe','Bearded axe','weapon','<g transform="rotate(20 32 32)"><rect f="W" x="30" y="6" width="5" height="54" rx="2"/><path f="M" d="M33 10 C42 6 52 10 54 22 C48 20 42 24 40 32 L35 30 L35 12 Z"/></g>'],
+ ['spear','Spear','weapon','<g transform="rotate(38 32 38)"><rect f="W" x="30" y="18" width="4" height="44" rx="1.5"/><path f="M" d="M32 2 L37 14 L32 20 L27 14 Z"/><rect f="P" x="29" y="20" width="6" height="4"/></g>'],
+ ['bow','Bow','weapon','<path f="N" d="M20 6 C46 16 46 48 20 58" style="stroke:var(--i-W);stroke-width:5"/><path f="N" d="M20 6 C46 16 46 48 20 58" style="stroke-width:1.2"/><path f="N" d="M20 6 L20 58" style="stroke-width:1.3"/><path f="N" d="M10 32 H48" style="stroke-width:2.2"/><path f="M" d="M46 28 L56 32 L46 36 Z"/><path f="L" d="M10 32 L6 27 L14 27 Z M10 32 L6 37 L14 37 Z"/>'],
+ ['shield','Heater shield','armour','<path f="P" d="M14 10 H50 V30 C50 44 42 52 32 58 C22 52 14 44 14 30 Z"/><path f="S" d="M32 10 H50 V30 C50 44 42 52 32 58 Z"/><path f="N" d="M14 10 H50 V30 C50 44 42 52 32 58 C22 52 14 44 14 30 Z"/><path f="N" d="M19 40 L32 27 L45 40" style="stroke-width:4"/>'],
+ ['helm','Nasal helm','armour','<path f="M" d="M14 40 C14 22 22 12 32 12 C42 12 50 22 50 40 Z"/><path f="N" d="M32 12 V38" style="stroke-width:1.4"/><rect f="G" x="13" y="38" width="38" height="6" rx="2"/><rect f="M" x="29.5" y="40" width="5" height="16" rx="1.5"/><circle f="K" cx="20" cy="41" r="1.2" style="stroke:none"/><circle f="K" cx="44" cy="41" r="1.2" style="stroke:none"/>'],
+ ['purse','Coin purse','wealth','<path f="W" d="M24 24 L20 12 L28 18 L32 10 L36 18 L44 12 L40 24 Z"/><path f="W" d="M20 26 C12 36 12 54 32 56 C52 54 52 36 44 26 Z"/><path f="N" d="M21 26 C28 22 36 22 43 26"/><circle f="G" cx="47" cy="50" r="7"/><circle f="N" cx="47" cy="50" r="3.5" style="stroke-width:1.4"/>'],
+ ['coins','Crowns','wealth','<path f="G" d="M8 46 v6 a14 5 0 0 0 28 0 v-6"/><ellipse f="G" cx="22" cy="46" rx="14" ry="5"/><path f="G" d="M8 38 v6 a14 5 0 0 0 28 0 v-6"/><ellipse f="G" cx="22" cy="38" rx="14" ry="5"/><circle f="G" cx="44" cy="30" r="12"/><path f="N" d="M38 33 L37 25 L41 29 L44 23 L47 29 L51 25 L50 33 Z" style="stroke-width:1.6"/>'],
+ ['crown','Crown','wealth','<path f="G" d="M10 46 L8 20 L20 32 L32 14 L44 32 L56 20 L54 46 Z"/><rect f="G" x="10" y="44" width="44" height="8" rx="1"/><circle f="B" cx="22" cy="48" r="2.4"/><circle f="B" cx="32" cy="48" r="2.4"/><circle f="B" cx="42" cy="48" r="2.4"/>'],
+ ['deed','Deed','property','<rect f="S" x="16" y="14" width="30" height="38"/><rect f="S" x="12" y="9" width="38" height="9" rx="4.5"/><rect f="S" x="12" y="47" width="38" height="9" rx="4.5"/><path f="N" d="M21 25 H41 M21 31 H41 M21 37 H33" style="stroke-width:1.6"/><path f="B" d="M38 50 L35 60 L40 57 L44 60 L42 50 Z"/><circle f="B" cx="40" cy="46" r="6"/>'],
+ ['grain','Grain','goods','<path f="N" d="M32 58 L32 18 M32 58 L22 20 M32 58 L42 20 M32 58 L15 26 M32 58 L49 26" style="stroke:var(--i-F);stroke-width:2.6"/><path f="N" d="M32 58 L32 18 M32 58 L22 20 M32 58 L42 20 M32 58 L15 26 M32 58 L49 26" style="stroke-width:.8;opacity:.6"/><ellipse f="F" cx="32" cy="14" rx="3.5" ry="7"/><ellipse f="F" cx="21" cy="17" rx="3.5" ry="7" transform="rotate(-18 21 17)"/><ellipse f="F" cx="43" cy="17" rx="3.5" ry="7" transform="rotate(18 43 17)"/><ellipse f="F" cx="14" cy="24" rx="3.2" ry="6.5" transform="rotate(-34 14 24)"/><ellipse f="F" cx="50" cy="24" rx="3.2" ry="6.5" transform="rotate(34 50 24)"/><rect f="W" x="26" y="42" width="12" height="6" rx="2"/>'],
+ ['ingot','Iron bars','goods','<path f="M" d="M8 50 L14 40 H40 L46 50 Z"/><path f="M" d="M20 38 L26 28 H52 L58 38 Z"/><path f="N" d="M14 40 L17 46 H37 L40 40 M26 28 L29 34 H49 L52 28" style="stroke-width:1.3;opacity:.7"/>'],
+ ['timber','Timber','goods','<rect f="W" x="14" y="16" width="40" height="13" rx="6.5"/><circle f="F" cx="14" cy="22.5" r="6.5"/><circle f="N" cx="14" cy="22.5" r="2.6" style="stroke-width:1.3"/><rect f="W" x="10" y="34" width="40" height="13" rx="6.5"/><circle f="F" cx="10" cy="40.5" r="6.5"/><circle f="N" cx="10" cy="40.5" r="2.6" style="stroke-width:1.3"/>'],
+ ['bread','Bread','goods','<path f="F" d="M8 40 C8 26 20 20 32 20 C44 20 56 26 56 40 C56 46 50 48 32 48 C14 48 8 46 8 40 Z"/><path f="N" d="M22 27 L18 36 M32 25 L28 36 M42 27 L38 36"/>'],
+ ['ale','Ale','goods','<path f="N" d="M42 26 C55 26 55 46 42 46" style="stroke:var(--i-W);stroke-width:6"/><path f="N" d="M42 26 C55 26 55 46 42 46" style="stroke-width:1.2"/><rect f="W" x="16" y="20" width="26" height="36" rx="3"/><path f="N" d="M16 29 H42 M16 47 H42" style="stroke-width:1.6"/><path f="S" d="M14 23 C14 15 22 13 26 17 C28 11 38 11 40 17 C46 15 48 23 44 25 H14 Z"/>'],
+ ['anvil','Anvil','craft','<path f="M" d="M8 22 H46 C52 22 56 26 58 30 C50 30 46 32 44 36 H40 L42 44 H48 V52 H16 V44 H22 L24 36 C18 34 12 30 8 22 Z"/><path f="N" d="M12 26 H44" style="stroke:var(--i-S);stroke-width:1.4;opacity:.7"/>'],
+ ['hammer','Hammer','craft','<g transform="rotate(-35 32 32)"><rect f="W" x="29" y="20" width="6" height="38" rx="2"/><rect f="M" x="18" y="8" width="28" height="14" rx="2"/></g>'],
+ ['house','House','place','<rect f="P" x="40" y="12" width="6" height="12"/><rect f="S" x="14" y="30" width="36" height="26"/><path f="P" d="M8 32 L32 10 L56 32 Z"/><rect f="W" x="28" y="42" width="9" height="14"/><rect f="W" x="18" y="37" width="7" height="7"/>'],
+ ['tower','Tower','place','<rect f="W" x="31" y="2" width="2" height="12" style="stroke-width:1.2"/><path f="P" d="M33 3 L45 6 L33 10 Z"/><path f="S" d="M18 58 V20 H22 V14 H28 V20 H36 V14 H42 V20 H46 V58 Z"/><path f="K" d="M28 58 V49 A4 4 0 0 1 36 49 V58 Z"/><rect f="K" x="30" y="28" width="4" height="9"/><path f="N" d="M18 38 H46" style="stroke-width:1.2;opacity:.6"/>'],
+ ['wall','Stone wall','place','<path f="S" d="M6 52 V18 H12 V12 H20 V18 H28 V12 H36 V18 H44 V12 H52 V18 H58 V52 Z"/><path f="N" d="M6 30 H58 M6 42 H58 M18 18 V30 M34 18 V30 M50 18 V30 M12 30 V42 M28 30 V42 M44 30 V42 M18 42 V52 M34 42 V52 M50 42 V52" style="stroke-width:1.5"/>'],
+ ['gate','Gate','place','<path f="S" d="M8 58 V16 H56 V58 H44 V36 C44 28 38 24 32 24 C26 24 20 28 20 36 V58 Z"/><path f="K" d="M20 58 V36 C20 28 26 24 32 24 C38 24 44 28 44 36 V58 Z" style="opacity:.85"/><path f="N" d="M23 30 V58 M28 26 V58 M32 25 V58 M36 26 V58 M41 30 V58 M20 38 H44 M20 46 H44 M20 54 H44" style="stroke:var(--i-M);stroke-width:2"/>'],
+ ['tent','Camp tent','place','<path f="P" d="M6 54 L32 12 L58 54 Z"/><path f="S" d="M32 12 L24 54 H40 Z"/><path f="K" d="M32 30 L27 54 H37 Z"/><path f="N" d="M32 12 V6 M6 54 L2 58 M58 54 L62 58"/>'],
+ ['cart','Cart','travel','<path f="N" d="M48 30 H62" style="stroke-width:3"/><path f="W" d="M6 22 H50 L46 40 H10 Z"/><circle f="W" cx="22" cy="44" r="10"/><path f="N" d="M22 34 V54 M12 44 H32 M15 37 L29 51 M29 37 L15 51" style="stroke-width:1.5"/><circle f="M" cx="22" cy="44" r="2.6"/>'],
+ ['ram','Battering ram','siege','<path f="W" d="M10 30 L32 12 L54 30 Z"/><path f="N" d="M14 30 V44 M50 30 V44" style="stroke-width:3"/><rect f="W" x="4" y="32" width="50" height="9" rx="4.5"/><path f="M" d="M53 30 H61 V43 H53 Z"/><circle f="W" cx="16" cy="51" r="6"/><circle f="W" cx="44" cy="51" r="6"/>'],
+ ['trebuchet','Trebuchet','siege','<path f="N" d="M6 56 H58" style="stroke-width:3"/><path f="N" d="M18 56 L30 26 L42 56" style="stroke:var(--i-W);stroke-width:5"/><path f="N" d="M18 56 L30 26 L42 56" style="stroke-width:1.2"/><path f="N" d="M8 12 L50 38" style="stroke:var(--i-W);stroke-width:5"/><path f="N" d="M8 12 L50 38" style="stroke-width:1.2"/><rect f="M" x="44" y="38" width="12" height="11"/><path f="N" d="M8 12 L6 26" style="stroke-width:1.3"/><circle f="S" cx="6" cy="29" r="3.5"/><circle f="M" cx="30" cy="25" r="3"/>'],
+ ['banner','Raven banner','society','<rect f="W" x="12" y="5" width="4" height="56" rx="1.5"/><circle f="G" cx="14" cy="5" r="3"/><path f="P" d="M16 9 H54 L46 23 L54 37 H16 Z"/><path f="K" d="M23 25 C26 19 33 17 37 21 L44 18 L40 24 C41 28 37 31 31 31 L26 36 L27 29 C24 28 22 27 23 25 Z" style="stroke:none"/>'],
+ ['scales','Scales','society','<rect f="W" x="30" y="10" width="4" height="44"/><rect f="W" x="20" y="52" width="24" height="5" rx="2"/><path f="N" d="M12 18 L52 12" style="stroke-width:3"/><path f="N" d="M12 18 L6 38 M12 18 L18 38 M52 12 L46 30 M52 12 L58 30" style="stroke-width:1.3"/><path f="M" d="M4 38 H20 C20 44 4 44 4 38 Z"/><path f="M" d="M44 30 H60 C60 36 44 36 44 30 Z"/>'],
+ ['shackles','Shackles','crime','<circle f="N" cx="18" cy="40" r="10" style="stroke:var(--i-M);stroke-width:6"/><circle f="N" cx="18" cy="40" r="13" style="stroke-width:1.3"/><circle f="N" cx="18" cy="40" r="7" style="stroke-width:1.3"/><circle f="N" cx="46" cy="40" r="10" style="stroke:var(--i-M);stroke-width:6"/><circle f="N" cx="46" cy="40" r="13" style="stroke-width:1.3"/><circle f="N" cx="46" cy="40" r="7" style="stroke-width:1.3"/><ellipse f="N" cx="25" cy="22" rx="4" ry="2.6" style="stroke-width:2"/><ellipse f="N" cx="32" cy="18" rx="4" ry="2.6" style="stroke-width:2"/><ellipse f="N" cx="39" cy="22" rx="4" ry="2.6" style="stroke-width:2"/>'],
+ ['eye','Witness','crime','<path f="S" d="M6 34 C16 20 48 20 58 34 C48 48 16 48 6 34 Z"/><circle f="W" cx="32" cy="34" r="9"/><circle f="K" cx="32" cy="34" r="4"/><circle f="S" cx="29" cy="31" r="1.6" style="stroke:none"/><path f="N" d="M14 22 L11 16 M24 18 L23 11 M40 18 L41 11 M50 22 L53 16" style="stroke-width:1.8"/>'],
+ ['skull','Death','body','<path f="S" d="M14 30 C14 16 22 8 32 8 C42 8 50 16 50 30 C50 38 46 40 44 42 V50 H20 V42 C18 40 14 38 14 30 Z"/><ellipse f="K" cx="24" cy="30" rx="5" ry="6"/><ellipse f="K" cx="40" cy="30" rx="5" ry="6"/><path f="K" d="M32 36 L29 42 H35 Z"/><path f="S" d="M20 50 H44 V55 C40 58 24 58 20 55 Z"/><path f="N" d="M26 50 V56 M32 50 V57 M38 50 V56" style="stroke-width:1.4"/>'],
+ ['blood','Bleeding','body','<path f="B" d="M32 6 C40 20 50 30 50 42 C50 52 42 58 32 58 C22 58 14 52 14 42 C14 30 24 20 32 6 Z"/><path f="N" d="M23 42 C23 35 26 30 29 27" style="stroke:var(--i-S);stroke-width:2.6;opacity:.7"/>'],
+ ['leaf','Falling leaf','emblem','<path f="L" d="M32 6 C38 10 36 14 40 14 C46 12 46 20 42 22 C48 22 50 30 44 32 C50 34 48 42 42 40 C44 46 38 50 34 46 L33 58 L31 58 L30 46 C26 50 20 46 22 40 C16 42 14 34 20 32 C14 30 16 22 22 22 C18 20 18 12 24 14 C28 14 26 10 32 6 Z"/><path f="N" d="M32 10 V56 M32 22 L39 18 M32 22 L25 18 M32 32 L41 28 M32 32 L23 28 M32 41 L38 38 M32 41 L26 38" style="stroke-width:1.3"/>']
+];
+function iconMarkup(body){
+  const out=body.replace(/<(\w+)([^>]*?)(\/?)>/g,(m,tag,attrs,sl)=>{
+    const fm=attrs.match(/\sf="(\w)"/);if(!fm)return m;
+    const sm=attrs.match(/\sstyle="([^"]*)"/);const st=sm?sm[1]:'';
+    attrs=attrs.replace(/\sf="\w"/,'').replace(/\sstyle="[^"]*"/,'');
+    return '<'+tag+attrs+' style="fill:var(--i-'+fm[1]+')'+(st?';'+st:'')+'"'+sl+'>';});
+  return '<g style="stroke:var(--i-K);stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round">'+out+'</g>';}
+function buildIcons(){
+  const defs=document.getElementById('iconDefs');let s='';
+  ICONS.forEach(i=>{s+='<symbol id="ic-'+i[0]+'" viewBox="0 0 64 64">'+iconMarkup(i[3])+'</symbol>';});
+  defs.innerHTML=s;
+  const sheet=document.getElementById('sheet');sheet.innerHTML=ICONS.map(i=>'<div class="icon"><svg viewBox="0 0 64 64" role="img" aria-label="'+i[1]+'"><use href="#ic-'+i[0]+'"/></svg><span>'+i[1]+'</span><em>'+i[2]+'</em></div>').join('');
+}
+function wireSwatches(){
+  const sheet=document.getElementById('sheet');
+  const fac={'fac-rg':['#9c4a25','#dccca5'],'fac-vell':['#3e5266','#c9c3ad'],'fac-ash':['#5f6b38','#d8c48a']};
+  const met={'met-iron':'#8f9496','met-bronze':'#a8743c','met-black':'#4a4f52'};
+  function group(map,apply){Object.keys(map).forEach(id=>{const b=document.getElementById(id);b.addEventListener('click',()=>{Object.keys(map).forEach(o=>document.getElementById(o).setAttribute('aria-pressed',o===id?'true':'false'));apply(map[id]);});});}
+  group(fac,v=>{sheet.style.setProperty('--i-P',v[0]);sheet.style.setProperty('--i-S',v[1]);});
+  group(met,v=>{sheet.style.setProperty('--i-M',v);});
+}
+
+/* ---------- run ---------- */
+buildIcons();wireSwatches();
+try{drawHero();}catch(e){console.error(e);}
+leafAnim();
+const fontsReady=Promise.race([Promise.all([document.fonts.load('22px "IM Fell English SC"'),document.fonts.load('15px "IM Fell English"'),document.fonts.load('700 11px "Alegreya Sans SC"')]).catch(()=>{}),new Promise(r=>setTimeout(r,2500))]);
+const steps=[drawTown,drawBattle,()=>fontsReady.then(()=>{drawMap();drawMini();}),drawBuild];
+(function run(i){if(i>=steps.length)return;Promise.resolve().then(()=>steps[i]()).catch(e=>console.error(e)).then(()=>setTimeout(()=>run(i+1),16));})(0);
+})();
+</script>
