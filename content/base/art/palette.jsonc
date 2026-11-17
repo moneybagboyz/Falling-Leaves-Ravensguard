@@ -1,0 +1,45 @@
+// Ravensguard fixed art palette. Source of truth for every sprite.
+// Values match the approved concept page (docs/redesign/concept/ravensguard-tileset.html).
+// Ramps list colour names dark -> light. The validator rejects any pixel not listed here.
+{
+  "colors": {
+    "out": "#1a1418",
+    "dk1": "#0e0b0c", "dk2": "#120c0c",
+    "g1": "#355c26", "g2": "#447030", "g3": "#56873a", "g4": "#6f9e46",
+    "d1": "#5a3e28", "d2": "#735034", "d3": "#8e6842", "d4": "#a8835a",
+    "s1": "#3e3d44", "s2": "#57565e", "s3": "#75747c", "s4": "#9a99a0", "s5": "#bdbcc0",
+    "w1": "#4a2e1a", "w2": "#653f24", "w3": "#80552f", "w4": "#9e6e3e", "w5": "#bb8c55",
+    "pl1": "#a8977a", "pl2": "#c9b994", "pl3": "#ddd0ae", "pl4": "#ece4c8",
+    "wa1": "#203a5a", "wa2": "#2c4f78", "wa3": "#3d6b9a", "wa4": "#6a9cc4",
+    "k1": "#7a4a32", "k2": "#a46a48", "k3": "#c98f68", "k4": "#e8b48e",
+    "hb": "#2a1e16", "hbr": "#5a3a1e", "hbl": "#b8863a", "hr": "#8a3a1e", "hg": "#7a7a7a",
+    "r1": "#5e1a14", "r2": "#8c2a1e", "r3": "#b33a2c", "r4": "#d4573f",
+    "b1": "#1e2e4e", "b2": "#2e4470", "b3": "#43609a", "b4": "#6584ba",
+    "gr1": "#2e4422", "gr2": "#3e5a2e", "gr3": "#527a3c",
+    "br1": "#3e2c1e", "br2": "#5a4430", "br3": "#7a5c40", "br4": "#987656",
+    "ln1": "#9a907c", "ln2": "#bfb49c", "ln3": "#d8d0bc",
+    "m1": "#2e3034", "m2": "#4e5258", "m3": "#7a7f86", "m4": "#a8adb3", "m5": "#d6dadd",
+    "au1": "#8a5e1e", "au2": "#b8862e", "au3": "#e0b450",
+    "bl1": "#5a0c0c", "bl2": "#8a1616", "bl3": "#b52222",
+    "f1": "#c23a12", "f2": "#e8701c", "f3": "#f5a82a", "f4": "#fde27a",
+    "lf1": "#8a3a14", "lf2": "#b8561c", "lf3": "#d98a2a", "lf4": "#e6b33a",
+    "bone": "#e8dcc0"
+  },
+  "ramps": {
+    "grass":   ["g1", "g2", "g3", "g4"],
+    "dirt":    ["d1", "d2", "d3", "d4"],
+    "stone":   ["s1", "s2", "s3", "s4", "s5"],
+    "wood":    ["w1", "w2", "w3", "w4", "w5"],
+    "plaster": ["pl1", "pl2", "pl3", "pl4"],
+    "water":   ["wa1", "wa2", "wa3", "wa4"],
+    "skin":    ["k1", "k2", "k3", "k4"],
+    "red":     ["r1", "r2", "r3", "r4"],
+    "blue":    ["b1", "b2", "b3", "b4"],
+    "green":   ["gr1", "gr2", "gr3", "g4"],
+    "brown":   ["br1", "br2", "br3", "br4"],
+    "linen":   ["ln1", "ln2", "ln3", "pl4"],
+    "iron":    ["m1", "m2", "m3", "m4", "m5"],
+    "gold":    ["au1", "au2", "au3", "f4"],
+    "leather": ["w1", "w2", "k1", "w4"]
+  }
+}
