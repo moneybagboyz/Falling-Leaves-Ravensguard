@@ -144,6 +144,16 @@ public sealed partial class HistoryGenerator
             string note = $"raiding by the border lords of {ra.Name}";
             var ev = Ev("border_raid", $"The Raid on {s.Name}", $"Riders from {ra.Name} burn the outskirts of {s.Name} in {rv.Name}; {Num(loss)} killed or carried off", s.Cell, [ra.Id, rv.Id, s.Id], Cz(CauseKind.Raid, EntityId.None, note));
             s.LastBlow = ev; s.LastBlowTick = _tick;
+            if (Pct(s.Id.Value, S.Incident, 55))
+            {
+                // the local levy catches the raiders on the way home
+                int site = s.Cell;
+                string bname = BattleName(site, s);
+                int deaths = Roll(s.Id.Value, S.Incident, 15, 90);
+                Kill(site, deaths, 3);
+                var fight = Ev("skirmish", $"The Skirmish at {bname}", $"The levy of {s.Name} catches riders of {ra.Name} on the road home; {Num(deaths)} die", site, [rv.Id, ra.Id, s.Id], Cz(CauseKind.Raid, ev, note));
+                _h.Battlefields.Add(new Battlefield(site, fight, bname, _tick, -1, deaths));
+            }
             PutCb(victim, actor, CasusBelliKind.Raid, ev, note);
             Op(actor, victim, -15);
         }
@@ -298,7 +308,7 @@ public sealed partial class HistoryGenerator
         int fightPct = (_season == 2 ? 35 : 60) * (w.Naval ? _s.SeaRaidPct : 100) / 100;
         if (!Pct(w.DeclEvent.Value + (ulong)w.Index, S.Battle, fightPct))
         {
-            if (Pct(w.DeclEvent.Value + (ulong)w.Index, S.Battle, w.Naval ? 12 : 22)) Skirmish(w, inv, vic, t, attInv);
+            if (Pct(w.DeclEvent.Value + (ulong)w.Index, S.Battle, w.Naval ? 20 : 50)) Skirmish(w, inv, vic, t, attInv);
             if (w.Score * (attInv ? 1 : -1) >= 10 && armyInv * 10 >= armyVic * 8 && Pct(w.DeclEvent.Value, S.Siege, 35)) BeginSiege(w, inv, vic, t, w.DeclEvent, "the enemy gives no battle");
             return;
         }
@@ -401,7 +411,7 @@ public sealed partial class HistoryGenerator
             {
                 var v = _h.Settlements[i];
                 if (v.IsRuin || v.Kind > SettlementKind.Village || v.Id == target.Id || Dist(v.Cell, site) != d) continue;
-                if (!Pct(v.Id.Value + (ulong)_tick, S.Battle, v.Manor ? 30 : 15)) continue;
+                if (!Pct(v.Id.Value + (ulong)_tick, S.Battle, v.Manor ? 25 : 12)) continue;
                 hits++;
                 int loss = v.Pop;
                 bool burn = v.Kind == SettlementKind.Hamlet || v.Manor || Pct(v.Id.Value, S.Battle, 35);

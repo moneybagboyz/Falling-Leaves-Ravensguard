@@ -39,6 +39,7 @@ public sealed record HistorySettingsDef : ContentDef
     public int MaxRealms { get; init; } = 60;
     public int FoundInitialAttempts { get; init; } = 30000;
     public int MinorInitialAttempts { get; init; } = 250000;
+    public int FoundRichCluster { get; init; } = 3;
     public int FoundRegrowPct { get; init; } = 45;
     public int FoundSpacingRich { get; init; } = 3;
     public int FoundRichHinterland { get; init; } = 2400;

@@ -23,7 +23,7 @@
     "mine_collapse_permille_year": 8,
     "incident_ppm_tick": 9000,           // border incidents (insult, raid, claim) per neighbour pair per season
     "war_utility_threshold": 76,         // claim + casus belli + strength + treasury + season - harvest cost
-    "war_chance_pct": 10,
+    "war_chance_pct": 9,
     "truce_years_min": 8,
     "truce_years_max": 20,
     "rebellion_ppm_tick": 2500,
@@ -35,9 +35,10 @@
     "max_realms": 60,
     "found_initial_attempts": 120000,     // candidate cells examined when the world is seeded
     "minor_initial_attempts": 250000,    // candidate cells examined to seed hamlets, villages and manors
+    "found_rich_cluster": 3,             // lowland towns packed at the rich spacing: at most this many majors within 6 cells
     "found_regrow_pct": 45,              // a town site needs rural folk at this % of capacity to be founded later
     "found_spacing_rich": 2,  // cells between towns in rich river lowlands (3 = 6 km)
-    "found_rich_hinterland": 3200,  // 5x5 capacity at or above which a river site counts as rich lowland
+    "found_rich_hinterland": 2800,  // 5x5 capacity at or above which a river site counts as rich lowland
     "urban_max_pop": 3000,  // largest a town grows before its own capital bonus
     "minor_found_attempts_per_tick": 400,  // candidate cells per season for hamlets, villages and manors
     "minor_spacing": 1,  // cells (Chebyshev) kept clear around a new minor settlement

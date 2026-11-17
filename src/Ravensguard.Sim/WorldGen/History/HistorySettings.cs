@@ -38,6 +38,7 @@ public sealed class HistorySettings
     public int MaxRealms { get; set; } = 60;
     public int FoundInitialAttempts { get; set; } = 30000;
     public int MinorInitialAttempts { get; set; } = 250000;
+    public int FoundRichCluster { get; set; } = 3;
     public int FoundRegrowPct { get; set; } = 45;
     public int FoundSpacingRich { get; set; } = 3;
     public int FoundRichHinterland { get; set; } = 2400;
@@ -70,7 +71,7 @@ public sealed class HistorySettings
         TruceYearsMax = d.TruceYearsMax, RebellionPpmTick = d.RebellionPpmTick, CoupPpmTick = d.CoupPpmTick,
         MarriagePctYear = d.MarriagePctYear, CrafterPermilleYear = d.CrafterPermilleYear, ArtefactPermilleYear = d.ArtefactPermilleYear,
         RouteRefreshYears = d.RouteRefreshYears, MaxRealms = d.MaxRealms,
-        FoundInitialAttempts = d.FoundInitialAttempts, FoundRegrowPct = d.FoundRegrowPct, MinorInitialAttempts = d.MinorInitialAttempts, FoundSpacingRich = d.FoundSpacingRich, FoundRichHinterland = d.FoundRichHinterland, UrbanMaxPop = d.UrbanMaxPop, MinorFoundAttemptsPerTick = d.MinorFoundAttemptsPerTick, MinorSpacing = d.MinorSpacing, MinorFoundChancePct = d.MinorFoundChancePct, MinorMaxPop = d.MinorMaxPop, ManorPct = d.ManorPct, MinorAbandonPermilleYear = d.MinorAbandonPermilleYear, PlagueEmptyPct = d.PlagueEmptyPct, FamineEmptyPct = d.FamineEmptyPct, PillageReach = d.PillageReach, SeaReach = d.SeaReach, SeaRaidPct = d.SeaRaidPct, TributePct = d.TributePct, VassalagePct = d.VassalagePct, VassalYearsMin = d.VassalYearsMin, VassalYearsMax = d.VassalYearsMax,
+        FoundInitialAttempts = d.FoundInitialAttempts, FoundRegrowPct = d.FoundRegrowPct, FoundRichCluster = d.FoundRichCluster, MinorInitialAttempts = d.MinorInitialAttempts, FoundSpacingRich = d.FoundSpacingRich, FoundRichHinterland = d.FoundRichHinterland, UrbanMaxPop = d.UrbanMaxPop, MinorFoundAttemptsPerTick = d.MinorFoundAttemptsPerTick, MinorSpacing = d.MinorSpacing, MinorFoundChancePct = d.MinorFoundChancePct, MinorMaxPop = d.MinorMaxPop, ManorPct = d.ManorPct, MinorAbandonPermilleYear = d.MinorAbandonPermilleYear, PlagueEmptyPct = d.PlagueEmptyPct, FamineEmptyPct = d.FamineEmptyPct, PillageReach = d.PillageReach, SeaReach = d.SeaReach, SeaRaidPct = d.SeaRaidPct, TributePct = d.TributePct, VassalagePct = d.VassalagePct, VassalYearsMin = d.VassalYearsMin, VassalYearsMax = d.VassalYearsMax,
     };
 
     /// <summary>Loads defaults through the content pipeline (e.g. content/base); built-in defaults if absent.</summary>

@@ -274,6 +274,18 @@ public sealed partial class HistoryGenerator
                 }
             bool river = SettledRiver(x, y);
             bool rich = river && hint >= _s.FoundRichHinterland;
+            if (rich)
+            {
+                int near = 0;
+                for (int dy = -6; dy <= 6; dy++)
+                    for (int dx = -6; dx <= 6; dx++)
+                    {
+                        if (!In(x + dx, y + dy)) continue;
+                        int si0 = _settleAt[(y + dy) * N + x + dx];
+                        if (si0 >= 0 && !_h.Settlements[si0].IsRuin && !_h.Settlements[si0].Minor) near++;
+                    }
+                rich = near < _s.FoundRichCluster;
+            }
             int sp = rich ? _s.FoundSpacingRich : _s.FoundSpacing;
             bool clash = false;
             for (int dy = -_s.FoundSpacing; dy <= _s.FoundSpacing && !clash; dy++)
