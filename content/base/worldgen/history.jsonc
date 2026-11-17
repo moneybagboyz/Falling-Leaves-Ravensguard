@@ -1,0 +1,37 @@
+// Stage 2 (history v0) tunables; see docs/REDESIGN_PLAN.md §1A Stage 2. Seed is per-world and not set here.
+// permille_year = per thousand per year; ppm_tick = per million per season tick (4 ticks a year); pct = percent.
+[
+  {
+    "type": "worldgen_history", "id": "history_defaults",
+    "years": 250,                        // 100-250 in the plan
+    "rural_growth_permille_year": 30,    // net logistic growth rate of rural cells
+    "capacity_scale_pct": 100,           // scales every cell's carrying capacity
+    "start_fill_pct": 72,                // starting population as % of capacity
+    "found_attempts_per_tick": 40,       // candidate cells examined per season for new settlements
+    "found_min_hinterland": 650,         // summed capacity of the 5x5 neighbourhood a settlement needs
+    "found_spacing": 5,                  // cells between settlements
+    "found_chance_pct": 22,
+    "urban_cap_pct": 90,                 // settlement capacity as % of its hinterland's rural population
+    "levy_permille": 10,                 // army = ~1% of realm population
+    "bad_year_permille": 85,             // per culture-year: drought, cold or wet
+    "famine_max_loss_pct": 16,
+    "plague_permille_year": 22,
+    "plague_spread_pct": 45,
+    "plague_town_mortality_pct": 20,
+    "fire_permille_year": 7,
+    "flood_permille_year": 9,
+    "mine_collapse_permille_year": 8,
+    "incident_ppm_tick": 9000,           // border incidents (insult, raid, claim) per neighbour pair per season
+    "war_utility_threshold": 62,         // claim + casus belli + strength + treasury + season - harvest cost
+    "war_chance_pct": 30,
+    "truce_years_min": 8,
+    "truce_years_max": 20,
+    "rebellion_ppm_tick": 2500,
+    "coup_ppm_tick": 600,
+    "marriage_pct_year": 35,
+    "crafter_permille_year": 12,
+    "artefact_permille_year": 110,
+    "route_refresh_years": 25,
+    "max_realms": 60
+  }
+]
