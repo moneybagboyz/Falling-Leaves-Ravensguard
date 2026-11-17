@@ -1,13 +1,15 @@
 using Ravensguard.Sim.Core;
 using Ravensguard.Sim.Lighting;
 using Ravensguard.Sim.World;
+using Ravensguard.Sim.WorldGen.Chunks;
 
 namespace Ravensguard.Sim.Live;
 
 /// <summary>Immutable view of the live world at the end of one tick. The presentation layer reads only this (plan 2.1a, 2.4).</summary>
 public sealed record LiveSnapshot(
     long Tick, GameTime Time, SimSpeed Speed, HeroSnapshot Hero,
-    Ambient Ambient, LightFrame Light, int HeroLight, int HeroVision);
+    Ambient Ambient, LightFrame Light, int HeroLight, int HeroVision,
+    int OriginX = 0, int OriginY = 0);
 
 /// <summary>
 /// The live sim for the street view: clock, level grid, hero and lights, stepped at a fixed 20 Hz (plan 2.5).
@@ -26,11 +28,20 @@ public sealed class LiveWorld
     private static readonly Fixed Diag = Fixed.FromRaw(46341); // 1/sqrt(2)
     private static readonly Fixed Arrive = Fixed.FromRatio(1, 16);
 
-    public LevelGrid Grid { get; }
-    public HamletMap Map { get; }
-    public LightGrid Lights { get; }
+    public LevelGrid Grid { get; private set; }
+    public HamletMap Map { get; private set; }
+    public LightGrid Lights { get; private set; }
     public SimClock Clock { get; }
-    public LevelPathfinder Pathfinder { get; }
+    public LevelPathfinder Pathfinder { get; private set; }
+    /// <summary>Streamed region mode: the chunk streamer and the window of it the sim currently stands in (null for the hamlet and test grids).</summary>
+    public ChunkStreamer? Streamer { get; }
+    public WorldWindow? Window { get; private set; }
+    /// <summary>World cell of local (0,0): zero outside streamed mode. Hero cells in a snapshot are local; add this for world cells.</summary>
+    public int OriginX => Window?.OriginX ?? 0;
+    public int OriginY => Window?.OriginY ?? 0;
+    /// <summary>Chunks the hero has moved the window across (rebuilds), for diagnostics.</summary>
+    public int WindowSwaps { get; private set; }
+    private int _lightRev;
     public int LatitudeTenths { get; }
     public long Tick { get; private set; }
     public LiveSnapshot Snapshot { get; private set; }
@@ -56,6 +67,24 @@ public sealed class LiveWorld
         Pathfinder = new LevelPathfinder(Grid);
         Clock = new SimClock(startTime) { Speed = SimSpeed.X1 };
         _x = Fixed.FromInt(start.X) + Fixed.Half; _y = Fixed.FromInt(start.Y) + Fixed.Half; _z = start.Z;
+        _px = _x; _py = _y; _pz = _z;
+        Snapshot = Publish();
+    }
+
+    /// <summary>
+    /// Streamed region mode (plan 2.3): the live bubble is a window of generated chunks around the hero. <paramref name="start"/> is in world
+    /// cells (0..31999). The hero's surrounding chunks are loaded before the first step; further chunks stream in time-sliced.
+    /// </summary>
+    public LiveWorld(ChunkStreamer streamer, Cell3 start, GameTime startTime, int latitudeTenths = 480)
+    {
+        Streamer = streamer; LatitudeTenths = latitudeTenths;
+        int cx = ChunkStreamer.FloorDiv(start.X, 32), cy = ChunkStreamer.FloorDiv(start.Y, 32);
+        streamer.LoadAround(cx, cy, streamer.Settings.LoadRadius);
+        Window = new WorldWindow(streamer, cx, cy);
+        Grid = Window.Grid; Map = Window.Map; Lights = Window.Lights; _lightRev = Window.LightRevision;
+        Pathfinder = new LevelPathfinder(Grid);
+        Clock = new SimClock(startTime) { Speed = SimSpeed.X1 };
+        _x = Fixed.FromInt(start.X - Window.OriginX) + Fixed.Half; _y = Fixed.FromInt(start.Y - Window.OriginY) + Fixed.Half; _z = start.Z;
         _px = _x; _py = _y; _pz = _z;
         Snapshot = Publish();
     }
@@ -106,12 +135,40 @@ public sealed class LiveWorld
     {
         Tick++;
         _px = _x; _py = _y; _pz = _z;
+        if (Streamer != null) StreamStep();
         Clock.Advance(TickSeconds);
         int mult = (int)Clock.Speed;
         _moving = false;
         if (_usePending) { _usePending = false; TryPortalHere(force: true); }
         if (mult > 0) MoveHero(mult);
         Snapshot = Publish();
+    }
+
+    /// <summary>Streams chunks around the hero; moves the window when the hero crosses into another chunk; stamps in chunks that finished loading.</summary>
+    private void StreamStep()
+    {
+        var w = Window!;
+        int hcx = ChunkStreamer.FloorDiv(w.OriginX + _x.Floor(), 32), hcy = ChunkStreamer.FloorDiv(w.OriginY + _y.Floor(), 32);
+        Streamer!.Update(hcx, hcy);
+        if (hcx != w.CenterChunkX || hcy != w.CenterChunkY)
+        {
+            var nw = new WorldWindow(Streamer, hcx, hcy);
+            int dx = nw.OriginX - w.OriginX, dy = nw.OriginY - w.OriginY;
+            _x -= Fixed.FromInt(dx); _y -= Fixed.FromInt(dy); _px -= Fixed.FromInt(dx); _py -= Fixed.FromInt(dy);
+            if (_portalLock is { } pl) _portalLock = new Cell3(pl.X - dx, pl.Y - dy, pl.Z);
+            if (_path != null)
+            {
+                var moved = new List<Cell3>(_path.Count);
+                foreach (var c in _path) moved.Add(new Cell3(c.X - dx, c.Y - dy, c.Z));
+                int cut = moved.FindIndex(c => !nw.Grid.InBounds(c.X, c.Y, c.Z));
+                if (cut >= 0) moved.RemoveRange(cut, moved.Count - cut);
+                _path = moved.Count > _pathIdx ? moved : null;
+            }
+            Window = nw; Grid = nw.Grid; Map = nw.Map; Lights = nw.Lights; _lightRev = nw.LightRevision;
+            Pathfinder = new LevelPathfinder(Grid);
+            _frame = null; _lightDirty = true; WindowSwaps++;
+        }
+        else if (w.Sync() || w.LightRevision != _lightRev) { _lightRev = w.LightRevision; _lightDirty = true; }
     }
 
     private Fixed SpeedOf(MoveMode m) => m switch { MoveMode.Walk => WalkSpeed, MoveMode.Sprint => SprintSpeed, _ => JogSpeed };
@@ -266,7 +323,7 @@ public sealed class LiveWorld
         }
         int heroLight = _frame!.Total(cx, cy, _z);
         var hero = new HeroSnapshot(_x, _y, _z, _px, _py, _pz, _facing, _moving, _mode, _torch, _path == null ? 0 : Math.Max(0, _path.Count - _pathIdx));
-        return new LiveSnapshot(Tick, t, Clock.Speed, hero, amb, _frame, heroLight, LightModel.VisionRadius(heroLight));
+        return new LiveSnapshot(Tick, t, Clock.Speed, hero, amb, _frame, heroLight, LightModel.VisionRadius(heroLight), OriginX, OriginY);
     }
 
     private static ulong Hash(long v)

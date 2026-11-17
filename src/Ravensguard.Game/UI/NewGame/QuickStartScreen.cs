@@ -44,9 +44,9 @@ public partial class QuickStartScreen : Control
 
     public override void _Ready()
     {
-        var margin = UiKit.Margin(this, 20);
+        var margin = UiKit.Margin(this, 16);
         var root = new VBoxContainer();
-        root.AddThemeConstantOverride("separation", 8);
+        root.AddThemeConstantOverride("separation", 6);
         margin.AddChild(root);
         root.AddChild(UiKit.Title(L.T("QS_TITLE")));
 
@@ -84,10 +84,10 @@ public partial class QuickStartScreen : Control
             var b = new Button
             {
                 ToggleMode = true, ButtonGroup = group, Alignment = HorizontalAlignment.Left, SizeFlagsHorizontal = SizeFlags.ExpandFill,
-                CustomMinimumSize = new Vector2(0, 46), Text = o.Name + "\n" + SkillLine(o), ClipText = true,
+                CustomMinimumSize = new Vector2(0, 40), Text = o.Name + "\n" + SkillLine(o), ClipText = true,
             };
-            b.AddThemeStyleboxOverride("pressed", PixelTheme.PanelBox(new Color("4b3d31"), PixelTheme.Gold, 6));
-            b.AddThemeStyleboxOverride("normal", PixelTheme.PanelBox(new Color("2f2722"), PixelTheme.Rim, 6));
+            b.AddThemeStyleboxOverride("pressed", PixelTheme.PanelBox(new Color("4b3d31"), PixelTheme.Gold, 4));
+            b.AddThemeStyleboxOverride("normal", PixelTheme.PanelBox(new Color("2f2722"), PixelTheme.Rim, 4));
             b.AddThemeColorOverride("font_pressed_color", PixelTheme.Gold);
             var id = o.Id;
             b.Pressed += () => SelectOrigin(id);
@@ -95,7 +95,7 @@ public partial class QuickStartScreen : Control
             _cards[id] = b;
             grid.AddChild(b);
         }
-        _detail = new RichTextLabel { BbcodeEnabled = true, FitContent = false, ScrollActive = false, SizeFlagsVertical = SizeFlags.ExpandFill, CustomMinimumSize = new Vector2(0, 120) };
+        _detail = new RichTextLabel { BbcodeEnabled = true, FitContent = false, ScrollActive = false, SizeFlagsVertical = SizeFlags.ExpandFill, CustomMinimumSize = new Vector2(0, 60) };
         var dp = UiKit.Panel(_detail); dp.SizeFlagsVertical = SizeFlags.ExpandFill; left.AddChild(dp);
 
         // right: world
@@ -158,7 +158,7 @@ public partial class QuickStartScreen : Control
         UiKit.CaptureKeys(_seed);
         _seed.TextChanged += t => { if (ulong.TryParse(t, out var v) && v > 0) { NewGameServices.Reseed(_d, v); ApplyWorld(); } };
         seedRow.AddChild(_seed);
-        var rs = UiKit.Key(L.T("ADV_REROLL_SEED"), "menu.reroll_seed", 0, 28);
+        var rs = UiKit.Key(L.T("ADV_REROLL_SEED"), "menu.reroll_seed", 140, 28);
         rs.Pressed += RerollSeed;
         seedRow.AddChild(rs);
         _advBox.AddChild(seedRow);
@@ -202,6 +202,8 @@ public partial class QuickStartScreen : Control
 
     void ToggleSex() { _d.Female = !_d.Female; RefreshToggles(); }
     void ToggleIronman() { _d.Ironman = !_d.Ironman; RefreshToggles(); }
+
+    public void DebugAdvanced() => ToggleAdvanced();
 
     void ToggleAdvanced()
     {
@@ -283,6 +285,16 @@ public partial class QuickStartScreen : Control
         NewGameFlow.Begin(_router, _d);
     }
 
+    // Enter starts unless a button other than an origin card has focus (then Enter presses that button).
+    public override void _Input(InputEvent e)
+    {
+        if (!Visible || !Actions.Pressed(e, "menu.accept")) return;
+        var f = GetViewport().GuiGetFocusOwner();
+        if (f is LineEdit || (f is Button b && !_cards.ContainsValue(b))) return;
+        Go(false);
+        GetViewport().SetInputAsHandled();
+    }
+
     public override void _UnhandledInput(InputEvent e)
     {
         if (!Visible) return;
@@ -293,7 +305,6 @@ public partial class QuickStartScreen : Control
         else if (Actions.Pressed(e, "menu.reroll_name")) RerollName();
         else if (Actions.Pressed(e, "menu.reroll_seed") && _worldIdx == 0) RerollSeed();
         else if (Actions.Pressed(e, "menu.choose_region")) Go(true);
-        else if (Actions.Pressed(e, "menu.accept")) Go(false);
         else return;
         GetViewport().SetInputAsHandled();
     }

@@ -152,7 +152,6 @@ public static class ContinentMap
             int cx = s.Cell % N * Scale + 1, cy = s.Cell / N * Scale + 1;
             if (s.Kind == SettlementKind.City) Square(img, cx, cy, 3, Rgb(255, 255, 255), Rgb(20, 14, 12));
             else if (s.Kind == SettlementKind.Town) Square(img, cx, cy, 2, Rgb(255, 255, 255), Rgb(20, 14, 12));
-            else if (s.Kind == SettlementKind.Village) Square(img, cx, cy, 1, Rgb(250, 240, 200), Rgb(60, 50, 40));
         }
         foreach (var r in h.Realms)
             if (r.Alive && r.Capital >= 0 && r.Capital < h.Settlements.Count)
@@ -165,8 +164,8 @@ public static class ContinentMap
     static void DrawLegends(uint[] img, WorldHistory h)
     {
         foreach (var s in h.Settlements)
-            if (s.IsRuin) Cross(img, s.Cell % N * Scale + 1, s.Cell / N * Scale + 1, 2, Rgb(235, 225, 205), Rgb(30, 20, 20), diagonal: true);
-        foreach (var b in h.Battlefields) Cross(img, b.Cell % N * Scale + 1, b.Cell / N * Scale + 1, 3, Rgb(240, 50, 40), Rgb(30, 10, 10), diagonal: false);
+            if (s.IsRuin) Cross(img, s.Cell % N * Scale + 1, s.Cell / N * Scale + 1, 1, Rgb(235, 225, 205), Rgb(30, 20, 20), diagonal: true);
+        foreach (var b in h.Battlefields) Cross(img, b.Cell % N * Scale + 1, b.Cell / N * Scale + 1, 2, Rgb(240, 50, 40), Rgb(30, 10, 10), diagonal: false);
     }
 
     static void Pixel(uint[] img, int x, int y, uint col) { if ((uint)x < Px && (uint)y < Px) img[y * Px + x] = col; }

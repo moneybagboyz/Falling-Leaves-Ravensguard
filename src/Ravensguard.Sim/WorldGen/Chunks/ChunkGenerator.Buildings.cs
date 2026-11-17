@@ -2,6 +2,7 @@ using Ravensguard.Content;
 using Ravensguard.Sim.Building;
 using Ravensguard.Sim.Core;
 using Ravensguard.Sim.Live;
+using Ravensguard.Sim.People;
 using Ravensguard.Sim.WorldGen.Region;
 using RegionData = Ravensguard.Sim.WorldGen.Region.Region;
 
@@ -358,6 +359,9 @@ public sealed partial class ChunkGenerator
             var st = GetStamp(s, li);
             if (st == null) continue;
             b.Stamps.Add(st);
+            var lr = Region.Settlements[s].Plan.Lots[li].Rect;
+            for (int wy = Math.Max(lr.Y, b.Y0); wy < Math.Min(lr.Bottom, b.Y0 + B); wy++)
+                for (int wx = Math.Max(lr.X, b.X0); wx < Math.Min(lr.Right, b.X0 + B); wx++) b.Flags[b.I(wx, wy)] |= Buf.Yard;
             foreach (var (x, y, g, v) in st.Ground)
             {
                 if (!b.In(x, y)) continue;

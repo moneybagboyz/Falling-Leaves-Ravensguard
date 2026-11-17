@@ -16,17 +16,21 @@ public sealed class StreetOptions
     public (int X, int Y)? Click; // --shot-click px,py: click that screen pixel as if with the mouse
     public int Frames = 12;      // --shot-frames n: frame to capture on
     public double BenchSeconds;  // --street-bench <s>: scripted walk, prints tick and frame timings, quits
+    public ulong? RegionSeed;    // --street-region <seed>: walk the generated region of that seed instead of the test hamlet (dev)
+    public string? Poi;          // --street-poi town|village|river: where in the region to start (default: the largest town's square)
 
     public bool IsShot => Hour.HasValue && ShotPath != null;
 
     public static StreetOptions? Parse(string[] args)
     {
-        int shot = Array.IndexOf(args, "--shot-street"), bench = Array.IndexOf(args, "--street-bench");
-        if (shot < 0 && bench < 0) return null;
+        int shot = Array.IndexOf(args, "--shot-street"), bench = Array.IndexOf(args, "--street-bench"), region = Array.IndexOf(args, "--street-region");
+        if (shot < 0 && bench < 0 && region < 0) return null;
         var o = new StreetOptions();
         string? Val(string name) { int i = Array.IndexOf(args, name); return i >= 0 && i + 1 < args.Length ? args[i + 1] : null; }
         if (shot >= 0 && Val("--shot-street") is { } h) o.Hour = int.Parse(h, CultureInfo.InvariantCulture);
         o.ShotPath = Val("--shot-out");
+        if (Val("--street-region") is { } rs) o.RegionSeed = ulong.Parse(rs, CultureInfo.InvariantCulture);
+        o.Poi = Val("--street-poi");
         if (Val("--shot-zoom") is { } z) o.Zoom = Math.Clamp(int.Parse(z, CultureInfo.InvariantCulture), 1, 2);
         if (Val("--shot-torch") is { } t) o.Torch = t == "1";
         if (Val("--shot-level") is { } l) o.ViewZ = int.Parse(l, CultureInfo.InvariantCulture);

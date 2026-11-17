@@ -168,3 +168,169 @@ ACTION_MENU_PREVIOUS,Previous entry
 ACTION_MENU_FOLLOW_CAUSE,Follow cause
 ACTION_MENU_FOLLOW_EFFECT,Follow consequence
 ACTION_MENU_OPEN_HERE,Open selected
+MENU_LEGENDS,Legends
+MENU_WORLDS,Worlds
+UI_CANCEL,Cancel
+UI_ON,on
+UI_OFF,off
+UI_PENCE,{0} crowns
+QS_TITLE,New game
+QS_NAME,Name
+QS_NAME_PLACEHOLDER,Your name
+QS_REROLL_NAME,New name
+QS_SEX_MALE,Man
+QS_SEX_FEMALE,Woman
+QS_ORIGIN,Who were you?
+QS_SKILLS,Skills
+QS_KIT,Kit
+QS_STARTS,Starts in
+QS_MENTOR,Mentor
+QS_AMBITION,Ambition
+QS_WORLD,The world
+QS_WORLD_NEW,World: new - {0}
+QS_WORLD_NEW_INFO,"Made from seed {0} with {1} years of history, then kept in your library."
+QS_WORLD_LIB,World: {0}
+QS_WORLD_LIB_INFO,"Seed {0}. {1} years of history, {2} realms standing, {3} places, {4} ruins. {5} saved runs."
+QS_IRONMAN,Ironman: {0}
+QS_IRONMAN_HELP,"One save, no reloading. If you die, you carry on as a companion or heir."
+QS_ADVANCED,Advanced world settings
+QS_ADVANCED_OPEN,Hide advanced settings
+QS_ADVANCED_LOCKED,Advanced (library worlds are fixed)
+QS_CHOOSE_REGION,Choose region
+QS_START,Start
+QS_NEED_NAME,Give your character a name.
+START_VILLAGE,a village
+START_TOWN,a town
+START_ROAD,the road
+START_MANOR,a manor
+START_MONASTERY,a monastery
+START_WILDS,the wilds
+ADV_HELP,Changes apply to a new world only. The seed fixes everything else.
+ADV_SEED,Seed
+ADV_REROLL_SEED,New seed
+ADV_LAYOUT,Layout
+ADV_LAYOUT_PANGEA,Pangea
+ADV_LAYOUT_CONTINENTS,Continents
+ADV_LAYOUT_ARCHIPELAGO,Archipelago
+ADV_PLATES,Plates
+ADV_CULTURES,Cultures
+ADV_REALMS,Realms
+ADV_YEARS,History length
+ADV_YEARS_FMT,{0} years
+ADV_MINERALS,Mineral density
+ADV_SAVAGERY,Savagery
+ADV_MOISTURE,Moisture
+ADV_TEMPERATURE,Temperature
+WC_TITLE_NEW,Making the world
+WC_TITLE_OPEN,Opening the world
+WC_CHRONICLE,The chronicle
+WC_STATS,Year {0} of {1}   -   {2} chronicle entries
+WC_FAILED,The world could not be made: {0}
+WC_STAGE_LAYOUT,Drawing the coasts
+WC_STAGE_PLATES,Moving the plates
+WC_STAGE_HEIGHTS,Raising mountains
+WC_STAGE_SLOPES,Measuring slopes
+WC_STAGE_TEMPERATURE,Warming the land
+WC_STAGE_RAIN,Bringing the rain
+WC_STAGE_HYDROLOGY,Cutting rivers
+WC_STAGE_COAST,Finding the coast
+WC_STAGE_DRAINAGE,Draining the marshes
+WC_STAGE_BIOMES,Growing forests
+WC_STAGE_SOIL,Turning the soil
+WC_STAGE_MINERALS,Laying ore
+WC_STAGE_CULTURES,Sowing peoples and realms
+WC_STAGE_SAVAGERY,Waking the wild
+WC_STAGE_HISTORY,History unfolds
+SEASON_SPRING,Spring
+SEASON_SUMMER,Summer
+SEASON_AUTUMN,Autumn
+SEASON_WINTER,Winter
+EM_TITLE,Choose a region
+EM_HELP,Point at a square of 16 x 16 cells (32 km) and click to choose it. Greyed ground cannot be started on.
+EM_LAYERS,Map layers
+LAYER_BIOME,Biome
+LAYER_REALM,Realm
+LAYER_CULTURE,Culture
+LAYER_WEALTH,Wealth
+LAYER_DANGER,Danger
+LAYER_RIVERS,Rivers
+LAYER_TOWNS,Towns
+LAYER_LEGENDS,Legends
+EM_AUTO,Auto pick
+EM_CONFIRM,Embark
+EM_LEGENDS,Open the legends
+EM_WAIT,Still scoring the map...
+EM_NO_REALM,no realm
+EM_CELL,"{0}, {1}, {2} folk, danger {3}"
+EM_SQUARE,"Square at cell {0}, {1}"
+EM_CHOSEN,chosen
+EM_NOT_ALLOWED,Not allowed: {0}
+EM_SCORE,Score {0}
+EM_COUNTS,"Towns {0}, villages {1}, ruins {2}, river cells {3}, biomes {4}, land {5}%, people {6}"
+EM_NO_WAR,No active war on the continent.
+EM_WAR_KM,Nearest active war: {0} km
+EM_REALMS,Realms:
+EM_LEGENDS_HERE,Legends here
+EM_HOVER_HELP,Point at the map.
+EMBARK_REASON_SEA,too much sea
+EMBARK_REASON_EMPTY,no settlements
+EMBARK_REASON_OUTSIDE,off the map
+EMBARK_REASON_WAR,an active war is within 10 km
+SCORE_TOWNS,towns
+SCORE_RIVERS,rivers
+SCORE_BIOMES,mixed biomes
+SCORE_HARSH_LAND,mountains and waste
+SCORE_SEA,sea
+SCORE_WAR,war nearby
+SCORE_POPULATION,population
+SCORE_RUINS,ruins to explore
+SCORE_REALMS,realms
+SCORE_FERTILITY,fertile soil
+SCORE_SAVAGERY,savagery
+BIOME_SEA,Open sea
+BIOME_LAKE,Lake
+BIOME_TUNDRA,Tundra
+BIOME_TAIGA,Taiga
+BIOME_TEMPERATEFOREST,Temperate forest
+BIOME_GRASSLAND,Grassland
+BIOME_STEPPE,Steppe
+BIOME_DESERT,Desert
+BIOME_MARSH,Marsh
+BIOME_MOUNTAIN,Mountains
+BIOME_RIVERVALLEY,River valley
+LEGEND_MARKER_BATTLE,"{0}, year {1}: {2} dead"
+LEGEND_MARKER_RUIN,Ruins of {0}: {1} in year {2}
+LEGEND_MARKER_RUIN_CAUSE,Ruins of {0}: {1} in year {2} ({3})
+LG_TITLE,Legends
+LG_SEARCH,"Search year, name, place"
+LG_ALL,all
+LG_TYPE,Type: {0}
+LG_REALM,Realm: {0}
+LG_COUNT,{0} of {1} entries
+LG_COUNT_MORE,First {0} of {1} entries (narrow the search)
+LG_PEOPLE,Named:
+LG_REALMS,Realms:
+LG_WHY,Why it happened
+LG_CAUSE,"Cause: year {0}, {1}"
+LG_EFFECT,"Led to: year {0}, {1}"
+LG_MORE_EFFECTS,and {0} more consequences
+LG_PREVIOUS,Previous entry
+RB_TITLE,Building the region
+RB_SITE,"Square at cell {0}, {1}"
+RB_SITE_AUTO,Choosing the best square
+RB_FAILED,The region could not be built: {0}
+RB_STEP_PICK,Choosing the square
+RB_STEP_TERRAIN,"Shaping land, roads and settlements"
+RB_STEP_PEOPLE,Placing every household
+RB_STEP_SAVE,Writing the first save
+WL_TITLE,Worlds
+WL_TITLE_LEGENDS,Legends: choose a world
+WL_HELP,A world is made once and can be played many times. Its history is always the same.
+WL_EMPTY,No worlds yet. Start a new game and the world you make is kept here.
+WL_ROW,"Seed {0}, {1} years, {2} realms, {3} places, {4} ruins, {5} runs"
+WL_DELETE,Delete
+WL_LEGENDS,Read legends
+WL_PLAY,New game here
+WL_CONFIRM,Delete {0} and its {1} saved runs for good?
+WL_CONFIRM_YES,Delete
+WL_CONFIRM_NO,Keep

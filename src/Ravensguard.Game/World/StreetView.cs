@@ -10,6 +10,9 @@ using Ravensguard.Sim.Building;
 using Ravensguard.Sim.Core;
 using Ravensguard.Sim.Lighting;
 using Ravensguard.Sim.Live;
+using Ravensguard.Sim.People;
+using Ravensguard.Sim.Save;
+using Ravensguard.Sim.WorldGen.Region;
 using Ravensguard.Sim.Weather;
 using Ravensguard.Sim.World;
 
@@ -25,11 +28,14 @@ public partial class StreetView : Control
 {
     const int Tile = 32;
     const double Step = LiveWorld.TickSeconds;
+    const int LightPatchW = 128, LightPatchH = 96;
+    int _lightW, _lightH;
 
     readonly ScreenRouter? _router;
     readonly StreetOptions _opt;
+    StreetSource? _source;
     LiveWorld _world = null!;
-    HamletMap _map = null!;
+    HamletMap Map => _world.Map;
     ArtAtlas _art = null!;
     readonly Calendar _calendar = new();
 
@@ -52,7 +58,6 @@ public partial class StreetView : Control
     ImageTexture _lightTex = null!;
     byte[] _lightBytes = null!;
     readonly Dictionary<string, Vector2I> _terrainCells = new(), _objectCells = new();
-    readonly List<Sprite2D> _propNodes = new();
 
     // hud
     Label _dateLabel = null!, _phaseLabel = null!, _levelLabel = null!, _hintLabel = null!, _perfLabel = null!;
@@ -64,7 +69,16 @@ public partial class StreetView : Control
     int _frames; double _benchT; bool _quitting;
     static readonly byte[] Tone = BuildTone();
 
-    public StreetView(ScreenRouter? router, StreetOptions? opt = null) { _router = router; _opt = opt ?? new StreetOptions(); }
+    public StreetView(ScreenRouter? router, StreetOptions? opt = null, StreetSource? source = null) { _router = router; _opt = opt ?? new StreetOptions(); _source = source; }
+
+    /// <summary>
+    /// The street view over a generated region (plan 2.2, 2.3): chunks generate on first visit around the hero and stream as they walk.
+    /// <paramref name="spawn"/> is in world cells (0..31999); null picks a paved cell in the largest town's square.
+    /// Pass the save's <paramref name="store"/> to resume (visited chunks come back from snapshot plus deltas).
+    /// </summary>
+    public static StreetView ForRegion(Region region, Population population, ContentDatabase content, ScreenRouter? router = null, StreetOptions? opt = null,
+        ChunkStore? store = null, (int X, int Y, int Z)? spawn = null)
+        => new(router, opt, StreetSource.ForRegion(region, population, content, store, spawn is { } p ? new Cell3(p.X, p.Y, p.Z) : null));
 
     // ------------------------------------------------------------------ setup
 
@@ -72,11 +86,10 @@ public partial class StreetView : Control
     {
         _art = ArtAtlas.Load();
         _rig = RigAtlas.Load();
-        var lib = LoadLibrary();
-        _map = HamletBuilder.Build(lib);
-        var start = _opt.Start is { } s ? new Cell3(s.X, s.Y, s.Z) : HamletBuilder.HeroStart;
+        _source ??= _opt.RegionSeed is { } seed ? StreetSource.FromSeed(seed, _opt.Poi) : StreetSource.Hamlet();
         var t0 = GameTime.FromCalendar(1, Season.Spring, 8, _opt.Hour ?? 9, 0);
-        _world = new LiveWorld(_map, start, t0);
+        _world = _source.CreateWorld(_opt.Start is { } s ? new Cell3(s.X, s.Y, s.Z) : null, t0);
+        var start = _world.Snapshot.Hero.Cell;
         DevContext.Clock = _world.Clock;
         if (_opt.Torch ?? IsNight(t0)) _world.SetTorch(true);
         _zoom = _opt.Zoom;
@@ -92,7 +105,7 @@ public partial class StreetView : Control
         _world.Step();
         if (_opt.BenchSeconds > 0) _perfLabel.Visible = true;
         MouseFilter = MouseFilterEnum.Stop;
-        GD.Print($"[street] ready: {_map.Props.Count} props, {_map.Buildings.Count} buildings, {_world.Grid.CellCount} cells, level {_viewZ}");
+        GD.Print($"[street] ready ({_source.Name}): {Map.Props.Count} props, {Map.Buildings.Count} buildings, {_world.Grid.CellCount} cells, level {_viewZ}, hero at world ({_world.OriginX + start.X},{_world.OriginY + start.Y})");
     }
 
     public override void _ExitTree()
@@ -103,7 +116,7 @@ public partial class StreetView : Control
 
     static bool IsNight(GameTime t) => LightModel.AmbientAt(t, 480).Phase == DayPhase.Night;
 
-    static BuildingLibrary LoadLibrary()
+    public static string ContentDir()
     {
         foreach (var dir in new[]
         {
@@ -112,12 +125,16 @@ public partial class StreetView : Control
         })
         {
             var full = System.IO.Path.GetFullPath(dir);
-            if (!System.IO.Directory.Exists(full)) continue;
-            var r = new ModLoader(ContentTypeRegistry.Default).Load([full]);
-            if (!r.Success) throw new InvalidOperationException("content failed to load: " + r.Report);
-            return BuildingLibrary.FromDatabase(r.Database);
+            if (System.IO.Directory.Exists(full)) return full;
         }
         throw new InvalidOperationException("content/base not found");
+    }
+
+    public static BuildingLibrary LoadLibrary()
+    {
+        var r = new ModLoader(ContentTypeRegistry.Default).Load([ContentDir()]);
+        if (!r.Success) throw new InvalidOperationException("content failed to load: " + r.Report);
+        return BuildingLibrary.FromDatabase(r.Database);
     }
 
     void BuildScene()
@@ -152,7 +169,9 @@ public partial class StreetView : Control
         _heroSprite.AddChild(_torchSprite);
 
         // light: one texel per tile, filtered linearly so light fades smoothly, multiplied over everything below it
-        int w = _map.Grid.Width, h = _map.Grid.Height;
+        // the hamlet lights its whole grid; a streamed window is 224 m across, so the light texture is a 128 x 96 m patch that follows the hero
+        int w = _world.Streamer != null ? LightPatchW : _world.Grid.Width, h = _world.Streamer != null ? LightPatchH : _world.Grid.Height;
+        _lightW = w; _lightH = h;
         _lightBytes = new byte[w * h * 4];
         _lightTex = ImageTexture.CreateFromImage(Image.CreateFromData(w, h, false, Image.Format.Rgba8, _lightBytes));
         var shader = new Shader { Code = "shader_type canvas_item;\nrender_mode blend_mul, unshaded;\nvoid fragment() { COLOR = vec4(texture(TEXTURE, UV).rgb, 1.0); }\n" };
@@ -215,7 +234,7 @@ public partial class StreetView : Control
         lvb.AddThemeConstantOverride("separation", 0);
         lv.AddChild(lvb);
         lvb.AddChild(new Label { Text = L.T("STREET_LEVEL_TITLE"), ThemeTypeVariation = "HintLabel", HorizontalAlignment = HorizontalAlignment.Center });
-        for (int z = _map.Grid.MaxZ; z >= _map.Grid.MinZ; z--)
+        for (int z = _world.Grid.MaxZ; z >= _world.Grid.MinZ; z--)
         {
             var b = new Label { HorizontalAlignment = HorizontalAlignment.Center, CustomMinimumSize = new Vector2(64, 0) };
             _levelBoxes.Add(b);
@@ -251,7 +270,7 @@ public partial class StreetView : Control
         _phaseLabel.Text = $"{L.T(phase)}  {speed}{torch}";
         for (int i = 0; i < _levelBoxes.Count; i++)
         {
-            int z = _map.Grid.MaxZ - i;
+            int z = _world.Grid.MaxZ - i;
             bool hero = z == s.Hero.Z, view = z == _viewZ;
             _levelBoxes[i].Text = (view ? "> " : "  ") + (z > 0 ? $"+{z}" : z.ToString()) + (hero ? " @" : "  ");
             _levelBoxes[i].AddThemeColorOverride("font_color", view ? PixelTheme.Gold : hero ? PixelTheme.Body : PixelTheme.Dim);
@@ -261,45 +280,140 @@ public partial class StreetView : Control
 
     // ------------------------------------------------------------------ level tiles
 
+    // Tiles live in world cells (1 cell = 1 tile layer cell), so a streamed window can move under them without redrawing: a chunk is
+    // drawn when it arrives (or its content changes) and erased when it leaves the window.
+    readonly Dictionary<(int X, int Y), int> _drawn = new();
+    readonly Dictionary<(int X, int Y), List<Sprite2D>> _chunkProps = new();
+    readonly Dictionary<string, string?> _terrainPick = new(), _objectPick = new(), _propPick = new();
+    HamletMap? _syncedMap; int _syncedRev = -1;
+
+    /// <summary>The view level changed (or first draw): forget everything and draw the current map's chunks at this level.</summary>
     void RebuildLevel()
     {
         var sw = Stopwatch.StartNew();
         _baseT.Clear(); _baseO.Clear(); _belowT.Clear(); _belowO.Clear();
-        var g = _map.Grid; int z = _viewZ;
-        for (int y = 0; y < g.Height; y++)
-            for (int x = 0; x < g.Width; x++)
+        foreach (var l in _chunkProps.Values) foreach (var n in l) n.QueueFree();
+        _chunkProps.Clear(); _drawn.Clear();
+        _syncedMap = null;
+        SyncTiles();
+        _shownTick = -1;
+        GD.Print($"[street] level {_viewZ} tiles rebuilt in {sw.Elapsed.TotalMilliseconds:F1} ms ({_drawn.Count} chunks)");
+    }
+
+    /// <summary>Draws chunks that are new or changed in the current window and erases those that left it.</summary>
+    void SyncTiles()
+    {
+        var m = Map;
+        if (m == _syncedMap && m.StreamRevision == _syncedRev) return;
+        _syncedMap = m; _syncedRev = m.StreamRevision;
+        if (m.ChunkVersions == null)
+        {
+            if (_drawn.Count > 0) return; // the hamlet never changes
+            DrawCells(m, 0, 0, m.Grid.Width, m.Grid.Height);
+            var all = new List<Prop>(m.Props);
+            AddProps(m, (0, 0), all);
+            _drawn[(0, 0)] = 0;
+            return;
+        }
+        List<(int X, int Y)>? stale = null;
+        foreach (var k in _drawn.Keys) if (!m.ChunkVersions.ContainsKey(k)) (stale ??= new()).Add(k);
+        if (stale != null) foreach (var k in stale) EraseChunk(m, k);
+        Dictionary<(int X, int Y), List<Prop>>? byChunk = null;
+        foreach (var (k, ver) in m.ChunkVersions)
+        {
+            if (_drawn.TryGetValue(k, out int dv) && dv == ver) continue;
+            if (byChunk == null)
             {
-                var c = new Vector2I(x, y);
-                var t = TileSprites.Terrain(_map, x, y, z);
+                byChunk = new();
+                foreach (var p in m.Props)
+                {
+                    var ck = (Div(p.X + m.OriginX, 32), Div(p.Y + m.OriginY, 32));
+                    if (!byChunk.TryGetValue(ck, out var l)) byChunk[ck] = l = new();
+                    l.Add(p);
+                }
+            }
+            if (_drawn.ContainsKey(k)) EraseChunk(m, k);
+            int lx = k.X * 32 - m.OriginX, ly = k.Y * 32 - m.OriginY;
+            DrawCells(m, lx, ly, lx + 32, ly + 32);
+            if (byChunk.TryGetValue(k, out var props)) AddProps(m, k, props);
+            _drawn[k] = ver;
+        }
+    }
+
+    static int Div(int a, int b) { int q = a / b; return (a % b != 0 && (a < 0) != (b < 0)) ? q - 1 : q; }
+
+    string? Pick(string id, Dictionary<string, Vector2I> cells, Dictionary<string, string?> memo)
+    {
+        if (memo.TryGetValue(id, out var r)) return r;
+        r = null;
+        foreach (var alt in TileSprites.Alternatives(id)) if (cells.ContainsKey(alt)) { r = alt; break; }
+        return memo[id] = r;
+    }
+
+    void DrawCells(HamletMap m, int x0, int y0, int x1, int y1)
+    {
+        var g = m.Grid; int z = _viewZ, ox = m.OriginX, oy = m.OriginY;
+        for (int y = y0; y < y1; y++)
+            for (int x = x0; x < x1; x++)
+            {
+                var c = new Vector2I(x + ox, y + oy);
+                _baseT.EraseCell(c); _baseO.EraseCell(c); _belowT.EraseCell(c); _belowO.EraseCell(c);
+                var t = TileSprites.Terrain(m, x, y, z);
                 if (t != null)
                 {
-                    _baseT.SetCell(c, 0, _terrainCells[t]);
-                    if (TileSprites.Object(_map, x, y, z) is { } o) _baseO.SetCell(c, 1, _objectCells[o]);
+                    if (Pick(t, _terrainCells, _terrainPick) is { } tp) _baseT.SetCell(c, 0, _terrainCells[tp]);
+                    if (TileSprites.Object(m, x, y, z) is { } o && Pick(o, _objectCells, _objectPick) is { } op) _baseO.SetCell(c, 1, _objectCells[op]);
                     continue;
                 }
                 for (int dz = 1; dz <= 2 && z - dz >= g.MinZ; dz++) // open air: look down
                 {
-                    var bt = TileSprites.Terrain(_map, x, y, z - dz);
+                    var bt = TileSprites.Terrain(m, x, y, z - dz);
                     if (bt == null) continue;
-                    _belowT.SetCell(c, 0, _terrainCells[bt]);
-                    if (TileSprites.Object(_map, x, y, z - dz) is { } bo) _belowO.SetCell(c, 1, _objectCells[bo]);
+                    if (Pick(bt, _terrainCells, _terrainPick) is { } btp) _belowT.SetCell(c, 0, _terrainCells[btp]);
+                    if (TileSprites.Object(m, x, y, z - dz) is { } bo && Pick(bo, _objectCells, _objectPick) is { } bop) _belowO.SetCell(c, 1, _objectCells[bop]);
                     break;
                 }
             }
-        foreach (var n in _propNodes) n.QueueFree();
-        _propNodes.Clear();
-        foreach (var p in _map.Props)
+    }
+
+    void AddProps(HamletMap m, (int X, int Y) key, List<Prop> props)
+    {
+        var list = new List<Sprite2D>();
+        foreach (var p in props)
         {
-            if (p.Z != z) continue;
-            var tex = _art.Texture(p.Sprite);
+            if (p.Z != _viewZ) continue;
+            var id = PickProp(p.Sprite);
+            if (id == null) continue;
+            var tex = _art.Texture(id);
             var size = tex.GetSize();
-            float cx = p.Wide ? (p.X + 1) * Tile : p.X * Tile + Tile / 2f;
-            var sp = new Sprite2D { Texture = tex, Centered = false, Offset = new Vector2(-size.X / 2f, -size.Y), Position = new Vector2(cx, (p.Y + 1) * Tile), TextureFilter = TextureFilterEnum.Nearest };
+            int px = p.X + m.OriginX, py = p.Y + m.OriginY;
+            float cx = p.Wide ? (px + 1) * Tile : px * Tile + Tile / 2f;
+            var sp = new Sprite2D { Texture = tex, Centered = false, Offset = new Vector2(-size.X / 2f, -size.Y), Position = new Vector2(cx, (py + 1) * Tile), TextureFilter = TextureFilterEnum.Nearest };
             _ysort.AddChild(sp);
-            _propNodes.Add(sp);
+            list.Add(sp);
         }
-        _shownTick = -1;
-        GD.Print($"[street] level {z} tiles rebuilt in {sw.Elapsed.TotalMilliseconds:F1} ms");
+        _chunkProps[key] = list;
+    }
+
+    string? PickProp(string id)
+    {
+        if (_propPick.TryGetValue(id, out var r)) return r;
+        r = null;
+        foreach (var alt in TileSprites.Alternatives(id)) if (_art.Has(alt)) { r = alt; break; }
+        return _propPick[id] = r;
+    }
+
+    void EraseChunk(HamletMap m, (int X, int Y) k)
+    {
+        int cx = k.X * 32, cy = k.Y * 32;
+        for (int y = 0; y < 32; y++)
+            for (int x = 0; x < 32; x++)
+            {
+                var c = new Vector2I(cx + x, cy + y);
+                _baseT.EraseCell(c); _baseO.EraseCell(c); _belowT.EraseCell(c); _belowO.EraseCell(c);
+            }
+        if (_chunkProps.Remove(k, out var l)) foreach (var n in l) n.QueueFree();
+        _drawn.Remove(k);
     }
 
     // ------------------------------------------------------------------ frame
@@ -385,7 +499,8 @@ public partial class StreetView : Control
         float fx = h.PrevX.ToFloat() + (h.X.ToFloat() - h.PrevX.ToFloat()) * alpha;
         float fy = h.PrevY.ToFloat() + (h.Y.ToFloat() - h.PrevY.ToFloat()) * alpha;
         if (h.Z != h.PrevZ) { fx = h.X.ToFloat(); fy = h.Y.ToFloat(); }
-        var feet = new Vector2(Mathf.Round(fx * Tile), Mathf.Round(fy * Tile));
+        SyncTiles();
+        var feet = new Vector2(Mathf.Round((fx + s.OriginX) * Tile), Mathf.Round((fy + s.OriginY) * Tile));
         _heroSprite.Position = feet;
         _heroSprite.Visible = h.Z == _viewZ;
         AnimateHero(h, feet);
@@ -403,9 +518,13 @@ public partial class StreetView : Control
 
     void UpdateLight(LiveSnapshot s)
     {
-        var g = _map.Grid; int w = g.Width, h = g.Height, z = _viewZ;
+        var g = _world.Grid; int w = _lightW, h = _lightH, z = _viewZ, gw = g.Width;
         var f = s.Light;
         int hx = s.Hero.CellX, hy = s.Hero.CellY;
+        // the patch of the light grid shown: all of it for the hamlet, a hero-centred 128 x 96 for a streamed window
+        int px0 = _world.Streamer != null ? Math.Clamp(hx - w / 2, 0, Math.Max(0, g.Width - w)) : 0;
+        int py0 = _world.Streamer != null ? Math.Clamp(hy - h / 2, 0, Math.Max(0, g.Height - h)) : 0;
+        _lightSprite.Position = new Vector2((px0 + s.OriginX) * Tile, (py0 + s.OriginY) * Tile);
         double hfx = s.Hero.X.ToDouble(), hfy = s.Hero.Y.ToDouble();
         int sun = s.Ambient.Sun;
         // ambient tint: cool moonlight to warm daylight, with an orange cast while the sun is low
@@ -425,9 +544,9 @@ public partial class StreetView : Control
         {
             for (int x = 0; x < w; x++)
             {
-                int i = baseOff + y * w + x, o = (y * w + x) * 4;
+                int i = baseOff + (y + py0) * gw + x + px0, o = (y * w + x) * 4;
                 int a = amb[i], p = pt[i], total = Math.Min(255, a + p);
-                double dx = x + 0.5 - hfx, dy = y + 0.5 - hfy;
+                double dx = x + px0 + 0.5 - hfx, dy = y + py0 + 0.5 - hfy;
                 int r = LightModel.VisionRadius(total);
                 double d2 = dx * dx + dy * dy;
                 float vis = 1f;
@@ -491,7 +610,7 @@ public partial class StreetView : Control
 
     void ChangeView(int dz)
     {
-        int z = Math.Clamp(_viewZ + dz, _map.Grid.MinZ, _map.Grid.MaxZ);
+        int z = Math.Clamp(_viewZ + dz, _world.Grid.MinZ, _world.Grid.MaxZ);
         if (z == _viewZ) return;
         _viewZ = z;
         RebuildLevel();
@@ -503,7 +622,7 @@ public partial class StreetView : Control
         var vpPos = local * f - new Vector2(_vp.Size.X, _vp.Size.Y) / 2f;
         var world = _cam.Position + vpPos / _zoom;
         int cx = Mathf.FloorToInt(world.X / Tile), cy = Mathf.FloorToInt(world.Y / Tile);
-        if (!_map.Grid.InBounds(cx, cy, _viewZ)) return;
+        if (!_world.Grid.InBounds(cx, cy, _viewZ)) return;
         if (_viewZ != _world.Snapshot.Hero.Z) { _router?.ShowToast(L.T("STREET_WRONG_LEVEL")); return; }
         if (!_world.CommandMoveTo(new Cell3(cx, cy, _viewZ))) _router?.ShowToast(L.T("STREET_NO_PATH"));
     }

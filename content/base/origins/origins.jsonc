@@ -1,5 +1,5 @@
 // Quick Start origin cards (plan §3 item 1). Skill/attribute entries are deltas on the rolled commoner.
-// Kit ids are weapon_shape / armour_shape ids from content/base/items; coin is in pence; start_location is a place kind the embark step resolves.
+// Kit ids are weapon_shape / armour_shape ids from content/base/items; coin is in crowns (plan 4A.1: 1 crown is about a silver penny); start_location is a place kind the embark step resolves.
 [
   { "type": "origin", "id": "disgraced_squire", "name": "Disgraced squire", "order": 1,
     "description": "You carried a knight's shield until a lie or a truth ended it. The training is still in your arms; the name is not.",

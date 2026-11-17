@@ -48,6 +48,7 @@ public partial class App : Node
         win.SizeChanged += () => Settings.ApplyScale(win);
         InputBootstrap.Init();
 
+        UI.NewGame.NewGameServices.Configure(args);
         Router = new ScreenRouter { Name = "ScreenRouter" };
         AddChild(Router);
         Router.Push(new MainMenu(Router));
@@ -68,6 +69,7 @@ public partial class App : Node
 
         GD.Print("Falling Leaves: Ravensguard — shell booted");
         if (smoke) RunSmoke();
+        else if (System.Array.IndexOf(args, "--ng-shot") >= 0) _ = UI.NewGame.NewGameDebug.Shot(GetTree(), Router, args);
     }
 
     async void RunSmoke()
@@ -81,6 +83,7 @@ public partial class App : Node
             Router.Pop(); await Frames(1);
             Router.Push(new World.StreetView(Router)); await Frames(2);
             Router.Pop(); await Frames(1);
+            await UI.NewGame.NewGameDebug.Smoke(GetTree(), Router);
         }
         catch (Exception ex)
         {

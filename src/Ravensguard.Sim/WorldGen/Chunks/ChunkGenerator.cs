@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using Ravensguard.Content;
 using Ravensguard.Sim.Building;
