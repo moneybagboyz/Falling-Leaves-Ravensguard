@@ -117,6 +117,7 @@ public sealed partial class HistoryGenerator
             if (s.IsRuin) continue;
             s.Realm = _owner[s.Cell];
             int cap = RuralPop25(s) * _s.UrbanCapPct / 100 + s.Mining * 120 + s.RouteCount * 50;
+            cap = s.Minor ? Math.Min(cap, _s.MinorMaxPop) : Math.Min(cap, _s.UrbanMaxPop);
             if (s.Realm >= 0 && Rm(s.Realm).Capital == i) cap += 400;
             s.Pop = Math.Max(0, s.Pop + LogisticDelta(s.Pop, cap, rateQ, s.Id.Value));
             if (s.Pop > s.PeakPop) s.PeakPop = s.Pop;
@@ -134,7 +135,8 @@ public sealed partial class HistoryGenerator
                         s.Realm >= 0 ? [s.Id, Rm(s.Realm).Id] : [s.Id], Cz(CauseKind.Other, EntityId.None, note));
                 }
             }
-            if (s.Pop < 5 && _tick > 0) AbandonQuiet(i);
+            if (s.Minor && _tick > 0 && Chance(s.Id.Value, S.Misc, _s.MinorAbandonPermilleYear * 250L)) AbandonHardship(i);
+            else if (s.Pop < 5 && _tick > 0) AbandonQuiet(i);
             else if (_season == 0 && s.Kind <= SettlementKind.Village && s.Hinterland > 0 && RuralPop25(s) * 100 < s.Hinterland * 33 && Pct(s.Id.Value, S.Misc, 5)) AbandonQuiet(i);
         }
     }
@@ -153,6 +155,53 @@ public sealed partial class HistoryGenerator
         var rn = s.Realm >= 0 ? Rm(s.Realm).Id : EntityId.None;
         var ev = Ev("settlement_abandoned", $"{s.Name} is abandoned", $"{why}; {s.Name} falls silent", s.Cell, rn.Value != 0 ? [s.Id, rn] : [s.Id],
             Cz(CauseKind.Other, cause, why));
+        MakeRuin(i, kind, ev, cause);
+    }
+
+    /// <summary>A small settlement dies of ordinary hard luck; each way has its own cause event.</summary>
+    private void AbandonHardship(int i)
+    {
+        var s = _h.Settlements[i];
+        int cu = _c.CultureId[s.Cell] < 8 ? _c.CultureId[s.Cell] : 0;
+        var rn = s.Realm >= 0 ? Rm(s.Realm).Id : EntityId.None;
+        EntityId[] subj = rn.Value != 0 ? [s.Id, rn] : [s.Id];
+        int way = Roll(s.Id.Value, S.Misc, 0, 5);
+        if (way == 0 && _badKind[cu] == 0) way = 1;
+        string kind = "abandoned", ruinText, why;
+        EntityId cause;
+        switch (way)
+        {
+            case 0:
+                cause = _weatherEv[cu]; why = "failing harvests"; ruinText = $"After the hard year the last families of {s.Name} give up the land and leave";
+                break;
+            case 1:
+                if (s.Manor)
+                {
+                    cause = Ev("line_extinct", $"The line of {s.Name} fails", $"The lord of {s.Name} dies and no kin will hold it", s.Cell, subj, Cz(CauseKind.Death, EntityId.None, "a lord who left no heirs"));
+                    why = "no lord to hold it"; ruinText = $"With no lord, the households of {s.Name} drift away and the hall stands empty";
+                }
+                else
+                {
+                    cause = Ev("emigration", $"Families leave {s.Name}", $"The people of {s.Name} drift off to richer ground", s.Cell, subj, Cz(CauseKind.Other, EntityId.None, "poor soil and the pull of the towns"));
+                    why = "drained by the towns"; ruinText = $"The last families leave {s.Name}";
+                }
+                break;
+            case 2:
+                cause = Ev("bandit_raid", $"Bandits strike {s.Name}", $"A band of outlaws plunders {s.Name} and carries off its stores", s.Cell, subj, Cz(CauseKind.Crime, EntityId.None, "hungry outlaws in the unwatched marches"));
+                s.LastBlow = cause; s.LastBlowTick = _tick;
+                why = "plundered by outlaws"; kind = s.Manor ? "sacked" : "burned"; ruinText = $"Outlaws put {s.Name} to the torch and the survivors scatter";
+                break;
+            case 3:
+                cause = Ev("spring_failed", $"The spring of {s.Name} runs dry", $"The wells and the stream at {s.Name} fail", s.Cell, subj, Cz(CauseKind.Weather, _badKind[cu] != 0 ? _weatherEv[cu] : EntityId.None, "a shifting watercourse and a run of dry summers"));
+                why = "no water"; ruinText = $"Without water, {s.Name} is left to the weeds";
+                break;
+            default:
+                cause = Ev("tithe_dispute", $"The tithe quarrel at {s.Name}", $"A bitter dispute over rents and tithes divides {s.Name}", s.Cell, subj, Cz(CauseKind.Law, EntityId.None, "a quarrel over rents and tithes"));
+                why = "a ruinous quarrel"; ruinText = $"Half of {s.Name} leaves in anger and the rest cannot hold it";
+                break;
+        }
+        if (cause.Value == 0) cause = Ev("emigration", $"Families leave {s.Name}", $"The people of {s.Name} drift away", s.Cell, subj, Cz(CauseKind.Other, EntityId.None, "poor soil and failing harvests"));
+        var ev = Ev("settlement_abandoned", $"{s.Name} is abandoned", $"{ruinText}; {s.Name} falls silent", s.Cell, subj, Cz(CauseKind.Other, cause, why));
         MakeRuin(i, kind, ev, cause);
     }
 
@@ -191,6 +240,19 @@ public sealed partial class HistoryGenerator
     }
 
     // ---------- founding of new settlements ----------
+    private bool SettledRiver(int x, int y)
+    {
+        for (int dy = -2; dy <= 2; dy++)
+            for (int dx = -2; dx <= 2; dx++)
+            {
+                if (!In(x + dx, y + dy)) continue;
+                int j = (y + dy) * N + x + dx;
+                if (_c.RiverFlow[j] >= _c.Settings.RiverFlowThreshold && !_c.Ocean[j]) return true;
+            }
+        return false;
+    }
+
+    /// <summary>Towns: spacing is wider on poor ground and narrows to <c>FoundSpacingRich</c> in fertile river lowlands.</summary>
     private void FoundingPass(bool initial)
     {
         int attempts = initial ? 9000 : _s.FoundAttemptsPerTick;
@@ -201,7 +263,52 @@ public sealed partial class HistoryGenerator
             int o = _owner[cell];
             if (o < 0 || !Rm(o).Alive) continue;
             if (_settleAt[cell] >= 0) continue;
-            int x = Cx(cell), y = Cy(cell), sp = _s.FoundSpacing;
+            int x = Cx(cell), y = Cy(cell);
+            int hint = 0, rural = 0;
+            for (int dy = -2; dy <= 2; dy++)
+                for (int dx = -2; dx <= 2; dx++)
+                {
+                    if (!In(x + dx, y + dy)) continue;
+                    int j = (y + dy) * N + x + dx;
+                    hint += _K[j]; rural += _pop[j];
+                }
+            bool river = SettledRiver(x, y);
+            bool rich = river && hint >= _s.FoundRichHinterland;
+            int sp = rich ? _s.FoundSpacingRich : _s.FoundSpacing;
+            bool clash = false;
+            for (int dy = -_s.FoundSpacing; dy <= _s.FoundSpacing && !clash; dy++)
+                for (int dx = -_s.FoundSpacing; dx <= _s.FoundSpacing; dx++)
+                {
+                    if (!In(x + dx, y + dy)) continue;
+                    int si = _settleAt[(y + dy) * N + x + dx];
+                    if (si < 0) continue;
+                    var other = _h.Settlements[si];
+                    int cheb = Math.Max(Math.Abs(dx), Math.Abs(dy));
+                    if (cheb <= 1 || (!other.IsRuin && !other.Minor && cheb <= sp)) { clash = true; break; }
+                }
+            if (clash) continue;
+            if (hint < _s.FoundMinHinterland) continue;
+            if (!initial && rural * 100 < hint * 55) continue;
+            int pct = _s.FoundChancePct * (100 + (river ? 60 : 0) + (_c.CoastDistance[cell] <= 2 ? 40 : 0) + (rich ? 80 : 0)) / 100;
+            if (!Pct((ulong)a, S.Found, pct)) continue;
+            int pop = initial ? 30 + rural / 14 + Roll((ulong)a, S.Found, 0, 40) : 18 + Roll((ulong)a, S.Found, 0, 20);
+            AddSettlement(cell, pop, o, null);
+            if (!initial) _pop[cell] = Math.Max(0, _pop[cell] - 10);
+        }
+    }
+
+    /// <summary>Hamlets, villages and manors fill the gaps between the towns; the ones that fail leave the ruins.</summary>
+    private void MinorFoundingPass(bool initial)
+    {
+        int attempts = initial ? 30000 : _s.MinorFoundAttemptsPerTick;
+        int sp = _s.MinorSpacing;
+        for (int a = 0; a < attempts; a++)
+        {
+            int cell = Roll((ulong)a + 1_000_000UL, S.Found, 0, A);
+            if (_K[cell] < 24) continue;
+            int o = _owner[cell];
+            if (o < 0 || !Rm(o).Alive || _settleAt[cell] >= 0) continue;
+            int x = Cx(cell), y = Cy(cell);
             bool clash = false;
             for (int dy = -sp; dy <= sp && !clash; dy++)
                 for (int dx = -sp; dx <= sp; dx++)
@@ -209,25 +316,22 @@ public sealed partial class HistoryGenerator
                     if (!In(x + dx, y + dy)) continue;
                     int si = _settleAt[(y + dy) * N + x + dx];
                     if (si < 0) continue;
-                    if (!_h.Settlements[si].IsRuin || (Math.Abs(dx) <= 1 && Math.Abs(dy) <= 1)) { clash = true; break; }
+                    var other = _h.Settlements[si];
+                    if (!other.IsRuin || (Math.Abs(dx) <= 1 && Math.Abs(dy) <= 1)) { clash = true; break; }
                 }
             if (clash) continue;
-            int hint = 0, rural = 0; bool river = false;
-            for (int dy = -2; dy <= 2; dy++)
-                for (int dx = -2; dx <= 2; dx++)
-                {
-                    if (!In(x + dx, y + dy)) continue;
-                    int j = (y + dy) * N + x + dx;
-                    hint += _K[j]; rural += _pop[j];
-                    if (_c.RiverFlow[j] >= _c.Settings.RiverFlowThreshold && !_c.Ocean[j]) river = true;
-                }
-            if (hint < _s.FoundMinHinterland) continue;
-            if (!initial && rural * 100 < hint * 55) continue;
-            int pct = _s.FoundChancePct * (100 + (river ? 60 : 0) + (_c.CoastDistance[cell] <= 2 ? 40 : 0)) / 100;
-            if (!Pct((ulong)a, S.Found, pct)) continue;
-            int pop = initial ? 30 + rural / 14 + Roll((ulong)a, S.Found, 0, 40) : 18 + Roll((ulong)a, S.Found, 0, 20);
-            AddSettlement(cell, pop, o, null);
-            if (!initial) _pop[cell] = Math.Max(0, _pop[cell] - 10);
+            int rural = 0, cnt = 0;
+            for (int dy = -1; dy <= 1; dy++)
+                for (int dx = -1; dx <= 1; dx++)
+                    if (In(x + dx, y + dy)) { rural += _pop[(y + dy) * N + x + dx]; cnt++; }
+            if (!initial && rural < 40 * cnt) continue;
+            bool river = SettledRiver(x, y);
+            int pct = _s.MinorFoundChancePct * (100 + (river ? 40 : 0) + (_c.CoastDistance[cell] <= 2 ? 20 : 0)) / 100;
+            if (!Pct((ulong)a + 1_000_000UL, S.Found, pct)) continue;
+            bool manor = Pct((ulong)a + 2_000_000UL, S.Found, _s.ManorPct);
+            int pop = initial ? Math.Min(_s.MinorMaxPop, 30 + rural / 40 + Roll((ulong)a, S.Found, 0, 60)) : 14 + Roll((ulong)a, S.Found, 0, 24);
+            AddSettlement(cell, pop, o, null, minor: true, manor: manor);
+            if (!initial) _pop[cell] = Math.Max(0, _pop[cell] - 6);
         }
     }
 
@@ -373,6 +477,7 @@ public sealed partial class HistoryGenerator
         int mort = s.Kind >= SettlementKind.Town ? _s.PlagueTownMortalityPct : _s.PlagueTownMortalityPct * 55 / 100;
         mort = Math.Max(3, mort * Roll(s.Id.Value, S.Plague, 70, 131) / 100);
         int dead = s.Pop * mort / 100;
+        if (s.Minor && Pct(s.Id.Value, S.Plague, _s.PlagueEmptyPct)) { PlagueEmpties(i); return; }
         s.Pop -= dead;
         int rural = Kill(s.Cell, RuralPop25(s) * 5 / 100, 2);
         _plagueDead += dead + rural;
@@ -384,6 +489,19 @@ public sealed partial class HistoryGenerator
         else if (Pct(s.Id.Value, S.Saint, 12)) MaybeSaint(i, _plagueStart, _plagueName);
         foreach (var n in _h.Notables)
             if (n.Alive && n.Residence == i && Pct(n.Id.Value, S.Death, mort / 2)) Die(n, "the " + _plagueName.ToLowerInvariant().Replace("the ", ""), _plagueStart);
+    }
+
+    /// <summary>The sickness takes a small settlement whole: the survivors flee and none come back.</summary>
+    private void PlagueEmpties(int i)
+    {
+        var s = _h.Settlements[i];
+        int dead = s.Pop * 2 / 3;
+        _plagueDead += dead + Kill(s.Cell, RuralPop25(s) * 3 / 100, 2);
+        var rn = s.Realm >= 0 ? Rm(s.Realm).Id : EntityId.None;
+        var ev = Ev("settlement_emptied", $"{s.Name} is emptied by the sickness", $"{_plagueName} leaves {s.Name} with {Num(dead)} dead; the few who live flee and no one will return to a plague house",
+            s.Cell, rn.Value != 0 ? [s.Id, rn] : [s.Id], Cz(CauseKind.Death, _plagueStart, "the contagion along the roads"));
+        s.LastBlow = ev; s.LastBlowTick = _tick;
+        MakeRuin(i, "plague", ev, _plagueStart);
     }
 
     private void FamineStep()
@@ -425,6 +543,11 @@ public sealed partial class HistoryGenerator
                 var s = _h.Settlements[i];
                 if (s.IsRuin || _c.CultureId[s.Cell] != c) continue;
                 s.LastBlow = ev; s.LastBlowTick = _tick;
+                if (s.Minor && Pct(s.Id.Value, S.Famine, _s.FamineEmptyPct * (100 + _badStreak[c] * 40) / 100))
+                {
+                    var starved = Ev("settlement_starved", $"{s.Name} starves", $"Hunger empties {s.Name}; the survivors take to the roads", s.Cell, [s.Id], Cz(CauseKind.Famine, ev, "the famine's toll on a small place"));
+                    MakeRuin(i, "famine", starved, ev);
+                }
             }
             foreach (var r in _h.Realms)
                 if (r.Alive && r.CultureId == c) { r.Unrest = Math.Min(100, r.Unrest + 15); r.LastFamineTick = _tick; }

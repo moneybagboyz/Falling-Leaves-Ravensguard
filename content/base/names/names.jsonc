@@ -1,0 +1,48 @@
+// Per-culture name pools (plan §4A.4). Given names = onset + mid + end, so each culture yields 300+ distinct names per sex;
+// family names = stem + ending; patronymic suffixes build peasant names such as "Aldricson". Cultures map by continent culture id modulo the pool count.
+[
+  {
+    "type": "name_pool", "id": "names_north", "name": "Northmark",
+    "onsets": ["Al", "Ber", "Cor", "Dag", "El", "Fen", "Gar", "Hal", "Ing", "Jor", "Kel", "Lor", "Mar", "Nor", "Os", "Per", "Ran", "Sig", "Tor", "Ul", "Var", "Wul", "Ed", "Ro"],
+    "mids": ["", "a", "e", "i", "o", "en", "ar", "id"],
+    "male_ends": ["ric", "wald", "mund", "bert", "an", "or", "ek", "dan", "ulf", "red", "gar", "win"],
+    "female_ends": ["a", "wyn", "ith", "elle", "ra", "ina", "is", "eth", "una", "hild", "ia", "lind"],
+    "family_stems": ["Ash", "Black", "Brook", "Cald", "Dun", "East", "Fair", "Grey", "Hart", "Iron", "Kings", "Long", "Marsh", "North", "Oak", "Red", "Stone", "Thorn", "Under", "West", "White", "Wolf", "Crow", "Hill", "Mill", "Fox", "Birch", "Cliff", "Moor", "Heath", "Wood", "Frost", "Storm", "Raven", "Elm", "Rush", "Sand", "Bright", "Deep", "Swift"],
+    "family_ends": ["wick", "hurst", "ward", "ley", "mont", "ham", "stan", "wyn", "croft", "den", "holt", "thorne", "field", "ford"],
+    "patronymic_son": "son", "patronymic_daughter": "dottir",
+    "bynames": ["the Red", "the Tall", "the Short", "the Lame", "the Quiet", "the Fair", "the Old", "the Younger", "Longshanks", "Greybeard", "Strongarm", "the Wanderer", "Halfhand", "the Bold", "Crookback", "the Wise", "Redhand", "the Black", "the Small", "Fleetfoot"]
+  },
+  {
+    "type": "name_pool", "id": "names_vale", "name": "Valeholt",
+    "onsets": ["Ald", "Bran", "Cad", "Dun", "Eth", "Fal", "Gwen", "Hew", "Isa", "Jas", "Kern", "Leof", "Mer", "Nel", "Owen", "Pen", "Quil", "Rhys", "Sel", "Tam", "Ur", "Vel", "Wyn", "Yar"],
+    "mids": ["", "a", "e", "o", "an", "el", "or", "in"],
+    "male_ends": ["ric", "ard", "in", "ot", "ley", "mund", "bold", "wick", "gar", "rus", "tan", "vin"],
+    "female_ends": ["a", "ey", "ien", "ila", "ora", "ette", "wen", "una", "ine", "essa", "ara", "lyn"],
+    "family_stems": ["Bar", "Cart", "Dale", "Eld", "Fletch", "Gard", "Hay", "Ing", "Jen", "Kell", "Lang", "Mead", "Nash", "Orch", "Pike", "Quar", "Rye", "Sharp", "Tan", "Up", "Vale", "Wain", "Yew", "Cress", "Bram", "Combe", "Dove", "Fern", "Glen", "Haw", "Lark", "Moss", "Pine", "Reed", "Sedge", "Tarn", "Thatch", "Wren", "Bell", "Cobb"],
+    "family_ends": ["ing", "worth", "by", "ton", "well", "more", "ridge", "bourne", "shaw", "man", "cott", "land", "brook", "stead"],
+    "patronymic_son": "s", "patronymic_daughter": "s",
+    "bynames": ["the Fair", "the Elder", "the Younger", "the Lean", "the Curly", "Goodfellow", "the Lucky", "the Humble", "Swiftwater", "the Mild", "Blackbrow", "the Stout", "the Plain", "Littlejohn", "the Cheerful", "Wiseacre", "the Thin", "the Stammerer", "Barefoot", "the Honest"]
+  },
+  {
+    "type": "name_pool", "id": "names_high", "name": "Highmarch",
+    "onsets": ["Ar", "Bre", "Cor", "Dor", "Eil", "Fer", "Gal", "Hor", "Ian", "Kar", "Lug", "Mor", "Nia", "Oen", "Pad", "Rua", "Sean", "Tad", "Uil", "Bel", "Cian", "Dru", "Fin", "Gor"],
+    "mids": ["", "a", "e", "o", "ach", "an", "ar", "in"],
+    "male_ends": ["gan", "mac", "ach", "ric", "dan", "ull", "ghal", "ven", "nus", "mor", "dric", "bran"],
+    "female_ends": ["a", "eth", "ona", "ide", "ara", "wen", "ibh", "enna", "ila", "ire", "ael", "ona"],
+    "family_stems": ["Mac", "Bal", "Dun", "Glen", "Inver", "Kil", "Loch", "Strath", "Ben", "Craig", "Drum", "Eas", "Fior", "Garr", "Knock", "Rath", "Tul", "Aber", "Bally", "Cairn", "Dal", "Fell", "Gil", "Heather", "Inch", "Kin", "Mull", "Ross", "Skel", "Tarn", "Corrie", "Morn", "Slate", "Brae", "Cleit", "Dour", "Linn", "Scar", "Tor", "Vane"],
+    "family_ends": ["more", "dale", "ross", "gowan", "lan", "burn", "rig", "nagh", "stone", "side", "bar", "ness", "garth", "mere"],
+    "patronymic_son": "son", "patronymic_daughter": "sdaughter",
+    "bynames": ["the Stag", "Ironside", "the Ruddy", "the Dark", "Fairhair", "the Proud", "the Grim", "Longbow", "the Hunter", "the Swift", "Stonefist", "the Silent", "Oakheart", "the Fierce", "Highbrow", "the Pale", "the Stout", "Redbeard", "Grayeyes", "the Singer"]
+  },
+  {
+    "type": "name_pool", "id": "names_coast", "name": "Seaboard",
+    "onsets": ["Ald", "Bor", "Cas", "Del", "Em", "Fal", "Gil", "Hen", "Ivo", "Jan", "Kas", "Lam", "Mat", "Nic", "Ott", "Pol", "Ros", "Sal", "Tib", "Val", "Wil", "Bar", "Ger", "Lud"],
+    "mids": ["", "a", "e", "i", "o", "an", "er", "el"],
+    "male_ends": ["o", "us", "ard", "ert", "ian", "ino", "mar", "olf", "ran", "ton", "ys", "ek"],
+    "female_ends": ["a", "ette", "ina", "ise", "ia", "elle", "ona", "ara", "ine", "ila", "enna", "ys"],
+    "family_stems": ["Net", "Wave", "Salt", "Gull", "Tide", "Sail", "Harbour", "Reef", "Kelp", "Shore", "Pearl", "Anchor", "Cod", "Eel", "Herring", "Mast", "Oar", "Pier", "Quay", "Rope", "Skiff", "Tern", "Wharf", "Brine", "Spray", "Drift", "Foam", "Keel", "Lugger", "Marl", "Cove", "Dune", "Isle", "Shoal", "Spit", "Strand", "Bay", "Cape", "Fjord", "Haven"],
+    "family_ends": ["er", "man", "by", "wick", "ness", "mouth", "ton", "ham", "stead", "fleet", "wood", "ing", "worth", "land"],
+    "patronymic_son": "son", "patronymic_daughter": "dotter",
+    "bynames": ["the Salt", "Saltbeard", "the Drowned", "Stormborn", "the Lucky", "Netmender", "the Pale", "the Weathered", "Shortbread", "the Dry", "the Tall", "Bluecoat", "the Gull", "the Steady", "Longtooth", "the Fisher", "Whiteknuckle", "the Calm", "the Anchor", "Goldtooth"]
+  }
+]

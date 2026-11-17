@@ -5,7 +5,7 @@
     "type": "worldgen_history", "id": "history_defaults",
     "years": 250,                        // 100-250 in the plan
     "rural_growth_permille_year": 30,    // net logistic growth rate of rural cells
-    "capacity_scale_pct": 100,           // scales every cell's carrying capacity
+    "capacity_scale_pct": 170,           // scales every cell's carrying capacity
     "start_fill_pct": 72,                // starting population as % of capacity
     "found_attempts_per_tick": 40,       // candidate cells examined per season for new settlements
     "found_min_hinterland": 650,         // summed capacity of the 5x5 neighbourhood a settlement needs
@@ -32,6 +32,24 @@
     "crafter_permille_year": 2,
     "artefact_permille_year": 60,
     "route_refresh_years": 25,
-    "max_realms": 60
+    "max_realms": 60,
+    "found_spacing_rich": 3,  // cells between towns in rich river lowlands (3 = 6 km)
+    "found_rich_hinterland": 2400,  // 5x5 capacity at or above which a river site counts as rich lowland
+    "urban_max_pop": 3000,  // largest a town grows before its own capital bonus
+    "minor_found_attempts_per_tick": 120,  // candidate cells per season for hamlets, villages and manors
+    "minor_spacing": 2,  // cells (Chebyshev) kept clear around a new minor settlement
+    "minor_found_chance_pct": 40,
+    "minor_max_pop": 320,  // hamlets and villages never outgrow this
+    "manor_pct": 18,  // share of minor settlements that are manors, keeps and halls
+    "minor_abandon_permille_year": 3,  // hard-luck abandonment of a minor settlement
+    "plague_empty_pct": 18,  // chance a plague empties a minor settlement it reaches
+    "famine_empty_pct": 3,  // chance a famine empties a minor settlement of its culture
+    "pillage_reach": 5,  // cells around a battle in which minor settlements may be burned
+    "sea_reach": 12,  // cells of open water a raiding fleet can cross
+    "sea_raid_pct": 55,  // percent of land battle chance that a seaborne war manages per season
+    "tribute_pct": 40,  // chance a decisive victory imposes tribute
+    "vassalage_pct": 25,  // chance a decisive victory over a smaller realm imposes vassalage
+    "vassal_years_min": 20,
+    "vassal_years_max": 45
   }
 ]

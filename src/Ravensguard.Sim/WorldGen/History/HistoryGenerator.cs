@@ -99,6 +99,7 @@ public sealed partial class HistoryGenerator
             PopulationPass();
             SettlementPass();
             FoundingPass(false);
+            MinorFoundingPass(false);
             DisasterPass();
             NotablesPass();
             PoliticsPass();
@@ -158,6 +159,7 @@ public sealed partial class HistoryGenerator
             r.Capital = _h.Settlements.IndexOf(cap);
         }
         FoundingPass(true);
+        MinorFoundingPass(true);
         for (int k = 0; k < _h.Realms.Count; k++) InitRuler(_h.Realms[k]);
         foreach (var s in _h.Settlements) s.PeakKind = s.Kind;
         RoutesPass();
@@ -183,10 +185,12 @@ public sealed partial class HistoryGenerator
         long k = (long)_c.Fertility[i] * mult / 100 * _s.CapacityScalePct / 100;
         if (_c.RiverFlow[i] >= _c.Settings.StreamFlowThreshold) k = k * 125 / 100;
         if (_c.CoastDistance[i] == 1) k = k * 115 / 100;
-        return (int)Math.Clamp(k, 0, 160);
+        return (int)Math.Clamp(k, 0, 160L * Math.Max(100, _s.CapacityScalePct) / 100);
     }
 
-    private Settlement AddSettlement(int cell, int pop, int realm, EntityId? foundedEvent)
+    private static readonly string[] ManorTypes = ["Hall", "Manor", "Keep", "Tower", "Grange", "Court"];
+
+    private Settlement AddSettlement(int cell, int pop, int realm, EntityId? foundedEvent, bool minor = false, bool manor = false)
     {
         var id = _ids.Allocate(IdKind.Settlement);
         int cu = _c.CultureId[cell] == Continent.None ? 0 : _c.CultureId[cell];
@@ -194,10 +198,11 @@ public sealed partial class HistoryGenerator
         string name = _names.Place(cu, ref rs);
         for (int tries = 0; _usedNames.Contains(name) && tries < 6; tries++) name = _names.Place(cu, ref rs);
         if (_usedNames.Contains(name)) name = $"{_names.Feature(0, ref rs)} {name}";
+        if (manor) name = $"{name} {ManorTypes[rs.Range(0, ManorTypes.Length)]}";
         if (!_usedNames.Add(name)) name = $"{name} {id.Counter}";
         var s = new Settlement
         {
-            Id = id, Name = name, Cell = cell, Pop = pop, PeakPop = pop, Realm = realm, FoundedTick = _tick,
+            Id = id, Name = name, Cell = cell, Pop = pop, PeakPop = pop, Realm = realm, FoundedTick = _tick, Minor = minor, Manor = manor,
         };
         int x = Cx(cell), y = Cy(cell);
         for (int dy = -1; dy <= 1; dy++)

@@ -21,6 +21,8 @@ public sealed class Settlement
     public int Mining;
     public int Hinterland;
     public int RouteCount;
+    /// <summary>Hamlets, villages and manors: never grow into towns, and the history's main source of small ruins.</summary>
+    public bool Minor, Manor;
     public bool IsRuin;
     public int RuinTick = -1;
     /// <summary>sacked, razed, burned, flooded, plague, famine, collapse, abandoned.</summary>
@@ -132,6 +134,7 @@ public sealed class WarRecord
     public int WearyA, WearyD;
     public int ArmyA, ArmyD;
     public int Battles, Sieges;
+    public bool Naval;                     // seaborne raiding between realms with no land border
     public int Target = -1;                // settlement index under threat
     public int BlockedTarget = -1, BlockedUntil, SiegeFails;
     public int SiegeTicks = -1;
@@ -142,5 +145,6 @@ public sealed class WarRecord
 
 public sealed record Snapshot(int Year, byte[] Owner);
 
-public enum TreatyKind { Truce, MarriageAlliance }
+public enum TreatyKind { Truce, MarriageAlliance, Tribute, Vassalage }
+/// <summary>For Tribute and Vassalage, <c>A</c> is the winner (overlord) and <c>B</c> the realm that pays or serves.</summary>
 public sealed record Treaty(int A, int B, TreatyKind Kind, int StartTick, int ExpiryTick, EntityId Event);

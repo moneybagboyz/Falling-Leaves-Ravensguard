@@ -37,4 +37,22 @@ public sealed record HistorySettingsDef : ContentDef
     public int ArtefactPermilleYear { get; init; } = 60;
     public int RouteRefreshYears { get; init; } = 25;
     public int MaxRealms { get; init; } = 60;
+    public int FoundSpacingRich { get; init; } = 3;
+    public int FoundRichHinterland { get; init; } = 2400;
+    public int UrbanMaxPop { get; init; } = 3000;
+    public int MinorFoundAttemptsPerTick { get; init; } = 120;
+    public int MinorSpacing { get; init; } = 2;
+    public int MinorFoundChancePct { get; init; } = 40;
+    public int MinorMaxPop { get; init; } = 320;
+    public int ManorPct { get; init; } = 18;
+    public int MinorAbandonPermilleYear { get; init; } = 3;
+    public int PlagueEmptyPct { get; init; } = 18;
+    public int FamineEmptyPct { get; init; } = 3;
+    public int PillageReach { get; init; } = 5;
+    public int SeaReach { get; init; } = 12;
+    public int SeaRaidPct { get; init; } = 55;
+    public int TributePct { get; init; } = 40;
+    public int VassalagePct { get; init; } = 25;
+    public int VassalYearsMin { get; init; } = 20;
+    public int VassalYearsMax { get; init; } = 45;
 }
