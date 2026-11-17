@@ -133,7 +133,7 @@ public static class MeleeScenarios
         for (int team = 0; team < 2; team++)
             for (int i = 0; i < perSide; i++)
             {
-                double x = team == 0 ? -7 : 7, y = (i - (perSide - 1) / 2.0) * 1.7;
+                double x = team == 0 ? -7 : 7, y = (i - (perSide - 1) / 2.0) * 1.4;
                 var face = new Vec2(team == 0 ? 1 : -1, 0);
                 int skill = 30 + (int)(DetRng.NextUInt(seed, 0, (ulong)(team * 100 + i), 7, 0) % 35);
                 FighterSpec s;

@@ -127,7 +127,7 @@ public sealed class MeleeWorld
             && f.State is Act.Idle or Act.Block or Act.Windup)
         {
             f.State = Act.Dodge; f.StateTicks = MeleeRules.DodgeTicks; f.DodgeDir = dd.Normalized();
-            f.DodgeReadyTick = Tick + MeleeRules.DodgeTicks + MeleeRules.DodgeCooldownTicks;
+            f.DodgeReadyTick = Tick + MeleeRules.DodgeTicks - 1 + MeleeRules.DodgeCooldownTicks; // cooldown counts from the last dodge tick
             f.Stamina -= MeleeRules.DodgeCost; f.Req = null;
             Emit(EventKind.Info, f.Id, -1, $"{f.Name} dodges");
             return;

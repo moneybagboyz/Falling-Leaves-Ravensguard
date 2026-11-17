@@ -22,6 +22,13 @@ public partial class App : Node
             return;
         }
 
+        int spike = System.Array.IndexOf(args, "--spike"); // e.g. `-- --spike melee`
+        if (spike >= 0 && spike + 1 < args.Length && args[spike + 1] == "melee")
+        {
+            Callable.From(() => GetTree().ChangeSceneToFile("res://Spikes/MeleeSpike.tscn")).CallDeferred();
+            return;
+        }
+
         Settings.Load();
         var win = GetWindow();
         Settings.ApplyScale(win);
