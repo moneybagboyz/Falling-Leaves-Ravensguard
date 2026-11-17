@@ -1,20 +1,13 @@
-# Godot 4+ specific ignores
+# .NET / Godot
+bin/
+obj/
 .godot/
-/android/
-
-# Backup and temp files
-*.bak
-*.tmp
-*.log
-
-# OS specific
+*.user
+.vs/
+.idea/
+TestResults/
+# Baked art atlases are build outputs
+art/out/
+# OS
 .DS_Store
 Thumbs.db
-
-# Project specific
-WorldGen.bak
-rename_log.txt
-cleanup_script.py
-fix_ai.py
-check_syntax.py
-rename_files.py

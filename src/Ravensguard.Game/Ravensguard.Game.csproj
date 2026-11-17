@@ -1,0 +1,11 @@
+<Project Sdk="Godot.NET.Sdk/4.7.2">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <RootNamespace>Ravensguard.Game</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Ravensguard.Sim/Ravensguard.Sim.csproj" />
+    <ProjectReference Include="../Ravensguard.Content/Ravensguard.Content.csproj" />
+  </ItemGroup>
+</Project>
