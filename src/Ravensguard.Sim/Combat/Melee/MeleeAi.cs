@@ -65,15 +65,22 @@ public static class MeleeAi
             return;
         }
 
-        // --- offence ---
+        // --- offence: opportunistic after the foe's blow, patient while a blow is incoming ---
         bool exhausted = f.Stamina < 22;
-        if (f.State is Act.Idle or Act.Block && !f.WeaponArmLost && !exhausted && dist <= strikeD && w.Tick >= f.AiNextAttackTick && !(threatened && w.Tick < f.AiBlockUntil))
+        bool foeRecovering = tgt.State is Act.Recover or Act.Stagger;
+        bool foeCommitted = tgt.State == Act.Windup && tgt.Req != null && (tgt.Req.TargetId < 0 || tgt.Req.TargetId == f.Id);
+        double aggr = 0.35 + 0.5 * (DetRng.NextUInt(w.Seed, 0, (ulong)f.Id, 5, 0) % 100) / 100.0; // per-fighter temperament
+        bool wantAttack = foeRecovering ? rng.Range(0, 100) < 85
+            : foeCommitted ? rng.Range(0, 100) < (int)(6 * aggr)
+            : rng.Range(0, 100) < (int)(10 * aggr);
+        if (f.State is Act.Idle or Act.Block && !f.WeaponArmLost && !exhausted && dist <= strikeD && w.Tick >= f.AiNextAttackTick
+            && wantAttack && !(threatened && w.Tick < f.AiBlockUntil))
         {
             var req = new AttackRequest { TargetId = tgt.Id, PartId = PickPart(f, tgt, ref rng), AutoRelease = true };
             req.AttackId = PickAttack(f, tgt, req.PartId);
             c.Start = req;
             c.Block = false;
-            f.AiNextAttackTick = w.Tick + 2 + rng.Range(0, 10 - skill / 15);
+            f.AiNextAttackTick = w.Tick + 4 + rng.Range(0, 16 - skill / 15);
             return;
         }
 

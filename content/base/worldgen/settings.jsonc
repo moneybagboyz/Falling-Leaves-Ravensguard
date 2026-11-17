@@ -1,0 +1,22 @@
+// Stage 1 (continent) generation defaults; see docs/REDESIGN_PLAN.md §1A. Seed and layout are per-world and not set here.
+[
+  {
+    "type": "worldgen_settings", "id": "continent_defaults",
+    "plate_count": 13,                 // 12-15 in the plan
+    "sea_level_raw": 22938,            // 0.35 in Q16.16, shared by every phase (the old generator used 0.32 and 0.35)
+    "mineral_density_pct": 100,
+    "savagery_pct": 100,
+    "moisture_pct": 100,
+    "temperature_offset_tenths": 0,    // 0.1 C units
+    "culture_count": 5,                // 3-8
+    "realm_count": 8,
+    "land_pct_pangea": 47,
+    "land_pct_continents": 38,
+    "land_pct_archipelago": 24,
+    "river_flow_threshold": 220,
+    "stream_flow_threshold": 70,
+    "culture_names": ["Aldmark", "Brennic", "Coravel", "Dunhold", "Eskarri", "Fennish", "Garrow", "Havren"],
+    "realm_names": ["Ashford", "Blackmere", "Caldor", "Dunmoor", "Eastwatch", "Fairholt", "Greywater", "Harrowgate",
+                    "Ironvale", "Kingsmarch", "Larkspur", "Marrow", "Northreach", "Oakhaven", "Pellam", "Ravensgate"]
+  }
+]

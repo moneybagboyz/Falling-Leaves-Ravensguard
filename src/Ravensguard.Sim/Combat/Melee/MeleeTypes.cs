@@ -21,7 +21,7 @@ public enum Outcome { Death, Knockout, Rout, Surrender, Stalemate }
 
 public sealed record FighterSpec(
     string Name, int Team, WeaponInstance Weapon, IReadOnlyList<WornItem> Worn, Vec2 Start,
-    int Skill = 40, int Strength = 1250, int Toughness = 5, double ShieldCover = 0, int Courage = 70, string Sprite = "person.soldier_red")
+    int Skill = 40, int Strength = 1250, int Toughness = 10, double ShieldCover = 0, int Courage = 70, string Sprite = "person.soldier_red")
 {
     public Vec2 FaceDir { get; init; } = new(1, 0);
 }
