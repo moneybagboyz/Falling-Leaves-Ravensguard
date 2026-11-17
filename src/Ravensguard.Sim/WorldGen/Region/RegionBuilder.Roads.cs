@@ -52,6 +52,12 @@ internal sealed partial class RegionBuilder
                 int n = ny * N + nx;
                 int c = n == b ? 100 : TileCost(n);
                 if (c < 0) continue;
+                if ((d & 1) == 1)
+                {
+                    // No sneaking diagonally between the tiles of a diagonal river: a crossing must enter a water tile.
+                    const byte chan = WaterFlags.River | WaterFlags.Stream;
+                    if ((_r.Water[cy * N + nx] & chan) != 0 && (_r.Water[ny * N + cx] & chan) != 0) continue;
+                }
                 int step = (d & 1) == 0 ? 10 : 14;
                 int ng = _g[cur] + step * c / 100;
                 if (_stamp[n] == _stampNo && _g[n] <= ng) continue;
@@ -259,6 +265,7 @@ internal sealed partial class RegionBuilder
     {
         if (node.Settlement < 0 || pts.Count < 2) return;
         var s = _r.Settlements[node.Settlement];
+        if (s.Class == SettlementClass.Farmstead) return;
         int r = s.Plan.RadiusM + (s.Class == SettlementClass.Town ? 30 : s.Class == SettlementClass.Village ? 24 : 6);
         if (!atStart) pts.Reverse();
         int cut = 0;
@@ -290,8 +297,10 @@ internal sealed partial class RegionBuilder
             if (cx - px != nx - cx || cy - py != ny - cy) pts.Add(new PointM(TileCenter(cx), TileCenter(cy)));
         }
         pts.Add(new PointM(B.X, B.Y));
-        TrimToSettlement(pts, A, true);
-        TrimToSettlement(pts, B, false);
+        var trimmed = new List<PointM>(pts);
+        TrimToSettlement(trimmed, A, true);
+        TrimToSettlement(trimmed, B, false);
+        if (trimmed.Count >= 2 && Dist(trimmed[0].X, trimmed[0].Y, trimmed[^1].X, trimmed[^1].Y) > 60) pts = trimmed;
         edge.Points = [.. pts];
         int len = 0;
         for (int i = 1; i < pts.Count; i++) len += Dist(pts[i - 1].X, pts[i - 1].Y, pts[i].X, pts[i].Y);

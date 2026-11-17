@@ -181,7 +181,9 @@ public class RegionTests(ITestOutputHelper output)
             Assert.InRange(p.DwellingCount, (int)(s.Households * 0.95) - 1, s.Households + 1);
             bool seat = s.FiefIndex >= 0 && r.Fiefs[s.FiefIndex].SeatSettlement == i;
             if (s.Class == SettlementClass.Town) Assert.True(seat);
-            Assert.Equal(s.Class == SettlementClass.Town ? DwellingType.Burgage : DwellingType.Cottage, p.Lots.First(l => l.IsDwelling && l.Dwelling != DwellingType.Manor && l.Dwelling != DwellingType.Longhouse).Dwelling);
+            var homes = p.Lots.Where(l => l.Dwelling is DwellingType.Cottage or DwellingType.Longhouse or DwellingType.Burgage).ToList();
+            if (s.Class == SettlementClass.Town) Assert.True(homes.Count(l => l.Dwelling == DwellingType.Burgage) * 2 >= homes.Count, $"{s.Name}: mostly burgage plots");
+            else { Assert.DoesNotContain(homes, l => l.Dwelling == DwellingType.Burgage); Assert.Contains(homes, l => l.Dwelling == DwellingType.Cottage); }
             // Lots never overlap each other.
             for (int a = 0; a < p.Lots.Count; a++)
                 for (int b = a + 1; b < p.Lots.Count; b++)

@@ -172,7 +172,16 @@ internal sealed partial class RegionBuilder
                 }
             if (bestD != int.MaxValue)
             {
-                var wr = new RectM(TileCenter(bx) - 9, TileCenter(by) - 7, 18, 14);
+                // Stand on the dry bank tile beside the water, nearest the settlement.
+                int mx = bx, my = by, md = int.MaxValue;
+                for (int d = 0; d < 8; d++)
+                {
+                    int nx = bx + Dx8[d], ny = by + Dy8[d];
+                    if ((uint)nx >= N || (uint)ny >= N || _r.Water[Idx(nx, ny)] != 0) continue;
+                    int dd = (nx - s.TileX) * (nx - s.TileX) + (ny - s.TileY) * (ny - s.TileY);
+                    if (dd < md) { md = dd; mx = nx; my = ny; }
+                }
+                var wr = new RectM(TileCenter(mx) - 9, TileCenter(my) - 7, 18, 14);
                 int du = horiz ? wr.X - cx : wr.Y - cy, dv = horiz ? wr.Y - cy : wr.X - cx;
                 var loc = horiz ? new RectM(du, dv, 18, 14) : new RectM(du, dv, 14, 18);
                 bool clash = false;
