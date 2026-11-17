@@ -26,6 +26,34 @@ public static class Seasons
 
     public static PixelBuffer Apply(Palette pal, PixelBuffer b, string season) => season == "summer" ? b : b.Recolor(Map(pal, season));
 
+    /// <summary>
+    /// Snow cover that follows autotile edges. A pixel of <paramref name="summer"/> (the unrecoloured sprite) that is one of the grass-family
+    /// colours takes the full-cover overlay pixel, so the grass lip of a road, field, hedge or shore tile turns white like the open grass around it
+    /// (the old whole-tile overlay left green strips). Every other pixel keeps <paramref name="seasoned"/>, or takes the dusting overlay when
+    /// <paramref name="dustOthers"/> is set (roads and fields). Overlay pixels that are transparent leave the ground showing (patchy snow).
+    /// </summary>
+    public static PixelBuffer SnowOver(Palette pal, PixelBuffer summer, PixelBuffer seasoned, PixelBuffer full, PixelBuffer dust, bool dustOthers)
+    {
+        var grass = new HashSet<uint>(pal.R[Ramp("grass", "summer")]);
+        var r = seasoned.Clone();
+        for (int y = 0; y < summer.H; y++)
+            for (int x = 0; x < summer.W; x++)
+            {
+                int i = y * summer.W + x;
+                uint c = summer.Data[i];
+                bool isGrass = grass.Contains(c);
+                if (!isGrass)
+                {
+                    // a flower or leaf speck counts as grass when three of its four neighbours are grass (a berry on a hedge is not); the game shader uses the same rule
+                    int n = (grass.Contains(summer.Get(x - 1, y)) ? 1 : 0) + (grass.Contains(summer.Get(x + 1, y)) ? 1 : 0) + (grass.Contains(summer.Get(x, y - 1)) ? 1 : 0) + (grass.Contains(summer.Get(x, y + 1)) ? 1 : 0);
+                    isGrass = n >= 3;
+                }
+                if (isGrass) { if ((full.Data[i] >> 24) != 0) r.Data[i] = full.Data[i]; }
+                else if (dustOthers && (dust.Data[i] >> 24) != 0) r.Data[i] = dust.Data[i];
+            }
+        return r;
+    }
+
     /// <summary>season_ramps.png: one row per (family, season) = family*4+season, 4 swatches (x = ramp index); plus season_ramps.json.</summary>
     public static void Export(Palette pal, string outDir)
     {
@@ -43,7 +71,10 @@ public static class Seasons
         var doc = new
         {
             note = "Author = summer row. Game recolour: for a texel equal to summer[family][i], output ramp[family][season][i] (one merged lookup). season_ramps.png row = familyIndex*4 + seasonIndex, x = i*8.",
-            seasons = Names, families = Families, swatch = 8, rows
+            seasons = Names, families = Families, swatch = 8, rows,
+            water = pal.R["water"].Select(c => "#" + (c & 0xFFFFFF).ToString("x6")).ToArray(),
+            ice = pal.R["ice"].Select(c => "#" + (c & 0xFFFFFF).ToString("x6")).ToArray(),
+            snow = pal.R["snow"].Select(c => "#" + (c & 0xFFFFFF).ToString("x6")).ToArray()
         };
         File.WriteAllText(Path.Combine(outDir, "season_ramps.json"), JsonSerializer.Serialize(doc, new JsonSerializerOptions { WriteIndented = true }) + "\n");
     }

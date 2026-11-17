@@ -134,7 +134,7 @@ STREET_LEVEL_TITLE,Level
 STREET_LEVEL_VIEWING,Looking at another level
 STREET_WRONG_LEVEL,You are on another level. Press Home to return the view.
 STREET_NO_PATH,No way there.
-STREET_HINTS,"{0} move   Click go   {1} pause   1-4 speed   {2} torch   {3} level   {4} zoom   {5} camera home   Esc menu"
+STREET_HINTS,"{0} move   Click go   {1} pause   1-4 speed   {2} torch   {3} level   {4} zoom   {5} camera home   {6} map   Esc menu"
 CONTROLS_SWAP_TITLE,Key already in use
 CONTROLS_SWAP_BODY,"{0} is already used by: {1}. Swap the bindings?"
 CONTROLS_SWAP,Swap
@@ -334,3 +334,29 @@ WL_PLAY,New game here
 WL_CONFIRM,Delete {0} and its {1} saved runs for good?
 WL_CONFIRM_YES,Delete
 WL_CONFIRM_NO,Keep
+WEATHER_CLEAR,Clear
+WEATHER_OVERCAST,Overcast
+WEATHER_RAIN,Light rain
+WEATHER_HEAVY_RAIN,Heavy rain
+WEATHER_STORM,Thunderstorm
+WEATHER_FOG,Fog
+WEATHER_FROST,Frost
+WEATHER_SNOW,Snow
+WEATHER_BLIZZARD,Blizzard
+WEATHER_HEAT,Heatwave
+BAND_CLOSE,Close view
+BAND_STREET,Street view
+BAND_FIELD,Field view
+BAND_COMMAND,Command view
+MAP_TITLE,"Map of the region (seed {0})"
+MAP_HINTS,"{0} pan   {1} zoom   {2} to the hero   {3} or Esc close   drag to pan"
+MAP_BUILDING,Drawing the map...
+MAP_NONE,There is no map of this place.
+MAP_UNKNOWN_SITE,Unexplored place
+MAP_WATER,Water
+MAP_RIVER,River
+MAP_LEGEND_TOWN,Town
+MAP_LEGEND_VILLAGE,Village
+MAP_LEGEND_SITE,Seen site
+MAP_LEGEND_UNKNOWN,Not yet seen
+MAP_LEGEND_YOU,You

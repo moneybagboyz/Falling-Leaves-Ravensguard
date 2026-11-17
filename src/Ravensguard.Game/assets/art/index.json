@@ -89,6 +89,24 @@
         64,
         80
       ]
+    },
+    "field_8": {
+      "file": "field_8.png",
+      "width": 400,
+      "height": 8,
+      "cell": [
+        8,
+        8
+      ]
+    },
+    "mini_16": {
+      "file": "mini_16.png",
+      "width": 512,
+      "height": 20,
+      "cell": [
+        16,
+        20
+      ]
     }
   },
   "sprites": {
@@ -4312,6 +4330,580 @@
       "y": 80,
       "w": 64,
       "h": 48
+    },
+    "field.grass.0": {
+      "atlas": "field_8",
+      "x": 0,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.grass.1": {
+      "atlas": "field_8",
+      "x": 8,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.grass.2": {
+      "atlas": "field_8",
+      "x": 16,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.grass.3": {
+      "atlas": "field_8",
+      "x": 24,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.grass_long": {
+      "atlas": "field_8",
+      "x": 32,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.meadow": {
+      "atlas": "field_8",
+      "x": 40,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.forest_floor": {
+      "atlas": "field_8",
+      "x": 48,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.leaf_litter": {
+      "atlas": "field_8",
+      "x": 56,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.dirt.0": {
+      "atlas": "field_8",
+      "x": 64,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.cobble.0": {
+      "atlas": "field_8",
+      "x": 72,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.dirt.1": {
+      "atlas": "field_8",
+      "x": 80,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.cobble.1": {
+      "atlas": "field_8",
+      "x": 88,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.sand": {
+      "atlas": "field_8",
+      "x": 96,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.mud": {
+      "atlas": "field_8",
+      "x": 104,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.marsh": {
+      "atlas": "field_8",
+      "x": 112,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.gravel": {
+      "atlas": "field_8",
+      "x": 120,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.rock": {
+      "atlas": "field_8",
+      "x": 128,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.scree": {
+      "atlas": "field_8",
+      "x": 136,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.peat": {
+      "atlas": "field_8",
+      "x": 144,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.water_shallow": {
+      "atlas": "field_8",
+      "x": 152,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.water_deep": {
+      "atlas": "field_8",
+      "x": 160,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.ford": {
+      "atlas": "field_8",
+      "x": 168,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.bridge": {
+      "atlas": "field_8",
+      "x": 176,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.farm.ploughed": {
+      "atlas": "field_8",
+      "x": 184,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.farm.sown": {
+      "atlas": "field_8",
+      "x": 192,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.farm.young": {
+      "atlas": "field_8",
+      "x": 200,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.farm.wheat_ripe": {
+      "atlas": "field_8",
+      "x": 208,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.farm.barley_ripe": {
+      "atlas": "field_8",
+      "x": 216,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.farm.stubble": {
+      "atlas": "field_8",
+      "x": 224,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.farm.fallow": {
+      "atlas": "field_8",
+      "x": 232,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.floor": {
+      "atlas": "field_8",
+      "x": 240,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.wall.stone": {
+      "atlas": "field_8",
+      "x": 248,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.wall.timber": {
+      "atlas": "field_8",
+      "x": 256,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.wall.wattle": {
+      "atlas": "field_8",
+      "x": 264,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.roof.thatch.lo": {
+      "atlas": "field_8",
+      "x": 272,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.roof.thatch.mid": {
+      "atlas": "field_8",
+      "x": 280,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.roof.thatch.hi": {
+      "atlas": "field_8",
+      "x": 288,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.roof.thatch.ridge": {
+      "atlas": "field_8",
+      "x": 296,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.roof.shingle.lo": {
+      "atlas": "field_8",
+      "x": 304,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.roof.shingle.mid": {
+      "atlas": "field_8",
+      "x": 312,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.roof.shingle.hi": {
+      "atlas": "field_8",
+      "x": 320,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.roof.shingle.ridge": {
+      "atlas": "field_8",
+      "x": 328,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.roof.slate.lo": {
+      "atlas": "field_8",
+      "x": 336,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.roof.slate.mid": {
+      "atlas": "field_8",
+      "x": 344,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.roof.slate.hi": {
+      "atlas": "field_8",
+      "x": 352,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.roof.slate.ridge": {
+      "atlas": "field_8",
+      "x": 360,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.roof.tile.lo": {
+      "atlas": "field_8",
+      "x": 368,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.roof.tile.mid": {
+      "atlas": "field_8",
+      "x": 376,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.roof.tile.hi": {
+      "atlas": "field_8",
+      "x": 384,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "field.roof.tile.ridge": {
+      "atlas": "field_8",
+      "x": 392,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "mini.person.villager.neutral": {
+      "atlas": "mini_16",
+      "x": 0,
+      "y": 0,
+      "w": 8,
+      "h": 16
+    },
+    "mini.person.villager.red": {
+      "atlas": "mini_16",
+      "x": 16,
+      "y": 0,
+      "w": 8,
+      "h": 16
+    },
+    "mini.person.villager.blue": {
+      "atlas": "mini_16",
+      "x": 32,
+      "y": 0,
+      "w": 8,
+      "h": 16
+    },
+    "mini.person.villager.green": {
+      "atlas": "mini_16",
+      "x": 48,
+      "y": 0,
+      "w": 8,
+      "h": 16
+    },
+    "mini.person.villager.gold": {
+      "atlas": "mini_16",
+      "x": 64,
+      "y": 0,
+      "w": 8,
+      "h": 16
+    },
+    "mini.person.villager.iron": {
+      "atlas": "mini_16",
+      "x": 80,
+      "y": 0,
+      "w": 8,
+      "h": 16
+    },
+    "mini.person.soldier.neutral": {
+      "atlas": "mini_16",
+      "x": 96,
+      "y": 0,
+      "w": 8,
+      "h": 16
+    },
+    "mini.person.soldier.red": {
+      "atlas": "mini_16",
+      "x": 112,
+      "y": 0,
+      "w": 8,
+      "h": 16
+    },
+    "mini.person.soldier.blue": {
+      "atlas": "mini_16",
+      "x": 128,
+      "y": 0,
+      "w": 8,
+      "h": 16
+    },
+    "mini.person.soldier.green": {
+      "atlas": "mini_16",
+      "x": 144,
+      "y": 0,
+      "w": 8,
+      "h": 16
+    },
+    "mini.person.soldier.gold": {
+      "atlas": "mini_16",
+      "x": 160,
+      "y": 0,
+      "w": 8,
+      "h": 16
+    },
+    "mini.person.soldier.iron": {
+      "atlas": "mini_16",
+      "x": 176,
+      "y": 0,
+      "w": 8,
+      "h": 16
+    },
+    "mini.person.hero.neutral": {
+      "atlas": "mini_16",
+      "x": 192,
+      "y": 0,
+      "w": 8,
+      "h": 16
+    },
+    "mini.person.hero.red": {
+      "atlas": "mini_16",
+      "x": 208,
+      "y": 0,
+      "w": 8,
+      "h": 16
+    },
+    "mini.person.hero.blue": {
+      "atlas": "mini_16",
+      "x": 224,
+      "y": 0,
+      "w": 8,
+      "h": 16
+    },
+    "mini.person.hero.green": {
+      "atlas": "mini_16",
+      "x": 240,
+      "y": 0,
+      "w": 8,
+      "h": 16
+    },
+    "mini.person.hero.gold": {
+      "atlas": "mini_16",
+      "x": 256,
+      "y": 0,
+      "w": 8,
+      "h": 16
+    },
+    "mini.person.hero.iron": {
+      "atlas": "mini_16",
+      "x": 272,
+      "y": 0,
+      "w": 8,
+      "h": 16
+    },
+    "mini.tree.oak.summer": {
+      "atlas": "mini_16",
+      "x": 288,
+      "y": 0,
+      "w": 16,
+      "h": 20
+    },
+    "mini.tree.oak.winter": {
+      "atlas": "mini_16",
+      "x": 304,
+      "y": 0,
+      "w": 16,
+      "h": 20
+    },
+    "mini.tree.ash.summer": {
+      "atlas": "mini_16",
+      "x": 320,
+      "y": 0,
+      "w": 16,
+      "h": 20
+    },
+    "mini.tree.ash.winter": {
+      "atlas": "mini_16",
+      "x": 336,
+      "y": 0,
+      "w": 16,
+      "h": 20
+    },
+    "mini.tree.birch.summer": {
+      "atlas": "mini_16",
+      "x": 352,
+      "y": 0,
+      "w": 16,
+      "h": 20
+    },
+    "mini.tree.birch.winter": {
+      "atlas": "mini_16",
+      "x": 368,
+      "y": 0,
+      "w": 16,
+      "h": 20
+    },
+    "mini.tree.pine.summer": {
+      "atlas": "mini_16",
+      "x": 384,
+      "y": 0,
+      "w": 16,
+      "h": 20
+    },
+    "mini.tree.pine.winter": {
+      "atlas": "mini_16",
+      "x": 400,
+      "y": 0,
+      "w": 16,
+      "h": 20
+    },
+    "mini.tree.apple.summer": {
+      "atlas": "mini_16",
+      "x": 416,
+      "y": 0,
+      "w": 16,
+      "h": 20
+    },
+    "mini.tree.apple.winter": {
+      "atlas": "mini_16",
+      "x": 432,
+      "y": 0,
+      "w": 16,
+      "h": 20
+    },
+    "mini.bush": {
+      "atlas": "mini_16",
+      "x": 448,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "mini.bush.winter": {
+      "atlas": "mini_16",
+      "x": 464,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "mini.rock": {
+      "atlas": "mini_16",
+      "x": 480,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "mini.block": {
+      "atlas": "mini_16",
+      "x": 496,
+      "y": 0,
+      "w": 8,
+      "h": 8
     }
   }
 }

@@ -14,6 +14,7 @@ using Ravensguard.Sim.People;
 using Ravensguard.Sim.Save;
 using Ravensguard.Sim.WorldGen.Region;
 using Ravensguard.Sim.Weather;
+using Ravensguard.Sim.WorldGen.Chunks;
 using Ravensguard.Sim.World;
 
 namespace Ravensguard.Game.World;
@@ -39,8 +40,12 @@ public partial class StreetView : Control
     ArtAtlas _art = null!;
     readonly Calendar _calendar = new();
 
+    /// <summary>Zoom bands (REDESIGN_PLAN 2.7): Close 64 px/m (2x pixels), Street 32 px/m, Field 8 px/m, Command 2 px/m.</summary>
+    public enum Band { Close, Street, Field, Command }
+
     // view state (camera only; nothing here is game state)
     int _zoom = 1, _viewZ;
+    Band _band = Band.Street;
     Vector2 _pan;
     double _acc;
     long _shownTick = -1;
@@ -50,17 +55,31 @@ public partial class StreetView : Control
     SubViewportContainer _box = null!;
     SubViewport _vp = null!;
     Camera2D _cam = null!;
-    TileMapLayer _belowT = null!, _belowO = null!, _baseT = null!, _baseO = null!;
-    Node2D _ysort = null!;
+    TileMapLayer _belowT = null!, _belowO = null!, _baseG = null!, _baseT = null!, _baseO = null!, _decal = null!;
+    Node2D _ysort = null!, _street = null!;
+    Seasonal _seasons = null!;
+    ShaderMaterial _matProp = null!;
+    WeatherFeed _wfeed = null!;
+    WeatherOverlay _wover = null!;
+    WeatherView _wx = WeatherView.Calm(10);
+    float _wxDim = 1f;
+    FarLayer? _far;
+    RegionMap? _regionMap;
+    ColorRect _ambient = null!;
+    ShaderMaterial _ambientMat = null!;
+    readonly List<FarPerson> _people = new();
+    HashSet<(int, int)> _exploredTile = new();
     RigAtlas _rig = null!;
     RigActor _heroSprite = null!;
     Sprite2D _torchSprite = null!, _lightSprite = null!;
     ImageTexture _lightTex = null!;
     byte[] _lightBytes = null!;
-    readonly Dictionary<string, Vector2I> _terrainCells = new(), _objectCells = new();
+    readonly Dictionary<string, (int Src, Vector2I Cell)> _terrainCells = new(), _objectCells = new(), _decalCells = new();
 
     // hud
-    Label _dateLabel = null!, _phaseLabel = null!, _levelLabel = null!, _hintLabel = null!, _perfLabel = null!;
+    Label _dateLabel = null!, _phaseLabel = null!, _levelLabel = null!, _hintLabel = null!, _perfLabel = null!, _weatherLabel = null!, _bandLabel = null!;
+    TextureRect _weatherIcon = null!;
+    Minimap? _minimap;
     readonly List<Label> _levelBoxes = new();
 
     // timing / shot
@@ -87,15 +106,25 @@ public partial class StreetView : Control
         _art = ArtAtlas.Load();
         _rig = RigAtlas.Load();
         _source ??= _opt.RegionSeed is { } seed ? StreetSource.FromSeed(seed, _opt.Poi) : StreetSource.Hamlet();
-        var t0 = GameTime.FromCalendar(1, Season.Spring, 8, _opt.Hour ?? 9, 0);
+        var season = _opt.Season switch { "summer" => Season.Summer, "autumn" => Season.Autumn, "winter" => Season.Winter, _ => Season.Spring };
+        var t0 = GameTime.FromCalendar(1, season, _opt.Day ?? 8, _opt.Hour ?? 9, 0);
         _world = _source.CreateWorld(_opt.Start is { } s ? new Cell3(s.X, s.Y, s.Z) : null, t0);
         var start = _world.Snapshot.Hero.Cell;
         DevContext.Clock = _world.Clock;
         if (_opt.Torch ?? IsNight(t0)) _world.SetTorch(true);
         _zoom = _opt.Zoom;
+        _band = _opt.Band switch { "close" => Band.Close, "field" => Band.Field, "command" => Band.Command, "street" => Band.Street, _ => _opt.Zoom >= 2 ? Band.Close : Band.Street };
         _viewZ = _opt.ViewZ ?? start.Z;
         if (_opt.Pan is { } p) _pan = new Vector2(p.X, p.Y) * Tile;
 
+        _seasons = new Seasonal(_art);
+        _wover = new WeatherOverlay(_art);
+        _wfeed = new WeatherFeed(_source.Region, _source.Weather, WeatherView.Parse(_opt.Weather));
+        if (_source.Region is { } rg)
+        {
+            _regionMap = new RegionMap(rg);
+            if (_world.Streamer != null) _regionMap.ExploreStore(_world.Streamer.Store);
+        }
         BuildScene();
         BuildHud();
         Resized += FitViewport;
@@ -145,24 +174,36 @@ public partial class StreetView : Control
         _box.AddChild(_vp);
         var root = new Node2D { Name = "Root" };
         _vp.AddChild(root);
+        _street = new Node2D { Name = "Street" };
+        root.AddChild(_street);
 
         var ts = new TileSet { TileSize = new Vector2I(Tile, Tile) };
         AddSource(ts, "terrain_32", "terrain.", _terrainCells, 0);
         AddSource(ts, "objects_32", "object.", _objectCells, 1);
-        TileMapLayer Layer(string name, Color tint)
+        if (_art.HasAtlas("terrain2_32")) AddSource(ts, "terrain2_32", "terrain.", _terrainCells, 2, "autotile.");
+        if (_art.HasAtlas("overlays_32")) AddSource(ts, "overlays_32", "overlay.puddle", _decalCells, 3);
+        var shade = new Color(0.58f, 0.58f, 0.62f);
+        TileMapLayer Layer(string name, ShaderMaterial? mat)
         {
-            var l = new TileMapLayer { Name = name, TileSet = ts, TextureFilter = TextureFilterEnum.Nearest, Modulate = tint, RenderingQuadrantSize = 16 };
-            root.AddChild(l);
+            var l = new TileMapLayer { Name = name, TileSet = ts, TextureFilter = TextureFilterEnum.Nearest, RenderingQuadrantSize = 16, Material = mat };
+            _street.AddChild(l);
             return l;
         }
-        var shade = new Color(0.58f, 0.58f, 0.62f);
-        _belowT = Layer("BelowTerrain", shade);
-        _belowO = Layer("BelowObjects", shade);
-        _baseT = Layer("Terrain", Colors.White);
-        _baseO = Layer("Objects", Colors.White);
+        // season shader: ground gets snow, ice and wet; objects and props only the colour swap; the level below is the same one shade darker
+        var gMat = _seasons.Create(ground: true);
+        var gBelow = _seasons.Create(ground: true, shade: shade);
+        var oMat = _seasons.Create(ground: false);
+        var oBelow = _seasons.Create(ground: false, shade: shade);
+        _matProp = _seasons.Create(ground: false, perSprite: true);
+        _belowT = Layer("BelowTerrain", gBelow);
+        _belowO = Layer("BelowObjects", oBelow);
+        _baseG = Layer("Ground", gMat);
+        _baseT = Layer("Terrain", null);
+        _decal = Layer("Decals", _seasons.CreateDecal());
+        _baseO = Layer("Objects", oMat);
 
         _ysort = new Node2D { Name = "Sprites", YSortEnabled = true };
-        root.AddChild(_ysort);
+        _street.AddChild(_ysort);
         _heroSprite = new RigActor(_rig, "hero"); // stacked layers from rig_32x64.png
         _ysort.AddChild(_heroSprite);
         _torchSprite = new Sprite2D { Texture = _art.Texture("item.torch"), Centered = false, Offset = new Vector2(-3, -34), TextureFilter = TextureFilterEnum.Nearest, Visible = false };
@@ -180,14 +221,25 @@ public partial class StreetView : Control
             Name = "Light", Texture = _lightTex, Centered = false, Scale = new Vector2(Tile, Tile), TextureFilter = TextureFilterEnum.Linear,
             Material = new ShaderMaterial { Shader = shader }, ZIndex = 100,
         };
-        root.AddChild(_lightSprite);
+        _street.AddChild(_lightSprite);
+
+        // Field and Command: cached chunk images, drawn instead of the street layers
+        _far = new FarLayer(_art, _seasons, _world.Streamer, _world.Streamer == null ? Map : null) { Name = "Far", Visible = false };
+        root.AddChild(_far);
+        var amb = new CanvasLayer { Name = "FarAmbient", Layer = 4 };
+        _ambientMat = new ShaderMaterial { Shader = new Shader { Code = "shader_type canvas_item;\nrender_mode blend_mul, unshaded;\nuniform vec4 tint = vec4(1.0);\nvoid fragment() { COLOR = vec4(tint.rgb, 1.0); }\n" } };
+        _ambient = new ColorRect { Color = Colors.White, Material = _ambientMat, MouseFilter = MouseFilterEnum.Ignore, Visible = false };
+        amb.AddChild(_ambient);
+        _vp.AddChild(amb);
+        _vp.AddChild(_wover.Node);
 
         _cam = new Camera2D { Name = "Camera", AnchorMode = Camera2D.AnchorModeEnum.DragCenter };
         root.AddChild(_cam);
         _cam.MakeCurrent();
     }
 
-    void AddSource(TileSet ts, string atlas, string prefix, Dictionary<string, Vector2I> cells, int sourceId)
+    /// <summary>Adds an atlas as a TileSet source. Ids starting with <paramref name="prefix"/> (or <paramref name="prefix2"/>) are listed in <paramref name="cells"/>.</summary>
+    void AddSource(TileSet ts, string atlas, string prefix, Dictionary<string, (int, Vector2I)> cells, int sourceId, string? prefix2 = null)
     {
         var src = new TileSetAtlasSource { Texture = _art.Atlas(atlas), TextureRegionSize = new Vector2I(Tile, Tile) };
         foreach (var (id, r) in _art.All)
@@ -195,7 +247,7 @@ public partial class StreetView : Control
             if (r.Atlas != atlas || r.W != Tile || r.H != Tile) continue;
             var c = new Vector2I(r.X / Tile, r.Y / Tile);
             src.CreateTile(c);
-            cells[id] = c;
+            if (!cells.ContainsKey(id)) cells[id] = (sourceId, c);
         }
         ts.AddSource(src, sourceId);
     }
@@ -226,7 +278,25 @@ public partial class StreetView : Control
         _dateLabel.AddThemeFontSizeOverride("font_size", 20);
         _phaseLabel = new Label();
         v.AddChild(_dateLabel); v.AddChild(_phaseLabel);
+        // the time widget's weather row: a pixel glyph, the weather in words and the temperature in degrees C
+        var wrow = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
+        wrow.AddThemeConstantOverride("separation", 6);
+        _weatherIcon = new TextureRect { CustomMinimumSize = new Vector2(32, 32), StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered, ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, TextureFilter = TextureFilterEnum.Nearest };
+        _weatherLabel = new Label { VerticalAlignment = VerticalAlignment.Center };
+        wrow.AddChild(_weatherIcon); wrow.AddChild(_weatherLabel);
+        v.AddChild(wrow);
+        _bandLabel = new Label { ThemeTypeVariation = "HintLabel" };
+        v.AddChild(_bandLabel);
         hud.AddChild(top);
+
+        if (_regionMap != null)
+        {
+            _minimap = new Minimap(_regionMap, HeroWorld, OpenMap);
+            _minimap.AnchorLeft = 1; _minimap.AnchorRight = 1; _minimap.AnchorTop = 1; _minimap.AnchorBottom = 1;
+            _minimap.OffsetLeft = -(Minimap.Pixels + 24); _minimap.OffsetRight = -12; _minimap.OffsetTop = -(Minimap.Pixels + 24 + 28); _minimap.OffsetBottom = -(28);
+            _minimap.GrowHorizontal = GrowDirection.Begin; _minimap.GrowVertical = GrowDirection.Begin;
+            hud.AddChild(_minimap);
+        }
 
         var lv = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore };
         lv.AnchorLeft = 1; lv.AnchorRight = 1; lv.OffsetRight = -12; lv.OffsetTop = 12; lv.GrowHorizontal = GrowDirection.Begin;
@@ -258,12 +328,27 @@ public partial class StreetView : Control
 
     static string HintText() => string.Format(L.T("STREET_HINTS"),
         $"{H("world.move_up")}{H("world.move_left")}{H("world.move_down")}{H("world.move_right")}", H("world.pause"), H("world.torch"),
-        $"{H("world.level_up")}/{H("world.level_down")}", $"{H("world.zoom_in")}/{H("world.zoom_out")}", H("world.camera_home"));
+        $"{H("world.level_up")}/{H("world.level_down")}", $"{H("world.zoom_in")}/{H("world.zoom_out")}", H("world.camera_home"), H("world.map"));
+
+    (float X, float Y) HeroWorld()
+    {
+        var h = _world.Snapshot.Hero;
+        return (_world.Snapshot.OriginX + h.X.ToFloat(), _world.Snapshot.OriginY + h.Y.ToFloat());
+    }
+
+    void OpenMap()
+    {
+        if (_router == null || _regionMap == null) { _router?.ShowToast(L.T("MAP_NONE")); return; }
+        _router.Push(new WorldMapScreen(_router, _regionMap, HeroWorld));
+    }
 
     void UpdateHud(LiveSnapshot s)
     {
         var t = s.Time;
         _dateLabel.Text = $"{t.Hour:00}:{t.Minute:00}  {_calendar.Describe(t)}";
+        _weatherIcon.Texture = PixelIcons.Weather(_wx.State, s.Ambient.Phase == DayPhase.Night);
+        _weatherLabel.Text = $"{L.T(WeatherFeed.Name(_wx.State))}  {Mathf.Round(_wx.TempC):0} °C";
+        _bandLabel.Text = L.T(_band switch { Band.Close => "BAND_CLOSE", Band.Street => "BAND_STREET", Band.Field => "BAND_FIELD", _ => "BAND_COMMAND" });
         string phase = s.Ambient.Phase switch { DayPhase.Dawn => "STREET_PHASE_DAWN", DayPhase.Dusk => "STREET_PHASE_DUSK", DayPhase.Night => "STREET_PHASE_NIGHT", _ => "STREET_PHASE_DAY" };
         string speed = s.Speed == SimSpeed.Paused ? L.T("STREET_PAUSED") : $"{(int)s.Speed}x";
         string torch = s.Hero.Torch ? "  " + L.T("STREET_TORCH_ON") : "";
@@ -283,7 +368,8 @@ public partial class StreetView : Control
     // Tiles live in world cells (1 cell = 1 tile layer cell), so a streamed window can move under them without redrawing: a chunk is
     // drawn when it arrives (or its content changes) and erased when it leaves the window.
     readonly Dictionary<(int X, int Y), int> _drawn = new();
-    readonly Dictionary<(int X, int Y), List<Sprite2D>> _chunkProps = new();
+    sealed class PropNode { public Sprite2D Node = null!; public string Base = ""; public float H; public string Shown = ""; }
+    readonly Dictionary<(int X, int Y), List<PropNode>> _chunkProps = new();
     readonly Dictionary<string, string?> _terrainPick = new(), _objectPick = new(), _propPick = new();
     HamletMap? _syncedMap; int _syncedRev = -1;
 
@@ -291,8 +377,8 @@ public partial class StreetView : Control
     void RebuildLevel()
     {
         var sw = Stopwatch.StartNew();
-        _baseT.Clear(); _baseO.Clear(); _belowT.Clear(); _belowO.Clear();
-        foreach (var l in _chunkProps.Values) foreach (var n in l) n.QueueFree();
+        _baseT.Clear(); _baseO.Clear(); _belowT.Clear(); _belowO.Clear(); _baseG.Clear(); _decal.Clear();
+        foreach (var l in _chunkProps.Values) foreach (var n in l) n.Node.QueueFree();
         _chunkProps.Clear(); _drawn.Clear();
         _syncedMap = null;
         SyncTiles();
@@ -342,12 +428,27 @@ public partial class StreetView : Control
 
     static int Div(int a, int b) { int q = a / b; return (a % b != 0 && (a < 0) != (b < 0)) ? q - 1 : q; }
 
-    string? Pick(string id, Dictionary<string, Vector2I> cells, Dictionary<string, string?> memo)
+    string? Pick(string id, Dictionary<string, (int Src, Vector2I Cell)> cells, Dictionary<string, string?> memo)
     {
         if (memo.TryGetValue(id, out var r)) return r;
         r = null;
         foreach (var alt in TileSprites.Alternatives(id)) if (cells.ContainsKey(alt)) { r = alt; break; }
         return memo[id] = r;
+    }
+
+    /// <summary>Walls, doors, floors and stairs live on the Terrain layer (no season shader: nothing seasonal about them); everything else is ground and takes snow, ice and rain.</summary>
+    static bool IsStructureId(string id) =>
+        id.StartsWith("terrain.wall") || id.StartsWith("terrain.door") || id.StartsWith("terrain.stairs") || id.StartsWith("terrain.void") || id.StartsWith("terrain.floor")
+        || id is "terrain.flagstone" or "terrain.wood_floor" or "terrain.earth_floor" or "terrain.feat";
+
+    static double Hash2(int x, int y, int s)
+    {
+        unchecked
+        {
+            uint h = (uint)x * 374761393u + (uint)y * 668265263u + (uint)s * 1442695041u;
+            h = (h ^ (h >> 13)) * 1274126177u; h ^= h >> 16;
+            return h / 4294967296.0;
+        }
     }
 
     void DrawCells(HamletMap m, int x0, int y0, int x1, int y1)
@@ -357,42 +458,82 @@ public partial class StreetView : Control
             for (int x = x0; x < x1; x++)
             {
                 var c = new Vector2I(x + ox, y + oy);
-                _baseT.EraseCell(c); _baseO.EraseCell(c); _belowT.EraseCell(c); _belowO.EraseCell(c);
+                _baseT.EraseCell(c); _baseG.EraseCell(c); _baseO.EraseCell(c); _belowT.EraseCell(c); _belowO.EraseCell(c); _decal.EraseCell(c);
                 var t = TileSprites.Terrain(m, x, y, z);
                 if (t != null)
                 {
-                    if (Pick(t, _terrainCells, _terrainPick) is { } tp) _baseT.SetCell(c, 0, _terrainCells[tp]);
-                    if (TileSprites.Object(m, x, y, z) is { } o && Pick(o, _objectCells, _objectPick) is { } op) _baseO.SetCell(c, 1, _objectCells[op]);
+                    if (Pick(t, _terrainCells, _terrainPick) is { } tp)
+                    {
+                        var (src, cell) = _terrainCells[tp];
+                        (IsStructureId(tp) ? _baseT : _baseG).SetCell(c, src, cell);
+                        // puddles sit on open ground; the shader shows them when the ground is wet and hides them under snow or ice
+                        if (z == 0 && !IsStructureId(tp) && _decalCells.Count > 0 && PuddleChance(tp) is { } chance)
+                        {
+                            double h = Hash2(c.X, c.Y, 811);
+                            if (h < chance) { var (psrc, pcell) = _decalCells[$"overlay.puddle.{(int)(h * 1000) % 3}"]; _decal.SetCell(c, psrc, pcell); }
+                        }
+                    }
+                    if (TileSprites.Object(m, x, y, z) is { } o && Pick(o, _objectCells, _objectPick) is { } op) { var (osrc, ocell) = _objectCells[op]; _baseO.SetCell(c, osrc, ocell); }
                     continue;
                 }
                 for (int dz = 1; dz <= 2 && z - dz >= g.MinZ; dz++) // open air: look down
                 {
                     var bt = TileSprites.Terrain(m, x, y, z - dz);
                     if (bt == null) continue;
-                    if (Pick(bt, _terrainCells, _terrainPick) is { } btp) _belowT.SetCell(c, 0, _terrainCells[btp]);
-                    if (TileSprites.Object(m, x, y, z - dz) is { } bo && Pick(bo, _objectCells, _objectPick) is { } bop) _belowO.SetCell(c, 1, _objectCells[bop]);
+                    if (Pick(bt, _terrainCells, _terrainPick) is { } btp) { var (bsrc, bcell) = _terrainCells[btp]; _belowT.SetCell(c, bsrc, bcell); }
+                    if (TileSprites.Object(m, x, y, z - dz) is { } bo && Pick(bo, _objectCells, _objectPick) is { } bop) { var (bosrc, bocell) = _objectCells[bop]; _belowO.SetCell(c, bosrc, bocell); }
                     break;
                 }
             }
     }
 
+    /// <summary>How likely a ground tile is to hold a puddle (ground that does not soak water in: paths, roads, trodden grass). Null for tiles that never do (water, fields, sand).</summary>
+    static double? PuddleChance(string id) =>
+        id.StartsWith("autotile.path_dirt") || id.StartsWith("terrain.dirt") || id.StartsWith("terrain.mud") || id.StartsWith("autotile.track") || id.StartsWith("autotile.mud") ? 0.16
+        : id.StartsWith("terrain.cobble") || id.StartsWith("autotile.road_cobble") ? 0.09
+        : id.StartsWith("terrain.grass") || id.StartsWith("terrain.meadow") ? 0.045
+        : null;
+
     void AddProps(HamletMap m, (int X, int Y) key, List<Prop> props)
     {
-        var list = new List<Sprite2D>();
+        var list = new List<PropNode>();
         foreach (var p in props)
         {
             if (p.Z != _viewZ) continue;
-            var id = PickProp(p.Sprite);
+            int px = p.X + m.OriginX, py = p.Y + m.OriginY;
+            float h = (float)Hash2(px, py, 313);
+            var id = PropSprite(p.Sprite, h);
             if (id == null) continue;
             var tex = _art.Texture(id);
             var size = tex.GetSize();
-            int px = p.X + m.OriginX, py = p.Y + m.OriginY;
             float cx = p.Wide ? (px + 1) * Tile : px * Tile + Tile / 2f;
-            var sp = new Sprite2D { Texture = tex, Centered = false, Offset = new Vector2(-size.X / 2f, -size.Y), Position = new Vector2(cx, (py + 1) * Tile), TextureFilter = TextureFilterEnum.Nearest };
+            var sp = new Sprite2D { Texture = tex, Centered = false, Offset = new Vector2(-size.X / 2f, -size.Y), Position = new Vector2(cx, (py + 1) * Tile), TextureFilter = TextureFilterEnum.Nearest, Material = _matProp };
             _ysort.AddChild(sp);
-            list.Add(sp);
+            list.Add(new PropNode { Node = sp, Base = p.Sprite, H = h, Shown = id });
         }
         _chunkProps[key] = list;
+    }
+
+    /// <summary>The sprite a prop shows right now. Generator trees (object.tree.N) become species trees: summer foliage, or the bare winter sprite once the leaves are down
+    /// (autumn colours come from the shader); props with a snow-capped variant take it under snow.</summary>
+    string? PropSprite(string baseId, float h)
+    {
+        var st = _seasons.State;
+        string id = baseId;
+        int dot = baseId.LastIndexOf('.');
+        if (baseId.StartsWith("object.tree.") && dot > 0 && int.TryParse(baseId.AsSpan(dot + 1), out int n))
+        {
+            string sp = h < 0.18f ? "pine" : (n % 3) switch { 0 => "oak", 1 => "ash", _ => "birch" };
+            bool bare = st.Season == 3 ? st.Frac < 0.85f + 0.15f * h : st.Season == 2 && st.Frac > 0.55f + 0.45f * h;
+            if (sp != "pine" || !bare)
+            {
+                string cand = $"object.tree.{sp}.{(bare ? "winter" : "summer")}";
+                if (_art.Has(cand)) return cand;
+            }
+            else if (_art.Has("object.tree.pine.winter")) return "object.tree.pine.winter";
+        }
+        if (st.Snow > 0.3f && _art.Has(baseId + "_snow")) return baseId + "_snow";
+        return PickProp(id);
     }
 
     string? PickProp(string id)
@@ -403,6 +544,25 @@ public partial class StreetView : Control
         return _propPick[id] = r;
     }
 
+    string _propState = "";
+    /// <summary>When the season, snow cover or tree-leaf state moved enough to change which sprite a prop shows, swaps the textures.</summary>
+    void RefreshProps()
+    {
+        var st = _seasons.State;
+        string key = $"{st.Season}:{(int)(st.Frac * 40)}:{(st.Snow > 0.3f ? 1 : 0)}";
+        if (key == _propState) return;
+        _propState = key;
+        foreach (var l in _chunkProps.Values)
+            foreach (var pn in l)
+            {
+                var id = PropSprite(pn.Base, pn.H);
+                if (id == null || id == pn.Shown) continue;
+                pn.Shown = id;
+                var tex = _art.Texture(id); var size = tex.GetSize();
+                pn.Node.Texture = tex; pn.Node.Offset = new Vector2(-size.X / 2f, -size.Y);
+            }
+    }
+
     void EraseChunk(HamletMap m, (int X, int Y) k)
     {
         int cx = k.X * 32, cy = k.Y * 32;
@@ -410,9 +570,9 @@ public partial class StreetView : Control
             for (int x = 0; x < 32; x++)
             {
                 var c = new Vector2I(cx + x, cy + y);
-                _baseT.EraseCell(c); _baseO.EraseCell(c); _belowT.EraseCell(c); _belowO.EraseCell(c);
+                _baseT.EraseCell(c); _baseG.EraseCell(c); _baseO.EraseCell(c); _belowT.EraseCell(c); _belowO.EraseCell(c); _decal.EraseCell(c);
             }
-        if (_chunkProps.Remove(k, out var l)) foreach (var n in l) n.QueueFree();
+        if (_chunkProps.Remove(k, out var l)) foreach (var n in l) n.Node.QueueFree();
         _drawn.Remove(k);
     }
 
@@ -443,7 +603,7 @@ public partial class StreetView : Control
         _drawMsSum += dms; _drawMsMax = Math.Max(_drawMsMax, dms); _drawCount++;
 
         if (_opt.Click is { } c && _frames == 2) ClickMove(new Vector2(c.X, c.Y));
-        if (_opt.IsShot && _frames == _opt.Frames) Shoot();
+        if (_opt.IsShot && !_quitting && _frames >= _opt.Frames && ShotReady()) Shoot();
         if (bench && _benchT >= _opt.BenchSeconds) Finish();
         if (bench && _perfLabel.Visible && _frames % 30 == 0)
             _perfLabel.Text = $"tick {_tickMsSum / Math.Max(1, _tickCount):F3} ms (max {_tickMsMax:F2})  draw {_drawMsSum / Math.Max(1, _drawCount):F3} ms (max {_drawMsMax:F2})  fps {Engine.GetFramesPerSecond()}";
@@ -458,8 +618,10 @@ public partial class StreetView : Control
         var pan = new Vector2(
             (Actions.HeldLoose("world.camera_right") ? 1 : 0) - (Actions.HeldLoose("world.camera_left") ? 1 : 0),
             (Actions.HeldLoose("world.camera_down") ? 1 : 0) - (Actions.HeldLoose("world.camera_up") ? 1 : 0));
-        if (pan != Vector2.Zero) _pan += pan * (float)(delta * 10 * Tile);
-        _pan = _pan.Clamp(new Vector2(-24 * Tile, -24 * Tile), new Vector2(24 * Tile, 24 * Tile));
+        // the same screen speed in every band: 10 m/s at Street, 40 m/s at Field, 160 m/s at Command
+        float speed = _band switch { Band.Command => 16f, Band.Field => 4f, _ => 1f };
+        if (pan != Vector2.Zero) _pan += pan * (float)(delta * 10 * Tile * speed);
+        ClampPan();
     }
 
     void ScriptedWalk()
@@ -507,11 +669,59 @@ public partial class StreetView : Control
         _torchSprite.Visible = h.Torch;
         _torchSprite.Position = new Vector2(h.Facing == Facing.West ? -16 : 6, 0);
 
-        _zoom = Math.Clamp(_zoom, 1, 2);
+        bool far = _band >= Band.Field && _far != null;
+        _street.Visible = !far;
+        if (_far != null) _far.Visible = far;
+        _zoom = _band == Band.Close ? 2 : 1;
         _cam.Zoom = new Vector2(_zoom, _zoom);
-        _cam.Position = new Vector2(Mathf.Round(feet.X + _pan.X), Mathf.Round(feet.Y - 16 + _pan.Y));
+        if (!far) _cam.Position = new Vector2(Mathf.Round(feet.X + _pan.X), Mathf.Round(feet.Y - 16 + _pan.Y));
+        else
+        {
+            // Field (8 px/m) and Command (2 px/m): the camera moves over the cached chunk images; metres in, pixels out
+            bool cmd = _band == Band.Command; float ppm = cmd ? 2f : 8f;
+            var heroM = new Vector2(feet.X, feet.Y) / Tile;
+            var centre = heroM + _pan / Tile;
+            _cam.Position = (centre * ppm).Round();
+            _people.Clear();
+            _people.Add(new FarPerson(heroM.X, heroM.Y, "blue", true));
+            _far!.Refresh(centre, new Vector2(_vp.Size.X, _vp.Size.Y), cmd, _people);
+        }
+        _ambient.Visible = far;
+        if (far) _ambient.Size = new Vector2(_vp.Size.X, _vp.Size.Y);
 
-        if (s.Tick != _shownTick) { _shownTick = s.Tick; UpdateLight(s); UpdateHud(s); }
+        if (s.Tick != _shownTick) { _shownTick = s.Tick; UpdateWorld(s); UpdateLight(s); UpdateHud(s); }
+        _wover.Update(GetProcessDeltaTime(), _wx, _vp.Size, _band == Band.Close ? 2 : 1);
+    }
+
+    Vector2I _heroTile = new(-1, -1);
+    /// <summary>Once per sim tick: the weather at the hero, the season and snow state for the shaders, the props' season sprites, the explored tiles of the map.</summary>
+    void UpdateWorld(LiveSnapshot s)
+    {
+        var t = s.Time;
+        float wx = s.OriginX + s.Hero.X.ToFloat(), wy = s.OriginY + s.Hero.Y.ToFloat();
+        _wx = _wfeed.Sample(t, (int)wx, (int)wy);
+        _wxDim = WeatherOverlay.Dim(_wx);
+        _seasons.Apply(SeasonState.Of(t, _wx.SnowCover, _wx.Freeze, _wx.Wet));
+        RefreshProps();
+        if (_regionMap != null)
+        {
+            var tile = new Vector2I((int)(wx / 64), (int)(wy / 64));
+            if (tile != _heroTile) { _heroTile = tile; _regionMap.Explore(wx, wy); }
+        }
+    }
+
+    /// <summary>Ambient tint of the open air: cool moonlight to warm daylight, an orange cast while the sun is low, then the weather's dimming (cloud, rain, fog).</summary>
+    (float R, float G, float B) AmbientTint(LiveSnapshot s)
+    {
+        float sf = s.Ambient.Sun / 255f;
+        float tr = Mathf.Lerp(0.50f, 1.0f, sf), tg = Mathf.Lerp(0.62f, 0.98f, sf), tb = Mathf.Lerp(1.0f, 0.92f, sf);
+        if (s.Ambient.Phase is DayPhase.Dawn or DayPhase.Dusk)
+        {
+            float k = 4f * sf * (1f - sf) * 0.55f;
+            tr = Mathf.Lerp(tr, 1.0f, k); tg = Mathf.Lerp(tg, 0.70f, k); tb = Mathf.Lerp(tb, 0.50f, k);
+        }
+        float d = _wxDim;
+        return (tr * d, tg * d, tb * Math.Min(1f, d * 1.05f));
     }
 
     // ------------------------------------------------------------------ light overlay
@@ -526,15 +736,8 @@ public partial class StreetView : Control
         int py0 = _world.Streamer != null ? Math.Clamp(hy - h / 2, 0, Math.Max(0, g.Height - h)) : 0;
         _lightSprite.Position = new Vector2((px0 + s.OriginX) * Tile, (py0 + s.OriginY) * Tile);
         double hfx = s.Hero.X.ToDouble(), hfy = s.Hero.Y.ToDouble();
-        int sun = s.Ambient.Sun;
-        // ambient tint: cool moonlight to warm daylight, with an orange cast while the sun is low
-        float sf = sun / 255f;
-        float tr = Mathf.Lerp(0.50f, 1.0f, sf), tg = Mathf.Lerp(0.62f, 0.98f, sf), tb = Mathf.Lerp(1.0f, 0.92f, sf);
-        if (s.Ambient.Phase is DayPhase.Dawn or DayPhase.Dusk)
-        {
-            float k = 4f * sf * (1f - sf) * 0.55f;
-            tr = Mathf.Lerp(tr, 1.0f, k); tg = Mathf.Lerp(tg, 0.70f, k); tb = Mathf.Lerp(tb, 0.50f, k);
-        }
+        var (tr, tg, tb) = AmbientTint(s);
+        _ambientMat.SetShaderParameter("tint", new Color(Math.Max(tr, 0.16f), Math.Max(tg, 0.17f), Math.Max(tb, 0.24f)));
         const float wr = 1.0f, wg = 0.62f, wb = 0.30f; // firelight
         int viewZ = z;
         var buf = _lightBytes;
@@ -594,12 +797,28 @@ public partial class StreetView : Control
         else if (Actions.Pressed(e, "world.torch")) _world.ToggleTorch();
         else if (Actions.Pressed(e, "world.level_up")) ChangeView(1);
         else if (Actions.Pressed(e, "world.level_down")) ChangeView(-1);
-        else if (Actions.Pressed(e, "world.zoom_in")) _zoom = 2;
-        else if (Actions.Pressed(e, "world.zoom_out")) _zoom = 1;
+        else if (Actions.Pressed(e, "world.zoom_in")) SetBand(_band - 1);
+        else if (Actions.Pressed(e, "world.zoom_out")) SetBand(_band + 1);
+        else if (Actions.Pressed(e, "world.map")) OpenMap();
         else if (Actions.Pressed(e, "world.camera_home")) { _pan = Vector2.Zero; if (_viewZ != _world.Snapshot.Hero.Z) { _viewZ = _world.Snapshot.Hero.Z; RebuildLevel(); } }
         else if (e is InputEventKey && Actions.Pressed(e, "world.act")) _world.UsePortal();
         else return;
         GetViewport().SetInputAsHandled();
+    }
+
+    /// <summary>One step along Close, Street, Field, Command. Pixel art only zooms at whole steps, so each band is its own scale.</summary>
+    void SetBand(Band b)
+    {
+        b = (Band)Math.Clamp((int)b, (int)Band.Close, (int)Band.Command);
+        if (b == _band) return;
+        _band = b;
+        ClampPan();
+    }
+
+    void ClampPan()
+    {
+        float lim = _band switch { Band.Command => 1500f, Band.Field => 400f, _ => 24f } * Tile;
+        _pan = _pan.Clamp(new Vector2(-lim, -lim), new Vector2(lim, lim));
     }
 
     void TogglePause()
@@ -621,13 +840,17 @@ public partial class StreetView : Control
         float f = GetWindow().ContentScaleFactor;
         var vpPos = local * f - new Vector2(_vp.Size.X, _vp.Size.Y) / 2f;
         var world = _cam.Position + vpPos / _zoom;
-        int cx = Mathf.FloorToInt(world.X / Tile), cy = Mathf.FloorToInt(world.Y / Tile);
+        float unit = _band switch { Band.Command => 2f, Band.Field => 8f, _ => Tile };
+        int cx = Mathf.FloorToInt(world.X / unit), cy = Mathf.FloorToInt(world.Y / unit);
         if (!_world.Grid.InBounds(cx, cy, _viewZ)) return;
         if (_viewZ != _world.Snapshot.Hero.Z) { _router?.ShowToast(L.T("STREET_WRONG_LEVEL")); return; }
         if (!_world.CommandMoveTo(new Cell3(cx, cy, _viewZ))) _router?.ShowToast(L.T("STREET_NO_PATH"));
     }
 
     // ------------------------------------------------------------------ shot / bench
+
+    /// <summary>A screenshot waits for the weather lookup and, at Field and Command, for the visible chunk images to finish baking (or the settle limit).</summary>
+    bool ShotReady() => _frames > _opt.Settle || (_wfeed.Ready && (_band < Band.Field || _far == null || _far.Settled));
 
     void Shoot()
     {

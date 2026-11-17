@@ -19,6 +19,12 @@ public sealed class StreetOptions
     public ulong? RegionSeed;    // --street-region <seed>: walk the generated region of that seed instead of the test hamlet (dev)
     public string? Poi;          // --street-poi town|village|river: where in the region to start (default: the largest town's square)
 
+    public string? Band;         // --shot-band close|street|field|command
+    public string? Season;       // --shot-season spring|summer|autumn|winter (dev: start date)
+    public int? Day;             // --shot-day 1..15 (day of that season)
+    public string? Weather;      // --shot-weather clear|overcast|rain|heavy|storm|snow|blizzard|fog|frost[:tempC] (dev: forces the weather)
+    public int Settle = 900;     // frames to wait for far-band chunks to bake before a screenshot
+
     public bool IsShot => Hour.HasValue && ShotPath != null;
 
     public static StreetOptions? Parse(string[] args)
@@ -32,6 +38,10 @@ public sealed class StreetOptions
         if (Val("--street-region") is { } rs) o.RegionSeed = ulong.Parse(rs, CultureInfo.InvariantCulture);
         o.Poi = Val("--street-poi");
         if (Val("--shot-zoom") is { } z) o.Zoom = Math.Clamp(int.Parse(z, CultureInfo.InvariantCulture), 1, 2);
+        o.Band = Val("--shot-band");
+        o.Season = Val("--shot-season");
+        if (Val("--shot-day") is { } dy) o.Day = int.Parse(dy, CultureInfo.InvariantCulture);
+        o.Weather = Val("--shot-weather");
         if (Val("--shot-torch") is { } t) o.Torch = t == "1";
         if (Val("--shot-level") is { } l) o.ViewZ = int.Parse(l, CultureInfo.InvariantCulture);
         if (Val("--shot-start") is { } s) { var p = s.Split(','); o.Start = (int.Parse(p[0]), int.Parse(p[1]), p.Length > 2 ? int.Parse(p[2]) : 0); }

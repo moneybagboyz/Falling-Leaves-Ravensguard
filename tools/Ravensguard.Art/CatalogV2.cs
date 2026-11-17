@@ -5,7 +5,7 @@ namespace Ravensguard.Art;
 /// <summary>Tileset v2 (Phase 1): ground, floors, walls, autotile sets, roofs, overlays, props and trees. Atlases: terrain2_32, roofs_32, overlays_32, props_32, props_64.</summary>
 public static class CatalogV2
 {
-    public static readonly HashSet<string> Atlases = new() { "terrain2_32", "roofs_32", "overlays_32", "props_32", "props_64" };
+    public static readonly HashSet<string> Atlases = new() { "terrain2_32", "roofs_32", "overlays_32", "props_32", "props_64", "field_8", "mini_16" };
     public static readonly string[] Seasonal = { "summer", "autumn", "winter" };
 
     public static void Add(List<SpriteDef> l, Palette pal)
@@ -113,5 +113,42 @@ public static class CatalogV2
         foreach (var k in new[] { "yellow", "brown", "plain" }) { var kk = k; O64($"object.stall_{k}", 48, () => pr.Stall(kk)); }
         foreach (var k in new[] { "hay", "barrels", "goods" }) { var kk = k; O64($"object.cart_{k}", 48, () => pr.CartLoaded(kk)); }
         O64("object.barrow", 48, pr.Barrow);
+
+        AddMinis(l, pal, g, t);
     }
+
+    /// <summary>Field / Command zoom art: 8x8 ground, wall-top and roof cells (field_8), and transparent minis (mini_16): people 8x16 in six team colours, trees 16x20, shrubs.</summary>
+    private static void AddMinis(List<SpriteDef> l, Palette pal, Ground g, Terrain t)
+    {
+        var m = new Minis(pal);
+        void C(string id, Func<PixelBuffer> f) => l.Add(new SpriteDef(id, SpriteKind.Terrain, "field_8", "field", 8, 8, f));
+        void CellOf(string id, Func<PixelBuffer> src, string style = "noise", int variants = 1)
+        {
+            for (int v = 0; v < variants; v++) { int k = v; string name = variants > 1 ? $"{id}.{k}" : id; int seed = 5000 + Math.Abs(StableHash(name)) % 997; C("field." + name, () => m.Cell(src(), seed, style)); }
+        }
+        for (int v = 0; v < 4; v++) { int c = v; CellOf($"grass.{c}", () => t.Grass(c)); }
+        CellOf("grass_long", () => g.GrassLong(0)); CellOf("meadow", () => g.Meadow(0));
+        CellOf("forest_floor", () => g.ForestFloor(0)); CellOf("leaf_litter", () => g.LeafLitter(0));
+        for (int v = 0; v < 2; v++) { int c = v; CellOf($"dirt.{c}", () => t.Dirt(c)); CellOf($"cobble.{c}", () => t.Cobble(c), "cobble"); }
+        CellOf("sand", () => g.Sand(0)); CellOf("mud", () => g.Mud(0)); CellOf("marsh", () => g.Marsh(0)); CellOf("gravel", () => g.Gravel(0));
+        CellOf("rock", () => g.Rock(0)); CellOf("scree", () => g.Scree(0)); CellOf("peat", () => g.Peat(0));
+        CellOf("water_shallow", () => g.WaterShallow(0), "water"); CellOf("water_deep", () => g.WaterDeep(0), "water"); CellOf("ford", () => t.Ford(), "water");
+        CellOf("bridge", () => t.Wood(), "planks");
+        CellOf("farm.ploughed", g.Ploughed, "furrows"); CellOf("farm.sown", g.Sown, "furrows"); CellOf("farm.young", g.YoungCrop, "furrows");
+        CellOf("farm.wheat_ripe", () => g.Ripe(false)); CellOf("farm.barley_ripe", () => g.Ripe(true)); CellOf("farm.stubble", g.Stubble); CellOf("farm.fallow", g.Fallow);
+        CellOf("floor", () => t.Wood(), "planks");
+        // wall tops: stone, timber and wattle (no roof over them: field walls, palisades, town walls)
+        C("field.wall.stone", () => m.Cell((pal.R["stone"][1], pal.R["stone"][2], pal.R["stone"][3]), 5301, "cobble"));
+        C("field.wall.timber", () => m.Cell((pal.R["wood"][1], pal.R["wood"][2], pal.R["wood"][3]), 5302, "planks"));
+        C("field.wall.wattle", () => m.Cell((pal.R["dirt"][1], pal.R["dirt"][2], pal.R["dirt"][3]), 5303));
+        foreach (var mat in Roofs.Mats) foreach (var part in new[] { "lo", "mid", "hi", "ridge" }) { var mm = mat; var pp = part; C($"field.roof.{mat}.{part}", () => m.Roof(mm, pp, 5400)); }
+
+        void Mi(string id, int w, int h, Func<PixelBuffer> f) => l.Add(new SpriteDef(id, SpriteKind.Overlay, "mini_16", "mini", w, h, f));
+        foreach (var role in Minis.Roles) foreach (var team in Minis.Teams) { var r = role; var tm = team; Mi($"mini.person.{role}.{team}", 8, 16, () => m.Person(r, tm)); }
+        foreach (var sp in Minis.Species) { var s = sp; Mi($"mini.tree.{sp}.summer", 16, 20, () => m.Tree(s, false)); Mi($"mini.tree.{sp}.winter", 16, 20, () => m.Tree(s, true)); }
+        Mi("mini.bush", 8, 8, () => m.Bush(false)); Mi("mini.bush.winter", 8, 8, () => m.Bush(true)); Mi("mini.rock", 8, 8, m.Rock);
+        Mi("mini.block", 8, 8, () => m.Block(pal.R["wood"][2], pal.R["wood"][3]));
+    }
+
+    private static int StableHash(string s) { unchecked { int h = 17; foreach (char c in s) h = h * 31 + c; return h; } }
 }

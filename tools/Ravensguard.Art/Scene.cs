@@ -81,22 +81,23 @@ public static class Scene
         cell[5, 6] = "terrain.feat.wattle.door_closed"; cell[4, 2] = "terrain.feat.wattle.window_shuttered"; cell[7, 6] = "terrain.feat.wattle.window_open";
         cell[6, 2] = "terrain.feat.wattle.window_shuttered";
 
-        // ---- draw ground
+        // ---- draw ground (winter: snow follows the autotile edges, see Seasons.SnowOver)
         for (int y = 0; y < H; y++)
             for (int x = 0; x < W; x++)
             {
                 var id = cell[x, y]!; bool water = id.StartsWith("autotile.shore_water");
-                cv.Blit(Tile(id, water), x * 32, y * 32);
-            }
-        if (winter)
-            for (int y = 0; y < H; y++)
-                for (int x = 0; x < W; x++)
+                var tile = Tile(id, water);
+                bool snowy = winter && !interior[x, y] && !id.StartsWith("terrain.wall") && !id.StartsWith("terrain.feat");
+                if (snowy)
                 {
-                    var id = cell[x, y]!;
-                    if (interior[x, y] || id.StartsWith("terrain.wall") || id.StartsWith("terrain.feat") || id.StartsWith("autotile.shore_water") || id.StartsWith("autotile.hedge") || id.StartsWith("autotile.wall_field") || id.StartsWith("autotile.fence")) continue;
-                    int v = id.StartsWith("autotile.track") || id.StartsWith("autotile.road_cobble") || id.StartsWith("autotile.mud") ? 4 + (x + y) % 2 : id.Contains("farm") ? 4 + (x * 3 + y) % 2 : (x * 7 + y * 3) % 2;
-                    cv.Blit(Get($"overlay.snow.{v}"), x * 32, y * 32);
+                    bool dust = id.StartsWith("autotile.track") || id.StartsWith("autotile.road_cobble") || id.StartsWith("autotile.mud") || id.Contains("farm");
+                    var full = Get($"overlay.snow.{(x * 7 + y * 3) % 2}");
+                    var dst = Get($"overlay.snow.{4 + (x + y) % 2}");
+                    tile = Seasons.SnowOver(pal, Get(id), tile, full, dst, dust);
+                    if (id.StartsWith("terrain.grass") || id.StartsWith("terrain.meadow")) { tile = tile.Clone(); tile.Blit(full, 0, 0); } // open grass: the whole tile
                 }
+                cv.Blit(tile, x * 32, y * 32);
+            }
 
         // ---- y-sorted objects: (id, feet x, feet y)
         var objs = new List<(string Id, int X, int Y, bool Tall)>();

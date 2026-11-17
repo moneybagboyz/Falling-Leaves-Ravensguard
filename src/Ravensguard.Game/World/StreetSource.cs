@@ -22,6 +22,10 @@ public abstract class StreetSource
     public abstract LiveWorld CreateWorld(Cell3? start, GameTime time);
     public abstract Cell3 DefaultStart { get; }
     public abstract string Name { get; }
+    /// <summary>The generated region this source streams (null for the test hamlet): the world map and the weather read it.</summary>
+    public virtual RegionData? Region => null;
+    /// <summary>The continent weather for the region, when it is already at hand (a seed start); otherwise the view rebuilds it from the region's seed in the background.</summary>
+    public virtual Ravensguard.Sim.Weather.RegionWeather? Weather => null;
 
     public static StreetSource Hamlet() => new HamletSource();
 
@@ -45,7 +49,8 @@ public abstract class StreetSource
         var region = RegionGenerator.Generate(c, h, pick.CellX, pick.CellY, rs);
         var pop = Populator.Populate(region, h, load.Database);
         GD.Print($"[street] region for seed {seed}: cell ({pick.CellX},{pick.CellY}), {region.Towns.Count()} towns, {region.Villages.Count()} villages, pop {pop.People.Count}, built in {sw.ElapsedMilliseconds} ms");
-        return new RegionSource(region, pop, load.Database, null, null) { Poi = poi };
+        var weather = new Ravensguard.Sim.Weather.RegionWeather(c, new Ravensguard.Sim.Weather.ContinentalWeather(seed, Ravensguard.Sim.Weather.WeatherSettings.LoadDefaults(dir)));
+        return new RegionSource(region, pop, load.Database, null, null) { Poi = poi, WeatherInit = weather };
     }
 
     sealed class HamletSource : StreetSource
@@ -70,6 +75,10 @@ public abstract class StreetSource
         readonly Cell3? _spawn;
         Cell3? _found;
         public string? Poi { get; init; }
+        public override RegionData? Region => _region;
+        public override Ravensguard.Sim.Weather.RegionWeather? Weather => _weather;
+        Ravensguard.Sim.Weather.RegionWeather? _weather;
+        public Ravensguard.Sim.Weather.RegionWeather? WeatherInit { init => _weather = value; }
         public ChunkStreamer? Streamer { get; private set; }
 
         public RegionSource(RegionData region, Population pop, ContentDatabase content, ChunkStore? store, Cell3? spawn)
