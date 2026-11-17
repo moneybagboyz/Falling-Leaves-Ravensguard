@@ -31,7 +31,13 @@ public partial class App : Node
         Router = new ScreenRouter { Name = "ScreenRouter" };
         AddChild(Router);
         Router.Push(new MainMenu(Router));
-        if (OS.IsDebugBuild() || args.Contains("--dev")) AddChild(new DevConsole { Name = "DevConsole" });
+        if (OS.IsDebugBuild() || args.Contains("--dev")) 
+        {
+            var inspector = new Debug.SimInspector { Name = "SimInspector" };
+            AddChild(inspector);
+            if (args.Contains("--inspector-demo")) inspector.Show(new Debug.DemoInspectable());
+            AddChild(new DevConsole { Name = "DevConsole" });
+        }
 
         GD.Print("Falling Leaves: Ravensguard — shell booted");
         if (args.Contains("--smoke")) Callable.From(() => GetTree().Quit()).CallDeferred();

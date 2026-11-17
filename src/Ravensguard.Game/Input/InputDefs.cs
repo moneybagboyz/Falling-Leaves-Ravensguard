@@ -21,6 +21,7 @@ public static class InputDefs
 
         // Global
         A(G, "console", K(Key.Quoteleft));
+        A(G, "inspector", K(Key.F12)); // dev-only: sim inspector panel
 
         // World
         A(W, "move_up", K(Key.W));

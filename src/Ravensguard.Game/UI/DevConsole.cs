@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
+using Ravensguard.Game.Debug;
+using Ravensguard.Sim.Debug;
 
 namespace Ravensguard.Game.UI;
 
@@ -9,16 +11,17 @@ namespace Ravensguard.Game.UI;
 public partial class DevConsole : CanvasLayer
 {
     public static DevConsole? Instance { get; private set; }
-    readonly Dictionary<string, (string help, Action<string[]> run)> _commands = new();
+    public DevCommandRegistry Registry { get; } = new();
     Control _root = null!;
     RichTextLabel _log = null!;
     LineEdit _input = null!;
 
     public bool IsOpen => _root.Visible;
 
-    public void Register(string name, string help, Action<string[]> run) => _commands[name] = (help, run);
+    public void Register(string name, string help, Func<string[], string> run) => Registry.Register(name, help, run);
 
     public void Print(string line) { _log.AppendText(line + "\n"); }
+    public void Clear() => _log.Clear();
 
     public override void _Ready()
     {
@@ -36,21 +39,20 @@ public partial class DevConsole : CanvasLayer
         _input.TextSubmitted += Submit;
         v.AddChild(_input);
 
-        Register("help", L.T("CONSOLE_HELP_HELP"), _ => { foreach (var kv in _commands.OrderBy(k => k.Key)) Print($"{kv.Key} - {kv.Value.help}"); });
-        Register("echo", L.T("CONSOLE_HELP_ECHO"), a => Print(string.Join(" ", a)));
-        Register("fps", L.T("CONSOLE_HELP_FPS"), _ => Print($"{Engine.GetFramesPerSecond()} fps"));
-        Register("quit", L.T("CONSOLE_HELP_QUIT"), _ => GetTree().Quit());
+        Register("echo", L.T("CONSOLE_HELP_ECHO"), a => string.Join(" ", a));
+        Register("fps", L.T("CONSOLE_HELP_FPS"), _ => $"{Engine.GetFramesPerSecond()} fps");
+        Register("quit", L.T("CONSOLE_HELP_QUIT"), _ => { GetTree().Quit(); return ""; });
+        DevContext.RegisterBuiltins(Registry, Clear);
         Print(L.T("CONSOLE_WELCOME"));
     }
 
     void Submit(string text)
     {
         _input.Clear();
-        var parts = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length == 0) return;
+        if (string.IsNullOrWhiteSpace(text)) return;
         Print("> " + text);
-        if (_commands.TryGetValue(parts[0], out var c)) c.run(parts[1..]);
-        else Print(L.F("CONSOLE_UNKNOWN", parts[0]));
+        var output = Registry.Execute(text);
+        if (output.Length > 0) Print(output);
     }
 
     public override void _Input(InputEvent e)

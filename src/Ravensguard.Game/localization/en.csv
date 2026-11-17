@@ -34,6 +34,9 @@ CONSOLE_HELP_ECHO,Print the arguments
 CONSOLE_HELP_FPS,Show frames per second
 CONSOLE_HELP_QUIT,Quit the game
 ACTION_GLOBAL_CONSOLE,Console
+ACTION_GLOBAL_INSPECTOR,Sim inspector
+INSPECTOR_TITLE,Sim inspector
+INSPECTOR_EMPTY,Nothing inspected. Use: inspect <id>
 ACTION_WORLD_MOVE_UP,Move up
 ACTION_WORLD_MOVE_DOWN,Move down
 ACTION_WORLD_MOVE_LEFT,Move left

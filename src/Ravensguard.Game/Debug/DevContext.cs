@@ -1,0 +1,29 @@
+using System;
+using Ravensguard.Sim.Core;
+using Ravensguard.Sim.Debug;
+
+namespace Ravensguard.Game.Debug;
+
+/// <summary>Hooks the running sim exposes to dev tooling. Null until a game session wires them (Phase 0: nothing does yet).</summary>
+public static class DevContext
+{
+    public static SimClock? Clock { get; set; }
+    public static ulong? Seed { get; set; }
+    /// <summary>Resolves an id string (e.g. "Person#3") to something inspectable.</summary>
+    public static Func<string, IInspectable?>? Resolver { get; set; }
+
+    public static void RegisterBuiltins(DevCommandRegistry r, Action clear)
+    {
+        r.Register("time", "Show the current game time", _ => Clock is { } c ? $"{c.Now} (speed {c.Speed})" : "no sim running");
+        r.Register("seed", "Show the world seed", _ => Seed is { } s ? s.ToString() : "no world seed");
+        r.Register("inspect", "inspect <id> - show an entity in the inspector", a =>
+        {
+            if (a.Length != 1) return "usage: inspect <id>";
+            var target = Resolver?.Invoke(a[0]);
+            if (target == null) return Resolver == null ? "inspect: no sim running (stub)" : $"inspect: nothing found for '{a[0]}'";
+            SimInspector.Instance?.Show(target);
+            return $"inspecting {target.InspectTitle}";
+        });
+        r.Register("clear", "Clear the console log", _ => { clear(); return ""; });
+    }
+}
