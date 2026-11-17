@@ -77,7 +77,7 @@ public static class MeleeAi
             && wantAttack && !(threatened && w.Tick < f.AiBlockUntil))
         {
             var req = new AttackRequest { TargetId = tgt.Id, PartId = PickPart(f, tgt, ref rng), AutoRelease = true };
-            req.AttackId = PickAttack(f, tgt, req.PartId);
+            req.AttackId = PickAttack(w, f, tgt, req.PartId);
             c.Start = req;
             c.Block = false;
             f.AiNextAttackTick = w.Tick + 4 + rng.Range(0, 16 - skill / 15);
@@ -139,7 +139,7 @@ public static class MeleeAi
         return t.PartIds[^1];
     }
 
-    private static string PickAttack(Fighter f, Fighter t, string part)
+    public static string PickAttack(MeleeWorld w, Fighter f, Fighter t, string part)
     {
         var attacks = f.WeaponStats.Shape.Attacks;
         return attacks[0].Id;

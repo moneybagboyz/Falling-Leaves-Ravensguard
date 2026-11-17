@@ -122,16 +122,16 @@ public partial class ScreenRouter : Control
 
     public override void _UnhandledInput(InputEvent e)
     {
-        if (!e.IsActionPressed("menu.back")) return;
+        if (!Actions.Pressed(e, "menu.back")) return;
         if (_modal != null) { CloseModal(); GetViewport().SetInputAsHandled(); }
         else if (_stack.Count > 1) { Pop(); GetViewport().SetInputAsHandled(); }
     }
 
-    /// <summary>Button with a right-aligned key hint such as "[N]".</summary>
+    /// <summary>Button with a right-aligned key hint such as "[N]". The hint follows rebinds.</summary>
     public static Button HintButton(string text, string actionId)
     {
         var b = new Button { Text = text, CustomMinimumSize = new Vector2(320, 40), Alignment = HorizontalAlignment.Left };
-        b.AddChild(new Label
+        var hint = new Label
         {
             Text = InputBootstrap.Hint(actionId),
             ThemeTypeVariation = "HintLabel",
@@ -139,7 +139,11 @@ public partial class ScreenRouter : Control
             HorizontalAlignment = HorizontalAlignment.Right,
             AnchorRight = 1, AnchorBottom = 1, OffsetRight = -12,
             VerticalAlignment = VerticalAlignment.Center,
-        });
+        };
+        b.AddChild(hint);
+        System.Action refresh = () => { if (GodotObject.IsInstanceValid(hint)) hint.Text = InputBootstrap.Hint(actionId); };
+        InputBootstrap.Hints.Changed += refresh;
+        b.TreeExiting += () => InputBootstrap.Hints.Changed -= refresh;
         return b;
     }
 }

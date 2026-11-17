@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Godot;
+using Ravensguard.Game.Inputs;
 using Ravensguard.Game.UI;
 using Ravensguard.Sim.Debug;
 
@@ -40,6 +41,8 @@ public partial class SimInspector : CanvasLayer
         Rebuild();
     }
 
+    public override void _ExitTree() { if (Instance == this) Instance = null; }
+
     /// <summary>Show a target (and open the panel). Pass null to clear.</summary>
     public void Show(IInspectable? target) { _target = target; _collapsed.Clear(); Rebuild(); _root.Visible = true; }
 
@@ -70,7 +73,7 @@ public partial class SimInspector : CanvasLayer
 
     public override void _Input(InputEvent e)
     {
-        if (!e.IsActionPressed("global.inspector")) return;
+        if (!Actions.PressedAlways(e, "global.inspector")) return;
         _root.Visible = !_root.Visible;
         GetViewport().SetInputAsHandled();
     }

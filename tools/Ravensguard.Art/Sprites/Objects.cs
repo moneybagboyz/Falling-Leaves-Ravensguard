@@ -168,6 +168,7 @@ public sealed class Objects
         for (int i = 0; i < 14; i++)
         {
             double cx = 14 + r() * 36, cy = 12 + r() * 36, rr = 8 + r() * 8;
+            cy = Math.Max(cy, rr + 1.5); cx = Math.Clamp(cx, rr + 1.5, 62.5 - rr); // keep the canopy inside the cell so it keeps its outline (no clipping at y=0)
             for (double y = -rr; y <= rr; y++)
                 for (double x = -rr; x <= rr; x++)
                 {
@@ -195,7 +196,7 @@ public sealed class Objects
     {
         b.Shade(4, 14, 52, 16, R["wood"], Top);
         for (int x = 8; x < 56; x += 10) b.Rect(x, 14, 1, 16, P["w1"]);
-        b.Rect(54, 22, 10, 2, P["w2"]); b.Shade(10, 6, 14, 9, R["wood"], Top); b.Shade(28, 4, 12, 11, R["linen"], Top);
+        b.Rect(54, 22, 9, 2, P["w2"]); b.Shade(10, 6, 14, 9, R["wood"], Top); b.Shade(28, 4, 12, 11, R["linen"], Top);
         foreach (var (wx, wy) in new[] { (14, 36), (46, 36) })
         {
             b.Ellipse(wx, wy, 9, 9, P["w2"], false);

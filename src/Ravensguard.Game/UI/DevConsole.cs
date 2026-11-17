@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
+using Ravensguard.Game.Inputs;
 using Ravensguard.Game.Debug;
 using Ravensguard.Sim.Debug;
 
@@ -20,8 +21,24 @@ public partial class DevConsole : CanvasLayer
 
     public void Register(string name, string help, Func<string[], string> run) => Registry.Register(name, help, run);
 
-    public void Print(string line) { _log.AppendText(line + "\n"); }
-    public void Clear() => _log.Clear();
+    const int MaxLines = 500;
+    readonly Queue<string> _lines = new();
+
+    public void Print(string line)
+    {
+        foreach (var l in line.Split('\n')) _lines.Enqueue(l);
+        if (_lines.Count <= MaxLines) { _log.AppendText(line + "\n"); return; }
+        while (_lines.Count > MaxLines) _lines.Dequeue();
+        _log.Clear();
+        _log.AppendText(string.Join("\n", _lines) + "\n");
+    }
+    public void Clear() { _lines.Clear(); _log.Clear(); }
+
+    public override void _ExitTree()
+    {
+        if (Instance == this) Instance = null;
+        if (_root.Visible) Actions.UiCaptured = false;
+    }
 
     public override void _Ready()
     {
@@ -57,9 +74,16 @@ public partial class DevConsole : CanvasLayer
 
     public override void _Input(InputEvent e)
     {
-        if (!e.IsActionPressed("global.console")) return;
+        if (!Actions.PressedAlways(e, "global.console")) return;
         _root.Visible = !_root.Visible;
+        Actions.UiCaptured = _root.Visible;
         if (_root.Visible) _input.GrabFocus(); else _input.ReleaseFocus();
         GetViewport().SetInputAsHandled();
+    }
+
+    /// <summary>While open, keys and clicks the console did not consume must not reach the screens underneath.</summary>
+    public override void _UnhandledInput(InputEvent e)
+    {
+        if (_root.Visible && e is InputEventKey or InputEventMouseButton) GetViewport().SetInputAsHandled();
     }
 }

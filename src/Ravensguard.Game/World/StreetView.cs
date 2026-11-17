@@ -337,13 +337,13 @@ public partial class StreetView : Control
 
     void HandleHeldInput(double delta)
     {
-        int dx = (Input.IsActionPressed("world.move_right") ? 1 : 0) - (Input.IsActionPressed("world.move_left") ? 1 : 0);
-        int dy = (Input.IsActionPressed("world.move_down") ? 1 : 0) - (Input.IsActionPressed("world.move_up") ? 1 : 0);
+        int dx = (Actions.HeldLoose("world.move_right") ? 1 : 0) - (Actions.HeldLoose("world.move_left") ? 1 : 0);
+        int dy = (Actions.HeldLoose("world.move_down") ? 1 : 0) - (Actions.HeldLoose("world.move_up") ? 1 : 0);
         if (_opt.BenchSeconds > 0) return;
-        _world.SetInput(new MoveInput(dx, dy, Input.IsActionPressed("world.sprint"), Input.IsActionPressed("world.sneak")));
+        _world.SetInput(new MoveInput(dx, dy, Actions.HeldLoose("world.sprint"), Actions.Held("world.sneak")));
         var pan = new Vector2(
-            (Input.IsActionPressed("world.camera_right") ? 1 : 0) - (Input.IsActionPressed("world.camera_left") ? 1 : 0),
-            (Input.IsActionPressed("world.camera_down") ? 1 : 0) - (Input.IsActionPressed("world.camera_up") ? 1 : 0));
+            (Actions.HeldLoose("world.camera_right") ? 1 : 0) - (Actions.HeldLoose("world.camera_left") ? 1 : 0),
+            (Actions.HeldLoose("world.camera_down") ? 1 : 0) - (Actions.HeldLoose("world.camera_up") ? 1 : 0));
         if (pan != Vector2.Zero) _pan += pan * (float)(delta * 10 * Tile);
         _pan = _pan.Clamp(new Vector2(-24 * Tile, -24 * Tile), new Vector2(24 * Tile, 24 * Tile));
     }
@@ -462,23 +462,23 @@ public partial class StreetView : Control
             ChangeView(wheel.ButtonIndex == MouseButton.WheelUp ? 1 : -1);
             AcceptEvent(); return;
         }
-        if (e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left } click)
+        if (e is InputEventMouseButton { Pressed: true } click && Actions.Pressed(e, "world.act")) // exact: Shift+click is reserved for selection
         {
             ClickMove(click.Position - GlobalPosition);
             GetViewport().SetInputAsHandled(); return;
         }
-        if (e.IsActionPressed("world.pause")) TogglePause();
-        else if (e.IsActionPressed("world.speed_1")) _world.SetSpeed(SimSpeed.X1);
-        else if (e.IsActionPressed("world.speed_2")) _world.SetSpeed(SimSpeed.X2);
-        else if (e.IsActionPressed("world.speed_4")) _world.SetSpeed(SimSpeed.X4);
-        else if (e.IsActionPressed("world.speed_8")) _world.SetSpeed(SimSpeed.X8);
-        else if (e.IsActionPressed("world.torch")) _world.ToggleTorch();
-        else if (e.IsActionPressed("world.level_up")) ChangeView(1);
-        else if (e.IsActionPressed("world.level_down")) ChangeView(-1);
-        else if (e.IsActionPressed("world.zoom_in")) _zoom = 2;
-        else if (e.IsActionPressed("world.zoom_out")) _zoom = 1;
-        else if (e.IsActionPressed("world.camera_home")) { _pan = Vector2.Zero; if (_viewZ != _world.Snapshot.Hero.Z) { _viewZ = _world.Snapshot.Hero.Z; RebuildLevel(); } }
-        else if (e is InputEventKey && e.IsActionPressed("world.act")) _world.UsePortal();
+        if (Actions.Pressed(e, "world.pause")) TogglePause();
+        else if (Actions.Pressed(e, "world.speed_1")) _world.SetSpeed(SimSpeed.X1);
+        else if (Actions.Pressed(e, "world.speed_2")) _world.SetSpeed(SimSpeed.X2);
+        else if (Actions.Pressed(e, "world.speed_4")) _world.SetSpeed(SimSpeed.X4);
+        else if (Actions.Pressed(e, "world.speed_8")) _world.SetSpeed(SimSpeed.X8);
+        else if (Actions.Pressed(e, "world.torch")) _world.ToggleTorch();
+        else if (Actions.Pressed(e, "world.level_up")) ChangeView(1);
+        else if (Actions.Pressed(e, "world.level_down")) ChangeView(-1);
+        else if (Actions.Pressed(e, "world.zoom_in")) _zoom = 2;
+        else if (Actions.Pressed(e, "world.zoom_out")) _zoom = 1;
+        else if (Actions.Pressed(e, "world.camera_home")) { _pan = Vector2.Zero; if (_viewZ != _world.Snapshot.Hero.Z) { _viewZ = _world.Snapshot.Hero.Z; RebuildLevel(); } }
+        else if (e is InputEventKey && Actions.Pressed(e, "world.act")) _world.UsePortal();
         else return;
         GetViewport().SetInputAsHandled();
     }

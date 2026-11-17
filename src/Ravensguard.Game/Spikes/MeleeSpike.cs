@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
+using Ravensguard.Game.Inputs;
 using Ravensguard.Content;
 using Ravensguard.Sim.Combat;
 using Ravensguard.Sim.Combat.Melee;
@@ -109,7 +110,7 @@ public partial class MeleeSpike : Node2D
     void StartBattle()
     {
         _log.Clear(); _callouts.Clear(); _flashUntil.Clear(); _evCursor = 0; _acc = 0; _banner = "";
-        _calling = false; _calledPart = null; _calledAtk = null;
+        _calling = false; _calledPart = null; _calledAtk = null; _releaseAfterStep = false;
         if (_skirmish)
         {
             _w = MeleeScenarios.Skirmish(_tables, _seed, 10, playerInTeam0: !_auto);
@@ -136,45 +137,52 @@ public partial class MeleeSpike : Node2D
 
     public override void _UnhandledInput(InputEvent ev)
     {
+        // Releases are processed first and unconditionally, so a button let go while the called-shot menu is open
+        // (or with other modifiers held) can never leave the command latched.
+        if (_player != null && ev is InputEventMouseButton { Pressed: false } rel)
+        {
+            if (rel.ButtonIndex == MouseButton.Left)
+            {
+                if (_player.Cmd.Start != null) _releaseAfterStep = true;
+                else _player.Cmd.Hold = false;
+            }
+            else if (rel.ButtonIndex == MouseButton.Right) _player.Cmd.Block = false;
+        }
+
         if (ev is InputEventKey { Pressed: true, Echo: false } k)
         {
-            if (_calling) { CallingKey(k); GetViewport().SetInputAsHandled(); return; }
+            if (_calling) { CallingKey(ev, k); GetViewport().SetInputAsHandled(); return; }
+            // spike-private keys (no InputMap action exists for these)
             switch (k.Keycode)
             {
                 case Key.R: _seed++; StartBattle(); return;
                 case Key.K: _skirmish = !_skirmish; StartBattle(); return;
                 case Key.N: _opponent = (_opponent + 1) % OpponentNames.Length; _skirmish = false; StartBattle(); return;
-                case Key.T when _player != null: BeginCalling(); return;
             }
-            if (_player != null && k.CtrlPressed)
+            if (_player != null && Actions.Pressed(ev, "combatstance.called_shot")) { BeginCalling(); return; }
+            if (_player != null)
             {
-                Vec2? dir = k.Keycode switch { Key.W => new Vec2(0, -1), Key.S => new Vec2(0, 1), Key.A => new Vec2(-1, 0), Key.D => new Vec2(1, 0), _ => null };
+                Vec2? dir = Actions.Pressed(ev, "combatstance.dodge_up") ? new Vec2(0, -1)
+                    : Actions.Pressed(ev, "combatstance.dodge_down") ? new Vec2(0, 1)
+                    : Actions.Pressed(ev, "combatstance.dodge_left") ? new Vec2(-1, 0)
+                    : Actions.Pressed(ev, "combatstance.dodge_right") ? new Vec2(1, 0) : null;
                 if (dir != null) _player.Cmd.Dodge = dir;
             }
         }
         if (_player == null || _calling) return;
-        if (ev is InputEventMouseButton mb)
+        if (ev is InputEventMouseButton { Pressed: true } mb)
         {
-            if (mb.ButtonIndex == MouseButton.Left)
+            if (Actions.Pressed(ev, "combatstance.attack"))
             {
-                if (mb.Pressed)
-                {
-                    var atk = _calledAtk ?? _player.WeaponStats.Shape.Attacks[0].Id;
-                    _player.Cmd.Start = new AttackRequest { PartId = _calledPart ?? "upper_body", AttackId = atk, TargetId = -1, AutoRelease = false };
-                    _player.Cmd.Hold = true; _releaseAfterStep = false;
-                    _calledPart = null; _calledAtk = null;
-                }
-                else if (_player.Cmd.Start != null) _releaseAfterStep = true;
-                else _player.Cmd.Hold = false;
+                var atk = _calledAtk ?? _player.WeaponStats.Shape.Attacks[0].Id;
+                _player.Cmd.Start = new AttackRequest { PartId = _calledPart ?? "upper_body", AttackId = atk, TargetId = -1, AutoRelease = false };
+                _player.Cmd.Hold = true; _releaseAfterStep = false;
+                _calledPart = null; _calledAtk = null;
             }
-            else if (mb.ButtonIndex == MouseButton.Right)
+            else if (Actions.Pressed(ev, "combatstance.block"))
             {
-                if (mb.Pressed)
-                {
-                    if (_player.State == Act.Windup && _player.WindupElapsed * 2 < _player.WindupNeeded) _player.Cmd.Feint = true;
-                    else _player.Cmd.Block = true;
-                }
-                else _player.Cmd.Block = false;
+                if (_player.State == Act.Windup && _player.WindupElapsed * 2 < _player.WindupNeeded) _player.Cmd.Feint = true;
+                else _player.Cmd.Block = true;
             }
         }
     }
@@ -184,14 +192,14 @@ public partial class MeleeSpike : Node2D
         if (_player == null) return;
         var c = _player.Cmd;
         Vector2 m = Vector2.Zero;
-        if (Input.IsKeyPressed(Key.W)) m.Y -= 1;
-        if (Input.IsKeyPressed(Key.S)) m.Y += 1;
-        if (Input.IsKeyPressed(Key.A)) m.X -= 1;
-        if (Input.IsKeyPressed(Key.D)) m.X += 1;
-        if (Input.IsKeyPressed(Key.Ctrl)) m = Vector2.Zero; // Ctrl+dir is a dodge, not a walk
+        // HeldLoose: walking tolerates Shift (sprint) but yields to Ctrl+direction (dodge).
+        if (Actions.HeldLoose("combatstance.move_up")) m.Y -= 1;
+        if (Actions.HeldLoose("combatstance.move_down")) m.Y += 1;
+        if (Actions.HeldLoose("combatstance.move_left")) m.X -= 1;
+        if (Actions.HeldLoose("combatstance.move_right")) m.X += 1;
         m = m.Normalized();
         c.Move = new Vec2(m.X, m.Y);
-        c.Sprint = Input.IsKeyPressed(Key.Shift);
+        c.Sprint = Actions.HeldLoose("world.sprint");
         var mouseWorld = (GetGlobalMousePosition() - ScreenOffset()) / (float)_ppm;
         var d = new Vec2(mouseWorld.X - _player.Pos.X, mouseWorld.Y - _player.Pos.Y).Normalized();
         c.Face = d;
@@ -202,20 +210,27 @@ public partial class MeleeSpike : Node2D
     string[] CallParts => (_w.Fighters.FirstOrDefault(f => f.Team != _player!.Team) ?? _w.Fighters[0]).PartIds;
     AttackDef[] CallAtks => _player!.WeaponStats.Shape.Attacks.ToArray();
 
-    void BeginCalling() { _calling = true; _callPart = Math.Max(0, Array.IndexOf(CallParts, "upper_body")); _callAtk = 0; }
+    void BeginCalling()
+    {
+        // Entering the paused menu: drop anything latched so nothing fires on resume.
+        if (_player != null)
+        {
+            var c = _player.Cmd;
+            c.Hold = false; c.Start = null; c.Block = false; c.Feint = false; c.Dodge = null; c.Move = new Vec2(0, 0); c.Sprint = false;
+        }
+        _releaseAfterStep = false;
+        _calling = true; _callPart = Math.Max(0, Array.IndexOf(CallParts, "upper_body")); _callAtk = 0;
+    }
 
-    void CallingKey(InputEventKey k)
+    void CallingKey(InputEvent ev, InputEventKey k)
     {
         var parts = CallParts; var atks = CallAtks;
-        switch (k.Keycode)
-        {
-            case Key.Up: _callPart = (_callPart + parts.Length - 1) % parts.Length; break;
-            case Key.Down: _callPart = (_callPart + 1) % parts.Length; break;
-            case Key.Left: _callAtk = (_callAtk + atks.Length - 1) % atks.Length; break;
-            case Key.Right: _callAtk = (_callAtk + 1) % atks.Length; break;
-            case Key.F: _calledPart = parts[_callPart]; _calledAtk = atks[_callAtk].Id; _calling = false; Say($"Called shot: {_calledAtk} to {_calledPart}. Next attack."); break;
-            case Key.Escape or Key.T: _calling = false; break;
-        }
+        if (Actions.Pressed(ev, "calledshot.part_prev")) _callPart = (_callPart + parts.Length - 1) % parts.Length;
+        else if (Actions.Pressed(ev, "calledshot.part_next")) _callPart = (_callPart + 1) % parts.Length;
+        else if (Actions.Pressed(ev, "calledshot.type_prev")) _callAtk = (_callAtk + atks.Length - 1) % atks.Length;
+        else if (Actions.Pressed(ev, "calledshot.type_next")) _callAtk = (_callAtk + 1) % atks.Length;
+        else if (Actions.Pressed(ev, "calledshot.strike")) { _calledPart = parts[_callPart]; _calledAtk = atks[_callAtk].Id; _calling = false; Say($"Called shot: {_calledAtk} to {_calledPart}. Next attack."); }
+        else if (Actions.Pressed(ev, "calledshot.cancel") || Actions.Pressed(ev, "combatstance.called_shot")) _calling = false;
     }
 
     double CallHitChance()

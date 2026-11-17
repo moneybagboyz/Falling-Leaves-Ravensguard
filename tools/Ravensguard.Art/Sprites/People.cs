@@ -151,7 +151,7 @@ public sealed class People
         // held things
         if (o.Spear)
         {
-            b.Rect(5, 0, 2, 60, P["w3"]); b.Rect(5, 0, 1, 60, P["w4"]); b.Rect(4, 0, 4, 4, P["m4"]); b.Set(5, 0, P["m5"]); b.Rect(4, 37, 4, 3, sk[2]);
+            b.Rect(5, 1, 2, 59, P["w3"]); b.Rect(5, 1, 1, 59, P["w4"]); b.Rect(4, 1, 4, 4, P["m4"]); b.Set(5, 1, P["m5"]); // starts at y=1 so the outline ring fits inside the cell b.Rect(4, 37, 4, 3, sk[2]);
         }
         if (o.Sword) { b.Rect(7, 39, 2, 1, P["au2"]); b.Rect(5, 40, 6, 1, P["au3"]); b.Rect(7, 41, 2, 14, P["m4"]); b.Rect(8, 41, 1, 14, P["m5"]); b.Set(7, 55, P["m3"]); }
         if (o.Axe) { b.Rect(7, 27, 2, 24, P["w3"]); b.Shade(2, 26, 6, 7, R["iron"]); }
@@ -168,9 +168,9 @@ public sealed class People
             for (int y = 24; y < 48; y++)
             {
                 int w = y < 36 ? 6 : Math.Max(0, 6 - Round((y - 35) * .55));
-                for (int x = 26 - w; x < 26 + w; x++) b.Set(x, y, sc[x < 24 ? 3 : x > 28 ? 1 : 2]);
+                for (int x = 25 - w; x < 25 + w; x++) b.Set(x, y, sc[x < 23 ? 3 : x > 27 ? 1 : 2]); // centred on x=25 so the right edge (x=30) keeps its outline inside the cell
             }
-            b.Rect(25, 25, 2, 20, P["au2"]); b.Rect(21, 30, 10, 2, P["au2"]); b.Set(25, 31, P["au3"]);
+            b.Rect(24, 25, 2, 20, P["au2"]); b.Rect(20, 30, 10, 2, P["au2"]); b.Set(24, 31, P["au3"]);
         }
         // wounds
         if (o.Blood != null)

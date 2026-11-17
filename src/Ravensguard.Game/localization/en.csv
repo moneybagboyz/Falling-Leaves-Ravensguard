@@ -135,3 +135,9 @@ STREET_LEVEL_VIEWING,Looking at another level
 STREET_WRONG_LEVEL,You are on another level. Press Home to return the view.
 STREET_NO_PATH,No way there.
 STREET_HINTS,"{0} move   Click go   {1} pause   1-4 speed   {2} torch   {3} level   {4} zoom   {5} camera home   Esc menu"
+CONTROLS_SWAP_TITLE,Key already in use
+CONTROLS_SWAP_BODY,"{0} is already used by: {1}. Swap the bindings?"
+CONTROLS_SWAP,Swap
+CONTROLS_KEEP,Keep current
+CONTROLS_REJECTED,"Not changed: {0} would conflict with: {1}."
+CONTROLS_STARTUP_RESET,Some saved key bindings were invalid or conflicting and were reset to defaults.

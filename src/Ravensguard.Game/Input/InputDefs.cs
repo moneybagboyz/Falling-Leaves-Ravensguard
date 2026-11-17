@@ -20,7 +20,7 @@ public static class InputDefs
             S = InputContext.CalledShot, B = InputContext.Build, U = InputContext.Menu;
 
         // Global
-        A(G, "console", K(Key.Quoteleft));
+        A(G, "console", Binding.P(Key.Quoteleft)); // physical: the backtick key position on any layout
         A(G, "inspector", K(Key.F12)); // dev-only: sim inspector panel
 
         // World

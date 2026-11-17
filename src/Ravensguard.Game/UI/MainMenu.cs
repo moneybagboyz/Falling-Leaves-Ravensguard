@@ -1,4 +1,5 @@
 using Godot;
+using Ravensguard.Game.Inputs;
 
 namespace Ravensguard.Game.UI;
 
@@ -36,9 +37,9 @@ public partial class MainMenu : Control
     public override void _UnhandledInput(InputEvent e)
     {
         if (!Visible) return;
-        if (e.IsActionPressed("menu.new_game")) DoNewGame();
-        else if (e.IsActionPressed("menu.settings")) DoSettings();
-        else if (e.IsActionPressed("menu.quit")) GetTree().Quit();
+        if (Actions.Pressed(e, "menu.new_game")) DoNewGame();
+        else if (Actions.Pressed(e, "menu.settings")) DoSettings();
+        else if (Actions.Pressed(e, "menu.quit")) GetTree().Quit();
         else return;
         GetViewport().SetInputAsHandled();
     }

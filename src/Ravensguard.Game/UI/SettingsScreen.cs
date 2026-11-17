@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
 using Ravensguard.Game.Inputs;
 
@@ -82,12 +83,22 @@ public partial class SettingsScreen : Control
     string Describe(InputAction a)
     {
         var l = _map.Get(a.Id);
-        return l.Count == 0 ? L.T("CONTROLS_UNBOUND") : string.Join(" / ", System.Linq.Enumerable.Select(l, b => b.Describe()));
+        return l.Count == 0 ? L.T("CONTROLS_UNBOUND") : string.Join(" / ", l.Select(b => b.Describe()));
     }
 
     void RefreshAll()
     {
         foreach (var a in _map.Actions) _buttons[a.Id].Text = Describe(a);
+    }
+
+    /// <summary>Saves and registers <paramref name="candidate"/> only if it has no conflicts; otherwise leaves everything untouched.</summary>
+    bool TryCommit(KeyMap candidate)
+    {
+        if (candidate.FindConflicts().Count > 0) return false;
+        foreach (var a in _map.Actions) _map.Set(a.Id, candidate.Get(a.Id));
+        InputBootstrap.Save(_map);
+        InputBootstrap.Register(_map); // also refreshes HintButton labels
+        return true;
     }
 
     void Persist()
@@ -107,6 +118,13 @@ public partial class SettingsScreen : Control
 
     static bool IsModifier(Key k) => k is Key.Shift or Key.Ctrl or Key.Alt or Key.Meta;
 
+    static bool IsLetter(Key k) => k is >= Key.A and <= Key.Z;
+
+    /// <summary>Only actions whose default is a lone modifier (sprint = Shift, nameplates = Alt) may be bound to one.</summary>
+    static bool AllowsLoneModifier(InputAction a) => a.Defaults.Any(d => d.IsKeyboard && IsModifier((Key)d.Code));
+
+    bool IsOverButton() => GetViewport().GuiGetHoveredControl() is BaseButton;
+
     public override void _Input(InputEvent e)
     {
         if (_capturing == null) return;
@@ -116,17 +134,28 @@ public partial class SettingsScreen : Control
             if (k.Echo) return;
             if (k.Pressed)
             {
-                if (k.Keycode == Key.Escape) { EndCapture(); GetViewport().SetInputAsHandled(); return; }
+                if (k.Keycode == Key.Escape) { EndCapture(); GetViewport().SetInputAsHandled(); return; } // Esc is never bindable
                 if (IsModifier(k.Keycode)) { _pendingModifier = k.Keycode; GetViewport().SetInputAsHandled(); return; }
                 var m = (k.ShiftPressed ? Mods.Shift : 0) | (k.CtrlPressed ? Mods.Ctrl : 0) | (k.AltPressed ? Mods.Alt : 0);
-                nb = Binding.K(k.Keycode, m);
+                // Letters bind by physical position so WASD-style layouts survive AZERTY/QWERTZ.
+                var phys = k.PhysicalKeycode != Key.None ? k.PhysicalKeycode : k.Keycode;
+                nb = IsLetter(k.Keycode) || IsLetter(phys) ? Binding.P(IsLetter(phys) ? phys : k.Keycode, m) : Binding.K(k.Keycode, m);
             }
             else if (_pendingModifier == k.Keycode && _pendingModifier != Key.None)
-                nb = Binding.K(k.Keycode); // a modifier pressed and released alone (e.g. Shift to sprint)
+            {
+                // A modifier pressed and released alone is only meaningful for hold-modifier actions; Meta never.
+                var mod = _pendingModifier;
+                _pendingModifier = Key.None;
+                if (mod == Key.Meta || !AllowsLoneModifier(_capturing)) { GetViewport().SetInputAsHandled(); return; }
+                nb = Binding.K(mod);
+            }
             else return;
         }
         else if (e is InputEventMouseButton mb && mb.Pressed)
         {
+            // Clicks on buttons (other actions, Reset, Back) are UI, not bindings. Plain left-click elsewhere may be bound.
+            if (mb.ButtonIndex == MouseButton.Left && IsOverButton()) return;
+            if (IsOverButton() && mb.ButtonIndex is MouseButton.WheelUp or MouseButton.WheelDown) return;
             var m = (mb.ShiftPressed ? Mods.Shift : 0) | (mb.CtrlPressed ? Mods.Ctrl : 0) | (mb.AltPressed ? Mods.Alt : 0);
             nb = Binding.M(mb.ButtonIndex, m);
         }
@@ -134,12 +163,48 @@ public partial class SettingsScreen : Control
         GetViewport().SetInputAsHandled();
 
         var action = _capturing;
-        var clashes = _map.FindClashes(action, binding);
-        _map.Rebind(action.Id, binding);
-        Persist();
         EndCapture();
-        if (clashes.Count > 0)
-            _warn.Text = L.F("CONTROLS_CONFLICT", binding.Describe(), string.Join(", ", System.Linq.Enumerable.Select(clashes, c => L.T(c.LocKey))));
+        Apply(action, binding);
+    }
+
+    /// <summary>Applies a captured binding. Exact clashes offer a swap; shadowing clashes are rejected. A conflicting map is never persisted.</summary>
+    void Apply(InputAction action, Binding binding)
+    {
+        var clashes = _map.FindClashes(action, binding);
+        if (clashes.Count == 0)
+        {
+            var cand = _map.Clone();
+            cand.Rebind(action.Id, binding);
+            if (!TryCommit(cand)) { _warn.Text = L.F("CONTROLS_REJECTED", binding.Describe(), "?"); return; }
+            RefreshAll();
+            return;
+        }
+
+        var names = string.Join(", ", clashes.Select(c => L.T(c.LocKey)));
+        bool swappable = clashes.All(c => _map.Get(c.Id).Contains(binding));
+        if (!swappable)
+        {
+            _warn.Text = L.F("CONTROLS_REJECTED", binding.Describe(), names);
+            return;
+        }
+        _router.ShowModal(L.T("CONTROLS_SWAP_TITLE"), L.F("CONTROLS_SWAP_BODY", binding.Describe(), names),
+            (L.T("CONTROLS_SWAP"), () => Swap(action, binding, clashes)),
+            (L.T("CONTROLS_KEEP"), () => _warn.Text = L.T("CONTROLS_HELP")));
+    }
+
+    void Swap(InputAction action, Binding binding, List<InputAction> clashes)
+    {
+        var cand = _map.Clone();
+        var old = cand.Get(action.Id).FirstOrDefault(b => b.IsKeyboard == binding.IsKeyboard);
+        bool hadOld = cand.Get(action.Id).Any(b => b.IsKeyboard == binding.IsKeyboard);
+        cand.Rebind(action.Id, binding);
+        foreach (var c in clashes)
+        {
+            cand.Unbind(c.Id, binding);
+            if (hadOld) cand.Rebind(c.Id, old); // the clashing action takes over the key this one gave up
+        }
+        if (TryCommit(cand)) { RefreshAll(); _warn.Text = L.T("CONTROLS_HELP"); }
+        else _warn.Text = L.F("CONTROLS_REJECTED", binding.Describe(), string.Join(", ", clashes.Select(c => L.T(c.LocKey))));
     }
 
     void EndCapture()

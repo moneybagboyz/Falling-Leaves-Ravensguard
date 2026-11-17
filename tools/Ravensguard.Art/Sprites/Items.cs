@@ -16,7 +16,7 @@ public sealed class Items
         yield return ("sword", () => Item(b =>
         {
             for (int i = 0; i < 9; i++) { b.Set(12 - i, 3 + i, P["m4"]); b.Set(13 - i, 3 + i, P["m5"]); b.Set(12 - i, 4 + i, P["m3"]); }
-            b.Line(2, 10, 6, 14, P["au2"]); b.Set(3, 13, P["w2"]); b.Set(2, 14, P["w2"]); b.Set(1, 15, P["au3"]);
+            b.Line(2, 10, 6, 14, P["au2"]); b.Set(3, 13, P["w2"]); b.Set(2, 14, P["w2"]);
         }));
         yield return ("axe", () => Item(b =>
         {

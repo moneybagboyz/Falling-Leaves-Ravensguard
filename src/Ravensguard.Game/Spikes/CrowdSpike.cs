@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Text;
 using Godot;
 
@@ -31,7 +32,7 @@ public partial class CrowdSpike : Node2D
 
     // --- render ---
     MultiMesh[] _mms = null!; Rid[] _mmRids = null!;
-    float[] _buf = new float[N * Stride]; float[] _keys = new float[N]; int[] _idx = new int[N];
+    float[] _buf = new float[N * Stride]; double _hudT; float[] _keys = new float[N]; int[] _idx = new int[N];
     Camera2D _cam = null!;
     TileMapLayer _tiles = null!; Node2D _chunkNode = null!; Sprite2D[] _chunkSprites = Array.Empty<Sprite2D>();
     Texture2D[] _chunkField = null!, _chunkCmd = null!;
@@ -58,9 +59,13 @@ public partial class CrowdSpike : Node2D
         _bench = args.Contains("--bench");
         foreach (var a in args)
         {
-            if (a.StartsWith("--seconds=")) _phaseSeconds = float.Parse(a[10..]) / Phases.Length;
-            if (a.StartsWith("--layers=")) _layers = int.Parse(a[9..]);
-            if (a.StartsWith("--phase=")) _fixedPhase = int.Parse(a[8..]);
+            if (a.StartsWith("--seconds=") && float.TryParse(a[10..], NumberStyles.Float, CultureInfo.InvariantCulture, out var secs) && secs > 0) _phaseSeconds = secs / Phases.Length;
+            else if (a.StartsWith("--layers=") && int.TryParse(a[9..], NumberStyles.Integer, CultureInfo.InvariantCulture, out var layers)) _layers = Math.Clamp(layers, 1, 8);
+            else if (a.StartsWith("--phase="))
+            {
+                if (int.TryParse(a[8..], NumberStyles.Integer, CultureInfo.InvariantCulture, out var ph) && ph >= 0 && ph < Phases.Length) _fixedPhase = ph;
+                else GD.PushWarning($"--phase must be 0..{Phases.Length - 1}; running all phases");
+            }
         }
         DisplayServer.WindowSetVsyncMode(DisplayServer.VSyncMode.Disabled);
         Engine.MaxFps = 0;
@@ -174,6 +179,7 @@ public partial class CrowdSpike : Node2D
         for (int r = 0; r < 4; r++) for (int l = 0; l < 4; l++) rimg.SetPixel(l, r, new Color(ramps[r][l]));
         var mat = new ShaderMaterial { Shader = GD.Load<Shader>("res://Spikes/crowd.gdshader") };
         mat.SetShaderParameter("atlas", atlas);
+        mat.SetShaderParameter("atlas_w", (float)atlas.GetWidth()); // was a hard-coded default of 960
         mat.SetShaderParameter("ramps", ImageTexture.CreateFromImage(rimg));
 
         _mms = new MultiMesh[_layers]; _mmRids = new Rid[_layers];
@@ -276,7 +282,9 @@ public partial class CrowdSpike : Node2D
             buf[o + 8] = _frame[i]; buf[o + 9] = _row[i]; buf[o + 10] = _wound[i] + (_moving[i] ? 8 : 0); buf[o + 11] = _phase[i];
         }
         long c = Stopwatch.GetTimestamp();
-        for (int l = 0; l < _layers; l++) _mms[l].Buffer = buf;
+        // Straight to the RenderingServer with the cached managed buffer (no MultiMesh property round-trip, no per-frame allocation
+        // beyond the engine-side copy). Hidden layers exist only to measure upload cost, so only layer 0 is a real upload in normal use.
+        for (int l = 0; l < _layers; l++) RenderingServer.MultimeshSetBuffer(_mmRids[l], buf);
         long d = Stopwatch.GetTimestamp();
 
         if (!warm)
@@ -287,7 +295,8 @@ public partial class CrowdSpike : Node2D
             stat.Upload.Add(Stopwatch.GetElapsedTime(c, d).TotalMilliseconds);
         }
         _phaseFrames++; _phaseT += delta;
-        _hud.Text = $"{Phases[_phaseIdx].Name}\nframe {frameMs:F1} ms   soldiers {N}   layers {_layers}";
+        _hudT += delta;
+        if (_hudT >= 0.25) { _hudT = 0; _hud.Text = $"{Phases[_phaseIdx].Name}\nframe {frameMs:F1} ms   soldiers {N}   layers {_layers}"; } // throttled: string churn would pollute the measurement
 
         if (_bench && _fixedPhase < 0 && _phaseT >= _phaseSeconds)
         {
