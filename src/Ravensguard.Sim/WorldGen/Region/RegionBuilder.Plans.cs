@@ -15,7 +15,7 @@ internal sealed partial class RegionBuilder
     private static string Blueprint(LotUse u) => u switch
     {
         LotUse.Cottage => "peasant_cottage", LotUse.Longhouse => "longhouse", LotUse.Burgage => "burgage_townhouse", LotUse.Manor => "manor_hall",
-        LotUse.Chapel => "chapel", LotUse.Smithy => "smithy", LotUse.Tavern => "tavern", LotUse.Barn => "barn", LotUse.Granary => "granary", _ => "",
+        LotUse.Chapel => "chapel", LotUse.Smithy => "smithy", LotUse.Tavern => "tavern", LotUse.Barn => "barn", LotUse.Granary => "granary", LotUse.Church => "parish_church", LotUse.Mill => "watermill", _ => "",
     };
     private static DwellingType DwellingOf(LotUse u) => u switch
     {
@@ -119,7 +119,7 @@ internal sealed partial class RegionBuilder
                 if (!LotOk(wr)) continue;
                 reserved.Add(loc);
                 plan.ChurchLot = lots.Count;
-                lots.Add(new Lot(lots.Count, town ? LotUse.Church : LotUse.Chapel, DwellingType.None, town ? "" : "chapel", wr, FacingOf(horiz, -side), 2));
+                lots.Add(new Lot(lots.Count, town ? LotUse.Church : LotUse.Chapel, DwellingType.None, town ? "parish_church" : "chapel", wr, FacingOf(horiz, -side), 2));
                 break;
             }
         }
@@ -190,7 +190,7 @@ internal sealed partial class RegionBuilder
                 {
                     reserved.Add(loc);
                     plan.MillLot = lots.Count;
-                    lots.Add(new Lot(lots.Count, LotUse.Mill, DwellingType.None, "", wr, 0, 1));
+                    lots.Add(new Lot(lots.Count, LotUse.Mill, DwellingType.None, "watermill", wr, 0, 1));
                 }
             }
         }

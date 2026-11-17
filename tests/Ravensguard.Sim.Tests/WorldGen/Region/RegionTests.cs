@@ -165,7 +165,12 @@ public class RegionTests(ITestOutputHelper output)
     public void Settlement_plans_have_square_church_manor_and_blueprints(ulong seed)
     {
         var r = Get(seed).R;
-        var known = new HashSet<string> { "peasant_cottage", "longhouse", "burgage_townhouse", "manor_hall", "chapel", "smithy", "tavern", "barn", "granary", "" };
+        // Every lot names a blueprint that exists in the base content (or none, for plots without a building yet).
+        var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../.."));
+        var db = new Ravensguard.Content.ModLoader(Ravensguard.Content.ContentTypeRegistry.Default).Load([Path.Combine(root, "content", "base")]).Database;
+        var known = db.All<Ravensguard.Content.BlueprintDef>().Select(b => b.Id).Append("").ToHashSet();
+        Assert.Contains("parish_church", known);
+        Assert.Contains("watermill", known);
         int mills = 0;
         for (int i = 0; i < r.Settlements.Count; i++)
         {
