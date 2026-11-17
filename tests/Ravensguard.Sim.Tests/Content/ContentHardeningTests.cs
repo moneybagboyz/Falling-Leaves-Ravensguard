@@ -3,6 +3,12 @@ using Ravensguard.Content;
 
 namespace Ravensguard.Sim.Tests.Content;
 
+[ContentType("trigger")]
+public sealed record TriggerDef : ContentDef
+{
+    public List<System.Text.Json.Nodes.JsonObject> Conditions { get; init; } = [];
+}
+
 /// <summary>Phase 0 review fixes: manifest parsing and the content cache.</summary>
 public class ContentHardeningTests : IDisposable
 {
@@ -107,13 +113,14 @@ public class ContentHardeningTests : IDisposable
     public void CacheKey_ChangesWithVocabulary_SoValidationIsNotSkipped()
     {
         var cache = Path.Combine(_t.Path, "cache");
-        var m = _t.Mod("a", "[" + Mat("iron", ", \"conditions\": [ { \"id\": \"has_tag\" } ]") + "]");
+        var reg = Reg().Register(typeof(TriggerDef));
+        var m = _t.Mod("a", "[{ \"type\": \"trigger\", \"id\": \"t\", \"conditions\": [ { \"id\": \"has_tag\" } ] }]");
         var wide = new ContentVocabulary().RegisterCondition("has_tag");
-        var first = new ModLoader(Reg(), wide).Load([m], cache);
+        var first = new ModLoader(reg, wide).Load([m], cache);
         Assert.True(first.Success, first.Report.ToString());
 
         var narrow = new ContentVocabulary().RegisterCondition("other");
-        var r = new ModLoader(Reg(), narrow).Load([m], cache);
+        var r = new ModLoader(reg, narrow).Load([m], cache);
         Assert.False(r.FromCache);
         Assert.False(r.Success);
         Assert.Contains(r.Report.Errors, e => e.Message.Contains("has_tag"));
