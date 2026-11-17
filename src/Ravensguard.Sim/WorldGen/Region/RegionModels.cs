@@ -97,6 +97,8 @@ public sealed class RegionSettlement
     /// <summary>Index into <see cref="WorldHistory.Realms"/> or -1.</summary>
     public int Realm = -1;
     public int FiefIndex = -1;
+    /// <summary>Culture index of the people here (the realm's culture; picks the building style, plan 2.9).</summary>
+    public int Culture;
     public bool OnRiver;
     public int NearWaterway = -1;
     public SettlementPlan Plan = new();

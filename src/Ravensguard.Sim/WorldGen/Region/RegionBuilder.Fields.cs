@@ -196,6 +196,7 @@ internal sealed partial class RegionBuilder
             var holders = new List<int>();
             foreach (var l in plan.Lots)
             {
+                if (!l.IsDwelling) continue;
                 if (l.Dwelling == DwellingType.Longhouse) { holders.Add(l.Index); holders.Add(l.Index); }
                 else if (l.Dwelling is DwellingType.Cottage or DwellingType.Burgage) holders.Add(l.Index);
             }

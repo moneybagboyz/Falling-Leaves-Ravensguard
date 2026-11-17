@@ -52,7 +52,9 @@ public class ChunkMapDump(ChunkWorldFixture fx) : IClassFixture<ChunkWorldFixtur
                 foreach (var p in c.Level(0).Props.Values)
                 {
                     var col = p.Kind switch { PropKind.Tree => ((byte)20, (byte)70, (byte)20), PropKind.Bush or PropKind.Hedge => ((byte)40, (byte)110, (byte)40), PropKind.Rocks or PropKind.Boulder => ((byte)100, (byte)100, (byte)100),
-                        PropKind.Hurdle => ((byte)150, (byte)110, (byte)60), PropKind.Well => ((byte)30, (byte)60, (byte)150), PropKind.Stall => ((byte)200, (byte)50, (byte)50), _ => ((byte)230, (byte)40, (byte)200) };
+                        PropKind.Hurdle => ((byte)150, (byte)110, (byte)60), PropKind.Well => ((byte)30, (byte)60, (byte)150), PropKind.Stall => ((byte)200, (byte)50, (byte)50),
+                        PropKind.FruitTree => ((byte)200, (byte)90, (byte)60), PropKind.Headstone => ((byte)235, (byte)235, (byte)235), PropKind.GraveMound => ((byte)120, (byte)90, (byte)70),
+                        PropKind.LowWall => ((byte)90, (byte)90, (byte)95), PropKind.Rail => ((byte)110, (byte)70, (byte)30), PropKind.Gate => ((byte)255, (byte)255, (byte)0), _ => ((byte)230, (byte)40, (byte)200) };
                     Set(bx + p.X, by + p.Y, col, p.Kind == PropKind.Tree ? 1 : 1);
                 }
             }
@@ -77,6 +79,7 @@ public class ChunkMapDump(ChunkWorldFixture fx) : IClassFixture<ChunkWorldFixtur
         var cr = r.RoadEdges.SelectMany(e => e.Crossings).OrderByDescending(c => c.WidthCm).First();
         Dump(dir, "river", cr.At.X / 32, cr.At.Y / 32, 6);
         var site = r.Sites.FirstOrDefault(x => x.Kind == SiteKind.Barrow) ?? r.Sites[0];
+        File.WriteAllText(Path.Combine(dir, "coords.txt"), $"farm {f.CenterX},{f.CenterY}\nbridge {cr.At.X},{cr.At.Y}\ntown {t.CenterX},{t.CenterY}\nvillage {v.CenterX},{v.CenterY}\n");
         Dump(dir, "site", site.X / 32, site.Y / 32, 3);
     }
 }

@@ -326,13 +326,15 @@ public class ChunkTests(ChunkWorldFixture fx, ITestOutputHelper output) : IClass
         var start = RegionSpawn.TownSquare(streamer, R)!.Value;
         var w = new LiveWorld(streamer, start, GameTime.FromCalendar(1, Season.Spring, 8, 12));
         int ox0 = w.OriginX;
-        w.SetInput(new MoveInput(1, 0, Sprint: true));
-        double worldX0 = w.OriginX + w.Snapshot.Hero.X.ToDouble();
+        bool streetEastWest = R.Settlements.OrderByDescending(t => t.TargetPop).First().Plan.Horizontal; // walk along the main street, the open way
+        w.SetInput(new MoveInput(streetEastWest ? 1 : 0, streetEastWest ? 0 : 1, Sprint: true));
+        double Along() => streetEastWest ? w.OriginX + w.Snapshot.Hero.X.ToDouble() : w.OriginY + w.Snapshot.Hero.Y.ToDouble();
+        double worldX0 = Along();
         for (int i = 0; i < 700; i++) w.Step();
-        double worldX1 = w.OriginX + w.Snapshot.Hero.X.ToDouble();
+        double worldX1 = Along();
         output.WriteLine($"walked {worldX1 - worldX0:0.0} m east, {w.WindowSwaps} window swaps, {streamer.LoadedCount} chunks loaded, {streamer.GeneratedCount} generated");
         Assert.True(worldX1 - worldX0 > 20, "the hero should make headway (blocked only by scenery)");
-        Assert.True(w.Window!.Contains(streamer.LoadedCount > 0 ? (int)(worldX1 / 32) : 0, (int)((w.OriginY + w.Snapshot.Hero.Y.ToDouble()) / 32)));
+        Assert.True(w.Window!.Contains(streamer.LoadedCount > 0 ? (int)((w.OriginX + w.Snapshot.Hero.X.ToDouble()) / 32) : 0, (int)((w.OriginY + w.Snapshot.Hero.Y.ToDouble()) / 32)));
         Assert.True(streamer.LoadedCount <= 81);
     }
 

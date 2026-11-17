@@ -6,7 +6,7 @@ internal sealed partial class RegionBuilder
 {
     private struct Slot
     {
-        public int U0, V0, W, D;
+        public int U0, V0, W, D, Ratio;
         public byte Type; // 0 cottage, 1 longhouse, 2 burgage
         public int Side;
         public long Rank;
@@ -79,8 +79,8 @@ internal sealed partial class RegionBuilder
         bool town = s.Class == SettlementClass.Town;
         bool horiz = plan.Horizontal = HorizontalFor(s);
         int cx = s.CenterX, cy = s.CenterY;
-        int sw = town ? 8 : 6, D = town ? 30 : 40, pitch = 2 * D + sw;
-        int sqU = town ? 56 : 30, sqV = town ? 36 : 22;
+        int sw = town ? 6 : 5, D = town ? 30 : 40, pitch = 2 * D + sw;
+        int sqU = town ? 36 : 38, sqV = town ? 18 : 20; // a modest market place (or a green), not a parade ground
         int pop = s.TargetPop;
         bool seat = s.FiefIndex >= 0 && _r.Fiefs[s.FiefIndex].SeatSettlement == index;
 
@@ -114,7 +114,7 @@ internal sealed partial class RegionBuilder
             int side = (Hash(StPlan, (long)s.Id.Value, 1) & 1) == 0 ? 1 : -1;
             for (int attempt = 0; attempt < 2; attempt++, side = -side)
             {
-                var loc = side > 0 ? new RectM(-cw / 2, sqV / 2 + 6, cw, ch) : new RectM(-cw / 2, -sqV / 2 - 6 - ch, cw, ch);
+                var loc = side > 0 ? new RectM(-cw / 2, sqV / 2 + 2, cw, ch) : new RectM(-cw / 2, -sqV / 2 - 2 - ch, cw, ch);
                 var wr = ToWorld(horiz, cx, cy, loc.X, loc.Y, loc.W, loc.H);
                 if (!LotOk(wr)) continue;
                 reserved.Add(loc);
@@ -194,13 +194,53 @@ internal sealed partial class RegionBuilder
                 }
             }
         }
-        // The cross lane runs perpendicular to the main street through the square.
-        reserved.Add(new RectM(-sw / 2, -umax, sw, 2 * umax));
-        // Main street through the middle.
-        // Slots along parallel streets.
+        // Cross lanes run perpendicular to the main street, every so often, never through the market place or over a reserved plot.
+        int lw = town ? 4 : 3;
+        var lanes = new List<int>(); // signed positions along the main street
+        for (int sgn = -1; sgn <= 1; sgn += 2)
+        {
+            int lu = sqU / 2 + 8 + (int)(Hash(StPlan, (long)s.Id.Value, 40 + sgn) % 10);
+            for (int k = 0; lu < umax; k++)
+            {
+                var a = new RectM(sgn > 0 ? lu - lw / 2 : -lu - lw / 2, -umax, lw, 2 * umax);
+                bool ok = true;
+                foreach (var rsv in reserved) if (rsv.Overlaps(a)) ok = false;
+                if (ok) { lanes.Add(sgn * lu); reserved.Add(a); }
+                lu += (town ? 44 : 64) + (int)(Hash(StPlan, (long)s.Id.Value, 60 + k * 2 + sgn + 1) % 36);
+            }
+        }
+        // Slots along parallel streets (burgage plots: long and narrow, the house at the street, the yard behind).
         var slots = new List<Slot>();
         int jmax = umax / pitch + 1;
-        int crossHalf = sw / 2;
+        double vBias = town ? 1.6 : 5.0; // a village is a long row before it grows a second street
+        void MakeSlot(long key, int u, int dir, int vlo, int depth, int side, out Slot sl, out int w)
+        {
+            int hv = (int)(Hash(StLot, (long)s.Id.Value, key) % 100);
+            int uc = dir * (u + 8), vcen = vlo + depth / 2;
+            int dist = (int)Region.Isqrt((long)uc * uc + (long)(vcen * vBias) * (long)(vcen * vBias));
+            int ratio = Math.Min(100, dist * 100 / Math.Max(1, rest * 3 / 2));
+            byte type;
+            if (town) type = (byte)(hv < 82 - ratio * 40 / 100 ? 2 : 0);
+            else type = (byte)(hv < 22 + (100 - ratio) / 8 ? 1 : 0);
+            w = type switch { 2 => 10, 1 => 22, _ => town ? 12 : 16 };
+            int u0 = dir > 0 ? u : -(u + w);
+            long noise = (long)(Hash(StLot, (long)s.Id.Value, key + 7) % 16);
+            sl = new Slot { U0 = u0, V0 = vlo, W = w, D = depth, Type = type, Side = side, Ratio = ratio, Rank = (long)dist * 16 + noise };
+        }
+        // plots facing the market place / green
+        {
+            int sd = town ? 22 : 26;
+            for (int side = 1; side >= -1; side -= 2)
+            {
+                int vlo = side > 0 ? sqV / 2 : -sqV / 2 - sd;
+                for (int dir = 1; dir >= -1; dir -= 2)
+                    for (int u = 0, k = 0; u < sqU / 2; k++)
+                    {
+                        MakeSlot(0x7000000L + ((long)(side + 1) << 12) + ((long)(dir + 1) << 8) + k, u, dir, vlo, sd, side, out var sl, out int w);
+                        slots.Add(sl); u += w;
+                    }
+            }
+        }
         for (int j = -jmax; j <= jmax; j++)
         {
             int vs = j * pitch;
@@ -209,21 +249,15 @@ internal sealed partial class RegionBuilder
                 int vlo = side > 0 ? vs + sw / 2 : vs - sw / 2 - D;
                 for (int dir = 1; dir >= -1; dir -= 2)
                 {
-                    int u = crossHalf;
+                    int u = 0;
                     for (int k = 0; u < umax; k++)
                     {
                         long key = ((long)(j + 64) << 24) | ((long)(side + 1) << 20) | ((long)(dir + 1) << 16) | (uint)k;
-                        int hv = (int)(Hash(StLot, (long)s.Id.Value, key) % 100);
-                        int uc = dir * (u + 8), vcen = vlo + D / 2;
-                        int dist = (int)Region.Isqrt((long)uc * uc + (long)vcen * vcen);
-                        int ratio = Math.Min(100, dist * 100 / Math.Max(1, rest * 3 / 2));
-                        byte type;
-                        if (town) type = (byte)(hv < 82 - ratio * 40 / 100 ? 2 : 0);
-                        else type = (byte)(hv < 22 + (100 - ratio) / 8 ? 1 : 0);
-                        int w = type switch { 2 => 10, 1 => 24, _ => town ? 12 : 16 };
-                        int u0 = dir > 0 ? u : -(u + w);
-                        long noise = (long)(Hash(StLot, (long)s.Id.Value, key + 7) % 16);
-                        slots.Add(new Slot { U0 = u0, V0 = vlo, W = w, D = D, Type = type, Side = side, Rank = (long)dist * 16 + noise });
+                        MakeSlot(key, u, dir, vlo, D, side, out var sl, out int w);
+                        bool moved = false;
+                        foreach (int l in lanes) { int lu = Math.Abs(l); if ((l > 0) == (dir > 0) && u < lu + lw / 2 && u + w > lu - lw / 2) { u = lu + lw / 2; moved = true; break; } }
+                        if (moved) continue;
+                        slots.Add(sl);
                         u += w;
                     }
                 }
@@ -239,6 +273,9 @@ internal sealed partial class RegionBuilder
             bool clash = false;
             foreach (var rsv in reserved) if (rsv.Overlaps(loc)) { clash = true; break; }
             if (clash) continue;
+            bool taken2 = false;
+            foreach (var (_, tw) in chosen) if (tw.Overlaps(ToWorld(horiz, cx, cy, sl.U0, sl.V0, sl.W, sl.D))) { taken2 = true; break; }
+            if (taken2) continue;
             var wr = ToWorld(horiz, cx, cy, sl.U0, sl.V0, sl.W, sl.D);
             if (!LotOk(wr)) continue;
             chosen.Add((sl, wr));
@@ -255,7 +292,11 @@ internal sealed partial class RegionBuilder
         {
             var (sl, wr) = chosen[k];
             LotUse use = roleAt.TryGetValue(k, out var ru) ? ru : sl.Type switch { 2 => LotUse.Burgage, 1 => LotUse.Longhouse, _ => LotUse.Cottage };
-            lots.Add(new Lot(lots.Count, use, DwellingOf(use), Blueprint(use), wr, FacingOf(horiz, sl.Side), WealthOf(use)));
+            byte wealth = WealthOf(use);
+            // the well-off live near the market, the poor at the edge
+            if (use == LotUse.Burgage) wealth = (byte)(sl.Ratio < 35 ? 2 : 1);
+            else if (use == LotUse.Cottage && town) wealth = (byte)(sl.Ratio >= 60 ? 0 : 1);
+            lots.Add(new Lot(lots.Count, use, DwellingOf(use), Blueprint(use), wr, FacingOf(horiz, sl.Side), wealth));
         }
         int dwellings = lots.Count(l => l.Dwelling is DwellingType.Cottage or DwellingType.Longhouse or DwellingType.Burgage);
         if (dwellings < dwellNeeded)
@@ -286,7 +327,13 @@ internal sealed partial class RegionBuilder
         foreach (var kv in perStreet.OrderBy(k => k.Key))
             plan.Streets.Add(new Street(P(kv.Value.Lo, kv.Key * pitch), P(kv.Value.Hi, kv.Key * pitch), sw));
         int jlo = perStreet.Keys.Min(), jhi = perStreet.Keys.Max();
-        if (jhi > jlo || town) plan.Streets.Add(new Street(P(0, jlo * pitch), P(0, jhi * pitch), sw));
+        if (jhi > jlo || town)
+            foreach (int l in lanes)
+            {
+                int ext = l > 0 ? maxU : -minU;
+                if (Math.Abs(l) > ext - 6) continue;
+                plan.Streets.Add(new Street(P(l, jlo * pitch), P(l, jhi * pitch), lw));
+            }
         plan.RadiusM = 0;
         foreach (var l in plan.Lots) plan.RadiusM = Math.Max(plan.RadiusM, Dist(cx, cy, l.Rect.CenterX, l.Rect.CenterY));
     }
@@ -299,8 +346,9 @@ internal sealed partial class RegionBuilder
         bool longhouse = Hash(StPlan, (long)s.Id.Value, 5) % 100 < 65;
         var house = longhouse ? LotUse.Longhouse : LotUse.Cottage;
         int hw = longhouse ? 28 : 20, hd = longhouse ? 26 : 24;
-        var hr = ToWorld(horiz, cx, cy, -hw / 2 - 8, 4, hw, hd);
-        var br = ToWorld(horiz, cx, cy, hw / 2 + 4, 6, 18, 16);
+        // the whole holding: house with its kitchen garden and orchard behind, and the farmyard with the barn beside it
+        var hr = ToWorld(horiz, cx, cy, -hw / 2 - 11, 4, hw + 6, hd + 16);
+        var br = ToWorld(horiz, cx, cy, hw / 2 + 4, 4, 24, 26);
         plan.Lots.Add(new Lot(0, house, DwellingOf(house), Blueprint(house), hr, FacingOf(horiz, 1), WealthOf(house)));
         plan.Lots.Add(new Lot(1, LotUse.Barn, DwellingType.None, "barn", br, FacingOf(horiz, 1), 1));
         plan.RadiusM = 36;

@@ -84,6 +84,7 @@ internal sealed partial class RegionBuilder
         int t = Idx(tx, ty);
         byte realm = _r.RealmMap[t];
         s.Realm = realm == Continent.None ? -1 : realm;
+        s.Culture = s.Realm >= 0 && s.Realm < _h.Realms.Count ? _h.Realms[s.Realm].CultureId : 0;
         int bestD = int.MaxValue;
         for (int dy = -7; dy <= 7; dy++)
             for (int dx = -7; dx <= 7; dx++)

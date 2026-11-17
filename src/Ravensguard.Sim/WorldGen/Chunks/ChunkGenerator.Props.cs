@@ -8,7 +8,7 @@ namespace Ravensguard.Sim.WorldGen.Chunks;
 
 public sealed partial class ChunkGenerator
 {
-    private const int PFixed = 0, PSite = 1, PYard = 2, PHedge = 3, PTree = 4, PBush = 5;
+    private const int PFixed = 0, PSite = 1, PYard = 2, PHedge = 3, PTree = 4, PBush = 5, PRail = 6;
 
     private void CollectProps(Buf b, List<PendingProp> props)
     {
@@ -49,6 +49,22 @@ public sealed partial class ChunkGenerator
         foreach (var st in b.Stamps)
             foreach (var (x, y, k, v) in st.Props)
                 if (In(x, y)) props.Add(new PendingProp(x, y, k, (byte)v, PYard));
+
+        // rails along both long edges of each bridge deck (one cell thick, ends left open)
+        foreach (var k in DecksNear(cx0 + Size / 2, cy0 + Size / 2))
+            for (int wy = Math.Max(cy0, (int)k.Cy - k.HalfLen - k.HalfW - 2); wy < Math.Min(cy0 + Size, (int)k.Cy + k.HalfLen + k.HalfW + 3); wy++)
+                for (int wx = Math.Max(cx0, (int)k.Cx - k.HalfLen - k.HalfW - 2); wx < Math.Min(cx0 + Size, (int)k.Cx + k.HalfLen + k.HalfW + 3); wx++)
+                {
+                    var (u, v) = DeckUV(k, wx, wy);
+                    if (Math.Abs(u) > k.HalfLen || Math.Abs(v) > k.HalfW || b.Ground[b.I(wx, wy)] != GroundKind.Bridge) continue;
+                    bool edge = false;
+                    foreach (var (dx, dy) in N4)
+                    {
+                        var (nu, nv) = DeckUV(k, wx + dx, wy + dy);
+                        if (Math.Abs(nv) > k.HalfW && Math.Abs(nu) <= k.HalfLen) edge = true;
+                    }
+                    if (edge) props.Add(new PendingProp(wx, wy, PropKind.Rail, (byte)(wx & 3), PRail));
+                }
 
         // hedges where a field meets open ground
         for (int wy = cy0; wy < cy0 + Size; wy++)
@@ -109,30 +125,38 @@ public sealed partial class ChunkGenerator
         var list = new List<FixedProp>();
         var q = s.Plan.Square;
         if (q.W < 6 || q.H < 6) return list;
-        list.Add(new FixedProp(q.CenterX, q.CenterY, PropKind.Well, 0));
+        bool horiz = q.W >= q.H;
+        int L = horiz ? q.W : q.H, S = horiz ? q.H : q.W, cx = q.CenterX, cy = q.CenterY;
+        // (u, v): u along the long axis of the square from its centre, v across it
+        FixedProp At(int u, int v, PropKind k, int variant) => horiz ? new FixedProp(cx + u, cy + v, k, (byte)variant) : new FixedProp(cx + v, cy + u, k, (byte)variant);
         if (s.Class == SettlementClass.Town)
         {
-            list.Add(new FixedProp(q.X + 1, q.Y + 1, PropKind.Brazier, 0)); list.Add(new FixedProp(q.Right - 2, q.Y + 1, PropKind.Brazier, 0));
-            list.Add(new FixedProp(q.X + 1, q.Bottom - 2, PropKind.Brazier, 0)); list.Add(new FixedProp(q.Right - 2, q.Bottom - 2, PropKind.Brazier, 0));
-            for (int ry = q.Y + 4; ry < q.Bottom - 4; ry += 6)
-                for (int x = q.X + 5; x + 3 < q.Right - 3; x += 8)
+            // a modest market place: stalls along both edges, the well and braziers at the sides, carts and goods about, the street left open down the middle
+            list.Add(At(-7, -S / 2 + 5, PropKind.Well, 0));
+            foreach (int su in new[] { -1, 1 }) foreach (int sv in new[] { -1, 1 }) list.Add(At(su * (L / 2 - 1), sv * (S / 2 - 1), PropKind.Brazier, 0));
+            foreach (int row in new[] { -S / 2 + 2, S / 2 - 3 })
+                for (int u = -L / 2 + 3; u + 4 < L / 2 - 1; u += 5)
                 {
-                    if (Math.Abs(x - q.CenterX) < 6 && Math.Abs(ry - q.CenterY) < 6) continue;
-                    ulong h = H(StFixed, x, ry);
-                    if (h % 5 == 0) continue;
-                    list.Add(new FixedProp(x, ry, PropKind.Stall, (byte)(h >> 8 & 3)));
-                    if (h % 3 == 0) list.Add(new FixedProp(x + 3, ry + 1, h % 2 == 0 ? PropKind.Barrel : PropKind.Crate, 0));
+                    if (Math.Abs(u) < 3) continue; // a gap in the middle where the cross lane meets
+                    ulong h = H(StFixed, cx * 7L + u, cy + row);
+                    if (h % 8 == 0) continue;
+                    list.Add(At(u, row, PropKind.Stall, (int)(h >> 8 & 7)));
+                    if (h % 3 == 0) list.Add(At(u + 2, row + (row < 0 ? 1 : -1), h % 2 == 0 ? PropKind.Barrel : PropKind.Crate, 0));
+                    else if (h % 7 == 0) list.Add(At(u + 2, row + (row < 0 ? 1 : -1), PropKind.Sacks, 0));
                 }
-            for (int k = 0; k < 10; k++)
-            {
-                ulong h = H(StFixed, q.X * 7L + k, q.Y);
-                list.Add(new FixedProp(q.X + 2 + (int)(h % (ulong)(q.W - 4)), q.Y + 2 + (int)(h >> 16) % (q.H - 4), k % 4 == 0 ? PropKind.Cart : k % 2 == 0 ? PropKind.Barrel : PropKind.Hay, 0));
-            }
+            list.Add(At(-L / 2 + 4, S / 2 - 6, PropKind.Cart, 1));
+            list.Add(At(L / 2 - 7, -S / 2 + 6, PropKind.Cart, 2));
+            list.Add(At(5, S / 2 - 6, PropKind.Trough, 0));
         }
         else
         {
-            list.Add(new FixedProp(q.X + 2, q.Y + 2, PropKind.Barrel, 0));
-            list.Add(new FixedProp(q.Right - 3, q.Bottom - 3, PropKind.Haystack, 0));
+            // the green: a well, a few old trees, a bench or two, a signpost; the pond is painted into the ground
+            list.Add(At(-9, -S / 2 + 4, PropKind.Well, 0));
+            list.Add(At(-L / 2 + 3, S / 2 - 5, PropKind.Tree, 0)); list.Add(At(-L / 4, -S / 2 + 2, PropKind.Tree, 1));
+            list.Add(At(L / 4 + 2, -S / 2 + 3, PropKind.Tree, 2)); list.Add(At(L / 2 - 4, -S / 2 + 3, PropKind.Tree, 0)); list.Add(At(-3, S / 2 - 3, PropKind.Tree, 1));
+            list.Add(At(-5, -S / 2 + 5, PropKind.Bench, 0)); list.Add(At(15, S / 2 - 3, PropKind.Bench, 0));
+            list.Add(At(-L / 2 + 2, 4, PropKind.Signpost, 0));
+            list.Add(At(L / 2 - 8, -S / 2 + 5, PropKind.Haystack, 0));
         }
         return list;
     });
@@ -185,6 +209,7 @@ public sealed partial class ChunkGenerator
         byte f = b.Flags[idx];
         if ((f & (Buf.Prop | Buf.Build | Buf.Deep)) != 0) return false;
         var g = b.Ground[idx];
+        if (p.Priority == PRail) return g == GroundKind.Bridge;
         if (g is GroundKind.Water or GroundKind.DeepWater or GroundKind.Ford or GroundKind.Bridge) return false;
         if (info.Wide)
         {

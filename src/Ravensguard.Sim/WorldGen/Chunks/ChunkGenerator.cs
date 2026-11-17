@@ -53,8 +53,10 @@ public sealed partial class ChunkGenerator
     private readonly Dictionary<long, List<int>> _sitesAt = [];
     private readonly SegIndex _roads = new(), _waters = new();
     private readonly Dictionary<long, List<(PointM At, CrossingKind Kind)>> _crossAt = [];
+    private readonly Dictionary<long, List<Deck>> _decks = [];
     private readonly byte[] _crop;
     private readonly string[] _settlementStyle;
+    private readonly string[][] _cultureStyles; // per culture index: building style at poor, middling, rich (plan 2.9)
     private readonly ConcurrentDictionary<long, Stamp?> _stamps = new();
     private readonly ConcurrentDictionary<(string, string, int), BuildingGrid?> _grids = new();
     private readonly ConcurrentDictionary<int, List<FixedProp>> _fixed = new();
@@ -81,6 +83,7 @@ public sealed partial class ChunkGenerator
         _settlementStyle = new string[region.Settlements.Count];
         for (int s = 0; s < region.Settlements.Count; s++) _settlementStyle[s] = StyleFor(region.Settlements[s]);
 
+        _cultureStyles = BuildCultureStyles(content);
         BuildIndices();
     }
 
@@ -146,7 +149,11 @@ public sealed partial class ChunkGenerator
         {
             for (int i = 0; i + 1 < e.Points.Length; i++)
                 _roads.Add(e.Id, e.Points[i], e.Points[i + 1], e.WidthCm, e.WidthCm, (byte)e.Class);
-            foreach (var c in e.Crossings) AddTo(_crossAt, Key(c.At.X / 256, c.At.Y / 256), (c.At, c.Kind));
+            foreach (var c in e.Crossings)
+            {
+                AddTo(_crossAt, Key(c.At.X / 256, c.At.Y / 256), (c.At, c.Kind));
+                if (c.Kind == CrossingKind.Bridge && MakeDeck(e, c) is { } deck) AddTo(_decks, Key((int)(deck.Cx / 256), (int)(deck.Cy / 256)), deck);
+            }
         }
         foreach (var w in r.Waterways)
             for (int i = 0; i + 1 < w.Points.Length; i++)
@@ -154,7 +161,31 @@ public sealed partial class ChunkGenerator
         for (int i = 0; i < r.Sites.Count; i++) AddTo(_sitesAt, Key(ChunkOf(r.Sites[i].X), ChunkOf(r.Sites[i].Y)), i);
     }
 
-    /// <summary>Building style id of a settlement: the culture's style where the content names one, else by landscape (hill stone, northern logs, clay brick, coastal planks).</summary>
+    /// <summary>The culture packs in name-pool order (a culture index picks its pool by modulo, exactly as the names do), each with its three styles.</summary>
+    private string[][] BuildCultureStyles(ContentDatabase content)
+    {
+        var pools = content.All<NamePoolDef>().Select(p => p.Id).OrderBy(i => i, StringComparer.Ordinal).ToList();
+        var cultures = content.All<CultureDef>().ToList();
+        var res = new string[Math.Max(1, pools.Count)][];
+        for (int i = 0; i < res.Length; i++)
+        {
+            var cu = pools.Count > 0 ? cultures.FirstOrDefault(c => c.NamePool == pools[i]) : null;
+            string Pick(string key) => cu != null && cu.BuildingStyles.TryGetValue(key, out var st) && Library.Styles.ContainsKey(st) ? st : "";
+            res[i] = [Pick("poor"), Pick("middling"), Pick("rich")];
+        }
+        return res;
+    }
+
+    /// <summary>Building style of a lot: the settlement culture's style for the lot's wealth, else the landscape's (see <see cref="StyleFor"/>).</summary>
+    private string StyleOf(int settlement, int wealth)
+    {
+        var cs = Region.Settlements[settlement].Culture;
+        var styles = _cultureStyles[((cs % _cultureStyles.Length) + _cultureStyles.Length) % _cultureStyles.Length];
+        string st = styles[Math.Clamp(wealth, 0, 2)];
+        return st.Length > 0 ? st : _settlementStyle[settlement];
+    }
+
+    /// <summary>Fallback building style id of a settlement: the culture's style where the content names one, else by landscape (hill stone, northern logs, clay brick, coastal planks).</summary>
     private string StyleFor(RegionSettlement s)
     {
         var b = Region.Biomes[Math.Clamp(s.TileY * RegionData.Size + s.TileX, 0, RegionData.Tiles - 1)];

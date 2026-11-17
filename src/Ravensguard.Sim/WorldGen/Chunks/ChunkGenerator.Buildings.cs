@@ -67,7 +67,8 @@ public sealed partial class ChunkGenerator
             wealth = cls switch { SocialClass.Gentry => 2, SocialClass.Burgher => Math.Max(1, wealth), _ => Math.Min(wealth, 1) };
             if (lot.Dwelling == DwellingType.Cottage) wealth = Math.Min(wealth, lot.Wealth);
         }
-        var grid = GridFor(bp, _settlementStyle[s], wealth);
+        string style = StyleOf(s, wealth);
+        var grid = GridFor(bp, style, wealth);
         if (grid == null) return null;
 
         var rect = lot.Rect;
@@ -89,7 +90,7 @@ public sealed partial class ChunkGenerator
         best = pick.G; bestTurns = pick.Turns; bestMirror = pick.Mirror;
 
         int w = best.Width, h = best.Height;
-        int setback = lot.Use == LotUse.Burgage || rs.Class == SettlementClass.Town ? 0 : 1 + (int)(hv >> 8 & 1);
+        int setback = lot.Use is LotUse.Church or LotUse.Chapel ? 3 : lot.Use == LotUse.Manor ? 5 : lot.Use == LotUse.Burgage || rs.Class == SettlementClass.Town ? 0 : 1 + (int)(hv >> 8 & 1);
         int x0, y0;
         int jit = (int)((hv >> 16) % 3) - 1;
         switch (lot.Facing & 3)
@@ -101,7 +102,7 @@ public sealed partial class ChunkGenerator
         }
         x0 = Math.Clamp(x0, rect.X, Math.Max(rect.X, rect.Right - w)); y0 = Math.Clamp(y0, rect.Y, Math.Max(rect.Y, rect.Bottom - h));
 
-        var st = new Stamp { Settlement = s, Lot = lotIdx, Blueprint = bp, Style = _settlementStyle[s], X0 = x0, Y0 = y0, W = w, H = h, Turns = bestTurns, Mirror = bestMirror, Fits = bestScore < 100 };
+        var st = new Stamp { Settlement = s, Lot = lotIdx, Blueprint = bp, Style = style, X0 = x0, Y0 = y0, W = w, H = h, Turns = bestTurns, Mirror = bestMirror, Fits = bestScore < 100 };
         var furnished = best.Clone();
         Furnish(furnished, st, lot, s, lotIdx, hv);
         foreach (var (z, lv) in furnished.Levels)
@@ -117,7 +118,7 @@ public sealed partial class ChunkGenerator
         // front door paths out to the street edge of the lot
         if (FrontDoor(furnished, lot.Facing, out var doors))
         {
-            var kind = rs.Class == SettlementClass.Town ? GroundKind.Cobble : GroundKind.Dirt;
+            var kind = rs.Class == SettlementClass.Town && lot.Use is not (LotUse.Church or LotUse.Chapel) ? GroundKind.Cobble : GroundKind.Dirt;
             foreach (var (dx, dy) in doors)
             {
                 int wx = x0 + dx, wy = y0 + dy;
@@ -149,61 +150,6 @@ public sealed partial class ChunkGenerator
                 if (_detector.IsExteriorDoor(lv, x, y)) doors.Add((x, y));
             }
         return doors.Count > 0;
-    }
-
-    /// <summary>Garden, hedges and farmyard goods around a building: rural lots only, the street side left open.</summary>
-    private void Yard(Stamp st, Lot lot, RegionSettlement rs, RectM rect, ulong hv)
-    {
-        bool rural = rs.Class != SettlementClass.Town;
-        int f = lot.Facing & 3;
-        // kitchen garden behind a dwelling
-        if (lot.IsDwelling && rural)
-        {
-            RectM back = f switch
-            {
-                0 => new RectM(st.X0, st.Y0 + st.H + 1, st.W, rect.Bottom - (st.Y0 + st.H) - 2),
-                2 => new RectM(st.X0, rect.Y + 1, st.W, st.Y0 - rect.Y - 2),
-                1 => new RectM(rect.X + 1, st.Y0, st.X0 - rect.X - 2, st.H),
-                _ => new RectM(st.X0 + st.W + 1, st.Y0, rect.Right - (st.X0 + st.W) - 2, st.H),
-            };
-            if (back.W >= 3 && back.H >= 3)
-            {
-                int bw = Math.Min(back.W, 9), bh = Math.Min(back.H, 9);
-                for (int y = back.Y; y < back.Y + bh; y++)
-                    for (int x = back.X; x < back.X + bw; x++)
-                        st.Ground.Add((x, y, ((f & 1) == 0 ? y : x) % 2 == 0 ? GroundKind.Furrow : GroundKind.Sown, 5));
-            }
-        }
-        // hedge or hurdle fence round the plot
-        if (rural && lot.Use is not (LotUse.Church or LotUse.Chapel))
-        {
-            for (int x = rect.X; x < rect.Right; x++) { Fence(st, x, rect.Y, f != 0, hv, x); Fence(st, x, rect.Bottom - 1, f != 2, hv, x + 7000); }
-            for (int y = rect.Y; y < rect.Bottom; y++) { Fence(st, rect.X, y, f != 3, hv, y + 14000); Fence(st, rect.Right - 1, y, f != 1, hv, y + 21000); }
-        }
-        // farmyard goods
-        int goods = lot.Use switch { LotUse.Barn => 2, LotUse.Granary => 1, LotUse.Longhouse => 2, LotUse.Cottage => 1, LotUse.Smithy => 1, LotUse.Tavern => 1, _ => 0 };
-        for (int k = 0; k < goods; k++)
-        {
-            ulong h = H(StYard, rect.X * 31L + k, rect.Y);
-            var kind = lot.Use switch
-            {
-                LotUse.Barn => k == 0 ? PropKind.Haystack : PropKind.Cart,
-                LotUse.Granary => PropKind.Sheaves,
-                LotUse.Smithy => PropKind.Woodpile,
-                LotUse.Tavern => PropKind.Barrel,
-                _ => k == 0 ? PropKind.Woodpile : PropKind.Haystack,
-            };
-            int px = rect.X + 1 + (int)(h % (ulong)Math.Max(1, rect.W - 3)), py = rect.Y + 1 + (int)(h >> 20) % Math.Max(1, rect.H - 3);
-            if (px >= st.X0 - 1 && px <= st.X0 + st.W && py >= st.Y0 - 1 && py <= st.Y0 + st.H) continue;
-            st.Props.Add((px, py, kind, (int)(h >> 40) & 3));
-        }
-    }
-
-    private static void Fence(Stamp st, int x, int y, bool on, ulong hv, int salt)
-    {
-        if (!on) return;
-        if ((DetRng.Mix(hv ^ (ulong)salt) & 7) == 0) return; // a gap now and then
-        st.Props.Add((x, y, PropKind.Hurdle, 0));
     }
 
     // ------------------------------------------------------------------ furnishing: what the household brings, kept clear of doors and stairs
