@@ -38,6 +38,7 @@ public partial class App : Node
         Router = new ScreenRouter { Name = "ScreenRouter" };
         AddChild(Router);
         Router.Push(new MainMenu(Router));
+        if (World.StreetOptions.Parse(args) is { } street) Router.Replace(new World.StreetView(Router, street)); // --shot-street <hour> --shot-out <png>, --street-bench <s>
         if (OS.IsDebugBuild() || args.Contains("--dev")) 
         {
             var inspector = new Debug.SimInspector { Name = "SimInspector" };

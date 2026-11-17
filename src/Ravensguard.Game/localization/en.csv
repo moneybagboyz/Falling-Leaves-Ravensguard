@@ -124,3 +124,14 @@ ACTION_MENU_NEW_GAME,New game
 ACTION_MENU_SETTINGS,Settings
 ACTION_MENU_QUIT,Quit
 DISPLAY_SCALE_AUTO,Auto
+STREET_PHASE_DAWN,Dawn
+STREET_PHASE_DAY,Day
+STREET_PHASE_DUSK,Dusk
+STREET_PHASE_NIGHT,Night
+STREET_PAUSED,Paused
+STREET_TORCH_ON,Torch lit
+STREET_LEVEL_TITLE,Level
+STREET_LEVEL_VIEWING,Looking at another level
+STREET_WRONG_LEVEL,You are on another level. Press Home to return the view.
+STREET_NO_PATH,No way there.
+STREET_HINTS,"{0} move   Click go   {1} pause   1-4 speed   {2} torch   {3} level   {4} zoom   {5} camera home   Esc menu"

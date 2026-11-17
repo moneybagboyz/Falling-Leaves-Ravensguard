@@ -30,7 +30,7 @@ public partial class MainMenu : Control
         newGame.GrabFocus();
     }
 
-    void DoNewGame() => _router.ShowToast(L.T("TOAST_COMING_PHASE_1"));
+    void DoNewGame() => _router.Push(new World.StreetView(_router));
     void DoSettings() => _router.Push(new SettingsScreen(_router));
 
     public override void _UnhandledInput(InputEvent e)

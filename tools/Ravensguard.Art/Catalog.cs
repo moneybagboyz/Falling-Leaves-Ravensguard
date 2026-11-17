@@ -17,7 +17,7 @@ public static class Catalog
     public static List<SpriteDef> Build(Palette pal)
     {
         var l = new List<SpriteDef>();
-        var t = new Terrain(pal); var o = new Objects(pal); var it = new Items(pal); var pe = new People(pal);
+        var t = new Terrain(pal); var hm = new Hamlet(pal); var o = new Objects(pal); var it = new Items(pal); var pe = new People(pal);
 
         void T(string id, string group, Func<PixelBuffer> f) => l.Add(new SpriteDef(id, SpriteKind.Terrain, "terrain_32", group, 32, 32, f));
         for (int v = 0; v < 6; v++) { int c = v; T($"terrain.grass.{c}", "terrain.grass", () => t.Grass(c)); }
@@ -40,6 +40,20 @@ public static class Catalog
         {
             var kk = k; T("terrain.wall_timber" + (k == "" ? "" : "_" + k), "terrain.wall", () => t.WallTimber(kk));
         }
+
+        // street-view additions
+        foreach (var m in new[] { "timber", "stone", "wattle" })
+            foreach (var w in new[] { false, true })
+            {
+                var mm = m; var ww = w;
+                T($"terrain.wall_{m}_cap{(w ? "_win" : "")}", "terrain.wall", () => hm.WallCap(mm, ww));
+            }
+        foreach (var k in new[] { "", "win" }) { var kk = k; T("terrain.wall_wattle" + (k == "" ? "" : "_" + k), "terrain.wall", () => hm.WallWattle(kk)); }
+        T("terrain.door_h", "terrain.floor", hm.DoorH);
+        T("terrain.door_v", "terrain.floor", hm.DoorV);
+        T("terrain.stairs_up", "terrain.floor", () => hm.Stairs(true));
+        T("terrain.stairs_down", "terrain.floor", () => hm.Stairs(false));
+        T("terrain.void", "terrain.floor", hm.Void);
 
         // autotile sets: 16 edge masks each (N=1 E=2 S=4 W=8, set = connected neighbour)
         var sets = new (string Name, Func<PixelBuffer> Overlay, string Rim, int Seed)[]
@@ -77,6 +91,11 @@ public static class Catalog
         O("object.sconce", "objects_32", 32, 32, () => o.Sconce(false));
         O("object.sconce_lit", "objects_32", 32, 32, () => o.Sconce(true));
         O("object.bush", "objects_32", 32, 32, o.Bush);
+        O("object.ladder", "objects_32", 32, 32, hm.Ladder);
+        O("object.trapdoor", "objects_32", 32, 32, hm.Trapdoor);
+        O("object.workbench", "objects_32", 32, 32, hm.Workbench);
+        O("object.brazier", "objects_32", 32, 32, () => hm.Brazier(false));
+        O("object.brazier_lit", "objects_32", 32, 32, () => hm.Brazier(true));
         O("object.rocks", "objects_32", 32, 32, o.Rocks);
         foreach (var c in new[] { "red", "blue", "green" }) { var cc = c; O($"object.stall_{c}", "objects_64", 64, 48, () => o.Stall(cc)); }
         O("object.cart", "objects_64", 64, 48, o.Cart);

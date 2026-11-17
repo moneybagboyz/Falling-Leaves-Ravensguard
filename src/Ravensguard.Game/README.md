@@ -27,3 +27,9 @@ Add the action to `InputDefs` (one `A(...)` line), then add `ACTION_<CONTEXT>_<N
 ## Notes / TODO
 - Contextual mouse gestures from plan 2.8 that are not plain bindings (feint, box-drag select, shift-click, middle-drag) are not defined yet.
 - The `?` overlay is bound as Shift+/ (US layout); revisit for other layouts.
+
+## Street view (first playable)
+`World/StreetView.cs` is the live view: New Game opens it. The sim (`Ravensguard.Sim/Live`, `Lighting`) owns all state; the view reads `LiveWorld.Snapshot`.
+Art atlases are the baked output of `tools/Ravensguard.Art` copied to `assets/art/` (re-run `bake`, then copy `art/out/*.png` and `index.json` there).
+Command line (after `--`): `--shot-street <hour> --shot-out <png> [--shot-start x,y,z] [--shot-level z] [--shot-zoom 1|2] [--shot-torch 0|1] [--shot-click px,py] [--shot-frames n]`
+captures a screenshot and quits; `--street-bench <seconds>` runs a scripted walk and prints tick/frame timings.
