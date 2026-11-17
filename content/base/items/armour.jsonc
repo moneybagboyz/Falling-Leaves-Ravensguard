@@ -1,0 +1,29 @@
+// Armour and clothing shapes. Layers (outside in): cover, armour, over, under (plan §2.6). Coverage is 0-1 per body part.
+// Layer sizes/permits and thicknesses are estimates; DF size multipliers (mail shirt 0.225, breastplate 0.2, helm 0.3,
+// gauntlets 0.25) come from the Material science page.
+[
+  { "type": "armour_shape", "id": "shirt", "name": "Linen shirt", "layer": "under", "thickness_mm": 0.8, "layer_size": 5, "layer_permit": 30,
+    "size_multiplier": 0.2, "woven": true,
+    "coverage": { "upper_body": 1.0, "lower_body": 0.6, "upper_arm": 1.0, "lower_arm": 0.8, "neck": 0.3 } },
+  { "type": "armour_shape", "id": "tunic", "name": "Tunic", "layer": "over", "thickness_mm": 1.5, "layer_size": 15, "layer_permit": 35,
+    "size_multiplier": 0.25, "woven": true,
+    "coverage": { "upper_body": 1.0, "lower_body": 0.8, "upper_arm": 1.0, "lower_arm": 0.5, "upper_leg": 0.4 } },
+  { "type": "armour_shape", "id": "gambeson", "name": "Gambeson", "layer": "over", "order": 1, "thickness_mm": 9.0, "layer_size": 25, "layer_permit": 60,
+    "size_multiplier": 0.3, "woven": true, "gaps": ["armpit"],
+    "coverage": { "upper_body": 1.0, "lower_body": 0.7, "upper_arm": 1.0, "lower_arm": 0.8, "neck": 0.6, "upper_leg": 0.5 } },
+  { "type": "armour_shape", "id": "mail_hauberk", "name": "Mail hauberk", "layer": "armour", "order": 0, "thickness_mm": 4.0, "layer_size": 50, "layer_permit": 80,
+    "size_multiplier": 0.225, "elastic": true, "gaps": ["groin"],
+    "coverage": { "upper_body": 1.0, "lower_body": 0.8, "upper_arm": 1.0, "lower_arm": 0.6, "neck": 0.6, "upper_leg": 0.6 } },
+  { "type": "armour_shape", "id": "breastplate", "name": "Breastplate", "layer": "armour", "order": 1, "thickness_mm": 2.5, "layer_size": 70, "layer_permit": 100,
+    "size_multiplier": 0.2, "gaps": ["armpit", "groin"],
+    "coverage": { "upper_body": 0.95, "lower_body": 0.4 } },
+  { "type": "armour_shape", "id": "helm", "name": "Helm", "layer": "armour", "order": 1, "thickness_mm": 2.5, "layer_size": 60, "layer_permit": 100,
+    "size_multiplier": 0.3, "gaps": ["face"],
+    "coverage": { "head": 0.9 } },
+  { "type": "armour_shape", "id": "gauntlets", "name": "Gauntlets", "layer": "armour", "order": 1, "thickness_mm": 2.0, "layer_size": 60, "layer_permit": 100,
+    "size_multiplier": 0.25,
+    "coverage": { "hand": 1.0, "lower_arm": 0.4 } },
+  { "type": "armour_shape", "id": "cloak", "name": "Cloak", "layer": "cover", "thickness_mm": 2.5, "layer_size": 90, "layer_permit": 120,
+    "size_multiplier": 0.4, "woven": true,
+    "coverage": { "upper_body": 0.8, "lower_body": 0.6, "upper_arm": 0.5, "upper_leg": 0.5, "lower_leg": 0.4, "neck": 0.8 } }
+]

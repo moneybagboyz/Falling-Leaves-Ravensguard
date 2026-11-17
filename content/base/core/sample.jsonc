@@ -1,5 +1,2 @@
-// Sample content; real materials come later.
-[
-  { "type": "material", "id": "iron", "name": "Iron", "density_kg_m3": 7850, "value_per_kg": 2.0 },
-  { "type": "material", "id": "oak",  "name": "Oak",  "density_kg_m3": 750,  "value_per_kg": 0.3, },
-]
+// Sample content moved: base materials now live in ../materials/. This file is kept (empty) so the "core" folder loads.
+[]

@@ -1,0 +1,29 @@
+// Woods, bone, leather and cloth. Density/impact/shear fracture for wood, bone and leather follow the Material science
+// table (wood IY 0.01, SF 0.04; bone IY 0.2, SF 0.13, density 0.5 g/cm3; leather IY 0.01, SF 0.03, elasticity 100%).
+// Everything marked `// estimate` is a plausible number, not a DF raw. Cloth shear is overridden by the item's `woven` flag.
+[
+  { "type": "material", "id": "oak", "name": "Oak", "category": "wood", "density_kg_m3": 750, "value_per_kg": 0.3, // density estimate (real oak)
+    "impact_yield_kpa": 10000, "impact_fracture_kpa": 10000, "impact_strain_at_yield": 2000,
+    "shear_yield_kpa": 20000, "shear_fracture_kpa": 40000, "shear_strain_at_yield": 2000, // shear yield, strains estimate
+    "max_edge": 0.1, "ignition_point_c": 300 }, // ignition estimate
+  { "type": "material", "id": "ash", "name": "Ash wood", "category": "wood", "copy_from": "oak", "density_kg_m3": 680, "value_per_kg": 0.3 }, // density estimate
+
+  { "type": "material", "id": "bone", "name": "Bone", "category": "bone", "density_kg_m3": 500, "value_per_kg": 0.2,
+    "impact_yield_kpa": 200000, "impact_fracture_kpa": 200000, "impact_strain_at_yield": 1000,
+    "shear_yield_kpa": 100000, "shear_fracture_kpa": 130000, "shear_strain_at_yield": 1000, // shear yield and strains estimate
+    "max_edge": 0.1 },
+
+  { "type": "material", "id": "leather", "name": "Leather", "category": "leather", "density_kg_m3": 500, "value_per_kg": 6.0,
+    "impact_yield_kpa": 10000, "impact_fracture_kpa": 10000, "impact_strain_at_yield": 100000,
+    "shear_yield_kpa": 20000, "shear_fracture_kpa": 30000, "shear_strain_at_yield": 100000, // shear yield estimate
+    "max_edge": 0.1, "ignition_point_c": 200 }, // ignition estimate
+
+  { "type": "material", "id": "linen", "name": "Linen", "category": "cloth", "density_kg_m3": 1500, "value_per_kg": 8.0, // all cloth numbers estimate
+    "impact_yield_kpa": 20000, "impact_fracture_kpa": 30000, "impact_strain_at_yield": 100000,
+    "shear_yield_kpa": 20000, "shear_fracture_kpa": 30000, "shear_strain_at_yield": 100000,
+    "max_edge": 0.1, "ignition_point_c": 210 },
+  { "type": "material", "id": "wool", "name": "Wool", "category": "cloth", "copy_from": "linen", "density_kg_m3": 1300, "value_per_kg": 5.0,
+    "impact_yield_kpa": 25000, "impact_fracture_kpa": 35000, "ignition_point_c": 250 }, // estimate
+  { "type": "material", "id": "silk", "name": "Silk", "category": "cloth", "copy_from": "linen", "density_kg_m3": 1340, "value_per_kg": 200.0,
+    "impact_yield_kpa": 15000, "impact_fracture_kpa": 25000, "shear_fracture_kpa": 50000, "ignition_point_c": 250 } // estimate
+]
