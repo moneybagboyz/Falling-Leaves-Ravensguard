@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+env:
+  DOTNET_NOLOGO: "1"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  GODOT_VERSION: "4.7.2"
+
+jobs:
+  build-test:
+    name: Build and test (.NET)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Build
+        run: dotnet build Ravensguard.slnx -c Release
+      - name: Test
+        run: dotnet test Ravensguard.slnx -c Release --no-build --logger "console;verbosity=normal"
+
+  godot-smoke:
+    name: Godot headless import and smoke boot
+    runs-on: ubuntu-latest
+    needs: build-test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Download Godot ${{ env.GODOT_VERSION }} (.NET)
+        run: |
+          curl -sSL -o godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_mono_linux_x86_64.zip"
+          unzip -q godot.zip -d "$HOME/godot"
+          echo "GODOT=$HOME/godot/Godot_v${GODOT_VERSION}-stable_mono_linux_x86_64/Godot_v${GODOT_VERSION}-stable_mono_linux.x86_64" >> "$GITHUB_ENV"
+      - name: Build game assembly
+        run: dotnet build src/Ravensguard.Game/Ravensguard.Game.csproj -c Debug
+      - name: Import
+        working-directory: src/Ravensguard.Game
+        run: timeout 300 "$GODOT" --headless --import
+      - name: Smoke boot
+        working-directory: src/Ravensguard.Game
+        run: timeout 120 "$GODOT" --headless -- --smoke
