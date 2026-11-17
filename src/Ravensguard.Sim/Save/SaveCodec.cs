@@ -56,7 +56,15 @@ public static class SaveCodec
         if (len < 0 || len > 16 * 1024 * 1024) throw new SaveException("Corrupt save header length.");
         var buf = new byte[len];
         ReadExactly(s, buf);
-        try { return Deserialize<SaveHeader>(buf); }
+        try
+        {
+            int keys = StoredKeyCount(buf);
+            if (keys < SaveHeader.KeyCount)
+                throw new SaveException($"This save's header is incomplete or from an incompatible version ({keys} of {SaveHeader.KeyCount} header fields present); it cannot be loaded.");
+            var h = Deserialize<SaveHeader>(buf);
+            if (h.FormatVersion < 1) throw new SaveException($"This save has an invalid format version ({h.FormatVersion}); it cannot be loaded.");
+            return h;
+        }
         catch (Exception e) when (e is not SaveException) { throw new SaveException("Corrupt save header.", e); }
     }
 
@@ -73,6 +81,12 @@ public static class SaveCodec
             return new SaveFile(header, body.Sections.Select(r => new KeyValuePair<string, byte[]>(r.Name, r.Data)));
         }
         catch (Exception e) when (e is not SaveException) { throw new SaveException("Corrupt save body.", e); }
+    }
+
+    private static int StoredKeyCount(byte[] header)
+    {
+        var r = new MessagePackReader(header);
+        return r.NextMessagePackType == MessagePackType.Array ? r.ReadArrayHeader() : 0;
     }
 
     private static void ReadExactly(Stream s, Span<byte> buf)

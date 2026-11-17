@@ -42,6 +42,23 @@ public static class LandmarkPlacer
         return list;
     }
 
+    /// <summary>SHA-256 over every placed landmark (null counts as none), for determinism tests and the save check.</summary>
+    public static string ComputeHash(IReadOnlyList<PlacedLandmark>? marks)
+    {
+        using var h = System.Security.Cryptography.IncrementalHash.CreateHash(System.Security.Cryptography.HashAlgorithmName.SHA256);
+        var b8 = new byte[8];
+        void L(long v) { System.Buffers.Binary.BinaryPrimitives.WriteInt64LittleEndian(b8, v); h.AppendData(b8); }
+        void S(string s) { L(s.Length); h.AppendData(System.Text.Encoding.UTF8.GetBytes(s)); }
+        L(marks?.Count ?? 0);
+        foreach (var m in marks ?? [])
+        {
+            L(m.Index); S(m.TemplateId); S(m.Name); L(m.X); L(m.Y); L((long)m.Event.Value); S(m.EventType); S(m.EventTitle); L(m.Year); S(m.Place); S(m.Lore);
+            L(m.Props.Count);
+            foreach (var p in m.Props) { L((long)p.Kind); L(p.Dx); L(p.Dy); L(p.Variant); }
+        }
+        return Convert.ToHexString(h.GetHashAndReset());
+    }
+
     /// <summary>Parses a content prop kind ("low_wall", "SiteRuin") into the sim's prop kind; false for an unknown name.</summary>
     public static bool TryParseKind(string name, out PropKind kind) => Enum.TryParse(name.Replace("_", ""), true, out kind) && Enum.IsDefined(kind);
 
@@ -122,16 +139,29 @@ public static class LandmarkPlacer
             return _r.HeightCm[t] - ring / 8 >= 350;
         }
 
+        List<LandmarkDef> WeightedOrder(List<LandmarkDef> rest, int round)
+        {
+            var order = new List<LandmarkDef>(rest.Count);
+            for (int k = 0; rest.Count > 0; k++)
+            {
+                long total = 0;
+                foreach (var d in rest) total += Math.Max(1, d.Weight);
+                long pick = (long)(Hash(round, k, 1) % (ulong)total), acc = 0;
+                int idx = rest.Count - 1;
+                for (int i = 0; i < rest.Count; i++) { acc += Math.Max(1, rest[i].Weight); if (pick < acc) { idx = i; break; } }
+                order.Add(rest[idx]); rest.RemoveAt(idx);
+            }
+            return order;
+        }
+
         public List<PlacedLandmark> Run()
         {
             if (_defs.Count == 0) return _placed;
             int target = MinCount + (int)(Hash(0, 1) % (ulong)(MaxCount - MinCount + 1));
             for (int round = 0; round < 4 && _placed.Count < target; round++)
             {
-                var order = _defs.Where(d => _count.GetValueOrDefault(d.Id) < d.MaxPerRegion)
-                    .Select(d => (D: d, Key: Math.Log(((Hash(round, StrKey(d.Id), 1) >> 11) + 1.0) / 9007199254740993.0) / -Math.Max(1, d.Weight)))
-                    .OrderBy(x => x.Key).ThenBy(x => x.D.Id, StringComparer.Ordinal).Select(x => x.D).ToList();
-                // the key above is a weighted exponential draw: smaller means earlier, heavier weights come first more often
+                var order = WeightedOrder(_defs.Where(d => _count.GetValueOrDefault(d.Id) < d.MaxPerRegion).ToList(), round);
+                // heavier weights come first more often: each slot is a cumulative-weight draw (hash % total) from what is left, integer maths only
                 foreach (var d in order)
                 {
                     if (_placed.Count >= target) break;

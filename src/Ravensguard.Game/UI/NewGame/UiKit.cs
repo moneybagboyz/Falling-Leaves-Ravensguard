@@ -30,12 +30,17 @@ public static class UiKit
         return b;
     }
 
-    /// <summary>Keeps the keyboard shortcuts quiet while a text field has focus.</summary>
+    static readonly HashSet<LineEdit> _capturing = new();
+
+    /// <summary>Keeps the keyboard shortcuts quiet while a text field has focus. The flag follows the set of focused fields, so it clears when the field loses focus, is hidden, is disabled or leaves the tree,
+    /// and a field gaining focus before the previous one reports losing it cannot leave the shortcuts on or off by accident.</summary>
     public static void CaptureKeys(LineEdit e)
     {
-        e.FocusEntered += () => Actions.UiCaptured = true;
-        e.FocusExited += () => Actions.UiCaptured = false;
-        e.TreeExiting += () => Actions.UiCaptured = false;
+        void Set(bool on) { if (on) _capturing.Add(e); else _capturing.Remove(e); Actions.UiCaptured = _capturing.Count > 0; }
+        e.FocusEntered += () => Set(true);
+        e.FocusExited += () => Set(false);
+        e.TreeExiting += () => Set(false);
+        e.VisibilityChanged += () => { if (!e.IsVisibleInTree()) Set(false); };
         e.TextSubmitted += _ => e.ReleaseFocus();
     }
 

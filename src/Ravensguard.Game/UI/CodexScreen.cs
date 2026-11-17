@@ -28,6 +28,8 @@ public partial class CodexScreen : Control
     Label _count = null!;
     RichTextLabel _detail = null!;
     int _shotWait;
+    double _debounce = -1; // seconds until the pending search runs; < 0 = nothing pending
+    (CodexEntry E, string Blob)[] _blobs = Array.Empty<(CodexEntry, string)>(); // lower-cased "title text", built once, not on every key
     /// <summary>Dev: when set, the screen saves its own picture to this path and quits.</summary>
     public string? ShotPath { get; init; }
     /// <summary>Dev: category to start on (CodexCategory name) and entry id to show.</summary>
@@ -55,7 +57,7 @@ public partial class CodexScreen : Control
         cols.AddChild(left);
         _search = new LineEdit { PlaceholderText = L.T("CODEX_SEARCH") + "  " + InputBootstrap.Hint("menu.search"), CustomMinimumSize = new Vector2(0, 30), ClearButtonEnabled = true };
         UiKit.CaptureKeys(_search);
-        _search.TextChanged += _ => Refilter();
+        _search.TextChanged += _ => _debounce = 0.18; // typing runs the search once the player pauses
         left.AddChild(_search);
         _catBtn = UiKit.Key("", "menu.filter_type", 0, 30); _catBtn.SizeFlagsHorizontal = SizeFlags.ExpandFill; _catBtn.ClipText = true;
         _catBtn.Pressed += CycleCategory;
@@ -85,6 +87,7 @@ public partial class CodexScreen : Control
         bottom.AddChild(UiKit.Hint(L.F("CODEX_CLOSE_HINT", InputBootstrap.Hint("world.panel_codex"))));
         root.AddChild(bottom);
 
+        _blobs = _book.Entries.Select(e => (e, (e.Title + " " + e.Text).ToLowerInvariant())).ToArray();
         Refilter();
         var start = StartEntry != null ? _book.Get(StartEntry) : null;
         start ??= _shown.FirstOrDefault(e => e.Unlocked);
@@ -101,7 +104,7 @@ public partial class CodexScreen : Control
         CodexCategory? c = _cat < 0 ? null : Cats[_cat];
         var query = _search.Text;
         int total = 0, known = 0;
-        foreach (var e in _book.Search(query, c).OrderBy(e => e.Unlocked ? 0 : 1)) // known pages first, then the "?" ones
+        foreach (var e in Filter(query, c).OrderBy(e => e.Unlocked ? 0 : 1)) // known pages first, then the "?" ones
         {
             total++;
             if (e.Unlocked) known++;
@@ -113,6 +116,21 @@ public partial class CodexScreen : Control
         _catBtn.Text = L.F("CODEX_CATEGORY", CatName());
         _count.Text = L.F("CODEX_COUNT", known, total);
         if (_current != null) { int p = _shown.IndexOf(_current); if (p >= 0) _list.Select(p); }
+    }
+
+    /// <summary>Same rules as <see cref="CodexBook.Search"/> (every term must appear; locked pages only show with an empty query) over the precomputed lower-case text.</summary>
+    IEnumerable<CodexEntry> Filter(string query, CodexCategory? category)
+    {
+        var terms = query.ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        foreach (var (e, blob) in _blobs)
+        {
+            if (category != null && e.Category != category) continue;
+            if (terms.Length == 0) { yield return e; continue; }
+            if (!e.Unlocked) continue;
+            bool all = true;
+            foreach (var t in terms) if (!blob.Contains(t, StringComparison.Ordinal)) { all = false; break; }
+            if (all) yield return e;
+        }
     }
 
     static string ItemText(CodexEntry e) => e.Year >= 0 && e.Category is CodexCategory.Legend ? $"{e.Year,3}  {e.Title}" : e.Title;
@@ -134,7 +152,7 @@ public partial class CodexScreen : Control
         {
             sb.Append($"[color=#{gold}]{e.Title}[/color]\n");
             sb.Append($"[color=#{dim}]{L.F("CODEX_KIND", L.T("CODEX_CAT_" + e.Category.ToString().ToUpperInvariant()))}{(e.Year >= 0 ? "  -  " + L.F("CODEX_YEAR", e.Year) : "")}[/color]\n\n");
-            sb.Append(e.Text);
+            sb.Append(CodexRules.ResolveKeys(e.Text));
             _open.Visible = e.Sources.Count > 0 && _history != null;
         }
         _detail.Text = sb.ToString();
@@ -148,6 +166,7 @@ public partial class CodexScreen : Control
 
     public override void _Process(double delta)
     {
+        if (_debounce >= 0 && (_debounce -= delta) < 0) { _debounce = -1; Refilter(); }
         if (ShotPath == null || !Visible || ++_shotWait != 8) return;
         var img = GetViewport().GetTexture().GetImage();
         System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(ShotPath) ?? ".");

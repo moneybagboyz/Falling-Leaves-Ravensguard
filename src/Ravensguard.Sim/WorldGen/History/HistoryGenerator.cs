@@ -271,10 +271,14 @@ public sealed partial class HistoryGenerator
         r.Ruler = ruler.Id;
         var spouse = NewConsort(ruler, age + Roll((ulong)r.Index, S.Init, -6, 4));
         int kids = Roll((ulong)r.Index, S.Init, 0, 4);
-        for (int k = 0; k < kids && age - 18 - k * 3 > 0; k++)
+        int motherAge = -(ruler.Female ? ruler : spouse).BirthYear;
+        for (int k = 0; k < kids; k++)
         {
+            // the mother was 18..MaxMotherAge when each child was born (older rulers' children are simply older)
+            int hi = motherAge - 18 - k * 3, lo = Math.Max(1, motherAge - MaxMotherAge);
+            if (hi < lo) break;
             var father = ruler.Female ? spouse : ruler; var mother = ruler.Female ? ruler : spouse;
-            var kid = NewNotable(NotableRole.Heir, r.CultureId, r.Index, father.Dynasty, Pct((ulong)r.Index * 7 + (ulong)k, S.Init, 50), -(age - 19 - k * 3 > 1 ? Roll((ulong)r.Index * 5 + (ulong)k, S.Init, 1, age - 18 - k * 3 + 1) : 1), father.Id, mother.Id);
+            var kid = NewNotable(NotableRole.Heir, r.CultureId, r.Index, father.Dynasty, Pct((ulong)r.Index * 7 + (ulong)k, S.Init, 50), -Roll((ulong)r.Index * 5 + (ulong)k, S.Init, lo, hi + 1), father.Id, mother.Id);
             kid.Residence = r.Capital;
         }
         r.Treasury = Math.Max(500, r.Pop / 20);
@@ -308,6 +312,9 @@ public sealed partial class HistoryGenerator
         _h.Add(n);
         return n;
     }
+
+    /// <summary>Oldest age at which a notable woman bears a child (births in play and the realms' initial heirs).</summary>
+    public const int MaxMotherAge = 45;
 
     private Notable NewConsort(Notable spouse, int birthAge)
     {

@@ -15,15 +15,34 @@ public sealed class ArtAtlas
     readonly Dictionary<string, Image> _images = new();
     readonly Dictionary<string, AtlasTexture> _cache = new();
 
+    static ArtAtlas? _shared;
+    /// <summary>The one decoded atlas set, shared by the street view and the blueprint editor (decoded once per run).</summary>
+    public static ArtAtlas Shared => _shared ??= Load();
+
+    /// <summary>Text of a res:// file through the engine's file access, so it works in an exported build (no host file system path).</summary>
+    public static string ReadText(string resPath)
+    {
+        using var f = Godot.FileAccess.Open(resPath, Godot.FileAccess.ModeFlags.Read) ?? throw new System.IO.FileNotFoundException(resPath + ": " + Godot.FileAccess.GetOpenError());
+        return f.GetAsText();
+    }
+
+    /// <summary>Pixels of an imported res:// texture (lossless import), RGBA8.</summary>
+    public static Image ReadImage(string resPath)
+    {
+        var tex = ResourceLoader.Load<Texture2D>(resPath) ?? throw new System.IO.FileNotFoundException("texture " + resPath);
+        var img = tex.GetImage();
+        img.Convert(Image.Format.Rgba8);
+        return img;
+    }
+
     public static ArtAtlas Load()
     {
         var a = new ArtAtlas();
-        string idx = System.IO.File.ReadAllText(ProjectSettings.GlobalizePath(Dir + "index.json"));
+        string idx = ReadText(Dir + "index.json");
         using var doc = JsonDocument.Parse(idx);
         foreach (var at in doc.RootElement.GetProperty("atlases").EnumerateObject())
         {
-            var img = Image.LoadFromFile(ProjectSettings.GlobalizePath(Dir + at.Value.GetProperty("file").GetString()));
-            img.Convert(Image.Format.Rgba8);
+            var img = ReadImage(Dir + at.Value.GetProperty("file").GetString());
             a._images[at.Name] = img;
             a._textures[at.Name] = ImageTexture.CreateFromImage(img);
         }

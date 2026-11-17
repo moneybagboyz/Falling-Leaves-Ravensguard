@@ -142,6 +142,33 @@ public sealed class ChunkEntry
     [Key(0)] public ChunkKey Key { get; set; }
     [Key(1)] public ChunkSnapshot? Snapshot { get; set; }
     [Key(2)] public ChunkDelta Delta { get; set; } = new();
+
+    // Change tracking for the incremental section writer: the store bumps Version on every change it makes, and a worker may park the entry's
+    // encoded bytes here for the version it encoded. The pair is one immutable reference, so a reader never sees bytes of another version.
+    internal sealed record EncodedBytes(int Version, byte[] Bytes);
+    private int _version;
+    private EncodedBytes? _encoded;
+    internal int Version => Volatile.Read(ref _version);
+    internal void Bump() => Interlocked.Increment(ref _version);
+    internal byte[]? CachedFor(int version) => Volatile.Read(ref _encoded) is { } e && e.Version == version ? e.Bytes : null;
+    internal void Cache(int version, byte[] bytes) { if (Version == version) Volatile.Write(ref _encoded, new EncodedBytes(version, bytes)); }
+}
+
+/// <summary>A pre-encoded <see cref="ChunkEntry"/> (its MessagePack bytes), written verbatim so the section stays byte-identical to encoding the entry itself.</summary>
+[MessagePackFormatter(typeof(RawEntryFormatter))]
+public sealed class RawEntry(byte[] bytes) { public byte[] Bytes { get; } = bytes; }
+
+public sealed class RawEntryFormatter : MessagePack.Formatters.IMessagePackFormatter<RawEntry>
+{
+    public void Serialize(ref MessagePackWriter writer, RawEntry value, MessagePackSerializerOptions options) => writer.WriteRaw(value.Bytes);
+    public RawEntry Deserialize(ref MessagePackReader reader, MessagePackSerializerOptions options) => throw new NotSupportedException("write-only");
+}
+
+/// <summary>Same wire layout as <see cref="ChunkStoreData"/>, but with pre-encoded entries.</summary>
+[MessagePackObject]
+public sealed class ChunkStoreRaw
+{
+    [Key(0)] public List<RawEntry> Chunks { get; set; } = new();
 }
 
 [MessagePackObject]
@@ -178,6 +205,7 @@ public sealed class ChunkStore
             if (e.Snapshot != null) return false;
             e.Delta.ApplyTo(ChunkSnapshot.Create(generatorVersion, contentHash, content).Decode()); // the old ops must still apply cleanly
             e.Snapshot = ChunkSnapshot.Create(generatorVersion, contentHash, content);
+            e.Bump();
             return true;
         }
         _chunks[key] = new ChunkEntry { Key = key, Snapshot = ChunkSnapshot.Create(generatorVersion, contentHash, content) };
@@ -200,6 +228,7 @@ public sealed class ChunkStore
         new ChunkDelta { Ops = list }.ApplyTo(probe);
         if (e == null) _chunks[key] = e = new ChunkEntry { Key = key };
         e.Delta.Ops.AddRange(list);
+        e.Bump();
     }
 
     public ChunkSnapshot? GetSnapshot(ChunkKey key) => _chunks.TryGetValue(key, out var e) ? e.Snapshot : null;
@@ -214,11 +243,24 @@ public sealed class ChunkStore
         return c;
     }
 
-    public byte[] ToSection()
+    /// <summary>
+    /// A point-in-time copy for background encoding: O(entries) on the calling thread (entries whose encoding is already cached are only referenced; the
+    /// others copy their op list). Snapshot payloads and ops are never mutated after they are created, so the worker can read them while play goes on.
+    /// </summary>
+    public ChunkStoreSnapshot Snapshot()
     {
-        var data = new ChunkStoreData { Chunks = _chunks.Values.ToList() };
-        return SaveCodec.SerializeCompressed(data);
+        var items = new ChunkStoreSnapshot.Item[_chunks.Count];
+        int i = 0;
+        foreach (var e in _chunks.Values)
+        {
+            int v = e.Version;
+            var cached = e.CachedFor(v);
+            items[i++] = cached != null ? new(e, v, cached, null, null) : new(e, v, null, e.Snapshot, e.Delta.Ops.ToArray());
+        }
+        return new ChunkStoreSnapshot(items);
     }
+
+    public byte[] ToSection() => Snapshot().Encode();
 
     public static ChunkStore FromSection(ReadOnlyMemory<byte> bytes)
     {
@@ -226,5 +268,36 @@ public sealed class ChunkStore
         var s = new ChunkStore();
         foreach (var e in data.Chunks) s._chunks[e.Key] = e;
         return s;
+    }
+}
+
+/// <summary>See <see cref="ChunkStore.Snapshot"/>. <see cref="Encode"/> may run on any thread.</summary>
+public sealed class ChunkStoreSnapshot
+{
+    internal readonly record struct Item(ChunkEntry Entry, int Version, byte[]? Cached, ChunkSnapshot? Snapshot, ChunkOp[]? Ops);
+    private readonly Item[] _items;
+    internal ChunkStoreSnapshot(Item[] items) { _items = items; }
+    public int Count => _items.Length;
+    /// <summary>Entries encoded by the last <see cref="Encode"/> call (the rest came from the per-entry cache).</summary>
+    public int ReEncoded { get; private set; }
+
+    public byte[] Encode()
+    {
+        var raw = new ChunkStoreRaw();
+        int fresh = 0;
+        foreach (var it in _items)
+        {
+            var bytes = it.Cached;
+            if (bytes == null)
+            {
+                var copy = new ChunkEntry { Key = it.Entry.Key, Snapshot = it.Snapshot, Delta = new ChunkDelta { Ops = [.. it.Ops!] } };
+                bytes = SaveCodec.Serialize(copy);
+                it.Entry.Cache(it.Version, bytes);
+                fresh++;
+            }
+            raw.Chunks.Add(new RawEntry(bytes));
+        }
+        ReEncoded = fresh;
+        return SaveCodec.SerializeCompressed(raw);
     }
 }

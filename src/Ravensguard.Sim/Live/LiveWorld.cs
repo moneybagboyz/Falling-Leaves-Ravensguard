@@ -1,3 +1,4 @@
+using Ravensguard.Sim.Codex;
 using Ravensguard.Sim.Core;
 using Ravensguard.Sim.Lighting;
 using Ravensguard.Sim.World;
@@ -42,7 +43,30 @@ public sealed class LiveWorld
     /// <summary>Chunks the hero has moved the window across (rebuilds), for diagnostics.</summary>
     public int WindowSwaps { get; private set; }
     private int _lightRev;
+    /// <summary>
+    /// Window rebuilds run on a worker by default (the hero keeps walking in the old window meanwhile). Set before the first step; tests that need
+    /// the exact moment of a swap switch it off.
+    /// </summary>
+    public bool SynchronousStreaming { get; set; }
+    private Task<WorldWindow>? _pending;
+    private int _pendingCx, _pendingCy;
+    /// <summary>Chunks stamped into the window per tick while it catches up after a swap.</summary>
+    private const int SyncChunksPerTick = 2;
+    /// <summary>The hero's chunk may be this far (Chebyshev) from the window's centre before the window is rebuilt around it.</summary>
+    public const int RecentreDistance = 1;
+    private LightFramePair _lightPair;
+    private readonly List<LightSource> _dyn = new(1);
     public int LatitudeTenths { get; }
+
+    // ---- live play state that is saved with the world (WorldSave.CaptureLive)
+    /// <summary>The Codex of this world (unlocked entries are saved). Null until <see cref="AttachCodex"/>.</summary>
+    public CodexBook? Codex { get; private set; }
+    /// <summary>The region tiles the hero has been near, marked in the tick.</summary>
+    public ExploredTiles Explored { get; private set; } = new();
+    private readonly List<CodexEntry> _opened = [];
+    private int _lastVisitX = int.MinValue, _lastVisitY = int.MinValue, _lastExploreTile = -1;
+    /// <summary>The hero's world cell must change by this many metres before the Codex is asked again.</summary>
+    private const int VisitStepM = 8;
     public long Tick { get; private set; }
     public LiveSnapshot Snapshot { get; private set; }
 
@@ -63,7 +87,7 @@ public sealed class LiveWorld
     public LiveWorld(HamletMap map, Cell3 start, GameTime startTime, int latitudeTenths = 480)
     {
         Map = map; Grid = map.Grid; LatitudeTenths = latitudeTenths;
-        Lights = map.BuildLightGrid();
+        Lights = map.BuildLightGrid(); _lightPair = new LightFramePair(Lights);
         Pathfinder = new LevelPathfinder(Grid);
         Clock = new SimClock(startTime) { Speed = SimSpeed.X1 };
         _x = Fixed.FromInt(start.X) + Fixed.Half; _y = Fixed.FromInt(start.Y) + Fixed.Half; _z = start.Z;
@@ -75,24 +99,40 @@ public sealed class LiveWorld
     /// Streamed region mode (plan 2.3): the live bubble is a window of generated chunks around the hero. <paramref name="start"/> is in world
     /// cells (0..31999). The hero's surrounding chunks are loaded before the first step; further chunks stream in time-sliced.
     /// </summary>
-    public LiveWorld(ChunkStreamer streamer, Cell3 start, GameTime startTime, int latitudeTenths = 480)
+    public LiveWorld(ChunkStreamer streamer, Cell3 start, GameTime startTime, int latitudeTenths = 480, CodexBook? codex = null)
+        : this(streamer, start, startTime, latitudeTenths, codex, null) { }
+
+    /// <summary>Resumes a saved run (see <c>WorldSave.Restore</c>): the hero stands exactly where the save left it, with the saved clock, torch, explored tiles and Codex progress.</summary>
+    public LiveWorld(ChunkStreamer streamer, LiveResume resume, int latitudeTenths = 480, CodexBook? codex = null)
+        : this(streamer, resume.Cell, resume.Time, latitudeTenths, codex, resume) { }
+
+    private LiveWorld(ChunkStreamer streamer, Cell3 start, GameTime startTime, int latitudeTenths, CodexBook? codex, LiveResume? resume)
     {
         Streamer = streamer; LatitudeTenths = latitudeTenths;
         int cx = ChunkStreamer.FloorDiv(start.X, 32), cy = ChunkStreamer.FloorDiv(start.Y, 32);
         streamer.LoadAround(cx, cy, streamer.Settings.LoadRadius);
         Window = new WorldWindow(streamer, cx, cy);
-        Grid = Window.Grid; Map = Window.Map; Lights = Window.Lights; _lightRev = Window.LightRevision;
+        Grid = Window.Grid; Map = Window.Map; Lights = Window.Lights; _lightRev = Window.LightRevision; _lightPair = new LightFramePair(Lights);
         Pathfinder = new LevelPathfinder(Grid);
-        Clock = new SimClock(startTime) { Speed = SimSpeed.X1 };
-        _x = Fixed.FromInt(start.X - Window.OriginX) + Fixed.Half; _y = Fixed.FromInt(start.Y - Window.OriginY) + Fixed.Half; _z = start.Z;
+        Clock = resume == null ? new SimClock(startTime) { Speed = SimSpeed.X1 } : new SimClock(resume.Time, resume.MsRemainder) { Speed = resume.Speed };
+        if (resume == null) { _x = Fixed.FromInt(start.X - Window.OriginX) + Fixed.Half; _y = Fixed.FromInt(start.Y - Window.OriginY) + Fixed.Half; }
+        else
+        {
+            _x = Fixed.FromRaw((int)(resume.WorldXRaw - ((long)Window.OriginX << Fixed.FracBits)));
+            _y = Fixed.FromRaw((int)(resume.WorldYRaw - ((long)Window.OriginY << Fixed.FracBits)));
+            _facing = resume.Facing; _torch = resume.Torch; Explored = resume.Explored.Clone();
+        }
+        _z = start.Z;
         _px = _x; _py = _y; _pz = _z;
+        if (codex != null) { AttachCodex(codex); if (resume?.Codex != null) codex.Apply(resume.Codex); }
+        NoteWalked();
         Snapshot = Publish();
     }
 
     /// <summary>Test constructor: any grid, no scenery.</summary>
     public LiveWorld(LevelGrid grid, LightGrid lights, Cell3 start, GameTime startTime, int latitudeTenths = 480)
     {
-        Map = null!; Grid = grid; Lights = lights; LatitudeTenths = latitudeTenths;
+        Map = null!; Grid = grid; Lights = lights; LatitudeTenths = latitudeTenths; _lightPair = new LightFramePair(lights);
         Pathfinder = new LevelPathfinder(grid);
         Clock = new SimClock(startTime) { Speed = SimSpeed.X1 };
         _x = Fixed.FromInt(start.X) + Fixed.Half; _y = Fixed.FromInt(start.Y) + Fixed.Half; _z = start.Z;
@@ -141,34 +181,111 @@ public sealed class LiveWorld
         _moving = false;
         if (_usePending) { _usePending = false; TryPortalHere(force: true); }
         if (mult > 0) MoveHero(mult);
+        NoteWalked();
         Snapshot = Publish();
     }
 
-    /// <summary>Streams chunks around the hero; moves the window when the hero crosses into another chunk; stamps in chunks that finished loading.</summary>
+    // ---------------- Codex and map exploration (part of the live state, advanced by the tick) ----------------
+
+    /// <summary>Hands the world's Codex to the live sim: it is opened from the tick (<see cref="VisitNear"/>) and saved with the run.</summary>
+    public void AttachCodex(CodexBook book) => Codex = book;
+
+    /// <summary>Entries opened by the hero's walking since the last call (the view toasts them). Clears the list.</summary>
+    public IReadOnlyList<CodexEntry> TakeOpenedCodexEntries()
+    {
+        if (_opened.Count == 0) return [];
+        var r = _opened.ToArray(); _opened.Clear();
+        return r;
+    }
+
+    /// <summary>
+    /// The hero stands at region cell (<paramref name="worldX"/>, <paramref name="worldY"/>): landmarks within <paramref name="radiusM"/> open their Codex pages.
+    /// The tick calls this as the hero walks; the opened entries wait in <see cref="TakeOpenedCodexEntries"/>. Returns how many pages opened.
+    /// </summary>
+    public int VisitNear(int worldX, int worldY, int radiusM = 90)
+    {
+        if (Codex == null) return 0;
+        var opened = Codex.Visit(worldX, worldY, radiusM);
+        _opened.AddRange(opened);
+        return opened.Count;
+    }
+
+    /// <summary>The hero's cell in region cells (the window origin added back).</summary>
+    public (int X, int Y) WorldCell => (OriginX + _x.Floor(), OriginY + _y.Floor());
+
+    private void NoteWalked()
+    {
+        var (wx, wy) = WorldCell;
+        int tile = (wy / ExploredTiles.TileM) * ExploredTiles.Size + wx / ExploredTiles.TileM;
+        if (tile != _lastExploreTile) { _lastExploreTile = tile; Explored.Mark(wx, wy); }
+        if (Math.Abs(wx - _lastVisitX) >= VisitStepM || Math.Abs(wy - _lastVisitY) >= VisitStepM)
+        {
+            _lastVisitX = wx; _lastVisitY = wy;
+            VisitNear(wx, wy);
+        }
+    }
+
+    /// <summary>The live state a save keeps; a copy, so the caller can encode it later while the sim goes on.</summary>
+    public LiveResume CaptureResume()
+    {
+        long wx = ((long)OriginX << Fixed.FracBits) + _x.Raw, wy = ((long)OriginY << Fixed.FracBits) + _y.Raw;
+        return new LiveResume(wx, wy, _z, _facing, _torch, Clock.Now, Clock.GameMsRemainder, Clock.Speed, Explored.Clone(), Codex?.ToProgress());
+    }
+
+    /// <summary>
+    /// Streams chunks around the hero and keeps the window around the hero. The window is rebuilt only when the hero is more than
+    /// <see cref="RecentreDistance"/> chunk from its centre (hysteresis, so walking back and forth over a seam does not rebuild), and the next window is
+    /// prepared on a worker as soon as the hero leaves the centre chunk, so the swap itself is a handful of reference changes.
+    /// </summary>
     private void StreamStep()
     {
         var w = Window!;
         int hcx = ChunkStreamer.FloorDiv(w.OriginX + _x.Floor(), 32), hcy = ChunkStreamer.FloorDiv(w.OriginY + _y.Floor(), 32);
         Streamer!.Update(hcx, hcy);
-        if (hcx != w.CenterChunkX || hcy != w.CenterChunkY)
+        int dist = Math.Max(Math.Abs(hcx - w.CenterChunkX), Math.Abs(hcy - w.CenterChunkY));
+        if (_pending != null && Math.Max(Math.Abs(hcx - _pendingCx), Math.Abs(hcy - _pendingCy)) > RecentreDistance) _pending = null; // the hero went another way; the finished window is no use
+        if (dist >= 1 && _pending == null && !SynchronousStreaming)
         {
-            var nw = new WorldWindow(Streamer, hcx, hcy);
-            int dx = nw.OriginX - w.OriginX, dy = nw.OriginY - w.OriginY;
-            _x -= Fixed.FromInt(dx); _y -= Fixed.FromInt(dy); _px -= Fixed.FromInt(dx); _py -= Fixed.FromInt(dy);
-            if (_portalLock is { } pl) _portalLock = new Cell3(pl.X - dx, pl.Y - dy, pl.Z);
-            if (_path != null)
-            {
-                var moved = new List<Cell3>(_path.Count);
-                foreach (var c in _path) moved.Add(new Cell3(c.X - dx, c.Y - dy, c.Z));
-                int cut = moved.FindIndex(c => !nw.Grid.InBounds(c.X, c.Y, c.Z));
-                if (cut >= 0) moved.RemoveRange(cut, moved.Count - cut);
-                _path = moved.Count > _pathIdx ? moved : null;
-            }
-            Window = nw; Grid = nw.Grid; Map = nw.Map; Lights = nw.Lights; _lightRev = nw.LightRevision;
-            Pathfinder = new LevelPathfinder(Grid);
-            _frame = null; _lightDirty = true; WindowSwaps++;
+            // centred one chunk further the way the hero is heading, so the swap (at two chunks out) leaves the hero in the middle of the new window
+            int pcx = hcx + Math.Sign(hcx - w.CenterChunkX), pcy = hcy + Math.Sign(hcy - w.CenterChunkY);
+            _pendingCx = pcx; _pendingCy = pcy;
+            var chunks = WorldWindow.CopyLoaded(Streamer, pcx, pcy);
+            var st = Streamer;
+            _pending = Task.Run(() => new WorldWindow(st, pcx, pcy, chunks));
         }
-        else if (w.Sync() || w.LightRevision != _lightRev) { _lightRev = w.LightRevision; _lightDirty = true; }
+        if (dist > RecentreDistance)
+        {
+            WorldWindow? nw = null;
+            if (_pending is { } task && (task.IsCompleted || dist >= WorldWindow.Chunks / 2)) // at the window's edge the hero has to wait for it
+            {
+                nw = task.GetAwaiter().GetResult(); nw.Attach();
+            }
+            else if (_pending == null) nw = new WorldWindow(Streamer, hcx, hcy);
+            if (nw != null) { _pending = null; SwapWindow(nw); return; }
+        }
+        w.Sync(SyncChunksPerTick);
+        if (w.LightRevision != _lightRev) { _lightRev = w.LightRevision; _lightDirty = true; }
+    }
+
+    private void SwapWindow(WorldWindow nw)
+    {
+        var w = Window!;
+        int dx = nw.OriginX - w.OriginX, dy = nw.OriginY - w.OriginY;
+        _x -= Fixed.FromInt(dx); _y -= Fixed.FromInt(dy); _px -= Fixed.FromInt(dx); _py -= Fixed.FromInt(dy);
+        if (_portalLock is { } pl) _portalLock = new Cell3(pl.X - dx, pl.Y - dy, pl.Z);
+        if (_path != null)
+        {
+            var moved = new List<Cell3>(_path.Count);
+            foreach (var c in _path) moved.Add(new Cell3(c.X - dx, c.Y - dy, c.Z));
+            int cut = moved.FindIndex(c => !nw.Grid.InBounds(c.X, c.Y, c.Z));
+            if (cut >= 0) moved.RemoveRange(cut, moved.Count - cut);
+            _path = moved.Count > _pathIdx ? moved : null;
+        }
+        nw.Sync(SyncChunksPerTick); // chunks that finished loading while the window was being built
+        Window = nw; Grid = nw.Grid; Map = nw.Map; Lights = nw.Lights; _lightRev = nw.LightRevision;
+        Pathfinder.Rebind(Grid); // same size: reuse the per-cell search arrays
+        _lightPair = new LightFramePair(Lights);
+        _frame = null; _lightDirty = true; WindowSwaps++;
     }
 
     private Fixed SpeedOf(MoveMode m) => m switch { MoveMode.Walk => WalkSpeed, MoveMode.Sprint => SprintSpeed, _ => JogSpeed };
@@ -311,13 +428,13 @@ public sealed class LiveWorld
         {
             if (_frame == null || minute != _lastMinute || _lightDirty || flicker)
             {
-                List<LightSource>? dyn = null;
+                _dyn.Clear();
                 if (_torch)
                 {
                     int flick = (int)(Hash(Tick / 2) % 21) - 10;
-                    dyn = new List<LightSource> { new(cx, cy, _z, LightModel.TorchRadius, LightModel.TorchIntensity + flick) };
+                    _dyn.Add(new LightSource(cx, cy, _z, LightModel.TorchRadius, LightModel.TorchIntensity + flick));
                 }
-                _frame = Lights.Compute(amb, dyn);
+                _frame = _lightPair.Next(amb, _dyn);
                 _lastMinute = minute; _lightDirty = false;
             }
         }

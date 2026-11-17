@@ -10,7 +10,7 @@ public static class RegionCommand
 {
     public static int Run(string[] args)
     {
-        var baseDir = ContinentSettings.FindBaseContent();
+        var baseDir = BaseContent.Require();
         var cs = ContinentSettings.LoadDefaults(baseDir);
         var hs = HistorySettings.LoadDefaults(baseDir);
         var rs = RegionSettings.LoadDefaults(baseDir);

@@ -149,18 +149,37 @@ public partial class ScreenRouter : Control
     /// <summary>Button with a right-aligned key hint such as "[N]". The hint follows rebinds.</summary>
     public static Button HintButton(string text, string actionId)
     {
-        var b = new Button { Text = text, CustomMinimumSize = new Vector2(320, 40), Alignment = HorizontalAlignment.Left };
+        var b = new Button { Text = text, CustomMinimumSize = new Vector2(320, 40), Alignment = HorizontalAlignment.Left, ClipText = true };
         var hint = new Label
         {
             Text = InputBootstrap.Hint(actionId),
             ThemeTypeVariation = "HintLabel",
             MouseFilter = MouseFilterEnum.Ignore,
             HorizontalAlignment = HorizontalAlignment.Right,
-            AnchorRight = 1, AnchorBottom = 1, OffsetRight = -12,
+            AnchorRight = 1, AnchorBottom = 1, OffsetRight = -8,
             VerticalAlignment = VerticalAlignment.Center,
         };
         b.AddChild(hint);
-        System.Action refresh = () => { if (GodotObject.IsInstanceValid(hint)) hint.Text = InputBootstrap.Hint(actionId); };
+        // the label text never runs under the hint: every state's stylebox keeps the hint's width (plus a gap) free on the right
+        var orig = new System.Collections.Generic.Dictionary<string, StyleBox>();
+        bool readied = false;
+        void Pad()
+        {
+            if (!readied || !GodotObject.IsInstanceValid(b) || !b.IsInsideTree()) return; // the theme is only resolved once the button is ready
+            if (b.Size.X > 0 && b.Size.X < 190) hint.AddThemeFontSizeOverride("font_size", 12); // a narrow button gets a smaller hint, so label and hint both fit
+            else hint.RemoveThemeFontSizeOverride("font_size");
+            float w = hint.GetThemeFont("font").GetStringSize(hint.Text, HorizontalAlignment.Left, -1, hint.GetThemeFontSize("font_size")).X + 12;
+            foreach (var st in new[] { "normal", "hover", "pressed", "hover_pressed", "focus", "disabled" })
+            {
+                if (!orig.TryGetValue(st, out var sb)) { sb = b.GetThemeStylebox(st); if (sb == null) continue; orig[st] = sb; } // the theme's own boxes, read once
+                var d = (StyleBox)sb.Duplicate();
+                d.ContentMarginRight = Mathf.Max(sb.ContentMarginRight, w);
+                b.AddThemeStyleboxOverride(st, d);
+            }
+        }
+        b.Ready += () => { readied = true; Pad(); };
+        b.Resized += Pad;
+        System.Action refresh = () => { if (GodotObject.IsInstanceValid(hint)) { hint.Text = InputBootstrap.Hint(actionId); Pad(); } };
         InputBootstrap.Hints.Changed += refresh;
         b.TreeExiting += () => InputBootstrap.Hints.Changed -= refresh;
         return b;

@@ -72,8 +72,8 @@ public static class NewGameServices
 
     public static string NowText() => Time.GetDatetimeStringFromSystem(false, true);
 
-    /// <summary>Forgets the loaded content, so the next <see cref="Content"/> call reads base plus the user blueprint mod again (the blueprint editor calls this after a save: hot reload).</summary>
     static void OnBlueprintsReloaded(Ravensguard.Sim.Building.BuildingLibrary _) => InvalidateContent();
+    /// <summary>Forgets the loaded content, so the next <see cref="Content"/> call reads base plus the user blueprint mod again (the blueprint editor raises a reload after each save: hot reload).</summary>
     public static void InvalidateContent() => _content = null;
 
     public static ContentBundle Content()

@@ -83,6 +83,10 @@ public static class SelfTest
         Check(Settings.AutoScale(1280, 720) == 1 && Settings.AutoScale(1920, 1080) == 2 && Settings.AutoScale(3840, 2160) == 3
             && Settings.AutoScale(1920, 540) == 1 && Settings.AutoScale(800, 2000) == 1 && Settings.AutoScale(7680, 4320) == 3, "AutoScale");
 
+        // codex key hints are tokens resolved at display time, so a rebind shows
+        Check(UI.CodexRules.ResolveKeys("{@world.map}") != "{@world.map}" && UI.CodexRules.ResolveKeys("plain") == "plain", "CodexRules.ResolveKeys");
+        Check(UI.CodexRules.FromInput().All(r => !r.Text.Contains("[")), "codex rule text holds rendered key hints instead of tokens");
+
         Tools.BlueprintEditor.EditorSelfTest.Run(Check);
 
         GD.Print($"selftest: {(_fails == 0 ? "ok" : _fails + " failure(s)")}");

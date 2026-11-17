@@ -77,6 +77,12 @@ public partial class WorldCreationScreen : Control
         v.AddChild(cancel);
 
         var content = NewGameServices.Content();
+        if (_draft is { LibraryWorldId: null } && NewGameServices.CheckLibraryWritable() is { } bad)
+        {
+            // checked before the (long) generation starts, so it never ends in a world that cannot be saved
+            _done = true; _error.Text = L.F("WC_LIB_UNWRITABLE", NewGameServices.Library.Root, bad);
+            return;
+        }
         if (_draft is { LibraryWorldId: null }) _job = WorldJob.Create(_draft.WorldName, _draft.Continent, _draft.History, content.Hash, NewGameServices.NowText());
         else _job = WorldJob.Open(_open?.Id ?? _draft!.LibraryWorldId!, content.Hash);
     }

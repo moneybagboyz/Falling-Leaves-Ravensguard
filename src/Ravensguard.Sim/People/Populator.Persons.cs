@@ -50,6 +50,12 @@ public sealed partial class Populator
 
     private void SetJob(int i, Occupation occ, int employer, int si, int workLot)
     {
+        // Nobody under the job's minimum age holds it: a young relative of a master works as a servant (an apprentice in all but name), a younger child not at all.
+        if (occ != Occupation.None && _p.AgeYears(i, _nowDay) < OccupationInfo.MinWorkAge(occ))
+        {
+            bool old12 = _p.AgeYears(i, _nowDay) >= OccupationInfo.MinWorkAge(Occupation.Servant);
+            occ = old12 ? Occupation.Servant : Occupation.None; if (!old12) employer = -1; workLot = occ == Occupation.Servant ? workLot : -1;
+        }
         _p.Occupation[i] = occ; _p.Employer[i] = employer;
         if (occ == Occupation.None) { _p.WorkSettlement[i] = -1; _p.WorkLot[i] = -1; return; }
         _p.WorkSettlement[i] = si; _p.WorkLot[i] = (short)workLot;

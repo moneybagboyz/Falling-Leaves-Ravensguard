@@ -24,6 +24,8 @@ public sealed class WorldWindow
     private readonly Dictionary<(int X, int Y), List<LightSource>> _lights = [];
     private readonly HashSet<(int X, int Y)> _portalsDone = [];
     private int _seenRevision = -1;
+    /// <summary>Where chunks come from: the streamer, or (while the window is built on a worker) a fixed set of chunks copied on the main thread.</summary>
+    private Func<int, int, LoadedChunk?> _source;
 
     public int CenterChunkX { get; }
     public int CenterChunkY { get; }
@@ -38,9 +40,16 @@ public sealed class WorldWindow
     /// <summary>Bumps when static lights change (a chunk arrived), so the live sim recomputes the light frame.</summary>
     public int LightRevision { get; private set; }
 
-    public WorldWindow(ChunkStreamer streamer, int centerChunkX, int centerChunkY)
+    public WorldWindow(ChunkStreamer streamer, int centerChunkX, int centerChunkY) : this(streamer, centerChunkX, centerChunkY, null) { }
+
+    /// <summary>
+    /// Builds the window from <paramref name="chunks"/> (the loaded chunks of the block, copied on the main thread) so the work can run on another thread;
+    /// the streamer itself is not touched until the first <see cref="Sync"/> after the hand-over. Null reads the streamer directly.
+    /// </summary>
+    public WorldWindow(ChunkStreamer streamer, int centerChunkX, int centerChunkY, IReadOnlyDictionary<(int X, int Y), LoadedChunk>? chunks)
     {
         _streamer = streamer; CenterChunkX = centerChunkX; CenterChunkY = centerChunkY;
+        _source = chunks == null ? streamer.TryGet : (x, y) => chunks.GetValueOrDefault((x, y));
         var gen = streamer.Generator;
         _pieces = gen.Library.Pieces; _palette = gen.Palette;
         Grid = new LevelGrid(Cells, Cells, Math.Min(gen.MinZ, -1), Math.Max(gen.MaxZ, 1));
@@ -49,33 +58,75 @@ public sealed class WorldWindow
         Sync();
     }
 
+    /// <summary>The loaded chunks of the block around a centre, for building a window on another thread.</summary>
+    public static Dictionary<(int X, int Y), LoadedChunk> CopyLoaded(ChunkStreamer streamer, int centerChunkX, int centerChunkY)
+    {
+        var d = new Dictionary<(int X, int Y), LoadedChunk>();
+        for (int cy = centerChunkY - Chunks / 2; cy <= centerChunkY + Chunks / 2; cy++)
+            for (int cx = centerChunkX - Chunks / 2; cx <= centerChunkX + Chunks / 2; cx++)
+                if (streamer.TryGet(cx, cy) is { } c) d[(cx, cy)] = c;
+        return d;
+    }
+
+    /// <summary>Main-thread hand-over of a window built on a worker: from now on chunks come from the streamer.</summary>
+    public void Attach() => _source = _streamer.TryGet;
+
     public bool Contains(int chunkX, int chunkY) => (uint)(chunkX - ChunkX0) < Chunks && (uint)(chunkY - ChunkY0) < Chunks;
 
-    /// <summary>Stamps in chunks loaded since the last call and re-stamps chunks whose content changed. True when anything moved.</summary>
-    public bool Sync()
+    /// <summary>
+    /// Stamps in chunks loaded since the last call and re-stamps chunks whose content changed, at most <paramref name="maxChunks"/> of them (nearest the
+    /// centre first), so a big catch-up is spread over several ticks. True when anything moved; <see cref="Pending"/> says whether more is waiting.
+    /// </summary>
+    public bool Sync(int maxChunks = int.MaxValue)
     {
-        bool changed = false, lightsChanged = false;
-        for (int cy = ChunkY0; cy < ChunkY0 + Chunks; cy++)
-            for (int cx = ChunkX0; cx < ChunkX0 + Chunks; cx++)
-            {
-                var c = _streamer.TryGet(cx, cy);
-                if (c == null) continue;
-                bool had = _versions.TryGetValue((cx, cy), out int v);
-                if (had && v == c.Version) continue;
-                Apply(c, first: !had);
-                _versions[(cx, cy)] = c.Version;
-                changed = true; lightsChanged = true;
-            }
-        if (lightsChanged)
+        bool changed = false;
+        int done = 0;
+        Pending = false;
+        foreach (var (cx, cy) in _order)
         {
+            var c = _source(cx, cy);
+            if (c == null) continue;
+            int version = c.Version; // read before stamping: a change made meanwhile leaves the stored version behind, so the chunk is stamped again
+            bool had = _versions.TryGetValue((cx, cy), out int v);
+            if (had && v == version) continue;
+            if (done >= maxChunks) { Pending = true; continue; }
+            Apply(c, first: !had);
+            _versions[(cx, cy)] = version;
+            changed = true; done++;
+        }
+        _lightsDirty |= changed;
+        if (changed) Map.StreamRevision++;
+        if (_lightsDirty && !Pending)
+        {
+            // the static lights are recast once the catch-up is complete (walls of late chunks block light from early ones, so a partial recast would be redone anyway)
             var all = new List<LightSource>();
             foreach (var l in _lights.Values) all.AddRange(l);
             Lights.SetStaticLights(all);
             LightRevision++;
+            _lightsDirty = false;
+            changed = true;
         }
-        if (changed) Map.StreamRevision++;
         _seenRevision = _streamer.Revision;
         return changed;
+    }
+
+    /// <summary>True when the last <see cref="Sync"/> stopped at its chunk limit with chunks still to stamp.</summary>
+    public bool Pending { get; private set; }
+    private bool _lightsDirty;
+
+    private (int X, int Y)[] _order => _orderArr ??= BuildOrder();
+    private (int X, int Y)[]? _orderArr;
+    private (int X, int Y)[] BuildOrder()
+    {
+        var o = new List<(int X, int Y)>();
+        for (int cy = ChunkY0; cy < ChunkY0 + Chunks; cy++) for (int cx = ChunkX0; cx < ChunkX0 + Chunks; cx++) o.Add((cx, cy));
+        o.Sort((a, b) =>
+        {
+            int da = (a.X - CenterChunkX) * (a.X - CenterChunkX) + (a.Y - CenterChunkY) * (a.Y - CenterChunkY);
+            int db = (b.X - CenterChunkX) * (b.X - CenterChunkX) + (b.Y - CenterChunkY) * (b.Y - CenterChunkY);
+            return da != db ? da.CompareTo(db) : a.Y != b.Y ? a.Y.CompareTo(b.Y) : a.X.CompareTo(b.X);
+        });
+        return [.. o];
     }
 
     private void Apply(LoadedChunk c, bool first)

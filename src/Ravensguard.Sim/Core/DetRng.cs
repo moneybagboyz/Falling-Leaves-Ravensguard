@@ -15,6 +15,12 @@ public static class DetRng
         return z ^ (z >> 31);
     }
 
+    /// <summary>
+    /// <c>(h &gt;&gt; shift) % n</c> as a non-negative int in 0..n-1. The modulo is taken on the unsigned value; casting to int first
+    /// (<c>(int)(h &gt;&gt; shift) % n</c>) keeps only 32 bits of it, and half of those are negative.
+    /// </summary>
+    public static int ShiftMod(ulong h, int shift, int n) => (int)((h >> shift) % (ulong)n);
+
     /// <summary>64 random bits for the given key.</summary>
     public static ulong Next(ulong seed, long tick, ulong entityId, uint stream, uint draw)
     {

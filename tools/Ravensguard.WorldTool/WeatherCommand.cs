@@ -23,7 +23,7 @@ public static class WeatherCommand
 
     public static int Run(string[] args)
     {
-        var settings = ContinentSettings.LoadDefaults(ContinentSettings.FindBaseContent());
+        var settings = ContinentSettings.LoadDefaults(BaseContent.Require());
         string outDir = "art/out/weather";
         int year = 3, day = 8, hour = 12, scale = 3;
         int? cx = null, cy = null;
@@ -46,7 +46,7 @@ public static class WeatherCommand
             }
         }
         var c = ContinentGenerator.Generate(settings);
-        var wset = WeatherSettings.LoadDefaults(ContinentSettings.FindBaseContent());
+        var wset = WeatherSettings.LoadDefaults(BaseContent.Require());
         var cw = new ContinentalWeather(settings.Seed, wset);
         var rw = new RegionWeather(c, cw);
 

@@ -239,7 +239,7 @@ public sealed partial class HistoryGenerator
             var f = _h.GetNotable(m.Spouse);
             if (f == null || !f.Alive) continue;
             int age = _year - m.BirthYear;
-            if (age < 18 || age > 44 || m.Kids >= 8) continue;
+            if (age < 18 || age > MaxMotherAge || m.Kids >= 8) continue;
             int p = 30;
             int realm = m.Role == NotableRole.Ruler ? m.Realm : f.Realm;
             if (realm >= 0 && realm < _h.Realms.Count && _tick - Rm(realm).LastFamineTick < 48) p = 18;

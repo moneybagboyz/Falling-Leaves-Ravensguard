@@ -14,7 +14,7 @@ if (args.Length == 0 || args[0] != "continent")
     return 1;
 }
 
-var settings = ContinentSettings.LoadDefaults(ContinentSettings.FindBaseContent());
+var settings = ContinentSettings.LoadDefaults(BaseContent.Require());
 string outDir = "art/out/worldgen";
 string layoutArg = "Continents";
 int scale = 3;

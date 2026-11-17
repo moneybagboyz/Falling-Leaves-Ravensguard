@@ -30,6 +30,14 @@ public static class OccupationInfo
         or Occupation.Mason or Occupation.Weaver or Occupation.Tanner or Occupation.Cobbler or Occupation.Merchant or Occupation.Innkeeper
         or Occupation.Miller or Occupation.Mayor or Occupation.GuildMaster;
 
+    /// <summary>Youngest age to hold the job: 12 for plain farm and household work (a child helping), 16 for crafts, trades, management and arms.</summary>
+    public static int MinWorkAge(Occupation o) => o switch
+    {
+        Occupation.None or Occupation.Farmer or Occupation.Ploughman or Occupation.Shepherd or Occupation.Spinner or Occupation.Labourer or Occupation.Servant
+            or Occupation.Fisher or Occupation.Woodcutter or Occupation.CharcoalBurner => 12,
+        _ => 16,
+    };
+
     /// <summary>Primary and secondary skills a job trains (levels are set by age and a roll).</summary>
     public static (Skill A, Skill B) Skills(Occupation o) => o switch
     {

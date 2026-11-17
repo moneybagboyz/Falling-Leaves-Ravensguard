@@ -304,6 +304,8 @@ internal sealed partial class RegionBuilder
         edge.Points = [.. pts];
         int len = 0;
         for (int i = 1; i < pts.Count; i++) len += Dist(pts[i - 1].X, pts[i - 1].Y, pts[i].X, pts[i].Y);
+        // The polyline stops at the settlements' outer streets; the way on to each node centre (along the plan's streets) counts towards the length.
+        len += Dist(A.X, A.Y, pts[0].X, pts[0].Y) + Dist(B.X, B.Y, pts[^1].X, pts[^1].Y);
         edge.LengthM = len;
         // Crossings: runs of river or stream tiles along the path.
         for (int i = 0; i < path.Count;)

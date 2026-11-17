@@ -68,7 +68,9 @@ public sealed class ContinentalWeather
     public LongConditions Long { get; }
 
     private readonly System.Collections.Concurrent.ConcurrentDictionary<long, Front[]> _seasonFronts = new();
-    private (long Hour, Front[] Fronts) _last = (long.MinValue, []);
+    /// <summary>One immutable reference swapped atomically, so concurrent readers never see an hour paired with another hour's fronts.</summary>
+    private sealed record HourFronts(long Hour, Front[] Fronts);
+    private volatile HourFronts _last = new(long.MinValue, []);
 
     public ContinentalWeather(ulong seed, WeatherSettings? settings = null)
     {
@@ -127,7 +129,7 @@ public sealed class ContinentalWeather
             foreach (var f in SeasonFronts(key - k))
                 if (f.ActiveAt(hour)) res.Add(f);
         var arr = res.ToArray();
-        _last = (hour, arr);
+        _last = new HourFronts(hour, arr);
         return arr;
     }
 

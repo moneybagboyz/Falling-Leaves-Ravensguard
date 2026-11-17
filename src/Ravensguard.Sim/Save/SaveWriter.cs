@@ -50,7 +50,19 @@ public sealed class SaveWriter
         });
     }
 
-    public Task<string> WriteAutosaveAsync(SaveFile snapshot) => Run(snapshot, () =>
+    // ---- a LiveCapture is encoded on the worker, inside the write: the caller only paid for taking the snapshot
+    public Task<string> WriteManualAsync(LiveCapture capture, string name)
+    {
+        ValidateManualName(name);
+        return Run(null, () => { var f = capture.Encode(); var target = ManualPath(_dir, name); Commit(f, target, null); return target; });
+    }
+
+    public Task<string> WriteAutosaveAsync(LiveCapture capture) => Run(null, () => AutosaveWork(capture.Encode()));
+    public Task<string> WriteIronmanAsync(LiveCapture capture) => Run(null, () => IronmanWork(capture.Encode()));
+
+    public Task<string> WriteAutosaveAsync(SaveFile snapshot) => Run(snapshot, () => AutosaveWork(snapshot));
+
+    private string AutosaveWork(SaveFile snapshot)
     {
         var target = AutosavePath(_dir, 1);
         Commit(snapshot, target, () =>
@@ -64,9 +76,11 @@ public sealed class SaveWriter
             if (File.Exists(target)) File.Copy(target, AutosavePath(_dir, 2), overwrite: true);
         });
         return target;
-    });
+    }
 
-    public Task<string> WriteIronmanAsync(SaveFile snapshot) => Run(snapshot, () =>
+    public Task<string> WriteIronmanAsync(SaveFile snapshot) => Run(snapshot, () => IronmanWork(snapshot));
+
+    private string IronmanWork(SaveFile snapshot)
     {
         var target = IronmanPath(_dir);
         Commit(snapshot, target, () =>
@@ -76,10 +90,10 @@ public sealed class SaveWriter
             if (File.Exists(target)) File.Copy(target, b1, overwrite: true);
         });
         return target;
-    });
+    }
 
-    // The snapshot is already immutable; the caller only pays for capturing it.
-    private Task<string> Run(SaveFile snapshot, Func<string> work) => Task.Run(async () =>
+    // The snapshot is already immutable (or a LiveCapture, encoded here); the caller only pays for capturing it.
+    private Task<string> Run(SaveFile? snapshot, Func<string> work) => Task.Run(async () =>
     {
         await _gate.WaitAsync().ConfigureAwait(false);
         try { return work(); }

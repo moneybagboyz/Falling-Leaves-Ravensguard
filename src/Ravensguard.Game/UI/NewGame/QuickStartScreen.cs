@@ -25,7 +25,7 @@ public partial class QuickStartScreen : Control
     LineEdit _name = null!;
     Button _sex = null!, _ironman = null!, _world = null!, _advanced = null!;
     RichTextLabel _detail = null!;
-    Label _worldInfo = null!, _warn = null!;
+    Label _worldInfo = null!, _warn = null!, _ironHelp = null!;
     VBoxContainer _advBox = null!;
     LineEdit _seed = null!;
     ScrollContainer _advScroll = null!;
@@ -84,7 +84,7 @@ public partial class QuickStartScreen : Control
             var b = new Button
             {
                 ToggleMode = true, ButtonGroup = group, Alignment = HorizontalAlignment.Left, SizeFlagsHorizontal = SizeFlags.ExpandFill,
-                CustomMinimumSize = new Vector2(0, 40), Text = o.Name + "\n" + SkillLine(o), ClipText = true,
+                CustomMinimumSize = new Vector2(0, 40), Text = o.Name + "\n" + SkillLine(o), ClipText = true, TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis,
             };
             b.AddThemeStyleboxOverride("pressed", PixelTheme.PanelBox(new Color("4b3d31"), PixelTheme.Gold, 4));
             b.AddThemeStyleboxOverride("normal", PixelTheme.PanelBox(new Color("2f2722"), PixelTheme.Rim, 4));
@@ -111,7 +111,8 @@ public partial class QuickStartScreen : Control
         _ironman = UiKit.Key("", "menu.ironman", 0, 36);
         _ironman.Pressed += ToggleIronman;
         right.AddChild(_ironman);
-        right.AddChild(UiKit.Hint(L.T("QS_IRONMAN_HELP"), true));
+        _ironHelp = UiKit.Hint(L.T("QS_IRONMAN_HELP"), true);
+        right.AddChild(_ironHelp);
         _advanced = UiKit.Key("", "menu.advanced", 0, 36);
         _advanced.Pressed += ToggleAdvanced;
         right.AddChild(_advanced);
@@ -146,7 +147,7 @@ public partial class QuickStartScreen : Control
     }
 
     static string SkillLine(OriginDef o) =>
-        string.Join("  ", o.Skills.OrderByDescending(kv => kv.Value).Take(3).Select(kv => $"{UiKit.Pretty(kv.Key)} +{kv.Value}"));
+        string.Join("  ", o.Skills.OrderByDescending(kv => kv.Value).Take(2).Select(kv => $"{UiKit.Pretty(kv.Key)} +{kv.Value}"));
 
     void BuildAdvanced()
     {
@@ -209,6 +210,7 @@ public partial class QuickStartScreen : Control
     {
         if (_worldIdx != 0) return;
         _advOpen = !_advOpen;
+        _ironHelp.Visible = !_advOpen; // small windows: the panel gets the room (it scrolls for the rest)
         RefreshToggles();
     }
 

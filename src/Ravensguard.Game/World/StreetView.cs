@@ -90,7 +90,7 @@ public partial class StreetView : Control, IHandlesBack
 
     // timing / shot
     readonly Stopwatch _sw = new();
-    double _tickMsSum, _tickMsMax, _drawMsSum, _drawMsMax; long _tickCount, _drawCount;
+    double _tickMsSum, _tickMsMax, _drawMsSum, _drawMsMax, _drawMsMaxWarm; long _tickCount, _drawCount;
     int _frames; double _benchT; bool _quitting; double _stepMsFrame;
     static readonly byte[] Tone = BuildTone();
 
@@ -115,8 +115,8 @@ public partial class StreetView : Control, IHandlesBack
 
     public override void _Ready()
     {
-        _art = ArtAtlas.Load();
-        _rig = RigAtlas.Load();
+        _art = ArtAtlas.Shared;
+        _rig = RigAtlas.Shared;
         _source ??= _opt.RegionSeed is { } seed ? StreetSource.FromSeed(seed, _opt.Poi) : StreetSource.Hamlet();
         _hero = _source.Hero; _codex = _source.Codex;
         var season = _opt.Season switch { "summer" => Season.Summer, "autumn" => Season.Autumn, "winter" => Season.Winter, _ => Season.Spring };
@@ -364,6 +364,8 @@ public partial class StreetView : Control, IHandlesBack
     }
 
     /// <summary>The hero walked onto a new tile: landmarks within sight open their Codex pages (and the legends they hang on).</summary>
+    // TODO(sim contract, not landed yet): visits and explored tiles move into the sim. When LiveWorld.Codex / LiveWorld.Explored exist, delete NoteVisit and the
+    // _regionMap.Explore call in UpdateWorld, read _world.Codex for the panels, and feed RegionMap/Minimap from LiveWorld.Explored.
     void NoteVisit(float wx, float wy)
     {
         if (_codex == null) return;
@@ -428,9 +430,10 @@ public partial class StreetView : Control, IHandlesBack
     // Tile drawing is time-sliced: a new or changed chunk is queued and drawn a band of rows at a time, nearest the camera first, within DrawBudgetMs per frame
     // (one 32 x 32 chunk is ~2.3 ms; seven arrive at once when the hero crosses a chunk edge, and a level switch redraws 49).
     const double DrawBudgetMs = 3.0;
-    const int BandRows = 8;
+    const int BandRows = 8, PropBatch = 48;
     readonly List<(int X, int Y)> _todo = new(), _erase = new();
-    (int X, int Y, int Ver, int Row)? _cur;
+    sealed class Job { public int X, Y, Ver, Row, PropIdx = -1; public List<Prop>? Props; }
+    Job? _cur;
     Dictionary<(int X, int Y), List<Prop>>? _propsByChunk; HamletMap? _propsMap; int _propsRev = -1;
     readonly Stopwatch _drawSw = new();
 
@@ -481,14 +484,14 @@ public partial class StreetView : Control, IHandlesBack
             _todo.Clear();
             foreach (var (k, ver) in m.ChunkVersions)
                 if (!(_drawn.TryGetValue(k, out int dv) && dv == ver)) _todo.Add(k);
-            if (_cur is { } c && (!m.ChunkVersions.TryGetValue((c.X, c.Y), out int cv) || cv != c.Ver)) _cur = null; // changed or gone while half drawn: start over from the queue
+            if (_cur is { } c && (!m.ChunkVersions.TryGetValue((c.X, c.Y), out int cv) || cv != c.Ver)) { ClearChunkObjects((c.X, c.Y)); _cur = null; } // changed or gone while half drawn: start over from the queue
             if (_cur is { } c2) _todo.Remove((c2.X, c2.Y));
         }
         if (_todo.Count == 0 && _erase.Count == 0 && _cur == null) return;
         _drawSw.Restart();
         while (true)
         {
-            if (_erase.Count > 0)
+                        if (_erase.Count > 0)
             {
                 var k = _erase[^1]; _erase.RemoveAt(_erase.Count - 1);
                 if (!m.ChunkVersions.ContainsKey(k) && _drawn.ContainsKey(k)) EraseChunk(k);
@@ -506,31 +509,45 @@ public partial class StreetView : Control, IHandlesBack
                         if (d < bd) { bd = d; best = i; }
                     }
                     var nk = _todo[best]; _todo.RemoveAt(best);
-                    _cur = (nk.X, nk.Y, m.ChunkVersions[nk], 0);
+                    _cur = new Job { X = nk.X, Y = nk.Y, Ver = m.ChunkVersions[nk] };
                 }
-                var cur = _cur!.Value;
-                int lx = cur.X * 32 - m.OriginX, ly = cur.Y * 32 - m.OriginY, row = cur.Row;
-                DrawCells(m, lx, ly + row, lx + 32, ly + row + BandRows);
-                row += BandRows;
-                if (row >= 32)
+                var cur = _cur!;
+                var key = (cur.X, cur.Y);
+                if (cur.Row < 32)
                 {
-                    var key = (cur.X, cur.Y);
-                    ClearChunkObjects(key); // a redrawn chunk: its old props and fence pieces go as the new ones arrive
-                    if (_propsMap != m || _propsRev != m.StreamRevision)
-                    {
-                        _propsByChunk = new(); _propsMap = m; _propsRev = m.StreamRevision;
-                        foreach (var p in m.Props)
-                        {
-                            var ck = (Div(p.X + m.OriginX, 32), Div(p.Y + m.OriginY, 32));
-                            if (!_propsByChunk.TryGetValue(ck, out var l)) _propsByChunk[ck] = l = new();
-                            l.Add(p);
-                        }
-                    }
-                    if (_propsByChunk!.TryGetValue(key, out var props)) AddProps(m, key, props);
-                    _drawn[key] = cur.Ver;
-                    _cur = null;
+                    int lx = cur.X * 32 - m.OriginX, ly = cur.Y * 32 - m.OriginY;
+                    DrawCells(m, lx, ly + cur.Row, lx + 32, ly + cur.Row + BandRows);
+                    cur.Row += BandRows;
                 }
-                else _cur = (cur.X, cur.Y, cur.Ver, row);
+                else
+                {
+                    if (cur.PropIdx >= 0 && (_propsMap != m || _propsRev != m.StreamRevision)) cur.PropIdx = -1; // the window moved under a half-placed chunk: its props are in the wrong frame, place them again
+                    if (cur.PropIdx < 0)
+                    {
+                        ClearChunkObjects(key); // a redrawn chunk: its old props and fence pieces go as the new ones arrive
+                        if (_propsMap != m || _propsRev != m.StreamRevision)
+                        {
+                            _propsByChunk = new(); _propsMap = m; _propsRev = m.StreamRevision;
+                            foreach (var p in m.Props)
+                            {
+                                var ck = (Div(p.X + m.OriginX, 32), Div(p.Y + m.OriginY, 32));
+                                if (!_propsByChunk.TryGetValue(ck, out var l)) _propsByChunk[ck] = l = new();
+                                l.Add(p);
+                            }
+                        }
+                        cur.Props = _propsByChunk!.GetValueOrDefault(key);
+                        cur.PropIdx = 0;
+                    }
+                    // props go in batches (a town chunk holds a thousand sprites and fence pieces)
+                    int end = Math.Min(cur.Props?.Count ?? 0, cur.PropIdx + PropBatch);
+                    if (cur.Props != null && cur.PropIdx < end) AddProps(m, key, cur.Props, cur.PropIdx, end);
+                    cur.PropIdx = end;
+                    if (cur.PropIdx >= (cur.Props?.Count ?? 0))
+                    {
+                        _drawn[key] = cur.Ver;
+                        _cur = null;
+                    }
+                }
             }
             if (_drawSw.Elapsed.TotalMilliseconds >= budgetMs) break;
         }
@@ -604,12 +621,15 @@ public partial class StreetView : Control, IHandlesBack
         : id.StartsWith("terrain.grass") || id.StartsWith("terrain.meadow") ? 0.045
         : null;
 
-    void AddProps(HamletMap m, (int X, int Y) key, List<Prop> props)
+    void AddProps(HamletMap m, (int X, int Y) key, List<Prop> props) => AddProps(m, key, props, 0, props.Count);
+
+    void AddProps(HamletMap m, (int X, int Y) key, List<Prop> props, int from, int to)
     {
-        var list = new List<PropNode>();
+        if (!_chunkProps.TryGetValue(key, out var list)) _chunkProps[key] = list = new List<PropNode>();
         List<(int X, int Y)>? lineCells = null;
-        foreach (var p in props)
+        for (int pi = from; pi < to; pi++)
         {
+            var p = props[pi];
             if (p.Z != _viewZ) continue;
             int px = p.X + m.OriginX, py = p.Y + m.OriginY;
             if (!p.Wide && TileSprites.LineFamily(p.Sprite) is { } fam && _terrainCells.Count > 0)
@@ -628,10 +648,9 @@ public partial class StreetView : Control, IHandlesBack
             _ysort.AddChild(sp);
             list.Add(new PropNode { Node = sp, Base = p.Sprite, H = h, Shown = id });
         }
-        _chunkProps[key] = list;
         if (lineCells != null)
         {
-            _chunkLines[key] = lineCells;
+            if (_chunkLines.TryGetValue(key, out var have)) have.AddRange(lineCells); else _chunkLines[key] = lineCells;
             foreach (var c in lineCells)
             {
                 RefreshLine(c);
@@ -759,7 +778,9 @@ public partial class StreetView : Control, IHandlesBack
         _sw.Restart();
         Render((float)(_acc / Step));
         double dms = _sw.Elapsed.TotalMilliseconds;
+        if (bench && dms > 16) GD.Print($"[street] frame {_frames} draw {dms:F1} ms (tick steps {steps}, step ms {_stepMsFrame:F1})");
         _drawMsSum += dms; _drawMsMax = Math.Max(_drawMsMax, dms); _drawCount++;
+        if (_frames > 3) _drawMsMaxWarm = Math.Max(_drawMsMaxWarm, dms); // frame 1 to 3 pay for JIT and first-use setup
 
         if (_opt.Click is { } c && _frames == 2) ClickMove(new Vector2(c.X, c.Y));
         if (_opt.MapShot && _frames == 3) OpenMap();
@@ -971,7 +992,8 @@ public partial class StreetView : Control, IHandlesBack
         if (_router != null && Actions.Pressed(e, "world.back"))
         {
             // Esc belongs to this view: the pause menu. With the menu already open the router closes it (Resume) and this view stays.
-            if (!_router.HasModal && !_leaving) OpenPauseMenu();
+            if (_router.HasModal) return; // the router closes the menu (and Resume follows)
+            if (!_leaving) OpenPauseMenu();
             GetViewport().SetInputAsHandled(); return;
         }
         if (e is InputEventMouseButton { Pressed: true, ShiftPressed: true } wheel && (wheel.ButtonIndex is MouseButton.WheelUp or MouseButton.WheelDown))
@@ -1047,6 +1069,7 @@ public partial class StreetView : Control, IHandlesBack
     (bool Ok, string Message) SaveNow()
     {
         if (Run == null) return (false, "no run to save");
+        // TODO(sim contract, not landed yet): switch RunSession.Save to WorldSave.CaptureLive(worldState, _world) so hero position, torch and the live Codex are saved.
         var r = Run.Save(_world.Snapshot.Time, EffectiveSpeed, _codex);
         if (!r.Ok) _router?.ShowModal(L.T("PAUSE_SAVE_FAILED_TITLE"), L.F("PAUSE_SAVE_FAILED", r.Message), ResumeAfterMenuDeferred, (L.T("UI_OK"), null));
         return r;
@@ -1161,7 +1184,7 @@ public partial class StreetView : Control, IHandlesBack
     {
         var hh = _world.Snapshot.Hero;
         GD.Print($"[street] hero at ({hh.X:0.00},{hh.Y:0.00}) z{hh.Z}, path left {hh.PathRemaining}, t={_world.Snapshot.Time}");
-        GD.Print($"[street] ticks {_tickCount}: avg {_tickMsSum / Math.Max(1, _tickCount):F3} ms, max {_tickMsMax:F3} ms; draw {_drawCount} frames: avg {_drawMsSum / Math.Max(1, _drawCount):F3} ms, max {_drawMsMax:F3} ms");
+        GD.Print($"[street] ticks {_tickCount}: avg {_tickMsSum / Math.Max(1, _tickCount):F3} ms, max {_tickMsMax:F3} ms; draw {_drawCount} frames: avg {_drawMsSum / Math.Max(1, _drawCount):F3} ms, max {_drawMsMax:F3} ms (max after warm-up {_drawMsMaxWarm:F3} ms)");
         GetTree().Quit();
     }
 }

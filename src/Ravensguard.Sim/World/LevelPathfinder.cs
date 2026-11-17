@@ -14,7 +14,7 @@ public sealed class PathResult
 /// </summary>
 public sealed class LevelPathfinder
 {
-    private readonly LevelGrid _g;
+    private LevelGrid _g;
     private readonly int[] _gs, _parent, _seen, _closed, _viaPortal;
     private int _cur;
     private static readonly (int dx, int dy)[] Dirs = { (0, -1), (1, 0), (0, 1), (-1, 0), (1, -1), (1, 1), (-1, 1), (-1, -1) };
@@ -49,6 +49,25 @@ public sealed class LevelPathfinder
         _chunkZones = new List<int>?[g.ChunkLevelCount];
         _seenRev = new int[g.ChunkLevelCount];
         Array.Fill(_seenRev, -1);
+    }
+
+    /// <summary>
+    /// Points the pathfinder at another grid of the same size (the live window moved) instead of allocating new per-cell arrays (about 11 MB for a 7 x 7 chunk window).
+    /// The search arrays stay (they are stamped per search); the chunk-zone abstraction is forgotten and rebuilt on demand.
+    /// </summary>
+    public void Rebind(LevelGrid g)
+    {
+        if (g.Width != _g.Width || g.Height != _g.Height || g.CellCount != _g.CellCount || g.ChunkLevelCount != _g.ChunkLevelCount)
+            throw new ArgumentException("Rebind needs a grid of the same size.", nameof(g));
+        _g = g;
+        if (_abstractRevision != -1 || _zoneInfo.Count > 0)
+        {
+            Array.Fill(_zoneOf, -1);
+            _zoneInfo.Clear(); _zoneEdges.Clear(); _freeZones.Clear();
+            Array.Clear(_chunkZones);
+            Array.Fill(_seenRev, -1);
+            _liveZones = 0; _abstractRevision = -1;
+        }
     }
 
     private static int Octile(int dx, int dy)

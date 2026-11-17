@@ -64,6 +64,13 @@ public sealed class RegionWeather
         }
     }
 
+    /// <summary>
+    /// Weather for an already generated continent (no regeneration): the weather seed defaults to the continent's seed, which is what a world
+    /// made from that seed uses. <paramref name="settings"/> defaults to the built-in weather settings.
+    /// </summary>
+    public static RegionWeather ForContinent(Continent c, ulong? seed = null, WeatherSettings? settings = null)
+        => new(c, new ContinentalWeather(seed ?? c.Settings.Seed, settings));
+
     public bool IsNearWater(int cell) => _nearWater[cell] != 0 || _c.Ocean[cell] || _c.Lake[cell];
 
     // ---------------- temperature ----------------
@@ -184,23 +191,40 @@ public sealed class RegionWeather
         return d;
     }
 
-    /// <summary>Snow depth in cm at the end of a day. Chained from a fixed anchor so it never depends on cache contents.</summary>
+    /// <summary>Day of the year index (0-based) of midsummer, the day the snow chain restarts from.</summary>
+    private const int MidsummerIndex = 22;
+
+    /// <summary>
+    /// First day of the chain that ends at <paramref name="day"/>: two midsummers back from the latest one. Midsummer snow is gone everywhere
+    /// except permanent snowfields, and a depth that hits zero erases its history, so the chain agrees with an endless one and depth is continuous
+    /// from day to day (the cycle boundary only moves the start of a chain that has long since melted out).
+    /// </summary>
+    private static long ChainStart(long day)
+    {
+        long m = FloorDiv(day, 60) * 60 + MidsummerIndex;
+        if (day < m) m -= 60;
+        return m - 60;
+    }
+
+    /// <summary>Snow depth in cm at the end of a day, chained from a start fixed by the day alone so it never depends on cache contents.</summary>
     public Fixed SnowDepthEndOfDay(int cell, long day)
     {
         // Cells whose coldest plausible day stays well above freezing never hold snow.
         Fixed floor = Fixed.FromRatio(_c.Temperature[cell], 10) - SeasonalAmp(cell) - Fixed.FromInt(10);
         if (floor > Fixed.FromInt(4)) return Fixed.Zero;
-        long key = DayKey(cell, day);
-        if (_snow.TryGetValue(key, out var cached)) return Fixed.FromRaw(cached);
-        long anchor = FloorDiv(day, 16) * 16 - 16;
-        Fixed depth = Fixed.Zero;
-        for (long d = anchor; d <= day; d++)
+        if (_snow.TryGetValue(DayKey(cell, day), out var cached)) return Fixed.FromRaw(cached);
+        long start = ChainStart(day);
+        // resume from the latest cached day of this same chain (cached values of other chains are keyed by their own days only)
+        long from = start; Fixed depth = Fixed.Zero;
+        for (long d = day - 1; d >= start; d--)
+            if (_snow.TryGetValue(DayKey(cell, d), out var c) && ChainStart(d) == start) { from = d + 1; depth = Fixed.FromRaw(c); break; }
+        for (long d = from; d <= day; d++)
         {
             var s = Day(cell, d);
             depth = depth * F(97, 100) + s.SnowMm;                 // 1 mm water equivalent ~ 1 cm of fresh snow, settling 3% a day
             if (s.MeanTemp > Fixed.Zero) depth -= s.MeanTemp * F(15, 10) + s.RainMm * F(3, 10);
             depth = Fixed.Clamp(depth, Fixed.Zero, Fixed.FromInt(200));
-            if (d >= FloorDiv(day, 16) * 16) _snow[DayKey(cell, d)] = depth.Raw;
+            if (ChainStart(d) == start) _snow[DayKey(cell, d)] = depth.Raw;
         }
         if (_snow.Count > 400_000) _snow.Clear();
         return depth;
@@ -237,6 +261,8 @@ public sealed class RegionWeather
     /// <summary>Total rain (mm) on a game day, as used for the river rule. Exposed for tools and tests.</summary>
     public Fixed DailyRainMm(int cell, long day) => Day(cell, day).RainMm;
     public Fixed DailyMeanTemp(int cell, long day) => Day(cell, day).MeanTemp;
+    /// <summary>Snowfall (cm of fresh snow, 1 mm water = 1 cm) on a game day. Exposed for tools and tests.</summary>
+    public Fixed DailySnowCm(int cell, long day) => Day(cell, day).SnowMm;
 
     // ---------------- the public query ----------------
 

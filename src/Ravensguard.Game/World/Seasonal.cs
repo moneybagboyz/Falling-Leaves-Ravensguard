@@ -132,7 +132,7 @@ void fragment() {
     public Seasonal(ArtAtlas art)
     {
         for (int s = 0; s < 4; s++) _season[s] = new Vector3[16];
-        using var doc = JsonDocument.Parse(System.IO.File.ReadAllText(ProjectSettings.GlobalizePath(ArtAtlas.Dir + "season_ramps.json")));
+        using var doc = JsonDocument.Parse(ArtAtlas.ReadText(ArtAtlas.Dir + "season_ramps.json"));
         var root = doc.RootElement;
         string[] seasons = { "spring", "summer", "autumn", "winter" }, fams = { "grass", "foliage", "leaf", "conifer" };
         foreach (var row in root.GetProperty("rows").EnumerateArray())

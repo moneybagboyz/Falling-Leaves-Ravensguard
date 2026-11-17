@@ -65,13 +65,14 @@ public static class EmbarkSite
             }
         int landPct = land * 100 / (Window * Window);
         int towns = 0, villages = 0, ruins = 0;
+        List<(int X, int Y)>? townCells = null;
         foreach (var s in h.Settlements)
         {
             int sx = s.Cell % Continent.Size - cx, sy = s.Cell / Continent.Size - cy;
             if (sx < 0 || sx >= Window || sy < 0 || sy >= Window) continue;
             if (s.IsRuin) { ruins++; continue; }
             pop += s.Pop;
-            if (s.Pop >= 500) towns++; else villages++;
+            if (s.Pop >= 500) { towns++; (townCells ??= []).Add((s.Cell % Continent.Size, s.Cell / Continent.Size)); } else villages++;
         }
         int realmCount = realms.Count(b => b);
         // Distance from the window centre to the nearest active war, in km (cells are 2 km).
@@ -93,6 +94,7 @@ public static class EmbarkSite
         var parts = new List<ScorePart>(12);
         void Add(string key, int pts) { if (pts != 0) { total += pts; parts.Add(new ScorePart(key, pts)); } }
         Add("towns", towns switch { 0 => 0, 1 => 150, 2 => 250, 3 => 320, 4 => 300, _ => -100 * (towns - 4) });
+        Add("spacing", TownSpacingPoints(townCells));
         Add("rivers", riverCells >= 8 ? 150 : riverCells > 0 ? 60 : -50);
         Add("biomes", biomeCount >= 2 ? 80 * Math.Min(biomeCount, 3) : 0);
         int mount = biomes[(int)Biome.Mountain] * 100 / Math.Max(1, land);
@@ -107,6 +109,35 @@ public static class EmbarkSite
         Add("savagery", -Math.Max(0, savSum / Math.Max(1, land) - 60));
         bool excluded = reason.Length > 0;
         return new EmbarkScore(cx, cy, excluded ? Excl : total, excluded, reason, towns, villages, ruins, riverCells, biomeCount, landPct, (int)Math.Min(pop, int.MaxValue), realmCount, warKm == int.MaxValue ? -1 : warKm) { Parts = excluded ? [] : parts };
+    }
+
+    /// <summary>Good nearest-town distance in km (plan section 1: towns stand 6-10 km apart); each link is scored against it.</summary>
+    public const int SpacingMinKm = 6, SpacingMaxKm = 10;
+
+    /// <summary>
+    /// Reward windows whose towns keep to the plan's spacing: every town's nearest-town link (between the 2 km cells' centres, so a town may stand a km
+    /// either side) earns points inside 6-10 km (a little leeway for where each town stands in its cell), loses points outside.
+    /// </summary>
+    internal static int TownSpacingPoints(List<(int X, int Y)>? towns)
+    {
+        if (towns == null || towns.Count < 2) return 0;
+        int pts = 0;
+        for (int i = 0; i < towns.Count; i++)
+        {
+            long best = long.MaxValue;
+            for (int j = 0; j < towns.Count; j++)
+            {
+                if (i == j) continue;
+                long dx = towns[i].X - towns[j].X, dy = towns[i].Y - towns[j].Y;
+                best = Math.Min(best, dx * dx + dy * dy);
+            }
+            // distance in metres between cell centres, squared against the km limits (cells are 2 km)
+            long km2x100 = best * 4 * 100; // (2 * cells)^2 km^2, x100
+            if (km2x100 >= 7L * 7 * 100 && km2x100 <= 9L * 9 * 100) pts += 80;          // the middle of 6-10 km survives the jitter of where each town stands in its cell
+            else if (km2x100 >= 6L * 6 * 100 && km2x100 <= 10L * 10 * 100) pts += 25;
+            else pts -= 80;
+        }
+        return pts;
     }
 
     /// <summary>Best window by <see cref="Score"/> (ties go to the lowest y then x): three or four history towns preferred (plan §1), a river, mixed biomes, clear of active wars.</summary>

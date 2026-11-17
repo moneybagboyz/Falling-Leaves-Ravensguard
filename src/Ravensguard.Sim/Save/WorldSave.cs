@@ -6,6 +6,7 @@ using Ravensguard.Content;
 using Ravensguard.Sim.Characters;
 using Ravensguard.Sim.Codex;
 using Ravensguard.Sim.Core;
+using Ravensguard.Sim.Live;
 using Ravensguard.Sim.People;
 using Ravensguard.Sim.WorldGen;
 using Ravensguard.Sim.WorldGen.History;
@@ -36,6 +37,9 @@ public sealed class WorldState
     public HeroRecord? Hero { get; init; }
     /// <summary>The unlocked Codex entries (saved in the "codex" section when present).</summary>
     public CodexProgress? Codex { get; init; }
+    /// <summary>Live play state restored from a save made with <see cref="WorldSave.CaptureLive"/> (hero position, torch, explored tiles...), null for a save without it.
+    /// <c>new LiveWorld(streamer, state.Live, ...)</c> resumes there; <see cref="Clock"/> already holds the saved live clock.</summary>
+    public LiveResume? Live { get; init; }
     public ulong Seed => ContinentSettings.Seed;
 }
 
@@ -60,6 +64,21 @@ public sealed class WorldMeta
     [Key(11)] public long ClockMsRemainder { get; set; }
     [Key(12)] public int ClockSpeed { get; set; }
     [Key(13)] public ulong[] IdState { get; set; } = [];
+    /// <summary>Hash of the placed landmarks (a pure function of region, history and content); empty in saves made before it was stored.</summary>
+    [Key(14)] public string LandmarkHash { get; set; } = "";
+}
+
+/// <summary>The "live" section: where the hero stands and which map tiles are explored. The clock is in the meta section and the Codex in its own.</summary>
+[MessagePackObject]
+public sealed class LiveSave
+{
+    [Key(0)] public long WorldXRaw { get; set; }
+    [Key(1)] public long WorldYRaw { get; set; }
+    [Key(2)] public int Z { get; set; }
+    [Key(3)] public byte Facing { get; set; }
+    [Key(4)] public bool Torch { get; set; }
+    /// <summary>Packed explored-tile bits (see <see cref="ExploredTiles.ToBytes"/>).</summary>
+    [Key(5)] public byte[] Explored { get; set; } = [];
 }
 
 [MessagePackObject]
@@ -159,18 +178,39 @@ public sealed class ChronicleData
 /// </summary>
 public static class WorldSave
 {
-    public const string MetaSection = "meta", PeopleSection = "people", LotsSection = "region.lots", ChunksSection = ChunkStore.SectionName, ChronicleSection = "chronicle", HeroSection = "hero", CodexSection = "codex";
+    public const string MetaSection = "meta", PeopleSection = "people", LotsSection = "region.lots", ChunksSection = ChunkStore.SectionName, ChronicleSection = "chronicle", HeroSection = "hero", CodexSection = "codex", LiveSection = "live";
 
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = false };
 
     // ---------- capture ----------
 
+    /// <summary>Saves the world as it is in <paramref name="w"/> (no live play state). Encodes on the calling thread.</summary>
     public static SaveFile Capture(WorldState w, string contentHash, string gameVersion, IReadOnlyList<ModEntry>? mods = null, bool ironman = false)
+        => Snapshot(w, null, contentHash, gameVersion, mods, ironman).Encode();
+
+    /// <summary>
+    /// Saves the world together with the live play state (hero position, facing, torch, the live clock, Codex progress, explored tiles) of
+    /// <paramref name="live"/>, which replaces the world's own clock and Codex. Encodes on the calling thread; for a short hitch take a
+    /// <see cref="SnapshotLive"/> there and call <see cref="LiveCapture.Encode"/> on a worker (or use <see cref="CaptureLiveAsync"/>).
+    /// <paramref name="contentHash"/> must be the loaded content's hash (the same one <see cref="Restore"/> is given).
+    /// </summary>
+    public static SaveFile CaptureLive(WorldState world, LiveWorld live, string contentHash = "", string gameVersion = "0.1", IReadOnlyList<ModEntry>? mods = null, bool ironman = false)
+        => SnapshotLive(world, live, contentHash, gameVersion, mods, ironman).Encode();
+
+    /// <summary>The caller-thread half of a save: copies everything that play can change (people arrays, chunk store entries, live state) in a few milliseconds.</summary>
+    public static LiveCapture SnapshotLive(WorldState world, LiveWorld live, string contentHash = "", string gameVersion = "0.1", IReadOnlyList<ModEntry>? mods = null, bool ironman = false)
+        => Snapshot(world, live.CaptureResume(), contentHash, gameVersion, mods, ironman);
+
+    /// <summary><see cref="SnapshotLive"/> now, encoding on the thread pool: only the snapshot costs the caller.</summary>
+    public static Task<SaveFile> CaptureLiveAsync(WorldState world, LiveWorld live, string contentHash = "", string gameVersion = "0.1", IReadOnlyList<ModEntry>? mods = null, bool ironman = false)
     {
-        var header = new SaveHeader
-        {
-            GameVersion = gameVersion, ContentHash = contentHash, Mods = mods ?? [], WorldSeed = w.Seed, GameSeconds = w.Clock.Now.Seconds, Ironman = ironman,
-        };
+        var snap = SnapshotLive(world, live, contentHash, gameVersion, mods, ironman);
+        return Task.Run(snap.Encode);
+    }
+
+    internal static LiveCapture Snapshot(WorldState w, LiveResume? live, string contentHash, string gameVersion, IReadOnlyList<ModEntry>? mods, bool ironman)
+    {
+        (GameTime Time, long MsRemainder, SimSpeed Speed) clock = live != null ? (live.Time, live.MsRemainder, live.Speed) : (w.Clock.Now, w.Clock.GameMsRemainder, w.Clock.Speed);
         var meta = new WorldMeta
         {
             Seed = w.Seed,
@@ -178,23 +218,24 @@ public static class WorldSave
             HistorySettingsJson = JsonSerializer.Serialize(w.HistorySettings, Json),
             RegionSettingsJson = JsonSerializer.Serialize(w.RegionSettings, Json),
             EmbarkCellX = w.EmbarkCellX, EmbarkCellY = w.EmbarkCellY,
-            ContinentHash = w.Continent.ComputeHash(), HistoryHash = w.History.ComputeHash(), RegionHash = w.Population.Region.ComputeHash(),
-            PopulationHash = w.Population.ComputeHash(),
-            ClockSeconds = w.Clock.Now.Seconds, ClockMsRemainder = w.Clock.GameMsRemainder, ClockSpeed = (int)w.Clock.Speed,
+            ClockSeconds = clock.Time.Seconds, ClockMsRemainder = clock.MsRemainder, ClockSpeed = (int)clock.Speed,
             IdState = w.Ids.GetState(),
         };
-        var sections = new List<KeyValuePair<string, byte[]>>
+        var header = new SaveHeader
         {
-            new(MetaSection, SaveCodec.Serialize(meta)),
-            new(PeopleSection, SaveCodec.SerializeCompressed(EncodePeople(w.Population))),
-            new(LotsSection, SaveCodec.SerializeCompressed(EncodeLots(w.Population))),
-            new(ChunksSection, w.Chunks.ToSection()),
-            new(ChronicleSection, SaveCodec.SerializeCompressed(EncodeChronicle(w.Chronicle))),
+            GameVersion = gameVersion, ContentHash = contentHash, Mods = mods ?? [], WorldSeed = w.Seed, GameSeconds = clock.Time.Seconds, Ironman = ironman,
         };
-        // additive sections: absent for worlds that have no hero or Codex yet, so older saves and tests keep their bytes
-        if (w.Hero != null) sections.Add(new(HeroSection, SaveCodec.Serialize(w.Hero.ToSave())));
-        if (w.Codex != null) sections.Add(new(CodexSection, SaveCodec.Serialize(new CodexSave { Unlocked = w.Codex.Unlocked.ToArray() })));
-        return new SaveFile(header, sections);
+        var codex = live?.Codex ?? w.Codex;
+        return new LiveCapture
+        {
+            Header = header, Meta = meta, Continent = w.Continent, History = w.History, Region = w.Population.Region,
+            People = EncodePeople(w.Population), Lots = EncodeLots(w.Population), Chunks = w.Chunks.Snapshot(), Chronicle = EncodeChronicle(w.Chronicle),
+            Hero = w.Hero?.ToSave(), Codex = codex == null ? null : new CodexSave { Unlocked = codex.Unlocked.ToArray() },
+            Live = live == null ? null : new LiveSave
+            {
+                WorldXRaw = live.WorldXRaw, WorldYRaw = live.WorldYRaw, Z = live.Z, Facing = (byte)live.Facing, Torch = live.Torch, Explored = live.Explored.ToBytes(),
+            },
+        };
     }
 
     // ---------- restore ----------
@@ -216,12 +257,15 @@ public static class WorldSave
 
         // A world library supplies the continent and history it already generated (and hashed) so they are not regenerated twice; hashes are still verified.
         var continent = knownContinent ?? ContinentGenerator.Generate(cs);
-        Verify("continent", meta.ContinentHash, continent.ComputeHash());
+        Verify("continent", meta.ContinentHash, LayerHashes.Of(continent));
         var history = knownHistory ?? HistoryGenerator.Generate(continent, hs);
-        Verify("history", meta.HistoryHash, history.ComputeHash());
+        Verify("history", meta.HistoryHash, LayerHashes.Of(history));
         var region = RegionGenerator.Generate(continent, history, meta.EmbarkCellX, meta.EmbarkCellY, rs);
-        Verify("region", meta.RegionHash, region.ComputeHash());
-        LandmarkPlacer.Place(region, history, content); // the landmark phase is a pure function of region, history and content, so it is not stored
+        Verify("region", meta.RegionHash, LayerHashes.Of(region));
+        // the landmark phase is a pure function of region, history and content, so only its hash is stored (absent in older saves)
+        var marks = LandmarkPlacer.Place(region, history, content);
+        string markHash = LayerHashes.OfLandmarks(marks);
+        if (meta.LandmarkHash.Length > 0) Verify("landmark", meta.LandmarkHash, markHash);
 
         var pop = DecodePeople(Decode<PeopleData>(file, PeopleSection, true), Decode<RegionLotsData>(file, LotsSection, true), region);
         Verify("population", meta.PopulationHash, pop.ComputeHash());
@@ -235,9 +279,16 @@ public static class WorldSave
             codex = new CodexProgress();
             foreach (var id in Decode<CodexSave>(file, CodexSection, compressed: false).Unlocked) codex.Unlocked.Add(id);
         }
+        LiveResume? resume = null;
+        if (file.Sections.ContainsKey(LiveSection))
+        {
+            var ls = Decode<LiveSave>(file, LiveSection, compressed: true);
+            resume = new LiveResume(ls.WorldXRaw, ls.WorldYRaw, ls.Z, (Facing)ls.Facing, ls.Torch, new GameTime(meta.ClockSeconds), meta.ClockMsRemainder, (SimSpeed)meta.ClockSpeed,
+                ExploredTiles.FromBytes(ls.Explored), codex);
+        }
         return new WorldState
         {
-            Hero = hero, Codex = codex,
+            Hero = hero, Codex = codex, Live = resume,
             ContinentSettings = cs, HistorySettings = hs, RegionSettings = rs, EmbarkCellX = meta.EmbarkCellX, EmbarkCellY = meta.EmbarkCellY,
             Continent = continent, History = history, Population = pop,
             Clock = new SimClock(new GameTime(meta.ClockSeconds), meta.ClockMsRemainder) { Speed = (SimSpeed)meta.ClockSpeed },
@@ -263,6 +314,9 @@ public static class WorldSave
 
     // ---------- people ----------
 
+    /// <summary>Hash of a population as encoded (decodes the copies into a temporary population, so it can run on a worker thread).</summary>
+    internal static string PopulationHashOf(PeopleData people, RegionLotsData lots, RegionData region) => DecodePeople(people, lots, region).ComputeHash();
+
     private static T[] Cut<T>(T[] a, int n) => a.AsSpan(0, n).ToArray();
 
     private static PeopleData EncodePeople(Population pop)
@@ -286,9 +340,12 @@ public static class WorldSave
 
     private static RegionLotsData EncodeLots(Population p) => new()
     {
-        NowDay = p.NowDay, LotHousehold = p.LotHousehold, LotBeds = p.LotBeds, LotKeeper = p.LotKeeper, FiefLord = p.FiefLord,
-        FiefLordHousehold = p.FiefLordHousehold, ParcelHolder = p.ParcelHolder, PriestHousehold = p.PriestHousehold, SettlementPeople = p.SettlementPeople,
+        NowDay = p.NowDay, LotHousehold = CopyJagged(p.LotHousehold), LotBeds = CopyJagged(p.LotBeds), LotKeeper = CopyJagged(p.LotKeeper), FiefLord = (int[])p.FiefLord.Clone(),
+        FiefLordHousehold = (int[])p.FiefLordHousehold.Clone(), ParcelHolder = (int[])p.ParcelHolder.Clone(), PriestHousehold = (int[])p.PriestHousehold.Clone(),
+        SettlementPeople = (int[])p.SettlementPeople.Clone(),
     };
+
+    private static int[][] CopyJagged(int[][] a) { var r = new int[a.Length][]; for (int i = 0; i < a.Length; i++) r[i] = (int[])a[i].Clone(); return r; }
 
     private static void Fill<T>(T[] dst, T[] src, string what)
     {
@@ -351,4 +408,65 @@ public static class WorldSave
         }
         return c;
     }
+}
+
+/// <summary>
+/// A world save in two halves: <see cref="WorldSave.SnapshotLive"/> copies what play can change on the calling thread, and <see cref="Encode"/> (any thread)
+/// hashes, serialises and compresses the copies. The copies share only immutable data with the running game (generated layers, chunk snapshot payloads), so
+/// encoding can run while play goes on.
+/// </summary>
+public sealed class LiveCapture
+{
+    internal SaveHeader Header { get; init; } = null!;
+    internal WorldMeta Meta { get; init; } = null!;
+    internal Continent Continent { get; init; } = null!;
+    internal WorldHistory History { get; init; } = null!;
+    internal RegionData Region { get; init; } = null!;
+    internal PeopleData People { get; init; } = null!;
+    internal RegionLotsData Lots { get; init; } = null!;
+    internal ChunkStoreSnapshot Chunks { get; init; } = null!;
+    internal ChronicleData Chronicle { get; init; } = null!;
+    internal HeroSave? Hero { get; init; }
+    internal CodexSave? Codex { get; init; }
+    internal LiveSave? Live { get; init; }
+
+    /// <summary>Chunk entries that had to be encoded by the last <see cref="Encode"/> (the rest were reused from earlier saves).</summary>
+    public int ChunkEntriesEncoded => Chunks.ReEncoded;
+
+    public SaveFile Encode()
+    {
+        var meta = Meta;
+        // the generated layers never change after generation, so their hashes are computed once per object (at load verification, or the first save) and reused
+        meta.ContinentHash = LayerHashes.Of(Continent); meta.HistoryHash = LayerHashes.Of(History); meta.RegionHash = LayerHashes.Of(Region);
+        meta.LandmarkHash = Region.Landmarks == null ? "" : LayerHashes.OfLandmarks(Region.Landmarks); // empty: the landmark phase had not run, nothing to verify
+        meta.PopulationHash = WorldSave.PopulationHashOf(People, Lots, Region);
+        var sections = new List<KeyValuePair<string, byte[]>>
+        {
+            new(WorldSave.MetaSection, SaveCodec.Serialize(meta)),
+            new(WorldSave.PeopleSection, SaveCodec.SerializeCompressed(People)),
+            new(WorldSave.LotsSection, SaveCodec.SerializeCompressed(Lots)),
+            new(WorldSave.ChunksSection, Chunks.Encode()),
+            new(WorldSave.ChronicleSection, SaveCodec.SerializeCompressed(Chronicle)),
+        };
+        // additive sections: absent for worlds that have no hero, Codex or live state yet, so older saves and tests keep their bytes
+        if (Hero != null) sections.Add(new(WorldSave.HeroSection, SaveCodec.Serialize(Hero)));
+        if (Codex != null) sections.Add(new(WorldSave.CodexSection, SaveCodec.Serialize(Codex)));
+        if (Live != null) sections.Add(new(WorldSave.LiveSection, SaveCodec.SerializeCompressed(Live)));
+        return new SaveFile(Header, sections);
+    }
+}
+
+/// <summary>
+/// Hashes of the generated layers, computed once per layer object. Generation is finished before a layer is used, so a layer's hash cannot change; caching it
+/// keeps a save from re-hashing a 500 x 500 region (and the continent and history) every time.
+/// </summary>
+public static class LayerHashes
+{
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<object, string> Cache = new();
+
+    public static string Of(Continent c) => Cache.GetValue(c, o => ((Continent)o).ComputeHash());
+    public static string Of(WorldHistory h) => Cache.GetValue(h, o => ((WorldHistory)o).ComputeHash());
+    public static string Of(RegionData r) => Cache.GetValue(r, o => ((RegionData)o).ComputeHash());
+    /// <summary>Hash of a placed-landmark list (cached per list object; null or empty hash alike).</summary>
+    public static string OfLandmarks(IReadOnlyList<PlacedLandmark>? marks) => marks == null ? LandmarkPlacer.ComputeHash(null) : Cache.GetValue(marks, o => LandmarkPlacer.ComputeHash((IReadOnlyList<PlacedLandmark>)o));
 }

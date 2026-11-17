@@ -61,7 +61,25 @@ public static class NewGameDebug
             var d2 = NewGameServices.NewDraft(); d2.Name = "Smoke Tester"; d2.LibraryWorldId = w.Id;
             router.Push(new RegionBuildScreen(router, d2, loaded));
             if (!await Until(tree, () => router.Top is Ravensguard.Game.World.StreetView, 6000)) throw new Exception("region build did not finish");
-            router.Pop(); await Frames(tree, 1);
+            // the generated region is played in window-local cells: a click must start the hero walking (it did not once)
+            var sv = (Ravensguard.Game.World.StreetView)router.Top!;
+            await Frames(tree, 5);
+            var click = sv.DebugClickAround();
+            if (!click.Accepted || click.Moved <= 0) throw new Exception($"click-to-move in region mode did not move the hero (accepted {click.Accepted}, cell {click.Clicked}, moved {click.Moved})");
+            // Esc opens the pause menu and leaves the street view on top; Esc again closes it; the router must not pop the run
+            int depth = router.Depth;
+            if (!sv.DebugEsc()) throw new Exception("Esc did not open the pause menu over the street view");
+            await Frames(tree, 2);
+            var esc = new InputEventKey { Keycode = Key.Escape, PhysicalKeycode = Key.Escape, Pressed = true };
+            Input.ParseInputEvent(esc);
+            await Frames(tree, 3);
+            if (router.Top != sv || router.Depth != depth || router.HasModal) throw new Exception("Esc in the pause menu did not just close it (depth " + router.Depth + ", modal " + router.HasModal + ")");
+            // quit to menu without saving returns to the main menu and clears the hand-off
+            sv.DebugEsc(); await Frames(tree, 2);
+            router.CloseModal(); await Frames(tree, 1);
+            router.ReturnToMainMenu(); await Frames(tree, 2);
+            if (router.Top is not MainMenu) throw new Exception("ReturnToMainMenu did not reach the main menu");
+            if (RegionBuildScreen.Latest != null) throw new Exception("RegionBuildScreen.Latest not cleared when the street view exited");
         }
         finally { try { System.IO.Directory.Delete(tmp, true); } catch { } }
     }

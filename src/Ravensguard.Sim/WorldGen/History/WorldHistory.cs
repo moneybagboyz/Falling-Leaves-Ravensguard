@@ -93,11 +93,11 @@ public sealed class WorldHistory
         }
         foreach (var n in Notables)
         {
-            Id(n.Id); S(n.Name); S(n.Epithet); L((long)n.Role); L(n.BirthYear); L(n.DeathYear); Id(n.Dynasty); Id(n.Father); Id(n.Mother); Id(n.Spouse); L(n.Realm); Id(n.DeathEvent); S(n.DeathCause);
+            Id(n.Id); S(n.Name); S(n.Epithet); L((long)n.Role); L(n.BirthYear); L(n.DeathYear); Id(n.Dynasty); Id(n.Father); Id(n.Mother); Id(n.Spouse); L(n.Realm); Id(n.DeathEvent); S(n.DeathCause); L(n.Female ? 1 : 0); L(n.Culture); L(n.Residence);
         }
         foreach (var d in Dynasties) { Id(d.Id); S(d.Name); Id(d.Founder); }
-        foreach (var a in Artefacts) { Id(a.Id); S(a.Name); S(a.Kind); Id(a.Holder); L((long)a.Status); L(a.Cell); Id(a.LossEvent); S(a.LossNote); L(a.Transfers); }
-        foreach (var t in TradeRoutes) { Id(t.A); Id(t.B); L(t.Cost); L(t.Cells.Length); L(t.Abandoned ? 1 : 0); }
+        foreach (var a in Artefacts) { Id(a.Id); S(a.Name); S(a.Kind); Id(a.Holder); L((long)a.Status); L(a.Cell); Id(a.LossEvent); S(a.LossNote); L(a.Transfers); Id(a.Creator); L(a.CreatedTick); Id(a.CreatedEvent); }
+        foreach (var t in TradeRoutes) { Id(t.A); Id(t.B); L(t.Cost); L(t.Cells.Length); foreach (var c in t.Cells) L(c); L(t.Abandoned ? 1 : 0); }
         foreach (var b in Battlefields) { L(b.Cell); Id(b.Event); S(b.Name); L(b.Tick); L(b.Dead); }
         foreach (var g in Grudges) { L(g.From); L(g.To); L(g.Strength); Id(g.CauseEvent); }
         foreach (var w in Wars) { L(w.Attacker); L(w.Defender); L(w.StartTick); L(w.EndTick); L((long)w.Cb); Id(w.CbEvent); Id(w.DeclEvent); Id(w.EndEvent); L(w.Score); S(w.Outcome); }

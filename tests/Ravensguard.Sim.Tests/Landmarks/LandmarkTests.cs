@@ -66,7 +66,7 @@ public class LandmarkTests(ITestOutputHelper output)
                     var e = w.History.Chronicle.Get(m.Event);
                     Assert.NotNull(e);
                     Assert.Contains(e!.TypeId, d.AttachEvents);
-                    Assert.Contains(m.EventTitle, m.Lore);
+                    if (d.Lore.Contains("{event}")) Assert.Contains(m.EventTitle, m.Lore); // a template may name the realm or the person instead of the event
                     Assert.Equal(e.When.Year, m.Year);
                 }
                 Assert.DoesNotContain("{", m.Lore);

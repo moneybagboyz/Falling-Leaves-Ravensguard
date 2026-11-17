@@ -191,7 +191,7 @@ public sealed partial class ChunkGenerator
             for (int tries = 0; tries < 6; tries++)
             {
                 ulong h = c.R(salt * 97 + (int)k * 13 + tries);
-                int a = a0 + (int)(h % (ulong)(a1 - a0 + 1)), d = d0 + (int)(h >> 20) % (d1 - d0 + 1);
+                int a = a0 + (int)(h % (ulong)(a1 - a0 + 1)), d = d0 + DetRng.ShiftMod(h, 20, d1 - d0 + 1);
                 if (c.Prop(a, d, k, (int)(h >> 40) & 3, k == PropKind.Cart, 1)) break;
             }
     }
@@ -311,7 +311,7 @@ public sealed partial class ChunkGenerator
                 ulong h = c.R(a * 977 + d * 131);
                 if (h % 100 >= 42) continue;
                 if (!c.Clear(a, d, 0) || !c.Clear(a, d + 1, 0)) continue;
-                c.Prop(a, d, PropKind.Headstone, (int)(h >> 8) % 3, false, 0);
+                c.Prop(a, d, PropKind.Headstone, DetRng.ShiftMod(h, 8, 3), false, 0);
                 c.Prop(a, d + 1, PropKind.GraveMound, 0, false, 0);
             }
         // a couple of yews at the back

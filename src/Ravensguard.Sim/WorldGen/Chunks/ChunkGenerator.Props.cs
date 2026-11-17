@@ -38,7 +38,7 @@ public sealed partial class ChunkGenerator
                 {
                     ulong h = H(StSite, s.X * 131L + n, s.Y);
                     int rad = s.Kind == SiteKind.Battlefield ? 14 : s.Kind == SiteKind.Ruin ? 7 : 3;
-                    int px = s.X + (int)(h % (ulong)(2 * rad + 1)) - rad, py = s.Y + (int)(h >> 16) % (2 * rad + 1) - rad;
+                    int px = s.X + (int)(h % (ulong)(2 * rad + 1)) - rad, py = s.Y + DetRng.ShiftMod(h, 16, 2 * rad + 1) - rad;
                     if (!In(px, py) || (px == s.X && py == s.Y)) continue;
                     var dk = s.Kind switch { SiteKind.Ruin => PropKind.SiteRuin, SiteKind.Battlefield => PropKind.SiteBattlefield, SiteKind.Cave or SiteKind.Barrow => PropKind.Boulder, _ => PropKind.Rocks };
                     props.Add(new PendingProp(px, py, dk, (byte)(h >> 40 & 3), PSite, ushort.MaxValue));
@@ -93,7 +93,7 @@ public sealed partial class ChunkGenerator
             for (int bx = FloorDiv(cx0, 3); bx <= FloorDiv(cx0 + Size - 1, 3); bx++)
             {
                 ulong h = H(StTree, bx, by);
-                int px = bx * 3 + (int)(h % 3), py = by * 3 + (int)(h >> 8) % 3;
+                int px = bx * 3 + (int)(h % 3), py = by * 3 + DetRng.ShiftMod(h, 8, 3);
                 if (!In(px, py) || Outside(px, py)) continue;
                 int dens = Bilinear(Region.Forest, px, py) / 64;
                 int p = dens < 6 ? 3 : Math.Min(205, 8 + (dens - 6) * 2);

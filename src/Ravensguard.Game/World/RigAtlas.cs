@@ -21,14 +21,16 @@ public sealed class RigAtlas
     readonly Dictionary<string, Piece[][]> _sprites = new();
     readonly Dictionary<Piece, AtlasTexture> _cache = new();
 
+    static RigAtlas? _shared;
+    public static RigAtlas Shared => _shared ??= Load();
+
     public static RigAtlas Load()
     {
         var a = new RigAtlas();
         string dir = ArtAtlas.Dir;
-        using var doc = JsonDocument.Parse(System.IO.File.ReadAllText(ProjectSettings.GlobalizePath(dir + "rig_index.json")));
+        using var doc = JsonDocument.Parse(ArtAtlas.ReadText(dir + "rig_index.json"));
         var r = doc.RootElement;
-        var img = Image.LoadFromFile(ProjectSettings.GlobalizePath(dir + r.GetProperty("atlas").GetString()));
-        img.Convert(Image.Format.Rgba8);
+        var img = ArtAtlas.ReadImage(dir + r.GetProperty("atlas").GetString());
         a._tex = ImageTexture.CreateFromImage(img);
         a.Order = r.GetProperty("order").EnumerateArray().Select(e => e.GetString()!).ToArray();
         var anc = r.GetProperty("anchorX");
@@ -93,22 +95,43 @@ public sealed partial class RigActor : Node2D
                 if (rig.Outfits[outfit].Contains(l)) Add(l, p);
     }
 
+    readonly record struct Slot(bool Visible, Texture2D? Tex, Vector2 Pos);
+    readonly Dictionary<(Facing Facing, string Action, int Frame), Slot[]> _poses = new();
+    (Facing, string, int)? _last;
+
+    /// <summary>Sets the figure's pose. Resolved slots are cached per (facing, action, frame), so a steady pose costs a dictionary lookup, and an unchanged one nothing.</summary>
     public void Pose(Facing facing, string action, int frame)
     {
-        var (view, mirror) = RigAtlas.ViewOf(facing);
-        _flip.Scale = new Vector2(mirror ? -1 : 1, 1);
         int n = _rig.Frames.TryGetValue(action, out var c) ? c : 1;
         frame = ((frame % n) + n) % n;
-        int ax = _rig.AnchorX[view];
-        string? lastLayer = null; RigAtlas.Piece[] pcs = System.Array.Empty<RigAtlas.Piece>();
-        foreach (var (layer, plane, node) in _sprites)
+        var key = (facing, action, frame);
+        if (_last == key) return;
+        _last = key;
+        if (!_poses.TryGetValue(key, out var slots)) _poses[key] = slots = Resolve(facing, action, frame);
+        var (_, mirror) = RigAtlas.ViewOf(facing);
+        _flip.Scale = new Vector2(mirror ? -1 : 1, 1);
+        for (int i = 0; i < slots.Length; i++)
         {
+            var node = _sprites[i].Node;
+            node.Visible = slots[i].Visible;
+            if (!slots[i].Visible) continue;
+            node.Texture = slots[i].Tex; node.Position = slots[i].Pos;
+        }
+    }
+
+    Slot[] Resolve(Facing facing, string action, int frame)
+    {
+        var (view, _) = RigAtlas.ViewOf(facing);
+        int ax = _rig.AnchorX[view];
+        var res = new Slot[_sprites.Count];
+        string? lastLayer = null; RigAtlas.Piece[] pcs = System.Array.Empty<RigAtlas.Piece>();
+        for (int i = 0; i < res.Length; i++)
+        {
+            var (layer, plane, _) = _sprites[i];
             if (layer != lastLayer) { pcs = _rig.Get(layer, view, _stance, action, frame); lastLayer = layer; }
             var piece = pcs.FirstOrDefault(p => p.Plane == plane && p.W > 0);
-            if (piece.W == 0) { node.Visible = false; continue; }
-            node.Visible = true;
-            node.Texture = _rig.Texture(piece);
-            node.Position = new Vector2(piece.Ox - ax, piece.Oy - 64);
+            res[i] = piece.W == 0 ? new Slot(false, null, default) : new Slot(true, _rig.Texture(piece), new Vector2(piece.Ox - ax, piece.Oy - 64));
         }
+        return res;
     }
 }

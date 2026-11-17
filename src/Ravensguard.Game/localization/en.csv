@@ -522,3 +522,27 @@ ACTION_BLUEPRINTEDITOR_SAVE,Save
 ACTION_BLUEPRINTEDITOR_SAVE_AS,Save as
 ACTION_BLUEPRINTEDITOR_CLOSE,Close editor
 BPEDIT_LAYER,Active layer
+UI_OK,OK
+RB_SAVE_FAILED_TITLE,The first save failed
+RB_SAVE_FAILED,"The run could not be written to disk: {0}\nYou can play, but nothing is saved until Save works (Esc, Save)."
+PAUSE_TITLE,Paused
+PAUSE_BODY,The world is paused.
+PAUSE_BODY_IRONMAN,The world is paused. An Ironman run saves itself when you leave.
+PAUSE_RESUME,Resume
+PAUSE_SAVE,Save
+PAUSE_SETTINGS,Settings
+PAUSE_QUIT,Quit to main menu
+PAUSE_SAVED,Saved: {0}
+PAUSE_SAVE_FAILED_TITLE,Save failed
+PAUSE_SAVE_FAILED,"The run could not be saved: {0}"
+PAUSE_QUIT_TITLE,Leave this run?
+PAUSE_QUIT_BODY,Save before going back to the main menu?
+PAUSE_SAVE_QUIT,Save and quit
+PAUSE_QUIT_NOSAVE,Quit without saving
+PAUSE_QUIT_ANYWAY,Quit anyway
+STREET_BLUEPRINTS_RELOADED,Blueprints reloaded: the next new game or street view is generated from them.
+BPEDIT_SAVE_ANYWAY,Save anyway
+BPEDIT_SAVE_ANYWAY_TIP,Write the blueprint even though validation found problems.
+WL_DELETE_FAILED_TITLE,Could not delete
+WL_DELETE_FAILED,"'{0}' could not be deleted: {1}"
+WC_LIB_UNWRITABLE,"The world library folder cannot be written ({0}): {1}"

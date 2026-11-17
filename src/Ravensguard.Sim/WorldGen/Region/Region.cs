@@ -64,7 +64,7 @@ public sealed class Region
     public List<RegionVein> Veins { get; } = [];
     public List<RegionRealm> Realms { get; } = [];
     public List<ActiveWarMarker> ActiveWars { get; } = [];
-    /// <summary>Authored landmarks placed by <see cref="LandmarkPlacer"/> (a separate phase after generation; null until it has run). Not part of <see cref="ComputeHash"/>.</summary>
+    /// <summary>Authored landmarks placed by <see cref="LandmarkPlacer"/> (a separate phase after generation; null until it has run). Not part of <see cref="ComputeHash"/>; see <see cref="LandmarkPlacer.ComputeHash"/>.</summary>
     public IReadOnlyList<PlacedLandmark>? Landmarks { get; set; }
 
     public static int Index(int x, int y) => y * Size + x;
@@ -128,9 +128,9 @@ public sealed class Region
         foreach (var w in Waterways)
         {
             L(w.Id); L((long)w.Kind); Pts(w.Points); foreach (var v in w.WidthCm) L(v); foreach (var v in w.DepthCm) L(v);
-            L(w.Tiles.Length); L((long)w.End); L(w.EndRef); L(w.LengthM); L(w.CatchmentTenthsKm2);
+            L(w.Tiles.Length); foreach (var t in w.Tiles) L(t); L((long)w.End); L(w.EndRef); L(w.LengthM); L(w.CatchmentTenthsKm2);
         }
-        foreach (var l in Lakes) { L(l.Id); L(l.Tiles); L(l.SurfaceCm); L(l.MaxDepthCm); L(l.Center.X); L(l.Center.Y); }
+        foreach (var l in Lakes) { L(l.Id); L(l.Tiles); L(l.SurfaceCm); L(l.MaxDepthCm); L(l.Center.X); L(l.Center.Y); L(l.MinTileX); L(l.MinTileY); L(l.MaxTileX); L(l.MaxTileY); }
         foreach (var n in RoadNodes) { L(n.Id); L((long)n.Kind); L(n.Settlement); L(n.X); L(n.Y); }
         foreach (var e in RoadEdges)
         {
@@ -140,11 +140,11 @@ public sealed class Region
         foreach (var s in Settlements)
         {
             Id(s.Id); S(s.Name); L((long)s.Class); L(s.TileX); L(s.TileY); L(s.CenterX); L(s.CenterY); L(s.TargetPop); L(s.Households);
-            Id(s.HistoryId); L(s.Realm); L(s.FiefIndex); L(s.OnRiver ? 1 : 0); L(s.FieldAcresDemand); L(s.FieldAcres); L(s.RoadNode);
+            Id(s.HistoryId); L(s.Realm); L(s.FiefIndex); L(s.Culture); L(s.NearWaterway); L(s.OnRiver ? 1 : 0); L(s.FieldAcresDemand); L(s.FieldAcres); L(s.RoadNode);
             var p = s.Plan;
             L(p.Horizontal ? 1 : 0); L(p.Square.X); L(p.Square.Y); L(p.Square.W); L(p.Square.H); L(p.RadiusM); L(p.ChurchLot); L(p.ManorLot); L(p.MillLot);
             foreach (var st in p.Streets) { L(st.A.X); L(st.A.Y); L(st.B.X); L(st.B.Y); L(st.WidthM); }
-            foreach (var lot in p.Lots) { L(lot.Index); L((long)lot.Use); L((long)lot.Dwelling); S(lot.BlueprintId); L(lot.Rect.X); L(lot.Rect.Y); L(lot.Rect.W); L(lot.Rect.H); L(lot.Facing); L(lot.Wealth); }
+            foreach (var lot in p.Lots) { L(lot.Index); L((long)lot.Use); L((long)lot.Dwelling); S(lot.BlueprintId); L(lot.Rect.X); L(lot.Rect.Y); L(lot.Rect.W); L(lot.Rect.H); L(lot.Facing); L(lot.Wealth); L(lot.Vacant ? 1 : 0); }
             foreach (var q in s.Parcels) L(q);
         }
         foreach (var f in Fiefs) { Id(f.Id); S(f.Name); L(f.Realm); L(f.SeatSettlement); L(f.ManorLot); foreach (var q in f.Settlements) L(q); L(f.Acres); L(f.Households); L(f.Pop); }

@@ -17,8 +17,8 @@ public static class HashesCommand
     public static int Run(string[] args)
     {
         var seeds = (Opt(args, "--seeds") ?? "1,1234").Split(',', StringSplitOptions.RemoveEmptyEntries).Select(ulong.Parse).ToArray();
-        var baseDir = ContinentSettings.FindBaseContent();
-        var db = new ModLoader(ContentTypeRegistry.Default).Load([baseDir!]).Database;
+        var baseDir = BaseContent.Require();
+        var db = new ModLoader(ContentTypeRegistry.Default).Load([baseDir]).Database;
         foreach (var seed in seeds)
         {
             var cs = ContinentSettings.LoadDefaults(baseDir); cs.Seed = seed;

@@ -10,7 +10,7 @@ public static class HistoryCommand
 {
     public static int Run(string[] args)
     {
-        var baseDir = ContinentSettings.FindBaseContent();
+        var baseDir = BaseContent.Require();
         var cs = ContinentSettings.LoadDefaults(baseDir);
         var hs = HistorySettings.LoadDefaults(baseDir);
         string outDir = "art/out/worldgen", layout = "Continents";

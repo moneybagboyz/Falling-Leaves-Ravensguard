@@ -11,8 +11,7 @@ namespace Ravensguard.Game.Tools.BlueprintEditor;
 /// <summary>The real game sprites for build pieces: the baked atlas plus the same sprite rules <see cref="TileSprites"/> gives the street view.</summary>
 public static class EditorArt
 {
-    static ArtAtlas? _atlas;
-    public static ArtAtlas Atlas => _atlas ??= ArtAtlas.Load();
+    public static ArtAtlas Atlas => ArtAtlas.Shared; // the same decoded atlases the street view uses
 
     /// <summary>First sprite of the alternatives list the atlas holds (the generator may name sprites that are not baked yet).</summary>
     public static string? Resolve(string? id)

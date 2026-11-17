@@ -26,6 +26,11 @@ public sealed class ChunkStreamer
     private readonly Dictionary<(int X, int Y), LoadedChunk> _loaded = [];
     private readonly (int Dx, int Dy)[] _order;
     private readonly Stopwatch _sw = new();
+    private double _avgLoadMs = 1.0;
+
+    /// <summary>Chunks per region side (32 km / 32 m); chunk coordinates outside 0..RegionChunks-1 are off the region.</summary>
+    public const int RegionChunks = 1000;
+    public static bool InRegion(int cx, int cy) => (uint)cx < RegionChunks && (uint)cy < RegionChunks;
 
     public ChunkGenerator Generator { get; }
     public ChunkStore Store { get; }
@@ -66,6 +71,8 @@ public sealed class ChunkStreamer
     public LoadedChunk LoadSync(int cx, int cy)
     {
         if (_loaded.TryGetValue((cx, cy), out var have)) return have;
+        // Off the region there is nothing to generate or remember: an empty chunk (closed cells) is "loaded" so the hero never waits on it, and it is never stored.
+        if (!InRegion(cx, cy)) { var empty = new LoadedChunk(cx, cy); _loaded[(cx, cy)] = empty; Revision++; return empty; }
         _sw.Restart();
         var c = new LoadedChunk(cx, cy);
         if (Store.Contains(new ChunkKey(cx, cy, 0)))
@@ -91,7 +98,7 @@ public sealed class ChunkStreamer
             GeneratedCount++;
         }
         double ms = _sw.Elapsed.TotalMilliseconds;
-        LastLoadMs = ms; MaxLoadMs = Math.Max(MaxLoadMs, ms); GenerateMsTotal += ms;
+        LastLoadMs = ms; MaxLoadMs = Math.Max(MaxLoadMs, ms); GenerateMsTotal += ms; _avgLoadMs = _avgLoadMs * 0.8 + ms * 0.2;
         _loaded[(cx, cy)] = c;
         Revision++;
         return c;
@@ -118,11 +125,14 @@ public sealed class ChunkStreamer
             if (!_loaded.ContainsKey((heroChunkX + dx, heroChunkY + dy))) { LoadSync(heroChunkX + dx, heroChunkY + dy); loaded++; }
         }
         var t0 = Stopwatch.GetTimestamp();
+        int extra = 0;
         foreach (var (dx, dy) in _order)
         {
             if (Math.Max(Math.Abs(dx), Math.Abs(dy)) <= sync) continue;
             if (_loaded.ContainsKey((heroChunkX + dx, heroChunkY + dy))) continue;
-            LoadSync(heroChunkX + dx, heroChunkY + dy); loaded++;
+            // do not start a chunk that is expected to run past the budget (the average of the loads so far), except the first one beyond the sync ring
+            if (extra > 0 && Stopwatch.GetElapsedTime(t0).TotalMilliseconds + _avgLoadMs > budget) break;
+            LoadSync(heroChunkX + dx, heroChunkY + dy); loaded++; extra++;
             if (Stopwatch.GetElapsedTime(t0).TotalMilliseconds >= budget) break;
         }
         int keep = Settings.KeepRadius;

@@ -77,7 +77,16 @@ public partial class WorldsScreen : Control
                 var msg = new Label { Text = L.F("WL_CONFIRM", w.Name, w.Runs.Count), ThemeTypeVariation = "WarnLabel", SizeFlagsHorizontal = SizeFlags.ExpandFill, AutowrapMode = TextServer.AutowrapMode.WordSmart };
                 var yes = new Button { Text = L.T("WL_CONFIRM_YES"), CustomMinimumSize = new Vector2(140, 36) };
                 var no = new Button { Text = L.T("WL_CONFIRM_NO"), CustomMinimumSize = new Vector2(140, 36) };
-                yes.Pressed += () => { NewGameServices.Library.Delete(w.Id); NewGameServices.Forget(w.Id); _confirming = null; Reload(); };
+                yes.Pressed += () =>
+                {
+                    try { NewGameServices.Library.Delete(w.Id); NewGameServices.Forget(w.Id); }
+                    catch (System.Exception ex) // locked or read-only files: say so, and put the row back to normal
+                    {
+                        GD.PushWarning("could not delete world " + w.Id + ": " + ex.Message);
+                        _router.ShowModal(L.T("WL_DELETE_FAILED_TITLE"), L.F("WL_DELETE_FAILED", w.Name, ex.Message), (L.T("UI_OK"), null));
+                    }
+                    _confirming = null; Reload();
+                };
                 no.Pressed += () => { _confirming = null; Rebuild(); };
                 row.AddChild(msg); row.AddChild(yes); row.AddChild(no);
                 _rows.AddChild(UiKit.Panel(row));

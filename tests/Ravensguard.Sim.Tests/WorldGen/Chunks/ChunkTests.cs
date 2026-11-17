@@ -330,7 +330,14 @@ public class ChunkTests(ChunkWorldFixture fx, ITestOutputHelper output) : IClass
         w.SetInput(new MoveInput(streetEastWest ? 1 : 0, streetEastWest ? 0 : 1, Sprint: true));
         double Along() => streetEastWest ? w.OriginX + w.Snapshot.Hero.X.ToDouble() : w.OriginY + w.Snapshot.Hero.Y.ToDouble();
         double worldX0 = Along();
-        for (int i = 0; i < 700; i++) w.Step();
+        int sideStep = 0, side = 1;
+        for (int i = 0; i < 700; i++)
+        {
+            // scenery (a trough, a cart) can stand in the street: step round it and carry on
+            if (sideStep > 0) { sideStep--; if (sideStep == 0) w.SetInput(new MoveInput(streetEastWest ? 1 : 0, streetEastWest ? 0 : 1, Sprint: true)); }
+            else if (i > 5 && !w.Snapshot.Hero.Moving) { side = -side; sideStep = 12; w.SetInput(new MoveInput(streetEastWest ? 1 : side, streetEastWest ? side : 1, Sprint: true)); }
+            w.Step();
+        }
         double worldX1 = Along();
         output.WriteLine($"walked {worldX1 - worldX0:0.0} m east, {w.WindowSwaps} window swaps, {streamer.LoadedCount} chunks loaded, {streamer.GeneratedCount} generated");
         Assert.True(worldX1 - worldX0 > 20, "the hero should make headway (blocked only by scenery)");

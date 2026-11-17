@@ -82,6 +82,10 @@ public sealed class Population
         foreach (var a in LotKeeper) foreach (int v in a) L(v);
         foreach (int v in FiefLord) L(v);
         foreach (int v in ParcelHolder) L(v);
+        foreach (var a in LotBeds) foreach (int v in a) L(v);
+        foreach (int v in FiefLordHousehold) L(v);
+        foreach (int v in PriestHousehold) L(v);
+        foreach (int v in SettlementPeople) L(v);
         return Convert.ToHexString(h.GetHashAndReset());
     }
 }
