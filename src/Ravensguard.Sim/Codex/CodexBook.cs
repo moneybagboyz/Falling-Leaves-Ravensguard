@@ -237,6 +237,23 @@ public sealed class CodexBook
         }
     }
 
+    /// <summary>SHA-256 over what the book holds (ids, categories, titles, texts, years, sources; not which entries are unlocked), for determinism tests.</summary>
+    public string ComputeHash()
+    {
+        using var h = System.Security.Cryptography.IncrementalHash.CreateHash(System.Security.Cryptography.HashAlgorithmName.SHA256);
+        var b8 = new byte[8];
+        void L(long v) { System.Buffers.Binary.BinaryPrimitives.WriteInt64LittleEndian(b8, v); h.AppendData(b8); }
+        void S(string s) { L(s.Length); h.AppendData(Encoding.UTF8.GetBytes(s)); }
+        L(_entries.Count);
+        foreach (var e in _entries)
+        {
+            S(e.Id); L((long)e.Category); S(e.Title); S(e.Text); L(e.Year);
+            L(e.Sources.Count); foreach (var s in e.Sources) L((long)s.Value);
+        }
+        foreach (var (e, x, y) in _landmarkPlaces) { S(e.Id); L(x); L(y); }
+        return Convert.ToHexString(h.GetHashAndReset());
+    }
+
     // ------------------------------------------------------------------ saving
 
     /// <summary>The ids to save: every unlocked entry except the rules (those are always open).</summary>

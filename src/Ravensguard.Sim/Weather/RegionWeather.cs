@@ -323,6 +323,40 @@ public sealed class RegionWeather
         return new WeatherSample(st, temp, a.PrecipMmH, a.Snow, a.Cloud, windDir, wind, fog, snowDepth, riverDays, ford, a.Layers);
     }
 
+    /// <summary>
+    /// SHA-256 over the full weather sample (state, temperature layers, precipitation, cloud, wind, fog, snow depth, river state) of every cell at every hour,
+    /// for determinism tests and the `hashes` tool. Cell-major, hours in the order given.
+    /// </summary>
+    public string SampleHash(IEnumerable<int> cells, IReadOnlyList<long> hours)
+    {
+        using var h = System.Security.Cryptography.IncrementalHash.CreateHash(System.Security.Cryptography.HashAlgorithmName.SHA256);
+        var b8 = new byte[8];
+        void L(long v) { System.Buffers.Binary.BinaryPrimitives.WriteInt64LittleEndian(b8, v); h.AppendData(b8); }
+        foreach (int cell in cells)
+            foreach (long hour in hours)
+            {
+                var w = At(cell, hour);
+                L(cell); L(hour); L((long)w.State); L(w.TempC.Raw); L(w.PrecipMmH.Raw); L(w.PrecipIsSnow ? 1 : 0); L(w.Cloud.Raw); L(w.WindFromDeg); L(w.WindMps.Raw);
+                L(w.FogDensity.Raw); L(w.SnowDepthCm.Raw); L(w.RiverHighDays); L(w.FordClosed ? 1 : 0);
+                L(w.Layers.Climate.Raw); L(w.Layers.Seasonal.Raw); L(w.Layers.Daily.Raw); L(w.Layers.Synoptic.Raw); L(w.Layers.Front.Raw); L(w.Layers.Long.Raw);
+            }
+        return Convert.ToHexString(h.GetHashAndReset());
+    }
+
+    /// <summary>
+    /// The standard determinism sample for an embark window: four cells (the window centre and three more, land or not) at eight hours (dawn and dusk on
+    /// days 8, 23, 38 and 53 of year 3), hashed with <see cref="SampleHash"/>. Used by the `hashes` tool and the golden-hash tests.
+    /// </summary>
+    public string StandardSampleHash(int embarkCellX, int embarkCellY)
+    {
+        int[] cells = [(embarkCellY + 8) * N + embarkCellX + 8, (embarkCellY + 3) * N + embarkCellX + 3, (embarkCellY + 5) * N + embarkCellX + 12, (embarkCellY + 12) * N + embarkCellX + 5];
+        var hours = new List<long>();
+        foreach (int doy in new[] { 8, 23, 38, 53 })
+            foreach (int hod in new[] { 6, 18 })
+                hours.Add(((long)3 * 60 + doy - 1) * 24 + hod);
+        return SampleHash(cells, hours);
+    }
+
     /// <summary>Chronicle-style cause text for a closed ford, e.g. "Ford closed: river high after three days of rain".</summary>
     public static string FordCause(int days) => $"Ford closed: river high after {(days is >= 0 and <= 9 ? new[] { "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine" }[days] : days.ToString())} days of rain";
 }

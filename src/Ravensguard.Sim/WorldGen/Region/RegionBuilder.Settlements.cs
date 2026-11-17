@@ -108,7 +108,7 @@ internal sealed partial class RegionBuilder
         _ => 1,
     };
 
-    private int PickInCell(int relX, int relY, bool wantRiver, ulong salt)
+    private int PickInCell(int relX, int relY, bool wantRiver, ulong salt, int centreBias = 0)
     {
         int x0 = relX * RegionSettings.CellM / TileM, x1 = (relX + 1) * RegionSettings.CellM / TileM;
         int y0 = relY * RegionSettings.CellM / TileM, y1 = (relY + 1) * RegionSettings.CellM / TileM;
@@ -123,6 +123,7 @@ internal sealed partial class RegionBuilder
                 if (sc >= 0)
                 {
                     sc += noise + Math.Min(inner, 6) * 4;
+                    if (centreBias > 0) sc -= (Math.Abs(x - (x0 + x1) / 2) + Math.Abs(y - (y0 + y1) / 2)) * centreBias; // towns keep near their cell's centre so the plan's 6-10 km spacing holds
                     if (wantRiver && RiverDist[t] <= 4) sc += 50;
                     if (sc > bestS) { bestS = sc; best = t; }
                 }
@@ -134,6 +135,9 @@ internal sealed partial class RegionBuilder
             }
         return best >= 0 ? best : relaxed >= 0 ? relaxed : Idx(Math.Clamp(relX * RegionSettings.CellM / TileM + 15, 8, N - 9), Math.Clamp(relY * RegionSettings.CellM / TileM + 15, 8, N - 9));
     }
+
+    /// <summary>Score lost per tile (64 m) a town stands from the centre of its 2 km cell (Manhattan).</summary>
+    private const int TownCentreBias = 5;
 
     private readonly List<(int X, int Y, int R)> _placed = [];
     private readonly Dictionary<EntityId, int> _ruinTile = [];
@@ -190,7 +194,7 @@ internal sealed partial class RegionBuilder
         foreach (var (hi, hs) in _histTowns)
         {
             int rx = hs.Cell % Continent.Size - _cx, ry = hs.Cell / Continent.Size - _cy;
-            int t = PickInCell(rx, ry, hs.OnRiver, hs.Id.Value);
+            int t = PickInCell(rx, ry, hs.OnRiver, hs.Id.Value, TownCentreBias);
             var s = NewSettlement(SettlementClass.Town, t % N, t / N, hs.Id, hs.Name, hs.Pop);
             s.HistoryId = hs.Id;
             if (s.Realm < 0) s.Realm = hs.Realm;

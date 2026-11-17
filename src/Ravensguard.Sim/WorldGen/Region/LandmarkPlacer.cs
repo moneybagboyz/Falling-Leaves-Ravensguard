@@ -59,6 +59,26 @@ public static class LandmarkPlacer
         return Convert.ToHexString(h.GetHashAndReset());
     }
 
+    /// <summary>
+    /// Orders <paramref name="items"/> by repeated weighted draws without replacement: each slot picks the item whose cumulative weight range holds
+    /// <c>draw(slot) % total</c>. Integer maths only (no logarithms), so the order is the same on every platform; heavier items tend to come first.
+    /// </summary>
+    public static List<T> WeightedOrder<T>(IReadOnlyList<T> items, Func<T, int> weight, Func<int, ulong> draw)
+    {
+        var rest = new List<T>(items);
+        var order = new List<T>(rest.Count);
+        for (int k = 0; rest.Count > 0; k++)
+        {
+            long total = 0;
+            foreach (var d in rest) total += Math.Max(1, weight(d));
+            long pick = (long)(draw(k) % (ulong)total), acc = 0;
+            int idx = rest.Count - 1;
+            for (int i = 0; i < rest.Count; i++) { acc += Math.Max(1, weight(rest[i])); if (pick < acc) { idx = i; break; } }
+            order.Add(rest[idx]); rest.RemoveAt(idx);
+        }
+        return order;
+    }
+
     /// <summary>Parses a content prop kind ("low_wall", "SiteRuin") into the sim's prop kind; false for an unknown name.</summary>
     public static bool TryParseKind(string name, out PropKind kind) => Enum.TryParse(name.Replace("_", ""), true, out kind) && Enum.IsDefined(kind);
 
@@ -139,20 +159,7 @@ public static class LandmarkPlacer
             return _r.HeightCm[t] - ring / 8 >= 350;
         }
 
-        List<LandmarkDef> WeightedOrder(List<LandmarkDef> rest, int round)
-        {
-            var order = new List<LandmarkDef>(rest.Count);
-            for (int k = 0; rest.Count > 0; k++)
-            {
-                long total = 0;
-                foreach (var d in rest) total += Math.Max(1, d.Weight);
-                long pick = (long)(Hash(round, k, 1) % (ulong)total), acc = 0;
-                int idx = rest.Count - 1;
-                for (int i = 0; i < rest.Count; i++) { acc += Math.Max(1, rest[i].Weight); if (pick < acc) { idx = i; break; } }
-                order.Add(rest[idx]); rest.RemoveAt(idx);
-            }
-            return order;
-        }
+        List<LandmarkDef> WeightedOrder(List<LandmarkDef> rest, int round) => LandmarkPlacer.WeightedOrder(rest, d => d.Weight, k => Hash(round, k, 1));
 
         public List<PlacedLandmark> Run()
         {

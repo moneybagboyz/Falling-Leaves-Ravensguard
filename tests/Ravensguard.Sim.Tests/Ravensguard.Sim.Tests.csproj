@@ -21,6 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Ravensguard.Sim\Ravensguard.Sim.csproj" />
     <ProjectReference Include="..\..\src\Ravensguard.Content\Ravensguard.Content.csproj" />
+    <ProjectReference Include="..\..\tools\Ravensguard.WorldTool\Ravensguard.WorldTool.csproj" />
   </ItemGroup>
 
 </Project>
