@@ -1,0 +1,122 @@
+// Chapel, manor hall and watch tower: stone buildings.
+[
+  // Chapel: nave with the altar at the east end, vestry beyond a door.
+  { "type": "blueprint", "id": "chapel", "name": "Chapel", "wealth": "rich",
+    "legend": { "#": "wall_stone", "o": "window_shuttered", "+": "door_wood", "c": "floor_flagstone", "v": "floor_flagstone", "P": "altar" },
+    "rooms": { "c": "worship", "v": "storage" },
+    "rows": [
+      "###ooo###",
+      "#ccccccc#",
+      "occccccco",
+      "+ccccccc#",
+      "occccccco",
+      "#ccccccc#",
+      "###+#####",
+      "#vvvvvvv#",
+      "####+####"
+    ],
+    "fixtures": [
+      "_________",
+      "____P____",
+      "_________",
+      "_________",
+      "_________",
+      "_________",
+      "_________",
+      "_________",
+      "_________"
+    ] },
+
+  // Manor hall: great hall with two posts, kitchen and buttery on the ground floor, chambers and a gallery above.
+  { "type": "blueprint", "id": "manor_hall", "name": "Manor hall", "wealth": "rich",
+    "legend": { "#": "$wall", "o": "window_shuttered", "+": "door_wood", "|": "post_timber", "a": "$floor", "k": "$floor", "v": "$floor", "s": "floor_plank", ":": "floor_plank",
+                "<": "stairs_up", ">": "stairs_down", "E": "hearth" },
+    "rooms": { "a": "gathering", "k": "hearth", "v": "storage", "s": "sleeping" },
+    "rows": [
+      "######oo########",
+      "#aaaaaaaaaa#kkk#",
+      "#aaaaaaaaaa+kkk#",
+      "#aaaaaaaaaa#kkk#",
+      "#aa|aaaa|aa#####",
+      "+aaaaaaaaaa#vvv#",
+      "#aaaaaaaaaa+vvv#",
+      "#aaaaaaaaa<#####",
+      "####+###########"
+    ],
+    "fixtures": [
+      "________________",
+      "_____________E__",
+      "________________",
+      "________________",
+      "________________",
+      "________________",
+      "________________",
+      "________________",
+      "________________"
+    ],
+    "levels": [
+      { "z": 1, "rows": [
+        "######oo########",
+        "#ssss#ssss#ssss#",
+        "#ssss#ssss#ssss#",
+        "#ssss#ssss#ssss#",
+        "##+####+####+###",
+        "#::::::::::::::#",
+        "#::::::::::::::#",
+        "#:::::::::>::::#",
+        "################"
+      ] }
+    ] },
+
+  // Watch tower to +3: store, barracks, guard room with a hearth, open wall-walk on top.
+  { "type": "blueprint", "id": "watch_tower", "name": "Watch tower", "wealth": "middling",
+    "legend": { "#": "wall_stone", "o": "window_arrow_slit", "+": "door_wood", "v": "floor_flagstone", "s": "floor_plank", "k": "floor_plank", "p": "floor_wall_walk",
+                "<": "stairs_up", ">": "stairs_down", "E": "hearth" },
+    "rooms": { "v": "storage", "s": "sleeping", "k": "hearth", "p": "watch" },
+    "rows": [
+      "###o###",
+      "#vvvvv#",
+      "#vvvvv#",
+      "+vvvvv#",
+      "#vvvvv#",
+      "#<vvvv#",
+      "#######"
+    ],
+    "levels": [
+      { "z": 1, "rows": [
+        "###o###",
+        "#sssss#",
+        "#sssss#",
+        "#sssss#",
+        "#sssss#",
+        "#>sss<#",
+        "#######"
+      ] },
+      { "z": 2, "rows": [
+        "###o###",
+        "#kkkk<#",
+        "#kkkkk#",
+        "#kkkkk#",
+        "#kkkkk#",
+        "#kkkk>#",
+        "#######"
+      ], "fixtures": [
+        "_______",
+        "_______",
+        "_E_____",
+        "_______",
+        "_______",
+        "_______",
+        "_______"
+      ] },
+      { "z": 3, "rows": [
+        "#o#o#o#",
+        "#pppp>#",
+        "#ppppp#",
+        "#ppppp#",
+        "#ppppp#",
+        "#ppppp#",
+        "#######"
+      ] }
+    ] }
+]

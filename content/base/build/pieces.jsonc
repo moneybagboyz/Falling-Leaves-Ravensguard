@@ -1,0 +1,48 @@
+// Building pieces (plan §2.9). Kind drives the room detector, pathing and structural support; `glyph` is the text-dump character.
+// Walls and posts hold up the floor above (plan §2.2a). Tags are what room types look for; workstations also get "station:<id>".
+// No stone material exists in content/base/materials yet, so stone pieces carry no material (open issue).
+[
+  // ground and floors
+  { "type": "build_piece", "id": "ground_dirt",          "name": "Dirt ground",       "kind": "ground", "glyph": "," },
+  { "type": "build_piece", "id": "floor_packed_earth",   "name": "Packed earth floor", "kind": "floor", "glyph": "." },
+  { "type": "build_piece", "id": "floor_plank",          "name": "Plank floor",       "kind": "floor", "glyph": ":", "material": "oak" },
+  { "type": "build_piece", "id": "floor_flagstone",      "name": "Flagstone floor",   "kind": "floor", "glyph": ";" },
+  { "type": "build_piece", "id": "floor_wall_walk",      "name": "Wall-walk",         "kind": "floor", "glyph": "~", "tags": ["wall_walk"] },
+
+  // walls by material
+  { "type": "build_piece", "id": "wall_wattle",          "name": "Wattle-and-daub wall", "kind": "wall", "glyph": "%" },
+  { "type": "build_piece", "id": "wall_timber",          "name": "Timber wall",       "kind": "wall", "glyph": "#", "material": "oak" },
+  { "type": "build_piece", "id": "wall_stone",           "name": "Stone wall",        "kind": "wall", "glyph": "S" },
+  { "type": "build_piece", "id": "post_timber",          "name": "Timber post",       "kind": "post", "glyph": "|", "material": "oak" },
+
+  // doors and windows
+  { "type": "build_piece", "id": "door_wood",            "name": "Wooden door",       "kind": "door", "glyph": "+", "material": "oak" },
+  { "type": "build_piece", "id": "door_barn",            "name": "Barn door",         "kind": "door", "glyph": "D", "material": "oak" },
+  { "type": "build_piece", "id": "window_shuttered",     "name": "Shuttered window",  "kind": "window", "glyph": "o", "material": "oak" },
+  { "type": "build_piece", "id": "window_arrow_slit",    "name": "Arrow slit",        "kind": "window", "glyph": "x" },
+
+  // moving between levels (portals)
+  { "type": "build_piece", "id": "stairs_up",            "name": "Stairs up",         "kind": "stairs_up", "glyph": "<", "material": "oak" },
+  { "type": "build_piece", "id": "stairs_down",          "name": "Stairs down",       "kind": "stairs_down", "glyph": ">", "material": "oak" },
+  { "type": "build_piece", "id": "ladder",               "name": "Ladder",            "kind": "ladder", "glyph": "H", "material": "oak" },
+  { "type": "build_piece", "id": "trapdoor",             "name": "Trapdoor",          "kind": "trapdoor", "glyph": "T", "material": "oak" },
+
+  // furniture
+  { "type": "build_piece", "id": "bed",                  "name": "Bed",               "kind": "furniture", "glyph": "B", "material": "oak", "tags": ["bed"], "beds": 1 },
+  { "type": "build_piece", "id": "bunk",                 "name": "Bunk",              "kind": "furniture", "glyph": "U", "material": "oak", "tags": ["bed"], "beds": 2 },
+  { "type": "build_piece", "id": "hearth",               "name": "Hearth",            "kind": "furniture", "glyph": "E", "tags": ["hearth"] },
+  { "type": "build_piece", "id": "table",                "name": "Table",             "kind": "furniture", "glyph": "X", "material": "oak", "tags": ["table"] },
+  { "type": "build_piece", "id": "chest",                "name": "Chest",             "kind": "furniture", "glyph": "C", "material": "oak", "tags": ["storage"] },
+  { "type": "build_piece", "id": "shelf",                "name": "Shelf",             "kind": "furniture", "glyph": "Z", "material": "oak", "tags": ["storage"] },
+  { "type": "build_piece", "id": "barrel",               "name": "Barrel",            "kind": "furniture", "glyph": "Y", "material": "oak", "tags": ["storage"] },
+  { "type": "build_piece", "id": "grain_bin",            "name": "Grain bin",         "kind": "furniture", "glyph": "G", "material": "oak", "tags": ["storage", "grain"] },
+  { "type": "build_piece", "id": "stall",                "name": "Animal stall",      "kind": "furniture", "glyph": "Q", "material": "oak", "tags": ["stall"] },
+  { "type": "build_piece", "id": "altar",                "name": "Altar",             "kind": "furniture", "glyph": "P", "tags": ["altar"] },
+
+  // workstations
+  { "type": "build_piece", "id": "workbench",            "name": "Workbench",         "kind": "workstation", "glyph": "K", "material": "oak", "station": "carpentry" },
+  { "type": "build_piece", "id": "anvil",                "name": "Anvil",             "kind": "workstation", "glyph": "N", "material": "wrought_iron", "station": "smithing" },
+  { "type": "build_piece", "id": "forge",                "name": "Forge",             "kind": "workstation", "glyph": "F", "material": "wrought_iron", "station": "smithing" },
+  { "type": "build_piece", "id": "loom",                 "name": "Loom",              "kind": "workstation", "glyph": "M", "material": "oak", "station": "weaving" },
+  { "type": "build_piece", "id": "tanning_rack",         "name": "Tanning rack",      "kind": "workstation", "glyph": "R", "material": "oak", "station": "tanning" }
+]

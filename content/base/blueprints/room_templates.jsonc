@@ -1,0 +1,56 @@
+// Room templates (plan §2.9): houses are assembled from these, fitted to a lot. Contents come from the household.
+[
+  { "type": "blueprint", "id": "template_bedroom", "name": "Bedroom template", "kind": "room_template", "wealth": "middling",
+    "legend": { "#": "$wall", "o": "window_shuttered", "+": "door_wood", "s": "floor_plank" },
+    "rooms": { "s": "sleeping" },
+    "rows": [
+      "##o##",
+      "#sss#",
+      "#sss+",
+      "#####"
+    ] },
+
+  { "type": "blueprint", "id": "template_workshop", "name": "Workshop template", "kind": "room_template", "wealth": "middling",
+    "legend": { "#": "$wall", "o": "window_shuttered", "+": "door_wood", "w": "floor_packed_earth" },
+    "rooms": { "w": "work:*" },
+    "rows": [
+      "###o###",
+      "#wwwww#",
+      "+wwwww#",
+      "#wwwww#",
+      "#######"
+    ] },
+
+  { "type": "blueprint", "id": "template_hall", "name": "Hall template", "kind": "room_template", "wealth": "middling",
+    "legend": { "#": "$wall", "o": "window_shuttered", "+": "door_wood", "a": "floor_plank" },
+    "rooms": { "a": "gathering" },
+    "rows": [
+      "##oo##oo",
+      "#aaaaaa#",
+      "#aaaaaa#",
+      "+aaaaaa#",
+      "#aaaaaa#",
+      "########"
+    ] },
+
+  // Stairwell closet on the ground floor, cellar below.
+  { "type": "blueprint", "id": "template_cellar", "name": "Cellar template", "kind": "room_template", "wealth": "middling",
+    "legend": { "#": "$wall", "+": "door_wood", ".": "floor_plank", "v": "floor_packed_earth", "<": "stairs_up", ">": "stairs_down" },
+    "rooms": { "v": "storage" },
+    "rows": [
+      "####___",
+      "#>.+___",
+      "####___",
+      "_______",
+      "_______"
+    ],
+    "levels": [
+      { "z": -1, "rows": [
+        "#######",
+        "#<vvvv#",
+        "#vvvvv#",
+        "#vvvvv#",
+        "#######"
+      ] }
+    ] }
+]

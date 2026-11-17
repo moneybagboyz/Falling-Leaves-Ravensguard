@@ -1,0 +1,9 @@
+// Culture styles (plan §2.9): what a blueprint's $wall / $floor become by wealth.
+[
+  { "type": "culture_style", "id": "common", "name": "Common lowland style",
+    "walls":  { "poor": "wall_wattle", "middling": "wall_timber", "rich": "wall_stone" },
+    "floors": { "poor": "floor_packed_earth", "middling": "floor_plank", "rich": "floor_flagstone" } },
+  { "type": "culture_style", "id": "hillfolk", "name": "Hill style (stone is cheap)",
+    "walls":  { "poor": "wall_timber", "middling": "wall_stone", "rich": "wall_stone" },
+    "floors": { "poor": "floor_packed_earth", "middling": "floor_flagstone", "rich": "floor_flagstone" } }
+]

@@ -1,0 +1,16 @@
+// Room types (plan §2.9). The detector picks the highest-priority type whose rules a room satisfies.
+// Purposes are what blueprints declare; "work:*" in a blueprint accepts any workshop.
+[
+  { "type": "room_type", "id": "bedroom",   "name": "Bedroom",          "purpose": "sleeping",       "priority": 40, "min_area": 4,  "requires": [{ "tag": "bed" }] },
+  { "type": "room_type", "id": "kitchen",   "name": "Kitchen / hearth room", "purpose": "hearth",    "priority": 50, "min_area": 4,  "requires": [{ "tag": "hearth" }] },
+  { "type": "room_type", "id": "storage",   "name": "Storeroom",        "purpose": "storage",        "priority": 20, "min_area": 4,  "requires": [{ "tag": "storage" }] },
+  { "type": "room_type", "id": "hall",      "name": "Hall",             "purpose": "gathering",      "priority": 45, "min_area": 12, "requires": [{ "tag": "table" }] },
+  { "type": "room_type", "id": "chapel",    "name": "Chapel",           "purpose": "worship",        "priority": 70, "min_area": 12, "requires": [{ "tag": "altar" }] },
+  { "type": "room_type", "id": "stable",    "name": "Stable / byre",    "purpose": "livestock",      "priority": 30, "min_area": 6,  "requires": [{ "tag": "stall", "min": 2 }] },
+  { "type": "room_type", "id": "workshop_carpentry", "name": "Carpenter's workshop", "purpose": "work:carpentry", "priority": 60, "min_area": 6, "requires": [{ "tag": "station:carpentry" }] },
+  { "type": "room_type", "id": "workshop_smithing",  "name": "Smithy",               "purpose": "work:smithing",  "priority": 60, "min_area": 6, "requires": [{ "tag": "station:smithing" }] },
+  { "type": "room_type", "id": "workshop_tanning",   "name": "Tannery",              "purpose": "work:tanning",   "priority": 60, "min_area": 6, "requires": [{ "tag": "station:tanning" }] },
+  { "type": "room_type", "id": "workshop_weaving",   "name": "Weaver's workshop",    "purpose": "work:weaving",   "priority": 60, "min_area": 6, "requires": [{ "tag": "station:weaving" }] },
+  // open-air wall-walk or tower top: not enclosed
+  { "type": "room_type", "id": "lookout",   "name": "Lookout",          "purpose": "watch",          "priority": 10, "enclosed": false, "min_area": 4, "requires": [{ "tag": "wall_walk" }] }
+]

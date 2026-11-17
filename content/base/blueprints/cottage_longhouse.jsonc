@@ -1,0 +1,63 @@
+// Starter dwellings (plan §2.9, §4A.2). Rows are x across, y down; "_" is empty; legend letters map to piece ids
+// ($wall/$floor follow culture style and wealth). Lowercase floor letters are room regions declared in "rooms".
+// Fixtures are fixed fixtures only (hearths); beds, tables and tools come from the household later.
+[
+  // 8x5 m peasant cottage with a sleeping loft over the hearth room (~5 beds).
+  { "type": "blueprint", "id": "peasant_cottage", "name": "Peasant cottage", "wealth": "poor", "dwelling": "cottage",
+    "legend": { "#": "$wall", "o": "window_shuttered", "+": "door_wood", "k": "$floor", "s": "floor_plank", "H": "ladder", "T": "trapdoor", "E": "hearth" },
+    "rooms": { "k": "hearth", "s": "sleeping" },
+    "rows": [
+      "##o##o##",
+      "#kkkkkH#",
+      "+kkkkkk#",
+      "#kkkkkk#",
+      "###o####"
+    ],
+    "fixtures": [
+      "________",
+      "_E______",
+      "________",
+      "________",
+      "________"
+    ],
+    "levels": [
+      { "z": 1, "rows": [
+        "##o##o##",
+        "#sssssT#",
+        "#ssssss#",
+        "#ssssss#",
+        "########"
+      ] }
+    ] },
+
+  // 16x6 m longhouse: byre, hearth hall and a sleeping end with a loft.
+  { "type": "blueprint", "id": "longhouse", "name": "Longhouse", "wealth": "middling", "dwelling": "longhouse",
+    "legend": { "#": "$wall", "o": "window_shuttered", "+": "door_wood", "k": "$floor", "l": "$floor", "s": "floor_plank", "H": "ladder", "T": "trapdoor", "E": "hearth" },
+    "rooms": { "k": "hearth", "l": "livestock", "s": "sleeping" },
+    "rows": [
+      "######oo########",
+      "#llll#kkkkk#ssH#",
+      "#llll+kkkkk+sss#",
+      "+llll#kkkkk#sss#",
+      "#llll#kkkkk#sss#",
+      "#######+########"
+    ],
+    "fixtures": [
+      "________________",
+      "________________",
+      "________E_______",
+      "________________",
+      "________________",
+      "________________"
+    ],
+    "levels": [
+      { "z": 1, "rows": [
+        "___________#####",
+        "___________#ssT#",
+        "___________#sss#",
+        "___________#sss#",
+        "___________#sss#",
+        "___________#####"
+      ] }
+    ] }
+]

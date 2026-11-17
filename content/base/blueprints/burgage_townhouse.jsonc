@@ -1,0 +1,70 @@
+// Burgage townhouse: narrow street frontage, three storeys and a cellar (plan §2.2a, §4A.2). Street door at the north.
+// Stairs switchback: z0 '<' (4,5) -> z1 '>' (4,5); z1 '<' (4,6) -> z2 '>' (4,6); cellar stairs '>' (1,8) <-> '<' z-1.
+[
+  { "type": "blueprint", "id": "burgage_townhouse", "name": "Burgage townhouse", "wealth": "rich", "dwelling": "burgage",
+    "legend": { "#": "$wall", "o": "window_shuttered", "+": "door_wood", "w": "$floor", "k": "$floor", "s": "floor_plank", "a": "floor_plank", "v": "floor_plank",
+                "<": "stairs_up", ">": "stairs_down", "E": "hearth" },
+    "rooms": { "w": "work:weaving", "k": "hearth", "s": "sleeping", "a": "gathering", "v": "storage" },
+    "rows": [
+      "##+###",
+      "owwwwo",
+      "#wwww#",
+      "#wwww#",
+      "##+###",
+      "#kkk<#",
+      "okkkk#",
+      "#kkkk#",
+      "#>kkk#",
+      "###+##"
+    ],
+    "fixtures": [
+      "______",
+      "______",
+      "______",
+      "______",
+      "______",
+      "______",
+      "_E____",
+      "______",
+      "______",
+      "______"
+    ],
+    "levels": [
+      { "z": -1, "rows": [
+        "______",
+        "______",
+        "______",
+        "______",
+        "######",
+        "#vvvv#",
+        "#vvvv#",
+        "#vvvv#",
+        "#<vvv#",
+        "######"
+      ] },
+      { "z": 1, "rows": [
+        "##oo##",
+        "#ssss#",
+        "#ssss#",
+        "#ssss#",
+        "##+###",
+        "#aaa>#",
+        "#aaa<#",
+        "#aaaa#",
+        "#aaaa#",
+        "######"
+      ] },
+      { "z": 2, "rows": [
+        "##oo##",
+        "#ssss#",
+        "#ssss#",
+        "#ssss#",
+        "##+###",
+        "#vvvv#",
+        "#vvv>#",
+        "#vvvv#",
+        "#vvvv#",
+        "######"
+      ] }
+    ] }
+]

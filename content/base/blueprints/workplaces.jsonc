@@ -1,0 +1,98 @@
+// Workplaces and farm buildings. The forge is a fixed fixture of the smithy; everything portable comes from the owner.
+[
+  // Smithy: stone walls against fire, a forge room and a store.
+  { "type": "blueprint", "id": "smithy", "name": "Smithy", "wealth": "middling",
+    "legend": { "#": "wall_stone", "o": "window_shuttered", "+": "door_wood", "w": "floor_flagstone", "v": "floor_plank", "F": "forge" },
+    "rooms": { "w": "work:smithing", "v": "storage" },
+    "rows": [
+      "##o###o###",
+      "#wwwww#vv#",
+      "+wwwww+vv#",
+      "#wwwww#vv#",
+      "#wwwww#vv#",
+      "####+#####"
+    ],
+    "fixtures": [
+      "__________",
+      "_F________",
+      "__________",
+      "__________",
+      "__________",
+      "__________"
+    ] },
+
+  // Tavern: taproom, kitchen and cellar-store on the ground floor, guest rooms above a corridor.
+  { "type": "blueprint", "id": "tavern", "name": "Tavern", "wealth": "middling",
+    "legend": { "#": "$wall", "o": "window_shuttered", "+": "door_wood", "|": "post_timber", "a": "floor_plank", "k": "floor_plank", "v": "floor_plank", "s": "floor_plank",
+                ":": "floor_plank", "<": "stairs_up", ">": "stairs_down", "E": "hearth" },
+    "rooms": { "a": "gathering", "k": "hearth", "v": "storage", "s": "sleeping" },
+    "rows": [
+      "####o##o####",
+      "#aaaaaaa#kk#",
+      "#aaaaaaa+kk#",
+      "+aaa|aaa#kk#",
+      "#aaaaaaa####",
+      "#aaaaaaa#vv#",
+      "#<aaaaaa+vv#",
+      "####+#######"
+    ],
+    "fixtures": [
+      "____________",
+      "_________E__",
+      "____________",
+      "____________",
+      "____________",
+      "____________",
+      "____________",
+      "____________"
+    ],
+    "levels": [
+      { "z": 1, "rows": [
+        "####oo##o###",
+        "#sss#sss#ss#",
+        "#sss#sss#ss#",
+        "#sss#sss#ss#",
+        "##+###+##+##",
+        "#::::::::::#",
+        "#>:::::::::#",
+        "############"
+      ] }
+    ] },
+
+  // Barn: livestock bay and hay/grain store, each with a big door.
+  { "type": "blueprint", "id": "barn", "name": "Barn", "wealth": "middling",
+    "legend": { "#": "$wall", "+": "door_wood", "D": "door_barn", "l": "floor_packed_earth", "v": "floor_packed_earth" },
+    "rooms": { "l": "livestock", "v": "storage" },
+    "rows": [
+      "############",
+      "#lllll#vvvv#",
+      "#lllll+vvvvD",
+      "Dlllll#vvvv#",
+      "#lllll#vvvv#",
+      "#lllll#vvvv#",
+      "############"
+    ] },
+
+  // Granary: a raised store with a ladder up to a second storeroom.
+  { "type": "blueprint", "id": "granary", "name": "Granary", "wealth": "middling",
+    "legend": { "#": "$wall", "o": "window_shuttered", "+": "door_wood", "v": "floor_plank", "H": "ladder", "T": "trapdoor" },
+    "rooms": { "v": "storage" },
+    "rows": [
+      "######",
+      "#vvvv#",
+      "+vvvH#",
+      "#vvvv#",
+      "#vvvv#",
+      "######"
+    ],
+    "levels": [
+      { "z": 1, "rows": [
+        "##oo##",
+        "#vvvv#",
+        "#vvvT#",
+        "#vvvv#",
+        "#vvvv#",
+        "######"
+      ] }
+    ] }
+]
