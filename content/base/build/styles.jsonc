@@ -1,9 +1,21 @@
-// Culture styles (plan §2.9): what a blueprint's $wall / $floor become by wealth.
+// Culture styles (plan §2.9): what a blueprint's $wall / $floor become by wealth. Cultures (content/base/cultures) pick a style per wealth.
 [
   { "type": "culture_style", "id": "common", "name": "Common lowland style",
     "walls":  { "poor": "wall_wattle", "middling": "wall_timber", "rich": "wall_stone" },
     "floors": { "poor": "floor_packed_earth", "middling": "floor_plank", "rich": "floor_flagstone" } },
   { "type": "culture_style", "id": "hillfolk", "name": "Hill style (stone is cheap)",
     "walls":  { "poor": "wall_timber", "middling": "wall_stone", "rich": "wall_stone" },
-    "floors": { "poor": "floor_packed_earth", "middling": "floor_flagstone", "rich": "floor_flagstone" } }
+    "floors": { "poor": "floor_packed_earth", "middling": "floor_flagstone", "rich": "floor_flagstone" } },
+  // Forest north: log and plank halls even for the poor, stone only for the rich.
+  { "type": "culture_style", "id": "northern", "name": "Northern log style",
+    "walls":  { "poor": "wall_timber", "middling": "wall_timber", "rich": "wall_stone" },
+    "floors": { "poor": "floor_packed_earth", "middling": "floor_plank", "rich": "floor_flagstone" } },
+  // Clay country: the rich fire bricks.
+  { "type": "culture_style", "id": "vale_brick", "name": "Vale brick and daub",
+    "walls":  { "poor": "wall_wattle", "middling": "wall_timber", "rich": "wall_brick" },
+    "floors": { "poor": "floor_packed_earth", "middling": "floor_plank", "rich": "floor_flagstone" } },
+  // Harbour towns: salvaged ship timber is plentiful, plank floors are the norm.
+  { "type": "culture_style", "id": "coastal", "name": "Coastal plank style",
+    "walls":  { "poor": "wall_timber", "middling": "wall_timber", "rich": "wall_stone" },
+    "floors": { "poor": "floor_plank", "middling": "floor_plank", "rich": "floor_flagstone" } }
 ]

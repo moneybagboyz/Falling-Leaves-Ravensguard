@@ -12,5 +12,31 @@
   { "type": "room_type", "id": "workshop_tanning",   "name": "Tannery",              "purpose": "work:tanning",   "priority": 60, "min_area": 6, "requires": [{ "tag": "station:tanning" }] },
   { "type": "room_type", "id": "workshop_weaving",   "name": "Weaver's workshop",    "purpose": "work:weaving",   "priority": 60, "min_area": 6, "requires": [{ "tag": "station:weaving" }] },
   // open-air wall-walk or tower top: not enclosed
-  { "type": "room_type", "id": "lookout",   "name": "Lookout",          "purpose": "watch",          "priority": 10, "enclosed": false, "min_area": 4, "requires": [{ "tag": "wall_walk" }] }
+  { "type": "room_type", "id": "lookout",   "name": "Lookout",          "purpose": "watch",          "priority": 10, "enclosed": false, "min_area": 4, "requires": [{ "tag": "wall_walk" }] },
+
+  // ---- more workshops ----
+  { "type": "room_type", "id": "workshop_baking",    "name": "Bakery",               "purpose": "work:baking",    "priority": 60, "min_area": 6, "requires": [{ "tag": "station:baking" }] },
+  { "type": "room_type", "id": "workshop_brewing",   "name": "Brewhouse",            "purpose": "work:brewing",   "priority": 60, "min_area": 6, "requires": [{ "tag": "station:brewing" }] },
+  { "type": "room_type", "id": "workshop_milling",   "name": "Mill room",            "purpose": "work:milling",   "priority": 60, "min_area": 6, "requires": [{ "tag": "station:milling" }] },
+  { "type": "room_type", "id": "workshop_firing",    "name": "Kiln room",            "purpose": "work:firing",    "priority": 60, "min_area": 6, "requires": [{ "tag": "station:firing" }] },
+  { "type": "room_type", "id": "workshop_potting",   "name": "Potter's workshop",    "purpose": "work:potting",   "priority": 60, "min_area": 6, "requires": [{ "tag": "station:potting" }] },
+  { "type": "room_type", "id": "workshop_coopering", "name": "Cooperage",            "purpose": "work:coopering", "priority": 60, "min_area": 6, "requires": [{ "tag": "station:coopering" }] },
+  { "type": "room_type", "id": "workshop_sawing",    "name": "Sawpit shed",          "purpose": "work:sawing",    "priority": 60, "min_area": 6, "requires": [{ "tag": "station:sawing" }] },
+  { "type": "room_type", "id": "workshop_charcoal",  "name": "Charcoal burners' yard", "purpose": "work:charcoal", "priority": 60, "min_area": 9, "requires": [{ "tag": "station:charcoal" }] },
+
+  // ---- living and ruling rooms ----
+  { "type": "room_type", "id": "great_hall", "name": "Great hall",   "purpose": "gathering", "priority": 55, "min_area": 30, "requires": [{ "tag": "table" }, { "tag": "high_seat" }] },
+  { "type": "room_type", "id": "solar",      "name": "Solar",        "purpose": "solar",     "priority": 55, "min_area": 9,  "requires": [{ "tag": "bed" }, { "tag": "table" }] },
+  { "type": "room_type", "id": "cellar",     "name": "Cellar",       "purpose": "cellar",    "priority": 25, "min_area": 4,  "requires": [{ "tag": "storage" }] },
+  { "type": "room_type", "id": "shop",       "name": "Shop",         "purpose": "shop",      "priority": 52, "min_area": 6,  "requires": [{ "tag": "shop" }] },
+  { "type": "room_type", "id": "toll_office","name": "Toll office",  "purpose": "toll",      "priority": 52, "min_area": 6,  "requires": [{ "tag": "toll" }] },
+  { "type": "room_type", "id": "market",     "name": "Market square","purpose": "market",    "priority": 35, "min_area": 12, "requires": [{ "tag": "market_stall", "min": 2 }] },
+  { "type": "room_type", "id": "well_house", "name": "Well house",   "purpose": "water",     "priority": 30, "min_area": 4,  "requires": [{ "tag": "well" }] },
+  { "type": "room_type", "id": "dovecote",   "name": "Dovecote",     "purpose": "dovecote",  "priority": 30, "min_area": 4,  "requires": [{ "tag": "nest" }] },
+
+  // ---- law, war and the church ----
+  { "type": "room_type", "id": "guardroom",  "name": "Guardroom",    "purpose": "guard",       "priority": 56, "min_area": 6, "requires": [{ "tag": "weapon_rack" }] },
+  { "type": "room_type", "id": "cell",       "name": "Cell",         "purpose": "confinement", "priority": 55, "min_area": 2, "max_area": 12, "requires": [{ "tag": "pallet" }] },
+  { "type": "room_type", "id": "crypt",      "name": "Crypt",        "purpose": "burial",      "priority": 65, "min_area": 6, "requires": [{ "tag": "tomb" }] },
+  { "type": "room_type", "id": "belfry",     "name": "Belfry",       "purpose": "belfry",      "priority": 60, "min_area": 4, "requires": [{ "tag": "bell" }] }
 ]

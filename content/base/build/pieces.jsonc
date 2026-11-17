@@ -44,5 +44,49 @@
   { "type": "build_piece", "id": "anvil",                "name": "Anvil",             "kind": "workstation", "glyph": "N", "material": "wrought_iron", "station": "smithing" },
   { "type": "build_piece", "id": "forge",                "name": "Forge",             "kind": "workstation", "glyph": "F", "material": "wrought_iron", "station": "smithing" },
   { "type": "build_piece", "id": "loom",                 "name": "Loom",              "kind": "workstation", "glyph": "M", "material": "oak", "station": "weaving" },
-  { "type": "build_piece", "id": "tanning_rack",         "name": "Tanning rack",      "kind": "workstation", "glyph": "R", "material": "oak", "station": "tanning" }
+  { "type": "build_piece", "id": "tanning_rack",         "name": "Tanning rack",      "kind": "workstation", "glyph": "R", "material": "oak", "station": "tanning" },
+
+  // ---- fortification and yard pieces ----
+  { "type": "build_piece", "id": "palisade",             "name": "Palisade",          "kind": "wall", "glyph": "!", "material": "oak" },
+  { "type": "build_piece", "id": "fence_wood",           "name": "Plank fence",       "kind": "wall", "glyph": "-", "material": "oak" },
+  { "type": "build_piece", "id": "wall_crenellated",     "name": "Crenellated parapet", "kind": "wall", "glyph": "=", "material": "granite" },
+  { "type": "build_piece", "id": "wall_brick",           "name": "Brick wall",        "kind": "wall", "glyph": "&", "material": "fired_brick" },
+  { "type": "build_piece", "id": "gate_wood",            "name": "Wooden gate",       "kind": "door", "glyph": "g", "material": "oak" },
+  { "type": "build_piece", "id": "gate_iron",            "name": "Iron-bound gate",   "kind": "door", "glyph": "w", "material": "wrought_iron" },
+  { "type": "build_piece", "id": "door_cell",            "name": "Barred cell door",  "kind": "door", "glyph": "d", "material": "wrought_iron" },
+  { "type": "build_piece", "id": "window_open",          "name": "Open arch",         "kind": "window", "glyph": "a", "material": "granite" },
+  { "type": "build_piece", "id": "stairs_stone_up",      "name": "Stone stairs up",   "kind": "stairs_up", "glyph": "{", "material": "granite" },
+  { "type": "build_piece", "id": "stairs_stone_down",    "name": "Stone stairs down", "kind": "stairs_down", "glyph": "}", "material": "granite" },
+
+  // ---- furniture and fixtures ----
+  { "type": "build_piece", "id": "hearth_central",       "name": "Central open hearth", "kind": "furniture", "glyph": "e", "tags": ["hearth"] },
+  { "type": "build_piece", "id": "hearth_chimney",       "name": "Chimney hearth",    "kind": "furniture", "glyph": "i", "material": "granite", "tags": ["hearth"] },
+  { "type": "build_piece", "id": "straw_pallet",         "name": "Straw pallet",      "kind": "furniture", "glyph": "u", "tags": ["bed", "pallet"], "beds": 1 },
+  { "type": "build_piece", "id": "high_seat",            "name": "High seat",         "kind": "furniture", "glyph": "*", "material": "oak", "tags": ["high_seat"] },
+  { "type": "build_piece", "id": "pew",                  "name": "Pew",               "kind": "furniture", "glyph": "p", "material": "oak", "tags": ["pew"] },
+  { "type": "build_piece", "id": "font",                 "name": "Baptismal font",    "kind": "furniture", "glyph": "f", "material": "granite", "tags": ["font"] },
+  { "type": "build_piece", "id": "tomb",                 "name": "Tomb slab",         "kind": "furniture", "glyph": "t", "material": "granite", "tags": ["tomb"] },
+  { "type": "build_piece", "id": "bell",                 "name": "Bell",              "kind": "furniture", "glyph": "l", "material": "bronze", "tags": ["bell"] },
+  { "type": "build_piece", "id": "weapon_rack",          "name": "Weapon rack",       "kind": "furniture", "glyph": "r", "material": "oak", "tags": ["weapon_rack"] },
+  { "type": "build_piece", "id": "toll_counter",         "name": "Toll counter",      "kind": "furniture", "glyph": "c", "material": "oak", "tags": ["toll"] },
+  { "type": "build_piece", "id": "shop_counter",         "name": "Shop counter",      "kind": "furniture", "glyph": "s", "material": "oak", "tags": ["shop"] },
+  { "type": "build_piece", "id": "market_stall",         "name": "Market stall",      "kind": "furniture", "glyph": "m", "material": "oak", "tags": ["market_stall"] },
+  { "type": "build_piece", "id": "well",                 "name": "Well",              "kind": "furniture", "glyph": "O", "material": "granite", "tags": ["well", "water"] },
+  { "type": "build_piece", "id": "hurdle",               "name": "Hurdle pen",        "kind": "furniture", "glyph": "h", "material": "oak", "tags": ["stall"] },
+  { "type": "build_piece", "id": "hay_stack",            "name": "Hay stack",         "kind": "furniture", "glyph": "y", "tags": ["storage", "hay"] },
+  { "type": "build_piece", "id": "malting_floor",        "name": "Malting floor",     "kind": "furniture", "glyph": "n", "tags": ["storage", "malt"] },
+  { "type": "build_piece", "id": "dovecote_nests",       "name": "Dovecote nests",    "kind": "furniture", "glyph": "v", "material": "oak", "tags": ["nest"] },
+  { "type": "build_piece", "id": "waterwheel",           "name": "Waterwheel",        "kind": "furniture", "glyph": "W", "material": "oak", "tags": ["waterwheel"] },
+  { "type": "build_piece", "id": "brake_wheel",          "name": "Brake wheel and gears", "kind": "furniture", "glyph": "J", "material": "oak", "tags": ["gearing"] },
+
+  // ---- workstations ----
+  { "type": "build_piece", "id": "oven",                 "name": "Bread oven",        "kind": "workstation", "glyph": "A", "material": "fired_brick", "station": "baking" },
+  { "type": "build_piece", "id": "brewing_vat",          "name": "Brewing vat",       "kind": "workstation", "glyph": "V", "material": "oak", "station": "brewing" },
+  { "type": "build_piece", "id": "millstone",            "name": "Millstone",         "kind": "workstation", "glyph": "L", "material": "granite", "station": "milling" },
+  { "type": "build_piece", "id": "kiln",                 "name": "Kiln",              "kind": "workstation", "glyph": "I", "material": "fired_brick", "station": "firing" },
+  { "type": "build_piece", "id": "potters_wheel",        "name": "Potter's wheel",    "kind": "workstation", "glyph": "j", "material": "oak", "station": "potting" },
+  { "type": "build_piece", "id": "cooper_bench",         "name": "Cooper's bench",    "kind": "workstation", "glyph": "k", "material": "oak", "station": "coopering" },
+  { "type": "build_piece", "id": "tanning_pit",          "name": "Tanning pit",       "kind": "workstation", "glyph": "q", "material": "oak", "station": "tanning" },
+  { "type": "build_piece", "id": "sawpit",               "name": "Sawpit",            "kind": "workstation", "glyph": "z", "material": "oak", "station": "sawing" },
+  { "type": "build_piece", "id": "charcoal_clamp",       "name": "Charcoal clamp",    "kind": "workstation", "glyph": "^", "station": "charcoal" }
 ]
