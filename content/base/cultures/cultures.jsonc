@@ -1,0 +1,60 @@
+// Culture packs (plan §2.9, §5 Phase 1). One per name pool in content/base/names. The calendar is twelve five-day months (a 60-day year,
+// four 15-day seasons of three months each: spring, summer, autumn, winter). Feast days name a month (1..12) and a day (1..5).
+// "crimes" maps a crime id to a punishment table key (resolved later by the law system); hearth_tax is in pence per hearth per year.
+[
+  { "type": "culture", "id": "north", "name": "Northmark", "name_pool": "names_north",
+    "building_styles": { "poor": "northern", "middling": "northern", "rich": "common" },
+    "roof_palette": ["thatch_straw", "turf_green", "slate_grey"], "wall_palette": ["weathered_oak", "tarred_black", "limewash_white"],
+    "inheritance": "partible", "marriage_age": { "male": 18, "female": 16 }, "tithe_percent": 8, "hearth_tax": 6,
+    "crimes": { "theft": "fine_or_hand", "poaching": "fine", "assault": "weregild", "murder": "weregild_or_outlawry", "arson": "outlawry", "treason": "hanging", "debt": "bond_labour", "oath_breaking": "outlawry" },
+    "months": ["Thawmonth", "Seedmonth", "Ploughmonth", "Budmonth", "Flowermonth", "Haymonth", "Sunmonth", "Reapmonth", "Fallmonth", "Slaughtermonth", "Darkmonth", "Yulemonth"],
+    "feast_days": [
+      { "id": "thaw_blot", "name": "Thaw Blot", "month": 1, "day": 3 },
+      { "id": "midsummer_fires", "name": "Midsummer Fires", "month": 6, "day": 5 },
+      { "id": "harvest_home", "name": "Harvest Home", "month": 8, "day": 5 },
+      { "id": "winternights", "name": "Winternights", "month": 10, "day": 2 },
+      { "id": "yule", "name": "Yule", "month": 12, "day": 3 }
+    ] },
+
+  { "type": "culture", "id": "vale", "name": "Valeholt", "name_pool": "names_vale",
+    "building_styles": { "poor": "common", "middling": "common", "rich": "vale_brick" },
+    "roof_palette": ["thatch_straw", "clay_tile_red", "slate_grey"], "wall_palette": ["limewash_white", "ochre_daub", "red_brick"],
+    "inheritance": "primogeniture", "marriage_age": { "male": 21, "female": 17 }, "tithe_percent": 10, "hearth_tax": 12,
+    "crimes": { "theft": "stocks_then_hand", "poaching": "fine_or_hand", "assault": "fine", "murder": "hanging", "arson": "hanging", "treason": "drawn_and_quartered", "debt": "gaol", "heresy": "penance" },
+    "months": ["Frostbreak", "Sowing", "Greening", "Blossom", "Mayfair", "Hayhurst", "Highsun", "Cornfall", "Applegather", "Mistmonth", "Leaffall", "Midwinter"],
+    "feast_days": [
+      { "id": "plough_monday", "name": "Plough Monday", "month": 2, "day": 1 },
+      { "id": "may_fair", "name": "May Fair", "month": 5, "day": 3 },
+      { "id": "lammas", "name": "Lammas", "month": 8, "day": 1 },
+      { "id": "martinmas", "name": "Martinmas", "month": 10, "day": 4 },
+      { "id": "christmastide", "name": "Christmastide", "month": 12, "day": 4 }
+    ] },
+
+  { "type": "culture", "id": "high", "name": "Highmarch", "name_pool": "names_high",
+    "building_styles": { "poor": "hillfolk", "middling": "hillfolk", "rich": "hillfolk" },
+    "roof_palette": ["slate_grey", "stone_slab", "heather_thatch"], "wall_palette": ["grey_granite", "dry_stone", "limewash_white"],
+    "inheritance": "elective", "marriage_age": { "male": 19, "female": 16 }, "tithe_percent": 5, "hearth_tax": 4,
+    "crimes": { "theft": "restitution_sevenfold", "poaching": "fine", "assault": "blood_price", "murder": "blood_feud_or_price", "arson": "outlawry", "treason": "exile", "debt": "kin_pays", "cattle_raiding": "blood_price" },
+    "months": ["Snowmelt", "Lambing", "Shearing", "Cuckoo", "Peatcut", "Hillgrass", "Heather", "Drovers", "Rutting", "Firstsnow", "Hearthmonth", "Longnight"],
+    "feast_days": [
+      { "id": "imbolc_eve", "name": "Lambing Eve", "month": 2, "day": 5 },
+      { "id": "clan_moot", "name": "Clan Moot", "month": 4, "day": 3 },
+      { "id": "drovers_gathering", "name": "Drovers' Gathering", "month": 8, "day": 2 },
+      { "id": "samhain", "name": "Hallowtide", "month": 10, "day": 5 },
+      { "id": "long_night", "name": "The Long Night", "month": 12, "day": 5 }
+    ] },
+
+  { "type": "culture", "id": "coast", "name": "Seaboard", "name_pool": "names_coast",
+    "building_styles": { "poor": "coastal", "middling": "coastal", "rich": "common" },
+    "roof_palette": ["tarred_shingle", "thatch_straw", "clay_tile_red"], "wall_palette": ["driftwood_grey", "tarred_black", "limewash_white"],
+    "inheritance": "partible", "marriage_age": { "male": 20, "female": 17 }, "tithe_percent": 9, "hearth_tax": 8,
+    "crimes": { "theft": "flogging", "poaching": "fine", "assault": "fine", "murder": "hanging", "arson": "hanging", "treason": "hanging", "debt": "gaol", "smuggling": "confiscation_and_fine", "wrecking": "hanging" },
+    "months": ["Stormfall", "Netmonth", "Springtide", "Gullmonth", "Herring", "Calmwater", "Saltsun", "Harvestfleet", "Equinox", "Foggmonth", "Gale", "Icewater"],
+    "feast_days": [
+      { "id": "blessing_of_the_boats", "name": "Blessing of the Boats", "month": 3, "day": 2 },
+      { "id": "herring_fair", "name": "Herring Fair", "month": 5, "day": 4 },
+      { "id": "midsummer_tide", "name": "Midsummer Tide", "month": 7, "day": 3 },
+      { "id": "drowned_remembrance", "name": "Remembrance of the Drowned", "month": 10, "day": 3 },
+      { "id": "winter_lights", "name": "Winter Lights", "month": 12, "day": 2 }
+    ] }
+]

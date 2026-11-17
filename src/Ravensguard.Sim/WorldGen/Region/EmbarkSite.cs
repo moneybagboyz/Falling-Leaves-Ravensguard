@@ -5,7 +5,13 @@ namespace Ravensguard.Sim.WorldGen.Region;
 /// <summary>Why and how well a 16 x 16 cell window suits an embark (plan §1A Stage 3 "Quick Start", §3f).</summary>
 public sealed record EmbarkScore(
     int CellX, int CellY, int Total, bool Excluded, string Reason,
-    int Towns, int Villages, int Ruins, int RiverCells, int BiomeCount, int LandPct, int Population, int Realms, int NearestWarKm);
+    int Towns, int Villages, int Ruins, int RiverCells, int BiomeCount, int LandPct, int Population, int Realms, int NearestWarKm)
+{
+    /// <summary>What made up <see cref="Total"/>: (part key, points), in the order they were added. Empty for excluded windows.</summary>
+    public IReadOnlyList<ScorePart> Parts { get; init; } = [];
+}
+
+public readonly record struct ScorePart(string Key, int Points);
 
 /// <summary>Scores embark windows on the continent map and picks one automatically.</summary>
 public static class EmbarkSite
@@ -77,21 +83,23 @@ public static class EmbarkSite
         else if (warKm < 10) reason = "active war within 10 km of the centre";
         else if (towns == 0 && villages == 0) reason = "no settlements";
         int total = 0;
-        total += towns switch { 0 => 0, 1 => 150, 2 => 250, 3 => 320, 4 => 300, _ => -100 * (towns - 4) };
-        total += riverCells >= 8 ? 150 : riverCells > 0 ? 60 : -50;
-        total += biomeCount >= 2 ? 80 * Math.Min(biomeCount, 3) : 0;
+        var parts = new List<ScorePart>(12);
+        void Add(string key, int pts) { if (pts != 0) { total += pts; parts.Add(new ScorePart(key, pts)); } }
+        Add("towns", towns switch { 0 => 0, 1 => 150, 2 => 250, 3 => 320, 4 => 300, _ => -100 * (towns - 4) });
+        Add("rivers", riverCells >= 8 ? 150 : riverCells > 0 ? 60 : -50);
+        Add("biomes", biomeCount >= 2 ? 80 * Math.Min(biomeCount, 3) : 0);
         int mount = biomes[(int)Biome.Mountain] * 100 / Math.Max(1, land);
         int bad = (biomes[(int)Biome.Desert] + biomes[(int)Biome.Tundra]) * 100 / Math.Max(1, land);
-        total -= Math.Max(0, mount - 25) * 4 + Math.Max(0, bad - 15) * 4;
-        if (landPct < 95) total -= (95 - landPct) * 5;
-        if (warKm < 20) total -= 150 + (20 - warKm) * 10;
-        total += (int)Math.Clamp((pop - 8000) / 200, -60, 100);
-        total += Math.Min(ruins, 12) * 6;
-        total += realmCount is >= 1 and <= 3 ? 80 : realmCount == 0 ? -100 : -40;
-        total += fertSum / Math.Max(1, land) / 2;
-        total -= Math.Max(0, savSum / Math.Max(1, land) - 60);
+        Add("harsh_land", -(Math.Max(0, mount - 25) * 4 + Math.Max(0, bad - 15) * 4));
+        if (landPct < 95) Add("sea", -(95 - landPct) * 5);
+        if (warKm < 20) Add("war", -(150 + (20 - warKm) * 10));
+        Add("population", (int)Math.Clamp((pop - 8000) / 200, -60, 100));
+        Add("ruins", Math.Min(ruins, 12) * 6);
+        Add("realms", realmCount is >= 1 and <= 3 ? 80 : realmCount == 0 ? -100 : -40);
+        Add("fertility", fertSum / Math.Max(1, land) / 2);
+        Add("savagery", -Math.Max(0, savSum / Math.Max(1, land) - 60));
         bool excluded = reason.Length > 0;
-        return new EmbarkScore(cx, cy, excluded ? Excl : total, excluded, reason, towns, villages, ruins, riverCells, biomeCount, landPct, (int)Math.Min(pop, int.MaxValue), realmCount, warKm == int.MaxValue ? -1 : warKm);
+        return new EmbarkScore(cx, cy, excluded ? Excl : total, excluded, reason, towns, villages, ruins, riverCells, biomeCount, landPct, (int)Math.Min(pop, int.MaxValue), realmCount, warKm == int.MaxValue ? -1 : warKm) { Parts = excluded ? [] : parts };
     }
 
     /// <summary>Best window by <see cref="Score"/> (ties go to the lowest y then x): three or four history towns preferred (plan §1), a river, mixed biomes, clear of active wars.</summary>

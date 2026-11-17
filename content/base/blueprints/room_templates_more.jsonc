@@ -1,0 +1,105 @@
+// More room templates (plan §2.9): solar, kitchen, storeroom, crypt, great hall, cell.
+[
+  // Solar: the lord's withdrawing chamber (bed, table; fits above a hall).
+  { "type": "blueprint", "id": "template_solar", "name": "Solar template", "wealth": "rich", "kind": "room_template",
+    "legend": { "#": "$wall", "o": "window_shuttered", "+": "door_wood", "r": "floor_plank" },
+    "rooms": { "r": "solar" },
+    "rows": [
+      "###o#o###",
+      "#rrrrrrr#",
+      "orrrrrrr+",
+      "#rrrrrrr#",
+      "#rrrrrrr#",
+      "#########"
+    ] },
+
+  { "type": "blueprint", "id": "template_kitchen", "name": "Kitchen template", "wealth": "middling", "kind": "room_template",
+    "legend": { "#": "$wall", "o": "window_shuttered", "+": "door_wood", "k": "$floor", "E": "hearth" },
+    "rooms": { "k": "hearth" },
+    "rows": [
+      "###o####",
+      "#kkkkkk#",
+      "#kkkkkk+",
+      "#kkkkkk#",
+      "#kkkkkk#",
+      "########"
+    ],
+    "fixtures": [
+      "________",
+      "_E______",
+      "________",
+      "________",
+      "________",
+      "________"
+    ] },
+
+  { "type": "blueprint", "id": "template_storeroom", "name": "Storeroom template", "wealth": "middling", "kind": "room_template",
+    "legend": { "#": "$wall", "o": "window_shuttered", "+": "door_wood", "v": "floor_plank" },
+    "rooms": { "v": "storage" },
+    "rows": [
+      "#######",
+      "#vvvvv#",
+      "#vvvvv+",
+      "#vvvvv#",
+      "#######"
+    ] },
+
+  // Stairwell closet on the ground floor, burial vault below (tombs added by the building).
+  { "type": "blueprint", "id": "template_crypt", "name": "Crypt template", "wealth": "rich", "kind": "room_template",
+    "legend": { "#": "$wall", "+": "door_wood", ".": "floor_plank", "y": "floor_flagstone", "S": "wall_stone", "<": "stairs_up", ">": "stairs_down" },
+    "rooms": { "y": "burial" },
+    "rows": [
+      "####___",
+      "#>.+___",
+      "####___",
+      "_______",
+      "_______"
+    ],
+    "levels": [
+      { "z": -1, "rows": [
+        "SSSSSSS",
+        "S<yyyyS",
+        "SyyyyyS",
+        "SyyyyyS",
+        "SSSSSSS"
+      ] }
+    ] },
+
+  // Great hall, 12x7 m interior with a central hearth; the high seat and tables come from the household.
+  { "type": "blueprint", "id": "template_great_hall", "name": "Great hall template", "wealth": "rich", "kind": "room_template",
+    "legend": { "#": "$wall", "o": "window_shuttered", "+": "door_wood", "a": "$floor", "e": "hearth_central" },
+    "rooms": { "a": "gathering" },
+    "rows": [
+      "###o##o##o####",
+      "#aaaaaaaaaaaa#",
+      "#aaaaaaaaaaaa#",
+      "#aaaaaaaaaaaa#",
+      "+aaaaaaaaaaaa+",
+      "#aaaaaaaaaaaa#",
+      "#aaaaaaaaaaaa#",
+      "#aaaaaaaaaaaa#",
+      "###o##o##o####"
+    ],
+    "fixtures": [
+      "______________",
+      "______________",
+      "______________",
+      "______________",
+      "______e_______",
+      "______________",
+      "______________",
+      "______________",
+      "______________"
+    ] },
+
+  { "type": "blueprint", "id": "template_cell", "name": "Cell template", "wealth": "middling", "kind": "room_template",
+    "legend": { "S": "wall_stone", "c": "floor_packed_earth", "d": "door_cell", "x": "window_arrow_slit" },
+    "rooms": { "c": "confinement" },
+    "rows": [
+      "SSxSS",
+      "ScccS",
+      "ScccS",
+      "ScccS",
+      "SSdSS"
+    ] }
+]

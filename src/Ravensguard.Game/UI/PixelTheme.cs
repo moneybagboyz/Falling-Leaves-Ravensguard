@@ -32,6 +32,16 @@ public static class PixelTheme
         return sb;
     }
 
+    /// <summary>A pixel panel box for cards, selection frames and map insets. Same 9-slice as the theme's panels.</summary>
+    public static StyleBox PanelBox(Color fill, Color rim, float margin = 8) => Box(fill, rim, margin);
+
+    static StyleBoxFlat Flat(Color c, float margin = 0)
+    {
+        var f = new StyleBoxFlat { BgColor = c };
+        f.SetContentMarginAll(margin);
+        return f;
+    }
+
     public static Theme Build()
     {
         var t = new Theme { DefaultFontSize = 16 };
@@ -74,6 +84,31 @@ public static class PixelTheme
         t.SetColor("font_color", "LineEdit", Body);
         t.SetColor("caret_color", "LineEdit", Gold);
 
+        t.SetStylebox("background", "ProgressBar", Box(new Color("1a1418"), Rim, 4));
+        t.SetStylebox("fill", "ProgressBar", Flat(Gold));
+        t.SetColor("font_color", "ProgressBar", Body);
+
+        t.SetStylebox("panel", "ItemList", Box(new Color("1a1418"), Rim, 4));
+        t.SetStylebox("focus", "ItemList", new StyleBoxEmpty());
+        t.SetStylebox("selected", "ItemList", Flat(new Color("4b3d31"), 2));
+        t.SetStylebox("selected_focus", "ItemList", Flat(new Color("5a4936"), 2));
+        t.SetStylebox("hovered", "ItemList", Flat(new Color("33291f"), 2));
+        t.SetColor("font_color", "ItemList", Body);
+        t.SetColor("font_selected_color", "ItemList", Gold);
+        t.SetColor("font_hovered_color", "ItemList", Gold);
+        t.SetConstant("v_separation", "ItemList", 2);
+
+        foreach (var sb in new[] { "VScrollBar", "HScrollBar" })
+        {
+            t.SetStylebox("scroll", sb, Flat(new Color("1a1418")));
+            t.SetStylebox("grabber", sb, Flat(Rim));
+            t.SetStylebox("grabber_highlight", sb, Flat(Gold));
+            t.SetStylebox("grabber_pressed", sb, Flat(Gold));
+        }
+        t.SetStylebox("normal", "RichTextLabel", new StyleBoxEmpty());
+        t.SetStylebox("panel", "TooltipPanel", Box(new Color("1a1418"), Gold, 6));
+        t.SetColor("font_color", "TooltipLabel", Body);
+
         t.SetColor("font_color", "Label", Body);
         t.SetColor("default_color", "RichTextLabel", Body);
 
@@ -81,6 +116,12 @@ public static class PixelTheme
         t.SetTypeVariation("TitleLabel", "Label");
         t.SetColor("font_color", "TitleLabel", Gold);
         t.SetFontSize("font_size", "TitleLabel", 32);
+        t.AddType("GoodLabel");
+        t.SetTypeVariation("GoodLabel", "Label");
+        t.SetColor("font_color", "GoodLabel", new Color("8fc46a"));
+        t.AddType("GoldLabel");
+        t.SetTypeVariation("GoldLabel", "Label");
+        t.SetColor("font_color", "GoldLabel", Gold);
         t.AddType("WarnLabel");
         t.SetTypeVariation("WarnLabel", "Label");
         t.SetColor("font_color", "WarnLabel", Warn);

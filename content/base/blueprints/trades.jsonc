@@ -1,0 +1,361 @@
+// Trade buildings: bakery, brewhouse, tannery, weaver, carpenter, cooper, potter + kiln, charcoal site, mills, sawpit.
+// Fixed fixtures are the big immovable gear (ovens, vats, kilns, wheels); portable tools come from the owner.
+[
+  // Bakehouse with two brick ovens, a flour store, and the baker's family above.
+  { "type": "blueprint", "id": "bakery", "name": "Bakery", "wealth": "middling",
+    "legend": { "#": "$wall", "o": "window_shuttered", "+": "door_wood", "b": "$floor", "v": "floor_plank", "s": "floor_plank", "O": "oven", "<": "stairs_up", ">": "stairs_down" },
+    "rooms": { "b": "work:baking", "v": "storage", "s": "sleeping" },
+    "rows": [
+      "##o#######",
+      "#bbbbb#vv#",
+      "#bbbbb#vv#",
+      "obbbbb+vv+",
+      "#bbbbb#vv#",
+      "#bbbb<#vv#",
+      "###+######"
+    ],
+    "fixtures": [
+      "__________",
+      "_OO_______",
+      "__________",
+      "__________",
+      "__________",
+      "__________",
+      "__________"
+    ],
+    "levels": [
+      { "z": 1, "rows": [
+        "##o####o##",
+        "#ssssssss#",
+        "#ssssssss#",
+        "#ssssssss#",
+        "#ssssssss#",
+        "#ssss>sss#",
+        "##########"
+      ] }
+    ] },
+
+  // Brewhouse: mash and boiling vats, a malting floor and grain store, and an ale cellar below.
+  { "type": "blueprint", "id": "brewhouse", "name": "Brewhouse", "wealth": "middling",
+    "legend": { "#": "$wall", "o": "window_shuttered", "+": "door_wood", "b": "floor_flagstone", "v": "$floor", "c": "floor_packed_earth", "S": "wall_stone", "D": "door_barn", "V": "brewing_vat", "N": "malting_floor", "<": "stairs_up", ">": "stairs_down" },
+    "rooms": { "b": "work:brewing", "v": "storage", "c": "cellar" },
+    "rows": [
+      "###o########",
+      "#bbbbbb#vvv#",
+      "#bbbbbb#vvv#",
+      "obbbbbb+vvvD",
+      "#bbbbbb#vvv#",
+      "#bbbbbb#vvv#",
+      "#bbbbb>#vvv#",
+      "###+########"
+    ],
+    "fixtures": [
+      "____________",
+      "_V_V_V___NN_",
+      "____________",
+      "____________",
+      "____________",
+      "____________",
+      "____________",
+      "____________"
+    ],
+    "levels": [
+      { "z": -1, "rows": [
+        "SSSSSSSS____",
+        "SccccccS____",
+        "SccccccS____",
+        "SccccccS____",
+        "SccccccS____",
+        "SccccccS____",
+        "Sccccc<S____",
+        "SSSSSSSS____"
+      ] }
+    ] },
+
+  // Tannery: pits and racks on an earth floor, a hide store, and a drying loft. Belongs downwind and downstream of the village.
+  { "type": "blueprint", "id": "tannery", "name": "Tannery", "wealth": "poor",
+    "legend": { "#": "$wall", "o": "window_shuttered", "+": "door_wood", "t": "floor_packed_earth", "v": "$floor", "d": "floor_plank", "D": "door_barn", "H": "ladder", "T": "trapdoor", "Q": "tanning_pit", "R": "tanning_rack" },
+    "rooms": { "t": "work:tanning", "v": "storage" },
+    "rows": [
+      "############",
+      "#ttttttt#vv#",
+      "#ttttttt#vv#",
+      "ottttttt+vvD",
+      "#ttttttt#vv#",
+      "#ttttttt#vv#",
+      "#Htttttt#vv#",
+      "####+#######"
+    ],
+    "fixtures": [
+      "____________",
+      "____________",
+      "__Q_Q_Q_____",
+      "____________",
+      "____________",
+      "___R_R______",
+      "____________",
+      "____________"
+    ],
+    "levels": [
+      { "z": 1, "rows": [
+        "####o####___",
+        "#ddddddd#___",
+        "#ddddddd#___",
+        "#ddddddd#___",
+        "#ddddddd#___",
+        "#ddddddd#___",
+        "#Tdddddd#___",
+        "#########___"
+      ] }
+    ] },
+
+  // Weaver's workroom with three looms, a small hearth and bed closet, and a wool loft.
+  { "type": "blueprint", "id": "weavers_shop", "name": "Weaver's shop", "wealth": "middling",
+    "legend": { "#": "$wall", "o": "window_shuttered", "+": "door_wood", "w": "$floor", "k": "$floor", "s": "floor_plank", "v": "floor_plank", "M": "loom", "E": "hearth", "<": "stairs_up", ">": "stairs_down" },
+    "rooms": { "w": "work:weaving", "k": "hearth", "s": "sleeping", "v": "storage" },
+    "rows": [
+      "##o#######",
+      "#wwwww#kk#",
+      "#wwwww#kk#",
+      "owwwww++##",
+      "#wwwww#ss#",
+      "#wwww<#sso",
+      "###+######"
+    ],
+    "fixtures": [
+      "__________",
+      "_M_M____E_",
+      "__________",
+      "_M________",
+      "__________",
+      "__________",
+      "__________"
+    ],
+    "levels": [
+      { "z": 1, "rows": [
+        "###o##o###",
+        "#vvvvvvvv#",
+        "#vvvvvvvv#",
+        "#vvvvvvvv#",
+        "#vvvvvvvv#",
+        "#vvvv>vvv#",
+        "##########"
+      ] }
+    ] },
+
+  // Carpenter's shop: benches under the windows and a timber store with a wide door for long planks.
+  { "type": "blueprint", "id": "carpenter_shop", "name": "Carpenter's shop", "wealth": "middling",
+    "legend": { "#": "$wall", "o": "window_shuttered", "+": "door_wood", "w": "floor_packed_earth", "v": "floor_plank", "D": "door_barn", "K": "workbench" },
+    "rooms": { "w": "work:carpentry", "v": "storage" },
+    "rows": [
+      "###o##o######",
+      "#wwwwwww#vvv#",
+      "#wwwwwww#vvv#",
+      "owwwwwww+vvvD",
+      "#wwwwwww#vvv#",
+      "#wwwwwww#vvv#",
+      "###+#########"
+    ],
+    "fixtures": [
+      "_____________",
+      "_K_K_________",
+      "_____________",
+      "_____________",
+      "_____________",
+      "_____________",
+      "_____________"
+    ] },
+
+  // Cooperage: benches for staves and hoops, and a stave store.
+  { "type": "blueprint", "id": "cooperage", "name": "Cooperage", "wealth": "middling",
+    "legend": { "#": "$wall", "o": "window_shuttered", "+": "door_wood", "w": "floor_packed_earth", "v": "floor_plank", "D": "door_barn", "B": "cooper_bench", "Y": "barrel" },
+    "rooms": { "w": "work:coopering", "v": "storage" },
+    "rows": [
+      "###o#######",
+      "#wwwwww#vv#",
+      "#wwwwww#vv#",
+      "owwwwww+vvD",
+      "#wwwwww#vv#",
+      "#wwwwww#vv#",
+      "###+#######"
+    ],
+    "fixtures": [
+      "___________",
+      "_BB______Y_",
+      "___________",
+      "___________",
+      "___________",
+      "___________",
+      "___________"
+    ] },
+
+  // Potter's workshop with wheels, a stone-walled kiln room (fire risk kept apart), and a clay and drying store.
+  { "type": "blueprint", "id": "pottery", "name": "Pottery", "wealth": "middling",
+    "legend": { "#": "$wall", "o": "window_shuttered", "+": "door_wood", "w": "floor_packed_earth", "f": "floor_flagstone", "v": "floor_packed_earth", "S": "wall_stone", "D": "door_barn", "j": "potters_wheel", "I": "kiln" },
+    "rooms": { "w": "work:potting", "f": "work:firing", "v": "storage" },
+    "rows": [
+      "###o#######",
+      "#wwwwwSfff#",
+      "+wwwww+fff#",
+      "#wwwwwSfff#",
+      "#wwwwwSfff#",
+      "###+#######",
+      "#vvvvvvvvv#",
+      "ovvvvvvvvv#",
+      "#vvvvvvvvv#",
+      "#####D#####"
+    ],
+    "fixtures": [
+      "___________",
+      "_j_j_______",
+      "________I__",
+      "___________",
+      "___________",
+      "___________",
+      "___________",
+      "___________",
+      "___________",
+      "___________"
+    ] },
+
+  // Charcoal burners' clearing: four earth-covered clamps in a fenced yard and a turf-and-wattle hut for the burner who tends them day and night.
+  { "type": "blueprint", "id": "charcoal_clamp_site", "name": "Charcoal burners' clearing", "wealth": "poor",
+    "legend": { "#": "$wall", "o": "window_shuttered", "+": "door_wood", "-": "fence_wood", "y": "floor_packed_earth", "k": "floor_packed_earth", "g": "gate_wood", "Z": "charcoal_clamp", "e": "hearth_central" },
+    "rooms": { "y": "work:charcoal", "k": "hearth" },
+    "rows": [
+      "-----------------",
+      "-yyyyyyyyyy#####-",
+      "-yyyyyyyyyy+kkk#-",
+      "-yyyyyyyyyy#kkk#-",
+      "-yyyyyyyyyy#####-",
+      "-yyyyyyyyyyyyyyy-",
+      "-yyyyyyyyyyyyyyy-",
+      "-yyyyyyyyyyyyyyy-",
+      "-yyyyyyyyyyyyyyy-",
+      "-yyyyyyyyyyyyyyy-",
+      "-yyyyyyyyyyyyyyy-",
+      "-------gg--------"
+    ],
+    "fixtures": [
+      "_________________",
+      "_________________",
+      "_________________",
+      "___Z___Z______e__",
+      "_________________",
+      "_________________",
+      "_________________",
+      "___Z___Z_________",
+      "_________________",
+      "_________________",
+      "_________________",
+      "_________________"
+    ] },
+
+  // Watermill on a stream: the wheel chamber at the west end (open to the race), two millstones, and a grain store with a loft.
+  { "type": "blueprint", "id": "watermill", "name": "Watermill", "wealth": "middling",
+    "legend": { "#": "$wall", "o": "window_shuttered", "+": "door_wood", "c": "floor_flagstone", "m": "$floor", "v": "floor_plank", "u": "floor_plank", "D": "door_barn", "H": "ladder", "T": "trapdoor", "W": "waterwheel", "L": "millstone" },
+    "rooms": { "m": "work:milling", "v": "storage", "u": "storage" },
+    "rows": [
+      "#######o#######",
+      "#ccc#mmmmm#vHv#",
+      "#ccc#mmmmm#vvv#",
+      "+ccc+mmmmm+vvvD",
+      "#ccc#mmmmm#vvv#",
+      "#ccc#mmmmm#vvv#",
+      "#ccc#mmmmm#vvvo",
+      "#######+#######"
+    ],
+    "fixtures": [
+      "_______________",
+      "_______________",
+      "__W___L_L______",
+      "_______________",
+      "_______________",
+      "_______________",
+      "_______________",
+      "_______________"
+    ],
+    "levels": [
+      { "z": 1, "rows": [
+        "__________##o##",
+        "__________#uTu#",
+        "__________#uuu#",
+        "__________#uuu#",
+        "__________#uuu#",
+        "__________#uuu#",
+        "__________#uuu#",
+        "__________#####"
+      ] }
+    ] },
+
+  // Smock mill, 5x5 m interior over three floors: grain store, milling floor, and the cap room with the brake wheel. Sails are drawn by the renderer.
+  { "type": "blueprint", "id": "windmill", "name": "Windmill", "wealth": "middling",
+    "legend": { "#": "$wall", "o": "window_shuttered", "+": "door_wood", "v": "floor_plank", "m": "floor_plank", "z": "floor_plank", "L": "millstone", "J": "brake_wheel", "<": "stairs_up", ">": "stairs_down" },
+    "rooms": { "v": "storage", "m": "work:milling" },
+    "rows": [
+      "#######",
+      "#<vvvv#",
+      "#vvvvv#",
+      "#vvvvv#",
+      "#vvvvv#",
+      "#vvvvv#",
+      "###+###"
+    ],
+    "levels": [
+      { "z": 1, "rows": [
+        "###o###",
+        "#>mmmm#",
+        "#<mmmm#",
+        "#mmmmm#",
+        "#mmmmm#",
+        "#mmmmm#",
+        "#######"
+      ], "fixtures": [
+        "_______",
+        "_______",
+        "_______",
+        "___L___",
+        "_______",
+        "_______",
+        "_______"
+      ] },
+      { "z": 2, "rows": [
+        "#####o#",
+        "#zzzzz#",
+        "#>zzzz#",
+        "#zzzzz#",
+        "#zzzzz#",
+        "#zzzzz#",
+        "#######"
+      ], "fixtures": [
+        "_______",
+        "_______",
+        "_______",
+        "___J___",
+        "_______",
+        "_______",
+        "_______"
+      ] }
+    ] },
+
+  // Plank-walled shed over a sawpit: a log on trestles, one sawyer above and one below.
+  { "type": "blueprint", "id": "sawpit", "name": "Sawpit shed", "wealth": "poor",
+    "legend": { "-": "fence_wood", "w": "floor_packed_earth", "D": "door_barn", "z": "sawpit" },
+    "rooms": { "w": "work:sawing" },
+    "rows": [
+      "-----------",
+      "-wwwwwwwww-",
+      "DwwwwwwwwwD",
+      "-wwwwwwwww-",
+      "-wwwwwwwww-",
+      "-----------"
+    ],
+    "fixtures": [
+      "___________",
+      "___________",
+      "____zzz____",
+      "___________",
+      "___________",
+      "___________"
+    ] }
+]

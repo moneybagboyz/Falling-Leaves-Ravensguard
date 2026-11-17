@@ -5,7 +5,17 @@ using Ravensguard.Sim.World;
 
 namespace Ravensguard.Sim.Live;
 
-public enum GroundKind : byte { None, Grass, Dirt, Cobble }
+/// <summary>
+/// Outdoor ground. The first four are the hamlet's; the rest come with the generated region (plan 4A.4). DeepWater is the only
+/// kind a person cannot walk on; shallow Water (streams, river banks) is wadeable.
+/// </summary>
+public enum GroundKind : byte
+{
+    None, Grass, Dirt, Cobble,
+    Meadow, ForestFloor, LeafLitter, Sand, Mud, Marsh, Gravel, Rock, Scree, Peat,
+    Water, DeepWater, Ford, Bridge,
+    Furrow, Sown, Crop, Stubble, Fallow,
+}
 
 /// <summary>Scenery that is not a building piece: trees, wells, stalls, braziers. Wide = a 64 px sprite spanning X and X+1; otherwise centred on its cell.</summary>
 public sealed record Prop(int X, int Y, int Z, string Sprite, bool Wide = false, bool Blocks = true, int LightRadius = 0, int LightIntensity = 0);
@@ -24,6 +34,14 @@ public sealed class HamletMap
     public byte[] GroundVariant { get; }
     public List<Prop> Props { get; } = new();
     public List<PlacedBuilding> Buildings { get; } = new();
+
+    /// <summary>World cell of local (0,0). Zero for the hamlet; a streamed window sits somewhere in the 32 km region (always a multiple of the chunk size).</summary>
+    public int OriginX { get; init; }
+    public int OriginY { get; init; }
+    /// <summary>Streamed maps only: version of each chunk's content in this window, keyed by world chunk (x, y). Null for the hamlet.</summary>
+    public Dictionary<(int X, int Y), int>? ChunkVersions { get; init; }
+    /// <summary>Bumps whenever a chunk is added to or patched in this window; the view redraws chunks whose version moved.</summary>
+    public int StreamRevision { get; set; }
 
     public HamletMap(LevelGrid grid, PieceCatalog pieces)
     {

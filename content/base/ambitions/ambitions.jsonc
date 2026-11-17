@@ -1,0 +1,70 @@
+// Starting ambitions, one per origin (plan §3.11). Each step is done when all its conditions hold; condition ids come from the base vocabulary
+// (src/Ravensguard.Content/BaseVocabulary.cs) and take string args.
+[
+  { "type": "ambition", "id": "regain_honour", "name": "Regain your honour",
+    "description": "Win back the name you lost, in front of the people who took it.",
+    "steps": [
+      { "id": "find_a_patron", "name": "Find a patron", "description": "Someone with a banner must vouch for you.",
+        "conditions": [ { "id": "knows_person", "args": { "kind": "lord", "min_trust": "20" } } ] },
+      { "id": "earn_a_horse", "name": "Earn a warhorse", "conditions": [ { "id": "has_item", "args": { "item": "horse_war" } } ] },
+      { "id": "win_renown", "name": "Win renown", "description": "Be spoken of well in the district.",
+        "conditions": [ { "id": "has_reputation_at_least", "args": { "scope": "district", "value": "40" } } ] },
+      { "id": "be_knighted", "name": "Be knighted", "conditions": [ { "id": "has_rank", "args": { "rank": "knight" } } ] }
+    ] },
+
+  { "type": "ambition", "id": "make_your_fortune", "name": "Make your fortune",
+    "description": "Turn a pack into a shop, and a shop into a name on a guild roll.",
+    "steps": [
+      { "id": "double_your_stake", "name": "Double your stake", "conditions": [ { "id": "has_coin_at_least", "args": { "pence": "300" } } ] },
+      { "id": "learn_the_trade", "name": "Learn the trade", "conditions": [ { "id": "has_proficiency", "args": { "skill": "trading", "level": "40" } } ] },
+      { "id": "open_a_stall", "name": "Own a stall or shop", "conditions": [ { "id": "owns_building", "args": { "kind": "shop" } } ] },
+      { "id": "join_the_guild", "name": "Join a guild", "conditions": [ { "id": "has_rank", "args": { "rank": "guild_member" } } ] },
+      { "id": "grow_rich", "name": "Hold a thousand pence", "conditions": [ { "id": "has_coin_at_least", "args": { "pence": "1000" } } ] }
+    ] },
+
+  { "type": "ambition", "id": "be_free", "name": "Be free",
+    "description": "Stay out of your lord's reach for a year and a day, and then have something to show for it.",
+    "steps": [
+      { "id": "find_shelter", "name": "Find shelter", "conditions": [ { "id": "is_in_place_kind", "args": { "kind": "village" } } ] },
+      { "id": "earn_a_wage", "name": "Earn a first wage", "conditions": [ { "id": "completed_contract_count", "args": { "count": "1" } } ] },
+      { "id": "a_year_and_a_day", "name": "Survive a year and a day", "conditions": [ { "id": "has_rank", "args": { "rank": "free_person" } } ] },
+      { "id": "own_a_roof", "name": "Own a roof", "conditions": [ { "id": "owns_building", "args": { "kind": "dwelling" } } ] }
+    ] },
+
+  { "type": "ambition", "id": "raise_a_company", "name": "Raise a company",
+    "description": "Gather the men who still know how to stand in a line, and find someone who will pay them.",
+    "steps": [
+      { "id": "first_recruits", "name": "Gather three followers", "conditions": [ { "id": "has_followers_at_least", "args": { "count": "3" } } ] },
+      { "id": "arm_them", "name": "Arm them", "conditions": [ { "id": "has_item", "args": { "item": "spear", "count": "3" } } ] },
+      { "id": "first_contract", "name": "Win a first contract", "conditions": [ { "id": "completed_contract_count", "args": { "count": "3" } } ] },
+      { "id": "a_dozen_swords", "name": "Command twelve", "conditions": [ { "id": "has_followers_at_least", "args": { "count": "12" } }, { "id": "has_proficiency", "args": { "skill": "leadership", "level": "40" } } ] }
+    ] },
+
+  { "type": "ambition", "id": "uncover_the_truth", "name": "Uncover the truth",
+    "description": "Someone sent a child to the monastery with a sealed letter. Find out who, and why.",
+    "steps": [
+      { "id": "learn_the_old_hands", "name": "Read the old hands", "conditions": [ { "id": "has_proficiency", "args": { "skill": "literacy", "level": "50" } } ] },
+      { "id": "find_the_scribe", "name": "Find the scribe who wrote it", "conditions": [ { "id": "knows_person", "args": { "kind": "scribe", "min_trust": "10" } } ] },
+      { "id": "reach_the_archive", "name": "Reach a lord's archive", "conditions": [ { "id": "is_in_place_kind", "args": { "kind": "manor" } } ] },
+      { "id": "confront_the_sender", "name": "Face the sender", "conditions": [ { "id": "knows_person", "args": { "kind": "sender", "min_trust": "0" } } ] }
+    ] },
+
+  { "type": "ambition", "id": "claim_your_inheritance", "name": "Claim your inheritance",
+    "description": "Your brother holds the manor. The law, the neighbours and the coin all matter more than the sword.",
+    "steps": [
+      { "id": "study_the_charter", "name": "Study the charter", "conditions": [ { "id": "has_proficiency", "args": { "skill": "law", "level": "30" } } ] },
+      { "id": "gather_allies", "name": "Gather allies", "conditions": [ { "id": "has_followers_at_least", "args": { "count": "4" } } ] },
+      { "id": "petition_the_lord", "name": "Petition the liege", "conditions": [ { "id": "knows_person", "args": { "kind": "liege", "min_trust": "30" } } ] },
+      { "id": "hold_land", "name": "Hold land of your own", "conditions": [ { "id": "owns_building", "args": { "kind": "manor" } } ] },
+      { "id": "be_acknowledged", "name": "Be acknowledged heir", "conditions": [ { "id": "has_rank", "args": { "rank": "landholder" } } ] }
+    ] },
+
+  { "type": "ambition", "id": "clear_your_name", "name": "Clear your name",
+    "description": "The charge was false, or mostly. The one who can prove it is not looking for you.",
+    "steps": [
+      { "id": "lie_low", "name": "Lie low", "conditions": [ { "id": "is_in_place_kind", "args": { "kind": "wilds" } } ] },
+      { "id": "find_a_fence", "name": "Find someone who deals in secrets", "conditions": [ { "id": "knows_person", "args": { "kind": "fence", "min_trust": "20" } } ] },
+      { "id": "find_the_witness", "name": "Find the witness", "conditions": [ { "id": "knows_person", "args": { "kind": "witness", "min_trust": "10" } } ] },
+      { "id": "stand_before_the_court", "name": "Stand before the court", "conditions": [ { "id": "has_reputation_at_least", "args": { "scope": "district", "value": "10" } } ] }
+    ] }
+]

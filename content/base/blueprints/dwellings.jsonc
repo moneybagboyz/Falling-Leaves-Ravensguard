@@ -1,0 +1,609 @@
+// Dwellings by wealth (plan §2.9, §4A.2): hovel, cottages, croft, longhouses, burgage houses, merchant house, manors and tower houses.
+// Generated layouts are plain text rows; bed capacity per kind is checked by BlueprintValidator (cottage 4-7, longhouse 6-10, burgage 6-12).
+[
+  // Hovel: one smoky room (~5x3 m interior) for a cottar or vagrant family, a central open hearth and no loft.
+  { "type": "blueprint", "id": "hovel", "name": "Hovel", "wealth": "poor",
+    "legend": { "#": "$wall", "o": "window_shuttered", "+": "door_wood", "k": "$floor", "e": "hearth_central" },
+    "rooms": { "k": "hearth" },
+    "rows": [
+      "#######",
+      "#kkkkk#",
+      "#kkkkko",
+      "#kkkkk#",
+      "###+###"
+    ],
+    "fixtures": [
+      "_______",
+      "_______",
+      "___e___",
+      "_______",
+      "_______"
+    ] },
+
+  // 9x4 m interior: hearth room, a separate bedchamber and a small loft over the hearth room (~6 beds).
+  { "type": "blueprint", "id": "cottage_two_room", "name": "Two-room cottage", "wealth": "middling", "dwelling": "cottage",
+    "legend": { "#": "$wall", "o": "window_shuttered", "+": "door_wood", "k": "$floor", "s": "floor_plank", "H": "ladder", "T": "trapdoor", "E": "hearth" },
+    "rooms": { "k": "hearth", "s": "sleeping" },
+    "rows": [
+      "##o####o##",
+      "#kkkH#sss#",
+      "#kkkk#ssso",
+      "#kkkk+sss#",
+      "#kkkk#sss#",
+      "##+####o##"
+    ],
+    "fixtures": [
+      "__________",
+      "__________",
+      "_E________",
+      "__________",
+      "__________",
+      "__________"
+    ],
+    "levels": [
+      { "z": 1, "rows": [
+        "##o###____",
+        "#sssT#____",
+        "#ssss#____",
+        "######____",
+        "__________",
+        "__________"
+      ] }
+    ] },
+
+  // Prosperous yeoman cottage: stone walls, chimney hearth, larder, and a full loft with a store at the far end.
+  { "type": "blueprint", "id": "cottage_stone", "name": "Stone cottage", "wealth": "rich", "dwelling": "cottage",
+    "legend": { "#": "$wall", "o": "window_shuttered", "+": "door_wood", "k": "$floor", "v": "floor_plank", "s": "floor_plank", "H": "ladder", "T": "trapdoor", "i": "hearth_chimney" },
+    "rooms": { "k": "hearth", "v": "storage", "s": "sleeping" },
+    "rows": [
+      "###o####o#",
+      "#kkkkH#vv#",
+      "okkkkk#vvo",
+      "#kkkkk+vv#",
+      "#kkkkk#vv#",
+      "###+######"
+    ],
+    "fixtures": [
+      "__________",
+      "__________",
+      "_i________",
+      "__________",
+      "__________",
+      "__________"
+    ],
+    "levels": [
+      { "z": 1, "rows": [
+        "###o####o#",
+        "#ssssT#vv#",
+        "#sssss#vv#",
+        "#sssss+vv#",
+        "#sssss#vv#",
+        "##########"
+      ] }
+    ] },
+
+  // Croft: the family and the cow share one roof. Byre at the west end (12 m2), hearth room, sleeping loft above the house.
+  { "type": "blueprint", "id": "croft_with_byre", "name": "Croft with byre", "wealth": "poor", "dwelling": "cottage",
+    "legend": { "#": "$wall", "o": "window_shuttered", "+": "door_wood", "l": "$floor", "k": "$floor", "s": "floor_plank", "D": "door_barn", "H": "ladder", "T": "trapdoor", "E": "hearth" },
+    "rooms": { "l": "livestock", "k": "hearth", "s": "sleeping" },
+    "rows": [
+      "########o###",
+      "#llll#kkkkH#",
+      "Dllll+kkkkko",
+      "#llll#kkkkk#",
+      "########+###"
+    ],
+    "fixtures": [
+      "____________",
+      "____________",
+      "______E_____",
+      "____________",
+      "____________"
+    ],
+    "levels": [
+      { "z": 1, "rows": [
+        "_____###o###",
+        "_____#ssssT#",
+        "_____#sssss#",
+        "_____#sssss#",
+        "_____#######"
+      ] }
+    ] },
+
+  // 15x3 m interior in wattle and daub: byre, central-hearth room, sleeping end, and a long loft over the people half.
+  { "type": "blueprint", "id": "longhouse_poor", "name": "Wattle longhouse", "wealth": "poor", "dwelling": "longhouse",
+    "legend": { "#": "$wall", "o": "window_shuttered", "+": "door_wood", "l": "$floor", "k": "$floor", "s": "floor_plank", "D": "door_barn", "H": "ladder", "T": "trapdoor", "e": "hearth_central" },
+    "rooms": { "l": "livestock", "k": "hearth", "s": "sleeping" },
+    "rows": [
+      "########o#######",
+      "#llll#kkkkk#ssH#",
+      "Dllll+kkkkk+ssso",
+      "#llll#kkkkk#sss#",
+      "########+#######"
+    ],
+    "fixtures": [
+      "________________",
+      "________________",
+      "_______e________",
+      "________________",
+      "________________"
+    ],
+    "levels": [
+      { "z": 1, "rows": [
+        "_____###o##o####",
+        "_____#ssssssssT#",
+        "_____#sssssssss#",
+        "_____#sssssssss#",
+        "_____###########"
+      ] }
+    ] },
+
+  // Stone hall house of a prosperous franklin: store, open hall with central hearth between a cross passage, and a two-storey chamber end.
+  { "type": "blueprint", "id": "longhouse_hall", "name": "Hall house", "wealth": "rich", "dwelling": "longhouse",
+    "legend": { "#": "$wall", "o": "window_shuttered", "+": "door_wood", "v": "$floor", "k": "$floor", "s": "floor_plank", "H": "ladder", "T": "trapdoor", "e": "hearth_central" },
+    "rooms": { "v": "storage", "k": "hearth", "s": "sleeping" },
+    "rows": [
+      "###o#####+#o######",
+      "#vvvv#kkkkkkk#Hss#",
+      "#vvvv#kkkkkkk#sss#",
+      "#vvvv+kkkkkkk+ssso",
+      "#vvvv#kkkkkkk#sss#",
+      "#vvvv#kkkkkkk#sss#",
+      "#vvvv#kkkkkkk#sss#",
+      "###o#####+#o######"
+    ],
+    "fixtures": [
+      "__________________",
+      "__________________",
+      "__________________",
+      "_________e________",
+      "__________________",
+      "__________________",
+      "__________________",
+      "__________________"
+    ],
+    "levels": [
+      { "z": 1, "rows": [
+        "_____________##o##",
+        "_____________#Tss#",
+        "_____________#sss#",
+        "_____________#sss#",
+        "_____________#sss#",
+        "_____________#sss#",
+        "_____________#sss#",
+        "_____________#####"
+      ] }
+    ] },
+
+  // Journeyman's house on a 3 m frontage: workroom at the street, hearth room behind, one long sleeping floor above.
+  { "type": "blueprint", "id": "burgage_poor", "name": "Narrow burgage house", "wealth": "poor", "dwelling": "burgage",
+    "legend": { "#": "$wall", "o": "window_shuttered", "+": "door_wood", "w": "$floor", "k": "$floor", "s": "floor_plank", "<": "stairs_up", ">": "stairs_down", "E": "hearth" },
+    "rooms": { "w": "work:*", "k": "hearth", "s": "sleeping" },
+    "rows": [
+      "##+##",
+      "#www#",
+      "owww#",
+      "#www#",
+      "#www#",
+      "##+##",
+      "#kkk#",
+      "#kkk#",
+      "#kkko",
+      "#kk<#",
+      "#kkk#",
+      "##+##"
+    ],
+    "fixtures": [
+      "_____",
+      "_____",
+      "_____",
+      "_____",
+      "_____",
+      "_____",
+      "_____",
+      "_E___",
+      "_____",
+      "_____",
+      "_____",
+      "_____"
+    ],
+    "levels": [
+      { "z": 1, "rows": [
+        "##o##",
+        "#sss#",
+        "#sss#",
+        "#sss#",
+        "#sss#",
+        "ossso",
+        "#sss#",
+        "#sss#",
+        "#sss#",
+        "#ss>#",
+        "#sss#",
+        "#####"
+      ] }
+    ] },
+
+  // Craftsman's house: shop at the street, hearth room behind with cellar steps, two sleeping chambers above (~11 beds).
+  { "type": "blueprint", "id": "burgage_middling", "name": "Burgage house with shopfront", "wealth": "middling", "dwelling": "burgage",
+    "legend": { "#": "$wall", "o": "window_shuttered", "+": "door_wood", "q": "$floor", "k": "$floor", "s": "floor_plank", "c": "floor_packed_earth", "S": "wall_stone", "<": "stairs_up", ">": "stairs_down", "E": "hearth" },
+    "rooms": { "q": "shop", "k": "hearth", "s": "sleeping", "c": "cellar" },
+    "rows": [
+      "##+###",
+      "#qqqq#",
+      "oqqqq#",
+      "#qqqq#",
+      "#qqqq#",
+      "##+###",
+      "#kkk<#",
+      "#kkkk#",
+      "#kkkko",
+      "#kkkk#",
+      "#>kkk#",
+      "###+##"
+    ],
+    "fixtures": [
+      "______",
+      "______",
+      "______",
+      "______",
+      "______",
+      "______",
+      "______",
+      "_E____",
+      "______",
+      "______",
+      "______",
+      "______"
+    ],
+    "levels": [
+      { "z": -1, "rows": [
+        "______",
+        "______",
+        "______",
+        "______",
+        "______",
+        "SSSSSS",
+        "SccccS",
+        "SccccS",
+        "SccccS",
+        "SccccS",
+        "S<cccS",
+        "SSSSSS"
+      ] },
+      { "z": 1, "rows": [
+        "#o##o#",
+        "#ssss#",
+        "#ssss#",
+        "#ssss#",
+        "#ssss#",
+        "##+###",
+        "#sss>#",
+        "#ssss#",
+        "ossss#",
+        "#ssss#",
+        "#ssss#",
+        "######"
+      ] }
+    ] },
+
+  // Three storeys and a cellar: shop on the street, kitchen, a hall floor, bedchambers, and a solar over a counting room and strongroom.
+  // Stairs alternate cells each flight (z0 (5,6), z1 (5,7)).
+  { "type": "blueprint", "id": "merchant_house", "name": "Merchant house", "wealth": "rich", "dwelling": "burgage",
+    "legend": { "#": "$wall", "o": "window_shuttered", "+": "door_wood", "q": "$floor", "k": "$floor", "a": "floor_plank", "s": "floor_plank", "r": "floor_plank", "v": "floor_plank", "c": "floor_packed_earth", "S": "wall_stone", "<": "stairs_up", ">": "stairs_down", "i": "hearth_chimney" },
+    "rooms": { "q": "shop", "k": "hearth", "a": "gathering", "s": "sleeping", "r": "solar", "v": "storage", "c": "cellar" },
+    "rows": [
+      "###+###",
+      "#qqqqq#",
+      "oqqqqqo",
+      "#qqqqq#",
+      "#qqqqq#",
+      "###+###",
+      "#kkkk<#",
+      "#kkkkk#",
+      "okkkkko",
+      "#kkkkk#",
+      "#>kkkk#",
+      "###+###"
+    ],
+    "fixtures": [
+      "_______",
+      "_______",
+      "_______",
+      "_______",
+      "_______",
+      "_______",
+      "_______",
+      "_i_____",
+      "_______",
+      "_______",
+      "_______",
+      "_______"
+    ],
+    "levels": [
+      { "z": -1, "rows": [
+        "_______",
+        "_______",
+        "_______",
+        "_______",
+        "_______",
+        "SSSSSSS",
+        "ScccccS",
+        "ScccccS",
+        "ScccccS",
+        "ScccccS",
+        "S<ccccS",
+        "SSSSSSS"
+      ] },
+      { "z": 1, "rows": [
+        "#######",
+        "#aaaaa#",
+        "oaaaaao",
+        "#aaaaa#",
+        "#aaaaa#",
+        "###+###",
+        "#ssss>#",
+        "#ssss<#",
+        "ossssso",
+        "#sssss#",
+        "#sssss#",
+        "#######"
+      ] },
+      { "z": 2, "rows": [
+        "###o###",
+        "#rrrrr#",
+        "#rrrrr#",
+        "#rrrrr#",
+        "#rrrrr#",
+        "###+###",
+        "#vvvvv#",
+        "#vvvv>#",
+        "ovvvvvo",
+        "#vvvvv#",
+        "#vvvvv#",
+        "#######"
+      ] }
+    ] },
+
+  // Small manor: open hall with central hearth, kitchen and buttery, and a floor above with a chamber and a solar.
+  { "type": "blueprint", "id": "manor_house_small", "name": "Yeoman manor house", "wealth": "middling",
+    "legend": { "#": "$wall", "o": "window_shuttered", "+": "door_wood", "a": "$floor", "k": "$floor", "v": "$floor", "s": "floor_plank", "r": "floor_plank", "|": "post_timber", "<": "stairs_up", ">": "stairs_down", "e": "hearth_central", "E": "hearth" },
+    "rooms": { "a": "gathering", "k": "hearth", "v": "storage", "s": "sleeping", "r": "solar" },
+    "rows": [
+      "##o###o#######",
+      "#aaaaaaaa#kkk#",
+      "#aaa|aaaa+kkko",
+      "#aaaaaaaa#kkk#",
+      "oaaaaaaaa##+##",
+      "#aaaaaaaa#vvv#",
+      "#aaa|aaaa+vvvo",
+      "#aaaaaaa<#vvv#",
+      "####+#########"
+    ],
+    "fixtures": [
+      "______________",
+      "____________E_",
+      "______________",
+      "______________",
+      "____e_________",
+      "______________",
+      "______________",
+      "______________",
+      "______________"
+    ],
+    "levels": [
+      { "z": 1, "rows": [
+        "##o#o####o#o##",
+        "#sssss#rrrrrr#",
+        "#sssss#rrrrrr#",
+        "#sssss#rrrrrr#",
+        "osssss+rrrrrro",
+        "#sssss#rrrrrr#",
+        "#sssss#rrrrrr#",
+        "#sssss#r>rrrr#",
+        "##o#######o###"
+      ] }
+    ] },
+
+  // Fortified tower house, 7x7 m interior: store and cellar, hall, chambers, battlemented roof at +3. Stairs alternate (7,1)/(7,2) each flight.
+  { "type": "blueprint", "id": "tower_house", "name": "Tower house", "wealth": "rich",
+    "legend": { "#": "$wall", "o": "window_shuttered", "+": "door_wood", "v": "$floor", "a": "floor_plank", "s": "floor_plank", "r": "floor_plank", "c": "floor_packed_earth", "p": "floor_wall_walk", "S": "wall_stone", "x": "window_arrow_slit", "C": "wall_crenellated", "|": "post_timber", "<": "stairs_up", ">": "stairs_down", "E": "hearth" },
+    "rooms": { "v": "storage", "a": "gathering", "s": "sleeping", "r": "solar", "c": "cellar", "p": "watch" },
+    "rows": [
+      "####x####",
+      "#vvvvvv<#",
+      "#vvvvvvv#",
+      "#vvvvvvv#",
+      "xvvv|vvvx",
+      "#vvvvvvv#",
+      "#vvvvvvv#",
+      "#>vvvvvv#",
+      "####+####"
+    ],
+    "levels": [
+      { "z": -1, "rows": [
+        "SSSSSSSSS",
+        "ScccccccS",
+        "ScccccccS",
+        "ScccccccS",
+        "ScccccccS",
+        "ScccccccS",
+        "ScccccccS",
+        "S<ccccccS",
+        "SSSSSSSSS"
+      ] },
+      { "z": 1, "rows": [
+        "####x####",
+        "#aaaaaa>#",
+        "#aaaaaa<#",
+        "xaaaaaaax",
+        "#aaa|aaa#",
+        "xaaaaaaax",
+        "#aaaaaaa#",
+        "#aaaaaaa#",
+        "#########"
+      ], "fixtures": [
+        "_________",
+        "_________",
+        "_________",
+        "_________",
+        "_E_______",
+        "_________",
+        "_________",
+        "_________",
+        "_________"
+      ] },
+      { "z": 2, "rows": [
+        "####x####",
+        "#sss#rr<#",
+        "#sss#rr>#",
+        "#sss#rrr#",
+        "xsss+rrrx",
+        "#sss#rrr#",
+        "#sss#rrr#",
+        "#sss#rrr#",
+        "#########"
+      ] },
+      { "z": 3, "rows": [
+        "CCCCCCCCC",
+        "Cpppppp>C",
+        "CpppppppC",
+        "CpppppppC",
+        "CpppppppC",
+        "CpppppppC",
+        "CpppppppC",
+        "CpppppppC",
+        "CCCCCCCCC"
+      ] }
+    ] },
+
+  // Walled manor compound, 22x16 m: curtain wall with a double gate, hall block (hall, kitchen, buttery; chambers above, cellar below) and a corner tower with a guardroom and a roof at +2.
+  { "type": "blueprint", "id": "fortified_manor", "name": "Fortified manor", "wealth": "rich",
+    "legend": { "#": "$wall", "o": "window_shuttered", "+": "door_wood", "a": "$floor", "k": "$floor", "v": "$floor", "c": "floor_packed_earth", "g": "$floor", "s": "floor_plank", "r": "floor_plank", "p": "floor_wall_walk", "S": "wall_stone", "G": "gate_wood", "C": "wall_crenellated", "x": "window_arrow_slit", ",": "ground_dirt", "<": "stairs_up", ">": "stairs_down", "E": "hearth", "e": "hearth_central", "R": "weapon_rack" },
+    "rooms": { "a": "gathering", "k": "hearth", "v": "storage", "g": "guard", "s": "sleeping", "r": "solar", "c": "cellar", "p": "watch" },
+    "rows": [
+      "SSSSSSSSSSSSSSSSSSSSSSSS",
+      "S,,,,,,,,,,,,,,,,,,,,,,S",
+      "S,###o######o###,SSxSSSS",
+      "S,#>aaaaaa#kkkk#,Sggg<SS",
+      "S,#aaaaaaa#kkkk#,+ggggSS",
+      "S,#aaaaaaa+kkkk#,SggggxS",
+      "S,#aaaaaaa##+###,SggggSS",
+      "S,#aaaaaaa#vvvv#,SSSSSSS",
+      "S,#aaaaaa<#vvvv#,,,,,,,S",
+      "S,####+#########,,,,,,,S",
+      "S,,,,,,,,,,,,,,,,,,,,,,S",
+      "S,,,,,,,,,,,,,,,,,,,,,,S",
+      "S,,,,,,,,,,,,,,,,,,,,,,S",
+      "S,,,,,,,,,,,,,,,,,,,,,,S",
+      "S,,,,,,,,,,,,,,,,,,,,,,S",
+      "S,,,,,,,,,,,,,,,,,,,,,,S",
+      "S,,,,,,,,,,,,,,,,,,,,,,S",
+      "SSSSSSSSSSSGGSSSSSSSSSSS"
+    ],
+    "fixtures": [
+      "________________________",
+      "________________________",
+      "________________________",
+      "______________E___RR____",
+      "_____e__________________",
+      "________________________",
+      "________________________",
+      "________________________",
+      "________________________",
+      "________________________",
+      "________________________",
+      "________________________",
+      "________________________",
+      "________________________",
+      "________________________",
+      "________________________",
+      "________________________",
+      "________________________"
+    ],
+    "levels": [
+      { "z": -1, "rows": [
+        "________________________",
+        "________________________",
+        "__SSSSSSSSSSSSSS________",
+        "__S<cccccccccccS________",
+        "__SccccccccccccS________",
+        "__SccccccccccccS________",
+        "__SccccccccccccS________",
+        "__SccccccccccccS________",
+        "__SccccccccccccS________",
+        "__SSSSSSSSSSSSSS________",
+        "________________________",
+        "________________________",
+        "________________________",
+        "________________________",
+        "________________________",
+        "________________________",
+        "________________________",
+        "________________________"
+      ] },
+      { "z": 1, "rows": [
+        "________________________",
+        "________________________",
+        "__###o######o###_##x###_",
+        "__#rrrrrrr#ssss#_#sss>#_",
+        "__#rrrrrrr#ssss#_#sss<#_",
+        "__orrrrrrr+sssso_#ssss#_",
+        "__#rrrrrrr#ssss#_#ssss#_",
+        "__#rrrrrrr#ssss#_######_",
+        "__#rrrrrr>#ssss#________",
+        "__######o###o###________",
+        "________________________",
+        "________________________",
+        "________________________",
+        "________________________",
+        "________________________",
+        "________________________",
+        "________________________",
+        "________________________"
+      ] },
+      { "z": 2, "rows": [
+        "________________________",
+        "________________________",
+        "_________________CCCCCC_",
+        "_________________CppppC_",
+        "_________________Cppp>C_",
+        "_________________CppppC_",
+        "_________________CppppC_",
+        "_________________CCCCCC_",
+        "________________________",
+        "________________________",
+        "________________________",
+        "________________________",
+        "________________________",
+        "________________________",
+        "________________________",
+        "________________________",
+        "________________________",
+        "________________________"
+      ] }
+    ] },
+
+  // Parsonage: a study-and-reception room with a table, a small kitchen and one bedchamber.
+  { "type": "blueprint", "id": "priest_house", "name": "Priest's house", "wealth": "middling",
+    "legend": { "#": "$wall", "o": "window_shuttered", "+": "door_wood", "a": "floor_plank", "k": "$floor", "s": "floor_plank", "E": "hearth" },
+    "rooms": { "a": "gathering", "k": "hearth", "s": "sleeping" },
+    "rows": [
+      "##o#######",
+      "#aaaa#kkko",
+      "#aaaa+kkk#",
+      "oaaaa#####",
+      "#aaaa+sss#",
+      "#aaaa#ssso",
+      "##+#######"
+    ],
+    "fixtures": [
+      "__________",
+      "________E_",
+      "__________",
+      "__________",
+      "__________",
+      "__________",
+      "__________"
+    ] }
+]

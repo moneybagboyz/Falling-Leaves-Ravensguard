@@ -2,6 +2,9 @@ using Ravensguard.Sim.Core;
 
 namespace Ravensguard.Sim.WorldGen.History;
 
+/// <summary>History progress: the year being simulated, the chronicle entry just written (when set) and, every ten years, the realm owner of each continent cell (255 = none).</summary>
+public readonly record struct HistoryProgress(int Year, int Years, ChronicleEntry? Entry, byte[]? Owner = null);
+
 /// <summary>
 /// Stage 2 world generation: history v0 (plan §1A). Seasonal ticks (4 a year) over the continent grid.
 /// Integer maths only; every random draw is keyed by (seed, tick, entity, stream, draw) via <see cref="DetRng"/>;
@@ -47,11 +50,24 @@ public sealed partial class HistoryGenerator
         _general = new EntityId[_R];
     }
 
+    private Action<HistoryProgress>? _progress;
+
+    /// <summary>Completed history runs on the calling thread (tests use it to prove a library world is not regenerated twice).</summary>
+    public static int RunCount => _runCount;
+    [ThreadStatic] private static int _runCount;
+
     /// <summary>Runs <c>settings.Years</c> years of history over the continent.</summary>
-    public static WorldHistory Generate(Continent c, HistorySettings settings)
+    public static WorldHistory Generate(Continent c, HistorySettings settings) => Generate(c, settings, null);
+
+    /// <summary>
+    /// Same, reporting progress: the callback runs on the calling thread once per chronicle entry as it is written and once at the start of every
+    /// year. It may throw (e.g. <see cref="OperationCanceledException"/>) to abort.
+    /// </summary>
+    public static WorldHistory Generate(Continent c, HistorySettings settings, Action<HistoryProgress>? progress)
     {
-        var g = new HistoryGenerator(c, settings);
+        var g = new HistoryGenerator(c, settings) { _progress = progress };
         g.Run();
+        _runCount++;
         return g._h;
     }
 
@@ -77,7 +93,9 @@ public sealed partial class HistoryGenerator
         int day = 1 + Math.Min(TimeConst.DaysPerSeason - 1, _evInTick++);
         var when = GameTime.FromCalendar(_year, (Season)_season, day);
         var data = new Dictionary<string, string> { ["title"] = title, ["text"] = text, ["cell"] = cell.ToString(System.Globalization.CultureInfo.InvariantCulture) };
-        _h.Chronicle.Add(new ChronicleEntry(id, when, type, subjects, causes, data));
+        var entry = new ChronicleEntry(id, when, type, subjects, causes, data);
+        _h.Chronicle.Add(entry);
+        _progress?.Invoke(new HistoryProgress(_year, _s.Years, entry));
         return id;
     }
 
@@ -95,6 +113,16 @@ public sealed partial class HistoryGenerator
         for (_tick = 0; _tick < ticks; _tick++)
         {
             _year = _tick / 4; _season = _tick % 4; _dc = 0; if (_tick > 0) _evInTick = 0;
+            if (_season == 0 && _progress != null)
+            {
+                byte[]? owners = null;
+                if (_year % 10 == 0)
+                {
+                    owners = new byte[A];
+                    for (int i = 0; i < A; i++) owners[i] = _owner[i] < 0 ? Continent.None : (byte)_owner[i];
+                }
+                _progress(new HistoryProgress(_year, _s.Years, null, owners));
+            }
             WeatherPass();
             PopulationPass();
             if (_season == 0) SeaPass();

@@ -190,7 +190,8 @@ public static class WorldSave
     // ---------- restore ----------
 
     /// <summary>Rebuilds the world from seed + content, then applies the stored sections. Throws <see cref="SaveException"/> with a readable message on any mismatch.</summary>
-    public static WorldState Restore(SaveFile file, ContentDatabase content, string currentContentHash, IReadOnlyList<ModEntry>? installedMods = null)
+    public static WorldState Restore(SaveFile file, ContentDatabase content, string currentContentHash, IReadOnlyList<ModEntry>? installedMods = null,
+        Continent? knownContinent = null, WorldHistory? knownHistory = null)
     {
         var report = new SaveReader().CheckCompatibility(file.Header, currentContentHash, installedMods ?? file.Header.Mods);
         if (!report.ContentHashMatches)
@@ -203,9 +204,10 @@ public static class WorldSave
         var hs = JsonSerializer.Deserialize<HistorySettings>(meta.HistorySettingsJson, Json) ?? throw new SaveException("Corrupt history settings in save.");
         var rs = JsonSerializer.Deserialize<RegionSettings>(meta.RegionSettingsJson, Json) ?? throw new SaveException("Corrupt region settings in save.");
 
-        var continent = ContinentGenerator.Generate(cs);
+        // A world library supplies the continent and history it already generated (and hashed) so they are not regenerated twice; hashes are still verified.
+        var continent = knownContinent ?? ContinentGenerator.Generate(cs);
         Verify("continent", meta.ContinentHash, continent.ComputeHash());
-        var history = HistoryGenerator.Generate(continent, hs);
+        var history = knownHistory ?? HistoryGenerator.Generate(continent, hs);
         Verify("history", meta.HistoryHash, history.ComputeHash());
         var region = RegionGenerator.Generate(continent, history, meta.EmbarkCellX, meta.EmbarkCellY, rs);
         Verify("region", meta.RegionHash, region.ComputeHash());

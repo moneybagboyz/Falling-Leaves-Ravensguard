@@ -1,0 +1,45 @@
+// Quick Start origin cards (plan §3 item 1). Skill/attribute entries are deltas on the rolled commoner.
+// Kit ids are weapon_shape / armour_shape ids from content/base/items; coin is in pence; start_location is a place kind the embark step resolves.
+[
+  { "type": "origin", "id": "disgraced_squire", "name": "Disgraced squire", "order": 1,
+    "description": "You carried a knight's shield until a lie or a truth ended it. The training is still in your arms; the name is not.",
+    "skills": { "melee": 15, "riding": 10, "literacy": 5 }, "attributes": { "strength": 4, "dexterity": 3 },
+    "kit": [ { "item": "arming_sword" }, { "item": "gambeson" }, { "item": "cloak" } ], "coin": 40,
+    "start_location": "town", "ambition": "regain_honour", "mentor": "old_knight" },
+
+  { "type": "origin", "id": "peddler", "name": "Peddler", "order": 2,
+    "description": "You have walked every road in the district with a pack on your back, and you know what each village runs short of.",
+    "skills": { "trading": 20, "literacy": 5 }, "attributes": { "perception": 4, "wits": 3 },
+    "kit": [ { "item": "dagger" }, { "item": "tunic" }, { "item": "cloak" } ], "coin": 120,
+    "start_location": "road", "ambition": "make_your_fortune", "mentor": "caravan_master" },
+
+  { "type": "origin", "id": "runaway_serf", "name": "Runaway serf", "order": 3,
+    "description": "A year and a day in a town makes a person free, or so they say. You only have to survive the year.",
+    "skills": { "farming": 10, "forestry": 10 }, "attributes": { "toughness": 6 },
+    "kit": [ { "item": "club" }, { "item": "shirt" } ], "coin": 3,
+    "start_location": "wilds", "ambition": "be_free", "mentor": "free_farmer" },
+
+  { "type": "origin", "id": "discharged_soldier", "name": "Discharged soldier", "order": 4,
+    "description": "The war moved on and the lord stopped paying. You kept the spear, and the habit of watching doorways.",
+    "skills": { "melee": 20, "archery": 5, "leadership": 5 }, "attributes": { "strength": 6, "toughness": 4 },
+    "kit": [ { "item": "spear" }, { "item": "gambeson" }, { "item": "helm" } ], "coin": 25,
+    "start_location": "town", "ambition": "raise_a_company", "mentor": "old_sergeant" },
+
+  { "type": "origin", "id": "monastery_orphan", "name": "Monastery orphan", "order": 5,
+    "description": "Raised on bread, copying and cold stone floors. You can read the old hands, and you have never owned a coin.",
+    "skills": { "literacy": 20, "theology": 10, "cooking": 5 }, "attributes": { "wits": 8 },
+    "kit": [ { "item": "shirt" }, { "item": "tunic" }, { "item": "cloak" } ], "coin": 5,
+    "start_location": "monastery", "ambition": "uncover_the_truth", "mentor": "prior" },
+
+  { "type": "origin", "id": "minor_heir", "name": "Minor heir", "order": 6,
+    "description": "Third child of a poor house with a long name. You were taught the law and the lance and given neither land nor money.",
+    "skills": { "leadership": 10, "law": 10, "riding": 10, "melee": 5 }, "attributes": { "wits": 4 },
+    "kit": [ { "item": "arming_sword" }, { "item": "tunic" }, { "item": "cloak" } ], "coin": 200,
+    "start_location": "manor", "ambition": "claim_your_inheritance", "mentor": "steward" },
+
+  { "type": "origin", "id": "outlaw", "name": "Outlaw", "order": 7,
+    "description": "There is a price on a name that is no longer yours. The greenwood keeps secrets better than the town does.",
+    "skills": { "melee": 10, "archery": 10, "forestry": 5 }, "attributes": { "dexterity": 6, "perception": 4 },
+    "kit": [ { "item": "dagger" }, { "item": "axe" }, { "item": "cloak" } ], "coin": 10,
+    "start_location": "wilds", "ambition": "clear_your_name", "mentor": "fence" }
+]

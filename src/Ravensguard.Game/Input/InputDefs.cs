@@ -118,5 +118,33 @@ public static class InputDefs
         A(U, "new_game", K(Key.N));
         A(U, "settings", K(Key.S));
         A(U, "quit", K(Key.Q));
+        // New game flow: Quick Start, world creation, embark map, legends viewer, world library
+        A(U, "legends", K(Key.L));
+        A(U, "worlds", K(Key.W));
+        A(U, "choose_region", K(Key.C));
+        A(U, "advanced", K(Key.A));
+        A(U, "ironman", K(Key.I));
+        A(U, "sex", K(Key.X));
+        A(U, "world_cycle", K(Key.G));
+        A(U, "reroll_name", K(Key.R));
+        A(U, "reroll_seed", K(Key.Y));
+        A(U, "delete", K(Key.Delete));
+        A(U, "auto_pick", K(Key.P));
+        A(U, "overlay_next", K(Key.Tab));
+        A(U, "overlay_1", K(Key.Key1));
+        A(U, "overlay_2", K(Key.Key2));
+        A(U, "overlay_3", K(Key.Key3));
+        A(U, "overlay_4", K(Key.Key4));
+        A(U, "overlay_5", K(Key.Key5));
+        A(U, "toggle_rivers", K(Key.Key6));
+        A(U, "toggle_towns", K(Key.Key7));
+        A(U, "toggle_legends", K(Key.Key8));
+        A(U, "search", K(Key.Slash));
+        A(U, "filter_type", K(Key.T));
+        A(U, "filter_realm", K(Key.E));
+        A(U, "previous", K(Key.Backspace));
+        A(U, "follow_cause", K(Key.F));
+        A(U, "follow_effect", K(Key.D));
+        A(U, "open_here", K(Key.O));
     }
 }

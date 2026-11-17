@@ -1,0 +1,107 @@
+// Farm buildings: byre, sheepfold, hay barn, dovecote. (Barn and granary live in workplaces.jsonc.)
+[
+  // Cow house, 6x3 m interior, with a hay loft over it.
+  { "type": "blueprint", "id": "byre", "name": "Byre", "wealth": "poor",
+    "legend": { "#": "$wall", "o": "window_shuttered", "+": "door_wood", "l": "$floor", "v": "floor_plank", "D": "door_barn", "H": "ladder", "T": "trapdoor" },
+    "rooms": { "l": "livestock", "v": "storage" },
+    "rows": [
+      "########",
+      "#lllllH#",
+      "DllllllD",
+      "#llllll#",
+      "########"
+    ],
+    "levels": [
+      { "z": 1, "rows": [
+        "########",
+        "#vvvvvT#",
+        "#vvvvvv#",
+        "#vvvvvv#",
+        "########"
+      ] }
+    ] },
+
+  // Hurdle-fenced pen, 12x8 m, with a double gate; folds ~60 sheep.
+  { "type": "blueprint", "id": "sheepfold", "name": "Sheepfold", "wealth": "poor",
+    "legend": { "-": "fence_wood", "l": "floor_packed_earth", "g": "gate_wood", "h": "hurdle" },
+    "rooms": { "l": "livestock" },
+    "rows": [
+      "--------------",
+      "-llllllllllll-",
+      "-llllllllllll-",
+      "-llllllllllll-",
+      "-llllllllllll-",
+      "-llllllllllll-",
+      "-llllllllllll-",
+      "-llllllllllll-",
+      "-llllllllllll-",
+      "------gg------"
+    ],
+    "fixtures": [
+      "______________",
+      "____h_________",
+      "____h_________",
+      "____h_________",
+      "______________",
+      "______________",
+      "_________h____",
+      "_________h____",
+      "_________h____",
+      "______________"
+    ] },
+
+  // Open-ended hay and fodder store, 10x4 m.
+  { "type": "blueprint", "id": "hay_barn", "name": "Hay barn", "wealth": "poor",
+    "legend": { "#": "$wall", "o": "window_shuttered", "+": "door_wood", "v": "floor_packed_earth", "D": "door_barn", "y": "hay_stack" },
+    "rooms": { "v": "storage" },
+    "rows": [
+      "############",
+      "#vvvvvvvvvv#",
+      "DvvvvvvvvvvD",
+      "#vvvvvvvvvv#",
+      "#vvvvvvvvvv#",
+      "############"
+    ],
+    "fixtures": [
+      "____________",
+      "__yy____yy__",
+      "____________",
+      "____________",
+      "________yy__",
+      "____________"
+    ] },
+
+  // Stone dovecote, 3x3 m: nesting boxes on two levels. A manorial privilege (pigeons feed the lord's table).
+  { "type": "blueprint", "id": "dovecote", "name": "Dovecote", "wealth": "rich",
+    "legend": { "#": "$wall", "o": "window_shuttered", "+": "door_wood", "n": "floor_packed_earth", "H": "ladder", "T": "trapdoor", "N": "dovecote_nests" },
+    "rooms": { "n": "dovecote" },
+    "rows": [
+      "#####",
+      "#nnH#",
+      "#nnn#",
+      "#nnn#",
+      "##+##"
+    ],
+    "fixtures": [
+      "_____",
+      "_N___",
+      "_____",
+      "_____",
+      "_____"
+    ],
+    "levels": [
+      { "z": 1, "rows": [
+        "##o##",
+        "#nnT#",
+        "#nnn#",
+        "#nnn#",
+        "#####"
+      ], "fixtures": [
+        "_____",
+        "_N___",
+        "_____",
+        "_N___",
+        "_____"
+      ] }
+    ] }
+]

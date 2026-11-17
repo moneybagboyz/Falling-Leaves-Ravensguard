@@ -73,6 +73,7 @@
   { "type": "build_piece", "id": "market_stall",         "name": "Market stall",      "kind": "furniture", "glyph": "m", "material": "oak", "tags": ["market_stall"] },
   { "type": "build_piece", "id": "well",                 "name": "Well",              "kind": "furniture", "glyph": "O", "material": "granite", "tags": ["well", "water"] },
   { "type": "build_piece", "id": "hurdle",               "name": "Hurdle pen",        "kind": "furniture", "glyph": "h", "material": "oak", "tags": ["stall"] },
+  { "type": "build_piece", "id": "cask_rack",            "name": "Cask rack",         "kind": "furniture", "glyph": "$", "material": "oak", "tags": ["storage", "cellar_store"] },
   { "type": "build_piece", "id": "hay_stack",            "name": "Hay stack",         "kind": "furniture", "glyph": "y", "tags": ["storage", "hay"] },
   { "type": "build_piece", "id": "malting_floor",        "name": "Malting floor",     "kind": "furniture", "glyph": "n", "tags": ["storage", "malt"] },
   { "type": "build_piece", "id": "dovecote_nests",       "name": "Dovecote nests",    "kind": "furniture", "glyph": "v", "material": "oak", "tags": ["nest"] },

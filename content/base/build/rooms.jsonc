@@ -27,7 +27,7 @@
   // ---- living and ruling rooms ----
   { "type": "room_type", "id": "great_hall", "name": "Great hall",   "purpose": "gathering", "priority": 55, "min_area": 30, "requires": [{ "tag": "table" }, { "tag": "high_seat" }] },
   { "type": "room_type", "id": "solar",      "name": "Solar",        "purpose": "solar",     "priority": 55, "min_area": 9,  "requires": [{ "tag": "bed" }, { "tag": "table" }] },
-  { "type": "room_type", "id": "cellar",     "name": "Cellar",       "purpose": "cellar",    "priority": 25, "min_area": 4,  "requires": [{ "tag": "storage" }] },
+  { "type": "room_type", "id": "cellar",     "name": "Cellar",       "purpose": "cellar",    "priority": 25, "min_area": 4,  "requires": [{ "tag": "cellar_store" }] },
   { "type": "room_type", "id": "shop",       "name": "Shop",         "purpose": "shop",      "priority": 52, "min_area": 6,  "requires": [{ "tag": "shop" }] },
   { "type": "room_type", "id": "toll_office","name": "Toll office",  "purpose": "toll",      "priority": 52, "min_area": 6,  "requires": [{ "tag": "toll" }] },
   { "type": "room_type", "id": "market",     "name": "Market square","purpose": "market",    "priority": 35, "min_area": 12, "requires": [{ "tag": "market_stall", "min": 2 }] },

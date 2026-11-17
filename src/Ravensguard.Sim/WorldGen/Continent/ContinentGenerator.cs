@@ -29,29 +29,25 @@ public sealed partial class ContinentGenerator
         _s = s; _seed = s.Seed; _c = new Continent(s);
     }
 
-    public static Continent Generate(ContinentSettings settings)
+    public static Continent Generate(ContinentSettings settings) => Generate(settings, null);
+
+    /// <summary>Same, reporting each stage as it starts: (stage name, zero-based index, stage count).</summary>
+    public static Continent Generate(ContinentSettings settings, Action<string, int, int>? progress)
     {
         var g = new ContinentGenerator(settings);
-        g.Run();
+        g.Run(progress);
         return g._c;
     }
 
-    private void Run()
+    private void Run(Action<string, int, int>? progress)
     {
-        Layout();
-        Plates();
-        Heights();
-        Slopes();
-        Temperature();
-        Rain();
-        Hydrology();
-        CoastDistance();
-        Drainage();
-        Biomes();
-        Soil();
-        StrataAndMinerals();
-        CulturesAndRealms();
-        SavageryLayer();
+        var stages = new (string, Action)[]
+        {
+            ("layout", Layout), ("plates", Plates), ("heights", Heights), ("slopes", Slopes), ("temperature", Temperature), ("rain", Rain),
+            ("hydrology", Hydrology), ("coast", CoastDistance), ("drainage", Drainage), ("biomes", Biomes), ("soil", Soil),
+            ("minerals", StrataAndMinerals), ("cultures", CulturesAndRealms), ("savagery", SavageryLayer),
+        };
+        for (int i = 0; i < stages.Length; i++) { progress?.Invoke(stages[i].Item1, i, stages.Length); stages[i].Item2(); }
     }
 
     // ---------- helpers ----------
