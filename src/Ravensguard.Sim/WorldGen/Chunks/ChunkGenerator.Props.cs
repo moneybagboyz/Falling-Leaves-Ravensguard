@@ -114,14 +114,20 @@ public sealed partial class ChunkGenerator
         {
             list.Add(new FixedProp(q.X + 1, q.Y + 1, PropKind.Brazier, 0)); list.Add(new FixedProp(q.Right - 2, q.Y + 1, PropKind.Brazier, 0));
             list.Add(new FixedProp(q.X + 1, q.Bottom - 2, PropKind.Brazier, 0)); list.Add(new FixedProp(q.Right - 2, q.Bottom - 2, PropKind.Brazier, 0));
-            int n = Math.Clamp(q.W * q.H / 260, 2, 8), placed = 0;
-            foreach (int ry in new[] { q.Y + 4, q.Bottom - 5 })
-                for (int x = q.X + 6; x + 3 < q.Right - 4 && placed < n; x += 7)
+            for (int ry = q.Y + 4; ry < q.Bottom - 4; ry += 6)
+                for (int x = q.X + 5; x + 3 < q.Right - 3; x += 8)
                 {
-                    if (Math.Abs(x - q.CenterX) < 5 && Math.Abs(ry - q.CenterY) < 5) continue;
-                    list.Add(new FixedProp(x, ry, PropKind.Stall, (byte)(H(StFixed, x, ry) % 3)));
-                    placed++;
+                    if (Math.Abs(x - q.CenterX) < 6 && Math.Abs(ry - q.CenterY) < 6) continue;
+                    ulong h = H(StFixed, x, ry);
+                    if (h % 5 == 0) continue;
+                    list.Add(new FixedProp(x, ry, PropKind.Stall, (byte)(h >> 8 & 3)));
+                    if (h % 3 == 0) list.Add(new FixedProp(x + 3, ry + 1, h % 2 == 0 ? PropKind.Barrel : PropKind.Crate, 0));
                 }
+            for (int k = 0; k < 10; k++)
+            {
+                ulong h = H(StFixed, q.X * 7L + k, q.Y);
+                list.Add(new FixedProp(q.X + 2 + (int)(h % (ulong)(q.W - 4)), q.Y + 2 + (int)(h >> 16) % (q.H - 4), k % 4 == 0 ? PropKind.Cart : k % 2 == 0 ? PropKind.Barrel : PropKind.Hay, 0));
+            }
         }
         else
         {

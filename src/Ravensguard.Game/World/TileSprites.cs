@@ -160,7 +160,7 @@ public static class TileSprites
         ["terrain.water_shallow"] = ["terrain.water"],
         ["terrain.water_deep"] = ["terrain.water"],
         ["terrain.farm.ploughed"] = ["terrain.dirt"],
-        ["terrain.farm.sown"] = ["terrain.farm.young", "terrain.farm.ploughed", "terrain.dirt"],
+        ["terrain.farm.sown"] = ["terrain.farm.young", "terrain.wheat", "terrain.dirt"],
         ["terrain.farm.young"] = ["terrain.farm.sown", "terrain.wheat"],
         ["terrain.farm.stubble"] = ["terrain.farm.fallow", "terrain.dirt"],
         ["terrain.farm.fallow"] = ["terrain.grass"],

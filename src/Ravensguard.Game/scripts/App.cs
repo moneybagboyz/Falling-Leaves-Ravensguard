@@ -96,6 +96,9 @@ public partial class App : Node
             code = 1;
         }
         GD.Print(code == 0 ? "smoke: ok" : "smoke: FAILED");
+        // Free every screen before quitting, so text and font resources are released and the exit is clean.
+        foreach (var child in GetChildren()) child.QueueFree();
+        for (int i = 0; i < 2; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
         GetTree().Quit(code);
     }
 }

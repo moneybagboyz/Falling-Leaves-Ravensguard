@@ -78,7 +78,7 @@ public partial class StreetView : Control
     /// </summary>
     public static StreetView ForRegion(Region region, Population population, ContentDatabase content, ScreenRouter? router = null, StreetOptions? opt = null,
         ChunkStore? store = null, (int X, int Y, int Z)? spawn = null)
-        => new(router, opt, StreetSource.ForRegion(region, population, content, store, spawn is { } p ? new Cell3(p.X, p.Y, p.Z) : null));
+        => new(router, opt, StreetSource.ForRegion(region, population, content, store, spawn is { } p ? new Cell3(p.X, p.Y, p.Z) : null, opt?.Poi));
 
     // ------------------------------------------------------------------ setup
 

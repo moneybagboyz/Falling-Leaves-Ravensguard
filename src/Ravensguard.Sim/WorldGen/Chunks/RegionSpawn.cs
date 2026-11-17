@@ -20,27 +20,15 @@ public static class RegionSpawn
         return NearestWalkable(s, q.CenterX, q.CenterY + 3, 12, paved: true) ?? NearestWalkable(s, t.CenterX, t.CenterY, 20, paved: false);
     }
 
-    /// <summary>A walkable cell on the first lane of a village's fields, a little way out from its last house.</summary>
+    /// <summary>A walkable street cell near the outer end of a village's main street, where the houses give way to fields.</summary>
     public static Cell3? VillageEdge(ChunkStreamer s, RegionData r)
     {
         foreach (var v in r.Villages.OrderByDescending(v => v.TargetPop))
         {
-            if (v.Parcels.Count == 0) continue;
-            // the field tile nearest the village centre
-            int best = int.MaxValue, bx = 0, by = 0;
-            foreach (int pi in v.Parcels)
-            {
-                var p = r.Parcels[pi];
-                for (int k = 0; k < p.FieldCount; k++)
-                {
-                    int tile = r.Fields[p.FieldStart + k].Tile;
-                    int fx = tile % RegionData.Size * RegionData.TileM + 32, fy = tile / RegionData.Size * RegionData.TileM + 32;
-                    int d = (int)Math.Min(int.MaxValue, (long)(fx - v.CenterX) * (fx - v.CenterX) + (long)(fy - v.CenterY) * (fy - v.CenterY));
-                    if (d < best) { best = d; bx = fx; by = fy; }
-                }
-            }
-            if (best == int.MaxValue) continue;
-            var c = NearestWalkable(s, bx, by, 16, paved: false);
+            if (v.Parcels.Count == 0 || v.Plan.Streets.Count == 0) continue;
+            var st = v.Plan.Streets[0];
+            var end = v.Plan.Horizontal ? (st.B.X > st.A.X ? st.B : st.A) : (st.B.Y > st.A.Y ? st.B : st.A);
+            var c = NearestWalkable(s, end.X - (v.Plan.Horizontal ? 4 : 0), end.Y - (v.Plan.Horizontal ? 0 : 4), 8, paved: true);
             if (c != null) return c;
         }
         return null;
@@ -49,11 +37,27 @@ public static class RegionSpawn
     /// <summary>A walkable cell by the first bridge of the region (a ford if there is no bridge).</summary>
     public static Cell3? RiverCrossing(ChunkStreamer s, RegionData r)
     {
-        RoadCrossing? best = null;
+        // a bridge over a proper river, of middling width (a wide one is a lake shore, a narrow one a ditch)
+        RoadCrossing? best = null; int bestScore = int.MaxValue;
         foreach (var e in r.RoadEdges)
             foreach (var c in e.Crossings)
-                if (best == null || (c.Kind == CrossingKind.Bridge && best.Kind != CrossingKind.Bridge) || (c.Kind == best.Kind && c.WidthCm > best.WidthCm)) best = c;
+            {
+                var w = r.Waterways.FirstOrDefault(x => x.Id == c.WaterwayId);
+                int score = Math.Abs(c.WidthCm - 1200) + (c.Kind == CrossingKind.Bridge ? 0 : 5000) + (w?.Kind == WaterKind.River ? 0 : 5000);
+                if (score < bestScore) { bestScore = score; best = c; }
+            }
         return best == null ? null : NearestWalkable(s, best.At.X, best.At.Y, 14, paved: false);
+    }
+
+    /// <summary>A walkable street cell in the named settlement: its square if it has one, else its centre. Null if no such settlement.</summary>
+    public static Cell3? AtSettlement(ChunkStreamer s, RegionData r, string name)
+    {
+        var t = r.Settlements.FirstOrDefault(x => x.Name == name);
+        if (t == null) return null;
+        var q = t.Plan.Square;
+        return (q.W > 0 ? NearestWalkable(s, q.CenterX, q.CenterY + 3, 12, paved: true) : null)
+            ?? NearestWalkable(s, t.CenterX, t.CenterY, 24, paved: true)
+            ?? NearestWalkable(s, t.CenterX, t.CenterY, 40, paved: false);
     }
 
     public static Cell3? NearestWalkable(ChunkStreamer s, int wx, int wy, int radius, bool paved)

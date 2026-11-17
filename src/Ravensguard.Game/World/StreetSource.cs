@@ -26,8 +26,8 @@ public abstract class StreetSource
     public static StreetSource Hamlet() => new HamletSource();
 
     /// <summary>The generated region as a street source. Chunks generate on first visit; pass the save's chunk store to resume where the world was left.</summary>
-    public static StreetSource ForRegion(RegionData region, Population population, ContentDatabase content, ChunkStore? store = null, Cell3? spawn = null)
-        => new RegionSource(region, population, content, store, spawn);
+    public static StreetSource ForRegion(RegionData region, Population population, ContentDatabase content, ChunkStore? store = null, Cell3? spawn = null, string? poi = null)
+        => new RegionSource(region, population, content, store, spawn) { Poi = poi };
 
     /// <summary>Dev: builds continent, history, embark region and population from a seed (seconds), then streams it.</summary>
     public static StreetSource FromSeed(ulong seed, string? poi = null)
@@ -85,7 +85,7 @@ public abstract class StreetSource
             var spot = start ?? _spawn;
             if (spot == null)
             {
-                spot = Poi switch
+                spot = Poi != null && Poi.StartsWith("at:", StringComparison.Ordinal) ? RegionSpawn.AtSettlement(Streamer, _region, Poi[3..]) : Poi switch
                 {
                     "village" => RegionSpawn.VillageEdge(Streamer, _region),
                     "river" => RegionSpawn.RiverCrossing(Streamer, _region),

@@ -123,7 +123,9 @@ public partial class RegionBuildScreen : Control
         _done = true;
         if (_task.IsFaulted) { _error.Text = L.F("RB_FAILED", _task.Exception!.GetBaseException().Message); GD.PushWarning("region build failed: " + _task.Exception); return; }
         Latest = _task.Result;
-        // TODO(street-view agent): once StreetView.ForRegion(router, RunStart) exists, call it here instead of the hamlet-only street view.
-        _router.Replace(new Ravensguard.Game.World.StreetView(_router));
+        // Walk the generated region, starting in the settlement the origin asked for (plan §3f safe start).
+        var w = Latest.World;
+        var opt = new Ravensguard.Game.World.StreetOptions { Poi = "at:" + Latest.StartSettlement };
+        _router.Replace(Ravensguard.Game.World.StreetView.ForRegion(w.Population.Region, w.Population, NewGameServices.Content().Db, _router, opt, w.Chunks));
     }
 }
