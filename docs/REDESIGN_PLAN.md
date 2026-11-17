@@ -48,8 +48,9 @@ The game today is a deep simulation hidden behind a hard-to-use interface: BBCod
 | Modding | Data-driven with a mod folder from day one |
 | Architecture | JSON for all content and tuning, plus a small typed condition and effect vocabulary; rules in tested C#. Hybrid runtime: ECS for the live tier, ID-keyed tables for records, items as a table with optional parts (§2.1a) |
 | Horses | Riding and carts for travel, plus mounted combat and cavalry with full horse anatomy (§3e) |
+| Vehicles | A Cataclysm-style **vehicle designer** for carts, wagons, chariots (open to every culture), sledges, siege engines and war wagons, river boats and **sea ships with naval combat**; one part-grid system (§3h) |
 | Weather | Seasons, day length and live weather from continental fronts, with effects on travel, combat, farming, the economy and war (§3c) |
-| Timeline | Everything above stays in 1.0; the plan is estimated at **about 6–8 years** (§5) |
+| Timeline | Everything above stays in 1.0; the plan is estimated at **about 6.5–8.5 years** (§5) |
 | Sequencing | **Breadth first**, every phase playable |
 | Release | **No public builds until 1.0** |
 
@@ -602,7 +603,7 @@ There is no double-click to interact.
     - Every chronicle entry has either a specific cause or that explicit label. Coverage is measured.
 13. **Warnings before failure:** encounter strength and odds, a starvation timeline, the injury consequences shown on the paper-doll, and "seen" or "unseen".
 14. **Authored content:** landmarks, unique NPCs and faction leaders, placed by a landmark generation phase.
-15. **Armies and war at scale:** see §3d. **Horses:** see §3e. **Learning the game:** see §3f. **Crafting:** see §3g.
+15. **Armies and war at scale:** see §3d. **Horses:** see §3e. **Learning the game:** see §3f. **Crafting:** see §3g. **Vehicles and ships:** see §3h.
 16. **Audio:** see §2.11.
 
 **Cut or folded in:**
@@ -846,6 +847,80 @@ Crafting is a full system in the style of Cataclysm: Dark Days Ahead, built on t
   - expected quality and time;
   - a link from any item to "what can I make with this" and "how is this made".
 - **Volume:** about 30 basic recipes in Phase 3, about 80 in Phase 5, about 250 by 1.0. Recipes for cultures, guilds and secrets are mostly content, not code.
+
+### 3h. Vehicles: a designer for carts, wagons, chariots, siege engines and ships
+Like Cataclysm's vehicle construction: a vehicle is a grid of parts that you design, build, drive, damage, repair and take apart. The one system covers everything that moves and carries:
+- handcarts and wheelbarrows;
+- carts, hay wains, ox wagons and covered wagons;
+- sledges and sleighs;
+- chariots and war wagons;
+- siege engines;
+- river boats and sea ships.
+
+- **The part grid.**
+  - A vehicle is a grid of 1 m cells, the same scale as the world. Each cell stacks parts on a **frame**, which is required and structural.
+  - Ships and siege towers have **several decks or floors**, using the same levels as buildings (§2.2a).
+  - **Movement:** axle and wheels (solid, spoked, iron-tyred), runners (sledges), hull planks and keel (boats), mast and sail, oars and rowlocks, rudder or steering oar, brake or drag shoe.
+  - **Hitching:** shafts, pole and yoke points; a draught harness (ox yoke, horse collar, breast strap).
+  - **Crew and cargo:** driver's bench, seats and rowing benches, cargo bed or box (with a volume), tilt cover, bed, animal stall.
+  - **War and siege:** armour boards and pavise sides, arrow slits; mounted weapons (springald, ballista); ram head on chains; the floors, ladder and drawbridge of a siege tower; trebuchet arm and counterweight.
+  - **Workplaces:** a mobile forge, cook wagon or peddler's stall. These are workstations, so businesses (§4A.1) and crafting (§3g) work on board.
+- **Data, not code.** Parts are content: material, volume, mass, hit points, what they need underneath them and what they provide (cargo volume, seats, pull points, buoyancy, sail area).
+  - Designs are **vehicle blueprints** in the same text format as buildings: `rows` plus a `legend` of part stacks, with extra decks as `levels` (§2.9). The designer saves to it, and mods add to it.
+  - Cultures have their own templates: a steppe war chariot, a northern longship, a southern cog, a hay wain.
+  - **Chariots are open to everyone.** They are balanced by cost, crew and terrain: fast on open, dry, flat ground; useless in mud, woods and ploughed fields.
+- **The designer.** A top-down part grid, with a deck switcher for ships and towers.
+  - It works like build mode and is opened from a cartwright's or shipwright's workshop, or anywhere for small designs.
+  - It shows live derived numbers: mass, cargo, crew, pull needed, speed per surface, turning circle, draft and stability for boats, and protection for war wagons.
+  - It warns about invalid designs: unsupported parts, no steering, a draft too deep for local rivers, a boat that will capsize.
+- **Building and upkeep** run through the job and crafting systems (§3g):
+  - recipes per part;
+  - **wheelwright, cartwright and shipwright proficiencies**;
+  - unfinished vehicles in the world that anyone can resume;
+  - repair and disassembly per part.
+  
+  A wagon is built in a yard; a ship is built on a slipway at the water's edge and launched.
+- **Power.**
+  - **Draught animals** (§3e): ox, horse, mule, donkey, or a dog for small carts. Each has a pull force, a harness requirement, stamina, and food and water needs.
+  - **People** push handcarts and siege towers, and row boats; their stamina and wages are real.
+  - **Wind** drives sails, using the wind from the weather system (§3c).
+  - **River current** moves boats downstream.
+- **Movement, simplified physics** (deterministic, fixed-point):
+  - Speed comes from pull force against total mass. Rolling resistance depends on the surface: road, field, mud and snow (from weather), and ice.
+  - Slopes matter; turning circles come from the axles (a pivoting front axle versus fixed); load limits apply per wheel and axle.
+  - **Getting stuck:** carts get stuck in mud. You push, unload, dig out, or add another team.
+  - **Fords and draft:** fords close to wagons before they close to riders.
+  - **Boats** use displacement and draft from their hull volume, checked against river depth from the river polylines. Overloading, beam seas and storms can capsize a boat.
+  - **Driving:** the hero drives with WASD, NPCs drive with their own skill, and the live and abstract tiers use the same speed numbers.
+- **Things on board move with the vehicle.** A vehicle is a moving sub-grid with its own local frame, and people, items and lights on it ride along.
+  - You can walk the deck of a ship, fight on a war wagon, or climb a siege tower while it rolls.
+  - Pathfinding links vehicle decks to the world through portals (gangplanks, ladders, the tower's drawbridge).
+- **Damage** goes through the §2.6 resolver and materials, per part:
+  - wheels and axles break;
+  - fire uses each part's ignition point (§2.10);
+  - siege engines are targets;
+  - a holed hull takes on water;
+  - a dead or panicked team leaves a wagon stranded.
+- **Uses in play:**
+  - **Trade and logistics:** caravans use real wagons, whose capacity comes from the design. The §4A.1 figures (cart ~500 kg, ox wagon ~1 t) become the base templates.
+  - **Farming:** hay wains and harvest carts. **Winter:** sleighs. **Peddlers:** mobile shops. **Armies:** baggage trains (§3d).
+  - **War wagons and wagon forts** (Hussite-style): wagons chained into a ring become a field fortification and a formation type (§3d).
+  - **Chariots:** a crew of driver plus archer or spearman. A charge adds momentum the way horses do (§3e and §2.6); chariots are countered by braced spears and bad ground.
+  - **Siege engines** (§3d) are vehicles: rams, mantlets, siege towers that reach the wall-walk at z+1, and wheeled trebuchets. They are designed, built, hauled and pushed with the same rules.
+- **Water and ships.**
+  - **River:** barges (poled, rowed or towed from the bank), ferries at crossings, rowing and fishing boats. Boat crews set the fishing rates in §4A.1.
+  - **Sea:** coastal regions get harbours. Ships range from small boats to cogs and longships, sailed by wind and weather.
+  - **Sea trade and sea raids** come in from the continent tick: a raid lands on the beach as real people from a real ship, and history's sea raids (§1A) leave grudges.
+  - **Naval combat:** missiles from the fore and aft castles, ramming, fire and boarding (people fight on the decks).
+  - **Voyages** between coastal places outside the region are abstract journeys, like border roads. This ties into the later multi-region travel (§1A, "Later").
+- **Presentation.**
+  - Vehicles face **8 directions**. Each part has sprites per facing, and the art tool (§2.7) bakes the diagonals from the drawn views.
+  - Ships and towers are drawn deck by deck, roofless like buildings.
+  - Draught animals use their own rigged sprites, harnessed at the hitch points.
+- **Scheduling (§5).**
+  - Phase 3: fixed template carts and wagons (no designer).
+  - Phase 5: the designer, building, repair, river boats, and the wheelwright, cartwright and shipwright proficiencies.
+  - Phase 7: war wagons and wagon forts, chariot combat, siege engines built from the designer, sea ships, harbours, sea raids and naval combat.
 
 ### 3f. Learning the game (brutal, but learnable)
 - **No tutorial level.** You learn in the real world during the first hour:
@@ -1213,12 +1288,12 @@ Estimates assume one developer working with an AI assistant. Every phase ends in
 | 2 | Economy, farming and the abstract world | 5–7 mo | ~26 mo |
 | 3 | People | 8–10 mo | ~35 mo |
 | 4 | Combat anywhere and exploration | 9–12 mo | ~46 mo |
-| 5 | Property, building, crafting, businesses | 6–8 mo | ~53 mo |
-| 6 | Society, factions, rule | 7–9 mo | ~61 mo |
-| 7 | Armies and war at scale | 12–16 mo | ~75 mo |
-| 8 | Depth, onboarding, polish, 1.0 | 8–12 mo | ~85 mo |
+| 5 | Property, building, crafting, businesses, vehicle designer | 7–10 mo | ~54 mo |
+| 6 | Society, factions, rule | 7–9 mo | ~62 mo |
+| 7 | Armies, war at scale, ships and naval war | 15–20 mo | ~80 mo |
+| 8 | Depth, onboarding, polish, 1.0 | 8–12 mo | ~90 mo |
 
-**Total: about 6–8 years (70–97 months).**
+**Total: about 6.5–8.5 years (76–103 months).** The vehicle designer and ships (§3h) added about 4–7 months.
 - The concept book's first hour becomes playable end to end at the end of Phase 5, about 4.5 years in.
 - **After 1.0, as free updates:** travelling to other regions (§1A, "Later"), C# script mods, and anything cut by the overrun rule (§7).
 
@@ -1323,7 +1398,7 @@ Estimates assume one developer working with an AI assistant. Every phase ends in
   - Skills that improve with use.
   - Travel activities (road encounters, night camp, foraging).
   - Feasts and fairs.
-- **Riding horses, and carts (§3e).**
+- **Riding horses, and carts (§3e):** fixed template carts and wagons built from vehicle blueprints (§3h), no designer yet.
 - **Basic crafting (§3g):** fire, torches, bandages, simple meals, simple repairs; recipe steps, including unattended ones such as rising dough; practice recipes; the crafting screen; unfinished items; learning from a master.
 - The first unique NPCs.
 - **Onboarding v1 (§3f):** contextual hints, the controls overlay, the practice yard, mentor NPCs.
@@ -1357,7 +1432,7 @@ Estimates assume one developer working with an AI assistant. Every phase ends in
 - Defeat leads to a capture you can escape.
 - A crypt crawl by torchlight ends with an injury far from a surgeon that matters.
 
-### Phase 5: Property, building, crafting, businesses (6–8 months)
+### Phase 5: Property, building, crafting, businesses, vehicle designer (7–10 months)
 - **Land:** `LandRegistry`, deeds and claims; owning and leasing fields; barns, granaries and mills.
 - **The player build mode:**
   - Including multi-storey floors, stairs, ladders and trapdoors.
@@ -1366,10 +1441,11 @@ Estimates assume one developer working with an AI assistant. Every phase ends in
 - **Construction:** construction and hauling jobs; RoomDetector, full version.
 - **Businesses:** hands-on or shares; stewards; the Ledger.
 - **Crafting (§3g), full system:** tool qualities and workstations, proficiencies, learning by apprenticeship, watching and manuscripts, batches, failure, repair, refitting, disassembly and salvage, commissions, guild secrets; smithing quality.
+- **Vehicles (§3h):** the vehicle designer, vehicle blueprints, building and repairing vehicles part by part, driving, getting stuck, river boats (barges, ferries, rowing and fishing boats); wheelwright, cartwright and shipwright proficiencies.
 - **Inheritance of property** completes Ironman succession.
-- **Content:** about 80 build pieces, about 60 workstations and pieces of furniture, about 80 crafting recipes.
+- **Content:** about 40 vehicle parts and 12 vehicle templates; about 80 build pieces, about 60 workstations and pieces of furniture, about 80 crafting recipes.
 
-**Done when:** you can buy a lot, build a two-storey smithy, hire a smith, supply iron and see profit while away; you can claim a clearing and build a homestead; the concept book's first hour plays end to end.
+**Done when:** you can design a wagon, have it built, drive it loaded to market and get it stuck in mud; you can buy a lot, build a two-storey smithy, hire a smith, supply iron and see profit while away; you can claim a clearing and build a homestead; the concept book's first hour plays end to end.
 
 ### Phase 6: Society, factions, rule (7–9 months)
 - **Crime and justice:** crime and witnesses, bounties, guards, jail, slavery (captivity complete); reputation.
@@ -1393,14 +1469,16 @@ Estimates assume one developer working with an AI assistant. Every phase ends in
 - A thatched street burns realistically.
 - Chronicle cause coverage is ≥ 90% specific.
 
-### Phase 7: Armies and war at scale (12–16 months)
+### Phase 7: Armies, war at scale, ships and naval war (15–20 months)
 - **Battle:** everything in §3d.
   - The battle bubble and the 2,000-soldier budget.
   - Formations, command and the tactical pause.
   - **Cavalry formations and charges.**
   - Reinforcement waves.
 - **Armies on the map:** columns, supply, camps, levies and mercenaries.
-- **Sieges** with engines, wall-walks and towers; breaches; winter sieges.
+- **Sieges** with engines, wall-walks and towers; breaches; winter sieges. Siege engines are vehicles from the designer (§3h).
+- **War wagons and wagon forts; chariot combat** (§3h).
+- **Ships at sea (§3h):** harbours, cogs and longships, sailing by wind, sea trade and sea raids from the continent tick, naval combat with missiles, ramming, fire and boarding.
 - **AI campaigns.**
 - **The abstract resolver**, calibrated against the tactical one within ±10%.
 - **Content:** about 10 siege engines and defences, plus Field and Command mini-sprites for every soldier type.
@@ -1409,6 +1487,7 @@ Estimates assume one developer working with an AI assistant. Every phase ends in
 - 2,000 soldiers hold 60 fps on the reference PC.
 - You can lead levies against an army arriving by road and see the consequences.
 - An AI faction besieges and breaches your walls.
+- Raiders land from a ship and you fight them on the beach and on the deck.
 
 ### Phase 8: Depth, onboarding, polish, 1.0 (8–12 months)
 - **Depth:** the full ambition tree; more authored landmarks (~40) and unique NPCs (~30).
@@ -1437,6 +1516,7 @@ Estimates assume one developer working with an AI assistant. Every phase ends in
   - **Derived stats:** golden tests on the derived-stats tables.
   - **Combat:** seeded fights; near and far soldiers equivalent; the abstract resolver within ±10% of tactical.
   - **Material science:** golden tests reproducing the DF wiki's worked results. Examples: the battle-axe momentum table; mail converting cuts to blunt without dampening; rigid metal soaking 98–99% of a stopped blow; light weapons deflecting off dense armour; severing when penetration exceeds part size.
+  - **Vehicles:** design validation (supported parts, steering, pull, draft against river depth, stability); speed against mass, surface and slope; people and items aboard move with the vehicle; part damage and repair; abstract and live travel times agree.
   - **Crafting:** recipe data validation (components, alternatives, qualities, requirement sets, proficiency graph without cycles); unattended steps ruin the batch past their deadline plus grace; proficiency penalties apply below 100%; disassembly returns the recorded components; practice recipes train without producing items.
   - **Levels:** line of sight between levels; pathfinding through portals; invalidation when a ladder is pulled up; **structural collapse** rules.
   - **Fire:** spread through thatch and timber but not stone; rain puts it out.
@@ -1455,7 +1535,7 @@ Estimates assume one developer working with an AI assistant. Every phase ends in
   - From Phase 3, 2–3 private testers, always asked: "did you understand why?".
 
 ## 7. Risks
-- **Scope (about 6–8 years, accepted).**
+- **Scope (about 6.5–8.5 years, accepted).**
   - Each phase has an estimate.
   - **Overrun rule:** if a phase runs more than 50% over, stop and move features to the after-1.0 list rather than letting the whole timeline slip.
   - Content volume is scaled separately from systems.
