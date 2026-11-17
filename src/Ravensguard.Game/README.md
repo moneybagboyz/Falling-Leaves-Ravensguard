@@ -30,6 +30,6 @@ Add the action to `InputDefs` (one `A(...)` line), then add `ACTION_<CONTEXT>_<N
 
 ## Street view (first playable)
 `World/StreetView.cs` is the live view: New Game opens it. The sim (`Ravensguard.Sim/Live`, `Lighting`) owns all state; the view reads `LiveWorld.Snapshot`.
-Art atlases are the baked output of `tools/Ravensguard.Art` copied to `assets/art/` (re-run `bake`, then copy `art/out/*.png` and `index.json` there).
+Art atlases are the baked output of `tools/Ravensguard.Art` copied to `assets/art/` (re-run `bake`, then copy `art/out/*.png` and `index.json` there; `rig --out art/out --out-game src/Ravensguard.Game/assets/art` bakes and copies `rig_32x64.png` + `rig_index.json`, which `RigAtlas`/`RigActor` use to draw the hero as stacked layers).
 Command line (after `--`): `--shot-street <hour> --shot-out <png> [--shot-start x,y,z] [--shot-level z] [--shot-zoom 1|2] [--shot-torch 0|1] [--shot-click px,py] [--shot-frames n]`
 captures a screenshot and quits; `--street-bench <seconds>` runs a scripted walk and prints tick/frame timings.

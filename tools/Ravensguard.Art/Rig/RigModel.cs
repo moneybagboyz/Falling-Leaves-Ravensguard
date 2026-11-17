@@ -27,6 +27,7 @@ public sealed class Pose
     public float Yaw, Roll, Pitch;              // whole body (pelvis); Pitch > 0 tips the top backward (falling back)
     public float TYaw, TRoll, TLean;            // torso relative to pelvis; TLean > 0 leans forward
     public float HYaw, HPitch;                  // head; HPitch > 0 looks down
+    public float Fwd;                           // pixels the whole figure is shifted forward (+) or back (-), to keep long reaches in the frame
     public float UpperZ;                        // pixels torso, head and arms sit above (+) or below (-) the pelvis (breathing, crouch)
     public float Lift;                          // pixels the whole figure is raised off the ground after planting
     public Limb ArmL, ArmR, LegL, LegR;
@@ -112,6 +113,9 @@ public sealed class Skeleton
     public M3 TorsoM, HandRM;
     public V3 HandLCentre, HandRCentre;
     public float GroundShift;
+    /// <summary>Screen column of the body axis: 16 in front/back, 15 in the side view (more room to reach forward).</summary>
+    public float BaseX => V == View.Side ? SideBase : 16;
+    public const float SideBase = 15;
     public (float X, float Y) Proj(V3 p) => V switch
     {
         View.Front => (-p.X, -p.Z + Tilt * p.Y),
@@ -124,7 +128,7 @@ public sealed class Skeleton
         P = p; V = v;
         var down = new V3(0, 0, -1);
         var mp = M3.Rz(p.Yaw) * M3.Ry(p.Roll) * M3.Rx(p.Pitch);
-        var o = new V3(0, 0, 0);
+        var o = new V3(0, p.Fwd, 0);
         Add(Bone.Pelvis, o, mp);
         var ot = o + mp.Apply(new V3(0, 0, p.UpperZ));
         var mt = mp * M3.Rz(p.TYaw) * M3.Ry(p.TRoll) * M3.Rx(-p.TLean);
@@ -209,7 +213,7 @@ public sealed class Skeleton
         foreach (var (b, fr) in F)
         {
             float par = Dims.Parity(b);
-            fr.Ox = MathF.Floor(fr.Ox + 16 - par + 0.5f) + par;
+            fr.Ox = MathF.Floor(fr.Ox + BaseX - par + 0.5f) + par;
             fr.Oy = MathF.Floor(fr.Oy + 38 + GroundShift + 0.5f);
         }
     }
@@ -222,6 +226,6 @@ public sealed class Skeleton
     public (float X, float Y) Screen(V3 p)
     {
         var (x, y) = Proj(p);
-        return (x + 16, y + 38 + GroundShift);
+        return (x + BaseX, y + 38 + GroundShift);
     }
 }

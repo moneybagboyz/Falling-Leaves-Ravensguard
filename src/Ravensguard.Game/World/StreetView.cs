@@ -46,7 +46,9 @@ public partial class StreetView : Control
     Camera2D _cam = null!;
     TileMapLayer _belowT = null!, _belowO = null!, _baseT = null!, _baseO = null!;
     Node2D _ysort = null!;
-    Sprite2D _heroSprite = null!, _torchSprite = null!, _lightSprite = null!;
+    RigAtlas _rig = null!;
+    RigActor _heroSprite = null!;
+    Sprite2D _torchSprite = null!, _lightSprite = null!;
     ImageTexture _lightTex = null!;
     byte[] _lightBytes = null!;
     readonly Dictionary<string, Vector2I> _terrainCells = new(), _objectCells = new();
@@ -69,6 +71,7 @@ public partial class StreetView : Control
     public override void _Ready()
     {
         _art = ArtAtlas.Load();
+        _rig = RigAtlas.Load();
         var lib = LoadLibrary();
         _map = HamletBuilder.Build(lib);
         var start = _opt.Start is { } s ? new Cell3(s.X, s.Y, s.Z) : HamletBuilder.HeroStart;
@@ -143,7 +146,7 @@ public partial class StreetView : Control
 
         _ysort = new Node2D { Name = "Sprites", YSortEnabled = true };
         root.AddChild(_ysort);
-        _heroSprite = new Sprite2D { Texture = _art.Texture("person.hero"), Centered = false, Offset = new Vector2(-16, -64), TextureFilter = TextureFilterEnum.Nearest };
+        _heroSprite = new RigActor(_rig, "hero"); // stacked layers from rig_32x64.png
         _ysort.AddChild(_heroSprite);
         _torchSprite = new Sprite2D { Texture = _art.Texture("item.torch"), Centered = false, Offset = new Vector2(-3, -34), TextureFilter = TextureFilterEnum.Nearest, Visible = false };
         _heroSprite.AddChild(_torchSprite);
@@ -354,6 +357,26 @@ public partial class StreetView : Control
         if (_frames == 2) _world.SetTorch(true);
     }
 
+    Vector2 _lastFeet; float _stridePhase; double _idleT;
+    /// <summary>Walk or jog frames from distance travelled (so feet match the ground), idle frames from time.</summary>
+    void AnimateHero(HeroSnapshot h, Vector2 feet)
+    {
+        float moved = h.Moving && h.Z == h.PrevZ ? feet.DistanceTo(_lastFeet) : 0f;
+        _lastFeet = feet;
+        if (moved > 0f)
+        {
+            bool walk = h.Mode == MoveMode.Walk;
+            _stridePhase += moved / (walk ? 46f : 66f); // pixels per full 4-frame cycle (two steps)
+            _heroSprite.Pose(h.Facing, walk ? "walk" : "jog", (int)(_stridePhase * 4f));
+        }
+        else
+        {
+            _stridePhase = 0f;
+            _idleT += GetProcessDeltaTime();
+            _heroSprite.Pose(h.Facing, "idle", (int)(_idleT / 0.7) % 2);
+        }
+    }
+
     void Render(float alpha)
     {
         var s = _world.Snapshot;
@@ -363,10 +386,9 @@ public partial class StreetView : Control
         float fy = h.PrevY.ToFloat() + (h.Y.ToFloat() - h.PrevY.ToFloat()) * alpha;
         if (h.Z != h.PrevZ) { fx = h.X.ToFloat(); fy = h.Y.ToFloat(); }
         var feet = new Vector2(Mathf.Round(fx * Tile), Mathf.Round(fy * Tile));
-        float bob = h.Moving ? Mathf.Abs(Mathf.Sin((float)Time.GetTicksMsec() / 1000f * 11f)) * 2f : 0f;
-        _heroSprite.Position = feet + new Vector2(0, -Mathf.Round(bob));
+        _heroSprite.Position = feet;
         _heroSprite.Visible = h.Z == _viewZ;
-        _heroSprite.FlipH = h.Facing == Facing.West;
+        AnimateHero(h, feet);
         _torchSprite.Visible = h.Torch;
         _torchSprite.Position = new Vector2(h.Facing == Facing.West ? -16 : 6, 0);
 

@@ -331,10 +331,10 @@ public static class RigLayers
         l.Add(new PieceLayer("shield", c =>
         {
             var sk = c.S;
-            var (cx, cy) = sk.Screen(sk.HandLCentre + sk.TorsoM.Apply(new V3(-1.5f, 3, 3.5f)));
+            var (cx, cy) = sk.Screen(sk.HandLCentre + sk.TorsoM.Apply(new V3(1.0f, 3, 3.5f)));
             var n = sk.TorsoM.Apply(new V3(0, 1, 0));
             float vis = c.V == View.Side ? MathF.Abs(n.X) : MathF.Abs(n.Y);
-            float rx = Math.Max(1.6f, 6f * vis), ry = 6f;
+            float rx = Math.Max(1.6f, 5.5f * vis), ry = 5.5f;
             int icx = (int)MathF.Floor(cx + 0.5f), icy = (int)MathF.Floor(cy + 0.5f);
             bool back = c.V == View.Back;
             int plane = c.V == View.Front ? 2 : 0;
@@ -363,16 +363,16 @@ public static class RigLayers
             c.Free(2, fr, new(-1, -5, 1, -4), noHand((in Cell k) => P["au3"]));
             c.Free(2, fr, new(-1, -4, 1, 2), noHand((in Cell k) => k.I == 0 ? P["w3"] : P["w2"]));
             c.Free(2, fr, new(-3, 2, 3, 3), (in Cell k) => k.I is 0 or 5 ? P["au2"] : P["au3"]);
-            c.Free(2, fr, new(-1, 3, 1, 19), (in Cell k) => (k.J == 15 && k.I == 1) ? 0u : (k.I == 0 ? P["m5"] : P["m4"]));
+            c.Free(2, fr, new(-1, 3, 1, 17), (in Cell k) => (k.J == 13 && k.I == 1) ? 0u : (k.I == 0 ? P["m5"] : P["m4"]));
         }));
         l.Add(new StanceLayer("spear", Stance.Pole, c =>
         {
             var (o, m) = c.S.WeaponFrame();
             var fr = Frame(c.S, o, m);
             Shader noHand(Shader s) => (in Cell k) => c.InBone(Bone.HandR, k.Sx, k.Sy) ? 0u : s(k);
-            c.Free(2, fr, new(-1, -13, 1, 28), noHand((in Cell k) => k.I == 0 ? P["w4"] : P["w3"]));
-            c.Free(2, fr, new(-1, 27, 1, 28), (in Cell k) => P["au2"]);
-            c.Free(2, fr, new(-2, 28, 2, 35), (in Cell k) =>
+            c.Free(2, fr, new(-1, -9, 1, 21), noHand((in Cell k) => k.I == 0 ? P["w4"] : P["w3"]));
+            c.Free(2, fr, new(-1, 20, 1, 21), (in Cell k) => P["au2"]);
+            c.Free(2, fr, new(-2, 21, 2, 28), (in Cell k) =>
                 k.J switch { <= 2 => P["m4"], <= 4 => (k.I is 1 or 2 ? P["m4"] : 0u), 5 => (k.I == 1 ? P["m5"] : 0u), _ => 0u });
         }));
         return l;
@@ -381,7 +381,7 @@ public static class RigLayers
     static BoneFrame Frame(Skeleton s, V3 o, M3 m)
     {
         var f = s.MakeFrame(o, m);
-        f.Ox = MathF.Floor(f.Ox + 16 + 0.5f);
+        f.Ox = MathF.Floor(f.Ox + s.BaseX + 0.5f);
         f.Oy = MathF.Floor(f.Oy + 38 + s.GroundShift + 0.5f);
         return f;
     }

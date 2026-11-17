@@ -51,41 +51,41 @@ public static class RigPoses
             {
                 var c = new Pose
                 {
-                    Yaw = -7, TYaw = 12, TLean = 13, LegR = L(34, 2, 10, 14), LegL = L(-34, 2, 64, -38),
-                    ArmR = L(-36, 5, 82), ArmL = L(40, 5, 86), WSwing = 40, WAbd = 8, HPitch = -6,
+                    Yaw = -7, TYaw = 12, TLean = 13, LegR = L(22, 2, 10, 14), LegL = L(-13, 2, 64, -38),
+                    ArmR = L(-14, 5, 70), ArmL = L(12, 5, 70), WSwing = 12, WAbd = 8, HPitch = -6,
                 };
                 var p = new Pose
                 {
                     Yaw = 0, TYaw = 0, TLean = 13, LegR = L(4, 2, 12, 0), LegL = L(50, 2, 88, -25),
-                    ArmR = L(-6, 5, 66), ArmL = L(8, 5, 74), WSwing = 40, WAbd = 8, HPitch = -6,
+                    ArmR = L(-6, 5, 66), ArmL = L(8, 5, 74), WSwing = 12, WAbd = 8, HPitch = -6,
                 };
                 return new[] { c, p, c.Mirror(), p.Mirror() };
             }
             case "windup":
                 return new[]
                 {
-                    new Pose { Yaw = -8, TYaw = 18, TLean = -4, HYaw = -10, LegL = L(24, 3, 12), LegR = L(-16, 3, 14), ArmR = L(95, 22, 100), ArmL = L(35, 12, 50), WSwing = 175, WAbd = 5 },
-                    new Pose { Yaw = -12, TYaw = 34, TLean = -12, HYaw = -16, LegL = L(28, 3, 14), LegR = L(-20, 3, 22), ArmR = L(62, 38, 150), ArmL = L(40, 16, 60), WSwing = 212, WAbd = 10, UpperZ = -1 },
+                    new Pose { Fwd = -2, Yaw = -8, TYaw = 18, TLean = -4, HYaw = -10, LegL = L(22, 3, 12), LegR = L(-14, 3, 14), ArmR = L(32, 20, 100), ArmL = L(30, 4, 50), WSwing = 214, WAbd = 5 },
+                    new Pose { Fwd = -2, Yaw = -12, TYaw = 32, TLean = -10, HYaw = -16, LegL = L(26, 3, 14), LegR = L(-18, 3, 22), ArmR = L(26, 30, 125), ArmL = L(34, 4, 60), WSwing = 240, WAbd = 8, UpperZ = -1 },
                 };
             case "strike":
                 return new[]
                 {
-                    new Pose { Yaw = 6, TYaw = -14, TLean = 12, HYaw = 6, LegL = L(32, 3, 22), LegR = L(-26, 3, 8), ArmR = L(100, 10, 40), ArmL = L(20, 20, 40), WSwing = 118, WAbd = 4 },
-                    new Pose { Yaw = 12, TYaw = -26, TLean = 24, HYaw = 10, LegL = L(38, 3, 32), LegR = L(-32, 3, 6), ArmR = L(72, 6, 14), ArmL = L(-10, 30, 40), WSwing = 58, WAbd = 4, UpperZ = -1 },
+                    new Pose { Fwd = -4, Yaw = 6, TYaw = -14, TLean = 12, HYaw = 6, LegL = L(28, 3, 22), LegR = L(-22, 3, 8), ArmR = L(52, 8, 30), ArmL = L(20, 6, 40), WSwing = 60, WAbd = 4 },
+                    new Pose { Fwd = -3, Yaw = 12, TYaw = -26, TLean = 22, HYaw = 10, LegL = L(32, 3, 32), LegR = L(-20, 3, 6), ArmR = L(42, 5, 18), ArmL = L(-10, 8, 40), WSwing = 28, WAbd = 4, UpperZ = -1 },
                 };
             case "recover":
-                return new[] { new Pose { Yaw = 4, TYaw = -8, TLean = 8, LegL = L(18, 3, 14), LegR = L(-14, 3, 10), ArmR = L(45, 8, 40), ArmL = L(20, 10, 40), WSwing = 46, WAbd = 6 } };
+                return new[] { new Pose { Fwd = -3, Yaw = 4, TYaw = -8, TLean = 8, LegL = L(18, 3, 14), LegR = L(-14, 3, 10), ArmR = L(35, 8, 35), ArmL = L(20, 6, 40), WSwing = 28, WAbd = 6 } };
             case "block":
-                return new[] { new Pose { Yaw = -4, TYaw = 8, TLean = 8, HPitch = 6, LegL = L(26, 3, 30), LegR = L(-14, 3, 26), ArmL = L(78, 2, 62), ArmR = L(50, 12, 80), WSwing = 135, WAbd = 15, UpperZ = -1 } };
+                return new[] { new Pose { Fwd = -3, Yaw = -4, TYaw = 8, TLean = 8, HPitch = 6, LegL = L(24, 3, 30), LegR = L(-12, 3, 26), ArmL = L(60, 2, 55), ArmR = L(35, 10, 80), WSwing = 150, WAbd = 12, UpperZ = -1 } };
             case "hitreact":
-                return new[] { new Pose { Yaw = 8, TLean = -20, HPitch = -14, UpperZ = -1, LegL = L(-10, 4, 8), LegR = L(16, 4, 10), ArmL = L(35, 35, 30), ArmR = L(30, 40, 40), WSwing = 40, WAbd = 40 } };
+                return new[] { new Pose { Fwd = -2, Yaw = 8, TLean = -14, HPitch = -10, UpperZ = -1, LegL = L(-10, 4, 8), LegR = L(16, 4, 10), ArmL = L(40, 16, 30), ArmR = L(34, 16, 40), WSwing = 25, WAbd = 15 } };
             case "fall":
                 return new[]
                 {
-                    new Pose { Pitch = 18, TLean = -8, HPitch = -8, LegL = L(15, 2, 20), LegR = L(-5, 2, 10), ArmL = L(30, 40, 20), ArmR = L(40, 40, 20), WSwing = 70, WAbd = 40 },
-                    new Pose { Pitch = 10, TLean = -14, HPitch = -14, UpperZ = -1, LegL = L(28, 3, 72), LegR = L(10, 3, 60), ArmL = L(45, 55, 10), ArmR = L(50, 55, 10), WSwing = 90, WAbd = 60 },
+                    new Pose { Fwd = -2, Pitch = 8, TLean = -4, HPitch = -8, LegL = L(10, 2, 20), LegR = L(-5, 2, 10), ArmL = L(20, 14, 20), ArmR = L(24, 14, 20), WSwing = 30, WAbd = 15 },
+                    new Pose { Fwd = -2, Pitch = 6, TLean = -14, HPitch = -14, UpperZ = -1, LegL = L(24, 3, 72), LegR = L(8, 3, 60), ArmL = L(24, 16, 10), ArmR = L(26, 16, 10), WSwing = 25, WAbd = 20 },
                     // the frame is 32 px wide, so a body lying flat cannot fit: the last frame is a collapse onto the knees
-                    new Pose { TLean = 36, HPitch = 24, UpperZ = -1, LegL = L(4, 6, 104), LegR = L(-2, 6, 100), ArmL = L(40, 14, 30), ArmR = L(38, 14, 30), WSwing = 60, WAbd = 20 },
+                    new Pose { TLean = 36, HPitch = 24, UpperZ = -1, LegL = L(4, 6, 104), LegR = L(-2, 6, 100), ArmL = L(40, 14, 30), ArmR = L(38, 14, 30), WSwing = 25, WAbd = 10 },
                 };
             default: throw new ArgumentException("unknown action " + action);
         }
@@ -96,8 +96,10 @@ public static class RigPoses
     {
         switch (action)
         {
-            case "idle": case "walk": case "jog":
+            case "idle": case "walk":
                 p.ArmR = L(20, 10, 40); p.WSwing = 176; p.WAbd = 3; break;
+            case "jog":
+                p.ArmR = L(20, 10, 40); p.WSwing = 196; p.WAbd = 3; break;
             case "windup":
                 if (i == 0) { p.ArmR = L(12, 22, 70); p.WSwing = 112; p.WAbd = 0; }
                 else { p.ArmR = L(-8, 28, 58); p.WSwing = 96; p.WAbd = 0; }

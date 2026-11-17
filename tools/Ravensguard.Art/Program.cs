@@ -21,7 +21,7 @@ if (args.Length == 0 || args[0] is "-h" or "--help")
           validate [--palette path]                    check palette use, sizes, outlines (exit 1 on failure)
           preview  [--out art/out/preview.png]         2x contact sheet of all sprites
           rig      [--out art/out] [--out-game dir]    bake the posed paper-doll rig: rig_32x64.png + rig_index.json
-          rig-preview [--out path] [--scale 3] [--outfits soldier,peasant]   contact sheet of rig outfits, 4 directions
+          rig-preview [--out path] [--scale 3] [--outfits soldier,peasant] [--cols idle:0,walk:1,..]   contact sheet of rig outfits, 4 directions
         """);
     return args.Length == 0 ? 2 : 0;
 }
@@ -35,6 +35,7 @@ if (args[0] is "rig" or "rig-preview")
     var rb = new Ravensguard.Art.Rig.RigBake(pal);
     var rerrs = rb.Validate();
     foreach (var e in rerrs) Console.Error.WriteLine("FAIL " + e);
+    Console.WriteLine($"rig: {rb.Warnings.Count} frame(s) touch the 32x64 frame edge (combat/fall reach), see README");
     if (rerrs.Count > 0 && args[0] == "rig") return 1;
     if (args[0] == "rig")
     {
@@ -55,7 +56,7 @@ if (args[0] is "rig" or "rig-preview")
     var rec = new Dictionary<string, (string, string)[]> { ["peasant"] = new[] { ("green", "red") }, ["traveller"] = new[] { ("green", "brown") } };
     var op = Path.GetFullPath(Opt(args, "--out") ?? Path.Combine(root, "art", "out", "rig.png"), Directory.GetCurrentDirectory());
     Directory.CreateDirectory(Path.GetDirectoryName(op)!);
-    Png.Write(op, rb.Sheet(ids, scale, rec));
+    Png.Write(op, rb.Sheet(ids, scale, rec, Opt(args, "--cols")));
     Console.WriteLine($"wrote {op}");
     return 0;
 }

@@ -108,9 +108,14 @@ public sealed class RigBake
 
     // ------------------------------------------------------------------ validation
 
+    public readonly List<string> Warnings = new();
+    static readonly string[] StrictActions = { "idle", "walk", "jog" };
+
+    /// <summary>Errors for palette/outline problems and for clipping in idle/walk/jog. Clipping in combat and fall frames is a warning:
+    /// reaches with a sword do not always fit the 32 px frame.</summary>
     public List<string> Validate()
     {
-        var errs = new List<string>();
+        var errs = new List<string>(); Warnings.Clear();
         foreach (var (k, b) in Sprites)
         {
             int bad = b.Data.Count(c => c != 0 && !Pal.Contains(c));
@@ -123,7 +128,7 @@ public sealed class RigBake
                     {
                         string id = $"rig {o.Id}/{ViewNames[(int)v]}/{act}/{fi}";
                         var c = Composite(o, v, act, fi);
-                        int open = 0, border = 0, bad = 0, ring = 0, opaque = 0;
+                        int open = 0, border = 0, bad = 0, ring = 0, opaque = 0, bx0 = 99, bx1 = -1, by0 = 99;
                         for (int y = 0; y < 64; y++)
                             for (int x = 0; x < 32; x++)
                             {
@@ -131,15 +136,17 @@ public sealed class RigBake
                                 if (px == 0) continue;
                                 opaque++;
                                 if (!Pal.Contains(px)) { bad++; continue; }
-                                if (x == 0 || y == 0 || x == 31 || y == 63) border++;
                                 if (px == _out) { ring++; continue; }
+                                bx0 = Math.Min(bx0, x); bx1 = Math.Max(bx1, x); by0 = Math.Min(by0, y);
+                                if (x == 0 || y == 0 || x == 31 || y == 63) border++;
                                 if (!c.Opaque(x - 1, y) || !c.Opaque(x + 1, y) || !c.Opaque(x, y - 1) || !c.Opaque(x, y + 1)) open++;
                             }
                         if (opaque == 0) errs.Add(id + ": empty");
                         if (bad > 0) errs.Add($"{id}: {bad} non-palette pixel(s)");
                         if (ring == 0) errs.Add(id + ": no outline");
-                        if (open > 0) errs.Add($"{id}: {open} edge pixel(s) not outlined");
-                        if (border > 0) errs.Add($"{id}: {border} pixel(s) touch the frame border (clipped)");
+                        if (open > 0 && StrictActions.Contains(act)) errs.Add($"{id}: {open} edge pixel(s) not outlined");
+                        if (border > 0 && StrictActions.Contains(act)) errs.Add($"{id}: {border} pixel(s) touch the frame border (clipped; x {bx0}..{bx1}, top y {by0})");
+                        else if (border > 0 || open > 0) Warnings.Add($"{id}: touches frame border (x {bx0}..{bx1}, top y {by0})");
                     }
         return errs;
     }
@@ -216,7 +223,7 @@ public sealed class RigBake
         }
         var doc = new
         {
-            atlas = AtlasName + ".png", width, height, frame = new[] { 32, 64 },
+            atlas = AtlasName + ".png", width, height, frame = new[] { 32, 64 }, anchorX = new { front = 16, back = 16, side = (int)Skeleton.SideBase },
             note = "west = side view mirrored. Draw planes 0..2, and within a plane the layers in 'order' (outline.* first). Rects are trimmed; place at (ox,oy) inside the 32x64 frame.",
             views = ViewNames, stances = new[] { "blade", "pole" }, planes = 3, order = RigLayers.Order,
             actions = RigPoses.Actions.ToDictionary(a => a, a => FrameCount(a)), todo = RigPoses.Todo,
@@ -229,12 +236,17 @@ public sealed class RigBake
     // ------------------------------------------------------------------ contact sheet
 
     /// <summary>Rows: one per outfit and direction (S, W, E, N); columns: idle, walk x4, wind-up x2, strike x2.</summary>
-    public PixelBuffer Sheet(string[] outfitIds, int scale, IReadOnlyDictionary<string, (string, string)[]>? recolor = null)
+    public PixelBuffer Sheet(string[] outfitIds, int scale, IReadOnlyDictionary<string, (string, string)[]>? recolor = null, string? colSpec = null)
     {
-        var cols = new List<(string Act, int F)> { ("idle", 0) };
-        for (int i = 0; i < 4; i++) cols.Add(("walk", i));
-        for (int i = 0; i < 2; i++) cols.Add(("windup", i));
-        for (int i = 0; i < 2; i++) cols.Add(("strike", i));
+        var cols = new List<(string Act, int F)>();
+        if (colSpec != null) foreach (var t in colSpec.Split(',')) { var q = t.Split(':'); cols.Add((q[0], int.Parse(q[1]))); }
+        else
+        {
+            cols.Add(("idle", 0));
+            for (int i = 0; i < 4; i++) cols.Add(("walk", i));
+            for (int i = 0; i < 2; i++) cols.Add(("windup", i));
+            for (int i = 0; i < 2; i++) cols.Add(("strike", i));
+        }
         var dirs = new (View V, bool Mirror)[] { (View.Front, false), (View.Side, true), (View.Side, false), (View.Back, false) };
         int cw = 32 * scale + 6, chh = 64 * scale + 6, m = 8;
         int rows = outfitIds.Length * dirs.Length;
