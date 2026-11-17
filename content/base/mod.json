@@ -1,0 +1,7 @@
+{
+  "id": "base",
+  "name": "Ravensguard Base Game",
+  "version": "0.1.0",
+  "load_after": [],
+  "dependencies": []
+}
