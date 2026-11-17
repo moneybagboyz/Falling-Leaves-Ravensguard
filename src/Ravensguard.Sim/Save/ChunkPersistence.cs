@@ -31,7 +31,7 @@ public sealed class ObjectRecord
 [MessagePackObject]
 public sealed class ChunkContent
 {
-    public const int Size = 64;
+    public const int Size = 32; // plan §1: a chunk is 32 × 32 cells
     [Key(0)] public SortedDictionary<int, int> Tiles { get; set; } = new();
     [Key(1)] public SortedDictionary<ulong, ObjectRecord> Objects { get; set; } = new();
     [IgnoreMember] public bool IsEmpty => Tiles.Count == 0 && Objects.Count == 0;

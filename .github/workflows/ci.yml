@@ -45,3 +45,6 @@ jobs:
       - name: Smoke boot
         working-directory: src/Ravensguard.Game
         run: timeout 120 "$GODOT" --headless -- --smoke
+      - name: Key-map conflict check
+        working-directory: src/Ravensguard.Game
+        run: timeout 120 "$GODOT" --headless -- --check-keymap
