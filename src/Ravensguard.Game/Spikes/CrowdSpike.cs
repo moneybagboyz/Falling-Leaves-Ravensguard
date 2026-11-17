@@ -193,7 +193,7 @@ public partial class CrowdSpike : Node2D
         for (int i = 0; i < N; i++)
         {
             int team = i < PerArmy ? 0 : 1, k = i % PerArmy, col = k % 20, rowi = k / 20;
-            float x = team == 0 ? 150 + col * 2.2f : 362 - col * 2.2f;
+            float x = team == 0 ? 206 + col * 2.2f : 306 - col * 2.2f;
             float y = 60 + rowi * 4.0f + (float)_rng.NextDouble();
             _px[i] = _cx[i] = x; _py[i] = _cy[i] = y; _homeY[i] = y;
             _stopX[i] = 256 + (team == 0 ? -1 : 1) * (0.8f + (float)_rng.NextDouble() * 5f);
