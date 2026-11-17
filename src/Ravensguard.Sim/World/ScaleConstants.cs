@@ -13,6 +13,8 @@ public static class ScaleConstants
     public const double RegionMeters = 32_000.0;
     public const double TownSpacingMeters = 8_000.0;
     public const double SquareMetersPerAcre = 4046.86;
+    /// <summary>Street zoom: 1 m = 32 px (plan §1).</summary>
+    public const int StreetPixelsPerMeter = 32;
 
     // Time
     public const double GameSecondsPerRealSecond = 20.0; // clock 1:20

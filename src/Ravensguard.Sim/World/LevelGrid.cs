@@ -34,7 +34,6 @@ public sealed class LevelGrid
     private readonly List<Portal> _portals = new();
     private readonly Dictionary<int, List<int>> _portalsAt = new(); // cell index -> portal ids
     private readonly int[] _chunkRev;
-    private readonly bool[] _chunkDirty;
 
     public IReadOnlyList<Portal> Portals => _portals;
     public int Revision { get; private set; }
@@ -46,8 +45,6 @@ public sealed class LevelGrid
         ChunksY = (height + ScaleConstants.ChunkCells - 1) / ScaleConstants.ChunkCells;
         _open = new byte[width * height * Levels];
         _chunkRev = new int[ChunksX * ChunksY * Levels];
-        _chunkDirty = new bool[_chunkRev.Length];
-        Array.Fill(_chunkDirty, true);
     }
 
     public int CellCount => _open.Length;
@@ -63,8 +60,15 @@ public sealed class LevelGrid
     public int ChunkLevelCount => _chunkRev.Length;
     public int ChunkRevision(int chunkLevel) => _chunkRev[chunkLevel];
 
+    private void Require(int x, int y, int z)
+    {
+        if (!InBounds(x, y, z))
+            throw new ArgumentOutOfRangeException(null, $"Cell ({x},{y},{z}) is outside the grid ({Width}x{Height}, z {MinZ}..{MaxZ}).");
+    }
+
     public void SetOpen(int x, int y, int z, bool open)
     {
+        Require(x, y, z);
         int i = Index(x, y, z);
         byte v = open ? (byte)1 : (byte)0;
         if (_open[i] == v) return;
@@ -74,18 +78,21 @@ public sealed class LevelGrid
 
     public void FillRect(int x0, int y0, int x1, int y1, int z, bool open)
     {
+        if (x0 > x1 || y0 > y1) return;
+        Require(x0, y0, z); Require(x1, y1, z); // validate the whole rect up front: nothing changes on failure
         for (int y = y0; y <= y1; y++) for (int x = x0; x <= x1; x++) SetOpen(x, y, z, open);
     }
 
     private void Touch(int x, int y, int z)
     {
         int cl = ChunkLevelIndex(x, y, z);
-        _chunkRev[cl]++; _chunkDirty[cl] = true; Revision++;
+        _chunkRev[cl]++; Revision++;
     }
 
     /// <summary>Adds a two-way portal; both endpoints become open. Cost is clamped up to the octile distance to keep A* admissible.</summary>
     public Portal AddPortal(PortalKind kind, Cell3 a, Cell3 b, int cost)
     {
+        Require(a.X, a.Y, a.Z); Require(b.X, b.Y, b.Z);
         SetOpen(a.X, a.Y, a.Z, true); SetOpen(b.X, b.Y, b.Z, true);
         int dx = Math.Abs(a.X - b.X), dy = Math.Abs(a.Y - b.Y);
         int octile = Straight * Math.Max(dx, dy) + (Diagonal - Straight) * Math.Min(dx, dy);
@@ -116,6 +123,7 @@ public sealed class LevelGrid
     /// <summary>Floor collapse: closes the rect on level z and disables every portal with an endpoint inside it. Returns affected portal ids.</summary>
     public List<int> CollapseFloor(int x0, int y0, int x1, int y1, int z)
     {
+        Require(x0, y0, z); Require(x1, y1, z);
         FillRect(x0, y0, x1, y1, z, false);
         var hit = new List<int>();
         foreach (var p in _portals)
@@ -127,7 +135,4 @@ public sealed class LevelGrid
     }
 
     private static bool InRect(Cell3 c, int x0, int y0, int x1, int y1, int z) => c.Z == z && c.X >= x0 && c.X <= x1 && c.Y >= y0 && c.Y <= y1;
-
-    internal bool IsDirty(int chunkLevel) => _chunkDirty[chunkLevel];
-    internal void ClearDirty(int chunkLevel) => _chunkDirty[chunkLevel] = false;
 }

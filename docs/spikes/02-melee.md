@@ -108,3 +108,17 @@ The 10v10 skirmish now averages 29.5 s.
 - The AI's guard and stance choices need work.
 - Bandaging isn't modelled yet. Most fighters who are knocked out still bleed to death within 60 s, because nobody can bandage them.
 - Feel still needs to be judged by playing `MeleeSpike.tscn`.
+
+## Follow-up: Phase 0 review fixes
+- Blows that land in the same tick now resolve against the state at the start of the tick. Before, the fighter with the lower id always won a mutual exchange.
+- The AI now picks its attack by situation: blunt or point against armour, edge against bare flesh.
+
+New benchmark over 200 duels per matchup:
+
+| Matchup | Mean duel length | Side A wins |
+|---|---|---|
+| Sword vs sword | 8.0 s | 49% |
+| Axe vs mail | 9.7 s | 64% |
+| Spear vs unarmoured | 8.4 s | 34% |
+
+The remaining reshape items listed above still stand for Phase 4.

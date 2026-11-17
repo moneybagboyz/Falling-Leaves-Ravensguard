@@ -19,13 +19,25 @@ public sealed class LevelPathfinder
     private int _cur;
     private static readonly (int dx, int dy)[] Dirs = { (0, -1), (1, 0), (0, 1), (-1, 0), (1, -1), (1, 1), (-1, 1), (-1, -1) };
 
-    // Zone abstraction
+    // Zone abstraction. Zone ids are slots: a chunk-level that is re-zoned gives its old ids back and reuses them, so the
+    // slot count is bounded by the peak number of live zones, not by the number of rebuilds.
     private readonly int[] _zoneOf;
     private readonly List<(int cx, int cy, int n)> _zoneInfo = new();
     private readonly List<List<(int to, int cost)>> _zoneEdges = new();
+    private readonly List<int>?[] _chunkZones;       // chunk-level -> its live zone ids
+    private readonly Stack<int> _freeZones = new();
+    private readonly int[] _seenRev;                 // this pathfinder's last-seen revision per chunk-level (-1 = never)
+    private int _liveZones;
     private int _abstractRevision = -1;
+    // pooled ZonePath buffers (sized to the slot count)
+    private int[] _best = [], _par = [];
+    private bool[] _pathBuf = [], _ringBuf = [];
+    private readonly PriorityQueue<int, long> _zoneOpen = new();
     public int LastZonesRebuilt { get; private set; }
-    public int ZoneCount => _zoneInfo.Count;
+    /// <summary>Live zones.</summary>
+    public int ZoneCount => _liveZones;
+    /// <summary>Allocated zone id slots (live + free); stays bounded across rebuilds.</summary>
+    public int ZoneSlots => _zoneInfo.Count;
 
     public LevelPathfinder(LevelGrid g)
     {
@@ -34,6 +46,9 @@ public sealed class LevelPathfinder
         _gs = new int[n]; _parent = new int[n]; _seen = new int[n]; _closed = new int[n]; _viaPortal = new int[n];
         _zoneOf = new int[n];
         Array.Fill(_zoneOf, -1);
+        _chunkZones = new List<int>?[g.ChunkLevelCount];
+        _seenRev = new int[g.ChunkLevelCount];
+        Array.Fill(_seenRev, -1);
     }
 
     private static int Octile(int dx, int dy)
@@ -58,6 +73,7 @@ public sealed class LevelPathfinder
     /// <summary>Reachability from the zone graph alone, no cell search.</summary>
     public bool IsReachable(Cell3 from, Cell3 to)
     {
+        if (!_g.InBounds(from.X, from.Y, from.Z) || !_g.InBounds(to.X, to.Y, to.Z)) return false;
         RefreshAbstraction();
         int zs = _zoneOf[_g.Index(from.X, from.Y, from.Z)], zg = _zoneOf[_g.Index(to.X, to.Y, to.Z)];
         return zs >= 0 && zg >= 0 && ZonePath(zs, zg) != null;
@@ -142,7 +158,7 @@ public sealed class LevelPathfinder
         if (_abstractRevision == _g.Revision) return;
         int rebuilt = 0;
         for (int cl = 0; cl < _g.ChunkLevelCount; cl++)
-            if (_g.IsDirty(cl)) { RebuildChunkZones(cl); _g.ClearDirty(cl); rebuilt++; }
+            if (_seenRev[cl] != _g.ChunkRevision(cl)) { RebuildChunkZones(cl); _seenRev[cl] = _g.ChunkRevision(cl); rebuilt++; }
         LastZonesRebuilt = rebuilt;
         RebuildEdges();
         _abstractRevision = _g.Revision;
@@ -153,7 +169,10 @@ public sealed class LevelPathfinder
         const int C = ScaleConstants.ChunkCells;
         int cx = cl % _g.ChunksX; int r = cl / _g.ChunksX; int cy = r % _g.ChunksY; int z = r / _g.ChunksY + _g.MinZ;
         int x0 = cx * C, y0 = cy * C, x1 = Math.Min(x0 + C, _g.Width), y1 = Math.Min(y0 + C, _g.Height);
-        // Old zone ids of this chunk stay allocated but unreferenced; ids are never reused, so results stay deterministic.
+        // Give this chunk's old zone ids back (lowest id is reused first, so the layout is a pure function of the edit history).
+        var mine = _chunkZones[cl] ??= new List<int>();
+        for (int i = mine.Count - 1; i >= 0; i--) { _zoneEdges[mine[i]].Clear(); _freeZones.Push(mine[i]); _liveZones--; }
+        mine.Clear();
         for (int y = y0; y < y1; y++) for (int x = x0; x < x1; x++) _zoneOf[_g.Index(x, y, z)] = -1;
         var stack = new Stack<int>();
         for (int y = y0; y < y1; y++)
@@ -161,7 +180,9 @@ public sealed class LevelPathfinder
             {
                 int i = _g.Index(x, y, z);
                 if (!_g.IsOpen(i) || _zoneOf[i] >= 0) continue;
-                int id = _zoneInfo.Count; long sx = 0, sy = 0; int n = 0;
+                int id = _freeZones.Count > 0 ? _freeZones.Pop() : -1; long sx = 0, sy = 0; int n = 0;
+                if (id < 0) { id = _zoneInfo.Count; _zoneInfo.Add(default); _zoneEdges.Add(new()); }
+                mine.Add(id); _liveZones++;
                 _zoneOf[i] = id; stack.Push(i);
                 while (stack.Count > 0)
                 {
@@ -175,7 +196,7 @@ public sealed class LevelPathfinder
                         if (_g.IsOpen(ni) && _zoneOf[ni] < 0) { _zoneOf[ni] = id; stack.Push(ni); }
                     }
                 }
-                _zoneInfo.Add(((int)(sx / n), (int)(sy / n), n)); _zoneEdges.Add(new());
+                _zoneInfo[id] = ((int)(sx / n), (int)(sy / n), n);
             }
     }
 
@@ -205,30 +226,31 @@ public sealed class LevelPathfinder
             if (p.Enabled) Link(_zoneOf[_g.Index(p.A.X, p.A.Y, p.A.Z)], _zoneOf[_g.Index(p.B.X, p.B.Y, p.B.Z)]);
     }
 
+    /// <summary>Returns the corridor (zones on the best path plus one ring) in a pooled buffer valid until the next call, or null.</summary>
     private bool[]? ZonePath(int zs, int zg)
     {
         int n = _zoneInfo.Count;
-        var best = new int[n]; var par = new int[n];
-        Array.Fill(best, int.MaxValue);
-        var open = new PriorityQueue<int, long>();
-        best[zs] = 0; par[zs] = -1; open.Enqueue(zs, 0);
+        if (_best.Length < n) { _best = new int[n]; _par = new int[n]; _pathBuf = new bool[n]; _ringBuf = new bool[n]; }
+        Array.Fill(_best, int.MaxValue, 0, n);
+        Array.Clear(_pathBuf, 0, n); Array.Clear(_ringBuf, 0, n);
+        var open = _zoneOpen; open.Clear();
+        _best[zs] = 0; _par[zs] = -1; open.Enqueue(zs, 0);
         var goal = _zoneInfo[zg];
         while (open.TryDequeue(out int z, out _))
         {
             if (z == zg)
             {
-                var path = new bool[n];
-                for (int i = z; i != -1; i = par[i]) path[i] = true;
+                for (int i = z; i != -1; i = _par[i]) _pathBuf[i] = true;
                 // widen the corridor by one ring so the cell search can route around zone shapes
-                var ring = (bool[])path.Clone();
-                for (int i = 0; i < n; i++) if (path[i]) foreach (var (to, _) in _zoneEdges[i]) ring[to] = true;
-                return ring;
+                for (int i = 0; i < n; i++)
+                    if (_pathBuf[i]) { _ringBuf[i] = true; foreach (var (to, _) in _zoneEdges[i]) _ringBuf[to] = true; }
+                return _ringBuf;
             }
             foreach (var (to, c) in _zoneEdges[z])
             {
-                int ng = best[z] + c;
-                if (ng >= best[to]) continue;
-                best[to] = ng; par[to] = z;
+                int ng = _best[z] + c;
+                if (ng >= _best[to]) continue;
+                _best[to] = ng; _par[to] = z;
                 var ti = _zoneInfo[to];
                 open.Enqueue(to, ((long)(ng + Octile(ti.cx - goal.cx, ti.cy - goal.cy)) << 32) | (uint)to);
             }

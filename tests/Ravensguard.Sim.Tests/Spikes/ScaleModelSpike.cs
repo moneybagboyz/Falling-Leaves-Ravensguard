@@ -4,7 +4,11 @@ using S = Ravensguard.Sim.World.ScaleConstants;
 
 namespace Ravensguard.Sim.Tests.Spikes;
 
-/// <summary>Spike 1: the scale-model notebook. Every number derives from ScaleConstants; the plan's stated values are asserted within 10%.</summary>
+/// <summary>
+/// Spike 1: the scale-model notebook. Derived numbers are checked against the plan's stated values (docs/REDESIGN_PLAN.md §1),
+/// and <see cref="PlanLiterals_PinTheConstants"/> pins the constants themselves to numbers typed in from the plan, so the
+/// tests can never agree with the constants merely because both were edited together.
+/// </summary>
 public class ScaleModelSpike(ITestOutputHelper output)
 {
     private static void Near(double expected, double actual, string what, double tol = 0.10)
@@ -15,11 +19,50 @@ public class ScaleModelSpike(ITestOutputHelper output)
     private static double GameDays(double realSec) => realSec * S.GameSecondsPerRealSecond / S.SecondsPerGameDay;
 
     [Fact]
+    public void PlanLiterals_PinTheConstants()
+    {
+        // §1 table, typed in independently of ScaleConstants
+        Assert.Equal(1.0, S.CellMeters);
+        Assert.Equal(32, S.StreetPixelsPerMeter);        // "Cell: 1 m; 32 px at street zoom"
+        Assert.Equal(32, S.ChunkCells);                  // "Chunk: 32 x 32 cells"
+        Assert.Equal(64.0, S.TileMeters);                // "Region tile: 64 m"
+        Assert.Equal(32_000.0, S.RegionMeters);          // "32 x 32 km"
+        Assert.Equal(20.0, S.GameSecondsPerRealSecond);  // "1 real s = 20 game s"
+        Assert.Equal(60, S.DaysPerYear);                 // "4 seasons x 15 days"
+        Assert.Equal(15, S.DaysPerSeason);
+        Assert.Equal(4, S.SeasonsPerYear);
+        Assert.Equal(3.0, S.Jog);
+        Assert.Equal(1.5, S.Walk); Assert.Equal(2.5, S.Cart); Assert.Equal(1.3, S.Column);
+        Assert.Equal(5.0, S.HorseTrot); Assert.Equal(12.0, S.HorseGallop);
+        Assert.Equal(25_000, S.Population);
+        Assert.Equal(new[] { 1, 4, 8 }, S.TimeScales);
+
+        // Derived from the literals above by hand, not from the constants:
+        // a game day is 86,400 game s = 4,320 real s = 72 real min at 1x (18 at 4x)
+        Assert.Equal(4320.0, S.RealSecondsPerGameDay);
+        Assert.Equal(72 * 60, S.RealSecondsPerGameDay);
+        // 8 km at 3 m/s = 2,666.67 s = 44.4 real min
+        Assert.Equal(44.44, S.TownSpacingMeters / 3.0 / 60.0, 2);
+        // one game hour = 3,600 game s / 20 = 180 real s = 3 real min
+        Assert.Equal(180.0, 3600.0 / S.GameSecondsPerRealSecond);
+        // a year is 60 days x 72 min = 72 real hours
+        Assert.Equal(72.0, 60 * 72 / 60.0);
+        Assert.Equal(60 * 72.0 / 60.0, S.DaysPerYear * S.RealSecondsPerGameDay / 3600.0);
+        // 32,000 m region = 1,000 chunks of 32 m, 500 tiles of 64 m
+        Assert.Equal(1000, 32_000 / 32);
+        Assert.Equal(500, 32_000 / 64);
+    }
+
+    [Fact]
     public void ClockAndCalendar()
     {
-        Near(3, 3600.0 / S.GameSecondsPerRealSecond / 60.0 , "real minutes per game hour at 1x", 0.01);
+        // the plan's literals, computed by hand: 1 game hour = 3,600 / 20 = 180 real s
+        Near(3, 3600.0 / 20.0 / 60.0, "real minutes per game hour at 1x", 0.01);
+        Near(3, 3600.0 / S.GameSecondsPerRealSecond / 60.0, "real minutes per game hour at 1x (constants)", 0.01);
+        Near(72, 86_400.0 / 20.0 / 60.0, "real min per game day at 1x (by hand)", 0.001);
         Near(72, S.RealSecondsPerGameDay / 60, "real min per game day at 1x");
         Near(18, S.RealSecondsPerGameDay / 60 / 4, "real min per game day at 4x");
+        Near(72, 60 * 72.0 / 60.0, "real hours per year at 1x (by hand)", 0.001);
         Near(72, S.DaysPerYear * S.RealSecondsPerGameDay / 3600, "real hours per year at 1x");
         Assert.Equal(60, S.DaysPerYear);
     }
@@ -49,6 +92,7 @@ public class ScaleModelSpike(ITestOutputHelper output)
             rows.Add($"| {name} | {v} | {s / 60:F1} | {s / 60 / 4:F1} | {s / 60 / 8:F1} | {GameHours(s):F1} |");
         }
         output.WriteLine(string.Join("\n", rows));
+        Near(44, 8000.0 / 3.0 / 60.0, "8 km at 3 m/s (by hand, min)", 0.02);
         double jog = RealSec(S.TownSpacingMeters, S.Jog);
         Near(44, jog / 60, "8 km jogging 1x (min)");
         Near(5.5, jog / 60 / 8, "8 km jogging 8x (min)");

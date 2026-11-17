@@ -23,7 +23,34 @@
     "bl1": "#5a0c0c", "bl2": "#8a1616", "bl3": "#b52222",
     "f1": "#c23a12", "f2": "#e8701c", "f3": "#f5a82a", "f4": "#fde27a",
     "lf1": "#8a3a14", "lf2": "#b8561c", "lf3": "#d98a2a", "lf4": "#e6b33a",
-    "bone": "#e8dcc0"
+    "bone": "#e8dcc0",
+
+    // --- Phase 1 additions (tileset v2). Seasonal ramps: summer rows are the authored colours, the others are swap targets. ---
+    "gs1": "#3a6a2c", "gs2": "#4e8636", "gs3": "#66a03f", "gs4": "#88bd55",
+    "ga1": "#4c4c24", "ga2": "#6c6532", "ga3": "#8c7c3c", "ga4": "#aa9450",
+    "gw1": "#46503c", "gw2": "#5c6650", "gw3": "#747c64", "gw4": "#929883",
+    "fo4": "#7aa84c",
+    "fs1": "#3c6a2e", "fs2": "#588a3a", "fs3": "#7aaa48", "fs4": "#a0c968",
+    "fw1": "#34382c", "fw2": "#464a38", "fw3": "#5c604a", "fw4": "#767a60",
+    "ly1": "#3a6a2a", "ly2": "#56903a", "ly3": "#78b244", "ly4": "#9fcf5c",
+    "lp1": "#4a8a3c", "lp2": "#6aac4a", "lp3": "#8ccc64", "lp4": "#b4e48a",
+    "la1": "#8a6a1c", "la2": "#b88a2a", "la3": "#e0b43c", "la4": "#f2dc7a",
+    "lw1": "#4a4638", "lw2": "#605a48", "lw3": "#78705a", "lw4": "#968c74",
+    "pn1": "#1c3624", "pn2": "#284a30", "pn3": "#38603e", "pn4": "#4c7a50",
+    "pa1": "#26382a", "pa2": "#34502f", "pa3": "#48683a", "pa4": "#5e8048",
+    "sn1": "#8a9cb8", "sn2": "#b4c4da", "sn3": "#dce6f2", "sn4": "#f6faff",
+    "ic1": "#4a7898", "ic2": "#6e9cba", "ic3": "#98c0d6", "ic4": "#c4e0ec",
+    "sd1": "#a08858", "sd2": "#bca26a", "sd3": "#d4bc82", "sd4": "#e8d49e",
+    "mu1": "#34261a", "mu2": "#46341f", "mu3": "#5a442a",
+    "pt1": "#261e16", "pt2": "#382c20", "pt3": "#4c3e2c",
+    "mg1": "#34503a", "mg2": "#466a48",
+    "rd1": "#6a6a30", "rd2": "#8c8a46", "rd3": "#b0aa62",
+    "th1": "#6a5428", "th2": "#8a7236", "th3": "#aa9048", "th4": "#cab064",
+    "sl1": "#2a323e", "sl2": "#3c4654", "sl3": "#54606f", "sl4": "#747f8d",
+    "tc1": "#7a2e1e", "tc2": "#a2442a", "tc3": "#c4603a", "tc4": "#de8456",
+    "sh1": "#3e362e", "sh2": "#564c40", "sh3": "#72665a", "sh4": "#90836f",
+    "bk1": "#5e281e", "bk2": "#80382a", "bk3": "#a24c38", "bk4": "#bc6850",
+    "fv": "#7a4a9a", "fp": "#d88aa8"
   },
   "ramps": {
     "grass":   ["g1", "g2", "g3", "g4"],
@@ -40,6 +67,37 @@
     "linen":   ["ln1", "ln2", "ln3", "pl4"],
     "iron":    ["m1", "m2", "m3", "m4", "m5"],
     "gold":    ["au1", "au2", "au3", "f4"],
-    "leather": ["w1", "w2", "k1", "w4"]
+    "leather": ["w1", "w2", "k1", "w4"],
+
+    // Seasonal families: <family>_<season>, 4 entries each, same index = same role, so a swap maps entry i to entry i.
+    // The game picks the row by season (see tools/Ravensguard.Art/README.md, "Seasons"). Sprites are authored in *_summer.
+    "grass_spring":  ["gs1", "gs2", "gs3", "gs4"],
+    "grass_summer":  ["g1", "g2", "g3", "g4"],
+    "grass_autumn":  ["ga1", "ga2", "ga3", "ga4"],
+    "grass_winter":  ["gw1", "gw2", "gw3", "gw4"],
+    "foliage_spring": ["fs1", "fs2", "fs3", "fs4"],
+    "foliage_summer": ["gr1", "gr2", "gr3", "fo4"],
+    "foliage_autumn": ["lf1", "lf2", "lf3", "lf4"],
+    "foliage_winter": ["fw1", "fw2", "fw3", "fw4"],
+    "leaf_spring":  ["lp1", "lp2", "lp3", "lp4"],
+    "leaf_summer":  ["ly1", "ly2", "ly3", "ly4"],
+    "leaf_autumn":  ["la1", "la2", "la3", "la4"],
+    "leaf_winter":  ["lw1", "lw2", "lw3", "lw4"],
+    "conifer_spring": ["pn1", "pn2", "pn3", "pn4"],
+    "conifer_summer": ["pn1", "pn2", "pn3", "pn4"],
+    "conifer_autumn": ["pa1", "pa2", "pa3", "pa4"],
+    "conifer_winter": ["pa1", "pa2", "pa3", "pa4"],
+
+    "snow":   ["sn1", "sn2", "sn3", "sn4"],
+    "ice":    ["ic1", "ic2", "ic3", "ic4"],
+    "sand":   ["sd1", "sd2", "sd3", "sd4"],
+    "mud":    ["mu1", "mu2", "mu3"],
+    "peat":   ["pt1", "pt2", "pt3"],
+    "reed":   ["rd1", "rd2", "rd3"],
+    "thatch": ["th1", "th2", "th3", "th4"],
+    "slate":  ["sl1", "sl2", "sl3", "sl4"],
+    "tile":   ["tc1", "tc2", "tc3", "tc4"],
+    "shingle": ["sh1", "sh2", "sh3", "sh4"],
+    "brick":  ["bk1", "bk2", "bk3", "bk4"]
   }
 }
