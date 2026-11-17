@@ -78,6 +78,12 @@ public sealed class SimClock
 
     public SimClock(GameTime start = default) { Now = start; }
 
+    /// <summary>Restores a saved clock including the sub-second remainder (game milliseconds, 0..999).</summary>
+    public SimClock(GameTime start, long gameMsRemainder) { Now = start; _gameMs = gameMsRemainder; }
+
+    /// <summary>Sub-second remainder in game milliseconds; saved so a reload loses no time.</summary>
+    public long GameMsRemainder => _gameMs;
+
     /// <summary>Advance by realSeconds × speed. Returns the number of game-hour boundaries crossed.</summary>
     public int Advance(double realSeconds)
     {
