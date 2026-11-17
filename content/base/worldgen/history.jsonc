@@ -5,13 +5,13 @@
     "type": "worldgen_history", "id": "history_defaults",
     "years": 250,                        // 100-250 in the plan
     "rural_growth_permille_year": 30,    // net logistic growth rate of rural cells
-    "capacity_scale_pct": 215,           // scales every cell's carrying capacity
+    "capacity_scale_pct": 250,           // scales every cell's carrying capacity
     "start_fill_pct": 72,                // starting population as % of capacity
     "found_attempts_per_tick": 40,       // candidate cells examined per season for new settlements
-    "found_min_hinterland": 650,         // summed capacity of the 5x5 neighbourhood a settlement needs
+    "found_min_hinterland": 1400,         // summed capacity of the 5x5 neighbourhood a settlement needs
     "found_spacing": 4,                  // cells between settlements
     "found_chance_pct": 22,
-    "urban_cap_pct": 90,                 // settlement capacity as % of its hinterland's rural population
+    "urban_cap_pct": 140,                 // settlement capacity as % of its hinterland's rural population
     "levy_permille": 10,                 // army = ~1% of realm population
     "bad_year_permille": 85,             // per culture-year: drought, cold or wet
     "famine_max_loss_pct": 16,
@@ -22,8 +22,8 @@
     "flood_permille_year": 4,
     "mine_collapse_permille_year": 8,
     "incident_ppm_tick": 9000,           // border incidents (insult, raid, claim) per neighbour pair per season
-    "war_utility_threshold": 68,         // claim + casus belli + strength + treasury + season - harvest cost
-    "war_chance_pct": 22,
+    "war_utility_threshold": 76,         // claim + casus belli + strength + treasury + season - harvest cost
+    "war_chance_pct": 10,
     "truce_years_min": 8,
     "truce_years_max": 20,
     "rebellion_ppm_tick": 2500,
@@ -33,19 +33,20 @@
     "artefact_permille_year": 60,
     "route_refresh_years": 25,
     "max_realms": 60,
-    "found_initial_attempts": 30000,     // candidate cells examined when the world is seeded
+    "found_initial_attempts": 120000,     // candidate cells examined when the world is seeded
+    "minor_initial_attempts": 250000,    // candidate cells examined to seed hamlets, villages and manors
     "found_regrow_pct": 45,              // a town site needs rural folk at this % of capacity to be founded later
-    "found_spacing_rich": 3,  // cells between towns in rich river lowlands (3 = 6 km)
-    "found_rich_hinterland": 2400,  // 5x5 capacity at or above which a river site counts as rich lowland
+    "found_spacing_rich": 2,  // cells between towns in rich river lowlands (3 = 6 km)
+    "found_rich_hinterland": 3200,  // 5x5 capacity at or above which a river site counts as rich lowland
     "urban_max_pop": 3000,  // largest a town grows before its own capital bonus
-    "minor_found_attempts_per_tick": 120,  // candidate cells per season for hamlets, villages and manors
-    "minor_spacing": 2,  // cells (Chebyshev) kept clear around a new minor settlement
+    "minor_found_attempts_per_tick": 400,  // candidate cells per season for hamlets, villages and manors
+    "minor_spacing": 1,  // cells (Chebyshev) kept clear around a new minor settlement
     "minor_found_chance_pct": 40,
     "minor_max_pop": 320,  // hamlets and villages never outgrow this
     "manor_pct": 18,  // share of minor settlements that are manors, keeps and halls
-    "minor_abandon_permille_year": 3,  // hard-luck abandonment of a minor settlement
+    "minor_abandon_permille_year": 1,  // hard-luck abandonment of a minor settlement
     "plague_empty_pct": 18,  // chance a plague empties a minor settlement it reaches
-    "famine_empty_pct": 3,  // chance a famine empties a minor settlement of its culture
+    "famine_empty_pct": 1,  // chance a famine empties a minor settlement of its culture
     "pillage_reach": 5,  // cells around a battle in which minor settlements may be burned
     "sea_reach": 12,  // cells of open water a raiding fleet can cross
     "sea_raid_pct": 55,  // percent of land battle chance that a seaborne war manages per season

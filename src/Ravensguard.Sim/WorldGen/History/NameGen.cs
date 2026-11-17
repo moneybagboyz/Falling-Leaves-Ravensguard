@@ -11,7 +11,16 @@ public sealed class NameGen
     private static readonly string[] FemaleEnds = ["a", "wyn", "ith", "elle", "ra", "ina", "is", "eth", "una", "hild", "ia", "lind"];
     private static readonly string[] HouseEnds = ["wick", "hurst", "ward", "ley", "mont", "ric", "stan", "wyn", "croft", "den", "holt", "thorne"];
     private static readonly string[] PlaceEnds = ["ford", "ton", "wick", "mere", "holt", "burg", "stead", "dale", "by", "haven", "ham", "field", "brook", "cliff", "moor", "ness"];
-    private static readonly string[] Adj = ["Red", "Grey", "Black", "White", "Old", "High", "Low", "Broken", "Long", "Green", "Cold", "Bitter", "Silent", "Weeping", "Bloody", "Hollow", "Golden", "Crow", "Wolf", "Hart"];
+    private static readonly string[] Adj = ["Red", "Grey", "Black", "White", "Old", "High", "Low", "Broken", "Long", "Green", "Cold", "Bitter", "Silent", "Weeping", "Bloody", "Hollow", "Golden", "Crow", "Wolf", "Hart",
+        "Iron", "Salt", "Thorn", "Ash", "Raven", "Fallow", "Stone", "Lonely", "Drowned", "Burnt", "Widow's", "King's", "Bishop's", "Shepherd's", "Miller's", "Harrow", "Elder", "Pale", "Sallow", "Windy", "Fox", "Boar",
+        "Bell", "Gallows", "Cairn", "Lantern", "Gleaming", "Dun", "Rook", "Heron", "Tallow", "Mourning", "Barley", "Hawthorn"];
+    private static readonly string[] Field = ["Field", "Fields", "Meadows", "Leas", "Plain", "Downs", "Common", "Acres", "Levels"];
+    private static readonly string[] Heath = ["Heath", "Moor", "Waste", "Down", "Barrens", "Scar"];
+    private static readonly string[] Hill = ["Hill", "Rise", "Knoll", "Tor", "Ridge", "Edge", "Brow", "Mount"];
+    private static readonly string[] Wood = ["Wood", "Holt", "Weald", "Shaw", "Chase", "Copse", "Grove"];
+    private static readonly string[] Pass = ["Pass", "Gap", "Defile", "Col", "Notch", "Stair"];
+    private static readonly string[] Fen = ["Fen", "Mere", "Marsh", "Mire", "Carr", "Slough"];
+    private static readonly string[] Ford = ["Ford", "Crossing", "Wade", "Bridge", "Weir", "Ferry"];
 
     private readonly ulong _seed;
     private readonly string[][] _onset, _maleEnd, _femaleEnd, _houseEnd, _placeEnd;
@@ -68,4 +77,11 @@ public sealed class NameGen
     }
 
     public string Feature(int adjSalt, ref RngStream r) => Of(Adj, ref r);
+
+    /// <summary>A terrain word for a battle or landmark; kind is field, heath, hill, wood, pass, fen or ford.</summary>
+    public string Terrain(string kind, ref RngStream r) => kind switch
+    {
+        "field" => Of(Field, ref r), "heath" => Of(Heath, ref r), "wood" => Of(Wood, ref r), "pass" => Of(Pass, ref r),
+        "fen" => Of(Fen, ref r), "ford" => Of(Ford, ref r), _ => Of(Hill, ref r),
+    };
 }

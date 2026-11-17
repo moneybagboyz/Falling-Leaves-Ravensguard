@@ -15,6 +15,8 @@ public static class RegionCommand
         var hs = HistorySettings.LoadDefaults(baseDir);
         var rs = RegionSettings.LoadDefaults(baseDir);
         string outDir = "art/out/worldgen";
+        bool people = args.Contains("--people"); // flag without a value: strip it before the pairwise option parse
+        if (people) args = args.Where(a => a != "--people").ToArray();
         int scale = 2;
         int? cellX = null, cellY = null;
         for (int i = 1; i + 1 < args.Length; i += 2)
@@ -56,6 +58,7 @@ public static class RegionCommand
         var hw = region.RoadEdges.Where(e => e.Class == RoadClass.Highway && region.RoadNodes[e.A].Kind == RoadNodeKind.Town && region.RoadNodes[e.B].Kind == RoadNodeKind.Town).ToList();
         Console.WriteLine("  town-to-town highways (km): " + string.Join(", ", hw.Select(e => $"{e.LengthM / 1000.0:0.0}")));
         Console.WriteLine($"  -> {Path.Combine(outDir, "region.png")}, region_town.png");
+        if (people) PeopleReport.Run(region, history, baseDir);
         return 0;
     }
 }

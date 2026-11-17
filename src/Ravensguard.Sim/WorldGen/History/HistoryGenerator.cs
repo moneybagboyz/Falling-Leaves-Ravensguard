@@ -97,6 +97,7 @@ public sealed partial class HistoryGenerator
             _year = _tick / 4; _season = _tick % 4; _dc = 0; if (_tick > 0) _evInTick = 0;
             WeatherPass();
             PopulationPass();
+            if (_season == 0) SeaPass();
             SettlementPass();
             FoundingPass(false);
             MinorFoundingPass(false);

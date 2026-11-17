@@ -8,7 +8,7 @@ if (args.Length > 0 && args[0] == "weather") return WeatherCommand.Run(args);
 if (args.Length > 0 && args[0] == "region") return RegionCommand.Run(args);
 if (args.Length == 0 || args[0] != "continent")
 {
-    Console.WriteLine("usage: region [--seed N] [--cell X,Y] [--out DIR] [--scale N]\n       history [--seed N] [--years N] [--layout L] [--out DIR] [--scale N]\n       continent [--seed N] [--layout Pangea|Continents|Archipelago|All] [--out DIR] [--plates N] [--cultures N] [--realms N]\n" +
+    Console.WriteLine("usage: region [--seed N] [--people] [--cell X,Y] [--out DIR] [--scale N]\n       history [--seed N] [--years N] [--layout L] [--out DIR] [--scale N]\n       continent [--seed N] [--layout Pangea|Continents|Archipelago|All] [--out DIR] [--plates N] [--cultures N] [--realms N]\n" +
                       "       [--minerals PCT] [--savagery PCT] [--moisture PCT] [--temperature TENTHS] [--scale N]");
     return 1;
 }

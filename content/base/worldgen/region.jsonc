@@ -17,9 +17,9 @@
     "lake_min_core_depth_cm": 200,
     "lake_min_tiles": 8,
     // population (the history's rural folk plus its settlements, clamped to the plan's ~25,000)
-    "min_region_population": 20000,
+    "min_region_population": 16000,
     "max_region_population": 30000,
-    "rural_scale_pct": 100,
+    "rural_scale_pct": 130,
     "town_min_pop": 500,
     "town_household_size_x10": 42,
     "village_household_size_x10": 53,

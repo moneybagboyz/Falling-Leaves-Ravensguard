@@ -118,7 +118,7 @@ public sealed partial class HistoryGenerator
             s.Realm = _owner[s.Cell];
             int cap = RuralPop25(s) * _s.UrbanCapPct / 100 + s.Mining * 120 + s.RouteCount * 50;
             cap = s.Minor ? Math.Min(cap, _s.MinorMaxPop) : Math.Min(cap, _s.UrbanMaxPop);
-            if (s.Realm >= 0 && Rm(s.Realm).Capital == i) cap += 400;
+            if (s.Realm >= 0 && Rm(s.Realm).Capital == i && !s.Minor) cap += 400;
             s.Pop = Math.Max(0, s.Pop + LogisticDelta(s.Pop, cap, rateQ, s.Id.Value));
             if (s.Pop > s.PeakPop) s.PeakPop = s.Pop;
             if (s.Realm >= 0) Rm(s.Realm).Pop += s.Pop;
@@ -137,7 +137,7 @@ public sealed partial class HistoryGenerator
             }
             if (s.Minor && _tick > 0 && Chance(s.Id.Value, S.Misc, _s.MinorAbandonPermilleYear * 250L)) AbandonHardship(i);
             else if (s.Pop < 5 && _tick > 0) AbandonQuiet(i);
-            else if (_season == 0 && s.Kind <= SettlementKind.Village && s.Hinterland > 0 && RuralPop25(s) * 100 < s.Hinterland * 33 && Pct(s.Id.Value, S.Misc, 5)) AbandonQuiet(i);
+            else if (_season == 0 && !s.Minor && s.Kind <= SettlementKind.Village && s.Hinterland > 0 && RuralPop25(s) * 100 < s.Hinterland * 33 && Pct(s.Id.Value, S.Misc, 5)) AbandonQuiet(i);
         }
     }
 
@@ -300,7 +300,7 @@ public sealed partial class HistoryGenerator
     /// <summary>Hamlets, villages and manors fill the gaps between the towns; the ones that fail leave the ruins.</summary>
     private void MinorFoundingPass(bool initial)
     {
-        int attempts = initial ? 30000 : _s.MinorFoundAttemptsPerTick;
+        int attempts = initial ? _s.MinorInitialAttempts : _s.MinorFoundAttemptsPerTick;
         int sp = _s.MinorSpacing;
         for (int a = 0; a < attempts; a++)
         {
@@ -487,8 +487,11 @@ public sealed partial class HistoryGenerator
                 s.Realm >= 0 ? [s.Id, Rm(s.Realm).Id] : [s.Id], Cz(CauseKind.Other, _plagueStart, "contagion along the trade roads"));
         if (s.Pop < 5) MakeRuin(i, "plague", _plagueStart, _plagueStart);
         else if (Pct(s.Id.Value, S.Saint, 12)) MaybeSaint(i, _plagueStart, _plagueName);
-        foreach (var n in _h.Notables)
+        for (int k = 0, cnt = _h.Notables.Count; k < cnt; k++)   // Die can add heirs, so the list may grow
+        {
+            var n = _h.Notables[k];
             if (n.Alive && n.Residence == i && Pct(n.Id.Value, S.Death, mort / 2)) Die(n, "the " + _plagueName.ToLowerInvariant().Replace("the ", ""), _plagueStart);
+        }
     }
 
     /// <summary>The sickness takes a small settlement whole: the survivors flee and none come back.</summary>

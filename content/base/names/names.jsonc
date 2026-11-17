@@ -39,7 +39,7 @@
     "onsets": ["Ald", "Bor", "Cas", "Del", "Em", "Fal", "Gil", "Hen", "Ivo", "Jan", "Kas", "Lam", "Mat", "Nic", "Ott", "Pol", "Ros", "Sal", "Tib", "Val", "Wil", "Bar", "Ger", "Lud"],
     "mids": ["", "a", "e", "i", "o", "an", "er", "el"],
     "male_ends": ["o", "us", "ard", "ert", "ian", "ino", "mar", "olf", "ran", "ton", "ys", "ek"],
-    "female_ends": ["a", "ette", "ina", "ise", "ia", "elle", "ona", "ara", "ine", "ila", "enna", "ys"],
+    "female_ends": ["a", "ette", "ina", "ise", "ia", "elle", "ona", "ara", "ine", "ila", "enna", "yse"],
     "family_stems": ["Net", "Wave", "Salt", "Gull", "Tide", "Sail", "Harbour", "Reef", "Kelp", "Shore", "Pearl", "Anchor", "Cod", "Eel", "Herring", "Mast", "Oar", "Pier", "Quay", "Rope", "Skiff", "Tern", "Wharf", "Brine", "Spray", "Drift", "Foam", "Keel", "Lugger", "Marl", "Cove", "Dune", "Isle", "Shoal", "Spit", "Strand", "Bay", "Cape", "Fjord", "Haven"],
     "family_ends": ["er", "man", "by", "wick", "ness", "mouth", "ton", "ham", "stead", "fleet", "wood", "ing", "worth", "land"],
     "patronymic_son": "son", "patronymic_daughter": "dotter",
