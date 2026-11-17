@@ -88,3 +88,23 @@ Bleed-out checks (tests): a 100 ml/s artery downs in 15 s and kills in 25 s; an 
 - Keep: 20 Hz action timeline, wind-up/strike/recover table, block/parry/dodge/feint, stamina, vitals (bleed/pain/shock), morale. They are deterministic, cheap (200 duels run in under a second; 20 skirmishes of up to 300 s run inside the 26 s test suite), tested and produce a sensible outcome mix once something ends a fight.
 - Reshape: (a) resolver calibration so one landed blow wounds rather than amputates (target: 10–20 s duels, severing a rare event, armour mattering); (b) add bandaging so knockouts are survivable; (c) re-run this benchmark after (a), expecting more blocks/parries and a spear win rate above 50%.
 - **Not decided here, a human must**: whether the feel is good. Play `MeleeSpike.tscn` against all three opponents and the skirmish; pay attention to reaction readability (wind-up bar, 0.2 s parry window), whether holding for a heavy swing is worth the exposure, and called-shot pacing (T, pick, F).
+
+## Follow-up: first lethality fix
+- Slash reach was far too deep. The old values were arming sword 300 mm, longsword 350, axe 250 and dagger 90. They are now 70, 85, 110 and 40.
+- A limb is now severed only when the reach **left after armour** is at least the part's depth. Before, the attack's raw reach was compared with the part's depth.
+
+Results over 200 duels per matchup, compared with before the fix:
+
+| Matchup | Severed limbs per duel | Mean duel length |
+|---|---|---|
+| Sword vs sword | 0.50 (was 1.4–1.9) | 8.0 s (was 5–7 s) |
+| Axe vs mail | 1.00 | 8.3 s |
+| Spear vs unarmoured | 0.34 | 8.4 s |
+
+The 10v10 skirmish now averages 29.5 s.
+
+**Still open (Phase 4 combat work):**
+- Too few blows are defended. About 1.2 of 10 blows are blocked or parried; a 40–60% defence rate would give the 10–20 s duels we want.
+- The AI's guard and stance choices need work.
+- Bandaging isn't modelled yet. Most fighters who are knocked out still bleed to death within 60 s, because nobody can bandage them.
+- Feel still needs to be judged by playing `MeleeSpike.tscn`.

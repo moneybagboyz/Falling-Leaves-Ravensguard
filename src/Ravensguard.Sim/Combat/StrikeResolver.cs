@@ -129,6 +129,7 @@ public sealed class StrikeResolver(CombatTables tables)
         }
 
         // --- body tissue layers ---
+        double penAfterArmour = edged ? pen : 0; // what is left of the edge's reach once armour has been cut
         bool breachedAll = false, allCutFull = edged;
         if (!deflected)
         {
@@ -166,7 +167,7 @@ public sealed class StrikeResolver(CombatTables tables)
 
         // --- sever, then organs behind the part ---
         bool severed = false;
-        if (breachedAll && part.Severable && atk.Type == AttackType.Edge && edged && allCutFull && atk.PenetrationMm >= part.DepthMm)
+        if (breachedAll && part.Severable && atk.Type == AttackType.Edge && edged && allCutFull && penAfterArmour >= part.DepthMm)
         {
             severed = true;
             wounds.Add(new Wound(part.Id, part.Layers[^1].TissueId, null, WoundKind.Cut, Fixed.One, Rate(BleedSevered), WoundFlags.Severed));

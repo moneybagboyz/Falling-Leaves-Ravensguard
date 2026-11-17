@@ -256,7 +256,7 @@ public class CombatTests(CombatFixture f)
         var r = Impact(axe, "hack", "hand_l", f.Man(), CombatFixture.Avg(100), style: AttackStyle.Heavy);
         Assert.True(r.Severed);
         Assert.Contains(r.Wounds, w => w.IsSevered && w.PartId == "hand_l");
-        // a dagger slash is too shallow (90 mm) and too weak to take the neck off
+        // a dagger slash is too shallow (40 mm) and too weak to take the neck off
         var d = Impact(new WeaponInstance("dagger", "steel"), "slash", "neck", f.Man(), CombatFixture.Avg(0));
         Assert.False(d.Severed);
         // a blunt blow never severs
