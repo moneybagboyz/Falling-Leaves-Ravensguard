@@ -255,7 +255,7 @@ public sealed partial class HistoryGenerator
     /// <summary>Towns: spacing is wider on poor ground and narrows to <c>FoundSpacingRich</c> in fertile river lowlands.</summary>
     private void FoundingPass(bool initial)
     {
-        int attempts = initial ? 9000 : _s.FoundAttemptsPerTick;
+        int attempts = initial ? _s.FoundInitialAttempts : _s.FoundAttemptsPerTick;
         for (int a = 0; a < attempts; a++)
         {
             int cell = Roll((ulong)a, S.Found, 0, A);
@@ -288,7 +288,7 @@ public sealed partial class HistoryGenerator
                 }
             if (clash) continue;
             if (hint < _s.FoundMinHinterland) continue;
-            if (!initial && rural * 100 < hint * 55) continue;
+            if (!initial && rural * 100 < hint * _s.FoundRegrowPct) continue;
             int pct = _s.FoundChancePct * (100 + (river ? 60 : 0) + (_c.CoastDistance[cell] <= 2 ? 40 : 0) + (rich ? 80 : 0)) / 100;
             if (!Pct((ulong)a, S.Found, pct)) continue;
             int pop = initial ? 30 + rural / 14 + Roll((ulong)a, S.Found, 0, 40) : 18 + Roll((ulong)a, S.Found, 0, 20);
@@ -324,7 +324,7 @@ public sealed partial class HistoryGenerator
             for (int dy = -1; dy <= 1; dy++)
                 for (int dx = -1; dx <= 1; dx++)
                     if (In(x + dx, y + dy)) { rural += _pop[(y + dy) * N + x + dx]; cnt++; }
-            if (!initial && rural < 40 * cnt) continue;
+            if (!initial && rural < 18 * cnt) continue;
             bool river = SettledRiver(x, y);
             int pct = _s.MinorFoundChancePct * (100 + (river ? 40 : 0) + (_c.CoastDistance[cell] <= 2 ? 20 : 0)) / 100;
             if (!Pct((ulong)a + 1_000_000UL, S.Found, pct)) continue;

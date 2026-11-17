@@ -20,6 +20,8 @@ if (args.Length == 0 || args[0] is "-h" or "--help")
           bake     [--out art/out] [--palette path]   write PNG atlases + index.json
           validate [--palette path]                    check palette use, sizes, outlines (exit 1 on failure)
           preview  [--out art/out/preview.png]         2x contact sheet of all sprites
+          rig      [--out art/out] [--out-game dir]    bake the posed paper-doll rig: rig_32x64.png + rig_index.json
+          rig-preview [--out path] [--scale 3] [--outfits soldier,peasant]   contact sheet of rig outfits, 4 directions
         """);
     return args.Length == 0 ? 2 : 0;
 }
@@ -28,6 +30,35 @@ var root = FindRoot() ?? Directory.GetCurrentDirectory();
 var palPath = Opt(args, "--palette") ?? Path.Combine(root, "art", "palette.jsonc");
 if (!File.Exists(palPath)) { Console.Error.WriteLine($"palette not found: {palPath}"); return 2; }
 var pal = Palette.Load(palPath);
+if (args[0] is "rig" or "rig-preview")
+{
+    var rb = new Ravensguard.Art.Rig.RigBake(pal);
+    var rerrs = rb.Validate();
+    foreach (var e in rerrs) Console.Error.WriteLine("FAIL " + e);
+    if (rerrs.Count > 0 && args[0] == "rig") return 1;
+    if (args[0] == "rig")
+    {
+        var od = Path.GetFullPath(Opt(args, "--out") ?? Path.Combine(root, "art", "out"), Directory.GetCurrentDirectory());
+        rb.Write(od);
+        Console.WriteLine($"baked rig ({rb.Sprites.Count} layer frames) to {od}");
+        if (Opt(args, "--out-game") is { } og)
+        {
+            var gd = Path.GetFullPath(og, Directory.GetCurrentDirectory());
+            Directory.CreateDirectory(gd);
+            foreach (var f in new[] { "rig_32x64.png", "rig_index.json" }) File.Copy(Path.Combine(od, f), Path.Combine(gd, f), true);
+            Console.WriteLine($"copied rig atlas to {gd}");
+        }
+        return 0;
+    }
+    var scale = int.Parse(Opt(args, "--scale") ?? "3");
+    var ids = (Opt(args, "--outfits") ?? "soldier,peasant").Split(',');
+    var rec = new Dictionary<string, (string, string)[]> { ["peasant"] = new[] { ("green", "red") }, ["traveller"] = new[] { ("green", "brown") } };
+    var op = Path.GetFullPath(Opt(args, "--out") ?? Path.Combine(root, "art", "out", "rig.png"), Directory.GetCurrentDirectory());
+    Directory.CreateDirectory(Path.GetDirectoryName(op)!);
+    Png.Write(op, rb.Sheet(ids, scale, rec));
+    Console.WriteLine($"wrote {op}");
+    return 0;
+}
 var defs = Catalog.Build(pal);
 var cache = defs.ToDictionary(d => d.Id, d => d.Build());
 
@@ -39,7 +70,10 @@ switch (args[0])
     {
         var errs = Validator.Validate(defs, pal, cache);
         foreach (var e in errs) Console.Error.WriteLine("FAIL " + e);
-        Console.WriteLine(errs.Count == 0 ? $"OK: {defs.Count} sprites valid ({pal.Colors.Count} palette colours)" : $"{errs.Count} problem(s) in {defs.Count} sprites");
+        var rerr = new Ravensguard.Art.Rig.RigBake(pal).Validate();
+        foreach (var e in rerr) Console.Error.WriteLine("FAIL " + e);
+        errs.AddRange(rerr);
+        Console.WriteLine(errs.Count == 0 ? $"OK: {defs.Count} sprites + rig valid ({pal.Colors.Count} palette colours)" : $"{errs.Count} problem(s) in {defs.Count} sprites and rig");
         return errs.Count == 0 ? 0 : 1;
     }
     case "bake":

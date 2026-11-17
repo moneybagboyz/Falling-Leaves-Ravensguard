@@ -5,11 +5,11 @@
     "type": "worldgen_history", "id": "history_defaults",
     "years": 250,                        // 100-250 in the plan
     "rural_growth_permille_year": 30,    // net logistic growth rate of rural cells
-    "capacity_scale_pct": 170,           // scales every cell's carrying capacity
+    "capacity_scale_pct": 215,           // scales every cell's carrying capacity
     "start_fill_pct": 72,                // starting population as % of capacity
     "found_attempts_per_tick": 40,       // candidate cells examined per season for new settlements
     "found_min_hinterland": 650,         // summed capacity of the 5x5 neighbourhood a settlement needs
-    "found_spacing": 5,                  // cells between settlements
+    "found_spacing": 4,                  // cells between settlements
     "found_chance_pct": 22,
     "urban_cap_pct": 90,                 // settlement capacity as % of its hinterland's rural population
     "levy_permille": 10,                 // army = ~1% of realm population
@@ -33,6 +33,8 @@
     "artefact_permille_year": 60,
     "route_refresh_years": 25,
     "max_realms": 60,
+    "found_initial_attempts": 30000,     // candidate cells examined when the world is seeded
+    "found_regrow_pct": 45,              // a town site needs rural folk at this % of capacity to be founded later
     "found_spacing_rich": 3,  // cells between towns in rich river lowlands (3 = 6 km)
     "found_rich_hinterland": 2400,  // 5x5 capacity at or above which a river site counts as rich lowland
     "urban_max_pop": 3000,  // largest a town grows before its own capital bonus

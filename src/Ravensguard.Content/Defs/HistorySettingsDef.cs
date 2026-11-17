@@ -37,6 +37,8 @@ public sealed record HistorySettingsDef : ContentDef
     public int ArtefactPermilleYear { get; init; } = 60;
     public int RouteRefreshYears { get; init; } = 25;
     public int MaxRealms { get; init; } = 60;
+    public int FoundInitialAttempts { get; init; } = 30000;
+    public int FoundRegrowPct { get; init; } = 45;
     public int FoundSpacingRich { get; init; } = 3;
     public int FoundRichHinterland { get; init; } = 2400;
     public int UrbanMaxPop { get; init; } = 3000;
