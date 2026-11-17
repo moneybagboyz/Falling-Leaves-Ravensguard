@@ -37,6 +37,44 @@ jobs:
           dotnet run --project tools/Ravensguard.Art -c Release --no-build -- same "$tmp/game" src/Ravensguard.Game/assets/art \
             || { echo "::error::src/Ravensguard.Game/assets/art is out of date. Re-run 'bake --out-game' and 'rig --out-game' (see tools/Ravensguard.Art/README.md) and commit."; exit 1; }
 
+  determinism:
+    # Plan §5 Phase 1 done-when: the same seed gives the same continent, history, region (and people, chunks) on Windows and Linux.
+    name: World hashes (${{ matrix.os }})
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Generate world hashes
+        shell: bash
+        run: |
+          dotnet build tools/Ravensguard.WorldTool -c Release
+          dotnet run --project tools/Ravensguard.WorldTool -c Release --no-build -- hashes --seeds 1,1234 | tr -d '\r' > hashes-${{ matrix.os }}.txt
+          cat hashes-${{ matrix.os }}.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hashes-${{ matrix.os }}
+          path: hashes-${{ matrix.os }}.txt
+
+  determinism-compare:
+    name: Same world on Windows and Linux
+    needs: determinism
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: hashes-*
+          merge-multiple: true
+      - name: Compare
+        run: |
+          diff -u hashes-ubuntu-latest.txt hashes-windows-latest.txt \
+            && echo "Windows and Linux generate identical worlds" \
+            || { echo "::error::world hashes differ between Windows and Linux (determinism leak, plan §2.4)"; exit 1; }
+
   godot-smoke:
     name: Godot headless import and smoke boot
     runs-on: ubuntu-latest
