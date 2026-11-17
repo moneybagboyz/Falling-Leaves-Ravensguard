@@ -72,7 +72,7 @@ All values are constants in `content/base/world.json`, so they are tunable and m
 | Town spacing | 6–10 km | 8 km ≈ 44 real min jogging at 1x (5.5 at 8x), ≈ 15 game hours: food and wages matter on every trip |
 | Food | 1 measure = a day's grain for one person (≈ 1.1 kg); a sown acre yields ~48 measures per harvest | ~2.3 arable acres per person; ~58,000 acres of farmland in the region (§3a) |
 | Population | ~25,000 | 3–4 towns of 1,000–3,000; 40–80 villages of 80–300; farmsteads; camps |
-| Realms | The region holds parts of 1–3 continental realms, with borders from history | The region alone levies ~250–500 men (1 per 10 households; 1 per 5 in war). Field armies of 1,000–2,000 combine levies, retinues and mercenaries from across a realm and arrive by road from outside the region |
+| Realms | The region holds parts of 1–3 continental realms, with borders from history | The region alone levies ~520 men in peace (1 per 10 of ~5,200 households) and ~1,040 in war (1 per 5). Field armies of 1,000–2,000 combine levies, retinues and mercenaries from across a realm and arrive by road from outside the region |
 | Combat time | Real seconds | A 5-minute fight ≈ 1.7 game hours. Bleeding and healing are specified in sim-seconds; needs and wages in game-hours. Every rate in the content schema carries an explicit unit |
 
 **Speeds:** pause, 1x, 2x, 4x, and 8x.

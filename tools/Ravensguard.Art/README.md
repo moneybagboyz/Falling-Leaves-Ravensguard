@@ -9,7 +9,7 @@ dotnet run --project tools/Ravensguard.Art -- bake     --out art/out            
 dotnet run --project tools/Ravensguard.Art -- validate                          # exit 1 on any problem
 dotnet run --project tools/Ravensguard.Art -- preview  --out art/out/preview.png # 2x contact sheet
 ```
-`--palette <path>` overrides `content/base/art/palette.jsonc`. `bake` validates first and refuses to write on failure.
+`--palette <path>` overrides `art/palette.jsonc`. `bake` validates first and refuses to write on failure.
 `art/out/` is gitignored.
 
 ## Layout

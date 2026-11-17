@@ -25,7 +25,7 @@ if (args.Length == 0 || args[0] is "-h" or "--help")
 }
 
 var root = FindRoot() ?? Directory.GetCurrentDirectory();
-var palPath = Opt(args, "--palette") ?? Path.Combine(root, "content", "base", "art", "palette.jsonc");
+var palPath = Opt(args, "--palette") ?? Path.Combine(root, "art", "palette.jsonc");
 if (!File.Exists(palPath)) { Console.Error.WriteLine($"palette not found: {palPath}"); return 2; }
 var pal = Palette.Load(palPath);
 var defs = Catalog.Build(pal);

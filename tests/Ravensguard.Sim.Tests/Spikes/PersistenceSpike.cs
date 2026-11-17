@@ -94,7 +94,7 @@ public class PersistenceSpike(ITestOutputHelper output)
         // Visited chunk: identical to before (same ids, same types, removed tree still gone, wall present)
         var afterA = reloaded.Visit(chunkA);
         Assert.Equal(beforeBytes, Bytes(afterA));
-        Assert.DoesNotContain("pine", afterA.Objects.Values.Select(o => Encoding.UTF8.GetString(o.Data)).Where(s => s.StartsWith("pine")).FirstOrDefault() ?? "");
+        Assert.DoesNotContain(afterA.Objects.Values, o => Encoding.UTF8.GetString(o.Data).StartsWith("pine"));
         var snap = reloaded.Store.GetSnapshot(chunkA)!;
         Assert.Equal(1, snap.GeneratorVersion);
         Assert.Equal(modV1.Hash(), snap.ContentHash);
