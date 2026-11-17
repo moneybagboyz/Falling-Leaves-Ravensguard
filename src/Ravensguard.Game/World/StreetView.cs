@@ -339,7 +339,7 @@ public partial class StreetView : Control
     void OpenMap()
     {
         if (_router == null || _regionMap == null) { _router?.ShowToast(L.T("MAP_NONE")); return; }
-        _router.Push(new WorldMapScreen(_router, _regionMap, HeroWorld));
+        _router.Push(new WorldMapScreen(_router, _regionMap, HeroWorld) { ShotPath = _opt.MapShot ? _opt.ShotPath : null, StartScale = _opt.MapScale });
     }
 
     void UpdateHud(LiveSnapshot s)
@@ -532,6 +532,12 @@ public partial class StreetView : Control
             }
             else if (_art.Has("object.tree.pine.winter")) return "object.tree.pine.winter";
         }
+        if (baseId is "object.bush" or "object.hedge")
+        {
+            // hedges and bushes: bare twigs once the leaves are down, a snow-capped round bush under snow
+            bool bare = st.Season == 3 ? st.Frac < 0.85f + 0.15f * h : st.Season == 2 && st.Frac > 0.55f + 0.45f * h;
+            if (bare) { string b = st.Snow > 0.3f && h < 0.5f ? "object.bush_round_snow" : "object.bush_bare"; if (_art.Has(b)) return b; }
+        }
         if (st.Snow > 0.3f && _art.Has(baseId + "_snow")) return baseId + "_snow";
         return PickProp(id);
     }
@@ -603,7 +609,9 @@ public partial class StreetView : Control
         _drawMsSum += dms; _drawMsMax = Math.Max(_drawMsMax, dms); _drawCount++;
 
         if (_opt.Click is { } c && _frames == 2) ClickMove(new Vector2(c.X, c.Y));
-        if (_opt.IsShot && !_quitting && _frames >= _opt.Frames && ShotReady()) Shoot();
+        if (_opt.MapShot && _frames == 3) OpenMap();
+        if (_opt.IsShot && _opt.Weather == "storm" && _frames == Math.Max(2, _opt.Frames - 1)) _wover.Strike(); // dev: catch a lightning flash in the picture
+        if (_opt.IsShot && !_opt.MapShot && !_quitting && _frames >= _opt.Frames && ShotReady()) Shoot();
         if (bench && _benchT >= _opt.BenchSeconds) Finish();
         if (bench && _perfLabel.Visible && _frames % 30 == 0)
             _perfLabel.Text = $"tick {_tickMsSum / Math.Max(1, _tickCount):F3} ms (max {_tickMsMax:F2})  draw {_drawMsSum / Math.Max(1, _drawCount):F3} ms (max {_drawMsMax:F2})  fps {Engine.GetFramesPerSecond()}";
@@ -858,6 +866,7 @@ public partial class StreetView : Control
         var img = GetViewport().GetTexture().GetImage();
         System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(_opt.ShotPath!) ?? ".");
         var err = img.SavePng(_opt.ShotPath!);
+        if (_opt.Weather == "storm") GD.Print($"[street] lightning flash alpha {_wover.FlashAlpha:0.00}, flashes enabled: {Accessibility.FlashesEnabled}");
         GD.Print($"[street] screenshot {_opt.ShotPath} ({img.GetWidth()}x{img.GetHeight()}): {err}");
         Finish();
     }

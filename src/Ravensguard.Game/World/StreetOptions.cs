@@ -23,6 +23,8 @@ public sealed class StreetOptions
     public string? Season;       // --shot-season spring|summer|autumn|winter (dev: start date)
     public int? Day;             // --shot-day 1..15 (day of that season)
     public string? Weather;      // --shot-weather clear|overcast|rain|heavy|storm|snow|blizzard|fog|frost[:tempC] (dev: forces the weather)
+    public bool MapShot;         // --shot-map: open the world map and capture it instead of the street
+    public int MapScale = 1;     // --shot-map-scale 1..6
     public int Settle = 900;     // frames to wait for far-band chunks to bake before a screenshot
 
     public bool IsShot => Hour.HasValue && ShotPath != null;
@@ -42,6 +44,8 @@ public sealed class StreetOptions
         o.Season = Val("--shot-season");
         if (Val("--shot-day") is { } dy) o.Day = int.Parse(dy, CultureInfo.InvariantCulture);
         o.Weather = Val("--shot-weather");
+        o.MapShot = Array.IndexOf(args, "--shot-map") >= 0;
+        if (Val("--shot-map-scale") is { } ms) o.MapScale = Math.Clamp(int.Parse(ms, CultureInfo.InvariantCulture), 1, 6);
         if (Val("--shot-torch") is { } t) o.Torch = t == "1";
         if (Val("--shot-level") is { } l) o.ViewZ = int.Parse(l, CultureInfo.InvariantCulture);
         if (Val("--shot-start") is { } s) { var p = s.Split(','); o.Start = (int.Parse(p[0]), int.Parse(p[1]), p.Length > 2 ? int.Parse(p[2]) : 0); }

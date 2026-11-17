@@ -25,6 +25,10 @@ public partial class WorldMapScreen : Control
     double _t;
     Font _font = null!;
     string _hover = "";
+    int _shotWait;
+    /// <summary>Dev: when set, the screen saves its own picture to this path once the map is drawn and quits.</summary>
+    public string? ShotPath { get; init; }
+    public int StartScale { get; init; } = 1;
 
     public WorldMapScreen(ScreenRouter router, RegionMap map, Func<(float X, float Y)> hero)
     {
@@ -37,13 +41,24 @@ public partial class WorldMapScreen : Control
         MouseFilter = MouseFilterEnum.Stop;
         TextureFilter = TextureFilterEnum.Nearest;
         _font = GetThemeDefaultFont();
+        _scale = Math.Clamp(StartScale, 1, 6);
         CenterOnHero();
+        ClampOrigin();
     }
 
     void CenterOnHero()
     {
         var (x, y) = _hero();
         _origin = new Vector2(x / RegionData.TileM * RegionMap.Px, y / RegionData.TileM * RegionMap.Px);
+    }
+
+    /// <summary>Keeps the map filling the window: the view never shows past the edge of the image, and a window larger than the map centres it.</summary>
+    void ClampOrigin()
+    {
+        float hx = Size.X / 2f / _scale, hy = Size.Y / 2f / _scale;
+        float x = RegionMap.Size <= 2 * hx ? RegionMap.Size / 2f : Math.Clamp(_origin.X, hx, RegionMap.Size - hx);
+        float y = RegionMap.Size <= 2 * hy ? RegionMap.Size / 2f : Math.Clamp(_origin.Y, hy, RegionMap.Size - hy);
+        _origin = new Vector2(x, y);
     }
 
     Vector2 ToScreen(Vector2 imagePx) => Size / 2f + (imagePx - _origin) * _scale;
@@ -57,8 +72,15 @@ public partial class WorldMapScreen : Control
         var pan = new Vector2((Actions.HeldLoose("world.camera_right") ? 1 : 0) - (Actions.HeldLoose("world.camera_left") ? 1 : 0),
             (Actions.HeldLoose("world.camera_down") ? 1 : 0) - (Actions.HeldLoose("world.camera_up") ? 1 : 0));
         if (pan != Vector2.Zero) _origin += pan * (float)(delta * 420f / _scale);
-        _origin = _origin.Clamp(Vector2.Zero, new Vector2(RegionMap.Size, RegionMap.Size));
+        ClampOrigin();
         QueueRedraw();
+        if (ShotPath != null && _map.Texture != null && _map.Fog != null && ++_shotWait == 8)
+        {
+            var img = GetViewport().GetTexture().GetImage();
+            System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(ShotPath) ?? ".");
+            GD.Print($"[map] screenshot {ShotPath}: {img.SavePng(ShotPath)}");
+            GetTree().Quit();
+        }
     }
 
     public override void _UnhandledInput(InputEvent e)
@@ -67,7 +89,7 @@ public partial class WorldMapScreen : Control
         if (Actions.Pressed(e, "world.map")) { _router.Pop(); AcceptEvent(); return; }
         if (Actions.Pressed(e, "world.zoom_in")) { Zoom(1, _mouse); AcceptEvent(); }
         else if (Actions.Pressed(e, "world.zoom_out")) { Zoom(-1, _mouse); AcceptEvent(); }
-        else if (Actions.Pressed(e, "world.camera_home")) { CenterOnHero(); AcceptEvent(); }
+        else if (Actions.Pressed(e, "world.camera_home")) { CenterOnHero(); ClampOrigin(); AcceptEvent(); }
     }
 
     public override void _GuiInput(InputEvent e)
@@ -76,7 +98,7 @@ public partial class WorldMapScreen : Control
         else if (e is InputEventMouseMotion mm)
         {
             _mouse = mm.Position;
-            if (_drag) _origin -= mm.Relative / _scale;
+            if (_drag) { _origin -= mm.Relative / _scale; ClampOrigin(); }
             UpdateHover();
         }
     }
@@ -88,6 +110,7 @@ public partial class WorldMapScreen : Control
         var img = ToImage(at.X > 0 || at.Y > 0 ? at : Size / 2f);
         _scale = ns;
         _origin = img - (at - Size / 2f) / _scale;
+        ClampOrigin();
     }
 
     void UpdateHover()
@@ -143,7 +166,7 @@ public partial class WorldMapScreen : Control
         // frame and hints
         DrawRect(new Rect2(0, 0, Size.X, 30), new Color(0.08f, 0.07f, 0.09f, 0.88f));
         DrawString(_font, new Vector2(12, 21), L.F("MAP_TITLE", r.Seed), HorizontalAlignment.Left, -1, 16, PixelTheme.Gold);
-        string hint = L.F("MAP_HINTS", H("world.camera_up") + H("world.camera_left") + H("world.camera_down") + H("world.camera_right"), H("world.zoom_in") + "/" + H("world.zoom_out"), H("world.camera_home"), H("world.map"));
+        string hint = L.F("MAP_HINTS", H("world.camera_up") + "/" + H("world.camera_left") + "/" + H("world.camera_down") + "/" + H("world.camera_right"), H("world.zoom_in") + "/" + H("world.zoom_out"), H("world.camera_home"), H("world.map"));
         DrawRect(new Rect2(0, Size.Y - 28, Size.X, 28), new Color(0.08f, 0.07f, 0.09f, 0.88f));
         DrawString(_font, new Vector2(12, Size.Y - 9), hint, HorizontalAlignment.Left, Size.X - 260, 14, PixelTheme.Dim);
         if (_hover.Length > 0) DrawString(_font, new Vector2(Size.X - 12, Size.Y - 9), _hover, HorizontalAlignment.Right, Size.X * 0.45f, 14, PixelTheme.Body);

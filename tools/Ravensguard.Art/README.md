@@ -109,6 +109,18 @@ fraction of the season elapsed exceeds `h` (so autumn creeps in tile by tile). W
 `dotnet run --project tools/Ravensguard.Art -- scene --out art/out` writes `scene-summer.png`, `scene-autumn.png`, `scene-winter.png` (a village corner built from the baked sprites).
 `preview --set v2 [--filter prefix,prefix] [--scale 4]` shows only the new atlases.
 
+### Snow over autotile edges
+`Seasons.SnowOver(pal, summerSprite, seasonedSprite, fullOverlay, dustOverlay, dustOthers)` composes snow per pixel: a pixel of the unrecoloured sprite that is a grass-family colour (or a speck with at least 2-3 grass neighbours) takes the full-cover
+`overlay.snow.0/1` pixel, every other pixel keeps the ground (or the `overlay.snow.4/5` dusting on roads and fields). The grass lip of a road, field, shore or hedge tile therefore whitens with the open grass around it (the old whole-tile overlay left green strips).
+`scene` uses it; the game's season shader (`World/Seasonal.cs`) does the same lookup on the GPU, so no snow variants of the tiles are baked.
+
+### Field and Command art (`field_8`, `mini_16`)
+Zoom bands Field (8 px/m) and Command (2 px/m) use their own sprites, not scaled street sprites (`Sprites/Minis.cs`):
+- `field_8` (8x8, opaque): `field.<ground>` cells (grass 0-3, meadow, dirt, cobble, sand, mud, marsh, water_*, ford, bridge, farm.*, ...), `field.wall.<stone|timber|wattle>` tops and `field.roof.<thatch|shingle|slate|tile>.<lo|mid|hi|ridge>` (ridge is horizontal; the game transposes it for a vertical ridge). Each cell is a three-colour dither (dark/mid/light) taken from the matching street tile
+  (mid = the tile colour nearest its average), so grass and water cells keep the exact season-key and water-ramp colours the shader recolours. Command draws one flat 2x2 block per cell in the cell's mid colour.
+- `mini_16` (transparent): `mini.person.<villager|soldier|hero>.<neutral|red|blue|green|gold|iron>` 8x16 in team colours, `mini.tree.<oak|ash|birch|pine|apple>.summer` 16x20, `mini.bush`, `mini.rock`, `mini.block`. Leaf fall at Field/Command is the shader thinning foliage pixels, so there are no winter minis.
+`season_ramps.json` also carries the `water`, `ice` and `snow` ramps for the shader.
+
 ## Not yet
 Remaining actions (parry, stagger, crawl, carry, work), wound overlays on the rig, hair/skin variants beyond the recolour hook, horses and large
 animals, per-faction palette-row export for the shader, hat layer.

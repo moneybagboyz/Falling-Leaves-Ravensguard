@@ -67,10 +67,10 @@ public sealed class WeatherOverlay
         Layer(_snowA, snow, _snow[(int)(_t * 5) % 4], 0.5f + w.Precip * 0.45f, _scrollA * 0.3f + new Vector2(0, (float)_t * 24f), vp, scale, 2);
         Layer(_snowB, snow && w.Precip > 0.5f, _snow[(int)(_t * 5 + 1) % 4], 0.55f, _scrollB * 0.45f + new Vector2(17, (float)_t * 40f + 9), vp, scale, 3);
         float fog = Math.Clamp(w.Fog, 0f, 1f);
-        Layer(_fogA, fog > 0.02f, _fog[0], fog * 0.55f, _scrollFog, vp, scale * 2, 4);
-        Layer(_fogB, fog > 0.02f, _fog[1], fog * 0.4f, _scrollFog * -0.6f + new Vector2(21, 11), vp, scale * 2, 5);
+        Layer(_fogA, fog > 0.02f, _fog[0], fog * 0.34f, _scrollFog, vp, scale * 2, 4);
+        Layer(_fogB, fog > 0.02f, _fog[1], fog * 0.2f, _scrollFog * -0.6f + new Vector2(21, 11), vp, scale * 2, 5);
         _mist.Size = _holder.Size;
-        _mist.Color = new Color(0.72f, 0.76f, 0.8f, fog * 0.28f);
+        _mist.Color = new Color(0.72f, 0.76f, 0.8f, fog * 0.42f);
 
         Lightning(dt, w);
         _flash.Size = _holder.Size;

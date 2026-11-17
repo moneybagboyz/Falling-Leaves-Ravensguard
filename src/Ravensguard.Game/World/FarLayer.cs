@@ -51,7 +51,7 @@ public sealed partial class FarLayer : Node2D
     {
         _art = art; _streamer = streamer; _hamlet = hamlet;
         _far = FarArt.Load(art);
-        _groundMat = seasons.Create(ground: true, tilePx: 8f, far: true);
+        _groundMat = seasons.Create(ground: true, tilePx: 8f); // the ground image has trees baked in: no leaf thinning there
         _topMat = seasons.Create(ground: false, perSprite: false, tilePx: 8f, far: true);
         AddChild(_fieldRoot); AddChild(_cmdRoot);
         _markers = new Markers(art) { ZIndex = 20 };

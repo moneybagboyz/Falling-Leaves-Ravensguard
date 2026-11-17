@@ -145,8 +145,8 @@ public static class CatalogV2
 
         void Mi(string id, int w, int h, Func<PixelBuffer> f) => l.Add(new SpriteDef(id, SpriteKind.Overlay, "mini_16", "mini", w, h, f));
         foreach (var role in Minis.Roles) foreach (var team in Minis.Teams) { var r = role; var tm = team; Mi($"mini.person.{role}.{team}", 8, 16, () => m.Person(r, tm)); }
-        foreach (var sp in Minis.Species) { var s = sp; Mi($"mini.tree.{sp}.summer", 16, 20, () => m.Tree(s, false)); Mi($"mini.tree.{sp}.winter", 16, 20, () => m.Tree(s, true)); }
-        Mi("mini.bush", 8, 8, () => m.Bush(false)); Mi("mini.bush.winter", 8, 8, () => m.Bush(true)); Mi("mini.rock", 8, 8, m.Rock);
+        foreach (var sp in Minis.Species) { var s = sp; Mi($"mini.tree.{sp}.summer", 16, 20, () => m.Tree(s)); }
+        Mi("mini.bush", 8, 8, () => m.Bush()); Mi("mini.rock", 8, 8, m.Rock);
         Mi("mini.block", 8, 8, () => m.Block(pal.R["wood"][2], pal.R["wood"][3]));
     }
 

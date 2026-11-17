@@ -21,7 +21,7 @@ public readonly record struct SeasonState(int Season, float Frac, float Snow, fl
 /// <summary>
 /// The season palette swap (REDESIGN_PLAN 3c, art README "Seasons") as one shader. Sprites are authored in the summer colours; the shader finds a
 /// texel equal to one of the 16 summer keys (grass, foliage, leaf, conifer x 4) and outputs the current season's colour, or the next season's once the
-/// fraction of the season elapsed passes that tile's hash, so the change creeps in tile by tile. The ground material also lays snow over grass
+/// fraction of the season elapsed passes that tile's hash, so the change creeps in tile by tile (the first half of a season is pure, the second half blends toward the next). The ground material also lays snow over grass
 /// (full, patchy or a dusting by depth, grass-coloured pixels only, so road and hedge edges blend), dusts roads and fields, freezes water (the water ramp
 /// swaps to the ice ramp, tile by tile) and darkens wet ground. Everything works on any texture drawn in the summer palette: street tiles, props and the
 /// baked Field / Command chunk images.
@@ -70,7 +70,7 @@ void fragment() {
 		bool grass = f >= 0 && f < 4;
 		bool water = false;
 		if (f >= 0) {
-			rgb = frac > h ? nxt[f] : cur[f];
+			rgb = max(0.0, frac * 2.0 - 1.0) > h ? nxt[f] : cur[f];
 			if (leaf_loss > 0.0 && f >= 4 && f < 12 && h21(floor(vpos) + vec2(5.0, 9.0)) < leaf_loss) a = 0.0;
 		} else {
 			int w = wat(rgb);
@@ -84,7 +84,7 @@ void fragment() {
 				if (!g && f < 0) {
 					vec2 px = TEXTURE_PIXEL_SIZE;
 					int n = (isgrass(texture(TEXTURE, UV + vec2(px.x, 0.0)).rgb) ? 1 : 0) + (isgrass(texture(TEXTURE, UV - vec2(px.x, 0.0)).rgb) ? 1 : 0) + (isgrass(texture(TEXTURE, UV + vec2(0.0, px.y)).rgb) ? 1 : 0) + (isgrass(texture(TEXTURE, UV - vec2(0.0, px.y)).rgb) ? 1 : 0);
-					g = n >= 3;
+					g = n >= 2;
 				}
 				float s = snow * (0.7 + 0.6 * h3);
 				int fr = -1;

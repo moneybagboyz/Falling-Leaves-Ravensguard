@@ -21,15 +21,19 @@ public sealed class Minis
 
     static double Lum(uint c) => 0.30 * ((c >> 16) & 255) + 0.59 * ((c >> 8) & 255) + 0.11 * (c & 255);
 
-    /// <summary>The (dark, mid, light) colours of a street tile: its most common colour and the nearest darker and lighter of its next most common.</summary>
+    /// <summary>The (dark, mid, light) colours of a street tile: the colour nearest its average, and the nearest darker and lighter colours of the tile that stay close to it.</summary>
     public static (uint Dark, uint Mid, uint Light) Triple(PixelBuffer src)
     {
-        var top = src.Data.Where(c => (c >> 24) == 255).GroupBy(c => c).OrderByDescending(g => g.Count()).ThenBy(g => g.Key).Select(g => g.Key).Take(8).ToList();
-        uint mid = top[0];
-        double lm = Lum(mid);
-        // only colours near the mid colour count: a flower or a berry in the tile must not become a dither colour
         static double Dist(uint a, uint b) { double dr = ((a >> 16) & 255) - ((b >> 16) & 255), dg = ((a >> 8) & 255) - ((b >> 8) & 255), db = (a & 255) - (b & 255); return Math.Sqrt(dr * dr + dg * dg + db * db); }
-        var near = top.Where(c => Dist(c, mid) <= 75).ToList();
+        var px = src.Data.Where(c => (c >> 24) == 255).ToList();
+        double r = px.Average(c => (double)((c >> 16) & 255)), g = px.Average(c => (double)((c >> 8) & 255)), b = px.Average(c => (double)(c & 255));
+        uint mean = 0xFF000000u | ((uint)r << 16) | ((uint)g << 8) | (uint)b;
+        // candidates: colours that cover at least half a percent of the tile; those far from the mid colour (a flower, a berry) are dropped below
+        var common = px.GroupBy(c => c).Where(k => k.Count() * 200 >= px.Count).Select(k => k.Key).OrderBy(c => c).ToList();
+        if (common.Count == 0) common.Add(px[0]);
+        uint mid = common.OrderBy(c => Dist(c, mean)).ThenBy(c => c).First();
+        double lm = Lum(mid);
+        var near = common.Where(c => Dist(c, mid) <= 70).ToList();
         uint light = near.Where(c => Lum(c) > lm).OrderBy(c => Lum(c)).FirstOrDefault(mid);
         uint dark = near.Where(c => Lum(c) < lm).OrderByDescending(c => Lum(c)).FirstOrDefault(mid);
         return (dark, mid, light);
@@ -120,7 +124,8 @@ public sealed class Minis
 
     // ------------------------------------------------------------------ trees and shrubs (16x20 / 8x8)
 
-    public PixelBuffer Tree(string species, bool bare)
+    /// <summary>A tree crown in the summer foliage colours; the leaf fall of autumn and winter is the season shader thinning the canopy pixels.</summary>
+    public PixelBuffer Tree(string species)
     {
         var b = new PixelBuffer(16, 20);
         var wood = R["wood"];
@@ -143,13 +148,6 @@ public sealed class Minis
                     b.Set(x, y, c[k]);
                 }
             }
-            if (bare) for (int y = 1; y < 15; y++) { /* pines keep their needles in winter */ }
-        }
-        else if (bare)
-        {
-            for (int y = 3; y < 12; y++) { b.Set(8, y, wood[1]); }
-            b.Set(7, 8, wood[1]); b.Set(6, 7, wood[1]); b.Set(5, 6, wood[1]); b.Set(9, 7, wood[1]); b.Set(10, 6, wood[1]); b.Set(11, 5, wood[1]);
-            b.Set(7, 5, wood[1]); b.Set(6, 4, wood[1]); b.Set(9, 4, wood[1]); b.Set(10, 3, wood[1]);
         }
         else
         {
@@ -172,7 +170,7 @@ public sealed class Minis
         return b;
     }
 
-    public PixelBuffer Bush(bool bare)
+    public PixelBuffer Bush()
     {
         var b = new PixelBuffer(8, 8); var f = R["foliage_summer"];
         for (int y = 2; y < 7; y++)
@@ -180,7 +178,6 @@ public sealed class Minis
             {
                 double dx = (x - 3.5) / 3.8, dy = (y - 4.5) / 2.6;
                 if (dx * dx + dy * dy > 1) continue;
-                if (bare && Hash(x, y, 4500) < .6) { if (Hash(x, y, 4501) < .5) b.Set(x, y, R["wood"][1]); continue; }
                 b.Set(x, y, f[Math.Clamp((x + (7 - y)) * 4 / 14, 0, 3)]);
             }
         return b.Outline(P["out"]);

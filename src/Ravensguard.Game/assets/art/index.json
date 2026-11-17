@@ -101,7 +101,7 @@
     },
     "mini_16": {
       "file": "mini_16.png",
-      "width": 512,
+      "width": 416,
       "height": 20,
       "cell": [
         16,
@@ -4814,93 +4814,51 @@
       "w": 16,
       "h": 20
     },
-    "mini.tree.oak.winter": {
+    "mini.tree.ash.summer": {
       "atlas": "mini_16",
       "x": 304,
       "y": 0,
       "w": 16,
       "h": 20
     },
-    "mini.tree.ash.summer": {
+    "mini.tree.birch.summer": {
       "atlas": "mini_16",
       "x": 320,
       "y": 0,
       "w": 16,
       "h": 20
     },
-    "mini.tree.ash.winter": {
+    "mini.tree.pine.summer": {
       "atlas": "mini_16",
       "x": 336,
       "y": 0,
       "w": 16,
       "h": 20
     },
-    "mini.tree.birch.summer": {
+    "mini.tree.apple.summer": {
       "atlas": "mini_16",
       "x": 352,
       "y": 0,
       "w": 16,
       "h": 20
     },
-    "mini.tree.birch.winter": {
-      "atlas": "mini_16",
-      "x": 368,
-      "y": 0,
-      "w": 16,
-      "h": 20
-    },
-    "mini.tree.pine.summer": {
-      "atlas": "mini_16",
-      "x": 384,
-      "y": 0,
-      "w": 16,
-      "h": 20
-    },
-    "mini.tree.pine.winter": {
-      "atlas": "mini_16",
-      "x": 400,
-      "y": 0,
-      "w": 16,
-      "h": 20
-    },
-    "mini.tree.apple.summer": {
-      "atlas": "mini_16",
-      "x": 416,
-      "y": 0,
-      "w": 16,
-      "h": 20
-    },
-    "mini.tree.apple.winter": {
-      "atlas": "mini_16",
-      "x": 432,
-      "y": 0,
-      "w": 16,
-      "h": 20
-    },
     "mini.bush": {
       "atlas": "mini_16",
-      "x": 448,
-      "y": 0,
-      "w": 8,
-      "h": 8
-    },
-    "mini.bush.winter": {
-      "atlas": "mini_16",
-      "x": 464,
+      "x": 368,
       "y": 0,
       "w": 8,
       "h": 8
     },
     "mini.rock": {
       "atlas": "mini_16",
-      "x": 480,
+      "x": 384,
       "y": 0,
       "w": 8,
       "h": 8
     },
     "mini.block": {
       "atlas": "mini_16",
-      "x": 496,
+      "x": 400,
       "y": 0,
       "w": 8,
       "h": 8
