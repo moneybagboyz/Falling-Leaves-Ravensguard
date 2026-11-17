@@ -107,7 +107,6 @@ internal sealed partial class RegionBuilder
         plan.Square = ToWorld(horiz, cx, cy, sq.X, sq.Y, sq.W, sq.H);
 
         var lots = new List<Lot>();
-        void AddLot(LotUse use, RectM world) { lots.Add(new Lot(lots.Count, use, DwellingOf(use), Blueprint(use), world, 0, WealthOf(use))); }
 
         // Church or chapel next to the square on the far side of the street.
         {

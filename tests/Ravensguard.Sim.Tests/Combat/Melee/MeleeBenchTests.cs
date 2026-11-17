@@ -24,7 +24,7 @@ public class MeleeBenchTests(CombatFixture f, ITestOutputHelper output)
     [Fact]
     public void SkirmishSummary()
     {
-        int n = 20, wolves = 0, over = 0; double dur = 0; int routs = 0, kos = 0, dead = 0, fled = 0, yield = 0, ko = 0;
+        int n = 20, wolves = 0, over = 0; double dur = 0; int routs = 0, dead = 0, fled = 0, yield = 0, ko = 0;
         for (ulong seed = 1; seed <= (ulong)n; seed++)
         {
             var w = MeleeScenarios.Skirmish(f.Tables, seed, 10, emitText: false);
