@@ -125,7 +125,7 @@ public sealed partial class HistoryGenerator
             if (kind > s.PeakKind)
             {
                 s.PeakKind = kind;
-                if (kind >= SettlementKind.Town)
+                if (kind == SettlementKind.City || (kind == SettlementKind.Town && s.Id.Value % 3 == 0))
                 {
                     var rn = s.Realm >= 0 ? Rm(s.Realm).Name : "no realm";
                     string what = kind == SettlementKind.City ? "a city" : "a market town";
@@ -135,6 +135,7 @@ public sealed partial class HistoryGenerator
                 }
             }
             if (s.Pop < 5 && _tick > 0) AbandonQuiet(i);
+            else if (_season == 0 && s.Kind <= SettlementKind.Village && s.Hinterland > 0 && RuralPop25(s) * 100 < s.Hinterland * 33 && Pct(s.Id.Value, S.Misc, 5)) AbandonQuiet(i);
         }
     }
 
@@ -281,7 +282,6 @@ public sealed partial class HistoryGenerator
             if (a.Status == ArtefactStatus.Held && a.Holder == s.Id && Pct(a.Id.Value, S.Art, 35))
                 ArtefactVanish(a, ArtefactStatus.Lost, s.Cell, ev, $"burned in the fire of {s.Name}");
         if (burnt || s.Pop < 5) MakeRuin(i, "burned", ev, ev);
-        else MaybeSaint(i, ev, "the fire");
     }
 
     private void Flood(int i, int cu)

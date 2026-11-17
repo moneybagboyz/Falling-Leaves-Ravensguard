@@ -18,19 +18,19 @@
     "plague_permille_year": 22,
     "plague_spread_pct": 45,
     "plague_town_mortality_pct": 20,
-    "fire_permille_year": 7,
-    "flood_permille_year": 9,
+    "fire_permille_year": 2,
+    "flood_permille_year": 4,
     "mine_collapse_permille_year": 8,
     "incident_ppm_tick": 9000,           // border incidents (insult, raid, claim) per neighbour pair per season
-    "war_utility_threshold": 62,         // claim + casus belli + strength + treasury + season - harvest cost
-    "war_chance_pct": 30,
+    "war_utility_threshold": 68,         // claim + casus belli + strength + treasury + season - harvest cost
+    "war_chance_pct": 22,
     "truce_years_min": 8,
     "truce_years_max": 20,
     "rebellion_ppm_tick": 2500,
     "coup_ppm_tick": 600,
     "marriage_pct_year": 35,
-    "crafter_permille_year": 12,
-    "artefact_permille_year": 110,
+    "crafter_permille_year": 2,
+    "artefact_permille_year": 60,
     "route_refresh_years": 25,
     "max_realms": 60
   }

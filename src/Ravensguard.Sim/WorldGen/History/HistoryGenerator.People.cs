@@ -55,13 +55,13 @@ public sealed partial class HistoryGenerator
         EntityId ev = EntityId.None;
         switch (n.Role)
         {
-            case NotableRole.Ruler when r != null:
+            case NotableRole.Ruler when r != null && r.Ruler == n.Id:
                 n.Epithet = Epithet(n, r);
                 ev = Ev("ruler_died", $"Death of {n.Full}", $"{Who(n)} of {HouseOf(n)} dies of {cause} at {age}; {r.Name} mourns", Cap(r), [n.Id, r.Id], cz);
                 MarkDead(n, cause, ev);
                 OnRulerDeath(r, n, ev);
                 return;
-            case NotableRole.Heir when age >= 12 && r != null:
+            case NotableRole.Heir when age >= 16 && r != null:
                 ev = Ev("heir_died", $"{n.Name} of {HouseOf(n)} dies", $"{(n.Female ? "Princess" : "Prince")} {n.Name}, heir of {r.Name}, dies of {cause} at {age}", Cap(r), [n.Id, r.Id], cz);
                 break;
             case NotableRole.Saint:
@@ -70,6 +70,7 @@ public sealed partial class HistoryGenerator
                 Reliquary(n, ev);
                 return;
         }
+        if (n.Role == NotableRole.Ruler) n.Role = NotableRole.Noble;
         MarkDead(n, cause, ev);
     }
 
@@ -99,7 +100,7 @@ public sealed partial class HistoryGenerator
         int age = _year - n.BirthYear;
         if (n.Victories >= 5) return "the Conqueror";
         if (n.Victories >= 3) return "the Victorious";
-        if (_tick - r.LastFamineTick < 40) return "the Hungry";
+        if (_tick - r.LastFamineTick < 24 && Pct(n.Id.Value, S.Misc, 60)) return "the Hungry";
         if (r.WarsLost > r.WarsWon + 1) return "the Unlucky";
         if (age >= 68) return "the Old";
         if (age < 30) return "the Young";
@@ -113,7 +114,7 @@ public sealed partial class HistoryGenerator
         var kids = new List<Notable>(); var sibs = new List<Notable>(); var others = new List<Notable>();
         foreach (var n in _h.Notables)
         {
-            if (!n.Alive || n.Id == dead.Id || n.Role is NotableRole.General or NotableRole.Rebel or NotableRole.Outlaw or NotableRole.Saint or NotableRole.MasterCrafter) continue;
+            if (!n.Alive || n.Id == dead.Id || n.Realm != r.Index || n.Role is NotableRole.Ruler or NotableRole.General or NotableRole.Rebel or NotableRole.Outlaw or NotableRole.Saint or NotableRole.MasterCrafter) continue;
             if (n.Father == dead.Id || n.Mother == dead.Id) kids.Add(n);
             else if (dead.Father.Value != 0 && n.Father == dead.Father && n.Realm == r.Index) sibs.Add(n);
             else if (n.Dynasty == dead.Dynasty && n.Realm == r.Index && _year - n.BirthYear >= 16) others.Add(n);
@@ -422,7 +423,7 @@ public sealed partial class HistoryGenerator
     {
         var s = _h.Settlements[sIdx];
         if (s.IsRuin || s.Realm < 0 || s.Pop < 40) return;
-        if (!Pct(s.Id.Value, S.Saint, 22)) return;
+        if (!Pct(s.Id.Value, S.Saint, 8)) return;
         if (_h.Notables.Any(n => n.Alive && n.Role == NotableRole.Saint && n.Residence == sIdx)) return;
         int cu = _c.CultureId[s.Cell] < 8 ? _c.CultureId[s.Cell] : 0;
         bool female = Pct(s.Id.Value, S.Saint, 50);
@@ -475,7 +476,7 @@ public sealed partial class HistoryGenerator
             }
             if (best < 0) continue;
             var tg = _h.Settlements[best];
-            int loss = Roll(o.Id.Value, S.Outlaw, 2, 7) * tg.Pop / 100;
+            int loss = Math.Max(1, Roll(o.Id.Value, S.Outlaw, 2, 7) * tg.Pop / 100);
             tg.Pop -= loss;
             var rev = Ev("outlaw_raid", $"{o.Name} raids {tg.Name}", $"{o.Full}'s band burns barns and carries off goods near {tg.Name}; {Num(loss)} killed or taken", tg.Cell,
                 tg.Realm >= 0 ? [o.Id, tg.Id, Rm(tg.Realm).Id] : [o.Id, tg.Id], Cz(CauseKind.Raid, o.RiseEvent, "outlaws of the hills"));

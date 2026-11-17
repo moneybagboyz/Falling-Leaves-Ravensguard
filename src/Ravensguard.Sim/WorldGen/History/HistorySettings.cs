@@ -21,19 +21,19 @@ public sealed class HistorySettings
     public int PlaguePermilleYear { get; set; } = 22;
     public int PlagueSpreadPct { get; set; } = 45;
     public int PlagueTownMortalityPct { get; set; } = 20;
-    public int FirePermilleYear { get; set; } = 7;
-    public int FloodPermilleYear { get; set; } = 9;
+    public int FirePermilleYear { get; set; } = 2;
+    public int FloodPermilleYear { get; set; } = 4;
     public int MineCollapsePermilleYear { get; set; } = 8;
     public int IncidentPpmTick { get; set; } = 9000;
-    public int WarUtilityThreshold { get; set; } = 62;
-    public int WarChancePct { get; set; } = 30;
+    public int WarUtilityThreshold { get; set; } = 68;
+    public int WarChancePct { get; set; } = 22;
     public int TruceYearsMin { get; set; } = 8;
     public int TruceYearsMax { get; set; } = 20;
     public int RebellionPpmTick { get; set; } = 2500;
     public int CoupPpmTick { get; set; } = 600;
     public int MarriagePctYear { get; set; } = 35;
-    public int CrafterPermilleYear { get; set; } = 12;
-    public int ArtefactPermilleYear { get; set; } = 110;
+    public int CrafterPermilleYear { get; set; } = 2;
+    public int ArtefactPermilleYear { get; set; } = 60;
     public int RouteRefreshYears { get; set; } = 25;
     public int MaxRealms { get; set; } = 60;
 

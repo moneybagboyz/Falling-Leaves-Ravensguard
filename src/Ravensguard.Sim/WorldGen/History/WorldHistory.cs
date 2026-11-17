@@ -49,7 +49,7 @@ public sealed class WorldHistory
     public string LegendLine(ChronicleEntry e)
     {
         var d = e.Data;
-        string title = d.GetValueOrDefault("title", e.TypeId), text = d.GetValueOrDefault("text", "");
+        string title = d.GetValueOrDefault("title", e.TypeId), text = d.GetValueOrDefault("text", "").TrimEnd('.');
         var sb = new StringBuilder();
         sb.Append(e.When.Season).Append(' ').Append(e.When.Year).Append(": ").Append(title);
         if (text.Length > 0) sb.Append(" — ").Append(text);

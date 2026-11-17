@@ -94,7 +94,7 @@ public sealed partial class HistoryGenerator
         int ticks = _s.Years * 4;
         for (_tick = 0; _tick < ticks; _tick++)
         {
-            _year = _tick / 4; _season = _tick % 4; _dc = 0; _evInTick = 0;
+            _year = _tick / 4; _season = _tick % 4; _dc = 0; if (_tick > 0) _evInTick = 0;
             WeatherPass();
             PopulationPass();
             SettlementPass();

@@ -133,6 +133,7 @@ public sealed class WarRecord
     public int ArmyA, ArmyD;
     public int Battles, Sieges;
     public int Target = -1;                // settlement index under threat
+    public int BlockedTarget = -1, BlockedUntil, SiegeFails;
     public int SiegeTicks = -1;
     public EntityId SiegeEvent;
     public EntityId LastBattleEvent;
