@@ -10,7 +10,7 @@ public partial class MainMenu : Control
     public override void _Ready()
     {
         var center = new CenterContainer();
-        center.SetAnchorsPreset(LayoutPreset.FullRect);
+        center.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         AddChild(center);
         var v = new VBoxContainer();
         v.AddThemeConstantOverride("separation", 12);

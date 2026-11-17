@@ -18,17 +18,17 @@ public partial class ScreenRouter : Control
 
     public override void _Ready()
     {
-        SetAnchorsPreset(LayoutPreset.FullRect);
+        SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         Theme = PixelTheme.Build();
         TextureFilter = TextureFilterEnum.Nearest;
         var backdrop = new ColorRect { Name = "Backdrop", Color = PixelTheme.Backdrop, MouseFilter = MouseFilterEnum.Ignore };
-        backdrop.SetAnchorsPreset(LayoutPreset.FullRect);
+        backdrop.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         AddChild(backdrop);
         _screens = new Control { Name = "Screens", MouseFilter = MouseFilterEnum.Ignore };
-        _screens.SetAnchorsPreset(LayoutPreset.FullRect);
+        _screens.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         AddChild(_screens);
         _overlay = new Control { Name = "Overlay", MouseFilter = MouseFilterEnum.Ignore };
-        _overlay.SetAnchorsPreset(LayoutPreset.FullRect);
+        _overlay.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         AddChild(_overlay);
         _toasts = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore, Alignment = BoxContainer.AlignmentMode.End };
         _toasts.SetAnchorsAndOffsetsPreset(LayoutPreset.BottomWide, LayoutPresetMode.Minsize, 24);
@@ -40,7 +40,7 @@ public partial class ScreenRouter : Control
     {
         if (Top is { } prev) SetActive(prev, false);
         _stack.Add(screen);
-        screen.SetAnchorsPreset(LayoutPreset.FullRect);
+        screen.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         _screens.AddChild(screen);
         SetActive(screen, true);
     }
@@ -87,9 +87,9 @@ public partial class ScreenRouter : Control
     {
         CloseModal();
         var dim = new ColorRect { Color = new Color(0, 0, 0, 0.6f), MouseFilter = MouseFilterEnum.Stop };
-        dim.SetAnchorsPreset(LayoutPreset.FullRect);
+        dim.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         var center = new CenterContainer();
-        center.SetAnchorsPreset(LayoutPreset.FullRect);
+        center.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         dim.AddChild(center);
         var panel = new PanelContainer();
         center.AddChild(panel);

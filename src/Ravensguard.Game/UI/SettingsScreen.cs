@@ -18,7 +18,7 @@ public partial class SettingsScreen : Control
     public override void _Ready()
     {
         var margin = new MarginContainer();
-        margin.SetAnchorsPreset(LayoutPreset.FullRect);
+        margin.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         foreach (var s in new[] { "left", "right", "top", "bottom" }) margin.AddThemeConstantOverride("margin_" + s, 48);
         AddChild(margin);
         var v = new VBoxContainer();
