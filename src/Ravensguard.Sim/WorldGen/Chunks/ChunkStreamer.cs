@@ -15,7 +15,7 @@ public sealed class ChunkStreamerSettings
     /// <summary>Milliseconds of generation per Update call beyond the sync ring (plan 2.11: 4 ms).</summary>
     public double BudgetMs { get; set; } = 4.0;
     /// <summary>Most chunks generated on worker threads at once when <see cref="ChunkStreamer.Update"/> is asked to work in the background.</summary>
-    public int MaxBackgroundJobs { get; set; } = 4;
+    public int MaxBackgroundJobs { get; set; } = 3;
 }
 
 /// <summary>
@@ -111,6 +111,23 @@ public sealed class ChunkStreamer
         return c;
     }
 
+    private bool NeedsGenerating(int cx, int cy) => InRegion(cx, cy) && !_loaded.ContainsKey((cx, cy)) && !Store.Contains(new ChunkKey(cx, cy, 0));
+
+    /// <summary>Starts workers on the nearest chunks that still have to be generated, keeping at most <see cref="ChunkStreamerSettings.MaxBackgroundJobs"/> running (finished jobs waiting to be picked up do not count).</summary>
+    private void StartBackgroundJobs(int heroChunkX, int heroChunkY)
+    {
+        int running = 0;
+        foreach (var t in _prefetch.Values) if (!t.IsCompleted) running++;
+        if (running >= Settings.MaxBackgroundJobs) return;
+        foreach (var (dx, dy) in _order)
+        {
+            int x = heroChunkX + dx, y = heroChunkY + dy;
+            if (!NeedsGenerating(x, y) || _prefetch.ContainsKey((x, y))) continue;
+            _prefetch[(x, y)] = Task.Run(() => Prepare(x, y));
+            if (++running >= Settings.MaxBackgroundJobs) break;
+        }
+    }
+
     /// <summary>A chunk made on a worker: the generated levels and their stored snapshots (the expensive part of recording a first visit).</summary>
     private sealed record Prepared(GeneratedChunk Gen, Dictionary<int, ChunkSnapshot> Snapshots);
 
@@ -150,23 +167,15 @@ public sealed class ChunkStreamer
             if (Math.Max(Math.Abs(dx), Math.Abs(dy)) > sync) break;
             if (!_loaded.ContainsKey((heroChunkX + dx, heroChunkY + dy))) { LoadSync(heroChunkX + dx, heroChunkY + dy); loaded++; }
         }
+        if (background) StartBackgroundJobs(heroChunkX, heroChunkY);
         var t0 = Stopwatch.GetTimestamp();
         int extra = 0;
         foreach (var (dx, dy) in _order)
         {
             if (Math.Max(Math.Abs(dx), Math.Abs(dy)) <= sync) continue;
             if (_loaded.ContainsKey((heroChunkX + dx, heroChunkY + dy))) continue;
-            if (background && InRegion(heroChunkX + dx, heroChunkY + dy) && !Store.Contains(new ChunkKey(heroChunkX + dx, heroChunkY + dy, 0)))
-            {
-                // a chunk that has to be generated is made on a worker; the main thread only records and decodes it once it is ready
-                var key = (heroChunkX + dx, heroChunkY + dy);
-                if (!_prefetch.TryGetValue(key, out var job))
-                {
-                    if (_prefetch.Count < Settings.MaxBackgroundJobs) { var (gx, gy) = key; _prefetch[key] = Task.Run(() => Prepare(gx, gy)); }
-                    continue;
-                }
-                if (!job.IsCompleted) continue;
-            }
+            if (background && NeedsGenerating(heroChunkX + dx, heroChunkY + dy) && !(_prefetch.TryGetValue((heroChunkX + dx, heroChunkY + dy), out var job) && job.IsCompleted))
+                continue; // being made on a worker: picked up on a later call
             // do not start a chunk that is expected to run past the budget (the average of the loads so far), except the first one beyond the sync ring
             if (extra > 0 && Stopwatch.GetElapsedTime(t0).TotalMilliseconds + _avgLoadMs > budget) break;
             LoadSync(heroChunkX + dx, heroChunkY + dy); loaded++; extra++;
