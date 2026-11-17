@@ -24,6 +24,11 @@ public sealed class MeleeWorld
     public bool EmitText = true;
 
     private readonly List<Fighter> _impacts = [];
+    // Start-of-impact-phase snapshot: every blow of a tick is resolved against the same state, so simultaneous blows both land
+    // and fighter Id order gives no advantage (a victim knocked down by an earlier blow of the tick still delivers its own).
+    private Act[] _snapState = [];
+    private double[] _snapStamina = [];
+    private AttackRequest?[] _snapReq = [];
 
     public MeleeWorld(CombatTables tables, ulong seed)
     {
@@ -82,7 +87,13 @@ public sealed class MeleeWorld
         foreach (var f in Fighters) { ApplyCommand(f); AdvanceState(f); }
         foreach (var f in Fighters) Move(f);
         Separate();
-        foreach (var a in _impacts) ResolveImpact(a);
+        if (_impacts.Count > 0)
+        {
+            int n = Fighters.Count;
+            if (_snapState.Length < n) { _snapState = new Act[n]; _snapStamina = new double[n]; _snapReq = new AttackRequest?[n]; }
+            for (int i = 0; i < n; i++) { _snapState[i] = Fighters[i].State; _snapStamina[i] = Fighters[i].Stamina; _snapReq[i] = Fighters[i].Req; }
+            foreach (var a in _impacts) ResolveImpact(a);
+        }
         foreach (var f in Fighters) f.Cmd.ClearOneShots();
     }
 
@@ -289,6 +300,8 @@ public sealed class MeleeWorld
 
     private void GoDown(Fighter f, DownReason why, string text)
     {
+        // Fled / Surrendered are outcomes that stay (they can still bleed to death, which Kill handles).
+        if (f.State is Act.Dead or Act.Fled or Act.Surrendered) return;
         f.State = Act.Down; f.Down = why; f.Req = null;
         Emit(EventKind.Down, f.Id, -1, $"{f.Name} {text}", severe: true);
         Announce(f);
@@ -353,36 +366,37 @@ public sealed class MeleeWorld
         return dot >= MeleeRules.FrontArcCos ? Facing.Front : dot <= MeleeRules.RearArcCos ? Facing.Rear : Facing.Flank;
     }
 
-    private Fighter? FindTarget(Fighter a)
+    private Fighter? FindTarget(Fighter a, AttackRequest req)
     {
         double maxD = a.Reach + 2 * MeleeRules.BodyRadius + 0.15;
-        if (a.Req!.TargetId >= 0)
+        if (req.TargetId >= 0)
         {
-            var t = Fighters[a.Req.TargetId];
+            var t = Fighters[req.TargetId];
             return InStrikeRange(a, t, maxD) ? t : null;
         }
         Fighter? best = null; double bd = double.MaxValue;
         foreach (var t in Fighters)
         {
             if (t.Team == a.Team || !InStrikeRange(a, t, maxD)) continue;
-            double d = (t.Pos - a.Pos).Length + (t.State == Act.Down ? 5 : 0); // prefer someone still standing
+            double d = (t.Pos - a.Pos).Length + (_snapState[t.Id] == Act.Down ? 5 : 0); // prefer someone still standing
             if (d < bd) { bd = d; best = t; }
         }
         return best;
     }
 
-    private static bool InStrikeRange(Fighter a, Fighter t, double maxD)
+    private bool InStrikeRange(Fighter a, Fighter t, double maxD)
     {
-        if (t.State is Act.Dead or Act.Fled or Act.Surrendered) return false;
+        if (_snapState[t.Id] is Act.Dead or Act.Fled or Act.Surrendered) return false;
         var d = t.Pos - a.Pos; double len = d.Length;
         return len <= maxD && a.Face.Dot(len < 1e-6 ? a.Face : d * (1.0 / len)) >= MeleeRules.AttackConeCos;
     }
 
     private void ResolveImpact(Fighter a)
     {
-        var req = a.Req;
+        var req = _snapReq[a.Id];
         if (req == null) return;
-        var t = FindTarget(a);
+        var t = FindTarget(a, req);
+        Act ts = t == null ? Act.Idle : _snapState[t.Id];
         if (t == null) { Emit(EventKind.Whiff, a.Id, req.TargetId, $"{a.Name}'s blow finds only air"); return; }
 
         var rng = Rng(a.Id, StreamImpact);
@@ -390,13 +404,13 @@ public sealed class MeleeWorld
         var facing = FacingOf(t, a);
 
         // dodge (0.35 s window; moves the target out of the blow)
-        if (t.State == Act.Dodge)
+        if (ts == Act.Dodge)
         {
             if (rng.Range(0, 1000) < (int)(MeleeRules.DodgeEvadeChance * 1000))
             { Emit(EventKind.Dodged, t.Id, a.Id, $"{t.Name} dodges {a.Name}'s {atk.Name.ToLowerInvariant()}"); return; }
         }
         // parry (Block pressed within 0.20 s before impact), then block (hold)
-        else if (t.State == Act.Block && facing != Facing.Rear)
+        else if (ts == Act.Block && facing != Facing.Rear)
         {
             double swingV = atk.Velocity * 6.0, joules = 0.5 * a.WeaponKg * swingV * swingV;
             if (Tick - t.BlockSince <= MeleeRules.ParryWindowTicks)
@@ -405,7 +419,7 @@ public sealed class MeleeWorld
                 t.Stamina = Math.Max(0, t.Stamina - (MeleeRules.BlockBase + joules * MeleeRules.BlockPerJoule));
                 if (rng.Range(0, 1000) < (int)(p * 1000))
                 {
-                    a.State = Act.Stagger; a.StateTicks = RecoverTicks(a) + 4; a.Req = null;
+                    if (a.State == Act.Strike) { a.State = Act.Stagger; a.StateTicks = RecoverTicks(a) + 4; a.Req = null; } // not if a blow earlier this tick already felled them
                     t.RiposteUntil = Tick + MeleeRules.RiposteTicks;
                     Emit(EventKind.Parried, t.Id, a.Id, $"{t.Name} parries {a.Name}'s {atk.Name.ToLowerInvariant()} -- riposte open");
                     Emit(EventKind.Riposte, t.Id, a.Id, $"{t.Name} may riposte");
@@ -418,13 +432,13 @@ public sealed class MeleeWorld
             {
                 int braced = 0;
                 foreach (var o in Fighters)
-                    if (o.Id != t.Id && o.Team == t.Team && o.State == Act.Block && o.ShieldCover > 0 && (o.Pos - t.Pos).Length <= 1.3) braced++;
+                    if (o.Id != t.Id && o.Team == t.Team && _snapState[o.Id] == Act.Block && o.ShieldCover > 0 && (o.Pos - t.Pos).Length <= 1.3) braced++;
                 shield += MeleeRules.WallBonusPerNeighbour * Math.Min(2, braced);
-                if (t.Stamina < MeleeRules.ExhaustedBelow) shield -= MeleeRules.ExhaustedCoverLoss;
+                if (_snapStamina[t.Id] < MeleeRules.ExhaustedBelow) shield -= MeleeRules.ExhaustedCoverLoss;
             }
             double weapon = MeleeRules.WeaponBlockBase + MeleeRules.WeaponBlockPerSkill * t.Spec.Skill;
             if (facing == Facing.Flank) weapon *= 0.5;
-            if (t.Stamina < MeleeRules.ExhaustedBelow) weapon -= MeleeRules.ExhaustedCoverLoss;
+            if (_snapStamina[t.Id] < MeleeRules.ExhaustedBelow) weapon -= MeleeRules.ExhaustedCoverLoss;
             cover = 1.0 - (1.0 - Math.Max(0, shield)) * (1.0 - Math.Max(0, weapon));
             if (rng.Range(0, 1000) < (int)(cover * 1000))
             {
@@ -436,8 +450,8 @@ public sealed class MeleeWorld
 
         // the blow lands: hit roll, coverage, layers, tissues (StrikeResolver)
         var style = a.Heavy ? AttackStyle.Heavy : AttackStyle.Normal;
-        IReadOnlySet<string>? guarded = t.State == Act.Block ? Guarded : null;
-        var def = new Defender(t.Plan, t.Plan.SizeCm3, t.Spec.Worn, t.Spec.Skill, guarded, t.State == Act.Down);
+        IReadOnlySet<string>? guarded = ts == Act.Block ? Guarded : null;
+        var def = new Defender(t.Plan, t.Plan.SizeCm3, t.Spec.Worn, t.Spec.Skill, guarded, ts == Act.Down);
         double str = a.Spec.Strength * (a.Weakened ? 0.8 : 1.0);
         var attacker = new Attacker((int)str, a.Spec.Skill, a.Plan.SizeCm3, 70000);
         var res = Resolver.Resolve(new StrikeInput(attacker, a.Spec.Weapon, req.AttackId, req.PartId, def, req.Gap, facing, style), ref rng);

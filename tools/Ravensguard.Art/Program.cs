@@ -17,7 +17,7 @@ if (args.Length == 0 || args[0] is "-h" or "--help")
 {
     Console.WriteLine("""
         Ravensguard.Art - sprite baker
-          bake     [--out art/out] [--palette path]   write PNG atlases + index.json
+          bake     [--out art/out] [--out-game dir] [--palette path]   write PNG atlases + index.json (--out-game also copies them to the game's assets/art)
           validate [--palette path]                    check palette use, sizes, outlines (exit 1 on failure)
           preview  [--out art/out/preview.png]         2x contact sheet of all sprites
           rig      [--out art/out] [--out-game dir]    bake the posed paper-doll rig: rig_32x64.png + rig_index.json
@@ -61,7 +61,9 @@ if (args[0] is "rig" or "rig-preview")
     return 0;
 }
 var defs = Catalog.Build(pal);
-var cache = defs.ToDictionary(d => d.Id, d => d.Build());
+// Duplicate ids must surface as a validator error, not an ArgumentException from ToDictionary: keep the first build per id.
+var cache = new Dictionary<string, PixelBuffer>();
+foreach (var d in defs) if (!cache.ContainsKey(d.Id)) cache[d.Id] = d.Build();
 
 string Rel(string? p, string def) => Path.GetFullPath(p ?? def, Directory.GetCurrentDirectory());
 
@@ -84,6 +86,14 @@ switch (args[0])
         var outDir = Rel(Opt(args, "--out"), Path.Combine(root, "art", "out"));
         Atlas.Bake(defs, pal, outDir, cache);
         Console.WriteLine($"baked {defs.Count} sprites to {outDir}");
+        if (Opt(args, "--out-game") is { } og)
+        {
+            var gd = Rel(og, ".");
+            Directory.CreateDirectory(gd);
+            foreach (var atlas in defs.Select(d => d.Atlas).Distinct()) File.Copy(Path.Combine(outDir, atlas + ".png"), Path.Combine(gd, atlas + ".png"), true);
+            File.Copy(Path.Combine(outDir, "index.json"), Path.Combine(gd, "index.json"), true);
+            Console.WriteLine($"copied sprite atlases + index.json to {gd}");
+        }
         return 0;
     }
     case "preview":

@@ -26,6 +26,13 @@ public static class ContentHasher
         }
         return Convert.ToHexString(sha.GetHashAndReset()).ToLowerInvariant();
     }
+
+    /// <summary>Cache file key: the content hash plus fingerprints of the type registry and the vocabulary.</summary>
+    public static string CacheKey(string contentHash, ContentTypeRegistry registry, ContentVocabulary? vocabulary)
+    {
+        var text = $"{contentHash}|{registry.Fingerprint()}|{(vocabulary ?? new ContentVocabulary()).Fingerprint()}";
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text))).ToLowerInvariant();
+    }
 }
 
 /// <summary>Stores merged, validated JSON (not CLR objects) gzip-compressed, one file per content hash.</summary>
@@ -50,12 +57,21 @@ public sealed class ContentCache(string directory)
             ["overrides"] = new JsonArray(db.Overrides.Select(o => (JsonNode)new JsonObject
                 { ["type"] = o.Type, ["id"] = o.Id, ["previous"] = o.PreviousMod, ["new"] = o.NewMod }).ToArray()),
         };
-        var tmp = PathFor(hash) + ".tmp";
-        using (var fs = File.Create(tmp))
-        using (var gz = new GZipStream(fs, CompressionLevel.Fastest))
-        using (var w = new Utf8JsonWriter(gz))
-            root.WriteTo(w);
-        File.Move(tmp, PathFor(hash), overwrite: true);
+        var target = PathFor(hash);
+        var tmp = $"{target}.{Guid.NewGuid():N}.tmp"; // unique per call: concurrent writers never share a temp file
+        try
+        {
+            using (var fs = File.Create(tmp))
+            using (var gz = new GZipStream(fs, CompressionLevel.Fastest))
+            using (var w = new Utf8JsonWriter(gz))
+                root.WriteTo(w);
+            File.Move(tmp, target, overwrite: true);
+        }
+        catch
+        {
+            try { File.Delete(tmp); } catch { /* best effort */ }
+            throw;
+        }
     }
 
     /// <summary>Returns null on a miss or a corrupt/unusable cache file.</summary>

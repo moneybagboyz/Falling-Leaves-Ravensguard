@@ -18,7 +18,7 @@ public class SaveTests(ITestOutputHelper output)
     private static SaveHeader Header(long secs = 1000, bool ironman = false) => new()
     {
         GameVersion = "0.1.0", ContentHash = "abc123", WorldSeed = 42UL, GameSeconds = secs, Ironman = ironman,
-        Mods = { new ModEntry("modA", "1.0"), new ModEntry("modB", "2.1") },
+        Mods = [new ModEntry("modA", "1.0"), new ModEntry("modB", "2.1")],
     };
 
     private static SaveFile Make(long secs = 1000, bool ironman = false, params (string, byte[])[] sections)
@@ -34,7 +34,7 @@ public class SaveTests(ITestOutputHelper output)
         Assert.Equal(b1, b2);
         Assert.Equal(new GameTime(5000), loaded.Header.Time);
         Assert.Equal(42UL, loaded.Header.WorldSeed);
-        Assert.Equal(new byte[] { 1, 2, 3 }, loaded.Sections["people"]);
+        Assert.Equal(new byte[] { 1, 2, 3 }, loaded.Sections["people"].ToArray());
     }
 
     [Fact]
@@ -52,7 +52,7 @@ public class SaveTests(ITestOutputHelper output)
         var data = new byte[] { 1, 2 };
         var f = Make(1, false, ("s", data));
         data[0] = 99;
-        Assert.Equal(1, f.Sections["s"][0]);
+        Assert.Equal(1, f.Sections["s"].Span[0]);
     }
 
     [Fact]
@@ -65,8 +65,8 @@ public class SaveTests(ITestOutputHelper output)
             .Register(2, s => { s["a"] = new byte[] { 10 }; });
         var r = m.Migrate(old);
         Assert.Equal(3, r.Header.FormatVersion);
-        Assert.Equal(new byte[] { 2 }, r.Sections["b"]);
-        Assert.Equal(new byte[] { 10 }, r.Sections["a"]);
+        Assert.Equal(new byte[] { 2 }, r.Sections["b"].ToArray());
+        Assert.Equal(new byte[] { 10 }, r.Sections["a"].ToArray());
     }
 
     [Fact]
@@ -254,8 +254,8 @@ public class SaveTests(ITestOutputHelper output)
         Assert.Contains("Missing mod: modB", text);
         Assert.Contains("saved with 1.0, installed 1.5", text);
 
-        h.FormatVersion = 99;
-        Assert.False(r.CheckCompatibility(h, "abc123", h.Mods).CanLoad);
+        var newer = h with { FormatVersion = 99 };
+        Assert.False(r.CheckCompatibility(newer, "abc123", h.Mods.ToList()).CanLoad);
     }
 
     [MessagePackObject]
@@ -303,6 +303,6 @@ public class SaveTests(ITestOutputHelper output)
         sw.Restart();
         var loaded = new SaveReader().Load(p);
         output.WriteLine($"load: {sw.ElapsedMilliseconds} ms");
-        Assert.Equal(raw, loaded.Sections["people"]);
+        Assert.Equal(raw, loaded.Sections["people"].ToArray());
     }
 }

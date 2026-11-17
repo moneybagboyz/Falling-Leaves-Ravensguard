@@ -10,6 +10,9 @@ public sealed class ContentVocabulary
 
     public ContentVocabulary RegisterCondition(params string[] ids) { foreach (var i in ids) _conditions.Add(i); return this; }
     public ContentVocabulary RegisterEffect(params string[] ids) { foreach (var i in ids) _effects.Add(i); return this; }
+    /// <summary>Stable text of the registered ids (sorted), for cache keys.</summary>
+    public string Fingerprint() =>
+        "c:" + string.Join(",", _conditions.Order(StringComparer.Ordinal)) + ";e:" + string.Join(",", _effects.Order(StringComparer.Ordinal));
     public bool IsCondition(string id) => _conditions.Contains(id);
     public bool IsEffect(string id) => _effects.Contains(id);
 

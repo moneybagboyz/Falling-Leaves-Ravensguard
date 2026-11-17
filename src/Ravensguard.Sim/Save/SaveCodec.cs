@@ -35,7 +35,7 @@ public static class SaveCodec
         var header = Serialize(file.Header);
         var body = new SaveBody();
         foreach (var k in file.Sections.Keys.OrderBy(k => k, StringComparer.Ordinal))
-            body.Sections.Add(new SectionRecord { Name = k, Data = file.Sections[k] });
+            body.Sections.Add(new SectionRecord { Name = k, Data = file.Sections[k].ToArray() });
         var bodyBytes = SerializeCompressed(body);
 
         var result = new byte[4 + 4 + header.Length + bodyBytes.Length];
@@ -60,10 +60,13 @@ public static class SaveCodec
         catch (Exception e) when (e is not SaveException) { throw new SaveException("Corrupt save header.", e); }
     }
 
-    public static SaveFile Decode(byte[] bytes)
+    /// <summary>Decodes a whole save. A header newer than <paramref name="maxFormatVersion"/> is rejected before the body is touched.</summary>
+    public static SaveFile Decode(byte[] bytes, int maxFormatVersion = SaveFormat.CurrentVersion)
     {
         using var ms = new MemoryStream(bytes, writable: false);
         var header = ReadHeader(ms);
+        if (header.FormatVersion > maxFormatVersion)
+            throw new SaveException($"This save was made by a newer version of the game (format v{header.FormatVersion}, this game reads up to v{maxFormatVersion}).");
         try
         {
             var body = DeserializeCompressed<SaveBody>(bytes.AsMemory((int)ms.Position));

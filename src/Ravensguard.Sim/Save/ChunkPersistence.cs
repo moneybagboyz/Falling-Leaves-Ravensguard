@@ -71,7 +71,19 @@ public sealed class ChunkOp
     public static ChunkOp AddObject(EntityId id, byte[] data) => new() { Kind = ChunkOpKind.AddObject, ObjectId = id.Value, Value = data };
     public static ChunkOp RemoveObject(EntityId id) => new() { Kind = ChunkOpKind.RemoveObject, ObjectId = id.Value };
     public static ChunkOp SetProperty(EntityId id, string key, byte[] value) => new() { Kind = ChunkOpKind.SetProperty, ObjectId = id.Value, Key = key, Value = value };
-    public static ChunkOp SetTile(int x, int y, int tileId) => new() { Kind = ChunkOpKind.SetTile, LocalX = x, LocalY = y, TileId = tileId };
+    public static ChunkOp SetTile(int x, int y, int tileId)
+    {
+        CheckLocal(x, y);
+        return Make(x, y, tileId);
+    }
+
+    internal static void CheckLocal(int x, int y)
+    {
+        if ((uint)x >= ChunkContent.Size) throw new ArgumentOutOfRangeException(nameof(x), x, $"Local x must be 0..{ChunkContent.Size - 1}.");
+        if ((uint)y >= ChunkContent.Size) throw new ArgumentOutOfRangeException(nameof(y), y, $"Local y must be 0..{ChunkContent.Size - 1}.");
+    }
+
+    private static ChunkOp Make(int x, int y, int tileId) => new() { Kind = ChunkOpKind.SetTile, LocalX = x, LocalY = y, TileId = tileId };
 }
 
 /// <summary>Ordered list of operations applied on top of the snapshot.</summary>
@@ -87,6 +99,8 @@ public sealed class ChunkDelta
             switch (op.Kind)
             {
                 case ChunkOpKind.AddObject:
+                    if (c.Objects.ContainsKey(op.ObjectId))
+                        throw new InvalidOperationException($"AddObject: object {op.ObjectId} already exists (remove it first to replace it).");
                     c.Objects[op.ObjectId] = new ObjectRecord { Id = op.ObjectId, Data = op.Value ?? Array.Empty<byte>() };
                     break;
                 case ChunkOpKind.RemoveObject:
@@ -98,9 +112,26 @@ public sealed class ChunkDelta
                         o.Props[op.Key] = op.Value ?? Array.Empty<byte>();
                     break;
                 case ChunkOpKind.SetTile:
+                    ChunkOp.CheckLocal(op.LocalX, op.LocalY);
                     c.Tiles[ChunkContent.TileIndex(op.LocalX, op.LocalY)] = op.TileId;
                     break;
+                default:
+                    throw new ArgumentException($"Unknown chunk op kind {(int)op.Kind}.");
             }
+        }
+    }
+
+    /// <summary>Structural checks that do not need the chunk content.</summary>
+    internal static void Validate(ChunkOp op)
+    {
+        switch (op.Kind)
+        {
+            case ChunkOpKind.AddObject: case ChunkOpKind.RemoveObject: break;
+            case ChunkOpKind.SetProperty:
+                if (string.IsNullOrEmpty(op.Key)) throw new ArgumentException("SetProperty needs a non-empty key.");
+                break;
+            case ChunkOpKind.SetTile: ChunkOp.CheckLocal(op.LocalX, op.LocalY); break;
+            default: throw new ArgumentException($"Unknown chunk op kind {(int)op.Kind}.");
         }
     }
 }
@@ -134,22 +165,40 @@ public sealed class ChunkStore
         if (!k.IsValid) throw new ArgumentOutOfRangeException(nameof(k), $"Z must be in {ChunkKey.MinZ}..{ChunkKey.MaxZ}.");
     }
 
-    /// <summary>Records the generated chunk on first visit. Returns false if already recorded or the chunk is empty (not stored).</summary>
+    /// <summary>
+    /// Records the generated chunk on first visit. Returns false if a snapshot is already recorded or the chunk is empty (not stored).
+    /// A delta-only entry (ops that landed before any snapshot) gets the snapshot attached and keeps its ops.
+    /// </summary>
     public bool RecordFirstVisit(ChunkKey key, int generatorVersion, string contentHash, ChunkContent content)
     {
         Check(key);
-        if (_chunks.ContainsKey(key) || content.IsEmpty) return false;
+        if (content.IsEmpty) return false;
+        if (_chunks.TryGetValue(key, out var e))
+        {
+            if (e.Snapshot != null) return false;
+            e.Delta.ApplyTo(ChunkSnapshot.Create(generatorVersion, contentHash, content).Decode()); // the old ops must still apply cleanly
+            e.Snapshot = ChunkSnapshot.Create(generatorVersion, contentHash, content);
+            return true;
+        }
         _chunks[key] = new ChunkEntry { Key = key, Snapshot = ChunkSnapshot.Create(generatorVersion, contentHash, content) };
         return true;
     }
 
-    /// <summary>Appends ops. Creates a snapshot-less entry if a delta lands on a chunk that had no stored content.</summary>
+    /// <summary>
+    /// Appends ops (all or nothing). Every op is validated and dry-run against the current content first: bad coordinates,
+    /// unknown kinds and AddObject over an existing id throw and leave the store untouched.
+    /// Creates a snapshot-less entry if a delta lands on a chunk that had no stored content.
+    /// </summary>
     public void AppendDelta(ChunkKey key, IEnumerable<ChunkOp> ops)
     {
         Check(key);
         var list = ops.ToList();
         if (list.Count == 0) return;
-        if (!_chunks.TryGetValue(key, out var e)) _chunks[key] = e = new ChunkEntry { Key = key };
+        foreach (var op in list) ChunkDelta.Validate(op);
+        _chunks.TryGetValue(key, out var e);
+        var probe = e == null ? new ChunkContent() : Rebuild(key)!;
+        new ChunkDelta { Ops = list }.ApplyTo(probe);
+        if (e == null) _chunks[key] = e = new ChunkEntry { Key = key };
         e.Delta.Ops.AddRange(list);
     }
 
@@ -171,7 +220,7 @@ public sealed class ChunkStore
         return SaveCodec.SerializeCompressed(data);
     }
 
-    public static ChunkStore FromSection(byte[] bytes)
+    public static ChunkStore FromSection(ReadOnlyMemory<byte> bytes)
     {
         var data = SaveCodec.DeserializeCompressed<ChunkStoreData>(bytes);
         var s = new ChunkStore();

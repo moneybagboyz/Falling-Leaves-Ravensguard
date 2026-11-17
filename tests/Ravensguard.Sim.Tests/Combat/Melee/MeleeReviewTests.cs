@@ -25,9 +25,10 @@ public class MeleeReviewTests(CombatFixture f)
             var b = w.Add(Spec("B", 1, MeleeScenarios.Sword, new(1.5, 0)), true);
             a.Cmd.Start = new AttackRequest { PartId = "upper_body", TargetId = 1 };
             b.Cmd.Start = new AttackRequest { PartId = "upper_body", TargetId = 0 };
-            while (a.State != Act.Strike) { w.Step(); if (a.State == Act.Windup) { a.Pain = a.KnockoutPain - 0.2; b.Pain = b.KnockoutPain - 0.2; } }
+            while (!w.Events.Any(e => Array.IndexOf(Resolutions, e.Kind) >= 0) && w.Tick < 100) { w.Step(); if (a.State == Act.Windup) { a.Pain = a.KnockoutPain - 0.2; b.Pain = b.KnockoutPain - 0.2; } }
             int t = w.Tick;
-            Assert.Equal(Act.Strike, b.State); // identical timings: both blows land on the same tick
+            Assert.Equal(1, a.BlowsThrown);
+            Assert.Equal(1, b.BlowsThrown); // identical timings: both blows land on the same tick
 
             var onTick = w.Events.Where(e => e.Tick == t && Array.IndexOf(Resolutions, e.Kind) >= 0).ToList();
             bool aResolved = onTick.Any(e => (e.Actor == 0 && e.Target == 1 && e.Kind is EventKind.Wound or EventKind.Whiff)
@@ -51,7 +52,7 @@ public class MeleeReviewTests(CombatFixture f)
             var b = w.Add(Spec("B", 1, MeleeScenarios.Sword, new(1.5, 0)), true);
             a.Cmd.Start = new AttackRequest { PartId = "upper_body", TargetId = 1 };
             b.Cmd.Start = new AttackRequest { PartId = "upper_body", TargetId = 0 };
-            while (a.State != Act.Strike) { w.Step(); if (a.State == Act.Windup) { a.Pain = a.KnockoutPain - 0.2; b.Pain = b.KnockoutPain - 0.2; } }
+            while (!w.Events.Any(e => Array.IndexOf(Resolutions, e.Kind) >= 0) && w.Tick < 100) { w.Step(); if (a.State == Act.Windup) { a.Pain = a.KnockoutPain - 0.2; b.Pain = b.KnockoutPain - 0.2; } }
             if (a.State == Act.Down) aDown++;
             if (b.State == Act.Down) bDown++;
         }

@@ -12,7 +12,7 @@ dotnet run --project tools/Ravensguard.Art -- rig      --out art/out [--out-game
 dotnet run --project tools/Ravensguard.Art -- rig-preview --out art/out/rig.png --scale 3 [--outfits soldier,peasant] [--cols walk:0,strike:1]
 ```
 `validate` also bakes the rig in memory and checks it. `rig --out-game <dir>` copies `rig_32x64.png` and `rig_index.json` into the game's
-`assets/art/` (the other atlases and `index.json` are still copied by hand after `bake`).
+`assets/art/` (`bake --out-game <dir>` copies the sprite atlases and `index.json`; CI bakes to a temp dir and fails if `assets/art` differs).
 
 `--palette <path>` overrides `art/palette.jsonc`. `bake` validates first and refuses to write on failure.
 `art/out/` is gitignored.

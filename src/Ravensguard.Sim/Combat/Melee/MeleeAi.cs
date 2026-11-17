@@ -1,3 +1,4 @@
+using Ravensguard.Content;
 using Ravensguard.Sim.Core;
 
 namespace Ravensguard.Sim.Combat.Melee;
@@ -139,9 +140,37 @@ public static class MeleeAi
         return t.PartIds[^1];
     }
 
+    /// <summary>
+    /// Attack choice by situation. Against hard armour (an armour-layer piece covering the zone: plate, helm, mail) prefer blunt,
+    /// then point, then edge; against soft or no armour prefer edge, then point, then blunt. Ties go to the faster attack,
+    /// then to the attack id (ordinal), so the choice is deterministic.
+    /// </summary>
     public static string PickAttack(MeleeWorld w, Fighter f, Fighter t, string part)
     {
         var attacks = f.WeaponStats.Shape.Attacks;
-        return attacks[0].Id;
+        bool hard = HardArmourOn(w, t, part);
+        AttackDef? best = null; int bestRank = int.MaxValue;
+        foreach (var a in attacks)
+        {
+            int rank = hard
+                ? a.Type switch { AttackType.Blunt => 0, AttackType.Point => 1, _ => 2 }
+                : a.Type switch { AttackType.Edge => 0, AttackType.Point => 1, _ => 2 };
+            if (best == null || rank < bestRank
+                || (rank == bestRank && (a.Velocity > best.Velocity
+                    || (a.Velocity == best.Velocity && string.CompareOrdinal(a.Id, best.Id) < 0))))
+            { best = a; bestRank = rank; }
+        }
+        return best!.Id;
+    }
+
+    private static bool HardArmourOn(MeleeWorld w, Fighter t, string part)
+    {
+        string baseId = t.Plan.ById.TryGetValue(part, out var p) ? p.BaseId : part;
+        foreach (var worn in t.Spec.Worn)
+        {
+            var sh = w.Tables.Armour(worn.ShapeId, worn.MaterialId).Shape;
+            if (sh.Layer == ArmourLayer.Armour && sh.Coverage.TryGetValue(baseId, out var cov) && cov >= 0.5) return true;
+        }
+        return false;
     }
 }

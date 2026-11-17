@@ -36,6 +36,19 @@ public sealed class ContentTypeRegistry
         return this;
     }
 
+    /// <summary>Bump when the way definitions are parsed or validated changes in a way the type shapes do not show.</summary>
+    public const int SchemaVersion = 1;
+
+    /// <summary>Stable text of the schema version and every registered type (name, CLR type, public property names and types), sorted.</summary>
+    public string Fingerprint()
+    {
+        var parts = _byName.OrderBy(kv => kv.Key, StringComparer.Ordinal).Select(kv =>
+            kv.Key + "=" + kv.Value.FullName + "{" + string.Join(",",
+                kv.Value.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                    .Select(p => p.Name + ":" + p.PropertyType.ToString()).Order(StringComparer.Ordinal)) + "}");
+        return $"v{SchemaVersion};" + string.Join(";", parts);
+    }
+
     public bool TryGetType(string name, out Type type) => _byName.TryGetValue(name, out type!);
     public IEnumerable<string> Names => _byName.Keys;
 

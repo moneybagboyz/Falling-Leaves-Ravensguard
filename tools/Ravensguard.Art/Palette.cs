@@ -43,7 +43,9 @@ public sealed class Palette
 
     public static uint ParseHex(string hex)
     {
-        var s = hex.TrimStart('#');
+        var s = hex.StartsWith('#') ? hex[1..] : hex;
+        if (s.Length != 6 || !s.All(Uri.IsHexDigit))
+            throw new InvalidDataException($"Palette colour '{hex}' is not a 6-digit hex colour (#rrggbb)");
         return 0xFF000000u | Convert.ToUInt32(s, 16);
     }
 

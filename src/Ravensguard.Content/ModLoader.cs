@@ -24,15 +24,19 @@ public sealed class ModLoader(ContentTypeRegistry? registry = null, ContentVocab
             .Select(f => Path.GetRelativePath(folder, f).Replace('\\', '/'))
             .OrderBy(f => f, StringComparer.Ordinal);
 
+    /// <summary>Reads <c>mod.json</c>. Returns null (after reporting an error with the file location) if it is missing, invalid, null or has no id.</summary>
     public static ModInfo ReadManifest(string folder, int index, ContentReport report)
     {
         var path = Path.Combine(folder, "mod.json");
         try
         {
             var bytes = File.ReadAllBytes(path);
+            if (bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF) bytes = bytes[3..]; // UTF-8 BOM
             var node = ContentFileParserSingle(bytes, path, report);
             var m = node?.Deserialize<ModManifest>(ContentDatabase.SerializerOptions);
-            if (m != null) return new ModInfo(m, folder, index);
+            if (m == null) report.Error(new(path, 1, 1), "mod.json must be a JSON object");
+            else if (string.IsNullOrWhiteSpace(m.Id)) report.Error(new(path, 1, 1), "mod.json needs a non-empty \"id\"");
+            else return new ModInfo(m, folder, index);
         }
         catch (FileNotFoundException) { report.Error(new(path, 0, 0), "mod.json not found"); }
         catch (DirectoryNotFoundException) { report.Error(new(folder, 0, 0), "mod folder not found"); }
@@ -103,12 +107,14 @@ public sealed class ModLoader(ContentTypeRegistry? registry = null, ContentVocab
             return new ModLoadResult { Database = new ContentDatabase(_registry), Report = report };
 
         var ids = order.Select(o => o.Manifest.Id).ToList();
-        string? hash = null;
+        string? hash = null, cacheKey = null;
         ContentCache? cache = cacheDirectory == null ? null : new ContentCache(cacheDirectory);
         if (cache != null)
         {
             hash = ContentHasher.Compute(order);
-            var cached = cache.TryLoad(hash, _registry);
+            // The cache holds validated output, so its key also covers what validation depends on besides the files.
+            cacheKey = ContentHasher.CacheKey(hash, _registry, vocabulary);
+            var cached = cache.TryLoad(cacheKey, _registry);
             if (cached != null)
                 return new ModLoadResult { Database = cached, Report = report, LoadOrder = ids, FromCache = true, Hash = hash };
         }
@@ -118,7 +124,14 @@ public sealed class ModLoader(ContentTypeRegistry? registry = null, ContentVocab
         db.Materialize(report);
         ContentValidator.Validate(db, vocabulary, report);
 
-        if (cache != null && hash != null && !report.HasErrors) cache.Store(hash, db);
+        if (cache != null && cacheKey != null && !report.HasErrors)
+        {
+            try { cache.Store(cacheKey, db); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException)
+            {
+                report.Warning(null, $"Could not write the content cache ({ex.Message}); content was loaded without it.");
+            }
+        }
         return new ModLoadResult { Database = db, Report = report, LoadOrder = ids, Hash = hash };
     }
 
