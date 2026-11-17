@@ -24,13 +24,6 @@ public sealed class Ground
             }
     }
 
-    private PixelBuffer GrassBase(int s, int shift = 0)
-    {
-        var b = New();
-        Fill(b, R["grass"], 7, s, new[] { .33, .6, .85 }, .65);
-        return b;
-    }
-
     public PixelBuffer GrassLong(int v)
     {
         var b = New(); int s = 211 + v * 9;

@@ -55,10 +55,13 @@ public sealed class Walls
         {
             case "wattle":
             {
-                uint c = Hash(x, fy, 17) < .22 ? P["pl1"] : P["pl2"];
-                foreach (int px in new[] { 0, 10, 21, 30 }) if (x >= px && x < px + 2) c = P["w2"];
-                if (fy < 2) c = P["w2"]; if (fy >= 21) c = P["w1"];
-                for (int p = 0; p < 4; p++) { int x0 = 3 + p * 8, y0 = 4 + (p % 2) * 7; if (x >= x0 && x < x0 + 6 && fy >= y0 && fy < y0 + 7 && x != 10 && x != 21) c = (x + fy) % 2 == 0 ? P["d3"] : P["d2"]; }
+                // daub panels between timber studs; one weathered patch per bay shows the woven hazel underneath
+                uint c = Hash(x, fy, 17) < .2 ? P["pl1"] : Hash(x, fy, 18) < .1 ? P["pl3"] : P["pl2"];
+                bool stud = x < 2 || (x >= 15 && x < 17) || x >= 30;
+                if (stud) return x % 15 == 0 || x == 30 ? P["w3"] : P["w2"];
+                bool inP1 = x >= 4 && x < 12 && fy >= 9 && fy < 17, inP2 = x >= 20 && x < 27 && fy >= 4 && fy < 11;
+                if (inP1 || inP2) { int lx = inP1 ? x - 4 : x - 20, ly = inP1 ? fy - 9 : fy - 4; bool edge = lx == 0 || ly == 0; c = edge ? P["pl1"] : (lx + ly) % 2 == 0 ? P["d3"] : P["d2"]; if ((lx + 2 * ly) % 4 == 0 && !edge) c = P["d1"]; }
+                if (fy < 2) c = P["w2"]; else if (fy == 2) c = P["w1"]; if (fy >= 22) c = fy == 22 ? P["w2"] : P["w1"];
                 return c;
             }
             case "timber":
@@ -123,17 +126,19 @@ public sealed class Walls
     private uint Hi(string mat, int i) => mat switch { "wattle" => P["d4"], "timber" => P["w5"], "stone" or "town" => P["s4"], "brick" => P["bk4"], _ => P["w5"] };
     private uint Lo(string mat) => mat switch { "wattle" => P["d1"], "timber" => P["w1"], "stone" or "town" => P["s1"], "brick" => P["bk1"], _ => P["w1"] };
 
-    /// <summary>Crenellation: merlons along open edges of the walkway, offset so neighbours line up.</summary>
+    /// <summary>Crenellation: merlons (8 px blocks, 8 px gaps) along the open edges of the walkway; neighbours line up because the period divides 32.</summary>
     private uint TownTop(int x, int y, bool nC, bool sC, bool eC, bool wC, uint walk)
     {
-        bool Merlon(int along) => (along / 6) % 2 == 0;
-        // front parapet (south edge of the top strip, only when the face is shown)
-        if (!sC && y >= 3 && y <= 6 && Merlon(x)) return y == 3 ? P["s5"] : y == 6 ? P["s2"] : (x % 6 == 0 ? P["s4"] : P["s3"]);
-        if (!sC && y >= 3 && y <= 6) return y == 3 ? P["s2"] : walk;          // crenel gap: walkway seen low
-        if (!nC && y >= 2 && y <= 4 && sC) return walk;
-        if (!nC && !sC && y >= 1 && y <= 2 && Merlon(x + 3)) return y == 1 ? P["s5"] : P["s3"];
-        if (!wC && x >= 2 && x <= 5 && sC && Merlon(y)) return x == 2 ? P["s5"] : x == 5 ? P["s2"] : P["s4"];
-        if (!eC && x >= 26 && x <= 29 && sC && Merlon(y + 3)) return x == 26 ? P["s4"] : x == 29 ? P["s1"] : P["s3"];
+        bool Merlon(int along) => (along / 8) % 2 == 0;
+        uint M(int d, int len, int i) => d == 0 ? P["s5"] : d == len - 1 ? P["s1"] : d == len - 2 ? P["s2"] : i % 8 == 0 ? P["s4"] : i % 8 == 7 ? P["s2"] : P["s3"];
+        if (!sC && y >= 2)                                                   // front parapet, nearest the viewer
+        {
+            if (Merlon(x)) return M(y - 2, 6, x);
+            return y >= 6 ? P["s1"] : y == 2 ? P["s1"] : P["s2"];            // crenel: dark notch down to the walkway
+        }
+        if (!nC && !sC && y <= 3 && y >= 1 && Merlon(x + 8)) return y == 1 ? P["s5"] : y == 3 ? P["s2"] : P["s3"];   // back parapet
+        if (sC && !wC && x >= 1 && x <= 5) return Merlon(y) ? (x == 1 ? P["s5"] : x == 5 ? P["s1"] : x == 4 ? P["s2"] : P["s4"]) : (x == 5 ? P["s1"] : P["s2"]);
+        if (sC && !eC && x >= 26 && x <= 30) return Merlon(y + 8) ? (x == 26 ? P["s4"] : x == 30 ? P["s1"] : x == 29 ? P["s2"] : P["s3"]) : (x == 26 ? P["s1"] : P["s2"]);
         return walk;
     }
 
@@ -245,11 +250,11 @@ public sealed class Walls
         var b = Ground.New(); int s = 601 + v * 5;
         for (int y = 0; y < 32; y++) for (int x = 0; x < 32; x++) { double n = Hash(x, y, s); b.Set(x, y, n < .5 ? P["d2"] : n < .85 ? P["d3"] : P["d1"]); }
         var r = Rng(s);
-        for (int i = 0; i < 48; i++)
+        for (int i = 0; i < 40; i++)
         {
-            int x = (int)(r() * 28), y = (int)(r() * 30), l = 3 + (int)(r() * 4), dy = r() < .5 ? -1 : (r() < .5 ? 0 : 1); var c = P[i % 3 == 0 ? "ln2" : i % 3 == 1 ? "au2" : "au3"];
+            int x = (int)(r() * 28), y = (int)(r() * 30), l = 3 + (int)(r() * 4), dy = r() < .5 ? -1 : (r() < .5 ? 0 : 1); var c = P[i % 4 == 0 ? "ln2" : i % 4 == 3 ? "au3" : i % 2 == 0 ? "d4" : "au1"];
             for (int k = 0; k < l; k++) b.Set(x + k, y + (dy * k) / 3, c);
-            if (i % 5 == 0) b.Set(x + l / 2, y + 1, P["au1"]);
+            if (i % 5 == 0) b.Set(x + l / 2, y + 1, P["d1"]);
         }
         return b;
     }

@@ -19,7 +19,8 @@ if (args.Length == 0 || args[0] is "-h" or "--help")
         Ravensguard.Art - sprite baker
           bake     [--out art/out] [--out-game dir] [--palette path]   write PNG atlases + index.json (--out-game also copies them to the game's assets/art)
           validate [--palette path]                    check palette use, sizes, outlines (exit 1 on failure)
-          preview  [--out art/out/preview.png]         2x contact sheet of all sprites
+          preview  [--out art/out/preview.png] [--set v2] [--filter id-prefix,..] [--scale 2] [--width 1500]   contact sheet (--set v2: tileset v2 only)
+          scene    [--out dir] [--scale 2]             village-corner composites scene-summer.png / scene-winter.png (season recolour demo)
           rig      [--out art/out] [--out-game dir]    bake the posed paper-doll rig: rig_32x64.png + rig_index.json
           rig-preview [--out path] [--scale 3] [--outfits soldier,peasant] [--cols idle:0,walk:1,..]   contact sheet of rig outfits, 4 directions
         """);
@@ -91,7 +92,7 @@ switch (args[0])
             var gd = Rel(og, ".");
             Directory.CreateDirectory(gd);
             foreach (var atlas in defs.Select(d => d.Atlas).Distinct()) File.Copy(Path.Combine(outDir, atlas + ".png"), Path.Combine(gd, atlas + ".png"), true);
-            File.Copy(Path.Combine(outDir, "index.json"), Path.Combine(gd, "index.json"), true);
+            foreach (var f in new[] { "index.json", "season_ramps.json", "season_ramps.png" }) File.Copy(Path.Combine(outDir, f), Path.Combine(gd, f), true);
             Console.WriteLine($"copied sprite atlases + index.json to {gd}");
         }
         return 0;
@@ -99,8 +100,20 @@ switch (args[0])
     case "preview":
     {
         var outPath = Rel(Opt(args, "--out"), Path.Combine(root, "art", "out", "preview.png"));
-        Png.Write(outPath, Preview.Compose(defs, cache));
+        var shown = defs;
+        if (Opt(args, "--set") == "v2") shown = defs.Where(d => CatalogV2.Atlases.Contains(d.Atlas)).ToList();
+        if (Opt(args, "--filter") is { } flt) { var pre = flt.Split(','); shown = shown.Where(d => pre.Any(p => d.Id.StartsWith(p))).ToList(); }
+        Png.Write(outPath, Preview.Compose(shown, cache, int.Parse(Opt(args, "--scale") ?? "2"), int.Parse(Opt(args, "--width") ?? "1500")));
         Console.WriteLine($"wrote {outPath}");
+        return 0;
+    }
+    case "scene":
+    {
+        var errs = Validator.Validate(defs, pal, cache);
+        if (errs.Count > 0) { foreach (var e in errs) Console.Error.WriteLine("FAIL " + e); return 1; }
+        var dir = Rel(Opt(args, "--out"), Path.Combine(root, "art", "out"));
+        Scene.Write(pal, cache, dir, int.Parse(Opt(args, "--scale") ?? "2"));
+        Console.WriteLine($"wrote scene-summer/autumn/winter.png to {dir}");
         return 0;
     }
     default:

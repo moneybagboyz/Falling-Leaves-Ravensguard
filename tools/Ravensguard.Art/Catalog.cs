@@ -2,14 +2,14 @@ using Ravensguard.Art.Sprites;
 
 namespace Ravensguard.Art;
 
-public enum SpriteKind { Terrain, Object, Item, Person }
+public enum SpriteKind { Terrain, Object, Item, Person, Overlay }
 
 /// <param name="Id">Stable sprite id, e.g. "terrain.grass.0".</param>
 /// <param name="Atlas">Atlas name; file is {Atlas}.png.</param>
 /// <param name="Group">Preview grouping (rows break between groups).</param>
 public sealed record SpriteDef(string Id, SpriteKind Kind, string Atlas, string Group, int W, int H, Func<PixelBuffer> Build)
 {
-    public bool NeedsOutline => Kind != SpriteKind.Terrain;
+    public bool NeedsOutline => Kind is SpriteKind.Object or SpriteKind.Item or SpriteKind.Person;
 }
 
 public static class Catalog
@@ -116,6 +116,7 @@ public static class Catalog
             l.Add(new SpriteDef($"person.soldier_swap_{name}", SpriteKind.Person, "people_32x64", "person", 32, 64, () =>
                 pe.Person(red).Recolor(PixelBuffer.RampSwap(pal.R["red"], pal.R[tt]))));
         }
+        CatalogV2.Add(l, pal);
         return l;
     }
 }

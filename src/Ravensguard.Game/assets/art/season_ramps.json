@@ -1,0 +1,210 @@
+{
+  "note": "Author = summer row. Game recolour: for a texel equal to summer[family][i], output ramp[family][season][i] (one merged lookup). season_ramps.png row = familyIndex*4 \u002B seasonIndex, x = i*8.",
+  "seasons": [
+    "spring",
+    "summer",
+    "autumn",
+    "winter"
+  ],
+  "families": [
+    "grass",
+    "foliage",
+    "leaf",
+    "conifer"
+  ],
+  "swatch": 8,
+  "rows": [
+    {
+      "row": 0,
+      "family": "grass",
+      "season": "spring",
+      "ramp": "grass_spring",
+      "colors": [
+        "#3a6a2c",
+        "#4e8636",
+        "#66a03f",
+        "#88bd55"
+      ]
+    },
+    {
+      "row": 1,
+      "family": "grass",
+      "season": "summer",
+      "ramp": "grass_summer",
+      "colors": [
+        "#355c26",
+        "#447030",
+        "#56873a",
+        "#6f9e46"
+      ]
+    },
+    {
+      "row": 2,
+      "family": "grass",
+      "season": "autumn",
+      "ramp": "grass_autumn",
+      "colors": [
+        "#4c4c24",
+        "#6c6532",
+        "#8c7c3c",
+        "#aa9450"
+      ]
+    },
+    {
+      "row": 3,
+      "family": "grass",
+      "season": "winter",
+      "ramp": "grass_winter",
+      "colors": [
+        "#46503c",
+        "#5c6650",
+        "#747c64",
+        "#929883"
+      ]
+    },
+    {
+      "row": 4,
+      "family": "foliage",
+      "season": "spring",
+      "ramp": "foliage_spring",
+      "colors": [
+        "#3c6a2e",
+        "#588a3a",
+        "#7aaa48",
+        "#a0c968"
+      ]
+    },
+    {
+      "row": 5,
+      "family": "foliage",
+      "season": "summer",
+      "ramp": "foliage_summer",
+      "colors": [
+        "#2e4422",
+        "#3e5a2e",
+        "#527a3c",
+        "#7aa84c"
+      ]
+    },
+    {
+      "row": 6,
+      "family": "foliage",
+      "season": "autumn",
+      "ramp": "foliage_autumn",
+      "colors": [
+        "#8a3a14",
+        "#b8561c",
+        "#d98a2a",
+        "#e6b33a"
+      ]
+    },
+    {
+      "row": 7,
+      "family": "foliage",
+      "season": "winter",
+      "ramp": "foliage_winter",
+      "colors": [
+        "#34382c",
+        "#464a38",
+        "#5c604a",
+        "#767a60"
+      ]
+    },
+    {
+      "row": 8,
+      "family": "leaf",
+      "season": "spring",
+      "ramp": "leaf_spring",
+      "colors": [
+        "#4a8a3c",
+        "#6aac4a",
+        "#8ccc64",
+        "#b4e48a"
+      ]
+    },
+    {
+      "row": 9,
+      "family": "leaf",
+      "season": "summer",
+      "ramp": "leaf_summer",
+      "colors": [
+        "#3a6a2a",
+        "#56903a",
+        "#78b244",
+        "#9fcf5c"
+      ]
+    },
+    {
+      "row": 10,
+      "family": "leaf",
+      "season": "autumn",
+      "ramp": "leaf_autumn",
+      "colors": [
+        "#8a6a1c",
+        "#b88a2a",
+        "#e0b43c",
+        "#f2dc7a"
+      ]
+    },
+    {
+      "row": 11,
+      "family": "leaf",
+      "season": "winter",
+      "ramp": "leaf_winter",
+      "colors": [
+        "#4a4638",
+        "#605a48",
+        "#78705a",
+        "#968c74"
+      ]
+    },
+    {
+      "row": 12,
+      "family": "conifer",
+      "season": "spring",
+      "ramp": "conifer_spring",
+      "colors": [
+        "#1c3624",
+        "#284a30",
+        "#38603e",
+        "#4c7a50"
+      ]
+    },
+    {
+      "row": 13,
+      "family": "conifer",
+      "season": "summer",
+      "ramp": "conifer_summer",
+      "colors": [
+        "#1c3624",
+        "#284a30",
+        "#38603e",
+        "#4c7a50"
+      ]
+    },
+    {
+      "row": 14,
+      "family": "conifer",
+      "season": "autumn",
+      "ramp": "conifer_autumn",
+      "colors": [
+        "#26382a",
+        "#34502f",
+        "#48683a",
+        "#5e8048"
+      ]
+    },
+    {
+      "row": 15,
+      "family": "conifer",
+      "season": "winter",
+      "ramp": "conifer_winter",
+      "colors": [
+        "#26382a",
+        "#34502f",
+        "#48683a",
+        "#5e8048"
+      ]
+    }
+  ]
+}

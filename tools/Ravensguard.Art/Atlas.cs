@@ -31,6 +31,8 @@ public static class Atlas
         var json = JsonSerializer.Serialize(new { atlases, sprites }, new JsonSerializerOptions { WriteIndented = true });
         File.WriteAllText(Path.Combine(outDir, "index.json"), json + "\n");
 
+        Sprites.Seasons.Export(pal, outDir);
+
         // palette export: swatch strip + ramps for shader lookup tables
         var names = pal.Colors.Keys.ToList();
         var sw = new PixelBuffer(names.Count * 8, 8);

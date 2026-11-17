@@ -35,7 +35,7 @@ public static class Autotile2
     private static int Rag(int along, int side, int seed) => 3 + (int)(Hash(along / 2, side, seed) * 3);
 
     /// <summary>Visual spec of a boundary line: top-strip half width, face height, colours as functions of position.</summary>
-    public sealed record LineStyle(int Tw, int Y0, int F, Func<int, int, bool, int, uint> Top, Func<int, int, uint> Face, uint Shadow);
+    public sealed record LineStyle(int Tw, int Y0, int F, Func<int, int, bool, int, uint> Top, Func<int, int, uint> Face, uint Shadow, uint Outline);
 
     public static PixelBuffer BuildLine(PixelBuffer grass, LineStyle st, int mask)
     {
@@ -57,7 +57,7 @@ public static class Autotile2
             for (int x = 0; x < 32; x++)
             {
                 if (T(x, y)) continue;
-                int d = 0; for (int k = 1; k <= st.F + 2 && d == 0; k++) if (T(x, y - k) || (k <= 2 && T(x - 1, y - k + 1))) d = k;
+                int d = 0; for (int k = 1; k <= st.F + 3 && d == 0; k++) if (T(x, y - k) || (k <= 2 && T(x - 1, y - k + 1))) d = k;
                 if (d == 0) continue;
                 if (d <= st.F) { if (T(x, y - d)) b.Set(x, y, st.Face(x, d - 1)); else b.Set(x, y, st.Shadow); }
                 else b.Set(x, y, st.Shadow);
@@ -70,6 +70,12 @@ public static class Autotile2
                 int lvl = !T(x, y - 1) ? 1 : (!T(x + 1, y) ? -1 : 0);
                 b.Set(x, y, st.Top(x, y, vert, lvl));
             }
+        // dark outline around the raised shape (same 1 px `out` ring the props use) so it reads against grass of any season
+        bool Shape(int x, int y) { if (T(x, y)) return true; for (int k = 1; k <= st.F; k++) if (T(x, y - k)) return true; return false; }
+        var ring = new List<(int, int)>();
+        for (int y = 0; y < 32; y++) for (int x = 0; x < 32; x++)
+            if (!Shape(x, y) && (Shape(x - 1, y) || Shape(x + 1, y) || Shape(x, y - 1) || Shape(x, y + 1))) ring.Add((x, y));
+        foreach (var (x, y) in ring) b.Set(x, y, st.Outline);
         return b;
     }
 
@@ -77,9 +83,9 @@ public static class Autotile2
     {
         var P = pal.P; var R = pal.R; var f = R["foliage_summer"]; var lt = R["leaf_summer"];
         return new LineStyle(6, 9, 7,
-            (x, y, v, lvl) => { double n = Vn(x / 3.0, y / 3.0, 801) * .6 + Hash(x, y, 802) * .4; int k = n < .3 ? 0 : n < .6 ? 1 : n < .88 ? 2 : 3; if (lvl > 0) k = Math.Min(3, k + 1); if (lvl < 0) k = Math.Max(0, k - 1); return Hash(x, y, 803) < .03 ? P["lf3"] : f[k]; },
-            (x, d) => { double h = Hash(x, d, 804); int k = d < 2 ? 1 : d < 5 ? 0 : 0; if (h < .2) k = 1; if (h > .93) k = 2; return h > .985 ? P["r3"] : f[k]; },
-            P["g1"]);
+            (x, y, v, lvl) => { double n = Vn(x / 3.0, y / 3.0, 801) * .6 + Hash(x, y, 802) * .4; int k = n < .3 ? 1 : n < .62 ? 2 : 3; if (lvl < 0) k = Math.Max(1, k - 1); return Hash(x, y, 803) < .03 ? P["lf3"] : f[k]; },
+            (x, d) => { double h = Hash(x, d, 804); int k = d < 2 ? 1 : 0; if (h < .12) k = 1; if (h > .95) k = 2; return h > .985 ? P["r3"] : f[k]; },
+            P["g1"], P["out"]);
     }
 
     public static LineStyle Wattle(Palette pal)
@@ -88,7 +94,7 @@ public static class Autotile2
         return new LineStyle(2, 13, 9,
             (x, y, v, lvl) => (x % 8 == 3 || x % 8 == 4) && !v ? w[3] : v ? ((y % 8 == 3 || y % 8 == 4) ? w[3] : d[lvl > 0 ? 3 : 2]) : d[lvl > 0 ? 3 : 2],
             (x, dd) => { if (x % 8 == 3) return w[2]; if (x % 8 == 4) return w[1]; if (x % 8 == 2) return w[3]; return ((x + dd) % 2 == 0) ? (dd % 2 == 0 ? d[3] : d[2]) : d[dd % 3 == 0 ? 1 : 2]; },
-            P["g1"]);
+            P["g1"], P["out"]);
     }
 
     public static LineStyle FieldWall(Palette pal)
@@ -97,7 +103,7 @@ public static class Autotile2
         return new LineStyle(4, 11, 7,
             (x, y, v, lvl) => { int i = v ? y % 8 : x % 8; int k = 3; if (i == 0) k = 1; else if (i == 1) k = 4; if (Hash(x, y, 811) < .12) k = 2; if (Hash(x, y, 812) < .03) return P["g3"]; return s[Math.Clamp(k + (lvl > 0 ? 0 : 0), 0, 4)]; },
             (x, d) => { int row = d / 3; int off = row * 4; int i = (x + off) % 8; if (i == 7) return s[0]; if (d % 3 == 2) return s[1]; int k = d % 3 == 0 ? 3 : 2; if (Hash(x + off, d, 813) < .1) k = 1; return s[k]; },
-            P["g1"]);
+            P["g1"], P["out"]);
     }
 
     public static LineStyle Palisade(Palette pal)
@@ -106,6 +112,6 @@ public static class Autotile2
         return new LineStyle(3, 9, 12,
             (x, y, v, lvl) => { int i = v ? y % 4 : x % 4; return i == 0 ? w[1] : i == 1 ? w[4] : i == 2 ? w[3] : w[2]; },
             (x, d) => { int i = x % 4; if (i == 0) return d > 10 ? P["out"] : w[0]; if (d == 6 || d == 7) return i == 1 ? P["br3"] : P["br2"]; int k = i == 1 ? 3 : i == 2 ? 2 : 1; if (Hash(x, d, 821) < .1) k = Math.Max(0, k - 1); return w[k]; },
-            P["g1"]);
+            P["g1"], P["out"]);
     }
 }

@@ -27,7 +27,7 @@ dotnet run --project tools/Ravensguard.Art -- rig-preview --out art/out/rig.png 
 
 ## Output
 `terrain_32.png`, `objects_32.png`, `objects_64.png` (stalls, cart, trees), `items_16.png`, `people_32x64.png`,
-`index.json` (`sprites[id] = {atlas, x, y, w, h}`), `palette.png`, `palette_ramps.json`.
+`terrain2_32.png`, `roofs_32.png`, `overlays_32.png`, `props_32.png`, `props_64.png`, `season_ramps.{json,png}`, `index.json` (`sprites[id] = {atlas, x, y, w, h}`), `palette.png`, `palette_ramps.json`.
 
 Sprite ids: `terrain.grass.0`, `object.anvil`, `item.sword`, `person.smith`, `autotile.path_dirt.ne` ...
 
@@ -70,6 +70,44 @@ is 16 front/back, 15 side). Also `order`, `outfits`, `actions` (frame counts) an
 Validation: palette-only pixels for every layer sprite; every outfit composite (6 outfits x 3 views x 20 frames) has an outline ring and no open
 edges. idle, walk and jog must also stay inside the 32x64 frame (error). Combat and fall frames may touch the frame edge (counted as a warning):
 a sword reach does not fit 32 px, and the last fall frame is a collapse onto the knees because a body lying flat is wider than the frame.
+
+## Tileset v2 (Phase 1)
+Sources: `Sprites/Ground.cs` (ground), `Walls.cs` (walls, features, floors), `Autotile2.cs` (shores, hedge, fences, walls, palisade), `Roofs.cs`, `Weather.cs`,
+`Props.cs` (props, trees), `Seasons.cs`; the list is `CatalogV2.cs`. Atlases: `terrain2_32` (opaque 32x32), `roofs_32`, `overlays_32` (transparent, palette-only,
+no outline rule: `SpriteKind.Overlay`), `props_32`, `props_64` (trees 64x80, stalls/carts/barrow 64x48 in 64x80 cells). Ids follow the existing scheme.
+- Ground: `terrain.grass_long.*`, `meadow.*`, `farm.{ploughed,sown,young,wheat_ripe,barley_ripe,stubble,fallow}`, `mud`, `puddle`, `track.{h,v}*`, `sand`, `gravel`, `rock`,
+  `scree`, `forest_floor`, `leaf_litter`, `peat`, `marsh`, `reeds`, `water_shallow`, `water_deep`, `ice`. Floors: `floor_{rush,brick,tile,plank_v,flag_irregular}`, `stairs_stone_*`.
+- Walls: `terrain.wall.<mat>.<mask>` for mat = wattle timber stone brick palisade town, 16 masks each (N=1 E=2 S=4 W=8, set = neighbour is the same wall, name via
+  `Autotile.MaskName`). Cells are full 1 m: south neighbour is wall -> all top surface; otherwise 8 px top strip over a 24 px face. Unconnected sides get a dark edge, so
+  ends/corners/T/crossings read. `terrain.feat.<mat>.<door_closed|door_open|window_shuttered|window_open|window_glazed|arrow_slit|gate_closed|gate_open>` replace a straight
+  east-west face cell (mask `ew`); the town wall has crenellated merlons on every open edge.
+- Autotile sets (16 masks, `autotile.<set>.<mask>`): `shore_water` (grass/sand lip/shallows/deep), `bank_river` (mud bank), `track_packed`, `mud_patch`, `farm_field`, plus the line sets
+  `hedge`, `fence_wattle`, `wall_field`, `palisade` (opaque, drawn over grass, 1 px outline, top + front face). v1 sets `path_dirt`, `road_cobble`, `pond_water` are unchanged.
+- Roofs `roof.<thatch|shingle|slate|tile>.<n|e|s|w|ridge_h|ridge_v>`: n/e/s/w descend toward that side (ridge opposite); ridge_* is a one-cell-wide roof. Field/Command zoom and the world map only.
+- Overlays: `overlay.snow.0-5` (0,1 full cover, 2,3 patchy, 4,5 dusting; tileable), `overlay.puddle.0-2`, `overlay.splash.0-3`, `overlay.rain.0-3`, `overlay.snowfall.0-3` (4-frame loops, 8 px per frame),
+  `overlay.fog.0-1` (dithered, draw at ~40-60 % alpha). Lightning is a full-screen flash, no sprite.
+- Props: see `CatalogV2.cs`; trees `object.tree.<oak|ash|birch|pine|apple>.<summer|autumn|winter>` (autumn is the summer sprite through the season swap, winter is bare / snow-laden pine),
+  `*_snow` variants for haystack, woodpile, boulder, bush, sheaves, headstone, barrels.
+
+### Seasons (palette ramp rows)
+Sprites are authored in the summer colours. `season_ramps.json` / `season_ramps.png` (also copied to the game's `assets/art/`) list, per family and season, four colours; entry `i` of the
+summer row maps to entry `i` of the target row. Families (row = familyIndex*4 + seasonIndex, seasons spring=0 summer=1 autumn=2 winter=3):
+
+| family | rows | used by |
+|---|---|---|
+| grass 0 | 0-3 | all grass-based terrain and autotile grass bases, hedge-line grass, meadow, long grass, bog tussocks |
+| foliage 1 | 4-7 | oak, hedges, bushes (`object.bush_*`) |
+| leaf 2 | 8-11 | ash, birch, apple |
+| conifer 3 | 12-15 | pine (autumn = winter = a duller green; snow comes from the `_winter` sprite / snow overlay) |
+
+How the game picks a row: take the season from the calendar (spring Mar-May, summer Jun-Aug, autumn Sep-Nov, winter Dec-Feb). Use ONE merged lookup (all families at once, keys are the summer
+colours) in the shader or when baking an atlas copy. For smooth transitions blend by tile: give every tile/tree a stable hash `h` in [0,1) and use the next season's row once the
+fraction of the season elapsed exceeds `h` (so autumn creeps in tile by tile). Winter also switches tree sprites to `.winter`, swaps `farm.*` crops to `stubble`/`ploughed`, shows
+`overlay.snow.*` on top (full on grass, dusting on roads and fields), and recolours water with the `water -> ice` ramp swap (or uses `terrain.ice.*`). `Seasons.Apply(pal, sprite, season)` does the same in C#;
+`scene` renders the demo.
+
+`dotnet run --project tools/Ravensguard.Art -- scene --out art/out` writes `scene-summer.png`, `scene-autumn.png`, `scene-winter.png` (a village corner built from the baked sprites).
+`preview --set v2 [--filter prefix,prefix] [--scale 4]` shows only the new atlases.
 
 ## Not yet
 Remaining actions (parry, stagger, crawl, carry, work), wound overlays on the rig, hair/skin variants beyond the recolour hook, horses and large

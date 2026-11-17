@@ -36,10 +36,10 @@ public sealed class Roofs
                 int row = u / 4, off = (row % 2) * 4, i = (v + off) % 8, j = u % 4; if (j == 3 || i == 7) return 0;
                 int k = Hash((v + off) / 8, row, 1005) < .3 ? 2 : 1; if (j == 0 || i == 0) k = Math.Min(3, k + 1); return k;
             }
-            default: // pan tiles: ribbed columns and scalloped courses
+            default: // pan tiles: ribbed columns, staggered grooves, overlapping courses
             {
-                int row = u / 7, j = u % 7, i = v % 6; int k = i == 0 ? 0 : i == 1 ? 3 : i == 5 ? 1 : 2;
-                if (j == 6) k = 0; else if (j == 5 && i > 0) k = Math.Max(0, k - 1); if (h < .07) k = Math.Max(0, k - 1); if ((row + i) % 4 == 0 && j == 0) k = Math.Min(3, k + 1);
+                int row = u / 9, j = u % 9, i = (v + (row % 2) * 4) % 8; int k = i == 0 ? 0 : i <= 2 ? 3 : i <= 5 ? 2 : 1;
+                if (j == 8) k = 0; else if (j == 7) k = Math.Max(0, k - 1); if (h < .06) k = Math.Max(0, k - 1);
                 return k;
             }
         }
@@ -70,7 +70,8 @@ public sealed class Roofs
                 {
                     bool apex = kind == "ridge_h" ? (y == 15 || y == 16) : kind == "ridge_v" ? (x == 15 || x == 16) : false;
                     c = ramp[apex ? 3 : Math.Clamp(1 + lit + (Hash(x, y, 1009) < .3 ? 1 : 0), 0, 3)];
-                    if (mat == "thatch") c = ramp[Hash(x, y, 1011) < .5 ? 3 : 2];
+                    if (kind is "s" or "e" or "n" or "w" && ((kind == "s" && y == 2) || (kind == "e" && x == 2) || (kind == "n" && y == 29) || (kind == "w" && x == 29))) c = ramp[0];   // shadow line under the ridge cap
+                    if (mat == "thatch" && c != ramp[0]) c = ramp[Hash(x, y, 1011) < .5 ? 3 : 2];
                 }
                 if (eave) c = (kind == "n" ? y == 0 : kind == "w" ? x == 0 : kind == "s" ? y == 31 : kind == "e" ? x == 31 : (kind == "ridge_h" ? (y == 0 || y == 31) : (x == 0 || x == 31))) ? P["out"] : ramp[0];
                 b.Set(x, y, c);

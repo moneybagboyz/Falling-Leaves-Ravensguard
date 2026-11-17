@@ -14,25 +14,25 @@ public sealed class Weather
     public PixelBuffer Snow(int v)
     {
         var b = new PixelBuffer(32, 32); int s = 901 + v * 11; var sn = R["snow"];
-        double cover = v < 2 ? .96 : v < 4 ? .55 : .26;
         for (int y = 0; y < 32; y++)
             for (int x = 0; x < 32; x++)
             {
+                double n = Periodic(x, y, s, 4) * .75 + Hash(x, y, s) * .25;           // tileable: seams between neighbouring tiles disappear
                 bool has;
-                double n = Vn(x / 6.0, y / 6.0, s) * .75 + Hash(x, y, s) * .25;
-                if (v < 2) has = Hash(x, y, s + 3) < cover && (Vn(x / 3.0, y / 3.0, s + 9) < .93);
-                else if (v < 4) has = n > .5 || (n > .42 && Hash(x, y, s + 5) < .5);
-                else has = Hash(x, y, s + 1) < .09 && Vn(x / 5.0, y / 5.0, s + 2) > .35 || Hash(x, y, s + 8) < .02;
+                if (v < 2) has = Periodic(x, y, s + 9, 8) < .94 || Hash(x, y, s + 3) < .5;
+                else if (v < 4) has = n > .5 || (n > .43 && Hash(x, y, s + 5) < .5);
+                else has = (Hash(x, y, s + 1) < .10 && Periodic(x, y, s + 2, 4) > .35) || Hash(x, y, s + 8) < .015;
                 if (!has) continue;
-                int k = 2; double lit = Vn(x / 4.0, y / 4.0, s + 4);
-                if (lit < .3) k = 1; else if (lit > .78) k = 3;
+                double lit = Periodic(x, y, s + 4, 4); int k = lit < .16 ? 1 : lit > .82 ? 3 : 2;
+                if (v < 2 && Hash(x, y, s + 6) < .035) k = k == 2 ? 3 : 2;           // fine grain
                 if (v >= 4) k = Hash(x, y, s + 2) < .5 ? 3 : 2;
                 b.Set(x, y, sn[k]);
             }
-        // shade the lower-right rim of each snow patch so drifts read as raised
+        // shade the lower-right rim of each patch so drifts read as raised
         var c = b.Clone();
-        for (int y = 0; y < 32; y++) for (int x = 0; x < 32; x++)
-            if (c.Opaque(x, y) && v < 4 && (!c.Opaque(x, y + 1) || !c.Opaque(x + 1, y)) && y < 31 && x < 31) b.Set(x, y, sn[1]);
+        if (v >= 2 && v < 4)
+            for (int y = 0; y < 31; y++) for (int x = 0; x < 31; x++)
+                if (c.Opaque(x, y) && (!c.Opaque(x, y + 1) || !c.Opaque(x + 1, y))) b.Set(x, y, sn[1]);
         return b;
     }
 
