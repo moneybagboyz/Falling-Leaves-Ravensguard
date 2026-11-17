@@ -297,7 +297,7 @@ public class SaveTests(ITestOutputHelper output)
         sw.Stop();
         var size = new FileInfo(p).Length;
         output.WriteLine($"snapshot capture: {captureMs} ms; total save: {sw.ElapsedMilliseconds} ms; file: {size / 1024} KB");
-        Assert.True(sw.Elapsed.TotalSeconds < 3, $"save took {sw.Elapsed.TotalSeconds}s");
+        Assert.True(sw.Elapsed.TotalMilliseconds < TestBudget.Ms(3000), $"save took {sw.Elapsed.TotalSeconds}s");
         Assert.True(size < 20 * 1024 * 1024);
 
         sw.Restart();
