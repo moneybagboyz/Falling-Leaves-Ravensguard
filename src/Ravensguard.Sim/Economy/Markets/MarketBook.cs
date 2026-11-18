@@ -176,9 +176,11 @@ public sealed class MarketBook
     private void AddLot(MarketParty owner, ushort good, long qty, int floor, int day, bool merchant)
     {
         var gb = Goods[good];
-        if (merchant)
-            foreach (var l in gb.Lots)
-                if (l.IsMerchant && l.Owner.Id == owner.Id && l.FloorPermille == floor) { l.Qty += qty; gb.StockUnits += qty; return; }
+        // one lot per owner and good (decision I40): a merchant's at the same floor; a producer's new goods join the lot it already has on the book, at that lot's
+        // floor and listing day (they come down and go home with it). A household that sold every day had a lot for each day, and the books carried tens of
+        // thousands of lots that every sale walked through
+        foreach (var l in gb.Lots)
+            if (l.Owner.Id == owner.Id && l.IsMerchant == merchant && (!merchant || l.FloorPermille == floor)) { l.Qty += qty; gb.StockUnits += qty; return; }
         var lot = new StockLot { Id = _nextLot++, Owner = owner, Good = good, Qty = qty, FloorPermille = floor, ListedDay = day, IsMerchant = merchant };
         int pos = gb.Lots.Count;
         while (pos > 0 && (gb.Lots[pos - 1].FloorPermille > floor)) pos--;

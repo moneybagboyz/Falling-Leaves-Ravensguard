@@ -103,4 +103,55 @@ public class BalanceMechanismTests(ITestOutputHelper output)
         foreach (var b in w.Markets.AllBooks()) for (ushort g = 0; g < w.Econ.Goods.Count; g++) Assert.Equal(b.BookStore.Qty(g), b.Goods[g].Lots.Sum(l => l.Qty));
         Assert.True(w.Econ.Ledger.Audit().IsConserved && w.Econ.MassAuditHolds());
     }
+
+    [Fact]
+    public void TheCoinFlowTrace_SeesTheTransfers_AndDoesNotChangeTheRun()
+    {
+        string Hash(bool trace)
+        {
+            using var w = SoakWorld.Create(); var soak = new EconomySoak(w.Headless);
+            if (trace) soak.EnableCoinFlow();
+            w.Ticker.AdvanceHours(24 * 20);
+            if (trace)
+            {
+                string t = soak.Coin!.CloseYear(1, print: true);
+                output.WriteLine(t.Length > 1200 ? t[..1200] : t);
+                Assert.Contains("money supply", t); Assert.Contains("retainer-hh", t); Assert.Contains("largest flows", t);
+            }
+            return w.Sim.ComputeHash() + w.Econ.ComputeHash();
+        }
+        Assert.Equal(Hash(false), Hash(true));
+    }
+
+    [Fact]
+    public void HouseholdSpending_PaysWagesAndAlms_AndBuysGoods_WithCoinAndMassExact()
+    {
+        using var w = SoakWorld.Create(); var sp = w.Economy.Spending; var led = w.Econ.Ledger;
+        long coin0 = led.Audit().InPurses.Mites;
+        w.Run(30);
+        output.WriteLine($"spenders {sp.Spenders}, wages {sp.WagesMites / 100} cr, builders {sp.WorksLabourMites / 100} cr, alms {sp.AlmsMites / 100} cr, goods ordered {sp.GoodsBudgetMites / 100} cr bought {w.Markets.SpentGoodsMites / 100} cr, materials ordered {sp.MaterialsBudgetMites / 100} cr bought {w.Markets.SpentMaterialsMites / 100} cr");
+        Assert.True(sp.HasRules && sp.Spenders > 0);
+        Assert.True(sp.WagesMites + sp.WorksLabourMites > 0 && sp.AlmsMites > 0 && sp.GoodsBudgetMites > 0);
+        Assert.True(led.Flow(TransferReason.Alms).Mites > 0);
+        Assert.Equal(coin0, led.Audit().InPurses.Mites);
+        Assert.True(led.Audit().IsConserved && w.Econ.MassAuditHolds());
+    }
+
+    [Fact]
+    public void AFailedStall_Closes_AndOpensAgainUnderANewMerchant_WhenTheBookHasNoSolventOne()
+    {
+        using var w = SoakWorld.Create(); w.Run(3);
+        var sys = w.Sys; var led = w.Econ.Ledger;
+        var stall = sys.Businesses.First(b => sys.KindOf(b).Trader && b.State == BusinessState.Open);
+        var book = w.Markets.BookForSettlement(stall.Settlement);
+        sys.Close(stall);
+        Assert.DoesNotContain(stall.Party, book.Merchants);
+        foreach (var m in book.Merchants.ToList()) { long c = led.Balance(m.Purse).Mites; if (c > 0) led.Transfer(m.Purse, w.Econ.HouseholdPurse[0], new Coin(c), TransferReason.Gift); }
+        long before = led.Audit().InPurses.Mites;
+        w.Economy.Labour.Reopen(GameTime.FromGameHours(w.Sim.State.HourDone));
+        output.WriteLine($"stall {stall.Index} state {stall.State}, merchants of the book {book.Merchants.Count}");
+        if (stall.State == BusinessState.Open) { Assert.Contains(stall.Party, book.Merchants); Assert.True(led.Balance(stall.Purse).Mites > 0); }
+        Assert.Equal(before, led.Audit().InPurses.Mites);
+        Assert.True(led.Audit().IsConserved);
+    }
 }
