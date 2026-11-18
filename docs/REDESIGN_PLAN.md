@@ -1593,6 +1593,12 @@ Estimates assume one developer working with an AI assistant. Every phase ends in
 - 2,000 soldiers hold 60 fps on the reference PC.
 - You can lead levies against an army arriving by road and see the consequences.
 - An AI faction besieges and breaches your walls.
+- **War soak:** several realms at war across the continent for 25 years, with abstract armies on the road graph, levies, supply, foraging and sieges. Their consequences are visible:
+  - dearer bread along the march routes;
+  - unrest where purveyance was used;
+  - refugees, and depopulated border regions.
+
+  But there is no collapse: coin and mass are conserved, and the population recovers within about 15 years of peace. Every war's end traces to war-weariness, money or harvest in the chronicle.
 - Raiders land from a ship and you fight them on the beach and on the deck.
 
 ### Phase 8: Depth, onboarding, polish, 1.0 (8–12 months)
