@@ -17,7 +17,7 @@ public static class InputDefs
     static InputDefs()
     {
         const InputContext G = InputContext.Global, W = InputContext.World, C = InputContext.CombatStance,
-            S = InputContext.CalledShot, B = InputContext.Build, U = InputContext.Menu, E = InputContext.BlueprintEditor;
+            S = InputContext.CalledShot, B = InputContext.Build, U = InputContext.Menu, E = InputContext.BlueprintEditor, T = InputContext.Trade, R = InputContext.Mounted;
 
         // Global
         A(G, "console", Binding.P(Key.Quoteleft)); // physical: the backtick key position on any layout
@@ -52,6 +52,10 @@ public static class InputDefs
         A(W, "panel_chronicle", K(Key.H));
         A(W, "build", K(Key.B));
         A(W, "map", K(Key.M));
+        A(W, "cart_hitch", K(Key.U));       // horses-and-carts spec 6: hitch the nearest animal to the nearest cart, or unhitch the team
+        A(W, "cart_unload", K(Key.Y));      // drop 100 kg of the cart's load on the ground (a stuck cart)
+        A(W, "cart_reload", K(Key.Bracketright));
+        A(W, "cart_dig", K(Key.Bracketleft)); // a shovel under the wheel: a fifth off the mud
         A(W, "make", K(Key.N)); // crafting screen (basic-crafting spec 4.7); N is free in World, CombatStance, CalledShot and Build
         A(W, "camera_up", K(Key.Up));
         A(W, "camera_down", K(Key.Down));
@@ -73,6 +77,9 @@ public static class InputDefs
         A(W, "quicksave", K(Key.F5));
         A(W, "quickload", K(Key.F9));
         A(W, "report_bug", K(Key.F8));
+
+        // Mounted (the hero rides or drives; stacks on World): O toggles the walk, Shift is the gallop, E dismounts
+        A(R, "walk_toggle", K(Key.O));
 
         // Combat stance: the mouse becomes the weapon arm
         A(C, "move_up", K(Key.W));
@@ -150,6 +157,16 @@ public static class InputDefs
         A(U, "follow_effect", K(Key.D));
         A(U, "open_here", K(Key.O));
         A(U, "dev_blueprints", K(Key.B)); // dev-only entry: the blueprint editor (debug builds)
+
+        // Trade screen (trade-inventory-character spec 6, overview 5A): a modal context, so N and Tab mean something else here. Shift (x10) and Ctrl (all) are read with Left/Right.
+        A(T, "up", K(Key.Up));
+        A(T, "down", K(Key.Down));
+        A(T, "less", K(Key.Left));
+        A(T, "more", K(Key.Right));
+        A(T, "confirm", K(Key.Enter));
+        A(T, "pane", K(Key.Tab));
+        A(T, "notebook", K(Key.N));
+        A(T, "cancel", K(Key.Escape));
 
         // Blueprint editor (dev tool, plan 2.11). A standalone context like Menu: only Global stays live beside it.
         A(E, "primary", M(MouseButton.Left), M(MouseButton.Left, Mods.Shift)); // Shift on rectangles = outline only

@@ -1,5 +1,6 @@
 using Ravensguard.Content;
 using Ravensguard.Sim.Core;
+using Ravensguard.Sim.Economy;
 using Ravensguard.Sim.Goods;
 using Ravensguard.Sim.Carts;
 
@@ -22,6 +23,7 @@ public readonly record struct RideView(bool Mounted, bool Driving, bool Mounting
 public sealed class RideBook
 {
     public AnimalCatalog Breeds { get; }
+    public GoodCatalog Goods { get; }
     public VehicleCatalog Templates { get; }
     public AnimalTable Animals { get; }
     public VehicleTable Vehicles { get; }
@@ -29,7 +31,9 @@ public sealed class RideBook
     public ulong Seed { get; }
     public List<HorseLoan> Loans { get; } = [];
     /// <summary>Goods the hero has dropped from a stuck cart: a heap on the ground, counted by the mass ledger like any store, loaded back when the cart is free.</summary>
-    public Store Heap { get; }
+    public Store Heap => _heap ??= _openStore(HeapId, 0, 0);
+    private Store? _heap;
+    private readonly Func<EntityId, long, long, Store> _openStore;
 
     // ---- the hero's ride (saved)
     public EntityId Mounted, Driving, MountTarget;
@@ -48,17 +52,35 @@ public sealed class RideBook
     public Func<int> SlopeNow { get; set; } = () => 0;
     public Surface? SurfaceOverride;
 
+    /// <summary>True when the stores live in the economy (they are counted by its mass ledger and saved in its section); false for a book on a private goods catalog and ledger.</summary>
+    public bool Hosted { get; }
+    public static readonly EntityId HeapId = EntityId.MakeIn(IdKind.Other, 0, 0x7F0_0000);
+
+    /// <summary>The book of a running game: the vehicles' beds and the heap are stores of the economy, so every kilogram of cargo is in the mass ledger and in the economy's save.</summary>
+    public RideBook(ContentDatabase db, EconomyState econ, ulong seed)
+        : this(db, econ.Goods, (id, m, v) => econ.OpenStore(StoreKind.Open, id, m, v, enforce: true), seed, hosted: true) { }
+
+    /// <summary>A book on its own goods catalog and ledger (tests, tools): the stores are private.</summary>
     public RideBook(ContentDatabase db, GoodCatalog goods, MassLedger ledger, ulong seed)
+        : this(db, goods, PrivateStores(goods, ledger), seed, hosted: false) { }
+
+    private static Func<EntityId, long, long, Store> PrivateStores(GoodCatalog goods, MassLedger ledger)
     {
-        Breeds = AnimalCatalog.From(db); Templates = VehicleCatalog.From(db); Seed = seed;
-        Animals = new AnimalTable(Breeds); Vehicles = new VehicleTable(Templates, Animals, goods, ledger);
-        Heap = new Store(goods, ledger, StoreKind.Open, EntityId.MakeIn(IdKind.Other, 0, 0x7F0_0000));
+        var d = new Dictionary<EntityId, Store>();
+        return (id, m, v) => d.TryGetValue(id, out var s) ? s : d[id] = new Store(goods, ledger, StoreKind.Open, id, m, v, enforce: m > 0 || v > 0);
+    }
+
+    private RideBook(ContentDatabase db, GoodCatalog goods, Func<EntityId, long, long, Store> open, ulong seed, bool hosted)
+    {
+        Breeds = AnimalCatalog.From(db); Templates = VehicleCatalog.From(db); Seed = seed; Hosted = hosted; Goods = goods;
+        Animals = new AnimalTable(Breeds); Vehicles = new VehicleTable(Templates, Animals, goods, open);
+        _openStore = open;
     }
 
     public bool IsMounted => Mounted != EntityId.None;
     public bool IsDriving => Driving != EntityId.None;
     public bool Busy => MountLeftGs > 0 || DismountLeftGs > 0;
-    public bool IsEmpty => Animals.Count == 0 && Vehicles.Rows.Count == 0 && Herds.IsEmpty && Loans.Count == 0 && Heap.RowCount == 0;
+    public bool IsEmpty => Animals.Count == 0 && Vehicles.Rows.Count == 0 && Herds.IsEmpty && Loans.Count == 0 && (_heap == null || _heap.RowCount == 0);
     public Animal? MountedAnimal => IsMounted ? Animals.Find(Mounted) : null;
     public VehicleRow? DrivenVehicle => IsDriving ? Vehicles.Find(Driving) : null;
     public Surface Surface => SurfaceOverride ?? SurfaceNow();

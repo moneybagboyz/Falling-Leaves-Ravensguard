@@ -1252,7 +1252,11 @@ This section comes from a full read of the legacy code by four auditors (economy
       - **jaw and teeth:** a broken jaw stops eating solid food and speaking clearly;
       - **thumb and fingers**, grouped: grip, weapon handling and two-handed use;
       - **ears:** hearing, which matters for spotting and stealth.
-      Every finger, toe and tooth individually is not modelled.
+      - **nose:** a broken nose bleeds into the airway and slows stamina recovery;
+      - **collarbone:** broken, the arm can't be raised, so no overhead blows and the shield is held low;
+      - **pelvis:** a bone shell for the bladder and intestines; broken, you can't walk;
+      - **kneecaps:** broken, that leg can't bear weight.
+      The chin is part of the jaw. Cheeks and forehead are covered by the skull and face. Every finger, toe and tooth individually is not modelled.
     - **Soft tissue (decided with the user):**
       - **Ligaments** at the six main joints (shoulder, elbow, wrist, hip, knee, ankle): a torn ligament makes the joint unstable, slowing movement, weakening grip and giving a chance to fall under load.
       - **Separate motor and sensory nerves** in each limb section.

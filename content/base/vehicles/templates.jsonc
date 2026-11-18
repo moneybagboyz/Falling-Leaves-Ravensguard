@@ -8,7 +8,7 @@
   { "type": "vehicle_blueprint", "id": "cart", "name": "Cart", "base_speed_cmps": 250, "axle_limit_kg": 700, "turning_radius_dm": 40, "hitch": { "slots": 1, "kind": "shafts" }, "driver": 1, "passengers": 1, "caravan_def": "cart",
     "legend": { "f": ["frame_plank"], "W": ["wheel_spoked", "iron_tyre"], "a": ["axle_wood"], "B": ["frame_plank", "cargo_bed"], "S": ["frame_plank", "seat_bench"], "h": ["shaft_pair"] },
     "rows": [ "_BBB_", "WaBBW", "hSf_h" ], "sprite": "object.cart" },
-  { "type": "vehicle_blueprint", "id": "hay_wain", "name": "Hay wain", "base_speed_cmps": 220, "axle_limit_kg": 800, "turning_radius_dm": 60, "hitch": { "slots": 2, "kind": "pole_yoke" }, "driver": 1, "passengers": 1,
+  { "type": "vehicle_blueprint", "id": "hay_wain", "name": "Hay wain", "base_speed_cmps": 220, "axle_limit_kg": 900, "turning_radius_dm": 60, "hitch": { "slots": 2, "kind": "pole_yoke" }, "driver": 1, "passengers": 1,
     "legend": { "f": ["frame_plank"], "W": ["wheel_spoked", "iron_tyre"], "a": ["axle_wood"], "R": ["frame_plank", "cargo_rack"], "S": ["frame_plank", "seat_bench"], "p": ["pole_yoke"] },
     "rows": [ "RRRRR", "WaR_W", "WaSfW", "pff__" ], "sprite": "object.cart_hay" },
   { "type": "vehicle_blueprint", "id": "ox_wagon", "name": "Ox wagon", "base_speed_cmps": 180, "axle_limit_kg": 1500, "turning_radius_dm": 80, "hitch": { "slots": 2, "kind": "pole_yoke" }, "driver": 1, "passengers": 1, "caravan_def": "ox_wagon",

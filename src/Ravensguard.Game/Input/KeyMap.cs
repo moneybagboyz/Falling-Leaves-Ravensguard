@@ -30,7 +30,7 @@ public static class ContextRules
     public static bool ActiveTogether(InputContext a, InputContext b)
     {
         if (a == b || a == InputContext.Global || b == InputContext.Global) return true;
-        return (a, b) is (InputContext.World, InputContext.Build) or (InputContext.Build, InputContext.World);
+        return (a, b) is (InputContext.World, InputContext.Build) or (InputContext.Build, InputContext.World) or (InputContext.World, InputContext.Mounted) or (InputContext.Mounted, InputContext.World);
     }
 
     /// <summary>World actions that are off while Build is active (Build rebinds their keys: Z/X, Esc, left/right click).</summary>

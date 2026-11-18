@@ -181,6 +181,7 @@ public partial class StreetView : Control, IHandlesBack
         }
         BuildScene();
         BuildHud();
+        AttachRide();
         Resized += FitViewport;
         GetWindow().SizeChanged += FitViewport;
         FitViewport();
@@ -248,6 +249,7 @@ public partial class StreetView : Control, IHandlesBack
         rt.Start();
         rt.Pump(_world.Clock.Now, rt.State.HomeRegion.OriginXM + wx, rt.State.HomeRegion.OriginYM + wy); // the first call pays for JIT (up to 60 ms seen): here, not on a frame
         Ravensguard.Sim.Diagnostics.GcSettle.Run(); // the built world is copied out of the young generations now, not by a collection in the middle of a tick
+        AttachHero();                                // the hero's desk on the runtime's barrier (trade spec 4.7)
     }
 
     /// <summary>The per-frame call to the tick runtime: tells it the clock and where the hero is. Costs microseconds; the hours themselves run on the worker.</summary>
@@ -429,6 +431,7 @@ public partial class StreetView : Control, IHandlesBack
         v.AddChild(_bandLabel);
         if (_hero != null) v.AddChild(new Label { Text = L.F("STREET_HERO_HINT", _hero.Name, H("world.panel_character"), H("world.panel_codex")), ThemeTypeVariation = "HintLabel" });
         hud.AddChild(top);
+        BuildPartyBar(hud);
 
         if (_regionMap != null)
         {
@@ -480,7 +483,7 @@ public partial class StreetView : Control, IHandlesBack
     void OpenCharacter()
     {
         if (_router == null || _hero == null || _source?.Content == null) { _router?.ShowToast(L.T("MAP_NONE")); return; }
-        _router.Push(new CharacterScreen(_router, _hero, _source.Content) { ShotPath = _opt.Panel == "character" ? _opt.ShotPath : null });
+        _router.Push(new CharacterScreen(_router, _hero, _source.Content, () => _heroLink?.View, HeroBodyLine) { ShotPath = _opt.Panel == "character" ? _opt.ShotPath : null });
     }
 
     CraftingSession? _crafting;
@@ -490,7 +493,7 @@ public partial class StreetView : Control, IHandlesBack
     {
         if (_router == null || _hero == null || _source?.Content == null) { _router?.ShowToast(L.T("MAP_NONE")); return; }
         int light = _world.Clock.Now.Hour is < 6 or >= 20 ? 120 : 255;
-        _crafting ??= new CraftingSession(_source.Content, _hero, _world.Clock.Now.Seconds, true, ["hearth", "workbench", "oven", "forge", "anvil"], light);
+        _crafting ??= NewCraftingSession(light);
         _crafting.NowSec = _world.Clock.Now.Seconds; _crafting.Site.Light = light;
         _router.Push(new CraftingScreen(_router, _crafting) { ShotPath = _opt.Panel == "crafting" ? _opt.ShotPath : null, StartRecipe = _opt.Panel == "crafting" ? _opt.PanelEntry : null });
     }
@@ -892,6 +895,7 @@ public partial class StreetView : Control, IHandlesBack
             _sw.Restart();
             _rec.Step();
             StepPeople();
+            RideTick();
             double ms = _sw.Elapsed.TotalMilliseconds;
             _tickMsSum += ms; _tickMsMax = Math.Max(_tickMsMax, ms); _tickCount++; _stepMsFrame += ms;
             _acc -= Step; steps++;
@@ -901,6 +905,7 @@ public partial class StreetView : Control, IHandlesBack
         PumpRuntime();
         PumpPeople();
         PumpJobs();
+        HeroTick(delta);
         PollSave();
         if (Run != null && !_leaving && _saveTask == null && (_sinceSave += delta) >= AutosaveSeconds) StartSave(SaveKind.Autosave, quiet: true);
 
@@ -913,10 +918,11 @@ public partial class StreetView : Control, IHandlesBack
 
         if (_opt.Click is { } c && _frames == 2) ClickMove(new Vector2(c.X, c.Y));
         if (_opt.MapShot && _frames == (_opt.Frames > 12 ? _opt.Frames : 3)) OpenMap(); // --shot-frames n (> 12) waits that long first, so neighbour regions are built when the map opens
-        if (_opt.Panel == "character" && _frames == 3) OpenCharacter();
+        if (_opt.Panel == "character" && _frames == (_heroLink != null ? 90 : 3)) OpenCharacter();   // with a world: once the first barrier's hero view is in
         if (_opt.Panel == "codex" && _frames == 3) OpenCodex();
         if (_opt.Panel == "crafting" && _frames == 3) OpenCrafting();
         if (_opt.Panel == "jobs" && _frames == 420) OpenWork();    // dev: the work panel once the first posting has come back from the tick worker
+        HeroShots();
         if (_opt.IsShot && _opt.Weather == "storm" && _frames == Math.Max(2, _opt.Frames - 1)) _wover.Strike(); // dev: catch a lightning flash in the picture
         if (_opt.IsShot && !_opt.MapShot && _opt.Panel == null && !_quitting && _frames >= _opt.Frames && ShotReady()) Shoot();
         if (bench && _benchT >= _opt.BenchSeconds) Finish();
@@ -929,7 +935,7 @@ public partial class StreetView : Control, IHandlesBack
         int dx = (Actions.HeldLoose("world.move_right") ? 1 : 0) - (Actions.HeldLoose("world.move_left") ? 1 : 0);
         int dy = (Actions.HeldLoose("world.move_down") ? 1 : 0) - (Actions.HeldLoose("world.move_up") ? 1 : 0);
         if (_opt.BenchSeconds > 0) return;
-        _rec.SetInput(new MoveInput(dx, dy, Actions.HeldLoose("world.sprint"), Actions.Held("world.sneak")));
+        _rec.SetInput(LoadInput(new MoveInput(dx, dy, Actions.HeldLoose("world.sprint"), HeroWalkInput())));
         var pan = new Vector2(
             (Actions.HeldLoose("world.camera_right") ? 1 : 0) - (Actions.HeldLoose("world.camera_left") ? 1 : 0),
             (Actions.HeldLoose("world.camera_down") ? 1 : 0) - (Actions.HeldLoose("world.camera_up") ? 1 : 0));
@@ -982,6 +988,7 @@ public partial class StreetView : Control, IHandlesBack
         _heroSprite.Position = feet;
         _heroSprite.Visible = h.Z == _viewZ;
         AnimateHero(h, feet);
+        RideRender(h, feet);
         _torchSprite.Visible = h.Torch;
         _torchSprite.Position = new Vector2(h.Facing == Facing.West ? -16 : 6, 0);
 
@@ -1306,6 +1313,7 @@ public partial class StreetView : Control, IHandlesBack
             ClickMove(click.Position - GlobalPosition);
             GetViewport().SetInputAsHandled(); return;
         }
+        if (RideInput(e)) { GetViewport().SetInputAsHandled(); return; }
         if (Actions.Pressed(e, "world.pause")) TogglePause();
         else if (Actions.Pressed(e, "world.speed_1")) _rec.SetSpeed(SimSpeed.X1);
         else if (Actions.Pressed(e, "world.speed_2")) _rec.SetSpeed(SimSpeed.X2);
@@ -1320,11 +1328,13 @@ public partial class StreetView : Control, IHandlesBack
         else if (Actions.Pressed(e, "world.panel_character")) OpenCharacter();
         else if (Actions.Pressed(e, "world.panel_codex")) OpenCodex();
         else if (Actions.Pressed(e, "world.make")) OpenCrafting();
+        else if (Actions.Pressed(e, "world.panel_inventory")) OpenInventory();
+        else if (Actions.Pressed(e, "world.panel_squad")) OpenSquad();
         else if (Actions.Pressed(e, "world.panel_journal") || Actions.Pressed(e, "world.context_menu")) OpenWork();
         else if (Actions.Pressed(e, "world.quicksave")) QuickSave();
         else if (Actions.Pressed(e, "world.quickload")) QuickLoad();
         else if (Actions.Pressed(e, "world.camera_home")) { _pan = Vector2.Zero; if (_viewZ != _world.Snapshot.Hero.Z) { _viewZ = _world.Snapshot.Hero.Z; RebuildLevel(); } }
-        else if (e is InputEventKey && Actions.Pressed(e, "world.act")) _rec.UsePortal();
+        else if (e is InputEventKey && Actions.Pressed(e, "world.act")) { if (!TryTradeNear()) _rec.UsePortal(); }
         else return;
         GetViewport().SetInputAsHandled();
     }

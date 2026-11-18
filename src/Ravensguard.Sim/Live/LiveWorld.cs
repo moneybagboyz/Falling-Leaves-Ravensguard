@@ -337,26 +337,35 @@ public sealed class LiveWorld
     /// <summary>A hero's command about animals and carts (E, hitch, drive, push, unload, dig); applied at the next step so a replay repeats it. Codes in <see cref="RideCode"/>.</summary>
     public void RideCommand(int code) { _rideCmd = code; }
     private int _rideCmd;
-    /// <summary>The result of the last <see cref="RideCommand"/>, for the view's message.</summary>
+    /// <summary>What the last <see cref="RideCommand"/> came to, as a message key and a number for the view's toast (empty when it was silent); <see cref="RideMsgSerial"/> changes with each.</summary>
+    public string LastRideKey { get; private set; } = "";
+    public int LastRideArg { get; private set; }
+    public int RideMsgSerial { get; private set; }
     public MountResult LastRideResult { get; private set; }
-    public string LastRideNote { get; private set; } = "";
+
+    private void Say(string key, int arg = 0) { LastRideKey = key; LastRideArg = arg; RideMsgSerial++; }
 
     private void RunRideCommand()
     {
         int c = _rideCmd; _rideCmd = 0;
         if (c == 0 || Ride == null) return;
         long now = Clock.Now.Seconds; SyncRide();
-        LastRideNote = "";
         switch (c)
         {
-            case RideCode.Interact: LastRideResult = Ride.Interact(now); break;
-            case RideCode.Hitch: LastRideNote = "hitch " + Ride.HitchNearest(); break;
-            case RideCode.Unhitch: Ride.UnhitchAll(); break;
-            case RideCode.Drive: LastRideNote = Ride.IsDriving ? "" : Ride.StartDriving() ? "drive" : "no cart"; if (LastRideNote == "") Ride.StopDriving(); break;
-            case RideCode.Push: LastRideNote = Ride.Push(1, now) ? "free" : "stuck"; break;
-            case RideCode.Unload: LastRideNote = "unloaded " + Ride.UnloadToHeap(100) + " kg"; break;
-            case RideCode.Reload: LastRideNote = "loaded " + Ride.ReloadFromHeap() + " kg"; break;
-            case RideCode.Dig: Ride.Dig(now); LastRideNote = "dig"; break;
+            case RideCode.Interact:
+                LastRideResult = Ride.Interact(now);
+                if (LastRideResult != MountResult.Ok) Say("RIDE_NO_" + LastRideResult.ToString().ToUpperInvariant());
+                break;
+            case RideCode.Hitch: { var r = Ride.HitchNearest(); Say("RIDE_HITCH_" + r.ToString().ToUpperInvariant()); break; }
+            case RideCode.Unhitch: Ride.UnhitchAll(); Say("RIDE_UNHITCHED"); break;
+            case RideCode.Drive:
+                if (Ride.IsDriving) Ride.StopDriving();
+                else if (!Ride.StartDriving()) Say("RIDE_NO_CART");
+                break;
+            case RideCode.Push: Say(Ride.Push(1, now) ? "RIDE_PUSH_FREE" : "RIDE_PUSH_STUCK"); break;
+            case RideCode.Unload: Say("RIDE_UNLOADED", Ride.UnloadToHeap(100)); break;
+            case RideCode.Reload: Say("RIDE_RELOADED", Ride.ReloadFromHeap()); break;
+            case RideCode.Dig: Ride.Dig(now); Say("RIDE_DIG"); break;
         }
     }
 

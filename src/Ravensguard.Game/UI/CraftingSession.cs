@@ -8,51 +8,61 @@ using Ravensguard.Sim.Crafting;
 using Ravensguard.Sim.Economy;
 using Ravensguard.Sim.Goods;
 using Ravensguard.Sim.People;
+using Ravensguard.Sim.Trade;
 
 namespace Ravensguard.Game.UI;
 
 /// <summary>
-/// What the crafting screen works with (basic-crafting spec 4.7): the recipe database, a crafting runner, the hero as crafter (skills read from the <see cref="HeroRecord"/>, grown by use), a pack of goods
-/// and the site (light, tools and stations in reach). It holds its own small economy for the pack: the running world's economy lives on the tick worker's thread, so the screen never touches it; moving
-/// the pack into the world's inventory is the trade spec's work.
+/// What the crafting screen works with (basic-crafting spec 4.7). In a running world (<see cref="World"/> set) the work is the world's: the hero's pack is the pack store of the economy, the
+/// unfinished pieces are <see cref="CraftJob"/>s of the world's crafting state (saved), and starting, working, pausing and collecting are hero commands applied by the tick worker at a barrier
+/// on the world clock (trade spec 4.7). The screen itself only reads: it plans on a mirror of the hero's pack and crafting state, refreshed from each <see cref="HeroView"/>, so every number it
+/// shows is <see cref="CraftRunner.Plan"/> on the same goods and skills the work uses. Without a world (the dev hamlet) it keeps the old starter bundle and runs the work locally.
 /// </summary>
 public sealed class CraftingSession
 {
     public RecipeDb Db { get; }
-    public CraftRunner Runner { get; }
-    public CraftState State { get; } = new();
+    public CraftRunner Runner { get; private set; }
+    public CraftState State { get; private set; } = new();
     public EconomyState Econ { get; }
     public Store Pack { get; }
     public HeroRecord Hero { get; }
     public CraftActor Actor { get; private set; }
     public CraftSite Site { get; }
+    public CraftSiteSpec SiteSpec { get; }
     public long NowSec { get; set; }
     public static readonly EntityId HeroId = EconomyState.HeroOwner;
+    /// <summary>The running world's hero link; null in the dev hamlet.</summary>
+    public HeroWorld? World { get; }
+    /// <summary>The world clock now (game seconds), and a way to set the world's speed for x1 / x2 / x4 while crafting.</summary>
+    public Func<long>? WorldNow { get; init; }
+    public Action<int>? SetWorldSpeed { get; init; }
+    HeroView? _seen;
+    readonly IdAllocator _ids = new();
 
-    public CraftingSession(ContentDatabase content, HeroRecord hero, long nowSec, bool starterPack, string[] stations, int light)
+    public CraftingSession(ContentDatabase content, HeroRecord hero, long nowSec, bool starterPack, string[] stations, int light, HeroWorld? world = null)
     {
-        Hero = hero; NowSec = nowSec;
+        Hero = hero; NowSec = nowSec; World = world;
         Econ = EconomyState.FromContent(content, 1, 1);
         Db = RecipeDb.Build(content, Econ.Goods);
         Pack = Econ.OpenStore(StoreKind.House, HeroId, 0, 0, false);
-        var ids = new IdAllocator();
-        Runner = new CraftRunner(Db, Econ, State, 1, ids, o => Econ.OtherStores.GetValueOrDefault(o));
-        State.Book.Base = (p, s) => p == HeroId ? hero.Skill(HeroRecord.SkillId(s)) : 0;
+        Runner = MakeRunner();
         Actor = new CraftActor(HeroId, hero.Attribute(HeroAttr.Strength), hero.Attribute(HeroAttr.Wits), hero.Attribute(HeroAttr.Perception));
-        Site = new CraftSite { Light = light, Water = true };
         // the traveller's kit: a knife, steel and flint, a needle and a pot, and whatever the hero carries
-        foreach (var t in new[] { "knife", "steel_and_flint", "needle", "pot" }) Site.AddTool(Db, t);
-        foreach (var it in hero.Inventory)
-        {
-            string id = it.Shape is "dagger" ? "knife" : it.Shape;
-            if (Db.Tools.ContainsKey(id)) Site.AddTool(Db, id);
-        }
-        foreach (var st in stations) if (Db.Stations.ContainsKey(st)) Site.AddStation(Db, st);
-        Site.WithImprovised("hammering");
-        if (starterPack) Stock();
+        var tools = new List<string> { "knife", "steel_and_flint", "needle", "pot" };
+        foreach (var it in hero.Inventory) { string id = it.Shape is "dagger" ? "knife" : it.Shape; if (Db.Tools.ContainsKey(id)) tools.Add(id); }
+        SiteSpec = new CraftSiteSpec(light, true, [.. tools.Distinct()], [.. stations.Where(Db.Stations.ContainsKey)], ["hammering"]);
+        Site = SiteSpec.Build(Db);
+        if (world == null && starterPack) Stock();
+        Refresh();
     }
 
-    /// <summary>A few days of everyday materials so the screen has something to show (the pack is the trade spec's inventory later).</summary>
+    CraftRunner MakeRunner()
+    {
+        State.Book.Base = (p, s) => p == HeroId ? Hero.Skill(HeroRecord.SkillId(s)) : 0;
+        return new CraftRunner(Db, Econ, State, 1, _ids, o => Econ.OtherStores.GetValueOrDefault(o));
+    }
+
+    /// <summary>A few days of everyday materials for the dev hamlet, which has no world economy.</summary>
     void Stock()
     {
         void G(string good, long qty) => Pack.Create(Econ.Goods.IdOf(good), qty, CreateReason.Seed);
@@ -61,12 +71,72 @@ public sealed class CraftingSession
         G("twine", 500); G("malt", 2500); G("milk", 5000); G("hide_raw", 3000); G("oak_bark", 1000); G("wheat", 2000);
     }
 
+    /// <summary>Takes the newest hero view into the mirror (its pack and crafting state). Cheap when nothing changed. Returns true when the mirror changed.</summary>
+    public bool Refresh()
+    {
+        if (World?.View is not { } v || ReferenceEquals(v, _seen)) return false;
+        _seen = v;
+        foreach (var (g, q) in Pack.Rows()) Pack.Destroy(g, q, DestroyReason.Other);
+        foreach (var g in v.Goods) Pack.Create(g.Good, g.Qty, CreateReason.Other);
+        State = v.Crafting ?? new CraftState();
+        Runner = MakeRunner();
+        int A(HeroAttr a) => v.Attributes[(int)a];
+        Actor = new CraftActor(HeroId, A(HeroAttr.Strength), A(HeroAttr.Wits), A(HeroAttr.Perception));
+        if (WorldNow != null) NowSec = WorldNow();
+        return true;
+    }
+
     public bool KnowsIt(CraftRecipe r) => State.Know.Knows(r, HeroId, State.Book);
     public CraftPlan Plan(CraftRecipe r, int batch, int[]? forced = null) => Runner.Plan(r, Actor, Site, Pack, batch, forced);
 
-    public IEnumerable<CraftJob> Unfinished() => State.Jobs.Values.Where(j => !j.Closed).OrderBy(j => j.Id);
+    public IEnumerable<CraftJob> Unfinished() => State.Jobs.Values.Where(j => !j.Closed && (World == null || j.Owner == HeroId)).OrderBy(j => j.Id);
+    public CraftJob? Find(EntityId id) => State.Get(id);
     public int SkillLevel(CraftRecipe r) => r.Skill == Skill.None ? 0 : State.Book.Level(HeroId, r.Skill);
 
     /// <summary>The goods in the pack, for "what can I make with this".</summary>
     public IEnumerable<string> PackGoods() => Pack.Rows().Select(r => Econ.Goods.StringId(r.Good));
+
+    long Now => WorldNow?.Invoke() ?? NowSec;
+
+    // ------------------------------------------------------------------ the work (commands to the world, or local in the hamlet)
+
+    /// <summary>Starts the plan. Local: the job at once. World: null (the job appears in the next view; <see cref="PendingStart"/> says it is on its way).</summary>
+    public CraftJob? Start(CraftPlan plan)
+    {
+        if (World == null) return Runner.Start(plan, Actor, HeroId, Pack, NowSec);
+        World.Issue(new HeroCommand { Kind = HeroCommandKind.CraftStart, IssuedSec = Now, Recipe = plan.Recipe.Index, Batch = plan.Batch, Choice = [.. plan.Choice.Select(c => (int)c)], Site = SiteSpec });
+        PendingStart = plan.Recipe.Index;
+        return null;
+    }
+
+    public int PendingStart { get; set; } = -1;
+
+    /// <summary>Works on for <paramref name="dt"/> game seconds (local), or tells the world the hero worked until now (world: sent at most twice a real second).</summary>
+    public List<CraftEvent> Work(CraftJob j, long dt)
+    {
+        if (World == null) { var ev = Runner.Advance(j, dt, NowSec); NowSec += dt; return ev; }
+        World.Issue(new HeroCommand { Kind = HeroCommandKind.CraftWork, IssuedSec = Now, Job = j.Id, UntilSec = Now });
+        return [];
+    }
+
+    public void Pause(CraftJob j) { if (World == null) Runner.Pause(j); else World.Issue(new HeroCommand { Kind = HeroCommandKind.CraftPause, IssuedSec = Now, Job = j.Id }); }
+
+    public bool Resume(CraftJob j)
+    {
+        if (World == null) return Runner.Resume(j, Actor);
+        World.Issue(new HeroCommand { Kind = HeroCommandKind.CraftResume, IssuedSec = Now, Job = j.Id });
+        return true;
+    }
+
+    public bool Collect(CraftJob j)
+    {
+        if (World == null) return Runner.Collect(j, Actor, NowSec).Ok;
+        World.Issue(new HeroCommand { Kind = HeroCommandKind.CraftCollect, IssuedSec = Now, Job = j.Id });
+        return true;
+    }
+
+    public void Speed(int x) => SetWorldSpeed?.Invoke(x);
+
+    /// <summary>The results of the hero's craft commands since <paramref name="afterSeq"/> (world only).</summary>
+    public IEnumerable<HeroResult> Results(long afterSeq) => World?.View?.Results.Where(r => r.Seq > afterSeq && r.Kind is >= HeroCommandKind.CraftStart && r.Text.Length > 0) ?? [];
 }

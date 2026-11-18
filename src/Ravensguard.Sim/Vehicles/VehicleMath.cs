@@ -127,7 +127,7 @@ public static class VehicleMath
     };
 
     // the Phase 2 vehicles' own numbers (kept equal to the derived stats of the templates by test H-13)
-    internal static readonly VehicleStats CartStats = new() { MassKg = 165, CargoKg = 500, CargoL = 1000, BaseSpeedCmps = 250, AxleLimitKg = 700, HitchSlots = 1, Driver = 1 };
-    internal static readonly VehicleStats OxWagonStats = new() { MassKg = 300, CargoKg = 1000, CargoL = 2000, BaseSpeedCmps = 180, AxleLimitKg = 1500, HitchSlots = 2, Driver = 1 };
-    internal static readonly VehicleStats PackStats = new() { MassKg = 6, CargoKg = 100, CargoL = 250, BaseSpeedCmps = 300, AxleLimitKg = 0, HitchSlots = 0 };
+    public static readonly VehicleStats CartStats = new() { MassKg = 165, CargoKg = 500, CargoL = 1000, BaseSpeedCmps = 250, AxleLimitKg = 700, HitchSlots = 1, Driver = 1 };
+    public static readonly VehicleStats OxWagonStats = new() { MassKg = 300, CargoKg = 1000, CargoL = 2000, BaseSpeedCmps = 180, AxleLimitKg = 1500, HitchSlots = 2, Driver = 1 };
+    public static readonly VehicleStats PackStats = new() { MassKg = 6, CargoKg = 100, CargoL = 250, BaseSpeedCmps = 300, AxleLimitKg = 0, HitchSlots = 0 };
 }

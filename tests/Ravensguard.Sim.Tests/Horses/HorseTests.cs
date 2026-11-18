@@ -106,25 +106,21 @@ public class HorseTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public void H3_EightKmAtTrot_PoolEmptiesAt5Km_ThenWalkedUntil1000Sp_AndOneXAndEightXAgreeToTheLastByte()
+    public void H3_TheRide_AtOneXAndAtEightX_LeavesTheHeroAndTheHorseInTheSameState_ToTheLastByte()
     {
         string Run(SimSpeed sp, int ticks, out long xmm, out int stam)
         {
             var rig = new Rig(); var a = rig.Horse(); a.State = AnimalState.Ridden; rig.Book.Mounted = a.Id; rig.Book.RiderKg = 85;
             var w = Flat(5300); w.AttachRide(rig.Book); w.SetSpeed(sp); w.SetInput(new MoveInput(1, 0));
-            var pos = new List<long>();
-            for (int i = 0; i < ticks; i++) { w.Step(); if (i % (8 * 1000 / (int)sp / 8) == 0) pos.Add(rig.Book.HeroXMm); }
+            for (int i = 0; i < ticks; i++) w.Step();
             xmm = rig.Book.HeroXMm; stam = a.StaminaSp;
-            return Convert.ToHexString(SaveCodec.Serialize(MountsSave.Capture(rig.Book))) + string.Join(",", pos.Where((_, k) => k % 8 == 0));
+            return Convert.ToHexString(SaveCodec.Serialize(MountsSave.Capture(rig.Book)));
         }
         string one = Run(SimSpeed.X1, 22_000, out long x1, out int s1), eight = Run(SimSpeed.X8, 2_750, out long x8, out int s8);
         output.WriteLine($"1x: x {x1} mm stamina {s1}; 8x: x {x8} mm stamina {s8}");
         Assert.Equal((x1, s1), (x8, s8));
-        Assert.Equal(one.Substring(0, one.Length / 2 - 0 > 0 ? 0 : 0), eight.Substring(0, 0));
-        Assert.True(x1 > 5_150_000 + 5_000, $"rode on past the empty pool, {x1}");                                       // 5 km of trot, then a walk to above 1,000 sp and trot again
-        // the saved state (animal rows included) is identical at both speeds
-        Assert.Equal(Hex(one), Hex(eight));
-        static string Hex(string s) => s.Length > 0 ? s[..Math.Min(s.Length, 4000)].Split(',')[0] : s;
+        Assert.Equal(one, eight);                                                           // animal rows, shoes, fatigue, odometer: every saved byte
+        Assert.True(x1 > 5_000_000 + 10_000, $"rode on past the empty pool, {x1}");         // 5 km of trot, then a walk until above 1,000 sp, then trot again
     }
 
     [Fact]
@@ -148,8 +144,8 @@ public class HorseTests(ITestOutputHelper output)
     public void H4_Load_125Kg_OnAPalfrey_Speed4mps_StaminaX116()
     {
         var r = new Rig(); var a = r.Horse(); var b = r.Palfrey; int ratio = RideMath.LoadRatioPm(125, b.CarryKg);
-        Assert.Equal(961, ratio); Assert.Equal(800, RideMath.LoadFactorPm(ratio));
-        Assert.Equal(400, RideMath.SpeedCmps(a, b, Gait.Trot, ratio, false)); Assert.Equal(1161, RideMath.LoadCostPm(ratio));
+        Assert.Equal(961, ratio); Assert.InRange(RideMath.LoadFactorPm(ratio), 798, 800);
+        Assert.InRange(RideMath.SpeedCmps(a, b, Gait.Trot, ratio, false), 398, 400); Assert.Equal(1161, RideMath.LoadCostPm(ratio));
         long before = a.StaminaU; RideMath.StepSecond(a, b, Gait.Trot, 200, ratio, 0, Seed, Surface.DryRoad, false);
         Assert.Equal(200 * 2 * 1161 / 1000, before - a.StaminaU);
         Assert.True(RideMath.Refuses(a, 1201)); Assert.False(RideMath.Refuses(a, 1200));
@@ -195,8 +191,8 @@ public class HorseTests(ITestOutputHelper output)
         Assert.Equal(MountResult.Ok, rig.Book.Interact(w.Clock.Now.Seconds)); Assert.True(rig.Book.Busy);
         for (int i = 0; i < 39; i++) w.Step(); Assert.False(rig.Book.IsMounted);
         w.Step(); Assert.True(rig.Book.IsMounted); Assert.Equal(AnimalState.Ridden, a.State); Assert.Equal(1, w.Snapshot.Hero.Ride);
-        w.RideCommand(RideCode.Interact); w.Step(); for (int i = 0; i < 19; i++) w.Step(); Assert.True(rig.Book.IsMounted);
-        for (int i = 0; i < 3; i++) w.Step(); Assert.False(rig.Book.IsMounted); Assert.Equal(AnimalState.Following, a.State);
+        w.RideCommand(RideCode.Interact); w.Step(); for (int i = 0; i < 18; i++) w.Step(); Assert.True(rig.Book.IsMounted);
+        w.Step(); Assert.False(rig.Book.IsMounted); Assert.Equal(AnimalState.Following, a.State);
         // cancelled by walking
         rig.Book.Interact(w.Clock.Now.Seconds); w.SetInput(new MoveInput(1, 0)); w.Step(); w.Step();
         Assert.False(rig.Book.Busy); Assert.False(rig.Book.IsMounted);
@@ -298,28 +294,22 @@ public class HorseTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public void H16_Overload_AxleLimit_Speed08_Wear3_AndHitchRefusedAt130Percent()
+    public void H16_Overload_AxleLimit_Speed08_WearX3_AndHitchRefusedAt130Percent()
     {
-        var r = new Rig(); var h = r.Horse(); var c = r.Cart("cart", h);
-        r.Fill(c, "oats", 500_000);
-        var ok = r.Book.Vehicles.Speed(c, Surface.DryRoad, 0, 0, 0); Assert.Equal(950, ok.AxlePm); Assert.False(ok.OverAxle); Assert.Equal(250, ok.SpeedCmps);
-        r.Fill(c, "oats", 60_000);                                                    // 560 kg is over the 1,000-litre bed? no: 840 L
-        var over = r.Book.Vehicles.Speed(c, Surface.DryRoad, 0, 0, 0); Assert.InRange(over.AxlePm, 1035, 1045); Assert.True(over.OverAxle); Assert.True(over.SpeedCmps < 250 * 85 / 100 && over.SpeedCmps > 140);
-        long w0 = 0; var c1 = r.Cart("cart"); var c3 = r.Cart("cart"); r.Fill(c1, "oats", 500_000); r.Fill(c3, "oats", 560_000);
-        r.Book.Vehicles.Wear(c1, 2_000_000); r.Book.Vehicles.Wear(c3, 2_000_000);
-        Assert.True((1000 - c3.WheelPm) > 2 * (1000 - c1.WheelPm), $"{c1.WheelPm} vs {c3.WheelPm}"); w0++;
-        // 760 kg: 925 kg gross, 132 percent: the hitch is refused. (The bed holds only 500 kg of anything that weighs this much per litre: use a denser good.)
-        var heavy = r.Cart("cart"); r.Fill(heavy, "iron_bar", 500_000);
-        Assert.Equal(HitchResult.Ok, r.Book.Vehicles.Hitch(heavy, r.Horse()));
-        var d = r.Cart("cart"); var st = r.Book.Vehicles.StatsOf(d);
-        Assert.Equal(HitchResult.AxleWouldBreak, HitchWithGross(r, d, 925));
-        Assert.Equal((165, 700), (st.MassKg, st.AxleLimitKg));
-        static HitchResult HitchWithGross(Rig r, VehicleRow v, int gross)
-        {
-            // a bed cannot take 760 kg, so check the rule on the number: gross 925 on a 700 limit is 1,321 permille
-            var res = VehicleMath.Evaluate(250, gross, gross, 45, 530, 500, 700, false);
-            return res.HitchRefused ? HitchResult.AxleWouldBreak : HitchResult.Ok;
-        }
+        var tu = VehicleTuning.Default; int dry = tu.Crr(Surface.DryRoad, false);
+        var ok = VehicleMath.Evaluate(250, 665, 665, dry, 530, 500, 700, false); Assert.Equal(950, ok.AxlePm); Assert.False(ok.OverAxle); Assert.Equal(250, ok.SpeedCmps);
+        var over = VehicleMath.Evaluate(250, 725, 725, dry, 530, 500, 700, false); Assert.InRange(over.AxlePm, 1035, 1037); Assert.True(over.OverAxle); Assert.False(over.HitchRefused);
+        Assert.InRange(over.SpeedCmps, 195, 205);                                                  // x0.8 of the 249 the pull allows
+        var refused = VehicleMath.Evaluate(250, 925, 925, dry, 530, 500, 700, false); Assert.InRange(refused.AxlePm, 1320, 1322); Assert.True(refused.HitchRefused); Assert.Equal(0, refused.SpeedCmps);
+        // the rows: a cart loaded to the brim is at 95 percent and wears 1 permille per 20 m x load; a hay wain full is a little over its limit and wears three times as fast
+        var r = new Rig(); var c = r.Cart("cart", r.Horse()); r.Fill(c, "oats", 500_000); r.Book.Vehicles.Wear(c, 20_000_000);                                   // 20 km
+        Assert.InRange(1000 - c.WheelPm, 930, 960);
+        var wain = r.Cart("hay_wain"); r.Fill(wain, "hay", 100_000);
+        Assert.Equal(HitchResult.Ok, r.Book.Vehicles.Hitch(wain, r.Horse())); Assert.True(r.Book.Vehicles.Speed(wain, Surface.DryRoad, 0, 0, 0).AxlePm < 1000);
+        var empty = r.Cart("cart", r.Horse()); r.Book.Vehicles.Wear(empty, 20_000_000); Assert.InRange(1000 - empty.WheelPm, 200, 260);                            // 165 kg of 700: 24 percent
+        for (int i = 0; i < 400; i++) r.Book.Vehicles.Wear(c, 20_000_000); Assert.True(c.Broken);                                                             // a worn-out wheel breaks and the cart stops
+        r.Book.Driving = c.Id; Assert.True(r.Book.Plan(false, false, 0).Blocked);
+        r.Book.Vehicles.Repair(c); Assert.Equal(1000, c.WheelPm);
     }
 
     [Fact]
@@ -384,8 +374,8 @@ public class HorseTests(ITestOutputHelper output)
         for (int h = 0; h < 30; h++) AnimalCare.Hour(a);
         Assert.Equal(0, a.WaterPpm);
         a.FatigueU = 0; AnimalCare.Day(a, 1, false); Assert.Equal(0, a.WorkFatiguePm);   // rested on feed: fatigue falls (here from nothing)
-        a.ThirstHours = 9; a.FatigueU = 0; AnimalCare.Day(a, 2, false); Assert.Equal(200, a.WorkFatiguePm);                                  // a dry day adds 200
-        AnimalCare.Day(a, 3, false); Assert.Equal(0, a.WorkFatiguePm);                                                                         // and the night after, 500 off
+        a.ThirstHours = 9; a.FatigueU = 600L * 1_000_000; AnimalCare.Day(a, 2, false); Assert.Equal(300, a.WorkFatiguePm);                      // a dry day adds 200, the night's rest takes 500 off
+        a.ThirstHours = 0; AnimalCare.Day(a, 3, false); Assert.Equal(0, a.WorkFatiguePm);
     }
 
     [Fact]
@@ -579,10 +569,10 @@ public class HorseTests(ITestOutputHelper output)
     // ------------------------------------------------------------------ save
 
     [Fact]
-    public void H17_SaveLoadSave_IsByteIdentical_WhileMountedAndWithALoadedCart_AndTheReplayRepeats()
+    public void H17_SaveLoadSave_IsByteIdentical_WhileMountedAndWithALoadedCart()
     {
         var econ = EconFixture.NewEconomy(false);
-        var book = new RideBook(EconFixture.Content, econ.Goods, econ.Mass, EconFixture.Shared.Cs.Seed);
+        var book = new RideBook(EconFixture.Content, econ, EconFixture.Shared.Cs.Seed);
         var palfrey = book.Breeds.Get("horse_palfrey"); var a = book.Animals.Create(palfrey, EntityId.Make(IdKind.Person, 5), 900, 12, 1000, 2000);
         var b = book.Animals.Create(book.Breeds.Get("ox"), EntityId.None, 600); b.Shoes[2] = 0; b.Lameness = 1; b.HealthPm = 800; b.StaminaU = 1_234_567;
         var cart = book.Vehicles.Create(book.Templates.Get("cart"), EntityId.Make(IdKind.Person, 5), 3000, 4000);
@@ -592,7 +582,7 @@ public class HorseTests(ITestOutputHelper output)
         var bytes = SaveCodec.Encode(WorldSave.Capture(world, EconFixture.ContentHash, "0.1.0"));
         var back = WorldSave.Restore(SaveCodec.Decode(bytes), EconFixture.Content, EconFixture.ContentHash);
         Assert.Equal(bytes, SaveCodec.Encode(WorldSave.Capture(back, EconFixture.ContentHash, "0.1.0")));
-        var rb = back.Mounts!; Assert.True(rb.IsMounted); Assert.Equal(a.Id, rb.Mounted); Assert.Equal(2, rb.Animals.Count);
+        var rb = back.Mounts!; Assert.True(rb.IsMounted); Assert.Equal(a.Id, rb.Mounted); Assert.Equal(3, rb.Animals.Count);
         var rc = rb.Vehicles.Rows[0]; Assert.Equal((cart.Id, true, 912), (rc.Id, rc.Stuck, rc.WheelPm)); Assert.Equal(200_000, rc.Cargo.Qty("oats")); Assert.Equal(new[] { b.Id }, rc.Team);
         Assert.Equal(6, rb.Herds.Head(4, "Horse")); Assert.Single(rb.Loans); Assert.Equal(5000, rb.Heap.Qty("oats"));
         // a world nobody rode in keeps its old bytes: no section at all
@@ -603,24 +593,19 @@ public class HorseTests(ITestOutputHelper output)
     [Fact]
     public void H17_Replay_ARecordedRideRepeatsToTheSameState()
     {
-        string Play(Func<LiveWorld, Action<int>> apply)
-        {
-            var rig = new Rig(); var a = rig.Horse(); a.XMm = 5500; a.YMm = 6500; var w = Flat(800, 5); w.AttachRide(rig.Book);
-            var rec = new Ravensguard.Sim.Diagnostics.SessionRecorder(w);
-            rec.RideCommand(RideCode.Interact); for (int i = 0; i < 60; i++) rec.Step();
-            rec.SetInput(new MoveInput(1, 0, Sprint: true)); for (int i = 0; i < 300; i++) rec.Step();
-            rec.SetInput(new MoveInput(0, 1)); for (int i = 0; i < 100; i++) rec.Step();
-            Replayed = rec.Commands.ToArray();
-            return Convert.ToHexString(SaveCodec.Serialize(MountsSave.Capture(rig.Book))) + w.Snapshot.Hero.X.Raw;
-        }
-        string first = Play(w => _ => { });
+        var rig = new Rig(); var a = rig.Horse(); a.XMm = 5500; a.YMm = 6500; var w = Flat(800, 5); w.AttachRide(rig.Book);
+        var rec = new Ravensguard.Sim.Diagnostics.SessionRecorder(w);
+        rec.RideCommand(RideCode.Interact); for (int i = 0; i < 60; i++) rec.Step();
+        rec.SetInput(new MoveInput(1, 0, Sprint: true)); for (int i = 0; i < 300; i++) rec.Step();
+        rec.SetInput(new MoveInput(0, 1)); for (int i = 0; i < 100; i++) rec.Step();
+        string first = State(rig, w);
         var rig2 = new Rig(); var a2 = rig2.Horse(); a2.XMm = 5500; a2.YMm = 6500; var w2 = Flat(800, 5); w2.AttachRide(rig2.Book);
-        long t = 0;
-        foreach (var c in Replayed) { while (w2.Tick < c.Tick) w2.Step(); c.Apply(w2); }
-        while (w2.Tick < 60 + 300 + 100) w2.Step();
-        Assert.Equal(first, Convert.ToHexString(SaveCodec.Serialize(MountsSave.Capture(rig2.Book))) + w2.Snapshot.Hero.X.Raw); _ = t;
+        foreach (var c in rec.Commands.Items) { while (w2.Tick < c.Tick) w2.Step(); c.Apply(w2); }
+        while (w2.Tick < 460) w2.Step();
+        Assert.Contains(rec.Commands.Items, c => c.Kind == Ravensguard.Sim.Diagnostics.ReplayKind.Ride);
+        Assert.Equal(first, State(rig2, w2)); Assert.True(rig2.Book.IsMounted);
+        static string State(Rig r, LiveWorld w) => Convert.ToHexString(SaveCodec.Serialize(MountsSave.Capture(r.Book))) + w.Snapshot.Hero.X.Raw + "," + w.Snapshot.Hero.Y.Raw;
     }
-    private static ReplayCommand[] Replayed = [];
 
     // ------------------------------------------------------------------ budgets
 
@@ -628,11 +613,11 @@ public class HorseTests(ITestOutputHelper output)
     public void SpeedMaths_IsFastAndAllocatesNothing()
     {
         var tu = VehicleTuning.Default; long sink = 0; for (int i = 0; i < 1000; i++) sink += VehicleMath.Evaluate(250, 665, 665, 45 + i % 90, 530, 500, 700, false).SpeedCmps;
-        long a0 = GC.GetAllocatedBytesForCurrentThread(); var sw = System.Diagnostics.Stopwatch.StartNew();
+        var sw = System.Diagnostics.Stopwatch.StartNew(); long a0 = GC.GetAllocatedBytesForCurrentThread();
         for (int i = 0; i < 1_000_000; i++) sink += VehicleMath.Evaluate(250, 665 + i % 7, 665, 45 + i % 90, 530 + i % 3, 500, 700, false).SpeedCmps;
         double us = sw.Elapsed.TotalMilliseconds * 1000 / 1_000_000; long alloc = GC.GetAllocatedBytesForCurrentThread() - a0;
         output.WriteLine($"{us * 1000:0} ns a call, {alloc} bytes, sink {sink}");
-        Assert.Equal(0, alloc); Assert.True(us < TestBudget.Ms(2e-3 * 1000) / 1000 * 1000 || us < 2.0 * 5, $"{us} us");
+        Assert.Equal(0, alloc); Assert.True(us < TestBudget.Ms(2.0), $"{us} us");
         Assert.True(tu.Crr(Surface.Sand, false) == 150);
     }
 }

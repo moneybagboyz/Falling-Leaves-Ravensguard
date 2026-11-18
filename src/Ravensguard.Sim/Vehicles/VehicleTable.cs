@@ -37,9 +37,10 @@ public sealed class VehicleTable
     public VehicleCatalog Catalog { get; }
     public AnimalTable Animals { get; }
     private readonly GoodCatalog _goods;
-    private readonly MassLedger _ledger;
+    private readonly Func<EntityId, long, long, Store> _open;
 
-    public VehicleTable(VehicleCatalog catalog, AnimalTable animals, GoodCatalog goods, MassLedger ledger) { Catalog = catalog; Animals = animals; _goods = goods; _ledger = ledger; }
+    /// <summary><paramref name="open"/> makes (or finds) the store of a vehicle's bed: owner, mass limit in grams, volume limit in millilitres. The economy's other stores in a running game, so the cargo is counted and saved with its goods.</summary>
+    public VehicleTable(VehicleCatalog catalog, AnimalTable animals, GoodCatalog goods, Func<EntityId, long, long, Store> open) { Catalog = catalog; Animals = animals; _goods = goods; _open = open; }
 
     public static EntityId MakeId(ulong serial) => EntityId.MakeIn(IdKind.Other, 0, SerialBase + serial);
     public static bool IsVehicleId(EntityId id) => id.Kind == IdKind.Other && (id.Serial & ~0xFFFFFUL) == SerialBase;
@@ -51,7 +52,7 @@ public sealed class VehicleTable
         return null;
     }
 
-    public Store NewStore(EntityId id, VehicleStats s) => new(_goods, _ledger, StoreKind.Open, id, s.CargoKg * 1000L, s.CargoL * 1000L, enforce: true);
+    public Store NewStore(EntityId id, VehicleStats s) => _open(id, s.CargoKg * 1000L, s.CargoL * 1000L);
 
     public VehicleRow Create(VehicleBlueprint bp, EntityId owner, long xMm = 0, long yMm = 0)
     {
@@ -163,7 +164,7 @@ public sealed class VehicleTable
         long loadPm = (long)GrossKg(r) * 1000 / st.AxleLimitKg;
         long mult = loadPm > 1000 ? 3 : 1;
         r.WearAccMm += movedMm * loadPm * mult / 1000;
-        long step = 20_000L * 1000 / Math.Max(1, Catalog.Tuning.WheelWearPm);
+        long step = 20_000L / Math.Max(1, Catalog.Tuning.WheelWearPm);
         while (r.WearAccMm >= step) { r.WearAccMm -= step; r.WheelPm = Math.Max(0, r.WheelPm - 1); }
     }
 

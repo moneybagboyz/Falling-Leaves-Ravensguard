@@ -418,12 +418,13 @@ public static class WorldSave
                 + "(the world generator or game content changed since). Load it with the game version that made it.");
     }
 
-    /// <summary>The ride book of a save: on the world's own goods and mass ledger when it has an economy, else on a private pair (a bare test world).</summary>
+    /// <summary>The ride book of a save: on the economy's stores when the world has one (their goods are in its section), else on a private goods catalog and ledger (a bare test world).</summary>
     private static Ravensguard.Sim.Animals.RideBook RestoreMounts(MountsSave m, ContentDatabase? content, EconomyState? economy, ulong seed)
     {
         if (content == null) throw new SaveException("The mounts of this save need the game content to be read.");
-        var goods = economy?.Goods ?? new Ravensguard.Sim.Goods.GoodCatalog(content);
-        return m.Restore(content, goods, economy?.Mass ?? new Ravensguard.Sim.Goods.MassLedger(goods.Count), seed);
+        if (economy != null) return m.Restore(content, economy, seed);
+        var goods = new Ravensguard.Sim.Goods.GoodCatalog(content);
+        return m.Restore(content, goods, new Ravensguard.Sim.Goods.MassLedger(goods.Count), seed);
     }
 
     private static T Decode<T>(SaveFile f, string name, bool compressed)

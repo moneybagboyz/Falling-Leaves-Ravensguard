@@ -108,7 +108,7 @@ public sealed class MountsSave
             });
         foreach (var v in b.Vehicles.Rows)
         {
-            var rows = v.Cargo.Rows();
+            var rows = b.Hosted ? [] : v.Cargo.Rows();       // a hosted bed is saved with the economy's other stores
             o.Vehicles.Add(new VehicleRowSave
             {
                 Id = v.Id.Value, Template = v.Template, Owner = v.Owner.Value, XMm = v.XMm, YMm = v.YMm, Facing = v.Facing, Team = [.. v.Team.Select(t => t.Value)], OdometerMm = v.OdometerMm, WheelPm = v.WheelPm, Stuck = v.Stuck,
@@ -117,15 +117,19 @@ public sealed class MountsSave
         }
         var hs = b.Herds.Rows().ToList();
         o.HerdSettlement = [.. hs.Select(h => h.Settlement)]; o.HerdSpecies = [.. hs.Select(h => h.Species)]; o.HerdHead = [.. hs.Select(h => h.Head)];
-        var hp = b.Heap.Rows(); o.HeapGood = [.. hp.Select(r => r.Good)]; o.HeapQty = [.. hp.Select(r => r.Qty)];
+        var hp = b.Hosted ? [] : b.Heap.Rows(); o.HeapGood = [.. hp.Select(r => r.Good)]; o.HeapQty = [.. hp.Select(r => r.Qty)];
         o.LoanAnimal = [.. b.Loans.Select(l => l.Animal.Value)]; o.LoanLender = [.. b.Loans.Select(l => l.Lender.Value)]; o.LoanDue = [.. b.Loans.Select(l => l.DueSec)];
         return o;
     }
 
     /// <summary>Rebuilds the book on the given content, goods and ledger (the economy section has restored the ledger's counts by now).</summary>
-    public RideBook Restore(ContentDatabase content, GoodCatalog goods, MassLedger ledger, ulong seed)
+    public RideBook Restore(ContentDatabase content, GoodCatalog goods, MassLedger ledger, ulong seed) => Restore(new RideBook(content, goods, ledger, seed));
+
+    /// <summary>Rebuilds the book on the economy (its beds and heap are the economy's restored stores).</summary>
+    public RideBook Restore(ContentDatabase content, Economy.EconomyState econ, ulong seed) => Restore(new RideBook(content, econ, seed));
+
+    private RideBook Restore(RideBook b)
     {
-        var b = new RideBook(content, goods, ledger, seed);
         b.Animals.Restore(Animals.Select(r => new Animal
         {
             Id = new EntityId(r.Id), Breed = r.Breed, Sex = r.Sex, BirthDay = r.BirthDay, Owner = new EntityId(r.Owner), MassKg = r.MassKg, TrainedPm = r.TrainedPm, Temper = r.Temper, StaminaU = r.StaminaU, FatigueU = r.FatigueU,
@@ -143,10 +147,10 @@ public sealed class MountsSave
                 Stuck = r.Stuck, StuckSinceSec = r.StuckSinceSec, DugUntilSec = r.DugUntilSec, WearAccMm = r.WearAccMm, Driven = r.Driven,
             };
             v.Cargo = b.Vehicles.NewStore(v.Id, bp.Stats);
-            v.Cargo.LoadRows(r.CargoGood, r.CargoQty);
+            if (!b.Hosted) v.Cargo.LoadRows(r.CargoGood, r.CargoQty);
             b.Vehicles.Restore(v);
         }
-        b.Heap.LoadRows(HeapGood, HeapQty);
+        if (!b.Hosted) b.Heap.LoadRows(HeapGood, HeapQty);
         for (int i = 0; i < HerdHead.Length; i++) b.Herds.Set(HerdSettlement[i], HerdSpecies[i], HerdHead[i]);
         for (int i = 0; i < LoanAnimal.Length; i++) b.Loans.Add(new HorseLoan(new EntityId(LoanAnimal[i]), new EntityId(LoanLender[i]), LoanDue[i]));
         b.Mounted = new EntityId(Mounted); b.Driving = new EntityId(Driving); b.MountTarget = new EntityId(MountTarget); b.MountLeftGs = MountLeftGs; b.DismountLeftGs = DismountLeftGs;

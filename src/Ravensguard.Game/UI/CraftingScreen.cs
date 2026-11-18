@@ -219,9 +219,10 @@ public partial class CraftingScreen : Control
     {
         var r = Selected(); if (r == null) return;
         var plan = _s.Plan(r, _batch);
-        var job = _s.Runner.Start(plan, _s.Actor, CraftingSession.HeroId, _s.Pack, _s.NowSec);
-        if (job == null) { _router.ShowToast(L.T("CRAFT_CANT")); return; }
-        _job = job; _router.ShowToast(L.F("CRAFT_STARTED", r.Name));
+        if (!plan.CanStart) { _router.ShowToast(L.T("CRAFT_CANT")); return; }
+        var job = _s.Start(plan);
+        if (job == null && _s.World == null) { _router.ShowToast(L.T("CRAFT_CANT")); return; }
+        _job = job; _seqSeen = _s.World?.View?.AppliedSeq ?? 0; _router.ShowToast(L.F("CRAFT_STARTED", r.Name));
         Work(); Rebuild();
     }
 
@@ -235,9 +236,9 @@ public partial class CraftingScreen : Control
             var row = new HBoxContainer(); row.AddThemeConstantOverride("separation", 8);
             row.AddChild(new Label { Text = L.F(j.State == CraftJobState.Waiting ? "CRAFT_WAITING" : "CRAFT_WORKING", r.Name, step) });
             row.AddChild(new ProgressBar { MinValue = 0, MaxValue = need, Value = j.State == CraftJobState.Waiting ? need : j.StepSeconds, CustomMinimumSize = new Vector2(240, 18), ShowPercentage = false });
-            foreach (int sp in new[] { 1, 2, 4 }) { int x = sp; var b = new Button { Text = $"x{x}", ToggleMode = true, ButtonPressed = _speed == x, CustomMinimumSize = new Vector2(40, 24) }; b.Pressed += () => { _speed = x; Work(); }; row.AddChild(b); }
+            foreach (int sp in new[] { 1, 2, 4 }) { int x = sp; var b = new Button { Text = $"x{x}", ToggleMode = true, ButtonPressed = _speed == x, CustomMinimumSize = new Vector2(40, 24) }; b.Pressed += () => { _speed = x; _s.Speed(x); Work(); }; row.AddChild(b); }
             var pause = new Button { Text = j.State == CraftJobState.Paused ? L.T("CRAFT_RESUME") : L.T("CRAFT_PAUSE") };
-            pause.Pressed += () => { if (j.State == CraftJobState.Paused) _s.Runner.Resume(j, _s.Actor); else _s.Runner.Pause(j); Work(); };
+            pause.Pressed += () => { if (j.State == CraftJobState.Paused) _s.Resume(j); else _s.Pause(j); Work(); };
             row.AddChild(pause);
             _work.AddChild(row);
         }
@@ -245,18 +246,18 @@ public partial class CraftingScreen : Control
         {
             var r = _s.Db[uj.Recipe]; var u = uj; var row = new HBoxContainer();
             row.AddChild(new Label { Text = L.F("CRAFT_UNFINISHED", r.Name, u.StepIndex + 1, r.Steps.Length) });
-            var res = new Button { Text = L.T("CRAFT_RESUME") }; res.Pressed += () => { if (u.State == CraftJobState.Waiting ? _s.Runner.Collect(u, _s.Actor, _s.NowSec).Ok : _s.Runner.Resume(u, _s.Actor)) _job = u; Work(); };
+            var res = new Button { Text = L.T("CRAFT_RESUME") }; res.Pressed += () => { if (u.State == CraftJobState.Waiting ? _s.Collect(u) : _s.Resume(u)) _job = u; Work(); };
             row.AddChild(res); _work.AddChild(row);
         }
     }
 
     public override void _Process(double delta)
     {
-        if (_job is { State: CraftJobState.Active } j)
+        if (_s.World != null) WorldProcess(delta);
+        else if (_job is { State: CraftJobState.Active } j)
         {
             long dt = (long)Math.Max(1, delta * TimeConst.GameSecondsPerRealSecond * _speed);
-            foreach (var e in _s.Runner.Advance(j, dt, _s.NowSec)) if (e.Kind == CraftEventKind.Finished) _router.ShowToast(L.F("CRAFT_DONE", e.Text));
-            _s.NowSec += dt;
+            foreach (var e in _s.Work(j, dt)) if (e.Kind == CraftEventKind.Finished) _router.ShowToast(L.F("CRAFT_DONE", e.Text));
             _refresh += delta;
             if (_refresh > 0.25 || j.Closed) { _refresh = 0; Work(); if (j.Closed) Rebuild(); }
         }
@@ -268,9 +269,30 @@ public partial class CraftingScreen : Control
         GetTree().Quit();
     }
 
+    long _seqSeen; double _sendWork;
+
+    /// <summary>In a running world: the job is the world's. Twice a real second the hero's work so far goes to the world; each new view refreshes the mirror and the job shown.</summary>
+    void WorldProcess(double delta)
+    {
+        if (_job is { State: CraftJobState.Active } j && (_sendWork += delta) > 0.5) { _sendWork = 0; _s.Work(j, 0); }
+        _refresh += delta;
+        if (_refresh < 0.2) return;
+        _refresh = 0;
+        if (!_s.Refresh()) return;
+        foreach (var r in _s.Results(_seqSeen)) { _seqSeen = Math.Max(_seqSeen, r.Seq); _router.ShowToast(r.Text); }
+        if (_job != null) _job = _s.Find(_job.Id);
+        if (_job == null && _s.PendingStart >= 0)
+        {
+            _job = _s.Unfinished().Where(x => x.Recipe == _s.PendingStart && x.State == CraftJobState.Active).OrderByDescending(x => x.Id).FirstOrDefault();
+            if (_job != null) _s.PendingStart = -1;
+        }
+        Work(); Rebuild();
+    }
+
     void Close()
     {
-        if (_job is { State: CraftJobState.Active } j) _s.Runner.Pause(j);     // Esc pauses with the progress kept
+        if (_job is { State: CraftJobState.Active } j) { if (_s.World != null) _s.Work(j, 0); _s.Pause(j); }     // Esc pauses with the progress kept (in a world: worked up to now first)
+        if (_s.World != null && _speed != 1) _s.Speed(1);
         _router.Pop();
     }
 

@@ -121,6 +121,14 @@ ACTION_MENU_LEFT,Left
 ACTION_MENU_RIGHT,Right
 ACTION_MENU_ACCEPT,Accept
 ACTION_MENU_BACK,Back
+ACTION_TRADE_UP,Previous line
+ACTION_TRADE_DOWN,Next line
+ACTION_TRADE_LESS,Less (Shift x10)
+ACTION_TRADE_MORE,More (Shift x10; Ctrl all)
+ACTION_TRADE_CONFIRM,Confirm the deal
+ACTION_TRADE_PANE,Change pane
+ACTION_TRADE_NOTEBOOK,Price notebook
+ACTION_TRADE_CANCEL,Leave the trade
 ACTION_MENU_NEW_GAME,New game
 ACTION_MENU_SETTINGS,Settings
 ACTION_MENU_QUIT,Quit
@@ -686,3 +694,187 @@ Q_POOR,Poor
 Q_COMMON,Common
 Q_FINE,Fine
 Q_MASTERWORK,Masterwork
+CONTEXT_MOUNTED,Mounted (riding or driving)
+ACTION_MOUNTED_WALK_TOGGLE,Walk (toggle) while mounted
+ACTION_WORLD_CART_HITCH,Hitch the nearest animal to the cart (or unhitch)
+ACTION_WORLD_CART_UNLOAD,Unload 100 kg of the cart onto the ground
+ACTION_WORLD_CART_RELOAD,Load the ground heap back on the cart
+ACTION_WORLD_CART_DIG,Dig out a bogged wheel
+RIDE_GALLOP,Gallop
+RIDE_TROT,Trot
+RIDE_WALK,Walk
+RIDE_SPEED,{0} m/s ({1} km/h)
+RIDE_MOUNTING,Mounting...
+RIDE_STAMINA,Stamina
+RIDE_LINE1,{0} {1}%  {2}  {3}
+RIDE_LINE2,{0}  Shoes {1}%  Fatigue {2}%
+RIDE_FED_OK,Fed
+RIDE_FED_LOW,Hungry ({0}% reserve)
+RIDE_LAME,Lame: it needs rest and a farrier
+RIDE_WINDED,Winded: it will only walk until it has rested
+RIDE_TIRED,Tired: it is slower and will not gallop
+RIDE_CART1,Load {0} / {1} kg  {2}
+RIDE_CART2,Axle {0}%  Pull {1}%  on {2}
+RIDE_STUCK,"STUCK! Push, dig, unload, or add a team"
+RIDE_HEAVY,Too heavy for this ground
+RIDE_LOAN_DUE,The loaned horse has gone home
+RIDE_HINT_FIRST,"{0} to dismount, {1} to gallop, {2} to walk. Horses tire."
+RIDE_HINT_MUD,"Carts struggle in mud: {0} to push, {1} to unload, {2} to dig."
+RIDE_NO_TOOFAR,Too far away
+RIDE_NO_NOTRIDEABLE,You cannot ride that
+RIDE_NO_NEEDSSADDLE,It needs a saddle (or Riding 20 to ride bareback)
+RIDE_NO_UNTRAINED,It is not broken to the saddle: it throws you off
+RIDE_NO_TOOLAME,It is too lame to carry you
+RIDE_NO_TOOTIRED,It is worn out for today
+RIDE_NO_OVERLOADED,Too much weight for this horse
+RIDE_NO_DEAD,It is dead
+RIDE_NO_TAKEN,It is already in use
+RIDE_NO_CART,No cart within reach
+RIDE_HITCH_OK,Hitched
+RIDE_HITCH_NOHITCH,Nothing to hitch to
+RIDE_HITCH_FULL,The team is full
+RIDE_HITCH_UNTRAINED,It is not broken to harness
+RIDE_HITCH_DEAD,It is dead
+RIDE_HITCH_TAKEN,It is already in use
+RIDE_HITCH_AXLEWOULDBREAK,The axle would break
+RIDE_HITCH_WRONGBEAST,That animal does not pull
+RIDE_UNHITCHED,Team unhitched
+RIDE_PUSH_FREE,The cart comes free
+RIDE_PUSH_STUCK,"Still stuck: more hands, less load, or dig"
+RIDE_UNLOADED,Unloaded {0} kg
+RIDE_RELOADED,Loaded {0} kg
+RIDE_DIG,You dig the mud from under the wheels
+TRADE_TITLE,Trade
+TRADE_TITLE_MARKET,Trade - the market of {0}
+TRADE_TITLE_PERSON,Barter with {0}
+TRADE_TAB_MARKET,Market
+TRADE_TAB_BARTER,Barter
+TRADE_TAB_PRICES,Prices (N)
+TRADE_KEYS,"Arrows choose   Left/Right amount (Shift x10, Ctrl all)   Enter deal   Tab side   N prices   Esc leave"
+TRADE_YOURS,Your goods - purse {0}
+TRADE_THEIRS,"The stalls - merchants hold {0}, {1}"
+TRADE_THEIRS_PERSON,"{0}'s household - coin {1}"
+TRADE_THEY_NEED_FOOD,They are short of food: food counts a fifth more to them.
+TRADE_OPEN,open
+TRADE_SHUT,shut (06:00 to 18:00)
+TRADE_BID,bid
+TRADE_ASK,ask
+TRADE_WORTH,worth
+TRADE_NOTHING,Nothing here.
+TRADE_BASKET,The deal
+TRADE_PICK,Pick a line on either side.
+TRADE_BUYING,Buying
+TRADE_SELLING,Selling
+TRADE_MAX,Max
+TRADE_PER_KG,cr/kg
+TRADE_PER_PIECE,cr each
+TRADE_FIRST,First unit: {0} {1}
+TRADE_AVERAGE,Average over the amount: {0} {1}
+TRADE_TOTAL,Total: {0}
+TRADE_TOLL,"Market toll (5%, the seller's): {0} - you receive {1}"
+TRADE_SPREAD,Bid {0} / ask {1}: a {2}% spread
+TRADE_MOVES_UP,Buying this much moves the price up as you go.
+TRADE_MOVES_DOWN,Selling this much moves the price down as you go.
+TRADE_HEARD,Last heard in {0}: {1}
+TRADE_COIN_AFTER,Purse {0} -> {1}
+TRADE_CONFIRM,Deal (Enter)
+TRADE_NO_PRICE,No price for this here.
+TRADE_NO_STOCK,They do not have that much.
+TRADE_SETTLING,Settling accounts...
+TRADE_GOOD,Good
+TRADE_BARTER_VALUE,Worth {0} {1}: {2} in all
+TRADE_BARTER_PAY,You offer {0} in coin for it.
+TRADE_BARTER_GET,They offer {0} in coin for it.
+TRADE_NOTEBOOK_HINT,"What you last heard of prices, asking price in crowns per kg (each for pieces), with how many days ago you heard it. The market you stand in is exact."
+TRADE_NOTEBOOK_LEGEND,"Gold: here and now. Plain: fresh (3 days or less). Amber: aged (4 to 15 days). Grey and ?: old. Talking at a market adds what its merchants heard elsewhere."
+INV_TITLE,Inventory
+INV_WEIGHT,Weight
+INV_VOLUME,Volume
+INV_LOAD_LIGHT,Lightly loaded: full speed.
+INV_LOAD_SLOW,"Load {0:0.00} of what you can carry: speed x{1:0.00}, stamina x{2:0.00}."
+INV_LOAD_CANNOT,Too heavy to walk: drop something or use a cart or horse.
+INV_PURSE,Purse {0} ({1})
+INV_WORN,Worn and held
+INV_INSIDE,in the {0}
+INV_EMPTY,empty
+INV_LOOSE,Carried loose
+INV_QUICKBAR,Quick bar
+INV_TAKE_OFF,Take off
+INV_EQUIP,Wear / hold
+INV_TAKE_OUT,Take out
+INV_PUT_IN,Into {0}
+INV_INSPECT,Inspect
+INV_CLOSE_HINT,{0} closes this page
+WEAR_WORN,worn
+WEAR_BATTERED,battered
+WEAR_BROKEN,broken
+SLOT_MAINHAND,main hand
+SLOT_OFFHAND,off hand
+SLOT_BOTHHANDS,both hands
+SLOT_HEAD,head
+SLOT_BODY,body
+SLOT_LEGS,legs
+SLOT_FEET,feet
+SLOT_HANDS,hands
+SLOT_CLOAK,cloak
+SLOT_BELT,belt
+SLOT_SHOULDER,shoulder
+SLOT_BACK,back
+SLOT_NONE,-
+CHAR_OVERVIEW,Overview
+CHAR_PURSE,purse {0}
+CHAR_STEP,Step {0} of {1}: {2}
+CHAR_CONDITIONS,Body: {0}
+CHAR_ATTR_NOTE,"Attributes grow slowly: 0.02 a day of matching work (half above 70). The sign is against the commoner's 50."
+CHAR_BODY,Body
+CHAR_WOUNDS_NONE,Wounds: none. (Wounds and the paper doll arrive with combat in Phase 4.)
+CHAR_WEARING,Wearing and holding: {0}
+CHAR_NOTHING,nothing
+CHAR_SQUAD,Party: {0} of {1} - {2} opens the squad
+CHAR_SKILL_LOCKED,untrained: learn by doing or from a master
+CHAR_USES_NEXT,about {0} uses to the next level
+CHAR_SKILL_TIP,"An ordinary use gives {0:0.###} levels now; last used {1}."
+CHAR_NEVER,never
+CHAR_DAYS_AGO,{0} days ago
+CHAR_SKILLS_NOTE,"Skills rise with use: a gain of 0.4 x difficulty x (1 - level/100)^2 levels each time, at most twelve uses an hour; nothing from work 30 levels too easy. ^ marks a skill that grew in the last three days."
+SKILLS_COMBAT,Combat
+SKILLS_CRAFT,Craft
+SKILLS_SOCIAL,Trade and social
+SKILLS_WILD,Wild
+SQUAD_TITLE,Squad
+SQUAD_MEMBERS,Party: {0} of {1} - wages {2} a day
+SQUAD_EMPTY,"Nobody travels with you yet. Talk to people, hire a hand for a few days or invite someone to join you for good (stand beside them)."
+SQUAD_RECRUITED,companion
+SQUAD_HIRED,hired
+SQUAD_UNTIL,{0} days left
+SQUAD_LOYALTY,loyalty
+SQUAD_WAGE,{0} a day
+SQUAD_UNPAID,{0} days unpaid
+SQUAD_DISMISS,Dismiss
+SQUAD_TRADE,"{0}, best skill {1}"
+SQUAD_NEAR,Beside you
+SQUAD_SKILL,skill {0}
+SQUAD_KNOW,"You know them {0} of 100 (talking and working together); trust {1}%."
+SQUAD_ASKS,"Their asking wage is {0} a day; they would take {1}."
+SQUAD_ALREADY,They are with you.
+SQUAD_WOULD_JOIN,"They would join you for good (signing bonus {0})."
+SQUAD_JOIN_NOTFAMILIAR,To join you for good they must know you better: talk with them.
+SQUAD_JOIN_NOTRUST,They do not trust you enough to join you.
+SQUAD_JOIN_NOREASON,You do not know yet what would make them come: talk with them.
+SQUAD_JOIN_SQUADFULL,Your party is as large as you can lead.
+SQUAD_JOIN_CANNOTPAY,You cannot pay the signing bonus.
+SQUAD_JOIN_UNAVAILABLE,They cannot join anyone.
+SQUAD_JOIN_ACCEPT,They would join you.
+SQUAD_TALK,Talk
+SQUAD_HIRE,Hire for 7 days at {0}
+SQUAD_RECRUIT,Invite to join
+SQUAD_NOBODY,Nobody is beside you.
+SQUAD_CLOSE_HINT,{0} closes this page
+ORDER_FOLLOW,Follow
+ORDER_HOLD,Hold
+ORDER_GUARDPLACE,Guard
+ORDER_WORK,Work
+ORDER_REST,Rest
+ORDER_TRAVEL,Travel
+ORDER_SCATTER,Scatter
+PARTY_YOU,you

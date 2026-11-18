@@ -1,105 +1,134 @@
+using System;
 using System.Linq;
-using System.Text;
 using Godot;
 using Ravensguard.Content;
 using Ravensguard.Game.Inputs;
 using Ravensguard.Game.UI.NewGame;
 using Ravensguard.Sim.Characters;
+using Ravensguard.Sim.Crafting;
+using Ravensguard.Sim.People;
+using Ravensguard.Sim.Trade;
 
 namespace Ravensguard.Game.UI;
 
-/// <summary>The Character panel (C, plan 2.8, 3 items 1 and 2): attributes, skills, kit, coin and the steps of the ambition, read from the <see cref="HeroRecord"/>.</summary>
+/// <summary>
+/// The character sheet (C, plan 2.8, trade-inventory-character spec 4.4): the overview (origin, ambition and its current step, conditions, warmth and clothing from the clothing book, the load bar),
+/// the five attributes with their slow growth (milli-points over the base, the base-50 reference, a trend arrow), the skills grouped Combat, Craft, Trade and Social, Wild, each with its level, a
+/// thin bar to the next whole level, an arrow when it grew in the last three game days and the uses a level takes at this point; locked skills greyed with how to learn them; the body (wounds arrive
+/// in Phase 4) and the party. In a running world everything comes from the barrier's <see cref="HeroView"/> (skills are the world's skills by use); without one, from the <see cref="HeroRecord"/>.
+/// </summary>
 public partial class CharacterScreen : Control
 {
     readonly ScreenRouter _router;
     readonly HeroRecord _hero;
     readonly ContentDatabase _db;
+    readonly Func<HeroView?>? _view;
+    readonly Func<string>? _body;
     int _shotWait;
     /// <summary>Dev: when set, the screen saves its own picture to this path and quits.</summary>
     public string? ShotPath { get; init; }
 
-    public CharacterScreen(ScreenRouter router, HeroRecord hero, ContentDatabase db) { _router = router; _hero = hero; _db = db; }
+    public CharacterScreen(ScreenRouter router, HeroRecord hero, ContentDatabase db, Func<HeroView?>? view = null, Func<string>? bodyLine = null)
+    { _router = router; _hero = hero; _db = db; _view = view; _body = bodyLine; }
+
+    static readonly (string Key, Skill[] Skills)[] Groups =
+    [
+        ("SKILLS_COMBAT", [Skill.Melee, Skill.Archery, Skill.Tactics, Skill.Athletics, Skill.Stealth, Skill.Riding]),
+        ("SKILLS_CRAFT", [Skill.Smithing, Skill.Carpentry, Skill.Masonry, Skill.Tailoring, Skill.Weaving, Skill.Spinning, Skill.Tanning, Skill.Cobbling, Skill.Baking, Skill.Brewing, Skill.Milling, Skill.Butchery, Skill.Cooking, Skill.Housekeeping, Skill.Surgery, Skill.Lockpicking]),
+        ("SKILLS_SOCIAL", [Skill.Trading, Skill.Speech, Skill.Leadership, Skill.Literacy, Skill.Law, Skill.Theology]),
+        ("SKILLS_WILD", [Skill.Farming, Skill.Husbandry, Skill.Forestry, Skill.Fishing, Skill.Mining]),
+    ];
 
     public override void _Ready()
     {
-        var margin = UiKit.Margin(this, 16);
-        var root = new VBoxContainer();
-        root.AddThemeConstantOverride("separation", 8);
-        margin.AddChild(root);
+        var v = _view?.Invoke();
+        var margin = UiKit.Margin(this, 14);
+        var root = new VBoxContainer(); root.AddThemeConstantOverride("separation", 6); margin.AddChild(root);
         root.AddChild(UiKit.Title(_hero.Name));
         string origin = _db.TryGet<OriginDef>(_hero.Origin, out var o) ? o.Name : UiKit.Pretty(_hero.Origin);
-        root.AddChild(UiKit.Hint($"{L.T(_hero.Female ? "QS_SEX_FEMALE" : "QS_SEX_MALE")}  -  {origin}"));
+        root.AddChild(UiKit.Hint($"{L.T(_hero.Female ? "QS_SEX_FEMALE" : "QS_SEX_MALE")}  -  {origin}" + (v != null ? $"  -  {L.F("CHAR_PURSE", Quotes.Money(v.CoinMites))}" : "")));
 
-        var cols = new HBoxContainer { SizeFlagsVertical = SizeFlags.ExpandFill };
-        cols.AddThemeConstantOverride("separation", 12);
-        root.AddChild(cols);
+        var cols = new HBoxContainer { SizeFlagsVertical = SizeFlags.ExpandFill }; cols.AddThemeConstantOverride("separation", 10); root.AddChild(cols);
 
-        // attributes and skills
-        var left = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        left.AddThemeConstantOverride("separation", 4);
+        // ---- left: overview, attributes, body
+        var left = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill }; left.AddThemeConstantOverride("separation", 4);
         cols.AddChild(UiKit.Panel(left));
-        left.AddChild(UiKit.Hint(L.T("CHAR_ATTRIBUTES")));
-        for (int i = 0; i < HeroRecord.AttrIds.Length; i++) left.AddChild(Bar(L.T("ATTR_" + HeroRecord.AttrIds[i].ToUpperInvariant()), _hero.Attributes[i]));
-        left.AddChild(UiKit.Hint(L.T("CHAR_SKILLS")));
-        var skills = _hero.Skills.Where(kv => kv.Value > 0).OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key, System.StringComparer.Ordinal).ToList();
-        foreach (var (id, lvl) in skills) left.AddChild(Bar(UiKit.Pretty(id), lvl));
-        if (skills.Count == 0) left.AddChild(UiKit.Body(L.T("CHAR_NO_SKILLS")));
-        left.AddChild(UiKit.Hint(L.F("CHAR_UNTRAINED", _hero.Skills.Count - skills.Count)));
-
-        // kit, coin, ambition
-        var right = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        right.AddThemeConstantOverride("separation", 8);
-        cols.AddChild(right);
-        var kit = new VBoxContainer();
-        kit.AddThemeConstantOverride("separation", 2);
-        right.AddChild(UiKit.Panel(kit));
-        kit.AddChild(UiKit.Hint(L.T("CHAR_KIT")));
-        foreach (var it in _hero.Inventory) kit.AddChild(UiKit.Body($"{(it.Count > 1 ? it.Count + " x " : "")}{ItemName(it.Shape)} ({MaterialName(it.Material)})", false));
-        if (_hero.Inventory.Count == 0) kit.AddChild(UiKit.Body(L.T("CHAR_NO_KIT")));
-        kit.AddChild(new Label { Text = L.F("CHAR_COIN", _hero.Coin), ThemeTypeVariation = "GoldLabel" });
-
-        var amb = new VBoxContainer();
-        amb.AddThemeConstantOverride("separation", 3);
-        var ap = UiKit.Panel(amb);
-        ap.SizeFlagsVertical = SizeFlags.ExpandFill;
-        right.AddChild(ap);
-        amb.AddChild(UiKit.Hint(L.T("CHAR_AMBITION")));
+        left.AddChild(UiKit.Hint(L.T("CHAR_OVERVIEW")));
         if (_db.TryGet<AmbitionDef>(_hero.AmbitionId, out var a))
         {
-            amb.AddChild(new Label { Text = a.Name, ThemeTypeVariation = "GoldLabel" });
-            amb.AddChild(UiKit.Body(a.Description));
-            for (int i = 0; i < a.Steps.Count; i++)
-            {
-                bool done = i < _hero.Milestone, now = i == _hero.Milestone;
-                var l = UiKit.Body((done ? "[x] " : now ? "[>] " : "[ ] ") + a.Steps[i].Name, false);
-                l.AddThemeColorOverride("font_color", done ? PixelTheme.Dim : now ? PixelTheme.Gold : PixelTheme.Body);
-                amb.AddChild(l);
-                if (now && a.Steps[i].Description.Length > 0) { var d = UiKit.Hint("      " + a.Steps[i].Description, true); amb.AddChild(d); }
-            }
-            if (_hero.Milestone >= a.Steps.Count) amb.AddChild(UiKit.Body(L.T("CHAR_AMBITION_DONE")));
+            left.AddChild(new Label { Text = a.Name, ThemeTypeVariation = "GoldLabel" });
+            var step = _hero.CurrentStep(a);
+            left.AddChild(UiKit.Body(step != null ? L.F("CHAR_STEP", _hero.Milestone + 1, a.Steps.Count, step.Name) : L.T("CHAR_AMBITION_DONE"), false));
         }
-        else amb.AddChild(UiKit.Body(L.T("CHAR_NO_AMBITION")));
+        else left.AddChild(UiKit.Body(L.T("CHAR_NO_AMBITION")));
+        if (_body?.Invoke() is { Length: > 0 } body) left.AddChild(UiKit.Body(L.F("CHAR_CONDITIONS", body), true));
+        if (v != null) left.AddChild(InventoryScreen.LoadBar(v, 200));
 
-        var bottom = new HBoxContainer();
-        bottom.AddThemeConstantOverride("separation", 8);
-        var back = UiKit.Key(L.T("UI_BACK"), "menu.back", 200);
-        back.Pressed += _router.Pop;
-        bottom.AddChild(back);
+        left.AddChild(UiKit.Hint(L.T("CHAR_ATTRIBUTES")));
+        for (int i = 0; i < HeroRecord.AttrIds.Length; i++)
+        {
+            int baseV = _hero.Attributes[i], milli = v?.AttrMilli[i] ?? 0;
+            double shown = baseV + milli / 1000.0;
+            var row = new HBoxContainer(); row.AddThemeConstantOverride("separation", 8);
+            row.AddChild(new Label { Text = L.T("ATTR_" + HeroRecord.AttrIds[i].ToUpperInvariant()), CustomMinimumSize = new Vector2(120, 0) });
+            row.AddChild(new Label { Text = milli == 0 ? baseV.ToString() : shown.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture), CustomMinimumSize = new Vector2(52, 0), HorizontalAlignment = HorizontalAlignment.Right });
+            row.AddChild(new Label { Text = milli > 0 ? "^" : milli < 0 ? "v" : " ", CustomMinimumSize = new Vector2(12, 0) });
+            var bar = new ProgressBar { MaxValue = 100, Value = shown, ShowPercentage = false, CustomMinimumSize = new Vector2(150, 12), SizeFlagsVertical = SizeFlags.ShrinkCenter };
+            row.AddChild(bar);
+            row.AddChild(UiKit.Hint(baseV > HeroRecord.BaselineAttribute ? $"+{baseV - HeroRecord.BaselineAttribute}" : baseV < HeroRecord.BaselineAttribute ? $"{baseV - HeroRecord.BaselineAttribute}" : "="));
+            left.AddChild(row);
+        }
+        left.AddChild(UiKit.Hint(L.T("CHAR_ATTR_NOTE"), true));
+        left.AddChild(UiKit.Hint(L.T("CHAR_BODY")));
+        left.AddChild(UiKit.Body(L.T("CHAR_WOUNDS_NONE"), true));
+        if (v != null)
+        {
+            var worn = v.Items.Where(x => x.Slot != Ravensguard.Sim.Inventory.EquipSlot.None).Select(x => x.Name.ToLowerInvariant()).ToList();
+            left.AddChild(UiKit.Body(L.F("CHAR_WEARING", worn.Count > 0 ? string.Join(", ", worn) : L.T("CHAR_NOTHING")), true));
+            left.AddChild(UiKit.Hint(L.F("CHAR_SQUAD", v.Squad.Count(m => m.Active), v.SquadCap, InputBootstrap.Hint("world.panel_squad"))));
+        }
+
+        // ---- right: skills by use
+        var right = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill }; right.AddThemeConstantOverride("separation", 2);
+        var scroll = new ScrollContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ExpandFill, HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
+        scroll.AddChild(right);
+        var rp = UiKit.Panel(scroll, 520, 0); rp.SizeFlagsHorizontal = SizeFlags.ExpandFill; cols.AddChild(rp);
+        long now = (v?.HourDone ?? 0) * 3600;
+        foreach (var (key, skills) in Groups)
+        {
+            right.AddChild(UiKit.Hint(L.T(key)));
+            var grid = new GridContainer { Columns = 4 }; grid.AddThemeConstantOverride("h_separation", 8); grid.AddThemeConstantOverride("v_separation", 1);
+            foreach (var s in skills.OrderByDescending(s => Micro(v, s)).ThenBy(s => s.ToString(), StringComparer.Ordinal))
+            {
+                long micro = Micro(v, s); int lvl = (int)(micro / CraftMath.MicroPerLevel);
+                long last = v?.Skills.FirstOrDefault(r => r.Skill == s).LastGainSec ?? long.MinValue;
+                bool rising = last != long.MinValue && now - last <= 3 * 86400;
+                var name = new Label { Text = UiKit.Pretty(HeroRecord.SkillId(s)) + (rising ? " ^" : ""), CustomMinimumSize = new Vector2(150, 0) };
+                var val = new Label { Text = lvl.ToString(), CustomMinimumSize = new Vector2(30, 0), HorizontalAlignment = HorizontalAlignment.Right };
+                var bar = new ProgressBar { MaxValue = 1000, Value = micro % CraftMath.MicroPerLevel / 1000, ShowPercentage = false, CustomMinimumSize = new Vector2(110, 8), SizeFlagsVertical = SizeFlags.ShrinkCenter };
+                // uses for the next level at an ordinary task (d = 100): what the bar means
+                long gain = Progress.GainMicro(micro, 100);
+                long need = CraftMath.MicroPerLevel - micro % CraftMath.MicroPerLevel;
+                var hint = UiKit.Hint(lvl >= 100 ? "-" : lvl == 0 ? L.T("CHAR_SKILL_LOCKED") : L.F("CHAR_USES_NEXT", gain > 0 ? (need + gain - 1) / gain : 0));
+                if (lvl == 0) { name.AddThemeColorOverride("font_color", PixelTheme.Dim); val.AddThemeColorOverride("font_color", PixelTheme.Dim); }
+                if (rising) name.AddThemeColorOverride("font_color", PixelTheme.Gold);
+                name.TooltipText = L.F("CHAR_SKILL_TIP", gain / 1000.0, last == long.MinValue ? L.T("CHAR_NEVER") : L.F("CHAR_DAYS_AGO", Math.Max(0, (now - last) / 86400)));
+                grid.AddChild(name); grid.AddChild(val); grid.AddChild(bar); grid.AddChild(hint);
+            }
+            right.AddChild(grid);
+        }
+        right.AddChild(UiKit.Hint(L.T("CHAR_SKILLS_NOTE"), true));
+
+        var bottom = new HBoxContainer(); bottom.AddThemeConstantOverride("separation", 8);
+        var back = UiKit.Key(L.T("UI_BACK"), "menu.back", 200); back.Pressed += _router.Pop; bottom.AddChild(back);
         bottom.AddChild(UiKit.Hint(L.F("CHAR_CLOSE_HINT", InputBootstrap.Hint("world.panel_character"))));
         root.AddChild(bottom);
     }
 
-    string ItemName(string shape) => _db.TryGet<WeaponShapeDef>(shape, out var w) ? w.Name : _db.TryGet<ArmourShapeDef>(shape, out var a) ? a.Name : UiKit.Pretty(shape);
-    string MaterialName(string id) => _db.TryGet<MaterialDef>(id, out var m) ? m.Name.ToLowerInvariant() : id;
-
-    static Control Bar(string name, int value)
+    long Micro(HeroView? v, Skill s)
     {
-        var row = new HBoxContainer();
-        row.AddThemeConstantOverride("separation", 8);
-        row.AddChild(new Label { Text = name, CustomMinimumSize = new Vector2(150, 0) });
-        row.AddChild(new Label { Text = value.ToString(), CustomMinimumSize = new Vector2(34, 0), HorizontalAlignment = HorizontalAlignment.Right });
-        row.AddChild(new ProgressBar { MaxValue = 100, Value = value, ShowPercentage = false, CustomMinimumSize = new Vector2(180, 12), SizeFlagsVertical = SizeFlags.ShrinkCenter });
-        return row;
+        if (v != null) { foreach (var r in v.Skills) if (r.Skill == s) return r.Micro; }
+        return _hero.Skill(HeroRecord.SkillId(s)) * CraftMath.MicroPerLevel;
     }
 
     public override void _Process(double delta)
