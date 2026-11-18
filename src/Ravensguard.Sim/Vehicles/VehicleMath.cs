@@ -1,6 +1,6 @@
 using Ravensguard.Content;
 
-namespace Ravensguard.Sim.Vehicles;
+namespace Ravensguard.Sim.Carts;
 
 /// <summary>The rolling-resistance tables (permille of weight, per <see cref="Surface"/>), read from content; wheels and runners.</summary>
 public sealed class VehicleTuning

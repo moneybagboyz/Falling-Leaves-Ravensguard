@@ -1246,6 +1246,13 @@ This section comes from a full read of the legacy code by four auditors (economy
   - The tournament prize is never paid.
 - **Redesign:**
   - **Body plans as data.** Each part has a size and an area. Tendons, nerves and vessels are *structures inside* muscle, hit with probability by area. Blood is ~5,000 ml, scaled by body mass.
+    - **Human detail (decided with the user):** about 25 parts are added to the Phase 1 plan, each one chosen because it changes play:
+      - **eyes:** a lost eye hurts aim and spotting, both eyes blind you;
+      - **skull and ribs:** bone shells that guard the brain, heart and lungs, and can be broken or caved in;
+      - **jaw and teeth:** a broken jaw stops eating solid food and speaking clearly;
+      - **thumb and fingers**, grouped: grip, weapon handling and two-handed use;
+      - **ears:** hearing, which matters for spotting and stealth.
+      Every finger, toe and tooth individually is not modelled.
   - **Resolver, armour, layers and hit chance:** see §2.6 (the single spec).
   - **Real-time melee:**
 
@@ -1510,7 +1517,7 @@ Estimates assume one developer working with an AI assistant. Every phase ends in
 **Done when:** residents keep schedules across floors; you can talk to, trade with, hire and recruit anyone; a rumour traces back to its source; testers can get through the first ride and the first odd job without help.
 
 ### Phase 4: Combat anywhere and exploration (9–12 months)
-- **The resolver:** the unified resolver (§2.6), with armour layers and gaps.
+- **The resolver:** the unified resolver (§2.6), with armour layers and gaps; the finer human body (eyes, skull, ribs, jaw and teeth, thumb and fingers, ears; §4A.3).
 - **Fighting:**
   - Real-time melee (timings, block, parry, dodge, feint, stamina).
   - Ranged weapons; thrown and improvised weapons.

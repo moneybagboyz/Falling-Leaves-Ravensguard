@@ -1,4 +1,4 @@
-namespace Ravensguard.Sim.Vehicles;
+namespace Ravensguard.Sim.Carts;
 
 /// <summary>What the wheel (or foot) runs on, from the tile and the last day's weather (horses-and-carts spec 4.5). The order is the order of the content tables.</summary>
 public enum Surface : byte { Paved, DryRoad, WetRoad, Track, Grass, MudRoad, DeepMud, PackedSnow, DeepSnow, Ice, Sand }

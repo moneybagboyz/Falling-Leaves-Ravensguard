@@ -85,6 +85,18 @@ public static class RngStreams
     /// <summary>Which pieces of the class wardrobe a person owns, and the dye of their outer pieces (key person, draw = piece index; 99 = dye).</summary>
     public const uint Wardrobe = 0x333;
 
+    // ---------- horses and carts (docs/specs/phase3/horses-and-carts.md section 5) ----------
+    /// <summary>Forced-exertion injury of a ridden animal at 0 stamina (key animal, tick = game second / 20).</summary>
+    public const uint AnimalInjury = 0x350;
+    /// <summary>A vehicle's stuck check (key vehicle, tick = game hour, draw = odometer metres / 20) and an abstract leg's stuck duration (draw = leg index).</summary>
+    public const uint VehicleStuck = 0x351;
+    /// <summary>Temper and training of an animal materialised from a herd (key settlement, draw = serial x 2 + 0 or 1).</summary>
+    public const uint AnimalBreed = 0x352;
+    /// <summary>A lost shoe (key animal, draw = odometer metres / 100 x 2, + 1 picks the hoof).</summary>
+    public const uint ShoeLoss = 0x353;
+    /// <summary>A try at taming (key animal, tick = game second / 600, draw = rider person index).</summary>
+    public const uint Taming = 0x354;
+
     // ---------- crafting (docs/specs/phase3/basic-crafting.md section 5) ----------
     /// <summary>The failure roll at a recipe's critical step (key crafter, tick = job serial, draw = step index).</summary>
     public const uint CraftFailure = 0x360;

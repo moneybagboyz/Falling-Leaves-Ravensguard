@@ -1,6 +1,6 @@
 using Ravensguard.Content;
 
-namespace Ravensguard.Sim.Vehicles;
+namespace Ravensguard.Sim.Carts;
 
 /// <summary>What a template's parts add up to (horses-and-carts spec 3.3, <c>VehicleStats.Derive</c>): mass, cargo by mass and volume, wheels, axle limit, hitch, crew and size.</summary>
 public sealed record VehicleStats

@@ -49,6 +49,8 @@ public sealed class WorldRuntime : IDisposable
     private double _maxHourMs;
     private int _disposed;
 
+    /// <summary>Called on the tick worker right after each hour is stepped, before the barrier's snapshot is swapped in (the hero's command desk hangs here).</summary>
+    public event Action<long>? AfterHour;
     /// <summary>The worker's last failure (null while healthy). The runtime stops starting hours after it; the game reports it once.</summary>
     public Exception? Fault => Volatile.Read(ref _fault);
     public RuntimeSnapshot Snapshot => _snapshot;
@@ -226,6 +228,7 @@ public sealed class WorldRuntime : IDisposable
     {
         var sw = Stopwatch.StartNew();
         var report = Scheduler.Update(GameTime.FromGameHours(h), ring);
+        AfterHour?.Invoke(h);                                // the hero's desk: the hour's own passes, then the commands asked in it (trade spec 4.7)
         Manager.ReleaseDistantGenerators(State.HomeRegion);
         Manager.EvictDistantTerrainOnly(State.HomeRegion, ring);
         Manager.PrewarmGenerator();

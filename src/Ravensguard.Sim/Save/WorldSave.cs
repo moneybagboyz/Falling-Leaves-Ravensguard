@@ -56,6 +56,8 @@ public sealed class WorldState
     public Ravensguard.Sim.Jobs.JobTable? Jobs { get; set; }
     /// <summary>Unfinished crafts, skills by use and what people know how to make (saved in the "crafting" section once anyone has crafted); the components of a job are in its store in the <see cref="Economy"/>.</summary>
     public Ravensguard.Sim.Crafting.CraftState? Crafting { get; set; }
+    /// <summary>The hero's side of the records (trade-inventory-character spec): worn slots and where each stack sits, the price notebook, the party, the people known (saved in the "party" section when present). The things themselves are item rows, the pack store and the purse in the <see cref="Economy"/>.</summary>
+    public Ravensguard.Sim.Trade.HeroParty? Party { get; set; }
     /// <summary>The abstract continent: 256 summaries, roads, caravans (saved in the "continent" section; null for a world that has none yet, which gets a fresh one when it runs).</summary>
     public Ravensguard.Sim.Continental.ContinentState? ContinentState { get; set; }
     /// <summary>The home region's records as the running game holds them (set by <see cref="WorldRuntime"/>, or by the code that built a new game's economy so the runtime adopts them as they are).</summary>
@@ -226,7 +228,7 @@ public sealed class ChronicleData
 /// </summary>
 public static class WorldSave
 {
-    public const string MetaSection = "meta", PeopleSection = "people", LotsSection = "region.lots", ChunksSection = ChunkStore.SectionName, ChronicleSection = "chronicle", HeroSection = "hero", CodexSection = "codex", LiveSection = "live", EconomySection = "economy", AbstractSection = "abstract", FarmingSection = "farming", ProductionSection = ProductionSave.SectionName, ContinentSection = "continent", GrowthSection = "growth", JobsSection = "jobs", CraftingSection = "crafting", MarketsSection = MarketsSave.SectionName, RegionSectionName = "region.";
+    public const string MetaSection = "meta", PeopleSection = "people", LotsSection = "region.lots", ChunksSection = ChunkStore.SectionName, ChronicleSection = "chronicle", HeroSection = "hero", CodexSection = "codex", LiveSection = "live", EconomySection = "economy", AbstractSection = "abstract", FarmingSection = "farming", ProductionSection = ProductionSave.SectionName, ContinentSection = "continent", GrowthSection = "growth", JobsSection = "jobs", CraftingSection = "crafting", PartySection = "party", MarketsSection = MarketsSave.SectionName, RegionSectionName = "region.";
     public static string RegionSection(int id) => RegionSectionName + id.ToString("D3");
 
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = false };
@@ -289,6 +291,7 @@ public static class WorldSave
             Growth = (w.Growth ?? w.HomeRecords?.Economy.Growth.State) is { IsEmpty: false } gs ? GrowthSave.Capture(gs) : null,
             Jobs = w.Jobs is { Count: > 0 } jt ? JobsSave.Capture(jt) : null,
             Crafting = w.Crafting is { IsEmpty: false } cr ? CraftingSave.Capture(cr) : null,
+            Party = w.Party == null ? null : Ravensguard.Sim.Trade.HeroPartySave.Capture(w.Party),
             Production = w.Production == null ? null : ProductionSave.Capture(w.Production), Markets = w.Markets == null ? null : MarketsSave.Capture(w.Markets),
             Regions = view?.CaptureResident(), PagedRegions = view != null ? view.Paged : new SortedDictionary<int, byte[]>(w.RegionSections.ToDictionary(kv => kv.Key, kv => kv.Value)),
             Hero = w.Hero?.ToSave(), Economy = w.Economy == null ? null : EconomySave.Capture(w.Economy), Abstract = w.Abstract == null ? null : AbstractSave.Capture(w.Abstract, w.Population), Farming = w.Farming == null ? null : FarmingSave.Capture(w.Farming), Codex = codex == null ? null : new CodexSave { Unlocked = codex.Unlocked.ToArray() },
@@ -384,6 +387,7 @@ public static class WorldSave
             Production = production, Markets = markets, RegionSections = regionSections, Growth = growth,
             Jobs = file.Sections.ContainsKey(JobsSection) ? Decode<JobsSave>(file, JobsSection, compressed: true).Restore() : null,
             Crafting = file.Sections.ContainsKey(CraftingSection) ? Decode<CraftingSave>(file, CraftingSection, compressed: true).Restore() : null,
+            Party = file.Sections.ContainsKey(PartySection) ? Decode<Ravensguard.Sim.Trade.HeroPartySave>(file, PartySection, compressed: true).Restore() : null,
             Hero = hero, Codex = codex, Live = resume, Economy = economy, Abstract = abstractState,
             Farming = file.Sections.ContainsKey(FarmingSection) ? Decode<FarmingSave>(file, FarmingSection, compressed: true).Restore(region) : null,
             ContinentState = file.Sections.ContainsKey(ContinentSection) ? Decode<ContinentSave>(file, ContinentSection, compressed: true).Restore(cs.Seed, history) : null,
@@ -547,6 +551,7 @@ public sealed class LiveCapture
     internal GrowthSave? Growth { get; init; }
     internal JobsSave? Jobs { get; init; }
     internal CraftingSave? Crafting { get; init; }
+    internal Ravensguard.Sim.Trade.HeroPartySave? Party { get; init; }
     internal MarketsSave? Markets { get; init; }
     internal ContinentSave? ContinentSt { get; init; }
     /// <summary>Captured sections of the resident regions other than home, and the stored sections of the paged ones.</summary>
@@ -591,6 +596,7 @@ public sealed class LiveCapture
         if (Growth != null) sections.Add(new(WorldSave.GrowthSection, SaveCodec.SerializeCompressed(Growth)));
         if (Jobs != null) sections.Add(new(WorldSave.JobsSection, SaveCodec.SerializeCompressed(Jobs)));
         if (Crafting != null) sections.Add(new(WorldSave.CraftingSection, SaveCodec.SerializeCompressed(Crafting)));
+        if (Party != null) sections.Add(new(WorldSave.PartySection, SaveCodec.SerializeCompressed(Party)));
         if (Production != null) sections.Add(new(WorldSave.ProductionSection, SaveCodec.SerializeCompressed(Production)));
         if (Markets != null) sections.Add(new(WorldSave.MarketsSection, SaveCodec.SerializeCompressed(Markets)));
         if (ContinentSt != null) sections.Add(new(WorldSave.ContinentSection, SaveCodec.SerializeCompressed(ContinentSt)));
