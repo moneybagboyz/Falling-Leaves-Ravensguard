@@ -115,6 +115,17 @@ public sealed class ChunkStreamer
         return gen == null ? Where.Pending : Where.Ready;
     }
 
+    /// <summary>
+    /// Makes the region holding a world chunk ready now, on the calling thread, if it is not built yet: for a hero put down in a region (a teleport, a load, a start at a
+    /// border) where walking in from a neighbour would have had it built long before. Nothing to do in a single-region world.
+    /// </summary>
+    public void EnsureReady(int cx, int cy)
+    {
+        if (Regions == null) return;
+        var at = RegionOfChunk(cx, cy);
+        if (at.IsValid) Regions.GenerateNow(at);
+    }
+
     /// <summary>The region square that holds a world chunk (Home itself without a manager and inside the home region).</summary>
     public RegionCoord RegionOfChunk(int cx, int cy) => Home.Offset(FloorDiv(cx, RegionChunks), FloorDiv(cy, RegionChunks));
 
@@ -197,6 +208,9 @@ public sealed class ChunkStreamer
             _neutral.Remove(k); _loaded.Remove(k);
             var c = LoadSync(k.X, k.Y);
             c.Version = v;
+            // a built chunk beside it was drawn against neutral ground (road rims, fence joins): it is stamped and drawn again
+            foreach (var (dx, dy) in new[] { (0, -1), (1, 0), (0, 1), (-1, 0) })
+                if (_loaded.TryGetValue((k.X + dx, k.Y + dy), out var nb) && !_neutral.Contains((k.X + dx, k.Y + dy))) nb.Version++;
             n++;
         }
         return n;
@@ -253,7 +267,7 @@ public sealed class ChunkStreamer
     {
         int loaded = 0;
         double budget = budgetMs ?? Settings.BudgetMs;
-        if (Regions != null) TrackHero(heroChunkX, heroChunkY);
+        if (Regions != null) { TrackHero(heroChunkX, heroChunkY); Regions.Poll(); }
         UpgradeNeutral(heroChunkX, heroChunkY, budget);
         int sync = Settings.SyncRadius;
         foreach (var (dx, dy) in _order)

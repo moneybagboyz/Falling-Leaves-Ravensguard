@@ -17,7 +17,7 @@ public sealed class StreetOptions
     public int Frames = 12;      // --shot-frames n: frame to capture on
     public double BenchSeconds;  // --street-bench <s>: scripted walk, prints tick and frame timings, quits
     public ulong? RegionSeed;    // --street-region <seed>: walk the generated region of that seed instead of the test hamlet (dev)
-    public string? Poi;          // --street-poi town|village|river: where in the region to start (default: the largest town's square)
+    public string? Poi;          // --street-poi town|village|river|border: where in the region to start (border: on the road of a border gate, 40 m inside the edge, to walk into the next region) (default: the largest town's square)
 
     public string? Band;         // --shot-band close|street|field|command
     public string? Season;       // --shot-season spring|summer|autumn|winter (dev: start date)
@@ -26,7 +26,7 @@ public sealed class StreetOptions
     public string? Panel;        // --shot-panel codex|character: open that panel and capture it instead of the street
     public string? PanelCategory, PanelEntry; // --shot-codex-cat legend|place|person|landmark|rule, --shot-codex-entry <id>
     public bool MapShot;         // --shot-map: open the world map and capture it instead of the street
-    public int MapScale = 1;     // --shot-map-scale 1..6
+    public int MapScale = 1;     // --shot-map-scale 1..6 (0 or -n: the continent overview, at zoom n)
     public int Settle = 900;     // frames to wait for far-band chunks to bake before a screenshot
 
     public bool IsShot => Hour.HasValue && ShotPath != null;
@@ -48,7 +48,7 @@ public sealed class StreetOptions
         o.Weather = Val("--shot-weather");
         o.MapShot = Array.IndexOf(args, "--shot-map") >= 0;
         o.Panel = Val("--shot-panel"); o.PanelCategory = Val("--shot-codex-cat"); o.PanelEntry = Val("--shot-codex-entry");
-        if (Val("--shot-map-scale") is { } ms) o.MapScale = Math.Clamp(int.Parse(ms, CultureInfo.InvariantCulture), 1, 6);
+        if (Val("--shot-map-scale") is { } ms) o.MapScale = Math.Clamp(int.Parse(ms, CultureInfo.InvariantCulture), -6, 6);
         if (Val("--shot-torch") is { } t) o.Torch = t == "1";
         if (Val("--shot-level") is { } l) o.ViewZ = int.Parse(l, CultureInfo.InvariantCulture);
         if (Val("--shot-start") is { } s) { var p = s.Split(','); o.Start = (int.Parse(p[0]), int.Parse(p[1]), p.Length > 2 ? int.Parse(p[2]) : 0); }

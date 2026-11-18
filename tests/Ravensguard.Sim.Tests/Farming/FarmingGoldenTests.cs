@@ -24,7 +24,7 @@ public class FarmingGoldenTests
             Assert.Equal(S.Info(c).RipeDoy, fs.Info(c).RipeDoy);
             Assert.Equal(S.Info(c).SowFirstDoy, fs.Info(c).SowFirstDoy);
         }
-        Assert.Equal(1100, fs.GramsPerMeasure); Assert.Equal(100, fs.Def.TithePermille); Assert.Equal(320, fs.Def.RentCoinMitesPerFieldYear);
+        Assert.Equal(1100, fs.GramsPerMeasure); Assert.Equal(100, fs.Def.TithePermille); Assert.Equal(640, fs.Def.RentCoinMitesPerFieldYear);       // integration decision I3: every lease pays coin, twice the spec's 320 a field-year (the in-kind shares stayed the lords' idle grain)
         Assert.Equal(-10, fs.Info(Crop.Wheat).FertilityDelta); Assert.Equal(5, fs.Info(Crop.Beans).FertilityDelta);
         fs.BindGoods(new GoodCatalog(EconFixture.Content)); Assert.True(fs.Info(Crop.Rye).Good > 0 || fs.Info(Crop.Rye).GoodId == "rye");
     }

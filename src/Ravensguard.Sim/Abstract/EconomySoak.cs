@@ -36,6 +36,7 @@ public sealed class SoakRow
     public long MassViolations;
     public long Hired, Succeeded, ClosedNoOwner;
     public int Sheep, Oxen, Cows;
+    public double MeanFertility;
 }
 
 /// <summary>
@@ -192,6 +193,7 @@ public sealed class EconomySoak
         r.CoinInHouseholds = led.TotalOf(PurseKind.Household).Mites;
         r.MassOk = e.MassAuditHolds(); r.MassViolations = ew.Production.MassViolations;
         r.Hired = ew.Labour.Hired - _hired0; r.Succeeded = ew.Labour.Succeeded - _succ0; r.ClosedNoOwner = ew.Labour.ClosedNoOwner - _closedNo0;
+        { long ft = 0; var ff = fs.Fields; for (int i = 0; i < ff.Count; i++) ft += ff.Fertility[i]; r.MeanFertility = ff.Count == 0 ? 0 : (double)ft / ff.Count; }
         var lv = fs.Livestock; foreach (int x in lv.Sheep) sheep += x; r.Sheep = (int)sheep; r.Oxen = lv.Oxen.Sum(); r.Cows = lv.Cows.Sum();
         return r;
     }
@@ -203,7 +205,7 @@ public sealed class EconomySoak
         var sb = new StringBuilder();
         sb.Append("year   pop  u15%  over50 birth death emig hungD  surplus% hungry% fam");
         foreach (var s in Staples.Take(5)) sb.Append($" {s[..Math.Min(5, s.Length)],5}");
-        sb.Append(" band% cap% shop% merch% bread-t ale-kl biz/closed employed idle      coin(crowns)  src/sink  audit");
+        sb.Append(" band% cap% shop% merch% bread-t ale-kl biz/closed employed idle fert sheep/ox/cow      coin(crowns)  src/sink  audit");
         return sb.ToString();
     }
 
@@ -212,7 +214,7 @@ public sealed class EconomySoak
         var sb = new StringBuilder();
         sb.Append($"{r.Year,4} {r.Population,6} {r.Under15Pct,5:0.0} {r.Over50Pct,6:0.0} {r.Births,5} {r.Deaths,5} {r.Emigrants,4} {r.HungerDeaths,5} {r.FoodSurplusPct,8:0.0} {r.HungryPct,7:0.00} {r.Famines,3}");
         for (int i = 0; i < 5; i++) sb.Append($" {r.PriceIndex[i],5:0.00}");
-        sb.Append($" {r.BandPct,5:0.0} {r.AtCapPct,4:0.0} {r.WorkshopCompletionPct,5:0} {r.MerchantsSolventPct,6:0} {r.BreadT,7} {r.AleKl,6} {r.Businesses,4}/{r.Closed,-3} {r.Employed,8} {r.Idle,4} {r.CoinTotal / 100,17:N0} {r.CoinSources / 100:N0}/{r.CoinSinks / 100:N0} {(r.CoinConserved && r.MassOk ? "ok" : "FAIL")}");
+        sb.Append($" {r.BandPct,5:0.0} {r.AtCapPct,4:0.0} {r.WorkshopCompletionPct,5:0} {r.MerchantsSolventPct,6:0} {r.BreadT,7} {r.AleKl,6} {r.Businesses,4}/{r.Closed,-3} {r.Employed,8} {r.Idle,4} {r.MeanFertility,4:0} {r.Sheep}/{r.Oxen}/{r.Cows} {r.CoinTotal / 100,12:N0} {r.CoinSources / 100:N0}/{r.CoinSinks / 100:N0} {(r.CoinConserved && r.MassOk ? "ok" : "FAIL")}");
         return sb.ToString();
     }
 
@@ -314,6 +316,8 @@ public sealed class EconomySoak
             {
                 if (pq.Status[i] != PersonStatus.Alive || e.NutritionCd[i] >= 500) continue;
                 int h = pq.Household[i]; if (h < 0 || hq.ParcelCount[h] == 0 || !seen.Add(h)) continue; shown++;
+                string barn = e.OtherStores.TryGetValue(Ravensguard.Sim.Farming.FarmIds.Barn(h), out var bs2) ? string.Join(",", bs2.Rows().Select(r => $"{cat.StringId(r.Good)} {r.Qty / 1000}")) : "-";
+                sb.AppendLine($"   barn [{barn}] fields {ew.Farming.State.Parcels.Holder.Select((x, k) => x == h ? Sim.Population.Region.Parcels[k].FieldCount : 0).Sum()}");
                 sb.AppendLine($"   hh {h} {hq.Class[h]} members {hq.MemberCount[h]} cover {e.FoodCoverDaysX10[h] / 10.0} d seedReserve {e.SeedReserveG[h] / 1000} kg tier {e.Tiers[h]} coin {led.Balance(e.HouseholdPurse[h]).Mites} stock: " + string.Join(", ", e.HouseholdStore[h].Rows().Select(r => $"{cat.StringId(r.Good)} {r.Qty / 1000.0:0}")));
             }
         }
@@ -326,6 +330,15 @@ public sealed class EconomySoak
             string Top(long[] units) => string.Join(", ", Enumerable.Range(0, cat.Count).Select(g => (g, v: units[g] * (cat.IsPiece((ushort)g) ? cat.BasePriceMilliMites((ushort)g) / 1000.0 : cat.BasePriceMilliMites((ushort)g) / 1e6) / 100)).Where(x => x.v > 0).OrderByDescending(x => x.v).Take(8).Select(x => $"{cat.StringId((ushort)x.g)} {x.v:N0}"));
             sb.AppendLine("-- imports by value (crowns at base price): " + Top(ew.Trade.ImportedUnits));
             sb.AppendLine("-- exports by value (crowns at base price): " + Top(ew.Trade.ExportedUnits));
+        }
+        {
+            var par = ew.Farming.State.Parcels; var fieldsOf = new Dictionary<int, int>();
+            for (int pi = 0; pi < par.Count; pi++) if (par.Holder[pi] >= 0) fieldsOf[par.Holder[pi]] = fieldsOf.GetValueOrDefault(par.Holder[pi]) + Sim.Population.Region.Parcels[pi].FieldCount;
+            var hungF = new List<int>(); var allF = new List<int>();
+            foreach (var (h, f) in fieldsOf) { if (Sim.Households.MemberCount[h] == 0 || Sim.Households.Class[h] == SocialClass.Gentry) continue; allF.Add(f); if ((e.Grievances[h] & Grievance.Hunger) != 0) hungF.Add(f); }
+            allF.Sort(); hungF.Sort();
+            string Q(List<int> l) => l.Count == 0 ? "-" : $"n {l.Count} p10 {l[l.Count / 10]} p50 {l[l.Count / 2]} p90 {l[l.Count * 9 / 10]}";
+            sb.AppendLine($"-- fields held (non-gentry holders): all {Q(allF)}; hungry {Q(hungF)}; farm seed eaten {e.SeedEaten / 1e6:N1} t");
         }
         var lab = ew.Labour;
         sb.AppendLine($"-- labour: hired {lab.Hired} (apprentices {lab.Apprenticed}), succeeded {lab.Succeeded}, closed for want of an owner {lab.ClosedNoOwner}, staff gone {lab.StaffGone}; quits {prod.QuitCount}, forgiven arrears {prod.ForgivenArrearsMites} mites; batches {prod.BatchesFinished}/{prod.BatchesStarted}");

@@ -37,7 +37,7 @@ public class FarmingSoakTests(ITestOutputHelper output)
     public void Soak_MildWeather_NormalYearsHoldTheSpecBalance()
     {
         var sw = Stopwatch.StartNew();
-        var soak = new FarmingSoak(weather: new FakeFarmWeather());
+        var soak = new FarmingSoak(FarmingSoak.SpecSettings(), weather: new FakeFarmWeather());
         var start = soak.Sys.State.Fields.Slot.ToArray(); var slotAcres = Enumerable.Range(0, 3).Select(s => soak.Sys.SlotAcres(0, s)).ToArray();
         soak.Run(10);
         Report(soak, "mild weather");

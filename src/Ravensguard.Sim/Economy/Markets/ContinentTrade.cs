@@ -13,8 +13,9 @@ namespace Ravensguard.Sim.Economy.Markets;
 /// </summary>
 public sealed class ContinentTrade
 {
-    public const int ImportMarkupPermille = 1250, ExportDiscountPermille = 850, StapleImportMarkupPermille = 1500, StapleExportDiscountPermille = 800;
-    public const int ShortBelowPermilleOfCover = 500, GlutAbovePermilleOfCover = 1500;
+    public const int ImportMarkupPermille = 1100, ExportDiscountPermille = 900, StapleImportMarkupPermille = 1050, StapleExportDiscountPermille = 950;
+    /// <summary>The continent steps in only at the extremes: below 0.3 of the target cover the price curve gives 1.83 x Ref, above 2.8 of it 0.6 x Ref, which is the band the spec asks staples to keep.</summary>
+    public const int ShortBelowPermilleOfCover = 300, GlutAbovePermilleOfCover = 2800;
 
     private readonly MarketSystem _markets;
     private readonly EconomyState _econ;
@@ -63,7 +64,7 @@ public sealed class ContinentTrade
     private void Import(MarketBook b, MarketParty m, ushort g, GoodBook gb, long cover, int markup, int day)
     {
         var led = _econ.Ledger;
-        long want = Math.Min(cover / 2 - gb.StockUnits, Math.Max(1, cover / 8));
+        long want = Math.Min(cover * 6 / 10 - gb.StockUnits, Math.Max(1, cover / 4));
         if (want <= 0) return;
         long cash = led.Balance(m.Purse).Mites;
         long unit = gb.RefMicro * markup / 1000;
@@ -81,7 +82,7 @@ public sealed class ContinentTrade
     private void Export(MarketBook b, ushort g, GoodBook gb, long cover, int discount, int day)
     {
         var led = _econ.Ledger;
-        long take = Math.Max(1, (gb.StockUnits - cover * 1200 / 1000) / 3);
+        long take = Math.Max(1, (gb.StockUnits - cover * 2000 / 1000) / 2);
         long budget = led.Balance(Purse).Mites;
         long unitMicro = gb.RefMicro * discount / 1000; if (unitMicro <= 0) return;
         long maxQ = (long)((Int128)budget * 1_000_000 / unitMicro);

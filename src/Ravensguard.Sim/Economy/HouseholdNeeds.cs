@@ -197,6 +197,13 @@ public static class HouseholdNeeds
         int shortRelish = need.RelishX100 - eatenRelish, subst = 0;
         if (shortRelish > 0) subst = EatStaple(e, store, shortRelish, e.SeedReserveG[hh], miller, ref toll);   // grain stands in, measure for measure
         bool dietPoor = shortRelish > 0;
+        // the seed emergency (households spec 3.6, G-H12): a household that has eaten everything else eats its seed corn rather than starve; the next sowing shrinks by what it ate
+        int stillShort = needTotal - (eatenStaple + eatenRelish + subst);
+        if (stillShort > 0 && e.SeedReserveG[hh] > 0)
+        {
+            int seedEaten = EatStaple(e, store, stillShort, 0, miller, ref toll);
+            if (seedEaten > 0) { subst += seedEaten; e.SeedReserveG[hh] = (int)Math.Max(0, e.SeedReserveG[hh] - (long)seedEaten * GramsPerMeasure / 100); e.SeedEaten += (long)seedEaten * GramsPerMeasure / 100; }
+        }
         int eatenTotal = eatenStaple + eatenRelish + subst;
         int fed = needTotal == 0 ? 1000 : (int)Math.Min(1000, (long)eatenTotal * 1000 / needTotal);
 

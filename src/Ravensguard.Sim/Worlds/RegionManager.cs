@@ -141,11 +141,16 @@ public sealed class RegionManager
         lock (_gate)
         {
             foreach (var (_, pos) in _travellers)
+            {
+                // the region a traveller stands in comes first (a hero put down in an unbuilt region)
+                var own = RegionCoord.OfMetres(pos.X, pos.Y);
+                if (own.IsValid && !_ready.ContainsKey(own.Id) && !_running.ContainsKey(own.Id)) _queued[own.Id] = -1;
                 foreach (var (n, d) in Triggered(pos.X, pos.Y))
                 {
                     if (_ready.ContainsKey(n.Id) || _running.ContainsKey(n.Id)) continue;
                     if (!_queued.TryGetValue(n.Id, out var old) || d < old) _queued[n.Id] = d;
                 }
+            }
             // drop jobs not started whose region no traveller is near any more
             if (_queued.Count > 0)
                 foreach (int id in _queued.Keys.ToArray())

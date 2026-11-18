@@ -417,7 +417,7 @@ internal sealed partial class RegionBuilder
             for (int k = 0; k < n; k++)
             {
                 long a = acc[tl[Math.Clamp(k - off, 0, n0 - 1)]];
-                bool rv = a >= _riverTiles;
+                bool rv = w.Kind == WaterKind.River || a >= _riverTiles; // a river stays river-sized where a continental step carries a little less than the local flow
                 w.WidthCm[k] = WidthCm(rv, a, _streamTiles, _riverTiles);
                 w.DepthCm[k] = DepthCm(rv, a, _streamTiles, _riverTiles);
             }

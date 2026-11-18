@@ -144,15 +144,32 @@ internal sealed partial class RegionBuilder
                     int e = (uint)ex < E && (uint)ey < E ? ey * E + ex : -1;
                     if (e < 0) { prevE = -1; continue; }
                     if (i == 0 && _eChainNext[e] >= 0) break; // starts in the middle of another river: it flows on as that one
+                    _eChainAcc[e] = Math.Max(_eChainAcc[e], stepAcc); // a tile carries the most of any step through it
                     if (prevE >= 0)
                     {
                         LinkChain(prevE, e);
                         if (_eChainNext[e] >= 0) break; // joins a river already laid: merged
                     }
-                    if (_eChainAcc[e] == 0) _eChainAcc[e] = stepAcc;
                     prevE = e;
                 }
             }
+        RaiseChainAccDownstream();
+    }
+
+    /// <summary>Makes the river's accumulation never fall downstream (where a small tributary laid a tile first and a bigger river merged into it).</summary>
+    private void RaiseChainAccDownstream()
+    {
+        int A = E * E;
+        var deg = new int[A];
+        for (int e = 0; e < A; e++) if (_eChainNext[e] >= 0) deg[_eChainNext[e]]++;
+        var q = new Queue<int>();
+        for (int e = 0; e < A; e++) if (_eChainNext[e] >= 0 && deg[e] == 0) q.Enqueue(e);
+        while (q.Count > 0)
+        {
+            int e = q.Dequeue(), n = _eChainNext[e];
+            if (_eChainAcc[n] < _eChainAcc[e]) _eChainAcc[n] = _eChainAcc[e];
+            if (--deg[n] == 0 && _eChainNext[n] >= 0) q.Enqueue(n);
+        }
     }
 
     private void LinkChain(int from, int to)

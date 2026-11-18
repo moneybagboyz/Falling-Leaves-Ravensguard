@@ -60,6 +60,7 @@ public sealed class ParishRelief
                 if (s2 != s && e.OtherStores.TryGetValue(FarmIds.ParishGranary(s2), out var other)) want -= Draw(other, house, want);
             }
         }
+        Relief(now);
         for (int s = 0; s < ns; s++)
         {
             if (_fiefHungry[FiefSlot(s)]) continue;
@@ -93,6 +94,61 @@ public sealed class ParishRelief
     }
     public const int DoleMitesPerMemberDay = 45;
     public long DoleMites;
+
+    // ---------- famine relief purchases (taxes spec 3.6) ----------
+
+    private MarketParty?[] _stewards = [];
+
+    private MarketParty Steward(int fief)
+    {
+        var reg = _w.Population.Region; var e = _w.Economy;
+        if (_stewards.Length != reg.Fiefs.Count) _stewards = new MarketParty?[reg.Fiefs.Count];
+        return _stewards[fief] ??= new MarketParty(reg.Fiefs[fief].Id, e.Ledger.Open(PurseKind.Treasury, reg.Fiefs[fief].Id), e.OpenStore(StoreKind.Chest, reg.Fiefs[fief].Id, 0, 0, enforce: false), PartyKind.Household, 1_000_000 + fief);
+    }
+
+    /// <summary>
+    /// The fief steward feeds the hungry from the treasury's own purchases: the day's rations leave the fief chest for the households under three days of food (lowest cover
+    /// first), and grain for the next days is bought at the market of every settlement that has hungry households, paid from the treasury (so the idle coin of the treasury
+    /// goes to the farmers who hold the grain). Capped at 2 percent of the treasury a day.
+    /// </summary>
+    private void Relief(GameTime now)
+    {
+        var e = _w.Economy; var hht = _w.Households; var reg = _w.Population.Region;
+        int nf = reg.Fiefs.Count; if (nf == 0) return;
+        var needBySettlement = new Dictionary<int, long>();
+        var hungry = new List<int>[nf]; for (int f = 0; f < nf; f++) hungry[f] = [];
+        for (int h = 0; h < hht.Count; h++)
+        {
+            if (hht.MemberCount[h] == 0 || e.FoodCoverDaysX10[h] >= HungryBelowDaysX10) continue;
+            int s = hht.Settlement[h]; int f = reg.Settlements[s].FiefIndex; if (f < 0 || f >= nf) continue;
+            hungry[f].Add(h); needBySettlement[s] = needBySettlement.GetValueOrDefault(s) + (long)hht.MemberCount[h] * HouseholdNeeds.GramsPerMeasure;
+        }
+        int day = (int)now.TotalDays;
+        for (int f = 0; f < nf; f++)
+        {
+            if (hungry[f].Count == 0) continue;
+            var st = Steward(f); var chest = st.Store;
+            foreach (int h in hungry[f].OrderBy(x => e.FoodCoverDaysX10[x]).ThenBy(x => x))
+            {
+                long want = (long)hht.MemberCount[h] * HouseholdNeeds.GramsPerMeasure, got = 0;
+                foreach (ushort g in _grains) { if (got >= want) break; got += Store.MoveUpTo(chest, e.HouseholdStore[h], g, want - got); }
+                CharityG += got; ReliefG += got;
+            }
+        }
+        foreach (var (s, need) in needBySettlement.OrderBy(kv => kv.Key))
+        {
+            int f = reg.Settlements[s].FiefIndex; var st = Steward(f);
+            long budget = e.Ledger.Balance(st.Purse).Mites * 2 / 100;
+            if (budget <= 0) continue;
+            var book = _markets.BookForSettlement(s);
+            ushort best = ushort.MaxValue; long bestStock = 0;
+            foreach (ushort g in _grains) { long stock = book.Goods[g].StockUnits; if (stock > bestStock) { bestStock = stock; best = g; } }
+            if (best == ushort.MaxValue) continue;
+            long qty = Math.Min(need * 2, bestStock);
+            book.Post(new BuyOrder(st, best, qty, 3500) { Priority = 0 });
+        }
+    }
+    public long ReliefG;
 
     private long Draw(Store granary, Store house, long want)
     {

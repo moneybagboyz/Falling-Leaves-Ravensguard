@@ -11,7 +11,7 @@ namespace Ravensguard.Sim.Tests.Production;
 /// <summary>Business creation from seed 1234's population and lots: coverage, records, determinism, and the section save of a fresh world.</summary>
 public class BuilderTests
 {
-    private static readonly Lazy<SoakWorld> World = new(SoakWorld.Create);
+    private static readonly Lazy<SoakWorld> World = new(() => SoakWorld.Create(withTicker: false));
 
     [Fact]
     public void EveryTradeWorkplaceBecomesABusiness_WithAnOwnerAStaffAndACashBox()
@@ -77,7 +77,7 @@ public class BuilderTests
     [Fact]
     public void Creation_IsDeterministic_AndTheFreshSectionsRoundTrip()
     {
-        var a = World.Value; var b = SoakWorld.Create();
+        var a = World.Value; var b = SoakWorld.Create(withTicker: false);
         Assert.Equal(a.Econ.ComputeHash(), b.Econ.ComputeHash());
         var pa = SaveCodec.SerializeCompressed(ProductionSave.Capture(a.Sys)); var pb = SaveCodec.SerializeCompressed(ProductionSave.Capture(b.Sys));
         Assert.Equal(pa, pb);

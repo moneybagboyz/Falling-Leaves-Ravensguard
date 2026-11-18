@@ -86,7 +86,13 @@ public class TickOrderingTests
         Assert.True(SystemOrder.Production < SystemOrder.Extraction && SystemOrder.Extraction < SystemOrder.FarmTasks && SystemOrder.FarmTasks < SystemOrder.Markets);
         int[] s = [SystemOrder.S1Farming, SystemOrder.S2Grazing, SystemOrder.S3Extraction, SystemOrder.S4Taxes, SystemOrder.S5MintPrices, SystemOrder.S6Population, SystemOrder.S7Migration, SystemOrder.S8Caravans, SystemOrder.S9Summary];
         Assert.Equal(s.OrderBy(x => x), s);
-        Assert.Equal(["population-seasonal", "population-migration"], r.For(TickPhase.H6Seasonal).Select(x => x.Name));   // S6 before S7
+        Assert.Equal(["resource-regrowth", "business-seasonal", "price-drift", "population-seasonal", "population-migration"], r.For(TickPhase.H6Seasonal).Select(x => x.Name));   // S3, S5, S5, S6, S7
+        // the economy in the overview's order: work (H2), session (H3), the day's slice, then the daily globals with farming first and the markets before production
+        Assert.Equal(["production-work"], r.For(TickPhase.H2Work).Select(x => x.Name));
+        Assert.Equal(["market-session"], r.For(TickPhase.H3Market).Select(x => x.Name));
+        var h5 = r.For(TickPhase.H5DailyGlobals).Select(x => x.Name).ToList();
+        Assert.True(h5.IndexOf("farming") < h5.IndexOf("population-daily") && h5.IndexOf("labour-market") < h5.IndexOf("market-daily") && h5.IndexOf("market-daily") < h5.IndexOf("production-daily"));
+        Assert.True(names.IndexOf("farm-sales") < names.IndexOf("household-needs") && names.IndexOf("production-slice") < names.IndexOf("household-shopping"));
     }
 
     [Fact]

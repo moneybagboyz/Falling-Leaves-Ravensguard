@@ -383,7 +383,7 @@ public partial class StreetView : Control, IHandlesBack
         if (_router == null || _regionMap == null) { _router?.ShowToast(L.T("MAP_NONE")); return; }
         UI.ContinentOverview? ov = _source?.Regions != null && _source.Continent != null && _source.History != null && _world.Streamer is { } st
             ? new UI.ContinentOverview(_source.Continent, _source.History, _source.Regions, st.Home, HeroWorld) : null;
-        _router.Push(new WorldMapScreen(_router, _regionMap, HeroWorld, ov) { ShotPath = _opt.MapShot ? _opt.ShotPath : null, StartScale = Math.Max(1, _opt.MapScale), StartContinent = _opt.MapScale == 0 });
+        _router.Push(new WorldMapScreen(_router, _regionMap, HeroWorld, ov) { ShotPath = _opt.MapShot ? _opt.ShotPath : null, StartScale = Math.Max(1, Math.Abs(_opt.MapScale)), StartContinent = _opt.MapScale <= 0 });
     }
 
     void UpdateHud(LiveSnapshot s)
@@ -779,7 +779,7 @@ public partial class StreetView : Control, IHandlesBack
         if (_frames > 3) _drawMsMaxWarm = Math.Max(_drawMsMaxWarm, dms); // frame 1 to 3 pay for JIT and first-use setup
 
         if (_opt.Click is { } c && _frames == 2) ClickMove(new Vector2(c.X, c.Y));
-        if (_opt.MapShot && _frames == 3) OpenMap();
+        if (_opt.MapShot && _frames == (_opt.Frames > 12 ? _opt.Frames : 3)) OpenMap(); // --shot-frames n (> 12) waits that long first, so neighbour regions are built when the map opens
         if (_opt.Panel == "character" && _frames == 3) OpenCharacter();
         if (_opt.Panel == "codex" && _frames == 3) OpenCodex();
         if (_opt.IsShot && _opt.Weather == "storm" && _frames == Math.Max(2, _opt.Frames - 1)) _wover.Strike(); // dev: catch a lightning flash in the picture

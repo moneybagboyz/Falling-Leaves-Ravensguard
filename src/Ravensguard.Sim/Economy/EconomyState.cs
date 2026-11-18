@@ -52,6 +52,8 @@ public sealed class EconomyState
     /// <summary>Per household, three counts (shoes, clothes, tools) of items that wore out and are waiting to be bought (integration decision I10).</summary>
     public byte[] DueDurables { get; private set; }
     public const int Durables = 3;
+    /// <summary>Grams of seed corn households ate in the seed emergency (not saved: a running tally for the soak).</summary>
+    public long SeedEaten;
 
     public EconomyState(GoodCatalog goods, MoneySettingsDef money, IReadOnlyList<NeedsBasketDef> baskets, int householdCount, int personCount, Ledger? ledger = null, MassLedger? mass = null)
     {

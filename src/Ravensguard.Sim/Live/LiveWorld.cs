@@ -110,6 +110,7 @@ public sealed class LiveWorld
     {
         Streamer = streamer; LatitudeTenths = latitudeTenths;
         int cx = ChunkStreamer.FloorDiv(start.X, 32), cy = ChunkStreamer.FloorDiv(start.Y, 32);
+        streamer.EnsureReady(cx, cy); // a start in a region that is not built yet builds it first (the one place the hero may wait)
         streamer.LoadAround(cx, cy, streamer.Settings.LoadRadius);
         Window = new WorldWindow(streamer, cx, cy);
         Grid = Window.Grid; Map = Window.Map; Lights = Window.Lights; _lightRev = Window.LightRevision; _lightPair = new LightFramePair(Lights);

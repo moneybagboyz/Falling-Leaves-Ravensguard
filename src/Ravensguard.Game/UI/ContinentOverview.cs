@@ -54,7 +54,7 @@ public sealed class ContinentOverview
         return $"{rc} {where}{(realm.Length > 0 ? "  " + realm : "")}  {(g != null ? $"{g.Region.Towns.Count()} towns, {g.Region.Villages.Count()} villages" : L.T("MAP_REGION_UNSEEN"))}";
     }
 
-    static readonly Color RoadHigh = new("f0d27a"), RoadMid = new("d8c9a0"), RoadLow = new("a89878"), RiverCol = new("5d8fd0"), RegionTint = new(1f, 0.95f, 0.7f, 0.10f);
+    static readonly Color RoadHigh = new("7a4a1e"), RoadMid = new("8f6a3c"), RoadLow = new("a8884e"), RiverCol = new("3f6fb8"), RegionTint = new(0.86f, 0.80f, 0.62f, 0.80f); // washes out the history icons under a generated region, which is drawn in detail instead
 
     /// <summary>Draws the region grid, then every generated region in detail over the pixels: roads, rivers, settlements and (when large enough) town names.</summary>
     public void Draw(CanvasItem c, Func<Vector2, Vector2> toScreen, float scale, Font font, Rect2 view)
@@ -102,9 +102,10 @@ public sealed class ContinentOverview
         foreach (var s in r.Settlements)
         {
             if (s.Class == SettlementClass.Farmstead && scale < 4) continue;
+            if (s.Class == SettlementClass.Village && scale < 2) continue; // at the smallest zoom a region is 32 px: only its towns
             var p = P(new PointM(s.CenterX, s.CenterY)).Floor();
-            int sz = s.Class == SettlementClass.Town ? 4 : s.Class == SettlementClass.Village ? 3 : 2;
-            c.DrawRect(new Rect2(p - new Vector2(sz / 2f + 1, sz / 2f + 1), new Vector2(sz + 2, sz + 2)), PixelTheme.Border);
+            int sz = s.Class == SettlementClass.Town ? (scale < 2 ? 3 : 4) : s.Class == SettlementClass.Village ? 2 : 2;
+            if (sz > 2 || scale >= 3) c.DrawRect(new Rect2(p - new Vector2(sz / 2f + 1, sz / 2f + 1), new Vector2(sz + 2, sz + 2)), PixelTheme.Border);
             c.DrawRect(new Rect2(p - new Vector2(sz / 2f, sz / 2f), new Vector2(sz, sz)), s.Class == SettlementClass.Town ? PixelTheme.Gold : new Color("e8e0c8"));
             if (s.Class == SettlementClass.Town && scale >= 3) c.DrawString(font, p + new Vector2(-24, 14), s.Name, HorizontalAlignment.Left, 48, 11, PixelTheme.Body);
         }

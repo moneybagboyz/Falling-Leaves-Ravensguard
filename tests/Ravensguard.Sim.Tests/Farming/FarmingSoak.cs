@@ -49,6 +49,17 @@ public sealed class FarmingSoak
 
     public int People => _people;
 
+    /// <summary>The settings of the farming spec: the content, with the calibrations the integrated economy added (target fertility, coin leases, herd products) put back to the spec's numbers, so this soak keeps testing G-F15.</summary>
+    public static FarmingSettings SpecSettings()
+    {
+        var c = FarmingSettings.FromContent(EconFixture.Content);
+        var d = new Ravensguard.Content.FarmingSettingsDef
+        {
+            Id = c.Def.Id, TargetMeanFertility = 74, CoinLeasePct = 15, RentCoinMitesPerFieldYear = 320, SheepPerFallowAcreCapX100 = 200,
+        };
+        return new FarmingSettings(d, EconFixture.Content.All<Ravensguard.Content.CropDef>());
+    }
+
     private long Grain() { long t = 0; foreach (var g in _eatOrder) t += Sys.TotalGrams(g); return t; }
 
     /// <summary>Eats <paramref name="needG"/> grams of grain; returns the shortfall.</summary>

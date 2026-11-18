@@ -24,7 +24,6 @@ public class SoakTests(ITestOutputHelper output)
     {
         var sw = Stopwatch.StartNew();
         var w = SoakWorld.Create();
-        w.Harvest(45);                                                   // last year's carry-over
         var ledger = w.Econ.Ledger; var cat = w.Econ.Goods;
         long coin0 = ledger.Audit().InPurses.Mites, seeded = ledger.Sourced(SourceReason.Seed).Mites;
         long hh = w.Pop.Households.Count;
