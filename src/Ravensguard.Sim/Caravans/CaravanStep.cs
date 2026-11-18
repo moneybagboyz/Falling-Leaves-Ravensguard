@@ -123,7 +123,10 @@ public sealed partial class ContinentTrade
     private void Encounter(TickContext ctx, ContinentState st, Caravan c, GameTime time)
     {
         int danger = Math.Clamp(c.DangerX, 0, 100);
-        long ppm = 120L * (50 + danger) / 100;
+        // Encounters per caravan-hour: 120 ppm on a safe road, rising 30 ppm per point of danger (3,120 ppm at 100). With bandits a share of
+        // encounters that grows with danger (up to 40 percent), a 40-hour trip is ambushed about 0.1 percent of the time at danger 15 and about
+        // 5 percent at danger 100. (Was 120 x (50 + danger) / 100 ppm: under one ambush in 3,000 trips even at danger 100, so dangerous roads weren't.)
+        long ppm = 120L + 30L * danger;
         ulong key = c.Id.Value;
         if (DetRng.Range(ctx.Seed, ctx.Hour, key, StreamCaravan, 0, 0, 1_000_000) >= ppm) return;
         int kind = DetRng.Range(ctx.Seed, ctx.Hour, key, StreamCaravan, 1, 0, 100);
