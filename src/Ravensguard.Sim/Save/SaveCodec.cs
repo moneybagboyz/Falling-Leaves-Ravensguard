@@ -27,7 +27,12 @@ public static class SaveCodec
 
     public static byte[] Serialize<T>(T value) => MessagePackSerializer.Serialize(value, Plain);
     public static T Deserialize<T>(ReadOnlyMemory<byte> data) => MessagePackSerializer.Deserialize<T>(data, Plain);
-    public static byte[] SerializeCompressed<T>(T value) => MessagePackSerializer.Serialize(value, Lz4);
+    // The LZ4 encoder of the MessagePack package does not give the same bytes for the same input when calls overlap on several threads (the output is
+    // still valid, but a chunk compressed on a worker differs from one compressed in place, and a re-saved game from the first save). Compression
+    // is a small share of the work, so calls take turns; generation and everything else stay parallel.
+    private static readonly object Lz4Gate = new();
+
+    public static byte[] SerializeCompressed<T>(T value) { lock (Lz4Gate) return MessagePackSerializer.Serialize(value, Lz4); }
     public static T DeserializeCompressed<T>(ReadOnlyMemory<byte> data) => MessagePackSerializer.Deserialize<T>(data, Lz4);
 
     public static byte[] Encode(SaveFile file)
