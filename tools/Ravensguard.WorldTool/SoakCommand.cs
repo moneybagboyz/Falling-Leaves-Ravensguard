@@ -32,6 +32,8 @@ public static class SoakCommand
                 default: Console.Error.WriteLine($"unknown option {args[i]}"); return 1;
             }
         }
+        // background collections only, as the game host runs (decision I40): a blocking gen-2 collection inside an hour is a host pause, not simulation work
+        System.Runtime.GCSettings.LatencyMode = System.Runtime.GCLatencyMode.SustainedLowLatency;
         var dir = BaseContent.Require();
         var sw = Stopwatch.StartNew();
         var hw = HeadlessWorld.Create(seed, dir, carryOverPct: carry);

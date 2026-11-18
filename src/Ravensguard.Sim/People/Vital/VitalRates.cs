@@ -66,10 +66,10 @@ public sealed record VitalRates
     public static readonly VitalRates Default = new();
 
     /// <summary>
-    /// The rates of a world with the whole economy (the game and the soaks): chevage (decision I11) and the north-west European marriage pattern, brides from 20 and
-    /// grooms from 22 (integration decision I39; were 16 and 18): later marriage is what kept the pre-industrial English under-15 share near 30 percent.
+    /// The rates of a world with the whole economy (the game and the soaks): chevage (decision I11) and the north-west European marriage pattern, brides from 21 and
+    /// grooms from 23 (integration decision I39; were 16 and 18): later marriage is what kept the pre-industrial English under-15 share near 30 percent.
     /// </summary>
-    public static readonly VitalRates EconomyDefault = Default with { ChevagePct = 50, MarryAgeMinFemale = 20, MarryAgeMinMale = 22 };
+    public static readonly VitalRates EconomyDefault = Default with { ChevagePct = 50, MarryAgeMinFemale = 21, MarryAgeMinMale = 23 };
 }
 
 /// <summary>The one RNG stream numbers of the vital kernels (overview 2.3).</summary>
