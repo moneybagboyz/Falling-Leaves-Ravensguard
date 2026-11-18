@@ -29,8 +29,7 @@ Reviewed at 490939f: people, autopilot v1, onboarding v1 and the Phase 3 cleanup
 
 Notes:
 - **Finding 1:** a chunk recorded while growth runs waits for the change to finish (a growth change regenerates at most the few visited chunks it touches).
-- **Finding 14, game half:** the game should set `HeroText.Resolver = L.Resolve` (translation server, then `string.Format`) at start and re-import `en.csv` (`en.en.translation`). Until then the desk's results come from the `en.csv` on disk, which a run from the source tree finds.
-- **Finding 15, game half:** the game can set `CraftViewWanted` to whether the crafting screen is open.
+- **Findings 14 and 15, game half:** the game sets `HeroText.Resolver` (its translation server) at start and `CraftViewWanted` to whether the crafting screen is open (see the game section). `en.en.translation` must be re-imported after the `en.csv` changes. Without a resolver, the desk's results come from the `en.csv` on disk, which a run from the source tree finds.
 
 ## Done in the cleanup
 From `docs/reviews/phase-3-open.md`:
