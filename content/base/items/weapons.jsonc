@@ -43,5 +43,13 @@
   // Single-material wooden club: the head material is chosen per instance (oak), no separate haft.
   { "type": "weapon_shape", "id": "club", "name": "Club", "head_volume_cm3": 1000,
     "wind_up_s": 0.55, "recover_s": 0.50,
-    "attacks": [ { "id": "bash", "name": "Bash", "verb": "bashes", "type": "blunt", "contact_area": 40, "penetration_mm": 0, "velocity": 1.0 } ] }
+    "attacks": [ { "id": "bash", "name": "Bash", "verb": "bashes", "type": "blunt", "contact_area": 40, "penetration_mm": 0, "velocity": 1.0 } ] },
+
+  // Blunted practice weapons of the yard (onboarding spec 3.4): half the momentum of the real thing, edges and points counted as blunt, like tournament weapons (spec 4A.3).
+  { "type": "weapon_shape", "id": "practice_sword", "name": "Practice sword", "head_volume_cm3": 400, "wind_up_s": 0.45, "recover_s": 0.40,
+    "attacks": [ { "id": "whack", "name": "Whack", "verb": "whacks", "type": "blunt", "contact_area": 30, "penetration_mm": 0, "velocity": 0.5 } ] },
+  { "type": "weapon_shape", "id": "practice_spear", "name": "Practice spear", "head_volume_cm3": 900, "wind_up_s": 0.50, "recover_s": 0.45,
+    "attacks": [ { "id": "prod", "name": "Prod", "verb": "prods", "type": "blunt", "contact_area": 20, "penetration_mm": 0, "velocity": 0.5 } ] },
+  { "type": "weapon_shape", "id": "practice_staff", "name": "Practice staff", "head_volume_cm3": 1100, "wind_up_s": 0.55, "recover_s": 0.45,
+    "attacks": [ { "id": "rap", "name": "Rap", "verb": "raps", "type": "blunt", "contact_area": 25, "penetration_mm": 0, "velocity": 0.5 } ] }
 ]
