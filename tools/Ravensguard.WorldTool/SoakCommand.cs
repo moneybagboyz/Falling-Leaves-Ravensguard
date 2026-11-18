@@ -12,7 +12,7 @@ public static class SoakCommand
 {
     public static int Run(string[] args)
     {
-        ulong seed = 1234; int years = 1, carry = 45; bool quiet = false, diag = false; string? probe = null; bool flow = false; var flowYears = new List<int>(); int probeDays = 15; int every = 1;
+        ulong seed = 1234; int years = 1, carry = 45; bool quiet = false, diag = false; string? probe = null; bool flow = false; var flowYears = new List<int>(); int probeDays = 15, probeSkip = 0; int every = 1;
         for (int i = 1; i < args.Length; i++)
         {
             switch (args[i])
@@ -26,6 +26,7 @@ public static class SoakCommand
                 case "--flow": flow = true; break;
                 case "--flow-years": flowYears = args[++i].Split(',').Select(int.Parse).ToList(); flow = true; break;
                 case "--probe": probe = args[++i]; break;
+                case "--probe-skip": probeSkip = int.Parse(args[++i]); break;
                 case "--probe-days": probeDays = int.Parse(args[++i]); break;
                 default: Console.Error.WriteLine($"unknown option {args[i]}"); return 1;
             }
@@ -38,7 +39,7 @@ public static class SoakCommand
         Console.WriteLine($"band: staple mid / base price within {EconomySoak.BandLow / 1000.0:0.0}..{EconomySoak.BandHigh / 1000.0:0.0}, book-days of books with a merchant; staples {string.Join(", ", EconomySoak.Staples.Take(5))} (price index columns are the mean mid/base)");
         var soak = new EconomySoak(hw) { TrackLastYear = diag };
         if (flow) { soak.EnableFlow(); foreach (int y in flowYears) soak.FlowYears.Add(y); soak.FlowOut = Console.WriteLine; }
-        if (probe != null) { soak.Probe(probe, probeDays, Console.Out); return 0; }
+        if (probe != null) { soak.Ticker.AdvanceHours(24 * probeSkip); soak.Probe(probe, probeDays, Console.Out); return 0; }
         Console.WriteLine(EconomySoak.Header());
         bool ok = true;
         soak.Run(years, r =>
