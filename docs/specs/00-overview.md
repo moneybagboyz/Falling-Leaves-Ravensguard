@@ -58,6 +58,7 @@ No `float`/`double` in simulation code. Square roots use a new `Fixed.Sqrt` (int
 | 0x220 | market tie-break, order shuffle | settlement |
 | 0x221 | stochastic rounding of goods | owner id |
 | 0x222 | spoilage rounding | owner id |
+| 0x223 | craft quality roll | crafter person |
 | 0x230 | caravan ambush / loss | caravan |
 | 0x231 | caravan trip noise | caravan |
 | 0x240 | extraction variance | tile / site |

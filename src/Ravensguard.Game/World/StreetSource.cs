@@ -31,18 +31,21 @@ public abstract class StreetSource
     public Ravensguard.Sim.Characters.HeroRecord? Hero { get; set; }
     public Ravensguard.Sim.Codex.CodexBook? Codex { get; set; }
     public WorldHistory? History { get; set; }
+    /// <summary>A saved run to resume (hero position, clock, torch, explored map, Codex progress); null starts fresh at the spawn.</summary>
+    public Ravensguard.Sim.Live.LiveResume? Resume { get; set; }
     public ContentDatabase? Content { get; protected set; }
 
     public static StreetSource Hamlet() => new HamletSource();
 
     /// <summary>The generated region as a street source. Chunks generate on first visit; pass the save's chunk store to resume where the world was left.</summary>
     public static StreetSource ForRegion(RegionData region, Population population, ContentDatabase content, ChunkStore? store = null, Cell3? spawn = null, string? poi = null,
-        Ravensguard.Sim.Characters.HeroRecord? hero = null, Ravensguard.Sim.Codex.CodexBook? codex = null, WorldHistory? history = null, Continent? continent = null)
+        Ravensguard.Sim.Characters.HeroRecord? hero = null, Ravensguard.Sim.Codex.CodexBook? codex = null, WorldHistory? history = null, Continent? continent = null,
+        Ravensguard.Sim.Live.LiveResume? resume = null)
         => new RegionSource(region, population, content, store, spawn)
         {
-            Poi = poi, Hero = hero, Codex = codex, History = history,
+            Poi = poi, Hero = hero, Codex = codex, History = history, Resume = resume,
             // the world's own (possibly customised) continent drives the weather, not one regenerated from default settings
-            WeatherInit = continent == null ? null : new Ravensguard.Sim.Weather.RegionWeather(continent, new Ravensguard.Sim.Weather.ContinentalWeather(region.Seed, Ravensguard.Sim.Weather.WeatherSettings.LoadDefaults(StreetView.ContentDir()))),
+            WeatherInit = continent == null ? null : Ravensguard.Sim.Weather.RegionWeather.ForContinent(continent, region.Seed, Ravensguard.Sim.Weather.WeatherSettings.LoadDefaults(StreetView.ContentDir())),
         };
 
     /// <summary>Dev: builds continent, history, embark region and population from a seed (seconds), then streams it.</summary>
@@ -62,7 +65,7 @@ public abstract class StreetSource
         Ravensguard.Sim.WorldGen.Region.LandmarkPlacer.Place(region, h, load.Database);
         var pop = Populator.Populate(region, h, load.Database);
         GD.Print($"[street] region for seed {seed}: cell ({pick.CellX},{pick.CellY}), {region.Towns.Count()} towns, {region.Villages.Count()} villages, pop {pop.People.Count}, built in {sw.ElapsedMilliseconds} ms");
-        var weather = new Ravensguard.Sim.Weather.RegionWeather(c, new Ravensguard.Sim.Weather.ContinentalWeather(seed, Ravensguard.Sim.Weather.WeatherSettings.LoadDefaults(dir)));
+        var weather = Ravensguard.Sim.Weather.RegionWeather.ForContinent(c, seed, Ravensguard.Sim.Weather.WeatherSettings.LoadDefaults(dir));
         // dev: a hero from the first origin, and the Codex of this world, so the panels can be opened from a seed start
         var origin = load.Database.All<OriginDef>().OrderBy(o => o.Order).First();
         return new RegionSource(region, pop, load.Database, null, null)
@@ -111,6 +114,11 @@ public abstract class StreetSource
         {
             var gen = ChunkGenerator.For(_region, _pop, _content);
             Streamer = new ChunkStreamer(gen, _store);
+            if (Resume is { } r)
+            {
+                _found = r.Cell; // the hero stands exactly where the save left it, with its clock, torch, explored map and Codex
+                return new LiveWorld(Streamer, r, codex: Codex);
+            }
             var spot = start ?? _spawn;
             if (spot == null)
             {
@@ -124,7 +132,7 @@ public abstract class StreetSource
                 if (spot == null) throw new InvalidOperationException("no town or village to start in");
             }
             _found = spot;
-            return new LiveWorld(Streamer, spot.Value, time);
+            return new LiveWorld(Streamer, spot.Value, time, codex: Codex);
         }
     }
 }

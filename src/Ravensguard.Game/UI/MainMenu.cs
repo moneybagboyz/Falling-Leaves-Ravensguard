@@ -21,6 +21,10 @@ public partial class MainMenu : Control
         v.AddChild(new Label { Text = L.T("MENU_SUBTITLE"), ThemeTypeVariation = "HintLabel", HorizontalAlignment = HorizontalAlignment.Center });
         v.AddChild(new Control { CustomMinimumSize = new Vector2(0, 24) });
 
+        _continue = ScreenRouter.HintButton(L.T("MENU_CONTINUE"), "menu.continue");
+        _continue.Pressed += DoContinue;
+        var load = ScreenRouter.HintButton(L.T("MENU_LOAD"), "menu.load");
+        load.Pressed += DoLoad;
         var newGame = ScreenRouter.HintButton(L.T("MENU_NEW_GAME"), "menu.new_game");
         newGame.Pressed += DoNewGame;
         var worlds = ScreenRouter.HintButton(L.T("MENU_WORLDS"), "menu.worlds");
@@ -31,7 +35,7 @@ public partial class MainMenu : Control
         settings.Pressed += DoSettings;
         var quit = ScreenRouter.HintButton(L.T("MENU_QUIT"), "menu.quit");
         quit.Pressed += () => GetTree().Quit();
-        v.AddChild(newGame); v.AddChild(worlds); v.AddChild(legends); v.AddChild(settings); v.AddChild(quit);
+        v.AddChild(_continue); v.AddChild(newGame); v.AddChild(load); v.AddChild(worlds); v.AddChild(legends); v.AddChild(settings); v.AddChild(quit);
         if (OS.IsDebugBuild()) // dev tools exist in debug builds only
         {
             var dev = ScreenRouter.HintButton(L.T("MENU_DEV_BLUEPRINTS"), "menu.dev_blueprints");
@@ -39,8 +43,23 @@ public partial class MainMenu : Control
             v.AddChild(dev);
             v.MoveChild(dev, quit.GetIndex());
         }
-        newGame.GrabFocus();
+        VisibilityChanged += () => { if (Visible) RefreshContinue(); }; // saves may have been written since this menu was last shown
+        RefreshContinue();
+        (_continue.Disabled ? newGame : _continue).GrabFocus();
     }
+
+    Button _continue = null!;
+
+    void RefreshContinue() => _continue.Disabled = LatestRun() == null;
+    static NewGame.RunEntry? LatestRun() => NewGame.RunCatalog.Latest(NewGame.NewGameServices.Library);
+
+    /// <summary>Carries on from the most recently written save of any world.</summary>
+    public void DoContinue()
+    {
+        if (LatestRun() is { } latest) NewGame.RunLoadScreen.Open(_router, latest);
+        else _router.ShowToast(L.T("MENU_CONTINUE_NONE"));
+    }
+    void DoLoad() => _router.Push(new NewGame.RunsScreen(_router));
 
     void DoNewGame() => _router.Push(new NewGame.QuickStartScreen(_router));
     void DoWorlds() => _router.Push(new NewGame.WorldsScreen(_router, legendsMode: false));
@@ -51,7 +70,9 @@ public partial class MainMenu : Control
     public override void _UnhandledInput(InputEvent e)
     {
         if (!Visible) return;
-        if (Actions.Pressed(e, "menu.new_game")) DoNewGame();
+        if (Actions.Pressed(e, "menu.continue")) DoContinue();
+        else if (Actions.Pressed(e, "menu.load")) DoLoad();
+        else if (Actions.Pressed(e, "menu.new_game")) DoNewGame();
         else if (Actions.Pressed(e, "menu.worlds")) DoWorlds();
         else if (Actions.Pressed(e, "menu.legends")) DoLegends();
         else if (Actions.Pressed(e, "menu.settings")) DoSettings();

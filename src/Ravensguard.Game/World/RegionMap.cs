@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Godot;
-using Ravensguard.Sim.Save;
+using Ravensguard.Sim.Live;
 using Ravensguard.Sim.WorldGen;
 using RegionData = Ravensguard.Sim.WorldGen.Region.Region;
 using Ravensguard.Sim.WorldGen.Region;
@@ -12,8 +12,8 @@ namespace Ravensguard.Game.World;
 /// <summary>
 /// The pixel overview of the embark region (REDESIGN_PLAN 2.7, world map): 500 x 500 region tiles of 64 m at 2 px each (1000 x 1000), drawn from the region
 /// data: biome colours with hill shading, forest speckle, sea, lakes and rivers, roads by class, field parcels, built tiles in roof colours and realm borders.
-/// A second 500 x 500 layer dims the tiles the player has not been near; the set of explored tiles comes from the chunks visited (the chunk store) and from the
-/// hero's walk. Settlement symbols and names are drawn over it by the map screen and the minimap.
+/// A second 500 x 500 layer dims the tiles the player has not been near; the set of explored tiles is the sim's
+/// (<see cref="LiveWorld.Explored"/>, saved with the run), bound with <see cref="Bind"/>. Settlement symbols and names are drawn over it by the map screen and the minimap.
 /// </summary>
 public sealed class RegionMap
 {
@@ -21,7 +21,8 @@ public sealed class RegionMap
     public RegionData Region { get; }
     public ImageTexture? Texture { get; private set; }
     public ImageTexture? Fog { get; private set; }
-    public readonly bool[] Explored = new bool[Tiles * Tiles];
+    ExploredTiles? _explored;
+    int _seenRevision = -1;
     byte[]? _pixels;
     Image? _fogImg;
     bool _fogDirty;
@@ -48,39 +49,22 @@ public sealed class RegionMap
             Texture = ImageTexture.CreateFromImage(Image.CreateFromData(Size, Size, false, Image.Format.Rgba8, _pixels));
             _fogDirty = true; Revision++;
         }
+        if (_explored != null && _explored.Revision != _seenRevision) { _seenRevision = _explored.Revision; _fogDirty = true; }
         if (_fogDirty && Texture != null)
         {
             _fogDirty = false;
             var d = new byte[Tiles * Tiles * 4];
-            for (int i = 0; i < Tiles * Tiles; i++) { d[i * 4 + 3] = Explored[i] ? (byte)0 : (byte)72; d[i * 4] = 8; d[i * 4 + 1] = 10; d[i * 4 + 2] = 24; }
+            for (int i = 0; i < Tiles * Tiles; i++) { d[i * 4 + 3] = _explored != null && _explored.IsExplored(i % Tiles, i / Tiles) ? (byte)0 : (byte)72; d[i * 4] = 8; d[i * 4 + 1] = 10; d[i * 4 + 2] = 24; }
             _fogImg = Image.CreateFromData(Tiles, Tiles, false, Image.Format.Rgba8, d);
             if (Fog == null) Fog = ImageTexture.CreateFromImage(_fogImg); else Fog.Update(_fogImg);
             Revision++;
         }
     }
 
-    /// <summary>Marks the tiles within <paramref name="radius"/> of a world position (metres) as explored.</summary>
-    public void Explore(float wx, float wy, int radius = 4)
-    {
-        int tx = (int)(wx / RegionData.TileM), ty = (int)(wy / RegionData.TileM);
-        for (int dy = -radius; dy <= radius; dy++)
-            for (int dx = -radius; dx <= radius; dx++)
-            {
-                int x = tx + dx, y = ty + dy;
-                if (!RegionData.InBounds(x, y) || dx * dx + dy * dy > radius * radius + 1) continue;
-                int i = RegionData.Index(x, y);
-                if (!Explored[i]) { Explored[i] = true; _fogDirty = true; }
-            }
-    }
+    /// <summary>Reads the fog from the sim's explored tiles (the live world owns and marks them; this only draws them).</summary>
+    public void Bind(ExploredTiles explored) { _explored = explored; _seenRevision = -1; }
 
-    /// <summary>Marks every chunk the save already knows (visited) as explored.</summary>
-    public void ExploreStore(ChunkStore store)
-    {
-        foreach (var k in store.Keys)
-            if (k.Z == 0) Explore(k.X * 32 + 16, k.Y * 32 + 16, 1);
-    }
-
-    public bool IsExplored(int tx, int ty) => RegionData.InBounds(tx, ty) && Explored[RegionData.Index(tx, ty)];
+    public bool IsExplored(int tx, int ty) => _explored != null && _explored.IsExplored(tx, ty);
 
     // ------------------------------------------------------------------ drawing the image
 

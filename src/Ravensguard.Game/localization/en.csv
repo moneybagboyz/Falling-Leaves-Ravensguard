@@ -143,6 +143,8 @@ CONTROLS_REJECTED,"Not changed: {0} would conflict with: {1}."
 CONTROLS_STARTUP_RESET,Some saved key bindings were invalid or conflicting and were reset to defaults.
 ACTION_MENU_LEGENDS,Legends
 ACTION_MENU_WORLDS,Worlds
+ACTION_MENU_CONTINUE,Continue
+ACTION_MENU_LOAD,Load
 ACTION_MENU_CHOOSE_REGION,Choose region
 ACTION_MENU_ADVANCED,Advanced world
 ACTION_MENU_IRONMAN,Ironman
@@ -546,3 +548,26 @@ BPEDIT_SAVE_ANYWAY_TIP,Write the blueprint even though validation found problems
 WL_DELETE_FAILED_TITLE,Could not delete
 WL_DELETE_FAILED,"'{0}' could not be deleted: {1}"
 WC_LIB_UNWRITABLE,"The world library folder cannot be written ({0}): {1}"
+MENU_CONTINUE,Continue
+MENU_LOAD,Load
+MENU_CONTINUE_NONE,There is no saved run to continue yet.
+SAVE_AUTOSAVED,Autosaved
+SAVE_AUTOSAVE_FAILED,"Autosave failed: {0}"
+SAVE_NO_RUN,There is no run to save here.
+SAVE_QUICK_IRONMAN,Quicksave is off in Ironman. The run saves when you leave.
+WL_LOAD,Saved runs
+RUNS_TITLE,Saved runs
+RUNS_TITLE_WORLD,Saved runs in {0}
+RUNS_HELP,Pick a save to carry on from where it left off.
+RUNS_EMPTY,No saved runs yet.
+RUNS_ROW,"{0}\n{1}   {2}"
+RUNS_IRONMAN,Ironman
+RUNS_AUTOSAVE,Autosave {0}
+RUNS_UNREADABLE,unreadable save
+RUNS_LOAD,Load
+LOAD_TITLE,Loading the run
+LOAD_STEP_WORLD,Opening the world
+LOAD_STEP_SAVE,Reading the save
+LOAD_STEP_REGION,Rebuilding the region
+LOAD_STEP_VIEW,Back to the hero
+LOAD_FAILED,"The run could not be loaded: {0}"

@@ -1,50 +1,49 @@
-using System;
-using Ravensguard.Sim.Core;
+using System.Threading.Tasks;
+using Ravensguard.Sim.Live;
 using Ravensguard.Sim.Save;
 using Ravensguard.Sim.Worlds;
 
 namespace Ravensguard.Game.UI.NewGame;
 
+/// <summary>Which slot a save goes to. An Ironman run ignores this: it only ever writes its one Ironman slot.</summary>
+public enum SaveKind { Manual, Autosave }
+
 /// <summary>
-/// The run being played: where it saves and what it saves. Created by the region build, handed to the street view, which calls <see cref="Save"/> from its pause menu
-/// (and on quit for an Ironman run). Library, content hash and run name are fixed on the main thread before the build starts, so saving never touches shared state.
+/// The run being played: where it saves and what it saves. Created by the region build or by loading a save, handed to the street view. A save is taken in two
+/// halves (plan 2.11): <see cref="Snapshot"/> copies the live state on the main thread in a few milliseconds, <see cref="WriteAsync"/> encodes and writes it on a worker.
+/// Library, content hash and run name are fixed on the main thread before the work starts, so saving never touches shared state.
 /// </summary>
 public sealed class RunSession
 {
-    readonly WorldState _state;
     readonly WorldLibrary _library;
-    readonly string _contentHash, _worldId;
+    readonly string _contentHash, _worldId, _runName;
+    SaveWriter? _writer; // one per run: its gate keeps two writes (manual, autosave) from touching the directory at once
 
-    public RunSession(RunStart start, WorldLibrary library, string contentHash, string worldId)
+    public RunSession(WorldState state, string runName, bool ironman, string? lastPath, WorldLibrary library, string contentHash, string worldId)
     {
-        Start = start; _state = start.World; _library = library; _contentHash = contentHash; _worldId = worldId;
-        LastPath = start.SavePath;
+        State = state; _runName = string.IsNullOrEmpty(runName) ? "run" : runName; Ironman = ironman; LastPath = lastPath;
+        _library = library; _contentHash = contentHash; _worldId = worldId;
     }
 
-    public RunStart Start { get; }
-    public bool Ironman => Start.Draft.Ironman;
+    public RunSession(RunStart start, WorldLibrary library, string contentHash, string worldId)
+        : this(start.World, start.RunName, start.Draft.Ironman, start.SavePath, library, contentHash, worldId) { }
+
+    /// <summary>The world the run plays in (the chunk store of the street view is State.Chunks).</summary>
+    public WorldState State { get; }
+    public bool Ironman { get; }
     public string? LastPath { get; private set; }
 
-    /// <summary>Writes the run as it is now: the live clock, the chunks the street view changed, the Codex the hero has opened. Returns the file written, or the reason it failed.</summary>
-    public (bool Ok, string Message) Save(GameTime now, SimSpeed speed, Ravensguard.Sim.Codex.CodexBook? codex)
+    /// <summary>Main thread: copies the hero, clock, torch, explored map, Codex progress, people and changed chunks as they are now.</summary>
+    public LiveCapture Snapshot(LiveWorld world) => WorldSave.SnapshotLive(State, world, _contentHash, "0.1", null, Ironman);
+
+    /// <summary>Worker thread: encodes the snapshot and writes it (Ironman: the Ironman slot with its backups; else the run's manual slot, or the rotating autosaves). Resolves to the file written.</summary>
+    public async Task<string> WriteAsync(LiveCapture capture, SaveKind kind)
     {
-        try
-        {
-            var live = new WorldState
-            {
-                ContinentSettings = _state.ContinentSettings, HistorySettings = _state.HistorySettings, RegionSettings = _state.RegionSettings,
-                EmbarkCellX = _state.EmbarkCellX, EmbarkCellY = _state.EmbarkCellY, Continent = _state.Continent, History = _state.History, Population = _state.Population,
-                Clock = new SimClock(now) { Speed = speed }, Ids = _state.Ids, Chunks = _state.Chunks, Chronicle = _state.Chronicle,
-                Hero = _state.Hero, Codex = codex?.ToProgress() ?? _state.Codex,
-            };
-            var file = WorldSave.Capture(live, _contentHash, "0.1", null, Ironman);
-            var writer = new SaveWriter(_library.RunsDirectory(_worldId));
-            string path = Ironman
-                ? writer.WriteIronmanAsync(file).GetAwaiter().GetResult()
-                : writer.WriteManualAsync(file, string.IsNullOrEmpty(Start.RunName) ? "run" : Start.RunName).GetAwaiter().GetResult();
-            LastPath = path;
-            return (true, path);
-        }
-        catch (Exception e) { return (false, e.Message); }
+        var writer = _writer ??= new SaveWriter(_library.RunsDirectory(_worldId));
+        string path = Ironman ? await writer.WriteIronmanAsync(capture).ConfigureAwait(false)
+            : kind == SaveKind.Autosave ? await writer.WriteAutosaveAsync(capture).ConfigureAwait(false)
+            : await writer.WriteManualAsync(capture, _runName).ConfigureAwait(false);
+        if (kind == SaveKind.Manual || Ironman) LastPath = path;
+        return path;
     }
 }

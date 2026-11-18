@@ -74,7 +74,7 @@ public sealed class WeatherFeed
         {
             var cs = ContinentSettings.LoadDefaults(dir); cs.Seed = seed;
             var continent = ContinentGenerator.Generate(cs);
-            _rw = new RegionWeather(continent, new ContinentalWeather(seed, WeatherSettings.LoadDefaults(dir)));
+            _rw = RegionWeather.ForContinent(continent, seed, WeatherSettings.LoadDefaults(dir));
             GD.Print("[weather] continent rebuilt for the region's seed");
         }
         catch (Exception e) { GD.PushWarning("weather unavailable: " + e.Message); }

@@ -121,6 +121,8 @@ public static class InputDefs
         // New game flow: Quick Start, world creation, embark map, legends viewer, world library
         A(U, "legends", K(Key.L));
         A(U, "worlds", K(Key.W));
+        A(U, "continue", K(Key.K)); // main menu: the latest run
+        A(U, "load", K(Key.V));     // main menu and world library: pick a saved run
         A(U, "choose_region", K(Key.C));
         A(U, "advanced", K(Key.A));
         A(U, "ironman", K(Key.I));

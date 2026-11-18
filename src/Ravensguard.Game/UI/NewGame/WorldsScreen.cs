@@ -15,7 +15,7 @@ public partial class WorldsScreen : Control
     string? _confirming;
     VBoxContainer _rows = null!;
     Label _empty = null!;
-    Button _legends = null!, _play = null!, _delete = null!;
+    Button _legends = null!, _play = null!, _delete = null!, _runs = null!;
 
     public WorldsScreen(ScreenRouter router, bool legendsMode) { _router = router; _legendsMode = legendsMode; }
 
@@ -41,12 +41,15 @@ public partial class WorldsScreen : Control
         back.Pressed += _router.Pop;
         _delete = UiKit.Key(L.T("WL_DELETE"), "menu.delete", 220);
         _delete.Pressed += AskDelete;
+        _runs = UiKit.Key(L.T("WL_LOAD"), "menu.load", 240);
+        _runs.Pressed += OpenRuns;
         _legends = UiKit.Key(L.T("WL_LEGENDS"), "menu.legends", 240);
         _legends.Pressed += OpenLegends;
         _play = UiKit.Key(L.T("WL_PLAY"), "menu.accept", 260);
         _play.Pressed += Play;
         bottom.AddChild(back); bottom.AddChild(_delete);
         bottom.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
+        bottom.AddChild(_runs);
         bottom.AddChild(_legends);
         bottom.AddChild(_play);
         _play.Visible = !_legendsMode; // never left unparented: an orphan button keeps its text-server RIDs alive past shutdown
@@ -103,12 +106,14 @@ public partial class WorldsScreen : Control
             _rows.AddChild(b);
         }
         bool any = _worlds.Count > 0;
-        _legends.Disabled = !any; _play.Disabled = !any; _delete.Disabled = !any;
+        _runs.Visible = !_legendsMode;
+        _runs.Disabled = !any || (Current?.Runs.Count ?? 0) == 0; _legends.Disabled = !any; _play.Disabled = !any; _delete.Disabled = !any;
     }
 
     WorldInfo? Current => _sel >= 0 && _sel < _worlds.Count ? _worlds[_sel] : null;
 
     void AskDelete() { if (Current is { } w) { _confirming = w.Id; Rebuild(); } }
+    void OpenRuns() { if (Current is { } w && w.Runs.Count > 0) _router.Push(new RunsScreen(_router, w.Id)); }
     void OpenLegends() { if (Current is { } w) NewGameFlow.OpenLegends(_router, w); }
     void Play() { if (Current is { } w) _router.Push(new QuickStartScreen(_router, w.Id)); }
 
@@ -117,6 +122,7 @@ public partial class WorldsScreen : Control
         if (!Visible) return;
         if (_confirming != null) return;
         if (Actions.Pressed(e, "menu.delete")) AskDelete();
+        else if (Actions.Pressed(e, "menu.load") && !_legendsMode) OpenRuns();
         else if (Actions.Pressed(e, "menu.legends")) OpenLegends();
         else if (Actions.Pressed(e, "menu.accept") && !_legendsMode) Play();
         else if (Actions.Pressed(e, "menu.accept")) OpenLegends();

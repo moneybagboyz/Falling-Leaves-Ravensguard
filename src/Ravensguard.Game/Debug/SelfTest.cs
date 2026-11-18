@@ -87,6 +87,16 @@ public static class SelfTest
         Check(UI.CodexRules.ResolveKeys("{@world.map}") != "{@world.map}" && UI.CodexRules.ResolveKeys("plain") == "plain", "CodexRules.ResolveKeys");
         Check(UI.CodexRules.FromInput().All(r => !r.Text.Contains("[")), "codex rule text holds rendered key hints instead of tokens");
 
+        // saved runs: Continue picks the newest save, a loaded run never saves its manual slot over an autosave or the Ironman file, and the keys exist
+        var t0 = new System.DateTime(2026, 1, 1, 12, 0, 0, System.DateTimeKind.Utc);
+        UI.NewGame.RunEntry E(string w, string slot, int min) => new(w, w, slot, slot, t0.AddMinutes(min), "Aldric", false, slot.StartsWith("autosave_"), 0, true);
+        var ordered = UI.NewGame.RunCatalog.Newest([E("a", "run-1", 0), E("b", "autosave_1", 30), E("a", "run-2", 30), E("a", "autosave_2", 10)]);
+        Check(ordered.Select(e => e.WorldId + "/" + e.Slot).SequenceEqual(["a/run-2", "b/autosave_1", "a/autosave_2", "a/run-1"]), "RunCatalog.Newest order: " + string.Join(",", ordered.Select(e => e.WorldId + "/" + e.Slot)));
+        Check(UI.NewGame.RunCatalog.ManualNameFor("run-3", "Aldric Vane", 5) == "run-3" && UI.NewGame.RunCatalog.ManualNameFor("autosave_2", "Aldric Vane", 5) == "aldric-vane-6"
+            && UI.NewGame.RunCatalog.ManualNameFor("ironman", null, 0) == "run-1", "RunCatalog.ManualNameFor");
+        var keys = KeyMap.CreateDefault();
+        Check(keys.Get("menu.continue").Count > 0 && keys.Get("menu.load").Count > 0 && keys.Get("world.quicksave").Count > 0, "continue / load / quicksave have default keys");
+
         Tools.BlueprintEditor.EditorSelfTest.Run(Check);
 
         GD.Print($"selftest: {(_fails == 0 ? "ok" : _fails + " failure(s)")}");

@@ -98,7 +98,7 @@ public partial class RegionBuildScreen : Control
         var pop = Populator.Populate(region, w.History, content.Db);
         ct.ThrowIfCancellationRequested();
         _at = 3;
-        var start = ChooseStart(region, d, bi.Origin);
+        var start = ChooseStart(region, bi.Origin);
         // the player character from the Quick Start origin, and the Codex of this world with what the embark region already knows
         var hero = bi.Origin != null ? Ravensguard.Sim.Characters.HeroRecord.FromOrigin(d.Name, d.Female, bi.Origin) : null;
         var codex = Ravensguard.Sim.Codex.CodexBook.Build(w.History, region, bi.Rules);
@@ -126,7 +126,7 @@ public partial class RegionBuildScreen : Control
     }
 
     /// <summary>The settlement the character starts in: the kind the origin asks for if it is clear of active wars (10 km) and monster lairs (3 km), else any safe one (plan §3f).</summary>
-    static string ChooseStart(RegionData region, NewGameDraft d, Ravensguard.Content.OriginDef? o)
+    internal static string ChooseStart(RegionData region, Ravensguard.Content.OriginDef? o)
     {
         string want = o?.StartLocation ?? "village";
         SettlementClass cls = want == "town" ? SettlementClass.Town : SettlementClass.Village;

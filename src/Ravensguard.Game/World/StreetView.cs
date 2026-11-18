@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using Godot;
 using Ravensguard.Content;
 using Ravensguard.Game.Debug;
@@ -71,7 +72,6 @@ public partial class StreetView : Control, IHandlesBack
     ColorRect _ambient = null!, _ground = null!;
     ShaderMaterial _ambientMat = null!;
     readonly List<FarPerson> _people = new();
-    HashSet<(int, int)> _exploredTile = new();
     RigAtlas _rig = null!;
     RigActor _heroSprite = null!;
     Sprite2D _torchSprite = null!, _lightSprite = null!;
@@ -80,9 +80,8 @@ public partial class StreetView : Control, IHandlesBack
     readonly Dictionary<string, (int Src, Vector2I Cell)> _terrainCells = new(), _objectCells = new(), _decalCells = new();
 
     // hud
-    // the player character and the Codex (hero record, plan 3 items 1 and 2; Codex, plan 3f)
+    // the player character (hero record, plan 3 item 1); the Codex and the explored map are the sim's (LiveWorld.Codex, LiveWorld.Explored)
     Ravensguard.Sim.Characters.HeroRecord? _hero;
-    Ravensguard.Sim.Codex.CodexBook? _codex;
     Label _dateLabel = null!, _phaseLabel = null!, _levelLabel = null!, _hintLabel = null!, _perfLabel = null!, _weatherLabel = null!, _bandLabel = null!;
     TextureRect _weatherIcon = null!;
     Minimap? _minimap;
@@ -108,8 +107,8 @@ public partial class StreetView : Control, IHandlesBack
     /// </summary>
     public static StreetView ForRegion(Region region, Population population, ContentDatabase content, ScreenRouter? router = null, StreetOptions? opt = null,
         ChunkStore? store = null, (int X, int Y, int Z)? spawn = null, Ravensguard.Sim.Characters.HeroRecord? hero = null, Ravensguard.Sim.Codex.CodexBook? codex = null,
-        Ravensguard.Sim.WorldGen.History.WorldHistory? history = null, Continent? continent = null)
-        => new(router, opt, StreetSource.ForRegion(region, population, content, store, spawn is { } p ? new Cell3(p.X, p.Y, p.Z) : null, opt?.Poi, hero, codex, history, continent));
+        Ravensguard.Sim.WorldGen.History.WorldHistory? history = null, Continent? continent = null, Ravensguard.Sim.Live.LiveResume? resume = null)
+        => new(router, opt, StreetSource.ForRegion(region, population, content, store, spawn is { } p ? new Cell3(p.X, p.Y, p.Z) : null, opt?.Poi, hero, codex, history, continent, resume));
 
     // ------------------------------------------------------------------ setup
 
@@ -118,13 +117,14 @@ public partial class StreetView : Control, IHandlesBack
         _art = ArtAtlas.Shared;
         _rig = RigAtlas.Shared;
         _source ??= _opt.RegionSeed is { } seed ? StreetSource.FromSeed(seed, _opt.Poi) : StreetSource.Hamlet();
-        _hero = _source.Hero; _codex = _source.Codex;
+        _hero = _source.Hero;
         var season = _opt.Season switch { "summer" => Season.Summer, "autumn" => Season.Autumn, "winter" => Season.Winter, _ => Season.Spring };
         var t0 = GameTime.FromCalendar(1, season, _opt.Day ?? 8, _opt.Hour ?? 9, 0);
         _world = _source.CreateWorld(_opt.Start is { } s ? new Cell3(s.X, s.Y, s.Z) : null, t0);
         var start = _world.Snapshot.Hero.Cell;
         DevContext.Clock = _world.Clock;
-        if (_opt.Torch ?? IsNight(t0)) _world.SetTorch(true);
+        if (_source.Resume == null && (_opt.Torch ?? IsNight(t0))) _world.SetTorch(true); // a resumed run keeps the torch it was saved with
+        if (_world.Clock.Speed == SimSpeed.Paused) _world.SetSpeed(SimSpeed.X1); // saved from the pause menu: play on
         _zoom = _opt.Zoom;
         _band = _opt.Band switch { "close" => Band.Close, "field" => Band.Field, "command" => Band.Command, "street" => Band.Street, _ => _opt.Zoom >= 2 ? Band.Close : Band.Street };
         _viewZ = _opt.ViewZ ?? start.Z;
@@ -136,7 +136,7 @@ public partial class StreetView : Control, IHandlesBack
         if (_source.Region is { } rg)
         {
             _regionMap = new RegionMap(rg);
-            if (_world.Streamer != null) _regionMap.ExploreStore(_world.Streamer.Store);
+            _regionMap.Bind(_world.Explored);
         }
         BuildScene();
         BuildHud();
@@ -363,15 +363,6 @@ public partial class StreetView : Control, IHandlesBack
         return (_world.Snapshot.OriginX + h.X.ToFloat(), _world.Snapshot.OriginY + h.Y.ToFloat());
     }
 
-    /// <summary>The hero walked onto a new tile: landmarks within sight open their Codex pages (and the legends they hang on).</summary>
-    // TODO(sim contract, not landed yet): visits and explored tiles move into the sim. When LiveWorld.Codex / LiveWorld.Explored exist, delete NoteVisit and the
-    // _regionMap.Explore call in UpdateWorld, read _world.Codex for the panels, and feed RegionMap/Minimap from LiveWorld.Explored.
-    void NoteVisit(float wx, float wy)
-    {
-        if (_codex == null) return;
-        foreach (var e in _codex.Visit((int)wx, (int)wy)) _router?.ShowToast(L.F("CODEX_NEW_ENTRY", e.Title));
-    }
-
     void OpenCharacter()
     {
         if (_router == null || _hero == null || _source?.Content == null) { _router?.ShowToast(L.T("MAP_NONE")); return; }
@@ -380,8 +371,8 @@ public partial class StreetView : Control, IHandlesBack
 
     void OpenCodex()
     {
-        if (_router == null || _codex == null) { _router?.ShowToast(L.T("MAP_NONE")); return; }
-        _router.Push(new CodexScreen(_router, _codex, _source?.History)
+        if (_router == null || _world.Codex is not { } codex) { _router?.ShowToast(L.T("MAP_NONE")); return; }
+        _router.Push(new CodexScreen(_router, codex, _source?.History)
         {
             ShotPath = _opt.Panel == "codex" ? _opt.ShotPath : null, StartCategory = _opt.PanelCategory, StartEntry = _opt.PanelEntry,
         });
@@ -774,6 +765,9 @@ public partial class StreetView : Control, IHandlesBack
             _acc -= Step; steps++;
         }
         if (steps == 5) _acc = 0;
+        foreach (var opened in _world.TakeOpenedCodexEntries()) _router?.ShowToast(L.F("CODEX_NEW_ENTRY", opened.Title)); // the sim opens pages as the hero walks
+        PollSave();
+        if (Run != null && !_leaving && _saveTask == null && (_sinceSave += delta) >= AutosaveSeconds) StartSave(SaveKind.Autosave, quiet: true);
 
         _sw.Restart();
         Render((float)(_acc / Step));
@@ -901,8 +895,7 @@ public partial class StreetView : Control, IHandlesBack
                 }
     }
 
-    Vector2I _heroTile = new(-1, -1);
-    /// <summary>Once per sim tick: the weather at the hero, the season and snow state for the shaders, the props' season sprites, the explored tiles of the map.</summary>
+    /// <summary>Once per sim tick: the weather at the hero, the season and snow state for the shaders, the props' season sprites.</summary>
     void UpdateWorld(LiveSnapshot s)
     {
         var t = s.Time;
@@ -911,11 +904,6 @@ public partial class StreetView : Control, IHandlesBack
         _wxDim = WeatherOverlay.Dim(_wx);
         _seasons.Apply(SeasonState.Of(t, _wx.SnowCover, _wx.Freeze, _wx.Wet));
         RefreshProps();
-        if (_regionMap != null)
-        {
-            var tile = new Vector2I((int)(wx / 64), (int)(wy / 64));
-            if (tile != _heroTile) { _heroTile = tile; _regionMap.Explore(wx, wy); NoteVisit(wx, wy); }
-        }
     }
 
     /// <summary>Ambient tint of the open air: cool moonlight to warm daylight, an orange cast while the sun is low, then the weather's dimming (cloud, rain, fog).</summary>
@@ -1019,6 +1007,7 @@ public partial class StreetView : Control, IHandlesBack
         else if (Actions.Pressed(e, "world.map")) OpenMap();
         else if (Actions.Pressed(e, "world.panel_character")) OpenCharacter();
         else if (Actions.Pressed(e, "world.panel_codex")) OpenCodex();
+        else if (Actions.Pressed(e, "world.quicksave")) QuickSave();
         else if (Actions.Pressed(e, "world.camera_home")) { _pan = Vector2.Zero; if (_viewZ != _world.Snapshot.Hero.Z) { _viewZ = _world.Snapshot.Hero.Z; RebuildLevel(); } }
         else if (e is InputEventKey && Actions.Pressed(e, "world.act")) _world.UsePortal();
         else return;
@@ -1051,7 +1040,7 @@ public partial class StreetView : Control, IHandlesBack
         if (_router == null) return;
         if (_world.Clock.Speed != SimSpeed.Paused) { _speedBeforePause = _world.Clock.Speed; _world.SetSpeed(SimSpeed.Paused); _menuPaused = true; }
         var buttons = new List<(string, Action?)> { (L.T("PAUSE_RESUME"), null) };
-        if (Run != null) buttons.Add((L.T("PAUSE_SAVE"), () => { var (ok, msg) = SaveNow(); if (ok) _router.ShowToast(L.F("PAUSE_SAVED", System.IO.Path.GetFileName(msg))); }));
+        if (Run != null) buttons.Add((L.T("PAUSE_SAVE"), () => StartSave(SaveKind.Manual)));
         buttons.Add((L.T("PAUSE_SETTINGS"), () => { _toSettings = true; _router.Push(new SettingsScreen(_router)); }));
         buttons.Add((L.T("PAUSE_QUIT"), QuitToMenu));
         string body = Run is { Ironman: true } ? L.T("PAUSE_BODY_IRONMAN") : L.T("PAUSE_BODY");
@@ -1066,13 +1055,90 @@ public partial class StreetView : Control, IHandlesBack
         _world.SetSpeed(_speedBeforePause);
     }
 
-    (bool Ok, string Message) SaveNow()
+    // ------------------------------------------------------------------ saving (plan 2.11)
+    // The snapshot is taken here on the main thread (a few ms); encoding and the file write run on a worker, and PollSave reports the result.
+
+    /// <summary>Real seconds between autosaves (plan 2.11: every 15 minutes).</summary>
+    public double AutosaveSeconds { get; set; } = 15 * 60;
+    /// <summary>The text of the last failed save (null when the last save worked); for the self-test.</summary>
+    public string? LastSaveError { get; private set; }
+    /// <summary>True while a save is being written.</summary>
+    public bool Saving => _saveTask != null || _saveQueue.Count > 0;
+
+    sealed record SaveJob(SaveKind Kind, bool Quiet, Action? Then, Action<string>? OnFail);
+    Task<string>? _saveTask;
+    SaveJob? _saveJob;
+    readonly Queue<SaveJob> _saveQueue = new();
+    double _sinceSave;
+
+    /// <summary>Starts a save of the run: a snapshot now, the write in the background. <paramref name="then"/> runs after it succeeded; <paramref name="onFail"/> replaces the default error dialog.
+    /// Ironman runs always write their one Ironman slot. False when this view has no run to save.</summary>
+    public bool StartSave(SaveKind kind, bool quiet = false, Action? then = null, Action<string>? onFail = null)
     {
-        if (Run == null) return (false, "no run to save");
-        // TODO(sim contract, not landed yet): switch RunSession.Save to WorldSave.CaptureLive(worldState, _world) so hero position, torch and the live Codex are saved.
-        var r = Run.Save(_world.Snapshot.Time, EffectiveSpeed, _codex);
-        if (!r.Ok) _router?.ShowModal(L.T("PAUSE_SAVE_FAILED_TITLE"), L.F("PAUSE_SAVE_FAILED", r.Message), ResumeAfterMenuDeferred, (L.T("UI_OK"), null));
-        return r;
+        if (Run == null || _world.Streamer == null) return false;
+        var job = new SaveJob(kind, quiet, then, onFail);
+        if (_saveTask != null) { _saveQueue.Enqueue(job); return true; }
+        Begin(job);
+        return true;
+    }
+
+    void Begin(SaveJob job)
+    {
+        _sinceSave = 0;
+        try
+        {
+            var capture = Run!.Snapshot(_world);
+            var task = Run.WriteAsync(capture, job.Kind);
+            task.ContinueWith(t => _ = t.Exception, TaskContinuationOptions.OnlyOnFaulted); // observed: PollSave shows the error (or nobody is left to, when the view was left)
+            _saveTask = task; _saveJob = job;
+        }
+        catch (Exception ex) { SaveFailed(job, ex.Message); }
+    }
+
+    void PollSave()
+    {
+        if (_saveTask is { IsCompleted: true } t && _saveJob is { } job)
+        {
+            _saveTask = null; _saveJob = null;
+            if (t.IsFaulted || t.IsCanceled) SaveFailed(job, t.Exception?.GetBaseException().Message ?? "cancelled");
+            else
+            {
+                LastSaveError = null;
+                if (job.Kind == SaveKind.Autosave && !job.Quiet) _router?.ShowToast(L.T("SAVE_AUTOSAVED"));
+                else if (!job.Quiet) _router?.ShowToast(L.F("PAUSE_SAVED", System.IO.Path.GetFileName(t.Result)));
+                job.Then?.Invoke();
+            }
+        }
+        if (_saveTask == null && _saveQueue.Count > 0) Begin(_saveQueue.Dequeue());
+    }
+
+    void SaveFailed(SaveJob job, string message)
+    {
+        LastSaveError = message;
+        GD.PushWarning("save failed: " + message);
+        if (job.OnFail != null) { job.OnFail(message); return; }
+        if (job.Kind == SaveKind.Autosave) { _router?.ShowToast(L.F("SAVE_AUTOSAVE_FAILED", message), 5f); return; }
+        _router?.ShowModal(L.T("PAUSE_SAVE_FAILED_TITLE"), L.F("PAUSE_SAVE_FAILED", message), ResumeAfterMenuDeferred, (L.T("UI_OK"), null));
+    }
+
+    void QuickSave()
+    {
+        if (_router == null) return;
+        if (Run == null || _world.Streamer == null) _router.ShowToast(L.T("SAVE_NO_RUN"));
+        else if (Run.Ironman) _router.ShowToast(L.T("SAVE_QUICK_IRONMAN"));
+        else StartSave(SaveKind.Manual);
+    }
+
+    /// <summary>The window is closing: write an autosave (Ironman: its slot) now, so the run is not lost. Waits for it, a second or two at most.</summary>
+    public override void _Notification(int what)
+    {
+        if (what != NotificationWMCloseRequest || Run == null || _world.Streamer == null || _leaving) return;
+        try
+        {
+            if (_saveTask != null) { try { _saveTask.GetAwaiter().GetResult(); } catch { /* the failure was reported; this save replaces it */ } }
+            Run.WriteAsync(Run.Snapshot(_world), SaveKind.Autosave).GetAwaiter().GetResult();
+        }
+        catch (Exception ex) { GD.PushWarning("save on quit failed: " + ex.Message); }
     }
 
     void QuitToMenu()
@@ -1082,14 +1148,25 @@ public partial class StreetView : Control, IHandlesBack
         if (Run.Ironman)
         {
             // an Ironman run saves itself on the way out; if that fails, the player decides
-            var r = Run.Save(_world.Snapshot.Time, EffectiveSpeed, _codex);
-            if (r.Ok) LeaveToMenu();
-            else _router.ShowModal(L.T("PAUSE_SAVE_FAILED_TITLE"), L.F("PAUSE_SAVE_FAILED", r.Message), ResumeAfterMenuDeferred, (L.T("PAUSE_QUIT_ANYWAY"), LeaveToMenu), (L.T("UI_CANCEL"), null));
+            _leaving = true; // the sim stays paused while it is written
+            StartSave(SaveKind.Manual, quiet: true, then: LeaveToMenu, onFail: msg =>
+            {
+                _leaving = false;
+                _router.ShowModal(L.T("PAUSE_SAVE_FAILED_TITLE"), L.F("PAUSE_SAVE_FAILED", msg), ResumeAfterMenuDeferred, (L.T("PAUSE_QUIT_ANYWAY"), LeaveToMenu), (L.T("UI_CANCEL"), null));
+            });
             return;
         }
         _router.ShowModal(L.T("PAUSE_QUIT_TITLE"), L.T("PAUSE_QUIT_BODY"), ResumeAfterMenuDeferred,
-            (L.T("PAUSE_SAVE_QUIT"), () => { var (ok, _) = SaveNow(); if (ok) LeaveToMenu(); }),
-            (L.T("PAUSE_QUIT_NOSAVE"), LeaveToMenu),
+            (L.T("PAUSE_SAVE_QUIT"), () =>
+            {
+                _leaving = true;
+                StartSave(SaveKind.Manual, quiet: true, then: LeaveToMenu, onFail: msg =>
+                {
+                    _leaving = false;
+                    _router.ShowModal(L.T("PAUSE_SAVE_FAILED_TITLE"), L.F("PAUSE_SAVE_FAILED", msg), ResumeAfterMenuDeferred, (L.T("UI_OK"), null));
+                });
+            }),
+            (L.T("PAUSE_QUIT_NOSAVE"), () => { StartSave(SaveKind.Autosave, quiet: true); LeaveToMenu(); }), // the manual slot is left alone; the rotating autosave keeps the run safe
             (L.T("UI_CANCEL"), null));
     }
 
@@ -1100,6 +1177,10 @@ public partial class StreetView : Control, IHandlesBack
         _leaving = true;
         _router!.ReturnToMainMenu();
     }
+
+    /// <summary>Self-test hooks: the live world, and the way out of the run (to the main menu) without the dialogs.</summary>
+    public LiveWorld DebugWorld => _world;
+    public void DebugLeave() => LeaveToMenu();
 
     /// <summary>Self-test hook: press Esc as the player would. True when the pause menu is up and this view is still the top screen.</summary>
     public bool DebugEsc() { var k = new InputEventKey { Keycode = Key.Escape, PhysicalKeycode = Key.Escape, Pressed = true }; _UnhandledInput(k); return _router != null && _router.HasModal && _router.Top == this; }
