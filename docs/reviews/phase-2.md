@@ -74,6 +74,21 @@ Seed 1234, 100 years (`EconomySoakTests.HundredYears_..._MeetTheTargets`, releas
 
 Not met, and why: the plan's 90% in band and 90% of workshops. The honest band counts an empty book as a failure; what fails most is bread (seed 1: 28% of its book-days in towns with a bakery in band; its price index sits at 2.2-4 x base because the bakers cannot buy the flour a town eats) and a drought year's grain. A fifth of the workshops idle for want of inputs or buyers (the Phase 1 artisan surplus, reasons 1 and 3 of the integration notes).
 
+## Done-when results (plan §5, Phase 2)
+| Check | Result |
+|---|---|
+| 1-year and 100-year headless soaks: stable prices, no collapse, population within ±10%, coin conserved | **Met, with honest measures.** Seed 1234, 100 years: population 25,666 -> 25,100 (min 25,068); missed meals 0.02 percent at worst; honest in-band 74.6 percent mean; cash-solvent merchants 76 percent; workshops 77 percent; closed businesses 1.4-12.9 percent; region coin +0.67 percent a year; world coin exact every year. Seed 1, 25 years: band 71, merchants 83, workshops 82 percent. Both soak tests assert these targets (I46) |
+| Caravans pass visibly through the region | **Met.** Merchant wagons with oxen, driver and guards are promoted at 150 m and drawn on the road (`scratchpad/shot/caravan-5.png`) and marked on the world map |
+| Walk across three regions in a straight line with no stop and no frame over budget | **Met headless.** 72 km at 8x: average 0.27 ms a tick, p99 6.1 ms; neighbours ready about 4 km before the border; in the game the tick costs the main thread 10 µs on average. The 60 fps check on the reference PC still needs the user |
+| Roads and rivers continue across each border | **Met.** Gates come from the continental road network; river vertices match exactly on every shared edge of the 3 x 3 blocks of both seeds |
+| Regions generated in any order give the same hashes, on Windows and Linux | **Met.** Order tests (three orders, four threads); CI's Windows/Linux hash compare covers a 2 x 2 block per seed |
+| Code and bug check | **Passed.** 30 findings (13 seamless, 17 economy), all fixed with regression tests. Full suite 936/936 green, build 0 warnings, `--smoke`, `--check-keymap` and `--selftest` clean |
+
+## Still needs the user
+- Play Phase 1 and 2 (fun check, `docs/playtests/`), and confirm 60 fps at street zoom on the reference PC.
+- Approve the art style sheet v2.
+- Answer the Phase 3 open questions in `docs/specs/phase3/00-phase3-overview.md` (defaults are recommended for each).
+
 ## Hooks for #2 (economy, parish, labour and trade state)
 - A region's own state goes in `RegionSectionData` (`Save/RegionSave.cs`): the next free key is 14. Add the DTO there and capture it in `RegionWorld.Capture`, restore it in `RegionWorld.Restore` (both run on the same code path for resident and paged regions, so paging never changes a save).
 - The home region's state goes in additive sections: add the DTO to `LiveCapture`, a section name next to `WorldSave.EconomySection`, an `if (X != null) sections.Add(...)` in `LiveCapture.Encode`, and its decode in `WorldSave.Restore`. `WorldMeta` has key 17 free.
@@ -82,7 +97,12 @@ Not met, and why: the plan's 90% in band and 90% of workshops. The honest band c
 
 ## Known limits
 - **Coarse catch-up is an approximation** of hourly truth, by design (N14); only the independence of stops and join time is guaranteed. The anchor is the earliest game hour a region was asked for; two parties asking at different hours before the join use the earlier.
-- **Coin that crosses a border** is melted and struck again (`RegionTransfer.CoinOut`/`CoinIn`) because the ledger has no emigrate reason; item instances stay in the origin. The economy owner may add both.
+- **Coin that crosses a border** now moves as `Emigrate`/`Immigrate` against the continent's holdings (continent agent, review economy #1); world coin is constant. Item instances still stay in the origin.
 - **v1 saves** load unguarded. A v1 save made while a record-less region held chunks has already lost them.
 - **Seam margins:** the 1,200 m and 400 m margins of the original spec remain unimplemented (N25); the guarantee they were for is pinned over the whole grid.
-- **Pump spike:** `A_new_game_ticks_three_days_at_8x...` asserts a 20 ms worst case for `Pump`; a single 25 ms call (a process GC pause, not the pump) failed it once in a full parallel run.
+- **Timing tests:** the long timing tests (three-region walk, game runtime, review barrier budgets) now run alone in the `Timing` collection; run in parallel they failed on CPU contention (a 297 ms tick that takes about 65 ms alone). The worst `Pump` bound is 60 ms (99.9th percentile still 1 ms).
+- **Economy targets below the plan's ideal:** the honest in-band share and busy workshops are gated at 60 percent on average (I46); bread is the main band failure and about a fifth of workshops sit idle. The under-15 share runs 34.2 percent in seed 1234's years 31-40 (an echo of an earlier birth boom). Seed 1's droughts (years 15, 19, 25) drop the band to 43 percent in year 20.
+- **Caravans carry only part of the trade:** a border desk settles the bulk flow with the continent and caravans trade on top (caravans-and-logistics Notes); trade with a neighbour that is itself detailed is not realised yet; bandits are not persons; `RegionalTrade` has no travel delay.
+- **Not built in continent tick v1:** silver and minting (C9), level hooks (C10), the closed-form golden tests G-C1 to G-C3.
+- **Memory:** the 12-region walk adds about 400 MB with 10 regions resident (target about 300 MB, 9 regions); the rest needs leaner economy data in memory.
+- **Daily regions** run in staggered 6-hour slices; a true coarse daily economy kernel is not built, so far regions save little CPU.
