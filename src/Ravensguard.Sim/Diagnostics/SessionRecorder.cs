@@ -14,12 +14,12 @@ public sealed class SessionRecorder
     public LiveWorld World { get; }
     public CommandLog Commands { get; } = new();
     public StateHashTrail Hashes { get; } = new();
-    private MoveInput _input; private SimSpeed _speed; private bool _torch; private bool _haveInput; private int _loadPm = 1000;
+    private MoveInput _input; private SimSpeed _speed, _wanted; private bool _torch; private bool _haveInput; private int _loadPm = 1000;
 
     public SessionRecorder(LiveWorld world)
     {
         World = world;
-        _speed = world.Clock.Speed; _torch = world.Torch; _loadPm = world.LoadSpeedPm;
+        _speed = world.Clock.Speed; _wanted = world.WantedSpeed; _torch = world.Torch; _loadPm = world.LoadSpeedPm;
         Rebase();
     }
 
@@ -27,7 +27,7 @@ public sealed class SessionRecorder
     public void Rebase()
     {
         long t = World.Tick;
-        Commands.Rebase(t, [ReplayCommand.Input(t, _input), ReplayCommand.Speed(t, _speed), ReplayCommand.Torch(t, _torch), ReplayCommand.LoadSpeed(t, _loadPm)]);
+        Commands.Rebase(t, [ReplayCommand.Input(t, _input), ReplayCommand.Speed(t, _speed), ReplayCommand.Torch(t, _torch), ReplayCommand.LoadSpeed(t, _loadPm), ReplayCommand.WantedSpeed(t, _wanted)]);
         Hashes.Clear();
         Hashes.Add(new HashRecord(t, StateHashTrail.KindStart, LiveStateHash.Saved(World)));
     }
@@ -42,6 +42,13 @@ public sealed class SessionRecorder
     {
         if (s != _speed) { Commands.Append(ReplayCommand.Speed(World.Tick, s)); _speed = s; }
         World.SetSpeed(s);
+    }
+
+    /// <summary>The speed asked for (the speed keys), recorded when it changes: a replay then gates the clock the same way.</summary>
+    public void SetWantedSpeed(SimSpeed s)
+    {
+        if (s != _wanted) { Commands.Append(ReplayCommand.WantedSpeed(World.Tick, s)); _wanted = s; }
+        World.SetWantedSpeed(s);
     }
 
     public void SetTorch(bool on)

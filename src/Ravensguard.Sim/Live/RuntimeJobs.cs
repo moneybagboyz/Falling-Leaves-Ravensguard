@@ -7,7 +7,10 @@ using Ravensguard.Sim.Worlds;
 namespace Ravensguard.Sim.Live;
 
 /// <summary>What the main thread gets back from a barrier: copies of the claimed and open jobs (the table itself belongs to the tick worker) and what the day's posting did.</summary>
-public sealed record JobSnapshot(IReadOnlyList<Job> Live, IReadOnlyList<Job> Open, int Posted, int ClaimsTaken);
+public sealed record JobSnapshot(IReadOnlyList<Job> Live, IReadOnlyList<Job> Open, int Posted, int ClaimsTaken, EntityId? LostJob = null);
+
+/// <summary>Where the hero stands (region millimetres) when the barrier looks, and the job that is never lost to distance (the mentor's first contract).</summary>
+public readonly record struct HeroSight(long XMm, long YMm, EntityId? Exempt);
 
 /// <summary>Runs the job table at the barrier of the running world: posting each morning, claims in (frame, seq) order, advancing the phases and paying out. The table is the world state's (<see cref="WorldState.Jobs"/>).</summary>
 public static class RuntimeJobs
@@ -27,7 +30,7 @@ public static class RuntimeJobs
     }
 
     /// <summary>One barrier of work: post the day's jobs at the first call of a day, apply <paramref name="claims"/>, advance every job to <paramref name="nowSec"/>, and copy out what the live tier needs.</summary>
-    public static Task<JobSnapshot> StepAsync(WorldRuntime rt, long nowSec, IReadOnlyList<ClaimRequest> claims) => rt.AtBarrier(() =>
+    public static Task<JobSnapshot> StepAsync(WorldRuntime rt, long nowSec, IReadOnlyList<ClaimRequest> claims, HeroSight? hero = null) => rt.AtBarrier(() =>
     {
         var env = EnvOf(rt); if (env == null) return new JobSnapshot([], [], 0, 0);
         var table = rt.State.Jobs ??= new JobTable();
@@ -40,7 +43,8 @@ public static class RuntimeJobs
         }
         if (claims.Count > 0) foreach (var (_, res) in table.ClaimAll(env, claims, nowSec, rt.State.Seed)) if (res == ClaimResult.Taken) taken++;
         table.Advance(env, nowSec);
-        return new JobSnapshot([.. table.Jobs.Values.Where(j => j.Live).Select(Copy)], [.. table.Jobs.Values.Where(j => j.State == JobState.Open).Select(Copy)], posted, taken);
+        EntityId? lost = hero is { } h ? table.WatchHero(EconomyState.HeroOwner, nowSec, h.XMm, h.YMm, h.Exempt) : null;
+        return new JobSnapshot([.. table.Jobs.Values.Where(j => j.Live).Select(Copy)], [.. table.Jobs.Values.Where(j => j.State == JobState.Open).Select(Copy)], posted, taken, lost);
     });
 }
 

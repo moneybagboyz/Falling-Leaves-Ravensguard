@@ -51,10 +51,12 @@ public sealed class JobsSave
     [Key(3)] public ulong[] Holds { get; set; } = [];
     [Key(4)] public long[] HoldExpiry { get; set; } = [];
     [Key(5)] public long LastPostedDay { get; set; } = -1;
+    /// <summary>The game second the hero was first seen away from his job's work site (-1: none); see <see cref="JobTable.WatchHero"/>.</summary>
+    [Key(6)] public long HeroAwaySince { get; set; } = -1;
 
     public static JobsSave Capture(JobTable t)
     {
-        var s = new JobsSave { NextSerial = t.NextSerial, LastPostedDay = t.LastPostedDay };
+        var s = new JobsSave { NextSerial = t.NextSerial, LastPostedDay = t.LastPostedDay, HeroAwaySince = t.HeroAwaySince };
         foreach (var j in t.Jobs.Values)
             s.Jobs.Add(new JobRow
             {
@@ -71,7 +73,7 @@ public sealed class JobsSave
 
     public JobTable Restore()
     {
-        var t = new JobTable { NextSerial = NextSerial, LastPostedDay = LastPostedDay };
+        var t = new JobTable { NextSerial = NextSerial, LastPostedDay = LastPostedDay, HeroAwaySince = HeroAwaySince };
         foreach (var r in Jobs)
             t.Restore(new Job
             {

@@ -46,15 +46,23 @@ public partial class StreetView
         int tile = HeroTile();
         if (t.AnimalsNear(layer, tile) <= 0) { _router?.ShowToast(L.T("HUNT_NO_GAME")); return; }
         _rec.Action(Ravensguard.Sim.Diagnostics.HeroAction.Hunt, tile, _world.Clock.Now.Seconds);
-        StartCampJob(L.T("HUNT_JOB"), 3600, () =>
+        StartCampJob(t, CampJobKind.Hunt, 3600);
+    }
+
+    /// <summary>The hour of stalking is over (the sim's camp job came due): a kill is butchered into the pack, a miss costs the hour.</summary>
+    void HuntDone(TravelState t)
+    {
+        var layer = Runtime?.State.Production?.Resources;
+        if (layer == null || t.PackStore?.Invoke() is not { } pack || _source?.Region is not { } rg) return;
+        int tile = HeroTile();
         {
             long now = _world.Clock.Now.Seconds; var (hx, hy) = _world.WorldMm;
             var (car, why) = t.Hunt(layer, tile, rg.Biomes[tile], _world.Clock.Now.Season, now, hx, hy, 20, HeroArmed());
-            if (car == null) { _router?.ShowToast(L.T(why == "missed" ? "HUNT_MISSED" : "HUNT_NO_GAME"), 3f); _wantedSpeed = SimSpeed.X1; return; }
+            if (car == null) { _router?.ShowToast(L.T(why == "missed" ? "HUNT_MISSED" : "HUNT_NO_GAME"), 3f); _rec.SetWantedSpeed(SimSpeed.X1); return; }
             var r = t.Butcher(car, pack, 50, now);
             string made = r == null ? "" : string.Join(", ", r.Made.Select(m => $"{m.Grams / 1000.0:0.#} kg {m.Good.Replace('_', ' ')}"));
-            _router?.ShowToast(L.F("HUNT_GOT", car.Species.Replace('_', ' '), made), 4f); _wantedSpeed = SimSpeed.X1;
-        });
+            _router?.ShowToast(L.F("HUNT_GOT", car.Species.Replace('_', ' '), made), 4f); _rec.SetWantedSpeed(SimSpeed.X1);
+        }
     }
 
     /// <summary>The snare key: a snare within four metres is taken up (and its catch butchered into the pack); else one is set here.</summary>

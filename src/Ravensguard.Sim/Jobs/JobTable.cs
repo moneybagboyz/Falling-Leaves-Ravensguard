@@ -57,7 +57,31 @@ public sealed class JobTable
     public IReadOnlyDictionary<EntityId, Job> Jobs => _jobs;
     public int Count => _jobs.Count;
     /// <summary>True when there is nothing to save: no jobs and both counters at their start (review finding 5: a table whose jobs are all gone still holds the next serial and the last posted day).</summary>
-    public bool IsEmpty => _jobs.Count == 0 && NextSerial == 1 && LastPostedDay == -1;
+    public bool IsEmpty => _jobs.Count == 0 && NextSerial == 1 && LastPostedDay == -1 && HeroAwaySince == -1;
+
+    /// <summary>The hero's rule (spec: a hero more than 60 m from the work of his job for 5 game minutes loses it). Game seconds, never real time.</summary>
+    public const long AwayLimitSec = 300, AwayRadiusMm = 60_000;
+    /// <summary>The game second the hero was first seen away from his job's work site, or -1 (saved, so a save made while he is away loses the job at the same second as an uninterrupted run).</summary>
+    public long HeroAwaySince { get; set; } = -1;
+
+    /// <summary>
+    /// One look at the hero (region millimetres) at <paramref name="nowSec"/>: the job he works loses him when he has been farther than <see cref="AwayRadiusMm"/> from where its work is done for
+    /// <see cref="AwayLimitSec"/> game seconds. Returns that job's id when it is lost (the caller asks the hero desk to abandon it), else null. <paramref name="exempt"/> (the mentor's first contract) is never lost.
+    /// Keyed on game seconds only: the same at 1x and 8x, however often it is looked at.
+    /// </summary>
+    public EntityId? WatchHero(EntityId hero, long nowSec, long heroXMm, long heroYMm, EntityId? exempt = null)
+    {
+        var mine = JobOf(hero);
+        if (mine == null || mine.Id == exempt) { HeroAwaySince = -1; return null; }
+        var (ex, ey, _, _) = PositionAt(mine, nowSec);
+        long dx = heroXMm - ex, dy = heroYMm - ey;
+        long n = dx * dx + dy * dy; long dist = n <= 0 ? 0 : (long)Math.Sqrt(n);
+        if (dist <= AwayRadiusMm) { HeroAwaySince = -1; return null; }
+        if (HeroAwaySince < 0) { HeroAwaySince = nowSec; return null; }
+        if (nowSec - HeroAwaySince < AwayLimitSec) return null;
+        HeroAwaySince = -1;
+        return mine.Id;
+    }
 
     public Job? Get(EntityId id) => _jobs.GetValueOrDefault(id);
     public Job? JobOf(EntityId worker) => _byWorker.TryGetValue(worker, out var j) ? _jobs[j] : null;

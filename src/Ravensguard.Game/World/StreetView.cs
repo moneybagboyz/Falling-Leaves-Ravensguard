@@ -15,6 +15,7 @@ using Ravensguard.Sim.Caravans;
 using Ravensguard.Sim.Core;
 using Ravensguard.Sim.Lighting;
 using Ravensguard.Sim.Live;
+using Ravensguard.Sim.Trade;
 using Ravensguard.Sim.People;
 using Ravensguard.Sim.Jobs;
 using Ravensguard.Sim.Save;
@@ -83,8 +84,7 @@ public partial class StreetView : Control, IHandlesBack
     // odd jobs (live-behaviour spec 4.5): the table belongs to the tick worker; the view holds copies, hands claims over at a barrier and shows the work panel
     System.Threading.Tasks.Task<JobSnapshot>? _jobTask;
     JobSnapshot? _jobSnap;
-    long _jobTick; bool _jobFaultShown; double _heroAway;
-    readonly List<ClaimRequest> _pendingClaims = new();
+    long _jobSec = long.MinValue; bool _jobFaultShown;
     RegionMap? _regionMap;
     ColorRect _ambient = null!, _ground = null!;
     ShaderMaterial _ambientMat = null!;
@@ -1146,28 +1146,31 @@ public partial class StreetView : Control, IHandlesBack
         if (_jobTask is { IsCompleted: true } done)
         {
             _jobTask = null;
-            if (done.IsCompletedSuccessfully) { _jobSnap = done.Result; _lod.SetJobs(done.Result.Live, done.Result.Open); WatchHero(rt, now); }
+            if (done.IsCompletedSuccessfully)
+            {
+                _jobSnap = done.Result; _lod.SetJobs(done.Result.Live, done.Result.Open);
+                if (done.Result.LostJob is { } lost) LoseJob(lost, now);
+            }
             else if (!_jobFaultShown) { _jobFaultShown = true; GD.PushWarning("job step failed: " + done.Exception?.GetBaseException().Message); }
         }
-        if (_jobTask == null && (_world.Tick - _jobTick >= 20 || _pendingClaims.Count > 0) && _world.Clock.Speed != SimSpeed.Paused)
+        // every JobStrideSec game seconds (never every so many ticks: the stride in game time is the same at 1x and 8x, and the away rule is the sim's, keyed on game seconds)
+        if (_jobTask == null && (now - _jobSec >= JobStrideSec) && _world.Clock.Speed != SimSpeed.Paused)
         {
-            _jobTick = _world.Tick;
-            var claims = _lod.TakeClaims().Concat(_pendingClaims).ToList(); _pendingClaims.Clear();
-            _jobTask = RuntimeJobs.StepAsync(rt, now, claims);
+            _jobSec = now;
+            var home = rt.State.HomeRegion; var c = LodCentres()[0];
+            var sight = new HeroSight(c.X - home.OriginXM * 1000, c.Y - home.OriginYM * 1000, Ob is { HasFirstJob: true } first ? first.FirstJob : null);   // the mentor's first contract is forgiving: it is not lost by lagging behind its carrier
+            _jobTask = RuntimeJobs.StepAsync(rt, now, _lod.TakeClaims().ToList(), sight);
         }
     }
 
-    void WatchHero(WorldRuntime rt, long now)
+    const long JobStrideSec = 30;
+
+    /// <summary>The sim's away rule said the hero has lost his job (game minutes away from its work): the abandon goes through the hero desk, recorded like any command.</summary>
+    void LoseJob(Ravensguard.Sim.Core.EntityId job, long now)
     {
-        var mine = _jobSnap?.Live.FirstOrDefault(j => j.Worker == HeroId);
-        if (mine == null || (Ob is { HasFirstJob: true } first && mine.Id == first.FirstJob)) { _heroAway = 0; return; }   // the mentor's first contract is forgiving: it is not lost by lagging behind its carrier
-        var home = rt.State.HomeRegion; var c = LodCentres()[0];
-        var (ex, ey, _, _) = Ravensguard.Sim.Jobs.JobTable.PositionAt(mine, now);
-        long dist = PathPlan.Dist(c.X - home.OriginXM * 1000 - ex, c.Y - home.OriginYM * 1000 - ey);
-        if (dist <= 60_000) { _heroAway = 0; return; }
-        // the work goes on without you only so long: five game minutes of being a long way from where it is done
-        _heroAway += 20.0 / TimeConst.GameSecondsPerRealSecond * 20; // one pump is about a second of real time, 20 game seconds at 1x
-        if (_heroAway > 300) { _heroAway = 0; _ = Watch(RuntimeJobsExt.AbandonAsync(rt, mine.Id, now), "abandon job"); _router?.ShowToast(L.T("JOBS_LOST"), 4f); }
+        if (_heroLink == null) return;
+        _heroLink.Issue(new HeroCommand { Kind = HeroCommandKind.JobAbandon, IssuedSec = now, Job = job, Tag = "away", Origin = CommandOrigin.Human });
+        _router?.ShowToast(L.T("JOBS_LOST"), 4f);
     }
 
     JobPanelData WorkData()
@@ -1195,10 +1198,10 @@ public partial class StreetView : Control, IHandlesBack
     void TakeJob(Ravensguard.Sim.Jobs.Job j)
     {
         var d = WorkData();
-        _pendingClaims.Add(new ClaimRequest(j.Id, HeroId, -1, _world.Tick, 0, d.HeroX, d.HeroY, 20, 25));
+        _heroLink?.Issue(new HeroCommand { Kind = HeroCommandKind.JobClaim, IssuedSec = _world.Clock.Now.Seconds, Job = j.Id, X = d.HeroX, Y = d.HeroY, Origin = CommandOrigin.Human });
     }
 
-    void AbandonJob(Ravensguard.Sim.Jobs.Job j) { if (Runtime is { } rt) _ = Watch(RuntimeJobsExt.AbandonAsync(rt, j.Id, _world.Clock.Now.Seconds), "abandon job"); }
+    void AbandonJob(Ravensguard.Sim.Jobs.Job j) => _heroLink?.Issue(new HeroCommand { Kind = HeroCommandKind.JobAbandon, IssuedSec = _world.Clock.Now.Seconds, Job = j.Id, Origin = CommandOrigin.Human });
 
     void SyncPeople(float alpha)
     {

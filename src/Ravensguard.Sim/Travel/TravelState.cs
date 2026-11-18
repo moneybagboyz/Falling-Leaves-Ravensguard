@@ -101,6 +101,12 @@ public sealed partial class TravelState
     public long LastMealSec;
     /// <summary>Set by the game when an encounter needs the player (the view reads and clears it).</summary>
     public EncounterEvent? PendingEncounter;
+    /// <summary>The encounter on the road the hero is dealing with (review finding 6: it was held in the view node, so a save lost it), whether its options are still open, and whether a trade or talk window it opened must settle when it closes. Saved.</summary>
+    public EncounterEvent? Current;
+    public bool CurrentOpen, ScreenPending;
+
+    /// <summary>Puts the encounter away (the journey is cancelled or begun anew).</summary>
+    public void ClearCurrent() { Current = null; CurrentOpen = false; }
 
     public TravelState(ContentDatabase db, ulong seed, GoodCatalog? goods = null, MassLedger? ledger = null)
     {
@@ -132,5 +138,5 @@ public sealed partial class TravelState
     public bool IsEmpty => Journey == null && Logs.Count == 0 && Encounters.Count == 0 && Camp == null && OldCamps.Count == 0 && Carcasses.Count == 0 && Snares.Count == 0 && Travellers.Count == 0
         && Companions.Count == 0 && Bus.Log.Count == 0 && LastById.Count == 0 && LegSerial == 0 && NextCamp == 0
         // the counters too (review finding 5): an emptied state with advanced serials is saved, so a load never hands out an id again or forgets the last meal
-        && NextTraveller == 0 && NextCarcass == 0 && NextSnare == 0 && LastMealSec == 0 && LastEncounterSec == long.MinValue;
+        && Current == null && !CurrentOpen && !ScreenPending && CampJob == null && NextTraveller == 0 && NextCarcass == 0 && NextSnare == 0 && LastMealSec == 0 && LastEncounterSec == long.MinValue;
 }

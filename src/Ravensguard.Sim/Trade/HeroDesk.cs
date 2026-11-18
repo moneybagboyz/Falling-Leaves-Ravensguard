@@ -18,6 +18,8 @@ public enum HeroCommandKind : byte
     CraftStart, CraftWork, CraftPause, CraftResume, CraftCollect,
     /// <summary>Appended (Phase 3 cleanup B): the hero pays a toll or bribe on the road (<c>CoinGive</c> mites to the <c>Person</c>'s household when one is named and real, else to the lord's tithe purse as a toll).</summary>
     EncounterPay,
+    /// <summary>Appended (Phase 3 review finding 6): the hero takes the job <c>Job</c> (his position in <c>X</c>, <c>Y</c>, region millimetres), or walks away from it (<c>JobAbandon</c>, <c>Tag</c> "away" when the distance rule asked).</summary>
+    JobClaim, JobAbandon,
 }
 
 /// <summary>Where the hero crafts (built on the main thread from what is in reach, copied into the command).</summary>
@@ -366,6 +368,8 @@ public sealed class HeroDesk
                 HeroCommandKind.CraftResume => CraftResume(ctx, c),
                 HeroCommandKind.CraftCollect => CraftCollect(ctx, c),
                 HeroCommandKind.EncounterPay => EncounterPay(ctx, c),
+                HeroCommandKind.JobClaim => JobClaim(ctx, c),
+                HeroCommandKind.JobAbandon => JobAbandon(ctx, c),
                 _ => R(c, HeroResultCode.Invalid, T("HERO_UNKNOWN_COMMAND")),
             };
         }
@@ -570,6 +574,22 @@ public sealed class HeroDesk
         if (to == null) return R(c, HeroResultCode.Invalid, T("HERO_THERE_NO_ONE_PAY"));
         if (!e.Ledger.Transfer(ctx.Purse, to.Value, Coin.FromMites(want), TransferReason.Toll)) return R(c, HeroResultCode.CannotAfford, T("HERO_CANNOT_PAY"), want);
         return R(c, HeroResultCode.Ok, T("HERO_PAY", Quotes.Money(want)), want);
+    }
+
+    /// <summary>The hero takes a job (review finding 6: it used to reach the job table through the view). Claimed at the second it was asked, in sequence order.</summary>
+    private HeroResult JobClaim(HeroContext ctx, HeroCommand c)
+    {
+        if (ctx.Jobs?.Invoke() is not { } jt) return R(c, HeroResultCode.Invalid, T("HERO_THERE_NO_WORK_BOARD"));
+        var res = jt.Table.ClaimAll(jt.Env, [new ClaimRequest(c.Job, ctx.Party.Hero, -1, c.IssuedSec, (int)c.Seq, c.X, c.Y, 20, 25)], c.IssuedSec, ctx.Seed);
+        return res.Count > 0 && res[0].Result == ClaimResult.Taken ? R(c, HeroResultCode.Ok, HeroText.Empty) : R(c, HeroResultCode.Refused, HeroText.Empty);
+    }
+
+    /// <summary>The hero walks away from his own job: it fails, pays the hours worked and returns the rest of the escrow.</summary>
+    private HeroResult JobAbandon(HeroContext ctx, HeroCommand c)
+    {
+        if (ctx.Jobs?.Invoke() is not { } jt) return R(c, HeroResultCode.Invalid, T("HERO_THERE_NO_WORK_BOARD"));
+        if (jt.Table.Get(c.Job) is not { Live: true } j || j.Worker != ctx.Party.Hero) return R(c, HeroResultCode.Invalid, HeroText.Empty);
+        return jt.Table.Abandon(jt.Env, c.Job, c.IssuedSec) ? R(c, HeroResultCode.Ok, HeroText.Empty) : R(c, HeroResultCode.Invalid, HeroText.Empty);
     }
 
     /// <summary>The real caravan a person belongs to (master or crew of an active caravan of the hero's region), with its cargo chest and account purse.</summary>

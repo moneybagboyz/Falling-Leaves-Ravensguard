@@ -144,6 +144,8 @@ public sealed class LiveSave
     [Key(11)] public byte Mode { get; set; }
     /// <summary>The hero's core temperature, exposure counters and the wetness of the clothes worn; null in older saves and in worlds without the clothing model.</summary>
     [Key(12)] public HeroBodySave? Body { get; set; }
+    /// <summary>The speed the hero asked for, plus one (0: not stored, an older save: 8x). Review finding 6.</summary>
+    [Key(13)] public byte WantedPlus1 { get; set; }
 }
 
 /// <summary>Save form of <see cref="Ravensguard.Sim.Clothing.HeroBody"/>.</summary>
@@ -358,7 +360,7 @@ public static class WorldSave
                 WorldXRaw = live.WorldXRaw, WorldYRaw = live.WorldYRaw, Z = live.Z, Facing = (byte)live.Facing, Torch = live.Torch, Explored = live.Explored.ToBytes(),
                 RegionPlus1 = HeroRegionOf(w, live) is { IsValid: true } hr ? hr.Id + 1 : 0,
                 PathXyz = live.Motion?.PathXyz ?? [], PathIdx = live.Motion?.PathIdx ?? 0, PathStuck = live.Motion?.Stuck ?? 0, PortalLock = live.Motion?.PortalLock ?? [], Mode = (byte)(live.Motion?.Mode ?? MoveMode.Jog),
-                Body = HeroBodySave.Of(live.Body),
+                Body = HeroBodySave.Of(live.Body), WantedPlus1 = (byte)((int)live.Wanted + 1),
             },
         };
     }
@@ -427,7 +429,7 @@ public static class WorldSave
                 throw new SaveException("Corrupt 'live' section in save: the hero's walk in progress is malformed.");
             var motion = new HeroMotion(ls.PathXyz, ls.PathIdx, ls.PathStuck, ls.PortalLock, (MoveMode)ls.Mode);
             resume = new LiveResume(ls.WorldXRaw, ls.WorldYRaw, ls.Z, (Facing)ls.Facing, ls.Torch, new GameTime(meta.ClockSeconds), meta.ClockMsRemainder, (SimSpeed)meta.ClockSpeed,
-                ExploredTiles.FromBytes(ls.Explored), codex, Motion: motion.IsIdle ? HeroMotion.Idle : motion, Body: ls.Body?.ToBody());
+                ExploredTiles.FromBytes(ls.Explored), codex, Motion: motion.IsIdle ? HeroMotion.Idle : motion, Body: ls.Body?.ToBody(), Wanted: ls.WantedPlus1 == 0 ? SimSpeed.X8 : (SimSpeed)(ls.WantedPlus1 - 1));
             var home = RegionCoord.Snap(meta.EmbarkCellX, meta.EmbarkCellY);
             var heroRegion = HeroRegionTracker.OfFrameCell(home, resume.Cell.X, resume.Cell.Y);
             if (ls.RegionPlus1 > 0 && (!heroRegion.IsValid || heroRegion.Id != ls.RegionPlus1 - 1))

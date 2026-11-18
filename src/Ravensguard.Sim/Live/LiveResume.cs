@@ -73,7 +73,7 @@ public sealed class ExploredTiles
 /// <para><see cref="Motion"/> is the walk in progress (Phase 3 cleanup: a path at an autosave was lost, so a replay window starting there diverged) and <see cref="Body"/> the hero's core
 /// temperature, exposure counters and the wetness of what they wear; both null in a save made before they were kept.</para>
 public sealed record LiveResume(long WorldXRaw, long WorldYRaw, int Z, Facing Facing, bool Torch, GameTime Time, long MsRemainder, SimSpeed Speed,
-    ExploredTiles Explored, CodexProgress? Codex, int RegionId = -1, HeroMotion? Motion = null, Ravensguard.Sim.Clothing.HeroBody? Body = null)
+    ExploredTiles Explored, CodexProgress? Codex, int RegionId = -1, HeroMotion? Motion = null, Ravensguard.Sim.Clothing.HeroBody? Body = null, SimSpeed Wanted = SimSpeed.X8)
 {
     public Fixed WorldX => Fixed.FromRaw((int)WorldXRaw);
     public Fixed WorldY => Fixed.FromRaw((int)WorldYRaw);

@@ -82,7 +82,7 @@ public static class LiveStateHash
         var b = new byte[8];
         void L(long v) { System.Buffers.Binary.BinaryPrimitives.WriteInt64LittleEndian(b, v); sha.AppendData(b); }
         long ox = (long)w.OriginX << Ravensguard.Sim.Core.Fixed.FracBits, oy = (long)w.OriginY << Ravensguard.Sim.Core.Fixed.FracBits;
-        L(w.Clock.Now.Seconds); L(w.Clock.GameMsRemainder); L((int)w.Clock.Speed);
+        L(w.Clock.Now.Seconds); L(w.Clock.GameMsRemainder); L((int)w.Clock.Speed); L((int)w.WantedSpeed);
         L(ox + h.X.Raw); L(oy + h.Y.Raw); L(h.Z); L((int)h.Facing); L(h.Torch ? 1 : 0);
         if (full) { L(ox + h.PrevX.Raw); L(oy + h.PrevY.Raw); L(h.PrevZ); L(h.Moving ? 1 : 0); L((int)h.Mode); L(h.PathRemaining); }
         else L(h.PathRemaining);                       // the walk in progress is saved (Phase 3 cleanup), so a load starts mid-route exactly where the autosave left it

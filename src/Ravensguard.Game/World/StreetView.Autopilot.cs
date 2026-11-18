@@ -234,7 +234,7 @@ public partial class StreetView
         {
             var host = ApHost(); var s = host.Setup(); s.Queue.Clear(); s.Queue.Add(Directive.Work(0, L.T("AP_D_WORK")));
             host.Preset("worker", s); host.Start(s);
-            _wantedSpeed = SimSpeed.X8; _rec.SetSpeed(SimSpeed.X8);
+            _rec.SetWantedSpeed(SimSpeed.X8); _rec.SetSpeed(SimSpeed.X8);
         }
         // the picture a little after the hero holds a job (or, failing that, late)
         bool has = _jobSnap?.Live.Any(j => j.Worker == HeroId) == true;

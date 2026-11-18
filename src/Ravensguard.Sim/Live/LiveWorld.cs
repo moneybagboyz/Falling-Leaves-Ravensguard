@@ -124,7 +124,7 @@ public sealed class LiveWorld
             _y = Fixed.FromRaw((int)(resume.WorldYRaw - ((long)Window.OriginY << Fixed.FracBits)));
             _facing = resume.Facing; _torch = resume.Torch; Explored = resume.Explored.Clone();
             if (resume.Motion is { } m) RestoreMotion(m);
-            ResumedBody = resume.Body;
+            ResumedBody = resume.Body; WantedSpeed = resume.Wanted;
         }
         _z = start.Z;
         _px = _x; _py = _y; _pz = _z;
@@ -148,6 +148,9 @@ public sealed class LiveWorld
 
     public void SetInput(MoveInput input) { _input = input; }
     public void SetSpeed(SimSpeed s) => Clock.Speed = s;
+    /// <summary>The speed the hero asked for (the keys 1, 2, 4, 8), which the travel gate may hold the clock below. Hero state (review finding 6: it was held in the view node): recorded, saved and hashed.</summary>
+    public SimSpeed WantedSpeed { get; private set; } = SimSpeed.X8;
+    public void SetWantedSpeed(SimSpeed s) => WantedSpeed = s;
     public void SetTorch(bool on) { if (_torch != on) { _torch = on; _lightDirty = true; } }
     public void ToggleTorch() => SetTorch(!_torch);
     public bool Torch => _torch;
@@ -245,7 +248,7 @@ public sealed class LiveWorld
     public LiveResume CaptureResume()
     {
         long wx = ((long)OriginX << Fixed.FracBits) + _x.Raw, wy = ((long)OriginY << Fixed.FracBits) + _y.Raw;
-        return new LiveResume(wx, wy, _z, _facing, _torch, Clock.Now, Clock.GameMsRemainder, Clock.Speed, Explored.Clone(), Codex?.ToProgress(), Motion: CaptureMotion(), Body: BodySource?.Invoke());
+        return new LiveResume(wx, wy, _z, _facing, _torch, Clock.Now, Clock.GameMsRemainder, Clock.Speed, Explored.Clone(), Codex?.ToProgress(), Motion: CaptureMotion(), Body: BodySource?.Invoke(), Wanted: WantedSpeed);
     }
 
     /// <summary>The hero's body for a save (core temperature, exposure, wet clothes): the game's clothing model answers it. Null: the save keeps none.</summary>

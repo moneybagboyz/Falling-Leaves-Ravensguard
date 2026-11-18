@@ -39,9 +39,25 @@ public readonly record struct TalkResult(EntityId Person, TalkKind Kind, bool Ga
 public readonly record struct CampEventResult(string Id, string Effect, string Name, long GramsLost);
 public readonly record struct MealResult(int Fed, long GramsEaten, long MeasuresPpm);
 
+/// <summary>What the hero is doing at camp for a while (game time, saved): the view only shows its label and acts when it ends.</summary>
+public enum CampJobKind : byte { Talk = 1, Sleep = 2, Break = 3, Gather = 4, Forage = 5, Hunt = 6 }
+public sealed record CampJobState(CampJobKind Kind, long EndSec);
+
 public sealed partial class TravelState
 {
     public Camp? Camp { get; set; }
+    /// <summary>The camp job in progress (review finding 6: it was a closure in the view node, so a save mid-job lost it), or null.</summary>
+    public CampJobState? CampJob { get; set; }
+
+    /// <summary>Starts a camp job of at least a game minute, ending <paramref name="secs"/> from <paramref name="nowSec"/>.</summary>
+    public CampJobState StartCampJob(CampJobKind kind, long secs, long nowSec) => CampJob = new CampJobState(kind, nowSec + Math.Max(60, secs));
+
+    /// <summary>The camp job when it is due at <paramref name="nowSec"/> (and clears it), else null. Game seconds only: the same at 1x and 8x.</summary>
+    public CampJobState? TakeDueCampJob(long nowSec)
+    {
+        if (CampJob is not { } j || nowSec < j.EndSec) return null;
+        CampJob = null; return j;
+    }
     /// <summary>Old camps: their fire pits stay as landmarks, the rest is gone after <c>CampDecayDays</c>.</summary>
     public readonly List<Camp> OldCamps = [];
     public readonly List<CampMember> Companions = [];

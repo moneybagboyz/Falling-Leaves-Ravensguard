@@ -46,6 +46,9 @@ public sealed class TravelSave
     [Key(24)] public List<TravellerSave> Travellers { get; set; } = []; [Key(25)] public CampSave? Camp { get; set; } [Key(26)] public List<CampSave> OldCamps { get; set; } = [];
     [Key(27)] public List<MemberSave> Companions { get; set; } = []; [Key(28)] public List<CarcassSave> Carcasses { get; set; } = []; [Key(29)] public List<SnareSave> Snares { get; set; } = [];
     [Key(30)] public bool Autopilot { get; set; } [Key(31)] public int LatitudeTenths { get; set; } = 480;
+    /// <summary>Review finding 6: the camp job (kind 0: none) and the encounter on the road with its flags, which the view used to hold.</summary>
+    [Key(32)] public byte CampJobKind { get; set; } [Key(33)] public long CampJobEnd { get; set; }
+    [Key(34)] public EncounterRowSave? Current { get; set; } [Key(35)] public bool CurrentOpen { get; set; } [Key(36)] public bool ScreenPending { get; set; }
 
     private static InterruptRowSave Row(InterruptRecord r) => new() { Sec = r.Sec, Kind = (byte)r.Kind, Policy = (byte)r.Policy, X = r.XMm, Y = r.YMm, Text = r.Text, Quiet = r.Quiet };
     private static InterruptRecord Rec(InterruptRowSave r) => new(r.Sec, (InterruptKind)r.Kind, (InterruptPolicy)r.Policy, r.X, r.Y, r.Text, r.Quiet);
@@ -70,7 +73,9 @@ public sealed class TravelSave
         if (t.Journey is { } j)
             o.Journey = new JourneySave { Dest = j.DestName, StartSec = j.StartSec, PathX = j.Path.X, PathY = j.Path.Y, Progress = j.ProgressMm, Sec = j.Sec, State = (byte)j.State, SlotDone = j.SlotDone, SlotSpeed = j.SlotSpeedMmPerGs, BreakUntil = j.BreakUntilSec, Leg = j.Leg, Coin = j.CoinSpent, Food = j.FoodUsedG, Enc = [.. j.EncounterIds] };
         o.Logs = [.. t.Logs.Select(l => new JourneyLogSave { Start = l.StartSec, End = l.EndSec, Dest = l.Dest, DistM = l.DistM, Coin = l.CoinSpent, Food = l.FoodUsedG, Enc = l.Encounters, Done = l.Completed })];
-        o.Encounters = [.. t.Encounters.Select(e => new EncounterRowSave { Sec = e.Sec, Id = e.Id, Kind = e.Kind, X = e.XMm, Y = e.YMm, SX = e.SpawnXMm, SY = e.SpawnYMm, Leg = e.Leg, Cast = e.Cast, Bark = e.Bark })];
+        o.Encounters = [.. t.Encounters.Select(EncRow)];
+        o.CampJobKind = (byte)(t.CampJob?.Kind ?? 0); o.CampJobEnd = t.CampJob?.EndSec ?? 0;
+        o.Current = t.Current is { } cu ? EncRow(cu) : null; o.CurrentOpen = t.CurrentOpen; o.ScreenPending = t.ScreenPending;
         o.Travellers = [.. t.Travellers.Select(x => new TravellerSave { Id = x.Id.Value, Archetype = x.Archetype, Encounter = x.Encounter, Sec = x.Sec, X = x.XMm, Y = x.YMm })];
         o.Camp = t.Camp == null ? null : CampRow(t, t.Camp, rows);
         o.OldCamps = [.. t.OldCamps.Select(c => CampRow(t, c, false))];
@@ -79,6 +84,8 @@ public sealed class TravelSave
         o.Snares = [.. t.Snares.Select(s => new SnareSave { Id = s.Id, Tile = s.Tile, Set = s.SetSec, LastHour = s.LastHour, Caught = s.Caught, CatchSec = s.CatchSec, Species = s.Species, Mass = s.MassG, XMm = s.XMm, YMm = s.YMm })];
         return o;
     }
+
+    private static EncounterRowSave EncRow(EncounterEvent e) => new() { Sec = e.Sec, Id = e.Id, Kind = e.Kind, X = e.XMm, Y = e.YMm, SX = e.SpawnXMm, SY = e.SpawnYMm, Leg = e.Leg, Cast = e.Cast, Bark = e.Bark };
 
     private static Camp CampOf(CampSave r) => new()
     {
@@ -97,6 +104,8 @@ public sealed class TravelSave
             t.Journey = new Journey { DestName = j.Dest, StartSec = j.StartSec, Path = new RoutePath(j.PathX, j.PathY), ProgressMm = j.Progress, Sec = j.Sec, State = (JourneyState)j.State, SlotDone = j.SlotDone, SlotSpeedMmPerGs = j.SlotSpeed, BreakUntilSec = j.BreakUntil, Leg = j.Leg, CoinSpent = j.Coin, FoodUsedG = j.Food, EncounterIds = [.. j.Enc], StartXMm = j.PathX[0], StartYMm = j.PathY[0], DestXMm = j.PathX[^1], DestYMm = j.PathY[^1] };
         t.Logs.Clear(); t.Logs.AddRange(Logs.Select(l => new JourneyLog(l.Start, l.End, l.Dest, l.DistM, l.Coin, l.Food, l.Enc, l.Done)));
         t.Encounters.Clear(); t.Encounters.AddRange(Encounters.Select(e => new EncounterEvent(e.Sec, e.Id, e.Kind, e.X, e.Y, e.SX, e.SY, e.Leg, e.Cast, e.Bark)));
+        t.CampJob = CampJobKind == 0 ? null : new CampJobState((Ravensguard.Sim.Travel.CampJobKind)CampJobKind, CampJobEnd);
+        t.Current = Current is { } ce ? new EncounterEvent(ce.Sec, ce.Id, ce.Kind, ce.X, ce.Y, ce.SX, ce.SY, ce.Leg, ce.Cast, ce.Bark) : null; t.CurrentOpen = CurrentOpen; t.ScreenPending = ScreenPending;
         t.Travellers.Clear(); t.Travellers.AddRange(Travellers.Select(x => new Traveller { Id = new EntityId(x.Id), Archetype = x.Archetype, Encounter = x.Encounter, Sec = x.Sec, XMm = x.X, YMm = x.Y }));
         t.OldCamps.Clear(); t.OldCamps.AddRange(OldCamps.Select(c => { var k = CampOf(c); k.Members.AddRange(c.Members.Select(m => new EntityId(m))); k.Sentries.AddRange(c.Sentries.Select(m => new EntityId(m))); return k; }));
         t.Camp = null;

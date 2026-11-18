@@ -13,8 +13,8 @@ public partial class StreetView
     /// <summary>No screen or dialog above the street view.</summary>
     public bool DebugForeground => Foreground;
     public int DebugBarksSpawned => _barksSpawned;
-    public bool DebugEncounterScreenPending => _encScreenPending;
-    public bool DebugEncounterOpen => _enc != null && _encOpen;
+    public bool DebugEncounterScreenPending => EncScreenPending;
+    public bool DebugEncounterOpen => Enc != null && EncOpen;
     public bool DebugCampOpen => _campOpen;
     public JourneyState? DebugJourneyState => _travel?.Journey?.State;
     public TravelHud? DebugTravelHud => _thud;
@@ -25,7 +25,7 @@ public partial class StreetView
     {
         if (_travel == null) return "no travel";
         string name = DevEncounter(id);
-        if (person is { } p && _enc != null) _enc = _enc with { Cast = [p.Value] };      // a real record to trade or talk with (the staged cast is generated travellers)
+        if (person is { } p && _travel?.Current is { } cur) _travel.Current = cur with { Cast = [p.Value] };      // a real record to trade or talk with (the staged cast is generated travellers)
         return name;
     }
 
