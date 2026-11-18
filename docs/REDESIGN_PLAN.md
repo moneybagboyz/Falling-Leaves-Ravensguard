@@ -624,7 +624,7 @@ There is no double-click to interact.
     - Every chronicle entry has either a specific cause or that explicit label. Coverage is measured.
 13. **Warnings before failure:** encounter strength and odds, a starvation timeline, the injury consequences shown on the paper-doll, and "seen" or "unseen".
 14. **Authored content:** landmarks, unique NPCs and faction leaders, placed by a landmark generation phase.
-15. **Armies and war at scale:** see §3d. **Horses:** see §3e. **Learning the game:** see §3f. **Crafting:** see §3g. **Vehicles and ships:** see §3h. **Watch mode and autopilot:** see §3i.
+15. **Armies and war at scale:** see §3d. **Horses:** see §3e. **Learning the game:** see §3f. **Crafting:** see §3g. **Vehicles and ships:** see §3h. **Watch mode and autopilot:** see §3i. **Realm and lordly income:** see §3j.
 16. **Audio:** see §2.11.
 
 **Cut or folded in:**
@@ -973,6 +973,46 @@ The player's hero can be handed to the same AI that runs every NPC, for one figh
   - The chronicle records what the hero did on autopilot like anything else.
 - **Zero-player watching.** With autopilot on and interrupts set to "notify", the world plays itself around your hero like a living story, Dwarf Fortress style. You can step back in at any time.
 - **Party members** you control (§3.4) use the same directives and stances, so a squad can work, train or travel on its own while you lead another group.
+
+### 3j. How realms and lords get supplies and money
+Revenue follows the feudal chain: peasants owe their lord, lords owe their overlord, and the crown also taxes everyone through its own officials. Every payment is a real transfer of coin or goods (§3.3, §4A.1), so supplies can always be traced back to where they came from.
+- **Royal and lordly estates (demesne).**
+  - Every lord, and the crown, holds estates worked by hired servants and by tenants' labour service.
+  - Estates pay **food rents in kind** (grain, livestock, cheese, ale) into the holder's barns. Over time these are commuted to coin.
+  - An itinerant court or lord can eat its way around its own estates.
+- **What vassals owe for a fief.**
+  - **Military service:** a set number of armed men for a set number of days a year, or **scutage**, a cash payment instead.
+  - **Aids:** fixed payments for set occasions, such as ransoming the lord, knighting his eldest son or marrying his eldest daughter.
+  - **Relief:** a fee when an heir inherits.
+  - **Wardship:** the overlord runs an underage heir's fief and keeps its income.
+  - **Marriage:** the overlord arranges, or sells, the marriage of heirs and heiresses.
+  - **Escheat:** the fief returns to the overlord when the line dies out, and is **forfeit** for treason.
+  - Unpaid dues become grievances and casus belli (§4A.4).
+- **General taxes.**
+  - **Hearth tax** (Phase 2): collected by the fief, with a crown share forwarded to the realm.
+  - **Subsidies:** a fraction of every household's movable goods, for example a tenth in towns and a fifteenth in the countryside. They are granted by a council of the great lords, and the council's agreement depends on their opinion of the ruler and the war's cause.
+  - **Tallage** on towns and on the ruler's own estates.
+- **Trade:** customs on exports and imports at ports and border gates, tolls at bridges and gates (O5), and fees for market and town charters.
+- **Justice and the mint.** Fines and forfeitures; seigniorage on coin minted (§4A.1).
+- **The church:** tithes go to the parish (Phase 2). Clerical taxes and the income of vacant bishoprics are a ruler's occasional windfall.
+- **Purveyance (requisition).**
+  - The ruler's officers may take grain, carts, animals and fodder for the court or an army, at a set price paid late or never.
+  - It supplies campaigns quickly, but raises grievances and unrest, can spark revolt (§4A.2 unrest ladder) and is a chronicle cause.
+  - Armies are otherwise supplied by buying from merchants, by their own baggage trains, and by foraging on enemy land (§3d).
+- **Loans.**
+  - Merchants and bankers lend to rulers against future taxes or customs, with interest paid from the treasury.
+  - Defaulting ruins the lender and closes the credit line.
+  - **Loans move existing coin. They never create money (§3.3).**
+- **Officials collect; the player sets policy.**
+  - As lord or ruler you set tax levels, dues and customs rates, decide when to call a council for a subsidy or to requisition, and appoint officials. These are reeves, stewards, sheriffs or bailiffs, and customs collectors, and each one is a Person.
+  - Officials collect, and they can be **honest or corrupt** (skimming is a crime with witnesses, §3.10).
+  - The Ledger (§3.9) shows receipts by source, arrears, grievances and each official's record.
+  - You can still act yourself, as any person can: ride out, escort a tax wagon, arrest a defaulter.
+- **Treasuries are physical.** Chests, barns and granaries can be raided, burned or stolen from. A tax wagon on the road is a caravan (§4A.4) and can be ambushed.
+- **Scheduling (§5).**
+  - Phase 2: hearth tax, rents, tithe, the crown share and basic treasuries.
+  - Phase 6: estates and food rents, vassal dues, subsidies and councils, tallage, customs, officials and corruption, loans.
+  - Phase 7: purveyance and army supply, scutage in place of service, and campaign finance.
 
 ### 3f. Learning the game (brutal, but learnable)
 - **No tutorial level.** You learn in the real world during the first hour:
@@ -1512,6 +1552,7 @@ Estimates assume one developer working with an AI assistant. Every phase ends in
   - Diplomacy as utility AI; faction reactions.
   - Sellsword to vassal to lord.
   - Fief zoning, taxes, rent and tithe; the unrest ladder.
+  - **Realm and lordly income (§3j):** estates and food rents, vassal dues (service, aids, relief, wardship, marriage, escheat), subsidies granted by councils, tallage, customs, officials (honest or corrupt), loans to rulers.
   - Founding a faction.
 - **The chronicle at full depth,** with measured "why" coverage.
 - **Heists and jailbreaks.**
@@ -1532,7 +1573,7 @@ Estimates assume one developer working with an AI assistant. Every phase ends in
   - Formations, command and the tactical pause.
   - **Cavalry formations and charges.**
   - Reinforcement waves.
-- **Armies on the map:** columns, supply, camps, levies and mercenaries.
+- **Armies on the map:** columns, supply, camps, levies and mercenaries; **purveyance**, scutage and campaign finance (§3j).
 - **Sieges** with engines, wall-walks and towers; breaches; winter sieges. Siege engines are vehicles from the designer (§3h).
 - **War wagons and wagon forts; chariot combat** (§3h).
 - **Ships at sea (§3h):** harbours, cogs and longships, sailing by wind, sea trade and sea raids from the continent tick, naval combat with missiles, ramming, fire and boarding.
