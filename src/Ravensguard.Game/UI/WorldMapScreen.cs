@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Godot;
 using Ravensguard.Game.Inputs;
+using Ravensguard.Game.UI.NewGame;
 using Ravensguard.Game.World;
 using Ravensguard.Sim.WorldGen.Region;
 using RegionData = Ravensguard.Sim.WorldGen.Region.Region;
@@ -18,6 +19,11 @@ public partial class WorldMapScreen : Control
     readonly ScreenRouter _router;
     readonly RegionMap _map;
     readonly Func<(float X, float Y)> _hero;
+    readonly ContinentOverview? _overview;
+    // continent mode (zoom out past the region map): the whole continent with the region grid and the generated regions in detail
+    bool _continent;
+    Vector2 _cOrigin;
+    int _cScale = 1;
     Vector2 _origin; // image pixel at the screen centre
     int _scale = 1;
     bool _drag;
@@ -32,9 +38,12 @@ public partial class WorldMapScreen : Control
     public string? ShotPath { get; init; }
     public int StartScale { get; init; } = 1;
 
-    public WorldMapScreen(ScreenRouter router, RegionMap map, Func<(float X, float Y)> hero)
+    /// <summary>Dev: opens in the continent overview (--shot-map-scale 0).</summary>
+    public bool StartContinent { get; init; }
+
+    public WorldMapScreen(ScreenRouter router, RegionMap map, Func<(float X, float Y)> hero, ContinentOverview? overview = null)
     {
-        _router = router; _map = map; _hero = hero;
+        _router = router; _map = map; _hero = hero; _overview = overview;
     }
 
     public override void _Ready()
@@ -46,6 +55,7 @@ public partial class WorldMapScreen : Control
         _scale = Math.Clamp(StartScale, 1, 6);
         RefreshTexts();
         InputBootstrap.Hints.Changed += RefreshTexts; // a rebind shows in the hint line
+        if (StartContinent && _overview != null) { _continent = true; _cScale = Math.Clamp(StartScale, 1, 6); }
         CenterOnHero();
         ClampOrigin();
     }
@@ -63,6 +73,7 @@ public partial class WorldMapScreen : Control
 
     void CenterOnHero()
     {
+        if (_continent && _overview != null) { _cOrigin = _overview.HeroPx(); return; }
         var (x, y) = _hero();
         _origin = new Vector2(x / RegionData.TileM * RegionMap.Px, y / RegionData.TileM * RegionMap.Px);
     }
@@ -70,14 +81,16 @@ public partial class WorldMapScreen : Control
     /// <summary>Keeps the map filling the window: the view never shows past the edge of the image, and a window larger than the map centres it.</summary>
     void ClampOrigin()
     {
-        float hx = Size.X / 2f / _scale, hy = Size.Y / 2f / _scale;
-        float x = RegionMap.Size <= 2 * hx ? RegionMap.Size / 2f : Math.Clamp(_origin.X, hx, RegionMap.Size - hx);
-        float y = RegionMap.Size <= 2 * hy ? RegionMap.Size / 2f : Math.Clamp(_origin.Y, hy, RegionMap.Size - hy);
-        _origin = new Vector2(x, y);
+        int sc = _continent ? _cScale : _scale; float img = _continent ? ContinentMap.Px : RegionMap.Size;
+        float hx = Size.X / 2f / sc, hy = Size.Y / 2f / sc;
+        float ox = _continent ? _cOrigin.X : _origin.X, oy = _continent ? _cOrigin.Y : _origin.Y;
+        float x = img <= 2 * hx ? img / 2f : Math.Clamp(ox, hx, img - hx);
+        float y = img <= 2 * hy ? img / 2f : Math.Clamp(oy, hy, img - hy);
+        if (_continent) _cOrigin = new Vector2(x, y); else _origin = new Vector2(x, y);
     }
 
-    Vector2 ToScreen(Vector2 imagePx) => Size / 2f + (imagePx - _origin) * _scale;
-    Vector2 ToImage(Vector2 screen) => (screen - Size / 2f) / _scale + _origin;
+    Vector2 ToScreen(Vector2 imagePx) => _continent ? Size / 2f + (imagePx - _cOrigin) * _cScale : Size / 2f + (imagePx - _origin) * _scale;
+    Vector2 ToImage(Vector2 screen) => _continent ? (screen - Size / 2f) / _cScale + _cOrigin : (screen - Size / 2f) / _scale + _origin;
 
     public override void _Process(double delta)
     {
@@ -86,10 +99,10 @@ public partial class WorldMapScreen : Control
         if (!Visible) return;
         var pan = new Vector2((Actions.HeldLoose("world.camera_right") ? 1 : 0) - (Actions.HeldLoose("world.camera_left") ? 1 : 0),
             (Actions.HeldLoose("world.camera_down") ? 1 : 0) - (Actions.HeldLoose("world.camera_up") ? 1 : 0));
-        if (pan != Vector2.Zero) _origin += pan * (float)(delta * 420f / _scale);
+        if (pan != Vector2.Zero) { if (_continent) _cOrigin += pan * (float)(delta * 420f / _cScale); else _origin += pan * (float)(delta * 420f / _scale); }
         ClampOrigin();
         QueueRedraw();
-        if (ShotPath != null && _map.Texture != null && _map.Fog != null && ++_shotWait == 8)
+        if (ShotPath != null && (_continent || (_map.Texture != null && _map.Fog != null)) && ++_shotWait == 8)
         {
             var img = GetViewport().GetTexture().GetImage();
             System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(ShotPath) ?? ".");
@@ -120,6 +133,18 @@ public partial class WorldMapScreen : Control
 
     void Zoom(int dir, Vector2 at)
     {
+        if (_continent)
+        {
+            int cs = _cScale + dir;
+            if (cs < 1) return;
+            if (cs > 6) { _continent = false; CenterOnHero(); ClampOrigin(); return; } // zoom in past the overview: back to the map of the region
+            var cimg = ToImage(at.X > 0 || at.Y > 0 ? at : Size / 2f);
+            _cScale = cs;
+            _cOrigin = cimg - (at - Size / 2f) / _cScale;
+            ClampOrigin();
+            return;
+        }
+        if (dir < 0 && _scale == 1 && _overview != null) { _continent = true; _cScale = Math.Clamp(Math.Max(1, (int)(Math.Min(Size.X, Size.Y - 60) / ContinentMap.Px)), 1, 6); CenterOnHero(); ClampOrigin(); return; }
         int ns = Math.Clamp(_scale + dir, 1, 6);
         if (ns == _scale) return;
         var img = ToImage(at.X > 0 || at.Y > 0 ? at : Size / 2f);
@@ -130,6 +155,7 @@ public partial class WorldMapScreen : Control
 
     void UpdateHover()
     {
+        if (_continent && _overview != null) { _hover = _overview.Describe(ToImage(_mouse)); return; }
         var p = ToImage(_mouse);
         int tx = (int)(p.X / RegionMap.Px), ty = (int)(p.Y / RegionMap.Px);
         _hover = "";
@@ -149,6 +175,7 @@ public partial class WorldMapScreen : Control
     public override void _Draw()
     {
         DrawRect(new Rect2(Vector2.Zero, Size), new Color("141118"));
+        if (_continent && _overview != null) { DrawContinent(); return; }
         if (_map.Texture == null) { DrawString(_font, Size / 2f - new Vector2(60, 0), _buildingText, HorizontalAlignment.Left, -1, 16, PixelTheme.Body); return; }
         float s = _scale;
         var tl = ToScreen(Vector2.Zero);
@@ -209,6 +236,22 @@ public partial class WorldMapScreen : Control
         DrawLandmark(new Vector2(lx + 6, ly - 2)); DrawString(_font, new Vector2(lx + 18, ly + 2), _landmarkText, HorizontalAlignment.Left, -1, 13, PixelTheme.Body);
         ly += 18;
         DrawRect(new Rect2(lx + 2, ly - 6, 8, 8), new Color("fde27a")); DrawString(_font, new Vector2(lx + 18, ly + 2), _youText, HorizontalAlignment.Left, -1, 13, PixelTheme.Body);
+    }
+
+    /// <summary>The continent overview: the pixel map, the region grid, the generated regions in detail, the hero.</summary>
+    void DrawContinent()
+    {
+        var ov = _overview!;
+        ov.Draw(this, ToScreen, _cScale, _font, new Rect2(0, 0, Size.X, Size.Y));
+        var hp = ToScreen(ov.HeroPx()).Floor();
+        for (int d = -4; d <= 4; d++) DrawRect(new Rect2(hp.X - (4 - Math.Abs(d)) - 1, hp.Y + d, 2 * (4 - Math.Abs(d)) + 2, 1), PixelTheme.Border);
+        for (int d = -3; d <= 3; d++) DrawRect(new Rect2(hp.X - (3 - Math.Abs(d)), hp.Y + d, 2 * (3 - Math.Abs(d)) + 1, 1), new Color("fde27a"));
+        DrawRect(new Rect2(0, 0, Size.X, 30), new Color(0.08f, 0.07f, 0.09f, 0.88f));
+        DrawString(_font, new Vector2(12, 21), L.F("MAP_CONTINENT_TITLE", ov.Regions.Ready.Count), HorizontalAlignment.Left, -1, 16, PixelTheme.Gold);
+        DrawRect(new Rect2(0, Size.Y - 28, Size.X, 28), new Color(0.08f, 0.07f, 0.09f, 0.88f));
+        float hoverW = _hover.Length > 0 ? Math.Min(Size.X * 0.5f, _font.GetStringSize(_hover, HorizontalAlignment.Left, -1, 14).X) : 0;
+        DrawString(_font, new Vector2(12, Size.Y - 9), _hintText, HorizontalAlignment.Left, Math.Max(60, Size.X - 36 - hoverW), 14, PixelTheme.Dim);
+        if (_hover.Length > 0) DrawString(_font, new Vector2(Size.X - 12, Size.Y - 9), _hover, HorizontalAlignment.Right, hoverW + 2, 14, PixelTheme.Body);
     }
 
     static string H(string id) => InputBootstrap.Hint(id).Trim('[', ']');

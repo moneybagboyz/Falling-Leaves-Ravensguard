@@ -40,8 +40,21 @@ public partial class MapOverlay : Control
         c.DrawRect(rect, col, false, 2);
     }
 
+    /// <summary>Draws the 16 x 16 grid of region squares (seamless-regions spec 2.1) over the map.</summary>
+    public bool ShowGrid = true;
+
     public override void _Draw()
     {
+        if (ShowGrid)
+        {
+            var line = new Color(1f, 1f, 1f, 0.28f);
+            int step = RegionCoord.CellsPerSide * ContinentMap.Scale, size = Continent.Size * ContinentMap.Scale;
+            for (int i = 0; i <= RegionCoord.Grid; i++)
+            {
+                DrawLine(new Vector2(i * step, 0), new Vector2(i * step, size), line, 1);
+                DrawLine(new Vector2(0, i * step), new Vector2(size, i * step), line, 1);
+            }
+        }
         if (LockedRect is { } l) Frame(this, l, PixelTheme.Gold);
         if (HoverRect is { } h && h != LockedRect) Frame(this, h, HoverAllowed ? new Color("f4efe0") : new Color("d96a4a"));
     }
@@ -159,22 +172,16 @@ public partial class EmbarkMapScreen : Control
 
         Redraw();
         ShowInfo(null);
-        // Score every second window once, in the background: the grey mask and the auto pick come from it.
+        // Score the 256 squares of the region grid once, in the background: the grey mask and the auto pick come from it.
         var cont = _c; var hist = _h;
         _task = Task.Run(() =>
         {
-            int ws = Continent.Size - EmbarkSite.Window;
-            var win = new bool[(ws / 2 + 1) * (ws / 2 + 1)];
-            int stride = ws / 2 + 1;
-            for (int wy = 0; wy <= ws / 2; wy++)
-                for (int wx = 0; wx <= ws / 2; wx++) win[wy * stride + wx] = EmbarkSite.Score(cont, hist, wx * 2, wy * 2).Excluded;
+            var excluded = new bool[RegionCoord.Count];
+            for (int id = 0; id < RegionCoord.Count; id++) excluded[id] = EmbarkSite.Score(cont, hist, RegionCoord.FromId(id)).Excluded;
             var mask = new bool[Continent.Cells];
             for (int y = 0; y < Continent.Size; y++)
                 for (int x = 0; x < Continent.Size; x++)
-                {
-                    int cx = Math.Clamp(x - 8, 0, ws), cy = Math.Clamp(y - 8, 0, ws);
-                    mask[y * Continent.Size + x] = win[Math.Min(cy / 2, ws / 2) * stride + Math.Min(cx / 2, ws / 2)];
-                }
+                    mask[y * Continent.Size + x] = excluded[RegionCoord.OfCell(x, y).Id];
             return (mask, EmbarkSite.AutoPick(cont, hist));
         });
     }
@@ -208,11 +215,12 @@ public partial class EmbarkMapScreen : Control
         foreach (var (b, on) in new[] { (_bRivers, _rivers), (_bTowns, _towns), (_bLegends, _legends) }) b.AddThemeColorOverride("font_color", on ? PixelTheme.Gold : PixelTheme.Dim);
     }
 
+    /// <summary>The score of the region square holding a cell: an embark is always a whole square of the grid.</summary>
     EmbarkScore ScoreAt(Vector2I cell)
     {
-        int ws = Continent.Size - EmbarkSite.Window;
-        var key = (Math.Clamp(cell.X - 8, 0, ws), Math.Clamp(cell.Y - 8, 0, ws));
-        if (!_scores.TryGetValue(key, out var s)) _scores[key] = s = EmbarkSite.Score(_c, _h, key.Item1, key.Item2);
+        var rc = RegionCoord.OfCell(cell.X, cell.Y);
+        var key = (rc.CellX, rc.CellY);
+        if (!_scores.TryGetValue(key, out var s)) _scores[key] = s = EmbarkSite.Score(_c, _h, rc);
         return s;
     }
 
@@ -278,7 +286,7 @@ public partial class EmbarkMapScreen : Control
         if (s == null) { _info.Text = L.T("EM_HOVER_HELP"); return; }
         string gold = PixelTheme.Gold.ToHtml(false), dim = PixelTheme.Dim.ToHtml(false), warn = PixelTheme.Warn.ToHtml(false), good = "8fc46a";
         var sb = new StringBuilder();
-        sb.Append($"[color=#{dim}]{L.F("EM_SQUARE", s.CellX, s.CellY)}[/color]");
+        sb.Append($"[color=#{dim}]{L.F("EM_SQUARE", s.CellX / RegionCoord.CellsPerSide, s.CellY / RegionCoord.CellsPerSide)}[/color]");
         if (_locked != null && s.CellX == _locked.CellX && s.CellY == _locked.CellY) sb.Append($"  [color=#{gold}]{L.T("EM_CHOSEN")}[/color]");
         sb.Append('\n');
         if (s.Excluded)

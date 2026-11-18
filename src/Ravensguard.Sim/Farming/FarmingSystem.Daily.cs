@@ -16,6 +16,7 @@ public sealed partial class FarmingSystem
     {
         int doy = now.DayOfYear; long day = now.TotalDays; long hourKey = now.TotalHours;
         if (doy == 46) Array.Clear(State.Climate.WinterBadDays);
+        SyncPopulation();
         RecomputeHours((int)day);                                   // ages move on: the same state always yields the same capacity
         AccumulateWeather(doy, day);
         if (doy >= 3 && doy <= 20) Frost(doy, hourKey);

@@ -107,8 +107,8 @@ public partial class StreetView : Control, IHandlesBack
     /// </summary>
     public static StreetView ForRegion(Region region, Population population, ContentDatabase content, ScreenRouter? router = null, StreetOptions? opt = null,
         ChunkStore? store = null, (int X, int Y, int Z)? spawn = null, Ravensguard.Sim.Characters.HeroRecord? hero = null, Ravensguard.Sim.Codex.CodexBook? codex = null,
-        Ravensguard.Sim.WorldGen.History.WorldHistory? history = null, Continent? continent = null, Ravensguard.Sim.Live.LiveResume? resume = null)
-        => new(router, opt, StreetSource.ForRegion(region, population, content, store, spawn is { } p ? new Cell3(p.X, p.Y, p.Z) : null, opt?.Poi, hero, codex, history, continent, resume));
+        Ravensguard.Sim.WorldGen.History.WorldHistory? history = null, Continent? continent = null, Ravensguard.Sim.Live.LiveResume? resume = null, RegionSettings? regionSettings = null)
+        => new(router, opt, StreetSource.ForRegion(region, population, content, store, spawn is { } p ? new Cell3(p.X, p.Y, p.Z) : null, opt?.Poi, hero, codex, history, continent, resume, regionSettings));
 
     // ------------------------------------------------------------------ setup
 
@@ -381,7 +381,9 @@ public partial class StreetView : Control, IHandlesBack
     void OpenMap()
     {
         if (_router == null || _regionMap == null) { _router?.ShowToast(L.T("MAP_NONE")); return; }
-        _router.Push(new WorldMapScreen(_router, _regionMap, HeroWorld) { ShotPath = _opt.MapShot ? _opt.ShotPath : null, StartScale = _opt.MapScale });
+        UI.ContinentOverview? ov = _source?.Regions != null && _source.Continent != null && _source.History != null && _world.Streamer is { } st
+            ? new UI.ContinentOverview(_source.Continent, _source.History, _source.Regions, st.Home, HeroWorld) : null;
+        _router.Push(new WorldMapScreen(_router, _regionMap, HeroWorld, ov) { ShotPath = _opt.MapShot ? _opt.ShotPath : null, StartScale = Math.Max(1, _opt.MapScale), StartContinent = _opt.MapScale == 0 });
     }
 
     void UpdateHud(LiveSnapshot s)

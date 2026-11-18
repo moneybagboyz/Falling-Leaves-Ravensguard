@@ -329,6 +329,13 @@ public static class Demography
         ob.Count("emigrants", members.Length);
         var purse = e.Ledger.Open(PurseKind.Treasury, ContinentOwner);
         var bal = e.Ledger.Balance(e.HouseholdPurse[hh]);
+        // chevage (integration decision I11): a household that leaves its lord's land pays him a share of its coin, so a region that people leave does not lose its money for good
+        int fiefOut = FiefOf(w, hht.Settlement[hh]);
+        if (bal.Mites > 0 && fiefOut >= 0 && fiefOut < w.Population.Region.Fiefs.Count && w.Rates.ChevagePct > 0)
+        {
+            var due = new Coin(bal.Mites * w.Rates.ChevagePct / 100);
+            if (due.Mites > 0 && e.Ledger.Transfer(e.HouseholdPurse[hh], e.Ledger.Open(PurseKind.Treasury, w.Population.Region.Fiefs[fiefOut].Id), due, TransferReason.Escheat)) bal -= due;
+        }
         if (bal.Mites > 0) e.Ledger.Transfer(e.HouseholdPurse[hh], purse, bal, TransferReason.Gift);
         var chest = e.OpenStore(StoreKind.Chest, ContinentOwner, 0, 0, enforce: false);
         var src = e.HouseholdStore[hh];

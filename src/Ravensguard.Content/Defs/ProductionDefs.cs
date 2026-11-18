@@ -84,6 +84,8 @@ public sealed record BusinessDef : ContentDef
     public List<string> Extractions { get; init; } = [];
     /// <summary>True for merchants: they hold market stock and cash rather than run recipes.</summary>
     public bool Trader { get; init; }
+    /// <summary>True when staff earn a day's wage for every day they are on the books (a manor's household and demesne staff, a stall's hands) rather than by the worker-hour of a recipe.</summary>
+    public bool Salaried { get; init; }
 }
 
 /// <summary>

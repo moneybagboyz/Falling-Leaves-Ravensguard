@@ -31,7 +31,7 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
     public long[] ProducedUnits { get; }
     public long[] ConsumedUnits { get; }
     public long MassViolations, BatchesFinished, BatchesStarted;
-    public long ForgivenArrearsMites, QuitCount;
+    public long ForgivenArrearsMites, QuitCount, TreasuryPaidMites;
     private readonly Dictionary<EntityId, int> _byId = [];
 
     public ProductionSystem(EconomyState econ, Population pop, ProductionContent content, ulong seed, MarketSystem? markets, ResourceLayer? resources)
@@ -63,6 +63,49 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
     {
         b.Staff.Add(person); b.Owed.Add(0); b.ShortDays.Add(0);
         if (Pop.People.Employer[person] < 0 && b.Owner >= 0 && person != b.Owner) Pop.People.Employer[person] = b.Owner;
+    }
+
+    /// <summary>
+    /// Hires a person into the business (labour market, households spec 3.5): the person's occupation, employer and workplace are updated, the wage accrues from the
+    /// next worker-hour. Persons under 16 are apprentices (half wage); the owner of a business is never under 16 (<see cref="SetOwner"/>).
+    /// </summary>
+    public void Employ(Business b, int person, Occupation occ)
+    {
+        var p = Pop.People;
+        p.Occupation[person] = occ; p.Employer[person] = b.Owner; p.WorkSettlement[person] = b.Settlement; p.WorkLot[person] = (short)(b.Lot < 0 ? -1 : b.Lot);
+        b.Staff.Add(person); b.Owed.Add(0); b.ShortDays.Add(0);
+    }
+
+    /// <summary>
+    /// Takes a staff member off the books. A living person goes back to the idle (no occupation, no employer, no workplace) unless <paramref name="keepJob"/> (he is
+    /// about to become the owner); the arrears owed to someone who died or left are forgiven.
+    /// </summary>
+    public void DropStaff(Business b, int staffIndex, bool alive, bool keepJob = false)
+    {
+        int p = b.Staff[staffIndex];
+        ForgivenArrearsMites += b.Owed[staffIndex];
+        b.Staff.RemoveAt(staffIndex); b.Owed.RemoveAt(staffIndex); b.ShortDays.RemoveAt(staffIndex);
+        if (!alive || keepJob) return;
+        var pt = Pop.People;
+        if (pt.Occupation[p] != Occupation.Lord) { pt.Occupation[p] = Occupation.None; pt.Employer[p] = -1; pt.WorkSettlement[p] = -1; pt.WorkLot[p] = -1; }
+    }
+
+    /// <summary>Makes <paramref name="heir"/> the owner (production spec 3.5): the household that gets the dividends changes, the heir takes the owner's trade and the staff's employer link follows.</summary>
+    public void SetOwner(Business b, int heir)
+    {
+        var pt = Pop.People; var kind = KindOf(b); int old = b.Owner;
+        b.Owner = heir; b.OwnerHousehold = pt.Household[heir];
+        bool crewLike = kind.Extractions.Length > 0 || kind.Id is "mine" or "manor";
+        if (!crewLike) { pt.Occupation[heir] = kind.OwnerOccupation; pt.WorkSettlement[heir] = b.Settlement; pt.WorkLot[heir] = (short)(b.Lot < 0 ? -1 : b.Lot); }
+        pt.Employer[heir] = -1;
+        foreach (int s in b.Staff) if (pt.Employer[s] == old || pt.Employer[s] < 0) pt.Employer[s] = heir;
+    }
+
+    /// <summary>The hourly wage a person earns in a class: half for an apprentice (under 16).</summary>
+    private int HourlyWage(int person, WageClass c, int day)
+    {
+        int w = RecipeBook.WagePerHour(c);
+        return Pop.People.AgeYears(person, day) < 16 ? w * 50 / 100 : w;
     }
 
     public int AddMine(MineWorks m) { Mines.Add(m); return Mines.Count - 1; }
@@ -125,7 +168,7 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
                     long mult = 1300 - 6 * skill;
                     st.ProgressMicro += Station.PerWorkerHour(hm, mult);
                     int si = b.Staff.IndexOf(p);
-                    if (si >= 0) b.Owed[si] += RecipeBook.WagePerHour(r.Wage);
+                    if (si >= 0) b.Owed[si] += HourlyWage(p, r.Wage, (int)now.TotalDays);
                 }
             }
             if (st.ProgressMicro >= Station.Complete && now.TotalHours >= st.BusyUntilHour) Finish(b, st, now);
@@ -206,7 +249,7 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
             {
                 int p = b.Staff[workerCursor];
                 int skill = k.Skill == Skill.None ? 40 : people.SkillLevelOf(p, k.Skill);
-                b.Owed[workerCursor] += RecipeBook.WagePerHour(WageClass.Unskilled);
+                b.Owed[workerCursor] += HourlyWage(p, WageClass.Unskilled, (int)now.TotalDays);
                 long g = Extraction.GramsPerWorkerHour(k, now, weather, skill, Resources.StockG(job.Row), Resources.CapG(job.Row), WorkdayHours);
                 if (g <= 0) continue;
                 long got = Resources.Take(job.Row, g, (int)now.TotalDays);
@@ -224,7 +267,7 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
         var k = Content.Extractions.FirstOrDefault(e => e.IsMine && e.OutGood == Econ.Goods.IdOf(ore)); if (k == null) return;
         int miners = b.Staff.Count(p => Pop.People.Occupation[p] == Occupation.Miner);
         int haulers = b.Staff.Count - miners;
-        for (int i = 0; i < b.Staff.Count; i++) b.Owed[i] += RecipeBook.WagePerDay(WageClass.Unskilled);
+        for (int i = 0; i < b.Staff.Count; i++) b.Owed[i] += RecipeBook.WagePerDay(WageClass.Unskilled) * (Pop.People.AgeYears(b.Staff[i], (int)now.TotalDays) < 16 ? 50 : 100) / 100;
         long g = mine.Mine(mine.DayYieldG(k, miners, b.Staff.Count > 0 && haulers == 0 && miners > 0 ? -1 : haulers, 1000, (int)now.TotalDays));
         if (g > 0) { b.Store.Create(k.OutGood, g, CreateReason.Mined); ProducedUnits[k.OutGood] += g; }
     }
@@ -251,13 +294,44 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
         foreach (var b in Businesses)
         {
             if (b.State != BusinessState.Open || b.Index % 24 != hour) continue;
-            PayWages(b, now);
             var kind = KindOf(b);
-            if (kind.Trader) continue;
+            if (kind.Salaried) { AccrueDayWages(b, kind, day); if (kind.Id == "manor") TopUpFromOwner(b); }
+            PayWages(b, now);
+            if (kind.Trader || kind.Salaried && kind.Stations.Length == 0) continue;
             SellOutputs(b, kind, day);
             if (kind.Extractions.Length > 0 || b.Mine >= 0) PlanExtraction(b, kind, now);
             else PlanStations(b, kind, now);
         }
+    }
+
+    /// <summary>A day's wage for each person on the books of a salaried business: the class of the slot of his occupation (skilled for a trader's hands), half for an apprentice.</summary>
+    private void AccrueDayWages(Business b, BusinessKind kind, int day)
+    {
+        for (int i = 0; i < b.Staff.Count; i++)
+        {
+            int p = b.Staff[i]; var occ = Pop.People.Occupation[p]; var wc = kind.Trader ? WageClass.Skilled : WageClass.Unskilled;
+            foreach (var sl in kind.Slots) if (sl.Occupation == occ) { wc = sl.Wage; break; }
+            b.Owed[i] += RecipeBook.WagePerDay(wc) * (Pop.People.AgeYears(p, day) < 16 ? 50 : 100) / 100;
+        }
+    }
+
+    /// <summary>The lord keeps his manor's cash box at 20 days of the wage bill from his own purse (reason Stipend) as long as he has the coin.</summary>
+    private void TopUpFromOwner(Business b)
+    {
+        int hh = b.OwnerHousehold; if (hh < 0 || b.Staff.Count == 0) return;
+        long bill = 0; foreach (long o in b.Owed) bill += Math.Max(o, 200);
+        long bal = Econ.Ledger.Balance(b.Purse).Mites;
+        if (bal >= 10 * bill) return;
+        long need = 20 * bill - bal;
+        // the fief's treasury pays first (the market tolls it collects are the payroll of the retinue and the public works: taxes spec 3.6), the lord makes up the rest
+        int fief = b.Settlement >= 0 ? Pop.Region.Settlements[b.Settlement].FiefIndex : -1;
+        if (fief >= 0 && fief < Pop.Region.Fiefs.Count && Econ.Ledger.TryFind(PurseKind.Treasury, Pop.Region.Fiefs[fief].Id, out var treasury))
+        {
+            long t = Math.Min(need, Econ.Ledger.Balance(treasury).Mites);
+            if (t > 0 && Econ.Ledger.Transfer(treasury, b.Purse, new Coin(t), TransferReason.Stipend)) { need -= t; TreasuryPaidMites += t; }
+        }
+        long pay = Math.Min(need, Econ.Ledger.Balance(Econ.HouseholdPurse[hh]).Mites);
+        if (pay > 0) Econ.Ledger.Transfer(Econ.HouseholdPurse[hh], b.Purse, new Coin(pay), TransferReason.Stipend);
     }
 
     /// <summary>Pays what each staff member has accrued, ascending person order, from the cash box until it runs dry; three short days in a row make a worker quit.</summary>
@@ -280,10 +354,7 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
 
     private void Quit(Business b, int staffIndex)
     {
-        int p = b.Staff[staffIndex];
-        ForgivenArrearsMites += b.Owed[staffIndex];
-        b.Staff.RemoveAt(staffIndex); b.Owed.RemoveAt(staffIndex); b.ShortDays.RemoveAt(staffIndex);
-        if (Pop.People.Employer[p] == b.Owner) Pop.People.Employer[p] = -1;
+        DropStaff(b, staffIndex, alive: Pop.People.Status[b.Staff[staffIndex]] == PersonStatus.Alive);
         QuitCount++;
     }
 
@@ -324,8 +395,46 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
         return rev - cost - r.WorkerHours * (double)RecipeBook.WagePerHour(r.Wage);
     }
 
+    /// <summary>Batches a station can finish in a working day with the people the business has (at least one).</summary>
+    private int CapacityBatchesPerDay(Business b, Recipe r)
+    {
+        int workers = Math.Min(Math.Max(1, r.MaxWorkers), b.Staff.Count + (b.OwnerWorks && b.Owner >= 0 ? 1 : 0));
+        return Math.Max(1, workers * WorkdayHours / Math.Max(1, r.WorkerHours));
+    }
+
+    /// <summary>
+    /// How many batches of the recipe the business keeps its inputs for (integration decision I6): what the market lacks of the main output against its target cover,
+    /// shared among the businesses of the same kind in the settlement, but at least one and at most two days of the business's own capacity, so a mill is not
+    /// held to a batch a day while the town runs short of flour, and a bakery does not buy flour for batches the market would not take.
+    /// </summary>
+    private int BatchesWanted(Business b, Recipe r, MarketBook? book)
+    {
+        int cap = CapacityBatchesPerDay(b, r);
+        if (book == null) return cap;
+        var gb = book.Goods[r.Outputs[0].Good];
+        long gap = gb.Demand * gb.TargetCoverDays - gb.StockUnits;
+        long outQ = Math.Max(1, r.Outputs[0].Qty);
+        int sharers = Math.Max(1, SameKind(b));
+        long wanted = gap <= 0 ? 1 : (gap / sharers + outQ - 1) / outQ;
+        return (int)Math.Clamp(wanted, 1, 2L * cap);
+    }
+
+    private int SameKind(Business b)
+    {
+        if (_sameKindDay != _lastDay || _sameKind == null) RebuildSameKind();
+        return _sameKind!.GetValueOrDefault((b.Settlement, b.Kind), 1);
+    }
+    private Dictionary<(int, ushort), int>? _sameKind; private long _sameKindDay = -1, _lastDay = 0;
+    private void RebuildSameKind()
+    {
+        _sameKind = [];
+        foreach (var x in Businesses) if (x.State == BusinessState.Open) { var key = (x.Settlement, x.Kind); _sameKind[key] = _sameKind.GetValueOrDefault(key) + 1; }
+        _sameKindDay = _lastDay;
+    }
+
     private void PlanStations(Business b, BusinessKind kind, GameTime now)
     {
+        _lastDay = now.TotalDays;
         var book = Markets?.BookForSettlement(b.Settlement);
         int busy = 0;
         foreach (var st in b.Stations)
@@ -343,20 +452,21 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
                 if (rate > bestRate) { bestRate = rate; best = r; }
             }
             if (best == null) continue;
-            if (TryStart(b, st, best, now)) { busy++; continue; }
-            PostInputOrders(b, best, book);
+            bool started = TryStart(b, st, best, now);
+            if (started) busy++;
+            PostInputOrders(b, best, book, BatchesWanted(b, best, book));
         }
         if (busy == 0 && b.Stations.Count > 0) b.IdleDays++; else b.IdleDays = 0;
     }
 
-    public void PostInputOrders(Business b, Recipe r, MarketBook? book)
+    public void PostInputOrders(Business b, Recipe r, MarketBook? book, int batches = 1)
     {
         if (book == null) return;
         foreach (var (g, q) in r.Inputs)
         {
-            long have = b.Store.Qty(g);
-            if (have >= q) continue;
-            book.Post(new BuyOrder(b.Party, g, q - have, 3000) { Priority = 5 + r.Inputs.Length, OnFilled = res => { b.InputsSeason += res.PaidMites; } });
+            long have = b.Store.Qty(g), want = q * Math.Max(1, batches);
+            if (have >= want) continue;
+            book.Post(new BuyOrder(b.Party, g, want - have, 3000) { Priority = 5 + r.Inputs.Length, OnFilled = res => { b.InputsSeason += res.PaidMites; } });
         }
     }
 
@@ -445,11 +555,18 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
             b.WageBillPerDay = b.WagesSeason / TimeConst.DaysPerSeason; b.InputSpendPerDay = b.InputsSeason / TimeConst.DaysPerSeason;
             long net = cash + b.DividendsSeason - b.CashStart;
             var kind = KindOf(b);
-            if (!kind.Trader)
+            if (kind.Trader)
             {
-                long div = Labour.Dividend(cash, b.WageBillPerDay, b.InputSpendPerDay, Labour.PayoutPct);
+                // a merchant pays out half of the cash it gained over the season (profit realised); its working capital stays
+                long gain = cash - Math.Max(b.CashStart, 2 * b.Capital), div = gain > 0 ? gain * Labour.PayoutPct / 100 : 0;
                 if (div > 0 && b.OwnerHousehold >= 0 && ledger.Transfer(b.Purse, Econ.HouseholdPurse[b.OwnerHousehold], new Coin(div), TransferReason.Dividend)) { b.Dividends += div; b.DividendsSeason += div; cash -= div; }
-                b.LossSeasons = net < 0 ? (byte)Math.Min(255, b.LossSeasons + 1) : (byte)0;
+            }
+            else
+            {
+                long div = kind.Salaried && kind.Stations.Length == 0 ? 0 : Labour.Dividend(cash, b.WageBillPerDay, b.InputSpendPerDay, Labour.PayoutPct, b.Capital);
+                if (div > 0 && b.OwnerHousehold >= 0 && ledger.Transfer(b.Purse, Econ.HouseholdPurse[b.OwnerHousehold], new Coin(div), TransferReason.Dividend)) { b.Dividends += div; b.DividendsSeason += div; cash -= div; }
+                bool costCentre = (kind.Salaried && kind.Stations.Length == 0) || kind.Extractions.Length > 0;       // a manor has no revenue, a crew works the lord's woods and waters: neither is closed for losses
+                b.LossSeasons = net < 0 && !costCentre ? (byte)Math.Min(255, b.LossSeasons + 1) : (byte)0;
                 if (b.LossSeasons >= 3 && cash < 5 * b.WageBillPerDay) Close(b);
             }
             if (b.State == BusinessState.Open) Markets?.ExtraCoin.Add((b.Settlement, cash));
@@ -475,24 +592,62 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
 
     // ---------- structural demand ----------
 
+    private int[]? _recipeOrder;
+
+    /// <summary>Recipes ordered so that those making goods nearer the consumer come first (flour's recipe after bread's), for propagating demand down the chains.</summary>
+    private int[] RecipeOrder()
+    {
+        if (_recipeOrder != null) return _recipeOrder;
+        var recipes = Content.Recipes.Recipes; int ng = Econ.Goods.Count;
+        var depth = new int[ng];
+        for (int pass = 0; pass < 24; pass++)
+        {
+            bool changed = false;
+            foreach (var r in recipes)
+            {
+                int d = 0; foreach (var (g, _) in r.Inputs) d = Math.Max(d, depth[g] + 1);
+                foreach (var (g, _) in r.Outputs) if (depth[g] < d) { depth[g] = d; changed = true; }
+            }
+            if (!changed) break;
+        }
+        return _recipeOrder = [.. Enumerable.Range(0, recipes.Count).OrderByDescending(i => depth[recipes[i].Outputs[0].Good]).ThenBy(i => i)];
+    }
+
     /// <inheritdoc/>
+    /// <remarks>
+    /// Derived demand (integration decision I7): the units of its main output the households and the other businesses of a book want each day set how many batches
+    /// the book's workshops of that recipe need to run, up to what their people can finish, and those batches' inputs are demand in turn, down the chain
+    /// (bread, flour, wheat). The old rule of at most one batch a day a station is gone.
+    /// </remarks>
     public void AddStructuralDemand(MarketSystem markets, long[][] demand)
     {
+        var recipes = Content.Recipes.Recipes; int nr = recipes.Count;
+        var capByBook = new SortedDictionary<int, long[]>();     // milli-batches a day per recipe
         foreach (var b in Businesses)
         {
             if (b.State != BusinessState.Open) continue;
-            var kind = KindOf(b); var arr = demand[markets.BookOf[b.Settlement]]; if (arr == null) continue;
-            foreach (var st in b.Stations.Select(s => s.Kind).Distinct())
+            var kind = KindOf(b); if (kind.Trader || kind.Stations.Length == 0) continue;
+            int book = markets.BookOf[b.Settlement]; if (demand[book] == null) continue;
+            if (!capByBook.TryGetValue(book, out var cap)) capByBook[book] = cap = new long[nr];
+            foreach (var st in b.Stations.GroupBy(x => x.Kind))
             {
-                var rs = kind.RecipesFor(st).ToList(); if (rs.Count == 0) continue;
-                int workers = Math.Max(1, Math.Min(2, b.Staff.Count + (b.OwnerWorks ? 1 : 0)));
-                foreach (var r in rs)
-                {
-                    long perDayMilli = Math.Min(1000, WorkdayHours * 1000L * workers / r.WorkerHours) / rs.Count;   // batches per day x 1000
-                    foreach (var (g, q) in r.Inputs) arr[g] += q * perDayMilli / 1000;
-                }
+                var rs = kind.RecipesFor(st.Key).ToList(); if (rs.Count == 0) continue;
+                foreach (var r in rs) cap[r.Index] += 1000L * st.Count() * CapacityBatchesPerDay(b, r) / rs.Count;
+            }
+        }
+        var order = RecipeOrder();
+        foreach (var (book, cap) in capByBook)
+        {
+            var arr = demand[book];
+            foreach (int ri in order)
+            {
+                if (cap[ri] == 0) continue;
+                var r = recipes[ri]; var (main, outQ) = r.Outputs[0];
+                long same = 0; foreach (var o in recipes) if (o.Outputs[0].Good == main) same += cap[o.Index];
+                long milli = Math.Min(cap[ri], arr[main] * 1000 / Math.Max(1, outQ) * cap[ri] / Math.Max(1, same));
+                if (milli <= 0) continue;
+                foreach (var (g, q) in r.Inputs) arr[g] += q * milli / 1000;
             }
         }
     }
 }
-

@@ -268,6 +268,9 @@ public static class WorldSave
         Verify("continent", meta.ContinentHash, LayerHashes.Of(continent));
         var history = knownHistory ?? HistoryGenerator.Generate(continent, hs);
         Verify("history", meta.HistoryHash, LayerHashes.Of(history));
+        if (meta.EmbarkCellX % RegionCoord.CellsPerSide != 0 || meta.EmbarkCellY % RegionCoord.CellsPerSide != 0)
+            throw new SaveException($"This save embarked on a free 16 x 16 cell window at ({meta.EmbarkCellX}, {meta.EmbarkCellY}); embark regions now snap to the 16 x 16 region grid so neighbouring regions tile exactly, "
+                + "and world generation changed with it. The world cannot be regenerated from this save.");
         var region = RegionGenerator.Generate(continent, history, meta.EmbarkCellX, meta.EmbarkCellY, rs);
         Verify("region", meta.RegionHash, LayerHashes.Of(region));
         // the landmark phase is a pure function of region, history and content, so only its hash is stored (absent in older saves)

@@ -9,6 +9,7 @@ namespace Ravensguard.Sim.People.Vital;
 public sealed class HouseholdNeedsSystem : AbstractSystem
 {
     private long _day = -1; private int _tMean;
+    private ushort _veg = ushort.MaxValue, _eggs;
 
     public HouseholdNeedsSystem() : base("household-needs", TickPhase.H4DailySlice, SystemOrder.HouseholdNeeds) { }
 
@@ -16,11 +17,14 @@ public sealed class HouseholdNeedsSystem : AbstractSystem
     {
         var w = ctx.World; var e = w.Economy; var hht = w.Households;
         if (_day != ctx.Day) { _day = ctx.Day; _tMean = w.Env.TMeanC(ctx.Day); }
+        if (_veg == ushort.MaxValue) { _veg = e.Goods.IdOf("vegetables"); _eggs = e.Goods.IdOf("eggs"); }
         int day = (int)ctx.Day, n = hht.Count;
         for (int hh = ctx.HourOfDay; hh < n; hh += 24)
         {
             if (hht.MemberCount[hh] == 0) continue;
+            if (w.Get<EconomyWorld>() != null) HouseholdNeeds.Produce(e, hht, hh, ctx.DayOfYear, _veg, _eggs);
             HouseholdNeeds.RunDay(e, w.People, hht, hh, day, _tMean);
+            HouseholdNeeds.RollDurables(e, hht, hh, w.Seed, ctx.Hour);
             e.HouseholdStore[hh].ApplySpoilage(w.Seed, ctx.Hour, _tMean);
         }
     }

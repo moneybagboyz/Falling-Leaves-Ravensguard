@@ -46,6 +46,7 @@ public sealed class MarketSystem
     public IStructuralDemandSource? Production { get; set; }
     private MarketParty?[] _hh;
     private readonly bool[] _basketGood;
+    private readonly ushort[] _durable;
 
     public MarketSystem(EconomyState econ, Population pop, ulong seed)
     {
@@ -78,6 +79,7 @@ public sealed class MarketSystem
             PurseId toll = st.FiefIndex >= 0 ? econ.Ledger.Open(PurseKind.Treasury, r.Fiefs[st.FiefIndex].Id) : econ.Ledger.Open(PurseKind.Settlement, st.Id);
             Books[s] = new MarketBook(econ, s, st.Id, st.Name, toll, pops[s], seed);
         }
+        _durable = [econ.Goods.IdOf("shoes"), econ.Goods.IdOf("clothes"), econ.Goods.IdOf("tools")];
         _basketGood = new bool[econ.Goods.Count];
         foreach (var (g, _) in Mix.Staple) _basketGood[g] = true;
         foreach (var (g, _) in Mix.Relish) _basketGood[g] = true;
@@ -192,6 +194,27 @@ public sealed class MarketSystem
         return res;
     }
 
+    /// <summary>
+    /// World start (integration decision I5): the first merchant of every book that has one holds <paramref name="pct"/> percent of the target cover of every good with a
+    /// structural demand, as a merchant lot at floor 1.0 (reason Seed): the trade stock a settlement already had when the world was generated.
+    /// </summary>
+    public long SeedMerchantStock(int day, int tMeanC, int pct)
+    {
+        var demand = ComputeStructuralDemand(day, tMeanC); long total = 0;
+        foreach (var b in AllBooks())
+        {
+            if (b.Merchants.Count == 0) continue;
+            var d = demand[b.SettlementIndex]; var m = b.Merchants[0];
+            for (ushort g = 0; g < d.Length; g++)
+            {
+                long units = d[g] * b.Goods[g].TargetCoverDays * pct / 100;
+                if (units <= 0 || !m.Store.Create(g, units, CreateReason.Seed)) continue;
+                b.List(m, g, units, 1000, day, merchantLot: true); total += units;
+            }
+        }
+        return total;
+    }
+
     // ---------- household shopping (households spec 3.4) ----------
 
     /// <summary>
@@ -207,16 +230,25 @@ public sealed class MarketSystem
         var basket = Econ.Basket(hht.Class[hh]);
         int ratio = Econ.Tiers[hh] == HouseholdTier.Survive ? 4000 : 2000;
         int posted = 0;
+        long reserveLeft = Econ.SeedReserveG[hh];                                  // seed corn is not food: the shopper counts only what the household may eat
+        var held = new Dictionary<ushort, long>();
+        foreach (ushort sg in Econ.Food.Staples)
+        {
+            long q = party.Store.Qty(sg);
+            if (Econ.Food.IsGrain(sg)) { long r = Math.Min(q, reserveLeft); reserveLeft -= r; q -= r; }
+            held[sg] = q;
+        }
+        long Held(ushort g) => held.TryGetValue(g, out long q) ? q : party.Store.Qty(g);
         int Line(IReadOnlyList<(ushort Good, int Permille)> mix, long measuresX100, int coverDays, int priority)
         {
             if (measuresX100 <= 0) return 0;
-            var avail = mix.Where(m => book.Goods[m.Good].StockUnits > 0 || party.Store.Qty(m.Good) > 0).ToList();
+            var avail = mix.Where(m => book.Goods[m.Good].StockUnits > 0 || Held(m.Good) > 0).ToList();
             int tot = avail.Sum(m => m.Permille); int n = 0;
             if (tot == 0) return 0;
             foreach (var (g, pm) in avail)
             {
                 long daily = HouseholdNeeds.GramsFor(c, g, measuresX100 * pm / tot);
-                long target = daily * coverDays, have = party.Store.Qty(g);
+                long target = daily * coverDays, have = Held(g);
                 if (daily > 0 && have < target / 2) { book.Post(new BuyOrder(party, g, target - have, ratio) { Priority = priority }); n++; }
             }
             return n;
@@ -231,6 +263,24 @@ public sealed class MarketSystem
         Single(Econ.Food.Firewood, need.FuelG, "firewood", 2);
         Single(Econ.Food.Ale, need.AleMl * c.Def(Econ.Food.Ale).LitreMassG / 1000, "ale", 3);
         Single(Econ.Food.Salt, need.SaltG, "salt", 4);
+        for (int k = 0; k < EconomyState.Durables; k++)
+        {
+            int idx = hh * EconomyState.Durables + k; int due = Econ.DueDurables[idx];
+            if (due == 0) continue;
+            ushort g = _durable[k];
+            if (book.Goods[g].StockUnits <= 0) continue;
+            book.Post(new BuyOrder(party, g, due, 2000)
+            {
+                Priority = 6,
+                OnFilled = res =>
+                {
+                    if (res.Qty <= 0) return;
+                    party.Store.Destroy(g, res.Qty, DestroyReason.Worn);              // the new pair, set or tool replaces the worn one: consumed in service
+                    Econ.DueDurables[idx] = (byte)Math.Max(0, Econ.DueDurables[idx] - (int)res.Qty);
+                },
+            });
+            posted++;
+        }
         return posted;
     }
 }

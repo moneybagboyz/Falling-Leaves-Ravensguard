@@ -75,6 +75,7 @@ public sealed class FarmingSave
     [Key(54)] public int[] SumLostAcres { get; set; } = [];
     [Key(55)] public byte[] FSheafCrop { get; set; } = [];
     [Key(56)] public long[] SeedDebt { get; set; } = [];
+    [Key(57)] public int[] Cows { get; set; } = [];
 
     public static FarmingSave Capture(FarmingState s)
     {
@@ -90,7 +91,7 @@ public sealed class FarmingSave
             PProgress = (int[])p.ProgressPpm.Clone(), PCarry = (int[])p.Carry.Clone(), PWeeded = (int[])p.WeededPpm.Clone(), PHarvestSet = (int[])p.HarvestSet.Clone(),
             PReapDone = (int[])p.ReapDone.Clone(), PBindDone = (int[])p.BindDone.Clone(), PHired = (short[])p.HiredHands.Clone(),
             FrostKillDay = (byte[])c.FrostKillDay.Clone(), WinterBadDays = (byte[])c.WinterBadDays.Clone(), StormMask = (ulong[])c.StormMask.Clone(), Blight = (bool[])c.BlightCulture.Clone(),
-            Sheep = (int[])l.Sheep.Clone(), Oxen = (int[])l.Oxen.Clone(), Meadow = (int[])l.MeadowAcres.Clone(), HayPpm = (int[])l.HayPpm.Clone(), HayCarry = (int[])l.HayCarry.Clone(), Grazed = (bool[])l.Grazed.Clone(),
+            Sheep = (int[])l.Sheep.Clone(), Oxen = (int[])l.Oxen.Clone(), Cows = (int[])l.Cows.Clone(), Meadow = (int[])l.MeadowAcres.Clone(), HayPpm = (int[])l.HayPpm.Clone(), HayCarry = (int[])l.HayCarry.Clone(), Grazed = (bool[])l.Grazed.Clone(),
             Tally = [s.HarvestG, s.SeedSownG, s.ThreshedG, s.TitheG, s.RentG, s.Gross0G, s.SownAcres, s.UnharvestedAcres],
             LostG = (long[])s.LostG.Clone(), LostAcres = (int[])s.LostAcres.Clone(), SeedDebt = (long[])s.SeedDebtG.Clone(),
         };
@@ -126,7 +127,7 @@ public sealed class FarmingSave
             Array.Copy(FrostKillDay, c.FrostKillDay, CellCropClimate.Cells); Array.Copy(WinterBadDays, c.WinterBadDays, CellCropClimate.Cells); Array.Copy(StormMask, c.StormMask, CellCropClimate.Cells);
             Array.Copy(Blight, c.BlightCulture, c.BlightCulture.Length);
             var l = s.Livestock;
-            Array.Copy(Sheep, l.Sheep, SettlementCount); Array.Copy(Oxen, l.Oxen, SettlementCount); Array.Copy(Meadow, l.MeadowAcres, SettlementCount);
+            Array.Copy(Sheep, l.Sheep, SettlementCount); Array.Copy(Oxen, l.Oxen, SettlementCount); if (Cows.Length == SettlementCount) Array.Copy(Cows, l.Cows, SettlementCount); Array.Copy(Meadow, l.MeadowAcres, SettlementCount);
             Array.Copy(HayPpm, l.HayPpm, SettlementCount); Array.Copy(HayCarry, l.HayCarry, SettlementCount); Array.Copy(Grazed, l.Grazed, SettlementCount);
             s.HarvestG = Tally[0]; s.SeedSownG = Tally[1]; s.ThreshedG = Tally[2]; s.TitheG = Tally[3]; s.RentG = Tally[4]; s.Gross0G = Tally[5]; s.SownAcres = Tally[6]; s.UnharvestedAcres = Tally[7];
             Array.Copy(LostG, s.LostG, s.LostG.Length); Array.Copy(LostAcres, s.LostAcres, s.LostAcres.Length);

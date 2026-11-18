@@ -21,9 +21,9 @@ public static class Labour
     /// <summary>
     /// The seasonal dividend: <c>max(0, cash - 15 x (daily wage bill + daily input spend)) x payout%</c> (G-B8).
     /// </summary>
-    public static long Dividend(long cashMites, long wageBillPerDay, long inputSpendPerDay, int payoutPct)
+    public static long Dividend(long cashMites, long wageBillPerDay, long inputSpendPerDay, int payoutPct, long capitalMites = 0)
     {
-        long reserve = 15 * (wageBillPerDay + inputSpendPerDay);
+        long reserve = Math.Max(capitalMites, 15 * (wageBillPerDay + inputSpendPerDay));
         return Math.Max(0, cashMites - reserve) * payoutPct / 100;
     }
 }

@@ -49,6 +49,9 @@ public sealed class EconomyState
     public HouseholdTier[] Tiers { get; private set; }
     /// <summary>Set for the day when relish was replaced by grain (feeds disease and unrest in the population spec).</summary>
     public bool[] DietPoor { get; private set; }
+    /// <summary>Per household, three counts (shoes, clothes, tools) of items that wore out and are waiting to be bought (integration decision I10).</summary>
+    public byte[] DueDurables { get; private set; }
+    public const int Durables = 3;
 
     public EconomyState(GoodCatalog goods, MoneySettingsDef money, IReadOnlyList<NeedsBasketDef> baskets, int householdCount, int personCount, Ledger? ledger = null, MassLedger? mass = null)
     {
@@ -64,7 +67,7 @@ public sealed class EconomyState
         _householdCount = householdCount; _personCount = personCount;
         NutritionCd = new short[personCount]; Array.Fill(NutritionCd, FullNutritionCd);
         SeedReserveG = new int[householdCount]; FoodCoverDaysX10 = new short[householdCount]; FuelCoverDaysX10 = new short[householdCount];
-        Grievances = new Grievance[householdCount]; Tiers = new HouseholdTier[householdCount]; DietPoor = new bool[householdCount];
+        Grievances = new Grievance[householdCount]; Tiers = new HouseholdTier[householdCount]; DietPoor = new bool[householdCount]; DueDurables = new byte[householdCount * Durables];
     }
 
     public NeedsBasketDef Basket(SocialClass c) => _baskets[(int)c];
@@ -83,7 +86,7 @@ public sealed class EconomyState
         {
             int n = Math.Max(16, index * 2);
             HouseholdPurse = Grow(HouseholdPurse, n); HouseholdStore = Grow(HouseholdStore, n); SeedReserveG = Grow(SeedReserveG, n);
-            FoodCoverDaysX10 = Grow(FoodCoverDaysX10, n); FuelCoverDaysX10 = Grow(FuelCoverDaysX10, n); Grievances = Grow(Grievances, n); Tiers = Grow(Tiers, n); DietPoor = Grow(DietPoor, n);
+            FoodCoverDaysX10 = Grow(FoodCoverDaysX10, n); FuelCoverDaysX10 = Grow(FuelCoverDaysX10, n); Grievances = Grow(Grievances, n); Tiers = Grow(Tiers, n); DietPoor = Grow(DietPoor, n); DueDurables = Grow(DueDurables, n * Durables);
         }
         _householdCount++;
         OpenHousehold(h, index);
@@ -219,6 +222,7 @@ public sealed class EconomyState
         for (int i = 0; i < _householdCount; i++) L((long)Grievances[i]);
         for (int i = 0; i < _householdCount; i++) L((long)Tiers[i]);
         for (int i = 0; i < _householdCount; i++) L(DietPoor[i] ? 1 : 0);
+        for (int i = 0; i < _householdCount * Durables; i++) if (DueDurables[i] != 0) { L(i); L(DueDurables[i]); }
         var snap = Items.Compact();
         L(snap.Rows.Length);
         foreach (var r in snap.Rows) { L((long)r.Id.Value); S(r.Shape); L(r.Good); L((long)r.Quality); L(r.ConditionPermille); L(r.Wear); L((long)r.Flags); L(r.Stains); L(r.LabourHours); L(r.Skill); L((long)r.Owner.Value); L(r.Parent); L(r.ComponentStart); L(r.ComponentCount); L(r.ContentsGood); L(r.ContentsQty); }

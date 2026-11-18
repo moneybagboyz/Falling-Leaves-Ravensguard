@@ -45,11 +45,13 @@ public static class SystemOrder
     // H3
     public const int Markets = 3_000;
     // H4 slice order (households spec 3.2: plan work, eat, drink, heat, wear, nutrition; then vital rolls, births before deaths)
-    public const int Provisioning = 4_000, HouseholdNeeds = 4_100, VitalRolls = 4_200, ProductionDaily = 4_300, MarketDaily = 4_400;
-    // H5 hour 0
-    public const int DailyGlobalsPopulation = 5_000, DailyGlobalsMarkets = 5_100, DailyGlobalsTaxes = 5_200;
+    public const int Provisioning = 4_000, FarmSales = 4_050, HouseholdNeeds = 4_100, VitalRolls = 4_200, ProductionDaily = 4_300, MarketDaily = 4_400;
+    // H5 hour 0: farming (weather, field events, the day's labour, harvest) first; then population; store spoilage, parish, labour market before the markets'
+    // daily globals (structural demand sees today's staff and stock) and production's vacancy counters last (Phase 2 integration, decision I1)
+    public const int DailyGlobalsFarming = 4_900, DailyGlobalsPopulation = 5_000, DailyGlobalsSpoilage = 5_020, DailyGlobalsParish = 5_030, DailyGlobalsLabour = 5_040,
+        DailyGlobalsMarkets = 5_100, DailyGlobalsProduction = 5_150, DailyGlobalsTaxes = 5_200;
     // H6 seasonal steps S1..S9 (overview section 4 table); several systems may share a step and then order by name
-    public const int S1Farming = 6_100, S2Grazing = 6_200, S3Extraction = 6_300, S4Taxes = 6_400, S5MintPrices = 6_500, S6Population = 6_600, S7Migration = 6_700,
+    public const int S1Farming = 6_100, S2Grazing = 6_200, S3Extraction = 6_300, S4Taxes = 6_400, S5Businesses = 6_450, S5MintPrices = 6_500, S6Population = 6_600, S7Migration = 6_700,
         S8Caravans = 6_800, S9Summary = 6_900;
     // H7
     public const int Outbox = 7_000;

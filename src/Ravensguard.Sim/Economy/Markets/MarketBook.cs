@@ -42,8 +42,14 @@ public sealed class GoodBook
     public long DemandToday, TradedToday;
     public List<StockLot> Lots { get; } = [];
 
-    /// <summary>Demand in units per day: the largest of structural, EMA and floor (money spec 3.1), at least 1.</summary>
-    public long Demand => Math.Max(1, Math.Max(StructuralDemand, Math.Max(DemandEma, FloorDemand)));
+    /// <summary>
+    /// Demand in units per day: the largest of structural, EMA and floor (money spec 3.1), at least 1. Where the goods have a structural demand (the baskets and the
+    /// planned inputs, which are exact) the EMA of requests counts at most that much: unfilled orders are re-posted every day and would otherwise count
+    /// 10 to 20 days of need again each day, driving a shortage's price up on its own (integration decision I4).
+    /// </summary>
+    public long Demand => Math.Max(1, StructuralDemand > 0 ? Math.Max(StructuralDemand, Math.Max(Math.Min(DemandEma, StructuralDemand * EmaCapOverStructural), FloorDemand))
+                                                          : Math.Max(DemandEma, FloorDemand));
+    public const int EmaCapOverStructural = 2;
 }
 
 /// <summary>The outcome of a buy: units bought, coin the buyer paid, toll the sellers paid onward.</summary>

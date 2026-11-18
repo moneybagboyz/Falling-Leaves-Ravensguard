@@ -128,7 +128,7 @@ public class Phase1ReviewTests(ITestOutputHelper output)
         var rows = new int[32]; int total = 0;
         // chunks in the thickest forest of the region
         var chunks = Enumerable.Range(0, RegionData.Tiles).Where(t => w.Region.Forest[t] >= 90 && w.Region.Water[t] == 0 && w.Region.Built[t] == 0)
-            .Select(t => (X: t % RegionData.Size * RegionData.TileM / 32, Y: t / RegionData.Size * RegionData.TileM / 32)).Distinct().Take(40).ToList();
+            .Select(t => (X: t % RegionData.Size * RegionData.TileM / 32, Y: t / RegionData.Size * RegionData.TileM / 32)).Where(c => c.X is > 2 and < 997 && c.Y is > 2 and < 997).Distinct().Take(40).ToList(); // away from the region border (a grid-aligned region may have forest on its edge)
         Assert.True(chunks.Count >= 10, "the region should have forest");
         foreach (var (cx, cy) in chunks)
             foreach (var kv in gen.GenerateLevels(cx, cy).Levels[0].Objects.Values)

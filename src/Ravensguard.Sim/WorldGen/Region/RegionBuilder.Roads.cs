@@ -76,6 +76,7 @@ internal sealed partial class RegionBuilder
 
     private void BuildRoads()
     {
+        var r = _r;
         var S = _r.Settlements;
         for (int i = 0; i < S.Count; i++)
         {
@@ -83,27 +84,31 @@ internal sealed partial class RegionBuilder
             _r.RoadNodes.Add(new RoadNode(i, kind, i, S[i].CenterX, S[i].CenterY));
             S[i].RoadNode = i;
         }
-        // Border gates where history trade routes enter or leave the region.
+        // Border gates from the continental road network (BorderGates): the same tile row or column and class on both sides of every edge.
+        // Each gate is a node on the edge tile, a straight 200 m segment inward along the route's bearing, then a road on to the nearest town.
         var gates = new List<int>();
-        foreach (var tr in _h.TradeRoutes)
+        var gateInner = new Dictionary<int, (int Inner, RoadClass Class)>();
+        foreach (var g in BorderGates.For(_h).Of(RegionCoord.OfCell(_cx, _cy)))
         {
-            if (tr.Abandoned || tr.Cells.Length < 2) continue;
-            for (int k = 1; k < tr.Cells.Length; k++)
+            r.Gates.Add(g);
+            int gx, gy, ix, iy;
+            int along = TileCenter(g.Tile);
+            switch (g.Side)
             {
-                int ca = tr.Cells[k - 1], cb = tr.Cells[k];
-                bool ina = CellInside(ca), inb = CellInside(cb);
-                if (ina == inb) continue;
-                int inCell = ina ? ca : cb, outCell = ina ? cb : ca;
-                var g = GateTile(inCell, outCell);
-                if (g < 0) continue;
-                int gx = TileCenter(g % N), gy = TileCenter(g / N);
-                bool dup = false;
-                foreach (int gi in gates) if (Dist(gx, gy, _r.RoadNodes[gi].X, _r.RoadNodes[gi].Y) < 1500) dup = true;
-                if (dup) continue;
-                int id = _r.RoadNodes.Count;
-                _r.RoadNodes.Add(new RoadNode(id, RoadNodeKind.Gate, -1, gx, gy));
-                gates.Add(id);
+                // on the border line itself: the neighbour's gate node is the same point seen from its side, so the road is one road across the edge
+                case BorderSide.West: gx = 0; gy = along; break;
+                case BorderSide.East: gx = Region.Meters; gy = along; break;
+                case BorderSide.North: gx = along; gy = 0; break;
+                default: gx = along; gy = Region.Meters; break;
             }
+            // inward: opposite to the bearing of the road leaving through the gate
+            ix = gx - g.BearingX * BorderGates.SegmentM / 1024; iy = gy - g.BearingY * BorderGates.SegmentM / 1024;
+            ix = Math.Clamp(ix, 0, Region.Meters); iy = Math.Clamp(iy, 0, Region.Meters);
+            int id = _r.RoadNodes.Count;
+            _r.RoadNodes.Add(new RoadNode(id, RoadNodeKind.Gate, -1, gx, gy));
+            _r.RoadNodes.Add(new RoadNode(id + 1, RoadNodeKind.Gate, -1, ix, iy));
+            gates.Add(id); gates.Add(id + 1);
+            gateInner[id] = (id + 1, g.Class);
         }
 
         // Relative neighbourhood graph over towns and villages.
@@ -168,15 +173,16 @@ internal sealed partial class RegionBuilder
                 : sa.Class == SettlementClass.Town || sb.Class == SettlementClass.Town ? RoadClass.Road : RoadClass.Track;
             work.Add((cls, d[a, b], core[a], core[b]));
         }
-        foreach (int g in gates)
+        foreach (var (g, (inner, cls)) in gateInner)
         {
+            work.Add((cls, 0, g, inner)); // the straight segment from the edge tile
             int best = -1; long bd = long.MaxValue;
             foreach (int a in townIdx.Count > 0 ? townIdx : Enumerable.Range(0, n))
             {
-                long dd = Dist2(_r.RoadNodes[g].X, _r.RoadNodes[g].Y, S[core[a]].CenterX, S[core[a]].CenterY);
+                long dd = Dist2(_r.RoadNodes[inner].X, _r.RoadNodes[inner].Y, S[core[a]].CenterX, S[core[a]].CenterY);
                 if (dd < bd) { bd = dd; best = a; }
             }
-            if (best >= 0) work.Add((RoadClass.Highway, bd, g, core[best]));
+            if (best >= 0) work.Add((cls, bd, inner, core[best]));
         }
         work.Sort((p, q) => p.C != q.C ? ((int)q.C).CompareTo((int)p.C) : p.D != q.D ? p.D.CompareTo(q.D) : p.NodeA != q.NodeA ? p.NodeA.CompareTo(q.NodeA) : p.NodeB.CompareTo(q.NodeB));
         var connected = new int[_r.RoadNodes.Count];
@@ -223,29 +229,6 @@ internal sealed partial class RegionBuilder
     {
         int x = cell % Continent.Size - _cx, y = cell / Continent.Size - _cy;
         return x >= 0 && x < 16 && y >= 0 && y < 16;
-    }
-
-    /// <summary>Tile on the region border where the line from an inside cell centre to an outside one leaves the square, nudged onto dry land.</summary>
-    private int GateTile(int inCell, int outCell)
-    {
-        long ix = (inCell % Continent.Size - _cx) * 2000L + 1000, iy = (inCell / Continent.Size - _cy) * 2000L + 1000;
-        long ox = (outCell % Continent.Size - _cx) * 2000L + 1000, oy = (outCell / Continent.Size - _cy) * 2000L + 1000;
-        long best = 1000;
-        if (ox < 0) best = Math.Min(best, (0 - ix) * 1000 / (ox - ix));
-        if (ox > Region.Meters) best = Math.Min(best, (Region.Meters - ix) * 1000 / (ox - ix));
-        if (oy < 0) best = Math.Min(best, (0 - iy) * 1000 / (oy - iy));
-        if (oy > Region.Meters) best = Math.Min(best, (Region.Meters - iy) * 1000 / (oy - iy));
-        long px = ix + (ox - ix) * best / 1000, py = iy + (oy - iy) * best / 1000;
-        int tx = Math.Clamp((int)(px / TileM), 3, N - 4), ty = Math.Clamp((int)(py / TileM), 3, N - 4);
-        for (int r = 0; r <= 8; r++)
-            for (int dy = -r; dy <= r; dy++)
-                for (int dx = -r; dx <= r; dx++)
-                {
-                    if (Math.Max(Math.Abs(dx), Math.Abs(dy)) != r) continue;
-                    int x = Math.Clamp(tx + dx, 3, N - 4), y = Math.Clamp(ty + dy, 3, N - 4);
-                    if (_r.Water[Idx(x, y)] == 0 && _r.SlopePermille[Idx(x, y)] < 200) return Idx(x, y);
-                }
-        return -1;
     }
 
     private static long[,] ShortestAll(int n, List<(int A, int B)> edges, long[,] d2)

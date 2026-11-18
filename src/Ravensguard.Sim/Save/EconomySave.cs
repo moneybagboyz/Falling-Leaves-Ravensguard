@@ -69,6 +69,7 @@ public sealed class EconomySave
     [Key(44)] public string[] CompMaterial { get; set; } = [];
     [Key(45)] public int[] CompMassG { get; set; } = [];
     [Key(46)] public short[] CompCondition { get; set; } = [];
+    [Key(47)] public byte[] DueDurables { get; set; } = [];
 
     private static T[] Cut<T>(T[] a, int n) => a.AsSpan(0, n).ToArray();
 
@@ -84,6 +85,7 @@ public sealed class EconomySave
             HouseholdCount = e.HouseholdCount, NutritionCd = Cut(e.NutritionCd, e.PersonCount), SeedReserveG = Cut(e.SeedReserveG, e.HouseholdCount),
             FoodCoverDaysX10 = Cut(e.FoodCoverDaysX10, e.HouseholdCount), FuelCoverDaysX10 = Cut(e.FuelCoverDaysX10, e.HouseholdCount),
             Grievance = e.Grievances.Take(e.HouseholdCount).Select(g => (ushort)g).ToArray(), Tier = e.Tiers.Take(e.HouseholdCount).Select(t => (byte)t).ToArray(), DietPoor = Cut(e.DietPoor, e.HouseholdCount),
+            DueDurables = Cut(e.DueDurables, e.HouseholdCount * EconomyState.Durables),
         };
         var stores = e.HouseholdStore.Take(e.HouseholdCount).Concat(e.OtherStores.Values).ToList();
         s.StoreOwner = stores.Select(x => x.Owner.Value).ToArray();
@@ -133,6 +135,7 @@ public sealed class EconomySave
             }
             Array.Copy(NutritionCd, e.NutritionCd, NutritionCd.Length); Array.Copy(SeedReserveG, e.SeedReserveG, HouseholdCount);
             Array.Copy(FoodCoverDaysX10, e.FoodCoverDaysX10, HouseholdCount); Array.Copy(FuelCoverDaysX10, e.FuelCoverDaysX10, HouseholdCount);
+            if (DueDurables.Length == HouseholdCount * EconomyState.Durables) Array.Copy(DueDurables, e.DueDurables, DueDurables.Length);
             for (int h = 0; h < HouseholdCount; h++) { e.Grievances[h] = (Economy.Grievance)Grievance[h]; e.Tiers[h] = (HouseholdTier)Tier[h]; e.DietPoor[h] = DietPoor[h]; }
 
             var rows = new ItemRow[ItemId.Length]; int comp = 0;

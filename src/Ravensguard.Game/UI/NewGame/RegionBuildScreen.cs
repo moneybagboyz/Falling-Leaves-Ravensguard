@@ -162,7 +162,7 @@ public partial class RegionBuildScreen : Control
         // Walk the generated region, starting in the settlement the origin asked for (plan §3f safe start).
         var opt = new Ravensguard.Game.World.StreetOptions { Poi = "at:" + Latest.StartSettlement };
         var view = Ravensguard.Game.World.StreetView.ForRegion(w.Population.Region, w.Population, _in.Content.Db, _router, opt, w.Chunks,
-            hero: w.Hero, codex: Latest.Codex, history: w.History, continent: w.Continent);
+            hero: w.Hero, codex: Latest.Codex, history: w.History, continent: w.Continent, regionSettings: w.RegionSettings);
         view.Run = session;
         view.OnExit = ClearLatest;
         _router.Replace(view);

@@ -32,7 +32,7 @@ public sealed class GeneratedChunk
 public sealed partial class ChunkGenerator
 {
     /// <summary>Bump when the output for the same region changes; snapshots keep the version they were made with (plan 2.2).</summary>
-    public const int Version = 1;
+    public const int Version = 2;
     public const int Size = ChunkContent.Size;
     public const int ChunksPerSide = RegionData.Meters / Size;
     private const int Pad = 4;

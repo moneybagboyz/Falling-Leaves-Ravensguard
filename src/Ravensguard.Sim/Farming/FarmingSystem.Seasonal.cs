@@ -16,13 +16,15 @@ public sealed partial class FarmingSystem
     public void StepSeasonal(GameTime now)
     {
         int doy = now.DayOfYear;
+        SyncPopulation();
         if (doy == 1)
         {
             while (State.Year < now.Year) RollYear(now);
             OpenYear(now);
+            Shear();
         }
         else if (doy == 16) { SetGrazing(); for (int f = 0; f < F.Count; f++) if (F.Stage[f] == FieldStage.Sown) F.Stage[f] = FieldStage.Growing; UpdateSeedReserve(doy); }
-        else if (doy == 31) LendSeed(winter: true);
+        else if (doy == 31) { LendSeed(winter: true); MakeCheese(); }
         else if (doy == 46) { CollectCoinRent(now); CullHerds(now); }
     }
 
@@ -58,7 +60,10 @@ public sealed partial class FarmingSystem
             if (DetRng.Range(Seed, now.TotalHours, (ulong)s, 0x212, 0, 0, 1000) < rem) add++;
             int acres = 0; foreach (int p in Region.Settlements[s].Parcels) acres += Region.Parcels[p].FieldCount;
             int cap = acres / 3 * _d.SheepPerFallowAcreCapX100 / 100;
-            lv.Sheep[s] = Math.Min(Math.Max(lv.Sheep[s], cap), lv.Sheep[s] + add);
+            int grown = Math.Min(Math.Max(lv.Sheep[s], cap), lv.Sheep[s] + add);
+            Slaughtered(s, "sheep", lv.Sheep[s] + add - grown);                 // lambs above the pasture cap go to the butcher
+            lv.Sheep[s] = grown;
+            HerdYear(s, now.TotalHours);
         }
         RefreshLong(State.Year);
     }
@@ -190,6 +195,35 @@ public sealed partial class FarmingSystem
                 var crop = slot == 1 ? PickSpring(Settings, Seed, yh, F.Id[f], fert, State.Year) : PickWinter(Settings, Seed, yh, F.Id[f], Math.Min(100, fert + _d.FallowGrazedFertility), State.Year);
                 if (crop == Crop.Fallow) continue;
                 var info = Settings.Info(crop); store.Create(info.Good, info.SeedG(gm), CreateReason.Seed);
+            }
+        }
+    }
+
+    /// <summary>
+    /// World start: the previous harvest's grain still in the barns (reason Seed). Fields now in the winter-grain slot (slot 1 after the rotation) were last year's
+    /// winter grain, fields now fallow (slot 2) last year's spring grain; each gives <paramref name="pct"/> percent of its average yield, split like a real harvest
+    /// (tithe to the parish granary, rent to the landlord, the rest to the holder's house store, threshed). Run once, after <see cref="ProvisionInitialStock"/>.
+    /// </summary>
+    public void ProvisionCarryOver(int pct)
+    {
+        int gm = _d.GramsPerMeasure; long yh = YearHour(State.Year - 1);
+        for (int p = 0; p < P.Count; p++)
+        {
+            int hh = P.Holder[p]; if (hh < 0) continue;
+            int slot = P.Slot[p]; if (slot == 0) continue;
+            var parcel = Region.Parcels[p]; int s = _settlementOfParcel[p];
+            var lease = P.Landlord[p] >= 0 ? P.Lease[p] : LeaseKind.None;
+            for (int k = 0; k < parcel.FieldCount; k++)
+            {
+                int f = parcel.FieldStart + k; int fert = F.Fertility[f];
+                var crop = slot == 1 ? PickWinter(Settings, Seed, yh, F.Id[f], fert, State.Year - 1) : PickSpring(Settings, Seed, yh, F.Id[f], fert, State.Year - 1);
+                if (crop == Crop.Fallow) continue;
+                var info = Settings.Info(crop);
+                long yield = YieldMath.Gross0G(info.BaseG(gm), fert) * pct / 100;
+                var sp = YieldMath.Split(yield, info.SeedG(gm) * pct / 100, P.OwnerKind[p], lease, P.ShareBp[p], _d.TithePermille);
+                if (sp.TitheG > 0) Parish(s).Create(info.Good, sp.TitheG, CreateReason.Seed);
+                if (sp.RentG > 0) HouseStore(P.Landlord[p]).Create(info.Good, sp.RentG, CreateReason.Seed);
+                if (sp.HolderG > 0) HouseStore(hh).Create(info.Good, sp.HolderG, CreateReason.Seed);
             }
         }
     }

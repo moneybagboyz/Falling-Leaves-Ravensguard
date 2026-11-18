@@ -124,7 +124,7 @@ public partial class RunLoadScreen : Control
         var session = new RunSession(r.State, runName, r.Header.Ironman, _entry.Path, lib, _in.Content.Hash, _entry.WorldId);
         var opt = new StreetOptions { Poi = r.State.Live == null ? "at:" + r.StartSettlement : null };
         var view = StreetView.ForRegion(r.State.Population.Region, r.State.Population, _in.Content.Db, _router, opt, r.State.Chunks,
-            hero: r.State.Hero, codex: r.Codex, history: r.World.History, continent: r.World.Continent, resume: r.State.Live);
+            hero: r.State.Hero, codex: r.Codex, history: r.World.History, continent: r.World.Continent, resume: r.State.Live, regionSettings: r.State.RegionSettings);
         view.Run = session;
         _router.Replace(view);
     }

@@ -56,6 +56,8 @@ public sealed class Region
     public List<Lake> Lakes { get; } = [];
     public List<RoadNode> RoadNodes { get; } = [];
     public List<RoadEdge> RoadEdges { get; } = [];
+    /// <summary>Border crossings of the continental road network on this region's four edges (N, E, S, W order, sorted by tile); the neighbour across each edge holds the mirror.</summary>
+    public List<RegionGate> Gates { get; } = [];
     public List<RegionSettlement> Settlements { get; } = [];
     public List<Fief> Fiefs { get; } = [];
     public List<Parcel> Parcels { get; } = [];
@@ -131,6 +133,7 @@ public sealed class Region
             L(w.Tiles.Length); foreach (var t in w.Tiles) L(t); L((long)w.End); L(w.EndRef); L(w.LengthM); L(w.CatchmentTenthsKm2);
         }
         foreach (var l in Lakes) { L(l.Id); L(l.Tiles); L(l.SurfaceCm); L(l.MaxDepthCm); L(l.Center.X); L(l.Center.Y); L(l.MinTileX); L(l.MinTileY); L(l.MaxTileX); L(l.MaxTileY); }
+        foreach (var g in Gates) { L((long)g.Side); L(g.Tile); L((long)g.Class); L(g.RouteId); L(g.BearingX); L(g.BearingY); }
         foreach (var n in RoadNodes) { L(n.Id); L((long)n.Kind); L(n.Settlement); L(n.X); L(n.Y); }
         foreach (var e in RoadEdges)
         {

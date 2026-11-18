@@ -192,6 +192,7 @@ public sealed class ProductionSave
     [Key(54)] public long[] ResStock { get; set; } = [];
     [Key(55)] public long[] ResCap { get; set; } = [];
     [Key(56)] public short[] ResLastDay { get; set; } = [];
+    [Key(57)] public long[] Capital { get; set; } = [];
 
     public static ProductionSave Capture(ProductionSystem p)
     {
@@ -204,7 +205,7 @@ public sealed class ProductionSave
             IdleDays = [.. bs.Select(b => b.IdleDays)], UnfilledDays = [.. bs.Select(b => b.UnfilledDays)], WageOffer = [.. bs.Select(b => b.WageOfferMites)],
             WagesSeason = [.. bs.Select(b => b.WagesSeason)], InputsSeason = [.. bs.Select(b => b.InputsSeason)], DividendsSeason = [.. bs.Select(b => b.DividendsSeason)],
             CashStart = [.. bs.Select(b => b.CashStart)], WageBillPerDay = [.. bs.Select(b => b.WageBillPerDay)], InputSpendPerDay = [.. bs.Select(b => b.InputSpendPerDay)],
-            Dividends = [.. bs.Select(b => b.Dividends)], ToolPiecesWorn = [.. bs.Select(b => b.ToolPiecesWorn)], Batches = [.. bs.Select(b => b.Batches)],
+            Capital = [.. bs.Select(b => b.Capital)], Dividends = [.. bs.Select(b => b.Dividends)], ToolPiecesWorn = [.. bs.Select(b => b.ToolPiecesWorn)], Batches = [.. bs.Select(b => b.Batches)],
             Quality = [.. bs.SelectMany(b => b.Quality)], LastQuality = [.. bs.Select(b => b.LastQuality)], Mine = [.. bs.Select(b => b.Mine)],
             StaffCount = [.. bs.Select(b => b.Staff.Count)], StaffPerson = [.. bs.SelectMany(b => b.Staff)], StaffOwed = [.. bs.SelectMany(b => b.Owed)], StaffShortDays = [.. bs.SelectMany(b => b.ShortDays)],
             StationCount = [.. bs.Select(b => b.Stations.Count)], StationKind = [.. bs.SelectMany(b => b.Stations.Select(x => x.Kind))], StationRecipe = [.. bs.SelectMany(b => b.Stations.Select(x => x.Recipe))],
@@ -241,7 +242,7 @@ public sealed class ProductionSave
             {
                 var b = sys.NewBusiness(content.Kinds[Kind[i]], Settlement[i], Lot[i], Owner[i]);
                 b.OwnerWorks = OwnerWorks[i]; b.State = (BusinessState)State[i]; b.LossSeasons = LossSeasons[i]; b.IdleDays = IdleDays[i]; b.UnfilledDays = UnfilledDays[i];
-                b.WageOfferMites = WageOffer[i]; b.WagesSeason = WagesSeason[i]; b.InputsSeason = InputsSeason[i]; b.DividendsSeason = DividendsSeason[i]; b.CashStart = CashStart[i];
+                b.WageOfferMites = WageOffer[i]; b.WagesSeason = WagesSeason[i]; b.InputsSeason = InputsSeason[i]; b.DividendsSeason = DividendsSeason[i]; b.CashStart = CashStart[i]; b.Capital = i < Capital.Length ? Capital[i] : CashStart[i];
                 b.WageBillPerDay = WageBillPerDay[i]; b.InputSpendPerDay = InputSpendPerDay[i]; b.Dividends = Dividends[i]; b.ToolPiecesWorn = ToolPiecesWorn[i]; b.Batches = Batches[i];
                 for (int q = 0; q < 5; q++) b.Quality[q] = Quality[i * 5 + q];
                 b.LastQuality = LastQuality[i]; b.Mine = Mine[i];

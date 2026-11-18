@@ -14,7 +14,7 @@ namespace Ravensguard.Sim.Production;
 /// </summary>
 public static class BusinessBuilder
 {
-    public const int StartCapitalWorkshopPermille = 500, StartCapitalCrewPermille = 80;
+    public const int StartCapitalWorkshopPermille = 500, StartCapitalCrewPermille = 80, StartCapitalStallPermille = 80, StartCapitalManorPermille = 100;
 
     public static ProductionSystem Create(EconomyState econ, Population pop, ProductionContent content, ulong seed, MarketSystem? markets, ResourceLayer? resources)
     {
@@ -49,7 +49,25 @@ public static class BusinessBuilder
             int cap = kind.StaffCapacity;
             foreach (int m in members) if (m != owner && b.Staff.Count < cap) sys.AddStaff(b, m);
             foreach (var (sk, count) in kind.Stations) for (int c = 0; c < count; c++) b.Stations.Add(new Station { Kind = sk });
-            Fund(sys, b, crew ? StartCapitalCrewPermille : kind.Trader ? econ.Money.MerchantCashShareBp / 10 : StartCapitalWorkshopPermille);
+            Fund(sys, b, crew ? StartCapitalCrewPermille : kind.Trader ? econ.Money.MerchantCashShareBp / 10 : kind.Id == "manor" ? StartCapitalManorPermille : StartCapitalWorkshopPermille);
+        }
+
+        // the manors: a lord's household and demesne staff (servants, guards, stewards, reeves, labourers, shepherds, ploughmen) are the staff of his manor business
+        var manorKind = content.Kinds.FirstOrDefault(k => k.Id == "manor");
+        if (manorKind != null)
+        {
+            var manorOf = new Dictionary<int, Business>();
+            foreach (var mb in sys.Businesses) if (mb.Kind == manorKind.Index) manorOf[mb.Owner] = mb;
+            var onBooks = new HashSet<int>(); foreach (var xb in sys.Businesses) foreach (int st in xb.Staff) onBooks.Add(st);
+            var perSlot = new Dictionary<(Business, Occupation), int>();
+            for (int i = 0; i < people.Count; i++)
+            {
+                int emp = people.Employer[i]; if (emp < 0 || onBooks.Contains(i) || !manorOf.TryGetValue(emp, out var mb2)) continue;
+                var occ = people.Occupation[i];
+                int slots = manorKind.Slots.Where(sl => sl.Occupation == occ).Sum(sl => sl.Count); if (slots == 0) continue;
+                var key = (mb2, occ); int have = perSlot.GetValueOrDefault(key); if (have >= slots) continue;
+                perSlot[key] = have + 1; sys.AddStaff(mb2, i); onBooks.Add(i);
+            }
         }
 
         // put-out spinners: each weaver business takes spinners of its settlement, up to its slot count (one weaver per 8 spinners)
@@ -91,6 +109,21 @@ public static class BusinessBuilder
                     foreach (int m in miners) if (m != owner && b.Staff.Count < mineKind.StaffCapacity) sys.AddStaff(b, m);
                     Fund(sys, b, StartCapitalCrewPermille);
                 }
+        }
+        // every market book has a trader (integration decision I8): a village without a merchant gets the lord's market stall, run for him by hired hands
+        var traderKind = content.Kinds.FirstOrDefault(k => k.Trader);
+        if (traderKind != null && markets != null)
+        {
+            foreach (var book in markets.AllBooks())
+            {
+                int s = book.SettlementIndex;
+                if (sys.Businesses.Any(x => x.State == BusinessState.Open && content.Kinds[x.Kind].Trader && markets.BookOf[x.Settlement] == s)) continue;
+                int fief = pop.Region.Settlements[s].FiefIndex;
+                int lord = fief >= 0 && fief < pop.FiefLord.Length ? pop.FiefLord[fief] : -1;
+                if (lord < 0 || people.Household[lord] < 0) continue;
+                var b = sys.NewBusiness(traderKind, s, -1, lord); b.OwnerWorks = false;
+                Fund(sys, b, StartCapitalStallPermille);
+            }
         }
         markets?.ExtraCoin.Clear();
         sys.RegisterTraders();
@@ -134,6 +167,6 @@ public static class BusinessBuilder
         long bal = econ.Ledger.Balance(econ.HouseholdPurse[hh]).Mites;
         long amt = bal * permille / 1000;
         if (amt > 0) econ.Ledger.Transfer(econ.HouseholdPurse[hh], b.Purse, new Coin(amt), TransferReason.Gift);
-        b.CashStart = econ.Ledger.Balance(b.Purse).Mites;
+        b.CashStart = econ.Ledger.Balance(b.Purse).Mites; b.Capital = b.CashStart;
     }
 }

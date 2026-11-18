@@ -20,6 +20,8 @@ public sealed class BusinessKind
     public Recipe[] Recipes = [];
     public ExtractionKind[] Extractions = [];
     public bool Trader;
+    /// <summary>Staff are paid by the day they are on the books (manor, stall) not by the batch.</summary>
+    public bool Salaried;
     public int StaffCapacity => Slots.Sum(s => s.Count);
     public IEnumerable<Recipe> RecipesFor(string station) { foreach (var r in Recipes) if (r.Station == station) yield return r; }
 }
@@ -41,7 +43,7 @@ public sealed class ProductionContent
         var kinds = new List<BusinessKind>();
         foreach (var d in db.All<BusinessDef>().OrderBy(b => b.Id, StringComparer.Ordinal))
         {
-            var k = new BusinessKind { Index = (ushort)kinds.Count, Id = d.Id, Trader = d.Trader, OwnerOccupation = Enum.Parse<Occupation>(d.OwnerOccupation) };
+            var k = new BusinessKind { Index = (ushort)kinds.Count, Id = d.Id, Trader = d.Trader, Salaried = d.Salaried || d.Trader, OwnerOccupation = Enum.Parse<Occupation>(d.OwnerOccupation) };
             if (d.LotUse.Length > 0) k.Lot = Enum.Parse<LotUse>(d.LotUse);
             foreach (var s in d.Stations) if (Array.IndexOf(RecipeBook.StationKinds, s.Kind) < 0) throw new InvalidDataException($"business '{d.Id}': unknown station kind '{s.Kind}'");
             k.Stations = [.. d.Stations.Select(s => (s.Kind, s.Count))];
@@ -122,6 +124,8 @@ public sealed class Business
     public int Mine = -1;
     public long WageBillPerDay, InputSpendPerDay;
     public long Dividends, ToolPiecesWorn, Batches;
+    /// <summary>Working capital the business was started with: dividends are paid only from what the cash box holds above it (integration decision I2).</summary>
+    public long Capital;
     public int[] Quality = new int[5];
     public int LastQuality = -1;
 

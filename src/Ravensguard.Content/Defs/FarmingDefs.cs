@@ -101,4 +101,18 @@ public sealed record FarmingSettingsDef : ContentDef
     public int CullMaxPermille { get; init; } = 600;
     public int SheepGrowthPermilleYear { get; init; } = 57;
     public int SheepPerFallowAcreCapX100 { get; init; } = 200;
+    // herds as owned stock (resources spec 3.3, 3.4; integration decision I3). Every key defaults to 0 = off, so the farming unit tests keep their old herds; content turns them on.
+    /// <summary>Cows per 100 field acres at world start (24 per 100 persons in the spec is about 10 per 100 acres in the seed-1234 region).</summary>
+    [JsonPropertyName("cows_per_100_field_acres")] public int CowsPer100FieldAcres { get; init; }
+    public int CowHayKgPerHeadDayX10 { get; init; }
+    /// <summary>Grams of raw wool per sheep per game year (1 kg fleece x 60/365 = 164 g), sheared at the first day of spring.</summary>
+    public int WoolGPerSheepYear { get; init; }
+    /// <summary>Grams of cheese per cow per game year (80 kg x 60/365 = 13.1 kg), made at the start of autumn.</summary>
+    public int CheeseGPerCowYear { get; init; }
+    /// <summary>Calves per 1000 cows per game year; bull calves refill the oxen up to the target, the rest and the surplus heifers are sold for beef.</summary>
+    public int CowCalvingPermilleYear { get; init; }
+    public int CowPerFieldAcreCapX100 { get; init; }
+    public int OxenMortalityPermilleYear { get; init; }
+    public int SheepMortalityPermilleYear { get; init; }
+    public int CowMortalityPermilleYear { get; init; }
 }

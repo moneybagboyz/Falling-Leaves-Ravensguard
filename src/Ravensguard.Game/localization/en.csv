@@ -264,7 +264,7 @@ EM_LEGENDS,Open the legends
 EM_WAIT,Still scoring the map...
 EM_NO_REALM,no realm
 EM_CELL,"{0}, {1}, {2} folk, danger {3}"
-EM_SQUARE,"Square at cell {0}, {1}"
+EM_SQUARE,"Region square {0}, {1}"
 EM_CHOSEN,chosen
 EM_NOT_ALLOWED,Not allowed: {0}
 EM_SCORE,Score {0}
@@ -353,6 +353,8 @@ BAND_COMMAND,Command view
 MAP_TITLE,"Map of the region (seed {0})"
 MAP_HINTS,"{0} pan   {1} zoom   {2} to the hero   {3} or Esc close   drag to pan"
 MAP_BUILDING,Drawing the map...
+MAP_CONTINENT_TITLE,"Map of the continent ({0} regions generated, shown in detail; zoom in for the region)"
+MAP_REGION_UNSEEN,not generated yet
 MAP_NONE,There is no map of this place.
 MAP_UNKNOWN_SITE,Unexplored place
 MAP_WATER,Water

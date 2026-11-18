@@ -12,6 +12,7 @@ using Ravensguard.Sim.WorldGen;
 using Ravensguard.Sim.WorldGen.Chunks;
 using Ravensguard.Sim.WorldGen.History;
 using Ravensguard.Sim.WorldGen.Region;
+using Ravensguard.Sim.Worlds;
 using RegionData = Ravensguard.Sim.WorldGen.Region.Region;
 
 namespace Ravensguard.Game.World;
@@ -25,6 +26,10 @@ public abstract class StreetSource
     public abstract string Name { get; }
     /// <summary>The generated region this source streams (null for the test hamlet): the world map and the weather read it.</summary>
     public virtual RegionData? Region => null;
+    /// <summary>The generated regions of the seamless world (null for the test hamlet and a single-region world).</summary>
+    public virtual RegionManager? Regions => null;
+    /// <summary>The continent of the world, when the source knows it (the world map shows it).</summary>
+    public Continent? Continent { get; protected set; }
     /// <summary>The continent weather for the region, when it is already at hand (a seed start); otherwise the view rebuilds it from the region's seed in the background.</summary>
     public virtual Ravensguard.Sim.Weather.RegionWeather? Weather => null;
     /// <summary>The player character and the Codex the street view shows panels for (null for the test hamlet), the world's history for the Codex links, and the content for names.</summary>
@@ -40,13 +45,25 @@ public abstract class StreetSource
     /// <summary>The generated region as a street source. Chunks generate on first visit; pass the save's chunk store to resume where the world was left.</summary>
     public static StreetSource ForRegion(RegionData region, Population population, ContentDatabase content, ChunkStore? store = null, Cell3? spawn = null, string? poi = null,
         Ravensguard.Sim.Characters.HeroRecord? hero = null, Ravensguard.Sim.Codex.CodexBook? codex = null, WorldHistory? history = null, Continent? continent = null,
-        Ravensguard.Sim.Live.LiveResume? resume = null)
+        Ravensguard.Sim.Live.LiveResume? resume = null, RegionSettings? regionSettings = null)
         => new RegionSource(region, population, content, store, spawn)
         {
             Poi = poi, Hero = hero, Codex = codex, History = history, Resume = resume,
+            // with the continent and history at hand the neighbours generate as the hero nears an edge (seamless continent, plan 1B)
+            RegionsInit = continent != null && history != null ? MakeRegions(continent, history, region, population, content, regionSettings) : null,
+            ContinentInit = continent,
             // the world's own (possibly customised) continent drives the weather, not one regenerated from default settings
             WeatherInit = continent == null ? null : Ravensguard.Sim.Weather.RegionWeather.ForContinent(continent, region.Seed, Ravensguard.Sim.Weather.WeatherSettings.LoadDefaults(StreetView.ContentDir())),
         };
+
+    static RegionManager MakeRegions(Continent continent, WorldHistory history, RegionData region, Population population, ContentDatabase content, RegionSettings? settings)
+    {
+        var rs = settings ?? RegionSettings.LoadDefaults(StreetView.ContentDir());
+        rs.Seed = region.Seed;
+        var m = new RegionManager(continent, history, rs, content);
+        m.Adopt(RegionCoord.OfCell(region.CellX, region.CellY), region, population);
+        return m;
+    }
 
     /// <summary>Dev: builds continent, history, embark region and population from a seed (seconds), then streams it.</summary>
     public static StreetSource FromSeed(ulong seed, string? poi = null)
@@ -70,7 +87,7 @@ public abstract class StreetSource
         var origin = load.Database.All<OriginDef>().OrderBy(o => o.Order).First();
         return new RegionSource(region, pop, load.Database, null, null)
         {
-            Poi = poi, WeatherInit = weather, History = h,
+            Poi = poi, WeatherInit = weather, History = h, RegionsInit = MakeRegions(c, h, region, pop, load.Database, rs), ContinentInit = c,
             Hero = Ravensguard.Sim.Characters.HeroRecord.FromOrigin("Aldric Vane", false, origin),
             Codex = Ravensguard.Sim.Codex.CodexBook.Build(h, region, Ravensguard.Game.UI.CodexRules.FromInput()),
         };
@@ -98,6 +115,10 @@ public abstract class StreetSource
         readonly Cell3? _spawn;
         Cell3? _found;
         public string? Poi { get; init; }
+        public RegionManager? RegionsInit { get => _regions; init => _regions = value; }
+        public Continent? ContinentInit { init => Continent = value; }
+        RegionManager? _regions;
+        public override RegionManager? Regions => _regions;
         public override RegionData? Region => _region;
         public override Ravensguard.Sim.Weather.RegionWeather? Weather => _weather;
         Ravensguard.Sim.Weather.RegionWeather? _weather;
@@ -113,7 +134,7 @@ public abstract class StreetSource
         public override LiveWorld CreateWorld(Cell3? start, GameTime time)
         {
             var gen = ChunkGenerator.For(_region, _pop, _content);
-            Streamer = new ChunkStreamer(gen, _store);
+            Streamer = Regions != null ? new ChunkStreamer(Regions, RegionCoord.OfCell(_region.CellX, _region.CellY), _store) : new ChunkStreamer(gen, _store);
             if (Resume is { } r)
             {
                 _found = r.Cell; // the hero stands exactly where the save left it, with its clock, torch, explored map and Codex
@@ -127,6 +148,7 @@ public abstract class StreetSource
                 {
                     "village" => RegionSpawn.VillageEdge(Streamer, _region),
                     "river" => RegionSpawn.RiverCrossing(Streamer, _region),
+                    "border" => RegionSpawn.AtBorder(Streamer, _region),
                     _ => RegionSpawn.TownSquare(Streamer, _region),
                 } ?? RegionSpawn.TownSquare(Streamer, _region);
                 if (spot == null) throw new InvalidOperationException("no town or village to start in");

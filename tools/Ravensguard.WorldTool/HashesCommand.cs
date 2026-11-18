@@ -10,7 +10,7 @@ using Ravensguard.Sim.WorldGen.Region;
 namespace Ravensguard.WorldTool;
 
 /// <summary>
-/// `hashes [--seeds 1,1234]`: prints one line per generated layer (continent, history, region, people, sample chunks)
+/// `hashes [--seeds 1,1234]`: prints one line per generated layer (continent, history, region, people, sample chunks, road gates, a 2 x 2 block of regions)
 /// for each seed. CI runs it on Linux and Windows and fails if the outputs differ (plan §2.2, §5 Phase 1 done-when:
 /// "the same seed gives the same continent, history and region hashes on Windows and Linux").
 /// </summary>
@@ -57,6 +57,22 @@ public static class HashesCommand
         if (town != null) spots.Insert(0, (town.CenterX / ChunkGenerator.Size, town.CenterY / ChunkGenerator.Size));
         foreach (var (x, y) in spots)
             lines.Add($"seed {seed} chunk {x},{y} {gen.GenerateLevels(x, y).ContentHash}");
+        // the seamless continent: the gates of the continental road network, and the 2 x 2 block of region squares whose north-west square is the embark square
+        // (clamped to fit the grid): each region's own hashes, so CI's Windows/Linux compare covers neighbours generated from the continent and history alone
+        var gates = BorderGates.For(history);
+        lines.Add($"seed {seed} gates {gates.Total} {gates.ComputeHash()}");
+        var embark = RegionCoord.Snap(pick.CellX, pick.CellY);
+        var nw = new RegionCoord(Math.Min(embark.X, RegionCoord.Grid - 2), Math.Min(embark.Y, RegionCoord.Grid - 2));
+        for (int dy = 0; dy < 2; dy++)
+            for (int dx = 0; dx < 2; dx++)
+            {
+                var rc = nw.Offset(dx, dy);
+                var r = RegionGenerator.Generate(continent, history, rc, rs);
+                var m = LandmarkPlacer.Place(r, history, db);
+                r.Landmarks = m;
+                var p = Populator.Populate(r, history, db);
+                lines.Add($"seed {seed} block {rc} region {r.ComputeHash()} landmarks {m.Count} {LandmarkPlacer.ComputeHash(m)} people {p.ComputeHash()}");
+            }
         return lines;
     }
 

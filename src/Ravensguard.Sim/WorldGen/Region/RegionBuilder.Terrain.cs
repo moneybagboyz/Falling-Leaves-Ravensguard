@@ -1,3 +1,4 @@
+using Ravensguard.Sim.WorldGen.History;
 using Ravensguard.Sim.Core;
 
 namespace Ravensguard.Sim.WorldGen.Region;
@@ -22,12 +23,13 @@ internal sealed partial class RegionBuilder
         public int[] W;    // 4 Catmull-Rom weights per position (Q16)
     }
 
-    private static Axis BuildAxis(int originM)
+    /// <summary>Axis taps for <paramref name="count"/> tiles whose first tile starts at <paramref name="startM"/> continent metres.</summary>
+    private static Axis BuildAxis(int startM, int count)
     {
-        var a = new Axis { I0 = new int[E], T = new int[E], W = new int[E * 4] };
-        for (int e = 0; e < E; e++)
+        var a = new Axis { I0 = new int[count], T = new int[count], W = new int[count * 4] };
+        for (int e = 0; e < count; e++)
         {
-            int x = originM + (e - Mg) * TileM + TileM / 2;
+            int x = startM + e * TileM + TileM / 2;
             int p = x - RegionSettings.CellM / 2;
             int i0 = FloorDiv(p, RegionSettings.CellM);
             int rem = p - i0 * RegionSettings.CellM;
@@ -44,22 +46,24 @@ internal sealed partial class RegionBuilder
 
     private static int CellClamp(int i) => Math.Clamp(i, 0, Continent.Size - 1);
 
-    /// <summary>Coarse heights interpolated bicubically (continuous across region borders), plus Q16.16 detail noise from absolute world coordinates.</summary>
-    private void BuildTerrain()
+    /// <summary>
+    /// Terrain height (cm), the lake indicator and the smooth fertility and drainage layers for a rectangle of tiles whose north-west corner starts at
+    /// (<paramref name="startXM"/>, <paramref name="startYM"/>) continent metres. Coarse heights are interpolated bicubically from the continental cells and the detail
+    /// noise comes from absolute world coordinates, so the value of a tile is the same whichever region (or block) asks: this is what makes heights match across borders.
+    /// </summary>
+    private void TerrainBlock(int startXM, int startYM, int w, int h, int[] hOut, int[]? lakeOut, byte[]? fertOut, byte[]? drainOut)
     {
-        _eH = new int[E * E]; _eSea = new bool[E * E]; _eFertBase = new byte[E * E]; _eDrainBase = new byte[E * E];
-        var ax = BuildAxis(_ox); var ay = BuildAxis(_oy);
+        var ax = BuildAxis(startXM, w); var ay = BuildAxis(startYM, h);
         int sea = _c.SeaLevelRaw;
-        var lakeW = new int[E * E]; _eLakeW = lakeW;
         ulong ns = DetRng.Mix(_seed ^ 0xD37A11);
         int wl = Math.Max(200, _s.DetailWavelengthM);
         int oct = Math.Clamp(_s.DetailOctaves, 1, 7);
         var rowTmp = new long[4];
-        for (int ey = 0; ey < E; ey++)
+        for (int ey = 0; ey < h; ey++)
         {
             int j0 = ay.I0[ey];
-            int Y = _oy + (ey - Mg) * TileM + TileM / 2;
-            for (int ex = 0; ex < E; ex++)
+            int Y = startYM + ey * TileM + TileM / 2;
+            for (int ex = 0; ex < w; ex++)
             {
                 int i0 = ax.I0[ex];
                 for (int j = 0; j < 4; j++)
@@ -81,7 +85,7 @@ internal sealed partial class RegionBuilder
                     long q = ((xq * xq) >> 16) * 3 / 4 + xq / 4;
                     hCm = (int)(q * _s.ReliefM * 100 >> 16);
                 }
-                int X = _ox + (ex - Mg) * TileM + TileM / 2;
+                int X = startXM + ex * TileM + TileM / 2;
                 if (hCm > -300)
                 {
                     var n = DetNoise.Fbm(ns, Fixed.FromRatio(X, wl), Fixed.FromRatio(Y, wl), oct);
@@ -94,15 +98,32 @@ internal sealed partial class RegionBuilder
                 int c01 = CellClamp(j0 + 1) * Continent.Size + CellClamp(i0), c11 = CellClamp(j0 + 1) * Continent.Size + CellClamp(i0 + 1);
                 int Bil(byte[] a) => (int)((((long)a[c00] * (65536 - t) + (long)a[c10] * t >> 16) * (65536 - u) + ((long)a[c01] * (65536 - t) + (long)a[c11] * t >> 16) * u) >> 16);
                 int Bilb(bool[] a) => (int)((((a[c00] ? (long)(65536 - t) : 0) + (a[c10] ? (long)t : 0)) * (65536 - u) + ((a[c01] ? (long)(65536 - t) : 0) + (a[c11] ? (long)t : 0)) * u) >> 16);
-                int e = ey * E + ex;
-                _eFertBase[e] = (byte)Math.Clamp(Bil(_c.Fertility), 0, 100);
-                _eDrainBase[e] = (byte)Math.Clamp(Bil(_c.Drainage), 0, 100);
-                lakeW[e] = Bilb(_c.Lake);
-                if (hCm > 0 && lakeW[e] > 32768) hCm -= (int)((long)(lakeW[e] - 32768) * 2 * _s.LakeDepressCm >> 16);
-                _eH[e] = hCm;
-                _eSea[e] = hCm <= 0;
+                int e = ey * w + ex;
+                if (fertOut != null) fertOut[e] = (byte)Math.Clamp(Bil(_c.Fertility), 0, 100);
+                if (drainOut != null) drainOut[e] = (byte)Math.Clamp(Bil(_c.Drainage), 0, 100);
+                int lakeW = Bilb(_c.Lake);
+                if (lakeOut != null) lakeOut[e] = lakeW;
+                if (hCm > 0 && lakeW > 32768) hCm -= (int)((long)(lakeW - 32768) * 2 * _s.LakeDepressCm >> 16);
+                hOut[e] = hCm;
             }
         }
+    }
+
+    internal static int[] HeightBlock(Continent c, WorldHistory h, RegionSettings s, int tileX0, int tileY0, int w, int ht)
+    {
+        var b = new RegionBuilder(c, h, 0, 0, s);
+        var o = new int[w * ht];
+        b.TerrainBlock(tileX0 * TileM, tileY0 * TileM, w, ht, o, null, null, null);
+        return o;
+    }
+
+    /// <summary>The extended window (the region plus a one-cell margin): heights, sea, lake indicator and the smooth layers.</summary>
+    private void BuildTerrain()
+    {
+        _eH = new int[E * E]; _eSea = new bool[E * E]; _eFertBase = new byte[E * E]; _eDrainBase = new byte[E * E];
+        var lakeW = new int[E * E]; _eLakeW = lakeW;
+        TerrainBlock(_ox - Mg * TileM, _oy - Mg * TileM, E, E, _eH, lakeW, _eFertBase, _eDrainBase);
+        for (int e = 0; e < E * E; e++) _eSea[e] = _eH[e] <= 0;
         _eSlope = new short[E * E];
         for (int ey = 1; ey < E - 1; ey++)
             for (int ex = 1; ex < E - 1; ex++)
@@ -196,14 +217,13 @@ internal sealed partial class RegionBuilder
                 PushT(n);
             }
         }
+        // The continental rivers are laid first and the local flow network follows them (RegionBuilder.Rivers.cs).
+        BuildChains();
+        ApplyChainsToFlow();
         // Flow accumulation in tiles; upstream cells feed in at the centre of their ring cell (continental D8 into the region).
         for (int e = 0; e < A; e++) _eAcc[e] = _eSea[e] ? 0 : 1;
         InjectInflow();
-        for (int k = oc - 1; k >= 0; k--)
-        {
-            int e = order[k], r = _eRecv[e];
-            if (r >= 0 && !_eSea[e]) _eAcc[r] += _eAcc[e];
-        }
+        AccumulateFlow();
         _streamTiles = (int)((long)_s.StreamCatchmentTenthsKm2 * 100_000 / (TileM * TileM));
         _riverTiles = (int)((long)_s.RiverCatchmentKm2 * 1_000_000 / (TileM * TileM));
 
@@ -263,6 +283,9 @@ internal sealed partial class RegionBuilder
                 int dp = _eSea[e] ? 0 : _eFill[e] - _eH[e];
                 // Only continental lake basins and genuinely deep pits become lakes; shallow noise pits just drain.
                 depth[r] = dp >= 2000 || (dp > 0 && _eLakeW[e] > 20000) ? dp : 0;
+                // The basin a lake fills comes from this region's own window, so a neighbour may disagree about it: the edge tiles are never lake, which
+                // keeps a river that crosses an edge a river on both sides (seamless-regions spec 2.3).
+                if (x == 0 || y == 0 || x == N - 1 || y == N - 1) depth[r] = 0;
             }
         var seen = new bool[Tiles];
         var queue = new int[Tiles];
@@ -324,14 +347,26 @@ internal sealed partial class RegionBuilder
         WaterwayAt = new int[Tiles]; Array.Fill(WaterwayAt, -1);
         var kids = new byte[Tiles]; var bigKids = new byte[Tiles];
         for (int t = 0; t < Tiles; t++)
+        {
             _chan[t] = acc[t] >= _streamTiles && (_r.Water[t] & (WaterFlags.Lake | WaterFlags.Sea)) == 0;
+            // Only continental rivers cross an edge (they are the same on both sides); a local stream ends one tile short of it.
+            int tx = t % N, ty = t / N;
+            if (_chan[t] && (tx == 0 || ty == 0 || tx == N - 1 || ty == N - 1) && !OnChain(t)) _chan[t] = false;
+        }
+        // water that runs into a pruned edge tile drains off the region there
+        for (int t = 0; t < Tiles; t++)
+        {
+            if (!_chan[t]) continue;
+            int rv0 = recv[t];
+            if (rv0 >= 0 && !_chan[rv0] && (rv0 % N == 0 || rv0 / N == 0 || rv0 % N == N - 1 || rv0 / N == N - 1) && acc[rv0] >= _streamTiles) recv[t] = -1;
+        }
         for (int t = 0; t < Tiles; t++)
         {
             if (!_chan[t]) continue;
             int rv = recv[t];
             if (rv >= 0 && _chan[rv]) { kids[rv]++; if (acc[t] >= _riverTiles) bigKids[rv]++; }
         }
-        bool IsStart(int t) => _chan[t] && (kids[t] != 1 || (acc[t] >= _riverTiles && bigKids[t] == 0));
+        bool IsStart(int t) => _chan[t] && (kids[t] != 1 || (acc[t] >= _riverTiles && bigKids[t] == 0) || BorderPoint(t, false) != null);
         var chainAt = new int[Tiles];
         Array.Fill(chainAt, -1);
         var pending = new List<(int Id, int NextTile)>();
@@ -366,25 +401,31 @@ internal sealed partial class RegionBuilder
         {
             var w = _r.Waterways[i]; var tl = chains[i];
             w.Tiles = [.. tl];
-            int n = tl.Count;
+            // A continental river that crosses an edge gets a vertex on the border line itself, the same point the neighbour computes.
+            var head = BorderPoint(tl[0], false); var tail = BorderPoint(tl[^1], true);
+            int n0 = tl.Count, off = head != null ? 1 : 0;
+            int n = n0 + off + (tail != null ? 1 : 0);
             var raw = new PointM[n];
-            for (int k = 0; k < n; k++) raw[k] = new PointM(TileCenter(tl[k] % N), TileCenter(tl[k] / N));
+            if (head != null) raw[0] = head.Value;
+            for (int k = 0; k < n0; k++) raw[off + k] = new PointM(TileCenter(tl[k] % N), TileCenter(tl[k] / N));
+            if (tail != null) raw[n - 1] = tail.Value;
             var pts = new PointM[n];
             for (int k = 0; k < n; k++)
                 pts[k] = k == 0 || k == n - 1 ? raw[k] : new PointM((raw[k - 1].X + 2 * raw[k].X + raw[k + 1].X) / 4, (raw[k - 1].Y + 2 * raw[k].Y + raw[k + 1].Y) / 4);
             w.Points = pts;
             w.WidthCm = new int[n]; w.DepthCm = new int[n];
-            bool river = w.Kind == WaterKind.River;
             for (int k = 0; k < n; k++)
             {
-                long a = acc[tl[k]];
-                w.WidthCm[k] = WidthCm(river, a, _streamTiles, _riverTiles);
-                w.DepthCm[k] = DepthCm(river, a, _streamTiles, _riverTiles);
+                long a = acc[tl[Math.Clamp(k - off, 0, n0 - 1)]];
+                bool rv = a >= _riverTiles;
+                w.WidthCm[k] = WidthCm(rv, a, _streamTiles, _riverTiles);
+                w.DepthCm[k] = DepthCm(rv, a, _streamTiles, _riverTiles);
             }
             int len = 0;
             for (int k = 1; k < n; k++) len += Dist(pts[k - 1].X, pts[k - 1].Y, pts[k].X, pts[k].Y);
             w.LengthM = len;
-            w.CatchmentTenthsKm2 = (int)((long)acc[tl[n - 1]] * TileM * TileM / 100_000);
+            w.CatchmentTenthsKm2 = (int)((long)acc[tl[n0 - 1]] * TileM * TileM / 100_000);
+            bool river = w.Kind == WaterKind.River;
             foreach (int t in tl) if (_chan[t]) { _r.Water[t] |= river ? WaterFlags.River : WaterFlags.Stream; WaterwayAt[t] = w.Id; }
         }
     }

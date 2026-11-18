@@ -130,7 +130,7 @@ public class LivePerfTests(ChunkWorldFixture fx, ITestOutputHelper output) : ICl
         var w = new LiveWorld(streamer, new Cell3(spot!.Value.X, spot.Value.Y, 0), GameTime.FromCalendar(1, Season.Spring, 8, 12));
         w.SetInput(new MoveInput(1, 0, Sprint: true));
         double last = w.OriginX + w.Snapshot.Hero.X.ToDouble();
-        for (int i = 0; i < 300; i++)
+        for (int i = 0; i < 480; i++) // 120 m: more than 3 chunks, so the window swaps whatever the start inside a chunk
         {
             w.Step();
             double now = w.OriginX + w.Snapshot.Hero.X.ToDouble();

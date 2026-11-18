@@ -49,6 +49,11 @@ public sealed partial class FarLayer : Node2D
     public int BakedCommand => _cmd.Count;
     public int Pending => _busy;
     public int ChunkLimit => _streamer != null ? 1000 : ((_hamlet?.Grid.Width ?? 96) / 32);
+    // chunk range of the world: the home region only, or the whole continent around it in the seamless world (world chunk coordinates, home region at 0..999)
+    int MinChunkX => _streamer?.Regions != null ? -_streamer.Home.X * ChunkStreamer.RegionChunks : 0;
+    int MinChunkY => _streamer?.Regions != null ? -_streamer.Home.Y * ChunkStreamer.RegionChunks : 0;
+    int MaxChunkX => _streamer?.Regions != null ? (Ravensguard.Sim.WorldGen.Region.RegionCoord.Grid - _streamer.Home.X) * ChunkStreamer.RegionChunks - 1 : ChunkLimit - 1;
+    int MaxChunkY => _streamer?.Regions != null ? (Ravensguard.Sim.WorldGen.Region.RegionCoord.Grid - _streamer.Home.Y) * ChunkStreamer.RegionChunks - 1 : ChunkLimit - 1;
 
     public FarLayer(ArtAtlas art, Seasonal seasons, ChunkStreamer? streamer, HamletMap? hamlet)
     {
@@ -72,9 +77,8 @@ public sealed partial class FarLayer : Node2D
         float ppm = command ? 2f : 8f;
         _groundMat.SetShaderParameter("tile_px", ppm); _topMat.SetShaderParameter("tile_px", ppm);
         float halfX = viewPx.X / 2f / ppm + 34f, halfY = viewPx.Y / 2f / ppm + 34f;
-        int limit = ChunkLimit;
-        int x0 = Math.Max(0, ChunkStreamer.FloorDiv((int)(centre.X - halfX), 32)), x1 = Math.Min(limit - 1, ChunkStreamer.FloorDiv((int)(centre.X + halfX), 32));
-        int y0 = Math.Max(0, ChunkStreamer.FloorDiv((int)(centre.Y - halfY), 32)), y1 = Math.Min(limit - 1, ChunkStreamer.FloorDiv((int)(centre.Y + halfY), 32));
+        int x0 = Math.Max(MinChunkX, ChunkStreamer.FloorDiv((int)(centre.X - halfX), 32)), x1 = Math.Min(MaxChunkX, ChunkStreamer.FloorDiv((int)(centre.X + halfX), 32));
+        int y0 = Math.Max(MinChunkY, ChunkStreamer.FloorDiv((int)(centre.Y - halfY), 32)), y1 = Math.Min(MaxChunkY, ChunkStreamer.FloorDiv((int)(centre.Y + halfY), 32));
         var dict = command ? _cmd : _field; var parent = command ? _cmdRoot : _fieldRoot;
         int px = command ? 64 : 256;
 
@@ -158,7 +162,9 @@ public sealed partial class FarLayer : Node2D
             if (_streamer.Store.Rebuild(new ChunkKey(cx, cy, 0)) is { } content) LoadedChunk.Decode(tmp, 0, content);
             input = FarInput.FromChunk(tmp, _streamer.Generator);
         }
-        var gen = _streamer?.Generator;
+        var gen = _streamer?.GeneratorOfChunk(cx, cy); // the generator of the region the chunk is in (null while that region is not built yet)
+        int lcx = _streamer == null ? cx : cx - ChunkStreamer.FloorDiv(cx, ChunkStreamer.RegionChunks) * ChunkStreamer.RegionChunks;
+        int lcy = _streamer == null ? cy : cy - ChunkStreamer.FloorDiv(cy, ChunkStreamer.RegionChunks) * ChunkStreamer.RegionChunks;
         var done = _done;
         Task.Run(() =>
         {
@@ -167,8 +173,9 @@ public sealed partial class FarLayer : Node2D
                 var inp = input;
                 if (inp == null)
                 {
+                    if (gen == null) throw new InvalidOperationException("the region of this chunk is not generated yet");
                     var tmp = new LoadedChunk(cx, cy);
-                    LoadedChunk.Decode(tmp, 0, gen!.Generate(cx, cy));
+                    LoadedChunk.Decode(tmp, 0, gen.Generate(lcx, lcy));
                     inp = FarInput.FromChunk(tmp, gen);
                 }
                 if (command) done.Enqueue(new Result((cx, cy), true, version, FarBake.BakeCommand(inp, art), null));

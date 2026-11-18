@@ -85,11 +85,11 @@ public sealed class CellCropClimate
 /// <summary>Herds that couple to farming (oxen pull, sheep graze the fallow, hay feeds both), per settlement (farming spec 3.6; resources spec).</summary>
 public sealed class LivestockState
 {
-    public int[] Sheep, Oxen, MeadowAcres, HayPpm, HayCarry;
+    public int[] Sheep, Oxen, Cows, MeadowAcres, HayPpm, HayCarry;
     public bool[] Grazed;
     public LivestockState(int settlements)
     {
-        Sheep = new int[settlements]; Oxen = new int[settlements]; MeadowAcres = new int[settlements]; HayPpm = new int[settlements]; HayCarry = new int[settlements]; Grazed = new bool[settlements];
+        Sheep = new int[settlements]; Oxen = new int[settlements]; Cows = new int[settlements]; MeadowAcres = new int[settlements]; HayPpm = new int[settlements]; HayCarry = new int[settlements]; Grazed = new bool[settlements];
     }
 }
 
@@ -142,7 +142,7 @@ public sealed class FarmingState
         foreach (bool b in c.BlightCulture) L(b ? 1 : 0);
         L(c.ColdSummerCultureMask);
         var l = Livestock;
-        for (int i = 0; i < l.Sheep.Length; i++) { L(l.Sheep[i]); L(l.Oxen[i]); L(l.MeadowAcres[i]); L(l.HayPpm[i]); L(l.HayCarry[i]); L(l.Grazed[i] ? 1 : 0); }
+        for (int i = 0; i < l.Sheep.Length; i++) { L(l.Sheep[i]); L(l.Oxen[i]); if (l.Cows[i] != 0) L(l.Cows[i]); L(l.MeadowAcres[i]); L(l.HayPpm[i]); L(l.HayCarry[i]); L(l.Grazed[i] ? 1 : 0); }
         foreach (long v in SeedDebtG) L(v);
         L(HarvestG); L(SeedSownG); L(ThreshedG); L(TitheG); L(RentG); L(Gross0G); L(SownAcres); L(UnharvestedAcres);
         foreach (long v in LostG) L(v); foreach (int v in LostAcres) L(v);

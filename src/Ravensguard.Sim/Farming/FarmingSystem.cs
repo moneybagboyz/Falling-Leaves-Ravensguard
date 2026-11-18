@@ -46,9 +46,10 @@ public sealed partial class FarmingSystem
     private readonly byte[] _cultureOfParcel;
     private readonly int[] _settlementOfParcel, _parcelCell;
     private readonly int[] _pendingThresh;
-    private readonly bool[] _isHolder;
-    private readonly int[] _hhHours;
-    private readonly int[][] _householdsOf;
+    private bool[] _isHolder;
+    private int[] _hhHours;
+    private int[][] _householdsOf;
+    private int[] _popHolder;
     private readonly long[] _rainToday = new long[CellCropClimate.Cells];
     private readonly int[] _tempToday = new int[CellCropClimate.Cells];
     private readonly bool[] _stormToday = new bool[CellCropClimate.Cells];
@@ -96,6 +97,7 @@ public sealed partial class FarmingSystem
         var lists = new List<int>[ns]; for (int s = 0; s < ns; s++) lists[s] = [];
         for (int h = 0; h < nh; h++) { int s = pop.Households.Settlement[h]; if ((uint)s < (uint)ns) lists[s].Add(h); }
         _householdsOf = lists.Select(l => l.ToArray()).ToArray();
+        _popHolder = (int[])P.Holder.Clone();
 
         // stores farming owns (idempotent: a restored economy already has them)
         for (int h = 0; h < nh; h++) if (_isHolder[h]) econ.OpenStore(StoreKind.Barn, FarmIds.Barn(h));
@@ -146,6 +148,7 @@ public sealed partial class FarmingSystem
             foreach (int p in region.Settlements[s].Parcels) { acres += region.Parcels[p].FieldCount; if (region.Parcels[p].Slot == 2) fallow += region.Parcels[p].FieldCount; }
             lv.Oxen[s] = (acres * d.OxenPer100ArableAcres + 50) / 100;
             lv.Sheep[s] = (fallow * d.SheepStartPerFallowAcreX100 + 50) / 100;
+            lv.Cows[s] = (acres * d.CowsPer100FieldAcres + 50) / 100;
             lv.MeadowAcres[s] = acres * d.MeadowPctOfFieldAcres / 100;
         }
         return st;
@@ -207,27 +210,89 @@ public sealed partial class FarmingSystem
         foreach (var s in Region.Settlements) { int c = s.Culture & 255; if (_long[c].Kind == Ravensguard.Sim.Weather.LongKind.None) _long[c] = Weather.Long(c, year); }
     }
 
-    /// <summary>Worker-hours per day of each household: members from 12 up (5 tenths of a day to 15 and over 60, a full day between) who farm or whose household holds land.</summary>
+    /// <summary>
+    /// Persons the farm labour planner must not count because another employer (a business) already has them; set by the integration layer. Null: nobody is employed.
+    /// </summary>
+    public Func<int, bool>? IsEmployedElsewhere { get; set; }
+
+    /// <summary>
+    /// Brings the farming tables in step with a population that grows and changes hands (births, weddings, inheritance, escheat, emigration): the household
+    /// arrays grow, parcels whose holder changed in the population table pass to the new holder (with the barn stock), barns open for new holders and the
+    /// per-settlement household lists are rebuilt. A no-op for a static population.
+    /// </summary>
+    public void SyncPopulation()
+    {
+        int nh = Pop.Households.Count, np = P.Count;
+        if (_hhHours.Length < nh)
+        {
+            Array.Resize(ref _hhHours, nh); Array.Resize(ref _isHolder, nh);
+            if (State.SeedDebtG.Length < nh) { var sd = State.SeedDebtG; Array.Resize(ref sd, nh); State.SeedDebtG = sd; }
+        }
+        bool changed = false;
+        var src = Pop.ParcelHolder;
+        for (int p = 0; p < np && p < src.Length; p++)
+        {
+            if (src[p] == _popHolder[p]) continue;
+            int old = P.Holder[p], now = src[p]; _popHolder[p] = now; changed = true;
+            P.Holder[p] = now;
+            if (now >= 0 && old >= 0 && old != now && old < nh && Econ.OtherStores.TryGetValue(FarmIds.Barn(old), out var oldBarn))
+            {
+                var nb = Econ.OpenStore(StoreKind.Barn, FarmIds.Barn(now));
+                foreach (var (g, q) in oldBarn.Rows()) Store.Move(oldBarn, nb, g, q);
+            }
+        }
+        if (changed || _holderStale)
+        {
+            Array.Clear(_isHolder);
+            for (int p = 0; p < np; p++) if (P.Holder[p] >= 0 && P.Holder[p] < nh) _isHolder[P.Holder[p]] = true;
+            for (int h = 0; h < nh; h++) if (_isHolder[h]) Econ.OpenStore(StoreKind.Barn, FarmIds.Barn(h));
+            _holderStale = false;
+        }
+        int ns = Region.Settlements.Count;
+        var cnt = new int[ns];
+        for (int h = 0; h < nh; h++) { int s = Pop.Households.Settlement[h]; if ((uint)s < (uint)ns && Pop.Households.MemberCount[h] > 0) cnt[s]++; }
+        for (int s = 0; s < ns; s++)
+        {
+            if (_householdsOf[s].Length != cnt[s]) _householdsOf[s] = new int[cnt[s]];
+            int k = 0; var arr = _householdsOf[s];
+            if (cnt[s] == 0) continue;
+            for (int h = 0; h < nh; h++) if (Pop.Households.Settlement[h] == s && Pop.Households.MemberCount[h] > 0) arr[k++] = h;
+        }
+    }
+    private bool _holderStale = true;
+
+    /// <summary>
+    /// Worker-hours per day of each household: members from 12 up (5 tenths of a day to 15 and over 60, a full day between) who farm or whose household holds land,
+    /// plus the idle of any peasant or burgher household (no occupation, no employer: the seasonal hands the harvest hires). Business staff are not counted.
+    /// </summary>
     private void RecomputeHours(int day)
     {
-        var people = Pop.People; var hh = Pop.Households;
-        for (int h = 0; h < hh.Count; h++)
+        var people = Pop.People; var hh = Pop.Households; int n = Math.Min(hh.Count, _hhHours.Length);
+        var away = IsEmployedElsewhere;
+        for (int h = 0; h < n; h++)
         {
             int hours = 0;
-            if (hh.Class[h] != SocialClass.Gentry || _isHolder[h])
+            if (hh.MemberCount[h] > 0 && (hh.Class[h] != SocialClass.Gentry || _isHolder[h]))
                 foreach (int m in hh.Members(h))
                 {
                     int age = people.AgeYears(m, day);
                     if (age < 12) continue;
+                    if (people.Status[m] != PersonStatus.Alive) continue;
                     var occ = people.Occupation[m];
                     bool hand = occ is Occupation.Farmer or Occupation.Ploughman or Occupation.Labourer or Occupation.Shepherd
-                                || (occ == Occupation.None && hh.Class[h] == SocialClass.Peasant && _isHolder[h]);
+                                || (occ == Occupation.None && (hh.Class[h] == SocialClass.Peasant || (_idleHands && hh.Class[h] != SocialClass.Gentry)));
                     if (!hand) continue;
+                    if (away != null && away(m)) continue;
                     hours += age < 16 || age >= 60 ? _wh / 2 : _wh;
                 }
             _hhHours[h] = hours;
         }
+        for (int h = n; h < _hhHours.Length; h++) _hhHours[h] = 0;
     }
+
+    /// <summary>When true (the integrated economy), unoccupied members of landless households are seasonal hands too; the standalone farming tests keep the original rule.</summary>
+    public bool CountIdleHands { get => _idleHands; set => _idleHands = value; }
+    private bool _idleHands;
 
     /// <summary>Runs the seasonal steps due at hour 0 of this day (doy 1, 16, 31, 46) and then the daily step.</summary>
     public void StepDay(GameTime now)
@@ -257,7 +322,7 @@ public sealed partial class FarmingSystem
     public long TotalGrams(ushort good)
     {
         long s = 0;
-        foreach (var st in Econ.HouseholdStore) s += st.Qty(good);
+        for (int h = 0; h < Econ.HouseholdCount; h++) s += Econ.HouseholdStore[h].Qty(good);
         foreach (var st in Econ.OtherStores.Values) s += st.Qty(good);
         return s;
     }

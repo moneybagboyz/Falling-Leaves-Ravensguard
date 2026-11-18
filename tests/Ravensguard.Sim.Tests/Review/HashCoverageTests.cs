@@ -75,10 +75,13 @@ public class HashCoverageTests(HashWorldFixture fx) : IClassFixture<HashWorldFix
         Changes(r.ComputeHash, () => s.NearWaterway = nw + 1, () => s.NearWaterway = nw, "NearWaterway");
         var ww = r.Waterways.First(w => w.Tiles.Length > 0);
         Changes(r.ComputeHash, () => ww.Tiles[0]++, () => ww.Tiles[0]--, "Waterway.Tiles");
-        Assert.NotEmpty(r.Lakes);
-        var lake = r.Lakes[0];
-        Changes(r.ComputeHash, () => lake.MinTileX++, () => lake.MinTileX--, "Lake.MinTileX");
-        Changes(r.ComputeHash, () => lake.MaxTileY++, () => lake.MaxTileY--, "Lake.MaxTileY");
+        // the embark square may have no lake: take the first square of the grid that has one
+        var rs = RegionSettings.LoadDefaults(ContinentSettings.FindBaseContent()); rs.Seed = 5;
+        var lr = r.Lakes.Count > 0 ? r : Enumerable.Range(0, RegionCoord.Count).Select(i => RegionGenerator.Generate(fx.Continent, fx.History, RegionCoord.FromId(i), rs)).First(x => x.Lakes.Count > 0);
+        Assert.NotEmpty(lr.Lakes);
+        var lake = lr.Lakes[0];
+        Changes(lr.ComputeHash, () => lake.MinTileX++, () => lake.MinTileX--, "Lake.MinTileX");
+        Changes(lr.ComputeHash, () => lake.MaxTileY++, () => lake.MaxTileY--, "Lake.MaxTileY");
     }
 
     [Fact]

@@ -372,7 +372,7 @@ public class HistoryTests(ITestOutputHelper output)
         var ruins = p.R.Sites.Where(s => s.Kind == SiteKind.Ruin).ToList();
         var fields = p.R.Sites.Where(s => s.Kind == SiteKind.Battlefield).ToList();
         output.WriteLine($"seed {seed}: ruins {ruins.Count} ({string.Join(", ", ruins.GroupBy(r => r.SubKind).Select(g => g.Key + "=" + g.Count()))}), battlefields {fields.Count}, barrows {p.R.Sites.Count(s => s.Kind == SiteKind.Barrow)}");
-        Assert.InRange(ruins.Count, 8, 15);
+        Assert.InRange(ruins.Count, 5, 15); // embark regions are squares of the region grid now, so a quiet one (seed 1: 6 ruins) is possible
         Assert.True(fields.Count >= 2);
         Assert.True(ruins.Select(r => r.SubKind).Distinct().Count() >= 2, "ruins come from more than one cause"); // the plan-spacing picker may choose a quiet region (seed 2: seven abandoned villages and a sacked abbey)
         Assert.All(ruins, r => { Assert.NotNull(h.Chronicle.Get(r.HistoryEvent)); Assert.NotNull(h.Chronicle.Get(r.CauseEvent)); });

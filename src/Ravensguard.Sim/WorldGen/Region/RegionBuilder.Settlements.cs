@@ -15,6 +15,8 @@ internal sealed partial class RegionBuilder
     internal bool FieldEligible(int t, int minFert)
     {
         if (_r.Water[t] != 0 || _r.Built[t] != 0 || _r.Road[t] != 0) return false;
+        int x = t % N, y = t / N;
+        if (x < 1 || y < 1 || x > N - 2 || y > N - 2) return false; // fields are clipped at the border: never a field tile on the edge row or column
         if (_r.Fertility[t] < minFert || _r.SlopePermille[t] > _s.MaxFieldSlopePermille) return false;
         return _r.Biomes[t] is not (Biome.Mountain or Biome.Desert or Biome.Tundra or Biome.Marsh or Biome.Sea or Biome.Lake);
     }

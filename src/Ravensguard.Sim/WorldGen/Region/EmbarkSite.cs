@@ -39,8 +39,16 @@ public static class EmbarkSite
         return cells;
     }
 
+    /// <summary>Scores the grid square holding the cell (cx, cy): embark regions snap to the 16 x 16 region grid (decision O1), so the result's CellX/CellY are multiples of 16.</summary>
     public static EmbarkScore Score(Continent c, WorldHistory h, int cx, int cy)
-        => ScoreCore(c, h, cx, cy, ActiveWarCells(h));
+    {
+        if (cx < 0 || cy < 0 || cx >= Continent.Size || cy >= Continent.Size) return ScoreCore(c, h, cx, cy, []);
+        var rc = RegionCoord.Snap(cx, cy);
+        return ScoreCore(c, h, rc.CellX, rc.CellY, ActiveWarCells(h));
+    }
+
+    public static EmbarkScore Score(Continent c, WorldHistory h, RegionCoord at)
+        => ScoreCore(c, h, at.CellX, at.CellY, ActiveWarCells(h));
 
     private static EmbarkScore ScoreCore(Continent c, WorldHistory h, int cx, int cy, List<int> warCells)
     {
@@ -103,6 +111,9 @@ public static class EmbarkSite
         if (landPct < 95) Add("sea", -(95 - landPct) * 5);
         if (warKm < 20) Add("war", -(150 + (20 - warKm) * 10));
         Add("population", (int)Math.Clamp((pop - 8000) / 200, -60, 100));
+        // A grid square cannot be nudged to a better window, so the plan's ~25,000 people (about 22,000 to 28,000 in history) now weigh in.
+        if (pop < 22_000) Add("thin_population", (int)Math.Max(-300, -(22_000 - pop) / 30));
+        else if (pop > 28_000) Add("crowded_population", (int)Math.Max(-300, -(pop - 28_000) / 30));
         Add("ruins", Math.Min(ruins, 12) * 6);
         Add("realms", realmCount is >= 1 and <= 3 ? 80 : realmCount == 0 ? -100 : -40);
         Add("fertility", fertSum / Math.Max(1, land) / 2);
@@ -140,25 +151,18 @@ public static class EmbarkSite
         return pts;
     }
 
-    /// <summary>Best window by <see cref="Score"/> (ties go to the lowest y then x): three or four history towns preferred (plan §1), a river, mixed biomes, clear of active wars.</summary>
+    /// <summary>Best of the 256 grid squares by <see cref="Score"/> (ties go to the lowest id): three or four history towns preferred (plan §1), a river, mixed biomes, clear of active wars.</summary>
     public static EmbarkScore AutoPick(Continent c, WorldHistory h)
     {
         var wars = ActiveWarCells(h);
         EmbarkScore? best = null;
-        for (int cy = 0; cy + Window <= Continent.Size; cy += 2)
-            for (int cx = 0; cx + Window <= Continent.Size; cx += 2)
-            {
-                var s = ScoreCore(c, h, cx, cy, wars);
-                if (!s.Excluded && (best == null || s.Total > best.Total)) best = s;
-            }
-        if (best == null) throw new InvalidOperationException("No window on this continent can host an embark.");
-        var centre = best;
-        for (int dy = -1; dy <= 1; dy++)
-            for (int dx = -1; dx <= 1; dx++)
-            {
-                var s = ScoreCore(c, h, centre.CellX + dx, centre.CellY + dy, wars);
-                if (!s.Excluded && s.Total > best.Total) best = s;
-            }
+        for (int id = 0; id < RegionCoord.Count; id++)
+        {
+            var rc = RegionCoord.FromId(id);
+            var s = ScoreCore(c, h, rc.CellX, rc.CellY, wars);
+            if (!s.Excluded && (best == null || s.Total > best.Total)) best = s;
+        }
+        if (best == null) throw new InvalidOperationException("No region on this continent can host an embark.");
         return best;
     }
 }

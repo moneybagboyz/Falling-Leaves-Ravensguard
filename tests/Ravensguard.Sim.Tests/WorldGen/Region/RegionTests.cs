@@ -235,19 +235,19 @@ public class RegionTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public void Heights_are_consistent_across_overlapping_regions()
+    public void Heights_are_the_pure_function_any_block_of_tiles_gives()
     {
+        // regions are squares of the region grid and do not overlap; a height depends only on the global tile, so a block computed anywhere agrees with the region
         var w = Get(1);
         var dir = ContinentSettings.FindBaseContent();
         var rs = RegionSettings.LoadDefaults(dir); rs.Seed = 1;
-        int cx = Math.Min(w.Pick.CellX + 8, Continent.Size - 16), cy = w.Pick.CellY;
-        var b = RegionGenerator.Generate(w.C, w.H, cx, cy, rs);
-        int shift = (cx - w.Pick.CellX) * RegionSettings.CellM / RegionSettings.TileM;
+        int gx = w.R.CellX / 16 * Region.Size, gy = w.R.CellY / 16 * Region.Size;
+        var block = RegionGenerator.HeightBlock(w.C, w.H, rs, gx + 37, gy + 91, 120, 80);
         int checkedTiles = 0;
-        for (int y = 0; y < Region.Size; y += 7)
-            for (int x = shift; x < Region.Size; x += 5)
+        for (int y = 0; y < 80; y += 3)
+            for (int x = 0; x < 120; x += 2)
             {
-                Assert.Equal(w.R.HeightCm[Region.Index(x, y)], b.HeightCm[Region.Index(x - shift, y)]);
+                Assert.Equal(w.R.HeightCm[Region.Index(37 + x, 91 + y)], block[y * 120 + x]);
                 checkedTiles++;
             }
         Assert.True(checkedTiles > 1000);

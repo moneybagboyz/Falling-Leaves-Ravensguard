@@ -74,6 +74,40 @@ public static class HouseholdNeeds
             (long)b.AleMlPerPersonDay * (2 * adults + kids) / 2, (long)n * b.SaltGPerPersonDay, (long)n * b.FirewoodGPerPersonDay * FuelMultX100(tMeanC) / 100);
     }
 
+    /// <summary>Grams of vegetables a member's garden gives on each day of its season (doy 11-40): 868 t a game year for 25,000 people (resources spec G-R14, gardens 130,000 measures).</summary>
+    public const int GardenGPerPersonDay = 1100, GardenFirstDoy = 11, GardenLastDoy = 40, HenEggGPerPersonDay = 14;
+
+    /// <summary>
+    /// Household production of relish (resources spec G-R14, integration decision I12): every household has a garden that gives vegetables in the growing days and hens
+    /// that lay all year; created into the house store before the day's meal (reason Harvest). Cows, sheep and fish come through the herds and the market.
+    /// </summary>
+    public static void Produce(EconomyState e, HouseholdTable hht, int hh, int doy, ushort vegetables, ushort eggs)
+    {
+        int n = hht.MemberCount[hh]; if (n == 0) return;
+        var s = e.HouseholdStore[hh];
+        if (doy >= GardenFirstDoy && doy <= GardenLastDoy) s.Create(vegetables, (long)n * GardenGPerPersonDay, CreateReason.Harvest);
+        s.Create(eggs, (long)n * HenEggGPerPersonDay, CreateReason.Harvest);
+    }
+
+    /// <summary>
+    /// The wear of the day (integration decision I10): each member may wear out a pair of shoes (one in <c>shoes_lifetime_days</c>) or a set of clothes, and the household a
+    /// tool; a worn item is a count of items due that the household's shopping buys. Lifetimes are in historical days, as the basket says.
+    /// </summary>
+    public static void RollDurables(EconomyState e, HouseholdTable hht, int hh, ulong seed, long hourKey)
+    {
+        int n = hht.MemberCount[hh]; if (n == 0) return;
+        var b = e.Basket(hht.Class[hh]);
+        ulong id = hht.IdOf(hh).Value;
+        for (int k = 0; k < EconomyState.Durables; k++)
+        {
+            int life = k == 0 ? b.ShoesLifetimeDays : k == 1 ? b.ClothesLifetimeDays : b.ToolsLifetimeDays;
+            if (life <= 0) continue;
+            long ppm = (k == 2 ? Math.Max(1, (n + 2) / 3) : n) * 1_000_000L / life;
+            int idx = hh * EconomyState.Durables + k;
+            if (e.DueDurables[idx] < 8 && DetRng.Range(seed, hourKey, id, 0x2C8, (uint)k, 0, 1_000_000) < ppm) e.DueDurables[idx]++;
+        }
+    }
+
     /// <summary>Survive / Buffer / Profit from cover in days x10 (households spec 3.5); cash cover is optional (null = not tracked yet).</summary>
     public static HouseholdTier TierOf(int foodDaysX10, int fuelDaysX10, int? cashDaysX10, int tMeanC, NeedsBasketDef basket)
     {
@@ -131,10 +165,15 @@ public static class HouseholdNeeds
     }
 
     /// <summary>Hundredths of a measure the household could still eat from its staple and relish stock (for the cover cache).</summary>
-    public static long FoodStockX100(EconomyState e, Store store)
+    public static long FoodStockX100(EconomyState e, Store store, long seedReserveG = 0)
     {
-        long s = 0;
-        foreach (ushort g in e.Food.Staples) s += MeasuresX100(e.Goods, g, store.Qty(g));
+        long s = 0, reserve = seedReserveG;
+        foreach (ushort g in e.Food.Staples)
+        {
+            long have = store.Qty(g);
+            if (e.Food.IsGrain(g)) { long held = Math.Min(have, reserve); reserve -= held; have -= held; }     // seed corn is not food (the eating step keeps it too)
+            s += MeasuresX100(e.Goods, g, have);
+        }
         foreach (ushort g in e.Food.Relishes) s += MeasuresX100(e.Goods, g, store.Qty(g));
         return s;
     }
@@ -174,7 +213,7 @@ public static class HouseholdNeeds
             e.NutritionCd[p] = (short)cd;
         }
 
-        long foodStock = FoodStockX100(e, store);
+        long foodStock = FoodStockX100(e, store, e.SeedReserveG[hh]);
         int foodDays = needTotal == 0 ? 0 : (int)Math.Min(short.MaxValue, foodStock * 10 / needTotal);
         int fuelDays = need.FuelG == 0 ? short.MaxValue : (int)Math.Min(short.MaxValue, store.Qty(e.Food.Firewood) * 10 / need.FuelG);
         bool hungry = foodDays < 10;

@@ -49,6 +49,23 @@ public static class RegionSpawn
         return best == null ? null : NearestWalkable(s, best.At.X, best.At.Y, 14, paved: false);
     }
 
+    /// <summary>
+    /// A walkable cell on the road of one of the region's border gates, <paramref name="insideM"/> metres inside the edge, for walking over a region border: the best-class gate,
+    /// preferring one on the east edge (the border poi of the street view). Null when the region has no gate.
+    /// </summary>
+    public static Cell3? AtBorder(ChunkStreamer s, RegionData r, int insideM = 40)
+    {
+        foreach (var g in r.Gates.OrderByDescending(g => g.Class).ThenBy(g => g.Side == BorderSide.East ? 0 : 1).ThenBy(g => g.Side).ThenBy(g => g.Tile))
+        {
+            int along = g.Tile * RegionData.TileM + RegionData.TileM / 2;
+            int x = g.Side switch { BorderSide.East => RegionData.Meters - insideM, BorderSide.West => insideM, _ => along };
+            int y = g.Side switch { BorderSide.South => RegionData.Meters - insideM, BorderSide.North => insideM, _ => along };
+            var c = NearestWalkable(s, x, y, 14, paved: false);
+            if (c != null) return c;
+        }
+        return null;
+    }
+
     /// <summary>A walkable cell a few metres south of an authored landmark (the one with this index, else the first that hangs on a history event, else the first), where its footprint is in view.</summary>
     public static Cell3? AtLandmark(ChunkStreamer s, RegionData r, int index)
     {
