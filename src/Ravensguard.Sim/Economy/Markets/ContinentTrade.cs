@@ -17,17 +17,19 @@ public sealed class ContinentTrade
     /// <summary>The continent steps in only at the extremes: below 0.3 of the target cover the price curve gives 1.83 x Ref, above 2.8 of it 0.6 x Ref, which is the band the spec asks staples to keep.</summary>
     public const int ShortBelowPermilleOfCover = 300, GlutAbovePermilleOfCover = 2800;
 
-    private readonly MarketSystem _markets;
+    private readonly Func<IEnumerable<MarketBook>> _books;
     private readonly EconomyState _econ;
-    private readonly bool[] _local, _staple;
+    private readonly bool[] _local, _staple, _made;
     public PurseId Purse { get; }
 
     public long ImportedMites, ExportedMites;
     public long[] ImportedUnits, ExportedUnits;
 
-    public ContinentTrade(MarketSystem markets, EconomyState econ, PurseId purse)
+    /// <param name="madeLocally">Goods some recipe of the region makes: the continent does not sell them back (it would undercut the region's own workshops), it sells what no workshop here can make, the raw materials and grain.</param>
+    public ContinentTrade(Func<IEnumerable<MarketBook>> books, EconomyState econ, PurseId purse, IEnumerable<ushort>? madeLocally = null)
     {
-        _markets = markets; _econ = econ; Purse = purse;
+        _books = books; _econ = econ; Purse = purse;
+        _made = new bool[econ.Goods.Count]; if (madeLocally != null) foreach (ushort g in madeLocally) _made[g] = true;
         var c = econ.Goods; int n = c.Count;
         _local = new bool[n]; _staple = new bool[n];
         foreach (var g in new[] { "milk", "meat_fresh", "fish_fresh", "eggs", "vegetables", "cheese", "sheep", "cow", "pig", "hay", "straw", "firewood", "silver", "arming_sword", "whey", "sawdust", "offal" })
@@ -41,7 +43,7 @@ public sealed class ContinentTrade
     public void Daily(GameTime now)
     {
         int day = (int)now.TotalDays; var led = _econ.Ledger; int n = _econ.Goods.Count;
-        foreach (var b in _markets.AllBooks())
+        foreach (var b in _books())
         {
             if (b.Merchants.Count == 0) continue;
             MarketParty? m = null; long best = -1;
@@ -53,7 +55,7 @@ public sealed class ContinentTrade
                 var gb = b.Goods[g]; long cover = gb.Demand * gb.TargetCoverDays;
                 if (cover <= 1) continue;
                 bool staple = _staple[g];
-                if (gb.StockUnits * 1000 < cover * ShortBelowPermilleOfCover && (gb.StructuralDemand > 0 || gb.LastTradedDay >= 0)) Import(b, m, g, gb, cover, staple ? StapleImportMarkupPermille : ImportMarkupPermille, day);
+                if (!_made[g] && gb.StockUnits * 1000 < cover * ShortBelowPermilleOfCover && (gb.StructuralDemand > 0 || gb.LastTradedDay >= 0)) Import(b, m, g, gb, cover, staple ? StapleImportMarkupPermille : ImportMarkupPermille, day);
                 else if (gb.StockUnits * 1000 > cover * GlutAbovePermilleOfCover) Export(b, g, gb, cover, staple ? StapleExportDiscountPermille : ExportDiscountPermille, day);
             }
         }

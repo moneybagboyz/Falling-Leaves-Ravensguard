@@ -37,7 +37,7 @@ public sealed class EconomyWorld
         Labour = new LabourMarket(production, world.Population, world.Economy, world.Seed, p => world.Children.Of(p));
         Parish = new ParishRelief(world, markets);
         var cp = world.Economy.Ledger.Open(PurseKind.Treasury, Ravensguard.Sim.People.Vital.Demography.ContinentOwner);
-        Trade = new ContinentTrade(markets, world.Economy, cp);
+        Trade = new ContinentTrade(markets.AllBooks, world.Economy, cp, content.Recipes.Recipes.SelectMany(r => r.Outputs.Select(o => o.Good)));
         farming.CountIdleHands = true;
         farming.IsEmployedElsewhere = Labour.IsAwayFromFarm;
         Labour.Rebuild();
