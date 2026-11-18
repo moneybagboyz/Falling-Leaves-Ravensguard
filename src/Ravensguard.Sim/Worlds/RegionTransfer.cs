@@ -16,16 +16,16 @@ public sealed record HouseholdMove(int Household, int[] Rows, Coin Coin, long Ma
 /// <see cref="MoveHousehold"/> is the public entry point for migration and caravans (spec 3.6; wiring them to it belongs to the economy work): the whole household
 /// goes with its coin and stock, kin inside it stay linked, kin outside it become foreign references (<see cref="PersonTable.ForeignKin"/>), pregnancies go on.
 /// <see cref="MovePerson"/> moves one adult who is free to go and refuses anyone whose leaving would split a family.
-/// Coin and goods are conserved across the two regions: coin is melted in the origin's ledger and struck in the destination's (<see cref="CoinOut"/>, <see cref="CoinIn"/>),
+/// Coin and goods are conserved across the two regions: coin leaves the origin's ledger as Emigrate and enters the destination's as Immigrate (<see cref="CoinOut"/>, <see cref="CoinIn"/>),
 /// goods leave as <see cref="DestroyReason.Export"/> and arrive as <see cref="CreateReason.Import"/>, so each region's audit still holds and the two together lose and gain nothing.
 /// </para>
 /// </summary>
 public static class RegionTransfer
 {
-    /// <summary>How coin that crosses a border leaves the origin's ledger. A dedicated emigrate reason would be cleaner; the ledger's reasons belong to the economy.</summary>
-    public const SinkReason CoinOut = SinkReason.Melt;
+    /// <summary>How coin that crosses a border leaves the origin's ledger: the dedicated emigrate reason (economy decision I33), counted in the audit's sunk coin, matched by immigrate in the destination.</summary>
+    public const SinkReason CoinOut = SinkReason.Emigrate;
     /// <summary>How it enters the destination's ledger.</summary>
-    public const SourceReason CoinIn = SourceReason.Mint;
+    public const SourceReason CoinIn = SourceReason.Immigrate;
 
     /// <summary>The age (years) from which a person may move alone.</summary>
     public const int AdultAge = 16;

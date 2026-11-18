@@ -144,7 +144,7 @@ public sealed class Ledger
         long total = 0, hoards = 0;
         for (int i = 0; i < _count; i++) { total = checked(total + _balance[i]); if (_kind[i] == PurseKind.Hoard) hoards += _balance[i]; }
         return new ConservationReport(new Coin(total), new Coin(hoards), Sourced(SourceReason.Seed), Sourced(SourceReason.Mint),
-            Sunk(SinkReason.Melt), Sunk(SinkReason.Burn), _count, _flowCount.Sum());
+            Sunk(SinkReason.Melt), Sunk(SinkReason.Burn), _count, _flowCount.Sum(), Sourced(SourceReason.Immigrate), Sunk(SinkReason.Emigrate));
     }
 
     /// <summary>Sum of the balances of every purse of this kind.</summary>
@@ -169,7 +169,7 @@ public sealed class Ledger
     /// <summary>Rebuilds a ledger from saved state and checks that it is conserved; throws <see cref="InvalidDataException"/> otherwise.</summary>
     public static Ledger Import(State s, int recentLogCapacity = 4096)
     {
-        if (s.Owner.Length != s.Kind.Length || s.Owner.Length != s.Balance.Length || s.Sourced.Length != SourceReasons || s.Sunk.Length != SinkReasons
+        if (s.Owner.Length != s.Kind.Length || s.Owner.Length != s.Balance.Length || s.Sourced.Length > SourceReasons || s.Sunk.Length > SinkReasons
             || s.FlowCoin.Length != TransferReasons || s.FlowCount.Length != TransferReasons) throw new InvalidDataException("corrupt ledger state");
         var l = new Ledger(recentLogCapacity);
         for (int i = 0; i < s.Owner.Length; i++)
@@ -179,7 +179,7 @@ public sealed class Ledger
             if (p.Index != i) throw new InvalidDataException("duplicate purse in ledger state");
             l._balance[i] = s.Balance[i];
         }
-        Array.Copy(s.Sourced, l._sourced, SourceReasons); Array.Copy(s.Sunk, l._sunk, SinkReasons);
+        Array.Copy(s.Sourced, l._sourced, s.Sourced.Length); Array.Copy(s.Sunk, l._sunk, s.Sunk.Length);   // a save older than the migration reasons has shorter arrays
         Array.Copy(s.FlowCoin, l._flowCoin, TransferReasons); Array.Copy(s.FlowCount, l._flowCount, TransferReasons);
         l._seq = s.Seq;
         if (!l.Audit().IsConserved) throw new InvalidDataException("saved ledger does not balance");

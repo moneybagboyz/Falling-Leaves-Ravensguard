@@ -31,11 +31,11 @@ public enum TransferReason : byte
     Trade, Wage, Rent, Hearth, Toll, Tithe, MarketToll, Dividend, Seigniorage, Inheritance, Escheat, Hoard, Stipend, Fine, Gift,
 }
 
-/// <summary>The only faucets: the one-off seed money of world creation, and silver struck at a mint.</summary>
-public enum SourceReason : byte { Seed, Mint }
+/// <summary>The only faucets: the one-off seed money of world creation, silver struck at a mint, and the coin a household brings across a region border (the other region's ledger holds the matching <see cref="SinkReason.Emigrate"/>).</summary>
+public enum SourceReason : byte { Seed, Mint, Immigrate }
 
-/// <summary>The only drains: melting coin into silver, and test-only burning. Hoarding is a transfer to a Hoard purse, not a sink.</summary>
-public enum SinkReason : byte { Melt, Burn }
+/// <summary>The only drains: melting coin into silver, test-only burning, and the coin a household takes across a region border (matched by <see cref="SourceReason.Immigrate"/> in the destination). Hoarding is a transfer to a Hoard purse, not a sink.</summary>
+public enum SinkReason : byte { Melt, Burn, Emigrate }
 
 /// <summary>A handle to a purse: its dense index in the ledger (ascending creation order). <see cref="None"/> is -1.</summary>
 public readonly record struct PurseId(int Index) : IComparable<PurseId>
@@ -58,10 +58,10 @@ public readonly record struct LedgerEntry(long Seq, PurseId From, PurseId To, Co
 /// Audit of the closed money supply (plan §3 item 3): <c>sum(purses) + sunk - sourced</c> is constant, exactly zero. Computed from the balances themselves,
 /// not from running totals, so a code path that bypassed the ledger would show as a non-zero <see cref="Imbalance"/>.
 /// </summary>
-public sealed record ConservationReport(Coin InPurses, Coin InHoards, Coin Seeded, Coin Minted, Coin Melted, Coin Burned, int PurseCount, long Transfers)
+public sealed record ConservationReport(Coin InPurses, Coin InHoards, Coin Seeded, Coin Minted, Coin Melted, Coin Burned, int PurseCount, long Transfers, Coin Immigrated = default, Coin Emigrated = default)
 {
-    public Coin Sourced => Seeded + Minted;
-    public Coin Sunk => Melted + Burned;
+    public Coin Sourced => Seeded + Minted + Immigrated;
+    public Coin Sunk => Melted + Burned + Emigrated;
     /// <summary>Coin in purses other than Hoard purses (the supply that prices see).</summary>
     public Coin Circulating => InPurses - InHoards;
     /// <summary><c>InPurses + Sunk - Sourced</c>; zero while conservation holds.</summary>
