@@ -67,6 +67,11 @@ public sealed class EconomySoak
     /// <summary>Track the coin each household earns and spends by reason during the last year of the run (diagnostics).</summary>
     public bool TrackLastYear { get; set; }
     private int _yearsToRun;
+    /// <summary>The goods-flow trace (<c>soak --flow</c>), null when off; <see cref="FlowYears"/> are the 1-based years printed (empty: all).</summary>
+    public FlowTrace? Flow { get; private set; }
+    public HashSet<int> FlowYears { get; } = [];
+    public Action<string>? FlowOut { get; set; }
+    public void EnableFlow() { Flow = new FlowTrace(Sim, World.Economy); }
     /// <summary>Hungry households at the end of each simulated day (a window of the whole run).</summary>
     public List<int> HungryByDay { get; } = [];
 
@@ -106,7 +111,9 @@ public sealed class EconomySoak
             {
                 Ticker.AdvanceHours(24);
                 Sample();
+                if (Flow != null && d % 6 == 5) Flow.Sample();
             }
+            if (Flow != null) { string t = Flow.CloseYear(y + 1, FlowYears.Count == 0 || FlowYears.Contains(y + 1)); if (t.Length > 0) FlowOut?.Invoke(t); }
             TotalHungryDaysAll += _hungryDays; TotalHouseholdDaysAll += _hhDays;
             var row = CloseYear();
             Rows.Add(row); onRow?.Invoke(row);

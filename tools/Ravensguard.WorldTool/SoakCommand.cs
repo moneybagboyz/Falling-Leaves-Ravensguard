@@ -12,7 +12,7 @@ public static class SoakCommand
 {
     public static int Run(string[] args)
     {
-        ulong seed = 1234; int years = 1, carry = 45; bool quiet = false, diag = false; string? probe = null; int probeDays = 15; int every = 1;
+        ulong seed = 1234; int years = 1, carry = 45; bool quiet = false, diag = false; string? probe = null; bool flow = false; var flowYears = new List<int>(); int probeDays = 15; int every = 1;
         for (int i = 1; i < args.Length; i++)
         {
             switch (args[i])
@@ -23,6 +23,8 @@ public static class SoakCommand
                 case "--every": every = Math.Max(1, int.Parse(args[++i])); break;
                 case "--quiet": quiet = true; break;
                 case "--diag": diag = true; break;
+                case "--flow": flow = true; break;
+                case "--flow-years": flowYears = args[++i].Split(',').Select(int.Parse).ToList(); flow = true; break;
                 case "--probe": probe = args[++i]; break;
                 case "--probe-days": probeDays = int.Parse(args[++i]); break;
                 default: Console.Error.WriteLine($"unknown option {args[i]}"); return 1;
@@ -35,6 +37,7 @@ public static class SoakCommand
         Console.WriteLine($"seed {seed}: {w.People.Count:N0} people, {w.Households.Count:N0} households, {hw.Economy.Markets.AllBooks().Count()} market books, {hw.Economy.Production.Businesses.Count} businesses, built in {sw.ElapsedMilliseconds} ms");
         Console.WriteLine($"band: staple mid / base price within {EconomySoak.BandLow / 1000.0:0.0}..{EconomySoak.BandHigh / 1000.0:0.0}, book-days of books with a merchant; staples {string.Join(", ", EconomySoak.Staples.Take(5))} (price index columns are the mean mid/base)");
         var soak = new EconomySoak(hw) { TrackLastYear = diag };
+        if (flow) { soak.EnableFlow(); foreach (int y in flowYears) soak.FlowYears.Add(y); soak.FlowOut = Console.WriteLine; }
         if (probe != null) { soak.Probe(probe, probeDays, Console.Out); return 0; }
         Console.WriteLine(EconomySoak.Header());
         bool ok = true;

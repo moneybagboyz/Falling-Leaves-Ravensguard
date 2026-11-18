@@ -10,8 +10,18 @@ public enum DestroyReason : byte { Eaten, Burned, Spoiled, Worn, Sown, Consumed,
 /// Per good and reason counters of every create and destroy, for the mass audit: <c>created - destroyed == stock delta</c> exactly (items spec 2.2, soak 9.1).
 /// Shared by all stores of one economy; nothing else may change a stock quantity.
 /// </summary>
+/// <summary>Optional observer of every create, destroy and move of goods (the soak's goods-flow trace); null in normal runs.</summary>
+public interface IFlowTrace
+{
+    void Created(Store store, ushort good, CreateReason why, long qty);
+    void Destroyed(Store store, ushort good, DestroyReason why, long qty);
+    void Moved(Store from, Store to, ushort good, long qty);
+}
+
 public sealed class MassLedger
 {
+    /// <summary>The flow observer, if any (diagnostics only; never part of the state).</summary>
+    public IFlowTrace? Trace { get; set; }
     public static readonly int CreateReasons = Enum.GetValues<CreateReason>().Length;
     public static readonly int DestroyReasons = Enum.GetValues<DestroyReason>().Length;
     private readonly long[] _created, _destroyed;

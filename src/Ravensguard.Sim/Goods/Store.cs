@@ -95,7 +95,7 @@ public sealed class Store
         if (qty < 0) throw new ArgumentOutOfRangeException(nameof(qty));
         if (qty == 0) return true;
         if (qty > Room(good)) return false;
-        Set(good, checked(Qty(good) + qty)); _ledger.Created(good, why, qty);
+        Set(good, checked(Qty(good) + qty)); _ledger.Created(good, why, qty); _ledger.Trace?.Created(this, good, why, qty);
         return true;
     }
 
@@ -114,7 +114,7 @@ public sealed class Store
         if (qty == 0) return true;
         long have = Qty(good);
         if (have < qty) return false;
-        Set(good, have - qty); _ledger.Destroyed(good, why, qty);
+        Set(good, have - qty); _ledger.Destroyed(good, why, qty); _ledger.Trace?.Destroyed(this, good, why, qty);
         return true;
     }
 
@@ -133,7 +133,7 @@ public sealed class Store
         if (qty == 0) return true;
         if (ReferenceEquals(from, to)) return from.Qty(good) >= qty;
         if (from.Qty(good) < qty || qty > to.Room(good)) return false;
-        from.Set(good, from.Qty(good) - qty); to.Set(good, checked(to.Qty(good) + qty));
+        from.Set(good, from.Qty(good) - qty); to.Set(good, checked(to.Qty(good) + qty)); from._ledger.Trace?.Moved(from, to, good, qty);
         return true;
     }
 
