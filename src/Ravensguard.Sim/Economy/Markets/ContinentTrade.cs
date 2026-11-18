@@ -28,7 +28,7 @@ public sealed partial class ContinentTrade
 {
     /// <summary>Bridge toll per vehicle and the realm-gate toll per vehicle, mites; the goods toll at a realm gate, permille of cargo value (roads.jsonc defaults, caravans spec 2.2).</summary>
     public const int TollBridgeMites = 10, TollGateMites = 25, TollGoodsPermille = 5;
-    public const int MinMarginPct = 15, PriceAgeDiscountPermillePerDay = 10, RiskPremiumPct = 3, CapitalCostPermillePerDay = 5;
+    public const int MinMarginPct = 8, PriceAgeDiscountPermillePerDay = 10, RiskPremiumPct = 2, CapitalCostPermillePerDay = 5;
     public const int DriverWageMites = 150, GuardWageMites = 1_750;
     public const int FoundingCashMites = 20_000;
     public const uint StreamCaravan = 0x230, StreamTrip = 0x231;

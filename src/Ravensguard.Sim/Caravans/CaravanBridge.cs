@@ -69,7 +69,7 @@ public sealed class CaravanBridge
         var parts = new List<LivePart>();
         long spacing = SpacingM * 1000L;
         int drivers = Math.Max(0, c.Crew.Length - c.Guards);
-        for (int i = 0; i < c.Vehicles.Length; i++)
+        for (int i = 0; i < c.Fielded; i++)
         {
             long d = lead - i * spacing;
             var p = At(d);
@@ -81,7 +81,7 @@ public sealed class CaravanBridge
         }
         var m = At(lead + 6_500);
         parts.Add(new LivePart(LivePartKind.Master, 0, m.X, m.Y, m.Hx, m.Hy, c.Master));
-        long train = Math.Max(1, c.Vehicles.Length) * spacing;
+        long train = Math.Max(1, c.Fielded) * spacing;
         for (int g = 0; g < c.Guards && drivers + g < c.Crew.Length; g++)
         {
             var q = At(lead + 3_000 - (g + 1) * train / (c.Guards + 1));

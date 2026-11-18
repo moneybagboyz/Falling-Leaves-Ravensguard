@@ -132,6 +132,9 @@ public sealed class Caravan
     public int OwnerHousehold = -1;
     public PurseId Account = PurseId.None;
     public VehicleKind[] Vehicles = [];
+    /// <summary>How many of the vehicles go on the current trip (the planner takes as many as the cargo fills); 0 = all.</summary>
+    public int Used;
+    public int Fielded => Used > 0 ? Math.Min(Used, Vehicles.Length) : Vehicles.Length;
     public int[] Crew = [];                // person rows in the home region: drivers first, then guards
     public int Guards;
     public CaravanState State;
@@ -154,9 +157,12 @@ public sealed class Caravan
     public bool TradedAtGate;
     public long ProfitTotalMites;
     public int DangerX = 0;
+    /// <summary>Coin the owner borrowed from his lord's treasury to buy the wagons, and whose treasury it is (repaid from the first trips' takings).</summary>
+    public long DebtMites;
+    public ulong DebtTo;
 
-    public int CapKg { get { int c = 0; foreach (var v in Vehicles) c += Ravensguard.Sim.Caravans.Vehicles.CapKg(v); return c; } }
-    public int SlowestMmPerGs { get { int s = int.MaxValue; foreach (var v in Vehicles) s = Math.Min(s, Ravensguard.Sim.Caravans.Vehicles.SpeedMmPerGs(v)); return s == int.MaxValue ? 0 : s; } }
+    public int CapKg { get { int c = 0; for (int i = 0; i < Fielded; i++) c += Ravensguard.Sim.Caravans.Vehicles.CapKg(Vehicles[i]); return c; } }
+    public int SlowestMmPerGs { get { int s = int.MaxValue; for (int i = 0; i < Fielded; i++) s = Math.Min(s, Ravensguard.Sim.Caravans.Vehicles.SpeedMmPerGs(Vehicles[i])); return s == int.MaxValue ? 0 : s; } }
     public bool Active => State != CaravanState.Idle && State != CaravanState.Lost;
     public EntityId StoreOwner => Id;
 
@@ -206,8 +212,8 @@ public sealed class CaravanTable
         foreach (var c in _byId.Values)
         {
             L((long)c.Id.Value); L(c.Home); L(c.Region); L(c.Settlement); L(c.OwnerBusiness); L(c.Master); L(c.Account.Index); L((long)c.State); L(c.Neighbour); L(c.Dist); L(c.AnchorSec);
-            L(c.PrevDist); L(c.WaitUntilSec); L(c.DepartSec); L(c.ArrearsMites); L(c.ExpectedProfitMites); L(c.FloatMites); L(c.PurchaseMites); L(c.Trips); L(c.LostDay); L(c.Guards);
-            L(c.TradedAtGate ? 1 : 0); L(c.ProfitTotalMites);
+            L(c.PrevDist); L(c.WaitUntilSec); L(c.DepartSec); L(c.ArrearsMites); L(c.ExpectedProfitMites); L(c.FloatMites); L(c.PurchaseMites); L(c.Trips); L(c.LostDay); L(c.Guards); L(c.Used);
+            L(c.TradedAtGate ? 1 : 0); L(c.ProfitTotalMites); L(c.DebtMites); L((long)c.DebtTo);
             foreach (var v in c.Vehicles) L((long)v);
             foreach (int m in c.Crew) L(m);
             foreach (var l in c.Cargo) { L(l.Good); L(l.Units); L(l.CostMites); L(l.Dest); }

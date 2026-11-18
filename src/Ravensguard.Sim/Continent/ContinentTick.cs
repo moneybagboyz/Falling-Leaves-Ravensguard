@@ -311,8 +311,8 @@ public static class ContinentTick
             var s = st.Summaries[r.Id]; var l = st.Link(r.Id);
             if (l.PendingPersons > 0) continue;
             long start = r.Economy.World.Vital.Years.Count > 0 ? r.Economy.World.Vital.Years[0].PopulationAtStart : s.Pop;
-            long room = Math.Max(0, Math.Min(start - s.Pop, (long)s.Vacancies * ContinentRules.HouseCapPersonsPerDwellingX10 / 10));
-            long quota = Math.Min(room / 6 + (room > 0 ? 1 : 0), start * 12 / 1000);
+            // an offer of settlers while the region is below its starting head count; the region takes what it has dwellings and its own quota for (RegionPopulation, S7)
+            long quota = s.Pop < start ? start * 12 / 1000 : 0;
             bool refugeesOnly = false;
             foreach (int ei in st.EdgesOf[r.Id])
             {

@@ -3,6 +3,7 @@ using Ravensguard.Sim.Continental;
 using Ravensguard.Sim.Core;
 using Ravensguard.Sim.Goods;
 using Ravensguard.Sim.People;
+using Ravensguard.Sim.People.Vital;
 using Ravensguard.Sim.Production;
 using Ravensguard.Sim.WorldGen.Region;
 
@@ -51,6 +52,14 @@ public sealed partial class ContinentTrade
         return ReferenceEquals(best, b);
     }
 
+    /// <summary>What goods brought to a short book fetch as the book's own customers buy them down again: the integral of its ask price over the stock range they fill, less five percent for what is left over.</summary>
+    private static long ImportValue(MarketBook cb, ushort g, long units, int spread)
+    {
+        long stock = cb.Goods[g].StockUnits;
+        long mid = cb.Curve(g).BuyMid(stock + units, units);
+        return (long)(((Int128)mid * (1000 + spread) + 500) / 1000) * 95 / 100;
+    }
+
     private static long Price(long refMicro, long qty, int permille) => (long)(((Int128)refMicro * qty * permille / 1000 + 500_000) / 1_000_000);
 
     /// <summary>Hours of daylight travel a game day allows (caravans spec 3.1: sunrise + 0.5 h to sunset - 0.5 h), by season.</summary>
@@ -66,6 +75,7 @@ public sealed partial class ContinentTrade
         public CaravanPath Path = null!;
         public int Gate, Neighbour;
         public long ImportBudget;
+        public int Used;
     }
 
     // ------------------------------------------------------------------ the day's planning
@@ -100,9 +110,14 @@ public sealed partial class ContinentTrade
     private void TryTrip(GameTime now, ContinentState st, RegionLink rl, MarketBook b, MarketParty m, Business biz, Caravan? car)
     {
         var led = _econ.Ledger; long cash = led.Balance(m.Purse).Mites;
-        var kinds = car?.Vehicles ?? PickVehicles(cash, out _);
-        if (kinds.Length == 0) { Dbg[6]++; return; }
-        if (car == null && (st.Caravans.ActiveCount() >= CaravanTable.MaxActive || cash < FoundingCashMites + Vehicles.PriceMites(kinds[0]))) { Dbg[7]++; return; }
+        long wagon = Vehicles.PriceMites(VehicleKind.OxWagon);
+        long loanRoom = car == null ? Advanceable(b) : 0;
+        int owned = car?.Vehicles.Length ?? 0;
+        // the fleet the merchant could field: what he owns, plus wagons he can pay for (founding also on his lord's advance)
+        int canBuy = (int)Math.Max(0, (cash + loanRoom - FoundingCashMites) / wagon);
+        int maxFleet = Math.Min(MaxVehicles, Math.Max(owned, owned + canBuy));
+        if (maxFleet < 1) { Dbg[6]++; return; }
+        if (car == null && st.Caravans.ActiveCount() >= CaravanTable.MaxActive) { Dbg[7]++; return; }
         int guards = car?.Guards ?? 0;
         Plan? best = null;
         foreach (var et in rl.Edges)
@@ -110,23 +125,29 @@ public sealed partial class ContinentTrade
             var nb = st.Summaries[et.Neighbour]; var edge = st.Edges[et.Edge];
             if (edge.Closed || nb.Pop <= 0 || nb.Detailed || et.PayBudgetMites <= 0) continue;
             var (path, gate) = PathTo(b.SettlementIndex, et.Neighbour); if (path == null) continue;
-            var plan = Evaluate(now, st, et, nb, b, m, path, gate, kinds, guards, cash, car == null);
-            if (plan != null && (best == null || plan.Profit > best.Profit)) best = plan;
+            foreach (int use in UseCounts)
+            {
+                if (use > maxFleet) break;
+                var plan = Evaluate(now, st, et, nb, b, m, path, gate, FleetOf(car, use), guards, cash + loanRoom, car == null || use > owned);
+                if (plan != null) { plan.Used = use; if (best == null || plan.Profit > best.Profit) best = plan; }
+            }
         }
         if (best == null) return;
-        Launch(now, st, b, m, biz, car, kinds, best);
+        Launch(now, st, b, m, biz, car, best);
     }
 
-    /// <summary>Vehicles a merchant with <paramref name="cash"/> mites can afford: an ox wagon (1 t) per 300 crowns of cash up to three, a cart when poorer.</summary>
-    private static VehicleKind[] PickVehicles(long cash, out int n)
+    private static VehicleKind[] FleetOf(Caravan? car, int use)
     {
-        long spare = cash - FoundingCashMites;
-        n = spare < Vehicles.PriceMites(VehicleKind.Cart) ? 0 : (int)Math.Min(4, 1 + (spare - Vehicles.PriceMites(VehicleKind.Cart)) / 50_000);
-        if (n == 0) return [];
-        var k = new VehicleKind[n];
-        for (int i = 0; i < n; i++) k[i] = spare >= 30_000 * (i + 1) + Vehicles.PriceMites(VehicleKind.OxWagon) ? VehicleKind.OxWagon : VehicleKind.Cart;
+        var k = new VehicleKind[use];
+        for (int i = 0; i < use; i++) k[i] = car != null && i < car.Vehicles.Length ? car.Vehicles[i] : VehicleKind.OxWagon;
         return k;
     }
+
+    public const int MaxVehicles = 8;
+    private static readonly int[] UseCounts = [1, 2, 3, 4, 6, 8];
+
+    /// <summary>Hired drivers a train of <paramref name="vehicles"/> needs: the master leads the first two wagons, each hired driver two more.</summary>
+    public static int DriversFor(int vehicles) => Math.Max(0, (vehicles - 1) / 2);
 
     // ------------------------------------------------------------------ the margin
 
@@ -143,7 +164,7 @@ public sealed partial class ContinentTrade
         var (w0, w1) = Window(now.Season);
         long travelS = path.RoundMm / Math.Max(1, slowest);
         long tripDays = (travelS + (w1 - w0) * 3600L - 1) / ((w1 - w0) * 3600L) + 1;
-        int drivers = Math.Max(0, kinds.Length - 1);
+        int drivers = DriversFor(kinds.Length);
         long wages = tripDays * (drivers * DriverWageMites + guards * GuardWageMites);
         long fodder = tripDays * 8 * kinds.Sum(Vehicles.Draught) * 20;                  // 8 kg of hay or grain a day an animal, bought at the camps at about 20 mites a kilo
         long tolls = 0; foreach (var t in path.Tolls) tolls += t.Kind == TollKind.Bridge ? 2L * kinds.Length * TollBridgeMites : (long)kinds.Length * TollGateMites;
@@ -160,7 +181,7 @@ public sealed partial class ContinentTrade
             long massPerUnit = Math.Max(1, cat.MassG(g, 1));
             int k = Array.IndexOf(ContinentRules.TrackedGoods, cat.StringId(g));
             int idx = k >= 0 ? nb.PriceIdx[k] : 1000;
-            long refMicro = gb.BaseRefMicro; if (refMicro <= 0) continue;
+            long refMicro = gb.RefMicro; if (refMicro <= 0) continue;
             long bidMicro = refMicro * idx / 1000 * (1000 - spread) / 1000 * ageDown / 1000, askMicro = refMicro * idx / 1000 * (1000 + spread) / 1000 * ageUp / 1000;
             long fitMass = capMassG / massPerUnit;
             long volPerUnit = Math.Max(1, cat.VolumeMl(g, 1)); long fitVol = capVolMl / volPerUnit; long fit = Math.Min(fitMass, fitVol);
@@ -196,7 +217,7 @@ public sealed partial class ContinentTrade
                     long w1u = Math.Min(Math.Max(1, ccover * 7 / 10 - cg.StockUnits), fit - want);
                     if (k >= 0) w1u = Math.Min(w1u, (et.SpareG[k] - want * massPerUnit) / massPerUnit);
                     if (w1u < 1) continue;
-                    rev += cb.QuoteSell(g, w1u) * 92 / 100; want += w1u; dest.Add((cb.SettlementIndex, w1u));
+                    rev += ImportValue(cb, g, w1u, spread); want += w1u; dest.Add((cb.SettlementIndex, w1u));
                 }
                 if (want >= 1)
                 {
@@ -234,6 +255,7 @@ public sealed partial class ContinentTrade
         long risk = (revenue + impRevenue) * (RiskPremiumPct) / 100;
         long profit = gross - transport - capital - risk;
         plan.Profit = profit; plan.Cost = transport + capital + risk; plan.Revenue = revenue + impRevenue; plan.Purchase = totalSpend; plan.ImportBudget = impPurchase;
+        if (Environment.GetEnvironmentVariable("RV_PLANDBG") != null && Dbg[3] < 25 && profit <= 0 && (revenue + impRevenue) > 1000) Console.WriteLine($"plan use={kinds.Length} rev={revenue} purch={purchase} impRev={impRevenue} impPurch={impPurchase} transport={transport} (wages {wages} fodder {fodder} tolls {tolls}) capital={capital} risk={risk} tripDays={tripDays} path={path.LengthMm/1000}m exp={plan.Exports.Count} imp={plan.Imports.Count}");
         if (profit <= 0) Dbg[3]++; else if (profit * 100 < (totalSpend + transport) * MinMarginPct) Dbg[4]++; else Dbg[5]++;
         if (profit <= 0 || profit * 100 < (totalSpend + transport) * MinMarginPct) return null;
         return plan;
@@ -252,31 +274,57 @@ public sealed partial class ContinentTrade
 
     // ------------------------------------------------------------------ launching a trip
 
-    private void Launch(GameTime now, ContinentState st, MarketBook b, MarketParty m, Business biz, Caravan? car, VehicleKind[] kinds, Plan plan)
+    private void Launch(GameTime now, ContinentState st, MarketBook b, MarketParty m, Business biz, Caravan? car, Plan plan)
     {
         var led = _econ.Ledger; var w = _ew.World; int day = (int)now.TotalDays; var pt = w.People;
+        int use = plan.Used; long wagon = Vehicles.PriceMites(VehicleKind.OxWagon);
         if (car == null)
         {
-            var crew = HireCrew(b.SettlementIndex, Math.Max(0, kinds.Length - 1), 0, now);
-            if (crew.Length + 1 < kinds.Length) kinds = kinds.Take(crew.Length + 1).ToArray();
-            long price = 0; foreach (var k in kinds) price += Vehicles.PriceMites(k);
-            if (kinds.Length == 0 || led.Balance(m.Purse).Mites < price + FoundingCashMites / 2) { ReleaseCrew(crew); return; }
-            if (!led.Transfer(m.Purse, b.TollPurse, new Coin(price), TransferReason.Trade)) { ReleaseCrew(crew); return; }     // the wainwright's and the horse-coper's share goes to the market's purse
+            var crew = HireCrew(b.SettlementIndex, DriversFor(use), 0, now);
+            use = Math.Min(use, 2 + 2 * crew.Length);                                  // the master and each hired driver lead two wagons
+            long price = use * wagon;
+            long debt = 0; ulong debtTo = 0;
+            long own = led.Balance(m.Purse).Mites - FoundingCashMites / 2;
+            if (own < price)
+            {
+                // his lord's treasury advances the rest (reason Stipend), to be repaid from the caravan's takings
+                var tid = TreasuryOf(b.SettlementIndex);
+                if (tid != Demography.ContinentOwner && led.TryFind(PurseKind.Treasury, tid, out var tp))
+                {
+                    long adv = Math.Min(price - Math.Max(0, own), led.Balance(tp).Mites / 10);
+                    if (adv > 0 && led.Transfer(tp, m.Purse, new Coin(adv), TransferReason.Stipend)) { debt = adv; debtTo = tid.Value; }
+                }
+            }
+            if (use < 1 || led.Balance(m.Purse).Mites < price) { if (debt > 0) led.Transfer(m.Purse, led.Open(PurseKind.Treasury, new EntityId(debtTo)), new Coin(debt), TransferReason.Trade); return; }
+            if (!PayWainwrights(m, b, price)) return;
             var id = EntityId.Make(IdKind.Other, CaravanIdBase + EntityId.RegionBase(Link.Region) + st.NextCaravanSerial(Link.Region));
             car = new Caravan
             {
                 Id = id, Home = Link.Region, Region = Link.Region, Settlement = b.SettlementIndex, OwnerBusiness = biz.Index, Master = biz.Owner, OwnerHousehold = biz.OwnerHousehold,
-                Vehicles = kinds, Crew = crew, Account = led.Open(PurseKind.Caravan, id), FoundedSec = now.Seconds, State = CaravanState.Idle, AnchorSec = now.Seconds,
+                Vehicles = Enumerable.Repeat(VehicleKind.OxWagon, use).ToArray(), Crew = crew, Account = led.Open(PurseKind.Caravan, id), FoundedSec = now.Seconds, State = CaravanState.Idle, AnchorSec = now.Seconds,
+                DebtMites = debt, DebtTo = debtTo,
             };
             _econ.OpenStore(StoreKind.Chest, id, 0, 0, enforce: false);
             st.Caravans.Add(car);
             CaravansFounded++;
         }
+        else if (use > car.Vehicles.Length)
+        {
+            // the fleet grows when the cargo asks for it and the merchant can pay and find drivers
+            int drivers = car.Crew.Length - car.Guards;
+            if (DriversFor(use) > drivers) { var more = HireCrew(b.SettlementIndex, DriversFor(use) - drivers, 0, now); car.Crew = [.. car.Crew.Take(drivers), .. more, .. car.Crew.Skip(drivers)]; drivers += more.Length; }
+            use = Math.Min(use, 2 + 2 * drivers);
+            int extra = use - car.Vehicles.Length;
+            if (extra > 0 && led.Balance(m.Purse).Mites - FoundingCashMites / 2 >= extra * wagon && PayWainwrights(m, b, extra * wagon))
+                car.Vehicles = [.. car.Vehicles, .. Enumerable.Repeat(VehicleKind.OxWagon, extra)];
+            use = Math.Min(use, car.Vehicles.Length);
+        }
+        plan.Used = use;
         // guards for the danger of the road, hired for the trip
         int danger = DangerOf(plan.Path, st);
-        int wanted = Math.Clamp(danger / 25 * ((car.Vehicles.Length + 3) / 4), 0, 8);
+        int wanted = Math.Clamp(danger / 25 * ((use + 3) / 4), 0, 8);
         if (car.Guards < wanted) { var g = HireCrew(b.SettlementIndex, wanted - car.Guards, 1, now); car.Crew = [.. car.Crew, .. g]; car.Guards += g.Length; }
-        car.DangerX = danger;
+        car.DangerX = danger; car.Used = use;
         var store = _econ.OpenStore(StoreKind.Chest, car.Id, 0, 0, enforce: false);
         // load: buy at the home book with the merchant's coin, move into the cargo store
         long spent = 0; int day2 = day;
@@ -293,7 +341,6 @@ public sealed partial class ContinentTrade
         car.WaitUntilSec = now.Seconds + (2 + jitter) * 3600L;
         car.DepartSec = car.WaitUntilSec;
         car.State = CaravanState.Loading;
-        foreach (int p in car.Crew) pt.Employer[p] = biz.Owner;
         TripsStarted++;
     }
 
@@ -306,7 +353,7 @@ public sealed partial class ContinentTrade
         var led = _econ.Ledger; var gb = b.Goods[g]; var nb = st.Summaries[plan.Neighbour];
         int spread = _econ.Money.SpreadHalfPermille;
         int k = Array.IndexOf(ContinentRules.TrackedGoods, _econ.Goods.StringId(g)); int idx = k >= 0 ? nb.PriceIdx[k] : 1000;
-        long contract = gb.BaseRefMicro * idx / 1000 * (1000 - spread) / 1000 * ExportContractPermille / 1000;
+        long contract = gb.RefMicro * idx / 1000 * (1000 - spread) / 1000 * ExportContractPermille / 1000;
         if (contract <= 0) return 0;
         b.Sync(g);
         long left = Math.Min(units, gb.StockUnits), paidTotal = 0;
@@ -334,6 +381,35 @@ public sealed partial class ContinentTrade
 
     public const int ExportContractPermille = 880;
     public static readonly long[] Dbg = new long[8];
+    /// <summary>What the merchant's lord will lend toward wagons: a tenth of his treasury's coin.</summary>
+    private long Advanceable(MarketBook b)
+    {
+        var tid = TreasuryOf(b.SettlementIndex);
+        return tid != Demography.ContinentOwner && _econ.Ledger.TryFind(PurseKind.Treasury, tid, out var tp) ? _econ.Ledger.Balance(tp).Mites / 10 : 0;
+    }
+
+    private EntityId TreasuryOf(int settlement)
+    {
+        var r = _ew.World.Population.Region;
+        int fief = settlement < r.Settlements.Count ? r.Settlements[settlement].FiefIndex : -1;
+        return fief >= 0 && fief < r.Fiefs.Count ? r.Fiefs[fief].Id : Demography.ContinentOwner;
+    }
+
+    /// <summary>The wagons are bought from the region's carpenters (their purses get the coin, ascending business, the market's own town first).</summary>
+    private bool PayWainwrights(MarketParty m, MarketBook b, long price)
+    {
+        var led = _econ.Ledger; long left = price;
+        var shops = _ew.Production.Businesses.Where(x => x.State == BusinessState.Open && _ew.Production.KindOf(x).Id == "carpentry").OrderBy(x => x.Settlement == b.SettlementIndex ? 0 : 1).ThenBy(x => x.Index).ToList();
+        if (shops.Count == 0) return led.Transfer(m.Purse, b.TollPurse, new Coin(price), TransferReason.Trade);
+        for (int i = 0; left > 0; i++)
+        {
+            long part = Math.Min(left, Math.Max(1, price / Math.Min(shops.Count, 3) + 1));
+            if (!led.Transfer(m.Purse, shops[i % shops.Count].Purse, new Coin(part), TransferReason.Trade)) return false;
+            left -= part;
+        }
+        return true;
+    }
+
     public const ulong CaravanIdBase = 0x400_0000;
     public static bool IsCaravanId(EntityId id) => id.Kind == IdKind.Other && (id.Counter & EntityId.SerialMask) >= CaravanIdBase && (id.Counter & EntityId.SerialMask) < CaravanIdBase + 0x100_0000;
 
@@ -358,43 +434,25 @@ public sealed partial class ContinentTrade
     {
         if (n <= 0) return [];
         var w = _ew.World; var pt = w.People; var hht = w.Households; long day = now.TotalDays;
+        var busy = new HashSet<int>();
+        foreach (var c in Link.State.Caravans.All) if (c.Home == Link.Region) foreach (int p in c.Crew) busy.Add(p);
         var got = new List<int>();
-        if (Environment.GetEnvironmentVariable("RV_CREWDBG") != null && _crewDbg++ < 2)
-        {
-            int[] c = new int[8];
-            for (int p = 0; p < pt.Count; p++)
+        // drivers and guards come from the young men of the region with no trade of their own: farm sons and the like (sons of landed households first, the settlement's own before the rest)
+        for (int pass = 0; pass < 2 && got.Count < n; pass++)
+            for (int p = 0; p < pt.Count && got.Count < n; p++)
             {
-                if (pt.Status[p] != PersonStatus.Alive || pt.Sex[p] != Sex.Male) continue; c[0]++;
-                int age = w.AgeOn(p, day); if (age < 16 || age > 50) continue; c[1]++;
-                if (pt.Household[p] < 0 || hht.Head[pt.Household[p]] == p) continue; c[2]++;
-                var occ = pt.Occupation[p]; if (occ is Occupation.None or Occupation.Labourer or Occupation.Servant) c[3]++; else continue;
-                if (pt.Employer[p] < 0) c[4]++;
-                if (pt.Employer[p] < 0 && hht.ParcelCount[pt.Household[p]] == 0) c[5]++;
+                if (pt.Status[p] != PersonStatus.Alive || pt.Sex[p] != Sex.Male || pt.Occupation[p] != Occupation.None || busy.Contains(p)) continue;
+                int hh = pt.Household[p]; if (hh < 0 || hht.Head[hh] == p || hht.MemberCount[hh] < 3) continue;
+                if (pass == 0 && pt.HomeSettlement[p] != settlement) continue;
+                int age = w.AgeOn(p, day); if (age < 18 || age > 40) continue;
+                if (pt.PregnantUntilDay[p] >= 0 || pt.Spouse[p] >= 0 && role == 1) continue;
+                got.Add(p); busy.Add(p);
             }
-            Console.WriteLine("crewdbg " + string.Join(",", c));
-        }
-        for (int p = 0; p < pt.Count && got.Count < n; p++)
-        {
-            if (pt.Status[p] != PersonStatus.Alive || pt.Sex[p] != Sex.Male || pt.Employer[p] >= 0) continue;
-            var occ = pt.Occupation[p]; if (occ is not (Occupation.None or Occupation.Labourer or Occupation.Servant)) continue;
-            int hh = pt.Household[p]; if (hh < 0 || hht.Head[hh] == p || hht.ParcelCount[hh] > 0 && occ == Occupation.None) continue;
-            if (hht.Settlement[hh] != settlement && role == 0 && got.Count == 0 && p > 0 && false) continue;
-            int age = w.AgeOn(p, day); if (age < 16 || age > 50) continue;
-            if (pt.HomeSettlement[p] != settlement) continue;
-            if (IsOnRoad(p)) continue;
-            got.Add(p);
-        }
-        foreach (int p in got) pt.Occupation[p] = role == 1 ? Occupation.Guard : Occupation.Labourer;
         return [.. got];
     }
 
-    private int _crewDbg;
     private readonly HashSet<int> _onRoad = [];
     private bool IsOnRoad(int person) => _onRoad.Contains(person);
 
-    private void ReleaseCrew(int[] crew)
-    {
-        var pt = _ew.World.People;
-        foreach (int p in crew) { pt.Occupation[p] = Occupation.None; pt.Employer[p] = -1; _onRoad.Remove(p); }
-    }
+    private void ReleaseCrew(int[] crew) { foreach (int p in crew) _onRoad.Remove(p); }
 }

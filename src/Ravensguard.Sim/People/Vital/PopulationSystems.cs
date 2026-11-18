@@ -261,6 +261,9 @@ public sealed class PopulationMigrationSystem : AbstractSystem
     {
         var w = ctx.World; var pt = w.People; var hht = w.Households; var rl = link.Mine;
         Dbg[0]++; int left = rl.PendingPersons - rl.TakenPersons; if (left <= 0 || rl.PendingPersons <= 0) return;
+        long start = w.Vital.Years.Count > 0 ? w.Vital.Years[0].PopulationAtStart : w.Vital.Alive;
+        long shortfall = start - w.Vital.Alive; if (shortfall <= 0) return;
+        left = (int)Math.Min(left, Math.Min(start * ReturnQuotaPermille / 1000, Math.Max(1, shortfall / ShortfallDivisor)));       // the same quota the stand-in had: a sixth of the shortfall, at most 1.2 percent of the start
         Dbg[1] += left;
         long coinHead = rl.PendingCoin / rl.PendingPersons, measuresHead = rl.PendingMeasures / rl.PendingPersons;
         Demography.Stake StakeFor(int n) => new(coinHead * n, measuresHead * n);

@@ -115,7 +115,7 @@ public class TaxTests(ITestOutputHelper output)
         int rented = PickPlainHousehold(w, s); int owned = -1; var hht = w.Sim.Households;
         for (int h = rented + 1; h < hht.Count; h++) if (hht.MemberCount[h] > 0 && hht.Settlement[h] == s && h != rented && !w.Economy.Production.Businesses.Any(b => b.OwnerHousehold == h)) { owned = h; break; }
         hht.Deed[rented] = DeedKind.Tenant; hht.Deed[owned] = DeedKind.Owned;
-        long coin0 = w.Econ.Ledger.Audit().InPurses.Mites; var ob = new RegionOutbox(w.Sim.Ids); int members = hht.MemberCount[rented];
+        var ob = new RegionOutbox(w.Sim.Ids); int members = hht.MemberCount[rented];
         for (int k = 0; k < 6; k++)
         {
             SetCoin(w.Sim, rented, 0); SetCoin(w.Sim, owned, 0);
@@ -135,7 +135,7 @@ public class TaxTests(ITestOutputHelper output)
         var entry = ob.Entries.Single(e => e.TypeId == "eviction");
         Assert.Contains(entry.Causes, c => c.Kind == CauseKind.Tax);
         Assert.Equal(members, ob.Counters["emigrants"]);
-        Assert.True(w.Econ.Ledger.Audit().IsConserved); Assert.True(coin0 >= w.Econ.Ledger.Audit().InPurses.Mites - 1_000_000);
+        Assert.True(w.Econ.Ledger.Audit().IsConserved);
     }
 
     [Fact]
@@ -308,7 +308,6 @@ public class TaxTests(ITestOutputHelper output)
     public void OnTheRealTick_TheCrownsShareReachesTheRealm_EveryMiteAccountedFor()
     {
         using var w = SoakWorld.Create(); var sim = w.Sim; var tax = w.Economy.Taxes; var T = tax.Treasuries;
-        long coin0 = w.Econ.Ledger.Audit().InPurses.Mites;
         w.Run(2);                                                                     // the first day of spring: S4 collects, and the realm gets its share
         long hearth = sim.State.Taxes.TallyOf(TaxTally.HearthCollected), fwd = sim.State.Taxes.TallyOf(TaxTally.CrownForwarded);
         Assert.True(hearth > 4_000 * 150, $"collected {hearth}");
@@ -320,7 +319,7 @@ public class TaxTests(ITestOutputHelper output)
         long fiefIncome = T.All.Where(r => r.Kind is TreasuryKind.Fief or TreasuryKind.Town).Sum(r => T.IncomeOf(r.Slot, TransferReason.Hearth, false));
         Assert.Equal(hearth, fiefIncome);                                              // what the households paid is what the fiefs and towns received
         Assert.True(w.Econ.Ledger.Audit().IsConserved);
-        Assert.Equal(coin0, w.Econ.Ledger.Audit().InPurses.Mites);                    // no taxes were printed: coin only moved
+        Assert.True(w.Econ.Ledger.Audit().Imbalance.IsZero);                          // no taxes were printed: coin only moved (the continent's own flows are audited as sources and sinks)
         output.WriteLine(tax.Report());
     }
 
@@ -328,7 +327,7 @@ public class TaxTests(ITestOutputHelper output)
     public void AYearOfTaxesRentsAndWages_KeepsCoinAndMassExact_AndNoTreasuryGoesNegative()
     {
         using var w = SoakWorld.Create(); var tax = w.Economy.Taxes;
-        long coin0 = w.Econ.Ledger.Audit().InPurses.Mites; int treasuries = tax.Treasuries.Count;
+        int treasuries = tax.Treasuries.Count;
         w.Run(60, (d, _) =>
         {
             if (d % 15 == 14) { Assert.True(w.Econ.Ledger.Audit().IsConserved); foreach (var r in tax.Treasuries.All) Assert.True(w.Econ.Ledger.Balance(r.Purse).Mites >= 0); }
@@ -337,7 +336,6 @@ public class TaxTests(ITestOutputHelper output)
         output.WriteLine($"{treasuries} treasuries\n{tax.Report()}\n{tax.Treasuries.LastSeasonReport()}");
         Assert.True(tax.Treasuries.History.Count >= 3);
         Assert.True(tax.Treasuries.IncomeTotal(tax.Treasuries.FiefSlot[0]) > 0);
-        Assert.True(coin0 > 0);
     }
 
     [Fact]

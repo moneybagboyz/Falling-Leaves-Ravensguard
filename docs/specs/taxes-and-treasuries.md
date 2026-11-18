@@ -277,3 +277,5 @@ spring realm in 2,873 / fief in 50,044 [Rent 829, Hearth 9,577, MarketToll 35,80
 summer realm 2,888 / fief 44,725 [Rent 898, Hearth 9,624, MarketToll 31,032, Escheat 286, Stipend 2,885] out 46,446 / parish 17,629 out 17,632;
 autumn realm 2,887 / fief 47,708 [Rent 886, Hearth 9,622, MarketToll 34,310, Stipend 2,890] out 49,706 (lord share 15) / parish 16,476 out 17,825;
 winter realm 2,811 / fief 34,864 [Rent 824, Hearth 9,369, MarketToll 21,854, Stipend 2,817] out 35,266 / parish 17,100 out 15,438.
+
+With the continent tick v1 and caravans work in progress merged in (tree at the time of writing), the same 25 years give population 24,647 with the taxes and 24,626 without them, workshops 55 percent against 57, hungry 0.78 against 0.83 percent: the drop from the figures above is the caravan stand-in's change, and the taxes are neutral at that level too. `ResumeDeterminismTests` n=24 and n=700 fail in that tree with the tax systems removed as well (the continent state); with the taxes on the previous tree they are green.

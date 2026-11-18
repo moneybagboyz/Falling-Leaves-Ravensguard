@@ -196,7 +196,6 @@ public sealed partial class ContinentTrade
         var hoard = led.Open(PurseKind.Hoard, loot);
         long left = led.Balance(c.Account).Mites;
         if (left > 0) { led.Transfer(c.Account, hoard, new Coin(left), TransferReason.Hoard); LootMites += left; }
-        foreach (int p in c.Crew) if (pt.Status[p] == PersonStatus.Alive) { pt.Occupation[p] = Occupation.None; pt.Employer[p] = -1; }
         c.Crew = []; c.Guards = 0;
         c.State = CaravanState.Lost; c.LostDay = (int)time.TotalDays; c.Region = c.Home;
         CaravansLost++;
@@ -221,7 +220,7 @@ public sealed partial class ContinentTrade
             {
                 if (_local[g]) continue;
                 int k = Array.IndexOf(ContinentRules.TrackedGoods, cat.StringId(g)); int idx = k >= 0 ? nb.PriceIdx[k] : 1000;
-                long bid = book.Goods[g].BaseRefMicro * idx / 1000 * (1000 - spread) / 1000;
+                long bid = book.Goods[g].RefMicro * idx / 1000 * (1000 - spread) / 1000;
                 if (bid <= 0) continue;
                 long budget = Math.Max(0, et.PayBudgetMites - et.CoinNetIn);
                 long take = Math.Min(q, (long)((Int128)budget * 1_000_000 / bid));
@@ -247,7 +246,7 @@ public sealed partial class ContinentTrade
             {
                 ushort g = line.Good; long massPerUnit = Math.Max(1, cat.MassG(g, 1)), volPerUnit = Math.Max(1, cat.VolumeMl(g, 1));
                 int k = Array.IndexOf(ContinentRules.TrackedGoods, cat.StringId(g)); int idx = k >= 0 ? nb.PriceIdx[k] : 1000;
-                long ask = book.Goods[g].BaseRefMicro * idx / 1000 * (1000 + spread) / 1000;
+                long ask = book.Goods[g].RefMicro * idx / 1000 * (1000 + spread) / 1000;
                 if (ask <= 0) continue;
                 long units = Math.Min(line.Units, Math.Min(capMass / massPerUnit, capVol / volPerUnit));
                 if (k >= 0) units = Math.Min(units, (et.SpareG[k] + et.StockNetOut[k]) / massPerUnit);
@@ -303,6 +302,11 @@ public sealed partial class ContinentTrade
             }
             long back = led.Balance(c.Account).Mites;
             if (back > 0) led.Transfer(c.Account, m.Purse, new Coin(back), TransferReason.Trade);
+            if (c.DebtMites > 0)                                                        // the lord's advance comes back from the takings, half of what the purse holds at most
+            {
+                long repay = Math.Min(c.DebtMites, led.Balance(m.Purse).Mites / 2);
+                if (repay > 0 && led.Transfer(m.Purse, led.Open(PurseKind.Treasury, new EntityId(c.DebtTo)), new Coin(repay), TransferReason.Trade)) c.DebtMites -= repay;
+            }
             c.ProfitTotalMites += back - c.FloatMites - c.PurchaseMites;
         }
         c.State = CaravanState.Idle; c.Region = c.Home; c.Dist = 0; c.PrevDist = 0; c.Trips++; TripsDone++;
@@ -317,7 +321,6 @@ internal static class CaravanExt
     {
         if (c.Guards <= 0) return;
         int drivers = c.Crew.Length - c.Guards;
-        for (int i = drivers; i < c.Crew.Length; i++) { int p = c.Crew[i]; if (pt.Status[p] == PersonStatus.Alive) { pt.Occupation[p] = Occupation.None; pt.Employer[p] = -1; } }
         c.Crew = c.Crew.Take(drivers).ToArray(); c.Guards = 0;
     }
 }

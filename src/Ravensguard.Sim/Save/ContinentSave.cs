@@ -112,6 +112,9 @@ public sealed class CaravanSave
     [Key(36)] public long ProfitTotalMites { get; set; }
     [Key(37)] public int DangerX { get; set; }
     [Key(38)] public int[] WishDest { get; set; } = [];
+    [Key(39)] public long DebtMites { get; set; }
+    [Key(40)] public ulong DebtTo { get; set; }
+    [Key(41)] public int Used { get; set; }
 }
 
 /// <summary>
@@ -160,7 +163,7 @@ public sealed class ContinentSave
                 Neighbour = c.Neighbour, GateIndex = c.GateIndex, Dist = c.Dist, PrevDist = c.PrevDist, AnchorSec = c.AnchorSec, WaitUntilSec = c.WaitUntilSec, DepartSec = c.DepartSec, FoundedSec = c.FoundedSec,
                 ArrearsMites = c.ArrearsMites, ExpectedProfitMites = c.ExpectedProfitMites, TripCostMites = c.TripCostMites, FloatMites = c.FloatMites, PurchaseMites = c.PurchaseMites,
                 WishGood = c.Cargo.Select(l => l.Good).ToArray(), WishUnits = c.Cargo.Select(l => l.Units).ToArray(), WishDest = c.Cargo.Select(l => l.Dest).ToArray(), Trips = c.Trips, LostDay = c.LostDay, TradedAtGate = c.TradedAtGate,
-                ProfitTotalMites = c.ProfitTotalMites, DangerX = c.DangerX,
+                ProfitTotalMites = c.ProfitTotalMites, DangerX = c.DangerX, DebtMites = c.DebtMites, DebtTo = c.DebtTo, Used = c.Used,
             }).ToArray(),
         };
         return s;
@@ -205,7 +208,7 @@ public sealed class ContinentSave
                 Neighbour = c.Neighbour, GateIndex = c.GateIndex, Dist = c.Dist, PrevDist = c.PrevDist, AnchorSec = c.AnchorSec, WaitUntilSec = c.WaitUntilSec, DepartSec = c.DepartSec, FoundedSec = c.FoundedSec,
                 ArrearsMites = c.ArrearsMites, ExpectedProfitMites = c.ExpectedProfitMites, TripCostMites = c.TripCostMites, FloatMites = c.FloatMites, PurchaseMites = c.PurchaseMites,
                 Cargo = c.WishGood.Select((g, i) => new CargoLine { Good = g, Units = c.WishUnits[i], Dest = c.WishDest.Length > i ? c.WishDest[i] : -1 }).ToList(), Trips = c.Trips, LostDay = c.LostDay, TradedAtGate = c.TradedAtGate,
-                ProfitTotalMites = c.ProfitTotalMites, DangerX = c.DangerX,
+                ProfitTotalMites = c.ProfitTotalMites, DangerX = c.DangerX, DebtMites = c.DebtMites, DebtTo = c.DebtTo, Used = c.Used,
             });
         }
         return st;

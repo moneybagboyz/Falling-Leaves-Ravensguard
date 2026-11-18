@@ -27,12 +27,7 @@ public static class NewGameWorld
         var sv = new RegionServices(cs.Seed, content, continent, home) { History = history };
         var rw = RegionWorld.CreateFresh(sv, home, pop);
         if (hero != null) rw.Sim.Economy.SeedHero(hero.Coin);
-        var cont = Ravensguard.Sim.Continental.ContinentState.Create(cs.Seed, history, home.Id, (int)rw.Sim.Vital.Alive, rw.Sim.Economy.Ledger.Audit().InPurses.Mites);
-        Ravensguard.Sim.Continental.ContinentWiring.Attach(cont, continent, history, sv.Weather);
-        sv.AbstractContinent = cont;
-        rw.Economy.BindContinent(new Ravensguard.Sim.Economy.Markets.ContinentLink(cont, home.Id));
-        Ravensguard.Sim.Continental.ContinentTick.BindPrices(rw.Sim.Economy.Goods);
-        Ravensguard.Sim.Continental.ContinentTick.Run(cont, [new Ravensguard.Sim.Continental.ResidentRegion(home.Id, rw.Economy)], GameTime.FromGameHours(rw.Sim.State.HourDone + 1));
+        var cont = sv.AbstractContinent!;                          // made by the home region itself (RegionServices.EnsureContinent), over this world's history
         return new WorldState
         {
             Hero = hero, Codex = codex, Content = content, HomeRecords = rw,

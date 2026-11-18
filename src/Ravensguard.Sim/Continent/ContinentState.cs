@@ -94,9 +94,9 @@ public sealed class ContinentState
     }
 
     /// <summary>A continent with no history (tests that build a bare economy): the home region and four equal neighbours joined to it by one road each.</summary>
-    public static ContinentState Standalone_(ulong seed, int home, int homePop, long homeCoinMites)
+    public static ContinentState Standalone_(ulong seed, int home, int homePop, long homeCoinMites, bool driven = true)
     {
-        var st = new ContinentState(seed, home) { Standalone = true };
+        var st = new ContinentState(seed, home) { Standalone = driven };
         long coinPerPerson = homePop > 0 ? homeCoinMites / homePop : 5000;
         var h = RegionCoord.FromId(home);
         foreach (var rc in new[] { h, h.Offset(0, -1), h.Offset(1, 0), h.Offset(0, 1), h.Offset(-1, 0) })

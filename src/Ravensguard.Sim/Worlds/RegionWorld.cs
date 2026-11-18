@@ -42,6 +42,25 @@ public sealed class RegionServices
     public Ravensguard.Sim.WorldGen.History.WorldHistory? History { get; set; }
     /// <summary>The abstract continent every region of this world trades and migrates through (continent tick v1); regions bind to it when they are made. Null in a bare test world.</summary>
     public Ravensguard.Sim.Continental.ContinentState? AbstractContinent { get; set; }
+    private readonly object _continentGate = new();
+
+    /// <summary>
+    /// The continent of this world, made from the first region that asks (normally the home region: its head count and coin set the continent's per-head values) when none was
+    /// given: over the history's roads when the history is at hand, else a small synthetic one. A continent made here is driven by whoever steps the regions (the scheduler), never by a region's own ticker.
+    /// </summary>
+    public Ravensguard.Sim.Continental.ContinentState EnsureContinent(Ravensguard.Sim.Abstract.EconomyWorld ew, int regionId)
+    {
+        lock (_continentGate)
+        {
+            if (AbstractContinent != null) return AbstractContinent;
+            var sim = ew.World; int pop = (int)Math.Max(1, sim.Vital.Alive); long coin = sim.Economy.Ledger.Audit().InPurses.Mites;
+            var st = History != null ? Ravensguard.Sim.Continental.ContinentState.Create(Seed, History, Home.Id, pop, coin) : Ravensguard.Sim.Continental.ContinentState.Standalone_(Seed, Home.Id, pop, coin, driven: false);
+            if (History != null) Ravensguard.Sim.Continental.ContinentWiring.Attach(st, Continent, History, Weather);
+            Ravensguard.Sim.Continental.ContinentTick.BindPrices(sim.Economy.Goods);
+            Ravensguard.Sim.Continental.ContinentTick.Run(st, [new Ravensguard.Sim.Continental.ResidentRegion(regionId, ew)], GameTime.FromGameHours(sim.State.HourDone + 1));
+            return AbstractContinent = st;
+        }
+    }
 
     public RegionServices(ulong seed, ContentDatabase content, Continent continent, RegionCoord home)
     {
@@ -106,7 +125,7 @@ public sealed class RegionWorld : IDisposable
         sim.Rates = VitalRates.EconomyDefault;
         VitalSeeding.SeedPregnancies(sim, start);
         var ew = EconomyWorld.Create(sim, sv.Content, sv.FarmWeatherFor());
-        if (sv.AbstractContinent != null) ew.BindContinent(new Ravensguard.Sim.Economy.Markets.ContinentLink(sv.AbstractContinent, at.Id));
+        ew.BindContinent(new Ravensguard.Sim.Economy.Markets.ContinentLink(sv.EnsureContinent(ew, at.Id), at.Id));
         return new RegionWorld(at, sv, sim, ew, chron, ids);
     }
 
@@ -122,7 +141,7 @@ public sealed class RegionWorld : IDisposable
         var farming = new FarmingSystem(w.Population.Region, w.Population, w.Economy, sv.FarmSettings, sv.FarmWeatherFor(), chron, w.Ids, sv.SeedFor(at), w.Farming);
         var ew = new EconomyWorld(sim, farming, w.Markets, w.Production, w.Production.Resources!, w.Production.Content, chron);
         ew.Install();
-        if (sv.AbstractContinent != null) ew.BindContinent(new Ravensguard.Sim.Economy.Markets.ContinentLink(sv.AbstractContinent, at.Id));
+        ew.BindContinent(new Ravensguard.Sim.Economy.Markets.ContinentLink(sv.EnsureContinent(ew, at.Id), at.Id));
         return new RegionWorld(at, sv, sim, ew, w.Chronicle, w.Ids);
     }
 
@@ -174,7 +193,7 @@ public sealed class RegionWorld : IDisposable
         d.Markets.Restore(markets, prod);
         var ew = new EconomyWorld(sim, farming, markets, prod, prod.Resources!, content, farmChron);
         ew.Install();
-        if (sv.AbstractContinent != null) ew.BindContinent(new Ravensguard.Sim.Economy.Markets.ContinentLink(sv.AbstractContinent, at.Id));
+        ew.BindContinent(new Ravensguard.Sim.Economy.Markets.ContinentLink(sv.EnsureContinent(ew, at.Id), at.Id));
         return new RegionWorld(at, sv, sim, ew, chron, ids) { PendingChunks = d.Chunks };
     }
 
