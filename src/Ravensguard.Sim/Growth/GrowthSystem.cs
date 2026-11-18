@@ -44,7 +44,7 @@ public sealed class GrowthSystem
 
     // ---------------------------------------------------------------- the season
 
-    /// <summary>The seasonal step, one part an hour of the season's first day so no hour carries it all (decision G17): hour 0 advances the projects, 1 starts cottages, 2 clearings, 3 businesses, 4 moves to town; <paramref name="step"/> -1 runs them all (tests).</summary>
+    /// <summary>The seasonal step, one part an hour of the season's first day so no hour carries it all (decision G17): hours 0 to 3 advance the projects (a quarter each, by serial), 4 starts cottages, 5 clearings, 6 businesses, 7 moves to town; <paramref name="step"/> -1 runs them all (tests).</summary>
     public void Seasonal(GameTime now, RegionOutbox ob, int step = -1)
     {
         if (!Enabled) return;
@@ -52,16 +52,17 @@ public sealed class GrowthSystem
         _hands = null;
         _popBy = new int[Region.Settlements.Count];
         for (int h = 0; h < hht.Count; h++) if (hht.MemberCount[h] > 0 && (uint)hht.Settlement[h] < (uint)_popBy.Length) _popBy[hht.Settlement[h]] += hht.MemberCount[h];
-        if (step is -1 or 0)
+        if (step is -1 or (>= 0 and < 4))
             for (int i = 0; i < State.Projects.Count; i++)
             {
                 var p = State.Projects[i];
+                if (step >= 0 && p.Serial % 4 != step) continue;
                 if (Advance(p, now, ob)) { State.Projects.RemoveAt(i); i--; }
             }
-        if (step is -1 or 1) StartCottages(now, ob);
-        if (step is -1 or 2) StartClearings(now, ob);
-        if (step is -1 or 3) OpenBusinesses(now, ob);
-        if (step is -1 or 4) MoveToTowns(now, ob);
+        if (step is -1 or 4) StartCottages(now, ob);
+        if (step is -1 or 5) StartClearings(now, ob);
+        if (step is -1 or 6) OpenBusinesses(now, ob);
+        if (step is -1 or 7) MoveToTowns(now, ob);
     }
 
     private int[] _popBy = [];

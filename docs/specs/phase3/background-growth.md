@@ -4,7 +4,7 @@ Implements plan 4A.2 "Background growth (from Phase 3)": the abstract world buil
 
 ## 1. What it does
 
-One system, `growth-seasonal` (H6, order `S6Growth` 6,650: after the marriage matching of S6 and before the migration of S7), runs in hours 0 to 4 of the first day of each season (one part an hour, decision G17: the whole step in hour 0 took up to 190 ms against the 150 ms budget) and calls `GrowthSystem.Seasonal`:
+One system, `growth-seasonal` (H6, order `S6Growth` 6,650: after the marriage matching of S6 and before the migration of S7), runs in hours 0 to 7 of the first day of each season (one part an hour, decision G17: the whole step in hour 0 took up to 190 ms against the 150 ms budget) and calls `GrowthSystem.Seasonal`:
 
 1. **Advance** every project in progress (a cottage, a clearing): buy or gather what is missing, pay the labour, finish what is done.
 2. **Cottages** (3.1): start new ones.
@@ -72,7 +72,7 @@ A town with free houses and posts its businesses cannot fill takes up to `town_m
 | G13 | Soak gates: -10 percent to +25 percent, at most 0.5 percent a year per decade (4). | background growth |
 | G14 | Marriage ages in `VitalRates.EconomyDefault`: brides 22, grooms 25 (were 21 and 23). | housing is the brake now; the historical range is 22-26 for women |
 | G16 | The assart target is 2.5 acres a head with up to 5 clearings of 8 acres a season: at 2.3 the extra mouths pushed the grain price up and the honest band fell under 40 percent in two dry years of the century. | measured: 100 years of seed 1234, band minimum 35 percent at 2.3, 60 percent at 2.5 |
-| G17 | The seasonal step is split over hours 0-4 of the season's first day (projects, cottages, clearings, businesses, town moves). | worst hour budget 150 ms (abstract spec E4) |
+| G17 | The seasonal step is split over hours 0-7 of the season's first day (projects in four quarters, cottages, clearings, businesses, town moves). | worst hour budget 150 ms (abstract spec E4) |
 | G15 | Soil improvement (marling, manuring as improvement projects) is **deferred to Phase 5**: it needs a per-field fertility cap in `FieldTable`, a lime and marl supply chain and the construction-job contracts of Phase 5, and nothing else in Phase 3 reads it. The fallow credit and grazing already raise fertility a little. | lead's item 7 |
 
 ## 6. Known limits
