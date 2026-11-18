@@ -66,8 +66,8 @@ public class AutopilotRulesTests
     [Fact]
     public void AP6_HomeByNightfall_2kmEachWay_AtTheJog_Is7p41Hours_Leave0830InMidwinter_Yes_0900_No_Midsummer1100_Yes()
     {
-        double rt = LimitGuard.RoundTripMinutes(2000);
-        Assert.InRange(rt / 60.0, 7.40, 7.42);                                                   // 3.70 h each way
+        long rt = LimitGuard.RoundTripSec(2000);
+        Assert.Equal(26_667, rt);                                                                // 7.41 h: 3.70 h each way, rounded up to the second
         int winter = 53, summer = 23, lat = 480;
         Assert.InRange(Daylight.SunsetMinute(lat, winter), 15 * 60 + 55, 16 * 60 + 1);           // sunset 15:58
         Assert.InRange(Daylight.SunsetMinute(lat, summer), 20 * 60 - 3, 20 * 60 + 5);            // sunset 20:01

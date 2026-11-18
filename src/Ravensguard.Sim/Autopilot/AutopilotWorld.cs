@@ -55,7 +55,7 @@ public sealed partial class AutopilotWorld
     /// <summary>Called when a chronicle entry should be written (set by the host; default writes to <see cref="State"/>.Chronicle).</summary>
     public Action<EntityId, string, long, IReadOnlyDictionary<string, string>>? ChronicleHook { get; set; }
     /// <summary>A pending-spend ledger: command sequence number to (person, day, mites reserved).</summary>
-    private readonly Dictionary<long, (EntityId Person, int Day, long Mites)> _reserved = [];
+    private SortedDictionary<long, (EntityId Person, int Day, long Mites)> _reserved => Book.Reserved;
     private readonly Dictionary<EntityId, (int Day, PersonAnchors A)> _anchors = [];
     private readonly Dictionary<EntityId, int> _busSeen = [];
 

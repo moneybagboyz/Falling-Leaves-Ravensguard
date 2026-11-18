@@ -87,13 +87,16 @@ public sealed class ReportBuilder(ConsentStore consent, Redactor redactor, strin
         yield return new Part("system.json", U(JsonSerializer.Serialize(r.Session.System, SessionHeader.Json)));
         yield return new Part("settings.json", U(r.SettingsJson));
         yield return new Part("content_manifest.json", U(r.ContentManifestJson));
-        if (r.IncludeLog && r.LogPath != null && File.Exists(r.LogPath))
+        // each optional piece needs both the request's tick and the stored consent (review finding 11: the stored choices were only the screen's defaults)
+        var allowed = consent.Current;
+        bool log = r.IncludeLog && allowed.IncludeLog, shotOk = r.IncludeScreenshot && allowed.IncludeScreenshot, save = allowed.IncludeSave;
+        if (log && r.LogPath != null && File.Exists(r.LogPath))
         {
             var tail = Encoding.UTF8.GetBytes(T(LogService.TailOf(r.LogPath, LogTailLines)));
             if (tail.Length > LogTailMaxBytes) tail = tail[^(int)LogTailMaxBytes..];
             yield return new Part("log_tail.txt", tail);
         }
-        if (r.IncludeScreenshot && r.Screenshot is { Length: > 0 } shot)
+        if (shotOk && r.Screenshot is { Length: > 0 } shot)
         {
             if (shot.Length <= ScreenshotMaxBytes) yield return new Part("screenshot.png", shot);
             else notes.Add($"screenshot.png left out: {shot.Length / 1024} KB is over the {ScreenshotMaxBytes / 1024} KB cap");
@@ -106,13 +109,14 @@ public sealed class ReportBuilder(ConsentStore consent, Redactor redactor, strin
         }
         if (r.HashesCsv != null) yield return new Part("hashes.csv", Cap(Encoding.UTF8.GetBytes(r.HashesCsv), 100 * 1024));
         foreach (var kv in r.ExtraFiles) yield return new Part(kv.Key, U(kv.Value));
-        if (r.IncludeAutosave && r.AutosavePath != null && File.Exists(r.AutosavePath))
+        if (r.IncludeAutosave && save && r.AutosavePath != null && File.Exists(r.AutosavePath))
         {
             long n = new FileInfo(r.AutosavePath).Length;
             if (n <= AutosaveMaxBytes) yield return new Part("autosave.bin", null, r.AutosavePath);
             else notes.Add($"autosave.bin left out: {n / (1024 * 1024)} MB is over the {AutosaveMaxBytes / (1024 * 1024)} MB cap");
         }
-        if (r.BugSavePath != null && File.Exists(r.BugSavePath)) yield return new Part("bug.save", null, r.BugSavePath);
+        if (save && r.BugSavePath != null && File.Exists(r.BugSavePath)) yield return new Part("bug.save", null, r.BugSavePath);
+        else if (r.BugSavePath != null && !save) notes.Add("bug.save left out: the stored consent does not include saves");
     }
 
     private static byte[] Cap(byte[] b, long max) => b.Length <= max ? b : b[..(int)max];
@@ -173,33 +177,53 @@ public sealed class ReportBuilder(ConsentStore consent, Redactor redactor, strin
 
     private string BuildReportJson(ReportRequest r, string id, DateTime now, List<ReportFile> files, List<string> notes)
     {
-        string T(string s) => redactor.Redact(s);
+        // every free-text field is capped before it is serialised (review finding 10: the whole JSON was cut by characters, which left it unparseable)
+        string T(string s, int n = FieldMaxChars) => Trim(redactor.Redact(s), n);
         var c = consent.Current;
+        var where = new JsonObject();
+        foreach (var kv in r.Where.OrderBy(k => k.Key, StringComparer.Ordinal).Take(WhereMaxEntries)) where[T(kv.Key, 200)] = JsonValue.Create(T(kv.Value));
+        if (r.Where.Count > WhereMaxEntries) notes.Add($"where: {r.Where.Count - WhereMaxEntries} entries left out (at most {WhereMaxEntries})");
         var o = new JsonObject
         {
             ["id"] = id,
             ["kind"] = r.Kind.ToString().ToLowerInvariant(),
-            ["category"] = r.Category,
+            ["category"] = T(r.Category, 200),
             ["created"] = now.ToString("s"),
-            ["what_happened"] = T(Trim(r.WhatHappened, 2000)),
-            ["what_expected"] = T(Trim(r.WhatExpected, 2000)),
-            ["understood"] = r.Understood,
+            ["what_happened"] = T(r.WhatHappened),
+            ["what_expected"] = T(r.WhatExpected),
+            ["understood"] = T(r.Understood, 200),
             ["build"] = JsonSerializer.SerializeToNode(r.Session.Build, SessionHeader.Json),
             ["system"] = JsonSerializer.SerializeToNode(r.Session.System, SessionHeader.Json),
             ["game"] = JsonSerializer.SerializeToNode(r.Session.Game, SessionHeader.Json),
-            ["where"] = new JsonObject(r.Where.Select(kv => KeyValuePair.Create(kv.Key, (JsonNode?)JsonValue.Create(T(kv.Value))))),
+            ["where"] = where,
             ["replay"] = new JsonObject { ["base_tick"] = r.ReplayBaseTick, ["end_tick"] = r.ReplayEndTick, ["has_trace"] = files.Any(f => f.Name == "replay.trace"), ["has_autosave"] = files.Any(f => f.Name == "autosave.bin") },
             ["files"] = new JsonArray(files.Select(f => (JsonNode)new JsonObject { ["name"] = f.Name, ["bytes"] = f.Bytes, ["sha256"] = f.Sha256 }).ToArray()),
-            ["notes"] = new JsonArray(notes.Select(n => (JsonNode)JsonValue.Create(n)!).ToArray()),
+            ["notes"] = new JsonArray(notes.Select(n => (JsonNode)JsonValue.Create(Trim(n, FieldMaxChars))!).ToArray()),
             ["consent"] = new JsonObject { ["version"] = c.Version, ["time"] = c.AcceptedAt },
             ["sent"] = false,
         };
-        if (r.PreviousCrashId != null) o["previous_crash_id"] = r.PreviousCrashId;
+        if (r.PreviousCrashId != null) o["previous_crash_id"] = T(r.PreviousCrashId, 200);
         string s = o.ToJsonString(Json);
-        return Encoding.UTF8.GetByteCount(s) > ReportJsonMaxBytes ? s[..ReportJsonMaxBytes] : s;
+        // still over the cap (session blocks the caller filled): whole members go, the biggest first, so what is left always parses
+        foreach (var drop in new[] { "where", "system", "game", "build", "notes", "files" })
+        {
+            if (Encoding.UTF8.GetByteCount(s) <= ReportJsonMaxBytes) break;
+            o[drop] = new JsonObject { ["left_out"] = $"over the {ReportJsonMaxBytes / 1024} KB cap of report.json" };
+            s = o.ToJsonString(Json);
+        }
+        return s;
     }
 
-    private static string Trim(string s, int n) => s.Length <= n ? s : s[..n];
+    /// <summary>Longest text a field of report.json keeps (characters), and the most <c>where</c> entries.</summary>
+    public const int FieldMaxChars = 2000, WhereMaxEntries = 64;
+
+    /// <summary>At most <paramref name="n"/> characters, never splitting a surrogate pair (half a pair is not valid text in JSON).</summary>
+    private static string Trim(string s, int n)
+    {
+        if (s.Length <= n) return s;
+        if (n > 0 && char.IsHighSurrogate(s[n - 1])) n--;
+        return s[..n];
+    }
 
     private static string Readme(List<ReportFile> files)
     {

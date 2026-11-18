@@ -46,7 +46,8 @@ public sealed partial class TravelState
     public readonly List<Camp> OldCamps = [];
     public readonly List<CampMember> Companions = [];
     public ulong NextCamp;
-    public static readonly ulong CampSerialBase = 0x1000;
+    /// <summary>The id of the nth camp: in the reserved serial space (review finding 2), never a record's id. Saves from before keep their old ids.</summary>
+    public static EntityId CampId(ulong n) => EntityId.Reserved(IdKind.Other, 253, EntityId.ReservedSpace.Camps, n);
 
     public CampMember? Member(EntityId id) => Companions.FirstOrDefault(m => m.Person == id);
 
@@ -65,7 +66,7 @@ public sealed partial class TravelState
     public Camp MakeCamp(long xMm, long yMm, long sec, IEnumerable<EntityId> members)
     {
         if (Camp is { Broken: false } old) BreakCamp(sec);
-        var c = new Camp { Id = EntityId.MakeIn(IdKind.Other, 253, CampSerialBase + ++NextCamp), XMm = xMm, YMm = yMm, MadeAtSec = sec, FireLastSec = sec };
+        var c = new Camp { Id = CampId(++NextCamp), XMm = xMm, YMm = yMm, MadeAtSec = sec, FireLastSec = sec };
         c.Members.AddRange(members);
         Camp = c; StoreOf(c.Id);
         return c;
@@ -269,7 +270,7 @@ public sealed partial class TravelState
             {
                 var stock = StoreOf(c.Id);
                 var food = stock.Rows().Where(r => Goods != null && Goods.FoodMeasuresPpm(r.Good) > 0 && !Goods.IsPiece(r.Good)).OrderByDescending(r => r.Qty).ThenBy(r => r.Good).FirstOrDefault();
-                if (food.Qty > 0) { lost = Math.Min(food.Qty, 1100); stock.Destroy(food.Good, lost, DestroyReason.Lost); }
+                if (food.Qty > 0) { lost = Math.Min(food.Qty, Math.Max(0, ev.StealG)); stock.Destroy(food.Good, lost, DestroyReason.Lost); }
                 break;
             }
             case "rain": if (c.Shelter is ShelterKind.None or ShelterKind.Bedroll) { c.FireLit = false; } break;

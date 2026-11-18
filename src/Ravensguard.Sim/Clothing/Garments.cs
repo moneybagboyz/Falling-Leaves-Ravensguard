@@ -45,9 +45,10 @@ public sealed class Garment
         var rp = new int[RegionCount];
         for (int r = 0; r < RegionCount; r++)
         {
-            double sum = 0;
-            foreach (var part in Parts[r]) if (d.Coverage.TryGetValue(part, out var c)) sum += c;
-            rp[r] = (int)Math.Round(sum * 1000.0 / Parts[r].Length);
+            // decimal, exact in base ten (review finding 16): the authored coverages (0.85) add and scale without a binary rounding, and the half rounds to even as before
+            decimal sum = 0;
+            foreach (var part in Parts[r]) if (d.Coverage.TryGetValue(part, out var c)) sum += (decimal)c;
+            rp[r] = (int)Math.Round(sum * 1000m / Parts[r].Length, MidpointRounding.ToEven);
         }
         return new Garment
         {

@@ -56,7 +56,7 @@ public sealed class ContainerRules
     public int LongestCm(ItemTable items, int row)
     {
         var r = items.At(row);
-        if (_defs.TryGetValue(r.Shape, out var c)) return Math.Max(10, (int)Math.Round(Math.Cbrt(c.VolumeL * 1000.0)) + 5);
+        if (_defs.TryGetValue(r.Shape, out var c)) return Math.Max(10, (int)Ravensguard.Sim.Core.IntMath.CbrtRound(c.VolumeL * 1000L) + 5);   // integer cube root (review finding 7)
         if (_db != null && _db.TryGet<WeaponShapeDef>(r.Shape, out var w))
             return r.Shape switch { "dagger" or "knife" => 35, "spear" or "pike" or "halberd" or "poleaxe" => 220, "staff" or "quarterstaff" or "longbow" => 180, "bow" or "shortbow" => 130, _ => w.TwoHanded ? 120 : w.HaftVolumeCm3 > 0 ? 80 : 95 };
         return 30;

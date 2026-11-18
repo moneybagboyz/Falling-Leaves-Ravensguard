@@ -144,6 +144,8 @@ public static class RngStreams
     public const uint CraftByproduct = 0x361;
     /// <summary>Learning a recipe by watching (key person, tick 0, draw = recipe index x 16 + attempt).</summary>
     public const uint CraftWatch = 0x362;
+    /// <summary>The fraction of a unit a failed step wastes (key job id, tick = job serial, draw = good): q x pct / 100 rounds up with probability of its remainder, so small stacks lose their share on average (review finding 8).</summary>
+    public const uint CraftWaste = 0x363;
 
     // ---------- onboarding (docs/specs/phase3/onboarding-v1.md section 5) ----------
     /// <summary>Start-site tie-break among equally scored candidates and the mentor's spawn jitter (key world seed, tick = origin hash).</summary>

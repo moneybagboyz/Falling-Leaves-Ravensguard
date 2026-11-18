@@ -19,6 +19,10 @@ public sealed class HeroWorld
     private HeroWorld(WorldRuntime rt, ContentDatabase content)
     {
         Runtime = rt; Content = content; Desk = new HeroDesk(rt.State.Party?.LastSeq ?? 0);
+        // the commands a save left waiting are taken up with their own numbers and hours, and a save reads the desk's queue from here on (review finding 6)
+        Desk.RestorePending(rt.State.HeroPending);
+        rt.State.HeroPending = [];
+        rt.State.HeroPendingSource = Desk.PendingCommands;
     }
 
     /// <summary>Binds the hero of a running world; null when the world has no hero or no economy (the dev hamlet).</summary>

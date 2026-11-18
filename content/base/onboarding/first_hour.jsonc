@@ -1,7 +1,7 @@
 // The first hour of each origin (onboarding spec 3.5): the mentor's small contract (an odd job through the job system), the animal lent for the first ride and the errand it carries the hero on.
 // Distances in metres; the job pays what the job system works out (with the 40 mite floor of onboarding_settings), from the mentor's own household.
 [
-  { "type": "onboarding_settings", "id": "onboarding" },
+  { "type": "onboarding_settings", "id": "onboarding", "yard_min_population": 1000, "yard_beyond_m": 30 },
 
   { "type": "first_hour", "id": "fh_disgraced_squire", "origin": "disgraced_squire", "mentor": "old_knight", "job_kind": "Haul", "job_distance_m": 300, "job_kg": 12,
     "job_title": "Carry a sack of oats to the stable", "loan_breed": "horse_palfrey", "errand_title": "Carry a sealed letter to the next village", "return_at": "start" },

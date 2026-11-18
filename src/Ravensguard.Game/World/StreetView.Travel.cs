@@ -31,6 +31,8 @@ public partial class StreetView
     EncounterEvent? _enc; bool _encOpen;
     IReadOnlyList<EncounterOption> _encOptions = [];
     bool _encScreenPending;
+    /// <summary>No screen or dialog above the street view (the router stack depth is not a test: the menu and the new-game flow sit below it).</summary>
+    bool Foreground => _router != null && _router.Top == this && !_router.HasModal;
     Ravensguard.Sim.Caravans.RecordCast? _recordCast;
     readonly Dictionary<ulong, RigActor> _castActors = new();
     Sprite2D? _campSprite;
@@ -140,7 +142,7 @@ public partial class StreetView
                 _encOptions = t.Table.Defs.FirstOrDefault(d => d.Id == ev.Id) is { } def ? EncounterOutcomes.Options(def, _heroLink?.View?.CoinMites ?? 0) : [];
             }
         }
-        if (_encScreenPending && _router?.Depth <= 1) { _encScreenPending = false; EncounterOutcomes.Settle(t, new EncounterOutcome(EncounterChoice.GoOn, "went_on", 0, EntityId.None, EntityId.None, 0, ""), now); }
+        if (_encScreenPending && Foreground) { _encScreenPending = false; EncounterOutcomes.Settle(t, new EncounterOutcome(EncounterChoice.GoOn, "went_on", 0, EntityId.None, EntityId.None, 0, ""), now); }
         if (t.Snares.Count > 0 && Runtime?.State.Production?.Resources is { } snareLayer) t.StepSnares(snareLayer, now, 20);
         if (t.Camp is { } c) { t.StepFire(c, now); CampHour(c, now); }
         if (_campJob is { } job && now >= job.EndSec) { _campJob = null; job.Apply(); }

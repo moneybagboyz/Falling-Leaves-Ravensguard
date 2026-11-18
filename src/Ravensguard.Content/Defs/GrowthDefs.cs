@@ -53,6 +53,11 @@ public sealed record GrowthTuningDef : ContentDef
     public int PlotDepthVillageM { get; init; } = 38;
     public int PlotWidthTownM { get; init; } = 11;
     public int PlotDepthTownM { get; init; } = 28;
+    /// <summary>The premises of a new business (smithy, tavern) in metres: width and depth in a village, and in a town.</summary>
+    public int BusinessPlotWidthVillageM { get; init; } = 18;
+    public int BusinessPlotDepthVillageM { get; init; } = 28;
+    public int BusinessPlotWidthTownM { get; init; } = 14;
+    public int BusinessPlotDepthTownM { get; init; } = 24;
     /// <summary>A plot lies within this many metres of a settlement's farthest lot (its plan bounds).</summary>
     public int PlanMarginM { get; init; } = 30;
 

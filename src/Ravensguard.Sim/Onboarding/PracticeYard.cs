@@ -1,3 +1,4 @@
+using Ravensguard.Content;
 using Ravensguard.Sim.Core;
 using Ravensguard.Sim.Crafting;
 using Ravensguard.Sim.People;
@@ -65,15 +66,24 @@ public static class PracticeYard
     public static UseOutcome FinishBout(SkillBook book, EntityId hero, long nowSec) => Progress.Use(book, hero, SparBout, 30, nowSec).Outcome;
 
     /// <summary>The yard of a settlement, or null when it is too small. Deterministic: the first of eight directions (from a stream 0x371 start) with open, unbuilt, dry ground 30 m beyond the houses.</summary>
-    public static YardSite? SiteOf(Population pop, int settlement, ulong seed, int minPopulation = 1000)
+    public static YardSite? SiteOf(Population pop, int settlement, ulong seed, OnboardingSettingsDef cfg) => SiteOf(pop, settlement, seed, cfg.YardMinPopulation, cfg.YardBeyondM);
+
+    /// <summary>The defaults of <see cref="OnboardingSettingsDef"/> (the content row tunes them).</summary>
+    private static readonly OnboardingSettingsDef Defaults = new() { Id = "defaults" };
+
+    public static YardSite? SiteOf(Population pop, int settlement, ulong seed) => SiteOf(pop, settlement, seed, Defaults);
+
+    public static YardSite? SiteOf(Population pop, int settlement, ulong seed, int minPopulation) => SiteOf(pop, settlement, seed, minPopulation, Defaults.YardBeyondM);
+
+    public static YardSite? SiteOf(Population pop, int settlement, ulong seed, int minPopulation, int beyondM)
     {
         var r = pop.Region; if (settlement < 0 || settlement >= r.Settlements.Count) return null;
         var s = r.Settlements[settlement]; if (s.TargetPop < minPopulation || s.Class != SettlementClass.Town) return null;
-        int start = DetRng.Range(seed, 3, (ulong)settlement, RngStreams.OnboardingJob, 9, 0, 8), radius = s.Plan.RadiusM + 30;
+        int start = DetRng.Range(seed, 3, (ulong)settlement, RngStreams.OnboardingJob, 9, 0, 8), radius = s.Plan.RadiusM + beyondM;
         for (int k = 0; k < 8; k++)
         {
-            double a = (start + k) * Math.PI / 4;
-            int x = (int)(s.CenterX + Math.Cos(a) * radius), y = (int)(s.CenterY + Math.Sin(a) * radius);
+            var (cq, sq) = IntMath.Directions(8)[(start + k) % 8];          // the eight-way compass (review finding 7), floored as the double sum was truncated
+            int x = (int)(s.CenterX + ((cq * radius) >> IntMath.Q30Bits)), y = (int)(s.CenterY + ((sq * radius) >> IntMath.Q30Bits));
             if (x < 20 || y < 20 || x > RegionSettings.RegionM - 20 || y > RegionSettings.RegionM - 20) continue;
             int tx = x / RegionSettings.TileM, ty = y / RegionSettings.TileM, i = RegionData.Index(tx, ty);
             if (r.Water[i] != 0 || r.Built[i] != 0) continue;

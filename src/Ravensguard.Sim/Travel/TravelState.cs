@@ -130,5 +130,7 @@ public sealed partial class TravelState
 {
     /// <summary>True when nothing was ever recorded: such a state is not saved, so worlds nobody travelled in keep their bytes.</summary>
     public bool IsEmpty => Journey == null && Logs.Count == 0 && Encounters.Count == 0 && Camp == null && OldCamps.Count == 0 && Carcasses.Count == 0 && Snares.Count == 0 && Travellers.Count == 0
-        && Companions.Count == 0 && Bus.Log.Count == 0 && LastById.Count == 0 && LegSerial == 0 && NextCamp == 0;
+        && Companions.Count == 0 && Bus.Log.Count == 0 && LastById.Count == 0 && LegSerial == 0 && NextCamp == 0
+        // the counters too (review finding 5): an emptied state with advanced serials is saved, so a load never hands out an id again or forgets the last meal
+        && NextTraveller == 0 && NextCarcass == 0 && NextSnare == 0 && LastMealSec == 0 && LastEncounterSec == long.MinValue;
 }

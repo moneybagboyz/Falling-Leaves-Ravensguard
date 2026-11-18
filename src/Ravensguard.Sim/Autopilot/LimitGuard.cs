@@ -97,13 +97,19 @@ public static class LimitGuard
     // ------------------------------------------------------------------ home by nightfall
 
     /// <summary>
-    /// Game minutes of a round trip: <paramref name="pathM"/> each way at <paramref name="speedMmPerGs"/> (the jog is 150 mm a game second: 540 m a game hour), plus the minutes spent there. Spec 4.3 / AP-6: two kilometres each way at the jog is 3.70 hours each way.
+    /// Game seconds of a round trip, rounded up: <paramref name="pathM"/> each way at <paramref name="speedMmPerGs"/> (the jog is 150 mm a game second: 540 m a game hour), plus the minutes spent there.
+    /// Spec 4.3 / AP-6: two kilometres each way at the jog is 3.70 hours each way. Integer (review finding 16; it was double minutes): rounding up loses nothing, since the comparison
+    /// in <see cref="HomeByNightfallOk"/> is against whole seconds.
     /// </summary>
-    public static double RoundTripMinutes(long pathM, int speedMmPerGs = 150, int stayMinutes = 0) => 2.0 * pathM * 1000 / speedMmPerGs / 60.0 + stayMinutes;
+    public static long RoundTripSec(long pathM, int speedMmPerGs = 150, int stayMinutes = 0)
+    {
+        int v = Math.Max(1, speedMmPerGs);
+        return (2000L * Math.Max(0, pathM) + v - 1) / v + stayMinutes * 60L;
+    }
 
-    /// <summary>A plan that starts away from home at minute-of-day <paramref name="startMinute"/> is allowed only if <c>start + round trip &lt;= sunset</c> of that day (minus the content's offset).</summary>
-    public static bool HomeByNightfallOk(int latTenths, int dayOfYear, double startMinute, double roundTripMinutes, int offsetMin = 0)
-        => startMinute + roundTripMinutes <= Daylight.SunsetMinute(latTenths, dayOfYear) - offsetMin;
+    /// <summary>A plan that starts away from home at minute-of-day <paramref name="startMinute"/> is allowed only if <c>start + round trip &lt;= sunset</c> of that day (minus the content's offset), in whole seconds.</summary>
+    public static bool HomeByNightfallOk(int latTenths, int dayOfYear, int startMinute, long roundTripSec, int offsetMin = 0)
+        => startMinute * 60L + roundTripSec <= (Daylight.SunsetMinute(latTenths, dayOfYear) - offsetMin) * 60L;
 
     /// <summary>True when the person is already away at an hour before sunset and should head home now (spec 4.3: sunset minus one hour).</summary>
     public static bool HeadHomeNow(int latTenths, int dayOfYear, int minuteOfDay) => minuteOfDay >= Daylight.SunsetMinute(latTenths, dayOfYear) - 60;

@@ -81,7 +81,9 @@ public sealed class RideBook
     public bool IsMounted => Mounted != EntityId.None;
     public bool IsDriving => Driving != EntityId.None;
     public bool Busy => MountLeftGs > 0 || DismountLeftGs > 0;
-    public bool IsEmpty => Animals.Count == 0 && Vehicles.Rows.Count == 0 && Herds.IsEmpty && Loans.Count == 0 && (_heap == null || _heap.RowCount == 0);
+    /// <summary>True when nothing would be saved: no rows and every counter at its start (review finding 5: an emptied book with advanced serials must still be saved, or ids are reused).</summary>
+    public bool IsEmpty => Animals.Count == 0 && Vehicles.Rows.Count == 0 && Herds.IsEmpty && Loans.Count == 0 && (_heap == null || _heap.RowCount == 0)
+        && Animals.NextSerial == 1 && Vehicles.NextSerial == 1 && RidingUses == 0 && Mounted == EntityId.None && Driving == EntityId.None;
     public Animal? MountedAnimal => IsMounted ? Animals.Find(Mounted) : null;
     public VehicleRow? DrivenVehicle => IsDriving ? Vehicles.Find(Driving) : null;
     public Surface Surface => SurfaceOverride ?? SurfaceNow();

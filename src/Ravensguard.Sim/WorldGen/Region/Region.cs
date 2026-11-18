@@ -89,6 +89,21 @@ public sealed class Region
     public void NoteGrown() => GrowthVersion++;
 
     /// <summary>
+    /// Guards what background growth changes (the plans' lots, <see cref="Built"/>, <see cref="ParcelMap"/>, <see cref="Forest"/>, <see cref="Parcels"/>, <see cref="Fields"/>, the population's
+    /// per-lot arrays) against the chunk generators that read them on the thread pool (review finding 1). Growth holds the write lock for a whole change, from reading the visited chunks
+    /// before it to writing their deltas after it (<see cref="Ravensguard.Sim.Growth.RegionGrowth.Change"/>); a generator holds a read lock for a whole chunk, and the streamer holds one
+    /// while it checks that a chunk made on a worker is still of the current <see cref="GrowthVersion"/> and records it. Recursive, so a generator called inside a change reads freely.
+    /// </summary>
+    public ReaderWriterLockSlim GrowthLock { get; } = new(LockRecursionPolicy.SupportsRecursion);
+
+    /// <summary>Holds <see cref="GrowthLock"/> for reading until disposed.</summary>
+    public ReadScope ReadGrowth() { GrowthLock.EnterReadLock(); return new ReadScope(GrowthLock); }
+    /// <summary>Holds <see cref="GrowthLock"/> for writing until disposed.</summary>
+    public WriteScope WriteGrowth() { GrowthLock.EnterWriteLock(); return new WriteScope(GrowthLock); }
+    public readonly struct ReadScope(ReaderWriterLockSlim l) : IDisposable { public void Dispose() => l.ExitReadLock(); }
+    public readonly struct WriteScope(ReaderWriterLockSlim l) : IDisposable { public void Dispose() => l.ExitWriteLock(); }
+
+    /// <summary>
     /// The region as generated: plans with only their generated lots, settlements with only their generated parcels and the generated fields. A copy that shares every tile layer
     /// (the populator reads none that growth changes); returns the region itself when it has not grown. Used so the baseline people of a save are always regenerated from the
     /// generated region, whatever has been built since.

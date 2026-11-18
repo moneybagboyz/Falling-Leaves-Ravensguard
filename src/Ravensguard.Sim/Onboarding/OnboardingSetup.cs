@@ -24,7 +24,7 @@ public static class OnboardingSetup
     static JobEnv EnvOf(WorldState st, ContentDatabase db) => new() { Ledger = st.Economy!.Ledger, Econ = st.Economy, Pop = st.Population, Tuning = BehaviourContent.From(db).OddJobs };
 
     /// <summary>A good in the household's store to carry, the most of it up to <paramref name="wantG"/> grams (at least two kilograms), or null.</summary>
-    static (ushort Good, long Grams)? Carryable(WorldState st, int household, long wantG)
+    internal static (ushort Good, long Grams)? Carryable(WorldState st, int household, long wantG)
     {
         var e = st.Economy!; if (household < 0 || household >= e.HouseholdCount) return null;
         (ushort, long)? best = null;
@@ -78,8 +78,9 @@ public static class OnboardingSetup
         if (h < 0) return;
         var table = st.Jobs ??= new JobTable();
         // the destination is JobDistanceM from the mentor, in a direction from stream 0x371
-        double ang = DetRng.Range(seed, 7, (ulong)book.MentorSettlement, RngStreams.OnboardingJob, 0, 0, 3600) / 3600.0 * 2 * Math.PI;
-        long dx = (long)(Math.Cos(ang) * Mm(fh.JobDistanceM)), dy = (long)(Math.Sin(ang) * Mm(fh.JobDistanceM));
+        // a tenth of a degree of 3,600, as an integer direction (review finding 7: Math.Cos and Math.Sin decided it); truncated toward zero as the double version was
+        var (cq, sq) = IntMath.CosSinQ30(DetRng.Range(seed, 7, (ulong)book.MentorSettlement, RngStreams.OnboardingJob, 0, 0, 3600), 3600);
+        long dx = (long)((Int128)cq * Mm(fh.JobDistanceM) / IntMath.One30), dy = (long)((Int128)sq * Mm(fh.JobDistanceM) / IntMath.One30);
         long ex = Math.Clamp(book.MentorX + dx, 0, Mm(RegionSettings.RegionM - 1)), ey = Math.Clamp(book.MentorY + dy, 0, Mm(RegionSettings.RegionM - 1));
         var poster = st.Population.Households.IdOf(h);
         var job = table.Post(env, kind, poster, st.Economy!.HouseholdPurse[h], st.HomeRegion.Id, book.MentorSettlement, nowSec, nowSec + cfg.JobDeadlineHours * 3600L, wage, j =>
@@ -125,7 +126,7 @@ public static class OnboardingSetup
         book.LoanOffered = true; book.OnLoan(nowSec);
         // the errand: pay for the real distance, held in the mentor household's escrow now, claimed by the hero on arrival (the hand-over is the whole job)
         var env = EnvOf(st, db); var table = st.Jobs ??= new JobTable();
-        long dist = (long)Math.Sqrt(Math.Pow(book.ErrandX - book.StartX, 2) + Math.Pow(book.ErrandY - book.StartY, 2));
+        long dist = Ravensguard.Sim.Production.ProductionSystem.ISqrt((book.ErrandX - book.StartX) * (book.ErrandX - book.StartX) + (book.ErrandY - book.StartY) * (book.ErrandY - book.StartY));
         long wage = Math.Max(cfg.MinWageMites, JobPay.Haul(env.Tuning, env.UnskilledWage, dist, 12_000));
         int h = PosterHousehold(st, book.MentorPerson, book.MentorSettlement, wage, 2000);
         if (h >= 0)

@@ -133,12 +133,12 @@ public partial class StreetView
         for (int i = _nearbyLines.Count - 1; i >= 0; i--) if (_barkClock >= _nearbyLines[i].Until) { if (IsInstanceValid(_nearbyLines[i].L)) _nearbyLines[i].L.QueueFree(); _nearbyLines.RemoveAt(i); }
         if (_climateTask is { IsCompleted: true } ct) { (_dear, _unrest) = ct.Result; _climateTask = null; }
         if (_climateAcc > 20 && _climateTask == null) { _climateAcc = 0; _climateTask = _talk.Climate(HeroSettlement()); }
-        if (_barkAcc >= 0.25 && _router?.Depth <= 1)
+        if (_barkAcc >= 0.25 && Foreground)
         {
             _barkAcc = 0; BarkStep();
         }
         if (_overheardTask is { IsCompleted: true } ot) { if (ot.Result != null) _router?.ShowToast(L.T("TALK_OVERHEARD")); _overheardTask = null; }
-        if (_overhearAcc >= 0.5 && _overheardTask == null && _router?.Depth <= 1) { _overhearAcc = 0; OverhearStep(); }
+        if (_overhearAcc >= 0.5 && _overheardTask == null && Foreground) { _overhearAcc = 0; OverhearStep(); }
     }
 
     List<LivePerson> PeopleNear(double radiusM)

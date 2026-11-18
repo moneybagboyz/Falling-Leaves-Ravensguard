@@ -81,9 +81,11 @@ public sealed record HeroCommand
 
 public enum HeroResultCode : byte { Ok, PriceMoved, Closed, NoStock, CannotAfford, TheyCannotAfford, Refused, NoMarket, Invalid, NoRoom, NotKnown }
 
-public sealed record HeroResult(long Seq, HeroCommandKind Kind, HeroResultCode Code, string Text, long Mites = 0, long Qty = 0, long AtSec = 0)
+public sealed record HeroResult(long Seq, HeroCommandKind Kind, HeroResultCode Code, HeroText Message, long Mites = 0, long Qty = 0, long AtSec = 0)
 {
     public bool Ok => Code == HeroResultCode.Ok;
+    /// <summary>The message as the game's language has it (<see cref="HeroText.Resolver"/>); the sim itself only holds the key and its parameters.</summary>
+    public string Text => Message.Render();
 }
 
 /// <summary>The local book frozen at a barrier: every good's price line, the merchants' coin and the items merchants have for sale.</summary>
@@ -217,6 +219,26 @@ public sealed class HeroDesk
 
     public HeroDesk(long lastSeq = 0) { _seq = lastSeq; }
 
+    /// <summary>The commands still waiting, in sequence order (any thread; a save writes them, review finding 6).</summary>
+    public IReadOnlyList<HeroCommand> PendingCommands() { lock (_gate) return [.. _pending.OrderBy(c => c.Seq)]; }
+
+    /// <summary>Takes up the commands a save left waiting, with their own numbers and hours; the next command issued is numbered after all of them.</summary>
+    public void RestorePending(IEnumerable<HeroCommand> cmds)
+    {
+        lock (_gate)
+            foreach (var c in cmds)
+            {
+                if (_pending.Any(p => p.Seq == c.Seq)) continue;
+                _pending.Add(c); _seq = Math.Max(_seq, c.Seq);
+            }
+    }
+
+    /// <summary>Commands whose application threw (review finding 3): answered <see cref="HeroResultCode.Invalid"/>, counted and reported here; the runtime never faults for one.</summary>
+    public long Faults { get; private set; }
+    public string LastFault { get; private set; } = "";
+    /// <summary>Called on the tick worker with each command that threw (the game logs it).</summary>
+    public Action<HeroCommand, Exception>? Faulted { get; set; }
+
     /// <summary>Queues a command (any thread); returns it with its sequence number.</summary>
     public HeroCommand Issue(HeroCommand c)
     {
@@ -236,7 +258,15 @@ public sealed class HeroDesk
         }
         foreach (var c in due)
         {
-            var r = (c.Origin == CommandOrigin.Autopilot ? Gate?.Invoke(ctx, c) : null) ?? Apply(ctx, c);
+            HeroResult r;
+            try { r = (c.Origin == CommandOrigin.Autopilot ? Gate?.Invoke(ctx, c) : null) ?? Apply(ctx, c); }
+            catch (Exception ex)
+            {
+                // one bad command is answered and logged; it must not fault the tick (a faulted runtime refuses every save)
+                Faults++; LastFault = $"{c.Kind} #{c.Seq}: {ex.GetType().Name}: {ex.Message}";
+                Faulted?.Invoke(c, ex);
+                r = R(c, HeroResultCode.Invalid, T("HERO_COULD_NOT_BE_DONE"));
+            }
             Settled?.Invoke(ctx, c, r);
             ctx.Party.LastSeq = Math.Max(ctx.Party.LastSeq, c.Seq);
             _results.Add(r);
@@ -273,7 +303,7 @@ public sealed class HeroDesk
         {
             if (ev.Kind is "unpaid" or "quit" or "ended")
                 _results.Add(new HeroResult(0, HeroCommandKind.Hire, ev.Kind == "unpaid" ? HeroResultCode.CannotAfford : HeroResultCode.Ok,
-                    ev.Kind switch { "unpaid" => $"{ev.Name} was not paid today ({Quotes.Money(ev.Mites)}).", "quit" => $"{ev.Name} has left your service: three days unpaid.", _ => $"{ev.Name}'s term is over." }, ev.Mites, AtSec: (long)day * 86400));
+                    ev.Kind switch { "unpaid" => T("HERO_WAS_NOT_PAID_TODAY", ev.Name, Quotes.Money(ev.Mites)), "quit" => T("HERO_HAS_LEFT_YOUR_SERVICE", ev.Name), _ => T("HERO_S_TERM_OVER", ev.Name) }, ev.Mites, AtSec: (long)day * 86400));
             if (ev.Kind == "quit")
                 ctx.State.Chronicle.Add(new ChronicleEntry(ctx.State.Ids.Allocate(IdKind.Event), new GameTime((long)day * 86400), "squad_member_quit", [ev.Person, ctx.Party.Hero], [],
                     new Dictionary<string, string> { ["name"] = ev.Name, ["reason"] = "unpaid" }));
@@ -284,10 +314,26 @@ public sealed class HeroDesk
 
     // ------------------------------------------------------------------ applying
 
-    private static HeroResult R(HeroCommand c, HeroResultCode code, string text, long mites = 0, long qty = 0) => new(c.Seq, c.Kind, code, text, mites, qty, c.IssuedSec);
+    private static HeroResult R(HeroCommand c, HeroResultCode code, HeroText text, long mites = 0, long qty = 0) => new(c.Seq, c.Kind, code, text, mites, qty, c.IssuedSec);
+    /// <summary>A message key of en.csv and its parameters (review finding 14: the desk returns keys, the game resolves them).</summary>
+    internal static HeroText T(string key, params object[] args) => HeroText.Of(key, args);
+
+    /// <summary>
+    /// The numbers every command must have before anything is looked up (review finding 3): no negative quantity, limit, wage, coin or days, no barter line of zero or less or of a good that
+    /// does not exist. A command that fails is answered <see cref="HeroResultCode.Invalid"/> and changes nothing.
+    /// </summary>
+    public static bool Valid(HeroCommand c, int goodCount)
+    {
+        if (c.Qty < 0 || c.Limit < 0 || c.Wage < 0 || c.Days < 0 || c.CoinGive < 0 || c.CoinTake < 0 || c.Batch < 0) return false;
+        foreach (var (g, q) in c.Give) if (q <= 0 || g >= goodCount) return false;
+        foreach (var (g, q) in c.Take) if (q <= 0 || g >= goodCount) return false;
+        foreach (var id in c.GiveItems) if (id == EntityId.None) return false;
+        return true;
+    }
 
     private HeroResult Apply(HeroContext ctx, HeroCommand c)
     {
+        if (!Valid(c, ctx.Econ.Goods.Count)) return R(c, HeroResultCode.Invalid, T("HERO_MAKES_NO_SENSE"));
         try
         {
             return c.Kind switch
@@ -299,7 +345,7 @@ public sealed class HeroDesk
                 HeroCommandKind.SellItem => SellItem(ctx, c),
                 HeroCommandKind.Barter => DoBarter(ctx, c),
                 HeroCommandKind.Equip => Equip(ctx, c),
-                HeroCommandKind.Unequip => ctx.Party.Carried.Unequip(c.Item) ? R(c, HeroResultCode.Ok, "Taken off.") : R(c, HeroResultCode.Invalid, "Not worn."),
+                HeroCommandKind.Unequip => ctx.Party.Carried.Unequip(c.Item) ? R(c, HeroResultCode.Ok, T("HERO_TAKEN_OFF")) : R(c, HeroResultCode.Invalid, T("HERO_NOT_WORN")),
                 HeroCommandKind.PutItem => Put(c, ctx.Party.Carried.PutItem(ctx.Econ, ctx.Rules, c.Item, c.Container)),
                 HeroCommandKind.PutGood => Put(c, ctx.Party.Carried.PutGood(ctx.Econ, ctx.Rules, c.Good, c.Container)),
                 HeroCommandKind.Inspect => Inspect(ctx, c),
@@ -315,16 +361,16 @@ public sealed class HeroDesk
                 HeroCommandKind.CraftResume => CraftResume(ctx, c),
                 HeroCommandKind.CraftCollect => CraftCollect(ctx, c),
                 HeroCommandKind.EncounterPay => EncounterPay(ctx, c),
-                _ => R(c, HeroResultCode.Invalid, "Unknown command."),
+                _ => R(c, HeroResultCode.Invalid, T("HERO_UNKNOWN_COMMAND")),
             };
         }
         finally { ctx.Party.Carried.Tidy(ctx.Econ); }
     }
 
-    private static HeroResult Put(HeroCommand c, PutRefusal why) => why == PutRefusal.None ? R(c, HeroResultCode.Ok, "Stowed.") : R(c, why == PutRefusal.Volume ? HeroResultCode.NoRoom : HeroResultCode.Invalid, why switch
+    private static HeroResult Put(HeroCommand c, PutRefusal why) => why == PutRefusal.None ? R(c, HeroResultCode.Ok, T("HERO_STOWED")) : R(c, why == PutRefusal.Volume ? HeroResultCode.NoRoom : HeroResultCode.Invalid, why switch
     {
-        PutRefusal.Volume => "It does not fit.", PutRefusal.TooLong => "It is too long for that.", PutRefusal.TooDeep => "Containers nest at most three deep.", PutRefusal.Liquid => "Liquids need a flask or a skin.",
-        PutRefusal.NotAContainer => "That holds nothing.", _ => "You cannot do that.",
+        PutRefusal.Volume => T("HERO_DOES_NOT_FIT"), PutRefusal.TooLong => T("HERO_TOO_LONG"), PutRefusal.TooDeep => T("HERO_CONTAINERS_NEST_MOST_THREE"), PutRefusal.Liquid => T("HERO_LIQUIDS_NEED_FLASK_OR"),
+        PutRefusal.NotAContainer => T("HERO_HOLDS_NOTHING"), _ => T("HERO_CANNOT_DO"),
     });
 
     private string GoodName(HeroContext ctx, ushort g) => ctx.Econ.Goods.Def(g).Name.ToLowerInvariant();
@@ -332,14 +378,14 @@ public sealed class HeroDesk
 
     private HeroResult Visit(HeroContext ctx, HeroCommand c)
     {
-        if (c.Settlement < 0) { _market = -1; _marketRegion = -1; return R(c, HeroResultCode.Ok, ""); }       // on the road: only a person to barter with
+        if (c.Settlement < 0) { _market = -1; _marketRegion = -1; return R(c, HeroResultCode.Ok, HeroText.Empty); }       // on the road: only a person to barter with
         if (ctx.IsAbroad(c.Region)) return AbroadDealing.Visit(ctx, c, out _market, out _marketRegion);
-        var b = ctx.Book(c.Settlement); if (b == null) return R(c, HeroResultCode.NoMarket, "There is no market here.");
+        var b = ctx.Book(c.Settlement); if (b == null) return R(c, HeroResultCode.NoMarket, T("HERO_THERE_NO_MARKET_HERE"));
         _market = c.Settlement; _marketRegion = -1;
         int day = (int)(c.IssuedSec / 86400);
         ctx.Party.Notebook.Visit(b, day);
         HearAround(ctx, b, day);
-        return R(c, HeroResultCode.Ok, $"The market of {b.Name}.");
+        return R(c, HeroResultCode.Ok, T("HERO_MARKET", b.Name));
     }
 
     /// <summary>Price talk at a market (spec 4.2): the merchants tell what prices were in up to six other markets of the region when they last heard, dated by the road (a day per 25 km, at least one).</summary>
@@ -368,44 +414,44 @@ public sealed class HeroDesk
     private HeroResult Buy(HeroContext ctx, HeroCommand c)
     {
         if (ctx.IsAbroad(c.Region)) return AbroadDealing.Buy(ctx, c);
-        var b = ctx.Book(c.Settlement); if (b == null) return R(c, HeroResultCode.NoMarket, "There is no market here.");
-        if (!b.IsOpen(HourOf(c.IssuedSec))) return R(c, HeroResultCode.Closed, "The stalls are shut (06:00 to 18:00).");
-        ushort g = c.Good; if (g >= b.Goods.Length || c.Qty <= 0) return R(c, HeroResultCode.Invalid, "Nothing to buy.");
+        var b = ctx.Book(c.Settlement); if (b == null) return R(c, HeroResultCode.NoMarket, T("HERO_THERE_NO_MARKET_HERE"));
+        if (!b.IsOpen(HourOf(c.IssuedSec))) return R(c, HeroResultCode.Closed, T("HERO_STALLS_ARE_SHUT"));
+        ushort g = c.Good; if (g >= b.Goods.Length || c.Qty <= 0) return R(c, HeroResultCode.Invalid, T("HERO_NOTHING_BUY"));
         b.Sync(g);
-        if (b.Goods[g].StockUnits < c.Qty) return R(c, HeroResultCode.NoStock, $"They have only {Amount(ctx, g, b.Goods[g].StockUnits)} of {GoodName(ctx, g)}.");
+        if (b.Goods[g].StockUnits < c.Qty) return R(c, HeroResultCode.NoStock, T("HERO_THEY_HAVE_ONLY", Amount(ctx, g, b.Goods[g].StockUnits), GoodName(ctx, g)));
         var q = Quotes.Buy(b, g, c.Qty);
-        if (c.Limit > 0 && q.TotalMites > c.Limit) return R(c, HeroResultCode.PriceMoved, $"Prices moved: {Amount(ctx, g, c.Qty)} of {GoodName(ctx, g)} now costs {Quotes.Money(q.TotalMites)}. Nothing was spent.", q.TotalMites);
-        if (ctx.Coin < q.TotalMites) return R(c, HeroResultCode.CannotAfford, $"You cannot afford it: {Quotes.Money(q.TotalMites)}, you have {Quotes.Money(ctx.Coin)}.", q.TotalMites);
+        if (c.Limit > 0 && q.TotalMites > c.Limit) return R(c, HeroResultCode.PriceMoved, T("HERO_PRICES_MOVED_NOW_COSTS", Amount(ctx, g, c.Qty), GoodName(ctx, g), Quotes.Money(q.TotalMites)), q.TotalMites);
+        if (ctx.Coin < q.TotalMites) return R(c, HeroResultCode.CannotAfford, T("HERO_CANNOT_AFFORD_HAVE", Quotes.Money(q.TotalMites), Quotes.Money(ctx.Coin)), q.TotalMites);
         var r = b.Buy(ctx.HeroMarketParty, g, c.Qty, b.Money.PriceClampMaxPermille, (int)(c.IssuedSec / 86400), c.Limit > 0 ? c.Limit : q.TotalMites);
-        if (r.Qty <= 0) return R(c, HeroResultCode.NoStock, "No one will sell at that price.");
+        if (r.Qty <= 0) return R(c, HeroResultCode.NoStock, T("HERO_NO_ONE_WILL_SELL"));
         ctx.Party.Carried.Stow(ctx.Econ, ctx.Rules, g);
         ctx.Party.Traded.Add(g);
         Deal(ctx, c);
         ctx.Party.Notebook.Visit(b, (int)(c.IssuedSec / 86400));
-        return R(c, HeroResultCode.Ok, $"Bought {Amount(ctx, g, r.Qty)} of {GoodName(ctx, g)} for {Quotes.Money(r.PaidMites)}.", r.PaidMites, r.Qty);
+        return R(c, HeroResultCode.Ok, T("HERO_BOUGHT", Amount(ctx, g, r.Qty), GoodName(ctx, g), Quotes.Money(r.PaidMites)), r.PaidMites, r.Qty);
     }
 
     private HeroResult Sell(HeroContext ctx, HeroCommand c)
     {
         if (ctx.IsAbroad(c.Region)) return AbroadDealing.Sell(ctx, c);
-        var b = ctx.Book(c.Settlement); if (b == null) return R(c, HeroResultCode.NoMarket, "There is no market here.");
-        if (!b.IsOpen(HourOf(c.IssuedSec))) return R(c, HeroResultCode.Closed, "The stalls are shut (06:00 to 18:00).");
+        var b = ctx.Book(c.Settlement); if (b == null) return R(c, HeroResultCode.NoMarket, T("HERO_THERE_NO_MARKET_HERE"));
+        if (!b.IsOpen(HourOf(c.IssuedSec))) return R(c, HeroResultCode.Closed, T("HERO_STALLS_ARE_SHUT"));
         ushort g = c.Good;
-        if (c.Qty <= 0 || ctx.Pack.Qty(g) < c.Qty) return R(c, HeroResultCode.Invalid, "You do not have that much.");
-        if (b.Merchants.Count == 0) return R(c, HeroResultCode.TheyCannotAfford, "No merchant buys here.");
-        if (ctx.Econ.Goods.SpoilPpm(g, StoreKind.Granary) >= MarketBook.PerishablePpmPerDay) return R(c, HeroResultCode.Refused, "No merchant buys fresh food to hold.");
+        if (c.Qty <= 0 || ctx.Pack.Qty(g) < c.Qty) return R(c, HeroResultCode.Invalid, T("HERO_DO_NOT_HAVE_MUCH"));
+        if (b.Merchants.Count == 0) return R(c, HeroResultCode.TheyCannotAfford, T("HERO_NO_MERCHANT_BUYS_HERE"));
+        if (ctx.Econ.Goods.SpoilPpm(g, StoreKind.Granary) >= MarketBook.PerishablePpmPerDay) return R(c, HeroResultCode.Refused, T("HERO_NO_MERCHANT_BUYS_FRESH"));
         b.Sync(g);
         var q = Quotes.Sell(b, g, c.Qty);
-        if (c.Limit > 0 && q.NetMites < c.Limit) return R(c, HeroResultCode.PriceMoved, $"Prices moved: they now pay {Quotes.Money(q.NetMites)}. Nothing was sold.", q.NetMites);
+        if (c.Limit > 0 && q.NetMites < c.Limit) return R(c, HeroResultCode.PriceMoved, T("HERO_PRICES_MOVED_THEY_NOW", Quotes.Money(q.NetMites)), q.NetMites);
         long before = ctx.Coin;
         var r = b.SellToMerchants(ctx.HeroMarketParty, g, c.Qty, (int)(c.IssuedSec / 86400));
-        if (r.Qty <= 0) return R(c, HeroResultCode.TheyCannotAfford, $"The merchants have no coin for it (they hold {Quotes.Money(MerchantCash(b))}).");
+        if (r.Qty <= 0) return R(c, HeroResultCode.TheyCannotAfford, T("HERO_MERCHANTS_HAVE_NO_COIN", Quotes.Money(MerchantCash(b))));
         ctx.Party.Carried.Stow(ctx.Econ, ctx.Rules, g);
         ctx.Party.Traded.Add(g);
         Deal(ctx, c);
         ctx.Party.Notebook.Visit(b, (int)(c.IssuedSec / 86400));
         long net = ctx.Coin - before;
-        return R(c, HeroResultCode.Ok, $"Sold {Amount(ctx, g, r.Qty)} of {GoodName(ctx, g)} for {Quotes.Money(r.PaidMites)} (toll {Quotes.Money(r.TollMites)}).", net, r.Qty);
+        return R(c, HeroResultCode.Ok, T("HERO_SOLD_TOLL", Amount(ctx, g, r.Qty), GoodName(ctx, g), Quotes.Money(r.PaidMites), Quotes.Money(r.TollMites)), net, r.Qty);
     }
 
     internal static long MerchantCash(MarketBook b) => b.Merchants.Sum(m => Math.Max(0, b.Econ.Ledger.Balance(m.Purse).Mites - (m.CashReserve?.Invoke() ?? 0)));
@@ -420,13 +466,13 @@ public sealed class HeroDesk
 
     private HeroResult SellItem(HeroContext ctx, HeroCommand c)
     {
-        var b = ctx.Book(c.Settlement); if (b == null) return R(c, HeroResultCode.NoMarket, "There is no market here.");
+        var b = ctx.Book(c.Settlement); if (b == null) return R(c, HeroResultCode.NoMarket, T("HERO_THERE_NO_MARKET_HERE"));
         var e = ctx.Econ; int row = e.Items.IndexOf(c.Item);
-        if (row < 0 || e.Items.At(row).Owner != ctx.Party.Hero) return R(c, HeroResultCode.Invalid, "You do not have that.");
-        if ((e.Items.At(row).Flags & ItemFlags.Stolen) != 0) return R(c, HeroResultCode.Refused, "\"I don't buy stolen goods.\"");
+        if (row < 0 || e.Items.At(row).Owner != ctx.Party.Hero) return R(c, HeroResultCode.Invalid, T("HERO_DO_NOT_HAVE"));
+        if ((e.Items.At(row).Flags & ItemFlags.Stolen) != 0) return R(c, HeroResultCode.Refused, T("HERO_I_DON_T_BUY"));
         long bid = ItemPricing.Bid(ItemValue(ctx, row), b.Money.SpreadHalfPermille, ctx.Party.Inspected.Contains(c.Item), ctx.Trade.SellUnknownConditionPm);
-        if (bid <= 0) return R(c, HeroResultCode.Refused, "It is worth nothing to them.");
-        if (c.Limit > 0 && bid < c.Limit) return R(c, HeroResultCode.PriceMoved, $"They now offer {Quotes.Money(bid)}.", bid);
+        if (bid <= 0) return R(c, HeroResultCode.Refused, T("HERO_WORTH_NOTHING_THEM"));
+        if (c.Limit > 0 && bid < c.Limit) return R(c, HeroResultCode.PriceMoved, T("HERO_THEY_NOW_OFFER", Quotes.Money(bid)), bid);
         foreach (var m in b.Merchants)
         {
             if (e.Ledger.Balance(m.Purse).Mites < bid) continue;
@@ -434,24 +480,24 @@ public sealed class HeroDesk
             foreach (int k in ctx.Party.Carried.Rows(e).ToArray()) if (e.Items.At(k).Parent == row) e.Items.At(k).Parent = -1; // its contents stay with the hero
             ref var it = ref e.Items.At(row); it.Owner = m.Id; it.Parent = -1;
             Deal(ctx, c);
-            return R(c, HeroResultCode.Ok, $"Sold the {ctx.Rules.Name(it.Shape).ToLowerInvariant()} for {Quotes.Money(bid)}.", bid, 1);
+            return R(c, HeroResultCode.Ok, T("HERO_SOLD", ctx.Rules.Name(it.Shape).ToLowerInvariant(), Quotes.Money(bid)), bid, 1);
         }
-        return R(c, HeroResultCode.TheyCannotAfford, $"No merchant has {Quotes.Money(bid)} for it.");
+        return R(c, HeroResultCode.TheyCannotAfford, T("HERO_NO_MERCHANT_HAS", Quotes.Money(bid)));
     }
 
     private HeroResult BuyItem(HeroContext ctx, HeroCommand c)
     {
-        var b = ctx.Book(c.Settlement); if (b == null) return R(c, HeroResultCode.NoMarket, "There is no market here.");
+        var b = ctx.Book(c.Settlement); if (b == null) return R(c, HeroResultCode.NoMarket, T("HERO_THERE_NO_MARKET_HERE"));
         var e = ctx.Econ; int row = e.Items.IndexOf(c.Item);
         var seller = row < 0 ? null : b.Merchants.FirstOrDefault(m => m.Id == e.Items.At(row).Owner);
-        if (seller == null) return R(c, HeroResultCode.NoStock, "That is no longer for sale.");
+        if (seller == null) return R(c, HeroResultCode.NoStock, T("HERO_NO_LONGER_SALE"));
         long ask = ItemPricing.Ask(ItemValue(ctx, row), b.Money.SpreadHalfPermille);
-        if (c.Limit > 0 && ask > c.Limit) return R(c, HeroResultCode.PriceMoved, $"It now costs {Quotes.Money(ask)}.", ask);
-        if (!e.Ledger.Transfer(ctx.Purse, seller.Purse, Coin.FromMites(ask), TransferReason.Trade)) return R(c, HeroResultCode.CannotAfford, $"You cannot afford {Quotes.Money(ask)}.", ask);
+        if (c.Limit > 0 && ask > c.Limit) return R(c, HeroResultCode.PriceMoved, T("HERO_NOW_COSTS", Quotes.Money(ask)), ask);
+        if (!e.Ledger.Transfer(ctx.Purse, seller.Purse, Coin.FromMites(ask), TransferReason.Trade)) return R(c, HeroResultCode.CannotAfford, T("HERO_CANNOT_AFFORD", Quotes.Money(ask)), ask);
         ref var it = ref e.Items.At(row); it.Owner = ctx.Party.Hero; it.Parent = -1;
         ctx.Party.Inspected.Add(c.Item);
         Deal(ctx, c);
-        return R(c, HeroResultCode.Ok, $"Bought the {ctx.Rules.Name(it.Shape).ToLowerInvariant()} for {Quotes.Money(ask)}.", ask, 1);
+        return R(c, HeroResultCode.Ok, T("HERO_BOUGHT_2", ctx.Rules.Name(it.Shape).ToLowerInvariant(), Quotes.Money(ask)), ask, 1);
     }
 
     private HeroResult Equip(HeroContext ctx, HeroCommand c)
@@ -461,18 +507,18 @@ public sealed class HeroDesk
         {
             // a counted piece with a shape (a knife bought at market) becomes an item of its own when it is taken in hand (Materialise: a counted sink, the row is the thing)
             var made = ctx.Factory.Materialise(ctx.Pack, e.Items, ctx.State.Ids, c.Good, ctx.Party.Hero);
-            if (made == null) return R(c, HeroResultCode.Invalid, "That cannot be worn or held.");
+            if (made == null) return R(c, HeroResultCode.Invalid, T("HERO_CANNOT_BE_WORN_OR"));
             item = made.Value;
         }
-        return ctx.Party.Carried.EquipItem(e, ctx.Rules, item, c.Slot) ? R(c, HeroResultCode.Ok, "Done.") : R(c, HeroResultCode.Invalid, "That cannot be worn or held.");
+        return ctx.Party.Carried.EquipItem(e, ctx.Rules, item, c.Slot) ? R(c, HeroResultCode.Ok, T("HERO_DONE")) : R(c, HeroResultCode.Invalid, T("HERO_CANNOT_BE_WORN_OR"));
     }
 
     private HeroResult Inspect(HeroContext ctx, HeroCommand c)
     {
-        int row = ctx.Econ.Items.IndexOf(c.Item); if (row < 0) return R(c, HeroResultCode.Invalid, "Nothing there.");
+        int row = ctx.Econ.Items.IndexOf(c.Item); if (row < 0) return R(c, HeroResultCode.Invalid, T("HERO_NOTHING_THERE"));
         ctx.Party.Inspected.Add(c.Item);
         var it = ctx.Econ.Items.At(row);
-        return R(c, HeroResultCode.Ok, $"{ctx.Rules.Name(it.Shape)}: {it.Quality}, condition {it.ConditionPermille / 10}%, worth about {Quotes.Money(ItemValue(ctx, row))}.", ItemValue(ctx, row));
+        return R(c, HeroResultCode.Ok, T("HERO_CONDITION_WORTH_ABOUT", ctx.Rules.Name(it.Shape), it.Quality, it.ConditionPermille / 10, Quotes.Money(ItemValue(ctx, row))), ItemValue(ctx, row));
     }
 
     // ------------------------------------------------------------------ people
@@ -498,7 +544,7 @@ public sealed class HeroDesk
 
     private sealed record HeroCandidateInfo(HireCandidate C, Acquaintance Known, string Trade, int Household);
 
-    private HeroResult ViewPerson(HeroCommand c) { _person = c.Person; return R(c, HeroResultCode.Ok, ""); }
+    private HeroResult ViewPerson(HeroCommand c) { _person = c.Person; return R(c, HeroResultCode.Ok, HeroText.Empty); }
 
     /// <summary>
     /// A toll or bribe on the road (Phase 3 cleanup B, item 1): <c>CoinGive</c> mites move from the hero's purse through the ledger to the household of <c>Person</c> (a real record, so the coin stays in the
@@ -507,8 +553,8 @@ public sealed class HeroDesk
     private HeroResult EncounterPay(HeroContext ctx, HeroCommand c)
     {
         long want = Math.Max(0, c.CoinGive);
-        if (want == 0) return R(c, HeroResultCode.Invalid, "Nothing to pay.");
-        if (ctx.Coin < want) return R(c, HeroResultCode.CannotAfford, $"You cannot pay {Quotes.Money(want)}: you have {Quotes.Money(ctx.Coin)}.", want);
+        if (want == 0) return R(c, HeroResultCode.Invalid, T("HERO_NOTHING_PAY"));
+        if (ctx.Coin < want) return R(c, HeroResultCode.CannotAfford, T("HERO_CANNOT_PAY_HAVE", Quotes.Money(want), Quotes.Money(ctx.Coin)), want);
         var e = ctx.Econ; PurseId? to = null;
         if (c.Person != EntityId.None) { var (i, hh) = PersonOf(ctx, c.Person); if (i >= 0 && hh >= 0 && hh < e.HouseholdCount) to = e.HouseholdPurse[hh]; }
         if (to == null)
@@ -516,9 +562,9 @@ public sealed class HeroDesk
             var b = ctx.Markets is { } ms ? ms.AllBooks().FirstOrDefault() : null;
             to = b?.TollPurse;
         }
-        if (to == null) return R(c, HeroResultCode.Invalid, "There is no one to pay.");
-        if (!e.Ledger.Transfer(ctx.Purse, to.Value, Coin.FromMites(want), TransferReason.Toll)) return R(c, HeroResultCode.CannotAfford, "You cannot pay it.", want);
-        return R(c, HeroResultCode.Ok, $"You pay {Quotes.Money(want)}.", want);
+        if (to == null) return R(c, HeroResultCode.Invalid, T("HERO_THERE_NO_ONE_PAY"));
+        if (!e.Ledger.Transfer(ctx.Purse, to.Value, Coin.FromMites(want), TransferReason.Toll)) return R(c, HeroResultCode.CannotAfford, T("HERO_CANNOT_PAY"), want);
+        return R(c, HeroResultCode.Ok, T("HERO_PAY", Quotes.Money(want)), want);
     }
 
     /// <summary>The real caravan a person belongs to (master or crew of an active caravan of the hero's region), with its cargo chest and account purse.</summary>
@@ -534,25 +580,25 @@ public sealed class HeroDesk
 
     private HeroResult Talk(HeroContext ctx, HeroCommand c)
     {
-        var (i, _) = PersonOf(ctx, c.Person); if (i < 0) return R(c, HeroResultCode.Invalid, "They are gone.");
+        var (i, _) = PersonOf(ctx, c.Person); if (i < 0) return R(c, HeroResultCode.Invalid, T("HERO_THEY_ARE_GONE"));
         _person = c.Person;
         var k = ctx.Party.Know(c.Person);
         if (k.LastTalkHour != c.Hour) { k.Familiarity = Math.Min(100, k.Familiarity + 10); k.TrustPm = Math.Min(1000, k.TrustPm + 25); k.LastTalkHour = c.Hour; }
         if (k.Familiarity >= ctx.Trade.RecruitFamiliarityMin) k.ReasonKnown = true;
         Progress.Use(ctx.Craft.State.Book, ctx.Party.Hero, Progress.Talk, 40, c.IssuedSec);
         string name = ctx.State.Population.People.FullName(i);
-        return R(c, HeroResultCode.Ok, k.ReasonKnown ? $"You talk with {name}. You know what would make them go with you: a fair wage." : $"You talk with {name} a while.");
+        return R(c, HeroResultCode.Ok, k.ReasonKnown ? T("HERO_TALK_KNOW_WHAT_WOULD", name) : T("HERO_TALK_WHILE", name));
     }
 
     private HeroResult Hire(HeroContext ctx, HeroCommand c)
     {
-        var (i, hh) = PersonOf(ctx, c.Person); if (i < 0) return R(c, HeroResultCode.Invalid, "They are gone.");
-        if (ctx.Party.Squad.Find(c.Person) != null) return R(c, HeroResultCode.Invalid, "They already work for you.");
+        var (i, hh) = PersonOf(ctx, c.Person); if (i < 0) return R(c, HeroResultCode.Invalid, T("HERO_THEY_ARE_GONE"));
+        if (ctx.Party.Squad.Find(c.Person) != null) return R(c, HeroResultCode.Invalid, T("HERO_THEY_ALREADY_WORK"));
         int day = (int)(c.IssuedSec / 86400); var info = Candidate(ctx, i, c.Person, day);
         var (ans, score, res) = Hiring.Ask(ctx.Trade, ctx.Seed, day, ctx.WageU, info.C, c.Wage, c.Danger, c.Terms);
         string name = ctx.State.Population.People.FullName(i);
         if (ans != HireAnswer.Accept)
-            return R(c, HeroResultCode.Refused, ans switch { HireAnswer.TooYoung => $"{name} is too young to hire.", HireAnswer.Unavailable => $"{name} cannot be hired.", _ => $"{name} will not work for {Quotes.Money(c.Wage)} a day (they ask about {Quotes.Money(Hiring.FairOffer(ctx.Trade, res, info.C))})." }, res);
+            return R(c, HeroResultCode.Refused, ans switch { HireAnswer.TooYoung => T("HERO_TOO_YOUNG_HIRE", name), HireAnswer.Unavailable => T("HERO_CANNOT_BE_HIRED", name), _ => T("HERO_WILL_NOT_WORK_DAY", name, Quotes.Money(c.Wage), Quotes.Money(Hiring.FairOffer(ctx.Trade, res, info.C))) }, res);
         ctx.Party.Squad.Members.Add(new Follower
         {
             Person = c.Person, PersonIndex = i, Name = name, Origin = FollowerOrigin.Hired, Loyalty = Recruiting.LoyaltyStart(ctx.Trade, info.C.TrustPm), JoinedDay = day, EndDay = day + Math.Clamp(c.Days, 1, 30),
@@ -560,13 +606,13 @@ public sealed class HeroDesk
             Household = hh >= 0 ? ctx.State.Population.Households.IdOf(hh) : EntityId.None,
         });
         var k = ctx.Party.Know(c.Person); k.Familiarity = Math.Min(100, k.Familiarity + 5);
-        return R(c, HeroResultCode.Ok, $"{name} agrees: {Math.Clamp(c.Days, 1, 30)} days at {Quotes.Money(c.Wage)} a day.", c.Wage, score);
+        return R(c, HeroResultCode.Ok, T("HERO_AGREES_DAYS_DAY", name, Math.Clamp(c.Days, 1, 30), Quotes.Money(c.Wage)), c.Wage, score);
     }
 
     private HeroResult Recruit(HeroContext ctx, HeroCommand c)
     {
-        var (i, hh) = PersonOf(ctx, c.Person); if (i < 0) return R(c, HeroResultCode.Invalid, "They are gone.");
-        if (ctx.Party.Squad.Find(c.Person) is { Origin: FollowerOrigin.Recruited }) return R(c, HeroResultCode.Invalid, "They are already with you.");
+        var (i, hh) = PersonOf(ctx, c.Person); if (i < 0) return R(c, HeroResultCode.Invalid, T("HERO_THEY_ARE_GONE"));
+        if (ctx.Party.Squad.Find(c.Person) is { Origin: FollowerOrigin.Recruited }) return R(c, HeroResultCode.Invalid, T("HERO_THEY_ARE_ALREADY"));
         int day = (int)(c.IssuedSec / 86400); var info = Candidate(ctx, i, c.Person, day);
         int leadership = ctx.Craft.State.Book.Level(ctx.Party.Hero, Skill.Leadership);
         long wage = c.Wage > 0 ? c.Wage : Hiring.FairOffer(ctx.Trade, Hiring.ReservationWage(ctx.Trade, ctx.WageU, info.C.MaxSkill, info.C.TrustPm), info.C);
@@ -576,15 +622,15 @@ public sealed class HeroDesk
         if (ans != RecruitAnswer.Accept)
             return R(c, HeroResultCode.Refused, ans switch
             {
-                RecruitAnswer.NotFamiliar => $"{name} hardly knows you.", RecruitAnswer.NoTrust => $"{name} does not trust you yet.", RecruitAnswer.NoReason => $"Talk with {name} first: you do not know what would make them come.",
-                RecruitAnswer.SquadFull => "Your party is as large as you can lead.", RecruitAnswer.CannotPay => $"You cannot pay the signing bonus of {Quotes.Money(Recruiting.SigningBonus(ctx.Trade, wage))}.", _ => $"{name} cannot join you.",
+                RecruitAnswer.NotFamiliar => T("HERO_HARDLY_KNOWS", name), RecruitAnswer.NoTrust => T("HERO_DOES_NOT_TRUST_YET", name), RecruitAnswer.NoReason => T("HERO_TALK_FIRST_DO_NOT", name),
+                RecruitAnswer.SquadFull => T("HERO_YOUR_PARTY_AS_LARGE"), RecruitAnswer.CannotPay => T("HERO_CANNOT_PAY_SIGNING_BONUS", Quotes.Money(Recruiting.SigningBonus(ctx.Trade, wage))), _ => T("HERO_CANNOT_JOIN", name),
             });
         long bonus = Recruiting.SigningBonus(ctx.Trade, wage);
         var e = ctx.Econ;
         if (bonus > 0)
         {
             var to = hh >= 0 && hh < e.HouseholdCount ? e.HouseholdPurse[hh] : e.Ledger.Open(PurseKind.Person, c.Person);
-            if (!e.Ledger.Transfer(ctx.Purse, to, Coin.FromMites(bonus), TransferReason.Wage)) return R(c, HeroResultCode.CannotAfford, "You cannot pay the signing bonus.");
+            if (!e.Ledger.Transfer(ctx.Purse, to, Coin.FromMites(bonus), TransferReason.Wage)) return R(c, HeroResultCode.CannotAfford, T("HERO_CANNOT_PAY_SIGNING_BONUS_2"));
         }
         ctx.Party.Squad.Members.RemoveAll(m => m.Person == c.Person);   // a hired hand who signs on for good
         ctx.Party.Squad.Members.Add(new Follower
@@ -593,132 +639,159 @@ public sealed class HeroDesk
             WageMitesPerDay = wage, PaidThroughDay = day, Order = SquadOrder.Follow, MaxSkill = info.C.MaxSkill, Trade = info.Trade, Household = hh >= 0 ? ctx.State.Population.Households.IdOf(hh) : EntityId.None,
         });
         var hht = ctx.State.Population.Households;
-        string warn = hh >= 0 && hh < hht.Count && hht.MemberCount[hh] > 1 ? $" {name}'s household will lose an earner." : "";
-        return R(c, HeroResultCode.Ok, $"{name} joins you for {Quotes.Money(wage)} a day; signing bonus {Quotes.Money(bonus)}.{warn}", bonus);
+        bool earner = hh >= 0 && hh < hht.Count && hht.MemberCount[hh] > 1;
+        return R(c, HeroResultCode.Ok, earner ? T("HERO_JOINS_LOSES_EARNER", name, Quotes.Money(wage), Quotes.Money(bonus)) : T("HERO_JOINS_DAY_SIGNING_BONUS", name, Quotes.Money(wage), Quotes.Money(bonus)), bonus);
     }
 
     private HeroResult Dismiss(HeroContext ctx, HeroCommand c)
     {
-        var f = ctx.Party.Squad.Find(c.Person); if (f == null) return R(c, HeroResultCode.Invalid, "They are not with you.");
+        var f = ctx.Party.Squad.Find(c.Person); if (f == null) return R(c, HeroResultCode.Invalid, T("HERO_THEY_ARE_NOT"));
         long sev = Recruiting.Severance(ctx.Trade, f.WageMitesPerDay); var e = ctx.Econ;
         var (_, hh) = PersonOf(ctx, c.Person);
-        if (sev > 0 && hh >= 0 && hh < e.HouseholdCount) e.Ledger.Transfer(ctx.Purse, e.HouseholdPurse[hh], Coin.FromMites(Math.Min(sev, ctx.Coin)), TransferReason.Wage);
+        // what was actually paid (review finding 9): what the hero could afford, and nothing when the transfer did not go through or there is no household to pay
+        long paid = 0, give = Math.Min(sev, ctx.Coin);
+        if (give > 0 && hh >= 0 && hh < e.HouseholdCount && e.Ledger.Transfer(ctx.Purse, e.HouseholdPurse[hh], Coin.FromMites(give), TransferReason.Wage)) paid = give;
         f.State = HireState.Dismissed;
         ctx.Party.Squad.Members.Remove(f);
-        return R(c, HeroResultCode.Ok, $"{f.Name} goes home with {Quotes.Money(sev)} severance.", sev);
+        HeroText text = sev <= 0 ? T("HERO_GOES_HOME", f.Name) : paid >= sev ? T("HERO_GOES_HOME_SEVERANCE", f.Name, Quotes.Money(paid))
+            : paid > 0 ? T("HERO_GOES_HOME_SEVERANCE_OWED", f.Name, Quotes.Money(paid), Quotes.Money(sev)) : T("HERO_GOES_HOME_WITHOUT_SEVERANCE", f.Name, Quotes.Money(sev));
+        return R(c, HeroResultCode.Ok, text, paid);
     }
 
     private HeroResult Order(HeroContext ctx, HeroCommand c)
     {
-        var f = ctx.Party.Squad.Find(c.Person); if (f == null) return R(c, HeroResultCode.Invalid, "They are not with you.");
+        var f = ctx.Party.Squad.Find(c.Person); if (f == null) return R(c, HeroResultCode.Invalid, T("HERO_THEY_ARE_NOT"));
         f.Order = c.Order; f.OrderX = c.X; f.OrderY = c.Y; f.OrderJob = EntityId.None;
         if (c.Order == SquadOrder.Work)
         {
-            if (ctx.Jobs?.Invoke() is not { } jt) return R(c, HeroResultCode.Invalid, "There is no work board here.");
+            if (ctx.Jobs?.Invoke() is not { } jt) return R(c, HeroResultCode.Invalid, T("HERO_THERE_NO_WORK_BOARD"));
             var job = c.Job != EntityId.None ? c.Job : jt.Table.Jobs.Values.Where(j => j.State == JobState.Open).OrderBy(j => Math.Abs(j.P0 - c.X) + Math.Abs(j.P1 - c.Y)).ThenBy(j => j.Id).Select(j => j.Id).FirstOrDefault();
-            if (job == EntityId.None) { f.Order = SquadOrder.Follow; return R(c, HeroResultCode.NoStock, "There is no open work nearby."); }
+            if (job == EntityId.None) { f.Order = SquadOrder.Follow; return R(c, HeroResultCode.NoStock, T("HERO_THERE_NO_OPEN_WORK")); }
             var p = ctx.State.Population.People; int day = (int)(c.IssuedSec / 86400);
             var res = jt.Table.ClaimAll(jt.Env, [new ClaimRequest(job, f.Person, f.PersonIndex, c.IssuedSec, (int)c.Seq, c.X, c.Y, f.MaxSkill, p.AgeYears(f.PersonIndex, day))], c.IssuedSec, ctx.Seed);
-            if (res.Count == 0 || res[0].Result != ClaimResult.Taken) { f.Order = SquadOrder.Follow; return R(c, HeroResultCode.Refused, $"{f.Name} could not take that work ({(res.Count > 0 ? res[0].Result : ClaimResult.NoSuchJob)})."); }
+            if (res.Count == 0 || res[0].Result != ClaimResult.Taken) { f.Order = SquadOrder.Follow; return R(c, HeroResultCode.Refused, T("HERO_COULD_NOT_TAKE_WORK", f.Name, (res.Count > 0 ? res[0].Result : ClaimResult.NoSuchJob))); }
             f.OrderJob = job;
-            return R(c, HeroResultCode.Ok, $"{f.Name} goes to work: {jt.Table.Jobs[job].Title}.");
+            return R(c, HeroResultCode.Ok, T("HERO_GOES_WORK", f.Name, jt.Table.Jobs[job].Title));
         }
-        return R(c, HeroResultCode.Ok, $"{f.Name}: {c.Order.ToString().ToLowerInvariant()}.");
+        return R(c, HeroResultCode.Ok, T("HERO_ORDER", f.Name, T("HERO_ORDER_" + c.Order.ToString().ToUpperInvariant())));
+    }
+
+    /// <summary>Barter lines summed by good, ascending (review finding 4: a good named twice was checked against the whole pack twice and credited twice). False on a sum that overflows.</summary>
+    internal static bool Coalesce((ushort Good, long Qty)[] lines, out List<(ushort Good, long Qty)> res)
+    {
+        var sum = new SortedDictionary<ushort, long>();
+        res = [];
+        try { foreach (var (g, q) in lines) sum[g] = checked(sum.GetValueOrDefault(g) + q); }
+        catch (OverflowException) { return false; }
+        foreach (var (g, q) in sum) res.Add((g, q));
+        return true;
     }
 
     private HeroResult DoBarter(HeroContext ctx, HeroCommand c)
     {
         var (i, hh) = PersonOf(ctx, c.Person); var e = ctx.Econ;
-        if (i < 0 || hh < 0 || hh >= e.HouseholdCount) return R(c, HeroResultCode.Invalid, "They have no household to trade from.");
+        if (i < 0 || hh < 0 || hh >= e.HouseholdCount) return R(c, HeroResultCode.Invalid, T("HERO_THEY_HAVE_NO_HOUSEHOLD"));
+        if (!Coalesce(c.Give, out var give) || !Coalesce(c.Take, out var take)) return R(c, HeroResultCode.Invalid, T("HERO_MAKES_NO_SENSE"));
+        var items = c.GiveItems.Distinct().OrderBy(x => x).ToArray();
         var book = ctx.Book(c.Settlement >= 0 ? c.Settlement : ctx.State.Population.People.HomeSettlement[i]);
         var store = e.HouseholdStore[hh]; var purse = e.HouseholdPurse[hh];
         var van = CaravanTrader(ctx, i); if (van is { } v0) { store = v0.Store; purse = v0.Purse; }       // a caravan's people trade the caravan's own cargo and float (Phase 3 cleanup B, item 1)
         bool survive = van == null && e.Tiers[hh] == HouseholdTier.Survive;
-        long Val(ushort g, long q) => book == null ? (long)(e.Goods.BasePriceMilliMites(g) * q / (e.Goods.IsPiece(g) ? 1000 : 1_000_000)) : (long)((Int128)book.MidMicro(g) * q / PriceCurve.Micro);
+        long Val(ushort g, long q) => book == null ? (long)((Int128)e.Goods.BasePriceMilliMites(g) * q / (e.Goods.IsPiece(g) ? 1000 : 1_000_000)) : (long)((Int128)book.MidMicro(g) * q / PriceCurve.Micro);
         int Want(ushort g) => survive && e.Goods.FoodMeasuresPpm(g) > 0 ? 1 : 0;
+        var pack = ctx.Pack;
         long received = c.CoinGive, given = c.CoinTake;
-        foreach (var (g, q) in c.Give) { if (ctx.Pack.Qty(g) < q) return R(c, HeroResultCode.Invalid, "You do not have that much."); received += Barter.Weighted(Val(g, q), Want(g), ctx.Trade.WantPm); }
-        foreach (var id in c.GiveItems) { int row = e.Items.IndexOf(id); if (row < 0 || e.Items.At(row).Owner != ctx.Party.Hero) return R(c, HeroResultCode.Invalid, "You do not have that."); received += ItemValue(ctx, row); }
-        foreach (var (g, q) in c.Take) { if (store.Qty(g) < q) return R(c, HeroResultCode.NoStock, "They do not have that much."); given += Barter.Weighted(Val(g, q), Want(g), ctx.Trade.WantPm); }
-        if (c.CoinTake > 0 && e.Ledger.Balance(purse).Mites < c.CoinTake) return R(c, HeroResultCode.TheyCannotAfford, $"They have only {Quotes.Money(e.Ledger.Balance(purse).Mites)}.");
-        if (c.CoinGive > 0 && ctx.Coin < c.CoinGive) return R(c, HeroResultCode.CannotAfford, "You do not have the coin.");
+        foreach (var (g, q) in give) { if (pack.Qty(g) < q) return R(c, HeroResultCode.Invalid, T("HERO_DO_NOT_HAVE_MUCH")); received += Barter.Weighted(Val(g, q), Want(g), ctx.Trade.WantPm); }
+        foreach (var id in items) { int row = e.Items.IndexOf(id); if (row < 0 || e.Items.At(row).Owner != ctx.Party.Hero) return R(c, HeroResultCode.Invalid, T("HERO_DO_NOT_HAVE")); received += ItemValue(ctx, row); }
+        foreach (var (g, q) in take) { if (store.Qty(g) < q) return R(c, HeroResultCode.NoStock, T("HERO_THEY_DO_NOT_HAVE")); given += Barter.Weighted(Val(g, q), Want(g), ctx.Trade.WantPm); }
+        if (c.CoinTake > 0 && e.Ledger.Balance(purse).Mites < c.CoinTake) return R(c, HeroResultCode.TheyCannotAfford, T("HERO_THEY_HAVE_ONLY_2", Quotes.Money(e.Ledger.Balance(purse).Mites)));
+        if (c.CoinGive > 0 && ctx.Coin < c.CoinGive) return R(c, HeroResultCode.CannotAfford, T("HERO_DO_NOT_HAVE_COIN"));
         string name = ctx.State.Population.People.FullName(i);
-        if (!Barter.Accepts(received, given)) return R(c, HeroResultCode.Refused, $"{name} shakes their head: that is worth {Quotes.Money(received)} to them, they would give {Quotes.Money(given)}.", received);
-        // all checks passed: every move below succeeds (the same stores, no capacity on a house store or the pack)
-        foreach (var (g, q) in c.Give) Store.Move(ctx.Pack, store, g, q);
-        foreach (var (g, q) in c.Take) { Store.Move(store, ctx.Pack, g, q); ctx.Party.Carried.Stow(e, ctx.Rules, g); ctx.Party.Traded.Add(g); }
-        foreach (var id in c.GiveItems) { ref var it = ref e.Items.Get(id); it.Owner = ctx.State.Population.People.IdOf(i); it.Parent = -1; }
-        if (van is { } v1) foreach (var (g, _) in c.Take) foreach (var line in v1.Caravan.Cargo) if (line.Good == g) line.Units = Math.Min(line.Units, store.Qty(g));
-        if (c.CoinGive > 0) e.Ledger.Transfer(ctx.Purse, purse, Coin.FromMites(c.CoinGive), TransferReason.Trade);
-        if (c.CoinTake > 0) e.Ledger.Transfer(purse, ctx.Purse, Coin.FromMites(c.CoinTake), TransferReason.Trade);
+        if (!Barter.Accepts(received, given)) return R(c, HeroResultCode.Refused, T("HERO_SHAKES_THEIR_HEAD_WORTH", name, Quotes.Money(received), Quotes.Money(given)), received);
+        // every move and transfer is checked; the first that fails undoes the ones before it, so the exchange happens whole or not at all (review finding 4)
+        var moved = new List<(Store From, Store To, ushort Good, long Qty)>(); var paid = new List<(PurseId From, PurseId To, long Mites)>();
+        bool ok = true;
+        foreach (var (g, q) in give) { if (!(ok = Store.Move(pack, store, g, q))) break; moved.Add((pack, store, g, q)); }
+        if (ok) foreach (var (g, q) in take) { if (!(ok = Store.Move(store, pack, g, q))) break; moved.Add((store, pack, g, q)); }
+        if (ok && c.CoinGive > 0) { if (ok = e.Ledger.Transfer(ctx.Purse, purse, Coin.FromMites(c.CoinGive), TransferReason.Trade)) paid.Add((ctx.Purse, purse, c.CoinGive)); }
+        if (ok && c.CoinTake > 0) { if (ok = e.Ledger.Transfer(purse, ctx.Purse, Coin.FromMites(c.CoinTake), TransferReason.Trade)) paid.Add((purse, ctx.Purse, c.CoinTake)); }
+        if (!ok)
+        {
+            for (int k = paid.Count - 1; k >= 0; k--) e.Ledger.Transfer(paid[k].To, paid[k].From, Coin.FromMites(paid[k].Mites), TransferReason.Trade);
+            for (int k = moved.Count - 1; k >= 0; k--) Store.Move(moved[k].To, moved[k].From, moved[k].Good, moved[k].Qty);
+            return R(c, HeroResultCode.Invalid, T("HERO_EXCHANGE_FELL_THROUGH_NOTHING"));
+        }
+        foreach (var id in items) { ref var it = ref e.Items.Get(id); it.Owner = ctx.State.Population.People.IdOf(i); it.Parent = -1; }
+        foreach (var (g, _) in take) { ctx.Party.Carried.Stow(e, ctx.Rules, g); ctx.Party.Traded.Add(g); }
+        if (van is { } v1) foreach (var (g, _) in take) foreach (var line in v1.Caravan.Cargo) if (line.Good == g) line.Units = Math.Min(line.Units, store.Qty(g));
         Deal(ctx, c);
-        var k = ctx.Party.Know(c.Person); k.Familiarity = Math.Min(100, k.Familiarity + 2);
-        return R(c, HeroResultCode.Ok, $"{name} agrees to the exchange.", received - given);
+        var k2 = ctx.Party.Know(c.Person); k2.Familiarity = Math.Min(100, k2.Familiarity + 2);
+        return R(c, HeroResultCode.Ok, T("HERO_AGREES_EXCHANGE", name), received - given);
     }
 
     // ------------------------------------------------------------------ crafting (the real world's CraftState, on the world clock)
 
-    private static string CraftText(HeroContext ctx, CraftEvent e) => e.Kind switch
+    private static HeroText CraftText(HeroContext ctx, CraftEvent e) => e.Kind switch
     {
-        CraftEventKind.Finished => $"Finished: {e.Text.Replace('_', ' ')}.", CraftEventKind.Ready => "Your work is ready to collect.", CraftEventKind.PastDeadline => "Your work is past its time: collect it soon.",
-        CraftEventKind.Ruining => "Your work is about to spoil.", CraftEventKind.Ruined => "Your work was spoiled.", CraftEventKind.Failed => "The work went wrong.", CraftEventKind.Waiting => "Left to rest; come back later.",
-        CraftEventKind.SkillGain => "", CraftEventKind.StepDone => "", _ => e.Text,
+        CraftEventKind.Finished => T("HERO_FINISHED", e.Text.Replace('_', ' ')), CraftEventKind.Ready => T("HERO_YOUR_WORK_READY_COLLECT"), CraftEventKind.PastDeadline => T("HERO_YOUR_WORK_PAST_ITS"),
+        CraftEventKind.Ruining => T("HERO_YOUR_WORK_ABOUT_SPOIL"), CraftEventKind.Ruined => T("HERO_YOUR_WORK_WAS_SPOILED"), CraftEventKind.Failed => T("HERO_WORK_WENT_WRONG"), CraftEventKind.Waiting => T("HERO_LEFT_REST_COME_BACK"),
+        CraftEventKind.SkillGain => HeroText.Empty, CraftEventKind.StepDone => HeroText.Empty, _ => T("HERO_RAW", e.Text),
     };
 
-    private HeroResult CraftEvents(HeroContext ctx, HeroCommand c, List<CraftEvent> ev, string fallback)
+    private HeroResult CraftEvents(HeroContext ctx, HeroCommand c, List<CraftEvent> ev, HeroText fallback)
     {
         foreach (var x in ev) if (x.Kind == CraftEventKind.Finished) foreach (var (g, _) in ctx.Pack.Rows()) ctx.Party.Carried.Stow(ctx.Econ, ctx.Rules, g);
-        var texts = ev.Select(x => CraftText(ctx, x)).Where(t => t.Length > 0).Distinct().ToList();
-        return R(c, HeroResultCode.Ok, texts.Count > 0 ? string.Join(" ", texts) : fallback);
+        var texts = ev.Select(x => CraftText(ctx, x)).Where(t => !t.IsEmpty).ToList();
+        return R(c, HeroResultCode.Ok, texts.Count > 0 ? HeroText.Join(texts) : fallback);
     }
 
     private HeroResult CraftStart(HeroContext ctx, HeroCommand c)
     {
-        if (c.Recipe >= ctx.Recipes.Recipes.Count) return R(c, HeroResultCode.Invalid, "No such recipe.");
+        if (c.Recipe >= ctx.Recipes.Recipes.Count) return R(c, HeroResultCode.Invalid, T("HERO_NO_SUCH_RECIPE"));
         var r = ctx.Recipes[c.Recipe];
-        if (!ctx.Craft.State.Know.Knows(r, ctx.Party.Hero, ctx.Craft.State.Book)) return R(c, HeroResultCode.NotKnown, "You do not know how to make that.");
+        if (!ctx.Craft.State.Know.Knows(r, ctx.Party.Hero, ctx.Craft.State.Book)) return R(c, HeroResultCode.NotKnown, T("HERO_DO_NOT_KNOW_HOW"));
         var site = (c.Site ?? new CraftSiteSpec(255, true, [], [], [])).Build(ctx.Recipes);
         var plan = ctx.Craft.Plan(r, ctx.Actor(), site, ctx.Pack, Math.Max(1, c.Batch), c.Choice);
-        if (!plan.CanStart) return R(c, HeroResultCode.NoStock, "You lack what it needs.");
+        if (!plan.CanStart) return R(c, HeroResultCode.NoStock, T("HERO_LACK_WHAT_NEEDS"));
         var job = ctx.Craft.Start(plan, ctx.Actor(), ctx.Party.Hero, ctx.Pack, c.IssuedSec, c.X, c.Y);
-        if (job == null) return R(c, HeroResultCode.NoStock, "You lack what it needs.");
+        if (job == null) return R(c, HeroResultCode.NoStock, T("HERO_LACK_WHAT_NEEDS"));
         ctx.Party.WorkedTo[job.Id] = c.IssuedSec;
-        return R(c, HeroResultCode.Ok, $"You start: {r.Name}.", 0, (long)job.Id.Value);
+        return R(c, HeroResultCode.Ok, T("HERO_START", r.Name), 0, (long)job.Id.Value);
     }
 
     private HeroResult CraftWork(HeroContext ctx, HeroCommand c)
     {
         var j = ctx.Craft.State.Get(c.Job);
-        if (j == null || j.Closed || j.Owner != ctx.Party.Hero) return R(c, HeroResultCode.Invalid, "");
+        if (j == null || j.Closed || j.Owner != ctx.Party.Hero) return R(c, HeroResultCode.Invalid, HeroText.Empty);
         long from = ctx.Party.WorkedTo.GetValueOrDefault(j.Id, c.UntilSec);
-        if (j.State != CraftJobState.Active || c.UntilSec <= from) { ctx.Party.WorkedTo[j.Id] = Math.Max(from, c.UntilSec); return R(c, HeroResultCode.Ok, ""); }
+        if (j.State != CraftJobState.Active || c.UntilSec <= from) { ctx.Party.WorkedTo[j.Id] = Math.Max(from, c.UntilSec); return R(c, HeroResultCode.Ok, HeroText.Empty); }
         var ev = ctx.Craft.Advance(j, c.UntilSec - from, from);
         ctx.Party.WorkedTo[j.Id] = c.UntilSec;
         if (j.Closed) ctx.Party.WorkedTo.Remove(j.Id);
-        return CraftEvents(ctx, c, ev, "");
+        return CraftEvents(ctx, c, ev, HeroText.Empty);
     }
 
     private HeroResult CraftPause(HeroContext ctx, HeroCommand c)
     {
-        var j = ctx.Craft.State.Get(c.Job); if (j == null || j.Owner != ctx.Party.Hero) return R(c, HeroResultCode.Invalid, "");
-        ctx.Craft.Pause(j); return R(c, HeroResultCode.Ok, "Put down; the work keeps.");
+        var j = ctx.Craft.State.Get(c.Job); if (j == null || j.Owner != ctx.Party.Hero) return R(c, HeroResultCode.Invalid, HeroText.Empty);
+        ctx.Craft.Pause(j); return R(c, HeroResultCode.Ok, T("HERO_PUT_DOWN_WORK_KEEPS"));
     }
 
     private HeroResult CraftResume(HeroContext ctx, HeroCommand c)
     {
-        var j = ctx.Craft.State.Get(c.Job); if (j == null) return R(c, HeroResultCode.Invalid, "");
-        if (!ctx.Craft.Resume(j, ctx.Actor())) return R(c, HeroResultCode.Refused, "You cannot take that up.");
+        var j = ctx.Craft.State.Get(c.Job); if (j == null) return R(c, HeroResultCode.Invalid, HeroText.Empty);
+        if (!ctx.Craft.Resume(j, ctx.Actor())) return R(c, HeroResultCode.Refused, T("HERO_CANNOT_TAKE_UP"));
         ctx.Party.WorkedTo[j.Id] = c.IssuedSec;
-        return R(c, HeroResultCode.Ok, "Back to work.");
+        return R(c, HeroResultCode.Ok, T("HERO_BACK_WORK"));
     }
 
     private HeroResult CraftCollect(HeroContext ctx, HeroCommand c)
     {
-        var j = ctx.Craft.State.Get(c.Job); if (j == null) return R(c, HeroResultCode.Invalid, "");
+        var j = ctx.Craft.State.Get(c.Job); if (j == null) return R(c, HeroResultCode.Invalid, HeroText.Empty);
         var (ok, ev) = ctx.Craft.Collect(j, ctx.Actor(), c.IssuedSec);
-        if (!ok) return R(c, HeroResultCode.Refused, "It is not ready yet.");
+        if (!ok) return R(c, HeroResultCode.Refused, T("HERO_NOT_READY_YET"));
         ctx.Party.WorkedTo[j.Id] = c.IssuedSec;
-        return CraftEvents(ctx, c, ev, "Collected.");
+        return CraftEvents(ctx, c, ev, T("HERO_COLLECTED"));
     }
 
     // ------------------------------------------------------------------ the view

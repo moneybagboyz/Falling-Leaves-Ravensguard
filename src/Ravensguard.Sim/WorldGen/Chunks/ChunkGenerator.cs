@@ -20,6 +20,8 @@ public sealed class GeneratedChunk
     public SortedDictionary<int, ChunkContent> Levels { get; } = [];
     /// <summary>SHA-256 (hex, 32 chars) over every level's tiles and objects in key order.</summary>
     public string ContentHash { get; set; } = "";
+    /// <summary>The region's <see cref="RegionData.GrowthVersion"/> the chunk was made from: one made before a growth change and recorded after it is stale (review finding 1).</summary>
+    public int GrowthVersion { get; init; }
 }
 
 /// <summary>
@@ -80,13 +82,13 @@ public sealed partial class ChunkGenerator
         }
         MinZ = Math.Max(minZ, ChunkKey.MinZ); MaxZ = Math.Min(maxZ, ChunkKey.MaxZ);
 
+        _cultureStyles = BuildCultureStyles(content);
+        using var _ = region.ReadGrowth();       // a generator made on a worker reads the plans while growth may be changing them (review finding 1)
         _growthVersion = region.GrowthVersion;
         _crop = new byte[RegionData.Tiles];
         foreach (var f in region.Fields) _crop[f.Tile] = (byte)((int)f.Crop + 1);
         _settlementStyle = new string[region.Settlements.Count];
         for (int s = 0; s < region.Settlements.Count; s++) _settlementStyle[s] = StyleFor(region.Settlements[s]);
-
-        _cultureStyles = BuildCultureStyles(content);
         BuildIndices();
     }
 
@@ -284,15 +286,18 @@ public sealed partial class ChunkGenerator
     /// <summary>All levels of a chunk (ground level plus building storeys and cellars), deterministic for (region, population, content, x, y).</summary>
     public GeneratedChunk GenerateLevels(int chunkX, int chunkY)
     {
+        // the region's growth lock first, for the whole chunk (review finding 1): background growth on the tick worker cannot change the plans, the built and parcel maps or the per-lot
+        // arrays under it, and the indices are refreshed against the same version the chunk is made from
+        using var _ = Region.ReadGrowth();
         RefreshIfGrown();
         _grow.EnterReadLock();
-        try { return GenerateLevelsCore(chunkX, chunkY); }
+        try { return GenerateLevelsCore(chunkX, chunkY, Region.GrowthVersion); }
         finally { _grow.ExitReadLock(); }
     }
 
-    private GeneratedChunk GenerateLevelsCore(int chunkX, int chunkY)
+    private GeneratedChunk GenerateLevelsCore(int chunkX, int chunkY, int growthVersion)
     {
-        var res = new GeneratedChunk { ChunkX = chunkX, ChunkY = chunkY };
+        var res = new GeneratedChunk { ChunkX = chunkX, ChunkY = chunkY, GrowthVersion = growthVersion };
         var buf = new Buf(chunkX * Size - Pad, chunkY * Size - Pad);
         if ((uint)chunkX >= ChunksPerSide || (uint)chunkY >= ChunksPerSide)
         {

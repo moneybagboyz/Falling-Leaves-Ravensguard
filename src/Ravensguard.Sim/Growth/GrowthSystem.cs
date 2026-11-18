@@ -362,9 +362,7 @@ public sealed class GrowthSystem
         bool vacant = p.Lot >= 0;
         int lot = vacant ? p.Lot : Region.Settlements[p.Settlement].Plan.Lots.Count;
         var rec = new LotRecord(p.Settlement, lot, !vacant, p.Use, p.Dwelling, p.Blueprint, p.Rect, p.Facing, p.Wealth, p.Beds, (int)now.TotalDays);
-        var tx = ChunkSink?.Begin([Pad(p.Rect)]);
-        RegionGrowth.AddLot(Region, pop, rec);
-        tx?.Commit();
+        RegionGrowth.Change(Region, ChunkSink, [Pad(p.Rect)], () => RegionGrowth.AddLot(Region, pop, rec));
         State.Lots.Add(rec);
         if (vacant) yr.VacantRefitted++; else yr.PlotsGiven++;
         yr.CottagesBuilt++;
@@ -428,18 +426,20 @@ public sealed class GrowthSystem
         var owner = new ParcelOwner(st.Class == SettlementClass.Town ? OwnerKind.Burgher : OwnerKind.Tenant, fief, holderLot);
         var rec = new ParcelRecord(s, owner, 2, tiles, fert, (int)now.TotalDays);
         var rects = tiles.Select(t => new RectM(t % N * RegionData.TileM, t / N * RegionData.TileM, RegionData.TileM, RegionData.TileM)).ToList();
-        var tx = ChunkSink?.Begin(rects.Select(q => new RectM(q.X - RegionData.TileM, q.Y - RegionData.TileM, q.W + 2 * RegionData.TileM, q.H + 2 * RegionData.TileM)).ToList());
         // the wood comes off the woodland rows and is taken to market as firewood and logs
         long wood = 0; int day = (int)now.TotalDays;
-        foreach (int t in tiles)
+        int pidx = RegionGrowth.Change(r, ChunkSink, rects.Select(q => new RectM(q.X - RegionData.TileM, q.Y - RegionData.TileM, q.W + 2 * RegionData.TileM, q.H + 2 * RegionData.TileM)).ToList(), () =>
         {
-            int row = _ew.Resources.Find(t, ResourceKind.Wood);
-            if (row >= 0) { wood += _ew.Resources.Clear(row, day); State.ClearedTiles.Add(t); }
-        }
-        State.ClearedTiles.Sort();
-        int pidx = RegionGrowth.ApplyParcel(r, rec);
-        farming.AddParcels([pidx], p.Payer);
-        tx?.Commit();
+            foreach (int t in tiles)
+            {
+                int row = _ew.Resources.Find(t, ResourceKind.Wood);
+                if (row >= 0) { wood += _ew.Resources.Clear(row, day); State.ClearedTiles.Add(t); }
+            }
+            State.ClearedTiles.Sort();
+            int pi = RegionGrowth.ApplyParcel(r, rec);
+            farming.AddParcels([pi], p.Payer);
+            return pi;
+        });
         State.Parcels.Add(rec);
         if (wood > 0)
         {
@@ -494,13 +494,11 @@ public sealed class GrowthSystem
             if (kind.Lot is { } use)
             {
                 bool town = Region.Settlements[s].Class == SettlementClass.Town;
-                if (!RegionGrowth.FindPlot(Region, s, town ? 14 : 18, town ? 24 : 28, T.PlanMarginM, State.Projects.Where(p => p.Settlement == s && p.Lot < 0).Select(p => p.Rect).ToList(), out var rect, out byte facing)) continue;
+                if (!RegionGrowth.FindPlot(Region, s, town ? T.BusinessPlotWidthTownM : T.BusinessPlotWidthVillageM, town ? T.BusinessPlotDepthTownM : T.BusinessPlotDepthVillageM, T.PlanMarginM, State.Projects.Where(p => p.Settlement == s && p.Lot < 0).Select(p => p.Rect).ToList(), out var rect, out byte facing)) continue;
                 var hands = HandsOf(s, day); long pay = T.PremisesMites;
                 if (Balance(ohh) < pay + T.BusinessMinOwnerMites / 2) continue;
                 var rec = new LotRecord(s, Region.Settlements[s].Plan.Lots.Count, true, use, DwellingType.None, use switch { LotUse.Smithy => "smithy", LotUse.Tavern => "tavern", _ => "" }, rect, facing, 1, 0, day);
-                var tx = ChunkSink?.Begin([Pad(rect)]);
-                RegionGrowth.AddLot(Region, W.Population, rec);
-                tx?.Commit();
+                RegionGrowth.Change(Region, ChunkSink, [Pad(rect)], () => RegionGrowth.AddLot(Region, W.Population, rec));
                 State.Lots.Add(rec); lot = rec.Lot; yr.PlotsGiven++;
                 PayHands(ohh, hands, pay, now);
             }

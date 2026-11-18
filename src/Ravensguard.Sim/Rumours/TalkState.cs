@@ -45,7 +45,7 @@ public sealed class TalkState
     internal int[][]? Residents;
     internal int ResidentsDay = -1, ResidentsCount = -1;
 
-    public bool IsEmpty => Rumours.Count == 0 && Heard.Count == 0 && Flags.Count == 0 && Relations.Count == 0 && Cursor == 0;
+    public bool IsEmpty => Rumours.Count == 0 && Heard.Count == 0 && Flags.Count == 0 && Relations.Count == 0 && Cursor == 0 && NextAuthored == 1;
     public bool HeroHolds(EntityId rumour) { foreach (var h in Heard) if (h.Rumour == rumour) return true; return false; }
 
     /// <summary>The digest of the talk records (the spec's <c>TalkHash</c>): rumours, hearings, relations, the hero's cards.</summary>

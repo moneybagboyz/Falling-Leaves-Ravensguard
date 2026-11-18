@@ -5,5 +5,7 @@
     "safe_disabled_kinds": [ "Ambush", "Demand" ],
     // permille of the hero's own speed by ground; mud and snow come from the weather rows
     "terrain_speed_pm": { "paved": 1000, "road": 1000, "track": 900, "field": 800, "woodland": 600, "marsh": 450, "sand": 700, "ford": 500 },
-    "weather_speed_pm": { "Clear": 1000, "Overcast": 1000, "LightRain": 950, "HeavyRain": 800, "Thunderstorm": 700, "Fog": 900, "Frost": 950, "Snow": 800, "Blizzard": 500, "Heatwave": 900 } }
+    "weather_speed_pm": { "Clear": 1000, "Overcast": 1000, "LightRain": 950, "HeavyRain": 800, "Thunderstorm": 700, "Fog": 900, "Frost": 950, "Snow": 800, "Blizzard": 500, "Heatwave": 900 },
+    // the day-to-day hunt: 250 + 5 x skill permille, + 250 armed, at most 900; a kill weighs 90 to 110 percent of the species; snares catch hares
+    "hunt_base_pm": 250, "hunt_per_skill_pm": 5, "hunt_armed_pm": 250, "hunt_max_pm": 900, "kill_mass_min_pm": 900, "kill_mass_max_pm": 1100, "snare_species": "hare" }
 ]

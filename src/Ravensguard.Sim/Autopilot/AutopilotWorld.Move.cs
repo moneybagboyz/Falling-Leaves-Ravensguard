@@ -103,7 +103,7 @@ public sealed partial class AutopilotWorld
             }
             if (st.Limits.HomeByNightfall)
             {
-                double rt = LimitGuard.RoundTripMinutes(PathPlan.Dist(tx - st.Limits.HomeX, ty - st.Limits.HomeY) / 1000);
+                long rt = LimitGuard.RoundTripSec(PathPlan.Dist(tx - st.Limits.HomeX, ty - st.Limits.HomeY) / 1000);
                 if (!LimitGuard.HomeByNightfallOk(LatTenths, DoY(at), MinuteOfDay(at), rt, Settings.HomeByNightfallOffsetMin))
                 { st.CampUntil = (at / 86400 + 1) * 86400; if (st.LimitDay != day) { st.LimitDay = day; Raise(st, InterruptKind.LimitReached, at, "Cannot be home by nightfall"); } return; }
             }

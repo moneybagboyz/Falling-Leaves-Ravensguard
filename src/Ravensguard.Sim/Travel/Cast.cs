@@ -30,6 +30,15 @@ public static class EncounterPlacement
     public static int Count(TravelState st, long sec, int slotKey, int group, EncounterGroupDef g)
         => g.Count.Count < 2 ? 1 : DetRng.Range(st.Seed, sec / TimeConst.SecondsPerHour, st.HeroId.Value, RngStreams.EncounterPlace, (uint)(slotKey * 16 + group * 4 + 1), g.Count[0], g.Count[1] + 1);
 
+    /// <summary>The region number generated travellers are made under (any; they belong to no region's records).</summary>
+    public const int TravellerRegion = 254;
+
+    /// <summary>
+    /// The id of the <paramref name="n"/>th generated traveller: a person id in the reserved serial space (<see cref="EntityId.ReservedSerialBit"/>), so it never equals the id of a real
+    /// person of region 254 (review finding 2: serial n of region 254 was the region's own nth person).
+    /// </summary>
+    public static EntityId TravellerId(ulong n) => EntityId.Reserved(IdKind.Person, TravellerRegion, EntityId.ReservedSpace.Travellers, n);
+
     /// <summary>The people of the group: existing records first, then generated ones. Returns their ids.</summary>
     public static List<EntityId> Cast(TravelState st, EncounterDef d, EncounterGroupDef g, int count, long sec, long xMm, long yMm)
     {
@@ -37,7 +46,7 @@ public static class EncounterPlacement
         if (st.CastSource != null) foreach (var id in st.CastSource.Existing(g.Archetype, count, sec, xMm, yMm)) { if (ids.Count < count) ids.Add(id); }
         while (ids.Count < count)
         {
-            var t = new Traveller { Id = EntityId.MakeIn(IdKind.Person, 254, ++st.NextTraveller), Archetype = g.Archetype, Encounter = d.Id, Sec = sec, XMm = xMm, YMm = yMm };
+            var t = new Traveller { Id = TravellerId(++st.NextTraveller), Archetype = g.Archetype, Encounter = d.Id, Sec = sec, XMm = xMm, YMm = yMm };
             st.Travellers.Add(t); ids.Add(t.Id);
         }
         return ids;

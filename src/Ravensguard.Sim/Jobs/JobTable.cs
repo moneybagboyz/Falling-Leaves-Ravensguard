@@ -56,6 +56,8 @@ public sealed class JobTable
     public long LastPostedDay { get; set; } = -1;
     public IReadOnlyDictionary<EntityId, Job> Jobs => _jobs;
     public int Count => _jobs.Count;
+    /// <summary>True when there is nothing to save: no jobs and both counters at their start (review finding 5: a table whose jobs are all gone still holds the next serial and the last posted day).</summary>
+    public bool IsEmpty => _jobs.Count == 0 && NextSerial == 1 && LastPostedDay == -1;
 
     public Job? Get(EntityId id) => _jobs.GetValueOrDefault(id);
     public Job? JobOf(EntityId worker) => _byWorker.TryGetValue(worker, out var j) ? _jobs[j] : null;
@@ -64,7 +66,7 @@ public sealed class JobTable
     /// <summary>Open jobs listed at a settlement, oldest first (the board, or what the reeve and innkeeper tell).</summary>
     public List<Job> Open(int region, int settlement) => [.. _jobs.Values.Where(j => j.State == JobState.Open && j.Region == region && j.Settlement == settlement).OrderBy(j => j.PostedSec).ThenBy(j => j.Id)];
 
-    public static EntityId MakeId(int region, ulong serial) => EntityId.MakeIn(IdKind.Other, region, (1UL << 47) | serial);
+    public static EntityId MakeId(int region, ulong serial) => EntityId.MakeIn(IdKind.Other, region, EntityId.ReservedSerialBit | serial);
 
     // ------------------------------------------------------------------ posting
 

@@ -40,6 +40,8 @@ public sealed partial class TravelState
     public readonly List<Carcass> Carcasses = [];
     public readonly List<Snare> Snares = [];
     public ulong NextCarcass; public int NextSnare;
+    /// <summary>The id of the nth carcass: in the reserved serial space (review finding 2), never a record's id.</summary>
+    public static EntityId CarcassId(ulong n) => EntityId.Reserved(IdKind.Other, 252, EntityId.ReservedSpace.Carcasses, n);
     public const long MicroPerG = 25, MicroDiv = 2;      // 1,000,000 micro-animals per 80 kg deer-equivalent: micro = grams x 25 / 2
 
     // ---------------------------------------------------------------- foraging (spec 4.4)
@@ -122,7 +124,8 @@ public sealed partial class TravelState
     /// </summary>
     public Carcass? Kill(ResourceLayer layer, int tile, GameSpeciesDef sp, long sec, long xMm, long yMm)
     {
-        long massG = sp.MassKg * 1000L * (900 + DetRng.Range(Seed, sec / TimeConst.SecondsPerHour, (ulong)tile, RngStreams.HuntDraw, 7, 0, 201)) / 1000;
+        int lo = Math.Min(Cfg.KillMassMinPm, Cfg.KillMassMaxPm), hi = Math.Max(Cfg.KillMassMinPm, Cfg.KillMassMaxPm);
+        long massG = sp.MassKg * 1000L * (lo + DetRng.Range(Seed, sec / TimeConst.SecondsPerHour, (ulong)tile, RngStreams.HuntDraw, 7, 0, hi - lo + 1)) / 1000;
         long need = massG * MicroPerG / MicroDiv, left = need; int day = (int)(sec / TimeConst.SecondsPerDay);
         int tx = tile % RegionData.Size, ty = tile / RegionData.Size;
         var cand = new List<(int D, int Row)>();
@@ -136,7 +139,7 @@ public sealed partial class TravelState
                 }
         if (cand.Sum(c => layer.StockG(c.Row)) < need) return null;
         foreach (var (_, row) in cand) { if (left <= 0) break; left -= layer.Take(row, left, day); }
-        var car = new Carcass { Id = EntityId.MakeIn(IdKind.Other, 252, 0x2000 + ++NextCarcass), Species = sp.Id, MassG = massG, DeathSec = sec, Tile = tile, XMm = xMm, YMm = yMm };
+        var car = new Carcass { Id = CarcassId(++NextCarcass), Species = sp.Id, MassG = massG, DeathSec = sec, Tile = tile, XMm = xMm, YMm = yMm };
         Carcasses.Add(car); return car;
     }
 
@@ -159,7 +162,7 @@ public sealed partial class TravelState
         if (AnimalsNear(layer, tile) <= 0) return (null, "nogame");
         long hour = sec / TimeConst.SecondsPerHour;
         var sp = PickSpecies(biome, season, tile, hour, 1); if (sp == null) return (null, "nogame");
-        int p = Math.Min(900, 250 + 5 * skill + (armed ? 250 : 0));
+        int p = Math.Min(Cfg.HuntMaxPm, Cfg.HuntBasePm + Cfg.HuntPerSkillPm * skill + (armed ? Cfg.HuntArmedPm : 0));
         if (DetRng.Range(Seed, hour, (ulong)tile, RngStreams.HuntDraw, 50, 0, 1000) >= p) return (null, "missed");
         var car = Kill(layer, tile, sp, sec, xMm, yMm);
         return car == null ? (null, "nogame") : (car, "ok");
@@ -174,11 +177,11 @@ public sealed partial class TravelState
         Snares.Add(s); return s;
     }
 
-    /// <summary>Per game hour a set snare may catch a hare-size animal: <c>15 + 3 x skill / 10</c> permille (stream 0x343 keyed on the tile and hour); the tile's game stock pays for it.</summary>
+    /// <summary>Per game hour a set snare may catch an animal of the settings' snare species (a hare): <c>15 + 3 x skill / 10</c> permille (stream 0x343 keyed on the tile and hour); the tile's game stock pays for it.</summary>
     public void StepSnares(ResourceLayer layer, long sec, int skill)
     {
         long hour = sec / TimeConst.SecondsPerHour;
-        var hare = Content.All<GameSpeciesDef>().FirstOrDefault(d => d.Id == "hare");
+        var hare = Content.All<GameSpeciesDef>().FirstOrDefault(d => d.Id == Cfg.SnareSpecies);
         foreach (var s in Snares)
         {
             if (s.Caught || hare == null) { s.LastHour = hour; continue; }
@@ -201,7 +204,7 @@ public sealed partial class TravelState
         Snares.Remove(s);
         if (!s.Caught) return null;
         if (sec > s.SetSec + (Cfg.SnareDeadlineHours + Cfg.SnareGraceHours) * TimeConst.SecondsPerHour) return null;
-        var car = new Carcass { Id = EntityId.MakeIn(IdKind.Other, 252, 0x2000 + ++NextCarcass), Species = s.Species, MassG = s.MassG, DeathSec = s.CatchSec, Tile = s.Tile };
+        var car = new Carcass { Id = CarcassId(++NextCarcass), Species = s.Species, MassG = s.MassG, DeathSec = s.CatchSec, Tile = s.Tile };
         Carcasses.Add(car); return car;
     }
 }

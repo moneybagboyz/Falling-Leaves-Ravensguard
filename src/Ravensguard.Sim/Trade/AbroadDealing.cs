@@ -28,16 +28,17 @@ public static class AbroadDealing
         return m == null || settlement < 0 || settlement >= m.BookOf.Length ? null : m.BookForSettlement(settlement);
     }
 
-    private static HeroResult R(HeroCommand c, HeroResultCode code, string text, long mites = 0, long qty = 0) => new(c.Seq, c.Kind, code, text, mites, qty, c.IssuedSec);
+    private static HeroResult R(HeroCommand c, HeroResultCode code, HeroText text, long mites = 0, long qty = 0) => new(c.Seq, c.Kind, code, text, mites, qty, c.IssuedSec);
+    private static HeroText T(string key, params object[] args) => HeroText.Of(key, args);
     private static string Amount(Economy.EconomyState e, ushort g, long q) => e.Goods.IsPiece(g) ? $"{q}" : Quotes.Weight(q);
 
     public static HeroResult Visit(HeroContext ctx, HeroCommand c, out int market, out int region)
     {
         market = -1; region = -1;
         var b = BookOf(ctx, c.Region, c.Settlement);
-        if (b == null) return R(c, HeroResultCode.NoMarket, "There is no market there.");
+        if (b == null) return R(c, HeroResultCode.NoMarket, T("ABROAD_THERE_NO_MARKET_THERE"));
         market = c.Settlement; region = c.Region;
-        return R(c, HeroResultCode.Ok, $"The market of {b.Name}.");
+        return R(c, HeroResultCode.Ok, T("HERO_MARKET", b.Name));
     }
 
     private static (PurseId Purse, Store Store) Visitor(Economy.EconomyState e)
@@ -63,39 +64,39 @@ public static class AbroadDealing
 
     public static HeroResult Buy(HeroContext ctx, HeroCommand c)
     {
-        var b = BookOf(ctx, c.Region, c.Settlement); if (b == null) return R(c, HeroResultCode.NoMarket, "There is no market there.");
+        var b = BookOf(ctx, c.Region, c.Settlement); if (b == null) return R(c, HeroResultCode.NoMarket, T("ABROAD_THERE_NO_MARKET_THERE"));
         var there = b.Econ;
-        if (!b.IsOpen((int)(c.IssuedSec / 3600 % 24))) return R(c, HeroResultCode.Closed, "The stalls are shut (06:00 to 18:00).");
-        ushort g = c.Good; if (g >= b.Goods.Length || c.Qty <= 0) return R(c, HeroResultCode.Invalid, "Nothing to buy.");
+        if (!b.IsOpen((int)(c.IssuedSec / 3600 % 24))) return R(c, HeroResultCode.Closed, T("HERO_STALLS_ARE_SHUT"));
+        ushort g = c.Good; if (g >= b.Goods.Length || c.Qty <= 0) return R(c, HeroResultCode.Invalid, T("HERO_NOTHING_BUY"));
         b.Sync(g);
-        if (b.Goods[g].StockUnits < c.Qty) return R(c, HeroResultCode.NoStock, $"They have only {Amount(there, g, b.Goods[g].StockUnits)} of {there.Goods.Def(g).Name.ToLowerInvariant()}.");
+        if (b.Goods[g].StockUnits < c.Qty) return R(c, HeroResultCode.NoStock, T("HERO_THEY_HAVE_ONLY", Amount(there, g, b.Goods[g].StockUnits), there.Goods.Def(g).Name.ToLowerInvariant()));
         var q = Quotes.Buy(b, g, c.Qty);
-        if (c.Limit > 0 && q.TotalMites > c.Limit) return R(c, HeroResultCode.PriceMoved, $"Prices moved: it now costs {Quotes.Money(q.TotalMites)}. Nothing was spent.", q.TotalMites);
+        if (c.Limit > 0 && q.TotalMites > c.Limit) return R(c, HeroResultCode.PriceMoved, T("ABROAD_PRICES_MOVED_NOW_COSTS", Quotes.Money(q.TotalMites)), q.TotalMites);
         long bring = c.Limit > 0 ? c.Limit : q.TotalMites;
-        if (ctx.Coin < bring) return R(c, HeroResultCode.CannotAfford, $"You cannot afford it: {Quotes.Money(q.TotalMites)}, you have {Quotes.Money(ctx.Coin)}.", q.TotalMites);
+        if (ctx.Coin < bring) return R(c, HeroResultCode.CannotAfford, T("HERO_CANNOT_AFFORD_HAVE", Quotes.Money(q.TotalMites), Quotes.Money(ctx.Coin)), q.TotalMites);
         var (vp, vs) = Visitor(there); long pre = there.Ledger.Balance(vp).Mites;
-        if (!CoinOver(ctx, there, vp, bring)) return R(c, HeroResultCode.CannotAfford, "You cannot afford it.", q.TotalMites);
+        if (!CoinOver(ctx, there, vp, bring)) return R(c, HeroResultCode.CannotAfford, T("ABROAD_CANNOT_AFFORD"), q.TotalMites);
         var party = new MarketParty(EconomyState.HeroOwner, vp, vs, PartyKind.Household, int.MaxValue);
         var r = b.Buy(party, g, c.Qty, b.Money.PriceClampMaxPermille, (int)(c.IssuedSec / 86400), bring);
         long got = vs.Qty(g);
         if (got > 0) { vs.Destroy(g, got, DestroyReason.Export); ctx.Pack.Create(g, got, CreateReason.Import); ctx.Party.Carried.Stow(ctx.Econ, ctx.Rules, g); ctx.Party.Traded.Add(g); }
         CoinHome(ctx, there, vp, pre);
-        if (r.Qty <= 0) return R(c, HeroResultCode.NoStock, "No one will sell at that price.");
-        return R(c, HeroResultCode.Ok, $"Bought {Amount(there, g, r.Qty)} of {there.Goods.Def(g).Name.ToLowerInvariant()} in {b.Name} for {Quotes.Money(r.PaidMites)}.", r.PaidMites, r.Qty);
+        if (r.Qty <= 0) return R(c, HeroResultCode.NoStock, T("HERO_NO_ONE_WILL_SELL"));
+        return R(c, HeroResultCode.Ok, T("ABROAD_BOUGHT", Amount(there, g, r.Qty), there.Goods.Def(g).Name.ToLowerInvariant(), b.Name, Quotes.Money(r.PaidMites)), r.PaidMites, r.Qty);
     }
 
     public static HeroResult Sell(HeroContext ctx, HeroCommand c)
     {
-        var b = BookOf(ctx, c.Region, c.Settlement); if (b == null) return R(c, HeroResultCode.NoMarket, "There is no market there.");
+        var b = BookOf(ctx, c.Region, c.Settlement); if (b == null) return R(c, HeroResultCode.NoMarket, T("ABROAD_THERE_NO_MARKET_THERE"));
         var there = b.Econ;
-        if (!b.IsOpen((int)(c.IssuedSec / 3600 % 24))) return R(c, HeroResultCode.Closed, "The stalls are shut (06:00 to 18:00).");
+        if (!b.IsOpen((int)(c.IssuedSec / 3600 % 24))) return R(c, HeroResultCode.Closed, T("HERO_STALLS_ARE_SHUT"));
         ushort g = c.Good;
-        if (c.Qty <= 0 || ctx.Pack.Qty(g) < c.Qty) return R(c, HeroResultCode.Invalid, "You do not have that much.");
-        if (b.Merchants.Count == 0) return R(c, HeroResultCode.TheyCannotAfford, "No merchant buys here.");
-        if (there.Goods.SpoilPpm(g, StoreKind.Granary) >= MarketBook.PerishablePpmPerDay) return R(c, HeroResultCode.Refused, "No merchant buys fresh food to hold.");
+        if (c.Qty <= 0 || ctx.Pack.Qty(g) < c.Qty) return R(c, HeroResultCode.Invalid, T("HERO_DO_NOT_HAVE_MUCH"));
+        if (b.Merchants.Count == 0) return R(c, HeroResultCode.TheyCannotAfford, T("HERO_NO_MERCHANT_BUYS_HERE"));
+        if (there.Goods.SpoilPpm(g, StoreKind.Granary) >= MarketBook.PerishablePpmPerDay) return R(c, HeroResultCode.Refused, T("HERO_NO_MERCHANT_BUYS_FRESH"));
         b.Sync(g);
         var q = Quotes.Sell(b, g, c.Qty);
-        if (c.Limit > 0 && q.NetMites < c.Limit) return R(c, HeroResultCode.PriceMoved, $"Prices moved: they now pay {Quotes.Money(q.NetMites)}. Nothing was sold.", q.NetMites);
+        if (c.Limit > 0 && q.NetMites < c.Limit) return R(c, HeroResultCode.PriceMoved, T("HERO_PRICES_MOVED_THEY_NOW", Quotes.Money(q.NetMites)), q.NetMites);
         var (vp, vs) = Visitor(there); long pre = there.Ledger.Balance(vp).Mites;
         ctx.Pack.Destroy(g, c.Qty, DestroyReason.Export); vs.Create(g, c.Qty, CreateReason.Import);
         var party = new MarketParty(EconomyState.HeroOwner, vp, vs, PartyKind.Household, int.MaxValue);
@@ -105,8 +106,8 @@ public static class AbroadDealing
         long before = ctx.Coin;
         CoinHome(ctx, there, vp, pre);
         ctx.Party.Carried.Stow(ctx.Econ, ctx.Rules, g);
-        if (r.Qty <= 0) return R(c, HeroResultCode.TheyCannotAfford, $"The merchants have no coin for it (they hold {Quotes.Money(HeroDesk.MerchantCash(b))}).");
+        if (r.Qty <= 0) return R(c, HeroResultCode.TheyCannotAfford, T("HERO_MERCHANTS_HAVE_NO_COIN", Quotes.Money(HeroDesk.MerchantCash(b))));
         ctx.Party.Traded.Add(g);
-        return R(c, HeroResultCode.Ok, $"Sold {Amount(there, g, r.Qty)} of {there.Goods.Def(g).Name.ToLowerInvariant()} in {b.Name} for {Quotes.Money(r.PaidMites)} (toll {Quotes.Money(r.TollMites)}).", ctx.Coin - before, r.Qty);
+        return R(c, HeroResultCode.Ok, T("ABROAD_SOLD_TOLL", Amount(there, g, r.Qty), there.Goods.Def(g).Name.ToLowerInvariant(), b.Name, Quotes.Money(r.PaidMites), Quotes.Money(r.TollMites)), ctx.Coin - before, r.Qty);
     }
 }

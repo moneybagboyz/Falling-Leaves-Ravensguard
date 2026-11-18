@@ -195,7 +195,7 @@ public sealed class LiveWorld
         int mult = (int)Clock.Speed;
         _moving = false;
         if (_usePending) { _usePending = false; TryPortalHere(force: true); }
-        if (_rideCmd != 0) RunRideCommand();
+        if (!_rideCmds.IsEmpty) while (_rideCmds.TryDequeue(out int rc)) RunRideCommand(rc);   // every command since the last step, in the order given
         if (mult > 0) { if (Ride is { IsMounted: true } or { IsDriving: true } or { Busy: true }) MoveRidden(mult); else MoveHero(mult); }
         NoteWalked();
         Snapshot = Publish();
@@ -385,8 +385,11 @@ public sealed class LiveWorld
     private byte RideKind() => Ride == null ? (byte)0 : Ride.IsMounted ? (byte)1 : Ride.IsDriving ? (byte)2 : (byte)0;
 
     /// <summary>A hero's command about animals and carts (E, hitch, drive, push, unload, dig); applied at the next step so a replay repeats it. Codes in <see cref="RideCode"/>.</summary>
-    public void RideCommand(int code) { _rideCmd = code; }
-    private int _rideCmd;
+    /// <summary>Any thread may call it: commands queue (review finding 13: a single field lost the first of two given between steps) and all run at the next step, first given first.</summary>
+    public void RideCommand(int code) { if (code != 0) _rideCmds.Enqueue(code); }
+    private readonly System.Collections.Concurrent.ConcurrentQueue<int> _rideCmds = new();
+    /// <summary>Ride commands given and not yet run.</summary>
+    public int PendingRideCommands => _rideCmds.Count;
     /// <summary>What the last <see cref="RideCommand"/> came to, as a message key and a number for the view's toast (empty when it was silent); <see cref="RideMsgSerial"/> changes with each.</summary>
     public string LastRideKey { get; private set; } = "";
     public int LastRideArg { get; private set; }
@@ -395,9 +398,8 @@ public sealed class LiveWorld
 
     private void Say(string key, int arg = 0) { LastRideKey = key; LastRideArg = arg; RideMsgSerial++; }
 
-    private void RunRideCommand()
+    private void RunRideCommand(int c)
     {
-        int c = _rideCmd; _rideCmd = 0;
         if (c == 0 || Ride == null) return;
         long now = Clock.Now.Seconds; SyncRide();
         switch (c)

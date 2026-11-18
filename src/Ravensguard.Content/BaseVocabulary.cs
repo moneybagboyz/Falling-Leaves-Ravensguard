@@ -19,5 +19,8 @@ public static class BaseVocabulary
 
     public static readonly string[] Effects = ["start_contract", "give_item", "add_rumour", "set_flag", "add_trust", "end_dialogue"];
 
-    public static ContentVocabulary Create() => new ContentVocabulary().RegisterCondition(Conditions).RegisterEffect(Effects);
+    /// <summary>The kinds <c>start_contract</c> posts (the odd-job kinds a speaker can offer) and the onboarding script's own two (<c>first</c>, <c>loan</c>).</summary>
+    public static readonly string[] ContractKinds = ["guard", "haul", "deliver", "tendshop", "farmwork", "first", "loan"];
+
+    public static ContentVocabulary Create() => new ContentVocabulary().RegisterCondition(Conditions).RegisterEffect(Effects).RegisterEffectArg("start_contract", "kind", ContractKinds);
 }

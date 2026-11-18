@@ -84,7 +84,8 @@ public sealed class GrowthState
         var y = new GrowthYear { Year = year }; Years.Add(y); return y;
     }
 
-    public bool IsEmpty => Projects.Count == 0 && Lots.Count == 0 && Parcels.Count == 0 && Unmet.Count == 0 && Years.Count == 0;
+    public bool IsEmpty => Projects.Count == 0 && Lots.Count == 0 && Parcels.Count == 0 && Unmet.Count == 0 && Years.Count == 0 && NextSerial == 1 && ClearedTiles.Count == 0 && FertilityScalePermille == 0
+        && WoodDrawnG == 0 && FirewoodMadeG == 0 && LogsMadeG == 0 && PolesGatheredG == 0;
 
     public string ComputeHash()
     {

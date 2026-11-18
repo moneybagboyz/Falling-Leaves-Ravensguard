@@ -251,17 +251,31 @@ public sealed class CraftRunner
         ev.Add(new CraftEvent(CraftEventKind.Waiting, j.Id, j.Crafter, now, s.Id));
     }
 
-    /// <summary>A failure wastes <paramref name="pct"/> percent of every component in the job's store: the mass becomes the <c>waste</c> good, so mass is conserved.</summary>
+    /// <summary>
+    /// A failure wastes <paramref name="pct"/> percent of every component in the job's store: the mass becomes the <c>waste</c> good, so mass is conserved. The share is exact on average:
+    /// <c>q x pct / 100</c> whole units, plus one more with probability of the remainder (stream 0x363 keyed by the job and the good), so a stack of 3 pieces at 10 percent loses one
+    /// three times in ten rather than never (review finding 8).
+    /// </summary>
     private void Waste(CraftJob j, Store store, int pct)
     {
         long massLost = 0;
         foreach (var (g, q) in store.Rows())
         {
-            long lose = Cat.IsPiece(g) ? q * pct / 100 : q * pct / 100;
+            long lose = WasteOf(_seed, j.Id, g, q, pct);
             if (lose <= 0) continue;
             store.Destroy(g, lose, DestroyReason.Other); massLost += Cat.MassG(g, lose);
         }
         if (massLost > 0) store.Create(_waste, massLost, CreateReason.Other);
+    }
+
+    /// <summary>How much of a stack of <paramref name="q"/> a failure at <paramref name="pct"/> percent wastes (see <see cref="Waste"/>): integer, a pure function of (seed, job, good).</summary>
+    public static long WasteOf(ulong seed, EntityId job, ushort good, long q, int pct)
+    {
+        if (q <= 0 || pct <= 0) return 0;
+        if (pct >= 100) return q;
+        long whole = (long)((Int128)q * pct / 100), rem = (long)((Int128)q * pct % 100);
+        if (rem > 0 && DetRng.Range(seed, (long)job.Counter, job.Value, RngStreams.CraftWaste, good, 0, 100) < rem) whole++;
+        return Math.Min(q, whole);
     }
 
     // ------------------------------------------------------------------ unattended work

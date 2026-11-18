@@ -23,6 +23,7 @@ public static class RegionGrowth
     /// <summary>Appends a lot to the plan (or takes a vacant one up again) in the region only; the population's per-lot arrays are the caller's to keep (<see cref="AddLot"/>).</summary>
     public static void ApplyLot(RegionData r, LotRecord rec)
     {
+        using var _ = r.WriteGrowth();
         r.PinGrowthBaseline();
         var plan = r.Settlements[rec.Settlement].Plan;
         if (rec.NewLot)
@@ -39,6 +40,7 @@ public static class RegionGrowth
     /// <summary>The region change of <see cref="ApplyLot"/> plus the population's per-lot arrays (a new slot per array, empty; beds from the record). Returns the lot index.</summary>
     public static int AddLot(RegionData r, Population pop, LotRecord rec)
     {
+        using var _ = r.WriteGrowth();                    // the plan and the per-lot arrays change together: a chunk generated meanwhile sees neither or both
         ApplyLot(r, rec);
         int s = rec.Settlement, l = rec.Lot;
         if (rec.NewLot)
@@ -151,6 +153,7 @@ public static class RegionGrowth
     /// </summary>
     public static int ApplyParcel(RegionData r, ParcelRecord rec)
     {
+        using var _ = r.WriteGrowth();
         r.PinGrowthBaseline();
         int pidx = r.Parcels.Count, start = r.Fields.Length, n = rec.Tiles.Length;
         int reg = RegionId(r);
@@ -224,6 +227,22 @@ public static class RegionGrowth
         return res;
     }
     private static readonly (int Dx, int Dy)[] N4 = [(0, -1), (-1, 0), (1, 0), (0, 1)];
+
+    // ---------------------------------------------------------------- a whole change
+
+    /// <summary>
+    /// One growth change as a unit (review finding 1): the visited chunks the <paramref name="touched"/> rectangles reach are generated before it, <paramref name="apply"/> changes the region,
+    /// and their deltas are written after it, all under the region's <see cref="RegionData.GrowthLock"/>. A chunk generated on another thread meanwhile waits; the streamer re-makes one that
+    /// was generated before the change and recorded after it (it checks <see cref="RegionData.GrowthVersion"/>), so a first visit always agrees with the records.
+    /// </summary>
+    public static T Change<T>(RegionData r, IGrowthChunkSink? sink, IReadOnlyList<RectM> touched, Func<T> apply)
+    {
+        using var _ = r.WriteGrowth();
+        var tx = sink?.Begin(touched);
+        var res = apply();
+        tx?.Commit();
+        return res;
+    }
 
     // ---------------------------------------------------------------- replay
 

@@ -55,6 +55,8 @@ public sealed class AutopilotSave
     [Key(6)] public long Violations { get; set; } [Key(7)] public long PlanViolations { get; set; } [Key(8)] public long Crimes { get; set; } [Key(9)] public long Added { get; set; }
     [Key(10)] public List<AutopilotRow> States { get; set; } = [];
     [Key(11)] public List<LogLineRow> Log { get; set; } = [];
+    /// <summary>The spends booked against commands still waiting at the barrier (review finding 6); absent in older saves.</summary>
+    [Key(12)] public long[] ReservedSeq { get; set; } = []; [Key(13)] public ulong[] ReservedPerson { get; set; } = []; [Key(14)] public int[] ReservedDay { get; set; } = []; [Key(15)] public long[] ReservedMites { get; set; } = [];
 
     private static DayRow Day(DaySummary d) => new() { Day = d.Day, Sec = [.. d.SecByAction], Earned = d.Earned, Spent = d.Spent, Jobs = d.JobsDone, Interrupts = d.Interrupts, Meals = d.Meals, Distance = d.DistanceM, SkillMilli = d.SkillGainMilli, Nutrition = d.NutritionCd };
     private static DaySummary Day(DayRow r) { var d = new DaySummary { Day = r.Day, Earned = r.Earned, Spent = r.Spent, JobsDone = r.Jobs, Interrupts = r.Interrupts, Meals = r.Meals, DistanceM = r.Distance, SkillGainMilli = r.SkillMilli, NutritionCd = r.Nutrition }; for (int i = 0; i < d.SecByAction.Length && i < r.Sec.Length; i++) d.SecByAction[i] = r.Sec[i]; return d; }
@@ -78,6 +80,7 @@ public sealed class AutopilotSave
             });
         }
         o.Log = [.. b.Log.Lines.Select(x => new LogLineRow { Sec = x.Sec, Person = x.Person.Value, Code = (byte)x.Code, Arg = x.Arg, Text = x.Text })];
+        o.ReservedSeq = [.. b.Reserved.Keys]; o.ReservedPerson = [.. b.Reserved.Values.Select(v => v.Person.Value)]; o.ReservedDay = [.. b.Reserved.Values.Select(v => v.Day)]; o.ReservedMites = [.. b.Reserved.Values.Select(v => v.Mites)];
         return o;
     }
 
@@ -103,6 +106,7 @@ public sealed class AutopilotSave
             b.States[s.Person] = s;
         }
         b.Log.Restore(Log.Select(x => new LogLine(x.Sec, new EntityId(x.Person), (LogCode)x.Code, x.Arg, x.Text)), Violations, PlanViolations, Crimes, Added);
+        for (int i = 0; i < ReservedSeq.Length && i < ReservedPerson.Length && i < ReservedDay.Length && i < ReservedMites.Length; i++) b.Reserved[ReservedSeq[i]] = (new EntityId(ReservedPerson[i]), ReservedDay[i], ReservedMites[i]);
         return b;
     }
 }

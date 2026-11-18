@@ -117,6 +117,16 @@ public sealed record TravelSettingsDef : ContentDef
     public int SnareGraceHours { get; init; } = 12;
     public int SnareBasePm { get; init; } = 15;
     public int SnareSkillPm { get; init; } = 3;
+    /// <summary>The game species a snare catches (its mass is the catch and the stock it takes).</summary>
+    public string SnareSpecies { get; init; } = "hare";
+    /// <summary>A day-to-day hunt succeeds with <c>base + per skill x skill</c> permille, plus the armed bonus with a weapon in hand, at most the cap (review finding 14: these were literals).</summary>
+    public int HuntBasePm { get; init; } = 250;
+    public int HuntPerSkillPm { get; init; } = 5;
+    public int HuntArmedPm { get; init; } = 250;
+    public int HuntMaxPm { get; init; } = 900;
+    /// <summary>A kill weighs the species mass times <c>[min, max]</c> permille, uniform (90 to 110 percent).</summary>
+    public int KillMassMinPm { get; init; } = 900;
+    public int KillMassMaxPm { get; init; } = 1100;
     // ---- butchery (clothing spec 4.8)
     public int ButcherFreshHours { get; init; } = 24;
     public int ButcherMaxHours { get; init; } = 72;
@@ -204,4 +214,6 @@ public sealed record CampEventDef : ContentDef
     /// <summary>Effect keyword the camp applies: steal_food, wolf_visit, traveller, rain, storm_omen, bad_dream, fox_scare.</summary>
     public required string Effect { get; init; }
     public int DangerAtLeastPm { get; init; }
+    /// <summary>What a <c>steal_food</c> event takes from the camp's largest food stack, in grams (at most what is there).</summary>
+    public long StealG { get; init; } = 1100;
 }

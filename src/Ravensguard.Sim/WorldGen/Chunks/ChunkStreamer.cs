@@ -68,6 +68,8 @@ public sealed class ChunkStreamer
 
     // statistics
     public long GeneratedCount { get; private set; }
+    /// <summary>Chunks made before a growth change and made again before their first visit was recorded (review finding 1).</summary>
+    public long StaleGenerated { get; private set; }
     public long ReloadedCount { get; private set; }
     public long UnloadedCount { get; private set; }
     /// <summary>Snapshots found whose generator version is older than the code's: kept as stored (a visited place never changes under the player).</summary>
@@ -169,12 +171,19 @@ public sealed class ChunkStreamer
         else
         {
             var prep = TakePrefetched(cx, cy);
-            var gen = prep?.Gen ?? gen0!.GenerateLevels(lx0, ly0);
-            foreach (var (z, content) in gen.Levels)
+            // the first visit is recorded under the region's growth lock and only from the region as it stands now: a chunk made (here or on a worker) before a growth change that
+            // has run since is made again, so the snapshot never misses a building the change wrote no delta for (review finding 1)
+            var region = gen0!.Region;
+            using (region.ReadGrowth())
             {
-                if (prep != null && prep.Snapshots.TryGetValue(z, out var snap)) Store.RecordFirstVisit(new ChunkKey(cx, cy, z), snap, content);
-                else Store.RecordFirstVisit(new ChunkKey(cx, cy, z), ChunkGenerator.Version, gen.ContentHash, content);
-                LoadedChunk.Decode(c, z, content);
+                var gen = prep?.Gen;
+                if (gen == null || gen.GrowthVersion != region.GrowthVersion) { if (gen != null) StaleGenerated++; gen = gen0.GenerateLevels(lx0, ly0); prep = null; }
+                foreach (var (z, content) in gen.Levels)
+                {
+                    if (prep != null && prep.Snapshots.TryGetValue(z, out var snap)) Store.RecordFirstVisit(new ChunkKey(cx, cy, z), snap, content);
+                    else Store.RecordFirstVisit(new ChunkKey(cx, cy, z), ChunkGenerator.Version, gen.ContentHash, content);
+                    LoadedChunk.Decode(c, z, content);
+                }
             }
             GeneratedCount++;
         }

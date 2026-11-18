@@ -474,7 +474,7 @@ public sealed partial class AutopilotWorld
     {
         Book.Log.Violations++;
         Book.Log.Add(c.IssuedSec, st?.Person ?? EntityId.None, LogCode.Violation, $"LimitViolation: {c.Kind} {why} ({Quotes.Money(cost)}, qty {c.Qty}, good {c.Good})");
-        return new HeroResult(c.Seq, c.Kind, HeroResultCode.Refused, "LimitViolation: " + why, cost, 0, c.IssuedSec);
+        return new HeroResult(c.Seq, c.Kind, HeroResultCode.Refused, HeroText.Of("HERO_LIMIT_VIOLATION", why), cost, 0, c.IssuedSec);
     }
 
     private void Settled(HeroContext ctx, HeroCommand c, HeroResult r)

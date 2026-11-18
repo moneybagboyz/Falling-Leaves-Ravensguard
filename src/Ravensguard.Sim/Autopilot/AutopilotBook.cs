@@ -27,7 +27,13 @@ public sealed class AutopilotBook
 
     public AutopilotBook() { Router = new InterruptRouter(Log); }
 
-    public bool IsEmpty => States.Count == 0 && Log.Added == 0;
+    /// <summary>
+    /// Spends booked at planning against commands still waiting for the barrier (command seq -> person, day, mites): settled or refunded when the desk applies the command. Saved with the
+    /// book (review finding 6), so a command that waits across a save and load is settled once, not booked again as a purchase nobody planned.
+    /// </summary>
+    public SortedDictionary<long, (EntityId Person, int Day, long Mites)> Reserved { get; } = [];
+
+    public bool IsEmpty => States.Count == 0 && Log.Added == 0 && Reserved.Count == 0;
 
     public AutopilotState? Get(EntityId person) => States.GetValueOrDefault(person);
 

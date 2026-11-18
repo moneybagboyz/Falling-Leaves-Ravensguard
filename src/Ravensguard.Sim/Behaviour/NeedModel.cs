@@ -22,8 +22,8 @@ public static class NeedModel
         n = default; ctx = default;
         // sleep: the contiguous run of Sleep blocks around now, read cyclically
         int sleepSecs = 0; for (int i = 0; i < cnt; i++) if (segs[i].Kind == JobKind.Sleep) sleepSecs += segs[i].End - segs[i].Start;
-        double awakeH = (Day - sleepSecs) / 3600.0;
-        int fat0 = (int)Math.Min(1000, 62 * awakeH);
+        // integer (review finding 16): 62 permille an awake hour, truncated as the double version truncated
+        int fat0 = (int)Math.Min(1000, 62L * (Day - sleepSecs) / 3600);
         int lastWakeEnd = int.MinValue;          // seconds relative to the start of today; the end of the latest sleep run before now
         if (cur.Kind != JobKind.Sleep)
             for (int step = 1; step <= cnt; step++)
@@ -36,9 +36,9 @@ public static class NeedModel
             int runStart = cur.Start; int j = k;                      // walk back over the contiguous run
             while (j > 0 && segs[j - 1].Kind == JobKind.Sleep) { j--; runStart = segs[j].Start; }
             if (j == 0 && cnt > 1 && segs[cnt - 1].Kind == JobKind.Sleep) { int l = cnt - 1; runStart = segs[l].Start - Day; while (l > 0 && segs[l - 1].Kind == JobKind.Sleep && segs[l - 1].End == segs[l].Start) { l--; runStart = segs[l].Start - Day; } }
-            n.FatiguePm = (int)Math.Max(0, fat0 - 125 * ((sod - runStart) / 3600.0));
+            n.FatiguePm = (int)Math.Max(0, fat0 - (125L * (sod - runStart) + 3599) / 3600);    // fat0 - 125 h, truncated toward zero: the rest rounds up
         }
-        else n.FatiguePm = lastWakeEnd == int.MinValue ? 300 : (int)Math.Min(1000, 62 * ((sod - lastWakeEnd) / 3600.0));
+        else n.FatiguePm = lastWakeEnd == int.MinValue ? 300 : (int)Math.Min(1000, 62L * (sod - lastWakeEnd) / 3600);
         // meals: breakfast soon after waking, dinner at noon, supper at 18:30; a meal only counts if the person was awake then
         int lastMeal = int.MinValue;
         Span<int> meals = [lastWakeEnd == int.MinValue ? int.MinValue : lastWakeEnd + 900, 12 * 3600, 18 * 3600 + 1800, -Day + 18 * 3600 + 1800];
@@ -48,7 +48,7 @@ public static class NeedModel
         // company: hours since the last shop or church block ended
         int lastSoc = int.MinValue;
         for (int i = 0; i < cnt; i++) if (segs[i].Kind is JobKind.Shop or JobKind.Church && segs[i].End <= sod) lastSoc = Math.Max(lastSoc, segs[i].End);
-        n.SocialPm = (int)Math.Min(1000, 300 + 25 * (lastSoc == int.MinValue ? sod / 3600.0 : (sod - lastSoc) / 3600.0));
+        n.SocialPm = (int)Math.Min(1000, 300 + 25L * (lastSoc == int.MinValue ? sod : sod - lastSoc) / 3600);
         var sched = UtilityBrain.OfKind(cur.Kind);
         n.DutyPm = cur.Kind == JobKind.Work ? UtilityBrain.Default.Profile.DutyPm : 0;
         ctx = new ChoiceContext

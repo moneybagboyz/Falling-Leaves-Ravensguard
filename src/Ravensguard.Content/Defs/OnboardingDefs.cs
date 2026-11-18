@@ -72,6 +72,8 @@ public sealed record OnboardingSettingsDef : ContentDef
     public int YardCapLevel { get; init; } = 30;
     public int SparCooldownMin { get; init; } = 5;
     public int YardMinPopulation { get; init; } = 1000;
+    /// <summary>The yard lies this many metres beyond the settlement's farthest house.</summary>
+    public int YardBeyondM { get; init; } = 30;
     public int SafeDays { get; init; } = 2;
     public int FullHintGameMinutes { get; init; } = 60;
 }

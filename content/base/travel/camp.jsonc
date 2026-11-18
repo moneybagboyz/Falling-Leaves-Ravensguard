@@ -1,6 +1,6 @@
 // Night events of a camp (travel spec 4.3), rolled once per game hour in the night hours (stream 0x346). About 12 events; weights by danger and watch.
 [
-  { "type": "camp_event", "id": "fox_steals_food", "name": "A fox raids the food", "weight_pm": 120, "unwatched": true, "effect": "steal_food" },
+  { "type": "camp_event", "id": "fox_steals_food", "name": "A fox raids the food", "weight_pm": 120, "unwatched": true, "effect": "steal_food", "steal_g": 1100 },
   { "type": "camp_event", "id": "fox_scare", "name": "A fox slinks past", "weight_pm": 90, "effect": "fox_scare" },
   { "type": "camp_event", "id": "wolf_visit", "name": "Wolves circle the light", "weight_pm": 80, "seasons": ["Winter"], "effect": "wolf_visit" },
   { "type": "camp_event", "id": "lost_traveller", "name": "A lost traveller asks for the fire", "weight_pm": 70, "effect": "traveller" },

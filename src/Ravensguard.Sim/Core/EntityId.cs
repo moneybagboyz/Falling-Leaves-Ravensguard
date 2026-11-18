@@ -17,6 +17,16 @@ public readonly record struct EntityId(ulong Value) : IComparable<EntityId>
     /// <summary>First counter of ids made in <paramref name="region"/>: the region bits with serial 0.</summary>
     public static ulong RegionBase(int region) => (ulong)(region & 0xFF) << SerialBits;
     public static EntityId MakeIn(IdKind kind, int region, ulong serial) => Make(kind, RegionBase(region) | (serial & SerialMask));
+    /// <summary>
+    /// Serial bit 47: ids made outside a region's allocator (jobs, generated road travellers) set it, so they never meet a record's id; an allocator counts from 1 and never
+    /// reaches 2^47 serials. Each user keeps its own kind (jobs are <see cref="IdKind.Other"/>, travellers <see cref="IdKind.Person"/>), so two such spaces never meet either.
+    /// </summary>
+    public const ulong ReservedSerialBit = 1UL << 47;
+    public bool IsReservedSerial => (Value & ReservedSerialBit) != 0;
+    /// <summary>The users of the reserved serial space, in bits 40-46 under <see cref="ReservedSerialBit"/> (space 0 is the jobs', as they always were).</summary>
+    public enum ReservedSpace : byte { Jobs = 0, Travellers = 1, Camps = 2, Carcasses = 3 }
+    /// <summary>The <paramref name="n"/>th id of a reserved space (n below 2^40).</summary>
+    public static EntityId Reserved(IdKind kind, int region, ReservedSpace space, ulong n) => MakeIn(kind, region, ReservedSerialBit | ((ulong)space << 40) | (n & ((1UL << 40) - 1)));
     public IdKind Kind => (IdKind)(Value >> CounterBits);
     public ulong Counter => Value & ((1UL << CounterBits) - 1);
     public int CompareTo(EntityId other) => Value.CompareTo(other.Value);

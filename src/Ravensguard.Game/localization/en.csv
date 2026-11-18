@@ -2070,3 +2070,117 @@ SQUAD_AUTO_GUARD,Guard the town
 SQUAD_AUTO_REST,Rest
 SQUAD_AUTO_STOP,Take back
 SQUAD_AUTO_SET,"{0}: {1}."
+ABROAD_BOUGHT,Bought {0} of {1} in {2} for {3}.
+ABROAD_CANNOT_AFFORD,You cannot afford it.
+ABROAD_PRICES_MOVED_NOW_COSTS,Prices moved: it now costs {0}. Nothing was spent.
+ABROAD_SOLD_TOLL,Sold {0} of {1} in {2} for {3} (toll {4}).
+ABROAD_THERE_NO_MARKET_THERE,There is no market there.
+HERO_AGREES_DAYS_DAY,{0} agrees: {1} days at {2} a day.
+HERO_AGREES_EXCHANGE,{0} agrees to the exchange.
+HERO_BACK_WORK,Back to work.
+HERO_BOUGHT,Bought {0} of {1} for {2}.
+HERO_BOUGHT_2,Bought the {0} for {1}.
+HERO_CANNOT_AFFORD,You cannot afford {0}.
+HERO_CANNOT_AFFORD_HAVE,"You cannot afford it: {0}, you have {1}."
+HERO_CANNOT_BE_HIRED,{0} cannot be hired.
+HERO_CANNOT_BE_WORN_OR,That cannot be worn or held.
+HERO_CANNOT_DO,You cannot do that.
+HERO_CANNOT_JOIN,{0} cannot join you.
+HERO_CANNOT_PAY,You cannot pay it.
+HERO_CANNOT_PAY_HAVE,You cannot pay {0}: you have {1}.
+HERO_CANNOT_PAY_SIGNING_BONUS,You cannot pay the signing bonus of {0}.
+HERO_CANNOT_PAY_SIGNING_BONUS_2,You cannot pay the signing bonus.
+HERO_CANNOT_TAKE_UP,You cannot take that up.
+HERO_COLLECTED,Collected.
+HERO_CONDITION_WORTH_ABOUT,"{0}: {1}, condition {2}%, worth about {3}."
+HERO_CONTAINERS_NEST_MOST_THREE,Containers nest at most three deep.
+HERO_COULD_NOT_BE_DONE,That could not be done.
+HERO_COULD_NOT_TAKE_WORK,{0} could not take that work ({1}).
+HERO_DOES_NOT_FIT,It does not fit.
+HERO_DOES_NOT_TRUST_YET,{0} does not trust you yet.
+HERO_DONE,Done.
+HERO_DO_NOT_HAVE,You do not have that.
+HERO_DO_NOT_HAVE_COIN,You do not have the coin.
+HERO_DO_NOT_HAVE_MUCH,You do not have that much.
+HERO_DO_NOT_KNOW_HOW,You do not know how to make that.
+HERO_EXCHANGE_FELL_THROUGH_NOTHING,The exchange fell through; nothing changed hands.
+HERO_FINISHED,Finished: {0}.
+HERO_GOES_HOME,{0} goes home.
+HERO_GOES_HOME_SEVERANCE,{0} goes home with {1} severance.
+HERO_GOES_HOME_SEVERANCE_OWED,{0} goes home with {1} of the {2} severance owed.
+HERO_GOES_HOME_WITHOUT_SEVERANCE,{0} goes home without the {1} severance owed.
+HERO_GOES_WORK,{0} goes to work: {1}.
+HERO_HARDLY_KNOWS,{0} hardly knows you.
+HERO_HAS_LEFT_YOUR_SERVICE,{0} has left your service: three days unpaid.
+HERO_HOLDS_NOTHING,That holds nothing.
+HERO_I_DON_T_BUY,"""I don't buy stolen goods."""
+HERO_JOINS_DAY_SIGNING_BONUS,{0} joins you for {1} a day; signing bonus {2}.{3}
+HERO_JOINS_LOSES_EARNER,{0} joins you for {1} a day; signing bonus {2}. {0}'s household will lose an earner.
+HERO_LACK_WHAT_NEEDS,You lack what it needs.
+HERO_LEFT_REST_COME_BACK,Left to rest; come back later.
+HERO_LIMIT_VIOLATION,LimitViolation: {0}
+HERO_LIQUIDS_NEED_FLASK_OR,Liquids need a flask or a skin.
+HERO_MAKES_NO_SENSE,That makes no sense.
+HERO_MARKET,The market of {0}.
+HERO_MERCHANTS_HAVE_NO_COIN,The merchants have no coin for it (they hold {0}).
+HERO_NOTHING_BUY,Nothing to buy.
+HERO_NOTHING_PAY,Nothing to pay.
+HERO_NOTHING_THERE,Nothing there.
+HERO_NOT_READY_YET,It is not ready yet.
+HERO_NOT_WORN,Not worn.
+HERO_NOW_COSTS,It now costs {0}.
+HERO_NO_LONGER_SALE,That is no longer for sale.
+HERO_NO_MERCHANT_BUYS_FRESH,No merchant buys fresh food to hold.
+HERO_NO_MERCHANT_BUYS_HERE,No merchant buys here.
+HERO_NO_MERCHANT_HAS,No merchant has {0} for it.
+HERO_NO_ONE_WILL_SELL,No one will sell at that price.
+HERO_NO_SUCH_RECIPE,No such recipe.
+HERO_ORDER,{0}: {1}.
+HERO_ORDER_FOLLOW,follow
+HERO_ORDER_GUARDPLACE,guardplace
+HERO_ORDER_HOLD,hold
+HERO_ORDER_REST,rest
+HERO_ORDER_SCATTER,scatter
+HERO_ORDER_TRAVEL,travel
+HERO_ORDER_WORK,work
+HERO_PAY,You pay {0}.
+HERO_PRICES_MOVED_NOW_COSTS,Prices moved: {0} of {1} now costs {2}. Nothing was spent.
+HERO_PRICES_MOVED_THEY_NOW,Prices moved: they now pay {0}. Nothing was sold.
+HERO_PUT_DOWN_WORK_KEEPS,Put down; the work keeps.
+HERO_RAW,{0}
+HERO_SHAKES_THEIR_HEAD_WORTH,"{0} shakes their head: that is worth {1} to them, they would give {2}."
+HERO_SOLD,Sold the {0} for {1}.
+HERO_SOLD_TOLL,Sold {0} of {1} for {2} (toll {3}).
+HERO_STALLS_ARE_SHUT,The stalls are shut (06:00 to 18:00).
+HERO_START,You start: {0}.
+HERO_STOWED,Stowed.
+HERO_S_TERM_OVER,{0}'s term is over.
+HERO_TAKEN_OFF,Taken off.
+HERO_TALK_FIRST_DO_NOT,Talk with {0} first: you do not know what would make them come.
+HERO_TALK_KNOW_WHAT_WOULD,You talk with {0}. You know what would make them go with you: a fair wage.
+HERO_TALK_WHILE,You talk with {0} a while.
+HERO_THERE_NO_MARKET_HERE,There is no market here.
+HERO_THERE_NO_ONE_PAY,There is no one to pay.
+HERO_THERE_NO_OPEN_WORK,There is no open work nearby.
+HERO_THERE_NO_WORK_BOARD,There is no work board here.
+HERO_THEY_ALREADY_WORK,They already work for you.
+HERO_THEY_ARE_ALREADY,They are already with you.
+HERO_THEY_ARE_GONE,They are gone.
+HERO_THEY_ARE_NOT,They are not with you.
+HERO_THEY_DO_NOT_HAVE,They do not have that much.
+HERO_THEY_HAVE_NO_HOUSEHOLD,They have no household to trade from.
+HERO_THEY_HAVE_ONLY,They have only {0} of {1}.
+HERO_THEY_HAVE_ONLY_2,They have only {0}.
+HERO_THEY_NOW_OFFER,They now offer {0}.
+HERO_TOO_LONG,It is too long for that.
+HERO_TOO_YOUNG_HIRE,{0} is too young to hire.
+HERO_UNKNOWN_COMMAND,Unknown command.
+HERO_WAS_NOT_PAID_TODAY,{0} was not paid today ({1}).
+HERO_WILL_NOT_WORK_DAY,{0} will not work for {1} a day (they ask about {2}).
+HERO_WORK_WENT_WRONG,The work went wrong.
+HERO_WORTH_NOTHING_THEM,It is worth nothing to them.
+HERO_YOUR_PARTY_AS_LARGE,Your party is as large as you can lead.
+HERO_YOUR_WORK_ABOUT_SPOIL,Your work is about to spoil.
+HERO_YOUR_WORK_PAST_ITS,Your work is past its time: collect it soon.
+HERO_YOUR_WORK_READY_COLLECT,Your work is ready to collect.
+HERO_YOUR_WORK_WAS_SPOILED,Your work was spoiled.
