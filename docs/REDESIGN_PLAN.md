@@ -1191,6 +1191,13 @@ This section comes from a full read of the legacy code by four auditors (economy
 | cathedral | chapel → parish church → minster |
 
     - Build limits come from free parcels, which the lord sells.
+    - **Background growth (from Phase 3):** the abstract world builds by itself.
+      - When a settlement is crowded and land is free, households put up cottages on vacant parcels. Cottages cost materials (poles, daub, thatch) bought or gathered, and worker-hours.
+      - Households clear new fields (assarting) from woodland or waste, drawing down the woodland stock.
+      - When demand is high, new businesses open on empty lots.
+      - Population can therefore creep up toward the land's carrying capacity at a fraction of a percent a year, while marriage stays gated on housing.
+      - New buildings appear in chunks the player has never seen as generated content, and in chunks already visited as ID-keyed `ChunkDelta`s (§2.2), so visited places never change silently.
+      - Phase 5 turns this into visible construction jobs.
     - The lord's planner posts paid construction contracts with a blueprint, a materials list and wages. Example: an 8×5 m cottage takes ~250 worker-hours, ~40 poles, 1.5 t of daub and 3 t of thatch.
   - **Unrest** is the share of households with grievances (hunger, taxes, crowding, crime, the lord's reputation). The ladder: rumours → tax and levy evasion → a riot by real people → a revolt that changes who holds the fief.
   - **Government:**
@@ -1497,6 +1504,7 @@ Estimates assume one developer working with an AI assistant. Every phase ends in
 - The first unique NPCs.
 - **Onboarding v1 (§3f):** contextual hints, the controls overlay, the practice yard, mentor NPCs.
 - **Autopilot v1 (§3i):** the hero and party members on the NPC utility AI with directives (work, trade route, travel, train, guard, escort, rest), limits and interrupts; zero-player watching.
+- **Background growth (§4A.2):** cottages on vacant parcels, assarted fields and new businesses built by the abstract world, so population can grow slowly toward the land's capacity.
 - **Private testers start**, with crash reports (§2.11).
 
 **Done when:** residents keep schedules across floors; you can talk to, trade with, hire and recruit anyone; a rumour traces back to its source; testers can get through the first ride and the first odd job without help.
