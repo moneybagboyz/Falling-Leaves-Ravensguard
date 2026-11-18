@@ -30,7 +30,7 @@ public sealed record YearSummary(int Year, long HarvestG, long SeedSownG, long T
 
 public static class FarmIds
 {
-    private const ulong Tag = 0xFA << 40;
+    private const ulong Tag = 0xFAUL << 40;
     public static Core.EntityId Of(FarmStoreKind kind, int index) => Core.EntityId.Make(Core.IdKind.Other, Tag | ((ulong)kind << 32) | (uint)index);
     public static Core.EntityId Barn(int household) => Of(FarmStoreKind.Barn, household);
     public static Core.EntityId ParishGranary(int settlement) => Of(FarmStoreKind.ParishGranary, settlement);

@@ -54,6 +54,8 @@ public sealed partial class Populator
         ulong pBase = 1, hBase = 1;
         foreach (var n in _h.Notables) pBase = Math.Max(pBase, n.Id.Counter + 1);
         foreach (var d in _h.Dynasties) hBase = Math.Max(hBase, d.Id.Counter + 1);
+        ulong rb = EntityId.RegionBase(RegionCoord.OfCell(_r.CellX, _r.CellY).Id);
+        pBase |= rb; hBase |= rb;
         int cap = Math.Max(1024, _r.TotalPopulation + _r.TotalPopulation / 20);
         _p = new PersonTable(cap, pBase);
         _hh = new HouseholdTable(Math.Max(256, _r.TotalHouseholds + _r.TotalHouseholds / 10), hBase);

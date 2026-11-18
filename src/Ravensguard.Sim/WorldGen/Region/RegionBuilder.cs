@@ -20,7 +20,7 @@ internal sealed partial class RegionBuilder
     private readonly Region _r;
     private readonly ulong _seed;
     private readonly int _ox, _oy;
-    private readonly IdAllocator _ids = new();
+    private readonly IdAllocator _ids;
 
     public RegionBuilder(Continent c, WorldHistory h, int cx, int cy, RegionSettings s)
     {
@@ -28,11 +28,12 @@ internal sealed partial class RegionBuilder
         _seed = DetRng.Mix(s.Seed ^ 0x5265676F6E21UL);
         _ox = cx * RegionSettings.CellM; _oy = cy * RegionSettings.CellM;
         _r = new Region { Seed = s.Seed, CellX = cx, CellY = cy };
+        _ids = IdAllocator.ForRegion(RegionCoord.OfCell(cx, cy).Id);
         // History ids come from their own allocator, so new settlements start after the highest history id.
         var st = _ids.GetState();
         ulong maxS = 0;
         foreach (var hs in h.Settlements) maxS = Math.Max(maxS, hs.Id.Counter);
-        st[(int)IdKind.Settlement] = maxS + 1;
+        st[(int)IdKind.Settlement] = EntityId.RegionBase(RegionCoord.OfCell(cx, cy).Id) | (maxS + 1);
         _ids.SetState(st);
     }
 

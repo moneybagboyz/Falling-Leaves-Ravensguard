@@ -9,6 +9,14 @@ public readonly record struct EntityId(ulong Value) : IComparable<EntityId>
     public static readonly EntityId None = new(0);
 
     public static EntityId Make(IdKind kind, ulong counter) => new(((ulong)kind << CounterBits) | (counter & ((1UL << CounterBits) - 1)));
+    /// <summary>E2: bits 48-55 of the counter hold the origin region (0..255), bits 0-47 the serial inside that region.</summary>
+    public const int SerialBits = 48;
+    public const ulong SerialMask = (1UL << SerialBits) - 1;
+    public ulong Serial => Value & SerialMask;
+    public int Region => (int)((Value >> SerialBits) & 0xFF);
+    /// <summary>First counter of ids made in <paramref name="region"/>: the region bits with serial 0.</summary>
+    public static ulong RegionBase(int region) => (ulong)(region & 0xFF) << SerialBits;
+    public static EntityId MakeIn(IdKind kind, int region, ulong serial) => Make(kind, RegionBase(region) | (serial & SerialMask));
     public IdKind Kind => (IdKind)(Value >> CounterBits);
     public ulong Counter => Value & ((1UL << CounterBits) - 1);
     public int CompareTo(EntityId other) => Value.CompareTo(other.Value);
@@ -21,6 +29,9 @@ public sealed class IdAllocator
     private readonly ulong[] _next = new ulong[Enum.GetValues<IdKind>().Length];
 
     public IdAllocator() { Array.Fill(_next, 1UL); }
+
+    /// <summary>An allocator whose every counter starts at serial 1 of <paramref name="region"/> (E2), so records of two regions never share an id.</summary>
+    public static IdAllocator ForRegion(int region) { var a = new IdAllocator(); Array.Fill(a._next, EntityId.RegionBase(region) | 1UL); return a; }
 
     public EntityId Allocate(IdKind kind) => EntityId.Make(kind, _next[(int)kind]++);
 
