@@ -227,6 +227,7 @@ public sealed class EconomySoak
         sb.AppendLine($"price band share of book-days (mean over years): {rows.Average(r => r.BandPct):0.0}%; at the 0.3x/4x caps {rows.Average(r => r.AtCapPct):0.0}%; staples " +
                       string.Join(", ", Staples.Select((s, i) => $"{s} {rows.Average(r => r.InBandPct[i]):0.0}%")));
         sb.AppendLine($"workshops completing a batch: mean {rows.Average(r => r.WorkshopCompletionPct):0}% (min {rows.Min(r => r.WorkshopCompletionPct):0}%); merchants solvent: mean {rows.Average(r => r.MerchantsSolventPct):0}% (min {rows.Min(r => r.MerchantsSolventPct):0}%)");
+        { var v = soak.Sim.Vital; long net = v.Emigrants - v.Immigrants; sb.AppendLine($"net migration over the run: {net:N0} left; population excluding it {rows[^1].Population + net:N0} (start {rows[0].Population:N0}): the continent tick owns the inflow, so judge births against deaths here"); }
         sb.AppendLine($"population {rows[0].Population:N0} -> {rows[^1].Population:N0} (min {rows.Min(r => r.Population):N0}, max {rows.Max(r => r.Population):N0}); under 15 mean {rows.Average(r => r.Under15Pct):0.0}%; coin {rows[0].CoinTotal / 100:N0} -> {rows[^1].CoinTotal / 100:N0} crowns, sources {rows[^1].CoinSources / 100:N0}, sinks {rows[^1].CoinSinks / 100:N0}");
         return sb.ToString().TrimEnd();
     }

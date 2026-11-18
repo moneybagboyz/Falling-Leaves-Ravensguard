@@ -312,7 +312,16 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
             int p = b.Staff[i]; var occ = Pop.People.Occupation[p]; var wc = kind.Trader ? WageClass.Skilled : WageClass.Unskilled;
             foreach (var sl in kind.Slots) if (sl.Occupation == occ) { wc = sl.Wage; break; }
             b.Owed[i] += RecipeBook.WagePerDay(wc) * (Pop.People.AgeYears(p, day) < 16 ? 50 : 100) / 100;
+            if (kind.Id == "manor") Livery(b, p);
         }
+    }
+
+    /// <summary>Livery (integration decision I17): a manor's staff are given a measure of grain a day from the lord's house store, as part of the wage, while he has it.</summary>
+    private void Livery(Business b, int person)
+    {
+        int lh = b.OwnerHousehold, sh = Pop.People.Household[person]; if (lh < 0 || sh < 0 || lh == sh) return;
+        long left = Pop.Households.MemberCount[sh] > 0 ? HouseholdNeeds.GramsPerMeasure : 0;
+        foreach (ushort g in Econ.Food.Staples) { if (left <= 0) break; if (Econ.Food.IsGrain(g)) left -= Store.MoveUpTo(Econ.HouseholdStore[lh], Econ.HouseholdStore[sh], g, left); }
     }
 
     /// <summary>The lord keeps his manor's cash box at 20 days of the wage bill from his own purse (reason Stipend) as long as he has the coin.</summary>

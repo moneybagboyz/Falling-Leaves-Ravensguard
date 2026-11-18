@@ -253,6 +253,9 @@ public sealed class MarketSystem
             }
             return n;
         }
+        long heldStaple = 0; foreach (ushort sg in Econ.Food.Staples) heldStaple += HouseholdNeeds.MeasuresX100(c, sg, Held(sg));
+        // a household that holds the grain for its next days eats it as pottage and home-baked bread: it does not buy flour or bread (integration decision I17)
+        if (heldStaple < (long)need.StapleX100 * basket.TargetCoverDays.GetValueOrDefault("staple", 20) / 2)
         posted += Line(Mix.Staple, need.StapleX100, basket.TargetCoverDays.GetValueOrDefault("staple", 20), 0);
         posted += Line(Mix.Relish, need.RelishX100, basket.TargetCoverDays.GetValueOrDefault("relish", 3), 1);
         void Single(ushort g, long daily, string key, int priority)
