@@ -59,11 +59,12 @@ public partial class AutopilotPanel : Control
         _tableBox = new VBoxContainer(); _tableBox.AddThemeConstantOverride("separation", 1);
         cols.AddChild(Column(L.T("AP_QUEUE"), _queueBox, 330));
         cols.AddChild(Column(L.T("AP_DIRECTIVE"), _midBox, 270));
-        var right = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill }; right.AddThemeConstantOverride("separation", 6);
+        var right = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ExpandFill }; right.AddThemeConstantOverride("separation", 6);
         right.AddChild(UiKit.Hint(L.T("AP_LIMITS"))); right.AddChild(UiKit.Panel(_limitBox));
         right.AddChild(UiKit.Hint(L.T("AP_INTERRUPTS")));
-        var scroll = new ScrollContainer { SizeFlagsVertical = SizeFlags.ExpandFill, CustomMinimumSize = new Vector2(0, 150), HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
-        _tableBox.SizeFlagsHorizontal = SizeFlags.ExpandFill; scroll.AddChild(_tableBox); right.AddChild(UiKit.Panel(scroll));
+        var scroll = new ScrollContainer { SizeFlagsVertical = SizeFlags.ExpandFill, CustomMinimumSize = new Vector2(0, 220), HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
+        _tableBox.SizeFlagsHorizontal = SizeFlags.ExpandFill; scroll.AddChild(_tableBox);
+        var tablePanel = UiKit.Panel(scroll); tablePanel.SizeFlagsVertical = SizeFlags.ExpandFill; right.AddChild(tablePanel);
         cols.AddChild(right);
 
         _warn = new Label { AutowrapMode = TextServer.AutowrapMode.WordSmart, ThemeTypeVariation = "HintLabel" }; root.AddChild(_warn);
@@ -244,6 +245,7 @@ public partial class AutopilotPanel : Control
         BuildWarn();
         Clear(_statusBox);
         var v = _h.View();
+        if (!v.Exists) v = v with { CapPerDay = _draft.Limits.SpendCapMitesPerDay };
         string state = !v.Exists || !v.Enabled ? L.T("AP_STATE_OFF") : v.Paused ? L.T("AP_STATE_PAUSED") : v.AlertPaused ? L.F("AP_STATE_ALERT", v.AlertText) : L.F("AP_STATE_ON", v.Active.Length > 0 ? v.Active : L.T("AP_NEIGHBOUR"));
         _statusBox.AddChild(new Label { Text = L.F("AP_STATE", state, Money(v.SpentToday), v.CapPerDay >= 0 ? Money(v.CapPerDay) : L.T("AP_NO_CAP"), Money(v.Coin)) });
         foreach (var line in v.LogTail.TakeLast(4)) _statusBox.AddChild(new Label { Text = line, ThemeTypeVariation = "HintLabel", ClipText = true });

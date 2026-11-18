@@ -33,3 +33,4 @@ Gaps reported by the step agents or seen in screenshots. Each one is either fixe
 - Timing tests are noisy when the machine is busy (`Daily_regions_are_staggered`, `HourlyTickTimings`). They're isolated in the Timing collection, but they still compete with other processes.
 - `JobTests.Determinism` ran out of memory once while Godot screenshot runs were going.
 - Vehicles face east or west only (no north/south sprites); a loaded cart bed isn't drawn with its cargo.
+- Dialogue: `start_contract` and `give_item` effects only toast; no legends fallback; caravans carry no rumours between regions; per-person mood in barks, the History (H) link and the Journal map pin are missing; only the caravan master is authored; the camp talk hook (Travel) isn't filled.
