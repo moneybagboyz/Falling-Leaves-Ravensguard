@@ -28,7 +28,7 @@ public sealed class Region
     /// <summary>Soil fertility 0..100 (slope, drainage, alluvium).</summary>
     public byte[] Fertility { get; } = new byte[Tiles];
     /// <summary>Tree cover 0..100 before per-chunk tree placement.</summary>
-    public byte[] Forest { get; } = new byte[Tiles];
+    public byte[] Forest { get; private set; } = new byte[Tiles];
     /// <summary>0..100, 100 = freely drained.</summary>
     public byte[] Drainage { get; private set; } = new byte[Tiles];
     /// <summary><see cref="WaterFlags"/> bit set per tile.</summary>
@@ -42,13 +42,13 @@ public sealed class Region
     /// <summary><see cref="RoadClass"/> per tile.</summary>
     public byte[] Road { get; } = new byte[Tiles];
     /// <summary>1 when a settlement lot or square overlaps the tile.</summary>
-    public byte[] Built { get; } = new byte[Tiles];
+    public byte[] Built { get; private set; } = new byte[Tiles];
     /// <summary>Realm index in <see cref="WorldHistory.Realms"/> per tile, 255 for none.</summary>
     public byte[] RealmMap { get; private set; } = new byte[Tiles];
     /// <summary>Fief index + 1 per tile (nearest member settlement), 0 for none.</summary>
     public ushort[] FiefMap { get; private set; } = new ushort[Tiles];
     /// <summary>Parcel index + 1 per field tile, 0 for none.</summary>
-    public int[] ParcelMap { get; } = new int[Tiles];
+    public int[] ParcelMap { get; private set; } = new int[Tiles];
     /// <summary>MineralType + 1 where a vein lies under the tile, 0 for none.</summary>
     public byte[] Mineral { get; } = new byte[Tiles];
 
@@ -58,9 +58,9 @@ public sealed class Region
     public List<RoadEdge> RoadEdges { get; } = [];
     /// <summary>Border crossings of the continental road network on this region's four edges (N, E, S, W order, sorted by tile); the neighbour across each edge holds the mirror.</summary>
     public List<RegionGate> Gates { get; } = [];
-    public List<RegionSettlement> Settlements { get; } = [];
+    public List<RegionSettlement> Settlements { get; private set; } = [];
     public List<Fief> Fiefs { get; } = [];
-    public List<Parcel> Parcels { get; } = [];
+    public List<Parcel> Parcels { get; private set; } = [];
     public Field[] Fields { get; set; } = [];
     public List<Site> Sites { get; } = [];
     public List<RegionVein> Veins { get; } = [];
@@ -68,6 +68,55 @@ public sealed class Region
     public List<ActiveWarMarker> ActiveWars { get; } = [];
     /// <summary>Authored landmarks placed by <see cref="LandmarkPlacer"/> (a separate phase after generation; null until it has run). Not part of <see cref="ComputeHash"/>; see <see cref="LandmarkPlacer.ComputeHash"/>.</summary>
     public IReadOnlyList<PlacedLandmark>? Landmarks { get; set; }
+
+    /// <summary>
+    /// What the region looked like when background growth first changed it (cottages added to plans, fields and parcels appended): the lot count of every plan, the parcel count of every
+    /// settlement, the totals and the hash of the generated region. Null for a region nobody has grown. The generated region is a pure function of seed and content and is
+    /// never stored; growth is saved apart (<c>GrowthSave</c>) and replayed over a freshly generated region, so <see cref="ComputeHash"/> keeps answering with the generated hash.
+    /// </summary>
+    public sealed record GrowthBaseline(int[] Lots, int[] SettlementParcels, int Parcels, int Fields, string Hash, int[] ParcelMap, byte[] Built, byte[] Forest);
+    public GrowthBaseline? Baseline { get; private set; }
+    /// <summary>Bumped by every change growth makes; the chunk generator rebuilds its indices when it differs from the version it was made at.</summary>
+    public int GrowthVersion { get; private set; }
+
+    /// <summary>Records the generated state before the first change growth makes (idempotent). Must be called on a region that has not been changed.</summary>
+    public void PinGrowthBaseline()
+    {
+        if (Baseline != null) return;
+        Baseline = new GrowthBaseline([.. Settlements.Select(s => s.Plan.Lots.Count)], [.. Settlements.Select(s => s.Parcels.Count)], Parcels.Count, Fields.Length, ComputeHash(), (int[])ParcelMap.Clone(), (byte[])Built.Clone(), (byte[])Forest.Clone());
+    }
+
+    public void NoteGrown() => GrowthVersion++;
+
+    /// <summary>
+    /// The region as generated: plans with only their generated lots, settlements with only their generated parcels and the generated fields. A copy that shares every tile layer
+    /// (the populator reads none that growth changes); returns the region itself when it has not grown. Used so the baseline people of a save are always regenerated from the
+    /// generated region, whatever has been built since.
+    /// </summary>
+    public Region GeneratedView()
+    {
+        var b = Baseline;
+        if (b == null) return this;
+        var c = (Region)MemberwiseClone();
+        c.Baseline = null;
+        c.Settlements = [];
+        for (int i = 0; i < Settlements.Count; i++)
+        {
+            var s = Settlements[i]; var n = (RegionSettlement)s.CloneShallow();
+            var plan = new SettlementPlan { Horizontal = s.Plan.Horizontal, Square = s.Plan.Square, RadiusM = s.Plan.RadiusM, ChurchLot = s.Plan.ChurchLot, ManorLot = s.Plan.ManorLot, MillLot = s.Plan.MillLot };
+            plan.Streets.AddRange(s.Plan.Streets);
+            for (int l = 0; l < b.Lots[i] && l < s.Plan.Lots.Count; l++) plan.Lots.Add(s.Plan.Lots[l]);
+            n.Plan = plan;
+            n.Parcels.Clear();
+            for (int k = 0; k < b.SettlementParcels[i] && k < s.Parcels.Count; k++) n.Parcels.Add(s.Parcels[k]);
+            n.FieldAcres = n.Parcels.Sum(p => Parcels[p].FieldCount);
+            c.Settlements.Add(n);
+        }
+        c.ParcelMap = b.ParcelMap; c.Built = b.Built; c.Forest = b.Forest;
+        c.Parcels = [.. Parcels.Take(b.Parcels)];
+        c.Fields = Fields.AsSpan(0, Math.Min(b.Fields, Fields.Length)).ToArray();
+        return c;
+    }
 
     private string? _trimmedHash;
     /// <summary>True once <see cref="TrimDerived"/> has released the layers nothing reads after generation.</summary>
@@ -128,6 +177,7 @@ public sealed class Region
     /// <summary>SHA-256 over every layer and list, integers little-endian, for determinism tests.</summary>
     public string ComputeHash()
     {
+        if (Baseline != null) return Baseline.Hash;
         if (_trimmedHash != null) return _trimmedHash;
         using var h = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
         var b8 = new byte[8];

@@ -16,7 +16,10 @@ public sealed partial class Populator
 {
     /// <summary>Creates the whole population. <paramref name="content"/> must hold the base building content and the name pools.</summary>
     public static Population Populate(RegionData region, WorldHistory history, ContentDatabase content)
-        => new Populator(region, history, content).Run();
+        => new Populator(region.GeneratedView(), history, content) { _origin = region }.Run();
+
+    /// <summary>The region the caller passed (a region that has grown is populated from its generated view, so the baseline people never depend on what was built since).</summary>
+    private RegionData? _origin;
 
     private const uint StLord = 1, StSettlement = 2;
     private const int KidPermille = 360, ElderPermille = 160;
@@ -92,7 +95,7 @@ public sealed partial class Populator
         for (int h = 0; h < _hh.Count; h++) _settlementPeople[_hh.Settlement[h]] += _hh.MemberCount[h];
         return new Population
         {
-            Region = _r, People = _p, Households = _hh, NowDay = _nowDay, LotHousehold = _lotHousehold, LotBeds = _lotBeds, LotKeeper = _lotKeeper,
+            Region = _origin ?? _r, People = _p, Households = _hh, NowDay = _nowDay, LotHousehold = _lotHousehold, LotBeds = _lotBeds, LotKeeper = _lotKeeper,
             FiefLord = _fiefLord, FiefLordHousehold = _fiefLordHh, ParcelHolder = holders, PriestHousehold = _priestHh, SettlementPeople = _settlementPeople,
         };
     }

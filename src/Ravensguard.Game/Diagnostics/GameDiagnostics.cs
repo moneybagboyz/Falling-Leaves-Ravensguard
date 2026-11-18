@@ -240,6 +240,9 @@ public static class GameDiagnostics
         };
     }
 
+    /// <summary>True when the kept autosave copy is the start of the recorder's trace window (a report made now can be replayed).</summary>
+    public static bool ReplayReady => Recorder is { } r && _t0Tick == r.Commands.BaseTick && File.Exists(_t0Path);
+
     // ------------------------------------------------------------------ replay window (the autosave the trace starts from)
 
     /// <summary>A run was loaded or created: the file it came from is T0 of the trace (tick 0 of this live world).</summary>

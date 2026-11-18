@@ -37,6 +37,8 @@ public sealed class ProductionContent
     public IReadOnlyList<SpendingRuleDef> Spending { get; init; } = [];
     /// <summary>Tax, toll and treasury constants (taxes spec 2.2).</summary>
     public TaxPolicyDef Tax { get; init; } = new TaxPolicyDef { Id = "default" };
+    /// <summary>The tunables of background growth (cottages, assarting, new businesses).</summary>
+    public GrowthTuningDef Growth { get; init; } = new GrowthTuningDef { Id = "growth" };
 
     public BusinessKind Kind(string id) => Kinds.First(k => k.Id == id);
 
@@ -59,7 +61,8 @@ public sealed class ProductionContent
         }
         var cfg = db.All<ResourceSettingsDef>().OrderBy(x => x.Id, StringComparer.Ordinal).FirstOrDefault() ?? new ResourceSettingsDef { Id = "resources" };
         return new ProductionContent { Recipes = book, Kinds = [.. kinds], Extractions = ext, Settings = cfg, Spending = [.. db.All<SpendingRuleDef>().OrderBy(x => x.Id, StringComparer.Ordinal)],
-            Tax = db.All<TaxPolicyDef>().OrderBy(x => x.Id, StringComparer.Ordinal).FirstOrDefault() ?? new TaxPolicyDef { Id = "default" } };
+            Tax = db.All<TaxPolicyDef>().OrderBy(x => x.Id, StringComparer.Ordinal).FirstOrDefault() ?? new TaxPolicyDef { Id = "default" },
+            Growth = db.All<GrowthTuningDef>().OrderBy(x => x.Id, StringComparer.Ordinal).FirstOrDefault() ?? new GrowthTuningDef { Id = "growth" } };
     }
 }
 

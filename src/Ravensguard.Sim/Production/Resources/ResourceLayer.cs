@@ -22,11 +22,15 @@ public sealed class ResourceLayer
     private long[] _stock = new long[1024], _cap = new long[1024];
     private short[] _lastDay = new short[1024];
     public int Count { get; private set; }
+    /// <summary>Rows of land cleared for fields (assarting): they hold no stock and never regrow. Null until the first clearing; not part of the row columns, so a layer saved as a difference from the generated one stays small.</summary>
+    private bool[]? _cleared;
+    public bool IsCleared(int row) => _cleared != null && _cleared[row];
+    public int ClearedCount { get { int n = 0; if (_cleared != null) foreach (bool b in _cleared) if (b) n++; return n; } }
 
     public int TileOf(int row) => _tile[row];
     public ResourceKind KindOf(int row) => _kind[row];
     public long StockG(int row) => _stock[row];
-    public long CapG(int row) => _cap[row];
+    public long CapG(int row) => _cleared != null && _cleared[row] ? 0 : _cap[row];
     public int LastDay(int row) => _lastDay[row];
 
     private static long Key(int tile, ResourceKind k) => ((long)tile << 4) | (long)k;
@@ -73,6 +77,15 @@ public sealed class ResourceLayer
         _stock[row] += a; return a;
     }
 
+    /// <summary>Land cleared of its stock for good (assarting): the row's stock goes to zero, its cap reads zero and it never regrows; returns the stock that was on it. Idempotent.</summary>
+    public long Clear(int row, int day)
+    {
+        _cleared ??= new bool[_tile.Length];
+        if (_cleared.Length < _tile.Length) Array.Resize(ref _cleared, _tile.Length);
+        long t = _stock[row]; _stock[row] = 0; _lastDay[row] = (short)day; _cleared[row] = true;
+        return t;
+    }
+
     public void SetStock(int row, long g) => _stock[row] = Math.Clamp(g, 0, _cap[row]);
 
     /// <summary>Sum of stock and of cap over all rows of a kind.</summary>
@@ -88,6 +101,7 @@ public sealed class ResourceLayer
     /// <summary>Builds the layer from the region (resources spec 2.1). Pure in the region and the seed; <paramref name="settlementCentres"/> feeds the pasture rule.</summary>
     public static ResourceLayer Build(RegionData r, ResourceSettingsDef cfg, ulong seed)
     {
+        r = r.GeneratedView();                       // the layer is a function of the generated region: cottages and fields grown since are marked on it afterwards (Clear)
         var layer = new ResourceLayer();
         var pasture = PastureTiles(r);
         var veinStone = new HashSet<int>(); var veinPeat = new HashSet<int>();
@@ -132,6 +146,7 @@ public sealed class ResourceLayer
     /// </summary>
     public static HashSet<int> PastureTiles(RegionData r)
     {
+        r = r.GeneratedView();
         var set = new HashSet<int>();
         int radius = 2500 / RegionData.TileM;
         foreach (var s in r.Settlements)
@@ -164,6 +179,7 @@ public sealed class ResourceLayer
         for (int i = 0; i < Count; i++)
         {
             long stock = _stock[i], cap = _cap[i];
+            if (_cleared != null && _cleared[i]) continue;
             switch (_kind[i])
             {
                 case ResourceKind.Wood: if (stock < cap) _stock[i] = Math.Min(cap, stock + cfg.WoodRegrowGPerAcreSeason); break;
@@ -187,6 +203,7 @@ public sealed class ResourceLayer
         void L(long v) { System.Buffers.Binary.BinaryPrimitives.WriteInt64LittleEndian(b8, v); h.AppendData(b8); }
         L(Count);
         for (int i = 0; i < Count; i++) { L(_tile[i]); L((long)_kind[i]); L(_stock[i]); L(_cap[i]); }
+        if (_cleared != null) for (int i = 0; i < Count; i++) if (_cleared[i]) L(-1 - i);       // only after the first clearing, so a layer nobody cleared keeps its hash
         return Convert.ToHexString(h.GetHashAndReset());
     }
 

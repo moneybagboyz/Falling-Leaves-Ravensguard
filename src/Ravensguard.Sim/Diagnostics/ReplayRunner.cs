@@ -52,7 +52,8 @@ public static class ReplayRunner
 
         bool Check(long tick)
         {
-            var rec = new HashRecord(tick, StateHashTrail.KindLive, LiveStateHash.Compute(world));
+            bool start = tick == baseTick;
+            var rec = new HashRecord(tick, start ? StateHashTrail.KindStart : StateHashTrail.KindLive, start ? LiveStateHash.Saved(world) : LiveStateHash.Compute(world));
             replayed.Add(rec);
             if (options.Verify && want.TryGetValue(tick, out var exp) && exp.Kind == rec.Kind)
             {
@@ -75,6 +76,8 @@ public static class ReplayRunner
                 while (next < cmds.Count && cmds[next].Tick <= abs) cmds[next++].Apply(world);
                 if (options.AfterStep != null && !options.AfterStep(abs)) break;
             }
+            // the recording also holds a hash of the very end (the report moment): check the state the replay ends in
+            if (div == null && abs == stop && steps > 0 && abs % StateHashTrail.Interval != 0 && want.ContainsKey(abs)) Check(abs);
         }
         catch (Exception ex) { error = ex; }
         return Finish();

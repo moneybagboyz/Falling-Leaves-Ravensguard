@@ -103,8 +103,16 @@ public sealed class RegionSettlement
     public int NearWaterway = -1;
     public SettlementPlan Plan = new();
     public int FieldAcresDemand, FieldAcres;
-    public List<int> Parcels { get; } = [];
+    public List<int> Parcels { get; private set; } = [];
     public int RoadNode = -1;
+
+    /// <summary>A copy that shares the references to everything immutable and owns a fresh parcel list (the plan is replaced by the caller).</summary>
+    internal RegionSettlement CloneShallow()
+    {
+        var c = (RegionSettlement)MemberwiseClone();
+        c.Parcels = [.. Parcels];
+        return c;
+    }
 }
 
 public enum Crop : byte { Fallow, Wheat, Rye, Barley, Oats, Peas, Beans }

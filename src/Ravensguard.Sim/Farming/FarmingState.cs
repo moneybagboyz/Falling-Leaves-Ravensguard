@@ -12,7 +12,7 @@ namespace Ravensguard.Sim.Farming;
 /// </summary>
 public sealed class FieldTable
 {
-    public int Count { get; }
+    public int Count { get; private set; }
     public EntityId[] Id;
     public int[] Tile, Parcel;
     public byte[] Region, Fertility, Slot, SownFertility, Flags, SheafCrop;
@@ -28,6 +28,16 @@ public sealed class FieldTable
         Crop = new Crop[n]; Stage = new FieldStage[n]; SownDay = new short[n]; DamagePermille = new short[n]; SeedG = new int[n]; YieldG = new int[n]; SheafG = new int[n];
     }
 
+    /// <summary>Grows every column to <paramref name="n"/> rows (new rows zero); background growth appends fields.</summary>
+    public void Grow(int n)
+    {
+        if (n <= Count) return;
+        Array.Resize(ref Id, n); Array.Resize(ref Tile, n); Array.Resize(ref Parcel, n); Array.Resize(ref Region, n); Array.Resize(ref Fertility, n); Array.Resize(ref Slot, n);
+        Array.Resize(ref SownFertility, n); Array.Resize(ref Flags, n); Array.Resize(ref SheafCrop, n); Array.Resize(ref Crop, n); Array.Resize(ref Stage, n);
+        Array.Resize(ref SownDay, n); Array.Resize(ref DamagePermille, n); Array.Resize(ref SeedG, n); Array.Resize(ref YieldG, n); Array.Resize(ref SheafG, n);
+        Count = n;
+    }
+
     public bool Has(int f, FieldFlags flag) => (Flags[f] & (byte)flag) != 0;
     public void Set(int f, FieldFlags flag) => Flags[f] |= (byte)flag;
     public void Clear(int f, FieldFlags flag) => Flags[f] &= (byte)~(byte)flag;
@@ -37,7 +47,7 @@ public sealed class FieldTable
 public sealed class ParcelWork
 {
     public const int ProgressTasks = 8;
-    public int Count { get; }
+    public int Count { get; private set; }
     /// <summary>Household index that works the parcel (-1 none) and the household that owns the rent (-1 none).</summary>
     public int[] Holder, Landlord;
     public OwnerKind[] OwnerKind;
@@ -57,6 +67,18 @@ public sealed class ParcelWork
         Holder = new int[n]; Landlord = new int[n]; OwnerKind = new OwnerKind[n]; Lease = new LeaseKind[n]; ShareBp = new short[n]; CoinMitesPerFieldYear = new int[n];
         CoinArrears = new long[n]; Slot = new byte[n]; ProgressPpm = new int[n * ProgressTasks]; Carry = new int[n * ProgressTasks];
         WeededPpm = new int[n]; HarvestSet = new int[n]; ReapDone = new int[n]; BindDone = new int[n]; HiredHands = new short[n];
+    }
+
+    /// <summary>Grows every column to <paramref name="n"/> parcels (new rows zero, no holder).</summary>
+    public void Grow(int n)
+    {
+        if (n <= Count) return;
+        int old = Count;
+        Array.Resize(ref Holder, n); Array.Resize(ref Landlord, n); Array.Resize(ref OwnerKind, n); Array.Resize(ref Lease, n); Array.Resize(ref ShareBp, n); Array.Resize(ref CoinMitesPerFieldYear, n);
+        Array.Resize(ref CoinArrears, n); Array.Resize(ref Slot, n); Array.Resize(ref ProgressPpm, n * ProgressTasks); Array.Resize(ref Carry, n * ProgressTasks);
+        Array.Resize(ref WeededPpm, n); Array.Resize(ref HarvestSet, n); Array.Resize(ref ReapDone, n); Array.Resize(ref BindDone, n); Array.Resize(ref HiredHands, n);
+        for (int i = old; i < n; i++) { Holder[i] = -1; Landlord[i] = -1; }
+        Count = n;
     }
 
     public int Progress(int parcel, FarmTask t) => ProgressPpm[parcel * ProgressTasks + (int)t];
@@ -97,8 +119,8 @@ public sealed class LivestockState
 public sealed class FarmingState
 {
     public int Year { get; set; }
-    public FieldTable Fields { get; }
-    public ParcelWork Parcels { get; }
+    public FieldTable Fields { get; private set; }
+    public ParcelWork Parcels { get; private set; }
     public CellCropClimate Climate { get; } = new();
     public LivestockState Livestock { get; }
     /// <summary>This year's running tally: harvest, seed, tithe, rent, threshed, and loss by cause.</summary>
@@ -113,6 +135,9 @@ public sealed class FarmingState
     {
         Fields = new FieldTable(fields); Parcels = new ParcelWork(parcels); Livestock = new LivestockState(settlements); SeedDebtG = new long[households];
     }
+
+    /// <summary>Background growth appended fields and parcels to the region: the tables grow to match (new rows zero, parcels without a holder).</summary>
+    public void GrowTo(int fields, int parcels) { Fields.Grow(fields); Parcels.Grow(parcels); }
 
     public void AddLoss(LossCause c, long grams, int acres) { LostG[(int)c] += grams; LostAcres[(int)c] += acres; }
 

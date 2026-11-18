@@ -40,12 +40,12 @@ public sealed partial class FarmingSystem
     private ParcelWork P => State.Parcels;
     private readonly FarmingSettingsDef _d;
     private readonly int _wh;
-    private readonly int[] _cellOfField;
-    private readonly int[] _cellStart, _cellFields;
-    private readonly int[] _usedCells;
-    private readonly byte[] _cultureOfParcel;
-    private readonly int[] _settlementOfParcel, _parcelCell;
-    private readonly int[] _pendingThresh;
+    private int[] _cellOfField = [];
+    private int[] _cellStart = [], _cellFields = [];
+    private int[] _usedCells = [];
+    private byte[] _cultureOfParcel = [];
+    private int[] _settlementOfParcel = [], _parcelCell = [];
+    private int[] _pendingThresh = [];
     private bool[] _isHolder;
     private int[] _hhHours;
     private int[][] _householdsOf;
@@ -67,6 +67,33 @@ public sealed partial class FarmingSystem
         State = state ?? CreateState(region, pop, settings, seed, pop.NowYear);
         if (State.Fields.Count != region.Fields.Length || State.Parcels.Count != region.Parcels.Count) throw new ArgumentException("farming state does not match the region");
 
+        BuildFieldIndexes();
+
+        int np = P.Count, ns = region.Settlements.Count;
+        int nh = pop.Households.Count;
+        _isHolder = new bool[nh];
+        for (int p = 0; p < np; p++) if (P.Holder[p] >= 0) _isHolder[P.Holder[p]] = true;
+        _hhHours = new int[nh];
+        var lists = new List<int>[ns]; for (int s = 0; s < ns; s++) lists[s] = [];
+        for (int h = 0; h < nh; h++) { int s = pop.Households.Settlement[h]; if ((uint)s < (uint)ns) lists[s].Add(h); }
+        _householdsOf = lists.Select(l => l.ToArray()).ToArray();
+        _popHolder = (int[])P.Holder.Clone();
+
+        // stores farming owns (idempotent: a restored economy already has them)
+        for (int h = 0; h < nh; h++) if (_isHolder[h]) econ.OpenStore(StoreKind.Barn, FarmIds.Barn(h));
+        for (int s = 0; s < ns; s++) { econ.OpenStore(StoreKind.Granary, FarmIds.ParishGranary(s)); econ.OpenStore(StoreKind.Barn, FarmIds.Fodder(s)); }
+        Array.Fill(_tempToday, int.MinValue);
+        RecomputeHours(pop.NowDay);
+        RefreshLong(State.Year);
+    }
+
+    /// <summary>
+    /// The indexes derived from the fields and parcels of the region: each field's weather cell, the fields of each cell, the cells in use, each parcel's culture,
+    /// settlement and cell and the sheaves waiting to be threshed. Built by the constructor, and again when background growth appends parcels.
+    /// </summary>
+    private void BuildFieldIndexes()
+    {
+        var region = Region;
         int nf = F.Count, np = P.Count, ns = region.Settlements.Count;
         _cellOfField = new int[nf];
         var perCell = new int[CellCropClimate.Cells + 1];
@@ -89,22 +116,35 @@ public sealed partial class FarmingSystem
             _parcelCell[p] = parcel.FieldCount > 0 ? _cellOfField[parcel.FieldStart] : 0;
             for (int k = 0; k < parcel.FieldCount; k++) if (F.Has(parcel.FieldStart + k, FieldFlags.Bound)) _pendingThresh[p]++;
         }
+    }
 
-        int nh = pop.Households.Count;
-        _isHolder = new bool[nh];
-        for (int p = 0; p < np; p++) if (P.Holder[p] >= 0) _isHolder[P.Holder[p]] = true;
-        _hhHours = new int[nh];
-        var lists = new List<int>[ns]; for (int s = 0; s < ns; s++) lists[s] = [];
-        for (int h = 0; h < nh; h++) { int s = pop.Households.Settlement[h]; if ((uint)s < (uint)ns) lists[s].Add(h); }
-        _householdsOf = lists.Select(l => l.ToArray()).ToArray();
+    /// <summary>
+    /// Background growth (assarting): the region has just had <paramref name="parcels"/> appended (each with its fields, already in <c>Region.Fields</c> with their fertility
+    /// scaled as the generated fields' were). Extends the field and parcel tables, starts the new fields fallow (cleared ground rests its first year), gives each parcel to
+    /// <paramref name="holder"/> (the lord, who lets it to a landless household at the next year's re-let), and rebuilds the derived indexes.
+    /// </summary>
+    public void AddParcels(IReadOnlyList<int> parcels, int holder)
+    {
+        int nf = Region.Fields.Length, np = Region.Parcels.Count;
+        State.GrowTo(nf, np);
+        foreach (int p in parcels)
+        {
+            var parcel = Region.Parcels[p];
+            for (int k = 0; k < parcel.FieldCount; k++)
+            {
+                int i = parcel.FieldStart + k; var src = Region.Fields[i];
+                F.Id[i] = src.Id; F.Tile[i] = src.Tile; F.Parcel[i] = src.Parcel; F.Fertility[i] = src.Fertility; F.Slot[i] = src.Slot; F.Region[i] = 0; F.SownFertility[i] = src.Fertility;
+                F.Crop[i] = Crop.Fallow; F.Stage[i] = FieldStage.Stubble;
+            }
+            P.Holder[p] = holder; P.Landlord[p] = -1; P.OwnerKind[p] = parcel.Owner.Kind; P.Lease[p] = LeaseKind.None; P.Slot[p] = parcel.Slot;
+            if (holder >= 0) Pop.Households.ParcelCount[holder]++;
+        }
+        var ph = Pop.ParcelHolder;
+        if (ph.Length < np) { Array.Resize(ref ph, np); Pop.ParcelHolder = ph; }
+        foreach (int p in parcels) ph[p] = holder;
         _popHolder = (int[])P.Holder.Clone();
-
-        // stores farming owns (idempotent: a restored economy already has them)
-        for (int h = 0; h < nh; h++) if (_isHolder[h]) econ.OpenStore(StoreKind.Barn, FarmIds.Barn(h));
-        for (int s = 0; s < ns; s++) { econ.OpenStore(StoreKind.Granary, FarmIds.ParishGranary(s)); econ.OpenStore(StoreKind.Barn, FarmIds.Fodder(s)); }
-        Array.Fill(_tempToday, int.MinValue);
-        RecomputeHours(pop.NowDay);
-        RefreshLong(State.Year);
+        BuildFieldIndexes();
+        _holderStale = true;
     }
 
     /// <summary>The fresh field, parcel and herd state at world start (day 1 of <paramref name="year"/>): winter grain standing on slot 0, spring fields stubble, fallow resting.</summary>

@@ -22,6 +22,9 @@ public sealed class LiveActor
     public long BlockKey = long.MinValue;
     public PathPlan? Plan;
     public bool PlanOnGround;
+    /// <summary>The plan of the next block, made ahead of time (a few seconds before it starts) so a tick never has to make many at once; the same plan as one made at the start, because a plan is a function of its block.</summary>
+    public long NextKey = long.MinValue;
+    public PathPlan? NextPlan;
     public long X, Y, PrevX, PrevY;
     public int HeadX, HeadY;
     public JobKind Action;
@@ -65,6 +68,10 @@ public sealed class PeopleBridge
     private readonly List<FoldBack> _folds = [];
     /// <summary>A person further than this from where their schedule puts them has been displaced (fled, pushed): the fold-back makes them travel to the block's place.</summary>
     public const long DisplacedMm = 30_000;
+    /// <summary>Game seconds before a block starts at which its plan is made, and how many plans one step may make ahead (the rest wait for the next step).</summary>
+    public const long PrefetchSec = 120;
+    public const int PrefetchPerStep = 3;
+    private int _prefetchLeft;
     private LivePerson[] _snapshot = [];
     private bool _dirty = true;
 
@@ -73,6 +80,12 @@ public sealed class PeopleBridge
     /// <summary>Most promotions made by one <see cref="Promote"/> call so far.</summary>
     public int MaxPromotedAtOnce { get; private set; }
     public int Count => _live.Count;
+    /// <summary>Plans made so far, and during the last <see cref="Step"/> (a diagnostic: a tick that starts many walks is a slow tick).</summary>
+    public int PlansBuilt { get; private set; }
+    public int PlansLastStep { get; private set; }
+    /// <summary>The slowest single plan so far, milliseconds, and what it was.</summary>
+    public double MaxPlanMs { get; private set; }
+    public string WorstPlan { get; private set; } = "";
     public int Queued => _queue.Count;
     public bool IsLive(EntityId person) => _live.ContainsKey(person);
     public IReadOnlyList<LiveBinding> Bindings => [.. _live.Values.Select(a => a.Binding)];
@@ -178,7 +191,7 @@ public sealed class PeopleBridge
     {
         if (_live.Count == 0) return;
         List<EntityId>? out_ = null;
-        var cs = centres.Take(Bubble.MaxBubbles).ToArray();
+        var cs = centres.Take(Bubble.MaxBubbles).ToArray(); int plans0 = PlansBuilt; _prefetchLeft = PrefetchPerStep;
         foreach (var (id, a) in _live)
         {
             a.PrevX = a.X; a.PrevY = a.Y;
@@ -188,6 +201,7 @@ public sealed class PeopleBridge
             a.Binding = a.Binding with { Bubble = b };
             if (Bubble.ShouldDemote(d2, nowSec, ref a.OutsideSince)) (out_ ??= []).Add(id);
         }
+        PlansLastStep = PlansBuilt - plans0;
         if (out_ != null) foreach (var id in out_) Demote(_live[id], nowSec);
         _dirty = true;
     }
@@ -246,12 +260,37 @@ public sealed class PeopleBridge
         var r = Schedule.Resolve(a.A, nowSec);
         long key = r.Day * 64 + r.Segment;
         bool covers = ground != null && Covers(ground, a, r);
-        if (key != a.BlockKey || (!a.PlanOnGround && covers)) Rebuild(a, r, covers ? ground : null);
+        if (key != a.BlockKey || (!a.PlanOnGround && covers))
+        {
+            if (key == a.NextKey && a.NextPlan != null) { a.Plan = a.NextPlan; a.BlockKey = key; a.PlanOnGround = true; }
+            else { long t0 = System.Diagnostics.Stopwatch.GetTimestamp(); Rebuild(a, r, covers ? ground : null); PlansBuilt++; NotePlan(a, r, t0); }
+            a.NextPlan = null; a.NextKey = long.MinValue;
+        }
+        else if (covers && a.NextPlan == null && _prefetchLeft > 0 && r.Job.EndSec - nowSec <= PrefetchSec)
+        {
+            var rn = Schedule.Resolve(a.A, r.Job.EndSec);
+            long nk = rn.Day * 64 + rn.Segment;
+            if (nk != key && Covers(ground!, a, rn))
+            {
+                _prefetchLeft--;
+                var keep = (a.Plan, a.BlockKey, a.PlanOnGround);
+                long t0 = System.Diagnostics.Stopwatch.GetTimestamp();
+                Rebuild(a, rn, ground); PlansBuilt++; NotePlan(a, rn, t0);
+                (a.NextPlan, a.NextKey) = (a.Plan, nk);
+                (a.Plan, a.BlockKey, a.PlanOnGround) = keep;
+            }
+        }
         var pos = a.Plan!.PositionAt(nowSec);
         a.X = pos.XMm; a.Y = pos.YMm;
         if (r.Seg.Kind == JobKind.Commute) { a.HeadX = pos.HeadX; a.HeadY = pos.HeadY; } else { a.HeadX = r.HeadX; a.HeadY = r.HeadY; }
         if (r.Job.Kind == JobKind.Work && a.LastSec > 0 && nowSec > a.LastSec) a.WorkSecs += nowSec - a.LastSec;
         a.LastSec = nowSec; a.Action = r.Job.Kind;
+    }
+
+    private void NotePlan(LiveActor a, in ResolvedJob r, long t0)
+    {
+        double ms = System.Diagnostics.Stopwatch.GetElapsedTime(t0).TotalMilliseconds;
+        if (ms > MaxPlanMs) { MaxPlanMs = ms; WorstPlan = $"{r.Seg.Kind} {(a.PlanOnGround ? "ground" : "free")} len {a.Plan!.LengthMm / 1000} m"; }
     }
 
     private static int FloorM(long mm) => (int)Math.Floor(mm / 1000.0);

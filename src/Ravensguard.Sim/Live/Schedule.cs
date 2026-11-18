@@ -96,7 +96,8 @@ public readonly struct PersonAnchors
                     tiles = list; if (tileCache != null) tileCache[ws] = list;
                 }
             }
-            else if (wplan.Square.W > 0) { wx = (long)wplan.Square.CenterX * 1000; wy = (long)wplan.Square.CenterY * 1000; wj = 3000; wf = 2; }
+            else if (!(occ is Occupation.Merchant or Occupation.Reeve or Occupation.Mayor or Occupation.GuildMaster or Occupation.Steward or Occupation.Guard)) { /* a spinner, a servant of a household, a town's day labourer: works about the house */ }
+            else if (wplan.Square.W > 0) { wx = (long)wplan.Square.CenterX * 1000; wy = (long)wplan.Square.CenterY * 1000; wj = Math.Max(3000, Math.Min(wplan.Square.W, wplan.Square.H) * 1000 / 3); wf = 2; }
         }
         var (st, en) = Shift(occ, index);
         return new PersonAnchors

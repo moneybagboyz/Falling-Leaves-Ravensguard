@@ -72,6 +72,11 @@ public partial class StreetView : Control, IHandlesBack
     FarLayer? _far;
     CaravanSprites? _caravanSprites;
     readonly CaravanBridge _caravanBridge = new();
+    // the LODBridge for people (plan 2.3): townsfolk of the abstract records, promoted into the bubble around the hero and drawn as rig figures
+    readonly PeopleBridge _lod = new();
+    PeopleSprites? _lodSprites;
+    System.Threading.Tasks.Task<ScanResult>? _lodScan;
+    long _lodScanTick; bool _lodFaultShown;
     RegionMap? _regionMap;
     ColorRect _ambient = null!, _ground = null!;
     ShaderMaterial _ambientMat = null!;
@@ -325,6 +330,7 @@ public partial class StreetView : Control, IHandlesBack
         _heroSprite = new RigActor(_rig, "hero"); // stacked layers from rig_32x64.png
         _ysort.AddChild(_heroSprite);
         _caravanSprites = new CaravanSprites(_ysort, _rig, _art);
+        _lodSprites = new PeopleSprites(_ysort, _rig);
         _torchSprite = new Sprite2D { Texture = _art.Texture("item.torch"), Centered = false, Offset = new Vector2(-3, -34), TextureFilter = TextureFilterEnum.Nearest, Visible = false };
         _heroSprite.AddChild(_torchSprite);
         if (_hero != null) _heroSprite.AddChild(new Label { Name = "Nameplate", Text = _hero.Name, Position = new Vector2(-60, -84), CustomMinimumSize = new Vector2(120, 0), HorizontalAlignment = HorizontalAlignment.Center, ThemeTypeVariation = "HintLabel", MouseFilter = MouseFilterEnum.Ignore, ZIndex = 50 });
@@ -857,6 +863,7 @@ public partial class StreetView : Control, IHandlesBack
         {
             _sw.Restart();
             _rec.Step();
+            StepPeople();
             double ms = _sw.Elapsed.TotalMilliseconds;
             _tickMsSum += ms; _tickMsMax = Math.Max(_tickMsMax, ms); _tickCount++; _stepMsFrame += ms;
             _acc -= Step; steps++;
@@ -864,6 +871,7 @@ public partial class StreetView : Control, IHandlesBack
         if (steps == 5) _acc = 0;
         foreach (var opened in _world.TakeOpenedCodexEntries()) _router?.ShowToast(L.F("CODEX_NEW_ENTRY", opened.Title)); // the sim opens pages as the hero walks
         PumpRuntime();
+        PumpPeople();
         PollSave();
         if (Run != null && !_leaving && _saveTask == null && (_sinceSave += delta) >= AutosaveSeconds) StartSave(SaveKind.Autosave, quiet: true);
 
@@ -967,6 +975,7 @@ public partial class StreetView : Control, IHandlesBack
         if (far) _ambient.Size = new Vector2(_vp.Size.X, _vp.Size.Y);
 
         SyncCaravans(s);
+        SyncPeople(alpha);
         if (s.Tick != _shownTick) { _shownTick = s.Tick; UpdateWorld(s); UpdateLight(s); UpdateHud(s); }
         _wover.Update(GetProcessDeltaTime(), _wx, _vp.Size, _band == Band.Close ? 2 : 1);
     }
@@ -983,6 +992,55 @@ public partial class StreetView : Control, IHandlesBack
         long now = _world.Clock.Now.Seconds;
         foreach (var c in rt.Caravans) { var p = CaravanMotion.PositionOf(c, now); list.Add((p.XMm, p.YMm)); }
         return list;
+    }
+
+    /// <summary>Where the hero stands, in continent millimetres: the centre of the bubble the people bridge fills.</summary>
+    (long X, long Y)[] LodCentres()
+    {
+        var home = Runtime!.State.HomeRegion; var (wx, wy) = _world.WorldCell;
+        return [((home.OriginXM + (long)wx) * 1000 + 500, (home.OriginYM + (long)wy) * 1000 + 500)];
+    }
+
+    /// <summary>The loaded window as walkable ground for the people (continent metres), or null in the hamlet.</summary>
+    GridGround? LodGround()
+    {
+        if (Runtime is not { } rt || _world.Streamer == null) return null;
+        var home = rt.State.HomeRegion;
+        return new GridGround(_world.Grid, _world.Pathfinder, (int)(home.OriginXM + (long)_world.OriginX), (int)(home.OriginYM + (long)_world.OriginY));
+    }
+
+    /// <summary>The 20 Hz step of the promoted people: each follows its plan, and those who stayed beyond 200 m for 5 real seconds are given back to the records (fold-back, at the next barrier).</summary>
+    void StepPeople()
+    {
+        if (Runtime is not { } rt || _world.Streamer == null || _lod.Count == 0) return;
+        _lod.Step(_world.Clock.Now.Seconds, LodGround(), LodCentres());
+        var folds = _lod.TakeFolds();
+        if (folds.Count > 0) _ = RuntimePeople.FoldAsync(rt, folds);
+    }
+
+    /// <summary>Per frame: asks the tick worker every half second (10 ticks) who the bubble should hold, takes the answer, and promotes up to 50 of them nearest first.</summary>
+    void PumpPeople()
+    {
+        if (Runtime is not { } rt || _world.Streamer == null) return;
+        long now = _world.Clock.Now.Seconds;
+        if (_lodScan is { IsCompleted: true } done)
+        {
+            _lodScan = null;
+            if (done.IsCompletedSuccessfully) _lod.Enqueue(done.Result);
+            else if (!_lodFaultShown) { _lodFaultShown = true; GD.PushWarning("people bridge scan failed: " + done.Exception?.GetBaseException().Message); }
+        }
+        if (_lodScan == null && _world.Tick - _lodScanTick >= 10 && _world.Clock.Speed != SimSpeed.Paused)
+        {
+            _lodScanTick = _world.Tick;
+            _lodScan = RuntimePeople.ScanAsync(rt, _lod.MakeScanInput(LodCentres(), now));
+        }
+        if (_lod.Queued > 0) _lod.Promote(now, LodGround());
+    }
+
+    void SyncPeople(float alpha)
+    {
+        if (_lodSprites == null || Runtime is not { } rt) return;
+        _lodSprites.Sync(_lod.People, rt.State.HomeRegion.OriginXM, rt.State.HomeRegion.OriginYM, alpha, GetProcessDeltaTime(), _band < Band.Field && _viewZ == 0, Actions.Held("world.nameplates"));
     }
 
     void SyncCaravans(LiveSnapshot s)
@@ -1392,7 +1450,7 @@ public partial class StreetView : Control, IHandlesBack
     // ------------------------------------------------------------------ shot / bench
 
     /// <summary>A screenshot waits for the weather lookup and, at Field and Command, for the visible chunk images to finish baking (or the settle limit).</summary>
-    bool ShotReady() => _frames > _opt.Settle || (_wfeed.Ready && TilesSettled && (_band < Band.Field || _far == null || _far.Settled));
+    bool ShotReady() => _frames > _opt.Settle || ((!_opt.PeopleShot || _lod.Count >= 10) && _wfeed.Ready && TilesSettled && (_band < Band.Field || _far == null || _far.Settled));
 
     void Shoot()
     {

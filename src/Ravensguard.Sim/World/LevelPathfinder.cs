@@ -76,7 +76,13 @@ public sealed class LevelPathfinder
         return LevelGrid.Straight * Math.Max(dx, dy) + (LevelGrid.Diagonal - LevelGrid.Straight) * Math.Min(dx, dy);
     }
 
-    public PathResult? FindPath(Cell3 from, Cell3 to) => Search(from, to, null);
+    public PathResult? FindPath(Cell3 from, Cell3 to) => Search(from, to, null, int.MaxValue);
+
+    /// <summary>
+    /// <see cref="FindPath"/> that gives up (null) after <paramref name="maxExpanded"/> cells: the search is a pure function of the grid, so the cutoff is deterministic. For the many small routes of
+    /// the live people, where a goal that cannot be reached must not flood the whole window.
+    /// </summary>
+    public PathResult? FindPathBounded(Cell3 from, Cell3 to, int maxExpanded) => Search(from, to, null, maxExpanded);
 
     public PathResult? FindPathAbstract(Cell3 from, Cell3 to)
     {
@@ -86,7 +92,7 @@ public sealed class LevelPathfinder
         if (zs < 0 || zg < 0) return null;
         var corridor = ZonePath(zs, zg);
         if (corridor == null) return null; // quick reject: provably unreachable
-        return Search(from, to, corridor);
+        return Search(from, to, corridor, int.MaxValue);
     }
 
     /// <summary>Reachability from the zone graph alone, no cell search.</summary>
@@ -98,7 +104,7 @@ public sealed class LevelPathfinder
         return zs >= 0 && zg >= 0 && ZonePath(zs, zg) != null;
     }
 
-    private PathResult? Search(Cell3 from, Cell3 to, bool[]? allowedZones)
+    private PathResult? Search(Cell3 from, Cell3 to, bool[]? allowedZones, int maxExpanded)
     {
         if (!_g.InBounds(from.X, from.Y, from.Z) || !_g.InBounds(to.X, to.Y, to.Z)) return null;
         int start = _g.Index(from.X, from.Y, from.Z), goal = _g.Index(to.X, to.Y, to.Z);
@@ -115,6 +121,7 @@ public sealed class LevelPathfinder
             _closed[cur] = _cur;
             expanded++;
             if (cur == goal) return Build(goal, expanded);
+            if (expanded > maxExpanded) return null;
             int cx = cur % W; int r = cur / W; int cy = r % H; int cz = r / H + _g.MinZ;
             int g0 = _gs[cur];
             for (int d = 0; d < 8; d++)

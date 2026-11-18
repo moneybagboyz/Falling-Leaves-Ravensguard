@@ -20,6 +20,8 @@ public sealed class StateHashTrail
     /// <summary>One hash every 400 ticks = 20 real seconds at 20 Hz.</summary>
     public const int Interval = 400;
     public const string KindLive = "live";
+    /// <summary>The state at T0 (what a save keeps).</summary>
+    public const string KindStart = "start";
     private readonly List<HashRecord> _items = [];
     private readonly object _gate = new();
 
@@ -61,19 +63,28 @@ public sealed class StateHashTrail
     }
 }
 
-/// <summary>The live-state hash: the hero, the clock and the path, all integers (Q16.16), so it is the same on every machine. The tick counter is left out (a resumed world counts from 0).</summary>
+/// <summary>
+/// The live-state hashes: the hero, the clock and the path, all integers (Q16.16), so they are the same on every machine. Positions are world positions (the window
+/// origin added), so a world resumed from a save, whose window may be cut differently, hashes like the original. The tick counter is left out (a resumed world counts from 0).
+/// </summary>
 public static class LiveStateHash
 {
-    public static ulong Compute(LiveWorld w)
+    /// <summary>The whole state: used at every 400th tick after the start.</summary>
+    public static ulong Compute(LiveWorld w) => Hash(w, full: true);
+
+    /// <summary>Only what a save keeps (clock, position, facing, torch): the check of the starting state T0, since a path in progress or the walking mode are not saved.</summary>
+    public static ulong Saved(LiveWorld w) => Hash(w, full: false);
+
+    private static ulong Hash(LiveWorld w, bool full)
     {
         var s = w.Snapshot; var h = s.Hero;
         using var sha = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
         var b = new byte[8];
         void L(long v) { System.Buffers.Binary.BinaryPrimitives.WriteInt64LittleEndian(b, v); sha.AppendData(b); }
+        long ox = (long)w.OriginX << Ravensguard.Sim.Core.Fixed.FracBits, oy = (long)w.OriginY << Ravensguard.Sim.Core.Fixed.FracBits;
         L(w.Clock.Now.Seconds); L(w.Clock.GameMsRemainder); L((int)w.Clock.Speed);
-        L(h.X.Raw); L(h.Y.Raw); L(h.Z); L(h.PrevX.Raw); L(h.PrevY.Raw); L(h.PrevZ);
-        L((int)h.Facing); L(h.Moving ? 1 : 0); L((int)h.Mode); L(h.Torch ? 1 : 0); L(h.PathRemaining);
-        L(w.OriginX); L(w.OriginY);
+        L(ox + h.X.Raw); L(oy + h.Y.Raw); L(h.Z); L((int)h.Facing); L(h.Torch ? 1 : 0);
+        if (full) { L(ox + h.PrevX.Raw); L(oy + h.PrevY.Raw); L(h.PrevZ); L(h.Moving ? 1 : 0); L((int)h.Mode); L(h.PathRemaining); }
         return BitConverter.ToUInt64(sha.GetHashAndReset(), 0);
     }
 }

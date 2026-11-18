@@ -26,7 +26,7 @@ public sealed class Population
     public required int[] FiefLord { get; init; }
     public required int[] FiefLordHousehold { get; init; }
     /// <summary>Per region parcel: the household that holds or works it (lord for demesne, priest for glebe), -1 none.</summary>
-    public required int[] ParcelHolder { get; init; }
+    public required int[] ParcelHolder { get; set; }
     /// <summary>Per settlement: the priest's household, -1 none.</summary>
     public required int[] PriestHousehold { get; init; }
     /// <summary>Per settlement: the people created there (count).</summary>

@@ -53,6 +53,14 @@ public partial class App : Node
 
         Settings.Load();
         GameDiagnostics.Init(GetTree(), args);
+        if (args.Contains("--crash-test"))
+        {
+            // dev: proves the crash handler end to end. An unhandled exception on a worker thread writes the report (a zip with `--crash-test-consent`), then the process ends as in a real crash.
+            GameDiagnostics.ShowDialogs = false;
+            if (args.Contains("--crash-test-consent")) GameDiagnostics.Consent.Accept();
+            var t = new System.Threading.Thread(() => throw new InvalidOperationException("injected crash (--crash-test)")) { Name = "crash-test" };
+            t.Start(); t.Join();
+        }
         var win = GetWindow();
         Settings.ApplyScale(win);
         win.SizeChanged += () => Settings.ApplyScale(win);
@@ -82,6 +90,9 @@ public partial class App : Node
         else if (OS.IsDebugBuild() && System.Array.IndexOf(args, "--bpedit-shot") >= 0) _ = Tools.BlueprintEditor.EditorShot.Run(GetTree(), Router, args);
         else if (System.Array.IndexOf(args, "--ng-shot") >= 0) _ = UI.NewGame.NewGameDebug.Shot(GetTree(), Router, args);
     }
+
+    /// <summary>The app is closing normally: the session log says so (a crash never gets here, so the next launch can offer a recovery report).</summary>
+    public override void _ExitTree() => GameDiagnostics.CleanExit();
 
     public override void _Process(double delta) => System.Threading.Interlocked.Increment(ref GameDiagnostics.Frames);
 

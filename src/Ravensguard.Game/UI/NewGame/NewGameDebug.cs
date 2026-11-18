@@ -125,6 +125,27 @@ public static class NewGameDebug
             if (!await Until(tree, () => System.IO.File.Exists(autosave) && !sv.Saving, 1500)) throw new Exception("no autosave was written");
             sv.AutosaveSeconds = 900;
             if (sv.LastSaveError != null) throw new Exception("autosave failed: " + sv.LastSaveError);
+            // testers: walk, write a bug report (as F8 does) and replay it headlessly: the replayed record hashes must equal the recorded ones (spec 4.5, TR-10)
+            {
+                var rec = Ravensguard.Game.Diagnostics.GameDiagnostics.Recorder ?? throw new Exception("the street view has no session recorder");
+                if (!await Until(tree, () => Ravensguard.Game.Diagnostics.GameDiagnostics.ReplayReady && !sv.Saving, 3000)) throw new Exception("the autosave copy for replay was not kept");
+                long t0 = rec.Commands.BaseTick;
+                rec.SetInput(new Ravensguard.Sim.Live.MoveInput(1, 0));
+                if (!await Until(tree, () => rec.World.Tick >= t0 + 120, 8000)) throw new Exception("the live world did not step");
+                rec.SetInput(new Ravensguard.Sim.Live.MoveInput(0, 1, true));
+                if (!await Until(tree, () => rec.World.Tick >= t0 + 260, 8000)) throw new Exception("the live world did not step");
+                rec.SetInput(Ravensguard.Sim.Live.MoveInput.None);
+                var rtmp = System.IO.Path.Combine(tmp, "report");
+                var consent = new Ravensguard.Sim.Diagnostics.ConsentStore(System.IO.Path.Combine(rtmp, "profile"), System.IO.Path.Combine(rtmp, "reports"));
+                if (consent.IsGranted) throw new Exception("consent is on by default");
+                consent.Accept();
+                var request = Ravensguard.Game.Diagnostics.GameDiagnostics.BuildRequest(Ravensguard.Sim.Diagnostics.ReportKind.Bug, null, null, "Bug", "smoke", "", "yes", true);
+                var report = new Ravensguard.Sim.Diagnostics.ReportBuilder(consent, Ravensguard.Game.Diagnostics.GameDiagnostics.Redactor, System.IO.Path.Combine(rtmp, "reports")).Write(request);
+                foreach (var need in new[] { "autosave.bin", "replay.trace", "hashes.csv", "session.json", "system.json", "content_manifest.json", "log_tail.txt" })
+                    if (!report.Files.Any(f => f.Name == need)) throw new Exception("the report has no " + need);
+                int code = Ravensguard.Game.Diagnostics.ReplayTool.Run(report.Path, []);
+                if (code != 0) throw new Exception("replaying the bug report did not reproduce the recorded hashes (exit " + code + ")");
+            }
             // F5: quicksave writes the run's manual slot again
             var stamp = System.IO.File.GetLastWriteTimeUtc(sv.Run.LastPath!);
             await Task.Delay(30);

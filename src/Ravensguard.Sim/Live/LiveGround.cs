@@ -18,6 +18,8 @@ public interface ILiveGround
 /// <summary>Ground over one level of a <see cref="LevelGrid"/> whose local (0,0) is continent metre (<see cref="OffsetX"/>, <see cref="OffsetY"/>).</summary>
 public sealed class GridGround(LevelGrid grid, LevelPathfinder finder, int offsetX, int offsetY, int z = 0) : ILiveGround
 {
+    /// <summary>Cells one route may expand before it is given up (a 200 m route over open ground expands a few hundred).</summary>
+    public const int MaxExpanded = 1500;
     public int OffsetX { get; } = offsetX;
     public int OffsetY { get; } = offsetY;
     public bool Covers(int cx, int cy) => grid.InBounds(cx - OffsetX, cy - OffsetY, z);
@@ -27,7 +29,8 @@ public sealed class GridGround(LevelGrid grid, LevelPathfinder finder, int offse
     {
         var a = new Cell3(ax - OffsetX, ay - OffsetY, z); var b = new Cell3(bx - OffsetX, by - OffsetY, z);
         if (!grid.InBounds(a.X, a.Y, z) || !grid.InBounds(b.X, b.Y, z)) return null;
-        var r = Math.Max(Math.Abs(a.X - b.X), Math.Abs(a.Y - b.Y)) <= 64 ? finder.FindPath(a, b) : finder.FindPathAbstract(a, b);
+        // bounded: a goal that cannot be reached (a walled-in spot) must not flood the window; such a person walks straight until the ground around them is loaded
+        var r = finder.FindPathBounded(a, b, MaxExpanded);
         if (r == null || r.Cells.Count == 0) return null;
         foreach (var c in r.Cells) if (c.Z != z) return null;          // a route through stairs belongs to the cross-floor work of live-behaviour step 3
         var cells = new (int, int)[r.Cells.Count];

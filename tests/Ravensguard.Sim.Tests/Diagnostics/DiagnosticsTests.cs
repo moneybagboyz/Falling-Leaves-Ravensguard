@@ -197,7 +197,7 @@ public sealed class DiagnosticsTests : IDisposable
         var (builder, req, logs) = MakeCrashRig(false);
         var (path, zipped) = builder.WriteCrash(req, logs);
         Assert.False(zipped); Assert.Equal(logs, path);
-        Assert.Single(Directory.GetFiles(logs, "crash-*-log_tail.txt")); Assert.Single(Directory.GetFiles(logs, "crash-*.txt").Where(f => !f.EndsWith("-log_tail.txt")));
+        Assert.Single(Directory.GetFiles(logs, "crash-*-log_tail.txt")); Assert.Single(Directory.GetFiles(logs, "crash-*.txt"), f => !f.EndsWith("-log_tail.txt"));
         Assert.False(Directory.Exists(builder.ReportsDir));
         Assert.DoesNotContain("alice", File.ReadAllText(Directory.GetFiles(logs, "crash-*.txt").First()));
     }
@@ -280,6 +280,22 @@ public sealed class DiagnosticsTests : IDisposable
         Assert.True(rec.World.Snapshot.Hero.X != Fixed.FromInt(5) || rec.World.Snapshot.Hero.Y != Fixed.FromInt(5), "the session did move the hero");
     }
 
+    [Fact]
+    public void An_export_off_the_hash_grid_adds_an_end_hash_that_the_replay_checks()
+    {
+        var rec = new SessionRecorder(Field());
+        rec.SetInput(new MoveInput(1, 1));
+        for (int i = 0; i < 530; i++) rec.Step();
+        var (trace, csv) = rec.Export();
+        var hashes = StateHashTrail.FromCsv(csv);
+        Assert.Equal([0L, 400L, 530L], hashes.Items.Select(h => h.Tick).ToArray());
+        var res = ReplayRunner.Run(Field(), CommandLog.FromBytes(trace), hashes);
+        Assert.True(res.Matched, res.Describe());
+        Assert.Equal(3, res.Replayed.Count);
+        var bad = StateHashTrail.FromCsv(csv.Replace(hashes.Items[2].Hash.ToString("x16"), "0000000000000001"));
+        Assert.Equal(530, ReplayRunner.Run(Field(), CommandLog.FromBytes(trace), bad).Divergence!.Tick);
+    }
+
     [Fact] // TR-12
     public void A_changed_command_is_reported_at_the_first_mismatching_hash()
     {
@@ -337,5 +353,23 @@ public sealed class DiagnosticsTests : IDisposable
         // TR-8 for the sim assembly: no System.Net.* type is referenced by Ravensguard.Sim
         var refs = typeof(LogService).Assembly.GetReferencedAssemblies().Select(a => a.Name).ToList();
         Assert.DoesNotContain("System.Net.Http", refs); Assert.DoesNotContain("System.Net.Sockets", refs); Assert.DoesNotContain("System.Net.WebSockets", refs);
+    }
+
+    [Fact] // TR-8
+    public void No_game_or_sim_source_uses_the_network()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir != null && !Directory.Exists(Path.Combine(dir.FullName, "src", "Ravensguard.Game"))) dir = dir.Parent;
+        Assert.NotNull(dir);
+        string[] banned = ["System.Net.Http", "System.Net.Sockets", "System.Net.WebSockets", "HttpClient", "HTTPRequest", "WebSocketPeer", "ENetMultiplayerPeer", "TcpClient", "UdpClient"];
+        var hits = new List<string>();
+        foreach (var root in new[] { "Ravensguard.Game", "Ravensguard.Sim", "Ravensguard.Content" })
+            foreach (var f in Directory.EnumerateFiles(Path.Combine(dir!.FullName, "src", root), "*.cs", SearchOption.AllDirectories).Where(f => !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}") && !f.Contains($"{Path.DirectorySeparatorChar}.godot{Path.DirectorySeparatorChar}")))
+            {
+                string text = File.ReadAllText(f);
+                foreach (var b in banned) if (text.Contains(b, StringComparison.Ordinal)) hits.Add($"{Path.GetFileName(f)}: {b}");
+            }
+        Assert.Empty(hits);
+        Assert.DoesNotContain("HTTPRequest", File.ReadAllText(Path.Combine(dir!.FullName, "src", "Ravensguard.Game", "project.godot")));
     }
 }

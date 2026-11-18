@@ -47,6 +47,12 @@ public static class RngStreams
     /// <summary>Tax evasion and unrest rolls (key household or settlement, tick = day).</summary>
     public const uint TaxEvents = 0x260;
 
+    // ---------- background growth (docs/specs/phase3/background-growth.md) ----------
+    /// <summary>Which plot, tile and household a cottage, a field clearing or a new business takes when the scores tie (key settlement, tick = the season's first hour, draw by use).</summary>
+    public const uint GrowthPick = 0x270;
+    /// <summary>The wobble of a build's or a clearing's hours (key project serial, tick = the season's first hour).</summary>
+    public const uint GrowthWork = 0x271;
+
     // ---------- reserved by the overview (no draw yet) ----------
     public const uint ScheduleJitter = 0x2A0, CatchUp = 0x2B0;
 

@@ -29,7 +29,7 @@ public sealed class SessionRecorder
         long t = World.Tick;
         Commands.Rebase(t, [ReplayCommand.Input(t, _input), ReplayCommand.Speed(t, _speed), ReplayCommand.Torch(t, _torch)]);
         Hashes.Clear();
-        Hashes.Add(new HashRecord(t, StateHashTrail.KindLive, LiveStateHash.Compute(World)));
+        Hashes.Add(new HashRecord(t, StateHashTrail.KindStart, LiveStateHash.Saved(World)));
     }
 
     public void SetInput(MoveInput input)
@@ -75,5 +75,14 @@ public sealed class SessionRecorder
     }
 
     /// <summary>The trace and the hashes as the files of a report (<c>replay.trace</c>, <c>hashes.csv</c>).</summary>
-    public (byte[] Trace, string HashesCsv) Export() => (Commands.ToBytes(), Hashes.ToCsv());
+    /// <summary>Includes one more hash for the moment of the export (unless it is on the 400-tick grid already), so a replay checks the state it ends in too.</summary>
+    public (byte[] Trace, string HashesCsv) Export()
+    {
+        var copy = new StateHashTrail();
+        foreach (var r in Hashes.Items) copy.Add(r);
+        long t = World.Tick;
+        if (t % StateHashTrail.Interval != 0 && t != Commands.BaseTick) copy.Add(new HashRecord(t, StateHashTrail.KindLive, LiveStateHash.Compute(World)));
+        Commands.NoteTick(t);
+        return (Commands.ToBytes(), copy.ToCsv());
+    }
 }

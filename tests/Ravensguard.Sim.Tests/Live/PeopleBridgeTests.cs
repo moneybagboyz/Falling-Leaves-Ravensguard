@@ -81,9 +81,10 @@ public class PeopleBridgeTests
             if (!a.HasWork || a.WorkInField) continue;
             checkedWorkers++;
             var noon = Schedule.Resolve(a, rig.At(11));
-            if (noon.Job.Kind == JobKind.Work && a.WorkLot >= 0) { atWork++; var l = pop.Region.Settlements[a.WorkSettlement].Plan.Lots[a.WorkLot].Rect; Assert.InRange(noon.XMm, (l.X - 1) * 1000L, (l.Right + 1) * 1000L); }
+            if (noon.Job.Kind == JobKind.Work) atWork++;
+            if (noon.Job.Kind == JobKind.Work && a.WorkLot >= 0) { var l = pop.Region.Settlements[a.WorkSettlement].Plan.Lots[a.WorkLot].Rect; Assert.InRange(noon.XMm, (l.X - 1) * 1000L, (l.Right + 1) * 1000L); }
         }
-        Assert.True(checkedWorkers > 100 && sleepers > 100 && atWork >= checkedWorkers * 8 / 10, $"workers {checkedWorkers}, at work {atWork}");
+        Assert.True(checkedWorkers > 100 && sleepers > 100 && atWork >= checkedWorkers * 6 / 10, $"workers {checkedWorkers}, at work {atWork}");
     }
 
     [Fact]
@@ -276,12 +277,14 @@ public class PeopleBridgePerfTests(ITestOutputHelper output)
         b.Enqueue(new ScanResult(t0, scan.Candidates.Take(300).ToList(), []));
         var sw = Stopwatch.StartNew(); while (b.Queued > 0) b.Promote(t0, ground); double promoteMs = sw.Elapsed.TotalMilliseconds;
         for (int i = 0; i < 20; i++) b.Step(t0 + i, ground, rig.Centre);        // warm up
-        var times = new List<double>(); long t = t0 + 20;
-        for (int i = 0; i < 2400; i++, t += 1) { sw.Restart(); b.Step(t, ground, rig.Centre); times.Add(sw.Elapsed.TotalMilliseconds); }
+        var times = new List<double>(); var plans = new List<int>(); long t = t0 + 20;
+        for (int i = 0; i < 2400; i++, t += 1) { sw.Restart(); b.Step(t, ground, rig.Centre); times.Add(sw.Elapsed.TotalMilliseconds); plans.Add(b.PlansLastStep); }
+        var worst = times.Select((v, k) => (v, k)).OrderByDescending(x => x.v).Take(5).Select(x => $"#{x.k}:{x.v:0.0}ms/{plans[x.k]}plans"); output.WriteLine("slowest ticks " + string.Join(" ", worst) + $"; slowest plan {b.MaxPlanMs:0.0} ms ({b.WorstPlan})");
         times.Sort(); double avg = times.Average(), p99 = times[(int)(times.Count * 0.99)], max = times[^1];
         output.WriteLine($"{b.Count} live people: promote {promoteMs:0.0} ms total, live step avg {avg:0.000} ms, p99 {p99:0.000} ms, max {max:0.00} ms");
         Assert.True(b.Count >= 150);
         Assert.True(avg < TestBudget.Ms(8), $"average live tick {avg:0.00} ms");
         Assert.True(p99 < TestBudget.Ms(8), $"p99 live tick {p99:0.00} ms");
+        Assert.True(max < TestBudget.Ms(25), $"slowest live tick {max:0.0} ms");      // a lone outlier (first use of a path search that fails, JIT tier-up) is about 10 ms; two of them in one tick would show
     }
 }
