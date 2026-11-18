@@ -36,7 +36,7 @@ public partial class TradeScreen : Control
     long _waitSeq, _shownSeq;
     double _refresh, _waitSince;
     HeroView? _view;
-    int _shotWait;
+    int _shotWait; double _dbg;
     public string? ShotPath { get; init; }
     /// <summary>Dev: the good to put in the basket for a screenshot (and the quantity).</summary>
     public string? StartGood { get; init; }
@@ -318,6 +318,7 @@ public partial class TradeScreen : Control
             if (i < 0) i = t.Count > 0 ? t.Select((x, k) => (x, k)).OrderByDescending(p => p.x.LotUnits).First().k : 0;
             _pane = 1; _sel = i; _qty = StartQty; _shotWait = 1; Build();
         }
+        if (ShotPath != null && (_dbg += delta) > 5) { _dbg = -1e9; GD.Print($"[trade] waiting: view {(_view == null ? "none" : $"market {_view.Market?.Name ?? "-"}, results {string.Join(" | ", _view.Results.Select(r => r.Text))}")}"); }
         if (ShotPath == null || !Visible || _view?.Market == null) return;
         if (++_shotWait != 12) return;
         var img = GetViewport().GetTexture().GetImage();

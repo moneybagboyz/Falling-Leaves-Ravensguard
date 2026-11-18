@@ -44,7 +44,7 @@ public sealed partial class RideHud : PanelContainer
             _bar.AnchorRight = f; _bar.OffsetRight = 0;
             _bar.Color = f > 0.5f ? new Color(0.45f, 0.8f, 0.4f) : f > 0.15f ? new Color(0.9f, 0.7f, 0.25f) : new Color(0.85f, 0.3f, 0.25f);
             _line1.Text = L.F("RIDE_LINE1", L.T("RIDE_STAMINA"), v.StaminaPm / 10, Gait(v.Gait), Speed(v.SpeedCmps));
-            _line2.Text = L.F("RIDE_LINE2", v.FeedCenti >= 100 ? L.T("RIDE_FED_OK") : L.F("RIDE_FED_LOW", v.FeedCenti), v.ShoePm / 10, v.FatiguePm / 10);
+            _line2.Text = L.F("RIDE_LINE2", v.FeedCenti >= 100 ? L.T("RIDE_FED_OK") : L.F("RIDE_FED_LOW", v.FeedCenti), v.ShoePm, v.FatiguePm / 10);
             _warn.Text = v.Lameness > 0 ? L.T("RIDE_LAME") : a.Winded ? L.T("RIDE_WINDED") : v.FatiguePm >= RideMath.TiredPm ? L.T("RIDE_TIRED") : "";
         }
         else

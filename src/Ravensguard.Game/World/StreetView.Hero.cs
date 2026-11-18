@@ -163,7 +163,9 @@ public partial class StreetView
 
     void HeroShots()
     {
-        if (_opt.Panel is not ("trade" or "prices" or "inventory" or "squad" or "party") || _heroLink == null || Runtime is not { } rt) return;
+        if (_opt.Panel is not ("trade" or "prices" or "inventory" or "squad" or "party")) return;
+        if (_frames % 30 == 0) GD.Print($"[hero] frame {_frames} link {_heroLink != null} view {_heroLink?.View != null}");
+        if (_heroLink == null || Runtime is not { } rt) return;
         if (_frames == 60)
         {
             int s = HeroSettlement(); long now = HeroNow();
@@ -194,6 +196,7 @@ public partial class StreetView
         }
         if (_frames != 150) return;
         int st = HeroSettlement();
+        GD.Print($"[hero] shot {_opt.Panel}: settlement {st}, view {(_heroLink.View == null ? "none" : $"hour {_heroLink.View.HourDone}, {_heroLink.View.Items.Count} items, market {_heroLink.View.Market?.Name ?? "-"}")}");
         switch (_opt.Panel)
         {
             case "trade": OpenTrade(st, NearPerson(8000)?.Id ?? EntityId.None, _opt.ShotPath); break;

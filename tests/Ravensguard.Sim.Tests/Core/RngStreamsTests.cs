@@ -38,7 +38,9 @@ public class RngStreamsTests
         // Phase 2 owns 0x200..0x2FF; Phase 3 (live behaviour and jobs) owns 0x300..0x3FF
         var phaseThree = new[] { nameof(RngStreams.UtilityNoise), nameof(RngStreams.JobClaim), nameof(RngStreams.BedFallback), nameof(RngStreams.RoutineJobs),
             nameof(RngStreams.CraftFailure), nameof(RngStreams.CraftByproduct), nameof(RngStreams.CraftWatch),
-            nameof(RngStreams.Stains), nameof(RngStreams.ColdTolerance), nameof(RngStreams.Wardrobe) };
+            nameof(RngStreams.Stains), nameof(RngStreams.ColdTolerance), nameof(RngStreams.Wardrobe),
+            nameof(RngStreams.TradeAttrJitter), nameof(RngStreams.HireMood), nameof(RngStreams.PackQuality),
+            nameof(RngStreams.AnimalInjury), nameof(RngStreams.VehicleStuck), nameof(RngStreams.AnimalBreed), nameof(RngStreams.ShoeLoss), nameof(RngStreams.Taming) };
         foreach (var (name, v) in All().Where(x => x.Name != nameof(RngStreams.WeatherLong) && !phaseThree.Contains(x.Name)))
             Assert.InRange(v, 0x200u, 0x2FFu);
         foreach (var (name, v) in All().Where(x => phaseThree.Contains(x.Name))) Assert.InRange(v, 0x300u, 0x3FFu);

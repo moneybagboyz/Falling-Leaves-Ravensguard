@@ -46,9 +46,9 @@ public sealed class RideSprites
             bool ridden = a.Id == mounted;
             if (ridden)
             {
-                if (heroEast) _flip[a.Id] = false; else if (heroWest) _flip[a.Id] = true;
+                if (heroEast) _flip[a.Id] = false; else if (heroWest) _flip[a.Id] = true; else if (!_flip.ContainsKey(a.Id)) _flip[a.Id] = false;
                 node.Position = heroFeet + new Vector2(0, -1);                                  // a pixel behind the rider, so the horse is drawn first
-                lift = RiderLift; seated = true; seatFacing = _flip[a.Id] ? Facing.West : Facing.East;
+                lift = RiderLift; seated = true; seatFacing = _flip.GetValueOrDefault(a.Id, false) ? Facing.West : Facing.East;
                 // a little bob at a trot
                 if (heroMoving) node.Position += new Vector2(0, (float)Math.Round(Math.Sin(_t * 14) * 1.0));
             }
@@ -73,7 +73,7 @@ public sealed class RideSprites
                 if (book.Animals.Find(id) is not { } t) continue;
                 var tn = Get(_animals, t.Id, book.Breeds.At(t.Breed).Def.Sprite);
                 tn.FlipH = west;
-                tn.Position = pos + new Vector2((west ? -1 : 1) * (38 + n * 4), 2 - n * 3);
+                tn.Position = pos + new Vector2((west ? -1 : 1) * (54 + n * 4), 2 - n * 3);
                 tn.Visible = visible; n++;
             }
         }
