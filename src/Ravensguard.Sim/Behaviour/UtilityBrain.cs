@@ -13,7 +13,7 @@ public enum ActionKind : byte { Sleep, Eat, Drink, Work, Commute, Shop, Socialis
 /// </summary>
 public struct NeedInputs
 {
-    public int HungerMilliHours, FatiguePm, SocialPm, ColdPm, ThreatPm, DutyPm, WageRatioPm;
+    public int HungerMilliHours, FatiguePm, SocialPm, ColdPm, ThreatPm, DutyPm, WageRatioPm, WetPm, HeatPm;
 }
 
 /// <summary>What the scorer needs to know about the situation besides the needs: the block the schedule is in, what the person is already doing, and the gates (the place an action needs exists).</summary>
@@ -84,7 +84,7 @@ public sealed class UtilityBrain
     private long Input(int curve, in NeedInputs n) => _curves[curve].From switch
     {
         "hours_since_meal" => n.HungerMilliHours, "fatigue_pm" => n.FatiguePm * 1000L, "social_pm" => n.SocialPm * 1000L, "cold_stress_pm" => n.ColdPm * 1000L,
-        "threat_pm" => n.ThreatPm * 1000L, "duty_pm" => n.DutyPm * 1000L, "wage_ratio_pm" => n.WageRatioPm * 1000L, _ => 0,
+        "wet_pm" => n.WetPm * 1000L, "heat_stress_pm" => n.HeatPm * 1000L, "threat_pm" => n.ThreatPm * 1000L, "duty_pm" => n.DutyPm * 1000L, "wage_ratio_pm" => n.WageRatioPm * 1000L, _ => 0,
     };
 
     private bool Gate(Act a, in NeedInputs n, in ChoiceContext c) => a.Kind switch
@@ -111,6 +111,8 @@ public sealed class UtilityBrain
         if (a.Kind == c.Current && c.MinutesInCurrent < a.CommitMin) s += Profile.CommitBonusPm;
         if (a.Kind == ActionKind.Sleep && n.FatiguePm >= Profile.ExhaustedPm) s += 1500;
         if (a.Kind == ActionKind.Flee && n.ThreatPm > Profile.FleeThreatPm) s += 2000;
+        // a person who is far too cold or hot, or wet and getting cold, goes in out of it whatever the day's plan says (content: shelter_override_pm; clothing spec 4.3 and 4.4)
+        if (a.Kind == ActionKind.Shelter && Profile.ShelterOverridePm > 0 && (n.ColdPm >= Profile.ShelterOverridePm || n.HeatPm >= Profile.ShelterOverridePm || (n.WetPm >= 700 && n.ColdPm >= Profile.ShelterOverridePm / 3))) s += 1500;
         if (Profile.NoisePm > 0) s += (int)DetRng.Range(c.Seed, c.GameSec / 20, c.Person, RngStreams.UtilityNoise, (uint)actIndex, -Profile.NoisePm, Profile.NoisePm + 1);
         return s;
     }
@@ -140,7 +142,7 @@ public sealed class UtilityBrain
             var a = _acts[idx];
             var parts = new List<string>();
             if (k == c.Scheduled) parts.Add($"schedule +{Profile.ScheduleBonusPm}");
-            foreach (var w in a.Weights) parts.Add(_curves[w.Need].Id switch { "hunger" => $"hungry {n.HungerMilliHours / 1000} h", "fatigue" => $"tired {n.FatiguePm / 10}%", "duty" => "duty", "social" => "lonely", _ => _curves[w.Need].Id });
+            foreach (var w in a.Weights) parts.Add(_curves[w.Need].Id switch { "hunger" => $"hungry {n.HungerMilliHours / 1000} h", "fatigue" => $"tired {n.FatiguePm / 10}%", "duty" => "duty", "social" => "lonely", "warmth" => $"cold {n.ColdPm / 10}%", "wetness" => $"wet {n.WetPm / 10}%", "heat" => $"hot {n.HeatPm / 10}%", _ => _curves[w.Need].Id });
             return parts.Count == 0 ? k.ToString() : $"{k} ({string.Join(", ", parts)})";
         }
         return ch.RunnerUp == ch.Kind ? Why(ch.Kind) : $"{Why(ch.Kind)}, then {Why(ch.RunnerUp)} {ch.RunnerUpScore}";

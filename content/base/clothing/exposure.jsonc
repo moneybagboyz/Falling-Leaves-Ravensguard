@@ -1,0 +1,14 @@
+// docs/specs/phase3/clothing-warmth-exposure.md 3.3. Whole numbers in the unit of the name; every number is tuning.
+[
+  { "type": "exposure_settings", "id": "default",
+    "comfort_c": 22, "clo_per_degree_x100_at_met100": 1400, "max_deficit_clo_x100": 300, "cool_cc_per_hour_at_max": 80, "rewarm_cc_per_hour": 150, "rewarm_fire_cc_per_hour": 250,
+    "heat_free_c": 24, "heat_full_hl_x10": 600, "heat_rise_cc_per_hour_at_max": 100, "heat_cool_cc_per_hour": 100, "wind_free_mps": 2, "wind_chill_max_c": 12,
+    "regions_pm": { "head": 100, "torso": 400, "arms": 150, "hands": 50, "legs": 220, "feet": 80 },
+    "met_x100": { "sleep": 80, "rest": 100, "walk": 180, "work": 220, "sprint": 350, "combat": 350 },
+    "indoor_offset_c": { "unheated": 5, "fire": 15 },
+    "wet_gain_pm_per_min_per_mm_h": 5, "wet_leak_inner_pct": 20,
+    "dry_pm_per_hour": { "fire_worn": 250, "fire_hung": 400, "indoor_worn": 60, "indoor_hung": 90, "outdoor_worn": 70, "wind_bonus": 40, "sun_bonus": 30, "rain": 20 },
+    "collapse_minutes": 30, "heatstroke_death_minutes": 120,
+    "chilled_cc": 3600, "moderate_cc": 3500, "severe_cc": 3200, "lethal_cc": 2800, "warm_cc": 3800, "exhausted_cc": 3950, "stroke_cc": 4100, "stroke_cool_cc": 4000,
+    "clothes_lifetime_days": 1095, "bedding_clo_x100": 250, "comfort_stress_pm": 100 }
+]

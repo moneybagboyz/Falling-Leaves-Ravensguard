@@ -22,6 +22,8 @@ public enum Skill : byte
 {
     None, Farming, Husbandry, Milling, Baking, Brewing, Butchery, Smithing, Carpentry, Masonry, Weaving, Spinning, Tanning, Cobbling,
     Trading, Leadership, Melee, Archery, Literacy, Fishing, Forestry, Mining, Cooking, Housekeeping, Law, Riding, Theology,
+    // Phase 3 (append only, plan skill list): used by crafting, clothing, trade and travel
+    Tailoring, Surgery, Speech, Athletics, Tactics, Stealth, Lockpicking,
 }
 
 /// <summary>A skill slot of a Person: which skill and its 0..100 level.</summary>

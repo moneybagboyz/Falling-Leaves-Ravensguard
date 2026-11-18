@@ -1,0 +1,44 @@
+// Starting clothes by class and season (docs/specs/phase3/clothing-warmth-exposure.md 4.1): the pieces a person owns, made as real items at promotion. "cold" pieces are issued when the season is cold
+// (late autumn, winter, early spring); a person who owns a cloak keeps it in summer too, so in the cold seasons everyone has what they own. chance_pm is the share who own the piece (a stable draw on the person).
+[
+  { "type": "wardrobe", "id": "peasant", "class": "Peasant",
+    "dyes": ["9a8468", "857e72", "9b5238", "bfae85", "6f7447", "685545"],
+    "pieces": [
+      { "shape": "shirt",  "material": "linen" },
+      { "shape": "tunic",  "material": "wool", "worn_pm": 250 },
+      { "shape": "hose",   "material": "wool", "worn_pm": 250 },
+      { "shape": "shoes",  "material": "leather", "chance_pm": 600, "worn_pm": 300 },
+      { "shape": "boots",  "material": "leather", "chance_pm": 350, "worn_pm": 250 },
+      { "shape": "cloak",  "material": "wool", "season": "cold", "chance_pm": 700, "worn_pm": 350 },
+      { "shape": "hood",   "material": "wool", "season": "cold", "chance_pm": 800, "worn_pm": 300 },
+      { "shape": "gloves", "material": "leather", "season": "cold", "chance_pm": 300, "worn_pm": 300 },
+      { "shape": "gambeson", "material": "linen", "occupations": ["Guard"], "worn_pm": 100 }
+    ] },
+  { "type": "wardrobe", "id": "burgher", "class": "Burgher",
+    "dyes": ["34527a", "357a47", "a33330", "c29a33", "6b3d75", "2f7080"],
+    "pieces": [
+      { "shape": "shirt",  "material": "linen" },
+      { "shape": "braies", "material": "linen" },
+      { "shape": "tunic",  "material": "wool", "worn_pm": 100 },
+      { "shape": "hose",   "material": "wool", "worn_pm": 100 },
+      { "shape": "boots",  "material": "leather", "chance_pm": 850, "worn_pm": 100 },
+      { "shape": "shoes",  "material": "leather", "chance_pm": 150 },
+      { "shape": "cloak",  "material": "wool", "season": "cold", "chance_pm": 950, "worn_pm": 100 },
+      { "shape": "hood",   "material": "wool", "season": "cold", "chance_pm": 900, "worn_pm": 100 },
+      { "shape": "gloves", "material": "leather", "season": "cold", "chance_pm": 700 },
+      { "shape": "gambeson", "material": "linen", "occupations": ["Guard"] }
+    ] },
+  { "type": "wardrobe", "id": "gentry", "class": "Gentry",
+    "dyes": ["702f85", "9e1f29", "243d9e", "cca338", "1f1f29", "1a6657"],
+    "pieces": [
+      { "shape": "shirt",  "material": "linen" },
+      { "shape": "braies", "material": "linen" },
+      { "shape": "tunic",  "material": "wool" },
+      { "shape": "hose",   "material": "wool" },
+      { "shape": "boots",  "material": "leather" },
+      { "shape": "cloak",  "material": "wool", "season": "cold" },
+      { "shape": "hood",   "material": "wool", "season": "cold" },
+      { "shape": "gloves", "material": "leather", "season": "cold" },
+      { "shape": "fur_coat", "material": "fur", "season": "cold", "chance_pm": 450 }
+    ] }
+]

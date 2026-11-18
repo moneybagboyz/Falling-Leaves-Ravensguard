@@ -309,13 +309,13 @@ public sealed class PriceDriftSystem : AbstractSystem
     }
 }
 
-/// <summary>H6 / S6 at hour 0, after the marriages: background growth (cottages, assarted fields, new businesses; docs/specs/phase3/background-growth.md).</summary>
+/// <summary>H6 / S6 at hours 0 to 4 of a season's first day, after the marriages: background growth (cottages, assarted fields, new businesses; docs/specs/phase3/background-growth.md).</summary>
 public sealed class GrowthSeasonalSystem : AbstractSystem
 {
     public GrowthSeasonalSystem() : base("growth-seasonal", TickPhase.H6Seasonal, SystemOrder.S6Growth) { }
     public override void Step(TickContext ctx)
     {
-        if (ctx.HourOfDay != 0 || !ctx.IsSeasonStartDay) return;
-        ctx.World.Get<EconomyWorld>()?.Growth.Seasonal(ctx.Time, ctx.Outbox);
+        if (ctx.HourOfDay > 4 || !ctx.IsSeasonStartDay) return;
+        ctx.World.Get<EconomyWorld>()?.Growth.Seasonal(ctx.Time, ctx.Outbox, ctx.HourOfDay);
     }
 }

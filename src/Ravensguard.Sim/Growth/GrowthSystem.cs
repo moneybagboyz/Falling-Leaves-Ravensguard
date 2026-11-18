@@ -28,7 +28,7 @@ public sealed class GrowthSystem
     public GrowthState State { get; private set; } = new();
     /// <summary>Where visited chunks hear of new buildings and fields; null in a world with no chunks (the headless soak).</summary>
     public IGrowthChunkSink? ChunkSink { get; set; }
-    public bool Enabled { get; set; } = Environment.GetEnvironmentVariable("RG_NOGROWTH") == null;
+    public bool Enabled { get; set; } = true;
     private readonly GoodCatalog _cat;
 
     public GrowthSystem(EconomyWorld ew) { _ew = ew; _cat = ew.World.Economy.Goods; }
@@ -44,23 +44,24 @@ public sealed class GrowthSystem
 
     // ---------------------------------------------------------------- the season
 
-    /// <summary>The seasonal step (hour 0 of a season's first day, after marriage matching).</summary>
-    public void Seasonal(GameTime now, RegionOutbox ob)
+    /// <summary>The seasonal step, one part an hour of the season's first day so no hour carries it all (decision G17): hour 0 advances the projects, 1 starts cottages, 2 clearings, 3 businesses, 4 moves to town; <paramref name="step"/> -1 runs them all (tests).</summary>
+    public void Seasonal(GameTime now, RegionOutbox ob, int step = -1)
     {
         if (!Enabled) return;
         var pt = W.People; var hht = W.Households;
         _hands = null;
         _popBy = new int[Region.Settlements.Count];
         for (int h = 0; h < hht.Count; h++) if (hht.MemberCount[h] > 0 && (uint)hht.Settlement[h] < (uint)_popBy.Length) _popBy[hht.Settlement[h]] += hht.MemberCount[h];
-        for (int i = 0; i < State.Projects.Count; i++)
-        {
-            var p = State.Projects[i];
-            if (Advance(p, now, ob)) { State.Projects.RemoveAt(i); i--; }
-        }
-        StartCottages(now, ob);
-        StartClearings(now, ob);
-        OpenBusinesses(now, ob);
-        MoveToTowns(now, ob);
+        if (step is -1 or 0)
+            for (int i = 0; i < State.Projects.Count; i++)
+            {
+                var p = State.Projects[i];
+                if (Advance(p, now, ob)) { State.Projects.RemoveAt(i); i--; }
+            }
+        if (step is -1 or 1) StartCottages(now, ob);
+        if (step is -1 or 2) StartClearings(now, ob);
+        if (step is -1 or 3) OpenBusinesses(now, ob);
+        if (step is -1 or 4) MoveToTowns(now, ob);
     }
 
     private int[] _popBy = [];
@@ -153,7 +154,6 @@ public sealed class GrowthSystem
         {
             var (waiting, crowded, free, inProg) = counts[cl];
             int need = waiting / Math.Max(1, T.WaitingPerCottage) + crowded / Math.Max(1, T.CrowdedPerCottage) - free - inProg;
-            if (Environment.GetEnvironmentVariable("RG_DEBUG") != null && (waiting + crowded) > 0) Console.Error.WriteLine($"y{now.Year} d{now.DayOfYear} cluster {cl}: waiting {waiting} crowded {crowded} free {free} proj {inProg} need {need}");
             int starts = 0;
             while (need > 0 && starts < T.MaxStartsPerClusterSeason && yr.CottagesStarted < cap
                    && State.Lots.Count(l => l.Dwelling != DwellingType.None) + State.Projects.Count(p => p.Kind == ProjectKind.Cottage) < landCap)
@@ -192,7 +192,7 @@ public sealed class GrowthSystem
             else
             {
                 int w = town ? T.PlotWidthTownM : T.PlotWidthVillageM, d = town ? T.PlotDepthTownM : T.PlotDepthVillageM;
-                if (!RegionGrowth.FindPlot(Region, s, w, d, T.PlanMarginM, reserved, out var rect, out byte facing)) { if (Environment.GetEnvironmentVariable("RG_DEBUG") != null) Console.Error.WriteLine($"  s{s} no plot"); continue; }
+                if (!RegionGrowth.FindPlot(Region, s, w, d, T.PlanMarginM, reserved, out var rect, out byte facing)) continue;
                 pr.Rect = rect; pr.Facing = facing;
                 pr.Use = town ? LotUse.Burgage : LotUse.Cottage; pr.Dwelling = town ? DwellingType.Burgage : DwellingType.Cottage;
                 pr.Blueprint = town ? "burgage_townhouse" : "peasant_cottage"; pr.Wealth = (byte)(town ? 1 : 0);
@@ -205,7 +205,7 @@ public sealed class GrowthSystem
             var book = _ew.Markets.BookForSettlement(s);
             for (int i = 0; i < lines.Count; i++) cost += (long)(lines[i].Kg * (long)pct / 100 * book.RefMitesPerKg(_cat.IdOf(lines[i].Good)));
             int payer = ChoosePayer(s, cluster, cost, waitBy.Count > 0);
-            if (payer < 0) { if (Environment.GetEnvironmentVariable("RG_DEBUG") != null) Console.Error.WriteLine($"  s{s} no payer cost {cost} lord {LordHousehold(s)} bal {(LordHousehold(s) >= 0 ? Balance(LordHousehold(s)) : -1)}"); continue; }
+            if (payer < 0) continue;
             pr.Payer = payer; State.NextSerial++; State.Projects.Add(pr);
             return true;
         }
@@ -251,7 +251,6 @@ public sealed class GrowthSystem
         }
         int crewMax = p.Kind == ProjectKind.Cottage ? T.CrewMax : T.AssartCrewMax;
         int handHours = (p.Kind == ProjectKind.Cottage ? T.HiredHoursPerHandDay : T.AssartHoursPerHandDay) * TimeConst.DaysPerSeason;
-        if (Environment.GetEnvironmentVariable("RG_DEBUG") != null) Console.Error.WriteLine($"  proj {p.Serial} {p.Kind} s{p.Settlement} hrs {p.HoursDone}/{p.HoursNeeded} allowed {allowed} mats {string.Join(',', p.MaterialG)} fodder-straw {(W.Economy.OtherStores.TryGetValue(Ravensguard.Sim.Farming.FarmIds.Fodder(p.Settlement), out var fs) ? fs.Qty(_cat.IdOf("straw")) : -1)} bal {Balance(p.Payer)} stalled {p.StalledSeasons}");
         long own = 0;
         if (p.Kind == ProjectKind.Cottage && hht.Class[p.Payer] != SocialClass.Gentry)
             foreach (int m in hht.Members(p.Payer)) { if (W.People.Status[m] == PersonStatus.Alive) { int a = W.People.AgeYears(m, day); if (a >= 14 && a < 60) own += T.OwnHoursPerMemberDay * TimeConst.DaysPerSeason; } }

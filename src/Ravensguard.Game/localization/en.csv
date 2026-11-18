@@ -65,6 +65,7 @@ ACTION_WORLD_PANEL_CODEX,Panel codex
 ACTION_WORLD_PANEL_CHRONICLE,Panel chronicle
 ACTION_WORLD_BUILD,Build
 ACTION_WORLD_MAP,Map
+ACTION_WORLD_MAKE,Make (crafting)
 ACTION_WORLD_CAMERA_UP,Camera up
 ACTION_WORLD_CAMERA_DOWN,Camera down
 ACTION_WORLD_CAMERA_LEFT,Camera left
@@ -628,3 +629,60 @@ JOBS_STEP_UNLOAD,unloading
 JOBS_STEP_WORK,at the work
 JOBS_STEP_DONE,handing over
 JOBS_LOST,"You were too long away from the work: the job is lost."
+CRAFT_TITLE,Make
+CRAFT_CAT_ALL,All
+CRAFT_CAT_FIRE,Fire
+CRAFT_CAT_FOOD,Food
+CRAFT_CAT_MEDICAL,Medical
+CRAFT_CAT_CLOTH,Cloth
+CRAFT_CAT_CRAFT,Craft
+CRAFT_CAT_SMITH,Smith
+CRAFT_CAT_PRACTICE,Practice
+CRAFT_SEARCH,Search recipes
+CRAFT_WITH,What can I make with...
+CRAFT_CAN_NOW,Can make now
+CRAFT_UNKNOWN,Show unknown
+CRAFT_CRAFT,Craft
+CRAFT_BATCH,Batch: {0} of {1}
+CRAFT_NONE,No recipe matches.
+CRAFT_COMPONENTS,"Components (need, in pack)"
+CRAFT_FUEL,{0} {1} as fuel
+CRAFT_TOOLS,Tools and station
+CRAFT_HAVE,have
+CRAFT_IMPROVISED,(improvised: slower and worse)
+CRAFT_LIGHT_DARK,"Too dark: needs light {0}, here {1}"
+CRAFT_LIGHT_DIM,"Dim: needs {0}, here {1} (quality -5)"
+CRAFT_LIGHT_OK,"Light: needs {0}, here {1}"
+CRAFT_SKILL,Skill
+CRAFT_DIFFICULTY,difficulty
+CRAFT_PROF,"{0} {1}%: time {2}%, skill -{3}"
+CRAFT_TIME,Time
+CRAFT_TIME_LINE,"Attended {0} ({1} work)"
+CRAFT_WAIT_LINE,"Then {0}: {1} unattended, ready for {2}, then {3} of grace before it is ruined"
+CRAFT_QUALITY,Expected quality
+CRAFT_RISK,"Risk of failure: {0}%; you would lose about {1}% of the components"
+CRAFT_NO_RISK,No risk of failure.
+CRAFT_RESULT,Makes
+CRAFT_PRACTICE,Practice: no item is made; skill gain stops at level {0}.
+CRAFT_BYPRODUCT,also {0} {1}
+CRAFT_REPAIR,"Mends +{0}% condition, up to {1}%"
+CRAFT_EFFECT_LIT_FIRE,A lit fire.
+CRAFT_EFFECT_REPAIR_CART,Restores the cart's wheel.
+CRAFT_EFFECT_REFIT,Refits the garment to the wearer.
+CRAFT_UNKNOWN_HOW,"You do not know this recipe yet. Learn it from a master, by watching, from a manuscript or by taking one apart."
+CRAFT_MISSING,Missing
+CRAFT_CANT,You cannot start that now.
+CRAFT_STARTED,You start: {0}.
+CRAFT_DONE,Finished: {0}.
+CRAFT_WORKING,"{0}: {1}"
+CRAFT_WAITING,"{0}: waiting ({1})"
+CRAFT_PAUSE,Pause
+CRAFT_RESUME,Resume
+CRAFT_UNFINISHED,"Unfinished: {0}, step {1} of {2}"
+CRAFT_KEYS,"/ search  F can make now  Enter craft  Esc pauses"
+CRAFT_HINT,"N opens crafting; green recipes can be made now."
+Q_CRUDE,Crude
+Q_POOR,Poor
+Q_COMMON,Common
+Q_FINE,Fine
+Q_MASTERWORK,Masterwork

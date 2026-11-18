@@ -195,6 +195,20 @@ public static class NewGameDebug
                     await Frames(tree, 3);
                     break;
                 }
+            case "crafting":
+                {
+                    // dev: the crafting screen for a made-up hero with a starter pack, a hearth and a workbench in reach (--ng-craft-recipe <id> selects a recipe)
+                    var db = NewGameServices.Content().Db;
+                    var origin = NewGameServices.Origins()[0];
+                    var hero = Ravensguard.Sim.Characters.HeroRecord.FromOrigin("Ada", true, origin);
+                    var session = new CraftingSession(db, hero, 8 * 3600, true, ["hearth", "oven", "workbench"], 255);
+                    session.State.Book.Set(CraftingSession.HeroId, Ravensguard.Sim.People.Skill.Baking, 45_000_000);
+                    session.State.Book.Set(CraftingSession.HeroId, Ravensguard.Sim.People.Skill.Tailoring, 12_000_000);
+                    session.State.Book.Set(CraftingSession.HeroId, Ravensguard.Sim.People.Skill.Cooking, 18_000_000);
+                    router.Push(new CraftingScreen(router, session) { StartRecipe = Arg("--ng-craft-recipe", "bake_loaf") });
+                    await Frames(tree, 10);
+                    break;
+                }
             case "embark":
             case "legends":
                 {

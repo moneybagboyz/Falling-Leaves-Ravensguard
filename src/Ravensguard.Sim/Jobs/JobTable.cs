@@ -15,6 +15,8 @@ public sealed class JobEnv
     public Population? Pop { get; init; }
     public OddJobTuningDef Tuning { get; init; } = new() { Id = "odd_jobs" };
     public IWorkSink Work { get; init; } = new WorkLog();
+    /// <summary>Called when a Craft job's work phase is done (the job, the game seconds worked): the crafting engine advances the unfinished piece the job names in <c>P5</c> (<c>Crafting.CraftWork</c>).</summary>
+    public Action<Job, int>? CraftWorked { get; init; }
     /// <summary>The purse a person's pay goes to: the hero's own, else the household's.</summary>
     public Func<EntityId, PurseId?>? PurseOf { get; init; }
 
@@ -245,7 +247,9 @@ public sealed class JobTable
             }
             case OddJobKind.FarmWork when p.Kind == PhaseKind.Work:
                 j.WorkMilliHours += p.DurSec * 1000L / 3600; env.Work.WorkDone(j.P5, p.DurSec * 1000L / 3600); return true;
-            case OddJobKind.Guard or OddJobKind.TendShop or OddJobKind.Craft when p.Kind == PhaseKind.Work:
+            case OddJobKind.Craft when p.Kind == PhaseKind.Work:
+                j.WorkMilliHours += p.DurSec * 1000L / 3600; env.CraftWorked?.Invoke(j, p.DurSec); return true;
+            case OddJobKind.Guard or OddJobKind.TendShop when p.Kind == PhaseKind.Work:
                 j.WorkMilliHours += p.DurSec * 1000L / 3600; return true;
         }
         return true;

@@ -52,6 +52,7 @@ public static class InputDefs
         A(W, "panel_chronicle", K(Key.H));
         A(W, "build", K(Key.B));
         A(W, "map", K(Key.M));
+        A(W, "make", K(Key.N)); // crafting screen (basic-crafting spec 4.7); N is free in World, CombatStance, CalledShot and Build
         A(W, "camera_up", K(Key.Up));
         A(W, "camera_down", K(Key.Down));
         A(W, "camera_left", K(Key.Left));

@@ -76,6 +76,7 @@ public partial class StreetView : Control, IHandlesBack
     // the LODBridge for people (plan 2.3): townsfolk of the abstract records, promoted into the bubble around the hero and drawn as rig figures
     readonly PeopleBridge _lod = new();
     PeopleSprites? _lodSprites;
+    ClothingFeed? _clothes;
     System.Threading.Tasks.Task<ScanResult>? _lodScan;
     long _lodScanTick; bool _lodFaultShown;
     // odd jobs (live-behaviour spec 4.5): the table belongs to the tick worker; the view holds copies, hands claims over at a barrier and shows the work panel
@@ -99,6 +100,7 @@ public partial class StreetView : Control, IHandlesBack
     Ravensguard.Sim.Characters.HeroRecord? _hero;
     Label _dateLabel = null!, _phaseLabel = null!, _levelLabel = null!, _hintLabel = null!, _perfLabel = null!, _weatherLabel = null!, _bandLabel = null!;
     TextureRect _weatherIcon = null!;
+    Label _condLabel = null!;
     Minimap? _minimap;
     readonly List<Label> _levelBoxes = new();
 
@@ -336,7 +338,8 @@ public partial class StreetView : Control, IHandlesBack
         _heroSprite = new RigActor(_rig, "hero"); // stacked layers from rig_32x64.png
         _ysort.AddChild(_heroSprite);
         _caravanSprites = new CaravanSprites(_ysort, _rig, _art);
-        _lodSprites = new PeopleSprites(_ysort, _rig);
+        _clothes = _source?.Content != null ? new ClothingFeed(_source.Content) : null;
+        _lodSprites = new PeopleSprites(_ysort, _rig, _clothes);
         _torchSprite = new Sprite2D { Texture = _art.Texture("item.torch"), Centered = false, Offset = new Vector2(-3, -34), TextureFilter = TextureFilterEnum.Nearest, Visible = false };
         _heroSprite.AddChild(_torchSprite);
         if (_hero != null) _heroSprite.AddChild(new Label { Name = "Nameplate", Text = _hero.Name, Position = new Vector2(-60, -84), CustomMinimumSize = new Vector2(120, 0), HorizontalAlignment = HorizontalAlignment.Center, ThemeTypeVariation = "HintLabel", MouseFilter = MouseFilterEnum.Ignore, ZIndex = 50 });
@@ -417,6 +420,9 @@ public partial class StreetView : Control, IHandlesBack
         _weatherLabel = new Label { VerticalAlignment = VerticalAlignment.Center };
         wrow.AddChild(_weatherIcon); wrow.AddChild(_weatherLabel);
         v.AddChild(wrow);
+        // the hero's body: a warning in words, hours before cold or heat matters (clothing spec 6), empty when all is well
+        _condLabel = new Label { Visible = false, Modulate = new Color(1f, 0.82f, 0.45f) };
+        v.AddChild(_condLabel);
         _bandLabel = new Label { ThemeTypeVariation = "HintLabel" };
         v.AddChild(_bandLabel);
         if (_hero != null) v.AddChild(new Label { Text = L.F("STREET_HERO_HINT", _hero.Name, H("world.panel_character"), H("world.panel_codex")), ThemeTypeVariation = "HintLabel" });
@@ -475,6 +481,18 @@ public partial class StreetView : Control, IHandlesBack
         _router.Push(new CharacterScreen(_router, _hero, _source.Content) { ShotPath = _opt.Panel == "character" ? _opt.ShotPath : null });
     }
 
+    CraftingSession? _crafting;
+
+    /// <summary>N: the crafting screen (basic-crafting spec 4.7). The session (the hero's pack, skills by use, unfinished work) lives as long as the street view; it keeps to itself, off the tick worker's economy.</summary>
+    void OpenCrafting()
+    {
+        if (_router == null || _hero == null || _source?.Content == null) { _router?.ShowToast(L.T("MAP_NONE")); return; }
+        int light = _world.Clock.Now.Hour is < 6 or >= 20 ? 120 : 255;
+        _crafting ??= new CraftingSession(_source.Content, _hero, _world.Clock.Now.Seconds, true, ["hearth", "workbench", "oven", "forge", "anvil"], light);
+        _crafting.NowSec = _world.Clock.Now.Seconds; _crafting.Site.Light = light;
+        _router.Push(new CraftingScreen(_router, _crafting) { ShotPath = _opt.Panel == "crafting" ? _opt.ShotPath : null, StartRecipe = _opt.Panel == "crafting" ? _opt.PanelEntry : null });
+    }
+
     void OpenCodex()
     {
         if (_router == null || _world.Codex is not { } codex) { _router?.ShowToast(L.T("MAP_NONE")); return; }
@@ -498,6 +516,8 @@ public partial class StreetView : Control, IHandlesBack
         _dateLabel.Text = $"{t.Hour:00}:{t.Minute:00}  {_calendar.Describe(t)}";
         _weatherIcon.Texture = PixelIcons.Weather(_wx.State, s.Ambient.Phase == DayPhase.Night);
         _weatherLabel.Text = $"{L.T(WeatherFeed.Name(_wx.State))}  {Mathf.Round(_wx.TempC):0} °C";
+        string cond = _clothes?.HudLine() ?? "";
+        _condLabel.Visible = cond.Length > 0; _condLabel.Text = cond;
         _bandLabel.Text = L.T(_band switch { Band.Close => "BAND_CLOSE", Band.Street => "BAND_STREET", Band.Field => "BAND_FIELD", _ => "BAND_COMMAND" });
         string phase = s.Ambient.Phase switch { DayPhase.Dawn => "STREET_PHASE_DAWN", DayPhase.Dusk => "STREET_PHASE_DUSK", DayPhase.Night => "STREET_PHASE_NIGHT", _ => "STREET_PHASE_DAY" };
         string speed = s.Speed == SimSpeed.Paused ? L.T("STREET_PAUSED") : $"{(int)s.Speed}x";
@@ -893,6 +913,7 @@ public partial class StreetView : Control, IHandlesBack
         if (_opt.MapShot && _frames == (_opt.Frames > 12 ? _opt.Frames : 3)) OpenMap(); // --shot-frames n (> 12) waits that long first, so neighbour regions are built when the map opens
         if (_opt.Panel == "character" && _frames == 3) OpenCharacter();
         if (_opt.Panel == "codex" && _frames == 3) OpenCodex();
+        if (_opt.Panel == "crafting" && _frames == 3) OpenCrafting();
         if (_opt.Panel == "jobs" && _frames == 420) OpenWork();    // dev: the work panel once the first posting has come back from the tick worker
         if (_opt.IsShot && _opt.Weather == "storm" && _frames == Math.Max(2, _opt.Frames - 1)) _wover.Strike(); // dev: catch a lightning flash in the picture
         if (_opt.IsShot && !_opt.MapShot && _opt.Panel == null && !_quitting && _frames >= _opt.Frames && ShotReady()) Shoot();
@@ -1042,6 +1063,7 @@ public partial class StreetView : Control, IHandlesBack
             _lodScanTick = _world.Tick;
             _lodScan = RuntimePeople.ScanAsync(rt, _lod.MakeScanInput(LodCentres(), now));
         }
+        if (_clothes != null && _lod.Clothing == null) { var home = rt.State.HomeRegion; _lod.AttachClothing(_clothes.Book, _clothes.Ambient(_wfeed, home.OriginXM, home.OriginYM)); }
         if (_lod.Queued > 0) _lod.Promote(now, LodGround());
     }
 
@@ -1155,7 +1177,22 @@ public partial class StreetView : Control, IHandlesBack
         _wx = _wfeed.Sample(t, (int)wx, (int)wy);
         _wxDim = WeatherOverlay.Dim(_wx);
         _seasons.Apply(SeasonState.Of(t, _wx.SnowCover, _wx.Freeze, _wx.Wet));
+        StepHeroBody(s);
         RefreshProps();
+    }
+
+    /// <summary>The hero's clothes and core temperature, once per sim tick (the model itself runs once per game minute): where they stand (under a roof, by a lit hearth) and what they are doing.</summary>
+    void StepHeroBody(LiveSnapshot s)
+    {
+        if (_clothes == null || _hero == null) return;
+        long sec = s.Time.Seconds;
+        _clothes.EnsureHero(_hero, sec);
+        var c = s.Hero.Cell;
+        bool indoors = _world.Lights.IsIndoor(c.X, c.Y, c.Z);
+        // a hearth is a static light: strong light on a roofed cell with no torch of the hero's own is a fire within reach
+        bool fire = indoors && !s.Hero.Torch && s.Light != null && c.X >= 0 && c.Y >= 0 && c.X < s.Light.Width && c.Y < s.Light.Height && c.Z >= s.Light.MinZ && c.Z <= s.Light.MaxZ && s.Light.Point(c.X, c.Y, c.Z) >= 120;
+        var act = !s.Hero.Moving ? Ravensguard.Sim.Clothing.Activity.Rest : s.Hero.Mode == MoveMode.Sprint ? Ravensguard.Sim.Clothing.Activity.Sprint : Ravensguard.Sim.Clothing.Activity.Walk;
+        _clothes.StepHero(sec, _wx, indoors, fire, act);
     }
 
     /// <summary>Ambient tint of the open air: cool moonlight to warm daylight, an orange cast while the sun is low, then the weather's dimming (cloud, rain, fog).</summary>
@@ -1259,6 +1296,7 @@ public partial class StreetView : Control, IHandlesBack
         else if (Actions.Pressed(e, "world.map")) OpenMap();
         else if (Actions.Pressed(e, "world.panel_character")) OpenCharacter();
         else if (Actions.Pressed(e, "world.panel_codex")) OpenCodex();
+        else if (Actions.Pressed(e, "world.make")) OpenCrafting();
         else if (Actions.Pressed(e, "world.panel_journal") || Actions.Pressed(e, "world.context_menu")) OpenWork();
         else if (Actions.Pressed(e, "world.quicksave")) QuickSave();
         else if (Actions.Pressed(e, "world.quickload")) QuickLoad();

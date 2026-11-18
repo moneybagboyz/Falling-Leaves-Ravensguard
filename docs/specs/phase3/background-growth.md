@@ -4,7 +4,7 @@ Implements plan 4A.2 "Background growth (from Phase 3)": the abstract world buil
 
 ## 1. What it does
 
-One system, `growth-seasonal` (H6, order `S6Growth` 6,650: after the marriage matching of S6 and before the migration of S7), runs at hour 0 of the first day of each season and calls `GrowthSystem.Seasonal`:
+One system, `growth-seasonal` (H6, order `S6Growth` 6,650: after the marriage matching of S6 and before the migration of S7), runs in hours 0 to 4 of the first day of each season (one part an hour, decision G17: the whole step in hour 0 took up to 190 ms against the 150 ms budget) and calls `GrowthSystem.Seasonal`:
 
 1. **Advance** every project in progress (a cottage, a clearing): buy or gather what is missing, pay the labour, finish what is done.
 2. **Cottages** (3.1): start new ones.
@@ -34,7 +34,7 @@ Save, load, save is byte for byte, with builds in progress (test `ASaveWithABuil
 - **Done**: a `Lot` with a dwelling and beds is in the plan (or the vacant one is occupied); the population's per-lot arrays grow; the chronicle has `cottage_built`. Marriage uses it from then on (`Marriage.FreeDwelling` and the weekly catch-up). A build whose payer is gone, or that makes no progress for `give_up_seasons`, is dropped.
 
 ### 3.2 Assarting
-- **When**: a settlement's arable acres a head under `target_acres_per_person_x10` (2.3, plan 3a); the biggest deficits first, at most `assart_max_starts_per_season`, one project a settlement, the fief's lord pays (treasury help as above).
+- **When**: a settlement's arable acres a head under `target_acres_per_person_x10` (2.5: the plan's 2.3 arable acres plus the margin of E10; the generated region has 2.28); the biggest deficits first, at most `assart_max_starts_per_season`, one project a settlement, the fief's lord pays (treasury help as above).
 - **Land** (`RegionGrowth.FindClearing`): `assart_tiles_per_project` tiles of woodland (tree cover 30+) or waste (too poor for pasture), level, dry, unbuilt, off roads and mines, within `assart_max_radius_m`, touching the settlement's own fields (or a tile already chosen), nearest first. When none touches, nothing is cleared: the land cap.
 - **Work**: `assart_hours_per_acre` worker-hours an acre from hired idle hands (`assart_crew_max`), wages paid as they go.
 - **Done**: the wood on the tiles (`ResourceLayer.Clear`) is taken to market as firewood (`assart_firewood_pct`) and logs, created in the lord's store (reason Cut); a new parcel is appended (`ParcelRecord`: tenant parcel of the settlement, fallow slot 2, each field's fertility the tile's times the generated fields' scale, `Forest` 0); farming's tables grow (`FarmingSystem.AddParcels`), meadow acres with them; the lord holds it until the year's re-let gives it to a landless household.
@@ -71,9 +71,28 @@ A town with free houses and posts its businesses cannot fill takes up to `town_m
 | G12 | Rural to town moves (3.5). | towns grew by drawing the countryside |
 | G13 | Soak gates: -10 percent to +25 percent, at most 0.5 percent a year per decade (4). | background growth |
 | G14 | Marriage ages in `VitalRates.EconomyDefault`: brides 22, grooms 25 (were 21 and 23). | housing is the brake now; the historical range is 22-26 for women |
+| G16 | The assart target is 2.5 acres a head with up to 5 clearings of 8 acres a season: at 2.3 the extra mouths pushed the grain price up and the honest band fell under 40 percent in two dry years of the century. | measured: 100 years of seed 1234, band minimum 35 percent at 2.3, 60 percent at 2.5 |
+| G17 | The seasonal step is split over hours 0-4 of the season's first day (projects, cottages, clearings, businesses, town moves). | worst hour budget 150 ms (abstract spec E4) |
 | G15 | Soil improvement (marling, manuring as improvement projects) is **deferred to Phase 5**: it needs a per-field fertility cap in `FieldTable`, a lime and marl supply chain and the construction-job contracts of Phase 5, and nothing else in Phase 3 reads it. The fallow credit and grazing already raise fertility a little. | lead's item 7 |
 
 ## 6. Known limits
 - A new house takes the next free *plot of the plan*: no new street, so a village stops growing when its streets are full (the cap by land).
 - The visited-chunk delta is written to the store; the streamer's loaded chunks pick it up when they are next rebuilt from the store (the game's runtime owns when).
 - The farm labour planner scales with the new parcels by itself; a manor's staff slots (stewards, reeves, guards) are fixed by content and do not grow with demesne acres.
+
+## 7. Results (release, `WorldTool soak`)
+
+Seed 1234, 100 years (17 minutes): population 25,670 to 27,082 (+5.5 percent, 0.05 percent a year; every decade at most 0.5 percent a year), missed meals at most 0.03 percent, honest band mean 64.7 percent (minimum year 60.4), cash-solvent merchants mean 77 percent (minimum 66), workshops mean 69 percent (minimum 64), under-15 share 32.1 percent after the first decade (decades 29-34), region coin growth 0.77 percent a year. Seed 1, 25 years: population 25,971 to 26,127, band mean 74.0 (minimum 67.1), under-15 30.0 percent.
+
+| year | people | dwellings | field acres | businesses open | hungry % | band % | solvent merchants % | workshops % | idle (landless) |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | 25,670 | 5,002 | 58,693 | 964 | 0.00 | 83.0 | 91 | 93 | 13 |
+| 10 | 25,672 | 5,598 | 60,173 | 996 | 0.00 | 69.0 | 76 | 70 | 206 |
+| 25 | 25,715 | 5,898 | 62,461 | 1,248 | 0.00 | 64.8 | 73 | 68 | 388 |
+| 50 | 26,059 | 5,898 | 64,570 | 1,468 | 0.00 | 62.9 | 82 | 69 | 1,054 |
+| 100 | 27,082 | 5,898 | 65,856 | 1,499 | 0.01 | 63.9 | 74 | 66 | 2,101 |
+
+Dwellings stop at +18 percent of the generated ones (the cap by land, year 17); cows 5,794 to 6,841 (decision G11); idle adults are still rising (item 5 below).
+
+## 8. Lead's list: status
+1. Immigration cap removed: done (G9). 2. Unvisited continent grows: done (G10). 3. Marriage ages: done (G14). 4. Herds: done, the cap bug (G11). 5. Idle adults: partly done: farm labour demand follows the parcels by itself and the new fields are worked by hired idle hands until the re-let, the 174 businesses opened in 15 years average 3.1 staff and hire the idle, but landless idle adults still rise (a manor's slots are fixed content; the re-let of parcels leaves landless households without fields): **open**, a labour-market design question for Phase 5 (day labour contracts). 6. Rural to town moves: done (G12). 7. Soil improvement: deferred to Phase 5 (G15).

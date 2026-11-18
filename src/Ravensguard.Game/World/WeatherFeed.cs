@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Threading.Tasks;
 using Godot;
@@ -11,8 +12,11 @@ namespace Ravensguard.Game.World;
 
 /// <summary>Weather at the hero, in the units the view draws with (precipitation 0..1, fog 0..1, snow depth in cm, wet ground 0..1, freeze 0..1).</summary>
 public readonly record struct WeatherView(
-    WeatherState State, float TempC, float Precip, bool Snowing, float Fog, float Cloud, int WindFrom, float WindMps, float SnowCm, float Wet, float Freeze)
+    WeatherState State, float TempC, float Precip, bool Snowing, float Fog, float Cloud, int WindFrom, float WindMps, float SnowCm, float Wet, float Freeze, float PrecipMmH = 0)
 {
+    /// <summary>Precipitation in millimetres an hour for the body model: the sampled rate, or (for a forced dev weather) three times the drawn strength.</summary>
+    public float Mm => PrecipMmH > 0 ? PrecipMmH : Precip * 3f;
+    public bool Sunny => State == WeatherState.Clear && Cloud < 0.5f;
     public bool Raining => Precip > 0 && !Snowing;
     public bool Thunder => State == WeatherState.Thunderstorm;
     /// <summary>Snow cover 0..1 for the shader: about 8 cm is a full white field.</summary>
@@ -103,8 +107,29 @@ public sealed class WeatherFeed
         float mean = (_rw.DailyMeanTemp(cell, day - 1).ToFloat() + _rw.DailyMeanTemp(cell, day - 2).ToFloat() + _rw.DailyMeanTemp(cell, day - 3).ToFloat()) / 3f;
         float freeze = Math.Clamp((-mean - 1f) / 5f, 0f, 1f);
         var v = new WeatherView(w.State, w.TempC.ToFloat(), precip, w.PrecipIsSnow && mm > 0, w.FogDensity.ToFloat(), w.Cloud.ToFloat(), w.WindFromDeg, w.WindMps.ToFloat(),
-            w.SnowDepthCm.ToFloat(), Math.Clamp(wet / 3f, 0f, 1f), freeze);
+            w.SnowDepthCm.ToFloat(), Math.Clamp(wet / 3f, 0f, 1f), freeze, mm);
         _cache = (hour, cell, v);
+        return v;
+    }
+
+    readonly Dictionary<(long Hour, int Cell), WeatherView> _raw = new();
+
+    /// <summary>
+    /// The weather at world metres (wx, wy) for an hour, for the people's bodies: the sampled values only (no wet-ground history), memoised per (hour, cell) so a few hundred people asking every game minute cost a
+    /// dictionary lookup each. A forced dev weather answers everywhere.
+    /// </summary>
+    public WeatherView Raw(long gameSec, int wx, int wy)
+    {
+        if (_forced is { } f) return f;
+        var t = new GameTime(gameSec);
+        if (_region == null || _rw == null) return WeatherView.Calm(Fallback(t));
+        int cx = Math.Clamp(_region.CellX + wx / 2000, 0, Continent.Size - 1), cy = Math.Clamp(_region.CellY + wy / 2000, 0, Continent.Size - 1);
+        int cell = cy * Continent.Size + cx; long hour = t.TotalHours;
+        if (_raw.TryGetValue((hour, cell), out var v)) return v;
+        if (_raw.Count > 256) _raw.Clear();
+        var w = _rw.At(cell, hour); float mm = w.PrecipMmH.ToFloat();
+        v = new WeatherView(w.State, w.TempC.ToFloat(), mm > 0 ? Math.Clamp(0.3f + mm / 4f, 0.3f, 1f) : 0f, w.PrecipIsSnow && mm > 0, w.FogDensity.ToFloat(), w.Cloud.ToFloat(), w.WindFromDeg, w.WindMps.ToFloat(), w.SnowDepthCm.ToFloat(), 0, 0, mm);
+        _raw[(hour, cell)] = v;
         return v;
     }
 

@@ -15,14 +15,14 @@ namespace Ravensguard.Game.World;
 public sealed class PeopleSprites
 {
     const int Tile = 32;
-    readonly Node2D _parent; readonly RigAtlas _rig;
+    readonly Node2D _parent; readonly RigAtlas _rig; readonly ClothingFeed? _clothes;
     readonly Dictionary<EntityId, Figure> _nodes = new();
     readonly HashSet<EntityId> _seen = new();
     double _t;
 
-    sealed class Figure { public RigActor Actor = null!; public Label? Name; public string Outfit = ""; }
+    sealed class Figure { public RigActor Actor = null!; public Label? Name; public string Outfit = ""; public string Look = ""; }
 
-    public PeopleSprites(Node2D parent, RigAtlas rig) { _parent = parent; _rig = rig; }
+    public PeopleSprites(Node2D parent, RigAtlas rig, ClothingFeed? clothes = null) { _parent = parent; _rig = rig; _clothes = clothes; }
 
     public int Count => _nodes.Count;
 
@@ -54,6 +54,13 @@ public sealed class PeopleSprites
         return d;
     }
 
+    /// <summary>
+    /// Where the origin of a lying figure goes so that the body is centred on its bed cell: turned a quarter turn, the 64 pixel body runs from the origin along +x with the visible body (about 58 pixels, from 3
+    /// to 61) centred 32 pixels along, so the origin is 32 pixels back. Along x the head is to the east. A bed in a row of beds side by side is lain across the row's other axis (<paramref name="axis"/> 1), so each
+    /// sleeper keeps to their own bed: the body is then turned to run north to south, the head to the north.
+    /// </summary>
+    public static Vector2 BedOffset(int axis) => axis == 1 ? new Vector2(0, 32) : new Vector2(-32, 0);
+
     /// <summary>Places every live person. <paramref name="originXM"/>, <paramref name="originYM"/> are the continent metres of the street's frame origin (the home region's corner); <paramref name="alpha"/> blends the last two sim steps.</summary>
     public void Sync(IReadOnlyList<LivePerson> live, long originXM, long originYM, float alpha, double delta, bool visible, bool names, Vector2? hero = null, int viewZ = 0)
     {
@@ -61,11 +68,21 @@ public sealed class PeopleSprites
         foreach (var p in live)
         {
             _seen.Add(p.Id);
-            string outfit = OutfitOf(p.Occupation, p.Class);
-            if (!_nodes.TryGetValue(p.Id, out var f))
+            // what the person wears decides the figure: the layers of the pieces on them (a cloak or hood only if one is worn), tinted by each piece's dye or material (clothing spec, plan 2.7)
+            ClothingFeed.Look? look = _clothes != null && p.Body != null ? _clothes.LookOf(p.Body, p.Occupation) : null;
+            string outfit = look?.Outfit ?? OutfitOf(p.Occupation, p.Class);
+            string lookKey = look?.Key ?? "";
+            if (_nodes.TryGetValue(p.Id, out var f) && (f.Outfit != outfit || f.Look != lookKey))
             {
-                f = new Figure { Actor = new RigActor(_rig, outfit), Outfit = outfit };
-                var tints = Clothes(p); tints.Remove("body"); f.Actor.Dress(tints);
+                // they put a cloak on or took one off: the figure is made again (the stance and the nameplate go with it)
+                f.Actor.QueueFree(); _nodes.Remove(p.Id); f = null!;
+            }
+            if (f == null)
+            {
+                f = new Figure { Actor = look is { } lk && lk.Layers.Length > 0 ? new RigActor(_rig, outfit, lk.Layers) : new RigActor(_rig, outfit), Outfit = outfit, Look = lookKey };
+                var tints = look is { } l2 ? l2.Tints : Clothes(p); tints.Remove("body");
+                if (look != null && lookKey != "spearman") tints.Remove("linen");
+                f.Actor.Dress(tints);
                 _nodes[p.Id] = f; _parent.AddChild(f.Actor);
             }
             double x = p.PrevXMm + (p.XMm - p.PrevXMm) * (double)alpha, y = p.PrevYMm + (p.YMm - p.PrevYMm) * (double)alpha;
@@ -84,9 +101,11 @@ public sealed class PeopleSprites
             int salt = (int)(p.Id.Counter % 7);
             // a sleeper lies down on the bed: the figure is turned on its side (head to the left, feet toward the foot of the bed) and eased onto the cell
             bool lying = p.Action == JobKind.Sleep && !p.Walking;
-            f.Actor.RotationDegrees = lying ? 90 : 0;
-            if (lying) f.Actor.Position += new Vector2(-27, 0);
-            if (lying) f.Actor.Pose(Facing.South, "idle", 0);
+            bool across = lying && p.LieAxis == 1;
+            f.Actor.RotationDegrees = lying && !across ? 90 : 0;
+            if (lying) f.Actor.Position += BedOffset(p.LieAxis);
+            if (across) f.Actor.Pose(Facing.South, "fall", 2);
+            else if (lying) f.Actor.Pose(Facing.South, "idle", 0);
             else if (p.Walking && p.Action != JobKind.Sleep) { f.Actor.Pose(facing, "jog", (int)(_t * 8) + salt); }       // a walk is a brisk 5 m/s (abstract spec decision A2)
             else switch (p.Action)
             {

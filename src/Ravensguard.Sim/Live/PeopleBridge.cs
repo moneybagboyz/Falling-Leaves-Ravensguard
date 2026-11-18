@@ -1,4 +1,5 @@
 using Ravensguard.Sim.Behaviour;
+using Ravensguard.Sim.Clothing;
 using Ravensguard.Sim.Core;
 using Ravensguard.Sim.Jobs;
 using Ravensguard.Sim.People;
@@ -45,10 +46,17 @@ public sealed class LiveActor
     public PathPlan? JobPlan;
     public int JobPhase = -1;
     public int JobStep;
+    /// <summary>The person's clothes and body (clothing spec), when the bridge has a book; and the last minute's cold, wet and heat stress that the scorer reads (permille).</summary>
+    public Tracked? Body;
+    public int ColdPm, WetPm, HeatPm;
+    public bool Indoors;
 }
 
 /// <summary>What the street view draws of one promoted person this tick.</summary>
-public readonly record struct LivePerson(EntityId Id, string Name, Occupation Occupation, Sex Sex, SocialClass Class, JobKind Action, long XMm, long YMm, long PrevXMm, long PrevYMm, int HeadX, int HeadY, int Bubble, int Z = 0, bool Walking = false, ActionKind Intent = ActionKind.Idle, int JobStep = -1);
+public readonly record struct LivePerson(EntityId Id, string Name, Occupation Occupation, Sex Sex, SocialClass Class, JobKind Action, long XMm, long YMm, long PrevXMm, long PrevYMm, int HeadX, int HeadY, int Bubble, int Z = 0, bool Walking = false, ActionKind Intent = ActionKind.Idle, int JobStep = -1, int LieAxis = 0, Tracked? Body = null, ExposureState State = ExposureState.Normal);
+
+/// <summary>How a live person's body is doing, for the view (a shiver, a wet hem) and the HUD.</summary>
+public enum ExposureState : byte { Normal, Chilled, Cold, Severe, Hot }
 
 /// <summary>A person the scan found inside a bubble that is not live yet: the anchors copied out of the records, and the squared distance to the nearest centre (mm).</summary>
 public readonly record struct PromotionCandidate(PersonAnchors Anchors, long OriginXMm, long OriginYMm, long D2Mm, int Bubble);
@@ -90,6 +98,23 @@ public sealed class PeopleBridge
     private LivePerson[] _snapshot = [];
     private bool _dirty = true;
 
+    // ---- clothing and exposure (docs/specs/phase3/clothing-warmth-exposure.md) ----
+    /// <summary>The clothes and bodies of the live people; null until <see cref="AttachClothing"/> (a bridge in a test or a headless run without weather).</summary>
+    public ClothingBook? Clothing { get; private set; }
+    private Func<long, long, long, ExposureEnv>? _ambient;
+    private readonly List<(EntityId Person, ExposureDeath Kind)> _exposureDeaths = [];
+
+    /// <summary>
+    /// Gives the live people clothes and a body. <paramref name="ambient"/> answers the open-air weather at (game second, continent mm x, y) as an <see cref="ExposureEnv"/>; it is asked once a game minute per
+    /// person, at the minute's own second and at the person's home, so the answer never depends on the game speed.
+    /// </summary>
+    public void AttachClothing(ClothingBook book, Func<long, long, long, ExposureEnv> ambient) { Clothing = book; _ambient = ambient; }
+
+    /// <summary>People who died of cold or heat since the last call (the caller applies the death at a barrier: <c>DeathCause.Cold</c>, chronicle entry); clears the list.</summary>
+    public IReadOnlyList<(EntityId Person, ExposureDeath Kind)> TakeExposureDeaths() { if (_exposureDeaths.Count == 0) return []; var r = _exposureDeaths.ToArray(); _exposureDeaths.Clear(); return r; }
+
+    private static ExposureState StateOfBody(BodyState s) => s switch { BodyState.Normal => ExposureState.Normal, BodyState.Chilled => ExposureState.Chilled, BodyState.Moderate => ExposureState.Cold, BodyState.Severe or BodyState.Lethal => ExposureState.Severe, _ => ExposureState.Hot };
+
     public int Promotions { get; private set; }
     public int Demotions { get; private set; }
     /// <summary>Most promotions made by one <see cref="Promote"/> call so far.</summary>
@@ -113,7 +138,7 @@ public sealed class PeopleBridge
         {
             if (_dirty)
             {
-                _snapshot = [.. _live.Values.Select(a => new LivePerson(a.Binding.Person, a.A.Name, a.A.Occupation, a.A.Sex, a.A.Class, a.Action, a.X, a.Y, a.PrevX, a.PrevY, a.HeadX, a.HeadY, a.Binding.Bubble, a.Z, a.Walking, a.Intent, a.JobSnap != null ? a.JobStep : -1))];
+                _snapshot = [.. _live.Values.Select(a => new LivePerson(a.Binding.Person, a.A.Name, a.A.Occupation, a.A.Sex, a.A.Class, a.Action, a.X, a.Y, a.PrevX, a.PrevY, a.HeadX, a.HeadY, a.Binding.Bubble, a.Z, a.Walking, a.Intent, a.JobSnap != null ? a.JobStep : -1, a.A.BedAxis, a.Body, a.Body == null ? ExposureState.Normal : StateOfBody(a.Body.State)))];
                 _dirty = false;
             }
             return _snapshot;
@@ -189,6 +214,7 @@ public sealed class PeopleBridge
             if (_live.ContainsKey(c.Anchors.Id)) continue;
             var actor = new LiveActor { A = c.Anchors, OriginXMm = c.OriginXMm, OriginYMm = c.OriginYMm, Binding = new LiveBinding(c.Anchors.Id, c.Anchors.Region, c.Anchors.Index, c.Bubble, nowSec) };
             _live.Add(c.Anchors.Id, actor);
+            if (Clothing != null) actor.Body = Clothing.Track(c.Anchors.Id, c.Anchors.Sex, c.Anchors.Class, c.Anchors.Occupation, 50, c.Anchors.Seed, nowSec);
             Advance(actor, ground, nowSec);
             actor.PrevX = actor.X; actor.PrevY = actor.Y;
             n++;
@@ -210,6 +236,7 @@ public sealed class PeopleBridge
         foreach (var (id, a) in _live)
         {
             a.PrevX = a.X; a.PrevY = a.Y;
+            if (a.Body != null && _ambient != null) Expose(a, nowSec);
             Advance(a, ground, nowSec);
             if (cs.Length == 0) continue;
             var (d2, b) = Bubble.Nearest(cs, a.X, a.Y);
@@ -356,6 +383,8 @@ public sealed class PeopleBridge
         ctx.Current = a.Intent; ctx.MinutesInCurrent = a.IntentSince == long.MinValue ? 999 : (int)((at - a.IntentSince) / 60);
         ctx.HasBoard = _board.Count > 0 && ctx.Scheduled == ActionKind.Idle && !ctx.Dark && !a.A.Child && (!a.A.HasWork || a.A.Occupation == Occupation.Labourer || a.A.Class == SocialClass.Peasant) && _board.Any(j => j.Settlement == a.A.HomeSettlement && j.Region == a.A.Region);
         needs.WageRatioPm = ctx.HasBoard ? 2000 : 0;
+        needs.ColdPm = a.ColdPm; needs.WetPm = a.WetPm; needs.HeatPm = a.HeatPm;
+        ctx.CanShelter = a.Body != null && !a.Indoors && (a.ColdPm > 0 || a.WetPm > 200 || a.HeatPm > 0);
         var brain = UtilityBrain.Default;
         var ch = brain.Choose(needs, ctx);
         if (ch.Kind != a.Intent) { a.Intent = ch.Kind; a.IntentSince = at; }
@@ -367,6 +396,37 @@ public sealed class PeopleBridge
             if (job != null) _claims.Add(new ClaimRequest(job.Id, a.Binding.Person, a.Binding.Index, at, _claims.Count, a.X - a.OriginXMm, a.Y - a.OriginYMm, 0, 30));
         }
     }
+
+    /// <summary>
+    /// One game minute of a person's body, at the minute boundary (never per tick, so at 8x it runs once per minute of game time, not 8 times as often per real second): the weather at the minute's own second at
+    /// their home, the place their schedule puts them at that second (indoors, by a lit hearth, in bed), what they are doing, and a Shelter intent taken from the last scorer window. A pure function of the
+    /// person, the minute and that window's choice, so a run at 1x and at 8x lead to the same body.
+    /// </summary>
+    private void Expose(LiveActor a, long nowSec)
+    {
+        long minute = nowSec / 60;
+        if (a.Body!.LastMinute == minute) return;
+        long msec = minute * 60;
+        var env = _ambient!(msec, a.OriginXMm + a.A.HomeX, a.OriginYMm + a.A.HomeY);
+        var r = Schedule.Resolve(a.A, msec);
+        var kind = a.JobSnap != null ? JobKind.Work : r.Job.Kind;      // (never a.Action: it is where the last tick left it, which depends on the game speed)
+        bool craft = a.A.HasWork && !a.A.WorkInField && a.A.Occupation is Occupation.Smith or Occupation.Baker or Occupation.Brewer or Occupation.Butcher or Occupation.Carpenter or Occupation.Mason
+            or Occupation.Weaver or Occupation.Spinner or Occupation.Tanner or Occupation.Cobbler or Occupation.Merchant or Occupation.Innkeeper or Occupation.Priest or Occupation.Miller or Occupation.Servant or Occupation.Steward;
+        bool indoors = r.Z > 0 || kind is JobKind.Sleep or JobKind.Home or JobKind.Eat or JobKind.Church || (kind == JobKind.Work && craft);
+        bool cold = env.TempCenti < 1000;
+        bool hearth = indoors && cold && kind != JobKind.Church;
+        bool sheltering = a.Intent == ActionKind.Shelter && !indoors;
+        a.Indoors = indoors;
+        env = env with { Roofed = indoors || sheltering, Fire = hearth || (sheltering && cold), InBed = kind == JobKind.Sleep && a.A.HasBed, Shade = sheltering || (indoors && !cold) };
+        var act = kind switch { JobKind.Sleep => Activity.Sleep, JobKind.Work or JobKind.Haul or JobKind.GuardCaravan => Activity.Work, JobKind.Commute or JobKind.Travel or JobKind.Shop or JobKind.Forage => Activity.Walk, _ => Activity.Rest };
+        // a meal at noon and supper keep the body fed; a person who has gone half a day without one rewarms slowly (the day's meals are the schedule's, see NeedModel)
+        var death = Clothing!.StepTo(a.Body, minute, env, act);
+        var last = a.Body.Last;
+        a.ColdPm = last.ColdStressPm; a.HeatPm = last.HeatStressPm; a.WetPm = last.WetAvgPm;
+        if (death != ExposureDeath.None && !_reported.Contains(a.Binding.Person)) { _reported.Add(a.Binding.Person); _exposureDeaths.Add((a.Binding.Person, death)); }
+    }
+
+    private readonly HashSet<EntityId> _reported = [];
 
     /// <summary>One person on an odd job: they walk the legs of the job (routes over the loaded ground, timed by the job's own phases), or stand and work at the end of a leg.</summary>
     private void AdvanceJob(LiveActor a, Job js, ILiveGround? ground, long nowSec)

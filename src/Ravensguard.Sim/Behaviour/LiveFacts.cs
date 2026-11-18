@@ -78,5 +78,17 @@ public sealed class LiveFacts(ChunkGenerator gen)
         return true;
     }
 
+    /// <summary>
+    /// The way a sleeper lies on <paramref name="bed"/>: beds standing side by side along x are lain along y (north to south), so each person fits their own cell and not their neighbour's;
+    /// beds in a column are lain along x; a lone bed, or one with neighbours on both axes, is lain along x. 0 is along x, 1 along y.
+    /// </summary>
+    public byte BedAxis(int settlement, int lot, BedCell bed)
+    {
+        var all = BedsOf(settlement, lot);
+        bool Has(int dx, int dy) { foreach (var c in all) if (c.Z == bed.Z && c.X == bed.X + dx && c.Y == bed.Y + dy) return true; return false; }
+        bool row = Has(-1, 0) || Has(1, 0), col = Has(0, -1) || Has(0, 1);
+        return (byte)(row && !col ? 1 : 0);
+    }
+
     public ChunkGenerator.StallSpot[] StallsOf(int settlement) => _stalls.GetOrAdd(settlement, s => [.. Generator.StallsOf(s)]);
 }

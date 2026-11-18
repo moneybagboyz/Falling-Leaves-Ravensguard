@@ -40,6 +40,8 @@ public sealed record UtilityProfileDef : ContentDef
     public int ExhaustedPm { get; init; } = 800;
     /// <summary>Flee beats everything above this threat (permille).</summary>
     public int FleeThreatPm { get; init; } = 600;
+    /// <summary>Cold or heat stress (permille) above which Shelter overrides the day's plan (0: never).</summary>
+    public int ShelterOverridePm { get; init; } = 600;
     public List<NeedCurveDef> Needs { get; init; } = [];
     public List<UtilityActionDef> Actions { get; init; } = [];
 }

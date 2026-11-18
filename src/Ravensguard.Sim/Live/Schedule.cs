@@ -67,6 +67,8 @@ public readonly struct PersonAnchors
     public long BedX { get; init; }
     public long BedY { get; init; }
     public int BedZ { get; init; }
+    /// <summary>The way a sleeper lies on the bed: 0 along x (head to the west), 1 along y (head to the north). Beds in a row side by side are lain along the other axis, so each person fits their own bed.</summary>
+    public byte BedAxis { get; init; }
     public bool HasChurch { get; init; }
     public long ChurchX { get; init; }
     public long ChurchY { get; init; }
@@ -117,8 +119,8 @@ public readonly struct PersonAnchors
             else if (wplan.Square.W > 0) { wx = (long)wplan.Square.CenterX * 1000; wy = (long)wplan.Square.CenterY * 1000; wj = Math.Max(3000, (wplan.Square.W - 2) * 1000 / 2); wjy = Math.Max(3000, (wplan.Square.H - 2) * 1000 / 2); wf = 2; }
         }
         // the bed: a real cell of the dwelling (its upper floor too) when the generator's building is at hand
-        bool hasBed = false; long bedx = 0, bedy = 0; int bedz = 0;
-        if (facts != null && hs >= 0 && hs < r.Settlements.Count && p.HomeLot[index] >= 0 && facts.TryBed(hs, p.HomeLot[index], p.Bed[index], p.IdOf(index).Value, seed, out var bc)) { hasBed = true; bedx = bc.X * 1000L + 500; bedy = bc.Y * 1000L + 500; bedz = bc.Z; }
+        bool hasBed = false; long bedx = 0, bedy = 0; int bedz = 0; byte bedAxis = 0;
+        if (facts != null && hs >= 0 && hs < r.Settlements.Count && p.HomeLot[index] >= 0 && facts.TryBed(hs, p.HomeLot[index], p.Bed[index], p.IdOf(index).Value, seed, out var bc)) { hasBed = true; bedx = bc.X * 1000L + 500; bedy = bc.Y * 1000L + 500; bedz = bc.Z; bedAxis = facts.BedAxis(hs, p.HomeLot[index], bc); }
         bool hasChurch = false; long cx = 0, cy = 0; int cj = 1000, cjy = 1000;
         if (hs >= 0 && hs < r.Settlements.Count && r.Settlements[hs].Plan.ChurchLot is >= 0 and var chl && chl < r.Settlements[hs].Plan.Lots.Count)
         { LotSpot(r.Settlements[hs].Plan.Lots[chl], out cx, out cy, out cj, out cjy, out _); hasChurch = true; }
@@ -130,7 +132,7 @@ public readonly struct PersonAnchors
             Id = p.IdOf(index), Region = regionId, Index = index, Seed = seed, Occupation = occ, Sex = p.Sex[index], Class = p.Class[index], Name = p.FullName(index), Child = child,
             HasWork = hasWork, WorkInField = field, HasSquare = hasSq, HomeX = hx, HomeY = hy, HomeJit = hj, HomeJitY = hjy, HomeFacing = hf, HomeSettlement = hs, HomeLot = p.HomeLot[index],
             WorkX = wx, WorkY = wy, WorkJit = wj, WorkJitY = wjy, WorkFacing = wf, WorkSettlement = ws, WorkLot = wl, SquareX = sx, SquareY = sy, SquareJit = sj, SquareJitY = sjy,
-            FieldTiles = tiles, LatTenths = lat, Book = book0, HasBed = hasBed, BedX = bedx, BedY = bedy, BedZ = bedz, HasChurch = hasChurch, ChurchX = cx, ChurchY = cy, ChurchJit = cj, ChurchJitY = cjy,
+            FieldTiles = tiles, LatTenths = lat, Book = book0, HasBed = hasBed, BedX = bedx, BedY = bedy, BedZ = bedz, BedAxis = bedAxis, HasChurch = hasChurch, ChurchX = cx, ChurchY = cy, ChurchJit = cj, ChurchJitY = cjy,
             Stalls = hs >= 0 && facts != null ? facts.StallsOf(hs) is { Length: > 0 } sp ? sp : null : null, QueueGapMm = book0.Content.Crowd.QueueGapMm,
         };
     }

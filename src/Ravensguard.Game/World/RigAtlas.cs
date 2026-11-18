@@ -82,9 +82,11 @@ public sealed partial class RigActor : Node2D
     readonly List<(string Layer, int Plane, Sprite2D Node)> _sprites = new();
     readonly string _outfit;
 
-    public RigActor(RigAtlas rig, string outfit)
+    /// <summary>A figure of an outfit (a baked layer list). <paramref name="layers"/> replaces the outfit's layers (the clothing view: the pieces the person actually wears); the outfit then only names the outline and the stance.</summary>
+    public RigActor(RigAtlas rig, string outfit, IReadOnlyCollection<string>? layers = null)
     {
         _rig = rig; _outfit = outfit; _stance = rig.OutfitStance[outfit];
+        layers ??= rig.Outfits[outfit];
         AddChild(_flip);
         void Add(string layer, int plane)
             => _sprites.Add((layer, plane, MakeSprite()));
@@ -92,7 +94,7 @@ public sealed partial class RigActor : Node2D
         Add("outline." + outfit, 0);
         for (int p = 0; p < 3; p++)
             foreach (var l in rig.Order)
-                if (rig.Outfits[outfit].Contains(l)) Add(l, p);
+                if (layers.Contains(l)) Add(l, p);
     }
 
     static Shader? _tintShader;

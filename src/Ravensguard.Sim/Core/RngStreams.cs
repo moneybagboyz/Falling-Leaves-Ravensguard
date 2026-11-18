@@ -69,6 +69,22 @@ public static class RngStreams
     /// <summary>The routine jobs a settlement's households post (key settlement, tick = game day).</summary>
     public const uint RoutineJobs = 0x303;
 
+    // ---------- clothing and exposure (docs/specs/phase3/clothing-warmth-exposure.md section 5) ----------
+    /// <summary>Stain accumulation rounding and tear rolls (key item).</summary>
+    public const uint Stains = 0x330;
+    /// <summary>A person's cold tolerance jitter at creation, plus or minus 3% (key person).</summary>
+    public const uint ColdTolerance = 0x331;
+    /// <summary>Which pieces of the class wardrobe a person owns, and the dye of their outer pieces (key person, draw = piece index; 99 = dye).</summary>
+    public const uint Wardrobe = 0x333;
+
+    // ---------- crafting (docs/specs/phase3/basic-crafting.md section 5) ----------
+    /// <summary>The failure roll at a recipe's critical step (key crafter, tick = job serial, draw = step index).</summary>
+    public const uint CraftFailure = 0x360;
+    /// <summary>By-product chance rolls (ash, offcuts; key job id, tick = job serial, draw = by-product index).</summary>
+    public const uint CraftByproduct = 0x361;
+    /// <summary>Learning a recipe by watching (key person, tick 0, draw = recipe index x 16 + attempt).</summary>
+    public const uint CraftWatch = 0x362;
+
     // ---------- people records ----------
     /// <summary>A newborn's or immigrant's name and attributes.</summary>
     public const uint Name = 0x2C0, Attributes = 0x2C1;

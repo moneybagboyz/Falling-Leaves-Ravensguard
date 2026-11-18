@@ -1,0 +1,4 @@
+// Fur for coats (an estimate, like the other cloths and leathers): light, warm, valuable.
+[
+  { "type": "material", "id": "fur", "name": "Fur", "category": "leather", "copy_from": "leather", "density_kg_m3": 400, "value_per_kg": 14.0, "ignition_point_c": 230 }
+]

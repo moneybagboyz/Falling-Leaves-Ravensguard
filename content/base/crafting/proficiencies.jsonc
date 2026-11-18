@@ -1,0 +1,19 @@
+// Proficiencies: a graph without cycles (basic-crafting spec 3.2). Pm is permille known, 0..1000.
+[
+  { "type": "proficiency", "id": "fire_craft", "name": "Fire craft", "learn_pm_per_hour": 8 },
+  { "type": "proficiency", "id": "cookery", "name": "Cookery", "learn_pm_per_hour": 8 },
+  { "type": "proficiency", "id": "brewing_basics", "name": "Brewing basics", "learn_pm_per_hour": 8 },
+  { "type": "proficiency", "id": "bread_making", "name": "Bread making", "requires": [ { "id": "cookery", "min_pm": 300 } ], "learn_pm_per_hour": 8 },
+  { "type": "proficiency", "id": "preserving", "name": "Preserving", "requires": [ { "id": "cookery", "min_pm": 300 } ], "learn_pm_per_hour": 8 },
+  { "type": "proficiency", "id": "needlework", "name": "Needlework", "learn_pm_per_hour": 8 },
+  { "type": "proficiency", "id": "tailoring", "name": "Tailoring", "requires": [ { "id": "needlework", "min_pm": 400 } ], "learn_pm_per_hour": 8 },
+  { "type": "proficiency", "id": "woodcraft", "name": "Woodcraft", "learn_pm_per_hour": 8 },
+  { "type": "proficiency", "id": "metalworking_principles", "name": "Metalworking principles", "learn_pm_per_hour": 8 },
+  { "type": "proficiency", "id": "blacksmithing_basics", "name": "Blacksmithing basics", "requires": [ { "id": "metalworking_principles", "min_pm": 500 } ], "learn_pm_per_hour": 8 },
+  { "type": "proficiency", "id": "first_aid", "name": "First aid", "learn_pm_per_hour": 8 },
+  { "type": "proficiency", "id": "herbalism", "name": "Herbalism", "requires": [ { "id": "first_aid", "min_pm": 300 } ], "learn_pm_per_hour": 8 },
+
+  { "type": "manuscript", "id": "bread_book", "name": "A book of bread", "recipes": ["bake_flatbread", "bake_loaf"] },
+  { "type": "manuscript", "id": "herbal_notes", "name": "Herbal notes", "recipes": ["bandage_linen", "herbal_poultice", "wooden_splint"] },
+  { "type": "manuscript", "id": "farrier_notes", "name": "Farrier's notes", "recipes": ["forge_horseshoe_set", "mend_tool"] }
+]
