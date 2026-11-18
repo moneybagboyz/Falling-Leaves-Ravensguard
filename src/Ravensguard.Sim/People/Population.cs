@@ -35,6 +35,41 @@ public sealed class Population
     private KinGraph? _kin;
     public KinGraph Kin => _kin ??= new KinGraph(People);
 
+    /// <summary>Drops the cached kin graph; the next <see cref="Kin"/> read rebuilds it from the person links (after births).</summary>
+    public void ResetKin() => _kin = null;
+
+    /// <summary>
+    /// Deep copy of everything that play changes (people, households, lot bindings); the generated region is shared. A copy is how a test or a
+    /// what-if run mutates a world without touching the shared fixture.
+    /// </summary>
+    public Population Clone() => new()
+    {
+        Region = Region, People = People.Clone(), Households = Households.Clone(), NowDay = NowDay,
+        LotHousehold = CopyJ(LotHousehold), LotBeds = CopyJ(LotBeds), LotKeeper = CopyJ(LotKeeper),
+        FiefLord = (int[])FiefLord.Clone(), FiefLordHousehold = (int[])FiefLordHousehold.Clone(), ParcelHolder = (int[])ParcelHolder.Clone(),
+        PriestHousehold = (int[])PriestHousehold.Clone(), SettlementPeople = (int[])SettlementPeople.Clone(),
+    };
+
+    private static int[][] CopyJ(int[][] a) { var r = new int[a.Length][]; for (int i = 0; i < a.Length; i++) r[i] = (int[])a[i].Clone(); return r; }
+
+    /// <summary>
+    /// Hash of the Phase 2 vital columns (status, death, pregnancy, marriage wait). Kept apart from <see cref="ComputeHash"/> so the generation hashes that
+    /// the golden tests pin do not change; a running world hashes both.
+    /// </summary>
+    public string ComputeSimHash()
+    {
+        using var h = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        var b8 = new byte[8];
+        void L(long v) { System.Buffers.Binary.BinaryPrimitives.WriteInt64LittleEndian(b8, v); h.AppendData(b8); }
+        var p = People;
+        L(p.Count);
+        for (int i = 0; i < p.Count; i++)
+        {
+            L((long)p.Status[i]); L(p.DeathDay[i]); L((long)p.DeathCause[i]); L(p.PregnantUntilDay[i]); L(p.FatherOfUnborn[i]); L(p.LastBirthDay[i]); L(p.MarriageWait[i]);
+        }
+        return Convert.ToHexString(h.GetHashAndReset());
+    }
+
     public int Age(int person) => People.AgeYears(person, NowDay);
 
     /// <summary>Households living in a settlement, ascending index.</summary>

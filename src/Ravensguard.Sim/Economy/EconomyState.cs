@@ -34,21 +34,21 @@ public sealed class EconomyState
     public FoodPlan Food { get; }
 
     /// <summary>Per household index: the household purse, and its house store.</summary>
-    public PurseId[] HouseholdPurse { get; }
-    public Store[] HouseholdStore { get; }
+    public PurseId[] HouseholdPurse { get; private set; }
+    public Store[] HouseholdStore { get; private set; }
     /// <summary>Stores that are not a household's (granaries, barns, chests), by owner id ascending.</summary>
     public SortedDictionary<EntityId, Store> OtherStores { get; } = [];
 
     /// <summary>Per person: nutrition reserve in centidays 0..3000 (households spec 3.2 step 6).</summary>
-    public short[] NutritionCd { get; }
+    public short[] NutritionCd { get; private set; }
     /// <summary>Per household columns (households spec 2.1).</summary>
-    public int[] SeedReserveG { get; }
-    public short[] FoodCoverDaysX10 { get; }
-    public short[] FuelCoverDaysX10 { get; }
-    public Grievance[] Grievances { get; }
-    public HouseholdTier[] Tiers { get; }
+    public int[] SeedReserveG { get; private set; }
+    public short[] FoodCoverDaysX10 { get; private set; }
+    public short[] FuelCoverDaysX10 { get; private set; }
+    public Grievance[] Grievances { get; private set; }
+    public HouseholdTier[] Tiers { get; private set; }
     /// <summary>Set for the day when relish was replaced by grain (feeds disease and unrest in the population spec).</summary>
-    public bool[] DietPoor { get; }
+    public bool[] DietPoor { get; private set; }
 
     public EconomyState(GoodCatalog goods, MoneySettingsDef money, IReadOnlyList<NeedsBasketDef> baskets, int householdCount, int personCount, Ledger? ledger = null, MassLedger? mass = null)
     {
@@ -61,6 +61,7 @@ public sealed class EconomyState
         }
         foreach (var c in Enum.GetValues<SocialClass>()) if (_baskets[(int)c] == null) throw new InvalidDataException($"no needs basket for class {c}");
         HouseholdPurse = new PurseId[householdCount]; HouseholdStore = new Store[householdCount];
+        _householdCount = householdCount; _personCount = personCount;
         NutritionCd = new short[personCount]; Array.Fill(NutritionCd, FullNutritionCd);
         SeedReserveG = new int[householdCount]; FoodCoverDaysX10 = new short[householdCount]; FuelCoverDaysX10 = new short[householdCount];
         Grievances = new Grievance[householdCount]; Tiers = new HouseholdTier[householdCount]; DietPoor = new bool[householdCount];
@@ -68,8 +69,38 @@ public sealed class EconomyState
 
     public NeedsBasketDef Basket(SocialClass c) => _baskets[(int)c];
     public IReadOnlyList<NeedsBasketDef> Baskets => _baskets;
-    public int HouseholdCount => HouseholdPurse.Length;
-    public int PersonCount => NutritionCd.Length;
+    // The per-household and per-person arrays are exact-length from creation and grow geometrically once births and weddings add rows (population spec 2);
+    // the counts below, not Length, say how many rows are real.
+    private int _householdCount, _personCount;
+    public int HouseholdCount => _householdCount;
+    public int PersonCount => _personCount;
+
+    /// <summary>Opens the purse and house store of household <paramref name="index"/> of <paramref name="h"/>, which must be the next unseen row (a new household from a wedding).</summary>
+    public int AddHousehold(HouseholdTable h, int index)
+    {
+        if (index != _householdCount) throw new ArgumentException($"household {index} is not the next row ({_householdCount})", nameof(index));
+        if (index == HouseholdPurse.Length)
+        {
+            int n = Math.Max(16, index * 2);
+            HouseholdPurse = Grow(HouseholdPurse, n); HouseholdStore = Grow(HouseholdStore, n); SeedReserveG = Grow(SeedReserveG, n);
+            FoodCoverDaysX10 = Grow(FoodCoverDaysX10, n); FuelCoverDaysX10 = Grow(FuelCoverDaysX10, n); Grievances = Grow(Grievances, n); Tiers = Grow(Tiers, n); DietPoor = Grow(DietPoor, n);
+        }
+        _householdCount++;
+        OpenHousehold(h, index);
+        return index;
+    }
+
+    /// <summary>Adds the economic columns of one new person (a birth): a full nutrition reserve. Returns the person's index, which must be the next row.</summary>
+    public int AddPerson(int index)
+    {
+        if (index != _personCount) throw new ArgumentException($"person {index} is not the next row ({_personCount})", nameof(index));
+        if (index == NutritionCd.Length) NutritionCd = Grow(NutritionCd, Math.Max(16, index * 2));
+        NutritionCd[index] = FullNutritionCd;
+        _personCount++;
+        return index;
+    }
+
+    private static T[] Grow<T>(T[] a, int n) { var r = new T[n]; Array.Copy(a, r, a.Length); return r; }
 
     public Coin HouseholdCoin(int hh) => Ledger.Balance(HouseholdPurse[hh]);
 
@@ -99,13 +130,15 @@ public sealed class EconomyState
     /// <summary>Opens the household purses and house stores for a household table.</summary>
     public void OpenHouseholds(HouseholdTable h)
     {
-        for (int i = 0; i < h.Count; i++)
-        {
-            var id = h.IdOf(i);
-            HouseholdPurse[i] = Ledger.Open(PurseKind.Household, id);
-            long litres = h.Dwelling[i] switch { Ravensguard.Sim.WorldGen.Region.DwellingType.Longhouse => 6000, Ravensguard.Sim.WorldGen.Region.DwellingType.Burgage => 8000, Ravensguard.Sim.WorldGen.Region.DwellingType.Manor => 20000, _ => 3000 };
-            HouseholdStore[i] = new Store(Goods, Mass, StoreKind.House, id, 0, litres * 1000, enforce: false);
-        }
+        for (int i = 0; i < h.Count; i++) OpenHousehold(h, i);
+    }
+
+    private void OpenHousehold(HouseholdTable h, int i)
+    {
+        var id = h.IdOf(i);
+        HouseholdPurse[i] = Ledger.Open(PurseKind.Household, id);
+        long litres = h.Dwelling[i] switch { Ravensguard.Sim.WorldGen.Region.DwellingType.Longhouse => 6000, Ravensguard.Sim.WorldGen.Region.DwellingType.Burgage => 8000, Ravensguard.Sim.WorldGen.Region.DwellingType.Manor => 20000, _ => 3000 };
+        HouseholdStore[i] = new Store(Goods, Mass, StoreKind.House, id, 0, litres * 1000, enforce: false);
     }
 
     /// <summary>A store that is not a household's (granary, barn, chest); capacity 0 means unlimited. Idempotent per owner.</summary>
@@ -147,7 +180,7 @@ public sealed class EconomyState
     public long ApplyDailySpoilage(ulong seed, long hourKey, int tempC)
     {
         long lost = 0;
-        foreach (var s in HouseholdStore) lost += s.ApplySpoilage(seed, hourKey, tempC);
+        for (int i = 0; i < _householdCount; i++) lost += HouseholdStore[i].ApplySpoilage(seed, hourKey, tempC);
         foreach (var s in OtherStores.Values) lost += s.ApplySpoilage(seed, hourKey, tempC);
         return lost;
     }
@@ -157,7 +190,7 @@ public sealed class EconomyState
     {
         var sums = new long[Goods.Count];
         void Add(Store s) { foreach (var (g, q) in s.Rows()) { if (q < 0) return; sums[g] += q; } }
-        foreach (var s in HouseholdStore) Add(s);
+        for (int i = 0; i < _householdCount; i++) Add(HouseholdStore[i]);
         foreach (var s in OtherStores.Values) Add(s);
         // an instance that came out of stock was destroyed as Materialised (and is created again as Dematerialised), so the ledger's net is exactly the stores
         for (ushort g = 0; g < Goods.Count; g++)
@@ -176,11 +209,16 @@ public sealed class EconomyState
         L(st.Owner.Length); for (int i = 0; i < st.Owner.Length; i++) { L((long)st.Owner[i]); L(st.Kind[i]); L(st.Balance[i]); }
         foreach (var v in st.Sourced) L(v); foreach (var v in st.Sunk) L(v); foreach (var v in st.FlowCoin) L(v); foreach (var v in st.FlowCount) L(v); L(st.Seq);
         void Store(Store s) { L((long)s.Owner.Value); L((long)s.Kind); L(s.CapacityMassG); L(s.CapacityVolumeMl); foreach (var (g, q) in s.Rows()) { L(g); L(q); } L(-1); }
-        foreach (var s in HouseholdStore) Store(s);
+        for (int i = 0; i < _householdCount; i++) Store(HouseholdStore[i]);
         foreach (var (k, s) in OtherStores) { L((long)k.Value); Store(s); }
         foreach (var v in Mass.CreatedState()) L(v); foreach (var v in Mass.DestroyedState()) L(v);
-        foreach (var v in NutritionCd) L(v); foreach (var v in SeedReserveG) L(v); foreach (var v in FoodCoverDaysX10) L(v); foreach (var v in FuelCoverDaysX10) L(v);
-        foreach (var v in Grievances) L((long)v); foreach (var v in Tiers) L((long)v); foreach (var v in DietPoor) L(v ? 1 : 0);
+        for (int i = 0; i < _personCount; i++) L(NutritionCd[i]);
+        for (int i = 0; i < _householdCount; i++) L(SeedReserveG[i]);
+        for (int i = 0; i < _householdCount; i++) L(FoodCoverDaysX10[i]);
+        for (int i = 0; i < _householdCount; i++) L(FuelCoverDaysX10[i]);
+        for (int i = 0; i < _householdCount; i++) L((long)Grievances[i]);
+        for (int i = 0; i < _householdCount; i++) L((long)Tiers[i]);
+        for (int i = 0; i < _householdCount; i++) L(DietPoor[i] ? 1 : 0);
         var snap = Items.Compact();
         L(snap.Rows.Length);
         foreach (var r in snap.Rows) { L((long)r.Id.Value); S(r.Shape); L(r.Good); L((long)r.Quality); L(r.ConditionPermille); L(r.Wear); L((long)r.Flags); L(r.Stains); L(r.LabourHours); L(r.Skill); L((long)r.Owner.Value); L(r.Parent); L(r.ComponentStart); L(r.ComponentCount); L(r.ContentsGood); L(r.ContentsQty); }

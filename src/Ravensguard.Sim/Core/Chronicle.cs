@@ -1,6 +1,8 @@
 namespace Ravensguard.Sim.Core;
 
-public enum CauseKind { Fire, Raid, Battle, Crime, Wound, Death, Law, Famine, MineFlood, War, Weather, MarketDrift, Unknown, Other }
+public enum CauseKind { Fire, Raid, Battle, Crime, Wound, Death, Law, Famine, MineFlood, War, Weather, MarketDrift, Unknown, Other,
+    // Phase 2 (overview 2.4): append only, never renumber
+    Tax, Trade, Disease, Migration }
 
 /// <summary>Why something happened; may reference another chronicle entry.</summary>
 public sealed record Cause(CauseKind Kind, EntityId? EventId = null, string Note = "");

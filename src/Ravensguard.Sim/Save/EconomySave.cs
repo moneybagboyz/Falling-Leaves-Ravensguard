@@ -70,6 +70,8 @@ public sealed class EconomySave
     [Key(45)] public int[] CompMassG { get; set; } = [];
     [Key(46)] public short[] CompCondition { get; set; } = [];
 
+    private static T[] Cut<T>(T[] a, int n) => a.AsSpan(0, n).ToArray();
+
     /// <summary>Copies the economy into a DTO on the calling thread (so encoding can run elsewhere).</summary>
     public static EconomySave Capture(EconomyState e)
     {
@@ -79,11 +81,11 @@ public sealed class EconomySave
             GoodsHash = e.Goods.Hash(), GoodCount = e.Goods.Count,
             PurseOwner = l.Owner, PurseKind = l.Kind, PurseBalance = l.Balance, Sourced = l.Sourced, Sunk = l.Sunk, FlowCoin = l.FlowCoin, FlowCount = l.FlowCount, Sequence = l.Seq,
             MassCreated = e.Mass.CreatedState(), MassDestroyed = e.Mass.DestroyedState(),
-            HouseholdCount = e.HouseholdCount, NutritionCd = (short[])e.NutritionCd.Clone(), SeedReserveG = (int[])e.SeedReserveG.Clone(),
-            FoodCoverDaysX10 = (short[])e.FoodCoverDaysX10.Clone(), FuelCoverDaysX10 = (short[])e.FuelCoverDaysX10.Clone(),
-            Grievance = e.Grievances.Select(g => (ushort)g).ToArray(), Tier = e.Tiers.Select(t => (byte)t).ToArray(), DietPoor = (bool[])e.DietPoor.Clone(),
+            HouseholdCount = e.HouseholdCount, NutritionCd = Cut(e.NutritionCd, e.PersonCount), SeedReserveG = Cut(e.SeedReserveG, e.HouseholdCount),
+            FoodCoverDaysX10 = Cut(e.FoodCoverDaysX10, e.HouseholdCount), FuelCoverDaysX10 = Cut(e.FuelCoverDaysX10, e.HouseholdCount),
+            Grievance = e.Grievances.Take(e.HouseholdCount).Select(g => (ushort)g).ToArray(), Tier = e.Tiers.Take(e.HouseholdCount).Select(t => (byte)t).ToArray(), DietPoor = Cut(e.DietPoor, e.HouseholdCount),
         };
-        var stores = e.HouseholdStore.Concat(e.OtherStores.Values).ToList();
+        var stores = e.HouseholdStore.Take(e.HouseholdCount).Concat(e.OtherStores.Values).ToList();
         s.StoreOwner = stores.Select(x => x.Owner.Value).ToArray();
         s.StoreKind = stores.Select(x => (byte)x.Kind).ToArray();
         s.StoreCapMassG = stores.Select(x => x.CapacityMassG).ToArray();

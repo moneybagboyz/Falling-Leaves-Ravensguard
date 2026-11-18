@@ -59,6 +59,67 @@ public sealed class HouseholdTable
         MemberCount[household]++;
     }
 
+    /// <summary>First counter of this table's household ids: row <c>i</c> has counter <c>BaseCounter + i</c>.</summary>
+    public ulong BaseCounter => _baseCounter;
+
+    /// <summary>
+    /// Adds a member to a household that already exists (a birth, a marriage): appends in place when the household's run is the last one in
+    /// <see cref="MemberIdx"/>, else moves the run to the end first (the old run becomes -1 holes; <see cref="CompactMembers"/> reclaims them).
+    /// </summary>
+    public void AddMemberLater(int household, int person)
+    {
+        int s = MemberStart[household], n = MemberCount[household];
+        if (s + n != MemberIdx.Count)
+        {
+            int ns = MemberIdx.Count;
+            for (int k = 0; k < n; k++) { MemberIdx.Add(MemberIdx[s + k]); MemberIdx[s + k] = -1; }
+            MemberStart[household] = ns;
+        }
+        MemberIdx.Add(person);
+        MemberCount[household]++;
+    }
+
+    /// <summary>Removes a member by swapping it with the last of the run (population spec 3.1). False when the person is not a member.</summary>
+    public bool RemoveMember(int household, int person)
+    {
+        int s = MemberStart[household], n = MemberCount[household];
+        for (int k = 0; k < n; k++)
+        {
+            if (MemberIdx[s + k] != person) continue;
+            MemberIdx[s + k] = MemberIdx[s + n - 1];
+            MemberIdx[s + n - 1] = -1;
+            MemberCount[household]--;
+            if (s + n == MemberIdx.Count) MemberIdx.RemoveAt(MemberIdx.Count - 1); // the run was last: give the freed slot back
+            return true;
+        }
+        return false;
+    }
+
+    /// <summary>Rewrites <see cref="MemberIdx"/> without holes, households in index order. Member order inside each run is kept.</summary>
+    public void CompactMembers()
+    {
+        var fresh = new List<int>(MemberIdx.Count);
+        for (int h = 0; h < Count; h++)
+        {
+            int s = MemberStart[h], n = MemberCount[h];
+            MemberStart[h] = fresh.Count;
+            for (int k = 0; k < n; k++) fresh.Add(MemberIdx[s + k]);
+        }
+        MemberIdx.Clear(); MemberIdx.AddRange(fresh);
+    }
+
+    /// <summary>Deep copy of the table.</summary>
+    public HouseholdTable Clone()
+    {
+        var c = new HouseholdTable(Count, _baseCounter);
+        for (int i = 0; i < Count; i++) c.Add(0, 0, default, 0);
+        void Cp<T>(T[] src, T[] dst) => Array.Copy(src, dst, Math.Min(src.Length, dst.Length));
+        Cp(Settlement, c.Settlement); Cp(Head, c.Head); Cp(MemberStart, c.MemberStart); Cp(Lot, c.Lot); Cp(MemberCount, c.MemberCount); Cp(Beds, c.Beds); Cp(ParcelCount, c.ParcelCount);
+        Cp(Dwelling, c.Dwelling); Cp(Deed, c.Deed); Cp(Class, c.Class); Cp(Purse, c.Purse); Cp(Name, c.Name);
+        c.MemberIdx.Clear(); c.MemberIdx.AddRange(MemberIdx);
+        return c;
+    }
+
     public IEnumerable<int> Members(int household)
     {
         int s = MemberStart[household], n = MemberCount[household];

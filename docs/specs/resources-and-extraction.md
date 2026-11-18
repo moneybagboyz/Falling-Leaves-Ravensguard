@@ -198,3 +198,12 @@ LODBridge (workers walk to tiles; herds appear on pasture), continent tick (expo
 4. A forced over-harvest scenario (50 cutters on one village's woods for 5 years) visibly depletes it: firewood price ratio
    rises > 2x and nearby tiles < 20% of cap, then recovers within 10 years of normal use.
 5. Mines: an Active mine's `Tonnage` only decreases; flood/cave-in events carry causes; silver minted never exceeds `tonnage mined x grade`.
+
+## Notes
+
+Phase 2 resources implementation notes (code: `Sim/Production/Resources`, tests `tests/.../Resources`):
+- **X1** Decision: game stock is micro-animals (1,000,000 per animal) rather than milli-animals, so the 1.2% seasonal growth does not floor to zero on a 0.08-animal tile. A hunting kill removes one animal from the tile's neighbourhood in the live rules; the statistical rule (`HuntKill`) is tested (G-R9).
+- **X2** Decision: foraging has no stock floor (a tile gives full rate until it is empty, G-R8), other kinds keep the 30% floor; a crew whose tile is empty moves to the best other tile at once.
+- **X3** Decision: `Salt` is a resource kind (sea pans on Sea tiles); `byproducts` lets felling give oak bark (3% of log mass) without a separate job.
+- **X4** Inconsistency found: the soak line "recovers within 10 years of normal use" cannot hold at the spec's regrowth of 0.82 m3 per acre per game year (575 kg against a 70 t cap, about 100 years). Depletion is tested; recovery is only asserted to be monotone and bounded.
+- Not done: herds (G-R5, G-R6, G-R14), trap lines, boat crews, pasture condition, the 20-per-season `Forest[t]` reduction below 5% of cap.

@@ -90,4 +90,17 @@ public sealed record MoneySettingsDef : ContentDef
     public int SeedPeasantPct { get; init; } = 30;
     public int SeedTreasuryPct { get; init; } = 12;
     public int SeedParishPct { get; init; } = 3;
+    // market keys (money spec 6): defaults are the spec values, money.jsonc may override them
+    public int SpreadHalfPermille { get; init; } = 80;
+    public int MarketTollPermille { get; init; } = 50;
+    public int MarketOpenHour { get; init; } = 6;
+    public int MarketCloseHour { get; init; } = 18;
+    public int PriceClampMinPermille { get; init; } = 300;
+    public int PriceClampMaxPermille { get; init; } = 4000;
+    public int RefDriftDivisor { get; init; } = 4;
+    public int DemandEmaDays { get; init; } = 7;
+    public int SeedCppMites { get; init; } = 5000;
+    public int LotExpiryDays { get; init; } = 3;
+    public int MerchantCashShareBp { get; init; } = 4000;
+    public int MerchantStockCapPermilleOfCover { get; init; } = 800;
 }

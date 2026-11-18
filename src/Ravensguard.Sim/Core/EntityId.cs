@@ -24,6 +24,12 @@ public sealed class IdAllocator
 
     public EntityId Allocate(IdKind kind) => EntityId.Make(kind, _next[(int)kind]++);
 
+    /// <summary>The id the next <see cref="Allocate"/> of this kind will return.</summary>
+    public EntityId Peek(IdKind kind) => EntityId.Make(kind, _next[(int)kind]);
+
+    /// <summary>Raises the next counter of <paramref name="kind"/> to at least <paramref name="nextCounter"/> (never lowers it). Used where a table derives ids from its own base counter.</summary>
+    public void EnsureNext(IdKind kind, ulong nextCounter) { if (_next[(int)kind] < nextCounter) _next[(int)kind] = nextCounter; }
+
     /// <summary>Next counter per kind, indexed by IdKind.</summary>
     public ulong[] GetState() => (ulong[])_next.Clone();
 

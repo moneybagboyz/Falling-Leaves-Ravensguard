@@ -170,3 +170,15 @@ inputs, export surplus); items (tier, mass check, price solver); population (own
 4. Business count stable +-10% over 100 years; closures replaced by heirs/successors within 2 seasons.
 5. Bronze, copper, tin, silver, glass, planks all have non-zero production and consumption in a 1-year soak (the "missing"
    chains of plan §4A.1 exist).
+
+## Notes
+
+Phase 2 production implementation notes (code: `Sim/Production`, content `content/base/production`, tests `tests/.../Production`):
+- **P1** Decision: progress is kept in micro-ppm (1e12 = done) and each worker-hour adds `ceil(1e18 / (worker_hours x scale x time_mult))`; the ceiling makes n worker-hours finish an n-hour batch exactly (G-B1: 10 / 5 / 13 / 7 clock hours). Speed uses each worker's own multiplier (equal to the mean rule).
+- **P2** Decision: recipes may run part batches down to `min_batch_permille` (default 1,000 = whole batches only, as G-B14 requires); big-batch recipes (bread, fulling, tanning, sawing...) allow 10-25% so one-household workshops can run. Inputs are rounded up, outputs down, so the mass rule holds at every scale.
+- **P3** Decision: wages accrue per worker-hour at the class rate (15 / 35 / 50 mites) and are paid at the daily slice from the cash box in ascending person order; three short pay days make a worker quit (arrears forgiven and counted). Put-out spinners need no special rule: 100 h at 15 equals 750 mites/kg.
+- **P4** Decision: cloth is three goods (`cloth_wool`, `cloth_fulled`, `cloth_dyed`) so the recipe graph has no cycle; `mill_flour` takes wheat only (one good, one recipe, one solver price); `split` of firewood is the `firewood_cutting` extraction (700 kg/day); tools are 5 pieces per batch (6 iron), swords 1 piece per 1.4 kg steel, cookware 5 pieces per 10 kg bronze, so pieces are whole.
+- **P5** Decision: `PriceSolver` prices a good by the lowest-id recipe that makes it; co-products share the recipe's cost by mass. Derived goods' content prices are written from it (`ContentPrices_MatchTheSolverForDerivedGoods`). `silver` (pegged to the crown) and `arming_sword` (items spec) are pinned; `slaughter_pig`, `slaughter_sheep`, `cupel_silver` and `forge_sword` are outside the 45% band test because their co-products or outputs are priced by another recipe.
+- **P6** Decision: businesses are created from the population: one per (settlement, lot, trade); crews (woodcutters, fishers, charcoal burners) per settlement owned by the common employer; one per Active mine; spinners go to weavers of their settlement (up to 8). Seed 1234 has no Active mine, so mines are tested on synthetic sites. Start-up capital is 50% of the owner household purse (8% for crews, 40% for merchants), a `Gift` transfer.
+- Not done: heirs and successors, hiring from the population (the pure `Labour.Hire` is tested), owner-absence slowdown, weather halts of outdoor stations, real tools (wear is only counted), quality is recorded per batch but not attached to bulk goods, `melt_coin`, upgrades.
+- Soak finding: see the soak report printed by `SoakTests` (price bands per good, closures, arrears).

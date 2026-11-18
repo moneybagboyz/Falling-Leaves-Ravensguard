@@ -1,0 +1,236 @@
+using Ravensguard.Content;
+using Ravensguard.Sim.Core;
+using Ravensguard.Sim.Goods;
+using Ravensguard.Sim.People;
+using Ravensguard.Sim.WorldGen.Region;
+
+namespace Ravensguard.Sim.Economy.Markets;
+
+/// <summary>Anything that adds structural demand to the books (businesses: planned recipe inputs, money spec 3.1).</summary>
+public interface IStructuralDemandSource
+{
+    /// <summary>Adds units per day to <c>demand[bookSettlementIndex][good]</c>.</summary>
+    void AddStructuralDemand(MarketSystem markets, long[][] demand);
+}
+
+/// <summary>
+/// The households' consumption mix (decision MK1): how a class's staple and relish measures split over the goods that satisfy them. The shopper orders by it and
+/// the structural demand counts by it, so the price curve sees what households actually want.
+/// </summary>
+public sealed class ConsumptionMix
+{
+    public (ushort Good, int Permille)[] Staple { get; }
+    public (ushort Good, int Permille)[] Relish { get; }
+    public ConsumptionMix(GoodCatalog c)
+    {
+        (ushort, int)[] Make((string, int)[] src) => [.. src.Where(x => c.TryIdOf(x.Item1, out _)).Select(x => (c.IdOf(x.Item1), x.Item2))];
+        Staple = Make([("wheat", 250), ("rye", 100), ("barley", 50), ("oats", 50), ("flour", 250), ("bread", 300)]);
+        Relish = Make([("peas", 200), ("beans", 100), ("vegetables", 250), ("cheese", 100), ("eggs", 100), ("fish_fresh", 100), ("meat_fresh", 100), ("fish_salted", 25), ("meat_salted", 25)]);
+    }
+}
+
+/// <summary>
+/// The markets of one region (money spec 2.4, 3.4-3.6): a <see cref="MarketBook"/> for every town and village, the road-nearest book for each farmstead, the
+/// households' parties, structural demand and the step functions at their tick places (H3 session, H5 daily globals, S5 price drift). Plain class with
+/// explicit parameters, shaped for the abstract tick; it does no scheduling of its own.
+/// </summary>
+public sealed class MarketSystem
+{
+    public EconomyState Econ { get; }
+    public Population Pop { get; }
+    public ulong Seed { get; }
+    public MarketBook?[] Books { get; }
+    /// <summary>Per settlement index: the settlement index of the book it uses.</summary>
+    public int[] BookOf { get; }
+    public ConsumptionMix Mix { get; }
+    public IStructuralDemandSource? Production { get; set; }
+    private MarketParty?[] _hh;
+    private readonly bool[] _basketGood;
+
+    public MarketSystem(EconomyState econ, Population pop, ulong seed)
+    {
+        Econ = econ; Pop = pop; Seed = seed; Mix = new ConsumptionMix(econ.Goods);
+        var r = pop.Region;
+        int n = r.Settlements.Count;
+        Books = new MarketBook?[n]; BookOf = new int[n]; _hh = new MarketParty?[pop.Households.Count];
+        var counts = new int[n];
+        for (int p = 0; p < pop.People.Count; p++) { int s = pop.People.HomeSettlement[p]; if (s >= 0) counts[s]++; }
+        var hosts = new List<int>();
+        for (int s = 0; s < n; s++)
+            if (r.Settlements[s].Class is SettlementClass.Town or SettlementClass.Village) hosts.Add(s);
+        if (hosts.Count == 0) throw new InvalidOperationException("region has no town or village for a market");
+        for (int s = 0; s < n; s++)
+        {
+            var st = r.Settlements[s];
+            if (st.Class is SettlementClass.Town or SettlementClass.Village) BookOf[s] = s;
+            else
+            {
+                int best = hosts[0]; long bd = long.MaxValue;
+                foreach (int h in hosts) { long dx = r.Settlements[h].CenterX - st.CenterX, dy = r.Settlements[h].CenterY - st.CenterY, d = dx * dx + dy * dy; if (d < bd) { bd = d; best = h; } }
+                BookOf[s] = best;
+            }
+        }
+        var pops = new int[n];
+        for (int s = 0; s < n; s++) pops[BookOf[s]] += counts[s];
+        foreach (int s in hosts)
+        {
+            var st = r.Settlements[s];
+            PurseId toll = st.FiefIndex >= 0 ? econ.Ledger.Open(PurseKind.Treasury, r.Fiefs[st.FiefIndex].Id) : econ.Ledger.Open(PurseKind.Settlement, st.Id);
+            Books[s] = new MarketBook(econ, s, st.Id, st.Name, toll, pops[s], seed);
+        }
+        _basketGood = new bool[econ.Goods.Count];
+        foreach (var (g, _) in Mix.Staple) _basketGood[g] = true;
+        foreach (var (g, _) in Mix.Relish) _basketGood[g] = true;
+        _basketGood[econ.Food.Ale] = _basketGood[econ.Food.Salt] = _basketGood[econ.Food.Firewood] = true;
+        foreach (var b in Books) if (b != null) SetFloors(b);
+    }
+
+    private void SetFloors(MarketBook b)
+    {
+        var c = Econ.Goods;
+        for (ushort g = 0; g < c.Count; g++)
+        {
+            // 0.02 x population g/day for every listed good, 0.25 x population x its share of the basket for basket goods
+            long grams = (long)b.Population * 20 / 1000;
+            if (_basketGood[g]) grams = Math.Max(grams, (long)b.Population * 1100 / 4 / Math.Max(1, BasketWidth(g)));
+            b.Goods[g].FloorDemand = c.IsPiece(g) ? Math.Max(1, grams / Math.Max(1, c.Def(g).PieceMassG)) : grams;
+        }
+    }
+
+    private int BasketWidth(ushort g)
+    {
+        if (g == Econ.Food.Ale || g == Econ.Food.Salt || g == Econ.Food.Firewood) return 1;
+        foreach (var (x, _) in Mix.Staple) if (x == g) return Mix.Staple.Length;
+        return Mix.Relish.Length * 2;
+    }
+
+    public MarketBook BookForSettlement(int settlement) => Books[BookOf[settlement]]!;
+    public MarketBook BookForHousehold(int hh) => BookForSettlement(Pop.Households.Settlement[hh]);
+    public IEnumerable<MarketBook> AllBooks() { foreach (var b in Books) if (b != null) yield return b; }
+
+    public MarketParty HouseholdParty(int hh)
+    {
+        if (hh >= _hh.Length) Array.Resize(ref _hh, Math.Max(hh + 1, _hh.Length * 2));
+        return _hh[hh] ??= new MarketParty(Pop.Households.IdOf(hh), Econ.HouseholdPurse[hh], Econ.HouseholdStore[hh], PartyKind.Household, hh);
+    }
+
+    // ---------- tick steps ----------
+
+    /// <summary>H3: one session in every open book, settlements ascending (money spec 4).</summary>
+    public (int Filled, long Mites) HourlySession(GameTime now)
+    {
+        int filled = 0; long mites = 0;
+        foreach (var b in AllBooks())
+        {
+            if (!b.IsOpen(now.Hour)) continue;
+            var (f, m) = b.RunSession(now.TotalHours, (int)now.TotalDays);
+            filled += f; mites += m;
+        }
+        return (filled, mites);
+    }
+
+    /// <summary>H5 (hour 0): structural demand, then the demand EMA, expiry and import requests (money spec 4).</summary>
+    public void DailyGlobals(GameTime now, int tMeanC = 10)
+    {
+        int day = (int)now.TotalDays;
+        var demand = ComputeStructuralDemand(day, tMeanC);
+        foreach (var b in AllBooks())
+        {
+            var d = demand[b.SettlementIndex];
+            for (int g = 0; g < d.Length; g++) b.Goods[g].StructuralDemand = d[g];
+            b.Daily(day);
+            PostImportRequests(b, day);
+        }
+    }
+
+    private void PostImportRequests(MarketBook b, int day)
+    {
+        b.ImportRequests.Clear();
+        if (b.Merchants.Count == 0) return;
+        for (ushort g = 0; g < b.Goods.Length; g++)
+        {
+            var gb = b.Goods[g];
+            if (gb.StockUnits * 2 >= gb.Demand * gb.TargetCoverDays) continue;
+            if (gb.LastTradedDay < 0 && gb.DemandEma == 0) continue;
+            long want = gb.Demand * gb.TargetCoverDays / 2 - gb.StockUnits;
+            if (want > 0) b.ImportRequests.Add(new ImportRequest(b.SettlementIndex, g, want, day, b.Merchants[0].Id));
+        }
+    }
+
+    /// <summary>S5: <c>Ref</c> drifts a quarter of the way toward <c>base x clamp(local coin per person / 5,000 mites, 0.5, 2)</c> (money spec 3.5).</summary>
+    public void SeasonalDrift(GameTime now)
+    {
+        var coin = new long[Books.Length];
+        var hh = Pop.Households;
+        for (int h = 0; h < hh.Count; h++) coin[BookOf[hh.Settlement[h]]] += Econ.Ledger.Balance(Econ.HouseholdPurse[h]).Mites;
+        foreach (var (s, mites) in ExtraCoin) coin[BookOf[s]] += mites;
+        foreach (var b in AllBooks()) b.DriftRefs(coin[b.SettlementIndex]);
+    }
+
+    /// <summary>Coin held by other local accounts (business cash boxes), per settlement; set by the production system before <see cref="SeasonalDrift"/>.</summary>
+    public List<(int Settlement, long Mites)> ExtraCoin { get; } = [];
+
+    // ---------- structural demand ----------
+
+    /// <summary>Households' basket demand by good plus the planned inputs of businesses, in units per day, per book (money spec 3.1).</summary>
+    public long[][] ComputeStructuralDemand(int day, int tMeanC)
+    {
+        var res = new long[Books.Length][];
+        foreach (var b in AllBooks()) res[b.SettlementIndex] = new long[Econ.Goods.Count];
+        var hh = Pop.Households; var c = Econ.Goods;
+        for (int h = 0; h < hh.Count; h++)
+        {
+            if (hh.MemberCount[h] == 0) continue;
+            var arr = res[BookOf[hh.Settlement[h]]];
+            var need = HouseholdNeeds.Basket(Econ, Pop.People, hh, h, day, tMeanC);
+            foreach (var (g, pm) in Mix.Staple) arr[g] += HouseholdNeeds.GramsFor(c, g, (long)need.StapleX100 * pm / 1000);
+            foreach (var (g, pm) in Mix.Relish) arr[g] += HouseholdNeeds.GramsFor(c, g, (long)need.RelishX100 * pm / 1000);
+            arr[Econ.Food.Ale] += need.AleMl * c.Def(Econ.Food.Ale).LitreMassG / 1000;
+            arr[Econ.Food.Salt] += need.SaltG; arr[Econ.Food.Firewood] += need.FuelG;
+        }
+        Production?.AddStructuralDemand(this, res);
+        return res;
+    }
+
+    // ---------- household shopping (households spec 3.4) ----------
+
+    /// <summary>
+    /// The shopping a household does in its daily slice: for each need line below half of its target cover it posts an order up to the target, staples first and
+    /// split by the consumption mix over the goods the market holds. Orders are filled by the next session (decision MK2).
+    /// </summary>
+    public int PostHouseholdOrders(int hh, int day, int tMeanC)
+    {
+        var hht = Pop.Households;
+        if (hht.MemberCount[hh] == 0) return 0;
+        var book = BookForHousehold(hh); var party = HouseholdParty(hh); var c = Econ.Goods;
+        var need = HouseholdNeeds.Basket(Econ, Pop.People, hht, hh, day, tMeanC);
+        var basket = Econ.Basket(hht.Class[hh]);
+        int ratio = Econ.Tiers[hh] == HouseholdTier.Survive ? 4000 : 2000;
+        int posted = 0;
+        int Line(IReadOnlyList<(ushort Good, int Permille)> mix, long measuresX100, int coverDays, int priority)
+        {
+            if (measuresX100 <= 0) return 0;
+            var avail = mix.Where(m => book.Goods[m.Good].StockUnits > 0 || party.Store.Qty(m.Good) > 0).ToList();
+            int tot = avail.Sum(m => m.Permille); int n = 0;
+            if (tot == 0) return 0;
+            foreach (var (g, pm) in avail)
+            {
+                long daily = HouseholdNeeds.GramsFor(c, g, measuresX100 * pm / tot);
+                long target = daily * coverDays, have = party.Store.Qty(g);
+                if (daily > 0 && have < target / 2) { book.Post(new BuyOrder(party, g, target - have, ratio) { Priority = priority }); n++; }
+            }
+            return n;
+        }
+        posted += Line(Mix.Staple, need.StapleX100, basket.TargetCoverDays.GetValueOrDefault("staple", 20), 0);
+        posted += Line(Mix.Relish, need.RelishX100, basket.TargetCoverDays.GetValueOrDefault("relish", 3), 1);
+        void Single(ushort g, long daily, string key, int priority)
+        {
+            long target = daily * basket.TargetCoverDays.GetValueOrDefault(key, 10), have = party.Store.Qty(g);
+            if (daily > 0 && have < target / 2) { book.Post(new BuyOrder(party, g, target - have, ratio) { Priority = priority }); posted++; }
+        }
+        Single(Econ.Food.Firewood, need.FuelG, "firewood", 2);
+        Single(Econ.Food.Ale, need.AleMl * c.Def(Econ.Food.Ale).LitreMassG / 1000, "ale", 3);
+        Single(Econ.Food.Salt, need.SaltG, "salt", 4);
+        return posted;
+    }
+}

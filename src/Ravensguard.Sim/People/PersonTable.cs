@@ -42,6 +42,21 @@ public sealed class PersonTable
     public EntityId[] Notable;
     public EntityId[] Dynasty;
 
+    // ---- Phase 2 vital columns (population spec 2). Defaults for a person created at world generation: alive, not pregnant, never gave birth.
+    public PersonStatus[] Status;
+    /// <summary>Game day of death, -1 while alive.</summary>
+    public int[] DeathDay;
+    public DeathCause[] DeathCause;
+    /// <summary>Game day the pregnancy ends, -1 when not pregnant.</summary>
+    public int[] PregnantUntilDay;
+    /// <summary>Person index of the father of the unborn child (the spouse at conception), -1 none.</summary>
+    public int[] FatherOfUnborn;
+    /// <summary>Game day of the last birth (postpartum gap), int.MinValue/2 when none.</summary>
+    public int[] LastBirthDay;
+    /// <summary>Seasons spent eligible to marry without a home (population spec 3.3).</summary>
+    public byte[] MarriageWait;
+    public const int NeverBorn = int.MinValue / 2;
+
     public PersonTable(int capacity, ulong baseCounter)
     {
         _baseCounter = baseCounter;
@@ -51,6 +66,27 @@ public sealed class PersonTable
         WorkSettlement = new int[_cap]; WorkLot = new short[_cap]; Class = new SocialClass[_cap]; Attr = new byte[_cap * AttrCount]; Skills = new byte[_cap * SkillSlots * 2];
         Traits = new ushort[_cap]; HomeSettlement = new int[_cap]; HomeLot = new short[_cap]; Bed = new short[_cap]; Homeless = new HomelessReason[_cap];
         Notable = new EntityId[_cap]; Dynasty = new EntityId[_cap];
+        Status = new PersonStatus[_cap]; DeathDay = new int[_cap]; DeathCause = new DeathCause[_cap]; PregnantUntilDay = new int[_cap]; FatherOfUnborn = new int[_cap];
+        LastBirthDay = new int[_cap]; MarriageWait = new byte[_cap];
+    }
+
+    /// <summary>First counter of this table's person ids: row <c>i</c> has counter <c>BaseCounter + i</c>.</summary>
+    public ulong BaseCounter => _baseCounter;
+
+    public bool IsAlive(int i) => Status[i] == PersonStatus.Alive;
+
+    /// <summary>Deep copy of the table (strings are immutable and shared).</summary>
+    public PersonTable Clone()
+    {
+        var c = new PersonTable(Count, _baseCounter);
+        for (int i = 0; i < Count; i++) c.Add();
+        void Cp<T>(T[] src, T[] dst) => Array.Copy(src, dst, Math.Min(src.Length, dst.Length));
+        Cp(Given, c.Given); Cp(Family, c.Family); Cp(Byname, c.Byname); Cp(Sex, c.Sex); Cp(BirthDay, c.BirthDay); Cp(Culture, c.Culture); Cp(Household, c.Household);
+        Cp(Father, c.Father); Cp(Mother, c.Mother); Cp(Spouse, c.Spouse); Cp(Occupation, c.Occupation); Cp(Employer, c.Employer); Cp(WorkSettlement, c.WorkSettlement);
+        Cp(WorkLot, c.WorkLot); Cp(Class, c.Class); Cp(Attr, c.Attr); Cp(Skills, c.Skills); Cp(Traits, c.Traits); Cp(HomeSettlement, c.HomeSettlement); Cp(HomeLot, c.HomeLot);
+        Cp(Bed, c.Bed); Cp(Homeless, c.Homeless); Cp(Notable, c.Notable); Cp(Dynasty, c.Dynasty); Cp(Status, c.Status); Cp(DeathDay, c.DeathDay); Cp(DeathCause, c.DeathCause);
+        Cp(PregnantUntilDay, c.PregnantUntilDay); Cp(FatherOfUnborn, c.FatherOfUnborn); Cp(LastBirthDay, c.LastBirthDay); Cp(MarriageWait, c.MarriageWait);
+        return c;
     }
 
     public EntityId IdOf(int index) => EntityId.Make(IdKind.Person, _baseCounter + (ulong)index);
@@ -63,6 +99,7 @@ public sealed class PersonTable
         Given[i] = Family[i] = Byname[i] = "";
         Household[i] = Father[i] = Mother[i] = Spouse[i] = Employer[i] = WorkSettlement[i] = HomeSettlement[i] = -1;
         WorkLot[i] = HomeLot[i] = Bed[i] = -1;
+        DeathDay[i] = PregnantUntilDay[i] = FatherOfUnborn[i] = -1; LastBirthDay[i] = NeverBorn;
         return i;
     }
 
@@ -74,6 +111,8 @@ public sealed class PersonTable
         WorkSettlement = G(WorkSettlement, n); WorkLot = G(WorkLot, n); Class = G(Class, n); Attr = G(Attr, n * AttrCount); Skills = G(Skills, n * SkillSlots * 2);
         Traits = G(Traits, n); HomeSettlement = G(HomeSettlement, n); HomeLot = G(HomeLot, n); Bed = G(Bed, n); Homeless = G(Homeless, n);
         Notable = G(Notable, n); Dynasty = G(Dynasty, n);
+        Status = G(Status, n); DeathDay = G(DeathDay, n); DeathCause = G(DeathCause, n); PregnantUntilDay = G(PregnantUntilDay, n); FatherOfUnborn = G(FatherOfUnborn, n);
+        LastBirthDay = G(LastBirthDay, n); MarriageWait = G(MarriageWait, n);
         _cap = n;
     }
 
