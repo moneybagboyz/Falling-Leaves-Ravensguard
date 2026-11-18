@@ -135,6 +135,9 @@ public sealed class PeopleData
     [Key(38)] public int[] HhPurse { get; set; } = [];
     [Key(39)] public string[] HhName { get; set; } = [];
     [Key(40)] public int[] HhMemberIdx { get; set; } = [];
+    /// <summary>Rows whose person id was made in another region (arrivals), with those ids; empty for a region nobody moved into.</summary>
+    [Key(41)] public int[] ForeignRow { get; set; } = [];
+    [Key(42)] public ulong[] ForeignId { get; set; } = [];
 }
 
 /// <summary>The mutable bindings of the region's lots, fiefs and parcels to people (not regenerable from terrain).</summary>
@@ -333,7 +336,7 @@ public static class WorldSave
 
     private static T[] Cut<T>(T[] a, int n) => a.AsSpan(0, n).ToArray();
 
-    private static PeopleData EncodePeople(Population pop)
+    internal static PeopleData EncodePeople(Population pop)
     {
         var p = pop.People; var h = pop.Households; int n = p.Count, m = h.Count;
         return new PeopleData
@@ -349,10 +352,11 @@ public static class WorldSave
             HhSettlement = Cut(h.Settlement, m), HhHead = Cut(h.Head, m), HhMemberStart = Cut(h.MemberStart, m), HhLot = Cut(h.Lot, m), HhMemberCount = Cut(h.MemberCount, m),
             HhBeds = Cut(h.Beds, m), HhParcelCount = Cut(h.ParcelCount, m), HhDwelling = Cut(h.Dwelling, m), HhDeed = Cut(h.Deed, m), HhClass = Cut(h.Class, m),
             HhPurse = Cut(h.Purse, m), HhName = Cut(h.Name, m), HhMemberIdx = h.MemberIdx.ToArray(),
+            ForeignRow = p.ForeignIds.Keys.ToArray(), ForeignId = p.ForeignIds.Values.Select(v => v.Value).ToArray(),
         };
     }
 
-    private static RegionLotsData EncodeLots(Population p) => new()
+    internal static RegionLotsData EncodeLots(Population p) => new()
     {
         NowDay = p.NowDay, LotHousehold = CopyJagged(p.LotHousehold), LotBeds = CopyJagged(p.LotBeds), LotKeeper = CopyJagged(p.LotKeeper), FiefLord = (int[])p.FiefLord.Clone(),
         FiefLordHousehold = (int[])p.FiefLordHousehold.Clone(), ParcelHolder = (int[])p.ParcelHolder.Clone(), PriestHousehold = (int[])p.PriestHousehold.Clone(),
@@ -367,7 +371,7 @@ public static class WorldSave
         Array.Copy(src, dst, src.Length);
     }
 
-    private static Population DecodePeople(PeopleData d, RegionLotsData l, RegionData region)
+    internal static Population DecodePeople(PeopleData d, RegionLotsData l, RegionData region)
     {
         var p = new PersonTable(d.Count, d.PersonBaseCounter);
         for (int i = 0; i < d.Count; i++) p.Add();
@@ -379,6 +383,7 @@ public static class WorldSave
         Fill(p.Bed, d.Bed, "bed"); Fill(p.Homeless, d.Homeless, "homeless");
         Fill(p.Notable, d.Notable.Select(v => new EntityId(v)).ToArray(), "notable"); Fill(p.Dynasty, d.Dynasty.Select(v => new EntityId(v)).ToArray(), "dynasty");
 
+        for (int i = 0; i < d.ForeignRow.Length; i++) p.SetForeignId(d.ForeignRow[i], new EntityId(d.ForeignId[i]));
         var h = new HouseholdTable(d.HhCount, d.HhBaseCounter);
         for (int i = 0; i < d.HhCount; i++) h.Add(0, 0, default, 0);
         h.MemberIdx.Clear(); h.MemberIdx.AddRange(d.HhMemberIdx);
@@ -395,7 +400,7 @@ public static class WorldSave
 
     // ---------- chronicle ----------
 
-    private static ChronicleData EncodeChronicle(Chronicle c)
+    internal static ChronicleData EncodeChronicle(Chronicle c)
     {
         var d = new ChronicleData();
         foreach (var e in c.All) // append order is the canonical order
@@ -410,7 +415,7 @@ public static class WorldSave
         return d;
     }
 
-    private static Chronicle DecodeChronicle(ChronicleData d)
+    internal static Chronicle DecodeChronicle(ChronicleData d)
     {
         var c = new Chronicle();
         foreach (var x in d.Entries)

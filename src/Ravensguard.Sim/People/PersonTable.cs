@@ -86,11 +86,31 @@ public sealed class PersonTable
         Cp(WorkLot, c.WorkLot); Cp(Class, c.Class); Cp(Attr, c.Attr); Cp(Skills, c.Skills); Cp(Traits, c.Traits); Cp(HomeSettlement, c.HomeSettlement); Cp(HomeLot, c.HomeLot);
         Cp(Bed, c.Bed); Cp(Homeless, c.Homeless); Cp(Notable, c.Notable); Cp(Dynasty, c.Dynasty); Cp(Status, c.Status); Cp(DeathDay, c.DeathDay); Cp(DeathCause, c.DeathCause);
         Cp(PregnantUntilDay, c.PregnantUntilDay); Cp(FatherOfUnborn, c.FatherOfUnborn); Cp(LastBirthDay, c.LastBirthDay); Cp(MarriageWait, c.MarriageWait);
+        foreach (var (i, id) in ForeignIds) c.SetForeignId(i, id);
         return c;
     }
 
-    public EntityId IdOf(int index) => EntityId.Make(IdKind.Person, _baseCounter + (ulong)index);
-    public int IndexOf(EntityId id) => id.Kind == IdKind.Person && id.Counter >= _baseCounter && id.Counter - _baseCounter < (ulong)Count ? (int)(id.Counter - _baseCounter) : -1;
+    // People who moved in from another region keep the id their origin region gave them (E2, spec 3.6): row -> id, and back.
+    private SortedDictionary<int, EntityId>? _foreign;
+    private Dictionary<EntityId, int>? _foreignIndex;
+
+    /// <summary>Rows whose id was made in another region, ascending row.</summary>
+    public IReadOnlyDictionary<int, EntityId> ForeignIds => _foreign ?? (IReadOnlyDictionary<int, EntityId>)EmptyForeign;
+    private static readonly SortedDictionary<int, EntityId> EmptyForeign = [];
+
+    /// <summary>Gives row <paramref name="index"/> an id from another region (an arrival keeps its origin id).</summary>
+    public void SetForeignId(int index, EntityId id)
+    {
+        (_foreign ??= [])[index] = id;
+        (_foreignIndex ??= [])[id] = index;
+    }
+
+    public EntityId IdOf(int index) => _foreign != null && _foreign.TryGetValue(index, out var f) ? f : EntityId.Make(IdKind.Person, _baseCounter + (ulong)index);
+    public int IndexOf(EntityId id)
+    {
+        if (_foreignIndex != null && _foreignIndex.TryGetValue(id, out int fi)) return fi;
+        return id.Kind == IdKind.Person && id.Counter >= _baseCounter && id.Counter - _baseCounter < (ulong)Count ? (int)(id.Counter - _baseCounter) : -1;
+    }
 
     public int Add()
     {
