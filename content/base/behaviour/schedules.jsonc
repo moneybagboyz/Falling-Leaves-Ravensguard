@@ -1,0 +1,86 @@
+// Day plans by occupation (live-behaviour spec 3.3, 3.5). Anchors are expressions over sunrise, sunset, noon and clock times (HH:MM), plus or minus H:MM, min(), max().
+// Times wrap at 24:00. The sleep block of a plan is `bed` from sleep_from to wake. A walk is inserted wherever the place changes.
+[
+  { "type": "schedule", "id": "outdoor_worker",
+    "occupations": ["Farmer","Ploughman","Shepherd","Labourer","Woodcutter","Fisher","Miner","CharcoalBurner"],
+    "anchors": { "wake": "sunrise-1:30", "work_from": "sunrise-0:30", "work_to": "min(sunset+0:30, work_from+11:00)", "sleep_from": "wake-8:30-winter" },
+    "blocks": [
+      { "from": "sleep_from", "to": "wake",      "kind": "Sleep",  "place": "bed" },
+      { "from": "wake",       "to": "work_from", "kind": "Home",   "place": "home" },
+      { "from": "work_from",  "to": "work_to",   "kind": "Work",   "place": "work" },
+      { "from": "work_to",    "to": "sleep_from","kind": "Home",   "place": "home" },
+      { "from": "09:00", "to": "11:00", "kind": "Church", "place": "church", "when": "holy" },
+      { "from": "work_to", "to": "work_to+1:00", "kind": "Shop", "place": "market", "when": "market", "share_pm": 330 },
+      { "from": "work_to", "to": "work_to+1:00", "kind": "Shop", "place": "market", "when": "fair",   "share_pm": 650 },
+      { "from": "work_to", "to": "work_to+1:00", "kind": "Shop", "place": "market", "when": "normal", "share_pm": 120 } ] },
+
+  { "type": "schedule", "id": "indoor_trade",
+    "occupations": ["Smith","Baker","Brewer","Weaver","Cobbler","Mason","Carpenter","Butcher","Tanner","Spinner","Priest","Miller"],
+    "anchors": { "work_from": "max(06:00, sunrise)", "work_to": "min(max(16:00,sunset-1:00), work_from+10:00)", "wake": "work_from-1:30", "sleep_from": "21:00-winter" },
+    "blocks": [
+      { "from": "sleep_from", "to": "wake",      "kind": "Sleep",  "place": "bed" },
+      { "from": "wake",       "to": "work_from", "kind": "Home",   "place": "home" },
+      { "from": "work_from",  "to": "work_to",   "kind": "Work",   "place": "work" },
+      { "from": "work_to",    "to": "sleep_from","kind": "Home",   "place": "home" },
+      { "from": "09:00", "to": "11:00", "kind": "Church", "place": "church", "when": "holy" },
+      { "from": "17:00", "to": "18:00", "kind": "Shop", "place": "market", "when": "market", "share_pm": 330 },
+      { "from": "17:00", "to": "18:00", "kind": "Shop", "place": "market", "when": "fair",   "share_pm": 650 },
+      { "from": "17:00", "to": "18:00", "kind": "Shop", "place": "market", "when": "normal", "share_pm": 120 } ] },
+
+  { "type": "schedule", "id": "merchant",
+    "occupations": ["Merchant","Reeve","GuildMaster","Mayor","Steward","Lord"],
+    "anchors": { "work_from": "08:00", "work_to": "17:00", "wake": "work_from-1:30", "sleep_from": "21:30-winter" },
+    "blocks": [
+      { "from": "sleep_from", "to": "wake",      "kind": "Sleep",  "place": "bed" },
+      { "from": "wake",       "to": "work_from", "kind": "Home",   "place": "home" },
+      { "from": "work_from",  "to": "work_to",   "kind": "Work",   "place": "work" },
+      { "from": "work_to",    "to": "sleep_from","kind": "Home",   "place": "home" },
+      { "from": "09:00", "to": "11:00", "kind": "Church", "place": "church", "when": "holy" } ] },
+
+  { "type": "schedule", "id": "innkeeper",
+    "occupations": ["Innkeeper","Servant"],
+    "anchors": { "work_from": "08:00", "work_to": "23:00", "wake": "work_from-1:00", "sleep_from": "23:30" },
+    "blocks": [
+      { "from": "sleep_from", "to": "wake",      "kind": "Sleep",  "place": "bed" },
+      { "from": "wake",       "to": "work_from", "kind": "Home",   "place": "home" },
+      { "from": "work_from",  "to": "work_to",   "kind": "Work",   "place": "work" },
+      { "from": "work_to",    "to": "sleep_from","kind": "Home",   "place": "home" } ] },
+
+  // the watch keeps three shifts of eight hours; a person's shift is fixed by their index (index mod 3), so the post is never empty
+  { "type": "schedule", "id": "guard_night",
+    "occupations": [],
+    "anchors": { "work_from": "00:00", "work_to": "08:00", "wake": "work_from-1:30", "sleep_from": "12:00" },
+    "blocks": [
+      { "from": "sleep_from", "to": "wake",      "kind": "Sleep",  "place": "bed" },
+      { "from": "wake",       "to": "work_from", "kind": "Home",   "place": "home" },
+      { "from": "work_from",  "to": "work_to",   "kind": "Work",   "place": "work" },
+      { "from": "work_to",    "to": "sleep_from","kind": "Home",   "place": "home" } ] },
+  { "type": "schedule", "id": "guard_day",
+    "occupations": [],
+    "anchors": { "work_from": "08:00", "work_to": "16:00", "wake": "work_from-1:30", "sleep_from": "21:30" },
+    "blocks": [
+      { "from": "sleep_from", "to": "wake",      "kind": "Sleep",  "place": "bed" },
+      { "from": "wake",       "to": "work_from", "kind": "Home",   "place": "home" },
+      { "from": "work_from",  "to": "work_to",   "kind": "Work",   "place": "work" },
+      { "from": "work_to",    "to": "sleep_from","kind": "Home",   "place": "home" } ] },
+  { "type": "schedule", "id": "guard_evening",
+    "occupations": [],
+    "anchors": { "work_from": "16:00", "work_to": "24:00", "wake": "work_from-1:30", "sleep_from": "02:00" },
+    "blocks": [
+      { "from": "sleep_from", "to": "wake",      "kind": "Sleep",  "place": "bed" },
+      { "from": "wake",       "to": "work_from", "kind": "Home",   "place": "home" },
+      { "from": "work_from",  "to": "work_to",   "kind": "Work",   "place": "work" },
+      { "from": "work_to",    "to": "sleep_from","kind": "Home",   "place": "home" } ] },
+
+  // no workplace: children and the people of a household who keep the house
+  { "type": "schedule", "id": "household",
+    "occupations": [],
+    "anchors": { "wake": "sunrise-1:00", "sleep_from": "21:00-winter" },
+    "blocks": [
+      { "from": "sleep_from", "to": "wake",      "kind": "Sleep",  "place": "bed" },
+      { "from": "wake",       "to": "sleep_from","kind": "Home",   "place": "home" },
+      { "from": "09:00", "to": "11:00", "kind": "Church", "place": "church", "when": "holy" },
+      { "from": "17:00", "to": "18:00", "kind": "Shop", "place": "market", "when": "market", "share_pm": 330 },
+      { "from": "17:00", "to": "18:00", "kind": "Shop", "place": "market", "when": "fair",   "share_pm": 650 },
+      { "from": "17:00", "to": "18:00", "kind": "Shop", "place": "market", "when": "normal", "share_pm": 100 } ] }
+]

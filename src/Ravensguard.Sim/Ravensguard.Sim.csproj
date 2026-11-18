@@ -11,6 +11,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- the behaviour content ships inside the assembly as the default, so the pure schedule functions need no content folder; a loaded ContentDatabase overrides it -->
+    <EmbeddedResource Include="..\..\content\base\behaviour\*.jsonc" LogicalName="behaviour/%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Ravensguard.Content\Ravensguard.Content.csproj" />
   </ItemGroup>
 

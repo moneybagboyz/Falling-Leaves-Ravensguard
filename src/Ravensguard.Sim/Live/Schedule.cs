@@ -6,22 +6,21 @@ using RegionData = Ravensguard.Sim.WorldGen.Region.Region;
 namespace Ravensguard.Sim.Live;
 
 /// <summary>
-/// The default day of abstract spec 3.4, as constants until the behaviour content (<c>behaviour/schedules.jsonc</c>, live-behaviour spec 3.5) exists: sleep from
-/// 21:00 to 90 minutes before work, work 06:00 to 16:00, a commute at 5 real m/s (0.25 m per game second, decision A2), market 17:00 to 18:00, home until bed.
-/// Seconds of the day, millimetres, millimetres per game second.
+/// The constants that stay constant (the day's timetable itself is content: <c>behaviour/schedules.jsonc</c>, see <see cref="Ravensguard.Sim.Behaviour.ScheduleBook"/>): a commute at 5 real m/s
+/// (0.25 m per game second, decision A2). Seconds of the day, millimetres, millimetres per game second.
 /// </summary>
 public static class ScheduleTuning
 {
     public const int Hour = 3600, Day = 86400;
-    public const int WorkStart = 6 * Hour, WorkEnd = 16 * Hour, SleepStart = 21 * Hour, ShopStart = 17 * Hour, ShopEnd = 18 * Hour;
-    public const int WakeBeforeWork = 90 * 60, RestBeforeSleep = 30 * 60;
-    public const int ChildWake = 6 * Hour + 1800, ChildIdleFrom = 8 * Hour, ChildIdleTo = 18 * Hour;
     public const long CommuteMmPerGs = 250;
     /// <summary>Beyond this the worker lives at the site (a field camp, abstract spec 3.4).</summary>
     public const long MaxCommuteMm = 1_350_000;
+    /// <summary>The least a walk between two places takes, game seconds (a person does not blink across a room).</summary>
+    public const int MinWalkSec = 30;
 }
 
-public enum PlaceRef : byte { Home = 0, Work = 1, Square = 2 }
+/// <summary>Where a block is: the home lot, the bed in it (the home spot when the household has no placed bed), the workplace, the square, the church, a market stall's customer side.</summary>
+public enum PlaceRef : byte { Home = 0, Work = 1, Square = 2, Bed = 3, Church = 4, Market = 5 }
 
 /// <summary>
 /// Everything the schedule needs about one person, copied out of the records (the person's row, their home and work lots, the settlement square): the cache that a
@@ -59,13 +58,27 @@ public readonly struct PersonAnchors
     public long SquareY { get; init; }
     public int SquareJit { get; init; }
     public int SquareJitY { get; init; }
-    public int WorkStartSod { get; init; }
-    public int WorkEndSod { get; init; }
+    /// <summary>Latitude in tenths of a degree (the sun's day); the plan this person follows and the tuning it reads.</summary>
+    public int LatTenths { get; init; } = 480;
+    public Ravensguard.Sim.Behaviour.ScheduleBook? Book { get; init; }
+    /// <summary>The bed (millimetres, level) and whether the household has a placed one.</summary>
+    public bool HasBed { get; init; }
+    public long BedX { get; init; }
+    public long BedY { get; init; }
+    public int BedZ { get; init; }
+    public bool HasChurch { get; init; }
+    public long ChurchX { get; init; }
+    public long ChurchY { get; init; }
+    public int ChurchJit { get; init; }
+    public int ChurchJitY { get; init; }
+    /// <summary>The stalls of the home settlement's square (null for a green), and the queue gap.</summary>
+    public Ravensguard.Sim.WorldGen.Chunks.ChunkGenerator.StallSpot[]? Stalls { get; init; }
+    public int QueueGapMm { get; init; } = 900;
     /// <summary>Parcel tiles (region tile x, y) of the work settlement, for a field worker (the day's tile is picked from them).</summary>
     public (int X, int Y)[]? FieldTiles { get; init; }
 
     /// <summary>The anchors of person <paramref name="index"/> (alive) at game second <paramref name="nowSec"/>.</summary>
-    public static PersonAnchors From(Population pop, int index, ulong seed, int regionId, long nowSec, Dictionary<int, (int, int)[]?>? tileCache = null)
+    public static PersonAnchors From(Population pop, int index, ulong seed, int regionId, long nowSec, Dictionary<int, (int, int)[]?>? tileCache = null, Ravensguard.Sim.Behaviour.LiveFacts? facts = null, Ravensguard.Sim.Behaviour.ScheduleBook? book = null)
     {
         var p = pop.People; var r = pop.Region;
         int hs = p.HomeSettlement[index];
@@ -83,8 +96,8 @@ public readonly struct PersonAnchors
         bool child = occ == Occupation.None || age < OccupationInfo.MinWorkAge(occ);
         bool hasWork = !child && ws >= 0 && ws < r.Settlements.Count;
         long wx = hx, wy = hy; int wj = hj, wjy = hjy; byte wf = hf; bool field = false; (int, int)[]? tiles = null;
-        long sx = hx, sy = hy; int sj = 3000, sjy = 3000; bool hasSq = false;
-        if (hs >= 0 && hs < r.Settlements.Count) { var sq = r.Settlements[hs].Plan.Square; if (sq.W > 0) { sx = (long)sq.CenterX * 1000; sy = (long)sq.CenterY * 1000; sj = Math.Max(1500, (sq.W - 2) * 1000 / 2); sjy = Math.Max(1500, (sq.H - 2) * 1000 / 2); hasSq = true; } }
+        long sx = hx, sy = hy; int sj = 3000, sjy = 3000; bool hasSq = false; RectM sq0 = default;
+        if (hs >= 0 && hs < r.Settlements.Count) { var sq = r.Settlements[hs].Plan.Square; sq0 = sq; if (sq.W > 0) { sx = (long)sq.CenterX * 1000; sy = (long)sq.CenterY * 1000; sj = Math.Max(1500, (sq.W - 2) * 1000 / 2); sjy = Math.Max(1500, (sq.H - 2) * 1000 / 2); hasSq = true; } }
         if (hasWork)
         {
             var wset = r.Settlements[ws]; var wplan = wset.Plan;
@@ -102,13 +115,22 @@ public readonly struct PersonAnchors
             else if (!(occ is Occupation.Merchant or Occupation.Reeve or Occupation.Mayor or Occupation.GuildMaster or Occupation.Steward or Occupation.Guard)) { /* a spinner, a servant of a household, a town's day labourer: works about the house */ }
             else if (wplan.Square.W > 0) { wx = (long)wplan.Square.CenterX * 1000; wy = (long)wplan.Square.CenterY * 1000; wj = Math.Max(3000, (wplan.Square.W - 2) * 1000 / 2); wjy = Math.Max(3000, (wplan.Square.H - 2) * 1000 / 2); wf = 2; }
         }
-        var (st, en) = Shift(occ, index);
+        // the bed: a real cell of the dwelling (its upper floor too) when the generator's building is at hand
+        bool hasBed = false; long bedx = 0, bedy = 0; int bedz = 0;
+        if (facts != null && hs >= 0 && hs < r.Settlements.Count && p.HomeLot[index] >= 0 && facts.TryBed(hs, p.HomeLot[index], p.Bed[index], p.IdOf(index).Value, seed, out var bc)) { hasBed = true; bedx = bc.X * 1000L + 500; bedy = bc.Y * 1000L + 500; bedz = bc.Z; }
+        bool hasChurch = false; long cx = 0, cy = 0; int cj = 1000, cjy = 1000;
+        if (hs >= 0 && hs < r.Settlements.Count && r.Settlements[hs].Plan.ChurchLot is >= 0 and var chl && chl < r.Settlements[hs].Plan.Lots.Count)
+        { LotSpot(r.Settlements[hs].Plan.Lots[chl], out cx, out cy, out cj, out cjy, out _); hasChurch = true; }
+        else if (sq0.W > 0) { cx = sx; cy = sy; cj = sj; cjy = sjy; hasChurch = true; }
+        int lat = Ravensguard.Sim.Behaviour.SunCache.LatitudeOfRow(r.CellY);
+        var book0 = book ?? Ravensguard.Sim.Behaviour.ScheduleBook.Default;
         return new PersonAnchors
         {
             Id = p.IdOf(index), Region = regionId, Index = index, Seed = seed, Occupation = occ, Sex = p.Sex[index], Class = p.Class[index], Name = p.FullName(index), Child = child,
             HasWork = hasWork, WorkInField = field, HasSquare = hasSq, HomeX = hx, HomeY = hy, HomeJit = hj, HomeJitY = hjy, HomeFacing = hf, HomeSettlement = hs, HomeLot = p.HomeLot[index],
             WorkX = wx, WorkY = wy, WorkJit = wj, WorkJitY = wjy, WorkFacing = wf, WorkSettlement = ws, WorkLot = wl, SquareX = sx, SquareY = sy, SquareJit = sj, SquareJitY = sjy,
-            WorkStartSod = st, WorkEndSod = en, FieldTiles = tiles,
+            FieldTiles = tiles, LatTenths = lat, Book = book0, HasBed = hasBed, BedX = bedx, BedY = bedy, BedZ = bedz, HasChurch = hasChurch, ChurchX = cx, ChurchY = cy, ChurchJit = cj, ChurchJitY = cjy,
+            Stalls = hs >= 0 && facts != null ? facts.StallsOf(hs) is { Length: > 0 } sp ? sp : null : null, QueueGapMm = book0.Content.Crowd.QueueGapMm,
         };
     }
 
@@ -120,15 +142,6 @@ public readonly struct PersonAnchors
 
     private static bool IsFieldWork(Occupation o) => o is Occupation.Farmer or Occupation.Ploughman or Occupation.Shepherd or Occupation.Labourer or Occupation.Woodcutter
         or Occupation.Fisher or Occupation.Miner or Occupation.CharcoalBurner;
-
-    /// <summary>Work hours by occupation (abstract spec 3.4 overrides; the night guard shift waits for step 3).</summary>
-    private static (int Start, int End) Shift(Occupation o, int index) => o switch
-    {
-        Occupation.Innkeeper => (8 * ScheduleTuning.Hour, 22 * ScheduleTuning.Hour),
-        Occupation.Guard => index % 2 == 0 ? (6 * ScheduleTuning.Hour, 14 * ScheduleTuning.Hour) : (14 * ScheduleTuning.Hour, 22 * ScheduleTuning.Hour),
-        Occupation.Lord or Occupation.Steward or Occupation.Mayor or Occupation.GuildMaster => (8 * ScheduleTuning.Hour, 17 * ScheduleTuning.Hour),
-        _ => (ScheduleTuning.WorkStart, ScheduleTuning.WorkEnd),
-    };
 
     /// <summary>The spot of <paramref name="place"/> on game day <paramref name="day"/>: the place's anchor plus a jitter drawn from stream 0x2A0 keyed on the day (so one day always gives the same spot).</summary>
     public (long X, long Y) Spot(PlaceRef place, long day)

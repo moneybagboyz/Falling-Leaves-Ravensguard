@@ -59,6 +59,16 @@ public static class RngStreams
     /// <summary>Reserved by the overview (no draw yet).</summary>
     public const uint CatchUp = 0x2B0;
 
+    // ---------- live behaviour and jobs (docs/specs/phase3/live-behaviour-and-utility-ai.md section 5; Phase 3 owns 0x300..0x3FF) ----------
+    /// <summary>The utility scorer's noise and ties (key person, tick = game second / 20, draw = action index).</summary>
+    public const uint UtilityNoise = 0x300;
+    /// <summary>The rank of a claimant of a job (key job, tick = game hour, draw = claimant person index): the lowest rank wins.</summary>
+    public const uint JobClaim = 0x301;
+    /// <summary>Where a person without a bed sleeps on the floor of the sleeping room (key person, tick = 0).</summary>
+    public const uint BedFallback = 0x302;
+    /// <summary>The routine jobs a settlement's households post (key settlement, tick = game day).</summary>
+    public const uint RoutineJobs = 0x303;
+
     // ---------- people records ----------
     /// <summary>A newborn's or immigrant's name and attributes.</summary>
     public const uint Name = 0x2C0, Attributes = 0x2C1;

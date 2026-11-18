@@ -1,0 +1,28 @@
+// The utility scorer (docs/specs/phase3/live-behaviour-and-utility-ai.md 3.4). One profile; every number is content.
+[
+  { "type": "utility_profile", "id": "default",
+    "decision_period_ticks": 20, "commit_bonus_pm": 150, "noise_pm": 20, "schedule_bonus_pm": 400, "duty_pm": 500,
+    "hunger_eat_hours": 13, "exhausted_pm": 800, "flee_threat_pm": 600,
+    "needs": [
+      { "id": "hunger",  "from": "hours_since_meal", "curve_pm": [[0,0],[4,100],[8,400],[12,800],[14,1000],[16,1300]] },
+      { "id": "fatigue", "from": "fatigue_pm",       "curve_pm": [[0,0],[500,100],[800,500],[1000,1000]] },
+      { "id": "social",  "from": "social_pm",        "curve_pm": [[0,0],[600,150],[1000,600]] },
+      { "id": "warmth",  "from": "cold_stress_pm",   "curve_pm": [[0,0],[300,200],[700,800],[1000,1000]] },
+      { "id": "safety",  "from": "threat_pm",        "curve_pm": [[0,0],[200,300],[600,900],[1000,1000]] },
+      { "id": "duty",    "from": "duty_pm",          "curve_pm": [[0,0],[1000,1000]] },
+      { "id": "wage",    "from": "wage_ratio_pm",    "curve_pm": [[0,0],[1000,300],[1100,500],[2000,900]] }
+    ],
+    "actions": [
+      { "kind": "Eat",       "weights": [ { "need": "hunger",  "weight_pm": 1000 } ], "needs_place": "food_source", "commit_minutes": 10 },
+      { "kind": "Sleep",     "weights": [ { "need": "fatigue", "weight_pm": 1000 } ], "needs_place": "bed", "commit_minutes": 60, "min_dark_or_fatigue_pm": 700 },
+      { "kind": "Shelter",   "weights": [ { "need": "warmth",  "weight_pm": 600 }, { "need": "safety", "weight_pm": 400 } ], "needs_place": "roof" },
+      { "kind": "Flee",      "weights": [ { "need": "safety",  "weight_pm": 1000 } ], "needs_place": "away_from_threat" },
+      { "kind": "Socialise", "weights": [ { "need": "social",  "weight_pm": 800 } ], "needs_place": "tavern_or_square", "commit_minutes": 20 },
+      { "kind": "Work",      "weights": [ { "need": "duty",    "weight_pm": 1000 } ], "needs_place": "workplace", "commit_minutes": 30 },
+      { "kind": "Idle",      "weights": [] },
+      { "kind": "Shop",      "weights": [] },
+      { "kind": "Worship",   "weights": [] },
+      { "kind": "Commute",   "weights": [] },
+      { "kind": "TakeJob",   "weights": [ { "need": "wage",    "weight_pm": 1000 } ], "needs_place": "board_or_word" }
+    ] }
+]
