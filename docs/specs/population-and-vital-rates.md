@@ -1,9 +1,14 @@
 # Population and vital rates
 
-Plan refs: §4A.2 (households, vital rates, the housing brake, famine, inheritance, test: 100 years within +-10%), §4A (time compression: life events at historical per-year rates per game year), §3c (disease from weather), §5 Phase 2 (vital rates, marriage gated on dwellings, famine). Replaces legacy growth `int(pop x 0.0001) + 2` and the starvation floor (`ConsumptionSystem.gd:113-119`).
+Plan refs: §4A.2 (households, vital rates, the housing brake, famine, inheritance, test: 100 years within +-10%), §4A (time
+compression: life events at historical per-year rates per game year), §3c (disease from weather), §5 Phase 2 (vital rates,
+marriage gated on dwellings, famine). Replaces legacy growth `int(pop x 0.0001) + 2` and the starvation floor
+(`ConsumptionSystem.gd:113-119`).
 
 ## 1. Purpose
-Every one of the ~25,000 people is a record that ages, may marry, conceive, bear children, fall ill, starve and die at historical per-game-year rates. Population is regulated by **dwellings** (marriage needs a home), **food** (fertility and death multipliers) and **crowding**, not by a counter.
+Every one of the ~25,000 people is a record that ages, may marry, conceive, bear children, fall ill, starve and die at
+historical per-game-year rates. Population is regulated by **dwellings** (marriage needs a home), **food** (fertility and
+death multipliers) and **crowding**, not by a counter.
 
 ## 2. Data
 New/extended columns (Phase 1 `PersonTable`: `Given, Family, Byname, Sex, BirthDay, Culture, Household, Father, Mother, Spouse, Occupation, Employer, WorkSettlement, WorkLot, Class, Attr, Skills, Traits, HomeSettlement, HomeLot, Bed, Homeless, Notable, Dynasty`):
@@ -20,8 +25,13 @@ New/extended columns (Phase 1 `PersonTable`: `Given, Family, Byname, Sex, BirthD
 | `LastBirthDay` | int | for the postpartum gap |
 | `MarriageWait` | byte | seasons spent eligible without a home |
 
-`PersonTable.IndexOf(id)` can no longer be `base + serial`: it becomes `SerialIndex` (open-addressing map `serial -> index`); dead/departed rows are kept (kin graph, legends) and compacted only by the yearly `PersonTable.Compact()` at save time when tombstones exceed 40% (rewrites indices, never ids). Memory after 100 years: 25,000 + ~64,500 births = ~90k rows x ~300 B = ~27 MB (inside the 25 MB records-only ring-2 budget only for the *living* subset; tombstones older than 20 years move to `Graveyard` (id, names, birth/death day, parents, cause) at 40 B each).
-`Settlement` side: `VacantDwellings[settlement]` (list of lot indices whose `Lot.IsDwelling` and `LotHousehold == -1`, ascending), `Pop`, `Households`, `Vacancy%`.
+`PersonTable.IndexOf(id)` can no longer be `base + serial`: it becomes `SerialIndex` (open-addressing map `serial -> index`);
+dead/departed rows are kept (kin graph, legends) and compacted only by the yearly `PersonTable.Compact()` at save time when
+tombstones exceed 40% (rewrites indices, never ids). Memory after 100 years: 25,000 + ~64,500 births = ~90k rows x ~300 B =
+~27 MB (inside the 25 MB records-only ring-2 budget only for the *living* subset; tombstones older than 20 years move to
+`Graveyard` (id, names, birth/death day, parents, cause) at 40 B each).
+`Settlement` side: `VacantDwellings[settlement]` (list of lot indices whose `Lot.IsDwelling` and `LotHousehold == -1`,
+ascending), `Pop`, `Households`, `Vacancy%`.
 
 Content `content/base/economy/vital.jsonc`:
 ```jsonc
@@ -44,9 +54,14 @@ mult_permille = nutrition_mult x crowding_mult x disease_mult x cold_mult x outb
 p_ppm         = base_ppm x mult / 1000 + (N == 0 ? starvation_ppm x (age < 5 or age >= 60 ? 2 : 1) : 0)
 dies          = DetRng.Chance(seed, hourKey, personId, 0x200, 0, p_ppm / 1e6)
 ```
-- Literal plan rule (divide the yearly rate by 60): the effective yearly probability is slightly lower than the table (age 0: 18.15% not 20%; 15-49: 1.19%).
-- `nutrition_mult` from `NutritionCd` (households spec); `crowding_mult` from the household's `crowding` (households 3.7); `disease_mult` 1200 for towns (`SettlementClass.Town`); `cold_mult` 1300 when `FuelCoverDays == 0` and `T_mean < 0`; `outbreak_mult` from 3.6.
-- On death: `Status = Dead`, remove from `MemberIdx` slice by swapping with the last member (`MemberCount--`), clear spouse link on the partner, queue inheritance (3.8), chronicle `Death` entry only for notable or violent/hunger deaths (cap 50 entries/day region-wide; others counted in `RegionSummary`).
+- Literal plan rule (divide the yearly rate by 60): the effective yearly probability is slightly lower than the table (age 0:
+  18.15% not 20%; 15-49: 1.19%).
+- `nutrition_mult` from `NutritionCd` (households spec); `crowding_mult` from the household's `crowding` (households 3.7);
+  `disease_mult` 1200 for towns (`SettlementClass.Town`); `cold_mult` 1300 when `FuelCoverDays == 0` and `T_mean < 0`;
+  `outbreak_mult` from 3.6.
+- On death: `Status = Dead`, remove from `MemberIdx` slice by swapping with the last member (`MemberCount--`), clear spouse
+  link on the partner, queue inheritance (3.8), chronicle `Death` entry only for notable or violent/hunger deaths (cap 50
+  entries/day region-wide; others counted in `RegionSummary`).
 
 ### 3.2 Conception and birth (daily, women)
 Eligible: married (`Spouse >= 0`, spouse alive and in the same household), age 18..44, not pregnant, `day - LastBirthDay >= 15`.
@@ -56,60 +71,115 @@ p_ppm = fertility_pct x 10,000 / 60  = 5,000
         x (crowding > 150 ? 800 : 1000) / 1000
 conceives = DetRng.Chance(seed, hourKey, womanId, 0x201, 0, p_ppm / 1e6)  ->  PregnantUntilDay = day + 45
 ```
-Birth (the woman's slice on day `PregnantUntilDay`): create a Person: id from the region allocator (`IdKind.Person`, origin region = the household's region), `Sex` = `Range(0,2)` (stream 0x201 draw 1), parents set, `Household` = mother's, `Class` = household class, `Culture` = mother's, name from `NamePools.For(culture)` keyed `(seed, personId)`, `BirthDay = day`, `NutritionCd = 3000`, attributes/skills from the Phase 1 child template (0..). Beds: child takes none (infant) until age 2.
-Steady state: a well-fed married woman has a birth every 200 + 45 + 15 = 260 days = **0.231 births per game year** (plan's "30% yearly fertility chance" realised as a daily conception chance).
+Birth (the woman's slice on day `PregnantUntilDay`): create a Person: id from the region allocator (`IdKind.Person`, origin
+region = the household's region), `Sex` = `Range(0,2)` (stream 0x201 draw 1), parents set, `Household` = mother's, `Class` =
+household class, `Culture` = mother's, name from `NamePools.For(culture)` keyed `(seed, personId)`, `BirthDay = day`,
+`NutritionCd = 3000`, attributes/skills from the Phase 1 child template (0..). Beds: child takes none (infant) until age 2.
+Steady state: a well-fed married woman has a birth every 200 + 45 + 15 = 260 days = **0.231 births per game year** (plan's
+"30% yearly fertility chance" realised as a daily conception chance).
 
 ### 3.3 Marriage gated on dwellings (seasonal S6, then weekly catch-up at H5 on doy%5 == 0)
 Per settlement cluster (settlement plus those within 5 km road):
-1. Eligible women: `Status Alive`, unmarried, age >= 16, age <= 40, not `Homeless Vagrant`; eligible men: unmarried, age >= 18, age <= 50. Widows/widowers are eligible but remarriage does not need a new dwelling (3.3.4).
-2. Each eligible woman is "proposed to" this season with probability `marry_chance_pct_per_season` (35%, stream 0x202, key woman id); proposed women are matched in ascending id to the unmarried man (same cluster) minimizing `|age diff - 3|` then `|class diff|` then id, excluding kin within the Phase 1 `KinGraph` degree 2 (siblings, parents, first cousins).
-3. **Housing brake**: a couple needs a home: (a) a vacant dwelling from `VacantDwellings` of the cluster (first lot ascending whose `Beds >= 2`), or (b) the groom's father's/widowed parent's household has a **dwelling inheritance pending** (groom is the heir of a head who just died; dwelling passes to him), or (c) the bride is the household head. Otherwise the pair waits: `MarriageWait++` (cap 8 seasons, then individuals try the next cluster or emigrate at S7).
+1. Eligible women: `Status Alive`, unmarried, age >= 16, age <= 40, not `Homeless Vagrant`; eligible men: unmarried, age >=
+   18, age <= 50. Widows/widowers are eligible but remarriage does not need a new dwelling (3.3.4).
+2. Each eligible woman is "proposed to" this season with probability `marry_chance_pct_per_season` (35%, stream 0x202, key
+   woman id); proposed women are matched in ascending id to the unmarried man (same cluster) minimizing `|age diff - 3|` then
+   `|class diff|` then id, excluding kin within the Phase 1 `KinGraph` degree 2 (siblings, parents, first cousins).
+3. **Housing brake**: a couple needs a home: (a) a vacant dwelling from `VacantDwellings` of the cluster (first lot ascending
+   whose `Beds >= 2`), or (b) the groom's father's/widowed parent's household has a **dwelling inheritance pending** (groom
+   is the heir of a head who just died; dwelling passes to him), or (c) the bride is the household head. Otherwise the pair
+   waits: `MarriageWait++` (cap 8 seasons, then individuals try the next cluster or emigrate at S7).
 4. Remarriage: a widow(er) moving into the spouse's dwelling merges households (beds permitting) with no vacancy needed.
-5. Effects: `Spouse` links set, new `Household` row created for (a)/(b) with head = groom, deed `Rented` (landlord = fief) unless the dwelling is Owned, `Occupation` unchanged; bride changes `Household`; dowry transfers 5% of the bride's parents' account (min 0) to the new household; chronicle entry for notables only.
-Stability follows from the brake: a fixed number of dwellings caps households; births exceeding the cap queue as unmarried adults (crowding), raise deaths and push emigrants.
+5. Effects: `Spouse` links set, new `Household` row created for (a)/(b) with head = groom, deed `Rented` (landlord = fief)
+   unless the dwelling is Owned, `Occupation` unchanged; bride changes `Household`; dowry transfers 5% of the bride's
+   parents' account (min 0) to the new household; chronicle entry for notables only.
+Stability follows from the brake: a fixed number of dwellings caps households; births exceeding the cap queue as unmarried
+adults (crowding), raise deaths and push emigrants.
 
 ### 3.4 Household formation and dissolution
-New household rows only via 3.3 or migration arrival. A household with `MemberCount == 0` dissolves at S6 (stock/account escheat 3.8). `Beds` come from the dwelling; the lot's `LotHousehold` is updated.
+New household rows only via 3.3 or migration arrival. A household with `MemberCount == 0` dissolves at S6 (stock/account
+escheat 3.8). `Beds` come from the dwelling; the lot's `LotHousehold` is updated.
 
 ### 3.5 Famine
-- Per person: nutrition reserve of 30 days (`NutritionCd = 3000`), drained by 100 centidays per fully missed day (households 3.2). `Hunger` death multiplier by `NutritionCd`: >= 2000: x1.0, 1000-1999: x1.5, 500-999: x2.0, < 500: x3.0; at 0 add `starvation_ppm_per_day` (0.5%/day). The poor die first because they have no stores/coin (the model does not special-case them).
-- **Famine event** (settlement level, daily H5): `famine = share of households with FoodCoverDays < 3 >= 15%` for 5 days -> chronicle `Famine` (cause: the highest-impact `CauseKind` found: weather loss share from farming entries within 120 days, else war/raid, else MarketDrift with supply/demand data). Famine flags the settlement for charity, migration push (3.7) and unrest (taxes spec).
+- Per person: nutrition reserve of 30 days (`NutritionCd = 3000`), drained by 100 centidays per fully missed day (households
+  3.2). `Hunger` death multiplier by `NutritionCd`: >= 2000: x1.0, 1000-1999: x1.5, 500-999: x2.0, < 500: x3.0; at 0 add
+  `starvation_ppm_per_day` (0.5%/day). The poor die first because they have no stores/coin (the model does not special-case
+  them).
+- **Famine event** (settlement level, daily H5): `famine = share of households with FoodCoverDays < 3 >= 15%` for 5 days ->
+  chronicle `Famine` (cause: the highest-impact `CauseKind` found: weather loss share from farming entries within 120 days,
+  else war/raid, else MarketDrift with supply/demand data). Famine flags the settlement for charity, migration push (3.7) and
+  unrest (taxes spec).
 - Fertility falls and miscarriages are modelled only by the 3.2 multiplier.
 
 ### 3.6 Disease
-Outbreaks per settlement per day (stream 0x204, key settlement id, draw = day): `base_ppm_per_day` by season x class table (JSON): winter coughs and fevers (town 4,000, village 1,500), summer flux in crowded camps/towns (town 2,500), none otherwise. An outbreak lasts `Range(8, 20)` days and gives `outbreak_mult` 1500 (mild) / 2500 (severe, 10% of outbreaks), only to persons with `NutritionCd < 2500` or age < 5 or >= 60 (others x1000). Averaged, disease adds ~12% to baseline deaths (calibration test). Weather linkage: wet year +30% outbreak chance, cold winter (`T_mean < -5` for 5 days) +50%.
+Outbreaks per settlement per day (stream 0x204, key settlement id, draw = day): `base_ppm_per_day` by season x class table
+(JSON): winter coughs and fevers (town 4,000, village 1,500), summer flux in crowded camps/towns (town 2,500), none
+otherwise. An outbreak lasts `Range(8, 20)` days and gives `outbreak_mult` 1500 (mild) / 2500 (severe, 10% of outbreaks),
+only to persons with `NutritionCd < 2500` or age < 5 or >= 60 (others x1000). Averaged, disease adds ~12% to baseline deaths
+(calibration test). Weather linkage: wet year +30% outbreak chance, cold winter (`T_mean < -5` for 5 days) +50%.
 
 ### 3.7 Migration (S7, seasonal)
-- **Push**: a household in `Tier = Survive` for the last two seasons, or `crowding > 150` for a season, or a settlement in `famine`, or a member with `MarriageWait >= 4`; each rolls `emigrate_chance_pct = 40` (stream 0x203).
-- **Pull** score per destination settlement `d` within 20 km (same or neighbouring detailed region): `score = 10 x vacancies(d) + 3 x wage_index(d) + 2 x food_cover_index(d) - distance_km - 5 x unrest(d)`; best score wins, ties lower id; destination needs >= 1 vacant dwelling (else the household becomes `Homeless Vagrant`, walks to the road, and tries again next season; vagrants over 2 seasons die at 1.5x or leave the region as `Migrants` with the continent tick).
-- Migrants are **visible**: a `MigrantGroup` record (household id, route polyline, speed 1.0 m/s with cart 2.5, stock carried = what fits on a handcart 150 kg) walks the road edges like a caravan (caravans spec) and arrives after `length / speed`. On arrival: dwelling assigned, deeds updated, `Region` column updated (if crossing, record transfer at the barrier, 3.9).
-- Immigration from outside the region comes from the continent tick (`inflow` per season) as MigrantGroups entering at a border gate.
+- **Push**: a household in `Tier = Survive` for the last two seasons, or `crowding > 150` for a season, or a settlement in
+  `famine`, or a member with `MarriageWait >= 4`; each rolls `emigrate_chance_pct = 40` (stream 0x203).
+- **Pull** score per destination settlement `d` within 20 km (same or neighbouring detailed region): `score = 10 x vacancies(d) + 3 x wage_index(d) + 2 x food_cover_index(d) - distance_km - 5 x unrest(d)`; best score wins, ties lower id;
+  destination needs >= 1 vacant dwelling (else the household becomes `Homeless Vagrant`, walks to the road, and tries again
+  next season; vagrants over 2 seasons die at 1.5x or leave the region as `Migrants` with the continent tick).
+- Migrants are **visible**: a `MigrantGroup` record (household id, route polyline, speed 1.0 m/s with cart 2.5, stock carried
+  = what fits on a handcart 150 kg) walks the road edges like a caravan (caravans spec) and arrives after `length / speed`.
+  On arrival: dwelling assigned, deeds updated, `Region` column updated (if crossing, record transfer at the barrier, 3.9).
+- Immigration from outside the region comes from the continent tick (`inflow` per season) as MigrantGroups entering at a
+  border gate.
 
 ### 3.8 Inheritance and escheat (on a head's death or dissolution)
-1. If the household still has a living adult (age >= 16): the household persists; new head = eldest adult son, else eldest adult daughter, else the spouse, else eldest adult member. Dwelling, parcels, businesses, stock and the account stay with the household (no splitting).
-2. If only minors remain: they go to the nearest adult kin household within the same cluster in `KinGraph` order (grandparent, aunt/uncle, sibling) together with the dwelling's stock and account (the guardian household absorbs them, beds permitting; the dwelling returns to the vacancy list). Parcels are re-let.
-3. No kin: **escheat** to the lord: stock and account to the fief treasury (`Escheat`), dwelling vacant, parcels re-let, children wards of the parish (join the priest's household, else vagrants who migrate).
+1. If the household still has a living adult (age >= 16): the household persists; new head = eldest adult son, else eldest
+   adult daughter, else the spouse, else eldest adult member. Dwelling, parcels, businesses, stock and the account stay with
+   the household (no splitting).
+2. If only minors remain: they go to the nearest adult kin household within the same cluster in `KinGraph` order
+   (grandparent, aunt/uncle, sibling) together with the dwelling's stock and account (the guardian household absorbs them,
+   beds permitting; the dwelling returns to the vacancy list). Parcels are re-let.
+3. No kin: **escheat** to the lord: stock and account to the fief treasury (`Escheat`), dwelling vacant, parcels re-let,
+   children wards of the parish (join the priest's household, else vagrants who migrate).
 4. Gentry/notables: Phase 1 `Notable/Dynasty` heirs follow the same order; the title goes with the household head.
 
 ### 3.9 Region crossing
-A person/household moving to another region is serialized (`PersonRecord`, household members, stocks, account) into the destination region's `MigrationMailbox` at the barrier; origin rows become `Departed`; ids unchanged (origin region bits stay); destination assigns a new row index. Order: mailboxes are applied in ascending (source region id, household id).
+A person/household moving to another region is serialized (`PersonRecord`, household members, stocks, account) into the
+destination region's `MigrationMailbox` at the barrier; origin rows become `Departed`; ids unchanged (origin region bits
+stay); destination assigns a new row index. Order: mailboxes are applied in ascending (source region id, household id).
 
 ## 4. Tick placement
-H4 slice: death rolls (everyone), conception/birth (women), nutrition effects. H5 (hour 0): famine/outbreak checks, weekly marriage catch-up. H6 S6: marriage matching, class, dissolution; S7: migration decisions (before caravans so migrants appear on roads the same day). L2 regions run the same per-day kernels once a day; L3/L4 use summary rates (`births = pop x 2.6%`, `deaths` by the stationary table scaled by the region's food index).
+H4 slice: death rolls (everyone), conception/birth (women), nutrition effects. H5 (hour 0): famine/outbreak checks, weekly
+marriage catch-up. H6 S6: marriage matching, class, dissolution; S7: migration decisions (before caravans so migrants appear
+on roads the same day). L2 regions run the same per-day kernels once a day; L3/L4 use summary rates (`births = pop x 2.6%`,
+`deaths` by the stationary table scaled by the region's food index).
 
 ## 5. Determinism
-All rolls are `DetRng` with keys above; iteration ascending person/household; births allocate serials in (hour, household index, woman index) order; matching uses ascending ids; migration scoring ties lowest id. Dead people stay in tables so ids/serials never reuse.
+All rolls are `DetRng` with keys above; iteration ascending person/household; births allocate serials in (hour, household
+index, woman index) order; matching uses ascending ids; migration scoring ties lowest id. Dead people stay in tables so
+ids/serials never reuse.
 
 ## 6. Interactions
-Households (nutrition, crowding, deaths remove members), farming/production (workers), taxes (hearth tax per household; unrest), markets (demand scales with pop), continent tick (inflow/outflow, summary pop), caravans (migrant groups share movement code), LODBridge (promoted people keep status).
+Households (nutrition, crowding, deaths remove members), farming/production (workers), taxes (hearth tax per household;
+unrest), markets (demand scales with pop), continent tick (inflow/outflow, summary pop), caravans (migrant groups share
+movement code), LODBridge (promoted people keep status).
 
 ## 7. Edge cases
 - Last member of a region dies: region summary pop 0; settlement flagged `Abandoned` (becomes a ruin source in later phases).
 - Mother dies in pregnancy: pregnancy ends silently (no stillbirth record; counted in summary).
-- Spouse in another region: marriage across the border allowed only after both records are in the same region (migration first); not modelled in Phase 2.
+- Spouse in another region: marriage across the border allowed only after both records are in the same region (migration
+  first); not modelled in Phase 2.
 - Age caps: persons reaching age 110 die (never occurs in practice).
 - Child ages: `AgeYears` = `(nowDay - BirthDay) / 60` (Phase 1).
 - Same-day birth and death of mother: birth happens first (slice order: births before deaths).
+
+
+## Decisions made in this spec (collected in 00-overview.md section 10.4)
+- **P1** Decision: Daily hazard is the yearly rate divided by 60 (literal plan rule). Reason: effective yearly mortality is slightly below the table (18.15% for infants).
+- **P2** Decision: No separate childbed mortality. Reason: covered by the 15-49 rate; avoids double counting.
+- **P3** Decision: Marriage matching runs each season with a 35% proposal chance and needs a home. Reason: the plan's dwelling brake with a staggered rate.
+- **P4** Decision: Orphans go to kin, else the parish; no kin means escheat. Reason: plan: eldest son -> children -> spouse -> lord.
+- **P5** Decision: Dead persons are kept (tombstones) and moved to a graveyard table after 20 years. Reason: kin graph and legends need them; memory stays flat.
+- **P6** Decision: Outbreaks are calibrated to add ~12% to baseline deaths. Reason: plan: town disease x1.2, winter coughs, summer flux.
+- **P7** Decision: Pushed households emigrate with 40% chance per season. Reason: migration must be visible and not instantaneous.
 
 ## 8. Golden tests
 | id | Case | Expected |

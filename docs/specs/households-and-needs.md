@@ -1,9 +1,12 @@
 # Households, needs baskets and household decision AI
 
-Plan refs: §4A.1 (keep: three-tier work logic, class-graded needs, buy-order pull, needs basket in kg), §4A.2 (households are the unit, housing capacity, overcrowding), §3a (the measure, "food in days"), §5 Phase 2 (households: needs baskets). Replaces legacy `ConsumptionSystem.gd` (class counts and a poll tax) and the daily per-tile loop.
+Plan refs: §4A.1 (keep: three-tier work logic, class-graded needs, buy-order pull, needs basket in kg), §4A.2 (households are
+the unit, housing capacity, overcrowding), §3a (the measure, "food in days"), §5 Phase 2 (households: needs baskets).
+Replaces legacy `ConsumptionSystem.gd` (class counts and a poll tax) and the daily per-tile loop.
 
 ## 1. Purpose
-A household is the unit that lives somewhere, holds stores and coin, eats, burns fuel, wears things out, shops, sends its workers to jobs and pays/receives money. It is the "decision AI" of plan §4A.1: **survive, then buffer, then profit.**
+A household is the unit that lives somewhere, holds stores and coin, eats, burns fuel, wears things out, shops, sends its
+workers to jobs and pays/receives money. It is the "decision AI" of plan §4A.1: **survive, then buffer, then profit.**
 
 ## 2. Data
 
@@ -22,7 +25,9 @@ A household is the unit that lives somewhere, holds stores and coin, eats, burns
 | `SeedReserveG` | int | grain reserved for next sowing (farming 3.5) |
 | `Income15d`, `Expense15d` | long | rolling 15-day sums for hoard/buffer decisions |
 
-Columns added to `PersonTable`: `Region` (byte), `NutritionCd` (short, centidays 0..3000, default 3000), `JobKind` (enum `None/Own/Employee/Hired/Forage`), `JobRef` (business/parcel/extraction id), `WageOwedMites` (int arrears owed to this person), `QuitCounter` (byte).
+Columns added to `PersonTable`: `Region` (byte), `NutritionCd` (short, centidays 0..3000, default 3000), `JobKind` (enum
+`None/Own/Employee/Hired/Forage`), `JobRef` (business/parcel/extraction id), `WageOwedMites` (int arrears owed to this
+person), `QuitCounter` (byte).
 
 ### 2.2 Content: `content/base/economy/needs.jsonc`
 ```jsonc
@@ -38,35 +43,59 @@ Columns added to `PersonTable`: `Region` (byte), `NutritionCd` (short, centidays
 | Peasant | 0.80 | 0.20 | 200 | 1,500 | 1,095 |
 | Burgher | 0.72 | 0.28 | 300 | 1,500 | 730 |
 | Gentry | 0.50 | 0.50 | 500 | 2,000 | 365 |
-Children under 12 drink half the ale. **Everyone eats 1.0 measure-equivalent per day** (staple + relish) as plan §3a states; per-age appetite is a possible later refinement (Decision: literal plan value, simple). Firewood is x2 in cold: `fuel_mult_x100 = 100 + clamp((12 - T_mean) x 100 / 12, 0, 100)` with `T_mean` the day's mean temp (`RegionWeather.DailyMeanTemp`): 0 C or colder -> x2.0, 6 C -> x1.5, 12 C+ -> x1.0 (plan: doubles in winter).
-Staple goods: grain (any), flour, bread. Relish goods: fish, meat, dairy (cheese, milk, butter), vegetables, eggs, pulses, preserved fish/meat. Each good has `food_measures_per_kg` (`items.jsonc`: grain 0.909, flour 0.95, bread 0.80, fish 0.45, meat 0.69, cheese 0.96, vegetables 0.15, eggs 0.5, pulses 0.909).
+Children under 12 drink half the ale. **Everyone eats 1.0 measure-equivalent per day** (staple + relish) as plan §3a states;
+per-age appetite is a possible later refinement (Decision: literal plan value, simple). Firewood is x2 in cold:
+`fuel_mult_x100 = 100 + clamp((12 - T_mean) x 100 / 12, 0, 100)` with `T_mean` the day's mean temp
+(`RegionWeather.DailyMeanTemp`): 0 C or colder -> x2.0, 6 C -> x1.5, 12 C+ -> x1.0 (plan: doubles in winter).
+Staple goods: grain (any), flour, bread. Relish goods: fish, meat, dairy (cheese, milk, butter), vegetables, eggs, pulses,
+preserved fish/meat. Each good has `food_measures_per_kg` (`items.jsonc`: grain 0.909, flour 0.95, bread 0.80, fish 0.45,
+meat 0.69, cheese 0.96, vegetables 0.15, eggs 0.5, pulses 0.909).
 
 ## 3. Rules
 
 ### 3.1 Class
-Recomputed at S6 each season: **Gentry** if head holds a fief or has occupation `Lord/Steward`, or (rare) assets >= 400 x `wage_craftsman_mites_per_day`; **Burgher** if `OccupationInfo.IsTrade(head)` or assets >= 60 x craftsman wage; else **Peasant**. (Plan §4A.2: class derived from occupation and property; mobility emerges.)
+Recomputed at S6 each season: **Gentry** if head holds a fief or has occupation `Lord/Steward`, or (rare) assets >= 400 x
+`wage_craftsman_mites_per_day`; **Burgher** if `OccupationInfo.IsTrade(head)` or assets >= 60 x craftsman wage; else
+**Peasant**. (Plan §4A.2: class derived from occupation and property; mobility emerges.)
 
 ### 3.2 Daily needs (H4 slice, one pass per household per day)
 Order inside the slice: `plan work -> eat -> drink -> heat -> wear -> nutrition -> update tier/cover caches -> post orders -> wage/transfers due`.
 
-1. **Staple**: `need_m = round(sum over members of class staple)` (integer measure-hundredths). Draw from stock in order flour, bread, pulses, grain (excluding `SeedReserveG` until the emergency of 3.6). Eating `N` g of grain-equivalent from **grain** draws `N x 16 / 15` g when the settlement has a mill within `mill_reach_m` (4,000): the extra `N/15` is paid in kind to the miller's stock (reason `MillToll`, the plan's 1/16). Flour/bread bypass the toll.
-2. **Relish**: draw relish goods ascending by perishability (fish, meat first, then dairy, vegetables, pulses, preserved). Any relish shortfall is replaced by staple grain at 1 measure per measure (substitution) so the person is fed, but it raises grain demand and sets `diet_poor` (feeds disease/unrest, population spec).
-3. **Ale**: `ale_ml x (adults + 0.5 x children)`; from `ale` stock; no penalty in Phase 2 other than a `Grievance.Lord`-independent mood flag (stub for Phase 3).
-4. **Fuel**: `firewood_g x fuel_mult x members`; shortage with `T_mean < 0` sets `Grievance.Cold` and the cold mortality multiplier (population spec 3.5).
-5. **Wear**: each of `clothes` pieces owned fails with probability `1/clothes_lifetime_days` (stream 0x221, key household id, draw per piece); a failed piece is destroyed (`Worn`). Tools: `tools_common` pieces (1 per 2 workers, min 1) fail with `1/tools_lifetime_days`; smiths/farmers with no tool work at 50% efficiency (production spec).
+1. **Staple**: `need_m = round(sum over members of class staple)` (integer measure-hundredths). Draw from stock in order
+   flour, bread, pulses, grain (excluding `SeedReserveG` until the emergency of 3.6). Eating `N` g of grain-equivalent from
+   **grain** draws `N x 16 / 15` g when the settlement has a mill within `mill_reach_m` (4,000): the extra `N/15` is paid in
+   kind to the miller's stock (reason `MillToll`, the plan's 1/16). Flour/bread bypass the toll.
+2. **Relish**: draw relish goods ascending by perishability (fish, meat first, then dairy, vegetables, pulses, preserved).
+   Any relish shortfall is replaced by staple grain at 1 measure per measure (substitution) so the person is fed, but it
+   raises grain demand and sets `diet_poor` (feeds disease/unrest, population spec).
+3. **Ale**: `ale_ml x (adults + 0.5 x children)`; from `ale` stock; no penalty in Phase 2 other than a
+   `Grievance.Lord`-independent mood flag (stub for Phase 3).
+4. **Fuel**: `firewood_g x fuel_mult x members`; shortage with `T_mean < 0` sets `Grievance.Cold` and the cold mortality
+   multiplier (population spec 3.5).
+5. **Wear**: each of `clothes` pieces owned fails with probability `1/clothes_lifetime_days` (stream 0x221, key household id,
+   draw per piece); a failed piece is destroyed (`Worn`). `cookware` (1 per household, lifetime 1,825 days, from bronze goods, production spec) wears the same way. Tools: `tools_common` pieces (1 per 2 workers, min 1) fail with
+   `1/tools_lifetime_days`; smiths/farmers with no tool work at 50% efficiency (production spec).
 6. **Nutrition** (per member): `r = eaten_measures / need`;
-   `if r >= 1000 permille: N = min(3000, N + 50)  else: N = max(0, N - 100 x (1 - r))` (centidays; full-day starvation drains one day of reserve; refilling 60 days).
+   `if r >= 1000 permille: N = min(3000, N + 50)  else: N = max(0, N - 100 x (1 - r))` (centidays; full-day starvation drains
+one day of reserve; refilling 60 days).
 7. **Caches**: `FoodCoverDays = (staple+relish stock in measure-eq) / need_m_per_day`, `FuelCoverDays`, `CashCoverDays = account / avg daily expense`.
 
 ### 3.3 Mill toll
-Millers (Phase 1 `LotUse.Mill`, occupation `Miller`) are businesses whose input is toll grain; toll grain sits in the miller's household stock/stall and is sold or eaten. Absence of a mill within 4 km: grinding by hand quern costs `quern_hours_per_person_day_x100 = 8` of a female adult's hours (they cannot work a job; production spec) and no toll.
+Millers (Phase 1 `LotUse.Mill`, occupation `Miller`) are businesses whose input is toll grain; toll grain sits in the
+miller's household stock/stall and is sold or eaten. Absence of a mill within 4 km: grinding by hand quern costs
+`quern_hours_per_person_day_x100 = 8` of a female adult's hours (they cannot work a job; production spec) and no toll.
 
 ### 3.4 Shopping (the buy-order pull model, H3 market session)
 For each good `g` in the basket: `target_g = target_cover_days x daily_need_g`, `reorder_g = target_g / 2`. If `stock_g < reorder_g` the household posts `order(g, target_g - stock_g, max_ratio)` in its slice hour:
-- `max_ratio` (max accepted `ask/Ref`): `Survive` tier 4.0 (any price); `Buffer` 2.0; `Profit` 1.5. Staples for a household with `FoodCoverDays < 3` ignore the ratio.
-- Spending cap: `spend <= account - tax_reserve - 3 x daily wage expectation` for Buffer/Profit; Survive may spend everything. The order is filled by `MaxAffordable` (money spec 3.2), cheaper substitutes first when the ratio is exceeded (flour -> grain; fish -> pulses).
-- Farmers sell surplus after harvest: `surplus_g = stock_g - keep_g`, `keep_g = max(target cover, next-sowing seed, 1.1 x remaining-year need until next harvest)`; offered to merchants (money spec 3.4). A farm household in `Survive` never sells grain below 30 days of cover.
-Durables: missing clothes/tools (`owned < members` / `< workers/2`) post an order at the next session regardless of cover; a household unable to afford wears fewer pieces (`Clothing` stat, Phase 3 mood).
+- `max_ratio` (max accepted `ask/Ref`): `Survive` tier 4.0 (any price); `Buffer` 2.0; `Profit` 1.5. Staples for a household
+  with `FoodCoverDays < 3` ignore the ratio.
+- Spending cap: `spend <= account - tax_reserve - 3 x daily wage expectation` for Buffer/Profit; Survive may spend
+  everything. The order is filled by `MaxAffordable` (money spec 3.2), cheaper substitutes first when the ratio is exceeded
+  (flour -> grain; fish -> pulses).
+- Farmers sell surplus after harvest: `surplus_g = stock_g - keep_g`, `keep_g = max(target cover, next-sowing seed, 1.1 x remaining-year need until next harvest)`; offered to merchants (money spec 3.4). A farm household in `Survive` never sells
+  grain below 30 days of cover.
+Durables: missing clothes/tools (`owned < members` / `< workers/2`) post an order at the next session regardless of cover; a
+household unable to afford wears fewer pieces (`Clothing` stat, Phase 3 mood).
 
 ### 3.5 Work allocation: survive, buffer, profit (H4 plan; H2 credit)
 ```
@@ -75,40 +104,80 @@ Survive  if food < survive_below_days(10) or (fuel < 3 and T_mean < 0)
 Buffer   if food < buffer_below_days(20) or fuel < 10 or cash < 15
 Profit   otherwise
 ```
-Each working member (age >= `MinWorkAge`, not pregnant in last 15 days, not levied, `hours = workday_hours` capped by daylight, minus child-care for the youngest woman: 1 hour per child under 5 up to 3 h) is assigned in this order:
-1. **Survive**: own farm task with the nearest deadline; else wage work paying >= 1 measure-eq per day-hour (market ref); else `Forage` (extraction spec seasonal windows); the head never takes jobs farther than `max_commute_m = 3000`.
-2. **Buffer**: current occupation at the current workplace (own business, employer, or parcel work) and farm tasks first; surplus hours to hired labour at the settlement's `LabourBoard`.
-3. **Profit**: the highest `expected_daily_mites` among: own craft/farm output priced at current `Ref`, hired labour at posted wages (harvest premium), caravan guard/haul jobs (Phase 3), idle (mood, Phase 3). Expected value uses *last seen* prices with age (money spec).
-Jobs: a person changes job only by being **hired** (a vacancy posted by a business with `OpenSlots`, filled at H5 in ascending business id, candidates ascending person id, preferring matching skill then lowest current wage) or by **quitting** (`QuitCounter` reaches 3 unpaid days, or wage < 0.8 x best offer for 15 consecutive days, or employer dissolved). `Occupation`, `Employer`, `WorkSettlement`, `WorkLot` (Phase 1) are updated at hire/quit.
+Each working member (age >= `MinWorkAge`, not pregnant in last 15 days, not levied, `hours = workday_hours` capped by
+daylight, minus child-care for the youngest woman: 1 hour per child under 5 up to 3 h) is assigned in this order:
+1. **Survive**: own farm task with the nearest deadline; else wage work paying >= 1 measure-eq per day-hour (market ref);
+   else `Forage` (extraction spec seasonal windows); no job farther than `max_commute_m = 1,350` (1.5 game hours at the 5 m/s
+   NPC commute pace, abstract spec 3.4) unless it is a field camp.
+2. **Buffer**: current occupation at the current workplace (own business, employer, or parcel work) and farm tasks first;
+   surplus hours to hired labour at the settlement's `LabourBoard`.
+3. **Profit**: the highest `expected_daily_mites` among: own craft/farm output priced at current `Ref`, hired labour at
+   posted wages (harvest premium), caravan guard/haul jobs (Phase 3), idle (mood, Phase 3). Expected value uses *last seen*
+   prices with age (money spec).
+Jobs: a person changes job only by being **hired** (a vacancy posted by a business with `OpenSlots`, filled at H5 in
+ascending business id, candidates ascending person id, preferring matching skill then lowest current wage) or by **quitting**
+(`QuitCounter` reaches 3 unpaid days, or wage < 0.8 x best offer for 15 consecutive days, or employer dissolved).
+`Occupation`, `Employer`, `WorkSettlement`, `WorkLot` (Phase 1) are updated at hire/quit.
 
 ### 3.6 Hunger and the emergency
-If `FoodCoverDays < 1` the household enters `Emergency` for the day: it may (in order) eat `SeedReserve`, sell tools/clothes? (no, Phase 3), take **charity** from the parish granary (tithe stock, up to 0.5 measure per member per day, reason `Charity`; parish gives to households with lowest cover first, stable by id), and set `Grievance.Hunger`. A household that eats seed sets `SownPpm` lower next sowing (farming 3.5).
+If `FoodCoverDays < 1` the household enters `Emergency` for the day: it may (in order) eat `SeedReserve`, sell tools/clothes?
+(no, Phase 3), take **charity** from the parish granary (tithe stock, up to 0.5 measure per member per day, reason `Charity`;
+parish gives to households with lowest cover first, stable by id), and set `Grievance.Hunger`. A household that eats seed
+sets `SownPpm` lower next sowing (farming 3.5).
 
 ### 3.7 Housing
-Capacity `Beds` (Phase 1 per dwelling: cottage 4-7, longhouse 6-10, burgage 6-12). `crowding = members x 100 / beds` (percent). Effects: `crowding > 100` -> `Grievance.Crowding` after 15 days; death multiplier table `overcrowd_death_mult_permille` { <=100:1000, <=125:1050, <=150:1100, >150:1200 } and disease x1.2 in towns (population spec). Extra members (lodgers, grown children) occupy beds first-come by age; the surplus becomes `Homeless(NoRoom)` (Phase 1 enum) sleeping in barns/inns (no bed -> `crowding` for the host). Dwelling vacancy and marriage gating are in the population spec.
+Capacity `Beds` (Phase 1 per dwelling: cottage 4-7, longhouse 6-10, burgage 6-12). `crowding = members x 100 / beds`
+(percent). Effects: `crowding > 100` -> `Grievance.Crowding` after 15 days; death multiplier table
+`overcrowd_death_mult_permille` { <=100:1000, <=125:1050, <=150:1100, >150:1200 } and disease x1.2 in towns (population
+spec). Extra members (lodgers, grown children) occupy beds first-come by age; the surplus becomes `Homeless(NoRoom)` (Phase 1
+enum) sleeping in barns/inns (no bed -> `crowding` for the host). Dwelling vacancy and marriage gating are in the population
+spec.
 
 ### 3.8 Heads, splits, merges
-Head = eldest adult male member, else eldest adult female (inheritance order in population spec). A household with no members is **dissolved** at S6: stock and coin escheat/inherit (population spec 3.8), dwelling becomes vacant, parcels return to the landlord.
+Head = eldest adult male member, else eldest adult female (inheritance order in population spec). A household with no members
+is **dissolved** at S6: stock and coin escheat/inherit (population spec 3.8), dwelling becomes vacant, parcels return to the
+landlord.
 
 ## 4. Tick placement
-- **H3**: shopping for households whose slice hour (`index % 24`) falls in the session (or next open hour); orders after the producers' sell step.
-- **H4 daily slice** (hour `= index % 24`): 3.2 and 3.5 planning, wage receipts credited (employers push wages in their own slice; households only receive).
+- **H3**: shopping for households whose slice hour (`index % 24`) falls in the session (or next open hour); orders after the
+  producers' sell step.
+- **H4 daily slice** (hour `= index % 24`): 3.2 and 3.5 planning, wage receipts credited (employers push wages in their own
+  slice; households only receive).
 - **H5 hour 0**: hiring/quitting pass per settlement (3.5), class update only at S6.
 - **S6**: class, tier statistics, dissolve empty households, grievance roll-up for unrest.
-- Live tier: no household logic; a household member promoted to the bubble keeps its plan (`JobKind/JobRef`) as the abstract job state (LODBridge).
+- Live tier: no household logic; a household member promoted to the bubble keeps its plan (`JobKind/JobRef`) as the abstract
+  job state (LODBridge).
 
 ## 5. Determinism
-Ascending household index; members ascending person index; ties via `0x220`. Stochastic rounding of grams (e.g., toll remainder, spoilage) uses stream 0x221 with `(hourKey, householdId, draw = goodId)`. Wear draws `(hourKey, householdId, 0x221, 1000 + pieceIndex)`. Wear is a **daily flow** (plan §4A time compression): lifetimes are historical days (a peasant's clothes last ~3 years = 1,095 game days), not scaled by 60/365.
+Ascending household index; members ascending person index; ties via `0x220`. Stochastic rounding of grams (e.g., toll
+remainder, spoilage) uses stream 0x221 with `(hourKey, householdId, draw = goodId)`. Wear draws `(hourKey, householdId, 0x221, 1000 + pieceIndex)`. Wear is a **daily flow** (plan §4A time compression): lifetimes are historical days (a peasant's
+clothes last ~3 years = 1,095 game days), not scaled by 60/365.
 
 ## 6. Interactions
-Farming (harvest stock, seed reserve, tithe), markets (orders, selling), production (wages, labour board), extraction (forage jobs), population (nutrition -> death multipliers, housing -> marriage), taxes (hearth tax, arrears, grievance), items (goods ids, spoilage), LODBridge (job state, inventory carried).
+Farming (harvest stock, seed reserve, tithe), markets (orders, selling), production (wages, labour board), extraction (forage
+jobs), population (nutrition -> death multipliers, housing -> marriage), taxes (hearth tax, arrears, grievance), items (goods
+ids, spoilage), LODBridge (job state, inventory carried).
 
 ## 7. Edge cases
-- Household with no workers (all children/old): lives on stores, charity, kin transfers (an adult kin household within 1 km sends 10% of surplus staple monthly: `kin_support_pct`), else starves.
-- Head dies while holding the only account: account passes to the new head's household, same index (the household persists); coin is never split by RNG.
-- A farm household whose crop failed with `FoodCoverDays < 10` and no money sells **tools last** (Phase 3), emigrates at S7 (population spec) if `Survive` for 2 seasons.
+- Household with no workers (all children/old): lives on stores, charity, kin transfers (an adult kin household within 1 km
+  sends 10% of surplus staple monthly: `kin_support_pct`), else starves.
+- Head dies while holding the only account: account passes to the new head's household, same index (the household persists);
+  coin is never split by RNG.
+- A farm household whose crop failed with `FoodCoverDays < 10` and no money sells **tools last** (Phase 3), emigrates at S7
+  (population spec) if `Survive` for 2 seasons.
 - Zero-price goods are impossible (markets spec 8); orders exceeding the whole market stock are truncated to stock.
-- Mills out of reach in winter (frozen river wheel): toll rule still applies (hand-quern penalty not applied) - Phase 2 ignores mill seasonality (noted for Phase 5).
+- Mills out of reach in winter (frozen river wheel): toll rule still applies (hand-quern penalty not applied) - Phase 2
+  ignores mill seasonality (noted for Phase 5).
+
+
+## Decisions made in this spec (collected in 00-overview.md section 10.4)
+- **H1** Decision: Everyone eats 1.0 measure-equivalent per day (no age scaling). Reason: plan §3a literal; keeps the region food test simple.
+- **H2** Decision: Peasant basket is 0.80 staple + 0.20 relish; relish can be replaced by grain 1:1. Reason: avoids a famine from one missing food (E14).
+- **H3** Decision: Tiers: Survive below 10 days of food cover, Buffer below 20. Reason: plan §4A.1 survive, buffer, profit; thresholds tunable.
+- **H4** Decision: Class is recomputed each season from occupation and assets. Reason: plan §4A.2: class derived, mobility emerges.
+- **H5** Decision: Clothes/tools/shoes lifetimes are historical days (1,095 / 900 / 365 for peasants). Reason: wear is a daily flow (E13).
+- **H6** Decision: Nutrition reserve drains 100 centidays per missed day and refills 50 per full day. Reason: plan: 30-day reserve; 60-day refill is a reasonable pace.
+- **H7** Decision: Seed corn is eaten only in an emergency. Reason: historically true and keeps next year's sowing meaningful.
 
 ## 8. Golden tests
 | id | Case | Expected |
@@ -128,8 +197,11 @@ Farming (harvest stock, seed reserve, tithe), markets (orders, selling), product
 | G-H13 | Permutation: households processed in any input order within one hour | identical stocks, accounts, `NutritionCd` |
 
 ## 9. Soak invariants
-1. In a normal year, `FoodCoverDays` of the median household >= 10 on every day after the first harvest; the 5th percentile never < 3 outside forced-drought years.
+1. In a normal year, `FoodCoverDays` of the median household >= 10 on every day after the first harvest; the 5th percentile
+   never < 3 outside forced-drought years.
 2. No household account is negative; no stock negative.
 3. Share of households in `Survive` over a normal year <= 8% (annual mean), over a drought year <= 35%.
-4. Worn-out clothes/tools destroyed per year within 10% of `pieces owned / lifetime_days x 60` summed over households (region ~1,370 clothes per game year).
-5. Employment: >= 90% of working-age persons with an occupation have an `Employer`/`Own` job each day; vacancies < 5% of workstations.
+4. Worn-out clothes/tools destroyed per year within 10% of `pieces owned / lifetime_days x 60` summed over households (region
+   ~1,370 clothes per game year).
+5. Employment: >= 90% of working-age persons with an occupation have an `Employer`/`Own` job each day; vacancies < 5% of
+   workstations.
