@@ -94,7 +94,7 @@ public sealed class MarketBook
     public MarketBook(EconomyState econ, int settlementIndex, EntityId settlementId, string name, PurseId tollPurse, int population, ulong seed)
     {
         Econ = econ; Money = econ.Money; SettlementIndex = settlementIndex; SettlementId = settlementId; Name = name; TollPurse = tollPurse; Population = population; Seed = seed;
-        BookStore = econ.OpenStore(StoreKind.House, EconIds.MarketStore(settlementIndex));
+        BookStore = econ.OpenStore(StoreKind.Granary, EconIds.MarketStore(settlementIndex), 0, 0, enforce: false);   // the market hall is a warehouse (decision I28): grain keeps as in a granary
         var cat = econ.Goods;
         Goods = new GoodBook[cat.Count];
         for (ushort g = 0; g < cat.Count; g++)

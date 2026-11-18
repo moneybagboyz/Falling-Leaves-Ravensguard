@@ -268,7 +268,7 @@ public class FarmingSystemTests(ITestOutputHelper output)
         Assert.Equal(w.State.SeedSownG, sown);
         Assert.Equal(w.State.HarvestG, w.State.TitheG + w.State.RentG + (w.State.HarvestG - w.State.TitheG - w.State.RentG));
         long parish = w.Econ.OtherStores[FarmIds.ParishGranary(0)].Rows().Sum(r => r.Qty);
-        Assert.True(parish > 0 && parish <= w.State.TitheG);               // the granary spoils 1% a season
+        Assert.True(parish > 0 && parish <= w.State.TitheG + w.State.GleanedG);   // the tithe and the gleanings; the granary spoils 1% a season
         Assert.True(w.Econ.HouseholdStore[0].TotalMassG() > 0);            // the lord's rent
         Assert.True(w.Econ.Mass.Created(w.Good("straw"), CreateReason.Harvest) > 0);
     }

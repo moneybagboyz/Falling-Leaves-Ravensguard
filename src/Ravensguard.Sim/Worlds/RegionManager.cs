@@ -16,7 +16,14 @@ public sealed class GeneratedRegion
     public required RegionCoord Coord { get; init; }
     public required RegionData Region { get; init; }
     public required Population Population { get; init; }
-    public required ChunkGenerator Generator { get; init; }
+    /// <summary>The region's chunk generator. Made on first use (5-6 MB of road and lot indices) unless handed in: a neighbour nobody walks in never pays for it.</summary>
+    public ChunkGenerator Generator { get => _gen ??= ChunkGenerator.For(Region, Population, Content ?? throw new InvalidOperationException("no content for the chunk generator")); init => _gen = value; }
+    private ChunkGenerator? _gen;
+    internal ContentDatabase? Content { get; init; }
+    /// <summary>True once <see cref="Generator"/> has been made.</summary>
+    public bool HasGenerator => _gen != null;
+    /// <summary>Lets go of the generator (5-6 MB); the next use makes it again. For a region nobody is near.</summary>
+    internal void ReleaseGenerator() { var g = _gen; if (g == null) return; _gen = null; ChunkGenerator.Forget(Region); }
     /// <summary>Wall-clock milliseconds the build took (region, landmarks, people, chunk generator); 0 for a region handed in already built.</summary>
     public double BuildMs { get; init; }
     /// <summary>The region's records (people, economy ...), made on the worker with the region when the manager has a <see cref="RegionManager.RecordsFactory"/>; null otherwise.</summary>
@@ -46,6 +53,24 @@ public sealed class RegionManager
     public int MaxConcurrent { get; set; } = 2;
     /// <summary>Build inline in <see cref="Track"/> instead of on workers: tests and the loading of a saved game.</summary>
     public bool Synchronous { get; set; }
+    /// <summary>Release the terrain layers nothing reads after generation (<see cref="Region.TrimDerived"/>) in every region built here (not the adopted home region): the game's setting, off for tests that read heights.</summary>
+    public bool TrimTerrain { get; set; }
+    /// <summary>Raised (under the manager's lock, on the thread that attached) when a built region becomes ready; <see cref="RegionRecordSet"/> takes the region's records in at once, so a chunk of it never streams before its saved chunk entries are in the store.</summary>
+    public event Action<GeneratedRegion>? Attached;
+    /// <summary>Make every region's chunk generator when it is built, however far the travellers are (tests that stream any region at once).</summary>
+    public bool KeepGenerators { get; set; }
+
+    /// <summary>
+    /// Releases the chunk generators of regions no traveller is within <see cref="HysteresisM"/> of (never the home region's, which the streamer holds); called at a barrier.
+    /// Returns how many went.
+    /// </summary>
+    public int ReleaseDistantGenerators(RegionCoord home)
+    {
+        List<GeneratedRegion> far = [];
+        lock (_gate) foreach (var g in _ready.Values) if (g.HasGenerator && g.Coord != home && !NearAnyTraveller(g.Coord, HysteresisM)) far.Add(g);
+        foreach (var g in far) g.ReleaseGenerator();
+        return far.Count;
+    }
     /// <summary>Makes a built region's records on the worker (fresh, or restored from a paged section). Set by <see cref="RegionRecordSet"/>.</summary>
     public Func<RegionCoord, RegionData, Population, RegionWorld?>? RecordsFactory { get; set; }
 
@@ -70,7 +95,7 @@ public sealed class RegionManager
     /// <summary>Hands in a region that was built elsewhere (the embark region), so it is never built twice.</summary>
     public GeneratedRegion Adopt(RegionCoord at, RegionData region, Population population)
     {
-        var g = new GeneratedRegion { Coord = at, Region = region, Population = population, Generator = ChunkGenerator.For(region, population, Content) };
+        var g = new GeneratedRegion { Coord = at, Region = region, Population = population, Generator = ChunkGenerator.For(region, population, Content), Content = Content };
         lock (_gate) { _ready[at.Id] = g; Revision++; }
         return g;
     }
@@ -100,8 +125,13 @@ public sealed class RegionManager
         var pop = Populator.Populate(region, History, Content);
         var rec = RecordsFactory?.Invoke(at, region, pop);
         pop = rec?.Population ?? pop;
-        var gen = ChunkGenerator.For(region, pop, Content);
-        return new GeneratedRegion { Coord = at, Region = region, Population = pop, Generator = gen, Records = rec, BuildMs = sw.Elapsed.TotalMilliseconds };
+        if (TrimTerrain) region.TrimDerived();
+        var g = new GeneratedRegion { Coord = at, Region = region, Population = pop, Content = Content, Records = rec, BuildMs = sw.Elapsed.TotalMilliseconds };
+        // a region a traveller is near will be streamed soon: its chunk generator (about 100 ms of indices) is made here, on the worker, not on the frame that first needs it;
+        // one built for the scheduler's sake (a ring-1 region far from the hero) makes it on first use
+        bool near; lock (_gate) near = NearAnyTraveller(at, HysteresisM);
+        if (near || KeepGenerators) _ = g.Generator;
+        return g;
     }
 
     /// <summary>Makes a region ready now on the calling thread (a teleport target, a test, a load): the region if already built.</summary>
@@ -116,7 +146,7 @@ public sealed class RegionManager
     private void Attach(GeneratedRegion g)
     {
         var t = Stopwatch.GetTimestamp();
-        if (!_ready.ContainsKey(g.Coord.Id)) { _ready[g.Coord.Id] = g; _generated++; Revision++; }
+        if (!_ready.ContainsKey(g.Coord.Id)) { _ready[g.Coord.Id] = g; _generated++; Revision++; Attached?.Invoke(g); }
         _lastMs = g.BuildMs; _maxMs = Math.Max(_maxMs, g.BuildMs); _totalMs += g.BuildMs;
         _queued.Remove(g.Coord.Id); _requested.Remove(g.Coord.Id);
         _maxAttachMs = Math.Max(_maxAttachMs, Stopwatch.GetElapsedTime(t).TotalMilliseconds);

@@ -24,6 +24,8 @@ public sealed class VitalState
     public ulong[] OutbreakEntry = [];
 
     public long Births, Marriages, Immigrants, Emigrants;
+    /// <summary>Hunger deaths by age band (0-4, 5-14, 15-49, 50+) x 8 + class x 2 + landed (diagnostics only).</summary>
+    public long[] HungerBySegment = new long[32];
     /// <summary>Deaths by <see cref="DeathCause"/> (index = enum value).</summary>
     public long[] DeathsByCause = new long[Enum.GetValues<DeathCause>().Length];
     /// <summary>Living people (kept by births and deaths so no one has to scan the table).</summary>

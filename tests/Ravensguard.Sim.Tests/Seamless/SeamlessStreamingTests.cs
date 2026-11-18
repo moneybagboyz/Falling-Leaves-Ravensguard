@@ -126,7 +126,7 @@ public class SeamlessStreamingTests(ITestOutputHelper output)
     // ------------------------------------------------------------------ the walk
 
     /// <summary>Nodes of a region's road graph with the shortest road distance from a source node (Dijkstra over edge lengths).</summary>
-    private static (long[] Dist, int[] Via) Roads(RegionData r, int src)
+    internal static (long[] Dist, int[] Via) Roads(RegionData r, int src)
     {
         int n = r.RoadNodes.Count;
         var adj = new List<(int To, int Edge)>[n];
@@ -149,7 +149,7 @@ public class SeamlessStreamingTests(ITestOutputHelper output)
     }
 
     /// <summary>The road from <paramref name="src"/> to <paramref name="dst"/> as points in continent metres.</summary>
-    private static List<(long X, long Y)> RoadPath(RegionData r, RegionCoord at, int src, int dst, (long[] Dist, int[] Via) t)
+    internal static List<(long X, long Y)> RoadPath(RegionData r, RegionCoord at, int src, int dst, (long[] Dist, int[] Via) t)
     {
         var edges = new List<(int Edge, bool Forward)>();
         for (int cur = dst; cur != src;)
@@ -171,7 +171,7 @@ public class SeamlessStreamingTests(ITestOutputHelper output)
     }
 
     /// <summary>A route along real roads: starts on the road of the first east gate of <paramref name="home"/> about <paramref name="leadM"/> metres before it, crosses region 2 gate to gate, and ends <paramref name="tailM"/> metres into region 3.</summary>
-    private static List<(long X, long Y)>? RoadRoute(SeamWorld w, RegionCoord home, int leadM, int tailM)
+    internal static List<(long X, long Y)>? RoadRoute(SeamWorld w, RegionCoord home, int leadM, int tailM)
     {
         var r1 = w.Region(home); var r2 = w.Region(home.Offset(1, 0)); var r3 = w.Region(home.Offset(2, 0));
         foreach (var g1 in r1.Gates.Where(g => g.Side == BorderSide.East).OrderByDescending(g => g.Class))
@@ -202,7 +202,7 @@ public class SeamlessStreamingTests(ITestOutputHelper output)
         return null;
     }
 
-    private static List<(long X, long Y)> Resample(List<(long X, long Y)> pts, int stepM)
+    internal static List<(long X, long Y)> Resample(List<(long X, long Y)> pts, int stepM)
     {
         var res = new List<(long X, long Y)> { pts[0] };
         double carry = 0;
@@ -218,10 +218,9 @@ public class SeamlessStreamingTests(ITestOutputHelper output)
         return res;
     }
 
-    [Fact]
-    public void Walking_along_the_roads_at_8x_through_three_regions_never_stops_and_keeps_every_tick_short()
+    /// <summary>The first triple of land regions in a row joined by road gates (over both test seeds) with a bridge-free road across the middle one: the world, the first region and the route (continent metres).</summary>
+    internal static (SeamWorld? W, RegionCoord Home, List<(long X, long Y)>? Route) FindRoadRoute(int leadM, int tailM)
     {
-        // three regions in a row joined by road gates, found from the (cheap, pure) gate lists: the first triple, over both test seeds, with a bridge-free road across the middle one
         SeamWorld? w = null; RegionCoord home = default; List<(long X, long Y)>? route = null;
         int tried = 0;
         foreach (ulong seed in new[] { 1234UL, 1UL })
@@ -235,11 +234,18 @@ public class SeamlessStreamingTests(ITestOutputHelper output)
                 bool Land(RegionCoord r) { int land = 0; for (int y = 0; y < 16; y++) for (int x = 0; x < 16; x++) if (!ws.Continent.Ocean[(r.CellY + y) * Continent.Size + r.CellX + x]) land++; return land > 200; }
                 if (!Land(h) || !Land(h.Offset(1, 0)) || !Land(h.Offset(2, 0))) continue;
                 tried++;
-                var rt = RoadRoute(ws, h, 4500, 1500);
+                var rt = RoadRoute(ws, h, leadM, tailM);
                 if (rt != null) { route = rt; w = ws; home = h; }
             }
             if (route != null) break;
         }
+        return (w, home, route);
+    }
+
+    [Fact]
+    public void Walking_along_the_roads_at_8x_through_three_regions_never_stops_and_keeps_every_tick_short()
+    {
+        var (w, home, route) = FindRoadRoute(4500, 1500);
         Assert.NotNull(route);
         var path = Resample(route!, 30);
         double routeM = 0; for (int i = 1; i < route!.Count; i++) routeM += Math.Sqrt(Math.Pow(route[i].X - route[i - 1].X, 2) + Math.Pow(route[i].Y - route[i - 1].Y, 2));
@@ -321,7 +327,7 @@ public class SeamlessStreamingTests(ITestOutputHelper output)
     }
 
     /// <summary>Follows a road polyline (world metres): paths to a point about 60 m ahead of the nearest waypoint, re-planning every second.</summary>
-    private sealed class RoadWalker(LiveWorld live, List<(long X, long Y)> path)
+    internal sealed class RoadWalker(LiveWorld live, List<(long X, long Y)> path)
     {
         private int _tick;
         public int Index { get; private set; }

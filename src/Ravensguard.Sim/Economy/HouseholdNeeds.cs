@@ -75,18 +75,43 @@ public static class HouseholdNeeds
     }
 
     /// <summary>Grams of vegetables a member's garden gives on each day of its season (doy 11-40): 868 t a game year for 25,000 people (resources spec G-R14, gardens 130,000 measures).</summary>
+    public const int GatherFuelPct = 125;
     public const int GardenGPerPersonDay = 1100, GardenFirstDoy = 11, GardenLastDoy = 40, HenEggGPerPersonDay = 14;
 
     /// <summary>
     /// Household production of relish (resources spec G-R14, integration decision I12): every household has a garden that gives vegetables in the growing days and hens
     /// that lay all year; created into the house store before the day's meal (reason Harvest). Cows, sheep and fish come through the herds and the market.
     /// </summary>
-    public static void Produce(EconomyState e, HouseholdTable hht, int hh, int doy, ushort vegetables, ushort eggs)
+    public static void Produce(EconomyState e, HouseholdTable hht, int hh, int doy, ushort vegetables, ushort eggs, ushort firewood = ushort.MaxValue)
     {
         int n = hht.MemberCount[hh]; if (n == 0) return;
         var s = e.HouseholdStore[hh];
+        // fuel is gathered (integration decision I22): peasant and gentry households gather 125 percent of the basket's firewood from the commons and the lord's woods, the
+        // surplus (a day's keep over twenty days' cover sells on the village market) is the village's fuel supply; a burgher buys all of his
+        if (firewood != ushort.MaxValue && hht.Class[hh] != SocialClass.Burgher)
+            s.Create(firewood, (long)n * e.Basket(hht.Class[hh]).FirewoodGPerPersonDay * GatherFuelPct / 100, CreateReason.Cut);
         if (doy >= GardenFirstDoy && doy <= GardenLastDoy) s.Create(vegetables, (long)n * GardenGPerPersonDay, CreateReason.Harvest);
         s.Create(eggs, (long)n * HenEggGPerPersonDay, CreateReason.Harvest);
+    }
+
+    /// <summary>Grams of barley and of firewood that go into a gram of home-brewed ale (the recipes' 52 kg of barley malted and 35 kg of fuel to a 101 kg of ale).</summary>
+    public const int BrewBarleyPermille = 520, BrewFuelPermille = 350, BrewDaysCover = 3;
+
+    /// <summary>
+    /// Home brewing (integration decision I23): a household with land brews its own ale from its barley when it holds under three days of it: six days' worth at a time,
+    /// while it has food for a fortnight and the barley and fuel for the brew. The ale is created (reason Brewed) from barley and firewood consumed, so the mass books
+    /// balance; the village breweries serve the towns and the landless.
+    /// </summary>
+    public static void HomeBrew(EconomyState e, PersonTable people, HouseholdTable hht, int hh, int day, ushort barley)
+    {
+        if (hht.ParcelCount[hh] == 0 || hht.Class[hh] == SocialClass.Burgher || e.FoodCoverDaysX10[hh] < 150) return;
+        var s = e.HouseholdStore[hh]; var b = Basket(e, people, hht, hh, day, 12);
+        long dayG = b.AleMl * e.Goods.Def(e.Food.Ale).LitreMassG / 1000;
+        if (dayG <= 0 || s.Qty(e.Food.Ale) >= dayG * BrewDaysCover) return;
+        long ale = dayG * 6, grain = ale * BrewBarleyPermille / 1000, fuel = ale * BrewFuelPermille / 1000;
+        if (s.Qty(barley) < grain || s.Qty(e.Food.Firewood) < fuel) return;
+        s.Destroy(barley, grain, DestroyReason.Consumed); s.Destroy(e.Food.Firewood, fuel, DestroyReason.Consumed);
+        s.Create(e.Food.Ale, ale, CreateReason.Brewed);
     }
 
     /// <summary>
@@ -197,6 +222,9 @@ public static class HouseholdNeeds
         int shortRelish = need.RelishX100 - eatenRelish, subst = 0;
         if (shortRelish > 0) subst = EatStaple(e, store, shortRelish, e.SeedReserveG[hh], miller, ref toll);   // grain stands in, measure for measure
         bool dietPoor = shortRelish > 0;
+        // pease pottage (integration decision I29): a household with no grain left eats its pulses, cheese, fish and meat for the staple too, rather than starve with a full larder of peas
+        int shortStaple = need.StapleX100 + need.RelishX100 - (eatenStaple + eatenRelish + subst);
+        if (shortStaple > 0) subst += EatRelish(e, store, shortStaple);
         // the seed emergency (households spec 3.6, G-H12): a household that has eaten everything else eats its seed corn rather than starve; the next sowing shrinks by what it ate
         int stillShort = needTotal - (eatenStaple + eatenRelish + subst);
         if (stillShort > 0 && e.SeedReserveG[hh] > 0)

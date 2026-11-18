@@ -23,11 +23,15 @@ public sealed class SaveWriter
     /// <summary>Raised from the background worker when a write fails (the returned task faults too). Handlers must not throw.</summary>
     public event Action<Exception>? OnError;
 
-    public SaveWriter(string directory) { _dir = directory; Directory.CreateDirectory(directory); }
+    private readonly string _run;
 
-    public static string AutosavePath(string dir, int slot) => Path.Combine(dir, $"autosave_{slot}{Extension}");
-    public static string IronmanPath(string dir) => Path.Combine(dir, $"ironman{Extension}");
-    public static string IronmanBackupPath(string dir, int n) => Path.Combine(dir, $"ironman.bak{n}");
+    /// <summary>A writer for a folder. With a <paramref name="run"/> name the rotating autosaves and the Ironman slot belong to that run (<c>run.autosave_1.sav</c>, <c>run.ironman.sav</c>), so two runs of one world never overwrite each other; without it the old shared names are used.</summary>
+    public SaveWriter(string directory, string run = "") { _dir = directory; _run = run; Directory.CreateDirectory(directory); }
+
+    private static string Prefix(string run) => run.Length == 0 ? "" : run + ".";
+    public static string AutosavePath(string dir, int slot, string run = "") => Path.Combine(dir, $"{Prefix(run)}autosave_{slot}{Extension}");
+    public static string IronmanPath(string dir, string run = "") => Path.Combine(dir, $"{Prefix(run)}ironman{Extension}");
+    public static string IronmanBackupPath(string dir, int n, string run = "") => Path.Combine(dir, $"{Prefix(run)}ironman.bak{n}");
     public static string ManualPath(string dir, string name) => Path.Combine(dir, name + Extension);
 
     /// <summary>Throws ArgumentException unless <paramref name="name"/> is a bare file name (no directories, no "..").</summary>
@@ -64,16 +68,16 @@ public sealed class SaveWriter
 
     private string AutosaveWork(SaveFile snapshot)
     {
-        var target = AutosavePath(_dir, 1);
+        var target = AutosavePath(_dir, 1, _run);
         Commit(snapshot, target, () =>
         {
             // Older slots shift down by moving; the current slot is COPIED so it stays in place until the new file replaces it.
             for (int i = AutosaveSlots; i >= 3; i--)
             {
-                var src = AutosavePath(_dir, i - 1);
-                if (File.Exists(src)) File.Move(src, AutosavePath(_dir, i), overwrite: true);
+                var src = AutosavePath(_dir, i - 1, _run);
+                if (File.Exists(src)) File.Move(src, AutosavePath(_dir, i, _run), overwrite: true);
             }
-            if (File.Exists(target)) File.Copy(target, AutosavePath(_dir, 2), overwrite: true);
+            if (File.Exists(target)) File.Copy(target, AutosavePath(_dir, 2, _run), overwrite: true);
         });
         return target;
     }
@@ -82,11 +86,11 @@ public sealed class SaveWriter
 
     private string IronmanWork(SaveFile snapshot)
     {
-        var target = IronmanPath(_dir);
+        var target = IronmanPath(_dir, _run);
         Commit(snapshot, target, () =>
         {
-            var b1 = IronmanBackupPath(_dir, 1);
-            if (File.Exists(b1)) File.Move(b1, IronmanBackupPath(_dir, 2), overwrite: true);
+            var b1 = IronmanBackupPath(_dir, 1, _run);
+            if (File.Exists(b1)) File.Move(b1, IronmanBackupPath(_dir, 2, _run), overwrite: true);
             if (File.Exists(target)) File.Copy(target, b1, overwrite: true);
         });
         return target;

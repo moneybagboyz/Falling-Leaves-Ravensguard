@@ -2,10 +2,10 @@
 // fertility_delta is applied once per harvest. sow_doy and ripe_doy are days of the 60-day year. Winter grain is sown in autumn of the
 // year before it ripens (sow_doy 36-45 of the previous year, ripe_doy 26).
 [
-  { "type": "crop", "id": "wheat",  "kind": "winter_grain",  "good": "wheat",  "base_yield_measures": 48, "seed_pct": 20, "fertility_delta": -10, "sow_doy": [36, 45], "ripe_doy": 26, "reap_grace_days": 10, "min_fertility": 40 },
-  { "type": "crop", "id": "rye",    "kind": "winter_grain",  "good": "rye",    "base_yield_measures": 46, "seed_pct": 20, "fertility_delta": -8,  "sow_doy": [36, 45], "ripe_doy": 26, "reap_grace_days": 10, "min_fertility": 30 },
-  { "type": "crop", "id": "barley", "kind": "spring_grain",  "good": "barley", "base_yield_measures": 48, "seed_pct": 20, "fertility_delta": -6,  "sow_doy": [3, 14],  "ripe_doy": 31, "reap_grace_days": 10, "min_fertility": 35 },
-  { "type": "crop", "id": "oats",   "kind": "spring_grain",  "good": "oats",   "base_yield_measures": 46, "seed_pct": 20, "fertility_delta": -6,  "sow_doy": [3, 14],  "ripe_doy": 31, "reap_grace_days": 10, "min_fertility": 30 },
+  { "type": "crop", "id": "wheat",  "kind": "winter_grain",  "good": "wheat",  "base_yield_measures": 52, "seed_pct": 20, "fertility_delta": -10, "sow_doy": [36, 45], "ripe_doy": 26, "reap_grace_days": 10, "min_fertility": 40 },
+  { "type": "crop", "id": "rye",    "kind": "winter_grain",  "good": "rye",    "base_yield_measures": 50, "seed_pct": 20, "fertility_delta": -8,  "sow_doy": [36, 45], "ripe_doy": 26, "reap_grace_days": 10, "min_fertility": 30 },
+  { "type": "crop", "id": "barley", "kind": "spring_grain",  "good": "barley", "base_yield_measures": 56, "seed_pct": 20, "fertility_delta": -6,  "sow_doy": [3, 14],  "ripe_doy": 31, "reap_grace_days": 10, "min_fertility": 35 },
+  { "type": "crop", "id": "oats",   "kind": "spring_grain",  "good": "oats",   "base_yield_measures": 50, "seed_pct": 20, "fertility_delta": -6,  "sow_doy": [3, 14],  "ripe_doy": 31, "reap_grace_days": 10, "min_fertility": 30 },
   { "type": "crop", "id": "peas",   "kind": "spring_legume", "good": "peas",   "base_yield_measures": 42, "seed_pct": 20, "fertility_delta": 5,   "sow_doy": [3, 14],  "ripe_doy": 31, "reap_grace_days": 10, "min_fertility": 25 },
   { "type": "crop", "id": "beans",  "kind": "spring_legume", "good": "beans",  "base_yield_measures": 42, "seed_pct": 20, "fertility_delta": 5,   "sow_doy": [3, 14],  "ripe_doy": 31, "reap_grace_days": 10, "min_fertility": 30 },
 ]

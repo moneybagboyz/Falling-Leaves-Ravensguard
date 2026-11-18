@@ -1,3 +1,4 @@
+using Ravensguard.Sim.People;
 using Ravensguard.Sim.Core;
 using Ravensguard.Sim.Economy;
 using Ravensguard.Sim.Goods;
@@ -22,10 +23,60 @@ public sealed partial class FarmingSystem
             while (State.Year < now.Year) RollYear(now);
             OpenYear(now);
             Shear();
+            ReletVacant();
         }
         else if (doy == 16) { SetGrazing(); for (int f = 0; f < F.Count; f++) if (F.Stage[f] == FieldStage.Sown) F.Stage[f] = FieldStage.Growing; UpdateSeedReserve(doy); }
         else if (doy == 31) { LendSeed(winter: true); MakeCheese(); }
         else if (doy == 46) { CollectCoinRent(now); CullHerds(now); }
+    }
+
+    // ---------- S1: the re-let (integration decision I24) ----------
+
+    /// <summary>Fields a member is meant to have before a holder is no longer taken for a land-hungry household.</summary>
+    public const int ReletFieldsPerMember = 3;
+    public long Relets;
+
+    /// <summary>
+    /// At the year's start the lord's reeve lets the holdings that fell back to him (no heir, the household left) to the households of the same village that have the
+    /// fewest fields for their members, landless ones first, on the village's share rent, until each has <see cref="ReletFieldsPerMember"/> fields a head. Idle land never
+    /// sits while a household next to it starves (the farming spec's "re-let", the subsistence fallback of integration decision I24).
+    /// </summary>
+    private void ReletVacant()
+    {
+        var hht = Pop.Households; int nh = hht.Count;
+        var held = new int[nh];
+        for (int p = 0; p < P.Count; p++) if (P.Holder[p] >= 0 && P.Holder[p] < nh) held[P.Holder[p]] += Region.Parcels[P.Holder[p] >= 0 ? p : 0].FieldCount;
+        for (int s = 0; s < Region.Settlements.Count; s++)
+        {
+            List<int>? vacant = null;
+            foreach (int p in Region.Settlements[s].Parcels)
+            {
+                int h = P.Holder[p]; if (h < 0 || h >= nh || hht.Class[h] != SocialClass.Gentry) continue;
+                var kind = Region.Parcels[p].Owner.Kind; if (kind is OwnerKind.Demesne or OwnerKind.Glebe) continue;
+                (vacant ??= []).Add(p);
+            }
+            if (vacant == null) continue;
+            var takers = _householdsOf[s].Where(h => hht.Class[h] != SocialClass.Gentry && hht.MemberCount[h] > 0).ToList();
+            if (takers.Count == 0) continue;
+            int fief = Region.Settlements[s].FiefIndex; int lord = fief >= 0 && fief < Pop.FiefLordHousehold.Length ? Pop.FiefLordHousehold[fief] : -1;
+            foreach (int p in vacant)
+            {
+                int best = -1; long bestScore = long.MaxValue;
+                foreach (int h in takers)
+                {
+                    if (held[h] >= ReletFieldsPerMember * hht.MemberCount[h]) continue;
+                    long score = (long)held[h] * 1000 / hht.MemberCount[h];                          // fewest fields a head first, lower index on a tie
+                    if (score < bestScore) { bestScore = score; best = h; }
+                }
+                if (best < 0) break;
+                int old = P.Holder[p], fc = Region.Parcels[p].FieldCount;
+                P.Holder[p] = best; _popHolder[p] = best; Pop.ParcelHolder[p] = best;
+                hht.ParcelCount[old]--; hht.ParcelCount[best]++; held[best] += fc; held[old] -= fc;
+                if (lord >= 0 && P.Landlord[p] < 0) { P.Landlord[p] = lord; P.Lease[p] = LeaseKind.Share; P.ShareBp[p] = (short)_d.RentShareBpDefault; }
+                Relets++; _holderStale = true;
+            }
+        }
+        if (_holderStale) SyncPopulation();
     }
 
     // ---------- S1: the year boundary ----------
@@ -271,6 +322,34 @@ public sealed partial class FarmingSystem
             State.SeedDebtG[h] += got * 120 / 100;
         }
         ExchangeSeed(winter, need);
+        BuySeedAtMarket(winter, need);
+    }
+
+    /// <summary>Set by the integration layer: buys up to a quantity of a good for a household at its market and returns what it got (coin through the ledger).</summary>
+    public Func<int, ushort, long, long>? BuyFromMarket { get; set; }
+    public long SeedBoughtG;
+
+    /// <summary>
+    /// What neighbours cannot spare, a holder with coin buys at the village market (integration decision I24): the seed corn is the one purchase a farmer makes before his own
+    /// bread, so a household that still holds coin does not leave its fields unsown. Crops in sowing order, whichever the book holds.
+    /// </summary>
+    private void BuySeedAtMarket(bool winter, long[] need)
+    {
+        if (BuyFromMarket == null) return;
+        var kinds = winter ? FarmingSettings.WinterCrops : FarmingSettings.SpringCrops;
+        for (int h = 0; h < need.Length; h++)
+        {
+            if (need[h] == 0) continue;
+            var own = HouseStore(h); long have = 0;
+            foreach (var c in kinds) have += own.Qty(Settings.Info(c).Good);
+            long lack = need[h] - have; if (lack <= 0 || Econ.Ledger.Balance(Econ.HouseholdPurse[h]).Mites <= 0) continue;
+            foreach (var c in kinds)
+            {
+                if (lack <= 0) break;
+                long got = BuyFromMarket(h, Settings.Info(c).Good, lack);
+                lack -= got; SeedBoughtG += got;
+            }
+        }
     }
 
     /// <summary>

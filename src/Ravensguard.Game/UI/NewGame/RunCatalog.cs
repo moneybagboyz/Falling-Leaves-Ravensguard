@@ -16,6 +16,21 @@ public sealed record RunEntry(string WorldId, string WorldName, string Path, str
 public static class RunCatalog
 {
     public const string AutosavePrefix = "autosave_";
+    const string AutosaveMark = ".autosave_", IronmanMark = ".ironman";
+
+    /// <summary>True for a rotating autosave slot of a run (<c>run.autosave_1</c>) or the older shared one (<c>autosave_1</c>).</summary>
+    public static bool IsAutosave(string slot) => slot.StartsWith(AutosavePrefix, StringComparison.Ordinal) || slot.Contains(AutosaveMark, StringComparison.Ordinal);
+    /// <summary>True for a run's Ironman slot (<c>run.ironman</c>) or the older shared <c>ironman</c>.</summary>
+    public static bool IsIronmanSlot(string slot) => slot == "ironman" || slot.EndsWith(IronmanMark, StringComparison.Ordinal);
+
+    /// <summary>The run a slot belongs to: its manual slot name (<c>run</c> for <c>run.autosave_2</c> and <c>run.ironman</c>, itself for a manual slot, "" for the older shared slots).</summary>
+    public static string RunOf(string slot)
+    {
+        int i = slot.IndexOf(AutosaveMark, StringComparison.Ordinal);
+        if (i > 0) return slot[..i];
+        if (slot.EndsWith(IronmanMark, StringComparison.Ordinal) && slot.Length > IronmanMark.Length) return slot[..^IronmanMark.Length];
+        return slot.StartsWith(AutosavePrefix, StringComparison.Ordinal) || slot == "ironman" ? "" : slot;
+    }
 
     /// <summary>Every save of one world (or of all worlds), newest first.</summary>
     public static List<RunEntry> List(WorldLibrary lib, string? worldId = null)
@@ -33,8 +48,8 @@ public static class RunCatalog
                 bool readable = true, ironman = false; long seconds = 0;
                 try { var h = reader.ReadHeader(path); ironman = h.Ironman; seconds = h.GameSeconds; }
                 catch (Exception e) when (e is SaveException or IOException or UnauthorizedAccessException) { readable = false; }
-                string who = lib.ReadRunInfo(w.Id, slot)?.CharacterName ?? "";
-                res.Add(new RunEntry(w.Id, w.Name, path, slot, saved, who, ironman, slot.StartsWith(AutosavePrefix, StringComparison.Ordinal), seconds, readable));
+                string who = (RunOf(slot) is { Length: > 0 } run ? lib.ReadRunInfo(w.Id, run) : null)?.CharacterName ?? "";
+                res.Add(new RunEntry(w.Id, w.Name, path, slot, saved, who, ironman, IsAutosave(slot), seconds, readable));
             }
         }
         return Newest(res);
@@ -50,7 +65,8 @@ public static class RunCatalog
     /// <summary>The name a loaded run saves its manual slot under: the file's own name, except for the autosave and Ironman slots, which a manual save must not overwrite.</summary>
     public static string ManualNameFor(string slot, string? hero, int existingSaves)
     {
-        if (slot.Length > 0 && !slot.StartsWith(AutosavePrefix, StringComparison.Ordinal) && slot != "ironman") return slot;
+        if (RunOf(slot) is { Length: > 0 } run) return run; // a run's own manual slot: its autosaves and Ironman slot are never overwritten by a manual save
+        if (slot.Length > 0 && !IsAutosave(slot) && !IsIronmanSlot(slot)) return slot;
         return WorldLibrary.Slug(string.IsNullOrWhiteSpace(hero) ? "run" : hero) + "-" + (existingSaves + 1);
     }
 
@@ -59,7 +75,7 @@ public static class RunCatalog
 
     public static string Title(RunEntry e)
     {
-        string name = e.Autosave ? L.F("RUNS_AUTOSAVE", e.Slot[AutosavePrefix.Length..]) : e.Slot;
+        string name = e.Autosave ? L.F("RUNS_AUTOSAVE", e.Slot[(e.Slot.LastIndexOf(AutosavePrefix, StringComparison.Ordinal) + AutosavePrefix.Length)..]) : e.Slot;
         string who = e.Character.Length > 0 ? e.Character + " - " : "";
         return who + name + (e.Ironman ? "  [" + L.T("RUNS_IRONMAN") + "]" : "");
     }

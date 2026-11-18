@@ -1,8 +1,8 @@
 // Spoilage rows (items spec 3.5): ppm of the quantity lost per game day, by the kind of store. A store kind without its own value uses house_ppm.
 // Grain 3,414 ppm/day = 5% a season in a house or barn, 670 = 1% in a granary (plan 3a). Fresh fish rots about 3 days.
 [
-  { "type": "spoil_class", "id": "grain",       "house_ppm": 3414, "granary_ppm": 670, "sealed_ppm": 670, "cellar_ppm": 670 },
-  { "type": "spoil_class", "id": "flour",       "house_ppm": 7000, "granary_ppm": 1500, "sealed_ppm": 1500, "cellar_ppm": 1500 },
+  { "type": "spoil_class", "id": "grain",       "house_ppm": 1200, "granary_ppm": 670, "sealed_ppm": 670, "cellar_ppm": 670 },
+  { "type": "spoil_class", "id": "flour",       "house_ppm": 3000, "granary_ppm": 1500, "sealed_ppm": 1500, "cellar_ppm": 1500 },
   { "type": "spoil_class", "id": "bread",       "house_ppm": 250000 },
   { "type": "spoil_class", "id": "fish_fresh",  "house_ppm": 300000, "cellar_ppm": 150000, "temp_sensitive": true },
   { "type": "spoil_class", "id": "meat_fresh",  "house_ppm": 300000, "cellar_ppm": 150000, "temp_sensitive": true },

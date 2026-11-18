@@ -55,7 +55,7 @@ Two reviewers covered all Phase 1 code: one the simulation (world generation, pe
 
 ## Known limits, carried forward
 - **Flaky determinism tests: fixed.** The chunk-from-worker test and the live save re-save test failed rarely in full runs. The cause was MessagePack 3.1.12's LZ4 encoder: compressing on two threads at once produced valid but different bytes. Chunk generation itself was deterministic. `SaveCodec.SerializeCompressed` now compresses under a lock, and generation stays parallel. A stress test (`ChunkSnapshotDeterminismTests`, about 7.5 s) failed 5 of 6 runs before the fix and 0 of 6 after.
-- **Saves:** F9 quickload isn't done yet. Autosave and Ironman slots are per world, so two runs in the same world share them; they should be per run.
+- **Saves: fixed in seamless part C.** F9 quickload loads the run's manual slot (not in Ironman). Autosave and Ironman slots are per run (`<run>.autosave_N.sav`, `<run>.ironman.sav`), so two runs in one world no longer share them; the older shared names still load.
 - **Chunk hand-over (Phase 2):** decoding a big town chunk into the live window still costs a few milliseconds on the tick. The worst seen at 8× was about 8 ms, with an occasional 20 ms outlier. It will be revisited with seamless region streaming.
 - **Frame spike (Phase 2):** one 45–59 ms frame spike at a single chunk draw appeared in several runs and then stopped reproducing; the cause isn't pinned. The frame-time capture on the reference PC will show whether it is real.
 - **Snow on permanent snowfields:** depth steps once a year where snow never melts.

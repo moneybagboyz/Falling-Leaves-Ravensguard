@@ -25,6 +25,8 @@ public sealed class StreetOptions
     public string? Weather;      // --shot-weather clear|overcast|rain|heavy|storm|snow|blizzard|fog|frost[:tempC] (dev: forces the weather)
     public string? Panel;        // --shot-panel codex|character: open that panel and capture it instead of the street
     public string? PanelCategory, PanelEntry; // --shot-codex-cat legend|place|person|landmark|rule, --shot-codex-entry <id>
+    public int Speed;            // --shot-speed 1|2|4|8 (dev): the clock speed from the start, to watch the world tick
+    public bool AllNeighbours;   // --shot-neighbours: ask for the eight neighbour regions at the start (dev: a world map with several regions, each with its economy running)
     public bool MapShot;         // --shot-map: open the world map and capture it instead of the street
     public int MapScale = 1;     // --shot-map-scale 1..6 (0 or -n: the continent overview, at zoom n)
     public int Settle = 900;     // frames to wait for far-band chunks to bake before a screenshot
@@ -47,6 +49,8 @@ public sealed class StreetOptions
         if (Val("--shot-day") is { } dy) o.Day = int.Parse(dy, CultureInfo.InvariantCulture);
         o.Weather = Val("--shot-weather");
         o.MapShot = Array.IndexOf(args, "--shot-map") >= 0;
+        o.AllNeighbours = Array.IndexOf(args, "--shot-neighbours") >= 0;
+        if (Val("--shot-speed") is { } sp) o.Speed = int.Parse(sp, CultureInfo.InvariantCulture);
         o.Panel = Val("--shot-panel"); o.PanelCategory = Val("--shot-codex-cat"); o.PanelEntry = Val("--shot-codex-entry");
         if (Val("--shot-map-scale") is { } ms) o.MapScale = Math.Clamp(int.Parse(ms, CultureInfo.InvariantCulture), -6, 6);
         if (Val("--shot-torch") is { } t) o.Torch = t == "1";

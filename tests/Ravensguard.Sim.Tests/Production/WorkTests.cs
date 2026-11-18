@@ -183,7 +183,7 @@ public class WorkTests
             for (long h = day * 24 + 6; h < day * 24 + 16; h++) k.Sys.WorkHour(At(h));
             k.Sys.PayWages(b, At(day * 24 + 24));
         }
-        Assert.Equal(1, b.Staff.Count);                                                  // the unpaid worker quit after three short days
+        Assert.Single(b.Staff);                                                          // the unpaid worker quit after three short days
         Assert.Equal(1, k.Sys.QuitCount);
         Assert.Equal(-1, k.People.Employer[2] == 0 ? -1 : k.People.Employer[2]);
         Assert.Equal(coin0, k.Econ.Ledger.Audit().InPurses.Mites);

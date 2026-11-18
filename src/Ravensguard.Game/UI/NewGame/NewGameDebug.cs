@@ -64,6 +64,19 @@ public static class NewGameDebug
             // the generated region is played in window-local cells: a click must start the hero walking (it did not once)
             var sv = (Ravensguard.Game.World.StreetView)router.Top!;
             await Frames(tree, 5);
+            // the world is running: the new game has its economy, and the tick worker catches up the opening hours and then steps three more game hours on its own
+            var rt = sv.Runtime ?? throw new Exception("the street view has no world runtime");
+            if (rt.State.Production == null || rt.State.Markets == null || rt.State.Farming == null) throw new Exception("a new game has no economy");
+            if (!await Until(tree, () => rt.HourDone >= sv.DebugWorld.Clock.Now.TotalHours, 3000)) throw new Exception($"the opening hours were not stepped (hour {rt.HourDone}, clock {sv.DebugWorld.Clock.Now.TotalHours}, fault {rt.Fault})");
+            long hour0 = rt.HourDone;
+            sv.DebugWorld.SetSpeed(Ravensguard.Sim.Core.SimSpeed.X8);
+            sv.DebugWorld.Clock.Advance(3 * 3600 / (Ravensguard.Sim.Core.TimeConst.GameSecondsPerRealSecond * 8.0) + 0.01); // three game hours at 8x
+            if (!await Until(tree, () => rt.HourDone >= hour0 + 3, 3000)) throw new Exception($"the tick did not step three game hours (hour {rt.HourDone}, wanted {hour0 + 3}, fault {rt.Fault})");
+            if (rt.Fault != null) throw new Exception("the world tick faulted: " + rt.Fault);
+            sv.DebugWorld.SetSpeed(Ravensguard.Sim.Core.SimSpeed.X1);
+            var tick = rt.Snapshot;
+            if (tick.HoursStepped < 3 || tick.HomeAlive <= 0 || tick.Resident < 1) throw new Exception($"the barrier snapshot is empty (hours {tick.HoursStepped}, alive {tick.HomeAlive}, regions {tick.Resident})");
+            GD.Print($"[smoke] world tick: {tick.HoursStepped} hours, worker {tick.HourMs:0} ms/hour (max {tick.MaxHourMs:0}), {tick.Resident} regions, home alive {tick.HomeAlive}; main thread pump {rt.PumpMsTotal / Math.Max(1, rt.Pumps) * 1000:0.0} us avg, {rt.MaxPumpMs:0.00} ms max");
             var click = sv.DebugClickAround();
             if (!click.Accepted || click.Moved <= 0) throw new Exception($"click-to-move in region mode did not move the hero (accepted {click.Accepted}, cell {click.Clicked}, moved {click.Moved})");
             // Esc opens the pause menu and leaves the street view on top; Esc again closes it; the router must not pop the run
@@ -108,7 +121,7 @@ public static class NewGameDebug
             if (sv.Run == null) throw new Exception("the resumed view has no run to save");
             // autosave: the timer writes the first rotating slot, then goes quiet
             sv.AutosaveSeconds = 0.05;
-            string autosave = Ravensguard.Sim.Save.SaveWriter.AutosavePath(runsDir, 1);
+            string autosave = Ravensguard.Sim.Save.SaveWriter.AutosavePath(runsDir, 1, sv.Run.RunName);
             if (!await Until(tree, () => System.IO.File.Exists(autosave) && !sv.Saving, 1500)) throw new Exception("no autosave was written");
             sv.AutosaveSeconds = 900;
             if (sv.LastSaveError != null) throw new Exception("autosave failed: " + sv.LastSaveError);
@@ -118,6 +131,13 @@ public static class NewGameDebug
             Input.ParseInputEvent(new InputEventKey { Keycode = Key.F5, PhysicalKeycode = Key.F5, Pressed = true });
             if (!await Until(tree, () => sv.Saving, 60)) throw new Exception("F5 did not start a save");
             if (!await Until(tree, () => !sv.Saving, 1500) || System.IO.File.GetLastWriteTimeUtc(sv.Run.LastPath!) <= stamp) throw new Exception("quicksave did not rewrite the manual slot");
+            // F9: quickload brings the run back from its manual slot (a new view, a new world runtime), the abstract hour where the save left it
+            var before9 = sv;
+            Input.ParseInputEvent(new InputEventKey { Keycode = Key.F9, PhysicalKeycode = Key.F9, Pressed = true });
+            if (!await Until(tree, () => router.Top is Ravensguard.Game.World.StreetView v && v != before9, 6000)) throw new Exception("F9 did not load the quicksave" + (router.Top is RunLoadScreen ? " (still loading)" : " (top is " + router.Top?.GetType().Name + ")"));
+            sv = (Ravensguard.Game.World.StreetView)router.Top!;
+            await Frames(tree, 3);
+            if (sv.Runtime == null || sv.Run == null || sv.Run.RunName != before9.Run!.RunName) throw new Exception("the quickloaded run lost its runtime or its name");
             // quit to menu without saving returns to the main menu and clears the hand-off
             sv.DebugEsc(); await Frames(tree, 2);
             router.CloseModal(); await Frames(tree, 1);

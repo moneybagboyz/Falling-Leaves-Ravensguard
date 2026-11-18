@@ -100,6 +100,21 @@ public static class Marriage
         return s;
     }
 
+    /// <summary>A vacant dwelling with at least <paramref name="beds"/> beds: the household's own village first, else any village of its fief (the first in ascending order); (-1,-1) when none.</summary>
+    public static (int S, int L) FreeDwelling(SimWorld w, int settlement, int beds)
+    {
+        var pop = w.Population; int cluster = ClusterOf(pop, settlement);
+        for (int pass = 0; pass < 2; pass++)
+            for (int s = pass == 0 ? settlement : 0; s < (pass == 0 ? settlement + 1 : pop.Region.Settlements.Count); s++)
+            {
+                if (pass == 1 && (s == settlement || ClusterOf(pop, s) != cluster)) continue;
+                var lots = pop.Region.Settlements[s].Plan.Lots;
+                for (int l = 0; l < lots.Count; l++)
+                    if (pop.LotBeds[s][l] >= Math.Max(2, beds) && pop.LotHousehold[s][l] < 0 && lots[l].IsDwelling && lots[l].Dwelling != DwellingType.Manor) return (s, l);
+            }
+        return (-1, -1);
+    }
+
     private static List<(int S, int L)> Vacancies(SimWorld w, int cluster)
     {
         var pop = w.Population; var res = new List<(int, int)>();

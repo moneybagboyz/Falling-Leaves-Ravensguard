@@ -37,6 +37,7 @@ public sealed class SoakRow
     public long Hired, Succeeded, ClosedNoOwner;
     public int Sheep, Oxen, Cows;
     public double MeanFertility;
+    public long HarvestT, SownAcres, UnharvestedAcres;
 }
 
 /// <summary>
@@ -169,6 +170,7 @@ public sealed class EconomySoak
         r.Famines = (int)(Ticker.Counters.GetValueOrDefault("famines") - _famine0);
         var fs = ew.Farming.State;
         long need = alive * TimeConst.DaysPerYear * 1100L;
+        r.HarvestT = fs.HarvestG / 1_000_000; r.SownAcres = fs.SownAcres; r.UnharvestedAcres = fs.UnharvestedAcres;
         r.FoodSurplusPct = need == 0 ? 0 : 100.0 * ((fs.HarvestG - fs.SeedSownG) - need) / need;
         r.HungryHouseholdDays = _hungryDays; r.HungryPct = 100.0 * _hungryDays / Math.Max(1, _hhDays);
         r.PriceIndex = new double[_staple.Length]; r.InBandPct = new double[_staple.Length];
@@ -216,7 +218,7 @@ public sealed class EconomySoak
         var sb = new StringBuilder();
         sb.Append("year   pop  u15%  over50 birth death emig hungD  surplus% hungry% fam");
         foreach (var s in Staples.Take(5)) sb.Append($" {s[..Math.Min(5, s.Length)],5}");
-        sb.Append(" band% cap% shop% merch% bread-t ale-kl biz/closed employed idle fert sheep/ox/cow      coin(crowns)  src/sink  audit");
+        sb.Append(" band% cap% shop% merch% bread-t ale-kl biz/closed employed idle fert sheep/ox/cow      coin(crowns)  src/sink  audit harv-t sown unharv");
         return sb.ToString();
     }
 
@@ -225,7 +227,7 @@ public sealed class EconomySoak
         var sb = new StringBuilder();
         sb.Append($"{r.Year,4} {r.Population,6} {r.Under15Pct,5:0.0} {r.Over50Pct,6:0.0} {r.Births,5} {r.Deaths,5} {r.Emigrants,4} {r.HungerDeaths,5} {r.FoodSurplusPct,8:0.0} {r.HungryPct,7:0.00} {r.Famines,3}");
         for (int i = 0; i < 5; i++) sb.Append($" {r.PriceIndex[i],5:0.00}");
-        sb.Append($" {r.BandPct,5:0.0} {r.AtCapPct,4:0.0} {r.WorkshopCompletionPct,5:0} {r.MerchantsSolventPct,6:0} {r.BreadT,7} {r.AleKl,6} {r.Businesses,4}/{r.Closed,-3} {r.Employed,8} {r.Idle,4} {r.MeanFertility,4:0} {r.Sheep}/{r.Oxen}/{r.Cows} {r.CoinTotal / 100,12:N0} {r.CoinSources / 100:N0}/{r.CoinSinks / 100:N0} {(r.CoinConserved && r.MassOk ? "ok" : "FAIL")}");
+        sb.Append($" {r.BandPct,5:0.0} {r.AtCapPct,4:0.0} {r.WorkshopCompletionPct,5:0} {r.MerchantsSolventPct,6:0} {r.BreadT,7} {r.AleKl,6} {r.Businesses,4}/{r.Closed,-3} {r.Employed,8} {r.Idle,4} {r.MeanFertility,4:0} {r.Sheep}/{r.Oxen}/{r.Cows} {r.CoinTotal / 100,12:N0} {r.CoinSources / 100:N0}/{r.CoinSinks / 100:N0} {(r.CoinConserved && r.MassOk ? "ok" : "FAIL")} {r.HarvestT} {r.SownAcres} {r.UnharvestedAcres}");
         return sb.ToString();
     }
 
@@ -309,6 +311,7 @@ public sealed class EconomySoak
             var bins = new int[7]; var pq = Sim.People;
             for (int i = 0; i < pq.Count; i++) if (pq.Status[i] == PersonStatus.Alive) bins[Math.Min(6, e.NutritionCd[i] / 500)]++;
             sb.AppendLine("-- living by nutrition reserve (centidays /500 bins, 6 = full): " + string.Join(" ", bins));
+            sb.AppendLine("-- hunger deaths by age band (0-4, 5-14, 15-49, 50+) and class/landed (P-,PL,B-,BL,G-,GL): " + string.Join(" | ", Enumerable.Range(0, 4).Select(a => string.Join(",", Enumerable.Range(0, 6).Select(k => Sim.Vital.HungerBySegment[a * 8 + k])))));
             sb.AppendLine("-- deaths by cause: " + string.Join(", ", Enum.GetValues<DeathCause>().Select(c => $"{c} {Sim.Vital.DeathsByCause[(int)c]}")));
         }
         {
@@ -356,6 +359,11 @@ public sealed class EconomySoak
         sb.AppendLine($"-- labour: hired {lab.Hired} (apprentices {lab.Apprenticed}), succeeded {lab.Succeeded}, closed for want of an owner {lab.ClosedNoOwner}, staff gone {lab.StaffGone}; quits {prod.QuitCount}, forgiven arrears {prod.ForgivenArrearsMites} mites; batches {prod.BatchesFinished}/{prod.BatchesStarted}");
         var fl = ew.Farming.LastLabour;
         sb.AppendLine($"-- farming labour last day: demand {fl.DemandHours} h, supply {fl.SupplyHours} h, own {fl.OwnUsedHours} h, hired {fl.HiredUsedHours} h, unmet {fl.UnmetHours} h, wages {fl.WagesMites} mites");
+        sb.AppendLine($"-- farm labour totals (worker-hours): wanted {ew.Farming.TotalDemandH:N0}, own {ew.Farming.TotalOwnH:N0}, hired {ew.Farming.TotalHiredH:N0}, daily unmet sum {ew.Farming.TotalUnmetH:N0}, wages {ew.Farming.TotalWagesMites / 100:N0} crowns");
+        sb.AppendLine($"-- sowing by holder class (peasant, burgher, gentry): sown {string.Join('/', ew.Farming.Diagnostics.SownByClass)}, refused for seed {string.Join('/', ew.Farming.Diagnostics.RefusedByClass)}; re-lets {ew.Farming.Relets}");
+        sb.AppendLine($"-- parish: household-days asked {ew.Parish.Asked:N0}, not fully served {ew.Parish.Short:N0}; relief purchases {ew.Parish.ReliefG / 1e6:N0} t; dole {ew.Parish.DoleMites / 100:N0} crowns; alms coin {ew.Parish.AlmsMites / 100:N0} crowns, alms grain {ew.Parish.AlmsG / 1e6:N0} t; gleaned {ew.Farming.State.GleanedG / 1e6:N0} t");
+        { var fst = ew.Farming.State; double yrs = Math.Max(1, Rows.Count); sb.AppendLine($"-- farming per year: fields {fst.Fields.Count}, sown acres {fst.SownAcres / yrs:N0}, harvest {fst.HarvestG / yrs / 1e6:N0} t ({fst.HarvestG / Math.Max(1.0, fst.SownAcres) / 1000:N1} kg a sown acre), seed {fst.SeedSownG / yrs / 1e6:N0} t, tithe {fst.TitheG / yrs / 1e6:N0} t, rent {fst.RentG / yrs / 1e6:N0} t, gleaned {fst.GleanedG / yrs / 1e6:N0} t, threshed {fst.ThreshedG / yrs / 1e6:N0} t, unharvested acres {fst.UnharvestedAcres / yrs:N0}"); }
+        sb.AppendLine($"-- regional carters: {ew.Regional.MovedUnits / 1e6:N0} t moved for {ew.Regional.SpentMites / 100:N0} crowns; by good: " + string.Join(", ", Enumerable.Range(0, cat.Count).Where(g => ew.Regional.MovedByGood[g] > 0).OrderByDescending(g => ew.Regional.MovedByGood[g]).Take(8).Select(g => $"{cat.StringId((ushort)g)} {ew.Regional.MovedByGood[g] / 1e6:N0}")));
         sb.AppendLine($"-- farm sales {ew.Counters.FarmSoldG / 1e6:N0} t, parish sold {ew.Parish.SoldG / 1e6:N0} t, charity {ew.Parish.CharityG / 1e6:N0} t");
         var fs = ew.Farming.State; var lv = fs.Livestock;
         sb.AppendLine($"-- herds: sheep {lv.Sheep.Sum()}, oxen {lv.Oxen.Sum()}, cows {lv.Cows.Sum()}; grazed settlements {lv.Grazed.Count(x => x)}; farm sow refused: seed {ew.Farming.Diagnostics.SowRefusedSeed}, fertility {ew.Farming.Diagnostics.SowRefusedFertility}");
@@ -381,11 +389,23 @@ public sealed class EconomySoak
             var hq = Sim.Households; int shown = 0;
             for (int h = 0; h < hq.Count && shown < 6; h++)
             {
-                if (hq.MemberCount[h] == 0 || (e.Grievances[h] & Grievance.Hunger) == 0 || led.Balance(e.HouseholdPurse[h]).Mites < 10000) continue;
+                if (hq.MemberCount[h] == 0 || (e.Grievances[h] & Grievance.Hunger) == 0 || false) continue;
+                if (h % 7 != 0) continue;
                 shown++; var bk = ew.Markets.BookForHousehold(h);
                 sb.AppendLine($"   hungry-with-coin hh {h} {hq.Class[h]} parcels {hq.ParcelCount[h]} members {hq.MemberCount[h]} coin {led.Balance(e.HouseholdPurse[h]).Mites / 100} cr cover {e.FoodCoverDaysX10[h] / 10.0} d tier {e.Tiers[h]} settlement {hq.Settlement[h]} stock: " + string.Join(", ", e.HouseholdStore[h].Rows().Select(r => $"{cat.StringId(r.Good)} {r.Qty / 1000.0:0}")));
                 sb.AppendLine("      book: " + string.Join(", ", e.Food.Staples.Select(g => $"{cat.StringId(g)} s={bk.Goods[g].StockUnits / 1000} d={bk.Goods[g].Demand / 1000} x{bk.MidRatioPermille(g)}")));
             }
+        }
+        {
+            var pq = Sim.People; long day = Sim.State.HourDone / 24; int women = 0, wed = 0, preg = 0, singlesF = 0, singlesM = 0, kids0 = 0, kids5 = 0, kids10 = 0; int[] age10 = new int[12];
+            for (int i = 0; i < pq.Count; i++)
+            {
+                if (pq.Status[i] != PersonStatus.Alive) continue; int age = Sim.AgeOn(i, day); age10[Math.Min(11, age / 10)]++;
+                if (age < 5) kids0++; else if (age < 10) kids5++; else if (age < 15) kids10++;
+                if (pq.Sex[i] == Sex.Female && age >= 18 && age <= 44) { women++; if (pq.Spouse[i] >= 0) wed++; if (pq.PregnantUntilDay[i] >= 0) preg++; }
+                if (age >= 18 && age <= 40 && pq.Spouse[i] < 0) { if (pq.Sex[i] == Sex.Female) singlesF++; else singlesM++; }
+            }
+            sb.AppendLine($"-- women 18-44 {women}, married {wed}, pregnant {preg}; unmarried 18-40: women {singlesF}, men {singlesM}; ages 0-4 {kids0}, 5-9 {kids5}, 10-14 {kids10}; by decade {string.Join(' ', age10)}; free beds {Sim.Households.Count} households");
         }
         sb.AppendLine("-- hungry households at the end of every 5th day: " + string.Join(" ", HungryByDay.Where((_, i) => i % 5 == 4).Select(x => x.ToString())));
         {

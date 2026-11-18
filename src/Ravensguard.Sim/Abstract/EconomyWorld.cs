@@ -26,6 +26,7 @@ public sealed class EconomyWorld
     public LabourMarket Labour { get; }
     public ParishRelief Parish { get; }
     public ContinentTrade Trade { get; }
+    public RegionalTrade Regional { get; }
     public EconomyCounters Counters { get; } = new();
     /// <summary>Farming writes its chronicle here; the farming system moves the new entries to the tick outbox after each daily step.</summary>
     public Chronicle FarmChronicle { get; }
@@ -38,6 +39,8 @@ public sealed class EconomyWorld
         Parish = new ParishRelief(world, markets);
         var cp = world.Economy.Ledger.Open(PurseKind.Treasury, Ravensguard.Sim.People.Vital.Demography.ContinentOwner);
         Trade = new ContinentTrade(markets.AllBooks, world.Economy, cp, content.Recipes.Recipes.SelectMany(r => r.Outputs.Select(o => o.Good)));
+        Regional = new RegionalTrade(markets, world.Economy, world.Population.Region);
+        farming.BuyFromMarket = (hh, good, qty) => markets.BookForHousehold(hh).Buy(markets.HouseholdParty(hh), good, qty, 3000, (int)(world.State.HourDone / 24)).Qty;
         farming.CountIdleHands = true;
         farming.IsEmployedElsewhere = Labour.IsAwayFromFarm;
         Labour.Rebuild();

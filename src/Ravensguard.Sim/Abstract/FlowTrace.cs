@@ -100,6 +100,13 @@ public sealed class FlowTrace : IFlowTrace
             }
             sb.AppendLine("   held      " + string.Join(" | ", st));
         }
+        if (print)
+        {
+            var cr = new long[MassLedger.CreateReasons]; var de = new long[MassLedger.DestroyReasons];
+            for (int t = 0; t < 4; t++) { for (int k = 0; k < K; k++) { for (int r = 0; r < cr.Length; r++) cr[r] += _created[k, t, r]; for (int r = 0; r < de.Length; r++) de[r] += _destroyed[k, t, r]; } }
+            sb.AppendLine($"[flow y{year}] ALL GRAINS held at year end (t): " + string.Join(" | ", Enumerable.Range(0, K).Select(k => (k, h: Enumerable.Range(0, 4).Sum(t => end[k, t]))).Where(x => x.h >= 100_000).Select(x => $"{Names[x.k]} {T(x.h)}")));
+            sb.AppendLine($"[flow y{year}] ALL GRAINS (wheat, rye, barley, oats), tonnes: created " + string.Join(", ", Enumerable.Range(0, cr.Length).Where(r => cr[r] > 0).Select(r => $"{(CreateReason)r} {T(cr[r])}")) + "; destroyed " + string.Join(", ", Enumerable.Range(0, de.Length).Where(r => de[r] > 0).Select(r => $"{(DestroyReason)r} {T(de[r])}")));
+        }
         Array.Clear(_created); Array.Clear(_destroyed); Array.Clear(_moved);
         return sb.ToString().TrimEnd();
     }

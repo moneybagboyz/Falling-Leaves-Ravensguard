@@ -102,7 +102,7 @@ public sealed class FarmingState
     public CellCropClimate Climate { get; } = new();
     public LivestockState Livestock { get; }
     /// <summary>This year's running tally: harvest, seed, tithe, rent, threshed, and loss by cause.</summary>
-    public long HarvestG, SeedSownG, ThreshedG, TitheG, RentG, Gross0G, SownAcres, UnharvestedAcres;
+    public long HarvestG, SeedSownG, ThreshedG, TitheG, RentG, Gross0G, SownAcres, UnharvestedAcres, GleanedG;
     public long[] LostG = new long[Enum.GetValues<LossCause>().Length];
     public int[] LostAcres = new int[Enum.GetValues<LossCause>().Length];
     public List<YearSummary> Summaries { get; } = [];

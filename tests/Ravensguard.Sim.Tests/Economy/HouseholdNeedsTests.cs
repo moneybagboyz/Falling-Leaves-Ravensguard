@@ -23,9 +23,9 @@ public class HouseholdNeedsTests
         Assert.Equal((2, 3), (b.Adults, b.Children));
         Assert.Equal(400, b.StapleX100); Assert.Equal(100, b.RelishX100);                       // 4.00 and 1.00 measures
         Assert.Equal(4_400, HouseholdNeeds.GrainEquivalentG(b.StapleX100));                      // 4,400 g of grain
-        Assert.Equal(700, b.AleMl);                                                              // 200 x (2 + 3 x 0.5)
+        Assert.Equal(1_050, b.AleMl);                                                            // 300 x (2 + 3 x 0.5) (integration decision I23)
         Assert.Equal(40, b.SaltG); Assert.Equal(7_500, b.FuelG);
-        Assert.Equal(707, 700 * e.Goods.Def(G(e, "ale")).LitreMassG / 1000);
+        Assert.Equal(1_060, 1_050 * e.Goods.Def(G(e, "ale")).LitreMassG / 1000);
     }
 
     [Fact] // G-H2
@@ -39,7 +39,7 @@ public class HouseholdNeedsTests
     [Fact]
     public void ClassBaskets_FollowTheSpecTable()
     {
-        foreach (var (cls, staple, relish, ale, wood) in new[] { (SocialClass.Peasant, 80, 20, 200, 1500), (SocialClass.Burgher, 72, 28, 300, 1500), (SocialClass.Gentry, 50, 50, 500, 2000) })
+        foreach (var (cls, staple, relish, ale, wood) in new[] { (SocialClass.Peasant, 80, 20, 300, 1500), (SocialClass.Burgher, 72, 28, 400, 1500), (SocialClass.Gentry, 50, 50, 600, 2000) })
         {
             var (p, h) = EconFixture.Household(cls, [40]);
             var e = EconFixture.SmallEconomy(h, p); var b = HouseholdNeeds.Basket(e, p, h, 0, 0, 12);
@@ -92,7 +92,7 @@ public class HouseholdNeedsTests
         var r = HouseholdNeeds.RunDay(e, p, h, 0, 0, 12);
         Assert.Equal(1000, r.FedPermille); Assert.False(r.DietPoor); Assert.False(r.Cold); Assert.False(r.Hungry);
         Assert.Equal((400, 100, 0), (r.EatenStapleX100, r.EatenRelishX100, r.SubstitutedX100));
-        Assert.Equal(7_500, r.FuelBurnedG); Assert.Equal(707, r.AleDrunkG); Assert.Equal(40, r.SaltEatenG);
+        Assert.Equal(7_500, r.FuelBurnedG); Assert.Equal(1_060, r.AleDrunkG); Assert.Equal(40, r.SaltEatenG);
         Assert.Equal(100_000 - 7_500, s.Qty(G(e, "firewood")));
         Assert.Equal(HouseholdTier.Profit, r.Tier);
         Assert.True(e.MassAuditHolds());

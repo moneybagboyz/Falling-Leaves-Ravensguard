@@ -182,10 +182,12 @@ public sealed class ChunkStore
 {
     public const string SectionName = "chunks";
     private readonly SortedDictionary<ChunkKey, ChunkEntry> _chunks = new();
+    // The streamer on the main thread and a region being paged in or out on the tick worker use the same store; every public member takes this lock.
+    private readonly object _lock = new();
 
-    public int Count => _chunks.Count;
-    public bool Contains(ChunkKey k) => _chunks.ContainsKey(k);
-    public IEnumerable<ChunkKey> Keys => _chunks.Keys;
+    public int Count { get { lock (_lock) return _chunks.Count; } }
+    public bool Contains(ChunkKey k) { lock (_lock) return _chunks.ContainsKey(k); }
+    public IEnumerable<ChunkKey> Keys { get { lock (_lock) return _chunks.Keys.ToList(); } }
 
     private static void Check(ChunkKey k)
     {
@@ -203,6 +205,11 @@ public sealed class ChunkStore
     public bool RecordFirstVisit(ChunkKey key, ChunkSnapshot snapshot, ChunkContent content) => RecordFirstVisit(key, content, () => snapshot);
 
     private bool RecordFirstVisit(ChunkKey key, ChunkContent content, Func<ChunkSnapshot> snapshot)
+    {
+        lock (_lock) return RecordFirstVisitLocked(key, content, snapshot);
+    }
+
+    private bool RecordFirstVisitLocked(ChunkKey key, ChunkContent content, Func<ChunkSnapshot> snapshot)
     {
         Check(key);
         if (content.IsEmpty) return false;
@@ -226,23 +233,33 @@ public sealed class ChunkStore
     /// </summary>
     public void AppendDelta(ChunkKey key, IEnumerable<ChunkOp> ops)
     {
+        lock (_lock) AppendDeltaLocked(key, ops);
+    }
+
+    private void AppendDeltaLocked(ChunkKey key, IEnumerable<ChunkOp> ops)
+    {
         Check(key);
         var list = ops.ToList();
         if (list.Count == 0) return;
         foreach (var op in list) ChunkDelta.Validate(op);
         _chunks.TryGetValue(key, out var e);
-        var probe = e == null ? new ChunkContent() : Rebuild(key)!;
+        var probe = e == null ? new ChunkContent() : RebuildLocked(key)!;
         new ChunkDelta { Ops = list }.ApplyTo(probe);
         if (e == null) _chunks[key] = e = new ChunkEntry { Key = key };
         e.Delta.Ops.AddRange(list);
         e.Bump();
     }
 
-    public ChunkSnapshot? GetSnapshot(ChunkKey key) => _chunks.TryGetValue(key, out var e) ? e.Snapshot : null;
-    public int DeltaOpCount(ChunkKey key) => _chunks.TryGetValue(key, out var e) ? e.Delta.Ops.Count : 0;
+    public ChunkSnapshot? GetSnapshot(ChunkKey key) { lock (_lock) return _chunks.TryGetValue(key, out var e) ? e.Snapshot : null; }
+    public int DeltaOpCount(ChunkKey key) { lock (_lock) return _chunks.TryGetValue(key, out var e) ? e.Delta.Ops.Count : 0; }
 
     /// <summary>Current state = snapshot + deltas. Null if the chunk was never stored.</summary>
     public ChunkContent? Rebuild(ChunkKey key)
+    {
+        lock (_lock) return RebuildLocked(key);
+    }
+
+    private ChunkContent? RebuildLocked(ChunkKey key)
     {
         if (!_chunks.TryGetValue(key, out var e)) return null;
         var c = e.Snapshot?.Decode() ?? new ChunkContent();
@@ -258,6 +275,11 @@ public sealed class ChunkStore
 
     /// <summary>The same for the entries <paramref name="pick"/> accepts (null: all).</summary>
     public ChunkStoreSnapshot Snapshot(Func<ChunkKey, bool>? pick)
+    {
+        lock (_lock) return SnapshotLocked(pick);
+    }
+
+    private ChunkStoreSnapshot SnapshotLocked(Func<ChunkKey, bool>? pick)
     {
         var list = pick == null ? _chunks.Values.ToList() : _chunks.Values.Where(e => pick(e.Key)).ToList();
         var items = new ChunkStoreSnapshot.Item[list.Count];
@@ -276,6 +298,11 @@ public sealed class ChunkStore
     /// <summary>The section bytes of the entries <paramref name="pick"/> accepts (a region's share of the store); empty store gives the encoding of an empty list.</summary>
     public byte[] ToSection(Func<ChunkKey, bool> pick)
     {
+        lock (_lock) return ToSectionLocked(pick);
+    }
+
+    private byte[] ToSectionLocked(Func<ChunkKey, bool> pick)
+    {
         var raw = new ChunkStoreRaw();
         foreach (var e in _chunks.Values)
         {
@@ -291,6 +318,11 @@ public sealed class ChunkStore
     /// <summary>Removes the entries <paramref name="pick"/> accepts (a region is paged out) and returns how many went.</summary>
     public int RemoveWhere(Func<ChunkKey, bool> pick)
     {
+        lock (_lock) return RemoveWhereLocked(pick);
+    }
+
+    private int RemoveWhereLocked(Func<ChunkKey, bool> pick)
+    {
         var gone = _chunks.Keys.Where(pick).ToList();
         foreach (var k in gone) _chunks.Remove(k);
         return gone.Count;
@@ -300,8 +332,9 @@ public sealed class ChunkStore
     public int Absorb(ReadOnlyMemory<byte> section)
     {
         if (section.Length == 0) return 0;
+        var data = SaveCodec.DeserializeCompressed<ChunkStoreData>(section).Chunks; // decoded outside the lock
         int n = 0;
-        foreach (var e in SaveCodec.DeserializeCompressed<ChunkStoreData>(section).Chunks) if (_chunks.TryAdd(e.Key, e)) n++;
+        lock (_lock) foreach (var e in data) if (_chunks.TryAdd(e.Key, e)) n++;
         return n;
     }
 

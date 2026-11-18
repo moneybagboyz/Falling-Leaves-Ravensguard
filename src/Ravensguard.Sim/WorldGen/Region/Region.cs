@@ -22,7 +22,7 @@ public sealed class Region
     public int CellY { get; init; }
 
     /// <summary>Terrain height in centimetres above sea level (sea is 0 or below).</summary>
-    public int[] HeightCm { get; } = new int[Tiles];
+    public int[] HeightCm { get; private set; } = new int[Tiles];
     public short[] SlopePermille { get; } = new short[Tiles];
     public Biome[] Biomes { get; } = new Biome[Tiles];
     /// <summary>Soil fertility 0..100 (slope, drainage, alluvium).</summary>
@@ -30,23 +30,23 @@ public sealed class Region
     /// <summary>Tree cover 0..100 before per-chunk tree placement.</summary>
     public byte[] Forest { get; } = new byte[Tiles];
     /// <summary>0..100, 100 = freely drained.</summary>
-    public byte[] Drainage { get; } = new byte[Tiles];
+    public byte[] Drainage { get; private set; } = new byte[Tiles];
     /// <summary><see cref="WaterFlags"/> bit set per tile.</summary>
     public byte[] Water { get; } = new byte[Tiles];
     /// <summary>Lake id + 1 per tile, 0 for none.</summary>
-    public ushort[] LakeMap { get; } = new ushort[Tiles];
+    public ushort[] LakeMap { get; private set; } = new ushort[Tiles];
     /// <summary>Catchment above each tile in tiles (flow accumulation, includes inflow from upstream cells).</summary>
-    public int[] Catchment { get; } = new int[Tiles];
+    public int[] Catchment { get; private set; } = new int[Tiles];
     /// <summary>D8 receiver tile, -1 where water leaves the region or reaches the sea.</summary>
-    public int[] FlowTo { get; } = new int[Tiles];
+    public int[] FlowTo { get; private set; } = new int[Tiles];
     /// <summary><see cref="RoadClass"/> per tile.</summary>
     public byte[] Road { get; } = new byte[Tiles];
     /// <summary>1 when a settlement lot or square overlaps the tile.</summary>
     public byte[] Built { get; } = new byte[Tiles];
     /// <summary>Realm index in <see cref="WorldHistory.Realms"/> per tile, 255 for none.</summary>
-    public byte[] RealmMap { get; } = new byte[Tiles];
+    public byte[] RealmMap { get; private set; } = new byte[Tiles];
     /// <summary>Fief index + 1 per tile (nearest member settlement), 0 for none.</summary>
-    public ushort[] FiefMap { get; } = new ushort[Tiles];
+    public ushort[] FiefMap { get; private set; } = new ushort[Tiles];
     /// <summary>Parcel index + 1 per field tile, 0 for none.</summary>
     public int[] ParcelMap { get; } = new int[Tiles];
     /// <summary>MineralType + 1 where a vein lies under the tile, 0 for none.</summary>
@@ -68,6 +68,22 @@ public sealed class Region
     public List<ActiveWarMarker> ActiveWars { get; } = [];
     /// <summary>Authored landmarks placed by <see cref="LandmarkPlacer"/> (a separate phase after generation; null until it has run). Not part of <see cref="ComputeHash"/>; see <see cref="LandmarkPlacer.ComputeHash"/>.</summary>
     public IReadOnlyList<PlacedLandmark>? Landmarks { get; set; }
+
+    private string? _trimmedHash;
+    /// <summary>True once <see cref="TrimDerived"/> has released the layers nothing reads after generation.</summary>
+    public bool IsTrimmed => _trimmedHash != null;
+
+    /// <summary>
+    /// Releases the layers that only generation (and the region map of the home region) reads: height, drainage, lake and fief maps, catchment, flow and realm maps,
+    /// 4.5 MB of the 11 MB a region takes. The hash is computed first and kept, so <see cref="ComputeHash"/> still answers. For regions that only tick and stream
+    /// (neighbours); never for the home region, whose map draws heights and borders.
+    /// </summary>
+    public void TrimDerived()
+    {
+        if (_trimmedHash != null) return;
+        _trimmedHash = ComputeHash();
+        HeightCm = []; Drainage = []; LakeMap = []; Catchment = []; FlowTo = []; RealmMap = []; FiefMap = [];
+    }
 
     public static int Index(int x, int y) => y * Size + x;
     public static bool InBounds(int x, int y) => (uint)x < Size && (uint)y < Size;
@@ -112,6 +128,7 @@ public sealed class Region
     /// <summary>SHA-256 over every layer and list, integers little-endian, for determinism tests.</summary>
     public string ComputeHash()
     {
+        if (_trimmedHash != null) return _trimmedHash;
         using var h = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
         var b8 = new byte[8];
         void L(long v) { System.Buffers.Binary.BinaryPrimitives.WriteInt64LittleEndian(b8, v); h.AppendData(b8); }

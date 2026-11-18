@@ -90,14 +90,19 @@ public sealed partial class ChunkGenerator
     /// <summary>The generator for a region, built once and shared (it only holds caches). Rebuilt if the content or population differ.</summary>
     public static ChunkGenerator For(RegionData region, Population population, ContentDatabase content)
     {
+        lock (Cache) { if (Cache.TryGetValue(region, out var have) && ReferenceEquals(have.Population, population)) return have; }
+        // built outside the lock (about 100 ms of road and lot indices): a worker making a neighbour's generator must not hold up the frame that asks for another region's
+        var made = new ChunkGenerator(region, population, content);
         lock (Cache)
         {
-            if (Cache.TryGetValue(region, out var g) && ReferenceEquals(g.Population, population)) return g;
-            g = new ChunkGenerator(region, population, content);
-            Cache.AddOrUpdate(region, g);
-            return g;
+            if (Cache.TryGetValue(region, out var raced) && ReferenceEquals(raced.Population, population)) return raced;
+            Cache.AddOrUpdate(region, made);
+            return made;
         }
     }
+
+    /// <summary>Drops the cached generator of a region (it is built again on the next <see cref="For"/>): the region's chunks are not being streamed, so its indices need not stay in memory.</summary>
+    public static void Forget(RegionData region) { lock (Cache) Cache.Remove(region); }
 
     /// <summary>The ground level (z = 0) of a chunk on its first visit.</summary>
     public static ChunkContent Generate(RegionData region, Population population, ContentDatabase content, int chunkX, int chunkY)

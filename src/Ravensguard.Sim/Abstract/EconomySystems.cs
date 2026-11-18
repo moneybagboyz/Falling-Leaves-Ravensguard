@@ -31,7 +31,7 @@ public sealed class FarmingDailySystem : AbstractSystem
 /// <summary>H4 slice: a household with more grain than it needs until the next threshing (plus its seed) sells a sixth of the surplus a day: merchants first, the rest as a lot.</summary>
 public sealed class FarmSalesSystem : AbstractSystem
 {
-    public const int KeepMarginDays = 12, ThreshedByDoy = 44, SpreadDays = 3;
+    public const int KeepMarginDays = 45, ThreshedByDoy = 44, SpreadDays = 3;
     private ushort[]? _grains;
 
     public FarmSalesSystem() : base("farm-sales", TickPhase.H4DailySlice, SystemOrder.FarmSales) { }
@@ -77,6 +77,11 @@ public sealed class FarmSalesSystem : AbstractSystem
         var cat = ew.World.Economy.Goods;
         _products ??= [cat.IdOf("wool_raw"), cat.IdOf("sheep"), cat.IdOf("cow"), cat.IdOf("cheese")];
         var book = ew.Markets.BookForHousehold(hh); ushort cheese = _products[3];
+        {   // fuel above twenty days of the household's use goes to the village market
+            ushort wood = ew.World.Economy.Food.Firewood; long hw = store.Qty(wood);
+            long keepW = (long)ew.World.Households.MemberCount[hh] * ew.World.Economy.Basket(ew.World.Households.Class[hh]).FirewoodGPerPersonDay * 20;
+            if (hw > keepW) book.SellOrList(ew.Markets.HouseholdParty(hh), wood, (hw - keepW + 2) / 3, 800, day);
+        }
         for (int i = 0; i < _products.Length; i++)
         {
             ushort g = _products[i]; long have = store.Qty(g); if (have <= 0) continue;
@@ -164,7 +169,9 @@ public sealed class ContinentTradeSystem : AbstractSystem
     public override void Step(TickContext ctx)
     {
         if (ctx.HourOfDay != 0) return;
-        ctx.World.Get<EconomyWorld>()?.Trade.Daily(ctx.Time);
+        var ew = ctx.World.Get<EconomyWorld>(); if (ew == null) return;
+        ew.Trade.Daily(ctx.Time);
+        ew.Regional.Daily(ctx.Time);
     }
 }
 
@@ -216,6 +223,7 @@ public sealed class BusinessSeasonalSystem : AbstractSystem
         ew.Production.Seasonal(ctx.Time);
         ew.Labour.SeasonalTraining();
         ew.Labour.Reopen(ctx.Time);
+        ew.Parish.Almonry(ctx.Time);
     }
 }
 

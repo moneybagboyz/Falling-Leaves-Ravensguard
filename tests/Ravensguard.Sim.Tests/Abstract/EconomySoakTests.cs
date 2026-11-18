@@ -26,7 +26,7 @@ public class EconomySoakTests(ITestOutputHelper output)
         var sw = Stopwatch.StartNew();
         using var w = SoakWorld.Create(); var sim = w.Sim; var led = w.Econ.Ledger;
         var soak = new EconomySoak(w.Headless);
-        long seeded = led.Audit().Seeded.Mites;
+        long seeded = led.Audit().Seeded.Mites; long start = sim.Vital.Alive;
         soak.Run(1, r => output.WriteLine(EconomySoak.Format(r)));
         var row = soak.Rows[0];
         output.WriteLine(EconomySoak.Header()); output.WriteLine($"1 year in {sw.ElapsedMilliseconds} ms");
@@ -43,7 +43,7 @@ public class EconomySoakTests(ITestOutputHelper output)
         Assert.True(row.WorkshopCompletionPct >= 40, $"workshops completing a batch {row.WorkshopCompletionPct}%");
         Assert.True(row.MerchantsSolventPct >= 10, $"merchants solvent {row.MerchantsSolventPct}%");
         Assert.True(row.HungryPct < 2.0, $"hungry household-days {row.HungryPct}%");
-        Assert.InRange(row.Population, 25_963 * 90 / 100, 25_963 * 110 / 100);
+        Assert.InRange(row.Population, start * 90 / 100, start * 110 / 100);                  // relative to the generated population (it is 25,6xx, not a fixed number)
         Assert.True(w.Economy.Labour.Hired > 0 && w.Economy.Farming.State.HarvestG >= 0);
         Assert.True(sim.Chronicle.CauseCoverage() >= 0.9);
 
@@ -97,7 +97,7 @@ public class EconomySoakTests(ITestOutputHelper output)
     {
         using var w = SoakWorld.Create(); var soak = new EconomySoak(w.Headless);
         output.WriteLine(EconomySoak.Header());
-        long seeded = w.Econ.Ledger.Audit().Seeded.Mites; var sw = Stopwatch.StartNew();
+        long seeded = w.Econ.Ledger.Audit().Seeded.Mites; var sw = Stopwatch.StartNew(); long start100 = w.Sim.Vital.Alive;
         soak.Run(100, r =>
         {
             if (r.Year == 1 || r.Year % 5 == 0) output.WriteLine(EconomySoak.Format(r));
@@ -108,9 +108,9 @@ public class EconomySoakTests(ITestOutputHelper output)
         output.WriteLine($"100 years in {sw.Elapsed.TotalSeconds:0} s");
         output.WriteLine(EconomySoak.Summary(soak)); output.WriteLine(soak.Ticker.Stats.Report());
         Assert.True(soak.Ticker.Stats.P99HourMs < 150);
-        Assert.True(w.Sys.Businesses.Any(b => b.State == BusinessState.Open));
+        Assert.Contains(w.Sys.Businesses, b => b.State == BusinessState.Open);
         // the plan's targets, as the soak reports them
         var rows = soak.Rows;
-        output.WriteLine($"TARGETS population {rows[^1].Population} vs {rows[0].Population} start (+-10%: {(Math.Abs(rows[^1].Population - 25_963) <= 2_596 ? "met" : "NOT met")}); under 15 share {rows[^1].Under15Pct:0.0}% (26-33%); staples in band {rows.Average(r => r.BandPct):0.0}% of book-days (90%); workshops completing {rows.Average(r => r.WorkshopCompletionPct):0}% (90%)");
+        output.WriteLine($"TARGETS population {rows[^1].Population} vs {start100} start (+-10%: {(Math.Abs(rows[^1].Population - start100) <= start100 / 10 ? "met" : "NOT met")}); under 15 share {rows[^1].Under15Pct:0.0}% (26-33%); staples in band {rows.Average(r => r.BandPct):0.0}% of book-days (90%); workshops completing {rows.Average(r => r.WorkshopCompletionPct):0}% (90%)");
     }
 }

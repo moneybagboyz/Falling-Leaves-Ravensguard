@@ -61,8 +61,9 @@ public sealed partial class ChunkGenerator
         if (bp.Length == 0) return null;
         int wealth = lot.Wealth;
         // a household better or worse off than its plot says builds to its means
-        if (Population.LotHousehold.Length > s && lotIdx < Population.LotHousehold[s].Length && Population.LotHousehold[s][lotIdx] is int hh and >= 0 && lot.IsDwelling)
+        if (Population.LotHousehold.Length > s && lotIdx < Population.LotHousehold[s].Length && Population.LotHousehold[s][lotIdx] is int hh and >= 0 && lot.IsDwelling && hh < Population.Households.Class.Length)
         {
+            // the tick may be growing the household table on its worker while this runs (a chunk is made on a worker or the main thread, the tick on another): read the array once, bounds checked
             var cls = Population.Households.Class[hh];
             wealth = cls switch { SocialClass.Gentry => 2, SocialClass.Burgher => Math.Max(1, wealth), _ => Math.Min(wealth, 1) };
             if (lot.Dwelling == DwellingType.Cottage) wealth = Math.Min(wealth, lot.Wealth);

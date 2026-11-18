@@ -24,4 +24,15 @@ public sealed class RegionSectionData
     [Key(10)] public ulong[] IdState { get; set; } = [];
     /// <summary>The region's chunk entries (<see cref="ChunkStore.ToSection(Func{ChunkKey, bool})"/> bytes).</summary>
     [Key(11)] public byte[] Chunks { get; set; } = [];
+
+    /// <summary>Makes the baseline people this region's people are diffed against (the populator's output again). Set by <c>RegionWorld.Capture</c>; not stored.</summary>
+    [IgnoreMember] public Func<PeopleData>? Baseline { get; set; }
+
+    /// <summary>Replaces the people by their patches over the baseline (spec N24); call before encoding, on any thread. A section with no baseline stays whole.</summary>
+    public void Compact()
+    {
+        if (Baseline == null || People.Diff != null) return;
+        People = PeopleDiffer.Compact(People, Baseline());
+        Baseline = null;
+    }
 }

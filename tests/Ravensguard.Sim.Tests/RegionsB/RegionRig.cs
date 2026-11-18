@@ -23,7 +23,7 @@ public sealed class RegionRig
     public ContinentSettings Cs { get; }
     public HistorySettings Hs { get; }
 
-    public RegionRig(RegionCoord? home = null, int dailyRing = 2)
+    public RegionRig(RegionCoord? home = null, int dailyRing = 2, bool trimTerrain = false, IRegionPager? pager = null)
     {
         W = SeamWorld.Get(1234);
         Home = home ?? W.BlockOrigin.Offset(1, 1);
@@ -31,8 +31,8 @@ public sealed class RegionRig
         Cs = ContinentSettings.LoadDefaults(dir); Cs.Seed = 1234;
         Hs = HistorySettings.LoadDefaults(dir); Hs.Seed = 1234;
         Sv = new RegionServices(1234, W.Content, W.Continent, Home);
-        Mgr = new RegionManager(W.Continent, W.History, W.Settings, W.Content) { Synchronous = true };
-        Set = new RegionRecordSet(Sv, Mgr, Chunks);
+        Mgr = new RegionManager(W.Continent, W.History, W.Settings, W.Content) { Synchronous = true, TrimTerrain = trimTerrain };
+        Set = new RegionRecordSet(Sv, Mgr, Chunks, pager);
         Sched = new RegionScheduler(Set) { DailyRing = dailyRing };
         Generate(Home);
     }

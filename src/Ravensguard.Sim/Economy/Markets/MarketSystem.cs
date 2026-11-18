@@ -196,8 +196,8 @@ public sealed class MarketSystem
                 else arr[g] += HouseholdNeeds.GramsFor(c, g, (long)need.StapleX100 * pm / 1000);
             }
             foreach (var (g, pm) in Mix.Relish) arr[g] += HouseholdNeeds.GramsFor(c, g, (long)need.RelishX100 * pm / 1000);
-            arr[Econ.Food.Ale] += need.AleMl * c.Def(Econ.Food.Ale).LitreMassG / 1000;
-            arr[Econ.Food.Salt] += need.SaltG; arr[Econ.Food.Firewood] += need.FuelG;
+            if (!grainOnly || hh.Class[h] == SocialClass.Burgher) arr[Econ.Food.Ale] += need.AleMl * c.Def(Econ.Food.Ale).LitreMassG / 1000;   // landed households brew their own (decision I23)
+            arr[Econ.Food.Salt] += need.SaltG; if (hh.Class[h] == SocialClass.Burgher) arr[Econ.Food.Firewood] += need.FuelG;   // the others gather their own (decision I22)
         }
         Production?.AddStructuralDemand(this, res);
         return res;
@@ -274,7 +274,7 @@ public sealed class MarketSystem
             if (daily > 0 && have < target / 2) { book.Post(new BuyOrder(party, g, target - have, ratio) { Priority = priority }); posted++; }
         }
         Single(Econ.Food.Firewood, need.FuelG, "firewood", 2);
-        Single(Econ.Food.Ale, need.AleMl * c.Def(Econ.Food.Ale).LitreMassG / 1000, "ale", 3);
+        if (!(hht.ParcelCount[hh] > 0 && hht.Class[hh] != SocialClass.Burgher && party.Store.Qty(c.IdOf("barley")) > 0)) Single(Econ.Food.Ale, need.AleMl * c.Def(Econ.Food.Ale).LitreMassG / 1000, "ale", 3);
         Single(Econ.Food.Salt, need.SaltG, "salt", 4);
         for (int k = 0; k < EconomyState.Durables; k++)
         {

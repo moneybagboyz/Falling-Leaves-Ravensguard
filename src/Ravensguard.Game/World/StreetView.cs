@@ -20,6 +20,7 @@ using Ravensguard.Sim.WorldGen.Region;
 using Ravensguard.Sim.Weather;
 using Ravensguard.Sim.WorldGen.Chunks;
 using Ravensguard.Sim.World;
+using Ravensguard.Sim.Worlds;
 
 namespace Ravensguard.Game.World;
 
@@ -95,6 +96,11 @@ public partial class StreetView : Control, IHandlesBack
 
     /// <summary>The run being played (null for the dev hamlet and seed starts): the pause menu saves through it.</summary>
     public RunSession? Run { get; set; }
+    /// <summary>The abstract world ticking beside the live one (null for the hamlet): every region's economy, advanced one game hour at a time on its own worker.</summary>
+    public WorldRuntime? Runtime => _source?.Runtime;
+    // frame cost of the abstract tick on this thread, and whether its failure was shown
+    double _pumpMsSum, _pumpMsMax; long _pumpCount; bool _runtimeFaultShown;
+    System.Runtime.GCLatencyMode _gcMode = System.Runtime.GCLatencyMode.Interactive;
     /// <summary>Called once when this view leaves the tree (the owner clears what it kept for the hand-off).</summary>
     public Action? OnExit { get; set; }
 
@@ -107,8 +113,8 @@ public partial class StreetView : Control, IHandlesBack
     /// </summary>
     public static StreetView ForRegion(Region region, Population population, ContentDatabase content, ScreenRouter? router = null, StreetOptions? opt = null,
         ChunkStore? store = null, (int X, int Y, int Z)? spawn = null, Ravensguard.Sim.Characters.HeroRecord? hero = null, Ravensguard.Sim.Codex.CodexBook? codex = null,
-        Ravensguard.Sim.WorldGen.History.WorldHistory? history = null, Continent? continent = null, Ravensguard.Sim.Live.LiveResume? resume = null, RegionSettings? regionSettings = null)
-        => new(router, opt, StreetSource.ForRegion(region, population, content, store, spawn is { } p ? new Cell3(p.X, p.Y, p.Z) : null, opt?.Poi, hero, codex, history, continent, resume, regionSettings));
+        Ravensguard.Sim.WorldGen.History.WorldHistory? history = null, Continent? continent = null, Ravensguard.Sim.Live.LiveResume? resume = null, RegionSettings? regionSettings = null, WorldRuntime? runtime = null)
+        => new(router, opt, StreetSource.ForRegion(region, population, content, store, spawn is { } p ? new Cell3(p.X, p.Y, p.Z) : null, opt?.Poi, hero, codex, history, continent, resume, regionSettings, runtime));
 
     // ------------------------------------------------------------------ setup
 
@@ -119,8 +125,13 @@ public partial class StreetView : Control, IHandlesBack
         _source ??= _opt.RegionSeed is { } seed ? StreetSource.FromSeed(seed, _opt.Poi) : StreetSource.Hamlet();
         _hero = _source.Hero;
         var season = _opt.Season switch { "summer" => Season.Summer, "autumn" => Season.Autumn, "winter" => Season.Winter, _ => Season.Spring };
-        var t0 = GameTime.FromCalendar(1, season, _opt.Day ?? 8, _opt.Hour ?? 9, 0);
+        // a run opens when history ended (the abstract tick's clock starts there); dev flags that name a date or hour pick it within that year
+        var open = _source.StartTime;
+        bool dated = _opt.Day != null || _opt.Hour != null || _opt.Season != null;
+        var t0 = open is { } ot && !dated ? ot : GameTime.FromCalendar(open?.Year ?? 1, season, _opt.Day ?? 8, _opt.Hour ?? 9, 0);
         _world = _source.CreateWorld(_opt.Start is { } s ? new Cell3(s.X, s.Y, s.Z) : null, t0);
+        StartRuntime();
+        if (_opt.Speed is 1 or 2 or 4 or 8) _world.SetSpeed((SimSpeed)_opt.Speed);
         var start = _world.Snapshot.Hero.Cell;
         DevContext.Clock = _world.Clock;
         if (_source.Resume == null && (_opt.Torch ?? IsNight(t0))) _world.SetTorch(true); // a resumed run keeps the torch it was saved with
@@ -153,11 +164,43 @@ public partial class StreetView : Control, IHandlesBack
 
     public override void _ExitTree()
     {
+        // the run's own save (if any) was already queued behind whatever the worker was doing; leaving waits for it, a moment at most
+        try { Runtime?.Dispose(); } catch (Exception ex) { GD.PushWarning("runtime shutdown: " + ex.Message); }
+        if (Runtime != null) { try { System.Runtime.GCSettings.LatencyMode = _gcMode; } catch (InvalidOperationException) { } }
         if (GetWindow() != null) GetWindow().SizeChanged -= FitViewport;
         if (DevContext.Clock == _world?.Clock) DevContext.Clock = null;
         EditorLibrary.ContentReloaded -= OnBlueprintsReloaded;
         var exit = OnExit; OnExit = null;
         exit?.Invoke();
+    }
+
+    /// <summary>Starts the tick worker and puts the hero's region where the live world stands (a loaded game resumes across a border).</summary>
+    void StartRuntime()
+    {
+        if (Runtime is not { } rt) return;
+        if (_opt.AllNeighbours) foreach (var n in rt.State.HomeRegion.Neighbours()) rt.Manager.Request(n, 0); // dev shot: every neighbour built and ticking
+        // the tick worker and the region builders allocate (a region is 30-40 MB): without this a blocking full collection of a 400 MB heap lands on a frame (a 120 ms frame was seen with nine regions)
+        try { _gcMode = System.Runtime.GCSettings.LatencyMode; System.Runtime.GCSettings.LatencyMode = System.Runtime.GCLatencyMode.SustainedLowLatency; } catch (InvalidOperationException) { /* no concurrent GC: leave it */ }
+        var (wx, wy) = _world.WorldCell;
+        rt.PlaceHero(rt.State.HomeRegion.OriginXM + wx, rt.State.HomeRegion.OriginYM + wy);
+        rt.Start();
+    }
+
+    /// <summary>The per-frame call to the tick runtime: tells it the clock and where the hero is. Costs microseconds; the hours themselves run on the worker.</summary>
+    void PumpRuntime()
+    {
+        if (Runtime is not { } rt) return;
+        var (wx, wy) = _world.WorldCell;
+        long t0 = Stopwatch.GetTimestamp();
+        rt.Pump(_world.Clock.Now, rt.State.HomeRegion.OriginXM + wx, rt.State.HomeRegion.OriginYM + wy);
+        double ms = Stopwatch.GetElapsedTime(t0).TotalMilliseconds;
+        _pumpMsSum += ms; _pumpMsMax = Math.Max(_pumpMsMax, ms); _pumpCount++;
+        if (rt.Fault != null && !_runtimeFaultShown)
+        {
+            _runtimeFaultShown = true;
+            GD.PushWarning("world tick failed: " + rt.Fault);
+            _router?.ShowToast(L.F("TICK_FAILED", rt.Fault.GetBaseException().Message), 8f);
+        }
     }
 
     void OnBlueprintsReloaded(BuildingLibrary _) => _router?.ShowToast(L.T("STREET_BLUEPRINTS_RELOADED"), 4f);
@@ -396,7 +439,8 @@ public partial class StreetView : Control, IHandlesBack
         string phase = s.Ambient.Phase switch { DayPhase.Dawn => "STREET_PHASE_DAWN", DayPhase.Dusk => "STREET_PHASE_DUSK", DayPhase.Night => "STREET_PHASE_NIGHT", _ => "STREET_PHASE_DAY" };
         string speed = s.Speed == SimSpeed.Paused ? L.T("STREET_PAUSED") : $"{(int)s.Speed}x";
         string torch = s.Hero.Torch ? "  " + L.T("STREET_TORCH_ON") : "";
-        _phaseLabel.Text = $"{L.T(phase)}  {speed}{torch}";
+        string where = Runtime is { } rt ? $"  R({rt.Hero.Region.X},{rt.Hero.Region.Y})" : ""; // the region the hero stands in (changes the moment a border is crossed)
+        _phaseLabel.Text = $"{L.T(phase)}  {speed}{torch}{where}";
         for (int i = 0; i < _levelBoxes.Count; i++)
         {
             int z = _world.Grid.MaxZ - i;
@@ -768,6 +812,7 @@ public partial class StreetView : Control, IHandlesBack
         }
         if (steps == 5) _acc = 0;
         foreach (var opened in _world.TakeOpenedCodexEntries()) _router?.ShowToast(L.F("CODEX_NEW_ENTRY", opened.Title)); // the sim opens pages as the hero walks
+        PumpRuntime();
         PollSave();
         if (Run != null && !_leaving && _saveTask == null && (_sinceSave += delta) >= AutosaveSeconds) StartSave(SaveKind.Autosave, quiet: true);
 
@@ -786,7 +831,7 @@ public partial class StreetView : Control, IHandlesBack
         if (_opt.IsShot && !_opt.MapShot && _opt.Panel == null && !_quitting && _frames >= _opt.Frames && ShotReady()) Shoot();
         if (bench && _benchT >= _opt.BenchSeconds) Finish();
         if (bench && _perfLabel.Visible && _frames % 30 == 0)
-            _perfLabel.Text = $"tick {_tickMsSum / Math.Max(1, _tickCount):F3} ms (max {_tickMsMax:F2})  draw {_drawMsSum / Math.Max(1, _drawCount):F3} ms (max {_drawMsMax:F2})  fps {Engine.GetFramesPerSecond()}";
+            _perfLabel.Text = $"tick {_tickMsSum / Math.Max(1, _tickCount):F3} ms (max {_tickMsMax:F2})  draw {_drawMsSum / Math.Max(1, _drawCount):F3} ms (max {_drawMsMax:F2})  fps {Engine.GetFramesPerSecond()}{RuntimeLine()}";
     }
 
     void HandleHeldInput(double delta)
@@ -1010,6 +1055,7 @@ public partial class StreetView : Control, IHandlesBack
         else if (Actions.Pressed(e, "world.panel_character")) OpenCharacter();
         else if (Actions.Pressed(e, "world.panel_codex")) OpenCodex();
         else if (Actions.Pressed(e, "world.quicksave")) QuickSave();
+        else if (Actions.Pressed(e, "world.quickload")) QuickLoad();
         else if (Actions.Pressed(e, "world.camera_home")) { _pan = Vector2.Zero; if (_viewZ != _world.Snapshot.Hero.Z) { _viewZ = _world.Snapshot.Hero.Z; RebuildLevel(); } }
         else if (e is InputEventKey && Actions.Pressed(e, "world.act")) _world.UsePortal();
         else return;
@@ -1089,8 +1135,9 @@ public partial class StreetView : Control, IHandlesBack
         _sinceSave = 0;
         try
         {
-            var capture = Run!.Snapshot(_world);
-            var task = Run.WriteAsync(capture, job.Kind);
+            // the hero's state now (main thread), the world's records copied on the tick worker between two hours, then encoded and written on the thread pool
+            var run = Run!;
+            var task = run.SnapshotAsync(_world).ContinueWith(c => run.WriteAsync(c.GetAwaiter().GetResult(), job.Kind), TaskScheduler.Default).Unwrap();
             task.ContinueWith(t => _ = t.Exception, TaskContinuationOptions.OnlyOnFaulted); // observed: PollSave shows the error (or nobody is left to, when the view was left)
             _saveTask = task; _saveJob = job;
         }
@@ -1131,6 +1178,23 @@ public partial class StreetView : Control, IHandlesBack
         else StartSave(SaveKind.Manual);
     }
 
+    /// <summary>F9: loads the run's manual slot (what F5 and the pause menu's Save write), never in Ironman. The run in play is left as it is; the load screen takes its place.</summary>
+    void QuickLoad()
+    {
+        if (_router == null || _leaving) return;
+        if (Run == null || _world.Streamer == null) { _router.ShowToast(L.T("SAVE_NO_RUN")); return; }
+        if (Run.Ironman) { _router.ShowToast(L.T("SAVE_QUICKLOAD_IRONMAN")); return; }
+        if (Saving) { _router.ShowToast(L.T("SAVE_QUICKLOAD_BUSY")); return; }
+        var entry = Run.ManualEntry();
+        if (entry == null) { _router.ShowToast(L.T("SAVE_QUICKLOAD_NONE")); return; }
+        _leaving = true; // no autosave on the way out: the run being left is the one being replaced
+        _router.ReturnToMainMenu();
+        RunLoadScreen.Open(_router, entry);
+    }
+
+    /// <summary>Self-test hook: the F9 path without the key event.</summary>
+    public void DebugQuickLoad() => QuickLoad();
+
     /// <summary>The window is closing: write an autosave (Ironman: its slot) now, so the run is not lost. Waits for it, a second or two at most.</summary>
     public override void _Notification(int what)
     {
@@ -1138,7 +1202,7 @@ public partial class StreetView : Control, IHandlesBack
         try
         {
             if (_saveTask != null) { try { _saveTask.GetAwaiter().GetResult(); } catch { /* the failure was reported; this save replaces it */ } }
-            Run.WriteAsync(Run.Snapshot(_world), SaveKind.Autosave).GetAwaiter().GetResult();
+            Run.WriteAsync(Run.SnapshotAsync(_world).GetAwaiter().GetResult(), SaveKind.Autosave).GetAwaiter().GetResult();
         }
         catch (Exception ex) { GD.PushWarning("save on quit failed: " + ex.Message); }
     }
@@ -1263,8 +1327,17 @@ public partial class StreetView : Control, IHandlesBack
         Finish();
     }
 
+    /// <summary>One line about the abstract tick for the perf label and the exit report: main-thread cost per frame, and what the worker did (read from the barrier snapshot).</summary>
+    string RuntimeLine()
+    {
+        if (Runtime is not { } rt) return "";
+        var sn = rt.Snapshot;
+        return $"  world pump {_pumpMsSum / Math.Max(1, _pumpCount) * 1000:F1} us (max {_pumpMsMax:F2} ms)  hour {sn.Hour} step {sn.HourMs:F0} ms (max {sn.MaxHourMs:F0})  regions {sn.Resident} paged {sn.Paged}";
+    }
+
     void Finish()
     {
+        if (Runtime != null) GD.Print("[street] world tick:" + RuntimeLine());
         var hh = _world.Snapshot.Hero;
         GD.Print($"[street] hero at ({hh.X:0.00},{hh.Y:0.00}) z{hh.Z}, path left {hh.PathRemaining}, t={_world.Snapshot.Time}");
         GD.Print($"[street] ticks {_tickCount}: avg {_tickMsSum / Math.Max(1, _tickCount):F3} ms, max {_tickMsMax:F3} ms; draw {_drawCount} frames: avg {_drawMsSum / Math.Max(1, _drawCount):F3} ms, max {_drawMsMax:F3} ms (max after warm-up {_drawMsMaxWarm:F3} ms)");

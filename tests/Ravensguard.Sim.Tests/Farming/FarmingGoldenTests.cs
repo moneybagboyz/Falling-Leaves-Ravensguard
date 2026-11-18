@@ -32,23 +32,23 @@ public class FarmingGoldenTests
     [Fact] public void G_F1_WheatFertility70()
     {
         long gross = YieldMath.GrossG(Base(Crop.Wheat), 70, 1000, 1000, 0);
-        Assert.Equal(52_800, gross); Assert.Equal(10_560, Seed(Crop.Wheat)); Assert.Equal(42_240, YieldMath.NetG(gross, Seed(Crop.Wheat)));
+        Assert.Equal(57_200, gross); Assert.Equal(11_440, Seed(Crop.Wheat)); Assert.Equal(45_760, YieldMath.NetG(gross, Seed(Crop.Wheat)));
     }
 
     [Fact] public void G_F2_WheatFertility55()
     {
         long gross = YieldMath.GrossG(Base(Crop.Wheat), 55, 1000, 1000, 0);
-        Assert.Equal(41_485, gross); Assert.Equal(30_925, YieldMath.NetG(gross, Seed(Crop.Wheat)));
+        Assert.Equal(44_942, gross); Assert.Equal(33_502, YieldMath.NetG(gross, Seed(Crop.Wheat)));
     }
 
     [Fact] public void G_F3_FertilityIsCappedAt91()
-        => Assert.Equal(68_640, YieldMath.GrossG(Base(Crop.Wheat), 95, 1000, 1000, 0));
+        => Assert.Equal(74_360, YieldMath.GrossG(Base(Crop.Wheat), 95, 1000, 1000, 0));
 
     [Fact] public void G_F4_RyeFertility40()
     {
-        Assert.Equal(50_600, Base(Crop.Rye));
+        Assert.Equal(55_000, Base(Crop.Rye));
         long gross = YieldMath.GrossG(Base(Crop.Rye), 40, 1000, 1000, 0);
-        Assert.Equal(28_914, gross); Assert.Equal(18_794, YieldMath.NetG(gross, Seed(Crop.Rye)));
+        Assert.Equal(31_428, gross); Assert.Equal(20_428, YieldMath.NetG(gross, Seed(Crop.Rye)));
     }
 
     [Fact] public void G_F5_TenantShareSplit()
@@ -72,7 +72,7 @@ public class FarmingGoldenTests
     {
         Assert.Equal(580, YieldMath.RainFactorPermille(300));
         long gross = YieldMath.GrossG(Base(Crop.Wheat), 70, 580, 1000, 0);
-        Assert.Equal(30_624, gross); Assert.Equal(20_064, YieldMath.NetG(gross, Seed(Crop.Wheat)));
+        Assert.Equal(33_176, gross); Assert.Equal(21_736, YieldMath.NetG(gross, Seed(Crop.Wheat)));
         Assert.Equal(475, 20_064 * 1000 / 42_240);     // 47.5% of normal net
         Assert.Equal(1000, YieldMath.RainFactorPermille(1400)); Assert.Equal(600, YieldMath.RainFactorPermille(2400)); Assert.Equal(1000, YieldMath.RainFactorPermille(1000));
     }
@@ -100,14 +100,14 @@ public class FarmingGoldenTests
         var house = new Store(cat, mass, StoreKind.Barn, EntityId.Make(IdKind.Other, 1)); var gran = new Store(cat, mass, StoreKind.Granary, EntityId.Make(IdKind.Other, 2));
         house.Create(wheat, 1_000_000, CreateReason.Seed); gran.Create(wheat, 1_000_000, CreateReason.Seed);
         for (int d = 0; d < 15; d++) { house.ApplySpoilage(7, d * 24, 10); gran.ApplySpoilage(7, d * 24, 10); }
-        Assert.InRange(house.Qty(wheat), 950_003 - 100, 950_003 + 100);
+        Assert.InRange(house.Qty(wheat), 982_151 - 100, 982_151 + 100);   // 1,200 ppm a day (decision I28)
         Assert.InRange(gran.Qty(wheat), 990_004 - 100, 990_004 + 100);
     }
 
     [Fact] public void G_F11_LateFrostResow_YieldAndSeedMaths()
     {
-        Assert.Equal(39_600, YieldMath.GrossG(Base(Crop.Wheat), 70, 750, 1000, 0));      // resown: x 0.75 of 52,800
-        Assert.Equal(10_560, Seed(Crop.Barley));                                          // each resow costs another seed
+        Assert.Equal(42_900, YieldMath.GrossG(Base(Crop.Wheat), 70, 750, 1000, 0));      // resown: x 0.75 of 52,800
+        Assert.Equal(12_320, Seed(Crop.Barley));                                          // each resow costs another seed
     }
 
     [Fact] public void G_F12_LabourCredit_ParcelOfTenAcres()
@@ -131,14 +131,14 @@ public class FarmingGoldenTests
     [Fact] public void G_F14_Hail()
     {
         long gross = YieldMath.GrossG(Base(Crop.Wheat), 70, 1000, 1000, 500);
-        Assert.Equal(26_400, gross); Assert.Equal(15_840, YieldMath.NetG(gross, Seed(Crop.Wheat)));
+        Assert.Equal(28_600, gross); Assert.Equal(17_160, YieldMath.NetG(gross, Seed(Crop.Wheat)));
     }
 
     [Fact] public void G_F15_RegionBalance_ReferenceRegion()
     {
         long Net(Crop c) => YieldMath.NetG(YieldMath.GrossG(Base(c), 70, 1000, 1000, 0), Seed(c));
         double winter = 0.60 * Net(Crop.Wheat) + 0.40 * Net(Crop.Rye), spring = 0.40 * Net(Crop.Barley) + 0.27 * Net(Crop.Oats) + 0.33 * (Net(Crop.Peas) + Net(Crop.Beans)) / 2;
-        Assert.Equal(41_536, winter, 0); Assert.Equal(40_022, spring, 0);
+        Assert.Equal(45_056, winter, 0); Assert.Equal(43_789, spring, 0);
         double regionMeasures = 20_800 * (winter + spring) / 1100.0;
         Assert.InRange(regionMeasures, 1_541_000, 1_543_500);
         double afterSpoil = regionMeasures * 0.96, demand = 25_000 * 60 * 0.92 + 45_000;
@@ -175,8 +175,8 @@ public class FarmingGoldenTests
 
     [Fact] public void FertilityMultiplier_IsLinearUpToTheCap()
     {
-        for (int fert = 0; fert <= 100; fert += 7) Assert.Equal(52_800L * Math.Min(fert, 91) / 70, YieldMath.Gross0G(Base(Crop.Wheat), fert));
-        Assert.Equal(68_640, YieldMath.Gross0G(Base(Crop.Wheat), 91)); Assert.Equal(68_640, YieldMath.Gross0G(Base(Crop.Wheat), 100));
+        for (int fert = 0; fert <= 100; fert += 7) Assert.Equal(57_200L * Math.Min(fert, 91) / 70, YieldMath.Gross0G(Base(Crop.Wheat), fert));
+        Assert.Equal(74_360, YieldMath.Gross0G(Base(Crop.Wheat), 91)); Assert.Equal(74_360, YieldMath.Gross0G(Base(Crop.Wheat), 100));
     }
 
     [Fact] public void Variance_IsWithinFourPercent_MeanOne()

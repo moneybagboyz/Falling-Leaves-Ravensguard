@@ -88,7 +88,7 @@ public class PopulationSoakTests(ITestOutputHelper output)
             Assert.InRange(births, 550, 800); Assert.InRange(deaths, 560, 760);
             long net = w.Vital.Alive - start;
             Assert.True(Math.Abs(net) * 100 <= start * 2 + start * 1 / 1, $"net change {net} within a percent or two");   // the first year also carries the emigration of the over-crowded
-            Assert.Equal(start + births - deaths - w.Vital.Emigrants, w.Vital.Alive);                                      // the audit is exact
+            Assert.Equal(start + births - deaths - w.Vital.Emigrants + w.Vital.Immigrants, w.Vital.Alive);                                      // the audit is exact
             Audit(w, coin);
             Assert.True(w.Chronicle.CauseCoverage() >= 0.9);
         }
@@ -169,7 +169,7 @@ public class PopulationSoakTests(ITestOutputHelper output)
         {
             int households0 = CountHouseholds(w);
             var years = new List<long>();
-            long lo = long.MaxValue, hi = 0; int maxVacant = 0; var sb = new System.Text.StringBuilder();
+            long lo = long.MaxValue, hi = 0; var sb = new System.Text.StringBuilder();
             for (int y = 1; y <= 100; y++)
             {
                 t.AdvanceDays(60);

@@ -9,7 +9,7 @@ namespace Ravensguard.Sim.People.Vital;
 public sealed class HouseholdNeedsSystem : AbstractSystem
 {
     private long _day = -1; private int _tMean;
-    private ushort _veg = ushort.MaxValue, _eggs;
+    private ushort _veg = ushort.MaxValue, _eggs, _wood, _barley;
 
     public HouseholdNeedsSystem() : base("household-needs", TickPhase.H4DailySlice, SystemOrder.HouseholdNeeds) { }
 
@@ -17,12 +17,12 @@ public sealed class HouseholdNeedsSystem : AbstractSystem
     {
         var w = ctx.World; var e = w.Economy; var hht = w.Households;
         if (_day != ctx.Day) { _day = ctx.Day; _tMean = w.Env.TMeanC(ctx.Day); }
-        if (_veg == ushort.MaxValue) { _veg = e.Goods.IdOf("vegetables"); _eggs = e.Goods.IdOf("eggs"); }
+        if (_veg == ushort.MaxValue) { _veg = e.Goods.IdOf("vegetables"); _eggs = e.Goods.IdOf("eggs"); _wood = e.Food.Firewood; _barley = e.Goods.IdOf("barley"); }
         int day = (int)ctx.Day, n = hht.Count;
         for (int hh = ctx.HourOfDay; hh < n; hh += 24)
         {
             if (hht.MemberCount[hh] == 0) continue;
-            if (w.Get<EconomyWorld>() != null) HouseholdNeeds.Produce(e, hht, hh, ctx.DayOfYear, _veg, _eggs);
+            if (w.Get<EconomyWorld>() != null) { HouseholdNeeds.Produce(e, hht, hh, ctx.DayOfYear, _veg, _eggs, _wood); HouseholdNeeds.HomeBrew(e, w.People, hht, hh, day, _barley); }
             HouseholdNeeds.RunDay(e, w.People, hht, hh, day, _tMean);
             HouseholdNeeds.RollDurables(e, hht, hh, w.Seed, ctx.Hour);
             e.HouseholdStore[hh].ApplySpoilage(w.Seed, ctx.Hour, _tMean);
@@ -248,5 +248,43 @@ public sealed class PopulationMigrationSystem : AbstractSystem
             if (VitalMath.Roll(w.Seed, ctx.Hour, pt.IdOf(p).Value, VitalStreams.Migrant, 1, ppm)) Demography.Depart(w, p, ctx.Time, ctx.Outbox);
         }
         _ = day;
+        Immigrate(ctx);
+    }
+
+    /// <summary>Share of the starting population (permille) that may return in one season, and the part of the shortfall they make up.</summary>
+    public const int ReturnQuotaPermille = 12, ShortfallDivisor = 6;
+
+    /// <summary>
+    /// Immigration (integration decision I27): while the region holds fewer people than it started with, households that left (crowding, a long wait for a home) come back to
+    /// vacant dwellings, a sixth of the shortfall a season and at most 1.2 percent of the starting population. Deterministic: households in ascending order. Balanced against
+    /// the emigration above, which only crowded households and long-waiting singles take: the region cannot lose people to the continent for good and never gains more
+    /// than it lost.
+    /// </summary>
+    private void Immigrate(TickContext ctx)
+    {
+        var w = ctx.World; var pt = w.People; var hht = w.Households; var v = w.Vital;
+        long start = v.Years.Count > 0 ? v.Years[0].PopulationAtStart : v.Alive;       // the first year's opening head count (saved with the vital state)
+        long shortfall = start - v.Alive; if (shortfall <= 0) return;
+        long quota = Math.Min(start * ReturnQuotaPermille / 1000, Math.Max(1, shortfall / ShortfallDivisor));
+        var byHousehold = new SortedDictionary<int, List<int>>();
+        for (int p = 0; p < pt.Count; p++)
+        {
+            if (pt.Status[p] != PersonStatus.Departed) continue;
+            int hh = pt.Household[p]; if (hh < 0 || hht.MemberCount[hh] != 0) continue;
+            if (!byHousehold.TryGetValue(hh, out var l)) byHousehold[hh] = l = [];
+            l.Add(p);
+        }
+        foreach (var (hh, members) in byHousehold)
+        {
+            if (quota <= 0) break;
+            if (Demography.ReturnHousehold(w, hh, members, ctx.Time, ctx.Outbox)) quota -= members.Count;
+        }
+        // singles who left a household that still stands come home to it when it has a bed
+        for (int p = 0; p < pt.Count && quota > 0; p++)
+        {
+            if (pt.Status[p] != PersonStatus.Departed) continue;
+            int hh = pt.Household[p]; if (hh < 0 || hht.MemberCount[hh] == 0 || hht.MemberCount[hh] >= hht.Beds[hh]) continue;
+            if (Demography.ReturnPerson(w, p, hh, ctx.Time, ctx.Outbox)) quota--;
+        }
     }
 }

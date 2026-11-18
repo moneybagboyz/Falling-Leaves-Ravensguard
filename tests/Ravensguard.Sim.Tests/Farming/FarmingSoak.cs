@@ -103,7 +103,6 @@ public sealed class FarmingSoak
         long dayNeedG = (long)(_people * MeasuresPerPersonDay * 1100);
         for (int y = y0; y < y0 + years; y++)
         {
-            long harvest0 = 0, sown0 = 0, spoil0 = 0, eaten0 = 0;
             var ids = _eatOrder; long h0 = Mass(ids, true), s0 = Mass(ids, false), sp0 = Spoiled(ids), e0 = EatenMass(ids);
             long shortG = 0; int hungry = 0; int springSown = 0, winterSown = 0;
             for (int d = 1; d <= 60; d++)

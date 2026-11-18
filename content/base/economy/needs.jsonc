@@ -2,15 +2,15 @@
 // Children under 12 drink half the ale. Firewood doubles toward 0 C (fuel_mult). Lifetimes are historical days.
 [
   { "type": "needs_basket", "id": "peasant", "class": "Peasant",
-    "staple_measures_per_person_day_x100": 80, "relish_measures_per_person_day_x100": 20, "ale_ml_per_person_day": 400, "salt_g_per_person_day": 8, "firewood_g_per_person_day": 1500,
-    "clothes_lifetime_days": 1095, "shoes_lifetime_days": 365, "tools_lifetime_days": 900,
+    "staple_measures_per_person_day_x100": 80, "relish_measures_per_person_day_x100": 20, "ale_ml_per_person_day": 300, "salt_g_per_person_day": 8, "firewood_g_per_person_day": 1500,
+    "clothes_lifetime_days": 730, "shoes_lifetime_days": 270, "tools_lifetime_days": 600,
     "target_cover_days": { "staple": 20, "relish": 3, "ale": 3, "firewood": 20, "salt": 30 }, "survive_below_days": 10, "buffer_below_days": 20 },
   { "type": "needs_basket", "id": "burgher", "class": "Burgher",
-    "staple_measures_per_person_day_x100": 72, "relish_measures_per_person_day_x100": 28, "ale_ml_per_person_day": 500, "salt_g_per_person_day": 8, "firewood_g_per_person_day": 1500,
-    "clothes_lifetime_days": 730, "shoes_lifetime_days": 365, "tools_lifetime_days": 900,
+    "staple_measures_per_person_day_x100": 72, "relish_measures_per_person_day_x100": 28, "ale_ml_per_person_day": 400, "salt_g_per_person_day": 8, "firewood_g_per_person_day": 1500,
+    "clothes_lifetime_days": 548, "shoes_lifetime_days": 270, "tools_lifetime_days": 600,
     "target_cover_days": { "staple": 20, "relish": 3, "ale": 3, "firewood": 20, "salt": 30 }, "survive_below_days": 10, "buffer_below_days": 20 },
   { "type": "needs_basket", "id": "gentry", "class": "Gentry",
-    "staple_measures_per_person_day_x100": 50, "relish_measures_per_person_day_x100": 50, "ale_ml_per_person_day": 800, "salt_g_per_person_day": 8, "firewood_g_per_person_day": 2000,
+    "staple_measures_per_person_day_x100": 50, "relish_measures_per_person_day_x100": 50, "ale_ml_per_person_day": 600, "salt_g_per_person_day": 8, "firewood_g_per_person_day": 2000,
     "clothes_lifetime_days": 365, "shoes_lifetime_days": 365, "tools_lifetime_days": 900,
     "target_cover_days": { "staple": 20, "relish": 3, "ale": 3, "firewood": 20, "salt": 30 }, "survive_below_days": 10, "buffer_below_days": 20 },
 ]

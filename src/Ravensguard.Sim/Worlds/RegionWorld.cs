@@ -38,6 +38,8 @@ public sealed class RegionServices
     public RegionWeather Weather { get; }
     public FarmingSettings FarmSettings { get; }
     public RegionCoord Home { get; }
+    /// <summary>The world's history: the baseline a saved region is diffed against is the population regenerated from it (note N24). Null where it is not at hand: sections are then saved whole.</summary>
+    public Ravensguard.Sim.WorldGen.History.WorldHistory? History { get; set; }
 
     public RegionServices(ulong seed, ContentDatabase content, Continent continent, RegionCoord home)
     {
@@ -134,16 +136,24 @@ public sealed class RegionWorld : IDisposable
             Production = ProductionSave.Capture(Economy.Production), Markets = MarketsSave.Capture(Economy.Markets),
             Chronicle = WorldSave.EncodeChronicle(Chronicle), IdState = Ids.GetState(),
             Chunks = chunks == null ? [] : chunks.ToSection(k => ChunkRegions.Of(Services.Home, k) == Coord),
+            Baseline = Services.History == null ? null : () => WorldSave.EncodePeople(Populator.Populate(pop.Region, Services.History, Services.Content)),
         };
     }
 
-    public byte[] CaptureBytes(ChunkStore? chunks = null) => SaveCodec.SerializeCompressed(Capture(chunks));
+    /// <summary>The section as bytes, people diffed against the baseline when the services know the history (the same bytes whether the region is paged out or saved while resident).</summary>
+    public byte[] CaptureBytes(ChunkStore? chunks = null) { var d = Capture(chunks); d.Compact(); return SaveCodec.SerializeCompressed(d); }
 
     /// <summary>Rebuilds a region's records from its section over the regenerated terrain. Does not tick: catching up is <see cref="AdvanceTo"/>.</summary>
-    public static RegionWorld Restore(RegionServices sv, RegionCoord at, RegionData terrain, RegionSectionData d)
+    public static RegionWorld Restore(RegionServices sv, RegionCoord at, RegionData terrain, RegionSectionData d, Population? baseline = null)
     {
         if (d.RegionId != at.Id) throw new SaveException($"A region section for region {d.RegionId} was found where region {at.Id} was expected.");
-        var pop = WorldSave.DecodePeople(d.People, d.Lots, terrain);
+        var people = d.People;
+        if (people.Diff != null)
+        {
+            var basePop = baseline ?? (sv.History != null ? Populator.Populate(terrain, sv.History, sv.Content) : throw new SaveException("The people of this region are saved as a difference from the generated ones, and the history to generate them again is missing."));
+            people = PeopleDiffer.Expand(people, WorldSave.EncodePeople(basePop));
+        }
+        var pop = WorldSave.DecodePeople(people, d.Lots, terrain);
         var seed = sv.SeedFor(at);
         var econ = d.Economy.Restore(pop, sv.Content);
         var abs = d.Abstract.Restore(pop);

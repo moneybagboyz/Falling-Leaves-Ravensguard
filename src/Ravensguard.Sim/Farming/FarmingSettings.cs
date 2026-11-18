@@ -59,10 +59,10 @@ public sealed class FarmingSettings
 
     private static IEnumerable<CropDef> DefaultCrops() =>
     [
-        new() { Id = "wheat", Kind = "winter_grain", Good = "wheat", BaseYieldMeasures = 48, FertilityDelta = -10, SowDoy = [36, 45], RipeDoy = 26, MinFertility = 40 },
-        new() { Id = "rye", Kind = "winter_grain", Good = "rye", BaseYieldMeasures = 46, FertilityDelta = -8, SowDoy = [36, 45], RipeDoy = 26, MinFertility = 30 },
-        new() { Id = "barley", Kind = "spring_grain", Good = "barley", BaseYieldMeasures = 48, FertilityDelta = -6, SowDoy = [3, 14], RipeDoy = 31, MinFertility = 35 },
-        new() { Id = "oats", Kind = "spring_grain", Good = "oats", BaseYieldMeasures = 46, FertilityDelta = -6, SowDoy = [3, 14], RipeDoy = 31, MinFertility = 30 },
+        new() { Id = "wheat", Kind = "winter_grain", Good = "wheat", BaseYieldMeasures = 52, FertilityDelta = -10, SowDoy = [36, 45], RipeDoy = 26, MinFertility = 40 },
+        new() { Id = "rye", Kind = "winter_grain", Good = "rye", BaseYieldMeasures = 50, FertilityDelta = -8, SowDoy = [36, 45], RipeDoy = 26, MinFertility = 30 },
+        new() { Id = "barley", Kind = "spring_grain", Good = "barley", BaseYieldMeasures = 56, FertilityDelta = -6, SowDoy = [3, 14], RipeDoy = 31, MinFertility = 35 },
+        new() { Id = "oats", Kind = "spring_grain", Good = "oats", BaseYieldMeasures = 50, FertilityDelta = -6, SowDoy = [3, 14], RipeDoy = 31, MinFertility = 30 },
         new() { Id = "peas", Kind = "spring_legume", Good = "peas", BaseYieldMeasures = 42, FertilityDelta = 5, SowDoy = [3, 14], RipeDoy = 31, MinFertility = 25 },
         new() { Id = "beans", Kind = "spring_legume", Good = "beans", BaseYieldMeasures = 42, FertilityDelta = 5, SowDoy = [3, 14], RipeDoy = 31, MinFertility = 30 },
     ];

@@ -556,6 +556,10 @@ MENU_CONTINUE_NONE,There is no saved run to continue yet.
 SAVE_AUTOSAVED,Autosaved
 SAVE_AUTOSAVE_FAILED,"Autosave failed: {0}"
 SAVE_NO_RUN,There is no run to save here.
+SAVE_QUICKLOAD_IRONMAN,Ironman runs have no quickload.
+SAVE_QUICKLOAD_BUSY,A save is being written; try again in a moment.
+SAVE_QUICKLOAD_NONE,There is no quicksave of this run yet (F5 makes one).
+TICK_FAILED,The world simulation stopped: {0}
 SAVE_QUICK_IRONMAN,Quicksave is off in Ironman. The run saves when you leave.
 WL_LOAD,Saved runs
 RUNS_TITLE,Saved runs

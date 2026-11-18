@@ -23,8 +23,8 @@ public sealed record VitalRates
     public int MarriageWaitCap { get; init; } = 8;
     /// <summary>Migration push (population spec 3.7): households over this crowding percent, and unmarried adults who waited this many seasons, leave with this chance per season.</summary>
     public int EmigrateCrowdingOverPct { get; init; } = 150;
-    public int EmigrateAfterWaitSeasons { get; init; } = 4;
-    public int EmigrateChancePct { get; init; } = 40;
+    public int EmigrateAfterWaitSeasons { get; init; } = 12;
+    public int EmigrateChancePct { get; init; } = 20;
     /// <summary>A couple may live with the groom's or bride's family only while the household, with the newcomer, stays within this percent of its beds (the stem family, decision V5).</summary>
     public int StemJoinMaxOccupancyPct { get; init; } = 100;
     /// <summary>Death multiplier (permille) by nutrition reserve in centidays: first row whose MinCd is at most the reserve.</summary>

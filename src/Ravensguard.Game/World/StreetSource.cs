@@ -39,22 +39,45 @@ public abstract class StreetSource
     /// <summary>A saved run to resume (hero position, clock, torch, explored map, Codex progress); null starts fresh at the spawn.</summary>
     public Ravensguard.Sim.Live.LiveResume? Resume { get; set; }
     public ContentDatabase? Content { get; protected set; }
+    /// <summary>The running abstract world (economy of every generated region, ticked on its own worker); null for the test hamlet and a source without a world state.</summary>
+    public virtual WorldRuntime? Runtime => null;
+    /// <summary>The game time a new run of this source opens at (the end of history); null: the caller picks one.</summary>
+    public virtual GameTime? StartTime => null;
 
     public static StreetSource Hamlet() => new HamletSource();
 
     /// <summary>The generated region as a street source. Chunks generate on first visit; pass the save's chunk store to resume where the world was left.</summary>
     public static StreetSource ForRegion(RegionData region, Population population, ContentDatabase content, ChunkStore? store = null, Cell3? spawn = null, string? poi = null,
         Ravensguard.Sim.Characters.HeroRecord? hero = null, Ravensguard.Sim.Codex.CodexBook? codex = null, WorldHistory? history = null, Continent? continent = null,
-        Ravensguard.Sim.Live.LiveResume? resume = null, RegionSettings? regionSettings = null)
+        Ravensguard.Sim.Live.LiveResume? resume = null, RegionSettings? regionSettings = null, WorldRuntime? runtime = null)
         => new RegionSource(region, population, content, store, spawn)
         {
-            Poi = poi, Hero = hero, Codex = codex, History = history, Resume = resume,
+            Poi = poi, Hero = hero, Codex = codex, History = history, Resume = resume, RuntimeInit = runtime,
             // with the continent and history at hand the neighbours generate as the hero nears an edge (seamless continent, plan 1B)
-            RegionsInit = continent != null && history != null ? MakeRegions(continent, history, region, population, content, regionSettings) : null,
+            RegionsInit = runtime != null ? runtime.Manager : continent != null && history != null ? MakeRegions(continent, history, region, population, content, regionSettings) : null,
             ContinentInit = continent,
             // the world's own (possibly customised) continent drives the weather, not one regenerated from default settings
             WeatherInit = continent == null ? null : Ravensguard.Sim.Weather.RegionWeather.ForContinent(continent, region.Seed, Ravensguard.Sim.Weather.WeatherSettings.LoadDefaults(StreetView.ContentDir())),
         };
+
+    /// <summary>A folder of this session's own for paged-out region sections (removed when the runtime goes).</summary>
+    public static IRegionPager MakePager()
+    {
+        string dir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ravensguard-pages-" + Guid.NewGuid().ToString("N"));
+        return new TempDirectoryRegionPager(dir);
+    }
+
+    /// <summary>A <see cref="DirectoryRegionPager"/> that deletes its folder when asked to (the runtime's disposal).</summary>
+    sealed class TempDirectoryRegionPager(string dir) : IRegionPager, IDisposable
+    {
+        readonly DirectoryRegionPager _inner = new(dir);
+        public void Write(int regionId, byte[] section) => _inner.Write(regionId, section);
+        public byte[]? Read(int regionId) => _inner.Read(regionId);
+        public bool Has(int regionId) => _inner.Has(regionId);
+        public void Delete(int regionId) => _inner.Delete(regionId);
+        public IReadOnlyList<int> Ids => _inner.Ids;
+        public void Dispose() { try { System.IO.Directory.Delete(dir, true); } catch (System.IO.IOException) { } catch (UnauthorizedAccessException) { } }
+    }
 
     static RegionManager MakeRegions(Continent continent, WorldHistory history, RegionData region, Population population, ContentDatabase content, RegionSettings? settings)
     {
@@ -85,11 +108,14 @@ public abstract class StreetSource
         var weather = Ravensguard.Sim.Weather.RegionWeather.ForContinent(c, seed, Ravensguard.Sim.Weather.WeatherSettings.LoadDefaults(dir));
         // dev: a hero from the first origin, and the Codex of this world, so the panels can be opened from a seed start
         var origin = load.Database.All<OriginDef>().OrderBy(o => o.Order).First();
-        return new RegionSource(region, pop, load.Database, null, null)
+        var hero = Ravensguard.Sim.Characters.HeroRecord.FromOrigin("Aldric Vane", false, origin);
+        var codex = Ravensguard.Sim.Codex.CodexBook.Build(h, region, Ravensguard.Game.UI.CodexRules.FromInput());
+        // the same new-game world the region build makes: economy, farming, production, markets and the tick state, run by a runtime of its own
+        var state = NewGameWorld.Create(load.Database, c, h, cs, hs, rs, pick.CellX, pick.CellY, pop, hero, codex.ToProgress());
+        var runtime = new WorldRuntime(state, load.Database, MakePager());
+        return new RegionSource(region, pop, load.Database, state.Chunks, null)
         {
-            Poi = poi, WeatherInit = weather, History = h, RegionsInit = MakeRegions(c, h, region, pop, load.Database, rs), ContinentInit = c,
-            Hero = Ravensguard.Sim.Characters.HeroRecord.FromOrigin("Aldric Vane", false, origin),
-            Codex = Ravensguard.Sim.Codex.CodexBook.Build(h, region, Ravensguard.Game.UI.CodexRules.FromInput()),
+            Poi = poi, WeatherInit = weather, History = h, RegionsInit = runtime.Manager, RuntimeInit = runtime, ContinentInit = c, Hero = hero, Codex = codex,
         };
     }
 
@@ -116,6 +142,10 @@ public abstract class StreetSource
         Cell3? _found;
         public string? Poi { get; init; }
         public RegionManager? RegionsInit { get => _regions; init => _regions = value; }
+        public WorldRuntime? RuntimeInit { init => _runtime = value; }
+        WorldRuntime? _runtime;
+        public override WorldRuntime? Runtime => _runtime;
+        public override GameTime? StartTime => _runtime?.State.Clock.Now;
         public Continent? ContinentInit { init => Continent = value; }
         RegionManager? _regions;
         public override RegionManager? Regions => _regions;

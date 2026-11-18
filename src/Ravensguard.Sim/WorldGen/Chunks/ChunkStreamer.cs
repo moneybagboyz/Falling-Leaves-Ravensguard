@@ -123,7 +123,7 @@ public sealed class ChunkStreamer
     {
         if (Regions == null) return;
         var at = RegionOfChunk(cx, cy);
-        if (at.IsValid) Regions.GenerateNow(at);
+        if (at.IsValid) _ = Regions.GenerateNow(at).Generator; // the streamer is about to use it: made here, not lazily on the first chunk
     }
 
     /// <summary>The region square that holds a world chunk (Home itself without a manager and inside the home region).</summary>

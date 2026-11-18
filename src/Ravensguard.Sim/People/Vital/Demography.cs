@@ -26,6 +26,7 @@ public static class Demography
         pt.Status[p] = PersonStatus.Dead; pt.DeathDay[p] = (int)day; pt.DeathCause[p] = cause; pt.PregnantUntilDay[p] = -1; pt.FatherOfUnborn[p] = -1;
         var v = w.Vital;
         v.Alive--; v.DeathsByCause[(int)cause]++; v.Year(when.Year).Deaths++;
+        if (cause == DeathCause.Hunger && hh >= 0) v.HungerBySegment[(age < 5 ? 0 : age < 15 ? 1 : age < 50 ? 2 : 3) * 8 + (int)w.Households.Class[hh] * 2 + (w.Households.ParcelCount[hh] > 0 ? 1 : 0)]++;
         ob.Count("deaths");
         int sp = pt.Spouse[p];
         if (sp >= 0 && pt.Spouse[sp] == p) pt.Spouse[sp] = -1;           // the partner is widowed; the dead keep the link as a record
@@ -346,6 +347,58 @@ public static class Demography
         VacateDwelling(w, hh);
         if (w.Rates.ChronicleEveryEvent)
             ob.Chronicle(when, "emigration", [hht.IdOf(hh)], [new Cause(CauseKind.Migration, null, "the household left a crowded dwelling")], ("household", hht.Name[hh]), ("members", members.Length.ToString()));
+    }
+
+    // ------------------------------------------------------------------ immigration
+
+    /// <summary>
+    /// A household that left comes back (integration decision I27, the stand-in for the continent's inflow): its departed members are alive again in a vacant dwelling (its own
+    /// village first), the eldest adult heads it, each member's reserve is full, and the continent's purse and chest give it a stake from what the emigrants took out
+    /// (20 crowns and a fortnight of grain a head, as much as is there), so coin and goods stay in the closed audit. False when no dwelling is free.
+    /// </summary>
+    public static bool ReturnHousehold(SimWorld w, int hh, List<int> members, GameTime when, RegionOutbox ob)
+    {
+        var pt = w.People; var hht = w.Households; var e = w.Economy; long day = when.TotalDays;
+        var (s, l) = Marriage.FreeDwelling(w, hht.Settlement[hh], members.Count);
+        if (s < 0) return false;
+        var pop = w.Population;
+        hht.Settlement[hh] = s; hht.Lot[hh] = (short)l; hht.Beds[hh] = (short)pop.LotBeds[s][l]; hht.Dwelling[hh] = pop.Region.Settlements[s].Plan.Lots[l].Dwelling; pop.LotHousehold[s][l] = hh;
+        int head = -1;
+        foreach (int p in members)
+        {
+            pt.Status[p] = PersonStatus.Alive; pt.HomeSettlement[p] = s; pt.HomeLot[p] = (short)l; pt.Bed[p] = -1; pt.Homeless[p] = HomelessReason.None;
+            e.NutritionCd[p] = (short)HouseholdNeeds.MaxNutritionCd;
+            hht.AddMemberLater(hh, p);
+            int age = w.AgeOn(p, day);
+            if (age >= 18 && (head < 0 || pt.BirthDay[p] < pt.BirthDay[head])) head = p;
+            w.Vital.Alive++; w.Vital.Immigrants++; w.Vital.Year(when.Year).Immigrants++;
+        }
+        hht.Head[hh] = head >= 0 ? head : members[0];
+        ob.Count("immigrants", members.Count);
+        var purse = e.Ledger.Open(PurseKind.Treasury, ContinentOwner);
+        long stake = Math.Min(e.Ledger.Balance(purse).Mites, members.Count * 2000L);
+        if (stake > 0) e.Ledger.Transfer(purse, e.HouseholdPurse[hh], new Coin(stake), TransferReason.Gift);
+        if (e.OtherStores.TryGetValue(ContinentOwner, out var chest))
+        {
+            long want = (long)members.Count * HouseholdNeeds.GramsPerMeasure * 14;
+            foreach (ushort g in e.Food.Staples) { if (want <= 0) break; if (e.Food.IsGrain(g)) want -= Store.MoveUpTo(chest, e.HouseholdStore[hh], g, want); }
+        }
+        return true;
+    }
+
+    /// <summary>A person who left alone comes back to the household that still stands (a bed free), with a stake of 20 crowns from the continent's purse.</summary>
+    public static bool ReturnPerson(SimWorld w, int p, int hh, GameTime when, RegionOutbox ob)
+    {
+        var pt = w.People; var hht = w.Households; var e = w.Economy;
+        pt.Status[p] = PersonStatus.Alive; pt.PregnantUntilDay[p] = -1; pt.HomeSettlement[p] = hht.Settlement[hh]; pt.HomeLot[p] = hht.Lot[hh]; pt.Bed[p] = -1; pt.Homeless[p] = HomelessReason.None;
+        e.NutritionCd[p] = (short)HouseholdNeeds.MaxNutritionCd;
+        hht.AddMemberLater(hh, p);
+        w.Vital.Alive++; w.Vital.Immigrants++; w.Vital.Year(when.Year).Immigrants++;
+        ob.Count("immigrants");
+        var purse = e.Ledger.Open(PurseKind.Treasury, ContinentOwner);
+        long stake = Math.Min(e.Ledger.Balance(purse).Mites, 2000L);
+        if (stake > 0) e.Ledger.Transfer(purse, e.HouseholdPurse[hh], new Coin(stake), TransferReason.Gift);
+        return true;
     }
 
     // ------------------------------------------------------------------ births

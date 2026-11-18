@@ -8,6 +8,7 @@ using Xunit.Abstractions;
 
 namespace Ravensguard.Sim.Tests.RegionsB;
 
+[Collection(MemoryCollection.Name)]
 public class RegionWalkTests(ITestOutputHelper output)
 {
     private static double Land(Continent c, RegionCoord r)
@@ -35,16 +36,35 @@ public class RegionWalkTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public void Walking_twelve_regions_in_a_line_keeps_memory_bounded_and_pages_the_ones_left_behind()
+    public void Walking_twelve_regions_in_a_line_keeps_memory_bounded_and_pages_the_ones_left_behind() => Walk(2, false, 26, 1_400);
+
+    /// <summary>The game's settings (part C, note N22): the 3 x 3 block resident (ring 2 paged), derived terrain layers released, chunk generators on demand.</summary>
+    [Fact]
+    public void Walking_twelve_regions_in_a_line_with_the_game_settings_keeps_nine_regions_and_the_memory_budget()
+        => Walk(1, true, 10, MemoryBudgetMb);
+
+    /// <summary>Peak managed MB asked of the 12-region walk with the game's settings: 9 detailed regions plus the home region, over a 60 MB baseline (plan 2.11: about 300 MB).</summary>
+    public const int MemoryBudgetMb = 450;
+
+    private void Walk(int dailyRing, bool game, int maxResident, int maxMb)
     {
         var w0 = Seamless.SeamWorld.Get(1234);
         var line = FindLine(w0.Continent, 12);
         output.WriteLine("line " + string.Join(" ", line));
         Assert.True(line.Count >= 8, "a row of at least 8 land regions");
-        var rig = new RegionRig(line[0]);
+        // the game keeps paged sections in a folder, not in memory
+        string pageDir = Path.Combine(Path.GetTempPath(), "rg-walk-" + Guid.NewGuid().ToString("N"));
+        try { WalkIn(line, w0, dailyRing, game, maxResident, maxMb, game ? new DirectoryRegionPager(pageDir) : null); }
+        finally { try { Directory.Delete(pageDir, true); } catch (IOException) { } }
+    }
+
+    private void WalkIn(List<RegionCoord> line, Seamless.SeamWorld w0, int dailyRing, bool game, int maxResident, int maxMb, IRegionPager? pager)
+    {
+        long beforeRig = GC.GetTotalMemory(true); // what the process already holds (the shared test worlds): the budget is for what the walk adds
+        var rig = new RegionRig(line[0], dailyRing, game, pager);
         long baseline = GC.GetTotalMemory(true);
         long peakBytes = 0; int peakResident = 0, peakDetailed = 0; double maxStageMs = 0, maxBuildMs = 0;
-        var pager = (MemoryRegionPager)rig.Set.Pager;
+        var pg = rig.Set.Pager;
         long hour = rig.Set.HomeWorld!.HourDone;
         foreach (var at in line)
         {
@@ -66,11 +86,12 @@ public class RegionWalkTests(ITestOutputHelper output)
             peakDetailed = Math.Max(peakDetailed, rig.Set.Resident.Count(r => r.Level is RegionLevel.Live or RegionLevel.Detailed));
             Assert.True(rig.Set.Resident.Count(r => r.Level is RegionLevel.Live or RegionLevel.Detailed) <= 9);
             Assert.All(rig.Set.Resident, r => Assert.True(r.Coord.Chebyshev(at) <= 2 || r.Coord == rig.Home));
-            output.WriteLine($"at {at}: resident {rig.Set.ResidentCount}, paged {pager.Ids.Count - rig.Set.ResidentCount + 0}, {mem / 1048576} MB, stage {sw.ElapsedMilliseconds} ms");
+            output.WriteLine($"at {at}: resident {rig.Set.ResidentCount}, paged {pg.Ids.Count - rig.Set.ResidentCount + 0}, {mem / 1048576} MB, stage {sw.ElapsedMilliseconds} ms");
         }
-        output.WriteLine($"PEAK {peakBytes / 1048576} MB over baseline {baseline / 1048576} MB; resident peak {peakResident}, detailed peak {peakDetailed}; slowest stage {maxStageMs:0} ms; slowest region build {maxBuildMs:0} ms; paged sections {pager.Ids.Count} ({pager.Ids.Sum(i => pager.Read(i)!.Length) / 1e6:0.0} MB)");
-        Assert.True(peakResident <= 26, "25 resident regions at most (ring 2) plus the home region");
-        Assert.True(peakBytes < 1_400L * 1048576, $"peak {peakBytes / 1048576} MB");
-        Assert.True(pager.Ids.Count > 0, "regions were paged to the pager on the way");
+        output.WriteLine($"PEAK {(peakBytes - beforeRig) / 1048576} MB added by the walk (home region {(baseline - beforeRig) / 1048576} MB); resident peak {peakResident}, detailed peak {peakDetailed}; slowest stage {maxStageMs:0} ms; slowest region build {maxBuildMs:0} ms; paged sections {pg.Ids.Count} ({pg.Ids.Sum(i => pg.Read(i)!.Length) / 1e6:0.0} MB)");
+        Assert.True(peakResident <= maxResident, $"{maxResident} resident regions at most, had {peakResident}");
+        Assert.True(peakDetailed <= 9, "9 detailed regions at most");
+        Assert.True(peakBytes - beforeRig < maxMb * 1048576L, $"the walk added {(peakBytes - beforeRig) / 1048576} MB, budget {maxMb}");
+        Assert.True(pg.Ids.Count > 0, "regions were paged to the pager on the way");
     }
 }

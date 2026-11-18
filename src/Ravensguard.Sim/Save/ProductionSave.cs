@@ -198,6 +198,23 @@ public sealed class ProductionSave
     [Key(59)] public int[] ResDiffRow { get; set; } = [];
     [Key(60)] public long[] ResDiffStock { get; set; } = [];
     [Key(61)] public short[] ResDiffLast { get; set; } = [];
+    /// <summary>
+    /// The difference per row of the layer (note N24), when non-empty: 0 = as freshly built, 1 = stock at its cap (what regrowth does to rows that were not full),
+    /// 2 = fresh stock plus the amount for the row's kind in <see cref="ResKindDelta"/> (wood and game regrow by a fixed amount), 4 = fresh stock plus a share of the gap to the cap, <see cref="ResKindFracPermille"/> (fish and the like regrow by a fraction of what is missing), 3 = explicit: the next entry of
+    /// <see cref="ResDiffStock"/> (stock minus fresh) and <see cref="ResDiffLast"/>. The class bytes repeat with the tile pattern, so they compress to a few kilobytes.
+    /// <see cref="ResDiffRow"/> is empty then (the older row list is still read).
+    /// </summary>
+    [Key(62)] public byte[] ResClass { get; set; } = [];
+    /// <summary>Per resource kind (index = kind, 16 entries): the amount the rows of class 2 gained, and the share of the gap to the cap (per mille) the rows of class 4 gained.</summary>
+    [Key(63)] public long[] ResKindDelta { get; set; } = [];
+    [Key(64)] public int[] ResKindFracPermille { get; set; } = [];
+
+    /// <summary>The per mille share of <paramref name="gap"/> that <paramref name="delta"/> is exactly (<c>gap * f / 1000 == delta</c>), null when none of the 1..1000 does.</summary>
+    private static int? FracOf(long delta, long gap)
+    {
+        long f = (delta * 1000 + gap - 1) / gap; // the smallest share that reaches delta
+        return f is >= 1 and <= 1000 && gap * f / 1000 == delta ? (int)f : null;
+    }
 
     public static ProductionSave Capture(ProductionSystem p)
     {
@@ -234,9 +251,38 @@ public sealed class ProductionSave
             var pristine = ResourceLayer.Build(p.Pop.Region, p.Content.Settings, p.Seed).Export();
             if (pristine.Tile.AsSpan().SequenceEqual(e.Tile) && pristine.Kind.AsSpan().SequenceEqual(e.Kind) && pristine.Cap.AsSpan().SequenceEqual(e.Cap))
             {
-                s.ResDiffBase = true; var rows = new List<int>();
-                for (int i = 0; i < e.Tile.Length; i++) if (e.Stock[i] != pristine.Stock[i] || e.LastDay[i] != pristine.LastDay[i]) rows.Add(i);
-                s.ResDiffRow = [.. rows]; s.ResDiffStock = [.. rows.Select(i => e.Stock[i])]; s.ResDiffLast = [.. rows.Select(i => e.LastDay[i])];
+                s.ResDiffBase = true;
+                var stocks = new List<long>(); var lasts = new List<short>();
+                // the usual regrowth of each kind: a fixed amount (wood) or a share of the gap to the cap (fish): the most common of the rows that moved and did not just fill up
+                var cDelta = new Dictionary<(byte Kind, long Delta), int>(); var cFrac = new Dictionary<(byte Kind, int Frac), int>();
+                for (int i = 0; i < e.Tile.Length; i++)
+                {
+                    long d = e.Stock[i] - pristine.Stock[i], gap = e.Cap[i] - pristine.Stock[i];
+                    if (d == 0 || e.Stock[i] == e.Cap[i] || e.LastDay[i] != pristine.LastDay[i]) continue;
+                    cDelta[(e.Kind[i], d)] = cDelta.GetValueOrDefault((e.Kind[i], d)) + 1;
+                    if (gap > 0 && FracOf(d, gap) is int f) cFrac[(e.Kind[i], f)] = cFrac.GetValueOrDefault((e.Kind[i], f)) + 1;
+                }
+                var kindDelta = new long[16]; var kindFrac = new int[16];
+                foreach (var g in cDelta.GroupBy(kv => kv.Key.Kind)) { var best = g.OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key.Delta).First(); kindDelta[g.Key] = best.Key.Delta; }
+                foreach (var g in cFrac.GroupBy(kv => kv.Key.Kind)) { var best = g.OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key.Frac).First(); kindFrac[g.Key] = best.Key.Frac; }
+                // a kind uses whichever law explains more of its rows
+                for (int k = 0; k < 16; k++)
+                {
+                    int nd = kindDelta[k] == 0 ? 0 : cDelta.GetValueOrDefault(((byte)k, kindDelta[k])), nf = kindFrac[k] == 0 ? 0 : cFrac.GetValueOrDefault(((byte)k, kindFrac[k]));
+                    if (nf > nd) kindDelta[k] = 0; else kindFrac[k] = 0;
+                }
+                var cls = new byte[e.Tile.Length];
+                for (int i = 0; i < e.Tile.Length; i++)
+                {
+                    long d = e.Stock[i] - pristine.Stock[i], gap = e.Cap[i] - pristine.Stock[i];
+                    bool sameLast = e.LastDay[i] == pristine.LastDay[i];
+                    byte kd = e.Kind[i];
+                    byte c = d == 0 && sameLast ? (byte)0 : e.Stock[i] == e.Cap[i] && sameLast ? (byte)1
+                        : sameLast && kindDelta[kd] != 0 && d == kindDelta[kd] ? (byte)2 : sameLast && kindFrac[kd] != 0 && gap > 0 && d == gap * kindFrac[kd] / 1000 ? (byte)4 : (byte)3;
+                    cls[i] = c;
+                    if (c == 3) { stocks.Add(d); lasts.Add(e.LastDay[i]); }
+                }
+                s.ResClass = cls; s.ResKindDelta = kindDelta; s.ResKindFracPermille = kindFrac; s.ResDiffStock = [.. stocks]; s.ResDiffLast = [.. lasts];
             }
             else { s.ResTile = e.Tile; s.ResKind = e.Kind; s.ResStock = e.Stock; s.ResCap = e.Cap; s.ResLastDay = e.LastDay; }
         }
@@ -255,7 +301,22 @@ public sealed class ProductionSave
                 if (ResDiffBase)
                 {
                     var b = ResourceLayer.Build(pop.Region, content.Settings, seed).Export();
-                    for (int k = 0; k < ResDiffRow.Length; k++) { b.Stock[ResDiffRow[k]] = ResDiffStock[k]; b.LastDay[ResDiffRow[k]] = ResDiffLast[k]; }
+                    if (ResClass.Length > 0)
+                    {
+                        if (ResClass.Length != b.Tile.Length) throw new SaveException("The resource layer does not match the region.");
+                        int ex = 0;
+                        for (int row = 0; row < ResClass.Length; row++)
+                        {
+                            switch (ResClass[row])
+                            {
+                                case 1: b.Stock[row] = b.Cap[row]; break;
+                                case 2: b.Stock[row] += ResKindDelta[b.Kind[row]]; break;
+                                case 4: b.Stock[row] += (b.Cap[row] - b.Stock[row]) * ResKindFracPermille[b.Kind[row]] / 1000; break;
+                                case 3: b.Stock[row] += ResDiffStock[ex]; b.LastDay[row] = ResDiffLast[ex]; ex++; break;
+                            }
+                        }
+                    }
+                    else for (int k = 0; k < ResDiffRow.Length; k++) { b.Stock[ResDiffRow[k]] = ResDiffStock[k]; b.LastDay[ResDiffRow[k]] = ResDiffLast[k]; }
                     layer = ResourceLayer.Import(b.Tile, b.Kind, b.Stock, b.Cap, b.LastDay);
                 }
                 else layer = ResourceLayer.Import(ResTile, ResKind, ResStock, ResCap, ResLastDay);

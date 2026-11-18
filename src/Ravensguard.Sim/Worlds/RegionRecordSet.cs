@@ -22,6 +22,8 @@ public sealed class RegionRecordSet
     {
         Services = services; Manager = manager; Chunks = chunks; Pager = pager ?? new MemoryRegionPager();
         manager.RecordsFactory = MakeRecords;
+        manager.Attached += _ => Sync();
+        Services.History ??= manager.History;
     }
 
     public RegionCoord Home => Services.Home;
@@ -38,7 +40,7 @@ public sealed class RegionRecordSet
     {
         if (pop.Households.Count == 0) return null; // a sea or wilderness region: terrain only, no records to tick (spec 7, Empty)
         var bytes = Pager.Read(at.Id);
-        if (bytes != null) return RegionWorld.Restore(Services, at, terrain, SaveCodec.DeserializeCompressed<RegionSectionData>(bytes));
+        if (bytes != null) return RegionWorld.Restore(Services, at, terrain, SaveCodec.DeserializeCompressed<RegionSectionData>(bytes), pop);
         return RegionWorld.CreateFresh(Services, at, pop);
     }
 
@@ -123,9 +125,11 @@ public sealed class HeroRegionTracker(RegionCoord start, int hysteresisM = 1000)
         if (!at.IsValid) return false;
         Region = at;
         if (at == RingRegion) return false;
-        long x = xM - at.OriginXM, y = yM - at.OriginYM, m = RegionCoord.RegionM;
-        long depth = Math.Min(Math.Min(x, m - 1 - x), Math.Min(y, m - 1 - y)); // distance to the nearest edge of the region the hero is in
-        if (depth < HysteresisM) return false;
+        // metres the hero stands outside the ring region's square, on the axis where it is further out: a hero walking along a border 500 m inside the next region
+        // keeps the old ring region (no level thrash) but one 1,000 m beyond it, on either axis, has left it (spec 3.5)
+        long ox = RingRegion.OriginXM, oy = RingRegion.OriginYM, m = RegionCoord.RegionM;
+        long dx = xM < ox ? ox - xM : xM >= ox + m ? xM - (ox + m) + 1 : 0, dy = yM < oy ? oy - yM : yM >= oy + m ? yM - (oy + m) + 1 : 0;
+        if (Math.Max(dx, dy) < HysteresisM) return false;
         RingRegion = at;
         return true;
     }

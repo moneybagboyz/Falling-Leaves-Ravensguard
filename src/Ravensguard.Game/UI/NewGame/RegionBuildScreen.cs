@@ -9,13 +9,14 @@ using Ravensguard.Sim.Save;
 using Ravensguard.Sim.WorldGen;
 using Ravensguard.Sim.WorldGen.Region;
 using Ravensguard.Sim.Worlds;
+using Ravensguard.Game.World;
 using RegionData = Ravensguard.Sim.WorldGen.Region.Region;
 
 namespace Ravensguard.Game.UI.NewGame;
 
 /// <summary>What the new-game flow hands to the street view: the populated world, the choices, and where the run was saved.</summary>
 public sealed record RunStart(WorldState World, NewGameDraft Draft, EmbarkScore Site, string StartSettlement, string? SavePath, Ravensguard.Sim.Codex.CodexBook? Codex = null,
-    string RunName = "", string? SaveError = null);
+    string RunName = "", string? SaveError = null, WorldRuntime? Runtime = null);
 
 /// <summary>Everything the worker thread needs that lives on the engine or in shared state, read once on the main thread before the task starts.</summary>
 sealed record BuildInputs(ContentBundle Content, LoadedWorld World, NewGameDraft Draft, WorldLibrary Library, string RunName, string Now, System.Collections.Generic.List<Ravensguard.Sim.Codex.CodexRule> Rules, Ravensguard.Content.OriginDef? Origin, string ContentHash);
@@ -102,30 +103,24 @@ public partial class RegionBuildScreen : Control
         // the player character from the Quick Start origin, and the Codex of this world with what the embark region already knows
         var hero = bi.Origin != null ? Ravensguard.Sim.Characters.HeroRecord.FromOrigin(d.Name, d.Female, bi.Origin) : null;
         var codex = Ravensguard.Sim.Codex.CodexBook.Build(w.History, region, bi.Rules);
-        // seed money and starting stock: once, before day 0 (money spec 3.8); the hero's crowns enter the ledger as seed money too
-        var economy = Ravensguard.Sim.Economy.EconomyState.Create(pop, content.Db, w.Info.Seed);
-        if (hero != null) economy.SeedHero(hero.Coin);
-        var world = new WorldState
-        {
-            Hero = hero, Codex = codex.ToProgress(), Economy = economy,
-            ContinentSettings = w.Info.File.Continent, HistorySettings = w.Info.File.History, RegionSettings = rs, EmbarkCellX = site.CellX, EmbarkCellY = site.CellY,
-            Continent = w.Continent, History = w.History, Population = pop,
-            Clock = new SimClock(GameTime.FromCalendar(pop.NowYear, Season.Spring, 1, 8)),
-            Ids = new IdAllocator(), Chunks = new ChunkStore(), Chronicle = new Chronicle(),
-        };
-        ct.ThrowIfCancellationRequested(); // cancelled: no save or run info is written
+        // the whole new-game world: people with the economy over them (markets, businesses, resources, farming, the tick's own state), built as the headless soak builds
+        // its world; the hero's crowns enter the ledger as seed money (money spec 3.8). The runtime then ticks it beside the live game.
+        var world = NewGameWorld.Create(content.Db, w.Continent, w.History, w.Info.File.Continent, w.Info.File.History, rs, site.CellX, site.CellY, pop, hero, codex.ToProgress());
+        ct.ThrowIfCancellationRequested();
+        var runtime = new WorldRuntime(world, content.Db, StreetSource.MakePager());
+        if (ct.IsCancellationRequested) { runtime.Dispose(); ct.ThrowIfCancellationRequested(); } // cancelled: no save or run info is written
         string? path = null, saveError = null;
         try
         {
             var lib = bi.Library;
             var file = WorldSave.Capture(world, bi.ContentHash, "0.1", null, d.Ironman);
-            var writer = new SaveWriter(lib.RunsDirectory(w.Info.Id));
+            var writer = new SaveWriter(lib.RunsDirectory(w.Info.Id), bi.RunName);
             path = (d.Ironman ? writer.WriteIronmanAsync(file) : writer.WriteManualAsync(file, bi.RunName)).GetAwaiter().GetResult();
-            lib.WriteRunInfo(w.Info.Id, d.Ironman ? "ironman" : bi.RunName, new WorldLibrary.RunInfo(d.Name, d.Female, d.OriginId, bi.Origin?.Ambition ?? "", d.Ironman, site.CellX, site.CellY, bi.Now));
+            lib.WriteRunInfo(w.Info.Id, bi.RunName, new WorldLibrary.RunInfo(d.Name, d.Female, d.OriginId, bi.Origin?.Ambition ?? "", d.Ironman, site.CellX, site.CellY, bi.Now));
         }
         catch (Exception e) { saveError = e.Message; GD.PushWarning("could not write the first save: " + e.Message); }
         _at = 4;
-        return new RunStart(world, d, site, start, path, codex, bi.RunName, saveError);
+        return new RunStart(world, d, site, start, path, codex, bi.RunName, saveError, runtime);
     }
 
     /// <summary>The settlement the character starts in: the kind the origin asks for if it is clear of active wars (10 km) and monster lairs (3 km), else any safe one (plan §3f).</summary>
@@ -162,7 +157,7 @@ public partial class RegionBuildScreen : Control
         // Walk the generated region, starting in the settlement the origin asked for (plan §3f safe start).
         var opt = new Ravensguard.Game.World.StreetOptions { Poi = "at:" + Latest.StartSettlement };
         var view = Ravensguard.Game.World.StreetView.ForRegion(w.Population.Region, w.Population, _in.Content.Db, _router, opt, w.Chunks,
-            hero: w.Hero, codex: Latest.Codex, history: w.History, continent: w.Continent, regionSettings: w.RegionSettings);
+            hero: w.Hero, codex: Latest.Codex, history: w.History, continent: w.Continent, regionSettings: w.RegionSettings, runtime: Latest.Runtime);
         view.Run = session;
         view.OnExit = ClearLatest;
         _router.Replace(view);

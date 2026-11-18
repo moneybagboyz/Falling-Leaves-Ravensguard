@@ -10,7 +10,7 @@ using RegionData = Ravensguard.Sim.WorldGen.Region.Region;
 namespace Ravensguard.Sim.Farming;
 
 /// <summary>Counters for tests and tooling.</summary>
-public sealed class FarmingDiagnostics { public long SowRefusedSeed, SowRefusedFertility; }
+public sealed class FarmingDiagnostics { public long SowRefusedSeed, SowRefusedFertility; public long[] RefusedByClass = new long[3]; public long[] SownByClass = new long[3]; }
 
 /// <summary>What the labour planner did on the last day: worker-hours wanted, available and used (farming spec 3.2).</summary>
 public sealed record LabourReport(long DemandHours, long SupplyHours, long OwnUsedHours, long HiredUsedHours, long UnmetHours, long WagesMites);

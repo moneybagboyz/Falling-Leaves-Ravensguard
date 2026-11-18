@@ -50,6 +50,10 @@ public sealed class WorldState
     public ProductionSystem? Production { get; set; }
     /// <summary>Market books, lots and merchants (saved in the "markets" section when present); needs <see cref="Production"/> for business parties.</summary>
     public MarketSystem? Markets { get; set; }
+    /// <summary>The home region's records as the running game holds them (set by <see cref="WorldRuntime"/>, or by the code that built a new game's economy so the runtime adopts them as they are).</summary>
+    public RegionWorld? HomeRecords { get; set; }
+    /// <summary>Content, for regenerating the baseline people a save is diffed against (spec N24); null: people are saved whole.</summary>
+    public ContentDatabase? Content { get; set; }
     /// <summary>The records of every other generated region (resident and paged), when the game runs the seamless continent. Saved as one section per region.</summary>
     public RegionRecordSet? Regions { get; set; }
     /// <summary>Sections of other regions read from a save, as stored (hand them to <see cref="RegionRecordSet.AttachSections"/>); re-saved unchanged when no <see cref="Regions"/> is attached.</summary>
@@ -153,6 +157,8 @@ public sealed class PeopleData
     /// <summary>Rows whose person id was made in another region (arrivals), with those ids; empty for a region nobody moved into.</summary>
     [Key(41)] public int[] ForeignRow { get; set; } = [];
     [Key(42)] public ulong[] ForeignId { get; set; } = [];
+    /// <summary>Set instead of the columns above (all empty) when the section holds only what differs from the regenerated baseline people; see <see cref="PeopleDiffer"/>.</summary>
+    [Key(43)] public PeopleDiff? Diff { get; set; }
 }
 
 /// <summary>The mutable bindings of the region's lots, fiefs and parcels to people (not regenerable from terrain).</summary>
@@ -228,6 +234,10 @@ public static class WorldSave
     public static LiveCapture SnapshotLive(WorldState world, LiveWorld live, string contentHash = "", string gameVersion = "0.1", IReadOnlyList<ModEntry>? mods = null, bool ironman = false)
         => Snapshot(world, live.CaptureResume(), contentHash, gameVersion, mods, ironman);
 
+    /// <summary>The same with a live state taken earlier (on the main thread), so the copy of the world itself can run on the tick worker at a barrier (<see cref="WorldRuntime.AtBarrier{T}"/>).</summary>
+    public static LiveCapture SnapshotLive(WorldState world, LiveResume resume, string contentHash = "", string gameVersion = "0.1", IReadOnlyList<ModEntry>? mods = null, bool ironman = false)
+        => Snapshot(world, resume, contentHash, gameVersion, mods, ironman);
+
     /// <summary><see cref="SnapshotLive"/> now, encoding on the thread pool: only the snapshot costs the caller.</summary>
     public static Task<SaveFile> CaptureLiveAsync(WorldState world, LiveWorld live, string contentHash = "", string gameVersion = "0.1", IReadOnlyList<ModEntry>? mods = null, bool ironman = false)
     {
@@ -257,6 +267,7 @@ public static class WorldSave
         {
             Header = header, Meta = meta, Continent = w.Continent, History = w.History, Region = w.Population.Region,
             People = EncodePeople(w.Population), Lots = EncodeLots(w.Population), Chunks = w.Regions != null ? w.Chunks.Snapshot(k => ChunkRegions.Of(w.HomeRegion, k) == w.HomeRegion) : w.Chunks.Snapshot(), Chronicle = EncodeChronicle(w.Chronicle),
+            Baseline = w.Content == null ? null : () => EncodePeople(Populator.Populate(w.Population.Region, w.History, w.Content)),
             Production = w.Production == null ? null : ProductionSave.Capture(w.Production), Markets = w.Markets == null ? null : MarketsSave.Capture(w.Markets),
             Regions = w.Regions?.CaptureResident(), PagedRegions = w.Regions != null ? w.Regions.PagedSections() : new SortedDictionary<int, byte[]>(w.RegionSections.ToDictionary(kv => kv.Key, kv => kv.Value)),
             Hero = w.Hero?.ToSave(), Economy = w.Economy == null ? null : EconomySave.Capture(w.Economy), Abstract = w.Abstract == null ? null : AbstractSave.Capture(w.Abstract, w.Population), Farming = w.Farming == null ? null : FarmingSave.Capture(w.Farming), Codex = codex == null ? null : new CodexSave { Unlocked = codex.Unlocked.ToArray() },
@@ -300,7 +311,14 @@ public static class WorldSave
         string markHash = LayerHashes.OfLandmarks(marks);
         if (meta.LandmarkHash.Length > 0) Verify("landmark", meta.LandmarkHash, markHash);
 
-        var pop = DecodePeople(Decode<PeopleData>(file, PeopleSection, true), Decode<RegionLotsData>(file, LotsSection, true), region);
+        var peopleData = Decode<PeopleData>(file, PeopleSection, true);
+        if (peopleData.Diff != null)
+        {
+            // saved as a difference from the people the generator makes again for this region (note N24)
+            if (content == null) throw new SaveException("The people of this save are stored as a difference from the generated ones; the game content is needed to generate them again.");
+            peopleData = PeopleDiffer.Expand(peopleData, EncodePeople(Populator.Populate(region, history, content)));
+        }
+        var pop = DecodePeople(peopleData, Decode<RegionLotsData>(file, LotsSection, true), region);
         Verify("population", meta.PopulationHash, pop.ComputeHash());
 
         var chunks = file.Sections.TryGetValue(ChunksSection, out var cb) ? ChunkStore.FromSection(cb) : new ChunkStore();
@@ -377,7 +395,7 @@ public static class WorldSave
 
     private static T[] Cut<T>(T[] a, int n) => a.AsSpan(0, n).ToArray();
 
-    internal static PeopleData EncodePeople(Population pop)
+    public static PeopleData EncodePeople(Population pop)
     {
         var p = pop.People; var h = pop.Households; int n = p.Count, m = h.Count;
         return new PeopleData
@@ -483,6 +501,8 @@ public sealed class LiveCapture
     internal WorldHistory History { get; init; } = null!;
     internal RegionData Region { get; init; } = null!;
     internal PeopleData People { get; init; } = null!;
+    /// <summary>Makes the baseline people the home region's people are diffed against; null when the content is not at hand (people are then saved whole).</summary>
+    internal Func<PeopleData>? Baseline { get; init; }
     internal RegionLotsData Lots { get; init; } = null!;
     internal ChunkStoreSnapshot Chunks { get; init; } = null!;
     internal ChronicleData Chronicle { get; init; } = null!;
@@ -508,10 +528,14 @@ public sealed class LiveCapture
         meta.ContinentHash = LayerHashes.Of(Continent); meta.HistoryHash = LayerHashes.Of(History); meta.RegionHash = LayerHashes.Of(Region);
         meta.LandmarkHash = Region.Landmarks == null ? "" : LayerHashes.OfLandmarks(Region.Landmarks); // empty: the landmark phase had not run, nothing to verify
         meta.PopulationHash = WorldSave.PopulationHashOf(People, Lots, Region);
+        // the people and every region section go in as differences from the regenerated baseline (note N24); the baselines are made here, in parallel, off the main thread
+        PeopleData people = People;
+        if (Regions != null) Parallel.ForEach(Regions.Values, new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, Math.Min(3, Environment.ProcessorCount - 1)) }, d => d.Compact());
+        if (Baseline != null) people = PeopleDiffer.Compact(People, Baseline());
         var sections = new List<KeyValuePair<string, byte[]>>
         {
             new(WorldSave.MetaSection, SaveCodec.Serialize(meta)),
-            new(WorldSave.PeopleSection, SaveCodec.SerializeCompressed(People)),
+            new(WorldSave.PeopleSection, SaveCodec.SerializeCompressed(people)),
             new(WorldSave.LotsSection, SaveCodec.SerializeCompressed(Lots)),
             new(WorldSave.ChunksSection, Chunks.Encode()),
             new(WorldSave.ChronicleSection, SaveCodec.SerializeCompressed(Chronicle)),

@@ -19,10 +19,10 @@ public class GoodCatalogTests
         foreach (var id in new[] { "wheat", "rye", "barley", "oats", "flour", "ale", "firewood", "hay", "wool_raw", "cloth_wool", "hide_raw", "leather", "iron_ore", "charcoal", "iron_bloom", "iron_bar", "salt", "fish_fresh", "meat_fresh" })
             Assert.True(Cat.TryIdOf(id, out _), id);
         ushort wheat = Cat.IdOf("wheat");
-        Assert.Equal(3414, Cat.SpoilPpm(wheat, StoreKind.House)); Assert.Equal(3414, Cat.SpoilPpm(wheat, StoreKind.Barn)); Assert.Equal(670, Cat.SpoilPpm(wheat, StoreKind.Granary));
+        Assert.Equal(1200, Cat.SpoilPpm(wheat, StoreKind.House)); Assert.Equal(1200, Cat.SpoilPpm(wheat, StoreKind.Barn)); Assert.Equal(670, Cat.SpoilPpm(wheat, StoreKind.Granary));
         Assert.Equal(300_000, Cat.SpoilPpm(Cat.IdOf("fish_fresh"), StoreKind.House)); Assert.Equal(150_000, Cat.SpoilPpm(Cat.IdOf("fish_fresh"), StoreKind.Cellar));
         Assert.Equal(0, Cat.SpoilPpm(Cat.IdOf("salt"), StoreKind.Open));
-        Assert.Equal(3414, Cat.SpoilPpm(wheat, StoreKind.Chest));
+        Assert.Equal(1200, Cat.SpoilPpm(wheat, StoreKind.Chest));
         Assert.Throws<KeyNotFoundException>(() => Cat.IdOf("unobtainium"));
     }
 
@@ -201,8 +201,8 @@ public class StoreTests
             for (int d = 0; d < 15; d++) s.ApplySpoilage(7, d * 24, 10);
             return s.Qty(w);
         }
-        Assert.InRange(Run(StoreKind.House), 950_003 - 100, 950_003 + 100);
-        Assert.InRange(Run(StoreKind.Barn), 950_003 - 100, 950_003 + 100);
+        Assert.InRange(Run(StoreKind.House), 982_151 - 100, 982_151 + 100);   // 1.8% a season at 1,200 ppm (decision I28; the spec's 5% was 3,414 ppm)
+        Assert.InRange(Run(StoreKind.Barn), 982_151 - 100, 982_151 + 100);
         Assert.InRange(Run(StoreKind.Granary), 990_004 - 100, 990_004 + 100);
     }
 
@@ -228,7 +228,7 @@ public class StoreTests
         var y = NewStore(StoreKind.House, owner: 4); y.Create(Cat.IdOf("wheat"), 10_000_000, CreateReason.Harvest);
         for (int d = 0; d < 60; d++) y.ApplySpoilage(11, d * 24, 12);
         double lost = 1.0 - y.Qty(Cat.IdOf("wheat")) / 10_000_000.0;
-        Assert.InRange(lost, 0.17, 0.21);   // 15 days = 5% of a season; a full 60-day year held in a house compounds to ~18.5% (spec 3-8% assumes sale and re-stocking)
+        Assert.InRange(lost, 0.06, 0.08);   // 1,200 ppm a day (integration decision I28, was 3,414): a season is 1.8%, a full 60-day year held in a house compounds to ~6.9%
     }
 
     [Fact]
@@ -237,7 +237,7 @@ public class StoreTests
         var led = new MassLedger(Cat.Count); ushort w = Cat.IdOf("wheat"); var s = NewStore(ml2: led);
         s.Create(w, 1_000_000, CreateReason.Harvest);
         long lost = s.ApplySpoilage(3, 100, 12);
-        Assert.InRange(lost, 3_413, 3_415);
+        Assert.InRange(lost, 1_199, 1_201);
         Assert.Equal(lost, led.Destroyed(w, DestroyReason.Spoiled)); Assert.Equal(s.Qty(w), led.Net(w));
     }
 
@@ -249,7 +249,7 @@ public class StoreTests
         for (ulong owner = 1; owner < 20; owner++) Assert.Equal(Run(5, 1000, owner), Run(5, 1000, owner));
         // a small stock loses a gram or not depending on the key: both outcomes occur across keys
         var outcomes = Enumerable.Range(0, 2000).Select(h => Run(5, h, 1)).Distinct().ToList();
-        Assert.Equal([774, 775], outcomes.Order().ToList());      // 777 x 3,414 ppm = 2.65 g: loses 2 or 3
+        Assert.Equal([776, 777], outcomes.Order().ToList());      // 777 x 1,200 ppm = 0.93 g: loses 0 or 1
     }
 
     [Fact] // G-I7
@@ -263,7 +263,7 @@ public class StoreTests
             lost += s.ApplySpoilage(21, k, 12);
             s.DestroyUpTo(w, 1, DestroyReason.Consumed);
         }
-        Assert.InRange(lost, 3_414 - 200, 3_414 + 200);   // sigma ~ 58; the spec asks +-100, three sigma is used here
+        Assert.InRange(lost, 1_200 - 120, 1_200 + 120);   // sigma ~ 35: three sigma
     }
 
     [Fact]

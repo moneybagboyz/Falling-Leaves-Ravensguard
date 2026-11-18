@@ -12,7 +12,11 @@ public sealed partial class FarmingSystem
 
     private readonly record struct Need(int Parcel, int Holder, FarmTask Task, int Deadline, int Tier);
     private int _teamHours;
+    /// <summary>Running totals of the farm labour market since the start (diagnostics): hours wanted, worked by the holders themselves, hired, left undone, and the wages paid.</summary>
+    public long TotalDemandH, TotalOwnH, TotalHiredH, TotalUnmetH, TotalWagesMites;
     private readonly List<Need> _needs = [];
+    /// <summary>Share of every holder's harvest left to the gleaners, in permille.</summary>
+    public const int GleaningPermille = 30;
 
     private int RateOf(FarmTask t) => t switch
     {
@@ -165,6 +169,7 @@ public sealed partial class FarmingSystem
         for (int p = 0; p < P.Count; p++) foreach (var t in ParcelTasks) unmet += HoursFor(p, t, doy);
         for (int s = 0; s < Region.Settlements.Count; s++) unmet += HayHours(s, doy);
         LastLabour = new LabourReport(demand, supply, own, hired, unmet, wages);
+        TotalDemandH += demand; TotalOwnH += own; TotalHiredH += hired; TotalUnmetH += unmet; TotalWagesMites += wages;
     }
 
     /// <summary>A field whose seed was missing when its turn came is tried again on later days of the window (seed may have arrived from the threshing floor).</summary>
@@ -314,10 +319,10 @@ public sealed partial class FarmingSystem
             if (!store.Destroy(info.Good, seed, DestroyReason.Sown)) continue;
             F.Crop[f] = c; F.Stage[f] = FieldStage.Sown; F.SownDay[f] = (short)doy; F.SownFertility[f] = (byte)fert; F.SeedG[f] = (int)seed; F.DamagePermille[f] = 0; F.YieldG[f] = 0;
             F.Clear(f, FieldFlags.Resown); F.Clear(f, FieldFlags.Lost);
-            State.SeedSownG += seed; State.SownAcres++;
+            State.SeedSownG += seed; State.SownAcres++; Diagnostics.SownByClass[(int)Pop.Households.Class[hh]]++;
             return true;
         }
-        if (anyFertile) Diagnostics.SowRefusedSeed++; else Diagnostics.SowRefusedFertility++;
+        if (anyFertile) { Diagnostics.SowRefusedSeed++; Diagnostics.RefusedByClass[(int)Pop.Households.Class[hh]]++; } else Diagnostics.SowRefusedFertility++;
         return false;
     }
 
@@ -341,10 +346,13 @@ public sealed partial class FarmingSystem
         var info = Settings.Info(F.Crop[f]); ushort good = info.Good;
         var lease = P.Landlord[p] >= 0 ? P.Lease[p] : LeaseKind.None;
         var sp = YieldMath.Split(F.YieldG[f], F.SeedG[f], P.OwnerKind[p], lease, P.ShareBp[p], _d.TithePermille);
-        if (sp.TitheG > 0) Parish(s).Create(good, sp.TitheG, CreateReason.Harvest);
+        // gleaning (integration decision I24): the poor of the village follow the reapers; 3 percent of the holder's share goes into the village's poor box (the parish granary, from which relief is given)
+        long glean = sp.HolderG * GleaningPermille / 1000, holderG = sp.HolderG - glean;
+        if (sp.TitheG + glean > 0) Parish(s).Create(good, sp.TitheG + glean, CreateReason.Harvest);
         if (sp.RentG > 0) HouseStore(P.Landlord[p]).Create(good, sp.RentG, CreateReason.Harvest);
-        if (sp.HolderG > 0) Barn(hh).Create(good, sp.HolderG, CreateReason.Harvest);
-        F.SheafG[f] = (int)sp.HolderG; F.SheafCrop[f] = (byte)F.Crop[f]; F.Set(f, FieldFlags.Bound); _pendingThresh[p]++;
+        if (holderG > 0) Barn(hh).Create(good, holderG, CreateReason.Harvest);
+        State.GleanedG += glean;
+        F.SheafG[f] = (int)holderG; F.SheafCrop[f] = (byte)F.Crop[f]; F.Set(f, FieldFlags.Bound); _pendingThresh[p]++;
         State.HarvestG += sp.YieldG; State.TitheG += sp.TitheG; State.RentG += sp.RentG;
     }
 

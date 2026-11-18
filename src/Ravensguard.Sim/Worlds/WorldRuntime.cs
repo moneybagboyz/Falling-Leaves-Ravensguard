@@ -1,0 +1,211 @@
+using System.Collections.Concurrent;
+using System.Diagnostics;
+using Ravensguard.Content;
+using Ravensguard.Sim.Abstract;
+using Ravensguard.Sim.Core;
+using Ravensguard.Sim.Save;
+using Ravensguard.Sim.WorldGen.Region;
+
+namespace Ravensguard.Sim.Worlds;
+
+/// <summary>One resident region as the barrier left it (what the world map and the HUD read; never the records).</summary>
+public readonly record struct RegionRow(int Id, RegionLevel Level, long HourDone, long Alive, int Households);
+
+/// <summary>
+/// The abstract world as of the last finished hour barrier: immutable, swapped in whole by the tick worker, read by any thread (seamless-regions spec N21).
+/// <see cref="HoursStepped"/> counts hour barriers since the runtime started; <see cref="HourMs"/> is the worker's wall time for the last one (all regions, with
+/// any joins, page-outs and catch-up), <see cref="MaxHourMs"/> the slowest so far.
+/// </summary>
+public sealed record RuntimeSnapshot(long Hour, int Resident, int Detailed, int Daily, int Paged, long HomeAlive, int HomeHouseholds, long HoursStepped, double HourMs, double MaxHourMs,
+    SchedulerReport Last, IReadOnlyList<RegionRow> Regions);
+
+/// <summary>
+/// Runs the seamless world's abstract tick next to the live game (REDESIGN_PLAN 2.4, seamless-regions N21). The main thread calls <see cref="Pump"/> every frame:
+/// it tells the runtime the game clock and where the hero is, and when a whole game hour has passed since the last barrier it hands the hour to the tick worker.
+/// The worker runs <see cref="RegionScheduler.Update"/> for exactly that hour (joins finished regions, pages regions in and out, steps every resident region
+/// ascending id) and swaps in a new <see cref="RuntimeSnapshot"/> at the end: that swap is the barrier. Records are written by the worker alone; the main thread
+/// never touches them, and asks for anything it needs through <see cref="AtBarrier{T}"/>, which runs a job on the worker between two hours. One hour is in flight
+/// at a time, so a slow machine falls behind in game hours, never in frames.
+/// <para>Deterministic where it matters: every hour is the scheduler's own, regions step in ascending id, and a game that is saved at a barrier and reloaded continues
+/// to the same records. What depends on timing is only when a region joins and which ring region the hero had at the moment an hour was started.</para>
+/// </summary>
+public sealed class WorldRuntime : IDisposable
+{
+    public WorldState State { get; }
+    public RegionServices Services { get; }
+    public RegionManager Manager { get; }
+    public RegionRecordSet Records { get; }
+    public RegionScheduler Scheduler { get; }
+    public HeroRegionTracker Hero { get; private set; }
+
+    private readonly BlockingCollection<Action> _jobs = new();
+    private Thread? _worker;
+    private volatile bool _hourBusy;
+    private long _hourDone;                    // last hour whose barrier is applied (worker writes at the barrier, Pump reads)
+    private volatile RuntimeSnapshot _snapshot;
+    private Exception? _fault;
+    private long _hoursStepped;
+    private double _maxHourMs;
+    private int _disposed;
+
+    /// <summary>The worker's last failure (null while healthy). The runtime stops starting hours after it; the game reports it once.</summary>
+    public Exception? Fault => Volatile.Read(ref _fault);
+    public RuntimeSnapshot Snapshot => _snapshot;
+    /// <summary>Last hour whose barrier is applied.</summary>
+    public long HourDone => Interlocked.Read(ref _hourDone);
+    /// <summary>True while the worker is stepping an hour or running a job.</summary>
+    public bool Busy => _hourBusy || _jobs.Count > 0 || _jobRunning;
+    private volatile bool _jobRunning;
+
+    /// <summary>Wall time of the last <see cref="Pump"/> call on the calling thread (the main thread's whole cost of the tick per frame) and the worst so far, milliseconds.</summary>
+    public double PumpMs { get; private set; }
+    public double MaxPumpMs { get; private set; }
+    public long Pumps { get; private set; }
+    public double PumpMsTotal { get; private set; }
+
+    /// <summary>
+    /// Wires the world state to a running set of regions: the manager (with the home region adopted), the record set (home region's records, the sections of a loaded
+    /// save waiting in <paramref name="pager"/>) and the scheduler. <see cref="WorldState.HomeRecords"/> is used when present (a game just built), else the home
+    /// records are made from the state's own economy sections (a loaded game).
+    /// </summary>
+    public WorldRuntime(WorldState state, ContentDatabase content, IRegionPager? pager = null, bool trimTerrain = true, int dailyRing = 1, int maxParallel = 0, RegionManager? manager = null)
+    {
+        State = state;
+        var home = state.HomeRegion;
+        Services = new RegionServices(state.Seed, content, state.Continent, home) { History = state.History };
+        var region = state.Population.Region;
+        if (manager == null)
+        {
+            var rs = state.RegionSettings; rs.Seed = region.Seed;
+            manager = new RegionManager(state.Continent, state.History, rs, content) { TrimTerrain = trimTerrain };
+        }
+        Manager = manager;
+        if (!Manager.IsReady(home)) Manager.Adopt(home, region, state.Population);
+        Records = new RegionRecordSet(Services, Manager, state.Chunks, pager);
+        var homeWorld = state.HomeRecords ?? RegionWorld.ForHome(Services, state);
+        Records.AdoptHome(homeWorld);
+        state.HomeRecords = homeWorld;
+        state.Regions = Records;
+        if (state.RegionSections.Count > 0) Records.AttachSections(state.RegionSections);
+        Scheduler = new RegionScheduler(Records) { DailyRing = dailyRing, MaxParallel = maxParallel > 0 ? maxParallel : Math.Max(1, Math.Min(2, Environment.ProcessorCount - 2)) };
+        Hero = new HeroRegionTracker(home);
+        _hourDone = homeWorld.HourDone;
+        _snapshot = MakeSnapshot(new SchedulerReport(0, 0, 0, 0, 0, 0), 0, _hourDone);
+    }
+
+    /// <summary>Puts the hero's tracker where a loaded or teleported hero stands (frame metres of the continent), before the first pump.</summary>
+    public void PlaceHero(long continentXM, long continentYM)
+    {
+        var at = RegionCoord.OfMetres(continentXM, continentYM);
+        if (at.IsValid) Hero = new HeroRegionTracker(at);
+    }
+
+    // ------------------------------------------------------------------ main thread
+
+    /// <summary>Starts the worker thread (idempotent). Without it <see cref="Pump"/> only tracks the hero.</summary>
+    public void Start()
+    {
+        if (_worker != null) return;
+        _worker = new Thread(WorkerLoop) { IsBackground = true, Name = "region-tick", Priority = ThreadPriority.BelowNormal };
+        _worker.Start();
+    }
+
+    /// <summary>
+    /// The per-frame call (main thread): the hero's position in continent metres decides the ring region; if the game clock is past the last barrier and the worker is
+    /// idle, the next hour starts. Costs microseconds: no records are read, nothing is waited for.
+    /// </summary>
+    public void Pump(GameTime now, long heroXM, long heroYM)
+    {
+        long t0 = Stopwatch.GetTimestamp();
+        Hero.Update(heroXM, heroYM);
+        if (_worker != null && !_hourBusy && Volatile.Read(ref _fault) == null && now.TotalHours > HourDone)
+        {
+            _hourBusy = true;
+            var ring = Hero.RingRegion;
+            long h = HourDone + 1;
+            _jobs.Add(() => RunHour(h, ring));
+        }
+        double ms = Stopwatch.GetElapsedTime(t0).TotalMilliseconds;
+        PumpMs = ms; MaxPumpMs = Math.Max(MaxPumpMs, ms); Pumps++; PumpMsTotal += ms;
+    }
+
+    /// <summary>
+    /// Runs <paramref name="job"/> on the tick worker between two hours (nothing is stepping, so every record may be read) and returns its result. This is how a save
+    /// copies the world: the main thread keeps drawing while the worker copies.
+    /// </summary>
+    public Task<T> AtBarrier<T>(Func<T> job)
+    {
+        var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
+        if (_worker == null) { try { tcs.SetResult(job()); } catch (Exception e) { tcs.SetException(e); } return tcs.Task; }
+        _jobs.Add(() =>
+        {
+            _jobRunning = true;
+            try { tcs.SetResult(job()); } catch (Exception e) { tcs.SetException(e); } finally { _jobRunning = false; }
+        });
+        return tcs.Task;
+    }
+
+    /// <summary>Blocks until the worker has nothing queued or running (tests, leaving the game). Hours still owed by the clock are not started.</summary>
+    public void Quiesce()
+    {
+        if (_worker == null) return;
+        AtBarrier(() => 0).GetAwaiter().GetResult();
+    }
+
+    /// <summary>Tests and tools: steps every owed hour up to <paramref name="now"/> on the calling thread (no worker may be running), then returns.</summary>
+    public void AdvanceTo(GameTime now)
+    {
+        if (_worker != null) throw new InvalidOperationException("The worker is running; drive the runtime with Pump.");
+        while (HourDone < now.TotalHours) RunHour(HourDone + 1, Hero.RingRegion);
+    }
+
+    // ------------------------------------------------------------------ worker
+
+    private void WorkerLoop()
+    {
+        foreach (var job in _jobs.GetConsumingEnumerable())
+        {
+            try { job(); }
+            catch (Exception e) { Interlocked.CompareExchange(ref _fault, e, null); _hourBusy = false; }
+        }
+    }
+
+    private void RunHour(long h, RegionCoord ring)
+    {
+        var sw = Stopwatch.StartNew();
+        var report = Scheduler.Update(GameTime.FromGameHours(h), ring);
+        Manager.ReleaseDistantGenerators(State.HomeRegion);
+        double ms = sw.Elapsed.TotalMilliseconds;
+        _hoursStepped++; _maxHourMs = Math.Max(_maxHourMs, ms);
+        _snapshot = MakeSnapshot(report, ms, h);             // the barrier: one reference swap
+        Interlocked.Exchange(ref _hourDone, h);
+        _hourBusy = false;
+    }
+
+    private RuntimeSnapshot MakeSnapshot(SchedulerReport report, double hourMs, long hour)
+    {
+        var rows = new List<RegionRow>();
+        int detailed = 0, daily = 0;
+        foreach (var rw in Records.Resident)
+        {
+            var v = rw.Sim.Vital;
+            rows.Add(new RegionRow(rw.Coord.Id, rw.Level, rw.HourDone, v.Alive, rw.Population.Households.Count));
+            if (rw.Level is RegionLevel.Live or RegionLevel.Detailed) detailed++; else daily++;
+        }
+        var home = Records.HomeWorld;
+        long alive = home?.Sim.Vital.Alive ?? 0;
+        int hh = 0;
+        if (home != null) { var t = home.Population.Households; for (int i = 0; i < t.Count; i++) if (t.MemberCount[i] > 0) hh++; }
+        int paged = Records.Pager.Ids.Count;
+        return new RuntimeSnapshot(hour, rows.Count, detailed, daily, paged, alive, hh, _hoursStepped, hourMs, _maxHourMs, report, rows);
+    }
+
+    public void Dispose()
+    {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+        _jobs.CompleteAdding();
+        bool stopped = _worker?.Join(5_000) ?? true;       // a save job still queued is run first; an hour step in flight finishes
+        if (stopped) foreach (var rw in Records.Resident) rw.Dispose();
+        (Records.Pager as IDisposable)?.Dispose();
+    }
+}

@@ -19,7 +19,7 @@ public partial class RunLoadScreen : Control
 {
     const int Steps = 4;
     sealed record Inputs(RunEntry Entry, ContentBundle Content, WorldLibrary Library, LoadedWorld? Cached, System.Collections.Generic.List<CodexRule> Rules);
-    sealed record Loaded(WorldState State, SaveHeader Header, LoadedWorld World, CodexBook Codex, string StartSettlement);
+    sealed record Loaded(WorldState State, SaveHeader Header, LoadedWorld World, CodexBook Codex, string StartSettlement, WorldRuntime Runtime);
 
     readonly ScreenRouter _router;
     readonly RunEntry _entry;
@@ -80,18 +80,22 @@ public partial class RunLoadScreen : Control
         ct.ThrowIfCancellationRequested();
         _at = 2;
         var state = WorldSave.Restore(file, content.Db, content.Hash, null, world.Continent, world.History);
+        state.Content = content.Db; // the next save diffs the people against the regenerated ones (note N24)
         ct.ThrowIfCancellationRequested();
         _at = 3;
+        // the abstract world of the run: the home region's records from their sections, the other regions' sections waiting in a folder until the hero comes near
+        var runtime = new WorldRuntime(state, content.Db, StreetSource.MakePager());
+        if (ct.IsCancellationRequested) { runtime.Dispose(); ct.ThrowIfCancellationRequested(); }
         var region = state.Population.Region;
         var codex = CodexBook.Build(world.History, region, bi.Rules);
         if (state.Live == null && state.Codex != null) codex.Apply(state.Codex); // a save made before the live section existed (the build's first save)
         string start = "";
         if (state.Live == null)
         {
-            var origin = lib.ReadRunInfo(bi.Entry.WorldId, bi.Entry.Slot) is { } info && content.Db.TryGet<Ravensguard.Content.OriginDef>(info.OriginId, out var o) ? o : null;
+            var origin = lib.ReadRunInfo(bi.Entry.WorldId, RunCatalog.RunOf(bi.Entry.Slot) is { Length: > 0 } runOf ? runOf : bi.Entry.Slot) is { } info && content.Db.TryGet<Ravensguard.Content.OriginDef>(info.OriginId, out var o) ? o : null;
             start = RegionBuildScreen.ChooseStart(region, origin);
         }
-        return new Loaded(state, file.Header, world, codex, start);
+        return new Loaded(state, file.Header, world, codex, start, runtime);
     }
 
     void Refresh()
@@ -121,10 +125,10 @@ public partial class RunLoadScreen : Control
         var lib = _in!.Library;
         string slot = _entry.Slot;
         string runName = RunCatalog.ManualNameFor(slot, r.State.Hero?.Name, lib.ListRuns(_entry.WorldId).Count);
-        var session = new RunSession(r.State, runName, r.Header.Ironman, _entry.Path, lib, _in.Content.Hash, _entry.WorldId);
+        var session = new RunSession(r.State, runName, r.Header.Ironman, _entry.Path, lib, _in.Content.Hash, _entry.WorldId, r.Runtime);
         var opt = new StreetOptions { Poi = r.State.Live == null ? "at:" + r.StartSettlement : null };
         var view = StreetView.ForRegion(r.State.Population.Region, r.State.Population, _in.Content.Db, _router, opt, r.State.Chunks,
-            hero: r.State.Hero, codex: r.Codex, history: r.World.History, continent: r.World.Continent, resume: r.State.Live, regionSettings: r.State.RegionSettings);
+            hero: r.State.Hero, codex: r.Codex, history: r.World.History, continent: r.World.Continent, resume: r.State.Live, regionSettings: r.State.RegionSettings, runtime: r.Runtime);
         view.Run = session;
         _router.Replace(view);
     }
