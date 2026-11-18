@@ -23,8 +23,8 @@ public sealed record VitalRates
     public int MarriageWaitCap { get; init; } = 8;
     /// <summary>Migration push (population spec 3.7): households over this crowding percent, and unmarried adults who waited this many seasons, leave with this chance per season.</summary>
     public int EmigrateCrowdingOverPct { get; init; } = 150;
-    public int EmigrateAfterWaitSeasons { get; init; } = 12;
-    public int EmigrateChancePct { get; init; } = 20;
+    public int EmigrateAfterWaitSeasons { get; init; } = 8;
+    public int EmigrateChancePct { get; init; } = 30;
     /// <summary>A couple may live with the groom's or bride's family only while the household, with the newcomer, stays within this percent of its beds (the stem family, decision V5).</summary>
     public int StemJoinMaxOccupancyPct { get; init; } = 100;
     /// <summary>Death multiplier (permille) by nutrition reserve in centidays: first row whose MinCd is at most the reserve.</summary>
@@ -50,6 +50,8 @@ public sealed record VitalRates
     /// <summary>Famine: share of households (percent) with under 3 days of food cover for this many days in a row.</summary>
     public int FamineSharePct { get; init; } = 15;
     public int FamineDays { get; init; } = 5;
+    /// <summary>Days without the hungry share before a famine is over (a settlement that flickers around the share is one famine, not a dozen; integration decision I34).</summary>
+    public int FamineQuietDays { get; init; } = 60;
     /// <summary>Share (percent) of a departing household's coin that goes to its fief's treasury (chevage, integration decision I11); the rest leaves with it.</summary>
     public int ChevagePct { get; init; }
     /// <summary>Dowry as percent of the bride's household purse.</summary>

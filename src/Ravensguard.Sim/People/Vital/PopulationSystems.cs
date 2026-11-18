@@ -165,7 +165,7 @@ public sealed class PopulationDailySystem : AbstractSystem
             else { v.QuietStreak[s]++; v.FamineStreak[s] = 0; }
             if (v.FamineEntry[s] != 0)
             {
-                if (v.QuietStreak[s] >= r.FamineDays) v.FamineEntry[s] = 0;
+                if (v.QuietStreak[s] >= r.FamineQuietDays) v.FamineEntry[s] = 0;
                 continue;
             }
             if (v.FamineStreak[s] < r.FamineDays) continue;
