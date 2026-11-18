@@ -254,11 +254,15 @@ public sealed class ChunkStore
     /// A point-in-time copy for background encoding: O(entries) on the calling thread (entries whose encoding is already cached are only referenced; the
     /// others copy their op list). Snapshot payloads and ops are never mutated after they are created, so the worker can read them while play goes on.
     /// </summary>
-    public ChunkStoreSnapshot Snapshot()
+    public ChunkStoreSnapshot Snapshot() => Snapshot(null);
+
+    /// <summary>The same for the entries <paramref name="pick"/> accepts (null: all).</summary>
+    public ChunkStoreSnapshot Snapshot(Func<ChunkKey, bool>? pick)
     {
-        var items = new ChunkStoreSnapshot.Item[_chunks.Count];
+        var list = pick == null ? _chunks.Values.ToList() : _chunks.Values.Where(e => pick(e.Key)).ToList();
+        var items = new ChunkStoreSnapshot.Item[list.Count];
         int i = 0;
-        foreach (var e in _chunks.Values)
+        foreach (var e in list)
         {
             int v = e.Version;
             var cached = e.CachedFor(v);
@@ -268,6 +272,38 @@ public sealed class ChunkStore
     }
 
     public byte[] ToSection() => Snapshot().Encode();
+
+    /// <summary>The section bytes of the entries <paramref name="pick"/> accepts (a region's share of the store); empty store gives the encoding of an empty list.</summary>
+    public byte[] ToSection(Func<ChunkKey, bool> pick)
+    {
+        var raw = new ChunkStoreRaw();
+        foreach (var e in _chunks.Values)
+        {
+            if (!pick(e.Key)) continue;
+            int v = e.Version;
+            var bytes = e.CachedFor(v);
+            if (bytes == null) { bytes = SaveCodec.Serialize(new ChunkEntry { Key = e.Key, Snapshot = e.Snapshot, Delta = new ChunkDelta { Ops = [.. e.Delta.Ops] } }); e.Cache(v, bytes); }
+            raw.Chunks.Add(new RawEntry(bytes));
+        }
+        return SaveCodec.SerializeCompressed(raw);
+    }
+
+    /// <summary>Removes the entries <paramref name="pick"/> accepts (a region is paged out) and returns how many went.</summary>
+    public int RemoveWhere(Func<ChunkKey, bool> pick)
+    {
+        var gone = _chunks.Keys.Where(pick).ToList();
+        foreach (var k in gone) _chunks.Remove(k);
+        return gone.Count;
+    }
+
+    /// <summary>Adds the entries of a section (a region is paged in); existing keys are kept (they are newer).</summary>
+    public int Absorb(ReadOnlyMemory<byte> section)
+    {
+        if (section.Length == 0) return 0;
+        int n = 0;
+        foreach (var e in SaveCodec.DeserializeCompressed<ChunkStoreData>(section).Chunks) if (_chunks.TryAdd(e.Key, e)) n++;
+        return n;
+    }
 
     public static ChunkStore FromSection(ReadOnlyMemory<byte> bytes)
     {

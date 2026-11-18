@@ -9,6 +9,9 @@ using Ravensguard.Sim.Codex;
 using Ravensguard.Sim.Core;
 using Ravensguard.Sim.Economy;
 using Ravensguard.Sim.Live;
+using Ravensguard.Sim.Worlds;
+using Ravensguard.Sim.Production;
+using Ravensguard.Sim.Economy.Markets;
 using Ravensguard.Sim.People;
 using Ravensguard.Sim.WorldGen;
 using Ravensguard.Sim.WorldGen.History;
@@ -43,6 +46,16 @@ public sealed class WorldState
     public EconomyState? Economy { get; init; }
     /// <summary>Field, parcel and herd state of farming (saved in the "farming" section when present); needs <see cref="Economy"/> for the stores it owns.</summary>
     public Ravensguard.Sim.Farming.FarmingState? Farming { get; set; }
+    /// <summary>Businesses, mines and resource stocks (saved in the "production" section when present); needs <see cref="Economy"/>.</summary>
+    public ProductionSystem? Production { get; set; }
+    /// <summary>Market books, lots and merchants (saved in the "markets" section when present); needs <see cref="Production"/> for business parties.</summary>
+    public MarketSystem? Markets { get; set; }
+    /// <summary>The records of every other generated region (resident and paged), when the game runs the seamless continent. Saved as one section per region.</summary>
+    public RegionRecordSet? Regions { get; set; }
+    /// <summary>Sections of other regions read from a save, as stored (hand them to <see cref="RegionRecordSet.AttachSections"/>); re-saved unchanged when no <see cref="Regions"/> is attached.</summary>
+    public IReadOnlyDictionary<int, byte[]> RegionSections { get; set; } = new SortedDictionary<int, byte[]>();
+    /// <summary>The grid square of the embark (home) region.</summary>
+    public RegionCoord HomeRegion => RegionCoord.Snap(EmbarkCellX, EmbarkCellY);
     /// <summary>The abstract tick's progress and vital counters (saved in the "abstract" section when present); attached by <c>SimWorld.From</c>.</summary>
     public Ravensguard.Sim.Abstract.AbstractState? Abstract { get; set; }
     /// <summary>Live play state restored from a save made with <see cref="WorldSave.CaptureLive"/> (hero position, torch, explored tiles...), null for a save without it.
@@ -87,6 +100,8 @@ public sealed class LiveSave
     [Key(4)] public bool Torch { get; set; }
     /// <summary>Packed explored-tile bits (see <see cref="ExploredTiles.ToBytes"/>).</summary>
     [Key(5)] public byte[] Explored { get; set; } = [];
+    /// <summary>Region id of the hero plus one (0 = not stored, an older save): the region the hero stands in, which changes as they cross a border.</summary>
+    [Key(6)] public int RegionPlus1 { get; set; }
 }
 
 [MessagePackObject]
@@ -189,7 +204,8 @@ public sealed class ChronicleData
 /// </summary>
 public static class WorldSave
 {
-    public const string MetaSection = "meta", PeopleSection = "people", LotsSection = "region.lots", ChunksSection = ChunkStore.SectionName, ChronicleSection = "chronicle", HeroSection = "hero", CodexSection = "codex", LiveSection = "live", EconomySection = "economy", AbstractSection = "abstract", FarmingSection = "farming";
+    public const string MetaSection = "meta", PeopleSection = "people", LotsSection = "region.lots", ChunksSection = ChunkStore.SectionName, ChronicleSection = "chronicle", HeroSection = "hero", CodexSection = "codex", LiveSection = "live", EconomySection = "economy", AbstractSection = "abstract", FarmingSection = "farming", ProductionSection = ProductionSave.SectionName, MarketsSection = MarketsSave.SectionName, RegionSectionName = "region.";
+    public static string RegionSection(int id) => RegionSectionName + id.ToString("D3");
 
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = false };
 
@@ -240,11 +256,14 @@ public static class WorldSave
         return new LiveCapture
         {
             Header = header, Meta = meta, Continent = w.Continent, History = w.History, Region = w.Population.Region,
-            People = EncodePeople(w.Population), Lots = EncodeLots(w.Population), Chunks = w.Chunks.Snapshot(), Chronicle = EncodeChronicle(w.Chronicle),
+            People = EncodePeople(w.Population), Lots = EncodeLots(w.Population), Chunks = w.Regions != null ? w.Chunks.Snapshot(k => ChunkRegions.Of(w.HomeRegion, k) == w.HomeRegion) : w.Chunks.Snapshot(), Chronicle = EncodeChronicle(w.Chronicle),
+            Production = w.Production == null ? null : ProductionSave.Capture(w.Production), Markets = w.Markets == null ? null : MarketsSave.Capture(w.Markets),
+            Regions = w.Regions?.CaptureResident(), PagedRegions = w.Regions != null ? w.Regions.PagedSections() : new SortedDictionary<int, byte[]>(w.RegionSections.ToDictionary(kv => kv.Key, kv => kv.Value)),
             Hero = w.Hero?.ToSave(), Economy = w.Economy == null ? null : EconomySave.Capture(w.Economy), Abstract = w.Abstract == null ? null : AbstractSave.Capture(w.Abstract, w.Population), Farming = w.Farming == null ? null : FarmingSave.Capture(w.Farming), Codex = codex == null ? null : new CodexSave { Unlocked = codex.Unlocked.ToArray() },
             Live = live == null ? null : new LiveSave
             {
                 WorldXRaw = live.WorldXRaw, WorldYRaw = live.WorldYRaw, Z = live.Z, Facing = (byte)live.Facing, Torch = live.Torch, Explored = live.Explored.ToBytes(),
+                RegionPlus1 = HeroRegionOf(w, live) is { IsValid: true } hr ? hr.Id + 1 : 0,
             },
         };
     }
@@ -299,11 +318,26 @@ public static class WorldSave
             var ls = Decode<LiveSave>(file, LiveSection, compressed: true);
             resume = new LiveResume(ls.WorldXRaw, ls.WorldYRaw, ls.Z, (Facing)ls.Facing, ls.Torch, new GameTime(meta.ClockSeconds), meta.ClockMsRemainder, (SimSpeed)meta.ClockSpeed,
                 ExploredTiles.FromBytes(ls.Explored), codex);
+            var home = RegionCoord.Snap(meta.EmbarkCellX, meta.EmbarkCellY);
+            var heroRegion = HeroRegionTracker.OfFrameCell(home, resume.Cell.X, resume.Cell.Y);
+            if (ls.RegionPlus1 > 0 && (!heroRegion.IsValid || heroRegion.Id != ls.RegionPlus1 - 1))
+                throw new SaveException($"Corrupt 'live' section in save: the hero is stored in region {ls.RegionPlus1 - 1} but stands in {heroRegion}.");
+            resume = resume with { RegionId = heroRegion.IsValid ? heroRegion.Id : -1 };
         }
         AbstractState? abstractState = file.Sections.ContainsKey(AbstractSection) ? Decode<AbstractSave>(file, AbstractSection, compressed: true).Restore(pop) : null;
         EconomyState? economy = file.Sections.ContainsKey(EconomySection) ? Decode<EconomySave>(file, EconomySection, compressed: true).Restore(pop, content) : null;
+        ProductionSystem? production = null; MarketSystem? markets = null;
+        if (economy != null && file.Sections.ContainsKey(ProductionSection))
+        {
+            production = Decode<ProductionSave>(file, ProductionSection, compressed: true).Restore(economy, pop, ProductionContent.Load(content, economy.Goods), cs.Seed, markets = new MarketSystem(economy, pop, cs.Seed));
+            if (file.Sections.ContainsKey(MarketsSection)) Decode<MarketsSave>(file, MarketsSection, compressed: true).Restore(markets, production);
+        }
+        var regionSections = new SortedDictionary<int, byte[]>();
+        foreach (var (name, bytes) in file.Sections)
+            if (name.StartsWith(RegionSectionName, StringComparison.Ordinal) && int.TryParse(name.AsSpan(RegionSectionName.Length), out int rid)) regionSections[rid] = bytes.ToArray();
         return new WorldState
         {
+            Production = production, Markets = markets, RegionSections = regionSections,
             Hero = hero, Codex = codex, Live = resume, Economy = economy, Abstract = abstractState,
             Farming = file.Sections.ContainsKey(FarmingSection) ? Decode<FarmingSave>(file, FarmingSection, compressed: true).Restore(region) : null,
             ContinentSettings = cs, HistorySettings = hs, RegionSettings = rs, EmbarkCellX = meta.EmbarkCellX, EmbarkCellY = meta.EmbarkCellY,
@@ -311,6 +345,13 @@ public static class WorldSave
             Clock = new SimClock(new GameTime(meta.ClockSeconds), meta.ClockMsRemainder) { Speed = (SimSpeed)meta.ClockSpeed },
             Ids = IdAllocator.FromState(meta.IdState), Chunks = chunks, Chronicle = chronicle,
         };
+    }
+
+    /// <summary>The region the hero stands in (the streaming frame's origin is the home region's north-west corner; cells are metres).</summary>
+    internal static RegionCoord HeroRegionOf(WorldState w, LiveResume live)
+    {
+        var c = live.Cell;
+        return HeroRegionTracker.OfFrameCell(w.HomeRegion, c.X, c.Y);
     }
 
     private static string Short(string h) => h.Length > 12 ? h[..12] : h;
@@ -451,6 +492,11 @@ public sealed class LiveCapture
     internal EconomySave? Economy { get; init; }
     internal AbstractSave? Abstract { get; init; }
     internal FarmingSave? Farming { get; init; }
+    internal ProductionSave? Production { get; init; }
+    internal MarketsSave? Markets { get; init; }
+    /// <summary>Captured sections of the resident regions other than home, and the stored sections of the paged ones.</summary>
+    internal SortedDictionary<int, RegionSectionData>? Regions { get; init; }
+    internal SortedDictionary<int, byte[]> PagedRegions { get; init; } = [];
 
     /// <summary>Chunk entries that had to be encoded by the last <see cref="Encode"/> (the rest were reused from earlier saves).</summary>
     public int ChunkEntriesEncoded => Chunks.ReEncoded;
@@ -477,6 +523,10 @@ public sealed class LiveCapture
         if (Economy != null) sections.Add(new(WorldSave.EconomySection, SaveCodec.SerializeCompressed(Economy)));
         if (Abstract != null) sections.Add(new(WorldSave.AbstractSection, SaveCodec.SerializeCompressed(Abstract)));
         if (Farming != null) sections.Add(new(WorldSave.FarmingSection, SaveCodec.SerializeCompressed(Farming)));
+        if (Production != null) sections.Add(new(WorldSave.ProductionSection, SaveCodec.SerializeCompressed(Production)));
+        if (Markets != null) sections.Add(new(WorldSave.MarketsSection, SaveCodec.SerializeCompressed(Markets)));
+        if (Regions != null) foreach (var (id, d) in Regions) sections.Add(new(WorldSave.RegionSection(id), SaveCodec.SerializeCompressed(d)));
+        foreach (var (id, b) in PagedRegions) sections.Add(new(WorldSave.RegionSection(id), b));
         return new SaveFile(Header, sections);
     }
 }

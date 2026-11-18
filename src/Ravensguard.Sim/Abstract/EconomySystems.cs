@@ -215,6 +215,7 @@ public sealed class BusinessSeasonalSystem : AbstractSystem
         var ew = ctx.World.Get<EconomyWorld>(); if (ew == null) return;
         ew.Production.Seasonal(ctx.Time);
         ew.Labour.SeasonalTraining();
+        ew.Labour.Reopen(ctx.Time);
     }
 }
 

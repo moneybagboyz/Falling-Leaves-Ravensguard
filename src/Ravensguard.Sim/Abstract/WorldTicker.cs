@@ -57,6 +57,11 @@ public sealed class WorldTicker : IDisposable
     }
 
     public SimWorld World { get; }
+    /// <summary>
+    /// The phases an hour step runs (default all). A region that must cross a long gap unseen runs the days it skips with <c>H5 | H6 | H7</c> only (daily globals,
+    /// seasons, outbox: farming days, famine, prices; no work, markets or vital slices), then the last days with every phase (seamless-regions spec 3.2, note N14).
+    /// </summary>
+    public TickPhase PhaseMask { get; set; } = TickPhase.All;
     public AbstractSystemRegistry Registry => _registry;
     public CommandQueue Commands { get; } = new();
     public CommandPump Handlers { get; }
@@ -220,6 +225,7 @@ public sealed class WorldTicker : IDisposable
         bool hour0 = c.HourOfDay == 0, seasonDay = c.IsSeasonStartDay;
         foreach (var phase in PhaseOrder)
         {
+            if ((phase & PhaseMask) == 0) continue;
             if (phase == TickPhase.H5DailyGlobals && !hour0) continue;
             if (phase == TickPhase.H6Seasonal && !seasonDay) continue;
             var systems = _registry.For(phase);

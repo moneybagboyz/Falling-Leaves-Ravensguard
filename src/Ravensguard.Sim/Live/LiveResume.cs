@@ -68,10 +68,10 @@ public sealed class ExploredTiles
 /// <summary>
 /// The live play state that a save keeps (plan 2.2, section 3): the hero's position in region cells (Q16.16, so a save resumes exactly), facing and torch,
 /// the live clock, the unlocked Codex entries and the explored map tiles. <see cref="LiveWorld.CaptureResume"/> makes one; <c>WorldSave.Restore</c> returns one
-/// and <see cref="LiveWorld"/> resumes from it. <see cref="Codex"/> is null when the sim had no Codex attached (the save then keeps the world's own progress).
+/// and <see cref="LiveWorld"/> resumes from it. <see cref="RegionId"/> is the grid region the hero stands in (-1 unknown), set by the save code. <see cref="Codex"/> is null when the sim had no Codex attached (the save then keeps the world's own progress).
 /// </summary>
 public sealed record LiveResume(long WorldXRaw, long WorldYRaw, int Z, Facing Facing, bool Torch, GameTime Time, long MsRemainder, SimSpeed Speed,
-    ExploredTiles Explored, CodexProgress? Codex)
+    ExploredTiles Explored, CodexProgress? Codex, int RegionId = -1)
 {
     public Fixed WorldX => Fixed.FromRaw((int)WorldXRaw);
     public Fixed WorldY => Fixed.FromRaw((int)WorldYRaw);

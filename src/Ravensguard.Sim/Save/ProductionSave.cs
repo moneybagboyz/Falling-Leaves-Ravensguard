@@ -193,6 +193,11 @@ public sealed class ProductionSave
     [Key(55)] public long[] ResCap { get; set; } = [];
     [Key(56)] public short[] ResLastDay { get; set; } = [];
     [Key(57)] public long[] Capital { get; set; } = [];
+    // resources as a difference from a freshly built layer (see Capture); the Res* arrays above are then empty
+    [Key(58)] public bool ResDiffBase { get; set; }
+    [Key(59)] public int[] ResDiffRow { get; set; } = [];
+    [Key(60)] public long[] ResDiffStock { get; set; } = [];
+    [Key(61)] public short[] ResDiffLast { get; set; } = [];
 
     public static ProductionSave Capture(ProductionSystem p)
     {
@@ -224,7 +229,16 @@ public sealed class ProductionSave
         if (p.Resources != null)
         {
             var e = p.Resources.Export();
-            s.HasResources = true; s.ResTile = e.Tile; s.ResKind = e.Kind; s.ResStock = e.Stock; s.ResCap = e.Cap; s.ResLastDay = e.LastDay;
+            s.HasResources = true;
+            // The layer is ~450,000 rows and a pure function of the region: store only the rows that differ from a freshly built one (stock, last visit), not the layer
+            var pristine = ResourceLayer.Build(p.Pop.Region, p.Content.Settings, p.Seed).Export();
+            if (pristine.Tile.AsSpan().SequenceEqual(e.Tile) && pristine.Kind.AsSpan().SequenceEqual(e.Kind) && pristine.Cap.AsSpan().SequenceEqual(e.Cap))
+            {
+                s.ResDiffBase = true; var rows = new List<int>();
+                for (int i = 0; i < e.Tile.Length; i++) if (e.Stock[i] != pristine.Stock[i] || e.LastDay[i] != pristine.LastDay[i]) rows.Add(i);
+                s.ResDiffRow = [.. rows]; s.ResDiffStock = [.. rows.Select(i => e.Stock[i])]; s.ResDiffLast = [.. rows.Select(i => e.LastDay[i])];
+            }
+            else { s.ResTile = e.Tile; s.ResKind = e.Kind; s.ResStock = e.Stock; s.ResCap = e.Cap; s.ResLastDay = e.LastDay; }
         }
         return s;
     }
@@ -235,7 +249,17 @@ public sealed class ProductionSave
         try
         {
             if (GoodsHash != econ.Goods.Hash()) throw new SaveException("The production section was saved against a different goods table.");
-            ResourceLayer? layer = HasResources ? ResourceLayer.Import(ResTile, ResKind, ResStock, ResCap, ResLastDay) : null;
+            ResourceLayer? layer = null;
+            if (HasResources)
+            {
+                if (ResDiffBase)
+                {
+                    var b = ResourceLayer.Build(pop.Region, content.Settings, seed).Export();
+                    for (int k = 0; k < ResDiffRow.Length; k++) { b.Stock[ResDiffRow[k]] = ResDiffStock[k]; b.LastDay[ResDiffRow[k]] = ResDiffLast[k]; }
+                    layer = ResourceLayer.Import(b.Tile, b.Kind, b.Stock, b.Cap, b.LastDay);
+                }
+                else layer = ResourceLayer.Import(ResTile, ResKind, ResStock, ResCap, ResLastDay);
+            }
             var sys = new ProductionSystem(econ, pop, content, seed, markets, layer);
             int sp = 0, st = 0, jb = 0;
             for (int i = 0; i < Kind.Length; i++)

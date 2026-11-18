@@ -187,6 +187,18 @@ public sealed class MarketBook
     public long ExpireLots(int day)
     {
         SyncAll();
+        // a producer's lot that did not sell comes down: its floor falls by a third a day it stays on the book, so a glut cannot jam the market (a lot priced
+        // above the curve would never sell and the stock would never fall, integration decision I21)
+        for (int g = 0; g < Goods.Length; g++)
+        {
+            var gl = Goods[g].Lots; bool changed = false;
+            foreach (var l in gl)
+            {
+                if (!l.IsMerchant && l.FloorPermille > 300 && l.ListedDay < day) { l.FloorPermille = Math.Max(300, l.FloorPermille * 2 / 3); changed = true; }
+                else if (l.IsMerchant && l.FloorPermille > 750 && day - l.ListedDay > 5) { l.FloorPermille = Math.Max(750, l.FloorPermille * 9 / 10); changed = true; }   // a merchant sells stock that will not move at a smaller margin
+            }
+            if (changed) { var sorted = gl.OrderBy(x => x.FloorPermille).ThenBy(x => x.Id).ToList(); gl.Clear(); gl.AddRange(sorted); }
+        }
         long returned = 0;
         for (int g = 0; g < Goods.Length; g++)
         {
@@ -284,7 +296,7 @@ public sealed class MarketBook
             if (m.Id == seller.Id) continue;
             var curve = Curve(good);
             long capUnits = gb.Demand * gb.TargetCoverDays * Money.MerchantStockCapPermilleOfCover / 1000;
-            long holds = 0; foreach (var l in gb.Lots) if (l.IsMerchant && l.Owner.Id == m.Id) holds += l.Qty;
+            long holds = 0; foreach (var l in gb.Lots) if (l.IsMerchant) holds += l.Qty;      // the book's merchants together hold at most 0.8 of the cover (a stock the price curve puts under the lots' floor jams the book, decision I21)
             long room = Math.Max(0, capUnits - holds);
             long cash = Econ.Ledger.Balance(m.Purse).Mites;
             long q = curve.MaxSellable(gb.StockUnits, Math.Min(qty - soldTotal, room), cash, Money.SpreadHalfPermille);

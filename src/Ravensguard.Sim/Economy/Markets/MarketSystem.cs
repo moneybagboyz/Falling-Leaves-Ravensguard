@@ -45,6 +45,9 @@ public sealed class MarketSystem
     public ConsumptionMix Mix { get; }
     public IStructuralDemandSource? Production { get; set; }
     private MarketParty?[] _hh;
+    private int _grainPermille;
+    /// <summary>The grain goods' share of the staple mix in permille (what a landed household's staple demand is divided by).</summary>
+    private int GrainPermille => _grainPermille > 0 ? _grainPermille : _grainPermille = Math.Max(1, Mix.Staple.Where(m => Econ.Food.IsGrain(m.Good)).Sum(m => m.Permille));
     private readonly bool[] _basketGood;
     private readonly ushort[] _durable;
 
@@ -185,7 +188,13 @@ public sealed class MarketSystem
             if (hh.MemberCount[h] == 0) continue;
             var arr = res[BookOf[hh.Settlement[h]]];
             var need = HouseholdNeeds.Basket(Econ, Pop.People, hh, h, day, tMeanC);
-            foreach (var (g, pm) in Mix.Staple) arr[g] += HouseholdNeeds.GramsFor(c, g, (long)need.StapleX100 * pm / 1000);
+            // a household with land eats its own grain, milled for the toll and baked at home (decision I17, I18): its staple demand is all grain
+            bool grainOnly = hh.ParcelCount[h] > 0;
+            foreach (var (g, pm) in Mix.Staple)
+            {
+                if (grainOnly) { if (!Econ.Food.IsGrain(g)) continue; arr[g] += HouseholdNeeds.GramsFor(c, g, (long)need.StapleX100 * pm / GrainPermille); }
+                else arr[g] += HouseholdNeeds.GramsFor(c, g, (long)need.StapleX100 * pm / 1000);
+            }
             foreach (var (g, pm) in Mix.Relish) arr[g] += HouseholdNeeds.GramsFor(c, g, (long)need.RelishX100 * pm / 1000);
             arr[Econ.Food.Ale] += need.AleMl * c.Def(Econ.Food.Ale).LitreMassG / 1000;
             arr[Econ.Food.Salt] += need.SaltG; arr[Econ.Food.Firewood] += need.FuelG;
@@ -242,7 +251,8 @@ public sealed class MarketSystem
         int Line(IReadOnlyList<(ushort Good, int Permille)> mix, long measuresX100, int coverDays, int priority)
         {
             if (measuresX100 <= 0) return 0;
-            var avail = mix.Where(m => book.Goods[m.Good].StockUnits > 0 || Held(m.Good) > 0).ToList();
+            // flour and bread count as on sale only when the book holds a day of its demand (a handful of loaves is not a market: the order would lapse and the household go hungry, decision I18); grain always
+            var avail = mix.Where(m => Held(m.Good) > 0 || (Econ.Food.IsGrain(m.Good) || mix != Mix.Staple ? book.Goods[m.Good].StockUnits > 0 : book.Goods[m.Good].StockUnits >= Math.Max(1, book.Goods[m.Good].Demand))).ToList();
             int tot = avail.Sum(m => m.Permille); int n = 0;
             if (tot == 0) return 0;
             foreach (var (g, pm) in avail)

@@ -377,6 +377,16 @@ public sealed class EconomySoak
             foreach (var (k, a) in seg)
                 sb.AppendLine($"   {k,-26} n {a[0],5} mem {a[3] / (double)a[0],4:0.0} hungry {100.0 * a[1] / a[0],5:0.0}% coin {a[2] / 100.0 / a[0],8:0.0} stock {a[4 + 2 * reasons.Length] / 1000.0 / a[0],7:0} | in " + string.Join(" ", Enumerable.Range(0, reasons.Length).Select(r => $"{a[4 + r] / 100.0 / a[0],6:0.0}")) + " | out " + string.Join(" ", Enumerable.Range(0, reasons.Length).Select(r => $"{a[4 + reasons.Length + r] / 100.0 / a[0],6:0.0}")));
         }
+        {
+            var hq = Sim.Households; int shown = 0;
+            for (int h = 0; h < hq.Count && shown < 6; h++)
+            {
+                if (hq.MemberCount[h] == 0 || (e.Grievances[h] & Grievance.Hunger) == 0 || led.Balance(e.HouseholdPurse[h]).Mites < 10000) continue;
+                shown++; var bk = ew.Markets.BookForHousehold(h);
+                sb.AppendLine($"   hungry-with-coin hh {h} {hq.Class[h]} parcels {hq.ParcelCount[h]} members {hq.MemberCount[h]} coin {led.Balance(e.HouseholdPurse[h]).Mites / 100} cr cover {e.FoodCoverDaysX10[h] / 10.0} d tier {e.Tiers[h]} settlement {hq.Settlement[h]} stock: " + string.Join(", ", e.HouseholdStore[h].Rows().Select(r => $"{cat.StringId(r.Good)} {r.Qty / 1000.0:0}")));
+                sb.AppendLine("      book: " + string.Join(", ", e.Food.Staples.Select(g => $"{cat.StringId(g)} s={bk.Goods[g].StockUnits / 1000} d={bk.Goods[g].Demand / 1000} x{bk.MidRatioPermille(g)}")));
+            }
+        }
         sb.AppendLine("-- hungry households at the end of every 5th day: " + string.Join(" ", HungryByDay.Where((_, i) => i % 5 == 4).Select(x => x.ToString())));
         {
             int hh1 = 0, hh2 = 0, hh3 = 0, hh4 = 0, hhTown = 0, hhNoCoin = 0, hhNoStock = 0; var hhb = Sim.Households; var reg2 = Sim.Population.Region;
@@ -424,6 +434,7 @@ public sealed class EconomySoak
                 sb.Append("} book {");
                 foreach (var r in k.Recipes.Take(2)) foreach (var (g, _) in r.Inputs.Concat(r.Outputs)) { var gb = book.Goods[g]; sb.Append($"{cat.StringId(g)}: s={gb.StockUnits / 1000.0:0.#} d={gb.Demand / 1000.0:0.#} x{book.MidRatioPermille(g)} "); }
                 sb.Append('}');
+                { var fw = book.Goods[Sim.Economy.Food.Firewood]; sb.Append($" firewood lots {fw.Lots.Count} floors {(fw.Lots.Count > 0 ? fw.Lots[0].FloorPermille : 0)}..{(fw.Lots.Count > 0 ? fw.Lots[^1].FloorPermille : 0)} eligible {book.Eligible(Sim.Economy.Food.Firewood, 30000, 3000)} ratio {book.MidRatioPermille(Sim.Economy.Food.Firewood)}"); }
                 o.WriteLine(sb.ToString());
             }
         }

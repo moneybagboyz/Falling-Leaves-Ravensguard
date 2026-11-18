@@ -298,6 +298,7 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
             if (kind.Salaried) { AccrueDayWages(b, kind, day); if (kind.Id == "manor") TopUpFromOwner(b); }
             PayWages(b, now);
             if (kind.Trader || kind.Salaried && kind.Stations.Length == 0) continue;
+            if (kind.Extractions.Length == 0 && b.Mine < 0) TopUpWorkshop(b, day);
             SellOutputs(b, kind, day);
             if (kind.Extractions.Length > 0 || b.Mine >= 0) PlanExtraction(b, kind, now);
             else PlanStations(b, kind, now);
@@ -445,7 +446,7 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
     {
         _lastDay = now.TotalDays;
         var book = Markets?.BookForSettlement(b.Settlement);
-        int busy = 0;
+        int busy = 0; double budget = Econ.Ledger.Balance(b.Purse).Mites * 0.9;      // what the cash box can still promise to the market this morning, shared by the stations
         foreach (var st in b.Stations)
         {
             if (st.Busy) { busy++; continue; }
@@ -463,19 +464,29 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
             if (best == null) continue;
             bool started = TryStart(b, st, best, now);
             if (started) busy++;
-            PostInputOrders(b, best, book, BatchesWanted(b, best, book));
+            // the orders are for what the cash box can pay, all inputs in proportion, so a brewer is not left with barley and no coin for the firewood (decision I19)
+            int batches = BatchesWanted(b, best, book); int permille = 1000;
+            double perBatch = 0; foreach (var (g, q) in best.Inputs) perBatch += q * PriceOutMites(book, g, true);
+            if (perBatch > 0 && budget < perBatch * batches)
+            {
+                double affordable = budget / perBatch;
+                if (affordable >= 1) batches = (int)affordable; else { batches = 1; permille = (int)Math.Max(0, affordable * 1000); }
+            }
+            if (permille > 0) { PostInputOrders(b, best, book, batches, permille); budget -= perBatch * batches * permille / 1000; }
         }
         if (busy == 0 && b.Stations.Count > 0) b.IdleDays++; else b.IdleDays = 0;
     }
 
-    public void PostInputOrders(Business b, Recipe r, MarketBook? book, int batches = 1)
+    public void PostInputOrders(Business b, Recipe r, MarketBook? book, int batches = 1, int permille = 1000)
     {
         if (book == null) return;
         foreach (var (g, q) in r.Inputs)
         {
-            long have = b.Store.Qty(g), want = q * Math.Max(1, batches);
+            long have = b.Store.Qty(g), want = q * Math.Max(1, batches) * permille / 1000;
             if (have >= want) continue;
-            book.Post(new BuyOrder(b.Party, g, want - have, 3000) { Priority = 5 + r.Inputs.Length, OnFilled = res => { b.InputsSeason += res.PaidMites; } });
+            if (b.Index == DebugIndex) Console.WriteLine($"  DBG b{b.Index} order {Econ.Goods.StringId(g)} {want - have} cash {Econ.Ledger.Balance(b.Purse).Mites}");
+            int bi = b.Index;
+            book.Post(new BuyOrder(b.Party, g, want - have, 3000) { Priority = 5 + r.Inputs.Length, OnFilled = res => { b.InputsSeason += res.PaidMites; if (bi == DebugIndex) Console.WriteLine($"  DBG b{bi} filled {Econ.Goods.StringId(g)} {res.Qty} paid {res.PaidMites}"); } });
         }
     }
 
@@ -598,6 +609,44 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
         }
         if (KindOf(b).Trader && Markets != null) Markets.BookForSettlement(b.Settlement).Merchants.Remove(b.Party);
     }
+
+    /// <summary>Opens a closed workshop under a new owner (integration decision I19): half the owner's household coin goes in as the working capital (reason Gift).</summary>
+    public void Reopen(Business b, int owner)
+    {
+        b.State = BusinessState.Open; b.LossSeasons = 0; b.IdleDays = 0; b.UnfilledDays = 0; b.WagesSeason = b.InputsSeason = b.DividendsSeason = 0;
+        SetOwner(b, owner);
+        int hh = b.OwnerHousehold;
+        if (hh >= 0)
+        {
+            long amt = Econ.Ledger.Balance(Econ.HouseholdPurse[hh]).Mites / 2;
+            if (amt > 0) Econ.Ledger.Transfer(Econ.HouseholdPurse[hh], b.Purse, new Coin(amt), TransferReason.Gift);
+        }
+        b.CashStart = Econ.Ledger.Balance(b.Purse).Mites; b.Capital = Math.Max(b.CashStart, 1000);
+    }
+
+    /// <summary>
+    /// A workshop's owner puts coin back into the cash box when it has run down to under half its capital (integration decision I19): up to the capital, never more than
+    /// half of what his household holds, at most once a week. Keeps a baker or a brewer in business through a lean season; the dividends bring it back.
+    /// </summary>
+    private void TopUpWorkshop(Business b, int day)
+    {
+        int hh = b.OwnerHousehold; if (hh < 0 || b.Capital <= 0 || (day + b.Index) % 7 != 0) return;
+        long cash = Econ.Ledger.Balance(b.Purse).Mites; if (cash >= b.Capital / 2) return;
+        long pay = Math.Min(b.Capital - cash, Econ.Ledger.Balance(Econ.HouseholdPurse[hh]).Mites / 2);
+        if (pay > 0 && Econ.Ledger.Transfer(Econ.HouseholdPurse[hh], b.Purse, new Coin(pay), TransferReason.Gift)) cash += pay;
+        // still short: the fief's treasury advances the market craftsmen's working capital, at most a fiftieth of its coin and half the capital (the treasury's idle coin goes back to work, decision I20)
+        if (cash < b.Capital / 4)
+        {
+            int fief = b.Settlement >= 0 ? Pop.Region.Settlements[b.Settlement].FiefIndex : -1;
+            if (fief >= 0 && fief < Pop.Region.Fiefs.Count && Econ.Ledger.TryFind(PurseKind.Treasury, Pop.Region.Fiefs[fief].Id, out var t))
+            {
+                long adv = Math.Min(b.Capital / 2, Econ.Ledger.Balance(t).Mites / 50);
+                if (adv > 0 && Econ.Ledger.Transfer(t, b.Purse, new Coin(adv), TransferReason.Stipend)) { TreasuryPaidMites += adv; AdvancesMites += adv; }
+            }
+        }
+    }
+    public long AdvancesMites;
+    public static int DebugIndex = -1;
 
     // ---------- structural demand ----------
 

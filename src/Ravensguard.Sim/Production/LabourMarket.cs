@@ -301,6 +301,49 @@ public sealed class LabourMarket
         p.SetSkill(person, slot >= 0 ? slot : lowest, skill, level);
     }
 
+    // ------------------------------------------------------------------ reopening (integration decision I19)
+
+    /// <summary>Coin a household must hold to set up a closed workshop again: 30 crowns.</summary>
+    public const long ReopenMinMites = 3000;
+    public long Reopened;
+
+    /// <summary>
+    /// S5: a closed workshop opens again under a new owner when its main product is wanted (the book's price is over 1.1 times its reference, or it holds under a day of
+    /// the demand): the most skilled idle adult of the settlement whose household holds at least <see cref="ReopenMinMites"/> takes it over and puts half his coin in as
+    /// working capital. At most one workshop a settlement a season.
+    /// </summary>
+    public int Reopen(GameTime now)
+    {
+        if (_sys.Markets == null) return 0;
+        int day = (int)now.TotalDays, n = 0; bool built = false; var done = new HashSet<int>();
+        var people = _pop.People; var hht = _pop.Households; var led = _econ.Ledger;
+        Rebuild();
+        foreach (var b in _sys.Businesses)
+        {
+            if (b.State != BusinessState.Closed || done.Contains(b.Settlement)) continue;
+            var kind = _sys.KindOf(b);
+            if (kind.Stations.Length == 0 || kind.Extractions.Length > 0 || kind.Trader || kind.Id is "mine" or "manor" or "charcoal_crew") continue;
+            var book = _sys.Markets.BookForSettlement(b.Settlement); bool wanted = false;
+            foreach (var r in kind.Recipes) { var gb = book.Goods[r.Outputs[0].Good]; if (gb.Demand > 0 && (book.MidRatioPermille(r.Outputs[0].Good) >= 1100 || gb.StockUnits < gb.Demand)) { wanted = true; break; } }
+            if (!wanted) continue;
+            if (!built) { BuildIdle(day); built = true; }
+            var skill = OccupationInfo.Skills(kind.OwnerOccupation).A;
+            int best = -1, bs = -1;
+            foreach (int p in _idle[b.Settlement])
+            {
+                int age = people.AgeYears(p, day);
+                if (age < ManagementMinAge || age >= RetireAge || OwnsBusiness(p) || IsStaff(p)) continue;
+                int hh = people.Household[p]; if (hh < 0 || led.Balance(_econ.HouseholdPurse[hh]).Mites < ReopenMinMites) continue;
+                int sk = people.SkillLevelOf(p, skill);
+                if (sk > bs || (sk == bs && p < best)) { bs = sk; best = p; }
+            }
+            if (best < 0) continue;
+            _sys.Reopen(b, best); _owners.Add(best); EnsureSkill(best, skill, StartSkill); _idle[b.Settlement].Remove(best);
+            done.Add(b.Settlement); n++; Reopened++;
+        }
+        return n;
+    }
+
     // ------------------------------------------------------------------ seasonal
 
     /// <summary>Learning by doing: each staff member and owner at work gains skill in the trade each season (apprentices at the same pace), up to the cap.</summary>

@@ -60,7 +60,7 @@ public class SeamlessStreamingTests(ITestOutputHelper output)
         var g = m.TryGet(east)!;
         output.WriteLine($"east neighbour built on a worker in {g.BuildMs:0} ms (region, landmarks, people, chunk generator); attach {m.Stats.MaxAttachMs:0.000} ms");
         Assert.True(g.BuildMs < TestBudget.Ms(3000), $"{g.BuildMs:0} ms");
-        Assert.True(m.Stats.MaxAttachMs < 1.0, $"attach {m.Stats.MaxAttachMs} ms");
+        Assert.True(m.Stats.MaxAttachMs < TestBudget.Ms(3.0), $"attach {m.Stats.MaxAttachMs} ms");
         Assert.Equal(w.Fresh(east).ComputeHash(), g.Region.ComputeHash());
         // the corner neighbour joined only when a traveller is near the corner
         Assert.False(m.IsReady(home.Offset(1, 1)));

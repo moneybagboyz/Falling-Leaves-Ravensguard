@@ -19,6 +19,8 @@ public sealed class GeneratedRegion
     public required ChunkGenerator Generator { get; init; }
     /// <summary>Wall-clock milliseconds the build took (region, landmarks, people, chunk generator); 0 for a region handed in already built.</summary>
     public double BuildMs { get; init; }
+    /// <summary>The region's records (people, economy ...), made on the worker with the region when the manager has a <see cref="RegionManager.RecordsFactory"/>; null otherwise.</summary>
+    public RegionWorld? Records { get; init; }
 }
 
 /// <summary>Counters for the perf report of neighbour generation.</summary>
@@ -44,10 +46,13 @@ public sealed class RegionManager
     public int MaxConcurrent { get; set; } = 2;
     /// <summary>Build inline in <see cref="Track"/> instead of on workers: tests and the loading of a saved game.</summary>
     public bool Synchronous { get; set; }
+    /// <summary>Makes a built region's records on the worker (fresh, or restored from a paged section). Set by <see cref="RegionRecordSet"/>.</summary>
+    public Func<RegionCoord, RegionData, Population, RegionWorld?>? RecordsFactory { get; set; }
 
     private readonly Dictionary<int, GeneratedRegion> _ready = [];
     private readonly Dictionary<int, double> _queued = []; // region id -> priority (distance, smaller first)
     private readonly Dictionary<int, Task> _running = [];
+    private readonly HashSet<int> _requested = [];
     private readonly ConcurrentQueue<(int Id, GeneratedRegion? Result, Exception? Error)> _done = new();
     private readonly Dictionary<int, (long X, long Y)> _travellers = [];
     private readonly object _gate = new();
@@ -70,6 +75,16 @@ public sealed class RegionManager
         return g;
     }
 
+    /// <summary>Drops a region from memory (it was paged out); it can be built again, identically, by <see cref="Request"/> or a traveller.</summary>
+    public bool Evict(RegionCoord at) { lock (_gate) { bool r = _ready.Remove(at.Id); if (r) Revision++; return r; } }
+
+    /// <summary>Queues a region for building (nearest first by <paramref name="priority"/>); in synchronous mode builds it now.</summary>
+    public void Request(RegionCoord at, double priority = 0)
+    {
+        lock (_gate) { if (!at.IsValid || _ready.ContainsKey(at.Id) || _running.ContainsKey(at.Id)) return; _queued[at.Id] = priority; _requested.Add(at.Id); }
+        Pump();
+    }
+
     public GeneratedRegion? TryGet(RegionCoord at) { lock (_gate) return at.IsValid && _ready.TryGetValue(at.Id, out var g) ? g : null; }
     public bool IsReady(RegionCoord at) => TryGet(at) != null;
     public IReadOnlyList<GeneratedRegion> Ready { get { lock (_gate) return [.. _ready.Values.OrderBy(g => g.Coord.Id)]; } }
@@ -83,8 +98,10 @@ public sealed class RegionManager
         var region = RegionGenerator.Generate(Continent, History, at, Settings);
         LandmarkPlacer.Place(region, History, Content);
         var pop = Populator.Populate(region, History, Content);
+        var rec = RecordsFactory?.Invoke(at, region, pop);
+        pop = rec?.Population ?? pop;
         var gen = ChunkGenerator.For(region, pop, Content);
-        return new GeneratedRegion { Coord = at, Region = region, Population = pop, Generator = gen, BuildMs = sw.Elapsed.TotalMilliseconds };
+        return new GeneratedRegion { Coord = at, Region = region, Population = pop, Generator = gen, Records = rec, BuildMs = sw.Elapsed.TotalMilliseconds };
     }
 
     /// <summary>Makes a region ready now on the calling thread (a teleport target, a test, a load): the region if already built.</summary>
@@ -101,7 +118,7 @@ public sealed class RegionManager
         var t = Stopwatch.GetTimestamp();
         if (!_ready.ContainsKey(g.Coord.Id)) { _ready[g.Coord.Id] = g; _generated++; Revision++; }
         _lastMs = g.BuildMs; _maxMs = Math.Max(_maxMs, g.BuildMs); _totalMs += g.BuildMs;
-        _queued.Remove(g.Coord.Id);
+        _queued.Remove(g.Coord.Id); _requested.Remove(g.Coord.Id);
         _maxAttachMs = Math.Max(_maxAttachMs, Stopwatch.GetElapsedTime(t).TotalMilliseconds);
     }
 
@@ -154,7 +171,7 @@ public sealed class RegionManager
             // drop jobs not started whose region no traveller is near any more
             if (_queued.Count > 0)
                 foreach (int id in _queued.Keys.ToArray())
-                    if (!NearAnyTraveller(RegionCoord.FromId(id), HysteresisM)) _queued.Remove(id);
+                    if (!_requested.Contains(id) && !NearAnyTraveller(RegionCoord.FromId(id), HysteresisM)) _queued.Remove(id);
         }
         Pump();
     }
