@@ -1,0 +1,5 @@
+// Money constants (money spec 6). 1 crown = 100 mites ~ 1 silver penny ~ 1.3 g silver. Seed shares are percent of the world's seed money and sum to 100.
+[
+  { "type": "money_settings", "id": "money", "crown_silver_mg": 1300, "mint_seigniorage_bp": 750, "seed_money_crowns_per_person": 50,
+    "seed_gentry_pct": 20, "seed_burgher_pct": 35, "seed_peasant_pct": 30, "seed_treasury_pct": 12, "seed_parish_pct": 3 },
+]

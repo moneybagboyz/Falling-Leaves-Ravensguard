@@ -26,13 +26,14 @@
     "shear_yield_kpa": 70000, "shear_fracture_kpa": 220000, "shear_strain_at_yield": 145,
     "max_edge": 1.0, "melting_point_c": 1122 },
 
-  { "type": "material", "id": "silver", "name": "Silver", "category": "metal", "density_kg_m3": 10490, "value_per_kg": 120.0,
+  // Silver 769.2 crowns/kg = 1 crown per 1.3 g (coin parity, money spec); gold keeps the 12.5 ratio.
+  { "type": "material", "id": "silver", "name": "Silver", "category": "metal", "density_kg_m3": 10490, "value_per_kg": 769.2,
     "impact_yield_kpa": 350000, "impact_fracture_kpa": 595000, "impact_strain_at_yield": 350,
     "shear_yield_kpa": 100000, "shear_fracture_kpa": 170000, "shear_strain_at_yield": 333,
     "max_edge": 1.0, "melting_point_c": 999 },
 
   // Gold: fracture/shear/strain from the wiki Gold/Metal pages; impact yield is an estimate.
-  { "type": "material", "id": "gold", "name": "Gold", "category": "metal", "density_kg_m3": 19320, "value_per_kg": 1500.0,
+  { "type": "material", "id": "gold", "name": "Gold", "category": "metal", "density_kg_m3": 19320, "value_per_kg": 9615.0,
     "impact_yield_kpa": 250000, "impact_fracture_kpa": 350000, "impact_strain_at_yield": 600, // impact yield estimate
     "shear_yield_kpa": 50000, "shear_fracture_kpa": 100000, "shear_strain_at_yield": 185,
     "max_edge": 1.0, "melting_point_c": 1102 },

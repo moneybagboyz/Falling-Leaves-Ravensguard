@@ -102,9 +102,12 @@ public partial class RegionBuildScreen : Control
         // the player character from the Quick Start origin, and the Codex of this world with what the embark region already knows
         var hero = bi.Origin != null ? Ravensguard.Sim.Characters.HeroRecord.FromOrigin(d.Name, d.Female, bi.Origin) : null;
         var codex = Ravensguard.Sim.Codex.CodexBook.Build(w.History, region, bi.Rules);
+        // seed money and starting stock: once, before day 0 (money spec 3.8); the hero's crowns enter the ledger as seed money too
+        var economy = Ravensguard.Sim.Economy.EconomyState.Create(pop, content.Db, w.Info.Seed);
+        if (hero != null) economy.SeedHero(hero.Coin);
         var world = new WorldState
         {
-            Hero = hero, Codex = codex.ToProgress(),
+            Hero = hero, Codex = codex.ToProgress(), Economy = economy,
             ContinentSettings = w.Info.File.Continent, HistorySettings = w.Info.File.History, RegionSettings = rs, EmbarkCellX = site.CellX, EmbarkCellY = site.CellY,
             Continent = w.Continent, History = w.History, Population = pop,
             Clock = new SimClock(GameTime.FromCalendar(pop.NowYear, Season.Spring, 1, 8)),

@@ -61,6 +61,24 @@ public class LivePerfTests(ChunkWorldFixture fx, ITestOutputHelper output) : ICl
         Assert.True(w.WindowSwaps <= walked / 32 / 2 + 2, $"{w.WindowSwaps} swaps for {walked:0} m");
     }
 
+    [Theory]
+    [MemberData(nameof(Reps))]
+    public void TmpRepeat(int rep)
+    {
+        var t = fx.Region.Settlements.OrderByDescending(x => x.TargetPop).First();
+        int cx = t.CenterX / 32 + rep % 5, cy = t.CenterY / 32 + rep / 5 % 5;
+        var a = new ChunkStreamer(fx.Generator);
+        a.LoadAround(cx, cy, 3);
+        var b = new ChunkStreamer(fx.Generator);
+        var sw = Stopwatch.StartNew();
+        while (b.LoadedCount < 49 && sw.Elapsed.TotalSeconds < 60) { b.Update(cx, cy, 2.0, background: true); Thread.Sleep(1); }
+        Assert.Equal(49, b.LoadedCount);
+        Assert.True(b.PrefetchedCount > 20, $"{b.PrefetchedCount} chunks came from workers");
+        Assert.True(a.Store.ToSection().AsSpan().SequenceEqual(b.Store.ToSection()), "sections differ");
+        Assert.Equal(a.Store.Count, b.Store.Count);
+    }
+    public static IEnumerable<object[]> Reps() => Enumerable.Range(0, 40).Select(i => new object[] { i });
+
     [Fact]
     public void Chunks_generated_on_worker_threads_are_identical_to_those_generated_in_place()
     {

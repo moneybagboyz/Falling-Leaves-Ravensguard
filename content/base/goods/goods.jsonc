@@ -1,0 +1,50 @@
+// Phase 2 goods (items spec 2.1). Quantity is grams for kg and litre goods, a count for piece goods. Prices are mites per kg (per piece for pieces).
+// Base prices are hand-set placeholders until tools/econ PriceSolver exists (wheat 45 and charcoal, bloom, bar iron, steel follow the spec's worked numbers).
+// food_measures_per_kg: 1 measure = 1,100 g of grain, so grain is 1/1.1 = 0.909091 (households spec 2.2).
+[
+  // ---- grain and pulses (staples: tag "staple"; pulses are relish, see households notes)
+  { "type": "good", "id": "wheat",  "name": "Wheat",  "class": "grain", "state": "grain", "bulk_litres_per_kg": 1.33, "base_price_mites_per_kg": 45, "food_measures_per_kg": 0.909091, "spoil_class": "grain", "target_cover_days": 30, "tags": ["food", "staple", "grain"] },
+  { "type": "good", "id": "rye",    "name": "Rye",    "class": "grain", "state": "grain", "bulk_litres_per_kg": 1.33, "base_price_mites_per_kg": 38, "food_measures_per_kg": 0.909091, "spoil_class": "grain", "target_cover_days": 30, "tags": ["food", "staple", "grain"] },
+  { "type": "good", "id": "barley", "name": "Barley", "class": "grain", "state": "grain", "bulk_litres_per_kg": 1.33, "base_price_mites_per_kg": 34, "food_measures_per_kg": 0.909091, "spoil_class": "grain", "target_cover_days": 30, "tags": ["food", "staple", "grain"] },
+  { "type": "good", "id": "oats",   "name": "Oats",   "class": "grain", "state": "grain", "bulk_litres_per_kg": 1.5,  "base_price_mites_per_kg": 30, "food_measures_per_kg": 0.909091, "spoil_class": "grain", "target_cover_days": 30, "tags": ["food", "staple", "grain"] },
+  { "type": "good", "id": "peas",   "name": "Peas",   "class": "pulse", "state": "grain", "bulk_litres_per_kg": 1.3,  "base_price_mites_per_kg": 40, "food_measures_per_kg": 0.909091, "spoil_class": "grain", "target_cover_days": 20, "tags": ["food", "relish", "pulse"] },
+  { "type": "good", "id": "beans",  "name": "Beans",  "class": "pulse", "state": "grain", "bulk_litres_per_kg": 1.3,  "base_price_mites_per_kg": 42, "food_measures_per_kg": 0.909091, "spoil_class": "grain", "target_cover_days": 20, "tags": ["food", "relish", "pulse"] },
+
+  // ---- prepared food and drink
+  { "type": "good", "id": "flour", "name": "Flour", "class": "flour", "state": "powder", "bulk_litres_per_kg": 1.6, "base_price_mites_per_kg": 56, "food_measures_per_kg": 0.95, "spoil_class": "flour", "target_cover_days": 14, "tags": ["food", "staple"] },
+  { "type": "good", "id": "bread", "name": "Bread", "class": "bread", "state": "solid", "bulk_litres_per_kg": 1.5, "base_price_mites_per_kg": 140, "food_measures_per_kg": 0.80, "spoil_class": "bread", "target_cover_days": 2, "tags": ["food", "staple"] },
+  { "type": "good", "id": "ale", "name": "Ale", "class": "ale", "state": "liquid", "unit": "litre", "litre_mass_g": 1010, "bulk_litres_per_kg": 0.99, "base_price_mites_per_kg": 110, "spoil_class": "ale", "target_cover_days": 5, "tags": ["food", "drink"] },
+  { "type": "good", "id": "milk", "name": "Milk", "class": "dairy", "state": "liquid", "unit": "litre", "litre_mass_g": 1030, "bulk_litres_per_kg": 0.97, "base_price_mites_per_kg": 45, "food_measures_per_kg": 0.35, "spoil_class": "milk", "target_cover_days": 1, "tags": ["food", "relish", "dairy"] },
+  { "type": "good", "id": "cheese", "name": "Cheese", "class": "dairy", "state": "solid", "bulk_litres_per_kg": 1.1, "base_price_mites_per_kg": 400, "food_measures_per_kg": 0.96, "spoil_class": "cheese", "target_cover_days": 20, "tags": ["food", "relish", "dairy"] },
+  { "type": "good", "id": "vegetables", "name": "Vegetables", "class": "vegetable", "state": "fresh", "bulk_litres_per_kg": 2.0, "base_price_mites_per_kg": 55, "food_measures_per_kg": 0.15, "spoil_class": "vegetables", "target_cover_days": 10, "tags": ["food", "relish"] },
+  { "type": "good", "id": "eggs", "name": "Eggs", "class": "egg", "state": "fresh", "bulk_litres_per_kg": 2.5, "base_price_mites_per_kg": 260, "food_measures_per_kg": 0.5, "spoil_class": "vegetables", "target_cover_days": 5, "tags": ["food", "relish"] },
+  { "type": "good", "id": "fish_fresh", "name": "Fresh fish", "class": "fish", "state": "fresh", "bulk_litres_per_kg": 1.2, "base_price_mites_per_kg": 160, "food_measures_per_kg": 0.45, "spoil_class": "fish_fresh", "target_cover_days": 2, "tags": ["food", "relish", "fresh"] },
+  { "type": "good", "id": "fish_salted", "name": "Salted fish", "class": "fish", "state": "solid", "bulk_litres_per_kg": 1.2, "base_price_mites_per_kg": 320, "food_measures_per_kg": 0.45, "spoil_class": "cured", "target_cover_days": 20, "tags": ["food", "relish", "preserved"] },
+  { "type": "good", "id": "meat_fresh", "name": "Fresh meat", "class": "meat", "state": "fresh", "bulk_litres_per_kg": 1.1, "base_price_mites_per_kg": 280, "food_measures_per_kg": 0.69, "spoil_class": "meat_fresh", "target_cover_days": 2, "tags": ["food", "relish", "fresh"] },
+  { "type": "good", "id": "meat_salted", "name": "Salted meat", "class": "meat", "state": "solid", "bulk_litres_per_kg": 1.1, "base_price_mites_per_kg": 420, "food_measures_per_kg": 0.69, "spoil_class": "cured", "target_cover_days": 20, "tags": ["food", "relish", "preserved"] },
+  { "type": "good", "id": "salt", "name": "Salt", "class": "salt", "state": "powder", "bulk_litres_per_kg": 0.8, "base_price_mites_per_kg": 600, "spoil_class": "inert", "target_cover_days": 60, "tags": ["food", "mineral"] },
+
+  // ---- fuel and fodder
+  { "type": "good", "id": "firewood", "name": "Firewood", "class": "fuel", "state": "solid", "bulk_litres_per_kg": 2.5, "base_price_mites_per_kg": 18, "spoil_class": "firewood", "target_cover_days": 20, "tags": ["fuel"] },
+  { "type": "good", "id": "charcoal", "name": "Charcoal", "class": "fuel", "state": "solid", "bulk_litres_per_kg": 4.0, "base_price_mites_per_kg": 21, "spoil_class": "charcoal", "target_cover_days": 30, "tags": ["fuel"] },
+  { "type": "good", "id": "hay",   "name": "Hay",   "class": "fodder", "state": "fibre", "bulk_litres_per_kg": 5.0, "base_price_mites_per_kg": 12, "spoil_class": "straw", "target_cover_days": 30, "tags": ["fodder"] },
+  { "type": "good", "id": "straw", "name": "Straw", "class": "fodder", "state": "fibre", "bulk_litres_per_kg": 6.0, "base_price_mites_per_kg": 8,  "spoil_class": "straw", "target_cover_days": 30, "tags": ["fodder"] },
+
+  // ---- fibre, hide and cloth
+  { "type": "good", "id": "wool_raw",   "name": "Raw wool",    "class": "fibre", "state": "fibre", "bulk_litres_per_kg": 3.0, "base_price_mites_per_kg": 380,  "spoil_class": "wool", "target_cover_days": 45, "tags": ["material"] },
+  { "type": "good", "id": "cloth_wool", "name": "Woollen cloth", "class": "cloth", "state": "solid", "bulk_litres_per_kg": 2.0, "base_price_mites_per_kg": 1100, "spoil_class": "cloth", "target_cover_days": 45, "material": "wool", "tags": ["cloth"] },
+  { "type": "good", "id": "cloth_linen","name": "Linen cloth", "class": "cloth", "state": "solid", "bulk_litres_per_kg": 2.0, "base_price_mites_per_kg": 1400, "spoil_class": "cloth", "target_cover_days": 45, "material": "linen", "tags": ["cloth"] },
+  { "type": "good", "id": "hide_raw",   "name": "Raw hide",    "class": "hide", "state": "fresh", "bulk_litres_per_kg": 2.0, "base_price_mites_per_kg": 150,  "spoil_class": "hide_raw", "target_cover_days": 20, "tags": ["material"] },
+  { "type": "good", "id": "leather",    "name": "Leather",     "class": "hide", "state": "solid", "bulk_litres_per_kg": 2.0, "base_price_mites_per_kg": 600,  "spoil_class": "cloth", "target_cover_days": 45, "material": "leather", "tags": ["material"] },
+
+  // ---- timber, ore and metal
+  { "type": "good", "id": "timber_planks", "name": "Planks", "class": "timber", "state": "solid", "bulk_litres_per_kg": 2.2, "base_price_mites_per_kg": 90, "spoil_class": "planks", "target_cover_days": 30, "material": "oak", "tags": ["material"] },
+  { "type": "good", "id": "iron_ore",   "name": "Iron ore",   "class": "ore",   "state": "solid", "bulk_litres_per_kg": 0.4,  "base_price_mites_per_kg": 14,  "spoil_class": "inert", "target_cover_days": 60, "tags": ["ore"] },
+  { "type": "good", "id": "iron_bloom", "name": "Iron bloom", "class": "metal", "state": "solid", "bulk_litres_per_kg": 0.4,  "base_price_mites_per_kg": 300, "spoil_class": "iron", "target_cover_days": 60, "material": "wrought_iron", "tags": ["metal"] },
+  { "type": "good", "id": "iron_bar",   "name": "Iron bar",   "class": "metal", "state": "solid", "bulk_litres_per_kg": 0.13, "base_price_mites_per_kg": 539, "spoil_class": "iron", "target_cover_days": 60, "material": "iron", "tags": ["metal"] },
+  { "type": "good", "id": "steel_bar",  "name": "Steel bar",  "class": "metal", "state": "solid", "bulk_litres_per_kg": 0.13, "base_price_mites_per_kg": 870, "spoil_class": "iron", "target_cover_days": 60, "material": "steel", "tags": ["metal"] },
+  { "type": "good", "id": "silver",     "name": "Silver",     "class": "metal", "state": "solid", "bulk_litres_per_kg": 0.1,  "base_price_mites_per_kg": 76920, "spoil_class": "inert", "target_cover_days": 60, "material": "silver", "tags": ["metal", "precious"] },
+
+  // ---- counted pieces that can become item instances (items spec 2.3)
+  { "type": "good", "id": "arming_sword", "name": "Arming sword", "class": "weapon", "state": "solid", "unit": "piece", "piece_mass_g": 1453, "bulk_litres_per_kg": 0.5, "base_price_mites_per_kg": 2506, "spoil_class": "iron", "target_cover_days": 60, "material": "steel", "shape": "arming_sword", "tags": ["weapon"] },
+]

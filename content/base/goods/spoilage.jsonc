@@ -1,0 +1,23 @@
+// Spoilage rows (items spec 3.5): ppm of the quantity lost per game day, by the kind of store. A store kind without its own value uses house_ppm.
+// Grain 3,414 ppm/day = 5% a season in a house or barn, 670 = 1% in a granary (plan 3a). Fresh fish rots about 3 days.
+[
+  { "type": "spoil_class", "id": "grain",       "house_ppm": 3414, "granary_ppm": 670, "sealed_ppm": 670, "cellar_ppm": 670 },
+  { "type": "spoil_class", "id": "flour",       "house_ppm": 7000, "granary_ppm": 1500, "sealed_ppm": 1500, "cellar_ppm": 1500 },
+  { "type": "spoil_class", "id": "bread",       "house_ppm": 250000 },
+  { "type": "spoil_class", "id": "fish_fresh",  "house_ppm": 300000, "cellar_ppm": 150000, "temp_sensitive": true },
+  { "type": "spoil_class", "id": "meat_fresh",  "house_ppm": 300000, "cellar_ppm": 150000, "temp_sensitive": true },
+  { "type": "spoil_class", "id": "cured",       "house_ppm": 8000, "granary_ppm": 3000, "sealed_ppm": 3000, "cellar_ppm": 3000 },
+  { "type": "spoil_class", "id": "ale",         "house_ppm": 150000, "sealed_ppm": 30000, "cellar_ppm": 30000 },
+  { "type": "spoil_class", "id": "milk",        "house_ppm": 400000, "temp_sensitive": true },
+  { "type": "spoil_class", "id": "cheese",      "house_ppm": 5000, "granary_ppm": 1500, "sealed_ppm": 1500, "cellar_ppm": 1500 },
+  { "type": "spoil_class", "id": "vegetables",  "house_ppm": 30000, "cellar_ppm": 8000, "temp_sensitive": true },
+  { "type": "spoil_class", "id": "hide_raw",    "house_ppm": 50000, "granary_ppm": 20000, "sealed_ppm": 20000, "cellar_ppm": 20000 },
+  { "type": "spoil_class", "id": "wool",        "house_ppm": 1000, "granary_ppm": 300, "sealed_ppm": 300, "cellar_ppm": 300 },
+  { "type": "spoil_class", "id": "cloth",       "house_ppm": 500, "granary_ppm": 200, "sealed_ppm": 200, "cellar_ppm": 200 },
+  { "type": "spoil_class", "id": "iron",        "house_ppm": 400, "granary_ppm": 100, "sealed_ppm": 100, "cellar_ppm": 100 },
+  { "type": "spoil_class", "id": "firewood",    "house_ppm": 500 },
+  { "type": "spoil_class", "id": "charcoal",    "house_ppm": 100 },
+  { "type": "spoil_class", "id": "planks",      "house_ppm": 100 },
+  { "type": "spoil_class", "id": "straw",       "house_ppm": 2000 },
+  { "type": "spoil_class", "id": "inert",       "house_ppm": 0 },
+]

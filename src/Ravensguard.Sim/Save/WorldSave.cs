@@ -6,6 +6,7 @@ using Ravensguard.Content;
 using Ravensguard.Sim.Characters;
 using Ravensguard.Sim.Codex;
 using Ravensguard.Sim.Core;
+using Ravensguard.Sim.Economy;
 using Ravensguard.Sim.Live;
 using Ravensguard.Sim.People;
 using Ravensguard.Sim.WorldGen;
@@ -37,6 +38,8 @@ public sealed class WorldState
     public HeroRecord? Hero { get; init; }
     /// <summary>The unlocked Codex entries (saved in the "codex" section when present).</summary>
     public CodexProgress? Codex { get; init; }
+    /// <summary>Coin, goods, stores and household needs (saved in the "economy" section when present). Created by <see cref="EconomyState.Create"/> at world creation.</summary>
+    public EconomyState? Economy { get; init; }
     /// <summary>Live play state restored from a save made with <see cref="WorldSave.CaptureLive"/> (hero position, torch, explored tiles...), null for a save without it.
     /// <c>new LiveWorld(streamer, state.Live, ...)</c> resumes there; <see cref="Clock"/> already holds the saved live clock.</summary>
     public LiveResume? Live { get; init; }
@@ -178,7 +181,7 @@ public sealed class ChronicleData
 /// </summary>
 public static class WorldSave
 {
-    public const string MetaSection = "meta", PeopleSection = "people", LotsSection = "region.lots", ChunksSection = ChunkStore.SectionName, ChronicleSection = "chronicle", HeroSection = "hero", CodexSection = "codex", LiveSection = "live";
+    public const string MetaSection = "meta", PeopleSection = "people", LotsSection = "region.lots", ChunksSection = ChunkStore.SectionName, ChronicleSection = "chronicle", HeroSection = "hero", CodexSection = "codex", LiveSection = "live", EconomySection = "economy";
 
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = false };
 
@@ -230,7 +233,7 @@ public static class WorldSave
         {
             Header = header, Meta = meta, Continent = w.Continent, History = w.History, Region = w.Population.Region,
             People = EncodePeople(w.Population), Lots = EncodeLots(w.Population), Chunks = w.Chunks.Snapshot(), Chronicle = EncodeChronicle(w.Chronicle),
-            Hero = w.Hero?.ToSave(), Codex = codex == null ? null : new CodexSave { Unlocked = codex.Unlocked.ToArray() },
+            Hero = w.Hero?.ToSave(), Economy = w.Economy == null ? null : EconomySave.Capture(w.Economy), Codex = codex == null ? null : new CodexSave { Unlocked = codex.Unlocked.ToArray() },
             Live = live == null ? null : new LiveSave
             {
                 WorldXRaw = live.WorldXRaw, WorldYRaw = live.WorldYRaw, Z = live.Z, Facing = (byte)live.Facing, Torch = live.Torch, Explored = live.Explored.ToBytes(),
@@ -286,9 +289,10 @@ public static class WorldSave
             resume = new LiveResume(ls.WorldXRaw, ls.WorldYRaw, ls.Z, (Facing)ls.Facing, ls.Torch, new GameTime(meta.ClockSeconds), meta.ClockMsRemainder, (SimSpeed)meta.ClockSpeed,
                 ExploredTiles.FromBytes(ls.Explored), codex);
         }
+        EconomyState? economy = file.Sections.ContainsKey(EconomySection) ? Decode<EconomySave>(file, EconomySection, compressed: true).Restore(pop, content) : null;
         return new WorldState
         {
-            Hero = hero, Codex = codex, Live = resume,
+            Hero = hero, Codex = codex, Live = resume, Economy = economy,
             ContinentSettings = cs, HistorySettings = hs, RegionSettings = rs, EmbarkCellX = meta.EmbarkCellX, EmbarkCellY = meta.EmbarkCellY,
             Continent = continent, History = history, Population = pop,
             Clock = new SimClock(new GameTime(meta.ClockSeconds), meta.ClockMsRemainder) { Speed = (SimSpeed)meta.ClockSpeed },
@@ -429,6 +433,7 @@ public sealed class LiveCapture
     internal HeroSave? Hero { get; init; }
     internal CodexSave? Codex { get; init; }
     internal LiveSave? Live { get; init; }
+    internal EconomySave? Economy { get; init; }
 
     /// <summary>Chunk entries that had to be encoded by the last <see cref="Encode"/> (the rest were reused from earlier saves).</summary>
     public int ChunkEntriesEncoded => Chunks.ReEncoded;
@@ -452,6 +457,7 @@ public sealed class LiveCapture
         if (Hero != null) sections.Add(new(WorldSave.HeroSection, SaveCodec.Serialize(Hero)));
         if (Codex != null) sections.Add(new(WorldSave.CodexSection, SaveCodec.Serialize(Codex)));
         if (Live != null) sections.Add(new(WorldSave.LiveSection, SaveCodec.SerializeCompressed(Live)));
+        if (Economy != null) sections.Add(new(WorldSave.EconomySection, SaveCodec.SerializeCompressed(Economy)));
         return new SaveFile(Header, sections);
     }
 }
