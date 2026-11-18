@@ -117,9 +117,9 @@ public sealed record TalkSettingsDef : ContentDef
     /// <summary>Per game hour of the day (24 values): the chance in permille that an adult is out at the market, the well, the tavern or the church that hour.</summary>
     public List<int> SocialPmByHour { get; init; } = [];
     /// <summary>The chance in permille, per household and hour, that the household sits and talks together (early morning and evening hours).</summary>
-    public int HomePm { get; init; } = 200;
+    public int HomePm { get; init; } = 25;
     /// <summary>The chance in permille, per workplace and hour, that those working together stop to talk (working hours).</summary>
-    public int WorkPm { get; init; } = 60;
+    public int WorkPm { get; init; } = 10;
     public int HearingsPerPersonMax { get; init; } = 6;
     public int HearingsMax { get; init; } = 120000;
     public int RumoursMax { get; init; } = 6000;

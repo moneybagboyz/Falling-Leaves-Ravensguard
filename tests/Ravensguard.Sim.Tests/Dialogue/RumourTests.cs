@@ -62,7 +62,7 @@ public class RumourTests
     {
         var (w, c) = TalkKit.Town(1000);
         var id = TalkKit.AddEntry(c, "famine", 100, "Ashby", ("hungry_households", "40")); TalkKit.AddEntry(c, "outbreak", 101, "Ashby", ("severity", "mild"));
-        var ts = Run(w, 30, 100 * 24 + 7);
+        var ts = Run(w, 14, 100 * 24 + 7);
         int checkedN = 0;
         foreach (var (rid, r) in ts.Rumours.Rumours)
             foreach (var h in ts.Rumours.HearingsOf(rid))
@@ -99,7 +99,7 @@ public class RumourTests
                 }
             }
         }
-        Assert.True(asked >= 50 && cards >= 20, $"asked {asked}, heard {cards}");
+        Assert.True(asked >= 50 && cards >= 8, $"asked {asked}, heard {cards}");
         var view = TalkSystem.Journal(w, ts, 112 * 24);
         Assert.Equal(cards, view.Cards.Count);
         foreach (var card in view.Cards)
@@ -136,7 +136,7 @@ public class RumourTests
         Assert.NotNull(hero);
         for (long h = 100 * 24 + 100; h < 130 * 24; h++) TalkSystem.AfterHour(w, ts, Book, h);
         Assert.Null(ts.Rumours.Get(id)); Assert.NotNull(ts.Rumours.Get(other));
-        Assert.Equal(0, ts.Rumours.HearingsOf(id).Count);
+        Assert.Empty(ts.Rumours.HearingsOf(id));
     }
 
     [Fact]

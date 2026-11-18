@@ -32,3 +32,4 @@ Gaps reported by the step agents or seen in screenshots. Each one is either fixe
 - `RegionRecordsTests.Tick_levels_are_assigned...` once threw IndexOutOfRange inside a `Parallel.ForEach` in a region tick. It passes when run alone. This could be a real race: investigate it.
 - Timing tests are noisy when the machine is busy (`Daily_regions_are_staggered`, `HourlyTickTimings`). They're isolated in the Timing collection, but they still compete with other processes.
 - `JobTests.Determinism` ran out of memory once while Godot screenshot runs were going.
+- Vehicles face east or west only (no north/south sprites); a loaded cart bed isn't drawn with its cargo.
