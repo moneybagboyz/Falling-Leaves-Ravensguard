@@ -25,6 +25,7 @@ public sealed class Ledger
     private readonly long[] _flowCoin = new long[TransferReasons];
     private readonly long[] _flowCount = new long[TransferReasons];
     private long _seq;
+    private long[]? _in, _out;          // per purse x transfer reason, only while tracking (diagnostics: who earns what)
 
     private readonly LedgerEntry[] _recent;
     private int _recentHead, _recentCount;
@@ -77,6 +78,7 @@ public sealed class Ledger
         long newTo = checked(_balance[to.Index] + amount.Mites);
         _balance[from.Index] -= amount.Mites; _balance[to.Index] = newTo;
         _flowCoin[(int)why] = checked(_flowCoin[(int)why] + amount.Mites); _flowCount[(int)why]++;
+        if (_in != null) Track(from.Index, to.Index, (int)why, amount.Mites);
         Log(from, to, amount, (byte)why, false, false, chronicleEvent);
         return true;
     }
@@ -104,6 +106,17 @@ public sealed class Ledger
         _balance[from.Index] -= amount.Mites; _sunk[(int)why] = checked(_sunk[(int)why] + amount.Mites);
         Log(from, PurseId.None, amount, (byte)why, false, true, chronicleEvent);
         return true;
+    }
+
+    /// <summary>Starts (or restarts, zeroed) per-purse tracking of the coin moved in and out by reason: a diagnostic, not part of the state.</summary>
+    public void StartTracking() { _in = new long[Math.Max(64, _count * 2) * TransferReasons]; _out = new long[_in.Length]; }
+    public Coin InFlow(PurseId p, TransferReason why) => new(_in == null || (p.Index + 1) * TransferReasons > _in.Length ? 0 : _in[p.Index * TransferReasons + (int)why]);
+    public Coin OutFlow(PurseId p, TransferReason why) => new(_out == null || (p.Index + 1) * TransferReasons > _out.Length ? 0 : _out[p.Index * TransferReasons + (int)why]);
+    private void Track(int from, int to, int why, long mites)
+    {
+        int need = (Math.Max(from, to) + 1) * TransferReasons;
+        if (need > _in!.Length) { int n = Math.Max(need, _in.Length * 2); Array.Resize(ref _in, n); Array.Resize(ref _out, n); }
+        _out![from * TransferReasons + why] += mites; _in[to * TransferReasons + why] += mites;
     }
 
     private void Log(PurseId from, PurseId to, Coin amount, byte reason, bool src, bool sink, EntityId? ev)

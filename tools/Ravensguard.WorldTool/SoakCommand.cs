@@ -34,7 +34,7 @@ public static class SoakCommand
         var w = hw.World;
         Console.WriteLine($"seed {seed}: {w.People.Count:N0} people, {w.Households.Count:N0} households, {hw.Economy.Markets.AllBooks().Count()} market books, {hw.Economy.Production.Businesses.Count} businesses, built in {sw.ElapsedMilliseconds} ms");
         Console.WriteLine($"band: staple mid / base price within {EconomySoak.BandLow / 1000.0:0.0}..{EconomySoak.BandHigh / 1000.0:0.0}, book-days of books with a merchant; staples {string.Join(", ", EconomySoak.Staples.Take(5))} (price index columns are the mean mid/base)");
-        var soak = new EconomySoak(hw);
+        var soak = new EconomySoak(hw) { TrackLastYear = diag };
         if (probe != null) { soak.Probe(probe, probeDays, Console.Out); return 0; }
         Console.WriteLine(EconomySoak.Header());
         bool ok = true;

@@ -64,6 +64,9 @@ public sealed class EconomySoak
     private long _hired0, _succ0, _closedNo0;
     public long TotalHungryDays, TotalHouseholdDays, TotalHungryDaysAll, TotalHouseholdDaysAll;
     public readonly Stopwatch Clock = new();
+    /// <summary>Track the coin each household earns and spends by reason during the last year of the run (diagnostics).</summary>
+    public bool TrackLastYear { get; set; }
+    private int _yearsToRun;
     /// <summary>Hungry households at the end of each simulated day (a window of the whole run).</summary>
     public List<int> HungryByDay { get; } = [];
 
@@ -95,9 +98,10 @@ public sealed class EconomySoak
     /// <summary>Advances <paramref name="years"/> game years, sampling every day, and returns the rows added; <paramref name="onRow"/> is called as each year closes.</summary>
     public void Run(int years, Action<SoakRow>? onRow = null)
     {
-        Clock.Start();
+        Clock.Start(); _yearsToRun = years;
         for (int y = 0; y < years; y++)
         {
+            if (TrackLastYear && y == years - 1) Sim.Economy.Ledger.StartTracking();
             for (int d = 0; d < TimeConst.DaysPerYear; d++)
             {
                 Ticker.AdvanceHours(24);
@@ -348,6 +352,24 @@ public sealed class EconomySoak
         sb.AppendLine($"-- farm sales {ew.Counters.FarmSoldG / 1e6:N0} t, parish sold {ew.Parish.SoldG / 1e6:N0} t, charity {ew.Parish.CharityG / 1e6:N0} t");
         var fs = ew.Farming.State; var lv = fs.Livestock;
         sb.AppendLine($"-- herds: sheep {lv.Sheep.Sum()}, oxen {lv.Oxen.Sum()}, cows {lv.Cows.Sum()}; grazed settlements {lv.Grazed.Count(x => x)}; farm sow refused: seed {ew.Farming.Diagnostics.SowRefusedSeed}, fertility {ew.Farming.Diagnostics.SowRefusedFertility}");
+        if (TrackLastYear)
+        {
+            var seg = new SortedDictionary<string, long[]>(StringComparer.Ordinal); var hq = Sim.Households; var pq = Sim.People;
+            var reasons = new[] { TransferReason.Wage, TransferReason.Trade, TransferReason.Rent, TransferReason.Dividend, TransferReason.Stipend, TransferReason.Gift };
+            for (int h = 0; h < hq.Count; h++)
+            {
+                if (hq.MemberCount[h] == 0) continue;
+                bool staff = false; foreach (int m in hq.Members(h)) if (ew.Labour.IsStaff(m)) { staff = true; break; }
+                string key = $"{hq.Class[h],-7} {(hq.ParcelCount[h] > 0 ? "landed " : "landless")} {(staff ? "staff" : "-")}";
+                if (!seg.TryGetValue(key, out var a)) seg[key] = a = new long[4 + 2 * reasons.Length + 3];
+                a[0]++; if ((e.Grievances[h] & Grievance.Hunger) != 0) a[1]++; a[2] += led.Balance(e.HouseholdPurse[h]).Mites; a[3] += hq.MemberCount[h];
+                for (int r = 0; r < reasons.Length; r++) { a[4 + r] += led.InFlow(e.HouseholdPurse[h], reasons[r]).Mites; a[4 + reasons.Length + r] += led.OutFlow(e.HouseholdPurse[h], reasons[r]).Mites; }
+                a[4 + 2 * reasons.Length] += e.HouseholdStore[h].TotalMassG();
+            }
+            sb.AppendLine("-- last year by household segment: n | members | hungry% | coin | stock kg | per household crowns: in " + string.Join("/", reasons) + " | out " + string.Join("/", reasons));
+            foreach (var (k, a) in seg)
+                sb.AppendLine($"   {k,-26} n {a[0],5} mem {a[3] / (double)a[0],4:0.0} hungry {100.0 * a[1] / a[0],5:0.0}% coin {a[2] / 100.0 / a[0],8:0.0} stock {a[4 + 2 * reasons.Length] / 1000.0 / a[0],7:0} | in " + string.Join(" ", Enumerable.Range(0, reasons.Length).Select(r => $"{a[4 + r] / 100.0 / a[0],6:0.0}")) + " | out " + string.Join(" ", Enumerable.Range(0, reasons.Length).Select(r => $"{a[4 + reasons.Length + r] / 100.0 / a[0],6:0.0}")));
+        }
         sb.AppendLine("-- hungry households at the end of every 5th day: " + string.Join(" ", HungryByDay.Where((_, i) => i % 5 == 4).Select(x => x.ToString())));
         {
             int hh1 = 0, hh2 = 0, hh3 = 0, hh4 = 0, hhTown = 0, hhNoCoin = 0, hhNoStock = 0; var hhb = Sim.Households; var reg2 = Sim.Population.Region;
