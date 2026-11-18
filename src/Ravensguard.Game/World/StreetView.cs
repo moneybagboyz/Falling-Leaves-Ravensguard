@@ -15,6 +15,7 @@ using Ravensguard.Sim.Core;
 using Ravensguard.Sim.Lighting;
 using Ravensguard.Sim.Live;
 using Ravensguard.Sim.People;
+using Ravensguard.Sim.Jobs;
 using Ravensguard.Sim.Save;
 using Ravensguard.Sim.WorldGen;
 using Ravensguard.Sim.WorldGen.Region;
@@ -77,6 +78,11 @@ public partial class StreetView : Control, IHandlesBack
     PeopleSprites? _lodSprites;
     System.Threading.Tasks.Task<ScanResult>? _lodScan;
     long _lodScanTick; bool _lodFaultShown;
+    // odd jobs (live-behaviour spec 4.5): the table belongs to the tick worker; the view holds copies, hands claims over at a barrier and shows the work panel
+    System.Threading.Tasks.Task<JobSnapshot>? _jobTask;
+    JobSnapshot? _jobSnap;
+    long _jobTick; bool _jobFaultShown; double _heroAway;
+    readonly List<ClaimRequest> _pendingClaims = new();
     RegionMap? _regionMap;
     ColorRect _ambient = null!, _ground = null!;
     ShaderMaterial _ambientMat = null!;
@@ -872,6 +878,7 @@ public partial class StreetView : Control, IHandlesBack
         foreach (var opened in _world.TakeOpenedCodexEntries()) _router?.ShowToast(L.F("CODEX_NEW_ENTRY", opened.Title)); // the sim opens pages as the hero walks
         PumpRuntime();
         PumpPeople();
+        PumpJobs();
         PollSave();
         if (Run != null && !_leaving && _saveTask == null && (_sinceSave += delta) >= AutosaveSeconds) StartSave(SaveKind.Autosave, quiet: true);
 
@@ -886,6 +893,7 @@ public partial class StreetView : Control, IHandlesBack
         if (_opt.MapShot && _frames == (_opt.Frames > 12 ? _opt.Frames : 3)) OpenMap(); // --shot-frames n (> 12) waits that long first, so neighbour regions are built when the map opens
         if (_opt.Panel == "character" && _frames == 3) OpenCharacter();
         if (_opt.Panel == "codex" && _frames == 3) OpenCodex();
+        if (_opt.Panel == "jobs" && _frames == 420) OpenWork();    // dev: the work panel once the first posting has come back from the tick worker
         if (_opt.IsShot && _opt.Weather == "storm" && _frames == Math.Max(2, _opt.Frames - 1)) _wover.Strike(); // dev: catch a lightning flash in the picture
         if (_opt.IsShot && !_opt.MapShot && _opt.Panel == null && !_quitting && _frames >= _opt.Frames && ShotReady()) Shoot();
         if (bench && _benchT >= _opt.BenchSeconds) Finish();
@@ -1037,10 +1045,73 @@ public partial class StreetView : Control, IHandlesBack
         if (_lod.Queued > 0) _lod.Promote(now, LodGround());
     }
 
+    static readonly Ravensguard.Sim.Core.EntityId HeroId = Ravensguard.Sim.Economy.EconomyState.HeroOwner;
+
+    /// <summary>Every second of real time: hands the people's claims and the hero's to the tick worker, gets copies of the jobs back, and sends the live ones to the people who work them. A hero who strays far from the work of his job loses it.</summary>
+    void PumpJobs()
+    {
+        if (Runtime is not { } rt || _world.Streamer == null) return;
+        long now = _world.Clock.Now.Seconds;
+        if (_jobTask is { IsCompleted: true } done)
+        {
+            _jobTask = null;
+            if (done.IsCompletedSuccessfully) { _jobSnap = done.Result; _lod.SetJobs(done.Result.Live, done.Result.Open); WatchHero(rt, now); }
+            else if (!_jobFaultShown) { _jobFaultShown = true; GD.PushWarning("job step failed: " + done.Exception?.GetBaseException().Message); }
+        }
+        if (_jobTask == null && (_world.Tick - _jobTick >= 20 || _pendingClaims.Count > 0) && _world.Clock.Speed != SimSpeed.Paused)
+        {
+            _jobTick = _world.Tick;
+            var claims = _lod.TakeClaims().Concat(_pendingClaims).ToList(); _pendingClaims.Clear();
+            _jobTask = RuntimeJobs.StepAsync(rt, now, claims);
+        }
+    }
+
+    void WatchHero(WorldRuntime rt, long now)
+    {
+        var mine = _jobSnap?.Live.FirstOrDefault(j => j.Worker == HeroId);
+        if (mine == null) { _heroAway = 0; return; }
+        var home = rt.State.HomeRegion; var c = LodCentres()[0];
+        var (ex, ey, _, _) = Ravensguard.Sim.Jobs.JobTable.PositionAt(mine, now);
+        long dist = PathPlan.Dist(c.X - home.OriginXM * 1000 - ex, c.Y - home.OriginYM * 1000 - ey);
+        if (dist <= 60_000) { _heroAway = 0; return; }
+        // the work goes on without you only so long: five game minutes of being a long way from where it is done
+        _heroAway += 20.0 / TimeConst.GameSecondsPerRealSecond * 20; // one pump is about a second of real time, 20 game seconds at 1x
+        if (_heroAway > 300) { _heroAway = 0; _ = RuntimeJobsExt.AbandonAsync(rt, mine.Id, now); _router?.ShowToast(L.T("JOBS_LOST"), 4f); }
+    }
+
+    JobPanelData WorkData()
+    {
+        var d = new JobPanelData { NowSec = _world.Clock.Now.Seconds };
+        if (Runtime is not { } rt) return d;
+        var home = rt.State.HomeRegion; var c = LodCentres()[0];
+        d.HeroX = c.X - home.OriginXM * 1000; d.HeroY = c.Y - home.OriginYM * 1000;
+        d.Mine = _jobSnap?.Live.FirstOrDefault(j => j.Worker == HeroId);
+        var near = _lod.People.Select(p => (P: p, D: PathPlan.Dist(p.XMm - c.X, p.YMm - c.Y))).Where(t => t.D < 4000 && t.P.Z == _world.Snapshot.Hero.Z).OrderBy(t => t.D).FirstOrDefault();
+        if (near.P.Name != null) { d.NearName = near.P.Name; d.NearWhy = _lod.Why(near.P.Id); }
+        var region = rt.State.Population.Region; int best = -1; long bd = long.MaxValue;
+        for (int i = 0; i < region.Settlements.Count; i++) { long dd = PathPlan.Dist(region.Settlements[i].CenterX * 1000L - d.HeroX, region.Settlements[i].CenterY * 1000L - d.HeroY); if (dd < bd) { bd = dd; best = i; } }
+        if (best >= 0 && bd < 400_000) { d.PlaceName = region.Settlements[best].Name; d.Board = region.Settlements[best].Class == Ravensguard.Sim.WorldGen.Region.SettlementClass.Town; d.Open = _jobSnap?.Open.Where(j => j.Settlement == best).ToList() ?? []; }
+        return d;
+    }
+
+    void OpenWork()
+    {
+        if (_router == null || Runtime == null) { _router?.ShowToast(L.T("MAP_NONE")); return; }
+        _router.Push(new JobPanel(_router, WorkData, TakeJob, AbandonJob) { ShotPath = _opt.Panel == "jobs" ? _opt.ShotPath : null });
+    }
+
+    void TakeJob(Ravensguard.Sim.Jobs.Job j)
+    {
+        var d = WorkData();
+        _pendingClaims.Add(new ClaimRequest(j.Id, HeroId, -1, _world.Tick, 0, d.HeroX, d.HeroY, 20, 25));
+    }
+
+    void AbandonJob(Ravensguard.Sim.Jobs.Job j) { if (Runtime is { } rt) _ = RuntimeJobsExt.AbandonAsync(rt, j.Id, _world.Clock.Now.Seconds); }
+
     void SyncPeople(float alpha)
     {
         if (_lodSprites == null || Runtime is not { } rt) return;
-        _lodSprites.Sync(_lod.People, rt.State.HomeRegion.OriginXM, rt.State.HomeRegion.OriginYM, alpha, GetProcessDeltaTime(), _band < Band.Field && _viewZ == 0, Actions.Held("world.nameplates"), _heroSprite.Position);
+        _lodSprites.Sync(_lod.People, rt.State.HomeRegion.OriginXM, rt.State.HomeRegion.OriginYM, alpha, GetProcessDeltaTime(), _band < Band.Field, Actions.Held("world.nameplates"), _heroSprite.Position, _viewZ);
     }
 
     void SyncCaravans(LiveSnapshot s)
@@ -1188,6 +1259,7 @@ public partial class StreetView : Control, IHandlesBack
         else if (Actions.Pressed(e, "world.map")) OpenMap();
         else if (Actions.Pressed(e, "world.panel_character")) OpenCharacter();
         else if (Actions.Pressed(e, "world.panel_codex")) OpenCodex();
+        else if (Actions.Pressed(e, "world.panel_journal") || Actions.Pressed(e, "world.context_menu")) OpenWork();
         else if (Actions.Pressed(e, "world.quicksave")) QuickSave();
         else if (Actions.Pressed(e, "world.quickload")) QuickLoad();
         else if (Actions.Pressed(e, "world.camera_home")) { _pan = Vector2.Zero; if (_viewZ != _world.Snapshot.Hero.Z) { _viewZ = _world.Snapshot.Hero.Z; RebuildLevel(); } }

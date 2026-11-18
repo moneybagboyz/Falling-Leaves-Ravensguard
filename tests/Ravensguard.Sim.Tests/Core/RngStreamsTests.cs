@@ -35,8 +35,12 @@ public class RngStreamsTests
     [Fact]
     public void PhaseTwoStreams_AreInTheirBlock_AndTheOldNamesPointAtThem()
     {
-        foreach (var (name, v) in All().Where(x => x.Name != nameof(RngStreams.WeatherLong)))
+        // Phase 2 owns 0x200..0x2FF; Phase 3 (live behaviour and jobs) owns 0x300..0x3FF
+        var phaseThree = new[] { nameof(RngStreams.UtilityNoise), nameof(RngStreams.JobClaim), nameof(RngStreams.BedFallback), nameof(RngStreams.RoutineJobs) };
+        foreach (var (name, v) in All().Where(x => x.Name != nameof(RngStreams.WeatherLong) && !phaseThree.Contains(x.Name)))
             Assert.InRange(v, 0x200u, 0x2FFu);
+        foreach (var (name, v) in All().Where(x => phaseThree.Contains(x.Name))) Assert.InRange(v, 0x300u, 0x3FFu);
+        Assert.Equal(0x300u, RngStreams.UtilityNoise); Assert.Equal(0x301u, RngStreams.JobClaim); Assert.Equal(0x302u, RngStreams.BedFallback); Assert.Equal(0x303u, RngStreams.RoutineJobs);
         Assert.Equal(0xC0u, RngStreams.WeatherLong);
         Assert.Equal(RngStreams.Death, VitalStreams.Death); Assert.Equal(RngStreams.Name, VitalStreams.Name); Assert.Equal(RngStreams.Attributes, VitalStreams.Attributes);
         Assert.Equal(RngStreams.TaxEvents, TaxSystem.Stream);

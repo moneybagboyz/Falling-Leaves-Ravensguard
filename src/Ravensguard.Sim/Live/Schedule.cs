@@ -1,3 +1,4 @@
+using Ravensguard.Sim.Behaviour;
 using Ravensguard.Sim.Core;
 using Ravensguard.Sim.People;
 using Ravensguard.Sim.WorldGen.Region;
@@ -19,8 +20,8 @@ public static class ScheduleTuning
     public const int MinWalkSec = 30;
 }
 
-/// <summary>Where a block is: the home lot, the bed in it (the home spot when the household has no placed bed), the workplace, the square, the church, a market stall's customer side.</summary>
-public enum PlaceRef : byte { Home = 0, Work = 1, Square = 2, Bed = 3, Church = 4, Market = 5 }
+/// <summary>Where a block is: the home lot, the bed in it (the home spot when the household has no placed bed), the workplace, the square, the church, a market stall's customer side (queue), behind a stall (a keeper).</summary>
+public enum PlaceRef : byte { Home = 0, Work = 1, Square = 2, Bed = 3, Church = 4, Market = 5, Stall = 6 }
 
 /// <summary>
 /// Everything the schedule needs about one person, copied out of the records (the person's row, their home and work lots, the settlement square): the cache that a
@@ -59,7 +60,7 @@ public readonly struct PersonAnchors
     public int SquareJit { get; init; }
     public int SquareJitY { get; init; }
     /// <summary>Latitude in tenths of a degree (the sun's day); the plan this person follows and the tuning it reads.</summary>
-    public int LatTenths { get; init; } = 480;
+    public int LatTenths { get; init; }
     public Ravensguard.Sim.Behaviour.ScheduleBook? Book { get; init; }
     /// <summary>The bed (millimetres, level) and whether the household has a placed one.</summary>
     public bool HasBed { get; init; }
@@ -73,7 +74,7 @@ public readonly struct PersonAnchors
     public int ChurchJitY { get; init; }
     /// <summary>The stalls of the home settlement's square (null for a green), and the queue gap.</summary>
     public Ravensguard.Sim.WorldGen.Chunks.ChunkGenerator.StallSpot[]? Stalls { get; init; }
-    public int QueueGapMm { get; init; } = 900;
+    public int QueueGapMm { get; init; }
     /// <summary>Parcel tiles (region tile x, y) of the work settlement, for a field worker (the day's tile is picked from them).</summary>
     public (int X, int Y)[]? FieldTiles { get; init; }
 
@@ -143,14 +144,40 @@ public readonly struct PersonAnchors
     private static bool IsFieldWork(Occupation o) => o is Occupation.Farmer or Occupation.Ploughman or Occupation.Shepherd or Occupation.Labourer or Occupation.Woodcutter
         or Occupation.Fisher or Occupation.Miner or Occupation.CharcoalBurner;
 
-    /// <summary>The spot of <paramref name="place"/> on game day <paramref name="day"/>: the place's anchor plus a jitter drawn from stream 0x2A0 keyed on the day (so one day always gives the same spot).</summary>
+    private static ulong Hash(ulong a, ulong b) => DetRng.Mix(a * 0x9E3779B97F4A7C15UL ^ b);
+
+    /// <summary>
+    /// The spot of <paramref name="place"/> on game day <paramref name="day"/> (region millimetres): the place's anchor plus a jitter from stream 0x2A0. Home, bed and a lot-bound workplace are the same every
+    /// day (a house does not move); a field worker's tile, a shopper's stall and a queue slot change with the day.
+    /// </summary>
     public (long X, long Y) Spot(PlaceRef place, long day)
     {
         long bx, by; int jit, jitY; uint draw = (uint)place * 4;
         switch (place)
         {
-            case PlaceRef.Home: bx = HomeX; by = HomeY; jit = HomeJit; jitY = HomeJitY; break;
+            case PlaceRef.Bed when HasBed: return (BedX, BedY);
+            case PlaceRef.Home or PlaceRef.Bed: bx = HomeX; by = HomeY; jit = HomeJit; jitY = HomeJitY; day = 0; draw = 0; break;
             case PlaceRef.Square: bx = SquareX; by = SquareY; jit = SquareJit; jitY = SquareJitY; break;
+            case PlaceRef.Church: bx = ChurchX; by = ChurchY; jit = ChurchJit; jitY = ChurchJitY; day = 0; break;
+            case PlaceRef.Market:
+                if (Stalls is { Length: > 0 } st)
+                {
+                    // a customer's place at a stall: on the customer side, a few places back in the line and a little to one side; the stall is picked from the person and the day
+                    ulong h = Hash(Id.Value, (ulong)day * 7 + 3);
+                    var s = st[(int)(h % (ulong)st.Length)]; int slot = (int)((h >> 20) % 5), side = (int)((h >> 28) % 4401) - 2200, dj = (int)((h >> 44) % 601) - 300;
+                    long depth = 1300L + (long)QueueGapMm * slot + dj;
+                    long gx = (s.X + 1) * 1000L + 500 + s.FaceDx * depth + (s.FaceDy != 0 ? side : 0), gy = s.Y * 1000L + 500 + s.FaceDy * depth + (s.FaceDx != 0 ? side : 0);
+                    return (gx, gy);
+                }
+                bx = SquareX; by = SquareY; jit = SquareJit; jitY = SquareJitY; break;
+            case PlaceRef.Stall:
+                if (Stalls is { Length: > 0 } ks)
+                {
+                    // a keeper stands behind a stall of the square (the side away from the customers); the same stall every day
+                    var s = ks[(int)(Hash(Id.Value, 11) % (ulong)ks.Length)];
+                    return ((s.X + 1) * 1000L + 500 - s.FaceDx * 1000, s.Y * 1000L + 500 - s.FaceDy * 1000);
+                }
+                bx = SquareX; by = SquareY; jit = SquareJit; jitY = SquareJitY; break;
             default:
                 bx = WorkX; by = WorkY; jit = WorkJit; jitY = WorkJitY;
                 if (WorkInField && FieldTiles is { Length: > 0 } t)
@@ -158,95 +185,123 @@ public readonly struct PersonAnchors
                     var (tx, ty) = t[DetRng.Range(Seed, day, Id.Value, RngStreams.ScheduleJitter, 15, 0, t.Length)];
                     bx = ((long)tx * RegionSettings.TileM + RegionSettings.TileM / 2) * 1000; by = ((long)ty * RegionSettings.TileM + RegionSettings.TileM / 2) * 1000;
                 }
+                else if (WorkLot >= 0 || Occupation == Occupation.Guard) day = 0;
                 break;
         }
         long jx = DetRng.Range(Seed, day, Id.Value, RngStreams.ScheduleJitter, draw, -jit, jit + 1), jy = DetRng.Range(Seed, day, Id.Value, RngStreams.ScheduleJitter, draw + 1, -jitY, jitY + 1);
         return (bx + jx, by + jy);
     }
 
+    /// <summary>The level a place is on (a bed upstairs is level 1; everything else is the ground).</summary>
+    public int ZOf(PlaceRef place) => place == PlaceRef.Bed && HasBed ? BedZ : 0;
+
     public (int X, int Y) FacingOf(PlaceRef place)
     {
-        int f = place == PlaceRef.Work ? WorkFacing : place == PlaceRef.Square ? 2 : HomeFacing;
+        int f = place == PlaceRef.Work ? WorkFacing : place == PlaceRef.Home || place == PlaceRef.Bed ? HomeFacing : 2;
         return (f & 3) switch { 0 => (0, -1024), 1 => (1024, 0), 2 => (0, 1024), _ => (-1024, 0) };
     }
 }
 
-internal ref struct SegBuilder(Span<DaySeg> buf)
+/// <summary>One block of a person's day: seconds of the day, what they do, where they come from and go to (the same place unless it is a walk).</summary>
+public readonly record struct DaySeg(int Start, int End, JobKind Kind, PlaceRef From, PlaceRef To)
 {
-    private readonly Span<DaySeg> _buf = buf;
-    public int Count { get; private set; }
-    public void Add(int s, int e, JobKind k, PlaceRef f, PlaceRef t)
-    {
-        s = Math.Clamp(s, 0, ScheduleTuning.Day); e = Math.Clamp(e, 0, ScheduleTuning.Day);
-        if (e > s && Count < _buf.Length) _buf[Count++] = new DaySeg(s, e, k, f, t);
-    }
+    /// <summary>True when the block moves the person from one place to another.</summary>
+    public bool Walks => From != To;
 }
 
-/// <summary>One block of a person's day: seconds of the day, what they do, where they come from and go to (the same place unless it is a commute).</summary>
-public readonly record struct DaySeg(int Start, int End, JobKind Kind, PlaceRef From, PlaceRef To);
-
-/// <summary>A person's state at one game second: the abstract job, where they stand (region millimetres, heading x1024) and the block's walk endpoints.</summary>
-public readonly record struct ResolvedJob(AbstractJob Job, long XMm, long YMm, int HeadX, int HeadY, int Segment, long Day, DaySeg Seg, long FromX, long FromY, long ToX, long ToY);
+/// <summary>A person's state at one game second: the abstract job, where they stand (region millimetres, heading x1024, level) and the block's walk endpoints.</summary>
+public readonly record struct ResolvedJob(AbstractJob Job, long XMm, long YMm, int HeadX, int HeadY, int Segment, long Day, DaySeg Seg, long FromX, long FromY, long ToX, long ToY, int FromZ = 0, int ToZ = 0, int Z = 0);
 
 /// <summary>Abstract spec 3.4: <c>PositionOf(person, t)</c> as a pure function of the person's anchors and the game second.</summary>
 public static class Schedule
 {
-    public const int MaxSegs = 16;
+    public const int MaxSegs = 32;
 
     private static long Secs(long distMm) => (distMm + ScheduleTuning.CommuteMmPerGs - 1) / ScheduleTuning.CommuteMmPerGs;
 
-    /// <summary>The day's blocks of the person (seconds of the day, contiguous from 0 to 86,400). Returns how many.</summary>
+    /// <summary>
+    /// The day's blocks of the person (seconds of the day, contiguous from 0 to 86,400). Returns how many. The plan is content (<c>behaviour/schedules.jsonc</c>): anchors from the sun of the day, blocks painted in
+    /// order (a holy day's worship, a market day's shopping over the ordinary day), a walk inserted ahead of every block that is somewhere else.
+    /// </summary>
     public static int Segments(in PersonAnchors a, long day, Span<DaySeg> buf)
     {
-        int D = ScheduleTuning.Day;
-        var b = new SegBuilder(buf);
-        var home = a.Spot(PlaceRef.Home, day);
-        if (!a.HasWork)
+        var book = a.Book ?? ScheduleBook.Default;
+        var plan = book.PlanOf(a.Occupation, a.HasWork, a.Index);
+        var info = DayInfo.Of(day, a.LatTenths, book.Content.Crowd);
+        var env = new AnchorEnv(plan.Def.Anchors, info.Sunrise, info.Sunset);
+        // the day, a minute at a time: each minute holds the index of the block that covers it (later blocks paint over earlier ones)
+        Span<sbyte> tl = stackalloc sbyte[1440]; tl.Fill(-1);
+        bool campCheck = false;
+        if (a.HasWork) { var h0 = a.Spot(PlaceRef.Home, day); var w0 = a.Spot(PlaceRef.Work, day); campCheck = PathPlan.Dist(w0.X - h0.X, w0.Y - h0.Y) > ScheduleTuning.MaxCommuteMm; }
+        var blocks = plan.Blocks;
+        for (int bi = 0; bi < blocks.Length; bi++)
         {
-            int wake = a.Child ? ScheduleTuning.ChildWake : ScheduleTuning.WorkStart - 3600;
-            b.Add(0, wake, JobKind.Sleep, PlaceRef.Home, PlaceRef.Home);
-            b.Add(wake, ScheduleTuning.ChildIdleFrom, JobKind.Home, PlaceRef.Home, PlaceRef.Home);
-            b.Add(ScheduleTuning.ChildIdleFrom, ScheduleTuning.ChildIdleTo, JobKind.Idle, PlaceRef.Home, PlaceRef.Home);
-            b.Add(ScheduleTuning.ChildIdleTo, ScheduleTuning.SleepStart, JobKind.Home, PlaceRef.Home, PlaceRef.Home);
-            b.Add(ScheduleTuning.SleepStart, D, JobKind.Sleep, PlaceRef.Home, PlaceRef.Home);
-            return b.Count;
-        }
-        int ws = a.WorkStartSod, we = a.WorkEndSod, wakeAt = ws - ScheduleTuning.WakeBeforeWork;
-        var work = a.Spot(PlaceRef.Work, day);
-        long dist = PathPlan.Dist(work.X - home.X, work.Y - home.Y);
-        if (dist > ScheduleTuning.MaxCommuteMm)   // a field camp: the worker stays at the site, sleeping there
-        {
-            int bed = Math.Min(D, Math.Max(ScheduleTuning.SleepStart, we + ScheduleTuning.RestBeforeSleep));
-            b.Add(0, wakeAt, JobKind.Sleep, PlaceRef.Work, PlaceRef.Work);
-            b.Add(wakeAt, bed, JobKind.Work, PlaceRef.Work, PlaceRef.Work);
-            b.Add(bed, D, JobKind.Sleep, PlaceRef.Work, PlaceRef.Work);
-            return b.Count;
-        }
-        int t = (int)Secs(dist);
-        int sleep = Math.Min(D, Math.Max(ScheduleTuning.SleepStart, we + t + ScheduleTuning.RestBeforeSleep));
-        b.Add(0, wakeAt, JobKind.Sleep, PlaceRef.Home, PlaceRef.Home);
-        b.Add(wakeAt, ws - t, JobKind.Home, PlaceRef.Home, PlaceRef.Home);
-        if (t > 0) b.Add(ws - t, ws, JobKind.Commute, PlaceRef.Home, PlaceRef.Work);
-        b.Add(ws, we, JobKind.Work, PlaceRef.Work, PlaceRef.Work);
-        int ret = we;
-        if (t > 0) { b.Add(we, we + t, JobKind.Commute, PlaceRef.Work, PlaceRef.Home); ret = we + t; }
-        bool shops = a.HasSquare && DetRng.Range(a.Seed, day, a.Id.Value, RngStreams.ScheduleJitter, 14, 0, 3) == 0;
-        if (shops)
-        {
-            var sq = a.Spot(PlaceRef.Square, day);
-            int ts = (int)Secs(PathPlan.Dist(sq.X - home.X, sq.Y - home.Y));
-            if (ret <= ScheduleTuning.ShopStart - ts && ScheduleTuning.ShopEnd + ts + ScheduleTuning.RestBeforeSleep <= sleep)
+            var b = blocks[bi];
+            bool on = b.When switch
             {
-                b.Add(ret, ScheduleTuning.ShopStart - ts, JobKind.Home, PlaceRef.Home, PlaceRef.Home);
-                if (ts > 0) b.Add(ScheduleTuning.ShopStart - ts, ScheduleTuning.ShopStart, JobKind.Commute, PlaceRef.Home, PlaceRef.Square);
-                b.Add(ScheduleTuning.ShopStart, ScheduleTuning.ShopEnd, JobKind.Shop, PlaceRef.Square, PlaceRef.Square);
-                if (ts > 0) b.Add(ScheduleTuning.ShopEnd, ScheduleTuning.ShopEnd + ts, JobKind.Commute, PlaceRef.Square, PlaceRef.Home);
-                ret = ScheduleTuning.ShopEnd + ts;
-            }
+                DayKind.Always => true, DayKind.Normal => !info.Market && !info.Fair, DayKind.Market => info.Market && !info.Fair, DayKind.Fair => info.Fair,
+                DayKind.Holy => info.Holy, _ => false,
+            };
+            if (!on) continue;
+            if (b.SharePm < 1000 && DetRng.Range(a.Seed, day, a.Id.Value, RngStreams.ScheduleJitter, (uint)(16 + bi), 0, 1000) >= b.SharePm) continue;
+            if (b.Place == PlaceRef.Market && !a.HasSquare) continue;
+            if (b.Place is PlaceRef.Church or PlaceRef.Market && campCheck) continue;      // a worker at a far field camp is not at church or market
+            int from = env.Eval(b.From), to = env.Eval(b.To), len = ((to - from) % 1440 + 1440) % 1440;
+            if (len == 0 && to != from) len = 1440;
+            if (len == 0) continue;
+            int m = ((from % 1440) + 1440) % 1440;
+            for (int k = 0; k < len; k++) { tl[m] = (sbyte)bi; if (++m == 1440) m = 0; }
         }
-        b.Add(ret, sleep, JobKind.Home, PlaceRef.Home, PlaceRef.Home);
-        b.Add(sleep, D, JobKind.Sleep, PlaceRef.Home, PlaceRef.Home);
-        return b.Count;
+        // a field camp: a worker whose workplace is beyond the commute lives there
+        bool camp = campCheck;
+        PlaceRef Map(PlaceRef p) => camp && p is PlaceRef.Home or PlaceRef.Bed && camp ? PlaceRef.Work : p;
+        // run-length encode into (start, end, kind, place)
+        Span<DaySeg> raw = stackalloc DaySeg[MaxSegs]; int n = 0;
+        int start = 0;
+        for (int mi = 1; mi <= 1440; mi++)
+        {
+            if (mi < 1440 && tl[mi] == tl[start]) continue;
+            JobKind kind = tl[start] < 0 ? JobKind.Home : blocks[tl[start]].Kind; PlaceRef place = Map(tl[start] < 0 ? PlaceRef.Home : blocks[tl[start]].Place);
+            if (n > 0 && raw[n - 1].Kind == kind && raw[n - 1].To == place) raw[n - 1] = raw[n - 1] with { End = mi * 60 };
+            else if (n < MaxSegs) raw[n++] = new DaySeg(start * 60, mi * 60, kind, place, place);
+            start = mi;
+        }
+        // walks: ahead of every block whose place differs from the one before it (the last block of the day leads into the first of the next)
+        int outN = 0; bool full = false;
+        for (int i = 0; i < n; i++)
+        {
+            var cur = raw[i]; var prev = raw[(i + n - 1) % n];
+            bool wrapFirst = i == 0;
+            if (cur.To != prev.To && n > 1 && !wrapFirst)
+            {
+                var f = a.Spot(prev.To, day); var t = a.Spot(cur.To, day);
+                int dur = (int)Math.Max(ScheduleTuning.MinWalkSec, Secs(PathPlan.Dist(t.X - f.X, t.Y - f.Y)));
+                int ws = Math.Max(prev.Start, cur.Start - dur);
+                if (outN > 0 && buf[outN - 1].Start >= ws) outN--;           // the walk swallows the whole block before it
+                else if (outN > 0) buf[outN - 1] = buf[outN - 1] with { End = ws };
+                bool inHouse = prev.To is PlaceRef.Home or PlaceRef.Bed && cur.To is PlaceRef.Home or PlaceRef.Bed;
+                PutSeg(buf, ref outN, ref full, new DaySeg(ws, cur.Start, inHouse ? JobKind.Home : JobKind.Commute, prev.To, cur.To));
+            }
+            PutSeg(buf, ref outN, ref full, cur);
+        }
+        // the end of the day leads into the start of the next (a night guard's shift begins at midnight)
+        if (n > 1 && raw[n - 1].To != raw[0].To && outN > 0)
+        {
+            var f = a.Spot(raw[n - 1].To, day); var t = a.Spot(raw[0].To, day);
+            int dur = (int)Math.Max(ScheduleTuning.MinWalkSec, Secs(PathPlan.Dist(t.X - f.X, t.Y - f.Y)));
+            int ws = Math.Max(buf[outN - 1].Start, ScheduleTuning.Day - dur);
+            bool inHouse = raw[n - 1].To is PlaceRef.Home or PlaceRef.Bed && raw[0].To is PlaceRef.Home or PlaceRef.Bed;
+            if (buf[outN - 1].Start >= ws) outN--; else buf[outN - 1] = buf[outN - 1] with { End = ws };
+            PutSeg(buf, ref outN, ref full, new DaySeg(ws, ScheduleTuning.Day, inHouse ? JobKind.Home : JobKind.Commute, raw[n - 1].To, raw[0].To));
+        }
+        if (full) throw new InvalidOperationException("a day with more blocks than the buffer holds");
+        return outN;
+    }
+
+    private static void PutSeg(Span<DaySeg> buf, ref int n, ref bool full, DaySeg d)
+    {
+        if (d.End <= d.Start) return;
+        if (n < buf.Length) buf[n++] = d; else full = true;
     }
 
     /// <summary>The person's job and position at game second <paramref name="sec"/>. A pure function.</summary>
@@ -260,14 +315,15 @@ public static class Schedule
         var from = a.Spot(s.From, day); var to = a.Spot(s.To, day);
         long segStart = day * ScheduleTuning.Day + s.Start, segEnd = day * ScheduleTuning.Day + s.End;
         long x, y; int hx, hy; int ppm = (int)Math.Clamp((sec - segStart) * 1_000_000 / Math.Max(1, segEnd - segStart), 0, 1_000_000);
-        if (s.Kind == JobKind.Commute)
+        int fz = a.ZOf(s.From), tz = a.ZOf(s.To);
+        if (s.Walks)
         {
             x = from.X + (to.X - from.X) * ppm / 1_000_000; y = from.Y + (to.Y - from.Y) * ppm / 1_000_000;
             long dx = to.X - from.X, dy = to.Y - from.Y, len = Math.Max(1, PathPlan.Dist(dx, dy)); hx = (int)(dx * 1024 / len); hy = (int)(dy * 1024 / len);
         }
         else { x = to.X; y = to.Y; (hx, hy) = a.FacingOf(s.To); }
-        var place = s.To == PlaceRef.Home ? new JobPlace(a.HomeSettlement, a.HomeLot, (int)(to.X / 1000), (int)(to.Y / 1000))
+        var place = s.To == PlaceRef.Home || s.To == PlaceRef.Bed ? new JobPlace(a.HomeSettlement, a.HomeLot, (int)(to.X / 1000), (int)(to.Y / 1000))
             : s.To == PlaceRef.Work ? new JobPlace(a.WorkSettlement, a.WorkLot, (int)(to.X / 1000), (int)(to.Y / 1000)) : new JobPlace(a.HomeSettlement, -1, (int)(to.X / 1000), (int)(to.Y / 1000));
-        return new ResolvedJob(new AbstractJob(s.Kind, place, segStart, segEnd, ppm), x, y, hx, hy, k, day, s, from.X, from.Y, to.X, to.Y);
+        return new ResolvedJob(new AbstractJob(s.Kind, place, segStart, segEnd, ppm), x, y, hx, hy, k, day, s, from.X, from.Y, to.X, to.Y, fz, tz, s.Walks ? (ppm < 500 ? fz : tz) : tz);
     }
 }

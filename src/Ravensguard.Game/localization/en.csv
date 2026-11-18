@@ -607,3 +607,24 @@ PRIVACY_REPORTS,Open reports folder
 PRIVACY_DELETE,Delete all reports and withdraw consent
 PRIVACY_DEBUG,Detailed log (DEBUG)
 PRIVACY_DELETED,Reports deleted and consent withdrawn.
+JOBS_TITLE,Work
+JOBS_MINE,Your work
+JOBS_NONE,You hold no job. Take one from the board below.
+JOBS_ACTIVE,"{0}: {1}. Done by {2}. Pay {3}."
+JOBS_ABANDON,Abandon the job
+JOBS_ABANDON_NOTE,"Walking away costs you the pay of the hours not worked, and the poster gets the rest of the escrow back."
+JOBS_NEAR,Beside you
+JOBS_BOARD,"Notice board, {0}"
+JOBS_WORD,"Work heard of by word of mouth, {0}"
+JOBS_EMPTY,Nothing is posted today.
+JOBS_ROW,"{0}  {1}  {2} m away  within {3}  risk {4}"
+JOBS_TAKE,Take it
+JOBS_TAKEN,You take the job.
+JOBS_RISK,armed
+JOBS_STEP_GO,on your way there
+JOBS_STEP_LOAD,loading
+JOBS_STEP_CARRY,carrying
+JOBS_STEP_UNLOAD,unloading
+JOBS_STEP_WORK,at the work
+JOBS_STEP_DONE,handing over
+JOBS_LOST,"You were too long away from the work: the job is lost."

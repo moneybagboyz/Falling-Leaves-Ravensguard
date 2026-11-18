@@ -73,14 +73,14 @@ public sealed record ScheduleDef : ContentDef
 [ContentType("crowd_tuning")]
 public sealed record CrowdTuningDef : ContentDef
 {
-    public int ShopShareNormalPm { get; init; } = 120;
-    public int ShopShareMarketPm { get; init; } = 330;
-    public int ShopShareFairPm { get; init; } = 650;
+    public int ShopShareNormalPm { get; init; } = 60;
+    public int ShopShareMarketPm { get; init; } = 200;
+    public int ShopShareFairPm { get; init; } = 450;
     /// <summary>Day of the month a market is held (5-day months: one in each), and the days of the year of the fairs are the calendar's feasts.</summary>
     public int MarketDayOfMonth { get; init; } = 3;
     public int HolyDayOfMonth { get; init; } = 5;
     /// <summary>A person queues this far back from a stall's front, millimetres per place in line.</summary>
-    public int QueueGapMm { get; init; } = 900;
+    public int QueueGapMm { get; init; } = 850;
 }
 
 /// <summary>Odd jobs (live-behaviour spec 4.5, 4.6): the wage multiple over the unskilled wage, the posting cap and the pay terms, by kind.</summary>

@@ -86,6 +86,9 @@ public sealed class ResourceLayer
         return t;
     }
 
+    /// <summary>Marks a row cleared without touching its stock or last-visit day (a load: those come from the save).</summary>
+    public void MarkCleared(int row) { _cleared ??= new bool[_tile.Length]; _cleared[row] = true; }
+
     public void SetStock(int row, long g) => _stock[row] = Math.Clamp(g, 0, _cap[row]);
 
     /// <summary>Sum of stock and of cap over all rows of a kind.</summary>

@@ -58,14 +58,14 @@ public sealed record GrowthTuningDef : ContentDef
 
     // ---------- assarting ----------
     /// <summary>Households clear new fields while a settlement has fewer arable acres than this a person (tenths: 23 is 2.3, plan 3a).</summary>
-    public int TargetAcresPerPersonX10 { get; init; } = 23;
+    public int TargetAcresPerPersonX10 { get; init; } = 25;
     public int AssartHoursPerAcre { get; init; } = 90;
-    public int AssartTilesPerProject { get; init; } = 6;
+    public int AssartTilesPerProject { get; init; } = 8;
     public int AssartMaxRadiusM { get; init; } = 2_600;
     public int AssartMinFertility { get; init; } = 35;
     public int AssartMaxSlopePermille { get; init; } = 100;
     public int AssartCrewMax { get; init; } = 12;
-    public int AssartMaxStartsPerSeason { get; init; } = 3;
+    public int AssartMaxStartsPerSeason { get; init; } = 5;
     /// <summary>Share (percent) of the cleared wood that goes to market as firewood; the rest is logs (poles and planks).</summary>
     public int AssartFirewoodPct { get; init; } = 60;
     /// <summary>Worker-hours a day a cleared acre's crew puts in (hired idle hands).</summary>

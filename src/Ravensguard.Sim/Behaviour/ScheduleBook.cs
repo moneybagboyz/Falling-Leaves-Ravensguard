@@ -1,4 +1,5 @@
 using Ravensguard.Content;
+using Ravensguard.Sim.Core;
 using Ravensguard.Sim.Live;
 using Ravensguard.Sim.People;
 using Ravensguard.Sim.Weather;
@@ -22,7 +23,7 @@ public sealed class PlanRt
         Blocks = [.. def.Blocks.Select(b =>
         {
             if (!Enum.TryParse<JobKind>(b.Kind, out var k)) throw new FormatException($"schedule '{def.Id}': unknown kind '{b.Kind}'");
-            PlaceRef p = b.Place switch { "home" => PlaceRef.Home, "bed" => PlaceRef.Bed, "work" => PlaceRef.Work, "market" => PlaceRef.Market, "square" => PlaceRef.Square, "church" => PlaceRef.Church, _ => throw new FormatException($"schedule '{def.Id}': unknown place '{b.Place}'") };
+            PlaceRef p = b.Place switch { "home" => PlaceRef.Home, "bed" => PlaceRef.Bed, "work" => PlaceRef.Work, "market" => PlaceRef.Market, "stall" => PlaceRef.Stall, "square" => PlaceRef.Square, "church" => PlaceRef.Church, _ => throw new FormatException($"schedule '{def.Id}': unknown place '{b.Place}'") };
             DayKind w = b.When switch { "" => DayKind.Always, "normal" => DayKind.Normal, "market" => DayKind.Market, "fair" => DayKind.Fair, "holy" => DayKind.Holy, "heatwave" => DayKind.Heatwave, _ => throw new FormatException($"schedule '{def.Id}': unknown day kind '{b.When}'") };
             return new BlockRt(b.From, b.To, k, p, w, b.SharePm);
         })];

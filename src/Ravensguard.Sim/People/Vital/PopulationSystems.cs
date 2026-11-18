@@ -328,6 +328,7 @@ public sealed class PopulationMigrationSystem : AbstractSystem
             int hh = pt.Household[p]; if (hh < 0 || hht.Class[hh] == SocialClass.Gentry || hht.ParcelCount[hh] > 0) continue;
             int age = w.AgeOn(p, day); if (age >= 16 && age < 60) idle++;
         }
+        if (Environment.GetEnvironmentVariable("RG_OLDIMM") != null) return Math.Min(start * ReturnQuotaPermille / 1000, pull);
         if (idle * 1000 <= alive * g.ImmigrationMaxIdlePermille) pull += Math.Max(0, vacant - waiting) / Math.Max(1, g.ImmigrationSurplusDivisor);
         return Math.Min(alive * g.ImmigrationMaxPermilleOfAlive / 1000, pull);
     }

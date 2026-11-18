@@ -16,16 +16,41 @@ public sealed class PathPlan
     /// <summary>Millimetres per game second the plan moves at (0 for a point).</summary>
     public long SpeedMmPerGs => EndSec > StartSec ? LengthMm / (EndSec - StartSec) : 0;
 
-    public PathPlan(long[] x, long[] y, long startSec, long endSec)
+    /// <summary>The level of each point (a walk up a stair changes level between two points); null: all on level 0.</summary>
+    public int[]? Z { get; }
+
+    public PathPlan(long[] x, long[] y, long startSec, long endSec) : this(x, y, null, startSec, endSec) { }
+
+    public PathPlan(long[] x, long[] y, int[]? z, long startSec, long endSec)
     {
-        if (x.Length == 0 || x.Length != y.Length) throw new ArgumentException("A path plan needs at least one point.");
-        X = x; Y = y; StartSec = startSec; EndSec = Math.Max(startSec, endSec);
+        if (x.Length == 0 || x.Length != y.Length || (z != null && z.Length != x.Length)) throw new ArgumentException("A path plan needs at least one point.");
+        X = x; Y = y; Z = z; StartSec = startSec; EndSec = Math.Max(startSec, endSec);
         CumMm = new long[x.Length];
         for (int i = 1; i < x.Length; i++) CumMm[i] = CumMm[i - 1] + Dist(x[i] - x[i - 1], y[i] - y[i - 1]);
     }
 
     public static PathPlan Point(long x, long y, long startSec, long endSec) => new([x], [y], startSec, endSec);
+    public static PathPlan Point(long x, long y, int z, long startSec, long endSec) => new([x], [y], [z], startSec, endSec);
     public static PathPlan Straight(long x0, long y0, long x1, long y1, long startSec, long endSec) => new([x0, x1], [y0, y1], startSec, endSec);
+    public static PathPlan Straight(long x0, long y0, int z0, long x1, long y1, int z1, long startSec, long endSec) => new([x0, x1], [y0, y1], [z0, z1], startSec, endSec);
+
+    /// <summary>True while the plan is moving (between its start and end second, with somewhere to go).</summary>
+    public bool MovingAt(long sec) => LengthMm > 0 && sec > StartSec && sec < EndSec;
+
+    /// <summary>The level at <paramref name="sec"/>: the level of the point just passed, switching to the next level halfway along an edge that joins two levels (a stair).</summary>
+    public int ZAt(long sec)
+    {
+        if (Z == null) return 0;
+        if (Z.Length == 1 || LengthMm == 0) return Z[0];
+        long d = (long)((Int128)LengthMm * ProgressPpmAt(sec) / 1_000_000);
+        int i = Array.BinarySearch(CumMm, d);
+        if (i < 0) i = ~i - 1;
+        i = Math.Clamp(i, 0, X.Length - 2);
+        while (i < X.Length - 2 && CumMm[i + 1] == CumMm[i]) i++;
+        if (Z[i] == Z[i + 1]) return Z[i];
+        long seg = Math.Max(1, CumMm[i + 1] - CumMm[i]);
+        return d - CumMm[i] < seg / 2 ? Z[i] : Z[i + 1];
+    }
 
     /// <summary>Integer square root of the squared length, millimetres.</summary>
     public static long Dist(long dx, long dy)

@@ -130,7 +130,7 @@ public sealed class UtilityBrain
     }
 
     /// <summary>Why the person chose it: the top two contributors, for the Q menu and the inspector; built only when asked.</summary>
-    public string Explain(in NeedInputs n, in ChoiceContext c)
+    public string Explain(NeedInputs n, ChoiceContext c)
     {
         var ch = Choose(n, c);
         string Why(ActionKind k)

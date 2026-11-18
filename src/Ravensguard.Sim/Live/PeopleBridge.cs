@@ -1,11 +1,13 @@
+using Ravensguard.Sim.Behaviour;
 using Ravensguard.Sim.Core;
+using Ravensguard.Sim.Jobs;
 using Ravensguard.Sim.People;
 using Ravensguard.Sim.WorldGen.Region;
 
 namespace Ravensguard.Sim.Live;
 
 /// <summary>What the bridge reads of one resident region: its people (<see cref="Population"/>), where its frame sits on the continent and the seed its schedule draws use.</summary>
-public sealed record PeopleRecords(int RegionId, long OriginXM, long OriginYM, Population Pop, ulong Seed, AbstractJobTable Jobs);
+public sealed record PeopleRecords(int RegionId, long OriginXM, long OriginYM, Population Pop, ulong Seed, AbstractJobTable Jobs, LiveFacts? Facts = null, ScheduleBook? Book = null);
 
 /// <summary>
 /// One live person's link to the record (abstract spec 2.1, plan 2.3): the person's id and row, the region and the bubble they are in. The components (position, plan,
@@ -30,10 +32,23 @@ public sealed class LiveActor
     public JobKind Action;
     public long OutsideSince = -1;
     public long WorkSecs, LastSec;
+    /// <summary>Level (0 ground, 1 the floor above) and whether the person is walking now.</summary>
+    public int Z;
+    public bool Walking;
+    /// <summary>What the utility scorer chose at the last 20-game-second window, and when it began.</summary>
+    public ActionKind Intent = ActionKind.Idle;
+    public long IntentSince = long.MinValue, DecisionWindow = long.MinValue;
+    public string Why = "";
+    /// <summary>The odd job the person is on (an immutable copy of the job at its claim) and the legs of it already planned over the ground.</summary>
+    public Job? JobSnap;
+    public long JobKey = long.MinValue;
+    public PathPlan? JobPlan;
+    public int JobPhase = -1;
+    public int JobStep;
 }
 
 /// <summary>What the street view draws of one promoted person this tick.</summary>
-public readonly record struct LivePerson(EntityId Id, string Name, Occupation Occupation, Sex Sex, SocialClass Class, JobKind Action, long XMm, long YMm, long PrevXMm, long PrevYMm, int HeadX, int HeadY, int Bubble);
+public readonly record struct LivePerson(EntityId Id, string Name, Occupation Occupation, Sex Sex, SocialClass Class, JobKind Action, long XMm, long YMm, long PrevXMm, long PrevYMm, int HeadX, int HeadY, int Bubble, int Z = 0, bool Walking = false, ActionKind Intent = ActionKind.Idle, int JobStep = -1);
 
 /// <summary>A person the scan found inside a bubble that is not live yet: the anchors copied out of the records, and the squared distance to the nearest centre (mm).</summary>
 public readonly record struct PromotionCandidate(PersonAnchors Anchors, long OriginXMm, long OriginYMm, long D2Mm, int Bubble);
@@ -44,8 +59,8 @@ public sealed record ScanInput(long NowSec, (long X, long Y)[] Centres, (EntityI
 /// <summary>The scan's answer: people to promote, nearest first (ties ascending region then person), and live people whose record is gone (died, left).</summary>
 public sealed record ScanResult(long NowSec, IReadOnlyList<PromotionCandidate> Candidates, IReadOnlyList<EntityId> Gone);
 
-/// <summary>A person given back to the records: the abstract job they continue with, and what the live tier did meanwhile.</summary>
-public readonly record struct FoldBack(EntityId Person, int Region, int Index, AbstractJob Job, long XMm, long YMm, bool Displaced, long LiveWorkSec);
+/// <summary>A person given back to the records. <see cref="JobId"/> and <see cref="JobStep"/> name the odd job they were on, which lives on in the job table (its phases are a pure function of the claim).</summary>
+public readonly record struct FoldBack(EntityId Person, int Region, int Index, AbstractJob Job, long XMm, long YMm, bool Displaced, long LiveWorkSec, EntityId JobId = default, int JobStep = -1);
 
 /// <summary>
 /// The LODBridge for people (plan 2.3, abstract spec 3.5 and 3.6, live-behaviour spec P3-A): promotes the people of the abstract records into live entities inside the
@@ -98,7 +113,7 @@ public sealed class PeopleBridge
         {
             if (_dirty)
             {
-                _snapshot = [.. _live.Values.Select(a => new LivePerson(a.Binding.Person, a.A.Name, a.A.Occupation, a.A.Sex, a.A.Class, a.Action, a.X, a.Y, a.PrevX, a.PrevY, a.HeadX, a.HeadY, a.Binding.Bubble))];
+                _snapshot = [.. _live.Values.Select(a => new LivePerson(a.Binding.Person, a.A.Name, a.A.Occupation, a.A.Sex, a.A.Class, a.Action, a.X, a.Y, a.PrevX, a.PrevY, a.HeadX, a.HeadY, a.Binding.Bubble, a.Z, a.Walking, a.Intent, a.JobSnap != null ? a.JobStep : -1))];
                 _dirty = false;
             }
             return _snapshot;
@@ -141,7 +156,7 @@ public sealed class PeopleBridge
                 if (!((hs >= 0 && hs < near.Length && near[hs]) || (ws >= 0 && ws < near.Length && near[ws]))) continue;
                 var id = p.IdOf(i);
                 if (liveSet.Contains(id)) continue;
-                var a = PersonAnchors.From(pop, i, rec.Seed, rec.RegionId, input.NowSec, tileCache);
+                var a = PersonAnchors.From(pop, i, rec.Seed, rec.RegionId, input.NowSec, tileCache, rec.Facts, rec.Book);
                 var r = Schedule.Resolve(a, input.NowSec);
                 var (d2, b) = Bubble.Nearest(centres, ox + r.XMm, oy + r.YMm);
                 if (b < 0 || !Bubble.InsidePromote(d2)) continue;
@@ -216,12 +231,24 @@ public sealed class PeopleBridge
     private void Demote(LiveActor a, long nowSec)
     {
         var r = Schedule.Resolve(a.A, nowSec);
-        int ppm = r.Job.ProgressPpm; var job = r.Job;
-        if (r.Seg.Kind == JobKind.Commute && a.Plan != null) ppm = a.Plan.ProgressPpmAt(nowSec);
-        // the person is where the plan puts them, so they continue the block; one who was moved far from it (fled, pushed) is travelling to the place of the block
-        bool displaced = PathPlan.Dist(a.X - (a.OriginXMm + r.XMm), a.Y - (a.OriginYMm + r.YMm)) > DisplacedMm;
-        job = displaced ? new AbstractJob(JobKind.Travel, job.Place, nowSec, job.EndSec, 0) : job with { ProgressPpm = ppm };
-        _folds.Add(new FoldBack(a.Binding.Person, a.Binding.Region, a.Binding.Index, job, a.X, a.Y, displaced, a.WorkSecs));
+        int ppm = r.Job.ProgressPpm; var job = r.Job; bool displaced = false;
+        if (a.JobSnap is { } js)
+        {
+            // an odd job goes on in the job table (its legs are a pure function of the claim): the person is folded back as a worker of it
+            var (_, _, phase, _) = JobTable.PositionAt(js, nowSec);
+            long end = JobTable.EndSec(js);
+            job = new AbstractJob(js.Kind is OddJobKind.Haul or OddJobKind.Deliver or OddJobKind.Fetch ? JobKind.Haul : js.Kind == OddJobKind.Guard ? JobKind.GuardCaravan : JobKind.Work,
+                new JobPlace(js.Settlement, -1, (int)(a.X / 1000), (int)(a.Y / 1000)), js.ClaimedSec, end, (int)Math.Clamp((nowSec - js.ClaimedSec) * 1_000_000 / Math.Max(1, end - js.ClaimedSec), 0, 1_000_000));
+            _folds.Add(new FoldBack(a.Binding.Person, a.Binding.Region, a.Binding.Index, job, a.X, a.Y, false, a.WorkSecs, js.Id, phase));
+        }
+        else
+        {
+            if (r.Seg.Walks && a.Plan != null) ppm = a.Plan.ProgressPpmAt(nowSec);
+            // the person is where the plan puts them, so they continue the block; one who was moved far from it (fled, pushed) is travelling to the place of the block
+            displaced = PathPlan.Dist(a.X - (a.OriginXMm + r.XMm), a.Y - (a.OriginYMm + r.YMm)) > DisplacedMm && a.Z == r.Z;
+            job = displaced ? new AbstractJob(JobKind.Travel, job.Place, nowSec, job.EndSec, 0) : job with { ProgressPpm = ppm };
+            _folds.Add(new FoldBack(a.Binding.Person, a.Binding.Region, a.Binding.Index, job, a.X, a.Y, displaced, a.WorkSecs));
+        }
         _live.Remove(a.Binding.Person);
         Demotions++; _dirty = true;
     }
@@ -253,10 +280,36 @@ public sealed class PeopleBridge
         return n;
     }
 
+    // ------------------------------------------------------------------ odd jobs (main thread)
+
+    private readonly Dictionary<EntityId, Job> _jobSnaps = [];
+    private List<Job> _board = [];
+    private readonly List<ClaimRequest> _claims = [];
+
+    /// <summary>
+    /// Takes copies of the jobs the table holds (at a barrier, then handed over): who is on a job (the live person follows its legs) and which are open at which board (an idle person may take one).
+    /// Copies, because the table belongs to the tick worker.
+    /// </summary>
+    public void SetJobs(IReadOnlyList<Job> live, IReadOnlyList<Job> open)
+    {
+        _jobSnaps.Clear();
+        foreach (var j in live) if (j.Worker != EntityId.None) _jobSnaps[j.Worker] = j;
+        _board = [.. open];
+        foreach (var (id, a) in _live) { _jobSnaps.TryGetValue(id, out var js); if (a.JobSnap?.Id != js?.Id) { a.JobSnap = js; a.JobKey = long.MinValue; } }
+    }
+
+    /// <summary>Claims the live people want to make (NPCs the scorer sent to a board); handed to the barrier by the caller. Clears the list.</summary>
+    public IReadOnlyList<ClaimRequest> TakeClaims() { if (_claims.Count == 0) return []; var r = _claims.ToArray(); _claims.Clear(); return r; }
+
+    /// <summary>The scorer's reason for a person's action now (the Q menu shows it); empty for a person who is not live.</summary>
+    public string Why(EntityId person) => _live.TryGetValue(person, out var a) ? a.Why : "";
+
     // ------------------------------------------------------------------ one person's step
 
     private void Advance(LiveActor a, ILiveGround? ground, long nowSec)
     {
+        if (a.JobSnap is { } js && nowSec < JobTable.EndSec(js) + 1) { AdvanceJob(a, js, ground, nowSec); return; }
+        a.JobSnap = null;
         var r = Schedule.Resolve(a.A, nowSec);
         long key = r.Day * 64 + r.Segment;
         bool covers = ground != null && Covers(ground, a, r);
@@ -281,10 +334,62 @@ public sealed class PeopleBridge
             }
         }
         var pos = a.Plan!.PositionAt(nowSec);
-        a.X = pos.XMm; a.Y = pos.YMm;
-        if (r.Seg.Kind == JobKind.Commute) { a.HeadX = pos.HeadX; a.HeadY = pos.HeadY; } else { a.HeadX = r.HeadX; a.HeadY = r.HeadY; }
+        a.X = pos.XMm; a.Y = pos.YMm; a.Z = a.Plan.ZAt(nowSec);
+        a.Walking = a.Plan.MovingAt(nowSec);
+        if (r.Seg.Walks) { a.HeadX = pos.HeadX; a.HeadY = pos.HeadY; } else { a.HeadX = r.HeadX; a.HeadY = r.HeadY; }
         if (r.Job.Kind == JobKind.Work && a.LastSec > 0 && nowSec > a.LastSec) a.WorkSecs += nowSec - a.LastSec;
         a.LastSec = nowSec; a.Action = r.Job.Kind;
+        Decide(a, nowSec);
+    }
+
+    /// <summary>
+    /// The utility scorer, once per 20-game-second window (never per tick: at 8x a tick is 8 game seconds, so the window is what makes the answer the same at any speed). The needs and the schedule block
+    /// are read at the window's first second, so the choice is a function of the window and the person alone.
+    /// </summary>
+    private void Decide(LiveActor a, long nowSec)
+    {
+        long window = nowSec / 20;
+        if (window == a.DecisionWindow) return;
+        a.DecisionWindow = window;
+        long at = window * 20;
+        NeedModel.Read(a.A, at, out var needs, out var ctx);
+        ctx.Current = a.Intent; ctx.MinutesInCurrent = a.IntentSince == long.MinValue ? 999 : (int)((at - a.IntentSince) / 60);
+        ctx.HasBoard = _board.Count > 0 && ctx.Scheduled == ActionKind.Idle && !ctx.Dark && !a.A.Child && (!a.A.HasWork || a.A.Occupation == Occupation.Labourer || a.A.Class == SocialClass.Peasant) && _board.Any(j => j.Settlement == a.A.HomeSettlement && j.Region == a.A.Region);
+        needs.WageRatioPm = ctx.HasBoard ? 2000 : 0;
+        var brain = UtilityBrain.Default;
+        var ch = brain.Choose(needs, ctx);
+        if (ch.Kind != a.Intent) { a.Intent = ch.Kind; a.IntentSince = at; }
+        a.Why = ch.Kind == ActionKind.TakeJob ? "Looking for work" : $"{ch.Kind} {ch.Score}";
+        // a person who would take the job does not rush it the same second as everyone else: they get round to it, on average, once in eight minutes (a draw keyed on the window, never on the tick)
+        if (ch.Kind == ActionKind.TakeJob && a.JobSnap == null && DetRng.Range(a.A.Seed, window, a.A.Id.Value, RngStreams.UtilityNoise, 99, 0, 24) == 0 && !_claims.Any(c => c.Person == a.Binding.Person))
+        {
+            var job = _board.Where(j => j.Settlement == a.A.HomeSettlement && j.Region == a.A.Region && j.MinAge <= 18 && j.MinSkill == 0).OrderBy(j => j.PostedSec).ThenBy(j => j.Id).FirstOrDefault();
+            if (job != null) _claims.Add(new ClaimRequest(job.Id, a.Binding.Person, a.Binding.Index, at, _claims.Count, a.X - a.OriginXMm, a.Y - a.OriginYMm, 0, 30));
+        }
+    }
+
+    /// <summary>One person on an odd job: they walk the legs of the job (routes over the loaded ground, timed by the job's own phases), or stand and work at the end of a leg.</summary>
+    private void AdvanceJob(LiveActor a, Job js, ILiveGround? ground, long nowSec)
+    {
+        var ph = JobTable.Phases(js); var ends = JobTable.Ends(js, ph);
+        int i = 0; while (i < ph.Length - 1 && nowSec >= ends[i]) i++;
+        long key = (long)(js.Id.Value & 0xFFFFFFFFFFUL) * 16 + i;
+        var p = ph[i]; long t0 = i == 0 ? js.ClaimedSec : ends[i - 1], t1 = ends[i];
+        bool moves = p.Kind is PhaseKind.Go or PhaseKind.Carry;
+        long fx = a.OriginXMm + p.X0, fy = a.OriginYMm + p.Y0, tx = a.OriginXMm + p.X1, ty = a.OriginYMm + p.Y1;
+        bool covers = ground != null && ground.Covers(FloorM(fx), FloorM(fy)) && ground.Covers(FloorM(tx), FloorM(ty));
+        if (key != a.JobKey || (!a.PlanOnGround && covers))
+        {
+            a.JobKey = key; a.JobPhase = i;
+            a.JobPlan = BuildLeg(covers ? ground : null, fx, fy, 0, tx, ty, 0, t0, t1, moves, false, false, out bool onGround);
+            a.PlanOnGround = onGround; a.BlockKey = long.MinValue;
+        }
+        var pos = a.JobPlan!.PositionAt(nowSec);
+        a.X = pos.XMm; a.Y = pos.YMm; a.Z = 0; a.Walking = a.JobPlan.MovingAt(nowSec); a.JobStep = i;
+        if (moves) { a.HeadX = pos.HeadX; a.HeadY = pos.HeadY; }
+        a.LastSec = nowSec;
+        a.Action = p.Kind == PhaseKind.Go ? JobKind.Commute : p.Kind == PhaseKind.Carry ? JobKind.Haul : p.Kind == PhaseKind.Work && js.Kind == OddJobKind.Guard ? JobKind.GuardCaravan : JobKind.Work;
+        a.Intent = ActionKind.JobStep; a.Why = $"{js.Kind}: {p.Kind}"; a.DecisionWindow = nowSec / 20;
     }
 
     private void NotePlan(LiveActor a, in ResolvedJob r, long t0)
@@ -301,22 +406,34 @@ public sealed class PeopleBridge
     private static void Rebuild(LiveActor a, in ResolvedJob r, ILiveGround? g)
     {
         a.BlockKey = r.Day * 64 + r.Segment;
-        long t0 = r.Job.StartSec, t1 = r.Job.EndSec;
         long fx = a.OriginXMm + r.FromX, fy = a.OriginYMm + r.FromY, tx = a.OriginXMm + r.ToX, ty = a.OriginYMm + r.ToY;
-        bool commute = r.Seg.Kind == JobKind.Commute;
-        if (g == null) { a.Plan = commute ? PathPlan.Straight(fx, fy, tx, ty, t0, t1) : PathPlan.Point(tx, ty, t0, t1); a.PlanOnGround = false; return; }
-        a.PlanOnGround = true;
-        var sf = PathSmoother.Snap(g, FloorM(fx), FloorM(fy)); var st = PathSmoother.Snap(g, FloorM(tx), FloorM(ty));
-        // a spot that is already open ground is used as it is; a blocked one moves to the nearest open cell
+        a.Plan = BuildLeg(g, fx, fy, r.FromZ, tx, ty, r.ToZ, r.Job.StartSec, r.Job.EndSec, r.Seg.Walks, r.Seg.From == PlaceRef.Bed && a.A.HasBed, r.Seg.To == PlaceRef.Bed && a.A.HasBed, out bool onGround);
+        a.PlanOnGround = onGround;
+    }
+
+    /// <summary>
+    /// A timed plan from one spot to another, possibly on another level: over the ground's routes (through stairs and other portals, string-pulled level by level) when the ground is loaded, else a straight line.
+    /// A bed is a cell that is not walkable, so a walk to it ends at the nearest open cell and then steps onto it; a walk from it begins by stepping off it.
+    /// </summary>
+    internal static PathPlan BuildLeg(ILiveGround? g, long fx, long fy, int fz, long tx, long ty, int tz, long t0, long t1, bool walks, bool fromBed, bool toBed, out bool onGround)
+    {
+        onGround = false;
+        if (g == null) return walks ? PathPlan.Straight(fx, fy, fz, tx, ty, tz, t0, t1) : PathPlan.Point(tx, ty, tz, t0, t1);
+        onGround = true;
+        var sf = fromBed ? PathSmoother.Snap3(g, FloorM(fx), FloorM(fy), fz) : PathSmoother.Snap3(g, FloorM(fx), FloorM(fy), fz);
+        var st = PathSmoother.Snap3(g, FloorM(tx), FloorM(ty), tz);
         long Cx(long raw, int snapped, int original) => snapped == original ? raw : snapped * 1000L + 500;
         long sx = Cx(fx, sf.X, FloorM(fx)), sy = Cx(fy, sf.Y, FloorM(fy)), ex = Cx(tx, st.X, FloorM(tx)), ey = Cx(ty, st.Y, FloorM(ty));
-        if (!commute || (sf == st)) { a.Plan = PathPlan.Point(ex, ey, t0, t1); return; }
-        var route = g.Route(sf.X, sf.Y, st.X, st.Y);
-        if (route == null || route.Length < 2) { a.Plan = PathPlan.Straight(sx, sy, ex, ey, t0, t1); return; }
-        var cells = PathSmoother.Smooth(g, route);
-        var xs = new long[cells.Length]; var ys = new long[cells.Length];
-        for (int i = 0; i < cells.Length; i++) { xs[i] = cells[i].X * 1000L + 500; ys[i] = cells[i].Y * 1000L + 500; }
-        xs[0] = sx; ys[0] = sy; xs[^1] = ex; ys[^1] = ey;
-        a.Plan = new PathPlan(xs, ys, t0, t1);
+        if (!walks || (sf == st && fz == tz)) return PathPlan.Point(toBed ? tx : ex, toBed ? ty : ey, tz, t0, t1);
+        var route = g.Route3(sf.X, sf.Y, fz, st.X, st.Y, tz);
+        if (route == null || route.Length < 2) return PathPlan.Straight(sx, sy, fz, ex, ey, tz, t0, t1);
+        var cells = PathSmoother.Smooth3(g, route);
+        var xs = new List<long>(cells.Length + 2); var ys = new List<long>(cells.Length + 2); var zs = new List<int>(cells.Length + 2);
+        if (fromBed) { xs.Add(fx); ys.Add(fy); zs.Add(fz); }
+        foreach (var c in cells) { xs.Add(c.X * 1000L + 500); ys.Add(c.Y * 1000L + 500); zs.Add(c.Z); }
+        int first = fromBed ? 1 : 0;
+        if (!fromBed) { xs[0] = sx; ys[0] = sy; }
+        if (toBed) { xs.Add(tx); ys.Add(ty); zs.Add(tz); } else { xs[^1] = ex; ys[^1] = ey; }
+        return new PathPlan([.. xs], [.. ys], [.. zs], t0, t1);
     }
 }

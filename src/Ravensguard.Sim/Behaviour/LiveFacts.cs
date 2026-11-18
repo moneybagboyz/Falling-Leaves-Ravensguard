@@ -1,3 +1,4 @@
+using Ravensguard.Content;
 using Ravensguard.Sim.Building;
 using Ravensguard.Sim.Core;
 using Ravensguard.Sim.WorldGen.Chunks;
@@ -30,25 +31,33 @@ public sealed class LiveFacts(ChunkGenerator gen)
     {
         var st = Generator.StampOf(s, lot);
         if (st == null) return [];
-        var res = new List<BedCell>(); var pieces = Generator.Library.Pieces; var pal = Generator.Palette;
-        int? floorZ = null;
-        if (!beds) { var b = BedsOf(s, lot); if (b.Length == 0) return []; floorZ = b[0].Z; }
+        if (beds) return BedsOfStamp(st, Generator.Library.Pieces, Generator.Palette);
+        var b = BedsOf(s, lot); if (b.Length == 0) return [];
+        var res = new List<BedCell>(); var pal = Generator.Palette;
+        if (!st.Levels.TryGetValue(b[0].Z, out var lv)) return [];
+        for (int y = 0; y < st.H; y++)
+            for (int x = 0; x < st.W; x++)
+            {
+                int i = y * st.W + x;
+                if (pal.Id(lv.Fixture[i]) == null && Generator.Library.Pieces.KindOf(pal.Id(lv.Structure[i])) == PieceKind.Floor) res.Add(new BedCell(st.X0 + x, st.Y0 + y, b[0].Z));
+            }
+        return [.. res];
+    }
+
+    /// <summary>
+    /// The beds of a placed building, ascending (z, y, x): every fixture tagged <c>bed</c>, a piece that gives two beds (a bunk) listed twice, lower first. Public so a test can feed it a building it builds by hand.
+    /// </summary>
+    public static BedCell[] BedsOfStamp(ChunkGenerator.Stamp st, PieceCatalog pieces, PiecePalette pal)
+    {
+        var res = new List<BedCell>();
         foreach (var (z, lv) in st.Levels)
-        {
-            if (floorZ != null && z != floorZ) continue;
             for (int y = 0; y < st.H; y++)
                 for (int x = 0; x < st.W; x++)
                 {
-                    int i = y * st.W + x;
-                    string? fx = pal.Id(lv.Fixture[i]);
-                    if (beds)
-                    {
-                        if (fx == null || !pieces.TryGet(fx, out var def) || !def.Tags.Contains("bed")) continue;
-                        for (int k = 0; k < Math.Max(1, def.Beds); k++) res.Add(new BedCell(st.X0 + x, st.Y0 + y, z));
-                    }
-                    else if (fx == null && pieces.KindOf(pal.Id(lv.Structure[i])) == PieceKind.Floor) res.Add(new BedCell(st.X0 + x, st.Y0 + y, z));
+                    string? fx = pal.Id(lv.Fixture[y * st.W + x]);
+                    if (fx == null || !pieces.TryGet(fx, out var def) || !def.Tags.Contains("bed")) continue;
+                    for (int k = 0; k < Math.Max(1, def.Beds); k++) res.Add(new BedCell(st.X0 + x, st.Y0 + y, z));
                 }
-        }
         return [.. res];
     }
 

@@ -55,7 +55,7 @@ public sealed class PeopleSprites
     }
 
     /// <summary>Places every live person. <paramref name="originXM"/>, <paramref name="originYM"/> are the continent metres of the street's frame origin (the home region's corner); <paramref name="alpha"/> blends the last two sim steps.</summary>
-    public void Sync(IReadOnlyList<LivePerson> live, long originXM, long originYM, float alpha, double delta, bool visible, bool names, Vector2? hero = null)
+    public void Sync(IReadOnlyList<LivePerson> live, long originXM, long originYM, float alpha, double delta, bool visible, bool names, Vector2? hero = null, int viewZ = 0)
     {
         _t += delta; _seen.Clear();
         foreach (var p in live)
@@ -70,24 +70,31 @@ public sealed class PeopleSprites
             }
             double x = p.PrevXMm + (p.XMm - p.PrevXMm) * (double)alpha, y = p.PrevYMm + (p.YMm - p.PrevYMm) * (double)alpha;
             var pos = new Vector2(Mathf.Round((float)((x / 1000.0 - originXM) * Tile)), Mathf.Round((float)((y / 1000.0 - originYM) * Tile)));
-            if (hero is { } hp && p.Action != JobKind.Sleep)
+            if (hero is { } hp && p.Action != JobKind.Sleep && p.Z == viewZ)
             {
                 // nobody stands on the hero: a person within a metre and a half is eased out to that distance, the way they would step aside (view only)
                 var away = pos - hp; float len = away.Length();
                 if (len < Tile * 1.5f) pos = hp + (len < 1f ? new Vector2(1, 0) : away / len) * Tile * 1.5f;
             }
             f.Actor.Position = pos;
-            f.Actor.Visible = visible;
+            // a person on another floor than the one on screen is not drawn (the view shows one level at a time)
+            bool here = visible && p.Z == viewZ;
+            f.Actor.Visible = here;
             var facing = p.HeadX > Math.Abs(p.HeadY) ? Facing.East : -p.HeadX > Math.Abs(p.HeadY) ? Facing.West : p.HeadY > 0 ? Facing.South : Facing.North;
             int salt = (int)(p.Id.Counter % 7);
-            switch (p.Action)
+            // a sleeper lies down on the bed: the figure is turned on its side (head to the left, feet toward the foot of the bed) and eased onto the cell
+            bool lying = p.Action == JobKind.Sleep && !p.Walking;
+            f.Actor.RotationDegrees = lying ? 90 : 0;
+            if (lying) f.Actor.Position += new Vector2(-27, 0);
+            if (lying) f.Actor.Pose(Facing.South, "idle", 0);
+            else if (p.Walking && p.Action != JobKind.Sleep) { f.Actor.Pose(facing, "jog", (int)(_t * 8) + salt); }       // a walk is a brisk 5 m/s (abstract spec decision A2)
+            else switch (p.Action)
             {
-                case JobKind.Commute: f.Actor.Pose(facing, "jog", (int)(_t * 8) + salt); break;       // a commute is a brisk 5 m/s (abstract spec decision A2)
                 case JobKind.Sleep: f.Actor.Pose(facing, "fall", 2); break;
-                case JobKind.Work: f.Actor.Pose(facing, "idle", (int)(_t / 0.45) + salt); break;
+                case JobKind.Work or JobKind.Haul or JobKind.GuardCaravan: f.Actor.Pose(facing, "idle", (int)(_t / 0.45) + salt); break;
                 default: f.Actor.Pose(facing, "idle", (int)(_t / 0.7) + salt); break;
             }
-            if (names && visible)
+            if (names && here)
             {
                 if (f.Name == null)
                 {

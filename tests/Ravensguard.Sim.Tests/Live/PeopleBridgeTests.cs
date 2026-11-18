@@ -75,14 +75,15 @@ public class PeopleBridgeTests
             int n = Schedule.Segments(a, pop.NowDay + 1, segs);
             Assert.Equal(0, segs[0].Start); Assert.Equal(86400, segs[n - 1].End);
             for (int k = 1; k < n; k++) Assert.Equal(segs[k - 1].End, segs[k].Start);
-            var night = Schedule.Resolve(a, rig.At(2)); Assert.Equal(JobKind.Sleep, night.Job.Kind);
-            var again = Schedule.Resolve(a, rig.At(2)); Assert.Equal(night, again);
+            var night = Schedule.Resolve(a, rig.At(0, 30)); if (a.Occupation != Occupation.Guard) Assert.Equal(JobKind.Sleep, night.Job.Kind);   // the watch keeps a night shift
+            var again = Schedule.Resolve(a, rig.At(0, 30)); Assert.Equal(night, again);
             sleepers++;
             if (!a.HasWork || a.WorkInField) continue;
             checkedWorkers++;
             var noon = Schedule.Resolve(a, rig.At(11));
             if (noon.Job.Kind == JobKind.Work) atWork++;
-            if (noon.Job.Kind == JobKind.Work && a.WorkLot >= 0) { var l = pop.Region.Settlements[a.WorkSettlement].Plan.Lots[a.WorkLot].Rect; Assert.InRange(noon.XMm, (l.X - 1) * 1000L, (l.Right + 1) * 1000L); }
+            // (a keeper at a market stall works on the square, not at the workplace)
+            if (noon.Job.Kind == JobKind.Work && a.WorkLot >= 0 && noon.Seg.To == PlaceRef.Work) { var l = pop.Region.Settlements[a.WorkSettlement].Plan.Lots[a.WorkLot].Rect; Assert.InRange(noon.XMm, (l.X - 1) * 1000L, (l.Right + 1) * 1000L); }
         }
         Assert.True(checkedWorkers > 100 && sleepers > 100 && atWork >= checkedWorkers * 6 / 10, $"workers {checkedWorkers}, at work {atWork}");
     }
@@ -98,11 +99,15 @@ public class PeopleBridgeTests
             if (!a.HasWork || a.WorkInField) continue;
             long day = pop.NowDay + 1; var h = a.Spot(PlaceRef.Home, day); var w = a.Spot(PlaceRef.Work, day);
             long d = PathPlan.Dist(w.X - h.X, w.Y - h.Y); if (d < 200_000 || d > 1_300_000) continue;
-            long t = (d + 249) / 250, start = day * 86400 + a.WorkStartSod - t;
+            Span<DaySeg> segs = stackalloc DaySeg[Schedule.MaxSegs]; int n = Schedule.Segments(a, day, segs);
+            int wi = 0; while (wi < n && segs[wi].Kind != JobKind.Work) wi++;
+            if (wi == 0 || wi == n || segs[wi - 1].Kind != JobKind.Commute) continue;
+            long workStart = segs[wi].Start, t = (d + 249) / 250, start = day * 86400 + workStart - t;
+            if (segs[wi - 1].End - segs[wi - 1].Start != t) continue;
             Assert.Equal(JobKind.Commute, Schedule.Resolve(a, start + 1).Job.Kind);
             var mid = Schedule.Resolve(a, start + t / 2);
             Assert.InRange(PathPlan.Dist(mid.XMm - (h.X + w.X) / 2, mid.YMm - (h.Y + w.Y) / 2), 0, 600);
-            Assert.Equal(JobKind.Work, Schedule.Resolve(a, day * 86400 + a.WorkStartSod).Job.Kind);
+            Assert.Equal(JobKind.Work, Schedule.Resolve(a, day * 86400 + workStart).Job.Kind);
             return;
         }
         Assert.Fail("no commuter with a 200 m to 1.3 km commute");
@@ -196,11 +201,13 @@ public class PeopleBridgeTests
     public void FoldBack_G_A11_AMidCommuteDemotionKeepsTheCommute_AtTheSamePointOfThePlan()
     {
         var rig = new PeopleRig(); var b = new PeopleBridge(); var ground = rig.Ground(walls: false);
-        long now = rig.At(5, 20);
-        var scan = rig.Scan(b, now, [(rig.CentreXMm, rig.CentreYMm)]);
-        // someone who is commuting 150 m from the centre at 05:50 is wanted: step until commuters exist
-        long t1 = rig.At(5, 40); b.Enqueue(rig.Scan(b, t1)); while (b.Queued > 0) b.Promote(t1, ground);
-        var commuter = b.People.FirstOrDefault(p => p.Action == JobKind.Commute);
+        // someone who is commuting within 150 m of the centre is wanted: look through the morning (the hour of the commute follows the sun) until commuters exist
+        long t1 = 0; LivePerson commuter = default;
+        for (int m = 4 * 60; m < 10 * 60 && commuter == default; m += 10)
+        {
+            b = new PeopleBridge(); t1 = rig.At(m / 60, m % 60); b.Enqueue(rig.Scan(b, t1)); while (b.Queued > 0) b.Promote(t1, ground);
+            commuter = b.People.FirstOrDefault(p => p.Action == JobKind.Commute && p.Walking);
+        }
         Assert.NotEqual(default, commuter);
         var actor = b.Actor(commuter.Id)!;
         long t2 = t1 + 120; b.Step(t2, ground, rig.Centre);

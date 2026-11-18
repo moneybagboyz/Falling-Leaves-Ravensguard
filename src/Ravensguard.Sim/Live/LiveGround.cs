@@ -13,6 +13,10 @@ public interface ILiveGround
     bool IsOpen(int cx, int cy);
     /// <summary>A walkable route over the ground level, as (x, y) cell pairs from <paramref name="ax"/>,<paramref name="ay"/> to <paramref name="bx"/>,<paramref name="by"/>; null when there is none.</summary>
     (int X, int Y)[]? Route(int ax, int ay, int bx, int by);
+    /// <summary>True when the cell is open on level <paramref name="z"/>.</summary>
+    bool IsOpen(int cx, int cy, int z);
+    /// <summary>A walkable route between two cells that may be on different levels (through stairs, ladders and other portals): (x, y, level) from start to goal; null when there is none.</summary>
+    (int X, int Y, int Z)[]? Route3(int ax, int ay, int az, int bx, int by, int bz);
 }
 
 /// <summary>Ground over one level of a <see cref="LevelGrid"/> whose local (0,0) is continent metre (<see cref="OffsetX"/>, <see cref="OffsetY"/>).</summary>
@@ -24,6 +28,19 @@ public sealed class GridGround(LevelGrid grid, LevelPathfinder finder, int offse
     public int OffsetY { get; } = offsetY;
     public bool Covers(int cx, int cy) => grid.InBounds(cx - OffsetX, cy - OffsetY, z);
     public bool IsOpen(int cx, int cy) => grid.IsOpen(cx - OffsetX, cy - OffsetY, z);
+
+    public bool IsOpen(int cx, int cy, int z) => grid.IsOpen(cx - OffsetX, cy - OffsetY, z);
+
+    public (int X, int Y, int Z)[]? Route3(int ax, int ay, int az, int bx, int by, int bz)
+    {
+        var a = new Cell3(ax - OffsetX, ay - OffsetY, az); var b = new Cell3(bx - OffsetX, by - OffsetY, bz);
+        if (!grid.InBounds(a.X, a.Y, az) || !grid.InBounds(b.X, b.Y, bz)) return null;
+        var r = finder.FindPathBounded(a, b, MaxExpanded * 2);
+        if (r == null || r.Cells.Count == 0) return null;
+        var cells = new (int, int, int)[r.Cells.Count];
+        for (int i = 0; i < cells.Length; i++) cells[i] = (r.Cells[i].X + OffsetX, r.Cells[i].Y + OffsetY, r.Cells[i].Z);
+        return cells;
+    }
 
     public (int X, int Y)[]? Route(int ax, int ay, int bx, int by)
     {
@@ -37,6 +54,16 @@ public sealed class GridGround(LevelGrid grid, LevelPathfinder finder, int offse
         for (int i = 0; i < cells.Length; i++) cells[i] = (r.Cells[i].X + OffsetX, r.Cells[i].Y + OffsetY);
         return cells;
     }
+}
+
+/// <summary>One level of a ground seen as a plain 2D ground (for string pulling along a stretch of a route that stays on a level).</summary>
+internal sealed class LevelView(ILiveGround g, int z) : ILiveGround
+{
+    public bool Covers(int cx, int cy) => g.Covers(cx, cy);
+    public bool IsOpen(int cx, int cy) => g.IsOpen(cx, cy, z);
+    public bool IsOpen(int cx, int cy, int zz) => g.IsOpen(cx, cy, zz);
+    public (int X, int Y)[]? Route(int ax, int ay, int bx, int by) => null;
+    public (int X, int Y, int Z)[]? Route3(int ax, int ay, int az, int bx, int by, int bz) => null;
 }
 
 /// <summary>Straightens a cell route into the fewest straight legs that stay on open ground (string pulling), so a person walks the way a person walks and not along the octile staircase.</summary>
@@ -70,6 +97,36 @@ public static class PathSmoother
             if (!g.IsOpen(x, y)) return false;
         }
         return true;
+    }
+
+    /// <summary>String-pulls a route that changes level: each stretch on one level is straightened on its own; the cells where the level changes stay (a person climbs at the stair, not beside it).</summary>
+    public static (int X, int Y, int Z)[] Smooth3(ILiveGround g, (int X, int Y, int Z)[] cells)
+    {
+        var res = new List<(int, int, int)>(); int i = 0;
+        while (i < cells.Length)
+        {
+            int j = i; while (j + 1 < cells.Length && cells[j + 1].Z == cells[i].Z) j++;
+            var run = new (int X, int Y)[j - i + 1];
+            for (int k = i; k <= j; k++) run[k - i] = (cells[k].X, cells[k].Y);
+            var sm = Smooth(new LevelView(g, cells[i].Z), run);
+            foreach (var c in sm) res.Add((c.X, c.Y, cells[i].Z));
+            i = j + 1;
+        }
+        return [.. res];
+    }
+
+    /// <summary>The open cell on level <paramref name="z"/> nearest to (<paramref name="x"/>, <paramref name="y"/>) within <paramref name="radius"/>; the cell itself when none is open.</summary>
+    public static (int X, int Y) Snap3(ILiveGround g, int x, int y, int z, int radius = 6)
+    {
+        if (!g.Covers(x, y) || g.IsOpen(x, y, z)) return (x, y);
+        for (int r = 1; r <= radius; r++)
+            for (int dy = -r; dy <= r; dy++)
+                for (int dx = -r; dx <= r; dx++)
+                {
+                    if (Math.Max(Math.Abs(dx), Math.Abs(dy)) != r) continue;
+                    if (g.Covers(x + dx, y + dy) && g.IsOpen(x + dx, y + dy, z)) return (x + dx, y + dy);
+                }
+        return (x, y);
     }
 
     /// <summary>The open cell nearest to (<paramref name="x"/>, <paramref name="y"/>) within <paramref name="radius"/> (ring by ring, row-major inside a ring, so the choice is deterministic); the cell itself when it is outside the ground or nothing is open near it.</summary>

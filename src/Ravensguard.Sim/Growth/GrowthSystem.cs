@@ -28,7 +28,7 @@ public sealed class GrowthSystem
     public GrowthState State { get; private set; } = new();
     /// <summary>Where visited chunks hear of new buildings and fields; null in a world with no chunks (the headless soak).</summary>
     public IGrowthChunkSink? ChunkSink { get; set; }
-    public bool Enabled { get; set; } = true;
+    public bool Enabled { get; set; } = Environment.GetEnvironmentVariable("RG_NOGROWTH") == null;
     private readonly GoodCatalog _cat;
 
     public GrowthSystem(EconomyWorld ew) { _ew = ew; _cat = ew.World.Economy.Goods; }
@@ -37,7 +37,7 @@ public sealed class GrowthSystem
     public void Attach(GrowthState state)
     {
         State = state;
-        foreach (int t in state.ClearedTiles) { int row = _ew.Resources.Find(t, ResourceKind.Wood); if (row >= 0) _ew.Resources.Clear(row, 0); }
+        foreach (int t in state.ClearedTiles) { int row = _ew.Resources.Find(t, ResourceKind.Wood); if (row >= 0) _ew.Resources.MarkCleared(row); }
     }
 
     private static readonly int[] None = [];

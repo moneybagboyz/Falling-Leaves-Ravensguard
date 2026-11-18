@@ -1,6 +1,6 @@
 // How many go to the square at the end of the day, and the odd-job terms (live-behaviour spec 4.5, 4.6, 8).
 [
-  { "type": "crowd_tuning", "id": "crowd", "shop_share_normal_pm": 120, "shop_share_market_pm": 330, "shop_share_fair_pm": 650, "market_day_of_month": 3, "holy_day_of_month": 5, "queue_gap_mm": 900 },
+  { "type": "crowd_tuning", "id": "crowd", "shop_share_normal_pm": 60, "shop_share_market_pm": 200, "shop_share_fair_pm": 450, "market_day_of_month": 3, "holy_day_of_month": 5, "queue_gap_mm": 850 },
   { "type": "odd_job_tuning", "id": "odd_jobs", "pay_multiple_pm": 1100, "guard_pay_multiple_pm": 1250, "escort_pay_multiple_pm": 1500, "unskilled_wage_mites_per_day": 150,
-    "board_cap": 24, "grace_hours": 2, "haul_mites_per_100_kg_km": 5, "reservation_ttl_seconds": 3600, "pace_metres_per_hour": 900 }
+    "board_cap": 24, "grace_hours": 2, "haul_mites_per100_kg_km": 5, "reservation_ttl_seconds": 3600, "pace_metres_per_hour": 900 }
 ]
