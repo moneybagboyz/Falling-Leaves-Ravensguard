@@ -337,6 +337,6 @@ public class FarmingCalibrationTests
         Assert.InRange(partial, 301, 999);
         Assert.Equal(1000, FarmingSystem.RainRatioPermille(new LongCondition(LongKind.Drought, 40, 60), 1, 25, D));  // after the window
         Assert.Equal(1000, FarmingSystem.RainRatioPermille(default, 1, 25, D));
-        Assert.Equal(933, YieldMath.RainFactorPermille(FarmingSystem.RainRatioPermille(new LongCondition(LongKind.WetYear, 1, 60), 1, 25, D)));   // a wet year costs little
+        Assert.Equal(934, YieldMath.RainFactorPermille(FarmingSystem.RainRatioPermille(new LongCondition(LongKind.WetYear, 1, 60), 1, 25, D)));   // a wet year costs little
     }
 }

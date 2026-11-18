@@ -24,7 +24,6 @@ public sealed partial class FarmingSystem
         else if (doy == 16) { SetGrazing(); for (int f = 0; f < F.Count; f++) if (F.Stage[f] == FieldStage.Sown) F.Stage[f] = FieldStage.Growing; UpdateSeedReserve(doy); }
         else if (doy == 31) LendSeed(winter: true);
         else if (doy == 46) { CollectCoinRent(now); CullHerds(now); }
-        RecomputeHours((int)now.TotalDays);
     }
 
     // ---------- S1: the year boundary ----------

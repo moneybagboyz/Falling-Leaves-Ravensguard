@@ -22,7 +22,7 @@ public sealed class TickerStats
 
     private readonly TimingCell[] _phases = new TimingCell[8];
     private readonly Dictionary<string, TimingCell> _systems = new(StringComparer.Ordinal);
-    private readonly List<float> _hourMs = [], _hour0Ms = [], _seasonDayMs = [];
+    private readonly List<float> _hourMs = [], _hour0Ms = [], _seasonDayMs = [], _barrierMs = [];
     public TimingCell BarrierStart { get; } = new();
     public TimingCell BarrierEnd { get; } = new();
     public TimingCell Commands { get; } = new();
@@ -38,6 +38,8 @@ public sealed class TickerStats
         if (!_systems.TryGetValue(name, out var c)) _systems[name] = c = new TimingCell();
         return c;
     }
+
+    internal void RecordBarrier(long ticks) { if (_barrierMs.Count < MaxRecordedHours) _barrierMs.Add((float)(ticks * 1000.0 / Stopwatch.Frequency)); }
 
     internal void RecordHour(long hourOfDay, bool seasonStartDay, long ticks)
     {
@@ -62,6 +64,8 @@ public sealed class TickerStats
         return a[Math.Min(a.Length - 1, (int)(q * a.Length))];
     }
 
+    /// <summary>The time the barrier took to apply the outbox and swap the snapshot, per hour (spec: at most 5 ms).</summary>
+    public double P99BarrierApplyMs => Pct(_barrierMs, 0.99);
     public double MedianHourMs => Pct(_hourMs, 0.5);
     public double P99HourMs => Pct(_hourMs, 0.99);
     public double MaxHourMs => _hourMs.Count == 0 ? 0 : _hourMs.Max();
@@ -71,7 +75,7 @@ public sealed class TickerStats
 
     public void Reset()
     {
-        _hourMs.Clear(); _hour0Ms.Clear(); _seasonDayMs.Clear(); _systems.Clear(); Hours = 0;
+        _hourMs.Clear(); _barrierMs.Clear(); _hour0Ms.Clear(); _seasonDayMs.Clear(); _systems.Clear(); Hours = 0;
         foreach (var p in _phases) { p.Ticks = p.Calls = p.MaxTicks = 0; }
         foreach (var c in new[] { BarrierStart, BarrierEnd, Commands }) { c.Ticks = c.Calls = c.MaxTicks = 0; }
     }
@@ -88,7 +92,7 @@ public sealed class TickerStats
             if (c.Calls > 0) sb.AppendLine($"  {p,-16} {c.TotalMs,10:0.0} ms total  {c.MeanMs,8:0.000} ms/call  max {c.MaxMs:0.000}");
         }
         foreach (var (name, c) in _systems.OrderByDescending(x => x.Value.Ticks)) sb.AppendLine($"  system {name,-22} {c.TotalMs,10:0.0} ms total  {c.MeanMs,8:0.000} ms/call  max {c.MaxMs:0.000}");
-        sb.AppendLine($"  barrier start {BarrierStart.MeanMs:0.000} ms/hour, apply {BarrierEnd.MeanMs:0.000} ms/hour (max {BarrierEnd.MaxMs:0.000})");
+        sb.AppendLine($"  barrier start {BarrierStart.MeanMs:0.000} ms/hour, apply {BarrierEnd.MeanMs:0.000} ms/hour (p99 {P99BarrierApplyMs:0.000}, max {BarrierEnd.MaxMs:0.000})");
         return sb.ToString();
     }
 }

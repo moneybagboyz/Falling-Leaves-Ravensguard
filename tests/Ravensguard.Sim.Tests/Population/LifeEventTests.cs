@@ -57,6 +57,7 @@ public class LifeEventTests
         s.Marry(father, mother);
         var w = s.Build(VitalRates.Default with { ChronicleEveryEvent = true });
         long day = w.State.HourDone / 24;
+        w.People.Father[2] = father; w.People.Mother[2] = mother;                 // the older son is theirs too
         w.People.PregnantUntilDay[mother] = (int)day + 1; w.People.FatherOfUnborn[mother] = father;
         w.Population.Kin.Children(mother);                                   // build the kin graph first: the birth must invalidate it
         using var t = Ticker(w);
@@ -158,11 +159,12 @@ public class LifeEventTests
         int b = s.Household(8, (Sex.Male, 50), (Sex.Female, 45), (Sex.Male, 10));
         s.Marry(s.MemberOf(b, 0), s.MemberOf(b, 1));
         int c = s.Household(8, (Sex.Male, 50), (Sex.Female, 20), (Sex.Male, 70));
+        int headA = s.MemberOf(a, 0), daughterA = s.MemberOf(a, 2), headB = s.MemberOf(b, 0), widowB = s.MemberOf(b, 1), headC = s.MemberOf(c, 0), eldestC = s.MemberOf(c, 2);
         var w = s.Build();
         var ob = new RegionOutbox(w.Ids); var now = GameTime.FromGameHours(w.State.HourDone);
-        Demography.Kill(w, s.MemberOf(a, 0), DeathCause.Other, now, ob); Assert.Equal(s.MemberOf(a, 2), w.Households.Head[a]);                    // the daughter of 17
-        Demography.Kill(w, s.MemberOf(b, 0), DeathCause.Other, now, ob); Assert.Equal(s.MemberOf(b, 1), w.Households.Head[b]);                    // the widow
-        Demography.Kill(w, s.MemberOf(c, 0), DeathCause.Other, now, ob); Assert.Equal(s.MemberOf(c, 2), w.Households.Head[c]);                    // the eldest adult member
+        Demography.Kill(w, headA, DeathCause.Other, now, ob); Assert.Equal(daughterA, w.Households.Head[a]);       // the daughter of 17
+        Demography.Kill(w, headB, DeathCause.Other, now, ob); Assert.Equal(widowB, w.Households.Head[b]);          // the widow
+        Demography.Kill(w, headC, DeathCause.Other, now, ob); Assert.Equal(eldestC, w.Households.Head[c]);         // the eldest adult member (70)
     }
 
     [Fact] // G-P9 second half
@@ -210,6 +212,19 @@ public class LifeEventTests
     }
 
     [Fact]
+    public void OrphansWithNoKinAndNoParish_StayWithTheEldestChildAsHead_AndAreMarkedVagrant()
+    {
+        var s = new Synth();
+        int home = s.Household(8, (Sex.Male, 40), (Sex.Male, 9), (Sex.Female, 12));
+        int eldest = s.MemberOf(home, 2), younger = s.MemberOf(home, 1);
+        var w = s.Build();
+        Demography.Kill(w, s.MemberOf(home, 0), DeathCause.Other, GameTime.FromGameHours(w.State.HourDone), new RegionOutbox(w.Ids));
+        Assert.Equal(eldest, w.Households.Head[home]);
+        Assert.Equal(2, w.Households.MemberCount[home]);
+        Assert.All(new[] { eldest, younger }, k => Assert.Equal(HomelessReason.Vagrant, w.People.Homeless[k]));
+    }
+
+    [Fact]
     public void LastMemberDies_TheEstateGoesToAChildInAnotherHousehold()
     {
         var s = new Synth();
@@ -231,9 +246,10 @@ public class LifeEventTests
         s.Marry(s.MemberOf(hh, 0), s.MemberOf(hh, 1));
         s.People.Father[s.MemberOf(hh, 2)] = s.MemberOf(hh, 0);
         var w = s.Build();
-        w.Population.FiefLord[s.Fief] = s.MemberOf(hh, 0); w.Population.FiefLordHousehold[s.Fief] = hh;
-        Demography.Kill(w, s.MemberOf(hh, 0), DeathCause.Violence, GameTime.FromGameHours(w.State.HourDone), new RegionOutbox(w.Ids));
-        Assert.Equal(s.MemberOf(hh, 2), w.Population.FiefLord[s.Fief]);
+        int lord = s.MemberOf(hh, 0), heir = s.MemberOf(hh, 2);
+        w.Population.FiefLord[s.Fief] = lord; w.Population.FiefLordHousehold[s.Fief] = hh;
+        Demography.Kill(w, lord, DeathCause.Violence, GameTime.FromGameHours(w.State.HourDone), new RegionOutbox(w.Ids));
+        Assert.Equal(heir, w.Population.FiefLord[s.Fief]);
     }
 
     [Fact]

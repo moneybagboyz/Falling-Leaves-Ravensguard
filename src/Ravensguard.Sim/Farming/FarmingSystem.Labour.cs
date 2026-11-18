@@ -27,11 +27,14 @@ public sealed partial class FarmingSystem
         var w = Settings.Info(Crop.Wheat); var b = Settings.Info(Crop.Barley);
         return t switch
         {
-            FarmTask.PloughSpring => 12, FarmTask.SowSpring => b.SowLastDoy, FarmTask.Weed => 25,
+            FarmTask.PloughSpring or FarmTask.SowSpring => _d.SpringWorkLastDoy, FarmTask.Weed => 25,
             FarmTask.Reap or FarmTask.BindCart => P.Slot[p] == 0 ? w.RipeDoy + w.ReapGraceDays : b.RipeDoy + b.ReapGraceDays,
-            FarmTask.PloughFallow => 40, FarmTask.SowWinter => w.SowLastDoy, _ => 1000,
+            FarmTask.PloughFallow or FarmTask.SowWinter => 40, _ => 1000,
         };
     }
+
+    /// <summary>Within a deadline sowing goes before ploughing: ploughed ground waiting for seed is the better use of an hour.</summary>
+    private static int TaskRank(FarmTask t) => t is FarmTask.SowSpring or FarmTask.SowWinter ? 0 : 1 + (int)t;
 
     private bool HasStandingCrop(int p)
     {
@@ -97,7 +100,7 @@ public sealed partial class FarmingSystem
             _teamHours = State.Livestock.Oxen[s] / 2 * _wh;
 
             // 1. each household works its own parcels, earliest deadline first
-            _needs.Sort((a, b) => a.Holder != b.Holder ? a.Holder.CompareTo(b.Holder) : a.Deadline != b.Deadline ? a.Deadline.CompareTo(b.Deadline) : a.Parcel != b.Parcel ? a.Parcel.CompareTo(b.Parcel) : a.Task.CompareTo(b.Task));
+            _needs.Sort((a, b) => a.Holder != b.Holder ? a.Holder.CompareTo(b.Holder) : a.Deadline != b.Deadline ? a.Deadline.CompareTo(b.Deadline) : a.Parcel != b.Parcel ? a.Parcel.CompareTo(b.Parcel) : TaskRank(a.Task).CompareTo(TaskRank(b.Task)));
             pool.Clear();
             var left = new Dictionary<int, int>();
             foreach (int hh0 in _householdsOf[s]) supply += _hhHours[hh0];
@@ -121,7 +124,7 @@ public sealed partial class FarmingSystem
                 if (avail > 0) pool.Add((hh, avail));
             }
             int first = 0;                                   // pool entries before this are used up
-            _needs.Sort((a, b) => a.Tier != b.Tier ? a.Tier.CompareTo(b.Tier) : a.Deadline != b.Deadline ? a.Deadline.CompareTo(b.Deadline) : a.Parcel != b.Parcel ? a.Parcel.CompareTo(b.Parcel) : a.Task.CompareTo(b.Task));
+            _needs.Sort((a, b) => a.Tier != b.Tier ? a.Tier.CompareTo(b.Tier) : a.Deadline != b.Deadline ? a.Deadline.CompareTo(b.Deadline) : a.Parcel != b.Parcel ? a.Parcel.CompareTo(b.Parcel) : TaskRank(a.Task).CompareTo(TaskRank(b.Task)));
             foreach (var nd in _needs)
             {
                 long want = HoursFor(nd.Parcel, nd.Task, doy);

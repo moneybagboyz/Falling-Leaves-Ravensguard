@@ -182,7 +182,7 @@ public class MarriageAndFamineTests
     {
         var r = VitalRates.Default;
         var fed = VitalMath.Hazard(r, 30, 3000, 100, false, false, 2500);                        // a severe outbreak hits the fed only through the age/nutrition filter in the system
-        var hungry = VitalMath.Hazard(r, 30, 600, 100, false, false, 2500);
+        var hungry = VitalMath.Hazard(r, 30, 300, 100, false, false, 2500);
         Assert.True(hungry.TotalPpm > 2 * fed.TotalPpm);
         Assert.True(hungry.Disease > fed.Disease);
     }

@@ -156,7 +156,7 @@ public class BarrierTests
         Assert.Equal([$"cmd 10/1@{h}", $"cmd 10/2@{h}", $"cmd 11/1@{h}"], log.Take(3));
         Assert.Contains($"{h}:H4DailySlice:step", log[3]);                  // the step comes after the barrier's commands
         t.AdvanceHours(1);
-        Assert.Equal(4, log.Count(l => !l.StartsWith("cmd")) + 3);          // a later hour has no old commands
+        Assert.Equal(3, log.Count(l => l.StartsWith("cmd")));              // a later hour does not replay old commands
         Assert.Equal(3, t.CommandLog.Count);
     }
 
@@ -244,6 +244,7 @@ public class BarrierTests
     {
         // forty hero payments over thirty days, some of them larger than the purse can afford
         if (day % 3 == 0 || day % 7 == 0) t.Commands.Enqueue(day * 100, CommandKind.PayCoin, EconomyState.HeroOwner, w.Households.IdOf((day * 37) % w.Households.Count), 120 + day * 11);
+        if (day == 13) t.Commands.Enqueue(day * 100 + 2, CommandKind.PayCoin, EconomyState.HeroOwner, w.Households.IdOf(5), 9_999_999);        // more than the purse holds
         if (day % 5 == 0) t.Commands.Enqueue(day * 100 + 1, CommandKind.PayCoin, w.Households.IdOf(day % 50), EconomyState.HeroOwner, 40);
     }
 

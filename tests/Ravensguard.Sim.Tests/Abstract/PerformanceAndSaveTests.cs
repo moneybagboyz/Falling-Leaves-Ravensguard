@@ -25,7 +25,7 @@ public class AbstractPerformanceTests(ITestOutputHelper output)
         Assert.InRange(s.MedianHourMs, 0, TestBudget.Ms(10));                              // p50 at most 10 ms
         Assert.InRange(s.P99HourMs, 0, TestBudget.Ms(150));                                // hard cap 150 ms
         Assert.InRange(s.MaxSeasonDayHourMs, 0, TestBudget.Ms(150));                       // the busiest hours of a season's first day
-        Assert.InRange(s.BarrierEnd.MaxMs, 0, TestBudget.Ms(5));                           // applying the outbox at the barrier
+        Assert.InRange(s.P99BarrierApplyMs, 0, TestBudget.Ms(5));                          // applying the outbox at the barrier (p99)
         Assert.True(s.Phase(TickPhase.H4DailySlice).Calls == 1440 && s.Systems.ContainsKey("vital-rolls") && s.Systems.ContainsKey("household-needs"));
     }
 

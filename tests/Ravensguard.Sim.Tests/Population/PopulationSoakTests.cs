@@ -34,7 +34,7 @@ public class PopulationSoakTests(ITestOutputHelper output)
                 Assert.Equal(hh, p.Household[m]);
                 Assert.Equal(0, seen[m]++);                                                    // in exactly one household
             }
-            if (n > 0) Assert.True(h.Head[hh] >= 0 && p.Household[h.Head[hh]] == hh && p.Status[h.Head[hh]] == PersonStatus.Alive, $"household {hh} head");
+            if (n > 0) Assert.True(h.Head[hh] >= 0 && p.Household[h.Head[hh]] == hh && p.Status[h.Head[hh]] == PersonStatus.Alive, Describe(w, hh));
         }
         for (int i = 0; i < p.Count; i++)
         {
@@ -60,6 +60,12 @@ public class PopulationSoakTests(ITestOutputHelper output)
         // audit: births - deaths - emigrants (+ immigrants) = change
         var v = w.Vital;
         return alive;
+    }
+
+    private static string Describe(SimWorld w, int hh)
+    {
+        var h = w.Households; var p = w.People; int head = h.Head[hh];
+        return $"household {hh} head {head} (household {(head >= 0 ? p.Household[head] : -9)}, {(head >= 0 ? p.Status[head].ToString() : "none")}), members {string.Join(',', h.Members(hh))}";
     }
 
     private static (SimWorld W, WorldTicker T, long Start, long Coin) Start(VitalRates? rates = null, Func<long, int>? yield = null)

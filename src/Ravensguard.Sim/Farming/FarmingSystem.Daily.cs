@@ -16,12 +16,15 @@ public sealed partial class FarmingSystem
     {
         int doy = now.DayOfYear; long day = now.TotalDays; long hourKey = now.TotalHours;
         if (doy == 46) Array.Clear(State.Climate.WinterBadDays);
+        RecomputeHours((int)day);                                   // ages move on: the same state always yields the same capacity
         AccumulateWeather(doy, day);
         if (doy >= 3 && doy <= 20) Frost(doy, hourKey);
         if (doy >= 16 && doy <= 30) Hail(doy, hourKey);
         if (doy == Settings.Info(Crop.Wheat).RipeDoy) Ripen(0, doy, hourKey);
         if (doy == Settings.Info(Crop.Barley).RipeDoy) Ripen(1, doy, hourKey);
         Overdue(doy);
+        if (doy is 38 or 41 or 44) LendSeed(winter: true);        // new grain has been threshed: neighbours with seed to spare can sell it
+        else if (doy is 6 or 10) LendSeed(winter: false);
         RunLabour(now);
         if (doy >= 46) FeedHerds();
         _lastDoy = doy;
@@ -69,13 +72,13 @@ public sealed partial class FarmingSystem
         foreach (int cell in _usedCells)
         {
             if (_tempToday[cell] >= _d.LateFrostTenthsC) continue;
-            if (c.FrostKillDay[cell] == 0) c.FrostKillDay[cell] = (byte)doy;
             for (int k = _cellStart[cell]; k < _cellStart[cell + 1]; k++)
             {
                 int f = _cellFields[k];
                 if (F.Slot[f] != 1 || F.Crop[f] == Crop.Fallow || F.Has(f, FieldFlags.Lost)) continue;
                 if (F.Stage[f] is not (FieldStage.Sown or FieldStage.Growing)) continue;
                 if (F.SownDay[f] < doy - _d.FrostKillWindowDays) continue;
+                if (c.FrostKillDay[cell] == 0) c.FrostKillDay[cell] = (byte)doy;                 // the day frost first hurt a sown field here
                 var info = Settings.Info(F.Crop[f]);
                 long potential = YieldMath.Gross0G(info.BaseG(gm), F.SownFertility[f]);
                 int p = F.Parcel[f], holder = P.Holder[p];

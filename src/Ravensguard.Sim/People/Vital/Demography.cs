@@ -141,7 +141,7 @@ public static class Demography
         if (kin) TransferAssets(w, hh, guardian, TransferReason.Inheritance);
         else EscheatAssets(w, hh, fief, TransferReason.Escheat);
         hht.Head[hh] = -1;
-        RelocateParcels(w, hh, kin ? guardian : LordHousehold(w, fief, guardian));
+        RelocateParcels(w, hh, kin ? guardian : LordHousehold(w, fief, guardian, exclude: hh));
         VacateDwelling(w, hh);
         ob.Count(kin ? "orphans_to_kin" : "orphans_to_parish", kids.Length);
         if (!kin || w.Rates.ChronicleEveryEvent)
@@ -181,13 +181,18 @@ public static class Demography
             int g = pop.PriestHousehold[s];
             if (g >= 0 && g != hh && hht.MemberCount[g] > 0 && FiefOf(w, s) == fief) return g;
         }
-        return LordHousehold(w, fief, -1);
+        return LordHousehold(w, fief, -1, exclude: hh);
     }
 
-    private static int LordHousehold(SimWorld w, int fief, int fallback)
+    /// <summary>The household of the lord of a fief if it still has people (and is not <paramref name="exclude"/>), else <paramref name="fallback"/>.</summary>
+    private static int LordHousehold(SimWorld w, int fief, int fallback, int exclude = -1)
     {
         var pop = w.Population;
-        if (fief >= 0 && fief < pop.FiefLordHousehold.Length && pop.FiefLordHousehold[fief] >= 0 && w.Households.MemberCount[pop.FiefLordHousehold[fief]] > 0) return pop.FiefLordHousehold[fief];
+        if (fief >= 0 && fief < pop.FiefLordHousehold.Length)
+        {
+            int g = pop.FiefLordHousehold[fief];
+            if (g >= 0 && g != exclude && w.Households.MemberCount[g] > 0) return g;
+        }
         return fallback;
     }
 
@@ -216,7 +221,7 @@ public static class Demography
         else
         {
             EscheatAssets(w, hh, fief, TransferReason.Escheat);
-            RelocateParcels(w, hh, LordHousehold(w, fief, -1));
+            RelocateParcels(w, hh, LordHousehold(w, fief, -1, exclude: hh));
             ob.Count("escheat");
             ob.Chronicle(when, "escheat", [hht.IdOf(hh)], [new Cause(CauseKind.Death, null, "no heir: the estate fell to the lord")], ("household", hht.Name[hh]),
                 ("settlement", w.Population.Region.Settlements[hht.Settlement[hh]].Name));
@@ -330,7 +335,7 @@ public static class Demography
         foreach (var (g, q) in src.Rows()) Store.Move(src, chest, g, q);
         int fief = FiefOf(w, hht.Settlement[hh]);
         hht.Head[hh] = -1;
-        RelocateParcels(w, hh, LordHousehold(w, fief, -1));
+        RelocateParcels(w, hh, LordHousehold(w, fief, -1, exclude: hh));
         VacateDwelling(w, hh);
         if (w.Rates.ChronicleEveryEvent)
             ob.Chronicle(when, "emigration", [hht.IdOf(hh)], [new Cause(CauseKind.Migration, null, "the household left a crowded dwelling")], ("household", hht.Name[hh]), ("members", members.Length.ToString()));

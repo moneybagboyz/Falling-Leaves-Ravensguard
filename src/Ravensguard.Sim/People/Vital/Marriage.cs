@@ -18,8 +18,8 @@ public static class Marriage
     {
         var pop = w.Population; var pt = pop.People; var hht = pop.Households; var rates = w.Rates;
         int day = (int)when.TotalDays, nFief = pop.Region.Fiefs.Count, clusters = nFief + 1;
-        pop.ResetKin();
-        var kin = pop.Kin;
+        pop.ResetKin();                       // births since the last round: the graph is rebuilt, but only if a proposal needs it
+        KinGraph? kin = null;
         var women = new List<int>[clusters]; var men = new List<int>[clusters];
         for (int c = 0; c < clusters; c++) { women[c] = []; men[c] = []; }
         for (int p = 0; p < pt.Count; p++)
@@ -35,7 +35,7 @@ public static class Marriage
         for (int c = 0; c < clusters; c++)
         {
             if (women[c].Count == 0 || men[c].Count == 0) continue;
-            var couples = Match(w, women[c], men[c], kin, when, seasonal, day);
+            var couples = Match(w, women[c], men[c], () => kin ??= pop.Kin, when, seasonal, day);
             if (couples.Count == 0) continue;
             couples = couples.OrderBy(x => Math.Abs(x.AgeGap - 3)).ThenBy(x => x.Man).ThenBy(x => x.Woman).ToList();
             List<(int S, int L)>? vacancies = null; int next = 0;
@@ -61,7 +61,7 @@ public static class Marriage
 
     private readonly record struct Couple(int Woman, int Man, int AgeGap);
 
-    private static List<Couple> Match(SimWorld w, List<int> women, List<int> men, KinGraph kin, GameTime when, bool seasonal, int day)
+    private static List<Couple> Match(SimWorld w, List<int> women, List<int> men, Func<KinGraph> kin, GameTime when, bool seasonal, int day)
     {
         var pt = w.People; var rates = w.Rates;
         var free = new List<int>(men); // ascending
@@ -71,7 +71,7 @@ public static class Marriage
             bool proposed = pt.MarriageWait[wo] > 0
                 || (seasonal && VitalMath.Roll(w.Seed, when.TotalHours, pt.IdOf(wo).Value, VitalStreams.Marriage, 0, rates.MarryChancePctPerSeason * 10_000));
             if (!proposed || free.Count == 0) continue;
-            var banned = Kin2(kin, wo);
+            var banned = Kin2(kin(), wo);
             int wAge = w.AgeOn(wo, day), best = -1, bestKey1 = int.MaxValue, bestKey2 = int.MaxValue;
             foreach (int m in free)
             {

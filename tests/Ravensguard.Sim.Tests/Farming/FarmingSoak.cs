@@ -11,7 +11,7 @@ using Ravensguard.Sim.WorldGen.Region;
 namespace Ravensguard.Sim.Tests.Farming;
 
 /// <summary>A year-by-year record of the headless soak (grams of grain; measures are 1,100 g).</summary>
-public sealed record SoakYear(int Year, long HarvestG, long SeedG, long SpoiledG, long EatenG, long ShortG, int HungryDays, long StockG, long PopulationDays, string Weather, int ChronicleCauses);
+public sealed record SoakYear(int Year, long HarvestG, long SeedG, long SpoiledG, long EatenG, long ShortG, int HungryDays, long StockG, long PopulationDays, int SpringSown, int WinterSown, double MeanFertility, int GrazedSettlements);
 
 /// <summary>
 /// The 10-year farming soak of the seed-1234 region: farming runs daily with the economy's spoilage, and an "ideal market" eats 0.92 measures per person-day from
@@ -94,7 +94,7 @@ public sealed class FarmingSoak
         {
             long harvest0 = 0, sown0 = 0, spoil0 = 0, eaten0 = 0;
             var ids = _eatOrder; long h0 = Mass(ids, true), s0 = Mass(ids, false), sp0 = Spoiled(ids), e0 = EatenMass(ids);
-            long shortG = 0; int hungry = 0;
+            long shortG = 0; int hungry = 0; int springSown = 0, winterSown = 0;
             for (int d = 1; d <= 60; d++)
             {
                 var now = Synth.At(y, d);
@@ -103,12 +103,16 @@ public sealed class FarmingSoak
                 var (w, s) = Sys.SeedNeeds();
                 long miss = Eat(dayNeedG, w, s);
                 if (miss > 0) { shortG += miss; hungry++; }
+                if (d == 20) springSown = CountSown(1);
+                if (d == 50) winterSown = CountSown(2);
             }
-            var year = new SoakYear(y, Mass(ids, true) - h0, Mass(ids, false) - s0, Spoiled(ids) - sp0, EatenMass(ids) - e0, shortG, hungry, Grain(), _people * 60L, "", 0);
+            var year = new SoakYear(y, Mass(ids, true) - h0, Mass(ids, false) - s0, Spoiled(ids) - sp0, EatenMass(ids) - e0, shortG, hungry, Grain(), _people * 60L, springSown, winterSown, MeanFert(), Sys.State.Livestock.Grazed.Count(g => g));
             Years.Add(year);
         }
     }
 
+    private int CountSown(int slot) { var F = Sys.State.Fields; int n = 0; for (int f = 0; f < F.Count; f++) if (F.Slot[f] == slot && F.Crop[f] != Crop.Fallow) n++; return n; }
+    private double MeanFert() { var F = Sys.State.Fields; long t = 0; for (int f = 0; f < F.Count; f++) t += F.Fertility[f]; return t / (double)F.Count; }
     private long Mass(ushort[] ids, bool created) { long t = 0; foreach (var g in ids) t += created ? Econ.Mass.Created(g, CreateReason.Harvest) : Econ.Mass.Destroyed(g, DestroyReason.Sown); return t; }
     private long Spoiled(ushort[] ids) { long t = 0; foreach (var g in ids) t += Econ.Mass.Destroyed(g, DestroyReason.Spoiled); return t; }
     private long EatenMass(ushort[] ids) { long t = 0; foreach (var g in ids) t += Econ.Mass.Destroyed(g, DestroyReason.Eaten); return t; }

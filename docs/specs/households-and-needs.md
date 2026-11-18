@@ -209,3 +209,4 @@ ids, spoilage), LODBridge (job state, inventory carried).
 ## Notes
 
 - Needs baskets live in `content/base/economy/needs.jsonc` per class; stores are seeded with a few weeks of staples, firewood, salt and ale at world creation (`EconomyState.Create`). Shortfall handling follows section 2; no deaths are produced in Phase 2.
+- **Growth of the per-household and per-person arrays (population spec 2).** `EconomyState` arrays are exact-length from creation and double once births and weddings add rows (`AddPerson`, `AddHousehold`); `HouseholdCount` / `PersonCount` are the real counts (save and hash cut to them). The abstract tick's `HouseholdNeedsSystem` runs `HouseholdNeeds.RunDay` and one day of store spoilage for each household whose index mod 24 is the hour (H4, order `SystemOrder.HouseholdNeeds`, after the `Provisioning` slot where farming and markets put food in); no miller store is passed yet, so the 1/16 toll is not charged in the tick.

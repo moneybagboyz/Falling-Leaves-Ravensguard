@@ -52,6 +52,7 @@ public sealed class WorldTicker : IDisposable
         _outbox = new RegionOutbox(world.Ids);
         _ctx = new TickContext(world, _outbox);
         Handlers = new CommandPump();
+        _ = world.Children;                                  // build the child index now, not inside the first hour that needs it
         _snapshot = MakeSnapshot(world.State.HourDone, countHouseholds: true);
     }
 
@@ -244,7 +245,7 @@ public sealed class WorldTicker : IDisposable
         Interlocked.Exchange(ref _snapshot, MakeSnapshot(h, hour0));
         if (!_opt.RecordTimings) return;
         long now = Stopwatch.GetTimestamp();
-        Stats.BarrierEnd.Add(now - t);
+        Stats.BarrierEnd.Add(now - t); Stats.RecordBarrier(now - t);
         long whole = _worker == null ? now - hourStartTimestamp : now - _stepStart + (now - t);
         Stats.RecordHour(h % 24, GameTime.FromGameHours(h).DayOfYear % TimeConst.DaysPerSeason == 1, whole);
     }

@@ -75,9 +75,9 @@ public sealed record FarmingSettingsDef : ContentDef
     public int VarianceSpreadPermille { get; init; } = 40;
     // fertility and mixes
     /// <summary>Phase 1 field fertility averages far below the plan's 70 (seed 1234: mean 39). At state creation field fertility is scaled so the mean fertility used by the yield (capped at 91) equals this; 0 keeps Phase 1 values.</summary>
-    public int TargetMeanFertility { get; init; } = 70;
-    /// <summary>The plan's reference density: 62,400 fields for 25,000 people is 2,496 per 1,000 people. When positive the target mean fertility is scaled by this over the region's own density (fewer acres per person need richer soil to keep the plan's balance); 0 switches it off.</summary>
-    public int ReferenceFieldsPerKiloPerson { get; init; } = 2496;
+    public int TargetMeanFertility { get; init; } = 74;
+    /// <summary>The plan's reference density is 62,400 fields for 25,000 people, 2,496 per 1,000 people. Off by default (0); when positive the target mean fertility is scaled by this over the region's own density (fewer acres per person need richer soil to keep the plan's balance); 0 switches it off.</summary>
+    public int ReferenceFieldsPerKiloPerson { get; init; } = 0;
     public int FallowGrazedFertility { get; init; } = 15;
     public int FallowUngrazedFertility { get; init; } = 5;
     public int WinterWheatPct { get; init; } = 60;
