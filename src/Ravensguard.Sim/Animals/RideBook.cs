@@ -13,7 +13,8 @@ public sealed record HorseLoan(EntityId Animal, EntityId Lender, long DueSec);
 public readonly record struct RideStep(int SpeedMmPerGs, Gait Gait, bool Driving, bool Stuck, bool Blocked);
 
 /// <summary>What the view shows of the hero's mount: the bars and flags of spec 6.</summary>
-public readonly record struct RideView(bool Mounted, bool Driving, bool Mounting, Gait Gait, int StaminaPm, int FatiguePm, int FeedCenti, int ShoePm, int Lameness, int SpeedCmps, bool Stuck, int CargoKg, int CargoCapKg, int AxlePm, int RatioPm, int BreedIndex, int TemplateIndex);
+public readonly record struct RideView(bool Mounted, bool Driving, bool Mounting, Gait Gait, int StaminaPm, int FatiguePm, int FeedCenti, int ShoePm, int Lameness, int SpeedCmps, bool Stuck, int CargoKg, int CargoCapKg, int AxlePm, int RatioPm, int BreedIndex, int TemplateIndex,
+    long PullN = 0, long NeedN = 0, int TeamCount = 0, int MaxAnimals = 0, int AnimalsNeeded = 0, int BeastBreed = -1);
 
 /// <summary>
 /// Everything about animals and vehicles the running game keeps: the breeds and templates, the animals that are individuals, the vehicles with their cargo, the herd head counts of species farming does
@@ -344,7 +345,8 @@ public sealed class RideBook
         if (v != null)
         {
             var st = Vehicles.StatsOf(v); var r = Vehicles.Speed(v, Surface, SlopeNow(), RiderKg, nowSec);
-            return new RideView(false, true, false, Gait.Walk, 0, 0, 0, 0, 0, v.Stuck ? 0 : r.SpeedCmps, v.Stuck, Vehicles.CargoKg(v), st.CargoKg, r.AxlePm, r.RatioPm, -1, v.Template);
+            return new RideView(false, true, false, Gait.Walk, 0, 0, 0, 0, 0, v.Stuck ? 0 : r.SpeedCmps, v.Stuck, Vehicles.CargoKg(v), st.CargoKg, r.AxlePm, r.RatioPm, -1, v.Template,
+                r.FPullN, r.FReqMilliN / 1000, v.Team.Count, st.MaxAnimals, Vehicles.AnimalsNeeded(v, r.FReqMilliN), Vehicles.ReferenceBeast(v).Breed);
         }
         return new RideView(false, false, MountLeftGs > 0, Gait.Walk, 0, 0, 0, 0, 0, 0, false, 0, 0, 0, 0, -1, -1);
     }

@@ -52,7 +52,8 @@ public sealed record VehiclePartDef : ContentDef
 }
 
 /// <summary>A hitch: how many animals pull the vehicle and by what (shafts, pole_yoke, pushed, none).</summary>
-public sealed record VehicleHitchDef { public int Slots { get; init; } public string Kind { get; init; } = "shafts"; }
+/// <summary><c>slots</c> is the animals of one team (a pair of oxen, one horse); <c>max_animals</c> is how many may be hitched in all (0 means one team): extra teams are added in front, each a tenth less efficient.</summary>
+public sealed record VehicleHitchDef { public int Slots { get; init; } public int MaxAnimals { get; init; } public string Kind { get; init; } = "shafts"; }
 
 /// <summary>
 /// A fixed template vehicle as text (spec 3.3, plan 3h): the same <c>legend</c> and <c>rows</c> as a building blueprint, each legend letter a stack of parts from the ground up.

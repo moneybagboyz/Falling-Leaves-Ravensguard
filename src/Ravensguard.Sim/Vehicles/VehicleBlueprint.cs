@@ -11,7 +11,10 @@ public sealed record VehicleStats
     public int Wheels { get; init; }
     public int Axles { get; init; }
     public int AxleLimitKg { get; init; }
+    /// <summary>Animals of one team (a pair of oxen, one horse).</summary>
     public int HitchSlots { get; init; }
+    /// <summary>Animals that may be hitched in all (several teams in a row); never below <see cref="HitchSlots"/>.</summary>
+    public int MaxAnimals { get; init; }
     public string HitchKind { get; init; } = "";
     public int Driver { get; init; }
     public int Passengers { get; init; }
@@ -73,6 +76,7 @@ public sealed class VehicleBlueprint
                 }
             }
         }
+        if (d.Hitch.MaxAnimals != 0 && d.Hitch.MaxAnimals < d.Hitch.Slots) errors.Add($"{who}: max_animals {d.Hitch.MaxAnimals} is below one team of {d.Hitch.Slots}");
         if (d.Hitch.Slots > 0 && hitches == 0) errors.Add($"{who}: pulled by {d.Hitch.Slots} animals but has no '{hitchTag}' hitch part");
         if (d.Hitch.Slots == 0 && d.Hitch.Kind != "pushed") errors.Add($"{who}: a vehicle with no hitch slots must be pushed");
         if (d.Hitch.Slots > 0 && d.Hitch.Kind is "shafts" or "pole_yoke" && seats == 0) errors.Add($"{who}: a driven vehicle needs a seat");
@@ -86,7 +90,7 @@ public sealed class VehicleBlueprint
             Def = d, Index = index,
             Stats = new VehicleStats
             {
-                MassKg = mass, CargoKg = cargoKg, CargoL = cargoL, Wheels = wheels, Axles = axles, AxleLimitKg = d.AxleLimitKg, HitchSlots = d.Hitch.Slots, HitchKind = d.Hitch.Kind, Driver = d.Driver,
+                MassKg = mass, CargoKg = cargoKg, CargoL = cargoL, Wheels = wheels, Axles = axles, AxleLimitKg = d.AxleLimitKg, HitchSlots = d.Hitch.Slots, MaxAnimals = Math.Max(d.Hitch.Slots, d.Hitch.MaxAnimals), HitchKind = d.Hitch.Kind, Driver = d.Driver,
                 Passengers = d.Passengers, Seats = seats, BaseSpeedCmps = d.BaseSpeedCmps, TurningRadiusDm = d.TurningRadiusDm, WidthCells = width, LengthCells = d.Rows.Count, Runners = d.Runners, WheelHp = wheelHp,
             },
         };

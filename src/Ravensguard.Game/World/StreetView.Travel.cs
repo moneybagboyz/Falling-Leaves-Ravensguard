@@ -36,7 +36,7 @@ public partial class StreetView
     /// <summary>The travel state of the run: restored from a save or new on the economy's stores (null without content).</summary>
     void AttachTravel()
     {
-        var content = _source?.Content; if (content == null) { GD.Print("[travel] no content: travel is off"); return; }
+        var content = _source?.Content; if (content == null) return;
         long now = _world.Clock.Now.Seconds;
         if (Runtime is { } rt && rt.State.Economy is { } econ)
         {
@@ -58,7 +58,6 @@ public partial class StreetView
         _thud = new TravelHud();
         GetNodeOrNull<Control>("Hud")?.AddChild(_thud);
         Debug.DevContext.Travel = DevTravelConsole;
-        GD.Print($"[travel] attached (hosted {_travel.Hosted}, region {(_source.Region != null)}, shot {_opt.Travel})");
         if (_opt.Travel != null) DevTravelShot(_opt.Travel);
     }
 

@@ -11,6 +11,7 @@ public static class ContentValidator
         {
             if (vocabulary != null) vocabulary.Validate(e.Json, e.Location, $"{e.Type} '{e.Id}'", report);
             if (e.Value == null) continue;
+            if (e.Value is DialogueDef dd) DialogueGraph.Check(dd, e.Location, report);
             foreach (var prop in e.Value.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance))
             {
                 var attr = prop.GetCustomAttribute<ContentRefAttribute>();

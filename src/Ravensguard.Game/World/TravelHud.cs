@@ -22,18 +22,19 @@ public sealed partial class TravelHud : Control
 
     public TravelHud()
     {
+        _bannerTitle.AddThemeFontSizeOverride("font_size", 18);
         MouseFilter = MouseFilterEnum.Ignore;
         SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-        _banner.AnchorLeft = 0.5f; _banner.AnchorRight = 0.5f; _banner.OffsetLeft = 60; _banner.OffsetRight = 480; _banner.OffsetTop = 12;
+        _banner.AnchorLeft = 0.5f; _banner.AnchorRight = 0.5f; _banner.OffsetLeft = -140; _banner.OffsetRight = 300; _banner.OffsetTop = 12;
         var bv = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore }; bv.AddThemeConstantOverride("separation", 3);
         _banner.AddChild(bv); bv.AddChild(_bannerTitle); bv.AddChild(_barBack); _barBack.AddChild(_bar); _bar.SetAnchorsAndOffsetsPreset(LayoutPreset.LeftWide); bv.AddChild(_bannerLine); bv.AddChild(_bannerWarn);
         AddChild(_banner);
-        _alert.AnchorLeft = 0.5f; _alert.AnchorRight = 0.5f; _alert.AnchorTop = 0.5f; _alert.AnchorBottom = 0.5f; _alert.OffsetLeft = -230; _alert.OffsetRight = 230; _alert.OffsetTop = -110; _alert.OffsetBottom = 40; _alert.GrowHorizontal = GrowDirection.Both; _alert.GrowVertical = GrowDirection.Both;
+        _alert.AnchorLeft = 0.5f; _alert.AnchorRight = 0.5f; _alert.AnchorTop = 1f; _alert.AnchorBottom = 1f; _alert.OffsetLeft = -230; _alert.OffsetRight = 230; _alert.OffsetTop = -200; _alert.OffsetBottom = -50; _alert.GrowHorizontal = GrowDirection.Both; _alert.GrowVertical = GrowDirection.Begin;
         var av = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore }; av.AddThemeConstantOverride("separation", 6);
         _alertBody.AutowrapMode = TextServer.AutowrapMode.WordSmart; _alertBody.CustomMinimumSize = new Vector2(430, 0);
         _alert.AddChild(av); av.AddChild(_alertTitle); av.AddChild(_alertBody); av.AddChild(_alertKeys);
         AddChild(_alert);
-        _camp.AnchorLeft = 1; _camp.AnchorRight = 1; _camp.OffsetLeft = -330; _camp.OffsetRight = -12; _camp.OffsetTop = 150;
+        _camp.AnchorLeft = 1; _camp.AnchorRight = 1; _camp.OffsetLeft = -330; _camp.OffsetRight = -12; _camp.OffsetTop = 190;
         _campBox.AddThemeConstantOverride("separation", 2); _campBox.AddChild(_campTitle);
         for (int i = 0; i < 12; i++) { var l = new Label(); _campLines.Add(l); _campBox.AddChild(l); }
         _camp.AddChild(_campBox); AddChild(_camp);

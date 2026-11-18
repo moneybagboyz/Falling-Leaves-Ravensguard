@@ -75,6 +75,28 @@ public static class VehicleMath
     /// <summary>The pull of one animal after lameness and weakness: <c>pull x (1000 - lame) / 1000 x (1000 - weak) / 1000</c>.</summary>
     public static int EffectivePullN(int pullN, int lamePm, int weakPm) => (int)((long)pullN * (1000 - lamePm) / 1000 * (1000 - weakPm) / 1000);
 
+    /// <summary>
+    /// What a team's animals give when hitched in teams of <paramref name="teamSize"/> one behind another: the animal at <paramref name="index"/> (hitch order) is in team <c>index / teamSize</c>, and every extra team
+    /// pulls a tenth less than the one before it (the traces and chains lose force, the animals do not keep step), down to half. The first team is at 1000.
+    /// </summary>
+    public static int TeamEfficiencyPm(int index, int teamSize) => Math.Max(500, 1000 - 100 * (index / Math.Max(1, teamSize)));
+
+    /// <summary>
+    /// How many animals of <paramref name="pullN"/> each (hitched in teams of <paramref name="teamSize"/>) it takes for the team to pull at most <paramref name="maxRatioPm"/> permille of
+    /// <paramref name="freqMilliN"/>; 0 when nothing needs pulling, and -1 when even <paramref name="maxAnimals"/> are too few.
+    /// </summary>
+    public static int AnimalsNeeded(int pullN, int teamSize, int maxAnimals, long freqMilliN, int maxRatioPm)
+    {
+        if (freqMilliN <= 0) return 0;
+        long sum = 0;
+        for (int i = 0; i < maxAnimals; i++)
+        {
+            sum += (long)pullN * TeamEfficiencyPm(i, teamSize) / 1000;
+            if (RatioPm(freqMilliN, sum) <= maxRatioPm) return i + 1;
+        }
+        return -1;
+    }
+
     /// <summary>How much pull a lameness level takes away (permille): none, mild, severe, unusable.</summary>
     public static int LamePm(int level) => level switch { <= 0 => 0, 1 => 300, 2 => 600, _ => 1000 };
 

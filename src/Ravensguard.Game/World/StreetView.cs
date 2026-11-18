@@ -513,7 +513,7 @@ public partial class StreetView : Control, IHandlesBack
         if (_router == null || _regionMap == null) { _router?.ShowToast(L.T("MAP_NONE")); return; }
         UI.ContinentOverview? ov = _source?.Regions != null && _source.Continent != null && _source.History != null && _world.Streamer is { } st
             ? new UI.ContinentOverview(_source.Continent, _source.History, _source.Regions, st.Home, HeroWorld) : null;
-        _router.Push(new WorldMapScreen(_router, _regionMap, HeroWorld, ov) { CaravanMarks = CaravanMarksNow, RegionOrigin = Runtime == null ? (0, 0) : (Runtime.State.HomeRegion.OriginXM, Runtime.State.HomeRegion.OriginYM), TravelPlan = _travel == null ? null : PreviewTravel, TravelStart = _travel == null ? null : StartTravel, PreselectNth = _opt.Travel == "picker" ? 1 : -1, ShotPath = _opt.MapShot ? _opt.ShotPath : null, StartScale = Math.Max(1, Math.Abs(_opt.MapScale)), StartContinent = _opt.MapScale <= 0 });
+        _router.Push(new WorldMapScreen(_router, _regionMap, HeroWorld, ov) { CaravanMarks = CaravanMarksNow, RegionOrigin = Runtime == null ? (0, 0) : (Runtime.State.HomeRegion.OriginXM, Runtime.State.HomeRegion.OriginYM), TravelPlan = _travel == null ? null : PreviewTravel, TravelStart = _travel == null ? null : StartTravel, PreselectNth = _opt.Travel == "picker" ? 7 : -1, ShotPath = _opt.MapShot ? _opt.ShotPath : null, StartScale = Math.Max(1, Math.Abs(_opt.MapScale)), StartContinent = _opt.MapScale <= 0 });
     }
 
     void UpdateHud(LiveSnapshot s)

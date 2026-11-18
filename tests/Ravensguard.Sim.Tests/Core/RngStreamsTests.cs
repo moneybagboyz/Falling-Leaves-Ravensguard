@@ -32,18 +32,35 @@ public class RngStreamsTests
         }
     }
 
-    [Fact]
-    public void PhaseTwoStreams_AreInTheirBlock_AndTheOldNamesPointAtThem()
+    private static string SourcePath()
     {
-        // Phase 2 owns 0x200..0x2FF; Phase 3 (live behaviour and jobs) owns 0x300..0x3FF
-        var phaseThree = new[] { nameof(RngStreams.UtilityNoise), nameof(RngStreams.JobClaim), nameof(RngStreams.BedFallback), nameof(RngStreams.RoutineJobs),
-            nameof(RngStreams.CraftFailure), nameof(RngStreams.CraftByproduct), nameof(RngStreams.CraftWatch),
-            nameof(RngStreams.Stains), nameof(RngStreams.ColdTolerance), nameof(RngStreams.Wardrobe),
-            nameof(RngStreams.TradeAttrJitter), nameof(RngStreams.HireMood), nameof(RngStreams.PackQuality),
-            nameof(RngStreams.AnimalInjury), nameof(RngStreams.VehicleStuck), nameof(RngStreams.AnimalBreed), nameof(RngStreams.ShoeLoss), nameof(RngStreams.Taming) };
-        foreach (var (name, v) in All().Where(x => x.Name != nameof(RngStreams.WeatherLong) && !phaseThree.Contains(x.Name)))
-            Assert.InRange(v, 0x200u, 0x2FFu);
-        foreach (var (name, v) in All().Where(x => phaseThree.Contains(x.Name))) Assert.InRange(v, 0x300u, 0x3FFu);
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir != null && !File.Exists(Path.Combine(dir.FullName, "src", "Ravensguard.Sim", "Core", "RngStreams.cs"))) dir = dir.Parent;
+        return Path.Combine(dir?.FullName ?? throw new InvalidOperationException("repo root not found"), "src", "Ravensguard.Sim", "Core", "RngStreams.cs");
+    }
+
+    [Fact]
+    public void EveryStreamIsInAKnownBlock_ReadFromTheSource_SoNewStreamsNeverBreakThisTest()
+    {
+        // the names and ids come from Core/RngStreams.cs itself (no hand list): weather's 0xC0, Phase 2's 0x200..0x2FF and Phase 3's 0x300..0x3FF
+        string text = File.ReadAllText(SourcePath());
+        var fromSource = System.Text.RegularExpressions.Regex.Matches(text, @"\b(?<n>[A-Z][A-Za-z0-9]*)\s*=\s*0x(?<v>[0-9A-Fa-f]+)\b")
+            .Select(m => (Name: m.Groups["n"].Value, Value: Convert.ToUInt32(m.Groups["v"].Value, 16))).ToList();
+        var all = All();
+        Assert.True(fromSource.Count >= all.Count, "the source parse found fewer streams than reflection");
+        foreach (var (name, v) in all)
+        {
+            Assert.True(fromSource.Contains((name, v)) || text.Contains(name + " = "), $"stream {name} is not declared in RngStreams.cs");
+            bool ok = v == 0xC0u || (v is >= 0x200u and <= 0x3FFu);
+            Assert.True(ok, $"stream {name} = 0x{v:X} is outside weather (0xC0), Phase 2 (0x200..0x2FF) and Phase 3 (0x300..0x3FF)");
+        }
+        foreach (var (name, v) in all.Where(x => x.Name is nameof(RngStreams.LinePick) or nameof(RngStreams.BarkPick) or nameof(RngStreams.RumourWitness) or nameof(RngStreams.RumourHear) or nameof(RngStreams.RumourDistort) or nameof(RngStreams.GatherPartition)))
+            Assert.InRange(v, 0x310u, 0x315u);
+    }
+
+    [Fact]
+    public void PinnedStreamIds_NeverChange()
+    {
         Assert.Equal(0x300u, RngStreams.UtilityNoise); Assert.Equal(0x301u, RngStreams.JobClaim); Assert.Equal(0x302u, RngStreams.BedFallback); Assert.Equal(0x303u, RngStreams.RoutineJobs);
         Assert.Equal(0xC0u, RngStreams.WeatherLong);
         Assert.Equal(RngStreams.Death, VitalStreams.Death); Assert.Equal(RngStreams.Name, VitalStreams.Name); Assert.Equal(RngStreams.Attributes, VitalStreams.Attributes);

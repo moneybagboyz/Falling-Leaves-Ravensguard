@@ -69,6 +69,20 @@ public static class RngStreams
     /// <summary>The routine jobs a settlement's households post (key settlement, tick = game day).</summary>
     public const uint RoutineJobs = 0x303;
 
+    // ---------- dialogue, barks and rumours (docs/specs/phase3/dialogue-barks-rumours.md section 5) ----------
+    /// <summary>The systemic line pick (key speaker, tick = game second / 60, draw = listener index x 16 + turn mod 16).</summary>
+    public const uint LinePick = 0x310;
+    /// <summary>Bark pick and cooldown jitter (key person, tick = game second / 20).</summary>
+    public const uint BarkPick = 0x311;
+    /// <summary>Which people witnessed a chronicle entry (key entry id, tick 0, draw = candidate rank).</summary>
+    public const uint RumourWitness = 0x312;
+    /// <summary>Whether a listener hears a rumour from a teller (key teller, tick = game hour, draw = listener index).</summary>
+    public const uint RumourHear = 0x313;
+    /// <summary>The distortion roll of a retelling (key listener, tick = game hour, draw 0 = whether, 1 = which, 2 = misattribution).</summary>
+    public const uint RumourDistort = 0x314;
+    /// <summary>Who socialises in an hour and which gathering they join (key settlement, tick = game hour, draw = person index x 2 + 0 or 1).</summary>
+    public const uint GatherPartition = 0x315;
+
     // ---------- trade, inventory and character (docs/specs/phase3/trade-inventory-character.md section 5) ----------
     /// <summary>Attribute rounding and skill-use jitter (key person; reserved, nothing draws it in v1).</summary>
     public const uint TradeAttrJitter = 0x320;

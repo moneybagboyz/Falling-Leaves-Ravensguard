@@ -81,7 +81,7 @@ public sealed class VehicleTable
         if (a.State is AnimalState.Hitched or AnimalState.Ridden) return HitchResult.Taken;
         if (!Animals.Catalog.At(a.Breed).Def.Draught) return HitchResult.WrongBeast;
         if (a.TrainedPm < 400) return HitchResult.Untrained;
-        if (r.Team.Count >= st.HitchSlots) return HitchResult.Full;
+        if (r.Team.Count >= st.MaxAnimals) return HitchResult.Full;
         if (st.AxleLimitKg > 0 && (long)(st.MassKg + CargoKg(r)) * 1000 / st.AxleLimitKg > 1300) return HitchResult.AxleWouldBreak;
         r.Team.Add(a.Id); a.Vehicle = r.Id; a.State = AnimalState.Hitched;
         return HitchResult.Ok;
@@ -93,15 +93,15 @@ public sealed class VehicleTable
         a.Vehicle = EntityId.None; if (a.State == AnimalState.Hitched) a.State = AnimalState.Free;
     }
 
-    /// <summary>The team's pull and the gait cap of its slowest animal.</summary>
+    /// <summary>The team's pull (the animals' pull summed, each extra team a tenth less efficient, see <see cref="VehicleMath.TeamEfficiencyPm"/>) and the gait cap of its slowest animal.</summary>
     public (long PullN, int GaitCapCmps) Team(VehicleRow r)
     {
-        long pull = 0; int cap = int.MaxValue;
+        long pull = 0; int cap = int.MaxValue; int slots = StatsOf(r).HitchSlots, i = 0;
         foreach (var id in r.Team)
         {
             var a = Animals.Find(id); if (a == null || !a.Alive) continue;
             var b = Animals.Catalog.At(a.Breed);
-            pull += VehicleMath.EffectivePullN(b.PullN, VehicleMath.LamePm(a.Lameness), a.Weak ? 150 : 0);
+            pull += VehicleMath.EffectivePullN(b.PullN, VehicleMath.LamePm(a.Lameness), a.Weak ? 150 : 0) * VehicleMath.TeamEfficiencyPm(i++, slots) / 1000;
             cap = Math.Min(cap, b.WorkCmps);
         }
         return (pull, cap == int.MaxValue ? 0 : cap);
@@ -121,6 +121,26 @@ public sealed class VehicleTable
         if (r.Stuck) crr = crr * tu.StuckCrrMultPm / 1000;
         int cargo = CargoKg(r);
         return VehicleMath.Evaluate(st.BaseSpeedCmps, st.MassKg + cargo, st.MassKg + cargo + peopleKg, crr + slopePm + windPm, pull, cap, st.AxleLimitKg, s == Surface.Ice);
+    }
+
+    /// <summary>
+    /// The beast to count teams of: the first animal hitched, or for an empty hitch the one that usually pulls this kind (an ox at a pole and yoke, a draught horse otherwise). Its breed index and unlamed pull.
+    /// </summary>
+    public (int Breed, int PullN) ReferenceBeast(VehicleRow r)
+    {
+        foreach (var id in r.Team) if (Animals.Find(id) is { Alive: true } a) return (a.Breed, Animals.Catalog.At(a.Breed).PullN);
+        var b = Animals.Catalog.Find(StatsOf(r).HitchKind == "pole_yoke" ? "ox" : "horse_draught") ?? Animals.Catalog.At(0);
+        return (b.Index, b.PullN);
+    }
+
+    /// <summary>
+    /// The animals this vehicle needs on its current ground to stay clear of bogging (a pull ratio of <see cref="Stuck.SafeRatioPm"/> or less): the force needed is <paramref name="freqMilliN"/>, the animals are
+    /// <see cref="ReferenceBeast"/>. 0 when no pull is needed, -1 when even the most the vehicle takes is too few.
+    /// </summary>
+    public int AnimalsNeeded(VehicleRow r, long freqMilliN)
+    {
+        var st = StatsOf(r); if (st.HitchSlots <= 0) return 0;
+        return VehicleMath.AnimalsNeeded(ReferenceBeast(r).PullN, st.HitchSlots, st.MaxAnimals, freqMilliN, Stuck.SafeRatioPm);
     }
 
     private int MinWalk(VehicleRow r)
@@ -175,6 +195,8 @@ public sealed class VehicleTable
 public static class Stuck
 {
     public const int DigPm = 200, DigMinutes = 10;
+    /// <summary>The pull ratio (permille) up to which a team can walk on a bogging surface without risk of sticking (<see cref="StuckPm"/> starts above it): what the cart bar counts animals for.</summary>
+    public const int SafeRatioPm = 700;
 
     /// <summary>Surfaces that can bog a vehicle down: resistance of 170 permille or more.</summary>
     public static bool CanBog(VehicleTuning tu, Surface s, bool runners) => tu.Crr(s, runners) >= 170;

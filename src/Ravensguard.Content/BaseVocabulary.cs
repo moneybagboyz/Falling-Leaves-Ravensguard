@@ -11,9 +11,12 @@ public static class BaseVocabulary
         "road_tier_at_most", "danger_at_least", "terrain_near", "hero_party_strength_below", "holy_day_within", "chronicle_within", "lords_land",
         "near_tavern", "evening", "daytime", "night", "rain_within", "storm_within", "river_crossing", "heavy_rain", "gate_or_bridge", "hungry_year",
         "deep_woodland", "war_within_km", "weather_is", "forage_stock_at_least", "hero_is_armed",
+        // dialogue (docs/specs/phase3/dialogue-barks-rumours.md 3.1): the speaker, the mood, the relationship and the moment
+        "speaker_job_is", "speaker_job_class", "mood_below", "mood_above", "relationship_at_least", "relationship_tier", "is_kin", "time_of_day_is", "knows_rumour_kind",
+        "hero_is_bloody", "hero_wealth_visible", "speaker_has_need", "feast_today", "flag_set", "speaker_is_shopkeeper", "speaker_is_child", "speaker_sex",
     ];
 
-    public static readonly string[] Effects = ["start_contract", "give_item", "add_rumour", "set_flag"];
+    public static readonly string[] Effects = ["start_contract", "give_item", "add_rumour", "set_flag", "add_trust", "end_dialogue"];
 
     public static ContentVocabulary Create() => new ContentVocabulary().RegisterCondition(Conditions).RegisterEffect(Effects);
 }

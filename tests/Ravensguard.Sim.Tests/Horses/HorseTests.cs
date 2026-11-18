@@ -479,15 +479,48 @@ public class HorseTests(ITestOutputHelper output)
     [Fact]
     public void Hitching_NeedsATrainedDraughtBeast_AFreeSlot_AndNoMoreThanTheTemplateAllows()
     {
-        var r = new Rig(); var c = r.Cart("cart"); var a = r.Horse(); var b = r.Horse();
+        var r = new Rig(); var c = r.Cart("cart"); var a = r.Horse(); var b = r.Horse(); var d = r.Horse();
         Assert.Equal(HitchResult.Untrained, r.Book.Vehicles.Hitch(c, r.Horse(trained: 300)));
         Assert.Equal(HitchResult.Ok, r.Book.Vehicles.Hitch(c, a)); Assert.Equal(AnimalState.Hitched, a.State);
-        Assert.Equal(HitchResult.Taken, r.Book.Vehicles.Hitch(c, a)); Assert.Equal(HitchResult.Full, r.Book.Vehicles.Hitch(c, b));
-        r.Book.Vehicles.Unhitch(c, a); Assert.Equal(AnimalState.Free, a.State); Assert.Equal(HitchResult.Ok, r.Book.Vehicles.Hitch(c, b));
+        Assert.Equal(HitchResult.Taken, r.Book.Vehicles.Hitch(c, a));
+        Assert.Equal(HitchResult.Ok, r.Book.Vehicles.Hitch(c, b));                                                            // a second horse goes in tandem: a cart takes one or two
+        Assert.Equal(HitchResult.Full, r.Book.Vehicles.Hitch(c, d));
+        r.Book.Vehicles.Unhitch(c, a); Assert.Equal(AnimalState.Free, a.State); Assert.Equal(HitchResult.Ok, r.Book.Vehicles.Hitch(c, d));
         Assert.Equal(HitchResult.NoHitch, r.Book.Vehicles.Hitch(r.Cart("handcart"), r.Horse()));
         var wagon = r.Cart("ox_wagon"); Assert.Equal(HitchResult.Ok, r.Book.Vehicles.Hitch(wagon, r.Horse("ox", 900))); Assert.Equal(HitchResult.Ok, r.Book.Vehicles.Hitch(wagon, r.Horse("horse_draught", 900)));
-        Assert.Equal(HitchResult.Full, r.Book.Vehicles.Hitch(wagon, r.Horse("ox", 900)));
         Assert.Equal(780 + 650, r.Book.Vehicles.Team(wagon).PullN);                                                            // a mixed team adds its pull
+        for (int i = 2; i < 8; i++) Assert.Equal(HitchResult.Ok, r.Book.Vehicles.Hitch(wagon, r.Horse("ox", 900)));            // four pairs of oxen is the most a wagon takes
+        Assert.Equal(HitchResult.Full, r.Book.Vehicles.Hitch(wagon, r.Horse("ox", 900)));
+    }
+
+    [Fact]
+    public void Teams_EveryExtraPairPullsATenthLess_AndAddingATeamFreesAWagonInMud()
+    {
+        Assert.Equal([1000, 1000, 900, 900, 800, 800, 700, 700, 500], Enumerable.Range(0, 9).Select(i => i < 8 ? VehicleMath.TeamEfficiencyPm(i, 2) : VehicleMath.TeamEfficiencyPm(30, 2)).ToArray());
+        Assert.Equal([1000, 900, 800], Enumerable.Range(0, 3).Select(i => VehicleMath.TeamEfficiencyPm(i, 1)).ToArray());
+        var r = new Rig(); var wagon = r.Cart("ox_wagon"); r.Fill(wagon, "oats", 1_000_000);
+        long[] pulls = new long[5];
+        for (int pair = 1; pair <= 4; pair++)
+        {
+            Assert.Equal(HitchResult.Ok, r.Book.Vehicles.Hitch(wagon, r.Horse("ox", 900))); Assert.Equal(HitchResult.Ok, r.Book.Vehicles.Hitch(wagon, r.Horse("ox", 900)));
+            pulls[pair] = r.Book.Vehicles.Team(wagon).PullN;
+        }
+        Assert.Equal([0, 1300, 1300 + 1170, 1300 + 1170 + 1040, 1300 + 1170 + 1040 + 910], pulls);                                   // 650 N an ox, x1.0, x0.9, x0.8, x0.7 a pair, in whole newtons
+        // mud: a loaded wagon (1,300 kg) cannot move on two oxen, and four pairs get it going
+        var tu = VehicleTuning.Default; int mud = tu.Crr(Surface.MudRoad, false);
+        long freq = VehicleMath.FReqMilliN(1300, mud);
+        Assert.True(VehicleMath.Evaluate(180, 1300, 1300, mud, pulls[1], 180, 1500, false).CannotMove);
+        Assert.False(VehicleMath.Evaluate(180, 1300, 1300, mud, pulls[4], 180, 1500, false).CannotMove);
+        // animals needed to keep clear of bogging (pull ratio 700): 2,168 N / 0.7 = 3,097 N; oxen add 650, 650, 585, 585, 520, 520: six of them
+        Assert.Equal(6, VehicleMath.AnimalsNeeded(650, 2, 8, freq, Stuck.SafeRatioPm));
+        Assert.Equal(2, VehicleMath.AnimalsNeeded(650, 2, 8, VehicleMath.FReqMilliN(1300, tu.Crr(Surface.DryRoad, false)), Stuck.SafeRatioPm));   // dry road: one pair
+        Assert.Equal(-1, VehicleMath.AnimalsNeeded(650, 2, 4, freq, Stuck.SafeRatioPm));                                           // more than the vehicle takes
+        Assert.Equal(0, VehicleMath.AnimalsNeeded(650, 2, 8, 0, Stuck.SafeRatioPm));
+        // the cart bar's figure, through the row
+        r.Book.Vehicles.Speed(wagon, Surface.MudRoad, 0, 0, 0);
+        Assert.Equal(6, r.Book.Vehicles.AnimalsNeeded(wagon, VehicleMath.FReqMilliN(r.Book.Vehicles.GrossKg(wagon), mud)));
+        Assert.Equal(r.Book.Breeds.Get("ox").Index, r.Book.Vehicles.ReferenceBeast(wagon).Breed);
+        Assert.Equal(r.Book.Breeds.Get("horse_draught").Index, r.Book.Vehicles.ReferenceBeast(r.Cart("cart")).Breed);
     }
 
     [Fact]
