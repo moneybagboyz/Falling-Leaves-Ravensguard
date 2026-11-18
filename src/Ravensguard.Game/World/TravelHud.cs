@@ -24,7 +24,7 @@ public sealed partial class TravelHud : Control
     {
         MouseFilter = MouseFilterEnum.Ignore;
         SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-        _banner.AnchorLeft = 0.5f; _banner.AnchorRight = 0.5f; _banner.OffsetLeft = -200; _banner.OffsetRight = 200; _banner.OffsetTop = 12; _banner.GrowHorizontal = GrowDirection.Both;
+        _banner.AnchorLeft = 0.5f; _banner.AnchorRight = 0.5f; _banner.OffsetLeft = 60; _banner.OffsetRight = 480; _banner.OffsetTop = 12;
         var bv = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore }; bv.AddThemeConstantOverride("separation", 3);
         _banner.AddChild(bv); bv.AddChild(_bannerTitle); bv.AddChild(_barBack); _barBack.AddChild(_bar); _bar.SetAnchorsAndOffsetsPreset(LayoutPreset.LeftWide); bv.AddChild(_bannerLine); bv.AddChild(_bannerWarn);
         AddChild(_banner);

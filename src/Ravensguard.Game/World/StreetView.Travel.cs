@@ -310,7 +310,7 @@ public partial class StreetView
         if (t.Journey is { State: JourneyState.Travelling or JourneyState.Paused } j)
         {
             double leftKm = (j.TotalMm - j.ProgressMm) / 1_000_000.0;
-            double hoursLeft = leftKm * 1000 / Math.Max(1, _tfeed!.Hero.BaseMmPerGs == 0 ? 150 : _tfeed.Hero.BaseMmPerGs) / 3600.0;
+            double hoursLeft = (j.TotalMm - j.ProgressMm) / (double)Math.Max(1, _tfeed!.Hero.BaseMmPerGs == 0 ? 150 : _tfeed.Hero.BaseMmPerGs) / 3600.0;
             var (ok, why) = t.Gate8x(_tfeed.Hero);
             string speed = _world.Clock.Speed == SimSpeed.Paused ? "paused" : $"{(int)_world.Clock.Speed}x";
             hud.Banner(L.F("TRAVEL_BANNER", j.DestName, leftKm.ToString("0.0"), hoursLeft.ToString("0")), j.TotalMm == 0 ? 1f : (float)j.ProgressMm / j.TotalMm,
@@ -428,7 +428,7 @@ public partial class StreetView
             t.Begin("the next village", path, now); t.Journey!.ProgressMm = 0;
         }
         var cast = new List<ulong>(); var g = d.Groups.FirstOrDefault();
-        long sx = hx + 70_000, sy = hy;
+        long sx = hx + (Debug.DevContext.Travel != null && _opt.Travel != null ? 9_000 : 70_000), sy = hy;
         if (g != null) { int n = Math.Min(4, g.Count.Count > 1 ? g.Count[1] : 1); foreach (var id2 in EncounterPlacement.Cast(t, d, g, n, now, sx, sy)) cast.Add(id2.Value); }
         var ev = new EncounterEvent(now, d.Id, d.Kind, hx, hy, sx, sy, t.LegSerial, [.. cast], d.Bark);
         t.Encounters.Add(ev); _enc = ev; _encOpen = true;
@@ -443,10 +443,11 @@ public partial class StreetView
         if (what == "encounter") DevEncounter("bandit_ambush_small");
         else if (what == "camp")
         {
-            _travel!.Cfg.GetType();
-            ToggleCamp();
+            var (cx, cy) = _world.WorldMm;
+            _travel!.MakeCamp(cx, cy, _world.Clock.Now.Seconds, [EconomyState.HeroOwner]); _campOpen = true;
             if (_travel.Camp is { } c)
             {
+                c.XMm += 2_500; c.YMm -= 600;
                 _travel.StoreOf(c.Id).Create(_travel.Goods!.IdOf("firewood"), 50_000, CreateReason.Other); _travel.StoreOf(c.Id).Create(_travel.Goods.IdOf("bread"), 6_000, CreateReason.Other);
                 _travel.AddFuel(c, 20_000); c.FireLit = true; c.FireLastSec = _world.Clock.Now.Seconds; c.Shelter = ShelterKind.Tent;
                 EnsureCompanions(_travel);
