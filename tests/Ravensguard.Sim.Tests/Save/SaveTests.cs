@@ -13,7 +13,7 @@ public sealed class TempDir : IDisposable
     public void Dispose() { try { Directory.Delete(Path, true); } catch { } }
 }
 
-public class SaveTests(ITestOutputHelper output)
+public class SaveTests
 {
     private static SaveHeader Header(long secs = 1000, bool ironman = false) => new()
     {
