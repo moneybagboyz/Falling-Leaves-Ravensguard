@@ -72,7 +72,7 @@ Stored per tracked person as a sorted list `(proficiencyId, Pm 0..1000)` (about 
 
 ## 4. Rules
 
-### 4.1 The recipe list (33; times are attended minutes/hours of the crafter, unattended in the notes)
+### 4.1 The recipe list (34; times are attended minutes/hours of the crafter, unattended in the notes)
 | # | Id | Cat | Skill (diff) | Key inputs (alternatives with `/`) | Tools / station | Output | Notes |
 |---|---|---|---|---|---|---|---|
 | 1 | `kindle_fire` | Fire | Forestry (5) | tinder 0.05 kg (straw/hay/oak_bark) + firewood 0.5 kg | fire_starting 1 (or level 0 bow drill, x2 time, fail +20%) | lit fire (fuel 0.5 kg) | 3 min; success per weather (travel spec 4.3); known by all; ash 0.02 kg |
@@ -140,7 +140,7 @@ For an unattended step starting at hour `S` with `time h`, `deadline_h` and `gra
 Recipes have `culture` and `secret: guild` flags; Phase 3 stores them and shows "taught only in the guild" but guild enforcement is Phase 6.
 
 ### 4.7 The crafting screen
-- **Open:** **N** (Make, new binding in the world context, to be conflict-checked), Q on a workstation (filters to its qualities), Q on an inventory item ("What can I make with this?", "How is this made?").
+- **Open:** **N** (Make, new binding in the world context; checked against the §2.8 tables for World, CombatStance, CalledShot and Build: N is unused in all of them, and the other Phase 3 world keys are Y for autopilot and O for the mounted layer, so there is no clash; the consolidated table is in the Phase 3 overview section 5A), Q on a workstation (filters to its qualities), Q on an inventory item ("What can I make with this?", "How is this made?").
 - **Layout** (Cataclysm-style): left, search box and category tabs (Fire, Food, Medical, Cloth, Craft, Smith, Practice); middle, the list with colour markers (green = can make now, amber = missing something you can get, grey = known but not possible, "?" = unknown, hidden by default); right, the detail: components with alternatives (the chosen one bold, others listed, have/need counts and which container they are in), tool qualities (have/need, where from), workstation, light need vs available, skill (yours vs difficulty), proficiencies (your %, time and skill effect), time (attended and elapsed), **expected quality** (computed as the distribution of `score` over the 41 rolls: for example "Poor 24%, Common 73%, Fine 2%"), failure chance and waste, byproducts, effort.
 - **Actions:** Craft (1), Craft batch (n), Queue (adds a `Craft` job for you or a worker), Pin, Resume (list of unfinished jobs nearby). **Nearby containers and furniture** within 6 m are used automatically for components and tools; a "what's missing" list highlights alternatives you could use.
 - Pressing Craft starts the job: progress bar per step, Esc pauses (progress kept), accelerate with 2-4 (when no hostiles).
@@ -160,7 +160,7 @@ LODBridge: a `CraftJob` is a record with a `Store`; promote/demote leaves it as 
 | 0x223 | craft quality roll (exists) | crafter, output serial |
 | 0x360 | failure roll at the critical step | crafter, jobId, step |
 | 0x361 | byproduct chance rolls (ash, offcuts) | job |
-| 0x362 | learning by watching | person, recipe |
+| 0x362 | learning by watching | person, recipe (rolled once when the watch hours are reached; no time key) |
 No `float`: durations in game seconds, permille factors, integer division with floor. Content ordering by ordinal id. Recipe database dense ids by ordinal string order (overview 2.2).
 
 ## 6. UI and controls
@@ -187,12 +187,13 @@ N makes the screen (Esc closes), Q on stations and items. Hotbar button "Make". 
 | K-16 | Screen: expected quality list equals the simulated one over 10,000 seeds (within 1%) | pass |
 | K-17 | Conservation: craft 1,000 random recipes with failures and ruin | `MassLedger` and `Store` totals exact (waste and ruined goods counted) |
 | K-18 | Determinism: replay a recorded day of crafting | identical item ids, qualities and stock |
+| K-19 | Disassembly: a `sew_shirt` result (recorded components `cloth_linen` 1,180 g and `yarn` 20 g), `decomp: true`, Tailoring difficulty 20 | at Tailoring 10 (`>= difficulty - 10`) the disassembly is allowed and the recipe is learnt; at 9 it is refused. Parts returned at 70% by mass with floor: linen 826 g, yarn 14 g; the other 360 g goes to the `waste` stock (rags), so input mass 1,200 g = 840 + 360 and `MassLedger` is exact. Byproducts only if the recipe lists them |
 
 ## 8. Open questions for the user
 1. **Recipe count and content depth:** 34 recipes now (plan: about 30). Default as listed; more arrive with Phase 5.
 2. **Crafting speed-up:** crafting runs at the chosen game speed; attended steps allow up to 4x (8x blocked because the crafter must watch the work). Default as written.
 3. **Skill additions:** `Tailoring, Surgery, Speech, Athletics, Tactics, Stealth, Lockpicking` appended to `Skill` (plan skill list). Default accept.
-4. **Key for crafting:** N is free in the world map; the plan's key list has no crafting key. Default N.
+4. **Key for crafting:** N is confirmed free in every context active with the world context (plan section 2.8 tables; see the overview section 5A). Default N.
 5. **Food quality:** food goods have no tier (yield only); alternative: food quality affects mood. Default yield only.
 
 ## 9. Budgets

@@ -119,7 +119,7 @@ First F8, first crash prompt or first "Finish session": a consent screen shows t
 | Background | heartbeat thread (1 Hz), log writer thread |
 
 ## 5. Determinism
-No RNG streams are added (the diagnostics code draws none). The replay tooling relies on the existing counter-based RNG keyed by `(seed, tick, entity, stream)`, so no RNG state needs saving. New hash kinds `TalkHash`, `CraftHash` use the same SHA-256 of sorted rows as `EconomyHash` (integers only). Replay output is identical on Windows and Linux for the same build (CI job `replay-x-os`: record on Linux, replay on Windows and vice versa).
+No RNG streams are added (the diagnostics code draws none). The replay tooling relies on the existing counter-based RNG keyed by `(seed, tickKey, entity, stream, draw)`, where the Phase 3 `tickKey` is always a game-time window (overview section 5), so no RNG state needs saving and a replay at a different speed draws the same values. New hash kinds `TalkHash`, `CraftHash` use the same SHA-256 of sorted rows as `EconomyHash` (integers only). Replay output is identical on Windows and Linux for the same build (CI job `replay-x-os`: record on Linux, replay on Windows and vice versa).
 
 ## 6. UI and controls
 - **F8** anywhere (`report_bug`, shown in the controls overlay and on the pause menu as "Report a problem"). **Report screen** layout as 4.3; a status bar shows the zip size.

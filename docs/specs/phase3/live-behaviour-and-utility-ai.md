@@ -59,7 +59,7 @@ New in this file: `Ravensguard.Sim.Behaviour` (`UtilityBrain`, `NeedState`, `Sch
 
 ### 3.3 `Reservation` (`ReservationTable`)
 `Key` = `(ReserveKind, ulong id)` where kinds are `Bed, Tile, Station, Item, Stock, Cart, Animal, Seat`. Value = `(holder person index,
-jobId, expiresTick)`. Expiry is in sim ticks (20 per real second at 1x; one tick is 1 game second at 1x).
+jobId, expiresGameSec)`. Expiry is in game seconds, not sim ticks (one tick is 1 game second at 1x and 8 at 8x), so a reservation lapses at the same game time at any speed.
 
 ### 3.4 Content: `content/base/behaviour/utility.jsonc`
 ```jsonc
@@ -67,6 +67,7 @@ jobId, expiresTick)`. Expiry is in sim ticks (20 per real second at 1x; one tick
   "decision_period_ticks": 20,           // 1 Hz real at 1x; staggered by personIdx % 20
   "commit_bonus_pm": 150, "noise_pm": 20, "schedule_bonus_pm": 400,
   "needs": {
+    "hunger_eat_hours": 13,              // the single auto-eat threshold, shared with travel and autopilot
     "hunger":  { "from": "hours_since_meal", "curve_pm": [[0,0],[4,100],[8,400],[12,800],[14,1000],[16,1300]] },
     "fatigue": { "from": "fatigue_pm",       "curve_pm": [[0,0],[500,100],[800,500],[1000,1000]] },
     "social":  { "from": "social_pm",        "curve_pm": [[0,0],[600,150],[1000,600]] },
@@ -104,7 +105,7 @@ Anchor grammar: `sunrise`, `sunset`, `noon`, `HH:MM`, plus or minus `H:MM`, `min
 |---|---|---|
 | Fatigue | awake: `+62` permille per game hour (1000 over 16 h); asleep in a bed: `-125` per game hour (empty in 8 h); asleep on ground without bedroll: `-75`; resting awake: `-20` | `FatiguePm` is updated by the abstract daily slice for abstract people (hourly by `Action`), and by the live tier every 20 ticks for live people; same constants |
 | Social | alone: `+25` per game hour; in conversation or at a tavern table: `-150` per game hour | |
-| Hunger | `hours_since_meal` from `LastMealHour`; eating itself stays in `HouseholdNeeds` (abstract) and in the Eat action (live) | the abstract daily slice remains the only writer of `NutritionCd` |
+| Hunger | `hours_since_meal` from `LastMealHour`; eating itself stays in `HouseholdNeeds` (abstract) and in the Eat action (live) | the abstract daily slice remains the only writer of `NutritionCd`. **The one auto-eat threshold is `hunger_eat_hours = 13`** (in `utility.jsonc`): from that hour a person with food at hand eats, because Eat scores 900 and ties a Work block. The travel `Hunger` interrupt, camp meals and autopilot read this same constant; no spec keeps its own number |
 | Warmth | `cold_stress_pm` comes from `clothing-warmth-exposure.md` (insulation against ambient) | |
 | Safety | `threat_pm` = sum over hostile or armed-unknown persons within 25 m, weighted by the Phase 4 threat rules; Phase 3: bandits, wild animals, fire within 15 m | |
 Live people read nothing from the economy tables directly: they read `NeedState` filled from the person's columns and the last published snapshot.
@@ -114,7 +115,7 @@ Live people read nothing from the economy tables directly: they read `NeedState`
 score(a) = (sum_i w_ai * curve_i(x_i)) / (sum_i w_ai)            // permille, integer, curves are piecewise-linear tables
          + schedule_bonus_pm          if a matches the current schedule block
          + commit_bonus_pm            if a == current Action and now - ActionSince < commit_min(a)
-         + noise                      in [-noise_pm, +noise_pm], DetRng stream 0x300, key (tickKey/20, personId, draw = actionIndex)
+         + noise                      in [-noise_pm, +noise_pm], DetRng stream 0x300, key (GameSec / 20, personId, draw = actionIndex)
          * gate(a)                    0 if the place the action needs does not exist (no bed, no food, closed workplace), else 1
 best = argmax score, ties by lower ActionKind then lower place id
 ```
@@ -198,11 +199,11 @@ Conservation: the person's `Pack` stock rows, reserved stock lots, the job escro
 New streams (proposed; overview of Phase 3 table, range 0x300..0x3FF):
 | Stream | Use | Key |
 |---|---|---|
-| 0x300 | utility noise and ties | person, `draw = actionIndex` |
-| 0x301 | job claim tie-break (same hour, two claimants) | job |
-| 0x302 | bed fallback spot | person |
-| 0x303 | routine job generation | settlement |
-Live decisions are keyed by `tickKey = tick / 20` so a person's choice does not depend on the stagger offset; processing order is ascending person index; claims are resolved at barriers, never in thread order. No `float`.
+| 0x300 | utility noise and ties | `GameSec / 20`, person, `draw = actionIndex` |
+| 0x301 | job claim tie-break (same hour, two claimants) | game hour, **job**, `draw = claimant person index` |
+| 0x302 | bed fallback spot | game day, person |
+| 0x303 | routine job generation | game day, settlement |
+Live decisions are keyed by `tickKey = GameSec / 20` (a 20-game-second window, never the live tick counter, so 1x and 8x draw the same values; overview section 5) and a person's choice does not depend on the stagger offset. **0x301 is keyed by the job, not the person**: a claim is a contest for one job, so each claimant's rank is `Draw(0x301, hour, jobId, claimantIdx)` and the lowest rank wins. The result does not depend on how many people claim or in what order they are processed; autopilot claims use the same key; processing order is ascending person index; claims are resolved at barriers, never in thread order. No `float`.
 
 ## 6. UI and controls
 - **Q on a person** (everything you can do): "What are you doing?" shows the explanation string and the job. **E** on the innkeeper or reeve: "Any work?" opens the job list. A board (E on a post) lists up to 24 jobs with pay, distance, deadline and a risk tag.
@@ -216,7 +217,7 @@ Live decisions are keyed by `tickKey = tick / 20` so a person's choice does not 
 | L-1 | Lat 480, day 23 (midsummer): sunrise 03:59, sunset 20:01 (day 16:03). Outdoor worker | wake 02:29, work 03:29 to 14:29 (11 h cap), sleep from 17:59 |
 | L-2 | Lat 480, day 53 (midwinter): sunrise 08:02, sunset 15:58 (7:57) | work 07:32 to 16:28 (8:56), wake 06:32, sleep from 21:02 (8.5 h + 1 h winter) |
 | L-3 | Equinox (day 8), 720 min | sunrise 06:00, sunset 18:00, wake 04:30, work 05:30 to 16:30 (11 h cap), sleep from 20:00 |
-| L-4 | Scoring, noise 0, Work block active (duty 500 + 400 schedule = 900), not committed | hunger 12 h: Eat 800 < 900, keeps Work; 13 h: 900 = 900, ties go to the need-driven action, Eat; committed (1,050): Eat wins from 14.5 h |
+| L-4 | Scoring, noise 0, Work block active (duty 500 + 400 schedule = 900), not committed; `hunger_eat_hours` = 13 | hunger 12 h: Eat 800 < 900, keeps Work; 13 h: 900 = 900, ties go to the need-driven action, Eat; committed (1,050): Eat wins from 14.5 h |
 | L-5 | Hysteresis: Work started 10 min ago (900 + 150 = 1,050), Socialise 1,000 | stays Work; at 31 min the bonus is gone, Work 900 < 1,000 and Socialise wins |
 | L-6 | Beds: dwelling with `bed`, `bunk` (2), `pallet`; `Beds = 4` | cells assigned 0: bed, 1-2: bunk lower/upper, 3: pallet, stable across runs |
 | L-7 | Cross-floor: 100 residents, bed at z = 1, work at z = 0, 3 game days | every resident in bed cell in the sleep block on each night, in workplace within 5 min of block start; 0 stuck |

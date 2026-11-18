@@ -58,8 +58,8 @@ New code: `Ravensguard.Sim.Onboarding` (`OnboardingScript`, `StartSiteFinder`, `
 Every hint has a Codex page (`rule.*`), generated from `CodexRules` where it is controls text and authored where it is a rule (cold, weight, horses, jobs).
 
 ### 3.3 Controls overlay (`?`)
-`ControlsOverlay` builds from `InputDefs.All` filtered by the **current context** (World, CombatStance, CalledShot, Build, plus Phase 3's new contexts `Dialogue`, `Trade`, `Crafting`; other Phase 3 screens use `Menu`) and shows a table: action, key, mouse. It is a view of the same table that CI conflict-checks, so it cannot disagree with the bindings. A footer links to the Codex rule page (`rule.controls.<context>`). Opening it pauses the game in single-player (not in Ironman? It also pauses: the overlay is never a cheat), Esc or `?` closes.
-New bindings in Phase 3 (all added with their context, duplicates rejected by CI): world `N` (make) and `T` (travel here from the map; `T` is also called shot in the combat-stance context, which is a different context, so no conflict; the CI check decides); `Z` stays sneak (sleeping is a Q menu verb on a bed); Dialogue `1-9`, `Enter`, `Esc`; Trade `Tab`, `N`, `Enter`, `Esc`, `Shift/Ctrl` quantity modifiers; Crafting `/`, `F`, `Enter`, `Esc`.
+`ControlsOverlay` builds from `InputDefs.All` filtered by the **current context** (World, CombatStance, CalledShot, Build, plus Phase 3's new contexts `Dialogue`, `Trade`, `Crafting`, `Map` and the `Mounted` layer; other Phase 3 screens use `Menu`) and shows a table: action, key, mouse. It is a view of the same table that CI conflict-checks, so it cannot disagree with the bindings. A footer links to the Codex rule page (`rule.controls.<context>`). Opening it pauses the game in single-player (not in Ironman? It also pauses: the overlay is never a cheat), Esc or `?` closes.
+New bindings in Phase 3 (all added with their context; CI rejects a duplicate inside a context and a clash between contexts that are active together). The single consolidated table is in the Phase 3 overview section 5A; in short: world `N` (make) and `Y` (autopilot panel); a `Mounted` layer with `O` (walk toggle); a Map screen where `Enter` is "travel here" for the selected place. `T` stays called shot and `Z` stays sneak (plan section 2.8); "travel here" is a Q-menu, order-wheel and Map verb, and sleeping is a Q menu verb on a bed. Dialogue `1-9`, `E`, `Esc`; Trade `Tab`, `N` (price notebook), `Enter`, `Esc`, `Shift/Ctrl` quantity modifiers; Crafting `/`, `F`, `Enter`, `Esc`. Modal screens (Dialogue, Trade, Crafting, Map, Menu) replace the world keys while open, so a key may repeat between them and the world.
 
 ### 3.4 Practice yard (`blueprints/practice_yard.jsonc`)
 A blueprint in the Phase 1 text format: a fenced 14 x 10 m yard, three training dummies (a wooden post with a pad: `training_dummy` furniture with material hit points), a weapon rack (blunted practice weapons: `practice_sword`, `practice_spear`, `practice_staff`, each `x0.5` momentum, edges counted as blunt, like tournament weapons §4A.3), a bench, a water trough, a notice board. Placed by settlement generation in every **town** (population >= 1,000) and at lord's manors with a retinue. A **trainer** NPC (occupation `Guard` or an `old_sergeant` mentor) stands in the yard from 08:00 to 16:00.
@@ -153,7 +153,7 @@ The finder iterates cells in ascending index order; the start date search is a p
 | O-12 | Mentor dialogue validation | each mentor has 20-50 lines, every `goto` reachable, every key in `en.csv`, effects in the vocabulary |
 | O-13 | Save and load mid-script | step states and loan rows restored; hint seen flags unaffected |
 | O-14 | Tester measure (manual, `docs/playtests/`) | per tester: time to step 3, time to step 6, number of times the `?` overlay or Codex was opened, number of "stuck" markers, answer to "Did you understand why that happened?" |
-**Done-when metric for testers (Phase 3):** of at least 5 testers over at least 3 origins, 4 or more complete steps 3 and 6 with no observer help, with at most 1 stuck marker each.
+**Done-when metric for testers (Phase 3):** the plan's 2 to 3 private testers (plan section 6), on different origins where possible. Every tester completes steps 3 and 6 with no observer help and at most 1 stuck marker, **or** each stuck point is written into `docs/reviews/phase-3.md` with its cause. There is no minimum of 5 testers; the bot (O-4) covers all seven origins and 3 seeds.
 
 ## 8. Open questions for the user
 1. **Default hint level:** `full` for the first hour, then `minimal`. Alternative: always `minimal`. Default as written.
@@ -161,7 +161,7 @@ The finder iterates cells in ascending index order; the start date search is a p
 3. **The loaned horse:** loan of 3 game days (about 3.6 real hours at 1x). Alternative: a gift of a poor mule. Default loan.
 4. **Fair-weather start:** shift the start by up to 10 days to avoid storms in the first 24 hours. Alternative: no shift, brutal as designed. Default shift (it is placement, like the war and lair rule).
 5. **Practice yard before Phase 4:** uses the Phase 0 melee spike. Default accept; the plan places the yard in Phase 3.
-6. **New key N and T:** conflict-check in CI. Default as listed.
+6. **New keys N, Y, O and Map Enter:** conflict-checked in CI against the overview section 5A table. `T` and `Z` are not reused. Default as listed.
 
 ## 9. Budgets
 | Item | Budget |

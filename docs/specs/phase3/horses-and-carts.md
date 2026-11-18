@@ -99,9 +99,9 @@ mass, cargo kg and L, axle load limit, wheel count, turning radius, hitch slots,
 ### 4.1 Mounting, gaits, stamina
 - **Mount:** E on a horse within 2 m; takes 2 s (40 ticks), cancelable; requires a saddle on the animal (a `saddle` item, 5 kg, equipped to the animal slot; bareback is allowed for `Riding >= 20`: speed x0.8, no saddlebags) and `TrainedPm >= 700` unless the rider tames it (`Riding` and `Husbandry`: `tame_chance_pm = 200 + 4 x Riding + 2 x Husbandry - 3 x temper`, one try per 10 game minutes, a failed try throws the rider, stun 3 s).
   Unowned or other-owned horses: a prompt "This is Bram's mare" (theft is a Phase 6 crime). **Dismount:** E when mounted (or Q > Dismount) takes 1 s; the horse then follows if `TrainedPm >= 700` and the squad order is Follow, else stands tied or free.
-- **Gaits:** `Walk 2.2 m/s`, `Trot 5.0`, `Gallop 12.0` (plan numbers; riding horse). Mounted movement uses the world keys: W/A/S/D move, **default Trot**, **Shift held = Gallop**, **Z toggled = Walk**. Gait changes take 1 s to blend.
+- **Gaits:** `Walk 2.2 m/s`, `Trot 5.0`, `Gallop 12.0` (plan numbers; riding horse). Mounted movement uses the world keys: W/A/S/D move, **default Trot**, **Shift held = Gallop**, **O toggled = Walk** (`walk_toggle`, a key of the `Mounted` input layer). `Z` stays sneak and does nothing while mounted; Shift is the world `sprint` action, shown as gallop while mounted. Gait changes take 1 s to blend.
 - **Stamina (short term):** pool 10,000 sp. Cost per metre: trot 2, gallop 21 (so trot costs 10 sp per real second at 1x and drains in 1,000 s = 16.7 real minutes; gallop 250 sp/s: 40 s of gallop = 480 m). Regen per game second: walking +5 (100 sp per real second at 1x), resting (standing, tied) +15 (300 per real second). Costs are per metre and regen per game second, so 8x does not change the result per distance.
-  Below 1,500 sp the horse slows to trot; at 0 gallop is refused and trot drops to walk; **forced exertion at 0** (rider keeps spurring: Shift held) risks injury: `30 pm per second` roll, stream 0x350, with a mild lameness result.
+  Below 1,500 sp the horse slows to trot; at 0 gallop is refused and trot drops to walk; **forced exertion at 0** (rider keeps spurring: Shift held) risks injury: `30 pm per 20-game-second window` (one real second at 1x) roll, stream 0x350 keyed `(GameSec / 20, animalId)`, with a mild lameness result.
 - **Load:** rider plus carried gear counts against `carry_kg` (palfrey 130). `load_ratio = (rider + gear) / carry_kg`; speed factor `1 - 0.5 x max(0, load_ratio - 0.8)/0.4` and stamina cost x`(1 + max(0, load_ratio - 0.8))`; above 1.2 the horse refuses (walk only at 1.2, none above).
 - **Long term:** `WorkFatiguePm` rises `1 permille per 40 m` at trot or gallop on roads (+50% off road, +100% in mud) and `+ 200 pm if no water for 8 game hours`; it falls 500 pm per game night of rest with feed. Above 800 the horse is "tired": speed x0.8 and gallop refused; at 1000 it will not carry a rider that day. Typical day: 40 km at trot and walk.
 - **Riding skill** gains from distance (`d = 60`, one use per game minute at trot, 80 at gallop) and trick uses (jumping a hedge, Phase 4). Skill `Riding`: below 30 an untrained rider falls when a horse spooks (`fall_pm = 400 - 8 x Riding` per spook).
@@ -110,7 +110,7 @@ mass, cargo kg and L, axle load limit, wheel count, turning radius, hitch slots,
 ### 4.2 Fodder, water, shoes, lameness
 - **Feed:** per game day a working horse needs `work_hay_kg + work_oats_kg` (palfrey 8 + 2.5); idle 7 hay. Grazing replaces hay at `1.0 kg per hour` up to 8 hours on a pasture, meadow or lush grass tile (taken from the tile pasture stock, Phase 2 grazing); oats 1 kg = 1.8 kg hay equivalent. `FeedDays` falls by `1/needed_fraction`; below 1.0 the horse is weak (speed x0.85), at 0 `HealthPm` -50 per day. Hay and oats are goods (`hay` exists, `oats` exists) in stable `Store`s or the saddlebags (feed bag).
 - **Water:** 35 L a day; drinking at a river, trough or well: 10 L per 30 s; `WaterPm` falls to 0 over 24 game hours without drink; dry horses add the fatigue above.
-- **Shoes:** 4 hoof states, 1000 new. Wear `1000 / shoe_life_km` permille per km on road (`600 km`), x2 on rough or mud, x0.2 on grass. A **shoe is lost** at `shoe_loss_ppm_per_100m = 5` on roads and `40` in deep mud or rock (stream 0x350 per 100 m). Reshoeing needs a farrier (smith with `hammering 2`), `1.6 kg iron_bar + 0.1 kg nails`, 30 game minutes, price about 12 crowns at a smithy; the hero can do it with `Smithing >= 25` and tools (recipe in basic crafting).
+- **Shoes:** 4 hoof states, 1000 new. Wear `1000 / shoe_life_km` permille per km on road (`600 km`), x2 on rough or mud, x0.2 on grass. A **shoe is lost** at `shoe_loss_ppm_per_100m = 5` on roads and `40` in deep mud or rock (stream 0x353 keyed `(animalId, draw = odometer_m / 100)`, so it depends on distance, not on time scale). Reshoeing needs a farrier (smith with `hammering 2`), `1.6 kg iron_bar + 0.1 kg nails`, 30 game minutes, price about 12 crowns at a smithy; the hero can do it with `Smithing >= 25` and tools (recipe in basic crafting).
 - **Lameness:** causes: hoof state < 200 on hard ground for more than 3 km (+1 level), forced exertion (+1), a stone bruise from a lost shoe (+1 per 2 km on road), Phase 4 wounds. Level 1 mild: speed x0.7, no gallop; level 2 severe: walk only, x0.4; level 3: unusable, the horse is led. Recovery: rest in a stable with feed, -1 level per 3 game days (a good farrier or healer -1 level at once: `Husbandry >= 30`). Horses with level 3 for 15 days are put down by NPCs (they become `Dead`, butchery meat).
 - **Stabling:** at an inn: `stable_fee_mites_per_night = 20` including hay (market-posted, per settlement); at home, a lot with a `stable`/`barn` stall (`Stable`); NPC horses sleep in stalls at night per schedule.
 
@@ -148,12 +148,12 @@ speed_mps   = base_speed(vehicle template) x f(ratio)/1000 x gait_cap(slowest an
 | Deep snow | 200 (sledge 90) | |
 | Ice | 15 (wheels slip: speed cap x0.7; animal slip risk) | |
 | Sand / gravel | 150 | |
-`slope_pm` = rise per 1,000 (5% grade = 50); `wind_pm` for covered wagons 10 in strong wind. `surface(cell, time)` is a pure function of `RegionWeather` history (rain and snow of the last 24 game hours, temperature, river-high) and tile type; it feeds both tiers.
+`slope_pm` = rise per 1,000 along travel (5% grade = 50; negative downhill; `F_req` is clamped at 0 so a downhill never pushes speed above the base speed); `wind_pm` for covered wagons 10 in strong wind. `surface(cell, time)` is a pure function of `RegionWeather` history (rain and snow of the last 24 game hours, temperature, river-high) and tile type; it feeds both tiers.
 For people and riders (no force model) the plan's multipliers apply: rain on roads x0.7, fields x0.5, snow x0.6..0.3, mud x0.6, from the same `surface()` state.
 - **Examples (golden C-1 to C-6):** a cart (165 kg) with 500 kg on dry road with one palfrey (not ideal: pull 530 N) `F_req = 665 x 9.81 x 0.045 = 293.6 N`, ratio 554 -> full 2.5 m/s; wet road (70): 456.7 N, ratio 862 -> `1000-262 = 738`: 1.85 m/s (about x0.74, the plan's x0.7); mud (170): 1,109 N, ratio 2,092 -> 0 (cannot move).
 
 ### 4.6 Getting stuck
-- **When:** on a surface with `crr_pm >= 170` the vehicle rolls a stuck check every 20 m: `stuck_pm = clamp(ratio_pm - 700, 0, 600)/2` (0..300) x surface (170: 1.0, 260: 1.5), stream 0x351 keyed `(tick/20, vehicleId, draw = 20 m segment)`. A ratio over 1,300 is stuck immediately. Stuck means speed 0 and `ratio` is evaluated with `crr_pm x 1.5` to move again.
+- **When:** on a surface with `crr_pm >= 170` the vehicle rolls a stuck check every 20 m: `stuck_pm = clamp(ratio_pm - 700, 0, 600)/2` (0..300) x surface (170: 1.0, 260: 1.5), stream 0x351 keyed `(game hour, vehicleId, draw = odometer_m / 20)`, so the roll belongs to a place on the road and is the same at any speed. A ratio over 1,300 is stuck immediately. Stuck means speed 0 and `ratio` is evaluated with `crr_pm x 1.5` to move again.
 - **Getting out (all can combine):** (1) **push:** each person adds `push_n = 6 x strength` N (strength 50: 300 N) within 3 m behind or sides; (2) **unload:** drop cargo (drag from the bed to the ground, 5 kg per game second per person) lowering mass; (3) **dig out:** a shovel (digging quality 1) removes the mud under a wheel: -20% `crr` for 10 game minutes of work; (4) **add a team:** hitch another animal; (5) **wait** for dry weather (the mud state decays 24 game hours after rain). Free when `F_pull + pushers >= F_req(stuck)`; whoever frees it gains `Husbandry` and `Strength` activity.
 - **Abstract caravans** use the same ratio: a caravan whose planned leg has `ratio_pm > 1300` is delayed by a "stuck" duration rolled by stream 0x351 (3-18 game hours) and may be lost or turn back by Phase 2 rules; chronicle cause `Weather` (mud).
 
@@ -173,14 +173,18 @@ LODBridge: promotion spawns drivers, animals and vehicles together (`LiveBinding
 ## 5. Determinism
 | Stream | Use | Key |
 |---|---|---|
-| 0x350 | forced-exertion injury, shoe loss, lameness onset, taming success | animal, tick/20 |
-| 0x351 | stuck check and abstract stuck duration | vehicle |
+| 0x350 | forced-exertion injury, lameness onset | `GameSec / 20`, animal |
+| 0x351 | stuck check (live) and abstract stuck duration | game hour, vehicle, `draw = odometer_m / 20` (live); vehicle, leg index (abstract) |
 | 0x352 | temper and breed jitter at materialisation | herd id, serial |
+| 0x353 | shoe loss | animal, `draw = odometer_m / 100` |
+| 0x354 | taming success | `GameSec / 600` (one try per 10 game minutes), animal, `draw = rider person index` |
+
+All keys are game time or distance, never the live tick counter, so 1x and 8x rolls match (overview section 5). The old 0x350 mixed four unrelated rolls; shoe loss and taming now have their own ids so a change to one roll order cannot shift another.
 Integer force and speed maths; `VehicleMath` takes no float; the `surface()` function depends only on the deterministic weather and tile data; animals' ids come from the allocator of the region (`E9`).
 
 ## 6. UI and controls
 - **E on a horse:** Mount (default action). **E when mounted:** Dismount. **Q on a horse:** Mount, Lead, Tie/Untie, Feed, Water, Inspect (health, shoes, fodder, stamina), Hitch to cart, Buy/Sell, Follow/Stay. **Q on a cart:** Drive, Load, Unload, Hitch, Inspect, Sit.
-- **Mount bar** (mounted): stamina bar (green/amber/red), gait icon, fodder, shoes icons, `Lame` flag; speed shown in m/s and km/h. Shift gallop, Z walk, default trot. **Cart bar:** load vs capacity, axle load %, pull ratio %, speed per current surface, stuck warning.
+- **Mount bar** (mounted): stamina bar (green/amber/red), gait icon, fodder, shoes icons, `Lame` flag; speed shown in m/s and km/h. Shift gallop, O walk, default trot. **Cart bar:** load vs capacity, axle load %, pull ratio %, speed per current surface, stuck warning.
 - **Auto-travel** while mounted/driving uses the same gaits (trot, or the cart's best) and the 8x interrupts for `Horse`, `CartStuck`.
 - Hints: first mount ("E to dismount, Shift to gallop; horses tire"), first mud ("Carts struggle in mud: unload or push"), first horse tired.
 
@@ -189,7 +193,7 @@ Integer force and speed maths; `VehicleMath` takes no float; the `surface()` fun
 |---|---|---|
 | H-1 | Gallop: palfrey, full stamina | 252 sp/s; slows to trot at 1,500 sp after 33.7 s (404 m); the pool would be empty after 39.7 s (476 m) |
 | H-2 | Trot: 1,000 s at 5 m/s | 5 km on a full pool (2 sp/m x 5,000 m = 10,000); walking regen 5 sp per game s = 100 per real s |
-| H-3 | 8x invariance: ride 8 km at trot at 1x and at 8x | the pool empties at 5.0 km (trot refused at 0 sp, resumes above 1,000 sp: hysteresis); the rest is walked at 2.2 m/s; positions at each game time identical at both multipliers |
+| H-3 | 8x invariance: ride 8 km at trot at 1x and at 8x | the pool empties at 5.0 km (trot refused at 0 sp, resumes above 1,000 sp: hysteresis); the rest is walked at 2.2 m/s; positions at each game time identical at both multipliers, and the draws of streams 0x350 and 0x353 (keys on game seconds and distance) are identical draw for draw |
 | H-4 | Load: rider + gear 125 kg on a palfrey (carry 130) | ratio 0.96 -> speed factor `1 - 0.5 x 0.16/0.4 = 0.8` (4.0 m/s trot), stamina x1.16 |
 | H-5 | Cart on dry road, 665 kg total, 1 palfrey | `F_req` 293.6 N, ratio 554, 2.5 m/s (matches Phase 2 `speed_real_mps`) |
 | H-6 | Same on wet road (70) | 456.7 N, ratio 862, `f = 738`, 1.85 m/s |
@@ -204,6 +208,7 @@ Integer force and speed maths; `VehicleMath` takes no float; the `surface()` fun
 | H-15 | Fords: river high 1 day | wagon refused, rider crosses; 2 days: rider refused too; 3: walkers |
 | H-16 | Overload: cart (1 axle, limit 700 kg, mass 165 kg) | cargo 500: gross 665 (95%) speed x1.0; cargo 560: 725 (104%) speed x0.8, wear x3; cargo 760: 925 (132%) hitch refused |
 | H-17 | Save: animal rows, hitched state, cargo stores | round-trip byte-identical; replay identical |
+| H-18 | Slope: cart 665 kg total, one palfrey (530 N), dry road (45), `F_req = 665 x 9.81 x (45 + slope)/1000`; slopes +30, +50 (uphill) and -50 (downhill) | +30: 489.3 N, ratio 923, `f = 677`, 1.69 m/s; +50: 619.7 N, ratio 1,169, `f = 374`, 0.93 m/s; -50: `crr + slope < 0` so `F_req` is clamped to 0, ratio 0, `f = 1000`, 2.5 m/s (downhill never exceeds base speed); the abstract `PathPlan` using the same signed grade per segment agrees with the live traversal within 1 s |
 
 ## 8. Open questions for the user
 1. **Horses in the economy:** palfrey price 480 crowns (137 craftsman days) makes a horse a major purchase, matching history. Default as written; the price solver may adjust.

@@ -74,7 +74,7 @@ Totals about 1,030 permille over all rows; only the eligible rows are normalised
 ## 4. Rules
 
 ### 4.1 When encounters happen
-- A leg is a stretch of hero movement outside a settlement plan rect and not inside a building. Every **10 game minutes of leg time** (not frames; so at 8x the check runs 8x as often per real second but the same per game hour) the director rolls with stream 0x340 keyed `(hourKey = game hour, heroId, draw = minute slot)`:
+- A leg is a stretch of hero movement outside a settlement plan rect and not inside a building. Every **10 game minutes of leg time** (not frames; so at 8x the check runs 8x as often per real second but the same per game hour) the director rolls with stream 0x340 keyed `(hourKey = game hour, heroId, draw = 10-minute slot 0..5)`:
   `p_pm = base(road tier) x night(x2 at night) x danger/500 x region_calm(x0.5 within 600 m of a settlement) x scale_first_days` where `base` = 28 pm (highway/paved), 40 (road), 55 (track), 70 (off-road), and cooldowns apply (at most one scripted encounter per 30 game minutes, and the same id not again within its cooldown).
 - Expected frequency on a road in a normal region (danger 300): `40 x 0.6 = 24 pm per 10 min` = 1 scripted encounter per 7 game hours (21 real minutes at 1x); an 8 km trip on foot (15 h) gives about 2 encounters, a night in a dangerous woodland about 1 per 3 h.
 - **Danger** (`RegionDanger`, pm 0..1000, recomputed daily per 2 km cell from records, never stored): `100 + 40 x vagrants per 1,000 residents + 300 if a Raid chronicle entry in the last 15 days within 10 km + 400 if war front within 20 km + 100 in a famine year + 50 at night`, capped at 1000.
@@ -83,28 +83,14 @@ Totals about 1,030 permille over all rows; only the eligible rows are normalised
 - **Safe first hours:** `scale_first_two_days_pm = 300` and ambush-type encounters are disabled in the first 2 game days of a new game and when the party has an escort contract from a mentor (`onboarding-v1.md`). The start rule (no start within 10 km of war or 3 km of a lair) is in onboarding.
 
 ### 4.2 Auto-travel at 8x with interrupts
-- **Start:** Q on the map or world > **Travel here** (or **T** on a map click, `autopilot` uses the same). The route is the HPA* road-graph path (road edges and tile paths; fords avoided if closed). The hero walks the path on the NPC movement code; the party follows in a column 2 m apart (`Follow` order), mounted members keep within 15 m; carts set the speed (horses-and-carts).
+- **Start:** Q on the map or world > **Travel here** (in the Map screen: **Enter** on the selected place; `T` is called shot and is not used here; autopilot uses the same verb). The route is the HPA* road-graph path (road edges and tile paths; fords avoided if closed). The hero walks the path on the NPC movement code; the party follows in a column 2 m apart (`Follow` order), mounted members keep within 15 m; carts set the speed (horses-and-carts).
 - **Speed gate:** 8x is allowed only if no hostile or unknown armed person is in view (vision range from `LightModel` and `HeroVision`), no party member has `threat_pm > 0`, the hero is not in combat stance, and no known hostile is within 200 m ahead on the path. Otherwise the clock drops to 1x and shows why ("Wolves in sight").
 - **At 8x:** game time x8, live ticks stay at 20 Hz (not multiplied); movement runs in sub-steps of 0.25 m (`LiveWorld`); the bubble contracts to a **40 m radius around the party plus a 400 m corridor ahead along the path** (radius 40 m): everything else stays abstract; a stranger in the corridor still promotes (so encounters are seen). The abstract tick keeps stepping every game hour.
 - **ETA:** speeds are real metres per real second at 1x, and the hero covers `speed x multiplier` per real second. `game_hours = path_m / (speed_m_s x 180)` (1 m/s at 1x covers 3,600/20 = 180 m per game hour) and `real_seconds = path_m / (speed_m_s x multiplier)`. The UI shows both: 8,000 m at 3 m/s is 14.8 game hours, 44 real minutes at 1x and 5.6 real minutes at 8x (plan section 1: "8 km is about 44 real minutes at 1x, 5.5 at 8x, about 15 game hours").
-- **Interrupts** (`InterruptBus`, shared with autopilot):
-| Kind | Trigger | Default | Notes |
-|---|---|---|---|
-| `Hostile` | hostile or unknown-armed in view, or encounter spawned | pause | clock to 1x |
-| `Attacked` | any damage to party | pause | |
-| `Weather` | state becomes thunderstorm, blizzard, heavy rain with ford ahead, heatwave | notify | travel may continue |
-| `Cold` / `Heat` | `cold_stress_pm > 400` or core below 36.00 / `heat_stress_pm > 400` | notify, pause at moderate | suggests shelter |
-| `Hunger` | `hours_since_meal >= 10` with food in pack | auto-eat (meal break 10 game minutes), notify when food runs under 1 day | |
-| `Fatigue` | `FatiguePm > 800` | pause ("camp needed") | |
-| `Dusk` | sunset minus 60 min | setting: continue / stop / make camp | default notify |
-| `Horse` | mount stamina < 20% or lame | pause | horses-and-carts |
-| `CartStuck` | cart cannot move 20 s | pause | |
-| `Lost`/`BlockedPath` | ford closed, tree down, gate closed | pause | re-plan offered |
-| `Companion` | party member left behind > 60 m for 30 s, wounded, or loyalty < 200 | notify | |
-| `Found` | landmark, shrine, corpse, forage ground within 25 m | notify | |
-| `Arrived` | destination within 3 m | pause | |
-| `Contract` | an offer from a person you pass, a toll, a ford ferry | pause | |
-Each kind has `pause | notify | ignore` in settings (`travel_interrupts`); `ignore` is not allowed for `Attacked`. The same table is used by autopilot (`autopilot-v1.md`) with its own per-directive defaults.
+- **Interrupts:** travel raises interrupts through `InterruptBus` and keeps **no list of its own**. The canonical list of kinds (names, count, triggers, default policies) is `autopilot-v1.md` section 3.2: one append-only `InterruptKind` enum and one policy type `Pause | Notify | Ai`. Travel is the source of the rows marked "travel" there. Travel-side behaviour that the table does not repeat:
+  - `Hostile` drops the clock to 1x in the same tick (V-6). `Dusk` follows the HUD setting continue / stop / make camp (default Notify).
+  - `Hunger` auto-eats at the shared `hunger_eat_hours` (13, `live-behaviour-and-utility-ai.md` 4.1) with a 10-game-minute meal break; this spec has no hunger number of its own.
+  - In manual play the `Ai` policy is not offered (the player is the AI). The old travel setting `ignore` is now `Notify` with the toast switched off (`quiet`); `quiet` is not allowed for `Attacked`. Settings key: `travel_interrupts`.
 - **Journey log:** `Journey { Start, Dest, DistM, GameHours, CoinSpent, Encounters[], FoodUsedG }` appended to the Journal at arrival; chronicle entry only for notable events.
 
 ### 4.3 Night camp
@@ -112,9 +98,9 @@ Each kind has `pause | notify | ignore` in settings (`travel_interrupts`); `igno
 - **Fire:** needs fuel (`firewood`, 5 kg per game hour burning, from the pack or gathered: gather 1.5 kg per game minute per person from woodland edge) and tinder + steel (recipe `make_fire`, basic crafting; skill-less success chance `700 + 3 x skill` pm in dry weather, `-300` rain/snow, `+200` with tinder dry). A lit fire gives light radius 12 m (`LightModel`), warmth `indoor_offset fire = +15 C` within 4 m (clothing spec), and a drying place. Fire attracts: bandits (`attract +200 pm danger`) and travellers; it keeps wolves away (animals need `Brave`).
 - **Shelter:** bedroll (rest rate `-100` fatigue per hour instead of `-75` on bare ground), lean-to (+3 C T_eff offset, rain proof, 25 min to build from 4 poles + cover), tent (+5 C, rain proof, windproof; a good `tent` is a Phase 3 item: 8 kg, 1 min to pitch per person); sleeping in a tent by a fire is `-125` per hour as in a bed.
 - **Cooking:** each cook uses basic-crafting recipes (`pottage`, `roast_meat`, `flatbread`, `boil_water`); a meal is eaten from the camp `Stock` or packs, **resetting `LastMealHour`**, eating 1.0 measure-equivalent per person-day as in Phase 2 (`food_measures_per_kg`), and creating `Familiarity +2` and `Loyalty +20` for companions who ate together (once per day). A cook with `Cooking` 40+ adds `Mood +5` ("a good meal"). Mass is conserved: eaten goods leave the stock rows.
-- **Sentries:** up to 3; each watch is a shift of 2 game hours (the hero sets it from the squad panel, or members volunteer by loyalty and fatigue: `Guard` action in utility AI). A sentry's detection of an approaching person or animal: sees a hostile at `min(vision, light radius + 10 m)` where vision is `120 m` by day, `30 m` moonlit, `18 m` by fire, `8 m` dark; `notice_pm = 400 + 6 x perception - 150 if FatiguePm > 600`, rolled once per second against each approacher, stream 0x344 keyed `(tick/20, sentryId, draw = approacherIdx)`. A noticed threat sets an alarm bark and wakes sleepers within 15 m (fatigue and sleep depth: a sleeper wakes if `noise_m < 6` or alarm). **Unwatched camps:** approachers reach the fire; sleepers wake at 4 m with 50% chance per second.
+- **Sentries:** up to 3; each watch is a shift of 2 game hours (the hero sets it from the squad panel, or members volunteer by loyalty and fatigue: `Guard` action in utility AI). A sentry's detection of an approaching person or animal: sees a hostile at `min(vision, light radius + 10 m)` where vision is `120 m` by day, `30 m` moonlit, `18 m` by fire, `8 m` dark; `notice_pm = 400 + 6 x perception - 150 if FatiguePm > 600`, rolled once per 20-game-second window (one real second at 1x) against each approacher, stream 0x344 keyed `(GameSec / 20, sentryId, draw = approacherIdx)`. A noticed threat sets an alarm bark and wakes sleepers within 15 m (fatigue and sleep depth: a sleeper wakes if `noise_m < 6` or alarm). **Unwatched camps:** approachers reach the fire; sleepers wake at 4 m with 50% chance per second.
 - **Companion talk:** after the meal, `Talk around the fire` (hero action, 20 game minutes) opens a conversation with any companions present. Each companion offers one topic per night, chosen by priority: (1) **ambition reveal** (`AmbitionKnown` false: the first 3 nights with that companion reveal it, also shown on the squad panel), (2) a **backstory** node (authored for unique companions, systemic template otherwise), (3) opinion on the day's events (a rumour or chronicle entry from the last 3 days), (4) banter. Effects: `Familiarity +6`, `Loyalty +50` once per night per companion, `Mood +5` for everyone at the fire, `SocialPm -150`. The hero may choose questions; Esc skips (no penalty, but no gain).
-- **Night events:** `camp_events.jsonc` rolls once per game hour in the camp's night hours (stream 0x344, keyed `(hour, campId)`): fox steals food (-1 day of one food stock, if unwatched), wolf visit (winter), a lost traveller asking for the fire, rain starting (fire out unless sheltered), storm omen, a bad dream (companion mood). About 12 events, weights by `danger` and watch.
+- **Night events:** `camp_events.jsonc` rolls once per game hour in the camp's night hours (stream 0x346, keyed `(game hour, campId)`): fox steals food (-1 day of one food stock, if unwatched), wolf visit (winter), a lost traveller asking for the fire, rain starting (fire out unless sheltered), storm omen, a bad dream (companion mood). About 12 events, weights by `danger` and watch.
 - **Breaking camp:** 10 game minutes; pack items return; the fire is doused or left (a lit unattended fire has `FireSpread` risk in dry grass in drought, Phase 5 fire sim uses it).
 
 ### 4.4 Foraging
@@ -157,23 +143,24 @@ Each kind has `pause | notify | ignore` in settings (`travel_interrupts`); `igno
 |---|---|---|
 | 0x340 | encounter roll and table choice | hero id, hour, minute slot |
 | 0x341 | encounter placement (cover tile choice, counts) | encounter instance |
-| 0x342 | forage poisoning, forage item mix | person, tick/200 |
+| 0x342 | forage poisoning, forage item mix | `GameSec / 200`, person, `draw = item index` |
 | 0x343 | hunting: animal spawn picks, snare catches | tile, hour |
-| 0x344 | sentry notice rolls; camp night events | sentry, tick/20; camp, hour |
+| 0x344 | sentry notice rolls | `GameSec / 20`, sentry, `draw = approacher index` |
 | 0x345 | fair events, contest results | settlement, day |
-The encounter outcome depends on game time and hero id only, never on frame rate or 8x vs 1x: the same journey gives the same encounters (test V-2).
+| 0x346 | camp night events (`camp_events.jsonc`) | game hour, camp |
+Every key is a game-time window (`GameSec` divided by 20, 200 or 3,600) or an entity or distance, never the live tick counter (overview section 5). The encounter outcome depends on game time and hero id only, never on frame rate or 8x vs 1x: the same journey gives the same encounters (test V-2).
 
 ## 6. UI and controls
 - **Map (M):** right-click or Q on a place > **Travel here**; route line, ETA (game hours, real minutes at 8x), food needs and "provisions for 3.2 days" check.
 - **Travel HUD:** a banner "Travelling to Oakford (6.1 km, 11 h)" with the interrupt icons, a **Stop** button (Space also pauses), and an "Auto-eat" and "Dusk" setting. **Esc** cancels. Speeds 1 2 3 4 as always; auto-travel forces 8x only when allowed.
 - **Camp (Q > Make camp):** a small panel: Fire (light, add fuel), Shelter (tent, lean-to), Cook, Watch (assign sentries), Talk around the fire, Sleep until dawn (8x if safe), Break camp. **Forage** and **Hunt** are Q verbs on terrain and animals; snares in the crafting list.
-- Controls overlay `?` shows the travel context (T travel here, Space pause, Z sneak). Hints: first long journey, first dusk, first camp, first forage.
+- Controls overlay `?` shows the travel context (Enter in the Map screen: travel here; Space pause; Z sneak; O walk toggle when mounted). Hints: first long journey, first dusk, first camp, first forage.
 
 ## 7. Tests (golden)
 | id | Case | Expected |
 |---|---|---|
 | V-1 | Table validation: 24 encounters; every `when` id in vocabulary, spawn archetypes exist, scripts exist; weights positive | load passes; mod with a bad condition fails with the file and id |
-| V-2 | Same seed, same 8 km road trip at 1x and at 8x (time-based checks) | identical encounter list (ids, game times, positions within 1 m) |
+| V-2 | Same seed, same 8 km road trip at 1x and at 8x (time-based checks) | identical encounter list (ids, game times, positions within 1 m); the draw logs of streams 0x340, 0x341, 0x343, 0x344 and 0x346 match draw for draw, because every key uses game seconds or hours |
 | V-3 | ETA: 8,000 m at 3 m/s jog | 2,667 real s (44.4 min) at 1x, 333 real s (5.6 min) at 8x; 14.8 game hours either way |
 | V-4 | Frequency: danger 300, road, 10,000 simulated 7 h legs | mean scripted encounters per leg 1.0 +/- 0.1; ambush-type encounters under 10% of all encounters |
 | V-5 | Safe start: first 2 game days, scale 300 pm | no ambush or highwayman encounter on 1,000 legs |

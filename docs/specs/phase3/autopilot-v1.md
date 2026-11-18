@@ -36,23 +36,34 @@ InterruptPolicy{ per InterruptKind: Pause | Notify | Ai }
 ```
 `DirectiveKind` (Phase 3): `Work, TradeRoute, Travel, Train, Guard, Escort, Rest` plus two stubs reserved for later phases: `Tend` (own fields and business; Phase 5) and `PursueAmbition` (Phase 6 content; v1 maps only `has_coin_at_least` to Work or TradeRoute and `has_proficiency` to Train, and raises `Blocked` for other step conditions).
 
-### 3.2 Interrupt kinds and defaults (shared `InterruptBus` with the travel spec; the Autopilot adds four)
-| Kind | Fires when | Default | `Ai` means |
-|---|---|---|---|
-| `Attacked` | damage to the person or party, or a hostile in view moving to attack | Pause (cannot be `Ignore`) | the NPC AI chooses Flee, Shelter or fight by utility (`safety` need), like any NPC |
-| `Threatened` | a hostile or unknown armed group within 60 m | Pause | Avoid/flee by utility |
-| `Injured` | `HealthPm` loss >= 15% or any bleeding wound | Pause | bandage (if pack has one), rest |
-| `LowFood` | food in pack and stores below 1 day | Notify | buy or eat or forage (Survive tier) within limits |
-| `LowMoney` | purse below `PurseReserveMites` | Notify | switch to Work for the best-paying job in range |
-| `ContractOffer` | a person offers a job (`Job` posted to you, an escort request) | Pause | accept only if the kind is in `AcceptContractKinds`, within limits; else decline politely |
-| `BigChoice` | an offer flagged `big` in authored dialogue (marriage, fealty, bribe, oath, sale of property) | **Pause** | **decline and record**; irreversible choices are never accepted by the AI (hard rule) |
-| `CompanionTrouble` | a squad member is hurt, lost (> 60 m for 30 s), or loyalty < 200, or a wage cannot be paid | Notify | pay the wage if the cap allows, wait for them, heal |
-| `Arrived` | the destination or the post is reached | Pause | next directive in the queue |
-| `DirectiveDone` | `Until` satisfied | Notify | next directive or idle at home |
-| `LimitReached` | a limit blocks the plan (spend cap used, risk above `MaxRiskPm`, cannot be home by nightfall) | Pause | idle at home or the safest place; retry next day |
-| `NeedMoney` | the directive needs more coin than the cap or the purse allows | Notify | switch to earning |
-| `Stuck` | no progress for 20 game hours | Pause | re-plan once, then pause |
-Plus all travel kinds (`Hostile, Weather, Cold, Heat, Fatigue, Dusk, Horse, CartStuck, BlockedPath, Companion, Found`) with their travel defaults; for them `Ai` means the same code that NPC travellers use (shelter in storms, make camp at dusk, rest a tired horse).
+### 3.2 Interrupt kinds and defaults (the canonical list)
+This is the **only** list of interrupt kinds. `travel-encounters-camp.md` and every other spec refer to it. There is one append-only `InterruptKind` enum (**23 kinds**, in the order below) and one policy type `Pause | Notify | Ai`. A kind may be set to `Notify` with the toast off (`quiet`); `quiet` is not allowed for `Attacked`. `Ai` is offered only for autopilot persons; in manual play a kind is Pause or Notify. The "Source" column says which spec raises the kind. Names were merged: `Lost` into `BlockedPath`, `CompanionTrouble` into `Companion`, `ContractOffer` into `Contract`, `LowFood` into `Hunger`.
+| # | Kind | Source | Fires when | Default | `Ai` means |
+|---|---|---|---|---|---|
+| 1 | `Hostile` | travel | a hostile or unknown-armed person in view, or an encounter spawned (clock drops to 1x) | Pause | avoid or flee by utility |
+| 2 | `Attacked` | travel | damage to the person or party, or a hostile in view moving to attack | Pause (never `quiet`) | the NPC AI chooses Flee, Shelter or fight by utility (`safety` need), like any NPC |
+| 3 | `Weather` | travel | state becomes thunderstorm, blizzard, heavy rain with a ford ahead, heatwave | Notify | shelter in storms |
+| 4 | `Cold` | travel | `cold_stress_pm > 400` or core below 36.00 | Notify, Pause at the clothing spec's `moderate` state | find shelter, add clothing, light a fire |
+| 5 | `Heat` | travel | `heat_stress_pm > 400` | Notify, Pause at `moderate` | rest in shade, drink |
+| 6 | `Hunger` | travel | `hours_since_meal >= hunger_eat_hours` (13, `live-behaviour-and-utility-ai.md` 4.1) with food in the pack: the person auto-eats (10-minute meal break); also when food in the pack and stores fall below 1 day | Notify | buy, eat or forage (Survive tier) within limits |
+| 7 | `Fatigue` | travel | `FatiguePm > 800` | Pause ("camp needed") | make camp or go to the nearest bed |
+| 8 | `Dusk` | travel | sunset minus 60 min | Notify (HUD setting: continue / stop / make camp) | make camp |
+| 9 | `Horse` | travel (horses) | mount stamina below 20% or lame | Pause | rest a tired horse |
+| 10 | `CartStuck` | travel (horses) | a cart cannot move for 20 game seconds | Pause | push, unload or wait, as NPC drivers do |
+| 11 | `BlockedPath` | travel | ford closed, tree down, gate closed | Pause (re-plan offered) | re-plan once |
+| 12 | `Companion` | travel | a squad member is hurt, lost (more than 60 m for 30 s), has loyalty below 200, or a wage cannot be paid | Notify | pay the wage if the cap allows, wait for them, heal |
+| 13 | `Found` | travel | landmark, shrine, corpse or forage ground within 25 m | Notify | ignore, or forage if the directive allows |
+| 14 | `Arrived` | travel | the destination or the post is within 3 m | Pause | next directive in the queue |
+| 15 | `Contract` | travel, dialogue | a person offers a job (a `Job` posted to you, an escort request), a toll, a ford ferry | Pause | accept only if the kind is in `AcceptContractKinds` and within limits; else decline politely |
+| 16 | `Threatened` | autopilot | a hostile or unknown armed group within 60 m | Pause | avoid or flee by utility |
+| 17 | `Injured` | autopilot | `HealthPm` loss >= 15% or any bleeding wound | Pause | bandage (if the pack has one), rest |
+| 18 | `LowMoney` | autopilot | purse below `PurseReserveMites` | Notify | switch to Work for the best-paying job in range |
+| 19 | `BigChoice` | autopilot (dialogue) | an offer flagged `big` in authored dialogue (marriage, fealty, bribe, oath, sale of property) | **Pause** | **decline and record**; irreversible choices are never accepted by the AI (hard rule) |
+| 20 | `DirectiveDone` | autopilot | `Until` satisfied | Notify | next directive, or idle at home |
+| 21 | `LimitReached` | autopilot | a limit blocks the plan (spend cap used, risk above `MaxRiskPm`, cannot be home by nightfall) | Pause | idle at home or the safest place; retry next day |
+| 22 | `NeedMoney` | autopilot | the directive needs more coin than the cap or the purse allows | Notify | switch to earning |
+| 23 | `Stuck` | autopilot | no progress for 20 game hours | Pause | re-plan once, then pause |
+Travel's old `ignore` value is `Notify` with `quiet`. Unknown or later-added kinds default to Pause.
 **Semantics:** `Pause` pauses the game (speed 0), opens a small alert panel with the cause and buttons (Take control, Continue autopilot, Open Journal) and records an entry; `Notify` shows a toast, logs and keeps going (speed unchanged but drops from 8x to 4x for 5 real seconds so you can see); `Ai` logs and lets the brain handle it.
 
 ### 3.3 Content (`autopilot/activities.jsonc`, `autopilot/settings.jsonc`)
@@ -67,7 +78,7 @@ Plus all travel kinds (`Hostile, Weather, Cold, Heat, Fatigue, Dusk, Horse, Cart
 ### 4.1 One AI: how the layer plugs in
 `UtilityBrain.Choose(PersonCtx)` is the only function that decides an action. `PersonCtx` has an optional `Policy` (null for plain NPCs): `bias_pm[ActionKind]` added to scores, `forced_place` for the current directive step, `filter_mask` of actions removed (limits), and `claim_filter` for jobs. **No other code path moves the hero or a party member while autopilot is on.** Everything the AI does goes through the same `Action -> Intent -> path/job` code and the same commands, tagged `Origin = Autopilot` so logs and replays can tell them apart.
 - **Equivalence (test AP-1):** a person row cloned from an NPC (same record, needs, schedule, jobs) run with `Policy = null` as an NPC and as the hero with autopilot `Enabled` and a directive equal to "follow my schedule" produce identical action logs (kinds, places, times) for 3 game days under the same seed. The hero's results (wages, deaths, mistakes) stick like anyone's.
-- **Directive to policy:** `DirectiveRunner.Plan(directive, person)` returns a short **step list** that sets `forced_place` and `bias_pm` for the brain: a step is `GoTo(place)`, `Work(job)`, `Trade(book, goods)`, `Wait(until)`, `Sleep`. While a step runs, schedule blocks that conflict (work block at another place) lose their `schedule_bonus_pm`; needs still win when urgent (hunger above 1,000 pm eats; fatigue above 800 sleeps; flee beats everything), as for NPCs.
+- **Directive to policy:** `DirectiveRunner.Plan(directive, person)` returns a short **step list** that sets `forced_place` and `bias_pm` for the brain: a step is `GoTo(place)`, `Work(job)`, `Trade(book, goods)`, `Wait(until)`, `Sleep`. While a step runs, schedule blocks that conflict (work block at another place) lose their `schedule_bonus_pm`; needs still win when urgent (a person at or past `hunger_eat_hours` (13) eats; fatigue above 800 sleeps; flee beats everything), as for NPCs.
 - **Planning cadence:** the planner runs for each autopilot person at the daily slice (hour 0 plus at step completion and on interrupt), never per tick; the brain's own cadence is the live 1 Hz (abstract at block boundaries). When the hero is far from any bubble (travelling at 8x or on a long trip) the hero is still a person record with `AbstractJob` and `PathPlan`, so autopilot works the same in either tier.
 
 ### 4.2 Directives
@@ -102,7 +113,7 @@ Plus all travel kinds (`Hostile, Weather, Cold, Heat, Fatigue, Dusk, Horse, Cart
 ### 4.5 Zero-player watching
 - **Mode:** autopilot on and all interrupts set to Notify or Ai (a preset "Watch the world": Attacked and Injured stay `Pause` by default but can be set to `Ai` by the player). The camera follows the hero (lock key `Home` re-centres); speed controls 1 to 8x work as always; **8x respects the same gate** (no hostile in view; at 8x the bubble shrinks to the party and path ahead).
 - **Daily summary:** at `summary_hour` (06:00) a toast and a Journal tab "Autopilot log" show yesterday: hours by activity, coin earned and spent, items made, distance travelled, interrupts and how they were handled, skills gained (levels with 1 decimal), people met, rumours heard. Entries are generated from the log, not narrated by an LLM.
-- **Stepping back in:** any movement key or a click on the ground **takes control at once** (`Paused = true`, banner "Autopilot paused - Y resumes"); the player may change the directive and resume. Opening the trade or dialogue screen yourself does the same.
+- **Stepping back in:** any movement key or a click on the ground **takes control at once** (`Paused = true`, banner "Autopilot paused - Y opens the panel"); the player may change the directive and resume. Opening the trade or dialogue screen yourself does the same.
 - **Death and Ironman:** when the hero dies, autopilot pauses; in Ironman the heir or companion becomes the hero and autopilot is **off** for them until you turn it on. Autopilot is allowed in Ironman under the same rules.
 - **Chronicle:** `AutopilotStart` and `AutopilotStop` entries with the directive; significant acts (wounds, arrivals, deals over 10 crowns, deaths) are ordinary chronicle entries, flagged `Data["autopilot"] = "1"`.
 
@@ -121,8 +132,10 @@ LODBridge: autopilot persons are persons; a hero beyond any bubble (8x travel, w
 ## 5. Determinism
 | Stream | Use | Key |
 |---|---|---|
-| 0x300, 0x301 | the brain's noise and job claim ties (shared with NPCs, per live-behaviour spec) | person |
+| 0x300 | the brain's noise and ties (shared with NPCs, per live-behaviour spec) | `GameSec / 20`, person, `draw = actionIndex` |
+| 0x301 | job claim tie-break (shared with NPCs) | game hour, **job**, `draw = claimant person index` |
 | 0x380 | reserved for autopilot-only choices that are not utility ties (none in v1; tests assert it is never drawn) | person |
+0x301 is keyed by the **job** (as in `live-behaviour-and-utility-ai.md` section 5), not by the person. A claim is a contest for one job: each claimant's rank is `Draw(0x301, hour, jobId, claimantIdx)` and the lowest wins. That gives the same winner whether the hero, a party member or an NPC is in the contest, and does not depend on processing order. Keying by person would give the same person a different roll for every job and make the result depend on who else claims, so the same claim could resolve differently with autopilot on and off (AP-1).
 `Origin` is part of the command log; replaying a recorded session (human plus autopilot commands) with the same seed reproduces the hash. No wall clock: summary hours and caps use game time. The planner iterates candidates in ascending ids.
 
 ## 6. UI and controls
@@ -140,7 +153,7 @@ LODBridge: autopilot persons are persons; a hero beyond any bubble (8x travel, w
 | AP-4 | No crimes: hero hungry with no coin next to a stall; test content adds an `ActionTag.Crime` "take bread" at utility 1,200 | the action is never chosen over 365 game days; with `NoCrimes` off it is chosen within 2 game days |
 | AP-5 | Risk: two routes, danger 450 and 300 along their cells, `MaxRiskPm = 400` | the 300 route is chosen; if both are above 400 the plan is refused with `LimitReached`; at night (x2) the 300 route (600) is refused too |
 | AP-6 | Home by nightfall at lat 480: 2 km each way at jog 3 m/s (3.70 game hours each way, 7.41 h round trip); midwinter sunset 15:58 | leave 08:30 accepted (back 15:55); leave 09:00 refused; midsummer (sunset 20:01) leave 11:00 accepted |
-| AP-7 | Every interrupt kind fires: scripted triggers for each of the 13 AP kinds and 11 travel kinds, with the three policy values | each kind raises once, honours Pause, Notify, Ai as in 3.2, writes a log line; `BigChoice` with `Ai` takes the decline branch |
+| AP-7 | Every interrupt kind fires: scripted triggers for each of the 23 kinds in 3.2 (the count is read from the `InterruptKind` enum, so a kind added without a test fails), with the three policy values | each kind raises once, honours Pause, Notify, Ai as in 3.2, writes a log line; `BigChoice` with `Ai` takes the decline branch |
 | AP-8 | `BigChoice` content validation | a `big` node without a decline branch fails content load |
 | AP-9 | Take control: movement key during autopilot | `Paused` within 1 tick; commands from the player are not filtered; resuming continues the directive |
 | AP-10 | Zero-player: 30 game days, `Work` directive, all interrupts Notify, labourer in a peaceful region, 8x when allowed | hero alive, no `Stuck`, daily summaries exist (30), no violation; wall time at 8x about 1.2 real hours |

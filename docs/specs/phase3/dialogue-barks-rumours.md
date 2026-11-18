@@ -99,7 +99,7 @@ Hearing       { RumourId, Listener (person), Teller (person index or -1 = "a tra
 ### 4.1 Choosing a line (`LineSelector`)
 1. Candidate set = lines of the requested `topic` whose `when` all hold for `(speaker, listener, context)`.
 2. `score = weight_pm x (1 + specificity)` (integer); lines used by this speaker in the last 8 turns, or this exact `(speaker, listener)` pair in the last 24 turns, get weight 0.
-3. Pick by weighted draw, DetRng stream 0x310 keyed `(tickKey = game minute, speakerId, draw = listenerIdx x 16 + turn mod 16)`, so the same moment gives the same line on replay.
+3. Pick by weighted draw, DetRng stream 0x310 keyed `(tickKey = `GameSec / 60`, i.e. the game minute, speakerId, draw = listenerIdx x 16 + turn mod 16)`, so the same moment gives the same line on replay.
 4. If no candidate exists the topic falls back to `smalltalk` generic lines (never silence). A content test guarantees every `(topic, job class, mood band, relationship tier)` cell has at least 1 line.
 
 ### 4.2 Line catalogue (about 300 base lines; barks counted separately)
@@ -131,7 +131,7 @@ Hearing       { RumourId, Listener (person), Teller (person index or -1 = "a tra
 ### 4.4 Barks (`BarkSystem`, live tier only)
 - A person within `radius_m` of the hero (default 8 m) may bark when a bark's `when` holds and its `cooldown_s` has elapsed. Per-person cooldown 60 real seconds; global cap **2 barks per real second, 3 visible at once**; closer people first, ties by person index.
 - A bark is a floating text above the head for `duration_s` (2.5-4 s) and a caption in the log (filterable "Nearby talk"); no voice in Phase 3.
-- Barks use stream 0x311, key `(tick, personId)`; they never change records (a pure view event) except **alarm** barks, which set `threat_pm` in listeners.
+- Barks use stream 0x311, key `(GameSec / 20, personId)` (a game-time window, not the live tick, so 1x and 8x give the same bark); they never change records (a pure view event) except **alarm** barks, which set `threat_pm` in listeners.
 
 ### 4.5 Rumours: creation
 - `RegionOutbox` already carries chronicle appends; Phase 3 adds `RumourSeed(entry, kind, place, witnesses[])` created in H7 (outbox) for every entry with `rumour_interest_pm > 0` and a place in a populated settlement. Witnesses are people the abstract tick marks as present (fire: the household and 4 neighbours; battle: survivors; crime: recorded witnesses; famine/weather: the reeve and 3 elders).
@@ -170,10 +170,10 @@ LODBridge: a person's hearings are table rows, so promote/demote loses nothing; 
 ## 5. Determinism
 | Stream | Use | Key |
 |---|---|---|
-| 0x310 | systemic line pick | speaker, draw = listener x 16 + turn |
-| 0x311 | bark pick and cooldown jitter | person |
+| 0x310 | systemic line pick | `GameSec / 60`, speaker, draw = listener x 16 + turn |
+| 0x311 | bark pick and cooldown jitter | `GameSec / 20`, person |
 | 0x312 | seed witness selection | chronicle entry |
-| 0x313 | hearing probability | teller, draw = listener |
+| 0x313 | hearing probability | game hour, teller, draw = listener |
 | 0x314 | distortion roll | listener |
 | 0x315 | gathering partition | place |
 Hash of `(RumourTable, HearingTable, RelationTable)` joins the daily `EconomyHash` family as `TalkHash`; iteration is ascending ids; no wall-clock.
