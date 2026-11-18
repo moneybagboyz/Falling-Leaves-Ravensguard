@@ -14,6 +14,7 @@ using Xunit.Abstractions;
 namespace Ravensguard.Sim.Tests.RegionsC;
 
 /// <summary>Part C: the game runs the world. A headless game on the real runtime (worker thread, barrier snapshots, workers building neighbours), driven like the street view drives it.</summary>
+[Collection(TimingCollection.Name)] // frame and tick timing: run alone so other tests don't share the CPU
 public class WorldRuntimeTests(ITestOutputHelper output)
 {
     private const string Hash = "content-hash";

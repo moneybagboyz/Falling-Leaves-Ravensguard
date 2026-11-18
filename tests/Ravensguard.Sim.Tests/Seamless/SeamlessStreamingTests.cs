@@ -12,6 +12,7 @@ using RegionData = Ravensguard.Sim.WorldGen.Region.Region;
 namespace Ravensguard.Sim.Tests.Seamless;
 
 /// <summary>Part A of the seamless continent: neighbour generation ahead of a traveller, chunks resolved across region edges, and a walk through three regions.</summary>
+[Collection(TimingCollection.Name)] // frame and tick timing: run alone so other tests don't share the CPU
 public class SeamlessStreamingTests(ITestOutputHelper output)
 {
     private static RegionManager NewManager(SeamWorld w, RegionCoord home)

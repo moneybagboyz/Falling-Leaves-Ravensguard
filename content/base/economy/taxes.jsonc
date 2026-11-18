@@ -1,0 +1,17 @@
+// Taxes, rents, tolls and treasuries (taxes spec 2.2, decisions T1-T6; integration notes T7 and on in docs/specs/taxes-and-treasuries.md). Amounts are mites (100 mites = 1 crown).
+// Hearth tax per household and season at the four named levels (plan 4A.2): about 2 crowns at Normal, 30 percent of the fief's receipts go on to the realm's treasury.
+// A rented dwelling pays by type; a tenant of the lord pays none and owes labour service. Coin parcel rent (320 mites a field and year, autumn), share rents and the 10 percent tithe in kind live in content/base/farming (single source, decision T8).
+// Arrears carry over, become a debt after 3 seasons and end in eviction after 6; labour on the demesne works them off at 2 worker-days per 100 mites.
+// Unrest rungs: rumours 200, evasion 350, riot 550, revolt brewing 750. Staff wages are mites a day. The lord keeps 40 percent of what the treasury holds above two seasons of payroll.
+[
+  { "type": "tax_policy_defaults", "id": "default",
+    "hearth_low": 100, "hearth_normal": 200, "hearth_high": 350, "hearth_crushing": 600, "crown_share_pct": 30,
+    "dwelling_rent_cottage": 100, "dwelling_rent_longhouse": 150, "dwelling_rent_burgage": 400,
+    "gate_toll_mites_per_cart": 25, "bridge_toll_mites_per_cart": 10, "gate_toll_permille_goods": 5,
+    "arrears_debt_seasons": 3, "arrears_evict_seasons": 6, "work_off_days_per_season": 4, "work_off_mites_per_day": 50,
+    "evasion_chance_pct_with_grievance": 30, "tax_burden_grievance_permille": 150, "income_per_member_season": 1000,
+    "rung1": 200, "rung2": 350, "rung3": 550, "rung4": 750, "riot_cooldown_days": 30, "riot_min_households": 3, "riot_household_pct": 5, "riot_granary_pct": 20,
+    "hunger_keep_mites_per_member": 200,
+    "steward_wage_mites_day": 350, "reeve_wage_mites_day": 250, "priest_wage_mites_day": 250, "guard_wage_mites_day": 250, "soldier_wage_mites_day": 250,
+    "lord_share_pct_of_surplus": 40, "reserve_seasons": 2, "crown_outlay_pct": 80, "levy_peace_households": 10, "levy_war_households": 5 },
+]
