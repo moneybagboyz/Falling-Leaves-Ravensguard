@@ -24,6 +24,7 @@ public sealed class LabourMarket
     private readonly ulong _seed;
     private readonly Func<int, IEnumerable<int>> _children;
     private bool[] _staff = [], _farmAway = [];
+    private int[] _manorLord = [];
     private readonly List<int>[] _idle;
 
     public long Hired, Apprenticed, Succeeded, ClosedNoOwner, StaffGone, Quit;
@@ -41,17 +42,22 @@ public sealed class LabourMarket
     /// <summary>True when the person's days belong to a workshop, crew or stall, so the farm labour planner must not count him; a manor's staff also work the demesne and still count.</summary>
     public bool IsAwayFromFarm(int person) => person < _farmAway.Length && _farmAway[person];
 
+    /// <summary>The household of the lord whose demesne a manor retainer works (the manor's owner), -1 for anyone else (integration decision I31).</summary>
+    public int ManorLordOf(int person) => person < _manorLord.Length ? _manorLord[person] : -1;
+
     /// <summary>Rebuilds the staff snapshot from the businesses.</summary>
     public void Rebuild()
     {
         int n = _pop.People.Count;
         if (_staff.Length < n) { _staff = new bool[Math.Max(n, _staff.Length * 2)]; _farmAway = new bool[_staff.Length]; }
         else { Array.Clear(_staff); Array.Clear(_farmAway); }
+        if (_manorLord.Length < _staff.Length) _manorLord = new int[_staff.Length];
+        Array.Fill(_manorLord, -1);
         _owners.Clear();
         foreach (var b in _sys.Businesses)
         {
             bool manor = _sys.KindOf(b).Id == "manor";
-            foreach (int s in b.Staff) { _staff[s] = true; if (!manor) _farmAway[s] = true; }
+            foreach (int s in b.Staff) { _staff[s] = true; if (!manor) _farmAway[s] = true; else if (b.State == BusinessState.Open && b.OwnerHousehold >= 0) _manorLord[s] = b.OwnerHousehold; }
             if (b.State == BusinessState.Open && b.Owner >= 0) _owners.Add(b.Owner);
         }
     }

@@ -43,6 +43,7 @@ public sealed class EconomyWorld
         farming.BuyFromMarket = (hh, good, qty) => markets.BookForHousehold(hh).Buy(markets.HouseholdParty(hh), good, qty, 3000, (int)(world.State.HourDone / 24)).Qty;
         farming.CountIdleHands = true;
         farming.IsEmployedElsewhere = Labour.IsAwayFromFarm;
+        farming.ManorLordOf = Labour.ManorLordOf;
         Labour.Rebuild();
     }
 

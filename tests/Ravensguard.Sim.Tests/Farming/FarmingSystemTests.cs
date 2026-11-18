@@ -187,7 +187,7 @@ public class FarmingSystemTests(ITestOutputHelper output)
             var f = Enumerable.Range(0, F.Count).First(i => F.Slot[i] == 0 && F.Crop[i] == Crop.Wheat);
             return F.YieldG[f];
         }
-        long Gross(int wx) => YieldMath.GrossG(52_800, 85, wx, 1000, 0);   // the field spent its fallow year grazed: fertility 70 + 15
+        long Gross(int wx) => YieldMath.GrossG(57_200, 85, wx, 1000, 0);   // the field spent its fallow year grazed: fertility 70 + 15
         Assert.Equal(Gross(600), Yield(0));                    // bare ground: 400 permille lost
         Assert.Equal(Gross(1000), Yield(10));                  // under snow: nothing lost
     }
@@ -224,7 +224,7 @@ public class FarmingSystemTests(ITestOutputHelper output)
         w.Run(y, 1, 36);                                                   // through doy 36: the first overdue day for winter grain
         Assert.Equal(0, w.State.SownAcres);
         int f = Enumerable.Range(0, F.Count).First(i => F.Slot[i] == 0 && F.Crop[i] == Crop.Wheat);
-        long g = 52_800 * 750 / 1000;                                      // nobody weeded: x 0.75
+        long g = 57_200 * 750 / 1000;                                      // nobody weeded: x 0.75
         Assert.Equal(YieldMath.Overdue(g), (long)F.YieldG[f]);
         w.Run(y, 37, 4);
         for (int i = 0; i < 4; i++) g = YieldMath.Overdue(g);

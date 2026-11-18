@@ -215,6 +215,9 @@ public sealed partial class FarmingSystem
     /// </summary>
     public Func<int, bool>? IsEmployedElsewhere { get; set; }
 
+    /// <summary>The household of the lord a person serves as a manor retainer, or -1; set by the integration layer.</summary>
+    public Func<int, int>? ManorLordOf { get; set; }
+
     /// <summary>
     /// Brings the farming tables in step with a population that grows and changes hands (births, weddings, inheritance, escheat, emigration): the household
     /// arrays grow, parcels whose holder changed in the population table pass to the new holder (with the barn stock), barns open for new holders and the
@@ -268,7 +271,8 @@ public sealed partial class FarmingSystem
     private void RecomputeHours(int day)
     {
         var people = Pop.People; var hh = Pop.Households; int n = Math.Min(hh.Count, _hhHours.Length);
-        var away = IsEmployedElsewhere;
+        var away = IsEmployedElsewhere; var lordOf = ManorLordOf;
+        var demesneHands = new int[n];
         for (int h = 0; h < n; h++)
         {
             int hours = 0;
@@ -283,10 +287,15 @@ public sealed partial class FarmingSystem
                                 || (occ == Occupation.None && (hh.Class[h] == SocialClass.Peasant || (_idleHands && hh.Class[h] != SocialClass.Gentry)));
                     if (!hand) continue;
                     if (away != null && away(m)) continue;
-                    hours += age < 16 || age >= 60 ? _wh / 2 : _wh;
+                    int hrs = age < 16 || age >= 60 ? _wh / 2 : _wh;
+                    // a retainer of a manor works the lord's demesne as part of his service (integration decision I31): his hours are the lord's own, not hired at a wage the lord may not have the coin for
+                    int lord = lordOf?.Invoke(m) ?? -1;
+                    if (lord >= 0 && lord < n && _isHolder[lord]) { demesneHands[lord] += hrs; continue; }
+                    hours += hrs;
                 }
             _hhHours[h] = hours;
         }
+        for (int h = 0; h < n; h++) _hhHours[h] += demesneHands[h];
         for (int h = n; h < _hhHours.Length; h++) _hhHours[h] = 0;
     }
 

@@ -140,10 +140,10 @@ public class FarmingGoldenTests
         double winter = 0.60 * Net(Crop.Wheat) + 0.40 * Net(Crop.Rye), spring = 0.40 * Net(Crop.Barley) + 0.27 * Net(Crop.Oats) + 0.33 * (Net(Crop.Peas) + Net(Crop.Beans)) / 2;
         Assert.Equal(45_056, winter, 0); Assert.Equal(43_789, spring, 0);
         double regionMeasures = 20_800 * (winter + spring) / 1100.0;
-        Assert.InRange(regionMeasures, 1_541_000, 1_543_500);
+        Assert.InRange(regionMeasures, 1_679_000, 1_681_000);                // integration decision I30: cereal yields 52/50/56/50 measures (were 48/46/48/46)
         double afterSpoil = regionMeasures * 0.96, demand = 25_000 * 60 * 0.92 + 45_000;
         double surplus = afterSpoil / demand - 1;
-        Assert.InRange(surplus, 0.02, 0.10); Assert.InRange(surplus, 0.037, 0.041);
+        Assert.InRange(surplus, 0.02, 0.15); Assert.InRange(surplus, 0.130, 0.135);   // was +4 percent; the 100-year soak needs the margin (spoilage, famine years)
     }
 
     [Fact] public void G_F16_CoinRentEquivalent()

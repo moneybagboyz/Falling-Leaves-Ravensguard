@@ -184,6 +184,7 @@ public partial class StreetView : Control, IHandlesBack
         var (wx, wy) = _world.WorldCell;
         rt.PlaceHero(rt.State.HomeRegion.OriginXM + wx, rt.State.HomeRegion.OriginYM + wy);
         rt.Start();
+        rt.Pump(_world.Clock.Now, rt.State.HomeRegion.OriginXM + wx, rt.State.HomeRegion.OriginYM + wy); // the first call pays for JIT (up to 60 ms seen): here, not on a frame
     }
 
     /// <summary>The per-frame call to the tick runtime: tells it the clock and where the hero is. Costs microseconds; the hours themselves run on the worker.</summary>
