@@ -7,6 +7,20 @@ Reviewed at 490939f: people, autopilot v1, onboarding v1 and the Phase 3 cleanup
 - **Save format:** unchanged (v4). The new data is in optional sections and keys: `hero.pending` (commands waiting for their hour), `autopilot` keys 12-15 (spends booked for them). Older saves load as before, and worlds that have none of this keep their bytes.
 - **Checks:** Release build with 0 warnings; `dotnet test --filter "Category!=Soak"` green twice; the Soak tests pass; Godot headless `--smoke`, `--check-keymap` and `--selftest` are clean; golden hashes unchanged (no re-pin).
 
+## Done-when results (plan §5, Phase 3)
+| Check | Result |
+|---|---|
+| Residents keep schedules across floors | **Met.** L-7: 100 residents with beds upstairs keep their schedules for three game days, using stairs and portals |
+| You can talk to, trade with, hire and recruit anyone | **Met.** E opens the talk window with trade, hire and recruit; trade works in any resident region; recruits join the party and follow on the hero's trail |
+| A rumour traces back to its source | **Met.** The Journal trace walks each rumour back through every teller to its chronicle entry and cause (`p3i-journal-trace.png`) |
+| Testers get through the first ride and the first odd job unaided | **Met by the bot; testers pending.** The `--autoplay` first-hour bot passes 7/7 origins (21/21 over three seeds): meet the mentor, take and finish the first odd job, ride the loaned horse. Real testers still need the user |
+| Code and bug check | **Passed.** 32 findings (16 simulation, 16 game), all fixed with regression tests; full suite 1,287/1,287; Soak tests pass; `--smoke` (now through the real new-game flow, opening every Phase 3 screen at 960x540), `--check-keymap`, `--selftest` and `--autoplay` clean |
+
+## Still needs the user
+- Play Phases 1-3 (fun check, `docs/playtests/`); confirm 60 fps at street zoom on the reference PC; approve art style sheet v2.
+- Answer the Phase 3 open questions in `docs/specs/phase3/00-phase3-overview.md` §6 (the recommended defaults are in use).
+- Pick 2-3 private testers (plan §5, Phase 3); the F8 report and crash zip are ready for them.
+
 ## Simulation (16 findings)
 | # | Severity | Defect | Fix |
 |---|---|---|---|
