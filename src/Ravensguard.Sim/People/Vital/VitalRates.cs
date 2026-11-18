@@ -26,7 +26,7 @@ public sealed record VitalRates
     public int EmigrateAfterWaitSeasons { get; init; } = 4;
     public int EmigrateChancePct { get; init; } = 40;
     /// <summary>A couple may live with the groom's or bride's family only while the household, with the newcomer, stays within this percent of its beds (the stem family, decision V5).</summary>
-    public int StemJoinMaxOccupancyPct { get; init; } = 80;
+    public int StemJoinMaxOccupancyPct { get; init; } = 100;
     /// <summary>Death multiplier (permille) by nutrition reserve in centidays: first row whose MinCd is at most the reserve.</summary>
     public (int MinCd, int MultPermille)[] NutritionDeathMult { get; init; } = [(2000, 1000), (1000, 1500), (500, 2000), (0, 3000)];
     /// <summary>Death multiplier (permille) by crowding percent (members x 100 / beds): first row whose MaxPct is at least the crowding.</summary>

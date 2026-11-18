@@ -29,12 +29,12 @@ public sealed class FarmingSoak
     private readonly bool[] _winterGood;
     private readonly int _people;
 
-    public FarmingSoak(FarmingSettings? settings = null, int topUpDays = 45)
+    public FarmingSoak(FarmingSettings? settings = null, int topUpDays = 45, IFarmWeather? weather = null)
     {
         var b = EconFixture.Shared; _pop = b.Pop;
         Econ = EconFixture.NewEconomy();
         var rw = RegionWeather.ForContinent(b.Continent);
-        var wx = new RegionFarmWeather(rw, rw.Fronts.Long);
+        IFarmWeather wx = weather ?? new RegionFarmWeather(rw, rw.Fronts.Long);
         Sys = new FarmingSystem(_pop.Region, _pop, Econ, settings ?? FarmingSettings.FromContent(EconFixture.Content), wx, Chron, new IdAllocator(), EconFixture.Seed);
         Sys.ProvisionInitialStock();
         _people = _pop.People.Count;

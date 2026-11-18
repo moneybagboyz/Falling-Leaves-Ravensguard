@@ -296,13 +296,15 @@ public sealed partial class FarmingSystem
         int p = F.Parcel[f], hh = P.Holder[p]; if (hh < 0) return false;
         var store = HouseStore(hh); int fert = F.Fertility[f]; long yh = YearHour(State.Year); int gm = _d.GramsPerMeasure;
         Crop pref = spring ? PickSpring(Settings, Seed, yh, F.Id[f], fert, State.Year) : PickWinter(Settings, Seed, yh, F.Id[f], fert, State.Year);
-        if (pref == Crop.Fallow) return false;
+        if (pref == Crop.Fallow) { Diagnostics.SowRefusedFertility++; return false; }
+        bool anyFertile = false;
         var pool = spring ? FarmingSettings.SpringCrops : FarmingSettings.WinterCrops;
         int start = Array.IndexOf(pool, pref);
         for (int i = 0; i < pool.Length; i++)
         {
             var c = pool[(start + i) % pool.Length]; var info = Settings.Info(c);
             if (fert < info.MinFertility) continue;
+            anyFertile = true;
             if (!spring && c == Crop.Wheat && fert < _d.WheatMinFertilityForWinterPick) continue;
             if (spring && fert < _d.LegumeForcedBelowFertility && info.Kind != CropKind.SpringLegume) continue;
             long seed = info.SeedG(gm);
@@ -312,6 +314,7 @@ public sealed partial class FarmingSystem
             State.SeedSownG += seed; State.SownAcres++;
             return true;
         }
+        if (anyFertile) Diagnostics.SowRefusedSeed++; else Diagnostics.SowRefusedFertility++;
         return false;
     }
 
@@ -353,7 +356,7 @@ public sealed partial class FarmingSystem
             if (g > 0)
             {
                 g = Store.MoveUpTo(Barn(hh), HouseStore(hh), good, g);                    // the barn has spoiled some of the sheaf since it was bound; thresh what is left
-                if (g > 0) Fodder(s).Create(_straw, g * _d.StrawGPerKgGrain / 1000, CreateReason.Harvest);
+                if (g > 0) { Fodder(s).Create(_straw, g * _d.StrawGPerKgGrain / 1000, CreateReason.Harvest); RepayFromThreshing(hh, good, g); }
             }
             State.ThreshedG += g; F.SheafG[f] = 0; F.Clear(f, FieldFlags.Bound);
             if (F.Stage[f] == FieldStage.Cut) F.Stage[f] = FieldStage.Threshed;

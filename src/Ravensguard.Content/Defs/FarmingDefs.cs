@@ -51,7 +51,7 @@ public sealed record FarmingSettingsDef : ContentDef
     public int BlightYieldPermille { get; init; } = 750;
     public int LateFrostTenthsC { get; init; } = -20;
     public int FrostKillWindowDays { get; init; } = 12;
-    public int ResowLastDoy { get; init; } = 12;
+    public int ResowLastDoy { get; init; } = 15;
     public int ResowYieldPermille { get; init; } = 750;
     public int ColdSummerSpringPermille { get; init; } = 850;
     public int ColdSummerWinterPermille { get; init; } = 900;
@@ -76,6 +76,8 @@ public sealed record FarmingSettingsDef : ContentDef
     // fertility and mixes
     /// <summary>Phase 1 field fertility averages far below the plan's 70 (seed 1234: mean 39). At state creation field fertility is scaled so the mean fertility used by the yield (capped at 91) equals this; 0 keeps Phase 1 values.</summary>
     public int TargetMeanFertility { get; init; } = 70;
+    /// <summary>The plan's reference density: 62,400 fields for 25,000 people is 2,496 per 1,000 people. When positive the target mean fertility is scaled by this over the region's own density (fewer acres per person need richer soil to keep the plan's balance); 0 switches it off.</summary>
+    public int ReferenceFieldsPerKiloPerson { get; init; } = 2496;
     public int FallowGrazedFertility { get; init; } = 15;
     public int FallowUngrazedFertility { get; init; } = 5;
     public int WinterWheatPct { get; init; } = 60;

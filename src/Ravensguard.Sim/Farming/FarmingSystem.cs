@@ -9,6 +9,9 @@ using RegionData = Ravensguard.Sim.WorldGen.Region.Region;
 
 namespace Ravensguard.Sim.Farming;
 
+/// <summary>Counters for tests and tooling.</summary>
+public sealed class FarmingDiagnostics { public long SowRefusedSeed, SowRefusedFertility; }
+
 /// <summary>What the labour planner did on the last day: worker-hours wanted, available and used (farming spec 3.2).</summary>
 public sealed record LabourReport(long DemandHours, long SupplyHours, long OwnUsedHours, long HiredUsedHours, long UnmetHours, long WagesMites);
 
@@ -30,6 +33,8 @@ public sealed partial class FarmingSystem
     public ulong Seed { get; }
     public FarmingState State { get; }
     public LabourReport LastLabour { get; private set; } = new(0, 0, 0, 0, 0, 0);
+    /// <summary>Counters of why fields went unsown this run (not saved): refused for want of seed, and refused because the soil was below every crop's minimum.</summary>
+    public FarmingDiagnostics Diagnostics { get; } = new();
 
     private FieldTable F => State.Fields;
     private ParcelWork P => State.Parcels;
@@ -106,7 +111,7 @@ public sealed partial class FarmingSystem
         var d = settings.Def;
         var st = new FarmingState(region.Fields.Length, region.Parcels.Count, region.Settlements.Count, pop.Households.Count) { Year = year };
         var f = st.Fields;
-        int scale = FertilityScalePermille(region, d.TargetMeanFertility);
+        int scale = FertilityScalePermille(region, TargetFertility(region, pop, d));
         long yearHour = (long)year * TimeConst.DaysPerYear * 24;
         for (int i = 0; i < f.Count; i++)
         {
@@ -156,6 +161,15 @@ public sealed partial class FarmingSystem
         if (MeanX1000(lo) >= targetMean * 1000L) return 1000;
         while (hi - lo > 1) { int mid = (lo + hi) / 2; if (MeanX1000(mid) >= targetMean * 1000L) hi = mid; else lo = mid; }
         return hi;
+    }
+
+    /// <summary>The mean yield fertility the region is calibrated to: the plan's 70, raised in proportion when the region has fewer fields per person than the plan's 62,400 for 25,000 (clamped 60..88).</summary>
+    public static int TargetFertility(RegionData region, Population pop, FarmingSettingsDef d)
+    {
+        if (d.TargetMeanFertility <= 0) return 0;
+        if (d.ReferenceFieldsPerKiloPerson <= 0 || pop.People.Count == 0) return d.TargetMeanFertility;
+        long perKilo = region.Fields.Length * 1000L / pop.People.Count;                 // fields per 1,000 people
+        return (int)Math.Clamp(d.TargetMeanFertility * (long)d.ReferenceFieldsPerKiloPerson / Math.Max(1, perKilo), 60, 88);
     }
 
     public static byte ScaleFertility(int fertility, int scalePermille) => (byte)Math.Clamp(fertility * scalePermille / 1000, 0, 100);

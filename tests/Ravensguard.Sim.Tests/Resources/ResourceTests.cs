@@ -247,7 +247,7 @@ public class ResourceTests
         int low = 0; for (int i = 0; i < layer.Count; i++) if (layer.StockG(i) * 10 > layer.CapG(i) * 6) low++;
         Assert.True(low < 400, $"{low} acres still above 60%");                                       // the cutters' favoured acres are stripped
         // the unit price of firewood would follow: cover falls by the same ratio at constant demand, 2x or more
-        var curve = new PriceCurve(18_000, 20 * 1_000_000);
+        var curve = new PriceCurve(18_000, (long)(cap0 * 0.9));
         Assert.True(curve.MidMicro(cap0 / 10) / (double)curve.MidMicro((long)(cap0 * 0.9)) >= 2);
         // regrowth is monotone and bounded
         long before = layer.Totals(ResourceKind.Wood).Stock; layer.Regrow(Day(16), Cfg);

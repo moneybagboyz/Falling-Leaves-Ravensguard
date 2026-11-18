@@ -23,7 +23,7 @@ public sealed partial class FarmingSystem
         }
         else if (doy == 16) { SetGrazing(); for (int f = 0; f < F.Count; f++) if (F.Stage[f] == FieldStage.Sown) F.Stage[f] = FieldStage.Growing; UpdateSeedReserve(doy); }
         else if (doy == 31) LendSeed(winter: true);
-        else if (doy == 46) { RepaySeedLoans(); CollectCoinRent(now); CullHerds(now); }
+        else if (doy == 46) { CollectCoinRent(now); CullHerds(now); }
         RecomputeHours((int)now.TotalDays);
     }
 
@@ -237,25 +237,56 @@ public sealed partial class FarmingSystem
             }
             State.SeedDebtG[h] += got * 120 / 100;
         }
+        ExchangeSeed(winter, need);
     }
 
-    /// <summary>S3 at autumn end: each borrower repays its seed debt in kind from grain above its seed reserve (any grain, most plentiful first).</summary>
-    private void RepaySeedLoans()
+    /// <summary>
+    /// What the lord cannot lend, a holder buys from neighbours with seed to spare (a stand-in for the village market until the market system lands): within the
+    /// settlement, from the household with the most surplus first, at the good's base price, paid through the ledger (reason Trade).
+    /// </summary>
+    private void ExchangeSeed(bool winter, long[] need)
     {
-        for (int h = 0; h < State.SeedDebtG.Length; h++)
+        var kinds = winter ? FarmingSettings.WinterCrops : FarmingSettings.SpringCrops;
+        var cat = Econ.Goods;
+        for (int s = 0; s < Region.Settlements.Count; s++)
         {
-            long debt = State.SeedDebtG[h]; if (debt <= 0) continue;
-            var own = HouseStore(h); var lender = LenderOf(h); if (ReferenceEquals(lender, own)) continue;
-            long total = 0; foreach (var c in AllGrains) total += own.Qty(Settings.Info(c).Good);
-            long free = Math.Min(debt, total - Econ.SeedReserveG[h]);
-            foreach (var c in AllGrains.OrderByDescending(c => own.Qty(Settings.Info(c).Good)))
+            var hs = _householdsOf[s]; List<(int Hh, long Surplus)>? donors = null;
+            foreach (int h in hs)
             {
-                if (free <= 0) break;
-                long moved = Store.MoveUpTo(own, lender, Settings.Info(c).Good, free);
-                free -= moved; debt -= moved;
+                if (need[h] == 0) continue;
+                var own = HouseStore(h); long have = 0;
+                foreach (var c in kinds) have += own.Qty(Settings.Info(c).Good);
+                long lack = need[h] - have; if (lack <= 0) continue;
+                donors ??= hs.Select(d => { long st = 0; foreach (var c in kinds) st += HouseStore(d).Qty(Settings.Info(c).Good); return (d, st - need[d]); }).Where(t => t.Item2 > 0).OrderByDescending(t => t.Item2).ThenBy(t => t.d).ToList();
+                for (int i = 0; i < donors.Count && lack > 0; i++)
+                {
+                    var (dh, sur) = donors[i]; if (sur <= 0 || dh == h) continue;
+                    foreach (var c in kinds)
+                    {
+                        if (lack <= 0) break;
+                        ushort g = Settings.Info(c).Good;
+                        long price = cat.BasePriceMilliMites(g);                                       // milli-mites per kg
+                        long want = Math.Min(Math.Min(lack, sur), HouseStore(dh).Qty(g));
+                        long afford = price == 0 ? want : Econ.Ledger.Balance(Econ.HouseholdPurse[h]).Mites * 1_000_000 / price;
+                        want = Math.Min(want, afford);
+                        if (want <= 0) continue;
+                        long moved = Store.MoveUpTo(HouseStore(dh), HouseStore(h), g, want);
+                        long pay = moved * price / 1_000_000;
+                        if (pay > 0) Econ.Ledger.Transfer(Econ.HouseholdPurse[h], Econ.HouseholdPurse[dh], Coin.FromMites(pay), TransferReason.Trade);
+                        lack -= moved; sur -= moved; donors[i] = (dh, sur);
+                    }
+                }
             }
-            State.SeedDebtG[h] = debt;
         }
+    }
+
+    /// <summary>A holder with a seed debt pays it from the grain it has just threshed, in kind, before the grain reaches its own stock (spec 7: repaid next harvest).</summary>
+    private void RepayFromThreshing(int household, ushort good, long threshedG)
+    {
+        long debt = State.SeedDebtG[household]; if (debt <= 0 || threshedG <= 0) return;
+        var own = HouseStore(household); var lender = LenderOf(household); if (ReferenceEquals(lender, own)) return;
+        long moved = Store.MoveUpTo(own, lender, good, Math.Min(debt, threshedG));
+        State.SeedDebtG[household] = debt - moved;
     }
 
     // ---------- S3: coin rent (spec 3.4, 3.5) ----------
