@@ -197,7 +197,7 @@ public sealed class MarketBook
                 if (!l.IsMerchant && l.FloorPermille > 300 && l.ListedDay < day) { l.FloorPermille = Math.Max(300, l.FloorPermille * 2 / 3); changed = true; }
                 else if (l.IsMerchant && l.FloorPermille > 750 && day - l.ListedDay > 5) { l.FloorPermille = Math.Max(750, l.FloorPermille * 9 / 10); changed = true; }   // a merchant sells stock that will not move at a smaller margin
             }
-            if (changed) { var sorted = gl.OrderBy(x => x.FloorPermille).ThenBy(x => x.Id).ToList(); gl.Clear(); gl.AddRange(sorted); }
+            if (changed) gl.Sort((a, b) => a.FloorPermille != b.FloorPermille ? a.FloorPermille.CompareTo(b.FloorPermille) : a.Id.CompareTo(b.Id));
         }
         long returned = 0;
         for (int g = 0; g < Goods.Length; g++)
