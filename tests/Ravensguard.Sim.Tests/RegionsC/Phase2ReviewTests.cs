@@ -199,7 +199,7 @@ public class Phase2ReviewTests(ITestOutputHelper output)
         state.Content = rig.W.Content; // the people go in as a difference from the regenerated ones
         var file = WorldSave.Capture(state, Hash, "0.1");
         Assert.Equal(SaveFormat.CurrentVersion, file.Header.FormatVersion);
-        Assert.Equal(2, SaveFormat.CurrentVersion);
+        Assert.Equal(3, SaveFormat.CurrentVersion);
         var meta = SaveCodec.Deserialize<WorldMeta>(file.Sections[WorldSave.MetaSection].ToArray());
         Assert.NotEqual("", meta.BaselineHash); Assert.Equal(SaveFormat.RegionGeneratorVersion, meta.GeneratorVersion);
         _ = WorldSave.Restore(file, rig.W.Content, Hash, null, rig.W.Continent, rig.W.History);

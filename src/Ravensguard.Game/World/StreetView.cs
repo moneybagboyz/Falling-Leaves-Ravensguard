@@ -90,6 +90,7 @@ public partial class StreetView : Control, IHandlesBack
     readonly List<FarPerson> _people = new();
     RigAtlas _rig = null!;
     RigActor _heroSprite = null!;
+    string _heroLookKey = "";
     Sprite2D _torchSprite = null!, _lightSprite = null!;
     ImageTexture _lightTex = null!;
     byte[] _lightBytes = null!;
@@ -1193,6 +1194,27 @@ public partial class StreetView : Control, IHandlesBack
         bool fire = indoors && !s.Hero.Torch && s.Light != null && c.X >= 0 && c.Y >= 0 && c.X < s.Light.Width && c.Y < s.Light.Height && c.Z >= s.Light.MinZ && c.Z <= s.Light.MaxZ && s.Light.Point(c.X, c.Y, c.Z) >= 120;
         var act = !s.Hero.Moving ? Ravensguard.Sim.Clothing.Activity.Rest : s.Hero.Mode == MoveMode.Sprint ? Ravensguard.Sim.Clothing.Activity.Sprint : Ravensguard.Sim.Clothing.Activity.Walk;
         _clothes.StepHero(sec, _wx, indoors, fire, act);
+        // the hero is drawn with the cloak and hood they actually wear (the rest of the figure is the hero's own art until the character screen dresses them piece by piece)
+        var look = _clothes.LookOf(_clothes.Hero, Ravensguard.Sim.People.Occupation.None);
+        if (look.Key != _heroLookKey) { _heroLookKey = look.Key; RebuildHeroSprite(look); }
+    }
+
+    void RebuildHeroSprite(ClothingFeed.Look look)
+    {
+        var layers = new System.Collections.Generic.List<string> { "body", "hose", "linen", "gambeson" };
+        foreach (var l in new[] { "cloak", "hood" }) if (System.Array.IndexOf(look.Layers, l) >= 0) layers.Add(l);
+        layers.Add("sword");
+        var neu = new RigActor(_rig, look.Layers.Length > 0 && System.Array.IndexOf(look.Layers, "cloak") >= 0 ? "traveller" : "hero", layers);
+        var tints = new System.Collections.Generic.Dictionary<string, Color>();
+        foreach (var l in new[] { "cloak", "hood" }) if (look.Tints.TryGetValue(l, out var c)) tints[l] = c;
+        neu.Dress(tints);
+        var old = _heroSprite;
+        var np = old.GetNodeOrNull("Nameplate");
+        if (_torchSprite.GetParent() == old) old.RemoveChild(_torchSprite);
+        if (np != null) old.RemoveChild(np);
+        _ysort.AddChild(neu); neu.Position = old.Position;
+        neu.AddChild(_torchSprite); if (np != null) neu.AddChild(np);
+        _heroSprite = neu; old.QueueFree();
     }
 
     /// <summary>Ambient tint of the open air: cool moonlight to warm daylight, an orange cast while the sun is low, then the weather's dimming (cloud, rain, fog).</summary>
