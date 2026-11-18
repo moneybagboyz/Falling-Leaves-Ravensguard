@@ -97,9 +97,29 @@ public static class SelfTest
         var keys = KeyMap.CreateDefault();
         Check(keys.Get("menu.continue").Count > 0 && keys.Get("menu.load").Count > 0 && keys.Get("world.quicksave").Count > 0, "continue / load / quicksave have default keys");
 
+        // F8 (report a bug): one binding, no clash anywhere (World actions are live in every screen), exact matching, and consent is off until given
+        var f8 = keys.Get("world.report_bug");
+        Check(f8.Count == 1 && f8[0] == Binding.K(Key.F8), "world.report_bug is not F8");
+        Check(keys.Actions.Count(a => a.Id != "world.report_bug" && keys.Get(a.Id).Contains(Binding.K(Key.F8))) == 0, "another action is bound to F8");
+        Check(new KeyEventProbe().F8Fires(), "F8 key event does not fire world.report_bug");
+        var probeConsent = new Ravensguard.Sim.Diagnostics.ConsentStore(ProjectSettings.GlobalizePath("user://selftest_profile"));
+        Check(!probeConsent.IsGranted, "report consent is on by default");
+
         Tools.BlueprintEditor.EditorSelfTest.Run(Check);
 
         GD.Print($"selftest: {(_fails == 0 ? "ok" : _fails + " failure(s)")}");
         return _fails == 0;
+    }
+}
+
+/// <summary>Sends a synthetic F8 press through the same exact-match query the game uses.</summary>
+file sealed class KeyEventProbe
+{
+    public bool F8Fires()
+    {
+        var map = KeyMap.CreateDefault();
+        InputBootstrap.Register(map);
+        var e = new InputEventKey { Keycode = Key.F8, PhysicalKeycode = Key.F8, Pressed = true };
+        return Actions.PressedAlways(e, "world.report_bug");
     }
 }

@@ -35,6 +35,9 @@ public partial class SettingsScreen : Control
         var display = BuildDisplayTab();
         display.Name = L.T("SETTINGS_TAB_DISPLAY");
         tabs.AddChild(display);
+        var privacy = BuildPrivacyTab();
+        privacy.Name = L.T("SETTINGS_TAB_PRIVACY");
+        tabs.AddChild(privacy);
 
         var back = ScreenRouter.HintButton(L.T("UI_BACK"), "menu.back");
         back.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
@@ -232,6 +235,35 @@ public partial class SettingsScreen : Control
         v.AddChild(Toggle("DISPLAY_SCREEN_SHAKE", Settings.ScreenShake, on => Settings.ScreenShake = on));
         v.AddChild(Toggle("DISPLAY_FLASHES", Settings.Flashes, on => Settings.Flashes = on));
         v.AddChild(Toggle("DISPLAY_SLOW_MOTION", Settings.SlowMotion, on => Settings.SlowMotion = on));
+        return v;
+    }
+
+    /// <summary>Privacy (testers spec 6): consent for bug-report files (off until agreed; nothing is ever sent), the log level and where the local files are.</summary>
+    Control BuildPrivacyTab()
+    {
+        var v = new VBoxContainer();
+        v.AddThemeConstantOverride("separation", 10);
+        var status = new Label { ThemeTypeVariation = "HintLabel", AutowrapMode = TextServer.AutowrapMode.WordSmart };
+        var consent = new CheckBox { Text = L.T("PRIVACY_CONSENT"), ButtonPressed = Diagnostics.GameDiagnostics.Consent.IsGranted };
+        consent.Toggled += on =>
+        {
+            if (on) Diagnostics.GameDiagnostics.Consent.Accept(); else Diagnostics.GameDiagnostics.Consent.Withdraw(deleteReports: false);
+            Diagnostics.GameDiagnostics.Info("report", "consent " + (on ? "given" : "withdrawn"));
+        };
+        v.AddChild(consent);
+        var debug = new CheckBox { Text = L.T("PRIVACY_DEBUG"), ButtonPressed = Diagnostics.GameDiagnostics.Log?.MinLevel == Ravensguard.Sim.Diagnostics.LogLevel.Debug };
+        debug.Toggled += on => { if (Diagnostics.GameDiagnostics.Log is { } log) log.MinLevel = on ? Ravensguard.Sim.Diagnostics.LogLevel.Debug : Ravensguard.Sim.Diagnostics.LogLevel.Info; };
+        v.AddChild(debug);
+        var logs = new Button { Text = L.T("PRIVACY_LOGS"), SizeFlagsHorizontal = SizeFlags.ShrinkBegin };
+        logs.Pressed += () => OS.ShellOpen(ProjectSettings.GlobalizePath("user://logs"));
+        v.AddChild(logs);
+        var reports = new Button { Text = L.T("PRIVACY_REPORTS"), SizeFlagsHorizontal = SizeFlags.ShrinkBegin };
+        reports.Pressed += () => { var d = ProjectSettings.GlobalizePath("user://reports"); System.IO.Directory.CreateDirectory(d); OS.ShellOpen(d); };
+        v.AddChild(reports);
+        var del = new Button { Text = L.T("PRIVACY_DELETE"), SizeFlagsHorizontal = SizeFlags.ShrinkBegin };
+        del.Pressed += () => { Diagnostics.GameDiagnostics.Consent.Withdraw(); consent.SetPressedNoSignal(false); status.Text = L.T("PRIVACY_DELETED"); };
+        v.AddChild(del);
+        v.AddChild(status);
         return v;
     }
 

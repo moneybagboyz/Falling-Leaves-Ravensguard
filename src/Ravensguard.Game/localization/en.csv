@@ -84,7 +84,7 @@ ACTION_WORLD_NAMEPLATES,Nameplates
 ACTION_WORLD_CONTROLS_OVERLAY,Controls overlay
 ACTION_WORLD_QUICKSAVE,Quicksave
 ACTION_WORLD_QUICKLOAD,Quickload
-ACTION_WORLD_REPORT_BUG,Report bug
+ACTION_WORLD_REPORT_BUG,Report a bug (testers)
 ACTION_COMBATSTANCE_MOVE_UP,Move up
 ACTION_COMBATSTANCE_MOVE_DOWN,Move down
 ACTION_COMBATSTANCE_MOVE_LEFT,Move left
@@ -577,3 +577,33 @@ LOAD_STEP_SAVE,Reading the save
 LOAD_STEP_REGION,Rebuilding the region
 LOAD_STEP_VIEW,Back to the hero
 LOAD_FAILED,"The run could not be loaded: {0}"
+REPORT_TITLE,Report a bug (testers)
+REPORT_LOCAL_ONLY,"The report is a zip saved on this computer. The game never sends anything. You choose who gets it."
+REPORT_CATEGORY,Kind of report
+REPORT_HAPPENED,What happened?
+REPORT_EXPECTED,What did you expect?
+REPORT_UNDERSTOOD,Did you understand why that happened?
+REPORT_YES,Yes
+REPORT_PARTLY,Partly
+REPORT_NO,No
+REPORT_INC_SCREENSHOT,Include a screenshot (taken before this window opened)
+REPORT_INC_LOG,Include the end of the game log
+REPORT_INC_AUTOSAVE,Include the autosave and recent commands so the problem can be replayed
+REPORT_FILES,Files:
+REPORT_TOTAL,total
+REPORT_CONSENT_TITLE,What a report contains
+REPORT_CONSENT_AGREE,"I agree: write this report to my disk"
+REPORT_SAVE,Save report
+REPORT_CANCEL,Cancel
+REPORT_CLOSE,Close
+REPORT_OPEN_FOLDER,Open folder
+REPORT_WRITING,Writing the report...
+REPORT_SAVED,"Saved to {0}. Nothing was sent."
+REPORT_FAILED,"The report could not be written: {0}"
+SETTINGS_TAB_PRIVACY,Privacy
+PRIVACY_CONSENT,Allow bug reports to be written (stays on this computer; nothing is sent)
+PRIVACY_LOGS,Open logs folder
+PRIVACY_REPORTS,Open reports folder
+PRIVACY_DELETE,Delete all reports and withdraw consent
+PRIVACY_DEBUG,Detailed log (DEBUG)
+PRIVACY_DELETED,Reports deleted and consent withdrawn.

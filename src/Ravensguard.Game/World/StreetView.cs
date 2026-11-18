@@ -99,6 +99,14 @@ public partial class StreetView : Control, IHandlesBack
 
     /// <summary>The run being played (null for the dev hamlet and seed starts): the pause menu saves through it.</summary>
     public RunSession? Run { get; set; }
+    Ravensguard.Sim.Diagnostics.SessionRecorder _rec = null!;
+
+    /// <summary>Where the tester is, for an F8 report: tick, game time, speed, hero cell and view level.</summary>
+    System.Collections.Generic.Dictionary<string, string> WhereForReport() => new()
+    {
+        ["screen"] = "street", ["tick"] = _world.Tick.ToString(), ["game_time"] = _world.Clock.Now.ToString(), ["speed"] = _world.Clock.Speed.ToString(),
+        ["hero_cell"] = $"{_world.OriginX + _world.Snapshot.Hero.CellX},{_world.OriginY + _world.Snapshot.Hero.CellY},{_world.Snapshot.Hero.Z}", ["view_level"] = _viewZ.ToString(),
+    };
     /// <summary>The abstract world ticking beside the live one (null for the hamlet): every region's economy, advanced one game hour at a time on its own worker.</summary>
     public WorldRuntime? Runtime => _source?.Runtime;
     // frame cost of the abstract tick on this thread, and whether its failure was shown
@@ -140,6 +148,10 @@ public partial class StreetView : Control, IHandlesBack
         DevContext.Clock = _world.Clock;
         if (_source.Resume == null && (_opt.Torch ?? IsNight(t0))) _world.SetTorch(true); // a resumed run keeps the torch it was saved with
         if (_world.Clock.Speed == SimSpeed.Paused) _world.SetSpeed(SimSpeed.X1); // saved from the pause menu: play on
+        _rec = new Ravensguard.Sim.Diagnostics.SessionRecorder(_world); // player commands and record hashes for deterministic replay of a bug report (testers spec 3.6)
+        Diagnostics.GameDiagnostics.Recorder = _rec;
+        Diagnostics.GameDiagnostics.NoteSessionStart(Run?.LastPath);
+        Diagnostics.GameDiagnostics.WhereProvider = WhereForReport;
         _zoom = _opt.Zoom;
         _band = _opt.Band switch { "close" => Band.Close, "field" => Band.Field, "command" => Band.Command, "street" => Band.Street, _ => _opt.Zoom >= 2 ? Band.Close : Band.Street };
         _viewZ = _opt.ViewZ ?? start.Z;
@@ -159,7 +171,7 @@ public partial class StreetView : Control, IHandlesBack
         GetWindow().SizeChanged += FitViewport;
         FitViewport();
         RebuildLevel(now: true); // the first picture is complete; later level switches fill in over a few frames
-        _world.Step();
+        _rec.Step();
         if (_opt.BenchSeconds > 0) _perfLabel.Visible = true;
         MouseFilter = MouseFilterEnum.Stop;
         EditorLibrary.ContentReloaded += OnBlueprintsReloaded;
@@ -173,6 +185,7 @@ public partial class StreetView : Control, IHandlesBack
         if (Runtime != null) { try { System.Runtime.GCSettings.LatencyMode = _gcMode; } catch (InvalidOperationException) { } }
         if (GetWindow() != null) GetWindow().SizeChanged -= FitViewport;
         if (DevContext.Clock == _world?.Clock) DevContext.Clock = null;
+        if (Diagnostics.GameDiagnostics.Recorder == _rec) { Diagnostics.GameDiagnostics.Recorder = null; Diagnostics.GameDiagnostics.WhereProvider = null; }
         EditorLibrary.ContentReloaded -= OnBlueprintsReloaded;
         var exit = OnExit; OnExit = null;
         exit?.Invoke();
@@ -235,6 +248,7 @@ public partial class StreetView : Control, IHandlesBack
         {
             _runtimeFaultShown = true;
             GD.PushWarning("world tick failed: " + rt.Fault);
+            Diagnostics.GameDiagnostics.ReportWorkerFault(rt.Fault, "region-tick");
             _router?.ShowToast(L.F("TICK_FAILED", rt.Fault.GetBaseException().Message), 8f);
         }
     }
@@ -842,7 +856,7 @@ public partial class StreetView : Control, IHandlesBack
         while (_acc >= Step && steps < 5)
         {
             _sw.Restart();
-            _world.Step();
+            _rec.Step();
             double ms = _sw.Elapsed.TotalMilliseconds;
             _tickMsSum += ms; _tickMsMax = Math.Max(_tickMsMax, ms); _tickCount++; _stepMsFrame += ms;
             _acc -= Step; steps++;
@@ -876,7 +890,7 @@ public partial class StreetView : Control, IHandlesBack
         int dx = (Actions.HeldLoose("world.move_right") ? 1 : 0) - (Actions.HeldLoose("world.move_left") ? 1 : 0);
         int dy = (Actions.HeldLoose("world.move_down") ? 1 : 0) - (Actions.HeldLoose("world.move_up") ? 1 : 0);
         if (_opt.BenchSeconds > 0) return;
-        _world.SetInput(new MoveInput(dx, dy, Actions.HeldLoose("world.sprint"), Actions.Held("world.sneak")));
+        _rec.SetInput(new MoveInput(dx, dy, Actions.HeldLoose("world.sprint"), Actions.Held("world.sneak")));
         var pan = new Vector2(
             (Actions.HeldLoose("world.camera_right") ? 1 : 0) - (Actions.HeldLoose("world.camera_left") ? 1 : 0),
             (Actions.HeldLoose("world.camera_down") ? 1 : 0) - (Actions.HeldLoose("world.camera_up") ? 1 : 0));
@@ -891,8 +905,8 @@ public partial class StreetView : Control, IHandlesBack
         // benchmark: sprint around the plaza in a square, torch on
         int phase = (int)(_benchT / 1.5) % 4;
         var (dx, dy) = phase switch { 0 => (1, 0), 1 => (0, 1), 2 => (-1, 0), _ => (0, -1) };
-        _world.SetInput(new MoveInput(dx, dy, true));
-        if (_frames == 2) _world.SetTorch(true);
+        _rec.SetInput(new MoveInput(dx, dy, true));
+        if (_frames == 2) _rec.SetTorch(true);
     }
 
     Vector2 _lastFeet; float _stridePhase; double _idleT;
@@ -1104,11 +1118,11 @@ public partial class StreetView : Control, IHandlesBack
             GetViewport().SetInputAsHandled(); return;
         }
         if (Actions.Pressed(e, "world.pause")) TogglePause();
-        else if (Actions.Pressed(e, "world.speed_1")) _world.SetSpeed(SimSpeed.X1);
-        else if (Actions.Pressed(e, "world.speed_2")) _world.SetSpeed(SimSpeed.X2);
-        else if (Actions.Pressed(e, "world.speed_4")) _world.SetSpeed(SimSpeed.X4);
-        else if (Actions.Pressed(e, "world.speed_8")) _world.SetSpeed(SimSpeed.X8);
-        else if (Actions.Pressed(e, "world.torch")) _world.ToggleTorch();
+        else if (Actions.Pressed(e, "world.speed_1")) _rec.SetSpeed(SimSpeed.X1);
+        else if (Actions.Pressed(e, "world.speed_2")) _rec.SetSpeed(SimSpeed.X2);
+        else if (Actions.Pressed(e, "world.speed_4")) _rec.SetSpeed(SimSpeed.X4);
+        else if (Actions.Pressed(e, "world.speed_8")) _rec.SetSpeed(SimSpeed.X8);
+        else if (Actions.Pressed(e, "world.torch")) _rec.ToggleTorch();
         else if (Actions.Pressed(e, "world.level_up")) ChangeView(1);
         else if (Actions.Pressed(e, "world.level_down")) ChangeView(-1);
         else if (Actions.Pressed(e, "world.zoom_in")) SetBand(_band - 1);
@@ -1119,7 +1133,7 @@ public partial class StreetView : Control, IHandlesBack
         else if (Actions.Pressed(e, "world.quicksave")) QuickSave();
         else if (Actions.Pressed(e, "world.quickload")) QuickLoad();
         else if (Actions.Pressed(e, "world.camera_home")) { _pan = Vector2.Zero; if (_viewZ != _world.Snapshot.Hero.Z) { _viewZ = _world.Snapshot.Hero.Z; RebuildLevel(); } }
-        else if (e is InputEventKey && Actions.Pressed(e, "world.act")) _world.UsePortal();
+        else if (e is InputEventKey && Actions.Pressed(e, "world.act")) _rec.UsePortal();
         else return;
         GetViewport().SetInputAsHandled();
     }
@@ -1148,7 +1162,7 @@ public partial class StreetView : Control, IHandlesBack
     void OpenPauseMenu()
     {
         if (_router == null) return;
-        if (_world.Clock.Speed != SimSpeed.Paused) { _speedBeforePause = _world.Clock.Speed; _world.SetSpeed(SimSpeed.Paused); _menuPaused = true; }
+        if (_world.Clock.Speed != SimSpeed.Paused) { _speedBeforePause = _world.Clock.Speed; _rec.SetSpeed(SimSpeed.Paused); _menuPaused = true; }
         var buttons = new List<(string, Action?)> { (L.T("PAUSE_RESUME"), null) };
         if (Run != null) buttons.Add((L.T("PAUSE_SAVE"), () => StartSave(SaveKind.Manual)));
         buttons.Add((L.T("PAUSE_SETTINGS"), () => { _toSettings = true; _router.Push(new SettingsScreen(_router)); }));
@@ -1162,7 +1176,7 @@ public partial class StreetView : Control, IHandlesBack
     {
         if (!_menuPaused || _toSettings || _leaving || (_router?.HasModal ?? false)) return;
         _menuPaused = false;
-        _world.SetSpeed(_speedBeforePause);
+        _rec.SetSpeed(_speedBeforePause);
     }
 
     // ------------------------------------------------------------------ saving (plan 2.11)
@@ -1195,6 +1209,7 @@ public partial class StreetView : Control, IHandlesBack
     void Begin(SaveJob job)
     {
         _sinceSave = 0;
+        if (job.Kind == SaveKind.Autosave) { _rec.Rebase(); Diagnostics.GameDiagnostics.NoteAutosaveBegin(_rec.Commands.BaseTick); } // the replay trace restarts at this autosave (testers spec 3.6)
         try
         {
             // the hero's state now (main thread), the world's records copied on the tick worker between two hours, then encoded and written on the thread pool
@@ -1215,6 +1230,7 @@ public partial class StreetView : Control, IHandlesBack
             else
             {
                 LastSaveError = null;
+                if (job.Kind == SaveKind.Autosave) Diagnostics.GameDiagnostics.NoteAutosaveDone(t.Result);
                 if (job.Kind == SaveKind.Autosave && !job.Quiet) _router?.ShowToast(L.T("SAVE_AUTOSAVED"));
                 else if (!job.Quiet) _router?.ShowToast(L.F("PAUSE_SAVED", System.IO.Path.GetFileName(t.Result)));
                 job.Then?.Invoke();
@@ -1315,8 +1331,8 @@ public partial class StreetView : Control, IHandlesBack
 
     void TogglePause()
     {
-        if (_world.Clock.Speed == SimSpeed.Paused) _world.SetSpeed(_speedBeforePause);
-        else { _speedBeforePause = _world.Clock.Speed; _world.SetSpeed(SimSpeed.Paused); }
+        if (_world.Clock.Speed == SimSpeed.Paused) _rec.SetSpeed(_speedBeforePause);
+        else { _speedBeforePause = _world.Clock.Speed; _rec.SetSpeed(SimSpeed.Paused); }
     }
 
     void ChangeView(int dz)
@@ -1352,7 +1368,7 @@ public partial class StreetView : Control, IHandlesBack
         var c = ScreenToCell(local);
         if (!_world.Grid.InBounds(c.X, c.Y, _viewZ)) return false;
         if (_viewZ != _world.Snapshot.Hero.Z) { _router?.ShowToast(L.T("STREET_WRONG_LEVEL")); return false; }
-        if (!_world.CommandMoveTo(new Cell3(c.X, c.Y, _viewZ))) { _router?.ShowToast(L.T("STREET_NO_PATH")); return false; }
+        if (!_rec.CommandMoveTo(new Cell3(c.X, c.Y, _viewZ))) { _router?.ShowToast(L.T("STREET_NO_PATH")); return false; }
         return true;
     }
 
@@ -1366,7 +1382,7 @@ public partial class StreetView : Control, IHandlesBack
             var back = ScreenToCell(CellToScreen(cell.X, cell.Y));
             if (back != cell) return (false, cell, -1); // the screen mapping does not round-trip
             if (!ClickMove(CellToScreen(cell.X, cell.Y))) continue;
-            for (int i = 0; i < steps; i++) _world.Step();
+            for (int i = 0; i < steps; i++) _rec.Step();
             var h1 = _world.Snapshot.Hero;
             return (true, cell, Math.Abs(h1.CellX - h0.CellX) + Math.Abs(h1.CellY - h0.CellY));
         }

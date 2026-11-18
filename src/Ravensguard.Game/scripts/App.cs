@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Godot;
 using Ravensguard.Game.Debug;
+using Ravensguard.Game.Diagnostics;
 using Ravensguard.Game.Inputs;
 using Ravensguard.Game.UI;
 
@@ -26,6 +27,14 @@ public partial class App : Node
             GetTree().Quit(conflicts.Count > 0 ? 1 : 0);
             return;
         }
+        int rp = System.Array.IndexOf(args, "--replay");
+        if (rp >= 0 && rp + 1 < args.Length)
+        {
+            // dev command: replay a bug-report zip headlessly, stop at the crash tick or report the first diverging hash (testers spec 4.5)
+            Settings.Load();
+            GetTree().Quit(ReplayTool.Run(args[rp + 1], args));
+            return;
+        }
         if (args.Contains("--selftest"))
         {
             GetTree().Quit(SelfTest.Run() ? 0 : 1);
@@ -43,6 +52,7 @@ public partial class App : Node
         }
 
         Settings.Load();
+        GameDiagnostics.Init(GetTree(), args);
         var win = GetWindow();
         Settings.ApplyScale(win);
         win.SizeChanged += () => Settings.ApplyScale(win);
@@ -73,6 +83,19 @@ public partial class App : Node
         else if (System.Array.IndexOf(args, "--ng-shot") >= 0) _ = UI.NewGame.NewGameDebug.Shot(GetTree(), Router, args);
     }
 
+    public override void _Process(double delta) => System.Threading.Interlocked.Increment(ref GameDiagnostics.Frames);
+
+    /// <summary>F8 works everywhere (menus, dialogues, Ironman): the picture is taken first, so the report window is not in it.</summary>
+    public override void _Input(InputEvent e)
+    {
+        if (Router == null || !Actions.PressedAlways(e, "world.report_bug") || BugReportScreen.IsOpen) return;
+        OpenBugReport();
+        GetViewport().SetInputAsHandled();
+    }
+
+    /// <summary>Opens the F8 report screen (the screenshot is captured before it opens).</summary>
+    public BugReportScreen? OpenBugReport() => BugReportScreen.Open(Router, GameDiagnostics.TryScreenshot());
+
     async void RunSmoke()
     {
         int code = 0;
@@ -84,6 +107,13 @@ public partial class App : Node
             Router.Pop(); await Frames(1);
             Router.Push(new World.StreetView(Router)); await Frames(2);
             Router.Pop(); await Frames(1);
+            var f8 = new InputEventKey { Keycode = Key.F8, PhysicalKeycode = Key.F8, Pressed = true };
+            _Input(f8); await Frames(2); // F8 opens the report window; opening it twice does nothing
+            if (!BugReportScreen.IsOpen) throw new Exception("F8 did not open the bug report window");
+            int depth = Router.Depth; _Input(f8); await Frames(1);
+            if (Router.Depth != depth) throw new Exception("F8 opened a second report window");
+            ((BugReportScreen)Router.Top!).Close(); await Frames(2);
+            if (BugReportScreen.IsOpen) throw new Exception("the bug report window did not close");
             await UI.NewGame.NewGameDebug.Smoke(GetTree(), Router);
         }
         catch (Exception ex)

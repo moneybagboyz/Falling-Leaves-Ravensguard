@@ -1,4 +1,5 @@
 using Ravensguard.Sim.Core;
+using Ravensguard.Sim.Live;
 
 namespace Ravensguard.Sim.Caravans;
 
@@ -19,8 +20,9 @@ public sealed record LiveCaravan(EntityId Id, int Home, CaravanState State, long
 /// </summary>
 public sealed class CaravanBridge
 {
-    public const int PromoteM = 150, DemoteM = 200, SpacingM = 12;
-    public const long DemoteAfterGameSeconds = 5 * TimeConst.GameSecondsPerRealSecond;
+    // the bubble rules are the people bridge's too (Live/Bubble.cs)
+    public const int PromoteM = Bubble.PromoteM, DemoteM = Bubble.DemoteM, SpacingM = 12;
+    public const long DemoteAfterGameSeconds = Bubble.DemoteAfterGameSeconds;
 
     private readonly HashSet<EntityId> _live = [];
     private readonly Dictionary<EntityId, long> _outsideSince = [];
@@ -36,29 +38,27 @@ public sealed class CaravanBridge
         var seen = new HashSet<EntityId>();
         foreach (var c in caravans.OrderBy(c => c.Id))
         {
-            if (!c.Active || c.State == CaravanState.Loading && c.Dist == 0 && false) continue;
+            if (!c.Active) continue;
             var (lx, ly, _, _) = CaravanMotion.PositionOf(c, nowSec);
-            long d2 = Sq(lx - centreXMm) + Sq(ly - centreYMm);
-            bool live = _live.Contains(c.Id);
-            if (!live)
+            long d2 = Bubble.Sq(lx - centreXMm) + Bubble.Sq(ly - centreYMm);
+            if (!_live.Contains(c.Id))
             {
-                if (d2 > Sq(PromoteM * 1000L)) continue;
+                if (!Bubble.InsidePromote(d2)) continue;
                 _live.Add(c.Id); _outsideSince.Remove(c.Id); Promotions++;
             }
-            else if (d2 > Sq(DemoteM * 1000L))
+            else
             {
-                if (!_outsideSince.TryGetValue(c.Id, out long since)) { _outsideSince[c.Id] = nowSec; since = nowSec; }
-                if (nowSec - since >= DemoteAfterGameSeconds) { _live.Remove(c.Id); _outsideSince.Remove(c.Id); Demotions++; continue; }
+                long since = _outsideSince.TryGetValue(c.Id, out long s0) ? s0 : -1;
+                bool demote = Bubble.ShouldDemote(d2, nowSec, ref since);
+                if (since < 0) _outsideSince.Remove(c.Id); else _outsideSince[c.Id] = since;
+                if (demote) { _live.Remove(c.Id); _outsideSince.Remove(c.Id); Demotions++; continue; }
             }
-            else _outsideSince.Remove(c.Id);
             seen.Add(c.Id);
             res.Add(Build(c, nowSec));
         }
         foreach (var id in _live.Where(id => !seen.Contains(id)).ToList()) { _live.Remove(id); _outsideSince.Remove(id); Demotions++; }   // the caravan reached its journey's end or was lost
         return res;
     }
-
-    private static long Sq(long v) => v * v;
 
     /// <summary>The live entities of a caravan at <paramref name="nowSec"/>: vehicles 12 m apart behind the lead, a draught animal or two ahead of each, a driver beside it, the master up front, guards spread along the train.</summary>
     public static LiveCaravan Build(Caravan c, long nowSec)
