@@ -359,6 +359,20 @@ public sealed partial class ContinentTrade
         if (n <= 0) return [];
         var w = _ew.World; var pt = w.People; var hht = w.Households; long day = now.TotalDays;
         var got = new List<int>();
+        if (Environment.GetEnvironmentVariable("RV_CREWDBG") != null && _crewDbg++ < 2)
+        {
+            int[] c = new int[8];
+            for (int p = 0; p < pt.Count; p++)
+            {
+                if (pt.Status[p] != PersonStatus.Alive || pt.Sex[p] != Sex.Male) continue; c[0]++;
+                int age = w.AgeOn(p, day); if (age < 16 || age > 50) continue; c[1]++;
+                if (pt.Household[p] < 0 || hht.Head[pt.Household[p]] == p) continue; c[2]++;
+                var occ = pt.Occupation[p]; if (occ is Occupation.None or Occupation.Labourer or Occupation.Servant) c[3]++; else continue;
+                if (pt.Employer[p] < 0) c[4]++;
+                if (pt.Employer[p] < 0 && hht.ParcelCount[pt.Household[p]] == 0) c[5]++;
+            }
+            Console.WriteLine("crewdbg " + string.Join(",", c));
+        }
         for (int p = 0; p < pt.Count && got.Count < n; p++)
         {
             if (pt.Status[p] != PersonStatus.Alive || pt.Sex[p] != Sex.Male || pt.Employer[p] >= 0) continue;
@@ -374,6 +388,7 @@ public sealed partial class ContinentTrade
         return [.. got];
     }
 
+    private int _crewDbg;
     private readonly HashSet<int> _onRoad = [];
     private bool IsOnRoad(int person) => _onRoad.Contains(person);
 
