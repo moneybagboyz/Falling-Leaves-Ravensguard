@@ -10,6 +10,7 @@ using Ravensguard.Game.Tools.BlueprintEditor;
 using Ravensguard.Game.UI;
 using Ravensguard.Game.UI.NewGame;
 using Ravensguard.Sim.Building;
+using Ravensguard.Sim.Caravans;
 using Ravensguard.Sim.Core;
 using Ravensguard.Sim.Lighting;
 using Ravensguard.Sim.Live;
@@ -69,6 +70,8 @@ public partial class StreetView : Control, IHandlesBack
     WeatherView _wx = WeatherView.Calm(10);
     float _wxDim = 1f;
     FarLayer? _far;
+    CaravanSprites? _caravanSprites;
+    readonly CaravanBridge _caravanBridge = new();
     RegionMap? _regionMap;
     ColorRect _ambient = null!, _ground = null!;
     ShaderMaterial _ambientMat = null!;
@@ -124,6 +127,7 @@ public partial class StreetView : Control, IHandlesBack
         _rig = RigAtlas.Shared;
         _source ??= _opt.RegionSeed is { } seed ? StreetSource.FromSeed(seed, _opt.Poi) : StreetSource.Hamlet();
         _hero = _source.Hero;
+        if (_opt.CaravanShot) PrepareCaravanShot();
         var season = _opt.Season switch { "summer" => Season.Summer, "autumn" => Season.Autumn, "winter" => Season.Winter, _ => Season.Spring };
         // a run opens when history ended (the abstract tick's clock starts there); dev flags that name a date or hour pick it within that year
         var open = _source.StartTime;
@@ -172,6 +176,35 @@ public partial class StreetView : Control, IHandlesBack
         EditorLibrary.ContentReloaded -= OnBlueprintsReloaded;
         var exit = OnExit; OnExit = null;
         exit?.Invoke();
+    }
+
+    /// <summary>
+    /// Dev (--shot-caravan): steps the abstract world, a game hour at a time, until one of the home region's caravans is on its road well inside the region, then points the run at that
+    /// moment (season, day, hour) and starts the hero on the road a few metres behind the lead wagon, so a screenshot shows the LODBridge's cart, animals and people.
+    /// </summary>
+    void PrepareCaravanShot()
+    {
+        if (_source?.Runtime is not { } rt || rt.State.ContinentState is not { } st) { GD.PushWarning("[street] --shot-caravan needs a seed start with a world runtime"); return; }
+        var home = rt.State.HomeRegion;
+        for (int i = 0; i < 24 * 45; i++)
+        {
+            rt.AdvanceTo(GameTime.FromGameHours(rt.HourDone + 1));
+            foreach (var c in st.Caravans.All)
+            {
+                if (c.State != CaravanState.Outbound || c.Region != c.Home) continue;
+                long len = c.Path.LengthMm; if (c.Dist < 2_500_000 || c.Dist > len - 2_500_000) continue;
+                var lead = c.Path.At(c.Dist); var behind = c.Path.At(c.Dist - 14_000);
+                int lx = (int)(lead.XMm / 1000 - home.OriginXM), ly = (int)(lead.YMm / 1000 - home.OriginYM);
+                if (lx < 400 || ly < 400 || lx > RegionSettings.RegionM - 400 || ly > RegionSettings.RegionM - 400) continue;
+                var t = new GameTime(c.AnchorSec);
+                _opt.Season = t.Season switch { Season.Summer => "summer", Season.Autumn => "autumn", Season.Winter => "winter", _ => "spring" };
+                _opt.Day = t.DayOfSeason; _opt.Hour = t.Hour;
+                _opt.Start = ((int)(behind.XMm / 1000 - home.OriginXM), (int)(behind.YMm / 1000 - home.OriginYM), 0);
+                GD.Print($"[street] caravan {c.Id} at region ({lx},{ly}), {t}: {c.Vehicles.Length} vehicles, {c.Crew.Length} crew, state {c.State}");
+                return;
+            }
+        }
+        GD.PushWarning("[street] --shot-caravan: no caravan on the road within 45 game days");
     }
 
     /// <summary>Starts the tick worker and puts the hero's region where the live world stands (a loaded game resumes across a border).</summary>
@@ -276,6 +309,7 @@ public partial class StreetView : Control, IHandlesBack
         _street.AddChild(_ysort);
         _heroSprite = new RigActor(_rig, "hero"); // stacked layers from rig_32x64.png
         _ysort.AddChild(_heroSprite);
+        _caravanSprites = new CaravanSprites(_ysort, _rig, _art);
         _torchSprite = new Sprite2D { Texture = _art.Texture("item.torch"), Centered = false, Offset = new Vector2(-3, -34), TextureFilter = TextureFilterEnum.Nearest, Visible = false };
         _heroSprite.AddChild(_torchSprite);
         if (_hero != null) _heroSprite.AddChild(new Label { Name = "Nameplate", Text = _hero.Name, Position = new Vector2(-60, -84), CustomMinimumSize = new Vector2(120, 0), HorizontalAlignment = HorizontalAlignment.Center, ThemeTypeVariation = "HintLabel", MouseFilter = MouseFilterEnum.Ignore, ZIndex = 50 });
@@ -917,8 +951,23 @@ public partial class StreetView : Control, IHandlesBack
         _ambient.Visible = far;
         if (far) _ambient.Size = new Vector2(_vp.Size.X, _vp.Size.Y);
 
+        SyncCaravans(s);
         if (s.Tick != _shownTick) { _shownTick = s.Tick; UpdateWorld(s); UpdateLight(s); UpdateHud(s); }
         _wover.Update(GetProcessDeltaTime(), _wx, _vp.Size, _band == Band.Close ? 2 : 1);
+    }
+
+    /// <summary>
+    /// The LODBridge for caravans: the bubble around the hero holds the caravans of the abstract world whose road position comes within 150 m (and keeps them to 200 m); each is drawn from its
+    /// record's own position function, so what is on screen is where the abstract tick says the caravan is.
+    /// </summary>
+    void SyncCaravans(LiveSnapshot s)
+    {
+        if (_caravanSprites == null) return;
+        if (Runtime is not { } rt) return;
+        var home = rt.State.HomeRegion;
+        var (wx, wy) = _world.WorldCell;
+        var live = _caravanBridge.Update(rt.Caravans, (home.OriginXM + (long)wx) * 1000, (home.OriginYM + (long)wy) * 1000, s.Time.Seconds);
+        _caravanSprites.Sync(live, home.OriginXM, home.OriginYM, GetProcessDeltaTime(), _band < Band.Field);
     }
 
     /// <summary>The hero's chunks stream around the hero; a panned camera can look past them. Chunks under (and just ahead of) the camera in the window load now, the nearest first,

@@ -50,6 +50,8 @@ public sealed class WorldState
     public ProductionSystem? Production { get; set; }
     /// <summary>Market books, lots and merchants (saved in the "markets" section when present); needs <see cref="Production"/> for business parties.</summary>
     public MarketSystem? Markets { get; set; }
+    /// <summary>The abstract continent: 256 summaries, roads, caravans (saved in the "continent" section; null for a world that has none yet, which gets a fresh one when it runs).</summary>
+    public Ravensguard.Sim.Continental.ContinentState? ContinentState { get; set; }
     /// <summary>The home region's records as the running game holds them (set by <see cref="WorldRuntime"/>, or by the code that built a new game's economy so the runtime adopts them as they are).</summary>
     public RegionWorld? HomeRecords { get; set; }
     /// <summary>Content, for regenerating the baseline people a save is diffed against (spec N24); null: people are saved whole.</summary>
@@ -218,7 +220,7 @@ public sealed class ChronicleData
 /// </summary>
 public static class WorldSave
 {
-    public const string MetaSection = "meta", PeopleSection = "people", LotsSection = "region.lots", ChunksSection = ChunkStore.SectionName, ChronicleSection = "chronicle", HeroSection = "hero", CodexSection = "codex", LiveSection = "live", EconomySection = "economy", AbstractSection = "abstract", FarmingSection = "farming", ProductionSection = ProductionSave.SectionName, MarketsSection = MarketsSave.SectionName, RegionSectionName = "region.";
+    public const string MetaSection = "meta", PeopleSection = "people", LotsSection = "region.lots", ChunksSection = ChunkStore.SectionName, ChronicleSection = "chronicle", HeroSection = "hero", CodexSection = "codex", LiveSection = "live", EconomySection = "economy", AbstractSection = "abstract", FarmingSection = "farming", ProductionSection = ProductionSave.SectionName, ContinentSection = "continent", MarketsSection = MarketsSave.SectionName, RegionSectionName = "region.";
     public static string RegionSection(int id) => RegionSectionName + id.ToString("D3");
 
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = false };
@@ -370,6 +372,7 @@ public static class WorldSave
             Production = production, Markets = markets, RegionSections = regionSections,
             Hero = hero, Codex = codex, Live = resume, Economy = economy, Abstract = abstractState,
             Farming = file.Sections.ContainsKey(FarmingSection) ? Decode<FarmingSave>(file, FarmingSection, compressed: true).Restore(region) : null,
+            ContinentState = file.Sections.ContainsKey(ContinentSection) ? Decode<ContinentSave>(file, ContinentSection, compressed: true).Restore(cs.Seed, history) : null,
             ContinentSettings = cs, HistorySettings = hs, RegionSettings = rs, EmbarkCellX = meta.EmbarkCellX, EmbarkCellY = meta.EmbarkCellY,
             Continent = continent, History = history, Population = pop,
             Clock = new SimClock(new GameTime(meta.ClockSeconds), meta.ClockMsRemainder) { Speed = (SimSpeed)meta.ClockSpeed },
@@ -528,6 +531,7 @@ public sealed class LiveCapture
     internal FarmingSave? Farming { get; init; }
     internal ProductionSave? Production { get; init; }
     internal MarketsSave? Markets { get; init; }
+    internal ContinentSave? ContinentSt { get; init; }
     /// <summary>Captured sections of the resident regions other than home, and the stored sections of the paged ones.</summary>
     internal SortedDictionary<int, RegionSectionData>? Regions { get; init; }
     internal SortedDictionary<int, byte[]> PagedRegions { get; init; } = [];
@@ -569,6 +573,7 @@ public sealed class LiveCapture
         if (Farming != null) sections.Add(new(WorldSave.FarmingSection, SaveCodec.SerializeCompressed(Farming)));
         if (Production != null) sections.Add(new(WorldSave.ProductionSection, SaveCodec.SerializeCompressed(Production)));
         if (Markets != null) sections.Add(new(WorldSave.MarketsSection, SaveCodec.SerializeCompressed(Markets)));
+        if (ContinentSt != null) sections.Add(new(WorldSave.ContinentSection, SaveCodec.SerializeCompressed(ContinentSt)));
         if (Regions != null) foreach (var (id, d) in Regions) sections.Add(new(WorldSave.RegionSection(id), SaveCodec.SerializeCompressed(d)));
         foreach (var (id, b) in PagedRegions) sections.Add(new(WorldSave.RegionSection(id), b));
         return new SaveFile(Header, sections);

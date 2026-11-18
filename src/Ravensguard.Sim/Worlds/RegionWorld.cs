@@ -40,6 +40,8 @@ public sealed class RegionServices
     public RegionCoord Home { get; }
     /// <summary>The world's history: the baseline a saved region is diffed against is the population regenerated from it (note N24). Null where it is not at hand: sections are then saved whole.</summary>
     public Ravensguard.Sim.WorldGen.History.WorldHistory? History { get; set; }
+    /// <summary>The abstract continent every region of this world trades and migrates through (continent tick v1); regions bind to it when they are made. Null in a bare test world.</summary>
+    public Ravensguard.Sim.Continental.ContinentState? AbstractContinent { get; set; }
 
     public RegionServices(ulong seed, ContentDatabase content, Continent continent, RegionCoord home)
     {
@@ -104,6 +106,7 @@ public sealed class RegionWorld : IDisposable
         sim.Rates = VitalRates.EconomyDefault;
         VitalSeeding.SeedPregnancies(sim, start);
         var ew = EconomyWorld.Create(sim, sv.Content, sv.FarmWeatherFor());
+        if (sv.AbstractContinent != null) ew.BindContinent(new Ravensguard.Sim.Economy.Markets.ContinentLink(sv.AbstractContinent, at.Id));
         return new RegionWorld(at, sv, sim, ew, chron, ids);
     }
 
@@ -119,6 +122,7 @@ public sealed class RegionWorld : IDisposable
         var farming = new FarmingSystem(w.Population.Region, w.Population, w.Economy, sv.FarmSettings, sv.FarmWeatherFor(), chron, w.Ids, sv.SeedFor(at), w.Farming);
         var ew = new EconomyWorld(sim, farming, w.Markets, w.Production, w.Production.Resources!, w.Production.Content, chron);
         ew.Install();
+        if (sv.AbstractContinent != null) ew.BindContinent(new Ravensguard.Sim.Economy.Markets.ContinentLink(sv.AbstractContinent, at.Id));
         return new RegionWorld(at, sv, sim, ew, w.Chronicle, w.Ids);
     }
 
@@ -170,6 +174,7 @@ public sealed class RegionWorld : IDisposable
         d.Markets.Restore(markets, prod);
         var ew = new EconomyWorld(sim, farming, markets, prod, prod.Resources!, content, farmChron);
         ew.Install();
+        if (sv.AbstractContinent != null) ew.BindContinent(new Ravensguard.Sim.Economy.Markets.ContinentLink(sv.AbstractContinent, at.Id));
         return new RegionWorld(at, sv, sim, ew, chron, ids) { PendingChunks = d.Chunks };
     }
 

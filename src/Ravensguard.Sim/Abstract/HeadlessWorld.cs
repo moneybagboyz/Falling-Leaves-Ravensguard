@@ -76,6 +76,13 @@ public sealed class HeadlessWorld
         w.Rates = VitalRates.EconomyDefault;
         VitalSeeding.SeedPregnancies(w, start);
         var ew = EconomyWorld.Create(w, db, new RegionFarmWeather(weather, weather.Fronts.Long), carryOverPct);
+        // the continent round the region: summaries, roads from the history's trade routes, the weather's say on every harvest; the region's ticker runs its season tick (single-region world)
+        int homeId = RegionCoord.OfCell(cellX, cellY).Id;
+        var cont = Ravensguard.Sim.Continental.ContinentState.Create(seed, h, homeId, (int)w.Vital.Alive, econ.Ledger.Audit().InPurses.Mites, standalone: true);
+        Ravensguard.Sim.Continental.ContinentWiring.Attach(cont, c, h, weather);
+        ew.BindContinent(new Ravensguard.Sim.Economy.Markets.ContinentLink(cont, homeId));
+        Ravensguard.Sim.Continental.ContinentTick.BindPrices(econ.Goods);
+        Ravensguard.Sim.Continental.ContinentTick.Run(cont, [new Ravensguard.Sim.Continental.ResidentRegion(homeId, ew)], GameTime.FromGameHours(w.State.HourDone + 1));
         return new HeadlessWorld { World = w, Economy = ew, Content = db, Continent = c, History = h, ContinentSettings = cs, HistorySettings = hs, RegionSettings = rs, CellX = cellX, CellY = cellY, Population = pop, Weather = weather };
     }
 }

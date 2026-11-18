@@ -18,6 +18,8 @@ public sealed class ParishRelief
     private readonly SimWorld _w;
     private readonly MarketSystem _markets;
     private readonly ushort[] _grains;
+    /// <summary>The tithe in wool and cheese (taxes spec 3.3): sold like the grain, a sixtieth a day, in the settlements where no household is hungry.</summary>
+    private readonly ushort[] _titheGoods;
     private readonly List<int>[] _byFief;
     private bool[] _fiefHungry = [];
 
@@ -27,6 +29,7 @@ public sealed class ParishRelief
     {
         _w = w; _markets = markets;
         _grains = [.. w.Economy.Food.Staples.Where(g => w.Economy.Food.IsGrain(g))];
+        _titheGoods = [.. new[] { "wool_raw", "cheese" }.Where(id => w.Economy.Goods.TryIdOf(id, out _)).Select(id => w.Economy.Goods.IdOf(id))];
         int nf = Math.Max(1, w.Population.Region.Fiefs.Count);
         _byFief = new List<int>[nf + 1]; for (int i = 0; i < _byFief.Length; i++) _byFief[i] = [];
         for (int s = 0; s < w.Population.Region.Settlements.Count; s++) _byFief[FiefSlot(s)].Add(s);
@@ -85,6 +88,12 @@ public sealed class ParishRelief
                 long moved = Store.MoveUpTo(granary, e.HouseholdStore[seller], g, Math.Max(1, have / SellDivisor));
                 if (moved <= 0) continue;
                 SoldG += book.SellOrList(party, g, moved, 800, day);
+            }
+            foreach (ushort g in _titheGoods)
+            {
+                long have = granary.Qty(g); if (have <= 0) continue;
+                long moved = Store.MoveUpTo(granary, e.HouseholdStore[seller], g, Math.Max(1, have / SellDivisor));
+                if (moved > 0) book.SellOrList(party, g, moved, 800, day);
             }
         }
     }

@@ -301,6 +301,28 @@ public sealed class Props
         }
     });
 
+    /// <summary>A draught animal in side view facing east (continent tick v1, caravans): an ox (heavy, horned, brown) or a horse (leaner, mane and tail, leather and brown). 40 wide on a 64 x 48 sheet cell, standing on the bottom rows.</summary>
+    public PixelBuffer Draught(string kind) => Obj(64, 48, b =>
+    {
+        bool ox = kind == "ox";
+        var coat = ox ? R["brown"] : R["leather"];
+        int bx = 10, by = ox ? 20 : 18, bw = ox ? 34 : 30, bh = ox ? 15 : 13;
+        b.Shade(bx, by, bw, bh, coat, Top);                                                          // barrel of the body
+        if (ox) b.Shade(bx + 20, by - 3, 11, 5, coat, Top);                                          // the withers' hump
+        // four legs with dark hooves; the far pair a shade darker
+        foreach (var lx in new[] { bx + 2, bx + 7, bx + bw - 10, bx + bw - 5 }) { b.Shade(lx, by + bh - 1, 4, 11, coat); b.Rect(lx, by + bh + 8, 4, 2, P["dk1"]); }
+        // neck, head and muzzle to the east
+        b.Shade(bx + bw - 4, by - (ox ? 1 : 5), 9, ox ? 10 : 13, coat, Top);
+        b.Shade(bx + bw + 3, by + (ox ? 6 : 3), ox ? 11 : 10, ox ? 8 : 6, coat, Top);
+        b.Rect(bx + bw + (ox ? 11 : 10), by + (ox ? 10 : 6), 3, 3, P["pl3"]);                        // pale muzzle
+        b.Rect(bx + bw + 6, by + (ox ? 7 : 4), 2, 2, P["dk1"]);                                       // eye
+        if (ox) { b.Line(bx + bw + 3, by + 5, bx + bw + 1, by + 1, P["pl2"]); b.Line(bx + bw + 8, by + 5, bx + bw + 10, by + 1, P["pl2"]); }   // horns
+        else { b.Rect(bx + bw - 3, by - 5, 3, 9, P["w1"]); b.Rect(bx + bw + 5, by + 1, 2, 3, P["w2"]); }                                         // mane, ears
+        b.Line(bx, by + 3, bx - 3, by + bh + 3, ox ? P["br1"] : P["w1"]);                             // tail
+        // a yoke or collar
+        b.Rect(bx + bw - 6, by + 1, 3, 9, P["w3"]);
+    });
+
     public PixelBuffer Barrow() => Obj(64, 48, b =>
     {
         for (int y = 8; y < 44; y++)

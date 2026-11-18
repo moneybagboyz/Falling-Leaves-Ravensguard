@@ -44,6 +44,7 @@ public sealed class WorldRuntime : IDisposable
     private long _hourDone;                    // last hour whose barrier is applied (worker writes at the barrier, Pump reads)
     private volatile RuntimeSnapshot _snapshot;
     private Exception? _fault;
+    private volatile Ravensguard.Sim.Caravans.Caravan[] _caravans = [];
     private long _hoursStepped;
     private double _maxHourMs;
     private int _disposed;
@@ -51,6 +52,8 @@ public sealed class WorldRuntime : IDisposable
     /// <summary>The worker's last failure (null while healthy). The runtime stops starting hours after it; the game reports it once.</summary>
     public Exception? Fault => Volatile.Read(ref _fault);
     public RuntimeSnapshot Snapshot => _snapshot;
+    /// <summary>The caravans on the road as the last barrier left them (copies, safe to read from any thread): what the street view draws and the world map marks.</summary>
+    public IReadOnlyList<Ravensguard.Sim.Caravans.Caravan> Caravans => _caravans;
     /// <summary>Last hour whose barrier is applied.</summary>
     public long HourDone => Interlocked.Read(ref _hourDone);
     /// <summary>True while the worker is stepping an hour or running a job.</summary>
@@ -81,6 +84,16 @@ public sealed class WorldRuntime : IDisposable
         var home = state.HomeRegion;
         Services = new RegionServices(state.Seed, content, state.Continent, home) { History = state.History };
         var region = state.Population.Region;
+        // the abstract continent: the one the game was made or saved with, else a fresh one over the history (a save from before the continent tick)
+        if (state.ContinentState == null)
+        {
+            var fresh = Ravensguard.Sim.Continental.ContinentState.Create(state.Seed, state.History, home.Id, (int)(state.Abstract?.Vital.Alive ?? state.Population.People.Count),
+                state.Economy?.Ledger.Audit().InPurses.Mites ?? 0);
+            state.ContinentState = fresh;
+        }
+        Ravensguard.Sim.Continental.ContinentWiring.Attach(state.ContinentState, state.Continent, state.History, Services.Weather);
+        Ravensguard.Sim.Continental.ContinentTick.BindPrices(state.Economy!.Goods);
+        Services.AbstractContinent = state.ContinentState;
         if (manager == null)
         {
             var rs = state.RegionSettings; rs.Seed = region.Seed;
@@ -90,6 +103,8 @@ public sealed class WorldRuntime : IDisposable
         if (!Manager.IsReady(home)) Manager.Adopt(home, region, state.Population);
         Records = new RegionRecordSet(Services, Manager, state.Chunks, pager);
         var homeWorld = state.HomeRecords ?? RegionWorld.ForHome(Services, state);
+        if (!homeWorld.Economy.Trade.IsBound) homeWorld.Economy.BindContinent(new Ravensguard.Sim.Economy.Markets.ContinentLink(state.ContinentState, home.Id));
+        else homeWorld.Economy.BindContinent(new Ravensguard.Sim.Economy.Markets.ContinentLink(state.ContinentState, home.Id));
         Records.AdoptHome(homeWorld);
         state.HomeRecords = homeWorld;
         state.Regions = Records;
@@ -98,6 +113,13 @@ public sealed class WorldRuntime : IDisposable
         Hero = new HeroRegionTracker(home);
         _hourDone = homeWorld.HourDone;
         _snapshot = MakeSnapshot(new SchedulerReport(0, 0, 0, 0, 0, 0), 0, _hourDone);
+        PublishCaravans();
+    }
+
+    private void PublishCaravans()
+    {
+        var st = State.ContinentState; if (st == null) return;
+        _caravans = st.Caravans.All.Where(c => c.Active).Select(c => c.Clone()).ToArray();
     }
 
     /// <summary>Puts the hero's tracker where a loaded or teleported hero stands (frame metres of the continent), before the first pump.</summary>
@@ -207,6 +229,7 @@ public sealed class WorldRuntime : IDisposable
         Manager.PrewarmGenerator();
         double ms = sw.Elapsed.TotalMilliseconds;
         _hoursStepped++; _maxHourMs = Math.Max(_maxHourMs, ms);
+        PublishCaravans();
         _snapshot = MakeSnapshot(report, ms, h);             // the barrier: one reference swap
         Interlocked.Exchange(ref _hourDone, h);
         _hourBusy = false;

@@ -274,6 +274,36 @@ public sealed class EconomySoak
     }
 
     /// <summary>A text dump of where the economy stands (businesses by kind, flows of the key goods, book state, purses) for tuning; <c>soak --diag</c>.</summary>
+    /// <summary>
+    /// The taxes and treasuries of the run (<c>soak --tax</c>): the totals and the arrears and unrest state, then the income and payments by source of every treasury kind, season by
+    /// season, for the 1-based game year <paramref name="year"/> (0: the last year run). Crowns.
+    /// </summary>
+    public string TaxReport(int year = 0)
+    {
+        var tx = World.Economy.Taxes; var sb = new System.Text.StringBuilder();
+        sb.AppendLine(tx.Report());
+        int y0 = World.Population.NowYear, want = y0 + (year <= 0 ? Math.Max(0, Rows.Count - 1) : year - 1);
+        var reasons = Enum.GetValues<TransferReason>();
+        string[] seasons = ["spring", "summer", "autumn", "winter"];
+        sb.AppendLine($"treasuries in year {want - y0 + 1}: coin received and paid by source, per season, by kind of treasury (crowns)");
+        foreach (var snap in tx.Treasuries.History.Where(h => h.Year == want).OrderBy(h => h.Season))
+        {
+            sb.AppendLine($"  {seasons[snap.Season]}:");
+            foreach (var kind in Enum.GetValues<Ravensguard.Sim.Taxes.TreasuryKind>())
+            {
+                int k = (int)kind; var inn = new List<string>(); var outt = new List<string>(); long ti = 0, to = 0;
+                foreach (var why in reasons)
+                {
+                    long vi = snap.Income[k, (int)why], vo = snap.Expense[k, (int)why]; ti += vi; to += vo;
+                    if (vi != 0) inn.Add($"{why} {vi / 100.0:N0}"); if (vo != 0) outt.Add($"{why} {vo / 100.0:N0}");
+                }
+                if (ti == 0 && to == 0 && snap.Balance[k] == 0) continue;
+                sb.AppendLine($"    {Ravensguard.Sim.Taxes.Treasuries.KindNames[k],-6} in {ti / 100.0,9:N0} [{string.Join(", ", inn)}]  out {to / 100.0,9:N0} [{string.Join(", ", outt)}]  balance {snap.Balance[k] / 100.0:N0}" + (snap.LordPaid[k] > 0 ? $"  lord share {snap.LordPaid[k] / 100.0:N0}" : ""));
+            }
+        }
+        return sb.ToString();
+    }
+
     public string Diagnostics()
     {
         var sb = new StringBuilder(); var ew = World.Economy; var e = Sim.Economy; var cat = e.Goods; var prod = ew.Production; var led = e.Ledger;
@@ -380,7 +410,7 @@ public sealed class EconomySoak
         {
             var (ws, wc) = ew.Resources.Totals(Ravensguard.Sim.Production.ResourceKind.Wood); var (fsh, fcap) = ew.Resources.Totals(Ravensguard.Sim.Production.ResourceKind.Fish);
             var (gs, gc) = ew.Resources.Totals(Ravensguard.Sim.Production.ResourceKind.Game);
-            sb.AppendLine($"-- resources: wood {100.0 * ws / Math.Max(1, wc):0.0}% of cap, fish {100.0 * fsh / Math.Max(1, fcap):0.0}%, game {100.0 * gs / Math.Max(1, gc):0.0}%; trade: imported {ew.Trade.ImportedMites / 100:N0} crowns, exported {ew.Trade.ExportedMites / 100:N0} crowns, continent purse {Sim.Economy.Ledger.Balance(ew.Trade.Purse).Mites / 100:N0}");
+            sb.AppendLine($"-- resources: wood {100.0 * ws / Math.Max(1, wc):0.0}% of cap, fish {100.0 * fsh / Math.Max(1, fcap):0.0}%, game {100.0 * gs / Math.Max(1, gc):0.0}%; trade: imported {ew.Trade.ImportedMites / 100:N0} crowns, exported {ew.Trade.ExportedMites / 100:N0} crowns, caravans founded {ew.Trade.CaravansFounded} (now {ew.Trade.Link.State.Caravans.Count}), trips {ew.Trade.TripsDone}, lost {ew.Trade.CaravansLost}, dbg {string.Join(",", ContinentTrade.Dbg)}; imm dbg {string.Join(",", Ravensguard.Sim.People.Vital.PopulationMigrationSystem.Dbg)}; migrants posted {ew.Trade.Link.Mine.TotalPosted}, came {ew.Trade.Link.Mine.TotalCame}, left {ew.Trade.Link.Mine.TotalLeft}");
         }
         {
             string Top(long[] units) => string.Join(", ", Enumerable.Range(0, cat.Count).Select(g => (g, v: units[g] * (cat.IsPiece((ushort)g) ? cat.BasePriceMilliMites((ushort)g) / 1000.0 : cat.BasePriceMilliMites((ushort)g) / 1e6) / 100)).Where(x => x.v > 0).OrderByDescending(x => x.v).Take(8).Select(x => $"{cat.StringId((ushort)x.g)} {x.v:N0}"));

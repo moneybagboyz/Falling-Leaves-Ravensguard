@@ -25,8 +25,8 @@ public sealed record TaxPolicyDef : ContentDef
     // the arrears ladder (T2)
     public int ArrearsDebtSeasons { get; init; } = 3;
     public int ArrearsEvictSeasons { get; init; } = 6;
-    /// <summary>Labour that works off arrears on the demesne: worker-days a season, and the mites a worker-day is worth (2 worker-days per 100 mites).</summary>
-    public int WorkOffDaysPerSeason { get; init; } = 4;
+    /// <summary>Labour that works off arrears on the demesne: worker-days a season for each of two working adults, and the mites a worker-day is worth (2 worker-days per 100 mites).</summary>
+    public int WorkOffDaysPerSeason { get; init; } = 12;
     public int WorkOffMitesPerDay { get; init; } = 50;
     // evasion and unrest (T4, T6)
     public int EvasionChancePctWithGrievance { get; init; } = 30;

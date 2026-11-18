@@ -247,6 +247,9 @@ public sealed class WorldTicker : IDisposable
         long t = Stopwatch.GetTimestamp();
         FlushOutbox();
         World.State.HourDone = h;
+        // a one-region world has no scheduler to run the continent's season tick: its own barrier does (the spec's C1 barrier; scheduler worlds run it there)
+        if (Ravensguard.Sim.Continental.ContinentTick.IsDue(h) && World.Get<Ravensguard.Sim.Economy.Markets.ContinentLink>() is { State.Standalone: true } cl && World.Get<EconomyWorld>() is { } cew)
+            Ravensguard.Sim.Continental.ContinentTick.Run(cl.State, [new Ravensguard.Sim.Continental.ResidentRegion(cl.Region, cew)], GameTime.FromGameHours(h));
         bool hour0 = h % 24 == 0;
         Interlocked.Exchange(ref _snapshot, MakeSnapshot(h, hour0));
         if (!_opt.RecordTimings) return;

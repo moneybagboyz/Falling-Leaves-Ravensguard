@@ -19,8 +19,11 @@ public class HerdTests
         var w = Synth.Build(new SynthSpec(Sheep: 40), Herds());
         w.Run(w.Year, 1, 1);
         Assert.Equal(40 * 164, w.Total("wool_raw"));
+        // a tenth of the wool is the parish's tithe (taxes spec 3.3, G-T4: 164 kg of wool, 16.4 kg tithe); the holders share the rest
+        long tithe = 40 * 164 / 10, held = 40 * 164 - tithe;
         var holders = Enumerable.Range(0, w.State.Parcels.Count).Select(p => w.State.Parcels.Holder[p]).Distinct().Where(h => h >= 0).ToList();
-        Assert.All(holders, h => Assert.InRange(w.Econ.HouseholdStore[h].Qty(w.Good("wool_raw")), 40 * 164 / holders.Count - 1, 40 * 164 / holders.Count + holders.Count));
+        Assert.All(holders, h => Assert.InRange(w.Econ.HouseholdStore[h].Qty(w.Good("wool_raw")), held / holders.Count - 1, held / holders.Count + holders.Count));
+        Assert.Equal(tithe, Enumerable.Range(0, w.Region.Settlements.Count).Sum(s => w.Econ.OtherStores.TryGetValue(FarmIds.ParishGranary(s), out var g) ? g.Qty(w.Good("wool_raw")) : 0));
         Assert.True(w.MassAudit());
     }
 

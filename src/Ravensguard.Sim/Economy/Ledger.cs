@@ -80,6 +80,7 @@ public sealed class Ledger
         _flowCoin[(int)why] = checked(_flowCoin[(int)why] + amount.Mites); _flowCount[(int)why]++;
         if (_in != null) Track(from.Index, to.Index, (int)why, amount.Mites);
         Observer?.Invoke(from, to, why, amount.Mites);
+        Tap?.Invoke(from, to, why, amount.Mites);
         Log(from, to, amount, (byte)why, false, false, chronicleEvent);
         return true;
     }
@@ -111,6 +112,9 @@ public sealed class Ledger
 
     /// <summary>Called after every successful transfer (from, to, reason, mites): the soak's coin-flow trace. A diagnostic, not part of the state; it must not move coin.</summary>
     public Action<PurseId, PurseId, TransferReason, long>? Observer { get; set; }
+
+    /// <summary>The treasuries' ledger view (taxes spec, <c>Treasuries</c>): called after every successful transfer like <see cref="Observer"/>, but owned by the economy, so a diagnostic can take the Observer. Must not move coin.</summary>
+    public Action<PurseId, PurseId, TransferReason, long>? Tap { get; set; }
 
     /// <summary>Starts (or restarts, zeroed) per-purse tracking of the coin moved in and out by reason: a diagnostic, not part of the state.</summary>
     public void StartTracking() { _in = new long[Math.Max(64, _count * 2) * TransferReasons]; _out = new long[_in.Length]; }

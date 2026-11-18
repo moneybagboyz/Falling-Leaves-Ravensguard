@@ -306,6 +306,7 @@ public static class Demography
         pt.Status[p] = PersonStatus.Departed; pt.PregnantUntilDay[p] = -1; pt.FatherOfUnborn[p] = -1;
         var v = w.Vital; v.Alive--; v.Emigrants++; v.Year(when.Year).Emigrants++;
         ob.Count("emigrants");
+        if (w.Get<Ravensguard.Sim.Economy.Markets.ContinentLink>() is { } lk) { var rl = lk.Mine; rl.EmigrantPersons++; rl.TotalLeft++; }
         int sp = pt.Spouse[p];
         if (sp >= 0 && pt.Spouse[sp] == p) pt.Spouse[sp] = -1;
         ReleaseOffice(w, p);
@@ -328,7 +329,8 @@ public static class Demography
             hht.RemoveMember(hh, p);
         }
         ob.Count("emigrants", members.Length);
-        var purse = e.Ledger.Open(PurseKind.Treasury, ContinentOwner);
+        var link = w.Get<Ravensguard.Sim.Economy.Markets.ContinentLink>();
+        var purse = link == null ? e.Ledger.Open(PurseKind.Treasury, ContinentOwner) : PurseId.None;
         var bal = e.Ledger.Balance(e.HouseholdPurse[hh]);
         // chevage (integration decision I11): a household that leaves its lord's land pays him a share of its coin, so a region that people leave does not lose its money for good
         int fiefOut = FiefOf(w, hht.Settlement[hh]);
@@ -337,10 +339,23 @@ public static class Demography
             var due = new Coin(bal.Mites * w.Rates.ChevagePct / 100);
             if (due.Mites > 0 && e.Ledger.Transfer(e.HouseholdPurse[hh], e.Ledger.Open(PurseKind.Treasury, w.Population.Region.Fiefs[fiefOut].Id), due, TransferReason.Escheat)) bal -= due;
         }
-        if (bal.Mites > 0) e.Ledger.Transfer(e.HouseholdPurse[hh], purse, bal, TransferReason.Gift);
-        var chest = e.OpenStore(StoreKind.Chest, ContinentOwner, 0, 0, enforce: false);
         var src = e.HouseholdStore[hh];
-        foreach (var (g, q) in src.Rows()) Store.Move(src, chest, g, q);
+        if (link != null)
+        {
+            // continent tick v1: what the household takes leaves the region's books (emigrated coin, exported goods) and arrives in the neighbour's summary at the next tick
+            var rl = link.Mine;
+            if (bal.Mites > 0 && e.Ledger.Sink(e.HouseholdPurse[hh], bal, SinkReason.Emigrate)) rl.EmigrantCoin += bal.Mites;
+            long grainG = 0;
+            foreach (var (g, q) in src.Rows()) { if (e.Food.IsGrain(g)) grainG += e.Goods.MassG(g, q); src.Destroy(g, q, DestroyReason.Export); }
+            rl.EmigrantMeasures += grainG * Ravensguard.Sim.Continental.ContinentRules.MeasuresPerKgX1000 / 1_000_000;
+            rl.EmigrantPersons += members.Length; rl.EmigrantHouseholds++; rl.TotalLeft += members.Length;
+        }
+        else
+        {
+            if (bal.Mites > 0) e.Ledger.Transfer(e.HouseholdPurse[hh], purse, bal, TransferReason.Gift);
+            var chest = e.OpenStore(StoreKind.Chest, ContinentOwner, 0, 0, enforce: false);
+            foreach (var (g, q) in src.Rows()) Store.Move(src, chest, g, q);
+        }
         int fief = FiefOf(w, hht.Settlement[hh]);
         hht.Head[hh] = -1;
         RelocateParcels(w, hh, LordHousehold(w, fief, -1, exclude: hh));
@@ -356,7 +371,7 @@ public static class Demography
     /// village first), the eldest adult heads it, each member's reserve is full, and the continent's purse and chest give it a stake from what the emigrants took out
     /// (20 crowns and a fortnight of grain a head, as much as is there), so coin and goods stay in the closed audit. False when no dwelling is free.
     /// </summary>
-    public static bool ReturnHousehold(SimWorld w, int hh, List<int> members, GameTime when, RegionOutbox ob)
+    public static bool ReturnHousehold(SimWorld w, int hh, List<int> members, GameTime when, RegionOutbox ob, Stake? stake = null)
     {
         var pt = w.People; var hht = w.Households; var e = w.Economy; long day = when.TotalDays;
         var (s, l) = Marriage.FreeDwelling(w, hht.Settlement[hh], members.Count);
@@ -375,15 +390,106 @@ public static class Demography
         }
         hht.Head[hh] = head >= 0 ? head : members[0];
         ob.Count("immigrants", members.Count);
+        if (stake != null) { GiveStake(w, hh, stake.Value); return true; }
         var purse = e.Ledger.Open(PurseKind.Treasury, ContinentOwner);
-        long stake = Math.Min(e.Ledger.Balance(purse).Mites, members.Count * 2000L);
-        if (stake > 0) e.Ledger.Transfer(purse, e.HouseholdPurse[hh], new Coin(stake), TransferReason.Gift);
+        long stakeMites = Math.Min(e.Ledger.Balance(purse).Mites, members.Count * 2000L);
+        if (stakeMites > 0) e.Ledger.Transfer(purse, e.HouseholdPurse[hh], new Coin(stakeMites), TransferReason.Gift);
         if (e.OtherStores.TryGetValue(ContinentOwner, out var chest))
         {
             long want = (long)members.Count * HouseholdNeeds.GramsPerMeasure * 14;
             foreach (ushort g in e.Food.Staples) { if (want <= 0) break; if (e.Food.IsGrain(g)) want -= Store.MoveUpTo(chest, e.HouseholdStore[hh], g, want); }
         }
         return true;
+    }
+
+    /// <summary>What the continent gives a household that comes to the region: coin (immigrated into its purse) and grain in measures (imported into its store).</summary>
+    [ThreadStatic] public static int LastSettled;
+    public readonly record struct Stake(long CoinMites, long GrainMeasures);
+
+    private static void GiveStake(SimWorld w, int hh, Stake stake)
+    {
+        var e = w.Economy;
+        if (stake.CoinMites > 0) e.Ledger.Mint(e.HouseholdPurse[hh], new Coin(stake.CoinMites), SourceReason.Immigrate);
+        if (stake.GrainMeasures > 0 && e.Goods.TryIdOf("wheat", out ushort wheat))
+            e.HouseholdStore[hh].Create(wheat, stake.GrainMeasures * 1_000_000 / Ravensguard.Sim.Continental.ContinentRules.MeasuresPerKgX1000, CreateReason.Import);
+    }
+
+    /// <summary>
+    /// A family from the continent settles in a vacant dwelling (continent tick v1, spec 3.7: the region instantiates synthetic households for the migrants posted to it): a father and
+    /// mother in their twenties and the rest children, names from the region's own pools, the ids from this region's allocator (E9), the coin and grain the continent sent
+    /// with them. Returns the household row, or -1 when no dwelling with room is free.
+    /// </summary>
+    /// <summary>The persons actually settled are <see cref="LastSettled"/>.</summary>
+    public static int SettleFamily(SimWorld w, int persons, Func<int, Stake> stakeFor, GameTime when, RegionOutbox ob, int salt)
+    {
+        var pt = w.People; var hht = w.Households; var pop = w.Population; var e = w.Economy; long day = when.TotalDays;
+        if (persons < 1) return -1;
+        int s = -1, l = -1;
+        for (; persons >= 2 && s < 0; persons--)               // a smaller family when no dwelling is big enough for the whole party
+            for (int cand = 0; cand < pop.Region.Settlements.Count && s < 0; cand++) { var (cs, cl) = Marriage.FreeDwelling(w, cand, persons); if (cs >= 0) { s = cs; l = cl; } }
+        persons++;
+        if (s < 0)
+        {
+            int free = 0, freeBig = 0, manor = 0;
+            for (int cs = 0; cs < pop.Region.Settlements.Count; cs++) { var lots = pop.Region.Settlements[cs].Plan.Lots; for (int cl = 0; cl < lots.Count; cl++) if (lots[cl].IsDwelling && pop.LotHousehold[cs][cl] < 0) { if (lots[cl].Dwelling == Ravensguard.Sim.WorldGen.Region.DwellingType.Manor) manor++; else { free++; if (pop.LotBeds[cs][cl] >= 3) freeBig++; } } }
+            Ravensguard.Sim.People.Vital.PopulationMigrationSystem.Dbg[3] = free * 10000L + freeBig * 100 + manor;
+            return -1;
+        }
+        var lot = pop.Region.Settlements[s].Plan.Lots[l];
+        w.Ids.EnsureNext(IdKind.Household, hht.BaseCounter + (ulong)hht.Count);
+        var hid = w.Ids.Allocate(IdKind.Household);
+        int hh = hht.Add(s, l, lot.Dwelling, pop.LotBeds[s][l]);
+        if (hht.IdOf(hh) != hid) throw new InvalidOperationException("household id out of step with the table");
+        int culture = pop.Region.Settlements[s].Culture;
+        var pool = w.Names?.For(culture);
+        string family = pool != null ? pool.FamilyName(new Rnd(w.Seed, hid.Value, VitalStreams.Name)) : "Settler";
+        hht.Class[hh] = SocialClass.Peasant; hht.Deed[hh] = DeedKind.Rented; hht.Name[hh] = family;
+        int head = -1;
+        for (int i = 0; i < persons; i++)
+        {
+            w.Ids.EnsureNext(IdKind.Person, pt.BaseCounter + (ulong)pt.Count);
+            var id = w.Ids.Allocate(IdKind.Person);
+            int p = pt.Add();
+            if (pt.IdOf(p) != id) throw new InvalidOperationException("person id out of step with the table");
+            bool adult = i < 2, female = i == 1 || (!adult && DetRng.Range(w.Seed, when.TotalHours, id.Value, VitalStreams.Conception, 2, 0, 2) == 1);
+            int age = adult ? (i == 0 ? 28 : 25) : 1 + DetRng.Range(w.Seed, when.TotalHours, id.Value, VitalStreams.Conception, 3, 0, 10);
+            pt.Sex[p] = female ? Sex.Female : Sex.Male; pt.BirthDay[p] = (int)(day - (long)age * TimeConst.DaysPerYear - DetRng.Range(w.Seed, when.TotalHours, id.Value, VitalStreams.Conception, 4, 0, 59));
+            pt.Culture[p] = (byte)culture; pt.Class[p] = SocialClass.Peasant; pt.Family[p] = family;
+            pt.Given[p] = pool != null ? pool.Given(female, new Rnd(w.Seed, id.Value, VitalStreams.Name)) : (female ? "Settler" : "Settler");
+            pt.Household[p] = hh; pt.HomeSettlement[p] = s; pt.HomeLot[p] = (short)l; pt.Bed[p] = -1; pt.Status[p] = PersonStatus.Alive;
+            pt.Occupation[p] = Occupation.None;
+            RollAdultAttributes(pt, p, w.Seed, id.Value, adult ? 100 : 55);
+            hht.AddMember(hh, p);
+            e.AddPerson(p);
+            if (i == 0) head = p;
+            else if (i == 1) { pt.Spouse[p] = head; pt.Spouse[head] = p; }
+            else { pt.Mother[p] = head + 0 >= 0 && pt.Spouse[head] >= 0 ? pt.Spouse[head] : -1; pt.Father[p] = head; }
+            w.Vital.Alive++; w.Vital.Immigrants++; w.Vital.Year(when.Year).Immigrants++;
+            w.NoteBirth(p);
+        }
+        hht.Head[hh] = head;
+        pop.LotHousehold[s][l] = hh;
+        e.AddHousehold(hht, hh);
+        for (int i = 0; i < hht.MemberCount[hh]; i++) { }
+        foreach (int p in hht.Members(hh)) e.NutritionCd[p] = (short)HouseholdNeeds.MaxNutritionCd;
+        pop.ResetKin();
+        GiveStake(w, hh, stakeFor(persons));
+        ob.Count("immigrants", persons); LastSettled = persons;
+        if (w.Rates.ChronicleEveryEvent) ob.Chronicle(when, "immigration", [hid], [new Cause(CauseKind.Migration, null, "a family came over the border looking for land")], ("household", family), ("members", persons.ToString()), ("settlement", pop.Region.Settlements[s].Name));
+        _ = salt;
+        return hh;
+    }
+
+    private static void RollAdultAttributes(PersonTable pt, int c, ulong seed, ulong entity, int fPct)
+    {
+        var s = new RngStream(seed, 0, entity, VitalStreams.Attributes);
+        int Roll() => 20 + s.Range(0, 21) + s.Range(0, 21) + s.Range(0, 21);
+        int str = Roll(), tou = Roll(), dex = Roll(), per = Roll(), wit = Roll();
+        if (pt.Sex[c] == Sex.Female) { str -= 6; dex += 2; }
+        str = str * fPct / 100; tou = tou * fPct / 100; dex = dex * (fPct + (fPct < 100 ? 10 : 0)) / 100;
+        int b = c * PersonTable.AttrCount;
+        byte K(int v) => (byte)Math.Clamp(v, 1, 100);
+        pt.Attr[b] = K(str); pt.Attr[b + 1] = K(tou); pt.Attr[b + 2] = K(dex); pt.Attr[b + 3] = K(per); pt.Attr[b + 4] = K(wit);
     }
 
     /// <summary>A person who left alone comes back to the household that still stands (a bed free), with a stake of 20 crowns from the continent's purse.</summary>

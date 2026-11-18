@@ -29,6 +29,8 @@ public sealed class EconomyWorld
     public RegionalTrade Regional { get; }
     /// <summary>The seasonal spending of households above their reserve (integration decision I37).</summary>
     public HouseholdSpending Spending { get; }
+    /// <summary>Taxes, rents, tolls, treasuries and unrest (taxes spec, Phase 2 scope).</summary>
+    public Ravensguard.Sim.Taxes.TaxSystem Taxes { get; }
     public EconomyCounters Counters { get; } = new();
     /// <summary>Farming writes its chronicle here; the farming system moves the new entries to the tick outbox after each daily step.</summary>
     public Chronicle FarmChronicle { get; }
@@ -39,13 +41,13 @@ public sealed class EconomyWorld
         World = world; Farming = farming; Markets = markets; Production = production; Resources = resources; Content = content; FarmChronicle = farmChronicle;
         Labour = new LabourMarket(production, world.Population, world.Economy, world.Seed, p => world.Children.Of(p));
         Parish = new ParishRelief(world, markets);
-        var cp = world.Economy.Ledger.Open(PurseKind.Treasury, Ravensguard.Sim.People.Vital.Demography.ContinentOwner);
         // the continent sells what no recipe of the region makes, and the materials the region's recipes consume (iron, leather, cloth, malt...) when a book is short of
         // them (integration decision I36): only the finished goods of the region's own workshops are never imported
         var inputs = content.Recipes.Recipes.SelectMany(r => r.Inputs.Select(i => i.Good)).ToHashSet();
-        Trade = new ContinentTrade(markets.AllBooks, world.Economy, cp, content.Recipes.Recipes.SelectMany(r => r.Outputs.Select(o => o.Good)).Where(g => !inputs.Contains(g)));
+        Trade = new ContinentTrade(this, markets.AllBooks, world.Economy, content.Recipes.Recipes.SelectMany(r => r.Outputs.Select(o => o.Good)).Where(g => !inputs.Contains(g)));
         Regional = new RegionalTrade(markets, world.Economy, world.Population.Region);
         Spending = new HouseholdSpending(world, this, content.Spending);
+        Taxes = new Ravensguard.Sim.Taxes.TaxSystem(world, this, farming, production, content.Tax);
         farming.BuyFromMarket = (hh, good, qty) => markets.BookForHousehold(hh).Buy(markets.HouseholdParty(hh), good, qty, 3000, (int)(world.State.HourDone / 24)).Qty;
         farming.CountIdleHands = true;
         farming.IsEmployedElsewhere = Labour.IsAwayFromFarm;
@@ -70,11 +72,13 @@ public sealed class EconomyWorld
         farming.ProvisionInitialStock();
         if (carryOverPct > 0) farming.ProvisionCarryOver(carryOverPct);
         var ew = new EconomyWorld(world, farming, markets, prod, layer, content, chron);
-        // the continent's trade float: a seed source like the households' (documented), so it can pay for exports before it has sold any imports
-        if (continentFloatPct > 0) { var seeded = econ.Ledger.Audit().Seeded.Mites; econ.Ledger.Mint(ew.Trade.Purse, new Coin(seeded * continentFloatPct / 100), SourceReason.Seed); }
+        // there is no continent float any more (continent tick v1): the neighbours' coin lives in the continent's summaries, and caravans carry it across the gates
         ew.Install();
         return ew;
     }
+
+    /// <summary>Puts this region into a continent: its caravans trade with that continent's summaries and its migrants cross through it.</summary>
+    public void BindContinent(Ravensguard.Sim.Economy.Markets.ContinentLink link) { Trade.Bind(link); World.Set(link); }
 
     /// <summary>Registers this economy in the world's service bag (<c>world.Get&lt;EconomyWorld&gt;()</c>).</summary>
     public void Install() => World.Set(this);

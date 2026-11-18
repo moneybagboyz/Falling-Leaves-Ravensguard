@@ -116,6 +116,7 @@ public static class CatalogV2
         foreach (var k in new[] { "yellow", "brown", "plain" }) { var kk = k; O64($"object.stall_{k}", 48, () => pr.Stall(kk)); }
         foreach (var k in new[] { "hay", "barrels", "goods" }) { var kk = k; O64($"object.cart_{k}", 48, () => pr.CartLoaded(kk)); }
         O64("object.barrow", 48, pr.Barrow);
+        O64("object.draught_ox", 48, () => pr.Draught("ox")); O64("object.draught_horse", 48, () => pr.Draught("horse"));
 
         AddMinis(l, pal, g, t);
     }

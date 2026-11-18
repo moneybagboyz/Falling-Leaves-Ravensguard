@@ -13,6 +13,8 @@ public sealed class AbstractState
     /// <summary>Hour index (<see cref="GameTime.TotalHours"/>) of the last completed hour step; the next step is <c>HourDone + 1</c>.</summary>
     public long HourDone { get; set; }
     public VitalState Vital { get; set; } = new();
+    /// <summary>Tax levels, arrears, treasury ledgers and unrest (taxes spec 2; saved with the abstract section).</summary>
+    public Ravensguard.Sim.Taxes.TaxState Taxes { get; set; } = new();
 }
 
 /// <summary>

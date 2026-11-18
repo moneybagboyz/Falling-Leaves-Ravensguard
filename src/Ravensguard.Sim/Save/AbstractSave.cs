@@ -54,6 +54,9 @@ public sealed class AbstractSave
     [Key(29)] public long[] YearEmigrants { get; set; } = [];
     [Key(30)] public long[] YearPopulationAtStart { get; set; } = [];
 
+    /// <summary>Tax levels, arrears, treasury ledgers and unrest (taxes spec 2); null in a save from before taxes.</summary>
+    [Key(31)] public Ravensguard.Sim.Taxes.TaxSave? Taxes { get; set; }
+
     private static T[] Cut<T>(T[] a, int n) => a.AsSpan(0, n).ToArray();
 
     /// <summary>Copies the state on the calling thread (so encoding can run elsewhere).</summary>
@@ -72,6 +75,7 @@ public sealed class AbstractSave
             YearNumber = v.Years.Select(y => y.Year).ToArray(), YearBirths = v.Years.Select(y => y.Births).ToArray(), YearDeaths = v.Years.Select(y => y.Deaths).ToArray(),
             YearMarriages = v.Years.Select(y => y.Marriages).ToArray(), YearImmigrants = v.Years.Select(y => y.Immigrants).ToArray(),
             YearEmigrants = v.Years.Select(y => y.Emigrants).ToArray(), YearPopulationAtStart = v.Years.Select(y => y.PopulationAtStart).ToArray(),
+            Taxes = Ravensguard.Sim.Taxes.TaxSave.Capture(s.Taxes),
         };
     }
 
@@ -97,7 +101,7 @@ public sealed class AbstractSave
             for (int i = 0; i < YearNumber.Length; i++)
                 v.Years.Add(new YearStats { Year = YearNumber[i], Births = YearBirths[i], Deaths = YearDeaths[i], Marriages = YearMarriages[i], Immigrants = YearImmigrants[i], Emigrants = YearEmigrants[i], PopulationAtStart = YearPopulationAtStart[i] });
             v.EnsureSettlements(pop.Region.Settlements.Count);
-            return new AbstractState { HourDone = HourDone, Vital = v };
+            return new AbstractState { HourDone = HourDone, Vital = v, Taxes = Taxes?.Restore() ?? new Ravensguard.Sim.Taxes.TaxState() };
         }
         catch (Exception ex) when (ex is IndexOutOfRangeException or ArgumentException)
         {

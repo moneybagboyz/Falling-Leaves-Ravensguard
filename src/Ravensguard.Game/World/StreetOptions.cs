@@ -27,6 +27,7 @@ public sealed class StreetOptions
     public string? PanelCategory, PanelEntry; // --shot-codex-cat legend|place|person|landmark|rule, --shot-codex-entry <id>
     public int Speed;            // --shot-speed 1|2|4|8 (dev): the clock speed from the start, to watch the world tick
     public bool AllNeighbours;   // --shot-neighbours: ask for the eight neighbour regions at the start (dev: a world map with several regions, each with its economy running)
+    public bool CaravanShot;      // --shot-caravan: step the world until a caravan is on the road, then start the hero a few metres behind it (dev screenshot of the LODBridge)
     public bool MapShot;         // --shot-map: open the world map and capture it instead of the street
     public int MapScale = 1;     // --shot-map-scale 1..6 (0 or -n: the continent overview, at zoom n)
     public int Settle = 900;     // frames to wait for far-band chunks to bake before a screenshot
@@ -49,6 +50,7 @@ public sealed class StreetOptions
         if (Val("--shot-day") is { } dy) o.Day = int.Parse(dy, CultureInfo.InvariantCulture);
         o.Weather = Val("--shot-weather");
         o.MapShot = Array.IndexOf(args, "--shot-map") >= 0;
+        o.CaravanShot = Array.IndexOf(args, "--shot-caravan") >= 0;
         o.AllNeighbours = Array.IndexOf(args, "--shot-neighbours") >= 0;
         if (Val("--shot-speed") is { } sp) o.Speed = int.Parse(sp, CultureInfo.InvariantCulture);
         o.Panel = Val("--shot-panel"); o.PanelCategory = Val("--shot-codex-cat"); o.PanelEntry = Val("--shot-codex-entry");

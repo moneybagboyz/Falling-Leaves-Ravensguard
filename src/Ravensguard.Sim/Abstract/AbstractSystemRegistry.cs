@@ -94,12 +94,14 @@ public sealed class AbstractSystemRegistry
         r.Add(new ParishSystem());                  // H5: charity and tithe sales
         r.Add(new LabourSystem());                  // H5: hiring, succession
         r.Add(new MarketDailySystem());             // H5: structural demand, demand EMA, lot expiry
-        r.Add(new ContinentTradeSystem());          // H5: imports and exports with the continent (caravan stand-in)
+        r.Add(new ContinentTradeSystem());          // H4 hour 3: merchants plan caravan trips to the gates (continent tick v1)
+        r.Add(new CaravanHourSystem());             // H1: caravans advance an hour
         r.Add(new ProductionGlobalsSystem());       // H5: vacancy and wage offers
         r.Add(new ResourceRegrowthSystem());        // H6 S3: regrowth
         r.Add(new BusinessSeasonalSystem());        // H6 S5: dividends, closures, training
         r.Add(new PriceDriftSystem());              // H6 S5: price drift
-        // Taxes (S4) are not built yet; they register here or by [AbstractSystem].
+        r.Add(new Ravensguard.Sim.Taxes.TaxDailySystem());       // H5: tax grievances, unrest and its ladder, riots, parish stipends (taxes spec 3.8)
+        r.Add(new Ravensguard.Sim.Taxes.TaxCollectionSystem());  // H6 S4: hearth tax, dwelling rent, the arrears ladder, the lord's share, the crown's outlay (taxes spec 3.1-3.7)
         if (discover) r.Discover(typeof(AbstractSystemRegistry).Assembly);
         return r;
     }

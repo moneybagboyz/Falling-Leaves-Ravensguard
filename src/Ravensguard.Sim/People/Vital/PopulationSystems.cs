@@ -251,6 +251,43 @@ public sealed class PopulationMigrationSystem : AbstractSystem
         Immigrate(ctx);
     }
 
+    /// <summary>
+    /// Immigration from the continent tick (spec 3.7, replaces the stand-in below when the region has a continent): the tick has posted migrants for this region (persons, the coin and
+    /// grain they bring, already taken out of the neighbour's summary); departed households come back first, then new families settle in vacant dwellings. What the region
+    /// takes is booked (<see cref="Ravensguard.Sim.Continental.RegionLink.TakenPersons"/>); the rest goes back at the next tick.
+    /// </summary>
+    public static readonly long[] Dbg = new long[4];
+    private static void ImmigrateFromContinent(TickContext ctx, Ravensguard.Sim.Economy.Markets.ContinentLink link)
+    {
+        var w = ctx.World; var pt = w.People; var hht = w.Households; var rl = link.Mine;
+        Dbg[0]++; int left = rl.PendingPersons - rl.TakenPersons; if (left <= 0 || rl.PendingPersons <= 0) return;
+        Dbg[1] += left;
+        long coinHead = rl.PendingCoin / rl.PendingPersons, measuresHead = rl.PendingMeasures / rl.PendingPersons;
+        Demography.Stake StakeFor(int n) => new(coinHead * n, measuresHead * n);
+        void Took(int n) { rl.TotalCame += n; rl.TakenPersons += n; rl.TakenCoin += coinHead * n; rl.TakenMeasures += measuresHead * n; }
+        var byHousehold = new SortedDictionary<int, List<int>>();
+        for (int p = 0; p < pt.Count; p++)
+        {
+            if (pt.Status[p] != PersonStatus.Departed) continue;
+            int hh = pt.Household[p]; if (hh < 0 || hht.MemberCount[hh] != 0) continue;
+            if (!byHousehold.TryGetValue(hh, out var l)) byHousehold[hh] = l = [];
+            l.Add(p);
+        }
+        foreach (var (hh, members) in byHousehold)
+        {
+            if (left < members.Count) continue;
+            if (Demography.ReturnHousehold(w, hh, members, ctx.Time, ctx.Outbox, StakeFor(members.Count))) { Took(members.Count); left -= members.Count; }
+        }
+        int salt = 0;
+        while (left >= 2)
+        {
+            int n = Math.Min(left, 3 + (salt % 3));
+            if (Demography.SettleFamily(w, n, StakeFor, ctx.Time, ctx.Outbox, salt++) < 0) { Dbg[2]++; break; }
+            int settled = Demography.LastSettled;
+            Took(settled); left -= settled;
+        }
+    }
+
     /// <summary>Share of the starting population (permille) that may return in one season, and the part of the shortfall they make up.</summary>
     public const int ReturnQuotaPermille = 12, ShortfallDivisor = 6;
 
@@ -262,6 +299,7 @@ public sealed class PopulationMigrationSystem : AbstractSystem
     /// </summary>
     private void Immigrate(TickContext ctx)
     {
+        if (ctx.World.Get<Ravensguard.Sim.Economy.Markets.ContinentLink>() is { } link) { ImmigrateFromContinent(ctx, link); return; }
         var w = ctx.World; var pt = w.People; var hht = w.Households; var v = w.Vital;
         long start = v.Years.Count > 0 ? v.Years[0].PopulationAtStart : v.Alive;       // the first year's opening head count (saved with the vital state)
         long shortfall = start - v.Alive; if (shortfall <= 0) return;

@@ -55,12 +55,24 @@ public sealed partial class FarmingSystem
         if (qty > given) HouseStore(top).Create(good, qty - given, CreateReason.Harvest);
     }
 
+    /// <summary>
+    /// The tithe of animal products (taxes spec 3.3, G-T4): a tenth of the wool and the cheese goes to the parish's granary (reason Harvest, as the grain tithe is); returns what is left for the
+    /// holders. The parish sells it with the rest of its tithe goods. Nothing is taken from a settlement whose parish has no granary.
+    /// </summary>
+    private long TitheOf(int s, ushort good, long qty)
+    {
+        long tithe = qty * _d.TithePermille / 1000;
+        if (tithe <= 0 || !Econ.OtherStores.TryGetValue(FarmIds.ParishGranary(s), out var granary)) return qty;
+        granary.Create(good, tithe, CreateReason.Harvest);
+        return qty - tithe;
+    }
+
     /// <summary>Spring shearing (resources spec 3.4, decision R2): raw wool from every sheep, to the holders by acres.</summary>
     private void Shear()
     {
         if (_d.WoolGPerSheepYear <= 0) return;
         var wool = _cat.IdOf("wool_raw");
-        for (int s = 0; s < Region.Settlements.Count; s++) ToHolders(s, wool, (long)State.Livestock.Sheep[s] * _d.WoolGPerSheepYear);
+        for (int s = 0; s < Region.Settlements.Count; s++) ToHolders(s, wool, TitheOf(s, wool, (long)State.Livestock.Sheep[s] * _d.WoolGPerSheepYear));
     }
 
     /// <summary>Start of autumn: the dairy of the year, a game year's cheese per cow, to the holders by acres.</summary>
@@ -68,7 +80,7 @@ public sealed partial class FarmingSystem
     {
         if (_d.CheeseGPerCowYear <= 0) return;
         var cheese = _cat.IdOf("cheese");
-        for (int s = 0; s < Region.Settlements.Count; s++) ToHolders(s, cheese, (long)State.Livestock.Cows[s] * _d.CheeseGPerCowYear);
+        for (int s = 0; s < Region.Settlements.Count; s++) ToHolders(s, cheese, TitheOf(s, cheese, (long)State.Livestock.Cows[s] * _d.CheeseGPerCowYear));
     }
 
     /// <summary>Animals slaughtered (culled, or surplus young) leave the herd as live pieces for the holders, who sell them to a butcher (the slaughter recipes' input).</summary>

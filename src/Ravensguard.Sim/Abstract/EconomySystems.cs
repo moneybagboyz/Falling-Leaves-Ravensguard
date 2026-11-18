@@ -238,6 +238,13 @@ public sealed class ContinentTradeSystem : AbstractSystem
     }
 }
 
+/// <summary>H1: the caravans of the region advance an hour (caravans spec 4): movement along the road, tolls, encounters, trade at the gate, settlement at home.</summary>
+public sealed class CaravanHourSystem : AbstractSystem
+{
+    public CaravanHourSystem() : base("caravans-hour", TickPhase.H1Caravans, SystemOrder.Caravans) { }
+    public override void Step(TickContext ctx) => ctx.World.Get<EconomyWorld>()?.Trade.Hour(ctx);
+}
+
 /// <summary>H2: one hour of work in every business (production spec 3.1).</summary>
 public sealed class ProductionWorkSystem : AbstractSystem
 {

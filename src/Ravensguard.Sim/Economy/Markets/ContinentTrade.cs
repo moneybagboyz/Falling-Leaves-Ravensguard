@@ -1,113 +1,81 @@
+using Ravensguard.Sim.Abstract;
+using Ravensguard.Sim.Caravans;
+using Ravensguard.Sim.Continental;
 using Ravensguard.Sim.Core;
 using Ravensguard.Sim.Goods;
+using Ravensguard.Sim.WorldGen.Region;
 
 namespace Ravensguard.Sim.Economy.Markets;
 
-/// <summary>
-/// The continent as a trade partner of the region until caravans exist (integration decision I13, plan Phase 2 "continent tick v1: trade into the region"). Once a day each
-/// book's richest merchant buys what the book is short of from the continent at a markup, and the continent buys what the book holds beyond its cover at a discount: raw
-/// materials and manufactures between <see cref="ImportMarkupPermille"/> and <see cref="ExportDiscountPermille"/> of the reference price, the staples inside a tighter and
-/// wider band (so a thin market is topped up and a glut is carried off, which is what bounds a staple's price). Food that is eaten fresh, livestock, fodder and firewood stay
-/// local. The continent pays and is paid through one purse (<see cref="Purse"/>) that holds a finite float, so it can export only as much as it has imported plus what it
-/// started with and never creates coin; goods enter as <c>Import</c> and leave as <c>Export</c> in the mass ledger.
-/// </summary>
-public sealed class ContinentTrade
+/// <summary>Where a region sits in the continent: the shared state and the region's own id.</summary>
+public sealed class ContinentLink(ContinentState state, int region)
 {
-    public const int ImportMarkupPermille = 1100, ExportDiscountPermille = 900, StapleImportMarkupPermille = 1050, StapleExportDiscountPermille = 950;
-    /// <summary>The continent steps in only at the extremes: below 0.3 of the target cover the price curve gives 1.83 x Ref, above 2.8 of it 0.6 x Ref, which is the band the spec asks staples to keep.</summary>
-    public const int ShortBelowPermilleOfCover = 300, GlutAbovePermilleOfCover = 2800;
+    public ContinentState State { get; } = state;
+    public int Region { get; } = region;
+    public RegionLink Mine => State.Link(Region);
+}
 
+/// <summary>
+/// The continent as a trade partner of the region, carried by caravans (continent-tick spec 3.6, caravans spec 3.3-3.6; replaces the daily stand-in of integration decision
+/// I13/I26 that bought from and sold to a purse with a finite float). Merchants of the books plan trips to the border gates of the region from the prices they know
+/// (a neighbour's summary, discounted by its age): a trip runs only when its expected margin beats its cost. The cargo is bought at the merchant's own book with his own
+/// coin, travels the real road (<see cref="CaravanRoads"/>) at cart speed in the daylight hours, pays bridge and realm tolls, risks encounters (stream 0x230) and
+/// is sold at the gate for coin the neighbour's summary pays out (limited by the season's <see cref="EdgeTrade"/> budget), with a back-haul bought at the gate and listed
+/// at home. Coin and goods that cross the gate are booked as emigrated/immigrated and exported/imported so every region's audit holds and the continent's total is conserved.
+/// <para>This file holds the state and the entry points; the planner is <c>CaravanPlanner.cs</c> and the hourly step <c>CaravanStep.cs</c> (both partial parts of this class).</para>
+/// </summary>
+public sealed partial class ContinentTrade
+{
+    /// <summary>Bridge toll per vehicle and the realm-gate toll per vehicle, mites; the goods toll at a realm gate, permille of cargo value (roads.jsonc defaults, caravans spec 2.2).</summary>
+    public const int TollBridgeMites = 10, TollGateMites = 25, TollGoodsPermille = 5;
+    public const int MinMarginPct = 15, PriceAgeDiscountPermillePerDay = 10, RiskPremiumPct = 3, CapitalCostPermillePerDay = 5;
+    public const int DriverWageMites = 150, GuardWageMites = 1_750;
+    public const int FoundingCashMites = 20_000;
+    public const uint StreamCaravan = 0x230, StreamTrip = 0x231;
+
+    private readonly EconomyWorld _ew;
     private readonly Func<IEnumerable<MarketBook>> _books;
     private readonly EconomyState _econ;
-    private readonly bool[] _local, _staple, _made;
-    public PurseId Purse { get; }
+    private readonly bool[] _local, _made;
+    private ContinentLink? _link;
 
-    public long ImportedMites, ExportedMites;
+    public long ImportedMites, ExportedMites, TollsMites, WagesMites;
     public long[] ImportedUnits, ExportedUnits;
+    public int TripsStarted, TripsDone, CaravansFounded, CaravansLost, Ambushes;
+    public long LootMites;
 
-    /// <param name="madeLocally">Goods some recipe of the region makes: the continent does not sell them back (it would undercut the region's own workshops), it sells what no workshop here can make, the raw materials and grain.</param>
-    public ContinentTrade(Func<IEnumerable<MarketBook>> books, EconomyState econ, PurseId purse, IEnumerable<ushort>? madeLocally = null)
+    /// <param name="madeLocally">Goods some recipe of the region makes: caravans do not bring them back (they would undercut the region's own workshops); they bring what no workshop here can make, the raw materials and the grain.</param>
+    public ContinentTrade(EconomyWorld ew, Func<IEnumerable<MarketBook>> books, EconomyState econ, IEnumerable<ushort>? madeLocally = null)
     {
-        _books = books; _econ = econ; Purse = purse;
+        _ew = ew; _books = books; _econ = econ;
         _made = new bool[econ.Goods.Count]; if (madeLocally != null) foreach (ushort g in madeLocally) _made[g] = true;
         var c = econ.Goods; int n = c.Count;
-        _local = new bool[n]; _staple = new bool[n];
-        foreach (var g in new[] { "milk", "meat_fresh", "fish_fresh", "eggs", "vegetables", "cheese", "sheep", "cow", "pig", "hay", "straw", "firewood", "silver", "arming_sword", "whey", "sawdust", "offal" })
+        _local = new bool[n];
+        foreach (var g in new[] { "milk", "meat_fresh", "fish_fresh", "eggs", "vegetables", "cheese", "sheep", "cow", "pig", "hay", "straw", "firewood", "silver", "arming_sword", "whey", "sawdust", "offal", "bread" })
             if (c.TryIdOf(g, out ushort id)) _local[id] = true;
-        foreach (var g in new[] { "wheat", "rye", "barley", "oats", "peas", "beans", "flour", "bread", "ale", "salt", "malt" })
-            if (c.TryIdOf(g, out ushort id)) _staple[id] = true;
         ImportedUnits = new long[n]; ExportedUnits = new long[n];
     }
 
-    /// <summary>One day of trade in every book that has a merchant (ascending settlement, then good).</summary>
-    public void Daily(GameTime now)
+    /// <summary>The region's place in the continent. A region built without one (a bare economy in a test) gets a small isolated continent of its own the first time it is asked.</summary>
+    public ContinentLink Link => _link ??= Standalone();
+    public bool IsBound => _link != null;
+
+    public void Bind(ContinentLink link) => _link = link;
+
+    private ContinentLink Standalone()
     {
-        int day = (int)now.TotalDays; var led = _econ.Ledger; int n = _econ.Goods.Count;
-        foreach (var b in _books())
-        {
-            if (b.Merchants.Count == 0) continue;
-            MarketParty? m = null; long best = -1;
-            foreach (var x in b.Merchants) { long c = led.Balance(x.Purse).Mites; if (c > best) { best = c; m = x; } }
-            if (m == null) continue;
-            for (ushort g = 0; g < n; g++)
-            {
-                if (_local[g]) continue;
-                var gb = b.Goods[g]; long cover = gb.Demand * gb.TargetCoverDays;
-                if (cover <= 1) continue;
-                bool staple = _staple[g];
-                if (!_made[g] && gb.StockUnits * 1000 < cover * ShortBelowPermilleOfCover && (gb.StructuralDemand > 0 || gb.LastTradedDay >= 0 || gb.DemandEma > 0)) Import(b, m, g, gb, cover, staple ? StapleImportMarkupPermille : ImportMarkupPermille, day);
-                else if (gb.StockUnits * 1000 > cover * GlutAbovePermilleOfCover) Export(b, g, gb, cover, staple ? StapleExportDiscountPermille : ExportDiscountPermille, day);
-            }
-        }
+        var w = _ew.World; var region = w.Population.Region;
+        int id = RegionCoord.OfCell(region.CellX, region.CellY).Id;
+        long coin = _econ.Ledger.Audit().InPurses.Mites;
+        var st = ContinentState.Standalone_(w.Seed, id, (int)Math.Max(1, w.Vital.Alive), coin);
+        st.HarvestPermille = null;
+        var l = new ContinentLink(st, id);
+        w.Set(l);
+        Ravensguard.Sim.Continental.ContinentTick.BindPrices(_econ.Goods);
+        Ravensguard.Sim.Continental.ContinentTick.Run(st, [new ResidentRegion(id, _ew)], GameTime.FromGameHours(w.State.HourDone + 1));
+        return l;
     }
 
-    private static long Price(long unitsRefMicro, long qty, int permille) => (long)(((Int128)unitsRefMicro * qty * permille / 1000 + 500_000) / 1_000_000);
-
-    private void Import(MarketBook b, MarketParty m, ushort g, GoodBook gb, long cover, int markup, int day)
-    {
-        var led = _econ.Ledger;
-        long want = Math.Min(cover * 6 / 10 - gb.StockUnits, Math.Max(1, cover / 4));
-        if (want <= 0) return;
-        long cash = led.Balance(m.Purse).Mites;
-        long unit = gb.RefMicro * markup / 1000;
-        if (unit <= 0) return;
-        long afford = (long)((Int128)(cash * 3 / 10) * 1_000_000 / unit);
-        long q = Math.Min(want, afford);
-        if (q <= 0) return;
-        long cost = Price(gb.RefMicro, q, markup);
-        if (cost > 0 && !led.Transfer(m.Purse, Purse, new Coin(cost), TransferReason.Trade)) return;
-        m.Store.Create(g, q, CreateReason.Import);
-        b.List(m, g, q, 1000, day, merchantLot: true);
-        ImportedMites += cost; ImportedUnits[g] += q;
-    }
-
-    private void Export(MarketBook b, ushort g, GoodBook gb, long cover, int discount, int day)
-    {
-        var led = _econ.Ledger;
-        long take = Math.Max(1, (gb.StockUnits - cover * 2000 / 1000) / 2);
-        long budget = led.Balance(Purse).Mites;
-        long unitMicro = gb.RefMicro * discount / 1000; if (unitMicro <= 0) return;
-        long maxQ = (long)((Int128)budget * 1_000_000 / unitMicro);
-        take = Math.Min(take, maxQ);
-        if (take <= 0) return;
-        b.Sync(g);
-        long left = take, got = 0;
-        for (int i = gb.Lots.Count - 1; i >= 0 && left > 0; i--)               // the dearest floors first: the lots the market would sell last
-        {
-            var lot = gb.Lots[i]; long q = Math.Min(lot.Qty, left);
-            if (q <= 0) continue;
-            long pay = Price(gb.RefMicro, q, discount);
-            if (pay > 0)
-            {
-                if (!led.Transfer(Purse, lot.Owner.Purse, new Coin(pay), TransferReason.Trade)) break;
-                long toll = (long)(((Int128)pay * _econ.Money.MarketTollPermille + 500) / 1000);
-                if (toll > 0) led.Transfer(lot.Owner.Purse, b.TollPurse, new Coin(toll), TransferReason.MarketToll);
-            }
-            b.BookStore.Destroy(g, q, DestroyReason.Export);
-            lot.Qty -= q; gb.StockUnits -= q; left -= q; got += q;
-            if (lot.Qty == 0) gb.Lots.RemoveAt(i);
-            ExportedMites += pay;
-        }
-        if (got > 0) ExportedUnits[g] += got;
-    }
+    /// <summary>One day of trade (hour 3 of the day, after the market): planning of trips for the merchants whose caravans are home, founding of new caravans.</summary>
+    public void Daily(GameTime now) => PlanDay(now);
 }

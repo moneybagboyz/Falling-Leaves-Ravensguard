@@ -35,6 +35,8 @@ public sealed class ProductionContent
     public required ResourceSettingsDef Settings { get; init; }
     /// <summary>How households spend above their reserve (integration decision I37), by role id; empty when the content has none.</summary>
     public IReadOnlyList<SpendingRuleDef> Spending { get; init; } = [];
+    /// <summary>Tax, toll and treasury constants (taxes spec 2.2).</summary>
+    public TaxPolicyDef Tax { get; init; } = new TaxPolicyDef { Id = "default" };
 
     public BusinessKind Kind(string id) => Kinds.First(k => k.Id == id);
 
@@ -56,7 +58,8 @@ public sealed class ProductionContent
             kinds.Add(k);
         }
         var cfg = db.All<ResourceSettingsDef>().OrderBy(x => x.Id, StringComparer.Ordinal).FirstOrDefault() ?? new ResourceSettingsDef { Id = "resources" };
-        return new ProductionContent { Recipes = book, Kinds = [.. kinds], Extractions = ext, Settings = cfg, Spending = [.. db.All<SpendingRuleDef>().OrderBy(x => x.Id, StringComparer.Ordinal)] };
+        return new ProductionContent { Recipes = book, Kinds = [.. kinds], Extractions = ext, Settings = cfg, Spending = [.. db.All<SpendingRuleDef>().OrderBy(x => x.Id, StringComparer.Ordinal)],
+            Tax = db.All<TaxPolicyDef>().OrderBy(x => x.Id, StringComparer.Ordinal).FirstOrDefault() ?? new TaxPolicyDef { Id = "default" } };
     }
 }
 

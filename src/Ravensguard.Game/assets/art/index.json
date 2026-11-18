@@ -4457,6 +4457,20 @@
       "w": 64,
       "h": 48
     },
+    "object.draught_ox": {
+      "atlas": "props_64",
+      "x": 512,
+      "y": 80,
+      "w": 64,
+      "h": 48
+    },
+    "object.draught_horse": {
+      "atlas": "props_64",
+      "x": 576,
+      "y": 80,
+      "w": 64,
+      "h": 48
+    },
     "field.grass.0": {
       "atlas": "field_8",
       "x": 0,

@@ -100,6 +100,10 @@ public sealed class RegionScheduler
             long steps = work[i].HourDone - before[i];
             if (work[i].Level == RegionLevel.Daily) dailyHours += (int)steps; else hourly += (int)steps;
         }
+        // the continent's season tick at the barrier, once every seasonal slice of the first day has run (continent-tick spec 3.0); never while a region is half-stepped
+        var cont = Records.Services.AbstractContinent;
+        if (cont != null && now.DayOfSeason >= 2 && Ravensguard.Sim.Continental.ContinentTick.SeasonOf(now) > cont.LastSeason)
+            Ravensguard.Sim.Continental.ContinentTick.Run(cont, Records.Resident.Select(r => new Ravensguard.Sim.Continental.ResidentRegion(r.Coord.Id, r.Economy)).ToArray(), now);
         return Last = new SchedulerReport(joined, paged, requested, hourly, dailyHours / 24, sw.Elapsed.TotalMilliseconds, dailyHours);
     }
 }

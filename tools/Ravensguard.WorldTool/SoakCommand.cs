@@ -4,7 +4,7 @@ using Ravensguard.Sim.Abstract;
 namespace Ravensguard.WorldTool;
 
 /// <summary>
-/// <c>soak --seed N --years Y [--carry PCT] [--quiet] [--diag] [--flow | --coin] [--flow-years 1,10]</c>: builds the seed's world with the whole Phase 2 economy, runs it Y game years on the abstract tick and prints the
+/// <c>soak --seed N --years Y [--carry PCT] [--quiet] [--diag] [--flow | --coin] [--flow-years 1,10] [--tax [--tax-year N]]</c>: builds the seed's world with the whole Phase 2 economy, runs it Y game years on the abstract tick and prints the
 /// yearly table (population, under-15 share, births, deaths, food surplus, hungry household-days, staple price index and book-days in band, workshop completion,
 /// merchants solvent, coin and its sources and sinks, the mass and coin audits) and, at the end, the tick timings. Exit code 1 when an audit fails.
 /// </summary>
@@ -12,7 +12,7 @@ public static class SoakCommand
 {
     public static int Run(string[] args)
     {
-        ulong seed = 1234; int years = 1, carry = 45; bool quiet = false, diag = false; string? probe = null; bool flow = false, coin = false; var flowYears = new List<int>(); int probeDays = 15, probeSkip = 0; int every = 1;
+        ulong seed = 1234; int years = 1, carry = 45; bool quiet = false, diag = false; string? probe = null; bool flow = false, coin = false, tax = false; int taxYear = 0; var flowYears = new List<int>(); int probeDays = 15, probeSkip = 0; int every = 1;
         for (int i = 1; i < args.Length; i++)
         {
             switch (args[i])
@@ -25,6 +25,8 @@ public static class SoakCommand
                 case "--diag": diag = true; break;
                 case "--flow": flow = true; break;
                 case "--coin": coin = true; break;
+                case "--tax": tax = true; break;
+                case "--tax-year": taxYear = int.Parse(args[++i]); tax = true; break;
                 case "--flow-years": flowYears = args[++i].Split(',').Select(int.Parse).ToList(); if (!coin) flow = true; break;
                 case "--probe": probe = args[++i]; break;
                 case "--probe-skip": probeSkip = int.Parse(args[++i]); break;
@@ -57,6 +59,7 @@ public static class SoakCommand
         Console.WriteLine($"{years} years in {soak.Clock.Elapsed.TotalSeconds:0.0} s");
         Console.WriteLine(EconomySoak.Summary(soak));
         if (diag) Console.WriteLine(soak.Diagnostics());
+        if (tax || diag) Console.WriteLine(soak.TaxReport(taxYear));
         Console.WriteLine(soak.Ticker.Stats.Report());
         return ok ? 0 : 1;
     }

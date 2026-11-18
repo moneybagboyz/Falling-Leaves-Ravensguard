@@ -27,13 +27,19 @@ public static class NewGameWorld
         var sv = new RegionServices(cs.Seed, content, continent, home) { History = history };
         var rw = RegionWorld.CreateFresh(sv, home, pop);
         if (hero != null) rw.Sim.Economy.SeedHero(hero.Coin);
+        var cont = Ravensguard.Sim.Continental.ContinentState.Create(cs.Seed, history, home.Id, (int)rw.Sim.Vital.Alive, rw.Sim.Economy.Ledger.Audit().InPurses.Mites);
+        Ravensguard.Sim.Continental.ContinentWiring.Attach(cont, continent, history, sv.Weather);
+        sv.AbstractContinent = cont;
+        rw.Economy.BindContinent(new Ravensguard.Sim.Economy.Markets.ContinentLink(cont, home.Id));
+        Ravensguard.Sim.Continental.ContinentTick.BindPrices(rw.Sim.Economy.Goods);
+        Ravensguard.Sim.Continental.ContinentTick.Run(cont, [new Ravensguard.Sim.Continental.ResidentRegion(home.Id, rw.Economy)], GameTime.FromGameHours(rw.Sim.State.HourDone + 1));
         return new WorldState
         {
             Hero = hero, Codex = codex, Content = content, HomeRecords = rw,
             Economy = rw.Sim.Economy, Farming = rw.Economy.Farming.State, Production = rw.Economy.Production, Markets = rw.Economy.Markets, Abstract = rw.Sim.State,
             ContinentSettings = cs, HistorySettings = hs, RegionSettings = rs, EmbarkCellX = cellX, EmbarkCellY = cellY,
             Continent = continent, History = history, Population = pop, Clock = new SimClock(clock ?? GameTime.FromCalendar(pop.NowYear, Season.Spring, 1, 8)),
-            Ids = rw.Ids, Chunks = new ChunkStore(), Chronicle = rw.Chronicle,
+            Ids = rw.Ids, Chunks = new ChunkStore(), Chronicle = rw.Chronicle, ContinentState = cont,
         };
     }
 }

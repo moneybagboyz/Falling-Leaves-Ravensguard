@@ -192,3 +192,88 @@ revolt, reputation).
    normal years.
 5. Tithe flows: grain tithe per year within 8-11% of net harvest (excluding glebe), spoilage in parish < 2% of grain.
 6. Evictions <= 0.3% of households per year in normal years; every eviction has the arrears chain recorded.
+
+
+## 10. Notes: Phase 2 implementation (taxes, treasuries, unrest basics)
+
+Code: `src/Ravensguard.Sim/Taxes/` (`TaxSystem`, `Treasuries`, `Tolls`, `TaxState` and `TaxSave`, `TaxTypes`), content `content/base/economy/taxes.jsonc`
+(`TaxPolicyDef`), tests `tests/Ravensguard.Sim.Tests/Taxes/TaxTests.cs`, soak `--tax [--tax-year N]` (also printed by `--diag`). The economy world owns one
+`TaxSystem` (`EconomyWorld.Taxes`); two systems drive it: `tax-daily` (H5, hour 0) and `tax-collection` (H6 S4, first day of a season). Everything below is Phase 2 scope
+(plan 3j: hearth tax, rents, tithe, the crown share and basic treasuries); subsidies, tallage, customs, estates, vassal dues, loans and purveyance are Phase 6 and 7.
+
+### 10.1 What exists
+- **Treasury records** (`Treasuries`): one per realm present (purse `Treasury`, owner a faction id built from the realm's history index), per fief (the existing
+  fief-treasury purse, so the market tolls, relief, workshop advances and manor payroll that already used it are unchanged), per chartered town (a settlement without a fief: its
+  `Settlement` purse, which is where the market book already sent the toll) and per parish (the `Chest` purse of the priest's settlement). All are ledger purses, hence physical
+  chests that can be raided. `Treasuries.All`, `Balance`, `PayeeSlot[settlement]` (where a settlement's hearth tax and rents go), `RealmSlotOfSettlement`.
+- **Ledger view**: `Ledger.Tap` (a second hook next to `Observer`, which the soak's coin trace owns) feeds `TaxState.Income/Expense[slot x transfer reason]` for the season; the
+  season rolls at hour 0 of its first day (`RollSeason`), and `Treasuries.History` keeps every finished season by kind (diagnostic, not saved). `IncomeOf(slot, reason)`,
+  `ExpenseOf`, `LastSeasonReport()`, `EconomySoak.TaxReport(year)`. There is no `EconomySnapshot` in the code yet; the view is this one.
+- **Hearth tax** (3.1): at S4 the reeve's round of settlement `s` runs at hour `s mod 24` of the first day, households ascending (G-T14: the order does not matter, tested): `due =
+  level amount + arrears`, `paid = min(coin, due)`, to the settlement's fief treasury (town treasury when it has no fief), reason `Hearth`; 30 percent of the settlement's hearth
+  receipts (the fief keeps `floor(70 percent)`, the realm the remainder) go on to the realm's treasury in the same step. The fief's level is data (`TaxState.FiefLevel`, `TaxSystem.SetLevel`).
+- **Dwelling rent** (3.2): a household with deed `Rented` pays 100 / 150 / 400 by dwelling type to the same treasury (reason `Rent`); deed `Tenant` pays none (its labour
+  service is Phase 5/6); `Owned` none. **Coin parcel rent** (autumn, 320 mites a field and year), **share rents** and the **tithe in kind** stay where they were, in farming
+  (one source: `content/base/economy/taxes.jsonc` does not repeat them), and were verified: G-F16 and G-T4 (`YieldMath.Split`: tithe 4,224 g of a net 42,240 g).
+- **Market tolls**: the books already take 5 percent (rounded half up, G-T5) to the fief treasury or town purse; unchanged. **Gate and bridge tolls**: see 10.3.
+- **Arrears ladder** (3.5): see T11 to T14. Arrears carry; at the third unpaid season they convert to a debt (no interest); a debt is paid down with up to half of what a household
+  holds above its dues; at the sixth season `Rented` and `Tenant` households are evicted (O11: everyone, the hero's tenants included; the hero's own household is an ordinary one);
+  `Owned` households keep the debt record. The chronicle entry `eviction` has the cause `Tax` ("evicted for arrears of N seasons") with the household and the creditor.
+- **Evasion** (3.1): a household with the `Tax` grievance in a settlement at rung 2 or above withholds its dues with probability 30 percent, `DetRng.Range(seed, day, household id, 0x260, 0, 0, 100)`;
+  the dues carry as arrears and the settlement gets one `tax_evasion` chronicle entry a season (cause `Tax`). Deterministic and order-free (test G-T9/G-T14).
+- **Unrest** (3.8): `Tax` bit set daily (H5, hour 0) by `TaxGrievance`: a `Crushing` level, a lease coin rent behind, arrears of two seasons (or an eviction notice pending: five), or dues
+  over 150 permille of an income of 1,000 mites a member and season. `Hunger` and `Cold` come from the household rules (existing). Unrest per settlement and per fief, rung ladder 200 / 350 / 550 /
+  750 with the step-down rule (below `rung - 50` for 15 days) and the 30-day test of rung 4, `TaxState.Unrest/Rung/FiefUnrest` are saved data for Phase 6. Rung 1 counts a rumour seed
+  a season (`RumourSeeds`, Phase 3 spreads them); rung 3 allows one **riot** per 30 days: `max(3, 5 percent)` households with a grievance (ascending hash of day and household, stream 0x260) take 20 percent
+  of the parish granary's grain, shared evenly (goods move, none are made), chronicle `riot` with the grievances as causes; rung 4 for a month emits `revolt_brewing` and stops (T4).
+- **Payroll**: see T15. **Lord stipend**: at the last hour of the first day, `LordShare` (G-T12). **Levy** (3.9): `TaxState.LevyDue[fief]` = households / 10 in peace (`/5` at war,
+  `TaxSystem.AtWar`), refreshed each season; no `Levied` flag or hearth-tax effect yet (Phase 7).
+
+### 10.2 State, save and determinism
+`TaxState` (tax levels, arrears rows, the season's and last season's receipts and payments by reason, wages owed, lords' shares, unrest and rungs, riot days, tallies) lives in
+`AbstractState.Taxes` and is saved as key 31 of the abstract section (`TaxSave`; rows in ascending household order; a save from before it loads with a fresh state; the by-reason
+tables are re-padded if a transfer reason is ever appended). Coin is never kept in it. The per-hour lists the collection builds (households by settlement, parcel arrears, workshop
+boxes) are rebuilt for every hour they are used, so a resumed world sees what the uninterrupted one saw (`ResumeDeterminismTests` is green with the taxes on).
+
+### 10.3 Public toll API for the caravan system
+```csharp
+Tolls.Compute(TaxPolicyDef p, TollKind kind, int vehicles, long cargoValueMites, int marketPermille = 50) -> long   // pure
+Tolls.HolderPurse(SimWorld w, int settlement) -> PurseId     // fief treasury of the settlement, else its town's, else its realm's; None if it has none
+Tolls.Charge(SimWorld w, PurseId payer, PurseId holder, TollKind kind, int vehicles, long cargoValueMites) -> long paid
+Tolls.ChargeAt(SimWorld w, PurseId payer, int settlement, TollKind kind, int vehicles, long cargoValueMites) -> long paid
+Tolls.MarketToll(long proceedsMites, int permille = 50) -> long   // G-T5: 7,776 -> 389
+```
+`TollKind.Gate` = carts x 25 + 5 permille of the cargo's value (G-L3: 4 carts, 64,800 mites: 424); `Bridge` = carts x 10; `Market` = the 5 percent. A payer that holds less than the toll pays what
+it holds (tolls carry no arrears); the transfer is `TransferReason.Toll` (`MarketToll` for the market kind), so it shows as income of the holder's treasury in the ledger view. Constants are
+`gate_toll_mites_per_cart`, `bridge_toll_mites_per_cart`, `gate_toll_permille_goods` in `taxes.jsonc`. If the caravan agent does not call it, it records the toll itself, as the caravans spec says.
+
+### 10.4 Decisions made during integration (T7 and on; fold into overview 10.4)
+- **T7** Treasuries are ledger purses named by `Treasuries`; their income and payments by transfer reason are tallied through `Ledger.Tap`, which sees every transfer (tolls, relief, wages, chevage). Reason: one view of every public chest without touching the callers.
+- **T8** Parcel coin rent, share rent and the tithe percentage live only in the farming content; `taxes.jsonc` holds the hearth tax, dwelling rent, tolls, the ladder, unrest and wages. Reason: no second copy to drift.
+- **T9** An unrest figure uses at least ten households as its denominator. Reason: a lone farmstead with one `Tax` bit read 1,000 and rioted (36 riots in 3 years in the first run).
+- **T10** The crown's local outlay (supersedes 3.7's "pays nothing locally"): each season the realm gives `crown_outlay_pct` (80) of its chest to the fief treasuries of its realm as a grant (reason `Stipend`) in proportion to their manor payrolls: the king's sergeants and castle guards. Reason: the region is closed; a realm chest that only fills takes 1 percent of the coin supply out of circulation a year (hearth 30 percent of 40,000 crowns a year against 1.39 million). Phase 6 gives the crown real expenses and ends this.
+- **T11** A coin parcel rent that is behind stays on the lease (`CoinArrears`, farming); it breeds the `Tax` grievance but is not a season of the ladder. Reason: rent day (autumn day 1) comes before the harvest is sold; counting it evicted about 70 households a year from year 6 and the region lost 5 percent of its people.
+- **T12** A second round on the eighth day of a season (`CatchUp`): households in arrears pay what they hold then, hearth first, the realm's share follows, and a household that clears its arrears starts its count again; rows of vanished households are written off. A household in want (`Hunger`) owes half its hearth tax and is left 200 mites a member; a master whose coin is in his workshop's box pays the rest of his dues from it, up to half the box. Reason: coin is out in wages on the first day (many master craftsmen showed zero in the household purse and thousands in the box).
+- **T13** Eviction is the region's `DepartHousehold` (the creditor claims the household's coin up to the debt first; parcels fall to the lord, the dwelling is vacated); there is no kin move-in or homeless state yet (population 3.8 order, Phase 5). A `Rented`/`Tenant` household with no one aged 16 to 59 is not evicted at the sixth season: the steward writes the debt off for charity (`WrittenOff`). Reason: the elderly widowers of the towns were most of the evictions and the region does not refill fast enough.
+- **T14** Labour works arrears off at 2 worker-days per 100 mites (50 mites a day): 12 worker-days a season for each of up to two adults of a `Rented`/`Tenant` household (credit, no coin; no farm hours are drawn yet). Reason: with 8 days a lone adult still lost 200 mites a season and evictions ran at 0.4 percent a year; the ladder still evicts at `Crushing` (tested) and for those who cannot work.
+- **T15** Payroll: the reeve, steward, guards and servants are the staff of the manor business and are paid from its cash box, which the fief's treasury fills first (the existing 20-days top-up, reason `Stipend`): that is the treasury's payroll, with wages owed (`Business.Owed`, three short days quit) when it is short. New: the parish chest pays its priest 250 mites a day, owing up to 90 days when empty (`WageOwed`), and each season the priest's household puts half of what it holds above 30 days of food into the chest (reason `Tithe`: the tithe sales are the parish's). The lord's share is `LordShare(balance, season payroll, 2 seasons reserve, 40 percent)`: with no treasury surplus (the manors drain it) it is rarely above zero; 913 crowns in 25 years.
+- **T16** Tithe of animal products: a tenth of the wool and of the cheese goes to the parish granary (G-T4: 164 kg of wool, 16.4 kg tithe); the parish sells it with the grain. Lambs and calves (pieces) are not tithed in Phase 2.
+- **T17** Riots take grain from the parish granary only (no steward fight, no reputation: Phase 4/6); the chronicle names the grievances. They do not occur in the 25-year run (unrest peak 272); the `Crushing` test shows the lever.
+
+### 10.5 Tests
+`tests/Ravensguard.Sim.Tests/Taxes/TaxTests.cs`: G-T1 (levels, fief 70 / realm 30, on the real ledger), G-T2, G-T3 (debt at 3, eviction at 6, `Owned` keeps a record), labour work-off, parcel rent not
+a season, the helpless written off, G-T5 and the toll API, G-T8, G-T9 with G-T14 (seeded evasion, same result in reverse order), G-T11, G-T12, parish stipend and wages owed, the crown share on the
+real tick (equal to the forwarded tally, 30 percent), a year of conservation (coin and mass exact, no treasury negative), `Crushing` raising unrest and riots, and the save round trip.
+`HerdTests` was adjusted for the wool tithe. `ResumeDeterminismTests` runs unchanged.
+
+### 10.6 Soak, seed 1234, release, `soak --years 25 --diag --tax-year 10`
+Year: population / under-15 % / hungry household-days % / staples in band % / workshops finishing a batch % / merchants solvent % (pre-taxes in brackets at year 25: 25,226 / 32.2 / 0.06 / 70.5 / 82 / 95):
+**1** 25,666 / 35.1 / 0.04 / 78.1 / 98 / 96; **5** 25,563 / 33.1 / 0.14 / 78.8 / 92 / 96; **10** 25,461 / 30.2 / 0.18 / 69.9 / 88 / 93; **15** 25,307 / 29.2 / 0.06 / 72.9 / 87 / 95;
+**20** 25,270 / 30.6 / 0.08 / 71.9 / 87 / 99; **25** 25,192 / 32.2 / 0.09 / 72.0 / 83 / 92 (population -1.8 percent, hungry 0.11 percent over the run, band 74 percent, workshops mean 88, merchants mean 95;
+coin audit exact every year). Over 25 years: hearth tax 957,000 crowns (due 999,000, evaded 674, waived 587), dwelling rent 96,000, crown share 288,000 (outlay 288,000), 42 evasion events, 0 riots,
+evictions 1, 1,023 arrears converted to debts, 49,500 crowns of arrears worked off, 547 written off for the helpless; unrest mean 25, peak 272. Year 10, income and payments by season and
+kind of treasury, crowns (fief: market toll about 33,000, hearth about 9,600, rent about 850; realm: the 30 percent share about 2,880, returned the same season; parish: the tithe sales banked about 17,000):
+spring realm in 2,873 / fief in 50,044 [Rent 829, Hearth 9,577, MarketToll 35,805, Escheat 972, Stipend 2,861] out 49,134 [Trade 3,638, Hearth 2,873, Stipend 41,240, Alms 1,382] / parish in 16,928 out 17,729;
+summer realm 2,888 / fief 44,725 [Rent 898, Hearth 9,624, MarketToll 31,032, Escheat 286, Stipend 2,885] out 46,446 / parish 17,629 out 17,632;
+autumn realm 2,887 / fief 47,708 [Rent 886, Hearth 9,622, MarketToll 34,310, Stipend 2,890] out 49,706 (lord share 15) / parish 16,476 out 17,825;
+winter realm 2,811 / fief 34,864 [Rent 824, Hearth 9,369, MarketToll 21,854, Stipend 2,817] out 35,266 / parish 17,100 out 15,438.

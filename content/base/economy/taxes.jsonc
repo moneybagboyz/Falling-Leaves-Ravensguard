@@ -8,7 +8,7 @@
     "hearth_low": 100, "hearth_normal": 200, "hearth_high": 350, "hearth_crushing": 600, "crown_share_pct": 30,
     "dwelling_rent_cottage": 100, "dwelling_rent_longhouse": 150, "dwelling_rent_burgage": 400,
     "gate_toll_mites_per_cart": 25, "bridge_toll_mites_per_cart": 10, "gate_toll_permille_goods": 5,
-    "arrears_debt_seasons": 3, "arrears_evict_seasons": 6, "work_off_days_per_season": 4, "work_off_mites_per_day": 50,
+    "arrears_debt_seasons": 3, "arrears_evict_seasons": 6, "work_off_days_per_season": 12, "work_off_mites_per_day": 50,
     "evasion_chance_pct_with_grievance": 30, "tax_burden_grievance_permille": 150, "income_per_member_season": 1000,
     "rung1": 200, "rung2": 350, "rung3": 550, "rung4": 750, "riot_cooldown_days": 30, "riot_min_households": 3, "riot_household_pct": 5, "riot_granary_pct": 20,
     "hunger_keep_mites_per_member": 200,
