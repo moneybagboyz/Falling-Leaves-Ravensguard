@@ -24,7 +24,7 @@ public class CombatTests(CombatFixture f)
     {
         Assert.True(f.Db.All<MaterialDef>().Count() >= 20);
         Assert.Equal(9, f.Db.All<WeaponShapeDef>().Count());
-        Assert.Equal(8, f.Db.All<ArmourShapeDef>().Count());
+        Assert.Equal(20, f.Db.All<ArmourShapeDef>().Count());
         Assert.True(f.Tables.WeaponEntries > 100 && f.Tables.ArmourEntries > 20);
         // copy_from: wrought iron overrides shear but inherits the impact numbers; ash inherits oak's strength.
         var wi = f.Tables.Materials["wrought_iron"]; var iron = f.Tables.Materials["iron"];
