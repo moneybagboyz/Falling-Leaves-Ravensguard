@@ -23,14 +23,15 @@ public readonly record struct Conflict(Binding Binding, InputAction A, InputActi
 public static class ContextRules
 {
     /// <summary>
-    /// Global is always live. World and Build stack (Build is entered from World and only suppresses the World actions
+    /// Global is always live. World and Build stack (Build and Choice are entered from World and only suppress the World actions
     /// listed in <see cref="BuildSuppressedWorld"/>). CombatStance and CalledShot are entered from World but replace it
     /// completely (they re-declare the world keys they keep), and Menu stands alone. Everything else is mutually exclusive.
     /// </summary>
     public static bool ActiveTogether(InputContext a, InputContext b)
     {
         if (a == b || a == InputContext.Global || b == InputContext.Global) return true;
-        return (a, b) is (InputContext.World, InputContext.Build) or (InputContext.Build, InputContext.World) or (InputContext.World, InputContext.Mounted) or (InputContext.Mounted, InputContext.World);
+        return (a, b) is (InputContext.World, InputContext.Build) or (InputContext.Build, InputContext.World) or (InputContext.World, InputContext.Mounted) or (InputContext.Mounted, InputContext.World)
+            or (InputContext.World, InputContext.Choice) or (InputContext.Choice, InputContext.World);
     }
 
     /// <summary>World actions that are off while Build is active (Build rebinds their keys: Z/X, Esc, left/right click).</summary>
@@ -38,7 +39,11 @@ public static class ContextRules
 
     /// <summary>True when <paramref name="lower"/> is switched off while <paramref name="active"/> is on top.</summary>
     public static bool Suppresses(InputContext active, InputAction lower) =>
-        active == InputContext.Build && lower.Context == InputContext.World && BuildSuppressedWorld.Contains(lower.Name);
+        (active == InputContext.Build && lower.Context == InputContext.World && BuildSuppressedWorld.Contains(lower.Name))
+        || (active == InputContext.Choice && lower.Context == InputContext.World && ChoiceSuppressedWorld.Contains(lower.Name));
+
+    /// <summary>World actions that are off while a numbered list (road encounter, camp panel) is open: the choice digits take the speed digits' keys.</summary>
+    public static readonly IReadOnlySet<string> ChoiceSuppressedWorld = new HashSet<string> { "speed_1", "speed_2", "speed_4", "speed_8" };
 
     /// <summary>True when a and b are both live at once with neither suppressing the other.</summary>
     public static bool Coexist(InputAction a, InputAction b) =>

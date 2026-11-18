@@ -25,7 +25,7 @@ public sealed partial class TravelHud : Control
         _bannerTitle.AddThemeFontSizeOverride("font_size", 18);
         MouseFilter = MouseFilterEnum.Ignore;
         SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-        _banner.AnchorLeft = 0.5f; _banner.AnchorRight = 0.5f; _banner.OffsetLeft = -140; _banner.OffsetRight = 300; _banner.OffsetTop = 12;
+        _banner.AnchorLeft = 0.5f; _banner.AnchorRight = 0.5f; _banner.OffsetLeft = -100; _banner.OffsetRight = 340; _banner.OffsetTop = 12;
         var bv = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore }; bv.AddThemeConstantOverride("separation", 3);
         _banner.AddChild(bv); bv.AddChild(_bannerTitle); bv.AddChild(_barBack); _barBack.AddChild(_bar); _bar.SetAnchorsAndOffsetsPreset(LayoutPreset.LeftWide); bv.AddChild(_bannerLine); bv.AddChild(_bannerWarn);
         AddChild(_banner);
@@ -34,9 +34,9 @@ public sealed partial class TravelHud : Control
         _alertBody.AutowrapMode = TextServer.AutowrapMode.WordSmart; _alertBody.CustomMinimumSize = new Vector2(430, 0);
         _alert.AddChild(av); av.AddChild(_alertTitle); av.AddChild(_alertBody); av.AddChild(_alertKeys);
         AddChild(_alert);
-        _camp.AnchorLeft = 1; _camp.AnchorRight = 1; _camp.OffsetLeft = -330; _camp.OffsetRight = -12; _camp.OffsetTop = 190;
+        _camp.AnchorLeft = 1; _camp.AnchorRight = 1; _camp.OffsetLeft = -330; _camp.OffsetRight = -12; _camp.OffsetTop = 150; _camp.GrowHorizontal = GrowDirection.Begin;   // grows leftwards, never past the window; the minimap steps aside while it shows
         _campBox.AddThemeConstantOverride("separation", 2); _campBox.AddChild(_campTitle);
-        for (int i = 0; i < 12; i++) { var l = new Label(); _campLines.Add(l); _campBox.AddChild(l); }
+        for (int i = 0; i < 12; i++) { var l = new Label { AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(300, 0) }; _campLines.Add(l); _campBox.AddChild(l); }
         _camp.AddChild(_campBox); AddChild(_camp);
     }
 

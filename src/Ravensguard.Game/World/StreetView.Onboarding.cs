@@ -66,14 +66,8 @@ public partial class StreetView
         if (_router == null || _router.Top is ControlsOverlay) return;
         page ??= ControlsPage();
         _hints?.Satisfied("hint.controls");
-        _router.Push(ControlsOverlayFor(page));
-    }
-
-    Control ControlsOverlayFor(string page)
-    {
         string rule = ControlsOverlay.View(page).CodexRule;
-        ControlsOverlay.Open(_router!, page, () => OpenCodexRule(rule));
-        return _router!.Top is ControlsOverlay o ? o : new Control();
+        ControlsOverlay.Open(_router, page, () => OpenCodexRule(rule));     // Open pushes the page itself (it was pushed a second time here once)
     }
 
     /// <summary>Opens the Codex at a rule page (a hint's "learn more").</summary>
@@ -106,7 +100,7 @@ public partial class StreetView
         while (_obIdleGame >= 60) { _obIdleGame -= 60; Settings.Hints.FirstCharacterMinutes++; }
         while (_obToasts.TryDequeue(out var msg)) _router?.ShowToast(msg, 4f);
         if ((_obPoll += delta) >= 0.25) { _obPoll = 0; PollHints(delta); PollScript(clock); AttachYard(); }
-        bool blocked = _router == null || _router.Top != this || _router.HasModal;
+        bool blocked = _router == null || _router.Top != this || _router.HasModal || _thud is { AlertShown: true } or { CampShown: true };   // the encounter options and the camp lines sit where the hint would
         if (!_hintToast.Showing && !blocked && _hints.Next(_obReal, false) is { } t) _hintToast.Show(new HintBar.HintToastData(t.Id, t.Text, t.LearnMore));
         else if (_hintToast.Showing && blocked) _hintToast.Dismiss();
         if (_yardSettlement != -2) YardTick();
@@ -147,11 +141,11 @@ public partial class StreetView
         if (_hintGameStart == long.MinValue) _hintGameStart = clock;
         // the job: taken (a live job of the hero's) and paid (it was live and is not any more)
         var mine = _jobSnap?.Live.FirstOrDefault(j => j.Worker == HeroId);
-        if (mine != null && !_obJobHeld) { _obJobHeld = true; _obJob = mine.Id; var id = mine.Id; _ = rt.AtBarrier(() => ob.OnJobTaken(id, clock)); Raise("job_taken"); Raise("job_taken", "escrow"); }
+        if (mine != null && !_obJobHeld) { _obJobHeld = true; _obJob = mine.Id; var id = mine.Id; _ = Bar(rt, () => ob.OnJobTaken(id, clock)); Raise("job_taken"); Raise("job_taken", "escrow"); }
         else if (mine == null && _obJobHeld)
         {
             _obJobHeld = false; var id = _obJob;
-            _ = rt.AtBarrier(() =>
+            _ = Bar(rt, () =>
             {
                 var j = rt.State.Jobs?.Get(id);
                 if (j is { State: Ravensguard.Sim.Jobs.JobState.Done }) { ob.OnJobDone(id, j.PaidMites, clock, cfg.MinWageMites); System.Threading.Interlocked.Increment(ref _obJobDone); }
@@ -161,19 +155,19 @@ public partial class StreetView
         if (System.Threading.Interlocked.Exchange(ref _obJobDone, 0) > 0) Raise("job_done");
         // a deal at the market
         int traded = _heroLink?.View?.Traded.Count ?? 0;
-        if (_obTraded < 0) _obTraded = traded; else if (traded > _obTraded) { _obTraded = traded; _ = rt.AtBarrier(() => ob.OnTraded(clock)); }
+        if (_obTraded < 0) _obTraded = traded; else if (traded > _obTraded) { _obTraded = traded; _ = Bar(rt, () => ob.OnTraded(clock)); }
         // the ride: how far the hero moved, mounted or not, and whether they stand at the errand place
         var (hx, hy) = HeroRegionMm(); var mounted = _ride?.IsMounted == true;
         if (_obLastPos is { } lp)
         {
             long moved = PathPlan.Dist(hx - lp.X, hy - lp.Y);
             bool atErrand = ob.ErrandSettlement >= 0 && PathPlan.Dist(hx - ob.ErrandX, hy - ob.ErrandY) <= 30_000;
-            if (moved > 0 || atErrand) _ = rt.AtBarrier(() => ob.OnRide(moved, mounted, atErrand, clock, cfg.MinRideM, cfg.MountedSharePm));
+            if (moved > 0 || atErrand) _ = Bar(rt, () => ob.OnRide(moved, mounted, atErrand, clock, cfg.MinRideM, cfg.MountedSharePm));
         }
         _obLastPos = (hx, hy);
         // the animal handed back beside its owner, on foot
         if (ob.Loans.Active is { } loan && !mounted && PathPlan.Dist(hx - ob.MentorX, hy - ob.MentorY) <= 60_000 && HeroSettlement() == loan.ReturnPlace)
-            _ = rt.AtBarrier(() => { var e = OnboardingSetup.ReturnAnimal(rt.State, db, ob, loan.ReturnPlace, clock); if (e != null) _obToasts.Enqueue(L.F("ONB_RETURNED", MentorName(rt))); return 0; });
+            _ = Bar(rt, () => { var e = OnboardingSetup.ReturnAnimal(rt.State, db, ob, loan.ReturnPlace, clock); if (e != null) _obToasts.Enqueue(L.F("ONB_RETURNED", MentorName(rt))); return 0; });
         // each game hour: the loan's due day and anger, and the night's rest
         long hour = clock / 3600;
         if (_obHour == long.MinValue) _obHour = hour;
@@ -181,7 +175,7 @@ public partial class StreetView
         {
             _obHour = hour; bool sheltered = _travel?.Camp != null || (HeroSettlement() is var s && s >= 0 && PathPlan.Dist(hx - rt.State.Population.Region.Settlements[s].CenterX * 1000L, hy - rt.State.Population.Region.Settlements[s].CenterY * 1000L) < 150_000);
             int rested = _obSleep.Feed(clock, hx, hy, sheltered, cfg.FirstNightHours);
-            _ = rt.AtBarrier(() =>
+            _ = Bar(rt, () =>
             {
                 if (rested > 0) ob.OnSlept(rested, clock, cfg.FirstNightHours);
                 foreach (var e in OnboardingSetup.Hour(rt.State, db, ob, clock))
@@ -268,9 +262,9 @@ public partial class StreetView
         string Gain(SwingResult sw, bool boutDone)
         {
             long now = _world.Clock.Now.Seconds; var outcome = UseOutcome.NoSkill;
-            if (boutDone) { _yardLastBout = now; _ = rt.AtBarrier(() => PracticeYard.FinishBout(_heroLink.Context().Craft.State.Book, EconomyState.HeroOwner, now)); return ""; }
+            if (boutDone) { _yardLastBout = now; _ = Bar(rt, () => PracticeYard.FinishBout(_heroLink.Context().Craft.State.Book, EconomyState.HeroOwner, now)); return ""; }
             if (sw == SwingResult.Good) outcome = Melee() >= cfg.YardCapLevel ? UseOutcome.AtCap : UseOutcome.Gained;
-            if (sw == SwingResult.Good) _ = rt.AtBarrier(() => PracticeYard.HitDummy(_heroLink.Context().Craft.State.Book, EconomyState.HeroOwner, sw, now));
+            if (sw == SwingResult.Good) _ = Bar(rt, () => PracticeYard.HitDummy(_heroLink.Context().Craft.State.Book, EconomyState.HeroOwner, sw, now));
             Raise("skill_gained");
             var reason = PracticeYard.Reason(sw, outcome);
             return reason switch { "too early" => L.T("YARD_TOO_EARLY"), "too late" => L.T("YARD_TOO_LATE"), "outgrown" => L.T("YARD_OUTGROWN"), _ => L.T("YARD_GOOD") };

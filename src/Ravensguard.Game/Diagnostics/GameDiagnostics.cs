@@ -20,11 +20,16 @@ public static class GameDiagnostics
     static ConsentStore? _consent;
     static ReportBuilder? _reports;
     static Redactor _redactor = Redactor.ForCurrentUser();
-    static int _crashed;
+    static int _crashedMask;      // one bit per kind of fatal error: a tick-fault report must not use up the guard of a later real crash
+    internal enum FatalKind { Crash = 1, Worker = 2 }
+
+    /// <summary>True the first time a kind of fatal error is claimed in a session; the second claim of the same kind is false.</summary>
+    internal static bool Claim(FatalKind kind) => (Interlocked.Or(ref _crashedMask, (int)kind) & (int)kind) == 0;
     static int _mainThread;
     static SceneTree? _tree;
     static string _t0Path = "";
     static long _t0Tick = -1, _pendingTick = -1;
+    static readonly object _t0Lock = new();
 
     public static LogService? Log => _log;
     public static ConsentStore Consent => _consent ??= new ConsentStore(Path("profile"), Path("reports"));
@@ -74,12 +79,36 @@ public static class GameDiagnostics
             _log.Info("boot", "session start", $"version={BuildVersion} godot={sys.Godot} os={sys.Os}");
             if (previous != null) { LastCrashId = previous; _log.Warn("boot", "the previous session did not close properly", "session=" + previous); }
             OS.AddLogger(new EngineLogBridge());
+            RedactEngineLogs();
             AppDomain.CurrentDomain.UnhandledException += (_, e) => Fatal("unhandled exception", e.ExceptionObject as Exception, e.ExceptionObject?.ToString() ?? "unknown", Thread.CurrentThread.Name ?? "worker");
             TaskScheduler.UnobservedTaskException += (_, e) => { _log?.Error("sim", "unobserved task exception: " + e.Exception.GetBaseException().Message); e.SetObserved(); };
             AppDomain.CurrentDomain.ProcessExit += (_, _) => { try { _log?.MarkCleanExit(); _log?.Dispose(); } catch (Exception) { } };
             StartHeartbeat();
         }
         catch (Exception ex) { GD.PushWarning("diagnostics could not start: " + ex.Message); }
+    }
+
+    /// <summary>The localised text of a key, or the English fallback when the translation server is not usable (a crash can happen before it is loaded or on another thread).</summary>
+    static string Tr(string key, string fallback) { try { var t = L.T(key); return t == key || t.Length == 0 ? fallback : t; } catch (Exception) { return fallback; } }
+
+    /// <summary>
+    /// The engine's own log (<c>godot.log</c>, written by the engine itself and so never redacted as it is written) lives in <c>user://engine</c>, not in <c>logs</c>: no report takes it and the folder a crash dialog names holds only
+    /// redacted files. The rotated copies of earlier sessions are redacted here (home folder and user name become ~) and only the newest five are kept.
+    /// </summary>
+    static void RedactEngineLogs()
+    {
+        try
+        {
+            string dir = Path("engine"); if (!Directory.Exists(dir)) return;
+            var old = new DirectoryInfo(dir).GetFiles("godot*.log").Where(f => f.Name != "godot.log").OrderByDescending(f => f.LastWriteTimeUtc).ToList();
+            for (int i = 0; i < old.Count; i++)
+            {
+                if (i >= 5) { old[i].Delete(); continue; }
+                string text = File.ReadAllText(old[i].FullName), red = _redactor.Redact(text);
+                if (red != text) File.WriteAllText(old[i].FullName, red);
+            }
+        }
+        catch (Exception ex) { GD.PushWarning("engine logs could not be redacted: " + ex.Message); }
     }
 
     static string Safe(Func<string> f) { try { return f(); } catch (Exception) { return ""; } }
@@ -158,11 +187,13 @@ public static class GameDiagnostics
 
     /// <summary>
     /// A fatal error: log it, write the crash report (a zip when the tester consented, plain files in the log folder when not), tell the tester where it is.
-    /// Never throws, and only the first fatal error of a session is reported.
+    /// Never throws, and only the first fatal error of each kind (a crash, a worker fault) in a session is reported.
     /// </summary>
-    public static void Fatal(string what, Exception? ex, string text, string thread)
+    public static void Fatal(string what, Exception? ex, string text, string thread) => Fatal(FatalKind.Crash, what, ex, text, thread);
+
+    static void Fatal(FatalKind kind, string what, Exception? ex, string text, string thread)
     {
-        if (Interlocked.Exchange(ref _crashed, 1) != 0) return;
+        if (!Claim(kind)) return;
         string path = "", message;
         try
         {
@@ -177,12 +208,12 @@ public static class GameDiagnostics
             var (zip, isZip) = Reports.WriteCrash(BuildRequest(ReportKind.Crash, crashText.ToString(), shot, "Bug", "", "", "", true), Path("logs"));
             path = zip;
             message = isZip
-                ? $"The game stopped. A report was saved to:\n{_redactor.Redact(path)}\nNothing was sent."
-                : $"The game stopped. Nothing was sent and no report zip was made (reports are off until you agree in the F8 screen). The log is in:\n{_redactor.Redact(Path("logs"))}";
+                ? string.Format(Tr("CRASH_SAVED", "The game stopped. A report was saved to:\n{0}\nNothing was sent."), _redactor.Redact(path))
+                : string.Format(Tr("CRASH_NO_ZIP", "The game stopped. Nothing was sent and no report zip was made (reports are off until you agree in the F8 screen). The log is in:\n{0}"), _redactor.Redact(Path("logs")));
         }
         catch (Exception inner)
         {
-            message = "The game stopped. The log is in the logs folder. (" + inner.GetType().Name + ")";
+            message = string.Format(Tr("CRASH_PLAIN", "The game stopped. The log is in the logs folder. ({0})"), inner.GetType().Name);
         }
         LastCrashDialog = message;
         _log?.Info("boot", "crash handled", "path=" + path);
@@ -198,10 +229,10 @@ public static class GameDiagnostics
     }
 
     /// <summary>A background worker (the world tick, a region build) failed: the crash report is written and shown, the game keeps running on what it has.</summary>
-    public static void ReportWorkerFault(Exception ex, string thread) => Fatal("worker thread fault", ex, ex.ToString(), thread);
+    public static void ReportWorkerFault(Exception ex, string thread) => Fatal(FatalKind.Worker, "worker thread fault", ex, ex.ToString(), thread);
 
     /// <summary>Test hook: allows another simulated crash.</summary>
-    public static void ResetCrashGuard() => Interlocked.Exchange(ref _crashed, 0);
+    public static void ResetCrashGuard() => Interlocked.Exchange(ref _crashedMask, 0);
 
     // ------------------------------------------------------------------ report requests
 
@@ -227,28 +258,29 @@ public static class GameDiagnostics
         var where = new System.Collections.Generic.Dictionary<string, string>();
         try { if (WhereProvider != null) foreach (var kv in WhereProvider()) where[kv.Key] = kv.Value; } catch (Exception) { }
         var header = _log?.Header ?? new SessionHeader { System = SystemInfo.Detect(), Build = BuildInfoNow() };
-        string? t0 = !string.IsNullOrEmpty(_t0Path) && File.Exists(_t0Path) ? _t0Path : null;
+        long t0Tick; string t0Path; lock (_t0Lock) { t0Tick = _t0Tick; t0Path = _t0Path; }
+        string? t0 = !string.IsNullOrEmpty(t0Path) && File.Exists(t0Path) ? t0Path : null;
         return new ReportRequest
         {
             Kind = kind, Category = category, WhatHappened = happened, WhatExpected = expected, Understood = understood,
             Session = header with { Build = BuildInfoNow() }, Where = where,
             SettingsJson = JsonSerializer.Serialize(new { ui_scale = Settings.UiScale, screen_shake = Settings.ScreenShake, flashes = Settings.Flashes, slow_motion = Settings.SlowMotion }),
             ContentManifestJson = JsonSerializer.Serialize(new { content_hash = BuildInfoNow().ContentHash, mods = header.Build.Mods }),
-            LogPath = _log?.LogPath, CrashText = crashText, AutosavePath = rec != null && _t0Tick == bt ? t0 : null,
+            LogPath = _log?.LogPath, CrashText = crashText, AutosavePath = rec != null && t0Tick == bt ? t0 : null,
             Screenshot = screenshot, ReplayTrace = trace, HashesCsv = csv, RecentCommands = commands, ReplayBaseTick = bt, ReplayEndTick = et,
             IncludeAutosave = includeAutosave, IncludeLog = includeLog, PreviousCrashId = LastCrashId,
         };
     }
 
     /// <summary>True when the kept autosave copy is the start of the recorder's trace window (a report made now can be replayed).</summary>
-    public static bool ReplayReady => Recorder is { } r && _t0Tick == r.Commands.BaseTick && File.Exists(_t0Path);
+    public static bool ReplayReady { get { long tk; string p; lock (_t0Lock) { tk = _t0Tick; p = _t0Path; } return Recorder is { } r && tk == r.Commands.BaseTick && File.Exists(p); } }
 
     // ------------------------------------------------------------------ replay window (the autosave the trace starts from)
 
     /// <summary>A run was loaded or created: the file it came from is T0 of the trace (tick 0 of this live world).</summary>
     public static void NoteSessionStart(string? savePath)
     {
-        _t0Tick = -1; _t0Path = "";
+        lock (_t0Lock) { _t0Tick = -1; _t0Path = ""; }
         if (string.IsNullOrEmpty(savePath) || !File.Exists(savePath)) return;
         CopyT0(savePath, 0);
     }
@@ -265,10 +297,16 @@ public static class GameDiagnostics
     static void CopyT0(string source, long tick)
     {
         string dest = System.IO.Path.Combine(Path("replay"), "t0.sav");
-        _t0Tick = -1;
+        lock (_t0Lock) _t0Tick = -1;
         Task.Run(() =>
         {
-            try { Directory.CreateDirectory(System.IO.Path.GetDirectoryName(dest)!); File.Copy(source, dest, true); _t0Path = dest; _t0Tick = tick; }
+            try
+            {
+                Directory.CreateDirectory(System.IO.Path.GetDirectoryName(dest)!);
+                string tmp = dest + ".tmp." + tick;          // copy aside and move into place: a report reading t0.sav never sees a half-written file
+                File.Copy(source, tmp, true);
+                lock (_t0Lock) { File.Move(tmp, dest, true); _t0Path = dest; _t0Tick = tick; }   // the tick is set last: a reader that sees the tick sees the file
+            }
             catch (Exception ex) { _log?.Warn("report", "could not keep the autosave copy for replay: " + ex.Message); }
         });
     }
@@ -282,8 +320,13 @@ sealed partial class EngineLogBridge : Logger
         string msg = $"{file}:{line} {function}: {code} {rationale}";
         if (errorType == 1) { GameDiagnostics.Log?.Warn("engine", msg); return; }
         GameDiagnostics.Log?.Error("engine", msg);
-        if (errorType == 2 && (code.Contains("Exception") || rationale.Contains("Exception"))) GameDiagnostics.ScriptException(msg);
+        if (errorType == 2 && (code.Contains("Exception") || rationale.Contains("Exception")) || IsManagedException(code, rationale)) GameDiagnostics.ScriptException(msg);
     }
+
+    static readonly System.Text.RegularExpressions.Regex ManagedException = new(@"Unhandled exception|\bSystem\.[A-Za-z.]*Exception\b|\bGodot\.[A-Za-z.]*Exception\b|\b[A-Z][A-Za-z]+Exception:", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    /// <summary>A C# exception that escaped a callback on the main thread (a signal, a timer, a _Process) reaches the engine log as a plain error (type 0, not a script error), so it is recognised by what it says.</summary>
+    internal static bool IsManagedException(string code, string rationale) => ManagedException.IsMatch(code ?? "") || ManagedException.IsMatch(rationale ?? "");
 
     public override void _LogMessage(string message, bool error) { }
 }

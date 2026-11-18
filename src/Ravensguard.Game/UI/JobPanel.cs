@@ -44,8 +44,8 @@ public partial class JobPanel : Control
         var margin = UiKit.Margin(this, 14);
         var root = new VBoxContainer(); root.AddThemeConstantOverride("separation", 8); margin.AddChild(root);
         root.AddChild(UiKit.Title(L.T("JOBS_TITLE")));
-        _body = new VBoxContainer { SizeFlagsVertical = SizeFlags.ExpandFill }; _body.AddThemeConstantOverride("separation", 6);
-        root.AddChild(UiKit.Panel(_body, 0, 0));
+        _body = new VBoxContainer(); _body.AddThemeConstantOverride("separation", 6);
+        var p = UiKit.Panel(UiKit.Scroll(_body), 0, 0); p.SizeFlagsVertical = SizeFlags.ExpandFill; root.AddChild(p);      // the board scrolls; Back stays on screen
         var back = UiKit.Key(L.T("UI_BACK"), "menu.back", 200); back.Pressed += _router.Pop; root.AddChild(back);
         Build();
     }

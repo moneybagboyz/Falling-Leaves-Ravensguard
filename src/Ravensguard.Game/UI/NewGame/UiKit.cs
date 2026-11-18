@@ -44,6 +44,15 @@ public static class UiKit
         e.TextSubmitted += _ => e.ReleaseFocus();
     }
 
+    /// <summary>A vertically scrolling body (no horizontal scroll: the content wraps or clips to the width), so a screen's Back bar can stay pinned under it at any window size.</summary>
+    public static ScrollContainer Scroll(Control content)
+    {
+        var s = new ScrollContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, SizeFlagsVertical = Control.SizeFlags.ExpandFill, HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
+        content.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        s.AddChild(content);
+        return s;
+    }
+
     public static PanelContainer Panel(Control child, int minW = 0, int minH = 0)
     {
         var p = new PanelContainer { CustomMinimumSize = new Vector2(minW, minH) };

@@ -16,6 +16,7 @@ namespace Ravensguard.Game.Diagnostics;
 /// </summary>
 public partial class BugReportScreen : Control
 {
+    /// <summary>The ids the report carries (stable English); the list shows <c>REPORT_CAT_*</c>.</summary>
     static readonly string[] Categories = ["Bug", "Confusing", "I did not understand why", "Balance", "Idea"];
     readonly ScreenRouter _router;
     readonly byte[]? _shot;
@@ -63,7 +64,7 @@ public partial class BugReportScreen : Control
         var row = new HBoxContainer(); v.AddChild(row);
         row.AddChild(new Label { Text = L.T("REPORT_CATEGORY"), SizeFlagsHorizontal = SizeFlags.ExpandFill });
         _category = new OptionButton();
-        foreach (var c in Categories) _category.AddItem(c);
+        foreach (var c in Categories) _category.AddItem(L.T("REPORT_CAT_" + c.ToUpperInvariant().Replace(' ', '_')));      // the ids stay English in the report; the list shows the translation
         row.AddChild(_category);
 
         v.AddChild(new Label { Text = L.T("REPORT_HAPPENED") });

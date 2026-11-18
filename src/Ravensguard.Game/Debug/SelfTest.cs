@@ -107,6 +107,10 @@ public static class SelfTest
 
         Tools.BlueprintEditor.EditorSelfTest.Run(Check);
 
+        CsvChecks();
+        ChoiceChecks();
+        CrashBridgeChecks();
+
         OnboardingChecks();
 
         GD.Print($"selftest: {(_fails == 0 ? "ok" : _fails + " failure(s)")}");
@@ -145,6 +149,85 @@ public static class SelfTest
         foreach (System.Text.RegularExpressions.Match m in System.Text.RegularExpressions.Regex.Matches(hints, "\"learn_more\": \"([a-z_.]+)\"")) { n++; Check(rules.Contains(m.Groups[1].Value), "a hint links to a Codex page that does not exist: " + m.Groups[1].Value); }
         Check(n == 40, $"expected 40 hints with a Codex link, found {n}");
     }
+
+    /// <summary>The translation table is a CSV Godot reads with quotes: every row has exactly the two fields (key, text) and no key is twice. An unquoted comma in a text once made a row of three.</summary>
+    static void CsvChecks()
+    {
+        string csv = ReadRes("res://localization/en.csv");
+        var rows = ParseCsv(csv);
+        Check(rows.Count > 100 && rows[0].SequenceEqual(["keys", "en"]), "en.csv does not start with the keys,en header");
+        var bad = rows.Select((r, i) => (r, i)).Where(x => x.r.Count != 2).Select(x => $"row {x.i + 1} ({(x.r.Count > 0 ? x.r[0] : "")}) has {x.r.Count} fields").ToList();
+        Check(bad.Count == 0, "en.csv rows with the wrong number of fields: " + string.Join("; ", bad.Take(5)));
+        var dup = rows.Skip(1).GroupBy(r => r[0]).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
+        Check(dup.Count == 0, "en.csv keys twice: " + string.Join(", ", dup.Take(5)));
+        // the parser itself: quotes, doubled quotes, a comma and a newline in a field
+        var t = ParseCsv("a,\"x, y\"\nb,\"say \"\"hi\"\"\"\n");
+        Check(t.Count == 2 && t[0].SequenceEqual(["a", "x, y"]) && t[1].SequenceEqual(["b", "say \"hi\""]), "the CSV checker misreads quoted fields");
+        // every key the code asks the player's text for with a fixed name exists (the new ones of the Phase 3 fixes)
+        var keys = rows.Select(r => r[0]).ToHashSet();
+        foreach (var k in new[] { "TALK_LEGEND", "TRADE_GOOD_N", "TRAVEL_CAMP_YOU", "TRAVEL_CLOCK_PAUSED", "SHELTER_TENT", "SURFACE_DEEPMUD", "REPORT_CAT_BUG", "CRASH_SAVED", "HUD_TICK_FAULT", "CONTEXT_CHOICE", "ACTION_CHOICE_PICK_9" })
+            Check(keys.Contains(k), "en.csv lacks " + k);
+    }
+
+    /// <summary>RFC 4180: comma separated, a field in double quotes may hold commas, quotes (doubled) and line breaks.</summary>
+    static List<List<string>> ParseCsv(string text)
+    {
+        var rows = new List<List<string>>(); var row = new List<string>(); var f = new System.Text.StringBuilder(); bool q = false, any = false;
+        for (int i = 0; i < text.Length; i++)
+        {
+            char c = text[i];
+            if (q) { if (c == '"') { if (i + 1 < text.Length && text[i + 1] == '"') { f.Append('"'); i++; } else q = false; } else f.Append(c); continue; }
+            if (c == '"') { q = true; any = true; }
+            else if (c == ',') { row.Add(f.ToString()); f.Clear(); any = true; }
+            else if (c == '\r') { }
+            else if (c == '\n') { if (any || f.Length > 0) { row.Add(f.ToString()); rows.Add(row); } row = new List<string>(); f.Clear(); any = false; }
+            else { f.Append(c); any = true; }
+        }
+        if (any || f.Length > 0) { row.Add(f.ToString()); rows.Add(row); }
+        return rows;
+    }
+
+    /// <summary>The numbered-list keys are real, rebindable actions that stay out of the speed keys' way, and the controls overlay has a layout-independent key.</summary>
+    static void ChoiceChecks()
+    {
+        var map = KeyMap.CreateDefault();
+        for (int i = 1; i <= 9; i++) Check(map.Get("choice.pick_" + i).Count == 1 && map.Get("choice.pick_" + i)[0] == Binding.K(Key.Key0 + i), "choice.pick_" + i + " is not bound to its digit");
+        Check(map.FindConflicts().Count == 0, "the choice digits clash with another action: " + string.Join("|", map.FindConflicts().Select(c => c.ToString())));
+        // a list open on the street view takes the digits from the speed keys (and only then)
+        Check(ContextRules.Suppresses(InputContext.Choice, map.Find("world.speed_1")!) && !ContextRules.Suppresses(InputContext.Choice, map.Find("world.pause")!), "Choice does not switch off exactly the speed digits");
+        // rebinding a pick onto a live world key is reported
+        var rb = KeyMap.CreateDefault(); rb.Set("choice.pick_1", new[] { Binding.K(Key.C) });
+        Check(rb.FindConflicts().Any(c => c.A.Id == "choice.pick_1" || c.B.Id == "choice.pick_1"), "a pick rebound onto a world key is not reported");
+        InputBootstrap.Register(map);
+        var one = new InputEventKey { Keycode = Key.Key1, PhysicalKeycode = Key.Key1, Pressed = true };
+        var three = new InputEventKey { Keycode = Key.Key3, PhysicalKeycode = Key.Key3, Pressed = true };
+        Check(Actions.Pick(one) == 0 && Actions.Pick(three) == 2 && Actions.Pick(three, 2) == -1, "Actions.Pick does not map the digits to entries");
+        // the controls overlay opens on a key that does not depend on the layout, too
+        var overlay = map.Get("world.controls_overlay");
+        Check(overlay.Contains(Binding.K(Key.F10)) && overlay.Contains(Binding.K(Key.Slash, Mods.Shift)), "the controls overlay is not on both ? and F10");
+        Check(Actions.PressedAlways(new InputEventKey { Keycode = Key.F10, PhysicalKeycode = Key.F10, Pressed = true }, "world.controls_overlay"), "F10 does not fire the controls overlay");
+        // trade quantity: Shift (x10) and Ctrl (all) with Left/Right match the plain action loosely (the exact query never fires with a modifier)
+        var shiftRight = new InputEventKey { Keycode = Key.Right, PhysicalKeycode = Key.Right, Pressed = true, ShiftPressed = true };
+        Check(!Actions.Pressed(shiftRight, "trade.more") && Actions.PressedLoose(shiftRight, "trade.more"), "Shift+Right does not reach trade.more");
+        // a quantity step with Shift is ten steps: read from the event
+        Check(shiftRight is InputEventWithModifiers { ShiftPressed: true }, "the event carries its modifiers");
+    }
+
+    /// <summary>A C# exception that escapes a main-thread callback arrives at the engine log as a plain error (type 0); the bridge recognises it by what it says and not by its type.</summary>
+    static void CrashBridgeChecks()
+    {
+        Check(Diagnostics.EngineLogBridge.IsManagedException("void Godot.NativeInterop.ExceptionUtils.LogException(System.Exception)", "System.InvalidOperationException: boom\n   at X"), "a System.* exception is not recognised");
+        Check(Diagnostics.EngineLogBridge.IsManagedException("Unhandled exception", "bad"), "'Unhandled exception' is not recognised");
+        Check(Diagnostics.EngineLogBridge.IsManagedException("", "Ravensguard.Game.FooException: bad"), "an own exception type is not recognised");
+        Check(!Diagnostics.EngineLogBridge.IsManagedException("Condition \"x\" is true.", "Parameter is null.") && !Diagnostics.EngineLogBridge.IsManagedException("", "the exception list is empty"), "an ordinary engine error is taken for a crash");
+        // the per-kind guard: a worker fault does not use up the report of a later real crash
+        Diagnostics.GameDiagnostics.ResetCrashGuard();
+        using var _ = new GuardReset();
+        Check(Diagnostics.GameDiagnostics.Claim(Diagnostics.GameDiagnostics.FatalKind.Worker) && !Diagnostics.GameDiagnostics.Claim(Diagnostics.GameDiagnostics.FatalKind.Worker), "a worker fault is not reported exactly once");
+        Check(Diagnostics.GameDiagnostics.Claim(Diagnostics.GameDiagnostics.FatalKind.Crash) && !Diagnostics.GameDiagnostics.Claim(Diagnostics.GameDiagnostics.FatalKind.Crash), "a crash after a worker fault is not reported exactly once");
+    }
+
+    sealed class GuardReset : System.IDisposable { public void Dispose() => Diagnostics.GameDiagnostics.ResetCrashGuard(); }
 
     static string ReadRes(string path) { try { return System.IO.File.ReadAllText(ProjectSettings.GlobalizePath(path)); } catch (System.Exception e) { GD.PrintErr("ERROR: selftest FAILED: cannot read " + path + ": " + e.Message); _fails++; return ""; } }
 }

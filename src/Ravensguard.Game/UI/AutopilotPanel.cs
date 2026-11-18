@@ -52,42 +52,45 @@ public partial class AutopilotPanel : Control
         head.AddChild(new Label { Text = L.T("AP_SUB"), ThemeTypeVariation = "HintLabel", SizeFlagsVertical = SizeFlags.ShrinkCenter });
         root.AddChild(head);
 
-        var cols = new HBoxContainer { SizeFlagsVertical = SizeFlags.ExpandFill }; cols.AddThemeConstantOverride("separation", 8); root.AddChild(cols);
+        // everything but the button bar scrolls: at 960x540 the three columns, the warning and the state do not fit one screen, and Back and Start must never be below the fold
+        var body = new VBoxContainer(); body.AddThemeConstantOverride("separation", 6);
+        root.AddChild(UiKit.Scroll(body));
+        var cols = new HBoxContainer(); cols.AddThemeConstantOverride("separation", 8); body.AddChild(cols);
         _queueBox = new VBoxContainer(); _queueBox.AddThemeConstantOverride("separation", 3);
         _midBox = new VBoxContainer(); _midBox.AddThemeConstantOverride("separation", 4);
         _limitBox = new VBoxContainer(); _limitBox.AddThemeConstantOverride("separation", 3);
         _tableBox = new VBoxContainer(); _tableBox.AddThemeConstantOverride("separation", 1);
-        cols.AddChild(Column(L.T("AP_QUEUE"), _queueBox, 330));
-        cols.AddChild(Column(L.T("AP_DIRECTIVE"), _midBox, 270));
-        var right = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ExpandFill }; right.AddThemeConstantOverride("separation", 6);
+        cols.AddChild(Column(L.T("AP_QUEUE"), _queueBox, 240, 4));
+        cols.AddChild(Column(L.T("AP_DIRECTIVE"), _midBox, 200, 3));
+        var right = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsStretchRatio = 4 }; right.AddThemeConstantOverride("separation", 6);
+        right.CustomMinimumSize = new Vector2(240, 0);
         right.AddChild(UiKit.Hint(L.T("AP_LIMITS"))); right.AddChild(UiKit.Panel(_limitBox));
         right.AddChild(UiKit.Hint(L.T("AP_INTERRUPTS")));
-        var scroll = new ScrollContainer { SizeFlagsVertical = SizeFlags.ExpandFill, CustomMinimumSize = new Vector2(0, 220), HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
-        _tableBox.SizeFlagsHorizontal = SizeFlags.ExpandFill; scroll.AddChild(_tableBox);
-        var tablePanel = UiKit.Panel(scroll); tablePanel.SizeFlagsVertical = SizeFlags.ExpandFill; right.AddChild(tablePanel);
+        _tableBox.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        right.AddChild(UiKit.Panel(_tableBox));
         cols.AddChild(right);
 
-        _warn = new Label { AutowrapMode = TextServer.AutowrapMode.WordSmart, ThemeTypeVariation = "HintLabel" }; root.AddChild(_warn);
-        _statusBox = new VBoxContainer(); _statusBox.AddThemeConstantOverride("separation", 0); root.AddChild(UiKit.Panel(_statusBox));
+        _warn = new Label { AutowrapMode = TextServer.AutowrapMode.WordSmart, ThemeTypeVariation = "HintLabel", SizeFlagsHorizontal = SizeFlags.ExpandFill }; body.AddChild(_warn);
+        _statusBox = new VBoxContainer(); _statusBox.AddThemeConstantOverride("separation", 0); body.AddChild(UiKit.Panel(_statusBox));
 
         var bottom = new HBoxContainer(); bottom.AddThemeConstantOverride("separation", 6); root.AddChild(bottom);
         foreach (var (id, key) in new[] { ("cautious", "AP_PRESET_CAUTIOUS"), ("worker", "AP_PRESET_WORKER"), ("watch", "AP_PRESET_WATCH") })
         {
-            var pb = new Button { Text = L.T(key), CustomMinimumSize = new Vector2(120, 30) };
+            var pb = new Button { Text = L.T(key), CustomMinimumSize = new Vector2(100, 30) };
             var capture = id; pb.Pressed += () => { _h.Preset(capture, _draft); BuildAll(); }; bottom.AddChild(pb);
         }
         bottom.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
-        var start = new Button { Text = L.T("AP_START"), CustomMinimumSize = new Vector2(150, 30) }; start.Pressed += () => { _h.Start(_draft); _router.ShowToast(L.T("AP_STARTED")); BuildStatus(); }; bottom.AddChild(start);
-        var pause = new Button { Text = L.T("AP_PAUSE"), CustomMinimumSize = new Vector2(150, 30) }; pause.Pressed += () => { _h.PauseResume(); }; bottom.AddChild(pause);
-        var stop = new Button { Text = L.T("AP_STOP"), CustomMinimumSize = new Vector2(110, 30) }; stop.Pressed += () => { _h.Stop(); }; bottom.AddChild(stop);
+        var start = new Button { Text = L.T("AP_START"), CustomMinimumSize = new Vector2(110, 30) }; start.Pressed += () => { _h.Start(_draft); _router.ShowToast(L.T("AP_STARTED")); BuildStatus(); }; bottom.AddChild(start);
+        var pause = new Button { Text = L.T("AP_PAUSE"), CustomMinimumSize = new Vector2(110, 30) }; pause.Pressed += () => { _h.PauseResume(); }; bottom.AddChild(pause);
+        var stop = new Button { Text = L.T("AP_STOP"), CustomMinimumSize = new Vector2(90, 30) }; stop.Pressed += () => { _h.Stop(); }; bottom.AddChild(stop);
         var back = UiKit.Key(L.T("UI_BACK"), "menu.back", 120, 30); back.Pressed += _router.Pop; bottom.AddChild(back);
         BuildAll();
     }
 
-    static Control Column(string title, Control body, int minW)
+    static Control Column(string title, Control body, int minW, float ratio)
     {
-        var v = new VBoxContainer { CustomMinimumSize = new Vector2(minW, 0) }; v.AddThemeConstantOverride("separation", 4);
-        v.AddChild(UiKit.Hint(title)); v.AddChild(UiKit.Panel(body, minW - 16, 0));
+        var v = new VBoxContainer { CustomMinimumSize = new Vector2(minW, 0), SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsStretchRatio = ratio }; v.AddThemeConstantOverride("separation", 4);
+        body.SizeFlagsHorizontal = SizeFlags.ExpandFill; v.AddChild(UiKit.Hint(title)); v.AddChild(UiKit.Panel(body, minW - 16, 0));
         return v;
     }
 
@@ -106,7 +109,7 @@ public partial class AutopilotPanel : Control
         {
             int idx = i; var d = q[i];
             var row = new HBoxContainer(); row.AddThemeConstantOverride("separation", 3);
-            var pick = new Button { Text = $"{i + 1}. {Describe(d)}", Alignment = HorizontalAlignment.Left, SizeFlagsHorizontal = SizeFlags.ExpandFill, ToggleMode = true, ButtonPressed = idx == _sel, ClipText = true, CustomMinimumSize = new Vector2(190, 26) };
+            var pick = new Button { Text = $"{i + 1}. {Describe(d)}", Alignment = HorizontalAlignment.Left, SizeFlagsHorizontal = SizeFlags.ExpandFill, ToggleMode = true, ButtonPressed = idx == _sel, ClipText = true, CustomMinimumSize = new Vector2(110, 26) };
             pick.Pressed += () => { _sel = idx; BuildQueue(); BuildMid(); };
             row.AddChild(pick);
             var up = new Button { Text = "^", CustomMinimumSize = new Vector2(26, 26), Disabled = i == 0 }; up.Pressed += () => { (q[idx - 1], q[idx]) = (q[idx], q[idx - 1]); _sel = idx - 1; BuildQueue(); BuildMid(); }; row.AddChild(up);
@@ -211,7 +214,7 @@ public partial class AutopilotPanel : Control
         {
             int k = i; var kind = (InterruptKind)i;
             var row = new HBoxContainer(); row.AddThemeConstantOverride("separation", 4);
-            row.AddChild(new Label { Text = L.T("AP_INT_" + kind.ToString().ToUpperInvariant()), SizeFlagsHorizontal = SizeFlags.ExpandFill, ClipText = true, CustomMinimumSize = new Vector2(170, 0) });
+            row.AddChild(new Label { Text = L.T("AP_INT_" + kind.ToString().ToUpperInvariant()), SizeFlagsHorizontal = SizeFlags.ExpandFill, ClipText = true, CustomMinimumSize = new Vector2(100, 0) });
             var o = new OptionButton { CustomMinimumSize = new Vector2(96, 24) };
             foreach (var n in PolicyNames) o.AddItem(L.T(n));
             o.Selected = (int)_draft.Policy[i];

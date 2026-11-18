@@ -27,7 +27,7 @@ public partial class StreetView
     bool _dear, _unrest;
     System.Threading.Tasks.Task<(bool, bool)>? _climateTask;
     System.Threading.Tasks.Task<JournalCard?>? _overheardTask;
-    int _talkShotStage, _talkShotAt;
+    int _talkShotStage, _talkShotAt, _barksSpawned;
 
     void AttachTalk()
     {
@@ -39,7 +39,7 @@ public partial class StreetView
     {
         _nearbyTalk = new VBoxContainer { Name = "NearbyTalk", MouseFilter = MouseFilterEnum.Ignore };
         _nearbyTalk.AddThemeConstantOverride("separation", 1);
-        _nearbyTalk.AnchorTop = 1; _nearbyTalk.AnchorBottom = 1; _nearbyTalk.OffsetLeft = 12; _nearbyTalk.OffsetTop = -190; _nearbyTalk.OffsetBottom = -100; _nearbyTalk.GrowVertical = GrowDirection.Begin;
+        _nearbyTalk.AnchorTop = 1; _nearbyTalk.AnchorBottom = 1; _nearbyTalk.OffsetLeft = 12; _nearbyTalk.OffsetTop = -236; _nearbyTalk.OffsetBottom = -140; _nearbyTalk.GrowVertical = GrowDirection.Begin;
         hud.AddChild(_nearbyTalk);
     }
 
@@ -131,13 +131,13 @@ public partial class StreetView
             l.Position = pos + new Vector2(-90, -112); l.Modulate = new Color(1, 1, 1, (float)Math.Clamp((until - _barkClock) * 2, 0, 1));
         }
         for (int i = _nearbyLines.Count - 1; i >= 0; i--) if (_barkClock >= _nearbyLines[i].Until) { if (IsInstanceValid(_nearbyLines[i].L)) _nearbyLines[i].L.QueueFree(); _nearbyLines.RemoveAt(i); }
-        if (_climateTask is { IsCompleted: true } ct) { (_dear, _unrest) = ct.Result; _climateTask = null; }
+        if (_climateTask is { IsCompleted: true } ct) { if (ct.IsCompletedSuccessfully) (_dear, _unrest) = ct.Result; _climateTask = null; }       // a faulted task is dropped, never read (reading throws every frame)
         if (_climateAcc > 20 && _climateTask == null) { _climateAcc = 0; _climateTask = _talk.Climate(HeroSettlement()); }
         if (_barkAcc >= 0.25 && Foreground)
         {
             _barkAcc = 0; BarkStep();
         }
-        if (_overheardTask is { IsCompleted: true } ot) { if (ot.Result != null) _router?.ShowToast(L.T("TALK_OVERHEARD")); _overheardTask = null; }
+        if (_overheardTask is { IsCompleted: true } ot) { if (ot.IsCompletedSuccessfully && ot.Result != null) _router?.ShowToast(L.T("TALK_OVERHEARD")); _overheardTask = null; }
         if (_overhearAcc >= 0.5 && _overheardTask == null && Foreground) { _overhearAcc = 0; OverhearStep(); }
     }
 
@@ -165,7 +165,7 @@ public partial class StreetView
             var label = new Label { Text = b.Text, CustomMinimumSize = new Vector2(180, 0), HorizontalAlignment = HorizontalAlignment.Center, AutowrapMode = TextServer.AutowrapMode.WordSmart, MouseFilter = Control.MouseFilterEnum.Ignore, ZIndex = 60, ThemeTypeVariation = "HintLabel" };
             label.AddThemeColorOverride("font_color", b.Channel is "alarm" or "combat" ? PixelTheme.Warn : PixelTheme.Gold);
             label.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0)); label.AddThemeConstantOverride("outline_size", 4);
-            _ysort.AddChild(label); _barkLabels.Add((label, id, _barkClock + b.DurationS));
+            _ysort.AddChild(label); _barkLabels.Add((label, id, _barkClock + b.DurationS)); _barksSpawned++;
             string name = _lod.People.FirstOrDefault(p => p.Id == id).Name ?? "";
             if (_nearbyTalk != null)
             {
@@ -201,7 +201,7 @@ public partial class StreetView
             if (_opt.Panel is "journal" or "journal-trace")
             {
                 // a rumour the town already holds: the dev shot seeds a famine entry in the world and has the hero ask the first person who holds it
-                _ = rt.AtBarrier(() =>
+                _ = Bar(rt, () =>
                 {
                     var st = rt.State; var ts = st.Talk ??= new TalkState();
                     string place = SettlementName(s);

@@ -138,10 +138,10 @@ public partial class StreetView
         if (_ap == null || Runtime is not { } rt) return;
         long now = _world.Clock.Now.Seconds; var ap = _ap; var cfg = ap.Cfg.Settings;
         _rec.Action(Ravensguard.Sim.Diagnostics.HeroAction.PartyDirective, (long)person.Value, kind switch { "guard" => 1, "rest" => 2, "stop" => 3, _ => 0 });
-        if (kind == "stop") { _ = rt.AtBarrier(() => { ap.Disable(person, now); return 0; }); return; }
+        if (kind == "stop") { _ = Bar(rt, () => { ap.Disable(person, now); return 0; }); return; }
         Directive d = kind switch { "guard" => Named(Directive.Guard(Math.Max(0, HeroSettlement())), L.T("AP_D_GUARD")), "rest" => Named(Directive.Rest(), L.T("AP_D_REST")), _ => Directive.Work(0, L.T("AP_D_WORK")) };
         var setup = new AutopilotSetup { Queue = [d] };
         setup.Limits.SpendCapMitesPerDay = cfg.DefaultSpendCapMitesPerDay; setup.Limits.MaxRiskPm = cfg.DefaultMaxRiskPm; setup.Limits.PurseReserveMites = cfg.DefaultPurseReserveMites;
-        _ = rt.AtBarrier(() => { ap.Apply(person, now, setup); return 0; });
+        _ = Bar(rt, () => { ap.Apply(person, now, setup); return 0; });
     }
 }

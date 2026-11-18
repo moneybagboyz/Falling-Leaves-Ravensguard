@@ -38,7 +38,7 @@ public partial class SquadScreen : Control
         var root = new VBoxContainer(); root.AddThemeConstantOverride("separation", 6); margin.AddChild(root);
         root.AddChild(UiKit.Title(L.T("SQUAD_TITLE")));
         _body = new VBoxContainer { SizeFlagsVertical = SizeFlags.ExpandFill }; _body.AddThemeConstantOverride("separation", 4);
-        var p = UiKit.Panel(_body, 0, 0); p.SizeFlagsVertical = SizeFlags.ExpandFill; root.AddChild(p);
+        var p = UiKit.Panel(UiKit.Scroll(_body), 0, 0); p.SizeFlagsVertical = SizeFlags.ExpandFill; root.AddChild(p);      // the body scrolls; status and Back stay pinned
         _status = UiKit.Body("", true); root.AddChild(_status);
         var bottom = new HBoxContainer(); bottom.AddThemeConstantOverride("separation", 8); root.AddChild(bottom);
         var back = UiKit.Key(L.T("UI_BACK"), "menu.back", 200); back.Pressed += _router.Pop; bottom.AddChild(back);
@@ -58,20 +58,24 @@ public partial class SquadScreen : Control
         foreach (var m in members)
         {
             var row = new HBoxContainer(); row.AddThemeConstantOverride("separation", 8);
-            row.AddChild(new Label { Text = m.Name, CustomMinimumSize = new Vector2(200, 0), ClipText = true, ThemeTypeVariation = "GoldLabel" });
-            row.AddChild(new Label { Text = L.T(m.Origin == FollowerOrigin.Recruited ? "SQUAD_RECRUITED" : "SQUAD_HIRED") + (m.Origin == FollowerOrigin.Hired && m.EndDay > 0 ? $" ({L.F("SQUAD_UNTIL", m.EndDay - v.Day)})" : ""), CustomMinimumSize = new Vector2(150, 0) });
+            row.AddChild(new Label { Text = m.Name, CustomMinimumSize = new Vector2(140, 0), ClipText = true, ThemeTypeVariation = "GoldLabel" });
+            row.AddChild(new Label { Text = L.T(m.Origin == FollowerOrigin.Recruited ? "SQUAD_RECRUITED" : "SQUAD_HIRED") + (m.Origin == FollowerOrigin.Hired && m.EndDay > 0 ? $" ({L.F("SQUAD_UNTIL", m.EndDay - v.Day)})" : ""), CustomMinimumSize = new Vector2(160, 0), ClipText = true });
             row.AddChild(new Label { Text = L.T("SQUAD_LOYALTY"), ThemeTypeVariation = "HintLabel" });
-            row.AddChild(new ProgressBar { MaxValue = 1000, Value = m.Loyalty, ShowPercentage = false, CustomMinimumSize = new Vector2(100, 12), SizeFlagsVertical = SizeFlags.ShrinkCenter });
-            row.AddChild(new Label { Text = L.F("SQUAD_WAGE", Quotes.Money(m.WageMitesPerDay)) + (m.UnpaidDays > 0 ? "  " + L.F("SQUAD_UNPAID", m.UnpaidDays) : ""), CustomMinimumSize = new Vector2(150, 0) });
-            row.AddChild(new Label { Text = L.T("ORDER_" + m.Order.ToString().ToUpperInvariant()), CustomMinimumSize = new Vector2(70, 0), ThemeTypeVariation = "HintLabel" });
+            row.AddChild(new ProgressBar { MaxValue = 1000, Value = m.Loyalty, ShowPercentage = false, CustomMinimumSize = new Vector2(70, 12), SizeFlagsVertical = SizeFlags.ShrinkCenter });
+            row.AddChild(new Label { Text = L.F("SQUAD_WAGE", Quotes.Money(m.WageMitesPerDay)) + (m.UnpaidDays > 0 ? "  " + L.F("SQUAD_UNPAID", m.UnpaidDays) : ""), CustomMinimumSize = new Vector2(120, 0), SizeFlagsHorizontal = SizeFlags.ExpandFill, ClipText = true });
+            row.AddChild(new Label { Text = L.T("ORDER_" + m.Order.ToString().ToUpperInvariant()), CustomMinimumSize = new Vector2(56, 0), ThemeTypeVariation = "HintLabel" });
+            _body.AddChild(row);
+            // the orders on a row of their own (the party row above is too wide for them at 960 px)
+            var orders = new HBoxContainer(); orders.AddThemeConstantOverride("separation", 6);
+            orders.AddChild(UiKit.Hint("      " + L.F("SQUAD_TRADE", UiKit.Pretty(m.Trade.ToLowerInvariant()), m.MaxSkill)));
+            orders.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
             foreach (var o in new[] { SquadOrder.Follow, SquadOrder.Hold, SquadOrder.Work, SquadOrder.Rest })
             {
                 var oo = o;
-                Btn(row, L.T("ORDER_" + o.ToString().ToUpperInvariant()), () => new HeroCommand { Kind = HeroCommandKind.Order, Person = m.Person, Order = oo, X = _near()?.X ?? 0, Y = _near()?.Y ?? 0 }, m.Order == o);
+                Btn(orders, L.T("ORDER_" + o.ToString().ToUpperInvariant()), () => new HeroCommand { Kind = HeroCommandKind.Order, Person = m.Person, Order = oo, X = _near()?.X ?? 0, Y = _near()?.Y ?? 0 }, m.Order == o);
             }
-            Btn(row, L.T("SQUAD_DISMISS"), () => new HeroCommand { Kind = HeroCommandKind.Dismiss, Person = m.Person });
-            _body.AddChild(row);
-            _body.AddChild(UiKit.Hint("      " + L.F("SQUAD_TRADE", UiKit.Pretty(m.Trade.ToLowerInvariant()), m.MaxSkill)));
+            Btn(orders, L.T("SQUAD_DISMISS"), () => new HeroCommand { Kind = HeroCommandKind.Dismiss, Person = m.Person });
+            _body.AddChild(orders);
             if (PartyDirective is { } pd)
             {
                 var ap = new HBoxContainer(); ap.AddThemeConstantOverride("separation", 6);
@@ -109,9 +113,13 @@ public partial class SquadScreen : Control
         row.AddChild(b);
     }
 
+    double _waitFor;
+
     public override void _Process(double delta)
     {
         _refresh += delta;
+        if (_waitSeq > 0 && (_waitFor += delta) > 8) { _waitSeq = 0; _waitFor = 0; Build(); }       // the answer never came: the buttons must not stay dead
+        if (_waitSeq == 0) _waitFor = 0;
         if (_refresh > 0.2)
         {
             _refresh = 0;

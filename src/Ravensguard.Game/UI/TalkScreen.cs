@@ -32,7 +32,7 @@ public partial class TalkScreen : Control
     Label _head = null!, _sub = null!; VBoxContainer _log = null!, _menu = null!; ScrollContainer _scroll = null!; Label _hint = null!;
     Task<SpeakerInfo?>? _spk; Task<HashSet<string>>? _flagsTask; Task<NewsAnswer>? _news;
     SpeakerInfo? _speaker; TalkContext _ctx = new(); DialogueRunner? _run; bool _ready, _closing; int _turn;
-    HeroView? _seen; long _waitSeq; string _lastCmd = "";
+    HeroView? _seen; long _waitSeq; double _waitFor; string _lastCmd = "";
     readonly List<Button> _buttons = new();
     int _shotWait; bool _scrollDown;
     /// <summary>Dev: when set, the window saves its own picture to this path and quits once the first line is up.</summary>
@@ -55,8 +55,10 @@ public partial class TalkScreen : Control
         _sub = UiKit.Hint("", true); root.AddChild(_sub);
         _log = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill }; _log.AddThemeConstantOverride("separation", 6);
         _scroll = new ScrollContainer { SizeFlagsVertical = SizeFlags.ExpandFill, HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled }; _scroll.AddChild(_log);
-        var p = UiKit.Panel(_scroll, 0, 150); p.SizeFlagsVertical = SizeFlags.ExpandFill; root.AddChild(p);
-        _menu = new VBoxContainer(); _menu.AddThemeConstantOverride("separation", 3); root.AddChild(_menu);
+        var p = UiKit.Panel(_scroll, 0, 70); p.SizeFlagsVertical = SizeFlags.ExpandFill; p.SizeFlagsStretchRatio = 0.7f; root.AddChild(p);
+        // the topic menu scrolls (nine entries do not fit under the log at 960x540); the Leave bar below stays pinned
+        _menu = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill }; _menu.AddThemeConstantOverride("separation", 3);
+        var menuScroll = UiKit.Scroll(_menu); menuScroll.CustomMinimumSize = new Vector2(0, 96); menuScroll.SizeFlagsStretchRatio = 1.3f; root.AddChild(menuScroll);
         var bottom = new HBoxContainer(); bottom.AddThemeConstantOverride("separation", 8); root.AddChild(bottom);
         var back = UiKit.Key(L.T("TALK_LEAVE"), "menu.back", 160); back.Pressed += _router.Pop; bottom.AddChild(back);
         _hint = UiKit.Hint(L.T("TALK_HINT")); bottom.AddChild(_hint);
@@ -68,8 +70,9 @@ public partial class TalkScreen : Control
 
     void Begin()
     {
-        _speaker = _spk!.Result; _ready = true;
-        if (_speaker == null) { _router.Pop(); return; }
+        _ready = true;
+        _speaker = _spk is { IsCompletedSuccessfully: true } ? _spk.Result : null;
+        if (_speaker == null || _flagsTask is not { IsCompletedSuccessfully: true }) { if (_spk?.IsFaulted == true || _flagsTask?.IsFaulted == true) GD.PushWarning("talk: the barrier did not answer: " + (_spk?.Exception?.GetBaseException().Message ?? _flagsTask?.Exception?.GetBaseException().Message)); _router.Pop(); return; }
         _ctx = _world();
         _ctx.Job = _speaker.Job; _ctx.Mood = _speaker.Mood; _ctx.Female = _speaker.Female; _ctx.Child = _speaker.Child; _ctx.Shopkeeper = _speaker.Shopkeeper; _ctx.Name = _speaker.Name;
         _ctx.Needs.Clear(); foreach (var n in _speaker.Needs) _ctx.Needs.Add(n);
@@ -267,7 +270,9 @@ public partial class TalkScreen : Control
             if (_spk != null && _spk.IsCompleted && _flagsTask != null && _flagsTask.IsCompleted) Begin();
             return;
         }
-        if (_news is { IsCompleted: true }) { var a = _news.Result; _news = null; SyncRelation(); Told(a); Head(); }
+        if (_news is { IsCompleted: true }) { var nt = _news; _news = null; if (nt.IsCompletedSuccessfully) { SyncRelation(); Told(nt.Result); Head(); } else { Add(Who(), Say("rumour", l => l.Id == "rum.nothing")); Menu(false); } }
+        if (_waitSeq > 0 && (_waitFor += delta) > 6) { _waitSeq = 0; Menu(false); }       // the answer never came (the worker faulted or the command was dropped): the menu must not stay dead
+        if (_waitSeq == 0) _waitFor = 0;
         var v = _hw.View;
         if (!ReferenceEquals(v, _seen))
         {
@@ -289,8 +294,8 @@ public partial class TalkScreen : Control
     public override void _UnhandledInput(InputEvent e)
     {
         if (!Visible || !_ready || _closing || e is not InputEventKey { Pressed: true, Echo: false } k) return;
-        int n = k.Keycode is >= Key.Key1 and <= Key.Key9 ? (int)k.Keycode - (int)Key.Key1 : -1;
+        int n = Inputs.Actions.Pick(e);
         if (n >= 0 && n < _buttons.Count && !_buttons[n].Disabled) { _buttons[n].EmitSignal(BaseButton.SignalName.Pressed); GetViewport().SetInputAsHandled(); return; }
-        if (k.Keycode == Key.E && _run is { NeedsAdvance: true }) { _run.Advance(); ShowNode(); GetViewport().SetInputAsHandled(); }
+        if (Inputs.Actions.Pressed(e, "world.act") && _run is { NeedsAdvance: true }) { _run.Advance(); ShowNode(); GetViewport().SetInputAsHandled(); }
     }
 }

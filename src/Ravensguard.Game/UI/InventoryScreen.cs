@@ -152,9 +152,13 @@ public partial class InventoryScreen : Control
         row.AddChild(b);
     }
 
+    double _waitFor;
+
     public override void _Process(double delta)
     {
         _refresh += delta;
+        if (_waitSeq > 0 && (_waitFor += delta) > 8) { _waitSeq = 0; _waitFor = 0; Build(); }       // the answer never came (the worker faulted, the result was trimmed): the buttons must not stay dead
+        if (_waitSeq == 0) _waitFor = 0;
         if (_refresh > 0.2)
         {
             _refresh = 0;

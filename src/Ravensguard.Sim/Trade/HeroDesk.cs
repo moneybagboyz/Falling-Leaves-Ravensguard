@@ -272,6 +272,7 @@ public sealed class HeroDesk
             _results.Add(r);
         }
         if (_results.Count > 40) _results.RemoveRange(0, _results.Count - 40);
+        _craftDirty = true;                                  // any command may touch the crafting state (a skill use, a job)
         if (publish) Publish(ctx, hourDone);
         return due.Count;
     }
@@ -284,7 +285,11 @@ public sealed class HeroDesk
     {
         if (h % 24 == 0) PayDay(ctx, (int)(h / 24));
         foreach (var ev in ctx.Craft.Hourly(h * 3600))
-            if (ctx.Craft.State.Get(ev.Job) is { } j && j.Owner == ctx.Party.Hero) _results.Add(new HeroResult(0, HeroCommandKind.CraftWork, HeroResultCode.Ok, CraftText(ctx, ev), AtSec: ev.AtSec));
+            if (ctx.Craft.State.Get(ev.Job) is { } j && j.Owner == ctx.Party.Hero)
+            {
+                _craftDirty = true;
+                _results.Add(new HeroResult(0, HeroCommandKind.CraftWork, HeroResultCode.Ok, CraftText(ctx, ev), AtSec: ev.AtSec));
+            }
         ctx.Party.Carried.Tidy(ctx.Econ);
         ApplyDue(ctx, h, publish: false);
         Publish(ctx, h);
@@ -820,15 +825,7 @@ public sealed class HeroDesk
         {
             var lines = new List<BookLine>();
             for (ushort g = 0; g < mb.Goods.Length; g++) lines.Add(BookLine.Of(mb, g));
-            var merchIds = mb.Merchants.Select(m => m.Id).ToHashSet();
-            var merchItems = new List<CarriedItem>();
-            foreach (int r in e.Items.LiveRows())
-            {
-                var row = e.Items.At(r); if (!merchIds.Contains(row.Owner)) continue;
-                merchItems.Add(new CarriedItem(row.Id, row.Shape, ctx.Rules.Name(row.Shape), row.Quality, row.ConditionPermille, e.Items.MassG(r, e.Goods), ctx.Rules.VolumeMl(e.Items, r), EntityId.None, EquipSlot.None,
-                    ItemValue(ctx, r), ctx.Rules.IsContainer(row.Shape), 0, 0, row.Flags, 1));
-            }
-            mv = new MarketView(_market, mb.Name, mb.IsOpen((int)(hourDone % 24)), (int)(hourDone / 24), lines, MerchantCash(mb), merchItems);
+            mv = new MarketView(_market, mb.Name, mb.IsOpen((int)(hourDone % 24)), (int)(hourDone / 24), lines, MerchantCash(mb), MerchantItems(ctx, mb, hourDone));
         }
         if (mv == null && _market < 0 && _person != EntityId.None) mv = new MarketView(-1, "", true, (int)(hourDone / 24), [], 0, []);     // the road: barter with a person, no stalls
         PersonView? pv = null;
@@ -843,8 +840,65 @@ public sealed class HeroDesk
             WornCapacityMl = wornCap, WornVolumeMl = wornUsed,
             Skills = skills, Attributes = attrs, AttrMilli = (int[])party.AttrMilli.Clone(), Notes = [.. party.Notebook.Notes], BookNames = names, Traded = [.. party.Traded], Market = mv, Person = pv,
             Squad = [.. party.Squad.Members.Select(FollowerRow.Of).Select(r => r.Restore())], SquadCap = Recruiting.SquadCap(ctx.Trade, leadership),
-            Crafting = CraftingSave.Capture(ctx.Craft.State).Restore(), Results = [.. _results],
+            Crafting = CraftCopy(ctx, hourDone), Results = [.. _results],
         };
+    }
+
+    // ------------------------------------------------------------------ the view's heavy parts, kept between barriers (review finding 15)
+
+    private (int Market, long Day, long Seq, int Items) _merchKey = (-1, -1, -1, -1);
+    private IReadOnlyList<CarriedItem> _merchItems = [];
+    private CraftState? _craftCopy;
+    private long _craftDay = -1;
+    private bool _craftDirty = true;
+    /// <summary>Full scans of the item rows for merchants' stock, and deep copies of the crafting state (tests count them).</summary>
+    public long MerchantScans { get; private set; }
+    public long CraftCopies { get; private set; }
+    /// <summary>
+    /// Whether a screen that shows the crafting state is open (the game sets it; null: assume it is). While it is not and nothing of the hero's crafting has changed, the view keeps the copy
+    /// it had, so a barrier does not deep-copy the whole crafting state for nobody.
+    /// </summary>
+    public Func<bool>? CraftViewWanted { get; set; }
+
+    /// <summary>
+    /// What the merchants of the book have for sale: one pass over the item rows, indexed by owner, made again only when the market, the day, the hero's last command or the number of
+    /// rows changed (a sale through the desk is a command; the world's own item trades show by the next day).
+    /// </summary>
+    private IReadOnlyList<CarriedItem> MerchantItems(HeroContext ctx, MarketBook mb, long hourDone)
+    {
+        var e = ctx.Econ;
+        var key = (mb.SettlementIndex, hourDone / 24, ctx.Party.LastSeq, e.Items.Count);
+        if (key == _merchKey) return _merchItems;
+        MerchantScans++;
+        var byOwner = new Dictionary<EntityId, List<int>>();
+        foreach (var m in mb.Merchants) byOwner.TryAdd(m.Id, []);
+        foreach (int r in e.Items.LiveRows()) if (byOwner.TryGetValue(e.Items.At(r).Owner, out var l)) l.Add(r);
+        var res = new List<CarriedItem>();
+        foreach (int r in byOwner.Values.SelectMany(l => l).Order())
+        {
+            var row = e.Items.At(r);
+            res.Add(new CarriedItem(row.Id, row.Shape, ctx.Rules.Name(row.Shape), row.Quality, row.ConditionPermille, e.Items.MassG(r, e.Goods), ctx.Rules.VolumeMl(e.Items, r), EntityId.None, EquipSlot.None,
+                ItemValue(ctx, r), ctx.Rules.IsContainer(row.Shape), 0, 0, row.Flags, 1));
+        }
+        _merchKey = key; _merchItems = res;
+        return res;
+    }
+
+    /// <summary>The crafting state for the view: copied again when a command was applied, the hourly pass moved a job of the hero's, the day turned, or there is none yet; else the last copy.</summary>
+    private CraftState CraftCopy(HeroContext ctx, long hourDone)
+    {
+        bool wanted = CraftViewWanted?.Invoke() ?? true;
+        bool stale = _craftCopy == null || _craftDirty || hourDone / 24 != _craftDay || wanted && HasOpenWork(ctx);
+        if (!stale) return _craftCopy!;
+        CraftCopies++;
+        _craftCopy = CraftingSave.Capture(ctx.Craft.State).Restore(); _craftDay = hourDone / 24; _craftDirty = false;
+        return _craftCopy;
+    }
+
+    private static bool HasOpenWork(HeroContext ctx)
+    {
+        foreach (var j in ctx.Craft.State.Jobs.Values) if (!j.Closed && j.Owner == ctx.Party.Hero) return true;
+        return false;
     }
 
     private static long LastUse(SkillBook b, EntityId p, Skill s)

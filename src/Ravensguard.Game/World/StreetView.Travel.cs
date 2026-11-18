@@ -130,7 +130,7 @@ public partial class StreetView
         _tfeed.Hero.BaseMmPerGs = VehicleSpeedMm();
         _tfeed.Hero.HoursSinceMeal = t.HoursSinceMeal(now);
         _tfeed.Hero.HostileM = _enc is { } e && IsHostileKind(e.Kind) && _encOpen ? (int)(DistToHeroM(e.SpawnXMm, e.SpawnYMm)) : int.MaxValue;
-        _tfeed.Hero.HostileName = _enc?.Id == "wolves" ? "Wolves" : _enc?.Id == "bear" ? "A bear" : "Bandits";
+        _tfeed.Hero.HostileName = L.T(_enc?.Id == "wolves" ? "ENC_NAME_WOLVES" : _enc?.Id == "bear" ? "ENC_NAME_BEAR" : "ENC_NAME_BANDITS");
         if (t.Journey is { State: JourneyState.Travelling } j)
         {
             t.Advance(_tfeed, now);
@@ -218,7 +218,7 @@ public partial class StreetView
     bool EncounterKey(InputEvent e)
     {
         if (e is not InputEventKey { Pressed: true } k) return false;
-        int i = k.Keycode switch { Key.Key1 => 0, Key.Key2 => 1, Key.Key3 => 2, Key.Key4 => 3, Key.Key5 => 4, _ => -1 };
+        int i = Actions.Pick(e, 5);
         if (i < 0 && (Actions.Pressed(e, "world.act") || k.Keycode is Key.Enter or Key.KpEnter))
         {
             i = _encOptions.ToList().FindIndex(o => o.Choice == EncounterChoice.GoOn);
@@ -288,30 +288,31 @@ public partial class StreetView
 
     static void EnsureCompanions(TravelState t)
     {
-        if (t.Companions.All(m => m.Person != EconomyState.HeroOwner)) t.Companions.Add(new CampMember { Person = EconomyState.HeroOwner, Name = "You", Loyalty = 1000, Perception = 45 });
+        if (t.Companions.All(m => m.Person != EconomyState.HeroOwner)) t.Companions.Add(new CampMember { Person = EconomyState.HeroOwner, Name = L.T("TRAVEL_CAMP_YOU"), Loyalty = 1000, Perception = 45 });
     }
 
     bool CampKey(InputEvent e, TravelState t, Camp c)
     {
         long now = _world.Clock.Now.Seconds; var people = t.Companions.Count;
         if (_campJob != null) return Actions.Pressed(e, "world.act") ? true : false;
-        var K = (e as InputEventKey)!.Keycode;
+        int K = Actions.Pick(e, 9);
+        if (Actions.Pressed(e, "world.back")) { _campOpen = false; return true; }
         var comps = t.Companions.Where(m => m.Person != EconomyState.HeroOwner).ToList();
         switch (K)
         {
-            case Key.Key1: FireAction(t, c, now); return true;
-            case Key.Key2:
+            case 0: FireAction(t, c, now); return true;
+            case 1:
             {
                 var eaters = t.Companions.ToList();
                 var r = t.CampMeal(c, eaters, now, cookSkill: 20);
                 _campMsg = r.Fed > 0 ? L.F("TRAVEL_CAMP_ATE", r.Fed, (r.GramsEaten / 1000.0).ToString("0.0")) : L.T("TRAVEL_CAMP_NOFOOD"); _campMsgUntil = now + 1200;
                 return true;
             }
-            case Key.Key3:
+            case 2:
                 if (comps.Count == 0) { _campMsg = L.T("TRAVEL_CAMP_NOWATCH"); _campMsgUntil = now + 1200; return true; }
                 t.SetSentries(c, c.Sentries.Count == 0 ? comps.Take(t.Cfg.SentryMax).Select(m => m.Person) : []);
                 return true;
-            case Key.Key4:
+            case 3:
                 StartCampJob(L.T("TRAVEL_CAMP_TALKING"), t.Cfg.TalkMinutes * 60, () =>
                 {
                     long ts = _world.Clock.Now.Seconds;
@@ -320,18 +321,17 @@ public partial class StreetView
                     if (speaker != null) { _campOpen = false; OpenTalk(speaker.Person); }               // then the talk window opens with that companion (dialogue spec 4.3)
                 });
                 return true;
-            case Key.Key5:
+            case 4:
             {
                 var tm = new GameTime(now); int ss = Daylight.SunsetMinute(t.LatitudeTenths, tm.DayOfYear), sr = Daylight.SunriseMinute(t.LatitudeTenths, tm.DayOfYear);
                 int m = tm.Hour * 60 + tm.Minute; long wait = (m < sr ? sr - m : 24 * 60 - m + sr) * 60L;
                 StartCampJob(L.T("TRAVEL_CAMP_SLEEPING"), wait, () => { _campMsg = L.T("TRAVEL_CAMP_DAWN"); _campMsgUntil = _world.Clock.Now.Seconds + 1800; });
                 return true;
             }
-            case Key.Key6: c.Shelter = (ShelterKind)(((int)c.Shelter + 1) % 4); return true;
-            case Key.Key7:
+            case 5: c.Shelter = (ShelterKind)(((int)c.Shelter + 1) % 4); return true;
+            case 6:
                 StartCampJob(L.T("TRAVEL_CAMP_BREAKING"), t.Cfg.BreakCampMinutes * 60, () => { t.BreakCamp(_world.Clock.Now.Seconds); _rec.Action(Ravensguard.Sim.Diagnostics.HeroAction.CampBreak); _campOpen = false; _router?.ShowToast(L.T("TRAVEL_CAMP_BROKEN")); _wantedSpeed = SimSpeed.X1; });
                 return true;
-            case Key.Escape: _campOpen = false; return true;
         }
         return false;
     }
@@ -381,17 +381,44 @@ public partial class StreetView
 
     // ------------------------------------------------------------------------------------------ view
 
+    /// <summary>Keeps the Choice input layer on while a numbered list is open on the street view (the road encounter's options, the camp panel): its digits take the speed keys' place.</summary>
+    void ChoiceContext()
+    {
+        var t = _travel;
+        bool going = t?.Journey is { State: JourneyState.Travelling or JourneyState.Paused };
+        bool on = t != null && Foreground && ((going && t.Bus.Paused && _enc != null && _encOpen && _encOptions.Count > 0 && !_encScreenPending) || (_campOpen && t.Camp != null));
+        if (on != ActiveContexts.IsOn(InputContext.Choice)) { if (on) ActiveContexts.Enter(InputContext.Choice); else ActiveContexts.Exit(InputContext.Choice); }
+    }
+
     /// <summary>Per frame: the banner, the alert, the camp panel, the people of an encounter and the camp's fire.</summary>
     void TravelRender()
     {
+        ChoiceContext();
         var t = _travel; var hud = _thud; if (t == null || hud == null) return;
         long now = _world.Clock.Now.Seconds;
+        // the panels' text is rebuilt four times a second (and at once when the state changes shape), not every frame; the sprites follow every frame
+        _trAcc += GetProcessDeltaTime();
+        string key = $"{t.Journey?.State}|{_enc?.Id}|{_encOpen}|{_encOptions.Count}|{_campOpen}|{t.Camp != null}|{t.Bus.PausedBy?.Kind}|{_world.Clock.Speed}";
+        if (_trAcc >= 0.25 || key != _trKey)
+        {
+            _trAcc = 0; _trKey = key;
+            TravelHudText(t, hud, now);
+        }
+        SyncCastSprites(now);
+        SyncCampSprite();
+        SyncSnareSprites();
+    }
+
+    double _trAcc; string _trKey = "";
+
+    void TravelHudText(TravelState t, TravelHud hud, long now)
+    {
         if (t.Journey is { State: JourneyState.Travelling or JourneyState.Paused } j)
         {
             double leftKm = (j.TotalMm - j.ProgressMm) / 1_000_000.0;
             double hoursLeft = (j.TotalMm - j.ProgressMm) / (double)Math.Max(1, _tfeed!.Hero.BaseMmPerGs == 0 ? 150 : _tfeed.Hero.BaseMmPerGs) / 3600.0;
             var (ok, why) = t.Gate8x(_tfeed.Hero);
-            string speed = _world.Clock.Speed == SimSpeed.Paused ? "paused" : $"{(int)_world.Clock.Speed}x";
+            string speed = _world.Clock.Speed == SimSpeed.Paused ? L.T("TRAVEL_CLOCK_PAUSED") : $"{(int)_world.Clock.Speed}x";
             hud.Banner(L.F("TRAVEL_BANNER", j.DestName, leftKm.ToString("0.0"), hoursLeft.ToString("0")), j.TotalMm == 0 ? 1f : (float)j.ProgressMm / j.TotalMm,
                 L.F("TRAVEL_BANNER_LINE", speed, H("world.back"), H("world.speed_8")), ok ? "" : why);
         }
@@ -403,15 +430,13 @@ public partial class StreetView
             if (_enc is { } e2 && _encOpen)
             {
                 body = (e2.Bark.Length > 0 ? "\"" + e2.Bark + "\"\n" : "") + L.F("TRAVEL_ALERT_PEOPLE", e2.Cast.Length);
-                if (_encOptions.Count > 0) { body += "\n" + string.Join("\n", _encOptions.Select((o, i) => $"[{i + 1}] {L.T(o.TextKey)}" + (o.Mites > 0 ? $"  ({Quotes.Money(o.Mites)})" : ""))); keys = L.F("ENC_KEYS", H("world.back")); }
+                if (_encOptions.Count > 0) { body += "\n" + string.Join("\n", _encOptions.Select((o, i) => $"[{H("choice.pick_" + (i + 1))}] {L.T(o.TextKey)}" + (o.Mites > 0 ? $"  ({Quotes.Money(o.Mites)})" : ""))); keys = L.F("ENC_KEYS", H("world.back")); }
             }
             hud.Alert(L.F("TRAVEL_ALERT_" + p.Kind.ToString().ToUpperInvariant(), _enc is { } e3 ? EncounterName(e3.Id) : p.Text), body, keys, p.Kind is InterruptKind.Hostile or InterruptKind.Attacked);
         }
         else hud.HideAlert();
         if (t.Camp is { } c && _campOpen) hud.Camp(L.T("TRAVEL_CAMP_TITLE"), CampLines(t, c, now)); else hud.HideCamp();
-        SyncCastSprites(now);
-        SyncCampSprite();
-        SyncSnareSprites();
+        if (_minimap != null) _minimap.Visible = !hud.CampShown;      // the camp panel takes the minimap's corner
     }
 
     string EncounterName(string id) { var d = _travel!.Table.Defs.FirstOrDefault(x => x.Id == id); return d?.Name ?? id; }
@@ -425,10 +450,10 @@ public partial class StreetView
         {
             L.F("TRAVEL_CAMP_FIRE", c.FireLit ? L.T("TRAVEL_CAMP_LITWORD") : L.T("TRAVEL_CAMP_OUTWORD"), (c.FuelG / 1000.0).ToString("0.0")),
             L.F("TRAVEL_CAMP_STOCK", food.ToString("0.0"), wood.ToString("0.0")),
-            L.F("TRAVEL_CAMP_SHELTER", c.Shelter.ToString(), t.RestPerHour(c)),
+            L.F("TRAVEL_CAMP_SHELTER", L.T("SHELTER_" + c.Shelter.ToString().ToUpperInvariant()), t.RestPerHour(c)),
             L.F("TRAVEL_CAMP_WATCH", c.Sentries.Count, t.Cfg.SentryMax),
             "",
-            $"[1] {L.T("TRAVEL_CAMP_K1")}", $"[2] {L.T("TRAVEL_CAMP_K2")}", $"[3] {L.T("TRAVEL_CAMP_K3")}", $"[4] {L.T("TRAVEL_CAMP_K4")}", $"[5] {L.T("TRAVEL_CAMP_K5")}", $"[6] {L.T("TRAVEL_CAMP_K6")}", $"[7] {L.T("TRAVEL_CAMP_K7")}",
+            $"[{H("choice.pick_1")}] {L.T("TRAVEL_CAMP_K1")}", $"[{H("choice.pick_2")}] {L.T("TRAVEL_CAMP_K2")}", $"[{H("choice.pick_3")}] {L.T("TRAVEL_CAMP_K3")}", $"[{H("choice.pick_4")}] {L.T("TRAVEL_CAMP_K4")}", $"[{H("choice.pick_5")}] {L.T("TRAVEL_CAMP_K5")}", $"[{H("choice.pick_6")}] {L.T("TRAVEL_CAMP_K6")}", $"[{H("choice.pick_7")}] {L.T("TRAVEL_CAMP_K7")}",
         };
         if (_campJob is { } job) l[4] = L.F("TRAVEL_CAMP_BUSY", job.Name, Math.Max(0, (job.EndSec - now) / 60));
         else if (now < _campMsgUntil) l[4] = _campMsg;

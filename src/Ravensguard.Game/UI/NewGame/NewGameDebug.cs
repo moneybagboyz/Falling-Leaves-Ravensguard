@@ -87,6 +87,8 @@ public static class NewGameDebug
             Input.ParseInputEvent(esc);
             await Frames(tree, 3);
             if (router.Top != sv || router.Depth != depth || router.HasModal) throw new Exception("Esc in the pause menu did not just close it (depth " + router.Depth + ", modal " + router.HasModal + ")");
+            // every Phase 3 screen at 960x540 through the real flow: fits, Esc returns; barks; encounter, trade, back
+            await Ravensguard.Game.Debug.Phase3Smoke.Run(tree, router, sv);
             // save, leave, Continue: the hero stands where it was, with the clock, torch, Codex and explored map (plan 2.11)
             var run = sv.DebugWorld;
             run.SetTorch(true);

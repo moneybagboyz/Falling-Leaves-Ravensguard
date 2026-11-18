@@ -48,11 +48,12 @@ public partial class CharacterScreen : Control
         string origin = _db.TryGet<OriginDef>(_hero.Origin, out var o) ? o.Name : UiKit.Pretty(_hero.Origin);
         root.AddChild(UiKit.Hint($"{L.T(_hero.Female ? "QS_SEX_FEMALE" : "QS_SEX_MALE")}  -  {origin}" + (v != null ? $"  -  {L.F("CHAR_PURSE", Quotes.Money(v.CoinMites))}" : "")));
 
-        var cols = new HBoxContainer { SizeFlagsVertical = SizeFlags.ExpandFill }; cols.AddThemeConstantOverride("separation", 10); root.AddChild(cols);
+        var cols = new HBoxContainer { SizeFlagsVertical = SizeFlags.ExpandFill }; cols.AddThemeConstantOverride("separation", 8);
+        root.AddChild(UiKit.Scroll(cols));      // the body scrolls; the Back bar below stays on screen
 
         // ---- left: overview, attributes, body
         var left = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill }; left.AddThemeConstantOverride("separation", 4);
-        cols.AddChild(UiKit.Panel(left));
+        var lp = UiKit.Panel(left, 300); lp.SizeFlagsHorizontal = SizeFlags.ExpandFill; lp.SizeFlagsStretchRatio = 4; lp.SizeFlagsVertical = SizeFlags.ShrinkBegin; cols.AddChild(lp);
         left.AddChild(UiKit.Hint(L.T("CHAR_OVERVIEW")));
         if (_db.TryGet<AmbitionDef>(_hero.AmbitionId, out var a))
         {
@@ -62,7 +63,7 @@ public partial class CharacterScreen : Control
         }
         else left.AddChild(UiKit.Body(L.T("CHAR_NO_AMBITION")));
         if (_body?.Invoke() is { Length: > 0 } body) left.AddChild(UiKit.Body(L.F("CHAR_CONDITIONS", body), true));
-        if (v != null) left.AddChild(InventoryScreen.LoadBar(v, 200));
+        if (v != null) left.AddChild(InventoryScreen.LoadBar(v, 160));
 
         left.AddChild(UiKit.Hint(L.T("CHAR_ATTRIBUTES")));
         for (int i = 0; i < HeroRecord.AttrIds.Length; i++)
@@ -70,10 +71,10 @@ public partial class CharacterScreen : Control
             int baseV = _hero.Attributes[i], milli = v?.AttrMilli[i] ?? 0;
             double shown = baseV + milli / 1000.0;
             var row = new HBoxContainer(); row.AddThemeConstantOverride("separation", 8);
-            row.AddChild(new Label { Text = L.T("ATTR_" + HeroRecord.AttrIds[i].ToUpperInvariant()), CustomMinimumSize = new Vector2(120, 0) });
+            row.AddChild(new Label { Text = L.T("ATTR_" + HeroRecord.AttrIds[i].ToUpperInvariant()), CustomMinimumSize = new Vector2(96, 0) });
             row.AddChild(new Label { Text = milli == 0 ? baseV.ToString() : shown.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture), CustomMinimumSize = new Vector2(52, 0), HorizontalAlignment = HorizontalAlignment.Right });
             row.AddChild(new Label { Text = milli > 0 ? "^" : milli < 0 ? "v" : " ", CustomMinimumSize = new Vector2(12, 0) });
-            var bar = new ProgressBar { MaxValue = 100, Value = shown, ShowPercentage = false, CustomMinimumSize = new Vector2(150, 12), SizeFlagsVertical = SizeFlags.ShrinkCenter };
+            var bar = new ProgressBar { MaxValue = 100, Value = shown, ShowPercentage = false, CustomMinimumSize = new Vector2(70, 12), SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ShrinkCenter };
             row.AddChild(bar);
             row.AddChild(UiKit.Hint(baseV > HeroRecord.BaselineAttribute ? $"+{baseV - HeroRecord.BaselineAttribute}" : baseV < HeroRecord.BaselineAttribute ? $"{baseV - HeroRecord.BaselineAttribute}" : "="));
             left.AddChild(row);
@@ -90,9 +91,7 @@ public partial class CharacterScreen : Control
 
         // ---- right: skills by use
         var right = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill }; right.AddThemeConstantOverride("separation", 2);
-        var scroll = new ScrollContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ExpandFill, HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
-        scroll.AddChild(right);
-        var rp = UiKit.Panel(scroll, 520, 0); rp.SizeFlagsHorizontal = SizeFlags.ExpandFill; cols.AddChild(rp);
+        var rp = UiKit.Panel(right, 340); rp.SizeFlagsHorizontal = SizeFlags.ExpandFill; rp.SizeFlagsStretchRatio = 6; rp.SizeFlagsVertical = SizeFlags.ShrinkBegin; cols.AddChild(rp);
         long now = (v?.HourDone ?? 0) * 3600;
         foreach (var (key, skills) in Groups)
         {
@@ -103,13 +102,14 @@ public partial class CharacterScreen : Control
                 long micro = Micro(v, s); int lvl = (int)(micro / CraftMath.MicroPerLevel);
                 long last = v?.Skills.FirstOrDefault(r => r.Skill == s).LastGainSec ?? long.MinValue;
                 bool rising = last != long.MinValue && now - last <= 3 * 86400;
-                var name = new Label { Text = UiKit.Pretty(HeroRecord.SkillId(s)) + (rising ? " ^" : ""), CustomMinimumSize = new Vector2(150, 0) };
+                var name = new Label { Text = UiKit.Pretty(HeroRecord.SkillId(s)) + (rising ? " ^" : ""), CustomMinimumSize = new Vector2(110, 0), ClipText = true };
                 var val = new Label { Text = lvl.ToString(), CustomMinimumSize = new Vector2(30, 0), HorizontalAlignment = HorizontalAlignment.Right };
-                var bar = new ProgressBar { MaxValue = 1000, Value = micro % CraftMath.MicroPerLevel / 1000, ShowPercentage = false, CustomMinimumSize = new Vector2(110, 8), SizeFlagsVertical = SizeFlags.ShrinkCenter };
+                var bar = new ProgressBar { MaxValue = 1000, Value = micro % CraftMath.MicroPerLevel / 1000, ShowPercentage = false, CustomMinimumSize = new Vector2(80, 8), SizeFlagsVertical = SizeFlags.ShrinkCenter };
                 // uses for the next level at an ordinary task (d = 100): what the bar means
                 long gain = Progress.GainMicro(micro, 100);
                 long need = CraftMath.MicroPerLevel - micro % CraftMath.MicroPerLevel;
                 var hint = UiKit.Hint(lvl >= 100 ? "-" : lvl == 0 ? L.T("CHAR_SKILL_LOCKED") : L.F("CHAR_USES_NEXT", gain > 0 ? (need + gain - 1) / gain : 0));
+                hint.ClipText = true; hint.CustomMinimumSize = new Vector2(70, 0); hint.SizeFlagsHorizontal = SizeFlags.ExpandFill; hint.TooltipText = hint.Text; hint.MouseFilter = MouseFilterEnum.Stop;
                 if (lvl == 0) { name.AddThemeColorOverride("font_color", PixelTheme.Dim); val.AddThemeColorOverride("font_color", PixelTheme.Dim); }
                 if (rising) name.AddThemeColorOverride("font_color", PixelTheme.Gold);
                 name.TooltipText = L.F("CHAR_SKILL_TIP", gain / 1000.0, last == long.MinValue ? L.T("CHAR_NEVER") : L.F("CHAR_DAYS_AGO", Math.Max(0, (now - last) / 86400)));

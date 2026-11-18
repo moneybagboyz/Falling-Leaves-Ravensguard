@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Threading;
 using Godot;
 using Ravensguard.Game.UI;
 using Ravensguard.Game.UI.NewGame;
@@ -27,6 +28,7 @@ public partial class StreetView
     {
         if (Runtime is not { } rt || _source?.Content == null || rt.State.Hero == null) return;
         _heroLink = HeroLink.Attach(rt, _source.Content);
+        if (_heroLink != null) _heroLink.Desk.CraftViewWanted = () => Volatile.Read(ref _craftWanted);   // read on the worker: the barrier copies the crafting state only for an open crafting screen (or when it changed)
         if (_heroLink != null) _heroLink.Issued += c => _rec.Hero(c); // trade, crafting, talk and hire go into the replay trace (Phase 3 cleanup)
     }
 
@@ -121,13 +123,16 @@ public partial class StreetView
     {
         _partyBar = new HBoxContainer { Name = "PartyBar", MouseFilter = MouseFilterEnum.Ignore, Visible = false };
         _partyBar.AddThemeConstantOverride("separation", 6);
-        _partyBar.AnchorTop = 1; _partyBar.AnchorBottom = 1; _partyBar.OffsetLeft = 12; _partyBar.OffsetTop = -96; _partyBar.OffsetBottom = -12;
+        _partyBar.AnchorTop = 1; _partyBar.AnchorBottom = 1; _partyBar.OffsetLeft = 12; _partyBar.OffsetTop = -132; _partyBar.OffsetBottom = -48;
         _partyBar.GrowVertical = GrowDirection.Begin;
         hud.AddChild(_partyBar);
     }
 
+    bool _craftWanted;
+
     void HeroTick(double delta)
     {
+        Volatile.Write(ref _craftWanted, _router?.Top is CraftingScreen);
         if (_heroLink == null || (_heroHud += delta) < 0.25) return;
         _heroHud = 0;
         var v = _heroLink.View; if (v == null || ReferenceEquals(v, _partySeen)) return;

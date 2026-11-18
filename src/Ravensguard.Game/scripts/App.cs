@@ -59,6 +59,8 @@ public partial class App : Node
         }
 
         Settings.Load();
+        // the hero desk says its texts as keys (the sim makes no English); they are resolved here, through the translation server
+        Ravensguard.Sim.Trade.HeroText.Resolver = (key, a) => { var t = L.T(key); return t == key ? null : string.Format(t, a); };
         GameDiagnostics.Init(GetTree(), args);
         if (args.Contains("--crash-test"))
         {
@@ -67,6 +69,12 @@ public partial class App : Node
             if (args.Contains("--crash-test-consent")) GameDiagnostics.Consent.Accept();
             var t = new System.Threading.Thread(() => throw new InvalidOperationException("injected crash (--crash-test)")) { Name = "crash-test" };
             t.Start(); t.Join();
+        }
+        if (args.Contains("--crash-test-callback"))
+        {
+            // dev: the same end to end, for an exception thrown in a main-thread callback (a timer here). Godot catches it and logs it as a plain error; the bridge must still write the crash report. Exit 0 when it did.
+            GameDiagnostics.ShowDialogs = false;
+            _ = CrashCallbackProbe();
         }
         var win = GetWindow();
         Settings.ApplyScale(win);
@@ -96,6 +104,15 @@ public partial class App : Node
         if (smoke) RunSmoke();
         else if (OS.IsDebugBuild() && System.Array.IndexOf(args, "--bpedit-shot") >= 0) _ = Tools.BlueprintEditor.EditorShot.Run(GetTree(), Router, args);
         else if (System.Array.IndexOf(args, "--ng-shot") >= 0) _ = UI.NewGame.NewGameDebug.Shot(GetTree(), Router, args);
+    }
+
+    async Task CrashCallbackProbe()
+    {
+        GetTree().CreateTimer(0.2).Timeout += () => throw new InvalidOperationException("injected crash (--crash-test-callback)");
+        await ToSignal(GetTree().CreateTimer(1.5), SceneTreeTimer.SignalName.Timeout);
+        bool ok = GameDiagnostics.LastCrashDialog is { } d && d.Length > 0;
+        GD.Print(ok ? "crash-test-callback: ok (" + GameDiagnostics.LastCrashDialog!.Split('\n')[0] + ")" : "ERROR: crash-test-callback: the exception in the callback produced no crash report");
+        GetTree().Quit(ok ? 0 : 1);
     }
 
     /// <summary>The app is closing normally: the session log says so (a crash never gets here, so the next launch can offer a recovery report).</summary>

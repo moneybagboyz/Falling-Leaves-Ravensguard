@@ -11,6 +11,10 @@ window/size/viewport_width=1280
 window/size/viewport_height=720
 window/stretch/mode="disabled"
 
+[debug]
+
+file_logging/log_path="user://engine/godot.log"
+
 [dotnet]
 project/assembly_name="Ravensguard.Game"
 

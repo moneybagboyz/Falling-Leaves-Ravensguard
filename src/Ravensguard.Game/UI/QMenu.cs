@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Godot;
+using Ravensguard.Game.Inputs;
 using Ravensguard.Game.UI.NewGame;
 
 namespace Ravensguard.Game.UI;
@@ -23,19 +24,21 @@ public partial class QMenu : Control
     public override void _Ready()
     {
         var margin = UiKit.Margin(this, 14);
-        margin.AddThemeConstantOverride("margin_left", 380); margin.AddThemeConstantOverride("margin_right", 380);
-        var root = new VBoxContainer { SizeFlagsVertical = SizeFlags.ShrinkCenter }; root.AddThemeConstantOverride("separation", 4);
+        // a centred column that fits a small window: the verbs scroll between the title and the Back button
+        var root = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ShrinkCenter, SizeFlagsVertical = SizeFlags.ExpandFill, CustomMinimumSize = new Vector2(440, 0) }; root.AddThemeConstantOverride("separation", 4);
         margin.AddChild(root);
         root.AddChild(UiKit.Title(_title));
+        var list = new VBoxContainer(); list.AddThemeConstantOverride("separation", 4);
+        var scroll = UiKit.Scroll(list); scroll.SizeFlagsVertical = SizeFlags.ExpandFill; root.AddChild(scroll);
         int n = 0;
         foreach (var v in _verbs)
         {
-            if (v.Heading) { root.AddChild(UiKit.Hint(v.Label)); continue; }
+            if (v.Heading) { list.AddChild(UiKit.Hint(v.Label)); continue; }
             n++;
-            var b = new Button { Text = $"{n}. {v.Label}", Alignment = HorizontalAlignment.Left, CustomMinimumSize = new Vector2(0, 30), Disabled = v.Why != null, TooltipText = v.Why ?? "" };
+            var b = new Button { Text = $"{n}. {v.Label}", Alignment = HorizontalAlignment.Left, CustomMinimumSize = new Vector2(0, 30), ClipText = true, Disabled = v.Why != null, TooltipText = v.Why ?? "" };
             if (v.Why != null) b.Text += $"   [{v.Why}]";
             var vv = v; b.Pressed += () => Choose(vv);
-            root.AddChild(b); _buttons.Add((b, v));
+            list.AddChild(b); _buttons.Add((b, v));
         }
         var back = UiKit.Key(L.T("UI_BACK"), "menu.back", 200); back.Pressed += _router.Pop; root.AddChild(back);
     }
@@ -45,8 +48,8 @@ public partial class QMenu : Control
     public override void _UnhandledInput(InputEvent e)
     {
         if (e is not InputEventKey { Pressed: true, Echo: false } k) return;
-        int i = k.Keycode is >= Key.Key1 and <= Key.Key9 ? (int)k.Keycode - (int)Key.Key1 : -1;
+        int i = Actions.Pick(e);
         if (i >= 0 && i < _buttons.Count) { Choose(_buttons[i].V); GetViewport().SetInputAsHandled(); }
-        else if (k.Keycode == Key.Q) { _router.Pop(); GetViewport().SetInputAsHandled(); }
+        else if (Actions.Pressed(e, "world.context_menu")) { _router.Pop(); GetViewport().SetInputAsHandled(); }
     }
 }

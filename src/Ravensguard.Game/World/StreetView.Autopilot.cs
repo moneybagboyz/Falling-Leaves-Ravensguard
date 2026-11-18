@@ -66,14 +66,14 @@ public partial class StreetView
         if (_ap == null || Runtime is not { } rt) return;
         long now = _world.Clock.Now.Seconds;
         if (_apView.AlertPaused) { ApContinue(); return; }
-        if (_apView.Paused || _apLocalPaused) { _apLocalPaused = false; _ = rt.AtBarrier(() => { _ap.Resume(HeroId, now); return 0; }); _router?.ShowToast(L.T("AP_RESUMED")); }
+        if (_apView.Paused || _apLocalPaused) { _apLocalPaused = false; _ = Bar(rt, () => { _ap.Resume(HeroId, now); return 0; }); _router?.ShowToast(L.T("AP_RESUMED")); }
         else ApTakeControl(null);
     }
 
     void ApContinue()
     {
         if (_ap == null || Runtime is not { } rt) return;
-        _ = rt.AtBarrier(() => { _ap.BusOf(_ap.Book.Get(HeroId)!).Resume(); return 0; });
+        _ = Bar(rt, () => { _ap.BusOf(_ap.Book.Get(HeroId)!).Resume(); return 0; });
         if (_world.Clock.Speed == SimSpeed.Paused) _rec.SetSpeed(SimSpeed.X1);
         if (_apAlert != null) _apAlert.Visible = false;
     }
@@ -87,7 +87,7 @@ public partial class StreetView
         _apLocalPaused = true; _apMoveCool = 0;
         long now = _world.Clock.Now.Seconds;
         _rec.Action(Ravensguard.Sim.Diagnostics.HeroAction.TakeControl, 0, now);
-        _ = rt.AtBarrier(() => { _ap.TakeControl(HeroId, now); return 0; });
+        _ = Bar(rt, () => { _ap.TakeControl(HeroId, now); return 0; });
         if (toast != null) _router?.ShowToast(toast);
         ApHud();
     }
@@ -198,9 +198,9 @@ public partial class StreetView
                 var copy = new AutopilotSetup { Queue = [.. s.Queue.Select(d => d.Clone())], Limits = s.Limits.Clone(), Policy = (InterruptPolicy[])s.Policy.Clone(), Quiet = (bool[])s.Quiet.Clone() };
                 long now = _world.Clock.Now.Seconds; _apLocalPaused = false;
                 _rec.Action(Ravensguard.Sim.Diagnostics.HeroAction.Directive, copy.Queue.Count, now);
-                _ = rt.AtBarrier(() => { ap.Apply(HeroId, now, copy); return 0; });
+                _ = Bar(rt, () => { ap.Apply(HeroId, now, copy); return 0; });
             },
-            Stop = () => { long now = _world.Clock.Now.Seconds; _apLocalPaused = false; _rec.Action(Ravensguard.Sim.Diagnostics.HeroAction.DirectiveStop, 0, now); _ = rt.AtBarrier(() => { ap.Disable(HeroId, now); return 0; }); },
+            Stop = () => { long now = _world.Clock.Now.Seconds; _apLocalPaused = false; _rec.Action(Ravensguard.Sim.Diagnostics.HeroAction.DirectiveStop, 0, now); _ = Bar(rt, () => { ap.Disable(HeroId, now); return 0; }); },
             PauseResume = () => ApChipClicked(),
             Preset = (name, s) => s.Preset(name, AutopilotSettingsDefLike.Of(cfg)),
             MaxRiskLow = () => cfg.RiskLowPm, MaxRiskMedium = () => cfg.RiskMediumPm, MaxRiskHigh = () => cfg.RiskHighPm,

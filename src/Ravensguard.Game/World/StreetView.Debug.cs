@@ -1,0 +1,78 @@
+using System;
+using System.Linq;
+using Godot;
+using Ravensguard.Game.UI;
+using Ravensguard.Sim.Core;
+using Ravensguard.Sim.Travel;
+
+namespace Ravensguard.Game.World;
+
+/// <summary>Hooks for the headless smoke (<c>--smoke</c>): open each Phase 3 screen the way the keys do, and read the few states the checks need. Dev only; play never calls them.</summary>
+public partial class StreetView
+{
+    /// <summary>No screen or dialog above the street view.</summary>
+    public bool DebugForeground => Foreground;
+    public int DebugBarksSpawned => _barksSpawned;
+    public bool DebugEncounterScreenPending => _encScreenPending;
+    public bool DebugEncounterOpen => _enc != null && _encOpen;
+    public bool DebugCampOpen => _campOpen;
+    public JourneyState? DebugJourneyState => _travel?.Journey?.State;
+    public TravelHud? DebugTravelHud => _thud;
+    public Control? DebugHud => GetNodeOrNull<Control>("Hud");
+
+    /// <summary>Starts a staged road encounter (the dev console's <c>encounter</c>): the journey stops, the options show.</summary>
+    public string DebugEncounter(string id, EntityId? person = null)
+    {
+        if (_travel == null) return "no travel";
+        string name = DevEncounter(id);
+        if (person is { } p && _enc != null) _enc = _enc with { Cast = [p.Value] };      // a real record to trade or talk with (the staged cast is generated travellers)
+        return name;
+    }
+
+    /// <summary>The camp, made where the hero stands (the dev shot's camp).</summary>
+    public void DebugCamp() { if (_travel != null) DevTravelShot("camp"); }
+
+    /// <summary>A person of the hero's home settlement, to talk to.</summary>
+    public EntityId DebugAnyPerson()
+    {
+        if (Runtime is not { } rt) return EntityId.None;
+        int s = HeroSettlement();
+        var p = rt.State.Population.People;
+        return rt.AtBarrier(() => Enumerable.Range(0, p.Count).Where(i => p.IsAlive(i) && (s < 0 || p.HomeSettlement[i] == s) && p.AgeYears(i, (int)(_world.Clock.Now.Seconds / 86400)) >= 18).Select(p.IdOf).FirstOrDefault()).GetAwaiter().GetResult();
+    }
+
+    /// <summary>Opens a screen by name, through the same method its key calls. False for an unknown name.</summary>
+    public bool DebugOpen(string what)
+    {
+        switch (what)
+        {
+            case "trade": OpenTrade(HeroSettlement(), EntityId.None); return true;
+            case "barter": OpenTrade(HeroSettlement(), DebugAnyPerson()); return true;
+            case "inventory": OpenInventory(); return true;
+            case "character": OpenCharacter(); return true;
+            case "squad": OpenSquad(); return true;
+            case "crafting": OpenCrafting(); return true;
+            case "talk": OpenTalk(DebugAnyPerson()); return true;
+            case "journal": OpenJournal(); return true;
+            case "autopilot": OpenAutopilot(); return true;
+            case "map": OpenMap(); return true;
+            case "picker": OpenMap(true); return true;
+            case "jobs": OpenWork(); return true;
+            case "codex": OpenCodex(); return true;
+            case "qmenu": OpenQMenu(); return true;
+            case "overlay": ShowControls(); return true;
+            default: return false;
+        }
+    }
+
+    /// <summary>A party bar with the hero and three members (long names), the widest case the HUD has.</summary>
+    public void DebugPartyBar()
+    {
+        if (_partyBar == null) return;
+        _partySeen = _heroLink?.View;                                   // HeroTick leaves the bar alone until the view changes
+        foreach (var c in _partyBar.GetChildren()) { _partyBar.RemoveChild(c); c.QueueFree(); }
+        _partyBar.Visible = true;
+        _partyBar.AddChild(Portrait(_hero?.Name ?? "Hero", L.T("PARTY_YOU"), 1000, PixelTheme.Gold, 1000));
+        foreach (var n in new[] { "Ulenor Ravenmont", "Oseuna Barstan the Younger", "Wystan" }) _partyBar.AddChild(Portrait(n, L.T("ORDER_FOLLOW"), 600, PixelTheme.Body, -1));
+    }
+}

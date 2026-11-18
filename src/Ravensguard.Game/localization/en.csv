@@ -1549,7 +1549,7 @@ JOB_GUILDMASTER,guildmaster
 TALK_RUMOUR_NONE,Nothing new.
 TALK_HERO_OVERHEARD,You overhear {0} telling someone: {1}
 TALK_TOLD_YOU,{0}
-TALK_LEGEND,It is an old tale, but they still tell it: {0}
+TALK_LEGEND,"It is an old tale, but they still tell it: {0}"
 D_NEED_PLAIN,Forgive me; I am not quite myself today.
 D_HOST_PLAIN,"Keep your distance, {title}."
 TALK_NEEDS_SKILL,Needs {skill} {level}
@@ -2184,3 +2184,45 @@ HERO_YOUR_WORK_ABOUT_SPOIL,Your work is about to spoil.
 HERO_YOUR_WORK_PAST_ITS,Your work is past its time: collect it soon.
 HERO_YOUR_WORK_READY_COLLECT,Your work is ready to collect.
 HERO_YOUR_WORK_WAS_SPOILED,Your work was spoiled.
+CONTEXT_CHOICE,"Numbered lists (talk, Q menu, road encounter, camp)"
+ACTION_CHOICE_PICK_1,Choose entry 1
+ACTION_CHOICE_PICK_2,Choose entry 2
+ACTION_CHOICE_PICK_3,Choose entry 3
+ACTION_CHOICE_PICK_4,Choose entry 4
+ACTION_CHOICE_PICK_5,Choose entry 5
+ACTION_CHOICE_PICK_6,Choose entry 6
+ACTION_CHOICE_PICK_7,Choose entry 7
+ACTION_CHOICE_PICK_8,Choose entry 8
+ACTION_CHOICE_PICK_9,Choose entry 9
+REPORT_CAT_BUG,Bug
+REPORT_CAT_CONFUSING,Confusing
+REPORT_CAT_I_DID_NOT_UNDERSTAND_WHY,I did not understand why
+REPORT_CAT_BALANCE,Balance
+REPORT_CAT_IDEA,Idea
+CRASH_SAVED,"The game stopped. A report was saved to:\n{0}\nNothing was sent."
+CRASH_NO_ZIP,"The game stopped. Nothing was sent and no report zip was made (reports are off until you agree in the F8 screen). The log is in:\n{0}"
+CRASH_PLAIN,"The game stopped. The log is in the logs folder. ({0})"
+TRADE_GOOD_N,good {0}
+TRAVEL_CAMP_YOU,You
+TRAVEL_CLOCK_PAUSED,paused
+SHELTER_NONE,none
+SHELTER_BEDROLL,bedroll
+SHELTER_LEANTO,lean-to
+SHELTER_TENT,tent
+SURFACE_PAVED,paved road
+SURFACE_DRYROAD,dry road
+SURFACE_WETROAD,wet road
+SURFACE_TRACK,track
+SURFACE_GRASS,grass
+SURFACE_MUDROAD,muddy road
+SURFACE_DEEPMUD,deep mud
+SURFACE_PACKEDSNOW,packed snow
+SURFACE_DEEPSNOW,deep snow
+SURFACE_ICE,ice
+SURFACE_SAND,sand
+ENC_NAME_WOLVES,Wolves
+ENC_NAME_BEAR,A bear
+ENC_NAME_BANDITS,Bandits
+HUD_TICK_FAULT,"The world has stopped stepping (see the F8 report). Save and restart."
+HUD_TASK_FAULT,"Something the world was asked to do failed (see the log; F8 reports it)."
+TASK_FAILED,"A world job failed: {0}"

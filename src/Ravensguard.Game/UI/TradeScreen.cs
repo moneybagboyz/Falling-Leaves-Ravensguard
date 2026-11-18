@@ -63,9 +63,9 @@ public partial class TradeScreen : Control
         notes.Pressed += () => { _notebook = true; market.ButtonPressed = false; barter.ButtonPressed = false; notes.ButtonPressed = true; Build(); };
         tabs.AddChild(market); tabs.AddChild(barter); tabs.AddChild(notes);
         if (_settlement < 0 && _person != EntityId.None) { _barter = true; market.ButtonPressed = false; market.Disabled = true; barter.ButtonPressed = true; }       // on the road: only the person's goods
-        tabs.AddChild(UiKit.Hint(L.T("TRADE_KEYS")));
-        _cols = new HBoxContainer { SizeFlagsVertical = SizeFlags.ExpandFill }; _cols.AddThemeConstantOverride("separation", 10); root.AddChild(_cols);
-        _left = Column(_cols, 300); _basket = Column(_cols, 360); _right = Column(_cols, 300);
+        var keysHint = UiKit.Hint(L.T("TRADE_KEYS"), true); keysHint.SizeFlagsHorizontal = SizeFlags.ExpandFill; keysHint.CustomMinimumSize = new Vector2(120, 0); tabs.AddChild(keysHint);
+        _cols = new HBoxContainer { SizeFlagsVertical = SizeFlags.ExpandFill }; _cols.AddThemeConstantOverride("separation", 8); root.AddChild(_cols);
+        _left = Column(_cols, 220, 3); _basket = Column(_cols, 380, 4); _right = Column(_cols, 220, 3);   // proportional: the three fit 960 px (the old 300/360/300 did not)
         _notes = new VBoxContainer { SizeFlagsVertical = SizeFlags.ExpandFill, Visible = false }; _notes.AddThemeConstantOverride("separation", 2); root.AddChild(_notes);
         _status = UiKit.Body("", true); root.AddChild(_status);
         var back = UiKit.Key(L.T("UI_BACK"), "menu.back", 200); back.Pressed += _router.Pop; root.AddChild(back);
@@ -77,12 +77,12 @@ public partial class TradeScreen : Control
         Build();
     }
 
-    static VBoxContainer Column(HBoxContainer parent, int w)
+    static VBoxContainer Column(HBoxContainer parent, int w, float ratio)
     {
         var v = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ExpandFill }; v.AddThemeConstantOverride("separation", 2);
         var scroll = new ScrollContainer { CustomMinimumSize = new Vector2(w, 0), SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ExpandFill, HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
         scroll.AddChild(v);
-        var p = UiKit.Panel(scroll, w, 0); p.SizeFlagsHorizontal = SizeFlags.ExpandFill; p.SizeFlagsVertical = SizeFlags.ExpandFill;
+        var p = UiKit.Panel(scroll, w, 0); p.SizeFlagsHorizontal = SizeFlags.ExpandFill; p.SizeFlagsVertical = SizeFlags.ExpandFill; p.SizeFlagsStretchRatio = ratio;
         parent.AddChild(p);
         return v;
     }
@@ -112,7 +112,7 @@ public partial class TradeScreen : Control
             .Select(l => new Line(l.Good, GoodName(l.Good), v.Goods.FirstOrDefault(x => x.Good == l.Good)?.Qty ?? 0, l.StockUnits, l, l.Piece, l.LotUnits))];
     }
 
-    string GoodName(ushort g) => _hw.Runtime.State.Economy is { } e && g < e.Goods.Count ? e.Goods.Def(g).Name : $"good {g}";
+    string GoodName(ushort g) => _hw.Runtime.State.Economy is { } e && g < e.Goods.Count ? e.Goods.Def(g).Name : L.F("TRADE_GOOD_N", g);
     bool Piece(ushort g) => _hw.Runtime.State.Economy is { } e && g < e.Goods.Count && e.Goods.IsPiece(g);
 
     static string Amount(long q, bool piece) => piece ? $"{q}" : Quotes.Weight(q);
@@ -146,7 +146,7 @@ public partial class TradeScreen : Control
         _title.Text = _barter && v.Person != null ? L.F("TRADE_TITLE_PERSON", v.Person.Name) : L.F("TRADE_TITLE_MARKET", v.Market.Name);
         if (_notebook) { BuildNotebook(v); return; }
 
-        _left.AddChild(UiKit.Hint(L.F("TRADE_YOURS", Quotes.Money(v.CoinMites))));
+        _left.AddChild(UiKit.Hint(L.F("TRADE_YOURS", Quotes.Money(v.CoinMites)), true));
         var mine = Mine();
         for (int i = 0; i < mine.Count; i++)
         {
@@ -158,10 +158,10 @@ public partial class TradeScreen : Control
 
         if (_barter && v.Person is { } pv)
         {
-            _right.AddChild(UiKit.Hint(L.F("TRADE_THEIRS_PERSON", pv.Name, Quotes.Money(pv.CoinMites))));
+            _right.AddChild(UiKit.Hint(L.F("TRADE_THEIRS_PERSON", pv.Name, Quotes.Money(pv.CoinMites)), true));
             if (pv.Survive) _right.AddChild(UiKit.Hint(L.T("TRADE_THEY_NEED_FOOD"), true));
         }
-        else _right.AddChild(UiKit.Hint(L.F("TRADE_THEIRS", Quotes.Money(v.Market.MerchantCash), v.Market.Open ? L.T("TRADE_OPEN") : L.T("TRADE_SHUT"))));
+        else _right.AddChild(UiKit.Hint(L.F("TRADE_THEIRS", Quotes.Money(v.Market.MerchantCash), v.Market.Open ? L.T("TRADE_OPEN") : L.T("TRADE_SHUT")), true));
         var theirs = Theirs();
         for (int i = 0; i < theirs.Count; i++)
         {
@@ -178,8 +178,8 @@ public partial class TradeScreen : Control
         var b = new Button { Text = "", Flat = !selected, ToggleMode = true, ButtonPressed = selected, CustomMinimumSize = new Vector2(0, 26), Alignment = HorizontalAlignment.Left };
         var h = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore }; h.SetAnchorsPreset(LayoutPreset.FullRect); h.AddThemeConstantOverride("separation", 6);
         h.AddChild(new Label { Text = " " + name, SizeFlagsHorizontal = SizeFlags.ExpandFill, ClipText = true, MouseFilter = MouseFilterEnum.Ignore });
-        h.AddChild(new Label { Text = qty, CustomMinimumSize = new Vector2(72, 0), HorizontalAlignment = HorizontalAlignment.Right, MouseFilter = MouseFilterEnum.Ignore });
-        h.AddChild(new Label { Text = price + " ", CustomMinimumSize = new Vector2(96, 0), HorizontalAlignment = HorizontalAlignment.Right, ThemeTypeVariation = "HintLabel", MouseFilter = MouseFilterEnum.Ignore });
+        h.AddChild(new Label { Text = qty, CustomMinimumSize = new Vector2(60, 0), HorizontalAlignment = HorizontalAlignment.Right, MouseFilter = MouseFilterEnum.Ignore });
+        h.AddChild(new Label { Text = price + " ", CustomMinimumSize = new Vector2(84, 0), HorizontalAlignment = HorizontalAlignment.Right, ThemeTypeVariation = "HintLabel", MouseFilter = MouseFilterEnum.Ignore });
         b.AddChild(h);
         b.Pressed += pick;
         return b;
@@ -195,9 +195,9 @@ public partial class TradeScreen : Control
         _basket.AddChild(new Label { Text = $"{(Side == TradeSide.Buy ? L.T("TRADE_BUYING") : L.T("TRADE_SELLING"))}: {l.Name}", ThemeTypeVariation = "GoldLabel" });
         var qrow = new HBoxContainer(); qrow.AddThemeConstantOverride("separation", 4);
         long step = l.Piece ? 1 : 1000;
-        void Add(string t, Func<long> f) { var b = new Button { Text = t, CustomMinimumSize = new Vector2(44, 28) }; b.Pressed += () => { _qty = Math.Clamp(f(), Math.Min(1, max), Math.Max(1, max)); Build(); }; qrow.AddChild(b); }
+        void Add(string t, Func<long> f) { var b = new Button { Text = t, CustomMinimumSize = new Vector2(38, 28) }; b.Pressed += () => { _qty = Math.Clamp(f(), Math.Min(1, max), Math.Max(1, max)); Build(); }; qrow.AddChild(b); }
         Add("-10", () => _qty - 10 * step); Add("-1", () => _qty - step);
-        qrow.AddChild(new Label { Text = Amount(_qty, l.Piece), CustomMinimumSize = new Vector2(84, 0), HorizontalAlignment = HorizontalAlignment.Center });
+        qrow.AddChild(new Label { Text = Amount(_qty, l.Piece), CustomMinimumSize = new Vector2(70, 0), HorizontalAlignment = HorizontalAlignment.Center });
         Add("+1", () => _qty + step); Add("+10", () => _qty + 10 * step); Add("+50%", () => _qty + Math.Max(step, _qty / 2)); Add(L.T("TRADE_MAX"), () => max);
         _basket.AddChild(qrow);
         var sb = new StringBuilder();
@@ -298,6 +298,7 @@ public partial class TradeScreen : Control
     public override void _Process(double delta)
     {
         _refresh += delta; _waitSince += delta;
+        if (_waitSeq > 0 && _waitSince > 8) { _waitSeq = 0; _status.Text = ""; Build(); }       // the answer never came (worker faulted, result trimmed): Deal and Back must not stay dead
         if (_refresh > 0.15)
         {
             _refresh = 0;
@@ -333,13 +334,13 @@ public partial class TradeScreen : Control
     {
         if (!Visible) return;
         var l = Current(); long step = l == null || l.Piece ? 1 : 1000;
-        bool shift = Input.IsKeyPressed(Key.Shift), ctrl = Input.IsKeyPressed(Key.Ctrl);
+        bool shift = e is InputEventWithModifiers { ShiftPressed: true }, ctrl = e is InputEventWithModifiers { CtrlPressed: true };
         if (Actions.Pressed(e, "trade.notebook")) { _notebook = !_notebook; Build(); }
         else if (Actions.Pressed(e, "trade.pane")) { _pane = 1 - _pane; _sel = 0; Build(); }
         else if (Actions.Pressed(e, "trade.up")) { _sel--; Build(); }
         else if (Actions.Pressed(e, "trade.down")) { _sel++; Build(); }
-        else if (Actions.Pressed(e, "trade.less")) { _qty = ctrl ? 1 : _qty - step * (shift ? 10 : 1); Build(); }
-        else if (Actions.Pressed(e, "trade.more")) { _qty = ctrl && l != null ? MaxQty(l) : _qty + step * (shift ? 10 : 1); Build(); }
+        else if (Actions.PressedLoose(e, "trade.less")) { _qty = ctrl ? 1 : _qty - step * (shift ? 10 : 1); Build(); }
+        else if (Actions.PressedLoose(e, "trade.more")) { _qty = ctrl && l != null ? MaxQty(l) : _qty + step * (shift ? 10 : 1); Build(); }
         else if (Actions.Pressed(e, "trade.confirm")) Confirm();
         else if (Actions.Pressed(e, "trade.cancel")) _router.Pop();
         else return;

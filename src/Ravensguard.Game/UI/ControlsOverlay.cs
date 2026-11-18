@@ -29,8 +29,8 @@ public partial class ControlsOverlay : Control
         new("mounted", [.. Of(InputContext.Mounted), "world.act", "world.sprint", "world.camp", "world.map", "world.cart_hitch", "world.cart_unload", "world.cart_reload", "world.cart_dig", "world.speed_1", "world.speed_2", "world.speed_4", "world.speed_8", "world.pause"], [], InputContext.Mounted),
         new("trade", [.. Of(InputContext.Trade)], [("Shift / Ctrl", "OVERLAY_TRADE_QTY")], InputContext.Trade),
         new("crafting", ["world.make", "world.speed_1", "world.pause"], [("/", "OVERLAY_CRAFT_SEARCH"), ("F", "OVERLAY_CRAFT_FILTER"), ("Enter", "OVERLAY_CRAFT_START"), ("Esc", "OVERLAY_CLOSE")], null),
-        new("camp", ["world.camp", "world.forage", "world.act", "world.context_menu", "world.torch", "world.speed_1", "world.speed_2", "world.speed_4", "world.speed_8", "world.pause", "world.panel_inventory"], [], null),
-        new("travel", ["world.map", "world.context_menu", "world.camp", "world.forage", "world.speed_1", "world.speed_2", "world.speed_4", "world.speed_8", "world.pause", "world.sprint", "world.panel_journal"], [("Enter", "OVERLAY_TRAVEL_HERE")], null),
+        new("camp", ["world.camp", "world.forage", "world.act", "world.context_menu", "world.torch", "choice.pick_1", "choice.pick_2", "choice.pick_3", "choice.pick_4", "choice.pick_5", "choice.pick_6", "choice.pick_7", "world.pause", "world.panel_inventory"], [], null),
+        new("travel", ["world.map", "world.context_menu", "world.camp", "world.forage", "world.speed_1", "world.speed_2", "world.speed_4", "world.speed_8", "choice.pick_1", "choice.pick_2", "choice.pick_3", "world.pause", "world.sprint", "world.panel_journal"], [("Enter", "OVERLAY_TRAVEL_HERE")], null),
         new("called_shot", [.. Of(InputContext.CalledShot)], [], InputContext.CalledShot),
         new("build", [.. Of(InputContext.Build)], [], InputContext.Build),
     ];

@@ -18,7 +18,7 @@ public sealed partial class RideHud : PanelContainer
     public RideHud()
     {
         MouseFilter = MouseFilterEnum.Ignore; Visible = false;
-        AnchorTop = 1; AnchorBottom = 1; OffsetLeft = 12; OffsetTop = -170; OffsetBottom = -40; GrowVertical = GrowDirection.Begin;
+        AnchorTop = 1; AnchorBottom = 1; OffsetLeft = 12; OffsetTop = -190; OffsetBottom = -52; GrowVertical = GrowDirection.Begin;
         var v = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
         v.AddThemeConstantOverride("separation", 2);
         AddChild(v);
@@ -37,7 +37,7 @@ public sealed partial class RideHud : PanelContainer
         string team = L.F("RIDE_TEAM", v.PullN, v.NeedN, v.TeamCount, v.MaxAnimals);
         string need = v.AnimalsNeeded < 0 ? L.F("RIDE_NEEDS_MORE", v.MaxAnimals, beast)
             : v.AnimalsNeeded == 0 ? ""
-            : L.F(v.AnimalsNeeded > v.TeamCount ? "RIDE_NEEDS" : "RIDE_NEEDS_OK", v.AnimalsNeeded, beast, book.Surface.ToString());
+            : L.F(v.AnimalsNeeded > v.TeamCount ? "RIDE_NEEDS" : "RIDE_NEEDS_OK", v.AnimalsNeeded, beast, L.T("SURFACE_" + book.Surface.ToString().ToUpperInvariant()));
         return need.Length == 0 ? team : team + "  " + need;
     }
 
@@ -47,8 +47,14 @@ public sealed partial class RideHud : PanelContainer
         return n == 1 ? name : name == "ox" ? "oxen" : name + "s";
     }
 
+    double _acc = 1;
+
     public void Update(RideBook book, long nowSec)
     {
+        // the text is rebuilt four times a second at most, not every frame (the line formatting allocates)
+        _acc += GetProcessDeltaTime();
+        if (_acc < 0.25) return;
+        _acc = 0;
         var v = book.View(nowSec);
         Visible = v.Mounted || v.Driving || v.Mounting;
         if (!Visible) return;
@@ -71,7 +77,7 @@ public sealed partial class RideHud : PanelContainer
             var bp = book.Templates.At(v.TemplateIndex);
             _title.Text = bp.Def.Name;
             _line1.Text = L.F("RIDE_CART1", v.CargoKg, v.CargoCapKg, Speed(v.SpeedCmps));
-            _line2.Text = L.F("RIDE_CART2", v.AxlePm / 10, Math.Min(v.RatioPm, 9999) / 10, book.Surface.ToString());
+            _line2.Text = L.F("RIDE_CART2", v.AxlePm / 10, Math.Min(v.RatioPm, 9999) / 10, L.T("SURFACE_" + book.Surface.ToString().ToUpperInvariant()));
             _line3.Text = TeamLine(book, v);
             _warn.Text = v.Stuck ? L.T("RIDE_STUCK") : v.RatioPm > 1000 ? L.T("RIDE_HEAVY") : "";
         }

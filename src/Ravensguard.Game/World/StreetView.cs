@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using Godot;
 using Ravensguard.Content;
@@ -199,6 +200,7 @@ public partial class StreetView : Control, IHandlesBack
         // the run's own save (if any) was already queued behind whatever the worker was doing; leaving waits for it, a moment at most
         try { Runtime?.Dispose(); } catch (Exception ex) { GD.PushWarning("runtime shutdown: " + ex.Message); }
         if (Runtime != null) { try { System.Runtime.GCSettings.LatencyMode = _gcMode; } catch (InvalidOperationException) { } }
+        ActiveContexts.Exit(InputContext.Choice);
         if (GetWindow() != null) GetWindow().SizeChanged -= FitViewport;
         if (DevContext.Clock == _world?.Clock) DevContext.Clock = null;
         if (Diagnostics.GameDiagnostics.Recorder == _rec) { Diagnostics.GameDiagnostics.Recorder = null; Diagnostics.GameDiagnostics.WhereProvider = null; }
@@ -271,6 +273,36 @@ public partial class StreetView : Control, IHandlesBack
             Diagnostics.GameDiagnostics.ReportWorkerFault(rt.Fault, "region-tick");
             _router?.ShowToast(L.F("TICK_FAILED", rt.Fault.GetBaseException().Message), 8f);
         }
+    }
+
+    // ---- fire-and-forget barrier jobs: a fault is logged, shown once in a while as a toast and kept in the HUD, never dropped silently
+
+    readonly System.Collections.Concurrent.ConcurrentQueue<string> _taskFaults = new();
+    Label? _faultLabel; int _taskFaultTotal; double _taskFaultToastAt = -100;
+
+    /// <summary>A world job at the next barrier whose result nobody awaits (a directive, a fold-back, a bout): faults are observed by <see cref="Watch"/>.</summary>
+    Task<T> Bar<T>(WorldRuntime rt, Func<T> job, [System.Runtime.CompilerServices.CallerMemberName] string what = "") => Watch(rt.AtBarrier(job), what);
+
+    Task<T> Watch<T>(Task<T> task, string what) { ((Task)task).ContinueWith(t => NoteTaskFault(t, what), TaskContinuationOptions.OnlyOnFaulted); return task; }
+
+    void NoteTaskFault(Task t, string what)
+    {
+        string msg = t.Exception?.GetBaseException().Message ?? "?";
+        Diagnostics.GameDiagnostics.Warn("sim", $"{what} failed: {msg}");     // worker thread: the log is thread safe, the UI is touched on the main thread only (PumpTaskFaults)
+        Interlocked.Increment(ref _taskFaultTotal);
+        if (_taskFaults.Count < 8) _taskFaults.Enqueue(msg);
+    }
+
+    void PumpTaskFaults()
+    {
+        if (_faultLabel != null)
+        {
+            bool tick = Runtime?.Fault != null;
+            _faultLabel.Visible = tick || _taskFaultTotal > 0;
+            if (_faultLabel.Visible) _faultLabel.Text = L.T(tick ? "HUD_TICK_FAULT" : "HUD_TASK_FAULT");
+        }
+        if (_taskFaults.IsEmpty) return;
+        while (_taskFaults.TryDequeue(out var m)) if (_frames / 60.0 - _taskFaultToastAt > 8) { _taskFaultToastAt = _frames / 60.0; _router?.ShowToast(L.F("TASK_FAILED", Diagnostics.GameDiagnostics.Redactor.Redact(m)), 5f); }
     }
 
     void OnBlueprintsReloaded(BuildingLibrary _) => _router?.ShowToast(L.T("STREET_BLUEPRINTS_RELOADED"), 4f);
@@ -428,20 +460,22 @@ public partial class StreetView : Control, IHandlesBack
         wrow.AddChild(_weatherIcon); wrow.AddChild(_weatherLabel);
         v.AddChild(wrow);
         // the hero's body: a warning in words, hours before cold or heat matters (clothing spec 6), empty when all is well
-        _condLabel = new Label { Visible = false, Modulate = new Color(1f, 0.82f, 0.45f) };
+        _condLabel = new Label { Visible = false, Modulate = new Color(1f, 0.82f, 0.45f), AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(290, 0) };   // wraps: a long warning must not widen the panel under the travel banner
         v.AddChild(_condLabel);
         _bandLabel = new Label { ThemeTypeVariation = "HintLabel" };
         v.AddChild(_bandLabel);
         if (_hero != null) v.AddChild(new Label { Text = L.F("STREET_HERO_HINT", _hero.Name, H("world.panel_character"), H("world.panel_codex")), ThemeTypeVariation = "HintLabel" });
         BuildAutopilotHud(v);
+        _faultLabel = new Label { Visible = false, Modulate = new Color(1f, 0.55f, 0.4f), AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(290, 0) };
+        v.AddChild(_faultLabel);
         hud.AddChild(top);
         BuildPartyBar(hud); BuildTalkHud(hud); BuildOnboardingHud(hud);
 
         if (_regionMap != null)
         {
-            _minimap = new Minimap(_regionMap, HeroWorld, OpenMap);
+            _minimap = new Minimap(_regionMap, HeroWorld, () => OpenMap());
             _minimap.AnchorLeft = 1; _minimap.AnchorRight = 1; _minimap.AnchorTop = 1; _minimap.AnchorBottom = 1;
-            _minimap.OffsetLeft = -(Minimap.Pixels + 24); _minimap.OffsetRight = -12; _minimap.OffsetTop = -(Minimap.Pixels + 24 + 28); _minimap.OffsetBottom = -(28);
+            _minimap.OffsetLeft = -(Minimap.Pixels + 24); _minimap.OffsetRight = -12; _minimap.OffsetTop = -(Minimap.Pixels + 24 + 48); _minimap.OffsetBottom = -(48);
             _minimap.GrowHorizontal = GrowDirection.Begin; _minimap.GrowVertical = GrowDirection.Begin;
             hud.AddChild(_minimap);
         }
@@ -463,7 +497,8 @@ public partial class StreetView : Control, IHandlesBack
         hud.AddChild(lv);
 
         _hintLabel = new Label { ThemeTypeVariation = "HintLabel", Text = HintText() };
-        _hintLabel.AnchorTop = 1; _hintLabel.AnchorBottom = 1; _hintLabel.OffsetLeft = 12; _hintLabel.OffsetTop = -30; _hintLabel.GrowVertical = GrowDirection.Begin;
+        _hintLabel.AnchorTop = 1; _hintLabel.AnchorBottom = 1; _hintLabel.AnchorRight = 1; _hintLabel.OffsetLeft = 12; _hintLabel.OffsetRight = -12; _hintLabel.OffsetTop = -44; _hintLabel.OffsetBottom = -4; _hintLabel.GrowVertical = GrowDirection.Begin;
+        _hintLabel.AutowrapMode = TextServer.AutowrapMode.WordSmart; _hintLabel.VerticalAlignment = VerticalAlignment.Bottom;   // the key line wraps to the window instead of running off its edge
         _hintLabel.AddThemeColorOverride("font_outline_color", PixelTheme.Border);
         _hintLabel.AddThemeConstantOverride("outline_size", 4);
         hud.AddChild(_hintLabel);
@@ -511,12 +546,12 @@ public partial class StreetView : Control, IHandlesBack
         });
     }
 
-    void OpenMap()
+    void OpenMap(bool picker = false)
     {
         if (_router == null || _regionMap == null) { _router?.ShowToast(L.T("MAP_NONE")); return; }
         UI.ContinentOverview? ov = _source?.Regions != null && _source.Continent != null && _source.History != null && _world.Streamer is { } st
             ? new UI.ContinentOverview(_source.Continent, _source.History, _source.Regions, st.Home, HeroWorld) : null;
-        _router.Push(new WorldMapScreen(_router, _regionMap, HeroWorld, ov) { CaravanMarks = CaravanMarksNow, RegionOrigin = Runtime == null ? (0, 0) : (Runtime.State.HomeRegion.OriginXM, Runtime.State.HomeRegion.OriginYM), TravelPlan = _travel == null ? null : PreviewTravel, TravelStart = _travel == null ? null : StartTravel, PreselectNth = _opt.Travel == "picker" ? 7 : -1, ShotPath = _opt.MapShot ? _opt.ShotPath : null, StartScale = Math.Max(1, Math.Abs(_opt.MapScale)), StartContinent = _opt.MapScale <= 0 });
+        _router.Push(new WorldMapScreen(_router, _regionMap, HeroWorld, ov) { CaravanMarks = CaravanMarksNow, RegionOrigin = Runtime == null ? (0, 0) : (Runtime.State.HomeRegion.OriginXM, Runtime.State.HomeRegion.OriginYM), TravelPlan = _travel == null ? null : PreviewTravel, TravelStart = _travel == null ? null : StartTravel, PreselectNth = picker || _opt.Travel == "picker" ? 7 : -1, ShotPath = _opt.MapShot ? _opt.ShotPath : null, StartScale = Math.Max(1, Math.Abs(_opt.MapScale)), StartContinent = _opt.MapScale <= 0 });
     }
 
     void UpdateHud(LiveSnapshot s)
@@ -908,6 +943,7 @@ public partial class StreetView : Control, IHandlesBack
         if (steps == 5) _acc = 0;
         foreach (var opened in _world.TakeOpenedCodexEntries()) _router?.ShowToast(L.F("CODEX_NEW_ENTRY", opened.Title)); // the sim opens pages as the hero walks
         PumpRuntime();
+        PumpTaskFaults();
         PumpPeople();
         PumpJobs();
         HeroTick(delta);
@@ -1066,9 +1102,9 @@ public partial class StreetView : Control, IHandlesBack
         if (_lod.Count == 0) return;
         _lod.Step(_world.Clock.Now.Seconds, LodGround(), LodCentres());
         var folds = _lod.TakeFolds();
-        if (folds.Count > 0) _ = RuntimePeople.FoldAsync(rt, folds);
+        if (folds.Count > 0) _ = Watch(RuntimePeople.FoldAsync(rt, folds), "fold-back");
         var exposure = _lod.TakeExposureDeaths();
-        if (exposure.Count > 0) _ = RuntimePeople.ExposureDeathsAsync(rt, exposure, _world.Clock.Now.Seconds);
+        if (exposure.Count > 0) _ = Watch(RuntimePeople.ExposureDeathsAsync(rt, exposure, _world.Clock.Now.Seconds), "exposure");
     }
 
     /// <summary>The party walks behind the hero (Phase 3 cleanup B, item 3): the hero's trail is fed every tick, the squad's members who follow are promoted into the bubble and walk it, those told to wait stay where they stand.</summary>
@@ -1131,7 +1167,7 @@ public partial class StreetView : Control, IHandlesBack
         if (dist <= 60_000) { _heroAway = 0; return; }
         // the work goes on without you only so long: five game minutes of being a long way from where it is done
         _heroAway += 20.0 / TimeConst.GameSecondsPerRealSecond * 20; // one pump is about a second of real time, 20 game seconds at 1x
-        if (_heroAway > 300) { _heroAway = 0; _ = RuntimeJobsExt.AbandonAsync(rt, mine.Id, now); _router?.ShowToast(L.T("JOBS_LOST"), 4f); }
+        if (_heroAway > 300) { _heroAway = 0; _ = Watch(RuntimeJobsExt.AbandonAsync(rt, mine.Id, now), "abandon job"); _router?.ShowToast(L.T("JOBS_LOST"), 4f); }
     }
 
     JobPanelData WorkData()
@@ -1162,7 +1198,7 @@ public partial class StreetView : Control, IHandlesBack
         _pendingClaims.Add(new ClaimRequest(j.Id, HeroId, -1, _world.Tick, 0, d.HeroX, d.HeroY, 20, 25));
     }
 
-    void AbandonJob(Ravensguard.Sim.Jobs.Job j) { if (Runtime is { } rt) _ = RuntimeJobsExt.AbandonAsync(rt, j.Id, _world.Clock.Now.Seconds); }
+    void AbandonJob(Ravensguard.Sim.Jobs.Job j) { if (Runtime is { } rt) _ = Watch(RuntimeJobsExt.AbandonAsync(rt, j.Id, _world.Clock.Now.Seconds), "abandon job"); }
 
     void SyncPeople(float alpha)
     {
@@ -1336,6 +1372,7 @@ public partial class StreetView : Control, IHandlesBack
     public override void _UnhandledInput(InputEvent e)
     {
         if (!Visible) return;
+        if (_router is { HasModal: true }) return; // the pause menu (or any dialog) owns the keys; Esc is the router's (it closes the menu) and F8 is the App's
         if (ObInput(e)) { GetViewport().SetInputAsHandled(); return; }
         if (e is InputEventKey { Pressed: true } && Actions.Pressed(e, "world.back") && (_campOpen || _travel?.Journey is { State: Ravensguard.Sim.Travel.JourneyState.Travelling or Ravensguard.Sim.Travel.JourneyState.Paused }) && TravelInput(e)) { GetViewport().SetInputAsHandled(); return; }
         if (_router != null && Actions.Pressed(e, "world.back"))

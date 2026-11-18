@@ -17,7 +17,7 @@ public static class InputDefs
     static InputDefs()
     {
         const InputContext G = InputContext.Global, W = InputContext.World, C = InputContext.CombatStance,
-            S = InputContext.CalledShot, B = InputContext.Build, U = InputContext.Menu, E = InputContext.BlueprintEditor, T = InputContext.Trade, R = InputContext.Mounted;
+            S = InputContext.CalledShot, B = InputContext.Build, U = InputContext.Menu, E = InputContext.BlueprintEditor, T = InputContext.Trade, R = InputContext.Mounted, H = InputContext.Choice;
 
         // Global
         A(G, "console", Binding.P(Key.Quoteleft)); // physical: the backtick key position on any layout
@@ -78,7 +78,7 @@ public static class InputDefs
         A(W, "level_up", K(Key.Pageup));
         A(W, "level_down", K(Key.Pagedown));
         A(W, "nameplates", K(Key.Alt));
-        A(W, "controls_overlay", K(Key.Slash, Mods.Shift));
+        A(W, "controls_overlay", K(Key.Slash, Mods.Shift), K(Key.F10)); // ? is Shift+Slash, which is not a "?" on every layout (German, French): F10 always works
         A(W, "quicksave", K(Key.F5));
         A(W, "quickload", K(Key.F9));
         A(W, "report_bug", K(Key.F8));
@@ -86,6 +86,9 @@ public static class InputDefs
 
         // Mounted (the hero rides or drives; stacks on World): O toggles the walk, Shift is the gallop, E dismounts
         A(R, "walk_toggle", K(Key.O));
+
+        // Choice (the numbered lists: talk window, Q menu, road encounter, camp panel): live beside World, where it takes the digits from the speed keys while a list is open
+        for (int i = 1; i <= 9; i++) A(H, "pick_" + i, K(Key.Key0 + i));
 
         // Combat stance: the mouse becomes the weapon arm
         A(C, "move_up", K(Key.W));

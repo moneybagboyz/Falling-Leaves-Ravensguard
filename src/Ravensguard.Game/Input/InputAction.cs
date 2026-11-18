@@ -3,7 +3,7 @@ using Godot;
 
 namespace Ravensguard.Game.Inputs;
 
-public enum InputContext { Global, World, CombatStance, CalledShot, Build, Menu, BlueprintEditor, Trade, Mounted }
+public enum InputContext { Global, World, CombatStance, CalledShot, Build, Menu, BlueprintEditor, Trade, Mounted, Choice }
 
 /// <summary>Key = layout keycode (F-keys, digits, symbols); PhysicalKey = scancode position (letters and the console key, so AZERTY/QWERTZ keep WASD); Mouse = button.</summary>
 public enum BindingKind { Key, Mouse, PhysicalKey }

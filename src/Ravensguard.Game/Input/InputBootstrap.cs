@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
@@ -151,9 +152,21 @@ public static class Actions
 
     /// <summary>Event-based press, exact modifiers. Use inside _Input/_UnhandledInput.</summary>
     public static bool Pressed(InputEvent e, string id) => !UiCaptured && !ActiveContexts.Suppressed(id) && e.IsActionPressed(id, false, true);
+    /// <summary>Press that also matches with extra Shift/Ctrl/Alt held (the caller reads the modifiers from the event): trade quantity steps with Shift (x10) and Ctrl (all).</summary>
+    public static bool PressedLoose(InputEvent e, string id) => !UiCaptured && !ActiveContexts.Suppressed(id) && e.IsActionPressed(id, false, false);
     public static bool Released(InputEvent e, string id) => !UiCaptured && !ActiveContexts.Suppressed(id) && e.IsActionReleased(id, true);
     /// <summary>Same as Pressed but ignores UiCaptured (for the console/inspector toggles themselves).</summary>
     public static bool PressedAlways(InputEvent e, string id) => e.IsActionPressed(id, false, true);
+
+    /// <summary>Which numbered entry (0-based) a key press chose, or -1: the "choice.pick_1" to "choice.pick_9" actions of the talk window, the Q menu, the road encounter and the camp panel.</summary>
+    public static int Pick(InputEvent e, int count = 9)
+    {
+        if (e is not InputEventKey { Pressed: true, Echo: false }) return -1;
+        for (int i = 0; i < Math.Min(count, 9); i++) if (Pressed(e, PickIds[i])) return i;
+        return -1;
+    }
+
+    static readonly string[] PickIds = [.. Enumerable.Range(1, 9).Select(i => "choice.pick_" + i)];
 
     /// <summary>Polled state, exact modifiers.</summary>
     public static bool Held(string id) => !UiCaptured && !ActiveContexts.Suppressed(id) && Input.IsActionPressed(id, true);

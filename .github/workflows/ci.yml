@@ -109,6 +109,9 @@ jobs:
           set -e
           if grep -E "ERROR|SCRIPT ERROR|Unhandled exception" smoke.log; then echo "::error::smoke run logged errors"; exit 1; fi
           exit $code
+      - name: Crash handler (an exception thrown in a main-thread callback writes the crash report)
+        working-directory: src/Ravensguard.Game
+        run: timeout 60 "$GODOT" --headless -- --crash-test-callback
       - name: Key-map conflict check
         working-directory: src/Ravensguard.Game
         run: timeout 120 "$GODOT" --headless -- --check-keymap
