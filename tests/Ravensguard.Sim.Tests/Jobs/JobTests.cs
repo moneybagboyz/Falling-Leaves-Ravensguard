@@ -370,7 +370,7 @@ public class BehaviourPerfTests(ITestOutputHelper output)
         b.SetJobs([], [open]);
         for (int i = 0; i < 40; i++) b.Step(t0 + i, rig.Ground, rig.Centre);
         var times = new List<double>(); var sw = new Stopwatch(); long t = t0 + 40;
-        for (int i = 0; i < 2400; i++, t++) { sw.Restart(); b.Step(t, rig.Ground, rig.Centre); times.Add(sw.Elapsed.TotalMilliseconds); b.TakeClaims(); }
+        for (int i = 0; i < 2400; i++, t++) { int g0=GC.CollectionCount(0),g2=GC.CollectionCount(2); sw.Restart(); b.Step(t, rig.Ground, rig.Centre); times.Add(sw.Elapsed.TotalMilliseconds); if (times[^1] > 15) output.WriteLine($"SPIKE i={i} t={t} {times[^1]:0.0}ms plans={b.PlansLastStep} gc0+{GC.CollectionCount(0)-g0} gc2+{GC.CollectionCount(2)-g2}"); b.TakeClaims(); }
         times.Sort(); double avg = times.Average(), p99 = times[(int)(times.Count * 0.99)], max = times[^1];
         output.WriteLine($"{b.Count} live people with the scorer every 20 game seconds: avg {avg:0.000} ms, p99 {p99:0.000} ms, max {max:0.00} ms");
         Assert.True(b.Count >= 250);
