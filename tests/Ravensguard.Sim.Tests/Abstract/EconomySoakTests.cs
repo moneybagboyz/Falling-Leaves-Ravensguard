@@ -45,7 +45,7 @@ public class EconomySoakTests(ITestOutputHelper output)
         Assert.True(row.MerchantsSolventPct >= 60, $"cash-solvent merchants {row.MerchantsSolventPct}%");
         Assert.True(row.BandPct >= 60, $"honest in-band book-days {row.BandPct}%");
         Assert.True(row.HungryPct < 2.0, $"missed-meal household-days {row.HungryPct}%");
-        Assert.InRange(row.Population, start * 90 / 100, start * 110 / 100);                  // relative to the generated population (it is 25,6xx, not a fixed number)
+        Assert.InRange(row.Population, start * 90 / 100, start * 125 / 100);                  // relative to the generated population (it is 25,6xx, not a fixed number): decision G13, -10 to +25 percent
         Assert.True(w.Economy.Labour.Hired > 0 && w.Economy.Farming.State.HarvestG > 0);
         Assert.True(sim.Chronicle.CauseCoverage() >= 0.9);
 
@@ -133,23 +133,35 @@ public class EconomySoakTests(ITestOutputHelper output)
     }
 
     /// <summary>
-    /// The Phase 2 done-when targets as the soak measures them (decision I46): population within 10 percent of the start every year; the under-15 share 26 to 33 percent
+    /// The Phase 2 done-when targets as the soak measures them (decision I46, changed by decision G13 for background growth): population within -10 percent and +25 percent of the
+    /// start every year, and growing at most 0.5 percent a year averaged over each decade (a closing part of a decade counts by its own length); the under-15 share 26 to 33 percent
     /// averaged over the years after the first decade (the first carries the generated population's 35 percent down), and 26 to 35 percent in every later decade
     /// (seed 1234's years 31-40, the children of the births of years 20-30, average 34.2 percent); missed-meal household-days under 2 percent
     /// every year; honest in-band book-days, cash-solvent merchants and workshops completing a batch at least 60 percent averaged over the run, and in every year
     /// at least 40 percent of book-days in band (a drought's dearth: seed 1's harvest falls to 1,400 t in years 15, 19 and 25 and grain sits at 2-2.4 x base) and
     /// 50 percent of the merchants and workshops; the region's own coin growing at most 2 percent a year compound; the world's coin exact every year (checked in the run).
     /// </summary>
+    /// <summary>Decision G13: population grows at most 0.5 percent a year, averaged over each decade (the first from the start head count, the last part by its own length).</summary>
+    private static void AssertGrowthPerDecade(IReadOnlyList<SoakRow> rows, long start)
+    {
+        for (int d = 0; d < rows.Count; d += 10)
+        {
+            int n = Math.Min(10, rows.Count - d); long from = d == 0 ? start : rows[d - 1].Population, to = rows[d + n - 1].Population;
+            Assert.True((to - from) * 1000 <= from * 5 * n, $"population grew {(to - from) * 100.0 / from / n:0.00} percent a year over years {d + 1}-{d + n} ({from} to {to})");
+        }
+    }
+
     private static void AssertTargets(IReadOnlyList<SoakRow> rows, long start)
     {
         foreach (var r in rows)
         {
-            Assert.InRange(r.Population, start * 90 / 100, start * 110 / 100);
+            Assert.InRange(r.Population, start * 90 / 100, start * 125 / 100);
             Assert.True(r.HungryPct < 2.0, $"missed meals {r.HungryPct:0.00}% in year {r.Year}");
             Assert.True(r.BandPct >= 40, $"honest band {r.BandPct:0.0}% in year {r.Year}");                  // a drought year's dearth is out of band, and honestly so
             Assert.True(r.MerchantsSolventPct >= 50, $"cash-solvent merchants {r.MerchantsSolventPct:0}% in year {r.Year}");
             Assert.True(r.WorkshopCompletionPct >= 50, $"workshops {r.WorkshopCompletionPct:0}% in year {r.Year}");
         }
+        AssertGrowthPerDecade(rows, start);
         for (int d = 10; d + 10 <= rows.Count; d += 10)
         {
             double u15 = rows.Skip(d).Take(10).Average(r => r.Under15Pct);

@@ -34,6 +34,8 @@ public sealed class SummarySave
     [Key(21)] public int[] NewsMagnitude { get; set; } = [];
     [Key(22)] public int[] NewsDay { get; set; } = [];
     [Key(23)] public byte[] NewsHops { get; set; } = [];
+    /// <summary>The most dwellings the region's land can carry (background growth of unvisited regions, decision G10); 0 in a save from before it (no growth).</summary>
+    [Key(24)] public int DwellingCap { get; set; }
 }
 
 [MessagePackObject]
@@ -142,7 +144,7 @@ public sealed class ContinentSave
             NextSerials = st.SerialState(), Home = st.Home, LastSeason = st.LastSeason, EdgeClosed = st.Edges.Select(e => e.Closed).ToArray(),
             Summaries = st.Summaries.Select(x => new SummarySave
             {
-                Pop = x.Pop, Households = x.Households, Dwellings = x.Dwellings, Vacancies = x.Vacancies, StockG = (long[])x.StockG.Clone(), GrainCapacityNet = x.GrainCapacityNet,
+                Pop = x.Pop, Households = x.Households, Dwellings = x.Dwellings, Vacancies = x.Vacancies, DwellingCap = x.DwellingCap, StockG = (long[])x.StockG.Clone(), GrainCapacityNet = x.GrainCapacityNet,
                 CoinTotal = x.CoinTotal, TreasuryCoin = x.TreasuryCoin, PriceIdx = (int[])x.PriceIdx.Clone(), CoverX10 = (int[])x.CoverX10.Clone(), FamineDays = x.FamineDays, Unrest = x.Unrest,
                 Prosperity = x.Prosperity, Realm = x.Realm, WarFlags = x.WarFlags, PopRemainder = x.PopRemainder, PriceDay = x.PriceDay, LastDetailDay = x.LastDetailDay, Detailed = x.Detailed,
                 NewsKind = x.News.Select(n => (byte)n.Kind).ToArray(), NewsOrigin = x.News.Select(n => n.Origin).ToArray(), NewsMagnitude = x.News.Select(n => n.Magnitude).ToArray(),
@@ -179,7 +181,7 @@ public sealed class ContinentSave
         for (int i = 0; i < Summaries.Length; i++)
         {
             var x = Summaries[i]; var t = st.Summaries[i];
-            t.Pop = x.Pop; t.Households = x.Households; t.Dwellings = x.Dwellings; t.Vacancies = x.Vacancies; t.StockG = (long[])x.StockG.Clone(); t.GrainCapacityNet = x.GrainCapacityNet;
+            t.Pop = x.Pop; t.Households = x.Households; t.Dwellings = x.Dwellings; t.Vacancies = x.Vacancies; t.DwellingCap = x.DwellingCap; t.StockG = (long[])x.StockG.Clone(); t.GrainCapacityNet = x.GrainCapacityNet;
             t.CoinTotal = x.CoinTotal; t.TreasuryCoin = x.TreasuryCoin; t.PriceIdx = (int[])x.PriceIdx.Clone(); t.CoverX10 = (int[])x.CoverX10.Clone(); t.FamineDays = x.FamineDays; t.Unrest = x.Unrest;
             t.Prosperity = x.Prosperity; t.Realm = x.Realm; t.WarFlags = x.WarFlags; t.PopRemainder = x.PopRemainder; t.PriceDay = x.PriceDay; t.LastDetailDay = x.LastDetailDay; t.Detailed = x.Detailed;
             t.News = [];

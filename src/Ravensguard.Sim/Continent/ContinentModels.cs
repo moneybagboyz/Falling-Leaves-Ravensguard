@@ -23,6 +23,8 @@ public static class ContinentRules
     public const int HarvestOverNeedPermille = 1117;
     public const int BirthRatePctX100PerYear = 258, DeathRatePctX100PerYear = 258;
     public const int HouseCapPersonsPerDwellingX10 = 48;
+    /// <summary>Background growth of closed-form regions (decision G10): grow while vacancies are under 1/this of the dwellings, by dwellings/this a season; the land's room is 10 percent plus 0.35 percent for each point of mean soil fertility of its cells, at most 45 percent.</summary>
+    public const int GrowthTightVacancyDivisor = 50, GrowthSeasonDivisor = 800;
     public const int EmigrateNormalPermille = 5, EmigrateFaminePermille = 30, FamineThresholdDays = 3;
     public const int NewsMetresPerGameSecondX100 = 25;           // 0.25 m per game second
     public const int NewsMaxHops = 3;
@@ -54,6 +56,8 @@ public sealed class RegionSummary
     public byte Id;
     public bool Detailed;
     public int Pop, Households, Dwellings, Vacancies;
+    /// <summary>The most dwellings the region's land can carry, from the continent cells' soil and biome (decision G10): a closed-form region builds toward it, a few tenths of a percent a year, while its houses are full. 0: no growth.</summary>
+    public int DwellingCap;
     /// <summary>Grams of each tracked good in all stores of the region.</summary>
     public long[] StockG = new long[ContinentRules.K];
     public long GrainCapacityNet;

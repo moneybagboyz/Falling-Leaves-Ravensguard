@@ -234,7 +234,13 @@ public static class RegionGrowth
     public static void Replay(RegionData r, GrowthState st)
     {
         // the two logs interleave only through the tiles (lots never share tiles with fields), so replaying lots first and parcels second gives the same region
-        foreach (var l in st.Lots) ApplyLot(r, l);
-        foreach (var p in st.Parcels) ApplyParcel(r, p);
+        // idempotent: a region that already carries a record (a world resumed over the terrain it was captured from) is left as it is
+        foreach (var l in st.Lots) { if (l.NewLot && r.Settlements[l.Settlement].Plan.Lots.Count > l.Lot) continue; ApplyLot(r, l); }
+        for (int k = 0; k < st.Parcels.Count; k++)
+        {
+            int baseParcels = r.Baseline?.Parcels ?? r.Parcels.Count;
+            if (r.Parcels.Count > baseParcels + k) continue;
+            ApplyParcel(r, st.Parcels[k]);
+        }
     }
 }

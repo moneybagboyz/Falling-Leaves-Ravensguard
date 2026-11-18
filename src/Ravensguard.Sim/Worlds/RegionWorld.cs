@@ -140,6 +140,7 @@ public sealed class RegionWorld : IDisposable
         var chron = new Chronicle();
         var farming = new FarmingSystem(w.Population.Region, w.Population, w.Economy, sv.FarmSettings, sv.FarmWeatherFor(), chron, w.Ids, sv.SeedFor(at), w.Farming);
         var ew = new EconomyWorld(sim, farming, w.Markets, w.Production, w.Production.Resources!, w.Production.Content, chron);
+        if (w.Growth != null) ew.Growth.Attach(w.Growth); else w.Growth = ew.Growth.State;
         ew.Install();
         ew.BindContinent(new Ravensguard.Sim.Economy.Markets.ContinentLink(sv.EnsureContinent(ew, at.Id), at.Id));
         return new RegionWorld(at, sv, sim, ew, w.Chronicle, w.Ids);
@@ -157,6 +158,7 @@ public sealed class RegionWorld : IDisposable
             People = WorldSave.EncodePeople(pop), Lots = WorldSave.EncodeLots(pop),
             Economy = EconomySave.Capture(Sim.Economy), Abstract = AbstractSave.Capture(Sim.State, pop), Farming = FarmingSave.Capture(Economy.Farming.State),
             Production = ProductionSave.Capture(Economy.Production), Markets = MarketsSave.Capture(Economy.Markets),
+            Growth = Economy.Growth.State.IsEmpty ? null : GrowthSave.Capture(Economy.Growth.State),
             Chronicle = WorldSave.EncodeChronicle(Chronicle), IdState = Ids.GetState(),
             Chunks = chunks == null ? [] : chunks.ToSection(k => ChunkRegions.Of(Services.Home, k) == Coord),
             Baseline = Services.History == null ? null : () => Populator.Populate(pop.Region, Services.History, Services.Content),
@@ -177,6 +179,8 @@ public sealed class RegionWorld : IDisposable
             BaselineGuard.Verify($"Region {at}", d.BaselineHash, d.GeneratorVersion, basePop);
             people = PeopleDiffer.Expand(people, WorldSave.EncodePeople(basePop));
         }
+        Ravensguard.Sim.Growth.GrowthState? growth = null;
+        if (d.Growth != null) { growth = d.Growth.Restore(); Ravensguard.Sim.Growth.RegionGrowth.Replay(terrain, growth); }
         var pop = WorldSave.DecodePeople(people, d.Lots, terrain);
         var seed = sv.SeedFor(at);
         var econ = d.Economy.Restore(pop, sv.Content);
@@ -192,6 +196,7 @@ public sealed class RegionWorld : IDisposable
         var prod = d.Production.Restore(econ, pop, content, seed, markets);
         d.Markets.Restore(markets, prod);
         var ew = new EconomyWorld(sim, farming, markets, prod, prod.Resources!, content, farmChron);
+        if (growth != null) ew.Growth.Attach(growth);
         ew.Install();
         ew.BindContinent(new Ravensguard.Sim.Economy.Markets.ContinentLink(sv.EnsureContinent(ew, at.Id), at.Id));
         return new RegionWorld(at, sv, sim, ew, chron, ids) { PendingChunks = d.Chunks };

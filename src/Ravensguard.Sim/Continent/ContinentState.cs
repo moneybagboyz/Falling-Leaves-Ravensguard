@@ -219,6 +219,23 @@ public static class ContinentWiring
             int r = RegionCoord.OfCell(s.Cell).Id;
             if (s.Pop > best[r]) { best[r] = s.Pop; st.Names[r] = s.Name; }
         }
+        // what each region's land can carry: more room where the cells' soil is good and the biome is farmland, none on mountain or desert (fresh worlds; a loaded one has its own caps)
+        for (int r = 0; r < ContinentState.Regions; r++)
+        {
+            var sm = st.Summaries[r]; if (sm.DwellingCap != 0 || sm.Dwellings <= 0 || sm.Detailed) continue;
+            var rc = RegionCoord.FromId(r); long fert = 0; int land = 0;
+            for (int dy = 0; dy < 16; dy++)
+                for (int dx = 0; dx < 16; dx++)
+                {
+                    int cx = rc.CellX + dx, cy = rc.CellY + dy; if (cx >= Ravensguard.Sim.WorldGen.Continent.Size || cy >= Ravensguard.Sim.WorldGen.Continent.Size) continue;
+                    int c = cy * Ravensguard.Sim.WorldGen.Continent.Size + cx;
+                    var b = continent.Biomes[c];
+                    if (continent.Ocean[c] || b is Ravensguard.Sim.WorldGen.Biome.Sea or Ravensguard.Sim.WorldGen.Biome.Lake or Ravensguard.Sim.WorldGen.Biome.Mountain or Ravensguard.Sim.WorldGen.Biome.Desert or Ravensguard.Sim.WorldGen.Biome.Tundra) continue;
+                    land++; fert += continent.Fertility[c];
+                }
+            int headroomPermille = land == 0 ? 0 : Math.Min(450, 100 + (int)(fert * 35 / land));
+            sm.DwellingCap = sm.Dwellings + (int)((long)sm.Dwellings * headroomPermille / 1000);
+        }
         st.HarvestPermille = (region, year) =>
         {
             var rc = RegionCoord.FromId(region);

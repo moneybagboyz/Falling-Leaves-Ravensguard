@@ -106,7 +106,7 @@ public sealed partial class FarmingSystem
         if (_d.CowMortalityPermilleYear > 0) lv.Cows[s] = Math.Max(0, lv.Cows[s] - Stoch(lv.Cows[s], _d.CowMortalityPermilleYear, s, hourKey, 3));
         if (_d.CowCalvingPermilleYear <= 0) return;
         int acres = 0; foreach (int p in Region.Settlements[s].Parcels) acres += Region.Parcels[p].FieldCount;
-        int oxTarget = (acres * _d.OxenPer100ArableAcres + 50) / 100, cowCap = acres * _d.CowPerFieldAcreCapX100 / 10_000;
+        int oxTarget = (acres * _d.OxenPer100ArableAcres + 50) / 100, cowCap = acres * _d.CowPerFieldAcreCapX100 / 100;       // decision G11: the cap is cows per field acre x100 (11 is 0.11), not per 10,000: it was 0 for a village, no heifer was ever kept and the herd fell 1 percent a year
         int calves = Stoch(lv.Cows[s], _d.CowCalvingPermilleYear, s, hourKey, 4);
         int bulls = calves / 2, heifers = calves - bulls;
         int toOxen = Math.Max(0, Math.Min(bulls, oxTarget - lv.Oxen[s]));

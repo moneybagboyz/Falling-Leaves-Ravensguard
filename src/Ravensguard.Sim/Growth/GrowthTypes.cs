@@ -53,7 +53,7 @@ public sealed record ParcelRecord(int Settlement, ParcelOwner Owner, byte Slot, 
 public sealed class GrowthYear
 {
     public int Year;
-    public int CottagesStarted, CottagesBuilt, VacantRefitted, AcresCleared, ClearingsStarted, BusinessesOpened, PlotsGiven;
+    public int CottagesStarted, CottagesBuilt, VacantRefitted, AcresCleared, ClearingsStarted, BusinessesOpened, PlotsGiven, MovedToTown;
     public long WagesMites, MaterialsMites;
 }
 
@@ -105,7 +105,7 @@ public sealed class GrowthState
         foreach (var r in Lots) { L(r.Settlement); L(r.Lot); L(r.NewLot ? 1 : 0); L((long)r.Use); L((long)r.Dwelling); S(r.Blueprint); L(r.Rect.X); L(r.Rect.Y); L(r.Rect.W); L(r.Rect.H); L(r.Facing); L(r.Wealth); L(r.Beds); L(r.Day); }
         foreach (var r in Parcels) { L(r.Settlement); L((long)r.Owner.Kind); L(r.Owner.FiefIndex); L(r.Owner.LotIndex); L(r.Slot); L(r.Day); foreach (int t in r.Tiles) L(t); foreach (byte f in r.Fertility) L(f); }
         foreach (var (k, v) in Unmet) { L(k); L(v); }
-        foreach (var y in Years) { L(y.Year); L(y.CottagesStarted); L(y.CottagesBuilt); L(y.VacantRefitted); L(y.AcresCleared); L(y.ClearingsStarted); L(y.BusinessesOpened); L(y.PlotsGiven); L(y.WagesMites); L(y.MaterialsMites); }
+        foreach (var y in Years) { L(y.Year); L(y.CottagesStarted); L(y.CottagesBuilt); L(y.VacantRefitted); L(y.AcresCleared); L(y.ClearingsStarted); L(y.BusinessesOpened); L(y.PlotsGiven); L(y.MovedToTown); L(y.WagesMites); L(y.MaterialsMites); }
         foreach (int t in ClearedTiles) L(t);
         return Convert.ToHexString(h.GetHashAndReset());
     }

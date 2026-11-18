@@ -260,9 +260,7 @@ public sealed class PopulationMigrationSystem : AbstractSystem
     {
         var w = ctx.World; var pt = w.People; var hht = w.Households; var rl = link.Mine;
         // the region's own quota, as the stand-in had it: a sixth of the shortfall, at most 1.2 percent of the starting head count; the coin and grain of the stake come from the continent
-        long start = w.Vital.Years.Count > 0 ? w.Vital.Years[0].PopulationAtStart : w.Vital.Alive;
-        long shortfall = start - w.Vital.Alive; if (shortfall <= 0) return;
-        int left = (int)Math.Min(start * ReturnQuotaPermille / 1000, Math.Max(1, shortfall / ShortfallDivisor));
+        int left = (int)ImmigrationQuota(w); if (left <= 0) return;
         var edge = rl.Edges.FirstOrDefault(e => !link.State.Summaries[e.Neighbour].Detailed);
         if (edge == null) return;                                // no road to a region the continent holds coin for
         long coinHead = w.Economy.Tuning.ImmigrantStakeMitesPerHead, measuresHead = w.Economy.Tuning.ImmigrantStakeMeasuresPerHead;   // review finding 12: content, not constants
@@ -302,6 +300,38 @@ public sealed class PopulationMigrationSystem : AbstractSystem
         }
     }
 
+    /// <summary>
+    /// How many people may come to the region this season (background growth, decision G9; replaces the cap of integration decision I27, which let people in only while the region
+    /// held fewer than it started with). Two pulls: the shortfall against the starting head count, a sixth of it a season as before, and the free dwellings the region's own
+    /// waiting couples do not need, a <see cref="GrowthTuningDef.ImmigrationSurplusDivisor"/>th of them a season, but only while jobs are there (idle adults under
+    /// <see cref="GrowthTuningDef.ImmigrationMaxIdlePermille"/> of the people). Never more than <see cref="GrowthTuningDef.ImmigrationMaxPermilleOfAlive"/> of the people in a season.
+    /// </summary>
+    public static long ImmigrationQuota(SimWorld w)
+    {
+        var g = w.Get<Ravensguard.Sim.Abstract.EconomyWorld>()?.Content.Growth ?? new Ravensguard.Content.GrowthTuningDef { Id = "growth" };
+        var v = w.Vital; var pt = w.People; var hht = w.Households; var pop = w.Population; long alive = v.Alive;
+        long start = v.Years.Count > 0 ? v.Years[0].PopulationAtStart : alive;
+        long shortfall = Math.Max(0, start - alive);
+        long pull = shortfall > 0 ? Math.Max(1, shortfall / ShortfallDivisor) : 0;
+        int vacant = 0;
+        for (int s = 0; s < pop.Region.Settlements.Count; s++)
+        {
+            var lots = pop.Region.Settlements[s].Plan.Lots;
+            for (int l = 0; l < lots.Count; l++) if (pop.LotBeds[s][l] >= 2 && pop.LotHousehold[s][l] < 0 && lots[l].IsDwelling && lots[l].Dwelling != DwellingType.Manor) vacant++;
+        }
+        long waiting = 0, idle = 0; long day = w.State.HourDone / 24;
+        for (int p = 0; p < pt.Count; p++)
+        {
+            if (pt.Status[p] != PersonStatus.Alive) continue;
+            if (pt.Sex[p] == Sex.Female && pt.Spouse[p] < 0 && pt.MarriageWait[p] > 0) waiting++;
+            if (pt.Employer[p] >= 0 || pt.Occupation[p] is not (Occupation.None or Occupation.Labourer)) continue;
+            int hh = pt.Household[p]; if (hh < 0 || hht.Class[hh] == SocialClass.Gentry || hht.ParcelCount[hh] > 0) continue;
+            int age = w.AgeOn(p, day); if (age >= 16 && age < 60) idle++;
+        }
+        if (idle * 1000 <= alive * g.ImmigrationMaxIdlePermille) pull += Math.Max(0, vacant - waiting) / Math.Max(1, g.ImmigrationSurplusDivisor);
+        return Math.Min(alive * g.ImmigrationMaxPermilleOfAlive / 1000, pull);
+    }
+
     /// <summary>Share of the starting population (permille) that may return in one season, and the part of the shortfall they make up.</summary>
     public const int ReturnQuotaPermille = 12, ShortfallDivisor = 6;
 
@@ -315,9 +345,7 @@ public sealed class PopulationMigrationSystem : AbstractSystem
     {
         if (ctx.World.Get<Ravensguard.Sim.Economy.Markets.ContinentLink>() is { } link) { ImmigrateFromContinent(ctx, link); return; }
         var w = ctx.World; var pt = w.People; var hht = w.Households; var v = w.Vital;
-        long start = v.Years.Count > 0 ? v.Years[0].PopulationAtStart : v.Alive;       // the first year's opening head count (saved with the vital state)
-        long shortfall = start - v.Alive; if (shortfall <= 0) return;
-        long quota = Math.Min(start * ReturnQuotaPermille / 1000, Math.Max(1, shortfall / ShortfallDivisor));
+        long quota = ImmigrationQuota(w); if (quota <= 0) return;
         var byHousehold = new SortedDictionary<int, List<int>>();
         for (int p = 0; p < pt.Count; p++)
         {

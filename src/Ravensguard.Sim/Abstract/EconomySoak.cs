@@ -50,6 +50,9 @@ public sealed class SoakRow
     public int Sheep, Oxen, Cows;
     public double MeanFertility;
     public long HarvestT, SownAcres, UnharvestedAcres;
+    /// <summary>Background growth: dwellings (lots with a household's home), field acres and open businesses at year end, and what was built, cleared and opened during the year.</summary>
+    public int Dwellings, FieldAcres;
+    public int NewCottages, NewVacantRefits, NewAcres, NewBusinesses;
 }
 
 /// <summary>
@@ -122,7 +125,7 @@ public sealed class EconomySoak
         _bandN = new long[_staple.Length]; _bandIn = new long[_staple.Length]; _bandSum = new long[_staple.Length];
         _honestN = new long[_staple.Length]; _honestIn = new long[_staple.Length];
         _needsMaker = [.. Staples.Select(st => st switch { "bread" => "bakery", "flour" => "mill", _ => (string?)null })];
-        _batchStart = new long[w.Economy.Production.Businesses.Count];
+        _batchStart = new long[w.Economy.Production.Businesses.Count + 4096];
         StartYear();
     }
 
@@ -273,6 +276,8 @@ public sealed class EconomySoak
         }
         r.WorkshopCompletionPct = workshops == 0 ? 100 : 100.0 * done / workshops; r.MerchantsSolventPct = merchants == 0 ? 100 : 100.0 * solvent / merchants;
         r.MerchantsCashSolventPct = merchants == 0 ? 100 : 100.0 * cashSolvent / merchants; r.MerchantsWorthSolventPct = openMerchants == 0 ? 100 : 100.0 * worthSolvent / openMerchants;
+        { var reg = Sim.Population.Region; int dw = 0; foreach (var st in reg.Settlements) dw += st.Plan.Lots.Count(l => l.IsDwelling); r.Dwellings = dw; r.FieldAcres = World.Economy.Farming.State.Fields.Count; }
+        { var gy = World.Economy.Growth.State.Years.FirstOrDefault(y => y.Year == Sim.State.HourDone / 24 / TimeConst.DaysPerYear); if (gy != null) { r.NewCottages = gy.CottagesBuilt - gy.VacantRefitted; r.NewVacantRefits = gy.VacantRefitted; r.NewAcres = gy.AcresCleared; r.NewBusinesses = gy.BusinessesOpened; } }
         r.Businesses = open; r.Closed = closed; r.Employed = staff; r.ClosedPct = 100.0 * closed / Math.Max(1, bs.Count);
         r.BreadT = (ew.Production.ProducedUnits[cat.IdOf("bread")] - _bread0) / 1_000_000;
         r.AleKl = (ew.Production.ProducedUnits[cat.IdOf("ale")] - _ale0) / 1_000_000;
@@ -300,7 +305,7 @@ public sealed class EconomySoak
         var sb = new StringBuilder();
         sb.Append("year   pop  u15%  over50 birth death emig hungD  surplus% hungry%  low% fam");
         foreach (var s in Staples.Take(5)) sb.Append($" {s[..Math.Min(5, s.Length)],5}");
-        sb.Append(" band% (offer) cap% (all books) shop% merch% (I38) closed% bread-t ale-kl biz/closed employed idle fert sheep/ox/cow      coin(crowns) coin+%  src/sink  audit harv-t sown unharv net-imm world-coin");
+        sb.Append(" dwell fieldac +cot +refit +acres +biz band% (offer) cap% (all books) shop% merch% (I38) closed% bread-t ale-kl biz/closed employed idle fert sheep/ox/cow      coin(crowns) coin+%  src/sink  audit harv-t sown unharv net-imm world-coin");
         return sb.ToString();
     }
 
@@ -309,7 +314,7 @@ public sealed class EconomySoak
         var sb = new StringBuilder();
         sb.Append($"{r.Year,4} {r.Population,6} {r.Under15Pct,5:0.0} {r.Over50Pct,6:0.0} {r.Births,5} {r.Deaths,5} {r.Emigrants,4} {r.HungerDeaths,5} {r.FoodSurplusPct,8:0.0} {r.HungryPct,7:0.00} {r.LowStorePct,5:0.0} {r.Famines,3}");
         for (int i = 0; i < 5; i++) sb.Append($" {r.PriceIndex[i],5:0.00}");
-        sb.Append($" {r.BandPct,5:0.0} ({r.BandOfferedPct,4:0}) {r.AtCapPct,4:0.0} ({r.BandAllPct,4:0} {r.AtCapAllPct,3:0}) {r.WorkshopCompletionPct,5:0} {r.MerchantsSolventPct,6:0} ({r.MerchantsWorthSolventPct,3:0}) {r.ClosedPct,7:0.0} {r.BreadT,7} {r.AleKl,6} {r.Businesses,4}/{r.Closed,-3} {r.Employed,8} {r.Idle,4} {r.MeanFertility,4:0} {r.Sheep}/{r.Oxen}/{r.Cows} {r.CoinTotal / 100,12:N0} {r.CoinGrowthPct,6:0.0} {r.CoinSources / 100:N0}/{r.CoinSinks / 100:N0} {(r.CoinConserved && r.MassOk ? "ok" : "FAIL")} {r.HarvestT} {r.SownAcres} {r.UnharvestedAcres} net-imm {r.NetImmigrated / 100:N0} (exp {r.BorderExports / 100:N0} imp {r.BorderImports / 100:N0} desk {r.DeskExports / 100:N0}/{r.DeskImports / 100:N0} toll {r.BorderTolls / 100:N0} migr {r.BorderMigrants / 100:N0}) world-coin {r.WorldCoin / 100:N0}");
+        sb.Append($" {r.Dwellings,5} {r.FieldAcres,7} {r.NewCottages,4} {r.NewVacantRefits,6} {r.NewAcres,6} {r.NewBusinesses,4} {r.BandPct,5:0.0} ({r.BandOfferedPct,4:0}) {r.AtCapPct,4:0.0} ({r.BandAllPct,4:0} {r.AtCapAllPct,3:0}) {r.WorkshopCompletionPct,5:0} {r.MerchantsSolventPct,6:0} ({r.MerchantsWorthSolventPct,3:0}) {r.ClosedPct,7:0.0} {r.BreadT,7} {r.AleKl,6} {r.Businesses,4}/{r.Closed,-3} {r.Employed,8} {r.Idle,4} {r.MeanFertility,4:0} {r.Sheep}/{r.Oxen}/{r.Cows} {r.CoinTotal / 100,12:N0} {r.CoinGrowthPct,6:0.0} {r.CoinSources / 100:N0}/{r.CoinSinks / 100:N0} {(r.CoinConserved && r.MassOk ? "ok" : "FAIL")} {r.HarvestT} {r.SownAcres} {r.UnharvestedAcres} net-imm {r.NetImmigrated / 100:N0} (exp {r.BorderExports / 100:N0} imp {r.BorderImports / 100:N0} desk {r.DeskExports / 100:N0}/{r.DeskImports / 100:N0} toll {r.BorderTolls / 100:N0} migr {r.BorderMigrants / 100:N0}) world-coin {r.WorldCoin / 100:N0}");
         return sb.ToString();
     }
 

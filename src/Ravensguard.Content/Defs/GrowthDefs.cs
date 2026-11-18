@@ -20,7 +20,7 @@ public sealed record GrowthTuningDef : ContentDef
     public int CottageWorkerHours { get; init; } = 250;
     public List<GrowthMaterialDef> CottageMaterials { get; init; } =
     [
-        new() { Good = "logs", Kg = 400 }, new() { Good = "clay", Kg = 1500 }, new() { Good = "straw", Kg = 3000 },
+        new() { Good = "logs", Kg = 400 }, new() { Good = "clay", Kg = 1500 }, new() { Good = "thatch", Kg = 3000 },
     ];
     public int BurgagePct { get; init; } = 160;
     /// <summary>Beds of a new dwelling by type (the generated ones run 4 to 7 for a cottage, 6 to 12 for a burgage house), and the share (percent) of the work and materials it takes to refit a vacant house instead of building one.</summary>
@@ -46,8 +46,8 @@ public sealed record GrowthTuningDef : ContentDef
     public int WaitingPerCottage { get; init; } = 1;
     /// <summary>Caps on land and pace: at most this many cottages a cluster of villages starts in a season, the region starts at most this many a year for every 10,000 people, and new dwellings never exceed this percent of the generated ones.</summary>
     public int MaxStartsPerClusterSeason { get; init; } = 2;
-    public int MaxStartsPerYearPerTenThousand { get; init; } = 60;
-    public int MaxNewDwellingsPctOfBase { get; init; } = 25;
+    public int MaxStartsPerYearPerTenThousand { get; init; } = 25;
+    public int MaxNewDwellingsPctOfBase { get; init; } = 18;
     /// <summary>The plot of a new cottage in metres: width and depth in a village, and in a town (a burgage plot is long and narrow).</summary>
     public int PlotWidthVillageM { get; init; } = 16;
     public int PlotDepthVillageM { get; init; } = 38;
@@ -83,4 +83,13 @@ public sealed record GrowthTuningDef : ContentDef
     public int PeoplePerBusiness { get; init; } = 250;
     /// <summary>Wages (mites) a new smithy or tavern's plot takes to clear and fence, paid to idle hands.</summary>
     public long PremisesMites { get; init; } = 2_500;
+
+    // ---------- immigration (decision G9) ----------
+    /// <summary>Free dwellings the region's own couples do not need draw settlers, a this-th of them a season, while idle adults are under this permille of the people; at most this permille of the people in a season.</summary>
+    public int ImmigrationSurplusDivisor { get; init; } = 4;
+    public int ImmigrationMaxIdlePermille { get; init; } = 30;
+    public int ImmigrationMaxPermilleOfAlive { get; init; } = 3;
+    // ---------- rural to town (decision G12) ----------
+    /// <summary>Landless peasant households a town with free houses and unfilled posts takes from the villages in a season.</summary>
+    public int TownMovesPerTownSeason { get; init; } = 2;
 }

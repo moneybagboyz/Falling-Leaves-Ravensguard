@@ -29,6 +29,9 @@ public sealed class RegionSectionData
     /// <summary>The region generator version the baseline was made with (<see cref="SaveFormat.RegionGeneratorVersion"/>); 0 when the people are stored whole.</summary>
     [Key(13)] public int GeneratorVersion { get; set; }
 
+    /// <summary>Cottages, fields and businesses this region has built since generation (null when it has not grown).</summary>
+    [Key(14)] public GrowthSave? Growth { get; set; }
+
     /// <summary>Makes the baseline population this region's people are diffed against (the populator's output again). Set by <c>RegionWorld.Capture</c>; not stored.</summary>
     [IgnoreMember] public Func<Ravensguard.Sim.People.Population>? Baseline { get; set; }
 

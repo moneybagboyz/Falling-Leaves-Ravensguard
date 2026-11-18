@@ -174,8 +174,9 @@ public class PopulationSoakTests(ITestOutputHelper output)
             {
                 t.AdvanceDays(60);
                 long alive = w.Vital.Alive; years.Add(alive); lo = Math.Min(lo, alive); hi = Math.Max(hi, alive);
-                Assert.InRange(alive, start * 90 / 100, start * 110 / 100);                           // soak 1: every year end within 10 percent
-                if (y >= 5) { double ma = years.Skip(y - 5).Average(); Assert.InRange(ma, start * 0.93, start * 1.07); }    // 5-year moving average within 7 percent
+                Assert.InRange(alive, start * 90 / 100, start * 125 / 100);                           // soak 1 (decision G13): every year end within -10 and +25 percent
+                if (y >= 5) { double ma = years.Skip(y - 5).Average(); Assert.InRange(ma, start * 0.93, start * 1.25); }    // 5-year moving average
+                if (y % 10 == 0) Assert.True((alive - (y == 10 ? start : years[y - 11])) * 1000 <= (y == 10 ? start : years[y - 11]) * 5 * 10, $"grew too fast in the decade to year {y}");   // at most 0.5 percent a year over a decade
                 int hhs = CountHouseholds(w);
                 Assert.InRange(hhs, households0 * 90 / 100, households0 * 110 / 100);                 // soak 2: households within 10 percent
                 if (y % 10 == 0) { Audit(w, coin); sb.Append($"y{y}:{alive} "); }

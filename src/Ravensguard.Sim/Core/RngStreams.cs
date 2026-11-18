@@ -53,8 +53,11 @@ public static class RngStreams
     /// <summary>The wobble of a build's or a clearing's hours (key project serial, tick = the season's first hour).</summary>
     public const uint GrowthWork = 0x271;
 
-    // ---------- reserved by the overview (no draw yet) ----------
-    public const uint ScheduleJitter = 0x2A0, CatchUp = 0x2B0;
+    // ---------- schedules and catch-up ----------
+    /// <summary>The spot of a person inside a place on a day, the day's field tile, and whether they shop (key person, tick = game day, draw = place x 4 + axis; 14 = shops, 15 = field tile). Live/Schedule.cs.</summary>
+    public const uint ScheduleJitter = 0x2A0;
+    /// <summary>Reserved by the overview (no draw yet).</summary>
+    public const uint CatchUp = 0x2B0;
 
     // ---------- people records ----------
     /// <summary>A newborn's or immigrant's name and attributes.</summary>

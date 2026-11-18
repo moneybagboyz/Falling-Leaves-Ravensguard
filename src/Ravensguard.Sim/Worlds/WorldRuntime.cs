@@ -105,6 +105,8 @@ public sealed class WorldRuntime : IDisposable
         var homeWorld = state.HomeRecords ?? RegionWorld.ForHome(Services, state);
         if (!homeWorld.Economy.Trade.IsBound) homeWorld.Economy.BindContinent(new Ravensguard.Sim.Economy.Markets.ContinentLink(state.ContinentState, home.Id));
         else homeWorld.Economy.BindContinent(new Ravensguard.Sim.Economy.Markets.ContinentLink(state.ContinentState, home.Id));
+        // what the abstract world builds in the home region reaches the chunks the player has already seen as ID-keyed deltas (plan 2.2); a chunk not yet seen is generated from the changed plan
+        homeWorld.Economy.Growth.ChunkSink ??= new Ravensguard.Sim.Growth.ChunkDeltaWriter(Ravensguard.Sim.WorldGen.Chunks.ChunkGenerator.For(region, state.Population, content), state.Chunks);
         Records.AdoptHome(homeWorld);
         state.HomeRecords = homeWorld;
         state.Regions = Records;

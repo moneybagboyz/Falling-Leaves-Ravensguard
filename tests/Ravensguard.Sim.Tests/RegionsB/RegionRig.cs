@@ -58,7 +58,7 @@ public sealed class RegionRig
             ContinentSettings = Cs, HistorySettings = Hs, RegionSettings = W.Settings, EmbarkCellX = Home.CellX, EmbarkCellY = Home.CellY,
             Continent = W.Continent, History = W.History, Population = h.Population, Clock = new SimClock(clock),
             Ids = h.Ids, Chunks = Chunks, Chronicle = h.Chronicle, Economy = sim.Economy, Farming = ew.Farming.State, Abstract = sim.State,
-            Production = ew.Production, Markets = ew.Markets, Regions = Set,
+            Production = ew.Production, Markets = ew.Markets, Growth = ew.Growth.State, Regions = Set,
         };
     }
 }

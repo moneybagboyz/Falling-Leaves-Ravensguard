@@ -54,7 +54,9 @@ public sealed partial class ChunkGenerator
     private readonly SegIndex _roads = new(), _waters = new();
     private readonly Dictionary<long, List<(PointM At, CrossingKind Kind)>> _crossAt = [];
     private readonly Dictionary<long, List<Deck>> _decks = [];
-    private readonly byte[] _crop;
+    private byte[] _crop;
+    private readonly ReaderWriterLockSlim _grow = new();
+    private int _growthVersion;
     private readonly string[] _settlementStyle;
     private readonly string[][] _cultureStyles; // per culture index: building style at poor, middling, rich (plan 2.9)
     private readonly ConcurrentDictionary<long, Stamp?> _stamps = new();
@@ -78,6 +80,7 @@ public sealed partial class ChunkGenerator
         }
         MinZ = Math.Max(minZ, ChunkKey.MinZ); MaxZ = Math.Min(maxZ, ChunkKey.MaxZ);
 
+        _growthVersion = region.GrowthVersion;
         _crop = new byte[RegionData.Tiles];
         foreach (var f in region.Fields) _crop[f.Tile] = (byte)((int)f.Crop + 1);
         _settlementStyle = new string[region.Settlements.Count];
@@ -129,7 +132,45 @@ public sealed partial class ChunkGenerator
 
     private static int ChunkOf(int m) => Math.Clamp(Math.DivRem(m, Size, out int r) - (r < 0 ? 1 : 0), 0, ChunksPerSide - 1);
 
+    /// <summary>Background growth has changed the plans or the fields since the indices were made: rebuild the lot, settlement and crop indices and drop the stamps (a vacant house refitted looks different), with the readers shut out meanwhile.</summary>
+    private void RefreshIfGrown()
+    {
+        if (Region.GrowthVersion == Volatile.Read(ref _growthVersion)) return;
+        _grow.EnterWriteLock();
+        try
+        {
+            if (Region.GrowthVersion == _growthVersion) return;
+            _growthVersion = Region.GrowthVersion;
+            _lotsAt.Clear(); _settlementsAt.Clear(); _stamps.Clear();
+            var crop = new byte[RegionData.Tiles];
+            foreach (var f in Region.Fields) crop[f.Tile] = (byte)((int)f.Crop + 1);
+            _crop = crop;
+            BuildLotIndices();
+        }
+        finally { _grow.ExitWriteLock(); }
+    }
+
     private void BuildIndices()
+    {
+        var r = Region;
+        BuildLotIndices();
+        foreach (var e in r.RoadEdges)
+        {
+            for (int i = 0; i + 1 < e.Points.Length; i++)
+                _roads.Add(e.Id, e.Points[i], e.Points[i + 1], e.WidthCm, e.WidthCm, (byte)e.Class);
+            foreach (var c in e.Crossings)
+            {
+                AddTo(_crossAt, Key(c.At.X / 256, c.At.Y / 256), (c.At, c.Kind));
+                if (c.Kind == CrossingKind.Bridge && MakeDeck(e, c) is { } deck) AddTo(_decks, Key((int)(deck.Cx / 256), (int)(deck.Cy / 256)), deck);
+            }
+        }
+        foreach (var w in r.Waterways)
+            for (int i = 0; i + 1 < w.Points.Length; i++)
+                _waters.Add(w.Id, w.Points[i], w.Points[i + 1], w.WidthCm[i], w.WidthCm[i + 1], (byte)w.Kind);
+        for (int i = 0; i < r.Sites.Count; i++) AddTo(_sitesAt, Key(ChunkOf(r.Sites[i].X), ChunkOf(r.Sites[i].Y)), i);
+    }
+
+    private void BuildLotIndices()
     {
         var r = Region;
         for (int s = 0; s < r.Settlements.Count; s++)
@@ -150,20 +191,6 @@ public sealed partial class ChunkGenerator
             int bx0 = ChunkOf(x0 - 4), bx1 = ChunkOf(x1 + 4), by0 = ChunkOf(y0 - 4), by1 = ChunkOf(y1 + 4);
             for (int cy = by0; cy <= by1; cy++) for (int cx = bx0; cx <= bx1; cx++) AddTo(_settlementsAt, Key(cx, cy), s);
         }
-        foreach (var e in r.RoadEdges)
-        {
-            for (int i = 0; i + 1 < e.Points.Length; i++)
-                _roads.Add(e.Id, e.Points[i], e.Points[i + 1], e.WidthCm, e.WidthCm, (byte)e.Class);
-            foreach (var c in e.Crossings)
-            {
-                AddTo(_crossAt, Key(c.At.X / 256, c.At.Y / 256), (c.At, c.Kind));
-                if (c.Kind == CrossingKind.Bridge && MakeDeck(e, c) is { } deck) AddTo(_decks, Key((int)(deck.Cx / 256), (int)(deck.Cy / 256)), deck);
-            }
-        }
-        foreach (var w in r.Waterways)
-            for (int i = 0; i + 1 < w.Points.Length; i++)
-                _waters.Add(w.Id, w.Points[i], w.Points[i + 1], w.WidthCm[i], w.WidthCm[i + 1], (byte)w.Kind);
-        for (int i = 0; i < r.Sites.Count; i++) AddTo(_sitesAt, Key(ChunkOf(r.Sites[i].X), ChunkOf(r.Sites[i].Y)), i);
     }
 
     /// <summary>The culture packs in name-pool order (a culture index picks its pool by modulo, exactly as the names do), each with its three styles.</summary>
@@ -256,6 +283,14 @@ public sealed partial class ChunkGenerator
 
     /// <summary>All levels of a chunk (ground level plus building storeys and cellars), deterministic for (region, population, content, x, y).</summary>
     public GeneratedChunk GenerateLevels(int chunkX, int chunkY)
+    {
+        RefreshIfGrown();
+        _grow.EnterReadLock();
+        try { return GenerateLevelsCore(chunkX, chunkY); }
+        finally { _grow.ExitReadLock(); }
+    }
+
+    private GeneratedChunk GenerateLevelsCore(int chunkX, int chunkY)
     {
         var res = new GeneratedChunk { ChunkX = chunkX, ChunkY = chunkY };
         var buf = new Buf(chunkX * Size - Pad, chunkY * Size - Pad);

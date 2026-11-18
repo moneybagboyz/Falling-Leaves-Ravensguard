@@ -80,6 +80,7 @@ public sealed class AbstractSystemRegistry
         r.Add(new VitalRollsSystem());              // population spec 3.1-3.2: births, conceptions, deaths (H4)
         r.Add(new PopulationDailySystem());         // population spec 3.3, 3.5, 3.6: outbreaks, famine, weekly marriage catch-up (H5)
         r.Add(new PopulationSeasonalSystem());      // population spec 3.3-3.4: marriage matching, dissolution sweep (H6, S6)
+        r.Add(new GrowthSeasonalSystem());          // H6 S6: background growth (cottages, fields, businesses)
         r.Add(new PopulationMigrationSystem());     // population spec 3.7: crowding and marriage-wait emigration (H6, S7)
         // The economy (decision I1), in the overview's tick order; every one is a no-op until an EconomyWorld is installed in the world
         r.Add(new ProductionWorkSystem());          // H2: businesses work the hour

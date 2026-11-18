@@ -141,7 +141,7 @@ public sealed partial class FarmingSystem
         }
         var ph = Pop.ParcelHolder;
         if (ph.Length < np) { Array.Resize(ref ph, np); Pop.ParcelHolder = ph; }
-        foreach (int p in parcels) ph[p] = holder;
+        foreach (int p in parcels) { ph[p] = holder; State.Livestock.MeadowAcres[Region.Parcels[p].Settlement] += Region.Parcels[p].FieldCount * _d.MeadowPctOfFieldAcres / 100; }
         _popHolder = (int[])P.Holder.Clone();
         BuildFieldIndexes();
         _holderStale = true;

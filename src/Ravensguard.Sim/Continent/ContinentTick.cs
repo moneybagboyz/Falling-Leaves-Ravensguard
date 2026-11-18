@@ -196,6 +196,13 @@ public static class ContinentTick
         s.Pop = (int)np;
         s.Households = Math.Max(1, s.Pop / 5);
         s.Vacancies = Math.Max(0, s.Dwellings - s.Households);
+        // background growth in closed form (decision G10): while the houses are nearly full, dwellings and the arable that feeds them grow an eighth of a percent a season toward what the land carries
+        if (s.DwellingCap > s.Dwellings && (long)s.Vacancies * ContinentRules.GrowthTightVacancyDivisor < s.Dwellings)
+        {
+            int add = Math.Min(s.DwellingCap - s.Dwellings, Math.Max(1, s.Dwellings / ContinentRules.GrowthSeasonDivisor));
+            s.GrainCapacityNet += s.GrainCapacityNet * add / Math.Max(1, s.Dwellings);
+            s.Dwellings += add; s.Vacancies = Math.Max(0, s.Dwellings - s.Households);
+        }
         // the other tracked goods: stock relaxes toward the region's target, which wanders by year (stream 0x250), so neighbours differ and trade has a reason
         for (int k = 1; k < ContinentRules.K; k++)
         {

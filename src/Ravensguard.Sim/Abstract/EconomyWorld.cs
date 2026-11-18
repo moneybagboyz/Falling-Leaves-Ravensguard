@@ -33,6 +33,8 @@ public sealed class EconomyWorld
     public HouseholdSpending Spending { get; }
     /// <summary>Taxes, rents, tolls, treasuries and unrest (taxes spec, Phase 2 scope).</summary>
     public Ravensguard.Sim.Taxes.TaxSystem Taxes { get; }
+    /// <summary>Background growth: cottages, assarted fields and new businesses built by the abstract world (plan 4A.2).</summary>
+    public Ravensguard.Sim.Growth.GrowthSystem Growth { get; }
     public EconomyCounters Counters { get; } = new();
     /// <summary>Farming writes its chronicle here; the farming system moves the new entries to the tick outbox after each daily step.</summary>
     public Chronicle FarmChronicle { get; }
@@ -56,6 +58,7 @@ public sealed class EconomyWorld
         farming.CountIdleHands = true;
         farming.IsEmployedElsewhere = Labour.IsAwayFromFarm;
         farming.ManorLordOf = Labour.ManorLordOf;
+        Growth = new Ravensguard.Sim.Growth.GrowthSystem(this);
         Labour.Rebuild();
     }
 
