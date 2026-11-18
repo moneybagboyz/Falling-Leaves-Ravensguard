@@ -62,7 +62,11 @@ public sealed class Job
 public readonly record struct Phase(PhaseKind Kind, int DurSec, long X0, long Y0, long X1, long Y1);
 
 /// <summary>A command from a player or NPC: take this job. Applied at the next barrier in <c>(Frame, Seq)</c> order, ties broken by the claim stream.</summary>
-public readonly record struct ClaimRequest(EntityId Job, EntityId Person, int PersonIndex, long Frame, int Seq, long X, long Y, int Skill, int Age);
+public readonly record struct ClaimRequest(EntityId Job, EntityId Person, int PersonIndex, long Frame, int Seq, long X, long Y, int Skill, int Age)
+{
+    /// <summary>Who asked: a player, the autopilot layer or an NPC (the command log tells them apart; the claim is resolved the same way).</summary>
+    public CommandOrigin Origin { get; init; }
+}
 
 /// <summary>Where completed work is credited. The abstract tier's labour book reads it: the live tier never writes worker-hours anywhere else, so work is counted once.</summary>
 public interface IWorkSink

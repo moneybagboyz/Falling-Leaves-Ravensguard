@@ -13,6 +13,10 @@
   <ItemGroup>
     <!-- the behaviour content ships inside the assembly as the default, so the pure schedule functions need no content folder; a loaded ContentDatabase overrides it -->
     <EmbeddedResource Include="..\..\content\base\behaviour\*.jsonc" LogicalName="behaviour/%(Filename)%(Extension)" />
+    <!-- the talk content (lines, barks, authored dialogue, rumour types) likewise -->
+    <EmbeddedResource Include="..\..\content\base\dialogue\**\*.jsonc" LogicalName="dialogue/%(RecursiveDir)%(Filename)%(Extension)" />
+    <!-- the autopilot content (activities, settings) likewise -->
+    <EmbeddedResource Include="..\..\content\base\autopilot\*.jsonc" LogicalName="autopilot/%(Filename)%(Extension)" />
   </ItemGroup>
 
   <ItemGroup>

@@ -5,7 +5,7 @@ namespace Ravensguard.Art;
 /// <summary>Tileset v2 (Phase 1): ground, floors, walls, autotile sets, roofs, overlays, props and trees. Atlases: terrain2_32, roofs_32, overlays_32, props_32, props_64.</summary>
 public static class CatalogV2
 {
-    public static readonly HashSet<string> Atlases = new() { "terrain2_32", "roofs_32", "overlays_32", "props_32", "props_64", "field_8", "mini_16" };
+    public static readonly HashSet<string> Atlases = new() { "terrain2_32", "roofs_32", "overlays_32", "props_32", "props_64", "field_8", "mini_16", "vehicles_32" };
     public static readonly string[] Seasonal = { "summer", "autumn", "winter" };
 
     public static void Add(List<SpriteDef> l, Palette pal)
@@ -118,6 +118,10 @@ public static class CatalogV2
         O64("object.barrow", 48, pr.Barrow);
         O64("object.draught_ox", 48, () => pr.Draught("ox")); O64("object.draught_horse", 48, () => pr.Draught("horse"));
         O64("object.horse_riding", 64, pr.Mount);
+
+        // ---- template vehicles at their footprint (one cell = one metre = 32 px; sprite = footprint plus a 4 px margin, and the rise above the ground rectangle)
+        var veh = new Vehicles(pal);
+        foreach (var vs in Vehicles.Specs) { var spec = vs; var (vw, vh) = Vehicles.Size(spec); l.Add(new SpriteDef("vehicle." + spec.Id, SpriteKind.Object, "vehicles_32", "vehicles", vw, vh, () => veh.Draw(spec))); }
 
         AddMinis(l, pal, g, t);
     }

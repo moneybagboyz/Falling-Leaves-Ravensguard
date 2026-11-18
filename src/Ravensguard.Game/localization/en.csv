@@ -715,6 +715,10 @@ RIDE_WINDED,Winded: it will only walk until it has rested
 RIDE_TIRED,Tired: it is slower and will not gallop
 RIDE_CART1,Load {0} / {1} kg  {2}
 RIDE_CART2,Axle {0}%  Pull {1}%  on {2}
+RIDE_TEAM,Pull {0} / {1} N  team {2} of {3}
+RIDE_NEEDS,Needs {0} {1} on this {2}
+RIDE_NEEDS_OK,Enough: {0} {1} on this {2}
+RIDE_NEEDS_MORE,Too heavy even for {0} {1}
 RIDE_STUCK,"STUCK! Push, dig, unload, or add a team"
 RIDE_HEAVY,Too heavy for this ground
 RIDE_LOAN_DUE,The loaned horse has gone home
@@ -948,3 +952,622 @@ TRAVEL_MAP_FOOD,"Provisions for {0} days"
 TRAVEL_MAP_KEYS,"Enter: travel here    Tab: next place    Esc: cancel"
 TRAVEL_MAP_NOWAY,"No way there"
 TRAVEL_MAP_HINT,"Click a place, then {0} to travel there"
+D_GREET_PLAIN,"Good day, {title}."
+D_GREET_DAWN,"Up before the cock, {title}? Fair morning."
+D_GREET_MORNING,"Morning, {title}."
+D_GREET_NOON,"Well met at midday, {title}. The sun is high."
+D_GREET_AFTERNOON,"Afternoon, {title}. Mind the dust."
+D_GREET_EVENING,"Evening, {title}. The day is nearly done."
+D_GREET_NIGHT,"Late to be abroad, {title}. What brings you out?"
+D_GREET_STRANGER_A,"I do not know your face. Welcome to {place}, {title}."
+D_GREET_STRANGER_B,"A new face. Be welcome, though keep to the road."
+D_GREET_STRANGER_C,"Hm. Passing through, are you?"
+D_GREET_ACQ_A,"Back again, {name}? Mind the dog."
+D_GREET_ACQ_B,"{name}, is it not? Good to see you."
+D_GREET_FRIEND_A,"{name}! Sit, sit; the ale is fresh."
+D_GREET_FRIEND_B,"There you are, {name}. I was just speaking of you."
+D_GREET_FRIEND_C,My friend {name}. What news with you?
+D_GREET_TRUSTED_A,{name}. For you the door is always open.
+D_GREET_TRUSTED_B,"Come in out of it, {name}. You know you need not ask."
+D_GREET_DISLIKED_A,What do you want?
+D_GREET_DISLIKED_B,You again. Be quick about it.
+D_GREET_HATED_A,"You have a nerve, showing your face."
+D_GREET_LOW_A,Mm. Good day. I am not in the best of humour.
+D_GREET_LOW_B,"Oh. It is you. Well, good day."
+D_GREET_HIGH_A,"A fine day, {title}, a fine day indeed!"
+D_GREET_HIGH_B,Ha! Good to see a friendly face. Good day!
+D_GREET_WORKER_TIRED,"Long day in the {field_or_yard}, {title}. Mind the mud."
+D_GREET_OUTDOOR_A,"Fair day for the work, {title}. Stand clear of the barrow."
+D_GREET_CRAFT_A,"Mind the shop, {title}; I have work laid out."
+D_GREET_TRADE_A,"Welcome, {title}, welcome! Looking, or buying?"
+D_GREET_CIVIC_A,Good day. Keep the peace and we shall get on.
+D_GREET_RAIN,"Wet weather, {title}. Come under the eave a moment."
+D_GREET_HEAVYRAIN,"Half drowned, are we? Good day all the same, {title}."
+D_GREET_SNOW,"Cold enough for you, {title}? Good day."
+D_GREET_FEAST,"A blessed feast to you, {title}!"
+D_GREET_KIN,"Cousin! I had not looked for you. Come, come."
+D_BYE_PLAIN,Fair road to you.
+D_BYE_GO,"Go on, then."
+D_BYE_STRANGER,"Safe journey, stranger."
+D_BYE_ACQ,"Until next time, {name}."
+D_BYE_FRIEND_A,"Don't be a stranger, {name}."
+D_BYE_FRIEND_B,"Come by the fire again soon, {name}."
+D_BYE_TRUSTED,"Walk carefully, {name}. I would not lose you."
+D_BYE_DISLIKED,Mind the door on your way out.
+D_BYE_NIGHT,"Keep to the lit streets, {title}. Goodnight."
+D_BYE_EVENING,"Goodnight, {title}. Sleep well."
+D_BYE_MORNING,"Good luck with your day, {title}."
+D_BYE_RAIN,Mind the mud. May you find a dry roof by dark.
+D_BYE_HIGH,"Off with you, then, and God speed!"
+D_BYE_HATED,Get out.
+D_WX_CLEAR_A,Clear sky today. A good day for the work.
+D_WX_CLEAR_B,Not a cloud. I could not ask for better.
+D_WX_OVERCAST_A,"Grey and heavy. Rain by evening, I would wager."
+D_WX_OVERCAST_B,The sky is low today. It presses on a man.
+D_WX_LIGHTRAIN_A,A soft rain. It will do the fields good.
+D_WX_LIGHTRAIN_B,Drizzle again. The ford will be up by noon.
+D_WX_HEAVYRAIN_A,"Rain again. The ford will be up by noon, and the roads worse."
+D_WX_HEAVYRAIN_B,Not a day to be on the road. The mud takes a cart to the axle.
+D_WX_STORM_A,That thunder is close. I do not like it near the barns.
+D_WX_STORM_B,"A storm like this takes a roof or two, mark me."
+D_WX_FOG_A,Thick fog. I could lose my own hand in it.
+D_WX_FOG_B,Fog on the water. The ferryman will not cross until it lifts.
+D_WX_FROST_A,Frost on the fields; the winter wheat will be glad.
+D_WX_FROST_B,Hard frost. The well rope is stiff as a bone.
+D_WX_SNOW_A,Snow again. The lanes will be closed by morning.
+D_WX_SNOW_B,"Pretty, snow, if you have wood stacked. I have not enough."
+D_WX_BLIZZARD_A,Nobody should be out in this. Get yourself indoors.
+D_WX_BLIZZARD_B,I have known a blizzard bury a sheepfold whole.
+D_WX_HEAT_A,This heat. The ale turns in the barrel before it is drunk.
+D_WX_HEAT_B,Too hot to work and too dry to rest. The wells are low.
+D_WX_WINTER_DRY,A cold {season}. Stack the wood before you need it.
+D_WX_SUMMER_RAIN,Rain in {season} is a blessing for the barley.
+D_SE_SPRING_A,Ploughing and sowing; there is no rest in {season}.
+D_SE_SPRING_B,The lambs are coming. I have not slept a full night in a week.
+D_SE_SUMMER_A,Long days of {season}. We work them all.
+D_SE_SUMMER_B,"Haying weather, if it holds."
+D_SE_AUTUMN_A,The harvest is everything. Pray the weather holds.
+D_SE_AUTUMN_B,Every barn is filling. The mice are fat this year.
+D_SE_WINTER_A,Winter is long. We count the barley to the grain.
+D_SE_WINTER_B,"Short days, long nights. I mend what I can by the fire."
+D_SE_FEAST_A,A feast day. The brewer has been at it since dawn.
+D_SE_FEAST_B,Feast day! Even the miller will lay down his sack.
+D_SE_FEAST_NEXT,The {feast} is in {days} {#days|day|days}. The brewer is counting barrels already.
+D_SE_FEAST_NEXT_B,Only {days} {#days|day|days} until {feast}. I have not even begun to prepare.
+D_JOB_FARMER_A,"The barley wants rain, and so do I."
+D_JOB_FARMER_B,"Tithe, rent and seed corn; the field feeds everyone but the man who ploughs it."
+D_JOB_PLOUGHMAN_A,"A straight furrow takes patience, and a good ox."
+D_JOB_PLOUGHMAN_B,My hands know the plough better than they know my own wife.
+D_JOB_SHEPHERD_A,"The flock was restless last night. Wolves, perhaps."
+D_JOB_SHEPHERD_B,"A good dog is worth three boys, and eats less."
+D_JOB_MILLER_A,"The stream is low and the stones are slow. People grumble, but I cannot make water."
+D_JOB_MILLER_B,"Every sack gets the toll, and every man thinks I take too much."
+D_JOB_BAKER_A,The oven wants wood and the dough wants time; nothing hurries bread.
+D_JOB_BAKER_B,"Flour has gone dear. I will not make the loaves smaller, but I may have to."
+D_JOB_BREWER_A,A good ale is patience and clean barrels. Folk forget the second.
+D_JOB_BREWER_B,"The barley price is up, and my customers expect the same cup for the same coin."
+D_JOB_BUTCHER_A,The best cuts go to the lord. The rest is honest meat.
+D_JOB_BUTCHER_B,A cold snap is the butcher's friend. Nothing spoils.
+D_JOB_SMITH_A,"A good edge starts with good iron, and iron has been dear."
+D_JOB_SMITH_B,"The forge eats charcoal like a hungry dog, and charcoal is not cheap."
+D_JOB_CARPENTER_A,Seasoned oak is worth more than gold to a carpenter. Green wood warps.
+D_JOB_CARPENTER_B,Everyone wants a roof; no one wants to wait for it.
+D_JOB_MASON_A,Stone remembers. A bad wall leans for a hundred years.
+D_JOB_MASON_B,Mortar will not set in this cold. The work stops until it warms.
+D_JOB_WEAVER_A,"The loom does not hurry, and neither do I. Good cloth takes its time."
+D_JOB_WEAVER_B,Wool is short this year. I am working with what I have.
+D_JOB_TANNER_A,"You will smell my trade before you see it. The work is honest, though."
+D_JOB_TANNER_B,"Hides, bark, lime, patience. Leather is more a waiting than a working."
+D_JOB_COBBLER_A,A good boot is half the road. I mend more than I make.
+D_JOB_COBBLER_B,Wet feet make a bad day. Come to me before the rains.
+D_JOB_MERCHANT_A,Prices rise at one end of the road and fall at the other. That is all trade is.
+D_JOB_MERCHANT_B,A caravan late is a month of worry. I count the days.
+D_JOB_INNKEEPER_A,"A full taproom is a loud one, but I will not complain of the coin."
+D_JOB_INNKEEPER_B,Travellers bring news and trouble in equal parts.
+D_JOB_PRIEST_A,"The Lord provides, though He does not always provide quickly."
+D_JOB_PRIEST_B,"The harvest is His gift, and I remind them to give thanks for it."
+D_JOB_GUARD_A,Quiet watch. Quiet is good; I get paid the same either way.
+D_JOB_GUARD_B,"Cold feet, empty belly; yet someone must watch the gate."
+D_JOB_FISHER_A,The river gives and the river takes. I only cast the net.
+D_JOB_FISHER_B,Pike are running thin this year. I blame the weir.
+D_LIFE_COURTING,My eldest is courting the miller's girl. I pretend not to notice.
+D_LIFE_BABY,"We have a babe at home. Nobody sleeps, but nobody minds."
+D_LIFE_BACK,My back is not what it was. Thirty years of bending will do that.
+D_LIFE_KNEES,My knees tell me the weather before the sky does.
+D_LIFE_KIN_A,"Blood is blood. Family comes first, whatever else."
+D_LIFE_KIN_B,Mother always said I would end up like my uncle. She was right.
+D_LIFE_MARKET,The market has been busy. Folk are buying more than they ought.
+D_LIFE_REEVE,The reeve is in a mood. Say nothing to him about the fences.
+D_LIFE_WELL,The well water tastes odd lately. I boil what I drink.
+D_LIFE_NEIGHBOUR,Neighbours: you cannot pick them. I have the best and the worst on one side.
+D_LIFE_DOG,The dog has taken against the cat. They are both hateful and both mine.
+D_LIFE_FEUD,There is an old feud over a boundary stone. Nobody remembers who moved it.
+D_LIFE_PRICES,Everything costs more than last year. Wages do not.
+D_LIFE_TAXES,"Taxes, taxes. The lord takes his due before the harvest is in."
+D_LIFE_CHURCH,"I light a candle for the dead on feast days. It helps, a little."
+D_LIFE_CHILD,The children have been into the apples again. I cannot blame them.
+D_LIFE_OLD,Eighty winters I have seen. I do not remember a colder one.
+D_LIFE_SONG,"They sing a new song at the tavern. It is terrible, and I know every word."
+D_LIFE_SLEEP,I sleep badly. The owl on the roof is no help.
+D_LIFE_HOPE,"Things will mend. They always do, somehow."
+D_WORK_CARRY,I need {goods} carried to {place} by {day_name}. {price} for it. Interested?
+D_WORK_CARRY_B,"Take this to {place} and you will have {price}. There is no hurry, but do not dawdle."
+D_WORK_NONE,"Nothing today, but ask the reeve."
+D_WORK_NONE_B,"Not a thing, I am afraid. Try again after the harvest."
+D_WORK_FARM,"Hands wanted in the {field_or_yard}. {price} a day, and a bowl at noon."
+D_WORK_FARM_B,"I could use a strong back at the hay. {price}, paid at dusk."
+D_WORK_HARVEST,"Every hand is wanted for the harvest. {price} a day, and you eat with us."
+D_WORK_CRAFT,Hold this a moment. Now carry it to the shop door. {price} for the trouble.
+D_WORK_SMITH,I need charcoal fetched from the burners. {price} if you are quick.
+D_WORK_BAKER,"Wood for the oven, a cartload. {price}, and a loaf besides."
+D_WORK_BREWER,"Barrels to roll to the tavern. {price}, and an ale when the work is done."
+D_WORK_SHEPHERD,Watch the flock tonight and you shall have {price}. Bring a cloak.
+D_WORK_INN,"The cellar wants clearing. {price}, and a hot meal after."
+D_WORK_MERCHANT,"I need a hand for the road to {place}. {price}, and you eat well."
+D_WORK_GUARD,"Watch needs more feet. {price} a night, and the cold is free."
+D_WORK_WINTER,Fuel is short. Split wood for me and I will pay {price}.
+D_WORK_TRUSTED,"For you, {name}, there is always something. {price}, and no questions."
+D_WORK_FRIEND,"If you want work, {name}, I have some. {price} is fair, I think."
+D_WORK_STRANGER,I do not know you. I will not hand you coin before I see your work.
+D_WORK_LOW,Work? Everyone wants work. Go ask the reeve.
+D_TRADE_PRICE,"{price} the {unit}. That is what it fetches at {place}, as I hear."
+D_TRADE_FAIR,"{price} the {unit}, and I am not robbing you."
+D_TRADE_NONE,I have none to spare.
+D_TRADE_AFTER,Come back after harvest.
+D_TRADE_LATER,The stock is thin. Come again in a few days.
+D_TRADE_DEAR,"It is dear this season, {title}; I did not set the price, the weather did."
+D_TRADE_CHEAP,"Plenty about, so cheap. Buy now, before I think better of it."
+D_TRADE_FRIEND,"For a friend, {price} the {unit}. Do not tell the others."
+D_TRADE_TRUSTED,"You may have it at cost, {name}. I trust you will remember me."
+D_TRADE_STRANGER,"New face, so full price: {price} the {unit}."
+D_TRADE_DISLIKED,"I will sell to you, but at {price} and not a mite less."
+D_TRADE_HATED,I do not sell to your sort.
+D_TRADE_BAKER_A,Bread is {price} the loaf; fresh this morning.
+D_TRADE_BAKER_B,"Day-old at half price, if you do not mind the crust."
+D_TRADE_SMITH_A,"Nails, hinges, blades; name it. {price} for good iron."
+D_TRADE_SMITH_B,"The edge is honest. It will hold, if you do not abuse it."
+D_TRADE_BREWER,"Ale is {price} the cup. Strong, or small, as you like."
+D_TRADE_BUTCHER,"Fresh meat, {price} the {unit}. Ask for the offal if you are thrifty."
+D_TRADE_MERCHANT_A,"Cloth, salt, spices; everything has a price. Let us talk."
+D_TRADE_MERCHANT_B,"What I have, I sell. What I do not have, I can find, for a fee."
+D_TRADE_WEAVER,This cloth is {price} the ell. Feel the weave; none better in {place}.
+D_TRADE_COBBLER,"Boots to measure, {price}. A week to make them, no sooner."
+D_TRADE_TANNER,"Hides, {price} each. They will last a lifetime, if you oil them."
+D_TRADE_INN,"A bed is {price} a night; supper, a little more."
+D_TRADE_MILLER,Flour is {price} the {unit}. The toll is the toll.
+D_TRADE_FARMER,"Barley, {price} the {unit}. I would rather sell to a neighbour than the market."
+D_TRADE_HAGGLE_A,"You drive a hard bargain, {title}. Make it a little more and we are done."
+D_TRADE_HAGGLE_B,"Is that your best? Come now, you are not at a fair."
+D_TRADE_HAGGLE_C,"Ha! You know the trade. {price}, and not a mite less."
+D_TRADE_HAGGLE_D,"I have a family to feed, {title}. I cannot go lower."
+D_TRADE_DEAL,A deal. May it do us both good.
+D_TRADE_BROKE,"I have not the coin to buy it from you, I am afraid."
+D_HIRE_WAGE,"{price} a day, and food? I will carry your pack."
+D_HIRE_WAGE_B,"{price} a day and a roof, and I am yours until the job is done."
+D_HIRE_NO,I have a family. No.
+D_HIRE_BUSY,"I am promised elsewhere this week, sorry."
+D_HIRE_TRUSTED,"For you, {name}? Aye."
+D_HIRE_FRIEND,"Since it is you, {name}, I will take it, and for less."
+D_HIRE_STRANGER,"I do not know you. Pay me up front, and I might think about it."
+D_HIRE_DISLIKED,No. Not for any coin.
+D_HIRE_DANGER,"If there is fighting in it, the price doubles and I want it in advance."
+D_HIRE_DANGER_B,Soldiering is not my trade. Ask someone with a spear.
+D_HIRE_SKILL,"I know my trade. {price} a day, and you will not be disappointed."
+D_HIRE_FOOD,"Food and a place by the fire, and I will take less. Winter is coming."
+D_HIRE_HUNGRY,"I will work for bread, if you have it."
+D_HIRE_POOR,"I will go for {price}, if it keeps my family fed."
+D_HIRE_DEAL,Done. When do we start?
+D_HIRE_DEAL_B,"Well, I have nothing better to do. Lead on."
+D_HIRE_BORED,The road is better than another winter here. Count me in.
+D_RECRUIT_YES,"Aye, I will go with you. I have been waiting for a reason to leave."
+D_RECRUIT_NO_KNOW,"We hardly know each other, {name}. Give it time."
+D_RECRUIT_NO_TRUST,I do not trust you well enough to follow you into trouble.
+D_RECRUIT_NO_REASON,What would I gain by going? You have not told me why I should.
+D_RECRUIT_FULL,"You have a full company already, {title}. Come to me when there is room."
+D_RECRUIT_NOPAY,You cannot pay me; I will not join an empty purse.
+D_RECRUIT_FRIEND,"For you, {name}, I would walk to the world's end."
+D_RECRUIT_KIN,"You are blood, {name}. Of course I will come."
+D_RECRUIT_OLD,I am too old for the road now. Ask the young ones.
+D_RECRUIT_FAMILY,I have my own to think of. Do not ask it of me.
+D_RECRUIT_BONUS,"The signing bonus is generous, I will say that."
+D_DIR_NORTH,Take the north road past the mill; {place} is about {n} {#n|hour|hours} on foot.
+D_DIR_EAST,"East, by the old ford. {place} is {n} {#n|hour|hours} away on a good day."
+D_DIR_SOUTH,South along the river; {place} lies about {n} {#n|hour|hours} on.
+D_DIR_WEST,"Out the west gate. {place} is {n} {#n|hour|hours}, and the road is rough."
+D_DIR_FAR,"{place}? A long way. Take food, and do not walk it at night."
+D_DIR_NEAR,{place} is just beyond the rise. You cannot miss it.
+D_DIR_SMITH,The smithy is by the green; follow the sound of the hammer.
+D_DIR_INN,The tavern is on the square. Look for the sign with the crooked boar.
+D_DIR_CHURCH,The church is at the top of the lane. The bell can be heard from everywhere.
+D_DIR_MARKET,"The market is on the square. Go early, the best goods go first."
+D_DIR_LOST,"You look lost, {title}. Where do you want to go?"
+D_DIR_RAIN,"The low road floods in rain. Take the high one, even if it is longer."
+D_DIR_NIGHT,I would not travel to {place} after dark. Wait for morning.
+D_DIR_UNKNOWN,I have never been there. Ask someone who has.
+D_RUM_HOP0,I saw it with my own eyes: {rumour}
+D_RUM_HOP0_B,I was there. {rumour} I will not forget it soon.
+D_RUM_HOP0_C,"You want the truth? Here it is, and I saw it: {rumour}"
+D_RUM_HOP0_D,"Not a tale, {title}; I saw it. {rumour}"
+D_RUM_HOP1_A,{teller} told me: {rumour}
+D_RUM_HOP1_B,"I had it from {teller}, who is not one to lie: {rumour}"
+D_RUM_HOP1_C,{teller} was full of it yesterday. {rumour}
+D_RUM_HOP1_D,"Between us, {name}: {teller} says {rumour}"
+D_RUM_HOP2_A,They say {rumour}
+D_RUM_HOP2_B,It is all over the lane: {rumour}
+D_RUM_HOP2_C,"I heard it at the well, and who knows who from. {rumour}"
+D_RUM_HOP2_D,The talk is that {rumour}
+D_RUM_TRAV_A,A carter from {place} said {rumour}
+D_RUM_TRAV_B,A traveller told it at the tavern: {rumour}
+D_RUM_TRAV_C,Word came up the road from {place}. {rumour}
+D_RUM_TRAV_D,A peddler had it from {place}: {rumour}
+D_RUM_GARBLED_A,"I hear it was worse than that, though. {rumour}"
+D_RUM_GARBLED_B,"Who knows how true it is, but they say {rumour}"
+D_RUM_GARBLED_C,"The story grows with the telling, but the gist is this: {rumour}"
+D_RUM_GARBLED_D,Do not hold me to the details. {rumour}
+D_RUM_FIRE,"A terrible business, fire. {rumour}"
+D_RUM_FAMINE,Hunger is a hard thing to talk about. {rumour}
+D_RUM_RAID,"Raiders, bold as brass. {rumour}"
+D_RUM_BANDITS,Not safe on the roads these days. {rumour}
+D_RUM_DISEASE,"Keep clear of the sick, and pray. {rumour}"
+D_RUM_DEATH,God rest them. {rumour}
+D_RUM_CRIME,"A wicked deed, and no one punished yet. {rumour}"
+D_RUM_WAR,War is a rich man's game and a poor man's burden. {rumour}
+D_RUM_TAX,"The lord wants his share, and then some. {rumour}"
+D_RUM_PRICE,"Everything is dear, and about to get dearer. {rumour}"
+D_RUM_LANDMARK,"Folk are building, which is a good sign, I suppose. {rumour}"
+D_RUM_NOTHING,"Nothing I would repeat, {title}. Ask me in a few days."
+D_REF_ARMED,Put that blade away.
+D_REF_ARMED_B,Keep your hand off that sword while you talk to me.
+D_REF_BLOODY,You are covered in blood. I will not stand near you.
+D_REF_BLOODY_B,What have you done? Do not come near my children.
+D_REF_NIGHT,Not at this hour.
+D_REF_NIGHT_B,It is the middle of the night. Come back in daylight.
+D_REF_BUSY,I have no time. Ask someone else.
+D_REF_BUSY_B,"Later, {title}. I am up to my elbows in work."
+D_REF_STRANGER,I do not talk business with strangers.
+D_REF_RICH,"You look rich. Whatever you want, I cannot afford it."
+D_REF_DISLIKED,I have nothing to say to you.
+D_REF_HATED,I do not talk to your sort.
+D_REF_HATED_B,"Leave, or I call the watch."
+D_REF_CIVIC,State your business or move along.
+D_REF_SORRY,"I am sorry, {title}; I cannot help with that."
+D_REF_NO,No.
+D_HOST_THREAT,One more step and you will regret it.
+D_HOST_INSULT,Scum. Get out of my sight.
+D_NEED_HUNGRY_A,Spare a heel of bread?
+D_NEED_HUNGRY_B,"I have not eaten since yesterday, {title}."
+D_NEED_HUNGRY_C,"I would talk, but my belly is louder than I am."
+D_NEED_TIRED_A,"I would talk, but my feet ache."
+D_NEED_TIRED_B,"I could sleep on my feet, {title}. Forgive me."
+D_NEED_COLD_A,Forgive me; I am half frozen. Can we talk by a fire?
+D_NEED_COLD_B,My hands are numb. I cannot even hold the cup.
+D_NEED_SICK_A,I am not well. Do not stand too close.
+D_NEED_SICK_B,"A fever, and no money for the apothecary."
+D_NEED_DRUNK_A,"Hic! Fine evening, ain't it?"
+D_NEED_DRUNK_B,"Have a drink with me, friend! I am a happy drunk."
+D_NEED_DRUNK_C,You are all blurry. Hold still.
+D_MOOD_LOW_A,Everything is going wrong this week. Forgive my tongue.
+D_MOOD_LOW_B,My heart is not in it today. What do you need?
+D_MOOD_HIGH_A,I could sing! I am in good spirits today.
+D_MOOD_HIGH_B,"Life is good, {title}. I mean to enjoy it."
+D_MOOD_GRIEF,We buried my kin not long ago. Be gentle with me.
+D_MOOD_RICH,"You look well-fed, {title}. Some of us are not."
+B_WORK_FARMER_A,"Come on, you lazy ox!"
+B_WORK_FARMER_B,Another furrow before noon.
+B_WORK_PLOUGHMAN_A,"Steady now, steady."
+B_WORK_PLOUGHMAN_B,Gee up! Straight and true.
+B_WORK_SHEPHERD_A,"Hup, hup! Back in the fold!"
+B_WORK_SHEPHERD_B,"Here, boy! Round them up."
+B_WORK_MILLER_A,Mind the sacks!
+B_WORK_MILLER_B,The stones need dressing again.
+B_WORK_BAKER_A,The oven is hot. Get the dough in.
+B_WORK_BAKER_B,Burnt again? Not on my watch.
+B_WORK_BREWER_A,A little more malt in this one.
+B_WORK_BREWER_B,"Roll that barrel, lad."
+B_WORK_BUTCHER_A,"Mind the cleaver, mind the cleaver."
+B_WORK_BUTCHER_B,"Fresh offal, going fast!"
+B_WORK_SMITH_A,Strike while the iron is hot!
+B_WORK_SMITH_B,"Another blade for the lord, and no thanks for it."
+B_WORK_CARPENTER_A,"Measure twice, cut once."
+B_WORK_CARPENTER_B,"Pass the adze, boy."
+B_WORK_MASON_A,Level that course!
+B_WORK_MASON_B,This stone wants chiselling.
+B_WORK_WEAVER_A,The shuttle runs clean today.
+B_WORK_WEAVER_B,"Another ell, and I am done."
+B_WORK_TANNER_A,"Pah, that vat wants emptying!"
+B_WORK_TANNER_B,"Hides on the line, mind the smell."
+B_WORK_COBBLER_A,"Tap, tap, tap. A boot is not made in a day."
+B_WORK_COBBLER_B,"Awl and thread, awl and thread."
+B_WORK_MERCHANT_A,"Honest weights, honest prices!"
+B_WORK_MERCHANT_B,Have you seen my ledger?
+B_WORK_INNKEEPER_A,A full house tonight!
+B_WORK_INNKEEPER_B,Clear those mugs!
+B_WORK_PRIEST_A,Bless this house.
+B_WORK_PRIEST_B,Pray for the harvest.
+B_WORK_GUARD_A,"Keep moving, nothing to see."
+B_WORK_GUARD_B,All quiet on the wall.
+B_WORK_FISHER_A,Nothing in the net again.
+B_WORK_FISHER_B,"Mend the net, mend the net."
+B_MARKET_1,"Fresh bread, hot from the oven!"
+B_MARKET_2,"Apples, sweet apples!"
+B_MARKET_3,"Ale, cold ale, a farthing the cup!"
+B_MARKET_4,"Eggs, fresh this morning!"
+B_MARKET_5,Cheese from the high pastures!
+B_MARKET_6,Salt! Good salt from the coast!
+B_MARKET_7,"Needles, thread, ribbons!"
+B_MARKET_8,"Fish, fresh from the river!"
+B_MARKET_9,"Cloth, fine wool cloth!"
+B_MARKET_10,"Honey, sweet and golden!"
+B_MARKET_11,"Candles, tallow and wax!"
+B_MARKET_12,"Come, come, the best prices in the market!"
+B_MARKET_13,Mend your pots! Mend your pots!
+B_MARKET_14,"Hot pies, hot pies!"
+B_MARKET_15,"Firewood, split and dry!"
+B_MARKET_16,"Boots, solid boots for the road!"
+B_WEATHER_1,Not a cloud. Good drying weather.
+B_WEATHER_2,What a day! I could work till dark.
+B_WEATHER_3,Grey skies. Rain by dusk.
+B_WEATHER_4,Drizzle again!
+B_WEATHER_5,This rain will drown the seedlings.
+B_WEATHER_6,The ford will be up!
+B_WEATHER_7,Get the washing in! Quick!
+B_WEATHER_8,"Lord, that was close!"
+B_WEATHER_9,I cannot see my own feet in this.
+B_WEATHER_10,Frost on the well rope again.
+B_WEATHER_11,Snow! Bring the sheep in!
+B_WEATHER_12,Shutters! Close the shutters!
+B_WEATHER_13,Hot enough to bake the bread in the street.
+B_WEATHER_14,The well is nearly dry!
+B_GUARD_1,Halt. Who goes there?
+B_GUARD_2,"Lights out, citizens. Curfew is on."
+B_GUARD_3,"Keep to the lit streets, friend."
+B_GUARD_4,"Move along, nothing to see."
+B_GUARD_5,All is well on the wall.
+B_GUARD_6,Hold. State your business.
+B_GUARD_7,Night watch! Name yourself!
+B_GUARD_8,Quiet now. Good folk are sleeping.
+B_ALARM_1,Fire! Fire! Bring buckets!
+B_ALARM_2,To arms! To arms!
+B_ALARM_3,Thief! Stop him!
+B_ALARM_4,Murder! Call the watch!
+B_ALARM_5,Help! Somebody help!
+B_ALARM_6,Bandits at the gate!
+B_ALARM_7,Run! Run for your lives!
+B_ALARM_8,The alarm! Ring the bell!
+B_ANIMAL_1,Woof! Woof!
+B_ANIMAL_2,Moo-oo.
+B_ANIMAL_3,"Cluck, cluck, cluck."
+B_ANIMAL_4,Baa! Baa!
+B_ANIMAL_5,Hee-haw!
+B_ANIMAL_6,"A rooster crows, late and proud."
+B_HERO_ARMED_A,"Look, a sword. Keep clear."
+B_HERO_ARMED_B,What is he planning with that blade?
+B_HERO_BLOODY_A,"God above, he is covered in blood!"
+B_HERO_BLOODY_B,Fetch the watch! There has been a killing.
+B_HERO_RICH_A,"A rich one, by the look of that purse."
+B_HERO_RICH_B,"Fine boots. Coin to burn, that one."
+B_HERO_RAGGED_A,"Poor soul, in those rags."
+B_HERO_RAGGED_B,A beggar? Or a vagabond?
+B_HERO_FRIEND,{name}! Good to see you!
+B_HERO_STRANGER,Who is that? A new face.
+B_HERO_DISLIKED,There goes trouble.
+B_HERO_FAMOUS,That is the one folk are talking about.
+B_STATE_DEAR_A,"Bread is dearer again, and the coin no thicker."
+B_STATE_DEAR_B,Look at that price! It is robbery.
+B_STATE_TAX_A,"The tax-man was round again. Taxes, taxes."
+B_STATE_TAX_B,They will have the shirt off my back before winter.
+B_STATE_HUNGRY_A,My belly is as empty as a drum.
+B_STATE_HUNGRY_B,Has anyone a crust to spare?
+B_COMBAT_1,Have at you!
+B_COMBAT_2,"Yield, you cur!"
+B_COMBAT_3,"Die, scum!"
+B_COMBAT_4,Guard yourself!
+B_COMBAT_5,You will pay for that!
+B_COMBAT_6,Help! He is killing me!
+B_COMBAT_7,Mercy! I yield!
+B_COMBAT_8,"To me, lads! To me!"
+B_COMBAT_9,That one hurt!
+B_COMBAT_10,I have you now!
+R_FAMINE,folk in {place} are going hungry; {number} households are short of bread.
+R_CULL,the farmers of {place} slaughtered sheep for want of fodder.
+R_CARAVAN_RAID,bandits stopped a caravan on the road and took {number} in every hundred of its cargo.
+R_CARAVAN_LOST,"a merchant's caravan out of {place} never arrived; robbers, they say."
+R_OUTBREAK,"sickness is going round {place}, a {about} sort, and the sick keep their doors shut."
+R_DEATH_VIOLENT,"{who} of {place} is dead, and not by the hand of God."
+R_DEATH_HUNGER,"{who} of {place} died of hunger, aged {number}."
+R_DEATH_DISEASE,"{who} of {place} was carried off by a fever, aged {number}."
+R_DEATH,"{who} of {place} has died, aged {number}."
+R_RIOT,{number} folk rioted at {place} over the price of grain.
+R_REVOLT,there is talk of revolt at {place}; the people have had enough.
+R_EVICTION,the {about} household was thrown out of their home at {place} for arrears.
+R_TAX_EVASION,{number} households at {place} are hiding their grain from the tax-man.
+R_WORD_FAMINE,there is famine in {about}; it is spreading this way.
+R_WORD_HARVEST,"the harvest failed in {about}, and the price of grain will follow."
+R_WORD_PRICE,grain has gone to famine prices in {about}.
+R_WORD_WAR,war has broken out in {about}; the levy is being called.
+R_WORD_PEACE,peace has been made in {about} at last.
+R_WORD_RAID,bandits have been raiding in {about}; the roads there are closed.
+R_WORD_CARAVAN,a caravan has gone missing near {about}.
+R_WORD_PLAGUE,"plague has come to {about}, and people are fleeing."
+R_BUSINESS,someone has opened a new {about} business at {place}.
+R_COTTAGE,a new cottage has gone up at {place}; a young couple at last have a home.
+R_CLEARED,{number} acres have been cleared for the plough at {place}.
+R_IMMIGRANTS,a family of {number} has come to {place} looking for land.
+R_WEDDING,{who} was married at {place}.
+R_FIRE,a fire took a house at {place}.
+R_FLOOD,the river flooded at {place} and took the low fields.
+R_OUTLAW_RAID,outlaws raided {place} and got away with cattle and coin.
+R_SKIRMISH,there was fighting near {place}; men lie dead.
+R_MINE,"the mine at {place} has collapsed, with men inside."
+R_VAGUE_PLACE,somewhere in the east
+R_UNKNOWN_PLACE,a place I cannot name
+R_WHO_TRAVELLER,a traveller
+R_HEDGE_VAGUE,though I could not tell you where
+D_CM_INTRO,"You have the look of someone who wants to be somewhere else. I am Marta Voss, and I run the wagons out of {place}. What do you want?"
+D_CM_ASK_WORK,I need work.
+D_CM_ASK_WHO,Who are you?
+D_CM_ASK_ROAD,What is the road like?
+D_CM_ASK_NEWS,Any news from the road?
+D_CM_ASK_HORSE,I can ride. What would that earn me?
+D_CM_LEAVE,Never mind. Goodbye.
+D_CM_WORK,"Work, is it? I have a wagon of salt for the coast road and one hand short. The pay is fair and the journey is a long one. Can you walk beside a cart for a week?"
+D_CM_ACCEPT_Q,Yes. I will take the job.
+D_CM_ASK_PAY,What does it pay?
+D_CM_ASK_DANGER,Is it dangerous?
+D_CM_BACK,Let me ask something else.
+D_CM_PAY,"Food on the road, a bed in the wagon, and a day's wage for every day, paid at the end. A good hand might earn a share of the profit, if the salt arrives dry."
+D_CM_DANGER,"Dangerous enough. There are bandits in the woods past the ford, and the weather is as bad as ever. I have never lost a wagon, mind. I take care."
+D_CM_ACCEPT_AFTER,I will take it all the same.
+D_CM_BACK2,Then I need to think.
+D_CM_ACCEPT,Good. Here is a lantern; a man who carries his own light is worth two. We leave at first light. Do not be late.
+D_CM_AFTER,Eat something. You will need it.
+D_CM_WHO,"My father drove wagons, and his father before him. The road is in our blood. I have never owned a field, and I never wanted one."
+D_CM_ASK_PAST,How did you start?
+D_CM_ASK_FAMILY,Do you have family?
+D_CM_BACK3,I see. Something else.
+D_CM_PAST,"I was nine when I first drove the team. I fell off and broke my wrist, and the wagon did not even stop. My father said that was the best lesson I would ever have."
+D_CM_FAMILY,"A husband in {place}, two sons who think wagons are boring. They are right, in a way, and I would not have it differently."
+D_CM_ROAD,Depends where. Highways are dry and dull; tracks are mud and trouble. And one bad ford can cost you a day.
+D_CM_ASK_BANDITS,Where are the bandits?
+D_CM_ASK_FORD,Tell me about the ford.
+D_CM_ASK_TIPS,Any advice for the road?
+D_CM_BACK4,Thank you. Something else.
+D_CM_BANDITS,"In the woods past the ford, mostly. A few of them were farmers once, which makes them worse. They like narrow places and tired travellers."
+D_CM_FORD,"When it rains, the ford is up to a man's chest. Wait for it to fall; I have seen a cart carried off with the oxen still in the traces."
+D_CM_TIPS,"Walk in daylight, camp early, keep a fire. Never sleep with your boots off. And pay the toll without argument; a quarrel costs more than a coin."
+D_CM_NEWS,"Only what the carters tell me. Prices are up in the east, and nobody is happy about it. And the roads are more dangerous than last year."
+D_CM_ASK_MORE,Tell me more.
+D_CM_BACK5,That is enough. Something else.
+D_CM_MORE,"There was a caravan lost on the north road, they say. Robbers took everything, even the oxen. I do not like it. If I were you, I would stay off that road."
+D_CM_HORSE,"You ride? Then you are worth two. A rider can scout ahead, and I need one for the coast road. The pay is half again."
+D_CM_HORSE_ACCEPT,Agreed.
+D_CM_HORSE_LATER,Perhaps later.
+D_CM_REPEAT,"You again. Back from the road, or about to go? Either way, the offer stands."
+D_CM_REPEAT_JOB,About that job of mine...
+D_CM_REPEAT_NEWS,Any news?
+D_CM_REPEAT_ROAD,Tell me about the road again.
+D_CM_LEAVE2,I must be going.
+D_CM_JOB_DONE,"If you carried the salt, you have my thanks, and a name on the road. Come back when you want a longer trip, and bring a mule."
+TALK_TITLE,Talk
+TALK_GREET,Greet
+TALK_WORK,Ask about work
+TALK_NEWS,Ask the news
+TALK_PERSON,Ask about someone or somewhere
+TALK_TRADE,Trade
+TALK_HIRE,Hire
+TALK_RECRUIT,Recruit
+TALK_LEAVE,Leave
+TALK_HINT,1-9 choose · E advance · Esc leave · H history
+TALK_TIER_STRANGER,stranger
+TALK_TIER_ACQUAINTANCE,acquaintance
+TALK_TIER_FRIEND,friend
+TALK_TIER_TRUSTED,trusted
+TALK_TIER_DISLIKED,disliked
+TALK_TIER_HATED,hated
+TALK_MOOD_LOW,low spirits
+TALK_MOOD_MID,even
+TALK_MOOD_HIGH,good spirits
+TALK_NO_WORK_MENU,You have no time for that now.
+TALK_CHILD,The child hides behind a skirt.
+TALK_LOCKED,Needs {0}
+TALK_NOTHING_NEW,They have nothing new to tell.
+TALK_LOG_FILTER,Nearby talk
+TALK_HIRE_ASK,How much a day?
+TALK_RECRUIT_ASK,Would you join me?
+TALK_ASK_PERSON,Who is talked of in town?
+JOURNAL_TITLE,Journal
+JOURNAL_TAB_RUMOURS,Rumours
+JOURNAL_RUMOURS_EMPTY,"You have heard no rumours yet. Talk to people, or linger where they gather."
+JOURNAL_TOLD_BY,"Told by {0}, day {1}"
+JOURNAL_OVERHEARD,"Overheard {0}, day {1}"
+JOURNAL_PASSED,passed through {0} people
+JOURNAL_CONF_WITNESS,Seen first-hand
+JOURNAL_CONF_RELIABLE,Reliable
+JOURNAL_CONF_HEARSAY,Hearsay
+JOURNAL_CONF_GARBLED,Garbled
+JOURNAL_HOW,How do you know?
+JOURNAL_HIDE,Hide
+JOURNAL_PIN,Pin to map
+JOURNAL_PARTLY,partly true
+JOURNAL_CLOSE_HINT,{0} closes · Tab changes tab
+JOURNAL_TAB_WORK,Work
+TRACE_OVERHEARD,Overheard {0} telling {1} (day {2})
+TRACE_TOLD,{0} heard it from {1} (day {2})
+TRACE_WITNESS,{0} saw it (day {1})
+TRACE_TRAVELLER,{0} had it from a traveller out of {1} (day {2})
+TRACE_CHRONICLE,Chronicle: {0} (day {1})
+TRACE_CAUSE,cause: {0}
+TRACE_YOU,You
+TRACE_HEARD_FROM,You heard it from {0} (day {1})
+HINT_TALK,E beside a person to talk
+LOG_BARK,{0}: {1}
+TITLE_FRIEND,friend
+TITLE_HATED,villain
+TITLE_LADY,my lady
+TITLE_SIR,sir
+TITLE_GOODWIFE,goodwife
+TITLE_GOODMAN,goodman
+TALK_YOU,friend
+TALK_FEAST_DEFAULT,next feast
+TALK_DAY_SOON,the end of the week
+TALK_FIELD,fields
+TALK_YARD,yard
+TALK_GOODS_DEFAULT,goods
+TALK_UNIT_DEFAULT,measure
+TALK_PRICE_DEFAULT,a fair price
+TALK_SOMEONE,someone
+JOB_NONE,no trade
+JOB_FARMER,farmer
+JOB_PLOUGHMAN,ploughman
+JOB_SHEPHERD,shepherd
+JOB_REEVE,reeve
+JOB_MILLER,miller
+JOB_BAKER,baker
+JOB_BREWER,brewer
+JOB_BUTCHER,butcher
+JOB_SMITH,smith
+JOB_CARPENTER,carpenter
+JOB_MASON,mason
+JOB_WEAVER,weaver
+JOB_SPINNER,spinner
+JOB_TANNER,tanner
+JOB_COBBLER,cobbler
+JOB_MERCHANT,merchant
+JOB_INNKEEPER,innkeeper
+JOB_PRIEST,priest
+JOB_GUARD,guard
+JOB_LABOURER,labourer
+JOB_SERVANT,servant
+JOB_FISHER,fisher
+JOB_WOODCUTTER,woodcutter
+JOB_MINER,miner
+JOB_CHARCOALBURNER,charcoal burner
+JOB_LORD,lord
+JOB_STEWARD,steward
+JOB_MAYOR,mayor
+JOB_GUILDMASTER,guildmaster
+TALK_RUMOUR_NONE,Nothing new.
+TALK_HERO_OVERHEARD,You overhear {0} telling someone: {1}
+TALK_TOLD_YOU,{0}
+TALK_LEGEND,It is an old tale, but they still tell it: {0}
+D_NEED_PLAIN,Forgive me; I am not quite myself today.
+D_HOST_PLAIN,"Keep your distance, {title}."
+TALK_NEEDS_SKILL,Needs {skill} {level}
+TALK_NEEDS_ITEM,Needs {item}
+TALK_NEEDS_COIN,Needs more coin
+TALK_NEEDS_FOLLOWERS,Needs more followers
+R_AUTHORED_FIRE,"there is talk of fire, but nothing I can swear to."
+R_AUTHORED_RAID,"there is talk of raid, but nothing I can swear to."
+R_AUTHORED_BATTLE,"there is talk of battle, but nothing I can swear to."
+R_AUTHORED_CRIME,"there is talk of crime, but nothing I can swear to."
+R_AUTHORED_DEATH,"there is talk of death, but nothing I can swear to."
+R_AUTHORED_BIRTHWEDDING,"there is talk of birthwedding, but nothing I can swear to."
+R_AUTHORED_FAMINE,"folk are going hungry, and it will get worse."
+R_AUTHORED_DISEASE,"there is talk of disease, but nothing I can swear to."
+R_AUTHORED_FLOODWEATHER,"there is talk of floodweather, but nothing I can swear to."
+R_AUTHORED_TAXLEVY,"there is talk of taxlevy, but nothing I can swear to."
+R_AUTHORED_WAR,there is talk of war.
+R_AUTHORED_ROADBANDITS,"there are bandits in the woods past the ford, and nobody travels there alone."
+R_AUTHORED_OMEN,"there is talk of omen, but nothing I can swear to."
+R_AUTHORED_LANDMARK,"there is talk of landmark, but nothing I can swear to."
+R_AUTHORED_PRICESPIKE,"there is talk of pricespike, but nothing I can swear to."

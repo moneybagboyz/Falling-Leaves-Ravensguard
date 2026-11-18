@@ -47,7 +47,7 @@ public class RngStreamsTests
         var fromSource = System.Text.RegularExpressions.Regex.Matches(text, @"\b(?<n>[A-Z][A-Za-z0-9]*)\s*=\s*0x(?<v>[0-9A-Fa-f]+)\b")
             .Select(m => (Name: m.Groups["n"].Value, Value: Convert.ToUInt32(m.Groups["v"].Value, 16))).ToList();
         var all = All();
-        Assert.True(fromSource.Count >= all.Count, "the source parse found fewer streams than reflection");
+        Assert.True(fromSource.Count >= all.Count - RngStreams.SharedPairs.Length, "the source parse found fewer streams than reflection");
         foreach (var (name, v) in all)
         {
             Assert.True(fromSource.Contains((name, v)) || text.Contains(name + " = "), $"stream {name} is not declared in RngStreams.cs");

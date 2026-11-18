@@ -67,6 +67,24 @@ public class VehicleScaleTests(ITestOutputHelper output)
         foreach (var b in cat.All) Assert.InRange(b.Stats.MaxAnimals, b.Stats.HitchSlots, 8);
     }
 
+    [Fact]
+    public void EveryTemplateSprite_IsItsFootprintAt32PxAMetre_PlusAMarginAndTheRiseAboveTheGround()
+    {
+        string? dir = AppContext.BaseDirectory; while (dir != null && !File.Exists(Path.Combine(dir, "Ravensguard.slnx"))) dir = Path.GetDirectoryName(dir);
+        Assert.NotNull(dir);
+        using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(Path.Combine(dir, "src", "Ravensguard.Game", "assets", "art", "index.json")));
+        var sprites = doc.RootElement.GetProperty("sprites");
+        foreach (var b in Book().Templates.All)
+        {
+            Assert.True(sprites.TryGetProperty(b.Def.Sprite, out var sp), $"{b.Id}: sprite '{b.Def.Sprite}' is not in the art atlas");
+            int w = sp.GetProperty("w").GetInt32(), h = sp.GetProperty("h").GetInt32(), margin = 4;
+            Assert.Equal(b.Stats.LengthCells * 32, w - 2 * margin);                                               // as long as it is on the ground
+            int rise = h - margin - b.Stats.WidthCells * 32;                                                       // what stands above the ground rectangle: bed, cover, load
+            Assert.InRange(rise, 20, 64);
+            output.WriteLine($"{b.Id}: {w} x {h} px = {b.Stats.LengthCells} x {b.Stats.WidthCells} m on the ground + {rise} px rise");
+        }
+    }
+
     /// <summary>Rows at the front that hold nothing but the hitch (pole, yoke, shafts, traces): the metres in front of the body.</summary>
     private static int HitchRows(VehicleCatalog cat, VehicleBlueprint b)
     {

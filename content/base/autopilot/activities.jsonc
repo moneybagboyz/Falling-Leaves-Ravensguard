@@ -1,0 +1,7 @@
+// Autopilot training activities (docs/specs/phase3/autopilot-v1.md 3.3): a skill maps to its practice uses (recipes with practice.cap_level 30), then to real work above the cap.
+[
+  { "type": "activity", "id": "train_smithing_30", "skill": "Smithing", "uses": [ { "recipe": "practice_billet", "d_x100": 45, "cap_level": 30, "needs": [ "forge" ] } ], "then": "work_smithing" },
+  { "type": "activity", "id": "train_carpentry_30", "skill": "Carpentry", "uses": [ { "recipe": "practice_spoon", "d_x100": 40, "cap_level": 30 } ], "then": "work_carpentry" },
+  { "type": "activity", "id": "train_tailoring_30", "skill": "Tailoring", "uses": [ { "recipe": "practice_sampler", "d_x100": 40, "cap_level": 30 } ], "then": "work_tailoring" },
+  { "type": "activity", "id": "train_melee_30", "skill": "Melee", "uses": [ { "recipe": "dummy_hit", "d_x100": 40, "cap_level": 30, "needs": [ "practice_yard" ] } ], "then": "guard" }
+]

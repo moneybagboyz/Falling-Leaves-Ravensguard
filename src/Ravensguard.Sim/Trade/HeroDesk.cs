@@ -62,6 +62,8 @@ public sealed record HeroCommand
     public int[]? Choice { get; init; }
     public CraftSiteSpec? Site { get; init; }
     public long UntilSec { get; init; }
+    /// <summary>Who issued it (autopilot spec 2, 4.1): the player, the autopilot layer, or an NPC. Part of the command log; the barrier's <see cref="HeroDesk.Gate"/> checks the autopilot's.</summary>
+    public CommandOrigin Origin { get; init; }
     /// <summary>Barter: what the hero gives and takes (counted goods), items both ways and coin both ways.</summary>
     public (ushort Good, long Qty)[] Give { get; init; } = [];
     public (ushort Good, long Qty)[] Take { get; init; } = [];
@@ -194,6 +196,13 @@ public sealed class HeroDesk
     private EntityId _person;
 
     public HeroView? View => _view;
+    /// <summary>
+    /// The barrier check of commands the autopilot issued (autopilot spec 4.3): called for every command with <c>Origin = Autopilot</c> before it is applied; a non-null result rejects it (nothing changes) and is the answer
+    /// the command gets. Null for a desk without autopilot.
+    /// </summary>
+    public Func<HeroContext, HeroCommand, HeroResult?>? Gate { get; set; }
+    /// <summary>Called after every command is applied, with its result (the autopilot settles what it reserved).</summary>
+    public Action<HeroContext, HeroCommand, HeroResult>? Settled { get; set; }
     public int Pending { get { lock (_gate) return _pending.Count; } }
 
     public HeroDesk(long lastSeq = 0) { _seq = lastSeq; }
@@ -217,7 +226,8 @@ public sealed class HeroDesk
         }
         foreach (var c in due)
         {
-            var r = Apply(ctx, c);
+            var r = (c.Origin == CommandOrigin.Autopilot ? Gate?.Invoke(ctx, c) : null) ?? Apply(ctx, c);
+            Settled?.Invoke(ctx, c, r);
             ctx.Party.LastSeq = Math.Max(ctx.Party.LastSeq, c.Seq);
             _results.Add(r);
         }

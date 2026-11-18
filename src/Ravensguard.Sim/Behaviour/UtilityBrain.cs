@@ -27,6 +27,8 @@ public struct ChoiceContext
     public ulong Seed;
     public long GameSec;
     public ulong Person;
+    /// <summary>The directive and limits of an autopilot person (null for an NPC): a bias per action and a mask of removed actions.</summary>
+    public ActionPolicy? Policy;
 }
 
 public readonly record struct Choice(ActionKind Kind, int Score, ActionKind RunnerUp, int RunnerUpScore);
@@ -104,11 +106,13 @@ public sealed class UtilityBrain
     {
         var a = _acts[actIndex];
         if (!Gate(a, n, c)) return -1;
+        if (c.Policy != null && c.Policy.Forbids(a.Kind)) return -1;
         long num = 0, den = 0;
         foreach (var w in a.Weights) { num += (long)w.W * Eval(_curves[w.Need], Input(w.Need, n)); den += w.W; }
         int s = den > 0 ? (int)(num / den) : 0;
         if (a.Kind == c.Scheduled) s += Profile.ScheduleBonusPm;
         if (a.Kind == c.Current && c.MinutesInCurrent < a.CommitMin) s += Profile.CommitBonusPm;
+        if (c.Policy != null) s += c.Policy.BiasPm[(int)a.Kind];
         if (a.Kind == ActionKind.Sleep && n.FatiguePm >= Profile.ExhaustedPm) s += 1500;
         if (a.Kind == ActionKind.Flee && n.ThreatPm > Profile.FleeThreatPm) s += 2000;
         // a person who is far too cold or hot, or wet and getting cold, goes in out of it whatever the day's plan says (content: shelter_override_pm; clothing spec 4.3 and 4.4)

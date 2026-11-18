@@ -14,6 +14,7 @@ public static class BaseVocabulary
         // dialogue (docs/specs/phase3/dialogue-barks-rumours.md 3.1): the speaker, the mood, the relationship and the moment
         "speaker_job_is", "speaker_job_class", "mood_below", "mood_above", "relationship_at_least", "relationship_tier", "is_kin", "time_of_day_is", "knows_rumour_kind",
         "hero_is_bloody", "hero_wealth_visible", "speaker_has_need", "feast_today", "flag_set", "speaker_is_shopkeeper", "speaker_is_child", "speaker_sex",
+        "market_dear", "unrest_high", "alarm_near", "in_combat", "hero_is_ragged", "rumour_hop_is", "rumour_via", "rumour_garbled",
     ];
 
     public static readonly string[] Effects = ["start_contract", "give_item", "add_rumour", "set_flag", "add_trust", "end_dialogue"];

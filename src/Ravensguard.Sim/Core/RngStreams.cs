@@ -68,6 +68,8 @@ public static class RngStreams
     public const uint BedFallback = 0x302;
     /// <summary>The routine jobs a settlement's households post (key settlement, tick = game day).</summary>
     public const uint RoutineJobs = 0x303;
+    /// <summary>Autopilot-only choices that are not utility ties (docs/specs/phase3/autopilot-v1.md 5): none in v1, and a test asserts it is never drawn (<c>DetRng.Draws</c> style guard in <c>AutopilotRng</c>).</summary>
+    public const uint AutopilotReserved = 0x380;
 
     // ---------- dialogue, barks and rumours (docs/specs/phase3/dialogue-barks-rumours.md section 5) ----------
     /// <summary>The systemic line pick (key speaker, tick = game second / 60, draw = listener index x 16 + turn mod 16).</summary>

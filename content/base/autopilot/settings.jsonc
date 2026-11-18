@@ -1,0 +1,6 @@
+// Autopilot numbers (docs/specs/phase3/autopilot-v1.md 3.3, 8, 9). Defaults of open question 1: a cap of 3 crowns a day, no crimes, risk Medium, home by nightfall off.
+[
+  { "type": "autopilot_settings", "id": "default", "default_max_risk_pm": 500, "stuck_game_hours": 20, "summary_hour": 6, "log_lines_max": 2000, "notify_speed_drop_s": 5, "home_by_nightfall_offset_min": 0,
+    "default_spend_cap_mites_per_day": 300, "default_purse_reserve_mites": 0, "risk_low_pm": 200, "risk_medium_pm": 500, "risk_high_pm": 800, "max_commute_m": 1350, "escort_risk_cut_pm": 400,
+    "train_uses_per_hour": 12, "food_days_in_pack": 3, "rest_max_hours": 72, "directive_bias_pm": 400 }
+]

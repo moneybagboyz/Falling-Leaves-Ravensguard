@@ -28,7 +28,7 @@ public sealed class StreetOptions
     public int Speed;            // --shot-speed 1|2|4|8 (dev): the clock speed from the start, to watch the world tick
     public bool AllNeighbours;   // --shot-neighbours: ask for the eight neighbour regions at the start (dev: a world map with several regions, each with its economy running)
     public bool CaravanShot;      // --shot-caravan: step the world until a caravan is on the road, then start the hero a few metres behind it (dev screenshot of the LODBridge)
-    public string? Ride;         // --shot-ride horse|horse_near|cart|wagon|stuck (dev): a palfrey, mounted or beside the hero; a cart or ox wagon with a team and a load, driven; stuck: a laden wagon bogged in mud
+    public string? Ride;         // --shot-ride horse|horse_near|cart|wagon|stuck|cart_beside|wagon_beside (dev): a palfrey, mounted or beside the hero; a cart or ox wagon with a team and a load, driven; stuck: a laden wagon bogged in mud
     public string? Travel;       // --shot-travel encounter|camp (dev): a bandit ambush on the road ahead, or a night camp with a lit fire
     public bool PeopleShot;       // --shot-people: wait until the LODBridge has promoted townsfolk before the picture is taken (dev screenshot of the people bridge)
     public bool MapShot;         // --shot-map: open the world map and capture it instead of the street

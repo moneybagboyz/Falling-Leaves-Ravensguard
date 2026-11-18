@@ -57,14 +57,24 @@ public partial class StreetView
             case "cart":
             {
                 var bp = r.Templates.Find(a.Length > 0 ? a[0] : "cart"); if (bp == null) return "unknown template";
-                var v = r.Vehicles.Create(bp, Ravensguard.Sim.Core.EntityId.None, x + 2500, y);
-                for (int i = 0; i < bp.Stats.HitchSlots; i++) r.Vehicles.Hitch(v, r.Animals.Create(r.Breeds.Get(bp.Stats.HitchKind == "pole_yoke" && bp.Id == "ox_wagon" ? "ox" : "horse_draught"), Ravensguard.Sim.Core.EntityId.None, 900, 0, v.XMm, v.YMm));
-                v.Cargo.CreateUpTo(r.Goods.IdOf("oats"), bp.Stats.CargoKg * 600L, Ravensguard.Sim.Goods.CreateReason.Other);
-                return $"{bp.Def.Name} with {v.Team.Count} animals: press {H("world.act")} next to it to drive";
+                int animals = a.Length > 1 && int.TryParse(a[1], out int n) ? Math.Clamp(n, 0, bp.Stats.MaxAnimals) : bp.Stats.HitchSlots;
+                var v = BesideCart(r, bp, x, y, animals);
+                return $"{bp.Def.Name} {bp.Stats.WidthCells} x {bp.Stats.LengthCells} m with {v.Team.Count} animals (up to {bp.Stats.MaxAnimals}): press {H("world.act")} next to it to drive";
             }
             case "mud": r.SurfaceOverride = a.Length > 0 && a[0] == "off" ? null : Surface.DeepMud; return r.SurfaceOverride == null ? "mud off" : "deep mud";
         }
         return "?";
+    }
+
+    /// <summary>A template vehicle standing with its seat level with the hero and its near side a metre and a half in front of them, the first <paramref name="animals"/> of its team hitched, and a load.</summary>
+    static Ravensguard.Sim.Carts.VehicleRow BesideCart(RideBook r, Ravensguard.Sim.Carts.VehicleBlueprint bp, long x, long y, int animals)
+    {
+        var st = bp.Stats;
+        var v = r.Vehicles.Create(bp, Ravensguard.Sim.Core.EntityId.None, x, y - 1500 - st.WidthCells * 500);
+        string beast = bp.Id is "ox_wagon" or "hay_wain" ? "ox" : "horse_draught";
+        for (int i = 0; i < animals; i++) r.Vehicles.Hitch(v, r.Animals.Create(r.Breeds.Get(beast), Ravensguard.Sim.Core.EntityId.None, 900, 0, v.XMm, v.YMm));
+        v.Cargo.CreateUpTo(r.Goods.IdOf("oats"), st.CargoKg * 600L, Ravensguard.Sim.Goods.CreateReason.Other);
+        return v;
     }
 
     /// <summary>The surface under the hero's wheels, from the ground tile and the weather of now (spec 4.5).</summary>
@@ -141,7 +151,7 @@ public partial class StreetView
         if (_world.RideMsgSerial != _rideMsg) { _rideMsg = _world.RideMsgSerial; _router?.ShowToast(L.F(_world.LastRideKey, _world.LastRideArg)); }
     }
 
-    /// <summary>Dev start (<c>--shot-ride horse|cart|stuck|hitched</c>): a palfrey beside the hero, mounted at once for <c>horse</c>; a cart with a loaded bed and a horse for the cart shots.</summary>
+    /// <summary>Dev start (<c>--shot-ride horse|cart|wagon|stuck|cart_beside|wagon_beside</c>): a palfrey beside the hero, mounted at once for <c>horse</c>; a cart with a loaded bed and a horse for the cart shots.</summary>
     void DevRide(string what)
     {
         var r = _ride!; var (x, y) = _world.WorldMm;
@@ -151,10 +161,12 @@ public partial class StreetView
             var a = r.Animals.Create(palfrey, Ravensguard.Sim.Core.EntityId.None, 900, 0, x + 1500, y);
             if (what == "horse") { a.XMm = x; a.YMm = y; a.State = AnimalState.Ridden; r.Mounted = a.Id; }
         }
+        else if (what.EndsWith("_beside"))                                                   // the hero on foot, level with the vehicle's seat, beside the vehicle and its team (screenshots for scale)
+            BesideCart(r, r.Templates.Get(what.StartsWith("wagon") ? "ox_wagon" : "cart"), x, y, what.StartsWith("wagon") ? 4 : 1);
         else
         {
-            var a = r.Animals.Create(r.Breeds.Get("horse_draught"), Ravensguard.Sim.Core.EntityId.None, 900, 0, x, y);
-            var b = r.Animals.Create(r.Breeds.Get("horse_draught"), Ravensguard.Sim.Core.EntityId.None, 900, 0, x, y);
+            var a = r.Animals.Create(r.Breeds.Get(what == "wagon" || what == "stuck" ? "ox" : "horse_draught"), Ravensguard.Sim.Core.EntityId.None, 900, 0, x, y);
+            var b = r.Animals.Create(r.Breeds.Get(what == "wagon" || what == "stuck" ? "ox" : "horse_draught"), Ravensguard.Sim.Core.EntityId.None, 900, 0, x, y);
             var cart = r.Vehicles.Create(r.Templates.Get(what == "wagon" || what == "stuck" ? "ox_wagon" : "cart"), Ravensguard.Sim.Core.EntityId.None, x, y);
             r.Vehicles.Hitch(cart, a); if (cart.Team.Count < r.Vehicles.StatsOf(cart).HitchSlots) r.Vehicles.Hitch(cart, b);
             ushort oats = r.Goods.IdOf("oats");

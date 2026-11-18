@@ -379,14 +379,10 @@ public sealed class PeopleBridge
         if (window == a.DecisionWindow) return;
         a.DecisionWindow = window;
         long at = window * 20;
-        NeedModel.Read(a.A, at, out var needs, out var ctx);
-        ctx.Current = a.Intent; ctx.MinutesInCurrent = a.IntentSince == long.MinValue ? 999 : (int)((at - a.IntentSince) / 60);
-        ctx.HasBoard = _board.Count > 0 && ctx.Scheduled == ActionKind.Idle && !ctx.Dark && !a.A.Child && (!a.A.HasWork || a.A.Occupation == Occupation.Labourer || a.A.Class == SocialClass.Peasant) && _board.Any(j => j.Settlement == a.A.HomeSettlement && j.Region == a.A.Region);
-        needs.WageRatioPm = ctx.HasBoard ? 2000 : 0;
-        needs.ColdPm = a.ColdPm; needs.WetPm = a.WetPm; needs.HeatPm = a.HeatPm;
-        ctx.CanShelter = a.Body != null && !a.Indoors && (a.ColdPm > 0 || a.WetPm > 200 || a.HeatPm > 0);
         var brain = UtilityBrain.Default;
-        var ch = brain.Choose(needs, ctx);
+        // the one function every person's choice goes through (the hero and party members on autopilot call it too: Behaviour/PersonDecision)
+        bool boardHere = _board.Count > 0 && _board.Any(j => j.Settlement == a.A.HomeSettlement && j.Region == a.A.Region);
+        var ch = PersonDecision.Decide(brain, a.A, at, a.Intent, a.IntentSince, boardHere, a.ColdPm, a.WetPm, a.HeatPm, a.Body != null, a.Indoors).Choice;
         if (ch.Kind != a.Intent) { a.Intent = ch.Kind; a.IntentSince = at; }
         a.Why = ch.Kind == ActionKind.TakeJob ? "Looking for work" : $"{ch.Kind} {ch.Score}";
         // a person who would take the job does not rush it the same second as everyone else: they get round to it, on average, once in eight minutes (a draw keyed on the window, never on the tick)

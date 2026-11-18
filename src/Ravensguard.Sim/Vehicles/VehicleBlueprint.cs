@@ -23,6 +23,8 @@ public sealed record VehicleStats
     public int TurningRadiusDm { get; init; }
     public int WidthCells { get; init; }
     public int LengthCells { get; init; }
+    /// <summary>The first row (counted from the rear) that holds a seat, or -1: where the hero sits when driving, and so where the vehicle is placed.</summary>
+    public int SeatRow { get; init; } = -1;
     public bool Runners { get; init; }
     public int WheelHp { get; init; }
 }
@@ -44,7 +46,7 @@ public sealed class VehicleBlueprint
         int n0 = errors.Count; string who = $"vehicle '{d.Id}'";
         if (d.Rows.Count == 0) { errors.Add($"{who}: no rows"); return null; }
         int width = d.Rows[0].Length;
-        int mass = 0, cargoKg = 0, cargoL = 0, wheels = 0, axles = 0, seats = 0, hitches = 0, wheelHp = 0;
+        int seatRow = -1, mass = 0, cargoKg = 0, cargoL = 0, wheels = 0, axles = 0, seats = 0, hitches = 0, wheelHp = 0;
         string hitchTag = d.Hitch.Kind;
         var cells = new Dictionary<char, List<VehiclePartDef>>();
         foreach (var (k, ids) in d.Legend)
@@ -71,7 +73,7 @@ public sealed class VehicleBlueprint
                     mass += p.MassKg; cargoKg += p.CargoKg; cargoL += p.CargoL;
                     if (p.Tags.Contains("wheel")) { wheels++; wheelHp = wheelHp == 0 ? p.Hp : Math.Min(wheelHp, p.Hp); }
                     if (p.Tags.Contains("axle")) axles++;
-                    if (p.Tags.Contains("seat")) seats++;
+                    if (p.Tags.Contains("seat")) { seats++; if (seatRow < 0) seatRow = r; }
                     if (p.Tags.Contains("hitch") && p.Tags.Contains(hitchTag)) hitches++;
                 }
             }
@@ -91,7 +93,7 @@ public sealed class VehicleBlueprint
             Stats = new VehicleStats
             {
                 MassKg = mass, CargoKg = cargoKg, CargoL = cargoL, Wheels = wheels, Axles = axles, AxleLimitKg = d.AxleLimitKg, HitchSlots = d.Hitch.Slots, MaxAnimals = Math.Max(d.Hitch.Slots, d.Hitch.MaxAnimals), HitchKind = d.Hitch.Kind, Driver = d.Driver,
-                Passengers = d.Passengers, Seats = seats, BaseSpeedCmps = d.BaseSpeedCmps, TurningRadiusDm = d.TurningRadiusDm, WidthCells = width, LengthCells = d.Rows.Count, Runners = d.Runners, WheelHp = wheelHp,
+                Passengers = d.Passengers, Seats = seats, BaseSpeedCmps = d.BaseSpeedCmps, TurningRadiusDm = d.TurningRadiusDm, WidthCells = width, LengthCells = d.Rows.Count, SeatRow = seatRow, Runners = d.Runners, WheelHp = wheelHp,
             },
         };
     }
