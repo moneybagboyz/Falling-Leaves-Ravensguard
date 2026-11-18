@@ -6,7 +6,7 @@ using Ravensguard.Sim.World;
 namespace Ravensguard.Sim.Diagnostics;
 
 /// <summary>The player commands the live sim takes. Never key codes: only what the sim was asked to do.</summary>
-public enum ReplayKind : byte { Input = 1, Speed = 2, Torch = 3, MoveTo = 4, UsePortal = 5, ClearPath = 6 }
+public enum ReplayKind : byte { Input = 1, Speed = 2, Torch = 3, MoveTo = 4, UsePortal = 5, ClearPath = 6, Ride = 7 }
 
 /// <summary>One command and the live tick it was issued at (it takes effect at the next step).</summary>
 public readonly record struct ReplayCommand(long Tick, ReplayKind Kind, long A = 0, long B = 0, long C = 0)
@@ -17,6 +17,7 @@ public readonly record struct ReplayCommand(long Tick, ReplayKind Kind, long A =
     public static ReplayCommand MoveTo(long tick, Cell3 c) => new(tick, ReplayKind.MoveTo, c.X, c.Y, c.Z);
     public static ReplayCommand UsePortal(long tick) => new(tick, ReplayKind.UsePortal);
     public static ReplayCommand ClearPath(long tick) => new(tick, ReplayKind.ClearPath);
+    public static ReplayCommand Ride(long tick, int code) => new(tick, ReplayKind.Ride, code);
 
     /// <summary>One readable line for crash reports ("tick 4021 move_to 12,40,0").</summary>
     public override string ToString() => Kind switch
@@ -26,6 +27,7 @@ public readonly record struct ReplayCommand(long Tick, ReplayKind Kind, long A =
         ReplayKind.Torch => $"tick {Tick} torch {(A != 0 ? "on" : "off")}",
         ReplayKind.MoveTo => $"tick {Tick} move_to {A},{B},{C}",
         ReplayKind.UsePortal => $"tick {Tick} use_portal",
+        ReplayKind.Ride => $"tick {Tick} ride {A}",
         _ => $"tick {Tick} clear_path",
     };
 
@@ -40,6 +42,7 @@ public readonly record struct ReplayCommand(long Tick, ReplayKind Kind, long A =
             case ReplayKind.MoveTo: w.CommandMoveTo(new Cell3((int)A, (int)B, (int)C)); break;
             case ReplayKind.UsePortal: w.UsePortal(); break;
             case ReplayKind.ClearPath: w.ClearPath(); break;
+            case ReplayKind.Ride: w.RideCommand((int)A); break;
         }
     }
 }

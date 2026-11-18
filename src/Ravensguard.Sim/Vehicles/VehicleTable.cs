@@ -135,6 +135,7 @@ public sealed class VehicleTable
     // ------------------------------------------------------------------ cargo (conserving)
 
     /// <summary>Loads goods from another store into the bed: all or nothing, mass and volume limits together. True when they fit.</summary>
+    public long GoodMassG(ushort good) => _goods.MassG(good, 1);
     public bool Load(VehicleRow r, Store from, ushort good, long qty) => Store.Move(from, r.Cargo, good, qty);
     public bool Unload(VehicleRow r, Store to, ushort good, long qty) => Store.Move(r.Cargo, to, good, qty);
 

@@ -56,6 +56,8 @@ public sealed class WorldState
     public Ravensguard.Sim.Jobs.JobTable? Jobs { get; set; }
     /// <summary>Unfinished crafts, skills by use and what people know how to make (saved in the "crafting" section once anyone has crafted); the components of a job are in its store in the <see cref="Economy"/>.</summary>
     public Ravensguard.Sim.Crafting.CraftState? Crafting { get; set; }
+    /// <summary>Animals that are individuals, vehicles with their cargo, horse herds, loans and the hero's ride (saved in the "mounts" section once any exists).</summary>
+    public Ravensguard.Sim.Animals.RideBook? Mounts { get; set; }
     /// <summary>The hero's side of the records (trade-inventory-character spec): worn slots and where each stack sits, the price notebook, the party, the people known (saved in the "party" section when present). The things themselves are item rows, the pack store and the purse in the <see cref="Economy"/>.</summary>
     public Ravensguard.Sim.Trade.HeroParty? Party { get; set; }
     /// <summary>The abstract continent: 256 summaries, roads, caravans (saved in the "continent" section; null for a world that has none yet, which gets a fresh one when it runs).</summary>
@@ -291,6 +293,7 @@ public static class WorldSave
             Growth = (w.Growth ?? w.HomeRecords?.Economy.Growth.State) is { IsEmpty: false } gs ? GrowthSave.Capture(gs) : null,
             Jobs = w.Jobs is { Count: > 0 } jt ? JobsSave.Capture(jt) : null,
             Crafting = w.Crafting is { IsEmpty: false } cr ? CraftingSave.Capture(cr) : null,
+            Mounts = w.Mounts is { IsEmpty: false } rb ? MountsSave.Capture(rb) : null,
             Party = w.Party == null ? null : Ravensguard.Sim.Trade.HeroPartySave.Capture(w.Party),
             Production = w.Production == null ? null : ProductionSave.Capture(w.Production), Markets = w.Markets == null ? null : MarketsSave.Capture(w.Markets),
             Regions = view?.CaptureResident(), PagedRegions = view != null ? view.Paged : new SortedDictionary<int, byte[]>(w.RegionSections.ToDictionary(kv => kv.Key, kv => kv.Value)),
@@ -387,6 +390,7 @@ public static class WorldSave
             Production = production, Markets = markets, RegionSections = regionSections, Growth = growth,
             Jobs = file.Sections.ContainsKey(JobsSection) ? Decode<JobsSave>(file, JobsSection, compressed: true).Restore() : null,
             Crafting = file.Sections.ContainsKey(CraftingSection) ? Decode<CraftingSave>(file, CraftingSection, compressed: true).Restore() : null,
+            Mounts = file.Sections.ContainsKey(MountsSave.SectionName) ? RestoreMounts(Decode<MountsSave>(file, MountsSave.SectionName, compressed: true), content, economy, cs.Seed) : null,
             Party = file.Sections.ContainsKey(PartySection) ? Decode<Ravensguard.Sim.Trade.HeroPartySave>(file, PartySection, compressed: true).Restore() : null,
             Hero = hero, Codex = codex, Live = resume, Economy = economy, Abstract = abstractState,
             Farming = file.Sections.ContainsKey(FarmingSection) ? Decode<FarmingSave>(file, FarmingSection, compressed: true).Restore(region) : null,
@@ -412,6 +416,14 @@ public static class WorldSave
         if (!string.Equals(stored, actual, StringComparison.Ordinal))
             throw new SaveException($"This save cannot be loaded: the regenerated {layer} differs from the one the save was made with "
                 + "(the world generator or game content changed since). Load it with the game version that made it.");
+    }
+
+    /// <summary>The ride book of a save: on the world's own goods and mass ledger when it has an economy, else on a private pair (a bare test world).</summary>
+    private static Ravensguard.Sim.Animals.RideBook RestoreMounts(MountsSave m, ContentDatabase? content, EconomyState? economy, ulong seed)
+    {
+        if (content == null) throw new SaveException("The mounts of this save need the game content to be read.");
+        var goods = economy?.Goods ?? new Ravensguard.Sim.Goods.GoodCatalog(content);
+        return m.Restore(content, goods, economy?.Mass ?? new Ravensguard.Sim.Goods.MassLedger(goods.Count), seed);
     }
 
     private static T Decode<T>(SaveFile f, string name, bool compressed)
@@ -551,6 +563,7 @@ public sealed class LiveCapture
     internal GrowthSave? Growth { get; init; }
     internal JobsSave? Jobs { get; init; }
     internal CraftingSave? Crafting { get; init; }
+    internal MountsSave? Mounts { get; init; }
     internal Ravensguard.Sim.Trade.HeroPartySave? Party { get; init; }
     internal MarketsSave? Markets { get; init; }
     internal ContinentSave? ContinentSt { get; init; }
@@ -596,6 +609,7 @@ public sealed class LiveCapture
         if (Growth != null) sections.Add(new(WorldSave.GrowthSection, SaveCodec.SerializeCompressed(Growth)));
         if (Jobs != null) sections.Add(new(WorldSave.JobsSection, SaveCodec.SerializeCompressed(Jobs)));
         if (Crafting != null) sections.Add(new(WorldSave.CraftingSection, SaveCodec.SerializeCompressed(Crafting)));
+        if (Mounts != null) sections.Add(new(MountsSave.SectionName, SaveCodec.SerializeCompressed(Mounts)));
         if (Party != null) sections.Add(new(WorldSave.PartySection, SaveCodec.SerializeCompressed(Party)));
         if (Production != null) sections.Add(new(WorldSave.ProductionSection, SaveCodec.SerializeCompressed(Production)));
         if (Markets != null) sections.Add(new(WorldSave.MarketsSection, SaveCodec.SerializeCompressed(Markets)));

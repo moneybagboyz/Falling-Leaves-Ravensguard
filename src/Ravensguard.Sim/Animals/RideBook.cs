@@ -28,6 +28,8 @@ public sealed class RideBook
     public HerdLedger Herds { get; } = new();
     public ulong Seed { get; }
     public List<HorseLoan> Loans { get; } = [];
+    /// <summary>Goods the hero has dropped from a stuck cart: a heap on the ground, counted by the mass ledger like any store, loaded back when the cart is free.</summary>
+    public Store Heap { get; }
 
     // ---- the hero's ride (saved)
     public EntityId Mounted, Driving, MountTarget;
@@ -50,12 +52,13 @@ public sealed class RideBook
     {
         Breeds = AnimalCatalog.From(db); Templates = VehicleCatalog.From(db); Seed = seed;
         Animals = new AnimalTable(Breeds); Vehicles = new VehicleTable(Templates, Animals, goods, ledger);
+        Heap = new Store(goods, ledger, StoreKind.Open, EntityId.MakeIn(IdKind.Other, 0, 0x7F0_0000));
     }
 
     public bool IsMounted => Mounted != EntityId.None;
     public bool IsDriving => Driving != EntityId.None;
     public bool Busy => MountLeftGs > 0 || DismountLeftGs > 0;
-    public bool IsEmpty => Animals.Count == 0 && Vehicles.Rows.Count == 0 && Herds.IsEmpty && Loans.Count == 0;
+    public bool IsEmpty => Animals.Count == 0 && Vehicles.Rows.Count == 0 && Herds.IsEmpty && Loans.Count == 0 && Heap.RowCount == 0;
     public Animal? MountedAnimal => IsMounted ? Animals.Find(Mounted) : null;
     public VehicleRow? DrivenVehicle => IsDriving ? Vehicles.Find(Driving) : null;
     public Surface Surface => SurfaceOverride ?? SurfaceNow();
@@ -197,6 +200,18 @@ public sealed class RideBook
     }
 
     public void Dig(long nowSec) { if ((DrivenVehicle ?? NearestVehicle()) is { } v) v.DugUntilSec = nowSec + Stuck.DigMinutes * 60; }
+
+    /// <summary>Drops cargo on the heap until about <paramref name="kg"/> kilograms are off the bed (5 kg per game second per person is the view's pace); returns kilograms moved.</summary>
+    public int UnloadToHeap(int kg) => Unload(Heap, kg);
+
+    /// <summary>Loads the heap back into the bed as far as it fits; returns kilograms moved.</summary>
+    public int ReloadFromHeap()
+    {
+        var v = DrivenVehicle ?? NearestVehicle(); if (v == null) return 0;
+        long moved = 0;
+        foreach (var (good, qty) in Heap.Rows()) moved += Store.MoveUpTo(Heap, v.Cargo, good, qty) * Vehicles.GoodMassG(good);
+        return (int)(moved / 1000);
+    }
 
     /// <summary>Drops cargo on the ground store (the caller supplies it) until <paramref name="kg"/> kilograms are off the bed; returns kilograms moved.</summary>
     public int Unload(Store ground, int kg) => (DrivenVehicle ?? NearestVehicle()) is { } v ? (int)(Vehicles.UnloadKg(v, ground, kg) / 1000) : 0;

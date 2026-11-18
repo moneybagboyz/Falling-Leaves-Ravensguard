@@ -66,6 +66,9 @@ public sealed class SessionRecorder
         return has;
     }
 
+    /// <summary>E, hitch, drive, push, unload and dig (<see cref="RideCode"/>): recorded so a replay of a ride repeats it.</summary>
+    public void RideCommand(int code) { Commands.Append(ReplayCommand.Ride(World.Tick, code)); World.RideCommand(code); }
+
     public void Step()
     {
         World.Step();

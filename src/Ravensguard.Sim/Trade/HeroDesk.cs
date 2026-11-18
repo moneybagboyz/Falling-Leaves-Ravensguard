@@ -458,9 +458,9 @@ public sealed class HeroDesk
         return i < 0 ? (-1, -1) : (i, p.Household[i]);
     }
 
-    private HeroCandidateInfo Candidate(HeroContext ctx, int i, EntityId id)
+    private HeroCandidateInfo Candidate(HeroContext ctx, int i, EntityId id, int day)
     {
-        var p = ctx.State.Population.People; var e = ctx.Econ; int day = (int)(ctx.State.Abstract?.HourDone / 24 ?? 0);
+        var p = ctx.State.Population.People; var e = ctx.Econ;
         int hh = p.Household[i];
         int maxSkill = 0; string trade = p.Occupation[i].ToString();
         for (int s = 0; s < PersonTable.SkillSlots; s++) maxSkill = Math.Max(maxSkill, p.SkillAt(i, s).Level);
@@ -491,7 +491,7 @@ public sealed class HeroDesk
     {
         var (i, hh) = PersonOf(ctx, c.Person); if (i < 0) return R(c, HeroResultCode.Invalid, "They are gone.");
         if (ctx.Party.Squad.Find(c.Person) != null) return R(c, HeroResultCode.Invalid, "They already work for you.");
-        var info = Candidate(ctx, i, c.Person); int day = (int)(c.IssuedSec / 86400);
+        int day = (int)(c.IssuedSec / 86400); var info = Candidate(ctx, i, c.Person, day);
         var (ans, score, res) = Hiring.Ask(ctx.Trade, ctx.Seed, day, ctx.WageU, info.C, c.Wage, c.Danger, c.Terms);
         string name = ctx.State.Population.People.FullName(i);
         if (ans != HireAnswer.Accept)
@@ -510,7 +510,7 @@ public sealed class HeroDesk
     {
         var (i, hh) = PersonOf(ctx, c.Person); if (i < 0) return R(c, HeroResultCode.Invalid, "They are gone.");
         if (ctx.Party.Squad.Find(c.Person) is { Origin: FollowerOrigin.Recruited }) return R(c, HeroResultCode.Invalid, "They are already with you.");
-        var info = Candidate(ctx, i, c.Person); int day = (int)(c.IssuedSec / 86400);
+        int day = (int)(c.IssuedSec / 86400); var info = Candidate(ctx, i, c.Person, day);
         int leadership = ctx.Craft.State.Book.Level(ctx.Party.Hero, Skill.Leadership);
         long wage = c.Wage > 0 ? c.Wage : Hiring.FairOffer(ctx.Trade, Hiring.ReservationWage(ctx.Trade, ctx.WageU, info.C.MaxSkill, info.C.TrustPm), info.C);
         int size = ctx.Party.Squad.Members.Count(m => m.Active && m.Person != c.Person);
@@ -693,7 +693,7 @@ public sealed class HeroDesk
             mv = new MarketView(_market, mb.Name, mb.IsOpen((int)(hourDone % 24)), (int)(hourDone / 24), lines, MerchantCash(mb), merchItems);
         }
         PersonView? pv = null;
-        if (_person != EntityId.None) { var (i, hh) = PersonOf(ctx, _person); if (i >= 0) pv = MakePerson(ctx, i, hh); }
+        if (_person != EntityId.None) { var (i, hh) = PersonOf(ctx, _person); if (i >= 0) pv = MakePerson(ctx, i, hh, (int)(hourDone / 24)); }
         int leadership = book.Level(party.Hero, Skill.Leadership);
         // walk the worn containers for the volume bar
         long wornCap = 0, wornUsed = 0;
@@ -714,10 +714,10 @@ public sealed class HeroDesk
         return long.MinValue;
     }
 
-    private PersonView MakePerson(HeroContext ctx, int i, int hh)
+    private PersonView MakePerson(HeroContext ctx, int i, int hh, int day)
     {
         var e = ctx.Econ; var p = ctx.State.Population.People; var id = p.IdOf(i);
-        var info = Candidate(ctx, i, id);
+        var info = Candidate(ctx, i, id, day);
         long res = Hiring.ReservationWage(ctx.Trade, ctx.WageU, info.C.MaxSkill, info.C.TrustPm);
         var goods = hh >= 0 && hh < e.HouseholdCount ? e.HouseholdStore[hh].Rows().Select(r => (r.Good, r.Qty)).ToList() : [];
         long coin = hh >= 0 && hh < e.HouseholdCount ? e.Ledger.Balance(e.HouseholdPurse[hh]).Mites : 0;

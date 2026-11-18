@@ -1,3 +1,4 @@
+using Ravensguard.Sim.Animals;
 using Ravensguard.Sim.Codex;
 using Ravensguard.Sim.Core;
 using Ravensguard.Sim.Lighting;
@@ -181,7 +182,8 @@ public sealed class LiveWorld
         int mult = (int)Clock.Speed;
         _moving = false;
         if (_usePending) { _usePending = false; TryPortalHere(force: true); }
-        if (mult > 0) MoveHero(mult);
+        if (_rideCmd != 0) RunRideCommand();
+        if (mult > 0) { if (Ride is { IsMounted: true } or { IsDriving: true } or { Busy: true }) MoveRidden(mult); else MoveHero(mult); }
         NoteWalked();
         Snapshot = Publish();
     }
@@ -294,25 +296,98 @@ public sealed class LiveWorld
     private void MoveHero(int mult)
     {
         Fixed budget = SpeedOfInput() * DtPerTick * mult;
-        if (_input.Any)
-        {
-            _path = null;
-            int dx = _input.Dx, dy = _input.Dy;
-            Fixed vx = Fixed.FromInt(dx), vy = Fixed.FromInt(dy);
-            if (dx != 0 && dy != 0) { vx = vx * Diag; vy = vy * Diag; }
-            SetFacing(dx, dy);
-            Fixed left = budget;
-            while (left > Fixed.Zero)
-            {
-                Fixed s = Fixed.Min(left, MaxSubStep);
-                bool moved = TryMove(vx * s, vy * s);
-                if (moved) _moving = true;
-                else break;
-                left -= s;
-                AutoPortal();
-            }
-        }
+        if (_input.Any) StepInput(budget);
         else if (_path != null) FollowPath(budget);
+        if (!_input.Any && _path == null) _mode = MoveMode.Jog;
+    }
+
+    /// <summary>Walks the held direction for up to <paramref name="budget"/> metres in sub-steps of at most a quarter metre; stops at the first step a wall refuses.</summary>
+    private void StepInput(Fixed budget)
+    {
+        _path = null;
+        int dx = _input.Dx, dy = _input.Dy;
+        Fixed vx = Fixed.FromInt(dx), vy = Fixed.FromInt(dy);
+        if (dx != 0 && dy != 0) { vx = vx * Diag; vy = vy * Diag; }
+        SetFacing(dx, dy);
+        Fixed left = budget;
+        while (left > Fixed.Zero)
+        {
+            Fixed s = Fixed.Min(left, MaxSubStep);
+            bool moved = TryMove(vx * s, vy * s);
+            if (moved) _moving = true;
+            else break;
+            left -= s;
+            AutoPortal();
+        }
+    }
+
+    // ---------------- riding and driving (horses-and-carts spec 4.1, 4.4) ----------------
+
+    /// <summary>The hero's horses, carts and ride (null until <see cref="AttachRide"/>). The ride is stepped here, one game second at a time, so stamina, wheels and the stuck rolls follow game time, never the tick.</summary>
+    public RideBook? Ride { get; private set; }
+    public void AttachRide(RideBook book) { Ride = book; SyncRide(); }
+
+    /// <summary>The hero's world position in millimetres (the window's origin added).</summary>
+    public (long XMm, long YMm) WorldMm => (((((long)OriginX << Fixed.FracBits) + _x.Raw) * 1000) >> Fixed.FracBits, ((((long)OriginY << Fixed.FracBits) + _y.Raw) * 1000) >> Fixed.FracBits);
+
+    private void SyncRide() { if (Ride != null) { var (x, y) = WorldMm; Ride.PlaceHero(x, y); } }
+
+    private byte RideKind() => Ride == null ? (byte)0 : Ride.IsMounted ? (byte)1 : Ride.IsDriving ? (byte)2 : (byte)0;
+
+    /// <summary>A hero's command about animals and carts (E, hitch, drive, push, unload, dig); applied at the next step so a replay repeats it. Codes in <see cref="RideCode"/>.</summary>
+    public void RideCommand(int code) { _rideCmd = code; }
+    private int _rideCmd;
+    /// <summary>The result of the last <see cref="RideCommand"/>, for the view's message.</summary>
+    public MountResult LastRideResult { get; private set; }
+    public string LastRideNote { get; private set; } = "";
+
+    private void RunRideCommand()
+    {
+        int c = _rideCmd; _rideCmd = 0;
+        if (c == 0 || Ride == null) return;
+        long now = Clock.Now.Seconds; SyncRide();
+        LastRideNote = "";
+        switch (c)
+        {
+            case RideCode.Interact: LastRideResult = Ride.Interact(now); break;
+            case RideCode.Hitch: LastRideNote = "hitch " + Ride.HitchNearest(); break;
+            case RideCode.Unhitch: Ride.UnhitchAll(); break;
+            case RideCode.Drive: LastRideNote = Ride.IsDriving ? "" : Ride.StartDriving() ? "drive" : "no cart"; if (LastRideNote == "") Ride.StopDriving(); break;
+            case RideCode.Push: LastRideNote = Ride.Push(1, now) ? "free" : "stuck"; break;
+            case RideCode.Unload: LastRideNote = "unloaded " + Ride.UnloadToHeap(100) + " kg"; break;
+            case RideCode.Reload: LastRideNote = "loaded " + Ride.ReloadFromHeap() + " kg"; break;
+            case RideCode.Dig: Ride.Dig(now); LastRideNote = "dig"; break;
+        }
+    }
+
+    private void MoveRidden(int mult)
+    {
+        var rb = Ride!;
+        SyncRide();
+        long last = Clock.Now.Seconds;
+        for (int i = 0; i < mult; i++)
+        {
+            long sec = last - mult + 1 + i;
+            if (rb.Busy)
+            {
+                if (_input.Any) rb.BreakOffMount(); else rb.TickBusy();
+                continue;
+            }
+            var step = rb.Plan(_input.Sprint, _input.Walk, sec);
+            Fixed ox = _x, oy = _y;
+            bool wants = _input.Any || _path != null;
+            if (wants && !step.Blocked && step.SpeedMmPerGs > 0)
+            {
+                Fixed budget = Fixed.FromRatio(step.SpeedMmPerGs, 1000);
+                if (_input.Any) StepInput(budget); else FollowPath(budget);
+            }
+            else if (_input.Any) SetFacing(_input.Dx, _input.Dy);
+            long movedMm = (long)Length(_x - ox, _y - oy).Raw * 1000 >> Fixed.FracBits;
+            SyncRide();
+            if (movedMm > 0) _moving = true;
+            rb.Account(step, movedMm, sec, _input.Sprint);
+        }
+        _mode = _input.Sprint ? MoveMode.Sprint : _input.Walk ? MoveMode.Walk : MoveMode.Jog;
         if (!_input.Any && _path == null) _mode = MoveMode.Jog;
     }
 
@@ -440,7 +515,7 @@ public sealed class LiveWorld
             }
         }
         int heroLight = _frame!.Total(cx, cy, _z);
-        var hero = new HeroSnapshot(_x, _y, _z, _px, _py, _pz, _facing, _moving, _mode, _torch, _path == null ? 0 : Math.Max(0, _path.Count - _pathIdx));
+        var hero = new HeroSnapshot(_x, _y, _z, _px, _py, _pz, _facing, _moving, _mode, _torch, _path == null ? 0 : Math.Max(0, _path.Count - _pathIdx)) { Ride = RideKind() };
         return new LiveSnapshot(Tick, t, Clock.Speed, hero, amb, _frame, heroLight, LightModel.VisionRadius(heroLight), OriginX, OriginY);
     }
 

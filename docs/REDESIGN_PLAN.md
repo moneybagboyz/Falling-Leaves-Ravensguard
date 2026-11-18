@@ -1253,6 +1253,11 @@ This section comes from a full read of the legacy code by four auditors (economy
       - **thumb and fingers**, grouped: grip, weapon handling and two-handed use;
       - **ears:** hearing, which matters for spotting and stealth.
       Every finger, toe and tooth individually is not modelled.
+    - **Soft tissue (decided with the user):**
+      - **Ligaments** at the six main joints (shoulder, elbow, wrist, hip, knee, ankle): a torn ligament makes the joint unstable, slowing movement, weakening grip and giving a chance to fall under load.
+      - **Separate motor and sensory nerves** in each limb section.
+      - **A spinal cord** in the neck, upper body and lower body.
+      - **Graded muscle damage:** bruised, torn or mangled, weakening the part in proportion, rather than whole or ruined.
   - **Resolver, armour, layers and hit chance:** see §2.6 (the single spec).
   - **Real-time melee:**
 
@@ -1284,7 +1289,11 @@ This section comes from a full read of the legacy code by four auditors (economy
   - **Wounds are records:** open → dressed → stitched (surgery check) → healing → scar.
     - Infection risk is 8% per game day while a wound is undressed.
     - A set fracture heals in 20 game days. An unset one takes 35, with a 50% chance of malunion (−2 dexterity or strength).
-    - Severed tendons and nerves are permanent, unless surgery at skill 50+ happens within a day.
+    - **Severed tendons stay severed unless surgery at skill 50+ happens within a day. Nerve and spinal damage is always permanent, Dwarf Fortress-harsh (decided with the user):**
+      - a cut motor nerve paralyses the limb and everything below it;
+      - a cut sensory nerve removes feeling and pain there, and weakens blows struck with it;
+      - spinal cord damage in the neck or back paralyses everything below the injury.
+      Crutches and splints are items that restore some movement.
     - Amputation happens only from a real blow or a surgeon's choice.
   - **Morale** (0–100 per soldier, updated at 2 Hz):
     - −6 for each friendly death within 10 m (decaying over 15 s).
