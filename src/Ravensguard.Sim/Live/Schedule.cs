@@ -44,18 +44,21 @@ public readonly struct PersonAnchors
     public long HomeX { get; init; }
     public long HomeY { get; init; }
     public int HomeJit { get; init; }
+    public int HomeJitY { get; init; }
     public byte HomeFacing { get; init; }
     public int HomeSettlement { get; init; }
     public int HomeLot { get; init; }
     public long WorkX { get; init; }
     public long WorkY { get; init; }
     public int WorkJit { get; init; }
+    public int WorkJitY { get; init; }
     public byte WorkFacing { get; init; }
     public int WorkSettlement { get; init; }
     public int WorkLot { get; init; }
     public long SquareX { get; init; }
     public long SquareY { get; init; }
     public int SquareJit { get; init; }
+    public int SquareJitY { get; init; }
     public int WorkStartSod { get; init; }
     public int WorkEndSod { get; init; }
     /// <summary>Parcel tiles (region tile x, y) of the work settlement, for a field worker (the day's tile is picked from them).</summary>
@@ -66,11 +69,11 @@ public readonly struct PersonAnchors
     {
         var p = pop.People; var r = pop.Region;
         int hs = p.HomeSettlement[index];
-        long hx = 0, hy = 0; int hj = 1000; byte hf = 2; bool hasHome = false;
+        long hx = 0, hy = 0; int hj = 1000, hjy = 1000; byte hf = 2; bool hasHome = false;
         if (hs >= 0 && hs < r.Settlements.Count)
         {
             var plan = r.Settlements[hs].Plan; int hl = p.HomeLot[index];
-            if (hl >= 0 && hl < plan.Lots.Count) { LotSpot(plan.Lots[hl], out hx, out hy, out hj, out hf); hasHome = true; }
+            if (hl >= 0 && hl < plan.Lots.Count) { LotSpot(plan.Lots[hl], out hx, out hy, out hj, out hjy, out hf); hasHome = true; }
             else { hx = (long)r.Settlements[hs].CenterX * 1000; hy = (long)r.Settlements[hs].CenterY * 1000; hasHome = true; }
         }
         if (!hasHome) { hx = (long)r.Settlements.Count > 0 ? (long)r.Settlements[0].CenterX * 1000 : 0; hy = r.Settlements.Count > 0 ? (long)r.Settlements[0].CenterY * 1000 : 0; }
@@ -79,16 +82,16 @@ public readonly struct PersonAnchors
         int age = p.AgeYears(index, (int)(nowSec / ScheduleTuning.Day));
         bool child = occ == Occupation.None || age < OccupationInfo.MinWorkAge(occ);
         bool hasWork = !child && ws >= 0 && ws < r.Settlements.Count;
-        long wx = hx, wy = hy; int wj = hj; byte wf = hf; bool field = false; (int, int)[]? tiles = null;
-        long sx = hx, sy = hy; int sj = 3000; bool hasSq = false;
-        if (hs >= 0 && hs < r.Settlements.Count) { var sq = r.Settlements[hs].Plan.Square; if (sq.W > 0) { sx = (long)sq.CenterX * 1000; sy = (long)sq.CenterY * 1000; sj = Math.Max(1500, Math.Min(sq.W, sq.H) * 1000 / 4); hasSq = true; } }
+        long wx = hx, wy = hy; int wj = hj, wjy = hjy; byte wf = hf; bool field = false; (int, int)[]? tiles = null;
+        long sx = hx, sy = hy; int sj = 3000, sjy = 3000; bool hasSq = false;
+        if (hs >= 0 && hs < r.Settlements.Count) { var sq = r.Settlements[hs].Plan.Square; if (sq.W > 0) { sx = (long)sq.CenterX * 1000; sy = (long)sq.CenterY * 1000; sj = Math.Max(1500, (sq.W - 2) * 1000 / 2); sjy = Math.Max(1500, (sq.H - 2) * 1000 / 2); hasSq = true; } }
         if (hasWork)
         {
             var wset = r.Settlements[ws]; var wplan = wset.Plan;
-            if (wl >= 0 && wl < wplan.Lots.Count) LotSpot(wplan.Lots[wl], out wx, out wy, out wj, out wf);
+            if (wl >= 0 && wl < wplan.Lots.Count) LotSpot(wplan.Lots[wl], out wx, out wy, out wj, out wjy, out wf);
             else if (IsFieldWork(occ) && wset.Parcels.Count > 0)
             {
-                field = true; wj = 20_000;
+                field = true; wj = wjy = 20_000;
                 if (tileCache == null || !tileCache.TryGetValue(ws, out tiles))
                 {
                     var list = new (int, int)[wset.Parcels.Count];
@@ -97,21 +100,22 @@ public readonly struct PersonAnchors
                 }
             }
             else if (!(occ is Occupation.Merchant or Occupation.Reeve or Occupation.Mayor or Occupation.GuildMaster or Occupation.Steward or Occupation.Guard)) { /* a spinner, a servant of a household, a town's day labourer: works about the house */ }
-            else if (wplan.Square.W > 0) { wx = (long)wplan.Square.CenterX * 1000; wy = (long)wplan.Square.CenterY * 1000; wj = Math.Max(3000, Math.Min(wplan.Square.W, wplan.Square.H) * 1000 / 3); wf = 2; }
+            else if (wplan.Square.W > 0) { wx = (long)wplan.Square.CenterX * 1000; wy = (long)wplan.Square.CenterY * 1000; wj = Math.Max(3000, (wplan.Square.W - 2) * 1000 / 2); wjy = Math.Max(3000, (wplan.Square.H - 2) * 1000 / 2); wf = 2; }
         }
         var (st, en) = Shift(occ, index);
         return new PersonAnchors
         {
             Id = p.IdOf(index), Region = regionId, Index = index, Seed = seed, Occupation = occ, Sex = p.Sex[index], Class = p.Class[index], Name = p.FullName(index), Child = child,
-            HasWork = hasWork, WorkInField = field, HasSquare = hasSq, HomeX = hx, HomeY = hy, HomeJit = hj, HomeFacing = hf, HomeSettlement = hs, HomeLot = p.HomeLot[index],
-            WorkX = wx, WorkY = wy, WorkJit = wj, WorkFacing = wf, WorkSettlement = ws, WorkLot = wl, SquareX = sx, SquareY = sy, SquareJit = sj,
+            HasWork = hasWork, WorkInField = field, HasSquare = hasSq, HomeX = hx, HomeY = hy, HomeJit = hj, HomeJitY = hjy, HomeFacing = hf, HomeSettlement = hs, HomeLot = p.HomeLot[index],
+            WorkX = wx, WorkY = wy, WorkJit = wj, WorkJitY = wjy, WorkFacing = wf, WorkSettlement = ws, WorkLot = wl, SquareX = sx, SquareY = sy, SquareJit = sj, SquareJitY = sjy,
             WorkStartSod = st, WorkEndSod = en, FieldTiles = tiles,
         };
     }
 
-    private static void LotSpot(Lot l, out long x, out long y, out int jit, out byte facing)
+    private static void LotSpot(Lot l, out long x, out long y, out int jit, out int jitY, out byte facing)
     {
-        x = (long)l.Rect.CenterX * 1000; y = (long)l.Rect.CenterY * 1000; jit = Math.Max(1000, Math.Min(l.Rect.W, l.Rect.H) * 1000 / 3); facing = (byte)(l.Facing & 3);
+        // people are spread over the lot's floor (its rect less a metre of wall), not stacked on its centre
+        x = (long)l.Rect.CenterX * 1000; y = (long)l.Rect.CenterY * 1000; jit = Math.Max(500, (l.Rect.W - 2) * 1000 / 2); jitY = Math.Max(500, (l.Rect.H - 2) * 1000 / 2); facing = (byte)(l.Facing & 3);
     }
 
     private static bool IsFieldWork(Occupation o) => o is Occupation.Farmer or Occupation.Ploughman or Occupation.Shepherd or Occupation.Labourer or Occupation.Woodcutter
@@ -129,13 +133,13 @@ public readonly struct PersonAnchors
     /// <summary>The spot of <paramref name="place"/> on game day <paramref name="day"/>: the place's anchor plus a jitter drawn from stream 0x2A0 keyed on the day (so one day always gives the same spot).</summary>
     public (long X, long Y) Spot(PlaceRef place, long day)
     {
-        long bx, by; int jit; uint draw = (uint)place * 4;
+        long bx, by; int jit, jitY; uint draw = (uint)place * 4;
         switch (place)
         {
-            case PlaceRef.Home: bx = HomeX; by = HomeY; jit = HomeJit; break;
-            case PlaceRef.Square: bx = SquareX; by = SquareY; jit = SquareJit; break;
+            case PlaceRef.Home: bx = HomeX; by = HomeY; jit = HomeJit; jitY = HomeJitY; break;
+            case PlaceRef.Square: bx = SquareX; by = SquareY; jit = SquareJit; jitY = SquareJitY; break;
             default:
-                bx = WorkX; by = WorkY; jit = WorkJit;
+                bx = WorkX; by = WorkY; jit = WorkJit; jitY = WorkJitY;
                 if (WorkInField && FieldTiles is { Length: > 0 } t)
                 {
                     var (tx, ty) = t[DetRng.Range(Seed, day, Id.Value, RngStreams.ScheduleJitter, 15, 0, t.Length)];
@@ -143,7 +147,7 @@ public readonly struct PersonAnchors
                 }
                 break;
         }
-        long jx = DetRng.Range(Seed, day, Id.Value, RngStreams.ScheduleJitter, draw, -jit, jit + 1), jy = DetRng.Range(Seed, day, Id.Value, RngStreams.ScheduleJitter, draw + 1, -jit, jit + 1);
+        long jx = DetRng.Range(Seed, day, Id.Value, RngStreams.ScheduleJitter, draw, -jit, jit + 1), jy = DetRng.Range(Seed, day, Id.Value, RngStreams.ScheduleJitter, draw + 1, -jitY, jitY + 1);
         return (bx + jx, by + jy);
     }
 

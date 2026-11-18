@@ -95,6 +95,15 @@ public sealed partial class RigActor : Node2D
                 if (rig.Outfits[outfit].Contains(l)) Add(l, p);
     }
 
+    static Shader? _tintShader;
+    /// <summary>Palette swap of the baked layers (plan 2.7): each listed layer is drawn in the luminance of its baked colours times the given tint, so one baked tunic becomes any dye. Layers not listed keep their baked colours.</summary>
+    public void Dress(IReadOnlyDictionary<string, Color> tints)
+    {
+        _tintShader ??= new Shader { Code = "shader_type canvas_item;\nuniform vec4 tint : source_color = vec4(1.0);\nvoid fragment() { vec4 t = texture(TEXTURE, UV); float l = dot(t.rgb, vec3(0.3, 0.59, 0.11)); COLOR = vec4(clamp(l * 2.2 * tint.rgb, 0.0, 1.0), t.a); }" };
+        foreach (var (layer, plane, node) in _sprites)
+            if (tints.TryGetValue(layer, out var c)) { var m = new ShaderMaterial { Shader = _tintShader }; m.SetShaderParameter("tint", c); node.Material = m; }
+    }
+
     readonly record struct Slot(bool Visible, Texture2D? Tex, Vector2 Pos);
     readonly Dictionary<(Facing Facing, string Action, int Frame), Slot[]> _poses = new();
     (Facing, string, int)? _last;

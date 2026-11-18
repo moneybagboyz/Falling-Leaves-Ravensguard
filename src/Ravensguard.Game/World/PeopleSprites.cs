@@ -34,8 +34,28 @@ public sealed class PeopleSprites
         _ => c == SocialClass.Gentry ? "traveller" : "peasant",
     };
 
+    static readonly Color[] PeasantTunic = { new(0.60f, 0.46f, 0.32f), new(0.52f, 0.51f, 0.48f), new(0.60f, 0.32f, 0.22f), new(0.75f, 0.68f, 0.52f), new(0.44f, 0.46f, 0.28f), new(0.40f, 0.33f, 0.27f) };
+    static readonly Color[] BurgherTunic = { new(0.20f, 0.32f, 0.60f), new(0.20f, 0.48f, 0.28f), new(0.64f, 0.20f, 0.18f), new(0.76f, 0.60f, 0.20f), new(0.42f, 0.24f, 0.46f), new(0.18f, 0.44f, 0.50f) };
+    static readonly Color[] GentryTunic = { new(0.44f, 0.20f, 0.52f), new(0.62f, 0.12f, 0.16f), new(0.14f, 0.24f, 0.62f), new(0.80f, 0.64f, 0.22f), new(0.12f, 0.12f, 0.16f), new(0.10f, 0.40f, 0.34f) };
+    static readonly Color[] Hose = { new(0.28f, 0.22f, 0.17f), new(0.35f, 0.35f, 0.34f), new(0.16f, 0.15f, 0.15f), new(0.40f, 0.28f, 0.20f), new(0.22f, 0.26f, 0.20f) };
+    static readonly Color[] Skin = { new(1.00f, 1.00f, 1.00f), new(0.90f, 0.82f, 0.74f), new(0.80f, 0.70f, 0.62f), new(1.08f, 1.02f, 0.96f) };
+
+    /// <summary>A person's clothes, the same every time: dyes by class (undyed browns and greys for peasants, dyed blues, greens and reds for burghers, richer for gentry), keyed on the person's id.</summary>
+    static Dictionary<string, Color> Clothes(LivePerson p)
+    {
+        ulong h = DetRng.Mix(p.Id.Value ^ 0x41505052UL);
+        var tunics = p.Class == SocialClass.Gentry ? GentryTunic : p.Class == SocialClass.Burgher || p.Occupation is Occupation.Merchant or Occupation.Smith or Occupation.Baker or Occupation.Innkeeper ? BurgherTunic : PeasantTunic;
+        var d = new Dictionary<string, Color>
+        {
+            ["tunic"] = tunics[(int)(h % (ulong)tunics.Length)], ["hose"] = Hose[(int)((h >> 8) % (ulong)Hose.Length)],
+            ["hood"] = tunics[(int)((h >> 16) % (ulong)tunics.Length)], ["cloak"] = tunics[(int)((h >> 24) % (ulong)tunics.Length)],
+            ["body"] = Skin[(int)((h >> 32) % (ulong)Skin.Length)],
+        };
+        return d;
+    }
+
     /// <summary>Places every live person. <paramref name="originXM"/>, <paramref name="originYM"/> are the continent metres of the street's frame origin (the home region's corner); <paramref name="alpha"/> blends the last two sim steps.</summary>
-    public void Sync(IReadOnlyList<LivePerson> live, long originXM, long originYM, float alpha, double delta, bool visible, bool names)
+    public void Sync(IReadOnlyList<LivePerson> live, long originXM, long originYM, float alpha, double delta, bool visible, bool names, Vector2? hero = null)
     {
         _t += delta; _seen.Clear();
         foreach (var p in live)
@@ -45,10 +65,18 @@ public sealed class PeopleSprites
             if (!_nodes.TryGetValue(p.Id, out var f))
             {
                 f = new Figure { Actor = new RigActor(_rig, outfit), Outfit = outfit };
+                var tints = Clothes(p); tints.Remove("body"); f.Actor.Dress(tints);
                 _nodes[p.Id] = f; _parent.AddChild(f.Actor);
             }
             double x = p.PrevXMm + (p.XMm - p.PrevXMm) * (double)alpha, y = p.PrevYMm + (p.YMm - p.PrevYMm) * (double)alpha;
-            f.Actor.Position = new Vector2(Mathf.Round((float)((x / 1000.0 - originXM) * Tile)), Mathf.Round((float)((y / 1000.0 - originYM) * Tile)));
+            var pos = new Vector2(Mathf.Round((float)((x / 1000.0 - originXM) * Tile)), Mathf.Round((float)((y / 1000.0 - originYM) * Tile)));
+            if (hero is { } hp && p.Action != JobKind.Sleep)
+            {
+                // nobody stands on the hero: a person within a metre and a half is eased out to that distance, the way they would step aside (view only)
+                var away = pos - hp; float len = away.Length();
+                if (len < Tile * 1.5f) pos = hp + (len < 1f ? new Vector2(1, 0) : away / len) * Tile * 1.5f;
+            }
+            f.Actor.Position = pos;
             f.Actor.Visible = visible;
             var facing = p.HeadX > Math.Abs(p.HeadY) ? Facing.East : -p.HeadX > Math.Abs(p.HeadY) ? Facing.West : p.HeadY > 0 ? Facing.South : Facing.North;
             int salt = (int)(p.Id.Counter % 7);

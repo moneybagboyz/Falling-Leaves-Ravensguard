@@ -1040,7 +1040,7 @@ public partial class StreetView : Control, IHandlesBack
     void SyncPeople(float alpha)
     {
         if (_lodSprites == null || Runtime is not { } rt) return;
-        _lodSprites.Sync(_lod.People, rt.State.HomeRegion.OriginXM, rt.State.HomeRegion.OriginYM, alpha, GetProcessDeltaTime(), _band < Band.Field && _viewZ == 0, Actions.Held("world.nameplates"));
+        _lodSprites.Sync(_lod.People, rt.State.HomeRegion.OriginXM, rt.State.HomeRegion.OriginYM, alpha, GetProcessDeltaTime(), _band < Band.Field && _viewZ == 0, Actions.Held("world.nameplates"), _heroSprite.Position);
     }
 
     void SyncCaravans(LiveSnapshot s)
