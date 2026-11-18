@@ -41,7 +41,55 @@ public sealed class TalkLink
         // the home region's chronicle and people are the ones this reads; a world without people yet has nothing to talk about
         if (Runtime.State.Population.People.Count == 0) return;
         TalkSystem.AfterHour(World(), State, Book, hour);
+        CarryRumours(hour);
         Publish(hour);
+    }
+
+    // ---- caravans carry rumours between regions (Phase 3 cleanup B, item 7)
+    private readonly Dictionary<EntityId, Ravensguard.Sim.Caravans.CaravanState> _caravanSeen = [];
+    private readonly Dictionary<int, (TalkWorld W, TalkState S)> _abroad = [];
+
+    private (TalkWorld W, TalkState S)? Abroad(int region, long hour)
+    {
+        var rs = Runtime.State.Regions; if (rs == null) return null;
+        var rw = rs.TryGet(new Ravensguard.Sim.WorldGen.Region.RegionCoord(region % Ravensguard.Sim.WorldGen.Region.RegionCoord.Grid, region / Ravensguard.Sim.WorldGen.Region.RegionCoord.Grid));
+        if (rw == null) return null;
+        if (!_abroad.TryGetValue(region, out var a))
+        {
+            var pop = rw.Population;
+            var w = new TalkWorld { People = pop.People, Households = pop.Households, SettlementNames = [.. pop.Region.Settlements.Select(x => x.Name)], SettlementIds = [.. pop.Region.Settlements.Select(x => x.Id)], Chronicle = rw.Chronicle, Seed = rw.Services.SeedFor(rw.Coord) };
+            _abroad[region] = a = (w, new TalkState());
+        }
+        RumourSeeder.Seed(a.W, a.S, Book, hour);          // what the neighbour's own chronicle gives its people to talk of
+        return a;
+    }
+
+    /// <summary>A caravan reaching the gate tells its crew's rumours in the neighbour's market town; one coming home brings what the neighbour's innkeepers and merchants told its crew.</summary>
+    private void CarryRumours(long hour)
+    {
+        var cont = Runtime.State.Regions?.Services.AbstractContinent; if (cont == null) return;
+        int home = Runtime.State.Regions!.Home.Id; var hw = World(); var set = Book.Settings;
+        foreach (var car in cont.Caravans.All)
+        {
+            if (car.Home != home) continue;
+            _caravanSeen.TryGetValue(car.Id, out var prev); _caravanSeen[car.Id] = car.State;
+            if (car.Neighbour < 0 || car.Crew.Length == 0) continue;
+            if (prev != Ravensguard.Sim.Caravans.CaravanState.AtGate && car.State == Ravensguard.Sim.Caravans.CaravanState.AtGate && Abroad(car.Neighbour, hour) is { } ab)
+                RumourCarriers.Deliver(hw, State, ab.W, ab.S, car.Crew, LargestSettlementOf(ab.W, ab.S, hour), hour, set);
+            else if (prev == Ravensguard.Sim.Caravans.CaravanState.Inbound && car.State == Ravensguard.Sim.Caravans.CaravanState.Idle && Abroad(car.Neighbour, hour) is { } nb)
+            {
+                var tellers = RumourCarriers.TravellerHearers(nb.W, nb.S, LargestSettlementOf(nb.W, nb.S, hour), hour);
+                RumourCarriers.Deliver(nb.W, nb.S, hw, State, tellers, [.. car.Crew.Where(r => r >= 0 && r < hw.People.Count && hw.People.IsAlive(r))], hour, set);
+                RumourCarriers.Deliver(hw, State, hw, State, car.Crew, car.Settlement, hour, set);        // and the crew tell it at home, to the travellers' ears of their own town
+            }
+        }
+    }
+
+    private static int LargestSettlementOf(TalkWorld w, TalkState ts, long hour)
+    {
+        var res = RumourSeeder.Residents(w, ts, (int)(hour / 24)); int best = -1, bn = 0;
+        for (int i = 0; i < res.Length; i++) if (res[i].Length > bn) { bn = res[i].Length; best = i; }
+        return best;
     }
 
     /// <summary>Rebuilds the Journal view at the next barrier (after something outside the link changed the records: a dev shot, a test).</summary>
@@ -103,7 +151,8 @@ public sealed class TalkLink
         switch (effect)
         {
             case "set_flag": return (A("flag").Length > 0 && ts.Flags.Add(A("flag"))) | script;
-            case "start_contract" or "give_item": return script;
+            case "start_contract": return script || (!script && A("kind") is not ("first" or "loan") && Runtime.State.Content is { } cdb && Ravensguard.Sim.Dialogue.DialogueEffects.StartContract(Runtime.State, cdb, i, args, hour * 3600) != null);
+            case "give_item": return script || (Runtime.State.Content is { } gdb && Ravensguard.Sim.Dialogue.DialogueEffects.GiveItem(Runtime.State, gdb, i, args) > 0);
             case "add_rumour": { var h = TalkSystem.AddAuthored(w, ts, A("kind"), A("place"), i, hour); Publish(hour); return h != null; }
             case "add_trust":
             {

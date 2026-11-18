@@ -111,8 +111,7 @@ public sealed class PeopleSprites
             bool across = lying && p.LieAxis == 1;
             f.Actor.RotationDegrees = lying && !across ? 90 : 0;
             if (lying) f.Actor.Position += BedOffset(p.LieAxis);
-            if (across) f.Actor.Pose(Facing.South, "fall", 2);
-            else if (lying) f.Actor.Pose(Facing.South, "idle", 0);
+            if (lying) f.Actor.Pose(Facing.South, "lie", 0);                // the top-down lying rig pose: head up the bed, or turned a quarter for a bed that runs across
             else if (p.Walking && p.Action != JobKind.Sleep) { f.Actor.Pose(facing, "jog", (int)(_t * 8) + salt); }       // a walk is a brisk 5 m/s (abstract spec decision A2)
             else switch (p.Action)
             {

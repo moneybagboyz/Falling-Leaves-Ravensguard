@@ -83,4 +83,20 @@ public sealed class FairBook
 public static class FairCalendar
 {
     public static bool IsFairDay(int doy) => doy is >= 8 and <= 10 or 23 or 38 or 39 or >= 53 and <= 55;
+
+    /// <summary>True when a settlement of this class holds the fair running on the day: the Spring Fair is the charter towns' (8-10), Midsummer the villages' (23), the Harvest Festival and the Midwinter Feast everyone's.</summary>
+    public static bool Holds(int doy, WorldGen.Region.SettlementClass c)
+        => doy is >= 8 and <= 10 ? c == WorldGen.Region.SettlementClass.Town : doy == 23 ? c == WorldGen.Region.SettlementClass.Village : IsFairDay(doy);
+
+    /// <summary>How many times the usual odd jobs a holder posts on the day (Spring Fair x3, Harvest Festival x2).</summary>
+    public static int JobBoardMult(int doy, WorldGen.Region.SettlementClass c) => !Holds(doy, c) ? 1 : doy is >= 8 and <= 10 ? 3 : doy is 38 or 39 ? 2 : 1;
+
+    /// <summary>Extra stalls of a fair-holding town (Spring Fair 12): each is a day's work minding it on the board.</summary>
+    public static int StallBonus(int doy, WorldGen.Region.SettlementClass c) => Holds(doy, c) && doy is >= 8 and <= 10 ? 12 : 0;
+
+    /// <summary>Hours after the usual close that the stalls stay open and the session still runs on a fair day (the revelry goes on into the evening).</summary>
+    public const int EveningSessionHours = 3;
+
+    /// <summary>Demand tilt in permille for the days of a fair (1000 = none), for the goods a fair crowd buys.</summary>
+    public static int DemandMultPm(string good) => good switch { "ale" => 1250, "bread" or "meat_fresh" => 1200, _ => 1000 };
 }

@@ -389,6 +389,31 @@ public sealed class ClothingBook
     /// <summary>The whole book as MessagePack bytes (items, side columns and the tracked people, all in id order): equal state gives equal bytes.</summary>
     public byte[] ToBytes() => Save.SaveCodec.Serialize(ClothingSave.Capture(this));
 
+    /// <summary>The body a save keeps for one tracked person (the hero): core temperature, exposure counters, the minute it was last stepped, and the wetness of each worn piece by its shape, in wearing order.</summary>
+    public HeroBody CaptureBody(Tracked t)
+    {
+        var shapes = new string[t.Worn.Count]; var wet = new int[t.Worn.Count];
+        for (int i = 0; i < t.Worn.Count; i++) { shapes[i] = GarmentOf(t.Worn[i]).Id; wet[i] = ExtraOf(t.Worn[i]).WetU; }
+        return new HeroBody(t.CoreU, t.ExposureMin, t.SevereMin, t.HeatMin, t.Collapsed, t.Died, t.LastMinute, t.WearDay, shapes, wet);
+    }
+
+    /// <summary>
+    /// Puts a saved body back on a tracked person who is already dressed: the core and counters, and each saved piece's wetness on the first worn piece of the same shape not yet matched (the
+    /// hero is dressed again from the inventory on load, so the item ids are new but the shapes and their order are the same). Pieces with no match are left dry.
+    /// </summary>
+    public void ApplyBody(Tracked t, HeroBody b)
+    {
+        t.CoreU = b.CoreU; t.ExposureMin = b.ExposureMin; t.SevereMin = b.SevereMin; t.HeatMin = b.HeatMin; t.Collapsed = b.Collapsed; t.Died = b.Died; t.LastMinute = b.LastMinute; t.WearDay = b.WearDay;
+        var used = new bool[t.Worn.Count];
+        for (int k = 0; k < b.WornShapes.Length; k++)
+            for (int i = 0; i < t.Worn.Count; i++)
+            {
+                if (used[i] || GarmentOf(t.Worn[i]).Id != b.WornShapes[k]) continue;
+                used[i] = true; var e = _extra[t.Worn[i]]; e.WetU = Math.Max(0, b.WornWetU[k]); _extra[t.Worn[i]] = e; SetWetFlag(t.Worn[i], e.WetPm);
+                break;
+            }
+    }
+
     public static ClothingBook FromBytes(ContentDatabase db, ReadOnlyMemory<byte> bytes)
     {
         var b = new ClothingBook(db);
@@ -400,3 +425,6 @@ public sealed class ClothingBook
     internal SortedDictionary<EntityId, ItemExtra> ExtraMap => _extra;
     internal void Replace(ItemTable items, IdAllocator ids, SortedDictionary<EntityId, Tracked> people, SortedDictionary<EntityId, ItemExtra> extra) { Items = items; Ids = ids; _people = people; _extra = extra; }
 }
+
+/// <summary>A tracked person's body as a save keeps it (<see cref="ClothingBook.CaptureBody"/>, <see cref="ClothingBook.ApplyBody"/>): the hero's core temperature and the wetness of what they wear.</summary>
+public sealed record HeroBody(long CoreU, int ExposureMin, int SevereMin, int HeatMin, bool Collapsed, ExposureDeath Died, long LastMinute, long WearDay, string[] WornShapes, int[] WornWetU);

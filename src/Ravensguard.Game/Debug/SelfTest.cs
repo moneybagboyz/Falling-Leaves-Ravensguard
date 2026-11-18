@@ -107,9 +107,46 @@ public static class SelfTest
 
         Tools.BlueprintEditor.EditorSelfTest.Run(Check);
 
+        OnboardingChecks();
+
         GD.Print($"selftest: {(_fails == 0 ? "ok" : _fails + " failure(s)")}");
         return _fails == 0;
     }
+
+    /// <summary>Onboarding (spec O-8, O-10): the controls overlay reads the key map for every context, a rebinding shows in it, every key token a hint names is a real action and every "learn more" has a Codex page.</summary>
+    static void OnboardingChecks()
+    {
+        var map = KeyMap.CreateDefault();
+        var all = InputDefs.All.Select(a => a.Id).ToHashSet();
+        foreach (var v in UI.ControlsOverlay.Views())
+        {
+            foreach (var id in v.Actions) Check(all.Contains(id), $"overlay '{v.Id}' names an action that does not exist: {id}");
+            Check(v.Actions.Distinct().Count() == v.Actions.Length, $"overlay '{v.Id}' lists an action twice");
+            if (v.Backing is { } ctx)
+            {
+                var want = InputDefs.All.Where(a => a.Context == ctx).Select(a => a.Id).ToHashSet();
+                Check(want.IsSubsetOf(v.Actions), $"overlay '{v.Id}' misses actions of its context {ctx}: {string.Join(",", want.Except(v.Actions))}");
+                if (v.Id != "mounted") Check(want.SetEquals(v.Actions), $"overlay '{v.Id}' is not exactly the actions of {ctx}");
+            }
+            var rows = UI.ControlsOverlay.Rows(v, map);
+            Check(rows.Count == v.Actions.Length + v.Local.Length && rows.All(r => r.Name.Length > 0 && (r.Keys.Length > 0 || r.Mouse.Length > 0)), $"overlay '{v.Id}' has an empty row");
+        }
+        // a rebound key shows in the overlay (E rebound to F)
+        var rb = KeyMap.CreateDefault(); rb.Set("world.act", new[] { Binding.K(Key.F) });
+        var act = UI.ControlsOverlay.Rows(UI.ControlsOverlay.View("world"), rb).FirstOrDefault(r => r.Name == L.T("ACTION_WORLD_ACT"));
+        Check(act.Keys == Binding.K(Key.F).Describe(), "a rebound key does not show in the controls overlay: " + act.Keys);
+        // the four contexts the open list named
+        foreach (var id in new[] { "travel", "camp", "mounted", "crafting" }) Check(UI.ControlsOverlay.Views().Any(v => v.Id == id && UI.ControlsOverlay.Rows(v, map).Count >= 4), $"overlay page '{id}' is missing or thin");
+        // hint text: key tokens are real actions
+        string csv = ReadRes("res://localization/en.csv"), hints = ReadRes("res://../../content/base/onboarding/hints.jsonc");
+        foreach (System.Text.RegularExpressions.Match m in System.Text.RegularExpressions.Regex.Matches(csv, @"\{@([a-z_.]+)\}")) Check(all.Contains(m.Groups[1].Value), "a text names the key of an unknown action: " + m.Groups[1].Value);
+        var rules = UI.CodexRules.FromInput().Select(r => r.Id).ToHashSet();
+        int n = 0;
+        foreach (System.Text.RegularExpressions.Match m in System.Text.RegularExpressions.Regex.Matches(hints, "\"learn_more\": \"([a-z_.]+)\"")) { n++; Check(rules.Contains(m.Groups[1].Value), "a hint links to a Codex page that does not exist: " + m.Groups[1].Value); }
+        Check(n == 40, $"expected 40 hints with a Codex link, found {n}");
+    }
+
+    static string ReadRes(string path) { try { return System.IO.File.ReadAllText(ProjectSettings.GlobalizePath(path)); } catch (System.Exception e) { GD.PrintErr("ERROR: selftest FAILED: cannot read " + path + ": " + e.Message); _fails++; return ""; } }
 }
 
 /// <summary>Sends a synthetic F8 press through the same exact-match query the game uses.</summary>

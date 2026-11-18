@@ -102,7 +102,9 @@ public sealed class CommandPump
         if (p < 0) return CommandResult.Fail(CommandError.UnknownRecord, ctx.TickKey);
         if (w.People.Status[p] != PersonStatus.Alive) return CommandResult.Fail(CommandError.NotAlive, ctx.TickKey);
         var cause = Enum.IsDefined((DeathCause)c.A) && c.A != 0 ? (DeathCause)c.A : DeathCause.Violence;
-        Demography.Kill(w, p, cause, ctx.Time, ctx.Outbox, "killed in the live tier");
+        // B: the live tier's exposure death (1 cold, 2 heat), else a death of the live tier
+        string note = c.B switch { 1 => "cold: caught out of doors in the freezing weather", 2 => "heat: collapsed in the heat", _ => "killed in the live tier" };
+        Demography.Kill(w, p, cause, ctx.Time, ctx.Outbox, note);
         return CommandResult.Success(ctx.TickKey);
     }
 }

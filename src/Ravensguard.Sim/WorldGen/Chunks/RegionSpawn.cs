@@ -75,6 +75,9 @@ public static class RegionSpawn
         return NearestWalkable(s, m.X, m.Y + m.Radius + 5, 14, paved: false);
     }
 
+    /// <summary>A walkable cell as near as possible to a region point (metres): where the start-site finder put the new hero, beside the mentor's door.</summary>
+    public static Cell3? AtPoint(ChunkStreamer s, RegionData r, int x, int y) => NearestWalkable(s, x, y, 14, paved: false) ?? NearestWalkable(s, x, y, 40, paved: false);
+
     /// <summary>A walkable street cell in the named settlement: its square if it has one, else its centre. Null if no such settlement.</summary>
     public static Cell3? AtSettlement(ChunkStreamer s, RegionData r, string name)
     {

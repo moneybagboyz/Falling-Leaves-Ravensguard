@@ -190,26 +190,61 @@ public static class CaravanMotion
     public static (long XMm, long YMm, int HeadX, int HeadY) PositionOf(Caravan c, long nowSec) => c.Path.At(DistAt(c, nowSec));
 }
 
-/// <summary>The caravans of the world, ascending id (stable order everywhere).</summary>
+/// <summary>
+/// The caravans of the world, ascending id (stable order everywhere). Shared by every region of the world: the scheduler steps resident regions on parallel workers and each
+/// worker adds, removes and walks the table in its caravan hour, so every access takes the table's lock and <see cref="All"/> is a snapshot (Phase 3 cleanup: the neighbours'
+/// <c>All.ToList()</c> raced the home region's <c>Add</c> and threw IndexOutOfRange inside the parallel region step). A worker only changes the caravans whose home is its region.
+/// </summary>
 public sealed class CaravanTable
 {
     public const int MaxActive = 60;
     private readonly SortedDictionary<EntityId, Caravan> _byId = [];
-    public IEnumerable<Caravan> All => _byId.Values;
-    public int Count => _byId.Count;
-    public Caravan? Get(EntityId id) => _byId.GetValueOrDefault(id);
-    public void Add(Caravan c) => _byId.Add(c.Id, c);
-    public bool Remove(EntityId id) => _byId.Remove(id);
-    public int ActiveCount() { int n = 0; foreach (var c in _byId.Values) if (c.State != CaravanState.Lost) n++; return n; }
+    private readonly object _gate = new();
+    /// <summary>Active caravans per home region at the last <see cref="Freeze"/> (a barrier); null before the first.</summary>
+    private int[]? _frozenActive;
+    /// <summary>A snapshot of the caravans, ascending id.</summary>
+    public IReadOnlyList<Caravan> All { get { lock (_gate) return [.. _byId.Values]; } }
+    public int Count { get { lock (_gate) return _byId.Count; } }
+    public Caravan? Get(EntityId id) { lock (_gate) return _byId.GetValueOrDefault(id); }
+    public void Add(Caravan c) { lock (_gate) _byId.Add(c.Id, c); }
+    public bool Remove(EntityId id) { lock (_gate) return _byId.Remove(id); }
+    public int ActiveCount() { lock (_gate) { int n = 0; foreach (var c in _byId.Values) if (c.State != CaravanState.Lost) n++; return n; } }
     /// <summary>Caravans whose record is in <paramref name="region"/> now (the region's record set).</summary>
-    public IEnumerable<Caravan> InRegion(int region) { foreach (var c in _byId.Values) if (c.Region == region) yield return c; }
+    public IEnumerable<Caravan> InRegion(int region) { foreach (var c in All) if (c.Region == region) yield return c; }
+
+    /// <summary>Notes each home region's active caravans. The scheduler calls it at the barrier, before it steps the regions in parallel.</summary>
+    public void Freeze()
+    {
+        lock (_gate)
+        {
+            var a = new int[RegionCoord.Count];
+            foreach (var c in _byId.Values) if (c.State != CaravanState.Lost && (uint)c.Home < (uint)a.Length) a[c.Home]++;
+            _frozenActive = a;
+        }
+    }
+
+    /// <summary>
+    /// The active caravans the world cap counts for <paramref name="region"/>'s planner: its own as they are now, the other regions' as they were at the last barrier. A region stepped
+    /// on a worker never sees how far the other workers have got, so whether it may found a caravan does not depend on the order the workers ran in. With one region this is
+    /// <see cref="ActiveCount"/>.
+    /// </summary>
+    public int ActiveCountFor(int region)
+    {
+        lock (_gate)
+        {
+            int own = 0, others = 0;
+            foreach (var c in _byId.Values) if (c.State != CaravanState.Lost) { if (c.Home == region) own++; else if (_frozenActive == null) others++; }
+            if (_frozenActive != null) for (int r = 0; r < _frozenActive.Length; r++) if (r != region) others += _frozenActive[r];
+            return own + others;
+        }
+    }
 
     public string ComputeHash()
     {
         using var h = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
         var b = new byte[8];
         void L(long v) { System.Buffers.Binary.BinaryPrimitives.WriteInt64LittleEndian(b, v); h.AppendData(b); }
-        foreach (var c in _byId.Values)
+        foreach (var c in All)
         {
             L((long)c.Id.Value); L(c.Home); L(c.Region); L(c.Settlement); L(c.OwnerBusiness); L(c.Master); L(c.Account.Index); L((long)c.State); L(c.Neighbour); L(c.Dist); L(c.AnchorSec);
             L(c.PrevDist); L(c.WaitUntilSec); L(c.DepartSec); L(c.ArrearsMites); L(c.ExpectedProfitMites); L(c.FloatMites); L(c.PurchaseMites); L(c.Trips); L(c.LostDay); L(c.Guards); L(c.Used);

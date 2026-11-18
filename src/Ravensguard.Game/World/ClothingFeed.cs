@@ -77,28 +77,28 @@ public sealed class ClothingFeed
     {
         var t = Hero; if (t == null) return "";
         var r = t.Last; string core = $"{t.CoreCenti / 100.0:0.0} °C";
-        string clo = $"warmth {r.IEffCloX100 / 100.0:0.00} clo, need {r.IReqCloX100 / 100.0:0.00}";
+        string clo = L.F("HUD_WARMTH", $"{r.IEffCloX100 / 100.0:0.00}", $"{r.IReqCloX100 / 100.0:0.00}");
         switch (t.State)
         {
             case BodyState.Normal:
                 if (r.ColdStressPm > 300)
                 {
                     int m = Book.MinutesTo(t, Book.Tuning.Def.ChilledCc);
-                    return m > 0 ? $"Cold: you will be chilled in {Hours(m)} ({clo})" : $"Cold ({clo})";
+                    return m > 0 ? L.F("HUD_COLD_SOON", Hours(m), clo) : L.F("HUD_COLD", clo);
                 }
-                if (r.HeatStressPm > 300) return $"Hot: shade and water ({clo})";
-                if (r.WetAvgPm > 400) return "Wet clothes lose warmth: find a fire";
+                if (r.HeatStressPm > 300) return L.F("HUD_HOT", clo);
+                if (r.WetAvgPm > 400) return L.T("HUD_WET");
                 return "";
-            case BodyState.Chilled: return $"Chilled {core}: shivering, find a fire ({clo})";
-            case BodyState.Moderate: return $"Cold {core}: clumsy and slow, get warm now";
-            case BodyState.Severe: case BodyState.Lethal: return t.Collapsed ? $"Hypothermia {core}: unconscious" : $"Hypothermia {core}: you will collapse";
-            case BodyState.Warm: return $"Hot {core}: rest in the shade";
-            case BodyState.Exhausted: return $"Heat exhaustion {core}: slow and clumsy";
-            default: return $"Heatstroke {core}!";
+            case BodyState.Chilled: return L.F("HUD_CHILLED", core, clo);
+            case BodyState.Moderate: return L.F("HUD_COLD_MODERATE", core);
+            case BodyState.Severe: case BodyState.Lethal: return t.Collapsed ? L.F("HUD_HYPO_OUT", core) : L.F("HUD_HYPO", core);
+            case BodyState.Warm: return L.F("HUD_WARM", core);
+            case BodyState.Exhausted: return L.F("HUD_HEAT_EXH", core);
+            default: return L.F("HUD_HEATSTROKE", core);
         }
     }
 
-    static string Hours(int minutes) => minutes >= 90 ? $"{minutes / 60.0:0.0} h" : $"{minutes} min";
+    static string Hours(int minutes) => minutes >= 90 ? L.F("HUD_HOURS", $"{minutes / 60.0:0.0}") : L.F("HUD_MINUTES", minutes);
 
     // ------------------------------------------------------------------ what a person looks like
 

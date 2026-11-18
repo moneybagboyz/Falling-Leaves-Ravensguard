@@ -26,12 +26,17 @@ public static class CodexRules
     /// <summary>Contexts that exist only in debug builds (the blueprint editor's keys); release builds do not list them.</summary>
     static bool IsDevContext(InputContext c) => c == InputContext.BlueprintEditor && !OS.IsDebugBuild();
 
+    /// <summary>The authored rule pages (not generated from the key map): every hint's "learn more" opens one of these or a controls page.</summary>
+    public static readonly string[] RulePages = ["talk", "jobs", "weight", "hunger", "cold", "horses", "sleep", "saving", "reporting", "rumours", "trade", "inventory", "crafting", "light", "travel", "camp", "forage", "carts", "squad"];
+
     public static List<CodexRule> FromInput()
     {
         var rules = new List<CodexRule>
         {
             new("rule.basics", L.T("CODEX_BASICS_TITLE"), L.F("CODEX_BASICS_TEXT", Key("world.panel_character"), Key("world.panel_codex"), Key("world.map"))),
         };
+        // the manual's rule pages that the hints link to ("learn more"), authored text in en.csv
+        foreach (var id in RulePages) rules.Add(new($"rule.{id}", L.T($"CODEX_RULE_{id.ToUpperInvariant()}_TITLE"), L.T($"CODEX_RULE_{id.ToUpperInvariant()}_TEXT")));
         foreach (var g in InputDefs.All.GroupBy(a => a.Context).OrderBy(g => (int)g.Key))
         {
             if (IsDevContext(g.Key)) continue;

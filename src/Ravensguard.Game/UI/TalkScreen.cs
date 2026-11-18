@@ -40,6 +40,9 @@ public partial class TalkScreen : Control
     /// <summary>Dev: menu entries (1-based) the window presses by itself, in order, a few frames apart, before the picture.</summary>
     public int[] ShotPress { get; init; } = [];
 
+    /// <summary>Called with the index of each dialogue choice the player picks (the session recorder writes it to the replay trace).</summary>
+    public Action<int>? OnChoice { get; init; }
+
     public TalkScreen(ScreenRouter router, HeroWorld hw, TalkLink link, LineBook book, EntityId person, Func<long> now, Func<TalkContext> world, TalkHistory hist, Action<EntityId> openTrade, ulong seed, string? unique = null, Func<string?>? farPlace = null)
     { _router = router; _hw = hw; _link = link; _book = book; _person = person; _now = now; _world = world; _hist = hist; _openTrade = openTrade; _seed = seed; _unique = unique; _farPlace = farPlace ?? (() => null); }
 
@@ -219,7 +222,7 @@ public partial class TalkScreen : Control
         Add(Who(), _run.Text);
         foreach (var c in _run.Choices)
         {
-            var cc = c; var b = Choice(cc.Text, () => { Add(L.T("TALK_YOU"), cc.Text, true); _run!.Choose(cc.Index); ShowNode(); }, false);
+            var cc = c; var b = Choice(cc.Text, () => { Add(L.T("TALK_YOU"), cc.Text, true); OnChoice?.Invoke(cc.Index); _run!.Choose(cc.Index); ShowNode(); }, false);
             if (cc.Locked) { b.Disabled = true; b.TooltipText = cc.NeedText; b.Text += $"   [{cc.NeedText}]"; }
         }
         if (_run.NeedsAdvance) Choice(L.T("TALK_CONTINUE"), () => { _run!.Advance(); ShowNode(); }, false);
@@ -231,8 +234,8 @@ public partial class TalkScreen : Control
         if (_run == null) return;
         foreach (var e in _run.Effects.ToList())
         {
-            _ = _link.Apply(e.Id, e.Args, _person);
-            if (e.Id is "start_contract" or "give_item") _router.ShowToast(L.F(e.Id == "start_contract" ? "TALK_EFFECT_CONTRACT" : "TALK_EFFECT_ITEM", e.Args.Values.FirstOrDefault() ?? ""));
+            var task = _link.Apply(e.Id, e.Args, _person);
+            if (e.Id is "start_contract" or "give_item") _effectTasks.Add((task, e.Id, e.Args.GetValueOrDefault("item") ?? e.Args.GetValueOrDefault("kind") ?? ""));        // the toast says what really happened, once the barrier has done it
         }
         _run.Effects.Clear();
     }
@@ -248,8 +251,17 @@ public partial class TalkScreen : Control
         _menu.AddChild(b); _buttons.Add(b); return b;
     }
 
+    readonly List<(System.Threading.Tasks.Task<bool> Task, string Id, string Arg)> _effectTasks = [];
+
     public override void _Process(double delta)
     {
+        for (int i = _effectTasks.Count - 1; i >= 0; i--)
+        {
+            var (task, id, arg) = _effectTasks[i]; if (!task.IsCompleted) continue;
+            _effectTasks.RemoveAt(i);
+            bool done = task.IsCompletedSuccessfully && task.Result;
+            _router.ShowToast(L.F(id == "start_contract" ? (done ? "TALK_EFFECT_CONTRACT" : "TALK_EFFECT_CONTRACT_NO") : (done ? "TALK_EFFECT_ITEM" : "TALK_EFFECT_ITEM_NO"), arg.Replace('_', ' ')));
+        }
         if (!_ready)
         {
             if (_spk != null && _spk.IsCompleted && _flagsTask != null && _flagsTask.IsCompleted) Begin();

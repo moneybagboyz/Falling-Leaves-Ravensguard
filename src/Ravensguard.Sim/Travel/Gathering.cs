@@ -2,6 +2,7 @@ using Ravensguard.Content;
 using Ravensguard.Sim.Core;
 using Ravensguard.Sim.Goods;
 using Ravensguard.Sim.Production;
+using Ravensguard.Sim.Weather;
 using Ravensguard.Sim.WorldGen;
 using RegionData = Ravensguard.Sim.WorldGen.Region.Region;
 
@@ -30,6 +31,8 @@ public sealed class Snare
     public long CatchSec;
     public string Species = "";
     public long MassG;
+    /// <summary>Where it was set (region millimetres); 0, 0 in a save from before snares had a place (the view then puts it at its tile's centre).</summary>
+    public long XMm, YMm;
 }
 
 public sealed partial class TravelState
@@ -147,12 +150,27 @@ public sealed partial class TravelState
         return (int)m;
     }
 
+    /// <summary>
+    /// A day-to-day hunt (Phase 3 cleanup B, item 2): an hour's stalking on a tile. Needs game within six tiles; succeeds with <c>250 + 5 x skill</c> permille, plus 250 with a weapon in hand, at most 900 (stream 0x343 keyed
+    /// on the tile and the game hour); a success is a <see cref="Kill"/> of the species the biome and season give, its mass off the land's game stock. Returns the carcass and why (<c>ok</c>, <c>nogame</c>, <c>missed</c>).
+    /// </summary>
+    public (Carcass? Carcass, string Why) Hunt(ResourceLayer layer, int tile, Biome biome, Season season, long sec, long xMm, long yMm, int skill, bool armed)
+    {
+        if (AnimalsNear(layer, tile) <= 0) return (null, "nogame");
+        long hour = sec / TimeConst.SecondsPerHour;
+        var sp = PickSpecies(biome, season, tile, hour, 1); if (sp == null) return (null, "nogame");
+        int p = Math.Min(900, 250 + 5 * skill + (armed ? 250 : 0));
+        if (DetRng.Range(Seed, hour, (ulong)tile, RngStreams.HuntDraw, 50, 0, 1000) >= p) return (null, "missed");
+        var car = Kill(layer, tile, sp, sec, xMm, yMm);
+        return car == null ? (null, "nogame") : (car, "ok");
+    }
+
     // ---------------------------------------------------------------- snares
 
-    public Snare? SetSnare(int tile, long sec)
+    public Snare? SetSnare(int tile, long sec, long xMm = 0, long yMm = 0)
     {
         if (Snares.Count >= Cfg.SnareMax) return null;
-        var s = new Snare { Id = ++NextSnare, Tile = tile, SetSec = sec, LastHour = sec / TimeConst.SecondsPerHour };
+        var s = new Snare { Id = ++NextSnare, Tile = tile, SetSec = sec, LastHour = sec / TimeConst.SecondsPerHour, XMm = xMm, YMm = yMm };
         Snares.Add(s); return s;
     }
 

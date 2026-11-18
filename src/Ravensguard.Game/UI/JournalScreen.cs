@@ -21,6 +21,9 @@ public partial class JournalScreen : Control
     /// <summary>Dev: the picture is taken with the trace open and the first card chosen.</summary>
     public string? ShotPath { get; init; }
     public bool StartTrace { get; init; }
+    /// <summary>The first hour's list (onboarding spec 6): shown at the top while it is not complete, with the optional "Pin to map?" button; the game never marks the map unasked.</summary>
+    public Func<IReadOnlyList<(string Text, bool Done)>>? GettingStarted { get; init; }
+    public Func<string?>? PinMentor { get; init; }
 
     public JournalScreen(ScreenRouter router, TalkLink link, Func<IReadOnlyList<string>> settlementNames, Action openWork) { _router = router; _link = link; _names = settlementNames; _openWork = openWork; _trace = false; }
 
@@ -35,6 +38,14 @@ public partial class JournalScreen : Control
         var work = new Button { Text = L.T("JOURNAL_TAB_WORK"), CustomMinimumSize = new Vector2(120, 28) };
         work.Pressed += () => { _router.Pop(); _openWork(); };
         tabs.AddChild(work);
+        if (GettingStarted?.Invoke() is { Count: > 0 } gs)
+        {
+            var box = new VBoxContainer(); box.AddThemeConstantOverride("separation", 1);
+            box.AddChild(UiKit.Title(L.T("ONB_TITLE")));
+            foreach (var (t, d) in gs) { var l = new Label { Text = (d ? "[x] " : "[  ] ") + t, ThemeTypeVariation = "HintLabel" }; if (d) l.Modulate = new Color(1, 1, 1, 0.55f); box.AddChild(l); }
+            if (PinMentor != null) { var pin = new Button { Text = L.T("ONB_PIN"), SizeFlagsHorizontal = SizeFlags.ShrinkBegin }; pin.Pressed += () => { if (PinMentor() is { } m) { _router.ShowToast(m, 6f); pin.Disabled = true; } }; box.AddChild(pin); }
+            root.AddChild(UiKit.Panel(box, 0, 0));
+        }
         var cols = new HBoxContainer { SizeFlagsVertical = SizeFlags.ExpandFill }; cols.AddThemeConstantOverride("separation", 10); root.AddChild(cols);
         _list = new ItemList { CustomMinimumSize = new Vector2(330, 0), SizeFlagsVertical = SizeFlags.ExpandFill };
         _list.ItemSelected += i => { _sel = (int)i; _trace = false; ShowCard(); };

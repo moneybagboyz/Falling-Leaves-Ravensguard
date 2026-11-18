@@ -120,6 +120,10 @@ public static class RngStreams
     public const uint CampEvent = 0x346;
     /// <summary>Making a fire: the success roll (key person, tick = game second / 60, draw = attempt).</summary>
     public const uint FireMaking = 0x347;
+    /// <summary>What a stubbed fight turns into, robbed or fled (key hero, tick = game hour, draw = slot; Phase 4 replaces it with real combat).</summary>
+    public const uint EncounterOutcome = 0x348;
+    /// <summary>Fair stalls and odd jobs a fair brings (key settlement, tick = game day, draw = what).</summary>
+    public const uint FairStall = 0x349;
 
     // ---------- horses and carts (docs/specs/phase3/horses-and-carts.md section 5) ----------
     /// <summary>Forced-exertion injury of a ridden animal at 0 stamina (key animal, tick = game second / 20).</summary>

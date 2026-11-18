@@ -88,6 +88,8 @@ public sealed class RegionScheduler
         var work = Records.Resident;
         long[] before = new long[work.Count];
         for (int i = 0; i < work.Count; i++) before[i] = work[i].HourDone;
+        // the continent's caravan table is the one thing the workers share: its cap counts the other regions' caravans as they are now, at the barrier
+        Records.Services.AbstractContinent?.Caravans.Freeze();
         var opt = new ParallelOptions { MaxDegreeOfParallelism = MaxParallel };
         Parallel.For(0, work.Count, opt, i =>
         {

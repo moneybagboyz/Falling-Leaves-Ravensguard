@@ -9,6 +9,7 @@ using Ravensguard.Sim.Economy;
 using Ravensguard.Sim.Goods;
 using Ravensguard.Sim.Live;
 using Ravensguard.Sim.Production;
+using Ravensguard.Sim.Trade;
 using Ravensguard.Sim.Travel;
 using Ravensguard.Sim.Weather;
 using Ravensguard.Sim.WorldGen;
@@ -28,6 +29,9 @@ public partial class StreetView
     (string Name, long EndSec, Action Apply)? _campJob;
     long _lastCampHour = long.MinValue;
     EncounterEvent? _enc; bool _encOpen;
+    IReadOnlyList<EncounterOption> _encOptions = [];
+    bool _encScreenPending;
+    Ravensguard.Sim.Caravans.RecordCast? _recordCast;
     readonly Dictionary<ulong, RigActor> _castActors = new();
     Sprite2D? _campSprite;
     string _campMsg = "";
@@ -53,6 +57,12 @@ public partial class StreetView
         }
         _travel.HeroId = EconomyState.HeroOwner;
         _travel.LatitudeTenths = 480;
+        if (Runtime is { } crt)
+        {
+            var home = crt.State.HomeRegion;
+            _recordCast = new Ravensguard.Sim.Caravans.RecordCast(() => crt.Caravans, () => crt.State.Population, home.OriginXM * 1000L, home.OriginYM * 1000L);
+            _travel.CastSource = _recordCast;
+        }
         if (_source!.Region is { } rg)
             _tfeed = new TravelFeed(rg, _wfeed, _travel.Cfg, () => Runtime?.State.Production?.Resources, _travel.LatitudeTenths);
         _thud = new TravelHud();
@@ -101,6 +111,7 @@ public partial class StreetView
         if (_travel == null || _tfeed == null) return false;
         long now = _world.Clock.Now.Seconds;
         _travel.Begin(p.Name, p.Path, now);
+        _rec.Action(Ravensguard.Sim.Diagnostics.HeroAction.TravelBegin, p.DistM, now);
         _enc = null; _encOpen = false; _wantedSpeed = SimSpeed.X8;
         _rec.SetSpeed(SimSpeed.X8);
         _router?.ShowToast(L.F("TRAVEL_START", p.Name, (p.DistM / 1000.0).ToString("0.0"), (p.GameHoursTenths / 10.0).ToString("0")), 4f);
@@ -122,9 +133,15 @@ public partial class StreetView
         {
             t.Advance(_tfeed, now);
             var (x, y, hx, hy) = j.Path.At(j.ProgressMm);
-            _world.TravelPlace(x, y, Math.Abs(hx) >= Math.Abs(hy) ? (hx < 0 ? Facing.West : Facing.East) : (hy < 0 ? Facing.North : Facing.South));
-            if (t.PendingEncounter is { } ev) { _enc = ev; _encOpen = true; t.PendingEncounter = null; _router?.ShowToast(ev.Bark.Length > 0 ? ev.Bark : ev.Id, 3f); }
+            _rec.TravelPlace(x, y, Math.Abs(hx) >= Math.Abs(hy) ? (hx < 0 ? Facing.West : Facing.East) : (hy < 0 ? Facing.North : Facing.South));
+            if (t.PendingEncounter is { } ev)
+            {
+                _enc = ev; _encOpen = true; t.PendingEncounter = null; _router?.ShowToast(ev.Bark.Length > 0 ? ev.Bark : ev.Id, 3f);
+                _encOptions = t.Table.Defs.FirstOrDefault(d => d.Id == ev.Id) is { } def ? EncounterOutcomes.Options(def, _heroLink?.View?.CoinMites ?? 0) : [];
+            }
         }
+        if (_encScreenPending && _router?.Depth <= 1) { _encScreenPending = false; EncounterOutcomes.Settle(t, new EncounterOutcome(EncounterChoice.GoOn, "went_on", 0, EntityId.None, EntityId.None, 0, ""), now); }
+        if (t.Snares.Count > 0 && Runtime?.State.Production?.Resources is { } snareLayer) t.StepSnares(snareLayer, now, 20);
         if (t.Camp is { } c) { t.StepFire(c, now); CampHour(c, now); }
         if (_campJob is { } job && now >= job.EndSec) { _campJob = null; job.Apply(); }
         var allowed = t.Journey is { State: JourneyState.Travelling or JourneyState.Paused } ? t.Bus.AllowedSpeed(_wantedSpeed, now) : _campJob != null ? SimSpeed.X8 : _wantedSpeed;
@@ -159,10 +176,11 @@ public partial class StreetView
         bool going = j is { State: JourneyState.Travelling or JourneyState.Paused };
         if (e is InputEventKey { Pressed: true } && going)
         {
-            if (Actions.Pressed(e, "world.back")) { t.Cancel(_world.Clock.Now.Seconds); _enc = null; _encOpen = false; _rec.SetSpeed(SimSpeed.X1); _wantedSpeed = SimSpeed.X1; _router?.ShowToast(L.T("TRAVEL_STOPPED")); return true; }
+            if (Actions.Pressed(e, "world.back")) { t.Cancel(_world.Clock.Now.Seconds); _rec.Action(Ravensguard.Sim.Diagnostics.HeroAction.TravelCancel); _enc = null; _encOpen = false; _rec.SetSpeed(SimSpeed.X1); _wantedSpeed = SimSpeed.X1; _router?.ShowToast(L.T("TRAVEL_STOPPED")); return true; }
+            if (t.Bus.Paused && _enc != null && _encOpen && _encOptions.Count > 0 && !_encScreenPending && EncounterKey(e)) return true;
             if (t.Bus.Paused && (Actions.Pressed(e, "world.act") || Actions.Pressed(e, "world.pause") || e is InputEventKey { Keycode: Key.Enter or Key.KpEnter }))
             {
-                t.Resume(); _encOpen = false; var allowed = t.Bus.AllowedSpeed(_wantedSpeed, _world.Clock.Now.Seconds); _rec.SetSpeed(allowed == SimSpeed.Paused ? SimSpeed.X1 : allowed); return true;
+                t.Resume(); _rec.Action(Ravensguard.Sim.Diagnostics.HeroAction.TravelResume); _encOpen = false; var allowed = t.Bus.AllowedSpeed(_wantedSpeed, _world.Clock.Now.Seconds); _rec.SetSpeed(allowed == SimSpeed.Paused ? SimSpeed.X1 : allowed); return true;
             }
             if (Actions.Pressed(e, "world.speed_1")) { _wantedSpeed = SimSpeed.X1; _rec.SetSpeed(SimSpeed.X1); return true; }
             if (Actions.Pressed(e, "world.speed_2")) { _wantedSpeed = SimSpeed.X2; _rec.SetSpeed(SimSpeed.X2); return true; }
@@ -179,6 +197,8 @@ public partial class StreetView
             if (_campOpen && t.Camp is { } c && CampKey(e, t, c)) return true;
             if (Actions.Pressed(e, "world.camp")) { ToggleCamp(); return true; }
             if (Actions.Pressed(e, "world.forage")) { Forage(); return true; }
+            if (Actions.Pressed(e, "world.hunt")) { HuntGame(); return true; }
+            if (Actions.Pressed(e, "world.snare")) { SnareVerb(); return true; }
         }
         return false;
     }
@@ -186,8 +206,58 @@ public partial class StreetView
     /// <summary>A movement key during auto-travel: the journey stops where the hero stands and the player has the hero again.</summary>
     void TakeControl()
     {
-        var t = _travel!; t.Cancel(_world.Clock.Now.Seconds); _enc = null; _encOpen = false; _wantedSpeed = SimSpeed.X1; _rec.SetSpeed(SimSpeed.X1);
+        var t = _travel!; t.Cancel(_world.Clock.Now.Seconds); _rec.Action(Ravensguard.Sim.Diagnostics.HeroAction.TravelCancel); _enc = null; _encOpen = false; _wantedSpeed = SimSpeed.X1; _rec.SetSpeed(SimSpeed.X1);
         _router?.ShowToast(L.T("TRAVEL_STOPPED"));
+    }
+
+    // ------------------------------------------------------------------------------------------ encounter choices
+
+    /// <summary>1 to 5 choose an option of the encounter panel; Enter takes the way on (or running, when the road is not free to go on).</summary>
+    bool EncounterKey(InputEvent e)
+    {
+        if (e is not InputEventKey { Pressed: true } k) return false;
+        int i = k.Keycode switch { Key.Key1 => 0, Key.Key2 => 1, Key.Key3 => 2, Key.Key4 => 3, Key.Key5 => 4, _ => -1 };
+        if (i < 0 && (Actions.Pressed(e, "world.act") || k.Keycode is Key.Enter or Key.KpEnter))
+        {
+            i = _encOptions.ToList().FindIndex(o => o.Choice == EncounterChoice.GoOn);
+            if (i < 0) i = _encOptions.ToList().FindIndex(o => o.Choice is EncounterChoice.Flee or EncounterChoice.Detour or EncounterChoice.Wait);
+        }
+        if (i < 0 || i >= _encOptions.Count) return false;
+        ChooseEncounter(_encOptions[i]);
+        return true;
+    }
+
+    /// <summary>The player's choice on the road: pay goes through the hero desk (a ledger transfer at the barrier), trade and talk open their screens with the real person, flee, detour and wait cost time, a fight is a stub until Phase 4.</summary>
+    void ChooseEncounter(EncounterOption opt)
+    {
+        var t = _travel!; var ev = _enc; if (ev == null) return;
+        var def = t.Table.Defs.FirstOrDefault(d => d.Id == ev.Id); long now = _world.Clock.Now.Seconds;
+        if (def == null || opt.Choice == EncounterChoice.GoOn) { FinishEncounter(new EncounterOutcome(EncounterChoice.GoOn, "went_on", 0, EntityId.None, EntityId.None, 0, ""), now, false); return; }
+        long coin = _heroLink?.View?.CoinMites ?? 0;
+        var o = EncounterOutcomes.Resolve(t, def, ev, opt.Choice, coin, _tfeed!.Hero.PartyStrengthPm, id => !t.Travellers.Any(x => x.Id == id));
+        if (o.PayMites > 0 && _heroLink != null)
+            _heroLink.Issue(new HeroCommand { Kind = HeroCommandKind.EncounterPay, IssuedSec = now, CoinGive = o.PayMites, Person = o.Payee, Tag = ev.Id, Origin = CommandOrigin.Human });
+        bool screen = false;
+        if (o.Result == "trade")
+        {
+            if (o.Counterpart != EntityId.None) { OpenTrade(-1, o.Counterpart); screen = true; }
+            else _router?.ShowToast(L.T("ENC_NOTHING_TO_TRADE"), 3f);
+        }
+        else if (o.Result == "talk")
+        {
+            if (o.Counterpart != EntityId.None) { OpenTalk(o.Counterpart); screen = true; }
+            else _router?.ShowToast(ev.Bark.Length > 0 ? "\"" + ev.Bark + "\"" : L.T("ENC_NOTHING_TO_SAY"), 3f);
+        }
+        else if (o.Text.Length > 0) _router?.ShowToast(o.PayMites > 0 ? L.F(o.Text, Quotes.Money(o.PayMites)) : L.T(o.Text), 4f);
+        FinishEncounter(o, now, screen);
+    }
+
+    void FinishEncounter(EncounterOutcome o, long now, bool screen)
+    {
+        var t = _travel!; _encOpen = false; _encOptions = [];
+        if (screen) { _encScreenPending = true; return; }       // the clock stays held while the trade or talk window is open
+        EncounterOutcomes.Settle(t, o, now);
+        var allowed = t.Bus.AllowedSpeed(_wantedSpeed, now); _rec.SetSpeed(allowed == SimSpeed.Paused ? SimSpeed.X1 : allowed);
     }
 
     // ------------------------------------------------------------------------------------------ camp
@@ -203,6 +273,7 @@ public partial class StreetView
         if (t.Journey is { State: JourneyState.Travelling or JourneyState.Paused }) t.Cancel(now);
         var members = new List<EntityId> { EconomyState.HeroOwner };
         var camp = t.MakeCamp(hx, hy, now, members);
+        _rec.Action(Ravensguard.Sim.Diagnostics.HeroAction.CampMake, hx, hy);
         EnsureCompanions(t);
         // the pack's food goes into the camp stock (it comes back when camp is broken)
         var pack = t.PackStore?.Invoke(); var stock = t.StoreOf(camp.Id);
@@ -238,7 +309,13 @@ public partial class StreetView
                 t.SetSentries(c, c.Sentries.Count == 0 ? comps.Take(t.Cfg.SentryMax).Select(m => m.Person) : []);
                 return true;
             case Key.Key4:
-                StartCampJob(L.T("TRAVEL_CAMP_TALKING"), t.Cfg.TalkMinutes * 60, () => { var r = t.TalkAroundFire(c, t.Companions, _world.Clock.Now.Seconds, false); _campMsg = L.F("TRAVEL_CAMP_TALKED", r.Count(x => x.Gained)); _campMsgUntil = _world.Clock.Now.Seconds + 1800; });
+                StartCampJob(L.T("TRAVEL_CAMP_TALKING"), t.Cfg.TalkMinutes * 60, () =>
+                {
+                    long ts = _world.Clock.Now.Seconds;
+                    var speaker = t.FireSpeaker(t.Companions, EconomyState.HeroOwner, ts);            // chosen before the talk marks the night, so the one with a story left sits down first
+                    var r = t.TalkAroundFire(c, t.Companions, ts, false); _campMsg = L.F("TRAVEL_CAMP_TALKED", r.Count(x => x.Gained)); _campMsgUntil = ts + 1800;
+                    if (speaker != null) { _campOpen = false; OpenTalk(speaker.Person); }               // then the talk window opens with that companion (dialogue spec 4.3)
+                });
                 return true;
             case Key.Key5:
             {
@@ -249,14 +326,14 @@ public partial class StreetView
             }
             case Key.Key6: c.Shelter = (ShelterKind)(((int)c.Shelter + 1) % 4); return true;
             case Key.Key7:
-                StartCampJob(L.T("TRAVEL_CAMP_BREAKING"), t.Cfg.BreakCampMinutes * 60, () => { t.BreakCamp(_world.Clock.Now.Seconds); _campOpen = false; _router?.ShowToast(L.T("TRAVEL_CAMP_BROKEN")); _wantedSpeed = SimSpeed.X1; });
+                StartCampJob(L.T("TRAVEL_CAMP_BREAKING"), t.Cfg.BreakCampMinutes * 60, () => { t.BreakCamp(_world.Clock.Now.Seconds); _rec.Action(Ravensguard.Sim.Diagnostics.HeroAction.CampBreak); _campOpen = false; _router?.ShowToast(L.T("TRAVEL_CAMP_BROKEN")); _wantedSpeed = SimSpeed.X1; });
                 return true;
             case Key.Escape: _campOpen = false; return true;
         }
         return false;
     }
 
-    void StartCampJob(string name, long secs, Action apply) { long now = _world.Clock.Now.Seconds; _campJob = (name, now + Math.Max(60, secs), apply); _rec.SetSpeed(SimSpeed.X8); }
+    void StartCampJob(string name, long secs, Action apply) { long now = _world.Clock.Now.Seconds; _campJob = (name, now + Math.Max(60, secs), apply); _rec.Action(Ravensguard.Sim.Diagnostics.HeroAction.CampJob, secs, now); _rec.SetSpeed(SimSpeed.X8); }
 
     void FireAction(TravelState t, Camp c, long now)
     {
@@ -319,13 +396,19 @@ public partial class StreetView
         if (t.Bus.PausedBy is { } p && t.Journey is { State: JourneyState.Paused })
         {
             string body = p.Text;
-            if (_enc is { } e2 && _encOpen) body = (e2.Bark.Length > 0 ? "\"" + e2.Bark + "\"\n" : "") + L.F("TRAVEL_ALERT_PEOPLE", e2.Cast.Length);
-            hud.Alert(L.F("TRAVEL_ALERT_" + p.Kind.ToString().ToUpperInvariant(), _enc is { } e3 ? EncounterName(e3.Id) : p.Text), body, L.F("TRAVEL_ALERT_KEYS", H("world.act"), H("world.back"), H("world.camp")), p.Kind is InterruptKind.Hostile or InterruptKind.Attacked);
+            string keys = L.F("TRAVEL_ALERT_KEYS", H("world.act"), H("world.back"), H("world.camp"));
+            if (_enc is { } e2 && _encOpen)
+            {
+                body = (e2.Bark.Length > 0 ? "\"" + e2.Bark + "\"\n" : "") + L.F("TRAVEL_ALERT_PEOPLE", e2.Cast.Length);
+                if (_encOptions.Count > 0) { body += "\n" + string.Join("\n", _encOptions.Select((o, i) => $"[{i + 1}] {L.T(o.TextKey)}" + (o.Mites > 0 ? $"  ({Quotes.Money(o.Mites)})" : ""))); keys = L.F("ENC_KEYS", H("world.back")); }
+            }
+            hud.Alert(L.F("TRAVEL_ALERT_" + p.Kind.ToString().ToUpperInvariant(), _enc is { } e3 ? EncounterName(e3.Id) : p.Text), body, keys, p.Kind is InterruptKind.Hostile or InterruptKind.Attacked);
         }
         else hud.HideAlert();
         if (t.Camp is { } c && _campOpen) hud.Camp(L.T("TRAVEL_CAMP_TITLE"), CampLines(t, c, now)); else hud.HideCamp();
         SyncCastSprites(now);
         SyncCampSprite();
+        SyncSnareSprites();
     }
 
     string EncounterName(string id) { var d = _travel!.Table.Defs.FirstOrDefault(x => x.Id == id); return d?.Name ?? id; }
@@ -355,28 +438,30 @@ public partial class StreetView
         if (c == null) { if (_campSprite != null) { _campSprite.QueueFree(); _campSprite = null; } return; }
         if (_campSprite == null)
         {
-            var tex = _art.Texture("object.hearth_lit");
+            var tex = _art.Texture("object.campfire_lit");
             _campSprite = new Sprite2D { Texture = tex, Centered = false, Offset = new Vector2(-tex.GetWidth() / 2f, -tex.GetHeight() + 6), TextureFilter = CanvasItem.TextureFilterEnum.Nearest };
             _ysort.AddChild(_campSprite);
         }
         _campSprite.Position = new Vector2((float)Math.Round(c.XMm / 1000.0 * Tile), (float)Math.Round(c.YMm / 1000.0 * Tile));
-        _campSprite.Modulate = c.FireLit ? Colors.White : new Color(0.45f, 0.4f, 0.38f);
+        _campSprite.Texture = _art.Texture(c.FireLit ? "object.campfire_lit" : "object.campfire");
+        _campSprite.Modulate = Colors.White;
     }
 
     /// <summary>The people of the encounter standing on the road where the director put them: real rig figures, facing the hero.</summary>
     void SyncCastSprites(long now)
     {
         var want = new HashSet<ulong>();
-        if (_enc is { } ev && _encOpen && _travel!.Travellers.Count > 0)
+        if (_enc is { } ev && _encOpen)
         {
-            var arch = _travel.Travellers.ToDictionary(x => x.Id.Value, x => x.Archetype);
+            var arch = _travel!.Travellers.ToDictionary(x => x.Id.Value, x => x.Archetype);
+            string groupArch = _travel.Table.Defs.FirstOrDefault(d => d.Id == ev.Id)?.Groups.FirstOrDefault()?.Archetype ?? "traveller";
             int i = 0;
             foreach (var id in ev.Cast)
             {
                 want.Add(id);
                 if (!_castActors.TryGetValue(id, out var a))
                 {
-                    a = new RigActor(_rig, OutfitFor(arch.GetValueOrDefault(id, "traveller"))); _ysort.AddChild(a); _castActors[id] = a;
+                    a = new RigActor(_rig, OutfitFor(arch.GetValueOrDefault(id, groupArch))); _ysort.AddChild(a); _castActors[id] = a;
                 }
                 var (hx, hy) = _world.WorldMm; double ox = (i % 3 - 1) * 1.1, oy = (i / 3) * 1.0 - 0.5;
                 a.Position = new Vector2((float)Math.Round((ev.SpawnXMm / 1000.0 + ox) * Tile), (float)Math.Round((ev.SpawnYMm / 1000.0 + oy) * Tile));
@@ -443,7 +528,7 @@ public partial class StreetView
         else if (what == "camp")
         {
             var (cx, cy) = _world.WorldMm;
-            _travel!.MakeCamp(cx, cy, _world.Clock.Now.Seconds, [EconomyState.HeroOwner]); _campOpen = true;
+            _travel!.MakeCamp(cx, cy, _world.Clock.Now.Seconds, [EconomyState.HeroOwner]); _rec.Action(Ravensguard.Sim.Diagnostics.HeroAction.CampMake, cx, cy); _campOpen = true;
             if (_travel.Camp is { } c)
             {
                 c.XMm += 2_500; c.YMm -= 600;

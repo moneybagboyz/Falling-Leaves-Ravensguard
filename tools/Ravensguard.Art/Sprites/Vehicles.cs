@@ -35,7 +35,7 @@ public sealed class Vehicles
 
     public static (int W, int H) Size(VehicleSpec s) => ((s.Body + s.Hitch) * Cell + 2 * Pad, s.Rise + s.Cols * Cell + Pad);
 
-    public PixelBuffer Draw(VehicleSpec s)
+    public PixelBuffer Draw(VehicleSpec s, bool loaded = false)
     {
         var (w, h) = Size(s); var b = new PixelBuffer(w, h);
         int gx = Pad, gy = s.Rise, gw = (s.Body + s.Hitch) * Cell, gh = s.Cols * Cell, cy = gy + gh / 2, bx1 = gx + s.Body * Cell;
@@ -53,9 +53,115 @@ public sealed class Vehicles
         Box(b, s, boxX0, boxX1, yTop, yBot, floor, wall);
         if (s.SeatRow >= 0) Deck(b, seatX, bx1 - 2, yTop, yBot, floor);
         if (s.Bed == BedStyle.Rack) Hay(b, boxX0, boxX1, yTop, yBot, floor, wall);
+        else if (loaded && !s.Cover) LoadEast(b, boxX0, boxX1, yTop - floor - wall, yBot - floor - wall);
         if (s.Cover) Cover(b, boxX0, boxX1, yTop, yBot, floor + wall, cy);
         foreach (int row in s.AxleRows) Wheel(b, gx + row * Cell + Cell / 2, yBot + inset - 1, s.Cols == 1 ? 9 : 14, s.Cols == 1 ? 8 : 11, s.Spoked);
         return b.Outline(P["out"]);
+    }
+
+    // ---------------------------------------------------------------------------------------------- north and south
+
+    /// <summary>The sprite size of a vehicle seen head-on (north or south): the footprint turned a quarter, plus the same margin and rise.</summary>
+    public static (int W, int H) SizeNS(VehicleSpec s) => (s.Cols * Cell + 2 * Pad, s.Rise + (s.Body + s.Hitch) * Cell + Pad);
+
+    /// <summary>
+    /// The vehicle facing north (away from the viewer: the hitch is at the top, the rear toward us) or south (toward the viewer: the hitch at the bottom). The same top-down view with a slight tilt as <see cref="Draw"/>:
+    /// the ground rectangle sits at the bottom of the sprite, the bed and its load are lifted by their height, the wheels are seen end-on as upright strips either side, and the near face of the bed shows on the side
+    /// nearest the viewer. <paramref name="loaded"/> draws sacks and a crate on the bed.
+    /// </summary>
+    public PixelBuffer DrawNS(VehicleSpec s, bool north, bool loaded)
+    {
+        var (w, h) = SizeNS(s); var b = new PixelBuffer(w, h);
+        int len = (s.Body + s.Hitch) * Cell, wid = s.Cols * Cell, gx = Pad, gy = s.Rise, cx = gx + wid / 2;
+        int bodyLen = s.Body * Cell, hitchLen = s.Hitch * Cell;
+        int bodyY0 = north ? gy + hitchLen : gy, bodyY1 = bodyY0 + bodyLen;                       // the body's ground rows
+        int hitchY0 = north ? gy : bodyY1, hitchY1 = hitchY0 + hitchLen;
+        int rearY = north ? gy + len : gy, dir = north ? -1 : 1;                                   // the rear end, and which way the rows count from it
+        int floor = s.Bed == BedStyle.Runner ? 7 : s.Bed is BedStyle.Tray ? 9 : s.Cols == 1 ? 8 : 16, wall = s.Bed == BedStyle.Runner ? 6 : s.Cols == 1 ? 5 : s.Bed == BedStyle.Rack ? 6 : 8;
+        int inset = s.Cols == 1 ? 4 : 3, t = floor + wall, x0 = gx + inset, x1 = gx + wid - inset, bw = x1 - x0;
+        if (s.Bed == BedStyle.Tray) { BarrowNS(b, s, north, loaded, gx, gy, wid, len, cx); return b.Outline(P["out"]); }
+
+        // the hitch lies on the ground ahead of the body, a hand above it
+        switch (s.Style)
+        {
+            case HitchStyle.Pole:
+                b.Shade(cx - 2, hitchY0 - 12, 5, hitchLen, R["wood"], Top); b.Rect(cx + 2, hitchY0 - 12, 1, hitchLen, P["w1"]);
+                int yokeY = north ? hitchY0 - 12 : hitchY1 - 12 - 4;
+                b.Shade(cx - 18, yokeY, 36, 4, R["wood"], Top); b.Rect(cx - 9, yokeY + 1, 2, 3, P["m3"]); b.Rect(cx + 7, yokeY + 1, 2, 3, P["m3"]);
+                break;
+            case HitchStyle.Shafts:
+                foreach (int sx in new[] { cx - 11, cx + 9 }) { b.Shade(sx, hitchY0 - 10, 3, hitchLen, R["wood"], Top); b.Rect(sx + 2, hitchY0 - 10, 1, hitchLen, P["w1"]); b.Rect(sx - 1, north ? hitchY0 - 10 : hitchY1 - 12, 5, 3, P["m3"]); }
+                break;
+            case HitchStyle.Traces:
+                foreach (int sx in new[] { x0 + 4, x1 - 5 }) b.Line(sx, north ? bodyY0 - 6 : bodyY1 - 6, cx, north ? hitchY0 - 4 : hitchY1 - 6, P["br3"]);
+                b.Rect(cx - 2, north ? hitchY0 - 6 : hitchY1 - 8, 4, 4, P["m3"]);
+                break;
+            case HitchStyle.None when s.Bed == BedStyle.Box:                                           // a handcart's handles at the rear
+                foreach (int sx in new[] { x0 + 4, x1 - 5 }) { b.Shade(sx, north ? rearY - 15 : rearY - 8, 2, 12, R["wood"], Top); }
+                break;
+        }
+        if (s.Bed == BedStyle.Runner) foreach (int sx in new[] { x0 + 2, x1 - 6 }) { b.Shade(sx, gy + 2, 4, len - 4, R["wood"], Top); b.Rect(sx + 3, gy + 2, 1, len - 4, P["m2"]); }
+        // wheels: seen end-on as upright strips either side of the body, one per axle row counted from the rear
+        foreach (int row in s.AxleRows)
+        {
+            int ay = rearY + dir * (row * Cell + Cell / 2), r = s.Cols == 1 ? 8 : 12;
+            foreach (int wx in new[] { gx - 3, gx + wid - 2 })
+            {
+                b.Shade(wx, ay - r - 2, 5, 2 * r + 2, R["wood"], Top); b.Rect(wx, ay - r - 2, 5, 2, P["m2"]); b.Rect(wx, ay + r - 2, 5, 2, P["m2"]); b.Rect(wx + 2, ay - 1, 1, 3, P["m3"]);
+                if (s.Spoked) for (int yy = ay - r + 3; yy < ay + r - 2; yy += 4) b.Rect(wx + 1, yy, 3, 1, P["w4"]);
+            }
+            b.Rect(gx + 1, ay - 1, wid - 2, 2, P["m2"]);                                              // the axle
+        }
+        // the bed: the frame, the floor inside, the end boards, the near face and the rim
+        int yTop = bodyY0 - t, yBot = bodyY1 - t;
+        b.Rect(x0 + 2, bodyY1 - 6, bw - 4, 2, P["w1"]);                                               // the frame under the box
+        b.Rect(x0, yTop, bw, yBot - yTop + 1, P["w2"]);
+        b.Shade(x0 + 2, yTop + 2, bw - 4, yBot - yTop - 3, R["wood"]);
+        for (int y = yTop + 6; y < yBot - 2; y += 6) b.Rect(x0 + 2, y, bw - 4, 1, P["w2"]);
+        b.Shade(x0, yTop, 3, yBot - yTop + 3, R["wood"], Top); b.Shade(x1 - 3, yTop, 3, yBot - yTop + 3, R["wood"], Top);
+        if (s.SeatRow >= 0)                                                                            // the driver's bench across the front end of the body
+        {
+            int sy = (north ? bodyY0 : bodyY1) - (north ? 0 : 10) - floor - 4;
+            b.Shade(x0 + 3, sy, bw - 6, 7, R["wood"], Top); b.Rect(x0 + 3, sy + 5, bw - 6, 1, P["w1"]);
+        }
+        if (loaded && !s.Cover) LoadNS(b, x0, x1, yTop, yBot);
+        if (s.Cover) { b.Shade(x0 + 1, yTop - 10, bw - 2, yBot - yTop + 10, R["linen"], Top); for (int y = yTop - 6; y < yBot; y += 10) b.Rect(x0 + 1, y, bw - 2, 1, P["ln1"]); b.Rect(cx - 1, yTop - 10, 2, yBot - yTop + 10, P["ln3"]); }
+        // the face toward the viewer (south side) and the rims
+        int faceTop = yBot + 1, faceBot = bodyY1 - floor + 1;
+        if (faceBot > faceTop) { Plank(b, x0, faceTop, bw, faceBot - faceTop, 1); }
+        b.Rect(x0, yBot, bw, 2, P["w5"]); b.Rect(x0, yTop, bw, 2, P["w5"]);
+        return b.Outline(P["out"]);
+    }
+
+    /// <summary>A wheelbarrow seen head-on: the tray with its load, the wheel in front, the handles behind.</summary>
+    private void BarrowNS(PixelBuffer b, VehicleSpec s, bool north, bool loaded, int gx, int gy, int wid, int len, int cx)
+    {
+        int rear = north ? gy + len - 6 : gy + 6, front = north ? gy + 8 : gy + len - 6;
+        foreach (int sx in new[] { cx - 9, cx + 8 }) b.Shade(sx, Math.Min(rear, rear + (north ? -14 : 0)) , 2, 14, R["wood"], Top);
+        int trayY = north ? rear - 30 : rear + 2;
+        b.Shade(cx - 11, trayY - 9, 22, 28, R["wood"], Top); b.Rect(cx - 9, trayY - 7, 18, 24, P["w2"]);
+        if (loaded) { b.Shade(cx - 8, trayY - 12, 16, 12, R["linen"], Top); b.Shade(cx - 3, trayY - 16, 10, 8, R["wood"], Top); }
+        b.Ellipse(cx, front - 6, 3, 7, P["w3"], true); b.Rect(cx - 1, front - 8, 2, 4, P["m2"]);
+    }
+
+    private void LoadNS(PixelBuffer b, int x0, int x1, int yTop, int yBot)
+    {
+        int bw = x1 - x0, mid = (yTop + yBot) / 2;
+        b.Shade(x0 + 3, mid - 4, bw / 2 - 4, 14, R["linen"], Top); b.Rect(x0 + 6, mid - 2, 5, 1, P["ln1"]);                 // two sacks side by side
+        b.Shade(x0 + bw / 2 + 1, mid - 6, bw / 2 - 4, 16, R["linen"], Top); b.Rect(x0 + bw / 2 + 5, mid - 3, 5, 1, P["ln1"]);
+        b.Shade(x0 + bw / 4, yTop + 2, bw / 2, 12, R["wood"], Top); b.Rect(x0 + bw / 4, yTop + 7, bw / 2, 1, P["m2"]);        // a crate behind
+    }
+
+    /// <summary>The load seen from the side: sacks along the bed and a crate on top, standing above the rim.</summary>
+    private void LoadEast(PixelBuffer b, int x0, int x1, int rimTop, int rimBot)
+    {
+        int bw = x1 - x0, n = Math.Max(2, bw / 20);
+        for (int k = 0; k < n; k++)
+        {
+            int sx = x0 + 3 + k * (bw - 6) / n;
+            b.Shade(sx, rimTop - 3 + (k % 2) * 2, (bw - 6) / n - 2, rimBot - rimTop + 1, R["linen"], Top); b.Rect(sx + 3, rimTop - 1 + (k % 2) * 2, 4, 1, P["ln1"]);
+        }
+        b.Shade(x0 + bw / 3, rimTop - 8, bw / 3, 8, R["wood"], Top); b.Rect(x0 + bw / 3, rimTop - 4, bw / 3, 1, P["m2"]);
     }
 
     // ---------------------------------------------------------------------------------------------- parts

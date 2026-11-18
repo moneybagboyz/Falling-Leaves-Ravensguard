@@ -167,15 +167,26 @@ public sealed class MarketSystem
     /// <summary>H3: one session in every open book, settlements ascending (money spec 4).</summary>
     public (int Filled, long Mites) HourlySession(GameTime now)
     {
-        int filled = 0; long mites = 0;
+        int filled = 0; long mites = 0; int doy = now.DayOfYear;
+        bool fairDay = Ravensguard.Sim.Travel.FairCalendar.IsFairDay(doy);
         foreach (var b in AllBooks())
         {
-            if (!b.IsOpen(now.Hour)) continue;
+            // a fair keeps the stalls busy into the evening: the holders run sessions for a few hours after the usual close (Phase 3 cleanup B, item 6)
+            bool fairHours = fairDay && now.Hour >= b.Money.MarketCloseHour && now.Hour < b.Money.MarketCloseHour + Ravensguard.Sim.Travel.FairCalendar.EveningSessionHours
+                && Ravensguard.Sim.Travel.FairCalendar.Holds(doy, ClassOf(b.SettlementIndex));
+            if (!b.IsOpen(now.Hour) && !fairHours) continue;
+            SessionsRun++; if (fairHours) FairSessionsRun++;
             var (f, m) = b.RunSession(now.TotalHours, (int)now.TotalDays);
             filled += f; mites += m;
         }
         return (filled, mites);
     }
+
+    /// <summary>Sessions run since this system was made (a counter for tests and the soak report, not saved) and how many of them were the fair's evening ones.</summary>
+    public long SessionsRun { get; private set; }
+    public long FairSessionsRun { get; private set; }
+
+    private SettlementClass ClassOf(int settlement) => settlement >= 0 && settlement < Pop.Region.Settlements.Count ? Pop.Region.Settlements[settlement].Class : SettlementClass.Village;
 
     /// <summary>H5 (hour 0): structural demand, then the demand EMA, expiry and import requests (money spec 4).</summary>
     public void DailyGlobals(GameTime now, int tMeanC = 10)
@@ -185,7 +196,9 @@ public sealed class MarketSystem
         foreach (var b in AllBooks())
         {
             var d = demand[b.SettlementIndex];
-            for (int g = 0; g < d.Length; g++) b.Goods[g].StructuralDemand = d[g];
+            // the days of a fair bring a crowd to the holder's stalls: demand for ale, bread and meat is tilted for those days only (travel spec 4.6)
+            bool fair = Ravensguard.Sim.Travel.FairCalendar.Holds(now.DayOfYear, ClassOf(b.SettlementIndex));
+            for (int g = 0; g < d.Length; g++) b.Goods[g].StructuralDemand = fair ? d[g] * Ravensguard.Sim.Travel.FairCalendar.DemandMultPm(Econ.Goods.StringId((ushort)g)) / 1000 : d[g];
             b.Daily(day);
             PostImportRequests(b, day);
         }

@@ -46,7 +46,7 @@ public partial class InventoryScreen : Control
         Build();
     }
 
-    static string Kg(long g) => $"{g / 1000.0:0.0}";
+    static string Kg(long g) => g < 50 ? "0" : Quotes.Weight(g).Replace(" kg", "");
     static string Litres(long ml) => $"{ml / 1000.0:0.#}";
 
     public static Control LoadBar(HeroView v, int width = 420)
@@ -131,7 +131,7 @@ public partial class InventoryScreen : Control
     void GoodRow(HeroView v, CarriedGood g, int indent)
     {
         var row = new HBoxContainer(); row.AddThemeConstantOverride("separation", 8);
-        row.AddChild(new Label { Text = new string(' ', indent * 4) + g.Name + (g.Piece ? $" x {g.Qty}" : $"  {g.Qty / 1000.0:0.###} kg"), SizeFlagsHorizontal = SizeFlags.ExpandFill, ClipText = true });
+        row.AddChild(new Label { Text = new string(' ', indent * 4) + g.Name + (g.Piece ? $" x {g.Qty}" : $"  {Quotes.Weight(g.Qty)}"), SizeFlagsHorizontal = SizeFlags.ExpandFill, ClipText = true });
         row.AddChild(new Label { Text = $"{Kg(g.MassG)} kg", CustomMinimumSize = new Vector2(70, 0), HorizontalAlignment = HorizontalAlignment.Right });
         row.AddChild(new Label { Text = $"{Litres(g.VolumeMl)} L", CustomMinimumSize = new Vector2(90, 0), HorizontalAlignment = HorizontalAlignment.Right, ThemeTypeVariation = "HintLabel" });
         var boxes = v.Items.Where(b => b.IsContainer).ToList();

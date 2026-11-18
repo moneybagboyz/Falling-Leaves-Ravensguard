@@ -58,6 +58,8 @@ public static class InputDefs
         A(W, "cart_dig", K(Key.Bracketleft)); // a shovel under the wheel: a fifth off the mud
         A(W, "camp", K(Key.Comma));      // travel spec 6: make camp, or open the camp panel (Q > Make camp once the Q menu exists)
         A(W, "forage", K(Key.Period));   // travel spec 4.4: forage the tile (Q > Forage)
+        A(W, "hunt", K(Key.Semicolon));  // travel spec 4.5: an hour's hunt for game on this tile (Q > Hunt)
+        A(W, "snare", K(Key.Apostrophe)); // travel spec 4.5: set a snare here, or take up the one beside you (Q > Snare)
         A(W, "autopilot", K(Key.Y)); // the autopilot panel (autopilot-v1 spec 6; overview 5A: Y is free in World)
         A(W, "make", K(Key.N)); // crafting screen (basic-crafting spec 4.7); N is free in World, CombatStance, CalledShot and Build
         A(W, "camera_up", K(Key.Up));
@@ -80,6 +82,7 @@ public static class InputDefs
         A(W, "quicksave", K(Key.F5));
         A(W, "quickload", K(Key.F9));
         A(W, "report_bug", K(Key.F8));
+        A(W, "hint_more", K(Key.Enter)); // onboarding spec 3.1: opens the Codex page of the hint on screen (the router's own Enter, menu.accept, is a different context)
 
         // Mounted (the hero rides or drives; stacks on World): O toggles the walk, Shift is the gallop, E dismounts
         A(R, "walk_toggle", K(Key.O));

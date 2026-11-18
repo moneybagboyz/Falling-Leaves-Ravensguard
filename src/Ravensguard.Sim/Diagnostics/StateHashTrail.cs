@@ -72,7 +72,7 @@ public static class LiveStateHash
     /// <summary>The whole state: used at every 400th tick after the start.</summary>
     public static ulong Compute(LiveWorld w) => Hash(w, full: true);
 
-    /// <summary>Only what a save keeps (clock, position, facing, torch): the check of the starting state T0, since a path in progress or the walking mode are not saved.</summary>
+    /// <summary>Only what a save keeps (clock, position, facing, torch, the walk in progress and its gait): the check of the starting state T0.</summary>
     public static ulong Saved(LiveWorld w) => Hash(w, full: false);
 
     private static ulong Hash(LiveWorld w, bool full)
@@ -85,6 +85,7 @@ public static class LiveStateHash
         L(w.Clock.Now.Seconds); L(w.Clock.GameMsRemainder); L((int)w.Clock.Speed);
         L(ox + h.X.Raw); L(oy + h.Y.Raw); L(h.Z); L((int)h.Facing); L(h.Torch ? 1 : 0);
         if (full) { L(ox + h.PrevX.Raw); L(oy + h.PrevY.Raw); L(h.PrevZ); L(h.Moving ? 1 : 0); L((int)h.Mode); L(h.PathRemaining); }
+        else L(h.PathRemaining);                       // the walk in progress is saved (Phase 3 cleanup), so a load starts mid-route exactly where the autosave left it
         return BitConverter.ToUInt64(sha.GetHashAndReset(), 0);
     }
 }

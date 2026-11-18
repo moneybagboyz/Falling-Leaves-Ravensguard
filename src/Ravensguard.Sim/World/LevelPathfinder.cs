@@ -17,6 +17,12 @@ public sealed class LevelPathfinder
     private LevelGrid _g;
     private readonly int[] _gs, _parent, _seen, _closed, _viaPortal;
     private int _cur;
+    /// <summary>
+    /// The search arrays are stamped per search and shared by every call, so two searches at once on one pathfinder corrupt each other's parent chains (a cycle there made
+    /// <see cref="Build"/> grow its list until the process ran out of memory: Phase 3 cleanup, a shared test ground walked from two test classes at once). Every entry point takes this lock;
+    /// the live tick calls from one thread, so it is never contended there.
+    /// </summary>
+    private readonly object _gate = new();
     private static readonly (int dx, int dy)[] Dirs = { (0, -1), (1, 0), (0, 1), (-1, 0), (1, -1), (1, 1), (-1, 1), (-1, -1) };
 
     // Zone abstraction. Zone ids are slots: a chunk-level that is re-zoned gives its old ids back and reuses them, so the
@@ -55,7 +61,9 @@ public sealed class LevelPathfinder
     /// Points the pathfinder at another grid of the same size (the live window moved) instead of allocating new per-cell arrays (about 11 MB for a 7 x 7 chunk window).
     /// The search arrays stay (they are stamped per search); the chunk-zone abstraction is forgotten and rebuilt on demand.
     /// </summary>
-    public void Rebind(LevelGrid g)
+    public void Rebind(LevelGrid g) { lock (_gate) RebindCore(g); }
+
+    private void RebindCore(LevelGrid g)
     {
         if (g.Width != _g.Width || g.Height != _g.Height || g.CellCount != _g.CellCount || g.ChunkLevelCount != _g.ChunkLevelCount)
             throw new ArgumentException("Rebind needs a grid of the same size.", nameof(g));
@@ -76,15 +84,17 @@ public sealed class LevelPathfinder
         return LevelGrid.Straight * Math.Max(dx, dy) + (LevelGrid.Diagonal - LevelGrid.Straight) * Math.Min(dx, dy);
     }
 
-    public PathResult? FindPath(Cell3 from, Cell3 to) => Search(from, to, null, int.MaxValue);
+    public PathResult? FindPath(Cell3 from, Cell3 to) { lock (_gate) return Search(from, to, null, int.MaxValue); }
 
     /// <summary>
     /// <see cref="FindPath"/> that gives up (null) after <paramref name="maxExpanded"/> cells: the search is a pure function of the grid, so the cutoff is deterministic. For the many small routes of
     /// the live people, where a goal that cannot be reached must not flood the whole window.
     /// </summary>
-    public PathResult? FindPathBounded(Cell3 from, Cell3 to, int maxExpanded) => Search(from, to, null, maxExpanded);
+    public PathResult? FindPathBounded(Cell3 from, Cell3 to, int maxExpanded) { lock (_gate) return Search(from, to, null, maxExpanded); }
 
-    public PathResult? FindPathAbstract(Cell3 from, Cell3 to)
+    public PathResult? FindPathAbstract(Cell3 from, Cell3 to) { lock (_gate) return FindPathAbstractCore(from, to); }
+
+    private PathResult? FindPathAbstractCore(Cell3 from, Cell3 to)
     {
         if (!_g.InBounds(from.X, from.Y, from.Z) || !_g.InBounds(to.X, to.Y, to.Z)) return null;
         RefreshAbstraction();
@@ -96,7 +106,9 @@ public sealed class LevelPathfinder
     }
 
     /// <summary>Reachability from the zone graph alone, no cell search.</summary>
-    public bool IsReachable(Cell3 from, Cell3 to)
+    public bool IsReachable(Cell3 from, Cell3 to) { lock (_gate) return IsReachableCore(from, to); }
+
+    private bool IsReachableCore(Cell3 from, Cell3 to)
     {
         if (!_g.InBounds(from.X, from.Y, from.Z) || !_g.InBounds(to.X, to.Y, to.Z)) return false;
         RefreshAbstraction();
@@ -169,6 +181,7 @@ public sealed class LevelPathfinder
         var cells = new List<Cell3>(); var portals = new List<int>();
         for (int i = goal; i != -1; i = _parent[i])
         {
+            if (cells.Count > _g.CellCount) throw new InvalidOperationException("The pathfinder's parent chain has a cycle (two searches ran at once on one pathfinder).");
             cells.Add(_g.FromIndex(i));
             if (_viaPortal[i] >= 0) portals.Add(_viaPortal[i]);
         }
@@ -179,7 +192,9 @@ public sealed class LevelPathfinder
     // ---------------- zone abstraction ----------------
 
     /// <summary>Rebuilds zones only for chunk-levels whose revision changed, then the (cheap) edge list.</summary>
-    public void RefreshAbstraction()
+    public void RefreshAbstraction() { lock (_gate) RefreshAbstractionCore(); }
+
+    private void RefreshAbstractionCore()
     {
         if (_abstractRevision == _g.Revision) return;
         int rebuilt = 0;

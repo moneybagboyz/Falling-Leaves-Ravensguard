@@ -642,13 +642,24 @@ public class HorseTests(ITestOutputHelper output)
 
     // ------------------------------------------------------------------ budgets
 
+}
+
+/// <summary>The cost of the vehicle speed maths (Phase 3 cleanup: a wall-clock budget, so in the Timing collection).</summary>
+[Collection(TimingCollection.Name)]
+public class HorseTimingTests(ITestOutputHelper output)
+{
     [Fact]
     public void SpeedMaths_IsFastAndAllocatesNothing()
     {
         var tu = VehicleTuning.Default; long sink = 0; for (int i = 0; i < 1000; i++) sink += VehicleMath.Evaluate(250, 665, 665, 45 + i % 90, 530, 500, 700, false).SpeedCmps;
-        var sw = System.Diagnostics.Stopwatch.StartNew(); long a0 = GC.GetAllocatedBytesForCurrentThread();
-        for (int i = 0; i < 1_000_000; i++) sink += VehicleMath.Evaluate(250, 665 + i % 7, 665, 45 + i % 90, 530 + i % 3, 500, 700, false).SpeedCmps;
-        double us = sw.Elapsed.TotalMilliseconds * 1000 / 1_000_000; long alloc = GC.GetAllocatedBytesForCurrentThread() - a0;
+        long alloc = 0;
+        double us = TestBudget.BestPass(2.0, 3, () =>
+        {
+            var sw = System.Diagnostics.Stopwatch.StartNew(); long a0 = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 1_000_000; i++) sink += VehicleMath.Evaluate(250, 665 + i % 7, 665, 45 + i % 90, 530 + i % 3, 500, 700, false).SpeedCmps;
+            double r = sw.Elapsed.TotalMilliseconds * 1000 / 1_000_000; alloc = Math.Max(alloc, GC.GetAllocatedBytesForCurrentThread() - a0);
+            return r;
+        });
         output.WriteLine($"{us * 1000:0} ns a call, {alloc} bytes, sink {sink}");
         Assert.Equal(0, alloc); Assert.True(us < TestBudget.Ms(2.0), $"{us} us");
         Assert.True(tu.Crr(Surface.Sand, false) == 150);

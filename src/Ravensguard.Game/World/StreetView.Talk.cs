@@ -90,6 +90,7 @@ public partial class StreetView
     {
         if (Runtime is not { } rt) return null;
         int i = rt.State.Population.People.IndexOf(person);
+        if (i >= 0 && Ob is { } mentor && i == mentor.MentorPerson) return mentor.MentorId;   // the first hour's mentor speaks the authored dialogue of their kind
         return i >= 0 && rt.Caravans.Any(c => c.Master == i) ? "caravan_master" : null;
     }
 
@@ -105,14 +106,15 @@ public partial class StreetView
     void OpenTalk(EntityId person, string? shot = null)
     {
         if (_heroLink == null || _talk == null || _router == null) { _router?.ShowToast(L.T("MAP_NONE")); return; }
+        Raise("dialogue_opened");
         _router.Push(new TalkScreen(_router, _heroLink, _talk, _talk.Book, person, HeroNow, TalkWorldContext, _talkHist, id => { _router.Pop(); OpenTrade(HeroSettlement(), id); }, TalkSeed, UniqueOf(person), FarPlace)
-        { ShotPath = shot, ShotPress = shot != null ? [2, 3, 3, 4] : [], SettlementNames = SettlementNames });
+        { ShotPath = shot, ShotPress = shot != null ? [2, 3, 3, 4] : [], SettlementNames = SettlementNames, OnChoice = i => _rec.Action(Ravensguard.Sim.Diagnostics.HeroAction.TalkChoice, i, (long)person.Value) });
     }
 
     void OpenJournal(string? shot = null, bool trace = false)
     {
         if (_talk == null || _router == null) { OpenWork(); return; }
-        _router.Push(new JournalScreen(_router, _talk, SettlementNames, OpenWork) { ShotPath = shot, StartTrace = trace });
+        _router.Push(new JournalScreen(_router, _talk, SettlementNames, OpenWork) { ShotPath = shot, StartTrace = trace, GettingStarted = GettingStarted, PinMentor = Ob?.Complete == false && !_pinned ? PinMentor : null });
     }
 
     // ------------------------------------------------------------------ barks and overhearing (a view over the live people; nothing here changes a record)

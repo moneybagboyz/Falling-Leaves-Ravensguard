@@ -130,6 +130,42 @@ public sealed class LiveSave
     [Key(5)] public byte[] Explored { get; set; } = [];
     /// <summary>Region id of the hero plus one (0 = not stored, an older save): the region the hero stands in, which changes as they cross a border.</summary>
     [Key(6)] public int RegionPlus1 { get; set; }
+    /// <summary>The walk in progress (<see cref="HeroMotion"/>): route as region-cell (x, y, level) triples, next index, stuck counter, portal lock (empty or a triple), gait. Empty in older saves.</summary>
+    [Key(7)] public int[] PathXyz { get; set; } = [];
+    [Key(8)] public int PathIdx { get; set; }
+    [Key(9)] public int PathStuck { get; set; }
+    [Key(10)] public int[] PortalLock { get; set; } = [];
+    [Key(11)] public byte Mode { get; set; }
+    /// <summary>The hero's core temperature, exposure counters and the wetness of the clothes worn; null in older saves and in worlds without the clothing model.</summary>
+    [Key(12)] public HeroBodySave? Body { get; set; }
+}
+
+/// <summary>Save form of <see cref="Ravensguard.Sim.Clothing.HeroBody"/>.</summary>
+[MessagePackObject]
+public sealed class HeroBodySave
+{
+    [Key(0)] public long CoreU { get; set; }
+    [Key(1)] public int ExposureMin { get; set; }
+    [Key(2)] public int SevereMin { get; set; }
+    [Key(3)] public int HeatMin { get; set; }
+    [Key(4)] public bool Collapsed { get; set; }
+    [Key(5)] public byte Died { get; set; }
+    [Key(6)] public long LastMinute { get; set; }
+    [Key(7)] public long WearDay { get; set; }
+    [Key(8)] public string[] WornShapes { get; set; } = [];
+    [Key(9)] public int[] WornWetU { get; set; } = [];
+
+    public static HeroBodySave? Of(Ravensguard.Sim.Clothing.HeroBody? b) => b == null ? null : new()
+    {
+        CoreU = b.CoreU, ExposureMin = b.ExposureMin, SevereMin = b.SevereMin, HeatMin = b.HeatMin, Collapsed = b.Collapsed, Died = (byte)b.Died, LastMinute = b.LastMinute, WearDay = b.WearDay,
+        WornShapes = [.. b.WornShapes], WornWetU = [.. b.WornWetU],
+    };
+
+    public Ravensguard.Sim.Clothing.HeroBody ToBody()
+    {
+        if (WornShapes.Length != WornWetU.Length) throw new SaveException("Corrupt 'live' section in save: the hero's worn clothes and their wetness do not match.");
+        return new(CoreU, ExposureMin, SevereMin, HeatMin, Collapsed, (Ravensguard.Sim.Clothing.ExposureDeath)Died, LastMinute, WearDay, [.. WornShapes], [.. WornWetU]);
+    }
 }
 
 [MessagePackObject]
@@ -314,6 +350,8 @@ public static class WorldSave
             {
                 WorldXRaw = live.WorldXRaw, WorldYRaw = live.WorldYRaw, Z = live.Z, Facing = (byte)live.Facing, Torch = live.Torch, Explored = live.Explored.ToBytes(),
                 RegionPlus1 = HeroRegionOf(w, live) is { IsValid: true } hr ? hr.Id + 1 : 0,
+                PathXyz = live.Motion?.PathXyz ?? [], PathIdx = live.Motion?.PathIdx ?? 0, PathStuck = live.Motion?.Stuck ?? 0, PortalLock = live.Motion?.PortalLock ?? [], Mode = (byte)(live.Motion?.Mode ?? MoveMode.Jog),
+                Body = HeroBodySave.Of(live.Body),
             },
         };
     }
@@ -378,8 +416,11 @@ public static class WorldSave
         if (file.Sections.ContainsKey(LiveSection))
         {
             var ls = Decode<LiveSave>(file, LiveSection, compressed: true);
+            if (ls.PathXyz.Length % 3 != 0 || ls.PortalLock.Length is not (0 or 3) || !Enum.IsDefined((MoveMode)ls.Mode))
+                throw new SaveException("Corrupt 'live' section in save: the hero's walk in progress is malformed.");
+            var motion = new HeroMotion(ls.PathXyz, ls.PathIdx, ls.PathStuck, ls.PortalLock, (MoveMode)ls.Mode);
             resume = new LiveResume(ls.WorldXRaw, ls.WorldYRaw, ls.Z, (Facing)ls.Facing, ls.Torch, new GameTime(meta.ClockSeconds), meta.ClockMsRemainder, (SimSpeed)meta.ClockSpeed,
-                ExploredTiles.FromBytes(ls.Explored), codex);
+                ExploredTiles.FromBytes(ls.Explored), codex, Motion: motion.IsIdle ? HeroMotion.Idle : motion, Body: ls.Body?.ToBody());
             var home = RegionCoord.Snap(meta.EmbarkCellX, meta.EmbarkCellY);
             var heroRegion = HeroRegionTracker.OfFrameCell(home, resume.Cell.X, resume.Cell.Y);
             if (ls.RegionPlus1 > 0 && (!heroRegion.IsValid || heroRegion.Id != ls.RegionPlus1 - 1))

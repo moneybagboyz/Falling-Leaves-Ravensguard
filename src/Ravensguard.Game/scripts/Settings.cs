@@ -13,6 +13,8 @@ public static class Settings
     public static bool ScreenShake { get; set; } = true;
     public static bool Flashes { get; set; } = true;
     public static bool SlowMotion { get; set; } = true;
+    /// <summary>What this profile has been taught and the hint setting (onboarding spec 3.1): kept in the profile's settings file, not in a world save, so a new world does not re-teach what the player knows.</summary>
+    public static Ravensguard.Sim.Onboarding.HintProfile Hints { get; set; } = new();
 
     public static void Load()
     {
@@ -22,6 +24,8 @@ public static class Settings
         ScreenShake = ReadBool(cfg, "accessibility", "screen_shake", true);
         Flashes = ReadBool(cfg, "accessibility", "flashes", true);
         SlowMotion = ReadBool(cfg, "accessibility", "slow_motion", true);
+        var h = cfg.GetValue("hints", "profile", "");
+        Hints = Ravensguard.Sim.Onboarding.HintProfile.FromJson(h.VariantType == Variant.Type.String ? h.AsString() : "");
     }
 
     // Type-checked reads: a hand-edited or corrupt file falls back to the default instead of throwing InvalidCastException.
@@ -44,6 +48,7 @@ public static class Settings
         cfg.SetValue("accessibility", "screen_shake", ScreenShake);
         cfg.SetValue("accessibility", "flashes", Flashes);
         cfg.SetValue("accessibility", "slow_motion", SlowMotion);
+        cfg.SetValue("hints", "profile", Hints.ToJson());
         var err = cfg.Save(Path);
         if (err != Error.Ok) GD.PushWarning($"Could not save {Path}: {err}");
     }

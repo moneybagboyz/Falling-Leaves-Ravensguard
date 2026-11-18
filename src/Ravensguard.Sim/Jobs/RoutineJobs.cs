@@ -19,7 +19,10 @@ public static class RoutineJobs
         var homes = new List<int>();
         for (int h = 0; h < pop.Households.Count && h < econ.HouseholdCount; h++) if (pop.Households.Settlement[h] == settlement) homes.Add(h);
         if (homes.Count == 0) return 0;
-        int want = Math.Min(env.Tuning.BoardCap, (homes.Count * 3 + 99) / 100);
+        int doy = new GameTime(day * 86400L).DayOfYear;
+        int want = Math.Min(env.Tuning.BoardCap, (homes.Count * 3 + 99) / 100 * Travel.FairCalendar.JobBoardMult(doy, rs.Class));          // a fair multiplies the day's postings
+        int stalls = Math.Min(Math.Max(0, env.Tuning.BoardCap - want), Travel.FairCalendar.StallBonus(doy, rs.Class) / 4);                    // and a fair needs hands to mind its stalls
+        want += stalls;
         long now = day * ScheduleTuningDay, posted = 0;
         for (int k = 0; k < want; k++)
         {
@@ -29,7 +32,7 @@ public static class RoutineJobs
             var sq = rs.Plan.Square; long sx = (sq.W > 0 ? sq.CenterX : rs.CenterX) * 1000L, sy = (sq.W > 0 ? sq.CenterY : rs.CenterY) * 1000L;
             long off = DetRng.Range(seed, day, (ulong)settlement, RngStreams.RoutineJobs, (uint)(k * 4 + 3), -6000, 6001);
             var poster = pop.Households.IdOf(h);
-            OddJobKind ok = kind switch { 0 => OddJobKind.Guard, 1 => OddJobKind.TendShop, _ => OddJobKind.FarmWork };
+            OddJobKind ok = k >= want - stalls ? OddJobKind.TendShop : kind switch { 0 => OddJobKind.Guard, 1 => OddJobKind.TendShop, _ => OddJobKind.FarmWork };
             long wage = ok == OddJobKind.Guard ? JobPay.Guard(env.Tuning, env.UnskilledWage, hours) : JobPay.Labour(env.Tuning, env.UnskilledWage, hours);
             var job = table.Post(env, ok, poster, econ.HouseholdPurse[h], region, settlement, now, now + 2 * 86400L, wage, j =>
             {
@@ -39,7 +42,7 @@ public static class RoutineJobs
                     int pi = rs.Parcels[DetRng.Range(seed, day, (ulong)settlement, RngStreams.RoutineJobs, (uint)(k * 4 + 3), 0, rs.Parcels.Count)];
                     var pc = pop.Region.Parcels[pi]; j.P0 = ((long)pc.TileX * RegionSettings.TileM + RegionSettings.TileM / 2) * 1000; j.P1 = ((long)pc.TileY * RegionSettings.TileM + RegionSettings.TileM / 2) * 1000; j.P5 = pi;
                 }
-                j.Title = ok switch { OddJobKind.Guard => "Stand watch", OddJobKind.TendShop => "Mind a stall", _ => "Field work" };
+                j.Title = ok switch { OddJobKind.Guard => "Stand watch", OddJobKind.TendShop => k >= want - stalls ? "Mind a fair stall" : "Mind a stall", _ => "Field work" };
             });
             if (job != null) posted++;
         }

@@ -6,7 +6,14 @@ using Ravensguard.Sim.World;
 namespace Ravensguard.Sim.Diagnostics;
 
 /// <summary>The player commands the live sim takes. Never key codes: only what the sim was asked to do.</summary>
-public enum ReplayKind : byte { Input = 1, Speed = 2, Torch = 3, MoveTo = 4, UsePortal = 5, ClearPath = 6, Ride = 7 }
+/// <para>Appended in the Phase 3 cleanup: <see cref="TravelPlace"/> (auto-travel and the autopilot's long walk put the hero on the route), <see cref="LoadSpeed"/> (the carried load's speed factor),
+/// <see cref="Hero"/> (a command the hero asked of the world records: trade, crafting, talk, hire; A = kind | seq &lt;&lt; 8, B = the game second, C = a digest of the command) and
+/// <see cref="Action"/> (a hero action outside the desk: camp, autopilot directives, a talk choice, a journey begun or cancelled; A = <see cref="HeroAction"/>, B and C its arguments).
+/// The last two act on the world's records, not on the live sim: a replay hands them to <see cref="ReplayOptions.OnRecordCommand"/>.</para>
+public enum ReplayKind : byte { Input = 1, Speed = 2, Torch = 3, MoveTo = 4, UsePortal = 5, ClearPath = 6, Ride = 7, TravelPlace = 8, LoadSpeed = 9, Hero = 10, Action = 11 }
+
+/// <summary>Hero actions recorded with <see cref="ReplayKind.Action"/> (append only).</summary>
+public enum HeroAction : byte { None = 0, TravelBegin = 1, TravelCancel = 2, TravelResume = 3, CampMake = 4, CampJob = 5, CampBreak = 6, Directive = 7, DirectiveStop = 8, TalkChoice = 9, TakeControl = 10 }
 
 /// <summary>One command and the live tick it was issued at (it takes effect at the next step).</summary>
 public readonly record struct ReplayCommand(long Tick, ReplayKind Kind, long A = 0, long B = 0, long C = 0)
@@ -18,6 +25,12 @@ public readonly record struct ReplayCommand(long Tick, ReplayKind Kind, long A =
     public static ReplayCommand UsePortal(long tick) => new(tick, ReplayKind.UsePortal);
     public static ReplayCommand ClearPath(long tick) => new(tick, ReplayKind.ClearPath);
     public static ReplayCommand Ride(long tick, int code) => new(tick, ReplayKind.Ride, code);
+    public static ReplayCommand TravelPlace(long tick, long xMm, long yMm, Facing f) => new(tick, ReplayKind.TravelPlace, xMm, yMm, (int)f);
+    public static ReplayCommand LoadSpeed(long tick, int pm) => new(tick, ReplayKind.LoadSpeed, pm);
+    public static ReplayCommand Hero(long tick, int kind, long seq, long issuedSec, long digest) => new(tick, ReplayKind.Hero, (long)(byte)kind + (seq << 8), issuedSec, digest);
+    public static ReplayCommand Action(long tick, HeroAction a, long b = 0, long c = 0) => new(tick, ReplayKind.Action, (int)a, b, c);
+    /// <summary>True for the kinds that act on the world's records rather than on the live sim.</summary>
+    public bool IsRecordCommand => Kind is ReplayKind.Hero or ReplayKind.Action;
 
     /// <summary>One readable line for crash reports ("tick 4021 move_to 12,40,0").</summary>
     public override string ToString() => Kind switch
@@ -28,6 +41,10 @@ public readonly record struct ReplayCommand(long Tick, ReplayKind Kind, long A =
         ReplayKind.MoveTo => $"tick {Tick} move_to {A},{B},{C}",
         ReplayKind.UsePortal => $"tick {Tick} use_portal",
         ReplayKind.Ride => $"tick {Tick} ride {A}",
+        ReplayKind.TravelPlace => $"tick {Tick} travel_place {A},{B} facing {(Facing)(int)C}",
+        ReplayKind.LoadSpeed => $"tick {Tick} load_speed {A}",
+        ReplayKind.Hero => $"tick {Tick} hero {A & 0xFF} seq {A >> 8} at {B}s digest {C:X}",
+        ReplayKind.Action => $"tick {Tick} action {(HeroAction)(int)A} {B} {C}",
         _ => $"tick {Tick} clear_path",
     };
 
@@ -43,6 +60,9 @@ public readonly record struct ReplayCommand(long Tick, ReplayKind Kind, long A =
             case ReplayKind.UsePortal: w.UsePortal(); break;
             case ReplayKind.ClearPath: w.ClearPath(); break;
             case ReplayKind.Ride: w.RideCommand((int)A); break;
+            case ReplayKind.TravelPlace: w.TravelPlace(A, B, (Facing)(int)C); break;
+            case ReplayKind.LoadSpeed: w.LoadSpeedPm = (int)A; break;
+            // Hero and Action change the world's records (the desk, the camp, the autopilot book): nothing in the live sim
         }
     }
 }
@@ -54,7 +74,8 @@ public readonly record struct ReplayCommand(long Tick, ReplayKind Kind, long A =
 public sealed class CommandLog
 {
     private const uint Magic = 0x4C434752; // "RGCL"
-    private const int FormatVersion = 1;
+    /// <summary>2: the coordinates of <see cref="ReplayKind.TravelPlace"/> are written as differences from the previous one (a journey places the hero every tick, a metre or so apart). 1 is still read.</summary>
+    private const int FormatVersion = 2;
     private readonly List<ReplayCommand> _items = [];
     private readonly object _gate = new();
 
@@ -100,8 +121,13 @@ public sealed class CommandLog
             using var w = new BinaryWriter(ms, Encoding.UTF8, true);
             w.Write(Magic); w.Write((byte)FormatVersion);
             V(w, BaseTick); V(w, EndTick); V(w, _items.Count);
-            long prev = BaseTick;
-            foreach (var c in _items) { V(w, c.Tick - prev); prev = c.Tick; w.Write((byte)c.Kind); V(w, c.A); V(w, c.B); V(w, c.C); }
+            long prev = BaseTick, px = 0, py = 0;
+            foreach (var c in _items)
+            {
+                V(w, c.Tick - prev); prev = c.Tick; w.Write((byte)c.Kind);
+                if (c.Kind == ReplayKind.TravelPlace) { V(w, c.A - px); V(w, c.B - py); V(w, c.C); px = c.A; py = c.B; }
+                else { V(w, c.A); V(w, c.B); V(w, c.C); }
+            }
             w.Flush();
             return ms.ToArray();
         }
@@ -112,15 +138,17 @@ public sealed class CommandLog
         using var r = new BinaryReader(new MemoryStream(data), Encoding.UTF8);
         if (r.ReadUInt32() != Magic) throw new InvalidDataException("not a replay trace");
         int ver = r.ReadByte();
-        if (ver != FormatVersion) throw new InvalidDataException($"replay trace version {ver} is not supported");
+        if (ver is not (1 or FormatVersion)) throw new InvalidDataException($"replay trace version {ver} is not supported");
         var log = new CommandLog { BaseTick = R(r), EndTick = 0 };
         long end = R(r); int n = (int)R(r);
-        long prev = log.BaseTick;
+        long prev = log.BaseTick, px = 0, py = 0;
         for (int i = 0; i < n; i++)
         {
             prev += R(r);
             var kind = (ReplayKind)r.ReadByte();
-            log._items.Add(new ReplayCommand(prev, kind, R(r), R(r), R(r)));
+            long a = R(r), b = R(r), c = R(r);
+            if (kind == ReplayKind.TravelPlace && ver >= 2) { a += px; b += py; px = a; py = b; }
+            log._items.Add(new ReplayCommand(prev, kind, a, b, c));
         }
         log.EndTick = end;
         return log;

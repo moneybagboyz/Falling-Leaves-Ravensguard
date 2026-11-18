@@ -134,7 +134,7 @@ public partial class CraftingScreen : Control
 
     static string C(string hex, string t) => $"[color=#{hex}]{t}[/color]";
     string Gn(ushort g) => _s.Db.Goods.Def(g).Name.ToLowerInvariant();
-    string Amount(ushort g, long qty) => _s.Db.Goods.IsPiece(g) ? $"{qty}" : _s.Db.Goods.Def(g).Unit == Ravensguard.Content.GoodUnit.Litre ? $"{qty * 1000 / _s.Db.Goods.Def(g).LitreMassG / 1000.0:0.##} L" : $"{qty / 1000.0:0.###} kg";
+    string Amount(ushort g, long qty) => _s.Db.Goods.IsPiece(g) ? $"{qty}" : _s.Db.Goods.Def(g).Unit == Ravensguard.Content.GoodUnit.Litre ? $"{qty * 1000 / _s.Db.Goods.Def(g).LitreMassG / 1000.0:0.##} L" : Ravensguard.Sim.Trade.Quotes.Weight(qty);
 
     void Detail()
     {

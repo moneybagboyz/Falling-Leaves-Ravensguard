@@ -435,7 +435,7 @@ public partial class StreetView : Control, IHandlesBack
         if (_hero != null) v.AddChild(new Label { Text = L.F("STREET_HERO_HINT", _hero.Name, H("world.panel_character"), H("world.panel_codex")), ThemeTypeVariation = "HintLabel" });
         BuildAutopilotHud(v);
         hud.AddChild(top);
-        BuildPartyBar(hud); BuildTalkHud(hud);
+        BuildPartyBar(hud); BuildTalkHud(hud); BuildOnboardingHud(hud);
 
         if (_regionMap != null)
         {
@@ -913,6 +913,7 @@ public partial class StreetView : Control, IHandlesBack
         HeroTick(delta);
         AutopilotTick(delta);
         TalkTick(delta); BarkShotStep();
+        OnboardingTick(delta);
         PollSave();
         if (Run != null && !_leaving && _saveTask == null && (_sinceSave += delta) >= AutosaveSeconds) StartSave(SaveKind.Autosave, quiet: true);
 
@@ -1060,10 +1061,23 @@ public partial class StreetView : Control, IHandlesBack
     /// <summary>The 20 Hz step of the promoted people: each follows its plan, and those who stayed beyond 200 m for 5 real seconds are given back to the records (fold-back, at the next barrier).</summary>
     void StepPeople()
     {
-        if (Runtime is not { } rt || _world.Streamer == null || _lod.Count == 0) return;
+        if (Runtime is not { } rt || _world.Streamer == null) return;
+        FeedFollowers(rt);
+        if (_lod.Count == 0) return;
         _lod.Step(_world.Clock.Now.Seconds, LodGround(), LodCentres());
         var folds = _lod.TakeFolds();
         if (folds.Count > 0) _ = RuntimePeople.FoldAsync(rt, folds);
+        var exposure = _lod.TakeExposureDeaths();
+        if (exposure.Count > 0) _ = RuntimePeople.ExposureDeathsAsync(rt, exposure, _world.Clock.Now.Seconds);
+    }
+
+    /// <summary>The party walks behind the hero (Phase 3 cleanup B, item 3): the hero's trail is fed every tick, the squad's members who follow are promoted into the bubble and walk it, those told to wait stay where they stand.</summary>
+    void FeedFollowers(WorldRuntime rt)
+    {
+        var home = rt.State.HomeRegion; var (hx, hy) = _world.WorldMm;
+        _lod.NoteHero(home.OriginXM * 1000 + hx, home.OriginYM * 1000 + hy, _world.Snapshot.Hero.Z);
+        _lod.FollowMinStepMm = 150L * Math.Max(1, (int)_world.Clock.Speed);
+        if (_heroLink?.View is { } v) _lod.SetFollowers([.. v.Squad.Where(m => m.Active).Select(m => (m.Person, m.Order == Ravensguard.Sim.Trade.SquadOrder.Follow))]);
     }
 
     /// <summary>Per frame: asks the tick worker every half second (10 ticks) who the bubble should hold, takes the answer, and promotes up to 50 of them nearest first.</summary>
@@ -1110,7 +1124,7 @@ public partial class StreetView : Control, IHandlesBack
     void WatchHero(WorldRuntime rt, long now)
     {
         var mine = _jobSnap?.Live.FirstOrDefault(j => j.Worker == HeroId);
-        if (mine == null) { _heroAway = 0; return; }
+        if (mine == null || (Ob is { HasFirstJob: true } first && mine.Id == first.FirstJob)) { _heroAway = 0; return; }   // the mentor's first contract is forgiving: it is not lost by lagging behind its carrier
         var home = rt.State.HomeRegion; var c = LodCentres()[0];
         var (ex, ey, _, _) = Ravensguard.Sim.Jobs.JobTable.PositionAt(mine, now);
         long dist = PathPlan.Dist(c.X - home.OriginXM * 1000 - ex, c.Y - home.OriginYM * 1000 - ey);
@@ -1138,6 +1152,7 @@ public partial class StreetView : Control, IHandlesBack
     void OpenWork()
     {
         if (_router == null || Runtime == null) { _router?.ShowToast(L.T("MAP_NONE")); return; }
+        Raise("job_board_seen");
         _router.Push(new JobPanel(_router, WorkData, TakeJob, AbandonJob) { ShotPath = _opt.Panel == "jobs" ? _opt.ShotPath : null });
     }
 
@@ -1233,6 +1248,21 @@ public partial class StreetView : Control, IHandlesBack
         _ysort.AddChild(neu); neu.Position = old.Position;
         neu.AddChild(_torchSprite); if (np != null) neu.AddChild(np);
         _heroSprite = neu; old.QueueFree();
+        EnsureSingleNameplate();
+    }
+
+    /// <summary>
+    /// The hero's name label is exactly one node under the hero sprite. A rebuild of the sprite (a new cloak or hood) moves the label across, and a second label from an earlier build, or one parked on the
+    /// retiring sprite, drew the name twice a pixel or two apart: every Label under the sprite beyond the first "Nameplate" goes, and the label stays on the whole pixel.
+    /// </summary>
+    void EnsureSingleNameplate()
+    {
+        bool seen = false;
+        foreach (var n in _heroSprite.GetChildren().OfType<Label>().ToList())
+        {
+            if (!seen) { seen = true; n.Name = "Nameplate"; n.Position = new Vector2(-60, -84); continue; }
+            _heroSprite.RemoveChild(n); n.QueueFree();
+        }
     }
 
     /// <summary>Ambient tint of the open air: cool moonlight to warm daylight, an orange cast while the sun is low, then the weather's dimming (cloud, rain, fog).</summary>
@@ -1306,6 +1336,7 @@ public partial class StreetView : Control, IHandlesBack
     public override void _UnhandledInput(InputEvent e)
     {
         if (!Visible) return;
+        if (ObInput(e)) { GetViewport().SetInputAsHandled(); return; }
         if (e is InputEventKey { Pressed: true } && Actions.Pressed(e, "world.back") && (_campOpen || _travel?.Journey is { State: Ravensguard.Sim.Travel.JourneyState.Travelling or Ravensguard.Sim.Travel.JourneyState.Paused }) && TravelInput(e)) { GetViewport().SetInputAsHandled(); return; }
         if (_router != null && Actions.Pressed(e, "world.back"))
         {
@@ -1343,11 +1374,11 @@ public partial class StreetView : Control, IHandlesBack
         else if (Actions.Pressed(e, "world.panel_squad")) OpenSquad();
         else if (Actions.Pressed(e, "world.autopilot")) OpenAutopilot();
         else if (Actions.Pressed(e, "world.panel_journal")) OpenJournal();
-        else if (Actions.Pressed(e, "world.context_menu")) OpenWork();
+        else if (Actions.Pressed(e, "world.context_menu")) OpenQMenu();
         else if (Actions.Pressed(e, "world.quicksave")) QuickSave();
         else if (Actions.Pressed(e, "world.quickload")) QuickLoad();
         else if (Actions.Pressed(e, "world.camera_home")) { _pan = Vector2.Zero; if (_viewZ != _world.Snapshot.Hero.Z) { _viewZ = _world.Snapshot.Hero.Z; RebuildLevel(); } }
-        else if (e is InputEventKey && Actions.Pressed(e, "world.act")) { if (ApActive && _heroLink != null && NearPerson() != null) ApTakeControl(L.T("AP_TOOK_CONTROL")); if (!TryTalkNear()) _rec.UsePortal(); }
+        else if (e is InputEventKey && Actions.Pressed(e, "world.act")) { if (ApActive && _heroLink != null && NearPerson() != null) ApTakeControl(L.T("AP_TOOK_CONTROL")); if (!TryTalkNear() && !TryPracticeYard()) _rec.UsePortal(); }
         else return;
         GetViewport().SetInputAsHandled();
     }
@@ -1422,7 +1453,7 @@ public partial class StreetView : Control, IHandlesBack
 
     void Begin(SaveJob job)
     {
-        _sinceSave = 0;
+        _sinceSave = 0; _lastSaveReal = _obReal;
         if (job.Kind == SaveKind.Autosave) { _rec.Rebase(); Diagnostics.GameDiagnostics.NoteAutosaveBegin(_rec.Commands.BaseTick); } // the replay trace restarts at this autosave (testers spec 3.6)
         try
         {

@@ -142,6 +142,43 @@ public sealed class Objects
         b.Rect(8, 24, 16, 2, P["w1"]);
     });
 
+    /// <summary>The camp fire (travel spec 4.3): a ring of stones on bare ground with two crossed logs, and when lit a flame that rises from the logs. Not the hearth: it stands in the open.</summary>
+    public PixelBuffer CampFire(bool lit) => Obj(32, 32, b =>
+    {
+        // ash and trodden earth inside the ring
+        b.Ellipse(16, 24, 12, 6, P["dk2"], true); b.Ellipse(16, 24, 9, 4, P["dk1"], true);
+        // the ring: stones round the edge, drawn back to front
+        foreach (var (sx, sy) in new[] { (5, 21), (9, 18), (15, 17), (21, 18), (26, 21), (27, 26), (22, 28), (15, 28), (9, 28), (4, 26) })
+        { b.Shade(sx - 2, sy - 2, 5, 4, R["stone"], Top); b.Set(sx - 2, sy + 1, P["out"]); }
+        // two logs crossed in the middle
+        b.Shade(8, 24, 16, 3, R["wood"], Top); b.Rect(8, 26, 16, 1, P["w1"]);
+        b.Shade(10, 21, 12, 3, R["wood"], Top); b.Rect(10, 23, 12, 1, P["w1"]);
+        b.Rect(7, 24, 2, 3, P["w4"]); b.Rect(23, 21, 2, 3, P["w4"]);
+        if (lit)
+        {
+            string[] f = { "f1", "f2", "f3", "f4" };
+            for (int i = 11; i < 21; i++)
+            {
+                int h = 4 + (int)(Hash(i, 3, 7) * 9) - Math.Abs(i - 16) / 2;
+                for (int j = 0; j < h; j++) b.Set(i, 22 - j, P[f[Math.Min(3, j * 4 / Math.Max(1, h))]]);
+            }
+            for (int i = 0; i < 5; i++) b.Set(12 + i * 2, 24 + (i % 2), P["f2"]);                                        // embers
+        }
+        else { for (int i = 0; i < 6; i++) b.Set(11 + i * 2, 23 + (i % 2), P["m2"]); }                                  // a grey heap of ash
+    });
+
+    /// <summary>A snare (travel spec 4.5): a bent sapling pegged down, with a noose of cord across the trail.</summary>
+    public PixelBuffer Snare() => Obj(32, 32, b =>
+    {
+        b.Rect(8, 27, 2, 3, P["w3"]); b.Set(8, 26, P["w4"]);                                  // the peg
+        for (int i = 0; i < 14; i++) b.Set(9 + i / 2, 26 - i, P["w2"]);                       // the sapling bent over the trail
+        for (int i = 0; i < 10; i++) b.Set(16 + i / 2, 12 + i, P["w3"]);
+        b.Set(21, 21, P["w3"]);
+        b.Line(21, 21, 21, 24, P["br3"]);                                                      // the cord down from the top of the bend
+        b.Ellipse(21, 26, 3, 3, P["br3"], false);                                              // the noose
+        b.Rect(19, 29, 6, 1, P["dk2"]);                                                        // the ground in the loop's shadow
+    });
+
     public PixelBuffer Sign() => Obj(32, 32, b =>
     {
         b.Rect(15, 10, 2, 20, P["w2"]); b.Shade(5, 4, 22, 9, R["wood"], Top);

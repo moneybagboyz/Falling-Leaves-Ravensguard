@@ -86,6 +86,9 @@ public static class Catalog
         O("object.well", "objects_32", 32, 32, o.Well);
         O("object.hearth", "objects_32", 32, 32, () => o.Hearth(false));
         O("object.hearth_lit", "objects_32", 32, 32, () => o.Hearth(true));
+        O("object.campfire", "objects_32", 32, 32, () => o.CampFire(false));
+        O("object.campfire_lit", "objects_32", 32, 32, () => o.CampFire(true));
+        O("object.snare", "objects_32", 32, 32, o.Snare);
         O("object.sign", "objects_32", 32, 32, o.Sign);
         O("object.stake", "objects_32", 32, 32, o.Stake);
         O("object.sconce", "objects_32", 32, 32, () => o.Sconce(false));

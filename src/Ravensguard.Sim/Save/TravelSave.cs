@@ -19,7 +19,7 @@ namespace Ravensguard.Sim.Save;
 }
 [MessagePackObject] public sealed class MemberSave { [Key(0)] public ulong Id { get; set; } [Key(1)] public string Name { get; set; } = ""; [Key(2)] public int Loyalty { get; set; } [Key(3)] public int Familiarity { get; set; } [Key(4)] public int Mood { get; set; } [Key(5)] public int Perception { get; set; } [Key(6)] public int Fatigue { get; set; } [Key(7)] public int Cooking { get; set; } [Key(8)] public int Social { get; set; } [Key(9)] public int Ambition { get; set; } [Key(10)] public bool Backstory { get; set; } [Key(11)] public int LastTalk { get; set; } [Key(12)] public int LastMeal { get; set; } }
 [MessagePackObject] public sealed class CarcassSave { [Key(0)] public ulong Id { get; set; } [Key(1)] public string Species { get; set; } = ""; [Key(2)] public long Mass { get; set; } [Key(3)] public long Death { get; set; } [Key(4)] public int Tile { get; set; } [Key(5)] public bool Hung { get; set; } [Key(6)] public long X { get; set; } [Key(7)] public long Y { get; set; } }
-[MessagePackObject] public sealed class SnareSave { [Key(0)] public int Id { get; set; } [Key(1)] public int Tile { get; set; } [Key(2)] public long Set { get; set; } [Key(3)] public long LastHour { get; set; } [Key(4)] public bool Caught { get; set; } [Key(5)] public long CatchSec { get; set; } [Key(6)] public string Species { get; set; } = ""; [Key(7)] public long Mass { get; set; } }
+[MessagePackObject] public sealed class SnareSave { [Key(0)] public int Id { get; set; } [Key(1)] public int Tile { get; set; } [Key(2)] public long Set { get; set; } [Key(3)] public long LastHour { get; set; } [Key(4)] public bool Caught { get; set; } [Key(5)] public long CatchSec { get; set; } [Key(6)] public string Species { get; set; } = ""; [Key(7)] public long Mass { get; set; } [Key(8)] public long XMm { get; set; } [Key(9)] public long YMm { get; set; } }
 [MessagePackObject]
 public sealed class JourneySave
 {
@@ -76,7 +76,7 @@ public sealed class TravelSave
         o.OldCamps = [.. t.OldCamps.Select(c => CampRow(t, c, false))];
         o.Companions = [.. t.Companions.Select(m => new MemberSave { Id = m.Person.Value, Name = m.Name, Loyalty = m.Loyalty, Familiarity = m.Familiarity, Mood = m.Mood, Perception = m.Perception, Fatigue = m.FatiguePm, Cooking = m.Cooking, Social = m.SocialPm, Ambition = m.AmbitionProgress, Backstory = m.BackstoryTold, LastTalk = m.LastTalkNight, LastMeal = m.LastMealDay })];
         o.Carcasses = [.. t.Carcasses.Select(c => new CarcassSave { Id = c.Id.Value, Species = c.Species, Mass = c.MassG, Death = c.DeathSec, Tile = c.Tile, Hung = c.Hung, X = c.XMm, Y = c.YMm })];
-        o.Snares = [.. t.Snares.Select(s => new SnareSave { Id = s.Id, Tile = s.Tile, Set = s.SetSec, LastHour = s.LastHour, Caught = s.Caught, CatchSec = s.CatchSec, Species = s.Species, Mass = s.MassG })];
+        o.Snares = [.. t.Snares.Select(s => new SnareSave { Id = s.Id, Tile = s.Tile, Set = s.SetSec, LastHour = s.LastHour, Caught = s.Caught, CatchSec = s.CatchSec, Species = s.Species, Mass = s.MassG, XMm = s.XMm, YMm = s.YMm })];
         return o;
     }
 
@@ -108,6 +108,6 @@ public sealed class TravelSave
         }
         t.Companions.Clear(); t.Companions.AddRange(Companions.Select(m => new CampMember { Person = new EntityId(m.Id), Name = m.Name, Loyalty = m.Loyalty, Familiarity = m.Familiarity, Mood = m.Mood, Perception = m.Perception, FatiguePm = m.Fatigue, Cooking = m.Cooking, SocialPm = m.Social, AmbitionProgress = m.Ambition, BackstoryTold = m.Backstory, LastTalkNight = m.LastTalk, LastMealDay = m.LastMeal }));
         t.Carcasses.Clear(); t.Carcasses.AddRange(Carcasses.Select(c => new Carcass { Id = new EntityId(c.Id), Species = c.Species, MassG = c.Mass, DeathSec = c.Death, Tile = c.Tile, Hung = c.Hung, XMm = c.X, YMm = c.Y }));
-        t.Snares.Clear(); t.Snares.AddRange(Snares.Select(s => new Snare { Id = s.Id, Tile = s.Tile, SetSec = s.Set, LastHour = s.LastHour, Caught = s.Caught, CatchSec = s.CatchSec, Species = s.Species, MassG = s.Mass }));
+        t.Snares.Clear(); t.Snares.AddRange(Snares.Select(s => new Snare { Id = s.Id, Tile = s.Tile, SetSec = s.Set, LastHour = s.LastHour, Caught = s.Caught, CatchSec = s.CatchSec, Species = s.Species, MassG = s.Mass, XMm = s.XMm, YMm = s.YMm }));
     }
 }

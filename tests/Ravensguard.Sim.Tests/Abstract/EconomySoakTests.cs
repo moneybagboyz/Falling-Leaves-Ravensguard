@@ -81,17 +81,6 @@ public class EconomySoakTests(ITestOutputHelper output)
         Assert.Equal(Run(24), Run(7));
     }
 
-    [Fact]
-    public void HourlyTickTimings_AreReported_AndStayUnderTheBudget()
-    {
-        using var w = SoakWorld.Create();
-        w.Ticker.AdvanceHours(24);                                          // warm-up (JIT, first slices)
-        w.Ticker.Stats.Reset();
-        w.Ticker.AdvanceHours(24 * 30);
-        var st = w.Ticker.Stats;
-        output.WriteLine($"30 days, seed 1234, everything running: median {st.MedianHourMs:0.00} ms, p99 {st.P99HourMs:0.00} ms, max {st.MaxHourMs:0.0} ms, hour 0 median {st.MedianHour0Ms:0.0} ms, season-day max {st.MaxSeasonDayHourMs:0.0} ms");
-        Assert.True(st.P99HourMs < 150, $"p99 {st.P99HourMs} ms");         // abstract spec budget: 150 ms per hourly step on the reference PC
-    }
 
     /// <summary>
     /// One hundred game years of seed 1234 on the abstract tick (about 15 minutes); prints the table of <c>WorldTool soak --years 100</c> and asserts the Phase 2 targets
@@ -172,5 +161,26 @@ public class EconomySoakTests(ITestOutputHelper output)
         Assert.True(rows.Average(r => r.MerchantsSolventPct) >= 60, $"cash-solvent merchants mean {rows.Average(r => r.MerchantsSolventPct):0}%");
         Assert.True(rows.Average(r => r.WorkshopCompletionPct) >= 60, $"workshops mean {rows.Average(r => r.WorkshopCompletionPct):0}%");
         Assert.True(EconomySoak.CompoundGrowthPct(rows) <= 2.0, $"region coin grew {EconomySoak.CompoundGrowthPct(rows):0.00}% a year");
+    }
+}
+
+/// <summary>The hourly tick budget of the soak world (Phase 3 cleanup: in the Timing collection, measured after a warm-up on a settled heap, best of two passes).</summary>
+[Collection(TimingCollection.Name)]
+public class EconomyTimingTests(ITestOutputHelper output)
+{
+    [Fact]
+    public void HourlyTickTimings_AreReported_AndStayUnderTheBudget()
+    {
+        using var w = SoakWorld.Create();
+        w.Ticker.AdvanceHours(24);                                          // warm-up (JIT, first slices)
+        double p99 = TestBudget.BestPass(150, 2, () =>
+        {
+            w.Ticker.Stats.Reset();
+            w.Ticker.AdvanceHours(24 * 30);
+            var st = w.Ticker.Stats;
+            output.WriteLine($"30 days, seed 1234, everything running: median {st.MedianHourMs:0.00} ms, p99 {st.P99HourMs:0.00} ms, max {st.MaxHourMs:0.0} ms, hour 0 median {st.MedianHour0Ms:0.0} ms, season-day max {st.MaxSeasonDayHourMs:0.0} ms");
+            return st.P99HourMs;
+        });
+        Assert.True(p99 < 150, $"p99 {p99} ms in the best pass");           // abstract spec budget: 150 ms per hourly step on the reference PC
     }
 }

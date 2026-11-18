@@ -16,6 +16,8 @@ public enum HeroCommandKind : byte
 {
     VisitMarket, Buy, Sell, BuyItem, SellItem, Barter, Equip, Unequip, PutItem, PutGood, Inspect, Talk, Hire, Recruit, Dismiss, Order, ViewPerson,
     CraftStart, CraftWork, CraftPause, CraftResume, CraftCollect,
+    /// <summary>Appended (Phase 3 cleanup B): the hero pays a toll or bribe on the road (<c>CoinGive</c> mites to the <c>Person</c>'s household when one is named and real, else to the lord's tithe purse as a toll).</summary>
+    EncounterPay,
 }
 
 /// <summary>Where the hero crafts (built on the main thread from what is in reach, copied into the command).</summary>
@@ -71,6 +73,10 @@ public sealed record HeroCommand
     public long CoinGive { get; init; }
     public long CoinTake { get; init; }
     public long Hour => IssuedSec / 3600;
+    /// <summary>The region whose market a Visit/Buy/Sell is for (<c>RegionCoord.Id</c>); -1 is the hero's own region. Another resident region's market is dealt with through <see cref="AbroadDealing"/>.</summary>
+    public int Region { get; init; } = -1;
+    /// <summary>A short key naming what the command is for (<c>EncounterPay</c>: the encounter id).</summary>
+    public string Tag { get; init; } = "";
 }
 
 public enum HeroResultCode : byte { Ok, PriceMoved, Closed, NoStock, CannotAfford, TheyCannotAfford, Refused, NoMarket, Invalid, NoRoom, NotKnown }
@@ -81,7 +87,7 @@ public sealed record HeroResult(long Seq, HeroCommandKind Kind, HeroResultCode C
 }
 
 /// <summary>The local book frozen at a barrier: every good's price line, the merchants' coin and the items merchants have for sale.</summary>
-public sealed record MarketView(int Settlement, string Name, bool Open, int Day, IReadOnlyList<BookLine> Lines, long MerchantCash, IReadOnlyList<CarriedItem> MerchantItems);
+public sealed record MarketView(int Settlement, string Name, bool Open, int Day, IReadOnlyList<BookLine> Lines, long MerchantCash, IReadOnlyList<CarriedItem> MerchantItems, int Region = -1);
 
 /// <summary>A person the hero is dealing with: their household's goods and coin, what they would ask to be hired, and whether they would join.</summary>
 public sealed record PersonView(EntityId Id, string Name, int Age, string Trade, int MaxSkill, int Familiarity, int TrustPm, bool ReasonKnown, IReadOnlyList<(ushort Good, long Qty)> Goods,
@@ -166,6 +172,10 @@ public sealed class HeroContext
     public Store Pack => Party.Carried.Pack(Econ);
     public MarketParty HeroMarketParty => new(Party.Hero, Purse, Pack, PartyKind.Household, int.MaxValue);
     public long Coin => Econ.Ledger.Balance(Purse).Mites;
+    /// <summary>True when <paramref name="region"/> names a resident region other than the hero's own.</summary>
+    public bool IsAbroad(int region) => region >= 0 && (BookAbroad != null || State.Regions != null) && region != (State.Regions?.Home.Id ?? 0);
+    /// <summary>Finds a market book of another region by (region id, settlement): the resident regions' markets by default; tests set it to a second fixture economy.</summary>
+    public Func<int, int, MarketBook?>? BookAbroad { get; init; }
     public MarketBook? Book(int settlement)
     {
         var m = Markets; if (m == null || settlement < 0 || settlement >= m.BookOf.Length) return null;
@@ -192,7 +202,7 @@ public sealed class HeroDesk
     private readonly List<HeroResult> _results = [];
     private long _seq;
     private volatile HeroView? _view;
-    private int _market = -1;
+    private int _market = -1, _marketRegion = -1;
     private EntityId _person;
 
     public HeroView? View => _view;
@@ -304,6 +314,7 @@ public sealed class HeroDesk
                 HeroCommandKind.CraftPause => CraftPause(ctx, c),
                 HeroCommandKind.CraftResume => CraftResume(ctx, c),
                 HeroCommandKind.CraftCollect => CraftCollect(ctx, c),
+                HeroCommandKind.EncounterPay => EncounterPay(ctx, c),
                 _ => R(c, HeroResultCode.Invalid, "Unknown command."),
             };
         }
@@ -317,12 +328,14 @@ public sealed class HeroDesk
     });
 
     private string GoodName(HeroContext ctx, ushort g) => ctx.Econ.Goods.Def(g).Name.ToLowerInvariant();
-    private string Amount(HeroContext ctx, ushort g, long q) => ctx.Econ.Goods.IsPiece(g) ? $"{q}" : $"{q / 1000.0:0.###} kg";
+    private string Amount(HeroContext ctx, ushort g, long q) => ctx.Econ.Goods.IsPiece(g) ? $"{q}" : Quotes.Weight(q);
 
     private HeroResult Visit(HeroContext ctx, HeroCommand c)
     {
+        if (c.Settlement < 0) { _market = -1; _marketRegion = -1; return R(c, HeroResultCode.Ok, ""); }       // on the road: only a person to barter with
+        if (ctx.IsAbroad(c.Region)) return AbroadDealing.Visit(ctx, c, out _market, out _marketRegion);
         var b = ctx.Book(c.Settlement); if (b == null) return R(c, HeroResultCode.NoMarket, "There is no market here.");
-        _market = c.Settlement;
+        _market = c.Settlement; _marketRegion = -1;
         int day = (int)(c.IssuedSec / 86400);
         ctx.Party.Notebook.Visit(b, day);
         HearAround(ctx, b, day);
@@ -354,6 +367,7 @@ public sealed class HeroDesk
 
     private HeroResult Buy(HeroContext ctx, HeroCommand c)
     {
+        if (ctx.IsAbroad(c.Region)) return AbroadDealing.Buy(ctx, c);
         var b = ctx.Book(c.Settlement); if (b == null) return R(c, HeroResultCode.NoMarket, "There is no market here.");
         if (!b.IsOpen(HourOf(c.IssuedSec))) return R(c, HeroResultCode.Closed, "The stalls are shut (06:00 to 18:00).");
         ushort g = c.Good; if (g >= b.Goods.Length || c.Qty <= 0) return R(c, HeroResultCode.Invalid, "Nothing to buy.");
@@ -373,6 +387,7 @@ public sealed class HeroDesk
 
     private HeroResult Sell(HeroContext ctx, HeroCommand c)
     {
+        if (ctx.IsAbroad(c.Region)) return AbroadDealing.Sell(ctx, c);
         var b = ctx.Book(c.Settlement); if (b == null) return R(c, HeroResultCode.NoMarket, "There is no market here.");
         if (!b.IsOpen(HourOf(c.IssuedSec))) return R(c, HeroResultCode.Closed, "The stalls are shut (06:00 to 18:00).");
         ushort g = c.Good;
@@ -393,7 +408,7 @@ public sealed class HeroDesk
         return R(c, HeroResultCode.Ok, $"Sold {Amount(ctx, g, r.Qty)} of {GoodName(ctx, g)} for {Quotes.Money(r.PaidMites)} (toll {Quotes.Money(r.TollMites)}).", net, r.Qty);
     }
 
-    private static long MerchantCash(MarketBook b) => b.Merchants.Sum(m => Math.Max(0, b.Econ.Ledger.Balance(m.Purse).Mites - (m.CashReserve?.Invoke() ?? 0)));
+    internal static long MerchantCash(MarketBook b) => b.Merchants.Sum(m => Math.Max(0, b.Econ.Ledger.Balance(m.Purse).Mites - (m.CashReserve?.Invoke() ?? 0)));
 
     private void Deal(HeroContext ctx, HeroCommand c)
     {
@@ -484,6 +499,38 @@ public sealed class HeroDesk
     private sealed record HeroCandidateInfo(HireCandidate C, Acquaintance Known, string Trade, int Household);
 
     private HeroResult ViewPerson(HeroCommand c) { _person = c.Person; return R(c, HeroResultCode.Ok, ""); }
+
+    /// <summary>
+    /// A toll or bribe on the road (Phase 3 cleanup B, item 1): <c>CoinGive</c> mites move from the hero's purse through the ledger to the household of <c>Person</c> (a real record, so the coin stays in the
+    /// world), or, when no one real is named, to the first town's toll purse as <c>Toll</c>. Never more than the hero holds; nothing is minted or destroyed.
+    /// </summary>
+    private HeroResult EncounterPay(HeroContext ctx, HeroCommand c)
+    {
+        long want = Math.Max(0, c.CoinGive);
+        if (want == 0) return R(c, HeroResultCode.Invalid, "Nothing to pay.");
+        if (ctx.Coin < want) return R(c, HeroResultCode.CannotAfford, $"You cannot pay {Quotes.Money(want)}: you have {Quotes.Money(ctx.Coin)}.", want);
+        var e = ctx.Econ; PurseId? to = null;
+        if (c.Person != EntityId.None) { var (i, hh) = PersonOf(ctx, c.Person); if (i >= 0 && hh >= 0 && hh < e.HouseholdCount) to = e.HouseholdPurse[hh]; }
+        if (to == null)
+        {
+            var b = ctx.Markets is { } ms ? ms.AllBooks().FirstOrDefault() : null;
+            to = b?.TollPurse;
+        }
+        if (to == null) return R(c, HeroResultCode.Invalid, "There is no one to pay.");
+        if (!e.Ledger.Transfer(ctx.Purse, to.Value, Coin.FromMites(want), TransferReason.Toll)) return R(c, HeroResultCode.CannotAfford, "You cannot pay it.", want);
+        return R(c, HeroResultCode.Ok, $"You pay {Quotes.Money(want)}.", want);
+    }
+
+    /// <summary>The real caravan a person belongs to (master or crew of an active caravan of the hero's region), with its cargo chest and account purse.</summary>
+    private static (Ravensguard.Sim.Caravans.Caravan Caravan, Store Store, PurseId Purse)? CaravanTrader(HeroContext ctx, int row)
+    {
+        var cont = ctx.State.Regions?.Services.AbstractContinent; if (cont == null || ctx.State.Regions == null) return null;
+        int home = ctx.State.Regions.Home.Id;
+        foreach (var car in cont.Caravans.All)
+            if (car.Home == home && car.Active && car.Account != PurseId.None && (car.Master == row || Array.IndexOf(car.Crew, row) >= 0))
+                return (car, ctx.Econ.OpenStore(StoreKind.Chest, car.Id, 0, 0, enforce: false), car.Account);
+        return null;
+    }
 
     private HeroResult Talk(HeroContext ctx, HeroCommand c)
     {
@@ -585,7 +632,8 @@ public sealed class HeroDesk
         if (i < 0 || hh < 0 || hh >= e.HouseholdCount) return R(c, HeroResultCode.Invalid, "They have no household to trade from.");
         var book = ctx.Book(c.Settlement >= 0 ? c.Settlement : ctx.State.Population.People.HomeSettlement[i]);
         var store = e.HouseholdStore[hh]; var purse = e.HouseholdPurse[hh];
-        bool survive = e.Tiers[hh] == HouseholdTier.Survive;
+        var van = CaravanTrader(ctx, i); if (van is { } v0) { store = v0.Store; purse = v0.Purse; }       // a caravan's people trade the caravan's own cargo and float (Phase 3 cleanup B, item 1)
+        bool survive = van == null && e.Tiers[hh] == HouseholdTier.Survive;
         long Val(ushort g, long q) => book == null ? (long)(e.Goods.BasePriceMilliMites(g) * q / (e.Goods.IsPiece(g) ? 1000 : 1_000_000)) : (long)((Int128)book.MidMicro(g) * q / PriceCurve.Micro);
         int Want(ushort g) => survive && e.Goods.FoodMeasuresPpm(g) > 0 ? 1 : 0;
         long received = c.CoinGive, given = c.CoinTake;
@@ -600,6 +648,7 @@ public sealed class HeroDesk
         foreach (var (g, q) in c.Give) Store.Move(ctx.Pack, store, g, q);
         foreach (var (g, q) in c.Take) { Store.Move(store, ctx.Pack, g, q); ctx.Party.Carried.Stow(e, ctx.Rules, g); ctx.Party.Traded.Add(g); }
         foreach (var id in c.GiveItems) { ref var it = ref e.Items.Get(id); it.Owner = ctx.State.Population.People.IdOf(i); it.Parent = -1; }
+        if (van is { } v1) foreach (var (g, _) in c.Take) foreach (var line in v1.Caravan.Cargo) if (line.Good == g) line.Units = Math.Min(line.Units, store.Qty(g));
         if (c.CoinGive > 0) e.Ledger.Transfer(ctx.Purse, purse, Coin.FromMites(c.CoinGive), TransferReason.Trade);
         if (c.CoinTake > 0) e.Ledger.Transfer(purse, ctx.Purse, Coin.FromMites(c.CoinTake), TransferReason.Trade);
         Deal(ctx, c);
@@ -688,7 +737,13 @@ public sealed class HeroDesk
         var names = new Dictionary<int, string>();
         if (ctx.Markets is { } ms) foreach (var b in ms.AllBooks()) names[b.SettlementIndex] = b.Name;
         MarketView? mv = null;
-        if (_market >= 0 && ctx.Book(_market) is { } mb)
+        if (_market >= 0 && _marketRegion >= 0 && AbroadDealing.BookOf(ctx, _marketRegion, _market) is { } ab)
+        {
+            var lines = new List<BookLine>();
+            for (ushort g = 0; g < ab.Goods.Length; g++) lines.Add(BookLine.Of(ab, g));
+            mv = new MarketView(_market, ab.Name, ab.IsOpen((int)(hourDone % 24)), (int)(hourDone / 24), lines, MerchantCash(ab), [], _marketRegion);
+        }
+        else if (_market >= 0 && _marketRegion < 0 && ctx.Book(_market) is { } mb)
         {
             var lines = new List<BookLine>();
             for (ushort g = 0; g < mb.Goods.Length; g++) lines.Add(BookLine.Of(mb, g));
@@ -702,6 +757,7 @@ public sealed class HeroDesk
             }
             mv = new MarketView(_market, mb.Name, mb.IsOpen((int)(hourDone % 24)), (int)(hourDone / 24), lines, MerchantCash(mb), merchItems);
         }
+        if (mv == null && _market < 0 && _person != EntityId.None) mv = new MarketView(-1, "", true, (int)(hourDone / 24), [], 0, []);     // the road: barter with a person, no stalls
         PersonView? pv = null;
         if (_person != EntityId.None) { var (i, hh) = PersonOf(ctx, _person); if (i >= 0) pv = MakePerson(ctx, i, hh, (int)(hourDone / 24)); }
         int leadership = book.Level(party.Hero, Skill.Leadership);
@@ -731,6 +787,7 @@ public sealed class HeroDesk
         long res = Hiring.ReservationWage(ctx.Trade, ctx.WageU, info.C.MaxSkill, info.C.TrustPm);
         var goods = hh >= 0 && hh < e.HouseholdCount ? e.HouseholdStore[hh].Rows().Select(r => (r.Good, r.Qty)).ToList() : [];
         long coin = hh >= 0 && hh < e.HouseholdCount ? e.Ledger.Balance(e.HouseholdPurse[hh]).Mites : 0;
+        if (CaravanTrader(ctx, i) is { } van) { goods = van.Store.Rows().Select(r => (r.Good, r.Qty)).ToList(); coin = e.Ledger.Balance(van.Purse).Mites; }
         int leadership = ctx.Craft.State.Book.Level(ctx.Party.Hero, Skill.Leadership);
         long fair = Hiring.FairOffer(ctx.Trade, res, info.C);
         var rc = Recruiting.Check(ctx.Trade, info.Known.Familiarity, info.Known.TrustPm, info.Known.ReasonKnown, ctx.Party.Squad.ActiveCount, leadership, ctx.Coin, fair, info.C.Alive && info.C.Age >= 14);

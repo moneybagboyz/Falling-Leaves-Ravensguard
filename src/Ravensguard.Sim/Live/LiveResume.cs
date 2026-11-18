@@ -70,11 +70,23 @@ public sealed class ExploredTiles
 /// the live clock, the unlocked Codex entries and the explored map tiles. <see cref="LiveWorld.CaptureResume"/> makes one; <c>WorldSave.Restore</c> returns one
 /// and <see cref="LiveWorld"/> resumes from it. <see cref="RegionId"/> is the grid region the hero stands in (-1 unknown), set by the save code. <see cref="Codex"/> is null when the sim had no Codex attached (the save then keeps the world's own progress).
 /// </summary>
+/// <para><see cref="Motion"/> is the walk in progress (Phase 3 cleanup: a path at an autosave was lost, so a replay window starting there diverged) and <see cref="Body"/> the hero's core
+/// temperature, exposure counters and the wetness of what they wear; both null in a save made before they were kept.</para>
 public sealed record LiveResume(long WorldXRaw, long WorldYRaw, int Z, Facing Facing, bool Torch, GameTime Time, long MsRemainder, SimSpeed Speed,
-    ExploredTiles Explored, CodexProgress? Codex, int RegionId = -1)
+    ExploredTiles Explored, CodexProgress? Codex, int RegionId = -1, HeroMotion? Motion = null, Ravensguard.Sim.Clothing.HeroBody? Body = null)
 {
     public Fixed WorldX => Fixed.FromRaw((int)WorldXRaw);
     public Fixed WorldY => Fixed.FromRaw((int)WorldYRaw);
     /// <summary>The cell the hero stands in, in region cells.</summary>
     public Cell3 Cell => new((int)(WorldXRaw >> Fixed.FracBits), (int)(WorldYRaw >> Fixed.FracBits), Z);
+}
+
+/// <summary>
+/// The hero's walk in progress, as a save keeps it: the planned route in region cells (x, y, level triples) with the index of the next cell, the stuck counter, the portal the hero just came
+/// through (empty when none) and the gait. With it a loaded game walks on exactly as the uninterrupted one does.
+/// </summary>
+public sealed record HeroMotion(int[] PathXyz, int PathIdx, int Stuck, int[] PortalLock, MoveMode Mode)
+{
+    public static readonly HeroMotion Idle = new([], 0, 0, [], MoveMode.Jog);
+    public bool IsIdle => PathXyz.Length == 0 && PortalLock.Length == 0 && Stuck == 0 && Mode == MoveMode.Jog;
 }

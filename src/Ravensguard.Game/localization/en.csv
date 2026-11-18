@@ -1889,3 +1889,184 @@ D_FE_ASK_NEWS,Heard anything?
 D_FE_ASK_HORSE,Could I borrow a beast?
 D_CM_ASK_LOAN,Could I borrow a horse for an errand?
 D_CM_LEND,"Take the grey from the end of the line. She is old and steady, and the next town is a day's slow ride. Carry my letter to the stall-keeper there, and bring her back within three days. I will notice if you do not."
+OVERLAY_TITLE,Controls: {0}
+OVERLAY_WORLD,World
+OVERLAY_MOUNTED,Mounted
+OVERLAY_TRADE,Trade
+OVERLAY_CRAFTING,Crafting
+OVERLAY_CAMP,Camp
+OVERLAY_TRAVEL,Travel
+OVERLAY_CALLED_SHOT,Called shot
+OVERLAY_BUILD,Build
+OVERLAY_COL_ACTION,Action
+OVERLAY_COL_KEY,Key
+OVERLAY_COL_MOUSE,Mouse
+OVERLAY_CODEX,Open the Codex page
+OVERLAY_CLOSE_HINT,{0} or Esc closes this page. The game is paused.
+OVERLAY_TRADE_QTY,"Quantity: Shift is ten at a time, Ctrl is all"
+OVERLAY_CRAFT_SEARCH,Search the recipes
+OVERLAY_CRAFT_FILTER,Only what you can make now
+OVERLAY_CRAFT_START,Start the chosen recipe
+OVERLAY_CLOSE,Close
+OVERLAY_TRAVEL_HERE,"Travel here (map, on the chosen place)"
+ACTION_WORLD_HINT_MORE,Hint: learn more
+STREET_HELP_BUTTON,?
+STREET_HELP_TIP,Controls for this screen
+HINT_LEARN_MORE,{0} learn more
+SETTINGS_HINTS,Hints
+SETTINGS_HINTS_AUTO,"Auto: full for your first hour, then minimal"
+SETTINGS_HINTS_OFF,Off
+SETTINGS_HINTS_MIN,Minimal (the essentials)
+SETTINGS_HINTS_FULL,Full
+SETTINGS_HINTS_RESET,Reset hints
+SETTINGS_HINTS_RESET_DONE,Hints will be shown again.
+ONB_TITLE,Getting started
+ONB_STEP_MEET_MENTOR,Speak to {0}
+ONB_STEP_TAKE_JOB,Take your first job
+ONB_STEP_FINISH_JOB,Finish it and be paid
+ONB_STEP_SPEND_COIN,Spend some coin at the market
+ONB_STEP_BORROW_HORSE,Borrow an animal for a ride
+ONB_STEP_FIRST_RIDE,Ride to {0}
+ONB_STEP_DELIVER,Deliver the errand and be paid
+ONB_STEP_FIRST_NIGHT,Sleep the night under a roof
+ONB_STEP_DONE,Done: {0}
+ONB_COMPLETE,You have found your feet. The Journal lists your ambition.
+ONB_AMBITION,Your ambition: {0}
+ONB_MENTOR_TOAST,Press {0} on the person near you.
+ONB_PIN,Pin the mentor to the map?
+ONB_PINNED,Pinned: the map now marks {0}.
+ONB_WHERE,Where to go: {0}
+ONB_RETURNED,You hand the animal back. {0} is pleased.
+ONB_LOAN_DUE,The animal you borrowed is due back today.
+ONB_LOAN_OVERDUE,You kept the animal past its day. {0} wants it back.
+ONB_LOAN_ANGRY,{0} is angry: the animal was kept too long.
+ONB_LOAN_LOST,"The animal is lost. You owe its price, {0}."
+ONB_DEBT,You owe {0} mites for the lost animal.
+ONB_NOSTART,No safe start of this kind in the region; choose another region.
+ONB_SAFE_DAYS,The first two days are quiet: no ambushes within 10 km.
+YARD_TITLE,Practice yard
+YARD_HINT,Strike when the bar is in the gold. {0} swings.
+YARD_DUMMY,Strike the dummy
+YARD_SPAR,Spar with the trainer
+YARD_TOO_EARLY,too early
+YARD_TOO_LATE,too late
+YARD_GOOD,good hit
+YARD_OUTGROWN,you have outgrown this
+YARD_SKILL,Melee {0}
+YARD_TRAINER,The trainer is here from 08:00 to 16:00.
+YARD_NO_TRAINER,The trainer is not here.
+YARD_SPAR_WAIT,Rest a little: another bout in {0} minutes.
+YARD_SPAR_WON,You landed three clean hits: the trainer yields.
+YARD_SPAR_LOST,The trainer landed three: try again after a rest.
+YARD_NEAR,The practice yard: {0} to train.
+HUD_COLD_SOON,Cold: you will be chilled in {0} ({1})
+HUD_COLD,Cold ({0})
+HUD_HOT,Hot: shade and water ({0})
+HUD_WET,Wet clothes lose warmth: find a fire
+HUD_CHILLED,"Chilled {0}: shivering, find a fire ({1})"
+HUD_COLD_MODERATE,"Cold {0}: clumsy and slow, get warm now"
+HUD_HYPO_OUT,Hypothermia {0}: unconscious
+HUD_HYPO,Hypothermia {0}: you will collapse
+HUD_WARM,Hot {0}: rest in the shade
+HUD_HEAT_EXH,Heat exhaustion {0}: slow and clumsy
+HUD_HEATSTROKE,Heatstroke {0}!
+HUD_WARMTH,"warmth {0} clo, need {1} clo"
+HUD_HOURS,{0} h
+HUD_MINUTES,{0} min
+AUTOPLAY_TITLE,Autoplay: first hour
+CODEX_RULE_TALK_TITLE,Talking
+CODEX_RULE_TALK_TEXT,"Press the act key beside a person to talk. Ask for work, news and the road; people tell what they have heard, and a rumour is only as good as its chain: the Journal shows how they know."
+CODEX_RULE_JOBS_TITLE,Odd jobs
+CODEX_RULE_JOBS_TEXT,"Odd jobs are posted on the board in a town, or told by the reeve and the innkeeper in a village. The poster puts the wage aside when the job is posted, so it is paid when you finish. Jobs have a deadline and a place; the Journal lists the steps."
+CODEX_RULE_WEIGHT_TITLE,Weight
+CODEX_RULE_WEIGHT_TEXT,"What you carry slows you above half of what you can bear. Drop what you do not need, put things in a bag or a cart, or lend your back to a pack animal."
+CODEX_RULE_HUNGER_TITLE,Hunger
+CODEX_RULE_HUNGER_TEXT,"Hunger builds over the day. Eat from your pack, or buy bread at a market. A hungry body works badly; a starving one fails."
+CODEX_RULE_COLD_TITLE,Cold
+CODEX_RULE_COLD_TEXT,Warmth is made by what you wear against wind and wet. Wet clothes lose warmth fast; a fire and a roof dry them. The line at the top of the screen warns hours before a chill matters.
+CODEX_RULE_HORSES_TITLE,Horses
+CODEX_RULE_HORSES_TEXT,"Press the act key beside an animal to mount, and again to dismount. The sprint key gallops; a galloping horse tires quickly. Keep a horse watered and fed, and do not ride a tired one."
+CODEX_RULE_SLEEP_TITLE,Sleep
+CODEX_RULE_SLEEP_TEXT,"Sleep in a bed, an inn or a camp. Tiredness slows you and dulls your hands. Six hours under a roof is a night."
+CODEX_RULE_SAVING_TITLE,Saving
+CODEX_RULE_SAVING_TEXT,"The game saves now and then by itself. The quick-save key saves at once, and the quick-load key goes back to it. Ironman keeps one save and no going back."
+CODEX_RULE_REPORTING_TITLE,Reporting a problem
+CODEX_RULE_REPORTING_TEXT,"The report key opens a form: it shows what will be sent, and nothing leaves your machine without your consent."
+CODEX_RULE_RUMOURS_TITLE,Rumours
+CODEX_RULE_RUMOURS_TEXT,A rumour came from someone who saw something. Each person who passed it on may have changed it. The Journal's trace shows the chain back to the first teller and the event it began with.
+CODEX_RULE_TRADE_TITLE,Trade
+CODEX_RULE_TRADE_TEXT,"Prices are per unit and move with what the market has and wants. The price notebook remembers what you saw, so you can carry goods from where they are cheap to where they are dear."
+CODEX_RULE_INVENTORY_TITLE,Inventory
+CODEX_RULE_INVENTORY_TEXT,"Your pack holds goods by weight and bulk. A bag, a basket or a cart holds more. Things on the ground can be picked up with the act key."
+CODEX_RULE_CRAFTING_TITLE,Crafting
+CODEX_RULE_CRAFTING_TEXT,"The crafting key lists what you can make with what you have here: tools, a station and light. Some steps keep going while you are away, and an alert tells you when they are done. Practice recipes teach a trade up to skill 30."
+CODEX_RULE_LIGHT_TITLE,Light
+CODEX_RULE_LIGHT_TEXT,"Work needs light. At night or indoors without a window, carry a torch or wait for day."
+CODEX_RULE_TRAVEL_TITLE,Travel
+CODEX_RULE_TRAVEL_TEXT,"On the map, travel here walks the road for you and stops when something happens: a traveller, a closed ford, weather, dusk. Read the line, then go on or turn back."
+CODEX_RULE_CAMP_TITLE,Camp
+CODEX_RULE_CAMP_TEXT,"Away from a roof, make camp: a fire, a place to sleep and rest for the animals. A fire needs dry fuel and a little skill."
+CODEX_RULE_FORAGE_TITLE,Foraging
+CODEX_RULE_FORAGE_TEXT,"Searching the ground takes time and gives food, kindling or herbs, more in wood and meadow than in open field."
+CODEX_RULE_CARTS_TITLE,Carts
+CODEX_RULE_CARTS_TEXT,"A cart rolls well on a road and badly in mud. Too heavy a load or too few animals leaves it stuck: unload some, dig, push or add a team."
+CODEX_RULE_SQUAD_TITLE,Followers
+CODEX_RULE_SQUAD_TEXT,"Someone who trusts you and is paid may follow. Followers show in the bar; orders go through the order wheel; unpaid, they leave."
+ENC_KEYS,"1-5: choose    Enter: go on or run    {0}: stop here"
+ENC_PAY,Pay
+ENC_FERRY,Pay the ferryman
+ENC_ALMS,Give alms
+ENC_FIGHT,Fight (combat arrives in Phase 4)
+ENC_FLEE,Run for it
+ENC_TRADE,Trade
+ENC_TALK,Talk
+ENC_GOON,Go on your way
+ENC_WAIT,Wait
+ENC_DETOUR,Find another way round
+ENC_PAID_TOLL,"You hand over {0}."
+ENC_PAID_FERRY,"You pay {0} for the crossing."
+ENC_PAID_ALMS,"You give {0}."
+ENC_CANNOT_PAY,You have too little to pay.
+ENC_FLED,You run for it and lose half an hour finding the road again.
+ENC_DETOURED,You pick your way round and lose some time.
+ENC_WAITED,You wait a little.
+ENC_FIGHT_STUB_FLED,"Combat arrives in Phase 4. For now you break away and run."
+ENC_FIGHT_STUB_ROBBED,"Combat arrives in Phase 4. For now they take {0} and you are left shaken."
+ENC_NOTHING_TO_TRADE,They have little to sell today.
+ENC_NOTHING_TO_SAY,They only nod and pass.
+ENC_TRADE_OPEN,
+ENC_TALK_OPEN,
+TALK_EFFECT_CONTRACT_NO,"No job came of it ({0})."
+TALK_EFFECT_ITEM_NO,"They have none to give ({0})."
+ACTION_WORLD_CAMP,Make camp (or open the camp panel)
+ACTION_WORLD_FORAGE,Forage the ground
+ACTION_WORLD_HUNT,Hunt game
+ACTION_WORLD_SNARE,Set or take up a snare
+Q_TITLE,What do you do?
+Q_HEAD_HERE,Here
+Q_HEAD_AUTO,Let the autopilot
+Q_JOBS,Look for work (the job board)
+Q_CAMP,Make camp or open the camp
+Q_FORAGE,Forage for food
+Q_HUNT,Hunt game (an hour)
+Q_SNARE_SET,Set a snare here
+Q_SNARE_TAKE,Take up the snare
+Q_AUTO_STOP,Take over again (stop the autopilot)
+Q_AUTO_OFF,it is not on
+Q_AUTO_PANEL,Open the autopilot panel
+HUNT_NONE,There is nothing to hunt with here.
+HUNT_NO_GAME,There is no game about.
+HUNT_JOB,Hunting
+HUNT_MISSED,You tracked for an hour and saw nothing close enough.
+HUNT_GOT,"You bring down a {0}: {1}."
+SNARE_SET,You set a snare. Come back within the day.
+SNARE_MAX,You are watching as many snares as you can.
+SNARE_GOT,"The snare held a {0}: {1}."
+SNARE_SPOILED,The catch has spoiled.
+SNARE_EMPTY,The snare is empty. You take it up.
+SQUAD_AUTO,Let them:
+SQUAD_AUTO_WORK,Work for pay
+SQUAD_AUTO_GUARD,Guard the town
+SQUAD_AUTO_REST,Rest
+SQUAD_AUTO_STOP,Take back
+SQUAD_AUTO_SET,"{0}: {1}."

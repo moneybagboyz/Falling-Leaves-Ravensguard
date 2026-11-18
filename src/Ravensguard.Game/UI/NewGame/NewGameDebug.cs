@@ -209,6 +209,24 @@ public static class NewGameDebug
                     await Frames(tree, 10);
                     break;
                 }
+            case "onboarding":
+                {
+                    // dev: a real new game for an origin (--ng-origin id), then a staged scene of the first hour: mentor | hint | overlay | overlay_mounted | yard | journal
+                    var w = MakeWorld(Math.Min(years, 60), 7);
+                    var d = NewGameServices.NewDraft(); d.Name = "Shot"; d.LibraryWorldId = w.Info.Id;
+                    d.OriginId = Arg("--ng-origin", d.OriginId);
+                    var loaded = w;
+                    router.Push(new RegionBuildScreen(router, d, loaded));
+                    if (!await Until(tree, () => router.Top is Ravensguard.Game.World.StreetView, 9000)) throw new Exception("onboarding shot: the region build did not finish");
+                    var sv = (Ravensguard.Game.World.StreetView)router.Top!; var rt = sv.Runtime!;
+                    await Until(tree, () => rt.HourDone >= sv.DebugWorld.Clock.Now.TotalHours, 6000);
+                    await Frames(tree, 240);
+                    GD.Print("onboarding shot: " + sv.DebugMentorLine());
+                    string scene = Arg("--ng-scene", "hint");
+                    if (scene == "hint") { sv.DebugOnboarding("hint"); await Frames(tree, 40); }
+                    else { sv.DebugOnboarding(scene); await Frames(tree, 40); }
+                    break;
+                }
             case "embark":
             case "legends":
                 {

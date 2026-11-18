@@ -235,6 +235,19 @@ public partial class SettingsScreen : Control
         v.AddChild(Toggle("DISPLAY_SCREEN_SHAKE", Settings.ScreenShake, on => Settings.ScreenShake = on));
         v.AddChild(Toggle("DISPLAY_FLASHES", Settings.Flashes, on => Settings.Flashes = on));
         v.AddChild(Toggle("DISPLAY_SLOW_MOTION", Settings.SlowMotion, on => Settings.SlowMotion = on));
+
+        // contextual hints (onboarding spec 3.1, 6): off, minimal or full, auto by default (full for the first hour of the first character); the "seen" marks live in the profile and can be reset
+        var hrow = new HBoxContainer();
+        hrow.AddChild(new Label { Text = L.T("SETTINGS_HINTS"), SizeFlagsHorizontal = SizeFlags.ExpandFill });
+        var hopt = new OptionButton();
+        foreach (var k in new[] { "SETTINGS_HINTS_AUTO", "SETTINGS_HINTS_OFF", "SETTINGS_HINTS_MIN", "SETTINGS_HINTS_FULL" }) hopt.AddItem(L.T(k));
+        hopt.Selected = (int)Settings.Hints.Setting;
+        hopt.ItemSelected += i => { Settings.Hints.Setting = (Ravensguard.Sim.Onboarding.HintSetting)i; Settings.Save(); };
+        hrow.AddChild(hopt);
+        v.AddChild(hrow);
+        var hreset = new Button { Text = L.T("SETTINGS_HINTS_RESET"), SizeFlagsHorizontal = SizeFlags.ShrinkBegin };
+        hreset.Pressed += () => { Settings.Hints.ResetSeen(); Settings.Save(); _router.ShowToast(L.T("SETTINGS_HINTS_RESET_DONE")); };
+        v.AddChild(hreset);
         return v;
     }
 

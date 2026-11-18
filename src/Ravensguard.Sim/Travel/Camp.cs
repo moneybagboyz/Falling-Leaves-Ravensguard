@@ -238,6 +238,17 @@ public sealed partial class TravelState
         return res;
     }
 
+    /// <summary>
+    /// The companion who sits down to talk with the hero after the fire talk (Phase 3 cleanup B, item 8): the first who has not yet told their backstory, else the night's turn among those present
+    /// (night number modulo their count), never the hero. Pure; null when no one else is at the fire. The game opens the talk window (Sim/Dialogue) with this person.
+    /// </summary>
+    public CampMember? FireSpeaker(IReadOnlyList<CampMember> present, EntityId hero, long sec)
+    {
+        var others = present.Where(m => m.Person != hero).OrderBy(m => m.Person.Value).ToList();
+        if (others.Count == 0) return null;
+        return others.FirstOrDefault(m => !m.BackstoryTold) ?? others[NightOf(sec) % others.Count];
+    }
+
     // ---------------------------------------------------------------- night events
 
     /// <summary>The hour's night event (stream 0x346 keyed on the camp and the game hour): one draw over the eligible rows, "a quiet night" included.</summary>

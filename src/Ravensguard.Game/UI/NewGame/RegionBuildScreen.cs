@@ -16,7 +16,11 @@ namespace Ravensguard.Game.UI.NewGame;
 
 /// <summary>What the new-game flow hands to the street view: the populated world, the choices, and where the run was saved.</summary>
 public sealed record RunStart(WorldState World, NewGameDraft Draft, EmbarkScore Site, string StartSettlement, string? SavePath, Ravensguard.Sim.Codex.CodexBook? Codex = null,
-    string RunName = "", string? SaveError = null, WorldRuntime? Runtime = null);
+    string RunName = "", string? SaveError = null, WorldRuntime? Runtime = null)
+{
+    /// <summary>Where the hero stands as a street-view point of interest (<c>xy:x,y</c>, region metres, beside the mentor): null starts in the named settlement.</summary>
+    public string? StartPoi { get; init; }
+}
 
 /// <summary>Everything the worker thread needs that lives on the engine or in shared state, read once on the main thread before the task starts.</summary>
 sealed record BuildInputs(ContentBundle Content, LoadedWorld World, NewGameDraft Draft, WorldLibrary Library, string RunName, string Now, System.Collections.Generic.List<Ravensguard.Sim.Codex.CodexRule> Rules, Ravensguard.Content.OriginDef? Origin, string ContentHash);
@@ -99,13 +103,31 @@ public partial class RegionBuildScreen : Control
         var pop = Populator.Populate(region, w.History, content.Db);
         ct.ThrowIfCancellationRequested();
         _at = 3;
-        var start = ChooseStart(region, bi.Origin);
+        var start = ChooseStart(region, bi.Origin); string? startXY = null;
         // the player character from the Quick Start origin, and the Codex of this world with what the embark region already knows
         var hero = bi.Origin != null ? Ravensguard.Sim.Characters.HeroRecord.FromOrigin(d.Name, d.Female, bi.Origin) : null;
         var codex = Ravensguard.Sim.Codex.CodexBook.Build(w.History, region, bi.Rules);
         // the whole new-game world: people with the economy over them (markets, businesses, resources, farming, the tick's own state), built as the headless soak builds
         // its world; the hero's crowns enter the ledger as seed money (money spec 3.8). The runtime then ticks it beside the live game.
-        var world = NewGameWorld.Create(content.Db, w.Continent, w.History, w.Info.File.Continent, w.Info.File.History, rs, site.CellX, site.CellY, pop, hero, codex.ToProgress());
+        // the fair-weather start (onboarding spec 4.1): 08:00 on the nominal first day of spring, or the first mild day within ten after it
+        int dayShift = 0;
+        try
+        {
+            var wx = Ravensguard.Sim.Weather.RegionWeather.ForContinent(w.Continent);
+            int cell = Math.Min(Ravensguard.Sim.WorldGen.Continent.Size - 1, site.CellY + 8) * Ravensguard.Sim.WorldGen.Continent.Size + Math.Min(Ravensguard.Sim.WorldGen.Continent.Size - 1, site.CellX + 8);
+            var nominal = Ravensguard.Sim.Core.GameTime.FromCalendar(pop.NowYear, Ravensguard.Sim.Core.Season.Spring, 1, 8);
+            dayShift = Ravensguard.Sim.Onboarding.StartDateFinder.Shift(wx, cell, nominal.Seconds / 86400);
+        }
+        catch (Exception e) { GD.PushWarning("start date search failed, keeping the nominal day: " + e.Message); }
+        var clock = Ravensguard.Sim.Core.GameTime.FromCalendar(pop.NowYear, Ravensguard.Sim.Core.Season.Spring, 1 + dayShift, 8);
+        var world = NewGameWorld.Create(content.Db, w.Continent, w.History, w.Info.File.Continent, w.Info.File.History, rs, site.CellX, site.CellY, pop, hero, codex.ToProgress(), clock);
+        // where the hero starts and who waits there: a safe start near the origin's mentor, with the mentor's first small job posted (onboarding spec 4.1, 4.3)
+        if (bi.Origin != null)
+        {
+            var setup = Ravensguard.Sim.Onboarding.OnboardingSetup.Create(world, content.Db, bi.Origin, clock.Seconds, w.Info.Seed);
+            if (setup.Book == null) throw new InvalidOperationException(L.T("ONB_NOSTART"));
+            world.Onboarding = setup.Book; start = pop.Region.Settlements[setup.Site.Settlement].Name; startXY = $"xy:{setup.Site.X},{setup.Site.Y}";
+        }
         ct.ThrowIfCancellationRequested();
         var runtime = new WorldRuntime(world, content.Db, StreetSource.MakePager());
         try
@@ -122,7 +144,7 @@ public partial class RegionBuildScreen : Control
         }
         catch (Exception e) { saveError = e.Message; GD.PushWarning("could not write the first save: " + e.Message); }
         _at = 4;
-        return new RunStart(world, d, site, start, path, codex, bi.RunName, saveError, runtime);
+        return new RunStart(world, d, site, start, path, codex, bi.RunName, saveError, runtime) { StartPoi = startXY };
         }
         catch { runtime.Dispose(); throw; } // cancelled or failed: no worker and no page folder is left behind
     }
@@ -159,7 +181,7 @@ public partial class RegionBuildScreen : Control
             _router.ShowModal(L.T("RB_SAVE_FAILED_TITLE"), L.F("RB_SAVE_FAILED", Latest.SaveError), (L.T("UI_OK"), null));
         var session = new RunSession(Latest, _in!.Library, _in.ContentHash, _w.Info.Id);
         // Walk the generated region, starting in the settlement the origin asked for (plan §3f safe start).
-        var opt = new Ravensguard.Game.World.StreetOptions { Poi = "at:" + Latest.StartSettlement };
+        var opt = new Ravensguard.Game.World.StreetOptions { Poi = Latest.StartPoi ?? "at:" + Latest.StartSettlement };
         var view = Ravensguard.Game.World.StreetView.ForRegion(w.Population.Region, w.Population, _in.Content.Db, _router, opt, w.Chunks,
             hero: w.Hero, codex: Latest.Codex, history: w.History, continent: w.Continent, regionSettings: w.RegionSettings, runtime: Latest.Runtime);
         view.Run = session;

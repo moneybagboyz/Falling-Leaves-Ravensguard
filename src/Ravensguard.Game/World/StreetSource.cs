@@ -189,7 +189,8 @@ public abstract class StreetSource
             var spot = start ?? _spawn;
             if (spot == null)
             {
-                spot = Poi != null && Poi.StartsWith("at:", StringComparison.Ordinal) ? RegionSpawn.AtSettlement(Streamer, _region, Poi[3..])
+                spot = Poi != null && Poi.StartsWith("xy:", StringComparison.Ordinal) && Poi[3..].Split(',') is [var px, var py] && int.TryParse(px, out var ix) && int.TryParse(py, out var iy) ? RegionSpawn.AtPoint(Streamer, _region, ix, iy)
+                    : Poi != null && Poi.StartsWith("at:", StringComparison.Ordinal) ? RegionSpawn.AtSettlement(Streamer, _region, Poi[3..])
                     : Poi != null && Poi.StartsWith("landmark", StringComparison.Ordinal) ? RegionSpawn.AtLandmark(Streamer, _region, Poi.Length > 9 && int.TryParse(Poi[9..], out var li) ? li : -1) : Poi switch
                 {
                     "village" => RegionSpawn.VillageEdge(Streamer, _region),

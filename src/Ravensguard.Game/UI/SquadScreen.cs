@@ -27,6 +27,8 @@ public partial class SquadScreen : Control
     long _waitSeq;
     int _shotWait;
     public string? ShotPath { get; init; }
+    /// <summary>Sets an autopilot directive for a party member (autopilot spec 6): the person and <c>work</c>, <c>guard</c>, <c>rest</c> or <c>stop</c>. Null: no picker.</summary>
+    public Action<EntityId, string>? PartyDirective { get; init; }
 
     public SquadScreen(ScreenRouter router, HeroWorld hw, Func<long> now, Func<(EntityId Id, string Name, long X, long Y)?> near) { _router = router; _hw = hw; _now = now; _near = near; }
 
@@ -70,6 +72,18 @@ public partial class SquadScreen : Control
             Btn(row, L.T("SQUAD_DISMISS"), () => new HeroCommand { Kind = HeroCommandKind.Dismiss, Person = m.Person });
             _body.AddChild(row);
             _body.AddChild(UiKit.Hint("      " + L.F("SQUAD_TRADE", UiKit.Pretty(m.Trade.ToLowerInvariant()), m.MaxSkill)));
+            if (PartyDirective is { } pd)
+            {
+                var ap = new HBoxContainer(); ap.AddThemeConstantOverride("separation", 6);
+                ap.AddChild(new Label { Text = "      " + L.T("SQUAD_AUTO"), ThemeTypeVariation = "HintLabel" });
+                foreach (var kind in new[] { "work", "guard", "rest", "stop" })
+                {
+                    var k = kind; var b = new Button { Text = L.T("SQUAD_AUTO_" + k.ToUpperInvariant()), CustomMinimumSize = new Vector2(0, 26) };
+                    b.Pressed += () => { pd(m.Person, k); _status.Text = L.F("SQUAD_AUTO_SET", m.Name, L.T("SQUAD_AUTO_" + k.ToUpperInvariant())); };
+                    ap.AddChild(b);
+                }
+                _body.AddChild(ap);
+            }
         }
         // the person beside you (Q > Hire, Q > Invite to join)
         _body.AddChild(UiKit.Hint(L.T("SQUAD_NEAR")));

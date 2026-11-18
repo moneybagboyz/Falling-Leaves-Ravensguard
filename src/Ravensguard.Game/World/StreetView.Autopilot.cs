@@ -86,6 +86,7 @@ public partial class StreetView
         if (!ApActive || Runtime is not { } rt || _ap == null) return;
         _apLocalPaused = true; _apMoveCool = 0;
         long now = _world.Clock.Now.Seconds;
+        _rec.Action(Ravensguard.Sim.Diagnostics.HeroAction.TakeControl, 0, now);
         _ = rt.AtBarrier(() => { _ap.TakeControl(HeroId, now); return 0; });
         if (toast != null) _router?.ShowToast(toast);
         ApHud();
@@ -138,7 +139,7 @@ public partial class StreetView
         if (++_apMoveFail >= 3)                       // no path in the loaded ground: the abstract way, a step along the line (what the journey does)
         {
             long step = 4000, len = Math.Max(1, PathPlan.Dist(dx, dy)), nx = hx + dx * Math.Min(step, len) / len, ny = hy + dy * Math.Min(step, len) / len;
-            _world.TravelPlace(nx, ny, Math.Abs(dx) >= Math.Abs(dy) ? (dx < 0 ? Facing.West : Facing.East) : (dy < 0 ? Facing.North : Facing.South));
+            _rec.TravelPlace(nx, ny, Math.Abs(dx) >= Math.Abs(dy) ? (dx < 0 ? Facing.West : Facing.East) : (dy < 0 ? Facing.North : Facing.South));
         }
     }
 
@@ -196,9 +197,10 @@ public partial class StreetView
                 if (s.Limits.HomeByNightfall && s.Limits.HomeX == 0 && s.Limits.HomeY == 0) { s.Limits.HomeX = hx; s.Limits.HomeY = hy; }
                 var copy = new AutopilotSetup { Queue = [.. s.Queue.Select(d => d.Clone())], Limits = s.Limits.Clone(), Policy = (InterruptPolicy[])s.Policy.Clone(), Quiet = (bool[])s.Quiet.Clone() };
                 long now = _world.Clock.Now.Seconds; _apLocalPaused = false;
+                _rec.Action(Ravensguard.Sim.Diagnostics.HeroAction.Directive, copy.Queue.Count, now);
                 _ = rt.AtBarrier(() => { ap.Apply(HeroId, now, copy); return 0; });
             },
-            Stop = () => { long now = _world.Clock.Now.Seconds; _apLocalPaused = false; _ = rt.AtBarrier(() => { ap.Disable(HeroId, now); return 0; }); },
+            Stop = () => { long now = _world.Clock.Now.Seconds; _apLocalPaused = false; _rec.Action(Ravensguard.Sim.Diagnostics.HeroAction.DirectiveStop, 0, now); _ = rt.AtBarrier(() => { ap.Disable(HeroId, now); return 0; }); },
             PauseResume = () => ApChipClicked(),
             Preset = (name, s) => s.Preset(name, AutopilotSettingsDefLike.Of(cfg)),
             MaxRiskLow = () => cfg.RiskLowPm, MaxRiskMedium = () => cfg.RiskMediumPm, MaxRiskHigh = () => cfg.RiskHighPm,

@@ -268,7 +268,7 @@ public class Phase2ReviewTests(ITestOutputHelper output)
         Pass(12); // JIT, and the regions' first slices
         // the barrier cost is measured over passes of a day and a half (so a day-boundary burst cannot hide); one noisy pass (a GC, another process) is allowed, a persistent burst is not
         var passMax = new List<double>();
-        for (int p = 0; p < 3; p++) { var ms = Pass(36); passMax.Add(ms.Max()); if (ms.Max() < TestBudget.Ms(150)) break; }
+        for (int p = 0; p < 3; p++) { Ravensguard.Sim.Diagnostics.GcSettle.Run(); var ms = Pass(36); passMax.Add(ms.Max()); if (ms.Max() < TestBudget.Ms(150)) break; } // each pass on a settled heap
         // the old schedule ran every daily region's 24 hours on the day boundary: the barrier carried N x 24 steps
         int worstOldBarrier = daily.Count * 24;
         int slice = RegionScheduler.DailySliceHours;

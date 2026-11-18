@@ -145,6 +145,23 @@ public class OnboardingTests
         for (long day = 1; day < 400; day += 37) Assert.Equal(StartDateFinder.Shift(w, cell, day), StartDateFinder.Shift(w, cell, day));
     }
 
+    // ------------------------------------------------------------------ pay
+
+    [Fact]
+    public void O5_A_first_job_with_71_mites_in_escrow_pays_the_worker_71_leaves_the_escrow_empty_and_the_poster_71_down()
+    {
+        var ledger = new Ravensguard.Sim.Economy.Ledger(); var posterId = EntityId.Make(IdKind.Household, 1); var hero = EntityId.Make(IdKind.Person, 5);
+        var poster = ledger.Open(Ravensguard.Sim.Economy.PurseKind.Household, posterId); ledger.Mint(poster, new Ravensguard.Sim.Economy.Coin(1000), Ravensguard.Sim.Economy.SourceReason.Seed);
+        var worker = ledger.Open(Ravensguard.Sim.Economy.PurseKind.Person, hero);
+        var env = new Ravensguard.Sim.Jobs.JobEnv { Ledger = ledger }; var table = new Ravensguard.Sim.Jobs.JobTable();
+        var j = table.Post(env, Ravensguard.Sim.Jobs.OddJobKind.Guard, posterId, poster, 0, 0, 0, 12 * 3600, 71, x => { x.P4 = 2; x.Slots = 1; })!;
+        Assert.Equal(929, ledger.Balance(poster).Mites); Assert.Equal(71, ledger.Balance(new Ravensguard.Sim.Economy.PurseId(j.Escrow)).Mites);
+        Assert.Equal(Ravensguard.Sim.Jobs.ClaimResult.Taken, table.Claim(env, new Ravensguard.Sim.Jobs.ClaimRequest(j.Id, hero, -1, 0, 0, 0, 0, 20, 25), 10));
+        table.Advance(env, Ravensguard.Sim.Jobs.JobTable.EndSec(j));
+        Assert.Equal(Ravensguard.Sim.Jobs.JobState.Done, j.State);
+        Assert.Equal(71, ledger.Balance(worker).Mites); Assert.Equal(0, ledger.Balance(new Ravensguard.Sim.Economy.PurseId(j.Escrow)).Mites); Assert.Equal(929, ledger.Balance(poster).Mites);
+    }
+
     // ------------------------------------------------------------------ loans
 
     sealed class Rig

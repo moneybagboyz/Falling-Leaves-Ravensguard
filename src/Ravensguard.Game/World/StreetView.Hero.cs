@@ -27,6 +27,7 @@ public partial class StreetView
     {
         if (Runtime is not { } rt || _source?.Content == null || rt.State.Hero == null) return;
         _heroLink = HeroLink.Attach(rt, _source.Content);
+        if (_heroLink != null) _heroLink.Issued += c => _rec.Hero(c); // trade, crafting, talk and hire go into the replay trace (Phase 3 cleanup)
     }
 
     /// <summary>The game second a command is asked at: the live clock (the desk applies it once the world has finished that hour).</summary>
@@ -73,6 +74,7 @@ public partial class StreetView
     {
         if (_heroLink == null || _router == null) { _router?.ShowToast(L.T("MAP_NONE")); return; }
         if (ApActive) ApTakeControl(L.T("AP_TOOK_CONTROL"));                       // the player's own trade: the hero is theirs again
+        Raise("trade_opened");
         _router.Push(new TradeScreen(_router, _heroLink, settlement, person, HeroNow) { ShotPath = shot, StartGood = shot != null ? "flour" : null, StartNotebook = notebook });
     }
 
@@ -85,7 +87,7 @@ public partial class StreetView
     void OpenSquad()
     {
         if (_heroLink == null || _router == null) { _router?.ShowToast(L.T("MAP_NONE")); return; }
-        _router.Push(new SquadScreen(_router, _heroLink, HeroNow, () => NearPerson(4000) ?? (_shotPerson != EntityId.None ? (_shotPerson, "", HeroRegionMm().X, HeroRegionMm().Y) : null)) { ShotPath = _opt.Panel == "squad" ? _opt.ShotPath : null });
+        _router.Push(new SquadScreen(_router, _heroLink, HeroNow, () => NearPerson(4000) ?? (_shotPerson != EntityId.None ? (_shotPerson, "", HeroRegionMm().X, HeroRegionMm().Y) : null)) { ShotPath = _opt.Panel == "squad" ? _opt.ShotPath : null, PartyDirective = _ap != null ? ApPartyDirective : null });
     }
 
     string HeroBodyLine() => _clothes?.HudLine() ?? "";
@@ -97,7 +99,12 @@ public partial class StreetView
         if (_heroLink == null) { _clothes.EnsureHero(_hero, sec); return; }
         _clothes.EnsureHero(_hero, sec, fromInventory: true);
         if (_heroLink.View is { } v)
+        {
             _clothes.DressHero([.. v.Items.Where(i => i.Slot != Ravensguard.Sim.Inventory.EquipSlot.None && _clothes.Book.Garments.ContainsKey(i.Shape)).Select(i => (i.Shape, i.Material, i.ConditionPermille))]);
+            // the body a save kept (core temperature, wet clothes) goes back on once the hero is dressed; from now on saves take it from the book
+            if (_world.ResumedBody is { } body && _clothes.Hero is { } h) { _clothes.Book.ApplyBody(h, body); _world.ResumedBody = null; }
+            _world.BodySource ??= () => _clothes?.Hero is { } t ? _clothes.Book.CaptureBody(t) : null;
+        }
     }
 
     /// <summary>The crafting session: bound to the world's hero when there is one (the pack, the jobs and the clock are the world's), else the dev hamlet's own starter pack.</summary>
@@ -158,15 +165,16 @@ public partial class StreetView
     }
 
     /// <summary>
-    /// The load on the hero's legs (spec 4.3): over half the capacity the hero cannot sprint, over the whole of it only walks, over one and a half not at all. The exact speed factor
-    /// (<see cref="Ravensguard.Sim.Inventory.Encumbrance.SpeedPm"/>) needs the live world's step to take it (Live/LiveWorld, not this view); until then the gait stands in for it.
+    /// The load on the hero's legs (trade spec 4A.3): the exact speed factor <see cref="Ravensguard.Sim.Inventory.Encumbrance.SpeedPm"/> goes to the live world, which scales every gait in fixed point
+    /// (<see cref="LiveWorld.LoadSpeedPm"/>); over half the capacity the hero still cannot sprint, and over one and a half cannot move.
     /// </summary>
     MoveInput LoadInput(MoveInput m)
     {
         int r = _heroLink?.View?.RatioPm ?? 0;
+        _rec.SetLoadSpeed(Ravensguard.Sim.Inventory.Encumbrance.SpeedPm(r)); // recorded: the load changes how far a tick walks
         if (r <= 500) return m;
         if (!Ravensguard.Sim.Inventory.Encumbrance.CanWalk(r)) return new MoveInput(0, 0);
-        return r > 1000 ? m with { Sprint = false, Walk = true } : m with { Sprint = false };
+        return m with { Sprint = false };
     }
 
     // ------------------------------------------------------------------ dev screenshots: --shot-panel trade | prices | inventory | squad | party

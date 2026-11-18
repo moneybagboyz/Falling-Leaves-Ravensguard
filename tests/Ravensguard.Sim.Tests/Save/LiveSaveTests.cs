@@ -144,6 +144,93 @@ public class LiveSaveTests(LiveSaveFixture fx, ITestOutputHelper output) : IClas
         Assert.Equal(a.CaptureResume().WorldYRaw, b.CaptureResume().WorldYRaw); // deterministic from a save
     }
 
+    // ------------------------------------------------------------------ Phase 3 cleanup: the walk in progress and the hero's body are saved
+
+    private static Cell3 RouteTarget(LiveWorld live)
+    {
+        var h = live.Snapshot.Hero; int cx = h.X.Floor(), cy = h.Y.Floor();
+        for (int r = 40; r >= 12; r -= 2)
+            foreach (var (dx, dy) in new[] { (r, 0), (0, r), (-r, 0), (0, -r), (r, r), (-r, -r) })
+            {
+                var c = new Cell3(cx + dx, cy + dy, h.Z);
+                if (live.Grid.InBounds(c.X, c.Y, c.Z) && live.Grid.IsOpen(live.Grid.Index(c.X, c.Y, c.Z)) && live.Pathfinder.FindPath(new Cell3(cx, cy, h.Z), c) is { Cells.Count: > 20 }) return c;
+            }
+        throw new InvalidOperationException("no open route target near the hero");
+    }
+
+    [Fact]
+    public void A_path_in_progress_at_a_save_walks_on_after_load_exactly_as_the_uninterrupted_run()
+    {
+        var (live, _, world, _) = Play(out _);
+        live.SetSpeed(SimSpeed.X1);
+        Assert.True(live.CommandMoveTo(RouteTarget(live)));
+        for (int i = 0; i < 30; i++) live.Step();
+        Assert.True(live.Snapshot.Hero.PathRemaining > 5, "the hero is mid-route at the save");
+        var bytes = SaveCodec.Encode(WorldSave.CaptureLive(world, live, fx.ContentHash, "0.1"));
+        var restored = WorldSave.Restore(SaveCodec.Decode(bytes), fx.Content, fx.ContentHash);
+        Assert.False(restored.Live!.Motion!.IsIdle);
+        var loaded = new LiveWorld(new ChunkStreamer(fx.Generator, restored.Chunks), restored.Live!) { SynchronousStreaming = true };
+        Assert.Equal(Ravensguard.Sim.Diagnostics.LiveStateHash.Saved(live), Ravensguard.Sim.Diagnostics.LiveStateHash.Saved(loaded));
+        Assert.Equal(live.CaptureMotion().PathXyz, loaded.CaptureMotion().PathXyz);
+        // save -> load -> save is byte-identical with the route in it
+        Assert.True(bytes.AsSpan().SequenceEqual(SaveCodec.Encode(WorldSave.CaptureLive(restored, loaded, fx.ContentHash, "0.1"))), "save -> load -> save changed the bytes");
+        for (int i = 0; i < 600; i++) { live.Step(); loaded.Step(); }
+        Assert.Equal(Ravensguard.Sim.Diagnostics.LiveStateHash.Compute(live), Ravensguard.Sim.Diagnostics.LiveStateHash.Compute(loaded));
+        Assert.Equal(live.CaptureResume().WorldXRaw, loaded.CaptureResume().WorldXRaw);
+        Assert.Equal(live.CaptureResume().WorldYRaw, loaded.CaptureResume().WorldYRaw);
+    }
+
+    [Fact]
+    public void A_replay_window_starting_at_an_autosave_mid_route_matches()
+    {
+        var (live, _, world, _) = Play(out _);
+        var rec = new Ravensguard.Sim.Diagnostics.SessionRecorder(live);
+        rec.SetSpeed(SimSpeed.X1);
+        rec.CommandMoveTo(RouteTarget(live));
+        for (int i = 0; i < 25; i++) rec.Step();
+        // the autosave: the world is saved and the trace restarts here
+        var bytes = SaveCodec.Encode(WorldSave.CaptureLive(world, live, fx.ContentHash, "0.1"));
+        rec.Rebase();
+        for (int i = 0; i < 820; i++) rec.Step();
+        var (trace, csv) = rec.Export();
+        var restored = WorldSave.Restore(SaveCodec.Decode(bytes), fx.Content, fx.ContentHash);
+        var loaded = new LiveWorld(new ChunkStreamer(fx.Generator, restored.Chunks), restored.Live!) { SynchronousStreaming = true };
+        var res = Ravensguard.Sim.Diagnostics.ReplayRunner.Run(loaded, Ravensguard.Sim.Diagnostics.CommandLog.FromBytes(trace), Ravensguard.Sim.Diagnostics.StateHashTrail.FromCsv(csv));
+        Assert.True(res.Matched, res.Describe());
+        Assert.True(res.Completed);
+    }
+
+    [Fact]
+    public void The_heros_core_temperature_and_wet_clothes_are_saved_and_put_back()
+    {
+        var (live, _, world, _) = Play(out _);
+        var book = new Ravensguard.Sim.Clothing.ClothingBook(fx.Content);
+        var heroId = EntityId.MakeIn(IdKind.Person, Ravensguard.Sim.Clothing.ClothingBook.WardrobeRegion, 1);
+        long sec = live.Clock.Now.Seconds;
+        var hero = book.Track(heroId, Sex.Male, SocialClass.Peasant, Occupation.None, 50, 77, sec);
+        var sleet = new Ravensguard.Sim.Clothing.ExposureEnv(-300, 600, 40);
+        for (long m = sec / 60 + 1; m <= sec / 60 + 50; m++) book.StepTo(hero, m, sleet, Ravensguard.Sim.Clothing.Activity.Walk);
+        var body = book.CaptureBody(hero);
+        Assert.True(body.CoreU < Ravensguard.Sim.Clothing.ClothingMath.CoreUnitsOf(Ravensguard.Sim.Clothing.ClothingMath.NormalCore), "the sleet chilled the hero");
+        Assert.Contains(body.WornWetU, w => w > 0);
+        live.BodySource = () => book.CaptureBody(hero);
+        var bytes = SaveCodec.Encode(WorldSave.CaptureLive(world, live, fx.ContentHash, "0.1"));
+        var restored = WorldSave.Restore(SaveCodec.Decode(bytes), fx.Content, fx.ContentHash);
+        var saved = restored.Live!.Body!;
+        Assert.Equal(body.CoreU, saved.CoreU); Assert.Equal(body.WornWetU, saved.WornWetU); Assert.Equal(body.WornShapes, saved.WornShapes); Assert.Equal(body.LastMinute, saved.LastMinute);
+        // the loaded game dresses the hero again (new item ids, same clothes) and puts the body back: the next hour in the sleet goes exactly as it would have
+        var loaded = new LiveWorld(new ChunkStreamer(fx.Generator, restored.Chunks), restored.Live!) { SynchronousStreaming = true };
+        var book2 = new Ravensguard.Sim.Clothing.ClothingBook(fx.Content);
+        var hero2 = book2.Track(heroId, Sex.Male, SocialClass.Peasant, Occupation.None, 50, 77, sec);
+        book2.ApplyBody(hero2, loaded.ResumedBody!);
+        Assert.Equal(body, book2.CaptureBody(hero2) with { WornShapes = body.WornShapes, WornWetU = body.WornWetU });
+        Assert.Equal(body.WornWetU, book2.CaptureBody(hero2).WornWetU);
+        for (long m = sec / 60 + 51; m <= sec / 60 + 110; m++) { book.StepTo(hero, m, sleet, Ravensguard.Sim.Clothing.Activity.Walk); book2.StepTo(hero2, m, sleet, Ravensguard.Sim.Clothing.Activity.Walk); }
+        Assert.Equal(hero.CoreU, hero2.CoreU);
+        Assert.Equal(book.CaptureBody(hero).WornWetU, book2.CaptureBody(hero2).WornWetU);
+        loaded.BodySource = () => book2.CaptureBody(hero2);
+    }
+
     [Fact]
     public void A_save_without_live_state_restores_with_no_resume()
     {

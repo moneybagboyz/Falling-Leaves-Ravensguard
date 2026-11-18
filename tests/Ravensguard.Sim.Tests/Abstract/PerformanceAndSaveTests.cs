@@ -8,6 +8,7 @@ using Xunit.Abstractions;
 namespace Ravensguard.Sim.Tests.Abstract;
 
 /// <summary>The hourly budget of the abstract tick (overview section 6, abstract spec G-A10) on the seed-1234 region: about 26,000 people, 5,150 households.</summary>
+[Collection(TimingCollection.Name)] // wall-clock budgets: run alone (Phase 3 cleanup)
 public class AbstractPerformanceTests(ITestOutputHelper output)
 {
     [Fact]
@@ -16,6 +17,7 @@ public class AbstractPerformanceTests(ITestOutputHelper output)
         var w = AbstractFixture.NewWorld();
         using var t = new WorldTicker(w, AbstractFixture.Registry());
         t.AdvanceDays(3);                                                                  // warm up the JIT, then measure two game months
+        Ravensguard.Sim.Diagnostics.GcSettle.Run();                                        // from a settled heap, as the game runs after a load
         t.Stats.Reset();
         t.AdvanceDays(60);
         var s = t.Stats;

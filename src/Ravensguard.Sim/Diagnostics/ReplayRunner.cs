@@ -26,6 +26,11 @@ public sealed class ReplayOptions
     public bool Verify { get; init; } = true;
     /// <summary>Called after every step with the absolute tick; return false to stop (the dev "step" and "break" tools).</summary>
     public Func<long, bool>? AfterStep { get; init; }
+    /// <summary>
+    /// Called with each recorded command that acts on the world's records (<see cref="ReplayCommand.IsRecordCommand"/>: a trade, a craft, a camp, a directive) at the tick it was issued, so a host that
+    /// holds the world as well can apply it; the live replay itself only steps the live sim.
+    /// </summary>
+    public Action<ReplayCommand>? OnRecordCommand { get; init; }
 }
 
 /// <summary>
@@ -66,14 +71,16 @@ public static class ReplayRunner
 
         try
         {
-            // commands issued at the base tick stand from the start; the hash of the loaded state itself is the first check
-            while (next < cmds.Count && cmds[next].Tick <= abs) cmds[next++].Apply(world);
+            // the hash of the loaded state itself is the first check (taken as the recorder took it, before anything issued at the base tick); then the commands issued
+            // at the base tick stand from the start (the standing input, speed, torch and load are the saved state's own, so they change nothing the start hash reads)
+            void ApplyDue() { while (next < cmds.Count && cmds[next].Tick <= abs) { var c = cmds[next++]; c.Apply(world); if (c.IsRecordCommand) options.OnRecordCommand?.Invoke(c); } }
             if (!Check(abs)) return Finish();
+            ApplyDue();
             while (abs < stop)
             {
                 world.Step(); steps++; abs++;
                 if (abs % StateHashTrail.Interval == 0 && !Check(abs)) break;
-                while (next < cmds.Count && cmds[next].Tick <= abs) cmds[next++].Apply(world);
+                ApplyDue();
                 if (options.AfterStep != null && !options.AfterStep(abs)) break;
             }
             // the recording also holds a hash of the very end (the report moment): check the state the replay ends in

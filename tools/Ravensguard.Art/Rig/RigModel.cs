@@ -27,6 +27,7 @@ public sealed class Pose
     public float Yaw, Roll, Pitch;              // whole body (pelvis); Pitch > 0 tips the top backward (falling back)
     public float TYaw, TRoll, TLean;            // torso relative to pelvis; TLean > 0 leans forward
     public float HYaw, HPitch;                  // head; HPitch > 0 looks down
+    public float Tilt;                          // projection tilt of the front and back views for this pose; 0 uses the standard 0.42 (a body lying down is seen from straight above: 1)
     public float Fwd;                           // pixels the whole figure is shifted forward (+) or back (-), to keep long reaches in the frame
     public float UpperZ;                        // pixels torso, head and arms sit above (+) or below (-) the pelvis (breathing, crouch)
     public float Lift;                          // pixels the whole figure is raised off the ground after planting
@@ -116,10 +117,11 @@ public sealed class Skeleton
     /// <summary>Screen column of the body axis: 16 in front/back, 15 in the side view (more room to reach forward).</summary>
     public float BaseX => V == View.Side ? SideBase : 16;
     public const float SideBase = 15;
+    float T => P.Tilt > 0 ? P.Tilt : Tilt;
     public (float X, float Y) Proj(V3 p) => V switch
     {
-        View.Front => (-p.X, -p.Z + Tilt * p.Y),
-        View.Back => (p.X, -p.Z - Tilt * p.Y),
+        View.Front => (-p.X, -p.Z + T * p.Y),
+        View.Back => (p.X, -p.Z - T * p.Y),
         _ => (p.Y, -p.Z + SideDepth * p.X),
     };
 
@@ -188,7 +190,7 @@ public sealed class Skeleton
         var (rx, ry) = Lin(m.Apply(new V3(1, 0, 0)));
         var (fx, fy) = Lin(m.Apply(new V3(0, 1, 0)));
         float rl = MathF.Sqrt(rx * rx + ry * ry), fl = MathF.Sqrt(fx * fx + fy * fy);
-        float r0 = V == View.Side ? SideDepth : 1, f0 = V == View.Side ? 1 : Tilt;
+        float r0 = V == View.Side ? SideDepth : 1, f0 = V == View.Side ? 1 : T;
         f.Ws = Math.Clamp(MathF.Sqrt(rl * rl * 1 + fl * fl * 1) / MathF.Sqrt(r0 * r0 + f0 * f0), 0.55f, 1.35f);
         f.Ox = px; f.Oy = py;
         return f;

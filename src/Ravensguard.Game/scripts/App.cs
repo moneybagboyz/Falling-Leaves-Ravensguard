@@ -35,6 +35,13 @@ public partial class App : Node
             GetTree().Quit(ReplayTool.Run(args[rp + 1], args));
             return;
         }
+        int ap = System.Array.IndexOf(args, "--autoplay");
+        if (ap >= 0)
+        {
+            // the first-hour bot (onboarding O-4): every origin through the mentor, the first job, the loan horse and the first ride, headlessly; --autoplay-seeds n (default 1), --autoplay-origin id
+            GetTree().Quit(Onboarding.AutoplayTool.Run(args));
+            return;
+        }
         if (args.Contains("--selftest"))
         {
             GetTree().Quit(SelfTest.Run() ? 0 : 1);
@@ -99,6 +106,13 @@ public partial class App : Node
     /// <summary>F8 works everywhere (menus, dialogues, Ironman): the picture is taken first, so the report window is not in it.</summary>
     public override void _Input(InputEvent e)
     {
+        // "?" opens the controls overlay for the screen you are on (the street view knows its own context; trade and crafting have theirs)
+        if (Router != null && Actions.Pressed(e, "world.controls_overlay") && Router.Top is not UI.ControlsOverlay && !BugReportScreen.IsOpen)
+        {
+            if (Router.Top is World.StreetView sv && !Router.HasModal) { sv.ShowControls(); GetViewport().SetInputAsHandled(); }
+            else if (Router.Top is UI.TradeScreen) { UI.ControlsOverlay.Open(Router, "trade"); GetViewport().SetInputAsHandled(); }
+            else if (Router.Top is UI.CraftingScreen) { UI.ControlsOverlay.Open(Router, "crafting"); GetViewport().SetInputAsHandled(); }
+        }
         if (Router == null || !Actions.PressedAlways(e, "world.report_bug") || BugReportScreen.IsOpen) return;
         OpenBugReport();
         GetViewport().SetInputAsHandled();

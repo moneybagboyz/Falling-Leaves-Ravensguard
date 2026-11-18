@@ -50,10 +50,14 @@ public sealed class HeroWorld
 
     private void OnHour(long h) => Desk.AfterHour(Context(), h);
 
+    /// <summary>Raised on the main thread with every command issued, stamped (the session recorder writes it to the replay trace).</summary>
+    public event Action<HeroCommand>? Issued;
+
     /// <summary>Queues a command and asks the worker to apply what is due. Main thread.</summary>
     public HeroCommand Issue(HeroCommand c)
     {
         c = Desk.Issue(c);
+        Issued?.Invoke(c);
         _ = Kick();
         return c;
     }

@@ -62,7 +62,7 @@ public enum ExposureState : byte { Normal, Chilled, Cold, Severe, Hot }
 public readonly record struct PromotionCandidate(PersonAnchors Anchors, long OriginXMm, long OriginYMm, long D2Mm, int Bubble);
 
 /// <summary>Who is live now and where the bubbles are: what a scan needs from the main thread (an immutable copy, so the scan can run on the tick worker at a barrier).</summary>
-public sealed record ScanInput(long NowSec, (long X, long Y)[] Centres, (EntityId Id, int Region, int Index)[] Live);
+public sealed record ScanInput(long NowSec, (long X, long Y)[] Centres, (EntityId Id, int Region, int Index)[] Live, EntityId[]? Force = null);
 
 /// <summary>The scan's answer: people to promote, nearest first (ties ascending region then person), and live people whose record is gone (died, left).</summary>
 public sealed record ScanResult(long NowSec, IReadOnlyList<PromotionCandidate> Candidates, IReadOnlyList<EntityId> Gone);
@@ -84,7 +84,7 @@ public readonly record struct FoldBack(EntityId Person, int Region, int Index, A
 /// always ascending id; the only RNG is the counter RNG keyed on the game day.
 /// </para>
 /// </summary>
-public sealed class PeopleBridge
+public sealed partial class PeopleBridge
 {
     private readonly SortedList<EntityId, LiveActor> _live = [];
     private List<PromotionCandidate> _queue = [];
@@ -149,7 +149,7 @@ public sealed class PeopleBridge
 
     /// <summary>What the next <see cref="Scan"/> needs from this bridge: the bubble centres (continent millimetres, at most 3) and who is already live.</summary>
     public ScanInput MakeScanInput(IReadOnlyList<(long X, long Y)> centres, long nowSec)
-        => new(nowSec, [.. centres.Take(Bubble.MaxBubbles)], [.. _live.Values.Select(a => (a.Binding.Person, a.Binding.Region, a.Binding.Index))]);
+        => new(nowSec, [.. centres.Take(Bubble.MaxBubbles)], [.. _live.Values.Select(a => (a.Binding.Person, a.Binding.Region, a.Binding.Index))], [.. _followers.Where(f => f.Value.Follow && !_live.ContainsKey(f.Key)).Select(f => f.Key)]);
 
     /// <summary>
     /// Finds the people of <paramref name="regions"/> (ascending region id) whose schedule puts them inside 150 m of a centre at <see cref="ScanInput.NowSec"/> and who are not live
@@ -188,6 +188,16 @@ public sealed class PeopleBridge
                 cands.Add(new PromotionCandidate(a with { Name = p.FullName(i) }, ox, oy, d2, b));
             }
         }
+        // the hero's followers are promoted wherever they are: they belong to the party, not to a place (Phase 3 cleanup B, item 3)
+        if (input.Force is { Length: > 0 })
+            foreach (var rec in regions.OrderBy(r => r.RegionId))
+                foreach (var fid in input.Force)
+                {
+                    int i = rec.Pop.People.IndexOf(fid);
+                    if (i < 0 || rec.Pop.People.Status[i] != PersonStatus.Alive || liveSet.Contains(fid) || cands.Any(c => c.Anchors.Id == fid)) continue;
+                    var a = PersonAnchors.From(rec.Pop, i, rec.Seed, rec.RegionId, input.NowSec, tileCache, rec.Facts, rec.Book);
+                    cands.Add(new PromotionCandidate(a with { Name = rec.Pop.People.FullName(i) }, rec.OriginXM * 1000, rec.OriginYM * 1000, 0, 0));
+                }
         cands.Sort((x, y) => x.D2Mm != y.D2Mm ? x.D2Mm.CompareTo(y.D2Mm) : x.Anchors.Region != y.Anchors.Region ? x.Anchors.Region.CompareTo(y.Anchors.Region) : x.Anchors.Index.CompareTo(y.Anchors.Index));
         return new ScanResult(input.NowSec, cands, gone);
     }
@@ -216,6 +226,7 @@ public sealed class PeopleBridge
             _live.Add(c.Anchors.Id, actor);
             if (Clothing != null) actor.Body = Clothing.Track(c.Anchors.Id, c.Anchors.Sex, c.Anchors.Class, c.Anchors.Occupation, 50, c.Anchors.Seed, nowSec);
             Advance(actor, ground, nowSec);
+            if (_followers.TryGetValue(c.Anchors.Id, out var fs)) PlaceFollower(actor, fs);
             actor.PrevX = actor.X; actor.PrevY = actor.Y;
             n++;
         }
@@ -237,6 +248,7 @@ public sealed class PeopleBridge
         {
             a.PrevX = a.X; a.PrevY = a.Y;
             if (a.Body != null && _ambient != null) Expose(a, nowSec);
+            if (_followers.TryGetValue(id, out var fs)) { StepFollower(a, fs); a.LastSec = nowSec; continue; }          // a party member walks the hero's trail, whatever their schedule says
             Advance(a, ground, nowSec);
             if (cs.Length == 0) continue;
             var (d2, b) = Bubble.Nearest(cs, a.X, a.Y);

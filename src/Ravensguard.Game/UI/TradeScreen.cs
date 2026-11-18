@@ -62,6 +62,7 @@ public partial class TradeScreen : Control
         barter.Pressed += () => { _notebook = false; _barter = true; market.ButtonPressed = false; barter.ButtonPressed = true; notes.ButtonPressed = false; _sel = 0; Build(); };
         notes.Pressed += () => { _notebook = true; market.ButtonPressed = false; barter.ButtonPressed = false; notes.ButtonPressed = true; Build(); };
         tabs.AddChild(market); tabs.AddChild(barter); tabs.AddChild(notes);
+        if (_settlement < 0 && _person != EntityId.None) { _barter = true; market.ButtonPressed = false; market.Disabled = true; barter.ButtonPressed = true; }       // on the road: only the person's goods
         tabs.AddChild(UiKit.Hint(L.T("TRADE_KEYS")));
         _cols = new HBoxContainer { SizeFlagsVertical = SizeFlags.ExpandFill }; _cols.AddThemeConstantOverride("separation", 10); root.AddChild(_cols);
         _left = Column(_cols, 300); _basket = Column(_cols, 360); _right = Column(_cols, 300);
@@ -114,7 +115,7 @@ public partial class TradeScreen : Control
     string GoodName(ushort g) => _hw.Runtime.State.Economy is { } e && g < e.Goods.Count ? e.Goods.Def(g).Name : $"good {g}";
     bool Piece(ushort g) => _hw.Runtime.State.Economy is { } e && g < e.Goods.Count && e.Goods.IsPiece(g);
 
-    static string Amount(long q, bool piece) => piece ? $"{q}" : $"{q / 1000.0:0.###} kg";
+    static string Amount(long q, bool piece) => piece ? $"{q}" : Quotes.Weight(q);
     static string Unit(bool piece) => piece ? L.T("TRADE_PER_PIECE") : L.T("TRADE_PER_KG");
 
     Line? Current()

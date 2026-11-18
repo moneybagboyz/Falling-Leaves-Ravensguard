@@ -19,8 +19,8 @@ Gaps reported by the step agents or seen in screenshots. Each one is either fixe
 
 ## Polish
 - Trade screen: weights show too many decimals (for example 8019.999 kg). Round sensibly.
-- The HUD cold warning text is hard-coded English, not in `en.csv`.
-- The `?` controls overlay is missing lines for the travel, camp, mounted and crafting contexts.
+- ~~The HUD cold warning text is hard-coded English, not in `en.csv`.~~ Fixed (onboarding): `HUD_*` keys in `en.csv`, `ClothingFeed.HudLine` reads them.
+- ~~The `?` controls overlay is missing lines for the travel, camp, mounted and crafting contexts.~~ Fixed (onboarding): the overlay exists, built from `InputDefs` and the live key map, with pages for world, mounted, trade, crafting, camp, travel, called shot and build; `--selftest` checks every page against the key map. `world.camp` and `world.forage` had no `ACTION_*` text and now do.
 - The camp fire uses the hearth sprite.
 - Sleepers in side-by-side beds are drawn upright with the fall pose; there's no top-down lying sprite.
 - Hair colour and style and the apron layer aren't in the rig. Skin-tone variation isn't applied.
@@ -33,5 +33,5 @@ Gaps reported by the step agents or seen in screenshots. Each one is either fixe
 - Timing tests are noisy when the machine is busy (`Daily_regions_are_staggered`, `HourlyTickTimings`). They're isolated in the Timing collection, but they still compete with other processes.
 - `JobTests.Determinism` ran out of memory once while Godot screenshot runs were going.
 - Vehicles face east or west only (no north/south sprites); a loaded cart bed isn't drawn with its cargo.
-- Dialogue: `start_contract` and `give_item` effects only toast; no legends fallback; caravans carry no rumours between regions; per-person mood in barks, the History (H) link and the Journal map pin are missing; only the caravan master is authored; the camp talk hook (Travel) isn't filled.
+- Dialogue: `start_contract` and `give_item` effects only toast; no legends fallback; caravans carry no rumours between regions; per-person mood in barks, the History (H) link and the Journal map pin are missing; only the caravan master was authored (now the seven first-hour mentors too: `old_knight`, `free_farmer`, `old_sergeant`, `prior`, `steward`, `fence` and the caravan master); the camp talk hook (Travel) isn't filled.
 - Autopilot: Q-menu directive verbs and a party-member directive picker in the squad screen aren't built; Tend and PursueAmbition are stubs (Phase 5 and Phase 8); AP-8 waits for dialogue's `offer_big` flag; AP-15 compares sessions rather than a literal command replay.

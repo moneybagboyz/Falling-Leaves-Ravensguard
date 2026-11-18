@@ -121,7 +121,20 @@ public static class CatalogV2
 
         // ---- template vehicles at their footprint (one cell = one metre = 32 px; sprite = footprint plus a 4 px margin, and the rise above the ground rectangle)
         var veh = new Vehicles(pal);
-        foreach (var vs in Vehicles.Specs) { var spec = vs; var (vw, vh) = Vehicles.Size(spec); l.Add(new SpriteDef("vehicle." + spec.Id, SpriteKind.Object, "vehicles_32", "vehicles", vw, vh, () => veh.Draw(spec))); }
+        foreach (var vs in Vehicles.Specs)
+        {
+            var spec = vs; var (vw, vh) = Vehicles.Size(spec); var (nw, nh) = Vehicles.SizeNS(spec);
+            l.Add(new SpriteDef("vehicle." + spec.Id, SpriteKind.Object, "vehicles_32", "vehicles", vw, vh, () => veh.Draw(spec)));
+            // facing north and south (the game mirrors the east one for west), and with a load on the bed
+            l.Add(new SpriteDef($"vehicle.{spec.Id}.n", SpriteKind.Object, "vehicles_32", "vehicles", nw, nh, () => veh.DrawNS(spec, true, false)));
+            l.Add(new SpriteDef($"vehicle.{spec.Id}.s", SpriteKind.Object, "vehicles_32", "vehicles", nw, nh, () => veh.DrawNS(spec, false, false)));
+            if (spec.Id is "handcart" or "cart" or "ox_wagon" or "sledge")
+            {
+                l.Add(new SpriteDef($"vehicle.{spec.Id}_loaded", SpriteKind.Object, "vehicles_32", "vehicles", vw, vh, () => veh.Draw(spec, true)));
+                l.Add(new SpriteDef($"vehicle.{spec.Id}.n_loaded", SpriteKind.Object, "vehicles_32", "vehicles", nw, nh, () => veh.DrawNS(spec, true, true)));
+                l.Add(new SpriteDef($"vehicle.{spec.Id}.s_loaded", SpriteKind.Object, "vehicles_32", "vehicles", nw, nh, () => veh.DrawNS(spec, false, true)));
+            }
+        }
 
         AddMinis(l, pal, g, t);
     }

@@ -11,7 +11,7 @@
     },
     "objects_32": {
       "file": "objects_32.png",
-      "width": 832,
+      "width": 928,
       "height": 32,
       "cell": [
         32,
@@ -93,10 +93,10 @@
     "vehicles_32": {
       "file": "vehicles_32.png",
       "width": 792,
-      "height": 360,
+      "height": 3212,
       "cell": [
         264,
-        120
+        292
       ]
     },
     "field_8": {
@@ -875,79 +875,100 @@
       "w": 32,
       "h": 32
     },
-    "object.sign": {
+    "object.campfire": {
       "atlas": "objects_32",
       "x": 480,
       "y": 0,
       "w": 32,
       "h": 32
     },
-    "object.stake": {
+    "object.campfire_lit": {
       "atlas": "objects_32",
       "x": 512,
       "y": 0,
       "w": 32,
       "h": 32
     },
-    "object.sconce": {
+    "object.snare": {
       "atlas": "objects_32",
       "x": 544,
       "y": 0,
       "w": 32,
       "h": 32
     },
-    "object.sconce_lit": {
+    "object.sign": {
       "atlas": "objects_32",
       "x": 576,
       "y": 0,
       "w": 32,
       "h": 32
     },
-    "object.bush": {
+    "object.stake": {
       "atlas": "objects_32",
       "x": 608,
       "y": 0,
       "w": 32,
       "h": 32
     },
-    "object.ladder": {
+    "object.sconce": {
       "atlas": "objects_32",
       "x": 640,
       "y": 0,
       "w": 32,
       "h": 32
     },
-    "object.trapdoor": {
+    "object.sconce_lit": {
       "atlas": "objects_32",
       "x": 672,
       "y": 0,
       "w": 32,
       "h": 32
     },
-    "object.workbench": {
+    "object.bush": {
       "atlas": "objects_32",
       "x": 704,
       "y": 0,
       "w": 32,
       "h": 32
     },
-    "object.brazier": {
+    "object.ladder": {
       "atlas": "objects_32",
       "x": 736,
       "y": 0,
       "w": 32,
       "h": 32
     },
-    "object.brazier_lit": {
+    "object.trapdoor": {
       "atlas": "objects_32",
       "x": 768,
       "y": 0,
       "w": 32,
       "h": 32
     },
-    "object.rocks": {
+    "object.workbench": {
       "atlas": "objects_32",
       "x": 800,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "object.brazier": {
+      "atlas": "objects_32",
+      "x": 832,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "object.brazier_lit": {
+      "atlas": "objects_32",
+      "x": 864,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "object.rocks": {
+      "atlas": "objects_32",
+      "x": 896,
       "y": 0,
       "w": 32,
       "h": 32
@@ -4494,47 +4515,229 @@
       "w": 72,
       "h": 60
     },
-    "vehicle.handcart": {
+    "vehicle.wheelbarrow.n": {
       "atlas": "vehicles_32",
       "x": 264,
       "y": 0,
-      "w": 72,
-      "h": 62
+      "w": 40,
+      "h": 92
     },
-    "vehicle.cart": {
+    "vehicle.wheelbarrow.s": {
       "atlas": "vehicles_32",
       "x": 528,
       "y": 0,
+      "w": 40,
+      "h": 92
+    },
+    "vehicle.handcart": {
+      "atlas": "vehicles_32",
+      "x": 0,
+      "y": 292,
+      "w": 72,
+      "h": 62
+    },
+    "vehicle.handcart.n": {
+      "atlas": "vehicles_32",
+      "x": 264,
+      "y": 292,
+      "w": 40,
+      "h": 94
+    },
+    "vehicle.handcart.s": {
+      "atlas": "vehicles_32",
+      "x": 528,
+      "y": 292,
+      "w": 40,
+      "h": 94
+    },
+    "vehicle.handcart_loaded": {
+      "atlas": "vehicles_32",
+      "x": 0,
+      "y": 584,
+      "w": 72,
+      "h": 62
+    },
+    "vehicle.handcart.n_loaded": {
+      "atlas": "vehicles_32",
+      "x": 264,
+      "y": 584,
+      "w": 40,
+      "h": 94
+    },
+    "vehicle.handcart.s_loaded": {
+      "atlas": "vehicles_32",
+      "x": 528,
+      "y": 584,
+      "w": 40,
+      "h": 94
+    },
+    "vehicle.cart": {
+      "atlas": "vehicles_32",
+      "x": 0,
+      "y": 876,
       "w": 168,
       "h": 98
+    },
+    "vehicle.cart.n": {
+      "atlas": "vehicles_32",
+      "x": 264,
+      "y": 876,
+      "w": 72,
+      "h": 194
+    },
+    "vehicle.cart.s": {
+      "atlas": "vehicles_32",
+      "x": 528,
+      "y": 876,
+      "w": 72,
+      "h": 194
+    },
+    "vehicle.cart_loaded": {
+      "atlas": "vehicles_32",
+      "x": 0,
+      "y": 1168,
+      "w": 168,
+      "h": 98
+    },
+    "vehicle.cart.n_loaded": {
+      "atlas": "vehicles_32",
+      "x": 264,
+      "y": 1168,
+      "w": 72,
+      "h": 194
+    },
+    "vehicle.cart.s_loaded": {
+      "atlas": "vehicles_32",
+      "x": 528,
+      "y": 1168,
+      "w": 72,
+      "h": 194
     },
     "vehicle.hay_wain": {
       "atlas": "vehicles_32",
       "x": 0,
-      "y": 120,
+      "y": 1460,
       "w": 232,
       "h": 120
     },
-    "vehicle.ox_wagon": {
+    "vehicle.hay_wain.n": {
       "atlas": "vehicles_32",
       "x": 264,
-      "y": 120,
+      "y": 1460,
+      "w": 72,
+      "h": 280
+    },
+    "vehicle.hay_wain.s": {
+      "atlas": "vehicles_32",
+      "x": 528,
+      "y": 1460,
+      "w": 72,
+      "h": 280
+    },
+    "vehicle.ox_wagon": {
+      "atlas": "vehicles_32",
+      "x": 0,
+      "y": 1752,
       "w": 264,
       "h": 100
     },
-    "vehicle.covered_wagon": {
+    "vehicle.ox_wagon.n": {
+      "atlas": "vehicles_32",
+      "x": 264,
+      "y": 1752,
+      "w": 72,
+      "h": 292
+    },
+    "vehicle.ox_wagon.s": {
       "atlas": "vehicles_32",
       "x": 528,
-      "y": 120,
+      "y": 1752,
+      "w": 72,
+      "h": 292
+    },
+    "vehicle.ox_wagon_loaded": {
+      "atlas": "vehicles_32",
+      "x": 0,
+      "y": 2044,
+      "w": 264,
+      "h": 100
+    },
+    "vehicle.ox_wagon.n_loaded": {
+      "atlas": "vehicles_32",
+      "x": 264,
+      "y": 2044,
+      "w": 72,
+      "h": 292
+    },
+    "vehicle.ox_wagon.s_loaded": {
+      "atlas": "vehicles_32",
+      "x": 528,
+      "y": 2044,
+      "w": 72,
+      "h": 292
+    },
+    "vehicle.covered_wagon": {
+      "atlas": "vehicles_32",
+      "x": 0,
+      "y": 2336,
       "w": 232,
       "h": 116
+    },
+    "vehicle.covered_wagon.n": {
+      "atlas": "vehicles_32",
+      "x": 264,
+      "y": 2336,
+      "w": 72,
+      "h": 276
+    },
+    "vehicle.covered_wagon.s": {
+      "atlas": "vehicles_32",
+      "x": 528,
+      "y": 2336,
+      "w": 72,
+      "h": 276
     },
     "vehicle.sledge": {
       "atlas": "vehicles_32",
       "x": 0,
-      "y": 240,
+      "y": 2628,
       "w": 104,
       "h": 92
+    },
+    "vehicle.sledge.n": {
+      "atlas": "vehicles_32",
+      "x": 264,
+      "y": 2628,
+      "w": 72,
+      "h": 124
+    },
+    "vehicle.sledge.s": {
+      "atlas": "vehicles_32",
+      "x": 528,
+      "y": 2628,
+      "w": 72,
+      "h": 124
+    },
+    "vehicle.sledge_loaded": {
+      "atlas": "vehicles_32",
+      "x": 0,
+      "y": 2920,
+      "w": 104,
+      "h": 92
+    },
+    "vehicle.sledge.n_loaded": {
+      "atlas": "vehicles_32",
+      "x": 264,
+      "y": 2920,
+      "w": 72,
+      "h": 124
+    },
+    "vehicle.sledge.s_loaded": {
+      "atlas": "vehicles_32",
+      "x": 528,
+      "y": 2920,
+      "w": 72,
+      "h": 124
     },
     "field.grass.0": {
       "atlas": "field_8",

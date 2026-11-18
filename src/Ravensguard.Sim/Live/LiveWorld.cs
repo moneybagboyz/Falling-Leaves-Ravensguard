@@ -123,6 +123,8 @@ public sealed class LiveWorld
             _x = Fixed.FromRaw((int)(resume.WorldXRaw - ((long)Window.OriginX << Fixed.FracBits)));
             _y = Fixed.FromRaw((int)(resume.WorldYRaw - ((long)Window.OriginY << Fixed.FracBits)));
             _facing = resume.Facing; _torch = resume.Torch; Explored = resume.Explored.Clone();
+            if (resume.Motion is { } m) RestoreMotion(m);
+            ResumedBody = resume.Body;
         }
         _z = start.Z;
         _px = _x; _py = _y; _pz = _z;
@@ -243,7 +245,36 @@ public sealed class LiveWorld
     public LiveResume CaptureResume()
     {
         long wx = ((long)OriginX << Fixed.FracBits) + _x.Raw, wy = ((long)OriginY << Fixed.FracBits) + _y.Raw;
-        return new LiveResume(wx, wy, _z, _facing, _torch, Clock.Now, Clock.GameMsRemainder, Clock.Speed, Explored.Clone(), Codex?.ToProgress());
+        return new LiveResume(wx, wy, _z, _facing, _torch, Clock.Now, Clock.GameMsRemainder, Clock.Speed, Explored.Clone(), Codex?.ToProgress(), Motion: CaptureMotion(), Body: BodySource?.Invoke());
+    }
+
+    /// <summary>The hero's body for a save (core temperature, exposure, wet clothes): the game's clothing model answers it. Null: the save keeps none.</summary>
+    public Func<Ravensguard.Sim.Clothing.HeroBody?>? BodySource { get; set; }
+    /// <summary>The body a resumed save carried, for the game to put back on the hero once it is dressed (null when none).</summary>
+    public Ravensguard.Sim.Clothing.HeroBody? ResumedBody { get; set; }
+
+    /// <summary>The walk in progress in region cells (the window origin added), or <see cref="HeroMotion.Idle"/>.</summary>
+    public HeroMotion CaptureMotion()
+    {
+        int ox = OriginX, oy = OriginY;
+        int[] path = [];
+        if (_path != null) { path = new int[_path.Count * 3]; for (int i = 0; i < _path.Count; i++) { path[i * 3] = _path[i].X + ox; path[i * 3 + 1] = _path[i].Y + oy; path[i * 3 + 2] = _path[i].Z; } }
+        int[] pl = _portalLock is { } p ? [p.X + ox, p.Y + oy, p.Z] : [];
+        var m = new HeroMotion(path, _path == null ? 0 : _pathIdx, _stuck, pl, _mode);
+        return m.IsIdle ? HeroMotion.Idle : m;
+    }
+
+    private void RestoreMotion(HeroMotion m)
+    {
+        int ox = OriginX, oy = OriginY;
+        if (m.PathXyz.Length >= 3)
+        {
+            var path = new List<Cell3>(m.PathXyz.Length / 3);
+            for (int i = 0; i + 2 < m.PathXyz.Length; i += 3) path.Add(new Cell3(m.PathXyz[i] - ox, m.PathXyz[i + 1] - oy, m.PathXyz[i + 2]));
+            _path = path; _pathIdx = Math.Clamp(m.PathIdx, 0, path.Count);
+        }
+        _stuck = m.Stuck; _mode = m.Mode;
+        if (m.PortalLock.Length == 3) _portalLock = new Cell3(m.PortalLock[0] - ox, m.PortalLock[1] - oy, m.PortalLock[2]);
     }
 
     /// <summary>
@@ -302,7 +333,15 @@ public sealed class LiveWorld
         _frame = null; _lightDirty = true; WindowSwaps++;
     }
 
-    private Fixed SpeedOf(MoveMode m) => m switch { MoveMode.Walk => WalkSpeed, MoveMode.Sprint => SprintSpeed, _ => JogSpeed };
+    /// <summary>The hero's load speed factor in permille (<c>Encumbrance.SpeedPm</c>, trade spec 4A.3): 1000 unloaded, 0 cannot walk. Set by the game from the hero's carried mass; an exact fixed-point factor on every gait.</summary>
+    public int LoadSpeedPm { get; set; } = 1000;
+
+    private Fixed SpeedOf(MoveMode m)
+    {
+        Fixed v = m switch { MoveMode.Walk => WalkSpeed, MoveMode.Sprint => SprintSpeed, _ => JogSpeed };
+        int pm = Math.Clamp(LoadSpeedPm, 0, 1000);
+        return pm == 1000 ? v : v * Fixed.FromRatio(pm, 1000);
+    }
 
     private void MoveHero(int mult)
     {

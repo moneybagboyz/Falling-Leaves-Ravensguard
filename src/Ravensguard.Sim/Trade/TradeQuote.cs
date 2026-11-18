@@ -40,6 +40,20 @@ public readonly record struct BookLine(ushort Good, long StockUnits, long RefMic
 /// <summary>Exact quotes (integer, the same rounding as <see cref="MarketBook.QuoteBuy"/> and <see cref="MarketBook.SellToMerchants"/>).</summary>
 public static class Quotes
 {
+    /// <summary>
+    /// A mass for people to read (Phase 3 cleanup B polish): 100 kg and over in whole kilograms with a thousands separator (8,020 kg), under that one decimal without a trailing zero (45.5 kg, 0.8 kg), under 50 g in grams.
+    /// Half rounds away from zero; never prints float noise such as 8019.999.
+    /// </summary>
+    public static string Weight(long grams)
+    {
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
+        long g = Math.Abs(grams); string sign = grams < 0 ? "-" : "";
+        if (g < 50) return $"{sign}{g} g";
+        if (g >= 100_000) return sign + ((g + 500) / 1000).ToString("N0", inv) + " kg";
+        long tenths = (g + 50) / 100;                                     // hundreds of grams, rounded half up
+        return sign + (tenths / 10).ToString(inv) + (tenths % 10 == 0 ? "" : "." + (tenths % 10).ToString(inv)) + " kg";
+    }
+
     public static TradeQuote Buy(MarketBook b, ushort g, long qty) => BookLine.Of(b, g).Quote(TradeSide.Buy, qty);
     public static TradeQuote Sell(MarketBook b, ushort g, long qty) => BookLine.Of(b, g).Quote(TradeSide.Sell, qty);
 

@@ -117,7 +117,7 @@ public sealed partial class ContinentTrade
         int canBuy = (int)Math.Max(0, (cash + loanRoom - FoundingCashMites) / wagon);
         int maxFleet = Math.Min(MaxVehicles, Math.Max(owned, owned + canBuy));
         if (maxFleet < 1) return;
-        if (car == null && st.Caravans.ActiveCount() >= CaravanTable.MaxActive) return;
+        if (car == null && st.Caravans.ActiveCountFor(rl.Region) >= CaravanTable.MaxActive) return;
         int guards = car?.Guards ?? 0;
         Plan? best = null;
         foreach (var et in rl.Edges)
