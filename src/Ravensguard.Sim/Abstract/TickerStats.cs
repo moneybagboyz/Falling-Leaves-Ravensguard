@@ -87,8 +87,19 @@ public sealed class TickerStats
     public double MaxHour0Ms => _hour0Ms.Count == 0 ? 0 : _hour0Ms.Max();
     public double MaxSeasonDayHourMs => _seasonDayMs.Count == 0 ? 0 : _seasonDayMs.Max();
 
+    /// <summary>The slowest hour of the warm-up that <see cref="Reset(bool)"/> set aside (the first day of a run, when the JIT compiles every system), 0 when none.</summary>
+    public double WarmupMaxHourMs { get; private set; }
+
+    /// <summary>Clears every timing; with <paramref name="warmup"/> the slowest hour so far is kept as <see cref="WarmupMaxHourMs"/> and reported apart.</summary>
+    public void Reset(bool warmup)
+    {
+        if (warmup) WarmupMaxHourMs = Math.Max(WarmupMaxHourMs, MaxHourMs);
+        Reset();
+    }
+
     public void Reset()
     {
+        WorstHour = (-1, 0, "", 0, 0, 0);
         _hourMs.Clear(); _barrierMs.Clear(); _hour0Ms.Clear(); _seasonDayMs.Clear(); _systems.Clear(); Hours = 0;
         foreach (var p in _phases) { p.Ticks = p.Calls = p.MaxTicks = 0; }
         foreach (var c in new[] { BarrierStart, BarrierEnd, Commands }) { c.Ticks = c.Calls = c.MaxTicks = 0; }
@@ -98,6 +109,7 @@ public sealed class TickerStats
     public string Report()
     {
         var sb = new System.Text.StringBuilder();
+        if (WarmupMaxHourMs > 0) sb.AppendLine($"warm-up day (JIT compilation of every system, set aside): slowest hour {WarmupMaxHourMs:0.0} ms");
         sb.AppendLine($"{Hours} hours; hour median {MedianHourMs:0.000} ms, p99 {P99HourMs:0.000} ms, max {MaxHourMs:0.000} ms; hour-0 median {MedianHour0Ms:0.000} ms, max {MaxHour0Ms:0.000} ms");
         foreach (TickPhase p in Enum.GetValues<TickPhase>())
         {

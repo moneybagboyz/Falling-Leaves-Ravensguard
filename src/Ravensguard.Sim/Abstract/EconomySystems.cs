@@ -98,14 +98,17 @@ public sealed class FarmSalesSystem : AbstractSystem
     public long AleSoldG;
 
     /// <summary>
-    /// The woodward (integration decision I38): when the village book holds under half its firewood cover (its bakers, brewers and kilns burn far more than the
-    /// households, who gather their own), a landed peasant household cuts up to two days of its own fuel more from the commons and sells it (reason Cut).
+    /// The woodward (integration decision I38): when the village book, or the market town's when it pays 15 percent more, holds under half its firewood cover (bakers,
+    /// brewers, kilns and townsfolk burn far more than the households, who gather their own), a landed peasant household cuts up to two days of its own fuel more from
+    /// the commons and sells it there (reason Cut).
     /// </summary>
     private void Woodward(EconomyWorld ew, int hh, Store store, int day, MarketBook book)
     {
         var e = ew.World.Economy; var hht = ew.World.Households;
         if (hht.ParcelCount[hh] == 0 || hht.Class[hh] != SocialClass.Peasant) return;
-        ushort wood = e.Food.Firewood; var gb = book.Goods[wood];
+        ushort wood = e.Food.Firewood;
+        book = ew.Markets.BestBookFor(hht.Settlement[hh], wood);          // the market town when it pays better: a town burns wood it cannot gather
+        var gb = book.Goods[wood];
         long target = gb.Demand * gb.TargetCoverDays; if (gb.StockUnits * 2 >= target) return;
         long cut = Math.Min(target / 2 - gb.StockUnits, (long)hht.MemberCount[hh] * e.Basket(SocialClass.Peasant).FirewoodGPerPersonDay * 2);
         if (cut <= 0) return;
@@ -165,14 +168,14 @@ public sealed class HouseholdSpendingSystem : AbstractSystem
     public override void Step(TickContext ctx) => ctx.World.Get<EconomyWorld>()?.Spending.Slice(ctx.Time);
 }
 
-/// <summary>H5: a day of spoilage in every store that is not a household's (barns, granaries, fodder, business and market stores), then the books re-sync their lots.</summary>
+/// <summary>H4 at hour 1 (was H5, decision I40): a day of spoilage in every store that is not a household's (barns, granaries, fodder, business and market stores), then the books re-sync their lots.</summary>
 public sealed class StoreSpoilageSystem : AbstractSystem
 {
-    public StoreSpoilageSystem() : base("store-spoilage", TickPhase.H5DailyGlobals, SystemOrder.DailyGlobalsSpoilage) { }
+    public StoreSpoilageSystem() : base("store-spoilage", TickPhase.H4DailySlice, SystemOrder.DailyGlobalsSpoilage) { }
 
     public override void Step(TickContext ctx)
     {
-        if (ctx.HourOfDay != 0) return;
+        if (ctx.HourOfDay != 1) return;   // off hour 0, which carries the daily globals (decision I40)
         var ew = ctx.World.Get<EconomyWorld>(); if (ew == null) return;
         int t = ctx.World.Env.TMeanC(ctx.Day);
         foreach (var s in ctx.World.Economy.OtherStores.Values) s.ApplySpoilage(ctx.World.Seed, ctx.Hour, t);
@@ -180,26 +183,26 @@ public sealed class StoreSpoilageSystem : AbstractSystem
     }
 }
 
-/// <summary>H5: the parish feeds the hungry from its granary and sells the rest of the tithe.</summary>
+/// <summary>H4 at hour 2 (was H5, decision I40): the parish feeds the hungry from its granary and sells the rest of the tithe.</summary>
 public sealed class ParishSystem : AbstractSystem
 {
-    public ParishSystem() : base("parish", TickPhase.H5DailyGlobals, SystemOrder.DailyGlobalsParish) { }
+    public ParishSystem() : base("parish", TickPhase.H4DailySlice, SystemOrder.DailyGlobalsParish) { }
     public override void Step(TickContext ctx)
     {
-        if (ctx.HourOfDay != 0) return;
+        if (ctx.HourOfDay != 2) return;   // off hour 0, which carries the daily globals (decision I40)
         var ew = ctx.World.Get<EconomyWorld>(); if (ew == null) return;
         ew.Parish.Daily(ctx.Time);
         ew.Counters.CharityG = ew.Parish.CharityG; ew.Counters.ParishSoldG = ew.Parish.SoldG;
     }
 }
 
-/// <summary>H5: the labour market: dead staff leave, owners succeed, businesses hire the idle (households spec 3.5, production spec 3.3).</summary>
+/// <summary>H4 at hour 1 (was H5, decision I40): the labour market: dead staff leave, owners succeed, businesses hire the idle (households spec 3.5, production spec 3.3).</summary>
 public sealed class LabourSystem : AbstractSystem
 {
-    public LabourSystem() : base("labour-market", TickPhase.H5DailyGlobals, SystemOrder.DailyGlobalsLabour) { }
+    public LabourSystem() : base("labour-market", TickPhase.H4DailySlice, SystemOrder.DailyGlobalsLabour) { }
     public override void Step(TickContext ctx)
     {
-        if (ctx.HourOfDay != 0) return;
+        if (ctx.HourOfDay != 1) return;   // off hour 0, which carries the daily globals (decision I40)
         ctx.World.Get<EconomyWorld>()?.Labour.Daily(ctx.Time);
     }
 }
@@ -215,13 +218,13 @@ public sealed class MarketDailySystem : AbstractSystem
     }
 }
 
-/// <summary>H5: the day's trade with the continent (imports of what a book lacks, exports of what it holds beyond its cover).</summary>
+/// <summary>H4 at hour 3 (was H5, decision I40): the day's trade with the continent (imports of what a book lacks, exports of what it holds beyond its cover).</summary>
 public sealed class ContinentTradeSystem : AbstractSystem
 {
-    public ContinentTradeSystem() : base("continent-trade", TickPhase.H5DailyGlobals, SystemOrder.DailyGlobalsMarkets + 10) { }
+    public ContinentTradeSystem() : base("continent-trade", TickPhase.H4DailySlice, SystemOrder.DailyGlobalsMarkets + 10) { }
     public override void Step(TickContext ctx)
     {
-        if (ctx.HourOfDay != 0) return;
+        if (ctx.HourOfDay != 3) return;   // off hour 0, which carries the daily globals (decision I40)
         var ew = ctx.World.Get<EconomyWorld>(); if (ew == null) return;
         ew.Trade.Daily(ctx.Time);
         ew.Regional.Daily(ctx.Time);

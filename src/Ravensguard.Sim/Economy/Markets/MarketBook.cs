@@ -188,6 +188,9 @@ public sealed class MarketBook
         gb.StockUnits += qty;
     }
 
+    /// <summary>Goods that lose this much a day in a market hall (bread, fresh fish and meat, milk) are sold by their makers only, never to a merchant's stock.</summary>
+    public const int PerishablePpmPerDay = 100_000;
+
     /// <summary>The lowest floor a merchant's lot comes down to (integration decision I36; was 750): in a glut the merchant sells at a loss rather than sit on the stock with his cash gone.</summary>
     public const int MerchantFloorMinPermille = 400;
 
@@ -294,6 +297,7 @@ public sealed class MarketBook
     public TradeResult SellToMerchants(MarketParty seller, ushort good, long qty, int day)
     {
         if (qty <= 0 || Merchants.Count == 0) return TradeResult.None;
+        if (Econ.Goods.SpoilPpm(good, StoreKind.Granary) >= PerishablePpmPerDay) return TradeResult.None;   // no merchant buys bread or fresh meat to hold (decision I40)
         Sync(good);
         var gb = Goods[good];
         qty = Math.Min(qty, seller.Store.Qty(good));

@@ -118,6 +118,7 @@ public sealed class EconomySoak
             for (int d = 0; d < TimeConst.DaysPerYear; d++)
             {
                 Ticker.AdvanceHours(24);
+                if (y == 0 && d == 0 && Rows.Count == 0) Ticker.Stats.Reset(warmup: true);   // the first day's hours carry the JIT (decision I40): timed apart
                 Sample();
                 if (Flow != null && d % 6 == 5) Flow.Sample();
                 if (Coin != null && d % 6 == 5) Coin.Sample();
