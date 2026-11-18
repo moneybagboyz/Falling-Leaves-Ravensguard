@@ -230,7 +230,7 @@ businesses).
 ## 10. Decisions
 
 ### 10.1 Open decisions for the user (player-facing)
-Each has a default already used by the specs; change the default in the named file if you disagree.
+Each has a default already used by the specs; change the default in the named file if you disagree. **Confirmed by the user on 18 Nov 2026:** O1 (fixed region grid), O6 (famine as a real risk), O10 (villagers hurry to work, field camps beyond about 1.35 km). The others stand as defaults until the user says otherwise.
 
 | # | Decision | Default taken | Why | Where |
 |---|---|---|---|---|
