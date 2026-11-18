@@ -369,11 +369,12 @@ public class BehaviourPerfTests(ITestOutputHelper output)
         var open = new Job { Id = JobTable.MakeId(0, 1), Kind = OddJobKind.Guard, State = JobState.Open, Settlement = rig.TownIndex, WageMites = 100, P4 = 2, PostedSec = t0, DeadlineSec = t0 + 86400 };
         b.SetJobs([], [open]);
         for (int i = 0; i < 40; i++) b.Step(t0 + i, rig.Ground, rig.Centre);
+        Ravensguard.Sim.Diagnostics.GcSettle.Run(); // what the game does after a load: the built world leaves the young generations before play
         var times = new List<double>(); var sw = new Stopwatch(); long t = t0 + 40;
         for (int i = 0; i < 2400; i++, t++) { int g0=GC.CollectionCount(0),g2=GC.CollectionCount(2); sw.Restart(); b.Step(t, rig.Ground, rig.Centre); times.Add(sw.Elapsed.TotalMilliseconds); if (times[^1] > 15) output.WriteLine($"SPIKE i={i} t={t} {times[^1]:0.0}ms plans={b.PlansLastStep} gc0+{GC.CollectionCount(0)-g0} gc2+{GC.CollectionCount(2)-g2}"); b.TakeClaims(); }
         times.Sort(); double avg = times.Average(), p99 = times[(int)(times.Count * 0.99)], max = times[^1];
         output.WriteLine($"{b.Count} live people with the scorer every 20 game seconds: avg {avg:0.000} ms, p99 {p99:0.000} ms, max {max:0.00} ms");
         Assert.True(b.Count >= 250);
-        Assert.True(avg < TestBudget.Ms(8), $"avg {avg:0.00}"); Assert.True(p99 < TestBudget.Ms(8), $"p99 {p99:0.00}"); Assert.True(max < TestBudget.Ms(40), $"max {max:0.0}"); // avg and p99 are the budget; the single worst tick can hold a GC pause (26 ms seen in a full run)
+        Assert.True(avg < TestBudget.Ms(8), $"avg {avg:0.00}"); Assert.True(p99 < TestBudget.Ms(8), $"p99 {p99:0.00}"); Assert.True(max < TestBudget.Ms(25), $"max {max:0.0}"); // the worst tick: a GC pause of a world still in the young generations was the 60-70 ms spike (GcSettle)
     }
 }

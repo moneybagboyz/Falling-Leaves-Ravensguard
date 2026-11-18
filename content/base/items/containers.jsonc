@@ -1,0 +1,13 @@
+// Containers a person carries (trade-inventory-character spec 3.2, ContainerDef). Volume in litres, own mass in grams, the longest item it takes in cm.
+// Bulk goods sit in a container by volume (grams x bulk litres per kg); nesting is at most three deep. Saddlebags go on a horse (horses-and-carts spec).
+[
+  { "type": "container", "id": "belt_pouch", "name": "Belt pouch", "volume_l": 2, "empty_mass_g": 120, "max_item_cm": 20, "slot": "belt", "hands": 0, "material": "leather" },
+  { "type": "container", "id": "satchel", "name": "Satchel", "volume_l": 8, "empty_mass_g": 600, "max_item_cm": 45, "slot": "shoulder", "hands": 0, "material": "leather" },
+  { "type": "container", "id": "rucksack", "name": "Rucksack", "volume_l": 30, "empty_mass_g": 1800, "max_item_cm": 70, "slot": "back", "hands": 0, "material": "leather" },
+  { "type": "container", "id": "sack", "name": "Sack", "volume_l": 50, "empty_mass_g": 400, "max_item_cm": 90, "slot": "both_hands", "hands": 2, "material": "linen" },
+  { "type": "container", "id": "basket", "name": "Basket", "volume_l": 20, "empty_mass_g": 700, "max_item_cm": 50, "soft": false, "slot": "hand", "hands": 1, "material": "linen" },
+  { "type": "container", "id": "quiver", "name": "Quiver", "volume_l": 3, "empty_mass_g": 300, "max_item_cm": 85, "slot": "back", "hands": 0, "material": "leather" },
+  { "type": "container", "id": "saddlebags", "name": "Saddlebags", "volume_l": 40, "empty_mass_g": 2500, "max_item_cm": 60, "slot": "horse", "hands": 0, "material": "leather" },
+  { "type": "container", "id": "flask", "name": "Flask", "volume_l": 1, "empty_mass_g": 250, "max_item_cm": 5, "soft": false, "slot": "belt", "hands": 0, "liquid": true, "material": "leather" },
+  { "type": "container", "id": "waterskin", "name": "Waterskin", "volume_l": 2, "empty_mass_g": 300, "max_item_cm": 5, "slot": "shoulder", "hands": 0, "liquid": true, "material": "leather" }
+]

@@ -1,0 +1,8 @@
+// The trade screen, the price notebook, hiring and recruiting (trade-inventory-character spec 3.4, 4.1, 4.2, 4.6; TradeSettingsDef).
+[
+  { "type": "trade_settings", "id": "default",
+    "friend_discount_pm": 0, "buy_stolen_pm": 500, "price_age_fresh_days": 3, "price_age_old_days": 15, "sell_unknown_condition_pm": 700, "slippage_pm": 20, "want_pm": 200,
+    "hire_skill_pm_per_level": 12, "hire_food_pct": 25, "hire_bed_pct": 25, "hire_need_bonus": 150, "hire_tie_penalty": 300, "hire_noise": 100, "unpaid_days_to_quit": 3,
+    "recruit_familiarity_min": 20, "recruit_trust_min": 100, "signing_bonus_days": 5, "severance_days": 3,
+    "loyalty_start": 400, "loyalty_paid_day": 10, "loyalty_unpaid_day": -100, "loyalty_ask_leave": 200, "squad_cap": 12 }
+]

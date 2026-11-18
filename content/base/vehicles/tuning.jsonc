@@ -1,0 +1,7 @@
+// docs/specs/phase3/horses-and-carts.md 4.5: rolling resistance in permille of weight per surface (the same table in the live tier and the abstract caravans), and the push and stuck numbers of 4.6.
+[
+  { "type": "vehicle_tuning", "id": "default",
+    "crr_pm": { "paved": 25, "dry_road": 45, "wet_road": 70, "track": 70, "grass": 110, "mud_road": 170, "deep_mud": 260, "packed_snow": 70, "deep_snow": 200, "ice": 15, "sand": 150 },
+    "runner_crr_pm": { "paved": 120, "dry_road": 150, "wet_road": 150, "track": 160, "grass": 180, "mud_road": 220, "deep_mud": 300, "packed_snow": 30, "deep_snow": 90, "ice": 12, "sand": 200 },
+    "push_n_per_strength": 6, "stuck_crr_mult_pm": 1500, "wheel_wear_pm": 1 }
+]

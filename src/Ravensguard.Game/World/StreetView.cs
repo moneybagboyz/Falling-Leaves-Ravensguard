@@ -247,6 +247,7 @@ public partial class StreetView : Control, IHandlesBack
         rt.PlaceHero(rt.State.HomeRegion.OriginXM + wx, rt.State.HomeRegion.OriginYM + wy);
         rt.Start();
         rt.Pump(_world.Clock.Now, rt.State.HomeRegion.OriginXM + wx, rt.State.HomeRegion.OriginYM + wy); // the first call pays for JIT (up to 60 ms seen): here, not on a frame
+        Ravensguard.Sim.Diagnostics.GcSettle.Run(); // the built world is copied out of the young generations now, not by a collection in the middle of a tick
     }
 
     /// <summary>The per-frame call to the tick runtime: tells it the clock and where the hero is. Costs microseconds; the hours themselves run on the worker.</summary>

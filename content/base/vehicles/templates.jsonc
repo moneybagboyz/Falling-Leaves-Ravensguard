@@ -1,0 +1,22 @@
+// docs/specs/phase3/horses-and-carts.md 3.3: the fixed template vehicles of Phase 3 (no designer). rows: one character per cell, "_" empty; legend: the stack of parts in a cell, ground up.
+// Derived stats (mass, cargo kg and litres) are checked against the Phase 2 caravan vehicles (cart 500 kg / 1,000 L, ox wagon 1,000 / 2,000, handcart 150 / 300).
+[
+  { "type": "vehicle_blueprint", "id": "wheelbarrow", "name": "Wheelbarrow", "base_speed_cmps": 150, "axle_limit_kg": 0, "turning_radius_dm": 10, "hitch": { "slots": 0, "kind": "pushed" }, "driver": 1,
+    "legend": { "t": ["barrow_tray"], "w": ["wheel_solid"], "H": ["handle_bars"], "F": ["iron_fitting"] }, "rows": [ "tHH", "wFF", "FF_" ], "sprite": "object.barrow" },
+  { "type": "vehicle_blueprint", "id": "handcart", "name": "Handcart", "base_speed_cmps": 150, "axle_limit_kg": 300, "turning_radius_dm": 30, "hitch": { "slots": 0, "kind": "pushed" }, "driver": 1, "caravan_def": "handcart",
+    "legend": { "c": ["cargo_box"], "w": ["wheel_solid"], "a": ["axle_wood"], "H": ["handle_bars"], "F": ["iron_fitting"] }, "rows": [ "_ccc_", "wa_Hw", "FF___" ], "sprite": "object.barrow" },
+  { "type": "vehicle_blueprint", "id": "cart", "name": "Cart", "base_speed_cmps": 250, "axle_limit_kg": 700, "turning_radius_dm": 40, "hitch": { "slots": 1, "kind": "shafts" }, "driver": 1, "passengers": 1, "caravan_def": "cart",
+    "legend": { "f": ["frame_plank"], "W": ["wheel_spoked", "iron_tyre"], "a": ["axle_wood"], "B": ["frame_plank", "cargo_bed"], "S": ["frame_plank", "seat_bench"], "h": ["shaft_pair"] },
+    "rows": [ "_BBB_", "WaBBW", "hSf_h" ], "sprite": "object.cart" },
+  { "type": "vehicle_blueprint", "id": "hay_wain", "name": "Hay wain", "base_speed_cmps": 220, "axle_limit_kg": 800, "turning_radius_dm": 60, "hitch": { "slots": 2, "kind": "pole_yoke" }, "driver": 1, "passengers": 1,
+    "legend": { "f": ["frame_plank"], "W": ["wheel_spoked", "iron_tyre"], "a": ["axle_wood"], "R": ["frame_plank", "cargo_rack"], "S": ["frame_plank", "seat_bench"], "p": ["pole_yoke"] },
+    "rows": [ "RRRRR", "WaR_W", "WaSfW", "pff__" ], "sprite": "object.cart_hay" },
+  { "type": "vehicle_blueprint", "id": "ox_wagon", "name": "Ox wagon", "base_speed_cmps": 180, "axle_limit_kg": 1500, "turning_radius_dm": 80, "hitch": { "slots": 2, "kind": "pole_yoke" }, "driver": 1, "passengers": 1, "caravan_def": "ox_wagon",
+    "legend": { "f": ["frame_plank"], "W": ["wheel_spoked", "iron_tyre"], "a": ["axle_wood"], "B": ["frame_plank", "cargo_bed"], "S": ["frame_plank", "seat_bench"], "p": ["pole_yoke"], "F": ["iron_fitting"] },
+    "rows": [ "BBBBB", "BBBBB", "WaffW", "WaSfW", "pFFFF" ], "sprite": "object.cart_goods" },
+  { "type": "vehicle_blueprint", "id": "covered_wagon", "name": "Covered wagon", "base_speed_cmps": 250, "axle_limit_kg": 1200, "turning_radius_dm": 80, "hitch": { "slots": 2, "kind": "pole_yoke" }, "driver": 1, "passengers": 2,
+    "legend": { "f": ["frame_plank"], "W": ["wheel_spoked", "iron_tyre"], "a": ["axle_wood"], "B": ["frame_plank", "cargo_bed"], "S": ["frame_plank", "seat_bench"], "p": ["pole_yoke"], "T": ["tilt_hoops", "tilt_cloth"], "F": ["iron_fitting"] },
+    "rows": [ "TTTTTT", "BBBBBB", "WaBBaW", "WffSfW", "pfffff", "fffFF_" ], "sprite": "object.cart_goods" },
+  { "type": "vehicle_blueprint", "id": "sledge", "name": "Sledge", "base_speed_cmps": 250, "axle_limit_kg": 0, "turning_radius_dm": 30, "hitch": { "slots": 1, "kind": "traces" }, "driver": 1, "runners": true,
+    "legend": { "b": ["runner", "cargo_bed"], "r": ["runner"], "t": ["traces"] }, "rows": [ "rbbbbr", "_t____" ], "sprite": "object.cart" }
+]

@@ -1,0 +1,22 @@
+// docs/specs/phase3/horses-and-carts.md 3.2. Speeds are cm per real second (500 = 5 m/s), stamina in stamina points (sp), costs per metre, regeneration per game second.
+// Sustained pull is about 12 percent of body weight. Prices are seeds for the price solver (mites).
+[
+  { "type": "species", "id": "horse_palfrey", "species": "Horse", "breed": "palfrey", "name": "Palfrey", "mass_kg": 420, "carry_kg": 130, "pull_n": 530,
+    "gait_cmps": { "walk": 220, "trot": 500, "gallop": 1200 }, "stamina_sp": 10000, "stamina_cost_sp_per_m": { "walk": 0, "trot": 2, "gallop": 21 }, "regen_sp_per_gs": { "walk": 5, "rest": 15 },
+    "idle_hay_kg_day": 7, "work_hay_kg_day": 8, "work_oats_hg_day": 25, "water_l_day": 35, "shoe_life_km": 600, "price_mites": 48000, "sprite": "object.draught_horse", "ridden": true },
+  { "type": "species", "id": "horse_packhorse", "species": "Horse", "breed": "packhorse", "name": "Packhorse", "mass_kg": 450, "carry_kg": 100, "pull_n": 560,
+    "gait_cmps": { "walk": 220, "trot": 450, "gallop": 900 }, "stamina_sp": 10000, "stamina_cost_sp_per_m": { "walk": 0, "trot": 2, "gallop": 21 }, "regen_sp_per_gs": { "walk": 5, "rest": 15 },
+    "idle_hay_kg_day": 7, "work_hay_kg_day": 8, "work_oats_hg_day": 0, "water_l_day": 35, "shoe_life_km": 600, "price_mites": 30000, "sprite": "object.draught_horse", "ridden": true },
+  { "type": "species", "id": "horse_draught", "species": "Horse", "breed": "draught", "name": "Draught horse", "mass_kg": 650, "carry_kg": 160, "pull_n": 780,
+    "gait_cmps": { "walk": 200, "trot": 400, "gallop": 800 }, "stamina_sp": 10000, "stamina_cost_sp_per_m": { "walk": 0, "trot": 2, "gallop": 21 }, "regen_sp_per_gs": { "walk": 5, "rest": 15 },
+    "idle_hay_kg_day": 9, "work_hay_kg_day": 9, "work_oats_hg_day": 30, "water_l_day": 45, "shoe_life_km": 600, "price_mites": 40000, "sprite": "object.draught_horse", "ridden": false },
+  { "type": "species", "id": "ox", "species": "Ox", "breed": "ox", "name": "Ox", "mass_kg": 600, "carry_kg": 120, "pull_n": 650,
+    "gait_cmps": { "walk": 180, "trot": 0, "gallop": 0 }, "stamina_sp": 10000, "stamina_cost_sp_per_m": { "walk": 0, "trot": 0, "gallop": 0 }, "regen_sp_per_gs": { "walk": 5, "rest": 15 },
+    "idle_hay_kg_day": 10, "work_hay_kg_day": 10, "work_oats_hg_day": 0, "water_l_day": 40, "shoe_life_km": 600, "price_mites": 13000, "sprite": "object.draught_ox", "ridden": false },
+  { "type": "species", "id": "mule", "species": "Mule", "breed": "mule", "name": "Mule", "mass_kg": 400, "carry_kg": 110, "pull_n": 480,
+    "gait_cmps": { "walk": 220, "trot": 450, "gallop": 800 }, "stamina_sp": 10000, "stamina_cost_sp_per_m": { "walk": 0, "trot": 2, "gallop": 21 }, "regen_sp_per_gs": { "walk": 5, "rest": 15 },
+    "idle_hay_kg_day": 5, "work_hay_kg_day": 5, "work_oats_hg_day": 0, "water_l_day": 30, "shoe_life_km": 600, "price_mites": 25000, "sprite": "object.draught_horse", "ridden": true },
+  { "type": "species", "id": "donkey", "species": "Donkey", "breed": "donkey", "name": "Donkey", "mass_kg": 200, "carry_kg": 70, "pull_n": 240,
+    "gait_cmps": { "walk": 200, "trot": 350, "gallop": 600 }, "stamina_sp": 10000, "stamina_cost_sp_per_m": { "walk": 0, "trot": 2, "gallop": 21 }, "regen_sp_per_gs": { "walk": 5, "rest": 15 },
+    "idle_hay_kg_day": 3, "work_hay_kg_day": 3, "work_oats_hg_day": 0, "water_l_day": 20, "shoe_life_km": 600, "price_mites": 9000, "sprite": "object.draught_horse", "ridden": true }
+]

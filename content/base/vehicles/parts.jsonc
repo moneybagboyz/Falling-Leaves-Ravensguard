@@ -1,0 +1,21 @@
+// docs/specs/phase3/horses-and-carts.md 3.3. A part's cargo is what its cell holds (kg and litres); needs_below lists parts one of which must lie under it in the same cell.
+[
+  { "type": "vehicle_part", "id": "frame_plank",  "name": "Frame plank",  "mass_kg": 6,  "volume_l": 20,  "hp": 80,  "tags": ["frame"] },
+  { "type": "vehicle_part", "id": "axle_wood",    "name": "Wooden axle",  "mass_kg": 9,  "volume_l": 10,  "hp": 100, "tags": ["axle"] },
+  { "type": "vehicle_part", "id": "wheel_solid",  "name": "Solid wheel",  "mass_kg": 5,  "volume_l": 30,  "hp": 90,  "tags": ["wheel"] },
+  { "type": "vehicle_part", "id": "wheel_spoked", "name": "Spoked wheel", "mass_kg": 14, "volume_l": 120, "hp": 120, "tags": ["wheel"] },
+  { "type": "vehicle_part", "id": "iron_tyre",    "name": "Iron tyre",    "mass_kg": 4,  "volume_l": 5,   "hp": 200, "needs_below": ["wheel_spoked"], "tags": ["tyre"] },
+  { "type": "vehicle_part", "id": "shaft_pair",   "name": "Shafts",       "mass_kg": 10, "volume_l": 40,  "hp": 70,  "tags": ["hitch", "shafts"] },
+  { "type": "vehicle_part", "id": "pole_yoke",    "name": "Pole and yoke","mass_kg": 14, "volume_l": 60,  "hp": 90,  "tags": ["hitch", "pole_yoke"] },
+  { "type": "vehicle_part", "id": "traces",       "name": "Traces",       "mass_kg": 2,  "volume_l": 5,   "hp": 40,  "tags": ["hitch", "traces"] },
+  { "type": "vehicle_part", "id": "cargo_bed",    "name": "Cargo bed",    "mass_kg": 10, "volume_l": 200, "cargo_kg": 100, "cargo_l": 200, "hp": 120, "needs_below": ["frame_plank", "runner"], "tags": ["bed"] },
+  { "type": "vehicle_part", "id": "cargo_box",    "name": "Cargo box",    "mass_kg": 5,  "volume_l": 100, "cargo_kg": 50,  "cargo_l": 100, "hp": 80,  "tags": ["bed"] },
+  { "type": "vehicle_part", "id": "barrow_tray",  "name": "Barrow tray",  "mass_kg": 8,  "volume_l": 100, "cargo_kg": 80,  "cargo_l": 100, "hp": 70,  "tags": ["bed"] },
+  { "type": "vehicle_part", "id": "cargo_rack",   "name": "Cargo rack",   "mass_kg": 8,  "volume_l": 500, "cargo_kg": 100, "cargo_l": 500, "hp": 90,  "needs_below": ["frame_plank"], "tags": ["bed", "bulk"] },
+  { "type": "vehicle_part", "id": "seat_bench",   "name": "Driver's bench","mass_kg": 8, "volume_l": 40,  "hp": 70,  "needs_below": ["frame_plank"], "tags": ["seat"] },
+  { "type": "vehicle_part", "id": "tilt_hoops",   "name": "Tilt hoops",   "mass_kg": 6,  "volume_l": 80,  "hp": 50,  "tags": ["tilt"] },
+  { "type": "vehicle_part", "id": "tilt_cloth",   "name": "Tilt cloth",   "mass_kg": 5,  "volume_l": 20,  "hp": 40,  "needs_below": ["tilt_hoops"], "tags": ["tilt"] },
+  { "type": "vehicle_part", "id": "runner",       "name": "Runner",       "mass_kg": 6,  "volume_l": 40,  "hp": 90,  "tags": ["runner"] },
+  { "type": "vehicle_part", "id": "handle_bars",  "name": "Handle bars",  "mass_kg": 4,  "volume_l": 20,  "hp": 60,  "tags": ["handle"] },
+  { "type": "vehicle_part", "id": "iron_fitting", "name": "Iron fittings","mass_kg": 1,  "volume_l": 1,   "hp": 150, "tags": ["fitting"] }
+]

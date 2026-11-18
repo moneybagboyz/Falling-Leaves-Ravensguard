@@ -69,6 +69,14 @@ public static class RngStreams
     /// <summary>The routine jobs a settlement's households post (key settlement, tick = game day).</summary>
     public const uint RoutineJobs = 0x303;
 
+    // ---------- trade, inventory and character (docs/specs/phase3/trade-inventory-character.md section 5) ----------
+    /// <summary>Attribute rounding and skill-use jitter (key person; reserved, nothing draws it in v1).</summary>
+    public const uint TradeAttrJitter = 0x320;
+    /// <summary>Hire and recruit mood noise (tick = game day, key person).</summary>
+    public const uint HireMood = 0x321;
+    /// <summary>Quality of goods for sale in an NPC pack (key owner, at stocking time only).</summary>
+    public const uint PackQuality = 0x322;
+
     // ---------- clothing and exposure (docs/specs/phase3/clothing-warmth-exposure.md section 5) ----------
     /// <summary>Stain accumulation rounding and tear rolls (key item).</summary>
     public const uint Stains = 0x330;
