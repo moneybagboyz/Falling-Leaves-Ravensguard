@@ -148,7 +148,7 @@ public class TalkSelectionTests
         Assert.Equal("work", r.NodeId);
         r.Choose(r.Choices.First(c => c.Text.StartsWith("Yes.")).Index);
         Assert.Equal("accept", r.NodeId);
-        Assert.Contains(r.Effects, e => e.Id == "start_contract" && e.Args["kind"] == "escort");
+        Assert.Contains(r.Effects, e => e.Id == "start_contract" && e.Args["kind"] == "first");
         Assert.Contains("cm_gave_first_job", x.Flags);
         Assert.True(r.Advance()); Assert.Equal("after", r.NodeId); Assert.True(r.Advance()); Assert.True(r.Ended);
         // returning: the repeat node, and the work choice is gone

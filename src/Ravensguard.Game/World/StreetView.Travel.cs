@@ -234,6 +234,7 @@ public partial class StreetView
         var def = t.Table.Defs.FirstOrDefault(d => d.Id == ev.Id); long now = _world.Clock.Now.Seconds;
         if (def == null || opt.Choice == EncounterChoice.GoOn) { FinishEncounter(new EncounterOutcome(EncounterChoice.GoOn, "went_on", 0, EntityId.None, EntityId.None, 0, ""), now, false); return; }
         long coin = _heroLink?.View?.CoinMites ?? 0;
+        _rec.Action(Ravensguard.Sim.Diagnostics.HeroAction.EncounterChoice, (long)opt.Choice, now);
         var o = EncounterOutcomes.Resolve(t, def, ev, opt.Choice, coin, _tfeed!.Hero.PartyStrengthPm, id => !t.Travellers.Any(x => x.Id == id));
         if (o.PayMites > 0 && _heroLink != null)
             _heroLink.Issue(new HeroCommand { Kind = HeroCommandKind.EncounterPay, IssuedSec = now, CoinGive = o.PayMites, Person = o.Payee, Tag = ev.Id, Origin = CommandOrigin.Human });

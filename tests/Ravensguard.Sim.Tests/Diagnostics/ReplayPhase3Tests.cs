@@ -48,9 +48,28 @@ public sealed class ReplayPhase3Tests
         rec.Action(HeroAction.CampJob, 1200, rec.World.Clock.Now.Seconds); rec.SetSpeed(SimSpeed.X8);
         for (int i = 0; i < 200; i++) rec.Step();
         rec.Action(HeroAction.CampBreak); rec.SetSpeed(SimSpeed.X1);
-        // home: a click-to-move route and a walk with the load
+        // the rest of Phase 3's hero commands (cleanup B): a road encounter paid off, a hunt and a snare, a follower's order, a Q verb and a party member's directive,
+        // trade in another region's market, a talk whose choice gives an item, the camp talk window
+        rec.Action(HeroAction.EncounterChoice, 1, rec.World.Clock.Now.Seconds);
+        rec.Hero(new HeroCommand { Seq = 3, IssuedSec = rec.World.Clock.Now.Seconds, Kind = HeroCommandKind.EncounterPay, CoinGive = 250, Tag = "toll_bridge", Origin = CommandOrigin.Human });
+        rec.Action(HeroAction.Hunt, 1234, rec.World.Clock.Now.Seconds); rec.Action(HeroAction.CampJob, 3600, rec.World.Clock.Now.Seconds); rec.SetSpeed(SimSpeed.X8);
+        for (int i = 0; i < 60; i++) rec.Step();
+        rec.SetSpeed(SimSpeed.X1); rec.SetLoadSpeed(700);                         // the carcass is in the pack
+        rec.Action(HeroAction.SnareSet, 9_500, 9_000);
+        rec.Hero(new HeroCommand { Seq = 4, IssuedSec = rec.World.Clock.Now.Seconds, Kind = HeroCommandKind.Order, Person = EntityId.MakeIn(IdKind.Person, 3, 42), Order = SquadOrder.Follow });
+        rec.Action(HeroAction.Directive, 1, rec.World.Clock.Now.Seconds);
+        rec.Action(HeroAction.PartyDirective, (long)EntityId.MakeIn(IdKind.Person, 3, 42).Value, 1);
+        rec.Hero(new HeroCommand { Seq = 5, IssuedSec = rec.World.Clock.Now.Seconds, Kind = HeroCommandKind.Sell, Settlement = 2, Region = 7, Good = 9, Qty = 4 });
+        rec.Hero(new HeroCommand { Seq = 6, IssuedSec = rec.World.Clock.Now.Seconds, Kind = HeroCommandKind.Talk, Person = EntityId.MakeIn(IdKind.Person, 3, 43), Choice = [2] });
+        rec.Action(HeroAction.TalkChoice, 2, (long)EntityId.MakeIn(IdKind.Person, 3, 43).Value);
+        rec.Action(HeroAction.TalkChoice, 0, (long)EntityId.MakeIn(IdKind.Person, 3, 42).Value);      // the camp talk window with a companion
+        // overloaded: the encumbrance factor is recorded, so the slow walk home replays the same
+        rec.SetLoadSpeed(350);
         rec.CommandMoveTo(new Cell3(20, 25, 0));
         for (int i = 0; i < 450; i++) rec.Step();
+        rec.SetLoadSpeed(0);                                                       // too heavy to move: the hero stands
+        rec.SetInput(new MoveInput(1, 0));
+        for (int i = 0; i < 40; i++) rec.Step();
         return rec;
     }
 
@@ -62,7 +81,7 @@ public sealed class ReplayPhase3Tests
         var log = CommandLog.FromBytes(trace);
         Assert.Contains(log.Items, c => c.Kind == ReplayKind.TravelPlace);
         Assert.Contains(log.Items, c => c.Kind == ReplayKind.LoadSpeed);
-        Assert.Equal(2, log.Items.Count(c => c.Kind == ReplayKind.Hero));
+        Assert.Equal(6, log.Items.Count(c => c.Kind == ReplayKind.Hero));
         Assert.True(trace.Length < 8 * 1024, $"trace {trace.Length} bytes: the route is delta-coded");
 
         var seen = new List<ReplayCommand>();
@@ -73,8 +92,15 @@ public sealed class ReplayPhase3Tests
         Assert.Equal(StateHashTrail.FromCsv(csv).Items, res.Replayed.Items);
         Assert.True(res.Replayed.Count >= 3);
         Assert.Equal(LiveStateHash.Compute(rec.World), LiveStateHash.Compute(fresh));
+        Assert.Equal(0, fresh.LoadSpeedPm);                                        // the encumbrance factor came back with the replay
         // the record-side commands reach the host in order, at the ticks they were issued
-        Assert.Equal([ReplayKind.Action, ReplayKind.Hero, ReplayKind.Hero, ReplayKind.Action, ReplayKind.Action, ReplayKind.Action], seen.Select(c => c.Kind).ToArray());
+        Assert.Equal(log.Items.Where(c => c.IsRecordCommand).ToArray(), seen.ToArray());
+        Assert.Equal([ReplayKind.Action, ReplayKind.Hero, ReplayKind.Hero, ReplayKind.Action, ReplayKind.Action, ReplayKind.Action], seen.Take(6).Select(c => c.Kind).ToArray());
+        var actions = seen.Where(c => c.Kind == ReplayKind.Action).Select(c => (HeroAction)(int)c.A).ToHashSet();
+        foreach (var a in new[] { HeroAction.TravelBegin, HeroAction.CampMake, HeroAction.CampJob, HeroAction.CampBreak, HeroAction.EncounterChoice, HeroAction.Hunt, HeroAction.SnareSet, HeroAction.Directive, HeroAction.PartyDirective, HeroAction.TalkChoice })
+            Assert.Contains(a, actions);
+        var kinds = seen.Where(c => c.Kind == ReplayKind.Hero).Select(c => (HeroCommandKind)(int)(c.A & 0xFF)).ToArray();
+        Assert.Equal([HeroCommandKind.Buy, HeroCommandKind.CraftStart, HeroCommandKind.EncounterPay, HeroCommandKind.Order, HeroCommandKind.Sell, HeroCommandKind.Talk], kinds);
         Assert.Equal((long)HeroCommandKind.Buy, seen[1].A & 0xFF); Assert.Equal(1, seen[1].A >> 8);
         Assert.Equal((long)HeroCommandKind.CraftStart, seen[2].A & 0xFF);
         Assert.Equal(SessionRecorder.DigestOf(new HeroCommand { Seq = 2, IssuedSec = seen[2].B, Kind = HeroCommandKind.CraftStart, Recipe = 7, Batch = 2, Site = new CraftSiteSpec(800, true, ["knife"], [], []) }), seen[2].C);

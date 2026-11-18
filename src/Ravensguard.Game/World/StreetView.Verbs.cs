@@ -45,6 +45,7 @@ public partial class StreetView
         if (t == null || layer == null || t.PackStore?.Invoke() is not { } pack || _source?.Region is not { } rg) { _router?.ShowToast(L.T("HUNT_NONE")); return; }
         int tile = HeroTile();
         if (t.AnimalsNear(layer, tile) <= 0) { _router?.ShowToast(L.T("HUNT_NO_GAME")); return; }
+        _rec.Action(Ravensguard.Sim.Diagnostics.HeroAction.Hunt, tile, _world.Clock.Now.Seconds);
         StartCampJob(L.T("HUNT_JOB"), 3600, () =>
         {
             long now = _world.Clock.Now.Seconds; var (hx, hy) = _world.WorldMm;
@@ -64,12 +65,13 @@ public partial class StreetView
         long now = _world.Clock.Now.Seconds; var (hx, hy) = _world.WorldMm;
         if (SnareNear() is { } s)
         {
-            bool caught = s.Caught; var car = t.CollectSnare(s, now);
+            bool caught = s.Caught; _rec.Action(Ravensguard.Sim.Diagnostics.HeroAction.SnareCollect, hx, hy); var car = t.CollectSnare(s, now);
             if (car != null && t.PackStore?.Invoke() is { } pack) { var r = t.Butcher(car, pack, 50, now); _router?.ShowToast(L.F("SNARE_GOT", car.Species.Replace('_', ' '), r == null ? "" : string.Join(", ", r.Made.Select(m => $"{m.Grams / 1000.0:0.#} kg {m.Good.Replace('_', ' ')}"))), 4f); }
             else _router?.ShowToast(L.T(caught ? "SNARE_SPOILED" : "SNARE_EMPTY"), 3f);
             return;
         }
         if (t.AnimalsNear(layer, HeroTile()) <= 0) { _router?.ShowToast(L.T("HUNT_NO_GAME")); return; }
+        _rec.Action(Ravensguard.Sim.Diagnostics.HeroAction.SnareSet, hx, hy);
         _router?.ShowToast(t.SetSnare(HeroTile(), now, hx, hy) != null ? L.T("SNARE_SET") : L.T("SNARE_MAX"), 3f);
     }
 
@@ -135,6 +137,7 @@ public partial class StreetView
     {
         if (_ap == null || Runtime is not { } rt) return;
         long now = _world.Clock.Now.Seconds; var ap = _ap; var cfg = ap.Cfg.Settings;
+        _rec.Action(Ravensguard.Sim.Diagnostics.HeroAction.PartyDirective, (long)person.Value, kind switch { "guard" => 1, "rest" => 2, "stop" => 3, _ => 0 });
         if (kind == "stop") { _ = rt.AtBarrier(() => { ap.Disable(person, now); return 0; }); return; }
         Directive d = kind switch { "guard" => Named(Directive.Guard(Math.Max(0, HeroSettlement())), L.T("AP_D_GUARD")), "rest" => Named(Directive.Rest(), L.T("AP_D_REST")), _ => Directive.Work(0, L.T("AP_D_WORK")) };
         var setup = new AutopilotSetup { Queue = [d] };

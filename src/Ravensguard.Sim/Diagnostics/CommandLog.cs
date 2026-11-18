@@ -13,7 +13,9 @@ namespace Ravensguard.Sim.Diagnostics;
 public enum ReplayKind : byte { Input = 1, Speed = 2, Torch = 3, MoveTo = 4, UsePortal = 5, ClearPath = 6, Ride = 7, TravelPlace = 8, LoadSpeed = 9, Hero = 10, Action = 11 }
 
 /// <summary>Hero actions recorded with <see cref="ReplayKind.Action"/> (append only).</summary>
-public enum HeroAction : byte { None = 0, TravelBegin = 1, TravelCancel = 2, TravelResume = 3, CampMake = 4, CampJob = 5, CampBreak = 6, Directive = 7, DirectiveStop = 8, TalkChoice = 9, TakeControl = 10 }
+public enum HeroAction : byte { None = 0, TravelBegin = 1, TravelCancel = 2, TravelResume = 3, CampMake = 4, CampJob = 5, CampBreak = 6, Directive = 7, DirectiveStop = 8, TalkChoice = 9, TakeControl = 10,
+    /// <summary>A choice on the road (B = <c>EncounterChoice</c>), a hunt, a snare set or taken up (B, C = the hero's region millimetres), a party member's directive (B = person id, C = verb code).</summary>
+    EncounterChoice = 11, Hunt = 12, SnareSet = 13, SnareCollect = 14, PartyDirective = 15 }
 
 /// <summary>One command and the live tick it was issued at (it takes effect at the next step).</summary>
 public readonly record struct ReplayCommand(long Tick, ReplayKind Kind, long A = 0, long B = 0, long C = 0)
