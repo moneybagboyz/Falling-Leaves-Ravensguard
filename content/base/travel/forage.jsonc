@@ -1,0 +1,9 @@
+// What a sweep of a woodland, scrub or marsh tile finds by season (travel spec 4.4). Good ids are existing goods (vegetables carries the food measure for berries, roots and herbs).
+[
+  { "type": "forage_item", "id": "wild_herbs", "name": "Wild herbs", "good": "vegetables", "seasons": ["Spring"], "share_pm": 500, "medicinal": true },
+  { "type": "forage_item", "id": "spring_roots", "name": "Roots", "good": "vegetables", "seasons": ["Spring", "Winter"], "share_pm": 500 },
+  { "type": "forage_item", "id": "berries", "name": "Berries", "good": "vegetables", "seasons": ["Summer"], "share_pm": 800 },
+  { "type": "forage_item", "id": "summer_herbs", "name": "Herbs", "good": "vegetables", "seasons": ["Summer"], "share_pm": 200, "medicinal": true },
+  { "type": "forage_item", "id": "nuts", "name": "Nuts", "good": "peas", "seasons": ["Autumn"], "share_pm": 550 },
+  { "type": "forage_item", "id": "mushrooms", "name": "Mushrooms", "good": "vegetables", "seasons": ["Autumn"], "share_pm": 450, "risky": true }
+]

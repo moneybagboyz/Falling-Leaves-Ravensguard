@@ -772,12 +772,13 @@ TRADE_FIRST,First unit: {0} {1}
 TRADE_AVERAGE,Average over the amount: {0} {1}
 TRADE_TOTAL,Total: {0}
 TRADE_TOLL,"Market toll (5%, the seller's): {0} - you receive {1}"
-TRADE_SPREAD,Bid {0} / ask {1}: a {2}% spread
+TRADE_SPREAD,Bid {0} / ask {1}: {2}% each side of the mid
 TRADE_MOVES_UP,Buying this much moves the price up as you go.
 TRADE_MOVES_DOWN,Selling this much moves the price down as you go.
 TRADE_HEARD,Last heard in {0}: {1}
 TRADE_COIN_AFTER,Purse {0} -> {1}
 TRADE_CONFIRM,Deal (Enter)
+TRADE_DEAL,Deal
 TRADE_NO_PRICE,No price for this here.
 TRADE_NO_STOCK,They do not have that much.
 TRADE_SETTLING,Settling accounts...
@@ -878,3 +879,72 @@ ORDER_REST,Rest
 ORDER_TRAVEL,Travel
 ORDER_SCATTER,Scatter
 PARTY_YOU,you
+TRAVEL_START,"Travelling to {0}: {1} km, about {2} game hours."
+TRAVEL_STOPPED,"You stop and take the road yourself."
+TRAVEL_BANNER,"Travelling to {0} ({1} km, {2} h)"
+TRAVEL_BANNER_LINE,"Clock {0}   {1} stops   {2} asks for 8x"
+TRAVEL_ALERT_KEYS,"{0} or Enter: go on    {1}: stop here    {2}: make camp"
+TRAVEL_ALERT_PEOPLE,"{0} people on the road ahead."
+TRAVEL_ALERT_HOSTILE,"Danger: {0}"
+TRAVEL_ALERT_ATTACKED,"You are under attack"
+TRAVEL_ALERT_WEATHER,"The weather turns: {0}"
+TRAVEL_ALERT_COLD,"You are getting cold"
+TRAVEL_ALERT_HEAT,"You are overheating"
+TRAVEL_ALERT_HUNGER,"Time to eat"
+TRAVEL_ALERT_FATIGUE,"Camp is needed"
+TRAVEL_ALERT_DUSK,"Dusk"
+TRAVEL_ALERT_HORSE,"Your horse needs rest"
+TRAVEL_ALERT_CARTSTUCK,"The cart is stuck"
+TRAVEL_ALERT_BLOCKEDPATH,"The way is blocked: {0}"
+TRAVEL_ALERT_COMPANION,"A companion needs you"
+TRAVEL_ALERT_FOUND,"{0}"
+TRAVEL_ALERT_ARRIVED,"You have arrived: {0}"
+TRAVEL_ALERT_CONTRACT,"{0}"
+TRAVEL_ALERT_THREATENED,"A threat nearby"
+TRAVEL_ALERT_INJURED,"You are hurt"
+TRAVEL_ALERT_LOWMONEY,"Your purse is low"
+TRAVEL_ALERT_BIGCHOICE,"A choice that cannot be undone"
+TRAVEL_ALERT_DIRECTIVEDONE,"Directive done"
+TRAVEL_ALERT_LIMITREACHED,"A limit was reached"
+TRAVEL_ALERT_NEEDMONEY,"You need more coin"
+TRAVEL_ALERT_STUCK,"No progress"
+TRAVEL_CAMP_MADE,"You make camp."
+TRAVEL_CAMP_BROKEN,"You break camp and pack up."
+TRAVEL_CAMP_TITLE,"Camp"
+TRAVEL_CAMP_FIRE,"Fire: {0}, fuel {1} kg"
+TRAVEL_CAMP_LITWORD,"lit"
+TRAVEL_CAMP_OUTWORD,"out"
+TRAVEL_CAMP_STOCK,"Stock: food {0} kg, firewood {1} kg"
+TRAVEL_CAMP_SHELTER,"Shelter: {0} (rest {1} per hour)"
+TRAVEL_CAMP_WATCH,"Watch: {0} of {1} sentries"
+TRAVEL_CAMP_BUSY,"{0} ({1} min)"
+TRAVEL_CAMP_K1,"Fire (gather wood, light, add fuel)"
+TRAVEL_CAMP_K2,"Cook and eat"
+TRAVEL_CAMP_K3,"Set or clear the watch"
+TRAVEL_CAMP_K4,"Talk around the fire"
+TRAVEL_CAMP_K5,"Sleep until dawn"
+TRAVEL_CAMP_K6,"Change shelter"
+TRAVEL_CAMP_K7,"Break camp"
+TRAVEL_CAMP_ATE,"{0} ate {1} kg."
+TRAVEL_CAMP_NOFOOD,"There is nothing to eat."
+TRAVEL_CAMP_NOWATCH,"No one to keep watch."
+TRAVEL_CAMP_TALKING,"Talking by the fire"
+TRAVEL_CAMP_TALKED,"{0} told you something."
+TRAVEL_CAMP_SLEEPING,"Sleeping"
+TRAVEL_CAMP_DAWN,"Dawn."
+TRAVEL_CAMP_BREAKING,"Breaking camp"
+TRAVEL_CAMP_GATHER,"Gathering firewood"
+TRAVEL_CAMP_FUEL,"You feed the fire."
+TRAVEL_CAMP_LIT,"The fire catches."
+TRAVEL_CAMP_NOLIGHT,"The tinder will not catch."
+TRAVEL_FORAGING,"Foraging"
+TRAVEL_FORAGE_NONE,"Nothing to forage here."
+TRAVEL_FORAGE_EMPTY,"The ground is picked clean."
+TRAVEL_FORAGE_GOT,"You gather {0} g; {1} kg is left here."
+TRAVEL_MAP_TITLE,"Travel to {0}"
+TRAVEL_MAP_DIST,"{0} km on the road"
+TRAVEL_MAP_ETA,"{0} game hours; {1} real minutes at 1x, {2} at 8x"
+TRAVEL_MAP_FOOD,"Provisions for {0} days"
+TRAVEL_MAP_KEYS,"Enter: travel here    Tab: next place    Esc: cancel"
+TRAVEL_MAP_NOWAY,"No way there"
+TRAVEL_MAP_HINT,"Click a place, then {0} to travel there"

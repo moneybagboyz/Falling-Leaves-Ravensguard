@@ -1,0 +1,10 @@
+// Feasts and fairs (travel spec 4.6). `feast` names the calendar feast whose day is day 1 of the event. Demand multipliers are tilts of the price curve for those days only.
+[
+  { "type": "fair", "id": "spring_fair", "name": "Spring Fair", "feast": "Spring Fair", "days": 3, "holders": "charter_towns", "stall_bonus": 12, "job_board_mult": 3, "work_end_hour": 13,
+    "gathering_mult_pm": 1500, "demand_mult_pm": { "ale": 1200, "meat_fresh": 1200, "cloth_wool": 1200, "bread": 1200 }, "wedding_bump_pm": 200, "purse_min": 5, "purse_max": 20, "contests": ["archery", "wrestling", "foot_race"], "event_bonus_pm": 150 },
+  { "type": "fair", "id": "midsummer", "name": "Midsummer", "feast": "Midsummer", "days": 1, "holders": "villages", "work_end_hour": 13, "gathering_mult_pm": 1500, "social_mult": 2, "demand_mult_pm": { "ale": 1200 } },
+  { "type": "fair", "id": "harvest_festival", "name": "Harvest Festival", "feast": "Harvest Festival", "days": 2, "holders": "all", "job_board_mult": 2, "work_end_hour": 13, "gathering_mult_pm": 1500,
+    "demand_mult_pm": { "ale": 1400, "meat_fresh": 1200, "bread": 1200 } },
+  { "type": "fair", "id": "midwinter_feast", "name": "Midwinter Feast", "feast": "Midwinter Feast", "days": 3, "holders": "all", "work_end_hour": 13, "gathering_mult_pm": 1500, "social_mult": 2,
+    "demand_mult_pm": { "firewood": 1300, "ale": 1300, "meat_fresh": 1200 } }
+]

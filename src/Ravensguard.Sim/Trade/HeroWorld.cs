@@ -39,7 +39,7 @@ public sealed class HeroWorld
     {
         if (_ctx != null) return _ctx;
         var st = Runtime.State;
-        st.Party ??= HeroParty.Create(st.Economy!, Content, st.Ids, st.Hero!);
+        st.Party ??= HeroParty.Create(st.Economy!, Content, st.Ids, st.Hero!, st.Clock.Now.Seconds);
         var rt = Runtime;
         _ctx = new HeroContext(st, st.Party, Content)
         {

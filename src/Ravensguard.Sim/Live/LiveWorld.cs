@@ -161,6 +161,17 @@ public sealed class LiveWorld
         return true;
     }
 
+    /// <summary>
+    /// Auto-travel (docs/specs/phase3/travel-encounters-camp.md 4.2): puts the hero at a point of the travel route, given in region-frame millimetres. The route is a pure function of game time, so the
+    /// streamer simply follows (the window recentres as for any walk); the step is a metre or so a tick, never a jump. Clears any path or input target.
+    /// </summary>
+    public void TravelPlace(long xMm, long yMm, Facing facing)
+    {
+        long wx = (xMm << Fixed.FracBits) / 1000, wy = (yMm << Fixed.FracBits) / 1000;
+        _x = Fixed.FromRaw((int)(wx - ((long)OriginX << Fixed.FracBits))); _y = Fixed.FromRaw((int)(wy - ((long)OriginY << Fixed.FracBits)));
+        _facing = facing; _path = null; _moving = true;
+    }
+
     /// <summary>Uses the portal under the hero's feet (stairs, ladder, trapdoor), if any.</summary>
     public bool UsePortal()
     {

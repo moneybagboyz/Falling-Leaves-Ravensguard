@@ -82,8 +82,28 @@ public static class RngStreams
     public const uint Stains = 0x330;
     /// <summary>A person's cold tolerance jitter at creation, plus or minus 3% (key person).</summary>
     public const uint ColdTolerance = 0x331;
+    /// <summary>Butchery yield variance, plus or minus 4 percent (key carcass id, draw = tissue index; docs/specs/phase3/clothing-warmth-exposure.md 4.8).</summary>
+    public const uint ButcheryVariance = 0x332;
     /// <summary>Which pieces of the class wardrobe a person owns, and the dye of their outer pieces (key person, draw = piece index; 99 = dye).</summary>
     public const uint Wardrobe = 0x333;
+
+    // ---------- travel (docs/specs/phase3/travel-encounters-camp.md section 5) ----------
+    /// <summary>The encounter roll (key hero, tick = game hour, draw = 10-minute slot 0..5) and the table choice (draw = 6 + slot).</summary>
+    public const uint EncounterRoll = 0x340;
+    /// <summary>Encounter placement: distance, side and count of a group (key hero, tick = game hour, draw = slot x 16 + group x 4 + what).</summary>
+    public const uint EncounterPlace = 0x341;
+    /// <summary>Forage poisoning and item mix (key person, tick = game second / 200, draw = item index).</summary>
+    public const uint ForageDraw = 0x342;
+    /// <summary>Hunting: which animal a tile offers and snare catches (key tile, tick = game hour, draw).</summary>
+    public const uint HuntDraw = 0x343;
+    /// <summary>Sentry notice rolls (key sentry, tick = game second / 20, draw = approacher index).</summary>
+    public const uint SentryNotice = 0x344;
+    /// <summary>Fair events and contest results (key settlement, tick = day).</summary>
+    public const uint FairDraw = 0x345;
+    /// <summary>Camp night events (key camp, tick = game hour).</summary>
+    public const uint CampEvent = 0x346;
+    /// <summary>Making a fire: the success roll (key person, tick = game second / 60, draw = attempt).</summary>
+    public const uint FireMaking = 0x347;
 
     // ---------- horses and carts (docs/specs/phase3/horses-and-carts.md section 5) ----------
     /// <summary>Forced-exertion injury of a ridden animal at 0 stamina (key animal, tick = game second / 20).</summary>

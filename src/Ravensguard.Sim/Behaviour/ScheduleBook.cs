@@ -36,7 +36,7 @@ public readonly record struct DayInfo(int DayOfYear, int DayOfMonth, bool Holy, 
     public static DayInfo Of(long day, int latTenths, CrowdTuningDef crowd)
     {
         int doy = (int)(day % TimeConst.DaysPerYear) + 1, dom = Calendar.DayOfMonth(doy);
-        bool fair = false; foreach (var f in CalendarNames.Default.Feasts) if (f.DayOfYear == doy) fair = true;
+        bool fair = Ravensguard.Sim.Travel.FairCalendar.IsFairDay(doy);   // the feasts run their days (travel spec 4.6: Spring Fair 8-10, Harvest 38-39, Midwinter 53-55)
         var (sr, ss) = SunCache.Of(latTenths, doy);
         return new DayInfo(doy, dom, dom == crowd.HolyDayOfMonth, dom == crowd.MarketDayOfMonth, fair, sr, ss);
     }

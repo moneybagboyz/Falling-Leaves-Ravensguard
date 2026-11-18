@@ -7,7 +7,7 @@ namespace Ravensguard.Sim.Inventory;
 
 /// <summary>One carried thing as the inventory screen lists it (a copy; the item table belongs to the tick worker).</summary>
 public sealed record CarriedItem(EntityId Id, string Shape, string Name, ItemQuality Quality, int ConditionPermille, long MassG, long VolumeMl, EntityId Container, EquipSlot Slot,
-    long ValueMites, bool IsContainer, long CapacityMl, long UsedMl, ItemFlags Flags, int Depth);
+    long ValueMites, bool IsContainer, long CapacityMl, long UsedMl, ItemFlags Flags, int Depth, string Material = "");
 
 /// <summary>One stack of counted goods in the pack, with the container it sits in (None: loose, in the arms).</summary>
 public sealed record CarriedGood(ushort Good, string Id, string Name, long Qty, long MassG, long VolumeMl, EntityId Container, bool Piece);
@@ -182,7 +182,7 @@ public sealed class Carried
             bool cont = rules.IsContainer(row.Shape);
             list.Add(new CarriedItem(row.Id, row.Shape, rules.Name(row.Shape), row.Quality, row.ConditionPermille, e.Items.MassG(r, e.Goods), rules.VolumeMl(e.Items, r),
                 row.Parent >= 0 ? e.Items.At(row.Parent).Id : EntityId.None, Equip.GetValueOrDefault(row.Id), e.Items.ValueMites(r, m => SafeValue(valuePerKg, m)), cont,
-                cont ? CapacityMl(e, rules, r) : 0, cont ? UsedMl(e, rules, r) : 0, row.Flags, Depth(e.Items, r)));
+                cont ? CapacityMl(e, rules, r) : 0, cont ? UsedMl(e, rules, r) : 0, row.Flags, Depth(e.Items, r), row.ComponentCount > 0 ? e.Items.Component(row.ComponentStart).Material : ""));
         }
         return list;
     }

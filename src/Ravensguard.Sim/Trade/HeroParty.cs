@@ -46,9 +46,10 @@ public sealed class HeroParty
 
     /// <summary>
     /// A new hero's things in the world (migration "hero_inventory_to_items" for an older save): every <see cref="HeroItem"/> becomes <c>Count</c> item rows at Common quality and full
-    /// condition, worn where they go; a belt pouch and a satchel are added; nothing else changes.
+    /// condition, worn where they go; with <paramref name="dressAtSec"/> the clothes of their origin's class for that season are added and worn (<see cref="HeroOutfit"/>);
+    /// a belt pouch and a satchel are added; nothing else changes.
     /// </summary>
-    public static HeroParty Create(EconomyState e, ContentDatabase db, IdAllocator ids, HeroRecord hero)
+    public static HeroParty Create(EconomyState e, ContentDatabase db, IdAllocator ids, HeroRecord hero, long dressAtSec = -1)
     {
         var party = new HeroParty();
         var rules = new ContainerRules(db, e.Goods);
@@ -61,6 +62,16 @@ public sealed class HeroParty
                 var id = c.MakeItem(e, db, rules, f, ids, it.Shape, it.Material);
                 if (k == 0) c.EquipItem(e, rules, id);
             }
+        // the clothes they stand in, by origin and season (clothing spec 4.1), worn; a piece the kit already has is not doubled
+        if (dressAtSec >= 0)
+        {
+            var have = new HashSet<string>(hero.Inventory.Select(i => i.Shape), StringComparer.Ordinal);
+            foreach (var (shape, material) in HeroOutfit.For(db, hero, dressAtSec))
+            {
+                if (!have.Add(shape)) continue;
+                c.EquipItem(e, rules, c.MakeItem(e, db, rules, f, ids, shape, material));
+            }
+        }
         foreach (var shape in new[] { "belt_pouch", "satchel" })
         {
             var id = c.MakeItem(e, db, rules, f, ids, shape);

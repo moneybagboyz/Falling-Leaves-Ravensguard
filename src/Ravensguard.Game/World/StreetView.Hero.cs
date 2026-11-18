@@ -29,6 +29,7 @@ public partial class StreetView
         _heroLink = HeroLink.Attach(rt, _source.Content);
     }
 
+    /// <summary>The game second a command is asked at: the live clock (the desk applies it once the world has finished that hour).</summary>
     long HeroNow() => _world.Clock.Now.Seconds;
 
     /// <summary>The hero's position in region millimetres (what jobs, orders and settlements use).</summary>
@@ -87,6 +88,16 @@ public partial class StreetView
     }
 
     string HeroBodyLine() => _clothes?.HudLine() ?? "";
+
+    /// <summary>The warmth model's hero, dressed in what the inventory has worn; before the first hero view arrives (a frame or two) the hero is tracked undressed.</summary>
+    void EnsureHeroClothes(long sec)
+    {
+        if (_clothes == null || _hero == null) return;
+        if (_heroLink == null) { _clothes.EnsureHero(_hero, sec); return; }
+        _clothes.EnsureHero(_hero, sec, fromInventory: true);
+        if (_heroLink.View is { } v)
+            _clothes.DressHero([.. v.Items.Where(i => i.Slot != Ravensguard.Sim.Inventory.EquipSlot.None && _clothes.Book.Garments.ContainsKey(i.Shape)).Select(i => (i.Shape, i.Material, i.ConditionPermille))]);
+    }
 
     /// <summary>The crafting session: bound to the world's hero when there is one (the pack, the jobs and the clock are the world's), else the dev hamlet's own starter pack.</summary>
     CraftingSession NewCraftingSession(int light)
@@ -160,20 +171,23 @@ public partial class StreetView
     // ------------------------------------------------------------------ dev screenshots: --shot-panel trade | prices | inventory | squad | party
 
     EntityId _shotPerson;
+    int _shotStage, _shotAt;
 
     void HeroShots()
     {
         if (_opt.Panel is not ("trade" or "prices" or "inventory" or "squad" or "party")) return;
-        if (_frames % 30 == 0) GD.Print($"[hero] frame {_frames} link {_heroLink != null} view {_heroLink?.View != null}");
         if (_heroLink == null || Runtime is not { } rt) return;
-        if (_frames == 60)
+        // a dated screenshot starts the clock days after the world's opening hour: wait until the worker has caught the hours up, so the commands below apply at once
+        if (_shotStage == 0 && _frames >= 60 && rt.HourDone >= _world.Clock.Now.TotalHours) { _shotStage = 1; _shotAt = _frames; }
+        if (_shotStage == 1)
         {
+            _shotStage = 2;
             int s = HeroSettlement(); long now = HeroNow();
             // something in the pack to show: a little of the market's goods
-            if (_opt.Panel is "inventory" or "party" or "squad")
+            if (_opt.Panel is "inventory" or "party" or "squad" or "trade")
             {
                 _heroLink.Issue(new HeroCommand { Kind = HeroCommandKind.VisitMarket, Settlement = s, IssuedSec = now });
-                foreach (var (g, q) in new[] { ("flour", 4_000L), ("salt", 500L), ("ale", 2_000L), ("bread", 3L) })
+                foreach (var (g, q) in new[] { ("flour", 4_000L), ("salt", 500L), ("ale", 2_000L), ("bread", 1_500L) })
                     if (rt.State.Economy!.Goods.TryIdOf(g, out var id)) _heroLink.Issue(new HeroCommand { Kind = HeroCommandKind.Buy, Settlement = s, Good = id, Qty = q, IssuedSec = now });
             }
             if (_opt.Panel is "party" or "squad")
@@ -194,7 +208,7 @@ public partial class StreetView
                 }
             }
         }
-        if (_frames != 150) return;
+        if (_shotStage != 2 || _frames != _shotAt + 90) return;
         int st = HeroSettlement();
         GD.Print($"[hero] shot {_opt.Panel}: settlement {st}, view {(_heroLink.View == null ? "none" : $"hour {_heroLink.View.HourDone}, {_heroLink.View.Items.Count} items, market {_heroLink.View.Market?.Name ?? "-"}")}");
         switch (_opt.Panel)

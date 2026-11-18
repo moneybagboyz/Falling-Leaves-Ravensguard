@@ -56,6 +56,8 @@ public static class InputDefs
         A(W, "cart_unload", K(Key.Y));      // drop 100 kg of the cart's load on the ground (a stuck cart)
         A(W, "cart_reload", K(Key.Bracketright));
         A(W, "cart_dig", K(Key.Bracketleft)); // a shovel under the wheel: a fifth off the mud
+        A(W, "camp", K(Key.Comma));      // travel spec 6: make camp, or open the camp panel (Q > Make camp once the Q menu exists)
+        A(W, "forage", K(Key.Period));   // travel spec 4.4: forage the tile (Q > Forage)
         A(W, "make", K(Key.N)); // crafting screen (basic-crafting spec 4.7); N is free in World, CombatStance, CalledShot and Build
         A(W, "camera_up", K(Key.Up));
         A(W, "camera_down", K(Key.Down));

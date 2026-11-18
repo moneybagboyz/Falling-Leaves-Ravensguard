@@ -141,6 +141,7 @@ public partial class TradeScreen : Control
         foreach (var c in _notes.GetChildren()) { _notes.RemoveChild(c); c.QueueFree(); }
         _cols.Visible = !_notebook; _notes.Visible = _notebook;
         if (v == null || v.Market == null) { _status.Text = L.T("TRADE_SETTLING"); return; }
+        if (_waitSeq == 0 && _status.Text == L.T("TRADE_SETTLING")) _status.Text = "";
         _title.Text = _barter && v.Person != null ? L.F("TRADE_TITLE_PERSON", v.Person.Name) : L.F("TRADE_TITLE_MARKET", v.Market.Name);
         if (_notebook) { BuildNotebook(v); return; }
 
@@ -206,7 +207,7 @@ public partial class TradeScreen : Control
             sb.Append(L.F("TRADE_BARTER_VALUE", Quotes.PerUnit(bb.MidMicro, l.Piece), Unit(l.Piece), Quotes.Money(value))).Append('\n');
             sb.Append(Side == TradeSide.Buy ? L.F("TRADE_BARTER_PAY", Quotes.Money(coin)) : L.F("TRADE_BARTER_GET", Quotes.Money(coin))).Append('\n');
             _basket.AddChild(UiKit.Body(sb.ToString(), true));
-            var deal = UiKit.Key(L.T("TRADE_CONFIRM"), "trade.confirm", 220); deal.Pressed += Confirm; deal.Disabled = _waitSeq > 0; _basket.AddChild(deal);
+            var deal = UiKit.Key(L.T("TRADE_DEAL"), "trade.confirm", 220); deal.Pressed += Confirm; deal.Disabled = _waitSeq > 0; _basket.AddChild(deal);
             return;
         }
         if (l.Book is not { } book) { _basket.AddChild(UiKit.Body(L.T("TRADE_NO_PRICE"))); return; }
@@ -216,7 +217,7 @@ public partial class TradeScreen : Control
         sb.Append(L.F("TRADE_AVERAGE", Quotes.PerUnit(q.AverageMicro, l.Piece), Unit(l.Piece))).Append('\n');
         sb.Append(L.F("TRADE_TOTAL", Quotes.Money(q.TotalMites))).Append('\n');
         if (Side == TradeSide.Sell) sb.Append(L.F("TRADE_TOLL", Quotes.Money(q.TollMites), Quotes.Money(q.NetMites))).Append('\n');
-        sb.Append(L.F("TRADE_SPREAD", Quotes.PerUnit(book.BidMicro, l.Piece), Quotes.PerUnit(book.AskMicro, l.Piece), book.HalfSpreadPm * 2 / 10)).Append('\n');
+        sb.Append(L.F("TRADE_SPREAD", Quotes.PerUnit(book.BidMicro, l.Piece), Quotes.PerUnit(book.AskMicro, l.Piece), book.HalfSpreadPm / 10)).Append('\n');
         if (q.AverageMicro > q.FirstUnitMicro * 1005 / 1000 && Side == TradeSide.Buy) sb.Append(L.T("TRADE_MOVES_UP")).Append('\n');
         if (q.AverageMicro < q.FirstUnitMicro * 995 / 1000 && Side == TradeSide.Sell) sb.Append(L.T("TRADE_MOVES_DOWN")).Append('\n');
         // what was last heard elsewhere for this good (O4)
@@ -231,7 +232,7 @@ public partial class TradeScreen : Control
         var body = UiKit.Body(sb.ToString(), true);
         if (Side == TradeSide.Buy && q.TotalMites > v.CoinMites) body.AddThemeColorOverride("font_color", PixelTheme.Warn);
         _basket.AddChild(body);
-        var confirm = UiKit.Key(L.T("TRADE_CONFIRM"), "trade.confirm", 220); confirm.Pressed += Confirm; confirm.Disabled = _waitSeq > 0 || !v.Market!.Open; _basket.AddChild(confirm);
+        var confirm = UiKit.Key(L.T("TRADE_DEAL"), "trade.confirm", 220); confirm.Pressed += Confirm; confirm.Disabled = _waitSeq > 0 || !v.Market!.Open; _basket.AddChild(confirm);
     }
 
     /// <summary>Coin offered in a barter: a quarter over the worth when you take their goods (so they do not lose even on food they need), four fifths of it when you give yours.</summary>

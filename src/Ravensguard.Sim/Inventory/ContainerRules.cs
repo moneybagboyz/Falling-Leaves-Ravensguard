@@ -70,8 +70,8 @@ public sealed class ContainerRules
         if (_db != null && _db.TryGet<WeaponShapeDef>(shape, out var w)) return w.TwoHanded ? EquipSlot.BothHands : EquipSlot.MainHand;
         if (_db != null && _db.TryGet<ArmourShapeDef>(shape, out var a))
         {
-            if (a.Layer == ArmourLayer.Cover) return EquipSlot.Cloak;
             string main = a.Coverage.Count == 0 ? "" : a.Coverage.OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal).First().Key;
+            if (a.Layer == ArmourLayer.Cover && main is not ("head" or "neck" or "face")) return EquipSlot.Cloak;   // a hood is a cover layer worn on the head
             return main switch
             {
                 "head" or "neck" or "face" => EquipSlot.Head,

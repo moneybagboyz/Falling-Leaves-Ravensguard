@@ -31,7 +31,7 @@ public static class NewGameWorld
         return new WorldState
         {
             Hero = hero, Codex = codex, Content = content, HomeRecords = rw,
-            Party = hero != null ? Ravensguard.Sim.Trade.HeroParty.Create(rw.Sim.Economy, content, rw.Ids, hero) : null, // the kit as item rows in the world (trade spec 3.2)
+            Party = hero != null ? Ravensguard.Sim.Trade.HeroParty.Create(rw.Sim.Economy, content, rw.Ids, hero, (clock ?? GameTime.FromCalendar(pop.NowYear, Season.Spring, 1, 8)).Seconds) : null, // the kit as item rows in the world (trade spec 3.2)
             Economy = rw.Sim.Economy, Farming = rw.Economy.Farming.State, Production = rw.Economy.Production, Markets = rw.Economy.Markets, Growth = rw.Economy.Growth.State, Abstract = rw.Sim.State,
             ContinentSettings = cs, HistorySettings = hs, RegionSettings = rs, EmbarkCellX = cellX, EmbarkCellY = cellY,
             Continent = continent, History = history, Population = pop, Clock = new SimClock(clock ?? GameTime.FromCalendar(pop.NowYear, Season.Spring, 1, 8)),

@@ -182,6 +182,7 @@ public partial class StreetView : Control, IHandlesBack
         BuildScene();
         BuildHud();
         AttachRide();
+        AttachTravel();
         Resized += FitViewport;
         GetWindow().SizeChanged += FitViewport;
         FitViewport();
@@ -512,7 +513,7 @@ public partial class StreetView : Control, IHandlesBack
         if (_router == null || _regionMap == null) { _router?.ShowToast(L.T("MAP_NONE")); return; }
         UI.ContinentOverview? ov = _source?.Regions != null && _source.Continent != null && _source.History != null && _world.Streamer is { } st
             ? new UI.ContinentOverview(_source.Continent, _source.History, _source.Regions, st.Home, HeroWorld) : null;
-        _router.Push(new WorldMapScreen(_router, _regionMap, HeroWorld, ov) { CaravanMarks = CaravanMarksNow, RegionOrigin = Runtime == null ? (0, 0) : (Runtime.State.HomeRegion.OriginXM, Runtime.State.HomeRegion.OriginYM), ShotPath = _opt.MapShot ? _opt.ShotPath : null, StartScale = Math.Max(1, Math.Abs(_opt.MapScale)), StartContinent = _opt.MapScale <= 0 });
+        _router.Push(new WorldMapScreen(_router, _regionMap, HeroWorld, ov) { CaravanMarks = CaravanMarksNow, RegionOrigin = Runtime == null ? (0, 0) : (Runtime.State.HomeRegion.OriginXM, Runtime.State.HomeRegion.OriginYM), TravelPlan = _travel == null ? null : PreviewTravel, TravelStart = _travel == null ? null : StartTravel, PreselectNth = _opt.Travel == "picker" ? 1 : -1, ShotPath = _opt.MapShot ? _opt.ShotPath : null, StartScale = Math.Max(1, Math.Abs(_opt.MapScale)), StartContinent = _opt.MapScale <= 0 });
     }
 
     void UpdateHud(LiveSnapshot s)
@@ -896,6 +897,7 @@ public partial class StreetView : Control, IHandlesBack
             _rec.Step();
             StepPeople();
             RideTick();
+            TravelTick();
             double ms = _sw.Elapsed.TotalMilliseconds;
             _tickMsSum += ms; _tickMsMax = Math.Max(_tickMsMax, ms); _tickCount++; _stepMsFrame += ms;
             _acc -= Step; steps++;
@@ -935,6 +937,7 @@ public partial class StreetView : Control, IHandlesBack
         int dx = (Actions.HeldLoose("world.move_right") ? 1 : 0) - (Actions.HeldLoose("world.move_left") ? 1 : 0);
         int dy = (Actions.HeldLoose("world.move_down") ? 1 : 0) - (Actions.HeldLoose("world.move_up") ? 1 : 0);
         if (_opt.BenchSeconds > 0) return;
+        if ((dx != 0 || dy != 0) && _travel?.Journey is { State: Ravensguard.Sim.Travel.JourneyState.Travelling or Ravensguard.Sim.Travel.JourneyState.Paused }) TakeControl();   // a movement key takes the hero back from auto-travel
         _rec.SetInput(LoadInput(new MoveInput(dx, dy, Actions.HeldLoose("world.sprint"), HeroWalkInput())));
         var pan = new Vector2(
             (Actions.HeldLoose("world.camera_right") ? 1 : 0) - (Actions.HeldLoose("world.camera_left") ? 1 : 0),
@@ -989,6 +992,7 @@ public partial class StreetView : Control, IHandlesBack
         _heroSprite.Visible = h.Z == _viewZ;
         AnimateHero(h, feet);
         RideRender(h, feet);
+        TravelRender();
         _torchSprite.Visible = h.Torch;
         _torchSprite.Position = new Vector2(h.Facing == Facing.West ? -16 : 6, 0);
 
@@ -1195,11 +1199,11 @@ public partial class StreetView : Control, IHandlesBack
     {
         if (_clothes == null || _hero == null) return;
         long sec = s.Time.Seconds;
-        _clothes.EnsureHero(_hero, sec);
+        EnsureHeroClothes(sec);                      // the hero wears the inventory's worn clothes (trade spec 3.2), not a wardrobe of their own
         var c = s.Hero.Cell;
         bool indoors = _world.Lights.IsIndoor(c.X, c.Y, c.Z);
         // a hearth is a static light: strong light on a roofed cell with no torch of the hero's own is a fire within reach
-        bool fire = indoors && !s.Hero.Torch && s.Light != null && c.X >= 0 && c.Y >= 0 && c.X < s.Light.Width && c.Y < s.Light.Height && c.Z >= s.Light.MinZ && c.Z <= s.Light.MaxZ && s.Light.Point(c.X, c.Y, c.Z) >= 120;
+        bool fire = CampFireNear() || indoors && !s.Hero.Torch && s.Light != null && c.X >= 0 && c.Y >= 0 && c.X < s.Light.Width && c.Y < s.Light.Height && c.Z >= s.Light.MinZ && c.Z <= s.Light.MaxZ && s.Light.Point(c.X, c.Y, c.Z) >= 120;
         var act = !s.Hero.Moving ? Ravensguard.Sim.Clothing.Activity.Rest : s.Hero.Mode == MoveMode.Sprint ? Ravensguard.Sim.Clothing.Activity.Sprint : Ravensguard.Sim.Clothing.Activity.Walk;
         _clothes.StepHero(sec, _wx, indoors, fire, act);
         // the hero is drawn with the cloak and hood they actually wear (the rest of the figure is the hero's own art until the character screen dresses them piece by piece)
@@ -1296,6 +1300,7 @@ public partial class StreetView : Control, IHandlesBack
     public override void _UnhandledInput(InputEvent e)
     {
         if (!Visible) return;
+        if (e is InputEventKey { Pressed: true } && Actions.Pressed(e, "world.back") && (_campOpen || _travel?.Journey is { State: Ravensguard.Sim.Travel.JourneyState.Travelling or Ravensguard.Sim.Travel.JourneyState.Paused }) && TravelInput(e)) { GetViewport().SetInputAsHandled(); return; }
         if (_router != null && Actions.Pressed(e, "world.back"))
         {
             // Esc belongs to this view: the pause menu. With the menu already open the router closes it (Resume) and this view stays.
@@ -1313,7 +1318,7 @@ public partial class StreetView : Control, IHandlesBack
             ClickMove(click.Position - GlobalPosition);
             GetViewport().SetInputAsHandled(); return;
         }
-        if (RideInput(e)) { GetViewport().SetInputAsHandled(); return; }
+        if (RideInput(e) || TravelInput(e)) { GetViewport().SetInputAsHandled(); return; }
         if (Actions.Pressed(e, "world.pause")) TogglePause();
         else if (Actions.Pressed(e, "world.speed_1")) _rec.SetSpeed(SimSpeed.X1);
         else if (Actions.Pressed(e, "world.speed_2")) _rec.SetSpeed(SimSpeed.X2);

@@ -63,6 +63,7 @@ public partial class WorldMapScreen : Control
         if (StartContinent && _overview != null) { _continent = true; _cScale = Math.Clamp(StartScale, 1, 6); }
         CenterOnHero();
         ClampOrigin();
+        TravelStartup();
     }
 
     public override void _ExitTree() => InputBootstrap.Hints.Changed -= RefreshTexts;
@@ -119,6 +120,7 @@ public partial class WorldMapScreen : Control
     public override void _UnhandledInput(InputEvent e)
     {
         if (!Visible) return;
+        if (TravelInput(e)) { AcceptEvent(); return; }
         if (Actions.Pressed(e, "world.map")) { _router.Pop(); AcceptEvent(); return; }
         if (Actions.Pressed(e, "world.zoom_in")) { Zoom(1, _mouse); AcceptEvent(); }
         else if (Actions.Pressed(e, "world.zoom_out")) { Zoom(-1, _mouse); AcceptEvent(); }
@@ -127,11 +129,16 @@ public partial class WorldMapScreen : Control
 
     public override void _GuiInput(InputEvent e)
     {
-        if (e is InputEventMouseButton mb && mb.ButtonIndex is MouseButton.Left or MouseButton.Middle) { _drag = mb.Pressed; AcceptEvent(); }
+        if (e is InputEventMouseButton mb && mb.ButtonIndex is MouseButton.Left or MouseButton.Middle)
+        {
+            if (mb.Pressed && mb.ButtonIndex == MouseButton.Left) { _pressAt = mb.Position; _pressDrag = 0; }
+            else if (!mb.Pressed && mb.ButtonIndex == MouseButton.Left && _pressDrag < 5f) TravelSelectAt(mb.Position);      // a click without a drag picks the place under it
+            _drag = mb.Pressed; AcceptEvent();
+        }
         else if (e is InputEventMouseMotion mm)
         {
             _mouse = mm.Position;
-            if (_drag) { _origin -= mm.Relative / _scale; ClampOrigin(); }
+            if (_drag) { _origin -= mm.Relative / _scale; ClampOrigin(); _pressDrag += mm.Relative.Length(); }
             UpdateHover();
         }
     }
@@ -220,6 +227,7 @@ public partial class WorldMapScreen : Control
             else if (_scale >= 4) Label(st.Name, pos + new Vector2(0, 14), 12, PixelTheme.Dim);
         }
         DrawCaravans();
+        DrawTravel();
         DrawHero();
 
         // frame and hints

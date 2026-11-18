@@ -32,12 +32,34 @@ public sealed class ClothingFeed
         => (sec, xMm, yMm) => EnvOf(feed.Raw(sec, (int)(xMm / 1000 - originXM), (int)(yMm / 1000 - originYM)));
 
     /// <summary>Dresses the hero from the wardrobe of their origin's class (a minor heir like gentry, a peddler like a burgher) the first time it is called.</summary>
-    public Tracked EnsureHero(Ravensguard.Sim.Characters.HeroRecord hero, long gameSec)
+    /// <param name="fromInventory">True when the hero's clothes are the world's item rows (trade spec 3.2): they are put on with <see cref="DressHero"/>, not drawn from the wardrobe.</param>
+    public Tracked EnsureHero(Ravensguard.Sim.Characters.HeroRecord hero, long gameSec, bool fromInventory = false)
     {
         if (Hero != null) return Hero;
-        var cls = hero.Origin is "minor_heir" or "disgraced_squire" ? SocialClass.Gentry : hero.Origin is "peddler" or "discharged_soldier" ? SocialClass.Burgher : SocialClass.Peasant;
-        Hero = Book.Track(HeroId, hero.Female ? Sex.Female : Sex.Male, cls, Occupation.None, hero.Attribute(Ravensguard.Sim.Characters.HeroAttr.Toughness), (ulong)hero.Name.GetHashCode() ^ 0x48455230UL, gameSec);
+        var cls = Ravensguard.Sim.Inventory.HeroOutfit.ClassOf(hero.Origin);
+        Hero = Book.Track(HeroId, hero.Female ? Sex.Female : Sex.Male, cls, Occupation.None, hero.Attribute(Ravensguard.Sim.Characters.HeroAttr.Toughness), (ulong)hero.Name.GetHashCode() ^ 0x48455230UL, gameSec, dress: !fromInventory);
         return Hero;
+    }
+
+    string _dressedKey = "";
+
+    /// <summary>
+    /// Puts on the hero exactly what the inventory says is worn (shape, material, condition), when that changed: the warmth model's copies of the hero's worn item rows. Garments it does not
+    /// know (a weapon, a container) are skipped; pieces that do not stack are left off, inner layers first.
+    /// </summary>
+    public void DressHero(IReadOnlyList<(string Shape, string Material, int Cond)> worn)
+    {
+        if (Hero == null) return;
+        string key = string.Join(";", worn.Select(w => $"{w.Shape}/{w.Material}/{w.Cond}"));
+        if (key == _dressedKey) return;
+        _dressedKey = key;
+        foreach (var it in Hero.Worn.ToArray()) { Book.Remove(Hero, it); Book.Items.Free(it); }
+        foreach (var (shape, material, cond) in worn.OrderBy(w => Book.Garments.TryGetValue(w.Shape, out var g) ? (int)g.Layer * 100 + g.Order : 999))
+        {
+            if (!Book.Garments.TryGetValue(shape, out var g) || !g.Wearable) continue;
+            var id = Book.Create(g, material.Length > 0 ? material : g.DefaultMaterial ?? "wool", HeroId, cond, 0, Hero.SizeCm3);
+            if (Book.CannotWear(Hero, id) == null) Book.Wear(Hero, id); else Book.Items.Free(id);
+        }
     }
 
     /// <summary>Steps the hero's body to <paramref name="gameSec"/>'s minute (a no-op within a minute).</summary>

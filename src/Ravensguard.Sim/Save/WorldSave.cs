@@ -58,6 +58,8 @@ public sealed class WorldState
     public Ravensguard.Sim.Crafting.CraftState? Crafting { get; set; }
     /// <summary>Animals that are individuals, vehicles with their cargo, horse herds, loans and the hero's ride (saved in the "mounts" section once any exists).</summary>
     public Ravensguard.Sim.Animals.RideBook? Mounts { get; set; }
+    /// <summary>Journey, camps, snares, carcasses and the interrupt log of travel (saved in the "travel" section once anything has been recorded).</summary>
+    public Ravensguard.Sim.Travel.TravelState? Travel { get; set; }
     /// <summary>The hero's side of the records (trade-inventory-character spec): worn slots and where each stack sits, the price notebook, the party, the people known (saved in the "party" section when present). The things themselves are item rows, the pack store and the purse in the <see cref="Economy"/>.</summary>
     public Ravensguard.Sim.Trade.HeroParty? Party { get; set; }
     /// <summary>The abstract continent: 256 summaries, roads, caravans (saved in the "continent" section; null for a world that has none yet, which gets a fresh one when it runs).</summary>
@@ -294,6 +296,7 @@ public static class WorldSave
             Jobs = w.Jobs is { Count: > 0 } jt ? JobsSave.Capture(jt) : null,
             Crafting = w.Crafting is { IsEmpty: false } cr ? CraftingSave.Capture(cr) : null,
             Mounts = w.Mounts is { IsEmpty: false } rb ? MountsSave.Capture(rb) : null,
+            Travel = w.Travel is { IsEmpty: false } tv ? TravelSave.Capture(tv) : null,
             Party = w.Party == null ? null : Ravensguard.Sim.Trade.HeroPartySave.Capture(w.Party),
             Production = w.Production == null ? null : ProductionSave.Capture(w.Production), Markets = w.Markets == null ? null : MarketsSave.Capture(w.Markets),
             Regions = view?.CaptureResident(), PagedRegions = view != null ? view.Paged : new SortedDictionary<int, byte[]>(w.RegionSections.ToDictionary(kv => kv.Key, kv => kv.Value)),
@@ -391,6 +394,7 @@ public static class WorldSave
             Jobs = file.Sections.ContainsKey(JobsSection) ? Decode<JobsSave>(file, JobsSection, compressed: true).Restore() : null,
             Crafting = file.Sections.ContainsKey(CraftingSection) ? Decode<CraftingSave>(file, CraftingSection, compressed: true).Restore() : null,
             Mounts = file.Sections.ContainsKey(MountsSave.SectionName) ? RestoreMounts(Decode<MountsSave>(file, MountsSave.SectionName, compressed: true), content, economy, cs.Seed) : null,
+            Travel = file.Sections.ContainsKey(TravelSave.SectionName) ? RestoreTravel(Decode<TravelSave>(file, TravelSave.SectionName, compressed: true), content, economy, cs.Seed) : null,
             Party = file.Sections.ContainsKey(PartySection) ? Decode<Ravensguard.Sim.Trade.HeroPartySave>(file, PartySection, compressed: true).Restore() : null,
             Hero = hero, Codex = codex, Live = resume, Economy = economy, Abstract = abstractState,
             Farming = file.Sections.ContainsKey(FarmingSection) ? Decode<FarmingSave>(file, FarmingSection, compressed: true).Restore(region) : null,
@@ -425,6 +429,17 @@ public static class WorldSave
         if (economy != null) return m.Restore(content, economy, seed);
         var goods = new Ravensguard.Sim.Goods.GoodCatalog(content);
         return m.Restore(content, goods, new Ravensguard.Sim.Goods.MassLedger(goods.Count), seed);
+    }
+
+    /// <summary>The travel state of a save: on the economy's stores when the world has one, else on a private goods catalog and ledger.</summary>
+    private static Ravensguard.Sim.Travel.TravelState RestoreTravel(TravelSave m, ContentDatabase? content, EconomyState? economy, ulong seed)
+    {
+        if (content == null) throw new SaveException("The travel records of this save need the game content to be read.");
+        Ravensguard.Sim.Travel.TravelState t;
+        if (economy != null) { t = new Ravensguard.Sim.Travel.TravelState(content, seed, economy.Goods, economy.Mass) { Hosted = true, OpenStore = id => economy.OpenStore(Ravensguard.Sim.Goods.StoreKind.Open, id) }; }
+        else { var goods = new Ravensguard.Sim.Goods.GoodCatalog(content); t = new Ravensguard.Sim.Travel.TravelState(content, seed, goods, new Ravensguard.Sim.Goods.MassLedger(goods.Count)); }
+        m.Restore(t);
+        return t;
     }
 
     private static T Decode<T>(SaveFile f, string name, bool compressed)
@@ -565,6 +580,7 @@ public sealed class LiveCapture
     internal JobsSave? Jobs { get; init; }
     internal CraftingSave? Crafting { get; init; }
     internal MountsSave? Mounts { get; init; }
+    internal TravelSave? Travel { get; init; }
     internal Ravensguard.Sim.Trade.HeroPartySave? Party { get; init; }
     internal MarketsSave? Markets { get; init; }
     internal ContinentSave? ContinentSt { get; init; }
@@ -611,6 +627,7 @@ public sealed class LiveCapture
         if (Jobs != null) sections.Add(new(WorldSave.JobsSection, SaveCodec.SerializeCompressed(Jobs)));
         if (Crafting != null) sections.Add(new(WorldSave.CraftingSection, SaveCodec.SerializeCompressed(Crafting)));
         if (Mounts != null) sections.Add(new(MountsSave.SectionName, SaveCodec.SerializeCompressed(Mounts)));
+        if (Travel != null) sections.Add(new(TravelSave.SectionName, SaveCodec.SerializeCompressed(Travel)));
         if (Party != null) sections.Add(new(WorldSave.PartySection, SaveCodec.SerializeCompressed(Party)));
         if (Production != null) sections.Add(new(WorldSave.ProductionSection, SaveCodec.SerializeCompressed(Production)));
         if (Markets != null) sections.Add(new(WorldSave.MarketsSection, SaveCodec.SerializeCompressed(Markets)));

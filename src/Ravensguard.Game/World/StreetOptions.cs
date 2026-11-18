@@ -29,6 +29,7 @@ public sealed class StreetOptions
     public bool AllNeighbours;   // --shot-neighbours: ask for the eight neighbour regions at the start (dev: a world map with several regions, each with its economy running)
     public bool CaravanShot;      // --shot-caravan: step the world until a caravan is on the road, then start the hero a few metres behind it (dev screenshot of the LODBridge)
     public string? Ride;         // --shot-ride horse|horse_near|cart|wagon|stuck (dev): a palfrey, mounted or beside the hero; a cart or ox wagon with a team and a load, driven; stuck: a laden wagon bogged in mud
+    public string? Travel;       // --shot-travel encounter|camp (dev): a bandit ambush on the road ahead, or a night camp with a lit fire
     public bool PeopleShot;       // --shot-people: wait until the LODBridge has promoted townsfolk before the picture is taken (dev screenshot of the people bridge)
     public bool MapShot;         // --shot-map: open the world map and capture it instead of the street
     public int MapScale = 1;     // --shot-map-scale 1..6 (0 or -n: the continent overview, at zoom n)
@@ -55,6 +56,7 @@ public sealed class StreetOptions
         o.CaravanShot = Array.IndexOf(args, "--shot-caravan") >= 0;
         o.PeopleShot = Array.IndexOf(args, "--shot-people") >= 0;
         o.Ride = Val("--shot-ride");
+        o.Travel = Val("--shot-travel");
         o.AllNeighbours = Array.IndexOf(args, "--shot-neighbours") >= 0;
         if (Val("--shot-speed") is { } sp) o.Speed = int.Parse(sp, CultureInfo.InvariantCulture);
         o.Panel = Val("--shot-panel"); o.PanelCategory = Val("--shot-codex-cat"); o.PanelEntry = Val("--shot-codex-entry");
