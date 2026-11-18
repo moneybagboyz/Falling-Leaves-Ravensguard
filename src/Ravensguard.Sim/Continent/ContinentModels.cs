@@ -36,7 +36,7 @@ public static class ContinentRules
     public const int RegionKm = 32;
     public const int PriceMinPermille = 300, PriceMaxPermille = 4000;
     /// <summary>The 0x250 stream of the continent tick (overview 2.3).</summary>
-    public const uint StreamContinent = 0x250;
+    public const uint StreamContinent = Ravensguard.Sim.Core.RngStreams.Continent;
 }
 
 /// <summary>What a news item is about (continent-tick spec 3.8).</summary>

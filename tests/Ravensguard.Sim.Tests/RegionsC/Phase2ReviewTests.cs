@@ -17,6 +17,7 @@ using Xunit.Abstractions;
 namespace Ravensguard.Sim.Tests.RegionsC;
 
 /// <summary>Regression tests for the phase 2 review of the seamless continent, saves and runtime (docs/reviews/phase-2.md): each failed before its fix.</summary>
+[Collection(TimingCollection.Name)] // contains barrier-timing budgets: run alone
 public class Phase2ReviewTests(ITestOutputHelper output)
 {
     private const string Hash = "h";

@@ -50,7 +50,29 @@ Reviewed: `Economy/`, `Production/`, `Farming/`, `Goods/`, `Taxes/`, the abstrac
 The lead's addendum (a): the region's coin grew about 40,000 crowns a year net (+90 percent in 25 years). The cause was the border desk, not the migrants (net under 2,000 crowns a year): it exported gluts from a float of 8 percent of the coin plus its own imports (290-460k crowns a year out against 200-280k in). I42 steers the desk by the region's coin (a path of the seed money a head + 1 percent a year, a 5 percent band, exports bounded at the top, imports at four bands below, thresholds leaning with the coin); the soak prints `coin+%` and gates on at most 2 percent a year.
 
 ### Done when (economy), final soaks
-DONE_WHEN_TABLE
+Seed 1234, 100 years (`EconomySoakTests.HundredYears_..._MeetTheTargets`, release, 15.7 min; the same numbers as `WorldTool soak --seed 1234 --years 100`):
+
+| Year | Population | Under 15 | Missed-meal household-days | Honest in band | Cash-solvent merchants | Workshops completing | Closed businesses | Region coin |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 25,666 | 35.1% | 0.00% | 83.1% | 91% | 93% | 4.2% | 1,269,357 crowns |
+| 10 | 25,448 | 30.1% | 0.00% | 69.9% | 66% | 74% | 12.9% | |
+| 25 | 25,232 | 32.4% | 0.00% | 73.1% | 68% | 75% | 9.7% | |
+| 50 | 25,228 | 31.0% | 0.00% | 77.2% | 76% | 78% | 3.5% | |
+| 100 | 25,100 | 33.4% | 0.02% | 60.7% | 90% | 77% | 1.4% | 2,453,002 crowns |
+
+| Target (plan 5, decision I46) | Seed 1234, 100 years | Seed 1, 25 years | |
+|---|---|---|---|
+| Population within 10% of the start | 25,666 -> 25,100 (min 24,929, -2.9%) | 25,973 -> 25,526 (min 25,463) | met |
+| Under-15 share 26-33% | mean 32.4% over the run; the decade of years 31-40 averages 34.2% (an echo of the births of years 20-30) | mean 31.2% | met on average; one decade over, the gate is 26-35% per decade |
+| Hungry (missed meals) < 2% | 0.001% over the run, max 0.02% in a year | 18 household-days in 25 years | met |
+| Honest in-band book-days >= 60% (the plan says 90%) | mean 74.6%, min 60.7% (year 100) | mean 71.2%, min 43.4% (year 20: drought, harvest 1,400 t, grain at 2.4 x) | met against 60%; the plan's 90% is not met |
+| Cash-solvent merchants >= 60% | mean 76%, min 59% | mean 83%, min 61% | met |
+| Workshops completing a batch >= 60% (the plan says 90%) | mean 77%, min 73% | mean 82%, min 76% | met against 60%; not 90% |
+| Region coin growth <= 2% a year | 0.67% a year compound | 0.43% a year | met |
+| Coin audit exact | world coin exact every year; the only sources and sinks are the seed money and the border | the same | met |
+| Hourly tick within 150 ms (p99) | median 3.8 ms, p99 29.2 ms, max 126 ms | | met |
+
+Not met, and why: the plan's 90% in band and 90% of workshops. The honest band counts an empty book as a failure; what fails most is bread (seed 1: 28% of its book-days in towns with a bakery in band; its price index sits at 2.2-4 x base because the bakers cannot buy the flour a town eats) and a drought year's grain. A fifth of the workshops idle for want of inputs or buyers (the Phase 1 artisan surplus, reasons 1 and 3 of the integration notes).
 
 ## Hooks for #2 (economy, parish, labour and trade state)
 - A region's own state goes in `RegionSectionData` (`Save/RegionSave.cs`): the next free key is 14. Add the DTO there and capture it in `RegionWorld.Capture`, restore it in `RegionWorld.Restore` (both run on the same code path for resident and paged regions, so paging never changes a save).

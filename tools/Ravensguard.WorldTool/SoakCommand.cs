@@ -5,8 +5,9 @@ namespace Ravensguard.WorldTool;
 
 /// <summary>
 /// <c>soak --seed N --years Y [--carry PCT] [--quiet] [--diag] [--flow | --coin] [--flow-years 1,10] [--tax [--tax-year N]]</c>: builds the seed's world with the whole Phase 2 economy, runs it Y game years on the abstract tick and prints the
-/// yearly table (population, under-15 share, births, deaths, food surplus, hungry household-days, staple price index and book-days in band, workshop completion,
-/// merchants solvent, coin and its sources and sinks, the mass and coin audits) and, at the end, the tick timings. Exit code 1 when an audit fails.
+/// yearly table (population, under-15 share, births, deaths, food surplus, missed-meal and low-store household-days, staple price index, honest book-days in band
+/// and the on-offer measure beside it, workshop completion, cash-solvent merchants, closed businesses, the region's coin and its growth, coin across the border by
+/// channel, the mass and coin audits; review findings 5, 6, 17 and decision I42) and, at the end, the tick timings. Exit code 1 when an audit fails.
 /// </summary>
 public static class SoakCommand
 {
