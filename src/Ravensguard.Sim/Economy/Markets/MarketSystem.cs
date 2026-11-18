@@ -143,7 +143,7 @@ public sealed class MarketSystem
         }
         var tb = MarketTownBook(settlement);
         if (ReferenceEquals(tb, home)) return home;
-        return tb.MidMicro(good) * 1000 > home.MidMicro(good) * 1150 ? tb : home;
+        return tb.MidMicro(good) * 1000 > home.MidMicro(good) * Econ.Tuning.CartToTownPermille ? tb : home;
     }
 
     /// <summary>The book of the town nearest the settlement (its own book when it is a town, or when the region has none).</summary>
