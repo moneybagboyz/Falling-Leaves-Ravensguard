@@ -46,7 +46,7 @@ Notes:
 - **Findings 14 and 15, game half:** the game sets `HeroText.Resolver` (its translation server) at start and `CraftViewWanted` to whether the crafting screen is open (see the game section). `en.en.translation` must be re-imported after the `en.csv` changes. Without a resolver, the desk's results come from the `en.csv` on disk, which a run from the source tree finds.
 
 ## Done in the cleanup
-From `docs/reviews/phase-3-open.md`:
+From the Phase 3 open-items list (folded into this file and removed at close-out):
 - Road encounters: `EncounterOutcomes` options (pay through the desk's `EncounterPay`, trade, talk, flee, detour, wait); the fight is a stub that robs or runs.
 - `RecordCast` casts caravan crews and nearby vagrants; trading with a caravan person trades the caravan's own cargo and float.
 - Hunt key `;` and snare key `'` (Q menu too), `TravelState.Hunt`, snare sprite `object.snare`; snares keep their place in the save.
@@ -72,7 +72,7 @@ From `docs/reviews/phase-3-open.md`:
 - ~~Chunk tiles name build pieces by a sorted palette number.~~ Fixed: `PiecePalette.LegacyIds` (append-only), content hashes over piece ids, each chunk section stores its palette, save format v4.
 
 ## Known limits, carried forward
-| Item (from phase-3-open.md) | Target |
+| Item (from the open-items list) | Target |
 |---|---|
 | Real road combat (the encounter fight is a stub that robs or runs) | Phase 4 |
 | NPCs sheltering from cold or rain change their exposure but not their position | Phase 4 (with the LODBridge) |
