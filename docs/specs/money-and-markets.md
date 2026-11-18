@@ -234,3 +234,9 @@ Test good `test_grain`: `Ref = 45` mites/kg, `T = 16` days, `d = 100` kg/day (so
 4. Per-settlement `local_cpp` never < 0.2 x seed or > 5 x seed for 100 years in the baseline soak.
 5. `SoakRichPlayer`: a hero injecting 50,000 crowns over 1 year changes local staple prices by < 25% after 5 years
    (dispersal), and the audit holds.
+
+## Notes
+
+Phase 2 economy foundation implementation notes (no spec Decision changed):
+- Seed money is apportioned by percent shares (gentry 20, burgher 35, peasant 30, treasury 12, parish 3) from `content/base/economy/money.jsonc`, largest remainder, ties by hash of owner id (stream 0x220). Creation is a Ledger `Seed` source before day 0.
+- The `economy` save section is optional; worlds saved without it load with `Economy == null`. Golden generator hashes are unchanged because seeding is a separate step after population.

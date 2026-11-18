@@ -185,3 +185,7 @@ taxes (tithe/rent in kind), LODBridge (items carried by promoted people are inst
 3. No unit of any good has `base_price` outside [0.05, 5,000,000] mites per kg/piece; price solver margin per recipe 5-25%
    (test `RecipeMarginBand`).
 4. Item table size after 100 years < 50,000 live instances in a region (instances only for owned/ground items).
+
+## Notes
+
+- Bulk goods are defined in `content/base/goods/goods.jsonc`; spoilage rates per store kind are in `spoilage.jsonc` and applied with deterministic integer arithmetic (mass-conserving via `MassLedger`).

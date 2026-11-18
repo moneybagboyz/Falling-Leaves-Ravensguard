@@ -205,3 +205,7 @@ ids, spoilage), LODBridge (job state, inventory carried).
    ~1,370 clothes per game year).
 5. Employment: >= 90% of working-age persons with an occupation have an `Employer`/`Own` job each day; vacancies < 5% of
    workstations.
+
+## Notes
+
+- Needs baskets live in `content/base/economy/needs.jsonc` per class; stores are seeded with a few weeks of staples, firewood, salt and ale at world creation (`EconomyState.Create`). Shortfall handling follows section 2; no deaths are produced in Phase 2.
