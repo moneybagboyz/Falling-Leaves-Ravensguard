@@ -51,7 +51,7 @@ public sealed record VitalRates
     public int FamineSharePct { get; init; } = 15;
     public int FamineDays { get; init; } = 5;
     /// <summary>Share (percent) of a departing household's coin that goes to its fief's treasury (chevage, integration decision I11); the rest leaves with it.</summary>
-    public int ChevagePct { get; init; } = 50;
+    public int ChevagePct { get; init; }
     /// <summary>Dowry as percent of the bride's household purse.</summary>
     public int DowryPct { get; init; } = 5;
     /// <summary>Share (percent) of each good that both households give a new couple to start with (stand-in until markets exist, decision V4).</summary>

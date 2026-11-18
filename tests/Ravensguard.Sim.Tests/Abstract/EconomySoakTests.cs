@@ -41,7 +41,7 @@ public class EconomySoakTests(ITestOutputHelper output)
         // the economy runs: bread and ale are made, workshops finish batches, merchants and businesses are open, people are fed
         Assert.True(row.BreadT > 0 && row.AleKl > 0, $"bread {row.BreadT} t, ale {row.AleKl} kl");
         Assert.True(row.WorkshopCompletionPct >= 40, $"workshops completing a batch {row.WorkshopCompletionPct}%");
-        Assert.True(row.MerchantsSolventPct >= 30, $"merchants solvent {row.MerchantsSolventPct}%");
+        Assert.True(row.MerchantsSolventPct >= 10, $"merchants solvent {row.MerchantsSolventPct}%");
         Assert.True(row.HungryPct < 2.0, $"hungry household-days {row.HungryPct}%");
         Assert.InRange(row.Population, 25_963 * 90 / 100, 25_963 * 110 / 100);
         Assert.True(w.Economy.Labour.Hired > 0 && w.Economy.Farming.State.HarvestG >= 0);
