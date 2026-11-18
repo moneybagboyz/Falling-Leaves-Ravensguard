@@ -40,8 +40,9 @@ public sealed record SaveHeader
 public static class SaveFormat
 {
     /// <summary>v2: region sections and the home people carry a baseline hash and generator version (<see cref="BaselineGuard"/>).
-    /// v3: seven skills are appended to the Skill enum (Tailoring, Surgery, Speech, Athletics, Tactics, Stealth, Lockpicking), so the hero's skill list grows; the optional "crafting" section is new.</summary>
-    public const int CurrentVersion = 3;
+    /// v3: seven skills are appended to the Skill enum (Tailoring, Surgery, Speech, Athletics, Tactics, Stealth, Lockpicking), so the hero's skill list grows; the optional "crafting" section is new.
+    /// v4: the chunk sections carry the build-piece palette their tile codes are numbered by (<see cref="ChunkStoreData.Palette"/>); a v3 section has none and is read with the legacy palette.</summary>
+    public const int CurrentVersion = 4;
     /// <summary>
     /// Version of everything a saved region is regenerated from (region terrain, landmarks, populator, chunk streaming frame). Bump it whenever generation output changes on
     /// purpose, together with the golden hashes: saves diffed against the old output are then refused with a clear message instead of loading onto different people.

@@ -538,7 +538,7 @@ public class CraftingTests(ITestOutputHelper output)
         var hero = new Ravensguard.Sim.Characters.HeroSave { Name = "Ada", Origin = "x", Attributes = [50, 50, 50, 50, 50], SkillIds = old, SkillLevels = old.Select((_, i) => i + 1).ToArray() };
         var file = new SaveFile(new SaveHeader { FormatVersion = 2 }, [new("hero", SaveCodec.Serialize(hero))]);
         var migrated = SaveMigrator.CreateDefault().Migrate(file);
-        Assert.Equal(SaveFormat.CurrentVersion, migrated.Header.FormatVersion); Assert.Equal(3, SaveFormat.CurrentVersion);
+        Assert.Equal(SaveFormat.CurrentVersion, migrated.Header.FormatVersion); Assert.True(SaveFormat.CurrentVersion >= 3); // v4 (Phase 3 cleanup) added the chunk palette on top
         var back = Ravensguard.Sim.Characters.HeroRecord.FromSave(SaveCodec.Deserialize<Ravensguard.Sim.Characters.HeroSave>(migrated.Sections["hero"]));
         Assert.Equal(33, back.Skills.Count); Assert.Equal(0, back.Skill("lockpicking")); Assert.Equal(1, back.Skill("farming"));
         Assert.Equal(33, SaveCodec.Deserialize<Ravensguard.Sim.Characters.HeroSave>(migrated.Sections["hero"]).SkillIds.Length);

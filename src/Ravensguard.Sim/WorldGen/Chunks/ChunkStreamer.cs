@@ -86,6 +86,7 @@ public sealed class ChunkStreamer
     private ChunkStreamer(ChunkGenerator generator, RegionManager? regions, RegionCoord home, ChunkStore? store, ChunkStreamerSettings? settings)
     {
         Generator = generator; Regions = regions; Home = home; Store = store ?? new ChunkStore(); Settings = settings ?? new ChunkStreamerSettings();
+        Store.AdoptPalette(generator.Palette); // saved chunks keep their furniture whatever pieces the content has added since (they are renumbered to this palette)
         var o = new List<(int, int)>();
         int r = Settings.LoadRadius;
         for (int dy = -r; dy <= r; dy++) for (int dx = -r; dx <= r; dx++) o.Add((dx, dy));

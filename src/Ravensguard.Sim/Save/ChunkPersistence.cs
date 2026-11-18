@@ -169,12 +169,19 @@ public sealed class RawEntryFormatter : MessagePack.Formatters.IMessagePackForma
 public sealed class ChunkStoreRaw
 {
     [Key(0)] public List<RawEntry> Chunks { get; set; } = new();
+    /// <summary>See <see cref="ChunkStoreData.Palette"/>.</summary>
+    [Key(1)] public string[] Palette { get; set; } = [];
 }
 
 [MessagePackObject]
 public sealed class ChunkStoreData
 {
     [Key(0)] public List<ChunkEntry> Chunks { get; set; } = new();
+    /// <summary>
+    /// The build-piece palette the tile codes of this section were written with (save format v4): the piece id of number i+1 ("" for an unused number). Empty in older sections and
+    /// in a store no generator was ever attached to: read as <see cref="Ravensguard.Sim.WorldGen.Chunks.PiecePalette.LegacyIds"/>.
+    /// </summary>
+    [Key(1)] public string[] Palette { get; set; } = [];
 }
 
 /// <summary>Snapshot on first visit + appended deltas. Only chunks with content are stored.</summary>
@@ -187,6 +194,48 @@ public sealed class ChunkStore
 
     public int Count { get { lock (_lock) return _chunks.Count; } }
     public bool Contains(ChunkKey k) { lock (_lock) return _chunks.ContainsKey(k); }
+
+    private string[] _palette = [];
+    /// <summary>The build-piece palette the tile codes in this store are numbered by (piece id of number i+1); empty until a generator is attached (<see cref="AdoptPalette"/>). Saved with every section.</summary>
+    public IReadOnlyList<string> Palette { get { lock (_lock) return _palette; } }
+
+    /// <summary>
+    /// Makes the store's tile codes use <paramref name="palette"/> (a streamer attaches its generator's): entries written with another palette (a save made before a content update or with
+    /// other mods, or before v4 when none was stored) are renumbered, snapshot and delta alike, so a visited place keeps its furniture. Returns the entries changed.
+    /// </summary>
+    public int AdoptPalette(Ravensguard.Sim.WorldGen.Chunks.PiecePalette palette)
+    {
+        lock (_lock)
+        {
+            var ids = palette.Ids.ToArray();
+            if (_palette.SequenceEqual(ids)) return 0;
+            int n = 0;
+            if (_chunks.Count > 0 && palette.MapFrom(_palette) is { } map) foreach (var e in _chunks.Values) if (Renumber(e, map)) n++;
+            _palette = ids;
+            return n;
+        }
+    }
+
+    /// <summary>Renumbers one entry's tile codes (snapshot payload and SetTile ops) with a palette map; the content hash stays (it is taken over piece ids).</summary>
+    private static bool Renumber(ChunkEntry e, int[] map)
+    {
+        bool changed = false;
+        if (e.Snapshot is { } snap)
+        {
+            var c = snap.Decode(); bool any = false;
+            foreach (var k in c.Tiles.Keys.ToList()) { int t = c.Tiles[k], nt = Ravensguard.Sim.WorldGen.Chunks.PiecePalette.Remap(t, map); if (nt != t) { c.Tiles[k] = nt; any = true; } }
+            if (any) { e.Snapshot = ChunkSnapshot.Create(snap.GeneratorVersion, snap.ContentHash, c); changed = true; }
+        }
+        for (int i = 0; i < e.Delta.Ops.Count; i++)
+        {
+            var op = e.Delta.Ops[i];
+            if (op.Kind != ChunkOpKind.SetTile) continue;
+            int nt = Ravensguard.Sim.WorldGen.Chunks.PiecePalette.Remap(op.TileId, map);
+            if (nt != op.TileId) { e.Delta.Ops[i] = ChunkOp.SetTile(op.LocalX, op.LocalY, nt); changed = true; }
+        }
+        if (changed) e.Bump();
+        return changed;
+    }
     public IEnumerable<ChunkKey> Keys { get { lock (_lock) return _chunks.Keys.ToList(); } }
 
     private static void Check(ChunkKey k)
@@ -290,7 +339,7 @@ public sealed class ChunkStore
             var cached = e.CachedFor(v);
             items[i++] = cached != null ? new(e, v, cached, null, null) : new(e, v, null, e.Snapshot, e.Delta.Ops.ToArray());
         }
-        return new ChunkStoreSnapshot(items);
+        return new ChunkStoreSnapshot(items, _palette);
     }
 
     public byte[] ToSection() => Snapshot().Encode();
@@ -303,7 +352,7 @@ public sealed class ChunkStore
 
     private byte[] ToSectionLocked(Func<ChunkKey, bool> pick)
     {
-        var raw = new ChunkStoreRaw();
+        var raw = new ChunkStoreRaw { Palette = _palette };
         foreach (var e in _chunks.Values)
         {
             if (!pick(e.Key)) continue;
@@ -332,16 +381,23 @@ public sealed class ChunkStore
     public int Absorb(ReadOnlyMemory<byte> section)
     {
         if (section.Length == 0) return 0;
-        var data = SaveCodec.DeserializeCompressed<ChunkStoreData>(section).Chunks; // decoded outside the lock
+        var sec = SaveCodec.DeserializeCompressed<ChunkStoreData>(section); var data = sec.Chunks; // decoded outside the lock
         int n = 0;
-        lock (_lock) foreach (var e in data) if (_chunks.TryAdd(e.Key, e)) n++;
+        lock (_lock)
+        {
+            // a section written with another palette is renumbered to the store's (the store has one once a streamer adopted it)
+            if (_palette.Length == 0 && _chunks.Count == 0) _palette = sec.Palette ?? [];        // an empty store takes the section's numbering as it is
+            int[]? map = _palette.SequenceEqual(sec.Palette ?? []) ? null
+                : new Ravensguard.Sim.WorldGen.Chunks.PiecePalette(_palette.Length > 0 ? _palette.Where(i => i.Length > 0) : Ravensguard.Sim.WorldGen.Chunks.PiecePalette.LegacyIds).MapFrom(sec.Palette);
+            foreach (var e in data) if (_chunks.TryAdd(e.Key, e)) { n++; if (map != null) Renumber(e, map); }
+        }
         return n;
     }
 
     public static ChunkStore FromSection(ReadOnlyMemory<byte> bytes)
     {
         var data = SaveCodec.DeserializeCompressed<ChunkStoreData>(bytes);
-        var s = new ChunkStore();
+        var s = new ChunkStore { _palette = data.Palette ?? [] };
         foreach (var e in data.Chunks) s._chunks[e.Key] = e;
         return s;
     }
@@ -352,14 +408,15 @@ public sealed class ChunkStoreSnapshot
 {
     internal readonly record struct Item(ChunkEntry Entry, int Version, byte[]? Cached, ChunkSnapshot? Snapshot, ChunkOp[]? Ops);
     private readonly Item[] _items;
-    internal ChunkStoreSnapshot(Item[] items) { _items = items; }
+    private readonly string[] _palette;
+    internal ChunkStoreSnapshot(Item[] items, string[] palette) { _items = items; _palette = palette; }
     public int Count => _items.Length;
     /// <summary>Entries encoded by the last <see cref="Encode"/> call (the rest came from the per-entry cache).</summary>
     public int ReEncoded { get; private set; }
 
     public byte[] Encode()
     {
-        var raw = new ChunkStoreRaw();
+        var raw = new ChunkStoreRaw { Palette = _palette };
         int fresh = 0;
         foreach (var it in _items)
         {

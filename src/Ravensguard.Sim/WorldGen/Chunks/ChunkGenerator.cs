@@ -299,7 +299,7 @@ public sealed partial class ChunkGenerator
             var off = new ChunkContent();
             for (int i = 0; i < Size * Size; i++) off.Tiles[i] = TileCode.Make(GroundKind.DeepWater, 0, 0, 0);
             res.Levels[0] = off;
-            res.ContentHash = HashOf(res);
+            res.ContentHash = HashOf(res, Palette);
             return res;
         }
         PaintBase(buf);
@@ -312,11 +312,12 @@ public sealed partial class ChunkGenerator
         CollectProps(buf, props);
         CollectLandmarkProps(buf, props);
         EmitLevels(buf, props, res);
-        res.ContentHash = HashOf(res);
+        res.ContentHash = HashOf(res, Palette);
         return res;
     }
 
-    private static string HashOf(GeneratedChunk g)
+    /// <summary>The content hash of a generated chunk, over piece ids rather than palette numbers (<see cref="PiecePalette.HashCodeOf"/>): a piece added to the content changes no hash.</summary>
+    private static string HashOf(GeneratedChunk g, PiecePalette pal)
     {
         using var h = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
         var b = new byte[8];
@@ -324,7 +325,7 @@ public sealed partial class ChunkGenerator
         foreach (var (z, c) in g.Levels)
         {
             L(z);
-            foreach (var (i, t) in c.Tiles) { L(i); L(t); }
+            foreach (var (i, t) in c.Tiles) { L(i); L(pal.HashCodeOf(t)); }
             foreach (var (id, o) in c.Objects) { L((long)id); h.AppendData(o.Data); }
         }
         return Convert.ToHexString(h.GetHashAndReset())[..32];

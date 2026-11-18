@@ -12,7 +12,7 @@ public sealed class SaveMigrator
     /// The game's migrations. v1 -> v2: v1 saves have no baseline guard (empty hashes) and are loaded unguarded; their format is otherwise unchanged (every v2 key is additive),
     /// so the step only re-stamps the version. A v1 save made while a region without people held chunks lost those chunks (fixed in v2); nothing can recover them.
     /// </summary>
-    public static SaveMigrator CreateDefault() => new SaveMigrator().Register(1, _ => { }).Register(2, MigrateSkillsV3);
+    public static SaveMigrator CreateDefault() => new SaveMigrator().Register(1, _ => { }).Register(2, MigrateSkillsV3).Register(3, MigrateChunkPaletteV4);
 
     /// <summary>
     /// v2 -> v3: the Skill enum gained seven entries at its end, so the hero's skill lists (parallel arrays of ids and levels) gain them at level 0. People rows store skills as the enum's byte values, which
@@ -23,6 +23,20 @@ public sealed class SaveMigrator
         if (!sections.TryGetValue(WorldSave.HeroSection, out var bytes)) return;
         var hero = SaveCodec.Deserialize<Ravensguard.Sim.Characters.HeroSave>(bytes);
         sections[WorldSave.HeroSection] = SaveCodec.Serialize(Ravensguard.Sim.Characters.HeroRecord.FromSave(hero).ToSave());
+    }
+
+    /// <summary>
+    /// v3 -> v4: chunk sections gain the palette their tile codes are numbered by. A v3 section was numbered by the piece ids sorted, which for the content of every v3 build is the
+    /// legacy palette, so the "chunks" section is stamped with <see cref="Ravensguard.Sim.WorldGen.Chunks.PiecePalette.LegacyIds"/> (the per-region sections inside "region.*" read an
+    /// empty palette as the same). The entries' bytes are kept as they are.
+    /// </summary>
+    private static void MigrateChunkPaletteV4(IDictionary<string, byte[]> sections)
+    {
+        if (!sections.TryGetValue(WorldSave.ChunksSection, out var bytes) || bytes.Length == 0) return;
+        var data = SaveCodec.DeserializeCompressed<ChunkStoreData>(bytes);
+        if (data.Palette.Length > 0) return;
+        data.Palette = [.. Ravensguard.Sim.WorldGen.Chunks.PiecePalette.LegacyIds];
+        sections[WorldSave.ChunksSection] = SaveCodec.SerializeCompressed(data);
     }
 
     public SaveMigrator Register(int fromVersion, Action<IDictionary<string, byte[]>> step)
