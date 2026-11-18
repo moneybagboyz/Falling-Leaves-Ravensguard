@@ -93,9 +93,17 @@ public sealed class TalkLink
     {
         var w = World(); var ts = State; int i = w.People.IndexOf(speaker); long hour = Runtime.HourDone;
         string A(string k) => args.TryGetValue(k, out var v) ? v : "";
+        // the first hour's mentor (onboarding spec 3.5): their contract, the loan and the "you have met" flag go to the script
+        bool script = false;
+        if (Runtime.State.Onboarding is { IsEmpty: false } ob && i >= 0 && i == ob.MentorPerson && Runtime.State.Content is { } db)
+        {
+            var rb = Runtime.State.Mounts; long hx = rb != null && (rb.HeroXMm != 0 || rb.HeroYMm != 0) ? rb.HeroXMm : ob.MentorX, hy = rb != null && (rb.HeroXMm != 0 || rb.HeroYMm != 0) ? rb.HeroYMm : ob.MentorY;
+            script = Ravensguard.Sim.Onboarding.OnboardingSetup.Apply(Runtime.State, db, ob, effect, args, hour * 3600, hx, hy);
+        }
         switch (effect)
         {
-            case "set_flag": return A("flag").Length > 0 && ts.Flags.Add(A("flag"));
+            case "set_flag": return (A("flag").Length > 0 && ts.Flags.Add(A("flag"))) | script;
+            case "start_contract" or "give_item": return script;
             case "add_rumour": { var h = TalkSystem.AddAuthored(w, ts, A("kind"), A("place"), i, hour); Publish(hour); return h != null; }
             case "add_trust":
             {

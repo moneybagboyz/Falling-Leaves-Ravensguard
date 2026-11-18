@@ -64,6 +64,8 @@ public sealed class WorldState
     public Ravensguard.Sim.Autopilot.AutopilotBook? Autopilot { get; set; }
     /// <summary>Rumours and who holds them, relations between people, the hero's heard rumours and dialogue flags (saved in the "talk" section once anything has been recorded).</summary>
     public Ravensguard.Sim.Rumours.TalkState? Talk { get; set; }
+    /// <summary>The first hour: mentor, jobs, step states and the loan (saved in the "onboarding" section once a new game has set it up).</summary>
+    public Ravensguard.Sim.Onboarding.OnboardingBook? Onboarding { get; set; }
     /// <summary>The hero's side of the records (trade-inventory-character spec): worn slots and where each stack sits, the price notebook, the party, the people known (saved in the "party" section when present). The things themselves are item rows, the pack store and the purse in the <see cref="Economy"/>.</summary>
     public Ravensguard.Sim.Trade.HeroParty? Party { get; set; }
     /// <summary>The abstract continent: 256 summaries, roads, caravans (saved in the "continent" section; null for a world that has none yet, which gets a fresh one when it runs).</summary>
@@ -303,6 +305,7 @@ public static class WorldSave
             Travel = w.Travel is { IsEmpty: false } tv ? TravelSave.Capture(tv) : null,
             Autopilot = w.Autopilot is { IsEmpty: false } ap ? AutopilotSave.Capture(ap) : null,
             Talk = w.Talk is { IsEmpty: false } tk ? TalkSave.Capture(tk) : null,
+            Onboarding = w.Onboarding is { IsEmpty: false } ob ? OnboardingSave.Capture(ob) : null,
             Party = w.Party == null ? null : Ravensguard.Sim.Trade.HeroPartySave.Capture(w.Party),
             Production = w.Production == null ? null : ProductionSave.Capture(w.Production), Markets = w.Markets == null ? null : MarketsSave.Capture(w.Markets),
             Regions = view?.CaptureResident(), PagedRegions = view != null ? view.Paged : new SortedDictionary<int, byte[]>(w.RegionSections.ToDictionary(kv => kv.Key, kv => kv.Value)),
@@ -403,6 +406,7 @@ public static class WorldSave
             Autopilot = file.Sections.ContainsKey(AutopilotSave.SectionName) ? Decode<AutopilotSave>(file, AutopilotSave.SectionName, compressed: true).Restore() : null,
             Travel = file.Sections.ContainsKey(TravelSave.SectionName) ? RestoreTravel(Decode<TravelSave>(file, TravelSave.SectionName, compressed: true), content, economy, cs.Seed) : null,
             Talk = file.Sections.ContainsKey(TalkSave.SectionName) ? Decode<TalkSave>(file, TalkSave.SectionName, compressed: true).Restore() : null,
+            Onboarding = file.Sections.ContainsKey(OnboardingSave.SectionName) ? Decode<OnboardingSave>(file, OnboardingSave.SectionName, compressed: true).Restore() : null,
             Party = file.Sections.ContainsKey(PartySection) ? Decode<Ravensguard.Sim.Trade.HeroPartySave>(file, PartySection, compressed: true).Restore() : null,
             Hero = hero, Codex = codex, Live = resume, Economy = economy, Abstract = abstractState,
             Farming = file.Sections.ContainsKey(FarmingSection) ? Decode<FarmingSave>(file, FarmingSection, compressed: true).Restore(region) : null,
@@ -591,6 +595,7 @@ public sealed class LiveCapture
     internal TravelSave? Travel { get; init; }
     internal AutopilotSave? Autopilot { get; init; }
     internal TalkSave? Talk { get; init; }
+    internal OnboardingSave? Onboarding { get; init; }
     internal Ravensguard.Sim.Trade.HeroPartySave? Party { get; init; }
     internal MarketsSave? Markets { get; init; }
     internal ContinentSave? ContinentSt { get; init; }
@@ -640,6 +645,7 @@ public sealed class LiveCapture
         if (Travel != null) sections.Add(new(TravelSave.SectionName, SaveCodec.SerializeCompressed(Travel)));
         if (Autopilot != null) sections.Add(new(AutopilotSave.SectionName, SaveCodec.SerializeCompressed(Autopilot)));
         if (Talk != null) sections.Add(new(TalkSave.SectionName, SaveCodec.SerializeCompressed(Talk)));
+        if (Onboarding != null) sections.Add(new(OnboardingSave.SectionName, SaveCodec.SerializeCompressed(Onboarding)));
         if (Party != null) sections.Add(new(WorldSave.PartySection, SaveCodec.SerializeCompressed(Party)));
         if (Production != null) sections.Add(new(WorldSave.ProductionSection, SaveCodec.SerializeCompressed(Production)));
         if (Markets != null) sections.Add(new(WorldSave.MarketsSection, SaveCodec.SerializeCompressed(Markets)));

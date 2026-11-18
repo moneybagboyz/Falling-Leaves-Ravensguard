@@ -1688,3 +1688,204 @@ AP_ALERT_TAKE,Take control
 AP_ALERT_GO,Continue autopilot
 AP_ALERT_JOURNAL,Open journal
 AP_TOOK_CONTROL,You have the hero again.
+HINT_MOVE,Move with {@world.move_up} {@world.move_left} {@world.move_down} {@world.move_right}. Hold {@world.sprint} to hurry; you tire.
+HINT_SPEEDS,"Time runs at 1x. {@world.speed_2} {@world.speed_4} {@world.speed_8} make it faster, {@world.pause} pauses."
+HINT_INTERACT,Press {@world.act} on what is near you; {@world.context_menu} lists everything you can do with it.
+HINT_JOB_BOARD,"Odd jobs are posted here or at the inn. The poster pays when the work is done, not before."
+HINT_WEIGHT,You carry over half of what you can. Weight slows you; drop what you do not need.
+HINT_HUNGER,"You are getting hungry. Eat from your pack, or buy bread at a market."
+HINT_COLD,"You are chilled: wet clothes and wind steal your warmth. Find a fire or a roof, and dry off."
+HINT_MOUNT,Press {@world.act} to mount. {@world.sprint} gallops; horses tire.
+HINT_FATIGUE,"You are tired. Sleep in a bed: {@world.act} on a bed, or make camp with {@world.camp}."
+HINT_SAVE,"{@world.quicksave} saves, {@world.quickload} loads. The game also saves for you now and then."
+HINT_REPORT_BUG,{@world.report_bug} reports a problem. Nothing is sent without your consent.
+HINT_CAMERA,Zoom with {@world.zoom_in} and {@world.zoom_out}; {@world.camera_home} brings the view back to you.
+HINT_TOPICS,Choose what to say with the number keys. Ask for news and the road: people tell what they have heard.
+HINT_TRADE,Prices are per unit and move with supply. The price notebook {@trade.notebook} remembers what you saw.
+HINT_RUMOUR_HOW,A rumour is only as good as its chain. Open the Journal {@world.panel_journal} and ask how they know.
+HINT_JOB_TAKEN,The Journal {@world.panel_journal} lists the steps of your job. The poster is waiting for you.
+HINT_JOB_DONE,Your pay has come out of the poster's escrow. It is in your purse now.
+HINT_ESCROW,"The poster put the wage aside when the job was posted, so it will be paid if you finish."
+HINT_WET,Rain soaks cloth. Wet clothes cool you fast; a roof or a fire dries them.
+HINT_CONTAINER,A bag or basket holds more than your hands do. Open the Inventory {@world.panel_inventory}.
+HINT_DROP,{@world.act} on an item on the ground picks it up. Drop things from the Inventory {@world.panel_inventory}.
+HINT_MAKE,"{@world.make} opens the crafting list for what you have here: tools, a station and light."
+HINT_UNATTENDED,It keeps going while you are away. The alert will tell you when it is done.
+HINT_LIGHT,"It is too dark to work well. Light a torch with {@world.torch}, or wait for day."
+HINT_AUTOTRAVEL,{@world.map} opens the map: travel here walks the road for you and stops when something happens.
+HINT_INTERRUPTS,"The journey stopped because something happened. Read the line, then go on or turn back."
+HINT_DUSK,"Dusk is coming and you are on the road. Reach a roof, or make camp with {@world.camp}."
+HINT_CAMP,"{@world.camp} makes camp: a fire, a place to sleep, and rest for the animals."
+HINT_FORAGE,"{@world.forage} searches the ground for food, kindling and herbs. It takes time."
+HINT_FORD,"The river is too high to cross here. Try a bridge, or wait for it to drop."
+HINT_GAIT,A gallop is fast but tires the horse quickly. {@mounted.walk_toggle} walks; {@world.sprint} gallops.
+HINT_TIRED_HORSE,"Your horse is tired. Walk it, rest it, and give it water and oats."
+HINT_FEED,"The animal is low on fodder. Buy oats or hay, or let it graze."
+HINT_MUD,The cart is heavy for this ground. Unload some of it or add another animal before it bogs down.
+HINT_STUCK,"The cart is stuck. Push, unload with {@world.cart_unload}, dig with {@world.cart_dig}, or add a team."
+HINT_RECRUIT,Someone here might follow you if they trust you and you can pay. Talk to them.
+HINT_SQUAD_BAR,Your followers show in the bar. {@world.panel_squad} opens the squad; {@world.order_wheel} gives orders.
+HINT_WAGES,"Followers want their wages. Unpaid, they will leave."
+HINT_CONTROLS,{@world.controls_overlay} shows the keys for this screen.
+D_ONB_LEAVE,Never mind. Goodbye.
+D_ONB_ACCEPT_Q,Yes. I will do it.
+D_ONB_ASK_PAY,What does it pay?
+D_ONB_ASK_DANGER,Is it dangerous?
+D_ONB_ACCEPT_AFTER,I will do it all the same.
+D_ONB_BACK,Let me ask something else.
+D_ONB_ASK_PAST,How did you come to this?
+D_ONB_ASK_FAMILY,Have you family?
+D_ONB_ASK_BANDITS,Who should I fear on the road?
+D_ONB_ASK_FORD,What of the rivers?
+D_ONB_ASK_TIPS,Any advice for a stranger?
+D_ONB_ASK_MORE,Tell me more.
+D_ONB_HORSE_ACCEPT,"I will take care of it, and bring it back."
+D_ONB_HORSE_LATER,Perhaps later.
+D_ONB_REPEAT_JOB,About the work you gave me...
+D_ONB_REPEAT_HORSE,About that animal you spoke of...
+D_OK_INTRO,"Your bearing is a squire's, and your eyes are not. I have seen both. Sit if you like; {place} is no worse than the next place for a man with nowhere to be."
+D_OK_WORK,"I have a sack of oats that must go from the granary to the stable before the grooms start shouting. A squire has carried worse. It is a small thing, and it pays."
+D_OK_PAY,"The grooms' wage, from my own purse, put aside this morning. Not a knight's pay, but you will not go hungry for it."
+D_OK_DANGER,"Only to your pride. The granary is two hundred paces from the stable, and the dog bites only the ones who run."
+D_OK_ACCEPT,Good. Take the sack and mind the dog. Come back to me when the stable hand has signed for it.
+D_OK_AFTER,A knight is made of small duties done well. Go on.
+D_OK_WHO,I rode behind three lords and buried two of them. Now I keep this yard and tell young fools what they will not hear.
+D_OK_PAST,"A spear in the ribs at a ford, a wet winter, and an honest surgeon. I was lucky; the lord was not."
+D_OK_FAMILY,"A daughter who married a miller and thinks me a bore. She is right, and she feeds me on feast days."
+D_OK_ROAD,"Roads are as honest as the men who keep them. Keep to the king's road, and keep your sword where you can reach it."
+D_OK_BANDITS,"Men who were soldiers once. They ask for your purse politely, the first time. Do not make them ask twice."
+D_OK_FORD,"Wait for the water to fall. A horse can swim, a man in mail cannot."
+D_OK_TIPS,Water the horse before yourself. Never ride a tired animal into a strange town. And bow to the reeve; he remembers.
+D_OK_NEWS,"The lords quarrel over a boundary stone and the poor pay for it, as ever. The roads are quieter than last year, and I do not trust the quiet."
+D_OK_MORE,"They say a lord to the east has hired every sword he can find. Whoever he means to fight, I would not stand between them."
+D_OK_HORSE,"You sit a saddle? Then take my palfrey for three days. There is a letter that must reach the next village, and she needs the exercise more than I need the peace."
+D_OK_LENT,"She is called Brindle and she is gentler than she looks. Take the sealed letter, carry it to the next village, and bring her back sound. Three days, no more."
+D_OK_REPEAT,Back already? A squire's day is short. What is it?
+D_OK_JOB_DONE,The grooms say you did it without being told twice. That is more than I can say for my last three squires.
+D_OK_ASK_WORK,Is there any work for me?
+D_OK_ASK_WHO,"Who are you, sir?"
+D_OK_ASK_ROAD,What is the road like?
+D_OK_ASK_NEWS,Any news?
+D_OK_ASK_HORSE,Could I borrow a horse?
+D_FF_INTRO,"You are not from here, and you walk like someone who looks over their shoulder. I ask no questions. This is {place}; the soup is thin but the roof is dry."
+D_FF_WORK,"The apples are ripe, and my back is not. A basket carried in from the orchard would be a kindness, and I pay for kindness."
+D_FF_PAY,"Coin from my own jar, put aside this morning. Not much. Honest, though."
+D_FF_DANGER,"Only the wasps. They are worse than any lord's bailiff, and I say that as one who knows."
+D_FF_ACCEPT,Good. Take the big basket by the gate and mind the wasps. I will pour you a cup when it is done.
+D_FF_AFTER,An honest wage is the first brick of a free man's house.
+D_FF_WHO,"I was a bondman once, and I stood in a town for a year and a day. Now I have an orchard, a wife and a name nobody owns."
+D_FF_PAST,"I did what you are doing. I walked at night, slept under hedges and learned to look as if I belonged. It works, for a while."
+D_FF_FAMILY,"A wife, three children and a dog who wants to be a sheepdog. All of them are free, and I intend to keep it so."
+D_FF_ROAD,"Keep off the lord's road and the bailiff's eyes. The tracks between the villages are worse, but nobody asks your name on them."
+D_FF_BANDITS,"Hungry men, mostly. They want your bread, not your life. Sometimes. Give them the bread."
+D_FF_FORD,"It floods in spring. Cross in the morning, when the water is low, and wade where the stones are flat."
+D_FF_TIPS,Never say where you came from. Learn a trade and let people need you. A needed man is hard to hand back.
+D_FF_NEWS,"The reeve was asking about runaways at the mill. I told him I had seen nothing, which was true of what he was looking for."
+D_FF_MORE,"There is talk of a new lord taking the manor to the east. A new lord counts his people, and then counts them again."
+D_FF_HORSE,"You can ride? My cousin keeps a mule at the next village, and she wants a cart of apples taken to market. Take mine, and bring the beast back."
+D_FF_LENT,"The mule is called Patience, and she is very well named. Take the apples to the market in the next village, sell them for what they fetch and bring her home within three days."
+D_FF_REPEAT,Back again. Did the wasps leave you anything?
+D_FF_JOB_DONE,"A full basket and no stings. You have the makings of a free man, my friend."
+D_FF_ASK_WORK,Do you have any work?
+D_FF_ASK_WHO,Who are you?
+D_FF_ASK_ROAD,How is the road?
+D_FF_ASK_NEWS,Any news?
+D_FF_ASK_HORSE,Could I borrow a beast?
+D_OS_INTRO,"Stand straight when you speak to me. Better. You have stood in a line before. I am the sergeant of the gate at {place}, and I am short of a good man."
+D_OS_WORK,"A watch at the gate for two hours. Look at faces, check the carts, say nothing clever. A guard who talks is a guard who is looking at the wrong man."
+D_OS_PAY,"A guard's wage, set aside this morning from the watch fund. It is fair. I do not cheat my men, and you are my man for two hours."
+D_OS_DANGER,"Drunks and carters, mostly. If it is worse, you shout. That is what the horn is for."
+D_OS_ACCEPT,Good. Take the post by the gate and keep your eyes open. I will be along to see you do not fall asleep.
+D_OS_AFTER,Two hours. It will feel like six. That is how you know it is working.
+D_OS_WHO,"Thirty years in the line, and a limp to show for it. The lord stopped paying and I kept the spear. Now I keep the gate."
+D_OS_PAST,I took a pike at a river crossing and held it till the cavalry came. They gave me a ribbon and a bad leg. I would have taken the money.
+D_OS_FAMILY,"I had a wife. The war took her, as it takes the quiet ones. I have the gate, and the gate does not argue."
+D_OS_ROAD,"Mind the carters and the pilgrims. The carters because they are in a hurry and the pilgrims because they are slow, and both of them block the road."
+D_OS_BANDITS,"Deserters, who learned in the army how little a man is worth. Never walk into the trees alone, and never sleep without a guard."
+D_OS_FORD,"The ford at the lower road floods in rain. The wise wait. The brave swim, and the wise bury them."
+D_OS_TIPS,"Count the exits when you enter a room, and the faces when you leave. Eat when you can and sleep when you can, and do both with your boots on."
+D_OS_NEWS,"A rider came through yesterday and would not say from where. The captain is nervous, and a nervous captain means doubled watches."
+D_OS_MORE,"They say one of the lords has called up men from the villages. If you meet a recruiting party, you have no business there."
+D_OS_HORSE,"You can sit a saddle? A messenger's horse stands idle in the yard, and a message must go to the next watch post. Take it, and bring the horse back."
+D_OS_LENT,"The grey is old and wise, and she will not be hurried. Carry the sealed message to the watch post and bring the horse back inside three days, or I shall hear of it."
+D_OS_REPEAT,"Back at the gate. What do you need, soldier?"
+D_OS_JOB_DONE,The watch says you stood well. That is the highest praise I allow. Do not let it go to your head.
+D_OS_ASK_WORK,Need a hand at the gate?
+D_OS_ASK_WHO,"Who are you, sergeant?"
+D_OS_ASK_ROAD,What of the roads?
+D_OS_ASK_NEWS,Any news from the watch?
+D_OS_ASK_HORSE,May I borrow a horse?
+D_PR_INTRO,"Peace, child. You wear the look of one raised in a house like this, and I know the hands that were taught to copy. {place} will keep you, if you let it."
+D_PR_WORK,"The infirmary has had no bread since the morning, and the brothers have gone to prayers. A basket of loaves from the bakehouse would feed the sick. It is not much, and it is honest work."
+D_PR_PAY,"The house gives a small wage for willing hands, from the almoner's purse, set aside this morning. It is not charity; it is justice."
+D_PR_DANGER,"Only the steps, which are worn, and the old brother who thinks every young person is his nephew."
+D_PR_ACCEPT,Bless you. The loaves are by the bakehouse door. Carry them carefully; some of the sick have not eaten since yesterday.
+D_PR_AFTER,"The work of the hands is also prayer, child. Go with God."
+D_PR_WHO,"I am the prior of this house, which is a grand title for a man who counts candles. I have kept the rule for forty years and the books for thirty."
+D_PR_PAST,"I came as an orphan, like you. The bread was thin and the stone floor was cold. I learned to read, and the reading saved me."
+D_PR_FAMILY,"My family is the house. Some of them are saints and some are fools, and the Lord has a fondness for both."
+D_PR_ROAD,"The roads are in the keeping of the Lord and the reeve, in that order. Pilgrims are safe, mostly, because even robbers fear the afterlife."
+D_PR_BANDITS,"Hungry men wear any cloth. Do not be fooled by a habit, and do not be too proud to give a crust."
+D_PR_FORD,After rain the river takes the low road. The brothers say a prayer and wait. It is wiser than hurrying.
+D_PR_TIPS,"Give alms and keep your purse closed. Write down what you see, for memory is a thief and a liar. And never lie to a priest, he has heard it all."
+D_PR_NEWS,"There is a quarrel over the tithe barn, and a brother has gone missing from a house three days away. The prior there will not say more, and that is itself a thing to hear."
+D_PR_MORE,"Old books are being sold off from a poor house in the north. Someone wants the pages, not the binding. I would give much to know who."
+D_PR_HORSE,"You read, and you can ride? The house mule is idle, and a satchel of copied pages must go to a village chapel. Take her, and bring her back safe."
+D_PR_LENT,"She is called Obedience, though she is not. Carry the satchel to the village chapel, hand it to the priest, and bring the mule home within three days."
+D_PR_REPEAT,Peace be with you. What do you need?
+D_PR_JOB_DONE,"The infirmary is fed and the sick are grateful. The Lord counts such things, and so do I."
+D_PR_ASK_WORK,Is there any work I can do?
+D_PR_ASK_WHO,"Who are you, father?"
+D_PR_ASK_ROAD,What of the roads?
+D_PR_ASK_NEWS,Any news?
+D_PR_ASK_HORSE,Could I borrow an animal?
+D_ST_INTRO,"You carry yourself like one of the house, and you are not on my roll. I am the steward at {place}. State your business, and quickly; the rents will not collect themselves."
+D_ST_WORK,"A tenant owes a measure of rent, and the cart is not ready. If you walk down and collect it, I will see you are paid. A man of the house should know what the land owes."
+D_ST_PAY,"A fair wage, paid from the house account, put aside this morning. I note it in the book, so it must be fair."
+D_ST_DANGER,The tenant is sour and the dog is sourer. You will survive. The lord's name will open the gate.
+D_ST_ACCEPT,"Good. Take the tally stick and the sack; count the measure twice, and write what he says. A steward who does not write is a fool."
+D_ST_AFTER,"Count it twice, and never argue. It is the dog that bites."
+D_ST_WHO,"Thirty years in the lord's service. I know every rent and every debt in this valley, and where the bodies are buried, in the books."
+D_ST_PAST,"I was a clerk's son who could count. The lord needed someone who could, and I needed a roof. We have kept the bargain."
+D_ST_FAMILY,"A wife who runs the dairy, and a son who wants to go to sea. I hope he does not. The sea does not keep accounts."
+D_ST_ROAD,"The road to the town house is a good one, kept by the lord's labour. Keep to it, and the lord's name will carry you further than your sword."
+D_ST_BANDITS,Poachers and worse. They know the lord's woods and the lord's hours. Do not stray into the trees after dusk.
+D_ST_FORD,The lord keeps a bridge on the town road. Pay the toll without argument; the lord is not fond of those who grumble about it.
+D_ST_TIPS,"Be courteous to the lord's people and exact with the lord's money. Remember a name, and remember a face. And never sign what you have not read."
+D_ST_NEWS,"The lord is short of money and long of ambition, which is a bad pair. The harvest was fair, but the rents were never fair, and everyone knows it."
+D_ST_MORE,A cousin of the house has been seen at the town court asking about the old will. I should not tell you this. I have.
+D_ST_HORSE,"You ride? The lord's town house wants a letter, and the manor palfrey wants exercise. Take her, and bring her back before the lord notices."
+D_ST_LENT,"She is called Duchess, and she knows she is better than you. Carry the letter to the lord's town house, and bring her back inside three days. The stable book will say the same."
+D_ST_REPEAT,"Back to the book, I see. What is it?"
+D_ST_JOB_DONE,The tally is exact. I had my doubts. I do not have them now.
+D_ST_ASK_WORK,Is there work for me?
+D_ST_ASK_WHO,Who are you?
+D_ST_ASK_ROAD,What of the road?
+D_ST_ASK_NEWS,Any news of the house?
+D_ST_ASK_HORSE,May I borrow a horse?
+D_FE_INTRO,"You are not from the village, and you are not from the road. Good; I like a man with a quiet past. Keep your voice down. The walls here are thin, and I am {place}'s oldest listener."
+D_FE_WORK,"A bundle of pelts wants moving from my back room to a camp in the trees. Nobody asks where from. I pay for a quiet pair of hands, and I pay on time."
+D_FE_PAY,"Coin from my own box, put aside this morning. It is clean enough, and it will spend anywhere."
+D_FE_DANGER,"The camp is in the trees, and the trees watch back. Walk, do not run, and nobody notices a man with a bundle."
+D_FE_ACCEPT,Good. The bundle is under the table. Take it to the camp by the oak and say the word the old man gave you. You have not heard it? Then use mine.
+D_FE_AFTER,"Go quietly. A quiet man is rich, in the end."
+D_FE_WHO,"I buy, I sell, and I do not ask. Some call it a trade; others call it a crime. The same people eat my bread."
+D_FE_PAST,I was a poacher who learned to count. The lord's men hung my brother and spared me. I decided to be useful instead.
+D_FE_FAMILY,"I have no family, only customers. They are more reliable."
+D_FE_ROAD,"There are two roads: the king's and the other one. The other is shorter, and it has fewer questions."
+D_FE_BANDITS,"The honest ones stay out of the trees, and the dishonest ones are my friends. A friend is a man who owes you."
+D_FE_FORD,"The lower ford has a hidden crossing. I will not draw it for you, but I will tell you to look for the dead oak."
+D_FE_TIPS,"Never carry what you cannot explain, and never explain what you carry. A friendly face costs nothing, a hostile one costs a head."
+D_FE_NEWS,"The reeve has hired two new men to watch the road. Business will slow for a week, and then the new men will learn what the old ones knew."
+D_FE_MORE,A man with a notice went through here asking about someone with your build. I said I had seen no one. I always say that.
+D_FE_HORSE,"You can ride? There is a donkey out back who will carry the pelts to the market in the next town without a fuss. Take him, and bring him back; I like him better than most men."
+D_FE_LENT,"He is called Quiet, and the name is an order. Take the pelts to the market in the next town, sell them for what they fetch and bring him back within three days."
+D_FE_REPEAT,"Back already, are you? Close the door."
+D_FE_JOB_DONE,"You said nothing and returned. That is rarer than gold, and I will remember it."
+D_FE_ASK_WORK,Got any work?
+D_FE_ASK_WHO,Who are you?
+D_FE_ASK_ROAD,What is the road like?
+D_FE_ASK_NEWS,Heard anything?
+D_FE_ASK_HORSE,Could I borrow a beast?
+D_CM_ASK_LOAN,Could I borrow a horse for an errand?
+D_CM_LEND,"Take the grey from the end of the line. She is old and steady, and the next town is a day's slow ride. Carry my letter to the stall-keeper there, and bring her back within three days. I will notice if you do not."

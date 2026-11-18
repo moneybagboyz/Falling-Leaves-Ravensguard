@@ -1,0 +1,20 @@
+// The first hour of each origin (onboarding spec 3.5): the mentor's small contract (an odd job through the job system), the animal lent for the first ride and the errand it carries the hero on.
+// Distances in metres; the job pays what the job system works out (with the 40 mite floor of onboarding_settings), from the mentor's own household.
+[
+  { "type": "onboarding_settings", "id": "onboarding" },
+
+  { "type": "first_hour", "id": "fh_disgraced_squire", "origin": "disgraced_squire", "mentor": "old_knight", "job_kind": "Haul", "job_distance_m": 300, "job_kg": 12,
+    "job_title": "Carry a sack of oats to the stable", "loan_breed": "horse_palfrey", "errand_title": "Carry a sealed letter to the next village", "return_at": "start" },
+  { "type": "first_hour", "id": "fh_peddler", "origin": "peddler", "mentor": "caravan_master", "job_kind": "Guard", "job_hours": 2,
+    "job_title": "Guard the wagons for two hours", "loan_breed": "horse_palfrey", "errand_title": "Ride ahead to book the stall in the next town", "return_at": "start" },
+  { "type": "first_hour", "id": "fh_runaway_serf", "origin": "runaway_serf", "mentor": "free_farmer", "job_kind": "Fetch", "job_distance_m": 250, "job_kg": 10,
+    "job_title": "Bring in a basket of apples", "loan_breed": "mule", "errand_title": "Take a load of apples to the market", "return_at": "start" },
+  { "type": "first_hour", "id": "fh_discharged_soldier", "origin": "discharged_soldier", "mentor": "old_sergeant", "job_kind": "Guard", "job_hours": 2,
+    "job_title": "Stand a watch at the gate", "loan_breed": "horse_palfrey", "errand_title": "Carry a message to the neighbouring watch post", "return_at": "start" },
+  { "type": "first_hour", "id": "fh_monastery_orphan", "origin": "monastery_orphan", "mentor": "prior", "job_kind": "Deliver", "job_distance_m": 200, "job_kg": 8,
+    "job_title": "Carry a basket of loaves to the infirmary", "loan_breed": "mule", "errand_title": "Take a satchel of manuscripts to the village chapel", "return_at": "start" },
+  { "type": "first_hour", "id": "fh_minor_heir", "origin": "minor_heir", "mentor": "steward", "job_kind": "Deliver", "job_distance_m": 400, "job_kg": 6,
+    "job_title": "Collect a measure of rent from a tenant", "loan_breed": "horse_palfrey", "errand_title": "Carry a letter to the lord's town house", "return_at": "start" },
+  { "type": "first_hour", "id": "fh_outlaw", "origin": "outlaw", "mentor": "fence", "job_kind": "Haul", "job_distance_m": 250, "job_kg": 14,
+    "job_title": "Haul a bundle of pelts to the camp", "loan_breed": "donkey", "errand_title": "Take the pelts to the market in the next town", "return_at": "start" }
+]

@@ -141,6 +141,12 @@ public static class RngStreams
     /// <summary>Learning a recipe by watching (key person, tick 0, draw = recipe index x 16 + attempt).</summary>
     public const uint CraftWatch = 0x362;
 
+    // ---------- onboarding (docs/specs/phase3/onboarding-v1.md section 5) ----------
+    /// <summary>Start-site tie-break among equally scored candidates and the mentor's spawn jitter (key world seed, tick = origin hash).</summary>
+    public const uint OnboardingSite = 0x370;
+    /// <summary>Onboarding job parameters: which good, which route (key new-game seed).</summary>
+    public const uint OnboardingJob = 0x371;
+
     // ---------- people records ----------
     /// <summary>A newborn's or immigrant's name and attributes.</summary>
     public const uint Name = 0x2C0, Attributes = 0x2C1;

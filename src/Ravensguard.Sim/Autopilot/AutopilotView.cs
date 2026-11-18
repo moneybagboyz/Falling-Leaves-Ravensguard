@@ -66,7 +66,8 @@ public sealed partial class AutopilotWorld
         var q = st.Queue.Select(d => d.State == DirectiveState.Done ? d.Name + " (done)" : d.State == DirectiveState.Blocked ? d.Name + " (blocked)" : d.Name).ToList();
         var tail = Book.Log.Lines.Where(l => l.Person == person).TakeLast(8).Select(l => $"{l.Sec % 86400 / 3600:00}:{l.Sec % 3600 / 60:00} {l.Text}").ToList();
         long coin = CoinOf(st);
-        return new AutopilotView(true, st.Enabled, st.Paused, bus.Paused, bus.PausedBy?.Text ?? "", st.Active?.Name ?? "", st.ActiveIdx, q, LimitGuard.SpentOn(st, day), st.Limits.SpendCapMitesPerDay, coin,
+        string doing = (st.Active?.Name ?? "") + (JobOfPerson(person) is { } job && job.Title.Length > 0 ? " - " + job.Title : "");       // "Work for pay - Field work"
+        return new AutopilotView(true, st.Enabled, st.Paused, bus.Paused, bus.PausedBy?.Text ?? "", doing, st.ActiveIdx, q, LimitGuard.SpentOn(st, day), st.Limits.SpendCapMitesPerDay, coin,
             st.Limits.Clone(), (InterruptPolicy[])st.Policy.Clone(), (bool[])st.Quiet.Clone(), tail, Warning(st)) { SlowUntilSec = bus.NotifySlowUntilSec, Wanted = Wanted.TryGetValue(person, out var w) ? w : null };
     }
 
