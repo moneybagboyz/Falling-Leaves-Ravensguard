@@ -53,6 +53,7 @@ public sealed class LiveSaveFixture
     }
 }
 
+[Collection(TimingCollection.Name)] // the save hitch is a wall-clock budget: run alone (Phase 3 cleanup)
 public class LiveSaveTests(LiveSaveFixture fx, ITestOutputHelper output) : IClassFixture<LiveSaveFixture>
 {
     /// <summary>A fresh play session on its own copy of the chunk store: walks, opens a Codex page, lights the torch and runs the clock.</summary>
@@ -263,9 +264,8 @@ public class LiveSaveTests(LiveSaveFixture fx, ITestOutputHelper output) : IClas
         live.SetInput(new MoveInput(1, 0, Sprint: true)); for (int i = 0; i < 40; i++) live.Step();
         world.Chunks.AppendDelta(new ChunkKey(5, 5, 0), [ChunkOp.SetTile(1, 1, 7)]);
 
-        var sw = Stopwatch.StartNew();
-        var snap = WorldSave.SnapshotLive(world, live, fx.ContentHash);
-        double hitchMs = sw.Elapsed.TotalMilliseconds;
+        var sw = new Stopwatch(); LiveCapture snap = null!;
+        double hitchMs = TestBudget.BestPass(100, 3, () => { sw.Restart(); snap = WorldSave.SnapshotLive(world, live, fx.ContentHash); return sw.Elapsed.TotalMilliseconds; });
         sw.Restart();
         var file = await Task.Run(snap.Encode);
         double encodeMs = sw.Elapsed.TotalMilliseconds;

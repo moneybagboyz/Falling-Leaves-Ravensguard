@@ -515,7 +515,7 @@ public partial class StreetView
         long sx = hx + (Debug.DevContext.Travel != null && _opt.Travel != null ? 9_000 : 70_000), sy = hy;
         if (g != null) { int n = Math.Min(4, g.Count.Count > 1 ? g.Count[1] : 1); foreach (var id2 in EncounterPlacement.Cast(t, d, g, n, now, sx, sy)) cast.Add(id2.Value); }
         var ev = new EncounterEvent(now, d.Id, d.Kind, hx, hy, sx, sy, t.LegSerial, [.. cast], d.Bark);
-        t.Encounters.Add(ev); _enc = ev; _encOpen = true;
+        t.Encounters.Add(ev); _enc = ev; _encOpen = true; _encOptions = EncounterOutcomes.Options(d, Math.Max(20_000, _heroLink?.View?.CoinMites ?? 0));
         t.Bus.Raise(IsHostileKind(d.Kind) ? InterruptKind.Hostile : InterruptKind.Contract, now, hx, hy, d.Name);
         if (t.Journey != null) t.Journey.State = JourneyState.Paused;
         return d.Name;

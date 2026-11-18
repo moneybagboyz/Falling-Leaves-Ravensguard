@@ -67,9 +67,6 @@
   { "type": "build_piece", "id": "font",                 "name": "Baptismal font",    "kind": "furniture", "glyph": "f", "material": "granite", "tags": ["font"] },
   { "type": "build_piece", "id": "tomb",                 "name": "Tomb slab",         "kind": "furniture", "glyph": "t", "material": "granite", "tags": ["tomb"] },
   { "type": "build_piece", "id": "bell",                 "name": "Bell",              "kind": "furniture", "glyph": "l", "material": "bronze", "tags": ["bell"] },
-  { "type": "build_piece", "id": "training_dummy",        "name": "Training dummy",    "kind": "furniture", "glyph": "d", "material": "oak", "tags": ["training_dummy", "practice_yard"] },
-  { "type": "build_piece", "id": "notice_board",          "name": "Notice board",      "kind": "furniture", "glyph": "n", "material": "oak", "tags": ["notice_board"] },
-  { "type": "build_piece", "id": "yard_bench",            "name": "Bench",             "kind": "furniture", "glyph": "e", "material": "oak", "tags": ["bench"] },
   { "type": "build_piece", "id": "weapon_rack",          "name": "Weapon rack",       "kind": "furniture", "glyph": "r", "material": "oak", "tags": ["weapon_rack"] },
   { "type": "build_piece", "id": "toll_counter",         "name": "Toll counter",      "kind": "furniture", "glyph": "c", "material": "oak", "tags": ["toll"] },
   { "type": "build_piece", "id": "shop_counter",         "name": "Shop counter",      "kind": "furniture", "glyph": "s", "material": "oak", "tags": ["shop"] },
@@ -92,5 +89,9 @@
   { "type": "build_piece", "id": "cooper_bench",         "name": "Cooper's bench",    "kind": "workstation", "glyph": "k", "material": "oak", "station": "coopering" },
   { "type": "build_piece", "id": "tanning_pit",          "name": "Tanning pit",       "kind": "workstation", "glyph": "q", "material": "oak", "station": "tanning" },
   { "type": "build_piece", "id": "sawpit",               "name": "Sawpit",            "kind": "workstation", "glyph": "z", "material": "oak", "station": "sawing" },
-  { "type": "build_piece", "id": "charcoal_clamp",       "name": "Charcoal clamp",    "kind": "workstation", "glyph": "^", "station": "charcoal" }
+  { "type": "build_piece", "id": "charcoal_clamp",       "name": "Charcoal clamp",    "kind": "workstation", "glyph": "^", "station": "charcoal" },
+  // the practice yard (onboarding): appended, so the piece numbers of everything before stay as they were
+  { "type": "build_piece", "id": "training_dummy",        "name": "Training dummy",    "kind": "furniture", "glyph": "d", "material": "oak", "tags": ["training_dummy", "practice_yard"] },
+  { "type": "build_piece", "id": "notice_board",          "name": "Notice board",      "kind": "furniture", "glyph": "n", "material": "oak", "tags": ["notice_board"] },
+  { "type": "build_piece", "id": "yard_bench",            "name": "Bench",             "kind": "furniture", "glyph": "e", "material": "oak", "tags": ["bench"] }
 ]

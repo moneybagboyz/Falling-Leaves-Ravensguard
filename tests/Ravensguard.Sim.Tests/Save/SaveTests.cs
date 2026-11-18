@@ -268,41 +268,46 @@ public class SaveTests(ITestOutputHelper output)
         [Key(4)] public string Notes { get; set; } = "";
     }
 
-    [Fact]
-    public async Task SizeAndTime_10kPeople()
+    /// <summary>The save size and time budget (Phase 3 cleanup: wall-clock, so in the Timing collection).</summary>
+    [Collection(TimingCollection.Name)]
+    public class Timing(ITestOutputHelper output)
     {
-        var rng = new Random(1);
-        var people = new List<DummyPerson>();
-        for (int i = 0; i < 10_000; i++)
+        [Fact]
+        public async Task SizeAndTime_10kPeople()
         {
-            var blob = new byte[512]; rng.NextBytes(blob);          // incompressible worst case
-            people.Add(new DummyPerson
+            var rng = new Random(1);
+            var people = new List<DummyPerson>();
+            for (int i = 0; i < 10_000; i++)
             {
-                Id = EntityId.Make(IdKind.Person, (ulong)i + 1).Value,
-                Name = "Person " + i,
-                Skills = Enumerable.Range(0, 40).Select(_ => rng.Next(0, 100)).ToArray(),
-                Blob = blob,
-                Notes = new string('x', 200) + i,
-            });
+                var blob = new byte[512]; rng.NextBytes(blob);          // incompressible worst case
+                people.Add(new DummyPerson
+                {
+                    Id = EntityId.Make(IdKind.Person, (ulong)i + 1).Value,
+                    Name = "Person " + i,
+                    Skills = Enumerable.Range(0, 40).Select(_ => rng.Next(0, 100)).ToArray(),
+                    Blob = blob,
+                    Notes = new string('x', 200) + i,
+                });
+            }
+            var raw = SaveCodec.Serialize(people);
+            output.WriteLine($"raw people section: {raw.Length / 1024} KB ({raw.Length / people.Count} B/person)");
+
+            using var d = new TempDir();
+            var w = new SaveWriter(d.Path);
+            var sw = Stopwatch.StartNew();
+            var snap = new SaveFile(Header(), new[] { new KeyValuePair<string, byte[]>("people", raw) });
+            var captureMs = sw.ElapsedMilliseconds;
+            var p = await w.WriteAutosaveAsync(snap);
+            sw.Stop();
+            var size = new FileInfo(p).Length;
+            output.WriteLine($"snapshot capture: {captureMs} ms; total save: {sw.ElapsedMilliseconds} ms; file: {size / 1024} KB");
+            Assert.True(sw.Elapsed.TotalMilliseconds < TestBudget.Ms(3000), $"save took {sw.Elapsed.TotalSeconds}s");
+            Assert.True(size < 20 * 1024 * 1024);
+
+            sw.Restart();
+            var loaded = new SaveReader().Load(p);
+            output.WriteLine($"load: {sw.ElapsedMilliseconds} ms");
+            Assert.Equal(raw, loaded.Sections["people"].ToArray());
         }
-        var raw = SaveCodec.Serialize(people);
-        output.WriteLine($"raw people section: {raw.Length / 1024} KB ({raw.Length / people.Count} B/person)");
-
-        using var d = new TempDir();
-        var w = new SaveWriter(d.Path);
-        var sw = Stopwatch.StartNew();
-        var snap = new SaveFile(Header(), new[] { new KeyValuePair<string, byte[]>("people", raw) });
-        var captureMs = sw.ElapsedMilliseconds;
-        var p = await w.WriteAutosaveAsync(snap);
-        sw.Stop();
-        var size = new FileInfo(p).Length;
-        output.WriteLine($"snapshot capture: {captureMs} ms; total save: {sw.ElapsedMilliseconds} ms; file: {size / 1024} KB");
-        Assert.True(sw.Elapsed.TotalMilliseconds < TestBudget.Ms(3000), $"save took {sw.Elapsed.TotalSeconds}s");
-        Assert.True(size < 20 * 1024 * 1024);
-
-        sw.Restart();
-        var loaded = new SaveReader().Load(p);
-        output.WriteLine($"load: {sw.ElapsedMilliseconds} ms");
-        Assert.Equal(raw, loaded.Sections["people"].ToArray());
     }
 }

@@ -288,32 +288,6 @@ public class WeatherTests(ITestOutputHelper output)
 
     // ---------- performance ----------
 
-    [Fact]
-    public void Region_of_256_tiles_per_hour_is_fast()
-    {
-        var w = Make();
-        var cells = Enumerable.Range(0, 256).Select(i => (100 + i / 16) * N + 100 + i % 16).ToArray();
-        for (int h = 0; h < 48; h++) foreach (var c in cells) w.At(c, Hour(1, 50, 0) + h);
-        // best of 5 runs, so a busy machine doesn't fail the budget by accident
-        int hours = 200;
-        double ms = double.MaxValue;
-        var sw = new Stopwatch();
-        for (int run = 0; run < 5; run++)
-        {
-            sw.Restart();
-            for (int h = 0; h < hours; h++) foreach (var c in cells) w.At(c, Hour(1, 50, 0) + h % 48);
-            ms = Math.Min(ms, sw.Elapsed.TotalMilliseconds / hours);
-        }
-        output.WriteLine($"{ms:0.000} ms per game hour for 256 tiles (warm day caches)");
-        sw.Restart();
-        for (int h = 0; h < 24; h++) foreach (var c in cells) w.At(c, Hour(2, 10, 0) + h);
-        output.WriteLine($"cold day: {sw.Elapsed.TotalMilliseconds / 24:0.000} ms per game hour averaged over a day");
-#if DEBUG
-        Assert.True(ms < TestBudget.Ms(4.0), $"{ms} ms (debug build; the 1 ms budget applies to Release)");
-#else
-        Assert.True(ms < TestBudget.Ms(1.0), $"{ms} ms");
-#endif
-    }
 
     // ---------- year statistics ----------
 
@@ -359,5 +333,37 @@ public class WeatherTests(ITestOutputHelper output)
         }
         if (stats.TryGetValue(Biome.TemperateForest, out var f)) Assert.InRange(f.rainy, 12, 40);
         if (stats.TryGetValue(Biome.Desert, out var de)) Assert.True(de.rainy < 10);
+    }
+
+    /// <summary>The weather cost budget (Phase 3 cleanup: wall-clock, so in the Timing collection).</summary>
+    [Collection(TimingCollection.Name)]
+    public class Timing(ITestOutputHelper output)
+    {
+        [Fact]
+        public void Region_of_256_tiles_per_hour_is_fast()
+        {
+            var w = Make();
+            var cells = Enumerable.Range(0, 256).Select(i => (100 + i / 16) * N + 100 + i % 16).ToArray();
+            for (int h = 0; h < 48; h++) foreach (var c in cells) w.At(c, Hour(1, 50, 0) + h);
+            // best of 5 runs, so a busy machine doesn't fail the budget by accident
+            int hours = 200;
+            double ms = double.MaxValue;
+            var sw = new Stopwatch();
+            for (int run = 0; run < 5; run++)
+            {
+                sw.Restart();
+                for (int h = 0; h < hours; h++) foreach (var c in cells) w.At(c, Hour(1, 50, 0) + h % 48);
+                ms = Math.Min(ms, sw.Elapsed.TotalMilliseconds / hours);
+            }
+            output.WriteLine($"{ms:0.000} ms per game hour for 256 tiles (warm day caches)");
+            sw.Restart();
+            for (int h = 0; h < 24; h++) foreach (var c in cells) w.At(c, Hour(2, 10, 0) + h);
+            output.WriteLine($"cold day: {sw.Elapsed.TotalMilliseconds / 24:0.000} ms per game hour averaged over a day");
+    #if DEBUG
+            Assert.True(ms < TestBudget.Ms(4.0), $"{ms} ms (debug build; the 1 ms budget applies to Release)");
+    #else
+            Assert.True(ms < TestBudget.Ms(1.0), $"{ms} ms");
+    #endif
+        }
     }
 }

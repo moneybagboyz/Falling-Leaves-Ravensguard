@@ -94,6 +94,7 @@ public static class NewGameDebug
             var fresh = book.Entries.FirstOrDefault(e => !e.Unlocked) ?? throw new Exception("every Codex entry is already open");
             book.Unlock(fresh.Id);
             run.VisitNear(run.WorldCell.X, run.WorldCell.Y, 2000);
+            run.ClearPath(); // a walk in progress is saved now and goes on after the load (Phase 3 cleanup): stand still, so "where it was" is one spot
             var before = run.CaptureResume();
             if (before.Codex == null || !before.Codex.Unlocked.Contains(fresh.Id)) throw new Exception("the unlocked Codex entry is not in the live capture");
             if (!sv.StartSave(SaveKind.Manual)) throw new Exception("the street view would not save its run");

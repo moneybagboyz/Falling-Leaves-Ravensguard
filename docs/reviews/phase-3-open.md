@@ -3,35 +3,35 @@
 Gaps reported by the step agents or seen in screenshots. Each one is either fixed in the Phase 3 cleanup or moved to a named later phase in `docs/reviews/phase-3.md`.
 
 ## Gameplay gaps
-- Road encounters: outcomes (pay, trade, fight) all resolve to "go on". Pay and trade can be done now; fights wait for Phase 4.
-- `IEncounterCast` isn't wired to real caravan and vagrant records, so encounters use generated travellers.
-- Hunting works only as a dev command. Snares have no key or sprite.
-- Fairs are calendar queries only; the economy and job board don't use them yet.
-- Followers don't walk behind the hero yet (it needs the LODBridge). Their orders are stored.
-- Trade works only in the home region's markets.
-- Encumbrance changes the gait but not the exact speed (`LiveWorld.SpeedOf`).
+- DONE (cleanup B). Road encounters: `EncounterOutcomes` gives each script its options (pay through the hero desk's `EncounterPay` ledger transfer, trade and talk open the screens with the real person, flee, detour, wait); a fight is a stub ("combat arrives in Phase 4") that robs or runs by stream 0x348. Real combat stays Phase 4.
+- DONE. `RecordCast` casts the crew of a caravan on that road and the vagrants of nearby settlements; others stay generated. Trading with a caravan person trades the caravan's own cargo and float.
+- DONE. Hunt key `;` and snare key `'` (Q menu too), `TravelState.Hunt`, snare sprite `object.snare` through the art pipeline; snares keep their place in the save.
+- DONE. On a fair day holders run market sessions into the evening, ale/bread/meat demand is tilted, the job board posts x3/x2 and fair-stall jobs (`FairCalendar`). Not wired: content-driven `FairBook` demand and stall tolls.
+- DONE. `HeroTrail` + `FollowState` in `PeopleBridge`: followers are force-promoted and walk the hero's breadcrumb trail at 1.8 m spacing (stairs and portals included); Hold and other orders stay put. No follower screenshot was taken.
+- DONE. `AbroadDealing`: buy and sell in any resident region's book; coin and goods cross the border as Emigrate/Immigrate and Export/Import. Items and barter abroad wait.
+- DONE. `LiveWorld.LoadSpeedPm` scales every gait exactly. Note: it is set from the hero view and not yet recorded by the session recorder, so a replay of an overloaded hero will differ.
 - NPCs sheltering from cold or rain change their exposure but not their position (positions come from the schedule).
-- Cold deaths aren't recorded on person records (`DeathCause.Cold`). The hero's core temperature and wetness aren't in the save.
+- ~~Cold deaths aren't recorded on person records (`DeathCause.Cold`). The hero's core temperature and wetness aren't in the save.~~ Fixed (cleanup A): `RuntimePeople.ExposureDeathsAsync` turns `TakeExposureDeaths` into `PersonDied` commands (cold: `DeathCause.Cold`, heat: `Other`) applied at the region's next barrier, so the person record, `DeathsByCause` and the chronicle get them; the street view calls it each step. The hero's core, exposure counters and per-garment wetness are in the "live" section (`HeroBodySave`), put back once the hero is dressed (`ClothingBook.ApplyBody`). Tests: `ExposureDeathTests`, `LiveSaveTests.The_heros_core_temperature...`.
 - Weather-driven rest, storm suspension, feast half-days, the escort follow check, shop takings and hero fatigue aren't wired (step 3).
 - The live tier is still "theatre" for scheduled work: `WorkDone` is credited through `IWorkSink` for farm hours only.
 - Landless idle adults rise to about 2,100 over a century. Day-labour contracts are planned for Phase 5.
 - Crafting effects with no world state yet (lit fire, cart repair, garment refit) are only reported as events.
 
 ## Polish
-- Trade screen: weights show too many decimals (for example 8019.999 kg). Round sensibly.
+- DONE. `Quotes.Weight` (8,020 kg, 45.5 kg, 0.8 kg, 20 g) in the trade, inventory and crafting screens and the desk's texts.
 - ~~The HUD cold warning text is hard-coded English, not in `en.csv`.~~ Fixed (onboarding): `HUD_*` keys in `en.csv`, `ClothingFeed.HudLine` reads them.
 - ~~The `?` controls overlay is missing lines for the travel, camp, mounted and crafting contexts.~~ Fixed (onboarding): the overlay exists, built from `InputDefs` and the live key map, with pages for world, mounted, trade, crafting, camp, travel, called shot and build; `--selftest` checks every page against the key map. `world.camp` and `world.forage` had no `ACTION_*` text and now do.
-- The camp fire uses the hearth sprite.
-- Sleepers in side-by-side beds are drawn upright with the fall pose; there's no top-down lying sprite.
+- DONE. `object.campfire` and `object.campfire_lit`.
+- DONE. Rig action `lie` (seen from straight above); sleepers use it. Not shot.
 - Hair colour and style and the apron layer aren't in the rig. Skin-tone variation isn't applied.
-- The hero name label sometimes draws twice, slightly offset.
+- PARTLY. Could not reproduce; the nameplate is now one node, deduplicated on every sprite rebuild. (Doubled text seen over crowds was two barks overlapping.)
 
 ## Determinism and tests
-- Auto-travel isn't recorded by the session recorder, so a trip can't be replayed.
-- A path in progress at an autosave isn't saved, so a replay window starting there can diverge.
-- `RegionRecordsTests.Tick_levels_are_assigned...` once threw IndexOutOfRange inside a `Parallel.ForEach` in a region tick. It passes when run alone. This could be a real race: investigate it.
-- Timing tests are noisy when the machine is busy (`Daily_regions_are_staggered`, `HourlyTickTimings`). They're isolated in the Timing collection, but they still compete with other processes.
-- `JobTests.Determinism` ran out of memory once while Godot screenshot runs were going.
-- Vehicles face east or west only (no north/south sprites); a loaded cart bed isn't drawn with its cargo.
-- Dialogue: `start_contract` and `give_item` effects only toast; no legends fallback; caravans carry no rumours between regions; per-person mood in barks, the History (H) link and the Journal map pin are missing; only the caravan master was authored (now the seven first-hour mentors too: `old_knight`, `free_farmer`, `old_sergeant`, `prior`, `steward`, `fence` and the caravan master); the camp talk hook (Travel) isn't filled.
-- Autopilot: Q-menu directive verbs and a party-member directive picker in the squad screen aren't built; Tend and PursueAmbition are stubs (Phase 5 and Phase 8); AP-8 waits for dialogue's `offer_big` flag; AP-15 compares sessions rather than a literal command replay.
+- ~~Auto-travel isn't recorded by the session recorder, so a trip can't be replayed.~~ Fixed (cleanup A): `SessionRecorder.TravelPlace` (auto-travel and the autopilot's long walk), `SetLoadSpeed` (the load trade and crafting change), `Hero` (every desk command: trade, crafting, talk, hire, via `HeroWorld.Issued`) and `Action` (camp, directives, take control, talk choices, journey begin/cancel/resume); trace format 2 delta-codes the route, version 1 still reads; record-side commands reach `ReplayOptions.OnRecordCommand`. Test: `ReplayPhase3Tests` (trip, trade, craft, camp).
+- ~~A path in progress at an autosave isn't saved, so a replay window starting there can diverge.~~ Fixed (cleanup A): the "live" section keeps the route (region cells), its index, the stuck counter, the portal lock and the gait (`HeroMotion`); the T0 hash covers it. Tests: `LiveSaveTests.A_path_in_progress...`, `A_replay_window_starting_at_an_autosave_mid_route_matches`. The live people are still promoted afresh from the schedule after a load (the bridge isn't saved; they aren't in the record hashes): moved to Phase 4 with the LODBridge.
+- ~~`RegionRecordsTests.Tick_levels_are_assigned...` once threw IndexOutOfRange inside a `Parallel.ForEach` in a region tick. It passes when run alone. This could be a real race: investigate it.~~ Fixed (cleanup A): a real race. The continent's `CaravanTable` (one sorted dictionary shared by every region) was added to by the home region's worker while the neighbours' workers copied it in their caravan hour. It now locks and hands out snapshots, and the world cap on caravans counts the other regions as they were at the barrier (`Freeze`), so founding no longer depends on worker order. Tests: `RegionParallelStressTests` (8 writers and readers reproduce the IndexOutOfRange on the old table; 5 regions x 72 barriers at 8 workers equal 1 worker).
+- ~~Timing tests are noisy when the machine is busy (`Daily_regions_are_staggered`, `HourlyTickTimings`). They're isolated in the Timing collection, but they still compete with other processes.~~ Fixed (cleanup A), budgets unchanged: `TestBudget.BestPass` (warm-up by the caller, `GcSettle` before each pass, best of N, stop once within budget) in the hourly tick, live walk, people bridge, behaviour and vehicle maths tests, `GcSettle` per pass in the daily-region barrier test; every tight wall-clock budget test is in the Timing collection (`EconomyTimingTests`, `HorseTimingTests`, `AbstractPerformanceTests`, `LivePerfTests`, the save, weather and chunk timing classes).
+- ~~`JobTests.Determinism` ran out of memory once while Godot screenshot runs were going.~~ Fixed (cleanup A): not the machine. The shared `TownRig` ground has one `LevelPathfinder`, and test classes running in parallel searched it at once; its per-search arrays are shared, a parent chain got a cycle and `Build` grew its list without end. The pathfinder now locks its entry points and `Build` throws on a cycle. Test: `SharedPathfinderTests` (8 threads on one pathfinder give the one-thread routes; it hits the cycle without the lock).
+- DONE. `vehicle.<id>.n/.s` and `_loaded` variants (cart, handcart, ox wagon, sledge); `RideSprites` picks them from the facing and the bed's cargo.
+- Dialogue: DONE here: `start_contract` (a real odd job with escrow) and `give_item` (a store move, conserved), caravans carry rumours (`RumourCarriers`, hooked in `TalkLink`), the camp talk hook opens the talk window (`FireSpeaker`). Still open: no legends fallback; per-person mood in barks, the History (H) link and the Journal map pin are missing; only the caravan master was authored (now the seven first-hour mentors too: `old_knight`, `free_farmer`, `old_sergeant`, `prior`, `steward`, `fence` and the caravan master).
+- Autopilot: DONE here: the Q menu (new) holds directive verbs, and the squad screen (P) has a per-member picker. Still open: Tend and PursueAmbition are stubs (Phase 5 and Phase 8); AP-8 waits for dialogue's `offer_big` flag; AP-15 compares sessions rather than a literal command replay.

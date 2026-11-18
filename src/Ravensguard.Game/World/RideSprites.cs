@@ -27,6 +27,7 @@ public sealed class RideSprites
     readonly Dictionary<EntityId, Sprite2D> _animals = new(), _vehicles = new();
     readonly HashSet<EntityId> _seen = new();
     readonly Dictionary<EntityId, bool> _flip = new();
+    readonly Dictionary<EntityId, Facing> _face = new();
     double _t;
 
     public RideSprites(Node2D parent, ArtAtlas art) { _parent = parent; _art = art; }
@@ -63,28 +64,48 @@ public sealed class RideSprites
         foreach (var v in book.Vehicles.Rows)
         {
             var bp = book.Templates.At(v.Template); var st = bp.Stats;
-            var node = Get(_vehicles, v.Id, bp.Def.Sprite);
             bool driven = driving != null && driving.Id == v.Id;
-            if (driven) { if (heroEast) _flip[v.Id] = false; else if (heroWest) _flip[v.Id] = true; }
-            bool west = _flip.GetValueOrDefault(v.Id, false);
+            if (driven) _face[v.Id] = heroFacing;
+            var face = _face.GetValueOrDefault(v.Id, Facing.East);
+            bool ns = face is Facing.North or Facing.South, west = face == Facing.West;
+            bool loaded = book.Vehicles.CargoKg(v) > 0;
+            // the art atlas has the vehicle facing east, a loaded one, and head-on versions facing north and south (the game mirrors east for west)
+            string baseId = string.IsNullOrEmpty(bp.Def.Sprite) ? "object.draught_horse" : bp.Def.Sprite;
+            string id = ns ? baseId + (face == Facing.North ? ".n" : ".s") : baseId;
+            if (loaded && _art.Has(id + "_loaded")) id += "_loaded";
+            else if (loaded && ns && _art.Has(baseId + (face == Facing.North ? ".n" : ".s") + "_loaded")) id = baseId + (face == Facing.North ? ".n_loaded" : ".s_loaded");
+            if (!_art.Has(id)) { ns = false; id = baseId; }
+            var node = Get(_vehicles, v.Id, id);
+            if (node.Texture != _art.Texture(id)) node.Texture = _art.Texture(id);
             var pos = driven ? heroFeet + new Vector2(0, -1) : ToPx(v.XMm, v.YMm);
-            // the sprite is the template's footprint at 32 px a metre; its anchor is the seat (or the middle of a vehicle without one), which is where the row stands
-            var (ax, ay) = Anchor(st, node.Texture.GetHeight());
-            node.Position = pos; node.FlipH = west; node.Visible = visible;
-            node.Offset = new Vector2(west ? ax - node.Texture.GetWidth() : -ax, -ay);
+            const int pad = 4;
+            int th = node.Texture.GetHeight(), tw = node.Texture.GetWidth();
+            node.Position = pos; node.Visible = visible; node.FlipH = !ns && west;
+            float front = (st.LengthCells - SeatCell(st)) * Tile;
+            if (ns)
+            {
+                int rise = th - pad - st.LengthCells * Tile;
+                float ay = face == Facing.South ? rise + SeatCell(st) * Tile : rise + (st.LengthCells - SeatCell(st)) * Tile;
+                node.Offset = new Vector2(-tw / 2f, -ay);
+            }
+            else
+            {
+                var (ax, ay) = Anchor(st, th);
+                node.Offset = new Vector2(west ? ax - tw : -ax, -ay);
+            }
             if (driven) { lift = BenchLift; seated = true; seatFacing = west ? Facing.West : Facing.East; }
             // the team stands in front: pairs side by side across the pole, further pairs one behind another ahead of them
-            float dir = west ? -1f : 1f, front = (st.LengthCells - SeatCell(st)) * Tile;
+            Vector2 fwd = face switch { Facing.West => new(-1, 0), Facing.North => new(0, -1), Facing.South => new(0, 1), _ => new(1, 0) }, side = new Vector2(-fwd.Y, fwd.X);
             int n = 0;
-            foreach (var id in v.Team)
+            foreach (var tid in v.Team)
             {
-                if (book.Animals.Find(id) is not { } t) continue;
+                if (book.Animals.Find(tid) is not { } t) continue;
                 var tn = Get(_animals, t.Id, book.Breeds.At(t.Breed).Def.Sprite);
                 tn.FlipH = west;
                 int slots = Math.Max(1, st.HitchSlots), pair = n / slots, k = n % slots;
                 float reach = st.HitchKind switch { "shafts" => front - 20f, "traces" => front + 16f, _ => front - 8f } + pair * PairGap;      // the animal's shoulder at the yoke, the horse's chest in the shafts
                 float across = slots == 1 ? 0f : (k - (slots - 1) / 2f) * 2f * Abreast;
-                tn.Position = pos + new Vector2(dir * reach, across + 1);
+                tn.Position = pos + fwd * reach + side * across + new Vector2(0, 1);
                 tn.Visible = visible; n++;
             }
         }

@@ -40,6 +40,7 @@ public sealed class ChunkWorldFixture
     }
 }
 
+[Collection(TimingCollection.Name)] // the chunk generation budget is wall-clock: run alone (Phase 3 cleanup)
 public class ChunkTests(ChunkWorldFixture fx, ITestOutputHelper output) : IClassFixture<ChunkWorldFixture>
 {
     private RegionData R => fx.Region;

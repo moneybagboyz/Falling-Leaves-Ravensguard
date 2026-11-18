@@ -10,6 +10,7 @@ using Xunit.Abstractions;
 
 namespace Ravensguard.Sim.Tests.Save;
 
+[Collection(TimingCollection.Name)] // save and load time budgets: run alone (Phase 3 cleanup)
 public class WorldSaveTests(ITestOutputHelper output)
 {
     private sealed record Built(WorldState World, ContentDatabase Content, string ContentHash);
