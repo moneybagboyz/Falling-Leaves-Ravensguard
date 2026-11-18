@@ -12,14 +12,18 @@ namespace Ravensguard.Sim.Abstract;
 /// The spending of households that hold coin above their reserve (integration decision I37; the rules are <see cref="SpendingRuleDef"/> content). Once a season, on a
 /// day of the season fixed by its index, a household of the hour's slice spends a share of the coin it holds above <c>reserve_days</c> of its food: wages to the idle
 /// hands of its village (the poorest households first, a labourer's day wage for each day of service, at most a season's), works (builders' wages to the same idle hands
-/// and building materials bought at the market), craft goods bought at the market and used up, and alms to the destitute of its village and then its fief. A priest's
-/// household spends the parish chest with its own purse. Every coin moves by a ledger transfer or a market trade and every good is bought and then destroyed for a
-/// documented reason (Worn, Consumed), so coin and mass stay exact. Market purchases are buy orders filled at the next session; what a book cannot supply is not
-/// spent, but the order still counts in the book's demand, so the workshops see it. Not saved: it keeps no state between calls, only diagnostic totals.
+/// and building materials bought at the market), craft goods bought at the market, and alms to the destitute of its village and then its fief. A priest's household
+/// spends the parish chest with its own purse. Review finding 10: the hands hired, for service or for the works, work: their worker-days go to the payer's works job
+/// (building and repair), which lays the building materials the payer holds at <see cref="WorksMaterialsGPerWorkerDay"/> a day (reason Consumed; materials wait in its
+/// store until there are hands, and the next order buys only what the store lacks); food and ale bought go into the buyer's store and are eaten through the needs
+/// (reason Eaten), only the durables wear out on delivery (reason Worn). Every coin moves by a ledger transfer or a market trade, so coin and mass stay exact. Market
+/// purchases are buy orders filled at the next session; what a book cannot supply is not spent, but the order still counts in the book's demand, so the workshops
+/// see it. Not saved: it keeps no state between calls (the materials are in the stores), only diagnostic totals.
 /// </summary>
 public sealed class HouseholdSpending
 {
-    public const int ServiceDaysMax = 15, PoorBelowMites = 3000, AlmsPerMemberMites = 1000, OrderMaxRatioPermille = 2000;
+    /// <summary>Building materials one worker-day of works lays (a builder's day: timber, thatch, stone and lime, about the 20 kg a mason and his labourer set).</summary>
+    public const int WorksMaterialsGPerWorkerDay = 20_000;
     public const int RolePeasant = 0, RoleBurgher = 1, RoleGentry = 2, RoleLord = 3, RoleParish = 4;
     private static readonly string[] RoleIds = ["peasant", "burgher", "gentry", "lord", "parish"];
 
@@ -30,6 +34,9 @@ public sealed class HouseholdSpending
     private readonly int _dayWage;
 
     public long WagesMites, WorksLabourMites, AlmsMites, GoodsBudgetMites, MaterialsBudgetMites, Spenders;
+    /// <summary>Worker-days the hired hands put into works, and the materials they laid (grams).</summary>
+    public long WorksWorkerDays, WorksMaterialsLaidG;
+    private EconomyTuningDef T => _w.Economy.Tuning;
 
     public HouseholdSpending(SimWorld w, EconomyWorld ew, IReadOnlyList<SpendingRuleDef> rules)
     {
@@ -85,8 +92,10 @@ public sealed class HouseholdSpending
         int s = hht.Settlement[hh];
         // coin first: alms, then the wages of service and of the builders (from the parish chest first, for a priest)
         AlmsMites += Alms(hh, s, chest, purse, alms);
-        WagesMites += Hire(hh, s, chest, purse, wages);
-        WorksLabourMites += Hire(hh, s, chest, purse, worksLabour);
+        long hiredWages = Hire(hh, s, chest, purse, wages), hiredWorks = Hire(hh, s, chest, purse, worksLabour);
+        WagesMites += hiredWages; WorksLabourMites += hiredWorks;
+        // the hands work (review finding 10): their worker-days go to the payer's works and lay the materials it holds
+        Build(hh, role, (hiredWages + hiredWorks) / _dayWage);
         // then the market: craft goods and materials as buy orders for the next session
         GoodsBudgetMites += Order(hh, s, _goods[role], goods, 3, role);
         MaterialsBudgetMites += Order(hh, s, _materials[role], materials, 4, role);
@@ -96,8 +105,26 @@ public sealed class HouseholdSpending
     private long ManorReserve(int hh)
     {
         long r = 0; var prod = _ew.Production;
-        foreach (var b in prod.Businesses) if (b.OwnerHousehold == hh && b.State == BusinessState.Open && prod.KindOf(b).Id == "manor") r += (long)b.Staff.Count * 200 * 30;
+        foreach (var b in prod.Businesses) if (b.OwnerHousehold == hh && b.State == BusinessState.Open && prod.KindOf(b).Id == "manor") r += (long)b.Staff.Count * T.ManorReserveWageMitesPerDay * T.ManorReserveDays;
         return r;
+    }
+
+    /// <summary>The works job of a household (review finding 10): <paramref name="workerDays"/> of hired hands lay the building materials it holds, in the mix's order, at <see cref="WorksMaterialsGPerWorkerDay"/> a day.</summary>
+    private void Build(int hh, int role, long workerDays)
+    {
+        if (workerDays <= 0) return;
+        WorksWorkerDays += workerDays;
+        var store = _w.Economy.HouseholdStore[hh]; var cat = _w.Economy.Goods;
+        long left = workerDays * WorksMaterialsGPerWorkerDay;
+        foreach (var (g, _) in _materials[role])
+        {
+            if (left <= 0) break;
+            long unitG = cat.IsPiece(g) ? Math.Max(1, cat.Def(g).PieceMassG) : 1;
+            long units = Math.Min(store.Qty(g), (left + unitG - 1) / unitG);
+            if (units <= 0) continue;
+            long laid = store.DestroyUpTo(g, units, DestroyReason.Consumed);
+            left -= laid * unitG; WorksMaterialsLaidG += laid * unitG;
+        }
     }
 
     private bool Pay(PurseId chest, PurseId purse, PurseId to, long mites, TransferReason why)
@@ -130,7 +157,7 @@ public sealed class HouseholdSpending
             var occ = p.Occupation[i]; if (occ is not (Occupation.None or Occupation.Labourer or Occupation.Servant) || (occ == Occupation.Servant && p.Employer[i] >= 0)) continue;
             int age = p.AgeYears(i, day); if (age < 16 || age >= 60) continue;
             int h = p.Household[i]; if (h < 0 || hht.MemberCount[h] == 0 || hht.Class[h] == SocialClass.Gentry) continue;
-            long coin = e.Ledger.Balance(e.HouseholdPurse[h]).Mites; if (coin >= PoorBelowMites) continue;
+            long coin = e.Ledger.Balance(e.HouseholdPurse[h]).Mites; if (coin >= T.SpendingPoorBelowMites) continue;
             int s = hht.Settlement[h];
             if (!tmp.TryGetValue(s, out var l)) tmp[s] = l = [];
             l.Add((coin, i));
@@ -150,7 +177,7 @@ public sealed class HouseholdSpending
             {
                 int person = list[0]; list.RemoveAt(0);
                 int h = _w.People.Household[person]; if (h < 0 || h == payerHh) continue;
-                long days = Math.Min(ServiceDaysMax, (budget - paid) / _dayWage), pay = days * _dayWage;
+                long days = Math.Min(T.SpendingServiceDaysMax, (budget - paid) / _dayWage), pay = days * _dayWage;
                 if (!Pay(chest, purse, e.HouseholdPurse[h], pay, TransferReason.Wage)) return paid;
                 paid += pay;
             }
@@ -183,7 +210,7 @@ public sealed class HouseholdSpending
         {
             if (hht.MemberCount[h] == 0 || hht.Class[h] == SocialClass.Gentry) continue;
             long coin = e.Ledger.Balance(e.HouseholdPurse[h]).Mites;
-            if (e.FoodCoverDaysX10[h] >= 100 || coin >= (long)hht.MemberCount[h] * AlmsPerMemberMites) continue;
+            if (e.FoodCoverDaysX10[h] >= 100 || coin >= (long)hht.MemberCount[h] * T.SpendingAlmsPerMemberMites) continue;
             int s = hht.Settlement[h];
             if (!tmp.TryGetValue(s, out var l)) tmp[s] = l = [];
             l.Add((coin, h));
@@ -202,7 +229,7 @@ public sealed class HouseholdSpending
             while (budget - paid > 0 && list.Count > 0)
             {
                 int h = list[0]; list.RemoveAt(0); if (h == payerHh) continue;
-                long give = Math.Min(budget - paid, (long)_w.Households.MemberCount[h] * AlmsPerMemberMites);
+                long give = Math.Min(budget - paid, (long)_w.Households.MemberCount[h] * T.SpendingAlmsPerMemberMites);
                 if (give <= 0 || !Pay(chest, purse, e.HouseholdPurse[h], give, TransferReason.Alms)) return paid;
                 paid += give;
             }
@@ -226,8 +253,9 @@ public sealed class HouseholdSpending
             long unitMicro = book.Goods[g].RefMicro * (1000 + book.Money.SpreadHalfPermille) / 1000;
             if (part <= 0 || unitMicro <= 0) continue;
             long qty = (long)((Int128)part * PriceCurve.Micro / unitMicro);
+            if (hook == 4) qty -= party.Store.Qty(g);                       // materials still waiting for hands: buy only what the store lacks (review finding 10)
             if (qty <= 0) continue;
-            book.Post(new BuyOrder(party, g, qty, OrderMaxRatioPermille) { Priority = 7, OnFilled = ms.DeliveryHook(hh, g, hook), HookKind = hook, HookArg = hh });
+            book.Post(new BuyOrder(party, g, qty, T.SpendingOrderMaxRatioPermille) { Priority = 7, OnFilled = ms.DeliveryHook(hh, g, hook), HookKind = hook, HookArg = hh });
             posted += part;
         }
         return posted;

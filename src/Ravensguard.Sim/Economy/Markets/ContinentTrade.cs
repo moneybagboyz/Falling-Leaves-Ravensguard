@@ -31,7 +31,7 @@ public sealed partial class ContinentTrade
     public const int MinMarginPct = 8, PriceAgeDiscountPermillePerDay = 10, RiskPremiumPct = 2, CapitalCostPermillePerDay = 5;
     public const int DriverWageMites = 150, GuardWageMites = 1_750;
     public const int FoundingCashMites = 20_000;
-    public const uint StreamCaravan = 0x230, StreamTrip = 0x231;
+    public const uint StreamCaravan = RngStreams.CaravanEncounter, StreamTrip = RngStreams.CaravanTrip;
 
     private readonly EconomyWorld _ew;
     private readonly Func<IEnumerable<MarketBook>> _books;
@@ -77,5 +77,39 @@ public sealed partial class ContinentTrade
     }
 
     /// <summary>One day of trade (hour 3 of the day, after the market): planning of trips for the merchants whose caravans are home, founding of new caravans.</summary>
-    public void Daily(GameTime now) { DeskDaily(now); PlanDay(now); }
+    public void Daily(GameTime now) { BoundDeskExports(now); DeskDaily(now); PlanDay(now); }
+
+    /// <summary>The region's coin is steered to grow by this much a year, permille of its seed money a head (plan 4A.1: a money supply growing 1 to 2 percent a year).</summary>
+    public const int CoinGrowthPermillePerYear = 10;
+    /// <summary>Half the width of the band around that path, permille of the base: inside it the desk trades freely both ways.</summary>
+    public const int CoinBandPermille = 50;
+
+    /// <summary>
+    /// The border desk's budgets (decision I42). The region's coin is steered along a path: the seed money a head (<c>seed_money_crowns_per_person</c>) for the people it has
+    /// now, grown <see cref="CoinGrowthPermillePerYear"/> a year (simple), with a band of <see cref="CoinBandPermille"/> either side. The desk buys a glut for the
+    /// neighbours' coin only while the region's coin is under the band's top, and its agents buy a short good from the neighbours only while the region's coin is over
+    /// four times the band under the path (a short book matters more than the coin); each budget is what is left to that edge, and the desk's thresholds lean with the coin (a region under its path sells a glut from
+    /// 1.5 x its cover instead of 2.8 x, one over it tops a book up from half its cover instead of 0.3 x). The desk paid out of an 8 percent float of the region's coin plus what its imports had taken out,
+    /// and imported whatever a book lacked: seed 1234 took in about 40,000 crowns a year net (its ledger grew 90 percent in 25 years), seed 1 lost 2.6 percent a year once
+    /// the exports were bounded. The rule reads only saved state (the ledger, the people and the year), so a loaded world gives the same budgets (the old float was not
+    /// saved and was taken afresh from the loaded coin). Caravans (planned trips) are not bounded by it.
+    /// </summary>
+    private void BoundDeskExports(GameTime now)
+    {
+        var w = _ew.World; long people = Math.Max(1, w.Vital.Alive);
+        long baseCoin = people * _econ.Money.SeedMoneyCrownsPerPerson * 100L;
+        long years = Math.Max(0, now.Year - w.Population.NowYear);                       // whole years since the world began
+        long path = baseCoin + (long)((Int128)baseCoin * CoinGrowthPermillePerYear * years / 1000), band = baseCoin * CoinBandPermille / 1000;
+        long coin = _econ.Ledger.Audit().InPurses.Mites;
+        _deskRoom = Math.Max(0, path + band - coin);
+        _deskImportRoom = Math.Max(0, coin - (path - 4 * band));
+        // the thresholds lean with the coin's place in the band (d from -1000 at the bottom to +1000 at the top): under the path the desk takes a glut from 1.5 x the
+        // cover (2.8 x at the path and above); over it, it tops a short book up from half its cover (0.3 x at the path and below)
+        long d = band <= 0 ? 0 : Math.Clamp((coin - path) * 1000 / band, -1000, 1000);
+        _glutAbovePermille = d >= 0 ? GlutAbovePermilleOfCover : (int)(GlutAbovePermilleOfCover + (GlutAbovePermilleOfCover - 1500) * d / 1000);
+        _shortBelowPermille = d <= 0 ? ShortBelowPermilleOfCover : (int)(ShortBelowPermilleOfCover + (500 - ShortBelowPermilleOfCover) * d / 1000);
+    }
+    private int _glutAbovePermille = GlutAbovePermilleOfCover, _shortBelowPermille = ShortBelowPermilleOfCover;
+    /// <summary>What the desk may still pay in today (exports) and pay out (imports), mites; set by <see cref="BoundDeskExports"/> and drawn down by each trade.</summary>
+    private long _deskRoom, _deskImportRoom;
 }

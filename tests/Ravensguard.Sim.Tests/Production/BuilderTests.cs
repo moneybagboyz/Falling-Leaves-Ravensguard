@@ -17,7 +17,9 @@ public class BuilderTests
     public void EveryTradeWorkplaceBecomesABusiness_WithAnOwnerAStaffAndACashBox()
     {
         var w = World.Value; var p = w.Pop.People; var sys = w.Sys;
-        Assert.True(sys.Businesses.Count > 1000, $"{sys.Businesses.Count} businesses");
+        Assert.True(sys.Businesses.Count > 900, $"{sys.Businesses.Count} businesses");             // 1,131 before decision I43 kept one stall a book for every 400 people
+        foreach (var bk in w.Markets.AllBooks())
+            Assert.True(sys.Businesses.Count(b => sys.KindOf(b).Trader && w.Markets.BookOf[b.Settlement] == bk.SettlementIndex) <= Math.Max(1, bk.Population / w.Econ.Tuning.PeoplePerStall), $"too many stalls in {bk.Name}");
         var kinds = sys.Businesses.Select(b => sys.Content.Kinds[b.Kind].Id).ToHashSet();
         foreach (var k in new[] { "bakery", "mill", "brewery", "tavern", "butchery", "smithy", "weavery", "tannery", "cobbler", "carpentry", "masonry", "merchant_stall", "woodlot", "fishery", "charcoal_crew" })
             Assert.Contains(k, kinds);

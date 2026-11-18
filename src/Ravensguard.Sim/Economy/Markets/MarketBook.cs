@@ -13,6 +13,8 @@ public sealed class MarketParty(EntityId id, PurseId purse, Store store, PartyKi
     public PartyKind Kind { get; } = kind;
     /// <summary>Household or business table index (the order orders are processed in).</summary>
     public int Index { get; } = index;
+    /// <summary>Coin a merchant keeps back from buying stock (decision I45): the stall's month of wages and costs, read when it buys. Null: it may spend all it holds.</summary>
+    public Func<long>? CashReserve { get; init; }
     public override string ToString() => $"{Kind} {Id}";
 }
 
@@ -178,11 +180,12 @@ public sealed class MarketBook
     private void AddLot(MarketParty owner, ushort good, long qty, int floor, int day, bool merchant)
     {
         var gb = Goods[good];
-        // one lot per owner and good (decision I40): a merchant's at the same floor; a producer's new goods join the lot it already has on the book, at that lot's
-        // floor and listing day (they come down and go home with it). A household that sold every day had a lot for each day, and the books carried tens of
-        // thousands of lots that every sale walked through
+        // one lot per owner, good, floor and listing day (decision I40, review finding 9): new goods join a lot only when it was listed the same day at the same floor, so
+        // they keep the floor the seller asked and their own age (they had joined any older lot at its decayed floor and listing day, and so came down and went home
+        // early). A producer's lots expire in three days, so an owner holds at most a few lots of a good; a merchant's lots that reached the lowest floor no longer age
+        // and merge whatever their day. A household that sold every day had a lot for each day before I40 and the books carried tens of thousands of them
         foreach (var l in gb.Lots)
-            if (l.Owner.Id == owner.Id && l.IsMerchant == merchant && (!merchant || l.FloorPermille == floor)) { l.Qty += qty; gb.StockUnits += qty; return; }
+            if (l.Owner.Id == owner.Id && l.IsMerchant == merchant && l.FloorPermille == floor && (l.ListedDay == day || (merchant && floor <= MerchantFloorMinPermille))) { l.Qty += qty; gb.StockUnits += qty; return; }
         var lot = new StockLot { Id = _nextLot++, Owner = owner, Good = good, Qty = qty, FloorPermille = floor, ListedDay = day, IsMerchant = merchant };
         int pos = gb.Lots.Count;
         while (pos > 0 && (gb.Lots[pos - 1].FloorPermille > floor)) pos--;
@@ -313,7 +316,8 @@ public sealed class MarketBook
             long capUnits = gb.Demand * gb.TargetCoverDays * Money.MerchantStockCapPermilleOfCover / 1000;
             long holds = 0; foreach (var l in gb.Lots) if (l.IsMerchant) holds += l.Qty;      // the book's merchants together hold at most 0.8 of the cover (a stock the price curve puts under the lots' floor jams the book, decision I21)
             long room = Math.Max(0, capUnits - holds);
-            long cash = Econ.Ledger.Balance(m.Purse).Mites;
+            long cash = Econ.Ledger.Balance(m.Purse).Mites - (m.CashReserve?.Invoke() ?? 0);
+            if (cash <= 0) continue;
             long q = curve.MaxSellable(gb.StockUnits, Math.Min(qty - soldTotal, room), cash, Money.SpreadHalfPermille);
             if (q <= 0) continue;
             long proceeds = Round(curve.SellMid(gb.StockUnits, q), 1000 - Money.SpreadHalfPermille);

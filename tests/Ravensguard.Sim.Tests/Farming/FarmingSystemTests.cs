@@ -214,7 +214,8 @@ public class FarmingSystemTests(ITestOutputHelper output)
         Assert.True(wHired.Econ.Ledger.Audit().IsConserved);
         var (demand, supply) = wShort.Sys.LabourOutlook(5);
         Assert.True(demand >= 0 && supply > 0);
-        Assert.True(wShort.Sys.LastLabour.UnmetHours >= 0);
+        Assert.True(wShort.Sys.TotalUnmetH > 0, "one worker a holder leaves farm hours undone");          // review finding 16: was ">= 0"
+        Assert.True(wFull.Sys.TotalUnmetH < wShort.Sys.TotalUnmetH);
     }
 
     [Fact]

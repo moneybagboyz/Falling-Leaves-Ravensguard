@@ -46,7 +46,7 @@ public class HerdTests
         int sheep0 = w.State.Livestock.Sheep[0], cows0 = w.State.Livestock.Cows[0];
         w.Run(w.Year, 1, 46);                                           // no meadow, no hay: the autumn-end cull at day 46
         int culledSheep = sheep0 - w.State.Livestock.Sheep[0], culledCows = cows0 - w.State.Livestock.Cows[0];
-        Assert.True(culledSheep > 0 && culledCows >= 0);
+        Assert.True(cows0 > 0 && culledSheep > 0 && culledCows > 0, $"culled {culledSheep} of {sheep0} sheep, {culledCows} of {cows0} cows");   // review finding 16: was "culledCows >= 0"
         Assert.Equal(culledSheep, (int)w.Total("sheep"));               // the pieces are in the holders' stores
         Assert.Equal(culledCows, (int)w.Total("cow"));
         Assert.True(w.MassAudit());

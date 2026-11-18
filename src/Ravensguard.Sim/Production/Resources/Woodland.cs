@@ -1,4 +1,5 @@
 using Ravensguard.Content;
+using Ravensguard.Sim.Abstract;
 using Ravensguard.Sim.Economy;
 using Ravensguard.Sim.Goods;
 using Ravensguard.Sim.People;

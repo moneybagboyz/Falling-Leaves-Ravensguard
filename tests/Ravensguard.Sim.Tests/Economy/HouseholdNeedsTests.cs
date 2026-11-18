@@ -90,7 +90,7 @@ public class HouseholdNeedsTests
         s.Create(G(e, "wheat"), 300_000, CreateReason.Seed); s.Create(G(e, "peas"), 5_000, CreateReason.Seed); s.Create(G(e, "firewood"), 100_000, CreateReason.Seed);
         s.Create(G(e, "ale"), 5_000, CreateReason.Seed); s.Create(G(e, "salt"), 1_000, CreateReason.Seed); s.Create(G(e, "fish_fresh"), 3_000, CreateReason.Seed);
         var r = HouseholdNeeds.RunDay(e, p, h, 0, 0, 12);
-        Assert.Equal(1000, r.FedPermille); Assert.False(r.DietPoor); Assert.False(r.Cold); Assert.False(r.Hungry);
+        Assert.Equal(1000, r.FedPermille); Assert.False(r.DietPoor); Assert.False(r.Cold); Assert.False(r.LowStore); Assert.False(r.MissedMeal);
         Assert.Equal((400, 100, 0), (r.EatenStapleX100, r.EatenRelishX100, r.SubstitutedX100));
         Assert.Equal(7_500, r.FuelBurnedG); Assert.Equal(1_060, r.AleDrunkG); Assert.Equal(40, r.SaltEatenG);
         Assert.Equal(100_000 - 7_500, s.Qty(G(e, "firewood")));
@@ -136,7 +136,7 @@ public class HouseholdNeedsTests
         for (int day = 1; day <= 30; day++)
         {
             var r = HouseholdNeeds.RunDay(e, p, h, 0, 0, 12);
-            Assert.Equal(0, r.FedPermille); Assert.True(r.Hungry && r.DietPoor);
+            Assert.Equal(0, r.FedPermille); Assert.True(r.LowStore && r.MissedMeal && r.DietPoor);
             Assert.Equal(Math.Max(0, 3000 - 100 * day), e.NutritionCd[0]);
         }
         Assert.Equal(0, e.NutritionCd[0]); Assert.Equal(0, e.NutritionCd[1]);
@@ -202,6 +202,23 @@ public class HouseholdNeedsTests
         Assert.Equal(a.ComputeHash(), b.ComputeHash());
     }
 
+    /// <summary>Review finding 17: "hungry" meant under a day of food left after eating. A household that eats its whole day and has nothing left has a low store, not a missed meal; one that runs out mid-day missed a meal.</summary>
+    [Fact]
+    public void LowStore_IsNotAMissedMeal_ButRunningOutIs()
+    {
+        var (e, p, h) = Peasants5(); var s = e.HouseholdStore[0];
+        var day = HouseholdNeeds.Basket(e, p, h, 0, 0, 12);
+        long needG = HouseholdNeeds.GramsFor(e.Goods, G(e, "wheat"), day.StapleX100 + day.RelishX100);
+        s.Create(G(e, "wheat"), needG * 21 / 20, CreateReason.Seed);                             // a day of grain and a little over
+        var r = HouseholdNeeds.RunDay(e, p, h, 0, 0, 12);
+        Assert.Equal(1000, r.FedPermille); Assert.True(r.LowStore); Assert.False(r.MissedMeal);
+        Assert.True((e.Grievances[0] & Grievance.Hunger) != 0); Assert.True((e.Grievances[0] & Grievance.MissedMeal) == 0);
+        s.Create(G(e, "wheat"), needG / 2, CreateReason.Seed);                                  // half a day: the meal is missed
+        r = HouseholdNeeds.RunDay(e, p, h, 0, 1, 12);
+        Assert.True(r.FedPermille < 1000, $"fed {r.FedPermille}, need {needG} g, eaten {r.EatenStapleX100}+{r.EatenRelishX100}+{r.SubstitutedX100}"); Assert.True(r.MissedMeal && r.LowStore);
+        Assert.True((e.Grievances[0] & Grievance.MissedMeal) != 0);
+    }
+
     [Fact]
     public void SeededWorld_EatsForAMonth_WithoutHungerOrLeaks()
     {
@@ -211,7 +228,7 @@ public class HouseholdNeedsTests
             for (int h = 0; h < n; h++)
             {
                 var r = HouseholdNeeds.RunDay(e, pop, h, pop.NowDay + d, 8);
-                if (r.Members > 0 && r.Hungry) hungry++;
+                if (r.Members > 0 && (r.LowStore || r.MissedMeal)) hungry++;
                 Assert.Equal(1000, r.FedPermille);
             }
         Assert.Equal(0, hungry);

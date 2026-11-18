@@ -235,7 +235,8 @@ public class WorkTests
         Assert.Equal(nLow, qLow.Sum()); Assert.Equal(nHigh, qHigh.Sum());
         double Mean(int[] q) => Enumerable.Range(0, 5).Sum(i => i * q[i]) / (double)q.Sum();
         Assert.True(Mean(qHigh) > Mean(qLow));
-        Assert.True(wear >= 0);
+        // forge_nails wears its tool 300 ppm a batch: a few dozen batches wear out at most a piece or two (a roll scaled wrong wears one every batch; review finding 16)
+        Assert.InRange(wear, 0, 2);
     }
 
     [Fact]

@@ -32,19 +32,21 @@ public class EconomySoakTests(ITestOutputHelper output)
         output.WriteLine(EconomySoak.Header()); output.WriteLine($"1 year in {sw.ElapsedMilliseconds} ms");
 
         // invariants
-        Assert.True(led.Audit().IsConserved); Assert.Equal(seeded, led.Audit().Seeded.Mites); Assert.Equal(0, led.Audit().Minted.Mites); Assert.Equal(0, led.Audit().Sunk.Mites);
+        Assert.True(led.Audit().IsConserved); Assert.Equal(seeded, led.Audit().Seeded.Mites); Assert.Equal(0, led.Audit().Minted.Mites); Assert.Equal(0, led.Audit().Melted.Mites + led.Audit().Burned.Mites);
+        Assert.True(row.CoinConserved, "the world's coin (the region's ledger and the continent) is exact");   // coin crosses the border with caravans, the desk and migrants (decision I33)
         Assert.True(w.Econ.MassAuditHolds()); Assert.Equal(0, w.Sys.MassViolations);
-        for (int p = 0; p < led.PurseCount; p++) Assert.True(led.Balance(new PurseId(p)).Mites >= 0);
+        { long sum = 0; for (int p = 0; p < led.PurseCount; p++) sum += led.Balance(new PurseId(p)).Mites; Assert.Equal(led.Audit().InPurses.Mites, sum); }   // review finding 16: was "every balance >= 0", which the ledger guarantees
         foreach (var b in w.Markets.AllBooks()) for (ushort g = 0; g < w.Econ.Goods.Count; g++) Assert.Equal(b.BookStore.Qty(g), b.Goods[g].Lots.Sum(l => l.Qty));
         Assert.Equal(sim.Vital.Alive, Enumerable.Range(0, sim.People.Count).Count(i => sim.People.Status[i] == PersonStatus.Alive));
 
         // the economy runs: bread and ale are made, workshops finish batches, merchants and businesses are open, people are fed
         Assert.True(row.BreadT > 0 && row.AleKl > 0, $"bread {row.BreadT} t, ale {row.AleKl} kl");
         Assert.True(row.WorkshopCompletionPct >= 40, $"workshops completing a batch {row.WorkshopCompletionPct}%");
-        Assert.True(row.MerchantsSolventPct >= 10, $"merchants solvent {row.MerchantsSolventPct}%");
-        Assert.True(row.HungryPct < 2.0, $"hungry household-days {row.HungryPct}%");
+        Assert.True(row.MerchantsSolventPct >= 60, $"cash-solvent merchants {row.MerchantsSolventPct}%");
+        Assert.True(row.BandPct >= 60, $"honest in-band book-days {row.BandPct}%");
+        Assert.True(row.HungryPct < 2.0, $"missed-meal household-days {row.HungryPct}%");
         Assert.InRange(row.Population, start * 90 / 100, start * 110 / 100);                  // relative to the generated population (it is 25,6xx, not a fixed number)
-        Assert.True(w.Economy.Labour.Hired > 0 && w.Economy.Farming.State.HarvestG >= 0);
+        Assert.True(w.Economy.Labour.Hired > 0 && w.Economy.Farming.State.HarvestG > 0);
         Assert.True(sim.Chronicle.CauseCoverage() >= 0.9);
 
         // every section round-trips byte for byte
@@ -91,26 +93,70 @@ public class EconomySoakTests(ITestOutputHelper output)
         Assert.True(st.P99HourMs < 150, $"p99 {st.P99HourMs} ms");         // abstract spec budget: 150 ms per hourly step on the reference PC
     }
 
-    /// <summary>One hundred game years of seed 1234 on the abstract tick (about 6 minutes); prints the table of <c>WorldTool soak --years 100</c>.</summary>
+    /// <summary>
+    /// One hundred game years of seed 1234 on the abstract tick (about 15 minutes); prints the table of <c>WorldTool soak --years 100</c> and asserts the Phase 2 targets
+    /// (review finding 16, the thresholds are decision I46): <see cref="AssertTargets"/>.
+    /// </summary>
     [Fact, Trait("Category", "Soak")]
-    public void HundredYears_RealSystems_KeepEveryInvariant_AndReportTheTargets()
+    public void HundredYears_RealSystems_KeepEveryInvariant_AndMeetTheTargets()
     {
-        using var w = SoakWorld.Create(); var soak = new EconomySoak(w.Headless);
+        using var w = SoakWorld.Create();
+        RunAndAssert(w.Headless, 100, every: 5);
+        Assert.Contains(w.Sys.Businesses, b => b.State == BusinessState.Open);
+    }
+
+    /// <summary>Twenty-five game years of seed 1 (a second world, about 4 minutes): the same targets.</summary>
+    [Fact, Trait("Category", "Soak")]
+    public void TwentyFiveYears_SeedOne_MeetsTheTargets()
+    {
+        var hw = HeadlessWorld.Create(1, Ravensguard.Sim.WorldGen.ContinentSettings.FindBaseContent()!);
+        RunAndAssert(hw, 25, every: 1);
+    }
+
+    private void RunAndAssert(HeadlessWorld hw, int years, int every)
+    {
+        var soak = new EconomySoak(hw); var led = hw.World.Economy.Ledger;
         output.WriteLine(EconomySoak.Header());
-        long seeded = w.Econ.Ledger.Audit().Seeded.Mites; var sw = Stopwatch.StartNew(); long start100 = w.Sim.Vital.Alive;
-        soak.Run(100, r =>
+        long start = hw.World.Vital.Alive; var sw = Stopwatch.StartNew();
+        soak.Run(years, r =>
         {
-            if (r.Year == 1 || r.Year % 5 == 0) output.WriteLine(EconomySoak.Format(r));
+            if (r.Year == 1 || r.Year % every == 0) output.WriteLine(EconomySoak.Format(r));
             Assert.True(r.CoinConserved && r.MassOk && r.MassViolations == 0, $"audit failed in year {r.Year}");
-            Assert.Equal(seeded, r.CoinSources); Assert.Equal(0, r.CoinSinks);
+            var au = led.Audit();
+            Assert.Equal(0, au.Minted.Mites); Assert.Equal(0, au.Melted.Mites + au.Burned.Mites);          // the only sources and sinks are the seed and the border (documented)
             Assert.True(r.Population > 0, $"the region died out in year {r.Year}");
         });
-        output.WriteLine($"100 years in {sw.Elapsed.TotalSeconds:0} s");
+        output.WriteLine($"{years} years in {sw.Elapsed.TotalSeconds:0} s");
         output.WriteLine(EconomySoak.Summary(soak)); output.WriteLine(soak.Ticker.Stats.Report());
         Assert.True(soak.Ticker.Stats.P99HourMs < 150);
-        Assert.Contains(w.Sys.Businesses, b => b.State == BusinessState.Open);
-        // the plan's targets, as the soak reports them
-        var rows = soak.Rows;
-        output.WriteLine($"TARGETS population {rows[^1].Population} vs {start100} start (+-10%: {(Math.Abs(rows[^1].Population - start100) <= start100 / 10 ? "met" : "NOT met")}); under 15 share {rows[^1].Under15Pct:0.0}% (26-33%); staples in band {rows.Average(r => r.BandPct):0.0}% of book-days (90%); workshops completing {rows.Average(r => r.WorkshopCompletionPct):0}% (90%)");
+        AssertTargets(soak.Rows, start);
+    }
+
+    /// <summary>
+    /// The Phase 2 done-when targets as the soak measures them (decision I46): population within 10 percent of the start every year; the under-15 share 26 to 33 percent
+    /// averaged over each full decade after the first (the first decade carries the generated population's 35 percent down); missed-meal household-days under 2 percent
+    /// every year; honest in-band book-days, cash-solvent merchants and workshops completing a batch at least 60 percent averaged over the run, and in every year
+    /// at least 40 percent of book-days in band (a drought's dearth: seed 1's harvest falls to 1,400 t in years 15, 19 and 25 and grain sits at 2-2.4 x base) and
+    /// 50 percent of the merchants and workshops; the region's own coin growing at most 2 percent a year compound; the world's coin exact every year (checked in the run).
+    /// </summary>
+    private static void AssertTargets(IReadOnlyList<SoakRow> rows, long start)
+    {
+        foreach (var r in rows)
+        {
+            Assert.InRange(r.Population, start * 90 / 100, start * 110 / 100);
+            Assert.True(r.HungryPct < 2.0, $"missed meals {r.HungryPct:0.00}% in year {r.Year}");
+            Assert.True(r.BandPct >= 40, $"honest band {r.BandPct:0.0}% in year {r.Year}");                  // a drought year's dearth is out of band, and honestly so
+            Assert.True(r.MerchantsSolventPct >= 50, $"cash-solvent merchants {r.MerchantsSolventPct:0}% in year {r.Year}");
+            Assert.True(r.WorkshopCompletionPct >= 50, $"workshops {r.WorkshopCompletionPct:0}% in year {r.Year}");
+        }
+        for (int d = 10; d + 10 <= rows.Count; d += 10)
+        {
+            double u15 = rows.Skip(d).Take(10).Average(r => r.Under15Pct);
+            Assert.InRange(u15, 26.0, 33.0);
+        }
+        Assert.True(rows.Average(r => r.BandPct) >= 60, $"honest band mean {rows.Average(r => r.BandPct):0.0}%");
+        Assert.True(rows.Average(r => r.MerchantsSolventPct) >= 60, $"cash-solvent merchants mean {rows.Average(r => r.MerchantsSolventPct):0}%");
+        Assert.True(rows.Average(r => r.WorkshopCompletionPct) >= 60, $"workshops mean {rows.Average(r => r.WorkshopCompletionPct):0}%");
+        Assert.True(EconomySoak.CompoundGrowthPct(rows) <= 2.0, $"region coin grew {EconomySoak.CompoundGrowthPct(rows):0.00}% a year");
     }
 }

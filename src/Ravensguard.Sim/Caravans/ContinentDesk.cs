@@ -10,8 +10,6 @@ public sealed partial class ContinentTrade
     public const int ShortBelowPermilleOfCover = 300, GlutAbovePermilleOfCover = 2800;
     private bool[]? _staple, _deskSkip;
     public long DeskImportedMites, DeskExportedMites;
-    /// <summary>What the desk's buyers may pay out beyond what they have taken in: 8 percent of the region's coin at the start (the old stand-in's float), so the border desk never drains the continent for the region.</summary>
-    private long _deskFloat = -1;
 
     /// <summary>
     /// The border desk: the merchants' agents at the gates, who top a book up from the neighbours when it is badly short and carry off a glut (the old stand-in's thresholds and prices, kept
@@ -45,8 +43,9 @@ public sealed partial class ContinentTrade
                 var gb = b.Goods[g]; long cover = gb.Demand * gb.TargetCoverDays;
                 if (cover <= 1) continue;
                 bool staple = _staple![g];
-                if (!_made[g] && gb.StockUnits * 1000 < cover * ShortBelowPermilleOfCover && (gb.StructuralDemand > 0 || gb.LastTradedDay >= 0 || gb.DemandEma > 0)) DeskImport(b, m, g, gb, cover, staple ? StapleImportMarkupPermille : ImportMarkupPermille, day, Any());
-                else if (gb.StockUnits * 1000 > cover * GlutAbovePermilleOfCover) DeskExport(b, g, gb, cover, staple ? StapleExportDiscountPermille : ExportDiscountPermille, Edge());
+                // the thresholds lean with the region's coin (ContinentTrade.BoundDeskExports, decision I42): a region short of coin sells its gluts sooner, one over its path buys sooner
+                if (!_made[g] && gb.StockUnits * 1000 < cover * _shortBelowPermille && (gb.StructuralDemand > 0 || gb.LastTradedDay >= 0 || gb.DemandEma > 0)) DeskImport(b, m, g, gb, cover, staple ? StapleImportMarkupPermille : ImportMarkupPermille, day, Any());
+                else if (gb.StockUnits * 1000 > cover * _glutAbovePermille) DeskExport(b, g, gb, cover, staple ? StapleExportDiscountPermille : ExportDiscountPermille, Edge());
             }
         }
     }
@@ -58,22 +57,21 @@ public sealed partial class ContinentTrade
         long want = Math.Min(cover * 6 / 10 - gb.StockUnits, Math.Max(1, cover / 4));
         if (want <= 0) return;
         long cash = led.Balance(m.Purse).Mites, unit = gb.RefMicro * markup / 1000; if (unit <= 0) return;
-        long q = Math.Min(want, (long)((Int128)(cash * 3 / 10) * 1_000_000 / unit)); if (q <= 0) return;
+        long q = Math.Min(want, (long)((Int128)Math.Min(cash * 3 / 10, _deskImportRoom) * 1_000_000 / unit)); if (q <= 0) return;      // and the region's coin floor (decision I42)
         long cost = Price(gb.RefMicro, q, markup);
         if (cost > 0 && !led.Sink(m.Purse, new Coin(cost), SinkReason.Emigrate)) return;
         et.CoinNetIn -= cost;
         m.Store.Create(g, q, CreateReason.Import);
         b.List(m, g, q, 1000, day, merchantLot: true);
-        ImportedMites += cost; DeskImportedMites += cost; ImportedUnits[g] += q;
+        ImportedMites += cost; DeskImportedMites += cost; ImportedUnits[g] += q; _deskImportRoom -= cost;
     }
 
     private void DeskExport(MarketBook b, ushort g, GoodBook gb, long cover, int discount, EdgeTrade? et)
     {
         if (et == null) return;
         var led = _econ.Ledger;
-        long take = Math.Max(1, (gb.StockUnits - cover * 2000 / 1000) / 2);
-        if (_deskFloat < 0) _deskFloat = _econ.Ledger.Audit().InPurses.Mites * 8 / 100;
-        long budget = Math.Max(0, Math.Min(et.PayBudgetMites - et.CoinNetIn, _deskFloat + DeskImportedMites - DeskExportedMites));
+        long take = Math.Max(1, (gb.StockUnits - cover * Math.Min(2000, _glutAbovePermille - 500) / 1000) / 2);
+        long budget = Math.Max(0, Math.Min(et.PayBudgetMites - et.CoinNetIn, _deskRoom));      // the region's coin allowance (ContinentTrade.BoundDeskExports, decision I42)
         long unitMicro = gb.RefMicro * discount / 1000; if (unitMicro <= 0) return;
         take = Math.Min(take, (long)((Int128)budget * 1_000_000 / unitMicro)); if (take <= 0) return;
         b.Sync(g);
@@ -92,7 +90,7 @@ public sealed partial class ContinentTrade
             b.BookStore.Destroy(g, q, DestroyReason.Export);
             lot.Qty -= q; gb.StockUnits -= q; left -= q; got += q;
             if (lot.Qty == 0) gb.Lots.RemoveAt(i);
-            ExportedMites += pay; DeskExportedMites += pay;
+            ExportedMites += pay; DeskExportedMites += pay; _deskRoom -= pay;
         }
         if (got > 0) ExportedUnits[g] += got;
     }

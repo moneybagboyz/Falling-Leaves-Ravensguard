@@ -78,6 +78,15 @@ public sealed record EconomyTuningDef : ContentDef
     public int GardenLastDoy { get; init; } = 40;
     public int HenEggGPerPersonDay { get; init; } = 14;
 
+    // ---------- immigration from the continent (continent-tick spec 3.7) ----------
+    /// <summary>The coin and grain an immigrant brings, a head (taken from the neighbour's summary).</summary>
+    public int ImmigrantStakeMitesPerHead { get; init; } = 2000;
+    public int ImmigrantStakeMeasuresPerHead { get; init; } = 13;
+
+    // ---------- merchants (decision I43) ----------
+    /// <summary>A market book keeps one merchant's stall for every this many of its people (at least one; 0: every merchant of the population keeps his own stall).</summary>
+    public int PeoplePerStall { get; init; }
+
     // ---------- farm sales (integration decisions I30, I38) ----------
     public int FarmSalesKeepMarginDays { get; init; } = 45;
     public int FarmSalesSpreadDays { get; init; } = 3;

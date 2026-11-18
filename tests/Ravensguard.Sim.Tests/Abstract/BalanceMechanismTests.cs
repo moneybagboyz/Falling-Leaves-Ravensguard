@@ -56,7 +56,7 @@ public class BalanceMechanismTests(ITestOutputHelper output)
     {
         using var w = SoakWorld.Create(); var sim = w.Sim; var hht = sim.Households;
         w.Run(1);
-        long start = sim.Vital.Alive; long coin0 = w.Econ.Ledger.Audit().InPurses.Mites;
+        long start = sim.Vital.Alive; var au0 = w.Econ.Ledger.Audit(); long coin0 = au0.InPurses.Mites, net0 = (au0.Immigrated - au0.Emigrated).Mites;
         // send a hundred households away through the real emigration, then run seasons: the shortfall brings households home
         int sent = 0;
         for (int h = 0; h < hht.Count && sent < 100; h++)
@@ -66,7 +66,9 @@ public class BalanceMechanismTests(ITestOutputHelper output)
         w.Run(60);
         output.WriteLine($"start {start}, after the departures {gone}, after 60 days {sim.Vital.Alive}, immigrants {sim.Vital.Immigrants}");
         Assert.True(sim.Vital.Immigrants > 0);
-        Assert.Equal(coin0, w.Econ.Ledger.Audit().InPurses.Mites);
+        // the region's coin changes only by what crossed the border with the people (decision I33): emigrants' takings out, immigrants' stakes in
+        var au = w.Econ.Ledger.Audit();
+        Assert.Equal(coin0 + (au.Immigrated - au.Emigrated).Mites - net0, au.InPurses.Mites);
         Assert.True(w.Econ.Ledger.Audit().IsConserved && w.Econ.MassAuditHolds());
         Assert.Equal(sim.Vital.Alive, Enumerable.Range(0, sim.People.Count).Count(i => sim.People.Status[i] == PersonStatus.Alive));
     }
@@ -127,13 +129,15 @@ public class BalanceMechanismTests(ITestOutputHelper output)
     public void HouseholdSpending_PaysWagesAndAlms_AndBuysGoods_WithCoinAndMassExact()
     {
         using var w = SoakWorld.Create(); var sp = w.Economy.Spending; var led = w.Econ.Ledger;
-        long coin0 = led.Audit().InPurses.Mites;
+        var au0 = led.Audit(); long coin0 = au0.InPurses.Mites, net0 = (au0.Immigrated - au0.Emigrated).Mites;
         w.Run(30);
         output.WriteLine($"spenders {sp.Spenders}, wages {sp.WagesMites / 100} cr, builders {sp.WorksLabourMites / 100} cr, alms {sp.AlmsMites / 100} cr, goods ordered {sp.GoodsBudgetMites / 100} cr bought {w.Markets.SpentGoodsMites / 100} cr, materials ordered {sp.MaterialsBudgetMites / 100} cr bought {w.Markets.SpentMaterialsMites / 100} cr");
         Assert.True(sp.HasRules && sp.Spenders > 0);
         Assert.True(sp.WagesMites + sp.WorksLabourMites > 0 && sp.AlmsMites > 0 && sp.GoodsBudgetMites > 0);
         Assert.True(led.Flow(TransferReason.Alms).Mites > 0);
-        Assert.Equal(coin0, led.Audit().InPurses.Mites);
+        var au = led.Audit();
+        Assert.Equal(coin0 + (au.Immigrated - au.Emigrated).Mites - net0, au.InPurses.Mites);     // only what crossed the border changed the region's coin
+        Assert.True(sp.WorksWorkerDays > 0);                                                    // the hands hired worked (review finding 10)
         Assert.True(led.Audit().IsConserved && w.Econ.MassAuditHolds());
     }
 

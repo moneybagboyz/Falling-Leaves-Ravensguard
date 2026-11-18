@@ -50,22 +50,23 @@ public class ResumeDeterminismTests(ITestOutputHelper output)
     [Fact]
     public void SaveLoadContinue_AcrossTheYearBoundary_GivesTheSameRecords()
     {
-        var rig = new RegionRig(); var rw = rig.Set.TryGet(rig.Home)!;
-        long h0 = rw.HourDone;
-        Step(rw, h0 + 1400); var at1400 = rw.CaptureBytes();
-        Step(rw, h0 + 1440); var at1440 = rw.CaptureBytes();
-        Step(rw, h0 + 1480); var at1480 = rw.CaptureBytes(); string hash1480 = rw.RecordsHash();
-        Step(rw, h0 + 1500); var at1500 = rw.CaptureBytes(); string hash1500 = rw.RecordsHash();
+        // the straight run (its own rig: the continent the region trades with is world state, saved with the world, not in the region's section)
+        var straight = new RegionRig(); var rwA = straight.Set.TryGet(straight.Home)!;
+        long h0 = rwA.HourDone;
+        Step(rwA, h0 + 1480); var at1480 = rwA.CaptureBytes(); string hash1480 = rwA.RecordsHash();
+        Step(rwA, h0 + 1500); var at1500 = rwA.CaptureBytes(); string hash1500 = rwA.RecordsHash();
 
-        void Resume(byte[] saved, long to, byte[] want, string wantHash, string label)
+        void Resume(long n, long to, byte[] want, string wantHash, string label)
         {
-            var back = RegionWorld.Restore(rig.Sv, rig.Home, rw.Population.Region, SaveCodec.DeserializeCompressed<RegionSectionData>(saved));
+            var rig = new RegionRig(); var rw = rig.Set.TryGet(rig.Home)!;
+            Step(rw, h0 + n);
+            var back = RegionWorld.Restore(rig.Sv, rig.Home, rw.Population.Region, SaveCodec.DeserializeCompressed<RegionSectionData>(rw.CaptureBytes()));
             Step(back, to);
             output.WriteLine($"{label}: straight {wantHash[..12]}, resumed {back.RecordsHash()[..12]}");
             Assert.Equal(wantHash, back.RecordsHash());
             Assert.Equal(want, back.CaptureBytes());
         }
-        Resume(at1400, h0 + 1500, at1500, hash1500, "N 1400 M 100");
-        Resume(at1440, h0 + 1480, at1480, hash1480, "N 1440 M 40");
+        Resume(1400, h0 + 1500, at1500, hash1500, "N 1400 M 100");
+        Resume(1440, h0 + 1480, at1480, hash1480, "N 1440 M 40");
     }
 }

@@ -265,7 +265,7 @@ public sealed class PopulationMigrationSystem : AbstractSystem
         int left = (int)Math.Min(start * ReturnQuotaPermille / 1000, Math.Max(1, shortfall / ShortfallDivisor));
         var edge = rl.Edges.FirstOrDefault(e => !link.State.Summaries[e.Neighbour].Detailed);
         if (edge == null) return;                                // no road to a region the continent holds coin for
-        long coinHead = 2000, measuresHead = 13;
+        long coinHead = w.Economy.Tuning.ImmigrantStakeMitesPerHead, measuresHead = w.Economy.Tuning.ImmigrantStakeMeasuresPerHead;   // review finding 12: content, not constants
         Demography.Stake StakeFor(int n) => new(coinHead * n, measuresHead * n);
         void Took(int n)
         {

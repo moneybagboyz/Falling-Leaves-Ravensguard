@@ -39,8 +39,25 @@ public static class BusinessBuilder
             l.Add(i);
         }
 
+        // fewer, viable stalls (decision I43): a book keeps at most one merchant's stall for every people_per_stall of its people (at least one), the stalls of the
+        // merchants with the most hands first; the other merchants join a kept stall of their book as its hand while it has room, or lose the trade and become idle hands
+        var dropped = new HashSet<(int, int, Occupation)>();
+        int perStall = econ.Tuning.PeoplePerStall;
+        if (perStall > 0 && markets != null)
+        {
+            var byBook = new SortedDictionary<int, List<(int Settlement, int Lot, Occupation Occ, int N)>>();
+            foreach (var ((settlement, lot, occ), members) in groups)
+                if (byOcc[occ].Trader) { int bk = markets.BookOf[settlement]; if (!byBook.TryGetValue(bk, out var l)) byBook[bk] = l = []; l.Add((settlement, lot, occ, members.Count)); }
+            foreach (var (bk, list) in byBook)
+            {
+                int keep = Math.Max(1, (markets.Books[bk]?.Population ?? 0) / perStall);
+                foreach (var g in list.OrderByDescending(x => x.N).ThenBy(x => x.Settlement).ThenBy(x => x.Lot).Skip(keep)) dropped.Add((g.Settlement, g.Lot, g.Occ));
+            }
+        }
+        var joinLater = new List<(int Book, List<int> Members)>();
         foreach (var ((settlement, lot, occ), members) in groups)
         {
+            if (dropped.Contains((settlement, lot, occ))) { joinLater.Add((markets!.BookOf[settlement], members)); continue; }
             var kind = byOcc[occ];
             bool crew = lot < 0;
             int owner = ChooseOwner(pop, members, kind, crew);
@@ -51,6 +68,14 @@ public static class BusinessBuilder
             foreach (var (sk, count) in kind.Stations) for (int c = 0; c < count; c++) b.Stations.Add(new Station { Kind = sk });
             Fund(sys, b, crew ? StartCapitalCrewPermille : kind.Trader ? econ.Money.MerchantCashShareBp / 10 : kind.Id == "manor" ? StartCapitalManorPermille : StartCapitalWorkshopPermille);
         }
+
+        foreach (var (bk, members) in joinLater)
+            foreach (int m in members)
+            {
+                var stall = sys.Businesses.FirstOrDefault(x => content.Kinds[x.Kind].Trader && markets!.BookOf[x.Settlement] == bk && x.Staff.Count < content.Kinds[x.Kind].StaffCapacity);
+                if (stall != null) sys.AddStaff(stall, m);
+                else { people.Occupation[m] = Occupation.None; people.WorkSettlement[m] = -1; people.WorkLot[m] = -1; }   // a chapman without a stall: an idle hand for hire
+            }
 
         // the manors: a lord's household and demesne staff (servants, guards, stewards, reeves, labourers, shepherds, ploughmen) are the staff of his manor business
         var manorKind = content.Kinds.FirstOrDefault(k => k.Id == "manor");

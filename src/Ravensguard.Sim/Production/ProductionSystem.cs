@@ -49,8 +49,10 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
         int idx = Businesses.Count; var id = EconIds.Business(idx);
         var purse = Econ.Ledger.Open(PurseKind.Business, id);
         var store = Econ.OpenStore(StoreKind.House, id);
-        var party = new MarketParty(id, purse, store, kind.Trader ? PartyKind.Merchant : PartyKind.Business, idx);
-        var b = new Business
+        Business? made = null;
+        // a merchant buys stock only with the coin above a month of his stall's wages and costs (decision I45): stock bought with the last coin left the stalls unable to pay their hands
+        var party = new MarketParty(id, purse, store, kind.Trader ? PartyKind.Merchant : PartyKind.Business, idx) { CashReserve = kind.Trader ? () => MerchantReserveDays * MerchantDayCost(made!) : null };
+        var b = made = new Business
         {
             Index = idx, Id = id, Kind = kind.Index, Settlement = settlement, Lot = lot, Owner = owner, OwnerHousehold = owner >= 0 ? Pop.People.Household[owner] : -1,
             Purse = purse, Store = store, Party = party, WageOfferMites = (short)RecipeBook.WagePerDay(WageClass.Skilled),
@@ -388,22 +390,26 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
 
     // ---------- planning ----------
 
-    private double PriceOutMites(MarketBook? book, ushort g, bool ask)
+    /// <summary>Micro-mites per unit (gram, or piece) the business sees: the base price without a book, else the book's ask (buying) or mid (selling).</summary>
+    private long PriceMicro(MarketBook? book, ushort g, bool ask)
+        => book == null ? Econ.Goods.BasePriceMilliMites(g) * (Econ.Goods.IsPiece(g) ? 1000 : 1) : ask ? book.AskMicro(g) : book.MidMicro(g);
+
+    /// <summary>
+    /// Expected margin of a full batch at the prices the business sees, in micro-mites: outputs at mid less the toll, inputs at ask, less wages (production spec 3.2).
+    /// Integer throughout (review finding 8: it was doubles, and drove the recipe choice).
+    /// </summary>
+    public long ExpectedMarginMicro(Business b, Recipe r)
     {
-        long micro = book == null ? Econ.Goods.BasePriceMilliMites(g) * (Econ.Goods.IsPiece(g) ? 1000 : 1) : ask ? book.AskMicro(g) : book.MidMicro(g);
-        return micro / 1e6;   // mites per unit
+        var book = Markets?.BookForSettlement(b.Settlement);
+        Int128 rev = 0, cost = 0; int keep = 1000 - Econ.Money.MarketTollPermille;
+        foreach (var (g, q) in r.Outputs) rev += (Int128)q * PriceMicro(book, g, false) * keep / 1000;
+        foreach (var (g, q) in r.Inputs) cost += (Int128)q * PriceMicro(book, g, true);
+        Int128 m = rev - cost - (Int128)r.WorkerHours * RecipeBook.WagePerHour(r.Wage) * PriceCurve.Micro;
+        return (long)Int128.Clamp(m, long.MinValue, long.MaxValue);
     }
 
-    /// <summary>Expected margin of a full batch at the prices the business sees: outputs at mid less the toll, inputs at ask, less wages (production spec 3.2).</summary>
-    public double ExpectedMargin(Business b, Recipe r)
-    {
-        var book = Markets?.BookForSettlement(b.Settlement); var cat = Econ.Goods;
-        double rev = 0, cost = 0;
-        double toll = (Econ.Money.MarketTollPermille) / 1000.0;
-        foreach (var (g, q) in r.Outputs) rev += q * PriceOutMites(book, g, false) * (1 - toll);
-        foreach (var (g, q) in r.Inputs) cost += q * PriceOutMites(book, g, true);
-        return rev - cost - r.WorkerHours * (double)RecipeBook.WagePerHour(r.Wage);
-    }
+    /// <summary>The same in mites, for display.</summary>
+    public long ExpectedMargin(Business b, Recipe r) => ExpectedMarginMicro(b, r) / PriceCurve.Micro;
 
     /// <summary>Batches a station can finish in a working day with the people the business has (at least one).</summary>
     private int CapacityBatchesPerDay(Business b, Recipe r)
@@ -440,11 +446,12 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
     private void PlanStations(Business b, BusinessKind kind, GameTime now)
     {
         var book = Markets?.BookForSettlement(b.Settlement);
-        int busy = 0; double budget = Econ.Ledger.Balance(b.Purse).Mites * 0.9;      // what the cash box can still promise to the market this morning, shared by the stations
+        // what the cash box can still promise to the market this morning, shared by the stations: nine tenths of it, in micro-mites (integer, review finding 8)
+        int busy = 0; Int128 budget = (Int128)Econ.Ledger.Balance(b.Purse).Mites * 9 * PriceCurve.Micro / 10;
         foreach (var st in b.Stations)
         {
             if (st.Busy) { busy++; continue; }
-            Recipe? best = null; double bestRate = 0;
+            Recipe? best = null; long bestMargin = 0; int bestHours = 1;
             foreach (var r in kind.RecipesFor(st.Kind))
             {
                 if (book != null)
@@ -452,19 +459,20 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
                     ushort main = r.Outputs[0].Good; var gb = book.Goods[main];
                     if (gb.StockUnits >= 2L * gb.Demand * gb.TargetCoverDays) continue;     // do not flood the market
                 }
-                double rate = ExpectedMargin(b, r) / r.WorkerHours;
-                if (rate > bestRate) { bestRate = rate; best = r; }
+                // the best margin per worker-hour, compared as margin_a x hours_b > margin_b x hours_a (no division); only a positive margin is worth starting
+                long m = ExpectedMarginMicro(b, r); int h = Math.Max(1, r.WorkerHours);
+                if (m > 0 && (Int128)m * bestHours > (Int128)bestMargin * h) { bestMargin = m; bestHours = h; best = r; }
             }
             if (best == null) continue;
             bool started = TryStart(b, st, best, now);
             if (started) busy++;
             // the orders are for what the cash box can pay, all inputs in proportion, so a brewer is not left with barley and no coin for the firewood (decision I19)
             int batches = BatchesWanted(b, best, book); int permille = 1000;
-            double perBatch = 0; foreach (var (g, q) in best.Inputs) perBatch += q * PriceOutMites(book, g, true);
+            Int128 perBatch = 0; foreach (var (g, q) in best.Inputs) perBatch += (Int128)q * PriceMicro(book, g, true);
             if (perBatch > 0 && budget < perBatch * batches)
             {
-                double affordable = budget / perBatch;
-                if (affordable >= 1) batches = (int)affordable; else { batches = 1; permille = (int)Math.Max(0, affordable * 1000); }
+                Int128 affordable = budget > 0 ? budget / perBatch : 0;
+                if (affordable >= 1) batches = (int)affordable; else { batches = 1; permille = budget > 0 ? (int)(budget * 1000 / perBatch) : 0; }
             }
             if (permille > 0) { PostInputOrders(b, best, book, batches, permille); budget -= perBatch * batches * permille / 1000; }
         }
@@ -506,10 +514,20 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
         b.Jobs.Add(new CrewJob { Kind = first.Index, Row = PickTile(first, s.CenterX, s.CenterY, first.Resource ?? ResourceKind.Wood), Workers = n });
     }
 
-    private double ExtractionValue(ExtractionKind k, MarketBook? book)
+    /// <summary>What a worker-day of the extraction is worth at the book's mid, micro-mites (integer, review finding 8; only its order matters).</summary>
+    private Int128 ExtractionValue(ExtractionKind k, MarketBook? book)
     {
-        double price = book == null ? Econ.Goods.BasePriceMilliMites(k.OutGood) / 1000.0 : book.MidMicro(k.OutGood) / 1000.0;
-        return k.RateGPerWorkerDay * price;
+        long micro = book == null ? Econ.Goods.BasePriceMilliMites(k.OutGood) : book.MidMicro(k.OutGood);
+        return (Int128)k.RateGPerWorkerDay * micro;
+    }
+
+    /// <summary>Floor of the square root of a non-negative integer (Newton's method; review finding 8 replaced <c>Math.Sqrt</c>).</summary>
+    public static long ISqrt(long n)
+    {
+        if (n <= 0) return 0;
+        long x = n, y = (x + 1) / 2;
+        while (y < x) { x = y; y = (x + n / x) / 2; }
+        return x;
     }
 
     /// <summary>
@@ -527,7 +545,7 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
                 int row = Resources.Find(Region.Index(x, y), kind);
                 if (row < 0) continue;
                 long dx = (x - tx) * (long)Region.TileM, dy = (y - ty) * (long)Region.TileM;
-                long dist = (long)Math.Sqrt(dx * dx + dy * dy);
+                long dist = ISqrt(dx * dx + dy * dy);
                 if (dist > k.RadiusM) continue;
                 long cap = Resources.CapG(row); if (cap <= 0) continue;
                 long score = Resources.StockG(row) * 1000 / cap - dist / 8;
@@ -571,7 +589,10 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
             {
                 // a merchant pays out half of the cash it holds above twice its working capital each season (integration decision I41; was half of the season's gain
                 // over the cash it kept last season, a ratchet: the stalls' boxes held 47 percent of the region's coin by year 40)
-                long gain = cash - 2 * b.Capital, div = gain > 0 ? gain * Labour.PayoutPct / 100 : 0;
+                // and it keeps at least two months of its wages and costs (decision I44): paid down to twice a small start-up capital, most stalls ran on under a
+                // month's wages and one bad season broke them
+                long keepCash = Math.Max(2 * b.Capital, MerchantKeepDays * MerchantDayCost(b));
+                long gain = cash - keepCash, div = gain > 0 ? gain * Labour.PayoutPct / 100 : 0;
                 if (div > 0 && b.OwnerHousehold >= 0 && ledger.Transfer(b.Purse, Econ.HouseholdPurse[b.OwnerHousehold], new Coin(div), TransferReason.Dividend)) { b.Dividends += div; b.DividendsSeason += div; cash -= div; }
                 // a stall with no coin and nothing on the book two seasons running has failed (integration decision I38): it closes, and opens again under a new
                 // merchant with his own capital when the book needs one (LabourMarket.Reopen), instead of standing as a broke merchant for ever
@@ -591,6 +612,14 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
             b.WagesSeason = 0; b.InputsSeason = 0; b.DividendsSeason = 0; b.CashStart = ledger.Balance(b.Purse).Mites;
         }
     }
+
+    /// <summary>Days of its wages and costs a stall keeps in its box before it pays its owner (decision I44).</summary>
+    public const int MerchantKeepDays = 90;
+    /// <summary>Days of its wages and costs a merchant keeps back when he buys stock (decision I45).</summary>
+    public const int MerchantReserveDays = 45;
+
+    /// <summary>A stall's daily wages and costs: its wage bill, at least a skilled day wage for each hand (one for a stall the merchant keeps alone: his own keep).</summary>
+    public long MerchantDayCost(Business b) => Math.Max(b.WageBillPerDay, (long)Math.Max(1, b.Staff.Count) * RecipeBook.WagePerDay(WageClass.Skilled));
 
     /// <summary>A merchant with under this much coin is not solvent (the soak's measure, 10 crowns).</summary>
     public const long MerchantSolventMites = 1000;

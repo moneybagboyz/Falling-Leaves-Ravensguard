@@ -53,7 +53,7 @@ public class SoakTests(ITestOutputHelper output)
         Assert.Equal(0, ledger.Audit().Minted.Mites);
         Assert.True(w.Econ.MassAuditHolds());
         Assert.Equal(0, w.Sys.MassViolations);
-        for (int p = 0; p < ledger.PurseCount; p++) Assert.True(ledger.Balance(new PurseId(p)).Mites >= 0);
+        { long sum = 0; for (int p = 0; p < ledger.PurseCount; p++) sum += ledger.Balance(new PurseId(p)).Mites; Assert.Equal(ledger.Audit().InPurses.Mites, sum); Assert.Equal(seeded, sum + ledger.Audit().Sunk.Mites - ledger.Audit().Immigrated.Mites); }   // review finding 16: was "every balance >= 0", which the ledger guarantees
         foreach (var b in w.Markets.AllBooks())
             for (ushort g = 0; g < goods; g++) Assert.Equal(b.BookStore.Qty(g), b.Goods[g].Lots.Sum(l => l.Qty));
 

@@ -18,6 +18,10 @@
     "alewife_batch_days": 10, "alewife_floor_permille": 850,
     // gardens and hens (decision I12)
     "garden_g_per_person_day": 1100, "garden_first_doy": 11, "garden_last_doy": 40, "hen_egg_g_per_person_day": 14,
+    // immigration from the continent: the coin and grain a head an immigrant brings (continent-tick spec 3.7)
+    "immigrant_stake_mites_per_head": 2000, "immigrant_stake_measures_per_head": 13,
+    // merchants: one stall a book for every so many of its people (decision I43)
+    "people_per_stall": 400,
     // farm sales (decisions I30, I38)
     "farm_sales_keep_margin_days": 45, "farm_sales_spread_days": 3, "farm_sales_floor_permille": 800, "cart_to_town_permille": 1150 },
 ]

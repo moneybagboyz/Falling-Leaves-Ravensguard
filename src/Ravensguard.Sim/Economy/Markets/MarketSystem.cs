@@ -294,19 +294,23 @@ public sealed class MarketSystem
     public long SpentGoodsMites, SpentMaterialsMites;
 
     /// <summary>
-    /// The callback of a spending order (integration decision I37): what was delivered is used up in the household (craft goods worn out, hook 3, reason Worn; building
-    /// materials built into a house, hook 4, reason Consumed), so the mass books record where it went.
+    /// The callback of a spending order (integration decision I37, review finding 10): durable craft goods (cloth, clothes, shoes, candles, pottery, tools...) wear out
+    /// in the household on delivery (hook 3, reason Worn); food, ale, salt and fuel stay in the buyer's store and are eaten, drunk and burned through the needs (reason
+    /// Eaten or Burned); building materials (hook 4) stay in the store until the hands the household hires lay them (<c>HouseholdSpending</c>, reason Consumed).
     /// </summary>
     public Action<TradeResult> DeliveryHook(int hh, ushort good, byte hookKind)
     {
-        var party = HouseholdParty(hh); var why = hookKind == 4 ? DestroyReason.Consumed : DestroyReason.Worn;
+        var party = HouseholdParty(hh); bool wears = hookKind == 3 && !IsConsumable(good);
         return res =>
         {
             if (res.Qty <= 0) return;
-            party.Store.Destroy(good, Math.Min(res.Qty, party.Store.Qty(good)), why);
+            if (wears) party.Store.Destroy(good, Math.Min(res.Qty, party.Store.Qty(good)), DestroyReason.Worn);
             if (hookKind == 4) SpentMaterialsMites += res.PaidMites; else SpentGoodsMites += res.PaidMites;
         };
     }
+
+    /// <summary>Goods the needs use up (food, ale, salt, firewood): bought by the spending, they go to the store, not straight to wear.</summary>
+    public bool IsConsumable(ushort good) => Econ.Goods.FoodMeasuresPpm(good) > 0 || good == Econ.Food.Ale || good == Econ.Food.Salt || good == Econ.Food.Firewood;
 
     /// <summary>Units of the durable good in one item (integration decision I36): a set of clothes and a pair of shoes are grams of the kg goods (the basket's mass), a tool is a piece.</summary>
     public long DurableUnits(int hh, int k)
