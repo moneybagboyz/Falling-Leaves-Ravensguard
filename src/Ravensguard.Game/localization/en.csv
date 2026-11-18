@@ -1457,7 +1457,7 @@ TALK_TRADE,Trade
 TALK_HIRE,Hire
 TALK_RECRUIT,Recruit
 TALK_LEAVE,Leave
-TALK_HINT,1-9 choose · E advance · Esc leave · H history
+TALK_HINT,1-9 choose · E advance · Esc leave
 TALK_TIER_STRANGER,stranger
 TALK_TIER_ACQUAINTANCE,acquaintance
 TALK_TIER_FRIEND,friend
@@ -1571,3 +1571,120 @@ R_AUTHORED_ROADBANDITS,"there are bandits in the woods past the ford, and nobody
 R_AUTHORED_OMEN,"there is talk of omen, but nothing I can swear to."
 R_AUTHORED_LANDMARK,"there is talk of landmark, but nothing I can swear to."
 R_AUTHORED_PRICESPIKE,"there is talk of pricespike, but nothing I can swear to."
+TALK_SUB,{0} · {1} · you know them {2}/100
+TALK_HIRE_OFFER,Offer {0} a day for a week
+TALK_RECRUIT_OFFER,Ask them to join you ({0} to start)
+TALK_BACK,Back
+TALK_CONTINUE,Go on
+TALK_JOURNAL_ADDED,Added to your Journal.
+TALK_OVERHEARD,You overhear talk: see your Journal.
+TALK_EFFECT_CONTRACT,A job is offered ({0}).
+TALK_EFFECT_ITEM,You are given something ({0}).
+TRACE_NO_SOURCE,No record of it in the chronicle; only what was said.
+ACTION_WORLD_AUTOPILOT,Autopilot panel
+AP_TITLE,Autopilot
+AP_SUB,"The same mind that runs everyone else, told what to do with your days."
+AP_QUEUE,"Directives, in order"
+AP_DIRECTIVE,This directive
+AP_LIMITS,Limits: what it must never do
+AP_INTERRUPTS,When to give control back
+AP_QUEUE_EMPTY,Nothing queued: you live like a neighbour of your trade.
+AP_ADD,Add
+AP_ADD_WORK,Work
+AP_ADD_GUARD,Guard
+AP_ADD_TRAIN,Train
+AP_ADD_REST,Rest
+AP_ADD_TRAVEL,Travel
+AP_ADD_TRADE,Trade route
+AP_D_WORK,Work for pay
+AP_D_GUARD,Guard the town
+AP_D_TRAIN,Train {0}
+AP_D_REST,Rest and recover
+AP_D_TRAVEL,Travel to {0}
+AP_D_TRADE,Trade route
+AP_PICK,Pick a directive on the left.
+AP_K_WORK,"Takes the best-paying job on the board each morning, does it, eats, sleeps."
+AP_K_TRADEROUTE,"Buys goods at one town and sells them at the other, when the margin is worth the road."
+AP_K_TRAVEL,Walks to the place by the safest road its limits allow.
+AP_K_TRAIN,"Practises the skill, then takes work that teaches it."
+AP_K_GUARD,Takes watch jobs at the post and sleeps in the off hours.
+AP_K_ESCORT,Walks beside a person and shares their road.
+AP_K_REST,"Goes to bed, eats and dresses wounds until healed."
+AP_K_TEND,Tend your own fields and business: a later phase.
+AP_K_PURSUEAMBITION,Pursue an ambition step: a later phase.
+AP_TO,To
+AP_AT,At
+AP_FROM,From
+AP_MARGIN,Least margin
+AP_LEVEL,Until level
+AP_UNTIL,Ends after
+AP_DAYS,Days
+AP_FOREVER,until you stop it
+AP_CAP,Spend at most
+AP_NO_CAP,no cap
+AP_CROWNS_DAY,{0} cr a day
+AP_CROWNS,{0} cr
+AP_RESERVE,Keep in the purse
+AP_RISK,Danger it may face
+AP_RISK_LOW,Low
+AP_RISK_MED,Medium
+AP_RISK_HIGH,High
+AP_NOCRIMES,No crimes
+AP_HOME,Home by nightfall
+AP_POL_PAUSE,Pause
+AP_POL_NOTIFY,Notify
+AP_POL_AI,AI
+AP_RESET,Reset to defaults
+AP_INT_HOSTILE,Hostile in view
+AP_INT_ATTACKED,Attacked
+AP_INT_WEATHER,Bad weather
+AP_INT_COLD,Cold
+AP_INT_HEAT,Heat
+AP_INT_HUNGER,Hunger or low food
+AP_INT_FATIGUE,Fatigue
+AP_INT_DUSK,Dusk
+AP_INT_HORSE,Horse tired or lame
+AP_INT_CARTSTUCK,Cart stuck
+AP_INT_BLOCKEDPATH,Path blocked
+AP_INT_COMPANION,Companion in trouble
+AP_INT_FOUND,Something found
+AP_INT_ARRIVED,Arrived
+AP_INT_CONTRACT,Contract offered
+AP_INT_THREATENED,Threatened
+AP_INT_INJURED,Injured
+AP_INT_LOWMONEY,Low on money
+AP_INT_BIGCHOICE,A big choice (always asks)
+AP_INT_DIRECTIVEDONE,Directive done
+AP_INT_LIMITREACHED,A limit blocks the plan
+AP_INT_NEEDMONEY,Needs more coin
+AP_INT_STUCK,Stuck
+AP_W_LINE,It will not {0}.
+AP_W_SPEND,spend more than {0} a day
+AP_W_RESERVE,go below {0} in the purse
+AP_W_CRIME,commit a crime
+AP_W_RISK_LOW,go anywhere dangerous
+AP_W_RISK_MED,take a risky road
+AP_W_RISK_HIGH,take the worst roads unescorted
+AP_W_DARK,be away after dark
+AP_W_BIG,"accept a marriage, an oath or a bribe"
+AP_STATE_OFF,off
+AP_STATE_PAUSED,paused: you have control
+AP_STATE_ALERT,waiting for you: {0}
+AP_STATE_ON,on: {0}
+AP_NEIGHBOUR,live like a neighbour
+AP_STATE,Autopilot {0}.   Spent today {1} of {2}.   Purse {3}.
+AP_PRESET_CAUTIOUS,Cautious
+AP_PRESET_WORKER,Worker
+AP_PRESET_WATCH,Watch the world
+AP_START,Start or update
+AP_PAUSE,Pause or resume
+AP_STOP,Stop
+AP_STARTED,Autopilot is on.
+AP_RESUMED,Autopilot resumed.
+AP_CHIP_OFF,Auto: off
+AP_BANNER,Autopilot paused - {0} opens the panel
+AP_ALERT,The autopilot stopped for you
+AP_ALERT_TAKE,Take control
+AP_ALERT_GO,Continue autopilot
+AP_ALERT_JOURNAL,Open journal
+AP_TOOK_CONTROL,You have the hero again.

@@ -27,6 +27,23 @@ public sealed partial class AutopilotWorld
 {
     /// <summary>Posts the day's jobs and advances the job table in step with the autopilot windows (a world with no running game around it: tests and the zero-player runner). The game's own barrier does this otherwise.</summary>
     public bool DrivesJobs { get; set; }
+
+    /// <summary>Every command the autopilot issued, in order (the command log of a replay; the tape keeps what the player issued itself).</summary>
+    public List<HeroCommand> Issued { get; } = [];
+    private HeroCommand IssueCmd(HeroCommand c) { c = Desk.Issue(c); Issued.Add(c); if (Issued.Count > 20000) Issued.RemoveRange(0, 10000); return c; }
+
+    /// <summary>Called with (person, game second, action) each window an autopilot person decided (the equivalence test and the zero-player log read it).</summary>
+    public Action<EntityId, long, ActionKind>? OnAction { get; set; }
+
+    /// <summary>Posts and advances jobs for the windows up to <paramref name="toSec"/> without moving anybody (a replay runs the world's side alone).</summary>
+    public void StepJobsTo(long toSec)
+    {
+        long last = toSec / WindowSec;
+        for (long w = Math.Max(_jobsClock == long.MinValue ? last : _jobsClock / WindowSec + 1, 0); w <= last; w++) { StepJobs(w * WindowSec); _jobsClock = w * WindowSec; }
+    }
+
+    /// <summary>Reads what travel raised on the person's bus since the last look (test hook; <see cref="Advance"/> does this by itself while travelling).</summary>
+    public void IngestBus(AutopilotState st, long at) => Ingest(st, BusOf(st), at);
     private long _jobsClock = long.MinValue;
 
     private void StepJobs(long at)
@@ -74,7 +91,13 @@ public sealed partial class AutopilotWorld
             if (pick == null)
             {
                 // later departure (day), else not at all today
-                if (night && LimitGuard.ChooseRoute(st.Limits, [new LimitGuard.RouteOption("direct", danger)], false) != null) { st.CampUntil = at / 86400 * 86400 + Daylight.SunriseMinute(LatTenths, DoY(at + 86400)) * 60L + (at % 86400 < 43200 ? 0 : 86400); if (st.CampUntil <= at) st.CampUntil += 86400; if (st.LimitDay != day) { st.LimitDay = day; Raise(st, InterruptKind.LimitReached, at, "Too dangerous at night: leaving at dawn"); } }
+                if (night && LimitGuard.ChooseRoute(st.Limits, [new LimitGuard.RouteOption("direct", danger)], false) != null)
+                {
+                    long dayStart = at / 86400 * 86400, dawn = dayStart + Daylight.SunriseMinute(LatTenths, DoY(at)) * 60L;
+                    if (at >= dawn) dawn = dayStart + 86400 + Daylight.SunriseMinute(LatTenths, DoY(at + 86400)) * 60L;       // after dark: tomorrow's dawn
+                    st.CampUntil = dawn;
+                    if (st.LimitDay != day) { st.LimitDay = day; Raise(st, InterruptKind.LimitReached, at, "Too dangerous at night: leaving at dawn"); }
+                }
                 else { st.CampUntil = (at / 86400 + 1) * 86400; if (st.LimitDay != day) { st.LimitDay = day; Raise(st, InterruptKind.LimitReached, at, "The way is too dangerous for the chosen risk"); } }
                 return;
             }
@@ -166,10 +189,16 @@ public sealed partial class AutopilotWorld
             case 0:     // be at A, read the prices, decide
                 if (!At(A)) { Go(A); return; }
                 if (!Open(A)) return;
-                if (st.StepUntil != -1 - day) { st.StepUntil = -1 - day; Desk.Issue(new HeroCommand { Kind = HeroCommandKind.VisitMarket, Settlement = A, IssuedSec = at, Origin = CommandOrigin.Autopilot }); return; }
+                if (st.StepUntil != -1 - day) { st.StepUntil = -1 - day; IssueCmd(new HeroCommand { Kind = HeroCommandKind.VisitMarket, Settlement = A, IssuedSec = at, Origin = CommandOrigin.Autopilot }); return; }
                 if (!party.Notebook.TryGet(A, good, out var na) || !party.Notebook.TryGet(B, good, out var nb))
                 { if (at - st.StepSince > 3 * 3600 && st.StepSince != 0) { Block(st, d, at, "No prices known for the route"); } if (st.StepSince == 0) st.StepSince = at; return; }
-                int margin = MarginPm(na.AskMicro, nb.BidMicro);
+                long allowance = LimitGuard.AllowanceLeft(st.Limits, st, day);
+                long afford = Math.Min(Ctx.Coin - st.Limits.PurseReserveMites, allowance == long.MaxValue ? long.MaxValue : allowance * 1000 / SlipPm);
+                long qty = Math.Min(grams, afford <= 0 ? 0 : afford * 1_000_000 / Math.Max(1, na.AskMicro) * 9 / 10);
+                if (qty <= 0) { Raise(st, InterruptKind.NeedMoney, at, "The route needs more coin than the cap allows"); st.CampUntil = (at / 86400 + 1) * 86400; return; }
+                // the trip is judged on what the stalls ask now (the hero is standing in the market), not on the heard price alone
+                var book = Ctx.Book(A); book?.Sync(good); long cost = book == null ? 0 : Quotes.Buy(book, good, qty).TotalMites;
+                int margin = cost <= 0 ? -1000 : MarginPm(Math.Max(na.AskMicro, cost * 1_000_000 / qty), nb.BidMicro);
                 if (margin < minPm)
                 {
                     d.Aux1++;
@@ -177,30 +206,27 @@ public sealed partial class AutopilotWorld
                     if (d.Aux1 >= 2) { Block(st, d, at, "The margin stayed below the minimum twice"); return; }
                     st.CampUntil = (at / 86400 + 1) * 86400; return;
                 }
-                long allowance = LimitGuard.AllowanceLeft(st.Limits, st, day);
-                long afford = Math.Min(Ctx.Coin - st.Limits.PurseReserveMites, allowance == long.MaxValue ? long.MaxValue : allowance);
-                long qty = Math.Min(grams, afford <= 0 ? 0 : afford * 1_000_000 / Math.Max(1, na.AskMicro) * 9 / 10);
-                if (qty <= 0) { Raise(st, InterruptKind.NeedMoney, at, "The route needs more coin than the cap allows"); st.CampUntil = (at / 86400 + 1) * 86400; return; }
-                var book = Ctx.Book(A); long cost = book == null ? 0 : Quotes.Buy(book, good, qty).TotalMites;
-                var v = LimitGuard.CheckSpend(st.Limits, st, day, Ctx.Coin, cost);
+                long maxPay = cost * SlipPm / 1000;                                  // the market may move in the hour before the barrier: plan for the most the order allows
+                var v = LimitGuard.CheckSpend(st.Limits, st, day, Ctx.Coin, maxPay);
                 if (cost <= 0 || v != LimitVerdict.Allowed) { Raise(st, InterruptKind.LimitReached, at, $"Buying for the route: {v}"); st.CampUntil = (at / 86400 + 1) * 86400; return; }
-                d.Cost = 0; d.Revenue = 0;
-                var cmd = Desk.Issue(new HeroCommand { Kind = HeroCommandKind.Buy, Settlement = A, Good = good, Qty = qty, Limit = cost * 105 / 100, IssuedSec = at, Origin = CommandOrigin.Autopilot });
-                LimitGuard.Commit(st, day, cost); _reserved[cmd.Seq] = (st.Person, day, cost);
+                d.Cost = 0; d.Revenue = 0; d.Aux3 = Ctx.Pack.Qty(good);
+                Book.Log.Add(at, st.Person, LogCode.Action, $"Route {A}->{B}: buying {qty} g of good {good} for {Quotes.Money(cost)} (margin {margin / 10.0:0.0}%)");
+                var cmd = IssueCmd(new HeroCommand { Kind = HeroCommandKind.Buy, Settlement = A, Good = good, Qty = qty, Limit = maxPay, IssuedSec = at, Origin = CommandOrigin.Autopilot });
+                LimitGuard.Commit(st, day, maxPay); _reserved[cmd.Seq] = (st.Person, day, maxPay);
                 d.Aux0 = 1; st.StepSince = at; st.StepUntil = at; break;
             case 1:     // waiting for the goods to be in the pack (the barrier applies the buy at the end of the hour)
-                if (Ctx.Pack.Qty(good) > 0 || at - st.StepSince > 3 * 3600) { d.Aux0 = Ctx.Pack.Qty(good) > 0 ? 2 : 0; st.StepUntil = 0; st.StepSince = 0; }
+                if (Ctx.Pack.Qty(good) > d.Aux3 || at - st.StepSince > 3 * 3600) { d.Aux0 = Ctx.Pack.Qty(good) > d.Aux3 ? 2 : 0; st.StepUntil = 0; st.StepSince = 0; }
                 break;
             case 2:     // to B
                 if (!At(B)) { Go(B); return; }
                 d.Aux0 = 3; st.StepSince = at; break;
             case 3:     // sell
                 if (!Open(B)) return;
-                Desk.Issue(new HeroCommand { Kind = HeroCommandKind.VisitMarket, Settlement = B, IssuedSec = at, Origin = CommandOrigin.Autopilot });
-                Desk.Issue(new HeroCommand { Kind = HeroCommandKind.Sell, Settlement = B, Good = good, Qty = Ctx.Pack.Qty(good), IssuedSec = at, Origin = CommandOrigin.Autopilot });
+                IssueCmd(new HeroCommand { Kind = HeroCommandKind.VisitMarket, Settlement = B, IssuedSec = at, Origin = CommandOrigin.Autopilot });
+                IssueCmd(new HeroCommand { Kind = HeroCommandKind.Sell, Settlement = B, Good = good, Qty = Math.Max(0, Ctx.Pack.Qty(good) - d.Aux3), IssuedSec = at, Origin = CommandOrigin.Autopilot });
                 d.Aux0 = 4; st.StepSince = at; break;
             case 4:     // the sale is in at the end of the hour: judge the trip
-                if (Ctx.Pack.Qty(good) > 0 && at - st.StepSince < 3 * 3600) return;
+                if (Ctx.Pack.Qty(good) > d.Aux3 && at - st.StepSince < 3 * 3600) return;
                 int tripPm = d.Cost > 0 ? (int)((d.Revenue - d.Cost) * 1000 / d.Cost) : -1000;
                 d.Aux2++; st.LastProgressSec = at;
                 Book.Log.Add(at, st.Person, LogCode.Action, $"Trade trip {d.Aux2}: paid {Quotes.Money(d.Cost)}, got {Quotes.Money(d.Revenue)} ({tripPm / 10.0:0.0}%)");

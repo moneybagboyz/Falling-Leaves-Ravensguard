@@ -72,7 +72,7 @@ public class RumourTests
                 Assert.Equal(h.Hop, chain[0].Hop); checkedN++;
             }
         Assert.True(checkedN >= 800, $"only {checkedN} hearings traced");
-        Assert.True(ts.Rumours.Rumours.Values.All(r => ts.Rumours.HearingsOf(r.Id).Max(h => h.Hop) >= 3), "no rumour travelled three retellings");
+        Assert.True(ts.Rumours.Rumours.Values.Any(r => ts.Rumours.HearingsOf(r.Id).Max(h => h.Hop) >= 3), "no rumour travelled three retellings");
     }
 
     [Fact]

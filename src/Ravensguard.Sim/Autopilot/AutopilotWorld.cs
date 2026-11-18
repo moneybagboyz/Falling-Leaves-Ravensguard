@@ -119,8 +119,9 @@ public sealed partial class AutopilotWorld
 
     // ------------------------------------------------------------------ the driver
 
-    public InterruptBus BusOf(AutopilotState st) => Book.BusOf(st.Person, TravelOf?.Invoke()?.Bus ?? State.Travel?.Bus, HeroId);
-    private TravelState? Travel => TravelOf?.Invoke() ?? State.Travel;
+    public InterruptBus BusOf(AutopilotState st) => Book.BusOf(st.Person, Travel?.Bus, HeroId);
+    /// <summary>The travel state the autopilot drives for a Travel directive: <see cref="TravelOf"/> when set (the game returns null: its main thread owns the journey), else the world's.</summary>
+    private TravelState? Travel => TravelOf != null ? TravelOf() : State.Travel;
 
     /// <summary>Runs every enabled, unpaused person's windows up to game second <paramref name="toSec"/>. Window <c>w</c> covers game seconds <c>[20w, 20w+20)</c> and is acted on at its first second.</summary>
     public void Advance(long toSec)
@@ -222,6 +223,7 @@ public sealed partial class AutopilotWorld
                 if (LimitGuard.Allows(st.Limits, x.Tags) && x.Score > dr.Choice.Score && x.Score > 0) { DoExtra(st, x, at); return; }
         }
         if (kind != st.Intent) { st.Intent = kind; st.IntentSince = at; }
+        OnAction?.Invoke(st.Person, at, kind);
         Chores(st, a, at, coin, dr);
         Execute(st, d, a, kind, at, dr);
         if (kind is ActionKind.Sleep or ActionKind.Rest) st.LastProgressSec = at;

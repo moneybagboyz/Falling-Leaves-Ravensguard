@@ -292,7 +292,8 @@ public sealed class JobTable
     private void End(Job j, JobState s)
     {
         j.State = s; Reservations.Release(j.Id);
-        if (j.Worker != EntityId.None) _byWorker.Remove(j.Worker);
+        // (the hero's id is the zero id, so "has a worker" cannot be tested against EntityId.None: a worker's entry goes when it points at this very job)
+        if (_byWorker.TryGetValue(j.Worker, out var cur) && cur == j.Id) _byWorker.Remove(j.Worker);
     }
 
     // ------------------------------------------------------------------ saving
@@ -300,6 +301,6 @@ public sealed class JobTable
     public void Restore(Job j)
     {
         _jobs[j.Id] = j;
-        if (j.Live && j.Worker != EntityId.None) _byWorker[j.Worker] = j.Id;
+        if (j.Live && (j.Worker != EntityId.None || j.ClaimedSec > 0)) _byWorker[j.Worker] = j.Id;
     }
 }

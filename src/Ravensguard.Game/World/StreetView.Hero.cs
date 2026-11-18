@@ -72,6 +72,7 @@ public partial class StreetView
     void OpenTrade(int settlement, EntityId person, string? shot = null, bool notebook = false)
     {
         if (_heroLink == null || _router == null) { _router?.ShowToast(L.T("MAP_NONE")); return; }
+        if (ApActive) ApTakeControl(L.T("AP_TOOK_CONTROL"));                       // the player's own trade: the hero is theirs again
         _router.Push(new TradeScreen(_router, _heroLink, settlement, person, HeroNow) { ShotPath = shot, StartGood = shot != null ? "flour" : null, StartNotebook = notebook });
     }
 

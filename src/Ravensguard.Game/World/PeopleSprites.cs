@@ -26,6 +26,13 @@ public sealed class PeopleSprites
 
     public int Count => _nodes.Count;
 
+    /// <summary>Where a person's figure stands in the street's pixels, for what floats above their head (a bark); false when they are not drawn.</summary>
+    public bool TryPosition(EntityId id, out Vector2 pos)
+    {
+        if (_nodes.TryGetValue(id, out var f) && f.Actor.Visible) { pos = f.Actor.Position; return true; }
+        pos = default; return false;
+    }
+
     /// <summary>Which rig outfit stands for a person (art stand-ins until the clothing spec dresses people by what they own).</summary>
     public static string OutfitOf(Occupation o, SocialClass c) => o switch
     {

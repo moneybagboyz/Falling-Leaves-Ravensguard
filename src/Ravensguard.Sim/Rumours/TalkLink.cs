@@ -44,6 +44,9 @@ public sealed class TalkLink
         Publish(hour);
     }
 
+    /// <summary>Rebuilds the Journal view at the next barrier (after something outside the link changed the records: a dev shot, a test).</summary>
+    public Task Refresh() => Runtime.AtBarrier(() => { Publish(Runtime.HourDone); return 0; });
+
     private void Publish(long hour) => _view = TalkSystem.Journal(World(), State, hour);
 
     /// <summary>Who this person is, for the dialogue screen. Null when they are gone.</summary>
@@ -101,6 +104,21 @@ public sealed class TalkLink
             }
             default: return false;
         }
+    });
+
+    /// <summary>What the street grumbles about, read from the world: a staple dear against its usual price in this settlement's market, and unrest at 400 permille or more.</summary>
+    public Task<(bool Dear, bool Unrest)> Climate(int settlement) => Runtime.AtBarrier(() =>
+    {
+        bool dear = false, unrest = false; var st = Runtime.State;
+        if (settlement < 0) return (false, false);
+        if (st.Markets != null && st.Economy != null && settlement < st.Population.Region.Settlements.Count)
+        {
+            var b = st.Markets.BookForSettlement(settlement);
+            foreach (var g in new[] { "bread", "flour", "wheat", "barley" })
+                if (st.Economy.Goods.TryIdOf(g, out var id) && b.Goods[id].BaseRefMicro > 0 && b.MidMicro(id) * 1000 > b.Goods[id].BaseRefMicro * 1300) dear = true;
+        }
+        if (Runtime.Records.HomeWorld?.Economy.Taxes.State.Unrest is { } u && settlement < u.Length) unrest = u[settlement] >= 400;
+        return (dear, unrest);
     });
 
     public Task<HashSet<string>> Flags() => Runtime.AtBarrier(() => State.Flags.ToHashSet(StringComparer.Ordinal));

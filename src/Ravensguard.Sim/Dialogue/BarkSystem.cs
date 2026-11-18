@@ -18,6 +18,7 @@ public sealed class BarkSystem
 {
     private readonly Dictionary<ulong, double> _next = [];
     private readonly List<(ulong Person, double Until)> _visible = [];
+    private readonly Dictionary<string, double> _said = [];
     private long _second = long.MinValue; private int _inSecond;
 
     public int VisibleCount => _visible.Count;
@@ -37,25 +38,25 @@ public sealed class BarkSystem
             world.Job = c.Job; world.Mood = c.Mood; world.Female = c.Female; world.Child = c.Child; world.Familiarity = c.Tier switch { RelationTier.Stranger => 0, RelationTier.Acquaintance => 20, RelationTier.Friend => 50, _ => 80 };
             world.TrustPm = c.Tier switch { RelationTier.Disliked => -300, RelationTier.Hated => -700, RelationTier.Trusted => 700, RelationTier.Friend => 400, _ => 100 };
             world.Needs.Clear(); if (c.Hungry) world.Needs.Add("hungry");
-            BarkDef? pick = Pick(book, c, world, seed, window);
+            BarkDef? pick = Pick(book, c, world, seed, window, b => !(_said.TryGetValue(b.Id, out double until) && until > realSec));      // the street does not call the same thing twice in a breath
             if (pick == null) continue;
             ParamResolver.Fill(world, text);
             string line = ParamResolver.Say(pick.Key, world, text, c.Female);
             res.Add(new BarkEvent(c.Id, pick.Id, pick.Channel, pick.DurationS, line));
             double jitter = DetRng.Range(seed, window, c.Id, RngStreams.BarkPick, 1, 0, Math.Max(1, set.BarkPersonCooldownS / 4));
             _next[c.Id] = realSec + Math.Max(pick.CooldownS, set.BarkPersonCooldownS) + jitter;
-            _visible.Add((c.Id, realSec + pick.DurationS)); _inSecond++;
+            _visible.Add((c.Id, realSec + pick.DurationS)); _inSecond++; _said[pick.Id] = realSec + 12;
         }
         return res;
     }
 
     /// <summary>The bark a person would call at this window: weight times one plus the number of conditions, a draw on stream 0x311.</summary>
-    public static BarkDef? Pick(LineBook book, in BarkCandidate c, TalkContext x, ulong seed, long window)
+    public static BarkDef? Pick(LineBook book, in BarkCandidate c, TalkContext x, ulong seed, long window, Func<BarkDef, bool>? allow = null)
     {
         BarkDef? only = null; long total = 0; var pool = new List<(BarkDef B, long W)>();
         foreach (var b in book.Barks)
         {
-            if (b.RadiusM < c.DistM || !TalkConditions.All(b.Conditions, x)) continue;
+            if (b.RadiusM < c.DistM || !TalkConditions.All(b.Conditions, x) || (allow != null && !allow(b))) continue;
             long w = (long)b.WeightPm * (1 + b.Conditions.Count); pool.Add((b, w)); total += w; only = b;
         }
         if (pool.Count == 0) return null;

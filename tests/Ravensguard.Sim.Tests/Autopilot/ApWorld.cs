@@ -87,11 +87,12 @@ public sealed class ApWorld : IDisposable
     }
 
     /// <summary>Plays <paramref name="hours"/> game hours: the autopilot acts through the hour, the world steps it, the hero's commands are applied at its barrier.</summary>
-    public void RunHours(int hours, Action<long>? afterHour = null)
+    public void RunHours(int hours, Action<long>? afterHour = null, int chunkSec = 3600)
     {
         for (int i = 0; i < hours; i++)
         {
             long h = Ticker.HourDone + 1;
+            for (long t = h * 3600 + chunkSec - 1; t < h * 3600 + 3600; t += chunkSec) Ap.Advance(t);
             Ap.Advance(h * 3600 + 3599);
             Ticker.AdvanceHours(1);
             Desk.AfterHour(Ctx, h);

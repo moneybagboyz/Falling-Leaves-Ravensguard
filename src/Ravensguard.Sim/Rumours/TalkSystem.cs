@@ -13,7 +13,7 @@ public sealed record JournalCard(EntityId Rumour, RumourKind Kind, string Key, s
 public sealed record JournalStep(string Person, int Day, HearHow How, string From, int Hop);
 
 /// <summary>The chronicle entry at the root of a trace.</summary>
-public sealed record JournalSource(EntityId Entry, string TypeId, int Day, string Text, IReadOnlyList<string> Causes, bool Found);
+public sealed record JournalSource(EntityId Entry, string TypeId, int Day, string Text, IReadOnlyList<string> Causes, bool Found, string Details = "");
 
 /// <summary>The hero's Journal rumours as the last barrier left them.</summary>
 public sealed record JournalView(IReadOnlyList<JournalCard> Cards, long Hour, ulong Hash);
@@ -119,8 +119,8 @@ public static class TalkSystem
             }
             var e = r.Source != EntityId.None ? w.Chronicle.Get(r.Source) : null;
             var src = e == null ? new JournalSource(r.Source, r.TypeId, r.BornDay, "", [], false)
-                : new JournalSource(e.Id, e.TypeId, (int)e.When.TotalDays, e.Data.TryGetValue("text", out var tx) ? tx : e.Data.TryGetValue("title", out var ti) ? ti : e.TypeId,
-                    [.. e.Causes.Select(c => c.Note).Where(n => n.Length > 0)], true);
+                : new JournalSource(e.Id, e.TypeId, (int)e.When.TotalDays, e.Data.TryGetValue("text", out var tx) ? tx : e.Data.TryGetValue("title", out var ti) ? ti : "",
+                    [.. e.Causes.Select(c => c.Note).Where(n => n.Length > 0)], true, string.Join(", ", e.Data.Where(kv => kv.Key is not ("text" or "title")).OrderBy(kv => kv.Key, StringComparer.Ordinal).Take(5).Select(kv => $"{kv.Key}: {kv.Value}")));
             cards.Add(new JournalCard(r.Id, r.Kind, r.Key, r.Place, r.Who, r.About, r.Number, r.Settlement, h.Flags, h.PlaceAlt, h.How, h.Hop, h.Day, h.TellerName, RumourText.Confidence(h),
                 RumourText.PartlyTrue(h.Flags), h.Chain.Count, steps, src, r.ExpiresDay < (int)(hour / 24)));
         }

@@ -38,6 +38,8 @@ public sealed class Directive
     public long StartCoin;
     /// <summary>Directive-private counters saved with it (trade route: trips, low margins; travel: journey started).</summary>
     public long Aux0, Aux1, Aux2;
+    /// <summary>A trade route's stock of the trade good the hero already held when the trip's buy was ordered (grams): only what is added to it is the cargo.</summary>
+    public long Aux3;
     /// <summary>A trade route's coin in and out for the trip in progress (mites).</summary>
     public long Cost, Revenue;
     public string Name = "";

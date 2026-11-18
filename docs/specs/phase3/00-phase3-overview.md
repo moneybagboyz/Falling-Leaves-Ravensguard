@@ -205,6 +205,7 @@ Decisions behind the table:
 - **N is free:** the plan's World, CombatStance, CalledShot and Build tables do not use it, and it does not collide with the Mounted layer. Inside the Trade screen N toggles the price notebook (a different, modal context).
 - **Free in World after Phase 3:** U, 5 to 9, 0, F6, F7, F10 to F12 (O is used by Mounted, so it counts as taken whenever World is active).
 - Autopilot's banner reads "Autopilot paused - Y opens the panel".
+- **Y** is the autopilot panel (`world.autopilot`). The horses spec's `cart_unload` was also bound to Y; it moved to **Backslash** (next to `]` reload and `[` dig) when autopilot landed.
 
 ## 6. Combined open questions (deduplicated, each with a recommended default)
 

@@ -108,7 +108,7 @@ public class TalkRuntimeTests
         Assert.NotNull(ans.Card);
         var card = ans.Card!;
         Assert.True(card.Source.Found); Assert.Equal("outbreak", card.Source.TypeId); Assert.NotEmpty(card.Steps); Assert.Contains("winter coughs", string.Join(" ", card.Source.Causes));
-        Assert.Equal(1, link.View!.Cards.Count);
+        Assert.Single(link.View!.Cards);
         Assert.Null(link.AskNews(id).GetAwaiter().GetResult().Card is { } c2 && c2.Rumour == card.Rumour ? c2 : null);   // the same rumour is not told twice
         Assert.True(link.Apply("set_flag", new Dictionary<string, string> { ["flag"] = "x" }, id).GetAwaiter().GetResult());
         Assert.Contains("x", link.Flags().GetAwaiter().GetResult());

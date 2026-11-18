@@ -251,6 +251,8 @@ public partial class StreetView : Control, IHandlesBack
         rt.Pump(_world.Clock.Now, rt.State.HomeRegion.OriginXM + wx, rt.State.HomeRegion.OriginYM + wy); // the first call pays for JIT (up to 60 ms seen): here, not on a frame
         Ravensguard.Sim.Diagnostics.GcSettle.Run(); // the built world is copied out of the young generations now, not by a collection in the middle of a tick
         AttachHero();                                // the hero's desk on the runtime's barrier (trade spec 4.7)
+        AttachAutopilot();                           // directives, limits and interrupts on the same barrier (autopilot spec 6)
+        AttachTalk();                                // rumours seeded and spread at the same barrier (dialogue spec 4.9)
     }
 
     /// <summary>The per-frame call to the tick runtime: tells it the clock and where the hero is. Costs microseconds; the hours themselves run on the worker.</summary>
@@ -431,8 +433,9 @@ public partial class StreetView : Control, IHandlesBack
         _bandLabel = new Label { ThemeTypeVariation = "HintLabel" };
         v.AddChild(_bandLabel);
         if (_hero != null) v.AddChild(new Label { Text = L.F("STREET_HERO_HINT", _hero.Name, H("world.panel_character"), H("world.panel_codex")), ThemeTypeVariation = "HintLabel" });
+        BuildAutopilotHud(v);
         hud.AddChild(top);
-        BuildPartyBar(hud);
+        BuildPartyBar(hud); BuildTalkHud(hud);
 
         if (_regionMap != null)
         {
@@ -908,6 +911,8 @@ public partial class StreetView : Control, IHandlesBack
         PumpPeople();
         PumpJobs();
         HeroTick(delta);
+        AutopilotTick(delta);
+        TalkTick(delta); BarkShotStep();
         PollSave();
         if (Run != null && !_leaving && _saveTask == null && (_sinceSave += delta) >= AutosaveSeconds) StartSave(SaveKind.Autosave, quiet: true);
 
@@ -924,7 +929,7 @@ public partial class StreetView : Control, IHandlesBack
         if (_opt.Panel == "codex" && _frames == 3) OpenCodex();
         if (_opt.Panel == "crafting" && _frames == 3) OpenCrafting();
         if (_opt.Panel == "jobs" && _frames == 420) OpenWork();    // dev: the work panel once the first posting has come back from the tick worker
-        HeroShots();
+        HeroShots(); TalkShots(); ApShots();
         if (_opt.IsShot && _opt.Weather == "storm" && _frames == Math.Max(2, _opt.Frames - 1)) _wover.Strike(); // dev: catch a lightning flash in the picture
         if (_opt.IsShot && !_opt.MapShot && _opt.Panel == null && !_quitting && _frames >= _opt.Frames && ShotReady()) Shoot();
         if (bench && _benchT >= _opt.BenchSeconds) Finish();
@@ -937,6 +942,7 @@ public partial class StreetView : Control, IHandlesBack
         int dx = (Actions.HeldLoose("world.move_right") ? 1 : 0) - (Actions.HeldLoose("world.move_left") ? 1 : 0);
         int dy = (Actions.HeldLoose("world.move_down") ? 1 : 0) - (Actions.HeldLoose("world.move_up") ? 1 : 0);
         if (_opt.BenchSeconds > 0) return;
+        if ((dx != 0 || dy != 0) && ApActive) ApTakeControl(L.T("AP_TOOK_CONTROL"));                   // any movement key takes the hero back at once (autopilot spec 4.5)
         if ((dx != 0 || dy != 0) && _travel?.Journey is { State: Ravensguard.Sim.Travel.JourneyState.Travelling or Ravensguard.Sim.Travel.JourneyState.Paused }) TakeControl();   // a movement key takes the hero back from auto-travel
         _rec.SetInput(LoadInput(new MoveInput(dx, dy, Actions.HeldLoose("world.sprint"), HeroWalkInput())));
         var pan = new Vector2(
@@ -1335,11 +1341,13 @@ public partial class StreetView : Control, IHandlesBack
         else if (Actions.Pressed(e, "world.make")) OpenCrafting();
         else if (Actions.Pressed(e, "world.panel_inventory")) OpenInventory();
         else if (Actions.Pressed(e, "world.panel_squad")) OpenSquad();
-        else if (Actions.Pressed(e, "world.panel_journal") || Actions.Pressed(e, "world.context_menu")) OpenWork();
+        else if (Actions.Pressed(e, "world.autopilot")) OpenAutopilot();
+        else if (Actions.Pressed(e, "world.panel_journal")) OpenJournal();
+        else if (Actions.Pressed(e, "world.context_menu")) OpenWork();
         else if (Actions.Pressed(e, "world.quicksave")) QuickSave();
         else if (Actions.Pressed(e, "world.quickload")) QuickLoad();
         else if (Actions.Pressed(e, "world.camera_home")) { _pan = Vector2.Zero; if (_viewZ != _world.Snapshot.Hero.Z) { _viewZ = _world.Snapshot.Hero.Z; RebuildLevel(); } }
-        else if (e is InputEventKey && Actions.Pressed(e, "world.act")) { if (!TryTradeNear()) _rec.UsePortal(); }
+        else if (e is InputEventKey && Actions.Pressed(e, "world.act")) { if (ApActive && _heroLink != null && NearPerson() != null) ApTakeControl(L.T("AP_TOOK_CONTROL")); if (!TryTalkNear()) _rec.UsePortal(); }
         else return;
         GetViewport().SetInputAsHandled();
     }
@@ -1571,6 +1579,7 @@ public partial class StreetView : Control, IHandlesBack
     /// <summary>Walk to the clicked cell. True when the hero set off.</summary>
     bool ClickMove(Vector2 local)
     {
+        if (ApActive) ApTakeControl(L.T("AP_TOOK_CONTROL"));                                              // a click on the ground is the player's own order
         var c = ScreenToCell(local);
         if (!_world.Grid.InBounds(c.X, c.Y, _viewZ)) return false;
         if (_viewZ != _world.Snapshot.Hero.Z) { _router?.ShowToast(L.T("STREET_WRONG_LEVEL")); return false; }

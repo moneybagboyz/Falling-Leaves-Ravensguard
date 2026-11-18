@@ -11,7 +11,7 @@ namespace Ravensguard.Sim.Save;
     [Key(0)] public byte Kind { get; set; } [Key(1)] public byte TargetKind { get; set; } [Key(2)] public long Target { get; set; } [Key(3)] public long[] Params { get; set; } = [];
     [Key(4)] public byte Until { get; set; } [Key(5)] public long UntilValue { get; set; } [Key(6)] public long UntilValue2 { get; set; } [Key(7)] public int StartDay { get; set; } [Key(8)] public byte State { get; set; }
     [Key(9)] public long StartCoin { get; set; } [Key(10)] public long Aux0 { get; set; } [Key(11)] public long Aux1 { get; set; } [Key(12)] public long Aux2 { get; set; } [Key(13)] public long Cost { get; set; } [Key(14)] public long Revenue { get; set; }
-    [Key(15)] public string Name { get; set; } = "";
+    [Key(15)] public string Name { get; set; } = ""; [Key(16)] public long Aux3 { get; set; }
 }
 
 [MessagePackObject] public sealed class LimitRow
@@ -73,7 +73,7 @@ public sealed class AutopilotSave
                 CurrentJob = s.CurrentJob.Value, LastFired = [.. s.LastFiredSec], EdgeBits = s.EdgeBits, LastHunger = s.LastHungerMilli, CampUntil = s.CampUntil, LastShop = s.LastShopSec, LimitDay = s.LimitDay,
                 Policy = [.. s.Policy.Select(p => (byte)p)], Quiet = [.. s.Quiet],
                 Limits = new LimitRow { CapDay = l.SpendCapMitesPerDay, CapTotal = l.SpendCapTotalMites, Reserve = l.PurseReserveMites, NoCrimes = l.NoCrimes, MaxRisk = l.MaxRiskPm, Home = l.HomeByNightfall, HomeX = l.HomeX, HomeY = l.HomeY, NoLethal = l.NoLethalForce, Accept = l.AcceptContractKinds },
-                Queue = [.. s.Queue.Select(d => new DirectiveRow { Kind = (byte)d.Kind, TargetKind = d.TargetKind, Target = d.Target, Params = [.. d.Params], Until = (byte)d.Until, UntilValue = d.UntilValue, UntilValue2 = d.UntilValue2, StartDay = d.StartDay, State = (byte)d.State, StartCoin = d.StartCoin, Aux0 = d.Aux0, Aux1 = d.Aux1, Aux2 = d.Aux2, Cost = d.Cost, Revenue = d.Revenue, Name = d.Name })],
+                Queue = [.. s.Queue.Select(d => new DirectiveRow { Kind = (byte)d.Kind, TargetKind = d.TargetKind, Target = d.Target, Params = [.. d.Params], Until = (byte)d.Until, UntilValue = d.UntilValue, UntilValue2 = d.UntilValue2, StartDay = d.StartDay, State = (byte)d.State, StartCoin = d.StartCoin, Aux0 = d.Aux0, Aux1 = d.Aux1, Aux2 = d.Aux2, Cost = d.Cost, Revenue = d.Revenue, Name = d.Name, Aux3 = d.Aux3 })],
                 Summaries = [.. s.Summaries.Select(Day)], Today = Day(s.Today),
             });
         }
@@ -98,7 +98,7 @@ public sealed class AutopilotSave
             for (int i = 0; i < s.LastFiredSec.Length && i < r.LastFired.Length; i++) s.LastFiredSec[i] = r.LastFired[i];
             var l = r.Limits;
             s.Limits = new LimitSet { SpendCapMitesPerDay = l.CapDay, SpendCapTotalMites = l.CapTotal, PurseReserveMites = l.Reserve, NoCrimes = l.NoCrimes, MaxRiskPm = l.MaxRisk, HomeByNightfall = l.Home, HomeX = l.HomeX, HomeY = l.HomeY, NoLethalForce = l.NoLethal, AcceptContractKinds = l.Accept };
-            s.Queue = [.. r.Queue.Select(d => new Directive { Kind = (DirectiveKind)d.Kind, TargetKind = d.TargetKind, Target = d.Target, Params = d.Params.Length == 4 ? d.Params : d.Params.Concat(new long[4]).Take(4).ToArray(), Until = (UntilKind)d.Until, UntilValue = d.UntilValue, UntilValue2 = d.UntilValue2, StartDay = d.StartDay, State = (DirectiveState)d.State, StartCoin = d.StartCoin, Aux0 = d.Aux0, Aux1 = d.Aux1, Aux2 = d.Aux2, Cost = d.Cost, Revenue = d.Revenue, Name = d.Name })];
+            s.Queue = [.. r.Queue.Select(d => new Directive { Kind = (DirectiveKind)d.Kind, TargetKind = d.TargetKind, Target = d.Target, Params = d.Params.Length == 4 ? d.Params : d.Params.Concat(new long[4]).Take(4).ToArray(), Until = (UntilKind)d.Until, UntilValue = d.UntilValue, UntilValue2 = d.UntilValue2, StartDay = d.StartDay, State = (DirectiveState)d.State, StartCoin = d.StartCoin, Aux0 = d.Aux0, Aux1 = d.Aux1, Aux2 = d.Aux2, Cost = d.Cost, Revenue = d.Revenue, Name = d.Name, Aux3 = d.Aux3 })];
             s.Summaries = [.. r.Summaries.Select(Day)]; s.Today = Day(r.Today);
             b.States[s.Person] = s;
         }

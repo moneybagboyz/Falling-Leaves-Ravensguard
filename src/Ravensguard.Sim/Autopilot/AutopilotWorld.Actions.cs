@@ -14,6 +14,8 @@ namespace Ravensguard.Sim.Autopilot;
 
 public sealed partial class AutopilotWorld
 {
+    /// <summary>Headroom in permille a purchase order allows over its quote (the market moves in the hour before the barrier applies it): 1150 = 15%.</summary>
+    public const int SlipPm = 1150;
     private int LatTenths => SunCache.LatitudeOfRow(State.Population.Region.CellY);
     private static int MinuteOfDay(long at) => (int)(at % 86400 / 60);
     private static int DoY(long at) => new GameTime(at).DayOfYear;
@@ -370,7 +372,7 @@ public sealed partial class AutopilotWorld
 
     private void MaybeMeal(AutopilotState st, long at)
     {
-        if (st.Person != HeroId) return;
+        if (st.Person != HeroId || st.Today.Meals >= 3) return;                 // three meals a day: breakfast, dinner, supper
         if (st.LastMealSec != long.MinValue && at - st.LastMealSec < 3 * 3600) return;
         if (!TryEat(st, at)) Provision(st, at, urgent: true);
     }
@@ -382,17 +384,21 @@ public sealed partial class AutopilotWorld
         NeedModel.Read(a, at, out var n, out _);
         if (n.HungerMilliHours + 1000 < st.LastHungerMilli) { if (!TryEat(st, at)) Provision(st, at, urgent: true); }
         st.LastHungerMilli = n.HungerMilliHours;
-        int hour = (int)(at % 86400 / 3600);
-        if (hour is >= 7 and < 15 && at - st.LastShopSec >= 3600 && PackFoodDays() < 2.0 && !_reserved.Values.Any(v => v.Person == st.Person)) Provision(st, at, urgent: false);
+        int hour = (int)(at % 86400 / 3600); double days = PackFoodDays();
+        bool low = days < 1.2, routine = hour is >= 7 and < 15 && days < 2.5;           // a routine top-up in the morning; a low pack is shopped for at any hour the stalls are open
+        if ((routine || low && hour is >= 6 and < 18) && (st.LastShopSec == long.MinValue || at - st.LastShopSec >= (low ? 1800 : 3600)) && !_reserved.Values.Any(v => v.Person == st.Person)) Provision(st, at, urgent: low);
     }
 
     /// <summary>Buys food for a few days at the home market (the cheapest food per measure that the stalls hold), inside the limits. Issues a <c>Buy</c> with <c>Origin = Autopilot</c>; the barrier checks it again.</summary>
     private void Provision(AutopilotState st, long at, bool urgent)
     {
-        if (at - st.LastShopSec < 600 && urgent) return;
+        if (_reserved.Values.Any(v => v.Person == st.Person)) return;                    // a purchase is already waiting for the barrier
+        if (urgent && st.LastShopSec != long.MinValue && at - st.LastShopSec < 600) return;
         st.LastShopSec = at;
         int hour = (int)(at % 86400 / 3600), day = (int)(at / 86400);
-        var a = AnchorsOf(st, at); var book = Ctx.Book(a.HomeSettlement); if (book == null || !book.IsOpen(hour)) return;
+        // the stalls the hero can reach: the settlement they stand in (within 2.5 km of its centre); on the road there is nobody to buy from
+        int market = NearestSettlement(st, 2_500_000); if (market < 0) return;
+        var book = Ctx.Book(market); if (book == null || !book.IsOpen(hour)) return;
         var goods = Ctx.Econ.Goods; long dayPpm = (long)Cfg_MealMeasures() * 1000;
         long coin = Ctx.Coin;
         for (int days = Settings.FoodDaysInPack; days >= 1; days--)
@@ -408,13 +414,23 @@ public sealed partial class AutopilotWorld
                 if (cost < bestCost) { bestCost = cost; bestG = g; bestQty = grams; }
             }
             if (bestG == ushort.MaxValue) continue;
-            var v = LimitGuard.CheckSpend(st.Limits, st, day, coin, bestCost);
+            long maxPay = bestCost * SlipPm / 1000;
+            var v = LimitGuard.CheckSpend(st.Limits, st, day, coin, maxPay);
             if (v != LimitVerdict.Allowed) { if (days == 1) NoteCannotBuy(st, v, at, bestCost); continue; }
-            var cmd = Desk.Issue(new HeroCommand { Kind = HeroCommandKind.Buy, Settlement = a.HomeSettlement, Good = bestG, Qty = bestQty, Limit = bestCost * 105 / 100, IssuedSec = at, Origin = CommandOrigin.Autopilot });
-            LimitGuard.Commit(st, day, bestCost); _reserved[cmd.Seq] = (st.Person, day, bestCost);
+            var cmd = IssueCmd(new HeroCommand { Kind = HeroCommandKind.Buy, Settlement = market, Good = bestG, Qty = bestQty, Limit = maxPay, IssuedSec = at, Origin = CommandOrigin.Autopilot });
+            LimitGuard.Commit(st, day, maxPay); _reserved[cmd.Seq] = (st.Person, day, maxPay);
             Book.Log.Add(at, st.Person, LogCode.Action, $"Buying {days} days of food for {Quotes.Money(bestCost)}");
             return;
         }
+    }
+
+    /// <summary>The settlement whose centre is nearest to the person and within <paramref name="withinMm"/>, or -1.</summary>
+    private int NearestSettlement(AutopilotState st, long withinMm)
+    {
+        int best = -1; long bd = withinMm;
+        var ss = State.Population.Region.Settlements;
+        for (int i = 0; i < ss.Count; i++) { long d = PathPlan.Dist(st.PosX - ss[i].CenterX * 1000L, st.PosY - ss[i].CenterY * 1000L); if (d <= bd) { bd = d; best = i; } }
+        return best;
     }
 
     private void NoteCannotBuy(AutopilotState st, LimitVerdict v, long at, long cost)
@@ -435,10 +451,11 @@ public sealed partial class AutopilotWorld
         var st = Book.Get(ctx.Party.Hero);
         long cost = c.Kind switch
         {
-            HeroCommandKind.Buy => ctx.Book(c.Settlement) is { } b && c.Good < b.Goods.Length && c.Qty > 0 ? Quotes.Buy(b, c.Good, c.Qty).TotalMites : 0,
+            HeroCommandKind.Buy => ctx.Book(c.Settlement) is { } b && c.Good < b.Goods.Length && c.Qty > 0 ? Synced(b, c.Good, c.Qty) : 0,
             HeroCommandKind.Hire => c.Wage * Math.Max(1, c.Days),
             _ => 0,
         };
+        if (c.Limit > 0) cost = Math.Min(cost, c.Limit);                      // above its own limit the desk refuses it anyway (the price moved): no spend, no violation
         if (st == null) return Violation(c, "no autopilot row", 0, null, 0);
         int day = (int)(c.IssuedSec / 86400);
         long res = 0;
@@ -449,10 +466,13 @@ public sealed partial class AutopilotWorld
         return null;
     }
 
+    /// <summary>The quote the desk itself would get (it syncs the line to the market's present before quoting).</summary>
+    private static long Synced(MarketBook b, ushort good, long qty) { b.Sync(good); return Quotes.Buy(b, good, qty).TotalMites; }
+
     private HeroResult Violation(HeroCommand c, string why, long cost, AutopilotState? st, long sec)
     {
         Book.Log.Violations++;
-        Book.Log.Add(c.IssuedSec, st?.Person ?? EntityId.None, LogCode.Violation, $"LimitViolation: {c.Kind} {why} ({Quotes.Money(cost)})");
+        Book.Log.Add(c.IssuedSec, st?.Person ?? EntityId.None, LogCode.Violation, $"LimitViolation: {c.Kind} {why} ({Quotes.Money(cost)}, qty {c.Qty}, good {c.Good})");
         return new HeroResult(c.Seq, c.Kind, HeroResultCode.Refused, "LimitViolation: " + why, cost, 0, c.IssuedSec);
     }
 
@@ -470,9 +490,15 @@ public sealed partial class AutopilotWorld
             }
             else LimitGuard.Refund(st, rv.Day, rv.Mites);
         }
+        else if (r.Ok && c.Kind == HeroCommandKind.Buy && r.Mites > 0)
+        {
+            // a purchase nobody planned (a forced command): it still counts against the day
+            LimitGuard.Commit(st, (int)(c.IssuedSec / 86400), r.Mites);
+            if (st.Today.Day == (int)(c.IssuedSec / 86400)) st.Today.Spent += r.Mites;
+        }
         if (st.Active is { Kind: DirectiveKind.TradeRoute } tr && r.Ok)
         {
-            if (c.Kind == HeroCommandKind.Buy) tr.Cost += r.Mites; else if (c.Kind == HeroCommandKind.Sell) tr.Revenue += r.Mites;
+            if (c.Good == (ushort)tr.Params[1]) { if (c.Kind == HeroCommandKind.Buy) tr.Cost += r.Mites; else if (c.Kind == HeroCommandKind.Sell) tr.Revenue += r.Mites; }
         }
         if (r.Ok && r.Mites >= 1000 && c.Kind is HeroCommandKind.Buy or HeroCommandKind.Sell)
             WriteChronicle(st.Person, "autopilot_deal", c.IssuedSec, new Dictionary<string, string> { ["autopilot"] = "1", ["kind"] = c.Kind.ToString(), ["mites"] = r.Mites.ToString() });

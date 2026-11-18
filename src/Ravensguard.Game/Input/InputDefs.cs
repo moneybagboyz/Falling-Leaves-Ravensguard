@@ -53,11 +53,12 @@ public static class InputDefs
         A(W, "build", K(Key.B));
         A(W, "map", K(Key.M));
         A(W, "cart_hitch", K(Key.U));       // horses-and-carts spec 6: hitch the nearest animal to the nearest cart, or unhitch the team
-        A(W, "cart_unload", K(Key.Y));      // drop 100 kg of the cart's load on the ground (a stuck cart)
+        A(W, "cart_unload", K(Key.Backslash)); // drop 100 kg of the cart's load on the ground (a stuck cart); Y is the autopilot panel (overview 5A)
         A(W, "cart_reload", K(Key.Bracketright));
         A(W, "cart_dig", K(Key.Bracketleft)); // a shovel under the wheel: a fifth off the mud
         A(W, "camp", K(Key.Comma));      // travel spec 6: make camp, or open the camp panel (Q > Make camp once the Q menu exists)
         A(W, "forage", K(Key.Period));   // travel spec 4.4: forage the tile (Q > Forage)
+        A(W, "autopilot", K(Key.Y)); // the autopilot panel (autopilot-v1 spec 6; overview 5A: Y is free in World)
         A(W, "make", K(Key.N)); // crafting screen (basic-crafting spec 4.7); N is free in World, CombatStance, CalledShot and Build
         A(W, "camera_up", K(Key.Up));
         A(W, "camera_down", K(Key.Down));
