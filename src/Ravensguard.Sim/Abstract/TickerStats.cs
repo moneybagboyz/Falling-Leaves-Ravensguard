@@ -41,8 +41,22 @@ public sealed class TickerStats
 
     internal void RecordBarrier(long ticks) { if (_barrierMs.Count < MaxRecordedHours) _barrierMs.Add((float)(ticks * 1000.0 / Stopwatch.Frequency)); }
 
-    internal void RecordHour(long hourOfDay, bool seasonStartDay, long ticks)
+    private readonly List<(string Name, long Ticks)> _curHour = [];
+    private int _gen0 = -1, _gen1, _gen2;
+    /// <summary>The slowest hour so far: its hour index, milliseconds, the systems that ran in it (slowest first) and the garbage collections during it (diagnostics).</summary>
+    public (long Hour, double Ms, string Systems, int Gen0, int Gen1, int Gen2) WorstHour { get; private set; } = (-1, 0, "", 0, 0, 0);
+
+    internal void HourSystem(string name, long ticks) => _curHour.Add((name, ticks));
+
+    internal void RecordHour(long hourOfDay, bool seasonStartDay, long ticks, long hour = -1)
     {
+        int g0 = GC.CollectionCount(0), g1 = GC.CollectionCount(1), g2 = GC.CollectionCount(2);
+        if (_gen0 < 0) { _gen0 = g0; _gen1 = g1; _gen2 = g2; }
+        double msAll = ticks * 1000.0 / Stopwatch.Frequency;
+        if (msAll > WorstHour.Ms)
+            WorstHour = (hour, msAll, string.Join(", ", _curHour.GroupBy(x => x.Name).Select(g => (g.Key, Ms: g.Sum(x => x.Ticks) * 1000.0 / Stopwatch.Frequency)).OrderByDescending(x => x.Ms).Take(8).Select(x => $"{x.Key} {x.Ms:0.0}")),
+                g0 - _gen0, g1 - _gen1, g2 - _gen2);
+        _curHour.Clear(); _gen0 = g0; _gen1 = g1; _gen2 = g2;
         Hours++;
         if (_hourMs.Count >= MaxRecordedHours) return;
         float ms = (float)(ticks * 1000.0 / Stopwatch.Frequency);
@@ -92,6 +106,7 @@ public sealed class TickerStats
             if (c.Calls > 0) sb.AppendLine($"  {p,-16} {c.TotalMs,10:0.0} ms total  {c.MeanMs,8:0.000} ms/call  max {c.MaxMs:0.000}");
         }
         foreach (var (name, c) in _systems.OrderByDescending(x => x.Value.Ticks)) sb.AppendLine($"  system {name,-22} {c.TotalMs,10:0.0} ms total  {c.MeanMs,8:0.000} ms/call  max {c.MaxMs:0.000}");
+        if (WorstHour.Hour >= 0) sb.AppendLine($"  worst hour {WorstHour.Hour} (day {WorstHour.Hour / 24}, hour {WorstHour.Hour % 24}) {WorstHour.Ms:0.0} ms: {WorstHour.Systems}; collections during it gen0 {WorstHour.Gen0}, gen1 {WorstHour.Gen1}, gen2 {WorstHour.Gen2}");
         sb.AppendLine($"  barrier start {BarrierStart.MeanMs:0.000} ms/hour, apply {BarrierEnd.MeanMs:0.000} ms/hour (p99 {P99BarrierApplyMs:0.000}, max {BarrierEnd.MaxMs:0.000})");
         return sb.ToString();
     }

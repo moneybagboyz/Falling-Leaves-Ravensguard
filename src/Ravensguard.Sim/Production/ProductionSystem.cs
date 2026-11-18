@@ -572,6 +572,11 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
                 // a merchant pays out half of the cash it gained over the season (profit realised); its working capital stays
                 long gain = cash - Math.Max(b.CashStart, 2 * b.Capital), div = gain > 0 ? gain * Labour.PayoutPct / 100 : 0;
                 if (div > 0 && b.OwnerHousehold >= 0 && ledger.Transfer(b.Purse, Econ.HouseholdPurse[b.OwnerHousehold], new Coin(div), TransferReason.Dividend)) { b.Dividends += div; b.DividendsSeason += div; cash -= div; }
+                // a stall with no coin and nothing on the book two seasons running has failed (integration decision I38): it closes, and opens again under a new
+                // merchant with his own capital when the book needs one (LabourMarket.Reopen), instead of standing as a broke merchant for ever
+                bool broke = cash < MerchantSolventMites && !HoldsLots(b);
+                b.LossSeasons = broke ? (byte)Math.Min(255, b.LossSeasons + 1) : (byte)0;
+                if (b.LossSeasons >= 2) Close(b);
             }
             else
             {
@@ -584,6 +589,16 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
             if (b.State == BusinessState.Open) Markets?.ExtraCoin.Add((b.Settlement, cash));
             b.WagesSeason = 0; b.InputsSeason = 0; b.DividendsSeason = 0; b.CashStart = ledger.Balance(b.Purse).Mites;
         }
+    }
+
+    /// <summary>A merchant with under this much coin is not solvent (the soak's measure, 10 crowns).</summary>
+    public const long MerchantSolventMites = 1000;
+
+    private bool HoldsLots(Business b)
+    {
+        if (Markets == null) return false;
+        foreach (var gb in Markets.BookForSettlement(b.Settlement).Goods) foreach (var l in gb.Lots) if (l.Owner == b.Party && l.Qty > 0) return true;
+        return false;
     }
 
     /// <summary>Closes a business: staff released, goods and cash go back to the owner's household (production spec 3.5).</summary>
@@ -614,6 +629,11 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
             if (amt > 0) Econ.Ledger.Transfer(Econ.HouseholdPurse[hh], b.Purse, new Coin(amt), TransferReason.Gift);
         }
         b.CashStart = Econ.Ledger.Balance(b.Purse).Mites; b.Capital = Math.Max(b.CashStart, 1000);
+        if (KindOf(b).Trader && Markets != null)
+        {
+            var ms = Markets.BookForSettlement(b.Settlement).Merchants;
+            if (!ms.Contains(b.Party)) { int at = 0; while (at < ms.Count && ms[at].Index < b.Party.Index) at++; ms.Insert(at, b.Party); }   // id order, as RegisterTraders made it
+        }
     }
 
     /// <summary>

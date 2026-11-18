@@ -55,7 +55,7 @@ public sealed class ContinentTrade
                 var gb = b.Goods[g]; long cover = gb.Demand * gb.TargetCoverDays;
                 if (cover <= 1) continue;
                 bool staple = _staple[g];
-                if (!_made[g] && gb.StockUnits * 1000 < cover * ShortBelowPermilleOfCover && (gb.StructuralDemand > 0 || gb.LastTradedDay >= 0)) Import(b, m, g, gb, cover, staple ? StapleImportMarkupPermille : ImportMarkupPermille, day);
+                if (!_made[g] && gb.StockUnits * 1000 < cover * ShortBelowPermilleOfCover && (gb.StructuralDemand > 0 || gb.LastTradedDay >= 0 || gb.DemandEma > 0)) Import(b, m, g, gb, cover, staple ? StapleImportMarkupPermille : ImportMarkupPermille, day);
                 else if (gb.StockUnits * 1000 > cover * GlutAbovePermilleOfCover) Export(b, g, gb, cover, staple ? StapleExportDiscountPermille : ExportDiscountPermille, day);
             }
         }

@@ -27,6 +27,8 @@ public sealed class EconomyWorld
     public ParishRelief Parish { get; }
     public ContinentTrade Trade { get; }
     public RegionalTrade Regional { get; }
+    /// <summary>The seasonal spending of households above their reserve (integration decision I37).</summary>
+    public HouseholdSpending Spending { get; }
     public EconomyCounters Counters { get; } = new();
     /// <summary>Farming writes its chronicle here; the farming system moves the new entries to the tick outbox after each daily step.</summary>
     public Chronicle FarmChronicle { get; }
@@ -38,8 +40,12 @@ public sealed class EconomyWorld
         Labour = new LabourMarket(production, world.Population, world.Economy, world.Seed, p => world.Children.Of(p));
         Parish = new ParishRelief(world, markets);
         var cp = world.Economy.Ledger.Open(PurseKind.Treasury, Ravensguard.Sim.People.Vital.Demography.ContinentOwner);
-        Trade = new ContinentTrade(markets.AllBooks, world.Economy, cp, content.Recipes.Recipes.SelectMany(r => r.Outputs.Select(o => o.Good)));
+        // the continent sells what no recipe of the region makes, and the materials the region's recipes consume (iron, leather, cloth, malt...) when a book is short of
+        // them (integration decision I36): only the finished goods of the region's own workshops are never imported
+        var inputs = content.Recipes.Recipes.SelectMany(r => r.Inputs.Select(i => i.Good)).ToHashSet();
+        Trade = new ContinentTrade(markets.AllBooks, world.Economy, cp, content.Recipes.Recipes.SelectMany(r => r.Outputs.Select(o => o.Good)).Where(g => !inputs.Contains(g)));
         Regional = new RegionalTrade(markets, world.Economy, world.Population.Region);
+        Spending = new HouseholdSpending(world, this, content.Spending);
         farming.BuyFromMarket = (hh, good, qty) => markets.BookForHousehold(hh).Buy(markets.HouseholdParty(hh), good, qty, 3000, (int)(world.State.HourDone / 24)).Qty;
         farming.CountIdleHands = true;
         farming.IsEmployedElsewhere = Labour.IsAwayFromFarm;

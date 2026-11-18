@@ -101,7 +101,7 @@ public sealed class RegionWorld : IDisposable
         var ids = IdAllocator.ForRegion(at.Id); var chron = new Chronicle();
         var start = GameTime.FromCalendar(pop.NowYear, Season.Spring, 1);
         var sim = new SimWorld(seed, pop, econ, chron, ids, new AbstractState { HourDone = start.TotalHours - 1 }, sv.NamesFor(pop.Region), sv.EnvFor(at));
-        sim.Rates = VitalRates.Default with { ChevagePct = 50 };
+        sim.Rates = VitalRates.EconomyDefault;
         VitalSeeding.SeedPregnancies(sim, start);
         var ew = EconomyWorld.Create(sim, sv.Content, sv.FarmWeatherFor());
         return new RegionWorld(at, sv, sim, ew, chron, ids);
@@ -114,7 +114,7 @@ public sealed class RegionWorld : IDisposable
             throw new InvalidOperationException("The home region needs the economy, farming, production and markets of the world state.");
         var at = sv.Home;
         var sim = SimWorld.From(w, sv.NamesFor(w.Population.Region), sv.EnvFor(at));
-        sim.Rates = VitalRates.Default with { ChevagePct = 50 };
+        sim.Rates = VitalRates.EconomyDefault;
         var chron = new Chronicle();
         var farming = new FarmingSystem(w.Population.Region, w.Population, w.Economy, sv.FarmSettings, sv.FarmWeatherFor(), chron, w.Ids, sv.SeedFor(at), w.Farming);
         var ew = new EconomyWorld(sim, farming, w.Markets, w.Production, w.Production.Resources!, w.Production.Content, chron);
@@ -161,7 +161,7 @@ public sealed class RegionWorld : IDisposable
         var chron = WorldSave.DecodeChronicle(d.Chronicle);
         var ids = IdAllocator.FromState(d.IdState);
         var sim = new SimWorld(seed, pop, econ, chron, ids, abs, sv.NamesFor(terrain), sv.EnvFor(at));
-        sim.Rates = VitalRates.Default with { ChevagePct = 50 };
+        sim.Rates = VitalRates.EconomyDefault;
         var farmChron = new Chronicle();
         var farming = new FarmingSystem(terrain, pop, econ, sv.FarmSettings, sv.FarmWeatherFor(), farmChron, ids, seed, d.Farming.Restore(terrain));
         var content = ProductionContent.Load(sv.Content, econ.Goods);

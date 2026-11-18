@@ -75,21 +75,23 @@ public static class HouseholdNeeds
     }
 
     /// <summary>Grams of vegetables a member's garden gives on each day of its season (doy 11-40): 868 t a game year for 25,000 people (resources spec G-R14, gardens 130,000 measures).</summary>
-    public const int GatherFuelPct = 125;
+    public const int GatherFuelPct = 105;
     public const int GardenGPerPersonDay = 1100, GardenFirstDoy = 11, GardenLastDoy = 40, HenEggGPerPersonDay = 14;
 
     /// <summary>
     /// Household production of relish (resources spec G-R14, integration decision I12): every household has a garden that gives vegetables in the growing days and hens
     /// that lay all year; created into the house store before the day's meal (reason Harvest). Cows, sheep and fish come through the herds and the market.
     /// </summary>
-    public static void Produce(EconomyState e, HouseholdTable hht, int hh, int doy, ushort vegetables, ushort eggs, ushort firewood = ushort.MaxValue)
+    public static void Produce(EconomyState e, HouseholdTable hht, int hh, int doy, ushort vegetables, ushort eggs, ushort firewood = ushort.MaxValue, int tMeanC = 12)
     {
         int n = hht.MemberCount[hh]; if (n == 0) return;
         var s = e.HouseholdStore[hh];
         // fuel is gathered (integration decision I22): peasant and gentry households gather 125 percent of the basket's firewood from the commons and the lord's woods, the
         // surplus (a day's keep over twenty days' cover sells on the village market) is the village's fuel supply; a burgher buys all of his
+        // the gathering follows the day's burn (integration decision I36): in a cold spell a household fetches more wood, as it burns more; at a flat 125 percent of the
+        // mild-weather basket every peasant ran short each winter and posted a 20-day firewood order every day, which the books counted as 1,400 t a day of demand
         if (firewood != ushort.MaxValue && hht.Class[hh] != SocialClass.Burgher)
-            s.Create(firewood, (long)n * e.Basket(hht.Class[hh]).FirewoodGPerPersonDay * GatherFuelPct / 100, CreateReason.Cut);
+            s.Create(firewood, (long)n * e.Basket(hht.Class[hh]).FirewoodGPerPersonDay * FuelMultX100(tMeanC) / 100 * GatherFuelPct / 100, CreateReason.Cut);
         if (doy >= GardenFirstDoy && doy <= GardenLastDoy) s.Create(vegetables, (long)n * GardenGPerPersonDay, CreateReason.Harvest);
         s.Create(eggs, (long)n * HenEggGPerPersonDay, CreateReason.Harvest);
     }
@@ -109,7 +111,7 @@ public static class HouseholdNeeds
         long dayG = b.AleMl * e.Goods.Def(e.Food.Ale).LitreMassG / 1000;
         if (dayG <= 0 || s.Qty(e.Food.Ale) >= dayG * BrewDaysCover) return;
         long ale = dayG * 6, grain = ale * BrewBarleyPermille / 1000, fuel = ale * BrewFuelPermille / 1000;
-        if (s.Qty(barley) < grain || s.Qty(e.Food.Firewood) < fuel) return;
+        if (s.Qty(barley) < grain + e.SeedReserveG[hh] / 3 || s.Qty(e.Food.Firewood) < fuel) return;     // the spring seed barley is not brewed (decision I38)
         s.Destroy(barley, grain, DestroyReason.Consumed); s.Destroy(e.Food.Firewood, fuel, DestroyReason.Consumed);
         s.Create(e.Food.Ale, ale, CreateReason.Brewed);
     }

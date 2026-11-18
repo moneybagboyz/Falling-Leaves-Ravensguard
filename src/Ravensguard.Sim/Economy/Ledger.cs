@@ -79,6 +79,7 @@ public sealed class Ledger
         _balance[from.Index] -= amount.Mites; _balance[to.Index] = newTo;
         _flowCoin[(int)why] = checked(_flowCoin[(int)why] + amount.Mites); _flowCount[(int)why]++;
         if (_in != null) Track(from.Index, to.Index, (int)why, amount.Mites);
+        Observer?.Invoke(from, to, why, amount.Mites);
         Log(from, to, amount, (byte)why, false, false, chronicleEvent);
         return true;
     }
@@ -107,6 +108,9 @@ public sealed class Ledger
         Log(from, PurseId.None, amount, (byte)why, false, true, chronicleEvent);
         return true;
     }
+
+    /// <summary>Called after every successful transfer (from, to, reason, mites): the soak's coin-flow trace. A diagnostic, not part of the state; it must not move coin.</summary>
+    public Action<PurseId, PurseId, TransferReason, long>? Observer { get; set; }
 
     /// <summary>Starts (or restarts, zeroed) per-purse tracking of the coin moved in and out by reason: a diagnostic, not part of the state.</summary>
     public void StartTracking() { _in = new long[Math.Max(64, _count * 2) * TransferReasons]; _out = new long[_in.Length]; }
@@ -170,7 +174,7 @@ public sealed class Ledger
     public static Ledger Import(State s, int recentLogCapacity = 4096)
     {
         if (s.Owner.Length != s.Kind.Length || s.Owner.Length != s.Balance.Length || s.Sourced.Length > SourceReasons || s.Sunk.Length > SinkReasons
-            || s.FlowCoin.Length != TransferReasons || s.FlowCount.Length != TransferReasons) throw new InvalidDataException("corrupt ledger state");
+            || s.FlowCoin.Length > TransferReasons || s.FlowCount.Length != s.FlowCoin.Length) throw new InvalidDataException("corrupt ledger state");
         var l = new Ledger(recentLogCapacity);
         for (int i = 0; i < s.Owner.Length; i++)
         {
@@ -180,7 +184,7 @@ public sealed class Ledger
             l._balance[i] = s.Balance[i];
         }
         Array.Copy(s.Sourced, l._sourced, s.Sourced.Length); Array.Copy(s.Sunk, l._sunk, s.Sunk.Length);   // a save older than the migration reasons has shorter arrays
-        Array.Copy(s.FlowCoin, l._flowCoin, TransferReasons); Array.Copy(s.FlowCount, l._flowCount, TransferReasons);
+        Array.Copy(s.FlowCoin, l._flowCoin, s.FlowCoin.Length); Array.Copy(s.FlowCount, l._flowCount, s.FlowCount.Length);   // a save older than the Alms reason has shorter arrays
         l._seq = s.Seq;
         if (!l.Audit().IsConserved) throw new InvalidDataException("saved ledger does not balance");
         return l;

@@ -26,8 +26,9 @@ public sealed class SoakRow
     public double[] InBandPct = [];        // per staple: share of eligible book-days with mid / base in the band
     public double AtCapPct;                // all staples: share of eligible book-days with mid at 0.3 x or 4 x Ref
     public double BandPct;                 // all staples together
+    public double BandAllPct, AtCapAllPct; // the same over every merchant book-day, offered or not (the measure before decision I36)
     public double WorkshopCompletionPct;  // open workshops (stations, not traders) that finished a batch this year
-    public double MerchantsSolventPct;
+    public double MerchantsSolventPct, MerchantsCashSolventPct;
     public long BreadT, AleKl;             // bread (tonnes) and ale (kilolitres) made this year
     public int Businesses, Closed;
     public int Employed, Idle;             // staff of businesses; working-age adults (16-59) with no occupation and not farming
@@ -60,7 +61,10 @@ public sealed class EconomySoak
     private long _births0, _deaths0, _emig0, _marr0, _famine0, _hunger0;
     private long _hhDays, _hungryDays;
     private readonly long[] _bandN, _bandIn, _bandSum;
-    private long _bandCap, _bandAll;
+    private long _bandCap, _bandAll, _bandInAllBooks, _bandCapAllBooks, _bandAllBooks;
+    private int[] _lastStocked = [];
+    /// <summary>A staple is on offer in a book (and its book-day counts for the band, decision I36) when the book held some of it within this many days.</summary>
+    public const int OfferedWithinDays = 15;
     private long _bread0, _ale0;
     private long _hired0, _succ0, _closedNo0;
     public long TotalHungryDays, TotalHouseholdDays, TotalHungryDaysAll, TotalHouseholdDaysAll;
@@ -72,7 +76,10 @@ public sealed class EconomySoak
     public FlowTrace? Flow { get; private set; }
     public HashSet<int> FlowYears { get; } = [];
     public Action<string>? FlowOut { get; set; }
-    public void EnableFlow() { Flow = new FlowTrace(Sim, World.Economy); }
+    public void EnableFlow() { Flow = new FlowTrace(Sim, World.Economy); EnableCoinFlow(); }
+    /// <summary>The coin-flow trace (<c>soak --coin</c>, also on with <c>--flow</c>), null when off.</summary>
+    public CoinFlowTrace? Coin { get; private set; }
+    public void EnableCoinFlow() { Coin ??= new CoinFlowTrace(Sim, World.Economy); }
     /// <summary>Hungry households at the end of each simulated day (a window of the whole run).</summary>
     public List<int> HungryByDay { get; } = [];
 
@@ -91,7 +98,7 @@ public sealed class EconomySoak
         var v = Sim.Vital; var ew = World.Economy;
         _births0 = v.Births; _deaths0 = v.Deaths; _emig0 = v.Emigrants; _marr0 = v.Marriages; _hunger0 = v.DeathsByCause[(int)DeathCause.Hunger];
         _famine0 = Ticker.Counters.GetValueOrDefault("famines");
-        _hhDays = _hungryDays = 0; _bandCap = _bandAll = 0;
+        _hhDays = _hungryDays = 0; _bandCap = _bandAll = 0; _bandInAllBooks = _bandCapAllBooks = _bandAllBooks = 0;
         Array.Clear(_bandN); Array.Clear(_bandIn); Array.Clear(_bandSum);
         var bs = ew.Production.Businesses;
         if (_batchStart.Length < bs.Count) { }
@@ -113,8 +120,10 @@ public sealed class EconomySoak
                 Ticker.AdvanceHours(24);
                 Sample();
                 if (Flow != null && d % 6 == 5) Flow.Sample();
+                if (Coin != null && d % 6 == 5) Coin.Sample();
             }
             if (Flow != null) { string t = Flow.CloseYear(y + 1, FlowYears.Count == 0 || FlowYears.Contains(y + 1)); if (t.Length > 0) FlowOut?.Invoke(t); }
+            if (Coin != null) { string t = Coin.CloseYear(y + 1, FlowYears.Count == 0 || FlowYears.Contains(y + 1)); if (t.Length > 0) FlowOut?.Invoke(t); }
             TotalHungryDaysAll += _hungryDays; TotalHouseholdDaysAll += _hhDays;
             var row = CloseYear();
             Rows.Add(row); onRow?.Invoke(row);
@@ -134,6 +143,9 @@ public sealed class EconomySoak
             if ((e.Grievances[h] & Grievance.Hunger) != 0) { _hungryDays++; today++; }
         }
         HungryByDay.Add(today);
+        int dayNow = (int)(Sim.State.HourDone / 24);
+        var books = ew.Markets.Books;
+        if (_lastStocked.Length != books.Length * _staple.Length) { _lastStocked = new int[books.Length * _staple.Length]; Array.Fill(_lastStocked, int.MinValue / 2); }
         foreach (var b in ew.Markets.AllBooks())
         {
             if (b.Merchants.Count == 0) continue;
@@ -142,10 +154,16 @@ public sealed class EconomySoak
                 var gb = b.Goods[_staple[i]];
                 long mid = b.MidMicro(_staple[i]);
                 int ratio = (int)(mid * 1000 / Math.Max(1, gb.BaseRefMicro));
-                _bandN[i]++; _bandSum[i] += ratio; _bandAll++;
-                if (ratio >= BandLow && ratio <= BandHigh) _bandIn[i]++;
+                bool inBand = ratio >= BandLow && ratio <= BandHigh;
                 int m = b.MidRatioPermille(_staple[i]);
-                if (m <= e.Money.PriceClampMinPermille + 5 || m >= e.Money.PriceClampMaxPermille - 5) _bandCap++;
+                bool cap = m <= e.Money.PriceClampMinPermille + 5 || m >= e.Money.PriceClampMaxPermille - 5;
+                _bandAllBooks++; if (inBand) _bandInAllBooks++; if (cap) _bandCapAllBooks++;
+                int k = b.SettlementIndex * _staple.Length + i;
+                if (gb.StockUnits > 0) _lastStocked[k] = dayNow;
+                if (dayNow - _lastStocked[k] > OfferedWithinDays) continue;      // not on offer here: a village with no baker has no bread price (decision I36)
+                _bandN[i]++; _bandSum[i] += ratio; _bandAll++;
+                if (inBand) _bandIn[i]++;
+                if (cap) _bandCap++;
             }
         }
         TotalHungryDays = _hungryDays; TotalHouseholdDays = _hhDays;
@@ -181,7 +199,8 @@ public sealed class EconomySoak
             r.InBandPct[i] = _bandN[i] == 0 ? 0 : 100.0 * _bandIn[i] / _bandN[i]; inAll += _bandIn[i];
         }
         r.BandPct = _bandAll == 0 ? 0 : 100.0 * inAll / _bandAll; r.AtCapPct = _bandAll == 0 ? 0 : 100.0 * _bandCap / _bandAll;
-        int workshops = 0, done = 0, merchants = 0, solvent = 0, open = 0, closed = 0, staff = 0;
+        r.BandAllPct = _bandAllBooks == 0 ? 0 : 100.0 * _bandInAllBooks / _bandAllBooks; r.AtCapAllPct = _bandAllBooks == 0 ? 0 : 100.0 * _bandCapAllBooks / _bandAllBooks;
+        int workshops = 0, done = 0, merchants = 0, solvent = 0, cashSolvent = 0, open = 0, closed = 0, staff = 0;
         var led = e.Ledger; long bizCoin = 0;
         var bs = ew.Production.Businesses;
         for (int i = 0; i < bs.Count; i++)
@@ -189,7 +208,15 @@ public sealed class EconomySoak
             var b = bs[i]; var k = ew.Production.KindOf(b);
             if (b.State == BusinessState.Closed) { closed++; continue; }
             open++; staff += b.Staff.Count; long cash = led.Balance(b.Purse).Mites; bizCoin += cash;
-            if (k.Trader) { merchants++; if (cash >= 1000) solvent++; }
+            if (k.Trader)
+            {
+                // solvent: cash and stock on the book (at today's bid) worth 10 crowns or more; a stall has no debts, so what it owns is its standing (decision I38;
+                // cash alone was the measure before, CashSolventPct keeps it)
+                merchants++; if (cash >= 1000) cashSolvent++;
+                long worth = cash; var bk = ew.Markets.BookForSettlement(b.Settlement);
+                foreach (var gb in bk.Goods) foreach (var l in gb.Lots) if (l.Owner == b.Party) worth += (long)((Int128)l.Qty * bk.BidMicro(l.Good) / 1_000_000);
+                if (worth >= 1000) solvent++;
+            }
             else if (k.Stations.Length > 0)
             {
                 workshops++;
@@ -197,7 +224,7 @@ public sealed class EconomySoak
                 if (b.Batches > before) done++;
             }
         }
-        r.WorkshopCompletionPct = workshops == 0 ? 100 : 100.0 * done / workshops; r.MerchantsSolventPct = merchants == 0 ? 100 : 100.0 * solvent / merchants;
+        r.WorkshopCompletionPct = workshops == 0 ? 100 : 100.0 * done / workshops; r.MerchantsSolventPct = merchants == 0 ? 100 : 100.0 * solvent / merchants; r.MerchantsCashSolventPct = merchants == 0 ? 100 : 100.0 * cashSolvent / merchants;
         r.Businesses = open; r.Closed = closed; r.Employed = staff;
         r.BreadT = (ew.Production.ProducedUnits[cat.IdOf("bread")] - _bread0) / 1_000_000;
         r.AleKl = (ew.Production.ProducedUnits[cat.IdOf("ale")] - _ale0) / 1_000_000;
@@ -218,7 +245,7 @@ public sealed class EconomySoak
         var sb = new StringBuilder();
         sb.Append("year   pop  u15%  over50 birth death emig hungD  surplus% hungry% fam");
         foreach (var s in Staples.Take(5)) sb.Append($" {s[..Math.Min(5, s.Length)],5}");
-        sb.Append(" band% cap% shop% merch% bread-t ale-kl biz/closed employed idle fert sheep/ox/cow      coin(crowns)  src/sink  audit harv-t sown unharv");
+        sb.Append(" band% cap% (all books) shop% merch% bread-t ale-kl biz/closed employed idle fert sheep/ox/cow      coin(crowns)  src/sink  audit harv-t sown unharv");
         return sb.ToString();
     }
 
@@ -227,7 +254,7 @@ public sealed class EconomySoak
         var sb = new StringBuilder();
         sb.Append($"{r.Year,4} {r.Population,6} {r.Under15Pct,5:0.0} {r.Over50Pct,6:0.0} {r.Births,5} {r.Deaths,5} {r.Emigrants,4} {r.HungerDeaths,5} {r.FoodSurplusPct,8:0.0} {r.HungryPct,7:0.00} {r.Famines,3}");
         for (int i = 0; i < 5; i++) sb.Append($" {r.PriceIndex[i],5:0.00}");
-        sb.Append($" {r.BandPct,5:0.0} {r.AtCapPct,4:0.0} {r.WorkshopCompletionPct,5:0} {r.MerchantsSolventPct,6:0} {r.BreadT,7} {r.AleKl,6} {r.Businesses,4}/{r.Closed,-3} {r.Employed,8} {r.Idle,4} {r.MeanFertility,4:0} {r.Sheep}/{r.Oxen}/{r.Cows} {r.CoinTotal / 100,12:N0} {r.CoinSources / 100:N0}/{r.CoinSinks / 100:N0} {(r.CoinConserved && r.MassOk ? "ok" : "FAIL")} {r.HarvestT} {r.SownAcres} {r.UnharvestedAcres}");
+        sb.Append($" {r.BandPct,5:0.0} {r.AtCapPct,4:0.0} ({r.BandAllPct,4:0} {r.AtCapAllPct,3:0}) {r.WorkshopCompletionPct,5:0} {r.MerchantsSolventPct,6:0} {r.BreadT,7} {r.AleKl,6} {r.Businesses,4}/{r.Closed,-3} {r.Employed,8} {r.Idle,4} {r.MeanFertility,4:0} {r.Sheep}/{r.Oxen}/{r.Cows} {r.CoinTotal / 100,12:N0} {r.CoinSources / 100:N0}/{r.CoinSinks / 100:N0} {(r.CoinConserved && r.MassOk ? "ok" : "FAIL")} {r.HarvestT} {r.SownAcres} {r.UnharvestedAcres}");
         return sb.ToString();
     }
 
@@ -237,9 +264,9 @@ public sealed class EconomySoak
         var sb = new StringBuilder();
         var rows = soak.Rows; if (rows.Count == 0) return "";
         sb.AppendLine($"hungry household-days over the run: {100.0 * soak.TotalHungryDaysAll / Math.Max(1, soak.TotalHouseholdDaysAll):0.000}% ({soak.TotalHungryDaysAll:N0} of {soak.TotalHouseholdDaysAll:N0})");
-        sb.AppendLine($"price band share of book-days (mean over years): {rows.Average(r => r.BandPct):0.0}%; at the 0.3x/4x caps {rows.Average(r => r.AtCapPct):0.0}%; staples " +
+        sb.AppendLine($"price band share of book-days on offer (mean over years): {rows.Average(r => r.BandPct):0.0}%; at the 0.3x/4x caps {rows.Average(r => r.AtCapPct):0.0}%; over every merchant book-day {rows.Average(r => r.BandAllPct):0.0}% in band, {rows.Average(r => r.AtCapAllPct):0.0}% at the caps; staples " +
                       string.Join(", ", Staples.Select((s, i) => $"{s} {rows.Average(r => r.InBandPct[i]):0.0}%")));
-        sb.AppendLine($"workshops completing a batch: mean {rows.Average(r => r.WorkshopCompletionPct):0}% (min {rows.Min(r => r.WorkshopCompletionPct):0}%); merchants solvent: mean {rows.Average(r => r.MerchantsSolventPct):0}% (min {rows.Min(r => r.MerchantsSolventPct):0}%)");
+        sb.AppendLine($"workshops completing a batch: mean {rows.Average(r => r.WorkshopCompletionPct):0}% (min {rows.Min(r => r.WorkshopCompletionPct):0}%); merchants solvent (cash and stock): mean {rows.Average(r => r.MerchantsSolventPct):0}% (min {rows.Min(r => r.MerchantsSolventPct):0}%), by cash alone mean {rows.Average(r => r.MerchantsCashSolventPct):0}%");
         { var v = soak.Sim.Vital; long net = v.Emigrants - v.Immigrants; sb.AppendLine($"net migration over the run: {net:N0} left; population excluding it {rows[^1].Population + net:N0} (start {rows[0].Population:N0}): the continent tick owns the inflow, so judge births against deaths here"); }
         sb.AppendLine($"population {rows[0].Population:N0} -> {rows[^1].Population:N0} (min {rows.Min(r => r.Population):N0}, max {rows.Max(r => r.Population):N0}); under 15 mean {rows.Average(r => r.Under15Pct):0.0}%; coin {rows[0].CoinTotal / 100:N0} -> {rows[^1].CoinTotal / 100:N0} crowns, sources {rows[^1].CoinSources / 100:N0}, sinks {rows[^1].CoinSinks / 100:N0}");
         return sb.ToString().TrimEnd();
@@ -256,7 +283,7 @@ public sealed class EconomySoak
             sb.AppendLine($"  {g.Key,-15} {g.Count(),4} {open.Count,4} | staff {open.Sum(b => b.Staff.Count),4}/{open.Count * k.StaffCapacity,-4} | batches {g.Sum(b => b.Batches),7} | cash {(open.Count == 0 ? 0 : open.Sum(b => led.Balance(b.Purse).Mites) / open.Count / 100.0),9:N0} | idle {(open.Count == 0 ? 0 : open.Average(b => b.IdleDays)),5:0.0} | arrears {g.Sum(b => b.ArrearsMites),8} | div {g.Sum(b => b.Dividends) / 100.0,9:N0}");
         }
         sb.AppendLine("-- goods: produced t | used by recipes t | on books t | book demand t/day | mean mid/base (all books | merchant books)");
-        var goods = new[] { "wheat", "rye", "barley", "oats", "peas", "beans", "flour", "bread", "malt", "ale", "firewood", "logs", "salt", "fish_fresh", "meat_fresh", "cheese", "vegetables", "eggs", "wool_raw", "yarn", "cloth_wool", "hay", "straw", "sheep", "cow", "charcoal", "tools", "leather", "hide_raw" };
+        var goods = new[] { "wheat", "rye", "barley", "oats", "peas", "beans", "flour", "bread", "malt", "ale", "firewood", "logs", "salt", "fish_fresh", "meat_fresh", "cheese", "vegetables", "eggs", "wool_raw", "yarn", "cloth_wool", "hay", "straw", "sheep", "cow", "charcoal", "tools", "leather", "hide_raw", "clothes", "shoes", "cloth_dyed", "candles", "pottery", "cookware", "meat_salted", "timber_planks", "stone_dressed", "stone_raw", "quicklime", "bricks", "nails", "thatch", "glass", "iron_bar" };
         foreach (var gn in goods)
         {
             if (!cat.TryIdOf(gn, out ushort g)) continue;
@@ -269,6 +296,19 @@ public sealed class EconomySoak
             }
             long inStores = ew.Farming.TotalGrams(g);
             sb.AppendLine($"  {gn,-11} made {prod.ProducedUnits[g] / 1e6,9:N1} | used {prod.ConsumedUnits[g] / 1e6,9:N1} | books {onBooks / 1e6,8:N1} | all stores {inStores / 1e6,9:N1} | demand/day {demand / 1e6,7:N2} | mid/base {all / Math.Max(1, nAll),5:0.00} | {mer / Math.Max(1, nMer),5:0.00}");
+        }
+        sb.AppendLine("-- staple books (merchant books): structural / EMA / floor demand t/day | stock t | books at 4x / at 0.3x / in band of " + ew.Markets.AllBooks().Count(b => b.Merchants.Count > 0));
+        foreach (var gn in Staples)
+        {
+            ushort g = cat.IdOf(gn); long st = 0, ema = 0, flo = 0, stock = 0; int hi = 0, lo = 0, band = 0;
+            foreach (var b in ew.Markets.AllBooks())
+            {
+                if (b.Merchants.Count == 0) continue; var gb = b.Goods[g];
+                st += gb.StructuralDemand; ema += gb.DemandEma; flo += gb.FloorDemand; stock += gb.StockUnits;
+                int m = b.MidRatioPermille(g); if (m >= e.Money.PriceClampMaxPermille - 5) hi++; else if (m <= e.Money.PriceClampMinPermille + 5) lo++;
+                long r = b.MidMicro(g) * 1000 / Math.Max(1, gb.BaseRefMicro); if (r >= BandLow && r <= BandHigh) band++;
+            }
+            sb.AppendLine($"  {gn,-9} {st / 1e6,8:0.00} / {ema / 1e6,8:0.00} / {flo / 1e6,7:0.00} | {stock / 1e6,8:0.0} | {hi,3} / {lo,3} / {band,3}");
         }
         var reg = Sim.Population.Region;
         sb.AppendLine("-- books by class: n | with merchants | pop | workshops (open) | workshops in books without a merchant");
@@ -364,6 +404,7 @@ public sealed class EconomySoak
         sb.AppendLine($"-- parish: household-days asked {ew.Parish.Asked:N0}, not fully served {ew.Parish.Short:N0}; relief purchases {ew.Parish.ReliefG / 1e6:N0} t; dole {ew.Parish.DoleMites / 100:N0} crowns; alms coin {ew.Parish.AlmsMites / 100:N0} crowns, alms grain {ew.Parish.AlmsG / 1e6:N0} t; gleaned {ew.Farming.State.GleanedG / 1e6:N0} t");
         { var fst = ew.Farming.State; double yrs = Math.Max(1, Rows.Count); sb.AppendLine($"-- farming per year: fields {fst.Fields.Count}, sown acres {fst.SownAcres / yrs:N0}, harvest {fst.HarvestG / yrs / 1e6:N0} t ({fst.HarvestG / Math.Max(1.0, fst.SownAcres) / 1000:N1} kg a sown acre), seed {fst.SeedSownG / yrs / 1e6:N0} t, tithe {fst.TitheG / yrs / 1e6:N0} t, rent {fst.RentG / yrs / 1e6:N0} t, gleaned {fst.GleanedG / yrs / 1e6:N0} t, threshed {fst.ThreshedG / yrs / 1e6:N0} t, unharvested acres {fst.UnharvestedAcres / yrs:N0}"); }
         sb.AppendLine($"-- regional carters: {ew.Regional.MovedUnits / 1e6:N0} t moved for {ew.Regional.SpentMites / 100:N0} crowns; by good: " + string.Join(", ", Enumerable.Range(0, cat.Count).Where(g => ew.Regional.MovedByGood[g] > 0).OrderByDescending(g => ew.Regional.MovedByGood[g]).Take(8).Select(g => $"{cat.StringId((ushort)g)} {ew.Regional.MovedByGood[g] / 1e6:N0}")));
+        { var sp = ew.Spending; sb.AppendLine($"-- household spending (I37) since start, crowns: spender-seasons {sp.Spenders:N0}, wages {sp.WagesMites / 100:N0}, builders' wages {sp.WorksLabourMites / 100:N0}, alms {sp.AlmsMites / 100:N0}, goods ordered {sp.GoodsBudgetMites / 100:N0} (bought {ew.Markets.SpentGoodsMites / 100:N0}), materials ordered {sp.MaterialsBudgetMites / 100:N0} (bought {ew.Markets.SpentMaterialsMites / 100:N0})"); }
         sb.AppendLine($"-- farm sales {ew.Counters.FarmSoldG / 1e6:N0} t, parish sold {ew.Parish.SoldG / 1e6:N0} t, charity {ew.Parish.CharityG / 1e6:N0} t");
         var fs = ew.Farming.State; var lv = fs.Livestock;
         sb.AppendLine($"-- herds: sheep {lv.Sheep.Sum()}, oxen {lv.Oxen.Sum()}, cows {lv.Cows.Sum()}; grazed settlements {lv.Grazed.Count(x => x)}; farm sow refused: seed {ew.Farming.Diagnostics.SowRefusedSeed}, fertility {ew.Farming.Diagnostics.SowRefusedFertility}");

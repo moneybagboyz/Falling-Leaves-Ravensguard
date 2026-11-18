@@ -131,6 +131,7 @@ public sealed class MarketsSave
                 {
                     1 => prod?.InputHook(prod.Businesses[OrderHookArg[i]]) ?? throw new SaveException("A buy order belongs to a business that does not exist."),
                     2 => ms.DurableHook(OrderHookArg[i] / EconomyState.Durables, OrderHookArg[i] % EconomyState.Durables),
+                    3 or 4 => ms.DeliveryHook(OrderHookArg[i], OrderGood[i], OrderHookKind[i]),
                     _ => null,
                 };
                 books[OrderBook[i]].Post(new BuyOrder(party, OrderGood[i], OrderQty[i], OrderRatio[i]) { Priority = OrderPriority[i], OnFilled = hook, HookKind = OrderHookKind[i], HookArg = OrderHookArg[i] });

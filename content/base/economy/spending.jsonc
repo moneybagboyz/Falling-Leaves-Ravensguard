@@ -1,0 +1,27 @@
+// How households spend the coin they hold above a reserve (integration decision I37). Each season a household spends spend_pct_per_season percent of its coin above
+// reserve_days days of its members' food (at the base price of grain): wages_pct to idle hands of its village (the poorest first, a day wage each day of service),
+// works_pct on building and repair (works_labour_pct of it builders' wages to idle hands, the rest materials bought at the market), goods_pct on craft goods bought at the
+// market and used up, alms_pct to the destitute of its village and fief. Historical anchors: the lords' and the Church's spending on retainers, building, cloth, ale and
+// alms carried rent and tithe back into the towns; a peasant spent a fifth or so of what he had on cloth, tools and fuel, a burgher more, a lord far more.
+[
+  { "type": "spending_rule", "id": "peasant", "role": "peasant", "reserve_days": 90, "spend_pct_per_season": 25,
+    "wages_pct": 30, "works_pct": 20, "goods_pct": 45, "alms_pct": 5, "works_labour_pct": 60,
+    "goods_weights": { "cloth_wool": 20, "clothes": 15, "shoes": 15, "candles": 15, "pottery": 15, "ale": 10, "tools": 10 },
+    "materials_weights": { "timber_planks": 40, "thatch": 40, "nails": 10, "quicklime": 10 } },
+  { "type": "spending_rule", "id": "burgher", "role": "burgher", "reserve_days": 90, "spend_pct_per_season": 35,
+    "wages_pct": 25, "works_pct": 25, "goods_pct": 45, "alms_pct": 5, "works_labour_pct": 50,
+    "goods_weights": { "cloth_dyed": 15, "clothes": 20, "shoes": 15, "candles": 15, "pottery": 10, "ale": 10, "cookware": 5, "barrel": 5, "tools": 5 },
+    "materials_weights": { "timber_planks": 35, "stone_dressed": 20, "bricks": 15, "quicklime": 15, "nails": 10, "glass": 5 } },
+  { "type": "spending_rule", "id": "gentry", "role": "gentry", "reserve_days": 120, "spend_pct_per_season": 45,
+    "wages_pct": 35, "works_pct": 25, "goods_pct": 30, "alms_pct": 10, "works_labour_pct": 50,
+    "goods_weights": { "cloth_dyed": 25, "clothes": 20, "shoes": 10, "candles": 15, "cookware": 10, "ale": 10, "meat_salted": 10 },
+    "materials_weights": { "stone_dressed": 35, "timber_planks": 25, "quicklime": 15, "nails": 10, "glass": 10, "bricks": 5 } },
+  { "type": "spending_rule", "id": "lord", "role": "lord", "reserve_days": 120, "spend_pct_per_season": 45,
+    "wages_pct": 35, "works_pct": 25, "goods_pct": 30, "alms_pct": 10, "works_labour_pct": 50,
+    "goods_weights": { "cloth_dyed": 25, "clothes": 20, "shoes": 10, "candles": 15, "cookware": 10, "ale": 10, "meat_salted": 10 },
+    "materials_weights": { "stone_dressed": 35, "timber_planks": 25, "quicklime": 15, "nails": 10, "glass": 10, "bricks": 5 } },
+  { "type": "spending_rule", "id": "parish", "role": "parish", "reserve_days": 60, "spend_pct_per_season": 70,
+    "wages_pct": 15, "works_pct": 35, "goods_pct": 15, "alms_pct": 35, "works_labour_pct": 50,
+    "goods_weights": { "candles": 40, "cloth_wool": 20, "ale": 20, "pottery": 20 },
+    "materials_weights": { "stone_dressed": 35, "timber_planks": 25, "quicklime": 20, "glass": 10, "nails": 10 } },
+]

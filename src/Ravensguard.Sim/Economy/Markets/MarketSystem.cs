@@ -49,6 +49,8 @@ public sealed class MarketSystem
     /// <summary>The grain goods' share of the staple mix in permille (what a landed household's staple demand is divided by).</summary>
     private int GrainPermille => _grainPermille > 0 ? _grainPermille : _grainPermille = Math.Max(1, Mix.Staple.Where(m => Econ.Food.IsGrain(m.Good)).Sum(m => m.Permille));
     private readonly bool[] _basketGood;
+    /// <summary>Days of food in store at which a landed household's grain demand on the books has faded to nothing (decision I36).</summary>
+    public const int LandedDemandFadeDays = 40;
     private readonly ushort[] _durable;
 
     public MarketSystem(EconomyState econ, Population pop, ulong seed)
@@ -92,12 +94,16 @@ public sealed class MarketSystem
 
     private void SetFloors(MarketBook b)
     {
-        var c = Econ.Goods;
+        var c = Econ.Goods; var pb = Econ.Basket(SocialClass.Peasant);
         for (ushort g = 0; g < c.Count; g++)
         {
-            // 0.02 x population g/day for every listed good, 0.25 x population x its share of the basket for basket goods
+            // 0.02 x population g/day for every listed good, 0.25 x population x its share of the basket for basket goods; ale, salt and firewood a quarter of the
+            // peasant's own daily quantity of them (integration decision I36: a quarter of a 1,100 g measure was 34 times the salt and the whole ale of the basket)
             long grams = (long)b.Population * 20 / 1000;
-            if (_basketGood[g]) grams = Math.Max(grams, (long)b.Population * 1100 / 4 / Math.Max(1, BasketWidth(g)));
+            if (g == Econ.Food.Ale) grams = Math.Max(grams, (long)b.Population * pb.AleMlPerPersonDay * c.Def(g).LitreMassG / 1000 / 4);
+            else if (g == Econ.Food.Salt) grams = Math.Max(grams, (long)b.Population * pb.SaltGPerPersonDay / 4);
+            else if (g == Econ.Food.Firewood) grams = Math.Max(grams, (long)b.Population * pb.FirewoodGPerPersonDay / 4);
+            else if (_basketGood[g]) grams = Math.Max(grams, (long)b.Population * 1100 / 4 / Math.Max(1, BasketWidth(g)));
             b.Goods[g].FloorDemand = c.IsPiece(g) ? Math.Max(1, grams / Math.Max(1, c.Def(g).PieceMassG)) : grams;
         }
     }
@@ -110,6 +116,36 @@ public sealed class MarketSystem
     }
 
     public MarketBook BookForSettlement(int settlement) => Books[BookOf[settlement]]!;
+
+    private int[]? _marketTown;
+
+    /// <summary>
+    /// The book a producer of the settlement may cart to instead of its own (integration decision I38): the nearest town's, when the town pays at least 15 percent more
+    /// for the good than the home book (the cart and the day it costs); otherwise the home book.
+    /// </summary>
+    public MarketBook BestBookFor(int settlement, ushort good)
+    {
+        var home = BookForSettlement(settlement);
+        if (_marketTown == null)
+        {
+            var r = Pop.Region; _marketTown = new int[r.Settlements.Count];
+            for (int s = 0; s < _marketTown.Length; s++)
+            {
+                int best = -1; long bd = long.MaxValue;
+                for (int t = 0; t < r.Settlements.Count; t++)
+                {
+                    if (r.Settlements[t].Class != SettlementClass.Town || Books[t] == null) continue;
+                    long dx = r.Settlements[t].CenterX - r.Settlements[s].CenterX, dy = r.Settlements[t].CenterY - r.Settlements[s].CenterY, d = dx * dx + dy * dy;
+                    if (d < bd) { bd = d; best = t; }
+                }
+                _marketTown[s] = best;
+            }
+        }
+        int town = _marketTown[settlement];
+        if (town < 0 || Books[town] == null || ReferenceEquals(Books[town], home)) return home;
+        var tb = Books[town]!;
+        return tb.MidMicro(good) * 1000 > home.MidMicro(good) * 1150 ? tb : home;
+    }
     public MarketBook BookForHousehold(int hh) => BookForSettlement(Pop.Households.Settlement[hh]);
     public IEnumerable<MarketBook> AllBooks() { foreach (var b in Books) if (b != null) yield return b; }
 
@@ -190,10 +226,20 @@ public sealed class MarketSystem
             var need = HouseholdNeeds.Basket(Econ, Pop.People, hh, h, day, tMeanC);
             // a household with land eats its own grain, milled for the toll and baked at home (decision I17, I18): its staple demand is all grain
             bool grainOnly = hh.ParcelCount[h] > 0;
+            // ...and it comes to market only as its own grain runs out (integration decision I36): its demand fades from the whole staple at no food in store to nothing
+            // at 40 days of cover. Counting every holder's whole staple made the books expect the region's entire grain consumption, so the merchants filled their
+            // 0.8 cover cap with grain no one bought and sat insolvent on it
+            long landedPermille = grainOnly ? Math.Max(0, 1000 - (long)Econ.FoodCoverDaysX10[h] * 1000 / (LandedDemandFadeDays * 10)) : 1000;
             foreach (var (g, pm) in Mix.Staple)
             {
-                if (grainOnly) { if (!Econ.Food.IsGrain(g)) continue; arr[g] += HouseholdNeeds.GramsFor(c, g, (long)need.StapleX100 * pm / GrainPermille); }
+                if (grainOnly) { if (!Econ.Food.IsGrain(g) || landedPermille == 0) continue; arr[g] += HouseholdNeeds.GramsFor(c, g, (long)need.StapleX100 * pm / GrainPermille * landedPermille / 1000); }
                 else arr[g] += HouseholdNeeds.GramsFor(c, g, (long)need.StapleX100 * pm / 1000);
+            }
+            // the wear of clothes, shoes and tools is a steady demand for the workshops to plan by (decision I36), whether or not the book has any on sale
+            {
+                var bk = Econ.Basket(hh.Class[h]); int n = hh.MemberCount[h];
+                if (bk.ShoesLifetimeDays > 0) arr[_durable[0]] += (long)n * DurableUnits(h, 0) / bk.ShoesLifetimeDays;
+                if (bk.ClothesLifetimeDays > 0) arr[_durable[1]] += (long)n * DurableUnits(h, 1) / bk.ClothesLifetimeDays;
             }
             foreach (var (g, pm) in Mix.Relish) arr[g] += HouseholdNeeds.GramsFor(c, g, (long)need.RelishX100 * pm / 1000);
             if (!grainOnly || hh.Class[h] == SocialClass.Burgher) arr[Econ.Food.Ale] += need.AleMl * c.Def(Econ.Food.Ale).LitreMassG / 1000;   // landed households brew their own (decision I23)
@@ -232,8 +278,35 @@ public sealed class MarketSystem
         {
             if (res.Qty <= 0) return;
             party.Store.Destroy(g, res.Qty, DestroyReason.Worn);
-            Econ.DueDurables[idx] = (byte)Math.Max(0, Econ.DueDurables[idx] - (int)res.Qty);
+            long unit = DurableUnits(hh, k);
+            Econ.DueDurables[idx] = (byte)Math.Max(0, Econ.DueDurables[idx] - (int)Math.Max(1, (res.Qty + unit / 2) / unit));
         };
+    }
+
+    /// <summary>Coin households paid for craft goods (hook 3) and building materials (hook 4) bought by their spending (decision I37): diagnostics, not saved.</summary>
+    public long SpentGoodsMites, SpentMaterialsMites;
+
+    /// <summary>
+    /// The callback of a spending order (integration decision I37): what was delivered is used up in the household (craft goods worn out, hook 3, reason Worn; building
+    /// materials built into a house, hook 4, reason Consumed), so the mass books record where it went.
+    /// </summary>
+    public Action<TradeResult> DeliveryHook(int hh, ushort good, byte hookKind)
+    {
+        var party = HouseholdParty(hh); var why = hookKind == 4 ? DestroyReason.Consumed : DestroyReason.Worn;
+        return res =>
+        {
+            if (res.Qty <= 0) return;
+            party.Store.Destroy(good, Math.Min(res.Qty, party.Store.Qty(good)), why);
+            if (hookKind == 4) SpentMaterialsMites += res.PaidMites; else SpentGoodsMites += res.PaidMites;
+        };
+    }
+
+    /// <summary>Units of the durable good in one item (integration decision I36): a set of clothes and a pair of shoes are grams of the kg goods (the basket's mass), a tool is a piece.</summary>
+    public long DurableUnits(int hh, int k)
+    {
+        ushort g = _durable[k]; if (Econ.Goods.IsPiece(g)) return 1;
+        var b = Econ.Basket(Pop.Households.Class[hh]);
+        return k == 0 ? Math.Max(1, b.ShoesPairG) : k == 1 ? Math.Max(1, b.ClothesSetG) : 1;
     }
 
     private MarketParty?[] _stewards = [];
@@ -311,8 +384,7 @@ public sealed class MarketSystem
             int idx = hh * EconomyState.Durables + k; int due = Econ.DueDurables[idx];
             if (due == 0) continue;
             ushort g = _durable[k];
-            if (book.Goods[g].StockUnits <= 0) continue;
-            book.Post(new BuyOrder(party, g, due, 2000) { Priority = 6, OnFilled = DurableHook(hh, k), HookKind = 2, HookArg = idx });
+            book.Post(new BuyOrder(party, g, due * DurableUnits(hh, k), 2000) { Priority = 6, OnFilled = DurableHook(hh, k), HookKind = 2, HookArg = idx });
             posted++;
         }
         return posted;

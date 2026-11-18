@@ -113,7 +113,7 @@ public sealed class ParishRelief
             foreach (int h in poor[f])
             {
                 long pay = per * hht.MemberCount[h];
-                if (pay > 0 && led.Transfer(e.HouseholdPurse[lord], e.HouseholdPurse[h], new Coin(pay), TransferReason.Gift)) AlmsMites += pay;
+                if (pay > 0 && led.Transfer(e.HouseholdPurse[lord], e.HouseholdPurse[h], new Coin(pay), TransferReason.Alms)) AlmsMites += pay;
             }
         }
     }
@@ -156,7 +156,7 @@ public sealed class ParishRelief
         int fief = reg.Settlements[settlement].FiefIndex; if (fief < 0 || fief >= reg.Fiefs.Count) return;
         if (!e.Ledger.TryFind(PurseKind.Treasury, reg.Fiefs[fief].Id, out var t)) return;
         long pay = Math.Min(members * (long)DoleMitesPerMemberDay, e.Ledger.Balance(t).Mites);
-        if (pay > 0 && e.Ledger.Transfer(t, e.HouseholdPurse[hh], new Coin(pay), TransferReason.Gift)) DoleMites += pay;
+        if (pay > 0 && e.Ledger.Transfer(t, e.HouseholdPurse[hh], new Coin(pay), TransferReason.Alms)) DoleMites += pay;
     }
     public const int DoleMitesPerMemberDay = 45;
     public long DoleMites;

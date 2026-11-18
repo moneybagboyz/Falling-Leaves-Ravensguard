@@ -22,7 +22,7 @@ public sealed class HouseholdNeedsSystem : AbstractSystem
         for (int hh = ctx.HourOfDay; hh < n; hh += 24)
         {
             if (hht.MemberCount[hh] == 0) continue;
-            if (w.Get<EconomyWorld>() != null) { HouseholdNeeds.Produce(e, hht, hh, ctx.DayOfYear, _veg, _eggs, _wood); HouseholdNeeds.HomeBrew(e, w.People, hht, hh, day, _barley); }
+            if (w.Get<EconomyWorld>() != null) { HouseholdNeeds.Produce(e, hht, hh, ctx.DayOfYear, _veg, _eggs, _wood, _tMean); HouseholdNeeds.HomeBrew(e, w.People, hht, hh, day, _barley); }
             HouseholdNeeds.RunDay(e, w.People, hht, hh, day, _tMean);
             HouseholdNeeds.RollDurables(e, hht, hh, w.Seed, ctx.Hour);
             e.HouseholdStore[hh].ApplySpoilage(w.Seed, ctx.Hour, _tMean);

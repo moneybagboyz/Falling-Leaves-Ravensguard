@@ -87,6 +87,7 @@ public sealed class AbstractSystemRegistry
         r.Add(new FarmSalesSystem());               // H4: farm households sell grain above their needs
         r.Add(new ProductionSliceSystem());         // H4: wages, sales, planning of the businesses of the hour
         r.Add(new HouseholdShoppingSystem());       // H4: buy orders of the households of the hour
+        r.Add(new HouseholdSpendingSystem());       // H4: seasonal spending above the reserve: wages, works, craft goods, alms (decision I37)
         r.Add(new FarmingDailySystem());            // H5: farming S1-S4 and the day's labour and harvest
         r.Add(new StoreSpoilageSystem());           // H5: spoilage of barns, granaries, business and market stores
         r.Add(new ParishSystem());                  // H5: charity and tithe sales

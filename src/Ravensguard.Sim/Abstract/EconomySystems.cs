@@ -1,5 +1,6 @@
 using Ravensguard.Sim.Core;
 using Ravensguard.Sim.Economy;
+using Ravensguard.Sim.Economy.Markets;
 using Ravensguard.Sim.Farming;
 using Ravensguard.Sim.Goods;
 using Ravensguard.Sim.People;
@@ -57,13 +58,14 @@ public sealed class FarmSalesSystem : AbstractSystem
             long surplus = have - keep;
             if (surplus <= 0) continue;
             long today = Math.Max(1, surplus / SpreadDays);
-            var book = ew.Markets.BookForHousehold(hh); var party = ew.Markets.HouseholdParty(hh);
+            var party = ew.Markets.HouseholdParty(hh);
             long left = today;
             foreach (ushort g in _grains)
             {
                 long q = Math.Min(store.Qty(g), Math.Max(1, today * store.Qty(g) / have));
                 q = Math.Min(q, left);
                 if (q <= 0) continue;
+                var book = ew.Markets.BestBookFor(hht.Settlement[hh], g);          // or carted to the market town when it pays better (decision I38)
                 long sold = book.SellOrList(party, g, q, 800, day);
                 left -= sold; ew.Counters.FarmSoldG += sold;
             }
@@ -71,6 +73,46 @@ public sealed class FarmSalesSystem : AbstractSystem
     }
 
     private ushort[]? _products;
+    private ushort _barley = ushort.MaxValue;
+
+    /// <summary>
+    /// The alewife (integration decision I38): a landed peasant household with a fortnight of food brews for its village market when the book holds under half its ale
+    /// cover, up to ten days of its own drink at a time, from barley beyond its seed (the recipe's 520 g of barley and 350 g of fuel to a kilogram of ale, reason Brewed),
+    /// and sells it at once (merchants first, the rest as its lot at 0.85). Village ale was brewed and sold this way; the breweries and taverns serve the towns.
+    /// </summary>
+    private void Alewife(EconomyWorld ew, int hh, Store store, int day, MarketBook book)
+    {
+        var e = ew.World.Economy; var hht = ew.World.Households;
+        if (hht.ParcelCount[hh] == 0 || hht.Class[hh] != SocialClass.Peasant || e.FoodCoverDaysX10[hh] < 150) return;
+        ushort ale = e.Food.Ale; var gb = book.Goods[ale];
+        long target = gb.Demand * gb.TargetCoverDays; if (gb.StockUnits * 2 >= target) return;
+        if (_barley == ushort.MaxValue) _barley = e.Goods.IdOf("barley");
+        long dayG = (long)hht.MemberCount[hh] * e.Basket(SocialClass.Peasant).AleMlPerPersonDay * e.Goods.Def(ale).LitreMassG / 1000;
+        long brew = Math.Min(target - gb.StockUnits, dayG * 10);
+        long grain = brew * HouseholdNeeds.BrewBarleyPermille / 1000, fuel = brew * HouseholdNeeds.BrewFuelPermille / 1000;
+        if (brew <= 0 || store.Qty(_barley) < grain + e.SeedReserveG[hh] / 3 + dayG || store.Qty(e.Food.Firewood) < fuel) return;
+        store.Destroy(_barley, grain, DestroyReason.Consumed); store.Destroy(e.Food.Firewood, fuel, DestroyReason.Consumed);
+        store.Create(ale, brew, CreateReason.Brewed);
+        AleSoldG += book.SellOrList(ew.Markets.HouseholdParty(hh), ale, brew, 850, day);
+    }
+    public long AleSoldG;
+
+    /// <summary>
+    /// The woodward (integration decision I38): when the village book holds under half its firewood cover (its bakers, brewers and kilns burn far more than the
+    /// households, who gather their own), a landed peasant household cuts up to two days of its own fuel more from the commons and sells it (reason Cut).
+    /// </summary>
+    private void Woodward(EconomyWorld ew, int hh, Store store, int day, MarketBook book)
+    {
+        var e = ew.World.Economy; var hht = ew.World.Households;
+        if (hht.ParcelCount[hh] == 0 || hht.Class[hh] != SocialClass.Peasant) return;
+        ushort wood = e.Food.Firewood; var gb = book.Goods[wood];
+        long target = gb.Demand * gb.TargetCoverDays; if (gb.StockUnits * 2 >= target) return;
+        long cut = Math.Min(target / 2 - gb.StockUnits, (long)hht.MemberCount[hh] * e.Basket(SocialClass.Peasant).FirewoodGPerPersonDay * 2);
+        if (cut <= 0) return;
+        store.Create(wood, cut, CreateReason.Cut);
+        WoodSoldG += book.SellOrList(ew.Markets.HouseholdParty(hh), wood, cut, 800, day);
+    }
+    public long WoodSoldG;
 
     /// <summary>The herds' products: wool and slaughtered animals go to market at once, cheese above a month's keep of the household sells a sixth a day.</summary>
     private void SellProducts(EconomyWorld ew, int hh, Store store, int day)
@@ -78,11 +120,14 @@ public sealed class FarmSalesSystem : AbstractSystem
         var cat = ew.World.Economy.Goods;
         _products ??= [cat.IdOf("wool_raw"), cat.IdOf("sheep"), cat.IdOf("cow"), cat.IdOf("cheese")];
         var book = ew.Markets.BookForHousehold(hh); ushort cheese = _products[3];
-        {   // fuel above twenty days of the household's use goes to the village market
+        {   // fuel above 25 days of the household's use at today's burn goes to the village market (decision I36: twenty days at the mild-weather rate is ten in a
+            // frost, the shopper's reorder point, so a household sold its wood in the morning and bought it back in the afternoon)
             ushort wood = ew.World.Economy.Food.Firewood; long hw = store.Qty(wood);
-            long keepW = (long)ew.World.Households.MemberCount[hh] * ew.World.Economy.Basket(ew.World.Households.Class[hh]).FirewoodGPerPersonDay * 20;
-            if (hw > keepW) book.SellOrList(ew.Markets.HouseholdParty(hh), wood, (hw - keepW + 2) / 3, 800, day);
+            long keepW = (long)ew.World.Households.MemberCount[hh] * ew.World.Economy.Basket(ew.World.Households.Class[hh]).FirewoodGPerPersonDay * HouseholdNeeds.FuelMultX100(ew.World.Env.TMeanC(day)) / 100 * 25;
+            if (hw > keepW) ew.Markets.BestBookFor(ew.World.Households.Settlement[hh], wood).SellOrList(ew.Markets.HouseholdParty(hh), wood, (hw - keepW + 2) / 3, 800, day);
         }
+        Alewife(ew, hh, store, day, book);
+        Woodward(ew, hh, store, day, book);
         for (int i = 0; i < _products.Length; i++)
         {
             ushort g = _products[i]; long have = store.Qty(g); if (have <= 0) continue;
@@ -111,6 +156,13 @@ public sealed class HouseholdShoppingSystem : AbstractSystem
         var hht = ctx.World.Households; int t = ctx.World.Env.TMeanC(ctx.Day), day = (int)ctx.Day;
         for (int hh = ctx.HourOfDay; hh < hht.Count; hh += 24) if (hht.MemberCount[hh] > 0) ew.Markets.PostHouseholdOrders(hh, day, t);
     }
+}
+
+/// <summary>H4 slice, after the shopping: the households of the hour whose day of the season it is spend what they hold above their reserve (integration decision I37).</summary>
+public sealed class HouseholdSpendingSystem : AbstractSystem
+{
+    public HouseholdSpendingSystem() : base("household-spending", TickPhase.H4DailySlice, SystemOrder.MarketDaily + 50) { }
+    public override void Step(TickContext ctx) => ctx.World.Get<EconomyWorld>()?.Spending.Slice(ctx.Time);
 }
 
 /// <summary>H5: a day of spoilage in every store that is not a household's (barns, granaries, fodder, business and market stores), then the books re-sync their lots.</summary>

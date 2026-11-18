@@ -328,9 +328,18 @@ public sealed class LabourMarket
         {
             if (b.State != BusinessState.Closed || done.Contains(b.Settlement)) continue;
             var kind = _sys.KindOf(b);
-            if (kind.Stations.Length == 0 || kind.Extractions.Length > 0 || kind.Trader || kind.Id is "mine" or "manor" or "charcoal_crew") continue;
             var book = _sys.Markets.BookForSettlement(b.Settlement); bool wanted = false;
-            foreach (var r in kind.Recipes) { var gb = book.Goods[r.Outputs[0].Good]; if (gb.Demand > 0 && (book.MidRatioPermille(r.Outputs[0].Good) >= 1100 || gb.StockUnits < gb.Demand)) { wanted = true; break; } }
+            if (kind.Trader)
+            {
+                // a failed stall opens again when its book has no solvent merchant left (decision I38)
+                wanted = true;
+                foreach (var m in book.Merchants) if (led.Balance(m.Purse).Mites >= ProductionSystem.MerchantSolventMites) { wanted = false; break; }
+            }
+            else
+            {
+                if (kind.Stations.Length == 0 || kind.Extractions.Length > 0 || kind.Id is "mine" or "manor" or "charcoal_crew") continue;
+                foreach (var r in kind.Recipes) { var gb = book.Goods[r.Outputs[0].Good]; if (gb.Demand > 0 && (book.MidRatioPermille(r.Outputs[0].Good) >= 1100 || gb.StockUnits < gb.Demand)) { wanted = true; break; } }
+            }
             if (!wanted) continue;
             if (!built) { BuildIdle(day); built = true; }
             var skill = OccupationInfo.Skills(kind.OwnerOccupation).A;

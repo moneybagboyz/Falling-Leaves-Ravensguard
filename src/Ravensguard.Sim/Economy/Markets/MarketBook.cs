@@ -65,7 +65,7 @@ public sealed record BuyOrder(MarketParty Buyer, ushort Good, long Qty, int MaxP
     public int Priority { get; init; }
     /// <summary>Called with the result when the order is filled (businesses book their input spend).</summary>
     public Action<TradeResult>? OnFilled { get; init; }
-    /// <summary>What <see cref="OnFilled"/> is, so a pending order can be saved and its callback rebuilt: 0 none, 1 a business's input spend (arg: business index), 2 a household's durable (arg: household x durables + kind).</summary>
+    /// <summary>What <see cref="OnFilled"/> is, so a pending order can be saved and its callback rebuilt: 0 none, 1 a business's input spend (arg: business index), 2 a household's durable (arg: household x durables + kind), 3 / 4 a household's spending on craft goods / building materials (arg: household; decision I37).</summary>
     public byte HookKind { get; init; }
     public int HookArg { get; init; }
 }
@@ -186,6 +186,9 @@ public sealed class MarketBook
         gb.StockUnits += qty;
     }
 
+    /// <summary>The lowest floor a merchant's lot comes down to (integration decision I36; was 750): in a glut the merchant sells at a loss rather than sit on the stock with his cash gone.</summary>
+    public const int MerchantFloorMinPermille = 400;
+
     /// <summary>Returns lots listed more than the expiry days ago (non-merchant lots only) to their owners' stores.</summary>
     public long ExpireLots(int day)
     {
@@ -198,7 +201,7 @@ public sealed class MarketBook
             foreach (var l in gl)
             {
                 if (!l.IsMerchant && l.FloorPermille > 300 && l.ListedDay < day) { l.FloorPermille = Math.Max(300, l.FloorPermille * 2 / 3); changed = true; }
-                else if (l.IsMerchant && l.FloorPermille > 750 && day - l.ListedDay > 5) { l.FloorPermille = Math.Max(750, l.FloorPermille * 9 / 10); changed = true; }   // a merchant sells stock that will not move at a smaller margin
+                else if (l.IsMerchant && l.FloorPermille > MerchantFloorMinPermille && day - l.ListedDay > 5) { l.FloorPermille = Math.Max(MerchantFloorMinPermille, l.FloorPermille * 9 / 10); changed = true; }   // a merchant sells stock that will not move at a smaller margin, at a loss in the end (decision I36)
             }
             if (changed) gl.Sort((a, b) => a.FloorPermille != b.FloorPermille ? a.FloorPermille.CompareTo(b.FloorPermille) : a.Id.CompareTo(b.Id));
         }

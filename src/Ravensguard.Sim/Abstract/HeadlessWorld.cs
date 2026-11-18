@@ -73,7 +73,7 @@ public sealed class HeadlessWorld
         var env = new CachedEnvironment(new RegionWeatherEnvironment(weather, cell));
         var start = GameTime.FromCalendar(pop.NowYear, Season.Spring, 1);
         var w = new SimWorld(seed, pop, econ, names: names, state: new AbstractState { HourDone = start.TotalHours - 1 }, env: env);
-        w.Rates = VitalRates.Default with { ChevagePct = 50 };
+        w.Rates = VitalRates.EconomyDefault;
         VitalSeeding.SeedPregnancies(w, start);
         var ew = EconomyWorld.Create(w, db, new RegionFarmWeather(weather, weather.Fronts.Long), carryOverPct);
         return new HeadlessWorld { World = w, Economy = ew, Content = db, Continent = c, History = h, ContinentSettings = cs, HistorySettings = hs, RegionSettings = rs, CellX = cellX, CellY = cellY, Population = pop, Weather = weather };

@@ -72,10 +72,37 @@ public sealed record NeedsBasketDef : ContentDef
     public required int ClothesLifetimeDays { get; init; }
     public required int ShoesLifetimeDays { get; init; }
     public required int ToolsLifetimeDays { get; init; }
+    /// <summary>Grams of clothes in one set and of shoes in one pair (integration decision I36): a worn-out set is replaced by this mass of the kg goods <c>clothes</c> and <c>shoes</c>.</summary>
+    public int ClothesSetG { get; init; } = 1500;
+    public int ShoesPairG { get; init; } = 700;
     /// <summary>Target stock in days of use per basket line: staple, relish, ale, firewood, salt.</summary>
     public required Dictionary<string, int> TargetCoverDays { get; init; }
     public required int SurviveBelowDays { get; init; }
     public required int BufferBelowDays { get; init; }
+}
+
+/// <summary>
+/// How a household of a role spends the coin it holds above its reserve (integration decision I37): each season it spends <see cref="SpendPctPerSeason"/> percent of what
+/// it holds above <see cref="ReserveDays"/> days of its members' food (at the base price of grain), split into wages for idle hands, works (builders' wages and materials),
+/// craft goods and alms. Roles: <c>peasant</c>, <c>burgher</c>, <c>gentry</c>, <c>lord</c> (a fief's lord), <c>parish</c> (a priest's household, with the parish chest).
+/// Every spend is a transfer or a market purchase: coin and goods are conserved.
+/// </summary>
+[ContentType("spending_rule")]
+public sealed record SpendingRuleDef : ContentDef
+{
+    public required string Role { get; init; }
+    public required int ReserveDays { get; init; }
+    public required int SpendPctPerSeason { get; init; }
+    public int WagesPct { get; init; }
+    public int WorksPct { get; init; }
+    public int GoodsPct { get; init; }
+    public int AlmsPct { get; init; }
+    /// <summary>Share of a works budget paid as the builders' wages; the rest buys the materials.</summary>
+    public int WorksLabourPct { get; init; } = 50;
+    /// <summary>Craft goods bought, by weight (good id to weight).</summary>
+    public Dictionary<string, int> GoodsWeights { get; init; } = [];
+    /// <summary>Building materials bought for works, by weight.</summary>
+    public Dictionary<string, int> MaterialsWeights { get; init; } = [];
 }
 
 /// <summary>Money constants (money spec 6): coin parity, mint, and the one-off seed money shares of world creation.</summary>

@@ -29,6 +29,8 @@ public enum PurseKind : byte
 public enum TransferReason : byte
 {
     Trade, Wage, Rent, Hearth, Toll, Tithe, MarketToll, Dividend, Seigniorage, Inheritance, Escheat, Hoard, Stipend, Fine, Gift,
+    /// <summary>Charity in coin to the destitute (lords' almonry, the parish, the fief's dole, a rich household's alms; integration decision I37). Appended: saves older than it load with the count padded.</summary>
+    Alms,
 }
 
 /// <summary>The only faucets: the one-off seed money of world creation, silver struck at a mint, and the coin a household brings across a region border (the other region's ledger holds the matching <see cref="SinkReason.Emigrate"/>).</summary>

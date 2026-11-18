@@ -236,7 +236,7 @@ public sealed class WorldTicker : IDisposable
             {
                 long s0 = _opt.RecordTimings ? Stopwatch.GetTimestamp() : 0;
                 s.Step(c);
-                if (_opt.RecordTimings) Stats.SystemCell(s.Name).Add(Stopwatch.GetTimestamp() - s0);
+                if (_opt.RecordTimings) { long dt = Stopwatch.GetTimestamp() - s0; Stats.SystemCell(s.Name).Add(dt); Stats.HourSystem(s.Name, dt); }
             }
             if (_opt.RecordTimings) Stats.Phase(phase).Add(Stopwatch.GetTimestamp() - p0);
         }
@@ -253,7 +253,7 @@ public sealed class WorldTicker : IDisposable
         long now = Stopwatch.GetTimestamp();
         Stats.BarrierEnd.Add(now - t); Stats.RecordBarrier(now - t);
         long whole = _worker == null ? now - hourStartTimestamp : now - _stepStart + (now - t);
-        Stats.RecordHour(h % 24, GameTime.FromGameHours(h).DayOfYear % TimeConst.DaysPerSeason == 1, whole);
+        Stats.RecordHour(h % 24, GameTime.FromGameHours(h).DayOfYear % TimeConst.DaysPerSeason == 1, whole, h);
     }
 
     private void FlushOutbox()
