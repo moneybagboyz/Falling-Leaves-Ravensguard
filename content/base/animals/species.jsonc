@@ -3,10 +3,10 @@
 [
   { "type": "species", "id": "horse_palfrey", "species": "Horse", "breed": "palfrey", "name": "Palfrey", "mass_kg": 420, "carry_kg": 130, "pull_n": 530,
     "gait_cmps": { "walk": 220, "trot": 500, "gallop": 1200 }, "stamina_sp": 10000, "stamina_cost_sp_per_m": { "walk": 0, "trot": 2, "gallop": 21 }, "regen_sp_per_gs": { "walk": 5, "rest": 15 },
-    "idle_hay_kg_day": 7, "work_hay_kg_day": 8, "work_oats_hg_day": 25, "water_l_day": 35, "shoe_life_km": 600, "price_mites": 48000, "sprite": "object.draught_horse", "ridden": true },
+    "idle_hay_kg_day": 7, "work_hay_kg_day": 8, "work_oats_hg_day": 25, "water_l_day": 35, "shoe_life_km": 600, "price_mites": 48000, "sprite": "object.horse_riding", "ridden": true },
   { "type": "species", "id": "horse_packhorse", "species": "Horse", "breed": "packhorse", "name": "Packhorse", "mass_kg": 450, "carry_kg": 100, "pull_n": 560,
     "gait_cmps": { "walk": 220, "trot": 450, "gallop": 900 }, "stamina_sp": 10000, "stamina_cost_sp_per_m": { "walk": 0, "trot": 2, "gallop": 21 }, "regen_sp_per_gs": { "walk": 5, "rest": 15 },
-    "idle_hay_kg_day": 7, "work_hay_kg_day": 8, "work_oats_hg_day": 0, "water_l_day": 35, "shoe_life_km": 600, "price_mites": 30000, "sprite": "object.draught_horse", "ridden": true },
+    "idle_hay_kg_day": 7, "work_hay_kg_day": 8, "work_oats_hg_day": 0, "water_l_day": 35, "shoe_life_km": 600, "price_mites": 30000, "sprite": "object.horse_riding", "ridden": true },
   { "type": "species", "id": "horse_draught", "species": "Horse", "breed": "draught", "name": "Draught horse", "mass_kg": 650, "carry_kg": 160, "pull_n": 780,
     "gait_cmps": { "walk": 200, "trot": 400, "gallop": 800 }, "stamina_sp": 10000, "stamina_cost_sp_per_m": { "walk": 0, "trot": 2, "gallop": 21 }, "regen_sp_per_gs": { "walk": 5, "rest": 15 },
     "idle_hay_kg_day": 9, "work_hay_kg_day": 9, "work_oats_hg_day": 30, "water_l_day": 45, "shoe_life_km": 600, "price_mites": 40000, "sprite": "object.draught_horse", "ridden": false },

@@ -323,6 +323,31 @@ public sealed class Props
         b.Rect(bx + bw - 6, by + 1, 3, 9, P["w3"]);
     });
 
+    /// <summary>A riding horse in side view facing east, saddled (horses-and-carts spec 6): taller and finer than the draught horse, 64 x 64 with its hooves 6 rows above the bottom. The rider is the rig's "ride" pose drawn over it.</summary>
+    public PixelBuffer Mount() => Obj(64, 64, b =>
+    {
+        var coat = R["leather"];
+        int bx = 9, by = 26, bw = 36, bh = 15;
+        b.Shade(bx, by, bw, bh, coat, Top);                                                                  // barrel
+        b.Shade(bx + bw - 6, by - 1, 8, bh - 2, coat, Top);                                                  // chest
+        foreach (var lx in new[] { bx + 2, bx + 8, bx + bw - 11, bx + bw - 5 })                              // four legs, long, with hooves and a darker far pair
+        {
+            b.Shade(lx, by + bh - 1, 4, 18, coat); b.Rect(lx, by + bh + 14, 4, 4, coat[1]); b.Rect(lx, by + bh + 17, 4, 2, P["dk1"]);
+        }
+        b.Shade(bx + bw - 3, by - 17, 8, 22, coat, Top);                                                      // the neck rises to the east
+        b.Shade(bx + bw + 2, by - 20, 12, 7, coat, Top);                                                      // head
+        b.Shade(bx + bw + 8, by - 15, 7, 6, coat, Top);                                                       // muzzle
+        b.Rect(bx + bw + 12, by - 12, 3, 3, P["pl3"]); b.Rect(bx + bw + 7, by - 18, 2, 2, P["dk1"]);        // pale nose, eye
+        b.Rect(bx + bw + 3, by - 24, 2, 4, P["w1"]); b.Rect(bx + bw + 6, by - 24, 2, 4, P["w1"]);            // ears
+        b.Rect(bx + bw - 4, by - 18, 3, 18, P["w1"]);                                                         // mane down the neck
+        b.Line(bx, by + 2, bx - 4, by + 20, P["w1"]); b.Line(bx + 1, by + 3, bx - 3, by + 21, P["w1"]);     // tail
+        b.Shade(bx + 11, by - 2, 16, 5, R["red"], Top);                                                       // saddle cloth
+        b.Shade(bx + 13, by - 5, 12, 4, R["brown"], Top);                                                     // the saddle
+        b.Rect(bx + 24, by - 7, 2, 3, P["br1"]);                                                              // pommel
+        b.Line(bx + 18, by + 3, bx + 18, by + 13, P["br1"]); b.Rect(bx + 17, by + 13, 3, 2, P["m3"]);        // stirrup leather and iron
+        b.Line(bx + bw + 9, by - 12, bx + bw + 3, by + 1, P["br1"]);                                          // rein
+    });
+
     public PixelBuffer Barrow() => Obj(64, 48, b =>
     {
         for (int y = 8; y < 44; y++)

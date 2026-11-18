@@ -135,11 +135,8 @@ public partial class StreetView
         if (_ride == null || _rideSprites == null) return;
         RideContext();
         var seat = _rideSprites.Sync(_ride, h.Facing, h.Moving, feet, GetProcessDeltaTime(), h.Z == _viewZ);
-        if (seat.Seated)
-        {
-            _heroSprite.Position = feet + new Vector2(0, -seat.Lift);
-            _heroSprite.Pose(h.Facing == Facing.North || h.Facing == Facing.South ? h.Facing : h.Facing, "idle", 0);
-        }
+        _heroSprite.Lift = seat.Seated ? seat.Lift : 0f;
+        if (seat.Seated) _heroSprite.Pose(seat.Facing, "ride", 0);                      // sitting astride, side view; the horse's and cart's sprites are side-on too
         _rideHud?.Update(_ride, _world.Clock.Now.Seconds);
         if (_world.RideMsgSerial != _rideMsg) { _rideMsg = _world.RideMsgSerial; _router?.ShowToast(L.F(_world.LastRideKey, _world.LastRideArg)); }
     }

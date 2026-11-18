@@ -17,7 +17,7 @@ public sealed class RideSprites
 {
     const int Tile = 32;
     /// <summary>How far the rider's feet are lifted: onto the horse's back, legs behind its barrel.</summary>
-    public const float RiderLift = 21f;
+    public const float RiderLift = 24f;
     public const float BenchLift = 17f;
     readonly Node2D _parent; readonly ArtAtlas _art;
     readonly Dictionary<EntityId, Sprite2D> _animals = new(), _vehicles = new();
@@ -30,13 +30,13 @@ public sealed class RideSprites
     public int Count => _animals.Count + _vehicles.Count;
 
     /// <summary>What the hero's sprite should do this frame: how far to lift it, and whether it is on a mount or a bench (a seated pose is not drawn; the standing one is).</summary>
-    public readonly record struct HeroSeat(float Lift, bool Seated);
+    public readonly record struct HeroSeat(float Lift, bool Seated, Facing Facing);
 
     public HeroSeat Sync(RideBook book, Facing heroFacing, bool heroMoving, Vector2 heroFeet, double delta, bool visible)
     {
         _t += delta; _seen.Clear();
         bool heroEast = heroFacing == Facing.East, heroWest = heroFacing == Facing.West;
-        float lift = 0f; bool seated = false;
+        float lift = 0f; bool seated = false; var seatFacing = Facing.East;
         var mounted = book.IsMounted ? book.Mounted : EntityId.None; var driving = book.DrivenVehicle;
         foreach (var a in book.Animals.Rows)
         {
@@ -47,8 +47,8 @@ public sealed class RideSprites
             if (ridden)
             {
                 if (heroEast) _flip[a.Id] = false; else if (heroWest) _flip[a.Id] = true;
-                node.Position = heroFeet + new Vector2(0, 1);
-                lift = RiderLift; seated = true;
+                node.Position = heroFeet + new Vector2(0, -1);                                  // a pixel behind the rider, so the horse is drawn first
+                lift = RiderLift; seated = true; seatFacing = _flip[a.Id] ? Facing.West : Facing.East;
                 // a little bob at a trot
                 if (heroMoving) node.Position += new Vector2(0, (float)Math.Round(Math.Sin(_t * 14) * 1.0));
             }
@@ -63,9 +63,9 @@ public sealed class RideSprites
             bool driven = driving != null && driving.Id == v.Id;
             if (driven) { if (heroEast) _flip[v.Id] = false; else if (heroWest) _flip[v.Id] = true; }
             bool west = _flip.GetValueOrDefault(v.Id, false);
-            var pos = driven ? heroFeet + new Vector2(0, -2) : ToPx(v.XMm, v.YMm);
+            var pos = driven ? heroFeet + new Vector2(0, -1) : ToPx(v.XMm, v.YMm);
             node.Position = pos; node.FlipH = west; node.Visible = visible;
-            if (driven) { lift = BenchLift; seated = true; }
+            if (driven) { lift = BenchLift; seated = true; seatFacing = west ? Facing.West : Facing.East; }
             // the team stands in front of the cart, side by side along the road
             int n = 0;
             foreach (var id in v.Team)
@@ -79,7 +79,7 @@ public sealed class RideSprites
         }
         foreach (var key in new List<EntityId>(_animals.Keys)) if (!_seen.Contains(key)) { _animals[key].QueueFree(); _animals.Remove(key); }
         foreach (var key in new List<EntityId>(_vehicles.Keys)) if (!_seen.Contains(key)) { _vehicles[key].QueueFree(); _vehicles.Remove(key); }
-        return new HeroSeat(lift, seated);
+        return new HeroSeat(lift, seated, seatFacing);
     }
 
     /// <summary>Rows are in the region frame in millimetres, the same frame the hero is drawn in (window origin added): metres times the tile size.</summary>
@@ -90,7 +90,8 @@ public sealed class RideSprites
         _seen.Add(id);
         if (map.TryGetValue(id, out var n)) return n;
         // the 64 x 48 sprites stand with their feet (or wheels) 4 px above the sheet's bottom: the node origin is the middle of the base
-        n = new Sprite2D { Texture = _art.Texture(string.IsNullOrEmpty(sprite) ? "object.draught_horse" : sprite), Centered = false, Offset = new Vector2(-32, -45), TextureFilter = CanvasItem.TextureFilterEnum.Nearest };
+        var tex = _art.Texture(string.IsNullOrEmpty(sprite) ? "object.draught_horse" : sprite);
+        n = new Sprite2D { Texture = tex, Centered = false, Offset = new Vector2(-32, -(tex.GetHeight() - 3)), TextureFilter = CanvasItem.TextureFilterEnum.Nearest };
         map[id] = n; _parent.AddChild(n);
         return n;
     }

@@ -7,7 +7,7 @@ public static class RigPoses
     /// <summary>Actions named in the plan (§2.7) that are not posed yet. They are listed in the index so the game can fall back.</summary>
     public static readonly string[] Todo = { "parry", "stagger", "crawl", "carry", "work" };
 
-    public static readonly string[] Actions = { "idle", "walk", "jog", "windup", "strike", "recover", "block", "hitreact", "fall" };
+    public static readonly string[] Actions = { "idle", "walk", "jog", "windup", "strike", "recover", "block", "hitreact", "fall", "ride" };
 
     static Limb L(float swing = 0, float abd = 0, float flex = 0, float end = 0) => new(swing, abd, flex, end);
 
@@ -87,6 +87,9 @@ public static class RigPoses
                     // the frame is 32 px wide, so a body lying flat cannot fit: the last frame is a collapse onto the knees
                     new Pose { TLean = 36, HPitch = 24, UpperZ = -1, LegL = L(4, 6, 104), LegR = L(-2, 6, 100), ArmL = L(40, 14, 30), ArmR = L(38, 14, 30), WSwing = 25, WAbd = 10 },
                 };
+            case "ride":
+                // sitting astride (side view): thighs forward and nearly level, shins hanging, back straight, hands forward on the reins; the horse sprite is drawn behind
+                return new[] { new Pose { TLean = 4, HPitch = 2, LegL = L(80, 4, 80, 8), LegR = L(72, 4, 74, 8), ArmL = L(40, 4, 64), ArmR = L(36, 4, 60), WSwing = 14, WAbd = 8 } };
             default: throw new ArgumentException("unknown action " + action);
         }
     }

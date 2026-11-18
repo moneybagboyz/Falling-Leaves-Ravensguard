@@ -4471,6 +4471,13 @@
       "w": 64,
       "h": 48
     },
+    "object.horse_riding": {
+      "atlas": "props_64",
+      "x": 640,
+      "y": 80,
+      "w": 64,
+      "h": 64
+    },
     "field.grass.0": {
       "atlas": "field_8",
       "x": 0,

@@ -107,6 +107,9 @@ public sealed partial class RigActor : Node2D
     }
 
     readonly record struct Slot(bool Visible, Texture2D? Tex, Vector2 Pos);
+    /// <summary>Pixels the whole figure is raised (a rider on a horse's back, a driver on a bench); the node origin stays at the ground.</summary>
+    public float Lift { get => -_flip.Position.Y; set => _flip.Position = new Vector2(0, -value); }
+
     readonly Dictionary<(Facing Facing, string Action, int Frame), Slot[]> _poses = new();
     (Facing, string, int)? _last;
 
