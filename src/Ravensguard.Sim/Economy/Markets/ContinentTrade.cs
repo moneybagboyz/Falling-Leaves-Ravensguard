@@ -77,5 +77,5 @@ public sealed partial class ContinentTrade
     }
 
     /// <summary>One day of trade (hour 3 of the day, after the market): planning of trips for the merchants whose caravans are home, founding of new caravans.</summary>
-    public void Daily(GameTime now) => PlanDay(now);
+    public void Daily(GameTime now) { DeskDaily(now); PlanDay(now); }
 }

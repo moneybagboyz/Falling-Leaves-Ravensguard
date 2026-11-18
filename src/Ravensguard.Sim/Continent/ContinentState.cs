@@ -166,7 +166,8 @@ public sealed class ContinentState
 
     // ------------------------------------------------------------------ totals
 
-    public long CoinInSummaries() { long t = 0; foreach (var s in Summaries) t += s.CoinTotal + s.TreasuryCoin; return t; }
+    /// <summary>Coin the continent holds in regions nobody has records of; a detailed region's coin is in its own ledger (its summary only mirrors it).</summary>
+    public long CoinInSummaries() { long t = 0; foreach (var s in Summaries) if (!s.Detailed) t += s.CoinTotal + s.TreasuryCoin; return t; }
 
     /// <summary>Everything the continent holds or owes, mites: summaries, treasuries, immigrants' stakes on the road, edge debts. Add every ledger's circulating coin to get the world's total (it is constant).</summary>
     public long TotalCoin()

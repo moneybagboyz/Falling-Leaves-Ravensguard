@@ -312,7 +312,7 @@ public static class ContinentTick
             if (l.PendingPersons > 0) continue;
             long start = r.Economy.World.Vital.Years.Count > 0 ? r.Economy.World.Vital.Years[0].PopulationAtStart : s.Pop;
             // an offer of settlers while the region is below its starting head count; the region takes what it has dwellings and its own quota for (RegionPopulation, S7)
-            long quota = s.Pop < start ? start * 12 / 1000 : 0;
+            long quota = 0;           // the region pulls its own returnees and settlers at S7 (PopulationMigrationSystem), at its own quota; nothing is posted any more
             bool refugeesOnly = false;
             foreach (int ei in st.EdgesOf[r.Id])
             {

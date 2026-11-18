@@ -87,13 +87,13 @@ public sealed partial class ContinentTrade
             if (t.Kind != TollKind.Bridge) continue;                                        // the realm gate is paid at the gate (GateTrade)
             long at = outbound ? t.AtMm : 2 * len - t.AtMm;
             if (at <= from || at > to) continue;
-            long toll = (long)TollBridgeMites * c.Vehicles.Length;
-            var holder = led.Open(PurseKind.Treasury, TreasuryOf(c));
-            long pay = Math.Min(toll, led.Balance(c.Account).Mites);
-            if (pay > 0 && led.Transfer(c.Account, holder, new Coin(pay), TransferReason.Toll)) TollsMites += pay;
-            if (pay < toll) c.ArrearsMites += 0;                                           // a bridge keeper takes what is there
+            long pay = Ravensguard.Sim.Taxes.Tolls.ChargeAt(_ew.World, c.Account, c.Settlement, Ravensguard.Sim.Taxes.TollKind.Bridge, c.Fielded, 0);   // taxes spec 10.3: to the holder of the road's settlement
+            TollsMites += pay;
         }
     }
+
+    private long store0Value(Caravan c) => PurchaseValue(c);
+    private static long PurchaseValue(Caravan c) => c.PurchaseMites;
 
     private EntityId TreasuryOf(Caravan c)
     {
@@ -132,8 +132,7 @@ public sealed partial class ContinentTrade
         if (kind < 30)
         {
             // a toll-taking patrol: a few mites a cart to the holder of the road
-            long toll = Math.Min((long)TollGateMites * c.Vehicles.Length, led.Balance(c.Account).Mites);
-            if (toll > 0 && led.Transfer(c.Account, led.Open(PurseKind.Treasury, TreasuryOf(c)), new Coin(toll), TransferReason.Toll)) TollsMites += toll;
+            TollsMites += Ravensguard.Sim.Taxes.Tolls.ChargeAt(_ew.World, c.Account, c.Settlement, Ravensguard.Sim.Taxes.TollKind.Gate, c.Fielded, store0Value(c));
             return;
         }
         if (kind < 60 || kind >= 60 + banditPct) return;                                    // merchants and refugees swap news; wolves are a delay

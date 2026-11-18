@@ -428,13 +428,7 @@ public static class Demography
         for (; persons >= 2 && s < 0; persons--)               // a smaller family when no dwelling is big enough for the whole party
             for (int cand = 0; cand < pop.Region.Settlements.Count && s < 0; cand++) { var (cs, cl) = Marriage.FreeDwelling(w, cand, persons); if (cs >= 0) { s = cs; l = cl; } }
         persons++;
-        if (s < 0)
-        {
-            int free = 0, freeBig = 0, manor = 0;
-            for (int cs = 0; cs < pop.Region.Settlements.Count; cs++) { var lots = pop.Region.Settlements[cs].Plan.Lots; for (int cl = 0; cl < lots.Count; cl++) if (lots[cl].IsDwelling && pop.LotHousehold[cs][cl] < 0) { if (lots[cl].Dwelling == Ravensguard.Sim.WorldGen.Region.DwellingType.Manor) manor++; else { free++; if (pop.LotBeds[cs][cl] >= 3) freeBig++; } } }
-            Ravensguard.Sim.People.Vital.PopulationMigrationSystem.Dbg[3] = free * 10000L + freeBig * 100 + manor;
-            return -1;
-        }
+        if (s < 0) return -1;
         var lot = pop.Region.Settlements[s].Plan.Lots[l];
         w.Ids.EnsureNext(IdKind.Household, hht.BaseCounter + (ulong)hht.Count);
         var hid = w.Ids.Allocate(IdKind.Household);
@@ -493,7 +487,7 @@ public static class Demography
     }
 
     /// <summary>A person who left alone comes back to the household that still stands (a bed free), with a stake of 20 crowns from the continent's purse.</summary>
-    public static bool ReturnPerson(SimWorld w, int p, int hh, GameTime when, RegionOutbox ob)
+    public static bool ReturnPerson(SimWorld w, int p, int hh, GameTime when, RegionOutbox ob, Stake? given = null)
     {
         var pt = w.People; var hht = w.Households; var e = w.Economy;
         pt.Status[p] = PersonStatus.Alive; pt.PregnantUntilDay[p] = -1; pt.HomeSettlement[p] = hht.Settlement[hh]; pt.HomeLot[p] = hht.Lot[hh]; pt.Bed[p] = -1; pt.Homeless[p] = HomelessReason.None;
@@ -501,6 +495,7 @@ public static class Demography
         hht.AddMemberLater(hh, p);
         w.Vital.Alive++; w.Vital.Immigrants++; w.Vital.Year(when.Year).Immigrants++;
         ob.Count("immigrants");
+        if (given != null) { GiveStake(w, hh, given.Value); return true; }
         var purse = e.Ledger.Open(PurseKind.Treasury, ContinentOwner);
         long stake = Math.Min(e.Ledger.Balance(purse).Mites, 2000L);
         if (stake > 0) e.Ledger.Transfer(purse, e.HouseholdPurse[hh], new Coin(stake), TransferReason.Gift);

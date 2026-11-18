@@ -191,15 +191,16 @@ public partial class StreetView : Control, IHandlesBack
             rt.AdvanceTo(GameTime.FromGameHours(rt.HourDone + 1));
             foreach (var c in st.Caravans.All)
             {
-                if (c.State != CaravanState.Outbound || c.Region != c.Home) continue;
+                if (c.State != CaravanState.Outbound || c.Region != c.Home || c.PrevDist >= c.Dist || (c.Fielded < 2 && i < 24 * 20)) continue;
                 long len = c.Path.LengthMm; if (c.Dist < 2_500_000 || c.Dist > len - 2_500_000) continue;
-                var lead = c.Path.At(c.Dist); var behind = c.Path.At(c.Dist - 14_000);
+                var lead = c.Path.At(c.Dist); var behind = c.Path.At(c.Dist - 8_000);
                 int lx = (int)(lead.XMm / 1000 - home.OriginXM), ly = (int)(lead.YMm / 1000 - home.OriginYM);
                 if (lx < 400 || ly < 400 || lx > RegionSettings.RegionM - 400 || ly > RegionSettings.RegionM - 400) continue;
                 var t = new GameTime(c.AnchorSec);
                 _opt.Season = t.Season switch { Season.Summer => "summer", Season.Autumn => "autumn", Season.Winter => "winter", _ => "spring" };
                 _opt.Day = t.DayOfSeason; _opt.Hour = t.Hour;
                 _opt.Start = ((int)(behind.XMm / 1000 - home.OriginXM), (int)(behind.YMm / 1000 - home.OriginYM), 0);
+                _opt.Pan = (lead.HeadX * 10 / 1024, lead.HeadY * 10 / 1024);                        // the camera looks along the road at the train
                 GD.Print($"[street] caravan {c.Id} at region ({lx},{ly}), {t}: {c.Vehicles.Length} vehicles, {c.Crew.Length} crew, state {c.State}");
                 return;
             }
@@ -462,7 +463,7 @@ public partial class StreetView : Control, IHandlesBack
         if (_router == null || _regionMap == null) { _router?.ShowToast(L.T("MAP_NONE")); return; }
         UI.ContinentOverview? ov = _source?.Regions != null && _source.Continent != null && _source.History != null && _world.Streamer is { } st
             ? new UI.ContinentOverview(_source.Continent, _source.History, _source.Regions, st.Home, HeroWorld) : null;
-        _router.Push(new WorldMapScreen(_router, _regionMap, HeroWorld, ov) { ShotPath = _opt.MapShot ? _opt.ShotPath : null, StartScale = Math.Max(1, Math.Abs(_opt.MapScale)), StartContinent = _opt.MapScale <= 0 });
+        _router.Push(new WorldMapScreen(_router, _regionMap, HeroWorld, ov) { CaravanMarks = CaravanMarksNow, RegionOrigin = Runtime == null ? (0, 0) : (Runtime.State.HomeRegion.OriginXM, Runtime.State.HomeRegion.OriginYM), ShotPath = _opt.MapShot ? _opt.ShotPath : null, StartScale = Math.Max(1, Math.Abs(_opt.MapScale)), StartContinent = _opt.MapScale <= 0 });
     }
 
     void UpdateHud(LiveSnapshot s)
@@ -960,6 +961,16 @@ public partial class StreetView : Control, IHandlesBack
     /// The LODBridge for caravans: the bubble around the hero holds the caravans of the abstract world whose road position comes within 150 m (and keeps them to 200 m); each is drawn from its
     /// record's own position function, so what is on screen is where the abstract tick says the caravan is.
     /// </summary>
+    /// <summary>Lead positions of the caravans on the road, for the world map.</summary>
+    IReadOnlyList<(long XMm, long YMm)> CaravanMarksNow()
+    {
+        var list = new List<(long, long)>();
+        if (Runtime is not { } rt) return list;
+        long now = _world.Clock.Now.Seconds;
+        foreach (var c in rt.Caravans) { var p = CaravanMotion.PositionOf(c, now); list.Add((p.XMm, p.YMm)); }
+        return list;
+    }
+
     void SyncCaravans(LiveSnapshot s)
     {
         if (_caravanSprites == null) return;

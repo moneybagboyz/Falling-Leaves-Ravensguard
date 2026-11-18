@@ -256,18 +256,22 @@ public sealed class PopulationMigrationSystem : AbstractSystem
     /// grain they bring, already taken out of the neighbour's summary); departed households come back first, then new families settle in vacant dwellings. What the region
     /// takes is booked (<see cref="Ravensguard.Sim.Continental.RegionLink.TakenPersons"/>); the rest goes back at the next tick.
     /// </summary>
-    public static readonly long[] Dbg = new long[4];
     private static void ImmigrateFromContinent(TickContext ctx, Ravensguard.Sim.Economy.Markets.ContinentLink link)
     {
         var w = ctx.World; var pt = w.People; var hht = w.Households; var rl = link.Mine;
-        Dbg[0]++; int left = rl.PendingPersons - rl.TakenPersons; if (left <= 0 || rl.PendingPersons <= 0) return;
+        // the region's own quota, as the stand-in had it: a sixth of the shortfall, at most 1.2 percent of the starting head count; the coin and grain of the stake come from the continent
         long start = w.Vital.Years.Count > 0 ? w.Vital.Years[0].PopulationAtStart : w.Vital.Alive;
         long shortfall = start - w.Vital.Alive; if (shortfall <= 0) return;
-        left = (int)Math.Min(left, Math.Min(start * ReturnQuotaPermille / 1000, Math.Max(1, shortfall / ShortfallDivisor)));       // the same quota the stand-in had: a sixth of the shortfall, at most 1.2 percent of the start
-        Dbg[1] += left;
-        long coinHead = rl.PendingCoin / rl.PendingPersons, measuresHead = rl.PendingMeasures / rl.PendingPersons;
+        int left = (int)Math.Min(start * ReturnQuotaPermille / 1000, Math.Max(1, shortfall / ShortfallDivisor));
+        var edge = rl.Edges.FirstOrDefault(e => !link.State.Summaries[e.Neighbour].Detailed);
+        if (edge == null) return;                                // no road to a region the continent holds coin for
+        long coinHead = 2000, measuresHead = 13;
         Demography.Stake StakeFor(int n) => new(coinHead * n, measuresHead * n);
-        void Took(int n) { rl.TotalCame += n; rl.TakenPersons += n; rl.TakenCoin += coinHead * n; rl.TakenMeasures += measuresHead * n; }
+        void Took(int n)
+        {
+            rl.TotalCame += n; rl.TotalPosted += n;
+            { edge.CoinNetIn += coinHead * n; edge.StockNetOut[0] -= measuresHead * n * 1_000_000 / Ravensguard.Sim.Continental.ContinentRules.MeasuresPerKgX1000; }
+        }
         var byHousehold = new SortedDictionary<int, List<int>>();
         for (int p = 0; p < pt.Count; p++)
         {
@@ -281,11 +285,18 @@ public sealed class PopulationMigrationSystem : AbstractSystem
             if (left < members.Count) continue;
             if (Demography.ReturnHousehold(w, hh, members, ctx.Time, ctx.Outbox, StakeFor(members.Count))) { Took(members.Count); left -= members.Count; }
         }
+        // singles who left a household that still stands come home to it when it has a bed
+        for (int p = 0; p < pt.Count && left > 0; p++)
+        {
+            if (pt.Status[p] != PersonStatus.Departed) continue;
+            int hh = pt.Household[p]; if (hh < 0 || hht.MemberCount[hh] == 0 || hht.MemberCount[hh] >= hht.Beds[hh]) continue;
+            if (Demography.ReturnPerson(w, p, hh, ctx.Time, ctx.Outbox, StakeFor(1))) { Took(1); left--; }
+        }
         int salt = 0;
         while (left >= 2)
         {
             int n = Math.Min(left, 3 + (salt % 3));
-            if (Demography.SettleFamily(w, n, StakeFor, ctx.Time, ctx.Outbox, salt++) < 0) { Dbg[2]++; break; }
+            if (Demography.SettleFamily(w, n, StakeFor, ctx.Time, ctx.Outbox, salt++) < 0) { break; }
             int settled = Demography.LastSettled;
             Took(settled); left -= settled;
         }

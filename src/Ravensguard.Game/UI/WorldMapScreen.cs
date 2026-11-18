@@ -38,6 +38,11 @@ public partial class WorldMapScreen : Control
     public string? ShotPath { get; init; }
     public int StartScale { get; init; } = 1;
 
+    /// <summary>The caravans on the road now as continent millimetres (lead position), asked for at every draw; null for a world without a runtime. The map shows each as a small brown wagon mark.</summary>
+    public Func<IReadOnlyList<(long XMm, long YMm)>>? CaravanMarks { get; init; }
+    /// <summary>Continent metres of the map region's corner.</summary>
+    public (long X, long Y) RegionOrigin { get; init; }
+
     /// <summary>Dev: opens in the continent overview (--shot-map-scale 0).</summary>
     public bool StartContinent { get; init; }
 
@@ -214,6 +219,7 @@ public partial class WorldMapScreen : Control
             else if (st.Class == SettlementClass.Village && _scale >= 2) Label(st.Name, pos + new Vector2(0, 14), 14, PixelTheme.Body);
             else if (_scale >= 4) Label(st.Name, pos + new Vector2(0, 14), 12, PixelTheme.Dim);
         }
+        DrawCaravans();
         DrawHero();
 
         // frame and hints
@@ -239,6 +245,21 @@ public partial class WorldMapScreen : Control
     }
 
     /// <summary>The continent overview: the pixel map, the region grid, the generated regions in detail, the hero.</summary>
+    void DrawCaravans()
+    {
+        if (CaravanMarks == null) return;
+        var view = new Rect2(-20, -20, Size.X + 40, Size.Y + 40);
+        foreach (var (x, y) in CaravanMarks())
+        {
+            float rx = (x / 1000f - RegionOrigin.X), ry = (y / 1000f - RegionOrigin.Y);
+            if (rx < 0 || ry < 0 || rx > RegionData.Meters || ry > RegionData.Meters) continue;
+            var pos = ToScreen(new Vector2(rx / RegionData.TileM * RegionMap.Px, ry / RegionData.TileM * RegionMap.Px)).Floor();
+            if (!view.HasPoint(pos)) continue;
+            DrawRect(new Rect2(pos.X - 3, pos.Y - 2, 7, 5), PixelTheme.Border);
+            DrawRect(new Rect2(pos.X - 2, pos.Y - 1, 5, 3), new Color("c9873c"));
+        }
+    }
+
     void DrawContinent()
     {
         var ov = _overview!;

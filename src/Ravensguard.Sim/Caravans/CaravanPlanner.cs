@@ -116,8 +116,8 @@ public sealed partial class ContinentTrade
         // the fleet the merchant could field: what he owns, plus wagons he can pay for (founding also on his lord's advance)
         int canBuy = (int)Math.Max(0, (cash + loanRoom - FoundingCashMites) / wagon);
         int maxFleet = Math.Min(MaxVehicles, Math.Max(owned, owned + canBuy));
-        if (maxFleet < 1) { Dbg[6]++; return; }
-        if (car == null && st.Caravans.ActiveCount() >= CaravanTable.MaxActive) { Dbg[7]++; return; }
+        if (maxFleet < 1) return;
+        if (car == null && st.Caravans.ActiveCount() >= CaravanTable.MaxActive) return;
         int guards = car?.Guards ?? 0;
         Plan? best = null;
         foreach (var et in rl.Edges)
@@ -227,7 +227,6 @@ public sealed partial class ContinentTrade
                 }
             }
         }
-        Dbg[0]++; if (exportC.Count > 0) Dbg[1]++; if (importC.Count > 0) Dbg[2]++;
         if (exportC.Count == 0 && importC.Count == 0) return null;
         exportC.Sort((x, y) => x.PerKg != y.PerKg ? y.PerKg.CompareTo(x.PerKg) : x.G.CompareTo(y.G));
         importC.Sort((x, y) => x.PerKg != y.PerKg ? y.PerKg.CompareTo(x.PerKg) : x.G.CompareTo(y.G));
@@ -255,8 +254,6 @@ public sealed partial class ContinentTrade
         long risk = (revenue + impRevenue) * (RiskPremiumPct) / 100;
         long profit = gross - transport - capital - risk;
         plan.Profit = profit; plan.Cost = transport + capital + risk; plan.Revenue = revenue + impRevenue; plan.Purchase = totalSpend; plan.ImportBudget = impPurchase;
-        if (Environment.GetEnvironmentVariable("RV_PLANDBG") != null && Dbg[3] < 25 && profit <= 0 && (revenue + impRevenue) > 1000) Console.WriteLine($"plan use={kinds.Length} rev={revenue} purch={purchase} impRev={impRevenue} impPurch={impPurchase} transport={transport} (wages {wages} fodder {fodder} tolls {tolls}) capital={capital} risk={risk} tripDays={tripDays} path={path.LengthMm/1000}m exp={plan.Exports.Count} imp={plan.Imports.Count}");
-        if (profit <= 0) Dbg[3]++; else if (profit * 100 < (totalSpend + transport) * MinMarginPct) Dbg[4]++; else Dbg[5]++;
         if (profit <= 0 || profit * 100 < (totalSpend + transport) * MinMarginPct) return null;
         return plan;
     }
@@ -380,7 +377,6 @@ public sealed partial class ContinentTrade
     }
 
     public const int ExportContractPermille = 880;
-    public static readonly long[] Dbg = new long[8];
     /// <summary>What the merchant's lord will lend toward wagons: a tenth of his treasury's coin.</summary>
     private long Advanceable(MarketBook b)
     {
