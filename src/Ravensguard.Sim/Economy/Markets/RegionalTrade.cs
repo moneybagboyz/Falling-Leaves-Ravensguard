@@ -25,7 +25,7 @@ public sealed class RegionalTrade
         _byFief = new List<MarketBook>[nf + 1]; for (int i = 0; i < _byFief.Length; i++) _byFief[i] = [];
         foreach (var b in markets.AllBooks()) _byFief[Slot(b.SettlementIndex)].Add(b);
         var c = econ.Goods; _skip = new bool[c.Count]; MovedByGood = new long[c.Count];
-        foreach (var g in new[] { "milk", "meat_fresh", "fish_fresh", "eggs", "vegetables", "sheep", "cow", "pig", "hay", "straw", "whey", "offal", "silver" })
+        foreach (var g in new[] { "milk", "meat_fresh", "fish_fresh", "eggs", "vegetables", "sheep", "cow", "pig", "hay", "straw", "whey", "offal", "silver", "bread" })
             if (c.TryIdOf(g, out ushort id)) _skip[id] = true;
     }
 
@@ -60,9 +60,16 @@ public sealed class RegionalTrade
                 if (src == null) continue;
                 long q = Math.Min(want, bestSurplus / 2);
                 if (q <= 0) continue;
+                // the 40 percent budget is a cap on this purchase: no more units than the remaining budget buys at the source's ask
+                long cost = src.QuoteBuy(g, q);
+                if (cost > budget) { q = q * budget / Math.Max(1, cost); if (q <= 0) continue; }
                 long cash = led.Balance(m.Purse).Mites;
                 var r = src.Buy(m, g, q, 1300, day);
                 if (r.Qty <= 0) continue;
+                // carriage: the carters of the fief take 3 percent of the price, paid to the source market's purse (a stand-in for their wages and the animals' keep)
+                long carriage = r.PaidMites * 3 / 100;
+                if (carriage > 0 && !led.Transfer(m.Purse, src.TollPurse, new Coin(carriage), TransferReason.Trade)) carriage = 0;
+                budget -= carriage;
                 b.List(m, g, r.Qty, 1000, day, merchantLot: true);
                 MovedUnits += r.Qty; MovedByGood[g] += r.Qty; SpentMites += r.PaidMites; budget -= r.PaidMites;
                 _ = cash;

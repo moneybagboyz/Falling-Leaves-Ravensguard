@@ -163,7 +163,7 @@ public sealed class Store
             Int128 num = (Int128)q * ppm * (_cat.TempSensitive(g) ? mult : 1000) * leakMult; // permille units: divide by 1e6 (ppm) x 1000 (permille)
             long whole = (long)(num / 1_000_000_000);
             long frac = (long)(num % 1_000_000_000);                                             // 0 .. 999,999,999 of 1e9
-            uint u = DetRng.NextUInt(seed, hourKey, Owner.Value, 0x222, g);
+            uint u = DetRng.NextUInt(seed, hourKey, Owner.Value, RngStreams.Spoilage, g);
             if (frac > 0 && (Int128)frac * 4_294_967_296L > (Int128)u * 1_000_000_000) whole++;  // frac/1e9 > u/2^32
             whole = Math.Min(whole, q);
             if (whole > 0) { Destroy(g, whole, DestroyReason.Spoiled); lost += whole; }

@@ -108,7 +108,7 @@ public sealed partial class FarmingSystem
             lv.HayPpm[s] = 0; lv.HayCarry[s] = 0; lv.Grazed[s] = false;
             int growth = lv.Sheep[s] * _d.SheepGrowthPermilleYear;
             int add = growth / 1000, rem = growth % 1000;
-            if (DetRng.Range(Seed, now.TotalHours, (ulong)s, 0x212, 0, 0, 1000) < rem) add++;
+            if (DetRng.Range(Seed, now.TotalHours, (ulong)s, RngStreams.Herds, 0, 0, 1000) < rem) add++;
             int acres = 0; foreach (int p in Region.Settlements[s].Parcels) acres += Region.Parcels[p].FieldCount;
             int cap = acres / 3 * _d.SheepPerFallowAcreCapX100 / 100;
             int grown = Math.Min(Math.Max(lv.Sheep[s], cap), lv.Sheep[s] + add);

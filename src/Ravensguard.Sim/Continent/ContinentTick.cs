@@ -76,7 +76,9 @@ public static class ContinentTick
                 int to = BestDestination(st, id, isRes);
                 var d = st.Summaries[to];
                 d.Pop += l.EmigrantPersons; d.Households += l.EmigrantHouseholds; d.CoinTotal += l.EmigrantCoin;
-                d.StockG[0] += l.EmigrantMeasures * 1_000_000 / ContinentRules.MeasuresPerKgX1000;
+                for (int k = 1; k < ContinentRules.K; k++) d.StockG[k] += l.EmigrantG[k];
+                d.StockG[0] += l.EmigrantG[0];
+                Array.Clear(l.EmigrantG);
                 l.EmigrantPersons = 0; l.EmigrantHouseholds = 0; l.EmigrantCoin = 0; l.EmigrantMeasures = 0;
             }
             if (l.PendingPersons > 0 || l.PendingCoin > 0 || l.TakenCoin > 0)

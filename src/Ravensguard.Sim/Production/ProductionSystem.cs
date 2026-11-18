@@ -191,7 +191,7 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
         int minSkill = st.MinSkill == 100 && st.Crew.Count == 0 ? 50 : st.MinSkill;
         var q2 = ItemQualityRules.FromScore(ItemQualityRules.Score(Seed, now.TotalHours, b.Id, (uint)b.Batches, minSkill, 0));
         b.Quality[(int)q2]++; b.LastQuality = (int)q2; b.Batches++; BatchesFinished++;
-        if (r.WearPpmPerBatch > 0 && DetRng.NextUInt(Seed, now.TotalHours, b.Id.Value, 0x221, r.Index) < (ulong)r.WearPpmPerBatch * 4_294_967_296UL / 1_000_000UL) b.ToolPiecesWorn++;
+        if (r.WearPpmPerBatch > 0 && DetRng.NextUInt(Seed, now.TotalHours, b.Id.Value, RngStreams.ToolWear, r.Index) < (ulong)r.WearPpmPerBatch * 4_294_967_296UL / 1_000_000UL) b.ToolPiecesWorn++;
         int recipe = st.Recipe;
         st.Recipe = -1; st.ProgressMicro = 0; st.MinSkill = 100; st.Crew.Clear();
         // keep the station busy: the same recipe again if the inputs are on hand

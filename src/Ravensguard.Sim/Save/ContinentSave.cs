@@ -68,6 +68,7 @@ public sealed class LinkSave
     [Key(14)] public long TotalLeft { get; set; }
     [Key(15)] public long TotalCame { get; set; }
     [Key(16)] public long TotalPosted { get; set; }
+    [Key(17)] public long[] EmigrantG { get; set; } = [];
 }
 
 [MessagePackObject]
@@ -151,7 +152,7 @@ public sealed class ContinentSave
             {
                 Region = kv.Key, EmigrantPersons = kv.Value.EmigrantPersons, EmigrantHouseholds = kv.Value.EmigrantHouseholds, EmigrantCoin = kv.Value.EmigrantCoin, EmigrantMeasures = kv.Value.EmigrantMeasures,
                 PendingPersons = kv.Value.PendingPersons, PendingHouseholds = kv.Value.PendingHouseholds, PendingCoin = kv.Value.PendingCoin, PendingMeasures = kv.Value.PendingMeasures,
-                PendingFromRegion = kv.Value.PendingFromRegion, TakenPersons = kv.Value.TakenPersons, TakenCoin = kv.Value.TakenCoin, TakenMeasures = kv.Value.TakenMeasures, TotalLeft = kv.Value.TotalLeft, TotalCame = kv.Value.TotalCame, TotalPosted = kv.Value.TotalPosted,
+                PendingFromRegion = kv.Value.PendingFromRegion, TakenPersons = kv.Value.TakenPersons, TakenCoin = kv.Value.TakenCoin, TakenMeasures = kv.Value.TakenMeasures, TotalLeft = kv.Value.TotalLeft, TotalCame = kv.Value.TotalCame, TotalPosted = kv.Value.TotalPosted, EmigrantG = (long[])kv.Value.EmigrantG.Clone(),
                 Edges = kv.Value.Edges.Select(e => new EdgeTradeSave { Edge = e.Edge, Neighbour = e.Neighbour, PayBudgetMites = e.PayBudgetMites, SpareG = (long[])e.SpareG.Clone(), CoinNetIn = e.CoinNetIn, StockNetOut = (long[])e.StockNetOut.Clone(), TollMites = e.TollMites }).ToArray(),
             }).ToArray(),
             Caravans = st.Caravans.All.Select(c => new CaravanSave
@@ -190,7 +191,7 @@ public sealed class ContinentSave
             var r = st.Link(l.Region);
             r.EmigrantPersons = l.EmigrantPersons; r.EmigrantHouseholds = l.EmigrantHouseholds; r.EmigrantCoin = l.EmigrantCoin; r.EmigrantMeasures = l.EmigrantMeasures;
             r.PendingPersons = l.PendingPersons; r.PendingHouseholds = l.PendingHouseholds; r.PendingCoin = l.PendingCoin; r.PendingMeasures = l.PendingMeasures;
-            r.PendingFromRegion = l.PendingFromRegion; r.TakenPersons = l.TakenPersons; r.TakenCoin = l.TakenCoin; r.TakenMeasures = l.TakenMeasures; r.TotalLeft = l.TotalLeft; r.TotalCame = l.TotalCame; r.TotalPosted = l.TotalPosted;
+            r.PendingFromRegion = l.PendingFromRegion; r.TakenPersons = l.TakenPersons; r.TakenCoin = l.TakenCoin; r.TakenMeasures = l.TakenMeasures; r.TotalLeft = l.TotalLeft; r.TotalCame = l.TotalCame; r.TotalPosted = l.TotalPosted; if (l.EmigrantG.Length == r.EmigrantG.Length) r.EmigrantG = (long[])l.EmigrantG.Clone();
             foreach (var e in l.Edges)
             {
                 var t = r.Edges.FirstOrDefault(q => q.Edge == e.Edge) ?? throw new SaveException("The continent section names a road that the history does not have.");

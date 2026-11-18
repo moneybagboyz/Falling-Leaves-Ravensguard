@@ -118,7 +118,7 @@ public sealed class SeasonalEnvironment(ulong seed) : IHourEnvironment
             t = t0 + (t1 - t0) * (doy - d0) / (d1 - d0);
             break;
         }
-        return t + DetRng.Range(seed, day, 0, 0x2E0, 0, -3, 4);
+        return t + DetRng.Range(seed, day, 0, RngStreams.EnvJitter, 0, -3, 4);
     }
 }
 

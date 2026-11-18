@@ -34,7 +34,11 @@ public sealed class FoodPlan
 public sealed record NeedsResult(
     int Members, int NeedStapleX100, int NeedRelishX100, int EatenStapleX100, int EatenRelishX100, int SubstitutedX100, int FedPermille,
     long AleNeedG, long AleDrunkG, long SaltNeedG, long SaltEatenG, long FuelNeedG, long FuelBurnedG, long MillTollG,
-    bool DietPoor, bool Cold, bool Hungry, HouseholdTier Tier, int FoodCoverDaysX10, int FuelCoverDaysX10);
+    bool DietPoor, bool Cold, bool LowStore, HouseholdTier Tier, int FoodCoverDaysX10, int FuelCoverDaysX10)
+{
+    /// <summary>The household could not eat its whole day's food (review finding 17: the true hunger measure; <see cref="LowStore"/> is under a day of food left after eating).</summary>
+    public bool MissedMeal => Members > 0 && FedPermille < 1000;
+}
 
 /// <summary>
 /// The daily needs pass of one household (households spec 3.2): eat the staple, eat the relish (grain substitutes a shortfall), drink, burn fuel, update each
@@ -74,9 +78,18 @@ public static class HouseholdNeeds
             (long)b.AleMlPerPersonDay * (2 * adults + kids) / 2, (long)n * b.SaltGPerPersonDay, (long)n * b.FirewoodGPerPersonDay * FuelMultX100(tMeanC) / 100);
     }
 
-    /// <summary>Grams of vegetables a member's garden gives on each day of its season (doy 11-40): 868 t a game year for 25,000 people (resources spec G-R14, gardens 130,000 measures).</summary>
-    public const int GatherFuelPct = 105;
-    public const int GardenGPerPersonDay = 1100, GardenFirstDoy = 11, GardenLastDoy = 40, HenEggGPerPersonDay = 14;
+    /// <summary>Grams of fuel a household burns today at the temperature (the basket's firewood x the cold multiplier).</summary>
+    public static long BurnG(EconomyState e, HouseholdTable hht, int hh, int tMeanC) => (long)hht.MemberCount[hh] * e.Basket(hht.Class[hh]).FirewoodGPerPersonDay * FuelMultX100(tMeanC) / 100;
+
+    /// <summary>
+    /// What a peasant or gentry household gathers today (review finding 4): its day's burn and a small buffer (<see cref="EconomyTuningDef.GatherFuelBufferPct"/>), and
+    /// no more than tops its store up to <see cref="EconomyTuningDef.FuelKeepDays"/> days of today's burn.
+    /// </summary>
+    public static long GatherWantG(EconomyState e, HouseholdTable hht, int hh, int tMeanC)
+    {
+        long burn = BurnG(e, hht, hh, tMeanC), have = e.HouseholdStore[hh].Qty(e.Food.Firewood);
+        return Math.Max(0, Math.Min(burn * (100 + e.Tuning.GatherFuelBufferPct) / 100, burn * e.Tuning.FuelKeepDays - have));
+    }
 
     /// <summary>
     /// Household production of relish (resources spec G-R14, integration decision I12): every household has a garden that gives vegetables in the growing days and hens
@@ -86,18 +99,18 @@ public static class HouseholdNeeds
     {
         int n = hht.MemberCount[hh]; if (n == 0) return;
         var s = e.HouseholdStore[hh];
-        // fuel is gathered (integration decision I22): peasant and gentry households gather 125 percent of the basket's firewood from the commons and the lord's woods, the
-        // surplus (a day's keep over twenty days' cover sells on the village market) is the village's fuel supply; a burgher buys all of his
-        // the gathering follows the day's burn (integration decision I36): in a cold spell a household fetches more wood, as it burns more; at a flat 125 percent of the
-        // mild-weather basket every peasant ran short each winter and posted a 20-day firewood order every day, which the books counted as 1,400 t a day of demand
+        // fuel is gathered (integration decisions I22, I36): peasant and gentry households gather their day's burn (it follows the weather) and a small buffer from the
+        // commons and the lord's woods; a burgher buys all of his. The wood comes off the woodland of the settlement and takes the members' hours (review finding 4: it was
+        // created from nothing at 105 percent of the burn, 36 kt in five years against 15.8 kt burned); a bare economy without a woodland creates it as before
         if (firewood != ushort.MaxValue && hht.Class[hh] != SocialClass.Burgher)
-            s.Create(firewood, (long)n * e.Basket(hht.Class[hh]).FirewoodGPerPersonDay * FuelMultX100(tMeanC) / 100 * GatherFuelPct / 100, CreateReason.Cut);
-        if (doy >= GardenFirstDoy && doy <= GardenLastDoy) s.Create(vegetables, (long)n * GardenGPerPersonDay, CreateReason.Harvest);
-        s.Create(eggs, (long)n * HenEggGPerPersonDay, CreateReason.Harvest);
+        {
+            long want = GatherWantG(e, hht, hh, tMeanC);
+            if (want > 0) { if (e.FuelGatherer != null) e.FuelGatherer.Gather(hh, want); else s.Create(firewood, want, CreateReason.Cut); }
+        }
+        var t = e.Tuning;
+        if (doy >= t.GardenFirstDoy && doy <= t.GardenLastDoy) s.Create(vegetables, (long)n * t.GardenGPerPersonDay, CreateReason.Harvest);
+        s.Create(eggs, (long)n * t.HenEggGPerPersonDay, CreateReason.Harvest);
     }
-
-    /// <summary>Grams of barley and of firewood that go into a gram of home-brewed ale (the recipes' 52 kg of barley malted and 35 kg of fuel to a 101 kg of ale).</summary>
-    public const int BrewBarleyPermille = 520, BrewFuelPermille = 350, BrewDaysCover = 3;
 
     /// <summary>
     /// Home brewing (integration decision I23): a household with land brews its own ale from its barley when it holds under three days of it: six days' worth at a time,
@@ -106,11 +119,12 @@ public static class HouseholdNeeds
     /// </summary>
     public static void HomeBrew(EconomyState e, PersonTable people, HouseholdTable hht, int hh, int day, ushort barley)
     {
-        if (hht.ParcelCount[hh] == 0 || hht.Class[hh] == SocialClass.Burgher || e.FoodCoverDaysX10[hh] < 150) return;
+        var t = e.Tuning;
+        if (hht.ParcelCount[hh] == 0 || hht.Class[hh] == SocialClass.Burgher || e.FoodCoverDaysX10[hh] < t.BrewMinFoodDaysX10) return;
         var s = e.HouseholdStore[hh]; var b = Basket(e, people, hht, hh, day, 12);
         long dayG = b.AleMl * e.Goods.Def(e.Food.Ale).LitreMassG / 1000;
-        if (dayG <= 0 || s.Qty(e.Food.Ale) >= dayG * BrewDaysCover) return;
-        long ale = dayG * 6, grain = ale * BrewBarleyPermille / 1000, fuel = ale * BrewFuelPermille / 1000;
+        if (dayG <= 0 || s.Qty(e.Food.Ale) >= dayG * t.BrewDaysCover) return;
+        long ale = dayG * t.BrewBatchDays, grain = ale * t.BrewBarleyPermille / 1000, fuel = ale * t.BrewFuelPermille / 1000;
         if (s.Qty(barley) < grain + e.SeedReserveG[hh] / 3 || s.Qty(e.Food.Firewood) < fuel) return;     // the spring seed barley is not brewed (decision I38)
         s.Destroy(barley, grain, DestroyReason.Consumed); s.Destroy(e.Food.Firewood, fuel, DestroyReason.Consumed);
         s.Create(e.Food.Ale, ale, CreateReason.Brewed);
@@ -131,7 +145,7 @@ public static class HouseholdNeeds
             if (life <= 0) continue;
             long ppm = (k == 2 ? Math.Max(1, (n + 2) / 3) : n) * 1_000_000L / life;
             int idx = hh * EconomyState.Durables + k;
-            if (e.DueDurables[idx] < 8 && DetRng.Range(seed, hourKey, id, 0x2C8, (uint)k, 0, 1_000_000) < ppm) e.DueDurables[idx]++;
+            if (e.DueDurables[idx] < 8 && DetRng.Range(seed, hourKey, id, RngStreams.Durables, (uint)k, 0, 1_000_000) < ppm) e.DueDurables[idx]++;
         }
     }
 
@@ -253,15 +267,16 @@ public static class HouseholdNeeds
         long foodStock = FoodStockX100(e, store, e.SeedReserveG[hh]);
         int foodDays = needTotal == 0 ? 0 : (int)Math.Min(short.MaxValue, foodStock * 10 / needTotal);
         int fuelDays = need.FuelG == 0 ? short.MaxValue : (int)Math.Min(short.MaxValue, store.Qty(e.Food.Firewood) * 10 / need.FuelG);
-        bool hungry = foodDays < 10;
+        bool lowStore = foodDays < 10, missedMeal = fed < 1000;
         var tier = TierOf(foodDays, fuelDays, null, tMeanC, e.Basket(hht.Class[hh]));
         e.FoodCoverDaysX10[hh] = (short)foodDays; e.FuelCoverDaysX10[hh] = (short)fuelDays; e.Tiers[hh] = tier; e.DietPoor[hh] = dietPoor;
         var gr = e.Grievances[hh];
         gr = cold ? gr | Grievance.Cold : gr & ~Grievance.Cold;
-        gr = hungry ? gr | Grievance.Hunger : gr & ~Grievance.Hunger;
+        gr = lowStore ? gr | Grievance.Hunger : gr & ~Grievance.Hunger;
+        gr = missedMeal ? gr | Grievance.MissedMeal : gr & ~Grievance.MissedMeal;
         e.Grievances[hh] = gr;
 
         return new NeedsResult(n, need.StapleX100, need.RelishX100, eatenStaple, eatenRelish, subst, fed, aleNeedG, aleDrunk, need.SaltG, saltEaten, need.FuelG, burned, toll,
-            dietPoor, cold, hungry, tier, foodDays, fuelDays);
+            dietPoor, cold, lowStore, tier, foodDays, fuelDays);
     }
 }

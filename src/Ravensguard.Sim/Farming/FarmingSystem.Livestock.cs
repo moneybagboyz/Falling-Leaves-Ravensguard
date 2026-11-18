@@ -90,7 +90,7 @@ public sealed partial class FarmingSystem
     private int Stoch(int head, int permille, int s, long hourKey, uint draw)
     {
         long x = (long)head * permille; int whole = (int)(x / 1000), rem = (int)(x % 1000);
-        if (rem > 0 && DetRng.Range(Seed, hourKey, (ulong)s, 0x212, draw, 0, 1000) < rem) whole++;
+        if (rem > 0 && DetRng.Range(Seed, hourKey, (ulong)s, RngStreams.Herds, draw, 0, 1000) < rem) whole++;
         return whole;
     }
 

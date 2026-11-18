@@ -346,7 +346,12 @@ public static class Demography
             var rl = link.Mine;
             if (bal.Mites > 0 && e.Ledger.Sink(e.HouseholdPurse[hh], bal, SinkReason.Emigrate)) rl.EmigrantCoin += bal.Mites;
             long grainG = 0;
-            foreach (var (g, q) in src.Rows()) { if (e.Food.IsGrain(g)) grainG += e.Goods.MassG(g, q); src.Destroy(g, q, DestroyReason.Export); }
+            foreach (var (g, q) in src.Rows())
+            {
+                if (e.Food.IsGrain(g)) grainG += e.Goods.MassG(g, q);
+                int tk = Array.IndexOf(Ravensguard.Sim.Continental.ContinentRules.TrackedGoods, e.Goods.StringId(g)); if (tk >= 0) rl.EmigrantG[tk] += e.Goods.MassG(g, q);
+                src.Destroy(g, q, DestroyReason.Export);
+            }
             rl.EmigrantMeasures += grainG * Ravensguard.Sim.Continental.ContinentRules.MeasuresPerKgX1000 / 1_000_000;
             rl.EmigrantPersons += members.Length; rl.EmigrantHouseholds++; rl.TotalLeft += members.Length;
         }

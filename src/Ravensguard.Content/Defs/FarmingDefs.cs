@@ -76,6 +76,8 @@ public sealed record FarmingSettingsDef : ContentDef
     // fertility and mixes
     /// <summary>Phase 1 field fertility averages far below the plan's 70 (seed 1234: mean 39). At state creation field fertility is scaled so the mean fertility used by the yield (capped at 91) equals this; 0 keeps Phase 1 values.</summary>
     public int TargetMeanFertility { get; init; } = 74;
+    /// <summary>Share of every holder's harvest that goes to the village's poor box, the parish granary (integration decision I24; was a constant, review finding 12).</summary>
+    public int GleaningPermille { get; init; } = 30;
     /// <summary>The plan's reference density is 62,400 fields for 25,000 people, 2,496 per 1,000 people. Off by default (0); when positive the target mean fertility is scaled by this over the region's own density (fewer acres per person need richer soil to keep the plan's balance); 0 switches it off.</summary>
     public int ReferenceFieldsPerKiloPerson { get; init; } = 0;
     public int FallowGrazedFertility { get; init; } = 15;

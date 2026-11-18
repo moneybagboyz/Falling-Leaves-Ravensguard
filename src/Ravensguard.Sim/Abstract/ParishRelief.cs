@@ -1,3 +1,4 @@
+using Ravensguard.Content;
 using Ravensguard.Sim.Core;
 using Ravensguard.Sim.Economy;
 using Ravensguard.Sim.Economy.Markets;
@@ -14,8 +15,8 @@ namespace Ravensguard.Sim.Abstract;
 /// </summary>
 public sealed class ParishRelief
 {
-    public const int CharityMeasureX100PerMember = 100, SellDivisor = 60, HungryBelowDaysX10 = 30;
     private readonly SimWorld _w;
+    private EconomyTuningDef T => _w.Economy.Tuning;
     private readonly MarketSystem _markets;
     private readonly ushort[] _grains;
     /// <summary>The tithe in wool and cheese (taxes spec 3.3): sold like the grain, a sixtieth a day, in the settlements where no household is hungry.</summary>
@@ -50,10 +51,10 @@ public sealed class ParishRelief
         for (int h = 0; h < hht.Count; h++)
         {
             int n = hht.MemberCount[h];
-            if (n == 0 || e.FoodCoverDaysX10[h] >= HungryBelowDaysX10) continue;
+            if (n == 0 || e.FoodCoverDaysX10[h] >= T.ReliefBelowDaysX10) continue;
             int s = hht.Settlement[h]; _fiefHungry[FiefSlot(s)] = true;
             Dole(h, n, s);
-            long want = (long)n * CharityMeasureX100PerMember * HouseholdNeeds.GramsPerMeasure / 100;
+            long want = (long)n * T.CharityMeasureX100PerMember * HouseholdNeeds.GramsPerMeasure / 100;
             var house = e.HouseholdStore[h];
             if (e.OtherStores.TryGetValue(FarmIds.ParishGranary(s), out var own)) want -= Draw(own, house, want);
             Asked++;
@@ -85,21 +86,20 @@ public sealed class ParishRelief
             foreach (ushort g in _grains)
             {
                 long have = granary.Qty(g); if (have <= 0) continue;
-                long moved = Store.MoveUpTo(granary, e.HouseholdStore[seller], g, Math.Max(1, have / SellDivisor));
+                long moved = Store.MoveUpTo(granary, e.HouseholdStore[seller], g, Math.Max(1, have / Math.Max(1, T.TitheSellDivisorPerDay)));
                 if (moved <= 0) continue;
-                SoldG += book.SellOrList(party, g, moved, 800, day);
+                SoldG += book.SellOrList(party, g, moved, T.TitheSaleFloorPermille, day);
             }
             foreach (ushort g in _titheGoods)
             {
                 long have = granary.Qty(g); if (have <= 0) continue;
-                long moved = Store.MoveUpTo(granary, e.HouseholdStore[seller], g, Math.Max(1, have / SellDivisor));
-                if (moved > 0) book.SellOrList(party, g, moved, 800, day);
+                long moved = Store.MoveUpTo(granary, e.HouseholdStore[seller], g, Math.Max(1, have / Math.Max(1, T.TitheSellDivisorPerDay)));
+                if (moved > 0) book.SellOrList(party, g, moved, T.TitheSaleFloorPermille, day);
             }
         }
     }
 
-    /// <summary>Alms (integration decision I25): every season a lord gives a third of the coin he holds above 1,000 crowns to the destitute households of his fief (under ten days of food and under ten crowns), at most 25 crowns a member.</summary>
-    public const long AlmsReserveMites = 100_000, AlmsMaxPerMemberMites = 2500, AlmsPoorBelowMites = 1000;
+    /// <summary>Alms (integration decision I25): every season a lord gives half of the coin he holds above 1,000 crowns to the destitute households of his fief (under ten days of food and under ten crowns), at most 25 crowns a member (the numbers are <see cref="EconomyTuningDef"/> content).</summary>
     public long AlmsMites;
 
     public void Almonry(GameTime now)
@@ -109,16 +109,16 @@ public sealed class ParishRelief
         var poor = new List<int>[nf]; for (int f = 0; f < nf; f++) poor[f] = [];
         for (int h = 0; h < hht.Count; h++)
         {
-            if (hht.MemberCount[h] == 0 || hht.Class[h] == SocialClass.Gentry || e.FoodCoverDaysX10[h] >= 100 || led.Balance(e.HouseholdPurse[h]).Mites >= AlmsPoorBelowMites) continue;
+            if (hht.MemberCount[h] == 0 || hht.Class[h] == SocialClass.Gentry || e.FoodCoverDaysX10[h] >= T.AlmsPoorBelowDaysX10 || led.Balance(e.HouseholdPurse[h]).Mites >= T.AlmsPoorBelowMites) continue;
             int f = reg.Settlements[hht.Settlement[h]].FiefIndex; if (f >= 0 && f < nf) poor[f].Add(h);
         }
         for (int f = 0; f < nf; f++)
         {
             if (poor[f].Count == 0 || f >= pop.FiefLordHousehold.Length) continue;
             int lord = pop.FiefLordHousehold[f]; if (lord < 0 || hht.MemberCount[lord] == 0) continue;
-            long wealth = led.Balance(e.HouseholdPurse[lord]).Mites - AlmsReserveMites; if (wealth <= 0) continue;
-            long pool = wealth / 2, members = 0; foreach (int h in poor[f]) members += hht.MemberCount[h];
-            long per = Math.Min(AlmsMaxPerMemberMites, pool / Math.Max(1, members)); if (per <= 0) continue;
+            long wealth = led.Balance(e.HouseholdPurse[lord]).Mites - T.AlmsReserveMites; if (wealth <= 0) continue;
+            long pool = wealth * T.AlmsSharePct / 100, members = 0; foreach (int h in poor[f]) members += hht.MemberCount[h];
+            long per = Math.Min(T.AlmsMaxPerMemberMites, pool / Math.Max(1, members)); if (per <= 0) continue;
             foreach (int h in poor[f])
             {
                 long pay = per * hht.MemberCount[h];
@@ -132,7 +132,7 @@ public sealed class ParishRelief
         var e = _w.Economy; var hht = _w.Households; var pop = _w.Population;
         int f = pop.Region.Settlements[settlement].FiefIndex; if (f < 0 || f >= pop.FiefLordHousehold.Length) return 0;
         int lord = pop.FiefLordHousehold[f]; if (lord < 0 || hht.MemberCount[lord] == 0) return 0;
-        var ls = e.HouseholdStore[lord]; long keep = (long)hht.MemberCount[lord] * HouseholdNeeds.GramsPerMeasure * 40, got = 0;
+        var ls = e.HouseholdStore[lord]; long keep = (long)hht.MemberCount[lord] * HouseholdNeeds.GramsPerMeasure * T.LordBarnKeepDays, got = 0;
         long have = 0; foreach (ushort g in _grains) have += ls.Qty(g);
         long spare = have - keep; if (spare <= 0) return 0;
         foreach (ushort g in _grains)
@@ -153,21 +153,20 @@ public sealed class ParishRelief
         if (_richestDay == _w.State.HourDone / 24) return _richest;
         _richestDay = _w.State.HourDone / 24; var e = _w.Economy; var list = new List<(long Mass, int S)>();
         for (int s = 0; s < _w.Population.Region.Settlements.Count; s++)
-            if (e.OtherStores.TryGetValue(FarmIds.ParishGranary(s), out var g)) { long m = 0; foreach (ushort gr in _grains) m += g.Qty(gr); if (m > 20_000) list.Add((m, s)); }
-        _richest = [.. list.OrderByDescending(x => x.Mass).ThenBy(x => x.S).Take(8).Select(x => x.S)];
+            if (e.OtherStores.TryGetValue(FarmIds.ParishGranary(s), out var g)) { long m = 0; foreach (ushort gr in _grains) m += g.Qty(gr); if (m > T.ChurchGranaryMinG) list.Add((m, s)); }
+        _richest = [.. list.OrderByDescending(x => x.Mass).ThenBy(x => x.S).Take(T.ChurchRichestGranaries).Select(x => x.S)];
         return _richest;
     }
 
-    /// <summary>Famine relief in coin (taxes spec 3.6): the fief's treasury gives a household with under three days of food <see cref="DoleMitesPerMemberDay"/> a member, as long as it holds the coin.</summary>
+    /// <summary>Famine relief in coin (taxes spec 3.6): the fief's treasury gives a household with under three days of food <see cref="EconomyTuningDef.DoleMitesPerMemberDay"/> a member, as long as it holds the coin.</summary>
     private void Dole(int hh, int members, int settlement)
     {
         var e = _w.Economy; var reg = _w.Population.Region;
         int fief = reg.Settlements[settlement].FiefIndex; if (fief < 0 || fief >= reg.Fiefs.Count) return;
         if (!e.Ledger.TryFind(PurseKind.Treasury, reg.Fiefs[fief].Id, out var t)) return;
-        long pay = Math.Min(members * (long)DoleMitesPerMemberDay, e.Ledger.Balance(t).Mites);
+        long pay = Math.Min(members * (long)T.DoleMitesPerMemberDay, e.Ledger.Balance(t).Mites);
         if (pay > 0 && e.Ledger.Transfer(t, e.HouseholdPurse[hh], new Coin(pay), TransferReason.Alms)) DoleMites += pay;
     }
-    public const int DoleMitesPerMemberDay = 45;
     public long DoleMites;
 
     // ---------- famine relief purchases (taxes spec 3.6) ----------
@@ -177,7 +176,9 @@ public sealed class ParishRelief
     /// <summary>
     /// The fief steward feeds the hungry from the treasury's own purchases: the day's rations leave the fief chest for the households under three days of food (lowest cover
     /// first), and grain for the next days is bought at the market of every settlement that has hungry households, paid from the treasury (so the idle coin of the treasury
-    /// goes to the farmers who hold the grain). Capped at 2 percent of the treasury a day.
+    /// goes to the farmers who hold the grain). The purchases of a fief spend at most 2 percent of its treasury a day, shared by its settlements in proportion to their
+    /// need: each order carries its share as a spending cap (review finding 3; the cap was computed and never applied, so one order at 3.5 x the price could spend the
+    /// whole treasury).
     /// </summary>
     private void Relief(GameTime now)
     {
@@ -187,7 +188,7 @@ public sealed class ParishRelief
         var hungry = new List<int>[nf]; for (int f = 0; f < nf; f++) hungry[f] = [];
         for (int h = 0; h < hht.Count; h++)
         {
-            if (hht.MemberCount[h] == 0 || e.FoodCoverDaysX10[h] >= HungryBelowDaysX10) continue;
+            if (hht.MemberCount[h] == 0 || e.FoodCoverDaysX10[h] >= T.ReliefBelowDaysX10) continue;
             int s = hht.Settlement[h]; int f = reg.Settlements[s].FiefIndex; if (f < 0 || f >= nf) continue;
             hungry[f].Add(h); needBySettlement[s] = needBySettlement.GetValueOrDefault(s) + (long)hht.MemberCount[h] * HouseholdNeeds.GramsPerMeasure;
         }
@@ -203,20 +204,28 @@ public sealed class ParishRelief
                 CharityG += got; ReliefG += got;
             }
         }
+        var fiefNeed = new long[nf]; var fiefBudget = new long[nf];
+        foreach (var (s, need) in needBySettlement) fiefNeed[reg.Settlements[s].FiefIndex] += need;
+        for (int f = 0; f < nf; f++) if (fiefNeed[f] > 0) fiefBudget[f] = e.Ledger.Balance(Steward(f).Purse).Mites * T.ReliefBudgetPermillePerDay / 1000;
         foreach (var (s, need) in needBySettlement.OrderBy(kv => kv.Key))
         {
             int f = reg.Settlements[s].FiefIndex; var st = Steward(f);
-            long budget = e.Ledger.Balance(st.Purse).Mites * 2 / 100;
+            long budget = ReliefShare(fiefBudget[f], need, fiefNeed[f]);
             if (budget <= 0) continue;
             var book = _markets.BookForSettlement(s);
             ushort best = ushort.MaxValue; long bestStock = 0;
             foreach (ushort g in _grains) { long stock = book.Goods[g].StockUnits; if (stock > bestStock) { bestStock = stock; best = g; } }
             if (best == ushort.MaxValue) continue;
-            long qty = Math.Min(need * 2, bestStock);
-            book.Post(new BuyOrder(st, best, qty, 3500) { Priority = 0 });
+            long qty = Math.Min(need * T.ReliefBuyDays, bestStock);
+            // the budget binds (review finding 3): the order may spend at most the day's share of the treasury, whatever the price ratio lets it buy
+            book.Post(new BuyOrder(st, best, qty, T.ReliefMaxRatioPermille) { Priority = 0, MaxSpendMites = budget });
+            ReliefBudgetMites += budget;
         }
     }
-    public long ReliefG;
+    public long ReliefG, ReliefBudgetMites;
+
+    /// <summary>A settlement's share of its fief's relief budget, in proportion to its need (floor).</summary>
+    public static long ReliefShare(long fiefBudget, long need, long fiefNeed) => fiefNeed <= 0 ? 0 : (long)((Int128)fiefBudget * need / fiefNeed);
 
     private long Draw(Store granary, Store house, long want)
     {

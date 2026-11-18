@@ -105,7 +105,7 @@ public sealed class ResourceLayer
             if ((w & (WaterFlags.Lake | WaterFlags.River | WaterFlags.Sea)) != 0)
             {
                 long cap = (w & WaterFlags.Lake) != 0 ? 150_000 : (w & WaterFlags.Sea) != 0 ? 200_000 : 40_000;
-                int pct = 70 + (int)(DetRng.Next(seed, 0, (ulong)t, 0x240, 1) % 31);
+                int pct = 70 + (int)(DetRng.Next(seed, 0, (ulong)t, RngStreams.Extraction, 1) % 31);
                 layer.Add(t, ResourceKind.Fish, cap * pct / 100, cap);
             }
             bool wood = r.Forest[t] >= 30 && !field && !built && (w & (WaterFlags.Lake | WaterFlags.Sea)) == 0;

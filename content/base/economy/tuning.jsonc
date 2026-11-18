@@ -1,0 +1,23 @@
+// The economy's tuning numbers that were constants in the code (review finding 12; EconomyTuningDef). Every change is a decision in docs/specs/00-overview.md (I42+).
+[
+  { "type": "economy_tuning", "id": "economy",
+    // parish relief and the fief's dole (households spec 3.6, taxes spec 3.6, decisions I15, I24)
+    "relief_below_days_x10": 30, "charity_measure_x100_per_member": 100, "tithe_sell_divisor_per_day": 60, "tithe_sale_floor_permille": 800,
+    "dole_mites_per_member_day": 45, "relief_budget_permille_per_day": 20, "relief_max_ratio_permille": 3500, "relief_buy_days": 2,
+    "lord_barn_keep_days": 40, "church_richest_granaries": 8, "church_granary_min_g": 20000,
+    // the lords' almonry (decision I25)
+    "alms_reserve_mites": 100000, "alms_share_pct": 50, "alms_max_per_member_mites": 2500, "alms_poor_below_mites": 1000, "alms_poor_below_days_x10": 100,
+    // households' spending (decision I37)
+    "spending_service_days_max": 15, "spending_poor_below_mites": 3000, "spending_alms_per_member_mites": 1000, "spending_order_max_ratio_permille": 2000,
+    "manor_reserve_days": 30, "manor_reserve_wage_mites_per_day": 200,
+    // fuel: gathering and the woodward draw on the woodland stock and take labour (review finding 4)
+    "gather_fuel_buffer_pct": 10, "gather_hours_idle_adult": 4, "gather_hours_working_adult": 1, "gather_hours_child": 1, "gather_fuel_g_per_worker_hour": 7500,
+    "gather_radius_m": 1500, "gather_stock_floor_pct": 30, "fuel_keep_days": 25, "woodward_hours_per_idle_adult": 6, "woodward_floor_permille": 800,
+    // home brewing and the alewife (decisions I23, I38)
+    "brew_barley_permille": 520, "brew_fuel_permille": 350, "brew_days_cover": 3, "brew_batch_days": 6, "brew_min_food_days_x10": 150,
+    "alewife_batch_days": 10, "alewife_floor_permille": 850,
+    // gardens and hens (decision I12)
+    "garden_g_per_person_day": 1100, "garden_first_doy": 11, "garden_last_doy": 40, "hen_egg_g_per_person_day": 14,
+    // farm sales (decisions I30, I38)
+    "farm_sales_keep_margin_days": 45, "farm_sales_spread_days": 3, "farm_sales_floor_permille": 800, "cart_to_town_permille": 1150 },
+]

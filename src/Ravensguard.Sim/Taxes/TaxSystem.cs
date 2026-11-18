@@ -20,7 +20,7 @@ namespace Ravensguard.Sim.Taxes;
 public sealed class TaxSystem
 {
     /// <summary>Counter-RNG stream of evasion and riot rolls (taxes spec 5).</summary>
-    public const uint Stream = 0x260;
+    public const uint Stream = RngStreams.TaxEvents;
     public const int CatchUpDayOfSeason = 8, TopDaysForRevolt = 30, QuietDaysToStepDown = 15, StepDownMargin = 50;
 
     private readonly SimWorld _w; private readonly FarmingSystem _farming; private readonly ProductionSystem _prod;
@@ -423,7 +423,7 @@ public sealed class TaxSystem
         {
             if (rec.Kind != TreasuryKind.Parish) continue;
             int hh = pop.PriestHousehold[rec.Settlement]; if (hh < 0 || hh >= hht.Count || hht.MemberCount[hh] == 0) continue;
-            long keep = (long)hht.MemberCount[hh] * 30 * ParishRelief.DoleMitesPerMemberDay, over = led.Balance(e.HouseholdPurse[hh]).Mites - keep;
+            long keep = (long)hht.MemberCount[hh] * 30 * e.Tuning.DoleMitesPerMemberDay, over = led.Balance(e.HouseholdPurse[hh]).Mites - keep;
             long give = over / 2;
             if (give > 0 && led.Transfer(e.HouseholdPurse[hh], rec.Purse, new Coin(give), TransferReason.Tithe)) State.Add(TaxTally.ParishBanked, give);
         }

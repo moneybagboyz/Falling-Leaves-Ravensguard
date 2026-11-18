@@ -18,5 +18,5 @@ public static class ItemQualityRules
 
     /// <summary><c>score = skill + Range(-20, 21) + tool_bonus</c> (stream 0x223, key = crafter id, draw = output serial). tool_bonus is -10..+10.</summary>
     public static int Score(ulong seed, long tick, EntityId crafter, uint outputSerial, int skill, int toolBonus)
-        => skill + DetRng.Range(seed, tick, crafter.Value, 0x223, outputSerial, -20, 21) + Math.Clamp(toolBonus, -10, 10);
+        => skill + DetRng.Range(seed, tick, crafter.Value, RngStreams.CraftQuality, outputSerial, -20, 21) + Math.Clamp(toolBonus, -10, 10);
 }

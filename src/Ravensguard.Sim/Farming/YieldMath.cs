@@ -57,15 +57,15 @@ public static class YieldMath
 
     /// <summary>Variance in permille: 1000 +- spread, centred (960..1040 for 40), from the field's own stream.</summary>
     public static int VariancePermille(ulong seed, long hourKey, EntityId field, int spread = 40)
-        => spread <= 0 ? 1000 : 1000 - spread + DetRng.Range(seed, hourKey, field.Value, 0x211, 0, 0, 2 * spread + 1);
+        => spread <= 0 ? 1000 : 1000 - spread + DetRng.Range(seed, hourKey, field.Value, RngStreams.YieldVariance, 0, 0, 2 * spread + 1);
 
     /// <summary>True when a parcel is hit by hail on a storm day (stream 0x210, key parcel id, draw = day of year).</summary>
     public static bool HailHit(ulong seed, long hourKey, EntityId parcel, int doy, int chancePermille = 5)
-        => DetRng.Range(seed, hourKey, parcel.Value, 0x210, (uint)doy, 0, 1000) < chancePermille;
+        => DetRng.Range(seed, hourKey, parcel.Value, RngStreams.FarmEvents, (uint)doy, 0, 1000) < chancePermille;
 
     /// <summary>Blight roll for a culture-year (stream 0x210, draw 99, key culture&lt;&lt;16|year); x3 in a wet year.</summary>
     public static bool Blight(ulong seed, long hourKey, int culture, int year, bool wetYear, int permille = 30, int wetMult = 3)
-        => DetRng.Range(seed, hourKey, ((ulong)(uint)culture << 16) | (uint)year, 0x210, 99, 0, 1000) < permille * (wetYear ? wetMult : 1);
+        => DetRng.Range(seed, hourKey, ((ulong)(uint)culture << 16) | (uint)year, RngStreams.FarmEvents, 99, 0, 1000) < permille * (wetYear ? wetMult : 1);
 
     /// <summary>Hours of one task credit: ppm gained by <paramref name="hours"/> worker-hours on a parcel (floor, remainder carried in <paramref name="carry"/>; spec 3.2).</summary>
     public static int CreditPpm(int ratePerDay, int hours, int acres, int workdayHours, ref int carry)

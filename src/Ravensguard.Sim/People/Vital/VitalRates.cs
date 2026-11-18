@@ -75,5 +75,6 @@ public sealed record VitalRates
 /// <summary>The one RNG stream numbers of the vital kernels (overview 2.3).</summary>
 public static class VitalStreams
 {
-    public const uint Death = 0x200, Conception = 0x201, Marriage = 0x202, Migrant = 0x203, Outbreak = 0x204, Name = 0x2C0, Attributes = 0x2C1;
+    public const uint Death = RngStreams.Death, Conception = RngStreams.Conception, Marriage = RngStreams.Marriage, Migrant = RngStreams.Migrant, Outbreak = RngStreams.Outbreak,
+        Name = RngStreams.Name, Attributes = RngStreams.Attributes;
 }

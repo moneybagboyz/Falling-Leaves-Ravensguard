@@ -88,7 +88,7 @@ public static class Extraction
     {
         // parts per million: min(0.5, 3 x density) with density = micro / 1e6
         long ppm = Math.Min(cfg.HuntKillMaxPermille * 1000L, densityMicro * 3);
-        uint u = DetRng.NextUInt(seed, day, (ulong)tile, 0x240, draw);
+        uint u = DetRng.NextUInt(seed, day, (ulong)tile, RngStreams.Extraction, draw);
         return (long)u * 1_000_000 < ppm * 4_294_967_296L;
     }
 }
@@ -143,10 +143,10 @@ public sealed class MineWorks
         long hour = now.TotalHours;
         int floodPermille = cfg.MineFloodPctPerLevel * 10 * Levels * (wetYear ? 2 : 1);
         if (riverHigh) floodPermille = floodPermille * 3 / 2;
-        uint a = DetRng.NextUInt(seed, hour, SiteId.Value, 0x241, 0), b = DetRng.NextUInt(seed, hour, SiteId.Value, 0x241, 1);
+        uint a = DetRng.NextUInt(seed, hour, SiteId.Value, RngStreams.MineHazard, 0), b = DetRng.NextUInt(seed, hour, SiteId.Value, RngStreams.MineHazard, 1);
         bool flood = State == MineStateKind.Active && (long)a * 1000 < (long)floodPermille * 4_294_967_296L;
         bool cave = State == MineStateKind.Active && (long)b * 1000 < (long)cfg.MineCaveInPermillePerLevel * Levels * 4_294_967_296L;
-        int dead = cave ? 1 + (int)(DetRng.NextUInt(seed, hour, SiteId.Value, 0x241, 2) & 1) : 0;
+        int dead = cave ? 1 + (int)(DetRng.NextUInt(seed, hour, SiteId.Value, RngStreams.MineHazard, 2) & 1) : 0;
         if (flood) State = MineStateKind.Flooded;
         if (cave) ClosedUntilDay = (int)now.TotalDays + 15;
         return new MineHazard(flood, cave, dead);

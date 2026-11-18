@@ -119,7 +119,7 @@ public sealed class EconomySave
             if (HouseholdCount != pop.Households.Count || NutritionCd.Length != pop.People.Count) throw new SaveException("The economy section does not match the population.");
             var mass = new MassLedger(GoodCount); mass.Restore(MassCreated, MassDestroyed);
             var ledger = Ledger.Import(new Ledger.State(PurseOwner, PurseKind, PurseBalance, Sourced, Sunk, FlowCoin, FlowCount, Sequence));
-            var e = new EconomyState(e0.Goods, e0.Money, e0.Baskets, HouseholdCount, NutritionCd.Length, ledger, mass);
+            var e = new EconomyState(e0.Goods, e0.Money, e0.Baskets, HouseholdCount, NutritionCd.Length, ledger, mass) { Tuning = e0.Tuning };
             for (int h = 0; h < HouseholdCount; h++)
             {
                 if (!ledger.TryFind(Economy.PurseKind.Household, pop.Households.IdOf(h), out var pid)) throw new SaveException("A household has no purse in the economy section.");

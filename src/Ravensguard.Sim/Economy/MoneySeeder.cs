@@ -45,15 +45,15 @@ public static class MoneySeeder
             int workers = 0;
             foreach (int p in hh.Members(h)) if (pop.Age(p) >= 12) workers++;
             int g = hh.Class[h] switch { SocialClass.Gentry => 0, SocialClass.Burgher => 1, _ => 2 };
-            groups[g].Add((econ.HouseholdPurse[h], 4 + workers, DetRng.Next(seed, 0, hh.IdOf(h).Value, 0x220, 0)));
+            groups[g].Add((econ.HouseholdPurse[h], 4 + workers, DetRng.Next(seed, 0, hh.IdOf(h).Value, RngStreams.MoneySeed, 0)));
         }
         foreach (var f in pop.Region.Fiefs)
-            groups[3].Add((econ.Ledger.Open(PurseKind.Treasury, f.Id), Math.Max(1, f.Acres), DetRng.Next(seed, 0, f.Id.Value, 0x220, 0)));
+            groups[3].Add((econ.Ledger.Open(PurseKind.Treasury, f.Id), Math.Max(1, f.Acres), DetRng.Next(seed, 0, f.Id.Value, RngStreams.MoneySeed, 0)));
         for (int s = 0; s < pop.PriestHousehold.Length; s++)
             if (pop.PriestHousehold[s] >= 0)
             {
                 var sid = pop.Region.Settlements[s].Id;
-                groups[4].Add((econ.Ledger.Open(PurseKind.Chest, sid), 1, DetRng.Next(seed, 0, sid.Value, 0x220, 0)));
+                groups[4].Add((econ.Ledger.Open(PurseKind.Chest, sid), 1, DetRng.Next(seed, 0, sid.Value, RngStreams.MoneySeed, 0)));
             }
 
         // an empty group's share goes to the largest non-empty one (ties: lower group index)

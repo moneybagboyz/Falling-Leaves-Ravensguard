@@ -27,6 +27,8 @@ public sealed class EconomyWorld
     public ParishRelief Parish { get; }
     public ContinentTrade Trade { get; }
     public RegionalTrade Regional { get; }
+    /// <summary>The woodland households gather fuel in and woodwards cut for the market (review finding 4).</summary>
+    public Woodland Woodland { get; }
     /// <summary>The seasonal spending of households above their reserve (integration decision I37).</summary>
     public HouseholdSpending Spending { get; }
     /// <summary>Taxes, rents, tolls, treasuries and unrest (taxes spec, Phase 2 scope).</summary>
@@ -41,6 +43,8 @@ public sealed class EconomyWorld
         World = world; Farming = farming; Markets = markets; Production = production; Resources = resources; Content = content; FarmChronicle = farmChronicle;
         Labour = new LabourMarket(production, world.Population, world.Economy, world.Seed, p => world.Children.Of(p));
         Parish = new ParishRelief(world, markets);
+        Woodland = new Woodland(world, resources, content.Extractions.FirstOrDefault(k => k.Id == "firewood_cutting"));
+        world.Economy.FuelGatherer = Woodland;
         // the continent sells what no recipe of the region makes, and the materials the region's recipes consume (iron, leather, cloth, malt...) when a book is short of
         // them (integration decision I36): only the finished goods of the region's own workshops are never imported
         var inputs = content.Recipes.Recipes.SelectMany(r => r.Inputs.Select(i => i.Good)).ToHashSet();

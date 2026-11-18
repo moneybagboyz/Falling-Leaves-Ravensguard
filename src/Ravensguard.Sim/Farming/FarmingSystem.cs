@@ -136,7 +136,7 @@ public sealed partial class FarmingSystem
             if (parcel.Owner.Kind == OwnerKind.Tenant && parcel.Owner.FiefIndex >= 0 && parcel.Owner.FiefIndex < pop.FiefLordHousehold.Length && pop.FiefLordHousehold[parcel.Owner.FiefIndex] >= 0)
             {
                 w.Landlord[p] = pop.FiefLordHousehold[parcel.Owner.FiefIndex];
-                bool coin = DetRng.Range(seed, 0, parcel.Id.Value, 0x210, 7, 0, 100) < d.CoinLeasePct;
+                bool coin = DetRng.Range(seed, 0, parcel.Id.Value, RngStreams.FarmEvents, 7, 0, 100) < d.CoinLeasePct;
                 w.Lease[p] = coin ? LeaseKind.Coin : LeaseKind.Share; w.ShareBp[p] = (short)d.RentShareBpDefault; w.CoinMitesPerFieldYear[p] = d.RentCoinMitesPerFieldYear;
             }
         }
@@ -180,7 +180,7 @@ public sealed partial class FarmingSystem
     // ---------- crop choice (farming spec 2.1: stable per field and year) ----------
 
     private static int Pct(FarmingSettings s, ulong seed, long yearHour, EntityId field, int year)
-        => DetRng.Range(seed, yearHour, field.Value, 0x211, (uint)year, 0, 100);
+        => DetRng.Range(seed, yearHour, field.Value, RngStreams.YieldVariance, (uint)year, 0, 100);
 
     /// <summary>The winter crop for a field: wheat for 60% by hash when fertility is 55 or more, otherwise rye; fallow when even rye fails its minimum fertility.</summary>
     public static Crop PickWinter(FarmingSettings s, ulong seed, long yearHour, EntityId field, int fertility, int year)

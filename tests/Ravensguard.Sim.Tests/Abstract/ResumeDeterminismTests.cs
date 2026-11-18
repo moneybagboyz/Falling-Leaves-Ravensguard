@@ -41,4 +41,31 @@ public class ResumeDeterminismTests(ITestOutputHelper output)
         Assert.Equal(SaveCodec.SerializeCompressed(FarmingSave.Capture(rwA.Economy.Farming.State)), SaveCodec.SerializeCompressed(FarmingSave.Capture(back.Economy.Farming.State)));
         Assert.Equal(rwA.CaptureBytes(), back.CaptureBytes());
     }
+
+    /// <summary>
+    /// Review finding 7: the cases above stop at hour 740, before any year boundary (a game year is 1,440 hours), so the state the year's start reads or resets (the
+    /// reeve's re-let, the herds' year, the annual seed provision, the yearly tallies) was never checked. One straight run is saved at hour 1,400 (N = 1,400, M = 100:
+    /// across the boundary) and at hour 1,440 (on the boundary itself, M = 40), and each resumed copy must match the straight run byte for byte.
+    /// </summary>
+    [Fact]
+    public void SaveLoadContinue_AcrossTheYearBoundary_GivesTheSameRecords()
+    {
+        var rig = new RegionRig(); var rw = rig.Set.TryGet(rig.Home)!;
+        long h0 = rw.HourDone;
+        Step(rw, h0 + 1400); var at1400 = rw.CaptureBytes();
+        Step(rw, h0 + 1440); var at1440 = rw.CaptureBytes();
+        Step(rw, h0 + 1480); var at1480 = rw.CaptureBytes(); string hash1480 = rw.RecordsHash();
+        Step(rw, h0 + 1500); var at1500 = rw.CaptureBytes(); string hash1500 = rw.RecordsHash();
+
+        void Resume(byte[] saved, long to, byte[] want, string wantHash, string label)
+        {
+            var back = RegionWorld.Restore(rig.Sv, rig.Home, rw.Population.Region, SaveCodec.DeserializeCompressed<RegionSectionData>(saved));
+            Step(back, to);
+            output.WriteLine($"{label}: straight {wantHash[..12]}, resumed {back.RecordsHash()[..12]}");
+            Assert.Equal(wantHash, back.RecordsHash());
+            Assert.Equal(want, back.CaptureBytes());
+        }
+        Resume(at1400, h0 + 1500, at1500, hash1500, "N 1400 M 100");
+        Resume(at1440, h0 + 1480, at1480, hash1480, "N 1440 M 40");
+    }
 }

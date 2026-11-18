@@ -15,8 +15,6 @@ public sealed partial class FarmingSystem
     /// <summary>Running totals of the farm labour market since the start (diagnostics): hours wanted, worked by the holders themselves, hired, left undone, and the wages paid.</summary>
     public long TotalDemandH, TotalOwnH, TotalHiredH, TotalUnmetH, TotalWagesMites;
     private readonly List<Need> _needs = [];
-    /// <summary>Share of every holder's harvest left to the gleaners, in permille.</summary>
-    public const int GleaningPermille = 30;
 
     private int RateOf(FarmTask t) => t switch
     {
@@ -347,7 +345,7 @@ public sealed partial class FarmingSystem
         var lease = P.Landlord[p] >= 0 ? P.Lease[p] : LeaseKind.None;
         var sp = YieldMath.Split(F.YieldG[f], F.SeedG[f], P.OwnerKind[p], lease, P.ShareBp[p], _d.TithePermille);
         // gleaning (integration decision I24): the poor of the village follow the reapers; 3 percent of the holder's share goes into the village's poor box (the parish granary, from which relief is given)
-        long glean = sp.HolderG * GleaningPermille / 1000, holderG = sp.HolderG - glean;
+        long glean = sp.HolderG * _d.GleaningPermille / 1000, holderG = sp.HolderG - glean;
         if (sp.TitheG + glean > 0) Parish(s).Create(good, sp.TitheG + glean, CreateReason.Harvest);
         if (sp.RentG > 0) HouseStore(P.Landlord[p]).Create(good, sp.RentG, CreateReason.Harvest);
         if (holderG > 0) Barn(hh).Create(good, holderG, CreateReason.Harvest);

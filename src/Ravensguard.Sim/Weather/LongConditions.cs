@@ -15,7 +15,7 @@ public sealed class LongConditions(ulong seed, WeatherSettings settings)
 {
     public LongCondition For(int cultureId, int year)
     {
-        var r = new RngStream(seed, year, (ulong)(uint)cultureId + 0x100, 0xC0);
+        var r = new RngStream(seed, year, (ulong)(uint)cultureId + 0x100, RngStreams.WeatherLong);
         int roll = r.Range(0, 1000);
         var s = settings;
         if (roll < s.DroughtPermilleYear)

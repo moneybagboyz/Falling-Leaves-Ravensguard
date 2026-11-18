@@ -33,6 +33,8 @@ public sealed class SoakRow
     public int Businesses, Closed;
     public int Employed, Idle;             // staff of businesses; working-age adults (16-59) with no occupation and not farming
     public long CoinTotal, CoinSources, CoinSinks, CoinInHouseholds, CoinInBusinesses;
+    /// <summary>Continent-wide coin (this region's ledger plus everything the continent holds or owes) and the year's net coin that crossed the border (immigrated minus emigrated).</summary>
+    public long WorldCoin, NetImmigrated;
     public bool CoinConserved, MassOk;
     public long MassViolations;
     public long Hired, Succeeded, ClosedNoOwner;
@@ -82,6 +84,8 @@ public sealed class EconomySoak
     public void EnableCoinFlow() { Coin ??= new CoinFlowTrace(Sim, World.Economy); }
     /// <summary>Hungry households at the end of each simulated day (a window of the whole run).</summary>
     public List<int> HungryByDay { get; } = [];
+
+    private long _worldCoin0 = -1, _netImmPrev;
 
     public EconomySoak(HeadlessWorld w, AbstractSystemRegistry? registry = null, TickerOptions? options = null)
     {
@@ -231,6 +235,7 @@ public sealed class EconomySoak
         r.AleKl = (ew.Production.ProducedUnits[cat.IdOf("ale")] - _ale0) / 1_000_000;
         var au = led.Audit();
         r.CoinTotal = au.InPurses.Mites; r.CoinSources = au.Sourced.Mites; r.CoinSinks = au.Sunk.Mites; r.CoinConserved = au.IsConserved; r.CoinInBusinesses = bizCoin;
+        { var cst = ew.Trade.Link.State; r.WorldCoin = au.InPurses.Mites + cst.TotalCoin(); if (_worldCoin0 < 0) { _worldCoin0 = r.WorldCoin; } r.NetImmigrated = (au.Immigrated - au.Emigrated).Mites - _netImmPrev; _netImmPrev = (au.Immigrated - au.Emigrated).Mites; r.CoinConserved &= r.WorldCoin == _worldCoin0; }
         r.CoinInHouseholds = led.TotalOf(PurseKind.Household).Mites;
         r.MassOk = e.MassAuditHolds(); r.MassViolations = ew.Production.MassViolations;
         r.Hired = ew.Labour.Hired - _hired0; r.Succeeded = ew.Labour.Succeeded - _succ0; r.ClosedNoOwner = ew.Labour.ClosedNoOwner - _closedNo0;
@@ -246,7 +251,7 @@ public sealed class EconomySoak
         var sb = new StringBuilder();
         sb.Append("year   pop  u15%  over50 birth death emig hungD  surplus% hungry% fam");
         foreach (var s in Staples.Take(5)) sb.Append($" {s[..Math.Min(5, s.Length)],5}");
-        sb.Append(" band% cap% (all books) shop% merch% bread-t ale-kl biz/closed employed idle fert sheep/ox/cow      coin(crowns)  src/sink  audit harv-t sown unharv");
+        sb.Append(" band% cap% (all books) shop% merch% bread-t ale-kl biz/closed employed idle fert sheep/ox/cow      coin(crowns)  src/sink  audit harv-t sown unharv net-imm world-coin");
         return sb.ToString();
     }
 
@@ -255,7 +260,7 @@ public sealed class EconomySoak
         var sb = new StringBuilder();
         sb.Append($"{r.Year,4} {r.Population,6} {r.Under15Pct,5:0.0} {r.Over50Pct,6:0.0} {r.Births,5} {r.Deaths,5} {r.Emigrants,4} {r.HungerDeaths,5} {r.FoodSurplusPct,8:0.0} {r.HungryPct,7:0.00} {r.Famines,3}");
         for (int i = 0; i < 5; i++) sb.Append($" {r.PriceIndex[i],5:0.00}");
-        sb.Append($" {r.BandPct,5:0.0} {r.AtCapPct,4:0.0} ({r.BandAllPct,4:0} {r.AtCapAllPct,3:0}) {r.WorkshopCompletionPct,5:0} {r.MerchantsSolventPct,6:0} {r.BreadT,7} {r.AleKl,6} {r.Businesses,4}/{r.Closed,-3} {r.Employed,8} {r.Idle,4} {r.MeanFertility,4:0} {r.Sheep}/{r.Oxen}/{r.Cows} {r.CoinTotal / 100,12:N0} {r.CoinSources / 100:N0}/{r.CoinSinks / 100:N0} {(r.CoinConserved && r.MassOk ? "ok" : "FAIL")} {r.HarvestT} {r.SownAcres} {r.UnharvestedAcres}");
+        sb.Append($" {r.BandPct,5:0.0} {r.AtCapPct,4:0.0} ({r.BandAllPct,4:0} {r.AtCapAllPct,3:0}) {r.WorkshopCompletionPct,5:0} {r.MerchantsSolventPct,6:0} {r.BreadT,7} {r.AleKl,6} {r.Businesses,4}/{r.Closed,-3} {r.Employed,8} {r.Idle,4} {r.MeanFertility,4:0} {r.Sheep}/{r.Oxen}/{r.Cows} {r.CoinTotal / 100,12:N0} {r.CoinSources / 100:N0}/{r.CoinSinks / 100:N0} {(r.CoinConserved && r.MassOk ? "ok" : "FAIL")} {r.HarvestT} {r.SownAcres} {r.UnharvestedAcres} net-imm {r.NetImmigrated / 100:N0} world-coin {r.WorldCoin / 100:N0}");
         return sb.ToString();
     }
 

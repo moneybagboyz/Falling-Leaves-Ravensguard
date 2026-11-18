@@ -68,6 +68,8 @@ public sealed record BuyOrder(MarketParty Buyer, ushort Good, long Qty, int MaxP
     /// <summary>What <see cref="OnFilled"/> is, so a pending order can be saved and its callback rebuilt: 0 none, 1 a business's input spend (arg: business index), 2 a household's durable (arg: household x durables + kind), 3 / 4 a household's spending on craft goods / building materials (arg: household; decision I37).</summary>
     public byte HookKind { get; init; }
     public int HookArg { get; init; }
+    /// <summary>The most coin the order may spend, in mites (0: no cap but the buyer's purse). The fief steward's relief purchases are capped by their budget (review finding 3).</summary>
+    public long MaxSpendMites { get; init; }
 }
 
 /// <summary>
@@ -249,7 +251,7 @@ public sealed class MarketBook
     /// Buys up to <paramref name="wanted"/> units for the buyer at the exact per-unit integral price (money spec 3.2, 3.3). Walks lots in ascending
     /// (floor, id) while their floor is within the current mid; pays each owner their slice and the owner pays the toll. Partial fills are normal.
     /// </summary>
-    public TradeResult Buy(MarketParty buyer, ushort good, long wanted, int maxRatioPermille, int day)
+    public TradeResult Buy(MarketParty buyer, ushort good, long wanted, int maxRatioPermille, int day, long maxSpendMites = 0)
     {
         Sync(good);
         var gb = Goods[good];
@@ -257,6 +259,7 @@ public sealed class MarketBook
         if (wanted <= 0 || gb.StockUnits <= 0) return TradeResult.None;
         var curve = Curve(good);
         long budget = Econ.Ledger.Balance(buyer.Purse).Mites;
+        if (maxSpendMites > 0) budget = Math.Min(budget, maxSpendMites);
         long cap = Eligible(good, wanted, maxRatioPermille);
         // lots owned by the buyer cannot be bought from itself
         long q = curve.MaxAffordable(gb.StockUnits, cap, budget, Money.SpreadHalfPermille);
@@ -350,12 +353,12 @@ public sealed class MarketBook
     public (int Filled, long Mites) RunSession(long hourKey, int day)
     {
         if (_orders.Count == 0) return (0, 0);
-        var sorted = _orders.Select(o => (o, key: DetRng.Next(Seed, hourKey, o.Buyer.Id.Value, 0x220, 0))).OrderBy(x => x.key).ThenBy(x => x.o.Buyer.Id.Value).ThenBy(x => x.o.Priority).ThenBy(x => x.o.Good).ToList();
+        var sorted = _orders.Select(o => (o, key: DetRng.Next(Seed, hourKey, o.Buyer.Id.Value, RngStreams.MarketOrder, 0))).OrderBy(x => x.key).ThenBy(x => x.o.Buyer.Id.Value).ThenBy(x => x.o.Priority).ThenBy(x => x.o.Good).ToList();
         _orders.Clear();
         int filled = 0; long mites = 0;
         foreach (var (o, _) in sorted)
         {
-            var r = Buy(o.Buyer, o.Good, o.Qty, o.MaxPriceRatioPermille, day);
+            var r = Buy(o.Buyer, o.Good, o.Qty, o.MaxPriceRatioPermille, day, o.MaxSpendMites);
             if (r.Qty > 0) { filled++; mites += r.PaidMites; }
             o.OnFilled?.Invoke(r);
         }

@@ -56,6 +56,8 @@ public sealed class MarketsSave
     [Key(33)] public int[] OrderPriority { get; set; } = [];
     [Key(34)] public byte[] OrderHookKind { get; set; } = [];
     [Key(35)] public int[] OrderHookArg { get; set; } = [];
+    /// <summary>An order's spending cap in mites (review finding 3); empty in older saves (no cap).</summary>
+    [Key(36)] public long[] OrderMaxSpend { get; set; } = [];
 
     public static MarketsSave Capture(MarketSystem ms)
     {
@@ -66,7 +68,7 @@ public sealed class MarketsSave
         s.RefMicro = new long[n]; s.DemandEma = new long[n]; s.StructuralDemand = new long[n]; s.LastTradedDay = new int[n]; s.DemandToday = new long[n]; s.TradedToday = new long[n]; s.FloorDemand = new long[n];
         var lb = new List<int>(); var lg = new List<ushort>(); var li = new List<uint>(); var lo = new List<ulong>(); var lk = new List<byte>(); var lq = new List<long>();
         var lf = new List<int>(); var ld = new List<int>(); var lm = new List<bool>(); var mb = new List<int>(); var mi = new List<ulong>();
-        var ob = new List<int>(); var ou = new List<ulong>(); var og = new List<ushort>(); var oq = new List<long>(); var orr = new List<int>(); var op = new List<int>(); var ok = new List<byte>(); var oa = new List<int>();
+        var ob = new List<int>(); var ou = new List<ulong>(); var og = new List<ushort>(); var oq = new List<long>(); var orr = new List<int>(); var op = new List<int>(); var ok = new List<byte>(); var oa = new List<int>(); var oms = new List<long>();
         var ib = new List<int>(); var ig = new List<ushort>(); var iq = new List<long>(); var id = new List<int>(); var im = new List<ulong>();
         for (int bi = 0; bi < books.Count; bi++)
         {
@@ -78,12 +80,12 @@ public sealed class MarketsSave
                 s.DemandToday[k] = gb.DemandToday; s.TradedToday[k] = gb.TradedToday; s.FloorDemand[k] = gb.FloorDemand;
                 foreach (var l in gb.Lots) { lb.Add(bi); lg.Add((ushort)g); li.Add(l.Id); lo.Add(l.Owner.Id.Value); lk.Add((byte)l.Owner.Kind); lq.Add(l.Qty); lf.Add(l.FloorPermille); ld.Add(l.ListedDay); lm.Add(l.IsMerchant); }
             }
-            foreach (var o in b.Orders) { ob.Add(bi); ou.Add(o.Buyer.Id.Value); og.Add(o.Good); oq.Add(o.Qty); orr.Add(o.MaxPriceRatioPermille); op.Add(o.Priority); ok.Add(o.HookKind); oa.Add(o.HookArg); }
+            foreach (var o in b.Orders) { ob.Add(bi); ou.Add(o.Buyer.Id.Value); og.Add(o.Good); oq.Add(o.Qty); orr.Add(o.MaxPriceRatioPermille); op.Add(o.Priority); ok.Add(o.HookKind); oa.Add(o.HookArg); oms.Add(o.MaxSpendMites); }
             foreach (var m in b.Merchants) { mb.Add(bi); mi.Add(m.Id.Value); }
             foreach (var r in b.ImportRequests) { ib.Add(bi); ig.Add(r.Good); iq.Add(r.Qty); id.Add(r.Day); im.Add(r.Merchant.Value); }
         }
         s.LotBook = [.. lb]; s.LotGood = [.. lg]; s.LotId = [.. li]; s.LotOwner = [.. lo]; s.LotOwnerKind = [.. lk]; s.LotQty = [.. lq]; s.LotFloor = [.. lf]; s.LotListedDay = [.. ld]; s.LotMerchant = [.. lm];
-        s.OrderBook = [.. ob]; s.OrderBuyer = [.. ou]; s.OrderGood = [.. og]; s.OrderQty = [.. oq]; s.OrderRatio = [.. orr]; s.OrderPriority = [.. op]; s.OrderHookKind = [.. ok]; s.OrderHookArg = [.. oa];
+        s.OrderBook = [.. ob]; s.OrderBuyer = [.. ou]; s.OrderGood = [.. og]; s.OrderQty = [.. oq]; s.OrderRatio = [.. orr]; s.OrderPriority = [.. op]; s.OrderHookKind = [.. ok]; s.OrderHookArg = [.. oa]; s.OrderMaxSpend = [.. oms];
         s.MerchantBook = [.. mb]; s.MerchantId = [.. mi]; s.ImportBook = [.. ib]; s.ImportGood = [.. ig]; s.ImportQty = [.. iq]; s.ImportDay = [.. id]; s.ImportMerchant = [.. im];
         return s;
     }
@@ -134,7 +136,7 @@ public sealed class MarketsSave
                     3 or 4 => ms.DeliveryHook(OrderHookArg[i], OrderGood[i], OrderHookKind[i]),
                     _ => null,
                 };
-                books[OrderBook[i]].Post(new BuyOrder(party, OrderGood[i], OrderQty[i], OrderRatio[i]) { Priority = OrderPriority[i], OnFilled = hook, HookKind = OrderHookKind[i], HookArg = OrderHookArg[i] });
+                books[OrderBook[i]].Post(new BuyOrder(party, OrderGood[i], OrderQty[i], OrderRatio[i]) { Priority = OrderPriority[i], OnFilled = hook, HookKind = OrderHookKind[i], HookArg = OrderHookArg[i], MaxSpendMites = i < OrderMaxSpend.Length ? OrderMaxSpend[i] : 0 });
             }
             for (int i = 0; i < MerchantId.Length; i++) books[MerchantBook[i]].Merchants.Add(Party(MerchantId[i], (byte)PartyKind.Merchant));
             for (int i = 0; i < ImportGood.Length; i++) books[ImportBook[i]].ImportRequests.Add(new ImportRequest(books[ImportBook[i]].SettlementIndex, ImportGood[i], ImportQty[i], ImportDay[i], new EntityId(ImportMerchant[i])));

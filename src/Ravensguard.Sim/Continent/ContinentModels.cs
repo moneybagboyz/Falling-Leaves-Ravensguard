@@ -120,6 +120,8 @@ public sealed class RegionLink
     /// <summary>People who left this region since the last tick, with the coin and grain they took (booked into the neighbours at the tick).</summary>
     public int EmigrantPersons, EmigrantHouseholds;
     public long EmigrantCoin, EmigrantMeasures;
+    /// <summary>Grams of every tracked good the emigrants took (grain also counts in <see cref="EmigrantMeasures"/>); goods outside the 8 leave as exports and are not stocked on the continent.</summary>
+    public long[] EmigrantG = new long[ContinentRules.K];
     /// <summary>Immigrants the tick sends for the next season: persons, the households they make up, the coin and grain they bring (all taken out of the source summaries already).</summary>
     public int PendingPersons, PendingHouseholds;
     public long PendingCoin, PendingMeasures;

@@ -6,8 +6,19 @@ using Ravensguard.Sim.People;
 
 namespace Ravensguard.Sim.Economy;
 
-/// <summary>Household mood flags the economy sets for the unrest and population specs (households spec 2.1, 3.2).</summary>
-[Flags] public enum Grievance : ushort { None = 0, Hunger = 1, Tax = 2, Crowding = 4, Crime = 8, Lord = 16, Cold = 32 }
+/// <summary>
+/// Household mood flags the economy sets for the unrest and population specs (households spec 2.1, 3.2). <see cref="Hunger"/> is a low store: under one day of
+/// food left after the day's meals (the unrest weight). <see cref="MissedMeal"/> is a household that could not eat its whole day's food that day (review finding 17:
+/// the soak's hunger measure); a missed meal always leaves a low store too, so the set of households with any grievance is unchanged by it.
+/// </summary>
+[Flags] public enum Grievance : ushort { None = 0, Hunger = 1, Tax = 2, Crowding = 4, Crime = 8, Lord = 16, Cold = 32, MissedMeal = 64 }
+
+/// <summary>Where a household's gathered fuel comes from (review finding 4): the woodland of its settlement, with its members' hours. Set by the economy world; not saved (the stock is the resource layer's).</summary>
+public interface IFuelGatherer
+{
+    /// <summary>Gathers up to <paramref name="wantG"/> grams of firewood into the household's store; returns the grams gathered.</summary>
+    long Gather(int hh, long wantG);
+}
 
 /// <summary>Household tier chosen at the daily slice (households spec 3.5): survive first, then buffer, then profit.</summary>
 public enum HouseholdTier : byte { Profit, Buffer, Survive }
@@ -29,6 +40,10 @@ public sealed class EconomyState
     public MassLedger Mass { get; }
     public ItemTable Items { get; set; } = new();
     public MoneySettingsDef Money { get; }
+    /// <summary>The economy's tuning numbers (review finding 12, <c>content/base/economy/tuning.jsonc</c>); the code's old constants when the content has none.</summary>
+    public EconomyTuningDef Tuning { get; set; } = new() { Id = "economy" };
+    /// <summary>The woodland households gather fuel from (review finding 4); null in bare economies (unit tests), where gathering creates the wood as before.</summary>
+    public IFuelGatherer? FuelGatherer { get; set; }
     private readonly NeedsBasketDef[] _baskets;
     /// <summary>Which goods are staples, relishes, ale, salt and fuel (derived from good tags and classes).</summary>
     public FoodPlan Food { get; }
@@ -113,7 +128,10 @@ public sealed class EconomyState
     public static EconomyState FromContent(ContentDatabase db, int householdCount, int personCount)
     {
         var money = db.All<MoneySettingsDef>().OrderBy(m => m.Id, StringComparer.Ordinal).FirstOrDefault() ?? new MoneySettingsDef { Id = "money" };
-        return new EconomyState(new GoodCatalog(db), money, db.All<NeedsBasketDef>().OrderBy(b => b.Id, StringComparer.Ordinal).ToList(), householdCount, personCount);
+        return new EconomyState(new GoodCatalog(db), money, db.All<NeedsBasketDef>().OrderBy(b => b.Id, StringComparer.Ordinal).ToList(), householdCount, personCount)
+        {
+            Tuning = db.All<EconomyTuningDef>().OrderBy(t => t.Id, StringComparer.Ordinal).FirstOrDefault() ?? new EconomyTuningDef { Id = "economy" },
+        };
     }
 
     /// <summary>
