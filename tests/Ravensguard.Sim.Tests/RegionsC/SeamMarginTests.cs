@@ -1,39 +1,37 @@
 using Ravensguard.Sim.Tests.Seamless;
 using Ravensguard.Sim.WorldGen.Region;
 using Xunit.Abstractions;
-using RegionData = Ravensguard.Sim.WorldGen.Region.Region;
 
 namespace Ravensguard.Sim.Tests.RegionsC;
 
-/// <summary>The spec's seam margins (note N5/N25): how far from a region's edge settlements, lots and fields really stand.</summary>
+/// <summary>The spec's seam margins (note N5/N25) as a generator invariant: no settlement, lot or field of any region of the grid comes near its edge, for both pinned seeds.</summary>
 public class SeamMarginTests(ITestOutputHelper output)
 {
-    private static int EdgeDistance(int x, int y) => Math.Min(Math.Min(x, y), Math.Min(RegionData.Meters - 1 - x, RegionData.Meters - 1 - y));
-
     [Theory]
     [InlineData(1234UL)]
     [InlineData(1UL)]
-    public void Settlements_lots_and_fields_keep_clear_of_region_edges(ulong seed)
+    public void The_seam_margins_hold_for_every_region_of_the_grid(ulong seed)
     {
         var w = SeamWorld.Get(seed);
-        int towns = 0, villages = 0, townsInside = 0, villagesInside = 0, minLot = int.MaxValue, minField = int.MaxValue, minSettle = int.MaxValue, regions = 0;
-        foreach (var rc in w.Block3())
+        int regions = 0, towns = 0, villages = 0;
+        int minSettle = int.MaxValue, minLot = int.MaxValue, minField = int.MaxValue;
+        var bad = new System.Collections.Concurrent.ConcurrentBag<string>();
+        var gate = new object();
+        Parallel.For(0, RegionCoord.Count, new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount - 1) }, id =>
         {
-            var r = w.Region(rc); regions++;
-            foreach (var s in r.Settlements)
+            var rc = RegionCoord.FromId(id);
+            var r = w.Fresh(rc);
+            var m = RegionSeamMargins.Of(r);
+            lock (gate)
             {
-                int d = EdgeDistance(s.CenterX, s.CenterY);
-                minSettle = Math.Min(minSettle, d);
-                if (s.Class == SettlementClass.Town) { towns++; if (d >= 1200) townsInside++; }
-                else if (s.Class == SettlementClass.Village) { villages++; if (d >= 400) villagesInside++; }
-                foreach (var l in s.Plan.Lots) minLot = Math.Min(minLot, Math.Min(EdgeDistance(l.Rect.X, l.Rect.Y), EdgeDistance(l.Rect.Right, l.Rect.Bottom)));
+                regions++; towns += r.Settlements.Count(s => s.Class == SettlementClass.Town); villages += r.Settlements.Count(s => s.Class == SettlementClass.Village);
+                minSettle = Math.Min(minSettle, m.SettlementCentre); minLot = Math.Min(minLot, m.LotCorner); minField = Math.Min(minField, m.FieldTile);
             }
-            foreach (var f in r.Fields) minField = Math.Min(minField, EdgeDistance(f.Tile % RegionData.Size * RegionData.TileM, f.Tile / RegionData.Size * RegionData.TileM));
-        }
-        output.WriteLine($"seed {seed}, {regions} regions: nearest settlement centre {minSettle} m from an edge, nearest lot corner {minLot} m, nearest field tile {minField} m; towns clear of 1,200 m {townsInside}/{towns}, villages clear of 400 m {villagesInside}/{villages}");
-        // what the generator guarantees (settlement centres at least 8 tiles = 512 m in, fields not on the edge row), measured with room to spare; the spec's 64 m floor is met by a wide margin
-        Assert.True(minSettle >= 480, $"a settlement centre stands {minSettle} m from an edge");
-        Assert.True(minLot >= 250, $"a lot stands {minLot} m from an edge (the spec's floor is 64 m)");
-        Assert.True(minField >= 64, $"a field stands {minField} m from an edge");
+            foreach (var why in m.Violations()) bad.Add($"{rc}: {why}");
+        });
+        output.WriteLine($"seed {seed}: {regions} regions, {towns} towns, {villages} villages; nearest settlement centre {minSettle} m from an edge, nearest lot corner {minLot} m, nearest field tile {minField} m");
+        Assert.Equal(RegionCoord.Count, regions);
+        Assert.True(towns + villages > 0, "the grid has settlements to check");
+        Assert.Empty(bad);
     }
 }

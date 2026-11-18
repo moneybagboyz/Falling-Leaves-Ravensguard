@@ -223,6 +223,7 @@ ids, spoilage), LODBridge (job state, inventory carried).
 
 1. **Livery: done.** A manor's staff receive a measure of grain a day from the lord's house store (`Livery`, `Store.MoveUpTo`, conserving) on top of the coin wage; manors already fill demesne jobs from the poorest idle first (production P10).
 2. **Own grain first: done for shopping.** `FoodPlan` still eats flour, then bread, then grain, but a household holding grain for half its staple cover target no longer posts flour or bread orders, so growers do not buy bread while sitting on grain (the seed reserve is excluded, H7). Home brewing and the mill toll on grinding are not modelled (no miller store is passed to the needs yet).
-3. **Safety nets: partly.** Parish and fief relief (tithe grain, steward purchases, treasury dole, H10) are done; gleaning and kin support are not.
-4. **Credit: not done.** 5. **Migration balance: reported, not matched.** `soak` prints net migration and the population excluding it; immigration awaits the continent tick (G-P11).
+3. **Safety nets: mostly.** Parish and fief relief (tithe grain, steward purchases, treasury dole, H10), gleaning (3 percent of every harvest into the poor box, I24), the Church's regional granaries and the lords' almonry in kind and in coin (I24, I25) and the village re-let of vacant holdings (I24) are done; kin support is not.
+4. **Credit: not done.** Tally credit for food, recorded in the ledger and repaid from wages or the harvest, is not modelled; the alms and the poor box stand in for it.
+5. **Migration balance: done as a stand-in.** Departed households come back to vacant dwellings while the region holds fewer people than it started with (I27); the continent tick will own the real inflow.
 Effect (seed 1234, 10 years): hungry household-days over the run 21 percent -> 7 percent, population 17,700 -> 19,900 (22,100 excluding the 2,214 net emigrants); the 100-year table in the overview notes predates this change.

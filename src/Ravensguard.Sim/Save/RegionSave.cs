@@ -24,15 +24,21 @@ public sealed class RegionSectionData
     [Key(10)] public ulong[] IdState { get; set; } = [];
     /// <summary>The region's chunk entries (<see cref="ChunkStore.ToSection(Func{ChunkKey, bool})"/> bytes).</summary>
     [Key(11)] public byte[] Chunks { get; set; } = [];
+    /// <summary>Hash of the regenerated region the people are diffed against (people, households, lots and terrain; <see cref="BaselineGuard"/>). Empty when the people are stored whole, and in saves of format v1.</summary>
+    [Key(12)] public string BaselineHash { get; set; } = "";
+    /// <summary>The region generator version the baseline was made with (<see cref="SaveFormat.RegionGeneratorVersion"/>); 0 when the people are stored whole.</summary>
+    [Key(13)] public int GeneratorVersion { get; set; }
 
-    /// <summary>Makes the baseline people this region's people are diffed against (the populator's output again). Set by <c>RegionWorld.Capture</c>; not stored.</summary>
-    [IgnoreMember] public Func<PeopleData>? Baseline { get; set; }
+    /// <summary>Makes the baseline population this region's people are diffed against (the populator's output again). Set by <c>RegionWorld.Capture</c>; not stored.</summary>
+    [IgnoreMember] public Func<Ravensguard.Sim.People.Population>? Baseline { get; set; }
 
-    /// <summary>Replaces the people by their patches over the baseline (spec N24); call before encoding, on any thread. A section with no baseline stays whole.</summary>
+    /// <summary>Replaces the people by their patches over the baseline (spec N24) and stamps the baseline guard; call before encoding, on any thread. A section with no baseline stays whole.</summary>
     public void Compact()
     {
         if (Baseline == null || People.Diff != null) return;
-        People = PeopleDiffer.Compact(People, Baseline());
+        var bp = Baseline();
+        People = PeopleDiffer.Compact(People, WorldSave.EncodePeople(bp));
+        BaselineHash = BaselineGuard.HashOf(bp); GeneratorVersion = SaveFormat.RegionGeneratorVersion;
         Baseline = null;
     }
 }

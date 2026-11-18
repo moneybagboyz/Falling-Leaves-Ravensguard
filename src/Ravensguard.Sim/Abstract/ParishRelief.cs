@@ -163,14 +163,7 @@ public sealed class ParishRelief
 
     // ---------- famine relief purchases (taxes spec 3.6) ----------
 
-    private MarketParty?[] _stewards = [];
-
-    private MarketParty Steward(int fief)
-    {
-        var reg = _w.Population.Region; var e = _w.Economy;
-        if (_stewards.Length != reg.Fiefs.Count) _stewards = new MarketParty?[reg.Fiefs.Count];
-        return _stewards[fief] ??= new MarketParty(reg.Fiefs[fief].Id, e.Ledger.Open(PurseKind.Treasury, reg.Fiefs[fief].Id), e.OpenStore(StoreKind.Chest, reg.Fiefs[fief].Id, 0, 0, enforce: false), PartyKind.Household, 1_000_000 + fief);
-    }
+    private MarketParty Steward(int fief) => _markets.Steward(fief);
 
     /// <summary>
     /// The fief steward feeds the hungry from the treasury's own purchases: the day's rations leave the fief chest for the households under three days of food (lowest cover

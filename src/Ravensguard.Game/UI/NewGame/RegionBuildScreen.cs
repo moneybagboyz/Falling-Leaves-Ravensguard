@@ -108,7 +108,9 @@ public partial class RegionBuildScreen : Control
         var world = NewGameWorld.Create(content.Db, w.Continent, w.History, w.Info.File.Continent, w.Info.File.History, rs, site.CellX, site.CellY, pop, hero, codex.ToProgress());
         ct.ThrowIfCancellationRequested();
         var runtime = new WorldRuntime(world, content.Db, StreetSource.MakePager());
-        if (ct.IsCancellationRequested) { runtime.Dispose(); ct.ThrowIfCancellationRequested(); } // cancelled: no save or run info is written
+        try
+        {
+        if (ct.IsCancellationRequested) ct.ThrowIfCancellationRequested(); // cancelled: no save or run info is written
         string? path = null, saveError = null;
         try
         {
@@ -121,6 +123,8 @@ public partial class RegionBuildScreen : Control
         catch (Exception e) { saveError = e.Message; GD.PushWarning("could not write the first save: " + e.Message); }
         _at = 4;
         return new RunStart(world, d, site, start, path, codex, bi.RunName, saveError, runtime);
+        }
+        catch { runtime.Dispose(); throw; } // cancelled or failed: no worker and no page folder is left behind
     }
 
     /// <summary>The settlement the character starts in: the kind the origin asks for if it is clear of active wars (10 km) and monster lairs (3 km), else any safe one (plan §3f).</summary>

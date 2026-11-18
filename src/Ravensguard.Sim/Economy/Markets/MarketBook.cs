@@ -65,6 +65,9 @@ public sealed record BuyOrder(MarketParty Buyer, ushort Good, long Qty, int MaxP
     public int Priority { get; init; }
     /// <summary>Called with the result when the order is filled (businesses book their input spend).</summary>
     public Action<TradeResult>? OnFilled { get; init; }
+    /// <summary>What <see cref="OnFilled"/> is, so a pending order can be saved and its callback rebuilt: 0 none, 1 a business's input spend (arg: business index), 2 a household's durable (arg: household x durables + kind).</summary>
+    public byte HookKind { get; init; }
+    public int HookArg { get; init; }
 }
 
 /// <summary>
@@ -327,6 +330,9 @@ public sealed class MarketBook
 
     public void Post(BuyOrder order) { if (order.Qty > 0) _orders.Add(order); }
     public int PendingOrders => _orders.Count;
+    /// <summary>The orders posted and not yet filled, in posting order (saved with the markets: an order posted in one hour is filled by the next session, which may be hours away).</summary>
+    public IReadOnlyList<BuyOrder> Orders => _orders;
+    public void ClearOrders() => _orders.Clear();
 
     /// <summary>
     /// One session (money spec 3.6): fills the posted orders in an order that depends only on the parties (a hash of the hour and the party id, then the id),

@@ -182,6 +182,7 @@ public partial class StreetView : Control, IHandlesBack
         // the tick worker and the region builders allocate (a region is 30-40 MB): without this a blocking full collection of a 400 MB heap lands on a frame (a 120 ms frame was seen with nine regions)
         try { _gcMode = System.Runtime.GCSettings.LatencyMode; System.Runtime.GCSettings.LatencyMode = System.Runtime.GCLatencyMode.SustainedLowLatency; } catch (InvalidOperationException) { /* no concurrent GC: leave it */ }
         var (wx, wy) = _world.WorldCell;
+        rt.Manager.BuildFailed += (rc, e) => GD.PushWarning($"[street] region {rc} failed to build after {rt.Manager.MaxBuildAttempts} tries and is given up on: {e.GetBaseException().Message}"); // once per region
         rt.PlaceHero(rt.State.HomeRegion.OriginXM + wx, rt.State.HomeRegion.OriginYM + wy);
         rt.Start();
         rt.Pump(_world.Clock.Now, rt.State.HomeRegion.OriginXM + wx, rt.State.HomeRegion.OriginYM + wy); // the first call pays for JIT (up to 60 ms seen): here, not on a frame

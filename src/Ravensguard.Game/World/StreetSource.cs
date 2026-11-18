@@ -63,8 +63,20 @@ public abstract class StreetSource
     /// <summary>A folder of this session's own for paged-out region sections (removed when the runtime goes).</summary>
     public static IRegionPager MakePager()
     {
+        SweepStalePagers();
         string dir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ravensguard-pages-" + Guid.NewGuid().ToString("N"));
         return new TempDirectoryRegionPager(dir);
+    }
+
+    /// <summary>Removes page folders a crash or a killed process left behind (older than a day; a folder of a running game is touched on every write).</summary>
+    static void SweepStalePagers()
+    {
+        try
+        {
+            foreach (var d in System.IO.Directory.EnumerateDirectories(System.IO.Path.GetTempPath(), "ravensguard-pages-*"))
+                if (DateTime.UtcNow - System.IO.Directory.GetLastWriteTimeUtc(d) > TimeSpan.FromDays(1)) { try { System.IO.Directory.Delete(d, true); } catch (Exception) { /* in use or not ours to remove */ } }
+        }
+        catch (Exception) { /* no temp folder to look in */ }
     }
 
     /// <summary>A <see cref="DirectoryRegionPager"/> that deletes its folder when asked to (the runtime's disposal).</summary>
@@ -113,10 +125,14 @@ public abstract class StreetSource
         // the same new-game world the region build makes: economy, farming, production, markets and the tick state, run by a runtime of its own
         var state = NewGameWorld.Create(load.Database, c, h, cs, hs, rs, pick.CellX, pick.CellY, pop, hero, codex.ToProgress());
         var runtime = new WorldRuntime(state, load.Database, MakePager());
-        return new RegionSource(region, pop, load.Database, state.Chunks, null)
+        try
         {
-            Poi = poi, WeatherInit = weather, History = h, RegionsInit = runtime.Manager, RuntimeInit = runtime, ContinentInit = c, Hero = hero, Codex = codex,
-        };
+            return new RegionSource(region, pop, load.Database, state.Chunks, null)
+            {
+                Poi = poi, WeatherInit = weather, History = h, RegionsInit = runtime.Manager, RuntimeInit = runtime, ContinentInit = c, Hero = hero, Codex = codex,
+            };
+        }
+        catch { runtime.Dispose(); throw; }
     }
 
     sealed class HamletSource : StreetSource

@@ -62,6 +62,7 @@ public class MemoryProfileTests(ITestOutputHelper output)
     public void A_region_section_of_a_ticked_region_is_under_a_megabyte_and_the_people_are_a_small_part_of_it()
     {
         var w = SeamWorld.Get(1234);
+        int checkedRegions = 0;
         foreach (var at in new[] { w.BlockOrigin.Offset(1, 1), w.BlockOrigin.Offset(0, 0), w.BlockOrigin.Offset(2, 1) })
         {
             var sv = new RegionServices(1234, w.Content, w.Continent, at) { History = w.History };
@@ -83,6 +84,9 @@ public class MemoryProfileTests(ITestOutputHelper output)
             var back = SaveCodec.DeserializeCompressed<RegionSectionData>(SaveCodec.SerializeCompressed(d));
             var again = RegionWorld.Restore(sv, at, region, back, Populator.Populate(region, w.History, w.Content));
             Assert.Equal(rw.RecordsHash(), again.RecordsHash());
+            Assert.NotEqual("", d.BaselineHash); // the baseline guard is stamped (review phase 2 #5)
+            checkedRegions++;
         }
+        Assert.True(checkedRegions >= 2, $"only {checkedRegions} populated regions were checked: the test skipped the rest");
     }
 }

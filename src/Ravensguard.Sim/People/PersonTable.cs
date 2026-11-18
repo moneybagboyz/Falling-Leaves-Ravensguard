@@ -6,6 +6,9 @@ namespace Ravensguard.Sim.People;
 /// Struct-of-arrays store of every Person (plan §2.1a). A person is an index; ids are dense counters so
 /// <see cref="IdOf"/> and <see cref="IndexOf"/> are O(1). Links to other people are indices, -1 for none.
 /// </summary>
+/// <summary>Which kin link of a person a cross-region reference stands for.</summary>
+public enum KinLink : byte { Father = 0, Mother = 1, Spouse = 2 }
+
 public sealed class PersonTable
 {
     public const int SkillSlots = 4;
@@ -87,6 +90,7 @@ public sealed class PersonTable
         Cp(Bed, c.Bed); Cp(Homeless, c.Homeless); Cp(Notable, c.Notable); Cp(Dynasty, c.Dynasty); Cp(Status, c.Status); Cp(DeathDay, c.DeathDay); Cp(DeathCause, c.DeathCause);
         Cp(PregnantUntilDay, c.PregnantUntilDay); Cp(FatherOfUnborn, c.FatherOfUnborn); Cp(LastBirthDay, c.LastBirthDay); Cp(MarriageWait, c.MarriageWait);
         foreach (var (i, id) in ForeignIds) c.SetForeignId(i, id);
+        foreach (var (row, link, id) in ForeignKin) c.SetForeignKin(row, link, id);
         return c;
     }
 
@@ -104,6 +108,21 @@ public sealed class PersonTable
         (_foreign ??= [])[index] = id;
         (_foreignIndex ??= [])[id] = index;
     }
+
+    // A kin link whose other end lives in another region cannot be a row number: it is kept as that person's id (spec 3.6), keyed by (row, link).
+    private SortedDictionary<long, EntityId>? _foreignKin;
+
+    /// <summary>Kin links to people of other regions (a person who moved in, whose parent or spouse stayed), ascending row then link.</summary>
+    public IEnumerable<(int Row, KinLink Link, EntityId Id)> ForeignKin
+    {
+        get { if (_foreignKin != null) foreach (var (k, id) in _foreignKin) yield return ((int)(k / 4), (KinLink)(k % 4), id); }
+    }
+
+    /// <summary>Records that <paramref name="link"/> of row <paramref name="row"/> is the person <paramref name="id"/> of another region.</summary>
+    public void SetForeignKin(int row, KinLink link, EntityId id) => (_foreignKin ??= [])[(long)row * 4 + (int)link] = id;
+
+    /// <summary>The other-region person a kin link points at, or <see cref="EntityId.None"/>.</summary>
+    public EntityId ForeignKinOf(int row, KinLink link) => _foreignKin != null && _foreignKin.TryGetValue((long)row * 4 + (int)link, out var id) ? id : EntityId.None;
 
     public EntityId IdOf(int index) => _foreign != null && _foreign.TryGetValue(index, out var f) ? f : EntityId.Make(IdKind.Person, _baseCounter + (ulong)index);
     public int IndexOf(EntityId id)

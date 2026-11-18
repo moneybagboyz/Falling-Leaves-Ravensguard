@@ -39,7 +39,6 @@ public static class SoakCommand
         Console.WriteLine($"band: staple mid / base price within {EconomySoak.BandLow / 1000.0:0.0}..{EconomySoak.BandHigh / 1000.0:0.0}, book-days of books with a merchant; staples {string.Join(", ", EconomySoak.Staples.Take(5))} (price index columns are the mean mid/base)");
         var soak = new EconomySoak(hw) { TrackLastYear = diag };
         if (flow) { soak.EnableFlow(); foreach (int y in flowYears) soak.FlowYears.Add(y); soak.FlowOut = Console.WriteLine; }
-        if (Environment.GetEnvironmentVariable("DBG_BIZ") is { } dbg) Ravensguard.Sim.Production.ProductionSystem.DebugIndex = int.Parse(dbg);
         if (probe != null) { soak.Ticker.AdvanceHours(24 * probeSkip); soak.Probe(probe, probeDays, Console.Out); return 0; }
         Console.WriteLine(EconomySoak.Header());
         bool ok = true;

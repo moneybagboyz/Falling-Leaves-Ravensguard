@@ -39,7 +39,13 @@ public sealed record SaveHeader
 
 public static class SaveFormat
 {
-    public const int CurrentVersion = 1;
+    /// <summary>v2: region sections and the home people carry a baseline hash and generator version (<see cref="BaselineGuard"/>).</summary>
+    public const int CurrentVersion = 2;
+    /// <summary>
+    /// Version of everything a saved region is regenerated from (region terrain, landmarks, populator, chunk streaming frame). Bump it whenever generation output changes on
+    /// purpose, together with the golden hashes: saves diffed against the old output are then refused with a clear message instead of loading onto different people.
+    /// </summary>
+    public const int RegionGeneratorVersion = 1;
     public static readonly byte[] Magic = { (byte)'R', (byte)'V', (byte)'S', (byte)'G' };
 }
 

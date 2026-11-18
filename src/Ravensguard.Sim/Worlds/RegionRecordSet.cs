@@ -38,10 +38,12 @@ public sealed class RegionRecordSet
     /// <summary>Runs on a worker: the records of a just-built region, restored from its paged section when it has one, fresh otherwise.</summary>
     private RegionWorld? MakeRecords(RegionCoord at, RegionData terrain, People.Population pop)
     {
-        if (pop.Households.Count == 0) return null; // a sea or wilderness region: terrain only, no records to tick (spec 7, Empty)
+        if (pop.Households.Count == 0) return null; // a sea or wilderness region: terrain only, no records to tick (spec 7, Empty). Its chunks are still saved (see CaptureView).
         var bytes = Pager.Read(at.Id);
-        if (bytes != null) return RegionWorld.Restore(Services, at, terrain, SaveCodec.DeserializeCompressed<RegionSectionData>(bytes), pop);
-        return RegionWorld.CreateFresh(Services, at, pop);
+        var rw = bytes != null ? RegionWorld.Restore(Services, at, terrain, SaveCodec.DeserializeCompressed<RegionSectionData>(bytes), pop) : RegionWorld.CreateFresh(Services, at, pop);
+        // the catch-up of this region is a function of the game hour it was asked for at, not of when a worker happened to finish (note N28)
+        rw.SetCatchUpAnchor(Manager.RequestedHour(at));
+        return rw;
     }
 
     /// <summary>Puts the home region's world state in the set (the embark region, built outside the manager).</summary>
@@ -54,10 +56,15 @@ public sealed class RegionRecordSet
         foreach (var g in Manager.Ready)
         {
             if (g.Records == null) continue;
-            lock (_lock) { if (_resident.ContainsKey(g.Coord.Id)) continue; _resident[g.Coord.Id] = g.Records; }
-            Pager.Delete(g.Coord.Id);
-            if (g.Records.PendingChunks is { Length: > 0 } c) Chunks.Absorb(c);
-            g.Records.PendingChunks = null;
+            // one critical section: a save taking CaptureView sees the region either still paged (file present) or resident (file gone), never neither
+            lock (_lock)
+            {
+                if (_resident.ContainsKey(g.Coord.Id)) continue;
+                _resident[g.Coord.Id] = g.Records;
+                Pager.Delete(g.Coord.Id);
+                if (g.Records.PendingChunks is { Length: > 0 } c) Chunks.Absorb(c);
+                g.Records.PendingChunks = null;
+            }
             n++;
         }
         return n;
@@ -78,25 +85,61 @@ public sealed class RegionRecordSet
     }
 
     /// <summary>Asks for a paged region to come back (built and restored on a worker).</summary>
-    public void PageIn(RegionCoord at, double priority = 0) { if (TryGet(at) == null && Pager.Has(at.Id)) Manager.Request(at, priority); }
+    public void PageIn(RegionCoord at, double priority = 0, long? hour = null) { if (TryGet(at) == null && Pager.Has(at.Id)) Manager.Request(at, priority, hour); }
 
     // ------------------------------------------------------------------ save sections
 
-    /// <summary>The sections of every generated region but the home region: resident ones captured now, paged ones as stored. Call at a barrier (nothing ticking).</summary>
-    public SortedDictionary<int, RegionSectionData> CaptureResident()
+    /// <summary>
+    /// One consistent view of the set for a save (take it at a barrier, on the tick worker): the resident regions other than home, the stored sections of the paged ones
+    /// (bytes already read), and which chunk entries belong where. Taken under the set's lock, and <see cref="Sync"/> attaches under the same lock, so a region the main
+    /// thread attaches meanwhile is either in <see cref="SaveView.Paged"/> (its file was read before the attach) or in <see cref="SaveView.Resident"/>, never in neither.
+    /// </summary>
+    public SaveView CaptureView()
     {
-        var d = new SortedDictionary<int, RegionWorld>();
-        lock (_lock) foreach (var (id, rw) in _resident) if (id != Home.Id) d[id] = rw;
-        var r = new SortedDictionary<int, RegionSectionData>();
-        foreach (var (id, rw) in d) r[id] = rw.Capture(Chunks);
-        return r;
+        lock (_lock)
+        {
+            var res = new SortedDictionary<int, RegionWorld>();
+            foreach (var (id, rw) in _resident) if (id != Home.Id) res[id] = rw;
+            var paged = new SortedDictionary<int, byte[]>();
+            foreach (int id in Pager.Ids)
+            {
+                if (id == Home.Id || _resident.ContainsKey(id)) continue;
+                if (Pager.Read(id) is { } b) paged[id] = b;
+            }
+            return new SaveView(this, res, paged);
+        }
     }
 
-    public SortedDictionary<int, byte[]> PagedSections()
+    /// <summary>The sections of every resident region but the home region, captured now. Call at a barrier (nothing ticking).</summary>
+    public SortedDictionary<int, RegionSectionData> CaptureResident() => CaptureView().CaptureResident();
+
+    /// <summary>Stored sections of the paged regions (one consistent read; see <see cref="CaptureView"/>).</summary>
+    public SortedDictionary<int, byte[]> PagedSections() => CaptureView().Paged;
+
+    /// <summary>What a save takes from the set at one instant.</summary>
+    public sealed class SaveView
     {
-        var r = new SortedDictionary<int, byte[]>();
-        foreach (int id in Pager.Ids) { if (TryGet(RegionCoord.FromId(id)) != null || id == Home.Id) continue; if (Pager.Read(id) is { } b) r[id] = b; }
-        return r;
+        private readonly RegionRecordSet _set;
+        public SortedDictionary<int, RegionWorld> Resident { get; }
+        public SortedDictionary<int, byte[]> Paged { get; }
+        internal SaveView(RegionRecordSet set, SortedDictionary<int, RegionWorld> resident, SortedDictionary<int, byte[]> paged) { _set = set; Resident = resident; Paged = paged; }
+
+        /// <summary>
+        /// True for chunk entries that go in the world's own chunk section: the home region's, and those of every region that has no section of its own (sea and wilderness
+        /// regions have no records, so nothing else would carry their chunks; spec 2.2: every visited chunk is saved).
+        /// </summary>
+        public bool InMainChunkSection(ChunkKey k)
+        {
+            var r = ChunkRegions.Of(_set.Home, k);
+            return r == _set.Home || !(r.IsValid && (Resident.ContainsKey(r.Id) || Paged.ContainsKey(r.Id)));
+        }
+
+        public SortedDictionary<int, RegionSectionData> CaptureResident()
+        {
+            var r = new SortedDictionary<int, RegionSectionData>();
+            foreach (var (id, rw) in Resident) r[id] = rw.Capture(_set.Chunks);
+            return r;
+        }
     }
 
     /// <summary>Hands the section bytes of a loaded save to the pager: those regions come back, restored, when approached.</summary>

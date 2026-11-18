@@ -21,7 +21,7 @@ public enum RegionLevel : byte
     Live = 0,
     /// <summary>L1: generated, in the ring around the hero. Hourly abstract tick.</summary>
     Detailed = 1,
-    /// <summary>L2: generated, resident, records only. Whole days at the day boundary.</summary>
+    /// <summary>L2: generated, resident, records only. Stepped in slices of a few hours, each region on its own phase (<see cref="Ravensguard.Sim.Abstract.RegionScheduler.DailySliceHours"/>).</summary>
     Daily = 2,
     /// <summary>L3: generated before, written to the pager; not ticked, not in memory.</summary>
     Paged = 3,
@@ -136,7 +136,7 @@ public sealed class RegionWorld : IDisposable
             Production = ProductionSave.Capture(Economy.Production), Markets = MarketsSave.Capture(Economy.Markets),
             Chronicle = WorldSave.EncodeChronicle(Chronicle), IdState = Ids.GetState(),
             Chunks = chunks == null ? [] : chunks.ToSection(k => ChunkRegions.Of(Services.Home, k) == Coord),
-            Baseline = Services.History == null ? null : () => WorldSave.EncodePeople(Populator.Populate(pop.Region, Services.History, Services.Content)),
+            Baseline = Services.History == null ? null : () => Populator.Populate(pop.Region, Services.History, Services.Content),
         };
     }
 
@@ -151,6 +151,7 @@ public sealed class RegionWorld : IDisposable
         if (people.Diff != null)
         {
             var basePop = baseline ?? (sv.History != null ? Populator.Populate(terrain, sv.History, sv.Content) : throw new SaveException("The people of this region are saved as a difference from the generated ones, and the history to generate them again is missing."));
+            BaselineGuard.Verify($"Region {at}", d.BaselineHash, d.GeneratorVersion, basePop);
             people = PeopleDiffer.Expand(people, WorldSave.EncodePeople(basePop));
         }
         var pop = WorldSave.DecodePeople(people, d.Lots, terrain);
@@ -174,22 +175,36 @@ public sealed class RegionWorld : IDisposable
 
     // ------------------------------------------------------------------ ticking
 
+    /// <summary>The last game hour whose step runs coarse (<c>H5 | H6 | H7</c>); every later hour runs every phase. <see cref="long.MinValue"/>: none (the default, exact hourly truth).</summary>
+    public long CoarseUntilHour { get; private set; } = long.MinValue;
+
     /// <summary>
-    /// Steps the region to <paramref name="hour"/>. A gap of up to <see cref="FullReplayHours"/> runs hour by hour with every phase; a longer one first runs the
-    /// older hours coarse (<c>H5 | H6 | H7</c>), so a region seen again after years still passes its seasons, famines and price drift without a year of full steps.
-    /// Pure in (records, hour): the same records and target always give the same records.
+    /// Sets how a long gap is crossed: given the game hour <paramref name="anchorHour"/> the region was asked for at (a paging request, a traveller coming near), the hours up to
+    /// the last day boundary at or before <c>anchorHour - </c><see cref="FullReplayHours"/> run coarse and all later hours run every phase. The choice is made per absolute hour,
+    /// so it does not depend on where <see cref="AdvanceTo"/> is stopped on the way, nor on the hour the region happened to join the scheduler (note N28).
+    /// </summary>
+    public void SetCatchUpAnchor(long anchorHour)
+    {
+        long edge = anchorHour - FullReplayHours;
+        long dayFloor = edge - (((edge % 24) + 24) % 24);
+        CoarseUntilHour = dayFloor;
+    }
+
+    /// <summary>
+    /// Steps the region to <paramref name="hour"/>, one game hour at a time. Hours up to <see cref="CoarseUntilHour"/> (set by <see cref="SetCatchUpAnchor"/>; none by default) run
+    /// coarse, so a region seen again after years still passes its seasons, famines and price drift without a year of full steps; every other hour runs every phase.
+    /// Which phases an hour runs depends on that hour alone, so the records at any hour are a pure function of (records, anchor, hour): the same section gives the same
+    /// result whatever intermediate hours it was stepped to. Coarse hours are an approximation of hourly truth, by design (spec 3.2, N14); with no anchor the result is exact.
     /// </summary>
     public void AdvanceTo(long hour)
     {
-        long gap = hour - HourDone;
-        if (gap <= 0) return;
+        if (hour <= HourDone) return;
         var t = Ticker;
-        if (gap > FullReplayHours)
+        if (HourDone < CoarseUntilHour)
         {
-            long coarseTo = hour - FullReplayHours;
             t.PhaseMask = TickPhase.H5DailyGlobals | TickPhase.H6Seasonal | TickPhase.H7Outbox;
-            t.AdvanceTo(GameTime.FromGameHours(coarseTo));
-            t.PhaseMask = TickPhase.All;
+            try { t.AdvanceTo(GameTime.FromGameHours(Math.Min(hour, CoarseUntilHour))); }
+            finally { t.PhaseMask = TickPhase.All; }
         }
         t.AdvanceTo(GameTime.FromGameHours(hour));
     }

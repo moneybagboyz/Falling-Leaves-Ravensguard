@@ -39,7 +39,7 @@ public sealed class CompatibilityReport
 public sealed class SaveReader
 {
     private readonly SaveMigrator _migrator;
-    public SaveReader(SaveMigrator? migrator = null) { _migrator = migrator ?? new SaveMigrator(); }
+    public SaveReader(SaveMigrator? migrator = null) { _migrator = migrator ?? SaveMigrator.CreateDefault(); }
 
     /// <summary>Reads only the header (load screen).</summary>
     public SaveHeader ReadHeader(string path)

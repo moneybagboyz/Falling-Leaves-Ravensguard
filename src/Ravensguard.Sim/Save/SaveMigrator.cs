@@ -8,6 +8,12 @@ public sealed class SaveMigrator
     public int TargetVersion { get; }
     public SaveMigrator(int targetVersion = SaveFormat.CurrentVersion) { TargetVersion = targetVersion; }
 
+    /// <summary>
+    /// The game's migrations. v1 -> v2: v1 saves have no baseline guard (empty hashes) and are loaded unguarded; their format is otherwise unchanged (every v2 key is additive),
+    /// so the step only re-stamps the version. A v1 save made while a region without people held chunks lost those chunks (fixed in v2); nothing can recover them.
+    /// </summary>
+    public static SaveMigrator CreateDefault() => new SaveMigrator().Register(1, _ => { });
+
     public SaveMigrator Register(int fromVersion, Action<IDictionary<string, byte[]>> step)
     {
         if (!_steps.TryAdd(fromVersion, step)) throw new ArgumentException($"Step from v{fromVersion} already registered.");

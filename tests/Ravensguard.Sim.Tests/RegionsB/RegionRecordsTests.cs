@@ -44,7 +44,8 @@ public class RegionRecordsTests(ITestOutputHelper output)
         {
             var rig = new RegionRig();
             var east = rig.Generate(rig.Home.Offset(1, 0)); var home = rig.Set.HomeWorld!;
-            int p = Enumerable.Range(0, home.Population.People.Count).First(i => home.Population.People.IsAlive(i) && home.Population.People.Household[i] >= 0 && home.Population.Age(i) is > 20 and < 50);
+            int p = Enumerable.Range(0, home.Population.People.Count).First(i => home.Population.People.IsAlive(i) && home.Population.People.Household[i] >= 0 && home.Population.Age(i) is > 20 and < 50
+                && RegionTransfer.CanMovePerson(home, i, GameTime.FromGameHours(home.HourDone)));
             movedId = home.Population.People.IdOf(p);
             int aliveH = (int)home.Sim.Vital.Alive, aliveE = (int)east.Sim.Vital.Alive;
             row = RegionTransfer.MovePerson(home, east, p, -1, GameTime.FromGameHours(home.HourDone));
@@ -94,7 +95,7 @@ public class RegionRecordsTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public void Daily_regions_step_in_whole_days_and_end_where_hourly_stepping_ends()
+    public void Daily_regions_step_in_staggered_slices_and_end_where_hourly_stepping_ends()
     {
         var rig = new RegionRig(dailyRing: 2);
         var near = rig.Generate(rig.Home.Offset(1, 0));
@@ -104,7 +105,7 @@ public class RegionRecordsTests(ITestOutputHelper output)
         var r = rig.Sched.Update(GameTime.FromGameHours(end), rig.Home);
         Assert.Equal(RegionLevel.Daily, far.Level); Assert.Equal(RegionLevel.Detailed, near.Level);
         Assert.Equal(end, near.HourDone);
-        Assert.Equal(end - end % 24, far.HourDone);
+        Assert.Equal(RegionScheduler.DailyTarget(end, far.Coord.Id), far.HourDone);
         output.WriteLine($"update: {r.HourlySteps} hourly, {r.DaysSteps} day steps, {r.Ms:0} ms");
         // promote: the same region at the same hour has the same records whichever level it ran at
         rig.Sched.Update(GameTime.FromGameHours(end), far.Coord);
@@ -138,7 +139,11 @@ public class RegionRecordsTests(ITestOutputHelper output)
         Assert.False(rig.Set.Pager.Has(east.Coord.Id), "a resident region has no stale page file");
         output.WriteLine($"page-in (terrain + people + restore) {ms:0} ms, section {before.Length / 1e6:0.00} MB");
         // after paging, the region catches up deterministically (an hour-aligned target)
+        long hourBefore = back.HourDone; string hashBefore = back.RecordsHash();
         back.AdvanceTo(back.HourDone + 10);
+        Assert.Equal(hourBefore + 10, back.HourDone);
+        Assert.NotEqual(hashBefore, back.RecordsHash());
+        Assert.Equal(PersonStatus.Alive, back.Population.People.Status[Enumerable.Range(0, back.Population.People.Count).First(i => back.Population.People.Status[i] == PersonStatus.Alive)]);
     }
 
     [Fact]

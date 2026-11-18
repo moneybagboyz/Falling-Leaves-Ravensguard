@@ -429,22 +429,16 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
         return (int)Math.Clamp(wanted, 1, 2L * cap);
     }
 
+    /// <summary>How many open businesses of the kind the settlement has (counted on the spot, not cached: a cache would depend on when a loaded world first asked, review finding 2).</summary>
     private int SameKind(Business b)
     {
-        if (_sameKindDay != _lastDay || _sameKind == null) RebuildSameKind();
-        return _sameKind!.GetValueOrDefault((b.Settlement, b.Kind), 1);
-    }
-    private Dictionary<(int, ushort), int>? _sameKind; private long _sameKindDay = -1, _lastDay = 0;
-    private void RebuildSameKind()
-    {
-        _sameKind = [];
-        foreach (var x in Businesses) if (x.State == BusinessState.Open) { var key = (x.Settlement, x.Kind); _sameKind[key] = _sameKind.GetValueOrDefault(key) + 1; }
-        _sameKindDay = _lastDay;
+        int n = 0;
+        foreach (var x in Businesses) if (x.State == BusinessState.Open && x.Settlement == b.Settlement && x.Kind == b.Kind) n++;
+        return Math.Max(1, n);
     }
 
     private void PlanStations(Business b, BusinessKind kind, GameTime now)
     {
-        _lastDay = now.TotalDays;
         var book = Markets?.BookForSettlement(b.Settlement);
         int busy = 0; double budget = Econ.Ledger.Balance(b.Purse).Mites * 0.9;      // what the cash box can still promise to the market this morning, shared by the stations
         foreach (var st in b.Stations)
@@ -484,9 +478,7 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
         {
             long have = b.Store.Qty(g), want = q * Math.Max(1, batches) * permille / 1000;
             if (have >= want) continue;
-            if (b.Index == DebugIndex) Console.WriteLine($"  DBG b{b.Index} order {Econ.Goods.StringId(g)} {want - have} cash {Econ.Ledger.Balance(b.Purse).Mites}");
-            int bi = b.Index;
-            book.Post(new BuyOrder(b.Party, g, want - have, 3000) { Priority = 5 + r.Inputs.Length, OnFilled = res => { b.InputsSeason += res.PaidMites; if (bi == DebugIndex) Console.WriteLine($"  DBG b{bi} filled {Econ.Goods.StringId(g)} {res.Qty} paid {res.PaidMites}"); } });
+            book.Post(new BuyOrder(b.Party, g, want - have, 3000) { Priority = 5 + r.Inputs.Length, OnFilled = InputHook(b), HookKind = 1, HookArg = b.Index });
         }
     }
 
@@ -646,7 +638,9 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
         }
     }
     public long AdvancesMites;
-    public static int DebugIndex = -1;
+
+    /// <summary>The callback of a business's input order: the coin paid goes to the season's input spend.</summary>
+    public Action<TradeResult> InputHook(Business b) => res => { b.InputsSeason += res.PaidMites; };
 
     // ---------- structural demand ----------
 

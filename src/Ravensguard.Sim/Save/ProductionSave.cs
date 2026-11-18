@@ -47,6 +47,15 @@ public sealed class MarketsSave
     [Key(25)] public int[] ImportDay { get; set; } = [];
     [Key(26)] public ulong[] ImportMerchant { get; set; } = [];
     [Key(27)] public long[] FloorDemand { get; set; } = [];
+    // buy orders posted and not yet filled (an order posted at one hour is filled by the next session, hours later when the market is shut)
+    [Key(28)] public int[] OrderBook { get; set; } = [];
+    [Key(29)] public ulong[] OrderBuyer { get; set; } = [];
+    [Key(30)] public ushort[] OrderGood { get; set; } = [];
+    [Key(31)] public long[] OrderQty { get; set; } = [];
+    [Key(32)] public int[] OrderRatio { get; set; } = [];
+    [Key(33)] public int[] OrderPriority { get; set; } = [];
+    [Key(34)] public byte[] OrderHookKind { get; set; } = [];
+    [Key(35)] public int[] OrderHookArg { get; set; } = [];
 
     public static MarketsSave Capture(MarketSystem ms)
     {
@@ -57,6 +66,7 @@ public sealed class MarketsSave
         s.RefMicro = new long[n]; s.DemandEma = new long[n]; s.StructuralDemand = new long[n]; s.LastTradedDay = new int[n]; s.DemandToday = new long[n]; s.TradedToday = new long[n]; s.FloorDemand = new long[n];
         var lb = new List<int>(); var lg = new List<ushort>(); var li = new List<uint>(); var lo = new List<ulong>(); var lk = new List<byte>(); var lq = new List<long>();
         var lf = new List<int>(); var ld = new List<int>(); var lm = new List<bool>(); var mb = new List<int>(); var mi = new List<ulong>();
+        var ob = new List<int>(); var ou = new List<ulong>(); var og = new List<ushort>(); var oq = new List<long>(); var orr = new List<int>(); var op = new List<int>(); var ok = new List<byte>(); var oa = new List<int>();
         var ib = new List<int>(); var ig = new List<ushort>(); var iq = new List<long>(); var id = new List<int>(); var im = new List<ulong>();
         for (int bi = 0; bi < books.Count; bi++)
         {
@@ -68,10 +78,12 @@ public sealed class MarketsSave
                 s.DemandToday[k] = gb.DemandToday; s.TradedToday[k] = gb.TradedToday; s.FloorDemand[k] = gb.FloorDemand;
                 foreach (var l in gb.Lots) { lb.Add(bi); lg.Add((ushort)g); li.Add(l.Id); lo.Add(l.Owner.Id.Value); lk.Add((byte)l.Owner.Kind); lq.Add(l.Qty); lf.Add(l.FloorPermille); ld.Add(l.ListedDay); lm.Add(l.IsMerchant); }
             }
+            foreach (var o in b.Orders) { ob.Add(bi); ou.Add(o.Buyer.Id.Value); og.Add(o.Good); oq.Add(o.Qty); orr.Add(o.MaxPriceRatioPermille); op.Add(o.Priority); ok.Add(o.HookKind); oa.Add(o.HookArg); }
             foreach (var m in b.Merchants) { mb.Add(bi); mi.Add(m.Id.Value); }
             foreach (var r in b.ImportRequests) { ib.Add(bi); ig.Add(r.Good); iq.Add(r.Qty); id.Add(r.Day); im.Add(r.Merchant.Value); }
         }
         s.LotBook = [.. lb]; s.LotGood = [.. lg]; s.LotId = [.. li]; s.LotOwner = [.. lo]; s.LotOwnerKind = [.. lk]; s.LotQty = [.. lq]; s.LotFloor = [.. lf]; s.LotListedDay = [.. ld]; s.LotMerchant = [.. lm];
+        s.OrderBook = [.. ob]; s.OrderBuyer = [.. ou]; s.OrderGood = [.. og]; s.OrderQty = [.. oq]; s.OrderRatio = [.. orr]; s.OrderPriority = [.. op]; s.OrderHookKind = [.. ok]; s.OrderHookArg = [.. oa];
         s.MerchantBook = [.. mb]; s.MerchantId = [.. mi]; s.ImportBook = [.. ib]; s.ImportGood = [.. ig]; s.ImportQty = [.. iq]; s.ImportDay = [.. id]; s.ImportMerchant = [.. im];
         return s;
     }
@@ -90,7 +102,8 @@ public sealed class MarketsSave
                 var id = new EntityId(owner);
                 if (EconIds.IsBusiness(id)) return prod?.ById(id)?.Party ?? throw new SaveException("A market lot belongs to a business that does not exist.");
                 int hh = ms.Pop.Households.IndexOf(id);
-                return hh >= 0 ? ms.HouseholdParty(hh) : throw new SaveException("A market lot belongs to an unknown owner.");
+                if (hh >= 0) return ms.HouseholdParty(hh);
+                return ms.StewardById(id) ?? throw new SaveException("A market lot or order belongs to an unknown owner.");
             }
             for (int bi = 0; bi < books.Count; bi++)
             {
@@ -103,13 +116,24 @@ public sealed class MarketsSave
                     gb.RefMicro = RefMicro[k]; gb.DemandEma = DemandEma[k]; gb.StructuralDemand = StructuralDemand[k]; gb.LastTradedDay = LastTradedDay[k];
                     gb.DemandToday = DemandToday[k]; gb.TradedToday = TradedToday[k]; gb.FloorDemand = FloorDemand[k]; gb.Lots.Clear(); gb.StockUnits = 0;
                 }
-                b.Merchants.Clear(); b.ImportRequests.Clear();
+                b.Merchants.Clear(); b.ImportRequests.Clear(); b.ClearOrders();
             }
             for (int i = 0; i < LotId.Length; i++)
             {
                 var gb = books[LotBook[i]].Goods[LotGood[i]];
                 gb.Lots.Add(new StockLot { Id = LotId[i], Owner = Party(LotOwner[i], LotOwnerKind[i]), Good = LotGood[i], Qty = LotQty[i], FloorPermille = LotFloor[i], ListedDay = LotListedDay[i], IsMerchant = LotMerchant[i] });
                 gb.StockUnits += LotQty[i];
+            }
+            for (int i = 0; i < OrderGood.Length; i++)
+            {
+                var party = Party(OrderBuyer[i], 0);
+                Action<TradeResult>? hook = OrderHookKind[i] switch
+                {
+                    1 => prod?.InputHook(prod.Businesses[OrderHookArg[i]]) ?? throw new SaveException("A buy order belongs to a business that does not exist."),
+                    2 => ms.DurableHook(OrderHookArg[i] / EconomyState.Durables, OrderHookArg[i] % EconomyState.Durables),
+                    _ => null,
+                };
+                books[OrderBook[i]].Post(new BuyOrder(party, OrderGood[i], OrderQty[i], OrderRatio[i]) { Priority = OrderPriority[i], OnFilled = hook, HookKind = OrderHookKind[i], HookArg = OrderHookArg[i] });
             }
             for (int i = 0; i < MerchantId.Length; i++) books[MerchantBook[i]].Merchants.Add(Party(MerchantId[i], (byte)PartyKind.Merchant));
             for (int i = 0; i < ImportGood.Length; i++) books[ImportBook[i]].ImportRequests.Add(new ImportRequest(books[ImportBook[i]].SettlementIndex, ImportGood[i], ImportQty[i], ImportDay[i], new EntityId(ImportMerchant[i])));

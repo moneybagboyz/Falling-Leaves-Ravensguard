@@ -18,6 +18,7 @@ public sealed class FarmingDailySystem : AbstractSystem
     {
         if (ctx.HourOfDay != 0) return;
         var ew = ctx.World.Get<EconomyWorld>(); if (ew == null) return;
+        ew.Labour.Rebuild();                  // the staff snapshot the farm hours read is taken here, not whenever the last hiring pass happened to leave it (a loaded world must see the same)
         ew.Farming.StepDay(ctx.Time);
         var all = ew.FarmChronicle.All;
         for (; ew.FarmChronicleDrained < all.Count; ew.FarmChronicleDrained++)

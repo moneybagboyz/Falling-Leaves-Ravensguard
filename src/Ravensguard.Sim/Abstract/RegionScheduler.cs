@@ -6,13 +6,15 @@ using Ravensguard.Sim.WorldGen.Region;
 namespace Ravensguard.Sim.Abstract;
 
 /// <summary>What one <see cref="RegionScheduler.Update"/> did (counts and wall time), for the perf report and the tests.</summary>
-public sealed record SchedulerReport(int Joined, int PagedOut, int PageInRequested, int HourlySteps, int DaysSteps, double Ms);
+/// <param name="DaysSteps">Whole days of region time the Daily regions advanced this hour (their hour steps / 24).</param>
+/// <param name="DailyHourSteps">Hour steps the Daily regions advanced this hour (the work the staggered schedule spreads over the day).</param>
+public sealed record SchedulerReport(int Joined, int PagedOut, int PageInRequested, int HourlySteps, int DaysSteps, double Ms, int DailyHourSteps = 0);
 
 /// <summary>
 /// Drives each generated region's abstract tick at its level (seamless-regions spec 3.4, 3.5; abstract spec 3.3). A region's level is a pure function of its
 /// Chebyshev distance to the hero's ring region and of whether it is generated, so it never depends on the order regions were visited or generated:
 /// ring 0 is <see cref="RegionLevel.Live"/> and ring 1 <see cref="RegionLevel.Detailed"/> (both stepped every game hour), ring 2 <see cref="RegionLevel.Daily"/> (stepped
-/// in whole days when the day turns), anything further is <see cref="RegionLevel.Paged"/> (written to the pager, dropped from memory, caught up on return),
+/// in <see cref="DailySliceHours"/>-hour slices staggered by region id), anything further is <see cref="RegionLevel.Paged"/> (written to the pager, dropped from memory, caught up on return),
 /// and a region never generated is <see cref="RegionLevel.Abstract"/> (continental numbers only, nothing here).
 /// The steps are the abstract tick's own (a region's <see cref="WorldTicker"/>), so a region's records at hour H are the same whatever levels it passed through
 /// (note N13: the systems have no daily-mode kernel yet, so Daily saves scheduling, not CPU).
@@ -26,6 +28,19 @@ public sealed class RegionScheduler
     public int DailyRing { get; init; } = 2;
     /// <summary>Regions stepped at the same time (they are independent: own records, chronicle and id counters).</summary>
     public int MaxParallel { get; init; } = Math.Max(1, Math.Min(4, Environment.ProcessorCount));
+    /// <summary>
+    /// A Daily region catches up in slices of this many hours, each region on its own phase (<c>hour - id</c> modulo the slice), so no barrier carries every daily region's work at once
+    /// (13 daily regions on one day boundary cost 340 to 600 ms in a single hour; spread, a barrier carries about one slice in <c>DailySliceHours</c> of them). Pure in (hour, region id).
+    /// </summary>
+    public const int DailySliceHours = 6;
+
+    /// <summary>The hour a Daily region is stepped to at barrier <paramref name="hour"/>: the latest hour at or before it that is on the region's own slice phase.</summary>
+    public static long DailyTarget(long hour, int regionId)
+    {
+        long m = ((hour - regionId) % DailySliceHours + DailySliceHours) % DailySliceHours;
+        return hour - m;
+    }
+
     /// <summary>Every earlier hour of a Daily region that has not yet been stepped is run before the hero's region needs it; see <see cref="Update"/>.</summary>
     public SchedulerReport Last { get; private set; } = new(0, 0, 0, 0, 0, 0);
 
@@ -66,11 +81,10 @@ public sealed class RegionScheduler
         foreach (int id in Records.Pager.Ids)
         {
             var rc = RegionCoord.FromId(id);
-            if (Records.TryGet(rc) == null && rc.Chebyshev(ringRegion) <= DailyRing) { Records.PageIn(rc, rc.Chebyshev(ringRegion)); requested++; }
+            if (Records.TryGet(rc) == null && rc.Chebyshev(ringRegion) <= DailyRing) { Records.PageIn(rc, rc.Chebyshev(ringRegion), now.TotalHours); requested++; }
         }
         long hour = now.TotalHours;
-        long dayStart = hour - hour % 24;
-        int hourly = 0, days = 0;
+        int hourly = 0, dailyHours = 0;
         var work = Records.Resident;
         long[] before = new long[work.Count];
         for (int i = 0; i < work.Count; i++) before[i] = work[i].HourDone;
@@ -78,14 +92,14 @@ public sealed class RegionScheduler
         Parallel.For(0, work.Count, opt, i =>
         {
             var rw = work[i];
-            long target = rw.Level is RegionLevel.Live or RegionLevel.Detailed ? hour : dayStart;
+            long target = rw.Level is RegionLevel.Live or RegionLevel.Detailed ? hour : DailyTarget(hour, rw.Coord.Id);
             rw.AdvanceTo(target);
         });
         for (int i = 0; i < work.Count; i++)
         {
             long steps = work[i].HourDone - before[i];
-            if (work[i].Level == RegionLevel.Daily) days += (int)(steps / 24); else hourly += (int)steps;
+            if (work[i].Level == RegionLevel.Daily) dailyHours += (int)steps; else hourly += (int)steps;
         }
-        return Last = new SchedulerReport(joined, paged, requested, hourly, days, sw.Elapsed.TotalMilliseconds);
+        return Last = new SchedulerReport(joined, paged, requested, hourly, dailyHours / 24, sw.Elapsed.TotalMilliseconds, dailyHours);
     }
 }

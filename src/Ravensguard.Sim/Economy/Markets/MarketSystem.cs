@@ -224,6 +224,36 @@ public sealed class MarketSystem
         return total;
     }
 
+    /// <summary>The callback of a household's durable order: the new pair, set or tool replaces the worn one (consumed in service) and the due count falls.</summary>
+    public Action<TradeResult> DurableHook(int hh, int k)
+    {
+        var party = HouseholdParty(hh); ushort g = _durable[k]; int idx = hh * EconomyState.Durables + k;
+        return res =>
+        {
+            if (res.Qty <= 0) return;
+            party.Store.Destroy(g, res.Qty, DestroyReason.Worn);
+            Econ.DueDurables[idx] = (byte)Math.Max(0, Econ.DueDurables[idx] - (int)res.Qty);
+        };
+    }
+
+    private MarketParty?[] _stewards = [];
+
+    /// <summary>The steward of a fief (relief purchases): a party over the fief's treasury purse and chest, made once (taxes spec 3.6).</summary>
+    public MarketParty Steward(int fief)
+    {
+        var reg = Pop.Region;
+        if (_stewards.Length != reg.Fiefs.Count) _stewards = new MarketParty?[reg.Fiefs.Count];
+        return _stewards[fief] ??= new MarketParty(reg.Fiefs[fief].Id, Econ.Ledger.Open(PurseKind.Treasury, reg.Fiefs[fief].Id), Econ.OpenStore(StoreKind.Chest, reg.Fiefs[fief].Id, 0, 0, enforce: false), PartyKind.Household, 1_000_000 + fief);
+    }
+
+    /// <summary>The steward party whose fief has this id, or null.</summary>
+    public MarketParty? StewardById(EntityId id)
+    {
+        var fiefs = Pop.Region.Fiefs;
+        for (int f = 0; f < fiefs.Count; f++) if (fiefs[f].Id == id) return Steward(f);
+        return null;
+    }
+
     // ---------- household shopping (households spec 3.4) ----------
 
     /// <summary>
@@ -282,16 +312,7 @@ public sealed class MarketSystem
             if (due == 0) continue;
             ushort g = _durable[k];
             if (book.Goods[g].StockUnits <= 0) continue;
-            book.Post(new BuyOrder(party, g, due, 2000)
-            {
-                Priority = 6,
-                OnFilled = res =>
-                {
-                    if (res.Qty <= 0) return;
-                    party.Store.Destroy(g, res.Qty, DestroyReason.Worn);              // the new pair, set or tool replaces the worn one: consumed in service
-                    Econ.DueDurables[idx] = (byte)Math.Max(0, Econ.DueDurables[idx] - (int)res.Qty);
-                },
-            });
+            book.Post(new BuyOrder(party, g, due, 2000) { Priority = 6, OnFilled = DurableHook(hh, k), HookKind = 2, HookArg = idx });
             posted++;
         }
         return posted;

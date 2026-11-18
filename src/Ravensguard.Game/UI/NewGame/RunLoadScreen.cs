@@ -85,17 +85,21 @@ public partial class RunLoadScreen : Control
         _at = 3;
         // the abstract world of the run: the home region's records from their sections, the other regions' sections waiting in a folder until the hero comes near
         var runtime = new WorldRuntime(state, content.Db, StreetSource.MakePager());
-        if (ct.IsCancellationRequested) { runtime.Dispose(); ct.ThrowIfCancellationRequested(); }
-        var region = state.Population.Region;
-        var codex = CodexBook.Build(world.History, region, bi.Rules);
-        if (state.Live == null && state.Codex != null) codex.Apply(state.Codex); // a save made before the live section existed (the build's first save)
-        string start = "";
-        if (state.Live == null)
+        try
         {
-            var origin = lib.ReadRunInfo(bi.Entry.WorldId, RunCatalog.RunOf(bi.Entry.Slot) is { Length: > 0 } runOf ? runOf : bi.Entry.Slot) is { } info && content.Db.TryGet<Ravensguard.Content.OriginDef>(info.OriginId, out var o) ? o : null;
-            start = RegionBuildScreen.ChooseStart(region, origin);
+            if (ct.IsCancellationRequested) ct.ThrowIfCancellationRequested();
+            var region = state.Population.Region;
+            var codex = CodexBook.Build(world.History, region, bi.Rules);
+            if (state.Live == null && state.Codex != null) codex.Apply(state.Codex); // a save made before the live section existed (the build's first save)
+            string start = "";
+            if (state.Live == null)
+            {
+                var origin = lib.ReadRunInfo(bi.Entry.WorldId, RunCatalog.RunOf(bi.Entry.Slot) is { Length: > 0 } runOf ? runOf : bi.Entry.Slot) is { } info && content.Db.TryGet<Ravensguard.Content.OriginDef>(info.OriginId, out var o) ? o : null;
+                start = RegionBuildScreen.ChooseStart(region, origin);
+            }
+            return new Loaded(state, file.Header, world, codex, start, runtime);
         }
-        return new Loaded(state, file.Header, world, codex, start, runtime);
+        catch { runtime.Dispose(); throw; } // a failed or cancelled load leaves no worker and no page folder behind
     }
 
     void Refresh()

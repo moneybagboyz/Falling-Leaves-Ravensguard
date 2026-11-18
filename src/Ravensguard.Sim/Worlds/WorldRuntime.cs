@@ -31,11 +31,11 @@ public sealed record RuntimeSnapshot(long Hour, int Resident, int Detailed, int 
 /// </summary>
 public sealed class WorldRuntime : IDisposable
 {
-    public WorldState State { get; }
-    public RegionServices Services { get; }
-    public RegionManager Manager { get; }
-    public RegionRecordSet Records { get; }
-    public RegionScheduler Scheduler { get; }
+    public WorldState State { get; private set; }
+    public RegionServices Services { get; private set; }
+    public RegionManager Manager { get; private set; }
+    public RegionRecordSet Records { get; private set; }
+    public RegionScheduler Scheduler { get; private set; }
     public HeroRegionTracker Hero { get; private set; }
 
     private readonly BlockingCollection<Action> _jobs = new();
@@ -70,6 +70,13 @@ public sealed class WorldRuntime : IDisposable
     /// </summary>
     public WorldRuntime(WorldState state, ContentDatabase content, IRegionPager? pager = null, bool trimTerrain = true, int dailyRing = 1, int maxParallel = 0, RegionManager? manager = null)
     {
+        try { Init(state, content, pager, trimTerrain, dailyRing, maxParallel, manager); }
+        catch { (pager as IDisposable)?.Dispose(); throw; } // a failed construction must not leave the pager's temp folder behind
+    }
+
+    [System.Diagnostics.CodeAnalysis.MemberNotNull(nameof(State), nameof(Services), nameof(Manager), nameof(Records), nameof(Scheduler), nameof(Hero), nameof(_snapshot))]
+    private void Init(WorldState state, ContentDatabase content, IRegionPager? pager, bool trimTerrain, int dailyRing, int maxParallel, RegionManager? manager)
+    {
         State = state;
         var home = state.HomeRegion;
         Services = new RegionServices(state.Seed, content, state.Continent, home) { History = state.History };
@@ -86,7 +93,7 @@ public sealed class WorldRuntime : IDisposable
         Records.AdoptHome(homeWorld);
         state.HomeRecords = homeWorld;
         state.Regions = Records;
-        if (state.RegionSections.Count > 0) Records.AttachSections(state.RegionSections);
+        if (state.RegionSections.Count > 0) { Records.AttachSections(state.RegionSections); state.RegionSections = new SortedDictionary<int, byte[]>(); } // the pager holds them now
         Scheduler = new RegionScheduler(Records) { DailyRing = dailyRing, MaxParallel = maxParallel > 0 ? maxParallel : Math.Max(1, Math.Min(2, Environment.ProcessorCount - 2)) };
         Hero = new HeroRegionTracker(home);
         _hourDone = homeWorld.HourDone;
@@ -118,6 +125,7 @@ public sealed class WorldRuntime : IDisposable
     {
         long t0 = Stopwatch.GetTimestamp();
         Hero.Update(heroXM, heroYM);
+        Manager.NowHour = now.TotalHours; // the game hour a region asked for now is anchored to (RegionManager.RequestedHour)
         if (_worker != null && !_hourBusy && Volatile.Read(ref _fault) == null && now.TotalHours > HourDone)
         {
             _hourBusy = true;
@@ -133,23 +141,42 @@ public sealed class WorldRuntime : IDisposable
     /// Runs <paramref name="job"/> on the tick worker between two hours (nothing is stepping, so every record may be read) and returns its result. This is how a save
     /// copies the world: the main thread keeps drawing while the worker copies.
     /// </summary>
-    public Task<T> AtBarrier<T>(Func<T> job)
+    public Task<T> AtBarrier<T>(Func<T> job) => AtBarrier(job, allowFaulted: false);
+
+    /// <summary>
+    /// The same. After the tick has faulted the records may be half-stepped, so a job is refused (the task fails with an <see cref="InvalidOperationException"/> that carries the fault)
+    /// unless <paramref name="allowFaulted"/>: saves must not overwrite good slots with that state.
+    /// </summary>
+    public Task<T> AtBarrier<T>(Func<T> job, bool allowFaulted)
     {
         var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
+        if (!allowFaulted && Fault is { } f0) { tcs.SetException(FaultedError(f0)); return tcs.Task; }
         if (_worker == null) { try { tcs.SetResult(job()); } catch (Exception e) { tcs.SetException(e); } return tcs.Task; }
-        _jobs.Add(() =>
+        try
         {
-            _jobRunning = true;
-            try { tcs.SetResult(job()); } catch (Exception e) { tcs.SetException(e); } finally { _jobRunning = false; }
-        });
+            _jobs.Add(() =>
+            {
+                _jobRunning = true;
+                try
+                {
+                    if (!allowFaulted && Fault is { } f) throw FaultedError(f); // it faulted while the job waited
+                    tcs.SetResult(job());
+                }
+                catch (Exception e) { tcs.SetException(e); }
+                finally { _jobRunning = false; }
+            });
+        }
+        catch (InvalidOperationException) { tcs.SetException(new ObjectDisposedException(nameof(WorldRuntime))); } // adding is completed: the runtime is disposed
         return tcs.Task;
     }
+
+    private static InvalidOperationException FaultedError(Exception fault) => new("The world tick failed, so the world cannot be saved now (the records may be half-stepped): " + fault.GetBaseException().Message, fault);
 
     /// <summary>Blocks until the worker has nothing queued or running (tests, leaving the game). Hours still owed by the clock are not started.</summary>
     public void Quiesce()
     {
         if (_worker == null) return;
-        AtBarrier(() => 0).GetAwaiter().GetResult();
+        AtBarrier(() => 0, allowFaulted: true).GetAwaiter().GetResult();
     }
 
     /// <summary>Tests and tools: steps every owed hour up to <paramref name="now"/> on the calling thread (no worker may be running), then returns.</summary>
@@ -168,6 +195,7 @@ public sealed class WorldRuntime : IDisposable
             try { job(); }
             catch (Exception e) { Interlocked.CompareExchange(ref _fault, e, null); _hourBusy = false; }
         }
+        Cleanup();                                          // disposed: nothing is queued any more, nothing steps
     }
 
     private void RunHour(long h, RegionCoord ring)
@@ -175,6 +203,8 @@ public sealed class WorldRuntime : IDisposable
         var sw = Stopwatch.StartNew();
         var report = Scheduler.Update(GameTime.FromGameHours(h), ring);
         Manager.ReleaseDistantGenerators(State.HomeRegion);
+        Manager.EvictDistantTerrainOnly(State.HomeRegion, ring);
+        Manager.PrewarmGenerator();
         double ms = sw.Elapsed.TotalMilliseconds;
         _hoursStepped++; _maxHourMs = Math.Max(_maxHourMs, ms);
         _snapshot = MakeSnapshot(report, ms, h);             // the barrier: one reference swap
@@ -200,12 +230,21 @@ public sealed class WorldRuntime : IDisposable
         return new RuntimeSnapshot(hour, rows.Count, detailed, daily, paged, alive, hh, _hoursStepped, hourMs, _maxHourMs, report, rows);
     }
 
+    /// <summary>
+    /// Stops the runtime without blocking the caller for long: the worker finishes the hour in flight and any save job already queued, then disposes the records and the pager itself.
+    /// Waits at most a quarter of a second (the idle case is instant).
+    /// </summary>
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
         _jobs.CompleteAdding();
-        bool stopped = _worker?.Join(5_000) ?? true;       // a save job still queued is run first; an hour step in flight finishes
-        if (stopped) foreach (var rw in Records.Resident) rw.Dispose();
+        if (_worker == null) { Cleanup(); return; }
+        _worker.Join(250);                                  // still busy: the worker cleans up when it is done (WorkerLoop)
+    }
+
+    private void Cleanup()
+    {
+        foreach (var rw in Records.Resident) rw.Dispose();
         (Records.Pager as IDisposable)?.Dispose();
     }
 }

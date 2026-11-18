@@ -1,0 +1,38 @@
+# Phase 2 code and bug check
+
+Reviewed at 55ce471: the seamless continent (regions, paging, per-region saves), the runtime that ticks it beside the live game, and the tests around them. Findings were checked with probes (`review2/p1`, `p2`, `p3`) and fixed with regression tests that failed before the fix. The economy review runs in parallel and is not covered here.
+
+- **Findings:** 13 in this section. 12 fixed; #2 (economy, parish, labour and trade state not saved) is with the economy agent.
+- **Save format:** v1 -> v2 (baseline guard). The default migrator takes v1 saves unguarded.
+- **Tests:** 18 new in `RegionsC/Phase2ReviewTests.cs` and `SeamMarginTests.cs` (whole grid, both seeds); build has 0 warnings.
+- **Checks:** `--smoke`, `--check-keymap` and `--selftest` pass; golden hashes unchanged (no generation output changed).
+
+## Seamless continent, saves and runtime (13 findings)
+| # | Severity | Defect | Fix |
+|---|---|---|---|
+| 1 | High | Chunk snapshots and deltas in regions without records (sea, wilderness) were in no saved section when a runtime was attached; the chunks regenerated on load, against plan 2.2 | The world's chunk section also takes every entry whose region has no section of its own (`SaveView.InMainChunkSection`); probe p1 is a test (delta and first-visit snapshot both come back) |
+| 2 | Medium-high | Economy counters, parish, labour and trade state are not saved | **With the economy agent.** Hooks left in `Save/`: see the list at the end |
+| 3 | Medium-high | Catch-up was not a pure function of (records, hour): the coarse/full boundary was `hour - 72`, so the result depended on the join hour, which depends on worker build time | The phases an hour runs depend on that hour alone: hours up to the last day boundary at or before `anchor - 72` run coarse, the rest full. The anchor is the game hour the region was asked for (`RegionManager.RequestedHour`, from the game clock or the barrier hour). Tests: any stops and any join delay give the same hash; with no anchor every hour is full (exact) |
+| 4 | Medium | The AtBarrier save read the resident set and the pager ids separately: a region attached by the main thread between the two was lost, and `Sync` could delete the page file under the reader | `RegionRecordSet.CaptureView` takes the resident list and the paged bytes under one lock, and `Sync` attaches (insert, delete file, absorb chunks) under the same lock. A forced-interleaving test attaches a region on another thread at the moment the pager lists its ids |
+| 5 | Medium | Diff-against-baseline saves had no guard against a regenerated region that differs | Region sections and the home meta store a baseline hash (regenerated population, households, lots and terrain) and the region-generator version; loading regenerates, compares and refuses with a message naming the region or the version. `SaveFormat.CurrentVersion` 2, `SaveMigrator.CreateDefault` takes v1 saves unguarded. Chunk snapshots already carry generator version and content hash each (verified by test) |
+| 6 | Medium | Daily regions ran all 24 hours at the day boundary: 13 of them cost 340-600 ms in one barrier (budget 150 ms) | `DailyTarget`: 6-hour slices, each region on its own phase by id, pure in (hour, id). Tests: steps in one barrier are bounded by the schedule (12 against 168 for 7 daily regions), and the slowest barrier is under the budget (`TestBudget`; best of up to three passes of a day and a half, so a noisy pass is tolerated and a daily burst is not) |
+| 7 | Medium | `MovePerson` had no callers and dropped the spouse link, left minors behind and cleared pregnancy | `MoveHousehold` moves a household with all members, kin links, pregnancies, coin and stock; kin who stay become foreign references (`PersonTable.ForeignKin`, saved). `MovePerson` refuses any move that would split a family (`CanMovePerson`). Coin and goods are conserved across the two regions (test: totals, both audits, both mass audits, ticking afterwards, save round trip). Wiring to migration and caravans is later work (spec N33) |
+| 8 | Low-medium | Terrain-only regions were never evicted (3.2 MB each, up to 256) | `EvictDistantTerrainOnly` every hour: beyond the hysteresis distance of every traveller and more than one region from the ring region |
+| 9 | Low-medium | After the tick faulted, saves still ran on half-stepped records and could overwrite good slots | `AtBarrier` refuses jobs after a fault (also those already queued); the existing save-failed toast or modal shows the message. Ironman quit asks the player. `Quiesce` still works |
+| 10 | Low-medium | A released chunk generator was rebuilt (about 100 ms) on the main thread when the hero came back | `PrewarmGenerator` on the worker, one per hour, for built regions within the trigger distance of a traveller |
+| 11 | Low | A region whose build always fails was retried forever and threw on the main thread | 3 tries with doubling waits, then marked failed, logged once (`BuildFailed`, a warning in the game) and left alone; `ClearFailure` tries again |
+| 12 | Low | Temp pager folders leaked on a crash or a failed load; loaded sections were kept twice; `Dispose` could block the main thread for 5 s | Construction failures and failed or cancelled loads dispose the runtime and its pager; folders older than a day are swept; `RegionSections` is cleared once the pager holds them; `Dispose` waits at most 250 ms and a busy worker cleans up itself |
+| 13 | Low | Test gaps | Hour-step budget asserted (with #6); the page-out test asserts hour and hash after `AdvanceTo`; `A_region_section_...` fails if it checks fewer than two regions; the seam margins are a generator invariant (`RegionSeamMargins`) checked over all 256 regions of both seeds (the old 3 x 3 block hid lots at 229 m, so the lot floor is 200 m) |
+
+## Hooks for #2 (economy, parish, labour and trade state)
+- A region's own state goes in `RegionSectionData` (`Save/RegionSave.cs`): the next free key is 14. Add the DTO there and capture it in `RegionWorld.Capture`, restore it in `RegionWorld.Restore` (both run on the same code path for resident and paged regions, so paging never changes a save).
+- The home region's state goes in additive sections: add the DTO to `LiveCapture`, a section name next to `WorldSave.EconomySection`, an `if (X != null) sections.Add(...)` in `LiveCapture.Encode`, and its decode in `WorldSave.Restore`. `WorldMeta` has key 17 free.
+- Diff-against-baseline is only for people; a new section needs no guard unless it is diffed.
+- A change to what is stored is a format bump: raise `SaveFormat.CurrentVersion` and register a step in `SaveMigrator.CreateDefault`.
+
+## Known limits
+- **Coarse catch-up is an approximation** of hourly truth, by design (N14); only the independence of stops and join time is guaranteed. The anchor is the earliest game hour a region was asked for; two parties asking at different hours before the join use the earlier.
+- **Coin that crosses a border** is melted and struck again (`RegionTransfer.CoinOut`/`CoinIn`) because the ledger has no emigrate reason; item instances stay in the origin. The economy owner may add both.
+- **v1 saves** load unguarded. A v1 save made while a record-less region held chunks has already lost them.
+- **Seam margins:** the 1,200 m and 400 m margins of the original spec remain unimplemented (N25); the guarantee they were for is pinned over the whole grid.
+- **Pump spike:** `A_new_game_ticks_three_days_at_8x...` asserts a 20 ms worst case for `Pump`; a single 25 ms call (a process GC pause, not the pump) failed it once in a full parallel run.
