@@ -20,9 +20,7 @@ public class VitalGoldenTests
         var h = VitalMath.Hazard(R, 30, nutritionCd: 800, crowdingPct: 140, town: true, cold: false, outbreakMultPermille: 1000);
         Assert.Equal(528, h.TotalPpm);                                    // 200 x 2.0 x 1.1 x 1.2
         Assert.Equal(528, VitalMath.DeathPpm(R, 30, 800, 140, true, false, 1000));
-        Assert.Equal(200, h.Other);                                       // the age-30 base
-        Assert.Equal(200, h.Hunger);                                      // the reserve doubled the base
-        Assert.Equal(128, h.Disease + (h.TotalPpm - h.Other - h.Hunger - h.Disease - h.Age - h.Cold)); // crowding 40 + town disease 88
+        Assert.Equal((0, 240, 200, 88, 0), (h.Age, h.Other, h.Hunger, h.Disease, h.Cold));   // base 200 + crowding 40; hunger 200; town disease 88
     }
 
     [Theory] // G-P3
