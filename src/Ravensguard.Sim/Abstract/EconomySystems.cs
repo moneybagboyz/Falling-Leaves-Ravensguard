@@ -161,6 +161,13 @@ public sealed class HouseholdShoppingSystem : AbstractSystem
     }
 }
 
+/// <summary>H4, hours 1 to 23: the weather's snow chain of a few farmed cells is computed ahead (a cache, decision I40).</summary>
+public sealed class WeatherPrewarmSystem : AbstractSystem
+{
+    public WeatherPrewarmSystem() : base("weather-prewarm", TickPhase.H4DailySlice, SystemOrder.MarketDaily + 60) { }
+    public override void Step(TickContext ctx) => ctx.World.Get<EconomyWorld>()?.Farming.PrewarmWeather(ctx.Time);
+}
+
 /// <summary>H4 slice, after the shopping: the households of the hour whose day of the season it is spend what they hold above their reserve (integration decision I37).</summary>
 public sealed class HouseholdSpendingSystem : AbstractSystem
 {

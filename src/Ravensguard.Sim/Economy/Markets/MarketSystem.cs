@@ -141,10 +141,17 @@ public sealed class MarketSystem
                 _marketTown[s] = best;
             }
         }
-        int town = _marketTown[settlement];
-        if (town < 0 || Books[town] == null || ReferenceEquals(Books[town], home)) return home;
-        var tb = Books[town]!;
+        var tb = MarketTownBook(settlement);
+        if (ReferenceEquals(tb, home)) return home;
         return tb.MidMicro(good) * 1000 > home.MidMicro(good) * 1150 ? tb : home;
+    }
+
+    /// <summary>The book of the town nearest the settlement (its own book when it is a town, or when the region has none).</summary>
+    public MarketBook MarketTownBook(int settlement)
+    {
+        if (_marketTown == null) BestBookFor(settlement, 0);
+        int town = _marketTown![settlement];
+        return town < 0 || Books[town] == null ? BookForSettlement(settlement) : Books[town]!;
     }
     public MarketBook BookForHousehold(int hh) => BookForSettlement(Pop.Households.Settlement[hh]);
     public IEnumerable<MarketBook> AllBooks() { foreach (var b in Books) if (b != null) yield return b; }

@@ -201,6 +201,18 @@ public sealed partial class FarmingSystem
         return pick;
     }
 
+    /// <summary>
+    /// Keeps the weather's snow-depth chain of the farmed cells warm, a few cells an hour (integration decision I40): the chain restarts at midsummer, and the first
+    /// winter query of each cell then walked 60 to 120 days of weather, all at hour 0 of one day (a 160 ms hour). A cache only: the values are pure functions of
+    /// the cell and day, so the results never change.
+    /// </summary>
+    public void PrewarmWeather(GameTime now)
+    {
+        int h = now.Hour; if (h == 0) return;
+        long day = now.TotalDays;
+        for (int i = h - 1; i < _usedCells.Length; i += 23) Weather.SnowDepthCm(CellContinent(_usedCells[i]), day);
+    }
+
     private int CellContinent(int local) => (Region.CellY + local / 16) * WorldGen.Continent.Size + Region.CellX + local % 16;
     private long YearHour(int year) => (long)year * TimeConst.DaysPerYear * 24;
 

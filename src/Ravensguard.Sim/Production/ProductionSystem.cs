@@ -569,8 +569,9 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
             var kind = KindOf(b);
             if (kind.Trader)
             {
-                // a merchant pays out half of the cash it gained over the season (profit realised); its working capital stays
-                long gain = cash - Math.Max(b.CashStart, 2 * b.Capital), div = gain > 0 ? gain * Labour.PayoutPct / 100 : 0;
+                // a merchant pays out half of the cash it holds above twice its working capital each season (integration decision I41; was half of the season's gain
+                // over the cash it kept last season, a ratchet: the stalls' boxes held 47 percent of the region's coin by year 40)
+                long gain = cash - 2 * b.Capital, div = gain > 0 ? gain * Labour.PayoutPct / 100 : 0;
                 if (div > 0 && b.OwnerHousehold >= 0 && ledger.Transfer(b.Purse, Econ.HouseholdPurse[b.OwnerHousehold], new Coin(div), TransferReason.Dividend)) { b.Dividends += div; b.DividendsSeason += div; cash -= div; }
                 // a stall with no coin and nothing on the book two seasons running has failed (integration decision I38): it closes, and opens again under a new
                 // merchant with his own capital when the book needs one (LabourMarket.Reopen), instead of standing as a broke merchant for ever

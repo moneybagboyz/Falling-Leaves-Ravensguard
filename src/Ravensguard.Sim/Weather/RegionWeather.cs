@@ -173,6 +173,18 @@ public sealed class RegionWeather
 
     private static long DayKey(int cell, long day) => (day << 20) | (uint)cell;
 
+    /// <summary>
+    /// Trims a full cache to the days a query near <paramref name="day"/> can still ask for (the snow chain reaches back two midsummers, at most 130 days), instead of
+    /// clearing it: a cleared snow cache made the next winter query re-chain 120 days for every cell, a 160 ms hour (integration decision I40). Values are pure functions
+    /// of the cell and day, so what the cache holds never changes a result.
+    /// </summary>
+    private static void Prune<T>(ConcurrentDictionary<long, T> cache, long day)
+    {
+        long keepFrom = day - 130;
+        foreach (var k in cache.Keys) if ((k >> 20) < keepFrom || (k >> 20) > day + 130) cache.TryRemove(k, out _);
+        if (cache.Count > 400_000) cache.Clear();
+    }
+
     private DaySummary Day(int cell, long day)
     {
         long key = DayKey(cell, day);
@@ -186,7 +198,7 @@ public sealed class RegionWeather
             t += a.Layers.Total;
         }
         d = new DaySummary(rain, snow, t / 6);
-        if (_days.Count > 400_000) _days.Clear();
+        if (_days.Count > 400_000) Prune(_days, day);
         _days[key] = d;
         return d;
     }
@@ -226,7 +238,7 @@ public sealed class RegionWeather
             depth = Fixed.Clamp(depth, Fixed.Zero, Fixed.FromInt(200));
             if (ChainStart(d) == start) _snow[DayKey(cell, d)] = depth.Raw;
         }
-        if (_snow.Count > 400_000) _snow.Clear();
+        if (_snow.Count > 400_000) Prune(_snow, day);
         return depth;
     }
 
@@ -253,7 +265,7 @@ public sealed class RegionWeather
         Span<Fixed> hist = stackalloc Fixed[12];
         for (int i = 0; i < hist.Length; i++) hist[i] = Day(cell, day - 1 - i).RainMm;
         v = HeavyRun(hist, _s.HeavyDayMm, _s.FordRecedeDays);
-        if (_river.Count > 400_000) _river.Clear();
+        if (_river.Count > 400_000) Prune(_river, day);
         _river[key] = v;
         return v;
     }

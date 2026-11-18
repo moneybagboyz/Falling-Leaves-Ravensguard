@@ -19,7 +19,7 @@ namespace Ravensguard.Sim.Abstract;
 /// </summary>
 public sealed class HouseholdSpending
 {
-    public const int ServiceDaysMax = 15, PoorBelowMites = 3000, AlmsPerMemberMites = 1000, OrderMaxRatioPermille = 1600;
+    public const int ServiceDaysMax = 15, PoorBelowMites = 3000, AlmsPerMemberMites = 1000, OrderMaxRatioPermille = 2000;
     public const int RolePeasant = 0, RoleBurgher = 1, RoleGentry = 2, RoleLord = 3, RoleParish = 4;
     private static readonly string[] RoleIds = ["peasant", "burgher", "gentry", "lord", "parish"];
 
@@ -88,8 +88,8 @@ public sealed class HouseholdSpending
         WagesMites += Hire(hh, s, chest, purse, wages);
         WorksLabourMites += Hire(hh, s, chest, purse, worksLabour);
         // then the market: craft goods and materials as buy orders for the next session
-        GoodsBudgetMites += Order(hh, s, _goods[role], goods, 3);
-        MaterialsBudgetMites += Order(hh, s, _materials[role], materials, 4);
+        GoodsBudgetMites += Order(hh, s, _goods[role], goods, 3, role);
+        MaterialsBudgetMites += Order(hh, s, _materials[role], materials, 4, role);
     }
 
     /// <summary>A lord keeps a month of his manors' wage bill before he spends.</summary>
@@ -119,10 +119,14 @@ public sealed class HouseholdSpending
     {
         if (_poor != null) return _poor;
         var p = _w.People; var hht = _w.Households; var e = _w.Economy; int day = (int)(_w.State.HourDone / 24);
+        // staff counted from the businesses now, not from the labour market's snapshot (that one is taken at the day's hiring and goes stale with the hourly quits;
+        // a loaded world would take it fresh and differ, review finding 2)
+        var staff = new bool[p.Count];
+        foreach (var b in _ew.Production.Businesses) foreach (int x in b.Staff) if (x < staff.Length) staff[x] = true;
         var tmp = new Dictionary<int, List<(long Coin, int Person)>>();
         for (int i = 0; i < p.Count; i++)
         {
-            if (p.Status[i] != PersonStatus.Alive || _ew.Labour.IsStaff(i)) continue;
+            if (p.Status[i] != PersonStatus.Alive || staff[i]) continue;
             var occ = p.Occupation[i]; if (occ is not (Occupation.None or Occupation.Labourer or Occupation.Servant) || (occ == Occupation.Servant && p.Employer[i] >= 0)) continue;
             int age = p.AgeYears(i, day); if (age < 16 || age >= 60) continue;
             int h = p.Household[i]; if (h < 0 || hht.MemberCount[h] == 0 || hht.Class[h] == SocialClass.Gentry) continue;
@@ -155,12 +159,15 @@ public sealed class HouseholdSpending
         return paid;
     }
 
-    /// <summary>The lists to draw from: the settlement's, then the other settlements of its fief in ascending index.</summary>
+    /// <summary>The lists to draw from: the settlement's, then the other settlements of its fief, then the rest of the region, each in ascending index (a rich lord's
+    /// works and alms reach beyond his own villages once those are served).</summary>
     private IEnumerable<List<int>> Lists(Dictionary<int, List<int>> by, int settlement)
     {
         if (by.TryGetValue(settlement, out var own)) yield return own;
-        var reg = _w.Population.Region; int f = reg.Settlements[settlement].FiefIndex; if (f < 0) yield break;
-        foreach (int s in by.Keys.Order()) if (s != settlement && reg.Settlements[s].FiefIndex == f) yield return by[s];
+        var reg = _w.Population.Region; int f = reg.Settlements[settlement].FiefIndex;
+        var keys = by.Keys.Order().ToList();
+        if (f >= 0) foreach (int s in keys) if (s != settlement && reg.Settlements[s].FiefIndex == f) yield return by[s];
+        foreach (int s in keys) if (s != settlement && (f < 0 || reg.Settlements[s].FiefIndex != f)) yield return by[s];
     }
 
     // ---------- alms: the destitute households of the village, then of the fief ----------
@@ -206,10 +213,11 @@ public sealed class HouseholdSpending
 
     // ---------- the market: craft goods and building materials ----------
 
-    private long Order(int hh, int settlement, (ushort Good, int Weight)[] mix, long budget, byte hook)
+    private long Order(int hh, int settlement, (ushort Good, int Weight)[] mix, long budget, byte hook, int role)
     {
         if (budget <= 0 || mix.Length == 0) return 0;
-        var ms = _ew.Markets; var book = ms.BookForSettlement(settlement); var party = ms.HouseholdParty(hh);
+        // a peasant buys at his village market; the lord, the gentry, the parish and the burghers buy their cloth, candles and stone in the market town
+        var ms = _ew.Markets; var book = role == RolePeasant ? ms.BookForSettlement(settlement) : ms.MarketTownBook(settlement); var party = ms.HouseholdParty(hh);
         int tot = 0; foreach (var (_, wt) in mix) tot += wt;
         long posted = 0;
         foreach (var (g, wt) in mix)
