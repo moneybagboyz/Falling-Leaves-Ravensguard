@@ -8,7 +8,7 @@
   { "type": "vehicle_blueprint", "id": "wheelbarrow", "name": "Wheelbarrow", "base_speed_cmps": 150, "axle_limit_kg": 0, "turning_radius_dm": 10, "hitch": { "slots": 0, "kind": "pushed" }, "driver": 1,
     "legend": { "t": ["barrow_tray", "wheel_solid"], "H": ["handle_bars", "iron_fitting"] }, "rows": [ "H", "t" ], "sprite": "vehicle.wheelbarrow" },
   { "type": "vehicle_blueprint", "id": "handcart", "name": "Handcart", "base_speed_cmps": 150, "axle_limit_kg": 300, "turning_radius_dm": 30, "hitch": { "slots": 0, "kind": "pushed" }, "driver": 1, "caravan_def": "handcart",
-    "legend": { "c": ["cargo_box", "axle_wood", "wheel_solid", "wheel_solid"], "H": ["cargo_box", "handle_bars", "iron_fitting"] }, "rows": [ "c", "H" ], "sprite": "vehicle.handcart" },
+    "legend": { "c": ["cargo_box", "axle_wood", "wheel_solid", "wheel_solid"], "H": ["cargo_box", "handle_bars", "iron_fitting"] }, "rows": [ "H", "c" ], "sprite": "vehicle.handcart" },
   { "type": "vehicle_blueprint", "id": "cart", "name": "Cart", "base_speed_cmps": 250, "axle_limit_kg": 700, "turning_radius_dm": 40, "hitch": { "slots": 1, "max_animals": 2, "kind": "shafts" }, "driver": 1, "passengers": 1, "caravan_def": "cart",
     "legend": { "B": ["frame_plank", "cargo_bed"], "L": ["axle_wood", "wheel_spoked", "iron_tyre", "frame_plank", "cargo_bed"], "R": ["wheel_spoked", "iron_tyre", "frame_plank", "cargo_bed"], "S": ["frame_plank", "seat_bench"], "h": ["shaft_pair"] },
     "rows": [ "BB", "LR", "SS", "hh", "hh" ], "sprite": "vehicle.cart" },
