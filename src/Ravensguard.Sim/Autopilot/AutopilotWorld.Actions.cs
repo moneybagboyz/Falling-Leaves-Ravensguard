@@ -425,11 +425,12 @@ public sealed partial class AutopilotWorld
     }
 
     /// <summary>The settlement whose centre is nearest to the person and within <paramref name="withinMm"/>, or -1.</summary>
-    private int NearestSettlement(AutopilotState st, long withinMm)
+    private int NearestSettlement(AutopilotState st, long withinMm, (long X, long Y)? at = null)
     {
+        long px = at?.X ?? st.PosX, py = at?.Y ?? st.PosY;
         int best = -1; long bd = withinMm;
         var ss = State.Population.Region.Settlements;
-        for (int i = 0; i < ss.Count; i++) { long d = PathPlan.Dist(st.PosX - ss[i].CenterX * 1000L, st.PosY - ss[i].CenterY * 1000L); if (d <= bd) { bd = d; best = i; } }
+        for (int i = 0; i < ss.Count; i++) { long d = PathPlan.Dist(px - ss[i].CenterX * 1000L, py - ss[i].CenterY * 1000L); if (d <= bd) { bd = d; best = i; } }
         return best;
     }
 

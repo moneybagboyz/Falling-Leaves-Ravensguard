@@ -23,14 +23,24 @@ public static class OnboardingSetup
 
     static JobEnv EnvOf(WorldState st, ContentDatabase db) => new() { Ledger = st.Economy!.Ledger, Econ = st.Economy, Pop = st.Population, Tuning = BehaviourContent.From(db).OddJobs };
 
-    /// <summary>The mentor's household is the poster when it can pay; else the first household of the settlement that can, by index.</summary>
-    static int PosterHousehold(WorldState st, int mentorPerson, int settlement, long wage)
+    /// <summary>A good in the household's store to carry, the most of it up to <paramref name="wantG"/> grams (at least two kilograms), or null.</summary>
+    static (ushort Good, long Grams)? Carryable(WorldState st, int household, long wantG)
+    {
+        var e = st.Economy!; if (household < 0 || household >= e.HouseholdCount) return null;
+        (ushort, long)? best = null;
+        foreach (var (g, q) in e.HouseholdStore[household].Rows()) if (q >= 2000 && (best == null || Math.Min(q, wantG) > best.Value.Item2)) best = (g, Math.Min(q, wantG));
+        return best;
+    }
+
+    /// <summary>The mentor's household is the poster when it can pay (and has something to carry when the job is a carry); else the first household of the settlement that can, by index.</summary>
+    static int PosterHousehold(WorldState st, int mentorPerson, int settlement, long wage, long carryG = 0)
     {
         var e = st.Economy!; var pop = st.Population;
-        int h = mentorPerson >= 0 ? pop.People.Household[mentorPerson] : -1;
-        if (h >= 0 && h < e.HouseholdCount && e.Ledger.Balance(e.HouseholdPurse[h]).Mites >= wage + 20) return h;
+        bool Ok(int h) => h >= 0 && h < e.HouseholdCount && e.Ledger.Balance(e.HouseholdPurse[h]).Mites >= wage + 20 && (carryG == 0 || Carryable(st, h, carryG) != null);
+        int m = mentorPerson >= 0 ? pop.People.Household[mentorPerson] : -1;
+        if (Ok(m)) return m;
         for (int k = 0; k < e.HouseholdCount && k < pop.Households.Count; k++)
-            if (pop.Households.Settlement[k] == settlement && e.Ledger.Balance(e.HouseholdPurse[k]).Mites >= wage + 20) return k;
+            if (pop.Households.Settlement[k] == settlement && Ok(k)) return k;
         return -1;
     }
 
@@ -63,7 +73,8 @@ public static class OnboardingSetup
             _ => JobPay.Labour(env.Tuning, env.UnskilledWage, fh.JobHours),
         };
         wage = Math.Max(wage, cfg.MinWageMites);      // the first contract is never so small that the purse shows nothing: the poster's choice, still paid from the poster's own coin
-        int h = PosterHousehold(st, book.MentorPerson, book.MentorSettlement, wage);
+        bool carry = kind is OddJobKind.Haul or OddJobKind.Deliver or OddJobKind.Fetch;
+        int h = PosterHousehold(st, book.MentorPerson, book.MentorSettlement, wage, carry ? fh.JobKg * 1000L : 0);
         if (h < 0) return;
         var table = st.Jobs ??= new JobTable();
         // the destination is JobDistanceM from the mentor, in a direction from stream 0x371
@@ -73,14 +84,13 @@ public static class OnboardingSetup
         var poster = st.Population.Households.IdOf(h);
         var job = table.Post(env, kind, poster, st.Economy!.HouseholdPurse[h], st.HomeRegion.Id, book.MentorSettlement, nowSec, nowSec + cfg.JobDeadlineHours * 3600L, wage, j =>
         {
-            j.Slots = 1; j.Title = fh.JobTitle; j.SrcOwner = poster; j.MinAge = 12;
+            j.Slots = 1; j.Title = fh.JobTitle; j.MinAge = 12;
             if (kind is OddJobKind.Haul or OddJobKind.Deliver or OddJobKind.Fetch)
             {
                 j.P0 = book.MentorX; j.P1 = book.MentorY; j.P2 = ex; j.P3 = ey; j.P5 = fh.JobKg * 1000L;
-                // a real sack out of the poster's own store when it holds one, else a job without goods
-                j.P4 = 0; j.SrcOwner = EntityId.None;
-                foreach (var g in new[] { "oats", "barley", "wheat", "flour", "bread" })
-                    if (st.Economy.Goods.TryIdOf(g, out var gid) && env.StoreOf(poster) is { } store && store.Qty(gid) >= j.P5) { j.P4 = gid; j.SrcOwner = poster; break; }
+                // a real load out of the poster's own store, back into it at the far end: the stock is conserved, the carrying is paid
+                var (gid, grams) = Carryable(st, h, fh.JobKg * 1000L)!.Value;
+                j.P4 = gid; j.P5 = grams; j.SrcOwner = poster; j.DstOwner = poster;
             }
             else { j.P0 = book.MentorX; j.P1 = book.MentorY; j.P4 = fh.JobHours; }
         });
@@ -117,13 +127,13 @@ public static class OnboardingSetup
         var env = EnvOf(st, db); var table = st.Jobs ??= new JobTable();
         long dist = (long)Math.Sqrt(Math.Pow(book.ErrandX - book.StartX, 2) + Math.Pow(book.ErrandY - book.StartY, 2));
         long wage = Math.Max(cfg.MinWageMites, JobPay.Haul(env.Tuning, env.UnskilledWage, dist, 12_000));
-        int h = PosterHousehold(st, book.MentorPerson, book.MentorSettlement, wage);
+        int h = PosterHousehold(st, book.MentorPerson, book.MentorSettlement, wage, 2000);
         if (h >= 0)
         {
-            var poster = st.Population.Households.IdOf(h);
+            var poster = st.Population.Households.IdOf(h); var (egood, egrams) = Carryable(st, h, 12_000)!.Value;
             var job = table.Post(env, OddJobKind.Deliver, poster, st.Economy.HouseholdPurse[h], st.HomeRegion.Id, book.ErrandSettlement, nowSec, nowSec + cfg.LoanDays * DaySec, wage, j =>
             {
-                j.Slots = 1; j.Title = fh.ErrandTitle; j.P0 = j.P2 = book.ErrandX; j.P1 = j.P3 = book.ErrandY; j.P5 = 12_000; j.MinAge = 12;
+                j.Slots = 1; j.Title = fh.ErrandTitle; j.SrcOwner = poster; j.DstOwner = poster; j.P4 = egood; j.P0 = j.P2 = book.ErrandX; j.P1 = j.P3 = book.ErrandY; j.P5 = egrams; j.MinAge = 12;
             });
             if (job != null) { book.ErrandJob = job.Id; book.HasErrandJob = true; }
         }

@@ -1,0 +1,31 @@
+// The town's practice yard (onboarding spec 3.4): a fenced 14 x 10 m ground with three training dummies, a rack of blunted practice weapons (practice_sword, practice_spear, practice_staff: half momentum, edges counted as blunt),
+// a bench, a water trough (a barrel) and a notice board. Gain stops at skill 30; the trainer (a guard) is in the yard from 08:00 to 16:00. The legend's fixtures are placed by the fixtures layer.
+[
+  { "type": "blueprint", "id": "practice_yard", "name": "Practice yard", "wealth": "poor",
+    "legend": { "-": "fence_wood", "g": "gate_wood", ",": "floor_packed_earth", "d": "training_dummy", "r": "weapon_rack", "e": "yard_bench", "Y": "barrel", "n": "notice_board" },
+    "rooms": { ",": "guard" },
+    "rows": [
+      "--------g-----",
+      "-,,,,,,,,,,,,-",
+      "-,,,,,,,,,,,,-",
+      "-,,,,,,,,,,,,-",
+      "-,,,,,,,,,,,,-",
+      "-,,,,,,,,,,,,-",
+      "-,,,,,,,,,,,,-",
+      "-,,,,,,,,,,,,-",
+      "-,,,,,,,,,,,,-",
+      "--------------"
+    ],
+    "fixtures": [
+      "______________",
+      "_n__________r_",
+      "______________",
+      "___d__d__d____",
+      "______________",
+      "______________",
+      "______________",
+      "_e__________Y_",
+      "______________",
+      "______________"
+    ] }
+]

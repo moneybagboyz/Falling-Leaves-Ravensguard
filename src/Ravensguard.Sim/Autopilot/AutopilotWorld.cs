@@ -163,7 +163,7 @@ public sealed partial class AutopilotWorld
         var pop = State.Population; int idx;
         if (st.Person == HeroId)
         {
-            if (Book.StandIn < 0 || Book.StandIn >= pop.People.Count) Book.StandIn = PickStandIn(pop, day);
+            if (Book.StandIn < 0 || Book.StandIn >= pop.People.Count) Book.StandIn = PickStandIn(pop, day, PositionHook?.Invoke(st.Person) is { } here ? NearestSettlement(st, long.MaxValue, here) : -1);
             idx = Book.StandIn;
         }
         else idx = Ctx.Party.Squad.Find(st.Person)?.PersonIndex ?? pop.People.IndexOf(st.Person);
@@ -173,12 +173,13 @@ public sealed partial class AutopilotWorld
         return a;
     }
 
-    /// <summary>The row the hero's days are modelled on: the first adult labourer with a home (ascending index), so the same on every run.</summary>
-    private static int PickStandIn(Population pop, int day)
+    /// <summary>The row the hero's days are modelled on: the first adult labourer with a home in the settlement the hero stands nearest to (ascending index), so the same on every run; any settlement's, then anyone, when there is none.</summary>
+    private static int PickStandIn(Population pop, int day, int settlement)
     {
         var p = pop.People;
-        for (int i = 0; i < p.Count; i++)
-            if (p.IsAlive(i) && p.Occupation[i] == Occupation.Labourer && p.HomeSettlement[i] >= 0 && p.AgeYears(i, day) is >= 20 and < 45 && p.Household[i] >= 0) return i;
+        for (int pass = 0; pass < 2; pass++)
+            for (int i = 0; i < p.Count; i++)
+                if (p.IsAlive(i) && p.Occupation[i] == Occupation.Labourer && p.HomeSettlement[i] >= 0 && (pass == 1 || settlement < 0 || p.HomeSettlement[i] == settlement) && p.AgeYears(i, day) is >= 20 and < 45 && p.Household[i] >= 0) return i;
         for (int i = 0; i < p.Count; i++) if (p.IsAlive(i) && p.AgeYears(i, day) >= 18) return i;
         return 0;
     }

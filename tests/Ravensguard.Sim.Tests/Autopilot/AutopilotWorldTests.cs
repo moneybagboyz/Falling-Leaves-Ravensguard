@@ -62,6 +62,16 @@ public class AutopilotWorldTests(ITestOutputHelper output)
         }
     }
 
+    [Fact]
+    public void TheHeroIsModelledOnALabourerOfTheSettlementTheyStandIn_WhenTheHostKnowsWhereTheyStand()
+    {
+        using var w = ApWorld.Soak();
+        var region = w.State.Population.Region; Assert.True(region.Settlements.Count > 1);
+        w.Ap.PositionHook = id => (region.Settlements[1].CenterX * 1000L + 5000, region.Settlements[1].CenterY * 1000L);
+        var st = w.Ap.Enable(w.Hero, w.Sec, Directive.Work());
+        Assert.Equal(1, w.Ap.AnchorsOf(st, w.Sec).HomeSettlement);
+    }
+
     // ------------------------------------------------------------------ AP-2 at the barrier
 
     [Fact]

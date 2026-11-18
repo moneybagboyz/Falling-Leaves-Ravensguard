@@ -16,5 +16,5 @@
   { "type": "first_hour", "id": "fh_minor_heir", "origin": "minor_heir", "mentor": "steward", "job_kind": "Deliver", "job_distance_m": 400, "job_kg": 6,
     "job_title": "Collect a measure of rent from a tenant", "loan_breed": "horse_palfrey", "errand_title": "Carry a letter to the lord's town house", "return_at": "start" },
   { "type": "first_hour", "id": "fh_outlaw", "origin": "outlaw", "mentor": "fence", "job_kind": "Haul", "job_distance_m": 250, "job_kg": 14,
-    "job_title": "Haul a bundle of pelts to the camp", "loan_breed": "donkey", "errand_title": "Take the pelts to the market in the next town", "return_at": "start" }
+    "job_title": "Haul a bundle of pelts to the camp", "loan_breed": "mule", "errand_title": "Take the pelts to the market in the next town", "return_at": "start" }
 ]

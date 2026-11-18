@@ -65,15 +65,15 @@ public static class FirstHourBot
         public void Fail(string t) { if (Rep.Failure.Length == 0) Rep.Failure = t; Log("FAIL " + t); }
     }
 
-    public static BotReport Play(HeadlessWorld hw, ContentDatabase db, OriginDef origin, ulong seed)
+    public static BotReport Play(HeadlessWorld hw, ContentDatabase db, OriginDef origin, ulong seed, Action<WorldState, string>? observer = null)
     {
         var rep = new BotReport { Origin = origin.Id, Seed = seed, MentorId = origin.Mentor };
-        try { Script(hw, db, origin, seed, rep); }
+        try { Script(hw, db, origin, seed, rep, observer); }
         catch (Exception e) { if (rep.Failure.Length == 0) rep.Failure = "exception: " + e.GetType().Name + ": " + e.Message; rep.Timeline.Add(new BotEvent(0, "EXCEPTION " + e)); }
         return rep;
     }
 
-    private static void Script(HeadlessWorld hw, ContentDatabase db, OriginDef origin, ulong seed, BotReport rep)
+    private static void Script(HeadlessWorld hw, ContentDatabase db, OriginDef origin, ulong seed, BotReport rep, Action<WorldState, string>? obs)
     {
         var econ = hw.World.Economy; var hero = HeroRecord.FromOrigin("Bot", false, origin);
         econ.SeedHero(hero.Coin);
@@ -109,6 +109,7 @@ public static class FirstHourBot
         var job = table.Get(book.FirstJob)!;
         if (job.Slots != 1 || job.DeadlineSec - job.PostedSec != cfg.Settings.JobDeadlineHours * 3600L) { r.Fail("first job is not Slots 1 with the 12 hour deadline"); return; }
         long purseBefore = econ.Ledger.Balance(ctx.Purse).Mites;
+        var posterPurse = new PurseId(job.PosterPurse); long posterBefore = econ.Ledger.Balance(posterPurse).Mites; obs?.Invoke(st, "met");
         var claim = table.Claim(env, new ClaimRequest(job.Id, r.HeroId, -1, 0, 0, r.X, r.Y, 20, 25) { Origin = CommandOrigin.Human }, r.Now);
         if (claim != ClaimResult.Taken) { r.Fail("claim refused: " + claim); return; }
         book.OnJobTaken(job.Id, r.Now); r.Log($"took the job '{job.Title}' ({job.Kind}) for {job.WageMites} mites");
@@ -120,16 +121,18 @@ public static class FirstHourBot
         rep.FirstJobGameSec = r.Now - taken; rep.FirstJobGameMinutesAt1x = (long)BotReport.RealMin(r.Now - taken);
         long gained = econ.Ledger.Balance(ctx.Purse).Mites - purseBefore;
         if (gained != job.PaidMites || job.PaidMites < cfg.Settings.MinWageMites) { r.Fail($"pay: purse +{gained}, job paid {job.PaidMites}, floor {cfg.Settings.MinWageMites}"); return; }
-        book.OnJobDone(job.Id, job.PaidMites, r.Now, cfg.Settings.MinWageMites); r.Log($"job done: +{job.PaidMites} mites in the purse");
+        if (econ.Ledger.Balance(new PurseId(job.Escrow)).Mites != 0 || econ.Ledger.Balance(posterPurse).Mites != posterBefore) { r.Fail("first job pay: the escrow is not empty or the poster's purse moved after posting"); return; }
+        book.OnJobDone(job.Id, job.PaidMites, r.Now, cfg.Settings.MinWageMites); r.Log($"job done: +{job.PaidMites} mites in the purse (poster's escrow {job.WageMites} -> 0)"); obs?.Invoke(st, "job_done");
         if (rep.FirstJobGameSec > cfg.Settings.JobDeadlineHours * 3600L) { r.Fail("first job took longer than its 12 game hour deadline"); return; }
 
         // 4. spend coin at the market through the hero's desk
-        if (!Spend(r)) { r.Fail("could not buy anything at the market"); return; }
+        if (!Spend(r)) { r.Fail($"could not buy anything at the market (coin {r.Ctx.Coin} mites, cheapest unit {Cheapest(r)})"); return; }
 
         // 5. a second talk (the dialogue starts at its repeat node) borrows the animal
         if (origin.Mentor == "caravan_master") Talk(r, origin.Mentor, ["ASK_LOAN"]); else Talk(r, origin.Mentor, ["REPEAT_HORSE", "HORSE_ACCEPT"]);
         if (!book.Done(OnboardingStep.BorrowHorse) || book.Loans.Active == null) { r.Fail("no loan after asking for the animal"); return; }
         if (!book.HasErrandJob) { r.Fail("no errand job posted with the loan"); return; }
+        obs?.Invoke(st, "borrowed");
         var loan = book.Loans.Active!; r.Log($"loan: animal {loan.Animal.Value % 100000} due in {cfg.Settings.LoanDays} days, return to settlement {loan.ReturnPlace}");
         if (loan.DueSec - loan.FromSec != cfg.Settings.LoanDays * 86_400L) { r.Fail("loan is not 3 game days"); return; }
 
@@ -206,14 +209,28 @@ public static class FirstHourBot
         for (ushort g = 0; g < b.Goods.Length; g++)
         {
             if (b.Goods[g].StockUnits < 1) continue;
-            b.Sync(g); var q = Quotes.Buy(b, g, 1);
-            if (q.TotalMites <= 0 || q.TotalMites > coin) continue;
-            var cmd = r.Desk.Issue(new HeroCommand { Kind = HeroCommandKind.Buy, Settlement = s, Good = g, Qty = 1, Limit = q.TotalMites + 5, IssuedSec = r.Now, Origin = CommandOrigin.Human });
-            r.Desk.ApplyDue(r.Ctx, cmd.Hour);
-            var res = r.Desk.View?.Results.LastOrDefault(x => x.Seq == cmd.Seq);
-            if (res is { Ok: true }) { r.Book.OnTraded(r.Now); r.Log("bought: " + res.Text); return true; }
+            b.Sync(g);
+            foreach (long qty in new long[] { 1, 500, 2000, 10_000, 100_000 })        // a piece, or a few hundred grams: whatever the unit of the good makes a small purchase
+            {
+                if (b.Goods[g].StockUnits < qty) break;
+                var q = Quotes.Buy(b, g, qty);
+                if (q.TotalMites <= 0 || q.TotalMites > coin / 2) continue;
+                var cmd = r.Desk.Issue(new HeroCommand { Kind = HeroCommandKind.Buy, Settlement = s, Good = g, Qty = qty, Limit = q.TotalMites + 5, IssuedSec = r.Now, Origin = CommandOrigin.Human });
+                r.Desk.ApplyDue(r.Ctx, cmd.Hour);
+                var res = r.Desk.View?.Results.LastOrDefault(x => x.Seq == cmd.Seq);
+                if (res is { Ok: true }) { r.Book.OnTraded(r.Now); r.Log("bought: " + res.Text); return true; }
+                break;
+            }
         }
         return false;
+    }
+
+    private static string Cheapest(Run r)
+    {
+        var b = r.Ctx.Book(r.Book.MentorSettlement); if (b == null) return "no market";
+        long best = long.MaxValue; int n = 0;
+        for (ushort g = 0; g < b.Goods.Length; g++) { if (b.Goods[g].StockUnits < 1) continue; n++; b.Sync(g); best = Math.Min(best, Quotes.Buy(b, g, 1).TotalMites); }
+        return $"{best} of {n} goods in stock";
     }
 
     private static bool Mount(Run r)
