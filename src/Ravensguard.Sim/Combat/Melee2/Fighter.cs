@@ -121,6 +121,8 @@ public sealed class Fighter
     public int Morale, MoralePenalty;
     public bool Routing, Announced;
     public int FlankedUntil = -1, EndedAt = -1;
+    /// <summary>P4-D hook: the morale model's state (morale-capture-succession 3.1; Morale/FightWorld.Morale.cs). <see cref="Morale"/> and <see cref="Routing"/> mirror it for readers.</summary>
+    public Ravensguard.Sim.Combat.Morale.MoraleState M;
 
     // ---- statistics ----
     public int Thrown, Landed, BlockedBy, ParriedBy, DodgedBy, Whiffs;

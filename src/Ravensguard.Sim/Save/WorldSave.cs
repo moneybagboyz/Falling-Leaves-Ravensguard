@@ -74,6 +74,10 @@ public sealed class WorldState
     /// <summary>P4-D (feedback-flavour-log): the log of the fight in progress or the last one, in the optional "fightlog" section (no format bump); <see cref="FightLogSource"/>, when set by the game, is read at a save.</summary>
     public FightLogSave? FightLog { get; set; }
     public Func<FightLogSave?>? FightLogSource { get; set; }
+    /// <summary>P4-D: everyone held captive (saved in the "captivity" section once anyone has been taken).</summary>
+    public Ravensguard.Sim.Combat.Aftermath.CaptiveBook? Captivity { get; set; }
+    /// <summary>P4-D: estates and inheritance records of the run, and whether it has ended (saved in the "succession" section once anyone has died as the hero).</summary>
+    public Ravensguard.Sim.Succession.SuccessionBook? Succession { get; set; }
     /// <summary>The hero's side of the records (trade-inventory-character spec): worn slots and where each stack sits, the price notebook, the party, the people known (saved in the "party" section when present). The things themselves are item rows, the pack store and the purse in the <see cref="Economy"/>.</summary>
     public Ravensguard.Sim.Trade.HeroParty? Party { get; set; }
     /// <summary>
@@ -361,6 +365,8 @@ public static class WorldSave
             Wounds = w.Wounds is { IsEmpty: false } wl ? WoundSave.Capture(wl) : null,
             Fight = w.FightSource != null ? w.FightSource() : w.Fight,
             FightLog = w.FightLogSource != null ? w.FightLogSource() : w.FightLog,
+            Captivity = w.Captivity is { Captives.Count: > 0 } cb ? CaptivitySave.Capture(cb) : null,                          // P4-D
+            Succession = w.Succession is { } sb && (sb.Estates.Count > 0 || sb.RunEnded) ? SuccessionSave.Capture(sb) : null,     // P4-D
             Party = w.Party == null ? null : Ravensguard.Sim.Trade.HeroPartySave.Capture(w.Party),
             HeroPending = (w.HeroPendingSource?.Invoke() ?? w.HeroPending) is { Count: > 0 } hp ? Ravensguard.Sim.Trade.HeroPendingSave.Capture(hp) : null,
             Production = w.Production == null ? null : ProductionSave.Capture(w.Production), Markets = w.Markets == null ? null : MarketsSave.Capture(w.Markets),
@@ -471,6 +477,8 @@ public static class WorldSave
             Wounds = file.Sections.ContainsKey(WoundSave.SectionName) ? Decode<WoundSave>(file, WoundSave.SectionName, compressed: true).Restore() : null,
             Fight = file.Sections.ContainsKey(FightRecord.SectionName) ? Decode<FightRecord>(file, FightRecord.SectionName, compressed: true) : null,
             FightLog = file.Sections.ContainsKey(FightLogSave.SectionName) ? Decode<FightLogSave>(file, FightLogSave.SectionName, compressed: true) : null,
+            Captivity = file.Sections.ContainsKey(CaptivitySave.SectionName) ? Decode<CaptivitySave>(file, CaptivitySave.SectionName, compressed: true).Restore() : null,          // P4-D
+            Succession = file.Sections.ContainsKey(SuccessionSave.SectionName) ? Decode<SuccessionSave>(file, SuccessionSave.SectionName, compressed: true).Restore() : null,    // P4-D
             Party = file.Sections.ContainsKey(PartySection) ? Decode<Ravensguard.Sim.Trade.HeroPartySave>(file, PartySection, compressed: true).Restore() : null,
             HeroPending = file.Sections.ContainsKey(Ravensguard.Sim.Trade.HeroPendingSave.SectionName) ? Decode<Ravensguard.Sim.Trade.HeroPendingSave>(file, Ravensguard.Sim.Trade.HeroPendingSave.SectionName, compressed: true).Restore() : [],
             Hero = hero, Codex = codex, Live = resume, Economy = economy, Abstract = abstractState,
@@ -664,6 +672,8 @@ public sealed class LiveCapture
     internal WoundSave? Wounds { get; init; }
     internal FightRecord? Fight { get; init; }
     internal FightLogSave? FightLog { get; init; }
+    internal CaptivitySave? Captivity { get; init; }
+    internal SuccessionSave? Succession { get; init; }
     internal Ravensguard.Sim.Trade.HeroPartySave? Party { get; init; }
     internal Ravensguard.Sim.Trade.HeroPendingSave? HeroPending { get; init; }
     internal MarketsSave? Markets { get; init; }
@@ -718,6 +728,8 @@ public sealed class LiveCapture
         if (Wounds != null) sections.Add(new(WoundSave.SectionName, SaveCodec.SerializeCompressed(Wounds)));
         if (Fight != null) sections.Add(new(FightRecord.SectionName, SaveCodec.SerializeCompressed(Fight)));
         if (FightLog != null) sections.Add(new(FightLogSave.SectionName, SaveCodec.SerializeCompressed(FightLog)));
+        if (Captivity != null) sections.Add(new(CaptivitySave.SectionName, SaveCodec.SerializeCompressed(Captivity)));       // P4-D (v7)
+        if (Succession != null) sections.Add(new(SuccessionSave.SectionName, SaveCodec.SerializeCompressed(Succession)));    // P4-D (v7)
         if (Party != null) sections.Add(new(WorldSave.PartySection, SaveCodec.SerializeCompressed(Party)));
         if (HeroPending != null) sections.Add(new(Ravensguard.Sim.Trade.HeroPendingSave.SectionName, SaveCodec.SerializeCompressed(HeroPending)));
         if (Production != null) sections.Add(new(WorldSave.ProductionSection, SaveCodec.SerializeCompressed(Production)));

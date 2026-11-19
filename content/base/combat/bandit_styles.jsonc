@@ -1,0 +1,6 @@
+// Bandit bands' styles (morale-capture-succession 3.2): one per band, drawn by the fight id on stream 0x452. A content table, not code.
+[
+  { "type": "bandit_style", "id": "robber", "share_pm": 700 },
+  { "type": "bandit_style", "id": "cruel", "share_pm": 150, "kill_wounded_lone_pm": 500 },
+  { "type": "bandit_style", "id": "kidnapper", "share_pm": 150, "kidnapper": true, "capture_min_mites": 1000 }
+]

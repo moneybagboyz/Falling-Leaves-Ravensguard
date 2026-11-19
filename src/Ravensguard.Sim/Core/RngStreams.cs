@@ -224,6 +224,23 @@ public static class RngStreams
     public const uint FlavourPick = 0x480;
     /// <summary>Cosmetic jitter: shake direction, decal offsets, audio pitch (key line serial). Presentation only.</summary>
     public const uint CosmeticJitter = 0x481;
+    // ---- morale, capture and succession (morale-capture-succession 6; P4-D owns 0x450..0x457) ----
+    /// <summary>Morale: the rally and the wavering step-back rolls (key FightTick, fighter).</summary>
+    public const uint MoraleRally = 0x450;
+    /// <summary>Morale: the winner's acceptance of a surrender (key FightTick, winner).</summary>
+    public const uint Surrender = 0x451;
+    /// <summary>Defeat: loot choices, the mercy bandage, the cruel kill, the bandit style (key fight id, loser).</summary>
+    public const uint Loot = 0x452;
+    /// <summary>Captivity: guard shifts, notice rolls, the guards' alertness, bandit release fates (key GameSec / 20, captive).</summary>
+    public const uint CaptiveEvent = 0x453;
+    /// <summary>Captivity: escape windows on a transfer, the rescue party's daily chance (key game day, captive).</summary>
+    public const uint EscapeWindow = 0x454;
+    /// <summary>Captivity: lock picking and slipping the bonds (key GameSec / 20, captive, draw = attempt).</summary>
+    public const uint LockPick = 0x455;
+    /// <summary>Captivity: ransom negotiation (key game day, captive).</summary>
+    public const uint RansomNegotiation = 0x456;
+    /// <summary>Reserved: succession draws nothing (a pure function of the tables; asserted by test SU-5).</summary>
+    public const uint SuccessionReserved = 0x457;
 
     /// <summary>Stream ids that two named uses share on purpose, with why their draws never meet.</summary>
     public static readonly (string A, string B, string Why)[] SharedPairs =

@@ -76,7 +76,7 @@ public sealed partial class FightWorld
         var s = new StrikeV2
         {
             Strength = (int)((long)a.Kit.Strength * a.StrengthPm / 1000), Skill = Math.Max(0, skill), SizeCm3 = a.Kit.SizeCm3, SpeciesSizeCm3 = a.Plan.SizeCm3,
-            MomentumPm = a.BlowPm * (a.Kit.Blunted ? 500 : 1000) / 1000, Weapon = a.Weapon, Attack = Math.Clamp(attack, 0, a.Weapon.Attacks.Length - 1), Style = style,
+            MomentumPm = a.BlowPm * (a.Kit.Blunted ? 500 : 1000) / 1000 * MoraleRearPm(t, facing) / 1000, Weapon = a.Weapon, Attack = Math.Clamp(attack, 0, a.Weapon.Attacks.Length - 1), Style = style,
             Plan = t.Plan, DefenderSizeCm3 = t.Kit.SizeCm3, DefenderSkill = prone ? 0 : t.Skill, Worn = t.Worn, WornCount = t.Worn.Length,
             GuardedMask = _snapAct.Length > t.Id && _snapAct[t.Id] == FAct.Block ? GuardMask(t.Plan) : 0, MissingMask = t.MissingMask, Prone = prone,
             TargetPart = part, TargetGap = gap, Facing = facing, SituationPoints = (a.Improvised != null ? 0 : 0) - (Crowded(a, t) ? K.CrowdedPoints : 0),
@@ -233,8 +233,7 @@ public sealed partial class FightWorld
         a.Landed++;
         t.Book.Apply(t.Plan, r, GameSec, Tick, a.Person != 0 ? a.Person : (ulong)(a.Id + 1));
         RefreshBody(t);
-        t.MoralePenalty += K.HitTakenPenalty;
-        if (facing != Facing.Front && Tick >= t.FlankedUntil) { t.MoralePenalty += K.FlankedPenalty; t.FlankedUntil = Tick + 100; }
+        MoraleOnHit(t, facing);                         // P4-D hook: a blow taken, a flank blow (morale 4.1 c, d)
         Emit(FightEventKind.Hit, a.Id, t.Id, r.Part, r.WoundCount, (r.Severed ? 1 : 0) | (r.Redirected ? 2 : 0) | (r.RibSlip ? 4 : 0) | ((int)facing << 4));
         if (t.Act == FAct.Windup && t.Req.Kind == BlowKind.Melee) { t.Act = FAct.Recover; t.ActTicks = K.HitInterruptTicks; Emit(FightEventKind.Interrupted, t.Id, a.Id); }
         else if (t.Act is FAct.Drawing or FAct.Aiming) { t.Act = FAct.Idle; Emit(FightEventKind.Interrupted, t.Id, a.Id); }

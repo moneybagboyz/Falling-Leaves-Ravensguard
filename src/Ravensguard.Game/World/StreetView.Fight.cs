@@ -79,8 +79,9 @@ public partial class StreetView
         if (rf.EndedTick < 0) { _roadFight = rf with { EndedTick = f.Tick }; return; }
         if (f.Tick - rf.EndedTick < 40) return;
         var hero = f.Fighters[_fightView.Hero];
-        bool won = f.WinnerTeam == hero.Team, fled = hero.Act == FAct.Fled;
+        bool won = f.DecidedWinner == hero.Team && hero.Act != FAct.Surrendered, fled = hero.Act == FAct.Fled;   // P4-D: the winner of a walk-away too (morale 4.3)
         var t = _travel;
+        if (!won && !fled && DefeatHook(rf.Ev, f, _fightView.Hero)) { CloseRoadFight(); return; }   // P4-D hook: the defeat table, robbery, capture (StreetView.Captivity.cs)
         var o = EncounterOutcomes.AfterFight(rf.Ev, won, fled, rf.Coin, id => t == null || !t.Travellers.Any(x => x.Id == id));
         long now = _world.Clock.Now.Seconds;
         if (o.PayMites > 0 && _heroLink != null)

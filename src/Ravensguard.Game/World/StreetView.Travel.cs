@@ -126,6 +126,7 @@ public partial class StreetView
     void TravelTick()
     {
         RoadFightFrame();
+        AftermathFrame();                                   // P4-D hook (StreetView.Captivity.cs)
         var t = _travel; if (t == null || _tfeed == null) return;
         long now = _world.Clock.Now.Seconds;
         _tfeed.Hero.BaseMmPerGs = VehicleSpeedMm();

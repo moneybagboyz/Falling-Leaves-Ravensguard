@@ -12,7 +12,7 @@ public sealed class SaveMigrator
     /// The game's migrations. v1 -> v2: v1 saves have no baseline guard (empty hashes) and are loaded unguarded; their format is otherwise unchanged (every v2 key is additive),
     /// so the step only re-stamps the version. A v1 save made while a region without people held chunks lost those chunks (fixed in v2); nothing can recover them.
     /// </summary>
-    public static SaveMigrator CreateDefault() => new SaveMigrator().Register(1, _ => { }).Register(2, MigrateSkillsV3).Register(3, MigrateChunkPaletteV4).Register(4, _ => { }).Register(5, MigrateWeaponFamiliesV6);
+    public static SaveMigrator CreateDefault() => new SaveMigrator().Register(1, _ => { }).Register(2, MigrateSkillsV3).Register(3, MigrateChunkPaletteV4).Register(4, _ => { }).Register(5, MigrateWeaponFamiliesV6).Register(6, MigrateMoraleV7);
 
     /// <summary>
     /// v2 -> v3: the Skill enum gained seven entries at its end, so the hero's skill lists (parallel arrays of ids and levels) gain them at level 0. People rows store skills as the enum's byte values, which
@@ -71,6 +71,19 @@ public sealed class SaveMigrator
             cs.SkillPerson = [.. rows.Keys.Select(k => k.Item1)]; cs.SkillId = [.. rows.Keys.Select(k => k.Item2)]; cs.SkillMicro = [.. rows.Values];
             sections[WorldSave.CraftingSection] = SaveCodec.SerializeCompressed(cs);
         }
+    }
+
+    /// <summary>
+    /// v6 -> v7 (Phase 4 P4-D, morale, capture and succession): the optional "captivity" and "succession" sections are new, and a fight record in progress gains each fighter's morale state
+    /// (key 20). A v6 fight record is re-stamped with the morale state the model starts a fighter with, so a load resumes it the same way a v7 save of it would.
+    /// </summary>
+    private static void MigrateMoraleV7(IDictionary<string, byte[]> sections)
+    {
+        if (!sections.TryGetValue(FightRecord.SectionName, out var fb) || fb.Length == 0) return;
+        var rec = SaveCodec.DeserializeCompressed<FightRecord>(fb);
+        if (rec.Morale != null) return;
+        rec.Morale = [];          // an empty table: every fighter's morale is initialised from its kit on the next step
+        sections[FightRecord.SectionName] = SaveCodec.SerializeCompressed(rec);
     }
 
     public SaveMigrator Register(int fromVersion, Action<IDictionary<string, byte[]>> step)

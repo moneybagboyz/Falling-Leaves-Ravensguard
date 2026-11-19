@@ -205,7 +205,7 @@ public class FightSystemTests(FightFixture fx)
         };
         var file = new SaveFile(new SaveHeader { FormatVersion = 5 }, [new(WorldSave.HeroSection, SaveCodec.Serialize(hero))]);
         var migrated = SaveMigrator.CreateDefault().Migrate(file);
-        Assert.Equal(6, migrated.Header.FormatVersion);
+        Assert.Equal(SaveFormat.CurrentVersion, migrated.Header.FormatVersion);   // v7 (P4-D) steps on from v6
         var h = Ravensguard.Sim.Characters.HeroRecord.FromSave(SaveCodec.Deserialize<Ravensguard.Sim.Characters.HeroSave>(migrated.Sections[WorldSave.HeroSection].ToArray()));
         foreach (var f in CombatSkills.Families) Assert.Equal(36, h.Skill(Ravensguard.Sim.Characters.HeroRecord.SkillId(f)));
         Assert.Equal(45, h.Skill("melee"));
