@@ -3,7 +3,13 @@ using Ravensguard.Sim.Combat.Watch;
 namespace Ravensguard.Sim.Combat.Melee2;
 
 /// <summary>What became of a fight outside every live bubble (the abstract tier's report): the winning team (-1 a draw), the odds it was fought at, and who is out by team.</summary>
-public sealed record AbstractFightReport(ulong FightId, FightKind Kind, int WinnerTeam, int OddsPm, IReadOnlyDictionary<int, int> OutByTeam, bool Stub, string Cause);
+public sealed record AbstractFightReport(ulong FightId, FightKind Kind, int WinnerTeam, int OddsPm, IReadOnlyDictionary<int, int> OutByTeam, bool Stub, string Cause)
+{
+    /// <summary>The abstract battle's full report (abstract-battles-v1 3.3; null from the stub).</summary>
+    public Abstract.BattleReport? Battle { get; init; }
+    /// <summary>What the battle changes (new wound books, fates, loot), in person order, for the barrier.</summary>
+    public IReadOnlyList<Abstract.BattleCommand> Commands { get; init; } = [];
+}
 
 /// <summary>A fight that was run: live in the bubble (<see cref="Live"/>) or resolved abstractly (<see cref="Report"/>). Exactly one is set.</summary>
 public sealed record FightRun(FightWorld? Live, AbstractFightReport? Report);

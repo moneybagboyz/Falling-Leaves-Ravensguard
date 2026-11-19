@@ -31,6 +31,7 @@ if (!spike)
     // P4-C: the shipped fight (FightWorld + CombatBrain + wound books + first aid)
     var fc = new Ravensguard.Sim.Combat.Melee2.FightContent(tables, load.Database);
     if (args.Contains("--mounted")) return MountedRun.Run(fc, args, duels, only, trace);
+    if (args.Contains("--abstract")) return AbstractRun.Run(fc, args, d.FullName);
     var pairs =Ravensguard.Sim.Combat.Melee2.FightCalibration.MainPairings().Where(p => only == null || p.Name.Contains(only, StringComparison.Ordinal)).ToList();
     if (args.Contains("--why"))
     {

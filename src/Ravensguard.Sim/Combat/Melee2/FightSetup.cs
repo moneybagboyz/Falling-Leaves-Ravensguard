@@ -78,10 +78,10 @@ public sealed record FightSetup(FightKind Kind, IReadOnlyList<FighterKit> Kits, 
 
     /// <summary>
     /// Runs the fight where it is: in the live bubble (<paramref name="inBubble"/>) a live <see cref="FightWorld"/> to step, else the abstract resolver's report. The seam of overview 3:
-    /// abstract-battles-v1 (step 6) replaces <see cref="AbstractFightStub"/> behind <see cref="IAbstractFights"/>; the callers do not change.
+    /// abstract-battles-v1 (step 6) is <see cref="Abstract.AbstractBattles"/> behind <see cref="IAbstractFights"/> (the stub when the content has no wound tables); the callers do not change.
     /// </summary>
     public FightRun Run(FightContent content, WoundLedger? ledger, bool inBubble, IAbstractFights? abstractFights = null)
-        => inBubble ? new FightRun(Start(content, ledger), null) : new FightRun(null, (abstractFights ?? AbstractFightStub.Instance).Resolve(this, content));
+        => inBubble ? new FightRun(Start(content, ledger), null) : new FightRun(null, (abstractFights ?? Abstract.AbstractBattles.Default).Resolve(this, content));   // P4-G: the abstract battle
 
     // ------------------------------------------------------------------ kits
 

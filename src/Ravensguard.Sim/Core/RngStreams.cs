@@ -243,6 +243,15 @@ public static class RngStreams
     public const uint SuccessionReserved = 0x457;
     /// <summary>Reserved: watch mode draws nothing of its own (the watched hero uses the brain's 0x430-0x432 unchanged; watch-mode 6). Asserted never drawn, like 0x380.</summary>
     public const uint WatchReserved = 0x490;
+    // ---- abstract battles (abstract-battles-v1 6; P4-G owns 0x4A0..0x4A3), keyed by battle id and step, never a live tick ----
+    /// <summary>Abstract battle: engagement jitter and who of the free soldiers pursues (key battle id, step, side or soldier).</summary>
+    public const uint AbstractNoise = 0x4A0;
+    /// <summary>Abstract battle: per attack action the target, the outcome class and the wound template (key battle id, step, attacker; draw = (step x 16 + k) x 4 + part).</summary>
+    public const uint WoundSample = 0x4A1;
+    /// <summary>Abstract battle: falls seen, the cornered and accepted surrender, the aftermath's mauling and first aid (key battle id, step, soldier).</summary>
+    public const uint RoutSample = 0x4A2;
+    /// <summary>Abstract battle: the leader's capture when downed or run down (key battle id, side).</summary>
+    public const uint LeaderFate = 0x4A3;
 
     /// <summary>Stream ids that two named uses share on purpose, with why their draws never meet.</summary>
     public static readonly (string A, string B, string Why)[] SharedPairs =
