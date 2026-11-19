@@ -40,6 +40,10 @@ public partial class StreetView
     /// <summary>Each frame: the order coming back, the heir's command applied.</summary>
     void SuccessionFrame()
     {
+        // the hero bled out or died of a wound outside a fight or a crawl (on the road, in captivity): the wounds go on in the ledger after the fight now (review finding 3)
+        if (_fightView == null && _crawl == null && _successionView == null && _heirsTask == null && _successionSeq < 0
+            && Runtime?.State.Wounds?.Find(Ravensguard.Sim.Economy.EconomyState.HeroOwner.Value) is { Dead: true })
+            HeroDied("su_cause_wounds");
         if (_heirsTask is { IsCompleted: true } t)
         {
             _heirsTask = null;

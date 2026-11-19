@@ -168,14 +168,23 @@ public partial class StreetView
         }
         if (c.Chronicle.Count > 0 && Runtime is { } rt2)
         {
+            var entries = new List<(string, Dictionary<string, string>)>();
             foreach (var (type, data) in c.Chronicle)
             {
                 if (_crawlSite != null) data["site_name"] = _crawlSite.Name;
                 if (_crawlSite != null && _source?.Region is { } rg && rg.Settlements.Count > 0)
                     data["settlement"] = rg.Settlements.OrderBy(t => (long)(t.CenterX - _crawlSite.X) * (t.CenterX - _crawlSite.X) + (long)(t.CenterY - _crawlSite.Y) * (t.CenterY - _crawlSite.Y)).First().Name;   // where the tale is told
-                rt2.State.Chronicle.Add(new ChronicleEntry(rt2.State.Ids.Allocate(IdKind.Event), _world.Clock.Now, type, [EconomyState.HeroOwner], [new Cause(CauseKind.Other, null, type)], data));
+                entries.Add((type, data));
             }
             c.Chronicle.Clear();
+            var when = _world.Clock.Now;
+            // numbered and added at the barrier: the world's chronicle and id allocator belong to the tick worker (review, game finding 1)
+            _ = Bar(rt2, () =>
+            {
+                foreach (var (type, data) in entries)
+                    rt2.State.Chronicle.Add(new ChronicleEntry(rt2.State.Ids.Allocate(IdKind.Event), when, type, [EconomyState.HeroOwner], [new Cause(CauseKind.Other, null, type)], data));
+                return entries.Count;
+            });
         }
         // resting below fast-forwards (P4 close-out): 8x while the party rests, back to 1x the moment the rest stops (any interrupt stops it in the crawl); the speed changes are recorded
         if (c.Resting && !_crawlRestFast && c.Fight == null) { _crawlRestFast = true; _rec.SetWantedSpeed(SimSpeed.X8); _rec.SetSpeed(SimSpeed.X8); }

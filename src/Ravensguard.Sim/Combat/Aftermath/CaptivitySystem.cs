@@ -22,7 +22,9 @@ public sealed class CaptivitySystem : AbstractSystem
         if (b == null || b.Captives.Count == 0) return;
         var e = ctx.World.Economy;
         var wounds = ctx.World.Get<WoundLedger>();
-        b.StepHour(b.Rules, e.Ledger, ctx.Hour, k => wounds?.Find(k), (c, items) => ReturnStash(b, e, c, items));
+        // the medic's care writes the captives' books, which the live tier steps on the main thread under the ledger's lock (review finding 1): the same lock here
+        if (wounds != null) lock (wounds.Sync) b.StepHour(b.Rules, e.Ledger, ctx.Hour, k => wounds.Find(k), (c, items) => ReturnStash(b, e, c, items));
+        else b.StepHour(b.Rules, e.Ledger, ctx.Hour, _ => null, (c, items) => ReturnStash(b, e, c, items));
     }
 
     /// <summary>An army hands the stash back on release or ransom, less its 10% keep of the non-weapon valuables (4.6).</summary>

@@ -154,7 +154,15 @@ public static class AftermathDesk
         }
     }
 
+    /// <summary>Applies an aftermath command at the barrier, under the wound ledger's lock (the mercy bandage, a beating and the rescue write the hero's book, which the live tier steps on
+    /// the main thread meanwhile; review finding 1).</summary>
     public static HeroResult Apply(HeroContext ctx, HeroCommand c)
+    {
+        if (ctx.State.Wounds is { } wl) lock (wl.Sync) return ApplyCore(ctx, c);
+        return ApplyCore(ctx, c);
+    }
+
+    private static HeroResult ApplyCore(HeroContext ctx, HeroCommand c)
     {
         var book = BookOf(ctx.State, ctx.Content);
         if (c.Tag.StartsWith(WearPrefix, StringComparison.Ordinal)) return Wear(ctx, c);              // P4 close-out: the fight's armour wear onto the item rows

@@ -91,6 +91,13 @@ public static class SuccessionDesk
         var carried = ctx.Party.Carried;
         carried.Equip.Clear(); carried.GoodIn.Clear(); Array.Clear(carried.QuickBar);
         string deadName = st.Hero?.Name ?? "";
+        // a hero who died held (wounds bleed on in captivity, review finding 3): the captive is dead, so the heir, who takes up the same hero id, is not held
+        if (st.Captivity is { } cb && cb.Find(ctx.Party.Hero) is { Held: true } cap)
+        {
+            cap.State = Combat.Aftermath.CaptiveState.Dead; cap.EndedSec = c.IssuedSec;
+            if (cb.Controlled != EntityId.None) cb.ReleaseControl();
+            cb.Publish(cb.Rules, e.Ledger, c.IssuedSec);
+        }
         if (heir == null)
         {
             st.Chronicle.Add(new ChronicleEntry(st.Ids.Allocate(IdKind.Event), new GameTime(c.IssuedSec), "hero_line_ended", [ctx.Party.Hero], [],

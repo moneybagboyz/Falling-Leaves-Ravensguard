@@ -200,8 +200,11 @@ public sealed partial class LiveWorld
             var sp = Clock.Speed; Clock.Speed = SimSpeed.X1; Clock.Advance(TickSeconds); Clock.Speed = sp;
         }
         else Clock.Advance(TickSeconds);
-        Wounds?.AdvanceTo(Clock.Now.Seconds);          // bleeding, pain and consciousness at 20 Hz while anyone has an open wound, in or out of a fight (wounds 5)
-        if (Fight != null && Clock.Speed != SimSpeed.Paused) Fight.StepWithAi();
+        // bleeding, pain and consciousness at 20 Hz while anyone has an open wound, in or out of a fight (wounds 5), then the fight's step: both under the ledger's lock, so the tick
+        // worker and a save made on it see the books and the fight of one whole tick (review finding 1)
+        bool stepFight = Fight != null && Clock.Speed != SimSpeed.Paused;
+        if (Wounds is { } wl) lock (wl.Sync) { wl.AdvanceTo(Clock.Now.Seconds); if (stepFight) Fight!.StepShared(); }
+        else if (stepFight) Fight!.StepShared();
         int mult = (int)Clock.Speed;
         _moving = false;
         if (_usePending) { _usePending = false; TryPortalHere(force: true); }

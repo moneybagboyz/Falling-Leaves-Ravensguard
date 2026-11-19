@@ -34,18 +34,34 @@ public static class Ransom
         return d >= r.D.QuarterAfterDays ? baseMites / 4 : d >= r.D.HalveAfterDays ? baseMites / 2 : baseMites;
     }
 
-    /// <summary>What the payer could pay now (the bandits' "ransom estimate" of 4.4): the faction's or household's balance, or friends' 30% shares.</summary>
+    /// <summary>What the payer could pay now (the bandits' "ransom estimate" of 4.4): the faction's or household's balance, or friends' 30% shares (each purse once).</summary>
     public static long Payable(AftermathRules r, Ledger l, PayerKind kind, IReadOnlyList<PurseRef> payers)
     {
+        if (kind != PayerKind.Friends)
+            return payers.Count > 0 && payers[0].Find(l) is { } id ? l.Balance(id).Mites : 0;
         long sum = 0;
-        foreach (var p in payers)
-        {
-            if (p.Find(l) is not { } id) continue;
-            long b = l.Balance(id).Mites;
-            sum += kind == PayerKind.Friends ? b * r.D.FriendSharePm / 1000 : b;
-            if (kind != PayerKind.Friends) break;
-        }
+        foreach (var (_, share) in FriendShares(r, l, payers, null, long.MaxValue)) sum += share;
         return sum;
+    }
+
+    /// <summary>
+    /// The friends' shares towards <paramref name="amount"/>: each distinct purse once (two companions of one household are one purse; review finding 4), in order, up to 30% of its balance,
+    /// never the captor's own.
+    /// </summary>
+    private static List<(PurseId Purse, long Share)> FriendShares(AftermathRules r, Ledger l, IReadOnlyList<PurseRef> payers, PurseId? captor, long amount)
+    {
+        var shares = new List<(PurseId, long)>();
+        var seen = new HashSet<PurseId>();
+        long left = amount;
+        foreach (var pr in payers)
+        {
+            if (left <= 0) break;
+            if (pr.Find(l) is not { } p || p == captor || !seen.Add(p)) continue;
+            long share = Math.Min(left, l.Balance(p).Mites * r.D.FriendSharePm / 1000);
+            if (share <= 0) continue;
+            shares.Add((p, share)); left -= share;
+        }
+        return shares;
     }
 
     /// <summary>
@@ -61,16 +77,15 @@ public static class Ransom
             if (payers[0].Find(l) is not { } p || p == captor || l.Balance(p).Mites < amount) return false;
             return l.Transfer(p, captor, Coin.FromMites(amount), AftermathCoin.Ransom);
         }
-        if (Payable(r, l, kind, payers) < amount) return false;
-        long left = amount;
-        foreach (var pr in payers)
-        {
-            if (left <= 0) break;
-            if (pr.Find(l) is not { } p || p == captor) continue;
-            long share = Math.Min(left, l.Balance(p).Mites * r.D.FriendSharePm / 1000);
-            if (share > 0 && l.Transfer(p, captor, Coin.FromMites(share), AftermathCoin.Ransom)) left -= share;
-        }
-        return left <= 0;
+        // the shares are planned first and paid only when together they reach the ransom: a shortfall moves nothing (review finding 4: a purse named twice was counted twice, so the
+        // friends paid part of it every day and the captive stayed)
+        var shares = FriendShares(r, l, payers, captor, amount);
+        long total = 0;
+        foreach (var (_, share) in shares) total += share;
+        if (total < amount) return false;
+        long paid = 0;
+        foreach (var (p, share) in shares) if (l.Transfer(p, captor, Coin.FromMites(share), AftermathCoin.Ransom)) paid += share;
+        return paid >= amount;
     }
 }
 

@@ -53,6 +53,20 @@ public sealed class WoundSystem : AbstractSystem
             }
         }
         if (gone != null) foreach (var k in gone) l.Books.Remove(k);
+        PruneDead(l, key => { int row = pt.IndexOf(new EntityId(key)); return row >= 0 && pt.Status[row] == PersonStatus.Alive; });
+    }
+
+    /// <summary>
+    /// Review finding 3 (with the fighters' books kept in the ledger): a dead body's book that no person row will take up (a traveller or bandit of a road fight, someone whose row is already
+    /// dead) never heals, so it would stay in the ledger and the save for good. It goes, after its events were drained. The hero's stays: the game turns it into the succession.
+    /// </summary>
+    public static int PruneDead(WoundLedger l, Func<ulong, bool> livingPerson)
+    {
+        List<ulong>? gone = null;
+        foreach (var (key, b) in l.Books)
+            if (b.Dead && key != Economy.EconomyState.HeroOwner.Value && !livingPerson(key)) (gone ??= []).Add(key);
+        if (gone != null) foreach (var k in gone) l.Books.Remove(k);
+        return gone?.Count ?? 0;
     }
 
     public static DeathCause CauseOf(DeathKind k) => k switch

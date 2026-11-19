@@ -189,6 +189,17 @@ public sealed partial class FightWorld
 
     // ------------------------------------------------------------------ the step
 
+    /// <summary>
+    /// The live tier's step (phase-4 review finding 1): <see cref="StepWithAi"/> under the world ledger's lock when the fighters' books are the ledger's, so the tick worker (the hourly
+    /// wound and captivity steps, the hero desk at the barrier, a save's capture) never reads or writes a book, the log or the fight half-way through a step. A fight of its own books
+    /// needs no lock.
+    /// </summary>
+    public void StepShared()
+    {
+        if (Ledger is { } l) lock (l.Sync) StepWithAi();
+        else StepWithAi();
+    }
+
     /// <summary>The brain thinks for every fighter it drives, then one step.</summary>
     public void StepWithAi()
     {
@@ -223,6 +234,25 @@ public sealed partial class FightWorld
         if (Rules.TreatInFight) TreatStep();                        // P4-F hook: pressure and bandages once clear of enemies (watch-mode 4.3)
         foreach (var f in Fighters) f.Cmd.ClearOneShots();
         if (Watch != null) WatchStep();                             // P4-F hook: odds, danger and the why line at 5 Hz; signals wait for the barrier
+        if (Ledger != null) KeepBooksInLedger();
+    }
+
+    /// <summary>
+    /// Phase 4 review finding 3: a fighter's book is the ledger's, but the ledger drops a book with nothing in it on its next advance, and every fighter starts unhurt, so the live tier's first
+    /// advance left every fighter writing into a book the ledger no longer held: the fight's wounds were never saved, never bled or healed after the fight, and the defeat table and the abstract
+    /// tier never saw them. After each step a hurt fighter's book goes back into the ledger (unless the ledger has since taken a hurt book of its own for that person).
+    /// </summary>
+    private void KeepBooksInLedger()
+    {
+        var l = Ledger!;
+        lock (l.Sync)
+            foreach (var f in Fighters)
+            {
+                ulong key = f.Kit.Person;
+                if (key == 0 || f.Book.Empty) continue;
+                if (l.Books.TryGetValue(key, out var held) && (ReferenceEquals(held, f.Book) || !held.Empty)) continue;
+                l.Books[key] = f.Book;
+            }
     }
 
     // ------------------------------------------------------------------ timings (4.1)

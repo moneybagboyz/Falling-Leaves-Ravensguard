@@ -2743,6 +2743,7 @@ su_ended,"{0} is dead, and nobody is left to carry on. The world goes on without
 su_continues,"{0} takes up the road. What was carried lies where the old hero fell."
 su_cause_fight,You fell on the road and did not get up again.
 su_cause_below,"You died below ground, in the dark."
+su_cause_wounds,"Your wounds were too much for you, far from any help."
 su_next_screen,Who carries on is decided next.
 su_btn_on,Go on
 su_title,{0} is dead

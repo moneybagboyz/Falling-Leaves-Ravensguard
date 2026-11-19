@@ -355,6 +355,7 @@ public static class WorldSave
         var codex = live?.Codex ?? w.Codex;
         // one consistent view of the other regions (resident, paged, which chunk entries are whose); see RegionRecordSet.CaptureView
         var view = w.Regions?.CaptureView();
+        var liveTier = CaptureLiveTier(w);
         return new LiveCapture
         {
             Header = header, Meta = meta, Continent = w.Continent, History = w.History, Region = w.Population.Region,
@@ -368,13 +369,11 @@ public static class WorldSave
             Autopilot = w.Autopilot is { IsEmpty: false } ap ? AutopilotSave.Capture(ap) : null,
             Talk = w.Talk is { IsEmpty: false } tk ? TalkSave.Capture(tk) : null,
             Onboarding = w.Onboarding is { IsEmpty: false } ob ? OnboardingSave.Capture(ob) : null,
-            Wounds = w.Wounds is { IsEmpty: false } wl ? WoundSave.Capture(wl) : null,
-            Fight = w.FightSource != null ? w.FightSource() : w.Fight,
-            FightLog = w.FightLogSource != null ? w.FightLogSource() : w.FightLog,
+            Wounds = liveTier.Wounds, Fight = liveTier.Fight, FightLog = liveTier.FightLog,
             Captivity = w.Captivity is { Captives.Count: > 0 } cb ? CaptivitySave.Capture(cb) : null,                          // P4-D
             Succession = w.Succession is { } sb && (sb.Estates.Count > 0 || sb.RunEnded || sb.Kin.Count > 0) ? SuccessionSave.Capture(sb) : null,     // P4-D
             Watch = w.Watch is { IsEmpty: false } wb ? WatchSave.Capture(wb) : null,                                                // P4-F
-            Sites = w.SiteSource != null ? w.SiteSource() : w.Sites is { IsEmpty: false } sbk ? SiteSave.Capture(sbk) : null,                 // P4-H
+            Sites = liveTier.Sites,                                                                                                    // P4-H
             Party = w.Party == null ? null : Ravensguard.Sim.Trade.HeroPartySave.Capture(w.Party),
             HeroPending = (w.HeroPendingSource?.Invoke() ?? w.HeroPending) is { Count: > 0 } hp ? Ravensguard.Sim.Trade.HeroPendingSave.Capture(hp) : null,
             Production = w.Production == null ? null : ProductionSave.Capture(w.Production), Markets = w.Markets == null ? null : MarketsSave.Capture(w.Markets),
@@ -388,6 +387,32 @@ public static class WorldSave
                 Body = HeroBodySave.Of(live.Body), WantedPlus1 = (byte)((int)live.Wanted + 1),
             },
         };
+    }
+
+    /// <summary>
+    /// The parts of a save the live tier changes every 20 Hz step while a fight or a crawl runs: the wound ledger, the fight, its log and the sites with the crawl. A save copies the world on the
+    /// tick worker while the main thread goes on stepping, so they are read together under the sites book's lock and then the ledger's (the order the crawl's step takes them), which the
+    /// live step holds (<see cref="Ravensguard.Sim.Combat.Melee2.FightWorld.StepShared"/>): the four sections show one and the same tick (review finding 1).
+    /// </summary>
+    public static (WoundSave? Wounds, FightRecord? Fight, FightLogSave? FightLog, SiteSave? Sites) CaptureLiveTier(WorldState w)
+    {
+        object? siteLock = w.Sites?.Sync, woundLock = w.Wounds?.Sync;
+        bool siteTaken = false, woundTaken = false;
+        try
+        {
+            if (siteLock != null) Monitor.Enter(siteLock, ref siteTaken);
+            if (woundLock != null) Monitor.Enter(woundLock, ref woundTaken);
+            var wounds = w.Wounds is { IsEmpty: false } wl ? WoundSave.Capture(wl) : null;
+            var fight = w.FightSource != null ? w.FightSource() : w.Fight;
+            var log = w.FightLogSource != null ? w.FightLogSource() : w.FightLog;
+            var sites = w.SiteSource != null ? w.SiteSource() : w.Sites is { IsEmpty: false } sbk ? SiteSave.Capture(sbk) : null;
+            return (wounds, fight, log, sites);
+        }
+        finally
+        {
+            if (woundTaken) Monitor.Exit(woundLock!);
+            if (siteTaken) Monitor.Exit(siteLock!);
+        }
     }
 
     // ---------- restore ----------

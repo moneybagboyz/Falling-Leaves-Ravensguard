@@ -34,7 +34,13 @@ public partial class StreetView
         if (def.Kind == "Ambush") { log.TriggerKey = "fl_trigger_ambush"; log.TriggerArg = L.T("fl_trigger_strangers"); }
         else { log.TriggerKey = "fl_trigger_encounter"; log.TriggerArg = def.Name.ToLowerInvariant(); }
         _lastFightLog = log; _lastBook = _fightView.Book;
-        if (Runtime is { } rt) rt.State.FightLogSource = () => _lastFightLog is { } l && _lastBook is { } b ? FightLogSave.Capture(l, b) : null;
+        if (Runtime is { } rt) rt.State.FightLogSource = () =>
+        {
+            if (_lastFightLog is not { } l || _lastBook is not { } b) return null;
+            // the save copies on the tick worker while the live step appends lines under the ledger's lock (review finding 1)
+            if (rt.State.Wounds is { } wl) lock (wl.Sync) return FightLogSave.Capture(l, b);
+            return FightLogSave.Capture(l, b);
+        };
     }
 
     /// <summary>The road fight is over: the log is closed, the named dead are written to the chronicle, and the report opens when you were hurt or three fell (else a toast says where to find it).</summary>
@@ -44,7 +50,12 @@ public partial class StreetView
         _fightView.FinishLog();
         var log = _fightView.Log; var book = _fightView.Book;
         _lastFightLog = log; _lastBook = book;
-        if (Runtime is { } rt) FightChronicle.Write(log, rt.State.Chronicle, rt.State.Ids, book, GameText.Instance, f.Watch is { EverOn: true } ws ? ws.Stance.Id : null);   // P4-F: "(watched)"
+        if (Runtime is { } rt)
+        {
+            // composed here, numbered and added at the barrier: the world's chronicle and id allocator belong to the tick worker (review, game finding 1)
+            var made = FightChronicle.Write(log, new Ravensguard.Sim.Core.Chronicle(), new Ravensguard.Sim.Core.IdAllocator(), book, GameText.Instance, f.Watch is { EverOn: true } ws ? ws.Stance.Id : null);   // P4-F: "(watched)"
+            if (made.Count > 0) _ = Bar(rt, () => { foreach (var e in made) rt.State.Chronicle.Add(e with { Id = rt.State.Ids.Allocate(Ravensguard.Sim.Core.IdKind.Event) }); return made.Count; });
+        }
         var hero = _fightView.HeroF;
         var rep = AfterFightReport.Build(log, book, GameText.Instance);
         bool hurt = hero != null && hero.Book.Records.Count > 0;

@@ -207,7 +207,7 @@ public partial class StreetView
         if (hero < 0) return;
         _rec.StartFight(fight, hero);
         _rec.SetSpeed(SimSpeed.Paused);
-        if (kind is FightKind.Practice or FightKind.Tournament) _boutFight = (kind.Value, -1, 0, _yard?.Settlement ?? -1);
+        if (kind is FightKind.Practice or FightKind.Tournament) _boutFight = (kind.Value, -1, BoutPurseOf(rec.Cause), BoutSettlementOf(rec.Cause, _yard?.Settlement ?? -1));   // the purse and the town come back with the record (review, game finding 2)
         else
         {
             var t = _travel;
@@ -270,9 +270,21 @@ public partial class StreetView
         _boutFight = (kind, -1, purse, settlement);
         OpenFightView(fight, setup.PlayerIndex);
         if (_fightView != null) _fightView.Log.Info(setup.PlayerIndex).Name = _hero?.Name ?? setup.Kits[0].Name;
-        if (rt != null) rt.State.FightSource = () => _world.Fight is { } f ? Ravensguard.Sim.Save.FightRecord.Capture(f, setup.KindName, "") : null;
+        string cause = BoutCause(purse, settlement);                 // a mid-bout save keeps the purse and the town (review, game finding 2)
+        if (rt != null) rt.State.FightSource = () => _world.Fight is { } f ? Ravensguard.Sim.Save.FightRecord.Capture(f, setup.KindName, cause) : null;
         _router?.ShowToast(L.T(kind == FightKind.Practice ? "wm_bout_begin" : "wm_tourney_begin"), 3f);
         return true;
+    }
+
+    /// <summary>The fight record's cause of a bout: "bout|purse|settlement" (invariant digits), so a load mid-bout still pays a tournament's purse to the right town.</summary>
+    static string BoutCause(long purse, int settlement) => string.Create(System.Globalization.CultureInfo.InvariantCulture, $"bout|{purse}|{settlement}");
+    static long BoutPurseOf(string cause) => BoutPart(cause, 1, out long v) ? Math.Max(0, v) : 0;
+    static int BoutSettlementOf(string cause, int fallback) => BoutPart(cause, 2, out long v) && v >= int.MinValue && v <= int.MaxValue ? (int)v : fallback;
+    static bool BoutPart(string cause, int i, out long v)
+    {
+        v = 0;
+        var p = cause.Split('|');
+        return p.Length == 3 && p[0] == "bout" && long.TryParse(p[i], System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out v);
     }
 
     /// <summary>A bout is over: the skill use of the bout (the same cap as before), the purse to a winning hero, and the view closes.</summary>

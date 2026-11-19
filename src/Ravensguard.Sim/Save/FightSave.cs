@@ -71,7 +71,15 @@ public sealed class FightRecord
 
     // ---------------------------------------------------------------- capture
 
+    /// <summary>The record of a fight as it stands. A fight on the world's ledger is read under the ledger's lock, which the live step holds (<see cref="FightWorld.StepShared"/>), so a
+    /// save made on the tick worker mid-fight reads one whole tick (review finding 1).</summary>
     public static FightRecord Capture(FightWorld w, string kind = "", string cause = "")
+    {
+        if (w.Ledger is { } l) lock (l.Sync) return CaptureCore(w, kind, cause);
+        return CaptureCore(w, kind, cause);
+    }
+
+    private static FightRecord CaptureCore(FightWorld w, string kind, string cause)
     {
         if (kind.Length == 0 && w.SetupKind is { } sk) kind = FightSetup.NameOf(sk);    // P4-F: the setup's kind, so the rules come back (the session recorder captures without one)
         var r = new FightRecord { Seed = w.Seed, FightId = w.FightId, GameSec0 = w.GameSec0, Tick = w.Tick, UsesLedger = w.Ledger != null, Kind = kind, Cause = cause, Weather = w.WeatherRow?.State ?? "" };
