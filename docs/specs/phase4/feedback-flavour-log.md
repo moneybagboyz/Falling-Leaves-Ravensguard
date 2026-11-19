@@ -247,7 +247,7 @@ Seeded duels, Aldric (sword, heater shield, gambeson, mail, helm) against Bram (
 
 ### Left for later
 - Wound overlays are P4-C's art; tears on armour layers below 800 condition and the persistent decals saving as chunk deltas (decals live for the fight only), dry-to-brown over game hours.
-- The "Larger parry window" and "Hold or toggle" accessibility options need a change in the fight's inputs (the sim, the recorder): not done. Treatment lines wait for the treatment events (`Treat`), which the fight does not emit yet; unhorse and horse panic wait for mounted-combat (the audio rows already name them).
+- The "Larger parry window" and "Hold or toggle" accessibility options need a change in the fight's inputs (the sim, the recorder): not done. Treatment lines wait for the treatment events (`Treat`), which the fight does not emit yet; the mounted events (charge, unhorsed, fell, horse fell, balked, reared, bolted, trampled, braced strike, lance shattered) have lines in `combat/flavour/mounted.jsonc` and audio rows since mounted-combat joined.
 - Slow motion for a hero parry-riposte kill: the riposte flag is on the parry line but the kill that follows is not linked to it; the other three triggers are in.
 - The After-fight buttons (treat now, loot, rest, pursue) are a one-line hint (the panel has Close only); a mid-fight load does not rebuild the fight view yet (the section keeps the log for the report).
 - Gore-low is the `high` mark on 28 pieces; a human pass over the English is wanted (the sample lines above are the first draft).

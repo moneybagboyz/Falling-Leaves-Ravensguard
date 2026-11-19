@@ -58,11 +58,13 @@ static class MountedRun
             foreach (int mix in new[] { 0, 1, 2 })
             foreach (int win in new[] { 10, 15, 20 })
             {
-                var res = new (int M, int F)[n12];
-                Parallel.For(0, n12, s => res[s] = (MountedCalibration.FirstContact(MountedCalibration.Skirmish(fc, (ulong)(900 + s), footMix: mix), win).Casualties,
-                    MountedCalibration.FirstContact(MountedCalibration.Skirmish(fc, (ulong)(900 + s), mounted: false, footMix: mix), win).Casualties));
-                double mm = res.Average(x => x.M), ff = res.Average(x => x.F);
-                Console.WriteLine($"foot mix {mix}, window {win,2} s, {n12} seeds: mounted {mm:0.00}, foot {ff:0.00}, bonus {100.0 * (mm / Math.Max(0.01, ff) - 1):0}%");
+                var res = new ((int C, int C2, int D) M, (int C, int C2, int D) F)[n12];
+                bool mud = args.Contains("--mud");          // the baseline: the same riders where no charge is possible (mud), instead of the same men on foot
+                Parallel.For(0, n12, s => res[s] = (MountedCalibration.FirstContact(MountedCalibration.Skirmish(fc, (ulong)(900 + s), footMix: mix), win),
+                    MountedCalibration.FirstContact(mud ? MountedCalibration.Skirmish(fc, (ulong)(900 + s), footMix: mix, ground: Footing.Mud) : MountedCalibration.Skirmish(fc, (ulong)(900 + s), mounted: false, footMix: mix), win)));
+                double mm = res.Average(x => x.M.C), ff = res.Average(x => x.F.C), md = res.Average(x => x.M.D), fd = res.Average(x => x.F.D);
+                Console.WriteLine($"foot mix {mix}, window {win,2} s, {n12} seeds: all casualties mounted {mm:0.00} foot {ff:0.00} bonus {100.0 * (mm / Math.Max(0.01, ff) - 1):0}%;"
+                    + $" downed by blows mounted {md:0.00} foot {fd:0.00} bonus {100.0 * (md / Math.Max(0.01, fd) - 1):0}%");
             }
             return 0;
         }
@@ -71,9 +73,9 @@ static class MountedRun
         Console.WriteLine($"{rows.Sum(r => r.N)} mounted duels in {sw.Elapsed.TotalSeconds:0.0} s");
         Console.WriteLine();
         Console.WriteLine(MountedCalibration.Table(rows));
-        // MT-12: the charge's first-contact casualties against the same men on foot
-        var (mounted, foot, bonus) = MountedCalibration.ChargeBonus(fc, 200);
-        Console.WriteLine($"12 v 20 skirmish, 200 seeds, foot casualties in the first {MountedCalibration.FirstPassS} s of contact (every rider's first pass): mounted {mounted:0.00}, the same men on foot {foot:0.00} (bonus {bonus:0}%, abstract charge_pm +60%)");
+        // MT-12: the charge's own bonus: the same riders on dry field (they charge) and on mud (they cannot), the same morale
+        var (charge, noCharge, bonus) = MountedCalibration.ChargeBonus(fc, 200);
+        Console.WriteLine($"12 v 20 skirmish, 200 seeds, foot downed by blows in the first {MountedCalibration.FirstPassS} s of contact (every rider's first pass): charging {charge:0.00}, the same riders on mud (no charge) {noCharge:0.00} (bonus {bonus:0}%, abstract charge_pm +60%)");
         return 0;
     }
 }
