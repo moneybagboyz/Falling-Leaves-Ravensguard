@@ -73,7 +73,7 @@ public sealed partial class FightWorld
     private StrikeV2 StrikeOf(Fighter a, Fighter t, int attack, int part, int gap, Facing facing, AttackStyle style, bool prone)
     {
         int skill = a.Skill + (a.Improvised != null ? K.ImprovisedHitPoints : 0);
-        return new StrikeV2
+        var s = new StrikeV2
         {
             Strength = (int)((long)a.Kit.Strength * a.StrengthPm / 1000), Skill = Math.Max(0, skill), SizeCm3 = a.Kit.SizeCm3, SpeciesSizeCm3 = a.Plan.SizeCm3,
             MomentumPm = a.BlowPm * (a.Kit.Blunted ? 500 : 1000) / 1000, Weapon = a.Weapon, Attack = Math.Clamp(attack, 0, a.Weapon.Attacks.Length - 1), Style = style,
@@ -81,6 +81,8 @@ public sealed partial class FightWorld
             GuardedMask = _snapAct.Length > t.Id && _snapAct[t.Id] == FAct.Block ? GuardMask(t.Plan) : 0, MissingMask = t.MissingMask, Prone = prone,
             TargetPart = part, TargetGap = gap, Facing = facing, SituationPoints = (a.Improvised != null ? 0 : 0) - (Crowded(a, t) ? K.CrowdedPoints : 0),
         };
+        if (Mounts != null) MountedStrike(a, t, ref s);              // [mounted-combat] the charge's momentum, mounted accuracy
+        return s;
     }
 
     /// <summary>A long weapon used inside its own comfortable range (closer than the polearm hold-off).</summary>
@@ -93,6 +95,7 @@ public sealed partial class FightWorld
         var req = a.Req;
         var t = FindTarget(a);
         if (t == null) { a.Whiffs++; Emit(FightEventKind.Whiff, a.Id, req.Target); return; }
+        if (Mounts != null) MountedRetarget(a, ref t, ref req);      // [mounted-combat] rider or horse
         var ts = _snapAct[t.Id];
         var facing = FacingOf(t, a.X, a.Y);
         uint serial = a.Serial;
@@ -147,6 +150,7 @@ public sealed partial class FightWorld
 
         Resolver.Resolve(s, KeyOf(a, serial), _r);
         OnBlow?.Invoke(a, t, _r, s);
+        if (Mounts != null) MountedOnBlow(a, t, s);                  // [mounted-combat] unhorse, lance shatter
         if (_r.Blocked)
         {
             ref var bo = ref _r.Block;

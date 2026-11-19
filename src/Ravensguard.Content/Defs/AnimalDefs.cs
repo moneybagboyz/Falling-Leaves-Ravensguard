@@ -35,6 +35,9 @@ public sealed record SpeciesDef : ContentDef
     /// <summary>Whether it can be ridden (a horse) and whether it works in harness.</summary>
     public bool Ridden { get; init; }
     public bool Draught { get; init; } = true;
+    /// <summary>Mounted combat (Phase 4): training and temper a horse of this breed is bred with (a war horse 900 and steady 10); 0 training keeps the herd's roll.</summary>
+    public int TrainedPm { get; init; }
+    public int Temper { get; init; }
 }
 
 /// <summary>One part of a vehicle (spec 3.3): what it weighs, what it carries, how tough it is and what it needs below it.</summary>

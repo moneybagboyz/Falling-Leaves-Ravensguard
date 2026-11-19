@@ -18,6 +18,8 @@ public enum FightEventKind : byte
 {
     Windup, Feint, Whiff, Blocked, Parried, Dodged, Hit, Stopped, Missed, Down, Wake, Death, Rout, Rally, Surrender, Fled, Riposte, Overpowered,
     Shot, ProjectileHit, ProjectileMiss, Throw, Broke, Reloaded, Shove, Interrupted, Disarmed, OutOfAmmo,
+    // mounted-combat (Combat/Mounted): A, B as each emitter documents
+    Charge, Unhorsed, Fell, HorseFell, Balked, Reared, Bolted, Trampled, BraceStrike, Shattered,
 }
 
 /// <summary>One thing that happened in the fight, for the log, the flavour text (feedback-flavour-log) and the statistics. Text is the presentation's.</summary>

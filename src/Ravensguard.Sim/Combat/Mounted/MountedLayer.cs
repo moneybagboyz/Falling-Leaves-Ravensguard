@@ -1,0 +1,49 @@
+using Ravensguard.Content;
+using Ravensguard.Sim.Combat.Melee2;
+
+namespace Ravensguard.Sim.Combat.Mounted;
+
+/// <summary>
+/// The mounted part of a fight (mounted-combat.md): the rider and horse pairs, what the layer keeps for every fighter (braces, trample cooldowns), the ground and the weather,
+/// and the work queued during the impact phase (unhorsings, shattered lances) that is done after it. A fight without horses has none (<c>FightWorld.Mounts</c> is null) and runs
+/// exactly as before.
+/// </summary>
+public sealed class MountedLayer
+{
+    public MountedTuning Tuning { get; }
+    public MountedTuningDef D => Tuning.D;
+    public List<MountedFighter> Pairs { get; } = [];
+    public FightTerrain Terrain { get; set; } = new();
+    public MountedExtra[] Extra = [];
+    /// <summary>Fighter id to pair index (rider or horse), -1 none.</summary>
+    private int[] _pairOf = [];
+    internal readonly List<(int Rider, int Attacker)> PendingUnseat = [];
+    internal readonly List<int> PendingShatter = [];
+    /// <summary>The horse's stance: it never routs or yields on its own (its fear is panic, 4.2).</summary>
+    public CombatStanceDef HorseStance { get; } = new() { Id = "mounted.horse", FleeBloodLossPm = 0, FleeMoraleBelow = 0, UseRanged = false, CalledShots = false, TreatAllies = false };
+
+    public MountedLayer(MountedTuning tuning) { Tuning = tuning; }
+
+    public void Grow(int fighters)
+    {
+        if (Extra.Length < fighters) Array.Resize(ref Extra, fighters);
+        if (_pairOf.Length < fighters)
+        {
+            int old = _pairOf.Length;
+            Array.Resize(ref _pairOf, fighters);
+            for (int i = old; i < fighters; i++) _pairOf[i] = -1;
+        }
+    }
+
+    internal void Index(MountedFighter m, int fighters)
+    {
+        Grow(fighters);
+        _pairOf[m.Rider] = m.Index; _pairOf[m.Horse] = m.Index;
+    }
+
+    /// <summary>The pair a fighter is the rider or the horse of (null for a foot fighter).</summary>
+    public MountedFighter? PairOf(int fighter) => fighter >= 0 && fighter < _pairOf.Length && _pairOf[fighter] >= 0 ? Pairs[_pairOf[fighter]] : null;
+    public bool IsHorse(int fighter) => PairOf(fighter) is { } m && m.Horse == fighter;
+    /// <summary>The pair whose rider this fighter is, while he sits the horse.</summary>
+    public MountedFighter? Riding(int fighter) => PairOf(fighter) is { Mounted: true } m && m.Rider == fighter ? m : null;
+}

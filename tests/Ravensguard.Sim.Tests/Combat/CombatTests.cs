@@ -23,8 +23,8 @@ public class CombatTests(CombatFixture f)
     public void ContentHasMaterialsShapesAndBodyPlan()
     {
         Assert.True(f.Db.All<MaterialDef>().Count() >= 20);
-        Assert.Equal(25, f.Db.All<WeaponShapeDef>().Count());   // 18 weapons (Phase 4), bare hands (P4-C), 3 natural weapons and the 3 blunted practice weapons of the yard
-        Assert.Equal(42, f.Db.All<ArmourShapeDef>().Count());   // 30 in items/armour.jsonc, 12 in clothing/garments.jsonc
+        Assert.Equal(29, f.Db.All<WeaponShapeDef>().Count());   // 18 weapons (Phase 4), bare hands (P4-C), 3 natural weapons, the 3 blunted practice weapons of the yard, and the 4 of mounted combat (lance, tourney lance, its stub, billhook)
+        Assert.Equal(46, f.Db.All<ArmourShapeDef>().Count());   // 30 in items/armour.jsonc, 12 in clothing/garments.jsonc, 4 barding rows (items/barding.jsonc)
         Assert.True(f.Tables.WeaponEntries > 100 && f.Tables.ArmourEntries > 20);
         // copy_from: wrought iron overrides shear but inherits the impact numbers; ash inherits oak's strength.
         var wi = f.Tables.Materials["wrought_iron"]; var iron = f.Tables.Materials["iron"];

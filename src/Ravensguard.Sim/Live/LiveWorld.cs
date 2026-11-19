@@ -222,7 +222,11 @@ public sealed class LiveWorld
     public Func<long, Ravensguard.Sim.Combat.Melee2.FightWorld?>? FightFactory { get; set; }
 
     public void AttachFight(Ravensguard.Sim.Combat.Melee2.FightWorld fight, int heroFighter) { Fight = fight; FightHero = heroFighter; }
-    public void EndFight() { Fight = null; FightHero = -1; }
+    public void EndFight()
+    {
+        if (Fight != null && Ride != null) Ravensguard.Sim.Combat.Mounted.MountedRide.Settle(Fight, Ride);      // [mounted-combat] the horse's state goes back to the ride
+        Fight = null; FightHero = -1;
+    }
 
     /// <summary>A replayed fight start: the factory gives back the fight as it was when it began.</summary>
     public void StartFightById(long id, int heroFighter) { if (FightFactory?.Invoke(id) is { } f) AttachFight(f, heroFighter); }

@@ -1,0 +1,26 @@
+// Mounted combat (docs/specs/phase4/mounted-combat.md 3.2): the charge, unhorsing, the horse's nerves, refusal before braced polearms, footing.
+// Integer units are in the names (pm permille, bp basis points, mmps mm/s, ticks 20 Hz). The spec's decimals are written here as integers:
+// hold_per_riding 1.0 = 1000 pm, k_pct_per_m 0.8 = 80 bp per unit, max_pct 80 = 8000 bp, hook_mult 2.0 = 2000 pm.
+[
+  { "type": "mounted_tuning", "id": "default",
+    "charge_k_milli_per_kgmps": 10,
+    "charge_weapon_pm": { "lance_couched": 1000, "tourney_couched": 500, "polearm_overhand": 600, "one_hand": 350, "thrown": 0, "bow": 0 },
+    "gallop_charge_min_mmps": 9000, "charge_max_mmps": 12500, "closing_max_mmps": 20000, "trample_k": 8, "brace_return_pm": 800,
+    "accel_mmps2": 7500, "brake_mmps2": 6000, "turn_gallop_deg_per_s": 60, "turn_trot_deg_per_s": 150, "turn_walk_deg_per_s": 270,
+    "unhorse": { "hold_base": 100, "hold_per_riding_pm": 1000, "k_bp_per_unit": 80, "max_bp": 8000, "hook_pm": 2000,
+      "pin_pm": 600, "pin_ticks": 80, "pin_crush_milli": 40000, "fall_height_mm": 1800, "down_ticks": 40, "refusal_throw_pm": 200 },
+    "panic": { "decay_pm_per_s": 30, "cut": 80, "torn": 150, "artery": 300, "leg_broken": 600, "barding_stop": 20, "fire_per_s": 200, "thunder": 100,
+      "bolts_at": 900, "rears_at": 600, "rear_throw_base_pct": 40, "rear_throw_riding_div": 3, "rear_throw_min_pct": 5, "rear_throw_max_pct": 40, "bolt_ticks": 200 },
+    "refusal": { "base_pm": 200, "per_braced_polearm_pm": 150, "trained_k": 2, "trained_ref": 700, "riding_k": 2, "max_pm": 950, "ai_avoid_pm": 400 },
+    "footing": {
+      "road":       { "speed_pm": 1000, "charge": true },
+      "field":      { "speed_pm": 850,  "charge": true },
+      "rough":      { "speed_pm": 600,  "charge": false, "max_mmps": 8000, "slip_pm_per_s": 20 },
+      "mud":        { "speed_pm": 500,  "charge": false, "max_mmps": 5000 },
+      "snow":       { "speed_pm": 600,  "charge": false, "max_mmps": 8000 },
+      "ice":        { "speed_pm": 400,  "charge": false, "slip_pm_per_s": 80 },
+      "woods":      { "speed_pm": 500,  "charge": false, "max_mmps": 5200 },
+      "ford":       { "speed_pm": 500,  "charge": false, "max_mmps": 5200 },
+      "deep_water": { "speed_pm": 80,   "charge": false, "max_mmps": 1000 },
+      "portal":     { "speed_pm": 0,    "charge": false, "forbidden": true } } }
+]

@@ -1,0 +1,16 @@
+// Barding (mounted-combat 3.1): armour for the horse body plan (coverage on horse part ids; "body": "horse" keeps it off any other plan). Layers and gaps work
+// as for people; the mass slows the horse (its carry is reduced by the barding's kg). Mail barding 18 kg; plate barding is rare.
+[
+  { "type": "armour_shape", "id": "horse_blanket", "name": "Horse blanket", "body": "horse", "layer": "over", "order": 0, "thickness_mm": 6.0, "layer_size": 20, "layer_permit": 60,
+    "default_material": "linen", "mass_g": 5000, "woven": true, "blunt_absorb_pm": 400, "fit_size_cm3": 450000, "size_multiplier": 0.2,
+    "coverage": { "chest": 0.8, "belly": 0.9, "rump": 0.9, "neck": 0.5 } },
+  { "type": "armour_shape", "id": "horse_mail", "name": "Mail barding", "body": "horse", "layer": "armour", "order": 0, "thickness_mm": 4.0, "layer_size": 50, "layer_permit": 80,
+    "default_material": "iron", "mass_g": 18000, "elastic": true, "fit_size_cm3": 450000, "size_multiplier": 0.225,
+    "coverage": { "neck": 0.8, "chest": 0.9, "belly": 0.5, "rump": 0.8 } },
+  { "type": "armour_shape", "id": "horse_chanfron", "name": "Chanfron", "body": "horse", "layer": "armour", "order": 1, "thickness_mm": 2.0, "layer_size": 60, "layer_permit": 100,
+    "default_material": "steel", "mass_g": 2500, "fit_size_cm3": 450000, "size_multiplier": 0.3,
+    "coverage": { "head": 0.9 } },
+  { "type": "armour_shape", "id": "horse_plate", "name": "Plate barding", "body": "horse", "layer": "armour", "order": 1, "thickness_mm": 2.0, "layer_size": 70, "layer_permit": 100,
+    "default_material": "steel", "mass_g": 30000, "fit_size_cm3": 450000, "size_multiplier": 0.2,
+    "coverage": { "chest": 0.9, "neck": 0.6, "rump": 0.7 } }
+]

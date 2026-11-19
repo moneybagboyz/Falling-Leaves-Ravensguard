@@ -2280,3 +2280,28 @@ FIGHT_DOLL_ATTACK,"Attack: < {0} > ({1})"
 FIGHT_DOLL_CHANCE,"{0}: hit chance {1:0}%"
 FIGHT_DEMO_DUEL,"Duel: you (sword, heater) against a bandit. R restarts, K skirmish."
 FIGHT_DEMO_SKIRMISH,"Skirmish: Wolves against Crows, ten a side. R restarts, K duel."
+mt_ev_charge,{0} charges! (+{1} momentum)
+mt_ev_unhorsed,{0} is thrown from the saddle
+mt_ev_unhorsed_pinned,{0} is thrown and pinned under the horse
+mt_ev_fell,{0} lands hard on the {1}
+mt_ev_horse_fell,{0} goes down
+mt_ev_balked,{0} balks before the braced points ({1}%)
+mt_ev_reared,{0} rears
+mt_ev_bolted,{0} bolts
+mt_ev_trampled,{0} tramples {1}
+mt_ev_brace,{0} braces and takes the charge on the point
+mt_ev_shattered,{0}'s lance shatters
+mt_call_charge,Charge!
+mt_call_unhorsed,Unhorsed!
+mt_call_balk,Balks!
+mt_call_trample,Trampled
+mt_call_brace,Braced!
+mt_call_shatter,Shatters!
+mt_hud_mount,"{0}: stamina {1}%  panic {2}%  {3:0.0} m/s{4}"
+mt_hud_winded, (winded)
+mt_hud_grip,Grip {0}%
+mt_hud_charge,Charge +{0:0}
+mt_hud_refusal,This charge will probably stop: refusal {0}%
+mt_hud_unhorse,"Unhorse chance on {0}: {1:0.0}%"
+mt_doll_mount,Horse: {0}
+mt_demo_mounted,"Mounted: you (lance, courser) against foot, a braced spear and a rider. Shift gallops, LMB couches. R restarts, K duel."

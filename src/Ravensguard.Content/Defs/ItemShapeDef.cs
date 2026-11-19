@@ -26,6 +26,8 @@ public sealed record AttackDef
     public int ShieldCoverPm { get; init; } = 1000;
     /// <summary>P4-C: the share of a parry's success chance that still applies against this attack, permille (a mace's weight drives through a blade's parry: 600).</summary>
     public int ParryPm { get; init; } = 1000;
+    /// <summary>Mounted combat 4.3: a hooked attack (billhook) pulls a rider down: the unhorse chance is doubled.</summary>
+    public bool Hook { get; init; }
 }
 
 /// <summary>
@@ -105,6 +107,8 @@ public sealed record ArmourShapeDef : ContentDef
     public int BluntAbsorbPm { get; init; }
     /// <summary>A helm with a visor: closed it leaves no face gap; the item's open state adds the gap (resolver-v2 4.2).</summary>
     public bool Visor { get; init; }
+    /// <summary>Mounted combat 3.1: the body plan the piece is made for (<c>horse</c> for barding); empty for any plan. Coverage applies only to that plan.</summary>
+    public string Body { get; init; } = "";
 }
 
 /// <summary>A shield (melee-and-ranged 3.2, resolver-v2 4.8): a separate slot, it blocks blows up to its capacity and wears by momentum over its durability.</summary>
