@@ -110,6 +110,6 @@ Console.WriteLine($"{rows.Sum(r => r.N)} duels in {sw.Elapsed.TotalSeconds:0.0} 
 Console.WriteLine();
 Console.WriteLine(Calibration.Table(rows, treated));
 Console.WriteLine($"Knocked out and bled out: {100.0 * rows.Sum(r => r.KoBledOut) / Math.Max(1, rows.Sum(r => r.KnockedOut)):0.0}% untreated, {100.0 * treated.Sum(r => r.KoBledOut) / Math.Max(1, treated.Sum(r => r.KnockedOut)):0.0}% with a medic (target <= 35%)");
-Console.WriteLine("Metal ranking (outer-piece cut rate, permille, sword slashes vs leather, bronze mail, iron mail):");
+Console.WriteLine("Metal ranking (outer-piece cut rate, permille, sword slashes vs a leather jerkin, a bone breastplate, bronze mail, iron mail):");
 Console.WriteLine(string.Join("  <  ", Calibration.MetalRanking(tables.V2).Select(x => $"{x.Metal} {x.CutsPerMille}")));
 return 0;

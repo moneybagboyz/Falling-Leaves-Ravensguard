@@ -302,5 +302,7 @@ internal static class Golden
     // re-pinned in P4-C: the mace (velocity 1.5) and the pommel (0.8) were recalibrated in content (melee-and-ranged Notes); the formulas are unchanged
     // re-pinned in the Phase 4 close-out (weapon x armour matrix, items 2 and 4): only a rigid shell deflects, a failed edge skids off it, a backplate is not met from the front,
     // blunt blows dent plate (the step wear), the maul is velocity 1.7, bodkins and quarrels are iron
-    public const ulong Table100k = 12489677114851335651UL;
+    // re-pinned in the DF wiki re-check (df-calibration.md): the materials are the DF2014 raws (iron and bronze impact, leather, bone, wood, gold, lead, tin); the formulas are
+    // unchanged
+    public const ulong Table100k = 2852731875240228929UL;
 }

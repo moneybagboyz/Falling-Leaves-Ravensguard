@@ -1,9 +1,10 @@
 // Metals. Stress values are DF raw (kPa-ish, 1,505,000 = "1.505 MPa" in the Material science page), strain-at-yield per 100,000.
-// DF-sourced (DF 0.31 raws via wiki "Metal" page): iron, steel, bronze, copper, silver, density, melting, impact/shear numbers.
-// Estimates are marked `// estimate`. Melting points are DF degrees converted to °C.
+// DF-sourced: density, impact and shear yield / fracture / strain of iron, steel, bronze, copper, silver, gold, lead and tin are the DF2014
+// raws (inorganic_metal.txt as the wiki shows it, read Nov 2026; docs/specs/phase4/df-calibration.md). Max edge 1.0 is DF's MAX_EDGE 10000 for
+// every metal. Estimates are marked `// estimate`. Melting points are DF degrees converted to °C.
 [
   { "type": "material", "id": "iron", "name": "Iron", "category": "metal", "density_kg_m3": 7850, "value_per_kg": 2.0,
-    "impact_yield_kpa": 542000, "impact_fracture_kpa": 1080000, "impact_strain_at_yield": 319,
+    "impact_yield_kpa": 542500, "impact_fracture_kpa": 1085000, "impact_strain_at_yield": 319,
     "shear_yield_kpa": 155000, "shear_fracture_kpa": 310000, "shear_strain_at_yield": 189,
     "max_edge": 1.0, "melting_point_c": 1576 },
 
@@ -17,7 +18,7 @@
     "max_edge": 1.0, "melting_point_c": 1548 },
 
   { "type": "material", "id": "bronze", "name": "Bronze", "category": "metal", "density_kg_m3": 8250, "value_per_kg": 4.0,
-    "impact_yield_kpa": 602000, "impact_fracture_kpa": 843000, "impact_strain_at_yield": 547,
+    "impact_yield_kpa": 602000, "impact_fracture_kpa": 843500, "impact_strain_at_yield": 547,
     "shear_yield_kpa": 172000, "shear_fracture_kpa": 241000, "shear_strain_at_yield": 156,
     "max_edge": 1.0, "melting_point_c": 1076 },
 
@@ -32,20 +33,20 @@
     "shear_yield_kpa": 100000, "shear_fracture_kpa": 170000, "shear_strain_at_yield": 333,
     "max_edge": 1.0, "melting_point_c": 999 },
 
-  // Gold: fracture/shear/strain from the wiki Gold/Metal pages; impact yield is an estimate.
+  // Gold: the DF2014 raws.
   { "type": "material", "id": "gold", "name": "Gold", "category": "metal", "density_kg_m3": 19320, "value_per_kg": 9615.0,
-    "impact_yield_kpa": 250000, "impact_fracture_kpa": 350000, "impact_strain_at_yield": 600, // impact yield estimate
+    "impact_yield_kpa": 175000, "impact_fracture_kpa": 350000, "impact_strain_at_yield": 97,
     "shear_yield_kpa": 50000, "shear_fracture_kpa": 100000, "shear_strain_at_yield": 185,
     "max_edge": 1.0, "melting_point_c": 1102 },
 
-  // Lead and tin: fracture/shear from wiki pages, impact yield estimated, strains from the V50 table.
+  // Lead and tin: the DF2014 raws.
   { "type": "material", "id": "lead", "name": "Lead", "category": "metal", "density_kg_m3": 11340, "value_per_kg": 1.0,
-    "impact_yield_kpa": 30000, "impact_fracture_kpa": 42000, "impact_strain_at_yield": 2348, // impact yield estimate
+    "impact_yield_kpa": 35000, "impact_fracture_kpa": 42000, "impact_strain_at_yield": 760,
     "shear_yield_kpa": 10000, "shear_fracture_kpa": 12000, "shear_strain_at_yield": 179,
     "max_edge": 1.0, "melting_point_c": 365 },
 
   { "type": "material", "id": "tin", "name": "Tin", "category": "metal", "density_kg_m3": 7280, "value_per_kg": 6.0,
-    "impact_yield_kpa": 150000, "impact_fracture_kpa": 350000, "impact_strain_at_yield": 1862, // impact yield estimate
+    "impact_yield_kpa": 42000, "impact_fracture_kpa": 350000, "impact_strain_at_yield": 724,
     "shear_yield_kpa": 12000, "shear_fracture_kpa": 100000, "shear_strain_at_yield": 66,
     "max_edge": 1.0, "melting_point_c": 269 },
 ]

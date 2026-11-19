@@ -1,6 +1,8 @@
 // Human body plan v2 (plan §2.6, §4A.3; docs/specs/phase4/anatomy-and-body-plans.md 3.2 and 3.3).
 // Relative part sizes are DF's (upper body 18%, lower body 18%, head 5.4%, neck 1.8%, upper arm 3.6%, lower arm 3.6%, hand 1.4%,
-// upper leg 9%, lower leg 7.2%, foot 2.2%; sided parts exist left and right). The 10 base ids and 16 instances of v1 stay; v2 adds
+// upper leg 9%, lower leg 7.2%, foot 2.2%; sided parts exist left and right). The hand and foot are the Material science page's rounded percent
+// column: DF's relsizes (80 and 120 against the trunk's 1000) make them 1.44% and 2.16%; the correction waits for the abstract re-fit, because
+// it tips AB-3's scenario A casualties out of their band (docs/specs/phase4/df-calibration.md). The 10 base ids and 16 instances of v1 stay; v2 adds
 // 12 hosted base ids (19 instances: eyes, ears, nose, skull, jaw, teeth, ribs, collarbones, pelvis, kneecaps, thumbs, fingers) for 35.
 // skull, ribs and pelvis are "shell" parts: the host's bone layer promoted to a part (it keeps the bone layer in the host's stack).
 // Structures sit inside the muscle and are rolled by area when the muscle is cut: vessels and tendons (v1), a motor and a sensory
