@@ -162,13 +162,15 @@ public class ResolverV2GoldenTests(V2Fixture f)
         var s = f.S("spear", "thrust", "upper_body", worn: [("gambeson", "linen"), ("mail_hauberk", "iron")]);
         var r = f.ImpactCovered(s);
         Expect(r, s, ("mail_hauberk", Cut, 117_400), ("gambeson", Cut, 111_500), ("skin", Cut, -1), ("fat", Cut, -1), ("muscle", Cut, -1), ("bone_tissue", Cut, 49_200));
-        // spear vs steel breastplate over gambeson: plate crushed, padding absorbs, a cracked rib, no organ
+        // spear vs steel breastplate over gambeson: the point fails the plate's cut need (168) and skids off it (the strain rule: close-out item 2; table 4.4 had the plate crushed
+        // at the point's small area, as a hammer would, and a cracked rib beneath): next to nothing goes on, the plate is only scuffed
         s = f.S("spear", "thrust", "upper_body", worn: [("gambeson", "linen"), ("breastplate", "steel")]);
         r = f.ImpactCovered(s);
-        Expect(r, s, ("breastplate", Crushed, 99_200), ("gambeson", Crushed, 51_800), ("skin", Crushed, -1), ("fat", Crushed, -1), ("muscle", Crushed, -1), ("bone_tissue", Crushed, 18_000));
+        Assert.Equal(LayerOutcome.Stopped, r.Steps[0].Outcome);
         Assert.InRange(r.Steps[0].NeedMilli, 167_000, 169_000);                          // plate cut need 168
-        Assert.Equal(BoneGrade.Cracked, Bone(r).Bone);
-        Assert.DoesNotContain(r.WoundSpan.ToArray(), w => w.Organ >= 0);
+        Assert.True(r.Steps[0].OutMilli < 1_000, $"{r.Steps[0].OutMilli}");
+        Assert.Equal(ArmourHarm.None, r.Steps[0].Harm);
+        Assert.DoesNotContain(r.WoundSpan.ToArray(), w => w.Kind == WoundKind.Cut || w.Organ >= 0 || f.T.MaterialList[w.Tissue].Id == "bone_tissue" && w.Bone >= BoneGrade.Cracked);
         // sword vs bronze mail: hard armour eats the blow
         s = f.S("arming_sword", "slash", "upper_leg_l", worn: [("mail_hauberk", "bronze")]);
         r = f.ImpactCovered(s);

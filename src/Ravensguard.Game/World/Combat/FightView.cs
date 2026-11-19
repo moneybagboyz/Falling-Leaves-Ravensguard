@@ -412,6 +412,9 @@ public partial class FightView : Node2D
                 FightEventKind.Surrender => (L.F("FIGHT_EV_SURRENDER", actor), Colors.White, af, ""),
                 FightEventKind.Shot => (L.F("FIGHT_EV_SHOT", actor), new Color(0.85f, 0.8f, 0.6f), null, ""),
                 FightEventKind.ProjectileHit => (L.F("FIGHT_EV_ARROW", target, part), new Color(1, 0.5f, 0.35f), tf, part),
+                FightEventKind.Broke when e.A == 3 && af != null && e.Part >= 0 && e.Part < af.Worn.Length =>
+                    (L.F(e.B switch { 2 => "FIGHT_EV_ARMOUR_BUCKLED", 3 => "FIGHT_EV_ARMOUR_BURST", 4 => "FIGHT_EV_ARMOUR_STRAP", _ => "FIGHT_EV_ARMOUR_DENTED" }, actor, af.Worn[e.Part].Stats.Shape.Name.ToLowerInvariant()),
+                        new Color(0.85f, 0.75f, 0.6f), af, ""),
                 FightEventKind.Broke => (L.F("FIGHT_EV_BROKE", actor), new Color(0.9f, 0.7f, 0.5f), af, ""),
                 _ => ((string?)null, Colors.White, (Fighter?)null, ""),
             };
@@ -723,8 +726,19 @@ public partial class FightView : Node2D
             int pi = t.Plan.IndexOf(b + side); if (pi < 0) pi = t.Plan.IndexOf(b);
             if (pi < 0) continue;
             var part = t.Plan.Parts[pi];
-            int cov = 0;
-            foreach (var wv in t.Worn) if (wv.Stats.Layer == Ravensguard.Content.ArmourLayer.Armour) cov = Math.Max(cov, wv.Stats.CoverageByPlan[t.Plan.Index][part.BaseIndex]);
+            int cov = 0; bool harmed = false;
+            foreach (var wv in t.Worn)
+            {
+                if (wv.Stats.Layer != Ravensguard.Content.ArmourLayer.Armour) continue;
+                int c0 = wv.Stats.CoverageByPlan[t.Plan.Index][part.BaseIndex];
+                if (c0 <= 0) continue;
+                // close-out item 4: a dented piece protects less (the condition multiplier), burst rings and a broken strap cover less
+                int c = c0 * (500 + Math.Clamp(wv.ConditionPm, 0, 1000) / 2) / 1000;
+                if ((wv.BreachMask & (1UL << part.BaseIndex)) != 0) c = c * 7 / 10;
+                if (wv.Slipped) c /= 2;
+                cov = Math.Max(cov, c);
+                harmed |= !wv.Pristine;
+            }
             var col = new Color(0.78f, 0.62f, 0.5f).Lerp(new Color(0.55f, 0.6f, 0.68f), cov / 1000f);
             if ((t.MissingMask & (1UL << pi)) != 0) col = new Color(0.2f, 0.2f, 0.2f);
             bool on = sel.Part == pi;
@@ -732,6 +746,7 @@ public partial class FightView : Node2D
             DrawRect(rr, on ? col.Lightened(0.25f) : col);
             DrawRect(rr, on ? new Color(1f, 0.82f, 0.2f) : new Color(0.15f, 0.12f, 0.1f), false, on ? 3 : 1);
             foreach (var w in t.Book.Records) if (w.Part == pi && w.BleedX10 > 0) { DrawCircle(rr.GetCenter(), 4, new Color(0.7f, 0.05f, 0.05f)); break; }
+            if (harmed) DrawLine(rr.Position + new Vector2(2, 2), rr.End - new Vector2(2, 2), new Color(0.35f, 0.3f, 0.25f), 2);     // a damaged piece: struck through
         }
         if (sel.Gap >= 0)
         {

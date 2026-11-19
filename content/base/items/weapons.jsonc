@@ -58,7 +58,7 @@
       { "id": "spike",  "name": "Spike",  "verb": "pierces", "type": "point", "contact_area": 10, "penetration_mm": 150, "velocity": 1.1 } ] },
   { "type": "weapon_shape", "id": "maul", "name": "Maul", "family": "hafted", "reach_mm": 1500, "strike_ticks": 3,
     "head_volume_cm3": 600, "haft_volume_cm3": 800, "haft_material": "ash", "two_handed": true, "wind_up_s": 0.90, "recover_s": 0.90,
-    "attacks": [ { "id": "smash", "name": "Smash", "verb": "smashes", "type": "blunt", "contact_area": 25, "penetration_mm": 0, "velocity": 0.9 } ] },
+    "attacks": [ { "id": "smash", "name": "Smash", "verb": "smashes", "type": "blunt", "contact_area": 25, "penetration_mm": 0, "velocity": 1.7 } ] },
   // Single-material wooden club and staff: the head material is chosen per instance (oak, ash), no separate haft.
   { "type": "weapon_shape", "id": "club", "name": "Club", "family": "hafted", "reach_mm": 1000, "strike_ticks": 2,
     "head_volume_cm3": 1000, "wind_up_s": 0.55, "recover_s": 0.50,
@@ -69,7 +69,7 @@
       { "id": "strike", "name": "Strike", "verb": "strikes", "type": "blunt", "contact_area": 30, "penetration_mm": 0, "velocity": 1.0 },
       { "id": "jab",    "name": "Jab",    "verb": "jabs",    "type": "blunt", "contact_area": 12, "penetration_mm": 0, "velocity": 1.0 } ] },
   { "type": "weapon_shape", "id": "spear", "name": "Spear", "family": "polearm", "reach_mm": 2400, "strike_ticks": 2,
-    "head_volume_cm3": 60, "haft_volume_cm3": 900, "haft_material": "ash", "two_handed": true, "wind_up_s": 0.50, "recover_s": 0.60,
+    "head_volume_cm3": 60, "haft_volume_cm3": 900, "haft_material": "ash", "two_handed": true, "wind_up_s": 0.40, "recover_s": 0.50,
     "attacks": [
       { "id": "thrust", "name": "Thrust", "verb": "thrusts", "type": "point", "contact_area": 12, "penetration_mm": 400, "velocity": 1.3 },
       { "id": "butt",   "name": "Butt strike", "verb": "bashes", "type": "blunt", "contact_area": 15, "penetration_mm": 0, "velocity": 0.8 } ] },

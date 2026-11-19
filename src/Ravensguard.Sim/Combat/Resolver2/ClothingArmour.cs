@@ -25,7 +25,8 @@ public static class ClothingArmour
         return n;
     }
 
-    /// <summary>Applies the blow's wear to the worn items (a cut tears cloth 30 pm, mail 10, plate 5; a crush less).</summary>
+    /// <summary>Applies the blow's wear to the worn items: a cut tears cloth 30 pm, leather 20, mail 10, plate 5; a crush scuffs them less, but a blunt blow dents a rigid shell
+    /// in proportion to its momentum over the crush need (close-out item 4: 150 pm at the need). Burst rings and broken straps live on the fight's pieces only.</summary>
     public static void ApplyWear(ClothingBook book, Tracked t, BlowResult r)
     {
         foreach (var s in r.StepSpan)

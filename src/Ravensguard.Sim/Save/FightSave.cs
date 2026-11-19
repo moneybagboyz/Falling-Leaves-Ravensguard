@@ -61,8 +61,13 @@ public sealed class FightRecord
     /// <summary>P4-F (watch mode, no format bump): the watch state, the sides' orders and formations, the always-near fighter, and per fighter the guarded person, the treat timer
     /// and the sheathed flag; null in a fight nobody watched, ordered or gave a stance (the extras are then all default).</summary>
     [Key(21)] public WatchRow? Watch { get; set; }
+    /// <summary>Close-out item 4 (no format bump): the worn pieces' damage, per fighter in id order: the piece count, then condition, breach mask and broken strap of each piece;
+    /// null when every piece of every fighter is untouched.</summary>
+    [Key(22)] public long[]? Armour { get; set; }
+    /// <summary>Close-out item 1 (no format bump): per fighter in id order, the tick it stays inside a longer weapon's reach and whose; null when nobody is or was.</summary>
+    [Key(23)] public long[]? Inside { get; set; }
     /// <summary>P4 close-out (no format bump): the fight's weather row by its state name; "" for a fight without one (older records).</summary>
-    [Key(22)] public string Weather { get; set; } = "";
+    [Key(24)] public string Weather { get; set; } = "";
 
     // ---------------------------------------------------------------- capture
 
@@ -80,6 +85,9 @@ public sealed class FightRecord
         r.Ground = [.. w.Ground.Select(g => new GroundRow { Shape = g.Shape, Material = g.Material, X = g.X, Y = g.Y, Damaged = g.Damaged, Ammo = g.Ammo })];
         r.Morale = w.CaptureMorale();                                         // P4-D hook
         r.Watch = WatchRow.Capture(w);                                        // P4-F hook
+        if (w.Fighters.Any(f => f.InsideUntil != -1 || f.InsideOf != -1)) r.Inside = [.. w.Fighters.SelectMany(f => new long[] { f.InsideUntil, f.InsideOf })];
+        if (w.Fighters.Any(f => f.Worn.Any(x => !x.Pristine)))
+            r.Armour = [.. w.Fighters.SelectMany(f => f.Worn.SelectMany(x => new long[] { x.ConditionPm, (long)x.BreachMask, x.Slipped ? 1 : 0 }).Prepend(f.Worn.Length))];
         var spent = w.SpentAmmo.OrderBy(kv => kv.Key, StringComparer.Ordinal).ToArray();
         r.SpentAmmoIds = [.. spent.Select(kv => kv.Key)]; r.SpentAmmoCounts = [.. spent.Select(kv => kv.Value)];
         return r;
@@ -201,6 +209,19 @@ public sealed class FightRecord
         for (int i = 0; i < SpentAmmoIds.Length; i++) w.SpentAmmo[SpentAmmoIds[i]] = SpentAmmoCounts[i];
         w.RestoreMorale(Morale);                                              // P4-D hook
         Watch?.Restore(w);                                                    // P4-F hook
+        if (Inside != null)
+            for (int i = 0; i < w.Fighters.Count && 2 * i + 1 < Inside.Length; i++) { w.Fighters[i].InsideUntil = (int)Inside[2 * i]; w.Fighters[i].InsideOf = (int)Inside[2 * i + 1]; }
+        if (Armour != null)
+        {
+            int i = 0;
+            foreach (var f in w.Fighters)
+            {
+                if (i >= Armour.Length) break;
+                int n = (int)Armour[i++];
+                for (int k = 0; k < n && i + 2 < Armour.Length; k++, i += 3)
+                    if (k < f.Worn.Length) { f.Worn[k].ConditionPm = (int)Armour[i]; f.Worn[k].BreachMask = (ulong)Armour[i + 1]; f.Worn[k].Slipped = Armour[i + 2] != 0; }
+            }
+        }
         w.WeatherRow = FightWorld.WeatherRowOf(content.Db, Weather);          // P4 close-out: the weather row
         return w;
     }

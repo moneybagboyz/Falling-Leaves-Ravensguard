@@ -235,7 +235,8 @@ public class WatchTests(FightFixture fx, ITestOutputHelper output)
         }
         output.WriteLine($"protect: within 3 m in {near} of {ticks} ticks");
         Assert.True(ticks > 2000);
-        Assert.True(near * 1000 >= 900 * ticks, $"within 3 m in {near * 1000 / Math.Max(1, ticks)} permille of ticks");
+        // over 240 seeds the protector is within 3 m 887 permille of the ticks before the Phase 4 close-out weapon changes and 889 after; these 40 read 905 before and 862 after
+        Assert.True(near * 1000 >= 850 * ticks, $"within 3 m in {near * 1000 / Math.Max(1, ticks)} permille of ticks");
     }
 
     // ------------------------------------------------------------------ WM-7: interrupts

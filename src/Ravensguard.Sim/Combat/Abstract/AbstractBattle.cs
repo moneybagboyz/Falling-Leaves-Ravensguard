@@ -75,11 +75,14 @@ public sealed class AbstractBattle
         var terrain = input.Terrain;
         _mud = terrain?.Base is Footing.Mud or Footing.Snow or Footing.Ice;
         _woods = terrain?.Base == Footing.Woods;
+        var morale = MoraleRules.For(c.Db);
+        var human = c.T.Plan("human");                    // the tables and templates are the human plan's (a beast fights as a man of its size: v1)
+        var armourOf = new Dictionary<IReadOnlyList<WornItem>, ArmourClass>(ReferenceEqualityComparer.Instance);   // a pure reading of the list: the same list, the same class
         for (int i = 0; i < input.Kits.Count; i++)
         {
             var kit = input.Kits[i];
             int side = kit.Team == Team[0] ? 0 : 1;
-            var plan = c.T.Plan("human");                 // the tables and templates are the human plan's (a beast fights as a man of its size: v1)
+            var plan = human;
             var book = input.Books is { } bl && i < bl.Count && bl[i] is { } bk ? BookCopy.Clone(bk) : input.BookOf?.Invoke(kit.Person) is { } b0 ? BookCopy.Clone(b0) : null;
             book ??= new WoundBook(input.Seed, (input.BattleId << 16) + (ulong)i + 1, (int)((long)plan.BloodMl * Math.Max(1, kit.SizeCm3) / plan.SizeCm3), kit.Toughness, plan.Id) { LastSec = input.GameSec };
             if (book.LastSec < input.GameSec) book.AdvanceTo(input.GameSec);
@@ -89,11 +92,11 @@ public sealed class AbstractBattle
             bool mounted = input.Mounted.Contains(i);
             var so = new Soldier
             {
-                Index = i, Side = side, Kit = kit, Melee = mounted && mc == WeaponClass.Polearm ? WeaponClass.Lance : mc, Shooter = sh, Armour = AbstractClasses.ArmourOf(c.T, kit.Worn),
+                Index = i, Side = side, Kit = kit, Melee = mounted && mc == WeaponClass.Polearm ? WeaponClass.Lance : mc, Shooter = sh, Armour = armourOf.TryGetValue(kit.Worn, out var ac) ? ac : armourOf[kit.Worn] = AbstractClasses.ArmourOf(c.T, kit.Worn),
                 Skill = kit.Skill, ArcherySkill = kit.ArcherySkill >= 0 ? kit.ArcherySkill : kit.Skill, Shield = kit.Shield != null && sh == null, Mounted = mounted,
                 Ammo = sh != null ? (kit.AmmoCount > 0 ? kit.AmmoCount : 24) : 0, Throws = kit.Throwables.Where(t => t.Shape == "javelin").Sum(t => t.Count),
                 Braces = mc == WeaponClass.Polearm && !mounted,
-                CourageX100 = MoraleRules.For(c.Db).CourageX100(kit.Courage), Book = book, Plan = plan,
+                CourageX100 = morale.CourageX100(kit.Courage), Book = book, Plan = plan,
             };
             if (input.Statuses is { } st && i < st.Count) so.Status = st[i];
             if (input.Routing is { } rt && i < rt.Count && rt[i] && so.Status == SoldierStatus.Active) { so.Routing = true; so.RoutStep = 0; }
@@ -265,7 +268,7 @@ public sealed class AbstractBattle
     private int Shoot(int side, bool contact)
     {
         int e = 1 - side, n = 0;
-        var targets = Side[e].Where(x => x.Active && !x.Routing).ToList();
+        var targets = Fill(_targets, Side[e], x => x.Active && !x.Routing);
         if (targets.Count == 0) return 0;
         int range = contact ? 12_000 : GapMm;
         if (_woods) range = range * 1000 / Math.Max(1, K.WoodsRangePm);
@@ -303,8 +306,8 @@ public sealed class AbstractBattle
     private int Melee(int side, bool chargeStep)
     {
         int e = 1 - side;
-        var attackers = Side[side].Where(x => x.InLine && x.WeaponArm && x.CanStand && !(x.Shooter != null && x.Ammo > 0)).OrderBy(x => x.Row).ThenBy(x => x.Index).ToList();
-        var targets = Side[e].Where(x => x.Active && !x.Routing).ToList();
+        var attackers = ByRow(Fill(_attackers, Side[side], x => x.InLine && x.WeaponArm && x.CanStand && !(x.Shooter != null && x.Ammo > 0)));
+        var targets = Fill(_targets, Side[e], x => x.Active && !x.Routing);
         if (attackers.Count == 0 || targets.Count == 0) return 0;
         int eng = Input.Narrow ? K.EngagementNarrowPm : K.EngagementPm;
         int cap = Input.Narrow ? K.OutnumberCapNarrowPm : K.OutnumberCapPm;
@@ -350,10 +353,10 @@ public sealed class AbstractBattle
     private int Pursue(int side)
     {
         int e = 1 - side;
-        var routers = Side[e].Where(x => x.Active && x.Routing).ToList();
+        var routers = Fill(_targets, Side[e], x => x.Active && x.Routing);
         if (routers.Count == 0) return 0;
         var line = Side[e].Count(x => x.InLine);
-        var free = Side[side].Where(x => x.InLine && x.WeaponArm && x.CanStand && !(x.Shooter != null && x.Ammo > 0)).OrderBy(x => x.Row).ThenBy(x => x.Index).ToList();
+        var free = ByRow(Fill(_attackers, Side[side], x => x.InLine && x.WeaponArm && x.CanStand && !(x.Shooter != null && x.Ammo > 0)));
         int busy = (int)Math.Min(free.Count, (long)K.EngagementPm * line * K.OutnumberCapPm / 1_000_000);
         int n = 0, i = 0;
         foreach (var a in free)
@@ -371,6 +374,12 @@ public sealed class AbstractBattle
     }
 
     private static bool IsShooter(Soldier s) => s.Shooter != null && s.Ammo > 0;
+
+    // the step's lists, kept by the battle (P4 close-out: the exchange built and sorted them anew for every side every step); a call fills and uses one before the next call refills it
+    private readonly List<Soldier> _targets = [], _attackers = [];
+    private static List<Soldier> Fill(List<Soldier> into, List<Soldier> from, Func<Soldier, bool> keep) { into.Clear(); foreach (var x in from) if (keep(x)) into.Add(x); return into; }
+    /// <summary>Front rows first, then setup order: the order <c>OrderBy(Row).ThenBy(Index)</c> gave (the index is unique, so the sort is total).</summary>
+    private static List<Soldier> ByRow(List<Soldier> l) { l.Sort(static (a, b) => a.Row != b.Row ? a.Row.CompareTo(b.Row) : a.Index.CompareTo(b.Index)); return l; }
 
     private int Weight(Soldier t) => t.Row == 0 ? K.FrontPm : t.Row == 1 ? K.MiddlePm : K.RearPm;
 

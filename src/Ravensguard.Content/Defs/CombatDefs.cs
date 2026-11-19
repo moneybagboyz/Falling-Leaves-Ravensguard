@@ -125,6 +125,15 @@ public sealed record MeleeTuningDef : ContentDef
     public int CrowdedPoints { get; init; } = 0;
     /// <summary>A short weapon closing on a longer one rushes in (sprints) while the foe recovers.</summary>
     public int CloseInSprint { get; init; } = 1;
+    /// <summary>Close-out item 1, the counter to the spear: a fighter who parries or dodges a blow from a weapon at least <see cref="InsideReachMm"/> longer than his own has
+    /// passed the point and presses inside its reach for this long (0: off), closing to <see cref="InsideHoldMm"/>.</summary>
+    public int InsideTicks { get; init; }
+    public int InsideReachMm { get; init; } = 500;
+    public int InsideHoldMm { get; init; } = 800;
+    /// <summary>A polearm used inside <see cref="PolearmTooCloseMm"/> is choked up: its blow keeps this share of its momentum (shortened grip), and the AI steps back to use it again
+    /// unless the foe gives it an opening (<see cref="CrowdedStepBack"/>).</summary>
+    public int CrowdedMomentumPm { get; init; } = 1000;
+    public int CrowdedStepBack { get; init; }
 
     // ---- morale (spike rules until morale-capture-succession) ----
     public int MoraleEveryTicks { get; init; } = 10;

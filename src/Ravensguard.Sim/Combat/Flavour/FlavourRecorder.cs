@@ -185,6 +185,13 @@ public sealed class FlavourRecorder
             case FightEventKind.Death:
                 actor.End = (byte)FAct.Dead; actor.DeathSerial = Log.NextSerial; Sample(actor, e.Actor); line.Severity = 4;
                 break;
+            case FightEventKind.Broke when e.A == 3 && e.Actor >= 0 && e.Actor < World.Fighters.Count && e.Part >= 0 && e.Part < World.Fighters[e.Actor].Worn.Length:
+            {
+                // close-out item 4: a dented, buckled or burst piece, or a broken strap: the piece rides in the weapon fields
+                var st = World.Fighters[e.Actor].Worn[e.Part].Stats;
+                line.WeaponShape = Log.Intern(st.Shape.Id); line.WeaponMaterial = Log.Intern(st.Material.Id);
+                break;
+            }
             case FightEventKind.Wake: actor.End = (byte)FAct.Idle; break;
             case FightEventKind.Fled: actor.End = (byte)FAct.Fled; break;
             case FightEventKind.Surrender: actor.End = (byte)FAct.Surrendered; break;

@@ -13,5 +13,6 @@
   // in MeleeTuningDef (src/Ravensguard.Content/Defs/CombatDefs.cs). Decisions are logged in docs/specs/phase4/melee-and-ranged.md, Notes.
   { "type": "melee_tuning", "id": "default",
     "patience_min_ticks": 12, "patience_max_ticks": 48, "crowded_points": 10, "weapon_cover_base_pm": 380, "react_parry_base_pm": 170,
+    "inside_ticks": 40, "inside_reach_mm": 500, "inside_hold_mm": 800, "crowded_momentum_pm": 500, "crowded_step_back": 1,
     "fragile_loss_per_unit_pm": 4800 }
 ]

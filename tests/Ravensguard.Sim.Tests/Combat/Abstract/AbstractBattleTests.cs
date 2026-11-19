@@ -208,7 +208,8 @@ public class AbstractBattleTests(FightFixture fx, ITestOutputHelper output)
         Assert.Equal(PinnedHash, ra.Hash);                                                                         // the same on every OS (integer only); re-pin when the battle changes on purpose
     }
 
-    private const ulong PinnedHash = 0xFD79A2565E621106;
+    // re-pinned in the Phase 4 close-out: the wound tables rebuilt for the weapon and armour changes, charge_pm 700 (MT-12 reconciled on them)
+    private const ulong PinnedHash = 0x521E696D38550233;
 
     [Fact]
     public void AB8_ALiveFightDemotedMidBattle_LosesNobody_AndKeepsEveryWound()

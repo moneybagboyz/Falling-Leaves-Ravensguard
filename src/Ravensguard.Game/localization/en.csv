@@ -2256,6 +2256,10 @@ FIGHT_EV_SURRENDER,{0} throws down the weapon and yields
 FIGHT_EV_SHOT,{0} looses
 FIGHT_EV_ARROW,An arrow takes {0} in the {1}
 FIGHT_EV_BROKE,{0}'s weapon breaks
+FIGHT_EV_ARMOUR_DENTED,{0}'s {1} is dented
+FIGHT_EV_ARMOUR_BUCKLED,{0}'s {1} buckles
+FIGHT_EV_ARMOUR_BURST,{0}'s {1} bursts open
+FIGHT_EV_ARMOUR_STRAP,{0}'s {1} hangs loose
 FIGHT_CALL_BLOCK,BLOCK
 FIGHT_CALL_PARRY,PARRY!
 FIGHT_CALL_DODGE,DODGE
@@ -2758,6 +2762,15 @@ rs_too_far,The camp is still too far: creep within fifteen metres of it.
 rs_now_you_are,"You are {0} now. Creep north to the captors' camp and press E to free {1}."
 rs_hud,"Rescue: you are {0}. Reach the camp, then E to free {1}."
 fr_resumed,The fight goes on where it stood. Unpause when ready.
+fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
+fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
+fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."
+fl_after_broke_armour_burst2,"The {armour_piece} tears open, its links scattering."
+fl_after_broke_armour_dented1,"{target}'s {armour_piece} takes a deep dent."
+fl_after_broke_armour_dented2,"The blow leaves a dent in the {armour}."
+fl_after_broke_armour_helm,"{target}'s {armour_piece} rings and caves in."
+fl_after_broke_armour_strap1,"A strap of {target}'s {armour_piece} snaps, and it hangs loose."
+fl_after_broke_armour_strap2,"The battered {armour_piece} breaks its straps and slips askew."
 fl_after_broke_shield1,"{target}'s shield splinters and falls apart."
 fl_after_broke_shield2,"{target}'s shield breaks in half."
 fl_after_broke_tool1,"{target}'s makeshift weapon breaks in {tgt_his} hands."

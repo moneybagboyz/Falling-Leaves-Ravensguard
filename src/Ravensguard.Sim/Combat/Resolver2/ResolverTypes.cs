@@ -27,6 +27,12 @@ public struct WornV2
     /// <summary>The body size the piece was made for (a piece fits within +-1/7).</summary>
     public int FitCm3;
     public bool VisorOpen;
+    /// <summary>Close-out item 4: base parts (bits over the plan's base index) where the piece's rings were burst or cut open: its coverage there falls by the calibration's breach share.</summary>
+    public ulong BreachMask;
+    /// <summary>A broken strap: the piece hangs loose and covers only part of what it did.</summary>
+    public bool Slipped;
+    /// <summary>Nothing has happened to the piece in this fight (full condition, no breach, no broken strap).</summary>
+    public readonly bool Pristine => ConditionPm >= 1000 && BreachMask == 0 && !Slipped;
 
     public static WornV2 Of(ArmourV2 stats, int qualityPm = 1000, int conditionPm = 1000, int fitCm3 = 70000, bool visorOpen = false) =>
         new() { Stats = stats, QualityPm = qualityPm, ConditionPm = conditionPm, FitCm3 = fitCm3, VisorOpen = visorOpen };
@@ -156,7 +162,13 @@ public struct LayerStep
     public long NeedMilli;
     /// <summary>Condition the worn piece lost, permille (resolver-v2 4.3 wear).</summary>
     public int WearPm;
+    /// <summary>Close-out item 4: what the blow did to the piece beyond wear (a dent, a buckle, burst rings, a broken strap), and the base zone it struck.</summary>
+    public ArmourHarm Harm;
+    public short Zone;
 }
+
+/// <summary>Visible damage to a worn piece (close-out item 4): told in the flavour log and drawn on the paper doll.</summary>
+public enum ArmourHarm : byte { None, Dented, Buckled, Burst, Strap }
 
 /// <summary>A draw the resolver made: stream and k (test RS-22 locks the sequence).</summary>
 public readonly record struct DrawRec(uint Stream, int K);
@@ -208,6 +220,7 @@ public sealed class BlowResult
         {
             ref var s = ref Steps[i];
             h = Mix(h, s.Piece); h = Mix(h, s.Tissue); h = Mix(h, s.Part); h = Mix(h, (long)s.Outcome); h = Mix(h, s.InMilli); h = Mix(h, s.OutMilli); h = Mix(h, s.WearPm);
+            if (s.Harm != ArmourHarm.None) h = Mix(h, (long)s.Harm);
         }
         return h;
     }

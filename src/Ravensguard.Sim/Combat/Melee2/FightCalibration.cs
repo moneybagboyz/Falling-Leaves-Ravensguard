@@ -65,14 +65,53 @@ public static class FightCalibration
     public static FighterKit KitOf(string name, int team, WeaponInstance w, Kit k, string? shield, int skill, int x, int faceX) =>
         new() { Name = name, Team = team, Weapon = w, Worn = k.Worn, Shield = shield, Skill = skill, X = x, FaceX = faceX };
 
+    /// <summary>A pairing given as two kit makers (skill, x, facing): the ranged realism runs (close-out item 3) start <see cref="GapMm"/> apart.</summary>
+    public sealed record KitPairing(string Name, Func<int, int, int, FighterKit> A, Func<int, int, int, FighterKit> B, int GapMm = 6000);
+
+    public static KitPairing AsKits(Pairing p) => new(p.Name, (s, x, f) => KitOf("A", 0, p.WeaponA, p.KitA, p.ShieldA, s, x, f), (s, x, f) => KitOf("B", 1, p.WeaponB, p.KitB, p.ShieldB, s, x, f));
+
+    /// <summary>An archer (longbow, a full quiver of 24 <paramref name="ammo"/>), a crossbowman (20 quarrels) and a skirmisher (a sword and three javelins to throw).</summary>
+    public static Func<int, int, int, FighterKit> Archer(string name, int team, Kit k, string ammo = "bodkin_arrow") =>
+        (s, x, f) => new FighterKit { Name = name, Team = team, Launcher = "longbow", Ammo = ammo, Worn = k.Worn, Skill = s, X = x, FaceX = f };
+    public static Func<int, int, int, FighterKit> Crossbowman(string name, int team, Kit k) =>
+        (s, x, f) => new FighterKit { Name = name, Team = team, Launcher = "crossbow", Ammo = "quarrel", Worn = k.Worn, Skill = s, X = x, FaceX = f };
+    public static Func<int, int, int, FighterKit> Javelineer(string name, int team, Kit k, string? shield = null) =>
+        (s, x, f) => KitOf(name, team, Sword, k, shield, s, x, f) with { Throwables = [new ThrowStock("javelin", "steel", 3)], ThrowSkill = s };
+    public static Func<int, int, int, FighterKit> Swordsman(string name, int team, Kit k, string? shield = null) => (s, x, f) => KitOf(name, team, Sword, k, shield, s, x, f);
+
+    /// <summary>
+    /// The ranged realism runs (close-out item 3): bow, crossbow and javelin against a swordsman and against each other, judged against what history leads one to expect, not
+    /// tuned for parity. Missile men start 30 m from a swordsman (40 m from each other), javelin men 20 m.
+    /// </summary>
+    public static IReadOnlyList<KitPairing> RangedPairings() =>
+    [
+        new("bow (bodkin) vs sword (padded)", Archer("A", 0, Padded), Swordsman("B", 1, Padded), 30_000),
+        new("bow (broadhead) vs sword (unarmoured)", Archer("A", 0, Padded, "broadhead_arrow"), Swordsman("B", 1, Unarmoured), 30_000),
+        new("bow (bodkin) vs sword (mail)", Archer("A", 0, Padded), Swordsman("B", 1, Mailed), 30_000),
+        new("bow (bodkin) vs sword (plate)", Archer("A", 0, Padded), Swordsman("B", 1, Plated), 30_000),
+        new("bow (bodkin) vs sword+heater (padded)", Archer("A", 0, Padded), Swordsman("B", 1, Padded, "heater"), 30_000),
+        new("bow (bodkin) vs sword+heater, shield raised", Archer("A", 0, Padded), (s, x, f) => Swordsman("B", 1, Padded, "heater")(s, x, f) with { Stance = "defensive" }, 30_000),
+        new("crossbow vs sword (padded)", Crossbowman("A", 0, Padded), Swordsman("B", 1, Padded), 30_000),
+        new("crossbow vs sword (mail)", Crossbowman("A", 0, Padded), Swordsman("B", 1, Mailed), 30_000),
+        new("javelins vs sword (padded)", Javelineer("A", 0, Padded), Swordsman("B", 1, Padded), 20_000),
+        new("javelins vs sword+heater (padded)", Javelineer("A", 0, Padded), Swordsman("B", 1, Padded, "heater"), 20_000),
+        new("bow vs bow (padded)", Archer("A", 0, Padded), Archer("B", 1, Padded), 40_000),
+        new("bow vs crossbow (padded)", Archer("A", 0, Padded), Crossbowman("B", 1, Padded), 40_000),
+        new("crossbow vs crossbow (padded)", Crossbowman("A", 0, Padded), Crossbowman("B", 1, Padded), 40_000),
+        new("bow vs javelins (padded)", Archer("A", 0, Padded), Javelineer("B", 1, Padded), 30_000),
+        new("crossbow vs javelins (padded)", Crossbowman("A", 0, Padded), Javelineer("B", 1, Padded), 30_000),
+    ];
+
     /// <summary>One seeded duel: skills 30-59 per (duel, side) as the spike's, 6 m apart, up to 240 s; then 60 s of aftermath, the winner treating the loser when <paramref name="treat"/>.</summary>
-    public static Duel RunDuel(FightContent content, Pairing p, int i, bool treat, int maxS = 240, int aftermathS = 60)
+    public static Duel RunDuel(FightContent content, Pairing p, int i, bool treat, int maxS = 240, int aftermathS = 60) => RunDuel(content, AsKits(p), i, treat, maxS, aftermathS);
+
+    public static Duel RunDuel(FightContent content, KitPairing p, int i, bool treat, int maxS = 240, int aftermathS = 60)
     {
         var w = new FightWorld(content, (ulong)(1000 + i), (ulong)(i + 1), gameSec0: 8 * 3600) { RecordEvents = false };
         int severs = 0;
         w.OnBlow = (_, _, r, _) => { if (r.Severed) severs++; };
-        var a = w.Add(KitOf("A", 0, p.WeaponA, p.KitA, p.ShieldA, Melee.MeleeScenarios.SkillFor(i, 0), -3000, FightMath.One));
-        var b = w.Add(KitOf("B", 1, p.WeaponB, p.KitB, p.ShieldB, Melee.MeleeScenarios.SkillFor(i, 1), 3000, -FightMath.One));
+        var a = w.Add(p.A(Melee.MeleeScenarios.SkillFor(i, 0), -p.GapMm / 2, FightMath.One));
+        var b = w.Add(p.B(Melee.MeleeScenarios.SkillFor(i, 1), p.GapMm / 2, -FightMath.One));
         int max = maxS * 20;
         while (!w.IsOver && w.Tick < max) w.StepWithAi();
         double secs = w.Tick / 20.0;
@@ -132,7 +171,9 @@ public static class FightCalibration
     }
 
     /// <summary>Runs <paramref name="duels"/> duels of a pairing (in parallel; each duel is its own seeded world, so the result does not depend on the thread count).</summary>
-    public static Row Run(FightContent content, Pairing p, int duels, bool withTreatment = true)
+    public static Row Run(FightContent content, Pairing p, int duels, bool withTreatment = true) => Run(content, AsKits(p), duels, withTreatment);
+
+    public static Row Run(FightContent content, KitPairing p, int duels, bool withTreatment = true)
     {
         var plain = new Duel[duels];
         var treated = new Duel[duels];
@@ -155,13 +196,13 @@ public static class FightCalibration
         return row;
     }
 
-    public static string Table(IReadOnlyList<Row> rows)
+    public static string Table(IReadOnlyList<Row> rows, bool bothSides = false)
     {
         var sb = new StringBuilder();
-        sb.AppendLine("| Pairing | n | mean s | defended | A wins | severs/duel | fatal | KO'd then bled out (untreated) | (with first aid) |");
-        sb.AppendLine("|---|---|---|---|---|---|---|---|---|");
+        sb.AppendLine($"| Pairing | n | mean s | defended | A wins |{(bothSides ? " B wins |" : "")} severs/duel | fatal | KO'd then bled out (untreated) | (with first aid) |");
+        sb.AppendLine(bothSides ? "|---|---|---|---|---|---|---|---|---|---|" : "|---|---|---|---|---|---|---|---|---|");
         foreach (var r in rows)
-            sb.AppendLine($"| {r.Name} | {r.N} | {r.MeanS:0.0} | {r.DefendedPct:0}% | {r.WinAPct:0}% | {r.SeversPerDuel:0.00} | {r.FatalPct:0}% | {(r.Knockouts == 0 ? "-" : $"{r.BledOutPct:0}%")} | {(r.KoTreatedN == 0 ? "-" : $"{r.BledOutTreatedPct:0}%")} |");
+            sb.AppendLine($"| {r.Name} | {r.N} | {r.MeanS:0.0} | {r.DefendedPct:0}% | {r.WinAPct:0}% |{(bothSides ? $" {(r.N == 0 ? 0 : 100.0 * r.WinsB / r.N):0}% |" : "")} {r.SeversPerDuel:0.00} | {r.FatalPct:0}% | {(r.Knockouts == 0 ? "-" : $"{r.BledOutPct:0}%")} | {(r.KoTreatedN == 0 ? "-" : $"{r.BledOutTreatedPct:0}%")} |");
         long ko = rows.Sum(r => r.Knockouts), kb = rows.Sum(r => r.KoBledOut), kt = rows.Sum(r => r.KoTreatedN), kbt = rows.Sum(r => r.KoBledOutTreated);
         sb.AppendLine();
         sb.AppendLine($"Knocked out and bled out: {100.0 * kb / Math.Max(1, ko):0.0}% untreated, {100.0 * kbt / Math.Max(1, kt):0.0}% with first aid (target <= 35%).");

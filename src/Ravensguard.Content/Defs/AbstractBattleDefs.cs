@@ -33,7 +33,7 @@ public sealed record AbstractBattleDef : ContentDef
     /// <summary>Without its leader a side under this share breaks at once.</summary>
     public int LeaderlessCollapsePm { get; init; } = 0;
     /// <summary>First-contact casualties added by a mounted charge (mounted-combat 5): extra attack actions of each charging rider in the contact step.</summary>
-    public int ChargePm { get; init; } = 1000;
+    public int ChargePm { get; init; } = 700;
     public int PursuitS { get; init; } = 120;
     /// <summary>A router is in reach of pursuers this long before it has fled (the live fight's 20 m and 5 s).</summary>
     public int FleeS { get; init; } = 16;

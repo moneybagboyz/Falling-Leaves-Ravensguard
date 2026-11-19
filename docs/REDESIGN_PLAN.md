@@ -54,6 +54,12 @@ The game today is a deep simulation hidden behind a hard-to-use interface: BBCod
 | Timeline | Everything above stays in 1.0; the plan is estimated at **about 6.5–9 years** (§5) |
 | Sequencing | **Breadth first**, every phase playable |
 | Release | **No public builds until 1.0** |
+| Difficulty | One intended brutal game, plus a few **honest named sliders** shown openly in the world settings: wound lethality, bandit frequency, economy harshness, plague severity, and Ironman on or off. No hidden rubber-banding (Nov 2026) |
+| Slavery | **Fully systemic, like Kenshi** (Nov 2026). Slavers and slave markets exist where the culture's law allows them, and you can be enslaved and escape. The player can buy, sell, own or free slaves, with heavy consequences for reputation, faith and law (Phase 6) |
+| Plague | **Rare but devastating** (Nov 2026). Everyday coughs, fevers and flux, plus rare great plagues. A great plague can kill a third of a town, spreads along trade roads, empties villages and reshapes the economy: labour gets dear and land gets cheap (Phase 6 to 8 events; the death rates are in §4A.2) |
+| Hero lifespan | **A real lifespan on the slow clock** (Nov 2026). The hero ages through a long campaign, strength fades in later years, and old age can kill, which hands play to the heir you raised (family life, Phase 6) |
+| Family, justice, faith, endings | Full family life for the hero, historically harsh justice, a real faith system (all Phase 6), and optional endings (Phase 8), all decided Nov 2026 |
+| Building | Hands-on, Kenshi style, with both free placement and ready-made house plans (Phase 5, Nov 2026) |
 
 ---
 
@@ -1408,7 +1414,7 @@ Estimates assume one developer working with an AI assistant. Every phase ends in
 | 3 | People, autopilot v1 | 9–11 mo | ~39 mo |
 | 4 | Combat anywhere and exploration | 9–12 mo | ~49 mo |
 | 5 | Property, building, crafting, businesses, vehicle designer | 7–10 mo | ~58 mo |
-| 6 | Society, factions, rule | 7–9 mo | ~66 mo |
+| 6 | Society, factions, rule, faith and family | 8–11 mo | ~67 mo |
 | 7 | Armies, war at scale, ships and naval war | 15–20 mo | ~83 mo |
 | 8 | Depth, onboarding, polish, 1.0 | 8–12 mo | ~93 mo |
 
@@ -1559,7 +1565,11 @@ Estimates assume one developer working with an AI assistant. Every phase ends in
 
 ### Phase 5: Property, building, crafting, businesses, vehicle designer (7–10 months)
 - **Land:** `LandRegistry`, deeds and claims; owning and leasing fields; barns, granaries and mills.
+- **Building is hands-on, Kenshi style (decided with the user).** Placing a plan only makes ghost pieces. Every piece is built by a person doing the work: the hero by hand, which trains the building skills, or the hero's own people and hired workers through the job system.
+  - Materials must physically be on site, bought, gathered or carted in. Work stops when they run out or wages go unpaid, and anyone can resume it.
+  - Half-built work stays in the world. Commissioning a builder is the same work done by NPCs for pay, never an instant result.
 - **The player build mode:**
+  - **Both free placement and ready-made plans (decided with the user):** piece by piece on the 1 m grid, or a house plan picked from a library by culture, wealth and purpose (the same blueprints world generation uses, plus any the player saved), fitted to the lot and then built the same hands-on way.
   - Including multi-storey floors, stairs, ladders and trapdoors.
   - **Structural support and collapse**.
   - Save as blueprint.
@@ -1572,8 +1582,25 @@ Estimates assume one developer working with an AI assistant. Every phase ends in
 
 **Done when:** you can design a wagon, have it built, drive it loaded to market and get it stuck in mud; you can buy a lot, build a two-storey smithy, hire a smith, supply iron and see profit while away; you can claim a clearing and build a homestead; the concept book's first hour plays end to end.
 
-### Phase 6: Society, factions, rule (7–9 months)
+### Phase 6: Society, factions, rule (8–11 months)
 - **Crime and justice:** crime and witnesses, bounties, guards, jail, slavery (captivity complete); reputation.
+  - **Historically harsh punishments (decided with the user):** fines, the stocks, flogging, branding, outlawry, a hand cut off for repeat theft, and hanging for murder or treason.
+  - Maiming goes through the real anatomy and wound system, so a lost hand stays lost.
+  - The sentence follows the local lord's and culture's law, and the chronicle records the cause.
+- **Family life for the hero (decided with the user):**
+  - courting, or an arranged marriage with dowries and alliances;
+  - children born and growing up over game years, raised and trained as heirs;
+  - spouses and children are real people who can be kidnapped, married off for alliance, or turn against you.
+
+  It feeds Ironman succession (Phase 4) and inheritance (Phase 5).
+- **A real faith system (decided with the user; about +1–2 months):**
+  - generated religions per culture, with saints, feast days, relics and pilgrimages;
+  - clergy are people, and the church holds land and collects tithes;
+  - piety and reputation with the church;
+  - heresy and excommunication as political tools;
+  - superstition tied to the rare monsters (§3b).
+  
+  History v0 is recalibrated to include it.
 - **Contracts v2:** generated from need, paid from escrow, with game-day deadlines.
 - **Rumours v2.**
 - **Politics:**
@@ -1623,6 +1650,7 @@ Estimates assume one developer working with an AI assistant. Every phase ends in
 
 ### Phase 8: Depth, onboarding, polish, 1.0 (8–12 months)
 - **Depth:** the full ambition tree, with autopilot able to pursue ambition steps (§3i); more authored landmarks (~40) and unique NPCs (~30).
+  - **Optional endings (decided with the user).** Reaching a great ambition offers to end the run with a chronicle epilogue (for example: found a dynasty, take a crown, clear the deep barrow). The player may decline and carry on; the world stays in the library for new characters.
 - **The full bestiary** (3–6 types) and more site templates.
 - **The full Codex**; onboarding v2.
 - **Polish:**

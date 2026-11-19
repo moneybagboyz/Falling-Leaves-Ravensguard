@@ -164,6 +164,18 @@ public class Phase4CloseOutTests
         Assert.Equal(HeroResultCode.Refused, w3.Do(AftermathDesk.ControlCommand(EntityId.Make(IdKind.Person, 9), w3.Sec)).Code);   // the hero is not held: no switch
     }
 
+    [Fact]
+    public void A_fights_wear_goes_back_to_the_heros_item_rows_and_never_mends_them()
+    {
+        var w = new TradeWorld();
+        var row = w.State.Party!.Carried.Rows(w.Econ).First(r => w.State.Party.Carried.Equip.ContainsKey(w.Econ.Items.At(r).Id));
+        var id = w.Econ.Items.At(row).Id;
+        Assert.Equal(1, w.Do(AftermathDesk.WearCommand([(id, 400)], w.Sec)).Qty);
+        Assert.Equal(400, w.Econ.Items.Get(id).ConditionPermille);
+        Assert.Equal(0, w.Do(AftermathDesk.WearCommand([(id, 700), (EntityId.Make(IdKind.Item, 999_999), 10)], w.Sec)).Qty);   // the lower stays; an unknown row is passed over
+        Assert.Equal(400, w.Econ.Items.Get(id).ConditionPermille);
+    }
+
     // ------------------------------------------------------------------ weather in combat
 
     [Fact]

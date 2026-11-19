@@ -75,6 +75,27 @@ public static class AftermathDesk
     /// <summary>P4 close-out (4.7): the player takes control of a free companion ("mc:control|person"), gives it back ("mc:release|"), or the controlled companion reaches the cell
     /// ("mc:rescue|person|dx|dy": where it stands, millimetres from the cell) and the rest of the rescue is <see cref="RescueRun"/>'s creep past the guards.</summary>
     public const string ControlPrefix = "mc:control|", ReleasePrefix = "mc:release|", RescuePrefix = "mc:rescue|";
+    /// <summary>P4 close-out: the fight's wear on the hero's worn pieces, written back to their item rows ("mc:wear|item:condition|..."; condition only, the rows keep the lower one).</summary>
+    public const string WearPrefix = "mc:wear|";
+
+    public static HeroCommand WearCommand(IEnumerable<(EntityId Item, int ConditionPm)> wear, long sec) =>
+        new() { Kind = HeroCommandKind.Aftermath, IssuedSec = sec, Tag = WearPrefix + string.Join("|", wear.Select(w => string.Create(CultureInfo.InvariantCulture, $"{w.Item.Value}:{w.ConditionPm}"))), Origin = CommandOrigin.Human };
+
+    private static HeroResult Wear(HeroContext ctx, HeroCommand c)
+    {
+        var items = ctx.Econ.Items; int n = 0;
+        foreach (var part in c.Tag[WearPrefix.Length..].Split('|', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var kv = part.Split(':');
+            if (kv.Length != 2 || !ulong.TryParse(kv[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var id) || !int.TryParse(kv[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var cond)) continue;
+            int row = items.IndexOf(new EntityId(id));
+            if (row < 0 || items.At(row).Owner != ctx.Party.Hero) continue;                  // robbed or gone since: the robbers carry the dents
+            ref var r = ref items.At(row);
+            short to = (short)Math.Clamp(cond, 0, 1000);
+            if (to < r.ConditionPermille) { r.ConditionPermille = to; n++; }
+        }
+        return new HeroResult(c.Seq, c.Kind, HeroResultCode.Ok, HeroText.Empty, 0, n, c.IssuedSec);
+    }
 
     public static HeroCommand ControlCommand(EntityId companion, long sec) =>
         new() { Kind = HeroCommandKind.Aftermath, IssuedSec = sec, Tag = ControlPrefix + companion.Value.ToString(CultureInfo.InvariantCulture), Origin = CommandOrigin.Human };
@@ -136,6 +157,7 @@ public static class AftermathDesk
     public static HeroResult Apply(HeroContext ctx, HeroCommand c)
     {
         var book = BookOf(ctx.State, ctx.Content);
+        if (c.Tag.StartsWith(WearPrefix, StringComparison.Ordinal)) return Wear(ctx, c);              // P4 close-out: the fight's armour wear onto the item rows
         if (c.Tag.StartsWith(ControlPrefix, StringComparison.Ordinal) || c.Tag.StartsWith(ReleasePrefix, StringComparison.Ordinal) || c.Tag.StartsWith(RescuePrefix, StringComparison.Ordinal))
             return Rescue(ctx, book, c);                                                   // P4 close-out: the rescue control switch
         if (c.Tag.StartsWith(ActPrefix, StringComparison.Ordinal))
