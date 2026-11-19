@@ -38,6 +38,8 @@ public partial class StreetView
         _rideHud = new RideHud();
         GetNodeOrNull<Control>("Hud")?.AddChild(_rideHud);
         Debug.DevContext.Ride = DevRideConsole;
+        Debug.DevContext.Rooms = DevRooms;      // P5-A3
+        if (_opt.Rooms) ShowRooms();            // P5-A3
         if (_opt.Ride != null) DevRide(_opt.Ride);
     }
 

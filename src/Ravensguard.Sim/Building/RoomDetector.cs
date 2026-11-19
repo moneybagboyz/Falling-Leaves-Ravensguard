@@ -109,6 +109,7 @@ public sealed class RoomDetector(PieceCatalog pieces, IReadOnlyList<RoomTypeDef>
     public static bool Satisfies(RoomTypeDef t, int area, bool enclosed, IReadOnlyDictionary<string, int> tags)
     {
         if (t.Enclosed && !enclosed) return false;
+        if (t.Roofed == false) return false; // P5-A3: unroofed (yard) types are v2's; v1 sees finished blueprints
         if (area < t.MinArea || (t.MaxArea > 0 && area > t.MaxArea)) return false;
         foreach (var r in t.Requires)
             if (tags.GetValueOrDefault(r.Tag) < r.Min) return false;

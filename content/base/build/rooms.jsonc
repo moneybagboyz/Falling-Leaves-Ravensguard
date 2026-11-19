@@ -1,10 +1,10 @@
 // Room types (plan §2.9). The detector picks the highest-priority type whose rules a room satisfies.
 // Purposes are what blueprints declare; "work:*" in a blueprint accepts any workshop.
 [
-  { "type": "room_type", "id": "bedroom",   "name": "Bedroom",          "purpose": "sleeping",       "priority": 40, "min_area": 4,  "requires": [{ "tag": "bed" }] },
-  { "type": "room_type", "id": "kitchen",   "name": "Kitchen / hearth room", "purpose": "hearth",    "priority": 50, "min_area": 4,  "requires": [{ "tag": "hearth" }] },
-  { "type": "room_type", "id": "storage",   "name": "Storeroom",        "purpose": "storage",        "priority": 20, "min_area": 4,  "requires": [{ "tag": "storage" }] },
-  { "type": "room_type", "id": "hall",      "name": "Hall",             "purpose": "gathering",      "priority": 45, "min_area": 12, "requires": [{ "tag": "table" }] },
+  { "type": "room_type", "id": "bedroom",   "name": "Bedroom",          "purpose": "sleeping",       "dwelling_part": true, "priority": 40, "min_area": 4,  "requires": [{ "tag": "bed" }] },
+  { "type": "room_type", "id": "kitchen",   "name": "Kitchen / hearth room", "purpose": "hearth",    "dwelling_part": true, "priority": 50, "min_area": 4,  "requires": [{ "tag": "hearth" }] },
+  { "type": "room_type", "id": "storage",   "name": "Storeroom",        "purpose": "storage",        "storage_kind": "general", "priority": 20, "min_area": 4,  "requires": [{ "tag": "storage" }] },
+  { "type": "room_type", "id": "hall",      "name": "Hall",             "purpose": "gathering",      "dwelling_part": true, "priority": 45, "min_area": 12, "requires": [{ "tag": "table" }] },
   { "type": "room_type", "id": "chapel",    "name": "Chapel",           "purpose": "worship",        "priority": 70, "min_area": 12, "requires": [{ "tag": "altar" }] },
   { "type": "room_type", "id": "stable",    "name": "Stable / byre",    "purpose": "livestock",      "priority": 30, "min_area": 6,  "requires": [{ "tag": "stall", "min": 2 }] },
   { "type": "room_type", "id": "workshop_carpentry", "name": "Carpenter's workshop", "purpose": "work:carpentry", "priority": 60, "min_area": 6, "requires": [{ "tag": "station:carpentry" }] },
@@ -25,9 +25,9 @@
   { "type": "room_type", "id": "workshop_charcoal",  "name": "Charcoal burners' yard", "purpose": "work:charcoal", "priority": 60, "min_area": 9, "requires": [{ "tag": "station:charcoal" }] },
 
   // ---- living and ruling rooms ----
-  { "type": "room_type", "id": "great_hall", "name": "Great hall",   "purpose": "gathering", "priority": 55, "min_area": 30, "requires": [{ "tag": "table" }, { "tag": "high_seat" }] },
-  { "type": "room_type", "id": "solar",      "name": "Solar",        "purpose": "solar",     "priority": 55, "min_area": 9,  "requires": [{ "tag": "bed" }, { "tag": "table" }] },
-  { "type": "room_type", "id": "cellar",     "name": "Cellar",       "purpose": "cellar",    "priority": 25, "min_area": 4,  "requires": [{ "tag": "cellar_store" }] },
+  { "type": "room_type", "id": "great_hall", "name": "Great hall",   "purpose": "gathering", "dwelling_part": true, "priority": 55, "min_area": 30, "min_value": 300, "requires": [{ "tag": "table" }, { "tag": "high_seat" }] },
+  { "type": "room_type", "id": "solar",      "name": "Solar",        "purpose": "solar",     "dwelling_part": true, "priority": 55, "min_area": 9,  "requires": [{ "tag": "bed" }, { "tag": "table" }] },
+  { "type": "room_type", "id": "cellar",     "name": "Cellar",       "purpose": "cellar",    "storage_kind": "cellar", "priority": 25, "min_area": 4,  "requires": [{ "tag": "cellar_store" }] },
   { "type": "room_type", "id": "shop",       "name": "Shop",         "purpose": "shop",      "priority": 52, "min_area": 6,  "requires": [{ "tag": "shop" }] },
   { "type": "room_type", "id": "toll_office","name": "Toll office",  "purpose": "toll",      "priority": 52, "min_area": 6,  "requires": [{ "tag": "toll" }] },
   { "type": "room_type", "id": "market",     "name": "Market square","purpose": "market",    "priority": 35, "min_area": 12, "requires": [{ "tag": "market_stall", "min": 2 }] },
@@ -38,5 +38,14 @@
   { "type": "room_type", "id": "guardroom",  "name": "Guardroom",    "purpose": "guard",       "priority": 56, "min_area": 6, "requires": [{ "tag": "weapon_rack" }] },
   { "type": "room_type", "id": "cell",       "name": "Cell",         "purpose": "confinement", "priority": 55, "min_area": 2, "max_area": 12, "requires": [{ "tag": "pallet" }] },
   { "type": "room_type", "id": "crypt",      "name": "Crypt",        "purpose": "burial",      "priority": 65, "min_area": 6, "requires": [{ "tag": "tomb" }] },
-  { "type": "room_type", "id": "belfry",     "name": "Belfry",       "purpose": "belfry",      "priority": 60, "min_area": 4, "requires": [{ "tag": "bell" }] }
+  { "type": "room_type", "id": "belfry",     "name": "Belfry",       "purpose": "belfry",      "priority": 60, "min_area": 4, "requires": [{ "tag": "bell" }] },
+
+  // ---- P5-A3 (RoomDetector v2): storage kinds, an enclosed yard, the large kitchen, the taproom and the malt house ----
+  // The yard is enclosed but unroofed: an unfinished house is a yard until its roof is built (roomdetector-v2 4.1).
+  { "type": "room_type", "id": "yard",        "name": "Yard (no roof)",   "purpose": "yard",      "priority": 5,  "roofed": false, "min_area": 4 },
+  { "type": "room_type", "id": "granary",     "name": "Granary",          "purpose": "storage",   "storage_kind": "grain", "priority": 22, "min_area": 6, "requires": [{ "tag": "grain" }, { "tag": "storage", "min": 2 }] },
+  { "type": "room_type", "id": "barn",        "name": "Barn",             "purpose": "storage",   "storage_kind": "hay",   "priority": 21, "min_area": 12, "requires": [{ "tag": "hay", "min": 2 }] },
+  { "type": "room_type", "id": "malt_house",  "name": "Malt house",       "purpose": "storage",   "storage_kind": "general", "priority": 23, "min_area": 6, "requires": [{ "tag": "malt" }] },
+  { "type": "room_type", "id": "taproom",     "name": "Taproom",          "purpose": "gathering", "priority": 48, "min_area": 12, "requires": [{ "tag": "table", "min": 2 }, { "tag": "cellar_store" }] },
+  { "type": "room_type", "id": "kitchen_large","name": "Great kitchen",   "purpose": "hearth",    "dwelling_part": true, "priority": 52, "min_area": 16, "requires": [{ "tag": "hearth" }, { "tag": "table" }, { "tag": "storage" }] }
 ]

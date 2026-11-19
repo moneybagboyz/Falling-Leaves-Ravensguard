@@ -1,18 +1,19 @@
 // Building pieces (plan §2.9). Kind drives the room detector, pathing and structural support; `glyph` is the text-dump character.
 // Walls and posts hold up the floor above (plan §2.2a). Tags are what room types look for; workstations also get "station:<id>".
 // Stone pieces use granite by default; culture styles can swap in local stone.
+// "kg" (P5-A3, optional) is the piece mass the room-value formula uses; without it the default for the kind applies (RoomValue.DefaultKg).
 [
   // ground and floors
   { "type": "build_piece", "id": "ground_dirt",          "name": "Dirt ground",       "kind": "ground", "glyph": "," },
   { "type": "build_piece", "id": "floor_packed_earth",   "name": "Packed earth floor", "kind": "floor", "glyph": "." },
   { "type": "build_piece", "id": "floor_plank",          "name": "Plank floor",       "kind": "floor", "glyph": ":", "material": "oak" },
-  { "type": "build_piece", "id": "floor_flagstone",      "name": "Flagstone floor",   "kind": "floor", "glyph": ";", "material": "granite" },
+  { "type": "build_piece", "id": "floor_flagstone",      "name": "Flagstone floor",   "kind": "floor", "glyph": ";", "material": "granite", "kg": 150 },
   { "type": "build_piece", "id": "floor_wall_walk",      "name": "Wall-walk",         "kind": "floor", "glyph": "~", "tags": ["wall_walk"] },
 
   // walls by material
   { "type": "build_piece", "id": "wall_wattle",          "name": "Wattle-and-daub wall", "kind": "wall", "glyph": "%", "material": "daub" },
   { "type": "build_piece", "id": "wall_timber",          "name": "Timber wall",       "kind": "wall", "glyph": "#", "material": "oak" },
-  { "type": "build_piece", "id": "wall_stone",           "name": "Stone wall",        "kind": "wall", "glyph": "S", "material": "granite" },
+  { "type": "build_piece", "id": "wall_stone",           "name": "Stone wall",        "kind": "wall", "glyph": "S", "material": "granite", "kg": 600 },
   { "type": "build_piece", "id": "post_timber",          "name": "Timber post",       "kind": "post", "glyph": "|", "material": "oak" },
 
   // doors and windows
@@ -31,7 +32,7 @@
   { "type": "build_piece", "id": "bed",                  "name": "Bed",               "kind": "furniture", "glyph": "B", "material": "oak", "tags": ["bed"], "beds": 1 },
   { "type": "build_piece", "id": "bunk",                 "name": "Bunk",              "kind": "furniture", "glyph": "U", "material": "oak", "tags": ["bed"], "beds": 2 },
   { "type": "build_piece", "id": "hearth",               "name": "Hearth",            "kind": "furniture", "glyph": "E", "tags": ["hearth"] },
-  { "type": "build_piece", "id": "table",                "name": "Table",             "kind": "furniture", "glyph": "X", "material": "oak", "tags": ["table"] },
+  { "type": "build_piece", "id": "table",                "name": "Table",             "kind": "furniture", "glyph": "X", "material": "oak", "tags": ["table"], "kg": 60 },
   { "type": "build_piece", "id": "chest",                "name": "Chest",             "kind": "furniture", "glyph": "C", "material": "oak", "tags": ["storage"] },
   { "type": "build_piece", "id": "shelf",                "name": "Shelf",             "kind": "furniture", "glyph": "Z", "material": "oak", "tags": ["storage"] },
   { "type": "build_piece", "id": "barrel",               "name": "Barrel",            "kind": "furniture", "glyph": "Y", "material": "oak", "tags": ["storage"] },
@@ -49,20 +50,20 @@
   // ---- fortification and yard pieces ----
   { "type": "build_piece", "id": "palisade",             "name": "Palisade",          "kind": "wall", "glyph": "!", "material": "oak" },
   { "type": "build_piece", "id": "fence_wood",           "name": "Plank fence",       "kind": "wall", "glyph": "-", "material": "oak" },
-  { "type": "build_piece", "id": "wall_crenellated",     "name": "Crenellated parapet", "kind": "wall", "glyph": "=", "material": "granite" },
-  { "type": "build_piece", "id": "wall_brick",           "name": "Brick wall",        "kind": "wall", "glyph": "&", "material": "fired_brick" },
+  { "type": "build_piece", "id": "wall_crenellated",     "name": "Crenellated parapet", "kind": "wall", "glyph": "=", "material": "granite", "kg": 400 },
+  { "type": "build_piece", "id": "wall_brick",           "name": "Brick wall",        "kind": "wall", "glyph": "&", "material": "fired_brick", "kg": 200 },
   { "type": "build_piece", "id": "gate_wood",            "name": "Wooden gate",       "kind": "door", "glyph": "g", "material": "oak" },
   { "type": "build_piece", "id": "gate_iron",            "name": "Iron-bound gate",   "kind": "door", "glyph": "w", "material": "wrought_iron" },
   { "type": "build_piece", "id": "door_cell",            "name": "Barred cell door",  "kind": "door", "glyph": "d", "material": "wrought_iron" },
   { "type": "build_piece", "id": "window_open",          "name": "Open arch",         "kind": "window", "glyph": "a", "material": "granite" },
-  { "type": "build_piece", "id": "stairs_stone_up",      "name": "Stone stairs up",   "kind": "stairs_up", "glyph": "{", "material": "granite" },
-  { "type": "build_piece", "id": "stairs_stone_down",    "name": "Stone stairs down", "kind": "stairs_down", "glyph": "}", "material": "granite" },
+  { "type": "build_piece", "id": "stairs_stone_up",      "name": "Stone stairs up",   "kind": "stairs_up", "glyph": "{", "material": "granite", "kg": 100 },
+  { "type": "build_piece", "id": "stairs_stone_down",    "name": "Stone stairs down", "kind": "stairs_down", "glyph": "}", "material": "granite", "kg": 100 },
 
   // ---- furniture and fixtures ----
   { "type": "build_piece", "id": "hearth_central",       "name": "Central open hearth", "kind": "furniture", "glyph": "e", "tags": ["hearth"] },
   { "type": "build_piece", "id": "hearth_chimney",       "name": "Chimney hearth",    "kind": "furniture", "glyph": "i", "material": "granite", "tags": ["hearth"] },
   { "type": "build_piece", "id": "straw_pallet",         "name": "Straw pallet",      "kind": "furniture", "glyph": "u", "tags": ["bed", "pallet"], "beds": 1 },
-  { "type": "build_piece", "id": "high_seat",            "name": "High seat",         "kind": "furniture", "glyph": "*", "material": "oak", "tags": ["high_seat"] },
+  { "type": "build_piece", "id": "high_seat",            "name": "High seat",         "kind": "furniture", "glyph": "*", "material": "oak", "tags": ["high_seat"], "kg": 80 },
   { "type": "build_piece", "id": "pew",                  "name": "Pew",               "kind": "furniture", "glyph": "p", "material": "oak", "tags": ["pew"] },
   { "type": "build_piece", "id": "font",                 "name": "Baptismal font",    "kind": "furniture", "glyph": "f", "material": "granite", "tags": ["font"] },
   { "type": "build_piece", "id": "tomb",                 "name": "Tomb slab",         "kind": "furniture", "glyph": "t", "material": "granite", "tags": ["tomb"] },
@@ -93,5 +94,8 @@
   // the practice yard (onboarding): appended, so the piece numbers of everything before stay as they were
   { "type": "build_piece", "id": "training_dummy",        "name": "Training dummy",    "kind": "furniture", "glyph": "d", "material": "oak", "tags": ["training_dummy", "practice_yard"] },
   { "type": "build_piece", "id": "notice_board",          "name": "Notice board",      "kind": "furniture", "glyph": "n", "material": "oak", "tags": ["notice_board"] },
-  { "type": "build_piece", "id": "yard_bench",            "name": "Bench",             "kind": "furniture", "glyph": "e", "material": "oak", "tags": ["bench"] }
+  { "type": "build_piece", "id": "yard_bench",            "name": "Bench",             "kind": "furniture", "glyph": "e", "material": "oak", "tags": ["bench"] },
+  // P5-A3 roofs: appended after everything. A roof covers the cell below it (RoomDetector v2: Indoor).
+  { "type": "build_piece", "id": "roof_thatch",           "name": "Thatch roof",       "kind": "roof", "glyph": "^", "material": "thatch" },
+  { "type": "build_piece", "id": "roof_slate",            "name": "Slate roof",        "kind": "roof", "glyph": "^", "material": "granite" }
 ]
