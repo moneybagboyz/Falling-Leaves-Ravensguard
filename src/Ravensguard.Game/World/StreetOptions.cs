@@ -31,6 +31,7 @@ public sealed class StreetOptions
     public string? Ride;         // --shot-ride horse|horse_near|cart|wagon|stuck|cart_beside|wagon_beside (dev): a palfrey, mounted or beside the hero; a cart or ox wagon with a team and a load, driven; stuck: a laden wagon bogged in mud
     public string? Travel;       // --shot-travel encounter|camp (dev): a bandit ambush on the road ahead, or a night camp with a lit fire
     public bool PeopleShot;       // --shot-people: wait until the LODBridge has promoted townsfolk before the picture is taken (dev screenshot of the people bridge)
+    public bool Rooms;           // --shot-rooms (P5-A3): the room overlay on from the start
     public bool MapShot;         // --shot-map: open the world map and capture it instead of the street
     public int MapScale = 1;     // --shot-map-scale 1..6 (0 or -n: the continent overview, at zoom n)
     public int Settle = 900;     // frames to wait for far-band chunks to bake before a screenshot
@@ -53,6 +54,7 @@ public sealed class StreetOptions
         if (Val("--shot-day") is { } dy) o.Day = int.Parse(dy, CultureInfo.InvariantCulture);
         o.Weather = Val("--shot-weather");
         o.MapShot = Array.IndexOf(args, "--shot-map") >= 0;
+        o.Rooms = Array.IndexOf(args, "--shot-rooms") >= 0;
         o.CaravanShot = Array.IndexOf(args, "--shot-caravan") >= 0;
         o.PeopleShot = Array.IndexOf(args, "--shot-people") >= 0;
         o.Ride = Val("--shot-ride");

@@ -107,6 +107,8 @@ public static class SelfTest
 
         Tools.BlueprintEditor.EditorSelfTest.Run(Check);
 
+        RoomChecks(); // P5-A3
+
         CsvChecks();
         ChoiceChecks();
         CrashBridgeChecks();
@@ -115,6 +117,23 @@ public static class SelfTest
 
         GD.Print($"selftest: {(_fails == 0 ? "ok" : _fails + " failure(s)")}");
         return _fails == 0;
+    }
+
+    /// <summary>P5-A3: RoomDetector v2 on the real content: the two-room cottage has the same rooms as v1, the hearth room is a yard until roofed, and it houses two beds once furnished.</summary>
+    static void RoomChecks()
+    {
+        try
+        {
+            var lib = Ravensguard.Game.World.StreetView.LoadLibrary();
+            var g = lib.Grid("cottage_two_room");
+            var w = lib.NewWorld();
+            w.LoadBlueprint(g, 0, 0, roofed: false);
+            Check(w.Rooms.Count == lib.Detector.Detect(g).Count, "RoomDetector v2 found a different number of rooms than v1");
+            Check(w.Rooms.Any(r => r.Primary?.Id == "yard"), "an unroofed cottage should show a yard");
+            w.RoofOver("roof_thatch");
+            Check(w.Rooms.All(r => r.Primary?.Id != "yard") && w.Rooms.Any(r => r.Primary?.Id == "kitchen" && r.Indoor), "the roofed cottage should have an indoor hearth room");
+        }
+        catch (Exception ex) { Check(false, "room detector selftest threw: " + ex); }
     }
 
     /// <summary>Onboarding (spec O-8, O-10): the controls overlay reads the key map for every context, a rebinding shows in it, every key token a hint names is a real action and every "learn more" has a Codex page.</summary>

@@ -23,6 +23,9 @@ public enum PieceKind
     Post,
     Furniture,
     Workstation,
+    // P5-A3: appended (roofing, RoomDetector v2)
+    /// <summary>A roof covering the cell below it: makes the room under it Indoor.</summary>
+    Roof,
 }
 
 /// <summary>
@@ -43,4 +46,6 @@ public sealed record BuildPieceDef : ContentDef
     public string? Station { get; init; }
     /// <summary>Beds this piece provides (bed 1, bunk 2).</summary>
     public int Beds { get; init; }
+    /// <summary>P5-A3: mass in kg for the room-value formula; 0 = the default for the piece kind (RoomDetector v2).</summary>
+    public int Kg { get; init; }
 }
