@@ -75,7 +75,7 @@ public static class Phase3Smoke
             if (router.Top != sv) throw new Exception("the street view is not on top");
 
             // every screen: open as its key does, it fits the window, Esc comes back (the control rects stay inside the viewport)
-            foreach (var what in new[] { "trade", "barter", "inventory", "character", "squad", "crafting", "talk", "journal", "autopilot", "map", "picker", "jobs", "codex", "qmenu", "overlay" })
+            foreach (var what in new[] { "trade", "barter", "inventory", "character", "squad", "crafting", "talk", "journal", "autopilot", "map", "picker", "jobs", "codex", "qmenu", "overlay", "land", "deeds" })   // P5-A2: land, deeds
             {
                 int depth = router.Depth;
                 if (!sv.DebugOpen(what)) throw new Exception("unknown screen " + what);

@@ -53,6 +53,7 @@ public sealed partial class FarmingSystem
             {
                 int h = P.Holder[p]; if (h < 0 || h >= nh || hht.Class[h] != SocialClass.Gentry) continue;
                 var kind = Region.Parcels[p].Owner.Kind; if (kind is OwnerKind.Demesne or OwnerKind.Glebe) continue;
+                if (LeasedOut?.Invoke(p) == true) continue;                                          // P5-A2: let on a lease of the land book
                 (vacant ??= []).Add(p);
             }
             if (vacant == null) continue;

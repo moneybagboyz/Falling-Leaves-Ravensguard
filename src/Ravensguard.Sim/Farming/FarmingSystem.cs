@@ -270,6 +270,9 @@ public sealed partial class FarmingSystem
     /// <summary>The household of the lord a person serves as a manor retainer, or -1; set by the integration layer.</summary>
     public Func<int, int>? ManorLordOf { get; set; }
 
+    /// <summary>P5-A2: parcels let on a lease of the land book (the re-let leaves them alone); set by the land wiring. Null: none.</summary>
+    public Func<int, bool>? LeasedOut { get; set; }
+
     /// <summary>
     /// Brings the farming tables in step with a population that grows and changes hands (births, weddings, inheritance, escheat, emigration): the household
     /// arrays grow, parcels whose holder changed in the population table pass to the new holder (with the barn stock), barns open for new holders and the

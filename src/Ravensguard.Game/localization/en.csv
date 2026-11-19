@@ -2775,6 +2775,128 @@ ROOMS_OFF,Room overlay off.
 ROOMS_NO_CONTENT,Room overlay: the content did not load.
 ROOMS_BEDS,"{0}, {1} beds"
 ROOMS_STATIONS,{0} ({1})
+ld_no_lots,The lord has no plot for sale here.
+ld_price_moved,"The price is {0} now; nothing was bought."
+ld_cannot_afford,That costs {0}. You do not have it.
+ld_bought,"You bought a plot in {0} for {1}: {2} by {3} metres, yours by deed."
+ld_not_yours,That is not yours to do that with.
+ld_offered,The deed is offered for sale at {0}.
+ld_withdrawn,The deed is no longer for sale.
+ld_not_leasable,The lord does not let that.
+ld_leased_field,"You lease {0} fields for a year, {1} a season to the lord."
+ld_renews,The lease will be renewed at its end.
+ld_gives_up,"You give the lease up at its end, if nothing is owed and nothing of yours is left inside."
+ld_no_stall,There is no such stall.
+ld_stall_taken,Someone has that stall already.
+ld_stall_day,"A stall in {0} for the fair day, {1} paid to the town."
+ld_stall_season,"A stall in {0} for the season, {1} paid to the town."
+ld_leased_house,"You rent an empty house in {0}, {1} a season to the lord."
+ld_claim_off_map,There is no land to claim here.
+ld_claim_not_open,"Nobody can claim this ground: it is farmed, built on, a road or water."
+ld_claim_taken,This ground is already claimed.
+ld_claim_too_near,This is the town's common land. Go farther out.
+ld_claim_small,There is not enough open ground here for a claim.
+ld_claim_squatting,"You stake {0} acres on the lord's waste without a licence. You are squatting."
+ld_claim_licensed,"You stake {0} acres with the lord's licence, paid {1}. The claim is protected."
+ld_claim_free,"You stake {0} acres of wild land. It is free, but nobody protects it."
+ld_claim_no_licence_needed,This claim needs no licence.
+ld_claim_improved,The claim grows to {0} acres.
+ld_claim_deeded_stays,"The claim is deeded now; the deed stands without the banner."
+ld_claim_pulled,You pull up the banner. The claim ends.
+ld_claim_no_banner,You need a claim banner to stake a claim.
+ld_charter_no_grantor,That ruler holds nothing here.
+ld_charter_at_seat,"A charter is asked for in person, at {0}."
+ld_charter_standing,The ruler will not hear you.
+ld_charter_no_site,There is not enough wild land there for a settlement.
+ld_charter_contested,That land is claimed or contested.
+ld_charter_granted,"{0} grants you a founding charter for {1}: settle {2} households by day {3}."
+ld_settle_refused,That household will not come.
+ld_settled,"{0} comes to the charter's site ({1} of {2} households)."
+ld_may_claimed,This is {0}'s claim.
+ld_may_charter,This land is chartered to {0}.
+ld_may_lessee,"You hold this on lease from {0}; you may not build or pull down here."
+ld_may_theirs,This is {0}'s ground.
+ld_may_farm_only,"A leased field: farm buildings only, by leave of {0}."
+ld_may_wild,Nobody's land yet. Stake a claim first.
+ld_title_market,Lots and leases
+ld_title_deeds,Deeds and claims
+ld_tab_market,Lots and leases
+ld_tab_deeds,My deeds
+ld_waiting,Asking the reeve...
+ld_status,{0}  -  your purse {1}
+ld_no_place,Out of any town or village
+ld_tenure_freehold,freehold
+ld_tenure_burgage,burgage
+ld_tenure_leasehold,lease
+ld_tenure_tenancy,tenancy
+ld_tenure_customary,customary
+ld_day,{0} {1} {2}
+ld_head_lots,Lots for sale (from the lord)
+ld_none_for_sale,The lord has nothing for sale here now.
+ld_lot_house,"An empty house, {0} x {1} m"
+ld_lot_plot,"A plot, {0} x {1} m"
+ld_lot_row,"{0}: {1}, {2}, dues {3} a season"
+ld_btn_buy,Buy
+ld_head_fields,Fields the lord would let
+ld_no_fields,No field has fallen back to the lord.
+ld_field_row,"{0} fields: {1} a season, for a year"
+ld_btn_lease,Lease
+ld_head_stalls,Market stalls
+ld_no_stalls,Every stall is taken.
+ld_stall_row,"{0} free: {1} for the season"
+ld_btn_season,Season
+ld_stall_day_row,or {0} for a fair day
+ld_btn_day,Fair day
+ld_market_note,"Prices follow the plot's size and how crowded the place is. A deed is bought in person, before the lord's officer."
+ld_buy_title,Buy this land?
+ld_buy_body,"{0} for {1}. You hold it {2}, and owe the lord {3} a season."
+ld_head_deeds,Deeds
+ld_no_deeds,You hold no land yet.
+ld_kind_lot,Plot
+ld_kind_parcel,Field
+ld_kind_building,House
+ld_kind_stall,Stall
+ld_kind_claim,Homestead
+ld_kind_fief,Fief
+ld_kind_foundingcharter,Charter
+ld_deed_row,"{0} in {1}, {2}, dues {3}"
+ld_lease_end,ends {0}
+ld_in_debt,"in debt: {0} seasons, {1} owed"
+ld_arrears,"{0} seasons behind, {1} owed"
+ld_notice,notice to leave by {0}
+ld_offered_at,for sale at {0}
+ld_btn_give_up,Give up
+ld_btn_withdraw,Withdraw
+ld_btn_offer,Sell at {0}
+ld_head_claims,Claims
+ld_no_claims,No claim staked.
+ld_claim_squat,squatting on the waste of {0}
+ld_claim_lic,licensed by {0}
+ld_claim_wild,"wild land, unprotected"
+ld_claim_deeded,deeded
+ld_claim_by,"improve by {0} ({1} so far)"
+ld_claim_row,"{0} acres, {1}: {2}"
+ld_btn_pull,Pull banner
+ld_head_charters,Founding charters
+ld_charter_row,"Of {0}: {1} of {2} households, by {3} ({4}); dues {5} a year, {6} men for {7} days"
+ld_cstate_granted,granted
+ld_cstate_fulfilled,fulfilled
+ld_cstate_lapsed,lapsed
+ld_deeds_note,"Dues are paid at each season's start. Three seasons behind is a debt; six bring the lord's notice."
+ld_find_officer,"Find the reeve or the lord's officer: a deed needs a witness."
+ld_stake_title,Stake a claim
+ld_stake_wild,"Wild land, beyond any lord's: {0} acres, free. Nobody will protect it. Within 60 days build a house or sow an acre, or the claim lapses."
+ld_stake_waste,"This is the waste of {0}. {1} acres: the lord's licence costs {2} and protects the claim. Without it you squat, and the lord may put you off."
+ld_btn_stake,Stake
+ld_btn_licence,Buy the licence
+ld_btn_squat,Squat
+ld_q_head,Land
+ld_q_market_with,Lots and leases ({0})
+ld_q_market,Lots and leases
+ld_q_deeds,My deeds and claims
+ld_q_stake_waste,Stake a claim (waste of {0})
+ld_q_stake,Stake a claim here
+ld_char_property,Deeds and claims
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."

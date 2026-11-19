@@ -273,6 +273,9 @@ public static class RngStreams
     public const uint RoutSample = 0x4A2;
     /// <summary>Abstract battle: the leader's capture when downed or run down (key battle id, side).</summary>
     public const uint LeaderFate = 0x4A3;
+    // ---- Phase 5 (docs/specs/phase5/00-phase5-overview.md 5; Phase 5 owns 0x500..0x5FF) ----
+    /// <summary>P5-A2: reserved for Phase 6 land disputes; land draws nothing (listings, buyers and claims are ordered by ids and coin). Asserted never drawn (LD-14).</summary>
+    public const uint LandDisputesReserved = 0x500;
 
     /// <summary>Stream ids that two named uses share on purpose, with why their draws never meet.</summary>
     public static readonly (string A, string B, string Why)[] SharedPairs =

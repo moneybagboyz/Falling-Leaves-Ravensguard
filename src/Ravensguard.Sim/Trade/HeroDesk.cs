@@ -28,6 +28,8 @@ public enum HeroCommandKind : byte
     Site,
     /// <summary>Appended (P4 close-out): the hero died; the heir takes over and the estate is settled ("su:heir|person|x|y"), or the line ends ("su:end|x|y"): <see cref="Ravensguard.Sim.Succession.SuccessionDesk"/>.</summary>
     Succession,
+    /// <summary>Appended (P5-A2): land at the barrier ("ld:buy|...", lease, stall, claim, licence, pull, petition, settle), applied by <see cref="Ravensguard.Sim.Land.LandDesk"/>.</summary>
+    Land,
 }
 
 /// <summary>Where the hero crafts (built on the main thread from what is in reach, copied into the command).</summary>
@@ -382,6 +384,7 @@ public sealed class HeroDesk
                 HeroCommandKind.Watch => Ravensguard.Sim.Combat.Watch.WatchDesk.Apply(ctx, c),                // P4-F hook
                 HeroCommandKind.Site => Ravensguard.Sim.Sites.SiteDesk.Apply(ctx, c),                          // P4 close-out: loot to the pack, search and dig
                 HeroCommandKind.Succession => Ravensguard.Sim.Succession.SuccessionDesk.Apply(ctx, c),         // P4 close-out: the heir takes over, the estate is settled
+                HeroCommandKind.Land => Ravensguard.Sim.Land.LandDesk.Apply(ctx, c),                           // P5-A2: deeds, leases, claims, charters
                 _ => R(c, HeroResultCode.Invalid, T("HERO_UNKNOWN_COMMAND")),
             };
         }
