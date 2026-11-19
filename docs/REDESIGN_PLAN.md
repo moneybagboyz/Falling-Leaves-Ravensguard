@@ -1408,7 +1408,7 @@ Estimates assume one developer working with an AI assistant. Every phase ends in
 | 3 | People, autopilot v1 | 9–11 mo | ~39 mo |
 | 4 | Combat anywhere and exploration | 9–12 mo | ~49 mo |
 | 5 | Property, building, crafting, businesses, vehicle designer | 7–10 mo | ~58 mo |
-| 6 | Society, factions, rule | 7–9 mo | ~66 mo |
+| 6 | Society, factions, rule, faith and family | 8–11 mo | ~67 mo |
 | 7 | Armies, war at scale, ships and naval war | 15–20 mo | ~83 mo |
 | 8 | Depth, onboarding, polish, 1.0 | 8–12 mo | ~93 mo |
 
@@ -1576,8 +1576,25 @@ Estimates assume one developer working with an AI assistant. Every phase ends in
 
 **Done when:** you can design a wagon, have it built, drive it loaded to market and get it stuck in mud; you can buy a lot, build a two-storey smithy, hire a smith, supply iron and see profit while away; you can claim a clearing and build a homestead; the concept book's first hour plays end to end.
 
-### Phase 6: Society, factions, rule (7–9 months)
+### Phase 6: Society, factions, rule (8–11 months)
 - **Crime and justice:** crime and witnesses, bounties, guards, jail, slavery (captivity complete); reputation.
+  - **Historically harsh punishments (decided with the user):** fines, the stocks, flogging, branding, outlawry, a hand cut off for repeat theft, and hanging for murder or treason.
+  - Maiming goes through the real anatomy and wound system, so a lost hand stays lost.
+  - The sentence follows the local lord's and culture's law, and the chronicle records the cause.
+- **Family life for the hero (decided with the user):**
+  - courting, or an arranged marriage with dowries and alliances;
+  - children born and growing up over game years, raised and trained as heirs;
+  - spouses and children are real people who can be kidnapped, married off for alliance, or turn against you.
+
+  It feeds Ironman succession (Phase 4) and inheritance (Phase 5).
+- **A real faith system (decided with the user; about +1–2 months):**
+  - generated religions per culture, with saints, feast days, relics and pilgrimages;
+  - clergy are people, and the church holds land and collects tithes;
+  - piety and reputation with the church;
+  - heresy and excommunication as political tools;
+  - superstition tied to the rare monsters (§3b).
+  
+  History v0 is recalibrated to include it.
 - **Contracts v2:** generated from need, paid from escrow, with game-day deadlines.
 - **Rumours v2.**
 - **Politics:**
@@ -1627,6 +1644,7 @@ Estimates assume one developer working with an AI assistant. Every phase ends in
 
 ### Phase 8: Depth, onboarding, polish, 1.0 (8–12 months)
 - **Depth:** the full ambition tree, with autopilot able to pursue ambition steps (§3i); more authored landmarks (~40) and unique NPCs (~30).
+  - **Optional endings (decided with the user).** Reaching a great ambition offers to end the run with a chronicle epilogue (for example: found a dynasty, take a crown, clear the deep barrow). The player may decline and carry on; the world stays in the library for new characters.
 - **The full bestiary** (3–6 types) and more site templates.
 - **The full Codex**; onboarding v2.
 - **Polish:**
