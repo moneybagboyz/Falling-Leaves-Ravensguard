@@ -10,6 +10,7 @@
   <Folder Name="/tools/">
     <Project Path="tools/Ravensguard.Art/Ravensguard.Art.csproj" />
     <Project Path="tools/Ravensguard.Bench/Ravensguard.Bench.csproj" />
+    <Project Path="tools/Ravensguard.Calibrate/Ravensguard.Calibrate.csproj" />
     <Project Path="tools/Ravensguard.WorldTool/Ravensguard.WorldTool.csproj" />
   </Folder>
 </Solution>

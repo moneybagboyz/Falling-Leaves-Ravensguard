@@ -26,3 +26,9 @@ The Dwarf Fortress wiki can't be fetched from the build environment (the page fe
 - The exact *i_Size* term and the velocity multipliers per attack.
 - The quality multipliers (Qw, Qa) and how sharpness enters the edged formula.
 - The worked-example momentum table (battle axe by material) for the golden tests RS-1 onwards.
+
+## Notes (P4-A, open question Q1)
+- The wiki still could not be read, so the goldens RS-1 to RS-8 stay **what our formulas give** (resolver-v2 4.4), as Q1 allows until the transcription task. The one wiki number we have, the battle-axe momentum shape, is checked: a dwarf (size 60,000, strength 1,250) hacking with a size-800 steel axe gives 92.862 (v1's double test and v2's integer `BaseMomentumMilli` agree), adamantine 68.181.
+- rSY is kept in the edged formula (the decision above); the harness shows it matters little against cloth and decides the ranking against mail.
+- The metal ranking golden holds: outer-piece cut rate silver 299 < copper 329 < bronze 333 < iron 341 < steel 674 permille over a seeded spread of sword slashes against leather, bronze mail and iron mail (`MetalRanking` test; `tools/Ravensguard.Calibrate` prints it).
+- Sharpness enters as the material's max edge S (metal 1000 pm, wood and bone 100); no blade material (obsidian, the 10x case) exists in content yet.

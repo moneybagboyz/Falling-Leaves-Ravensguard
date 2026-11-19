@@ -15,10 +15,10 @@ public static class ClothingArmour
         foreach (var id in t.Worn)
         {
             if (n >= into.Length) break;
+            // one entry per worn item, in the same order (ApplyWear maps the trace's piece index back to t.Worn); a garment row always has its material
             ref var row = ref book.Items.Get(id);
-            if (row.ComponentCount == 0) continue;
-            string material = book.Items.Component(row.ComponentStart).Material;
-            if (!tables.HasMaterial(material)) continue;
+            string material = row.ComponentCount > 0 ? book.Items.Component(row.ComponentStart).Material
+                : book.Garments[row.Shape].DefaultMaterial ?? throw new InvalidOperationException($"worn item {id} has no material");
             var ex = book.ExtraOf(id);
             into[n++] = WornV2.Of(tables.Armour(row.Shape, material), CombatTablesV2.QualityPmOf(row.Quality), row.ConditionPermille, ex.FitCm3 > 0 ? ex.FitCm3 : 70000);
         }

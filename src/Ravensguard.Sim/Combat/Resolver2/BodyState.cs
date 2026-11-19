@@ -45,6 +45,12 @@ public sealed class BodyState
     public bool Bleeds => Plan.Bleeds;
     public bool FeelsPain => Plan.FeelsPain;
 
+    /// <summary>Spotting radius multiplier, permille: two eyes 1000, one eye 800, blind 0 (anatomy 3.2).</summary>
+    public int SpotPm => Sight >= 1000 ? 1000 : Sight > 0 ? 800 : 0;
+
+    /// <summary>Vision radius for a light radius (anatomy 3.6): <c>light x Sight / 1000</c>, never below 1 m (blind: 1 m whatever the torch).</summary>
+    public int VisionRadiusMm(int lightRadiusMm) => Math.Max(1000, (int)((long)lightRadiusMm * Sight / 1000));
+
     /// <summary>Pain multiplier for a wound on this part, permille: 0 where a cut sensory nerve took the feeling (or the plan feels no pain).</summary>
     public int PainPm(int part) => !Plan.FeelsPain || Parts[part].Numb ? 0 : Plan.Parts[part].PainPm;
 

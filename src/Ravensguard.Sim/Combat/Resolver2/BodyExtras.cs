@@ -55,3 +55,40 @@ public static class BodyVariation
         return new Result((int)((long)plan.SizeCm3 * (1000 + size) / 1000), (int)((long)plan.BloodMl * (1000 + blood) / 1000), left);
     }
 }
+
+/// <summary>Loads v1 wound records into v2 (anatomy 3.1 migration): a wound on a v1 nerve becomes a cut of both its motor and sensory nerves.</summary>
+public static class WoundMigration
+{
+    public static IEnumerable<WoundV2> FromV1(CombatTablesV2 tables, BodyPlanV2 plan, Wound w)
+    {
+        int part = plan.IndexOf(w.PartId);
+        if (part < 0) yield break;
+        var p = plan.Parts[part];
+        short tissue = (short)(tables.HasMaterial(w.TissueId) ? tables.Material(w.TissueId).Index : 0);
+        int depth = w.Depth.Raw * 1000 / Fixed.OneRaw, bleed = w.BleedMlPerS.Raw * 10 / Fixed.OneRaw;
+        if (w.StructureId == null)
+        {
+            yield return new WoundV2 { Part = (short)part, Tissue = tissue, Structure = -1, Organ = -1, Kind = w.Kind, DepthPm = depth, BleedX10 = bleed, Flags = w.Flags };
+            yield break;
+        }
+        int organ = Array.FindIndex(p.Organs, o => o.Id == w.StructureId);
+        if (organ >= 0)
+        {
+            yield return new WoundV2 { Part = (short)part, Tissue = tissue, Structure = -1, Organ = (short)organ, Kind = w.Kind, DepthPm = depth, BleedX10 = bleed, Flags = w.Flags };
+            yield break;
+        }
+        foreach (var id in plan.MigrateStructure(w.StructureId))
+        {
+            int si = Array.FindIndex(p.Structures, s => s.Id == id);
+            if (si < 0) continue;
+            var st = p.Structures[si];
+            var f = w.Flags & ~WoundFlags.NerveHit;
+            f |= st.Kind switch
+            {
+                Content.StructureKind.MotorNerve => WoundFlags.MotorNerveHit, Content.StructureKind.SensoryNerve => WoundFlags.SensoryNerveHit,
+                Content.StructureKind.Nerve => WoundFlags.NerveHit, _ => WoundFlags.None,
+            };
+            yield return new WoundV2 { Part = (short)part, Tissue = (short)st.Tissue.Index, Structure = (short)si, Organ = -1, Kind = w.Kind, DepthPm = depth, BleedX10 = bleed, Flags = f };
+        }
+    }
+}
