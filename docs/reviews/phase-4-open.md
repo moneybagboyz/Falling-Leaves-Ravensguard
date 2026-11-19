@@ -20,6 +20,13 @@ Collected while steps 1 to 7 were built. Step 8 fixes each one or moves it into 
    Where a result breaks one of these, fix the material or shape data, not a per-weapon fudge factor. Weapons are allowed to be better or worse than each other.
 3. **Ranged realism runs.** Add bow, crossbow and javelin pairings to `tools/Ravensguard.Calibrate`, recorded in the melee-and-ranged Notes. They are judged against the expectations above, not tuned for parity.
 
+4. **Blunt weapons should damage rigid armour more than edges do.** At the moment `ClothingArmour.ApplyWear` wears plate 5 pm on a cut and less on a crush, the wrong way round for maces and hammers.
+   - A heavy blunt blow should dent or buckle plate, and protection falls with condition.
+   - A heavy blow can burst mail rings or break a plate's straps, which leaves a gap.
+   - Show the damage in the flavour log ("the breastplate buckles") and on the paper doll.
+
+   Check the new values against the item 2 matrix.
+
 ## Found during steps 1 to 5 (see each spec's Notes for detail)
 
 - **Mounted reach:** mounted non-lance weapons get +0.4 m against riders too; the spec says +0 there.
