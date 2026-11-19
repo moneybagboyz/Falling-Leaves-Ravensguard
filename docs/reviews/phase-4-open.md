@@ -65,3 +65,27 @@ Collected while steps 1 to 7 were built. Step 8 fixes each one or moves it into 
   - settings rows (take-back, speed cap, which kinds pause);
   - about 95 `wm_` strings against a budget of 40.
 - **Content:** no obsidian or flint blades (the 10x-sharpness case) yet.
+
+## Found during steps 6 and 7
+
+- **Abstract battles: AB-3 is only partly met.** 17 of 45 comparisons on fresh seeds are outside ±10%. The worst is the flanked variant: the abstract side wins 96%, live 41%.
+  - Causes: the abstract model has no battlefield geometry (live raiders swamp a ten-spear line; flankers are only a morale penalty), and lance rows lack the trample and the fall.
+  - The fast test is a ratchet: it fails if more than the 17 known misses appear. Plan §6 says a test that cannot fail is a review finding, so either close the gap or record the ratchet and its reason in phase-4.md.
+  - Mounted: on mud the abstract gives 0.14 against 0.41 live. The spec's "+60% ±10" is not met; the live charge bonus is +220%.
+- **Abstract battles: performance.** The AB-13 Soak test fails: 100 v 100 takes about 5 ms against a 3 ms budget, and 2,000 v 2,000 takes about 125 ms against 45 ms. The template library is 0.9 MB against a 300 KB budget.
+- **Abstract battles, also left:**
+  - live fights are not converted at the bubble edge in play (the code and AB-8 test exist);
+  - prisoners from abstract battles do not enter captivity;
+  - no corpse loot;
+  - no in-game Chronicle (H) screen; reports reach the player only as rumours in the Journal.
+- **Exploration: loot does not reach the pack.** Crawl loot and the finds from Search and Dig are not moved into the hero's items, and burnt torches are not taken from the pack. This needs a hero command.
+  - Search and Dig run on the UI thread under the site book's lock, are not on the replay log, and cost no clock time.
+- **Exploration, also left:**
+  - weather in combat is only partly wired (aim spread and fog surprise); road fights do not set the weather row from live weather;
+  - the game passes only the hero into a crawl, not the party;
+  - the site factory is not set for replays;
+  - resting below is only a flag;
+  - the 8 °C underground temperature is not read by the clothing model;
+  - site fights use an open arena that ignores walls;
+  - the cave beast is drawn as a blob and the draugr as a tinted human rig;
+  - heist sites and firedamp are out of scope.
