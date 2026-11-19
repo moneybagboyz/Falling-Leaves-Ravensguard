@@ -202,7 +202,9 @@ public sealed class StrikeResolver(CombatTables tables)
             {
                 case StructureKind.Artery: f = WoundFlags.ArteryHit; bleed = rng.Range((int)BleedArteryMin, (int)BleedArteryMax + 1); break;
                 case StructureKind.Vein: f = WoundFlags.VeinHit; bleed = BleedVein; break;
-                case StructureKind.Nerve: f = WoundFlags.NerveHit; bleed = 0; break;
+                case StructureKind.Nerve or StructureKind.MotorNerve or StructureKind.SpinalCord: f = WoundFlags.NerveHit; bleed = 0; break;
+                case StructureKind.SensoryNerve: f = WoundFlags.SensoryNerveHit; bleed = 0; break;
+                case StructureKind.Ligament: f = WoundFlags.LigamentHit; bleed = 0; break;
                 default: f = WoundFlags.TendonHit; bleed = 0; break;
             }
             wounds.Add(new Wound(part.Id, s.Tissue, s.Id, WoundKind.Cut, Fixed.One, Rate(bleed), f));

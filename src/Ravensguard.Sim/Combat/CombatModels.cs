@@ -5,7 +5,7 @@ namespace Ravensguard.Sim.Combat;
 
 public enum AttackStyle { Normal, Quick, Heavy }
 public enum Facing { Front, Flank, Rear }
-public enum WoundKind { Cut, Crush }
+public enum WoundKind { Cut, Crush, Burn }
 public enum LayerOutcome
 {
     /// <summary>Cut through (edged test passed).</summary>
@@ -20,6 +20,13 @@ public enum LayerOutcome
     NotCovered,
     /// <summary>A named gap let the blow bypass the armour piece.</summary>
     Bypassed,
+    // v2 (resolver-v2 3.2), appended
+    /// <summary>A block stopped the blow (the trace's first step).</summary>
+    Blocked,
+    Parried,
+    /// <summary>The layer was crushed and its padding soaked up part of the blow.</summary>
+    Absorbed,
+    Dodged,
 }
 
 [Flags]
@@ -35,6 +42,21 @@ public enum WoundFlags
     OrganHit = 64,
     /// <summary>The wounded organ is vital (heart, brain).</summary>
     Vital = 128,
+    // v2 (resolver-v2 3.2), appended
+    LigamentHit = 256,
+    MotorNerveHit = 512,
+    SensoryNerveHit = 1024,
+    SpineHit = 2048,
+    /// <summary>The wound is on a hosted part (eye, ear, nose, jaw, teeth, collarbone, kneecap, thumb, fingers).</summary>
+    InsetHit = 4096,
+    Displaced = 8192,
+    /// <summary>A shattered bone through the skin.</summary>
+    Compound = 16384,
+    Burn = 32768,
+    /// <summary>Skull broken or a brain blow short of destruction: the wounds file's concussion (an addition to the spec's list).</summary>
+    Concussion = 65536,
+    /// <summary>A point blow slipped between the ribs.</summary>
+    RibSlip = 131072,
 }
 
 /// <summary>

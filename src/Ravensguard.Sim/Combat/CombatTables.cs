@@ -85,8 +85,12 @@ public sealed class CombatTables
             foreach (var m in materials.Values.Where(m => ArmourCategories.Contains(m.Category)))
                 _armour[(s.Id, m.Id)] = new ArmourStats(s, m, LayerProps.From(m, s.Elastic, s.Woven));
 
-        BodyPlans = db.All<BodyPlanDef>().ToDictionary(p => p.Id, p => BodyPlan.Build(p, Tissue), StringComparer.Ordinal);
+        BodyPlans = db.All<BodyPlanDef>().ToDictionary(p => p.Id, p => BodyPlan.Build(BodyPlanResolver.Resolve(db, p), Tissue), StringComparer.Ordinal);
+        V2 = new Resolver2.CombatTablesV2(db, materials);
     }
+
+    /// <summary>The resolver v2 tables (integer derived stats per weapon, armour piece, shield, tissue and body plan; resolver-v2 3.1).</summary>
+    public Resolver2.CombatTablesV2 V2 { get; }
 
     private static WeaponStats BuildWeapon(WeaponShapeDef s, ResolvedMaterial head, Quality q, Dictionary<string, ResolvedMaterial> materials)
     {

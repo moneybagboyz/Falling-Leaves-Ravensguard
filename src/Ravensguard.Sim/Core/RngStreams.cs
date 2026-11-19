@@ -163,6 +163,31 @@ public static class RngStreams
     /// <summary>The stand-in environment's daily temperature jitter (key 0, tick = day), for worlds without a weather model.</summary>
     public const uint EnvJitter = 0x2E0;
 
+    // ---------- Phase 4: combat (docs/specs/phase4/00-phase4-overview.md 6.2; Phase 4 owns 0x400..0x4FF) ----------
+    // Combat streams key on the fight's own FightTick (overview 6.1), the attacker, and draw = swing serial x 64 + k.
+    /// <summary>Body variation at creation: stature +-8%, blood volume +-5%, handedness (key person, tick 0).</summary>
+    public const uint BodyVariation = 0x400;
+    /// <summary>Monster size variation at spawn (key creature id).</summary>
+    public const uint MonsterVariation = 0x401;
+    /// <summary>Resolver v2: the hit roll (k = 0).</summary>
+    public const uint HitRoll = 0x410;
+    /// <summary>Resolver v2: redirect of a missed called shot (k = 0 yes or no, k = 1 which neighbour).</summary>
+    public const uint Redirect = 0x411;
+    /// <summary>Resolver v2: coverage rolls outside in (k = the piece's rank).</summary>
+    public const uint Coverage = 0x412;
+    /// <summary>Resolver v2: structures, ligaments, nerves, cord, hosted parts and rib slip (k = structure index, insets after, 32 + i joint wrench, 62 rib side, 63 rib slip).</summary>
+    public const uint StructureRoll = 0x413;
+    /// <summary>Resolver v2: organ rolls (k = organ index).</summary>
+    public const uint OrganRoll = 0x414;
+    /// <summary>Resolver v2: artery bleed rate 80-120 ml/s (k = structure index).</summary>
+    public const uint BleedRate = 0x415;
+    /// <summary>Falls and joint-wrench placement, partial-cord residual strength (k = limb group).</summary>
+    public const uint HitJitter = 0x416;
+    /// <summary>Stumble from an unstable joint (key person, tick = GameSec / 20).</summary>
+    public const uint Stumble = 0x417;
+    /// <summary>Melee defence: dodge and parry success (key FightTick, defender, draw = blow serial); the resolver's dodge roll uses it.</summary>
+    public const uint MeleeDefence = 0x430;
+
     /// <summary>Stream ids that two named uses share on purpose, with why their draws never meet.</summary>
     public static readonly (string A, string B, string Why)[] SharedPairs =
     [

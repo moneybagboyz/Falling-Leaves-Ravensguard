@@ -68,6 +68,10 @@ public struct RngStream
     }
 
     public uint Draws => _draw;
+    public ulong Seed => _seed;
+    public long Tick => _tick;
+    public ulong Entity => _entity;
+    public uint Stream => _stream;
     public uint NextUInt() => DetRng.NextUInt(_seed, _tick, _entity, _stream, _draw++);
     public Fixed NextFixed01() => DetRng.NextFixed01(_seed, _tick, _entity, _stream, _draw++);
     public int Range(int minInclusive, int maxExclusive) => DetRng.Range(_seed, _tick, _entity, _stream, _draw++, minInclusive, maxExclusive);

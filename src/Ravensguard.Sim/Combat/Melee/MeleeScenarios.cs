@@ -44,9 +44,10 @@ public static class MeleeScenarios
         int Seed, double DurationS, int WinnerTeam, Outcome LoserOutcome, DownReason LoserDownReason, bool LoserDiedLater,
         int BlowsThrown, int Landed, int Blocked, int Parried, int Dodged, int Whiffed, int Feints, IReadOnlyDictionary<string, int> Wounds);
 
-    public static DuelResult RunDuel(CombatTables tables, Matchup m, int duel, double maxS = 240, double aftermathS = 60)
+    public static DuelResult RunDuel(CombatTables tables, Matchup m, int duel, double maxS = 240, double aftermathS = 60, Action<MeleeWorld>? setup = null)
     {
         var w = new MeleeWorld(tables, (ulong)(1000 + duel)) { EmitText = false };
+        setup?.Invoke(w);
         w.Add(m.A(duel)); w.Add(m.B(duel));
         int max = (int)(maxS * MeleeRules.TickHz);
         while (!w.IsOver && w.Tick < max) w.StepWithAi();

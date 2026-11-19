@@ -40,12 +40,17 @@ public sealed class BodyPlan
         foreach (var c in p.Children) yield return c;
     }
 
+    /// <summary>
+    /// Builds the v1 plan. Resolver v1 sees only the trunk and limb parts: the v2 hosted parts (eyes, ribs, fingers ...) are skipped, so the
+    /// v1 human keeps its 16 instances (the v2 detail is in <see cref="Resolver2.BodyPlanV2"/>).
+    /// </summary>
     public static BodyPlan Build(BodyPlanDef def, Func<string, LayerProps> tissue)
     {
         var parts = new List<BodyPart>();
         var byBase = def.Parts.ToDictionary(p => p.Id, StringComparer.Ordinal);
         foreach (var d in def.Parts)
         {
+            if (d.Host != null || d.Shell) continue;
             foreach (var side in d.Sided ? new[] { "_l", "_r" } : [""])
             {
                 string? parent = null;

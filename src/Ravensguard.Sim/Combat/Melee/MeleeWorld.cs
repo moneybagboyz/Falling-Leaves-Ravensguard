@@ -14,6 +14,12 @@ public sealed class MeleeWorld
 
     public CombatTables Tables { get; }
     public StrikeResolver Resolver { get; }
+
+    /// <summary>A blow resolver in the v1 shape: input and stream in, a <see cref="StrikeResult"/> out.</summary>
+    public delegate StrikeResult StrikeFn(StrikeInput input, ref RngStream rng);
+    /// <summary>The resolver the blows go through: v1's <see cref="StrikeResolver.Resolve"/> by default; tools/calibrate plugs in resolver v2
+    /// through <see cref="Resolver2.V1Adapter"/> (the spike's real-time loop is the calibration harness's exchange loop until P4-C).</summary>
+    public StrikeFn Strike { get; set; }
     public ulong Seed { get; }
     public int Tick { get; private set; }
     public double TimeS => Tick * MeleeRules.Dt;
@@ -33,6 +39,7 @@ public sealed class MeleeWorld
     public MeleeWorld(CombatTables tables, ulong seed)
     {
         Tables = tables; Resolver = new StrikeResolver(tables); Seed = seed;
+        Strike = Resolver.Resolve;
     }
 
     // ------------------------------------------------------------------ setup
@@ -454,7 +461,7 @@ public sealed class MeleeWorld
         var def = new Defender(t.Plan, t.Plan.SizeCm3, t.Spec.Worn, t.Spec.Skill, guarded, ts == Act.Down);
         double str = a.Spec.Strength * (a.Weakened ? 0.8 : 1.0);
         var attacker = new Attacker((int)str, a.Spec.Skill, a.Plan.SizeCm3, 70000);
-        var res = Resolver.Resolve(new StrikeInput(attacker, a.Spec.Weapon, req.AttackId, req.PartId, def, req.Gap, facing, style), ref rng);
+        var res = Strike(new StrikeInput(attacker, a.Spec.Weapon, req.AttackId, req.PartId, def, req.Gap, facing, style), ref rng);
 
         if (!res.Hit || res.Wounds.Count == 0)
         {

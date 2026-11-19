@@ -2,7 +2,8 @@
 // blade 180 cm3 = 1.41 kg). Contact areas, penetration (mm) and velocity multipliers are DF-style estimates, calibrated with tools/calibrate
 // against resolver-v2 section 8. Wind-up and recover for dagger, sword, axe, maul and spear are plan §4A.3; the rest are the melee spec's.
 // v2 fields: family, reach_mm, strike_ticks (the 20 Hz timeline is P4-C); shield_cover_pm on an attack scales a shield's cover (flail 500).
-// The maul's contact area is 25 (was 60, open question Q22: its blunt need, proportional to area, made it worse than a mace).
+// The maul's contact area is 25 (was 60, open question Q22: its blunt need, proportional to area, made it worse than a mace). The great axe's
+// hack is 40, not the melee spec's 50: a wider edge raises the bone's cut need (DF), and at 50 the great axe could not take a neck at all.
 [
   { "type": "weapon_shape", "id": "dagger", "name": "Dagger", "family": "dagger", "reach_mm": 800, "strike_ticks": 2,
     "head_volume_cm3": 40, "haft_volume_cm3": 25, "haft_material": "ash", "wind_up_s": 0.30, "recover_s": 0.30,
@@ -39,7 +40,7 @@
   { "type": "weapon_shape", "id": "great_axe", "name": "Great axe", "family": "axe", "reach_mm": 1700, "strike_ticks": 3,
     "head_volume_cm3": 300, "haft_volume_cm3": 1400, "haft_material": "ash", "two_handed": true, "wind_up_s": 0.85, "recover_s": 0.80,
     "attacks": [
-      { "id": "hack", "name": "Hack", "verb": "hacks", "type": "edge", "contact_area": 50, "penetration_mm": 160, "velocity": 1.2 },
+      { "id": "hack", "name": "Hack", "verb": "hacks", "type": "edge", "contact_area": 40, "penetration_mm": 160, "velocity": 1.2 },
       { "id": "haft", "name": "Haft strike", "verb": "bashes", "type": "blunt", "contact_area": 30, "penetration_mm": 0, "velocity": 0.8 } ] },
   { "type": "weapon_shape", "id": "mace", "name": "Mace", "family": "hafted", "reach_mm": 1100, "strike_ticks": 3,
     "head_volume_cm3": 250, "haft_volume_cm3": 300, "haft_material": "ash", "wind_up_s": 0.70, "recover_s": 0.70,

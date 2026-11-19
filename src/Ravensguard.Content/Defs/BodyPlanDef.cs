@@ -10,6 +10,8 @@ public sealed record TissueLayerDef
 {
     public required string Tissue { get; init; }
     public required double ThicknessMm { get; init; }
+    /// <summary>The tissue's role when a plan's tissue_map replaced it (the draugr's dried flesh is still its muscle); null: the tissue itself.</summary>
+    public string? Role { get; init; }
 }
 
 /// <summary>A structure inside the muscle layer (tendon, nerve, vessel), hit with probability by area fraction.</summary>
@@ -133,7 +135,7 @@ public static class BodyPlanResolver
         var drop = new HashSet<StructureKind>(def.DropStructureKinds);
         var parts = (def.Parts.Count > 0 ? def.Parts : src.Parts).Select(p => p with
         {
-            Layers = [.. p.Layers.Select(l => l with { Tissue = Map(l.Tissue) })],
+            Layers = [.. p.Layers.Select(l => l with { Tissue = Map(l.Tissue), Role = l.Role ?? (Map(l.Tissue) != l.Tissue ? l.Tissue : null) })],
             Structures = [.. p.Structures.Where(s => !drop.Contains(s.Kind)).Select(s => s with { Tissue = Map(s.Tissue) })],
             Organs = def.DropOrgans ? [] : [.. p.Organs.Select(o => o with { Tissue = Map(o.Tissue) })],
         }).ToList();
