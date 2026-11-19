@@ -1,6 +1,6 @@
 # Phase 4: Dwarf Fortress calibration notes (resolver R1)
 
-The Dwarf Fortress wiki can't be fetched from the build environment (the page fetcher can't resolve the host). These notes record what a web search of the wiki returned, so the calibration task (resolver-v2 R1) has a fixed reference. Where the wiki is unclear or disagrees with itself, the decision is written down. Re-check against the live pages when they can be read.
+Update (Nov 2026): the user approved reading the wiki from this environment, and the pages now load (`index.php?title=DF2014:<Page>&action=raw`); the re-check below is a Phase 4 close-out item. Originally, the Dwarf Fortress wiki couldn't be fetched from the build environment. These notes record what a web search of the wiki returned, so the calibration task (resolver-v2 R1) has a fixed reference. Where the wiki is unclear or disagrees with itself, the decision is written down. Re-check against the live pages when they can be read.
 
 ## What the wiki says (from search results, Nov 2026)
 - **Melee momentum** (DF2014:Weapon): `M = Skill × Size × Str × Vel / (10^6 × (1 + i_Size / (w_density × w_size)))`.

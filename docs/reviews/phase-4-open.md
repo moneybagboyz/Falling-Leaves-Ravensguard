@@ -31,6 +31,21 @@ Collected while steps 1 to 7 were built. Step 8 fixes each one or moves it into 
 
    Check the new values against the item 2 matrix.
 
+## The DF wiki can be read now (user approved, Nov 2026)
+
+The calibration re-check from `docs/specs/phase4/df-calibration.md` ("what to re-check when the wiki can be read"):
+- Transcribe from the live pages: the *i_Size* term, the velocity multiplier per attack, the quality multipliers (Qw and Qa, artifacts x3) and the battle-axe momentum table into the golden tests RS-1 onwards.
+- Compare them with ours and record every difference and its decision.
+- Pages are cached raw in the session scratchpad (`dfwiki/`). Fetch with `index.php?title=DF2014:<Page>&action=raw`.
+
+Already confirmed from Material science, Weapon and Ammunition:
+- the blunt deflection and crush formulas;
+- the failed-blow strain rule (mail x1, rigid metal 98-99%);
+- weight matters little past a threshold;
+- penetration is ignored for blunt attacks;
+- all DF ammunition is edged (our blunt arrow is our own, historical, addition);
+- pulping: every layer 100% bruised, 250% dented or 100% fractured.
+
 ## Moved to Phase 7 (decided with the user, Nov 2026)
 
 These only matter once armies exist, so Phase 4 closes without them. Each is recorded in `phase-4.md` with Phase 7 as its home.
