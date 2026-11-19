@@ -3,14 +3,20 @@ using Ravensguard.Sim.Combat.Watch;
 namespace Ravensguard.Sim.Combat.Melee2;
 
 /// <summary>What became of a fight outside every live bubble (the abstract tier's report): the winning team (-1 a draw), the odds it was fought at, and who is out by team.</summary>
-public sealed record AbstractFightReport(ulong FightId, FightKind Kind, int WinnerTeam, int OddsPm, IReadOnlyDictionary<int, int> OutByTeam, bool Stub, string Cause);
+public sealed record AbstractFightReport(ulong FightId, FightKind Kind, int WinnerTeam, int OddsPm, IReadOnlyDictionary<int, int> OutByTeam, bool Stub, string Cause)
+{
+    /// <summary>The abstract battle's full report (abstract-battles-v1 3.3; null from the stub).</summary>
+    public Abstract.BattleReport? Battle { get; init; }
+    /// <summary>What the battle changes (new wound books, fates, loot), in person order, for the barrier.</summary>
+    public IReadOnlyList<Abstract.BattleCommand> Commands { get; init; } = [];
+}
 
 /// <summary>A fight that was run: live in the bubble (<see cref="Live"/>) or resolved abstractly (<see cref="Report"/>). Exactly one is set.</summary>
 public sealed record FightRun(FightWorld? Live, AbstractFightReport? Report);
 
 /// <summary>
 /// The abstract tier's fight resolver (overview 3: "outside any bubble, an AbstractBattle"). This is the seam abstract-battles-v1 (P4-G, step 6) fills: its Lanchester exchange with
-/// the wound tables baked from the tactical resolver implements this interface; <see cref="FightSetup.Run"/> and its callers do not change.
+/// the wound tables baked from the tactical resolver implements this interface (<see cref="Abstract.AbstractBattles"/>); <see cref="FightSetup.Run"/> and its callers do not change.
 /// </summary>
 public interface IAbstractFights
 {
@@ -18,7 +24,7 @@ public interface IAbstractFights
 }
 
 /// <summary>
-/// The stand-in until abstract-battles-v1: the side the odds favour (<see cref="RiskEstimate"/>, the square law on the setup's fighters) holds the field and nobody is hurt (no
+/// The fallback when the content has no wound tables (and step 5's stand-in; abstract-battles-v1's <see cref="Abstract.AbstractBattles"/> is the default): the side the odds favour (<see cref="RiskEstimate"/>, the square law on the setup's fighters) holds the field and nobody is hurt (no
 /// wound is invented, no person is moved). It draws nothing (the abstract streams 0x4A0..0x4A3 belong to step 6) and is marked <see cref="AbstractFightReport.Stub"/>.
 /// </summary>
 public sealed class AbstractFightStub : IAbstractFights

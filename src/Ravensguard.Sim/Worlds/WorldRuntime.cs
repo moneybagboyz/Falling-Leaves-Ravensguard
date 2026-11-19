@@ -114,6 +114,7 @@ public sealed class WorldRuntime : IDisposable
         homeWorld.Sim.Set(state.Wounds ??= new Ravensguard.Sim.Combat.Wounds.WoundLedger(state.Seed, state.Clock.Now.Seconds));   // the wounds both tiers share (Phase 4 P4-B)
         homeWorld.Sim.Set(Ravensguard.Sim.Combat.Aftermath.AftermathDesk.BookOf(state, content));                               // P4-D hook: the captives' hourly step (CaptivitySystem)
         Ravensguard.Sim.Sites.SiteWiring.Attach(homeWorld, state, content, Services.Weather);                                                     // P4-H hook: the sites' book, content and weather (SiteSystem)
+        homeWorld.Sim.Set(new Ravensguard.Sim.Combat.Abstract.AbstractBattleService(content));                                    // P4-G hook: fights nobody watches (abstract battles)
         state.Regions = Records;
         if (state.RegionSections.Count > 0) { Records.AttachSections(state.RegionSections); state.RegionSections = new SortedDictionary<int, byte[]>(); } // the pager holds them now
         Scheduler = new RegionScheduler(Records) { DailyRing = dailyRing, MaxParallel = maxParallel > 0 ? maxParallel : Math.Max(1, Math.Min(2, Environment.ProcessorCount - 2)) };

@@ -141,6 +141,7 @@ public sealed partial class ContinentTrade
         if (kind < 60 || kind >= 60 + banditPct) return;                                    // merchants and refugees swap news; wolves are a delay
         Ambushes++;
         int band = 3 + DetRng.Range(ctx.Seed, ctx.Hour, key, StreamCaravan, 2, 0, 6);
+        if (ctx.World.Get<Ravensguard.Sim.Combat.Abstract.AbstractBattleService>() is { Ready: true } ab) { AmbushBattle(ctx, st, c, time, band, ab); return; }   // P4-G: fought out (CaravanAmbush.cs)
         int guardStr = 4 * c.Guards + 1 + (c.Crew.Length - c.Guards), banditStr = 3 * band;
         int pWin = guardStr * 1000 / (guardStr + banditStr);
         if (DetRng.Range(ctx.Seed, ctx.Hour, key, StreamCaravan, 3, 0, 1000) < pWin)
@@ -152,11 +153,11 @@ public sealed partial class ContinentTrade
     }
 
     /// <summary>The caravan lost the fight: crew die, cargo and coin go to the hideout's loot, the survivors turn back or the caravan is lost (caravans spec 3.4).</summary>
-    private void Robbed(TickContext ctx, ContinentState st, Caravan c, GameTime time, int band)
+    private void Robbed(TickContext ctx, ContinentState st, Caravan c, GameTime time, int band, List<int>? fought = null)
     {
         var led = _econ.Ledger; var w = _ew.World; ulong key = c.Id.Value;
-        int dead = (c.Crew.Length * 30 + 99) / 100;
-        var killed = new List<int>();
+        int dead = fought != null ? 0 : (c.Crew.Length * 30 + 99) / 100;                 // P4-G: a fought ambush brings its own dead (CaravanAmbush.cs)
+        var killed = fought ?? new List<int>();
         for (int i = 0; i < dead && i < c.Crew.Length; i++)
         {
             int p = c.Crew[c.Crew.Length - 1 - i];                                           // guards stand in front, drivers behind: the guards are the first to go

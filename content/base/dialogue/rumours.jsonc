@@ -32,5 +32,6 @@
   {"type": "rumour_type", "id": "outlaw_raid", "entry": "outlaw_raid", "kind": "Raid", "interest_pm": 750, "life_days": 15, "witnesses": "town", "severity": 2, "key": "R_OUTLAW_RAID"},
   {"type": "rumour_type", "id": "skirmish", "entry": "skirmish", "kind": "Battle", "interest_pm": 700, "life_days": 15, "witnesses": "town", "severity": 2, "key": "R_SKIRMISH"},
   {"type": "rumour_type", "id": "mine_collapse", "entry": "mine_collapse", "kind": "Death", "interest_pm": 700, "life_days": 15, "witnesses": "town", "severity": 2, "key": "R_MINE"},
+  {"type": "rumour_type", "id": "battle_report", "entry": "battle_report", "kind": "Battle", "interest_pm": 650, "life_days": 15, "witnesses": "traveller", "severity": 2, "key": "ab_rumour_report", "number_key": "lost_a"},
   {"type": "talk_settings", "id": "default", "home_pm": 25, "work_pm": 10, "social_pm_by_hour": [0, 0, 0, 0, 0, 0, 8, 11, 14, 17, 17, 17, 19, 17, 17, 17, 17, 19, 28, 34, 34, 28, 8, 0]}
 ]

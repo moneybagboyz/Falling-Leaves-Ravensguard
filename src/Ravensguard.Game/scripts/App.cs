@@ -71,6 +71,13 @@ public partial class App : Node
             AddChild(new World.Combat.CaptivityDemo { Name = "CaptivityDemo" });
             return;
         }
+        if (args.Contains("--battle-demo"))
+        {
+            // P4-G hook: the abstract battle's report viewer on its own; --shot-out for screenshots
+            InputBootstrap.Init();
+            AddChild(new World.Combat.BattleDemo { Name = "BattleDemo" });
+            return;
+        }
         int spike = System.Array.IndexOf(args, "--spike"); // e.g. `-- --spike melee`
         if (spike >= 0 && spike + 1 < args.Length && args[spike + 1] == "melee")
         {

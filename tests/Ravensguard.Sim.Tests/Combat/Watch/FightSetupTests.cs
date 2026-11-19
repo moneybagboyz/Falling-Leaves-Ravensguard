@@ -125,7 +125,7 @@ public class FightSetupTests(FightFixture fx)
     }
 
     [Fact]
-    public void OutsideTheBubble_AFightGoesToTheAbstractSeam_AStubThatInventsNothing()
+    public void OutsideTheBubble_AFightGoesToTheAbstractSeam_TheAbstractBattle()
     {
         var setup = FightSetup.Raid([Person("Farmer", 20)], [Person("Raider 1", 55, worn: FightCalibration.Mailed.Worn), Person("Raider 2", 50)], 9, 79, 8 * 3600, "raid");
         var live = setup.Run(fx.C, null, inBubble: true);
@@ -133,10 +133,13 @@ public class FightSetupTests(FightFixture fx)
         var far = setup.Run(fx.C, null, inBubble: false);
         Assert.Null(far.Live);
         var rep = far.Report!;
-        Assert.True(rep.Stub); Assert.Equal(1, rep.WinnerTeam); Assert.True(rep.OddsPm > 500);
-        Assert.All(rep.OutByTeam.Values, v => Assert.Equal(0, v));
-        var again = setup.Run(fx.C, null, inBubble: false).Report!;           // deterministic, no draw
-        Assert.Equal((rep.WinnerTeam, rep.OddsPm, rep.FightId), (again.WinnerTeam, again.OddsPm, again.FightId));
+        // step 6: the default behind the seam is the abstract battle (abstract-battles-v1); the stub remains for content without wound tables
+        Assert.False(rep.Stub); Assert.NotNull(rep.Battle); Assert.Equal(1, rep.WinnerTeam); Assert.True(rep.OddsPm > 500);
+        Assert.True(rep.OutByTeam[0] >= 1);
+        var again = setup.Run(fx.C, null, inBubble: false).Report!;           // deterministic
+        Assert.Equal((rep.WinnerTeam, rep.OddsPm, rep.FightId, rep.Battle!.Hash), (again.WinnerTeam, again.OddsPm, again.FightId, again.Battle!.Hash));
+        var stub = setup.Run(fx.C, null, inBubble: false, AbstractFightStub.Instance).Report!;
+        Assert.True(stub.Stub); Assert.All(stub.OutByTeam.Values, v => Assert.Equal(0, v));
         // step 6 plugs its battles in behind the interface; callers do not change
         var custom = setup.Run(fx.C, null, inBubble: false, new FixedAbstract());
         Assert.False(custom.Report!.Stub);
