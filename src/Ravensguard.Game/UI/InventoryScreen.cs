@@ -110,8 +110,13 @@ public partial class InventoryScreen : Control
     {
         var row = new HBoxContainer(); row.AddThemeConstantOverride("separation", 8);
         string slot = it.Slot != EquipSlot.None ? $"[{L.T("SLOT_" + it.Slot.ToString().ToUpperInvariant())}] " : "";
-        string cond = it.ConditionPermille >= 950 ? "" : it.ConditionPermille >= 700 ? L.T("WEAR_WORN") : it.ConditionPermille >= 400 ? L.T("WEAR_BATTERED") : L.T("WEAR_BROKEN");
-        row.AddChild(new Label { Text = new string(' ', indent * 4) + slot + it.Name + (it.Quality != Ravensguard.Sim.Goods.ItemQuality.Common ? $" ({it.Quality})" : "") + (cond.Length > 0 ? $", {cond}" : ""), SizeFlagsHorizontal = SizeFlags.ExpandFill, ClipText = true });
+        // P5-A1 (items-quality-and-wear 4.4, 7): the condition bands (none from 700, worn, battered, ruined) and the tier's adjective ("fine arming sword, worn"); a named artefact by its name
+        string cond = it.ConditionPermille >= 700 ? "" : it.ConditionPermille >= 400 ? L.T("WEAR_WORN") : it.ConditionPermille >= 150 ? L.T("WEAR_BATTERED") : L.T("WEAR_BROKEN");
+        string tier = it.Quality == Ravensguard.Sim.Goods.ItemQuality.Common ? "" : L.T("iq_tier_" + it.Quality.ToString().ToLowerInvariant()) + " ";
+        string label = v.Crafting?.Artefacts.Of(it.Id) is { } art ? L.F("iq_named", art.Name, tier + it.Name.ToLowerInvariant()) : tier + it.Name;
+        var nameLabel = new Label { Text = new string(' ', indent * 4) + slot + label + (cond.Length > 0 ? $", {cond}" : ""), SizeFlagsHorizontal = SizeFlags.ExpandFill, ClipText = true };
+        if ((it.Flags & Ravensguard.Sim.Goods.ItemFlags.Named) != 0) nameLabel.ThemeTypeVariation = "GoldLabel";
+        row.AddChild(nameLabel);
         row.AddChild(new Label { Text = $"{Kg(it.MassG)} kg", CustomMinimumSize = new Vector2(70, 0), HorizontalAlignment = HorizontalAlignment.Right });
         row.AddChild(new Label { Text = Quotes.Money(it.ValueMites), CustomMinimumSize = new Vector2(90, 0), HorizontalAlignment = HorizontalAlignment.Right, ThemeTypeVariation = "HintLabel" });
         if (it.Slot != EquipSlot.None) Btn(row, L.T("INV_TAKE_OFF"), new HeroCommand { Kind = HeroCommandKind.Unequip, Item = it.Id });

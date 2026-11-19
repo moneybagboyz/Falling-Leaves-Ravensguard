@@ -524,7 +524,10 @@ public static class WorldSave
             Clock = new SimClock(new GameTime(meta.ClockSeconds), meta.ClockMsRemainder) { Speed = (SimSpeed)meta.ClockSpeed },
             Ids = IdAllocator.FromState(meta.IdState), Chunks = chunks, Chronicle = chronicle,
         };
-        // P5-A4: a migrated v7 save's hero gets the person row now (the v8 step marks it pending); a v8 save holds it in the people diff already
+        // P5-A4: a migrated v7 save's hero gets the person row now (the v8 step marks it pending); a v8 save holds it in the people diff already, and its status in the
+        // abstract section's vital columns; a bare world without that section (tools, test fixtures) has only the hero section's index to say which row is the hero's
+        if (hero is { PersonIndex: >= 0 } hp && hp.PersonIndex < pop.People.Count && abstractState == null && pop.People.Status[hp.PersonIndex] == PersonStatus.Alive)
+            pop.People.Status[hp.PersonIndex] = PersonStatus.Hero;
         if (hero is { PersonIndex: Ravensguard.Sim.Succession.HeroPerson.Pending } && content != null)
             hero.PersonIndex = Ravensguard.Sim.Succession.HeroPerson.InsertForLoad(pop, economy, content, hero, Ravensguard.Sim.Economy.EconomyState.HeroOwner, cs.Seed,
                 (int)(meta.ClockSeconds / 86400), restored.Succession?.Kin ?? [], restored.Ids);

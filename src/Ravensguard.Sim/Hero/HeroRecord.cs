@@ -63,7 +63,7 @@ public sealed class HeroRecord
         DefaultWeaponFamilies(skills, origin.Skills.Keys);
 
         var inv = new List<HeroItem>();
-        foreach (var k in origin.Kit) inv.Add(new HeroItem(k.Item, DefaultMaterial(k.Item), Math.Max(1, k.Count)));
+        foreach (var k in origin.Kit) inv.Add(new HeroItem(k.Item, DefaultMaterial(k.Item), Math.Max(1, k.Count), (Ravensguard.Sim.Goods.ItemQuality)QualityNames.Tier(k.Quality)));
         return new HeroRecord
         {
             Name = name, Female = female, Origin = origin.Id, Attributes = attrs, Skills = skills, Inventory = inv,

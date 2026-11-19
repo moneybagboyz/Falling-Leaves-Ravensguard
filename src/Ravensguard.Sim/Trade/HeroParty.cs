@@ -59,7 +59,7 @@ public sealed class HeroParty
         foreach (var it in hero.Inventory)
             for (int k = 0; k < Math.Max(1, it.Count); k++)
             {
-                var id = c.MakeItem(e, db, rules, f, ids, it.Shape, it.Material);
+                var id = c.MakeItem(e, db, rules, f, ids, it.Shape, it.Material, it.Quality);       // P5-A1: the kit row carries its tier (common unless the origin says)
                 if (k == 0) c.EquipItem(e, rules, id);
             }
         // the clothes they stand in, by origin and season (clothing spec 4.1), worn; a piece the kit already has is not doubled

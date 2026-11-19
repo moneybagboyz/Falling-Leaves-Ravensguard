@@ -7,6 +7,7 @@ using Ravensguard.Sim.Core;
 using Ravensguard.Sim.Crafting;
 using Ravensguard.Sim.Economy;
 using Ravensguard.Sim.Goods;
+using Ravensguard.Sim.Inventory;
 using Ravensguard.Sim.People;
 using Ravensguard.Sim.Trade;
 
@@ -47,9 +48,10 @@ public sealed class CraftingSession
         Pack = Econ.OpenStore(StoreKind.House, HeroId, 0, 0, false);
         Runner = MakeRunner();
         Actor = new CraftActor(HeroId, hero.Attribute(HeroAttr.Strength), hero.Attribute(HeroAttr.Wits), hero.Attribute(HeroAttr.Perception));
-        // the traveller's kit: a knife, steel and flint, a needle and a pot, and whatever the hero carries
+        // the traveller's kit: a knife, steel and flint, a needle and a pot, and whatever the hero carries (P5-A4: in a running world the pack's real item rows and goods, else the record's kit)
         var tools = new List<string> { "knife", "steel_and_flint", "needle", "pot" };
-        foreach (var it in hero.Inventory) { string id = it.Shape is "dagger" ? "knife" : it.Shape; if (Db.Tools.ContainsKey(id)) tools.Add(id); }
+        var carried = world?.View is { } view ? view.Items.Select(i => i.Shape).Concat(view.Goods.Select(g => g.Id)) : hero.Inventory.Select(i => i.Shape);
+        tools.AddRange(HeroPack.Tools(carried, Db.Tools.ContainsKey));
         SiteSpec = new CraftSiteSpec(light, true, [.. tools.Distinct()], [.. stations.Where(Db.Stations.ContainsKey)], ["hammering"]);
         Site = SiteSpec.Build(Db);
         if (world == null && starterPack) Stock();
