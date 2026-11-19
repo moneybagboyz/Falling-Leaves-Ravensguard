@@ -30,6 +30,9 @@ public static class NewGameDebug
         return w;
     }
 
+    /// <summary>The smoke's world seed. It was random (a fresh seed per run), so CI met worlds where nobody stood near the hero and no bark came.</summary>
+    public const ulong SmokeSeed = 20261119;
+
     public static async Task Smoke(SceneTree tree, ScreenRouter router)
     {
         var tmp = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "rg-smoke-" + Guid.NewGuid().ToString("N"));
@@ -40,7 +43,7 @@ public static class NewGameDebug
             router.Push(new WorldsScreen(router, false)); await Frames(tree, 2); router.Pop(); await Frames(tree, 1);
 
             // creation through the worker job, then the chronicle viewer and the embark map
-            var d = NewGameServices.NewDraft(); d.History.Years = 40; d.ChooseRegion = false;
+            var d = NewGameServices.NewDraft(); NewGameServices.Reseed(d, SmokeSeed); d.History.Years = 40; d.ChooseRegion = false;   // one fixed world: a smoke that fails must fail the same way on every machine
             var creation = new WorldCreationScreen(router, d, WorldPurpose.Legends);
             router.Push(creation);
             if (!await Until(tree, () => router.Top is LegendsScreen)) throw new Exception("world creation did not finish");

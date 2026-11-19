@@ -3,6 +3,7 @@ using System.Linq;
 using Godot;
 using Ravensguard.Game.UI;
 using Ravensguard.Sim.Core;
+using Ravensguard.Sim.World;
 using Ravensguard.Sim.Travel;
 
 namespace Ravensguard.Game.World;
@@ -31,6 +32,20 @@ public partial class StreetView
 
     /// <summary>The camp, made where the hero stands (the dev shot's camp).</summary>
     public void DebugCamp() { if (_travel != null) DevTravelShot("camp"); }
+
+    /// <summary>Smoke hook: walk the hero toward the nearest live person on its level (barks need someone within 12 m). Returns that person's distance in metres, or -1 when nobody is live.</summary>
+    public double DebugWalkToNearestPerson()
+    {
+        if (Runtime is not { } rt) return -1;
+        var c = LodCentres()[0]; int z = _world.Snapshot.Hero.Z;
+        var near = _lod.People.Where(p => p.Z == z).OrderBy(p => Math.Abs(p.XMm - c.X) + Math.Abs(p.YMm - c.Y)).ThenBy(p => p.Id.Value).FirstOrDefault();
+        if (near.Name == null) return -1;
+        var home = rt.State.HomeRegion;
+        int lx = (int)(near.XMm / 1000 - home.OriginXM - _world.OriginX), ly = (int)(near.YMm / 1000 - home.OriginYM - _world.OriginY);
+        foreach (var (dx, dy) in new[] { (1, 0), (-1, 0), (0, 1), (0, -1), (0, 0), (2, 0), (0, 2) })
+            if (_rec.CommandMoveTo(new Cell3(lx + dx, ly + dy, z))) break;
+        return Math.Sqrt(Math.Pow(near.XMm - c.X, 2) + Math.Pow(near.YMm - c.Y, 2)) / 1000.0;
+    }
 
     /// <summary>A person of the hero's home settlement, to talk to.</summary>
     public EntityId DebugAnyPerson()

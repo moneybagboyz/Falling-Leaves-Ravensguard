@@ -116,7 +116,9 @@ public static class Phase3Smoke
             if (router.Top != sv || router.HasModal) throw new Exception("Esc did not close the pause menu");
 
             // barks and nearby talk run with the real stack (they were gated on the stack being one deep, so they never did)
-            if (!await Until(tree, () => sv.DebugBarksSpawned > 0, 2400)) throw new Exception("no bark appeared over the people near the hero in 2400 frames (the stack is " + router.Depth + " deep)");
+            // nobody may stand within 12 m of where the hero starts (open country): walk to the nearest live person first, then wait
+            if (!await Until(tree, () => sv.DebugWalkToNearestPerson() >= 0, 1200)) throw new Exception("no live person near the hero in 1200 frames");
+            if (!await Until(tree, () => sv.DebugBarksSpawned > 0, 3600)) throw new Exception("no bark appeared over the people near the hero in 3600 frames (the stack is " + router.Depth + " deep, nearest person " + sv.DebugWalkToNearestPerson().ToString("0.0") + " m)");
             GD.Print($"[smoke]   barks: {sv.DebugBarksSpawned} so far");
 
             // a road encounter: trade opens over the journey, Back gives the journey back, the keys 1 to 5 work again
