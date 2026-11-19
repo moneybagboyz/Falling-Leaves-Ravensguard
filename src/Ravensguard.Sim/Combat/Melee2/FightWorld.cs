@@ -103,6 +103,7 @@ public sealed partial class FightWorld
         if (launcher != null && kit.Ammo != null && Content.Ammo.TryGetValue(kit.Ammo, out var ammo))
         {
             f.AmmoDef = ammo; f.AmmoWeapon = Content.AmmoWeapon(ammo); f.Ammo = kit.AmmoCount > 0 ? kit.AmmoCount : launcher.QuiverSize;
+            if (launcher.Holds && f.Ammo > 0) { f.Loaded = true; f.Ammo--; }          // close-out item 3: a crossbow is carried into a fight spanned
         }
         foreach (var t in kit.Throwables) if (t.Count > 0) f.Throwables.Add(t);
         f.Brain.Target = -1; f.Brain.ReactSerialFoe = -1;
@@ -659,6 +660,8 @@ public sealed partial class FightWorld
             h = FightMath.Mix(h, f.Stamina); h = FightMath.Mix(h, f.Serial); h = FightMath.Mix(h, f.Req.Attack | f.Req.Part << 8 | f.Req.Target << 16 | (int)f.Req.Style << 28);
             h = FightMath.Mix(h, f.Ammo | (f.Loaded ? 1 << 20 : 0)); h = FightMath.Mix(h, f.ShieldPm); h = FightMath.Mix(h, f.ImprovisedPm);
             h = FightMath.Mix(h, f.Morale | f.MoralePenalty << 8 | (f.Routing ? 1 << 20 : 0));
+            if (f.InsideUntil != -1) h = FightMath.Mix(h, (uint)f.InsideUntil | (long)f.InsideOf << 32);                                     // close-out item 1
+            foreach (var wv in f.Worn) if (!wv.Pristine) { h = FightMath.Mix(h, wv.ConditionPm | (wv.Slipped ? 1 << 16 : 0)); h = FightMath.Mix(h, (long)wv.BreachMask); }   // close-out item 4: armour damage
             h = f.Book.Hash(h);
             h = f.M.Hash(h);                            // P4-D hook: the MoraleHash joins the FightHash
         }

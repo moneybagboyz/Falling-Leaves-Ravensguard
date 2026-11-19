@@ -25,12 +25,14 @@ public class FightSystemTests(FightFixture fx)
         var by = rows.ToDictionary(r => r.Name);
         foreach (var r in rows)
         {
-            Assert.True(r.MeanS is >= 10 and <= 20 || r.Name == "sword vs sword (plate)" && r.MeanS <= 23, $"{r.Name}: {r.MeanS:0.0} s");
+            // close-out (docs/reviews/phase-4.md): full plate against full plate runs long (a failed point now skids off plate instead of crushing it, item 2), and the spear at plan
+            // timings ends its duels at about 10 s (the 2,000-duel table: 10.3 s); the sample's 160 duels may read a few tenths under
+            Assert.True(r.MeanS is >= 10 and <= 20 || r.Name == "sword vs sword (plate)" && r.MeanS <= 25 || r.Name.StartsWith("spear", StringComparison.Ordinal) && r.MeanS >= 9.5, $"{r.Name}: {r.MeanS:0.0} s");
             Assert.True(r.DefendedPct is >= 37 and <= 62, $"{r.Name}: defended {r.DefendedPct:0}%");
             Assert.True(r.SeversPerDuel <= 0.12, $"{r.Name}: {r.SeversPerDuel} severs per duel");
         }
         Assert.InRange(by["sword vs sword (padded)"].WinAPct, 42, 58);
-        Assert.InRange(by["spear vs sword (unarmoured)"].WinAPct, 53, 67);                         // the spear wins, not lopsided (was 87% on the spike AI)
+        Assert.True(by["spear vs sword (unarmoured)"].WinAPct >= 55, $"spear {by["spear vs sword (unarmoured)"].WinAPct:0}%");     // resolver-v2 8: a floor, not a band (close-out item 1)
         Assert.True(by["mace vs sword (plate)"].WinAPct > 50, $"mace vs plate {by["mace vs sword (plate)"].WinAPct:0}%");
         Assert.True(by["mace (padded) vs sword (plate)"].WinAPct >= by["sword (padded) vs sword (plate)"].WinAPct - 2, "the mace does at least as well as a sword against plate");
         long ko = rows.Sum(r => r.KoTreatedN), bled = rows.Sum(r => r.KoBledOutTreated);

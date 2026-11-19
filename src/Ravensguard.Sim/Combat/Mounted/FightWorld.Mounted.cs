@@ -82,6 +82,16 @@ public sealed partial class FightWorld
 
     public static bool IsLance(Fighter f) => f.Weapon.Shape.Id is "lance" or "tourney_lance";
 
+    /// <summary>
+    /// The reach of <paramref name="a"/>'s weapon against <paramref name="t"/> (4.1): a rider's non-lance weapon reaches 0.4 m further down at a man on foot (or a horse), but not
+    /// against another rider, whose body is as high as his own (close-out item 5; it was +0.4 m against riders too).
+    /// </summary>
+    public int ReachAgainst(Fighter a, Fighter t)
+    {
+        if (Mounts == null || IsLance(a) || Riding(a) == null || Riding(t) is not { } mt || mt.Rider != t.Id) return a.ReachMm;
+        return Math.Max(500, a.ReachMm - Mounts.D.MountedReachMm);
+    }
+
     /// <summary>A spear, pike, javelin or bill that can be planted against a horse (4.4); not a lance.</summary>
     public static bool CanBrace(Fighter f) => f.Family == "polearms" && f.Launcher == null && !IsLance(f) && f.WeaponArm;
 

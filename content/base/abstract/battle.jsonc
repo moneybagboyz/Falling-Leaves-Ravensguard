@@ -5,7 +5,7 @@
   { "type": "abstract_battle", "id": "default",
     "step_s": 1, "max_steps": 1200, "press_rate_pct": 125, "pursuit_blows_per_min_x10": 380, "engagement_pm": 594, "engagement_narrow_pm": 800,
     "engagement_loose_pm": 400, "outnumber_cap_pm": 2500, "outnumber_cap_narrow_pm": 1500, "flank_bonus_pm": 250, "press_hit_pm": 780, "rear_bonus_pm": 500,
-    "morale_k": 16, "rout_below": 20, "collapse_active_pm": 0, "leaderless_collapse_pm": 0, "charge_pm": 1000, "pursuit_s": 120, "flee_s": 16, "pursue_pm": 329,
+    "morale_k": 16, "rout_below": 20, "collapse_active_pm": 0, "leaderless_collapse_pm": 0, "charge_pm": 700, "pursuit_s": 120, "flee_s": 16, "pursue_pm": 329,
     "cornered_pm": 2252, "router_cornered_pm": 108, "router_yield_below": 18, "rider_blows_per_min_x10": 88, "rider_slow_blows_per_min_x10": 80, "vs_rider_rate_pm": 44,
     "vs_rider_hit_pm": 131, "vs_rider_slow_rate_pm": 120, "vs_rider_slow_hit_pm": 1485, "melee_flanked_pm": 1168, "advance_mmps": 2500, "charge_mmps": 7700,
     "rider_mmps": 9000, "contact_mm": 2000, "longbow_per_min": 12, "crossbow_per_min": 6, "front_pm": 1500, "middle_pm": 1000, "rear_pm": 345, "beset_rate_pm": 100,

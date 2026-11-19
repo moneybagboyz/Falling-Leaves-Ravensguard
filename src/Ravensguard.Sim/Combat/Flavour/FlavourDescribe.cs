@@ -163,6 +163,9 @@ public static class FlavourDescribe
 
     public static string EventName(FightEventKind k) => FlavourBook.Snake(k.ToString());
 
+    /// <summary>The cause word of an armour-damage line (close-out item 4: <see cref="Resolver2.ArmourHarm"/>).</summary>
+    public static string HarmCause(int harm) => harm switch { 1 => "dented", 2 => "buckled", 3 => "burst", 4 => "strap", _ => "dented" };
+
     static string DownCause(int bits) => (bits & 4) != 0 ? "heart" : (bits & 16) != 0 ? "breath" : (bits & 8) != 0 ? "concussion" : (bits & 1) != 0 ? "blood" : (bits & 2) != 0 ? "pain" : "blood";
     static string DeathCause(int kind) => kind switch { 1 => "blood", 2 => "organ", 3 => "brain", 4 => "breath", 5 => "infection", 6 => "infection", _ => "blood" };
 
@@ -243,7 +246,13 @@ public static class FlavourDescribe
                 }
             }
         }
-        if (line.Kind is FightEventKind.Broke) { c.Cause = line.A == 1 ? "shield" : "improvised"; }
+        if (line.Kind is FightEventKind.Broke) { c.Cause = line.A == 1 ? "shield" : line.A == 3 ? HarmCause(line.B) : "improvised"; }
+        if (line.Kind is FightEventKind.Broke && line.A == 3)
+        {
+            string shape = log.Str(line.WeaponShape), am = log.Str(line.WeaponMaterial);
+            c.ArmourFamily = ArmourFamilyOf(shape, am);
+            d.P["armour_piece"] = V(text, "armour", shape); d.P["armour_material"] = V(text, "mat", am); d.P["armour"] = d.P["armour_material"] + " " + d.P["armour_piece"];
+        }
         if (line.Kind == FightEventKind.Disarmed) c.Cause = line.A == 1 ? "shield" : "weapon";
         _ = partId;
         d.Ctx = c;

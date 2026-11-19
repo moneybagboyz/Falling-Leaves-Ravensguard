@@ -4,11 +4,13 @@ Collected while steps 1 to 7 were built. Step 8 fixes each one or moves it into 
 
 ## Decided with the user (Nov 2026)
 
-1. **The spear was over-balanced. Undo it.** The plan target is a floor ("a spear beats a sword of equal skill at least 55%", resolver-v2 §8), not a band. The P4-C calibration slowed the spear to 0.50 / 0.60 s (plan §4A.3 says 0.40 / 0.50) to bring its win rate down from 87%.
+1. **Done (close-out):** the spear is back at 0.40 / 0.50 s and countered (a parried, slipped or beaten-aside point puts the swordsman inside its reach; a crowded polearm is choked up and steps back): it wins 62% against an unarmoured and 59% against a padded swordsman (melee-and-ranged Notes, close-out).
+   **The spear was over-balanced. Undo it.** The plan target is a floor ("a spear beats a sword of equal skill at least 55%", resolver-v2 §8), not a band. The P4-C calibration slowed the spear to 0.50 / 0.60 s (plan §4A.3 says 0.40 / 0.50) to bring its win rate down from 87%.
    - Restore 0.40 / 0.50.
    - Add the real counter: a swordsman who parries the point or slips past it closes **inside the spear's reach**, and the spearman must step back to use it. This builds on the existing crowded-polearm penalty inside 1.3 m.
    - Keep only the ≥ 55% floor, and record the win rate the physics then gives.
-2. **Weapon × armour matrix (a realism check, not equalising).** Run every melee weapon and every missile against: no armour, padded, leather, mail, mail over padding, and full plate (with and without a called shot to a gap). Expected:
+2. **Done (close-out):** `-- --matrix` and `docs/calibration/weapon-armour-matrix.md`; four expectations broke (the club, staff and blunt arrow bounced off cloth; a dagger's point crushed plate; arrows went through plate; the maul did nothing through plate) and were fixed by three physics rules (rigid-only deflection, a failed edge skids off plate, a backplate is not met from the front) and two data changes (the maul's velocity, iron bodkin and quarrel heads); `WeaponArmourTests` pins the directions.
+   **Weapon × armour matrix (a realism check, not equalising).** Run every melee weapon and every missile against: no armour, padded, leather, mail, mail over padding, and full plate (with and without a called shot to a gap). Expected:
    - swords and axes against mail mostly bruise rather than cut;
    - maces, hammers and mauls still hurt through plate;
    - daggers work against plate only through the gaps;
@@ -18,9 +20,11 @@ Collected while steps 1 to 7 were built. Step 8 fixes each one or moves it into 
    - against an unarmoured man, everything is deadly.
 
    Where a result breaks one of these, fix the material or shape data, not a per-weapon fudge factor. Weapons are allowed to be better or worse than each other.
-3. **Ranged realism runs.** Add bow, crossbow and javelin pairings to `tools/Ravensguard.Calibrate`, recorded in the melee-and-ranged Notes. They are judged against the expectations above, not tuned for parity.
+3. **Done (close-out):** `-- --ranged`, 15 pairings recorded in the calibration file; archers beat a lone swordsman unless he wears plate, a crossbow wins 55% on its one spanned shot, javelins 82 to 88%; two AI faults fixed (the archer now nocks as he backs off, the crossbowman stands to span).
+   **Ranged realism runs.** Add bow, crossbow and javelin pairings to `tools/Ravensguard.Calibrate`, recorded in the melee-and-ranged Notes. They are judged against the expectations above, not tuned for parity.
 
-4. **Blunt weapons should damage rigid armour more than edges do.** At the moment `ClothingArmour.ApplyWear` wears plate 5 pm on a cut and less on a crush, the wrong way round for maces and hammers.
+4. **Done (close-out):** blunt blows dent and buckle plate (150 pm at the crush need, protection falls with condition), heavy blows burst mail and battered plate slips its straps; told in the flavour log and drawn on the doll (a mace takes a breastplate under 300 in about five blows, a sword scuffs 3 pm a blow).
+   **Blunt weapons should damage rigid armour more than edges do.** At the moment `ClothingArmour.ApplyWear` wears plate 5 pm on a cut and less on a crush, the wrong way round for maces and hammers.
    - A heavy blunt blow should dent or buckle plate, and protection falls with condition.
    - A heavy blow can burst mail rings or break a plate's straps, which leaves a gap.
    - Show the damage in the flavour log ("the breastplate buckles") and on the paper doll.
@@ -29,7 +33,7 @@ Collected while steps 1 to 7 were built. Step 8 fixes each one or moves it into 
 
 ## Found during steps 1 to 5 (see each spec's Notes for detail)
 
-- **Mounted reach:** mounted non-lance weapons get +0.4 m against riders too; the spec says +0 there.
+- **Mounted reach:** mounted non-lance weapons get +0.4 m against riders too; the spec says +0 there. **Done (close-out):** `FightWorld.ReachAgainst`, +0 against a rider; lance against lance 33 -> 29 s.
 - **Mace strength:** the mace beats a padded swordsman 69%. Re-check after item 2; this may be fine.
 - **Plate duels:** plate against plate lasts 21 s (target 10 to 20 s, test allows 23 s).
 - **Wounds content:** `medicine/*.jsonc` content, the `make_crutch` recipe, Treat utility scoring, tourniquet grade drops at 2 and 6 h, physician prices, the paper-doll treatment UI, an `AbstractFirstAid` test.

@@ -476,8 +476,9 @@ public class MountedCombatTests(FightFixture fx)
         var loaded = FightRecord.FromBytes(FightRecord.Capture(w, "test").ToBytes()).Restore(fx.C);
         for (int i = 0; i < 20 * 20; i++) loaded.StepWithAi();
         Assert.Equal(a, (loaded.Hash(), loaded.MountedHash()));
-        Assert.Equal(14264917679344927324UL, a.Fight);                // the FightHash of the fixed skirmish (MountedHash included): the Linux and Windows CI compare
-        Assert.Equal(11330053023378257550UL, a.Mounted);
+        // re-pinned in the Phase 4 close-out: armour now dents and bursts, a rider has no +0.4 m reach against another rider (items 4, 5)
+        Assert.Equal(8079067610618892121UL, a.Fight);                // the FightHash of the fixed skirmish (MountedHash included): the Linux and Windows CI compare
+        Assert.Equal(17694732195683071764UL, a.Mounted);
     }
 
     [Fact]

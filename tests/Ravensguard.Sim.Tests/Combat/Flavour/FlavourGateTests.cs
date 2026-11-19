@@ -258,7 +258,7 @@ public class FlavourGateTests(FlavourFixture fx) : IClassFixture<FlavourFixture>
     [Fact]
     public void FL5_Filters_ReturnExactlyWhatTheyPromise()
     {
-        var (w, r) = Skirmish(fx, 5);
+        var (w, r) = Skirmish(fx, 6);                // a seed where someone comes for the standing hero (seed 5 stopped doing so with the Phase 4 close-out's weapon changes)
         var log = r.Log;
         Assert.Equal(1, log.Hero);
         Assert.True(log.Lines.Count > 50);

@@ -10,18 +10,18 @@ namespace Ravensguard.Sim.Tests.Combat.Abstract;
 /// </summary>
 public static class TacticalReference
 {
-    public const string ContentHash = "B8342AD2275C1A22";
+    public const string ContentHash = "3972AD104E0FFE93";
     public const int Seed0 = 20000, Seeds = 200;
 
     public static readonly Dictionary<AbstractScenarios.Scenario, long[]> Tallies = new()
     {
-        [AbstractScenarios.Scenario.A] = [200, 30, 170, 28518, 762, 183, 4000, 405, 721, 0, 0, 0, 123, 632, 7, 0, 406, 211, 4000, 142, 388, 0, 0, 0, 84, 295, 0, 27],
-        [AbstractScenarios.Scenario.B] = [200, 105, 94, 21183, 815, 729, 6000, 246, 814, 0, 0, 0, 280, 475, 9, 51, 685, 1547, 10000, 432, 674, 0, 0, 0, 91, 527, 52, 15],
-        [AbstractScenarios.Scenario.C] = [200, 192, 7, 63106, 792, 290, 6000, 223, 566, 0, 0, 0, 52, 428, 2, 310, 1859, 2599, 5000, 668, 1600, 0, 0, 0, 189, 1083, 0, 587],
-        [AbstractScenarios.Scenario.D] = [200, 200, 0, 97962, 18, 5, 2400, 5, 3, 0, 0, 0, 2, 14, 1, 1, 1506, 155, 4000, 346, 261, 0, 0, 0, 835, 598, 0, 73],
-        [AbstractScenarios.Scenario.DMud] = [200, 50, 148, 302122, 978, 525, 2400, 127, 163, 0, 0, 0, 114, 768, 60, 36, 636, 614, 4000, 65, 82, 0, 0, 0, 187, 400, 0, 49],
-        [AbstractScenarios.Scenario.AFlanked] = [200, 83, 117, 37059, 823, 296, 4000, 437, 746, 0, 0, 0, 110, 700, 11, 2, 907, 536, 4000, 297, 850, 0, 0, 0, 247, 606, 6, 48],
-        [AbstractScenarios.Scenario.ANoLeader] = [200, 26, 173, 29448, 522, 278, 4000, 258, 480, 0, 0, 0, 79, 438, 5, 0, 301, 367, 4000, 115, 288, 0, 0, 0, 55, 225, 0, 21],
+        [AbstractScenarios.Scenario.A] = [200, 51, 149, 28655, 692, 199, 4000, 378, 646, 0, 0, 0, 113, 567, 12, 0, 513, 309, 4000, 147, 493, 0, 0, 0, 127, 356, 0, 30],
+        [AbstractScenarios.Scenario.B] = [200, 117, 83, 20541, 782, 823, 6000, 217, 780, 0, 0, 0, 316, 448, 4, 14, 711, 1314, 10000, 443, 708, 0, 0, 0, 103, 543, 53, 12],
+        [AbstractScenarios.Scenario.C] = [200, 188, 11, 52189, 784, 379, 6000, 289, 642, 0, 0, 0, 52, 475, 0, 257, 2037, 2466, 5000, 818, 1861, 0, 0, 0, 200, 1146, 0, 691],
+        [AbstractScenarios.Scenario.D] = [200, 200, 0, 96711, 20, 6, 2400, 5, 3, 0, 0, 0, 2, 15, 1, 2, 1543, 144, 4000, 360, 251, 0, 0, 0, 854, 614, 0, 75],
+        [AbstractScenarios.Scenario.DMud] = [200, 46, 152, 300920, 1015, 558, 2400, 153, 162, 0, 0, 0, 131, 772, 72, 40, 643, 642, 4000, 74, 81, 0, 0, 0, 182, 415, 0, 46],
+        [AbstractScenarios.Scenario.AFlanked] = [200, 120, 78, 36948, 753, 324, 4000, 412, 680, 0, 0, 0, 105, 639, 9, 0, 1050, 498, 4000, 369, 1001, 0, 0, 0, 304, 692, 2, 52],
+        [AbstractScenarios.Scenario.ANoLeader] = [200, 56, 144, 37594, 521, 385, 4000, 261, 453, 0, 0, 0, 75, 437, 9, 0, 411, 480, 4000, 124, 390, 0, 0, 0, 91, 293, 0, 27],
     };
 
     public static AbstractEquivalence.Tally Of(AbstractScenarios.Scenario s) => AbstractEquivalence.Unpack(Tallies[s]);

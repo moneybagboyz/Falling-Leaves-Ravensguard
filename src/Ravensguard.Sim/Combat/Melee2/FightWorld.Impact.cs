@@ -50,16 +50,15 @@ public sealed partial class FightWorld
 
     private Fighter? FindTarget(Fighter a)
     {
-        int reach = a.ReachMm;
         if (a.Req.Target >= 0 && a.Req.Target < Fighters.Count)
         {
             var t = Fighters[a.Req.Target];
-            if (t.Team != a.Team && Hittable(t) && InStrike(a, t, reach)) return t;
+            if (t.Team != a.Team && Hittable(t) && InStrike(a, t, ReachAgainst(a, t))) return t;
         }
         Fighter? best = null; long bd = long.MaxValue;
         foreach (var t in Fighters)
         {
-            if (t.Team == a.Team || !Hittable(t) || !InStrike(a, t, reach)) continue;
+            if (t.Team == a.Team || !Hittable(t) || !InStrike(a, t, ReachAgainst(a, t))) continue;
             long d = DistMm(a, t) + (_snapAct[t.Id] == FAct.Down ? 5000 : 0);       // prefer someone still standing
             if (d < bd) { bd = d; best = t; }
         }
@@ -76,7 +75,7 @@ public sealed partial class FightWorld
         var s = new StrikeV2
         {
             Strength = (int)((long)a.Kit.Strength * a.StrengthPm / 1000), Skill = Math.Max(0, skill), SizeCm3 = a.Kit.SizeCm3, SpeciesSizeCm3 = a.Plan.SizeCm3,
-            MomentumPm = a.BlowPm * (a.Kit.Blunted ? 500 : 1000) / 1000 * MoraleRearPm(t, facing) / 1000, Blunted = a.Kit.Blunted, Weapon = a.Weapon, Attack = Math.Clamp(attack, 0, a.Weapon.Attacks.Length - 1), Style = style,
+            MomentumPm = a.BlowPm * (a.Kit.Blunted ? 500 : 1000) / 1000 * MoraleRearPm(t, facing) / 1000 * CrowdedMomentumPm(a, t) / 1000, Blunted = a.Kit.Blunted, Weapon = a.Weapon, Attack = Math.Clamp(attack, 0, a.Weapon.Attacks.Length - 1), Style = style,
             Plan = t.Plan, DefenderSizeCm3 = t.Kit.SizeCm3, DefenderSkill = prone ? 0 : t.Skill, Worn = t.Worn, WornCount = t.Worn.Length,
             GuardedMask = _snapAct.Length > t.Id && _snapAct[t.Id] == FAct.Block ? GuardMask(t.Plan) : 0, MissingMask = t.MissingMask | (a.Stance.NoLethal ? NoLethalMask(t.Plan) : 0), Prone = prone,
             TargetPart = part, TargetGap = gap, Facing = facing, SituationPoints = (a.Improvised != null ? 0 : 0) - (Crowded(a, t) ? K.CrowdedPoints : 0) + SitePoints(a, t),   // [exploration] hook: light, air, fog (4.8)
@@ -88,9 +87,45 @@ public sealed partial class FightWorld
     /// <summary>A long weapon used inside its own comfortable range (closer than the polearm hold-off).</summary>
     private bool Crowded(Fighter a, Fighter t) => a.Family == "polearms" && K.CrowdedPoints != 0 && DistMm(a, t) < K.PolearmTooCloseMm;
 
+    /// <summary>A polearm choked up inside its hold-off: the shortened grip's share of the momentum (close-out item 1).</summary>
+    private int CrowdedMomentumPm(Fighter a, Fighter t) => a.Family == "polearms" && DistMm(a, t) < K.PolearmTooCloseMm ? K.CrowdedMomentumPm : 1000;
+
+    /// <summary>Close-out item 1: the defender who parried or slipped a longer weapon's point is past it and presses inside its reach (the brain closes; the polearm is crowded).</summary>
+    private void PassedThePoint(Fighter t, Fighter a)
+    {
+        if (K.InsideTicks <= 0 || a.Family != "polearms" || a.ReachMm < t.ReachMm + K.InsideReachMm || t.Family == "polearms") return;
+        t.InsideUntil = Tick + K.InsideTicks; t.InsideOf = a.Id;
+    }
+
     private BlowKey KeyOf(Fighter a, uint serial) => new(Seed, Tick, (ulong)(a.Id + 1), serial);
 
     private void ResolveImpact(Fighter a)
+    {
+        ResolveImpactCore(a);
+        TellArmourHarm();
+    }
+
+    // ------------------------------------------------------------------ armour damage (close-out item 4)
+
+    private readonly List<(int Wearer, int Attacker, int Piece, ArmourHarm Harm)> _harms = [];
+    private int _harmWearer, _harmAttacker;
+    private Action<int, ArmourHarm>? _onHarm;
+
+    /// <summary>The blow's wear goes to the struck fighter's pieces (dents, burst rings, broken straps); what shows is told after the blow's own line.</summary>
+    private void WearArmour(Fighter a, Fighter t)
+    {
+        if (t.Worn.Length == 0 || _r.StepCount == 0) return;
+        _harmWearer = t.Id; _harmAttacker = a.Id;
+        ArmourWear.Apply(t.Worn, _r, _onHarm ??= (piece, harm) => _harms.Add((_harmWearer, _harmAttacker, piece, harm)));
+    }
+
+    private void TellArmourHarm()
+    {
+        foreach (var (wearer, attacker, piece, harm) in _harms) Emit(FightEventKind.Broke, wearer, attacker, piece, 3, (int)harm);
+        _harms.Clear();
+    }
+
+    private void ResolveImpactCore(Fighter a)
     {
         var req = a.Req;
         var t = FindTarget(a);
@@ -111,6 +146,7 @@ public sealed partial class FightWorld
             if (DefenceRoll(t, a.Id, serial, 0) < p)
             {
                 t.DodgedBy++;
+                PassedThePoint(t, a);
                 Emit(FightEventKind.Dodged, t.Id, a.Id, part);
                 return;
             }
@@ -127,6 +163,7 @@ public sealed partial class FightWorld
                     if (a.Act == FAct.Strike) { a.Act = FAct.Stagger; a.ActTicks = RecoverTicks(a) + K.ParryStaggerExtraTicks; }
                     t.RiposteUntil = Tick + K.RiposteTicks;
                     t.ParriedBy++;
+                    PassedThePoint(t, a);
                     Emit(FightEventKind.Parried, t.Id, a.Id, part);
                     Emit(FightEventKind.Riposte, t.Id, a.Id);
                     return;
@@ -150,12 +187,14 @@ public sealed partial class FightWorld
 
         Resolver.Resolve(s, KeyOf(a, serial), _r);
         OnBlow?.Invoke(a, t, _r, s);
+        WearArmour(a, t);
         if (Mounts != null) MountedOnBlow(a, t, s);                  // [mounted-combat] unhorse, lance shatter
         if (_r.Blocked)
         {
             ref var bo = ref _r.Block;
             t.Stamina = Math.Max(0, t.Stamina - bo.StaminaX100);
             t.BlockedBy++;
+            if (bo.Stopped && atk.Type == AttackType.Point) PassedThePoint(t, a);      // the point beaten aside: inside it
             if (s.Block.Kind == BlockKind.Shield) WearShield(t, bo.ShieldLossPm);
             Wear(a, _r.InitialMilli);
             if (bo.Stagger && t.Act is FAct.Block or FAct.Idle or FAct.Recover) { t.Act = FAct.Stagger; t.ActTicks = K.OverpoweredStaggerTicks; Emit(FightEventKind.Overpowered, t.Id, a.Id); }

@@ -134,6 +134,8 @@ public sealed class Fighter
     // ---- watch-mode (P4-F): orders and the treat job (Combat/Watch) ----
     /// <summary>The fighter the protect stance guards (-1: none); set by the stance, an order ("protect X") or the setup.</summary>
     public int ProtectFighter = -1;
+    /// <summary>Close-out item 1: inside a longer weapon's reach (its point parried or dodged) until this tick, against fighter <see cref="InsideOf"/>.</summary>
+    public int InsideUntil = -1, InsideOf = -1;
     /// <summary>Busy with a treatment (pressure, bandage) until this tick.</summary>
     public int TreatBusyUntil;
     /// <summary>The weapon was put away for bare hands by a no-lethal stance (a blade without a flat, a javelin): the kit's weapon comes back when the stance changes.</summary>
