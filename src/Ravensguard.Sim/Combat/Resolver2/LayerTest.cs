@@ -35,7 +35,7 @@ public static class LayerTest
         long need = basePpm * (10_000 + 2L * qaPm) / 1_000_000;
         need = need * cmPm / 1000;
         need = need * resistPm / 1000;
-        return need * 1_000_000 / ((long)weapon.SharpPm * qwPm);
+        return (long)Int128.Min(long.MaxValue, (Int128)need * 1_000_000 / ((long)weapon.SharpPm * qwPm));   // Int128: the four products before it can grow past long for an extreme pairing (review W4)
     }
 
     /// <summary>The blunt need, milli-units: <c>(2 IF - IY) x (2 + 0.4 Qa) x A x Cm x CrushResist</c> (IF and IY in MPa = raw / 10^6; floored at 1 raw).</summary>

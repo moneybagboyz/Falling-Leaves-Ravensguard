@@ -63,8 +63,7 @@ public static class AbstractClasses
     public static WeaponClass MeleeOf(FightContent c, FighterKit k)
     {
         if (k.Weapon == null || !c.T.HasMaterial(k.Weapon.MaterialId)) return WeaponClass.Unarmed;
-        try { return Of(c.T.Weapon(k.Weapon.ShapeId, k.Weapon.MaterialId).Shape); }
-        catch (KeyNotFoundException) { return WeaponClass.Unarmed; }
+        return c.T.TryWeapon(k.Weapon.ShapeId, k.Weapon.MaterialId, out var w) ? Of(w.Shape) : WeaponClass.Unarmed;
     }
 
     /// <summary>The shooting class of a kit (a launcher with ammunition), or null.</summary>
@@ -91,7 +90,7 @@ public static class AbstractClasses
             foreach (var w in worn)
             {
                 if (!t.HasMaterial(w.MaterialId)) continue;
-                try { ws.Add(WornV2.Of(t.Armour(w.ShapeId, w.MaterialId), CombatTablesV2.QualityPm[(int)w.Quality])); } catch (KeyNotFoundException) { }
+                if (t.TryArmour(w.ShapeId, w.MaterialId, out var a)) ws.Add(WornV2.Of(a, CombatTablesV2.QualityPm[(int)w.Quality]));
             }
             v = RiskEstimate.ProtectionPm(p, ws);
             cache.ByKey[key] = v;

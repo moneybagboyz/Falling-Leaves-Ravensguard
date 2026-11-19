@@ -289,6 +289,9 @@ public sealed class CombatTablesV2
 
     public ArmourV2 Armour(string shape, string material) =>
         _armour.TryGetValue((shape, material), out var a) ? a : throw new KeyNotFoundException($"no armour stats for '{shape}' in '{material}'");
+    /// <summary>The weapon and armour lookups without an exception for a pair the content does not have (review finding S6 / W1: no exceptions as control flow).</summary>
+    public bool TryWeapon(string shape, string material, out WeaponV2 weapon, Quality q = Quality.Standard) => _weapons.TryGetValue((shape, material, q), out weapon!);
+    public bool TryArmour(string shape, string material, out ArmourV2 armour) => _armour.TryGetValue((shape, material), out armour!);
     public ShieldV2 Shield(string id) => _shields[id];
 
     /// <summary>Qa for a Phase 3 item quality (Crude 800, Poor 900, Common 1000, Fine 1400, Masterwork 2000): DF has nothing below standard.</summary>
