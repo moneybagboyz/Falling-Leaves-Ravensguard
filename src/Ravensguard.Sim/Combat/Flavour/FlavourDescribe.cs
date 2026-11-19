@@ -156,6 +156,8 @@ public static class FlavourDescribe
         FightEventKind.Shot or FightEventKind.Throw => "shot",
         FightEventKind.Down or FightEventKind.Death or FightEventKind.Wake or FightEventKind.Broke or FightEventKind.Disarmed or FightEventKind.Interrupted => "after",
         FightEventKind.Rout or FightEventKind.Rally or FightEventKind.Surrender or FightEventKind.Fled => "morale",
+        FightEventKind.Charge or FightEventKind.Unhorsed or FightEventKind.Fell or FightEventKind.HorseFell or FightEventKind.Shattered or FightEventKind.BraceStrike or FightEventKind.Trampled => "after",
+        FightEventKind.Reared or FightEventKind.Bolted or FightEventKind.Balked => "morale",
         _ => "",
     };
 
@@ -187,6 +189,8 @@ public static class FlavourDescribe
                 attacker = other; victim = actor; break;
             case FightEventKind.Down: case FightEventKind.Death: case FightEventKind.Wake: case FightEventKind.Broke: case FightEventKind.Disarmed: case FightEventKind.Interrupted:
             case FightEventKind.Rout: case FightEventKind.Rally: case FightEventKind.Fled: case FightEventKind.Surrender:
+            case FightEventKind.Unhorsed: case FightEventKind.Fell: case FightEventKind.HorseFell: case FightEventKind.Reared: case FightEventKind.Bolted: case FightEventKind.Balked:
+            case FightEventKind.Shattered:          // mounted-combat: the one it happens to is the event's actor
                 attacker = other; victim = actor; break;
             default: attacker = actor; victim = other; break;
         }

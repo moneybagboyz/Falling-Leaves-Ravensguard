@@ -446,14 +446,15 @@ public class MountedCombatTests(FightFixture fx)
     // ---------------------------------------------------------------- MT-12 the skirmish against the abstract charge bonus
 
     [Fact]
-    public void MT12_TwelveMountedAgainstTwentyFoot_ChargeBonusNearTheAbstract60()
+    public void MT12_TwelveMountedAgainstTwentyFoot_TheChargesOwnBonus_AgainstTheAbstract60()
     {
-        // 200 seeds of the first pass (10 s from first contact) against unbraced sword-and-shield foot: the charge's casualties against the same men fighting on foot.
-        // The abstract battle's first-contact bonus is +60%; the live charge comes out well above it (spec Notes: the abstract charge_pm is to be set from this when abstract
-        // battles are built). Pinned here: the bonus is at least the abstract +60% and the figure does not drift (the seeded run is exact).
-        var (mounted, foot, bonus) = MountedCalibration.ChargeBonus(fx.C, 200);
-        Assert.True(mounted > foot, $"mounted {mounted:0.00} foot {foot:0.00}");
-        Assert.InRange(bonus, 60.0 - 10.0, 250.0);
+        // The charge's own bonus, morale on in both runs: the same 12 riders against the same 20 unbraced sword-and-shield foot on dry field (they charge) and on mud (no charge
+        // is possible: the abstract rule's own exception); the foot downed or killed by blows in the first pass (10 s from the first wound), 200 seeds. The abstract battle's
+        // first-contact bonus is +60%; the live charge comes out well above it (spec Notes: the abstract charge_pm is to be set from this when abstract battles are built).
+        // Pinned: the charge at least doubles the no-charge casualties and stays in the band the calibration records (the seeded run is exact).
+        var (charge, noCharge, bonus) = MountedCalibration.ChargeBonus(fx.C, 200);
+        Assert.True(charge > noCharge, $"charge {charge:0.00} no charge {noCharge:0.00}");
+        Assert.InRange(bonus, 100.0, 400.0);
     }
 
     // ---------------------------------------------------------------- MT-13 determinism, save and replay
@@ -469,8 +470,14 @@ public class MountedCombatTests(FightFixture fx)
         }
         var a = Run(fx.C); var b = Run(fx.C);
         Assert.Equal(a, b);
-        Assert.Equal(2707936629411030277UL, a.Fight);                // the FightHash of the fixed skirmish (MountedHash included): the Linux and Windows CI compare
-        Assert.Equal(5169227370918658997UL, a.Mounted);
+        // saved at 20 s, loaded and run on to 40 s: the same hashes as the run that never stopped (morale's state included)
+        var w = MountedCalibration.Skirmish(fx.C, 77, 6, 10);
+        for (int i = 0; i < 20 * 20; i++) w.StepWithAi();
+        var loaded = FightRecord.FromBytes(FightRecord.Capture(w, "test").ToBytes()).Restore(fx.C);
+        for (int i = 0; i < 20 * 20; i++) loaded.StepWithAi();
+        Assert.Equal(a, (loaded.Hash(), loaded.MountedHash()));
+        Assert.Equal(14264917679344927324UL, a.Fight);                // the FightHash of the fixed skirmish (MountedHash included): the Linux and Windows CI compare
+        Assert.Equal(11330053023378257550UL, a.Mounted);
     }
 
     [Fact]

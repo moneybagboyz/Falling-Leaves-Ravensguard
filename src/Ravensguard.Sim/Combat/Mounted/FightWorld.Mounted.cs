@@ -591,6 +591,8 @@ public sealed partial class FightWorld
     internal void MountedRetarget(Fighter a, ref Fighter t, ref AttackReq req)
     {
         var L = Mounts!;
+        // the blow found another body than the one aimed at (a man's part or gap on a horse, a fallen horse beside its rider): it lands by area
+        if (req.Part >= 0 && req.Target >= 0 && req.Target < Fighters.Count && Fighters[req.Target].Plan != t.Plan) { req.Part = -1; req.Gap = -1; }
         var mt = L.PairOf(t.Id);
         if (mt == null || !mt.Mounted || L.PairOf(a.Id) == mt) return;
         if (req.Part < 0)
@@ -599,7 +601,6 @@ public sealed partial class FightWorld
             var pick = roll < L.D.RiderSharePm ? Fighters[mt.Rider] : Fighters[mt.Horse];
             if (Hittable(pick)) t = pick;
         }
-        else if (req.Target >= 0 && req.Target < Fighters.Count && Fighters[req.Target].Plan != t.Plan) req.Part = -1;
     }
 
     /// <summary>After a resolved blow: the lance shatters (60% at 150 units or more), a rider struck or blocking may be unhorsed (4.3), barding that stops a blow still frightens.</summary>

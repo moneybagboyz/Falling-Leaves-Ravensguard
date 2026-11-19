@@ -19,7 +19,7 @@ public partial class FightDemo
         var w = new FightWorld(c, _seed, 1, 8 * 3600);
         w.AddMounted(new FighterKit
         {
-            Name = "You", Team = 0, Weapon = new WeaponInstance("lance", "steel"), Shield = "heater", Skill = 55, X = -30_000, FaceX = 1024,
+            Name = "Aldric", Team = 0, Weapon = new WeaponInstance("lance", "steel"), Shield = "heater", Skill = 55, X = -30_000, FaceX = 1024,
             Worn = [new("shirt", "linen"), new("gambeson", "linen"), new("mail_hauberk", "iron"), new("helm", "iron")],
         }, new MountKit { Riding = 55, Barding = [new("horse_blanket", "linen")] }, player: true);
         w.Add(new FighterKit { Name = "Bandit", Team = 1, Weapon = new WeaponInstance("arming_sword", "iron"), Shield = "round_shield", Skill = 40, X = 0, Y = -1800, FaceX = -1024,
@@ -38,7 +38,7 @@ public partial class FightDemo
     {
         var w = new FightWorld(c, seed, 1, 8 * 3600);
         WornItem[] mail = [new("shirt", "linen"), new("gambeson", "linen"), new("mail_hauberk", "iron"), new("helm", "iron")];
-        w.AddMounted(new FighterKit { Name = "You", Team = 0, Weapon = new WeaponInstance("lance", "steel"), Shield = "heater", Skill = 55, X = -25_000, FaceX = 1024, Worn = mail },
+        w.AddMounted(new FighterKit { Name = "Aldric", Team = 0, Weapon = new WeaponInstance("lance", "steel"), Shield = "heater", Skill = 55, X = -25_000, FaceX = 1024, Worn = mail },
             new MountKit { Riding = 55 }, player: true);
         w.AddMounted(new FighterKit { Name = "Knight", Team = 1, Weapon = new WeaponInstance("lance", "steel"), Shield = "heater", Skill = 50, X = 25_000, Y = 1200, FaceX = -1024, Worn = mail },
             new MountKit { Riding = 45, Barding = [new("horse_mail", "iron")] });

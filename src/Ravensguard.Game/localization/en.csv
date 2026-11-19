@@ -2280,6 +2280,169 @@ FIGHT_DOLL_ATTACK,"Attack: < {0} > ({1})"
 FIGHT_DOLL_CHANCE,"{0}: hit chance {1:0}%"
 FIGHT_DEMO_DUEL,"Duel: you (sword, heater) against a bandit. R restarts, K skirmish."
 FIGHT_DEMO_SKIRMISH,"Skirmish: Wolves against Crows, ten a side. R restarts, K duel."
+mt_ev_charge,{0} charges! (+{1} momentum)
+mt_ev_unhorsed,{0} is thrown from the saddle
+mt_ev_unhorsed_pinned,{0} is thrown and pinned under the horse
+mt_ev_fell,{0} lands hard on the {1}
+mt_ev_horse_fell,{0} goes down
+mt_ev_balked,{0} balks before the braced points ({1}%)
+mt_ev_reared,{0} rears
+mt_ev_bolted,{0} bolts
+mt_ev_trampled,{0} tramples {1}
+mt_ev_brace,{0} braces and takes the charge on the point
+mt_ev_shattered,{0}'s lance shatters
+mt_call_charge,Charge!
+mt_call_unhorsed,Unhorsed!
+mt_call_balk,Balks!
+mt_call_trample,Trampled
+mt_call_brace,Braced!
+mt_call_shatter,Shatters!
+mt_hud_mount,"{0}: stamina {1}%  panic {2}%  {3:0.0} m/s{4}"
+mt_hud_winded, (winded)
+mt_hud_grip,Grip {0}%
+mt_hud_charge,Charge +{0:0}
+mt_hud_refusal,This charge will probably stop: refusal {0}%
+mt_hud_unhorse,"Unhorse chance on {0}: {1:0.0}%"
+mt_doll_mount,Horse: {0}
+mt_demo_mounted,"Mounted: you are Aldric (lance, courser), against foot, a braced spear and a rider. Shift gallops, LMB couches. R restarts, K duel."
+mt_cap_hooves,"hooves thunder"
+mt_cap_fall,"heavy fall"
+MC_DEFEAT_ROBBED,"Robbed of {0}."
+MC_DEFEAT_CAPTURED,Taken captive.
+MC_DEFEAT_KILLED,Killed.
+MC_DEFEAT_MAULED,Mauled and left.
+MC_DEFEAT_IGNORED,Fined and let go.
+MC_DEFEAT_YIELDED,Yielded.
+MC_DEFEAT_LEFT,Left where you fell.
+MC_DEFEAT_TITLE_ROBBED,You wake in the mud
+MC_DEFEAT_TITLE_CAPTURED,You wake with your hands tied
+MC_DEFEAT_TITLE_KILLED,You have died
+MC_DEFEAT_TITLE_MAULED,You wake torn and alone
+MC_DEFEAT_TITLE_IGNORED,The guards let you go
+MC_DEFEAT_TITLE_YIELDED,You yielded
+MC_DEFEAT_TITLE_LEFT,You come to
+MC_DEFEAT_BODY_ROBBED,"{0} went through your things and took {1}. They left you alive, and they left you your shirt."
+MC_DEFEAT_BODY_CAPTURED,"{0} did not leave you on the road. They mean to sell you back to your friends, or to someone."
+MC_DEFEAT_BODY_KILLED,"{0} finished what the fight began. Your story ends here; the world goes on."
+MC_DEFEAT_BODY_MAULED,"{0} fed and wandered off. You are still breathing."
+MC_DEFEAT_BODY_IGNORED,"{0} took a fine at the gate and sent you on your way."
+MC_DEFEAT_BODY_YIELDED,"{0} accepted your surrender and left you be."
+MC_DEFEAT_BODY_LEFT,"{0} are gone. Nobody touched you."
+MC_WINNER_NONE,Nobody
+MC_WINNER_BANDITS,The bandits
+MC_WINNER_ARMY,The soldiers
+MC_WINNER_BEASTS,The beasts
+MC_WINNER_DRAUGR,The draugr
+MC_WINNER_GUARDS,The guards
+MC_WINNER_LOCALS,The mob
+MC_WINNER_FOLK,They
+MC_TAKEN,What they took
+MC_TAKEN_COIN,{0} from your purse
+MC_TAKEN_NOTHING,Nothing
+MC_LEFT,What you still have
+MC_LEFT_COIN,{0} (a pittance left for a doctor)
+MC_FINED,Fined {0}.
+MC_WOUNDS,Your wounds
+MC_WOUNDS_NONE,Bruised but whole.
+MC_WOUNDS_SOME,{0} wounds; none bleeding now.
+MC_WOUNDS_BLEEDING,"{0} wounds, and you are bleeding."
+MC_MERCY,One of them pressed a rag to the worst of it before they left.
+MC_FIRST,What to do first
+MC_FIRST_TREAT,Bind your wounds (Q on yourself) or find a doctor.
+MC_FIRST_TRACK,"Their camp is near: what they took stays in their stash for about ten days."
+MC_FIRST_CAPTIVE,"Watch the guards, look for something to pick the lock with, or wait for a ransom."
+MC_FIRST_ROAD,The road goes on when you are ready.
+MC_SUCCESSION,Who continues
+MC_SUCCESSION_NONE,"Nobody is left to continue. The run ends; the world persists for a new life."
+MC_SUCCESSION_HEIR,{0} continues ({1}).
+MC_SUCCESSION_OTHER,or {0} ({1})
+MC_WORLD_PERSISTS,"Your estate stays where you fell: the coin goes to the heir, less the funeral."
+MC_RULE_CHILD,your child
+MC_RULE_SPOUSE,your spouse
+MC_RULE_SIBLING,your sibling
+MC_RULE_YOUNGCHILD,"your child, with a guardian"
+MC_RULE_PARENT,your parent
+MC_RULE_COMPANION,your companion
+MC_RULE_FOLLOWER,your follower
+MC_BTN_GET_UP,Get up
+MC_BTN_CAPTIVITY,Look around
+MC_BTN_MENU,Back to the library
+MC_DARKNESS,Darkness...
+MC_ROBBED_TOAST,"Robbed of {0}. The road waits."
+MC_LEFT_TOAST,You pick yourself up.
+MC_CAPTIVE_TITLE_BANDITS,Held by the bandits
+MC_CAPTIVE_TITLE_ARMY,Prisoner of the army
+MC_CAPTIVE_WAIT,They are deciding what to do with you.
+MC_STATUS,Your situation
+MC_RESTRAINT_NONE,Free to move
+MC_RESTRAINT_BOUND,"Hands tied: you can walk, but not fight or use anything."
+MC_RESTRAINT_CHAINED,Chained to a post.
+MC_RESTRAINT_CAGED,In a locked cage.
+MC_GUARDS,"{0} guards, {1} awake ({2})."
+MC_DAY,day
+MC_NIGHT,"night, and dark"
+MC_HELD_DAYS,"They will decide your fate in {0} days."
+MC_RANSOM,The ransom
+MC_RANSOM_ASK,"They ask {0}; {1} would pay."
+MC_RANSOM_DUE,The payment is due in {0} days.
+MC_RANSOM_SHORT,"Your payer has only {0}: the price will fall, or nobody pays."
+MC_PAYER_NONE,nobody
+MC_PAYER_FACTION,your lord's treasury
+MC_PAYER_HOUSEHOLD,your own purse
+MC_PAYER_FRIENDS,your friends
+MC_ODDS,Your chances
+MC_ODDS_BONDS,Working the bonds: {0}% a try.
+MC_ODDS_LOCK,"Picking the lock with {1}: {0}% a try."
+MC_ODDS_NO_PICK,You have nothing to pick the lock with.
+MC_ODDS_NOTICE,A guard notices a try: {0}%.
+MC_PICK_NAIL,a bent nail
+MC_PICK_TOOL,a lockpick
+MC_TRANSFER_TONIGHT,"They are moving camp tonight: a chance to slip away."
+MC_RESCUE_FRIENDS,"Friends still free, who may come for you: {0}."
+MC_LAST,Last
+MC_WORKING,You work at it...
+MC_OPT_PICK,Pick the lock
+MC_OPT_BONDS,Work the bonds
+MC_OPT_SEARCH,Search for a pick
+MC_OPT_RANSOM,Offer a ransom
+MC_OPT_TALK,Talk to a guard
+MC_OPT_ESCAPE,Slip away
+MC_OPT_WAIT,Wait
+MC_OPT_WORK,Work it off
+MC_OPT_WORK_LATER,Working off a sentence comes with jails (later).
+MC_NOT_HELD,You are not held.
+MC_NOT_BOUND,Your hands are not tied.
+MC_NO_LOCK,There is no lock to pick.
+MC_NO_PICK,You have nothing to pick the lock with.
+MC_CAUGHT,"Caught! They beat you and bind you tighter."
+MC_SLIPPED_BONDS,"The rope gives. You slip out and away to the road."
+MC_BONDS_HOLD,The knots hold.
+MC_PICKED_LOCK,"The lock clicks. You creep out and reach the road."
+MC_LOCK_HOLDS,The lock holds.
+MC_HAVE_PICK,You already have something to pick the lock with.
+MC_FOUND_NAIL,You work a nail loose from the boards.
+MC_FOUND_NOTHING,You find nothing you could use.
+MC_OFFER_CANNOT,"Nobody can pay {0} now."
+MC_OFFER_TAKEN,"The guard takes your word: {0}, paid tomorrow."
+MC_OFFER_REFUSED,The guard laughs at your offer.
+MC_GUARD_NEWS_BANDIT,"""Your friends had better pay {0}, or we sell you south."""
+MC_GUARD_NEWS_ARMY,"""{0}, and you go home when the campaign ends. Behave."""
+MC_NO_WINDOW,This is not the moment.
+MC_SLIPPED_AWAY,"In the dark of the march you slip away from the column."
+MC_WAITED,You wait.
+MC_RESCUE_CUT,Your friend cuts your bonds.
+MC_RESCUE_PICKED,Your friend picks the lock.
+MC_RESCUE_SEEN,The guards saw your friend coming.
+MC_RESCUE_TIME,Your friend could not reach you in time.
+MC_FREE_HELD,Still held.
+MC_FREE_RANSOMED,Ransomed. You are free.
+MC_FREE_ESCAPED,"You escaped, and you are back on the road."
+MC_FREE_RESCUED,Rescued by your friends.
+MC_FREE_RELEASED,They let you go.
+MC_FREE_DEAD,You did not survive captivity.
+MC_YIELD_TITLE,Yield?
+MC_YIELD_BODY,"Throw down your weapon and ask for quarter. Bandits rob the yielding, soldiers take them prisoner; beasts and the dead do not listen."
+MC_YIELD,Yield
 fl_after_broke_shield1,"{target}'s shield splinters and falls apart."
 fl_after_broke_shield2,"{target}'s shield breaks in half."
 fl_after_broke_tool1,"{target}'s makeshift weapon breaks in {tgt_his} hands."
@@ -3094,164 +3257,23 @@ fl_call_part_rump,"Rump"
 fl_call_part_torso,"Body"
 fl_call_part_fore_leg,"Foreleg"
 fl_call_part_hind_leg,"Hind leg"
-mt_ev_charge,{0} charges! (+{1} momentum)
-mt_ev_unhorsed,{0} is thrown from the saddle
-mt_ev_unhorsed_pinned,{0} is thrown and pinned under the horse
-mt_ev_fell,{0} lands hard on the {1}
-mt_ev_horse_fell,{0} goes down
-mt_ev_balked,{0} balks before the braced points ({1}%)
-mt_ev_reared,{0} rears
-mt_ev_bolted,{0} bolts
-mt_ev_trampled,{0} tramples {1}
-mt_ev_brace,{0} braces and takes the charge on the point
-mt_ev_shattered,{0}'s lance shatters
-mt_call_charge,Charge!
-mt_call_unhorsed,Unhorsed!
-mt_call_balk,Balks!
-mt_call_trample,Trampled
-mt_call_brace,Braced!
-mt_call_shatter,Shatters!
-mt_hud_mount,"{0}: stamina {1}%  panic {2}%  {3:0.0} m/s{4}"
-mt_hud_winded, (winded)
-mt_hud_grip,Grip {0}%
-mt_hud_charge,Charge +{0:0}
-mt_hud_refusal,This charge will probably stop: refusal {0}%
-mt_hud_unhorse,"Unhorse chance on {0}: {1:0.0}%"
-mt_doll_mount,Horse: {0}
-mt_demo_mounted,"Mounted: you (lance, courser) against foot, a braced spear and a rider. Shift gallops, LMB couches. R restarts, K duel."
-MC_DEFEAT_ROBBED,"Robbed of {0}."
-MC_DEFEAT_CAPTURED,Taken captive.
-MC_DEFEAT_KILLED,Killed.
-MC_DEFEAT_MAULED,Mauled and left.
-MC_DEFEAT_IGNORED,Fined and let go.
-MC_DEFEAT_YIELDED,Yielded.
-MC_DEFEAT_LEFT,Left where you fell.
-MC_DEFEAT_TITLE_ROBBED,You wake in the mud
-MC_DEFEAT_TITLE_CAPTURED,You wake with your hands tied
-MC_DEFEAT_TITLE_KILLED,You have died
-MC_DEFEAT_TITLE_MAULED,You wake torn and alone
-MC_DEFEAT_TITLE_IGNORED,The guards let you go
-MC_DEFEAT_TITLE_YIELDED,You yielded
-MC_DEFEAT_TITLE_LEFT,You come to
-MC_DEFEAT_BODY_ROBBED,"{0} went through your things and took {1}. They left you alive, and they left you your shirt."
-MC_DEFEAT_BODY_CAPTURED,"{0} did not leave you on the road. They mean to sell you back to your friends, or to someone."
-MC_DEFEAT_BODY_KILLED,"{0} finished what the fight began. Your story ends here; the world goes on."
-MC_DEFEAT_BODY_MAULED,"{0} fed and wandered off. You are still breathing."
-MC_DEFEAT_BODY_IGNORED,"{0} took a fine at the gate and sent you on your way."
-MC_DEFEAT_BODY_YIELDED,"{0} accepted your surrender and left you be."
-MC_DEFEAT_BODY_LEFT,"{0} are gone. Nobody touched you."
-MC_WINNER_NONE,Nobody
-MC_WINNER_BANDITS,The bandits
-MC_WINNER_ARMY,The soldiers
-MC_WINNER_BEASTS,The beasts
-MC_WINNER_DRAUGR,The draugr
-MC_WINNER_GUARDS,The guards
-MC_WINNER_LOCALS,The mob
-MC_WINNER_FOLK,They
-MC_TAKEN,What they took
-MC_TAKEN_COIN,{0} from your purse
-MC_TAKEN_NOTHING,Nothing
-MC_LEFT,What you still have
-MC_LEFT_COIN,{0} (a pittance left for a doctor)
-MC_FINED,Fined {0}.
-MC_WOUNDS,Your wounds
-MC_WOUNDS_NONE,Bruised but whole.
-MC_WOUNDS_SOME,{0} wounds; none bleeding now.
-MC_WOUNDS_BLEEDING,"{0} wounds, and you are bleeding."
-MC_MERCY,One of them pressed a rag to the worst of it before they left.
-MC_FIRST,What to do first
-MC_FIRST_TREAT,Bind your wounds (Q on yourself) or find a doctor.
-MC_FIRST_TRACK,"Their camp is near: what they took stays in their stash for about ten days."
-MC_FIRST_CAPTIVE,"Watch the guards, look for something to pick the lock with, or wait for a ransom."
-MC_FIRST_ROAD,The road goes on when you are ready.
-MC_SUCCESSION,Who continues
-MC_SUCCESSION_NONE,"Nobody is left to continue. The run ends; the world persists for a new life."
-MC_SUCCESSION_HEIR,{0} continues ({1}).
-MC_SUCCESSION_OTHER,or {0} ({1})
-MC_WORLD_PERSISTS,"Your estate stays where you fell: the coin goes to the heir, less the funeral."
-MC_RULE_CHILD,your child
-MC_RULE_SPOUSE,your spouse
-MC_RULE_SIBLING,your sibling
-MC_RULE_YOUNGCHILD,"your child, with a guardian"
-MC_RULE_PARENT,your parent
-MC_RULE_COMPANION,your companion
-MC_RULE_FOLLOWER,your follower
-MC_BTN_GET_UP,Get up
-MC_BTN_CAPTIVITY,Look around
-MC_BTN_MENU,Back to the library
-MC_DARKNESS,Darkness...
-MC_ROBBED_TOAST,"Robbed of {0}. The road waits."
-MC_LEFT_TOAST,You pick yourself up.
-MC_CAPTIVE_TITLE_BANDITS,Held by the bandits
-MC_CAPTIVE_TITLE_ARMY,Prisoner of the army
-MC_CAPTIVE_WAIT,They are deciding what to do with you.
-MC_STATUS,Your situation
-MC_RESTRAINT_NONE,Free to move
-MC_RESTRAINT_BOUND,"Hands tied: you can walk, but not fight or use anything."
-MC_RESTRAINT_CHAINED,Chained to a post.
-MC_RESTRAINT_CAGED,In a locked cage.
-MC_GUARDS,"{0} guards, {1} awake ({2})."
-MC_DAY,day
-MC_NIGHT,"night, and dark"
-MC_HELD_DAYS,"They will decide your fate in {0} days."
-MC_RANSOM,The ransom
-MC_RANSOM_ASK,"They ask {0}; {1} would pay."
-MC_RANSOM_DUE,The payment is due in {0} days.
-MC_RANSOM_SHORT,"Your payer has only {0}: the price will fall, or nobody pays."
-MC_PAYER_NONE,nobody
-MC_PAYER_FACTION,your lord's treasury
-MC_PAYER_HOUSEHOLD,your own purse
-MC_PAYER_FRIENDS,your friends
-MC_ODDS,Your chances
-MC_ODDS_BONDS,Working the bonds: {0}% a try.
-MC_ODDS_LOCK,"Picking the lock with {1}: {0}% a try."
-MC_ODDS_NO_PICK,You have nothing to pick the lock with.
-MC_ODDS_NOTICE,A guard notices a try: {0}%.
-MC_PICK_NAIL,a bent nail
-MC_PICK_TOOL,a lockpick
-MC_TRANSFER_TONIGHT,"They are moving camp tonight: a chance to slip away."
-MC_RESCUE_FRIENDS,"Friends still free, who may come for you: {0}."
-MC_LAST,Last
-MC_WORKING,You work at it...
-MC_OPT_PICK,Pick the lock
-MC_OPT_BONDS,Work the bonds
-MC_OPT_SEARCH,Search for a pick
-MC_OPT_RANSOM,Offer a ransom
-MC_OPT_TALK,Talk to a guard
-MC_OPT_ESCAPE,Slip away
-MC_OPT_WAIT,Wait
-MC_OPT_WORK,Work it off
-MC_OPT_WORK_LATER,Working off a sentence comes with jails (later).
-MC_NOT_HELD,You are not held.
-MC_NOT_BOUND,Your hands are not tied.
-MC_NO_LOCK,There is no lock to pick.
-MC_NO_PICK,You have nothing to pick the lock with.
-MC_CAUGHT,"Caught! They beat you and bind you tighter."
-MC_SLIPPED_BONDS,"The rope gives. You slip out and away to the road."
-MC_BONDS_HOLD,The knots hold.
-MC_PICKED_LOCK,"The lock clicks. You creep out and reach the road."
-MC_LOCK_HOLDS,The lock holds.
-MC_HAVE_PICK,You already have something to pick the lock with.
-MC_FOUND_NAIL,You work a nail loose from the boards.
-MC_FOUND_NOTHING,You find nothing you could use.
-MC_OFFER_CANNOT,"Nobody can pay {0} now."
-MC_OFFER_TAKEN,"The guard takes your word: {0}, paid tomorrow."
-MC_OFFER_REFUSED,The guard laughs at your offer.
-MC_GUARD_NEWS_BANDIT,"""Your friends had better pay {0}, or we sell you south."""
-MC_GUARD_NEWS_ARMY,"""{0}, and you go home when the campaign ends. Behave."""
-MC_NO_WINDOW,This is not the moment.
-MC_SLIPPED_AWAY,"In the dark of the march you slip away from the column."
-MC_WAITED,You wait.
-MC_RESCUE_CUT,Your friend cuts your bonds.
-MC_RESCUE_PICKED,Your friend picks the lock.
-MC_RESCUE_SEEN,The guards saw your friend coming.
-MC_RESCUE_TIME,Your friend could not reach you in time.
-MC_FREE_HELD,Still held.
-MC_FREE_RANSOMED,Ransomed. You are free.
-MC_FREE_ESCAPED,"You escaped, and you are back on the road."
-MC_FREE_RESCUED,Rescued by your friends.
-MC_FREE_RELEASED,They let you go.
-MC_FREE_DEAD,You did not survive captivity.
-MC_YIELD_TITLE,Yield?
-MC_YIELD_BODY,"Throw down your weapon and ask for quarter. Bandits rob the yielding, soldiers take them prisoner; beasts and the dead do not listen."
-MC_YIELD,Yield
+fl_after_mounted_charge1,"{attacker} spurs into a charge at {other}."
+fl_after_mounted_charge2,"{attacker} comes on at the gallop, point levelled."
+fl_after_mounted_unhorsed1,"{target} is thrown from the saddle."
+fl_after_mounted_unhorsed2,"{target} is torn out of the saddle and goes down hard."
+fl_after_mounted_fell1,"{target} hits the ground hard."
+fl_after_mounted_fell2,"{target} lands heavily and rolls."
+fl_after_mounted_horse_fell1,"{target} goes down in a tangle of legs."
+fl_after_mounted_horse_fell2,"{target} crashes to the ground."
+fl_after_mounted_shattered1,"{target}'s lance shatters."
+fl_after_mounted_shattered2,"{target}'s lance breaks into splinters."
+fl_after_mounted_brace_strike1,"{attacker} plants the butt and takes the charge on the point."
+fl_after_mounted_brace_strike2,"{attacker} braces, and {other} runs onto the point."
+fl_after_mounted_trampled1,"{attacker} rides {other} down."
+fl_after_mounted_trampled2,"{other} goes under the hooves."
+fl_morale_mounted_reared1,"{target} rears and screams."
+fl_morale_mounted_reared2,"{target} rears up, fighting the bit."
+fl_morale_mounted_bolted1,"{target} bolts in terror."
+fl_morale_mounted_bolted2,"{target} breaks away at a wild gallop."
+fl_morale_mounted_balked1,"{target} balks at the braced points."
+fl_morale_mounted_balked2,"{target} refuses the points and shies away."

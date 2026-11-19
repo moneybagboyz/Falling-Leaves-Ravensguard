@@ -134,7 +134,7 @@ public static class MountedCalibration
     /// </summary>
     /// <para><paramref name="footMix"/>: 0 swords and heaters with every fourth a spear; 1 swords and heaters only (no polearm to brace: the abstract bonus's "not braced" unit);
     /// 2 swords without shields.</para>
-    public static FightWorld Skirmish(FightContent c, ulong seed, int riders = 12, int foot = 20, bool mounted = true, int footMix = 0)
+    public static FightWorld Skirmish(FightContent c, ulong seed, int riders = 12, int foot = 20, bool mounted = true, int footMix = 0, Footing ground = Footing.Field)
     {
         var w = new FightWorld(c, seed, seed, 8 * 3600);
         for (int i = 0; i < riders; i++)
@@ -152,6 +152,7 @@ public static class MountedCalibration
             bool spear = footMix == 0 && i % 4 == 3;
             w.Add(FightCalibration.KitOf($"Foot {i + 1}", 1, spear ? Spear : Sword, Padded, spear || footMix == 2 ? null : "heater", skill, 0, -FightMath.One) with { Y = y });
         }
+        if (w.Mounts != null) w.Mounts.Terrain.Base = ground;
         return w;
     }
 
@@ -159,28 +160,35 @@ public static class MountedCalibration
     public const int FirstPassS = 10;
 
     /// <summary>
-    /// MT-12: the 12 v 20 skirmish's foot casualties in the first pass from the first blow that lands, mounted against the same twelve men on foot with swords (seeds 900 on, in
-    /// parallel; each its own seeded world), and the charge's bonus in percent (the abstract battle's first-contact <c>charge_pm</c> is +60%). The foot are the abstract bonus's
-    /// unit "neither braced nor on mud": swords and heaters, no polearm to brace (<paramref name="footMix"/> 1).
+    /// MT-12: the charge's own bonus. The same 12 riders against the same 20 foot (swords and heaters, no polearm to brace: the abstract bonus's unit "neither braced nor on mud",
+    /// <paramref name="footMix"/> 1), once on dry field where they charge and once on mud where no charge is possible (the abstract rule's own exception), with the same morale on both;
+    /// the foot downed or killed by blows in the first pass from the first wound (routs and yields are morale's, which the abstract battle counts by its own rout rule). Seeds 900 on,
+    /// in parallel (each its own seeded world). Returns the two means and the bonus in percent (the abstract battle's first-contact <c>charge_pm</c> is +60%).
     /// </summary>
-    public static (double Mounted, double Foot, double BonusPct) ChargeBonus(FightContent c, int seeds, int footMix = 1)
+    public static (double Charge, double NoCharge, double BonusPct) ChargeBonus(FightContent c, int seeds, int footMix = 1)
     {
         var res = new (int M, int F)[seeds];
-        Parallel.For(0, seeds, s => res[s] = (FirstContact(Skirmish(c, (ulong)(900 + s), footMix: footMix), FirstPassS).Casualties,
-            FirstContact(Skirmish(c, (ulong)(900 + s), mounted: false, footMix: footMix), FirstPassS).Casualties));
+        Parallel.For(0, seeds, s => res[s] = (FirstContact(Skirmish(c, (ulong)(900 + s), footMix: footMix), FirstPassS).Downed,
+            FirstContact(Skirmish(c, (ulong)(900 + s), footMix: footMix, ground: Footing.Mud), FirstPassS).Downed));
         double m = res.Average(x => x.M), f = res.Average(x => x.F);
         return (m, f, 100.0 * (m / Math.Max(0.01, f) - 1));
     }
 
-    /// <summary>The foot side's casualties (down, dead, fled or yielded) in the <paramref name="windowS"/> seconds from the first blow that lands on it.</summary>
-    public static (int Casualties, int Contact) FirstContact(FightWorld w, int windowS, int maxS = 120, Action<Fighter, Fighter, Resolver2.BlowResult, Resolver2.StrikeV2>? onBlow = null)
+    /// <summary>The foot side's casualties (down, dead, fled or yielded) in the <paramref name="windowS"/> seconds from the first blow that lands on it, and of them those
+    /// downed or killed by blows (morale's routs and yields left out).</summary>
+    public static (int Casualties, int Contact, int Downed) FirstContact(FightWorld w, int windowS, int maxS = 120, Action<Fighter, Fighter, Resolver2.BlowResult, Resolver2.StrikeV2>? onBlow = null)
     {
         int contact = -1;
         w.OnBlow = (a, t, r, s) => { if (contact < 0 && t.Team == 1 && r.WoundCount > 0) contact = w.Tick; onBlow?.Invoke(a, t, r, s); };
         int max = maxS * 20;
         while (!w.IsOver && w.Tick < max && (contact < 0 || w.Tick < contact + windowS * 20)) w.StepWithAi();
-        int cas = 0;
-        foreach (var f in w.Fighters) if (f.Team == 1 && !w.IsHorse(f) && !f.Active) cas++;
-        return (cas, contact);
+        int cas = 0, downed = 0;
+        foreach (var f in w.Fighters)
+        {
+            if (f.Team != 1 || w.IsHorse(f) || f.Active) continue;
+            cas++;
+            if (f.Act is FAct.Down or FAct.Dead) downed++;
+        }
+        return (cas, contact, downed);
     }
 }

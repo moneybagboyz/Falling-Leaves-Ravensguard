@@ -1,0 +1,23 @@
+// Flavour templates (feedback-flavour-log 3.2): the mounted events (mounted-combat 7). The English text of a key is in localization/en.csv (fl_ prefix).
+[
+  {"type":"flavour","id":"after.mounted.charge1","slot":"after","when":{"event":["charge"]}},
+  {"type":"flavour","id":"after.mounted.charge2","slot":"after","when":{"event":["charge"]}},
+  {"type":"flavour","id":"after.mounted.unhorsed1","slot":"after","when":{"event":["unhorsed"]}},
+  {"type":"flavour","id":"after.mounted.unhorsed2","slot":"after","when":{"event":["unhorsed"]}},
+  {"type":"flavour","id":"after.mounted.fell1","slot":"after","when":{"event":["fell"]}},
+  {"type":"flavour","id":"after.mounted.fell2","slot":"after","when":{"event":["fell"]}},
+  {"type":"flavour","id":"after.mounted.horse_fell1","slot":"after","when":{"event":["horse_fell"]}},
+  {"type":"flavour","id":"after.mounted.horse_fell2","slot":"after","when":{"event":["horse_fell"]}},
+  {"type":"flavour","id":"after.mounted.shattered1","slot":"after","when":{"event":["shattered"]}},
+  {"type":"flavour","id":"after.mounted.shattered2","slot":"after","when":{"event":["shattered"]}},
+  {"type":"flavour","id":"after.mounted.brace_strike1","slot":"after","when":{"event":["brace_strike"]}},
+  {"type":"flavour","id":"after.mounted.brace_strike2","slot":"after","when":{"event":["brace_strike"]}},
+  {"type":"flavour","id":"after.mounted.trampled1","slot":"after","when":{"event":["trampled"]}},
+  {"type":"flavour","id":"after.mounted.trampled2","slot":"after","when":{"event":["trampled"]}},
+  {"type":"flavour","id":"morale.mounted.reared1","slot":"morale","when":{"event":["reared"]}},
+  {"type":"flavour","id":"morale.mounted.reared2","slot":"morale","when":{"event":["reared"]}},
+  {"type":"flavour","id":"morale.mounted.bolted1","slot":"morale","when":{"event":["bolted"]}},
+  {"type":"flavour","id":"morale.mounted.bolted2","slot":"morale","when":{"event":["bolted"]}},
+  {"type":"flavour","id":"morale.mounted.balked1","slot":"morale","when":{"event":["balked"]}},
+  {"type":"flavour","id":"morale.mounted.balked2","slot":"morale","when":{"event":["balked"]}}
+]
