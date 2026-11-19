@@ -80,6 +80,10 @@ public sealed class WorldState
     public Ravensguard.Sim.Succession.SuccessionBook? Succession { get; set; }
     /// <summary>P4-F: the watch settings (stances by person, keep watching, take-back, the speed cap), in the optional "watch" section once anything is set (no format bump).</summary>
     public Ravensguard.Sim.Combat.Watch.WatchBook? Watch { get; set; }
+    /// <summary>P4-H: the sites history and play have touched (snapshots, deltas, the crawl in progress), in the optional "sites" section (no format bump).</summary>
+    public Ravensguard.Sim.Sites.SiteBook? Sites { get; set; }
+    /// <summary>P4-H: while the hero is underground the game captures the book with the live crawl (under the book's lock).</summary>
+    public Func<SiteSave?>? SiteSource { get; set; }
     /// <summary>The hero's side of the records (trade-inventory-character spec): worn slots and where each stack sits, the price notebook, the party, the people known (saved in the "party" section when present). The things themselves are item rows, the pack store and the purse in the <see cref="Economy"/>.</summary>
     public Ravensguard.Sim.Trade.HeroParty? Party { get; set; }
     /// <summary>
@@ -370,6 +374,7 @@ public static class WorldSave
             Captivity = w.Captivity is { Captives.Count: > 0 } cb ? CaptivitySave.Capture(cb) : null,                          // P4-D
             Succession = w.Succession is { } sb && (sb.Estates.Count > 0 || sb.RunEnded) ? SuccessionSave.Capture(sb) : null,     // P4-D
             Watch = w.Watch is { IsEmpty: false } wb ? WatchSave.Capture(wb) : null,                                                // P4-F
+            Sites = w.SiteSource != null ? w.SiteSource() : w.Sites is { IsEmpty: false } sbk ? SiteSave.Capture(sbk) : null,                 // P4-H
             Party = w.Party == null ? null : Ravensguard.Sim.Trade.HeroPartySave.Capture(w.Party),
             HeroPending = (w.HeroPendingSource?.Invoke() ?? w.HeroPending) is { Count: > 0 } hp ? Ravensguard.Sim.Trade.HeroPendingSave.Capture(hp) : null,
             Production = w.Production == null ? null : ProductionSave.Capture(w.Production), Markets = w.Markets == null ? null : MarketsSave.Capture(w.Markets),
@@ -483,6 +488,7 @@ public static class WorldSave
             Captivity = file.Sections.ContainsKey(CaptivitySave.SectionName) ? Decode<CaptivitySave>(file, CaptivitySave.SectionName, compressed: true).Restore() : null,          // P4-D
             Succession = file.Sections.ContainsKey(SuccessionSave.SectionName) ? Decode<SuccessionSave>(file, SuccessionSave.SectionName, compressed: true).Restore() : null,    // P4-D
             Watch = file.Sections.ContainsKey(WatchSave.SectionName) ? Decode<WatchSave>(file, WatchSave.SectionName, compressed: true).Restore() : null,                      // P4-F
+            Sites = file.Sections.ContainsKey(SiteSave.SectionName) ? Decode<SiteSave>(file, SiteSave.SectionName, compressed: true).Restore() : null,                          // P4-H
             Party = file.Sections.ContainsKey(PartySection) ? Decode<Ravensguard.Sim.Trade.HeroPartySave>(file, PartySection, compressed: true).Restore() : null,
             HeroPending = file.Sections.ContainsKey(Ravensguard.Sim.Trade.HeroPendingSave.SectionName) ? Decode<Ravensguard.Sim.Trade.HeroPendingSave>(file, Ravensguard.Sim.Trade.HeroPendingSave.SectionName, compressed: true).Restore() : [],
             Hero = hero, Codex = codex, Live = resume, Economy = economy, Abstract = abstractState,
@@ -679,6 +685,7 @@ public sealed class LiveCapture
     internal CaptivitySave? Captivity { get; init; }
     internal SuccessionSave? Succession { get; init; }
     internal WatchSave? Watch { get; init; }
+    internal SiteSave? Sites { get; init; }
     internal Ravensguard.Sim.Trade.HeroPartySave? Party { get; init; }
     internal Ravensguard.Sim.Trade.HeroPendingSave? HeroPending { get; init; }
     internal MarketsSave? Markets { get; init; }
@@ -736,6 +743,7 @@ public sealed class LiveCapture
         if (Captivity != null) sections.Add(new(CaptivitySave.SectionName, SaveCodec.SerializeCompressed(Captivity)));       // P4-D (v7)
         if (Succession != null) sections.Add(new(SuccessionSave.SectionName, SaveCodec.SerializeCompressed(Succession)));    // P4-D (v7)
         if (Watch != null) sections.Add(new(WatchSave.SectionName, SaveCodec.SerializeCompressed(Watch)));                   // P4-F (optional, no bump)
+        if (Sites != null) sections.Add(new(SiteSave.SectionName, SaveCodec.SerializeCompressed(Sites)));                    // P4-H (optional, no bump)
         if (Party != null) sections.Add(new(WorldSave.PartySection, SaveCodec.SerializeCompressed(Party)));
         if (HeroPending != null) sections.Add(new(Ravensguard.Sim.Trade.HeroPendingSave.SectionName, SaveCodec.SerializeCompressed(HeroPending)));
         if (Production != null) sections.Add(new(WorldSave.ProductionSection, SaveCodec.SerializeCompressed(Production)));

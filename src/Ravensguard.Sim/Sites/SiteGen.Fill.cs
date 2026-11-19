@@ -78,6 +78,13 @@ public static partial class SiteGen
             bool namedDone = false;
             // grave goods go to the biers and the burial chambers first
             targets.Sort((a, b) => (b.Grave ? 1 : 0).CompareTo(a.Grave ? 1 : 0) != 0 ? (b.Grave ? 1 : 0).CompareTo(a.Grave ? 1 : 0) : a.Id.CompareTo(b.Id));
+            // the event's own piece first (the reliquary of the abbey sacked in 287): the first named entry the budget can pay for
+            if (entries.FirstOrDefault(e => e.Named && e.ValueMites <= left) is { } own)
+            {
+                var c0 = targets.FirstOrDefault(c => m.Rooms[c.Room].Template is "reliquary_vault" or "barrow_burial_chamber" or "tomb_chamber") ?? targets[0];
+                c0.Items.Add(new LootItem(own.Item, own.Material, own.ValueMites, own.MassG, own.Condition.Count >= 2 ? own.Condition[1] : 1000, NameOfPiece(own.Item), own.Dirty, c0.Grave));
+                left -= own.ValueMites; placed += own.ValueMites; namedDone = true;
+            }
             for (int guard = 0; guard < 400 && left > 0 && entries.Count > 0; guard++)
             {
                 var c = targets[k % targets.Count]; k++;
@@ -259,8 +266,12 @@ public static partial class SiteGen
                 if (m.Room[cell] == 0 && m.At(cell).Level == 0) return false;
                 return true;
             }
+            // a floor that gives way leaves a hole: only where one can still walk round it (3 x 3 of open floor), so it never cuts the way out
+            bool Open3(int cell) { var (l, x, y) = m.At(cell); for (int dy = -1; dy <= 1; dy++) for (int dx = -1; dx <= 1; dx++) if (m.Tile(l, x + dx, y + dy) != SiteTile.Floor) return false; return true; }
             foreach (var tr in _t.Traps)
             {
+                bool hole = _c.Traps.TryGetValue(tr.Id, out var td) && td.Effect == "floor";
+                bool Free2(int cell) => Free(cell) && (!hole || Open3(cell));
                 int n = tr.PerEntrance ? 1 : Math.Max(1, (rooms + tr.PerRooms - 1) / Math.Max(1, tr.PerRooms));
                 for (int k = 0; k < n; k++)
                 {
@@ -270,12 +281,12 @@ public static partial class SiteGen
                         var dist = Distances(0, m.Mouth);
                         for (int i = 0; i < m.Plane && cell < 0; i++) if (dist[i] == m.Rooms[0].H && m.Room[i] < 0 && Free(i)) cell = i;
                     }
-                    while (cell < 0 && anchors.Count > 0) { int a = anchors[0]; anchors.RemoveAt(0); if (Free(a)) cell = a; }
+                    for (int ai = 0; cell < 0 && ai < anchors.Count; ai++) { int a = anchors[ai]; if (Free2(a)) { cell = a; anchors.RemoveAt(ai); } }
                     for (int tries = 0; tries < 80 && cell < 0; tries++)
                     {
                         var p = m.Rooms[1 + r.Range(0, Math.Max(1, rooms - 1)) % Math.Max(1, rooms)];
                         int c = m.Index(p.Level, p.X + 1 + r.Range(0, Math.Max(1, p.W - 2)), p.Y + 1 + r.Range(0, Math.Max(1, p.H - 2)));
-                        if (Free(c)) cell = c;
+                        if (Free2(c)) cell = c;
                     }
                     if (cell >= 0) m.Traps.Add(new SiteTrap { Id = m.Traps.Count, Def = tr.Id, Cell = cell });
                 }

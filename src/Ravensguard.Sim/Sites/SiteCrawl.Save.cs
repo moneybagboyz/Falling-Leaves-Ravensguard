@@ -39,6 +39,8 @@ public sealed partial class SiteCrawl
             };
             m.Plan = fc.T.Plan(kit.Plan); m.Worn = crawl.Blows.Worn(kit); m.Book = ledger.For(m.Person, m.Plan, s.GameSec, kit.SizeCm3, kit.Toughness);
             m.Crumbs = Breadcrumbs.From(n[27], ms.Crumbs);
+            if (n.Length > 29) { m.Bandages = n[28]; m.FirstAid = n[29]; }
+            if (f.Length > 13) m.AutoTreat = f[13];
             m.Hero = crawl.Members.Count == 0;
             crawl.Members.Add(m);
         }

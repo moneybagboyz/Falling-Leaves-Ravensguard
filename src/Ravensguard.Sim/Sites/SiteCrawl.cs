@@ -81,6 +81,14 @@ public sealed partial class SiteCrawl
         return m;
     }
 
+    /// <summary>The member's wound book: the ledger's (a fight writes there, and the ledger drops a book with nothing in it).</summary>
+    public WoundBook BookOf(CrawlMember m)
+    {
+        lock (Ledger.Sync)
+            if (Ledger.Books.TryGetValue(m.Person, out var b)) { m.Book = b; return b; }
+        return m.Book = Ledger.For(m.Person, m.Plan, GameSec, m.Kit.SizeCm3, m.Kit.Toughness);
+    }
+
     public int CellOf(CrawlMember m) => Map.Index(m.Level, Math.Clamp(m.X / 1000, 0, Map.W - 1), Math.Clamp(m.Y / 1000, 0, Map.H - 1));
     public int CellOf(Inhabitant n) => Map.Index(n.Level, Math.Clamp(n.X / 1000, 0, Map.W - 1), Math.Clamp(n.Y / 1000, 0, Map.H - 1));
     public int DaySec => (int)(GameSec % 86400);
@@ -96,11 +104,18 @@ public sealed partial class SiteCrawl
 
     // ------------------------------------------------------------------ the step
 
+    /// <summary>The lock shared with the site book (a save captures the crawl from the tick worker while the main thread steps it).</summary>
+    public object Sync { get; set; } = new();
+
     /// <summary>One game second (a twentieth of a sim-second).</summary>
-    public void Step()
+    public void Step() { lock (Sync) StepCore(); }
+
+    private void StepCore()
     {
         if (Ended) return;
         GameSec++; Steps++;
+        if (OwnsFight) Ledger.AdvanceTo(GameSec);         // standalone: the crawl keeps the wounds' clock (the live world does it when it owns the crawl)
+        foreach (var m in Members) BookOf(m);              // the ledger drops a healed book; the member's is always the ledger's
         bool second = GameSec % 20 == 0;
         while (_inputs.Count > 0) Apply(_inputs.Dequeue());
         if (Fight == null)
@@ -138,6 +153,7 @@ public sealed partial class SiteCrawl
             case CrawlInputKind.Burn: Burn(h); break;
             case CrawlInputKind.Leave: if (h.Cell == Map.Mouth) Leave(); break;
             case CrawlInputKind.DragOut: DragOut(h); break;
+            case CrawlInputKind.Treat: if (!Treat(h)) Note(CrawlEventKind.NothingHere); break;
         }
     }
 
@@ -206,7 +222,6 @@ public sealed partial class SiteCrawl
         var t = Map.Tiles[c];
         if (t == SiteTile.Door) { OpenDoor(c); return false; }
         if (!SiteTiles.Walkable(t)) return false;
-        if (Map.TrapAt(c) is { Armed: true, Detected: true }) return false;            // a trap you found is stepped round
         foreach (var n in Map.Inhabitants) if (n.State != InhabitantState.Dead && n.Level == m.Level && CellOf(n) == c && n.State is InhabitantState.Dormant or InhabitantState.Asleep or InhabitantState.Home) return false;
         return true;
     }
@@ -350,7 +365,7 @@ public sealed partial class SiteCrawl
         Note(CrawlEventKind.NothingHere);
     }
 
-    internal IEnumerable<int> Around(int cell, bool withSelf = false)
+    public IEnumerable<int> Around(int cell, bool withSelf = false)
     {
         var (l, x, y) = Map.At(cell);
         if (withSelf) yield return cell;

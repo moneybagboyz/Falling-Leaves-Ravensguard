@@ -8,7 +8,7 @@ namespace Ravensguard.Sim.Sites;
 /// <summary>What the player asks of the crawl (recorded and replayed like any live input). Append only.</summary>
 public enum CrawlInputKind : byte
 {
-    None, Move, Act, Torch, Retrace, Mark, PullLadder, Rest, Burn, Leave, MoveTo, DragOut, Search, Stop,
+    None, Move, Act, Torch, Retrace, Mark, PullLadder, Rest, Burn, Leave, MoveTo, DragOut, Search, Stop, Treat,
 }
 
 /// <summary>One input: Move (A = direction 0..7 east, south-east, south... or -1 to stop; B = flags 1 sprint, 2 walk, 4 sneak), MoveTo (A = cell), the rest without arguments.</summary>
@@ -22,7 +22,7 @@ public enum CrawlEventKind : byte
     TrapDetected, TrapTriggered, TrapDisarmed, TrapDisarmFailed, TrapCannotDisarm, Fell, Held, Freed,
     CaveInCreak, CaveIn, Dug, WaterRising, Swimming, Sinking, Drowned, Unconscious, Woke, Died,
     MonsterWoke, Noticed, FightStarted, FightEnded, MonsterSlain, LadderPulled, LadderUp, ClimbedRope, RopeFell,
-    RetraceStarted, RetraceDone, RetraceStopped, Marked, RestStarted, RestStopped, CannotRest, Lost, Found, RatsAtFood, Busy, Burning, NothingHere, Blocked,
+    RetraceStarted, RetraceDone, RetraceStopped, Marked, RestStarted, RestStopped, CannotRest, Lost, Found, RatsAtFood, Busy, Burning, NothingHere, Blocked, Treated,
 }
 
 public readonly record struct CrawlEvent(long Sec, CrawlEventKind Kind, int A = 0, int B = 0, string Text = "");
@@ -49,6 +49,10 @@ public sealed class CrawlMember
     public bool Tinder = true;
     public int Perception = 50, Lockpicking = 20, Athletics = 30, Stealth = 30, DigQuality;
     public bool Rope;
+    /// <summary>Bandages carried, and whether the member dresses its own bleeding when out of a fight (companions always; the hero when the AI plays him).</summary>
+    public int Bandages = 2;
+    public bool AutoTreat;
+    public int FirstAid = 20;
     public int GearG = 8000, CapacityG = 40000;
     public List<LootItem> Loot = [];
     public int LootG;

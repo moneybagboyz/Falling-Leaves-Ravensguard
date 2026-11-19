@@ -8,6 +8,8 @@
     "skill_min": 45, "skill_max": 55, "stance": "aggressive", "courage": 90 },
   { "type": "fight_kit", "id": "scavengers", "weapon": "club:oak", "alt_weapons": ["dagger:iron", "axe:iron", "spear:iron"], "worn": ["shirt:linen", "tunic:wool", "cap:leather"],
     "skill_min": 18, "skill_max": 35, "stance": "flee_hurt", "courage": 45 },
+  { "type": "fight_kit", "id": "grave_robber", "weapon": "axe:iron", "alt_weapons": ["hand_axe:iron"], "worn": ["shirt:linen", "tunic:wool", "cap:leather"],
+    "skill_min": 35, "skill_max": 45, "stance": "aggressive", "courage": 65 },
   { "type": "fight_kit", "id": "miners", "weapon": "club:oak", "worn": ["shirt:linen", "tunic:wool"], "skill_min": 10, "skill_max": 25, "stance": "flee_hurt", "courage": 40 },
   { "type": "fight_kit", "id": "smugglers", "weapon": "dagger:iron", "alt_weapons": ["arming_sword:iron", "axe:iron"], "worn": ["shirt:linen", "tunic:wool", "jack:linen"],
     "skill_min": 25, "skill_max": 45, "stance": "balanced", "courage": 55 },

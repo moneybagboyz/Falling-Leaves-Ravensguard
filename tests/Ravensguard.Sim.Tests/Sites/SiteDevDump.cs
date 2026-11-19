@@ -22,7 +22,7 @@ public class SiteDevDump(SiteFixture fx, ITestOutputHelper o)
         }
     }
 
-    [Fact]
+    [Fact(Skip = "dev")]
     public void Crawl()
     {
         var m = SiteGen.Generate(fx.S, SiteFixture.Abbey(), 1);

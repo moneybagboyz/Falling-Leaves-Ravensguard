@@ -18,11 +18,14 @@ public sealed partial class SiteCrawl
     public FightSetup? FightSetupUsed { get; private set; }
     /// <summary>Fighter index to member (>= 0) or inhabitant (-1 - index).</summary>
     private int[] _fightMap = [];
+    /// <summary>The hero's fighter in <see cref="Fight"/> (-1 when the hero is not in it).</summary>
+    public int HeroFighter => Array.IndexOf(_fightMap, 0);
     private int _fightOx, _fightOy, _fightLevel, _fights;
     /// <summary>The game day the site was cleared (no hostile left standing), -1 while it is not.</summary>
     public int ClearedDay { get; set; } = -1;
     /// <summary>Monsters slain here (the renown stub, 4.9) and their legend names.</summary>
     public List<string> Slain { get; } = [];
+    public string LastFightEnd { get; private set; } = "";
 
     private SiteMonsterDef? MonsterDef(Inhabitant n) => n.Monster.Length > 0 && C.Monsters.TryGetValue(n.Monster, out var d) ? d : null;
 
@@ -142,6 +145,7 @@ public sealed partial class SiteCrawl
         int loseM = d?.LoseM ?? 30, leash = d?.LeashM ?? 200, returnS = d?.ReturnAfterS ?? 60;
         if (n.State == InhabitantState.Return)
         {
+            if (n.InvestigateS > 0) { n.InvestigateS--; if (n.Path == null) PathFolk(n, n.Home); return; }
             if (CellOf(n) == n.Home) { n.State = d?.Dormant == true ? InhabitantState.Dormant : InhabitantState.Home; n.TriggerS = 0; n.StayS = 0; n.Path = null; }
             else if (n.Path == null) PathFolk(n, n.Home);
             // a returning beast still answers what it meets
@@ -382,9 +386,10 @@ public sealed partial class SiteCrawl
                 n.FledDay = Day;
                 if (n.State == InhabitantState.Return) { n.Path = null; PathFolk(n, n.Home); }
             }
-            else n.State = InhabitantState.Hunt;
+            else { n.State = InhabitantState.Return; n.InvestigateS = 30; n.Path = null; PathFolk(n, n.Home); }     // the fight broke off (one side ran): they go home and stay off for 30 sim-seconds
         }
         int winner = f.WinnerTeam;
+        LastFightEnd = $"tick {f.Tick} " + string.Join(",", f.Fighters.Select(x => x.Name + ":" + x.Act + ":t" + x.Team));
         Fight = null;
         Note(CrawlEventKind.FightEnded, winner);
         if (!Map.Inhabitants.Any(n => n.Hostile && n.State is not (InhabitantState.Dead or InhabitantState.Fled or InhabitantState.Away))) ClearedDay = Day;

@@ -132,6 +132,11 @@ public sealed class SessionRecorder
     /// <summary>Every combat input of the hero (move, face, block, attack, dodge, reload, throw, target, called shot) is recorded: a replay of a fight repeats it exactly.</summary>
     public void FightInput(Ravensguard.Sim.Combat.Melee2.FightInput i) { Commands.Append(ReplayCommand.Fight(World.Tick, i)); World.FightInput(i); }
 
+    // P4-H: the hero underground; the crawl's inputs are recorded like any live input, its start and end too (the game's SiteFactory rebuilds it for a replay)
+    public void EnterSite(Ravensguard.Sim.Sites.SiteCrawl crawl) { Commands.Append(ReplayCommand.SiteStart(World.Tick, crawl.Map.SiteId)); World.AttachSite(crawl); }
+    public void LeaveSite() { Commands.Append(ReplayCommand.SiteEnd(World.Tick)); World.DetachSite(); }
+    public void SiteInput(Ravensguard.Sim.Sites.CrawlInput i) { Commands.Append(ReplayCommand.Site(World.Tick, i)); World.SiteInput(i); }
+
     public void Step()
     {
         World.Step();

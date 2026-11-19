@@ -112,8 +112,8 @@ public sealed class SiteSave
                 Person = m.Person, Name = m.Name, KitJson = JsonSerializer.Serialize(m.Kit, Json), Pos = [m.X, m.Y, m.Level, m.FX, m.FY, m.Cell],
                 LightLeft = m.Light.LeftMilliS, LightKind = (byte)m.Light.Kind, Lit = m.Light.Lit,
                 Ints = [m.SpareTorches, m.SpareCandles, m.OilMl, m.Perception, m.Lockpicking, m.Athletics, m.Stealth, m.DigQuality, m.GearG, m.CapacityG, m.LootG, m.MoraleX100,
-                    m.FoulS, m.ClearS, m.BreathS, m.HeldS, m.BusyS, m.SwimChecks, (int)m.BusyKind, m.BusyTarget, m.DragBy, (int)m.Mode, m.MoveDir, m.PathIdx, m.TorchesUsed, m.CandlesUsed, m.OilUsedMl, m.Crumbs.Capacity],
-                Flags = [m.Tinder, m.Rope, m.Superstitious, m.HasMap, m.Unconscious, m.Dead, m.Sunk, m.Swimming, m.WarnedAir, m.Lost, m.Sneak, m.Retracing, m.Path != null],
+                    m.FoulS, m.ClearS, m.BreathS, m.HeldS, m.BusyS, m.SwimChecks, (int)m.BusyKind, m.BusyTarget, m.DragBy, (int)m.Mode, m.MoveDir, m.PathIdx, m.TorchesUsed, m.CandlesUsed, m.OilUsedMl, m.Crumbs.Capacity, m.Bandages, m.FirstAid],
+                Flags = [m.Tinder, m.Rope, m.Superstitious, m.HasMap, m.Unconscious, m.Dead, m.Sunk, m.Swimming, m.WarnedAir, m.Lost, m.Sneak, m.Retracing, m.Path != null, m.AutoTreat],
                 Loot = SiteCodec.Items(m.Loot), Path = m.Path?.ToArray() ?? [], Crumbs = m.Crumbs.ToArray(), DeathCause = m.DeathCause,
             });
         c.CaptureFight(s);

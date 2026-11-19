@@ -35,8 +35,9 @@ public sealed class SiteSystem : AbstractSystem
         {
             if (!book.LegendsSeeded) { book.LegendsSeeded = true; Legends(ctx, region); }
             if (ctx.HourOfDay != 23) return;
-            Daily(ctx, book, content, region);
-            if (ctx.Time.DayOfYear == Core.TimeConst.DaysPerYear) Yearly(ctx, book, content, region);
+            void Chron(string type, Site? site, string note, (string, string)[] data) => ctx.Outbox.Chronicle(ctx.Time, type, site == null ? [] : [site.Id], [new Cause(type == "mine_flooded" ? CauseKind.Weather : CauseKind.Other, null, note)], data);
+            Daily(book, content, region, ctx.Seed, (int)ctx.Day, Chron);
+            if (ctx.Time.DayOfYear == Core.TimeConst.DaysPerYear) Yearly(book, content, region, ctx.Seed, ctx.Year);
         }
     }
 
@@ -63,21 +64,20 @@ public sealed class SiteSystem : AbstractSystem
         return best;
     }
 
-    private static void Daily(TickContext ctx, SiteBook book, SiteContent c, Region region)
+    /// <summary>The day's steps (floods, the fled coming back, beasts healing, reoccupation), for every site but the hero's. <paramref name="chronicle"/> writes an entry.</summary>
+    public static void Daily(SiteBook book, SiteContent c, Region region, ulong seed, int day, Action<string, Site?, string, (string, string)[]> chronicle)
     {
-        int day = (int)ctx.Day;
         int heavy = book.HeavyOfLastDay;
         foreach (var s in region.Sites)
         {
             if (s.Id.Value == book.ActiveSite) continue;
-            if (s.Kind == SiteKind.Mine && s.Mine is MineState.Active or MineState.Abandoned && SiteBook.FloodRolls(ctx.Seed, day, s.Id.Value, heavy, c.K))
+            if (s.Kind == SiteKind.Mine && s.Mine is MineState.Active or MineState.Abandoned && SiteBook.FloodRolls(seed, day, s.Id.Value, heavy, c.K))
             {
                 var r = book.Record(s.Id.Value);
                 r.FloodSince = (long)(day + 1) * 86400;
                 if (r.Map is { } m) m.FloodCm[m.Levels - 1] = Math.Max(m.FloodCm[m.Levels - 1], c.K.FloodHours * c.K.FloodRiseCmPerHour);
                 int near = Nearest(region, s);
-                ctx.Outbox.Chronicle(ctx.Time, "mine_flooded", [s.Id], [new Cause(CauseKind.Weather, null, $"heavy rain for {heavy} hours")],
-                    ("site", s.Name), ("settlement", near >= 0 ? region.Settlements[near].Name : ""), ("text_key", "ex_chron_flooded"));
+                chronicle("mine_flooded", s, $"heavy rain for {heavy} hours", [("site", s.Name), ("settlement", near >= 0 ? region.Settlements[near].Name : ""), ("text_key", "ex_chron_flooded")]);
             }
         }
         foreach (var (id, r) in book.Records)
@@ -90,25 +90,23 @@ public sealed class SiteSystem : AbstractSystem
             foreach (var n in m.Inhabitants) if (n.LossPm > 0 && n.State is not InhabitantState.Dead) n.LossPm = Math.Max(0, n.LossPm - 24 * (c.Monsters.GetValueOrDefault(n.Monster)?.RecoverPmPerHour ?? 0));
             bool empty = !m.Inhabitants.Any(n => n.Hostile && n.State is not (InhabitantState.Dead or InhabitantState.Fled or InhabitantState.Away));
             if (r.Cleared < 0 || !empty || day < r.Cleared + c.K.ReoccupyAfterDays) continue;
-            if (!SiteBook.ReoccupyRolls(ctx.Seed, day, id, c.K.ReoccupyPressure, c.K)) continue;
-            var band = SiteBook.NewBand(c, m, ctx.Seed, day, 1000 * (r.Reoccupied + 1), 0);
+            if (!SiteBook.ReoccupyRolls(seed, day, id, c.K.ReoccupyPressure, c.K)) continue;
+            var band = SiteBook.NewBand(c, m, seed, day, 1000 * (r.Reoccupied + 1), 0);
             m.Inhabitants.RemoveAll(n => n.State == InhabitantState.Dead);
             m.Inhabitants.AddRange(band);
             r.Reoccupied++; r.Cleared = -1;
             var site = region.Sites.FirstOrDefault(x => x.Id.Value == id);
-            ctx.Outbox.Chronicle(ctx.Time, "site_reoccupied", site == null ? [] : [site.Id], [new Cause(CauseKind.Other, null, "a band of outlaws moved in")],
-                ("site", site?.Name ?? ""), ("band", band.Count.ToString()), ("text_key", "ex_chron_reoccupied"));
+            chronicle("site_reoccupied", site, "a band of outlaws moved in", [("site", site?.Name ?? ""), ("band", band.Count.ToString()), ("text_key", "ex_chron_reoccupied")]);
         }
     }
 
     /// <summary>The scavengers (4.3): once a game year one in ten untouched ruins loses 5% of what is left (stream 0x4B9, key year and site, draws from 1000).</summary>
-    private static void Yearly(TickContext ctx, SiteBook book, SiteContent c, Region region)
+    public static void Yearly(SiteBook book, SiteContent c, Region region, ulong seed, int year)
     {
-        int year = ctx.Year;
         foreach (var s in region.Sites)
         {
             if (s.Kind != SiteKind.Ruin || s.Id.Value == book.ActiveSite) continue;
-            if (DetRng.Range(ctx.Seed, year, s.Id.Value, RngStreams.Scavenge, 1000, 0, 1000) >= c.K.ScavengeSitesPm) continue;
+            if (DetRng.Range(seed, year, s.Id.Value, RngStreams.Scavenge, 1000, 0, 1000) >= c.K.ScavengeSitesPm) continue;
             var r = book.Record(s.Id.Value);
             if (r.Map is { } m) { if (m.Containers.All(x => !x.Opened)) SiteBook.Scavenge(m, c.K.ScavengeLossPm); }
             else r.LootPm = r.LootPm * (1000 - c.K.ScavengeLossPm) / 1000;

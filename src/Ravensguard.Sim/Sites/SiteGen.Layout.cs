@@ -393,7 +393,7 @@ public static partial class SiteGen
     }
 
     /// <summary>Breadth-first distances (cells) from a cell over walkable cells of its level; -1 unreached.</summary>
-    public static int[] Distances(SiteMap m, int l, int fromCell)
+    public static int[] Distances(SiteMap m, int l, int fromCell, bool throughRubble = false)
     {
         var d = new int[m.Plane]; Array.Fill(d, -1);
         int s = fromCell - l * m.Plane;
@@ -405,7 +405,7 @@ public static partial class SiteGen
             foreach (var (dx, dy) in Job_Four)
             {
                 int nx = x + dx, ny = y + dy; if ((uint)nx >= m.W || (uint)ny >= m.H) continue;
-                int j = ny * m.W + nx; if (d[j] >= 0 || !SiteTiles.Walkable(m.Tiles[l * m.Plane + j])) continue;
+                int j = ny * m.W + nx; var tj = m.Tiles[l * m.Plane + j]; if (d[j] >= 0 || !SiteTiles.Walkable(tj) && !(throughRubble && tj == SiteTile.Rubble)) continue;
                 d[j] = d[c] + 1; q.Enqueue(j);
             }
         }

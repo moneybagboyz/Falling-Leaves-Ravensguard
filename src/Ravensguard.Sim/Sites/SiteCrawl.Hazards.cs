@@ -1,5 +1,6 @@
 using Ravensguard.Content;
 using Ravensguard.Sim.Combat.Resolver2;
+using Ravensguard.Sim.Combat.Wounds;
 using Ravensguard.Sim.Core;
 
 namespace Ravensguard.Sim.Sites;
@@ -33,6 +34,7 @@ public sealed partial class SiteCrawl
             if (m.Book.Conscious == false && !m.Unconscious) { m.Unconscious = true; StopPath(m, true); }
             else if (m.Unconscious && m.Book.Conscious && m.FoulS == 0 && !m.Sunk) m.Unconscious = false;
             if (m.Book.Dead && !m.Dead) Die(m, m.Book.Death.ToString());
+            if ((m.AutoTreat || m.Hero && HeroAi) && m.CanAct && Fight == null) Treat(m);
         }
         DetectTraps();
         CaveInWindow();
@@ -48,6 +50,26 @@ public sealed partial class SiteCrawl
             if (want > Map.FloodCm[Map.Levels - 1]) { Map.FloodCm[Map.Levels - 1] = want; Note(CrawlEventKind.WaterRising, Map.Levels - 1, want); }
         }
         if (GameSec % 86400 == 0 && Map.Template.StartsWith("mine", StringComparison.Ordinal) | Map.Template.StartsWith("ruin", StringComparison.Ordinal)) Note(CrawlEventKind.RatsAtFood, C.K.RatsPmPerDay);
+    }
+
+    /// <summary>First aid on oneself out of a fight (the wounds spec's windows: a bandage within 30 sim-seconds): the worst bleeder pressed or bandaged.</summary>
+    public bool Treat(CrawlMember m)
+    {
+        if (Treatment.WorstBleeder(m.Book, -1, GameSec) < 0) return false;
+        var bag = new Bag(m);
+        var req = TreatAi.Next(m.Book, m.Plan, bag, GameSec, m.FirstAid, m.Person);
+        if (req is not { } r || r.Kind is not (TreatKind.Pressure or TreatKind.Bandage or TreatKind.Tourniquet)) return false;
+        var res = Treatment.Perform(m.Book, m.Plan, r, bag);
+        if (!res.Ok) return false;
+        m.BusyS = Math.Max(m.BusyS, Treatment.SimSeconds(r.Kind)); m.BusyTarget = -1;
+        Note(CrawlEventKind.Treated, Members.IndexOf(m), (int)r.Kind);
+        return true;
+    }
+
+    private sealed class Bag(CrawlMember m) : ITreatItems
+    {
+        public bool Has(string item, int count) => item == "bandage" ? m.Bandages >= count : item == "rope" && m.Rope && count <= 1;
+        public void Take(string item, int count) { if (item == "bandage") m.Bandages = Math.Max(0, m.Bandages - count); }
     }
 
     private void Die(CrawlMember m, string cause)
@@ -144,8 +166,6 @@ public sealed partial class SiteCrawl
     private void Detect(SiteTrap t, CrawlMember by)
     {
         t.Detected = true;
-        var (l, x, y) = Map.At(t.Cell);
-        Grid.SetOpen(x, y, SiteMap.Z(l), false);
         Known.Mark(t.Cell);
         Note(CrawlEventKind.TrapDetected, t.Id, Members.IndexOf(by), t.Def);
         foreach (var m in Members) StopPath(m, true);
@@ -155,7 +175,7 @@ public sealed partial class SiteCrawl
     private void StepOnTrap(CrawlMember m, int cell)
     {
         var t = Map.TrapAt(cell);
-        if (t == null || !t.Armed) return;
+        if (t == null || !t.Armed || t.Detected) return;                           // a trap one has found is stepped over with care (4.6: avoided)
         if (m.Sneak && m.CarriedKg + 75 < C.K.SneakSkipMaxKg + 75 && m.CarriedKg < C.K.SneakSkipMaxKg
             && DetRng.Range(Seed, SimSecond, ((ulong)t.Id << 20) + (ulong)(uint)Members.IndexOf(m), RngStreams.TrapTrigger, 0, 0, 1000) < C.K.SneakSkipPm) return;
         Trigger(t, m);
@@ -211,13 +231,8 @@ public sealed partial class SiteCrawl
     {
         var (l, x, y) = Map.At(t.Cell);
         var falling = Members.Where(m => !m.Dead && m.Level == l && Math.Abs(m.X / 1000 - x) <= 1 && Math.Abs(m.Y / 1000 - y) <= 1).ToList();
-        for (int dy = -1; dy <= 1; dy++)
-            for (int dx = -1; dx <= 1; dx++)
-            {
-                if (!Map.In(l, x + dx, y + dy)) continue;
-                int c = Map.Index(l, x + dx, y + dy);
-                if (Map.Tiles[c] is SiteTile.Floor && Map.PortalAt(c) == null && c != Map.Mouth) { Map.Tiles[c] = SiteTile.Hole; Grid.SetOpen(x + dx, y + dy, SiteMap.Z(l), false); }
-            }
+        // everyone on the 3 x 3 goes down with the rotten boards; the hole left is the trap's own cell (it stays: a delta)
+        if (Map.Tiles[t.Cell] is SiteTile.Floor && Map.PortalAt(t.Cell) == null && t.Cell != Map.Mouth) { Map.Tiles[t.Cell] = SiteTile.Hole; Grid.SetOpen(x, y, SiteMap.Z(l), false); }
         foreach (var m in falling) FallThrough(m, m.Cell);
         _lightDirty = _mapDirty = true;
     }
@@ -272,8 +287,6 @@ public sealed partial class SiteCrawl
         if (roll < SiteTraps.DisarmPm(m.Lockpicking, d.Disarm))
         {
             t.Armed = false;
-            var (l, x, y) = Map.At(t.Cell);
-            if (Map.Tiles[t.Cell] != SiteTile.Hole) Grid.SetOpen(x, y, SiteMap.Z(l), true);
             Note(CrawlEventKind.TrapDisarmed, t.Id);
             return;
         }
@@ -368,7 +381,8 @@ public sealed partial class SiteCrawl
 
     // ------------------------------------------------------------------ loot and the taboo (4.2, 4.10)
 
-    private void Loot(CrawlMember m, SiteContainer box)
+    /// <summary>Takes everything in a container (E beside it).</summary>
+    public void Loot(CrawlMember m, SiteContainer box)
     {
         box.Opened = true;
         int value = 0;
