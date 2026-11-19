@@ -176,11 +176,14 @@ public sealed class ResolverV2(CombatTablesV2 tables)
             int wi = rank[k];
             ref var w = ref s.Worn![wi];
             int cov = w.Stats.CoverageByPlan[plan.Index][host.BaseIndex];
-            if (cov <= 0) continue;
+            // a breastplate is not met by a blow from behind, a backplate not by one from the front (from the flank both)
+            if (cov <= 0 || w.Stats.Side == 1 && s.Facing == Facing.Rear || w.Stats.Side == 2 && s.Facing == Facing.Front) continue;
             if (!Fit.Fits(w.FitCm3, s.DefenderSizeCm3)) cov -= C.MisfitCoveragePm;
+            if ((w.BreachMask & (1UL << host.BaseIndex)) != 0) cov = cov * (1000 - C.BreachCoveragePm) / 1000;     // burst or cut-open rings
+            if (w.Slipped) cov = cov * C.SlipCoveragePm / 1000;                                                    // a broken strap
             bool covered = Draw(key, r, RngStreams.Coverage, k, 0, 1000) < cov;
             long mIn = m;
-            var step = new LayerStep { Piece = (short)wi, Tissue = (short)w.Stats.Material.Index, Part = (short)part.Index, IsArmour = true, InMilli = mIn };
+            var step = new LayerStep { Piece = (short)wi, Tissue = (short)w.Stats.Material.Index, Part = (short)part.Index, IsArmour = true, InMilli = mIn, Zone = (short)host.BaseIndex };
             if (!covered) { step.Outcome = LayerOutcome.NotCovered; step.OutMilli = m; r.Add(step); continue; }
             if (gapHere && w.Stats.Layer == ArmourLayer.Armour
                 && ((w.Stats.GapMaskByPlan[plan.Index] & (1UL << gap)) != 0 || (w.Stats.Shape.Visor && w.VisorOpen && plan.Gaps[gap].Name == "face")))
@@ -200,12 +203,14 @@ public sealed class ResolverV2(CombatTablesV2 tables)
                     pen -= st.ThicknessUm;
                     if (pen <= 0) { pen = 0; edged = false; }
                     res = LayerOutcome.Cut; step.WearPm = st.WearCutPm;
+                    if (st.Elastic && st.Material.Category == "metal") step.Harm = ArmourHarm.Burst;      // the rings are cut: the mail is open there
                 }
                 else res = BluntArmour(s, st, w.QualityPm, cm, a, true, fallArea > 0, ref m, ref step);
                 if (res != LayerOutcome.Cut) edged = false;                     // the edge failed: the blow is blunt for good
             }
             else res = BluntArmour(s, st, w.QualityPm, cm, a, false, fallArea > 0, ref m, ref step);
             step.Outcome = res; step.OutMilli = m;
+            if (st.Rigid && step.Harm is ArmourHarm.Dented or ArmourHarm.Buckled && !w.Slipped && w.ConditionPm - step.WearPm < C.StrapBelowPm) step.Harm = ArmourHarm.Strap;  // battered loose
             r.Add(step);
             if (res == LayerOutcome.Deflected) { r.Deflected = true; m = 0; r.FinalMilli = 0; return; }
             armourCaught = true;
@@ -326,21 +331,43 @@ public sealed class ResolverV2(CombatTablesV2 tables)
         return ai < bi;
     }
 
-    /// <summary>A worn layer tested blunt (or after a failed edge): deflect, crush (padding absorbs), or fail (the strain conversion).</summary>
+    /// <summary>
+    /// A worn layer tested blunt (or after a failed edge): deflect, crush (padding absorbs), or fail (the strain conversion). Only a rigid shell bounces a light weapon (cloth and
+    /// mail give with the blow: a club does not bounce off a shirt or a hauberk), and a failed edge or point skids off a rigid shell (the strain rule) instead of crushing it at its
+    /// point's small area (close-out item 2).
+    /// Wear (item 4): a blunt blow dents a rigid shell in proportion to its momentum over the crush need (buckled at the need or more); a heavy blow bursts mail's rings.
+    /// </summary>
     private LayerOutcome BluntArmour(in StrikeV2 s, ArmourV2 st, int qaPm, int cm, long a, bool failedEdge, bool fall, ref long m, ref LayerStep step)
     {
-        if (!fall && LayerTest.Deflects(s.Weapon, a, st.DensityKgM3)) { step.NeedMilli = 0; return LayerOutcome.Deflected; }
+        if (!fall && st.Rigid && LayerTest.Deflects(s.Weapon, a, st.DensityKgM3)) { step.NeedMilli = 0; return LayerOutcome.Deflected; }
         long need = LayerTest.BluntNeedMilli(st.ImpactFracture, st.ImpactYield, a, qaPm, cm, 1000);
         if (!failedEdge) step.NeedMilli = need;
-        if (m >= need)
+        long mIn = m;
+        step.WearPm = st.WearCrushPm;
+        if (m >= need && !(failedEdge && st.Rigid && !fall))
         {
             m = LayerTest.AfterCrush(m, need, st.Elastic, st.BluntAbsorbPm, C);
-            step.WearPm = st.WearCrushPm;
+            if (!fall) ArmourHarmOf(st, mIn, need, failedEdge, ref step);
             return LayerOutcome.Crushed;
         }
         m = LayerTest.AfterFail(m, failedEdge ? st.ShearStrain : st.ImpactStrain, C);
-        step.WearPm = st.WearCrushPm;
+        if (!fall) ArmourHarmOf(st, mIn, need, failedEdge, ref step);
         return LayerOutcome.Stopped;
+    }
+
+    /// <summary>The blunt blow's damage to the piece: a rigid shell dents by <c>dent_full x min(M / need, 2)</c> (a failed edge only scuffs), buckling at the need; mail bursts at
+    /// <c>burst_ratio</c> of its crush need.</summary>
+    private void ArmourHarmOf(ArmourV2 st, long mIn, long need, bool failedEdge, ref LayerStep step)
+    {
+        if (need <= 0) need = 1;
+        long ratioPm = Math.Min(2000, mIn * 1000 / need);
+        if (st.Rigid && !failedEdge)
+        {
+            int dent = (int)(C.DentFullPm * ratioPm / 1000);
+            if (dent > step.WearPm) step.WearPm = dent;
+            step.Harm = ratioPm >= 1000 ? ArmourHarm.Buckled : dent >= C.DentNoticePm ? ArmourHarm.Dented : ArmourHarm.None;
+        }
+        else if (st.Elastic && st.Material.Category == "metal" && mIn * 1000 / need >= C.BurstRatioPm) { step.Harm = ArmourHarm.Burst; step.WearPm = Math.Max(step.WearPm, st.WearCutPm * 3); }
     }
 
     /// <summary>

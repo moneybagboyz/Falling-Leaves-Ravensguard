@@ -300,5 +300,7 @@ internal static class Golden
     /// <summary>A sword stab at the right upper arm through cloak, mail, gambeson and shirt (serial 6): the hit roll, four coverage rolls outside in, then the arm's six structures in content order with the artery's rate drawn right after it.</summary>
     public const string DrawOrder = "6|410:0,412:0,412:1,412:2,412:3,413:0,415:0,413:1,413:2,413:3,413:4,413:5";
     // re-pinned in P4-C: the mace (velocity 1.5) and the pommel (0.8) were recalibrated in content (melee-and-ranged Notes); the formulas are unchanged
-    public const ulong Table100k = 7788444446239837917UL;
+    // re-pinned in the Phase 4 close-out (weapon x armour matrix, items 2 and 4): only a rigid shell deflects, a failed edge skids off it, a backplate is not met from the front,
+    // blunt blows dent plate (the step wear), the maul is velocity 1.7, bodkins and quarrels are iron
+    public const ulong Table100k = 12489677114851335651UL;
 }

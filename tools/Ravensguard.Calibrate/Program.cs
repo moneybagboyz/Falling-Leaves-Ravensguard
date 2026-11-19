@@ -32,27 +32,54 @@ if (!spike)
     var fc = new Ravensguard.Sim.Combat.Melee2.FightContent(tables, load.Database);
     if (args.Contains("--mounted")) return MountedRun.Run(fc, args, duels, only, trace);
     if (args.Contains("--abstract")) return AbstractRun.Run(fc, args, d.FullName);
+    if (args.Contains("--matrix")) return MatrixRun.Run(fc, args, only);
+    if (args.Contains("--ranged"))
+    {
+        // close-out item 3: the ranged realism runs
+        if (trace >= 0)
+        {
+            var rp = Ravensguard.Sim.Combat.Melee2.FightCalibration.RangedPairings().First(p => only == null || p.Name.Contains(only, StringComparison.Ordinal));
+            var w = new Ravensguard.Sim.Combat.Melee2.FightWorld(fc, (ulong)(1000 + trace), (ulong)(trace + 1), 8 * 3600);
+            w.Add(rp.A(Ravensguard.Sim.Combat.Melee.MeleeScenarios.SkillFor(trace, 0), -rp.GapMm / 2, 1024));
+            w.Add(rp.B(Ravensguard.Sim.Combat.Melee.MeleeScenarios.SkillFor(trace, 1), rp.GapMm / 2, -1024));
+            Console.WriteLine($"{rp.Name}: skills {w.Fighters[0].Skill} / {w.Fighters[1].Skill}");
+            while (!w.IsOver && w.Tick < 4800)
+            {
+                w.StepWithAi();
+                if (w.Tick % 20 == 0) Console.WriteLine($"{w.Tick,5} A {w.Fighters[0].X / 1000.0,6:0.0},{w.Fighters[0].Y / 1000.0,5:0.0} {w.Fighters[0].Act,-9} ammo {w.Fighters[0].Ammo} loaded {w.Fighters[0].Loaded} | B {w.Fighters[1].X / 1000.0,6:0.0},{w.Fighters[1].Y / 1000.0,5:0.0} {w.Fighters[1].Act,-9} ammo {w.Fighters[1].Ammo} loaded {w.Fighters[1].Loaded}");
+            }
+            foreach (var e in w.Events) if (e.Kind != Ravensguard.Sim.Combat.Melee2.FightEventKind.Windup) Console.WriteLine($"{e.Tick,5} {e.Kind,-12} {e.Actor,2} -> {e.Target,2} {e.Part,4} {e.A,6} {e.B,4}");
+            foreach (var f in w.Fighters) Console.WriteLine($"{f.Name}: {f.Act} blood {f.Book.LossPm} pm lost, pain {f.Book.PainX100 / 100}, stamina {f.Stamina / 100}, thrown {f.Thrown} landed {f.Landed}");
+            return 0;
+        }
+        var rrows = Ravensguard.Sim.Combat.Melee2.FightCalibration.RangedPairings().Where(p => only == null || p.Name.Contains(only, StringComparison.Ordinal))
+            .Select(p => Ravensguard.Sim.Combat.Melee2.FightCalibration.Run(fc, p, duels)).ToList();
+        Console.WriteLine($"{rrows.Sum(r => r.N)} ranged duels (x2 with first aid) in {sw.Elapsed.TotalSeconds:0.0} s on FightWorld");
+        Console.WriteLine();
+        Console.WriteLine(Ravensguard.Sim.Combat.Melee2.FightCalibration.Table(rrows, bothSides: true));
+        return 0;
+    }
     var pairs =Ravensguard.Sim.Combat.Melee2.FightCalibration.MainPairings().Where(p => only == null || p.Name.Contains(only, StringComparison.Ordinal)).ToList();
     if (args.Contains("--why"))
     {
         var p0 = pairs[0];
         var states = new int[32]; var kinds = new int[40];
-        long[] blows = new long[2], mom = new long[2], pain = new long[2], hits = new long[2], wnd = new long[2];
+        long[] blows = new long[2], mom = new long[2], pain = new long[2], hits = new long[2], wnd = new long[2], close = new long[2], insideT = new long[2];
         for (int i = 0; i < duels; i++)
         {
             var w = new Ravensguard.Sim.Combat.Melee2.FightWorld(fc, (ulong)(1000 + i), (ulong)(i + 1), 8 * 3600) { ImpactStates = states };
             w.OnBlow = (a, t, r, s) =>
             {
-                blows[a.Team]++; mom[a.Team] += r.InitialMilli;
+                blows[a.Team]++; mom[a.Team] += r.InitialMilli; if (Math.Sqrt((double)(a.X - t.X) * (a.X - t.X) + (double)(a.Y - t.Y) * (a.Y - t.Y)) < 1300) close[a.Team]++;
                 if (r.WoundCount > 0) { hits[a.Team]++; wnd[a.Team] += r.WoundCount; foreach (var wd in r.WoundSpan) pain[a.Team] += Ravensguard.Sim.Combat.Wounds.WoundBook.PainOf(t.Plan, wd, Ravensguard.Sim.Combat.Wounds.WoundBook.Categorise(t.Plan, wd)); }
             };
             w.Add(Ravensguard.Sim.Combat.Melee2.FightCalibration.KitOf("A", 0, p0.WeaponA, p0.KitA, p0.ShieldA, Ravensguard.Sim.Combat.Melee.MeleeScenarios.SkillFor(i, 0), -3000, 1024));
             w.Add(Ravensguard.Sim.Combat.Melee2.FightCalibration.KitOf("B", 1, p0.WeaponB, p0.KitB, p0.ShieldB, Ravensguard.Sim.Combat.Melee.MeleeScenarios.SkillFor(i, 1), 3000, -1024));
-            while (!w.IsOver && w.Tick < 4800) w.StepWithAi();
+            while (!w.IsOver && w.Tick < 4800) { w.StepWithAi(); foreach (var f in w.Fighters) if (w.Tick <= f.InsideUntil) insideT[f.Team]++; }
             foreach (var e in w.Events) kinds[(int)e.Kind]++;
         }
         Console.WriteLine("defender state at impact: " + string.Join(", ", Enumerable.Range(0, 15).Where(i => states[i] > 0).Select(i => $"{(Ravensguard.Sim.Combat.Melee2.FAct)i} {states[i]}")));
-        for (int k = 0; k < 2; k++) Console.WriteLine($"side {k}: resolved {blows[k]}, mean M {mom[k] / Math.Max(1, blows[k]) / 1000.0:0.0}, wounding {hits[k]} ({100.0 * hits[k] / Math.Max(1, blows[k]):0}%), wounds/hit {(double)wnd[k] / Math.Max(1, hits[k]):0.0}, pain/hit {(double)pain[k] / Math.Max(1, hits[k]):0.0}");
+        for (int k = 0; k < 2; k++) Console.WriteLine($"side {k}: inside s/duel {insideT[k] / 20.0 / duels:0.0}, blows within 1.3 m {100.0 * close[k] / Math.Max(1, blows[k]):0}%, resolved {blows[k]}, mean M {mom[k] / Math.Max(1, blows[k]) / 1000.0:0.0}, wounding {hits[k]} ({100.0 * hits[k] / Math.Max(1, blows[k]):0}%), wounds/hit {(double)wnd[k] / Math.Max(1, hits[k]):0.0}, pain/hit {(double)pain[k] / Math.Max(1, hits[k]):0.0}");
         Console.WriteLine("idle by reaction (decided for this blow): " + string.Join(", ", Enumerable.Range(16, 5).Select(i => $"{i - 16}:{states[i]}")) + "  (other blow): " + string.Join(", ", Enumerable.Range(24, 5).Select(i => $"{i - 24}:{states[i]}")));
         Console.WriteLine("events: " + string.Join(", ", Enumerable.Range(0, 40).Where(i => kinds[i] > 0).Select(i => $"{(Ravensguard.Sim.Combat.Melee2.FightEventKind)i} {kinds[i]}")));
         return 0;

@@ -196,3 +196,28 @@ Merge fixes (after morale and the flavour log joined): a blow whose target chang
 Left: mounting and dismounting inside a fight (E), the stirrup drag (H3), the 8-degree tilt of 4.8 (riders meet head-on), horse kicks (H7), bandit leaders on horseback (H6), fire panic (no fire in a fight yet), fog, branches in woods (a gallop there is impossible anyway), drowning (exploration's), the horse's wound silhouette in the HUD, the hoof-thunder loop and slow motion (feedback's), and reconciling MT-12 with the abstract battle.
 
 MT-12 reconciled (P4-G, abstract-battles-v1 Notes): the abstract charge is a blow at contact for every charging rider plus `charge_pm` 1,000 more, on the lance rows that already carry the gallop's momentum; the abstract first pass then equals the live one (1.31 against 1.31 downed in the 10 s from the first wound, 200 fresh seeds; held to 15% by `AbstractBattleTests.MT12_TheAbstractChargeBonus_AgreesWithTheLiveOne`). The spec's "+60% +-10" is not held: the live charge's own bonus is +220%, and the abstract reads +830% on its mud baseline (0.14 against the live 0.41).
+
+## Notes (Phase 4 close-out, item 5)
+- **Mounted reach fixed:** a rider's non-lance weapon reaches +0.4 m against a man on foot or a horse, but not against another rider (`FightWorld.ReachAgainst`, read by the
+  strike, the combat brain's reactions and footwork and the cavalry brain); the lance keeps its own reach against anyone. Test `WeaponArmourTests.MountedReach_*`.
+- The table before -> after (2,000 duels; the other close-out changes are in it too: armour that wears, the club and the trample no longer bounced off mail, the spear's counter):
+
+| Pairing | mean s | rider wins | other wins | down on first pass | charge M | unhorsed/duel | lances broken/duel |
+|---|---|---|---|---|---|---|---|
+| couched lance vs sword (padded, unbraced) | 22.0 -> 21.9 | 100% -> 100% | 0% -> 0% | 13% -> 13% | 185 -> 185 | 0.00 -> 0.00 | 0.75 -> 0.75 |
+| couched lance vs sword+heater (mail) | 81.6 -> 25.1 | 48% -> 100% | 2% -> 0% | 4% -> 9% | 150 -> 173 | 0.02 -> 0.00 | 0.90 -> 0.82 |
+| couched lance vs braced spear (padded) | 13.6 -> 13.3 | 80% -> 79% | 18% -> 19% | 39% -> 39% | 205 -> 205 | 0.14 -> 0.14 | 0.65 -> 0.64 |
+| couched lance vs braced pike (padded) | 18.7 -> 18.7 | 64% -> 65% | 34% -> 33% | 28% -> 28% | 197 -> 197 | 0.24 -> 0.24 | 0.68 -> 0.68 |
+| palfrey lance vs braced spear (padded) | 12.4 -> 12.6 | 58% -> 56% | 39% -> 41% | 31% -> 31% | 205 -> 205 | 0.34 -> 0.34 | 0.58 -> 0.58 |
+| mounted sword vs foot sword (padded) | 29.9 -> 29.9 | 100% -> 100% | 0% -> 0% | 3% -> 3% | 172 -> 172 | 0.00 -> 0.00 | 0.00 -> 0.00 |
+| mounted sword vs foot sword (mail) | 52.6 -> 27.1 | 89% -> 100% | 1% -> 0% | 2% -> 8% | 170 -> 170 | 0.01 -> 0.00 | 0.00 -> 0.00 |
+| lance vs lance (mail, both mounted) | 32.9 -> 29.3 | 41% -> 40% | 40% -> 42% | 16% -> 16% | 249 -> 208 | 1.12 -> 0.95 | 1.28 -> 1.31 |
+| couched lance vs sword on mud | 18.1 -> 17.9 | 18% -> 18% | 2% -> 1% | 9% -> 9% | - -> - | 0.02 -> 0.01 | 0.41 -> 0.41 |
+
+MT-12 skirmish (12 riders against 20 foot, the first 10 s of contact): charging 1.27 -> 1.27, on mud 0.39 -> 0.36 (bonus +224% -> +251%).
+
+  Against mail the riders now finish what they start (the lance against a mailed swordsman with a heater: 82 s and 48% to 25 s and 100%): the trample (a blunt "bone" weapon of
+  800 cm3) used to bounce off mail by the light-weapon rule and now only bounces off plate, which is still wrong for a horse and is left for mounted combat. Lance against lance
+  shortens (33 -> 29 s): once the lances break the riders fight at sword reach, no longer at +0.4 m. MT-13's hashes are re-pinned (`8079067610618892121`, `17694732195683071764`).
+- The abstract charge (abstract-battles-v1 Notes, MT-12) is re-reconciled on the rebuilt wound tables: `charge_pm` 1,000 -> 700 (abstract first pass 1.50 -> 1.31 against the live 1.26).
+

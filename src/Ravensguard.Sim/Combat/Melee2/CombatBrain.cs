@@ -92,7 +92,7 @@ public static class CombatBrain
         {
             if (e.Team == f.Team || e.Act != FAct.Windup || e.Req.Kind != BlowKind.Melee) continue;
             if (e.Req.Target >= 0 && e.Req.Target != f.Id) continue;
-            if (w.DistMm(e, f) > e.ReachMm + K.ReachSlackMm + 600) continue;
+            if (w.DistMm(e, f) > w.ReachAgainst(e, f) + K.ReachSlackMm + 600) continue;
             int at = ImpactTick(e);
             if (at < tick || at - tick > K.ReactLeadTicks) continue;
             if (at < best) { best = at; foeNext = e; }
@@ -175,7 +175,14 @@ public static class CombatBrain
         {
             if (orders.HoldFire) { if (!f.Loaded && f.Act == FAct.Idle) c.Reload = true; return; }                   // P4-F: hold fire: nocked and waiting
             bool meleeFoe = !t.Ranged;
-            if (dist < K.ArcherMinMm && meleeFoe && dist > 2500 && f.Act is FAct.Idle or FAct.Reloading && !f.Loaded) { c.MoveX = -ux; c.MoveY = -uy; c.Sprint = dist < 8000; return; }
+            // an archer backs off and nocks as he goes (close-out item 3: he used to run without nocking, outpace the swordsman for ever and end the fight walked away);
+            // not a crossbowman, whose windlass needs him standing
+            if (dist < K.ArcherMinMm && meleeFoe && dist > 2500 && f.Act is FAct.Idle or FAct.Reloading && !f.Loaded && f.Launcher is { Holds: false })
+            {
+                c.MoveX = -ux; c.MoveY = -uy; c.Sprint = dist < 8000;
+                if (f.Act == FAct.Idle && f.Ammo > 0) c.Reload = true;
+                return;
+            }
             if (dist > K.ArcherMaxMm) { c.MoveX = ux; c.MoveY = uy; return; }
             if (!f.Loaded && f.Act == FAct.Idle) { c.Reload = true; return; }
             if (f.Loaded && f.Act is FAct.Idle or FAct.Block) c.Start = new AttackReq { Attack = 0, Target = t.Id, Part = -1, Gap = -1, Auto = true };
@@ -189,9 +196,12 @@ public static class CombatBrain
             return;
         }
 
-        int strikeD = f.ReachMm + K.ReachSlackMm - 100;
+        int strikeD = w.ReachAgainst(f, t) + K.ReachSlackMm - 100;
         bool polearm = f.Family == "polearms";
-        int hold = polearm ? f.ReachMm - K.PolearmHoldSlackMm : strikeD - 250;
+        // close-out item 1: past a longer weapon's point (parried or slipped), press inside its reach; a crowded polearm steps back to use it again
+        bool inside = tick <= f.InsideUntil && f.InsideOf == t.Id && !polearm;
+        bool crowded = polearm && K.CrowdedStepBack != 0 && dist < K.PolearmTooCloseMm;
+        int hold = polearm ? f.ReachMm - K.PolearmHoldSlackMm : inside ? Math.Min(strikeD - 250, K.InsideHoldMm) : strikeD - 250;
         bool exhausted = f.Stamina < K.AiGuardBelowX100;
 
         // feint against a guard: skill / 300 per swing
@@ -215,7 +225,7 @@ public static class CombatBrain
                 pat = (int)((long)pat * Math.Max(100, 1000 - st.AttackBiasPm) / 1000);
                 m.PatienceSet = tick + pat;
             }
-            bool go = opening ? Noise(w, f, 14, 1000) < K.AttackOnOpeningPm : !st.OpeningsOnly && tick >= m.PatienceSet;
+            bool go = opening ? Noise(w, f, 14, 1000) < K.AttackOnOpeningPm : !st.OpeningsOnly && tick >= m.PatienceSet && !crowded;
             if (go && !(t.Act == FAct.Down && st.NoLethal))
             {
                 var req = new AttackReq { Target = t.Id, Part = PickPart(w, f, t, tick), Gap = -1, Auto = true };
@@ -238,6 +248,7 @@ public static class CombatBrain
         {
             c.MoveX = ux; c.MoveY = uy;
             c.Sprint = dist > strikeD + 3000 && f.Stamina > 4000
+                || inside && f.Stamina > 2000
                 || K.CloseInSprint != 0 && t.ReachMm > f.ReachMm + 500 && t.Act is FAct.Recover or FAct.Stagger && f.Stamina > 3000
                 || st.ChargeWithinM > 0 && dist <= st.ChargeWithinM * 1000L && f.Stamina > 3000;           // P4-F: the aggressive charge from 6 m
             StanceBias.ShieldToArchers(w, f, dist);                                                          // P4-F: defensive: the shield toward archers while closing

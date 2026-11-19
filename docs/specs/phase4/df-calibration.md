@@ -32,3 +32,10 @@ The Dwarf Fortress wiki can't be fetched from the build environment (the page fe
 - rSY is kept in the edged formula (the decision above); the harness shows it matters little against cloth and decides the ranking against mail.
 - The metal ranking golden holds: outer-piece cut rate silver 299 < copper 329 < bronze 333 < iron 341 < steel 674 permille over a seeded spread of sword slashes against leather, bronze mail and iron mail (`MetalRanking` test; `tools/Ravensguard.Calibrate` prints it).
 - Sharpness enters as the material's max edge S (metal 1000 pm, wood and bone 100); no blade material (obsidian, the 10x case) exists in content yet.
+
+## Notes (Phase 4 close-out)
+Two departures from the DF rules as we read them, both found by the weapon x armour matrix (`docs/calibration/weapon-armour-matrix.md`): the light-weapon deflection is tested
+only against a rigid shell (DF tests every layer, so a wooden club bounced off a linen shirt), and an edge or point that fails a rigid shell skids off it by the strain rule (DF
+tests it blunt at its own contact area, so a dagger's point crushed a breastplate like a war hammer's face). DF's momentum formula, which all but ignores the weapon's mass, is kept;
+the maul's velocity multiplier (1.7) carries its weight instead.
+

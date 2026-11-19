@@ -196,3 +196,18 @@ Decisions taken while building (each is content-tunable unless noted):
 - Mail turns 93 to 100% of edged blows into blunt ones; rigid plate soaks **98.1 to 99.4%** of a stopped blow.
 - Metal ranking, outer-piece cut rate: silver 299 < copper 329 < bronze 333 < iron 341 < steel 674 permille.
 - Still off target, and not the resolver's: **defended 8 to 20%** (40-60% wanted: the spike's AI, P4-C 4.2/4.7); **fatal 22 to 53%** and **KO'd who bleed out 27 to 71%** untreated (15-35% and <= 35% wanted: there is no bandaging until P4-B; arteries are cut about 0.4 to 0.9 times per duel). The mace does badly against a sword (14 to 23% wins): it bruises where the sword cuts, and its 0.7 s wind-up is long; re-check with the P4-C timeline before touching the resolver.
+
+## Notes (Phase 4 close-out, items 2 and 4)
+- **Three physics fixes the weapon x armour matrix found** (`docs/calibration/weapon-armour-matrix.md`): the light-weapon deflection applies only to a rigid shell
+  (`ArmourV2.Rigid`: metal, bone or wood, neither woven nor elastic), so a club no longer bounces off a shirt or a hauberk (RS-11's club off plate holds); an edge or point that fails a
+  rigid shell's cut need skids off it by the strain rule instead of meeting the crush test at its own small area (a dagger no longer crushes a breastplate like a hammer); a piece
+  with `side` `front` (the breastplate) is not met by a blow from behind, nor one with `back` (the backplate, coverage now 0.9 / 0.3 of the trunk) by a blow from the front.
+  Table 4.4's row "spear against a steel breastplate over a gambeson" changes: the point fails the plate's cut need (168) and skids, next to nothing goes on (RS-8b updated; the
+  other rows are unchanged). RS-24's 100,000-blow table hash is re-pinned (`12489677114851335651`).
+- **Wear (4.3), close-out item 4.** A cut keeps its wear (cloth 30, leather 20, mail 10, plate 5 pm). A blunt blow on a rigid shell dents it `dent_full_pm x min(M / need, 2)` (150 at
+  the crush need; `combat_calibration`), *buckled* at the need, *dented* from 40 pm; a failed edge only scuffs it (3). Mail cut through, or struck blunt at `burst_ratio_pm` (2,000)
+  of its crush need, bursts its rings at the struck zone (`WornV2.BreachMask`: the piece covers `breach_coverage_pm` 300 less there). A rigid shell dented below `strap_below_pm` (300)
+  breaks a strap (`WornV2.Slipped`: coverage x `slip_coverage_pm` 500). Protection falls with condition through the existing `Cm`. The trace carries it (`LayerStep.Harm`, `Zone`;
+  the result hash mixes the harm when there is one); `ArmourWear.Apply` applies it (the fight, the matrix), `ClothingArmour.ApplyWear` writes the condition into a clothing book.
+- No double, no new RNG draw: every rule is a threshold on the blow's momentum and the piece's numbers.
+

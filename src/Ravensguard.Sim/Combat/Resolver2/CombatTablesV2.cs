@@ -76,6 +76,10 @@ public sealed class ArmourV2
     /// <summary>Condition lost when cut and when crushed (resolver-v2 4.3: cloth 30 and 10, mail 10 and 5, plate 5 and 3, leather between).</summary>
     public int WearCutPm { get; init; }
     public int WearCrushPm { get; init; }
+    /// <summary>A rigid shell (metal, bone or wood, neither woven nor elastic: plate, lamellar, a helm): blunt blows dent it, a failed edge skids off it (close-out items 2 and 4).</summary>
+    public bool Rigid { get; init; }
+    /// <summary>The side a rigid shell faces (1 front, 2 back, 0 wraps the body): a blow from the other side does not meet it.</summary>
+    public int Side { get; init; }
     /// <summary>Coverage permille per plan index, per base part index.</summary>
     public required int[][] CoverageByPlan { get; init; }
     /// <summary>Bits over the plan's named gaps that the piece leaves open, per plan index.</summary>
@@ -98,6 +102,7 @@ public sealed class CalibrationV2
     public int CrackedPm = 1000, BrokenPm = 2000, DisplacedPm = 4000, ShatteredPm = 8000, BrainCutMilli = 40_000;
     public int GuardedPm = 600, GapPm = 350, FlankPm = 1250, RearPm = 1500, HitMinBp = 200, HitMaxBp = 9800, RedirectPm = 500, MisfitCoveragePm = 250;
     public int WeaponBlockBase = 110, WeaponBlockSkillDivisor = 2, BracedNeighbourPm = 100, WeaponNotchPmPer50 = 20;
+    public int DentFullPm = 150, DentNoticePm = 40, BurstRatioPm = 2000, BreachCoveragePm = 300, StrapBelowPm = 300, SlipCoveragePm = 500;
     public int BurnPmPerSecond = 75, BoneBurnDivisor = 3;
     public long MaxMomentumMilli = 2_000_000;
 
@@ -114,6 +119,8 @@ public sealed class CalibrationV2
         c.GuardedPm = d.GuardedPm; c.GapPm = d.GapPm; c.FlankPm = d.FlankPm; c.RearPm = d.RearPm; c.HitMinBp = d.HitMinBp; c.HitMaxBp = d.HitMaxBp;
         c.RedirectPm = d.RedirectPm; c.MisfitCoveragePm = d.MisfitCoveragePm;
         c.WeaponBlockBase = d.WeaponBlockBase; c.WeaponBlockSkillDivisor = Math.Max(1, d.WeaponBlockSkillDivisor); c.BracedNeighbourPm = d.BracedNeighbourPm;
+        c.DentFullPm = d.DentFullPm; c.DentNoticePm = d.DentNoticePm; c.BurstRatioPm = Math.Max(1, d.BurstRatioPm); c.BreachCoveragePm = d.BreachCoveragePm;
+        c.StrapBelowPm = d.StrapBelowPm; c.SlipCoveragePm = d.SlipCoveragePm;
         c.WeaponNotchPmPer50 = d.WeaponNotchPmPer50; c.BurnPmPerSecond = d.BurnPmPerSecond; c.BoneBurnDivisor = Math.Max(1, d.BoneBurnDivisor);
         c.MaxMomentumMilli = d.MaxMomentumMilli;
         return c;
@@ -236,6 +243,7 @@ public sealed class CombatTablesV2
             ShearYield = sy, ShearFracture = sf, ShearStrain = s.Elastic ? 50_000 : m.ShearStrain,
             ImpactYield = m.ImpactYield, ImpactFracture = m.ImpactFracture, ImpactStrain = s.Elastic ? 50_000 : m.ImpactStrain,
             DensityKgM3 = m.DensityKgM3, Elastic = s.Elastic, BluntAbsorbPm = s.BluntAbsorbPm, WearCutPm = wearCut, WearCrushPm = wearCrush,
+            Rigid = !s.Elastic && !s.Woven && m.Category is "metal" or "bone" or "wood", Side = s.Side switch { "front" => 1, "back" => 2, _ => 0 },
             CoverageByPlan = cover, GapMaskByPlan = gaps,
         };
     }

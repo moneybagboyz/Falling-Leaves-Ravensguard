@@ -27,12 +27,12 @@ public class FightTimelineTests(FightFixture fx)
     [Fact]
     public void ML1_TimingTableInTicks_AtSkill0_AndSkill50()
     {
-        // wind-up / recover at skill 0 (melee 3.1); the mace (0.65 s) and spear (0.50 / 0.60 s) are the P4-C calibration (Notes), the rest the spec's table
+        // wind-up / recover at skill 0 (melee 3.1); the mace (0.65 s) is the P4-C calibration (Notes), the spear back at plan 4A.3's 0.40 / 0.50 s (close-out item 1), the rest the spec's table
         var expect = new Dictionary<string, (int W, int R, int S)>
         {
             ["dagger"] = (6, 6, 2), ["arming_sword"] = (9, 8, 2), ["longsword"] = (10, 9, 2), ["falchion"] = (10, 9, 2), ["hand_axe"] = (9, 9, 2), ["axe"] = (12, 12, 3),
             ["great_axe"] = (17, 16, 3), ["mace"] = (13, 13, 3), ["flail"] = (13, 14, 3), ["war_hammer"] = (12, 12, 3), ["maul"] = (18, 18, 3), ["club"] = (11, 10, 2),
-            ["quarterstaff"] = (8, 8, 2), ["spear"] = (10, 12, 2), ["pike"] = (14, 16, 3), ["javelin"] = (7, 10, 2),
+            ["quarterstaff"] = (8, 8, 2), ["spear"] = (8, 10, 2), ["pike"] = (14, 16, 3), ["javelin"] = (7, 10, 2),
         };
         var w = fx.World();
         foreach (var (shape, e) in expect)

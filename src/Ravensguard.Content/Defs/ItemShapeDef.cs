@@ -109,6 +109,9 @@ public sealed record ArmourShapeDef : ContentDef
     public bool Visor { get; init; }
     /// <summary>Mounted combat 3.1: the body plan the piece is made for (<c>horse</c> for barding); empty for any plan. Coverage applies only to that plan.</summary>
     public string Body { get; init; } = "";
+    /// <summary>Close-out item 2 (the weapon x armour matrix): the side of the body a rigid shell faces, <c>front</c> (a breastplate) or <c>back</c> (a backplate); a blow from
+    /// the other side does not meet it (from the flank both). Empty: the piece wraps the body.</summary>
+    public string Side { get; init; } = "";
 }
 
 /// <summary>A shield (melee-and-ranged 3.2, resolver-v2 4.8): a separate slot, it blocks blows up to its capacity and wears by momentum over its durability.</summary>
@@ -172,6 +175,18 @@ public sealed record CombatCalibrationDef : ContentDef
     public int BracedNeighbourPm { get; init; } = 100;
     /// <summary>A held weapon that blocks loses this condition per 50 units absorbed.</summary>
     public int WeaponNotchPmPer50 { get; init; } = 20;
+    /// <summary>Close-out item 4, armour damage: a blunt blow equal to a rigid piece's crush need dents it this much condition (permille), in proportion below and up to twice above;
+    /// a failed edge or point only scuffs it (the crush wear).</summary>
+    public int DentFullPm { get; init; } = 150;
+    /// <summary>A dent this large or larger is told ("the breastplate dents").</summary>
+    public int DentNoticePm { get; init; } = 40;
+    /// <summary>A blunt blow this many permille of mail's crush need bursts its rings at that zone (a cut through mail always opens it).</summary>
+    public int BurstRatioPm { get; init; } = 2000;
+    /// <summary>Coverage a burst or cut-open zone of mail loses, permille of the piece's coverage there.</summary>
+    public int BreachCoveragePm { get; init; } = 300;
+    /// <summary>A rigid piece battered below this condition breaks a strap and hangs loose: its coverage everywhere falls to <see cref="SlipCoveragePm"/>.</summary>
+    public int StrapBelowPm { get; init; } = 300;
+    public int SlipCoveragePm { get; init; } = 500;
     /// <summary>Burning (draugr): a part burns this permille of its total layer depth per sim-second; bone at a third of the rate.</summary>
     public int BurnPmPerSecond { get; init; } = 75;
     public int BoneBurnDivisor { get; init; } = 3;

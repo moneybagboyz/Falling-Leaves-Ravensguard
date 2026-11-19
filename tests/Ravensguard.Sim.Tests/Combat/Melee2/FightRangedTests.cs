@@ -72,11 +72,14 @@ public class FightRangedTests(FightFixture fx)
         Assert.Equal(20, w.Tick - t0 + 1);                                         // nocking takes 1.0 s
         Assert.True(bow.Loaded); Assert.Equal(23, bow.Ammo);
         var xb = Archer(w, "crossbow", "quarrel", 20, x: 3000);
+        Assert.True(xb.Loaded); Assert.Equal(19, xb.Ammo);                         // a crossbow comes into a fight spanned (close-out item 3)
+        xb.Loaded = false; xb.Ammo = 20;                                           // shot: span it again
         xb.Cmd.Reload = true; w.Step();
         t0 = w.Tick;
         while (xb.Act == FAct.Reloading) w.Step();
         Assert.Equal(200, w.Tick - t0 + 1);                                        // spanning takes 10.0 s
         var xb2 = Archer(w, "crossbow", "quarrel", 20, x: 6000);
+        xb2.Loaded = false; xb2.Ammo = 20;
         xb2.Cmd.Reload = true; w.Step();
         for (int i = 0; i < 50; i++) w.Step();
         xb2.Cmd.MoveX = 1024; xb2.Cmd.Sprint = true; w.Step();                     // moving at more than 1.5 m/s cancels the spanning

@@ -176,3 +176,12 @@ Gates: AB-1 (stale-table hash; three cells rebuilt byte-equal to the shipped row
 - **Budgets** (warm, best of three, on the shared 4-core machine): 100 v 100 about 5 ms (spec 3: the small battle runs more steps, one a second), 200 v 200 about 5 to 6 ms (spec 8: met), 2,000 v 2,000 about 125 ms (spec 45). The cost is the books (three `BodyState` derivations per hit inside `WoundBook.Apply`) and the per-step lists. The normal test allows eight times the budget; the Soak test holds the spec's and fails on the 100 and 2,000 sizes today. Templates 0.9 MB against 300 KB (above).
 
 Left for later: the AB-3 gaps above; the performance budgets; the game does not yet demote or promote a live fight at the bubble's edge (the code and AB-8 are there); prisoners taken in an abstract battle are marked captured in the report and the commands but do not enter the `CaptiveBook` (ransom rows wait for the war-marker skirmishes of Phase 5; `BattleRansom` is the ledger rule they will use); dead soldiers' items are not yet dropped as corpse loot (the `Loot` command names who and to whom); there is no in-game Chronicle (H) screen to list reports, so a report reaches the player as a rumour in the Journal and the report viewer is shown by `--battle-demo`; beasts fight as men of their size (the tables are the human plan's); the map's "report" markers.
+
+## Notes (Phase 4 close-out: the weapon and armour changes)
+- The wound tables were rebuilt (`-- --abstract tables`, hash `3972AD104E0FFE93`) for the close-out's resolver and content changes (rigid-only deflection, failed edges skid off
+  plate, the backplate's side, the maul's velocity, iron bodkins and quarrels, armour shapes' `side`) and the tactical reference refought (the spear's timings and counter, the
+  archers who nock as they back off, crossbows carried spanned). AB-3 still counts **17** comparisons outside the gate, the ratchet unchanged; which ones moved (B is now the worst
+  scenario: the abstract men-at-arms win 73% against the live 58.5%) is in `docs/calibration/abstract-vs-tactical.md`.
+- MT-12: on the rebuilt tables `charge_pm` 1,000 gave an abstract first pass of 1.50 against the live 1.26 (outside the test's 15%); it is 700 now (1.31; the C# default follows).
+  AB-7's pinned battle hash is re-pinned for it. A full refit (`-- --abstract fit`) was started and not adopted: it moved a dozen constants for a few points of loss.
+

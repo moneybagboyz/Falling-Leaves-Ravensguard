@@ -48,7 +48,8 @@ public static class MountedBrain
                     // strike so that the blow lands where the horse will be when the wind-up ends (its velocity over the wind-up), inside the reach
                     long px = r.X + (long)m.VX * wind / 20, py = r.Y + (long)m.VY * wind / 20;
                     long dAt = FightMath.Len(t.X - px, t.Y - py);
-                    if (dAt <= r.ReachMm + w.K.ReachSlackMm - 300 && dist <= r.ReachMm + w.K.ReachSlackMm + (long)m.Speed * (wind + 1) / 20)
+                    int reach = w.ReachAgainst(r, t);
+                    if (dAt <= reach + w.K.ReachSlackMm - 300 && dist <= reach + w.K.ReachSlackMm + (long)m.Speed * (wind + 1) / 20)
                     {
                         int body = t.Plan.IndexOf(t.Plan.Id == "horse" ? "chest" : "upper_body");
                         int part = lance && body >= 0 ? body : CombatBrain.PickPart(w, r, t, tick);      // a couched lance is aimed at the body

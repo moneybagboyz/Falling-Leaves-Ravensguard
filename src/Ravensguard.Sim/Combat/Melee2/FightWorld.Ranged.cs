@@ -345,6 +345,7 @@ public sealed partial class FightWorld
         }
         else Resolver.ResolveImpact(s, key, _r);
         OnBlow?.Invoke(shooter, t, _r, s);
+        WearArmour(shooter, t);
         if (_r.Blocked)
         {
             WearShield(t, _r.Block.ShieldLossPm);
@@ -358,6 +359,7 @@ public sealed partial class FightWorld
             Emit(FightEventKind.ProjectileHit, shooter.Id, t.Id, part, (int)(m / 1000), p.Thrown ? 1 : 0);
             Land(shooter, t, facing, _r);
         }
+        TellArmourHarm();
         Spent(p, t.X, t.Y, hit: true);
     }
 }
