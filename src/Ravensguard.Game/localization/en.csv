@@ -2444,9 +2444,9 @@ MC_YIELD_TITLE,Yield?
 MC_YIELD_BODY,"Throw down your weapon and ask for quarter. Bandits rob the yielding, soldiers take them prisoner; beasts and the dead do not listen."
 MC_YIELD,Yield
 wm_button,Watch {0}
-wm_chip,"Stance: {0} {1}"
+wm_chip,{0} {1}
 wm_chip_tip,"Flees at {0} blood loss or morale under {1}. Click for the stance panel."
-wm_odds,"Odds {0} ({1}) - allies {2}, enemies {3}"
+wm_odds,"Odds {0}, {1}: {2} with you, {3} against"
 wm_odds_win,probably win
 wm_odds_even,even
 wm_odds_lose,probably lose

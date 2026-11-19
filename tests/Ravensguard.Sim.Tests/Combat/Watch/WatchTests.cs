@@ -532,6 +532,43 @@ public class WatchTests(FightFixture fx, ITestOutputHelper output)
     }
 
     [Fact]
+    public void AWatchedRoadFight_IsRecordedAndReplaysToTheSameHashes()
+    {
+        static Ravensguard.Sim.Live.LiveWorld Field()
+        {
+            var g = new Ravensguard.Sim.World.LevelGrid(40, 20, 0, 1);
+            g.FillRect(0, 0, 39, 19, 0, true);
+            return new Ravensguard.Sim.Live.LiveWorld(g, new Ravensguard.Sim.Lighting.LightGrid(g), new Ravensguard.Sim.World.Cell3(5, 5, 0), GameTime.FromCalendar(1, Season.Spring, 8, 12));
+        }
+        var def = fx.Db.Get<EncounterDef>("bandit_ambush_small");
+        var ev = new EncounterEvent(500_000, def.Id, def.Kind, 0, 0, 0, 0, 1, [101, 102, 103], def.Bark);
+        var setup = FightSetup.Encounter(fx.C, def, ev, Kit("Aldwin", 0, 0, skill: 50, shield: "heater") with { Person = 7 }, [Kit("Brand", 0, 0, skill: 40) with { Person = 8 }], 5);
+        var live = Field();
+        var rec = new Ravensguard.Sim.Diagnostics.SessionRecorder(live);
+        rec.StartFight(setup.Start(fx.C, null), 0);
+        for (int t = 0; t < 700; t++)
+        {
+            if (t == 20) rec.FightInput(new FightInput(FightInputKind.Watch, 1, 1));
+            if (t == 60) rec.FightInput(S(StancePreset.Protect).AsInput(1));
+            if (t == 300) rec.FightInput(new FightInput(FightInputKind.Watch, 0, 1));
+            if (t == 301) rec.FightInput(new FightInput(FightInputKind.AttackDown, -1, -1, -1));
+            if (t == 312) rec.FightInput(new FightInput(FightInputKind.AttackUp));
+            if (t == 400) rec.FightInput(new FightInput(FightInputKind.Watch, 1, 1));
+            rec.Step();
+        }
+        Assert.True(live.Fight!.Watch!.EverOn);
+        Assert.Equal(FightKind.Ambush, live.Fight.SetupKind);
+        var (trace, csv) = rec.Export();
+        var again = Field();
+        again.FightFactory = id => FightRecord.FromBytes(rec.FightStarts[id]).Restore(fx.C);
+        var res = Ravensguard.Sim.Diagnostics.ReplayRunner.Run(again, Ravensguard.Sim.Diagnostics.CommandLog.FromBytes(trace), Ravensguard.Sim.Diagnostics.StateHashTrail.FromCsv(csv));
+        Assert.True(res.Matched, res.Describe());
+        Assert.Equal(live.Fight.Hash(), again.Fight!.Hash());
+        Assert.Equal(live.Fight.Watch.Hash(), again.Fight.Watch!.Hash());
+        Assert.True(again.Fight.Rules.TreatInFight);
+    }
+
+    [Fact]
     public void StancesAreTheContentRows_AndShiftF6CyclesThem()
     {
         var b = S(StancePreset.Balanced);

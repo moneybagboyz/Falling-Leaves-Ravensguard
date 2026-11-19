@@ -133,7 +133,7 @@ public partial class FightView : Node2D
         bool on = !Watching;
         Send(new FightInput(FightInputKind.Watch, on ? 1 : 0, TakeBackOnInput ? 1 : 0));
         if (!on) _lastMoveDir = -1;                                  // the held keys are sent again: the player's input applies at once
-        if (on && !_everWatched) { _everWatched = true; LogPanel.Filter.Flags |= LogFilterFlags.Misses | LogFilterFlags.Treatment; }   // the log shows all on first watch (4.5)
+        if (on && !_everWatched) { _everWatched = true; LogPanel.Filter.Flags = LogFilterFlags.Misses | LogFilterFlags.Treatment; }   // the log shows all on first watch (4.5)
     }
 
     /// <summary>Shift+F6: the next preset.</summary>
@@ -267,6 +267,8 @@ public partial class FightView : Node2D
             if (Actions.Pressed(e, "combatstance.combat_log")) { LogPanel.Toggle(); GetViewport().SetInputAsHandled(); return; }
             if (Actions.Pressed(e, "combatstance.stance_next") && !_calling) { NextStance(); GetViewport().SetInputAsHandled(); return; }      // P4-F: Shift+F6 (checked before F6)
             if (Actions.Pressed(e, "combatstance.watch_toggle") && !_calling) { ToggleWatch(); GetViewport().SetInputAsHandled(); return; }   // P4-F: F6
+            for (int k = 1; k <= 4; k++)
+                if (Actions.Pressed(e, "combatstance.formation_" + k) && !_calling && HeroF != null) { Send(new FightInput(FightInputKind.Formation, (int)SquadTactics.OfKey(k))); GetViewport().SetInputAsHandled(); return; }   // P4-F: F1-F4, the side's formation (4.4)
         }
         if (e is InputEventMouse mouse && (LogPanel.Covers(mouse.Position) || Hud.Covers(mouse.Position))) return;       // clicks on the open log panel or the watch HUD are theirs: no swings through them
         var h = HeroF;
@@ -504,8 +506,8 @@ public partial class FightView : Node2D
             if (layer.Length > 0 && !l.Contains(layer)) l.Add(layer);
         }
         if (f.Shield != null) l.Add("shield");
-        bool pole = f.Family == "polearms";
-        if (f.Family is "blades" or "axes" or "hafted" or "improvised") l.Add("sword");
+        bool pole = f.Family == "polearms" || f.Weapon.Shape.Id is "practice_spear" or "practice_staff";      // P4-F: the yard's rack draws as the real thing
+        if (f.Family is "blades" or "axes" or "hafted" or "improvised" || f.Weapon.Shape.Id == "practice_sword") l.Add("sword");
         if (pole) l.Add("spear");
         string outfit = pole ? "spearman" : l.Contains("plate") ? "knight" : l.Contains("mail") ? "soldier" : l.Contains("gambeson") ? "hero" : "peasant";
         return (l, pole ? "pole" : "blade", outfit);

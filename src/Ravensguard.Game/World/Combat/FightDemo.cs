@@ -20,7 +20,7 @@ public partial class FightDemo : Node2D
     static FightContent? _content;
     FightView _view = null!;
     FightWorld _w = null!;
-    bool _skirmish; ulong _seed = 7;
+    bool _skirmish, _practice; ulong _seed = 7;
     string? _shotOut, _shotWhat;
 
     public static FightContent Content()
@@ -39,6 +39,7 @@ public partial class FightDemo : Node2D
         int k = Array.IndexOf(args, "--fight-demo");
         _skirmish = k >= 0 && k + 1 < args.Length && args[k + 1] == "skirmish";
         _mounted = k >= 0 && k + 1 < args.Length && args[k + 1] == "mounted";             // [mounted-combat] FightDemo.Mounted.cs
+        _practice = k >= 0 && k + 1 < args.Length && args[k + 1] == "practice";           // P4-F: a yard bout on the real fight
         _seed = ulong.TryParse(Arg("--seed", "7"), out var s) ? s : 7;
         _shotOut = Arg("--shot-out", ""); if (_shotOut.Length == 0) _shotOut = null;
         _shotWhat = Arg("--shot-what", "windup");
@@ -51,6 +52,12 @@ public partial class FightDemo : Node2D
     {
         var c = Content();
         if (_mounted) return BuildMounted(c);
+        if (_practice)
+        {
+            var hero = new FighterKit { Name = "Aldric", Weapon = new WeaponInstance("arming_sword", "steel"), Skill = 35, Worn = [new("shirt", "linen"), new("tunic", "wool")], Person = 7 };
+            var trainer = new FighterKit { Name = "Sergeant Hale", Weapon = new WeaponInstance("spear", "iron"), Skill = 45, Worn = [new("shirt", "linen"), new("gambeson", "linen")] };
+            return FightSetup.Practice(c, hero, trainer, _seed, 8 * 3600, 1).Start(c, null);
+        }
         if (_skirmish)
         {
             var sk = FightCalibration.Skirmish(c, _seed, 10);

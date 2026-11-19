@@ -47,7 +47,7 @@ public sealed record FightSetup(FightKind Kind, IReadOnlyList<FighterKit> Kits, 
     /// <summary>The fight in the live bubble, built and not stepped: fighters in kit order (the hero, if any, driven by the player's inputs), the kind's rules, sides, terrain.</summary>
     public FightWorld Build(FightContent content, WoundLedger? ledger)
     {
-        var w = new FightWorld(content, Seed, FightId, GameSec, ledger) { Rules = FightRules.For(Kind) };
+        var w = new FightWorld(content, Seed, FightId, GameSec, ledger) { Rules = FightRules.For(Kind), SetupKind = Kind };
         for (int i = 0; i < Kits.Count; i++)
         {
             var k = Kits[i];

@@ -43,31 +43,33 @@ public partial class WatchHud : Control
         MouseFilter = MouseFilterEnum.Ignore;
         // the top-right box: Watch, the stance chip, the odds, the bars
         _top = new PanelContainer { MouseFilter = MouseFilterEnum.Stop };
-        _top.SetAnchorsAndOffsetsPreset(LayoutPreset.TopRight);
-        _top.OffsetLeft = -300; _top.OffsetTop = 8; _top.OffsetRight = -8;
+        _top.SetAnchorsAndOffsetsPreset(LayoutPreset.BottomRight);              // bottom right: the help lines run along the top, the log feed along the bottom left
+        _top.OffsetLeft = -328; _top.OffsetTop = -132; _top.OffsetRight = -8; _top.OffsetBottom = -8;
+        _top.GrowHorizontal = GrowDirection.Begin; _top.GrowVertical = GrowDirection.Begin;
+        _top.AddThemeStyleboxOverride("panel", Box(0.72f, false));
         AddChild(_top);
         var v = new VBoxContainer(); v.AddThemeConstantOverride("separation", 4); _top.AddChild(v);
         var row = new HBoxContainer(); row.AddThemeConstantOverride("separation", 6); v.AddChild(row);
         _watch = new Button { CustomMinimumSize = new Vector2(132, 30), FocusMode = FocusModeEnum.None, ToggleMode = true };
         _watch.Pressed += () => _view.ToggleWatch();
         row.AddChild(_watch);
-        _chip = new Button { CustomMinimumSize = new Vector2(140, 30), FocusMode = FocusModeEnum.None, SizeFlagsHorizontal = SizeFlags.ExpandFill, ClipText = true };
+        _chip = new Button { CustomMinimumSize = new Vector2(170, 30), FocusMode = FocusModeEnum.None, SizeFlagsHorizontal = SizeFlags.ExpandFill, ClipText = true };
         _chip.Pressed += OpenStance;
         row.AddChild(_chip);
-        _odds = new Label { ThemeTypeVariation = "HintLabel" }; v.AddChild(_odds);
-        _bars = new Label(); _bars.AddThemeFontSizeOverride("font_size", 14); v.AddChild(_bars);
+        _odds = new Label { AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(308, 0) }; _odds.AddThemeFontSizeOverride("font_size", 14); v.AddChild(_odds);
+        _bars = new Label { AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(308, 0) }; _bars.AddThemeFontSizeOverride("font_size", 14); v.AddChild(_bars);
         // the banner and the why line, top centre
         var bannerBox = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
         bannerBox.SetAnchorsAndOffsetsPreset(LayoutPreset.CenterTop);
-        bannerBox.OffsetLeft = -250; bannerBox.OffsetRight = 250; bannerBox.OffsetTop = 64;
+        bannerBox.OffsetLeft = -250; bannerBox.OffsetRight = 250; bannerBox.OffsetTop = 84;
         AddChild(bannerBox);
         _banner = new Label { HorizontalAlignment = HorizontalAlignment.Center, AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(500, 0) };
         _banner.AddThemeColorOverride("font_color", new Color(1f, 0.85f, 0.35f)); _banner.AddThemeFontSizeOverride("font_size", 16);
         _banner.AddThemeConstantOverride("outline_size", 4); _banner.AddThemeColorOverride("font_outline_color", Colors.Black);
         bannerBox.AddChild(_banner);
-        _why = new Label { HorizontalAlignment = HorizontalAlignment.Center, CustomMinimumSize = new Vector2(500, 0) };
-        _why.AddThemeFontSizeOverride("font_size", 15); _why.AddThemeConstantOverride("outline_size", 4); _why.AddThemeColorOverride("font_outline_color", Colors.Black);
-        bannerBox.AddChild(_why);
+        _why = new Label { AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(308, 0) };
+        _why.AddThemeFontSizeOverride("font_size", 15); _why.AddThemeColorOverride("font_color", new Color(1f, 0.85f, 0.35f));
+        v.AddChild(_why);                                                       // the "why" line: what the brain is doing for you
         _toast = new Label { HorizontalAlignment = HorizontalAlignment.Center, CustomMinimumSize = new Vector2(500, 0), AutowrapMode = TextServer.AutowrapMode.WordSmart };
         _toast.AddThemeColorOverride("font_color", new Color(1f, 0.6f, 0.5f)); _toast.AddThemeFontSizeOverride("font_size", 15);
         _toast.AddThemeConstantOverride("outline_size", 4); _toast.AddThemeColorOverride("font_outline_color", Colors.Black);
@@ -82,6 +84,7 @@ public partial class WatchHud : Control
     public override void _Process(double delta)
     {
         if (_toastLeft > 0) { _toastLeft -= delta; if (_toastLeft <= 0) _toast.Text = ""; }
+        _dim.Visible = ModalOpen;
         Refresh();
     }
 
@@ -102,7 +105,7 @@ public partial class WatchHud : Control
         {
             int pain = (int)Math.Min(100, h.Book.PainX100 * 100L / Math.Max(1, h.Book.KnockoutPainX100));
             int collapse = h.Book.SecondsToCollapse();
-            _bars.Text = L.F("wm_bars", Pct(h.Book.LossPm), pain) + (collapse >= 0 && collapse < 600 && h.Book.CurrentRateMilli() > 0 ? "  " + L.F("wm_collapse", collapse) : "");
+            _bars.Text = L.F("wm_bars", Pct(h.Book.LossPm), pain) + (collapse >= 0 && collapse < 120 ? "  " + L.F("wm_collapse", collapse) : "");
             _bars.AddThemeColorOverride("font_color", h.Book.LossPm >= 200 || pain >= 70 ? new Color(1f, 0.45f, 0.4f) : Colors.White);
         }
         _banner.Text = on ? (ws!.TakeBackOnInput ? L.F("wm_banner_input", InputBootstrap.Hint("combatstance.watch_toggle")) : L.F("wm_banner", InputBootstrap.Hint("combatstance.watch_toggle"))) : "";
@@ -129,9 +132,20 @@ public partial class WatchHud : Control
 
     // ------------------------------------------------------------------ the danger prompt (4.5)
 
+    /// <summary>The HUD's panel look (the fight's canvas layer has no theme of its own).</summary>
+    static StyleBoxFlat Box(float alpha, bool rim)
+    {
+        var b = new StyleBoxFlat { BgColor = new Color(PixelTheme.Fill, alpha), BorderColor = PixelTheme.Rim, ContentMarginLeft = 10, ContentMarginRight = 10, ContentMarginTop = 6, ContentMarginBottom = 6 };
+        b.SetBorderWidthAll(rim ? 2 : 1);
+        return b;
+    }
+
+    ColorRect _dim = null!;
+
     void BuildPrompt()
     {
         _prompt = new PanelContainer { Visible = false, MouseFilter = MouseFilterEnum.Stop };
+        _prompt.AddThemeStyleboxOverride("panel", Box(1f, true));
         _prompt.SetAnchorsAndOffsetsPreset(LayoutPreset.Center);
         _prompt.OffsetLeft = -220; _prompt.OffsetRight = 220; _prompt.OffsetTop = -70; _prompt.OffsetBottom = 70;
         AddChild(_prompt);
@@ -162,7 +176,11 @@ public partial class WatchHud : Control
 
     void BuildStancePanel()
     {
+        _dim = new ColorRect { Color = new Color(0, 0, 0, 0.55f), MouseFilter = MouseFilterEnum.Stop, Visible = false };
+        _dim.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        AddChild(_dim);
         _stancePanel = new PanelContainer { Visible = false, MouseFilter = MouseFilterEnum.Stop };
+        _stancePanel.AddThemeStyleboxOverride("panel", Box(1f, true));
         _stancePanel.SetAnchorsAndOffsetsPreset(LayoutPreset.Center);
         _stancePanel.OffsetLeft = -300; _stancePanel.OffsetRight = 300; _stancePanel.OffsetTop = -215; _stancePanel.OffsetBottom = 215;
         AddChild(_stancePanel);

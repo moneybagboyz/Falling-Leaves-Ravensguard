@@ -15,6 +15,8 @@ public sealed partial class FightWorld
     public WatchState? Watch { get; private set; }
     /// <summary>Rules a setup gives the fight (practice to three clean hits, a tournament's yield at pain knock-out, treating in the fight).</summary>
     public FightRules Rules { get; set; } = FightRules.Plain;
+    /// <summary>The kind of the setup that built the fight (null: a harness fight); a record captured without a kind keeps this one, so a replay rebuilds the same rules.</summary>
+    public FightKind? SetupKind { get; set; }
     /// <summary>This fighter is always in the 20 Hz group of the AI (the hero, watched or not: set by the setup, the same for a watched hero and a plain NPC in its place).</summary>
     public int LodFighter = -1;
     /// <summary>Test hook (WM-3): every random draw the combat brain makes, as (fighter, stream). Null in play.</summary>

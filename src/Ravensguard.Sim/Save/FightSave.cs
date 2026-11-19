@@ -66,6 +66,7 @@ public sealed class FightRecord
 
     public static FightRecord Capture(FightWorld w, string kind = "", string cause = "")
     {
+        if (kind.Length == 0 && w.SetupKind is { } sk) kind = FightSetup.NameOf(sk);    // P4-F: the setup's kind, so the rules come back (the session recorder captures without one)
         var r = new FightRecord { Seed = w.Seed, FightId = w.FightId, GameSec0 = w.GameSec0, Tick = w.Tick, UsesLedger = w.Ledger != null, Kind = kind, Cause = cause };
         r.Fighters = [.. w.Fighters.Select(f => Row(w, f))];
         r.Projectiles = [.. w.Projectiles.Select(p => new ProjectileRow
@@ -154,7 +155,7 @@ public sealed class FightRecord
     {
         var w = new FightWorld(content, Seed, FightId, GameSec0, UsesLedger ? ledger : null);
         w.RestoreTick(Tick);
-        if (FightSetup.KindOf(Kind) is { } fk) w.Rules = FightRules.For(fk);         // P4-F: the kind's rules (practice hits, the tournament yield, treating)
+        if (FightSetup.KindOf(Kind) is { } fk) { w.Rules = FightRules.For(fk); w.SetupKind = fk; }   // P4-F: the kind's rules (practice hits, the tournament yield, treating)
         foreach (var r in Fighters)
         {
             var st = r.Stats;
