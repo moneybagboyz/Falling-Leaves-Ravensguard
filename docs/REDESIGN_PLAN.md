@@ -54,6 +54,12 @@ The game today is a deep simulation hidden behind a hard-to-use interface: BBCod
 | Timeline | Everything above stays in 1.0; the plan is estimated at **about 6.5–9 years** (§5) |
 | Sequencing | **Breadth first**, every phase playable |
 | Release | **No public builds until 1.0** |
+| Difficulty | One intended brutal game, plus a few **honest named sliders** shown openly in the world settings: wound lethality, bandit frequency, economy harshness, plague severity, and Ironman on or off. No hidden rubber-banding (Nov 2026) |
+| Slavery | **Fully systemic, like Kenshi** (Nov 2026). Slavers and slave markets exist where the culture's law allows them, and you can be enslaved and escape. The player can buy, sell, own or free slaves, with heavy consequences for reputation, faith and law (Phase 6) |
+| Plague | **Rare but devastating** (Nov 2026). Everyday coughs, fevers and flux, plus rare great plagues. A great plague can kill a third of a town, spreads along trade roads, empties villages and reshapes the economy: labour gets dear and land gets cheap (Phase 6 to 8 events; the death rates are in §4A.2) |
+| Hero lifespan | **A real lifespan on the slow clock** (Nov 2026). The hero ages through a long campaign, strength fades in later years, and old age can kill, which hands play to the heir you raised (family life, Phase 6) |
+| Family, justice, faith, endings | Full family life for the hero, historically harsh justice, a real faith system (all Phase 6), and optional endings (Phase 8), all decided Nov 2026 |
+| Building | Hands-on, Kenshi style, with both free placement and ready-made house plans (Phase 5, Nov 2026) |
 
 ---
 
