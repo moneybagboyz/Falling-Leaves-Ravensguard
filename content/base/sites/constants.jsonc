@@ -1,0 +1,16 @@
+// The numbers of exploration (exploration-and-sites 3.3, P4-H): light, air, water, cave-ins, digging, reoccupation, traps, the map. One row, "default".
+// Durations are sim-seconds (one sim-second is 20 live ticks at 1x and still 1 sim-second at 8x: a torch lasts 1,200 of them at any speed).
+[
+  { "type": "site_constants", "id": "default",
+    "torch_burn_s": 1200, "torch_radius": 6, "torch_intensity": 235, "candle_burn_s": 1800, "candle_radius": 3, "candle_intensity": 140,
+    "lantern_burn_s": 3600, "lantern_radius": 8, "lantern_intensity": 245, "gutter_s": 60, "gutter_radius_loss": 3, "gutter_intensity": 120,
+    "rain_light_burn_pm": 1500, "rain_heavy_burn_pm": 2500, "rain_heavy_out_pm_x10": 5, "wind_out_pm_x10": 2, "wind_out_mps": 12,
+    "air_gutter": 800, "air_dim": 600, "air_dazed": 400, "air_foul": 250, "air_unconscious_s": 20, "air_death_s": 120, "air_slope_per_tile": 18, "air_vent_tiles": 6, "air_vent_bonus": 200,
+    "flood_rise_cm_per_hour": 30, "flood_hours": 6, "flood_pm": 40, "flood_rain_hours": 4, "wade_slow_cm": 30, "swim_cm": 90, "swim_mmps": 1000, "hold_breath_s": 30,
+    "sink_gear_kg": 15, "sink_check_s": 5, "sink_check_pm": 500,
+    "cave_in_radius_min": 2, "cave_in_radius_max": 3, "cave_in_warn_s": 6, "cave_in_window_s": 60, "cave_in_blow_milli": 150000, "cave_in_dodge_pm": 800, "dig_s": 20,
+    "reoccupy_after_days": 20, "reoccupy_pm_per_day": 20, "reoccupy_pressure": 500, "scavenge_sites_pm": 100, "scavenge_loss_pm": 50, "fled_return_days": 3,
+    "trap_near_mm": 2500, "disarm_s": 6, "disarm_fail_trigger_pm": 250, "sneak_skip_pm": 200, "sneak_skip_max_kg": 60,
+    "map_share_m": 20, "breadcrumb_cells": 400, "lost_light": 20, "seen_light": 30, "underground_temp_c": 8, "rats_pm_per_day": 20, "superstitious_morale_x100": 500,
+    "battlefield_search_s": 60, "battlefield_decay_pm_per_year": 8, "hoard_dig_s": 120, "rest_air": 600, "level_depth_m": 3, "carry_base_kg": 15 }
+]

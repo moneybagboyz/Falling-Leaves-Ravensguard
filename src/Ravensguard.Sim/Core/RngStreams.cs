@@ -243,6 +243,27 @@ public static class RngStreams
     public const uint SuccessionReserved = 0x457;
     /// <summary>Reserved: watch mode draws nothing of its own (the watched hero uses the brain's 0x430-0x432 unchanged; watch-mode 6). Asserted never drawn, like 0x380.</summary>
     public const uint WatchReserved = 0x490;
+    // ---- exploration and sites (exploration-and-sites 6, overview 6.2; P4-H owns 0x4B0..0x4B9). Keys are ids and game time, never a live tick ----
+    /// <summary>Sites: the layout of a level (key site id, level).</summary>
+    public const uint SiteLayout = 0x4B0;
+    /// <summary>Sites: loot rolls (key site id, room).</summary>
+    public const uint SiteLoot = 0x4B1;
+    /// <summary>Sites: inhabitants, their names and kits (key site id, serial).</summary>
+    public const uint SiteInhabitants = 0x4B2;
+    /// <summary>Sites: hazard zones at generation (key site, level) and hazard events (key game hour or 60 sim-second window, site; draw = hazard id).</summary>
+    public const uint HazardEvent = 0x4B3;
+    /// <summary>Sites: trap trigger (key GameSec/20, trap and entity).</summary>
+    public const uint TrapTrigger = 0x4B4;
+    /// <summary>Sites: trap detection (key GameSec/20, person and trap).</summary>
+    public const uint TrapDetect = 0x4B5;
+    /// <summary>Sites: monster behaviour outside the fight: wake, wander, flee (key GameSec/20, monster).</summary>
+    public const uint MonsterBehaviour = 0x4B6;
+    /// <summary>Sites: the debris pattern of a cave-in (key event id).</summary>
+    public const uint CaveInDebris = 0x4B7;
+    /// <summary>Sites: reoccupation of a cleared site (key game day, site).</summary>
+    public const uint Reoccupation = 0x4B8;
+    /// <summary>Sites: scavenging yield of the Search action (key action serial, person) and the yearly abstract scavengers (key year, site, draw 1000+).</summary>
+    public const uint Scavenge = 0x4B9;
 
     /// <summary>Stream ids that two named uses share on purpose, with why their draws never meet.</summary>
     public static readonly (string A, string B, string Why)[] SharedPairs =

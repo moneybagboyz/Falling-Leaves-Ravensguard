@@ -1,0 +1,77 @@
+// Site loot (exploration-and-sites 4.2, P4-H): finite and historical. Items are drawn by weight until the site's budget (mites of value) is spent; what is left
+// is the site's LootRemainingPm, never regenerated. Values are mites (1 crown = 100 mites). No coin is minted here: grave goods and church plate are goods, sold for coin
+// that already exists; a band's stash is the coin and goods of its recorded robberies (the caravan loot hoard).
+[
+  { "type": "site_item", "id": "reliquary", "name": "Reliquary", "mass_g": 2400, "value_mites": 900, "kind": "church" },
+  { "type": "site_item", "id": "silver_chalice", "name": "Silver chalice", "mass_g": 450, "value_mites": 420, "kind": "church" },
+  { "type": "site_item", "id": "altar_candlestick", "name": "Brass candlestick", "mass_g": 1200, "value_mites": 90, "kind": "church" },
+  { "type": "site_item", "id": "psalter", "name": "Psalter", "mass_g": 900, "value_mites": 260, "kind": "book" },
+  { "type": "site_item", "id": "censer", "name": "Censer", "mass_g": 800, "value_mites": 140, "kind": "church" },
+  { "type": "site_item", "id": "pewter_plate", "name": "Pewter plate", "mass_g": 600, "value_mites": 45, "kind": "household" },
+  { "type": "site_item", "id": "iron_pot", "name": "Iron pot", "mass_g": 2500, "value_mites": 60, "kind": "household" },
+  { "type": "site_item", "id": "bone_comb", "name": "Bone comb", "mass_g": 40, "value_mites": 12, "kind": "household" },
+  { "type": "site_item", "id": "gold_torc", "name": "Gold torc", "mass_g": 300, "value_mites": 1400, "kind": "grave" },
+  { "type": "site_item", "id": "silver_brooch", "name": "Silver brooch", "mass_g": 60, "value_mites": 220, "kind": "grave" },
+  { "type": "site_item", "id": "amber_beads", "name": "Amber beads", "mass_g": 120, "value_mites": 160, "kind": "grave" },
+  { "type": "site_item", "id": "drinking_horn", "name": "Silver-rimmed drinking horn", "mass_g": 500, "value_mites": 300, "kind": "grave" },
+  { "type": "site_item", "id": "bones_of_the_lost", "name": "A dead man's purse and ring", "mass_g": 200, "value_mites": 80, "kind": "remnant" },
+  { "type": "site_item", "id": "gnawed_boot", "name": "Gnawed boot with a knife in it", "mass_g": 700, "value_mites": 25, "kind": "remnant" },
+  { "type": "site_item", "id": "salt_barrel", "name": "Barrel of untaxed salt", "mass_g": 30000, "value_mites": 900, "kind": "smuggled" },
+  { "type": "site_item", "id": "wine_cask", "name": "Cask of wine", "mass_g": 25000, "value_mites": 700, "kind": "smuggled" },
+  { "type": "site_item", "id": "cloth_bale", "name": "Bale of fine cloth", "mass_g": 12000, "value_mites": 1100, "kind": "smuggled" },
+  { "type": "site_item", "id": "herb_bundle", "name": "Bundle of dried herbs", "mass_g": 300, "value_mites": 30, "kind": "hermit" },
+  { "type": "site_item", "id": "hermits_book", "name": "The hermit's book", "mass_g": 1100, "value_mites": 240, "kind": "book" },
+  { "type": "site_item", "id": "miners_pick", "name": "Miner's pick", "mass_g": 2600, "value_mites": 150, "kind": "tool" },
+  { "type": "site_item", "id": "shovel", "name": "Shovel", "mass_g": 2000, "value_mites": 90, "kind": "tool" },
+  { "type": "site_item", "id": "ore_sack", "name": "Sack of ore", "mass_g": 20000, "value_mites": 60, "kind": "ore" },
+  { "type": "site_item", "id": "rope_coil", "name": "Coil of rope (10 m)", "mass_g": 1500, "value_mites": 50, "kind": "tool" },
+  { "type": "site_item", "id": "skull", "name": "Skull", "mass_g": 900, "value_mites": 0, "kind": "remnant" },
+
+  { "type": "site_loot_table", "id": "church_goods", "entries": [
+      { "item": "reliquary", "value_mites": 900, "mass_g": 2400, "weight": 4, "named": true },
+      { "item": "silver_chalice", "value_mites": 420, "mass_g": 450, "weight": 8 },
+      { "item": "censer", "value_mites": 140, "mass_g": 800, "weight": 10 },
+      { "item": "altar_candlestick", "value_mites": 90, "mass_g": 1200, "weight": 14 },
+      { "item": "psalter", "value_mites": 260, "mass_g": 900, "weight": 6 } ] },
+  { "type": "site_loot_table", "id": "household_goods", "entries": [
+      { "item": "pewter_plate", "value_mites": 45, "mass_g": 600, "weight": 20 },
+      { "item": "iron_pot", "value_mites": 60, "mass_g": 2500, "weight": 12 },
+      { "item": "bone_comb", "value_mites": 12, "mass_g": 40, "weight": 10 } ] },
+  { "type": "site_loot_table", "id": "weapons_rusty", "entries": [
+      { "item": "dagger", "material": "iron", "value_mites": 40, "mass_g": 350, "weight": 12, "condition": [300, 600], "dirty": true },
+      { "item": "axe", "material": "iron", "value_mites": 70, "mass_g": 1600, "weight": 10, "condition": [300, 600], "dirty": true },
+      { "item": "arming_sword", "material": "iron", "value_mites": 160, "mass_g": 1100, "weight": 6, "condition": [300, 600], "dirty": true },
+      { "item": "helm", "material": "iron", "value_mites": 120, "mass_g": 2000, "weight": 5, "condition": [300, 600] } ] },
+  { "type": "site_loot_table", "id": "grave_goods", "entries": [
+      { "item": "gold_torc", "value_mites": 1400, "mass_g": 300, "weight": 3, "named": true },
+      { "item": "arming_sword", "material": "steel", "value_mites": 600, "mass_g": 1100, "weight": 3, "condition": [500, 800], "named": true },
+      { "item": "silver_brooch", "value_mites": 220, "mass_g": 60, "weight": 10 },
+      { "item": "amber_beads", "value_mites": 160, "mass_g": 120, "weight": 10 },
+      { "item": "drinking_horn", "value_mites": 300, "mass_g": 500, "weight": 6 } ] },
+  { "type": "site_loot_table", "id": "victims_remnants", "entries": [
+      { "item": "bones_of_the_lost", "value_mites": 80, "mass_g": 200, "weight": 10 },
+      { "item": "gnawed_boot", "value_mites": 25, "mass_g": 700, "weight": 10 },
+      { "item": "dagger", "material": "iron", "value_mites": 40, "mass_g": 350, "weight": 6, "condition": [200, 500], "dirty": true } ] },
+  { "type": "site_loot_table", "id": "band_stash", "entries": [
+      { "item": "pewter_plate", "value_mites": 45, "mass_g": 600, "weight": 10 },
+      { "item": "silver_brooch", "value_mites": 220, "mass_g": 60, "weight": 4 },
+      { "item": "cloth_bale", "value_mites": 1100, "mass_g": 12000, "weight": 2 } ] },
+  { "type": "site_loot_table", "id": "hermit_goods", "entries": [
+      { "item": "herb_bundle", "value_mites": 30, "mass_g": 300, "weight": 10 },
+      { "item": "hermits_book", "value_mites": 240, "mass_g": 1100, "weight": 3 } ] },
+  { "type": "site_loot_table", "id": "smuggled_goods", "entries": [
+      { "item": "salt_barrel", "value_mites": 900, "mass_g": 30000, "weight": 6 },
+      { "item": "wine_cask", "value_mites": 700, "mass_g": 25000, "weight": 6 },
+      { "item": "cloth_bale", "value_mites": 1100, "mass_g": 12000, "weight": 4 } ] },
+  { "type": "site_loot_table", "id": "mine_tools", "entries": [
+      { "item": "miners_pick", "value_mites": 150, "mass_g": 2600, "weight": 8, "condition": [400, 800] },
+      { "item": "shovel", "value_mites": 90, "mass_g": 2000, "weight": 8, "condition": [400, 800] },
+      { "item": "rope_coil", "value_mites": 50, "mass_g": 1500, "weight": 6 },
+      { "item": "ore_sack", "value_mites": 60, "mass_g": 20000, "weight": 6 } ] },
+  { "type": "site_loot_table", "id": "battlefield_scatter", "entries": [
+      { "item": "arming_sword", "material": "iron", "value_mites": 160, "mass_g": 1100, "weight": 6, "condition": [200, 500], "dirty": true },
+      { "item": "spear", "material": "iron", "value_mites": 50, "mass_g": 1800, "weight": 10, "condition": [200, 500], "dirty": true },
+      { "item": "helm", "material": "iron", "value_mites": 120, "mass_g": 2000, "weight": 6, "condition": [200, 500] },
+      { "item": "mail_hauberk", "material": "iron", "value_mites": 500, "mass_g": 10000, "weight": 2, "condition": [200, 500] },
+      { "item": "skull", "value_mites": 0, "mass_g": 900, "weight": 8 } ] }
+]

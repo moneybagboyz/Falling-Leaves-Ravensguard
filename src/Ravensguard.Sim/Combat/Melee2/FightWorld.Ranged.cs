@@ -167,6 +167,7 @@ public sealed partial class FightWorld
             }
         }
         if (lob) { sigmaMdeg = sigmaMdeg * K.LobSigmaPm / 1000; rangeMm = rangeMm * 1150 / 1000; }
+        if (WeatherRow != null) sigmaMdeg = (int)((long)sigmaMdeg * WeatherSigmaPm(d) / 1000);   // [exploration] hook: weather in combat (4.8)
         int lat0 = AimOffsetMm(d, sigmaMdeg, DetRng.Range(Seed, Tick, (ulong)(f.Id + 1), stream, serial * 2, 0, 256));
         int vert = AimOffsetMm(d, sigmaMdeg, DetRng.Range(Seed, Tick, (ulong)(f.Id + 1), stream, serial * 2 + 1, 0, 256));
         var (nx, ny) = FightMath.Norm(dx, dy);
