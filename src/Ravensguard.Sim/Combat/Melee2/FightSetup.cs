@@ -69,7 +69,7 @@ public sealed record FightSetup(FightKind Kind, IReadOnlyList<FighterKit> Kits, 
         var w = Build(content, ledger);
         if (PlayerIndex >= 0)
         {
-            if (HeroStance is { } st) w.SetStance(PlayerIndex, st, -1);
+            if (HeroStance is { } st) { w.EnsureWatch(PlayerIndex); w.SetStance(PlayerIndex, st, -1); }
             if (HeroTactics >= 0) w.CaptainFormation(Kits[PlayerIndex].Team, PlayerIndex, HeroTactics);
             if (StartWatched) w.SetWatch(PlayerIndex, true, takeBackOnInput: true);
         }

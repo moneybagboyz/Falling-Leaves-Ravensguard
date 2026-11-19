@@ -125,7 +125,7 @@ public sealed partial class FightWorld
         switch (i.Kind)
         {
             case FightInputKind.Watch: SetWatch(f.Id, i.A != 0, i.B != 0); break;
-            case FightInputKind.Stance: SetStance(f.Id, WatchStance.FromInput(i) with { Protect = i.C >= 0 && i.C < Fighters.Count ? Fighters[i.C].Person : 0 }, i.C); break;
+            case FightInputKind.Stance: EnsureWatch(f.Id); SetStance(f.Id, WatchStance.FromInput(i) with { Protect = i.C >= 0 && i.C < Fighters.Count ? Fighters[i.C].Person : 0 }, i.C); break;
             case FightInputKind.Formation: SetFormation(f.Team, (Formation)i.A); break;
             case FightInputKind.Order: Order(f.Team, (SquadOrderKind)i.A, i.B); break;
             case FightInputKind.DeclineDanger: { var w = EnsureWatch(f.Id); w.DangerCooldownUntil = Tick + DangerCooldownTicks; break; }
