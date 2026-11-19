@@ -76,6 +76,8 @@ public struct StrikeV2
     public int SpeciesSizeCm3;
     /// <summary>Multiplier on the blow, permille: 850 when the striking hand's sensory nerve is cut (anatomy 3.6), 500 for blunted practice weapons.</summary>
     public int MomentumPm;
+    /// <summary>Blunted practice or tournament weapons (plan 4A.3): edges and points count as blunt (with <see cref="MomentumPm"/> 500 for the half momentum).</summary>
+    public bool Blunted;
     public WeaponV2 Weapon;
     public int Attack;
     public AttackStyle Style;

@@ -1,6 +1,7 @@
 using Ravensguard.Content;
 using Ravensguard.Sim.Combat.Resolver2;
 using Ravensguard.Sim.Core;
+using Ravensguard.Sim.Combat.Watch;
 
 namespace Ravensguard.Sim.Combat.Melee2;
 
@@ -17,11 +18,16 @@ public static class CombatBrain
     public static bool IsNear(FightWorld w, Fighter f)
     {
         if (w.ForceNear is { } n) return n;
+        if (f.Id == w.LodFighter) return true;                       // P4-F: the hero (watched or not) is always thought at 20 Hz
         if (w.LodCentre is not { } c) return true;
         return FightMath.Len(f.X - c.X, f.Y - c.Y) <= w.K.AiNearRadiusMm;
     }
 
-    private static int Noise(FightWorld w, Fighter f, uint draw, int max) => DetRng.Range(w.Seed, w.Tick + 1, (ulong)(f.Id + 1), RngStreams.StanceNoise, draw, 0, max);
+    private static int Noise(FightWorld w, Fighter f, uint draw, int max)
+    {
+        w.AiDrawLog?.Invoke(f.Id, RngStreams.StanceNoise);           // P4-F: the stream draw log of test WM-3 (null in play)
+        return DetRng.Range(w.Seed, w.Tick + 1, (ulong)(f.Id + 1), RngStreams.StanceNoise, draw, 0, max);
+    }
 
     public static void Think(FightWorld w, Fighter f)
     {
@@ -35,6 +41,7 @@ public static class CombatBrain
         int tick = w.Tick + 1;             // the step this decision is for
         React(w, f, tick);
         bool near = IsNear(w, f);
+        if (tick <= f.TreatBusyUntil) { c.MoveX = c.MoveY = 0; c.Sprint = false; c.Start = null; return; }   // P4-F: kneeling to press or bandage (watch-mode 4.3)
         if (!near && (tick + f.Id) % Math.Max(1, w.K.AiFarEveryTicks) != 0) { Carry(w, f, tick); return; }
         Decide(w, f, tick);
     }
@@ -95,6 +102,7 @@ public static class CombatBrain
         m.ReactSerialFoe = foeNext.Id; m.ReactSerial = (int)foeNext.Serial;
         int toImpact = best - tick;
         var st = f.Stance;
+        w.AiDrawLog?.Invoke(f.Id, RngStreams.MeleeDefence);
         int roll = DetRng.Range(w.Seed, tick, FightWorld.DefKey(f.Id, foeNext.Id), RngStreams.MeleeDefence, foeNext.Serial * 8u + 6, 0, 1000);
         int pParry = Math.Min(K.ReactParryCapPm, K.ReactParryBasePm + f.Skill * 1000 / K.ReactParrySkillDivisor) + (st.ParryPoints + st.ReactPoints) * 10;
         // a fighter still recovering from its own blow can act once the recover ends: from that tick on (it presses or dodges then, if that is in time)
@@ -118,6 +126,7 @@ public static class CombatBrain
         m.React = r;
         m.HoldBlockUntil = best + 2;
         int lead = Math.Min(K.ParryWindowTicks - 1, Math.Max(0, toImpact - (f.Act == FAct.Block ? 1 : 0)));
+        w.AiDrawLog?.Invoke(f.Id, RngStreams.MeleeDefence);
         int jitter = DetRng.Range(w.Seed, tick, (ulong)(f.Id + 1), RngStreams.MeleeDefence, foeNext.Serial * 8u + 7, 0, lead + 1);
         switch (r)
         {
@@ -151,6 +160,8 @@ public static class CombatBrain
 
         if (f.Routing) { Flee(w, f); return; }
         if (w.MoraleStepBack(f)) return;                // P4-D hook: a wavering fighter's pace back (morale 4.1)
+        var orders = w.OrdersOf(f.Team);
+        if (StanceBias.FallBack(w, f, orders)) return;      // P4-F: "fall back to me" (the order wheel, F4)
         var t = PickTarget(w, f, tick);
         if (t == null) { c.Block = false; return; }
         m.Target = t.Id;
@@ -159,9 +170,10 @@ public static class CombatBrain
         var (ux, uy) = FightMath.Norm(dx, dy);
         c.FaceX = ux; c.FaceY = uy;
 
-        // ranged: keep 15 to 40 m, shoot when loaded, nock or span when safe
+        // ranged: keep 15 to 40 m, shoot when loaded, nock or span when safe ("hold fire" keeps the arrow nocked)
         if (f.Ranged && st.UseRanged && (f.Loaded || f.Ammo > 0))
         {
+            if (orders.HoldFire) { if (!f.Loaded && f.Act == FAct.Idle) c.Reload = true; return; }                   // P4-F: hold fire: nocked and waiting
             bool meleeFoe = !t.Ranged;
             if (dist < K.ArcherMinMm && meleeFoe && dist > 2500 && f.Act is FAct.Idle or FAct.Reloading && !f.Loaded) { c.MoveX = -ux; c.MoveY = -uy; c.Sprint = dist < 8000; return; }
             if (dist > K.ArcherMaxMm) { c.MoveX = ux; c.MoveY = uy; return; }
@@ -189,8 +201,10 @@ public static class CombatBrain
             if (t.Act == FAct.Block && Noise(w, f, 12, 1000) < f.Skill * 1000 / K.FeintSkillDivisor) { c.Feint = true; m.AttackAfter = tick + 2; return; }
         }
 
+        var guarded = w.ProtectOf(f);                         // P4-F: the protect stance stays by its charge (watch-mode 4.3)
+        bool placed = guarded == null || w.DistMm(f, guarded) <= StanceBias.ProtectAttackMm && !guarded.Routing;
         // offence: opportunistic after the foe's blow or a parry, otherwise when the patience runs out
-        if (f.Act is FAct.Idle or FAct.Block && f.WeaponArm && f.Stamina > 0 && !exhausted && dist <= strikeD && tick >= m.AttackAfter && !(reacting && tick <= m.HoldBlockUntil && tick > f.RiposteUntil))
+        if (placed && f.Act is FAct.Idle or FAct.Block && f.WeaponArm && f.Stamina > 0 && !exhausted && dist <= strikeD && tick >= m.AttackAfter && !(reacting && tick <= m.HoldBlockUntil && tick > f.RiposteUntil))
         {
             bool opening = t.Act is FAct.Recover or FAct.Stagger or FAct.Down || tick <= f.RiposteUntil;
             if (st.NoLethal && t.Act == FAct.Down) opening = false;
@@ -218,11 +232,15 @@ public static class CombatBrain
 
         // footwork: close in, hold the polearm's distance, back off to breathe
         if (exhausted && dist < strikeD + 1500 && f.Act is FAct.Idle or FAct.Block) { c.MoveX = -ux; c.MoveY = -uy; c.Block = true; return; }
+        if (guarded != null && StanceBias.ProtectFootwork(w, f, guarded, t, dist, strikeD)) return;          // P4-F: by the guarded person's side
+        if (StanceBias.FormationFootwork(w, f, t, dist, orders)) return;                                     // P4-F: the side's formation (4.4)
         if (dist > hold)
         {
             c.MoveX = ux; c.MoveY = uy;
             c.Sprint = dist > strikeD + 3000 && f.Stamina > 4000
-                || K.CloseInSprint != 0 && t.ReachMm > f.ReachMm + 500 && t.Act is FAct.Recover or FAct.Stagger && f.Stamina > 3000;
+                || K.CloseInSprint != 0 && t.ReachMm > f.ReachMm + 500 && t.Act is FAct.Recover or FAct.Stagger && f.Stamina > 3000
+                || st.ChargeWithinM > 0 && dist <= st.ChargeWithinM * 1000L && f.Stamina > 3000;           // P4-F: the aggressive charge from 6 m
+            StanceBias.ShieldToArchers(w, f, dist);                                                          // P4-F: defensive: the shield toward archers while closing
         }
         else if (polearm && dist < K.PolearmTooCloseMm) { c.MoveX = -ux; c.MoveY = -uy; }
     }
@@ -230,15 +248,17 @@ public static class CombatBrain
     private static Fighter? PickTarget(FightWorld w, Fighter f, int tick)
     {
         ref var m = ref f.Brain;
+        long pursue = f.Stance.PursueM * 1000L;                 // routers are chased this far (aggressive 20 m, else 10 m)
+        if (StanceBias.OrderedTarget(w, f, pursue) is { } ordered) { m.Target = ordered.Id; return ordered; }   // P4-F: the guarded person's nearest enemy, the side's focus
         Fighter? cur = m.Target >= 0 && m.Target < w.Fighters.Count ? w.Fighters[m.Target] : null;
-        bool keep = cur != null && cur.Team != f.Team && cur.Active && !(cur.Routing && w.DistMm(f, cur) > 10_000) && tick % 20 != f.Id % 20;
+        bool keep = cur != null && cur.Team != f.Team && cur.Active && !(cur.Routing && w.DistMm(f, cur) > pursue) && tick % 20 != f.Id % 20;
         if (keep) return cur;
         Fighter? best = null; long bd = long.MaxValue;
         foreach (var o in w.Fighters)
         {
             if (o.Team == f.Team || !o.Active) continue;
             long d = w.DistMm(f, o);
-            if (o.Routing && d > 10_000) continue;
+            if (o.Routing && d > pursue) continue;
             if (f.Stance.TargetPriority == "threat" && o.Brain.Target == f.Id) d -= 2000;
             if (d < bd || (d == bd && best != null && o.Id < best.Id)) { bd = d; best = o; }
         }

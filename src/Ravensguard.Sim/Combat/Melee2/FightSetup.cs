@@ -3,23 +3,85 @@ using Ravensguard.Sim.Characters;
 using Ravensguard.Sim.Combat.Wounds;
 using Ravensguard.Sim.Core;
 using Ravensguard.Sim.People;
+using Ravensguard.Sim.Combat.Morale;
+using Ravensguard.Sim.Combat.Mounted;
+using Ravensguard.Sim.Combat.Watch;
 
 namespace Ravensguard.Sim.Combat.Melee2;
 
+/// <summary>One side of a fight as the setup sees it: its team, what kind of side it is (who accepts surrenders, how its losers fare), its stance default and its people.</summary>
+public sealed record FightSide(int Team, SideKind Kind, IReadOnlyList<FighterKit> Kits);
+
 /// <summary>
-/// One entry point for every fight (overview 3): the kind, the sides as kits with places, the seed and id, the game second it starts and what caused it. Built by a road encounter
-/// (<see cref="Encounter"/>), the practice yard, a site's inhabitants waking, and the tests; <see cref="Start"/> turns it into a live <see cref="FightWorld"/>.
+/// One entry point for every fight (overview 3, P4-F): the kind (<see cref="FightKind"/>: a road encounter, a raid, an ambush, a site's inhabitants waking, a tournament bout, a
+/// practice bout), the sides as kits with places, the terrain and weather, what caused it, the stance defaults by side, the seed and id and the game second it starts. Built by
+/// travel encounters (<see cref="Encounter"/>), raids and ambush scripts (<see cref="Raid"/>, <see cref="Ambush"/>), sites (<see cref="SiteInhabitants"/>), the practice yard
+/// (<see cref="Practice"/>) and tournaments (<see cref="Tournament"/>). <see cref="Run"/> spawns a live <see cref="FightWorld"/> in the bubble, or, outside any bubble, hands the
+/// fight to the abstract resolver (<see cref="IAbstractFights"/>: a stub until abstract-battles-v1, step 6).
 /// </summary>
-public sealed record FightSetup(string Kind, IReadOnlyList<FighterKit> Kits, ulong Seed, ulong FightId, long GameSec, string Cause = "", int PlayerIndex = -1)
+public sealed record FightSetup(FightKind Kind, IReadOnlyList<FighterKit> Kits, ulong Seed, ulong FightId, long GameSec, string Cause = "", int PlayerIndex = -1)
 {
-    /// <summary>The fight in the live bubble: fighters in kit order; the hero (if any) is driven by the player's inputs; the wounds go into <paramref name="ledger"/>.</summary>
-    public FightWorld Start(FightContent content, WoundLedger? ledger)
+    /// <summary>The ground (footing, slopes, rain) the horses read; null: an open field.</summary>
+    public FightTerrain? Terrain { get; init; }
+    /// <summary>The weather at the start ("", "rain", "storm", "snow"): rain and storm set the terrain's rain flags.</summary>
+    public string Weather { get; init; } = "";
+    /// <summary>What kind of side each team is (who accepts a surrender, the defeat table's winner); unlisted teams are folk.</summary>
+    public IReadOnlyDictionary<int, SideKind> SideKinds { get; init; } = new Dictionary<int, SideKind>();
+    /// <summary>The stance a side's fighters take when their kit names none (a guard post defensive, a raid aggressive).</summary>
+    public IReadOnlyDictionary<int, string> StanceDefaults { get; init; } = new Dictionary<int, string>();
+    /// <summary>The hero's stance (watch-mode 3.1, from the hero's saved <c>WatchStance</c>) and whether the fight starts watched (autopilot with Attacked on Ai, or "keep watching").</summary>
+    public WatchStance? HeroStance { get; init; }
+    public bool StartWatched { get; init; }
+    /// <summary>The hero's Tactics (the side's captain picks the formation, watch-mode 4.4) and Leadership (the hero leads a side at 20, morale 4.1 g).</summary>
+    public int HeroTactics { get; init; } = -1;
+    public int HeroLeadership { get; init; }
+
+    /// <summary>The record's name of the kind ("encounter", "practice", ...); a saved fight's rules come back from it.</summary>
+    public string KindName => NameOf(Kind);
+    public static string NameOf(FightKind k) => Flavour.FlavourBook.Snake(k.ToString());
+    public static FightKind KindOf(string name) => Enum.GetValues<FightKind>().FirstOrDefault(k => NameOf(k) == name);
+
+    /// <summary>The sides by team, in team order, each with its kits in setup order.</summary>
+    public IReadOnlyList<FightSide> Sides => [.. Kits.Select(k => k.Team).Distinct().Order().Select(t => new FightSide(t, SideKinds.TryGetValue(t, out var sk) ? sk : SideKind.Folk, [.. Kits.Where(k => k.Team == t)]))];
+
+    /// <summary>The fight in the live bubble, built and not stepped: fighters in kit order (the hero, if any, driven by the player's inputs), the kind's rules, sides, terrain.</summary>
+    public FightWorld Build(FightContent content, WoundLedger? ledger)
     {
-        var w = new FightWorld(content, Seed, FightId, GameSec, ledger);
-        for (int i = 0; i < Kits.Count; i++) w.Add(Kits[i], player: i == PlayerIndex);
-        if (PlayerIndex >= 0) w.LodCentre = (Kits[PlayerIndex].X, Kits[PlayerIndex].Y);
+        var w = new FightWorld(content, Seed, FightId, GameSec, ledger) { Rules = FightRules.For(Kind) };
+        for (int i = 0; i < Kits.Count; i++)
+        {
+            var k = Kits[i];
+            if (StanceDefaults.TryGetValue(k.Team, out var sd) && k.Stance.Length == 0) k = k with { Stance = sd };
+            w.Add(k, player: i == PlayerIndex);
+        }
+        if (PlayerIndex >= 0) { w.LodCentre = (Kits[PlayerIndex].X, Kits[PlayerIndex].Y); w.LodFighter = PlayerIndex; }
+        foreach (var (team, kind) in SideKinds) w.SetSide(team, kind);
+        var tr = Terrain ?? new FightTerrain();
+        if (Weather is "rain" or "storm") tr.HeavyRain = true;
+        if (Weather == "storm") tr.Thunderstorm = true;
+        w.UseTerrain(tr);
         return w;
     }
+
+    /// <summary>The live fight, ready to step: built, the hero's stance and watch set (the same inputs a player sends, so a replay agrees), the captain's formation chosen.</summary>
+    public FightWorld Start(FightContent content, WoundLedger? ledger)
+    {
+        var w = Build(content, ledger);
+        if (PlayerIndex >= 0)
+        {
+            if (HeroStance is { } st) w.SetStance(PlayerIndex, st, -1);
+            if (HeroTactics >= 0) w.CaptainFormation(Kits[PlayerIndex].Team, PlayerIndex, HeroTactics);
+            if (StartWatched) w.SetWatch(PlayerIndex, true, takeBackOnInput: true);
+        }
+        return w;
+    }
+
+    /// <summary>
+    /// Runs the fight where it is: in the live bubble (<paramref name="inBubble"/>) a live <see cref="FightWorld"/> to step, else the abstract resolver's report. The seam of overview 3:
+    /// abstract-battles-v1 (step 6) replaces <see cref="AbstractFightStub"/> behind <see cref="IAbstractFights"/>; the callers do not change.
+    /// </summary>
+    public FightRun Run(FightContent content, WoundLedger? ledger, bool inBubble, IAbstractFights? abstractFights = null)
+        => inBubble ? new FightRun(Start(content, ledger), null) : new FightRun(null, (abstractFights ?? AbstractFightStub.Instance).Resolve(this, content));
 
     // ------------------------------------------------------------------ kits
 
@@ -59,7 +121,7 @@ public sealed record FightSetup(string Kind, IReadOnlyList<FighterKit> Kits, ulo
     /// The hero's kit from the record: the best weapon carried for the hero's skills (a launcher with arrows when no melee weapon), a shield, a javelin to throw, the worn pieces
     /// given, and the family skills (Melee x0.8 when a family was never trained).
     /// </summary>
-    public static FighterKit HeroKit(FightContent c, HeroRecord h, IReadOnlyList<WornItem> worn, ulong heroId, string name = "You")
+    public static FighterKit HeroKit(FightContent c, HeroRecord h, IReadOnlyList<WornItem> worn, ulong heroId, string? name = null)
     {
         int Sk(Skill s) => CombatSkills.Level(k => h.Skill(HeroRecord.SkillId(k)), s);
         var shapes = c.Db.All<WeaponShapeDef>().ToDictionary(s => s.Id, StringComparer.Ordinal);
@@ -82,10 +144,10 @@ public sealed record FightSetup(string Kind, IReadOnlyList<FighterKit> Kits, ulo
         if (best != null && shapes[best.ShapeId].TwoHanded) shield = null;
         return new FighterKit
         {
-            Name = name, Team = 0, Person = heroId, Weapon = best, Shield = launcher == null ? shield : null, Worn = worn, Launcher = launcher, Ammo = ammo, AmmoCount = ammoCount, Throwables = throws,
+            Name = name ?? h.Name, Team = 0, Person = heroId, Weapon = best, Shield = launcher == null ? shield : null, Worn = worn, Launcher = launcher, Ammo = ammo, AmmoCount = ammoCount, Throwables = throws,
             Skill = Sk(CombatSkills.Of(fam)), ShieldSkill = Sk(Skill.Shields), ThrowSkill = Sk(Skill.Throwing), ArcherySkill = Sk(Skill.Archery),
             Strength = 1250 * Math.Max(1, h.Attribute(HeroAttr.Strength)) / Math.Max(1, HeroRecord.BaselineAttribute), Toughness = 10 * Math.Max(1, h.Attribute(HeroAttr.Toughness)) / Math.Max(1, HeroRecord.BaselineAttribute),
-            Stance = "balanced",
+            Stance = "balanced", Tactics = h.Skill(HeroRecord.SkillId(Skill.Tactics)),
         };
     }
 
@@ -114,6 +176,115 @@ public sealed record FightSetup(string Kind, IReadOnlyList<FighterKit> Kits, ulo
             }
         }
         ulong fightId = (ulong)ev.Sec * 64 + (ulong)(ev.Leg & 63);
-        return new FightSetup("encounter", kits, seed ^ 0x4F17_0000UL, fightId, ev.Sec, ev.Id, PlayerIndex: 0);
+        var kind = ambush ? FightKind.Ambush : FightKind.Encounter;
+        var side = d.Kind switch { "Animal" => SideKind.Beasts, "Ambush" or "Demand" => SideKind.Bandits, "Check" or "Column" => SideKind.Guards, _ => SideKind.Folk };
+        return new FightSetup(kind, kits, seed ^ 0x4F17_0000UL, fightId, ev.Sec, ev.Id, PlayerIndex: 0)
+        {
+            SideKinds = side == SideKind.Folk ? new Dictionary<int, SideKind>() : new Dictionary<int, SideKind> { [1] = side },
+            HeroTactics = party.Count > 0 ? hero.Tactics : -1,
+        };
+    }
+
+    // ------------------------------------------------------------------ the other kinds (overview 3)
+
+    /// <summary>The practice weapon of a weapon family: a staff for hafted and bare hands, a spear for polearms, else a sword (the yard's rack, onboarding 3.4).</summary>
+    public static string PracticeShape(string family) => family switch { "polearms" => "practice_spear", "hafted" or "melee" => "practice_staff", _ => "practice_sword" };
+
+    /// <summary>
+    /// A practice bout in the yard (onboarding 3.4 on the real fight): the hero against the trainer 2 m apart, both with the rack's blunted practice weapons (x0.5 momentum, edges
+    /// counted as blunt), no shields or armour beyond what is worn; first to three clean hits (<see cref="FightRules.For"/>), and a fighter who reaches the pain knock-out yields.
+    /// </summary>
+    public static FightSetup Practice(FightContent c, FighterKit hero, FighterKit trainer, ulong seed, long gameSec, ulong yardId)
+    {
+        string fam(FighterKit k) => k.Weapon == null ? "melee" : FightWorld.FamilyOf(c.T.Weapon(k.Weapon.ShapeId, k.Weapon.MaterialId).Shape);
+        FighterKit Blunt(FighterKit k, int team, int x, int faceX) => k with
+        {
+            Team = team, X = x, Y = 0, FaceX = faceX, FaceY = 0, Weapon = new WeaponInstance(PracticeShape(fam(k)), "oak"), Shield = null, Launcher = null, Ammo = null, AmmoCount = 0, Throwables = [],
+            Improvised = null, Blunted = true, Stance = "balanced",
+        };
+        var kits = new List<FighterKit> { Blunt(hero, 0, 0, FightMath.One), Blunt(trainer, 1, 2000, -FightMath.One) };
+        return new FightSetup(FightKind.Practice, kits, seed ^ 0x9A4C_0000UL, yardId * 4096 + (ulong)(gameSec / 300 & 4095), gameSec, "yard", PlayerIndex: 0);
+    }
+
+    /// <summary>
+    /// A tournament bout (plan 4A.3): the hero against an entrant 3 m apart, both with their own weapons blunted (x0.5 momentum, edges and points count as blunt), yielding at the pain
+    /// knock-out. The purse is paid from the town treasury by <see cref="TournamentPurse.Pay"/> (coin moves, none is made).
+    /// </summary>
+    public static FightSetup Tournament(FightContent c, FighterKit hero, FighterKit entrant, ulong seed, long gameSec, ulong settlementId, int bout)
+    {
+        var kits = new List<FighterKit>
+        {
+            hero with { Team = 0, X = 0, Y = 0, FaceX = FightMath.One, FaceY = 0, Blunted = true, Launcher = null, Ammo = null, AmmoCount = 0, Throwables = [] },
+            entrant with { Team = 1, X = 3000, Y = 0, FaceX = -FightMath.One, FaceY = 0, Blunted = true, Launcher = null, Ammo = null, AmmoCount = 0, Throwables = [] },
+        };
+        return new FightSetup(FightKind.Tournament, kits, seed ^ 0x7E11_0000UL, settlementId * 1024 + (ulong)(bout & 1023) + ((ulong)(gameSec / 86400) << 32), gameSec, "tournament", PlayerIndex: 0);
+    }
+
+    /// <summary>
+    /// A raid on a place (bandits on a farmstead, a reaver band on a village edge): the raiders come in a loose line from 15 m, aggressive by default; the defenders stand where they
+    /// are, defensive. The hero, if among the defenders, is <paramref name="heroIndex"/> of <paramref name="defenders"/>.
+    /// </summary>
+    public static FightSetup Raid(IReadOnlyList<FighterKit> defenders, IReadOnlyList<FighterKit> raiders, ulong seed, ulong fightId, long gameSec, string cause, int heroIndex = -1, SideKind raiderKind = SideKind.Bandits)
+    {
+        var kits = new List<FighterKit>();
+        for (int i = 0; i < defenders.Count; i++) kits.Add(defenders[i] with { Team = 0, X = defenders[i].X, Y = defenders[i].Y == 0 && i > 0 ? (i % 2 == 0 ? 1 : -1) * 900 * ((i + 1) / 2) : defenders[i].Y, FaceX = FightMath.One, FaceY = 0 });
+        for (int i = 0; i < raiders.Count; i++) kits.Add(raiders[i] with { Team = 1, X = 15_000 + (i % 2) * 700, Y = (i - raiders.Count / 2) * 1300, FaceX = -FightMath.One, FaceY = 0 });
+        return new FightSetup(FightKind.Raid, kits, seed, fightId, gameSec, cause, heroIndex)
+        {
+            SideKinds = new Dictionary<int, SideKind> { [1] = raiderKind },
+            StanceDefaults = new Dictionary<int, string> { [0] = "defensive", [1] = "aggressive" },
+        };
+    }
+
+    /// <summary>An ambush (a script or a site's trap): the ambushers close in a ring 6 m around the victims' centre, aggressive; the victims start where they stand.</summary>
+    public static FightSetup Ambush(IReadOnlyList<FighterKit> victims, IReadOnlyList<FighterKit> ambushers, ulong seed, ulong fightId, long gameSec, string cause, int heroIndex = -1, SideKind ambusherKind = SideKind.Bandits)
+    {
+        var kits = new List<FighterKit>();
+        foreach (var v in victims) kits.Add(v with { Team = 0 });
+        for (int i = 0; i < ambushers.Count; i++)
+        {
+            var (dx, dy) = FightMath.Dir((i * 64 / Math.Max(1, ambushers.Count) + 8) % 64);
+            int x = dx * 6, y = dy * 6; var (fx, fy) = FightMath.Norm(-x, -y);
+            kits.Add(ambushers[i] with { Team = 1, X = x, Y = y, FaceX = fx, FaceY = fy });
+        }
+        return new FightSetup(FightKind.Ambush, kits, seed, fightId, gameSec, cause, heroIndex)
+        {
+            SideKinds = new Dictionary<int, SideKind> { [1] = ambusherKind },
+            StanceDefaults = new Dictionary<int, string> { [1] = "aggressive" },
+        };
+    }
+
+    /// <summary>
+    /// A site's inhabitants waking (exploration-and-sites, step 7, builds the kits from the site's history and calls this): the intruders at the door, the inhabitants where the site
+    /// put them; beasts and draugr never accept a surrender (morale 4.2).
+    /// </summary>
+    public static FightSetup SiteInhabitants(IReadOnlyList<FighterKit> intruders, IReadOnlyList<FighterKit> inhabitants, SideKind inhabitantKind, ulong seed, ulong siteId, int serial, long gameSec, int heroIndex = -1, FightTerrain? terrain = null)
+    {
+        var kits = new List<FighterKit>();
+        foreach (var k in intruders) kits.Add(k with { Team = 0 });
+        foreach (var k in inhabitants) kits.Add(k with { Team = 1 });
+        return new FightSetup(FightKind.SiteInhabitants, kits, seed, siteId * 256 + (ulong)(serial & 255), gameSec, "site", heroIndex)
+        {
+            Terrain = terrain ?? new FightTerrain { Base = Footing.Rough },
+            SideKinds = new Dictionary<int, SideKind> { [1] = inhabitantKind },
+            StanceDefaults = new Dictionary<int, string> { [1] = "aggressive" },
+        };
+    }
+}
+
+/// <summary>
+/// A tournament's purse (plan 4A.3: "the purse comes from the town treasury"; Phase 3's contest purse): paid to the winner by one ledger transfer from the treasury, never more
+/// than the treasury holds, so coin is conserved (the ledger's audit stays exact). The reason is the ledger's <c>Gift</c> (a prize), as the jobs' escrow aliases its reasons.
+/// </summary>
+public static class TournamentPurse
+{
+    public const Economy.TransferReason Prize = Economy.TransferReason.Gift;
+
+    /// <summary>Pays <paramref name="mites"/> (at most what the treasury holds) from <paramref name="treasury"/> to <paramref name="winner"/>. Returns what was paid.</summary>
+    public static long Pay(Economy.Ledger ledger, Economy.PurseId treasury, Economy.PurseId winner, long mites)
+    {
+        if (mites <= 0 || treasury == Economy.PurseId.None || winner == Economy.PurseId.None || treasury == winner) return 0;
+        long pay = Math.Min(mites, ledger.Balance(treasury).Mites);
+        return pay > 0 && ledger.Transfer(treasury, winner, new Economy.Coin(pay), Prize) ? pay : 0;
     }
 }

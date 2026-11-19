@@ -1,9 +1,12 @@
-// Combat stances (watch-mode 3.1 presets): biases the one combat brain reads, for NPCs now and for the hero in watch mode (P4-F).
+// Combat stances (watch-mode 3.1 presets): biases the one combat brain reads, for NPCs and for the hero in watch mode (P4-F). The order of the rows is the order
+// Shift+F6 cycles. "flee_checks" turns on the pain, morale and odds flee triggers of watch-mode 4.3 (the flee_hurt stance; the NPC presets leave fleeing to morale).
 [
-  { "type": "combat_stance", "id": "aggressive", "posture": "aggressive", "flee_blood_loss_pm": 400, "flee_morale_below": 15, "attack_bias_pm": 300, "react_points": -15, "heavy_on_opening": true },
+  { "type": "combat_stance", "id": "aggressive", "posture": "aggressive", "flee_blood_loss_pm": 400, "flee_morale_below": 15, "attack_bias_pm": 300, "react_points": -15, "heavy_on_opening": true,
+    "pursue_m": 20, "charge_within_m": 6 },
   { "type": "combat_stance", "id": "balanced",   "posture": "balanced",   "flee_blood_loss_pm": 250, "flee_morale_below": 25 },
-  { "type": "combat_stance", "id": "defensive",  "posture": "defensive",  "flee_blood_loss_pm": 200, "flee_morale_below": 30, "parry_points": 20, "openings_only": true, "attack_bias_pm": -300 },
-  { "type": "combat_stance", "id": "protect",    "posture": "defensive",  "protect": true, "flee_blood_loss_pm": 300, "flee_morale_below": 25, "parry_points": 20 },
+  { "type": "combat_stance", "id": "defensive",  "posture": "defensive",  "flee_blood_loss_pm": 200, "flee_morale_below": 30, "parry_points": 20, "openings_only": true, "attack_bias_pm": -300,
+    "shield_to_archers": true, "pursue_m": 0 },
+  { "type": "combat_stance", "id": "protect",    "posture": "defensive",  "protect": true, "flee_blood_loss_pm": 300, "flee_morale_below": 25, "parry_points": 20, "pursue_m": 0 },
   { "type": "combat_stance", "id": "subdue",     "posture": "balanced",   "no_lethal": true, "flee_blood_loss_pm": 250, "flee_morale_below": 25, "called_shots": false },
-  { "type": "combat_stance", "id": "flee_hurt",  "posture": "balanced",   "flee_blood_loss_pm": 150, "flee_morale_below": 40 }
+  { "type": "combat_stance", "id": "flee_hurt",  "posture": "balanced",   "flee_blood_loss_pm": 150, "flee_morale_below": 40, "flee_checks": true }
 ]

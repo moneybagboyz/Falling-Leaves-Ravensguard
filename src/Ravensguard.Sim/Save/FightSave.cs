@@ -58,6 +58,9 @@ public sealed class FightRecord
     [Key(10)] public string Kind { get; set; } = ""; [Key(11)] public string Cause { get; set; } = "";
     /// <summary>P4-D (save v7): each fighter's morale state in id order (<see cref="Ravensguard.Sim.Combat.Morale.MoraleState.Pack"/>); null in a v6 record (the model starts afresh).</summary>
     [Key(20)] public long[][]? Morale { get; set; }
+    /// <summary>P4-F (watch mode, no format bump): the watch state, the sides' orders and formations, the always-near fighter, and per fighter the guarded person, the treat timer
+    /// and the sheathed flag; null in a fight nobody watched, ordered or gave a stance (the extras are then all default).</summary>
+    [Key(21)] public WatchRow? Watch { get; set; }
 
     // ---------------------------------------------------------------- capture
 
@@ -73,6 +76,7 @@ public sealed class FightRecord
         })];
         r.Ground = [.. w.Ground.Select(g => new GroundRow { Shape = g.Shape, Material = g.Material, X = g.X, Y = g.Y, Damaged = g.Damaged, Ammo = g.Ammo })];
         r.Morale = w.CaptureMorale();                                         // P4-D hook
+        r.Watch = WatchRow.Capture(w);                                        // P4-F hook
         var spent = w.SpentAmmo.OrderBy(kv => kv.Key, StringComparer.Ordinal).ToArray();
         r.SpentAmmoIds = [.. spent.Select(kv => kv.Key)]; r.SpentAmmoCounts = [.. spent.Select(kv => kv.Value)];
         return r;
@@ -89,7 +93,8 @@ public sealed class FightRecord
             WornShapes = [.. k.Worn.Select(x => x.ShapeId)], WornMaterials = [.. k.Worn.Select(x => x.MaterialId)], WornQualities = [.. k.Worn.Select(x => (byte)x.Quality)],
             Launcher = k.Launcher ?? "", Ammo = k.Ammo ?? "", AmmoCount = k.AmmoCount,
             ThrowShapes = [.. k.Throwables.Select(t => t.Shape)], ThrowMaterials = [.. k.Throwables.Select(t => t.Material)], ThrowCounts = [.. k.Throwables.Select(t => t.Count)], ThrowImprovised = [.. k.Throwables.Select(t => t.Improvised)],
-            Improvised = k.Improvised ?? "", Stats = [k.Skill, k.ShieldSkill, k.ThrowSkill, k.ArcherySkill, k.Strength, k.Toughness, k.SizeCm3, k.Courage, k.X, k.Y, k.FaceX, k.FaceY],
+            Improvised = k.Improvised ?? "", Stats = k.Tactics >= 0 ? [k.Skill, k.ShieldSkill, k.ThrowSkill, k.ArcherySkill, k.Strength, k.Toughness, k.SizeCm3, k.Courage, k.X, k.Y, k.FaceX, k.FaceY, k.Tactics]
+                : [k.Skill, k.ShieldSkill, k.ThrowSkill, k.ArcherySkill, k.Strength, k.Toughness, k.SizeCm3, k.Courage, k.X, k.Y, k.FaceX, k.FaceY],
             Stance = k.Stance, Plan = k.Plan, Blunted = k.Blunted,
             NowShape = f.Weapon.Shape.Id, NowMaterial = f.Weapon.Head.Id, NowQuality = (byte)f.Weapon.Quality, NowImprovised = f.Improvised?.Id ?? "", HasShield = f.Shield != null,
             NowThrowShapes = [.. f.Throwables.Select(t => t.Shape)], NowThrowMaterials = [.. f.Throwables.Select(t => t.Material)], NowThrowCounts = [.. f.Throwables.Select(t => t.Count)], NowThrowImprovised = [.. f.Throwables.Select(t => t.Improvised)],
@@ -149,6 +154,7 @@ public sealed class FightRecord
     {
         var w = new FightWorld(content, Seed, FightId, GameSec0, UsesLedger ? ledger : null);
         w.RestoreTick(Tick);
+        if (Kind.Length > 0) w.Rules = FightRules.For(FightSetup.KindOf(Kind));      // P4-F: the kind's rules (practice hits, the tournament yield, treating)
         foreach (var r in Fighters)
         {
             var st = r.Stats;
@@ -162,7 +168,7 @@ public sealed class FightRecord
                 Throwables = [.. r.ThrowShapes.Select((s, i) => new ThrowStock(s, r.ThrowMaterials[i], r.ThrowCounts[i], r.ThrowImprovised[i]))],
                 Improvised = r.Improvised.Length > 0 ? r.Improvised : null,
                 Skill = st[0], ShieldSkill = st[1], ThrowSkill = st[2], ArcherySkill = st[3], Strength = st[4], Toughness = st[5], SizeCm3 = st[6], Courage = st[7],
-                X = st[8], Y = st[9], FaceX = st[10], FaceY = st[11], Stance = r.Stance, Plan = r.Plan, Blunted = r.Blunted,
+                X = st[8], Y = st[9], FaceX = st[10], FaceY = st[11], Stance = r.Stance, Plan = r.Plan, Blunted = r.Blunted, Tactics = st.Length > 12 ? st[12] : -1,
             };
             var f = w.Add(kit, r.Player);
             if (r.Book != null) f.Book = WoundSave.ToBook(r.Book, Seed);
@@ -191,9 +197,56 @@ public sealed class FightRecord
         foreach (var g in Ground) w.Ground.Add(new GroundItem(g.Shape, g.Material, g.X, g.Y, g.Damaged, g.Ammo));
         for (int i = 0; i < SpentAmmoIds.Length; i++) w.SpentAmmo[SpentAmmoIds[i]] = SpentAmmoCounts[i];
         w.RestoreMorale(Morale);                                              // P4-D hook
+        Watch?.Restore(w);                                                    // P4-F hook
         return w;
     }
 
     public byte[] ToBytes() => SaveCodec.SerializeCompressed(this);
     public static FightRecord FromBytes(byte[] b) => SaveCodec.DeserializeCompressed<FightRecord>(b);
+}
+
+/// <summary>The watch extras of a saved fight (P4-F): see <see cref="FightRecord.Watch"/>.</summary>
+[MessagePackObject]
+public sealed class WatchRow
+{
+    [Key(0)] public long[]? State { get; set; }
+    [Key(1)] public long[] Orders { get; set; } = [];
+    [Key(2)] public int LodFighter { get; set; } = -1;
+    /// <summary>Per fighter in id order: the guarded fighter + 1, the treat timer, sheathed (three longs each).</summary>
+    [Key(3)] public long[] Fighters { get; set; } = [];
+    /// <summary>Per fighter: the stance the brain reads, packed (<see cref="Ravensguard.Sim.Combat.Watch.WatchStance.PackA"/> of its row, custom bit set when it is not the kit's).</summary>
+    [Key(4)] public long[] Stances { get; set; } = [];
+
+    public static WatchRow? Capture(FightWorld w)
+    {
+        var orders = w.PackOrders();
+        bool extras = w.Fighters.Any(f => f.ProtectFighter >= 0 || f.TreatBusyUntil != 0 || f.Sheathed || !ReferenceEquals(f.Stance, w.Content.Stance(f.Kit.Stance)));
+        if (w.Watch == null && orders.Length == 0 && w.LodFighter < 0 && !extras) return null;
+        var row = new WatchRow { State = w.Watch?.Pack(), Orders = orders, LodFighter = w.LodFighter };
+        if (extras)
+        {
+            row.Fighters = [.. w.Fighters.SelectMany(f => new long[] { f.ProtectFighter + 1, f.TreatBusyUntil, f.Sheathed ? 1 : 0 })];
+            row.Stances = [.. w.Fighters.Select(f => ReferenceEquals(f.Stance, w.Content.Stance(f.Kit.Stance)) ? 0L : StanceOf(w, f).PackA())];
+        }
+        return row;
+    }
+
+    private static Ravensguard.Sim.Combat.Watch.WatchStance StanceOf(FightWorld w, Fighter f)
+    {
+        var p = Ravensguard.Sim.Combat.Watch.WatchStance.PresetOf(f.Stance.Id);
+        return Ravensguard.Sim.Combat.Watch.WatchStance.FromDef(f.Stance, p) with { Flags = Ravensguard.Sim.Combat.Watch.WatchStance.FromDef(f.Stance, p).Flags | Ravensguard.Sim.Combat.Watch.StanceFlags.Custom };
+    }
+
+    public void Restore(FightWorld w)
+    {
+        w.LodFighter = LodFighter;
+        w.RestoreOrders(Orders);
+        if (State != null) w.RestoreWatch(Ravensguard.Sim.Combat.Watch.WatchState.Unpack(State));
+        for (int i = 0; i < w.Fighters.Count; i++)
+        {
+            var f = w.Fighters[i];
+            if (i < Stances.Length && Stances[i] != 0) f.Stance = Ravensguard.Sim.Combat.Watch.WatchStance.Unpack(Stances[i], 0).ToDef(w.Content);
+            if (3 * i + 2 < Fighters.Length) { f.ProtectFighter = (int)Fighters[3 * i] - 1; f.TreatBusyUntil = (int)Fighters[3 * i + 1]; f.Sheathed = Fighters[3 * i + 2] != 0; }
+        }
+    }
 }

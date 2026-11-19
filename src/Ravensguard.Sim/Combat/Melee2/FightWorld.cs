@@ -108,6 +108,7 @@ public sealed partial class FightWorld
         f.Brain.Target = -1; f.Brain.ReactSerialFoe = -1;
         Fighters.Add(f);
         RefreshBody(f);
+        if (f.Stance.NoLethal) SheatheFor(f);                   // P4-F hook: a no-lethal stance fights with the flat, the butt, or bare hands (watch-mode 4.3)
         return f;
     }
 
@@ -123,6 +124,7 @@ public sealed partial class FightWorld
         get
         {
             if (Disengaged) return true;                // P4-D hook: both sides walked away for 15 s (morale 4.3)
+            if (HitsWinner() >= 0) return true;         // P4-F hook: a practice bout ends at three clean hits
             int team = -1;
             foreach (var f in Fighters)
             {
@@ -138,6 +140,7 @@ public sealed partial class FightWorld
     {
         get
         {
+            if (HitsWinner() is int hw and >= 0) return Fighters[hw].Team;     // P4-F hook: the practice bout's winner
             int team = -1;
             foreach (var f in Fighters) { if (!f.Active) continue; if (team < 0) team = f.Team; else if (f.Team != team) return -1; }
             return team;
@@ -179,6 +182,7 @@ public sealed partial class FightWorld
             case FightInputKind.Target: f.Brain.Target = i.A; break;
             case FightInputKind.Yield: Yield(f); break;       // P4-D hook: the Q-menu yield (4.2)
             case FightInputKind.CalledShot: c.Start = new AttackReq { Attack = i.A, Target = f.Brain.Target, Part = i.B, Gap = i.C, Auto = true }; break;
+            case FightInputKind.Watch or FightInputKind.Stance or FightInputKind.Formation or FightInputKind.Order or FightInputKind.DeclineDanger: WatchInput(f, i); break;   // P4-F hook
         }
     }
 
@@ -215,7 +219,9 @@ public sealed partial class FightWorld
         }
         if (Mounts != null) MountedAfterImpacts();                  // [mounted-combat] unhorsings, shattered lances
         StepProjectiles();
+        if (Rules.TreatInFight) TreatStep();                        // P4-F hook: pressure and bandages once clear of enemies (watch-mode 4.3)
         foreach (var f in Fighters) f.Cmd.ClearOneShots();
+        if (Watch != null) WatchStep();                             // P4-F hook: odds, danger and the why line at 5 Hz; signals wait for the barrier
     }
 
     // ------------------------------------------------------------------ timings (4.1)
@@ -560,6 +566,7 @@ public sealed partial class FightWorld
         b.AdvanceTo(GameSec);
         if (b.Records.Count != f.WoundsSeen) RefreshBody(f);
         if (b.Dead) { Kill(f); return; }
+        if (YieldAtPain(f)) return;                                 // P4-F hook: a tournament bout is yielded at the pain knock-out
         bool down = b.State is Consciousness.Unconscious or Consciousness.Dying or Consciousness.Collapsed || !f.CanStand;
         f.Crawling = b.State == Consciousness.Collapsed || (!f.CanStand && b.Conscious);
         if (down && f.Act is not (FAct.Down or FAct.Fled or FAct.Surrendered)) GoDown(f);

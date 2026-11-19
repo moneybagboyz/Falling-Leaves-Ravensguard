@@ -22,6 +22,8 @@ public enum HeroCommandKind : byte
     JobClaim, JobAbandon,
     /// <summary>Appended (Phase 4 P4-D): a lost fight's defeat (the request in <c>Tag</c>, "mc:defeat|...") or a captive's attempt ("mc:act|verb"), applied by <see cref="Ravensguard.Sim.Combat.Aftermath.AftermathDesk"/>.</summary>
     Aftermath,
+    /// <summary>Appended (Phase 4 P4-F): a watch-mode setting (the stance of a person, keep watching, take control on input, the speed cap; the tag "wm:...") applied by <see cref="Ravensguard.Sim.Combat.Watch.WatchDesk"/>.</summary>
+    Watch,
 }
 
 /// <summary>Where the hero crafts (built on the main thread from what is in reach, copied into the command).</summary>
@@ -373,6 +375,7 @@ public sealed class HeroDesk
                 HeroCommandKind.JobClaim => JobClaim(ctx, c),
                 HeroCommandKind.JobAbandon => JobAbandon(ctx, c),
                 HeroCommandKind.Aftermath => Ravensguard.Sim.Combat.Aftermath.AftermathDesk.Apply(ctx, c),     // P4-D hook
+                HeroCommandKind.Watch => Ravensguard.Sim.Combat.Watch.WatchDesk.Apply(ctx, c),                // P4-F hook
                 _ => R(c, HeroResultCode.Invalid, T("HERO_UNKNOWN_COMMAND")),
             };
         }

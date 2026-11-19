@@ -76,9 +76,9 @@ public sealed partial class FightWorld
         var s = new StrikeV2
         {
             Strength = (int)((long)a.Kit.Strength * a.StrengthPm / 1000), Skill = Math.Max(0, skill), SizeCm3 = a.Kit.SizeCm3, SpeciesSizeCm3 = a.Plan.SizeCm3,
-            MomentumPm = a.BlowPm * (a.Kit.Blunted ? 500 : 1000) / 1000 * MoraleRearPm(t, facing) / 1000, Weapon = a.Weapon, Attack = Math.Clamp(attack, 0, a.Weapon.Attacks.Length - 1), Style = style,
+            MomentumPm = a.BlowPm * (a.Kit.Blunted ? 500 : 1000) / 1000 * MoraleRearPm(t, facing) / 1000, Blunted = a.Kit.Blunted, Weapon = a.Weapon, Attack = Math.Clamp(attack, 0, a.Weapon.Attacks.Length - 1), Style = style,
             Plan = t.Plan, DefenderSizeCm3 = t.Kit.SizeCm3, DefenderSkill = prone ? 0 : t.Skill, Worn = t.Worn, WornCount = t.Worn.Length,
-            GuardedMask = _snapAct.Length > t.Id && _snapAct[t.Id] == FAct.Block ? GuardMask(t.Plan) : 0, MissingMask = t.MissingMask, Prone = prone,
+            GuardedMask = _snapAct.Length > t.Id && _snapAct[t.Id] == FAct.Block ? GuardMask(t.Plan) : 0, MissingMask = t.MissingMask | (a.Stance.NoLethal ? NoLethalMask(t.Plan) : 0), Prone = prone,
             TargetPart = part, TargetGap = gap, Facing = facing, SituationPoints = (a.Improvised != null ? 0 : 0) - (Crowded(a, t) ? K.CrowdedPoints : 0),
         };
         if (Mounts != null) MountedStrike(a, t, ref s);              // [mounted-combat] the charge's momentum, mounted accuracy

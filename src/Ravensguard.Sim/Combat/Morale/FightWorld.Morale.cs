@@ -33,7 +33,7 @@ public sealed partial class FightWorld
             int best = -1, bestN = -1; bool tie = false;
             foreach (int t in teams)
             {
-                int n = Fighters.Count(o => o.Team != t && o.Act is FAct.Down or FAct.Dead or FAct.Surrendered or FAct.Fled);
+                int n = Fighters.Count(o => o.Team != t && (o.Act is FAct.Down or FAct.Dead or FAct.Surrendered or FAct.Fled || o.Routing));   // P4-F: a side running away when both walk away has lost
                 if (n > bestN) { best = t; bestN = n; tie = false; } else if (n == bestN) tie = true;
             }
             return tie ? -1 : best;
@@ -217,7 +217,7 @@ public sealed partial class FightWorld
             if (f.Routing) EscapeCheck(f);
             return;
         }
-        bool hurtFlee = f.Stance.FleeBloodLossPm > 0 && b.LossPm >= f.Stance.FleeBloodLossPm;
+        bool hurtFlee = f.Stance.FleeBloodLossPm > 0 && b.LossPm >= f.Stance.FleeBloodLossPm || f.Stance.FleeChecks && FleeTriggered(f, value);   // P4-F: the stance's flee triggers (watch-mode 4.3)
         if (f.Routing)
         {
             if (value >= D.RallyAboveX100 && !hurtFlee && CaptainWithin(f, D.RallyCaptainRadiusM * 1000L))
@@ -246,6 +246,15 @@ public sealed partial class FightWorld
                 m.StepBackUntil = Tick + Math.Max(1, D.StepBackMm * MoraleRules.TicksPerS / Math.Max(1, K.WalkMmps));
         }
         else m.Mood = MoraleMood.Steady;
+    }
+
+    /// <summary>The flee triggers of a stance with <c>flee_checks</c> (watch-mode 4.3): pain at its share of the knock-out, morale under its mark, the odds under its mark.</summary>
+    private bool FleeTriggered(Fighter f, int moraleX100)
+    {
+        var st = f.Stance; var b = f.Book;
+        if (b.PainX100 * 1000L >= (long)st.FleePainPm * b.KnockoutPainX100) return true;
+        if (moraleX100 < st.FleeMoraleBelow * 100) return true;
+        return st.FleeOddsBelowPm > 0 && Ravensguard.Sim.Combat.Watch.RiskEstimate.Odds(this, f).OddsPm < st.FleeOddsBelowPm;
     }
 
     private bool CaptainWithin(Fighter f, long r)
@@ -376,7 +385,7 @@ public sealed partial class FightWorld
         foreach (var e in Fighters) if (e.Team != f.Team && e.Active) { long d = DistMm(e, f); if (d < nd) { nd = d; w = e; } }
         if (w == null) return false;
         EnsureMorale(w);
-        int accept = MoraleK.AcceptPm(w.M.Side);
+        int accept = w.Stance.NoLethal ? 1000 : MoraleK.AcceptPm(w.M.Side);      // P4-F: a no-lethal fighter accepts a surrender at once (watch-mode 4.3)
         bool ok = accept >= 1000 || accept > 0 && DetRng.Range(Seed, Tick, (ulong)(w.Id + 1), RngStreams.Surrender, (uint)f.Id, 0, 1000) < accept;
         if (!ok)
         {

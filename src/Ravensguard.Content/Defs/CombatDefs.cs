@@ -272,6 +272,17 @@ public sealed record CombatStanceDef : ContentDef
     public bool OpeningsOnly { get; init; }
     /// <summary>Heavy swings when the foe recovers and stamina allows.</summary>
     public bool HeavyOnOpening { get; init; }
+    // ---- watch-mode 3.1 and 4.3 (P4-F): the rest of the stance table, as data the one brain reads ----
+    /// <summary>The flee triggers of 4.3 beyond blood loss (pain, morale under <see cref="FleeMoraleBelow"/>, odds under <see cref="FleeOddsBelowPm"/>); off for the NPC presets, whose morale model decides.</summary>
+    public bool FleeChecks { get; init; }
+    /// <summary>Flee when the estimated odds of winning fall below this (permille; 0 = never by odds).</summary>
+    public int FleeOddsBelowPm { get; init; }
+    /// <summary>Routers are pursued up to this distance (aggressive 20 m; the others 10 m).</summary>
+    public int PursueM { get; init; } = 10;
+    /// <summary>Sprint in for the first blow from this close (aggressive 6 m; 0 = the ordinary close-in).</summary>
+    public int ChargeWithinM { get; init; }
+    /// <summary>With no foe at hand, the shield is raised toward archers within 40 m (defensive).</summary>
+    public bool ShieldToArchers { get; init; }
 }
 
 /// <summary>

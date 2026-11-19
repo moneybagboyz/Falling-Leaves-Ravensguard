@@ -21,5 +21,5 @@
   {"type":"audio_event","id":"combat.horn","events":["rally"],"caption":"fl_cap_horn","priority":12},
   {"type":"audio_event","id":"combat.rout.cry","events":["rout","fled","surrender"],"caption":"fl_cap_rout","priority":12},
   {"type":"audio_event","id":"combat.cloth","events":["wake","treat"],"priority":2},
-  {"type":"audio_event","id":"silent.preparation","events":["windup","feint","reloaded","shove","interrupted","disarmed","out_of_ammo"],"silent":true,"priority":0}
+  {"type":"audio_event","id":"silent.preparation","events":["windup","feint","reloaded","shove","interrupted","disarmed","out_of_ammo","treated"],"silent":true,"priority":0}
 ]

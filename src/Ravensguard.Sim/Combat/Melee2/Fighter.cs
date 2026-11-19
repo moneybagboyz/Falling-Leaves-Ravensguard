@@ -44,6 +44,8 @@ public sealed record FighterKit
     public int FaceY { get; init; }
     /// <summary>Practice weapons (blunted x0.5 momentum): the yard, tournaments.</summary>
     public bool Blunted { get; init; }
+    /// <summary>The Tactics skill (a squad leader's picks the side's formation, watch-mode 4.4); -1 when unknown.</summary>
+    public int Tactics { get; init; } = -1;
 }
 
 /// <summary>The AI's memory of one fighter (live only, rebuilt from nothing after a load: every field is re-derived within a few ticks).</summary>
@@ -128,6 +130,14 @@ public sealed class Fighter
     public int Thrown, Landed, BlockedBy, ParriedBy, DodgedBy, Whiffs;
 
     public BrainMemory Brain;
+
+    // ---- watch-mode (P4-F): orders and the treat job (Combat/Watch) ----
+    /// <summary>The fighter the protect stance guards (-1: none); set by the stance, an order ("protect X") or the setup.</summary>
+    public int ProtectFighter = -1;
+    /// <summary>Busy with a treatment (pressure, bandage) until this tick.</summary>
+    public int TreatBusyUntil;
+    /// <summary>The weapon was put away for bare hands by a no-lethal stance (a blade without a flat, a javelin): the kit's weapon comes back when the stance changes.</summary>
+    public bool Sheathed;
 
     public bool Alive => Act != FAct.Dead;
     /// <summary>Still in the fight (not down, dead, fled or yielded).</summary>

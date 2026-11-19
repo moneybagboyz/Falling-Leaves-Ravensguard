@@ -66,7 +66,7 @@ public sealed class ResolverV2(CombatTablesV2 tables)
     /// <summary>The blow is aimed at a named gap that lies on this zone (blunt blows never slip through a gap).</summary>
     private static bool GapOn(in StrikeV2 s, PartV2 zone) =>
         s.TargetGap >= 0 && s.TargetGap < s.Plan.Gaps.Length && s.Plan.Gaps[s.TargetGap].OnBase(zone.BaseIndex)
-        && s.Weapon.Attacks[s.Attack].Type != AttackType.Blunt;
+        && s.Weapon.Attacks[s.Attack].Type != AttackType.Blunt && !s.Blunted;
 
     // ------------------------------------------------------------------ entry points
 
@@ -153,7 +153,7 @@ public sealed class ResolverV2(CombatTablesV2 tables)
         AttackType type; long area, pen;
         if (fallArea > 0) { type = AttackType.Blunt; area = fallArea; pen = 0; }
         else { var a = s.Weapon.Attacks[s.Attack]; type = a.Type; area = a.AreaMilli; pen = a.PenUm; }
-        bool edged = !forceBlunt && type != AttackType.Blunt;
+        bool edged = !forceBlunt && !s.Blunted && type != AttackType.Blunt;
         if (!edged) pen = 0;
         // the named gap aimed at: explicit, or a hosted part's exposure gap (a called shot at an eye goes through the face)
         if (gap < 0 && part.IsHosted && part.ExposureGap >= 0) gap = part.ExposureGap;

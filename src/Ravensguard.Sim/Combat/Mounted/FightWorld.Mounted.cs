@@ -19,9 +19,14 @@ public sealed partial class FightWorld
     /// <summary>The mounted layer; null in a fight without horses.</summary>
     public MountedLayer? Mounts { get; private set; }
 
+    private FightTerrain? _setupTerrain;
+
+    /// <summary>The ground and weather of the fight's setup (overview 3): the horses read it once a rider is in the fight.</summary>
+    public void UseTerrain(FightTerrain t) { _setupTerrain = t; if (Mounts != null) Mounts.Terrain = t; }
+
     private MountedLayer EnsureMounts()
     {
-        Mounts ??= new MountedLayer(MountedTuning.For(Content.Db, T));
+        Mounts ??= new MountedLayer(MountedTuning.For(Content.Db, T)) { Terrain = _setupTerrain ?? new FightTerrain() };     // P4-F: the setup's ground
         Mounts.Grow(Fighters.Count);
         return Mounts;
     }

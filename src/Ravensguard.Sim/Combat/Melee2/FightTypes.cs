@@ -20,6 +20,8 @@ public enum FightEventKind : byte
     Shot, ProjectileHit, ProjectileMiss, Throw, Broke, Reloaded, Shove, Interrupted, Disarmed, OutOfAmmo,
     // mounted-combat (Combat/Mounted): A, B as each emitter documents
     Charge, Unhorsed, Fell, HorseFell, Balked, Reared, Bolted, Trampled, BraceStrike, Shattered,
+    // watch-mode 4.3 (P4-F): A = the TreatKind, Target = the patient (the treater itself when it treats itself)
+    Treated,
 }
 
 /// <summary>One thing that happened in the fight, for the log, the flavour text (feedback-flavour-log) and the statistics. Text is the presentation's.</summary>
@@ -79,6 +81,16 @@ public enum FightInputKind : byte
     CalledShot = 11,
     /// <summary>P4-D (morale 4.2): the hero yields (the Q-menu verb on self); the winner's side accepts or refuses as for any surrender.</summary>
     Yield = 20,
+    /// <summary>P4-F (watch-mode 4.1): A = 1 hands the hero to the combat brain at this tick barrier (the swing in progress completes), 0 takes control back; B = 1 keeps "take control on any combat input" on.</summary>
+    Watch = 21,
+    /// <summary>P4-F: the hero's stance (<see cref="Ravensguard.Sim.Combat.Watch.WatchStance.AsInput"/>: A, B the packed stance, C the guarded fighter or -1).</summary>
+    Stance = 22,
+    /// <summary>P4-F (4.4): A = the formation for the hero's side (<see cref="Ravensguard.Sim.Combat.Watch.Formation"/>; 0 = the captain's own choice again).</summary>
+    Formation = 23,
+    /// <summary>P4-F (4.1 orders): A = <see cref="Ravensguard.Sim.Combat.Watch.SquadOrderKind"/>, B = its fighter (the focus target, the person to protect) or -1.</summary>
+    Order = 24,
+    /// <summary>P4-F (4.5): a danger pause was declined; no new one for 5 s.</summary>
+    DeclineDanger = 25,
 }
 
 public readonly record struct FightInput(FightInputKind Kind, int A = 0, int B = 0, int C = 0);

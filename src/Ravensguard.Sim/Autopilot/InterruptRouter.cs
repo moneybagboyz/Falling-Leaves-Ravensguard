@@ -8,6 +8,8 @@ public enum AiResponse : byte
 {
     None, AvoidOrFlee, FleeShelterOrFight, ShelterFromStorm, FindShelterOrClothing, RestInShade, EatBuyOrForage, MakeCamp, RestTiredHorse, PushUnloadOrWait, ReplanOnce, PayWageWaitOrHeal, IgnoreOrForage,
     NextDirective, AcceptIfAllowedElseDecline, DeclineAndRecord, Bandage, SwitchToWork, IdleHome, SwitchToEarning,
+    /// <summary>Appended (watch-mode 3.2): the watch kinds set to Ai: keep watching under the stance (its flee triggers decide), treat and loot after the fight.</summary>
+    KeepWatching, TreatAfterFight,
 }
 
 /// <summary>What <see cref="InterruptRouter.Raise"/> did: the record the bus kept, the policy applied, what the AI answers, and whether the event was dropped as a duplicate.</summary>
@@ -54,6 +56,8 @@ public sealed class InterruptRouter(AutopilotLog log)
         InterruptKind.LimitReached => AiResponse.IdleHome,
         InterruptKind.NeedMoney => AiResponse.SwitchToEarning,
         InterruptKind.Stuck => AiResponse.ReplanOnce,
+        InterruptKind.WatchDanger or InterruptKind.WatchLosing or InterruptKind.WatchAmmoOut => AiResponse.KeepWatching,
+        InterruptKind.WatchOver => AiResponse.TreatAfterFight,
         _ => AiResponse.None,
     };
 

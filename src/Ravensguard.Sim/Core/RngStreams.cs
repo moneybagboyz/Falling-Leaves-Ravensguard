@@ -241,6 +241,8 @@ public static class RngStreams
     public const uint RansomNegotiation = 0x456;
     /// <summary>Reserved: succession draws nothing (a pure function of the tables; asserted by test SU-5).</summary>
     public const uint SuccessionReserved = 0x457;
+    /// <summary>Reserved: watch mode draws nothing of its own (the watched hero uses the brain's 0x430-0x432 unchanged; watch-mode 6). Asserted never drawn, like 0x380.</summary>
+    public const uint WatchReserved = 0x490;
 
     /// <summary>Stream ids that two named uses share on purpose, with why their draws never meet.</summary>
     public static readonly (string A, string B, string Why)[] SharedPairs =

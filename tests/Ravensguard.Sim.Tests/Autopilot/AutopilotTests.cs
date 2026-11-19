@@ -81,10 +81,10 @@ public class AutopilotRulesTests
     // ------------------------------------------------------------------ AP-7: every interrupt kind, three policies
 
     [Fact]
-    public void AP7_TheListHas23Kinds_EachRaisesOnce_HonoursPauseNotifyAi_AndWritesALogLine()
+    public void AP7_TheListHas27Kinds_EachRaisesOnce_HonoursPauseNotifyAi_AndWritesALogLine()
     {
         var kinds = Enum.GetValues<InterruptKind>();
-        Assert.Equal(23, kinds.Length); Assert.Equal(InterruptBus.KindCount, kinds.Length);
+        Assert.Equal(27, kinds.Length); Assert.Equal(InterruptBus.KindCount, kinds.Length);          // 23 of Phase 3 and the four watch kinds (watch-mode 3.2)
         foreach (var kind in kinds)
             foreach (var pol in new[] { InterruptPolicy.Pause, InterruptPolicy.Notify, InterruptPolicy.Ai })
             {
@@ -111,6 +111,10 @@ public class AutopilotRulesTests
             Assert.Equal(InterruptPolicy.Pause, InterruptBus.DefaultPolicy(k));
         foreach (var k in new[] { InterruptKind.Weather, InterruptKind.Cold, InterruptKind.Heat, InterruptKind.Hunger, InterruptKind.Dusk, InterruptKind.Companion, InterruptKind.Found, InterruptKind.LowMoney, InterruptKind.DirectiveDone, InterruptKind.NeedMoney })
             Assert.Equal(InterruptPolicy.Notify, InterruptBus.DefaultPolicy(k));
+        // the watch kinds keep their numbers after the Phase 3 list, with the defaults of watch-mode 3.2
+        Assert.Equal(23, (int)InterruptKind.WatchDanger); Assert.Equal(26, (int)InterruptKind.WatchOver);
+        Assert.Equal(InterruptPolicy.Pause, InterruptBus.DefaultPolicy(InterruptKind.WatchDanger)); Assert.Equal(InterruptPolicy.Notify, InterruptBus.DefaultPolicy(InterruptKind.WatchLosing));
+        Assert.Equal(InterruptPolicy.Notify, InterruptBus.DefaultPolicy(InterruptKind.WatchAmmoOut)); Assert.Equal(InterruptPolicy.Pause, InterruptBus.DefaultPolicy(InterruptKind.WatchOver));
     }
 
     [Fact]
