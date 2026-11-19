@@ -72,7 +72,7 @@ public sealed class ContinentalWeather
     private sealed record HourFronts(long Hour, Front[] Fronts);
     /// <summary>The fronts of recent hours, direct-mapped by hour (a snow chain asks for six hours of every day it walks, from several region workers at once; one cached hour thrashed).</summary>
     private readonly HourFronts?[] _hours = new HourFronts?[HourSlots];
-    private const int HourSlots = 2048;
+    private const int HourSlots = 1024;                       // a snow chain walks 120 days of six hours: 720 hours fit
     private readonly Func<long, Front[]> _spawn;
 
     public ContinentalWeather(ulong seed, WeatherSettings? settings = null)

@@ -91,6 +91,30 @@ public partial class StreetView
         return m;
     }
 
+    /// <summary>
+    /// The party members who follow the hero (order Follow, up to three, in join order) as crawl members (P4 close-out): kitted as the road fights' rows (a hired hand the <c>guard</c>
+    /// row, a recruited companion the <c>traveller</c>), the person's own skills where the person table knows them, no light of their own (they walk in the hero's), treating their own wounds.
+    /// </summary>
+    List<CrawlMember> PartyMembers(Ravensguard.Sim.Combat.Melee2.FightContent fc)
+    {
+        var list = new List<CrawlMember>();
+        if (_heroLink?.View is not { } v || Runtime is not { } rt) return list;
+        var pt = rt.State.Population.People;
+        foreach (var f in v.Squad.Where(m => m.Active && m.Order == Ravensguard.Sim.Trade.SquadOrder.Follow).OrderBy(m => m.JoinedDay).ThenBy(m => m.Person.Value).Take(3))
+        {
+            var row = Ravensguard.Sim.Combat.Melee2.FightSetup.KitDef(fc, f.Origin == Ravensguard.Sim.Trade.FollowerOrigin.Hired ? "guard" : "traveller", "traveller");
+            var kit = Ravensguard.Sim.Combat.Melee2.FightSetup.Roll(fc, row, rt.State.Seed, f.Person.Value, f.Name, 0, 0, 0, Ravensguard.Sim.Combat.Melee2.FightMath.One, 0);
+            int i = pt.IndexOf(f.Person);
+            int Sk(Skill s, int d) => i >= 0 ? Math.Max(d, pt.SkillLevelOf(i, s)) : d;
+            list.Add(new CrawlMember
+            {
+                Person = f.Person.Value, Name = f.Name, Kit = kit, Perception = 40, Lockpicking = Sk(Skill.Lockpicking, 10), Athletics = Sk(Skill.Athletics, 30), Stealth = Sk(Skill.Stealth, 30),
+                AutoTreat = true, Bandages = 1, SpareTorches = 0,
+            });
+        }
+        return list;
+    }
+
     void OpenCrawl(Site site, SiteRecord rec, CrawlSave? resume)
     {
         if (Runtime is not { } rt || _source?.Content == null || FightContentOf() is not { } fc || rec.Map == null) return;
@@ -103,6 +127,7 @@ public partial class StreetView
         {
             crawl = new SiteCrawl(rec.Map, sc, fc, ledger, _world.Clock.Now.Seconds, rt.State.Seed, rec.Known);
             crawl.Add(HeroMember(sc));
+            foreach (var m in PartyMembers(fc)) crawl.Add(m);          // P4 close-out: the party goes down with the hero
         }
         crawl.OwnsFight = false; crawl.Sync = book.Sync;
         if (_source.Region is { } region) crawl.Surgeon = SurgeonInfo.Nearest(region, site.X, site.Y);
@@ -152,8 +177,13 @@ public partial class StreetView
             }
             c.Chronicle.Clear();
         }
-        if (c.Ended) LeaveCrawl();
+        // resting below fast-forwards (P4 close-out): 8x while the party rests, back to 1x the moment the rest stops (any interrupt stops it in the crawl); the speed changes are recorded
+        if (c.Resting && !_crawlRestFast && c.Fight == null) { _crawlRestFast = true; _rec.SetWantedSpeed(SimSpeed.X8); _rec.SetSpeed(SimSpeed.X8); }
+        else if (_crawlRestFast && (!c.Resting || c.Fight != null)) { _crawlRestFast = false; _rec.SetWantedSpeed(SimSpeed.X1); _rec.SetSpeed(SimSpeed.X1); }
+        if (c.Ended) { if (_crawlRestFast) { _crawlRestFast = false; _rec.SetWantedSpeed(SimSpeed.X1); _rec.SetSpeed(SimSpeed.X1); } LeaveCrawl(); }
     }
+
+    bool _crawlRestFast;
 
     void LeaveCrawl()
     {

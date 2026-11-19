@@ -358,28 +358,29 @@ public sealed class MarketBook
     public (int Filled, long Mites) RunSession(long hourKey, int day)
     {
         if (_orders.Count == 0) return (0, 0);
-        // (hash of hour and party, party id, priority, good), then posting order: the stable order the LINQ sort gave, sorted in a buffer the book keeps (the session ran every open hour in every book and allocated its sort each time)
+        // (hash of hour and party, party id, priority, good), then posting order: the stable order the LINQ sort gave, sorted in buffers rented for the session (the session ran every open
+        // hour in every book and allocated its sort each time; the pool's buffers are shared, so no book keeps a night's worth of orders)
         int n = _orders.Count;
-        if (_session.Length < n) _session = new SessionKey[Math.Max(n, _session.Length * 2)];
-        if (_sessionOrders.Length < n) _sessionOrders = new BuyOrder[Math.Max(n, _sessionOrders.Length * 2)];
+        var keys = System.Buffers.ArrayPool<SessionKey>.Shared.Rent(n);
+        var orders = System.Buffers.ArrayPool<BuyOrder>.Shared.Rent(n);
         for (int i = 0; i < n; i++)
         {
             var o = _orders[i];
-            _sessionOrders[i] = o;
-            _session[i] = new SessionKey(DetRng.Next(Seed, hourKey, o.Buyer.Id.Value, RngStreams.MarketOrder, 0), o.Buyer.Id.Value, o.Priority, o.Good, i);
+            orders[i] = o;
+            keys[i] = new SessionKey(DetRng.Next(Seed, hourKey, o.Buyer.Id.Value, RngStreams.MarketOrder, 0), o.Buyer.Id.Value, o.Priority, o.Good, i);
         }
         _orders.Clear();
-        Array.Sort(_session, 0, n);
+        Array.Sort(keys, 0, n);
         int filled = 0; long mites = 0;
-        var orders = _sessionOrders;
         for (int i = 0; i < n; i++)
         {
-            var o = orders[_session[i].Index];
+            var o = orders[keys[i].Index];
             var r = Buy(o.Buyer, o.Good, o.Qty, o.MaxPriceRatioPermille, day, o.MaxSpendMites);
             if (r.Qty > 0) { filled++; mites += r.PaidMites; }
             o.OnFilled?.Invoke(r);
         }
-        Array.Clear(orders, 0, n);
+        System.Buffers.ArrayPool<SessionKey>.Shared.Return(keys);
+        System.Buffers.ArrayPool<BuyOrder>.Shared.Return(orders, clearArray: true);
         return (filled, mites);
     }
 
@@ -394,8 +395,6 @@ public sealed class MarketBook
             return Index.CompareTo(o.Index);
         }
     }
-    private SessionKey[] _session = [];
-    private BuyOrder[] _sessionOrders = [];
 
     // ---------- daily and seasonal ----------
 

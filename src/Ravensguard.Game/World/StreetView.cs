@@ -1271,7 +1271,13 @@ public partial class StreetView : Control, IHandlesBack
         // a hearth is a static light: strong light on a roofed cell with no torch of the hero's own is a fire within reach
         bool fire = CampFireNear() || indoors && !s.Hero.Torch && s.Light != null && c.X >= 0 && c.Y >= 0 && c.X < s.Light.Width && c.Y < s.Light.Height && c.Z >= s.Light.MinZ && c.Z <= s.Light.MaxZ && s.Light.Point(c.X, c.Y, c.Z) >= 120;
         var act = !s.Hero.Moving ? Ravensguard.Sim.Clothing.Activity.Rest : s.Hero.Mode == MoveMode.Sprint ? Ravensguard.Sim.Clothing.Activity.Sprint : Ravensguard.Sim.Clothing.Activity.Walk;
-        _clothes.StepHero(sec, _wx, indoors, fire, act);
+        // P4 close-out: below ground the body feels the site's own still, dry air (the constants' underground_temp_c, 8 C) under rock, not the weather above
+        if (Underground && _source?.Content != null)
+        {
+            int under = Ravensguard.Sim.Sites.SiteWiring.ContentOf(_source.Content).K.UndergroundTempC;
+            _clothes.StepHero(sec, _wx with { TempC = under, Precip = 0, PrecipMmH = 0, Snowing = false, WindMps = 0, Wet = 0, Freeze = 0 }, true, false, act);
+        }
+        else _clothes.StepHero(sec, _wx, indoors, fire, act);
         // the hero is drawn with the cloak and hood they actually wear (the rest of the figure is the hero's own art until the character screen dresses them piece by piece)
         var look = _clothes.LookOf(_clothes.Hero, Ravensguard.Sim.People.Occupation.None);
         if (look.Key != _heroLookKey) { _heroLookKey = look.Key; RebuildHeroSprite(look); }

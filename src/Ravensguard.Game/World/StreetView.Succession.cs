@@ -84,6 +84,15 @@ public partial class StreetView
         if (Runtime is not { } rt) return;
         _hero = rt.State.Hero;
         if (_hero == null) return;
+        long now = _world.Clock.Now.Seconds;
+        // the old hero's road is over: the encounter that killed him is settled and the journey given up (recorded, as the cancel key does)
+        if (_aftermathEv != null && _travel is { } t0)
+        {
+            _aftermathEv = null; t0.ScreenPending = false;
+            FinishEncounter(new EncounterOutcome(EncounterChoice.Fight, "aftermath", 0, EntityId.None, EntityId.None, EncounterOutcomes.FleeDelaySec, ""), now, false);
+        }
+        _aftermathEv = null;
+        if (_travel is { Journey: not null } t1) { t1.Cancel(now); _rec.Action(Ravensguard.Sim.Diagnostics.HeroAction.TravelCancel); t1.ClearCurrent(); }
         if (SuccessionDesk.HomeOf(rt.State, _heirRow) is { } home)
         {
             var o = rt.State.HomeRegion;
