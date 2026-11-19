@@ -128,6 +128,7 @@ public partial class StreetView
         RoadFightFrame();
         AftermathFrame();                                   // P4-D hook (StreetView.Captivity.cs)
         CrawlFrame();                                       // P4-H hook: the hero underground (StreetView.Crawl.cs)
+        SuccessionFrame();                                  // P4 close-out: the heir takes over (StreetView.Succession.cs)
         var t = _travel; if (t == null || _tfeed == null) return;
         long now = _world.Clock.Now.Seconds;
         _tfeed.Hero.BaseMmPerGs = VehicleSpeedMm();
@@ -343,7 +344,7 @@ public partial class StreetView
     /// <summary>The sim keeps the job and when it ends (<see cref="TravelState.CampJob"/>, saved); the view records it and says what it is.</summary>
     void StartCampJob(TravelState t, CampJobKind kind, long secs) { long now = _world.Clock.Now.Seconds; t.StartCampJob(kind, secs, now); _rec.Action(Ravensguard.Sim.Diagnostics.HeroAction.CampJob, secs, now); _rec.SetSpeed(SimSpeed.X8); }
 
-    static string CampJobName(CampJobKind k) => L.T(k switch { CampJobKind.Talk => "TRAVEL_CAMP_TALKING", CampJobKind.Sleep => "TRAVEL_CAMP_SLEEPING", CampJobKind.Gather => "TRAVEL_CAMP_GATHER", CampJobKind.Forage => "TRAVEL_FORAGING", CampJobKind.Hunt => "HUNT_JOB", _ => "TRAVEL_CAMP_BREAKING" });
+    static string CampJobName(CampJobKind k) => L.T(k switch { CampJobKind.Talk => "TRAVEL_CAMP_TALKING", CampJobKind.Sleep => "TRAVEL_CAMP_SLEEPING", CampJobKind.Gather => "TRAVEL_CAMP_GATHER", CampJobKind.Forage => "TRAVEL_FORAGING", CampJobKind.Hunt => "HUNT_JOB", CampJobKind.Search => "ex_job_search", CampJobKind.Dig => "ex_job_dig", _ => "TRAVEL_CAMP_BREAKING" });
 
     /// <summary>What a camp job that has come due does (its time was the sim's; this is the toast, the talk window and the sim calls the effect needs).</summary>
     void CampJobDone(TravelState t, CampJobKind kind)
@@ -361,6 +362,7 @@ public partial class StreetView
             case CampJobKind.Gather: GatherDone(t); break;
             case CampJobKind.Forage: ForageDone(t); break;
             case CampJobKind.Hunt: HuntDone(t); break;
+            case CampJobKind.Search or CampJobKind.Dig: SiteJobDone(kind); break;   // P4 close-out: the find is rolled at the barrier (StreetView.Crawl.cs)
             case CampJobKind.Sleep: _campMsg = L.T("TRAVEL_CAMP_DAWN"); _campMsgUntil = ts + 1800; break;
             case CampJobKind.Break:
                 t.BreakCamp(ts); _rec.Action(Ravensguard.Sim.Diagnostics.HeroAction.CampBreak); _campOpen = false; _router?.ShowToast(L.T("TRAVEL_CAMP_BROKEN")); _rec.SetWantedSpeed(SimSpeed.X1);

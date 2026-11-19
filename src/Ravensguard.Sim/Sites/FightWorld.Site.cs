@@ -32,6 +32,7 @@ public sealed partial class FightWorld
         if (SiteLight != null && !SeesInDark(a)) p += Sites.SiteLight.LightPoints(SiteLight(t.X, t.Y));
         if (SitePlacePoints != null) p += SitePlacePoints(a);
         if (WeatherRow is { } w && Tick < 20 * 5 && w.SurprisePoints != 0) p += w.SurprisePoints;     // the first blows out of the fog
+        p += WeatherPoints();                                                                          // P4 close-out: footing and grip (FightWorld.Weather.cs)
         return p;
     }
 

@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Godot;
 using Ravensguard.Game.UI;
+using Ravensguard.Game.UI.NewGame;
 using Ravensguard.Sim.Combat.Aftermath;
 using Ravensguard.Sim.Core;
 using Ravensguard.Sim.Succession;
@@ -48,6 +50,48 @@ public partial class CaptivityDemo : Control
                     army ? 1500 : 1500, army ? PayerKind.Household : PayerKind.Friends, army ? 800 : 300, 303, 300, army ? 340 : 310, army, army, 500, army ? 400 : 0, army ? 125 : 108, !army, army ? 0 : 1, 2, "",
                     new CaptiveResult(army ? CaptiveVerb.Search : CaptiveVerb.WorkBonds, army, false, army ? "MC_FOUND_NAIL" : "MC_BONDS_HOLD", now), 0, 0);
                 return new CaptivityView(() => view, _ => { }, () => false) { Name = "CaptivityView" };
+            }
+            case "rescue":                                                      // P4 close-out: the rescue control switch on the captivity screen
+            {
+                var view = new CaptiveView(EconomyStateHero, CaptorKind.Bandits, Restraint.Bound, CaptiveState.Held, 3, 1, true, 1500, PayerKind.Friends, 300, 303, 300, 310, false, false, 500, 0, 108, false, 1, 0, "",
+                    null, 0, 0);
+                return new CaptivityView(() => view, _ => { }, () => false)
+                {
+                    Name = "CaptivityView", Rescuers = () => [(EntityId.Make(IdKind.Person, 9), "Wat Hobbe")], TakeControl = _ => { },
+                };
+            }
+            case "rescue_hud":                                                  // P4 close-out: the street view's line while the player is the companion
+            {
+                var box = new PanelContainer { Name = "RescueHud", Position = new Vector2(12, 12), CustomMinimumSize = new Vector2(560, 0) };
+                box.AddChild(UiKit.Body(L.F("rs_hud", "Wat Hobbe", "Aldric Vane")));
+                var toast = new PanelContainer { Position = new Vector2(180, 440), CustomMinimumSize = new Vector2(600, 0) };
+                toast.AddChild(UiKit.Body(L.F("rs_now_you_are", "Wat Hobbe", "Aldric Vane")));
+                var root = new Control(); root.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect); root.AddChild(box); root.AddChild(toast);
+                return root;
+            }
+            case "succession":
+            case "succession_ironman":                                         // P4 close-out: the heir takes over
+            {
+                bool iron = _what == "succession_ironman";
+                var heirs = new List<SuccessionCandidate>
+                {
+                    new(EntityId.Make(IdKind.Person, 7), 1, SuccessionRule.Sibling, 22, "Isolde Vane"),
+                    new(EntityId.Make(IdKind.Person, 8), 2, SuccessionRule.Sibling, 19, "Hugh Vane"),
+                    new(EntityId.Make(IdKind.Person, 9), 3, SuccessionRule.Parent, 47, "Maud Vane"),
+                    new(EntityId.Make(IdKind.Person, 10), -1, SuccessionRule.Companion, 30, "Wat Hobbe"),
+                };
+                return new SuccessionView("Aldric Vane", L.T("su_cause_fight"), iron ? heirs.GetRange(0, 1) : heirs, heirs.Count, iron, _ => { }, iron ? null : () => { }, () => { }) { Name = "SuccessionView" };
+            }
+            case "loot":                                                        // P4 close-out: what the crawl brought out, in the pack
+            {
+                var box = new PanelContainer { Position = new Vector2(180, 90), CustomMinimumSize = new Vector2(600, 0) };
+                var v = new VBoxContainer(); box.AddChild(v);
+                v.AddChild(UiKit.Title(L.T("INV_TITLE")));
+                foreach (var line in new[] { "Silver chalice  0.45 kg", "Reliquary  2.4 kg", "Arming sword (rusted, dirty)  1.1 kg", "Torch x1  0.5 kg" }) v.AddChild(UiKit.Body("  " + line));
+                var toast = new PanelContainer { Position = new Vector2(180, 440), CustomMinimumSize = new Vector2(600, 0) };
+                toast.AddChild(UiKit.Body(L.F("ex_ui_left_loot", 3, Ravensguard.Sim.Trade.Quotes.Money(1480))));
+                var root = new Control(); root.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect); root.AddChild(box); root.AddChild(toast);
+                return root;
             }
             case "killed":
             {

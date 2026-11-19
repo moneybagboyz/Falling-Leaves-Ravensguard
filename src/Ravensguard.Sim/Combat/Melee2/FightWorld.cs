@@ -257,7 +257,7 @@ public sealed partial class FightWorld
     {
         long c = (K.SwingBaseX100 * 1_000_000L + K.SwingPerKgX100 * f.Weapon.MassMg) / 1_000_000;
         int pm = style == SwingStyle.Quick ? K.QuickStaminaPm : style == SwingStyle.Heavy ? K.HeavyStaminaPm : 1000;
-        return (int)(c * pm / 1000);
+        return (int)WeatherSwing(f, c * pm / 1000);                        // [P4 close-out] weather hook
     }
 
     // ------------------------------------------------------------------ commands and the state machine
@@ -277,7 +277,7 @@ public sealed partial class FightWorld
         {
             f.Act = FAct.Dodge; f.ActTicks = K.DodgeTicks;
             (f.DodgeX, f.DodgeY) = FightMath.Norm(c.DodgeX, c.DodgeY);
-            f.DodgeReady = Tick + K.DodgeTicks + K.DodgeCooldownTicks;      // the cooldown counts from the end of the dodge
+            f.DodgeReady = Tick + K.DodgeTicks + K.DodgeCooldownTicks + WeatherDodgeTicks();      // the cooldown counts from the end of the dodge; [P4 close-out] weather hook
             f.Stamina -= K.DodgeX100;
             return;
         }
@@ -414,6 +414,7 @@ public sealed partial class FightWorld
         int pm = f.Act switch { FAct.Windup or FAct.Strike or FAct.Recover => K.AttackMovePm, FAct.Block or FAct.Aiming or FAct.Drawing => K.GuardMovePm, _ => 1000 };
         speed = (int)((long)speed * pm / 1000 * f.WalkPm / 1000);
         if (f.Book.Weakened) speed = speed * 800 / 1000;
+        speed = WeatherSpeed(speed);                                       // [P4 close-out] weather hook (FightWorld.Weather.cs)
         int perTick = speed / 20;
         if (f.Act == FAct.Reloading && f.Launcher is { Holds: true } && perTick > K.MoveCancelMmps / 20) { f.Act = FAct.Idle; f.ActTicks = 0; }   // spanning needs standing
         Step(f, c.MoveX, c.MoveY, perTick);
@@ -586,6 +587,7 @@ public sealed partial class FightWorld
             {
                 int r = f.Act == FAct.Block || f.ArmourG > K.HeavyArmourKg * 1000 ? K.RegenGuardPerSX100 : K.RegenRestPerSX100;
                 if (b.Weakened) r = r * K.WeakenedRegenPm / 1000;
+                r = WeatherRegen(f, r);                                    // [P4 close-out] weather hook
                 f.Stamina = Math.Min(K.StaminaMaxX100, f.Stamina + r / 20);
             }
         }
@@ -667,6 +669,7 @@ public sealed partial class FightWorld
         }
         foreach (var p in Projectiles) h = p.Hash(h);
         if (Mounts != null) h = MountedHash(h);                     // [mounted-combat] MountedHash joins the trail
+        h = WeatherHash(h);                                         // [P4 close-out] the weather row, when set (FightWorld.Weather.cs)
         h = FightMath.Mix(h, _engageTick);              // P4-D hook: the walk-away clock
         return h;
     }

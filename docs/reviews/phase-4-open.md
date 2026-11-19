@@ -49,10 +49,10 @@ Already confirmed from Material science, Weapon and Ammunition:
 ## Moved to Phase 7 (decided with the user, Nov 2026)
 
 These only matter once armies exist, so Phase 4 closes without them. Each is recorded in `phase-4.md` with Phase 7 as its home.
-- **The 2,000 v 2,000 abstract battle budget (45 ms).** The test comes back with the Phase 7 battle bubble. The 100 v 100 and 200 v 200 budgets stay in Phase 4, because caravan ambushes use those sizes.
+- **The 2,000 v 2,000 abstract battle budget (45 ms).** The test comes back with the Phase 7 battle bubble. The 100 v 100 and 200 v 200 budgets stay in Phase 4, because caravan ambushes use those sizes. *Step 8: the case is out of AB-13 with a comment saying so; the template library's size goes with it.*
 - **AB-3's misses** (17 of 45 outside ±10%, the flanked variant worst). Fixing them needs battlefield geometry (lines, flanks, cavalry passes), which is Phase 7's formation work. The AB-3 ratchet stays, with this reason recorded.
 - **The mounted abstract charge on mud** and the spec's "+60% ±10".
-- **Followers joining road fights, formations and orders in play, and the R order wheel.**
+- **Followers joining road fights, formations and orders in play, and the R order wheel.** *Step 8: not built; the party fights only below ground (it goes into a crawl with the hero).*
 
 Also moved: heist sites to Phase 6; the cave beast and draugr art and the extra accessibility settings to Phase 8.
 
@@ -67,14 +67,14 @@ Also moved: heist sites to Phase 6; the cave beast and draugr art and the extra 
   - the larger-parry-window and hold-or-toggle accessibility options;
   - blood decals do not persist or dry;
   - the after-fight report's next-step buttons;
-  - a mid-fight load does not rebuild the fight view;
+  - a mid-fight load does not rebuild the fight view; **Closed (step 8):** the "fight" section's record is restored through the recorder and the stance view reopens on it, paused (`ResumeFight`); a site fight comes back with its crawl.
   - the English draft needs a human read.
 - **Morale, capture and succession:**
   - no morale bar under nameplates;
   - the captors' camp is not generated in the live area;
-  - the rescue control switch is not wired in the street view;
-  - hero death shows the succession order but does not switch to the heir or settle the estate in game;
-  - `CaptiveHash` and `EstateHash` are not in `WorldTool hashes`;
+  - the rescue control switch is not wired in the street view; **Closed (step 8):** "Take control of {companion}" on the captivity screen (`mc:control`), the street view is the companion's, E near the camp runs `RescueRun` at the barrier (`mc:rescue`), control comes back either way.
+  - hero death shows the succession order but does not switch to the heir or settle the estate in game; **Closed (step 8):** the hero is linked to a household at a new game (`HeroKin`, kin in the "succession" section); death opens the succession screen, `SuccessionDesk` settles the estate (items to an estate owner where the hero fell, coin less the 5% funeral) and makes the heir the hero; Ironman takes the first heir, the run ends only with nobody left.
+  - `CaptiveHash` and `EstateHash` are not in `WorldTool hashes`; **Closed (step 8):** a "captive ... estate ..." line per seed, pinned in `GoldenHashes`.
   - morale neighbour checks are O(n);
   - prisoners are not fed.
 - **Mounted:** not built yet:
@@ -88,8 +88,8 @@ Also moved: heist sites to Phase 6; the cave beast and draugr art and the extra 
   - drowning;
   - the horse wound diagram.
 - **Watch mode:**
-  - followers do not join road fights in play;
-  - the R order wheel is not wired;
+  - followers do not join road fights in play; *moved to Phase 7 (see below)*;
+  - the R order wheel is not wired; *moved to Phase 7 (see below)*;
   - autopilot road encounters do not use the odds rule in play;
   - settings rows (take-back, speed cap, which kinds pause);
   - about 95 `wm_` strings against a budget of 40.
@@ -101,9 +101,9 @@ Also moved: heist sites to Phase 6; the cave beast and draugr art and the extra 
   - Causes: the abstract model has no battlefield geometry (live raiders swamp a ten-spear line; flankers are only a morale penalty), and lance rows lack the trample and the fall.
   - The fast test is a ratchet: it fails if more than the 17 known misses appear. Plan §6 says a test that cannot fail is a review finding, so either close the gap or record the ratchet and its reason in phase-4.md.
   - Mounted: on mud the abstract gives 0.14 against 0.41 live. The spec's "+60% ±10" is not met; the live charge bonus is +220%.
-- **CI is red at d7a165e on AB13_Soak_TheBudgets** (CI runs Soak tests too): 15.3 / 14.6 / 302.5 ms against budgets of 3 / 8 / 45 ms. Assigned to the gaps helper's performance work.
-- **Abstract battles: performance.** The AB-13 Soak test fails: 100 v 100 takes about 5 ms against a 3 ms budget, and 2,000 v 2,000 takes about 125 ms against 45 ms. The template library is 0.9 MB against a 300 KB budget.
-- **The hour barrier is near its budget.** After steps 6 and 7, `Phase2ReviewTests.Daily_regions_are_staggered` has its slowest barrier at 126 to 153 ms against 150 ms; it passes alone and fails under load. Profile the hourly tick (sites daily step, caravan ambushes fought as abstract battles) and win back headroom rather than raising the budget.
+- **CI is red at d7a165e on AB13_Soak_TheBudgets** (CI runs Soak tests too): 15.3 / 14.6 / 302.5 ms against budgets of 3 / 8 / 45 ms. Assigned to the gaps helper's performance work. **Closed (step 8):** see the performance line below; the 2000 v 2000 case moved to Phase 7.
+- **Abstract battles: performance.** The AB-13 Soak test fails: 100 v 100 takes about 5 ms against a 3 ms budget, and 2,000 v 2,000 takes about 125 ms against 45 ms. The template library is 0.9 MB against a 300 KB budget. **Closed for 100 and 200 (step 8):** 100 v 100 5.6 -> 2.0 ms, 200 v 200 7.0 -> 3.1 ms on the dev box (measured on the rebuilt tables after the weapons merge), results unchanged (the 100 v 100 and a 2000 v 2000 battle hash identical before and after, on the old and the new tables): a sim-second's wound losses read once and the rest of a stable sim-second summed, the body reading cached on the battle's book copies, the step's lists kept, the armour class read once per worn set. The soak uses `TestBudget`; 2000 v 2000 and the library size moved to Phase 7.
+- **The hour barrier is near its budget.** After steps 6 and 7, `Phase2ReviewTests.Daily_regions_are_staggered` has its slowest barrier at 126 to 153 ms against 150 ms; it passes alone and fails under load. Profile the hourly tick (sites daily step, caravan ambushes fought as abstract battles) and win back headroom rather than raising the budget. **Closed (step 8):** the slow barriers were 95 to 135 ms gen-0 collections (the sites and ambushes were idle in that rig); the hourly tick allocated 310 MB a day and a half, now about 80 MB (household shopping, market sessions, needs, member lists, the fronts cache), so a pass usually has no collection: slowest barrier 51 to 63 ms, also in the full suite.
 - **Abstract battles, also left:**
   - live fights are not converted at the bubble edge in play (the code and AB-8 test exist);
   - prisoners from abstract battles do not enter captivity;
@@ -111,12 +111,14 @@ Also moved: heist sites to Phase 6; the cave beast and draugr art and the extra 
   - no in-game Chronicle (H) screen; reports reach the player only as rumours in the Journal.
 - **Exploration: loot does not reach the pack.** Crawl loot and the finds from Search and Dig are not moved into the hero's items, and burnt torches are not taken from the pack. This needs a hero command.
   - Search and Dig run on the UI thread under the site book's lock, are not on the replay log, and cost no clock time.
+  - **Closed (step 8):** `HeroCommandKind.Site` (`SiteDesk`): the crawl's haul becomes item rows of exactly the mass that left the site, the burnt torches leave the pack; Search and Dig are camp jobs (20 and 40 game minutes at 8x) whose find is rolled at the barrier under the book's lock; all recorded and saved as hero commands. A stash's coin stays a silver thing (no hoard purse is wired yet).
 - **Exploration, also left:**
-  - weather in combat is only partly wired (aim spread and fog surprise); road fights do not set the weather row from live weather;
-  - the game passes only the hero into a crawl, not the party;
+  - weather in combat is only partly wired (aim spread and fog surprise); road fights do not set the weather row from live weather; **Closed (step 8):** the road fight takes the live weather's row (saved in the fight record, in the `FightHash`); the fight reads sigma, vision cap, bow range, dodge cooldown, evade and grip points, speed, stamina regeneration, the heat's heavy-armour costs, no charges and the storm. Site fights are underground (no row). Left: torch, fire, hearing, stealth, superstition, daylight, slip and cavalry-speed fields, read by nobody yet.
+  - the game passes only the hero into a crawl, not the party; **Closed (step 8):** followers on Follow (up to three) go down with the hero.
   - the site factory is not set for replays;
-  - resting below is only a flag;
-  - the 8 °C underground temperature is not read by the clothing model;
+  - resting below is only a flag; **Closed (step 8):** resting fast-forwards at 8x until the rest stops.
+  - the 8 °C underground temperature is not read by the clothing model; **Closed (step 8):** below ground the body model reads the site's 8 °C still, dry air under rock.
   - site fights use an open arena that ignores walls;
   - the cave beast is drawn as a blob and the draugr as a tinted human rig;
   - heist sites and firedamp are out of scope.
+

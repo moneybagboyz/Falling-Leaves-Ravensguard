@@ -4,6 +4,7 @@ using Godot;
 using Ravensguard.Content;
 using Ravensguard.Game.World.Combat;
 using Ravensguard.Sim.Combat;
+using Ravensguard.Sim.Combat.Aftermath;
 using Ravensguard.Sim.Combat.Melee2;
 using Ravensguard.Sim.Combat.Watch;
 using Ravensguard.Sim.Combat.Wounds;
@@ -47,12 +48,43 @@ public partial class StreetView
     /// (the log said "You charges" when the kit was called "You").</summary>
     FighterKit HeroKit(FightContent fc)
     {
-        var worn = new List<WornItem> { new("shirt", "linen"), new("tunic", "wool") };
+        // P4 close-out: what the hero wears is the inventory's worn garments and armour (item rows, in their order), so the fight's wear can go back to them; a shirt and tunic when none
+        _heroWorn.Clear();
+        var worn = new List<WornItem>();
+        foreach (var it in _heroLink?.View?.Items ?? [])
+        {
+            if (it.Slot == Ravensguard.Sim.Inventory.EquipSlot.None || !fc.Db.TryGet<ArmourShapeDef>(it.Shape, out var a)) continue;
+            string mat = it.Material.Length > 0 && fc.T.HasMaterial(it.Material) ? it.Material : a.DefaultMaterial ?? "";
+            if (mat.Length == 0 || !fc.T.HasMaterial(mat)) continue;
+            worn.Add(new WornItem(it.Shape, mat)); _heroWorn.Add((it.Id, it.ConditionPermille));
+        }
+        if (worn.Count == 0) { worn.Add(new("shirt", "linen")); worn.Add(new("tunic", "wool")); }
         var rec = Runtime?.State.Hero ?? _hero;
         string name = _hero?.Name ?? rec?.Name ?? L.T("wm_hero_unnamed");
         if (rec == null)
             return new FighterKit { Name = name, Person = EconomyState.HeroOwner.Value, Weapon = new WeaponInstance("dagger", "iron"), Worn = worn, Skill = 30 };
         return FightSetup.HeroKit(fc, rec, worn, EconomyState.HeroOwner.Value, name);
+    }
+
+    /// <summary>The hero's worn item rows in the order of the kit's worn pieces (empty for the stand-in shirt and tunic), with their condition before the fight.</summary>
+    readonly List<(EntityId Item, int ConditionPm)> _heroWorn = [];
+
+    /// <summary>The pieces start the fight at their item rows' condition (the kit knows only shape and material); set before the fight is recorded, so a replay starts the same.</summary>
+    void WornCondition(FightWorld fight, int hero)
+    {
+        if (hero < 0 || hero >= fight.Fighters.Count) return;
+        var w = fight.Fighters[hero].Worn;
+        for (int i = 0; i < w.Length && i < _heroWorn.Count; i++) w[i].ConditionPm = Math.Clamp(_heroWorn[i].ConditionPm, 0, 1000);
+    }
+
+    /// <summary>After a road fight (P4 close-out): the wear on the hero's worn pieces goes back to their item rows at the barrier (condition; burst rings and straps stay the fight's).</summary>
+    void WriteBackWear(FightWorld fight, int hero)
+    {
+        if (_heroLink == null || hero < 0 || hero >= fight.Fighters.Count) return;
+        var w = fight.Fighters[hero].Worn;
+        var wear = new List<(EntityId, int)>();
+        for (int i = 0; i < w.Length && i < _heroWorn.Count; i++) if (w[i].ConditionPm < _heroWorn[i].ConditionPm) wear.Add((_heroWorn[i].Item, w[i].ConditionPm));
+        if (wear.Count > 0) _heroLink.Issue(AftermathDesk.WearCommand(wear, _world.Clock.Now.Seconds));
     }
 
     /// <summary>The hero's watch settings (the world's book; its changes go back through <see cref="KeepStance"/>).</summary>
@@ -72,7 +104,7 @@ public partial class StreetView
         var fc = FightContentOf(); if (fc == null) return null;
         var book = WatchBookOf();
         var setup = FightSetup.Encounter(fc, def, ev, HeroKit(fc), [], Runtime?.State.Seed ?? 1);
-        return setup with { HeroStance = book.StanceOf(fc, EconomyState.HeroOwner, Runtime?.State.Autopilot), StartWatched = book.KeepWatching };
+        return setup with { HeroStance = book.StanceOf(fc, EconomyState.HeroOwner, Runtime?.State.Autopilot), StartWatched = book.KeepWatching, Weather = _wx.State.ToString() };   // P4 close-out: the live weather's row
     }
 
     /// <summary>The encounter's options with the odds on the Fight button (P4-F: "probably lose"; a fight is offered, never forced).</summary>
@@ -94,6 +126,7 @@ public partial class StreetView
         if (ledger == null) { ledger = new WoundLedger(rt?.State.Seed ?? 1, _world.Clock.Now.Seconds); _world.AttachWounds(ledger); }
         var setup = EncounterSetup(def, ev)!;
         var fight = setup.Start(fc, ledger);
+        WornCondition(fight, setup.PlayerIndex);                    // P4 close-out: the pieces as worn as their rows
         if (_ride is { IsMounted: true } ride) Ravensguard.Sim.Combat.Mounted.MountedRide.MountHero(fight, setup.PlayerIndex, ride);   // [mounted-combat] a rider fights from the saddle
         _rec.StartFight(fight, setup.PlayerIndex);
         _rec.SetSpeed(SimSpeed.X1);
@@ -131,6 +164,7 @@ public partial class StreetView
     /// <summary>Each frame of a road fight: when it has been over for two seconds, settle the encounter and close the stance view.</summary>
     void RoadFightFrame()
     {
+        if (!_fightResumeChecked) { _fightResumeChecked = true; ResumeFight(); }   // P4 close-out: a save made mid-fight
         if (_boutFight != null) { BoutFrame(); return; }
         if (_fightView == null || _roadFight is not { } rf) return;
         var f = _world.Fight;
@@ -141,6 +175,7 @@ public partial class StreetView
         var hero = f.Fighters[_fightView.Hero];
         bool won = f.DecidedWinner == hero.Team && hero.Act != FAct.Surrendered, fled = hero.Act == FAct.Fled;   // P4-D: the winner of a walk-away too (morale 4.3)
         var t = _travel;
+        WriteBackWear(f, _fightView.Hero);                         // P4 close-out: the dents and tears onto the hero's clothing rows (before any robbery)
         if (!won && !fled && DefeatHook(rf.Ev, f, _fightView.Hero)) { CloseRoadFight(); return; }   // P4-D hook: the defeat table, robbery, capture (StreetView.Captivity.cs)
         var o = EncounterOutcomes.AfterFight(rf.Ev, won, fled, rf.Coin, id => t == null || !t.Travellers.Any(x => x.Id == id));
         long now = _world.Clock.Now.Seconds;
@@ -150,6 +185,41 @@ public partial class StreetView
         FightEnded(f);                                             // P4-D: close the log, chronicle the named dead, open the report
         CloseRoadFight();
         if (t != null) { t.ScreenPending = false; FinishEncounter(o, now, false); }
+    }
+
+    bool _fightResumeChecked;
+
+    /// <summary>
+    /// A save made mid-fight (P4 close-out): the fight record of the "fight" section is rebuilt where it stood (same FightTick, books, morale, watch and weather) and attached to the live world
+    /// through the recorder (so a replay starts it too), the stance view opens on it paused, and the road fight or the bout is settled as before when it ends. A site's fight comes back with
+    /// its crawl (StreetView.Crawl.cs), not here.
+    /// </summary>
+    void ResumeFight()
+    {
+        if (Runtime is not { } rt || rt.State.Fight is not { } rec || _fightView != null || _world.Fight != null) return;
+        rt.State.Fight = null;                                          // taken up: the next save captures the live fight, never this record again
+        var kind = FightSetup.KindOf(rec.Kind);
+        if (kind == FightKind.SiteInhabitants || FightContentOf() is not { } fc) return;
+        var ledger = rt.State.Wounds ?? _world.Wounds;
+        if (ledger == null) { ledger = new WoundLedger(rt.State.Seed, _world.Clock.Now.Seconds); _world.AttachWounds(ledger); }
+        var fight = rec.Restore(fc, ledger);
+        int hero = fight.Fighters.FindIndex(f => f.Player);
+        if (hero < 0) return;
+        _rec.StartFight(fight, hero);
+        _rec.SetSpeed(SimSpeed.Paused);
+        if (kind is FightKind.Practice or FightKind.Tournament) _boutFight = (kind.Value, -1, 0, _yard?.Settlement ?? -1);
+        else
+        {
+            var t = _travel;
+            var ev = t?.Current is { } cur && cur.Id == rec.Cause ? cur : new EncounterEvent(rec.GameSec0, rec.Cause, "Ambush", 0, 0, 0, 0, 0, [], "");
+            _roadFight = (ev, _heroLink?.View?.CoinMites ?? 0, -1);
+            if (t != null) t.ScreenPending = true;
+        }
+        OpenFightView(fight, hero);
+        if (_fightView != null && _hero != null) { var me = _fightView.Log.Info(hero); me.Name = _hero.Name; me.Female = _hero.Female; }
+        string kindName = rec.Kind, cause = rec.Cause;
+        rt.State.FightSource = () => _world.Fight is { } f ? Ravensguard.Sim.Save.FightRecord.Capture(f, kindName, cause) : null;
+        _router?.ShowToast(L.T("fr_resumed"), 4f);
     }
 
     void CloseRoadFight()

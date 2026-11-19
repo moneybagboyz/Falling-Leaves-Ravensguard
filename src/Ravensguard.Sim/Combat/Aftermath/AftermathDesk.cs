@@ -6,6 +6,7 @@ using Ravensguard.Sim.Combat.Wounds;
 using Ravensguard.Sim.Core;
 using Ravensguard.Sim.Economy;
 using Ravensguard.Sim.Inventory;
+using Ravensguard.Sim.People;
 using Ravensguard.Sim.Trade;
 
 namespace Ravensguard.Sim.Combat.Aftermath;
@@ -71,6 +72,63 @@ public sealed record DefeatReport(DefeatKind Kind, WinnerKind Winner, string Sty
 public static class AftermathDesk
 {
     public const string ActPrefix = "mc:act|";
+    /// <summary>P4 close-out (4.7): the player takes control of a free companion ("mc:control|person"), gives it back ("mc:release|"), or the controlled companion reaches the cell
+    /// ("mc:rescue|person|dx|dy": where it stands, millimetres from the cell) and the rest of the rescue is <see cref="RescueRun"/>'s creep past the guards.</summary>
+    public const string ControlPrefix = "mc:control|", ReleasePrefix = "mc:release|", RescuePrefix = "mc:rescue|";
+    /// <summary>P4 close-out: the fight's wear on the hero's worn pieces, written back to their item rows ("mc:wear|item:condition|..."; condition only, the rows keep the lower one).</summary>
+    public const string WearPrefix = "mc:wear|";
+
+    public static HeroCommand WearCommand(IEnumerable<(EntityId Item, int ConditionPm)> wear, long sec) =>
+        new() { Kind = HeroCommandKind.Aftermath, IssuedSec = sec, Tag = WearPrefix + string.Join("|", wear.Select(w => string.Create(CultureInfo.InvariantCulture, $"{w.Item.Value}:{w.ConditionPm}"))), Origin = CommandOrigin.Human };
+
+    private static HeroResult Wear(HeroContext ctx, HeroCommand c)
+    {
+        var items = ctx.Econ.Items; int n = 0;
+        foreach (var part in c.Tag[WearPrefix.Length..].Split('|', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var kv = part.Split(':');
+            if (kv.Length != 2 || !ulong.TryParse(kv[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var id) || !int.TryParse(kv[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var cond)) continue;
+            int row = items.IndexOf(new EntityId(id));
+            if (row < 0 || items.At(row).Owner != ctx.Party.Hero) continue;                  // robbed or gone since: the robbers carry the dents
+            ref var r = ref items.At(row);
+            short to = (short)Math.Clamp(cond, 0, 1000);
+            if (to < r.ConditionPermille) { r.ConditionPermille = to; n++; }
+        }
+        return new HeroResult(c.Seq, c.Kind, HeroResultCode.Ok, HeroText.Empty, 0, n, c.IssuedSec);
+    }
+
+    public static HeroCommand ControlCommand(EntityId companion, long sec) =>
+        new() { Kind = HeroCommandKind.Aftermath, IssuedSec = sec, Tag = ControlPrefix + companion.Value.ToString(CultureInfo.InvariantCulture), Origin = CommandOrigin.Human };
+    public static HeroCommand ReleaseCommand(long sec) => new() { Kind = HeroCommandKind.Aftermath, IssuedSec = sec, Tag = ReleasePrefix, Origin = CommandOrigin.Human };
+    public static HeroCommand RescueCommand(EntityId companion, long dx, long dy, long sec) =>
+        new() { Kind = HeroCommandKind.Aftermath, IssuedSec = sec, Tag = string.Create(CultureInfo.InvariantCulture, $"{RescuePrefix}{companion.Value}|{dx}|{dy}"), Origin = CommandOrigin.Human };
+
+    /// <summary>The guard posts round the cell (millimetres): the first <c>Guards</c> of a fixed ring, nearest first.</summary>
+    public static IReadOnlyList<GuardPost> PostsOf(Captive c)
+    {
+        (int X, int Y)[] ring = [(8000, 0), (-8000, 0), (0, 8000), (0, -8000), (6000, 6000), (-6000, -6000), (6000, -6000), (-6000, 6000)];
+        return [.. ring.Take(Math.Clamp(c.Guards, 1, ring.Length)).Select(p => new GuardPost(p.X, p.Y))];
+    }
+
+    private static HeroResult Rescue(HeroContext ctx, CaptiveBook book, HeroCommand c)
+    {
+        HeroResult Res(HeroResultCode code, string key) { book.Publish(book.Rules, ctx.Econ.Ledger, c.IssuedSec); return new HeroResult(c.Seq, c.Kind, code, HeroText.Of(key), 0, 0, c.IssuedSec); }
+        if (c.Tag.StartsWith(ReleasePrefix, StringComparison.Ordinal)) { book.ReleaseControl(); return Res(HeroResultCode.Ok, "rs_released"); }
+        var p = c.Tag[(c.Tag.StartsWith(ControlPrefix, StringComparison.Ordinal) ? ControlPrefix : RescuePrefix).Length..].Split('|');
+        long P(int i) => i < p.Length && long.TryParse(p[i], NumberStyles.Integer, CultureInfo.InvariantCulture, out var v) ? v : 0;
+        var who = new EntityId((ulong)P(0));
+        if (c.Tag.StartsWith(ControlPrefix, StringComparison.Ordinal))
+        {
+            bool free = ctx.Party.Squad.Find(who) != null;
+            return free && book.TakeControl(who) ? Res(HeroResultCode.Ok, "rs_control") : Res(HeroResultCode.Refused, "rs_control_refused");
+        }
+        if (book.Controlled != who || book.Hero is not { Held: true } cap) return Res(HeroResultCode.Refused, "rs_control_refused");
+        var pt = ctx.State.Population.People; int row = pt.IndexOf(who);
+        int stealth = row >= 0 ? pt.SkillLevelOf(row, Skill.Stealth) : 20, locks = row >= 0 ? pt.SkillLevelOf(row, Skill.Lockpicking) : 10;
+        var o = RescueRun.Run(book.Rules, ctx.Seed, cap, who, stealth, locks, (int)Math.Clamp(P(1), -200_000, 200_000), (int)Math.Clamp(P(2), -200_000, 200_000), PostsOf(cap), c.IssuedSec);
+        if (o.Freed) book.Rescued(cap.Person, c.IssuedSec + o.Seconds); else book.ReleaseControl();
+        return Res(o.Freed ? HeroResultCode.Ok : HeroResultCode.Refused, o.Text);
+    }
 
     public static HeroCommand DefeatCommand(DefeatRequest r, long sec) => new() { Kind = HeroCommandKind.Aftermath, IssuedSec = sec, Tag = r.Encode(), Origin = CommandOrigin.Human };
     public static HeroCommand ActCommand(CaptiveVerb v, long sec, CommandOrigin origin = CommandOrigin.Human) =>
@@ -99,6 +157,9 @@ public static class AftermathDesk
     public static HeroResult Apply(HeroContext ctx, HeroCommand c)
     {
         var book = BookOf(ctx.State, ctx.Content);
+        if (c.Tag.StartsWith(WearPrefix, StringComparison.Ordinal)) return Wear(ctx, c);              // P4 close-out: the fight's armour wear onto the item rows
+        if (c.Tag.StartsWith(ControlPrefix, StringComparison.Ordinal) || c.Tag.StartsWith(ReleasePrefix, StringComparison.Ordinal) || c.Tag.StartsWith(RescuePrefix, StringComparison.Ordinal))
+            return Rescue(ctx, book, c);                                                   // P4 close-out: the rescue control switch
         if (c.Tag.StartsWith(ActPrefix, StringComparison.Ordinal))
         {
             if (!int.TryParse(c.Tag.AsSpan(ActPrefix.Length), NumberStyles.Integer, CultureInfo.InvariantCulture, out int v) || v < 0 || v > (int)CaptiveVerb.Escape)

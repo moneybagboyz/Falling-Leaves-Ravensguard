@@ -140,6 +140,7 @@ public sealed class HouseholdSpending
     // ---------- wages: the poorest idle hands of the village, then of the fief ----------
 
     private Dictionary<int, List<int>>? _poor;
+    private bool[] _staffBuf = [];
 
     /// <summary>Idle adults (16 to 59, no post, not on a business's staff) of households that are not gentry and hold under 30 crowns, per settlement, poorest household first.</summary>
     private Dictionary<int, List<int>> Poor()
@@ -148,7 +149,8 @@ public sealed class HouseholdSpending
         var p = _w.People; var hht = _w.Households; var e = _w.Economy; int day = (int)(_w.State.HourDone / 24);
         // staff counted from the businesses now, not from the labour market's snapshot (that one is taken at the day's hiring and goes stale with the hourly quits;
         // a loaded world would take it fresh and differ, review finding 2)
-        var staff = new bool[p.Count];
+        if (_staffBuf.Length < p.Count) _staffBuf = new bool[p.Count]; else Array.Clear(_staffBuf);
+        var staff = _staffBuf;
         foreach (var b in _ew.Production.Businesses) foreach (int x in b.Staff) if (x < staff.Length) staff[x] = true;
         var tmp = new Dictionary<int, List<(long Coin, int Person)>>();
         for (int i = 0; i < p.Count; i++)

@@ -24,6 +24,10 @@ public enum HeroCommandKind : byte
     Aftermath,
     /// <summary>Appended (Phase 4 P4-F): a watch-mode setting (the stance of a person, keep watching, take control on input, the speed cap; the tag "wm:...") applied by <see cref="Ravensguard.Sim.Combat.Watch.WatchDesk"/>.</summary>
     Watch,
+    /// <summary>Appended (P4 close-out): the sites at the barrier, applied by <see cref="Ravensguard.Sim.Sites.SiteDesk"/>: a crawl's haul into the pack and its burnt torches out ("ex:take|..."), a battlefield searched ("ex:search|site"), a hoard dug ("ex:dig|site").</summary>
+    Site,
+    /// <summary>Appended (P4 close-out): the hero died; the heir takes over and the estate is settled ("su:heir|person|x|y"), or the line ends ("su:end|x|y"): <see cref="Ravensguard.Sim.Succession.SuccessionDesk"/>.</summary>
+    Succession,
 }
 
 /// <summary>Where the hero crafts (built on the main thread from what is in reach, copied into the command).</summary>
@@ -376,6 +380,8 @@ public sealed class HeroDesk
                 HeroCommandKind.JobAbandon => JobAbandon(ctx, c),
                 HeroCommandKind.Aftermath => Ravensguard.Sim.Combat.Aftermath.AftermathDesk.Apply(ctx, c),     // P4-D hook
                 HeroCommandKind.Watch => Ravensguard.Sim.Combat.Watch.WatchDesk.Apply(ctx, c),                // P4-F hook
+                HeroCommandKind.Site => Ravensguard.Sim.Sites.SiteDesk.Apply(ctx, c),                          // P4 close-out: loot to the pack, search and dig
+                HeroCommandKind.Succession => Ravensguard.Sim.Succession.SuccessionDesk.Apply(ctx, c),         // P4 close-out: the heir takes over, the estate is settled
                 _ => R(c, HeroResultCode.Invalid, T("HERO_UNKNOWN_COMMAND")),
             };
         }

@@ -66,13 +66,15 @@ public sealed class FightRecord
     [Key(22)] public long[]? Armour { get; set; }
     /// <summary>Close-out item 1 (no format bump): per fighter in id order, the tick it stays inside a longer weapon's reach and whose; null when nobody is or was.</summary>
     [Key(23)] public long[]? Inside { get; set; }
+    /// <summary>P4 close-out (no format bump): the fight's weather row by its state name; "" for a fight without one (older records).</summary>
+    [Key(24)] public string Weather { get; set; } = "";
 
     // ---------------------------------------------------------------- capture
 
     public static FightRecord Capture(FightWorld w, string kind = "", string cause = "")
     {
         if (kind.Length == 0 && w.SetupKind is { } sk) kind = FightSetup.NameOf(sk);    // P4-F: the setup's kind, so the rules come back (the session recorder captures without one)
-        var r = new FightRecord { Seed = w.Seed, FightId = w.FightId, GameSec0 = w.GameSec0, Tick = w.Tick, UsesLedger = w.Ledger != null, Kind = kind, Cause = cause };
+        var r = new FightRecord { Seed = w.Seed, FightId = w.FightId, GameSec0 = w.GameSec0, Tick = w.Tick, UsesLedger = w.Ledger != null, Kind = kind, Cause = cause, Weather = w.WeatherRow?.State ?? "" };
         r.Fighters = [.. w.Fighters.Select(f => Row(w, f))];
         r.Projectiles = [.. w.Projectiles.Select(p => new ProjectileRow
         {
@@ -220,6 +222,7 @@ public sealed class FightRecord
                     if (k < f.Worn.Length) { f.Worn[k].ConditionPm = (int)Armour[i]; f.Worn[k].BreachMask = (ulong)Armour[i + 1]; f.Worn[k].Slipped = Armour[i + 2] != 0; }
             }
         }
+        w.WeatherRow = FightWorld.WeatherRowOf(content.Db, Weather);          // P4 close-out: the weather row
         return w;
     }
 

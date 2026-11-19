@@ -31,7 +31,7 @@ public sealed class FoodPlan
 }
 
 /// <summary>What one household's day of needs came to (households spec 3.2). Measures are in hundredths; grams are of the good itself.</summary>
-public sealed record NeedsResult(
+public readonly record struct NeedsResult(
     int Members, int NeedStapleX100, int NeedRelishX100, int EatenStapleX100, int EatenRelishX100, int SubstitutedX100, int FedPermille,
     long AleNeedG, long AleDrunkG, long SaltNeedG, long SaltEatenG, long FuelNeedG, long FuelBurnedG, long MillTollG,
     bool DietPoor, bool Cold, bool LowStore, HouseholdTier Tier, int FoodCoverDaysX10, int FuelCoverDaysX10)

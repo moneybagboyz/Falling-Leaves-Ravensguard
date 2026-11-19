@@ -90,6 +90,9 @@ public sealed class SuccessionSave
     [Key(3)] public string[][] RecordText { get; set; } = [];
     [Key(4)] public bool RunEnded { get; set; }
     [Key(5)] public ulong CurrentHero { get; set; }
+    /// <summary>The hero's kin (P4 close-out; absent in older saves, which read as none).</summary>
+    [Key(6)] public ulong[] KinPeople { get; set; } = [];
+    [Key(7)] public byte[] KinRelations { get; set; } = [];
 
     public static SuccessionSave Capture(SuccessionBook b) => new()
     {
@@ -98,12 +101,15 @@ public sealed class SuccessionSave
         Records = [.. b.Records.Select(r => new long[] { (long)r.From.Value, (long)r.To.Value, (long)r.Rule, r.Coin, r.EstateId, r.GameDay, (long)r.Guardian.Value })],
         RecordText = [.. b.Records.Select(r => new[] { r.ReputationPending, r.RecoverShape }.Concat(r.DeedsPending).ToArray())],
         RunEnded = b.RunEnded, CurrentHero = b.CurrentHero.Value,
+        KinPeople = [.. b.Kin.Select(k => k.Person.Value)], KinRelations = [.. b.Kin.Select(k => (byte)k.Relation)],
     };
 
     public SuccessionBook Restore()
     {
         if (Estates.Length != EstateItems.Length || Records.Length != RecordText.Length) throw new SaveException("Corrupt 'succession' section in save.");
         var b = new SuccessionBook { RunEnded = RunEnded, CurrentHero = new EntityId(CurrentHero) };
+        if (KinPeople.Length != KinRelations.Length) throw new SaveException("Corrupt kin in the 'succession' section.");
+        for (int k = 0; k < KinPeople.Length; k++) b.Kin.Add(new HeroKinLink(new EntityId(KinPeople[k]), (KinRelation)KinRelations[k]));
         for (int k = 0; k < Estates.Length; k++)
         {
             var v = Estates[k];

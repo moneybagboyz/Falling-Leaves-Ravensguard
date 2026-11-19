@@ -23,7 +23,20 @@ public sealed class BusinessKind
     /// <summary>Staff are paid by the day they are on the books (manor, stall) not by the batch.</summary>
     public bool Salaried;
     public int StaffCapacity => Slots.Sum(s => s.Count);
-    public IEnumerable<Recipe> RecipesFor(string station) { foreach (var r in Recipes) if (r.Station == station) yield return r; }
+    /// <summary>The recipes a station of this kind works, in recipe order (built once per recipe list and shared by the region workers: the planner asks for every station every day).</summary>
+    public Recipe[] RecipesFor(string station)
+    {
+        var snap = Volatile.Read(ref _byStation);
+        if (snap == null || !ReferenceEquals(snap.Recipes, Recipes))
+        {
+            var rs = Recipes; var map = new Dictionary<string, Recipe[]>(StringComparer.Ordinal);
+            foreach (var r in rs) if (!map.ContainsKey(r.Station)) map[r.Station] = [.. rs.Where(x => x.Station == r.Station)];
+            Volatile.Write(ref _byStation, snap = new StationRecipes(rs, map));
+        }
+        return snap.Map.TryGetValue(station, out var a) ? a : [];
+    }
+    private sealed record StationRecipes(Recipe[] Recipes, Dictionary<string, Recipe[]> Map);
+    private StationRecipes? _byStation;
 }
 
 /// <summary>Everything the production systems read from content, resolved once (recipes, business kinds, extraction kinds, resource constants).</summary>

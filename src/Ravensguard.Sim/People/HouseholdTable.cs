@@ -120,11 +120,27 @@ public sealed class HouseholdTable
         return c;
     }
 
-    public IEnumerable<int> Members(int household)
-    {
-        int s = MemberStart[household], n = MemberCount[household];
-        for (int k = 0; k < n; k++) yield return MemberIdx[s + k];
-    }
+    /// <summary>The household's members, in table order (a struct range: <c>foreach</c> over it allocates nothing; the hourly tick walks it for every household).</summary>
+    public MemberRange Members(int household) => new(MemberIdx, MemberStart[household], MemberCount[household]);
 
     public long ArrayBytes() => (long)Count * (4 * 3 + 2 * 4 + 1 * 3 + 4 + IntPtr.Size) + MemberIdx.Count * 4L;
+}
+
+/// <summary>A household's slice of <see cref="HouseholdTable.MemberIdx"/>, read live (as the iterator it replaced did). A struct enumerator, so <c>foreach</c> allocates nothing; LINQ still works through the interface.</summary>
+public readonly struct MemberRange(List<int> idx, int start, int count) : IEnumerable<int>
+{
+    public int Count => count;
+    public Enumerator GetEnumerator() => new(idx, start, count);
+    IEnumerator<int> IEnumerable<int>.GetEnumerator() => GetEnumerator();
+    System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
+
+    public struct Enumerator(List<int> idx, int start, int count) : IEnumerator<int>
+    {
+        private int _k = -1;
+        public readonly int Current => idx[start + _k];
+        readonly object System.Collections.IEnumerator.Current => Current;
+        public bool MoveNext() => ++_k < count;
+        public void Reset() => _k = -1;
+        public readonly void Dispose() { }
+    }
 }

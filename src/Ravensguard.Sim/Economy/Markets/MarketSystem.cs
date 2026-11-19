@@ -334,6 +334,7 @@ public sealed class MarketSystem
     }
 
     private MarketParty?[] _stewards = [];
+    private long[] _held = [];
 
     /// <summary>The steward of a fief (relief purchases): a party over the fief's treasury purse and chest, made once (taxes spec 3.6).</summary>
     public MarketParty Steward(int fief)
@@ -367,30 +368,42 @@ public sealed class MarketSystem
         int ratio = Econ.Tiers[hh] == HouseholdTier.Survive ? 4000 : 2000;
         int posted = 0;
         long reserveLeft = Econ.SeedReserveG[hh];                                  // seed corn is not food: the shopper counts only what the household may eat
-        var held = new Dictionary<ushort, long>();
-        foreach (ushort sg in Econ.Food.Staples)
+        // what the household holds of each staple, seed corn set aside (a small buffer the system keeps: this ran for every household every day and allocated a dictionary each time)
+        var staples = Econ.Food.Staples;
+        if (_held.Length < staples.Length) _held = new long[staples.Length];
+        var held = _held;
+        for (int j = 0; j < staples.Length; j++)
         {
+            ushort sg = staples[j];
             long q = party.Store.Qty(sg);
             if (Econ.Food.IsGrain(sg)) { long r = Math.Min(q, reserveLeft); reserveLeft -= r; q -= r; }
-            held[sg] = q;
+            held[j] = q;
         }
-        long Held(ushort g) => held.TryGetValue(g, out long q) ? q : party.Store.Qty(g);
-        int Line(IReadOnlyList<(ushort Good, int Permille)> mix, long measuresX100, int coverDays, int priority)
+        long Held(ushort g) { for (int j = staples.Length - 1; j >= 0; j--) if (staples[j] == g) return held[j]; return party.Store.Qty(g); }
+        int Line((ushort Good, int Permille)[] mix, long measuresX100, int coverDays, int priority)
         {
             if (measuresX100 <= 0) return 0;
             // flour and bread count as on sale only when the book holds a day of its demand (a handful of loaves is not a market: the order would lapse and the household go hungry, decision I18); grain always
-            var avail = mix.Where(m => Held(m.Good) > 0 || (Econ.Food.IsGrain(m.Good) || mix != Mix.Staple ? book.Goods[m.Good].StockUnits > 0 : book.Goods[m.Good].StockUnits >= Math.Max(1, book.Goods[m.Good].Demand))).ToList();
-            int tot = avail.Sum(m => m.Permille); int n = 0;
-            if (tot == 0) return 0;
-            foreach (var (g, pm) in avail)
+            Span<bool> avail = stackalloc bool[mix.Length];
+            int tot = 0, n = 0;
+            for (int i = 0; i < mix.Length; i++)
             {
+                ushort g = mix[i].Good;
+                avail[i] = Held(g) > 0 || (Econ.Food.IsGrain(g) || mix != Mix.Staple ? book.Goods[g].StockUnits > 0 : book.Goods[g].StockUnits >= Math.Max(1, book.Goods[g].Demand));
+                if (avail[i]) tot += mix[i].Permille;
+            }
+            if (tot == 0) return 0;
+            for (int i = 0; i < mix.Length; i++)
+            {
+                if (!avail[i]) continue;
+                var (g, pm) = mix[i];
                 long daily = HouseholdNeeds.GramsFor(c, g, measuresX100 * pm / tot);
                 long target = daily * coverDays, have = Held(g);
                 if (daily > 0 && have < target / 2) { book.Post(new BuyOrder(party, g, target - have, ratio) { Priority = priority }); n++; }
             }
             return n;
         }
-        long heldStaple = 0; foreach (ushort sg in Econ.Food.Staples) heldStaple += HouseholdNeeds.MeasuresX100(c, sg, Held(sg));
+        long heldStaple = 0; foreach (ushort sg in staples) heldStaple += HouseholdNeeds.MeasuresX100(c, sg, Held(sg));
         // a household that holds the grain for its next days eats it as pottage and home-baked bread: it does not buy flour or bread (integration decision I17)
         if (heldStaple < (long)need.StapleX100 * basket.TargetCoverDays.GetValueOrDefault("staple", 20) / 2)
         posted += Line(Mix.Staple, need.StapleX100, basket.TargetCoverDays.GetValueOrDefault("staple", 20), 0);
