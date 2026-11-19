@@ -27,6 +27,16 @@ Collected while steps 1 to 7 were built. Step 8 fixes each one or moves it into 
 
    Check the new values against the item 2 matrix.
 
+## Moved to Phase 7 (decided with the user, Nov 2026)
+
+These only matter once armies exist, so Phase 4 closes without them. Each is recorded in `phase-4.md` with Phase 7 as its home.
+- **The 2,000 v 2,000 abstract battle budget (45 ms).** The test comes back with the Phase 7 battle bubble. The 100 v 100 and 200 v 200 budgets stay in Phase 4, because caravan ambushes use those sizes.
+- **AB-3's misses** (17 of 45 outside ±10%, the flanked variant worst). Fixing them needs battlefield geometry (lines, flanks, cavalry passes), which is Phase 7's formation work. The AB-3 ratchet stays, with this reason recorded.
+- **The mounted abstract charge on mud** and the spec's "+60% ±10".
+- **Followers joining road fights, formations and orders in play, and the R order wheel.**
+
+Also moved: heist sites to Phase 6; the cave beast and draugr art and the extra accessibility settings to Phase 8.
+
 ## Found during steps 1 to 5 (see each spec's Notes for detail)
 
 - **Mounted reach:** mounted non-lance weapons get +0.4 m against riders too; the spec says +0 there.
