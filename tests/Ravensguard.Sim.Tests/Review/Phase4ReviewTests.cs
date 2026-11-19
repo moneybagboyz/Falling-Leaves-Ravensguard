@@ -132,6 +132,19 @@ public class Phase4ReviewTests
         Assert.Equal(total, w.TotalCoin);
     }
 
+    // ------------------------------------------------------------------ F7: robbery's food tally
+
+    [Fact]
+    public void F7_the_robbers_plan_says_how_much_food_they_carried_off()
+    {
+        var r = AftermathRules.For(EconFixture.Content);
+        var bread = new Ravensguard.Sim.Combat.Aftermath.LootItem(EntityId.None, "bread", LootKind.Food, 300, 3000, Good: 7, Qty: 3000);
+        var plan = Robbery.Plan(r, 0, false, [bread], false, [new Robber(), new Robber()]);
+        Assert.Equal(r.D.FoodLeftG, plan.FoodLeftG);                                         // a day's food is left
+        Assert.Equal(3000 - r.D.FoodLeftG, plan.FoodTakenG);                                 // and the rest is taken (always 0 before)
+        Assert.Equal(3000, plan.Taken.Concat(plan.Left).Where(i => i.Good == 7).Sum(i => i.MassG));
+    }
+
     // ------------------------------------------------------------------ F3: the fighters' books stay the ledger's
 
     [Fact]

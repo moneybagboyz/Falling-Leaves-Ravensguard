@@ -37,6 +37,7 @@ public static class Robbery
         bool daggerLeft = resisted;                                  // a victim who fought to the end is "seen": no dagger is left
         long foodLeft = D.FoodLeftG, foodTaken = 0, foodKept = 0;
         var rest = new List<LootItem>();
+        var foodGoods = new HashSet<ushort>();
         // fixed order of the candidates: by kind, then the robbers' preference, then id (stable)
         foreach (var it in items.OrderBy(i => i.Id.Value).ThenBy(i => i.Good))
         {
@@ -45,6 +46,7 @@ public static class Robbery
                 case LootKind.Clothing when leftShapes.Contains(it.Shape): keep.Add(it); continue;
                 case LootKind.Food:
                 {
+                    foodGoods.Add(it.Good);
                     long k = Math.Min(foodLeft, it.MassG); foodLeft -= k;
                     if (k >= it.MassG) { keep.Add(it); foodKept += k; continue; }
                     if (k > 0) { keep.Add(it with { MassG = k, Qty = Qty(it, k) }); foodKept += k; }
@@ -75,6 +77,7 @@ public static class Robbery
             }
         }
         foreach (var i in rest) if (!chosen.Contains(i)) keep.Add(i);
+        foreach (var i in take) if (i.Good != ushort.MaxValue && foodGoods.Contains(i.Good)) foodTaken += i.MassG;   // the food the robbers carry off (it was always 0: review finding 7)
         return new RobberyPlan(taken, left, take, keep, foodTaken, foodKept);
     }
 
@@ -91,11 +94,12 @@ public static class Robbery
         var shields = content.All<ShieldShapeDef>().Select(w => w.Id).ToHashSet(StringComparer.Ordinal);
         var armour = content.All<ArmourShapeDef>().Select(w => w.Id).ToHashSet(StringComparer.Ordinal);
         var list = new List<LootItem>();
-        foreach (int row in carried.Rows(e).ToList())
+        var mine = carried.Rows(e).ToList();                                                   // one walk of the item table (review finding 7: one per row and per container before)
+        foreach (int row in mine)
         {
             ref var r = ref e.Items.At(row);
             if (r.Parent >= 0 && e.Items.At(r.Parent).Owner == carried.Owner) continue;      // contents go with their container
-            long mass = MassWithContents(e, carried.Owner, row);
+            long mass = MassWithContents(e, carried.Owner, row, mine);
             long value = valueOf?.Invoke(row) ?? 0;
             var kind = weapons.Contains(r.Shape) || shields.Contains(r.Shape) ? LootKind.Weapon : under.Contains(r.Shape) ? LootKind.Clothing
                 : armour.Contains(r.Shape) ? LootKind.Armour : carried.Equip.ContainsKey(r.Id) ? LootKind.Clothing : LootKind.Tool;
@@ -114,10 +118,11 @@ public static class Robbery
         return list;
     }
 
-    private static long MassWithContents(EconomyState e, EntityId owner, int row)
+    /// <summary>A row's mass with what is inside it; <paramref name="mine"/> is every row the owner holds (contents are always the owner's too).</summary>
+    private static long MassWithContents(EconomyState e, EntityId owner, int row, List<int> mine)
     {
         long m = e.Items.MassG(row, e.Goods);
-        foreach (int i in e.Items.LiveRows()) if (e.Items.At(i).Parent == row && e.Items.At(i).Owner == owner) m += MassWithContents(e, owner, i);
+        foreach (int i in mine) if (e.Items.At(i).Parent == row && e.Items.At(i).Owner == owner) m += MassWithContents(e, owner, i, mine);
         return m;
     }
 
@@ -131,12 +136,13 @@ public static class Robbery
         var moved = new List<EntityId>();
         var stash = e.OpenStore(StoreKind.Chest, stashOwner);
         var pack = carried.Pack(e);
+        var mine = carried.Rows(e).ToList();
         foreach (var it in plan.Taken)
         {
             if (it.Kind == LootKind.Mount) continue;
             if (it.Id != EntityId.None && e.Items.IndexOf(it.Id) is int row and >= 0 && e.Items.At(row).Owner == carried.Owner)
             {
-                MoveRow(e, carried, row, stashOwner, moved);
+                MoveRow(e, carried, row, stashOwner, moved, mine);
                 e.Items.At(row).Parent = -1;
             }
             else if (it.Good != ushort.MaxValue && it.Qty > 0) Store.MoveUpTo(pack, stash, it.Good, it.Qty);
@@ -144,10 +150,10 @@ public static class Robbery
         return moved;
     }
 
-    private static void MoveRow(EconomyState e, Carried carried, int row, EntityId to, List<EntityId> moved)
+    private static void MoveRow(EconomyState e, Carried carried, int row, EntityId to, List<EntityId> moved, List<int> mine)
     {
         var id = e.Items.At(row).Id;
-        foreach (int i in e.Items.LiveRows().ToList()) if (e.Items.At(i).Parent == row && e.Items.At(i).Owner == carried.Owner) MoveRow(e, carried, i, to, moved);
+        foreach (int i in mine) if (e.Items.At(i).Parent == row && e.Items.At(i).Owner == carried.Owner) MoveRow(e, carried, i, to, moved, mine);
         e.Items.At(row).Owner = to;
         carried.Equip.Remove(id);
         for (int q = 0; q < carried.QuickBar.Length; q++) if (carried.QuickBar[q] == id) carried.QuickBar[q] = EntityId.None;

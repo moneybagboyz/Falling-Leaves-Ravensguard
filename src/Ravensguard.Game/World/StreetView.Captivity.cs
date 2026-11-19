@@ -54,7 +54,15 @@ public partial class StreetView
             _rec.SetSpeed(SimSpeed.Paused);
             ShowDefeat(rep, p.Ev);
         }
-        if (_aftermathEv != null) HoldJourney(now);                       // from the fall to the end of captivity the journey waits
+        // a save loaded while the hero is held (review, game finding 3): the sim's book says held, so the captivity screen comes back and the journey waits, as before the save
+        bool held = Captives is { HeroHeld: true };
+        if (held && _captivityView == null && _defeatView == null && _defeatPending == null && _rescuer == null && _successionView == null && _heirsTask == null
+            && Captives?.View is { State: CaptiveState.Held })
+        {
+            OpenCaptivityView();
+            _rec.SetWantedSpeed(SimSpeed.X8); _rec.SetSpeed(SimSpeed.X8);
+        }
+        if (_aftermathEv != null || held) HoldJourney(now);              // from the fall to the end of captivity the journey waits
         if (_captivityView == null) return;
         var v = Captives?.View;
         if (_captiveActSec >= 0 && v?.Last is { } last && last.EndSec >= _captiveActSec) _captiveActSec = -1;
@@ -85,9 +93,7 @@ public partial class StreetView
         if (rep.Kind == DefeatKind.Killed) { HeroDied("su_cause_fight"); return; }   // the heir takes over (StreetView.Succession.cs); with nobody left the run ends
         if (rep.Kind == DefeatKind.Captured)
         {
-            Layer();
-            OpenCaptivityView();
-            _mcLayer!.AddChild(_captivityView);
+            OpenCaptivityView();                                            // adds the view itself (it was added a second time here: review, game finding 4)
             _rec.SetWantedSpeed(SimSpeed.X8); _rec.SetSpeed(SimSpeed.X8);
             return;
         }
