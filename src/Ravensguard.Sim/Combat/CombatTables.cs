@@ -100,7 +100,7 @@ public sealed class CombatTables
             var haft = s.HaftMaterial != null ? materials[s.HaftMaterial] : head;
             mass += haft.DensityKgM3 * s.HaftVolumeCm3;
         }
-        return new WeaponStats(s, head, q, LayerProps.From(head), mass, s.HeadVolumeCm3 + s.HaftVolumeCm3, QualityTable.Multiplier(q));
+        return new WeaponStats(s, head, q, LayerProps.From(head), mass, s.HeadVolumeCm3 + s.HaftVolumeCm3, QualityTable.EdgeMultiplier(q));
     }
 
     public LayerProps Tissue(string materialId) =>

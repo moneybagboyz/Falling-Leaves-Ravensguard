@@ -134,7 +134,10 @@ public sealed class CalibrationV2
 /// </summary>
 public sealed class CombatTablesV2
 {
+    /// <summary>Qa, the armour quality multiplier by <see cref="Quality"/>, permille (DF2014:Item quality, the armour-deflect column: an artifact x3).</summary>
     public static readonly int[] QualityPm = [1000, 1200, 1400, 1600, 1800, 2000, 3000];
+    /// <summary>Qw, the weapon's edge multiplier by <see cref="Quality"/>, permille (the sharpness column, 50% to 100% of the max edge: an artifact's edge is a masterwork's).</summary>
+    public static readonly int[] EdgeQualityPm = [1000, 1200, 1400, 1600, 1800, 2000, 2000];
 
     private readonly Dictionary<string, MaterialV2> _materials = new(StringComparer.Ordinal);
     private readonly Dictionary<(string, string, Quality), WeaponV2> _weapons = [];
@@ -227,7 +230,7 @@ public sealed class CombatTablesV2
         return new WeaponV2
         {
             Shape = s, Head = _materials[head.Id], Quality = q, Attacks = attacks, MassMg = mass,
-            VolumeMilli = RL((s.HeadVolumeCm3 + s.HaftVolumeCm3) * 1000), QwPm = QualityPm[(int)q],
+            VolumeMilli = RL((s.HeadVolumeCm3 + s.HaftVolumeCm3) * 1000), QwPm = EdgeQualityPm[(int)q],
         };
     }
 
