@@ -195,7 +195,7 @@ public sealed class ResolverV2(CombatTablesV2 tables)
             LayerOutcome res;
             if (edged)
             {
-                long need = LayerTest.CutNeedMilli(st.ShearYield, st.ShearFracture, s.Weapon.Head, s.Weapon.QwPm, a, w.QualityPm, cm, 1000);
+                long need = LayerTest.CutNeedMilli(st.ShearYield, st.ShearFracture, s.Weapon.Head, s.EdgeQwPm, a, w.QualityPm, cm, 1000);
                 step.NeedMilli = need;
                 if (m >= need)
                 {
@@ -381,7 +381,7 @@ public sealed class ResolverV2(CombatTablesV2 tables)
         depthPm = 0; ratioPm = 0;
         if (edged)
         {
-            need = LayerTest.CutNeedMilli(mat.ShearYield, mat.ShearFracture, s.Weapon.Head, s.Weapon.QwPm, area, 1000, 1000, mat.CutResistPm);
+            need = LayerTest.CutNeedMilli(mat.ShearYield, mat.ShearFracture, s.Weapon.Head, s.EdgeQwPm, area, 1000, 1000, mat.CutResistPm);
             if (m >= need)
             {
                 m = LayerTest.AfterCut(m, need, C);

@@ -31,14 +31,16 @@ public static class ItemMath
 
     /// <summary>
     /// <c>(sum(material) + labour) x quality x condition</c> in mites, rounded half up once at the end; each stain takes 10% off (until washed).
-    /// Common/new steel arming sword with 24 h skilled labour at skill 60 is 2,506 (spec G-I2).
+    /// Common/new steel arming sword with 24 h skilled labour at skill 60 is 2,506 (spec G-I2). Each repair the row records (<paramref name="wear"/>'s top four bits) takes 10% more off, at most 30%.
     /// </summary>
-    public static long ValueMites(long materialsAndLabourMites, ItemQuality quality, int conditionPermille, int stains = 0)
+    public static long ValueMites(long materialsAndLabourMites, ItemQuality quality, int conditionPermille, int stains = 0, ushort wear = 0)
     {
         long q = ItemQualityRules.ValuePermille(quality), c = ConditionPermille(conditionPermille);
         long num = materialsAndLabourMites * q * c;                 // x 1e6
         long v = (num + 500_000) / 1_000_000;
         if (stains > 0) v = (v * Math.Max(0, 100 - 10 * stains) + 50) / 100;
+        int rp = QualityTiers.RepairValuePm(wear);                  // P5-A1 (items-quality-and-wear 4.1): -100 pm a repair, at most -300 (the top four bits of Wear)
+        if (rp < 1000) v = (v * rp + 500) / 1000;
         return v;
     }
 }

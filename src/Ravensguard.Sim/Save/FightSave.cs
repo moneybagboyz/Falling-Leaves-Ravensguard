@@ -108,7 +108,7 @@ public sealed class FightRecord
         return new FighterRow
         {
             Name = k.Name, Team = k.Team, Person = k.Person, Player = f.Player,
-            WeaponShape = k.Weapon?.ShapeId ?? "", WeaponMaterial = k.Weapon?.MaterialId ?? "", WeaponQuality = (byte)(k.Weapon?.Quality ?? Quality.Standard), Shield = k.Shield ?? "",
+            WeaponShape = k.Weapon?.ShapeId ?? "", WeaponMaterial = k.Weapon?.MaterialId ?? "", WeaponQuality = (byte)(k.Weapon?.Quality ?? Goods.ItemQuality.Common), Shield = k.Shield ?? "",
             WornShapes = [.. k.Worn.Select(x => x.ShapeId)], WornMaterials = [.. k.Worn.Select(x => x.MaterialId)], WornQualities = [.. k.Worn.Select(x => (byte)x.Quality)],
             Launcher = k.Launcher ?? "", Ammo = k.Ammo ?? "", AmmoCount = k.AmmoCount,
             ThrowShapes = [.. k.Throwables.Select(t => t.Shape)], ThrowMaterials = [.. k.Throwables.Select(t => t.Material)], ThrowCounts = [.. k.Throwables.Select(t => t.Count)], ThrowImprovised = [.. k.Throwables.Select(t => t.Improvised)],
@@ -180,9 +180,9 @@ public sealed class FightRecord
             var kit = new FighterKit
             {
                 Name = r.Name, Team = r.Team, Person = r.Person,
-                Weapon = r.WeaponShape.Length > 0 ? new WeaponInstance(r.WeaponShape, r.WeaponMaterial, (Quality)r.WeaponQuality) : null,
+                Weapon = r.WeaponShape.Length > 0 ? new WeaponInstance(r.WeaponShape, r.WeaponMaterial, (Goods.ItemQuality)r.WeaponQuality) : null,
                 Shield = r.Shield.Length > 0 ? r.Shield : null,
-                Worn = [.. r.WornShapes.Select((s, i) => new WornItem(s, r.WornMaterials[i], (Quality)r.WornQualities[i]))],
+                Worn = [.. r.WornShapes.Select((s, i) => new WornItem(s, r.WornMaterials[i], (Goods.ItemQuality)r.WornQualities[i]))],
                 Launcher = r.Launcher.Length > 0 ? r.Launcher : null, Ammo = r.Ammo.Length > 0 ? r.Ammo : null, AmmoCount = r.AmmoCount,
                 Throwables = [.. r.ThrowShapes.Select((s, i) => new ThrowStock(s, r.ThrowMaterials[i], r.ThrowCounts[i], r.ThrowImprovised[i]))],
                 Improvised = r.Improvised.Length > 0 ? r.Improvised : null,
@@ -198,7 +198,7 @@ public sealed class FightRecord
             }
             // what is in hand now
             if (r.NowImprovised.Length > 0) { f.Improvised = content.Improvised[r.NowImprovised]; f.Weapon = content.ImprovisedWeapon(f.Improvised); }
-            else { f.Improvised = null; f.Weapon = content.T.Weapon(r.NowShape, r.NowMaterial, (Quality)r.NowQuality); }
+            else { f.Improvised = null; f.Weapon = content.T.Weapon(r.NowShape, r.NowMaterial, (Goods.ItemQuality)r.NowQuality); }
             var sh = f.Weapon.Shape;
             f.Family = FightWorld.FamilyOf(sh); f.ReachMm = Math.Max(500, sh.ReachMm); f.StrikeTicks = Math.Max(1, sh.StrikeTicks);
             f.BaseWindTicks = FightWorld.TicksOf(sh.WindUpS); f.BaseRecoverTicks = FightWorld.TicksOf(sh.RecoverS);

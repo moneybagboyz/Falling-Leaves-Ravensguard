@@ -29,16 +29,14 @@ public class DfWikiGoldenTests(V2Fixture f)
     [Fact]
     public void RS26_QualityMultipliers_ItemQualityTable()
     {
-        // DF2014:Item quality: armour deflect 1, 1.2, 1.4, 1.6, 1.8, 2, artifact 3 (Qa); sharpness 50, 60, 70, 80, 90, 100, artifact 100% of the max edge (Qw relative to standard)
-        Assert.Equal(new[] { 1000, 1200, 1400, 1600, 1800, 2000, 3000 }, CombatTablesV2.QualityPm);
-        Assert.Equal(new[] { 1000, 1200, 1400, 1600, 1800, 2000, 2000 }, CombatTablesV2.EdgeQualityPm);
-        for (int q = 0; q < QualityTable.Count; q++)
+        // P5-A1 (items-quality-and-wear 3): one scale for Qa and Qw: crude 0.8, poor 0.9, common 1.0 (DF's standard), fine 1.4, masterwork 2.0 (DF's own values), no artifact tier
+        Assert.Equal(new[] { 800, 900, 1000, 1400, 2000 }, CombatTablesV2.QualityPm);
+        for (int q = 0; q < Ravensguard.Sim.Goods.QualityTiers.Count; q++)
         {
-            Assert.Equal(CombatTablesV2.EdgeQualityPm[q], f.T.Weapon("arming_sword", "steel", (Quality)q).QwPm);
-            Assert.Equal(CombatTablesV2.EdgeQualityPm[q], (int)Math.Round(QualityTable.EdgeMultiplier((Quality)q) * 1000));
-            Assert.Equal(CombatTablesV2.QualityPm[q], (int)Math.Round(QualityTable.Multiplier((Quality)q) * 1000));
+            Assert.Equal(CombatTablesV2.QualityPm[q], f.T.Weapon("arming_sword", "steel", (Ravensguard.Sim.Goods.ItemQuality)q).QwPm);
+            Assert.Equal(CombatTablesV2.QualityPm[q], f.T.Qa((Ravensguard.Sim.Goods.ItemQuality)q));
         }
-        Assert.Equal(f.T.Weapon("arming_sword", "steel", Quality.Masterwork).QwPm, f.T.Weapon("arming_sword", "steel", Quality.Artifact).QwPm);
+        Assert.Equal(1000, f.T.Weapon("arming_sword", "steel").QwPm);                    // the default is common: every Phase 4 kit
         // Material science: "masterwork armor provides only about 15% more protection than low-quality one": (10 + 2 x 2) / (10 + 2) and (2 + 0.8) / (2 + 0.4), +16.7%
         var sword = f.T.Weapon("arming_sword", "steel");
         var mail = f.T.Armour("mail_hauberk", "iron");

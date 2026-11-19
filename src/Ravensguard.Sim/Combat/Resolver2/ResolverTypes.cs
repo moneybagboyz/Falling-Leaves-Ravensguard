@@ -85,6 +85,11 @@ public struct StrikeV2
     /// <summary>Blunted practice or tournament weapons (plan 4A.3): edges and points count as blunt (with <see cref="MomentumPm"/> 500 for the half momentum).</summary>
     public bool Blunted;
     public WeaponV2 Weapon;
+    /// <summary>P5-A1 (items-quality-and-wear 4.1): how dull the blade is, permille of condition lost (0: sharp, as all Phase 4 kit). An edged attack cuts with
+    /// <c>Qw x (400 + 600 x condition / 1000) / 1000</c>; blunt blows ignore it.</summary>
+    public int WeaponDullPm;
+    /// <summary>The edge the blow cuts with: Qw scaled by the blade's condition (<see cref="Goods.QualityTiers.EdgePm"/>).</summary>
+    public readonly int EdgeQwPm => Goods.QualityTiers.EdgePm(Weapon.QwPm, 1000 - WeaponDullPm);
     public int Attack;
     public AttackStyle Style;
     // defender

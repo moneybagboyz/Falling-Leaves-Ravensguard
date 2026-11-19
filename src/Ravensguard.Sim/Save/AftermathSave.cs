@@ -99,7 +99,7 @@ public sealed class SuccessionSave
         Estates = [.. b.Estates.Select(e => new long[] { e.Id, (long)e.Dead.Value, e.PlaceX, e.PlaceY, e.CoinMites, e.FuneralMites, (long)e.Heir.Value, e.Claimed ? 1 : 0, e.Looted ? 1 : 0, e.Day })],
         EstateItems = [.. b.Estates.Select(e => e.Items.Select(i => i.Value).ToArray())],
         Records = [.. b.Records.Select(r => new long[] { (long)r.From.Value, (long)r.To.Value, (long)r.Rule, r.Coin, r.EstateId, r.GameDay, (long)r.Guardian.Value })],
-        RecordText = [.. b.Records.Select(r => new[] { r.ReputationPending, r.RecoverShape }.Concat(r.DeedsPending).ToArray())],
+        RecordText = [.. b.Records.Select(r => new[] { r.ReputationPending, r.RecoverShape }.Concat(r.Deeds).ToArray())],
         RunEnded = b.RunEnded, CurrentHero = b.CurrentHero.Value,
         KinPeople = [.. b.Kin.Select(k => k.Person.Value)], KinRelations = [.. b.Kin.Select(k => (byte)k.Relation)],
     };
@@ -127,7 +127,7 @@ public sealed class SuccessionSave
             b.Records.Add(new InheritanceRecord
             {
                 From = new EntityId((ulong)v[0]), To = new EntityId((ulong)v[1]), Rule = (SuccessionRule)v[2], Coin = v[3], EstateId = (int)v[4], GameDay = (int)v[5], Guardian = new EntityId((ulong)v[6]),
-                ReputationPending = t[0], RecoverShape = t[1], DeedsPending = [.. t.Skip(2)],
+                ReputationPending = t[0], RecoverShape = t[1], Deeds = [.. t.Skip(2)],
             });
         }
         return b;

@@ -177,7 +177,12 @@ public sealed class HeroContext
             if (p == party.Hero) return hero?.Skill(HeroRecord.SkillId(s)) ?? 0;
             int i = people.IndexOf(p); return i >= 0 ? people.SkillLevelOf(i, s) : 0;
         };
-        Craft = new CraftRunner(Recipes, e, cs, state.Seed, state.Ids, o => o == party.Hero ? party.Carried.Pack(e) : e.OtherStores.GetValueOrDefault(o));
+        Craft = new CraftRunner(Recipes, e, cs, state.Seed, state.Ids, o => o == party.Hero ? party.Carried.Pack(e) : e.OtherStores.GetValueOrDefault(o))
+        {
+            // P5-A1: a masterwork may be a named artefact, with its chronicle line and its maker's name
+            Content = content, Chronicle = state.Chronicle, Tiers = QualityTiers.From(content),
+            NameOf = p => { if (p == party.Hero) return state.Hero?.Name ?? ""; int i = people.IndexOf(p); return i >= 0 ? people.FullName(i) : ""; },
+        };
         Purse = e.Ledger.Open(PurseKind.Person, party.Hero);
     }
 
@@ -283,8 +288,18 @@ public sealed class HeroDesk
         }
         if (_results.Count > 40) _results.RemoveRange(0, _results.Count - 40);
         _craftDirty = true;                                  // any command may touch the crafting state (a skill use, a job)
+        MirrorHero(ctx);
         if (publish) Publish(ctx, hourDone);
         return due.Count;
+    }
+
+    /// <summary>P5-A4: the hero's person row mirrors the record at the barrier (one direction, hero to row: attributes and the four best skills).</summary>
+    private static void MirrorHero(HeroContext ctx)
+    {
+        if (ctx.Hero is not { } h) return;
+        var pt = ctx.State.Population.People;
+        int row = Ravensguard.Sim.Succession.HeroPerson.RowOf(pt, h, ctx.Party.Hero);
+        if (row >= 0) Ravensguard.Sim.Succession.HeroPerson.Mirror(pt, row, h);
     }
 
     /// <summary>
@@ -302,6 +317,7 @@ public sealed class HeroDesk
             }
         ctx.Party.Carried.Tidy(ctx.Econ);
         ApplyDue(ctx, h, publish: false);
+        MirrorHero(ctx);
         Publish(ctx, h);
     }
 

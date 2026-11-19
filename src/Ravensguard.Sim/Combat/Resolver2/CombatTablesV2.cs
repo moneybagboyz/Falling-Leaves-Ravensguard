@@ -44,7 +44,7 @@ public sealed class WeaponV2
 {
     public required WeaponShapeDef Shape { get; init; }
     public required MaterialV2 Head { get; init; }
-    public required Quality Quality { get; init; }
+    public required Goods.ItemQuality Quality { get; init; }
     public required AttackV2[] Attacks { get; init; }
     /// <summary>Head plus haft, mg (= kg/m3 x cm3).</summary>
     public long MassMg { get; init; }
@@ -134,13 +134,18 @@ public sealed class CalibrationV2
 /// </summary>
 public sealed class CombatTablesV2
 {
-    /// <summary>Qa, the armour quality multiplier by <see cref="Quality"/>, permille (DF2014:Item quality, the armour-deflect column: an artifact x3).</summary>
-    public static readonly int[] QualityPm = [1000, 1200, 1400, 1600, 1800, 2000, 3000];
-    /// <summary>Qw, the weapon's edge multiplier by <see cref="Quality"/>, permille (the sharpness column, 50% to 100% of the max edge: an artifact's edge is a masterwork's).</summary>
-    public static readonly int[] EdgeQualityPm = [1000, 1200, 1400, 1600, 1800, 2000, 2000];
+    /// <summary>
+    /// Qa and Qw by <see cref="Goods.ItemQuality"/>, permille: the one scale's combat column (items-quality-and-wear 3, P5-A1: crude 800, poor 900, common 1000, fine 1400, masterwork 2000;
+    /// DF's standard, fine and masterwork, crude and poor below its floor, no artifact tier). The base table; an instance reads the loaded row (<see cref="Tiers"/>).
+    /// </summary>
+    public static int[] QualityPm => Goods.QualityTiers.Default.CombatPm;
+    /// <summary>The quality scale these tables were built with (the content's <c>quality_tiers</c> row).</summary>
+    public Goods.QualityTiers Tiers { get; }
+    /// <summary>Qa of a worn piece of <paramref name="q"/> by the loaded row.</summary>
+    public int Qa(Goods.ItemQuality q) => Tiers.Combat(q);
 
     private readonly Dictionary<string, MaterialV2> _materials = new(StringComparer.Ordinal);
-    private readonly Dictionary<(string, string, Quality), WeaponV2> _weapons = [];
+    private readonly Dictionary<(string, string, Goods.ItemQuality), WeaponV2> _weapons = [];
     private readonly Dictionary<(string, string), ArmourV2> _armour = [];
     private readonly Dictionary<string, ShieldV2> _shields = new(StringComparer.Ordinal);
     private readonly Dictionary<string, BodyPlanV2> _plans = new(StringComparer.Ordinal);
@@ -158,11 +163,12 @@ public sealed class CombatTablesV2
     public CombatTablesV2(ContentDatabase db) : this(db, MaterialResolver.ResolveAll(db)) { }
 
     private readonly IReadOnlyDictionary<string, ResolvedMaterial> _resolved;
-    private readonly Dictionary<(string, string, Quality), WeaponV2> _synthetic = [];
+    private readonly Dictionary<(string, string, Goods.ItemQuality), WeaponV2> _synthetic = [];
 
     public CombatTablesV2(ContentDatabase db, IReadOnlyDictionary<string, ResolvedMaterial> resolved)
     {
         _resolved = resolved;
+        Tiers = Goods.QualityTiers.From(db);
         Cal = CalibrationV2.From(db.All<CombatCalibrationDef>().OrderBy(c => c.Id, StringComparer.Ordinal).FirstOrDefault());
         var mats = new List<MaterialV2>();
         foreach (var m in resolved.Values.OrderBy(m => m.Id, StringComparer.Ordinal))
@@ -190,8 +196,8 @@ public sealed class CombatTablesV2
         var shapes = db.All<WeaponShapeDef>().OrderBy(s => s.Id, StringComparer.Ordinal).ToList();
         foreach (var s in shapes)
             foreach (var m in resolved.Values.Where(m => WeaponCategories.Contains(m.Category)))
-                for (int q = 0; q < QualityPm.Length; q++)
-                    _weapons[(s.Id, m.Id, (Quality)q)] = BuildWeapon(s, m, (Quality)q, resolved);
+                for (int q = 0; q < Goods.QualityTiers.Count; q++)
+                    _weapons[(s.Id, m.Id, (Goods.ItemQuality)q)] = BuildWeapon(s, m, (Goods.ItemQuality)q, resolved);
 
         int si = 0;
         foreach (var s in db.All<ArmourShapeDef>().OrderBy(s => s.Id, StringComparer.Ordinal))
@@ -209,7 +215,7 @@ public sealed class CombatTablesV2
     private static int R(double v) => (int)Math.Round(v, MidpointRounding.AwayFromZero);
     private static long RL(double v) => (long)Math.Round(v, MidpointRounding.AwayFromZero);
 
-    private WeaponV2 BuildWeapon(WeaponShapeDef s, ResolvedMaterial head, Quality q, IReadOnlyDictionary<string, ResolvedMaterial> materials)
+    private WeaponV2 BuildWeapon(WeaponShapeDef s, ResolvedMaterial head, Goods.ItemQuality q, IReadOnlyDictionary<string, ResolvedMaterial> materials)
     {
         long mass = RL(head.DensityKgM3 * s.HeadVolumeCm3);
         if (s.HaftVolumeCm3 > 0)
@@ -230,7 +236,7 @@ public sealed class CombatTablesV2
         return new WeaponV2
         {
             Shape = s, Head = _materials[head.Id], Quality = q, Attacks = attacks, MassMg = mass,
-            VolumeMilli = RL((s.HeadVolumeCm3 + s.HaftVolumeCm3) * 1000), QwPm = EdgeQualityPm[(int)q],
+            VolumeMilli = RL((s.HeadVolumeCm3 + s.HaftVolumeCm3) * 1000), QwPm = Tiers.Combat(q),
         };
     }
 
@@ -269,13 +275,13 @@ public sealed class CombatTablesV2
     public MaterialV2 Material(string id) => _materials.TryGetValue(id, out var m) ? m : throw new KeyNotFoundException($"unknown material '{id}'");
     public bool HasMaterial(string id) => _materials.ContainsKey(id);
     public BodyPlanV2 Plan(string id) => _plans.TryGetValue(id, out var p) ? p : throw new KeyNotFoundException($"unknown body plan '{id}'");
-    public WeaponV2 Weapon(string shape, string material, Quality q = Quality.Standard) =>
+    public WeaponV2 Weapon(string shape, string material, Goods.ItemQuality q = Goods.ItemQuality.Common) =>
         _weapons.TryGetValue((shape, material, q), out var w) ? w : throw new KeyNotFoundException($"no weapon stats for '{shape}' in '{material}'");
     /// <summary>
     /// A weapon built on demand from a shape that is not in the content's weapon list (an arrow head, an improvised stool, a thrown rock: melee-and-ranged 4.5, 4.6), in any material,
     /// cached by (shape id, material, quality). The same rules as the table's own entries.
     /// </summary>
-    public WeaponV2 Synthetic(WeaponShapeDef shape, string material, Quality q = Quality.Standard)
+    public WeaponV2 Synthetic(WeaponShapeDef shape, string material, Goods.ItemQuality q = Goods.ItemQuality.Common)
     {
         lock (_synthetic)
         {
@@ -290,13 +296,10 @@ public sealed class CombatTablesV2
     public ArmourV2 Armour(string shape, string material) =>
         _armour.TryGetValue((shape, material), out var a) ? a : throw new KeyNotFoundException($"no armour stats for '{shape}' in '{material}'");
     /// <summary>The weapon and armour lookups without an exception for a pair the content does not have (review finding S6 / W1: no exceptions as control flow).</summary>
-    public bool TryWeapon(string shape, string material, out WeaponV2 weapon, Quality q = Quality.Standard) => _weapons.TryGetValue((shape, material, q), out weapon!);
+    public bool TryWeapon(string shape, string material, out WeaponV2 weapon, Goods.ItemQuality q = Goods.ItemQuality.Common) => _weapons.TryGetValue((shape, material, q), out weapon!);
     public bool TryArmour(string shape, string material, out ArmourV2 armour) => _armour.TryGetValue((shape, material), out armour!);
     public ShieldV2 Shield(string id) => _shields[id];
 
-    /// <summary>Qa for a Phase 3 item quality (Crude 800, Poor 900, Common 1000, Fine 1400, Masterwork 2000): DF has nothing below standard.</summary>
-    public static int QualityPmOf(Goods.ItemQuality q) => q switch
-    {
-        Goods.ItemQuality.Crude => 800, Goods.ItemQuality.Poor => 900, Goods.ItemQuality.Fine => 1400, Goods.ItemQuality.Masterwork => 2000, _ => 1000,
-    };
+    /// <summary>Qa for an item quality by the base scale (Crude 800, Poor 900, Common 1000, Fine 1400, Masterwork 2000).</summary>
+    public static int QualityPmOf(Goods.ItemQuality q) => Goods.QualityTiers.Default.Combat(q);
 }

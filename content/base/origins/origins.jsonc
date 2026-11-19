@@ -1,11 +1,14 @@
 // Quick Start origin cards (plan §3 item 1). Skill/attribute entries are deltas on the rolled commoner.
 // Kit ids are weapon_shape / armour_shape ids from content/base/items; coin is in crowns (plan 4A.1: 1 crown is about a silver penny); start_location is a place kind the embark step resolves.
+// P5-A4 (inheritance 3): "kin" rows give the hero real kin in the person table (rel child, spouse_dead, parent or none; age and count ranges, rolled with stream 0x560); an origin without
+// "kin" keeps the Phase 4 rule (the grown child of a household of the start region). "age" is the hero's age range in years; "occupation" what the hero's person row says he does.
 [
   { "type": "origin", "id": "disgraced_squire", "name": "Disgraced squire", "order": 1,
     "description": "You carried a knight's shield until a lie or a truth ended it. The training is still in your arms; the name is not.",
     "skills": { "melee": 15, "riding": 10, "literacy": 5 }, "attributes": { "strength": 4, "dexterity": 3 },
     "kit": [ { "item": "arming_sword" }, { "item": "gambeson" }, { "item": "cloak" } ], "coin": 40,
-    "start_location": "town", "ambition": "regain_honour", "mentor": "old_knight" },
+    "start_location": "town", "ambition": "regain_honour", "mentor": "old_knight",
+    "age": [22, 28], "kin": [ { "rel": "parent", "age": [48, 66], "count": [1, 1] } ] },
 
   { "type": "origin", "id": "peddler", "name": "Peddler", "order": 2,
     "description": "You have walked every road in the district with a pack on your back, and you know what each village runs short of.",
@@ -23,7 +26,8 @@
     "description": "The war moved on and the lord stopped paying. You kept the spear, and the habit of watching doorways.",
     "skills": { "melee": 20, "archery": 5, "leadership": 5 }, "attributes": { "strength": 6, "toughness": 4 },
     "kit": [ { "item": "spear" }, { "item": "gambeson" }, { "item": "helm" } ], "coin": 25,
-    "start_location": "town", "ambition": "raise_a_company", "mentor": "old_sergeant" },
+    "start_location": "town", "ambition": "raise_a_company", "mentor": "old_sergeant",
+    "age": [26, 36], "kin": [ { "rel": "none" } ], "occupation": "guard" },
 
   { "type": "origin", "id": "monastery_orphan", "name": "Monastery orphan", "order": 5,
     "description": "Raised on bread, copying and cold stone floors. You can read the old hands, and you have never owned a coin.",

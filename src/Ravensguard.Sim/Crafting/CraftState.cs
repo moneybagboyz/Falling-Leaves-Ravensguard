@@ -57,8 +57,10 @@ public sealed class CraftState
     public Knowledge Know { get; } = new();
     public SortedDictionary<EntityId, CraftedRecord> Records { get; } = [];
     public List<TeachSession> Sessions { get; } = [];
+    /// <summary>P5-A1: the named artefacts of the world (items-quality-and-wear 4.2).</summary>
+    public ArtefactBook Artefacts { get; } = new();
 
-    public bool IsEmpty => _jobs.Count == 0 && Book.Count == 0 && Records.Count == 0 && Sessions.Count == 0 && Know.RecipeRows().Length == 0 && Know.ProfRows().Length == 0 && Know.WatchRows().Length == 0;
+    public bool IsEmpty => _jobs.Count == 0 && Book.Count == 0 && Records.Count == 0 && Sessions.Count == 0 && Artefacts.Count == 0 && Know.RecipeRows().Length == 0 && Know.ProfRows().Length == 0 && Know.WatchRows().Length == 0;
 
     public CraftJob? Get(EntityId id) => _jobs.GetValueOrDefault(id);
     public void Add(CraftJob j) => _jobs[j.Id] = j;

@@ -497,7 +497,7 @@ public static class WorldSave
         var regionSections = new SortedDictionary<int, byte[]>();
         foreach (var (name, bytes) in file.Sections)
             if (name.StartsWith(RegionSectionName, StringComparison.Ordinal) && int.TryParse(name.AsSpan(RegionSectionName.Length), out int rid)) regionSections[rid] = bytes.ToArray();
-        return new WorldState
+        var restored = new WorldState
         {
             Production = production, Markets = markets, RegionSections = regionSections, Growth = growth,
             Jobs = file.Sections.ContainsKey(JobsSection) ? Decode<JobsSave>(file, JobsSection, compressed: true).Restore() : null,
@@ -524,6 +524,11 @@ public static class WorldSave
             Clock = new SimClock(new GameTime(meta.ClockSeconds), meta.ClockMsRemainder) { Speed = (SimSpeed)meta.ClockSpeed },
             Ids = IdAllocator.FromState(meta.IdState), Chunks = chunks, Chronicle = chronicle,
         };
+        // P5-A4: a migrated v7 save's hero gets the person row now (the v8 step marks it pending); a v8 save holds it in the people diff already
+        if (hero is { PersonIndex: Ravensguard.Sim.Succession.HeroPerson.Pending } && content != null)
+            hero.PersonIndex = Ravensguard.Sim.Succession.HeroPerson.InsertForLoad(pop, economy, content, hero, Ravensguard.Sim.Economy.EconomyState.HeroOwner, cs.Seed,
+                (int)(meta.ClockSeconds / 86400), restored.Succession?.Kin ?? [], restored.Ids);
+        return restored;
     }
 
     /// <summary>The region the hero stands in (the streaming frame's origin is the home region's north-west corner; cells are metres).</summary>

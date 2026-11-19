@@ -126,24 +126,25 @@ public sealed record FightSetup(FightKind Kind, IReadOnlyList<FighterKit> Kits, 
 
     /// <summary>
     /// The hero's kit from the record: the best weapon carried for the hero's skills (a launcher with arrows when no melee weapon), a shield, a javelin to throw, the worn pieces
-    /// given, and the family skills (Melee x0.8 when a family was never trained).
+    /// given, and the family skills (Melee x0.8 when a family was never trained). <paramref name="carried"/> is what the hero really carries (P5-A4: the pack's item rows with their quality,
+    /// <see cref="Ravensguard.Sim.Inventory.HeroPack.Things"/>); without it the record's starting kit is read, as before.
     /// </summary>
-    public static FighterKit HeroKit(FightContent c, HeroRecord h, IReadOnlyList<WornItem> worn, ulong heroId, string? name = null)
+    public static FighterKit HeroKit(FightContent c, HeroRecord h, IReadOnlyList<WornItem> worn, ulong heroId, string? name = null, IReadOnlyList<HeroItem>? carried = null)
     {
         int Sk(Skill s) => CombatSkills.Level(k => h.Skill(HeroRecord.SkillId(k)), s);
         var shapes = c.Db.All<WeaponShapeDef>().ToDictionary(s => s.Id, StringComparer.Ordinal);
         WeaponInstance? best = null; int bestScore = -1;
         string? launcher = null, ammo = null; int ammoCount = 0; string? shield = null;
         var throws = new List<ThrowStock>();
-        foreach (var it in h.Inventory)
+        foreach (var it in carried ?? h.Inventory)
         {
             if (c.Launchers.Values.FirstOrDefault(l => l.Shape == it.Shape) is { } l) { launcher = l.Id; continue; }
             if (c.Ammo.ContainsKey(it.Shape)) { ammo = it.Shape; ammoCount += it.Count; continue; }
             if (c.T.Shields.ContainsKey(it.Shape)) { shield ??= it.Shape; continue; }
             if (it.Shape == "javelin") { throws.Add(new ThrowStock(it.Shape, it.Material, it.Count)); continue; }
             if (!shapes.TryGetValue(it.Shape, out var sh) || sh.Family is "ranged" or "natural" or "practice" or "unarmed" || !c.T.HasMaterial(it.Material)) continue;
-            int score = Sk(CombatSkills.Of(FightWorld.FamilyOf(sh))) * 10 + (int)(sh.HeadVolumeCm3 / 100);
-            if (score > bestScore) { bestScore = score; best = new WeaponInstance(it.Shape, it.Material); }
+            int score = Sk(CombatSkills.Of(FightWorld.FamilyOf(sh))) * 10 + (int)(sh.HeadVolumeCm3 / 100) + (int)it.Quality;    // P5-A1: of two alike, the better made
+            if (score > bestScore) { bestScore = score; best = new WeaponInstance(it.Shape, it.Material, it.Quality); }
         }
         if (best != null) { launcher = null; ammo = null; ammoCount = 0; }
         else if (launcher == null || ammo == null) launcher = null;

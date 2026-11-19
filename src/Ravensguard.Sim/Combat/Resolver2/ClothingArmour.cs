@@ -20,7 +20,7 @@ public static class ClothingArmour
             string material = row.ComponentCount > 0 ? book.Items.Component(row.ComponentStart).Material
                 : book.Garments[row.Shape].DefaultMaterial ?? throw new InvalidOperationException($"worn item {id} has no material");
             var ex = book.ExtraOf(id);
-            into[n++] = WornV2.Of(tables.Armour(row.Shape, material), CombatTablesV2.QualityPmOf(row.Quality), row.ConditionPermille, ex.FitCm3 > 0 ? ex.FitCm3 : 70000);
+            into[n++] = WornV2.Of(tables.Armour(row.Shape, material), tables.Qa(row.Quality), row.ConditionPermille, ex.FitCm3 > 0 ? ex.FitCm3 : 70000);
         }
         return n;
     }
@@ -33,7 +33,7 @@ public static class ClothingArmour
         {
             if (!s.IsArmour || s.WearPm <= 0 || s.Piece < 0 || s.Piece >= t.Worn.Count) continue;
             ref var row = ref book.Items.Get(t.Worn[s.Piece]);
-            row.ConditionPermille = (short)Math.Max(0, row.ConditionPermille - s.WearPm);
+            row.ConditionPermille = (short)Math.Max(0, row.ConditionPermille - Goods.QualityTiers.Default.ScaleWear(s.WearPm, row.Quality));     // P5-A1: wear by tier
         }
     }
 }

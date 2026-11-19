@@ -273,6 +273,13 @@ public static class RngStreams
     public const uint RoutSample = 0x4A2;
     /// <summary>Abstract battle: the leader's capture when downed or run down (key battle id, side).</summary>
     public const uint LeaderFate = 0x4A3;
+    // ---- Phase 5 (0x500..0x5FF, phase 5 overview 5). P5-A1 items and P5-A4 the hero as a person ----
+    /// <summary>Items: the masterwork inspiration roll of a crafted item whose score reaches Masterwork (key crafter, job id x 64 + unit).</summary>
+    public const uint MasterworkInspiration = 0x530;
+    /// <summary>Items: whether a masterwork weapon, armour piece or jewel is a named artefact, and its name (key item id).</summary>
+    public const uint NamedArtefact = 0x531;
+    /// <summary>Inheritance: the hero's kin at a new game (the origin's kin rows, their ages and counts, the hero's own age; key hero seed).</summary>
+    public const uint HeroKin = 0x560;
 
     /// <summary>Stream ids that two named uses share on purpose, with why their draws never meet.</summary>
     public static readonly (string A, string B, string Why)[] SharedPairs =

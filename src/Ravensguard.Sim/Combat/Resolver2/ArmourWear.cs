@@ -15,7 +15,8 @@ public static class ArmourWear
         {
             if (!s.IsArmour || s.Piece < 0 || s.Piece >= worn.Length || s.WearPm <= 0 && s.Harm == ArmourHarm.None) continue;
             ref var w = ref worn[s.Piece];
-            w.ConditionPm = Math.Max(0, w.ConditionPm - s.WearPm);
+            var tiers = Goods.QualityTiers.Default;
+            w.ConditionPm = Math.Max(0, w.ConditionPm - tiers.ScaleWear(s.WearPm, tiers.OfCombatPm(w.QualityPm)));     // P5-A1: a fine piece takes 800 pm of the wear, a crude one 1,600
             var harm = s.Harm;
             if (harm == ArmourHarm.Burst)
             {

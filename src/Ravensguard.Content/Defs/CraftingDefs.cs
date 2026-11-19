@@ -170,6 +170,8 @@ public sealed record CraftToolDef : ContentDef
     public Dictionary<string, int> Qualities { get; init; } = [];
     /// <summary>The good (a counted piece) that is this tool, when the tool is held as stock.</summary>
     public string? Good { get; init; }
+    /// <summary>P5-A1 (items-quality-and-wear 4.3): permille of condition an attended game hour takes per quality used, at Common (0.5 is exact: kept to the milli-permille).</summary>
+    public Dictionary<string, double> WearPmPerHour { get; init; } = [];
 }
 
 /// <summary>A proficiency: a learnt know-how that speeds work and sharpens skill (spec 3.2). They form a graph without cycles.</summary>

@@ -119,7 +119,7 @@ public sealed class StrikeResolver(CombatTables tables)
                 && def.Plan.NamedGaps.TryGetValue(input.TargetGap, out var gp) && gp == part.BaseId)
             { trace.Add(new(name, true, LayerOutcome.Bypassed, mIn, mIn)); continue; }
 
-            double qa = QualityTable.Multiplier(item.Quality);
+            double qa = Goods.QualityTiers.Default.Combat(item.Quality) / 1000.0;
             double area = Math.Min(atk.ContactArea, partSize * cov);
             var res = TestLayer(w, atk, stats.Props, qa, area, true, ref m, ref edged);
             if (res == LayerOutcome.Cut) ConsumePen(ref pen, ref edged, stats.Shape.ThicknessMm);

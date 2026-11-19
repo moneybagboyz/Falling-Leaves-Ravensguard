@@ -5,8 +5,9 @@ public enum SocialClass : byte { Peasant, Burgher, Gentry }
 /// <summary>How a household holds its dwelling (plan §4A.2): Owned outright, Rented from a landlord, or Tenant of the lord of the fief.</summary>
 public enum DeedKind : byte { None, Owned, Rented, Tenant }
 public enum HomelessReason : byte { None, NoRoom, Vagrant }
-/// <summary>Life state of a person row (population spec 2): dead and departed rows are kept so kin links and ids never dangle.</summary>
-public enum PersonStatus : byte { Alive, Dead, Departed }
+/// <summary>Life state of a person row (population spec 2): dead and departed rows are kept so kin links and ids never dangle. <see cref="Hero"/> (appended, P5-A4): the row of the played
+/// character (inheritance 3); every NPC system reads <see cref="Alive"/>, so the hero's row is never simulated as a villager.</summary>
+public enum PersonStatus : byte { Alive, Dead, Departed, Hero }
 /// <summary>Why a person died (population spec 2, chronicle cause kinds); <see cref="None"/> while alive.</summary>
 public enum DeathCause : byte
 {

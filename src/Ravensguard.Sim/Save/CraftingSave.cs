@@ -89,6 +89,12 @@ public sealed class CraftingSave
     [Key(17)] public long[] WatchSec { get; set; } = [];
     [Key(18)] public int[] WatchTries { get; set; } = [];
     [Key(19)] public List<TeachRow> Sessions { get; set; } = [];
+    // P5-A1 (save v8): the named artefacts, by item id ascending
+    [Key(20)] public ulong[] ArtefactItem { get; set; } = [];
+    [Key(21)] public string[] ArtefactName { get; set; } = [];
+    [Key(22)] public ulong[] ArtefactMaker { get; set; } = [];
+    [Key(23)] public string[] ArtefactMakerName { get; set; } = [];
+    [Key(24)] public long[] ArtefactSec { get; set; } = [];
 
     public static CraftingSave Capture(CraftState s)
     {
@@ -110,6 +116,9 @@ public sealed class CraftingSave
         var wr = s.Know.WatchRows(); o.WatchPerson = [.. wr.Select(x => x.Person)]; o.WatchRecipe = [.. wr.Select(x => x.Recipe)]; o.WatchSec = [.. wr.Select(x => x.Sec)]; o.WatchTries = [.. wr.Select(x => x.Tries)];
         foreach (var t in s.Sessions)
             o.Sessions.Add(new TeachRow { Student = t.Student, Master = t.Master, Recipe = t.Recipe, NeededSec = t.NeededSec, DoneSec = t.DoneSec, Cost = t.CostMites, ByLabour = t.ByLabour, Paid = t.Paid });
+        var named = s.Artefacts.Named;
+        o.ArtefactItem = [.. named.Keys.Select(k => k.Value)]; o.ArtefactName = [.. named.Values.Select(a => a.Name)]; o.ArtefactMaker = [.. named.Values.Select(a => a.Maker.Value)];
+        o.ArtefactMakerName = [.. named.Values.Select(a => a.MakerName)]; o.ArtefactSec = [.. named.Values.Select(a => a.MadeSec)];
         return o;
     }
 
@@ -131,6 +140,8 @@ public sealed class CraftingSave
         for (int i = 0; i < ProfRaw.Length; i++) s.Know.RestoreProf(ProfPerson[i], ProfId[i], ProfRaw[i]);
         for (int i = 0; i < WatchRecipe.Length; i++) s.Know.RestoreWatch(WatchPerson[i], WatchRecipe[i], WatchSec[i], WatchTries[i]);
         foreach (var t in Sessions) s.Sessions.Add(new TeachSession { Student = t.Student, Master = t.Master, Recipe = t.Recipe, NeededSec = t.NeededSec, DoneSec = t.DoneSec, CostMites = t.Cost, ByLabour = t.ByLabour, Paid = t.Paid });
+        for (int i = 0; i < ArtefactItem.Length && i < ArtefactName.Length && i < ArtefactMaker.Length && i < ArtefactMakerName.Length && i < ArtefactSec.Length; i++)
+            s.Artefacts.Named[new EntityId(ArtefactItem[i])] = new Ravensguard.Sim.Goods.Artefact(ArtefactName[i], new EntityId(ArtefactMaker[i]), ArtefactMakerName[i], ArtefactSec[i]);
         return s;
     }
 }

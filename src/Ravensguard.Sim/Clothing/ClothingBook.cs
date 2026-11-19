@@ -351,7 +351,7 @@ public sealed class ClothingBook
         {
             ref var row = ref Items.Get(w);
             int add = 100_000 / Math.Max(1, t.LifeDays);                  // 1/100 permille a day
-            int acc = row.Wear + add; int lose = acc / 100; row.Wear = (ushort)(acc % 100);
+            int acc = Goods.QualityTiers.WearFraction(row.Wear) + add; int lose = acc / 100; row.Wear = Goods.QualityTiers.WithWearFraction(row.Wear, acc % 100);   // the low bits; the top four are the repair count (P5-A1)
             if (lose > 0) row.ConditionPermille = (short)Math.Max(0, row.ConditionPermille - lose);
         }
     }
