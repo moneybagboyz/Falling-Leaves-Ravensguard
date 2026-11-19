@@ -13,6 +13,11 @@ public static class Settings
     public static bool ScreenShake { get; set; } = true;
     public static bool Flashes { get; set; } = true;
     public static bool SlowMotion { get; set; } = true;
+    // P4-D combat feel (feedback-flavour-log 4.7): captions for important sounds, reduced blood, the combat log's text size (1x to 3x) and its filters
+    public static bool Captions { get; set; } = false;
+    public static bool ReduceBlood { get; set; } = false;
+    public static int LogTextSize { get; set; } = 1;
+    public static string LogFilter { get; set; } = "";
     /// <summary>What this profile has been taught and the hint setting (onboarding spec 3.1): kept in the profile's settings file, not in a world save, so a new world does not re-teach what the player knows.</summary>
     public static Ravensguard.Sim.Onboarding.HintProfile Hints { get; set; } = new();
 
@@ -24,6 +29,11 @@ public static class Settings
         ScreenShake = ReadBool(cfg, "accessibility", "screen_shake", true);
         Flashes = ReadBool(cfg, "accessibility", "flashes", true);
         SlowMotion = ReadBool(cfg, "accessibility", "slow_motion", true);
+        Captions = ReadBool(cfg, "accessibility", "captions", false);
+        ReduceBlood = ReadBool(cfg, "accessibility", "reduce_blood", false);
+        LogTextSize = Mathf.Clamp(ReadInt(cfg, "accessibility", "log_text_size", 1), 1, 3);
+        var lf = cfg.GetValue("combat", "log_filter", "");
+        LogFilter = lf.VariantType == Variant.Type.String ? lf.AsString() : "";
         var h = cfg.GetValue("hints", "profile", "");
         Hints = Ravensguard.Sim.Onboarding.HintProfile.FromJson(h.VariantType == Variant.Type.String ? h.AsString() : "");
     }
@@ -48,6 +58,10 @@ public static class Settings
         cfg.SetValue("accessibility", "screen_shake", ScreenShake);
         cfg.SetValue("accessibility", "flashes", Flashes);
         cfg.SetValue("accessibility", "slow_motion", SlowMotion);
+        cfg.SetValue("accessibility", "captions", Captions);
+        cfg.SetValue("accessibility", "reduce_blood", ReduceBlood);
+        cfg.SetValue("accessibility", "log_text_size", LogTextSize);
+        cfg.SetValue("combat", "log_filter", LogFilter);
         cfg.SetValue("hints", "profile", Hints.ToJson());
         var err = cfg.Save(Path);
         if (err != Error.Ok) GD.PushWarning($"Could not save {Path}: {err}");
@@ -71,6 +85,10 @@ public static class Accessibility
     public static bool ScreenShakeEnabled => Settings.ScreenShake;
     public static bool FlashesEnabled => Settings.Flashes;
     public static bool SlowMotionEnabled => Settings.SlowMotion;
+    public static bool CaptionsEnabled => Settings.Captions;
+    public static bool ReduceBloodEnabled => Settings.ReduceBlood;
+    /// <summary>The combat log's text size step, 1 to 3.</summary>
+    public static int LogTextSize => Settings.LogTextSize;
 
     /// <summary>Scales a shake amplitude: 0 when screen shake is off.</summary>
     public static float ShakeScale(float amplitude) => ScreenShakeEnabled ? amplitude : 0f;

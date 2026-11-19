@@ -63,6 +63,7 @@ public partial class StreetView
         AddChild(_fightLayer);
         _fightView = new FightView(fight, setup.PlayerIndex, i => _rec.FightInput(i), _rig) { SetPaused = p => _rec.SetSpeed(p ? SimSpeed.Paused : SimSpeed.X1), Name = "FightView" };
         _fightLayer.AddChild(_fightView);
+        BeginFightLog(def, ev);                                    // P4-D: what began it, and the log for the save
         if (rt != null) rt.State.FightSource = () => _world.Fight is { } f ? Ravensguard.Sim.Save.FightRecord.Capture(f, "encounter", ev.Id) : null;
         return true;
     }
@@ -84,6 +85,7 @@ public partial class StreetView
         if (o.PayMites > 0 && _heroLink != null)
             _heroLink.Issue(new HeroCommand { Kind = HeroCommandKind.EncounterPay, IssuedSec = now, CoinGive = o.PayMites, Person = o.Payee, Tag = rf.Ev.Id, Origin = CommandOrigin.Human });
         _router?.ShowToast(o.PayMites > 0 ? L.F(o.Text, Quotes.Money(o.PayMites)) : L.T(o.Text), 5f);
+        FightEnded(f);                                             // P4-D: close the log, chronicle the named dead, open the report
         CloseRoadFight();
         if (t != null) { t.ScreenPending = false; FinishEncounter(o, now, false); }
     }

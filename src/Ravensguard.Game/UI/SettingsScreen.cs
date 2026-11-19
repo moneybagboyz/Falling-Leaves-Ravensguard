@@ -232,9 +232,23 @@ public partial class SettingsScreen : Control
         row.AddChild(opt);
         v.AddChild(row);
 
-        v.AddChild(Toggle("DISPLAY_SCREEN_SHAKE", Settings.ScreenShake, on => Settings.ScreenShake = on));
-        v.AddChild(Toggle("DISPLAY_FLASHES", Settings.Flashes, on => Settings.Flashes = on));
-        v.AddChild(Toggle("DISPLAY_SLOW_MOTION", Settings.SlowMotion, on => Settings.SlowMotion = on));
+        // combat feel (P4-D, feedback-flavour-log 4.7): shake, flashes and slow motion off give none of them; captions, reduced blood and the log's text size
+        v.AddChild(new Label { Text = L.T("fl_set_title"), ThemeTypeVariation = "TitleLabel" });
+        var shake = Toggle("DISPLAY_SCREEN_SHAKE", Settings.ScreenShake, on => Settings.ScreenShake = on); shake.TooltipText = L.T("fl_set_shake_tip"); v.AddChild(shake);
+        var flash = Toggle("DISPLAY_FLASHES", Settings.Flashes, on => Settings.Flashes = on); flash.TooltipText = L.T("fl_set_flash_tip"); v.AddChild(flash);
+        var slow = Toggle("DISPLAY_SLOW_MOTION", Settings.SlowMotion, on => Settings.SlowMotion = on); slow.TooltipText = L.T("fl_set_slow_tip"); v.AddChild(slow);
+        v.AddChild(new Label { Text = L.T("fl_set_slow_tip"), ThemeTypeVariation = "HintLabel", AutowrapMode = TextServer.AutowrapMode.WordSmart });
+        v.AddChild(Toggle("fl_set_captions", Settings.Captions, on => Settings.Captions = on));
+        v.AddChild(Toggle("fl_set_reduce_blood", Settings.ReduceBlood, on => Settings.ReduceBlood = on));
+        var lrow = new HBoxContainer();
+        lrow.AddChild(new Label { Text = L.T("fl_set_logsize"), SizeFlagsHorizontal = SizeFlags.ExpandFill });
+        var lopt = new OptionButton();
+        for (int s = 1; s <= 3; s++) lopt.AddItem($"{s}x");
+        lopt.Selected = Settings.LogTextSize - 1;
+        lopt.ItemSelected += i => { Settings.LogTextSize = (int)i + 1; Settings.Save(); };
+        lrow.AddChild(lopt);
+        v.AddChild(lrow);
+        v.AddChild(new Label { Text = L.T("fl_set_icons"), ThemeTypeVariation = "HintLabel", AutowrapMode = TextServer.AutowrapMode.WordSmart });
 
         // contextual hints (onboarding spec 3.1, 6): off, minimal or full, auto by default (full for the first hour of the first character); the "seen" marks live in the profile and can be reset
         var hrow = new HBoxContainer();
@@ -248,7 +262,11 @@ public partial class SettingsScreen : Control
         var hreset = new Button { Text = L.T("SETTINGS_HINTS_RESET"), SizeFlagsHorizontal = SizeFlags.ShrinkBegin };
         hreset.Pressed += () => { Settings.Hints.ResetSeen(); Settings.Save(); _router.ShowToast(L.T("SETTINGS_HINTS_RESET_DONE")); };
         v.AddChild(hreset);
-        return v;
+        // the tab scrolls: with the combat feel rows it is taller than 540 pixels
+        v.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        var scroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
+        scroll.AddChild(v);
+        return scroll;
     }
 
     /// <summary>Privacy (testers spec 6): consent for bug-report files (off until agreed; nothing is ever sent), the log level and where the local files are.</summary>

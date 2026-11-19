@@ -12,7 +12,8 @@ namespace Ravensguard.Game.World.Combat;
 
 /// <summary>
 /// The combat stance on its own (<c>-- --fight-demo [duel|skirmish] [--seed n]</c>): you (sword and heater, padded and mailed) against a bandit, or ten a side, on the shipped
-/// <see cref="FightWorld"/> and <see cref="CombatBrain"/>. R restarts, K switches duel and skirmish. Screenshots: <c>--shot-out file.png --shot-what windup|calledshot|wounded</c>.
+/// <see cref="FightWorld"/> and <see cref="CombatBrain"/>. R restarts, K switches duel and skirmish. Screenshots: <c>--shot-out file.png --shot-what windup|calledshot|wounded|feed|log|logall|report|hit</c>
+/// (the last four are the P4-D log panel, the same with every filter off, the after-fight report and a landed blow with its callout and flash).
 /// </summary>
 public partial class FightDemo : Node2D
 {
@@ -79,6 +80,7 @@ public partial class FightDemo : Node2D
             AddChild(_view);
         }
         else _view.Replace(_w);
+        if (!_skirmish && hero >= 0) { _view.Log.Info(hero).Name = "Aldric"; _view.Log.Info(1 - hero).Name = "Bram"; }       // the log names people
         _view.Banner = L.T(_skirmish ? "FIGHT_DEMO_SKIRMISH" : "FIGHT_DEMO_DUEL");
         GetTree().CreateTimer(3.0).Timeout += () => { if (IsInstanceValid(_view)) _view.Banner = ""; };
     }
@@ -103,6 +105,40 @@ public partial class FightDemo : Node2D
         hero.Player = false;                                          // the brain drives both while the scene is staged
         switch (_shotWhat)
         {
+            case "feed": case "log": case "logall":
+            {
+                // fifteen seconds of the duel, then the combat log: the small feed along the bottom, or the open panel (F7), with the default filter or with everything
+                _view.Advance(20 * 14);
+                hero.Player = true;
+                _view.Zoom = 3f;
+                if (_shotWhat == "logall") { _view.LogPanel.Filter.Flags = Ravensguard.Sim.Combat.Flavour.LogFilterFlags.Misses | Ravensguard.Sim.Combat.Flavour.LogFilterFlags.Treatment; }
+                _view.LogPanel.SetExpanded(_shotWhat != "feed");
+                _view.ClearCallouts();
+                break;
+            }
+            case "hit":
+            {
+                // the blow that has just landed on someone: the callout, the white flash and the blood on the ground
+                for (int i = 0; i < 20 * 60; i++)
+                {
+                    _view.Advance(1);
+                    if (_view.Log.Lines.Count > 0 && _view.Log.Lines[^1] is { Kind: FightEventKind.Hit, Severity: >= 2 }) break;
+                }
+                _view.Feedback.Update(0.02);
+                hero.Player = true;
+                _view.Zoom = 3.5f;
+                break;
+            }
+            case "report":
+            {
+                for (int i = 0; i < 20 * 200 && !_w.IsOver; i++) _view.Advance(1);
+                _view.Advance(30);
+                _view.FinishLog();
+                hero.Player = true;
+                _view.ClearCallouts();
+                _view.OpenReport();
+                break;
+            }
             case "calledshot":
                 _view.Advance(30);
                 hero.Player = true;
