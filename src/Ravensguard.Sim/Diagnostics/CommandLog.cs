@@ -12,7 +12,9 @@ namespace Ravensguard.Sim.Diagnostics;
 /// The last two act on the world's records, not on the live sim: a replay hands them to <see cref="ReplayOptions.OnRecordCommand"/>.</para>
 public enum ReplayKind : byte { Input = 1, Speed = 2, Torch = 3, MoveTo = 4, UsePortal = 5, ClearPath = 6, Ride = 7, TravelPlace = 8, LoadSpeed = 9, Hero = 10, Action = 11, WantedSpeed = 12,
     /// <summary>P4-C: a combat input of the hero (A = input kind, B = first argument, C = second and third packed), and the start and end of a fight (A = fight id, B = the hero's fighter).</summary>
-    Fight = 13, FightStart = 14, FightEnd = 15 }
+    Fight = 13, FightStart = 14, FightEnd = 15,
+    /// <summary>P4-H: a crawl input (A = <c>CrawlInputKind</c>, B and C its arguments), and the hero going down into a site (A = site id) and coming up.</summary>
+    Site = 16, SiteStart = 17, SiteEnd = 18 }
 
 /// <summary>Hero actions recorded with <see cref="ReplayKind.Action"/> (append only).</summary>
 public enum HeroAction : byte { None = 0, TravelBegin = 1, TravelCancel = 2, TravelResume = 3, CampMake = 4, CampJob = 5, CampBreak = 6, Directive = 7, DirectiveStop = 8, TalkChoice = 9, TakeControl = 10,
@@ -37,6 +39,9 @@ public readonly record struct ReplayCommand(long Tick, ReplayKind Kind, long A =
     public static ReplayCommand Fight(long tick, Ravensguard.Sim.Combat.Melee2.FightInput i) => new(tick, ReplayKind.Fight, (int)i.Kind, i.A, ((long)i.B << 32) | (uint)i.C);
     public static ReplayCommand FightStart(long tick, long fightId, int hero) => new(tick, ReplayKind.FightStart, fightId, hero);
     public static ReplayCommand FightEnd(long tick) => new(tick, ReplayKind.FightEnd);
+    public static ReplayCommand Site(long tick, Ravensguard.Sim.Sites.CrawlInput i) => new(tick, ReplayKind.Site, (int)i.Kind, i.A, i.B);
+    public static ReplayCommand SiteStart(long tick, ulong site) => new(tick, ReplayKind.SiteStart, (long)site);
+    public static ReplayCommand SiteEnd(long tick) => new(tick, ReplayKind.SiteEnd);
     public Ravensguard.Sim.Combat.Melee2.FightInput AsFightInput => new((Ravensguard.Sim.Combat.Melee2.FightInputKind)(int)A, (int)B, (int)(C >> 32), (int)(uint)C);
     /// <summary>True for the kinds that act on the world's records rather than on the live sim.</summary>
     public bool IsRecordCommand => Kind is ReplayKind.Hero or ReplayKind.Action;
@@ -58,6 +63,9 @@ public readonly record struct ReplayCommand(long Tick, ReplayKind Kind, long A =
         ReplayKind.Fight => $"tick {Tick} fight {AsFightInput}",
         ReplayKind.FightStart => $"tick {Tick} fight_start {A} hero {B}",
         ReplayKind.FightEnd => $"tick {Tick} fight_end",
+        ReplayKind.Site => $"tick {Tick} site {(Ravensguard.Sim.Sites.CrawlInputKind)(int)A} {B} {C}",
+        ReplayKind.SiteStart => $"tick {Tick} site_start {A}",
+        ReplayKind.SiteEnd => $"tick {Tick} site_end",
         _ => $"tick {Tick} clear_path",
     };
 
@@ -79,6 +87,9 @@ public readonly record struct ReplayCommand(long Tick, ReplayKind Kind, long A =
             case ReplayKind.Fight: w.FightInput(AsFightInput); break;
             case ReplayKind.FightStart: w.StartFightById(A, (int)B); break;
             case ReplayKind.FightEnd: w.EndFight(); break;
+            case ReplayKind.Site: w.SiteInput(new Ravensguard.Sim.Sites.CrawlInput((Ravensguard.Sim.Sites.CrawlInputKind)(int)A, (int)B, (int)C)); break;   // P4-H
+            case ReplayKind.SiteStart: w.EnterSiteById((ulong)A); break;
+            case ReplayKind.SiteEnd: w.DetachSite(); break;
             // Hero and Action change the world's records (the desk, the camp, the autopilot book): nothing in the live sim
         }
     }

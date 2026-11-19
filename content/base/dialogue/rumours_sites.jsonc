@@ -1,0 +1,9 @@
+// Rumours of the sites (exploration-and-sites 4.2, 4.3, 4.9, E7; P4-H): a robbed barrow's curse, a monster slain, the old tales of a lair (its monsters are rumours until met),
+// a band moving into a cleared cave, a mine flooded after storms. Same rules as rumours.jsonc: the first matching row of an entry type wins.
+[
+  {"type": "rumour_type", "id": "taboo_robbed", "entry": "taboo_robbed", "kind": "Omen", "interest_pm": 800, "life_days": 30, "witnesses": "elders", "severity": 2, "key": "ex_r_taboo", "about_key": "site_name"},
+  {"type": "rumour_type", "id": "site_monster_slain", "entry": "site_monster_slain", "kind": "Omen", "interest_pm": 900, "life_days": 40, "witnesses": "town", "severity": 3, "key": "ex_r_slain", "who_key": "attacker", "about_key": "site_name"},
+  {"type": "rumour_type", "id": "lair_legend", "entry": "lair_legend", "kind": "Omen", "interest_pm": 400, "life_days": 60, "witnesses": "elders", "severity": 1, "key": "ex_r_legend", "about_key": "site"},
+  {"type": "rumour_type", "id": "site_reoccupied", "entry": "site_reoccupied", "kind": "RoadBandits", "interest_pm": 600, "life_days": 20, "witnesses": "traveller", "severity": 2, "key": "ex_r_reoccupied", "about_key": "site"},
+  {"type": "rumour_type", "id": "mine_flooded", "entry": "mine_flooded", "kind": "FloodWeather", "interest_pm": 600, "life_days": 15, "witnesses": "town", "severity": 2, "key": "ex_r_flooded", "about_key": "site"}
+]

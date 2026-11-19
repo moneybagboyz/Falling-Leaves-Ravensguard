@@ -1,0 +1,17 @@
+// Weather in combat (exploration-and-sites 4.8, P4-H): one row per weather state, read by the fight's input builder, the ranged layer, the horses and the stamina
+// model. Outdoors only (underground and indoors ignore it). Permille multipliers, points on the hit formula's skill delta, ticks at 20 Hz, x10 permille per sim-second.
+[
+  { "type": "weather_combat", "id": "clear", "state": "Clear" },
+  { "type": "weather_combat", "id": "overcast", "state": "Overcast", "day_light_pm": 900 },
+  { "type": "weather_combat", "id": "light_rain", "state": "LightRain", "sigma_pm": 1150, "dodge_cooldown_ticks": 4, "torch_burn_pm": 1500, "stealth_points": 10 },
+  { "type": "weather_combat", "id": "heavy_rain", "state": "HeavyRain", "sigma_pm": 1300, "vision_cap_m": 60, "dodge_cooldown_ticks": 6, "evade_points": -5, "no_charges": true,
+    "torch_burn_pm": 2500, "torch_out_pm_x10": 5, "fires_out": true, "hearing_pm": 700, "bow_range_pm": 850 },
+  { "type": "weather_combat", "id": "thunderstorm", "state": "Thunderstorm", "sigma_pm": 1300, "vision_cap_m": 40, "dodge_cooldown_ticks": 6, "evade_points": -5, "no_charges": true,
+    "torch_burn_pm": 2500, "torch_out_pm_x10": 5, "fires_out": true, "hearing_pm": 700, "bow_range_pm": 850, "horse_panic_per_flash": 100, "superstitious_x100": 300 },
+  { "type": "weather_combat", "id": "fog", "state": "Fog", "sigma_pm": 1400, "sigma_beyond_m": 15, "vision_cap_m": 15, "surprise_points": 10 },
+  { "type": "weather_combat", "id": "frost", "state": "Frost", "slip_gallop_pm_x10": 80, "slip_sprint_pm_x10": 10, "grip_points": -5 },
+  { "type": "weather_combat", "id": "snow", "state": "Snow", "sigma_pm": 1100, "vision_cap_m": 30, "speed_pm": 800, "cavalry_speed_pm": 600, "no_charges": true },
+  { "type": "weather_combat", "id": "blizzard", "state": "Blizzard", "sigma_pm": 1500, "vision_cap_m": 10, "speed_pm": 600, "cavalry_speed_pm": 600, "no_charges": true,
+    "torch_out_pm_x10": 10, "fires_out": true, "stamina_regen_pm": 800 },
+  { "type": "weather_combat", "id": "heatwave", "state": "Heatwave", "heavy_armour_kg": 10, "heavy_swing_cost_pm": 1100, "heavy_regen_pm": 850 }
+]

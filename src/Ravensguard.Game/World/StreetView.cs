@@ -1427,7 +1427,7 @@ public partial class StreetView : Control, IHandlesBack
         else if (Actions.Pressed(e, "world.quicksave")) QuickSave();
         else if (Actions.Pressed(e, "world.quickload")) QuickLoad();
         else if (Actions.Pressed(e, "world.camera_home")) { _pan = Vector2.Zero; if (_viewZ != _world.Snapshot.Hero.Z) { _viewZ = _world.Snapshot.Hero.Z; RebuildLevel(); } }
-        else if (e is InputEventKey && Actions.Pressed(e, "world.act")) { if (ApActive && _heroLink != null && NearPerson() != null) ApTakeControl(L.T("AP_TOOK_CONTROL")); if (!TryTalkNear() && !TryPracticeYard()) _rec.UsePortal(); }
+        else if (e is InputEventKey && Actions.Pressed(e, "world.act")) { if (ApActive && _heroLink != null && NearPerson() != null) ApTakeControl(L.T("AP_TOOK_CONTROL")); if (!TryTalkNear() && !TryPracticeYard() && !TryEnterSite()) _rec.UsePortal(); }   // P4-H: TryEnterSite (StreetView.Crawl.cs)
         else return;
         GetViewport().SetInputAsHandled();
     }

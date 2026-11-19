@@ -562,6 +562,7 @@ public sealed partial class FightWorld
     private void UpdateVitals(Fighter f)
     {
         if (f.Act == FAct.Dead) return;
+        if (_burning != null || f.Plan.Id == "draugr") { SiteVitals(f); if (f.Act == FAct.Dead) return; }   // [exploration] hook: the draugr's fire and core (Sites/FightWorld.Site.cs)
         var b = f.Book;
         b.AdvanceTo(GameSec);
         if (b.Records.Count != f.WoundsSeen) RefreshBody(f);

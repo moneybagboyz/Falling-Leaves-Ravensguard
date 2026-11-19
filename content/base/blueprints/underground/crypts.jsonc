@@ -1,0 +1,95 @@
+// Underground room templates (exploration-and-sites 3.1, P4-H): cellars, crypts and tombs of ruined churches, abbeys and keeps.
+// Characters: # wall, . floor, + door (where a corridor joins), < stairs up, > stairs down, H shaft or ladder down, o pillar or prop (a support),
+// $ loot spot, n burial niche (named dead), b bier or bed, ^ trap spot, l light sconce, ~ water, : rubble, v ore face.
+// CI (test EX-3): every row the same width, every floor reachable from a door or portal, every purpose known.
+[
+  { "type": "site_room", "id": "stairs_down", "purposes": ["entrance"], "rows": [
+      "#####",
+      "#.<.#",
+      "#...#",
+      "#l..#",
+      "##+##" ] },
+  { "type": "site_room", "id": "undercroft", "purposes": ["storage", "rest"], "rows": [
+      "####+####",
+      "#.......#",
+      "#.o...o.#",
+      "+...$...+",
+      "#.o...o.#",
+      "#l.....l#",
+      "####+####" ] },
+  { "type": "site_room", "id": "cellar_store", "purposes": ["storage"], "rows": [
+      "#######",
+      "#$..$.#",
+      "#.....+",
+      "#$...$#",
+      "#######" ] },
+  { "type": "site_room", "id": "cistern", "purposes": ["water"], "rows": [
+      "###+####",
+      "#......#",
+      "#.~~~~.#",
+      "#.~~~~.#",
+      "#..$...#",
+      "########" ] },
+  { "type": "site_room", "id": "drain_tunnel", "purposes": ["passage"], "rows": [
+      "###########",
+      "+..~...~..+",
+      "###########" ] },
+  { "type": "site_room", "id": "collapsed_stair", "purposes": ["passage"], "rows": [
+      "##+###",
+      "#..::#",
+      "#.:..#",
+      "#..>.#",
+      "#:...#",
+      "######" ] },
+  { "type": "site_room", "id": "crypt_nave", "purposes": ["worship", "rest"], "rows": [
+      "#####+#####",
+      "#l.......l#",
+      "#.o.o.o.o.#",
+      "#.........#",
+      "+....^....+",
+      "#.........#",
+      "#.o.o.o.o.#",
+      "#l...$...l#",
+      "###########" ] },
+  { "type": "site_room", "id": "crypt_aisle", "purposes": ["burial"], "rows": [
+      "#n#n#n#n#",
+      "+.......+",
+      "#.......#",
+      "#n#n#n#n#",
+      "#########" ] },
+  { "type": "site_room", "id": "tomb_niche", "purposes": ["burial"], "rows": [
+      "#n#n#",
+      "n...n",
+      "#.$.#",
+      "n...n",
+      "##+##" ] },
+  { "type": "site_room", "id": "ossuary", "purposes": ["burial", "storage"], "rows": [
+      "###+###",
+      "#n...n#",
+      "#.....#",
+      "#n.$.n#",
+      "#.....#",
+      "#n...n#",
+      "#######" ] },
+  { "type": "site_room", "id": "reliquary_vault", "purposes": ["storage", "worship"], "sealed_air": 700, "rows": [
+      "###+###",
+      "#..^..#",
+      "#.....#",
+      "#l$$$l#",
+      "#.....#",
+      "#######" ] },
+  { "type": "site_room", "id": "sacristy_cellar", "purposes": ["storage"], "rows": [
+      "######",
+      "#$..l#",
+      "+....#",
+      "#..$.#",
+      "######" ] },
+  { "type": "site_room", "id": "tomb_chamber", "purposes": ["burial"], "sealed_air": 650, "rows": [
+      "###+###",
+      "#n...n#",
+      "#..^..#",
+      "#..b..#",
+      "#..$..#",
+      "#n...n#",
+      "#######" ] }
+]

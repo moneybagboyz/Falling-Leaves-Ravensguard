@@ -1,0 +1,25 @@
+// The two monster types of Phase 4 (exploration-and-sites 4.9, anatomy 4.3 and 4.4; P4-H): their fight kits (the same resolver, plans draugr and cave_beast)
+// and their behaviour outside the fight; and the kits of the other site inhabitants. Monsters are rare and legendary: only monster lairs (1-3 per region,
+// always deep), rumours until met; a kill is a chronicle event with renown.
+[
+  { "type": "fight_kit", "id": "draugr", "weapon": "axe:iron", "alt_weapons": ["arming_sword:iron", "spear:iron"], "worn": ["tunic:wool", "mail_hauberk:iron", "helm:iron"],
+    "plan": "draugr", "strength": 1900, "toughness": 40, "skill_min": 40, "skill_max": 55, "stance": "aggressive", "courage": 100 },
+  { "type": "fight_kit", "id": "cave_beast", "weapon": "natural_cave_beast:bone", "plan": "cave_beast", "size_cm3": 250000, "strength": 2600, "toughness": 25,
+    "skill_min": 45, "skill_max": 55, "stance": "aggressive", "courage": 90 },
+  { "type": "fight_kit", "id": "scavengers", "weapon": "club:oak", "alt_weapons": ["dagger:iron", "axe:iron", "spear:iron"], "worn": ["shirt:linen", "tunic:wool", "cap:leather"],
+    "skill_min": 18, "skill_max": 35, "stance": "flee_hurt", "courage": 45 },
+  { "type": "fight_kit", "id": "grave_robber", "weapon": "axe:iron", "alt_weapons": ["hand_axe:iron"], "worn": ["shirt:linen", "tunic:wool", "cap:leather"],
+    "skill_min": 35, "skill_max": 45, "stance": "aggressive", "courage": 65 },
+  { "type": "fight_kit", "id": "miners", "weapon": "club:oak", "worn": ["shirt:linen", "tunic:wool"], "skill_min": 10, "skill_max": 25, "stance": "flee_hurt", "courage": 40 },
+  { "type": "fight_kit", "id": "smugglers", "weapon": "dagger:iron", "alt_weapons": ["arming_sword:iron", "axe:iron"], "worn": ["shirt:linen", "tunic:wool", "jack:linen"],
+    "skill_min": 25, "skill_max": 45, "stance": "balanced", "courage": 55 },
+  { "type": "fight_kit", "id": "hermit", "weapon": "quarterstaff:ash", "worn": ["shirt:linen", "cloak:wool"], "skill_min": 15, "skill_max": 30, "stance": "flee_hurt", "courage": 40 },
+  { "type": "fight_kit", "id": "vermin", "weapon": "natural_wolf:bone", "plan": "quadruped", "size_cm3": 20000, "strength": 600, "skill_min": 15, "skill_max": 25, "stance": "aggressive", "courage": 30 },
+
+  { "type": "site_monster", "id": "draugr", "kit": "draugr", "walk_mmps": 2000, "lunge_mmps": 3500, "lunge_s": 5, "rest_s": 20, "dark_sight_m": 12,
+    "dormant": true, "wake_pm_per_s": 100, "wake_noise_m": 20, "wake_stay_s": 60, "leash_m": 100, "return_after_s": 120, "lose_m": 60, "attack_m": 12,
+    "tireless": true, "burns": true, "slain_key": "ex_chron_draugr_slain", "renown": 25 },
+  { "type": "site_monster", "id": "cave_beast", "kit": "cave_beast", "walk_mmps": 2500, "lunge_mmps": 6000, "lunge_s": 3, "rest_s": 10,
+    "hear_walk_m": 15, "hear_run_m": 25, "hear_sneak_m": 8, "hear_fight_m": 30, "hear_asleep_m": 8, "sleep_hour": 6, "wake_hour": 22, "investigate_s": 20, "attack_m": 8,
+    "flee_loss_pm": 300, "recover_pm_per_hour": 10, "leash_m": 200, "return_after_s": 60, "lose_m": 40, "slain_key": "ex_chron_beast_slain", "renown": 20 }
+]

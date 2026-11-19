@@ -127,6 +127,7 @@ public partial class StreetView
     {
         RoadFightFrame();
         AftermathFrame();                                   // P4-D hook (StreetView.Captivity.cs)
+        CrawlFrame();                                       // P4-H hook: the hero underground (StreetView.Crawl.cs)
         var t = _travel; if (t == null || _tfeed == null) return;
         long now = _world.Clock.Now.Seconds;
         _tfeed.Hero.BaseMmPerGs = VehicleSpeedMm();

@@ -19,7 +19,7 @@ public sealed record LiveSnapshot(
 /// speed x multiplier x dt of ground per step in sub-steps of at most a quarter metre, so 8x never tunnels through a wall.
 /// All arithmetic is integer or Q16.16, so the same inputs give the same positions on every machine.
 /// </summary>
-public sealed class LiveWorld
+public sealed partial class LiveWorld
 {
     public const int TickHz = 20;
     public const double TickSeconds = 1.0 / TickHz;
@@ -206,6 +206,7 @@ public sealed class LiveWorld
         _moving = false;
         if (_usePending) { _usePending = false; TryPortalHere(force: true); }
         if (!_rideCmds.IsEmpty) while (_rideCmds.TryDequeue(out int rc)) RunRideCommand(rc);   // every command since the last step, in the order given
+        if (Site != null) { SiteTick(); mult = 0; }    // [exploration] hook: the hero underground (Sites/LiveWorld.Site.cs)
         if (Fight != null) mult = 0;                    // the hero's feet belong to the fight while it lasts
         if (mult > 0) { if (Ride is { IsMounted: true } or { IsDriving: true } or { Busy: true }) MoveRidden(mult); else MoveHero(mult); }
         NoteWalked();
