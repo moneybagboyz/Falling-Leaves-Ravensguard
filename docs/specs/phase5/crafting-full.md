@@ -136,3 +136,13 @@ N (unchanged). New in the screen: a **Commission** tab (makers in this settlemen
 
 ## 9. Budgets
 `RecipeDb` can-make for 80 recipes with the real world scan (room + 6 m) <= 1.5 ms, incremental after; live crafters <= 20 per bubble <= 0.05 ms a tick; the bridge at promotion <= 0.02 ms per station; save: commissions 64 B, apprenticeships 32 B, guild memberships 16 B; content about 140 KB.
+
+
+## Decided with the user (Nov 2026)
+- **Reach:** room or within 6 m (unchanged).
+- **Auto-fetch:** stores in the same building that the crafter may use are fetched as part of the job: real walking time and carrying limits, done as a `Haul` sub-step before the first attended step. The CF-3 "a chest 7 m away does not count" rule now means "is fetched, at a time cost", when the chest is in the same building.
+- **Field kits:** new tool items, `sewing_kit`, `whetstone_file`, `fletching_kit` and `field_smith_kit`.
+  - Each gives one or two low tool qualities (level 1) anywhere, with a -5 score penalty.
+  - They are enough for mending, sharpening, fletching and field repair recipes.
+  - Smithing steps still need the `forge` and `anvil` stations.
+- **Craft time:** historical labour times, with 8x allowed in safety (as for building).

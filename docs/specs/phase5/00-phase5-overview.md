@@ -247,6 +247,12 @@ These answer the questions in §10. Where this section and a per-spec "default" 
   - Mineral rights are separate from surface rights: a lord's licence for base metals, the crown's for silver and gold, with royalties.
   - Build order: it goes in step 4, beside businesses, using streams 0x5C0 to 0x5C2. Estimate: about +0.5 to 1 month, inside the 9 to 10 months if run in parallel.
 
+- **Crafting (decided with the user):**
+  - **Reach:** tools, stations and materials count when they are in the crafter's room or within 6 m, as `crafting-full.md` §4 already says.
+  - **Fetching:** materials stored elsewhere in the same building are fetched as part of the job, with real walking time and carrying limits; no manual inventory juggling.
+  - **Field kits:** limited portable kits (sewing kit, whetstone and file, fletching kit, field smithing kit) give low tool qualities anywhere, at a penalty. They allow mending, sharpening, fletching and field repairs. Real smithing still needs a forge and anvil.
+  - **Craft time:** historical labour times (a sword takes days of a smith's work, mail takes weeks), with 8x allowed while crafting somewhere safe, or commission the work and come back.
+
 ## 11. Risks
 
 | Risk | Why it matters | Mitigation |
