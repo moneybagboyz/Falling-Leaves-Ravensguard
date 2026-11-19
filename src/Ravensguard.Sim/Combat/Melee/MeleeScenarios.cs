@@ -44,7 +44,7 @@ public static class MeleeScenarios
         int Seed, double DurationS, int WinnerTeam, Outcome LoserOutcome, DownReason LoserDownReason, bool LoserDiedLater,
         int BlowsThrown, int Landed, int Blocked, int Parried, int Dodged, int Whiffed, int Feints, IReadOnlyDictionary<string, int> Wounds);
 
-    public static DuelResult RunDuel(CombatTables tables, Matchup m, int duel, double maxS = 240, double aftermathS = 60, Action<MeleeWorld>? setup = null)
+    public static DuelResult RunDuel(CombatTables tables, Matchup m, int duel, double maxS = 240, double aftermathS = 60, Action<MeleeWorld>? setup = null, Action<MeleeWorld, Fighter, int>? aftermath = null)
     {
         var w = new MeleeWorld(tables, (ulong)(1000 + duel)) { EmitText = false };
         setup?.Invoke(w);
@@ -60,7 +60,8 @@ public static class MeleeScenarios
         // aftermath: does the loser still die with nobody tending the wounds?
         int end = w.Tick + (int)(aftermathS * MeleeRules.TickHz);
         bool wasAlive = loser.Alive;
-        while (w.Tick < end && loser.Alive && loser.State == Act.Down) w.StepWithAi();
+        int t0 = w.Tick;
+        while (w.Tick < end && loser.Alive && loser.State == Act.Down) { aftermath?.Invoke(w, loser, w.Tick - t0); w.StepWithAi(); }
         bool diedLater = wasAlive && !loser.Alive;
         var counts = new Dictionary<string, int>();
         foreach (var (_, wd) in w.WoundLog) counts[Categorise(wd)] = counts.GetValueOrDefault(Categorise(wd)) + 1;

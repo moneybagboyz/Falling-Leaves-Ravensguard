@@ -74,6 +74,7 @@ public sealed partial class WoundBook
 
     private void Heal(ref WoundRecord w, long day, long sec, int speedPm)
     {
+        if (w.InfectionLevel > 0) return;                                        // an infected wound does not close until it is cleaned
         bool eligible;
         bool repaired = w.Is(Aid.Repaired);
         switch (w.Cat)

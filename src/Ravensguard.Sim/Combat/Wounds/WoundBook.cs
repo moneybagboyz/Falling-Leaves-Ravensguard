@@ -117,6 +117,7 @@ public sealed partial class WoundBook
             }
             Tick(g, s, j);
         }
+        if (Dead && LastSec < toSec) LastSec = toSec;
     }
 
     /// <summary>A sim-second in which no threshold or timer can fire: awake, nothing pending, and the blood ends well above collapse.</summary>

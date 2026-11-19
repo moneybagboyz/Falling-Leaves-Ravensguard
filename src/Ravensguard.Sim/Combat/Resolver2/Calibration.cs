@@ -75,7 +75,7 @@ public static class Calibration
     }
 
     /// <summary>Runs <paramref name="duels"/> seeded duels of a pairing. Skills 30-59 per seed (the spike's), steel weapons.</summary>
-    public static Row Run(CombatTables tables, Pairing p, int duels, bool v2 = true)
+    public static Row Run(CombatTables tables, Pairing p, int duels, bool v2 = true, bool treat = false)
     {
         var row = new Row { Name = p.Name };
         var adapter = new V1Adapter(tables);
@@ -105,7 +105,7 @@ public static class Calibration
         };
         for (int i = 0; i < duels; i++)
         {
-            var d = MeleeScenarios.RunDuel(tables, m, i, setup: v2 ? w => w.Strike = adapter.Resolve : null);
+            var d = MeleeScenarios.RunDuel(tables, m, i, setup: v2 ? w => w.Strike = adapter.Resolve : null, aftermath: treat ? Medic() : null);
             row.N++; row.TotalS += d.DurationS; row.Durations.Add(d.DurationS);
             if (d.WinnerTeam == 0) row.WinsA++;
             row.Thrown += d.BlowsThrown; row.Landed += d.Landed; row.Blocked += d.Blocked; row.Parried += d.Parried; row.Dodged += d.Dodged;
@@ -118,18 +118,53 @@ public static class Calibration
         return row;
     }
 
+    private static readonly string[] InternalIds = ["heart", "brain", "lung", "liver", "spleen", "kidney", "stomach", "intestine", "trachea"];
+    private static bool IsInternal(ActiveWound w) => w.StructureId != null && InternalIds.Any(i => w.StructureId.StartsWith(i, StringComparison.Ordinal));
+    private static string? Group(string part) => part.Contains("arm") || part.Contains("hand") ? "arm" + part[^2..] : part.Contains("leg") || part.Contains("foot") ? "leg" + part[^2..] : null;
+
+    /// <summary>
+    /// The aftermath helper of the treatment run (wounds 4.3, WB-15): the winner walks over (3 sim-s), then dresses the loser's worst undressed external wound with the Phase 4 rules:
+    /// a tourniquet (6 s, -98%) on a spurting limb, else a bandage (4 s, -80%, and the dressed wound clots), else a pressure hold; internal wounds cannot be dressed. Kit: one rope, four bandages.
+    /// The same constants as <see cref="Ravensguard.Sim.Combat.Wounds.Treatment"/>; the spike's world keeps its own bleeding model, so this applies them to its wounds.
+    /// </summary>
+    public static Action<MeleeWorld, Fighter, int> Medic()
+    {
+        int ready = 3 * MeleeRules.TickHz, doneAt = -1, rope = 1, bandages = 4;
+        ActiveWound? target = null; bool tourniquet = false, bandage = false;
+        var dressed = new HashSet<ActiveWound>();
+        return (w, loser, t) =>
+        {
+            if (!w.Fighters.Any(f => f.Active)) return;
+            if (target != null && t >= doneAt)
+            {
+                if (tourniquet) { string? g = Group(target.PartId); foreach (var x in loser.Wounds) if (!IsInternal(x) && Group(x.PartId) == g) { x.Rate *= 0.02; dressed.Add(x); } }
+                else if (bandage) { foreach (var x in loser.Wounds) if (!IsInternal(x) && x.PartId == target.PartId && !dressed.Contains(x)) { x.Rate *= 0.2; x.Clots = true; dressed.Add(x); } }
+                else { target.Rate *= 0.2; target.Clots = true; dressed.Add(target); }
+                target = null; ready = t;
+            }
+            if (target != null || t < ready) return;
+            ActiveWound? best = null;
+            foreach (var x in loser.Wounds) if (!IsInternal(x) && !dressed.Contains(x) && x.Rate > 0.2 && (best == null || x.Rate > best.Rate)) best = x;
+            if (best == null) return;
+            target = best; tourniquet = best.Rate >= 10 && Group(best.PartId) != null && (rope > 0 || bandages >= 2); bandage = !tourniquet && bandages > 0;
+            if (tourniquet) { if (rope > 0) rope--; else bandages -= 2; } else if (bandage) bandages--;
+            doneAt = t + MeleeRules.TickHz * (tourniquet ? 6 : bandage ? 4 : 2);
+        };
+    }
+
     /// <summary>The summary table, with the resolver-v2 8 targets.</summary>
-    public static string Table(IReadOnlyList<Row> rows)
+    public static string Table(IReadOnlyList<Row> rows, IReadOnlyList<Row>? treated = null)
     {
         var sb = new StringBuilder();
-        sb.AppendLine("| Pairing | n | mean s | median s | A wins | defended | severs/duel | fatal | KO'd then bled out (untreated) | mail turned cuts | plate soak |");
-        sb.AppendLine("|---|---|---|---|---|---|---|---|---|---|---|");
-        foreach (var r in rows)
+        sb.AppendLine("| Pairing | n | mean s | median s | A wins | defended | severs/duel | fatal | KO'd then bled out (untreated) |" + (treated != null ? " KO'd then bled out (with a medic) |" : "") + " mail turned cuts | plate soak |");
+        sb.AppendLine("|---|---|---|---|---|---|---|---|---|---|---|" + (treated != null ? "---|" : ""));
+        for (int ri = 0; ri < rows.Count; ri++)
         {
+            var r = rows[ri];
             string mail = r.BlowsOnMailEdged == 0 ? "-" : $"{100.0 * r.MailConverted / r.BlowsOnMailEdged:0}%";
             string plate = r.PlateStopped == 0 ? "-" : $"{100.0 - 100.0 * r.PlateStoppedOut / Math.Max(1, r.PlateStoppedIn):0.0}%";
             string ko = r.KnockedOut == 0 ? "-" : $"{100.0 * r.KoBledOut / r.KnockedOut:0}%";
-            sb.AppendLine($"| {r.Name} | {r.N} | {r.MeanS:0.0} | {r.MedianS:0.0} | {r.WinAPct:0}% | {r.DefendedPct:0}% | {r.SeversPerDuel:0.00} | {100.0 * r.Fatal / Math.Max(1, r.N):0}% | {ko} | {mail} | {plate} |");
+            sb.AppendLine($"| {r.Name} | {r.N} | {r.MeanS:0.0} | {r.MedianS:0.0} | {r.WinAPct:0}% | {r.DefendedPct:0}% | {r.SeversPerDuel:0.00} | {100.0 * r.Fatal / Math.Max(1, r.N):0}% | {ko} | " + (treated != null ? $"{(treated[ri].KnockedOut == 0 ? "-" : $"{100.0 * treated[ri].KoBledOut / treated[ri].KnockedOut:0}%")} | " : "") + $"{mail} | {plate} |");
         }
         sb.AppendLine();
         var cats = rows.SelectMany(r => r.Wounds.Keys).Distinct().OrderBy(x => x, StringComparer.Ordinal).ToList();
