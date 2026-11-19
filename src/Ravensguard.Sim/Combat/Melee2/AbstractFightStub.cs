@@ -16,7 +16,7 @@ public sealed record FightRun(FightWorld? Live, AbstractFightReport? Report);
 
 /// <summary>
 /// The abstract tier's fight resolver (overview 3: "outside any bubble, an AbstractBattle"). This is the seam abstract-battles-v1 (P4-G, step 6) fills: its Lanchester exchange with
-/// the wound tables baked from the tactical resolver implements this interface; <see cref="FightSetup.Run"/> and its callers do not change.
+/// the wound tables baked from the tactical resolver implements this interface (<see cref="Abstract.AbstractBattles"/>); <see cref="FightSetup.Run"/> and its callers do not change.
 /// </summary>
 public interface IAbstractFights
 {
@@ -24,7 +24,7 @@ public interface IAbstractFights
 }
 
 /// <summary>
-/// The stand-in until abstract-battles-v1: the side the odds favour (<see cref="RiskEstimate"/>, the square law on the setup's fighters) holds the field and nobody is hurt (no
+/// The fallback when the content has no wound tables (and step 5's stand-in; abstract-battles-v1's <see cref="Abstract.AbstractBattles"/> is the default): the side the odds favour (<see cref="RiskEstimate"/>, the square law on the setup's fighters) holds the field and nobody is hurt (no
 /// wound is invented, no person is moved). It draws nothing (the abstract streams 0x4A0..0x4A3 belong to step 6) and is marked <see cref="AbstractFightReport.Stub"/>.
 /// </summary>
 public sealed class AbstractFightStub : IAbstractFights

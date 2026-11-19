@@ -289,6 +289,23 @@ static class AbstractRun
             foreach (var n in names) Console.WriteLine($"  \"{System.Text.Json.JsonNamingPolicy.SnakeCaseLower.ConvertName(n)}\": {Get(best, n)},");
             return 0;
         }
+        if (args.Contains("ndiag"))
+        {
+            foreach (int n in new[] { 16, 18, 20 })
+            {
+                int wins = 0;
+                for (int seed = 0; seed < 40; seed++)
+                {
+                    var kits = AbstractScenarios.Kits(AbstractScenarios.Scenario.A, (ulong)(50_000 + seed), out _, out _);
+                    var militia = kits.Where(k => k.Team == 0).Take(n).ToList(); var bandits = kits.Where(k => k.Team == 1).ToList();
+                    var b = new AbstractBattle(fc, tables, new BattleInput([.. militia, .. bandits], (ulong)(50_000 + seed), (ulong)(n * 1000 + seed), 8 * 3600) { Aftermath = false });
+                    if (seed == 0) Console.WriteLine($"n {n}: gap {b.GapMm}, positions {string.Join("", b.Soldiers.Select(s => s.Position == BattlePosition.Front ? "." : s.Position == BattlePosition.Flank ? "F" : "R"))}, rows {string.Join("", b.Soldiers.Select(s => s.Row))}");
+                    b.Run(); if (b.Winner == 0) wins++;
+                }
+                Console.WriteLine($"n {n}: {wins}/40");
+            }
+            return 0;
+        }
         if (args.Contains("reference"))
         {
             // the tactical reference of the fast AB-3 test (the live fights on the fresh seeds, summed), as C# for tests/.../Combat/Abstract/TacticalReference.cs

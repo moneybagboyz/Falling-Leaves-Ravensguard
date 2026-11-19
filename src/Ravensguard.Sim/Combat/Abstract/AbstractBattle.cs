@@ -44,6 +44,8 @@ public sealed class AbstractBattle
     public int Routs, LineYields, RouterYields, Flights;
     /// <summary>Diagnostics (the calibration tool): every landed outcome with the weapon class and the template copied.</summary>
     public Action<WeaponClass, OutcomeClass, WoundTemplate?>? OnHit;
+    /// <summary>Diagnostics and AB-14: every shot's outcome class.</summary>
+    public Action<OutcomeClass>? OnShot;
     public long ExpectedOutsPm;
     private readonly ulong _seed;
     private int _quiet;
@@ -56,6 +58,8 @@ public sealed class AbstractBattle
     private readonly List<Hit> _hits = [];
     private bool _mud, _woods, _contact;
     private readonly int[] _frontSlots = new int[2], _seePm = new int[2];
+    private readonly long[] _cornerRatio = new long[2];
+    private int _cornerStep = -1;
 
     private readonly record struct Hit(long Sec, int Defender, int Attacker, int K, WoundTemplate? T, OutcomeClass O, WeaponClass W);
 
@@ -76,7 +80,7 @@ public sealed class AbstractBattle
             var kit = input.Kits[i];
             int side = kit.Team == Team[0] ? 0 : 1;
             var plan = c.T.Plan("human");                 // the tables and templates are the human plan's (a beast fights as a man of its size: v1)
-            var book = input.BookOf?.Invoke(kit.Person) is { } b0 ? BookCopy.Clone(b0) : null;
+            var book = input.Books is { } bl && i < bl.Count && bl[i] is { } bk ? BookCopy.Clone(bk) : input.BookOf?.Invoke(kit.Person) is { } b0 ? BookCopy.Clone(b0) : null;
             book ??= new WoundBook(input.Seed, (input.BattleId << 16) + (ulong)i + 1, (int)((long)plan.BloodMl * Math.Max(1, kit.SizeCm3) / plan.SizeCm3), kit.Toughness, plan.Id) { LastSec = input.GameSec };
             if (book.LastSec < input.GameSec) book.AdvanceTo(input.GameSec);
             var sh = AbstractClasses.ShooterOf(c, kit);
@@ -90,17 +94,19 @@ public sealed class AbstractBattle
                 Braces = mc == WeaponClass.Polearm && !mounted,
                 CourageX100 = MoraleRules.For(c.Db).CourageX100(kit.Courage), Book = book, Plan = plan,
             };
+            if (input.Statuses is { } st && i < st.Count) so.Status = st[i];
+            if (input.Routing is { } rt && i < rt.Count && rt[i] && so.Status == SoldierStatus.Active) { so.Routing = true; so.RoutStep = 0; }
             if (book.Dead) so.Status = SoldierStatus.Dead;
             Soldiers.Add(so); Side[side].Add(so);
         }
-        for (int s = 0; s < 2; s++) _start[s] = Side[s].Count(x => x.Status == SoldierStatus.Active);
+        for (int s = 0; s < 2; s++) _start[s] = Math.Max(1, Side[s].Count(x => x.Status == SoldierStatus.Active));
         Place();
         if (input.Leaders)
             for (int s = 0; s < 2; s++)
                 if (Side[s].Count >= 3)
                 {
                     var best = Side[s].Where(x => x.Active).OrderByDescending(x => x.Skill).ThenBy(x => x.Index).FirstOrDefault();
-                    if (best != null) { best.Captain = true; _captain[s] = best.Index; }
+                    if (best != null) { best.Captain = true; _captain[s] = best.Index; best.Row = Math.Max(best.Row, 1); }      // the captain leads from just behind the front rank
                 }
         foreach (var so in Soldiers) Refresh(so);
         for (int s = 0; s < 2; s++) _frontSlots[s] = Side[s].Count(x => x.Row == 0 && x.Active && !x.Mounted);
@@ -127,7 +133,13 @@ public sealed class AbstractBattle
         long[] cx = new long[2], cy = new long[2]; int[] n = new int[2];
         foreach (var s in Soldiers) { cx[s.Side] += s.Kit.X; cy[s.Side] += s.Kit.Y; n[s.Side]++; }
         for (int s = 0; s < 2; s++) if (n[s] > 0) { cx[s] /= n[s]; cy[s] /= n[s]; }
-        var (ax, ay) = FightMath.Norm((int)Math.Clamp(cx[1] - cx[0], -2_000_000_000, 2_000_000_000), (int)Math.Clamp(cy[1] - cy[0], -2_000_000_000, 2_000_000_000));
+        // the axis between the sides: the way the lines face (side 0's facing less side 1's; a line drawn up faces its enemy), else the line between their centres; a tilt of the
+        // centres' line (one end of a line shorter) would put the ends of a straight line in its second rank
+        long fx = 0, fy = 0;
+        foreach (var s in Soldiers) { int sg = s.Side == 0 ? 1 : -1; fx += sg * s.Kit.FaceX; fy += sg * s.Kit.FaceY; }
+        var (ax, ay) = FightMath.Norm((int)Math.Clamp(fx, -2_000_000_000, 2_000_000_000), (int)Math.Clamp(fy, -2_000_000_000, 2_000_000_000));
+        long dcx = cx[1] - cx[0], dcy = cy[1] - cy[0];
+        if (ax == 0 && ay == 0 || dcx * ax + dcy * ay <= 0) (ax, ay) = FightMath.Norm((int)Math.Clamp(dcx, -2_000_000_000, 2_000_000_000), (int)Math.Clamp(dcy, -2_000_000_000, 2_000_000_000));
         if (ax == 0 && ay == 0) ax = FightMath.One;
         long Along(Soldier s) => ((long)s.Kit.X * ax + (long)s.Kit.Y * ay) / FightMath.One;           // towards side 1
         long Across(Soldier s) => ((long)s.Kit.Y * ax - (long)s.Kit.X * ay) / FightMath.One;
@@ -366,7 +378,7 @@ public sealed class AbstractBattle
     /// row weight, the less beset first; a shot goes at anyone by row weight.</summary>
     private Soldier PickTarget(Soldier a, List<Soldier> targets, bool shot, int k)
     {
-        if (!shot && a.Target >= 0 && Soldiers[a.Target] is { } held && targets.Contains(held)) return held;
+        if (!shot && a.Target >= 0 && Soldiers[a.Target] is { } held && held.Side != a.Side && held.Active && held.Routing == (targets.Count > 0 && targets[0].Routing)) return held;
         uint d = (uint)(Step * 16 + Math.Min(15, k)) * 4u + (shot ? 0x8000_0000u : 0u);
         long sum = 0;
         foreach (var t in targets) sum += Weight(t) * 1000 / (1000 + (shot ? 0 : K.BesetPm * t.TargetedBy));
@@ -395,9 +407,10 @@ public sealed class AbstractBattle
         int r = DetRng.Range(_seed, Step, (ulong)(a.Index + 1), RngStreams.WoundSample, d + 1, 0, 1000);
         var o = shot ? Tables.Draw(wc, tgt.Armour, rangeM, shield, r, shot: true, hitPm: hitPm)
                      : Tables.Draw(wc, tgt.Armour, (a.Mounted ? a.Skill : a.Skill) - tgt.Skill, shield, r, hitPm: hitPm);
+        if (shot) OnShot?.Invoke(o);
         Actions++; ActionsBy[a.Side]++;
         if (o >= OutcomeClass.Light) WoundingBy[a.Side]++;
-        ExpectedOutsPm += shot ? 0 : Tables.OutPm(wc, tgt.Armour, a.Skill - tgt.Skill, shield);
+        ExpectedOutsPm += shot ? 0 : Tables.OutPm(wc, tgt.Armour, a.Skill - tgt.Skill, shield, hitPm);
         if (o >= OutcomeClass.Serious && !shot) Outs++;
         if (o == OutcomeClass.Miss) return;
         WoundTemplate? tpl = null;
@@ -521,10 +534,18 @@ public sealed class AbstractBattle
     /// side still on its feet: <c>cornered_pm x (enemies / ours)^3</c>, at most 1000 (a thin line in front leaves the way back open; one that wraps round closes it).</summary>
     private int CorneredPm(int side, int basePm)
     {
-        int foes = 0, ours = 0;
-        foreach (var x in Side[1 - side]) if (x.InLine && !(x.Shooter != null && x.Ammo > 0)) foes++;
-        foreach (var x in Side[side]) if (x.Active) ours++;
-        long r = Math.Min(4000L, (long)foes * 1000 / Math.Max(1, ours));                            // enemies per man, x1000: surrounded grows as its cube
+        if (_cornerStep != Step)
+        {
+            _cornerStep = Step;
+            for (int sd = 0; sd < 2; sd++)
+            {
+                int foes = 0, ours = 0;
+                foreach (var x in Side[1 - sd]) if (x.InLine && !(x.Shooter != null && x.Ammo > 0)) foes++;
+                foreach (var x in Side[sd]) if (x.Active) ours++;
+                _cornerRatio[sd] = Math.Min(4000L, (long)foes * 1000 / Math.Max(1, ours));             // enemies per man, x1000: surrounded grows as its cube
+            }
+        }
+        long r = _cornerRatio[side];
         return (int)Math.Min(1000L, basePm * r / 1000 * r / 1000 * r / 1000);
     }
 
@@ -597,6 +618,10 @@ public sealed class AbstractBattle
                     var c = Soldiers[_captain[side]];
                     if (side == l && c.Status == SoldierStatus.Down && Kind[Winner] == SideKind.Bandits && DetRng.Range(_seed, 0, (ulong)(side + 1), RngStreams.LeaderFate, 0, 0, 1000) < 300) c.Status = SoldierStatus.Captured;
                     if (side == l && c.Status == SoldierStatus.Fled && (Side[Winner].Any(x => x.Mounted && x.InLine)) && DetRng.Range(_seed, 0, (ulong)(side + 1), RngStreams.LeaderFate, 1, 0, 1000) < 250) c.Status = SoldierStatus.Captured;
+                    // his own men close round a fallen or yielded captain and carry him off (or he slips away in the press), alive, wounds and all, more often than not
+                    if (side == l && c.Status is SoldierStatus.Captured or SoldierStatus.Down or SoldierStatus.Surrendered && !c.Book.Dead
+                        && DetRng.Range(_seed, 0, (ulong)(side + 1), RngStreams.LeaderFate, 2, 0, 1000) < K.LeaderCarriedPm)
+                        c.Status = SoldierStatus.Fled;
                 }
             }
             // first aid by whoever holds the field (wounds 5, B6): 90% with a medic or 40%; the fled see to themselves at 40%

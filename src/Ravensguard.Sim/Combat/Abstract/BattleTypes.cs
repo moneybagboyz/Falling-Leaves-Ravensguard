@@ -78,6 +78,10 @@ public sealed record BattleInput(IReadOnlyList<FighterKit> Kits, ulong Seed, ulo
     public bool FirstAid { get; init; } = true;
     /// <summary>Existing wound books by person (copied, never changed: the battle's books are applied at the barrier).</summary>
     public Func<ulong, WoundBook?>? BookOf { get; init; }
+    /// <summary>A demoted live fight (4.7): each kit's own book (copied) and where it stands (down, dead, fled, yielded; routing), by kit index.</summary>
+    public IReadOnlyList<WoundBook?>? Books { get; init; }
+    public IReadOnlyList<SoldierStatus>? Statuses { get; init; }
+    public IReadOnlyList<bool>? Routing { get; init; }
 }
 
 /// <summary>One 15 (here 5) second step of the report's timeline strip: casualties of each side in it.</summary>

@@ -2537,6 +2537,49 @@ wm_why_yielded,Yielded
 wm_why_fled,Got away
 wm_why_waiting,Waiting
 wm_why_subduing,Subduing: blunt blows only
+ab_report_title,Report: a fight on {0}
+ab_report_word,Word reached {0}.
+ab_report_held,{0} held the field after {1} seconds of fighting.
+ab_report_neither,Neither side held the field ({0} seconds).
+ab_report_side,"{0}: {1} went in; {2} dead, {3} down, {4} taken, {5} fled or yielded, {6} standing."
+ab_report_quality,The first side's quality factor: {0}.{1} (its blows against theirs)
+ab_report_timeline,"Who fell, second by second (red: the first side; blue: the second; gold: men breaking)"
+ab_report_notables,Notables
+ab_report_leader,{0} (captain): {1}{2}
+ab_report_notable,{0}: {1}{2}
+ab_report_by,", {0} from {1}"
+ab_report_no_replay,"This is a report: nobody watched this fight, and it cannot be replayed."
+ab_fate_unhurt,unhurt
+ab_fate_wounded,wounded
+ab_fate_down,left on the field
+ab_fate_dead,killed
+ab_fate_fled,got away
+ab_fate_captured,taken prisoner
+ab_fate_surrendered,yielded
+ab_wound_miss,no wound
+ab_wound_nothing,a bruise
+ab_wound_light,a light wound
+ab_wound_serious,a serious wound
+ab_wound_grave,a grave wound
+ab_wound_severed,a limb taken
+ab_wound_instant,a killing blow
+ab_weapon_blade,a blade
+ab_weapon_dagger,a dagger
+ab_weapon_axe,an axe
+ab_weapon_hafted,a mace
+ab_weapon_polearm,a spear
+ab_weapon_longbow,an arrow
+ab_weapon_crossbow,a bolt
+ab_weapon_thrown,a thrown javelin
+ab_weapon_unarmed,bare hands
+ab_weapon_lance,a lance
+ab_weapon_club,a club
+ab_chron_report,"Word reached {settlement} that {a} and {b} fought on {place}; {a} lost {lost_a}, {b} lost {lost_b}."
+ab_rumour_report,"word came of a fight near {place}: {number} fell on one side, they say."
+ab_demo_place,the Oakford road
+ab_demo_town,Oakford
+ab_demo_side_a,the Wolf Company
+ab_demo_side_b,the levy of the Crows
 fl_after_broke_shield1,"{target}'s shield splinters and falls apart."
 fl_after_broke_shield2,"{target}'s shield breaks in half."
 fl_after_broke_tool1,"{target}'s makeshift weapon breaks in {tgt_his} hands."

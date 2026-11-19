@@ -37,7 +37,7 @@ public sealed partial class ContinentTrade
             victims.Add(FightSetup.Roll(fc, i >= drivers ? guard : driver, seed, id.Value, pt.FullName(p), 0, (i % 4) * 1200, (i / 4) * 1500, FightMath.One, 0) with { Stance = "balanced" });
             rows.Add(p);
         }
-        if (victims.Count == 0) return false;
+        if (victims.Count == 0) { Robbed(ctx, st, c, time, band, []); return false; }               // nobody to fight: the wagons are simply taken
         var robbers = new List<FighterKit>();
         for (int i = 0; i < band; i++) robbers.Add(FightSetup.Roll(fc, bandit, seed, 0x4A00_0000UL + (ulong)i, $"bandit {i + 1}", 1, 0, 0, -FightMath.One, 0) with { Person = 0 });
         ulong battleId = (ulong)ctx.Hour * 4096 + (c.Id.Value & 4095);

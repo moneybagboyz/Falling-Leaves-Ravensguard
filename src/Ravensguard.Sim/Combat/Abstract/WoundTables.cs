@@ -122,12 +122,15 @@ public sealed class WoundTables
     }
 
     /// <summary>The probability (permille) that one attack action lands a wound of serious or worse: the table's part of the Lanchester coefficient (4.2).</summary>
-    public int OutPm(WeaponClass w, ArmourClass a, int delta, bool shield)
+    public int OutPm(WeaponClass w, ArmourClass a, int delta, bool shield, int hitPm = 1000)
     {
         int d = Math.Clamp(delta, -60, 60) + 60, b0 = Math.Min(B - 1, d / 20), b1 = Math.Min(B - 1, b0 + 1), frac = d % 20 * 50, s = shield ? 1 : 0;
         int c0 = Cell((int)w, (int)a, b0, s) * O, c1 = Cell((int)w, (int)a, b1, s) * O;
         int light = (_cum[c0 + (int)OutcomeClass.Light] * (1000 - frac) + _cum[c1 + (int)OutcomeClass.Light] * frac) / 1000;
-        return 1000 - light;
+        int miss = (_cum[c0] * (1000 - frac) + _cum[c1] * frac) / 1000, landed = 1000 - miss;
+        if (landed <= 0) return 0;
+        long scaled = Math.Min(1000L, (long)landed * hitPm / 1000);
+        return (int)((1000 - light) * scaled / landed);                 // the serious-or-worse share of the landed blows, over the landed share the press scales
     }
 
     /// <summary>The recorded wounds of a class (empty when none were recorded: the hit is then counted with no wound, as armour holding).</summary>

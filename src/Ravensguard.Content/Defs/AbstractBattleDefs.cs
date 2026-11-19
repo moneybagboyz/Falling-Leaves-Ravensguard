@@ -33,7 +33,7 @@ public sealed record AbstractBattleDef : ContentDef
     /// <summary>Without its leader a side under this share breaks at once.</summary>
     public int LeaderlessCollapsePm { get; init; } = 0;
     /// <summary>First-contact casualties added by a mounted charge (mounted-combat 5): extra attack actions of each charging rider in the contact step.</summary>
-    public int ChargePm { get; init; } = 600;
+    public int ChargePm { get; init; } = 1000;
     public int PursuitS { get; init; } = 120;
     /// <summary>A router is in reach of pursuers this long before it has fled (the live fight's 20 m and 5 s).</summary>
     public int FleeS { get; init; } = 16;
@@ -71,8 +71,8 @@ public sealed record AbstractBattleDef : ContentDef
     public int RearPm { get; init; } = 345;
     /// <summary>A man already struck at by others is picked as a new opponent at weight / (1 + beset x attackers), permille (the line spreads its men along the enemy's).</summary>
     /// <summary>Each attacker beyond the first on a man cuts his own attack rate (x 1000 / (1000 + beset_rate x extra)) and raises the landed share of blows on him (x (1000 + beset_hit x extra), at most three).</summary>
-    public int BesetRatePm { get; init; } = 562;
-    public int BesetHitPm { get; init; } = 330;
+    public int BesetRatePm { get; init; } = 100;
+    public int BesetHitPm { get; init; } = 50;
     public int BesetPm { get; init; } = 1440;
     /// <summary>Terrain and weather (4.5): mud blows x0.9, night x0.8 and rout +10, uphill defender p_hit x1.1 (applied as a miss share), rain bows x0.85, woods range -40%.</summary>
     public int MudBlowsPm { get; init; } = 900;
@@ -85,6 +85,8 @@ public sealed record AbstractBattleDef : ContentDef
     public int MedicPct { get; init; } = 90;
     public int NoMedicPct { get; init; } = 40;
     public int AftermathS { get; init; } = 120;
+    /// <summary>The losing side's captain down, yielded or taken is carried off by his fleeing men with this chance (0x4A3), alive and hurt.</summary>
+    public int LeaderCarriedPm { get; init; } = 800;
     /// <summary>Engagement jitter +-, permille (stream 0x4A0).</summary>
     public int JitterPm { get; init; } = 50;
 }

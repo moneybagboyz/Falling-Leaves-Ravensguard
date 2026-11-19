@@ -160,6 +160,18 @@ public static class WoundTableBuilder
         return pm;
     }
 
+    /// <summary>A cell's row of integers as the generated content holds it (see <c>WoundTableDef</c>).</summary>
+    public static List<long> Row(Cell c)
+    {
+        long nl = c.Outcome[(int)OutcomeClass.Light], ns = c.Outcome[(int)OutcomeClass.Serious];
+        long apm = c.Ticks == 0 ? 0 : (long)c.N * 20 * 60 * 10 / c.Ticks;
+        var row = new List<long> { c.Band, c.Shield ? 1 : 0, c.N, apm };
+        row.AddRange(Permille(c).Select(x => (long)x));
+        row.AddRange([nl == 0 ? 0 : c.PainL / nl, ns == 0 ? 0 : c.PainS / ns, nl == 0 ? 0 : c.BleedL / nl, ns == 0 ? 0 : c.BleedS / ns]);
+        row.AddRange(Shares(c.Limb).Select(x => (long)x)); row.AddRange(Shares(c.Fx).Select(x => (long)x));
+        return row;
+    }
+
     private static int[] Shares(long[] x)
     {
         long t = x.Sum();
@@ -186,13 +198,7 @@ public static class WoundTableBuilder
             foreach (var c in g.OrderBy(c => c.Band).ThenBy(c => c.Shield))
             {
                 t.Append(first ? "\n" : ",\n"); first = false;
-                long nl = c.Outcome[(int)OutcomeClass.Light], ns = c.Outcome[(int)OutcomeClass.Serious];
-                long apm = c.Ticks == 0 ? 0 : (long)c.N * 20 * 60 * 10 / c.Ticks;
-                var row = new List<long> { c.Band, c.Shield ? 1 : 0, c.N, apm };
-                row.AddRange(Permille(c).Select(x => (long)x));
-                row.AddRange([nl == 0 ? 0 : c.PainL / nl, ns == 0 ? 0 : c.PainS / ns, nl == 0 ? 0 : c.BleedL / nl, ns == 0 ? 0 : c.BleedS / ns]);
-                row.AddRange(Shares(c.Limb).Select(x => (long)x)); row.AddRange(Shares(c.Fx).Select(x => (long)x));
-                t.Append("    [" + string.Join(",", row) + "]");
+                t.Append("    [" + string.Join(",", Row(c)) + "]");
             }
             t.Append(" ] }");
 
