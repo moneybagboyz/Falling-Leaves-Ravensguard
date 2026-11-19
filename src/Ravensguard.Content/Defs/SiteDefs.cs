@@ -137,6 +137,8 @@ public sealed record SiteItemDef : ContentDef
     public int MassG { get; init; } = 500;
     public int ValueMites { get; init; } = 100;
     public string Kind { get; init; } = "valuable";
+    /// <summary>What it is made of (a material id): the one part of the item row it becomes in the pack ("" falls back to bone).</summary>
+    public string Material { get; init; } = "";
 }
 
 public sealed record SitePartChanceDef

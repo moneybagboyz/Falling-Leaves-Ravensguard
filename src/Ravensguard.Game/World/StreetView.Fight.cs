@@ -72,7 +72,7 @@ public partial class StreetView
         var fc = FightContentOf(); if (fc == null) return null;
         var book = WatchBookOf();
         var setup = FightSetup.Encounter(fc, def, ev, HeroKit(fc), [], Runtime?.State.Seed ?? 1);
-        return setup with { HeroStance = book.StanceOf(fc, EconomyState.HeroOwner, Runtime?.State.Autopilot), StartWatched = book.KeepWatching };
+        return setup with { HeroStance = book.StanceOf(fc, EconomyState.HeroOwner, Runtime?.State.Autopilot), StartWatched = book.KeepWatching, Weather = _wx.State.ToString() };   // P4 close-out: the live weather's row
     }
 
     /// <summary>The encounter's options with the odds on the Fight button (P4-F: "probably lose"; a fight is offered, never forced).</summary>
@@ -131,6 +131,7 @@ public partial class StreetView
     /// <summary>Each frame of a road fight: when it has been over for two seconds, settle the encounter and close the stance view.</summary>
     void RoadFightFrame()
     {
+        if (!_fightResumeChecked) { _fightResumeChecked = true; ResumeFight(); }   // P4 close-out: a save made mid-fight
         if (_boutFight != null) { BoutFrame(); return; }
         if (_fightView == null || _roadFight is not { } rf) return;
         var f = _world.Fight;
@@ -150,6 +151,41 @@ public partial class StreetView
         FightEnded(f);                                             // P4-D: close the log, chronicle the named dead, open the report
         CloseRoadFight();
         if (t != null) { t.ScreenPending = false; FinishEncounter(o, now, false); }
+    }
+
+    bool _fightResumeChecked;
+
+    /// <summary>
+    /// A save made mid-fight (P4 close-out): the fight record of the "fight" section is rebuilt where it stood (same FightTick, books, morale, watch and weather) and attached to the live world
+    /// through the recorder (so a replay starts it too), the stance view opens on it paused, and the road fight or the bout is settled as before when it ends. A site's fight comes back with
+    /// its crawl (StreetView.Crawl.cs), not here.
+    /// </summary>
+    void ResumeFight()
+    {
+        if (Runtime is not { } rt || rt.State.Fight is not { } rec || _fightView != null || _world.Fight != null) return;
+        rt.State.Fight = null;                                          // taken up: the next save captures the live fight, never this record again
+        var kind = FightSetup.KindOf(rec.Kind);
+        if (kind == FightKind.SiteInhabitants || FightContentOf() is not { } fc) return;
+        var ledger = rt.State.Wounds ?? _world.Wounds;
+        if (ledger == null) { ledger = new WoundLedger(rt.State.Seed, _world.Clock.Now.Seconds); _world.AttachWounds(ledger); }
+        var fight = rec.Restore(fc, ledger);
+        int hero = fight.Fighters.FindIndex(f => f.Player);
+        if (hero < 0) return;
+        _rec.StartFight(fight, hero);
+        _rec.SetSpeed(SimSpeed.Paused);
+        if (kind is FightKind.Practice or FightKind.Tournament) _boutFight = (kind.Value, -1, 0, _yard?.Settlement ?? -1);
+        else
+        {
+            var t = _travel;
+            var ev = t?.Current is { } cur && cur.Id == rec.Cause ? cur : new EncounterEvent(rec.GameSec0, rec.Cause, "Ambush", 0, 0, 0, 0, 0, [], "");
+            _roadFight = (ev, _heroLink?.View?.CoinMites ?? 0, -1);
+            if (t != null) t.ScreenPending = true;
+        }
+        OpenFightView(fight, hero);
+        if (_fightView != null && _hero != null) { var me = _fightView.Log.Info(hero); me.Name = _hero.Name; me.Female = _hero.Female; }
+        string kindName = rec.Kind, cause = rec.Cause;
+        rt.State.FightSource = () => _world.Fight is { } f ? Ravensguard.Sim.Save.FightRecord.Capture(f, kindName, cause) : null;
+        _router?.ShowToast(L.T("fr_resumed"), 4f);
     }
 
     void CloseRoadFight()

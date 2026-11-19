@@ -39,7 +39,7 @@ public sealed class WorldState
     public required ChunkStore Chunks { get; init; }
     public required Chronicle Chronicle { get; init; }
     /// <summary>The player character (saved in the "hero" section when present).</summary>
-    public HeroRecord? Hero { get; init; }
+    public HeroRecord? Hero { get; set; }
     /// <summary>The unlocked Codex entries (saved in the "codex" section when present).</summary>
     public CodexProgress? Codex { get; init; }
     /// <summary>Coin, goods, stores and household needs (saved in the "economy" section when present). Created by <see cref="EconomyState.Create"/> at world creation.</summary>
@@ -372,7 +372,7 @@ public static class WorldSave
             Fight = w.FightSource != null ? w.FightSource() : w.Fight,
             FightLog = w.FightLogSource != null ? w.FightLogSource() : w.FightLog,
             Captivity = w.Captivity is { Captives.Count: > 0 } cb ? CaptivitySave.Capture(cb) : null,                          // P4-D
-            Succession = w.Succession is { } sb && (sb.Estates.Count > 0 || sb.RunEnded) ? SuccessionSave.Capture(sb) : null,     // P4-D
+            Succession = w.Succession is { } sb && (sb.Estates.Count > 0 || sb.RunEnded || sb.Kin.Count > 0) ? SuccessionSave.Capture(sb) : null,     // P4-D
             Watch = w.Watch is { IsEmpty: false } wb ? WatchSave.Capture(wb) : null,                                                // P4-F
             Sites = w.SiteSource != null ? w.SiteSource() : w.Sites is { IsEmpty: false } sbk ? SiteSave.Capture(sbk) : null,                 // P4-H
             Party = w.Party == null ? null : Ravensguard.Sim.Trade.HeroPartySave.Capture(w.Party),

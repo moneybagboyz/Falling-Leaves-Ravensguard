@@ -40,7 +40,8 @@ public readonly record struct CampEventResult(string Id, string Effect, string N
 public readonly record struct MealResult(int Fed, long GramsEaten, long MeasuresPpm);
 
 /// <summary>What the hero is doing at camp for a while (game time, saved): the view only shows its label and acts when it ends.</summary>
-public enum CampJobKind : byte { Talk = 1, Sleep = 2, Break = 3, Gather = 4, Forage = 5, Hunt = 6 }
+/// <summary>What a camp job is doing; Search and Dig (P4 close-out) are the surface sites' verbs, whose find is rolled at the barrier when the job comes due.</summary>
+public enum CampJobKind : byte { Talk = 1, Sleep = 2, Break = 3, Gather = 4, Forage = 5, Hunt = 6, Search = 7, Dig = 8 }
 public sealed record CampJobState(CampJobKind Kind, long EndSec);
 
 public sealed partial class TravelState

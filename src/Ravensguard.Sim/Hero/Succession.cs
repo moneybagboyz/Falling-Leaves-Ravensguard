@@ -49,6 +49,8 @@ public sealed class SuccessionBook
     public readonly List<InheritanceRecord> Records = [];
     public bool RunEnded;
     public EntityId CurrentHero;
+    /// <summary>The living hero's kin in the person table (P4 close-out: the hero is not a row, so the family is linked here at a new game, and from the heir's own row after a succession).</summary>
+    public readonly List<HeroKinLink> Kin = [];
 
     /// <summary>The <c>EstateHash</c> of the daily trail (6).</summary>
     public ulong Hash()
@@ -65,6 +67,7 @@ public sealed class SuccessionBook
             L((long)r.From.Value); L((long)r.To.Value); L((long)r.Rule); L(r.Coin); L(r.EstateId); L(r.DeedsPending.Count); L(r.ReputationPending.Length); L(r.GameDay); L(r.RecoverShape.Length); L((long)r.Guardian.Value);
         }
         L(RunEnded ? 1 : 0); L((long)CurrentHero.Value);
+        if (Kin.Count > 0) { L(Kin.Count); foreach (var k in Kin) { L((long)k.Person.Value); L((long)k.Relation); } }   // only a book with kin hashes them (older hashes unchanged)
         return h;
     }
 }

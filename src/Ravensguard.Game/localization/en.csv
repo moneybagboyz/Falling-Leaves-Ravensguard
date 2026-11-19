@@ -2731,6 +2731,33 @@ ab_demo_place,the Oakford road
 ab_demo_town,Oakford
 ab_demo_side_a,the Wolf Company
 ab_demo_side_b,the levy of the Crows
+ex_job_search,Searching the field
+ex_job_dig,Digging
+su_run_over,The line has ended; nobody is left to go on.
+su_not_heir,They cannot take up your road.
+su_ended,"{0} is dead, and nobody is left to carry on. The world goes on without them."
+su_continues,"{0} takes up the road. What was carried lies where the old hero fell."
+su_cause_fight,You fell on the road and did not get up again.
+su_cause_below,"You died below ground, in the dark."
+su_next_screen,Who carries on is decided next.
+su_btn_on,Go on
+su_title,{0} is dead
+su_heir_line,"{0}, {1}, aged {2}, would carry on."
+su_other_line,"then {0}, {1}, aged {2}"
+su_ironman,Ironman: the first in line carries on; there is no choosing.
+su_estate,The estate
+su_estate_line,"The coin passes on, less the funeral; everything carried stays where the body lies, until someone fetches it."
+su_btn_continue,Continue as {0}
+su_btn_load,Load the last save
+su_btn_end,End the line
+rs_btn_control,Take control of {0}
+rs_control,Your companion slips away to come for you.
+rs_control_refused,Nobody free can come for you now.
+rs_released,You leave the rescue to chance.
+rs_too_far,The camp is still too far: creep within fifteen metres of it.
+rs_now_you_are,"You are {0} now. Creep north to the captors' camp and press E to free {1}."
+rs_hud,"Rescue: you are {0}. Reach the camp, then E to free {1}."
+fr_resumed,The fight goes on where it stood. Unpause when ready.
 fl_after_broke_shield1,"{target}'s shield splinters and falls apart."
 fl_after_broke_shield2,"{target}'s shield breaks in half."
 fl_after_broke_tool1,"{target}'s makeshift weapon breaks in {tgt_his} hands."

@@ -9,8 +9,10 @@ using Ravensguard.Sim.Characters;
 using Ravensguard.Sim.Core;
 using Ravensguard.Sim.Economy;
 using Ravensguard.Sim.People;
+using Ravensguard.Sim.Live;
 using Ravensguard.Sim.Save;
 using Ravensguard.Sim.Sites;
+using Ravensguard.Sim.Travel;
 using Ravensguard.Sim.WorldGen.Region;
 
 namespace Ravensguard.Game.World;
@@ -118,6 +120,7 @@ public partial class StreetView
     void CrawlFrame()
     {
         if (!_crawlResumeChecked) { _crawlResumeChecked = true; ResumeCrawl(); }
+        SiteResults();
         if (_siteGen is { IsCompleted: true } g)
         {
             _siteGen = null;
@@ -169,9 +172,10 @@ public partial class StreetView
             rt.State.SiteSource = null;
         }
         _rec.SetTorch(c.Hero.Light.Lit);
-        int value = c.Hero.Loot.Sum(i => i.ValueMites);
-        if (c.Hero.Dead) _router?.ShowToast(L.T("ex_ui_died_below"), 6f);
-        else _router?.ShowToast(value > 0 ? L.F("ex_ui_left_loot", c.Hero.Loot.Count, Ravensguard.Sim.Trade.Quotes.Money(value)) : L.T("ex_ui_left"), 5f);
+        if (c.Hero.Dead) { _router?.ShowToast(L.T("ex_ui_died_below"), 6f); HeroDied("su_cause_below"); }   // the heir takes over (StreetView.Succession.cs)
+        else if (_heroLink != null && _crawlSite != null && (c.Hero.Loot.Count > 0 || c.Hero.TorchesUsed > 0))
+            SiteCommand(SiteDesk.TakeCommand(_crawlSite.Id.Value, c.Hero.Loot, c.Hero.TorchesUsed, _world.Clock.Now.Seconds));   // the haul into the pack and the burnt torches out, at the barrier
+        else _router?.ShowToast(L.T("ex_ui_left"), 5f);
         _crawlView?.QueueFree(); _crawlLayer?.QueueFree();
         _crawlView = null; _crawlLayer = null; _crawl = null; _crawlSite = null; _crawlRecord = null;
     }
@@ -201,35 +205,46 @@ public partial class StreetView
     /// <summary>The Q menu's verbs at a surface site: Search the field (60 sim-seconds a cell), Dig here (a hoard).</summary>
     void SurfaceSiteVerbs(List<QMenu.Verb> v)
     {
-        if (SurfaceSiteAtHero() is not { } s || Runtime is not { } rt || _source?.Content == null) return;
-        var sc = SiteWiring.ContentOf(_source.Content);
-        var book = rt.State.Sites ??= new SiteBook();
-        var info = SiteHistoryInfo.Of(s, rt.State.History, _world.Clock.Now.Year);
+        if (SurfaceSiteAtHero() is not { } s || Runtime == null || _source?.Content == null) return;
         if (s.Kind == SiteKind.Battlefield)
-            v.Insert(1, new QMenu.Verb(L.T("ex_q_search"), () => SearchField(sc, book, info, s, rt.State.Seed)));
+            v.Insert(1, new QMenu.Verb(L.T("ex_q_search"), () => StartSiteJob(false), _heroLink == null ? L.T("MAP_NONE") : null));
         else
-            v.Insert(1, new QMenu.Verb(L.T("ex_q_dig"), () => DigHoardHere(book, info, s)));
+            v.Insert(1, new QMenu.Verb(L.T("ex_q_dig"), () => StartSiteJob(true), _heroLink == null ? L.T("MAP_NONE") : null));
     }
 
-    void SearchField(SiteContent sc, SiteBook book, SiteHistoryInfo info, Site s, ulong seed)
+    /// <summary>Search the field or dig the hoard: the clock time passes as a camp job (at 8x), then the find is rolled at the barrier (<see cref="SiteDesk"/>) and goes into the pack.</summary>
+    void StartSiteJob(bool dig)
     {
-        var rec = book.Record(s.Id.Value);
-        int perception = (Runtime?.State.Hero ?? _hero)?.Attribute(HeroAttr.Perception) ?? 50;
-        LootItem? it;
-        System.Threading.Monitor.Enter(book.Sync);
-        try { int pm = rec.LootPm; bool named = rec.Curse; it = SiteSurface.Search(sc, info, ref pm, ref named, perception, EconomyState.HeroOwner.Value, rec.Visits++, seed); rec.LootPm = pm; rec.Curse = named; }
-        finally { System.Threading.Monitor.Exit(book.Sync); }
-        _router?.ShowToast(it == null ? L.T("ex_ui_search_none") : L.F("ex_ui_search_found", it.Named.Length > 0 ? it.Named : it.Item.Replace('_', ' ')), 4f);
+        if (_heroLink == null) return;
+        if (_travel is not { } t) { SiteJobDone(dig ? CampJobKind.Dig : CampJobKind.Search); return; }
+        _router?.ShowToast(L.T(dig ? "ex_job_dig" : "ex_job_search"), 3f);
+        StartCampJob(t, dig ? CampJobKind.Dig : CampJobKind.Search, dig ? SiteDesk.DigSec : SiteDesk.SearchSec);
     }
 
-    void DigHoardHere(SiteBook book, SiteHistoryInfo info, Site s)
+    /// <summary>The search's or the dig's time is up: the command for the site the hero stands at (none if he walked off it).</summary>
+    void SiteJobDone(CampJobKind kind)
     {
-        var rec = book.Record(s.Id.Value);
-        LootItem? it;
-        System.Threading.Monitor.Enter(book.Sync);
-        try { int pm = rec.LootPm; it = SiteSurface.DigHoard(info, ref pm); rec.LootPm = pm; }
-        finally { System.Threading.Monitor.Exit(book.Sync); }
-        _router?.ShowToast(it == null ? L.T("ex_ui_dig_none") : L.F("ex_ui_search_found", it.Named), 4f);
+        _rec.SetWantedSpeed(SimSpeed.X1);
+        if (SurfaceSiteAtHero() is not { } s) { _router?.ShowToast(L.T(kind == CampJobKind.Dig ? "ex_ui_dig_none" : "ex_ui_search_none"), 4f); return; }
+        long now = _world.Clock.Now.Seconds;
+        SiteCommand(kind == CampJobKind.Dig ? SiteDesk.DigCommand(s.Id.Value, now) : SiteDesk.SearchCommand(s.Id.Value, now));
+    }
+
+    readonly HashSet<long> _siteSeqs = [];
+
+    /// <summary>Sends a site command (recorded for replay by the hero link) and shows its answer when the barrier has applied it.</summary>
+    void SiteCommand(Ravensguard.Sim.Trade.HeroCommand cmd)
+    {
+        if (_heroLink == null) return;
+        _siteSeqs.Add(_heroLink.Issue(cmd).Seq);
+    }
+
+    /// <summary>Per frame: the answers of the site commands (what was found, what was carried out).</summary>
+    void SiteResults()
+    {
+        if (_siteSeqs.Count == 0 || _heroLink?.View is not { } v) return;
+        foreach (var r in v.Results)
+            if (_siteSeqs.Remove(r.Seq)) _router?.ShowToast(r.Text, 5f);
     }
 
     /// <summary>Q underground: the crawl's verbs (exploration-and-sites 7).</summary>

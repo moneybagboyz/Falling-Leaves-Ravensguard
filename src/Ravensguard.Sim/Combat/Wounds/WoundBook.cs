@@ -82,7 +82,7 @@ public sealed partial class WoundBook
 
     /// <summary>Total rate now, milli-ml per sim-second.</summary>
     public long CurrentRateMilli() { return RateMilliAt(LastSec / TicksPerSimS); }
-    public long RateMilliAt(long s) { long r = 0; foreach (var w in Records) r += LossMilli(w, s); return r; }
+    public long RateMilliAt(long s) { long r = 0; foreach (ref readonly var w in System.Runtime.InteropServices.CollectionsMarshal.AsSpan(Records)) r += LossMilli(w, s); return r; }
 
     /// <summary>ml per sim-second as a whole number (display and tests).</summary>
     public int RateMlPerS => (int)(CurrentRateMilli() / 1000);
@@ -107,27 +107,79 @@ public sealed partial class WoundBook
         {
             long g = LastSec;
             long s = g / TicksPerSimS; int j = (int)(g % TicksPerSimS);
-            if (j == 0 && toSec - g >= TicksPerSimS && QuietSecond(s))
+            long rate = RateMilliAt(s);
+            if (j == 0 && toSec - g >= TicksPerSimS && QuietSecond(s, rate))
             {
-                long loss = RateMilliAt(s);
-                BloodUl -= loss; LastSec += TicksPerSimS;
+                BloodUl -= rate; LastSec += TicksPerSimS;
                 EndSecond(s);
                 if (!Active) { LastSec = toSec; break; }
                 continue;
             }
-            Tick(g, s, j);
+            TicksOfSecond(g, s, j, toSec);
         }
         if (Dead && LastSec < toSec) LastSec = toSec;
     }
 
     /// <summary>A sim-second in which no threshold or timer can fire: awake, nothing pending, and the blood ends well above collapse.</summary>
-    private bool QuietSecond(long s)
+    private bool QuietSecond(long s, long rate)
     {
         if (State is not (Consciousness.Awake or Consciousness.Dazed) || HeartAtSec >= 0 || BreathStopSec >= 0 || CalmSince >= 0 || UnconsciousUntilSec > LastSec || Latch != 0) return false;
         if (PainX100 + 100 > KnockoutPainX100 * 9 / 10) return false;
-        long after = BloodUl - RateMilliAt(s);
+        long after = BloodUl - rate;
         return after > BloodMaxUl - BloodMaxUl * (CollapsePm - 20) / 1000;
     }
+
+    /// <summary>
+    /// The game seconds of one sim-second from tick <paramref name="j"/> on, up to <paramref name="toSec"/>: exactly what <see cref="Tick"/> does tick by tick, with each wound's loss of the
+    /// sim-second read once (the loss depends on the wound and the sim-second only, and nothing in a tick changes the records), so a downed man's long bleed costs a sum, not twenty walks of the book.
+    /// </summary>
+    private void TicksOfSecond(long g, long s, int j, long toSec)
+    {
+        int n = Records.Count;
+        if (n > 64) { Tick(g, s, j); return; }
+        Span<long> l = stackalloc long[n];
+        var recs = System.Runtime.InteropServices.CollectionsMarshal.AsSpan(Records);
+        for (int k = 0; k < n; k++) l[k] = LossMilli(recs[k], s);
+        bool whole = j == 0 && toSec - g >= TicksPerSimS;
+        for (; j < TicksPerSimS && g < toSec; j++, g++)
+        {
+            long lost = 0;
+            for (int k = 0; k < n; k++) { long x = l[k]; if (x > 0) lost += x * (j + 1) / TicksPerSimS - x * j / TicksPerSimS; }
+            BloodUl -= lost;
+            LastSec = g + 1;
+            if (whole && j == 1)
+            {
+                // the second tick of a whole sim-second: when it changes nothing that the first did not, and nothing the rest of the second reads can change (the blood stays in the same
+                // band of every threshold Evaluate tests, the timers do not come due), the other ticks would each read and write the same: their blood is summed and they are passed over
+                var st = State; byte la = Latch; var dn = Down; long cs = CalmSince; int ev = _events?.Count ?? 0;
+                Evaluate(g + 1);
+                if (Dead) return;
+                if (st == State && la == Latch && dn == Down && cs == CalmSince && CalmSince < 0 && (_events?.Count ?? 0) == ev && BreathStopSec < 0
+                    && (HeartAtSec < 0 || HeartAtSec <= g + 1) && (UnconsciousUntilSec <= g + 1 || UnconsciousUntilSec > g + TicksPerSimS - 1))
+                {
+                    long rest = 0;
+                    for (int k = 0; k < n; k++) { long x = l[k]; if (x > 0) rest += x - x * 2 / TicksPerSimS; }
+                    if (Band(LossPm) == Band(LossPmAt(BloodUl - rest)))
+                    {
+                        BloodUl -= rest;
+                        LastSec = g - 1 + TicksPerSimS;
+                        EndSecond(s);
+                        return;
+                    }
+                }
+                continue;
+            }
+            Evaluate(g + 1);
+            if (Dead) return;
+            if (j == TicksPerSimS - 1) EndSecond(s);
+        }
+    }
+
+    private int LossPmAt(long bloodUl) => BloodMaxUl <= 0 ? 0 : (int)((BloodMaxUl - bloodUl) * 1000 / BloodMaxUl);
+
+    /// <summary>Which side of each blood threshold <see cref="Evaluate"/> tests a loss lies on (a count: the loss only grows within a sim-second).</summary>
+    private static int Band(int lossPm) =>
+        (lossPm >= DeadPm ? 1 : 0) + (lossPm >= UnconsciousPm ? 1 : 0) + (lossPm >= UnconsciousPm - 20 ? 1 : 0) + (lossPm >= CollapsePm ? 1 : 0) + (lossPm >= CollapsePm - 20 ? 1 : 0);
 
     private void Tick(long g, long s, int j)
     {
@@ -400,8 +452,42 @@ public sealed partial class WoundBook
     /// <summary>The derived capacities now (walk, grip, sight, paralysis, numbness...): splints and crutches included.</summary>
     public BodyState Function(BodyPlanV2 plan, bool crutch = false)
     {
+        var aids = AidsFor(crutch);
+        if (CacheFunction && _fnState != null && ReferenceEquals(_fnPlan, plan) && _fnAids == aids && SameFunctionWounds()) return _fnState;
         var f = FunctionWounds();
-        return BodyState.From(plan, System.Runtime.InteropServices.CollectionsMarshal.AsSpan(f), AidsFor(crutch));
+        var bs = BodyState.From(plan, System.Runtime.InteropServices.CollectionsMarshal.AsSpan(f), aids);
+        if (CacheFunction) { _fnState = bs; _fnKey = [.. f]; _fnPlan = plan; _fnAids = aids; }
+        return bs;
+    }
+
+    /// <summary>
+    /// P4 close-out (abstract battle performance): the book keeps the last <see cref="Function"/> and hands it back while the function wounds, the aids and the plan are unchanged (an
+    /// abstract battle reads a soldier's body before and after every hit and after every step). Only the abstract battle sets it, on its own copies, and clears it before the books leave
+    /// the battle; callers there only read the state. Off, nothing is cached.
+    /// </summary>
+    internal bool CacheFunction
+    {
+        get => _cacheFunction;
+        set { _cacheFunction = value; if (!value) { _fnState = null; _fnKey = null; _fnPlan = null; } }
+    }
+    private bool _cacheFunction;
+    private BodyState? _fnState;
+    private WoundV2[]? _fnKey;
+    private BodyPlanV2? _fnPlan;
+    private BodyAids _fnAids;
+
+    private bool SameFunctionWounds()
+    {
+        var key = _fnKey!; int i = 0;
+        foreach (ref readonly var w in System.Runtime.InteropServices.CollectionsMarshal.AsSpan(Records))
+        {
+            if (w.Is(Aid.Resolved)) continue;
+            if (i >= key.Length) return false;
+            ref readonly var k = ref key[i++];
+            if (k.Part != w.Part || k.Tissue != w.Tissue || k.Structure != w.Structure || k.Organ != w.Organ || k.Kind != w.Kind || k.DepthPm != w.DepthPm || k.Grade != w.Grade
+                || k.Count != w.Count || k.Residual != w.Residual || k.BleedX10 != w.BleedX10 || k.Flags != w.Flags) return false;
+        }
+        return i == key.Length;
     }
 
     /// <summary>What blood loss and infection do to strength, permille (weakened -20%, fever -20%).</summary>

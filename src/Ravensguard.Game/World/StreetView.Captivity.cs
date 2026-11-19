@@ -48,6 +48,7 @@ public partial class StreetView
     void AftermathFrame()
     {
         long now = _world.Clock.Now.Seconds;
+        RescueFrame();                                                    // P4 close-out: the rescue control switch
         if (_defeatPending is { } p && _defeatView == null && Captives?.LastDefeat is { } rep && rep.AtSec == p.IssuedSec)
         {
             _rec.SetSpeed(SimSpeed.Paused);
@@ -72,17 +73,8 @@ public partial class StreetView
     void ShowDefeat(DefeatReport rep, EncounterEvent ev)
     {
         Layer();
-        var heirs = rep.Kind == DefeatKind.Killed ? HeirsOfTheParty() : [];
-        _defeatView = new DefeatView(rep, () => AfterDefeat(rep, ev), heirs) { Name = "DefeatView" };
+        _defeatView = new DefeatView(rep, () => AfterDefeat(rep, ev), [], Run is { Ironman: true }) { Name = "DefeatView" };
         _mcLayer!.AddChild(_defeatView);
-    }
-
-    /// <summary>Who would continue: the party (the hero is not a row of the person table in Phase 4, so kin comes with Phase 5's estates; the order is <see cref="SuccessionOrder"/>'s).</summary>
-    System.Collections.Generic.List<SuccessionCandidate> HeirsOfTheParty()
-    {
-        var squad = (_heroLink?.View?.Squad ?? []).Where(m => m.Active)
-            .Select(m => new SquadMember(m.Person, -1, m.Loyalty, m.JoinedDay, m.Origin == FollowerOrigin.Recruited, m.Name)).ToList();
-        return SuccessionOrder.Order(new Ravensguard.Sim.People.PersonTable(1, 1), -1, (int)(_world.Clock.Now.Seconds / 86400), squad);
     }
 
     void AfterDefeat(DefeatReport rep, EncounterEvent ev)
@@ -90,11 +82,11 @@ public partial class StreetView
         _defeatView?.QueueFree(); _defeatView = null;
         _defeatPending = null;
         long now = _world.Clock.Now.Seconds;
-        if (rep.Kind == DefeatKind.Killed) { _router?.ReturnToMainMenu(); return; }   // the world persists; a new life starts from the library
+        if (rep.Kind == DefeatKind.Killed) { HeroDied("su_cause_fight"); return; }   // the heir takes over (StreetView.Succession.cs); with nobody left the run ends
         if (rep.Kind == DefeatKind.Captured)
         {
             Layer();
-            _captivityView = new CaptivityView(() => Captives?.View, CaptiveAct, () => _captiveActSec >= 0) { Name = "CaptivityView", Pending = () => _captiveActSec >= 0 ? L.T("MC_WORKING") : "" };
+            OpenCaptivityView();
             _mcLayer!.AddChild(_captivityView);
             _rec.SetWantedSpeed(SimSpeed.X8); _rec.SetSpeed(SimSpeed.X8);
             return;
@@ -102,6 +94,78 @@ public partial class StreetView
         _rec.SetSpeed(SimSpeed.X1);
         Settle(ev, now, rep.Kind == DefeatKind.Robbed ? "MC_ROBBED_TOAST" : "MC_LEFT_TOAST", rep.CoinTaken);
     }
+
+    void OpenCaptivityView()
+    {
+        Layer();
+        _captivityView = new CaptivityView(() => Captives?.View, CaptiveAct, () => _captiveActSec >= 0 || _rescueSeq >= 0)
+        {
+            Name = "CaptivityView", Pending = () => _captiveActSec >= 0 ? L.T("MC_WORKING") : "",
+            Rescuers = () => [.. (_heroLink?.View?.Squad ?? []).Where(m => m.Active).OrderByDescending(m => m.Loyalty).ThenBy(m => m.Person.Value).Select(m => (m.Person, m.Name))],
+            TakeControl = AskControl,
+        };
+        _mcLayer!.AddChild(_captivityView);
+    }
+
+    // ------------------------------------------------------------------ the rescue control switch (4.7; P4 close-out)
+
+    (EntityId Id, string Name)? _rescuer;
+    (long X, long Y) _rescueCell;
+    long _rescueSeq = -1;
+    bool _rescueAsk;
+    /// <summary>How far from the captors' camp the companion starts (world millimetres south of the cell) and how near it must come before E frees the hero (the rest is the sim's creep).</summary>
+    const long RescueStartMm = 60_000, RescueReachMm = 15_000;
+
+    /// <summary>Take control of a free companion: asked at the barrier; once granted the street view is the companion's (the captivity screen closes until the rescue is over).</summary>
+    void AskControl(EntityId companion)
+    {
+        if (_heroLink == null || Captives?.View is not { } v) return;
+        var name = (_heroLink.View?.Squad ?? []).FirstOrDefault(m => m.Person == companion)?.Name ?? "";
+        _rescuer = (companion, name); _rescueCell = (v.PlaceX, v.PlaceY); _rescueAsk = true;
+        _rescueSeq = _heroLink.Issue(AftermathDesk.ControlCommand(companion, _world.Clock.Now.Seconds)).Seq;
+        _rec.SetSpeed(SimSpeed.X8);
+    }
+
+    /// <summary>E while controlling the companion: near enough to the camp, the rescue is tried from where it stands.</summary>
+    bool TryRescueAct()
+    {
+        if (_rescuer is not { } r || _rescueAsk || _heroLink == null) return false;
+        var (x, y) = _world.WorldMm; long dx = x - _rescueCell.X, dy = y - _rescueCell.Y;
+        if (dx * dx + dy * dy > RescueReachMm * RescueReachMm) { _router?.ShowToast(L.T("rs_too_far"), 3f); return true; }
+        _rescueSeq = _heroLink.Issue(AftermathDesk.RescueCommand(r.Id, dx, dy, _world.Clock.Now.Seconds)).Seq;
+        _rec.SetSpeed(SimSpeed.X8);
+        return true;
+    }
+
+    /// <summary>Each frame: the answers of the control and rescue commands.</summary>
+    void RescueFrame()
+    {
+        if (_rescueSeq < 0 || _heroLink?.View is not { } hv) return;
+        var res = hv.Results.FirstOrDefault(x => x.Seq == _rescueSeq);
+        if (res == null) return;
+        _rescueSeq = -1;
+        _router?.ShowToast(res.Text, 5f);
+        if (_rescueAsk)
+        {
+            _rescueAsk = false;
+            if (!res.Ok || _rescuer is not { } r) { _rescuer = null; return; }
+            // the street view is the companion's: the captivity screen goes, the avatar stands a way off from the camp, time runs at 1x
+            _captivityView?.QueueFree(); _captivityView = null;
+            _rec.TravelPlace(_rescueCell.X, _rescueCell.Y + RescueStartMm, Ravensguard.Sim.Live.Facing.North);
+            _rec.SetWantedSpeed(SimSpeed.X1); _rec.SetSpeed(SimSpeed.X1);
+            _router?.ShowToast(L.F("rs_now_you_are", r.Name, _hero?.Name ?? ""), 6f);
+            return;
+        }
+        // the attempt is over: the hero stands at the cell again (freed, or still held and the screen returns)
+        _rescuer = null;
+        _rec.TravelPlace(_rescueCell.X, _rescueCell.Y, Ravensguard.Sim.Live.Facing.South);
+        long now = _world.Clock.Now.Seconds;
+        if (Captives?.View is { State: not CaptiveState.Held } v) EndCaptivity(v, now);
+        else { OpenCaptivityView(); _rec.SetWantedSpeed(SimSpeed.X8); _rec.SetSpeed(SimSpeed.X8); }
+    }
+
+    /// <summary>The HUD line while the player is the companion.</summary>
+    string? RescueHud() => _rescuer is { } r && !_rescueAsk ? L.F("rs_hud", r.Name, _hero?.Name ?? "") : null;
 
     void CaptiveAct(CaptiveVerb verb)
     {
@@ -158,7 +222,7 @@ public partial class StreetView
     /// <summary>The input guard while an aftermath screen is up, and the yield verb (Q in the combat stance). True when the event is taken.</summary>
     bool AftermathInput(InputEvent e)
     {
-        if (_defeatView != null || _captivityView != null) return e is InputEventKey && !Ravensguard.Game.Inputs.Actions.Pressed(e, "world.back");
+        if (_defeatView != null || _captivityView != null || _rescueAsk) return e is InputEventKey && !Ravensguard.Game.Inputs.Actions.Pressed(e, "world.back");
         if (_fightView != null && _world.Fight is { } f && _router != null && Ravensguard.Game.Inputs.Actions.Pressed(e, "combatstance.context_menu"))
         {
             var hero = f.Fighters[_fightView.Hero];

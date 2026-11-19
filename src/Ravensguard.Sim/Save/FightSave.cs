@@ -61,13 +61,15 @@ public sealed class FightRecord
     /// <summary>P4-F (watch mode, no format bump): the watch state, the sides' orders and formations, the always-near fighter, and per fighter the guarded person, the treat timer
     /// and the sheathed flag; null in a fight nobody watched, ordered or gave a stance (the extras are then all default).</summary>
     [Key(21)] public WatchRow? Watch { get; set; }
+    /// <summary>P4 close-out (no format bump): the fight's weather row by its state name; "" for a fight without one (older records).</summary>
+    [Key(22)] public string Weather { get; set; } = "";
 
     // ---------------------------------------------------------------- capture
 
     public static FightRecord Capture(FightWorld w, string kind = "", string cause = "")
     {
         if (kind.Length == 0 && w.SetupKind is { } sk) kind = FightSetup.NameOf(sk);    // P4-F: the setup's kind, so the rules come back (the session recorder captures without one)
-        var r = new FightRecord { Seed = w.Seed, FightId = w.FightId, GameSec0 = w.GameSec0, Tick = w.Tick, UsesLedger = w.Ledger != null, Kind = kind, Cause = cause };
+        var r = new FightRecord { Seed = w.Seed, FightId = w.FightId, GameSec0 = w.GameSec0, Tick = w.Tick, UsesLedger = w.Ledger != null, Kind = kind, Cause = cause, Weather = w.WeatherRow?.State ?? "" };
         r.Fighters = [.. w.Fighters.Select(f => Row(w, f))];
         r.Projectiles = [.. w.Projectiles.Select(p => new ProjectileRow
         {
@@ -199,6 +201,7 @@ public sealed class FightRecord
         for (int i = 0; i < SpentAmmoIds.Length; i++) w.SpentAmmo[SpentAmmoIds[i]] = SpentAmmoCounts[i];
         w.RestoreMorale(Morale);                                              // P4-D hook
         Watch?.Restore(w);                                                    // P4-F hook
+        w.WeatherRow = FightWorld.WeatherRowOf(content.Db, Weather);          // P4 close-out: the weather row
         return w;
     }
 

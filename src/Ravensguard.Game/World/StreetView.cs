@@ -561,7 +561,7 @@ public partial class StreetView : Control, IHandlesBack
         _dateLabel.Text = $"{t.Hour:00}:{t.Minute:00}  {_calendar.Describe(t)}";
         _weatherIcon.Texture = PixelIcons.Weather(_wx.State, s.Ambient.Phase == DayPhase.Night);
         _weatherLabel.Text = $"{L.T(WeatherFeed.Name(_wx.State))}  {Mathf.Round(_wx.TempC):0} °C";
-        string cond = _clothes?.HudLine() ?? "";
+        string cond = RescueHud() ?? _clothes?.HudLine() ?? "";                    // P4 close-out: while the player is the rescuing companion
         _condLabel.Visible = cond.Length > 0; _condLabel.Text = cond;
         _bandLabel.Text = L.T(_band switch { Band.Close => "BAND_CLOSE", Band.Street => "BAND_STREET", Band.Field => "BAND_FIELD", _ => "BAND_COMMAND" });
         string phase = s.Ambient.Phase switch { DayPhase.Dawn => "STREET_PHASE_DAWN", DayPhase.Dusk => "STREET_PHASE_DUSK", DayPhase.Night => "STREET_PHASE_NIGHT", _ => "STREET_PHASE_DAY" };
@@ -1383,6 +1383,7 @@ public partial class StreetView : Control, IHandlesBack
         if (!Visible) return;
         if (_router is { HasModal: true }) return; // the pause menu (or any dialog) owns the keys; Esc is the router's (it closes the menu) and F8 is the App's
         if (AftermathInput(e)) { GetViewport().SetInputAsHandled(); return; }   // P4-D hook: the defeat and captivity screens' guard, the yield verb
+        if (SuccessionInput(e)) { GetViewport().SetInputAsHandled(); return; }  // P4 close-out: the succession screen's guard (StreetView.Succession.cs)
         if (ObInput(e)) { GetViewport().SetInputAsHandled(); return; }
         if (e is InputEventKey { Pressed: true } && Actions.Pressed(e, "world.back") && (_campOpen || _travel?.Journey is { State: Ravensguard.Sim.Travel.JourneyState.Travelling or Ravensguard.Sim.Travel.JourneyState.Paused }) && TravelInput(e)) { GetViewport().SetInputAsHandled(); return; }
         if (_router != null && Actions.Pressed(e, "world.back"))
@@ -1427,7 +1428,7 @@ public partial class StreetView : Control, IHandlesBack
         else if (Actions.Pressed(e, "world.quicksave")) QuickSave();
         else if (Actions.Pressed(e, "world.quickload")) QuickLoad();
         else if (Actions.Pressed(e, "world.camera_home")) { _pan = Vector2.Zero; if (_viewZ != _world.Snapshot.Hero.Z) { _viewZ = _world.Snapshot.Hero.Z; RebuildLevel(); } }
-        else if (e is InputEventKey && Actions.Pressed(e, "world.act")) { if (ApActive && _heroLink != null && NearPerson() != null) ApTakeControl(L.T("AP_TOOK_CONTROL")); if (!TryTalkNear() && !TryPracticeYard() && !TryEnterSite()) _rec.UsePortal(); }   // P4-H: TryEnterSite (StreetView.Crawl.cs)
+        else if (e is InputEventKey && Actions.Pressed(e, "world.act")) { if (ApActive && _heroLink != null && NearPerson() != null) ApTakeControl(L.T("AP_TOOK_CONTROL")); if (!TryRescueAct() && !TryTalkNear() && !TryPracticeYard() && !TryEnterSite()) _rec.UsePortal(); }   // P4-H: TryEnterSite (StreetView.Crawl.cs); P4 close-out: TryRescueAct (StreetView.Captivity.cs)
         else return;
         GetViewport().SetInputAsHandled();
     }

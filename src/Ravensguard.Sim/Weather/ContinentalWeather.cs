@@ -70,16 +70,20 @@ public sealed class ContinentalWeather
     private readonly System.Collections.Concurrent.ConcurrentDictionary<long, Front[]> _seasonFronts = new();
     /// <summary>One immutable reference swapped atomically, so concurrent readers never see an hour paired with another hour's fronts.</summary>
     private sealed record HourFronts(long Hour, Front[] Fronts);
-    private volatile HourFronts _last = new(long.MinValue, []);
+    /// <summary>The fronts of recent hours, direct-mapped by hour (a snow chain asks for six hours of every day it walks, from several region workers at once; one cached hour thrashed).</summary>
+    private readonly HourFronts?[] _hours = new HourFronts?[HourSlots];
+    private const int HourSlots = 2048;
+    private readonly Func<long, Front[]> _spawn;
 
     public ContinentalWeather(ulong seed, WeatherSettings? settings = null)
     {
         Seed = seed; Settings = settings ?? new WeatherSettings();
         Long = new LongConditions(seed, Settings);
+        _spawn = Spawn;
     }
 
     /// <summary>All fronts spawned in one season (key = year * 4 + season). A pure function of the seed.</summary>
-    public Front[] SeasonFronts(long seasonKey) => _seasonFronts.GetOrAdd(seasonKey, Spawn);
+    public Front[] SeasonFronts(long seasonKey) => _seasonFronts.TryGetValue(seasonKey, out var f) ? f : _seasonFronts.GetOrAdd(seasonKey, _spawn);
 
     private Front[] Spawn(long key)
     {
@@ -118,18 +122,19 @@ public sealed class ContinentalWeather
         return list;
     }
 
-    /// <summary>Fronts affecting the continent at an hour. Cached for the latest hour only; results never depend on the cache.</summary>
+    /// <summary>Fronts affecting the continent at an hour. Cached per recent hour; results never depend on the cache.</summary>
     public Front[] ActiveFronts(long hour)
     {
-        var last = _last;
-        if (last.Hour == hour) return last.Fronts;
+        int slot = (int)(hour & (HourSlots - 1));
+        var last = Volatile.Read(ref _hours[slot]);
+        if (last != null && last.Hour == hour) return last.Fronts;
         long key = FloorDiv(hour, TimeConst.DaysPerSeason * 24L);
         var res = new List<Front>(12);
         for (int k = 0; k <= MaxSeasonsBack; k++)
             foreach (var f in SeasonFronts(key - k))
                 if (f.ActiveAt(hour)) res.Add(f);
         var arr = res.ToArray();
-        _last = new HourFronts(hour, arr);
+        Volatile.Write(ref _hours[slot], new HourFronts(hour, arr));
         return arr;
     }
 

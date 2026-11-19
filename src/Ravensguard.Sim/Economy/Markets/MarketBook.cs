@@ -61,7 +61,7 @@ public readonly record struct TradeResult(long Qty, long PaidMites, long TollMit
 }
 
 /// <summary>An order to buy (money spec 3.4): filled in a session in a fixed order, partly if need be, and then dropped.</summary>
-public sealed record BuyOrder(MarketParty Buyer, ushort Good, long Qty, int MaxPriceRatioPermille)
+public readonly record struct BuyOrder(MarketParty Buyer, ushort Good, long Qty, int MaxPriceRatioPermille)
 {
     /// <summary>Lines of one buyer are filled in ascending priority (staples before ale).</summary>
     public int Priority { get; init; }
@@ -268,11 +268,12 @@ public sealed class MarketBook
         long q = curve.MaxAffordable(gb.StockUnits, cap, budget, Money.SpreadHalfPermille);
         if (q <= 0) return TradeResult.None;
         long s0 = gb.StockUnits, left = q, taken = 0, paidSoFar = 0, tollTotal = 0;
-        var done = new List<StockLot>();
         long prevGross = 0;
-        foreach (var lot in gb.Lots.ToArray())
+        // the lots are taken from the front, ascending (floor, id); an emptied lot leaves the list where it stood, so the walk stays on its index (no copy of the list per buy)
+        for (int li = 0; li < gb.Lots.Count; )
         {
             if (left <= 0) break;
+            var lot = gb.Lots[li];
             long take = Math.Min(lot.Qty, left);
             taken += take; left -= take;
             long cumMid = curve.BuyMid(s0, taken);
@@ -280,7 +281,7 @@ public sealed class MarketBook
             long gross = cumGross - prevGross; prevGross = cumGross;
             if (!Store.Move(BookStore, buyer.Store, good, take)) throw new InvalidOperationException("book store lost goods");
             lot.Qty -= take; gb.StockUnits -= take;
-            if (lot.Qty == 0) gb.Lots.Remove(lot);
+            if (lot.Qty == 0) gb.Lots.RemoveAt(li); else li++;
             if (gross > 0 && lot.Owner.Purse != buyer.Purse)
             {
                 if (!Econ.Ledger.Transfer(buyer.Purse, lot.Owner.Purse, new Coin(gross), TransferReason.Trade)) throw new InvalidOperationException("buyer could not pay a quote it could afford");
@@ -357,17 +358,44 @@ public sealed class MarketBook
     public (int Filled, long Mites) RunSession(long hourKey, int day)
     {
         if (_orders.Count == 0) return (0, 0);
-        var sorted = _orders.Select(o => (o, key: DetRng.Next(Seed, hourKey, o.Buyer.Id.Value, RngStreams.MarketOrder, 0))).OrderBy(x => x.key).ThenBy(x => x.o.Buyer.Id.Value).ThenBy(x => x.o.Priority).ThenBy(x => x.o.Good).ToList();
-        _orders.Clear();
-        int filled = 0; long mites = 0;
-        foreach (var (o, _) in sorted)
+        // (hash of hour and party, party id, priority, good), then posting order: the stable order the LINQ sort gave, sorted in a buffer the book keeps (the session ran every open hour in every book and allocated its sort each time)
+        int n = _orders.Count;
+        if (_session.Length < n) _session = new SessionKey[Math.Max(n, _session.Length * 2)];
+        if (_sessionOrders.Length < n) _sessionOrders = new BuyOrder[Math.Max(n, _sessionOrders.Length * 2)];
+        for (int i = 0; i < n; i++)
         {
+            var o = _orders[i];
+            _sessionOrders[i] = o;
+            _session[i] = new SessionKey(DetRng.Next(Seed, hourKey, o.Buyer.Id.Value, RngStreams.MarketOrder, 0), o.Buyer.Id.Value, o.Priority, o.Good, i);
+        }
+        _orders.Clear();
+        Array.Sort(_session, 0, n);
+        int filled = 0; long mites = 0;
+        var orders = _sessionOrders;
+        for (int i = 0; i < n; i++)
+        {
+            var o = orders[_session[i].Index];
             var r = Buy(o.Buyer, o.Good, o.Qty, o.MaxPriceRatioPermille, day, o.MaxSpendMites);
             if (r.Qty > 0) { filled++; mites += r.PaidMites; }
             o.OnFilled?.Invoke(r);
         }
+        Array.Clear(orders, 0, n);
         return (filled, mites);
     }
+
+    private readonly record struct SessionKey(ulong Key, ulong Buyer, int Priority, ushort Good, int Index) : IComparable<SessionKey>
+    {
+        public int CompareTo(SessionKey o)
+        {
+            int c = Key.CompareTo(o.Key); if (c != 0) return c;
+            c = Buyer.CompareTo(o.Buyer); if (c != 0) return c;
+            c = Priority.CompareTo(o.Priority); if (c != 0) return c;
+            c = Good.CompareTo(o.Good); if (c != 0) return c;
+            return Index.CompareTo(o.Index);
+        }
+    }
+    private SessionKey[] _session = [];
+    private BuyOrder[] _sessionOrders = [];
 
     // ---------- daily and seasonal ----------
 

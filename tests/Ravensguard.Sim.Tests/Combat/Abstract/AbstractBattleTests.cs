@@ -371,14 +371,15 @@ public class AbstractBattleTests(FightFixture fx, ITestOutputHelper output)
     public void AB13_Soak_TheBudgets()
     {
         var over = new List<string>();
-        foreach (var (n, budgetMs) in new[] { (100, 3), (200, 8), (2000, 45) })
+        // the caravan ambushes' sizes (P4 close-out). The 2000 v 2000 budget (45 ms) comes back as a Phase 7 test with the battle bubble (army-scale battles moved to Phase 7, decided with the user)
+        foreach (var (n, budgetMs) in new[] { (100, 3), (200, 8) })
         {
             var warm = Stopwatch.StartNew();
             for (int i = 0; i < 2 || warm.ElapsedMilliseconds < 1500; i++) new AbstractBattle(fx.C, T, Big(n, (ulong)(100 + i % 8))).Run();
             double ms = double.MaxValue;
             for (int i = 0; i < 3; i++) { var sw = Stopwatch.StartNew(); new AbstractBattle(fx.C, T, Big(n, (ulong)(2 + i))).Run(); ms = Math.Min(ms, sw.Elapsed.TotalMilliseconds); }
-            output.WriteLine($"{n} v {n}: {ms:0.0} ms (budget {budgetMs})");
-            if (ms > budgetMs) over.Add($"{n} v {n} took {ms:0.0} ms (budget {budgetMs})");
+            output.WriteLine($"{n} v {n}: {ms:0.0} ms (budget {budgetMs}, here {TestBudget.Ms(budgetMs):0})");
+            if (ms > TestBudget.Ms(budgetMs)) over.Add($"{n} v {n} took {ms:0.0} ms (budget {budgetMs}, here {TestBudget.Ms(budgetMs):0})");
         }
         Assert.True(over.Count == 0, string.Join("; ", over));
     }

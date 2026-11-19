@@ -23,7 +23,7 @@ public sealed record FightSetup(FightKind Kind, IReadOnlyList<FighterKit> Kits, 
 {
     /// <summary>The ground (footing, slopes, rain) the horses read; null: an open field.</summary>
     public FightTerrain? Terrain { get; init; }
-    /// <summary>The weather at the start ("", "rain", "storm", "snow"): rain and storm set the terrain's rain flags.</summary>
+    /// <summary>The weather at the start: a <c>WeatherState</c> name ("HeavyRain", "Fog" ...; P4 close-out, the live weather) or the old words "rain", "storm", "snow"; "" none. Its <c>weather_combat</c> row goes on the fight.</summary>
     public string Weather { get; init; } = "";
     /// <summary>What kind of side each team is (who accepts a surrender, the defeat table's winner); unlisted teams are folk.</summary>
     public IReadOnlyDictionary<int, SideKind> SideKinds { get; init; } = new Dictionary<int, SideKind>();
@@ -59,6 +59,13 @@ public sealed record FightSetup(FightKind Kind, IReadOnlyList<FighterKit> Kits, 
         var tr = Terrain ?? new FightTerrain();
         if (Weather is "rain" or "storm") tr.HeavyRain = true;
         if (Weather == "storm") tr.Thunderstorm = true;
+        // [P4 close-out] the weather row of the live weather (a WeatherState name): the whole 4.8 table, and the horses' footing: no charges in rain or snow, the storm's flashes
+        if (FightWorld.WeatherRowOf(content.Db, Weather) is { } row)
+        {
+            w.WeatherRow = row;
+            if (row.NoCharges) tr.HeavyRain = true;
+            if (row.State == "Thunderstorm") tr.Thunderstorm = true;
+        }
         w.UseTerrain(tr);
         return w;
     }

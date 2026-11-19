@@ -90,6 +90,7 @@ public sealed class ContainerRules
         if (_defs.TryGetValue(shape, out var c) && c.Name.Length > 0) return c.Name;
         if (_db != null && _db.TryGet<WeaponShapeDef>(shape, out var w)) return w.Name;
         if (_db != null && _db.TryGet<ArmourShapeDef>(shape, out var a)) return a.Name;
+        if (_db != null && _db.TryGet<SiteItemDef>(shape, out var si) && si.Name.Length > 0) return si.Name;    // a thing brought out of a site (P4 close-out)
         return shape.Replace('_', ' ');
     }
 }

@@ -83,6 +83,7 @@ public sealed class AbstractBattle
             var book = input.Books is { } bl && i < bl.Count && bl[i] is { } bk ? BookCopy.Clone(bk) : input.BookOf?.Invoke(kit.Person) is { } b0 ? BookCopy.Clone(b0) : null;
             book ??= new WoundBook(input.Seed, (input.BattleId << 16) + (ulong)i + 1, (int)((long)plan.BloodMl * Math.Max(1, kit.SizeCm3) / plan.SizeCm3), kit.Toughness, plan.Id) { LastSec = input.GameSec };
             if (book.LastSec < input.GameSec) book.AdvanceTo(input.GameSec);
+            book.CacheFunction = true;                    // P4 close-out: the body is read before and after every hit; the copy keeps the last reading (cleared in Finish)
             var sh = AbstractClasses.ShooterOf(c, kit);
             var mc = AbstractClasses.MeleeOf(c, kit);
             bool mounted = input.Mounted.Contains(i);
@@ -675,6 +676,7 @@ public sealed class AbstractBattle
             };
             rep.Notables.Add(new BattleNotable(x.Person, x.Name, x.Side, fate, x.LastHitClass, x.LastHitWith, x.Captain));
         }
+        foreach (var x in Soldiers) x.Book.CacheFunction = false;          // the books leave the battle as they came: no cached reading
         // commands, in person order
         foreach (var x in Soldiers.Where(x => x.Person != 0).OrderBy(x => x.Person))
         {

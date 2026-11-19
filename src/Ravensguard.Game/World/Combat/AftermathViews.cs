@@ -110,12 +110,7 @@ public partial class DefeatView : AftermathPanel
         if (_r.Kind == DefeatKind.Killed)
         {
             Section(L.T("MC_SUCCESSION"));
-            if (_heirs.Count == 0) Line("  " + L.T("MC_SUCCESSION_NONE"));
-            else
-            {
-                Line("  " + L.F("MC_SUCCESSION_HEIR", _heirs[0].Name, L.T("MC_RULE_" + _heirs[0].Rule.ToString().ToUpperInvariant())));
-                if (!_ironman) foreach (var h in _heirs.Skip(1).Take(6)) Line("    " + L.F("MC_SUCCESSION_OTHER", h.Name, L.T("MC_RULE_" + h.Rule.ToString().ToUpperInvariant())));
-            }
+            Line("  " + L.T("su_next_screen"));                                           // the succession screen follows (who continues, the estate)
             Line("  " + L.T("MC_WORLD_PERSISTS"));
         }
         else
@@ -126,7 +121,7 @@ public partial class DefeatView : AftermathPanel
             if (_r.Kind == DefeatKind.Captured) Line("  " + L.T("MC_FIRST_CAPTIVE"));
             Line("  " + L.T("MC_FIRST_ROAD"));
         }
-        var b = Btn(L.T(_r.Kind == DefeatKind.Captured ? "MC_BTN_CAPTIVITY" : _r.Kind == DefeatKind.Killed ? "MC_BTN_MENU" : "MC_BTN_GET_UP"), _continue, w: 220);
+        var b = Btn(L.T(_r.Kind == DefeatKind.Captured ? "MC_BTN_CAPTIVITY" : _r.Kind == DefeatKind.Killed ? "su_btn_on" : "MC_BTN_GET_UP"), _continue, w: 220);
         b.GrabFocus();
     }
 }
@@ -144,6 +139,9 @@ public partial class CaptivityView : AftermathPanel
     CaptiveView? _shown;
     double _poll;
     public Func<string>? Pending;
+    /// <summary>The free companions who could come for the hero (P4 close-out, 4.7): the first is offered as "Take control of {name}" (the rescue control switch), with <see cref="TakeControl"/>.</summary>
+    public Func<IReadOnlyList<(Ravensguard.Sim.Core.EntityId Id, string Name)>>? Rescuers;
+    public Action<Ravensguard.Sim.Core.EntityId>? TakeControl;
 
     public CaptivityView(Func<CaptiveView?> view, Action<CaptiveVerb> act, Func<bool> waiting) { _view = view; _act = act; _waiting = waiting; }
 
@@ -193,5 +191,50 @@ public partial class CaptivityView : AftermathPanel
         Btn(L.T("MC_OPT_ESCAPE"), () => _act(CaptiveVerb.Escape), held && !busy && v.TransferTonight, 110);
         Btn(L.T("MC_OPT_WAIT"), () => _act(CaptiveVerb.Wait), held, 80).GrabFocus();
         Btn(L.T("MC_OPT_WORK"), () => { }, false, 100).TooltipText = L.T("MC_OPT_WORK_LATER");
+        if (Rescuers?.Invoke() is { Count: > 0 } rs && TakeControl != null)                 // the rescue control switch (Tab in the spec's table; a button here, the screen is modal)
+            Btn(L.F("rs_btn_control", rs[0].Name), () => TakeControl(rs[0].Id), held && !busy, 200);
+    }
+}
+
+/// <summary>
+/// The succession screen (7; P4 close-out): "Aldric is dead. Isolde, his sister, continues." — the heir and why they inherit, the others in the order (not in Ironman, where the first
+/// continues), what happens to the estate, and the buttons: continue as one of them, load the last save (not in Ironman), or, with nobody left, end the line.
+/// </summary>
+public partial class SuccessionView : AftermathPanel
+{
+    readonly string _dead, _cause;
+    readonly IReadOnlyList<SuccessionCandidate> _heirs;
+    readonly int _all;
+    readonly bool _ironman;
+    readonly Action<SuccessionCandidate> _pick;
+    readonly Action? _load;
+    readonly Action _end;
+
+    public SuccessionView(string dead, string cause, IReadOnlyList<SuccessionCandidate> heirs, int all, bool ironman, Action<SuccessionCandidate> pick, Action? load, Action end)
+    {
+        _dead = dead; _cause = cause; _heirs = heirs; _all = all; _ironman = ironman; _pick = pick; _load = load; _end = end;
+    }
+
+    static string Rule(SuccessionCandidate c) => L.T("MC_RULE_" + c.Rule.ToString().ToUpperInvariant());
+
+    protected override void Build()
+    {
+        Heading.Text = L.F("su_title", _dead);
+        Line(_cause);
+        Section(L.T("MC_SUCCESSION"));
+        if (_heirs.Count == 0) { Line("  " + L.T("MC_SUCCESSION_NONE")); Line("  " + L.T("MC_WORLD_PERSISTS")); }
+        else
+        {
+            Line("  " + L.F("su_heir_line", _heirs[0].Name, Rule(_heirs[0]), _heirs[0].AgeYears));
+            foreach (var h in _heirs.Skip(1).Take(6)) Line("    " + L.F("su_other_line", h.Name, Rule(h), h.AgeYears));
+            if (_ironman && _all > 1) Line("  " + L.T("su_ironman"));
+        }
+        Section(L.T("su_estate"));
+        Line("  " + L.T("su_estate_line"));
+        Button? first = null;
+        foreach (var h in _heirs.Take(4)) { var c = h; var b = Btn(L.F("su_btn_continue", c.Name), () => _pick(c), w: 220); first ??= b; }
+        if (_load != null) Btn(L.T("su_btn_load"), _load, w: 180);
+        if (_heirs.Count == 0) first = Btn(L.T("su_btn_end"), _end, w: 200);
+        first?.GrabFocus();
     }
 }
