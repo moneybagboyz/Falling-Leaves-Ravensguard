@@ -18,7 +18,7 @@ using LootItem = Ravensguard.Sim.Sites.LootItem;
 namespace Ravensguard.Sim.Tests.CloseOut;
 
 /// <summary>
-/// Phase 4 close-out (step 8): the gaps of docs/reviews/phase-4-open.md closed in the sim. Loot reaches the pack through a hero command (mass and coin conserved, torches burnt), the surface
+/// Phase 4 close-out (step 8): the gaps of the close-out list (folded into docs/reviews/phase-4.md, "Done in the close-out") closed in the sim. Loot reaches the pack through a hero command (mass and coin conserved, torches burnt), the surface
 /// sites' search and dig are barrier commands, the hero's kin are linked at a new game and the heir takes over with the estate settled, the rescue control switch, the weather row of a fight.
 /// </summary>
 public class Phase4CloseOutTests

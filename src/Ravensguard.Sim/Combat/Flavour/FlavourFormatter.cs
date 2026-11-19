@@ -29,9 +29,13 @@ public static class FlavourFormatter
     /// <summary>Makes the picks of every line below <paramref name="upTo"/> that has none yet, in order.</summary>
     public static void PickUpTo(FightLog log, FlavourBook book, int upTo, bool reduceBlood = false)
     {
-        upTo = Math.Min(upTo, log.Lines.Count);
-        var buf = new List<CompiledFlavour>(64);
-        while (log.PickCursor < upTo) { PickLine(log, book, log.PickCursor, buf, reduceBlood); log.PickCursor++; }
+        lock (log.Sync)
+        {
+            upTo = Math.Min(upTo, log.Lines.Count);
+            if (log.PickCursor >= upTo) return;
+            var buf = new List<CompiledFlavour>(64);
+            while (log.PickCursor < upTo) { PickLine(log, book, log.PickCursor, buf, reduceBlood); log.PickCursor++; }
+        }
     }
 
     static void PickLine(FightLog log, FlavourBook book, int index, List<CompiledFlavour> buf, bool reduce)

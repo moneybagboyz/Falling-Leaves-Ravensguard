@@ -201,7 +201,7 @@ Decisions taken while building:
 | sword+heater vs sword (padded) | 16.6 | 59% | 66% | 0.00 | 47% / 8% |
 All knocked out: 31.2% bleed out untreated, 5.6% with first aid (target <= 35%). Off target and left: full plate against full plate lasts 21 s (the test allows 23); the mace is strong against padding (69%; maces crush through cloth); a padded axeman loses to a mailed swordsman (armour matters). Severs stay near zero (the resolver's C4 rule).
 
-## Notes (Phase 4 close-out, step 8: items 1 to 5 of docs/reviews/phase-4-open.md)
+## Notes (Phase 4 close-out, step 8: items 1 to 5 of the close-out list, now in docs/reviews/phase-4.md)
 Code: `Combat/Melee2/WeaponMatrix.cs` (the matrix), `Combat/Resolver2/ArmourWear.cs` (armour damage), `FightCalibration.RangedPairings`, the counter to the spear in `FightWorld.Impact.cs`
 (`PassedThePoint`, `CrowdedMomentumPm`) and `CombatBrain.Decide`, tools `-- --matrix` and `-- --ranged`. Tests `Combat/Melee2/WeaponArmourTests.cs`.
 - **The spear (item 1).** Back at plan 4A.3's 0.40 / 0.50 s (it alone won 67 to 69% at those timings before the counter). The counter: a fighter who parries a polearm's blow, dodges

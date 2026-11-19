@@ -39,6 +39,10 @@ public sealed class FightLog
     /// <summary>The cursor of the formatter's picks: every line below it has its templates chosen.</summary>
     public int PickCursor { get; set; }
 
+    /// <summary>The formatter's picks write the lines and the strings on whichever thread formats (the log panel on the main thread, a save's capture on the tick worker): both take this
+    /// lock (review, game finding 8).</summary>
+    public object Sync { get; } = new();
+
     public List<FightLine> Lines { get; } = new(RingCap * 2 + 16);
     public Dictionary<int, BlowSnap> Blows { get; } = [];
     public SortedDictionary<int, FighterInfo> Fighters { get; } = [];

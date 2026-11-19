@@ -49,15 +49,7 @@ public partial class StreetView
     FighterKit HeroKit(FightContent fc)
     {
         // P4 close-out: what the hero wears is the inventory's worn garments and armour (item rows, in their order), so the fight's wear can go back to them; a shirt and tunic when none
-        _heroWorn.Clear();
-        var worn = new List<WornItem>();
-        foreach (var it in _heroLink?.View?.Items ?? [])
-        {
-            if (it.Slot == Ravensguard.Sim.Inventory.EquipSlot.None || !fc.Db.TryGet<ArmourShapeDef>(it.Shape, out var a)) continue;
-            string mat = it.Material.Length > 0 && fc.T.HasMaterial(it.Material) ? it.Material : a.DefaultMaterial ?? "";
-            if (mat.Length == 0 || !fc.T.HasMaterial(mat)) continue;
-            worn.Add(new WornItem(it.Shape, mat)); _heroWorn.Add((it.Id, it.ConditionPermille));
-        }
+        var worn = HeroWornRows(fc);
         if (worn.Count == 0) { worn.Add(new("shirt", "linen")); worn.Add(new("tunic", "wool")); }
         var rec = Runtime?.State.Hero ?? _hero;
         string name = _hero?.Name ?? rec?.Name ?? L.T("wm_hero_unnamed");
@@ -68,6 +60,21 @@ public partial class StreetView
 
     /// <summary>The hero's worn item rows in the order of the kit's worn pieces (empty for the stand-in shirt and tunic), with their condition before the fight.</summary>
     readonly List<(EntityId Item, int ConditionPm)> _heroWorn = [];
+
+    /// <summary>The inventory's worn garments and armour as fight pieces, in row order, and <see cref="_heroWorn"/> with them.</summary>
+    List<WornItem> HeroWornRows(FightContent fc)
+    {
+        _heroWorn.Clear();
+        var worn = new List<WornItem>();
+        foreach (var it in _heroLink?.View?.Items ?? [])
+        {
+            if (it.Slot == Ravensguard.Sim.Inventory.EquipSlot.None || !fc.Db.TryGet<ArmourShapeDef>(it.Shape, out var a)) continue;
+            string mat = it.Material.Length > 0 && fc.T.HasMaterial(it.Material) ? it.Material : a.DefaultMaterial ?? "";
+            if (mat.Length == 0 || !fc.T.HasMaterial(mat)) continue;
+            worn.Add(new WornItem(it.Shape, mat)); _heroWorn.Add((it.Id, it.ConditionPermille));
+        }
+        return worn;
+    }
 
     /// <summary>The pieces start the fight at their item rows' condition (the kit knows only shape and material); set before the fight is recorded, so a replay starts the same.</summary>
     void WornCondition(FightWorld fight, int hero)
@@ -205,6 +212,11 @@ public partial class StreetView
         var fight = rec.Restore(fc, ledger);
         int hero = fight.Fighters.FindIndex(f => f.Player);
         if (hero < 0) return;
+        // the worn rows the fight's wear goes back to (review, game finding 5: not kept across a load, so a resumed fight wrote no wear back); the rows are as they were when it began,
+        // since wear is written only when it ends. When they no longer match the pieces in the fight, nothing is written back.
+        var rows = HeroWornRows(fc);
+        var pieces = fight.Fighters[hero].Kit.Worn;
+        if (rows.Count != pieces.Count || rows.Where((w, i) => w.ShapeId != pieces[i].ShapeId || w.MaterialId != pieces[i].MaterialId).Any()) _heroWorn.Clear();
         _rec.StartFight(fight, hero);
         _rec.SetSpeed(SimSpeed.Paused);
         if (kind is FightKind.Practice or FightKind.Tournament) _boutFight = (kind.Value, -1, BoutPurseOf(rec.Cause), BoutSettlementOf(rec.Cause, _yard?.Settlement ?? -1));   // the purse and the town come back with the record (review, game finding 2)

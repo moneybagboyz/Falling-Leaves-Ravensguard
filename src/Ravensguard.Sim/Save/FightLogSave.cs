@@ -52,6 +52,11 @@ public sealed class FightLogSave
     /// <summary>Captures the log (every pick is made first, with <paramref name="book"/>, so the saved lines carry them).</summary>
     public static FightLogSave Capture(FightLog log, FlavourBook book)
     {
+        lock (log.Sync) return CaptureCore(log, book);          // the panel's formatter picks lines on the main thread meanwhile (review, game finding 8)
+    }
+
+    private static FightLogSave CaptureCore(FightLog log, FlavourBook book)
+    {
         FlavourFormatter.PickUpTo(log, book, log.Lines.Count);
         // keep the newest lines and some serious older ones, in order
         int n = log.Lines.Count, recentFrom = Math.Max(0, n - KeepRecent);
