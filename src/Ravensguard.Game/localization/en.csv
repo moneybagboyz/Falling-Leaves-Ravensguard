@@ -2443,6 +2443,100 @@ MC_FREE_DEAD,You did not survive captivity.
 MC_YIELD_TITLE,Yield?
 MC_YIELD_BODY,"Throw down your weapon and ask for quarter. Bandits rob the yielding, soldiers take them prisoner; beasts and the dead do not listen."
 MC_YIELD,Yield
+wm_button,Watch {0}
+wm_chip,"Stance: {0} {1}"
+wm_chip_tip,"Flees at {0} blood loss or morale under {1}. Click for the stance panel."
+wm_odds,"Odds {0} ({1}) - allies {2}, enemies {3}"
+wm_odds_win,probably win
+wm_odds_even,even
+wm_odds_lose,probably lose
+wm_odds_hopeless,hopeless
+wm_enc_odds,"[odds {0}%: {1}]"
+wm_bars,"Blood lost {0}  pain {1}%"
+wm_collapse,collapse in {0} s
+wm_banner,WATCH - press {0} to take control
+wm_banner_input,WATCH - press {0} or any combat input to take control
+wm_prompt_title,Take control?
+wm_prompt_take,Take control {0}
+wm_prompt_keep,Keep watching
+wm_prompt_continue,Continue
+wm_danger_blood,"You have lost a third of your blood: you will collapse soon."
+wm_danger_pain,The pain is close to knocking you out.
+wm_danger_morale,Your nerve is breaking.
+wm_danger_artery,An artery is open and spurting: it must be stopped now.
+wm_over_won,"The fight is over, and your side holds the field."
+wm_over_lost,The fight is over.
+wm_note_losing,"Watch: your side is losing (odds under 25%)."
+wm_note_ammo,Watch: out of arrows.
+wm_note_over,Watch: the fight is over.
+wm_note_danger,Watch: you are in danger.
+wm_stance_title,Combat stance
+wm_close,Close
+wm_stance_aggressive,Aggressive
+wm_stance_balanced,Balanced
+wm_stance_defensive,Defensive
+wm_stance_protect,Protect
+wm_stance_subdue,Subdue
+wm_stance_flee_hurt,Flee when hurt
+wm_stance_desc_aggressive,"Attacks first, swings heavy when the foe recovers, rarely guards, chases runners up to 20 m."
+wm_stance_desc_balanced,The ordinary way of fighting: the same as anyone else's.
+wm_stance_desc_defensive,"Holds the guard, parries more, strikes only after a parry or when the foe recovers; raises the shield toward archers."
+wm_stance_desc_protect,"Stays within 2.5 m of the person you choose, takes the enemy nearest them, and tends them first."
+wm_stance_desc_subdue,"No lethal blows: the flat of the blade, the butt or the fists, never at the head, neck or chest; accepts surrender at once."
+wm_stance_desc_flee_hurt,"Leaves early (blood loss 15%, bad pain, failing nerve), then presses its own wounds once clear."
+wm_opt_nolethal,No lethal blows (the same flag as the autopilot's limit)
+wm_opt_called,Aim at weak spots and armour gaps
+wm_opt_ranged,Shoot when a bow is in hand
+wm_opt_treat,Tend bleeding allies when it is safe
+wm_opt_flee_blood,Flee at blood loss: {0}
+wm_opt_flee_morale,Flee when morale falls under: {0}
+wm_opt_flee_odds,Flee when the odds fall under: {0}
+wm_never,never
+wm_protect_who,Protect:
+wm_protect_none,Nobody
+wm_stance_note,"The AI fighting for you is the same one every other fighter uses: it can be outflanked and make mistakes, and what happens stands."
+wm_speed_drop,The fight is too heavy for this speed: {0}x.
+wm_hero_unnamed,The traveller
+wm_trainer,The trainer
+wm_entrant,An entrant
+wm_bout_begin,"A bout with blunted weapons: first to three clean hits."
+wm_tourney_begin,"A tournament bout: blunted weapons, and a yield ends it."
+wm_tourney_button,Enter the tournament ({0})
+wm_tourney_won,You win the bout and the purse of {0}.
+wm_tourney_lost,You lose the bout.
+wm_prize_paid,The town pays the purse: {0}.
+wm_prize_none,The town treasury has nothing to pay.
+wm_set,Combat stance kept.
+wm_bad,That watch setting is not known.
+wm_chron_watched,{name} fought {n} (watched; stance {stance}).
+wm_int_watch_danger,Watch: in danger
+wm_int_watch_losing,Watch: losing
+wm_int_watch_ammo_out,Watch: out of ammunition
+wm_int_watch_over,Watch: the fight is over
+wm_why_fighting,Fighting: odds {0}%
+wm_why_attacking,Attacking
+wm_why_opening,Attacking: foe recovering
+wm_why_riposte,Riposte
+wm_why_guarding,Guarding: stamina {0}
+wm_why_guarding_tired,Guarding: stamina {0}
+wm_why_guarding_archers,Guarding: archers at {0} m
+wm_why_closing,Closing in: {0} m
+wm_why_shooting,Shooting
+wm_why_reloading,Reloading: {0} left
+wm_why_fleeing,Fleeing
+wm_why_fleeing_blood,Fleeing: blood loss {0}%
+wm_why_fleeing_pain,Fleeing: pain {0}%
+wm_why_fleeing_odds,Fleeing: odds {0}%
+wm_why_fleeing_morale,Fleeing: morale {0}
+wm_why_protecting,Protecting {0}
+wm_why_treating,Treating {0}
+wm_why_treating_self,Treating own wounds: bleeding {0} ml/s
+wm_why_over,"Fight over; {0} wounds to see to"
+wm_why_down,Down: blood loss {0}%
+wm_why_yielded,Yielded
+wm_why_fled,Got away
+wm_why_waiting,Waiting
+wm_why_subduing,Subduing: blunt blows only
 fl_after_broke_shield1,"{target}'s shield splinters and falls apart."
 fl_after_broke_shield2,"{target}'s shield breaks in half."
 fl_after_broke_tool1,"{target}'s makeshift weapon breaks in {tgt_his} hands."

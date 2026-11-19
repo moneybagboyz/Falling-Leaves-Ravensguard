@@ -930,14 +930,19 @@ public partial class StreetView : Control, IHandlesBack
 
         _acc += Math.Min(delta, 0.25) * FightTimeScale();       // P4-D: slow motion and hit-stop give a fight step less real time (steps per real second only, FL-9)
         int steps = 0; _stepMsFrame = 0;
+        int fightSteps = FightStepsPerSlice();                  // P4-F: a watched fight at 2x-8x steps the bubble that many times a slice, never a longer step (watch-mode 4.1)
         while (_acc >= Step && steps < 5)
         {
             _sw.Restart();
-            _rec.Step();
-            StepPeople();
-            RideTick();
-            TravelTick();
+            for (int k = 0; k < fightSteps; k++)
+            {
+                _rec.Step();
+                StepPeople();
+                RideTick();
+                TravelTick();
+            }
             double ms = _sw.Elapsed.TotalMilliseconds;
+            _lastFightSliceMs = ms;
             _tickMsSum += ms; _tickMsMax = Math.Max(_tickMsMax, ms); _tickCount++; _stepMsFrame += ms;
             _acc -= Step; steps++;
         }

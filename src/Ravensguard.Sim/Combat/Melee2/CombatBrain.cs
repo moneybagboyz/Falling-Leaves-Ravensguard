@@ -163,7 +163,7 @@ public static class CombatBrain
         var orders = w.OrdersOf(f.Team);
         if (StanceBias.FallBack(w, f, orders)) return;      // P4-F: "fall back to me" (the order wheel, F4)
         var t = PickTarget(w, f, tick);
-        if (t == null) { c.Block = false; return; }
+        if (t == null) { c.Block = false; if (w.ProtectOf(f) is { } alone) StanceBias.FollowCharge(w, f, alone); return; }   // P4-F: no threat: keep by the charge
         m.Target = t.Id;
         long dx = t.X - f.X, dy = t.Y - f.Y;
         long dist = FightMath.Len(dx, dy);
@@ -231,8 +231,8 @@ public static class CombatBrain
         }
 
         // footwork: close in, hold the polearm's distance, back off to breathe
+        if (guarded != null && StanceBias.ProtectFootwork(w, f, guarded, t, dist, strikeD)) return;          // P4-F: by the guarded person's side, tired or not
         if (exhausted && dist < strikeD + 1500 && f.Act is FAct.Idle or FAct.Block) { c.MoveX = -ux; c.MoveY = -uy; c.Block = true; return; }
-        if (guarded != null && StanceBias.ProtectFootwork(w, f, guarded, t, dist, strikeD)) return;          // P4-F: by the guarded person's side
         if (StanceBias.FormationFootwork(w, f, t, dist, orders)) return;                                     // P4-F: the side's formation (4.4)
         if (dist > hold)
         {

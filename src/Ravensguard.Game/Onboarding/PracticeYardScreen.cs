@@ -23,8 +23,13 @@ public partial class PracticeYardScreen : Control
     public string? ShotPath { get; init; }
     int _shotWait;
 
-    public PracticeYardScreen(ScreenRouter router, Func<SwingResult, bool, string> gain, Func<int> meleeLevel, Func<int> sparWaitMinutes, bool trainerHere)
-    { _router = router; _gain = gain; _melee = meleeLevel; _sparWaitMin = sparWaitMinutes; _trainerHere = trainerHere; }
+    readonly Func<bool>? _bout;
+    readonly (string Label, Func<bool> Start)? _tourney;
+
+    /// <param name="bout">P4-F: starts the sparring bout as a real fight in the yard (blunted practice weapons, to three clean hits); null keeps the timing-bar bout.</param>
+    /// <param name="tourney">P4-F: a tournament on a fair day (its button label with the purse, and the start).</param>
+    public PracticeYardScreen(ScreenRouter router, Func<SwingResult, bool, string> gain, Func<int> meleeLevel, Func<int> sparWaitMinutes, bool trainerHere, Func<bool>? bout = null, (string Label, Func<bool> Start)? tourney = null)
+    { _router = router; _gain = gain; _melee = meleeLevel; _sparWaitMin = sparWaitMinutes; _trainerHere = trainerHere; _bout = bout; _tourney = tourney; }
 
     public override void _Ready()
     {
@@ -45,6 +50,12 @@ public partial class PracticeYardScreen : Control
         var hit = new Button { Text = L.T("YARD_DUMMY"), CustomMinimumSize = new Vector2(220, 36) }; hit.Pressed += () => Swing(false); row.AddChild(hit);
         var spar = new Button { Text = L.T("YARD_SPAR"), CustomMinimumSize = new Vector2(220, 36), Disabled = !_trainerHere }; spar.Pressed += StartSpar; row.AddChild(spar);
         if (!_trainerHere) spar.TooltipText = L.T("YARD_NO_TRAINER");
+        if (_tourney is { } tn)
+        {
+            var tb = new Button { Text = tn.Label, CustomMinimumSize = new Vector2(220, 36) };
+            tb.Pressed += () => { if (tn.Start()) _router.Pop(); };
+            row.AddChild(tb);
+        }
         var back = UiKit.Key(L.T("UI_BACK"), "menu.back", 200); back.Pressed += _router.Pop; root.AddChild(back);
         Refresh();
     }
@@ -55,6 +66,7 @@ public partial class PracticeYardScreen : Control
     {
         int wait = _sparWaitMin();
         if (wait > 0) { _reason.Text = L.F("YARD_SPAR_WAIT", wait); return; }
+        if (_bout != null && _bout()) { _router.Pop(); return; }          // P4-F: the bout is fought for real in the yard
         _sparring = true; _heroHits = _trainerHits = 0; _state.Text = L.T("YARD_SPAR"); Swing(true);
     }
 

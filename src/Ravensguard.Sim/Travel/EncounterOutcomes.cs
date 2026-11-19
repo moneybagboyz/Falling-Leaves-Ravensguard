@@ -7,7 +7,11 @@ namespace Ravensguard.Sim.Travel;
 public enum EncounterChoice : byte { GoOn, Pay, Trade, Talk, Flee, Detour, Fight, Wait }
 
 /// <summary>One button of the encounter panel: the choice, its text key, and what it costs in mites (0: free).</summary>
-public sealed record EncounterOption(EncounterChoice Choice, string TextKey, long Mites = 0);
+public sealed record EncounterOption(EncounterChoice Choice, string TextKey, long Mites = 0)
+{
+    /// <summary>P4-F (watch-mode 3.3, overview 3): the estimated odds of winning a Fight (permille; -1 not estimated), shown on the button ("probably lose"); a fight is offered, never forced.</summary>
+    public int OddsPm { get; init; } = -1;
+}
 
 /// <summary>
 /// How an encounter ended, for the game to act on: coin to pay through the hero desk (to <see cref="Payee"/>, a real person, or the toll purse when none), the person to trade or talk with, and the delay it cost.
@@ -34,6 +38,10 @@ public static class EncounterOutcomes
                   : AlmsMites;
         return Math.Min(toll, Math.Max(0, coinMites));
     }
+
+    /// <summary>The choices with the Fight button carrying the odds (P4-F: <c>RiskEstimate</c> of the fight the setup would start). The fight stays a choice: Flee or Pay is always beside it.</summary>
+    public static IReadOnlyList<EncounterOption> Options(EncounterDef d, long coinMites, int fightOddsPm)
+        => [.. Options(d, coinMites).Select(o => o.Choice == EncounterChoice.Fight ? o with { OddsPm = fightOddsPm } : o)];
 
     /// <summary>The choices of an encounter, in the order the panel lists them (the first is the default key).</summary>
     public static IReadOnlyList<EncounterOption> Options(EncounterDef d, long coinMites)

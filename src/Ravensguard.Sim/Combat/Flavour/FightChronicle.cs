@@ -12,7 +12,8 @@ public static class FightChronicle
 {
     public const int BattleCasualties = 20;
 
-    public static List<ChronicleEntry> Write(FightLog log, Chronicle chronicle, IdAllocator ids, FlavourBook book, ITextSource text)
+    /// <param name="watchedStance">P4-F (watch-mode 4.6): the stance the hero was watched under, when the fight was handed to the AI: the chronicle notes "(watched)" and the stance.</param>
+    public static List<ChronicleEntry> Write(FightLog log, Chronicle chronicle, IdAllocator ids, FlavourBook book, ITextSource text, string? watchedStance = null)
     {
         var made = new List<ChronicleEntry>();
         var when = new GameTime(log.GameSec0 + (log.Finished ? log.EndTick : log.Lines.Count > 0 ? log.Lines[^1].Tick : 0));
@@ -62,6 +63,11 @@ public static class FightChronicle
                 log.TryInfo(l.Actor, out var a);
                 Add("fight_maiming", [new EntityId(t.Person)], t.Name + " was maimed: " + part + ".", ("text_key", "fl_report_chron_maim"), ("name", t.Name), ("part", part), ("attacker", a?.Name ?? ""), ("weapon", FlavourDescribe.V(text, "weapon", log.Str(l.WeaponShape))));
             }
+        }
+        if (watchedStance != null && log.Hero >= 0 && log.TryInfo(log.Hero, out var hero))
+        {
+            int foes = log.Fighters.Values.Count(x => x.Team != hero.Team);
+            Add("fight_watched", hero.Person != 0 ? [new EntityId(hero.Person)] : [], $"{hero.Name} fought {foes} (watched, {watchedStance}).", ("text_key", "wm_chron_watched"), ("name", hero.Name), ("n", foes.ToString()), ("stance", watchedStance));
         }
         var rep = AfterFightReport.Build(log, book, text);
         if (rep.Casualties >= BattleCasualties) Add("battle_fought", [], rep.Casualties + " fell in a battle.", ("text_key", "fl_report_chron_battle"), ("n", rep.Casualties.ToString()));

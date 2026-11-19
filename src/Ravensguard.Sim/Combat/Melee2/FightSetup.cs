@@ -39,7 +39,7 @@ public sealed record FightSetup(FightKind Kind, IReadOnlyList<FighterKit> Kits, 
     /// <summary>The record's name of the kind ("encounter", "practice", ...); a saved fight's rules come back from it.</summary>
     public string KindName => NameOf(Kind);
     public static string NameOf(FightKind k) => Flavour.FlavourBook.Snake(k.ToString());
-    public static FightKind KindOf(string name) => Enum.GetValues<FightKind>().FirstOrDefault(k => NameOf(k) == name);
+    public static FightKind? KindOf(string name) { foreach (var k in Enum.GetValues<FightKind>()) if (NameOf(k) == name) return k; return null; }
 
     /// <summary>The sides by team, in team order, each with its kits in setup order.</summary>
     public IReadOnlyList<FightSide> Sides => [.. Kits.Select(k => k.Team).Distinct().Order().Select(t => new FightSide(t, SideKinds.TryGetValue(t, out var sk) ? sk : SideKind.Folk, [.. Kits.Where(k => k.Team == t)]))];

@@ -232,6 +232,7 @@ public sealed partial class FightWorld
             return;
         }
         var mood = R.MoodOf(value, Tick - m.LastLossTick <= D.RecentLossS * MoraleRules.TicksPerS);
+        if (mood == MoraleMood.Routing && !hurtFlee && ProtectOf(f) != null) mood = MoraleMood.Wavering;   // P4-F: a guard holds by its charge; only its flee thresholds break it (watch-mode 4.3)
         if (mood == MoraleMood.Routing || hurtFlee)
         {
             StartRout(f);                                                   // it breaks; below 10 and cornered it yields at once

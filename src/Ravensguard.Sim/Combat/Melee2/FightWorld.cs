@@ -628,6 +628,7 @@ public sealed partial class FightWorld
     private void GoDown(Fighter f)
     {
         if (f.Act is FAct.Dead or FAct.Fled or FAct.Surrendered) return;
+        if (Rules.YieldAtPainKo && f.Book.PainX100 >= f.Book.KnockoutPainX100 && YieldAtPain(f)) return;      // P4-F: the marshal stops a tournament bout at the pain knock-out
         f.Act = FAct.Down; f.EndedAt = Tick; f.Loaded = f.Loaded && f.Launcher is { Holds: true };
         Emit(FightEventKind.Down, f.Id, -1, -1, (int)f.Book.Down);
         Announce(f);

@@ -32,11 +32,12 @@ public sealed partial class FightWorld
     /// <summary>A tournament or practice fighter whose pain reaches the knock-out yields (the marshal stops the bout) instead of going down. True when it yielded now.</summary>
     private bool YieldAtPain(Fighter f)
     {
-        if (!Rules.YieldAtPainKo || !f.Active || f.Book.Dead) return false;
+        if (!Rules.YieldAtPainKo || f.Book.Dead || f.Act is FAct.Dead or FAct.Fled or FAct.Surrendered) return false;     // a blow that knocked out by pain is yielded too
         if (f.Book.PainX100 < f.Book.KnockoutPainX100 && f.Book.State is not (Consciousness.Unconscious or Consciousness.Collapsed)) return false;
+        bool wasDown = f.Act == FAct.Down;
         f.Act = FAct.Surrendered; f.EndedAt = Tick; f.Routing = false;
         Emit(FightEventKind.Surrender, f.Id, NearestEnemyId(f), -1, 0, 1);
-        Announce(f);
+        if (!wasDown) Announce(f);
         return true;
     }
 

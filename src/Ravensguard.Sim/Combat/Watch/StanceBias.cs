@@ -46,8 +46,17 @@ public static class StanceBias
         c.MoveX = ux; c.MoveY = uy;
         bool far = dg > 1_500 || dx > ProtectKeepMm - 300;
         if (far && !(f.Brain.React is CombatBrain.ReactBlock or CombatBrain.ReactParry && w.Tick + 1 <= f.Brain.HoldBlockUntil)) c.Block = false;   // the guard drops to keep up (a guard walks at half pace)
-        c.Sprint = far && f.Stamina > 1500;
+        c.Sprint = far && f.Stamina > 500;
         return true;
+    }
+
+    /// <summary>No threat left: the guard walks (or runs) back to within 1.5 m of its charge.</summary>
+    public static void FollowCharge(FightWorld w, Fighter f, Fighter x)
+    {
+        long d = w.DistMm(f, x);
+        if (d <= ProtectOffsetMm) return;
+        var (ux, uy) = FightMath.Norm(x.X - f.X, x.Y - f.Y);
+        var c = f.Cmd; c.MoveX = ux; c.MoveY = uy; c.Sprint = d > ProtectKeepMm && f.Stamina > 1500; c.FaceX = ux; c.FaceY = uy;
     }
 
     /// <summary>"Fall back to me": every fighter of the side but the leader walks to within 4 m of the leader (fighting only what reaches it there).</summary>

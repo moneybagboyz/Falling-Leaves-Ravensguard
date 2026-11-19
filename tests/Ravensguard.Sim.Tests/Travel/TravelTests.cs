@@ -187,7 +187,7 @@ public class TravelTests
     [Fact]
     public void AP7_EveryKindRaisesOnce_AndHonoursPauseNotifyAndAi()
     {
-        Assert.Equal(23, Enum.GetValues<InterruptKind>().Length);
+        Assert.Equal(27, Enum.GetValues<InterruptKind>().Length);                                 // the Phase 3 list and the four watch kinds (watch-mode 3.2)
         Assert.Equal(InterruptBus.KindCount, Enum.GetValues<InterruptKind>().Length);
         foreach (var kind in Enum.GetValues<InterruptKind>())
             foreach (var pol in Enum.GetValues<InterruptPolicy>())

@@ -141,7 +141,7 @@ public partial class StreetView
             if (t.PendingEncounter is { } ev)
             {
                 t.Current = ev; t.CurrentOpen = true; t.PendingEncounter = null; _router?.ShowToast(ev.Bark.Length > 0 ? ev.Bark : ev.Id, 3f);
-                _encOptions = t.Table.Defs.FirstOrDefault(d => d.Id == ev.Id) is { } def ? EncounterOutcomes.Options(def, _heroLink?.View?.CoinMites ?? 0) : [];
+                _encOptions = t.Table.Defs.FirstOrDefault(d => d.Id == ev.Id) is { } def ? EncounterOptionsFor(def, ev, _heroLink?.View?.CoinMites ?? 0) : [];      // P4-F: the Fight button carries the odds
             }
         }
         if (t.ScreenPending && Foreground) { t.ScreenPending = false; EncounterOutcomes.Settle(t, new EncounterOutcome(EncounterChoice.GoOn, "went_on", 0, EntityId.None, EntityId.None, 0, ""), now); }
@@ -471,7 +471,7 @@ public partial class StreetView
             if (Enc is { } e2 && EncOpen)
             {
                 body = (e2.Bark.Length > 0 ? "\"" + e2.Bark + "\"\n" : "") + L.F("TRAVEL_ALERT_PEOPLE", e2.Cast.Length);
-                if (_encOptions.Count > 0) { body += "\n" + string.Join("\n", _encOptions.Select((o, i) => $"[{H("choice.pick_" + (i + 1))}] {L.T(o.TextKey)}" + (o.Mites > 0 ? $"  ({Quotes.Money(o.Mites)})" : ""))); keys = L.F("ENC_KEYS", H("world.back")); }
+                if (_encOptions.Count > 0) { body += "\n" + string.Join("\n", _encOptions.Select((o, i) => $"[{H("choice.pick_" + (i + 1))}] {L.T(o.TextKey)}" + (o.Mites > 0 ? $"  ({Quotes.Money(o.Mites)})" : "") + (o.OddsPm >= 0 ? "  " + L.F("wm_enc_odds", (o.OddsPm + 5) / 10, L.T(Ravensguard.Sim.Combat.Watch.RiskEstimate.Word(o.OddsPm))) : ""))); keys = L.F("ENC_KEYS", H("world.back")); }
             }
             hud.Alert(L.F("TRAVEL_ALERT_" + p.Kind.ToString().ToUpperInvariant(), Enc is { } e3 ? EncounterName(e3.Id) : p.Text), body, keys, p.Kind is InterruptKind.Hostile or InterruptKind.Attacked);
         }
@@ -584,7 +584,7 @@ public partial class StreetView
         long sx = hx + (Debug.DevContext.Travel != null && _opt.Travel != null ? 9_000 : 70_000), sy = hy;
         if (g != null) { int n = Math.Min(4, g.Count.Count > 1 ? g.Count[1] : 1); foreach (var id2 in EncounterPlacement.Cast(t, d, g, n, now, sx, sy)) cast.Add(id2.Value); }
         var ev = new EncounterEvent(now, d.Id, d.Kind, hx, hy, sx, sy, t.LegSerial, [.. cast], d.Bark);
-        t.Encounters.Add(ev); t.Current = ev; t.CurrentOpen = true; _encOptions = EncounterOutcomes.Options(d, Math.Max(20_000, _heroLink?.View?.CoinMites ?? 0));
+        t.Encounters.Add(ev); t.Current = ev; t.CurrentOpen = true; _encOptions = EncounterOptionsFor(d, ev, Math.Max(20_000, _heroLink?.View?.CoinMites ?? 0));
         t.Bus.Raise(IsHostileKind(d.Kind) ? InterruptKind.Hostile : InterruptKind.Contract, now, hx, hy, d.Name);
         if (t.Journey != null) t.Journey.State = JourneyState.Paused;
         return d.Name;

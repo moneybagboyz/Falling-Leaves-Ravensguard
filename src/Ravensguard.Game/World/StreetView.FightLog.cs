@@ -44,7 +44,7 @@ public partial class StreetView
         _fightView.FinishLog();
         var log = _fightView.Log; var book = _fightView.Book;
         _lastFightLog = log; _lastBook = book;
-        if (Runtime is { } rt) FightChronicle.Write(log, rt.State.Chronicle, rt.State.Ids, book, GameText.Instance);
+        if (Runtime is { } rt) FightChronicle.Write(log, rt.State.Chronicle, rt.State.Ids, book, GameText.Instance, f.Watch is { EverOn: true } ws ? ws.Stance.Id : null);   // P4-F: "(watched)"
         var hero = _fightView.HeroF;
         var rep = AfterFightReport.Build(log, book, GameText.Instance);
         bool hurt = hero != null && hero.Book.Records.Count > 0;

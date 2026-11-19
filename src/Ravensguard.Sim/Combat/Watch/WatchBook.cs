@@ -64,7 +64,20 @@ public static class WatchDesk
     public static string CapTag(int speed) => string.Create(CultureInfo.InvariantCulture, $"wm:cap|{speed}");
     public static string NoLethalTag(EntityId person, bool on) => string.Create(CultureInfo.InvariantCulture, $"wm:nolethal|{person.Value}|{(on ? 1 : 0)}");
 
+    /// <summary>A tournament purse won (overview 3, plan 4A.3): paid by the settlement's fief treasury to the hero, through the ledger, never more than it holds.</summary>
+    public static string PrizeTag(int settlement, long mites) => string.Create(CultureInfo.InvariantCulture, $"wm:prize|{settlement}|{mites}");
+
     public static WatchBook BookOf(Save.WorldState s) => s.Watch ??= new WatchBook();
+
+    /// <summary>The treasury of the fief a settlement belongs to (the town's), or none.</summary>
+    public static Economy.PurseId TreasuryOf(Save.WorldState s, int settlement)
+    {
+        var r = s.Population.Region;
+        if (s.Economy == null || settlement < 0 || settlement >= r.Settlements.Count) return Economy.PurseId.None;
+        int fief = r.Settlements[settlement].FiefIndex;
+        if (fief < 0 || fief >= r.Fiefs.Count) return Economy.PurseId.None;
+        return s.Economy.Ledger.TryFind(Economy.PurseKind.Treasury, r.Fiefs[fief].Id, out var p) ? p : Economy.PurseId.None;
+    }
 
     /// <summary>Applies one watch command to the book (and, for no-lethal, to the person's autopilot limits).</summary>
     public static bool Apply(WatchBook book, string tag, FightContent? c, AutopilotBook? ap)
@@ -86,6 +99,14 @@ public static class WatchDesk
 
     public static HeroResult Apply(HeroContext ctx, HeroCommand c)
     {
+        if (c.Tag.StartsWith("wm:prize|", StringComparison.Ordinal))
+        {
+            var q = c.Tag.Split('|');
+            int settlement = q.Length > 1 && int.TryParse(q[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var si) ? si : -1;
+            long want = q.Length > 2 && long.TryParse(q[2], NumberStyles.Integer, CultureInfo.InvariantCulture, out var m) ? m : 0;
+            long paid = TournamentPurse.Pay(ctx.Econ.Ledger, TreasuryOf(ctx.State, settlement), ctx.Purse, want);
+            return new HeroResult(c.Seq, c.Kind, paid > 0 ? HeroResultCode.Ok : HeroResultCode.TheyCannotAfford, HeroText.Of(paid > 0 ? "wm_prize_paid" : "wm_prize_none", Quotes.Money(paid)), paid, 0, c.IssuedSec);
+        }
         var fc = c.Tag.StartsWith("wm:nolethal", StringComparison.Ordinal) ? new FightContent(new CombatTables(ctx.Content), ctx.Content) : null;
         bool ok = Apply(BookOf(ctx.State), c.Tag, fc, ctx.State.Autopilot);
         return new HeroResult(c.Seq, c.Kind, ok ? HeroResultCode.Ok : HeroResultCode.Invalid, HeroText.Of(ok ? "wm_set" : "wm_bad"), 0, 0, c.IssuedSec);

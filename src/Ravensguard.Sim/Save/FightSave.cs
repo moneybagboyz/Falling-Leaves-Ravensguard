@@ -154,7 +154,7 @@ public sealed class FightRecord
     {
         var w = new FightWorld(content, Seed, FightId, GameSec0, UsesLedger ? ledger : null);
         w.RestoreTick(Tick);
-        if (Kind.Length > 0) w.Rules = FightRules.For(FightSetup.KindOf(Kind));      // P4-F: the kind's rules (practice hits, the tournament yield, treating)
+        if (FightSetup.KindOf(Kind) is { } fk) w.Rules = FightRules.For(fk);         // P4-F: the kind's rules (practice hits, the tournament yield, treating)
         foreach (var r in Fighters)
         {
             var st = r.Stats;

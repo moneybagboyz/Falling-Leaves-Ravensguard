@@ -9,7 +9,9 @@ using Ravensguard.Sim.Combat;
 using Ravensguard.Sim.Combat.Flavour;
 using Ravensguard.Sim.Combat.Melee2;
 using Ravensguard.Sim.Combat.Resolver2;
+using Ravensguard.Sim.Combat.Watch;
 using Ravensguard.Sim.Combat.Wounds;
+using Ravensguard.Sim.Travel;
 
 namespace Ravensguard.Game.World.Combat;
 
@@ -53,8 +55,22 @@ public partial class FightView : Node2D
     public FightLogPanel LogPanel { get; private set; } = null!;
     public AfterFightPanel? Report { get; private set; }
     public FightLog Log => Recorder.Log;
-    /// <summary>A report or the log panel has the keyboard and the mouse: the combat inputs wait.</summary>
-    public bool ModalOpen => Report != null && IsInstanceValid(Report);
+    /// <summary>A report, the stance panel or the danger prompt has the keyboard and the mouse: the combat inputs wait.</summary>
+    public bool ModalOpen => Report != null && IsInstanceValid(Report) || Hud != null && Hud.ModalOpen;
+
+    // ---- P4-F watch mode (watch-mode 4.1, 7): the HUD, the toggle and the stance go out as recorded inputs; the signals are routed here at the frame ----
+    public WatchHud Hud { get; private set; } = null!;
+    /// <summary>Any combat input takes control back (WA1; the setting).</summary>
+    public bool TakeBackOnInput { get; set; } = true;
+    /// <summary>Called when the player changes the stance (the street view keeps it for the hero through a hero command).</summary>
+    public Action<WatchStance>? StanceChanged { get; init; }
+    /// <summary>The interrupt bus the watch signals go to (the journey's when travelling, else the view's own), and the autopilot row when the hero is on autopilot.</summary>
+    public InterruptBus Bus { get; set; } = new();
+    public Ravensguard.Sim.Autopilot.AutopilotState? Autopilot { get; set; }
+    public Ravensguard.Sim.Autopilot.InterruptRouter? Router { get; set; }
+    /// <summary>True when the hero's fighter is handed to the combat brain.</summary>
+    public bool Watching => W.Watch is { On: true } ws && ws.Hero == Hero;
+    bool _everWatched;
     bool _ended; int _endedTick = -1;
     static (ContentDatabase Db, FlavourBook Book, IReadOnlyList<AudioEventDef> Audio)? _flavourCache;
 
@@ -103,6 +119,58 @@ public partial class FightView : Node2D
         LogPanel = new FightLogPanel(() => Recorder.Log, Book);
         layer.AddChild(LogPanel); AddChild(layer);
         LogPanel.Layout();
+        var hudLayer = new CanvasLayer { Layer = 9, Name = "WatchLayer" };
+        Hud = new WatchHud(this);
+        hudLayer.AddChild(Hud); AddChild(hudLayer);
+    }
+
+    // ------------------------------------------------------------------ watch mode (P4-F)
+
+    /// <summary>F6 or the Watch button: hand the hero to the brain, or take it back (an input at the next tick barrier).</summary>
+    public void ToggleWatch()
+    {
+        if (HeroF == null) return;
+        bool on = !Watching;
+        Send(new FightInput(FightInputKind.Watch, on ? 1 : 0, TakeBackOnInput ? 1 : 0));
+        if (!on) _lastMoveDir = -1;                                  // the held keys are sent again: the player's input applies at once
+        if (on && !_everWatched) { _everWatched = true; LogPanel.Filter.Flags |= LogFilterFlags.Misses | LogFilterFlags.Treatment; }   // the log shows all on first watch (4.5)
+    }
+
+    /// <summary>Shift+F6: the next preset.</summary>
+    public void NextStance()
+    {
+        var cur = W.Watch?.Stance ?? (HeroF is { } h ? WatchStance.Of(W.Content, WatchStance.PresetOf(h.Stance.Id)) : WatchStance.Of(W.Content, StancePreset.Balanced));
+        SetStance(cur.Next(W.Content), W.Watch?.ProtectFighter ?? -1);
+    }
+
+    public void SetStance(WatchStance st, int protectFighter)
+    {
+        if (HeroF == null) return;
+        Send(st.AsInput(protectFighter));
+        StanceChanged?.Invoke(W.Watch?.Stance ?? st);
+    }
+
+    /// <summary>The answer to "Take control?": take it (watching stops at the next tick) or keep watching (no new danger pause for 5 s); the fight runs again.</summary>
+    public void AnswerDanger(bool take)
+    {
+        if (take) { if (Watching) ToggleWatch(); }
+        else Send(new FightInput(FightInputKind.DeclineDanger));
+        WatchPause(false);
+    }
+
+    bool _watchPaused;
+    void WatchPause(bool p) { _watchPaused = p; SetPaused?.Invoke(p); }
+
+    /// <summary>The watch signals of the last steps, through the interrupt router at the frame (the barrier of the view): Pause stops the fight and asks, Notify shows a line.</summary>
+    void PollWatch()
+    {
+        if (W.Watch is not { } ws || ws.Signals.Count == 0) return;
+        var routed = WatchInterrupts.Route(ws.TakeSignals(), Bus, W.GameSec, Autopilot, Router);
+        foreach (var (sig, pol) in routed)
+        {
+            if (pol == InterruptPolicy.Pause) { Bus.Resume(); WatchPause(true); Hud.ShowPrompt(sig); }
+            else if (pol == InterruptPolicy.Notify) Hud.Toast(L.T(sig.Kind switch { InterruptKind.WatchLosing => "wm_note_losing", InterruptKind.WatchAmmoOut => "wm_note_ammo", InterruptKind.WatchOver => "wm_note_over", _ => "wm_note_danger" }));
+        }
     }
 
     public override void _ExitTree() { ActiveContexts.Exit(InputContext.CombatStance); }
@@ -111,8 +179,9 @@ public partial class FightView : Node2D
 
     public override void _Process(double delta)
     {
+        PollWatch();                                                    // P4-F
         PollHero();
-        if (OwnsStepping && !_calling)
+        if (OwnsStepping && !_calling && !_watchPaused)
         {
             _acc += delta * Feedback.TimeScale;                       // slow motion and hit-stop change the steps per real second, never a step (FL-9)
             int guard = 0;
@@ -191,14 +260,17 @@ public partial class FightView : Node2D
 
     public override void _Input(InputEvent e)
     {
-        if (ModalOpen) return;                                                           // the report is up: it has the keys (and the mouse)
+        if (ModalOpen) return;                                                           // the report or the stance panel is up: it has the keys (and the mouse)
         if (e is InputEventKey { Pressed: true, Echo: false })
         {
             if (Actions.Pressed(e, "combatstance.last_report")) { OpenReport(); GetViewport().SetInputAsHandled(); return; }
             if (Actions.Pressed(e, "combatstance.combat_log")) { LogPanel.Toggle(); GetViewport().SetInputAsHandled(); return; }
+            if (Actions.Pressed(e, "combatstance.stance_next") && !_calling) { NextStance(); GetViewport().SetInputAsHandled(); return; }      // P4-F: Shift+F6 (checked before F6)
+            if (Actions.Pressed(e, "combatstance.watch_toggle") && !_calling) { ToggleWatch(); GetViewport().SetInputAsHandled(); return; }   // P4-F: F6
         }
-        if (e is InputEventMouse mouse && LogPanel.Covers(mouse.Position)) return;       // clicks on the open log panel are the panel's: no swings through it
+        if (e is InputEventMouse mouse && (LogPanel.Covers(mouse.Position) || Hud.Covers(mouse.Position))) return;       // clicks on the open log panel or the watch HUD are theirs: no swings through them
         var h = HeroF;
+        if (h != null && Watching && TakeBackOnInput && IsCombatInput(e)) ToggleWatch(); // P4-F: any combat input takes control back; the input applies this same tick
         if (h == null || !h.Player) return;
         if (_calling) { if (e is InputEventKey { Pressed: true, Echo: false }) { CallingKey(e); GetViewport().SetInputAsHandled(); } return; }
         bool handled = true;
@@ -225,6 +297,17 @@ public partial class FightView : Node2D
         }
         else handled = false;
         if (handled) GetViewport().SetInputAsHandled();
+    }
+
+    /// <summary>LMB, RMB, Ctrl + direction, G, T or a movement key (watch-mode 4.1: these take control back).</summary>
+    bool IsCombatInput(InputEvent e)
+    {
+        if (e is InputEventMouseButton { Pressed: true } mb) return mb.ButtonIndex is MouseButton.Left or MouseButton.Right;
+        if (e is not InputEventKey { Pressed: true, Echo: false }) return false;
+        foreach (var a in new[] { "combatstance.dodge_up", "combatstance.dodge_down", "combatstance.dodge_left", "combatstance.dodge_right", "combatstance.throw", "combatstance.called_shot",
+            "combatstance.move_up", "combatstance.move_down", "combatstance.move_left", "combatstance.move_right" })
+            if (Actions.Pressed(e, a)) return true;
+        return false;
     }
 
     // ------------------------------------------------------------------ called shot (T: paused paper doll)

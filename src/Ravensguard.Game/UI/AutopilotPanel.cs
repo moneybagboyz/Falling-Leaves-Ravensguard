@@ -214,7 +214,8 @@ public partial class AutopilotPanel : Control
         {
             int k = i; var kind = (InterruptKind)i;
             var row = new HBoxContainer(); row.AddThemeConstantOverride("separation", 4);
-            row.AddChild(new Label { Text = L.T("AP_INT_" + kind.ToString().ToUpperInvariant()), SizeFlagsHorizontal = SizeFlags.ExpandFill, ClipText = true, CustomMinimumSize = new Vector2(100, 0) });
+            string intKey = (int)kind >= (int)InterruptKind.WatchDanger ? "wm_int_" + Ravensguard.Sim.Combat.Flavour.FlavourBook.Snake(kind.ToString()) : "AP_INT_" + kind.ToString().ToUpperInvariant();   // P4-F: the watch kinds' rows
+            row.AddChild(new Label { Text = L.T(intKey), SizeFlagsHorizontal = SizeFlags.ExpandFill, ClipText = true, CustomMinimumSize = new Vector2(100, 0) });
             var o = new OptionButton { CustomMinimumSize = new Vector2(96, 24) };
             foreach (var n in PolicyNames) o.AddItem(L.T(n));
             o.Selected = (int)_draft.Policy[i];

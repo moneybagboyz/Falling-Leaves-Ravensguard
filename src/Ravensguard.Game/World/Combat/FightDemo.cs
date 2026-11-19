@@ -61,7 +61,7 @@ public partial class FightDemo : Node2D
         var w = new FightWorld(c, _seed, 1, 8 * 3600);
         w.Add(new FighterKit
         {
-            Name = "You", Team = 0, Weapon = new WeaponInstance("arming_sword", "steel"), Shield = "heater", Skill = 55, X = -1800, FaceX = 1024,
+            Name = "Aldric", Team = 0, Weapon = new WeaponInstance("arming_sword", "steel"), Shield = "heater", Skill = 55, X = -1800, FaceX = 1024,
             Worn = [new("shirt", "linen"), new("gambeson", "linen"), new("mail_hauberk", "iron"), new("helm", "iron")],
         }, player: true);
         w.Add(new FighterKit
@@ -139,6 +139,21 @@ public partial class FightDemo : Node2D
                 hero.Player = true;
                 _view.ClearCallouts();
                 _view.OpenReport();
+                break;
+            }
+            case "watch" or "stance" or "danger" or "protect":
+            {
+                // P4-F: the hero handed to the brain (F6): the banner, the why line, the odds; the stance panel open; the "Take control?" prompt of a danger pause
+                if (_shotWhat == "protect" && _w.Fighters.Count(f => f.Team == hero.Team) > 1)
+                    _view.SetStance(Ravensguard.Sim.Combat.Watch.WatchStance.Of(_w.Content, Ravensguard.Sim.Combat.Watch.StancePreset.Protect), _w.Fighters.First(f => f.Team == hero.Team && f.Id != hero.Id).Id);
+                hero.Player = true;
+                _view.ToggleWatch();
+                for (int i = 0; i < 20 * 9; i++) { _view.Advance(1); if (_w.IsOver) break; }
+                if (_shotWhat == "stance") _view.Hud.OpenStanceForShot();
+                if (_shotWhat == "danger") _view.Hud.ShowPrompt(new Ravensguard.Sim.Combat.Watch.WatchSignal(_w.Tick, Ravensguard.Sim.Travel.InterruptKind.WatchDanger, hero.Id, 1));
+                _view.Zoom = 3f;
+                _view.ClearCallouts();
+                _view.SetProcess(true); await Frames(2); _view.SetProcess(false);
                 break;
             }
             case "charge" or "impact" or "brace" or "unhorsed":
