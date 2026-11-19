@@ -62,9 +62,58 @@ public class ResolverV2GoldenTests(V2Fixture f)
         var a = f.S("axe", "hack", "neck", skill: 50, style: AttackStyle.Heavy);
         Assert.InRange(f.R.InitialMomentumMilli(a), 233_500, 234_500);
         a.Skill = 100; Assert.InRange(f.R.InitialMomentumMilli(a), 311_400, 312_400);
-        // the DF Material science battle-axe table shape: a dwarf (size 60,000, strength 1,250) hacking (1.25) with a size-800 axe
+        // the DF wiki's numbers are RS-1b (the battle-axe table) and DfWikiGoldenTests (RS-25 to RS-30)
         Assert.Equal(92_862, LayerTest.BaseMomentumMilli(60000, 1250, 1250, 7850L * 800, 60000));
-        Assert.Equal(68_181, LayerTest.BaseMomentumMilli(60000, 1250, 1250, 200L * 800, 60000));   // adamantine
+    }
+
+    /// <summary>
+    /// The DF wiki's worked example (DF2014:Material science, "Momenta for dwarves of strength 1250 hacking (velocity 1.25) with battle axes (size 800)"): every one of its 28 dwarf
+    /// sizes x 8 metals, in ten-thousandths. The species size is the dwarf's 60,000, the row the individual's i_Size, the weapon's mass density x 800. Our milli-units floor where the
+    /// wiki rounds to 4 places, so a cell may differ by up to 1 milli (10 here). Steel, iron, bronze, copper and silver take their density from our content, which is the wiki's.
+    /// </summary>
+    [Fact]
+    public void RS1b_DfWiki_BattleAxeMomentumTable()
+    {
+        (string Name, int Density)[] metals = [("adamantine", 200), ("divine metal", 1000), ("steel", 7850), ("iron", 7850), ("bismuth bronze", 8250), ("bronze", 8250), ("copper", 8930), ("silver", 10490)];
+        foreach (var m in new[] { "steel", "iron", "bronze", "copper", "silver" })
+            Assert.Equal(metals.Single(x => x.Name == m).Density, f.T.Material(m).DensityKgM3);
+        long[][] table =
+        [
+            [33750, 774194, 899550, 932489, 932489, 932730, 932730, 933092, 933745],
+            [42750, 739827, 889944, 931161, 931161, 931467, 931467, 931923, 932748],
+            [44100, 734934, 888520, 930963, 930963, 931277, 931277, 931748, 932599],
+            [45000, 731707, 887574, 930830, 930830, 931151, 931151, 931632, 932500],
+            [45900, 728509, 886630, 930698, 930698, 931025, 931025, 931515, 932400],
+            [47250, 723764, 885217, 930499, 930499, 930836, 930836, 931340, 932251],
+            [54150, 700444, 878066, 929485, 929485, 929871, 929871, 930447, 931489],
+            [55860, 694895, 876312, 929235, 929235, 929632, 929632, 930226, 931301],
+            [56250, 693642, 875912, 929177, 929177, 929577, 929577, 930176, 931258],
+            [57000, 691244, 875146, 929067, 929067, 929473, 929473, 930079, 931175],
+            [57624, 689262, 874509, 928976, 928976, 929386, 929386, 929999, 931107],
+            [58140, 687632, 873983, 928900, 928900, 929314, 929314, 929932, 931050],
+            [58800, 685558, 873312, 928804, 928804, 929221, 929221, 929847, 930977],
+            [59850, 682283, 872245, 928650, 928650, 929075, 929075, 929711, 930861],
+            [59976, 681893, 872117, 928631, 928631, 929057, 929057, 929695, 930847],
+            [60000, 681818, 872093, 928628, 928628, 929054, 929054, 929692, 930845],
+            [61200, 678119, 870878, 928452, 928452, 928887, 928887, 929537, 930713],
+            [61740, 676468, 870332, 928373, 928373, 928811, 928811, 929467, 930653],
+            [62424, 674388, 869642, 928273, 928273, 928716, 928716, 929379, 930578],
+            [63000, 672646, 869061, 928189, 928189, 928636, 928636, 929305, 930514],
+            [64260, 668866, 867794, 928004, 928004, 928460, 928460, 929142, 930376],
+            [66150, 663277, 865901, 927728, 927728, 928197, 928197, 928899, 930168],
+            [71250, 648649, 860832, 926983, 926983, 927487, 927487, 928242, 929607],
+            [73500, 642398, 858615, 926655, 926655, 927175, 927175, 927953, 929360],
+            [75000, 638298, 857143, 926436, 926436, 926966, 926966, 927760, 929196],
+            [76500, 634249, 855676, 926217, 926217, 926758, 926758, 927567, 929031],
+            [78750, 628272, 853485, 925890, 925890, 926446, 926446, 927278, 928784],
+            [93750, 591133, 839161, 923711, 923711, 924370, 924370, 925357, 927143],
+        ];
+        foreach (var row in table)
+            for (int c = 0; c < metals.Length; c++)
+            {
+                long ours = LayerTest.BaseMomentumMilli(60000, 1250, 1250, (long)metals[c].Density * 800, (int)row[0]) * 10;
+                Assert.True(Math.Abs(ours - row[c + 1]) <= 10, $"size {row[0]} {metals[c].Name}: ours {ours / 10_000.0:0.0000}, wiki {row[c + 1] / 10_000.0:0.0000}");
+            }
     }
 
     // ---------------------------------------------------------------- RS-2 to RS-8 (and the rest of table 4.4)
@@ -193,6 +242,8 @@ public class ResolverV2GoldenTests(V2Fixture f)
     [Fact]
     public void RS9_RigidMetalSoaks98To99Point6PercentOfAStoppedBlow()
     {
+        // the wiki's rule (Weapon, Material science): a blow failing both tests keeps M x strain / 50,000, "most rigid metal armor reduces blocked attacks by 98%-99%"; the
+        // strains are the DF2014 raws (steel shear 215, impact 940; iron impact 319; bronze impact 547)
         var c = f.T.Cal;
         Assert.Equal(430, LayerTest.AfterFail(100_000, f.T.Material("steel").ShearStrain, c));
         Assert.Equal(1_880, LayerTest.AfterFail(100_000, f.T.Material("steel").ImpactStrain, c));
@@ -288,9 +339,11 @@ public class ResolverV2GoldenTests(V2Fixture f)
     [Fact]
     public void MetalRanking_SilverCopperBronzeIronSteel_CutRateAgainstTheSameArmour()
     {
-        // equal skill, shape and quality; a seeded spread of skills (0-100) and styles; the outer piece cut, against leather, bronze mail and iron mail
+        // equal skill, shape and quality; a seeded spread of skills (0-100) and styles; the outer piece cut, against leather, a bone breastplate, bronze mail and iron mail (the DF
+        // wiki's Weapon page, "Combat testing": adamantine > steel > iron >= the bronzes > copper > silver). The bone plate separates copper from bronze: with DF's leather both cut a
+        // jerkin every time and neither cuts mail of their own tier
         string[] metals = ["silver", "copper", "bronze", "iron", "steel"];
-        (string, string)[] armour = [("jerkin", "leather"), ("mail_hauberk", "bronze"), ("mail_hauberk", "iron")];
+        (string, string)[] armour = [("jerkin", "leather"), ("breastplate", "bone"), ("mail_hauberk", "bronze"), ("mail_hauberk", "iron")];
         var leather = f.T.Armour("jerkin", "leather");
         var rates = new List<int>();
         var needs = new List<long>();

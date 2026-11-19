@@ -33,6 +33,14 @@ Collected while steps 1 to 7 were built. Step 8 fixes each one or moves it into 
 
 ## The DF wiki can be read now (user approved, Nov 2026)
 
+**Done (close-out):** re-checked against the live pages and the DF2014 raws they show; `docs/specs/phase4/df-calibration.md` has what the wiki says, a 42-row comparison and the
+decision for each difference. Fixed: an artifact's edge multiplier Qw (2, a masterwork's, not 3: the x3 is the armour's Qa) and the materials to the raws (iron and bronze impact,
+leather, bone, wood's shear and strains, gold, lead, tin). Found and deferred: the human hand and foot are DF's 1.44% and 2.16%, not the rounded 1.4% and 2.2%; the correction tips
+AB-3's scenario A casualties out of their band, so it waits for the abstract re-fit. Kept on purpose: the momentum formula's
+1 x i_Size term (the wiki gives 1 x and 10 x; the battle-axe table is 1 x, and 10 x broke the plate and mace targets), our velocities, real cm2 areas, mm reach and real weapon
+volumes, rules C1 to C4, the permanent blunt after a failed edge, the close-out physics, the tuned tissues. Goldens RS-1b (the battle-axe table, every cell) and RS-25 to RS-30;
+the P4-C, matrix, ranged and mounted tables barely move (within a point); the abstract tables and the AB-3 reference were rebuilt.
+
 The calibration re-check from `docs/specs/phase4/df-calibration.md` ("what to re-check when the wiki can be read"):
 - Transcribe from the live pages: the *i_Size* term, the velocity multiplier per attack, the quality multipliers (Qw and Qa, artifacts x3) and the battle-axe momentum table into the golden tests RS-1 onwards.
 - Compare them with ours and record every difference and its decision.

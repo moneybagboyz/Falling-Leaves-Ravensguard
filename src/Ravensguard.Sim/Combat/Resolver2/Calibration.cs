@@ -177,14 +177,17 @@ public static class Calibration
         return sb.ToString();
     }
 
-    /// <summary>The metal ranking (df-calibration.md): cut rate of the outer piece by a seeded spread of sword slashes against leather, bronze mail and iron mail.</summary>
+    /// <summary>
+    /// The metal ranking (df-calibration.md): cut rate of the outer piece by a seeded spread of sword slashes against a leather jerkin, a bone breastplate, bronze mail and iron mail.
+    /// The bone plate (DF's bone, SF 0.13) is the piece whose need falls inside every metal's spread of blows; with DF's leather (SF 0.025) copper and bronze both cut a jerkin every time.
+    /// </summary>
     public static IReadOnlyList<(string Metal, int CutsPerMille)> MetalRanking(CombatTablesV2 t, int blows = 2000)
     {
         var res = new ResolverV2(t);
         var plan = t.Plan("human");
         var r = new BlowResult();
         var list = new List<(string, int)>();
-        (string, string)[] armour = [("jerkin", "leather"), ("mail_hauberk", "bronze"), ("mail_hauberk", "iron")];
+        (string, string)[] armour = [("jerkin", "leather"), ("breastplate", "bone"), ("mail_hauberk", "bronze"), ("mail_hauberk", "iron")];
         foreach (var metal in new[] { "silver", "copper", "bronze", "iron", "steel" })
         {
             var w = t.Weapon("arming_sword", metal);

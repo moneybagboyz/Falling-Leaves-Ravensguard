@@ -133,6 +133,7 @@ A defender that is `Blocking` (or `Parrying`, `Dodging`) gets a pre-resolution s
 | Id | Check |
 |---|---|
 | RS-1 | M0 sword 104,350; skill 50 156,525; heavy 234,788 (integer formula) |
+| RS-1b | The DF wiki's battle-axe momentum table (Material science: 28 dwarf sizes x 8 metals) within 1 milli of every cell (df-calibration.md) |
 | RS-2 to RS-8 | Table 4.4: seven cases reproduce the listed per-layer M out within +-1,000 milli and the same outcome words (`Cut`, `Crushed`, `Stopped`) |
 | RS-9 | Rigid metal soak: a blow of 100.0 stopped by steel plate (shear) leaves 0.43; stopped blunt by steel 1.88; iron 0.64; bronze 1.09 (98 to 99.6% soaked) |
 | RS-10 | Mail turning a cut into blunt: sword 156.5 vs iron mail: crush with M out = 148.7 = 0.95 x M in |
@@ -150,6 +151,7 @@ A defender that is `Blocking` (or `Parrying`, `Dodging`) gets a pre-resolution s
 | RS-22 | Draw order locked (a recorded blow's stream index sequence is a golden) |
 | RS-23 | Near equals far (identical result hash for 5,000 blows with the flag flipped) |
 | RS-24 | Integer determinism: hash of a 100,000-blow table identical on both OS |
+| RS-25 to RS-30 | The DF wiki's other numbers (df-calibration.md): weight matters little (gold vs silver hammer < 1%; our mace in five metals within 1%); the Item quality table (Qa, Qw with an artifact's edge a masterwork's, masterwork armour +16.7%); the "min M" crush column; the DF2014 material raws; the human part sizes; slade alone deflects a war hammer, and the strain rule over every weapon metal |
 Calibration targets (checked by `tools/calibrate`, 2,000 duels per matchup, steel weapons, skills 30-59; spike baseline in brackets): mean duel length **10 to 20 s** (8.0 s); limbs severed per duel **<= 0.12** (0.34 to 1.00); defended blows **40 to 60%** (about 12%); sword-vs-sword A wins 50% +- 5; spear vs unarmoured sword **>= 55%** (11% before); knocked-out fighters who then bleed out with no treatment **<= 35%** (about 83%, partly bandaging, wounds file); fatal outcomes per duel (death + bleed-out) 15 to 35%.
 
 ## 9. Open questions (recommended defaults)
@@ -211,3 +213,8 @@ Decisions taken while building (each is content-tunable unless noted):
   the result hash mixes the harm when there is one); `ArmourWear.Apply` applies it (the fight, the matrix), `ClothingArmour.ApplyWear` writes the condition into a clothing book.
 - No double, no new RNG draw: every rule is a threshold on the blow's momentum and the piece's numbers.
 
+
+## Notes (the DF wiki re-check, Phase 4 close-out)
+- The formulas are the wiki's (df-calibration.md has the 42-row comparison). Fixed: an artifact's edge multiplier Qw is 2, a masterwork's (`CombatTablesV2.EdgeQualityPm`; Qa keeps
+  the artifact's 3); the materials are the DF2014 raws. The human hand and foot stay 1.4% and 2.2% (DF's are 1.44% and 2.16%: deferred, df-calibration.md row 25). RS-24's table hash is
+  re-pinned (`2852731875240228929`). New goldens RS-1b and RS-25 to RS-30 carry the wiki's own numbers.
