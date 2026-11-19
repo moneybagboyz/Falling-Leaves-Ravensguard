@@ -210,6 +210,12 @@ public static class RngStreams
     /// <summary>Thrown aim error (key FightTick, thrower).</summary>
     public const uint ThrownAim = 0x442;
 
+    // ---------- feedback and flavour (P4-D): cosmetic, never read by the simulation, never hashed ----------
+    /// <summary>Flavour text: which template of each slot a line uses (key FightTick, line serial, draw = slot x 8 + attempt). Presentation only.</summary>
+    public const uint FlavourPick = 0x480;
+    /// <summary>Cosmetic jitter: shake direction, decal offsets, audio pitch (key line serial). Presentation only.</summary>
+    public const uint CosmeticJitter = 0x481;
+
     /// <summary>Stream ids that two named uses share on purpose, with why their draws never meet.</summary>
     public static readonly (string A, string B, string Why)[] SharedPairs =
     [

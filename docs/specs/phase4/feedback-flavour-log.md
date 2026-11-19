@@ -168,3 +168,86 @@ Filters: **My side** adds the swings of Aldric's two followers; **Kills and seri
 | Audio | <= 16 voices, <= 1 ms per frame |
 | After-fight report build | <= 15 ms for a 2,000-soldier battle (counts only) |
 | Content | `flavour/*.jsonc` <= 60 KB, `en.csv` additions <= 80 KB, placeholder audio <= 40 files and <= 6 MB (CC0) |
+
+## Notes (P4-D implementation, step 4)
+Code: Sim `src/Ravensguard.Sim/Combat/Flavour/` (`FightLog` and the line, blow and fighter records in `FlavourTypes`, `FlavourRecorder`, `FlavourBook`, `FlavourDescribe`, `FlavourFormatter`, `LogFilter`, `AfterFightReport` with `CauseChain`, `FightChronicle`, `FeedbackPlan` (the planner, `AudioMap`, `VoicePool`, `SlowMotionGovernor`, `StepPacer`, `MusicState`)), `Save/FightLogSave.cs` (the optional "fightlog" section), content `content/base/combat/flavour/*.jsonc` (452 rows, 8 files, 59 KB) and `content/base/audio/events.jsonc` (18 sound hooks), content types `flavour` and `audio_event` in `Ravensguard.Content/Defs/FlavourDefs.cs`, streams 0x480 `FlavourPick` and 0x481 `CosmeticJitter`. Game: `World/Combat/FightFeedback.cs` (flash, callouts, shake, decals, hit-stop, slow motion, vignette, captions, sound hooks), `UI/FightLogPanel.cs` (the feed and the F7 panel), `UI/AfterFightPanel.cs` (Shift+F7), `Audio/AudioBus.cs`, `World/StreetView.FightLog.cs`, the "Combat feel" block of the Display settings tab, and `-- --fight-demo duel --shot-what feed|log|logall|report|hit` for the screenshots. Tests `tests/.../Combat/Flavour/` (FL-1 to FL-13, the golden file `golden_lines.txt`, the prose dump `FlavourSamplesTests`; set `FL_SAMPLES=file` to write the sample lines, `FL_WRITE_GOLDEN=1` to rewrite the golden file).
+Decisions taken while building:
+- **Listening, not feeding:** the only change to the fight is one hook, `FightWorld.OnEvent` (called from `Emit`, beside the P4-C `OnBlow`). `FlavourRecorder` chains both, writes a `FightLine` struct (about 60 bytes) per event and a `BlowSnap` (the resolver's `LayerStep`s and `WoundV2`s as interned ids, so a saved log reads without the content tables) per blow, and never touches the sim: the same seeded fight has the same `FightHash` at every tick with and without it (FL-9). `Windup`, `Reloaded` and `Shove` write no line (a swing only counts in the report); `Riposte` marks its `Parried` line ("parries and answers"); `Overpowered` marks the `Blocked` line that follows it; a `ProjectileHit` and the `Hit` after it are one line (flagged missile or thrown).
+- **The picks are made by a cursor, the text lazily.** Which template each slot of a line uses (stream 0x480, key `(FightTick, line serial)`, draw `slot x 8 + attempt`, a quarter weight on pieces used in the last 12 lines, and a redraw (up to 8) when the set of picks equals any of the last 12 lines' sets, so no line repeats within 12) is chosen in line order by `FightLog.PickCursor` and stored in the line, so a line reads the same whoever looked first, after a replay and after a save (FL-4, FL-13). Strings are built only for lines that are shown: a fight nobody reads makes no picks and no strings (FL-8). A compaction that drops lines (ring 4,096; the serious older lines are kept up to 20,000) makes the picks first.
+- **A line is up to five pieces:** a first sentence, from `blow` (a whole sentence for the cases that deserve one: plate scraping, mail turning a cut into a bruise, an eye through a visor, a head taken off, 21 rows) or composed from `open` (60 rows: the subject and verb by attack type, style, facing, material, family), `armour` (50: one clause for the layer that decided it) and `tissue` (69: what the blow does under it; a preposition piece has an "and ..." twin when it follows an armour clause, a verb piece always starts "and"); then up to two `consequence` sentences (111 rows, one per distinct wound flag by priority, told about the wound that carries it). Events that are not blows use one row of `defence` (39), `shot` (7), `after` (56: falling and dying by cause, waking, a broken shield, a dropped weapon, a spoiled swing), `morale` (14) or `report` (25: the result lines, the cause chains and the chronicle texts). 452 rows against the spec's 420; vocabulary (weapons, armour, materials, parts, structures, organs, causes, grades), the log and report strings, 40 callouts and the captions are further `fl_` keys: 814 in all, one contiguous block at the end of `en.csv`.
+- **A blow that wounded was not stopped.** The resolver's `Stopped` means "the blow became blunt and went on", so a `Hit` whose deepest armour step is `Stopped` or `Deflected` is told as `crushed` ("the iron links hold their shape but the force goes through"); the terminal armour clauses ("goes no further") are used only for a `Stopped` event, a blow with no wound.
+- **Severity** is the sim's: 0 graze, 1 wound, 2 grievous, 3 mortal, 4 fatal, computed from the wound list (organs, spine and arteries of a limb root are 3; vital organs and a severed head or neck 4); `Down` is 3 and `Death` 4. The log marks it with a colour and a shape ([.] [o] [+] [#] [X]).
+- **Filters** (`LogFilter`): Hero only (actor or target is the hero), My side (either end on the hero's team), Kills and serious (severity >= 2, falling, dying, rout, yielding, fled, severing), Misses and defences, Treatment, Beasts only and a free text search that formats only the lines that passed the rest. The defaults are the spec's (a fight: hero only and serious; a battle: my side and serious); the choice is saved in `settings.cfg`.
+- **Feedback numbers** are integers (`FeedbackPlanner`): white flash 33 ms, wound tint 100 ms (severity >= 2), shake `clamp(M/16, 1, 8)` px (+2 at severity 3) for 150 ms when the hero is hit with M >= 60 (M is the resolver's final momentum in units), hit-stop 60 ms and slow motion for severity 4 near the hero, or a hit on the hero with M >= 100. The planner takes `IFeedbackSettings`; the Game's backing class asks `Accessibility.ShakeScale`, `FlashScale` and `TimeScale` (FL-10), and a lint test (FL-12) greps effect code for direct `Settings.ScreenShake/Flashes/SlowMotion` reads. Callout words and captions are not effects and show with the toggles off.
+- **Slow motion changes steps per real second only** (`SlowMotionGovernor` 35 percent for 0.4 s, 80 ms in, 150 ms out, 3 s cooldown, 6 a minute; `StepPacer` turns real microseconds and the scale into whole 20 Hz steps). `FightView` multiplies its time by `Feedback.TimeScale`; `StreetView._Process` does the same for the live fight (one line). FL-9 steps the same skirmish with and without a forced schedule and with and without the recorder and compares the hash.
+- **Save:** a new optional section "fightlog" (`FightLogSave`: the newest 2,000 lines and up to 1,000 older serious ones, the picks, the blows they cite, the people; written only while a log exists; no format bump). `WorldState.FightLog` and `FightLogSource` follow `Fight` and `FightSource`; the game keeps the last fight's log so Shift+F7 works after a load. Save, load, save gives the same bytes and the same `FlavourHash` (FL-13).
+- **Chronicle** (`FightChronicle`): `fight_death` for a named person (a person key on the kit), `fight_maiming` for a severed limb or a broken spine, `monster_slain`, `fight_capture` and `battle_fought` (20 casualties or more), each with a `CauseKind.Wound` cause that is the cause chain's sentence. Nameless soldiers get nothing (FL-7).
+- **After-fight report** (`AfterFightReport`): result, duration and sides, casualties from the log's own end states (equal to the fight's, FL-6), the hero's blows and the damage by kind, the best blow, stamina and blood low points, the hero's wounds with what to do first ("about 31 s until you collapse" for an artery, from the wound's bleed rate), the fallen with the finishing line and the chain "Bram died of blood loss from a cut brachial artery, dealt by Aldric's axe in the fight, which began when strangers sprang an ambush on the road" (every death has all five links), the spoils (the number of things on the ground and arrows to recover). It opens by itself when the hero was wounded or three fell, else a toast points to Shift+F7.
+- **Audio** has no files (the brief): `audio_event` rows map every fight event kind to a named sound or an explicit silence (FL-11), with a caption key and a priority; `AudioBus.Emit(name, x, y, intensity)` records the sound and calls a `Sink` for the day there is an audio layer; `VoicePool` keeps 16 voices (closest and most severe), volume full inside 8 m to nothing at 60 m, 40 percent less behind a wall; `MusicState` is the calm, tension and battle machine with 8 s hysteresis and 3 s fades (tested, not yet fed by the street view).
+- **Settings:** the Display tab now scrolls and has a "Combat feel" block: shake, flashes, slow motion (with the tooltip that it never changes an outcome), captions, reduce blood (no decals, and the pieces marked `gore: high` are left out of the prose), log text size 1x to 3x; the severity shape marks are always on.
+- **Shared files touched:** `FightWorld.cs` (the `OnEvent` hook, 3 lines), `RngStreams.cs` (0x480, 0x481 only), `WorldSave.cs` (the "fightlog" section, 5 additions), `FightView.cs` (recorder, feedback, panels, shake, tint, time scale; about 70 lines in hooks), `FightDemo.cs` (screenshot modes), `StreetView.cs` (the time scale and the two world keys), `StreetView.Fight.cs` (2 calls), `Settings.cs`, `SettingsScreen.cs`, `en.csv` and `en.en.translation`.
+
+### Sample lines (seeded duels, the shipped templates)
+Seeded duels, Aldric (sword, heater shield, gambeson, mail, helm) against Bram (axe, padded jack): the log with every filter off, as the test `FlavourSamplesTests` prints it (event kind and severity in brackets).
+
+```
+=== seed 7: arming_sword vs axe, 00:11 ===
+00:01 [Blocked    s0] Aldric turns the blow aside with his shield.
+00:01 [Hit        s2] Aldric's sword cuts deep into the flesh of Bram's left shin. An artery is opened; blood sprays. Bram's knee will not hold; the tendon is cut.
+00:02 [Hit        s2] Bram puts everything into one blow of the axe, and it lands. Aldric feels nothing in his left foot now.
+00:03 [Blocked    s0] Bram's guard holds against Aldric's sword.
+00:03 [Blocked    s0] Aldric's guard is beaten down.
+00:03 [Hit        s1] Bram's axe hacks against the linen gambeson, which turns the edge but not the force and jars the bone of Aldric's right forearm.
+00:04 [Blocked    s0] Bram blocks Aldric's sword with his own.
+00:05 [Blocked    s0] Bram's axe hammers Aldric's shield back into him.
+00:05 [Hit        s1] Bram's axe cuts the iron links of Aldric's mail, but the blow lands as a bruise on his forearm.
+00:06 [Blocked    s0] Steel meets steel as Bram blocks.
+00:07 [Blocked    s0] Bram's blow drives through Aldric's guard and staggers him.
+00:07 [Hit        s1] Bram's axe hacks against the mail, which drives the rings inward and bruises Aldric's left forearm to the bone.
+00:08 [Parried    s0] With a ringing parry, Bram turns the blow and answers.
+00:08 [Blocked    s0] Aldric catches the blow on his weapon and holds.
+00:08 [Hit        s1] Bram's axe hacks into the iron mail, which gives way and leaves the bone of Aldric's right forearm aching.
+00:08 [Blocked    s0] Aldric's blow is stopped by Bram's guard.
+00:09 [Broke      s0] Aldric's shield splinters and falls apart.
+00:09 [Blocked    s0] Aldric's guard is beaten down.
+00:09 [Hit        s1] Bram's axe hacks into the linen gambeson, which gives way and bruises the bone of Aldric's left forearm.
+00:10 [Blocked    s0] Bram's guard holds against Aldric's sword.
+00:11 [Blocked    s0] Aldric's guard is beaten down.
+00:11 [Hit        s1] Bram's axe cuts the iron links of Aldric's mail, but the blow lands as a bruise on his forearm.
+00:11 [Down       s3] Aldric collapses, shaking, and does not rise.
+=== seed 11: mace vs spear, 00:04 ===
+00:02 [Hit        s2] Bram's aimed thrust finds the mark; the spear goes ripping through the rings of the iron mail and into the bone of Aldric's right thigh. Aldric cannot put his weight on it.
+00:02 [Interrupted s0] The blow breaks Aldric's stroke.
+00:03 [Hit        s2] Aldric swings the mace and it lands and crushes the bone of Bram's right foot. The crack of it carries across the field.
+00:03 [Missed     s0] Bram's spear misses Aldric by a hair.
+00:04 [Hit        s2] Aldric's mace slams and snaps the bone in Bram's left foot. Bram's left foot is no use to him until it is set. The joint gives way; the ligament is torn.
+00:04 [Down       s3] Bram collapses, shaking, and does not rise.
+=== seed 23: longsword vs falchion, 00:14 ===
+00:01 [Blocked    s0] Bram blocks Aldric's longsword with his own.
+00:02 [Hit        s3] Bram's blow with the falchion bites through a bare spot the mail leaves and cleaves deep into Aldric's right thigh. Aldric's right thigh runs red; the femoral artery is cut.
+00:02 [Dodged     s0] Bram sways back and the longsword passes by.
+00:04 [Parried    s0] With a ringing parry, Aldric turns the blow and answers.
+00:04 [Hit        s1] Aldric's longsword cuts through the stitching of the jack and bruises Bram's left upper arm to the bone.
+00:05 [Blocked    s0] Aldric staggers under the weight of Bram's blow but holds.
+00:05 [Missed     s0] Aldric's blow goes past Bram.
+00:06 [Blocked    s0] Aldric's guard is beaten down.
+00:06 [Hit        s1] Bram's falchion chops into the iron mail, which gives way and numbs Aldric's right forearm with the shock of it.
+00:08 [Missed     s0] Bram overreaches and misses.
+00:08 [Dodged     s0] Bram ducks under Aldric's longsword.
+00:10 [Blocked    s0] Bram's blow is stopped by Aldric's guard.
+00:11 [Parried    s0] Bram knocks the longsword wide and counters.
+00:11 [Missed     s0] The falchion goes wide of Aldric.
+00:12 [Hit        s2] Aldric's keen steel longsword slices and leaves the bone of Bram's right foot aching. The feeling leaves Bram's right foot at once.
+00:13 [Hit        s2] Bram's aimed cut with the falchion bites straight through the linen gambeson and jars the bone of Aldric's right thigh. A tendon snaps with a sound like a plucked string.
+00:13 [Rout       s0] Aldric throws the fight away and bolts.
+00:14 [Disarmed   s0] Aldric drops his weapon.
+00:14 [Hit        s2] Bram's bronze falchion bites and bruises the bone of Aldric's right hand. The feeling leaves Aldric's right hand at once.
+00:14 [Down       s3] Aldric collapses, shaking, and does not rise.
+```
+
+### Left for later
+- Wound overlays are P4-C's art; tears on armour layers below 800 condition and the persistent decals saving as chunk deltas (decals live for the fight only), dry-to-brown over game hours.
+- The "Larger parry window" and "Hold or toggle" accessibility options need a change in the fight's inputs (the sim, the recorder): not done. Treatment lines wait for the treatment events (`Treat`), which the fight does not emit yet; unhorse and horse panic wait for mounted-combat (the audio rows already name them).
+- Slow motion for a hero parry-riposte kill: the riposte flag is on the parry line but the kill that follows is not linked to it; the other three triggers are in.
+- The After-fight buttons (treat now, loot, rest, pursue) are a one-line hint (the panel has Close only); a mid-fight load does not rebuild the fight view yet (the section keeps the log for the report).
+- Gore-low is the `high` mark on 28 pieces; a human pass over the English is wanted (the sample lines above are the first draft).

@@ -41,6 +41,8 @@ public sealed partial class FightWorld
     public (int X, int Y)? LodCentre;
     /// <summary>Called after every resolved blow (the calibration harness counts from it).</summary>
     public Action<Fighter, Fighter, BlowResult, StrikeV2>? OnBlow;
+    /// <summary>P4-D hook: called for every event as it is emitted, whether or not <see cref="RecordEvents"/> keeps it (the flavour recorder listens; the sim never reads it).</summary>
+    public Action<FightEvent>? OnEvent;
 
     private readonly BlowResult _r = new();
     private readonly List<int> _impacts = [];
@@ -143,7 +145,9 @@ public sealed partial class FightWorld
 
     private void Emit(FightEventKind kind, int actor, int target, int part = -1, int a = 0, int b = 0)
     {
-        if (RecordEvents) Events.Add(new FightEvent(Tick, kind, actor, target, (short)part, a, b));
+        var ev = new FightEvent(Tick, kind, actor, target, (short)part, a, b);
+        if (RecordEvents) Events.Add(ev);
+        OnEvent?.Invoke(ev);   // P4-D hook
     }
 
     // ------------------------------------------------------------------ player input (recorded by the session recorder)

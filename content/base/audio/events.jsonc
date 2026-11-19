@@ -1,0 +1,22 @@
+// Placeholder audio hooks (feedback-flavour-log 4.6): the named sounds a fight event plays and the caption of each. No files ship in Phase 4 (the file field stays empty
+// until Phase 8); the captions work now. Of several rows that match, the highest priority wins; a silent row is a choice, not an omission (test FL-11).
+[
+  {"type":"audio_event","id":"combat.hit.flesh","events":["hit"],"armour":["none","cloth","padded","leather"],"caption":"fl_cap_blow","priority":10},
+  {"type":"audio_event","id":"combat.hit.metal","events":["hit","stopped"],"armour":["mail","plate","scale","helm"],"caption":"fl_cap_clash","priority":12},
+  {"type":"audio_event","id":"combat.hit.wood","events":["hit","stopped"],"armour":["shield"],"caption":"fl_cap_thud","priority":12},
+  {"type":"audio_event","id":"combat.block","events":["blocked","overpowered"],"caption":"fl_cap_clash","priority":10},
+  {"type":"audio_event","id":"combat.parry","events":["parried","riposte"],"caption":"fl_cap_parry","priority":14},
+  {"type":"audio_event","id":"combat.miss.swing","events":["whiff","missed","dodged","throw"],"caption":"fl_cap_swing","priority":4},
+  {"type":"audio_event","id":"combat.arrow.loose","events":["shot"],"caption":"fl_cap_loose","priority":8},
+  {"type":"audio_event","id":"combat.arrow.hit","events":["hit","projectile_hit"],"attack":["missile","thrown"],"caption":"fl_cap_arrow_hit","priority":16},
+  {"type":"audio_event","id":"combat.arrow.miss","events":["projectile_miss"],"caption":"fl_cap_arrow_over","priority":6},
+  {"type":"audio_event","id":"combat.shield.break","events":["broke"],"caption":"fl_cap_break","priority":14},
+  {"type":"audio_event","id":"combat.bone.break","events":["hit"],"min_severity":2,"flags":["bone_broken","compound","displaced"],"caption":"fl_cap_bone","priority":20},
+  {"type":"audio_event","id":"combat.scream","events":["hit","down"],"min_severity":2,"caption":"fl_cap_scream","priority":18},
+  {"type":"audio_event","id":"combat.death","events":["death"],"caption":"fl_cap_death","priority":22},
+  {"type":"audio_event","id":"combat.horse.rear","events":["unhorse","horse_panic"],"caption":"fl_cap_horse","priority":16},
+  {"type":"audio_event","id":"combat.horn","events":["rally"],"caption":"fl_cap_horn","priority":12},
+  {"type":"audio_event","id":"combat.rout.cry","events":["rout","fled","surrender"],"caption":"fl_cap_rout","priority":12},
+  {"type":"audio_event","id":"combat.cloth","events":["wake","treat"],"priority":2},
+  {"type":"audio_event","id":"silent.preparation","events":["windup","feint","reloaded","shove","interrupted","disarmed","out_of_ammo"],"silent":true,"priority":0}
+]

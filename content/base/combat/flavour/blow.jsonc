@@ -1,0 +1,24 @@
+// Flavour templates (feedback-flavour-log 3.2): blow. Generated rows; the English text of a key is in localization/en.csv (fl_ prefix).
+[
+  {"type":"flavour","id":"blow.plate.scrape","slot":"blow","when":{"armour_outcome":["stopped","deflected"],"armour_family":["plate","scale"]},"weight":16},
+  {"type":"flavour","id":"blow.plate.skid","slot":"blow","when":{"armour_outcome":["stopped","deflected"],"armour_family":["plate","scale"],"attack":["edge","point","missile","thrown"]},"weight":14},
+  {"type":"flavour","id":"blow.mail.turn","slot":"blow","when":{"armour_outcome":["crushed"],"armour_family":["mail"],"attack":["edge","point"]},"weight":18},
+  {"type":"flavour","id":"blow.mail.hold","slot":"blow","when":{"armour_outcome":["stopped","deflected"],"armour_family":["mail"]},"weight":14},
+  {"type":"flavour","id":"blow.padded.sink","slot":"blow","when":{"armour_outcome":["stopped","deflected"],"armour_family":["padded","cloth"]},"weight":14},
+  {"type":"flavour","id":"blow.helm.ring","slot":"blow","when":{"armour_outcome":["stopped","deflected"],"armour_family":["helm"]},"weight":16},
+  {"type":"flavour","id":"blow.plate.fold","slot":"blow","when":{"armour_outcome":["crushed"],"armour_family":["plate"],"attack":["blunt"]},"weight":14},
+  {"type":"flavour","id":"blow.mail.crush","slot":"blow","when":{"armour_outcome":["crushed"],"armour_family":["mail"],"attack":["blunt"]},"weight":14},
+  {"type":"flavour","id":"blow.eye.visor","slot":"blow","when":{"armour_outcome":["bypassed"],"part":["eye"],"attack":["point","missile","thrown"]},"weight":40},
+  {"type":"flavour","id":"blow.eye.find","slot":"blow","when":{"part":["eye"]},"weight":30},
+  {"type":"flavour","id":"blow.gap.find","slot":"blow","when":{"armour_outcome":["bypassed"],"attack":["point","edge"]},"weight":14},
+  {"type":"flavour","id":"blow.head.off","slot":"blow","when":{"attack":["edge"],"flags":["severed"],"part_group":["head","neck"]},"weight":60,"gore":"high"},
+  {"type":"flavour","id":"blow.flank","slot":"blow","when":{"facing":["flank"],"armour_outcome":["none","cut","crushed"]},"weight":14},
+  {"type":"flavour","id":"blow.rear","slot":"blow","when":{"facing":["rear"],"armour_outcome":["none","cut","crushed"]},"weight":14},
+  {"type":"flavour","id":"blow.heavy","slot":"blow","when":{"style":["heavy"],"armour_outcome":["none","cut","crushed"]}},
+  {"type":"flavour","id":"blow.missile","slot":"blow","when":{"attack":["missile"],"armour_outcome":["none","cut","crushed"]},"weight":16},
+  {"type":"flavour","id":"blow.thrown","slot":"blow","when":{"attack":["thrown"],"armour_outcome":["none","cut","crushed"]},"weight":16},
+  {"type":"flavour","id":"blow.bite","slot":"blow","when":{"attack":["bite"],"armour_outcome":["none","cut","crushed"]},"weight":16},
+  {"type":"flavour","id":"blow.claw","slot":"blow","when":{"attack":["claw"],"armour_outcome":["none","cut"]},"weight":16},
+  {"type":"flavour","id":"blow.bare.edge","slot":"blow","when":{"attack":["edge"],"armour_outcome":["none"],"tissue":["muscle","fat","skin"]},"weight":12},
+  {"type":"flavour","id":"blow.stop.air","slot":"blow","when":{"armour_outcome":["none"],"event":["stopped"]},"weight":6}
+]

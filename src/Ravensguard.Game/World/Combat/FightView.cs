@@ -2,8 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
+using Ravensguard.Content;
 using Ravensguard.Game.Inputs;
+using Ravensguard.Game.UI;
 using Ravensguard.Sim.Combat;
+using Ravensguard.Sim.Combat.Flavour;
 using Ravensguard.Sim.Combat.Melee2;
 using Ravensguard.Sim.Combat.Resolver2;
 using Ravensguard.Sim.Combat.Wounds;
@@ -43,9 +46,49 @@ public partial class FightView : Node2D
     readonly List<(Vector2 Pos, string Text, Color Col, double Age)> _callouts = new();
     Vector2 _cam;
 
+    // ---- P4-D feedback and flavour (feedback-flavour-log): a recorder writes the log, the feedback draws the effects, the panel shows the lines ----
+    public FlavourRecorder Recorder { get; private set; }
+    public FlavourBook Book { get; private set; }
+    public FightFeedback Feedback { get; private set; }
+    public FightLogPanel LogPanel { get; private set; } = null!;
+    public AfterFightPanel? Report { get; private set; }
+    public FightLog Log => Recorder.Log;
+    /// <summary>A report or the log panel has the keyboard and the mouse: the combat inputs wait.</summary>
+    public bool ModalOpen => Report != null && IsInstanceValid(Report);
+    bool _ended; int _endedTick = -1;
+    static (ContentDatabase Db, FlavourBook Book, IReadOnlyList<AudioEventDef> Audio)? _flavourCache;
+
     public FightView(FightWorld w, int hero, Action<FightInput> send, RigAtlas? rig = null)
     {
         W = w; Hero = hero; Send = send; _rig = rig ?? RigAtlas.Shared;
+        Book = null!; Recorder = null!; Feedback = null!;
+        StartFlavour(null);
+    }
+
+    /// <summary>Starts recording the fight (a new log, or the one restored from a save to carry on) and its feedback.</summary>
+    void StartFlavour(FightLog? log)
+    {
+        var db = W.Content.Db;
+        if (_flavourCache is not { } c || !ReferenceEquals(c.Db, db)) _flavourCache = c = (db, new FlavourBook(db), db.All<AudioEventDef>().OrderBy(a => a.Id, StringComparer.Ordinal).ToList());
+        Book = c.Book;
+        Recorder = FlavourRecorder.Attach(W, log, Book);
+        if (Hero >= 0 && Hero < W.Fighters.Count) { Recorder.Log.Hero = Hero; Recorder.Log.HeroTeam = W.Fighters[Hero].Team; }
+        Feedback = new FightFeedback(Recorder.Log, W, c.Audio);
+        _ended = false; _endedTick = -1;
+    }
+
+    /// <summary>The fight is over: the log is closed (the report's duration and result) once.</summary>
+    public void FinishLog() { if (_ended) return; _ended = true; Recorder.Finish(); }
+
+    /// <summary>Opens the after-fight report over the view (Shift+F7); the report is rebuilt from the log each time.</summary>
+    public void OpenReport()
+    {
+        if (ModalOpen) return;
+        var rep = AfterFightReport.Build(Log, Book, GameText.Instance);
+        var layer = new CanvasLayer { Layer = 20, Name = "ReportLayer" };
+        var panel = new AfterFightPanel(rep, W.Ground.Count, W.SpentAmmo.Values.Sum() / 2);
+        panel.Closed = () => { layer.QueueFree(); Report = null; };
+        layer.AddChild(panel); AddChild(layer); Report = panel;
     }
 
     public Fighter? HeroF => Hero >= 0 && Hero < W.Fighters.Count ? W.Fighters[Hero] : null;
@@ -56,9 +99,13 @@ public partial class FightView : Node2D
         _font = GD.Load<Font>("res://assets/fonts/PixelifySans.ttf") ?? ThemeDB.FallbackFont;
         ActiveContexts.Enter(InputContext.CombatStance);
         _cam = Centre();
+        var layer = new CanvasLayer { Layer = 8, Name = "LogLayer" };
+        LogPanel = new FightLogPanel(() => Recorder.Log, Book);
+        layer.AddChild(LogPanel); AddChild(layer);
+        LogPanel.Layout();
     }
 
-    public override void _ExitTree() => ActiveContexts.Exit(InputContext.CombatStance);
+    public override void _ExitTree() { ActiveContexts.Exit(InputContext.CombatStance); }
 
     // ------------------------------------------------------------------ the frame
 
@@ -67,24 +114,45 @@ public partial class FightView : Node2D
         PollHero();
         if (OwnsStepping && !_calling)
         {
-            _acc += delta;
+            _acc += delta * Feedback.TimeScale;                       // slow motion and hit-stop change the steps per real second, never a step (FL-9)
             int guard = 0;
             while (_acc >= 0.05 && guard++ < 6) { _acc -= 0.05; W.StepWithAi(); }
             if (guard >= 6) _acc = 0;
         }
         Consume();
+        Feedback.Poll(); Feedback.Update(delta);
+        CheckEnd();
         for (int i = _callouts.Count - 1; i >= 0; i--) { var c = _callouts[i]; c.Age += delta; if (c.Age > 1.4) _callouts.RemoveAt(i); else _callouts[i] = c; }
         _cam = _cam.Lerp(Centre(), (float)Math.Min(1, delta * 4));
         QueueRedraw();
     }
 
     /// <summary>Steps the fight <paramref name="ticks"/> times without drawing (screenshots, tests of the scene).</summary>
-    public void Advance(int ticks) { for (int i = 0; i < ticks; i++) W.StepWithAi(); Consume(); _cam = Centre(); }
+    public void Advance(int ticks) { for (int i = 0; i < ticks; i++) W.StepWithAi(); Consume(); Feedback.Poll(); _cam = Centre(); }
+
+    /// <summary>When a fight the view steps itself is over for two seconds, the log is closed and the report offered (F3: opened for a wound on the hero or three casualties, else a banner).</summary>
+    void CheckEnd()
+    {
+        if (!OwnsStepping || _ended || !W.IsOver) return;
+        if (_endedTick < 0) { _endedTick = W.Tick; return; }
+        if (W.Tick - _endedTick < 40) return;
+        FinishLog();
+        var rep = AfterFightReport.Build(Log, Book, GameText.Instance);
+        bool hurt = HeroF != null && HeroF.Book.Records.Count > 0;
+        if (hurt || rep.Casualties >= 3) OpenReport(); else Banner = L.T("fl_ui_toast_report");
+    }
 
     /// <summary>Drops the floating callouts (a staged screenshot: they only age while the view runs).</summary>
-    public void ClearCallouts() => _callouts.Clear();
+    public void ClearCallouts() { _callouts.Clear(); Feedback.Clear(); }
 
-    public void Replace(FightWorld w) { W = w; _evCursor = 0; _log.Clear(); _hitAt.Clear(); _cam = Centre(); }
+    public void Replace(FightWorld w)
+    {
+        Recorder?.Detach();
+        W = w; _evCursor = 0; _log.Clear(); _hitAt.Clear(); _cam = Centre();
+        StartFlavour(null);
+        if (Report != null && IsInstanceValid(Report)) Report.Close();
+        LogPanel?.SetExpanded(false);
+    }
 
     /// <summary>The camera looks at the hero (or the middle of the fight) a metre above the feet, so the figures stand in the middle of the screen.</summary>
     Vector2 Centre()
@@ -97,7 +165,7 @@ public partial class FightView : Node2D
     }
 
     float Ppm => 48f / 1.8f * Zoom;               // a 1.8 m figure is about 48 px of the 64 px frame (the rest is headroom for weapons)
-    Vector2 Screen(int xMm, int yMm) => GetViewportRect().Size * 0.5f + (new Vector2(xMm, yMm) / 1000f - _cam) * Ppm;
+    Vector2 Screen(int xMm, int yMm) => GetViewportRect().Size * 0.5f + (new Vector2(xMm, yMm) / 1000f - _cam) * Ppm + Feedback.Shake;
 
     // ------------------------------------------------------------------ input (recorded)
 
@@ -123,6 +191,13 @@ public partial class FightView : Node2D
 
     public override void _Input(InputEvent e)
     {
+        if (ModalOpen) return;                                                           // the report is up: it has the keys (and the mouse)
+        if (e is InputEventKey { Pressed: true, Echo: false })
+        {
+            if (Actions.Pressed(e, "combatstance.last_report")) { OpenReport(); GetViewport().SetInputAsHandled(); return; }
+            if (Actions.Pressed(e, "combatstance.combat_log")) { LogPanel.Toggle(); GetViewport().SetInputAsHandled(); return; }
+        }
+        if (e is InputEventMouse mouse && LogPanel.Covers(mouse.Position)) return;       // clicks on the open log panel are the panel's: no swings through it
         var h = HeroF;
         if (h == null || !h.Player) return;
         if (_calling) { if (e is InputEventKey { Pressed: true, Echo: false }) { CallingKey(e); GetViewport().SetInputAsHandled(); } return; }
@@ -254,7 +329,7 @@ public partial class FightView : Node2D
             if (e.Kind == FightEventKind.Hit || e.Kind == FightEventKind.ProjectileHit) if (tf != null) _hitAt[tf.Id] = e.Tick;
             if (t == null) continue;
             _log.Add((t, c, e.Tick)); if (_log.Count > 7) _log.RemoveAt(0);
-            if (at != null && call.Length > 0)
+            if (Feedback == null && at != null && call.Length > 0)      // the feedback layer draws the callouts now (severity colours, the facade)
             {
                 int stack = _callouts.Count(x => x.Age < 0.5 && (x.Pos - new Vector2(at.X, at.Y)).Length() < 300);
                 _callouts.Add((new Vector2(at.X, at.Y - stack * 380), call, c, 0));
@@ -274,6 +349,7 @@ public partial class FightView : Node2D
         for (float x = o.X % ppm; x < sz.X; x += ppm) DrawLine(new Vector2(x, 0), new Vector2(x, sz.Y), grid);
         for (float y = o.Y % ppm; y < sz.Y; y += ppm) DrawLine(new Vector2(0, y), new Vector2(sz.X, y), grid);
         foreach (var g in W.Ground) DrawCircle(Screen(g.X, g.Y), 3, new Color(0.5f, 0.4f, 0.3f));
+        Feedback.DrawDecals(this, Screen, Ppm);
         if (HeroF is { Active: true } hero) DrawArcs(hero);
         foreach (var f in W.Fighters.OrderBy(f => (f.Act is FAct.Down or FAct.Dead ? -100000 : 0) + f.Y)) DrawFighter(f);
         foreach (var p in W.Projectiles) if (!p.Done) DrawProjectile(p);
@@ -285,6 +361,7 @@ public partial class FightView : Node2D
             DrawString(_font, p + new Vector2(-100 + 1, 1), c.Text, HorizontalAlignment.Center, 200, 16, new Color(0, 0, 0, a));
             DrawString(_font, p + new Vector2(-100, 0), c.Text, HorizontalAlignment.Center, 200, 16, new Color(c.Col, a));
         }
+        Feedback.DrawOverlay(this, sz, _font, Screen, Zoom, HeroF?.Book.LossPm ?? 0);
         DrawHud(sz);
         if (_calling) DrawDoll(sz);
         if (Banner.Length > 0)
@@ -434,6 +511,7 @@ public partial class FightView : Node2D
         if (_hitAt.TryGetValue(f.Id, out var h) && W.Tick - h < 3) tint = new Color(1f, 0.55f, 0.55f);
         if (f.Act == FAct.Dead) tint = new Color(0.55f, 0.5f, 0.5f);
         if (f.Routing) tint = tint * new Color(1, 1, 0.75f);
+        tint = Feedback.Tint(f.Id, tint);                                  // the white flash and the wound's red tint (through the facade)
         var all = new List<string>(layers); all.AddRange(overlays);
         // west is the side view mirrored: the whole figure is drawn through a flipped transform about the feet (a negative rect size is not a flip in every renderer)
         DrawSetTransform(pos, 0, new Vector2(mirror ? -1 : 1, 1));
@@ -514,7 +592,7 @@ public partial class FightView : Node2D
             DrawString(_font, new Vector2(11, 23 + i * 18), lines[i], HorizontalAlignment.Left, sz.X - 20, 14, Colors.Black);
             DrawString(_font, new Vector2(10, 22 + i * 18), lines[i], HorizontalAlignment.Left, sz.X - 20, 14, Colors.White);
         }
-        for (int i = 0; i < _log.Count; i++)
+        for (int i = 0; i < _log.Count && LogPanel == null; i++)      // the combat log panel's feed replaces this plain list
         {
             var (t, c, _) = _log[i];
             float yy = sz.Y - 14 - (_log.Count - 1 - i) * 18;

@@ -928,7 +928,7 @@ public partial class StreetView : Control, IHandlesBack
         if (bench) { _benchT += delta; ScriptedWalk(); }
         if (!_quitting) HandleHeldInput(delta);
 
-        _acc += Math.Min(delta, 0.25);
+        _acc += Math.Min(delta, 0.25) * FightTimeScale();       // P4-D: slow motion and hit-stop give a fight step less real time (steps per real second only, FL-9)
         int steps = 0; _stepMsFrame = 0;
         while (_acc >= Step && steps < 5)
         {
@@ -1415,6 +1415,8 @@ public partial class StreetView : Control, IHandlesBack
         else if (Actions.Pressed(e, "world.panel_squad")) OpenSquad();
         else if (Actions.Pressed(e, "world.autopilot")) OpenAutopilot();
         else if (Actions.Pressed(e, "world.panel_journal")) OpenJournal();
+        else if (Actions.Pressed(e, "world.combat_log")) OpenCombatLog();         // P4-D: F7 and Shift+F7 outside a fight (the last fight's log and report)
+        else if (Actions.Pressed(e, "world.last_report")) OpenLastReport();
         else if (Actions.Pressed(e, "world.context_menu")) OpenQMenu();
         else if (Actions.Pressed(e, "world.quicksave")) QuickSave();
         else if (Actions.Pressed(e, "world.quickload")) QuickLoad();
