@@ -88,7 +88,7 @@ public sealed class Phase3GameRulesTests
         var w = new TradeWorld(); var (e, env, table, _) = HeroJob();
         var j2 = table.Post(env, OddJobKind.FarmWork, EconFixture.Pop.Households.IdOf(4), e.HouseholdPurse[4], 0, 1, w.Sec - 600, w.Sec + 3 * 86400, 140, x => { x.P0 = 6000; x.P1 = 6000; x.P4 = 8; x.P5 = 7; x.SrcOwner = EconFixture.Pop.Households.IdOf(4); x.Title = "More work"; })!;
         table.Abandon(env, table.JobOf(Hero)!.Id, 10);       // (its own time is long past: it is given up before the clock moves on)         // the first job is given up so the hero is free
-        var ctx = new HeroContext(w.State, w.State.Party, EconFixture.Content) { Jobs = () => (env, table) };
+        var ctx = new HeroContext(w.State, w.State.Party!, EconFixture.Content) { Jobs = () => (env, table) };
         var desk = new HeroDesk();
         long sec = w.Sec;
         var claim = desk.Issue(new HeroCommand { Kind = HeroCommandKind.JobClaim, IssuedSec = sec, Job = j2.Id, X = 6000, Y = 6000, Origin = CommandOrigin.Human });

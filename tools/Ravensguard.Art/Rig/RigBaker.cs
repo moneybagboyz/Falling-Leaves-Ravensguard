@@ -50,6 +50,14 @@ public sealed class RigBake
                                 Cleanup(ctx.Planes[p]);
                                 if (ctx.Planes[p].Data.Any(c => c != 0)) Sprites[new Key(layer.Id, v, st, act, fi, p)] = ctx.Planes[p];
                             }
+                            // P4-C: the limb-split copy (planes 3..17 = 3 + depth + 3 x group), only for layers that draw on a body bone
+                            for (int p = 0; p < 15; p++)
+                            {
+                                var sp = ctx.Split[p];
+                                if (!sp.Data.Any(c => c != 0)) continue;
+                                Cleanup(sp);
+                                if (sp.Data.Any(c => c != 0)) Sprites[new Key(layer.Id, v, st, act, fi, 3 + p)] = sp;
+                            }
                         }
                     }
             }
@@ -225,7 +233,8 @@ public sealed class RigBake
         {
             atlas = AtlasName + ".png", width, height, frame = new[] { 32, 64 }, anchorX = new { front = 16, back = 16, side = (int)Skeleton.SideBase },
             note = "west = side view mirrored. Draw planes 0..2, and within a plane the layers in 'order' (outline.* first). Rects are trimmed; place at (ox,oy) inside the 32x64 frame.",
-            views = ViewNames, stances = new[] { "blade", "pole" }, planes = 3, order = RigLayers.Order,
+            views = ViewNames, stances = new[] { "blade", "pole" }, planes = 3, order = RigLayers.Order, overlays = RigLayers.Overlays,
+            split = "planes 3..17: the same layer split by limb group, plane = 3 + depth + 3 x group (0 rest, 1 left forearm+hand, 2 right forearm+hand, 3 left shin+foot, 4 right shin+foot); draw them instead of 0..2 to leave a lost limb out",
             actions = RigPoses.Actions.ToDictionary(a => a, a => FrameCount(a)), todo = RigPoses.Todo,
             outfits = Outfits.ToDictionary(o => o.Id, o => new { stance = o.Stance.ToString().ToLowerInvariant(), layers = o.Layers }),
             sprites = tree,

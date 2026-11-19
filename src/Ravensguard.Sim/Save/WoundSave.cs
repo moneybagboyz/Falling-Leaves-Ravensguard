@@ -59,40 +59,41 @@ public sealed class WoundSave
     public static WoundSave Capture(WoundLedger l)
     {
         lock (l.Sync)
-            return new WoundSave
+            return new WoundSave { Seed = l.Seed, LastDay = l.LastDay, Books = [.. l.Books.Select(kv => Of(kv.Key, kv.Value))] };
+    }
+
+    /// <summary>One book's save form (also used by the "fight" section for a fight's own books).</summary>
+    public static WoundBookSave Of(ulong key, WoundBook b) => new()
+    {
+        Key = key, PlanId = b.PlanId, BloodUl = b.BloodUl, BloodMaxUl = b.BloodMaxUl, PainX100 = b.PainX100, Toughness = b.Toughness, State = (byte)b.State, Down = (byte)b.Down, LastSec = b.LastSec,
+        UnconsciousUntilSec = b.UnconsciousUntilSec, HeartAtSec = b.HeartAtSec, BreathStopSec = b.BreathStopSec, CalmSince = b.CalmSince, DeathSec = b.DeathSec, ConcussedUntilDay = b.ConcussedUntilDay,
+        Death = (byte)b.Death, DeathWound = b.DeathWound, Latch = b.Latch, NextId = b.NextId, RegenPm = b.RegenPm,
+        StrengthLoss = b.Permanent.StrengthLoss, DexterityLoss = b.Permanent.DexterityLoss, WitsLoss = b.Permanent.WitsLoss, SpeechCap = b.Permanent.SpeechCap, Malunions = b.Permanent.Malunions,
+        Concussions = b.Permanent.Concussions, AmputatedMask = b.Permanent.AmputatedMask, Conc0 = b.Permanent.Conc0, Conc1 = b.Permanent.Conc1, Conc2 = b.Permanent.Conc2,
+        Records = [.. b.Records.Select(r => WoundRecSave.Of(r))],
+    };
+
+    public static WoundBook ToBook(WoundBookSave s, ulong seed)
+    {
+        var b = new WoundBook(seed, s.Key, 0, s.Toughness, s.PlanId)
+        {
+            BloodUl = s.BloodUl, BloodMaxUl = s.BloodMaxUl, PainX100 = s.PainX100, State = (Consciousness)s.State, Down = (DownReason)s.Down, LastSec = s.LastSec, UnconsciousUntilSec = s.UnconsciousUntilSec,
+            HeartAtSec = s.HeartAtSec, BreathStopSec = s.BreathStopSec, CalmSince = s.CalmSince, DeathSec = s.DeathSec, ConcussedUntilDay = s.ConcussedUntilDay, Death = (DeathKind)s.Death,
+            DeathWound = s.DeathWound, Latch = s.Latch, NextId = s.NextId, RegenPm = s.RegenPm,
+            Permanent = new PermanentInfo
             {
-                Seed = l.Seed, LastDay = l.LastDay,
-                Books = [.. l.Books.Select(kv => { var b = kv.Value; return new WoundBookSave
-                {
-                    Key = kv.Key, PlanId = b.PlanId, BloodUl = b.BloodUl, BloodMaxUl = b.BloodMaxUl, PainX100 = b.PainX100, Toughness = b.Toughness, State = (byte)b.State, Down = (byte)b.Down, LastSec = b.LastSec,
-                    UnconsciousUntilSec = b.UnconsciousUntilSec, HeartAtSec = b.HeartAtSec, BreathStopSec = b.BreathStopSec, CalmSince = b.CalmSince, DeathSec = b.DeathSec, ConcussedUntilDay = b.ConcussedUntilDay,
-                    Death = (byte)b.Death, DeathWound = b.DeathWound, Latch = b.Latch, NextId = b.NextId, RegenPm = b.RegenPm,
-                    StrengthLoss = b.Permanent.StrengthLoss, DexterityLoss = b.Permanent.DexterityLoss, WitsLoss = b.Permanent.WitsLoss, SpeechCap = b.Permanent.SpeechCap, Malunions = b.Permanent.Malunions,
-                    Concussions = b.Permanent.Concussions, AmputatedMask = b.Permanent.AmputatedMask, Conc0 = b.Permanent.Conc0, Conc1 = b.Permanent.Conc1, Conc2 = b.Permanent.Conc2,
-                    Records = [.. b.Records.Select(r => WoundRecSave.Of(r))],
-                }; })],
-            };
+                StrengthLoss = s.StrengthLoss, DexterityLoss = s.DexterityLoss, WitsLoss = s.WitsLoss, SpeechCap = s.SpeechCap, Malunions = s.Malunions, Concussions = s.Concussions,
+                AmputatedMask = s.AmputatedMask, Conc0 = s.Conc0, Conc1 = s.Conc1, Conc2 = s.Conc2,
+            },
+        };
+        foreach (var r in s.Records) b.Records.Add(r.To());
+        return b;
     }
 
     public WoundLedger Restore()
     {
         var l = new WoundLedger(Seed) { LastDay = LastDay };
-        foreach (var s in Books)
-        {
-            var b = new WoundBook(Seed, s.Key, 0, s.Toughness, s.PlanId)
-            {
-                BloodUl = s.BloodUl, BloodMaxUl = s.BloodMaxUl, PainX100 = s.PainX100, State = (Consciousness)s.State, Down = (DownReason)s.Down, LastSec = s.LastSec, UnconsciousUntilSec = s.UnconsciousUntilSec,
-                HeartAtSec = s.HeartAtSec, BreathStopSec = s.BreathStopSec, CalmSince = s.CalmSince, DeathSec = s.DeathSec, ConcussedUntilDay = s.ConcussedUntilDay, Death = (DeathKind)s.Death,
-                DeathWound = s.DeathWound, Latch = s.Latch, NextId = s.NextId, RegenPm = s.RegenPm,
-                Permanent = new PermanentInfo
-                {
-                    StrengthLoss = s.StrengthLoss, DexterityLoss = s.DexterityLoss, WitsLoss = s.WitsLoss, SpeechCap = s.SpeechCap, Malunions = s.Malunions, Concussions = s.Concussions,
-                    AmputatedMask = s.AmputatedMask, Conc0 = s.Conc0, Conc1 = s.Conc1, Conc2 = s.Conc2,
-                },
-            };
-            foreach (var r in s.Records) b.Records.Add(r.To());
-            l.Books[s.Key] = b;
-        }
+        foreach (var s in Books) l.Books[s.Key] = ToBook(s, Seed);
         return l;
     }
 }

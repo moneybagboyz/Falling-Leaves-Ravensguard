@@ -18,6 +18,8 @@ public sealed class RigAtlas
     public readonly Dictionary<string, int> Frames = new();
     public readonly int[] AnchorX = { 16, 16, 15 }; // front, back, side
     ImageTexture _tex = null!;
+    /// <summary>The atlas texture (the fight view draws pieces itself, by region).</summary>
+    public Texture2D Atlas => _tex;
     readonly Dictionary<string, Piece[][]> _sprites = new();
     readonly Dictionary<Piece, AtlasTexture> _cache = new();
 

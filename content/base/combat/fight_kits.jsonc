@@ -1,0 +1,18 @@
+// Who fights with what (overview 3 FightSetup, melee 3): a road or site group's archetype (wolf, bear) or kit (bandit_light, guard) names a row.
+// Items are "shape:material"; throwables "shape:material:count". The weapon is picked per person from weapon + alt_weapons by the person's id;
+// bow_pm of a band carries a longbow with ammo_count arrows (bandits 12, melee M6).
+[
+  { "type": "fight_kit", "id": "bandit_light", "weapon": "axe:iron", "alt_weapons": ["club:oak", "spear:iron", "dagger:iron", "arming_sword:iron"],
+    "shield": "round_shield", "shield_pm": 300, "worn": ["shirt:linen", "tunic:wool", "jack:linen", "cap:leather"], "skill_min": 22, "skill_max": 45,
+    "stance": "aggressive", "courage": 50, "bow_pm": 250, "launcher": "longbow", "ammo": "broadhead_arrow", "ammo_count": 12, "throwables": ["javelin:iron:1"] },
+  { "type": "fight_kit", "id": "guard", "weapon": "arming_sword:iron", "alt_weapons": ["spear:iron"], "shield": "heater", "shield_pm": 800,
+    "worn": ["shirt:linen", "tunic:wool", "gambeson:linen", "mail_hauberk:iron", "helm:iron"], "skill_min": 35, "skill_max": 55, "stance": "defensive", "courage": 70 },
+  { "type": "fight_kit", "id": "soldier", "weapon": "spear:iron", "alt_weapons": ["arming_sword:iron", "axe:iron"], "shield": "round_shield", "shield_pm": 700,
+    "worn": ["shirt:linen", "gambeson:linen", "mail_hauberk:iron", "nasal_helm:iron"], "skill_min": 40, "skill_max": 60, "stance": "balanced", "courage": 70, "bow_pm": 150,
+    "launcher": "crossbow", "ammo": "quarrel", "ammo_count": 20 },
+  { "type": "fight_kit", "id": "traveller", "weapon": "dagger:iron", "alt_weapons": ["club:oak", "quarterstaff:ash"], "worn": ["shirt:linen", "tunic:wool", "cloak:wool"],
+    "skill_min": 5, "skill_max": 25, "stance": "flee_hurt", "courage": 40 },
+  { "type": "fight_kit", "id": "default", "weapon": "club:oak", "alt_weapons": ["dagger:iron"], "worn": ["shirt:linen", "tunic:wool"], "skill_min": 5, "skill_max": 25, "stance": "flee_hurt", "courage": 40 },
+  { "type": "fight_kit", "id": "wolf", "weapon": "natural_wolf:bone", "plan": "quadruped", "size_cm3": 40000, "strength": 900, "skill_min": 30, "skill_max": 45, "stance": "aggressive", "courage": 45 },
+  { "type": "fight_kit", "id": "bear", "weapon": "natural_cave_beast:bone", "plan": "cave_beast", "size_cm3": 250000, "strength": 2500, "toughness": 25, "skill_min": 40, "skill_max": 55, "stance": "aggressive", "courage": 90 }
+]

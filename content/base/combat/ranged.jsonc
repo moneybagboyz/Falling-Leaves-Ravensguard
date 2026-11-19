@@ -1,0 +1,14 @@
+// Bows, crossbows and their ammunition (melee-and-ranged 4.5). Momentum comes from the launcher, not the archer's arm:
+// M_milli = mass_g x v_mps x power_pm x 485 / 10,000, with drag v(d) = v0 x (1 - 1.2 d_m / 1000). A longbow bodkin leaves at 120.0 units,
+// a crossbow quarrel at 132.4. Quivers: 24 arrows or 20 bolts; NPC bandits carry 12 (fight setup).
+[
+  { "type": "launcher", "id": "longbow",  "name": "Longbow",  "shape": "longbow",  "power_pm": 1000, "min_strength": 1000, "draw_ticks": 18, "reload_ticks": 20, "release_ticks": 4,
+    "ammo_kind": "arrow", "range_effective_m": 150, "range_max_m": 280, "v0_mps": 55, "holds": false, "quiver_size": 24 },
+  { "type": "launcher", "id": "crossbow", "name": "Crossbow", "shape": "crossbow", "power_pm": 600,  "min_strength": 0,    "draw_ticks": 0,  "reload_ticks": 200, "release_ticks": 3,
+    "ammo_kind": "bolt",  "range_effective_m": 100, "range_max_m": 220, "v0_mps": 65, "holds": true, "quiver_size": 20 },
+
+  { "type": "ammo", "id": "bodkin_arrow",    "name": "Bodkin arrow",    "kind": "arrow", "attack": "point", "contact_area": 2,  "penetration_mm": 250, "mass_g": 45, "head_material": "steel" },
+  { "type": "ammo", "id": "broadhead_arrow", "name": "Broadhead arrow", "kind": "arrow", "attack": "edge",  "contact_area": 12, "penetration_mm": 120, "mass_g": 40, "head_material": "iron" },
+  { "type": "ammo", "id": "blunt_arrow",     "name": "Blunt arrow",     "kind": "arrow", "attack": "blunt", "contact_area": 20, "penetration_mm": 0,   "mass_g": 40, "head_material": "oak", "break_hit_pm": 100, "break_miss_pm": 50 },
+  { "type": "ammo", "id": "quarrel",         "name": "Quarrel",         "kind": "bolt",  "attack": "point", "contact_area": 3,  "penetration_mm": 200, "mass_g": 70, "head_material": "steel" }
+]

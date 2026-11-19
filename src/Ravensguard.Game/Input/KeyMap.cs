@@ -63,6 +63,9 @@ public sealed class KeyMap
         ("combatstance.move_down", "combatstance.dodge_down"),
         ("combatstance.move_left", "combatstance.dodge_left"),
         ("combatstance.move_right", "combatstance.dodge_right"),
+        // Phase 4: Shift+F6 / Shift+F7 are matched exactly beside F6 / F7
+        ("world.watch_toggle", "world.stance_next"), ("world.combat_log", "world.last_report"),
+        ("combatstance.watch_toggle", "combatstance.stance_next"), ("combatstance.combat_log", "combatstance.last_report"),
     };
 
     readonly Dictionary<string, List<Binding>> _bindings = new();

@@ -116,6 +116,22 @@ public sealed class SessionRecorder
     /// <summary>A hero action outside the desk (camp, autopilot directives, a talk choice, a journey begun or cancelled).</summary>
     public void Action(HeroAction a, long b = 0, long c = 0) => Commands.Append(ReplayCommand.Action(World.Tick, a, b, c));
 
+    /// <summary>The starting record of every fight begun in this window (by fight id), so a replay rebuilds the fight where it began (<see cref="LiveWorld.FightFactory"/>).</summary>
+    public Dictionary<long, byte[]> FightStarts { get; } = [];
+
+    /// <summary>A fight begins in the bubble (a road encounter, the yard): recorded with its starting state.</summary>
+    public void StartFight(Ravensguard.Sim.Combat.Melee2.FightWorld fight, int heroFighter)
+    {
+        FightStarts[(long)fight.FightId] = Ravensguard.Sim.Save.FightRecord.Capture(fight).ToBytes();
+        Commands.Append(ReplayCommand.FightStart(World.Tick, (long)fight.FightId, heroFighter));
+        World.AttachFight(fight, heroFighter);
+    }
+
+    public void EndFight() { Commands.Append(ReplayCommand.FightEnd(World.Tick)); World.EndFight(); }
+
+    /// <summary>Every combat input of the hero (move, face, block, attack, dodge, reload, throw, target, called shot) is recorded: a replay of a fight repeats it exactly.</summary>
+    public void FightInput(Ravensguard.Sim.Combat.Melee2.FightInput i) { Commands.Append(ReplayCommand.Fight(World.Tick, i)); World.FightInput(i); }
+
     public void Step()
     {
         World.Step();

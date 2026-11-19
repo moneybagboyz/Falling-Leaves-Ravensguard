@@ -6,7 +6,8 @@ namespace Ravensguard.Sim.Behaviour;
 /// </summary>
 public sealed class ActionPolicy
 {
-    public const int Kinds = 15;
+    /// <summary>Every <see cref="ActionKind"/> (15 in Phase 3; Phase 4 appended Treat and Fight: 17).</summary>
+    public const int Kinds = 17;
     /// <summary>Added to the score of the action kind (index = <see cref="ActionKind"/>).</summary>
     public readonly int[] BiasPm = new int[Kinds];
     /// <summary>Bit per <see cref="ActionKind"/>: set = the action is removed (a limit forbids it).</summary>

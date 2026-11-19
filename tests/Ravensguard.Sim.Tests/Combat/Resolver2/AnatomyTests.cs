@@ -262,7 +262,7 @@ public class AnatomyTests(V2Fixture f)
     public void Content_Phase4ItemsAndPlansLoadAndValidate()
     {
         var shapes = f.Db.All<WeaponShapeDef>().ToList();
-        Assert.Equal(18, shapes.Count(s => s.Family is not ("natural" or "practice")));
+        Assert.Equal(18, shapes.Count(s => s.Family is not ("natural" or "practice" or "unarmed")));
         Assert.Equal(42, f.Db.All<ArmourShapeDef>().Count());
         Assert.Equal(4, f.Db.All<ShieldShapeDef>().Count());
         Assert.Equal(new[] { "cave_beast", "draugr", "horse", "human", "quadruped" }, f.T.Plans.Select(p => p.Id).OrderBy(x => x));

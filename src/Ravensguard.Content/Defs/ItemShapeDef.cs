@@ -24,6 +24,8 @@ public sealed record AttackDef
     public double Velocity { get; init; } = 1.0;
     /// <summary>v2: the share of a shield's cover that still applies against this attack, permille (a flail swings round a shield: 500).</summary>
     public int ShieldCoverPm { get; init; } = 1000;
+    /// <summary>P4-C: the share of a parry's success chance that still applies against this attack, permille (a mace's weight drives through a blade's parry: 600).</summary>
+    public int ParryPm { get; init; } = 1000;
 }
 
 /// <summary>

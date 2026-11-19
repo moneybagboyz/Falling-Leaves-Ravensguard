@@ -114,10 +114,20 @@ public class ResolverV2GoldenTests(V2Fixture f)
         Assert.Equal(BoneGrade.Cracked, Bone(r).Bone);
     }
 
+    /// <summary>The mace of resolver-v2 table 4.4 (bash velocity 1.0, skill 50): the content mace was recalibrated to 1.5 in P4-C, the table's worked case keeps its inputs.</summary>
+    private StrikeV2 TableMace(string part)
+    {
+        var def = f.Db.Get<WeaponShapeDef>("mace");
+        var table = def with { Id = "mace_table_4_4", Attacks = [def.Attacks[0] with { Velocity = 1.0 }] };
+        var s = StrikeV2.Create(f.T.Synthetic(table, "steel"), 0, f.Human, f.P(part), 50);
+        s.Worn = []; s.WornCount = 0;
+        return s;
+    }
+
     [Fact]
     public void RS6_MaceBash_BareThigh_CracksBone()
     {
-        var s = f.S("mace", "bash", "upper_leg_l");
+        var s = TableMace("upper_leg_l");
         Assert.InRange(f.R.InitialMomentumMilli(s), 126_600, 127_600);
         var r = f.ImpactCovered(s);
         Expect(r, s, ("skin", Crushed, 118_400), ("fat", Crushed, 103_500), ("muscle", Crushed, 86_500), ("bone_tissue", Crushed, -1));
@@ -128,7 +138,7 @@ public class ResolverV2GoldenTests(V2Fixture f)
     [Fact]
     public void RS7_MaceBash_Gambeson_AbsorbsToABruise()
     {
-        var s = f.S("mace", "bash", "upper_leg_l", worn: [("gambeson", "linen")]);
+        var s = TableMace("upper_leg_l"); s.Worn = [WornV2.Of(f.T.Armour("gambeson", "linen"))]; s.WornCount = 1;
         var r = f.ImpactCovered(s);
         Expect(r, s, ("gambeson", Crushed, 66_400), ("skin", Crushed, 61_800), ("fat", Crushed, 54_100), ("muscle", Crushed, 45_200), ("bone_tissue", Stopped, -1));
         Assert.Equal(MuscleGrade.Torn, Muscle(r).Muscle);
@@ -142,7 +152,7 @@ public class ResolverV2GoldenTests(V2Fixture f)
         Assert.InRange(f.R.InitialMomentumMilli(s), 159_800, 160_800);
         var r = f.ImpactCovered(s);
         Expect(r, s, ("gambeson", Cut, 152_300), ("skin", Cut, 144_600), ("fat", Cut, 137_400), ("muscle", Cut, 130_500), ("bone_tissue", Cut, 84_100));
-        Assert.Equal(f.P("ribs_l") == Bone(r).Part || f.P("ribs_r") == Bone(r).Part, true);   // the bone wound is on a rib side
+        Assert.True(f.P("ribs_l") == Bone(r).Part || f.P("ribs_r") == Bone(r).Part);   // the bone wound is on a rib side
     }
 
     [Fact]

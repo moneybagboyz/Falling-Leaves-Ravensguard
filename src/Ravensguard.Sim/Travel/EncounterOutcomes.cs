@@ -100,17 +100,23 @@ public static class EncounterOutcomes
             case EncounterChoice.Detour: return new(choice, "detour", 0, EntityId.None, EntityId.None, DetourDelaySec, "ENC_DETOURED");
             case EncounterChoice.Wait: return new(choice, "waited", 0, EntityId.None, EntityId.None, WaitDelaySec, "ENC_WAITED");
             case EncounterChoice.Fight:
-            {
-                // combat arrives in Phase 4: the party is robbed, or runs; the stronger the party the likelier it runs clear
-                long hour = ev.Sec / TimeConst.SecondsPerHour; uint slot = (uint)(ev.Sec % TimeConst.SecondsPerHour / TimeConst.SecondsPerMinute);
-                int roll = DetRng.Range(st.Seed, hour, st.HeroId.Value, RngStreams.EncounterOutcome, slot, 0, 1000);
-                if (roll < Math.Clamp(partyStrengthPm, 100, 900))
-                    return new(choice, "fled", 0, EntityId.None, EntityId.None, FleeDelaySec, "ENC_FIGHT_STUB_FLED");
-                long loot = Math.Min(Math.Max(0, coinMites), Math.Max(10, coinMites / 4));
-                return new(choice, "robbed", loot, lead, lead, FleeDelaySec, "ENC_FIGHT_STUB_ROBBED");
-            }
+                // Phase 4 (P4-C): a real fight. The game builds the FightSetup from the cast (Melee2.FightSetup.Encounter), fights it live and settles it with AfterFight.
+                return new(choice, "fight", 0, EntityId.None, lead, 0, "ENC_FIGHT_BEGIN");
             default: return new(EncounterChoice.GoOn, "went_on", 0, EntityId.None, EntityId.None, 0, "");
         }
+    }
+
+    /// <summary>
+    /// How a road fight ended (P4-C, until the defeat table of morale-capture-succession): the hero's side held the field ("won", a quarter hour to catch breath); the hero ran ("fled");
+    /// or the hero is down or yielded and is robbed of a quarter of the purse (10 mites at least, never more than there is) by the encounter's lead ("robbed").
+    /// </summary>
+    public static EncounterOutcome AfterFight(EncounterEvent ev, bool heroSideWon, bool heroFled, long coinMites, Func<EntityId, bool> isRecord)
+    {
+        var lead = Lead(ev, isRecord);
+        if (heroSideWon) return new(EncounterChoice.Fight, "won", 0, EntityId.None, lead, 15 * 60, "ENC_FIGHT_WON");
+        if (heroFled) return new(EncounterChoice.Fight, "fled", 0, EntityId.None, EntityId.None, FleeDelaySec, "ENC_FIGHT_FLED");
+        long loot = Math.Min(Math.Max(0, coinMites), Math.Max(10, coinMites / 4));
+        return new(EncounterChoice.Fight, "robbed", loot, lead, lead, FleeDelaySec, "ENC_FIGHT_LOST");
     }
 
     /// <summary>Applies the delay of an outcome to the journey: the hero stands (or loses the time on a detour) for that long, then walks on. Resumes the journey.</summary>

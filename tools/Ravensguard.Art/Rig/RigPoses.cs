@@ -5,9 +5,10 @@ namespace Ravensguard.Art.Rig;
 public static class RigPoses
 {
     /// <summary>Actions named in the plan (§2.7) that are not posed yet. They are listed in the index so the game can fall back.</summary>
-    public static readonly string[] Todo = { "parry", "stagger", "crawl", "carry", "work" };
+    public static readonly string[] Todo = { "carry", "work" };
 
-    public static readonly string[] Actions = { "idle", "walk", "jog", "windup", "strike", "recover", "block", "hitreact", "fall", "ride", "lie" };
+    /// <summary>Phase 4 (P4-C) added parry, stagger and crawl (the combat set of plan 2.7: idle, wind-up, strike, recover, block, parry, hit-react, stagger, fall, crawl).</summary>
+    public static readonly string[] Actions = { "idle", "walk", "jog", "windup", "strike", "recover", "block", "hitreact", "fall", "ride", "lie", "parry", "stagger", "crawl" };
 
     static Limb L(float swing = 0, float abd = 0, float flex = 0, float end = 0) => new(swing, abd, flex, end);
 
@@ -87,6 +88,19 @@ public static class RigPoses
                     // the frame is 32 px wide, so a body lying flat cannot fit: the last frame is a collapse onto the knees
                     new Pose { TLean = 36, HPitch = 24, UpperZ = -1, LegL = L(4, 6, 104), LegR = L(-2, 6, 100), ArmL = L(40, 14, 30), ArmR = L(38, 14, 30), WSwing = 25, WAbd = 10 },
                 };
+            case "parry":
+                // the blade thrown across the line of the blow, high and forward: a short, sharp beat
+                return new[] { new Pose { Fwd = -2, Yaw = -6, TYaw = 14, TLean = 6, HPitch = 4, LegL = L(22, 3, 24), LegR = L(-14, 3, 20), ArmL = L(36, 8, 50), ArmR = L(62, 22, 64), WSwing = 118, WAbd = 42, UpperZ = -1 } };
+            case "stagger":
+                // knocked off balance: weight thrown back, feet scrambling, arms flung out
+                return new[] { new Pose { Fwd = -3, Yaw = 10, TLean = -20, HPitch = -14, Roll = 4, LegL = L(-16, 8, 12), LegR = L(20, 8, 26), ArmL = L(30, 34, 20), ArmR = L(18, 30, 34), WSwing = 40, WAbd = 28 } };
+            case "crawl":
+                // down but conscious: on the knees, leaning forward on one hand, dragging along (two frames)
+                return new[]
+                {
+                    new Pose { Fwd = -8, TLean = 30, HPitch = -20, UpperZ = -1, LegL = L(-30, 6, 95), LegR = L(-20, 6, 105), ArmL = L(62, 8, 6), ArmR = L(40, 10, 24), WSwing = 30, WAbd = 20 },
+                    new Pose { Fwd = -8, TLean = 34, HPitch = -22, UpperZ = -1, LegL = L(-20, 6, 105), LegR = L(-30, 6, 95), ArmL = L(44, 10, 24), ArmR = L(60, 8, 8), WSwing = 34, WAbd = 20 },
+                };
             case "lie":
                 // lying on the back, seen from straight above (a sleeper on a bed): head up the sprite, feet down, arms along the sides, knees a little bent
                 return new[] { new Pose { Pitch = 90, Tilt = 1f, ArmL = L(2, 10, 8), ArmR = L(2, 10, 8), LegL = L(0, 3, 4), LegR = L(0, 3, 4), WSwing = 0, WAbd = 0 } };
@@ -118,6 +132,9 @@ public static class RigPoses
             case "block": p.ArmR = L(60, -8, 70); p.WSwing = 8; p.WAbd = 82; break;
             case "hitreact": p.WSwing = 150; p.WAbd = 30; break;
             case "fall": p.WSwing = i == 0 ? 150 : i == 1 ? 115 : 92; p.WAbd = i * 30; break;
+            case "parry": p.ArmR = L(56, -6, 62); p.WSwing = 24; p.WAbd = 76; break;
+            case "stagger": p.WSwing = 140; p.WAbd = 34; break;
+            case "crawl": p.WSwing = 96; p.WAbd = 40; break;
         }
         return p;
     }

@@ -11,6 +11,14 @@ public sealed class Ctx
     public readonly Skeleton S;
     public readonly View V;
     public readonly PixelBuffer[] Planes = { new(32, 64), new(32, 64), new(32, 64) };
+    /// <summary>P4-C: the same pixels split by limb group (0 the rest; 1 left forearm and hand, 2 right forearm and hand, 3 left shin and foot, 4 right shin and foot) per depth
+    /// plane: index = plane + 3 x group. The game draws these instead of <see cref="Planes"/> to leave a lost limb out (a stump overlay covers the end).</summary>
+    public readonly PixelBuffer[] Split = Enumerable.Range(0, 15).Select(_ => new PixelBuffer(32, 64)).ToArray();
+
+    public static int GroupOf(Bone b) => b switch
+    {
+        Bone.LArmL or Bone.HandL => 1, Bone.LArmR or Bone.HandR => 2, Bone.LLegL or Bone.FootL => 3, Bone.LLegR or Bone.FootR => 4, _ => 0,
+    };
     readonly List<(int Plane, int Order, Bone Bone, Box Box, Shader Sh, BoneFrame? Frame)> _q = new();
     int _seq;
 
@@ -56,7 +64,10 @@ public sealed class Ctx
     public void Flush()
     {
         foreach (var q in _q.OrderBy(q => q.Plane).ThenBy(q => q.Order))
+        {
             Fill(Planes[q.Plane], q.Frame ?? S.F[q.Bone], q.Box, q.Sh);
+            Fill(Split[q.Plane + 3 * (q.Frame == null ? GroupOf(q.Bone) : 0)], q.Frame ?? S.F[q.Bone], q.Box, q.Sh);
+        }
         _q.Clear();
     }
 
@@ -121,7 +132,16 @@ sealed class StanceLayer : RigLayer
 public static class RigLayers
 {
     public static readonly string[] Order =
-        { "body", "hose", "linen", "tunic", "gambeson", "mail", "plate", "surcoat", "cloak", "hood", "helm", "shield", "sword", "spear" };
+        { "body", "hose", "linen", "tunic", "gambeson", "mail", "plate", "surcoat", "cloak", "hood", "helm",
+          // P4-C wound overlays (plan 2.7): drawn over the clothes, under the shield and weapon; the game adds the ones a fighter's wound book calls for
+          "blood_head", "blood_torso", "blood_arm_l", "blood_arm_r", "blood_leg_l", "blood_leg_r",
+          "bandage_head", "bandage_torso", "bandage_arm_l", "bandage_arm_r", "bandage_leg_l", "bandage_leg_r",
+          "splint_arm_l", "splint_arm_r", "splint_leg_l", "splint_leg_r", "stump_arm_l", "stump_arm_r", "stump_leg_l", "stump_leg_r",
+          "shield", "sword", "spear" };
+
+    /// <summary>The wound overlay layers (not part of any outfit; the fight view stacks them per fighter).</summary>
+    public static readonly string[] Overlays = Order.Where(o => o.StartsWith("blood_", StringComparison.Ordinal) || o.StartsWith("bandage_", StringComparison.Ordinal)
+        || o.StartsWith("splint_", StringComparison.Ordinal) || o.StartsWith("stump_", StringComparison.Ordinal)).ToArray();
 
     static uint[] Rp(Palette pal, params string[] n) => n.Select(x => pal.P[x]).ToArray();
 
@@ -325,6 +345,34 @@ public static class RigLayers
             c.P(Bone.Head, new(-7, -12, 7, -11), (in Cell k) => P["m1"]);
             if (c.V != View.Back) c.P(Bone.Head, new(-1, -11, 1, -5), (in Cell k) => P["m3"], new Box(4, -11, 6, -6));
         }));
+
+        // ---- wound overlays (P4-C, plan 2.7): blood, bandage, splint and the stump of a lost limb, one layer per body region
+        uint b1 = P["r1"], b2 = P["r2"], ln = P["ln3"], lnD = P["ln1"], wd = P["w3"], wdD = P["w2"];
+        Shader Blood = (in Cell k) => ((k.Sx * 7 + k.Sy * 3) % 5) switch { 0 => b2, 4 => 0u, _ => b1 };
+        Shader Wrap = (in Cell k) => k.J % 2 == 0 ? ln : lnD;
+        void Region(string id, Action<Ctx> f) => l.Add(new PieceLayer(id, f));
+        Region("blood_head", c => c.P(Bone.Head, new(-4, -14, 2, -10), Blood));
+        Region("blood_torso", c => { c.P(Bone.Torso, new(-4, -12, 3, -5), Blood); c.P(Bone.Pelvis, new(-1, 0, 2, 3), (in Cell k) => k.I == 1 ? b1 : 0u); });
+        Region("blood_arm_l", c => { c.P(Bone.LArmL, new(-1.5f, 1, 1.5f, 6), Blood); c.P(Bone.HandL, new(-1, 0, 1, 2), (in Cell k) => b1); });
+        Region("blood_arm_r", c => { c.P(Bone.LArmR, new(-1.5f, 1, 1.5f, 6), Blood); c.P(Bone.HandR, new(-1, 0, 1, 2), (in Cell k) => b1); });
+        Region("blood_leg_l", c => { c.P(Bone.ULegL, new(-2, 2, 2, 8), Blood); c.P(Bone.LLegL, new(-1, 0, 1, 3), (in Cell k) => b1); });
+        Region("blood_leg_r", c => { c.P(Bone.ULegR, new(-2, 2, 2, 8), Blood); c.P(Bone.LLegR, new(-1, 0, 1, 3), (in Cell k) => b1); });
+        Region("bandage_head", c => c.P(Bone.Head, new(-6, -13, 6, -10), (in Cell k) => k.J == 1 && k.I == 3 ? b2 : Wrap(k)));
+        Region("bandage_torso", c => c.P(Bone.Torso, new(-6.5f, -11, 6.5f, -6), (in Cell k) => k.J == 2 ? 0u : (k.J == 1 && k.I == 4 ? b2 : Wrap(k))));
+        Region("bandage_arm_l", c => c.P(Bone.LArmL, new(-2, 1, 2, 6), (in Cell k) => k.J == 2 && k.I == 1 ? b2 : Wrap(k)));
+        Region("bandage_arm_r", c => c.P(Bone.LArmR, new(-2, 1, 2, 6), (in Cell k) => k.J == 2 && k.I == 1 ? b2 : Wrap(k)));
+        Region("bandage_leg_l", c => c.P(Bone.LLegL, new(-2.5f, 0, 2.5f, 5), (in Cell k) => k.J == 2 && k.I == 2 ? b2 : Wrap(k)));
+        Region("bandage_leg_r", c => c.P(Bone.LLegR, new(-2.5f, 0, 2.5f, 5), (in Cell k) => k.J == 2 && k.I == 2 ? b2 : Wrap(k)));
+        Shader Splint = (in Cell k) => k.J % 3 == 1 ? ln : (k.I == 0 || k.I == k.W - 1 ? (k.I == 0 ? wdD : wd) : 0u);
+        Region("splint_arm_l", c => c.P(Bone.LArmL, new(-2.5f, 0, 2.5f, 7), Splint));
+        Region("splint_arm_r", c => c.P(Bone.LArmR, new(-2.5f, 0, 2.5f, 7), Splint));
+        Region("splint_leg_l", c => c.P(Bone.LLegL, new(-3, 0, 3, 8), Splint));
+        Region("splint_leg_r", c => c.P(Bone.LLegR, new(-3, 0, 3, 8), Splint));
+        Shader Stump = (in Cell k) => k.J >= k.H - 1 ? b1 : k.J >= k.H - 2 ? b2 : Wrap(k);
+        Region("stump_arm_l", c => c.P(Bone.UArmL, new(-2, 5, 2, 9), Stump));
+        Region("stump_arm_r", c => c.P(Bone.UArmR, new(-2, 5, 2, 9), Stump));
+        Region("stump_leg_l", c => c.P(Bone.ULegL, new(-3, 6, 3, 10), Stump));
+        Region("stump_leg_r", c => c.P(Bone.ULegR, new(-3, 6, 3, 10), Stump));
 
         // ---- round shield on the left forearm
         var shr = R["red"];

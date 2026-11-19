@@ -147,8 +147,12 @@ public sealed class CombatTablesV2
 
     public CombatTablesV2(ContentDatabase db) : this(db, MaterialResolver.ResolveAll(db)) { }
 
+    private readonly IReadOnlyDictionary<string, ResolvedMaterial> _resolved;
+    private readonly Dictionary<(string, string, Quality), WeaponV2> _synthetic = [];
+
     public CombatTablesV2(ContentDatabase db, IReadOnlyDictionary<string, ResolvedMaterial> resolved)
     {
+        _resolved = resolved;
         Cal = CalibrationV2.From(db.All<CombatCalibrationDef>().OrderBy(c => c.Id, StringComparer.Ordinal).FirstOrDefault());
         var mats = new List<MaterialV2>();
         foreach (var m in resolved.Values.OrderBy(m => m.Id, StringComparer.Ordinal))
@@ -255,6 +259,22 @@ public sealed class CombatTablesV2
     public BodyPlanV2 Plan(string id) => _plans.TryGetValue(id, out var p) ? p : throw new KeyNotFoundException($"unknown body plan '{id}'");
     public WeaponV2 Weapon(string shape, string material, Quality q = Quality.Standard) =>
         _weapons.TryGetValue((shape, material, q), out var w) ? w : throw new KeyNotFoundException($"no weapon stats for '{shape}' in '{material}'");
+    /// <summary>
+    /// A weapon built on demand from a shape that is not in the content's weapon list (an arrow head, an improvised stool, a thrown rock: melee-and-ranged 4.5, 4.6), in any material,
+    /// cached by (shape id, material, quality). The same rules as the table's own entries.
+    /// </summary>
+    public WeaponV2 Synthetic(WeaponShapeDef shape, string material, Quality q = Quality.Standard)
+    {
+        lock (_synthetic)
+        {
+            if (_synthetic.TryGetValue((shape.Id, material, q), out var w)) return w;
+            if (!_resolved.TryGetValue(material, out var m)) throw new KeyNotFoundException($"unknown material '{material}'");
+            w = BuildWeapon(shape, m, q, _resolved);
+            _synthetic[(shape.Id, material, q)] = w;
+            return w;
+        }
+    }
+
     public ArmourV2 Armour(string shape, string material) =>
         _armour.TryGetValue((shape, material), out var a) ? a : throw new KeyNotFoundException($"no armour stats for '{shape}' in '{material}'");
     public ShieldV2 Shield(string id) => _shields[id];

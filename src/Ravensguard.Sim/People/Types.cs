@@ -29,6 +29,8 @@ public enum Skill : byte
     Trading, Leadership, Melee, Archery, Literacy, Fishing, Forestry, Mining, Cooking, Housekeeping, Law, Riding, Theology,
     // Phase 3 (append only, plan skill list): used by crafting, clothing, trade and travel
     Tailoring, Surgery, Speech, Athletics, Tactics, Stealth, Lockpicking,
+    // Phase 4 (append only, melee-and-ranged M1 / overview Q4): the weapon families; Melee stays for bare hands. A save migration (v6) copies Melee x0.8 into each.
+    Blades, Axes, Hafted, Polearms, Shields, Throwing,
 }
 
 /// <summary>A skill slot of a Person: which skill and its 0..100 level.</summary>

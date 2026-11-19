@@ -1,0 +1,18 @@
+// Improvised weapons (melee-and-ranged 4.6): anything with a shape. The attack is synthesised: blunt unless it has an edge or a point,
+// contact area min(60, volume^(2/3) x 2) cm2, velocity 0.7, wind-up 0.45 + 0.1 x kg s, hit chance -10 points (unwieldy). Fragile things
+// lose condition by the momentum of each blow they deliver or take (fragile_loss_per_unit_pm in combat/calibration.jsonc): a stool breaks
+// after about three; a bottle after one, leaving shards.
+[
+  { "type": "improvised", "id": "stool",      "name": "Stool",       "volume_cm3": 3200, "material": "oak",  "fragile": true },
+  { "type": "improvised", "id": "chair",      "name": "Chair",       "volume_cm3": 5200, "material": "oak",  "fragile": true },
+  { "type": "improvised", "id": "plank",      "name": "Plank",       "volume_cm3": 2600, "material": "ash",  "fragile": true },
+  { "type": "improvised", "id": "fence_post", "name": "Fence post",  "volume_cm3": 4200, "material": "oak" },
+  { "type": "improvised", "id": "torch",      "name": "Torch",       "volume_cm3": 900,  "material": "ash",  "ignites": true },
+  { "type": "improvised", "id": "pitchfork",  "name": "Pitchfork",   "volume_cm3": 1400, "material": "ash",  "attack": "point", "contact_area": 5, "penetration_mm": 200 },
+  { "type": "improvised", "id": "frying_pan", "name": "Frying pan",  "volume_cm3": 180,  "material": "iron" },
+  { "type": "improvised", "id": "bottle",     "name": "Bottle",      "volume_cm3": 450,  "material": "fired_brick", "breaks_after": 1, "leaves": "shards" },
+  { "type": "improvised", "id": "rock",       "name": "Rock",        "volume_cm3": 190,  "material": "granite" },
+  { "type": "improvised", "id": "cleaver",    "name": "Cleaver",     "volume_cm3": 90,   "material": "iron", "attack": "edge", "contact_area": 20, "penetration_mm": 40 },
+  { "type": "improvised", "id": "hammer",     "name": "Hammer",      "volume_cm3": 120,  "material": "iron" },
+  { "type": "improvised", "id": "spade",      "name": "Spade",       "volume_cm3": 1600, "material": "ash",  "attack": "edge", "contact_area": 45, "penetration_mm": 20 }
+]

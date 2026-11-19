@@ -83,6 +83,11 @@ public static class InputDefs
         A(W, "quickload", K(Key.F9));
         A(W, "report_bug", K(Key.F8));
         A(W, "hint_more", K(Key.Enter)); // onboarding spec 3.1: opens the Codex page of the hint on screen (the router's own Enter, menu.accept, is a different context)
+        // Phase 4 (overview 6A): watch mode and the combat log; F6, F7 and their Shift forms were free in World
+        A(W, "watch_toggle", K(Key.F6));
+        A(W, "stance_next", K(Key.F6, Mods.Shift));
+        A(W, "combat_log", K(Key.F7));
+        A(W, "last_report", K(Key.F7, Mods.Shift));
 
         // Mounted (the hero rides or drives; stacks on World): O toggles the walk, Shift is the gallop, E dismounts
         A(R, "walk_toggle", K(Key.O));
@@ -109,6 +114,15 @@ public static class InputDefs
         A(C, "formation_3", K(Key.F3));
         A(C, "formation_4", K(Key.F4));
         A(C, "combat_stance", K(Key.X));
+        A(C, "throw", K(Key.G));
+        A(C, "sprint", K(Key.Shift));
+        A(C, "reload", K(Key.Key5));      // overview 6A: reload or nock (] is the cart reload)
+        A(C, "attack_next", K(Key.Key6)); // cycle the attack type (Auto, then the weapon's attacks)
+        A(C, "watch_toggle", K(Key.F6));
+        A(C, "stance_next", K(Key.F6, Mods.Shift));
+        A(C, "combat_log", K(Key.F7));
+        A(C, "last_report", K(Key.F7, Mods.Shift));
+        A(C, "back", K(Key.Escape));
 
         // Called shot (paused)
         A(S, "part_prev", K(Key.Up));

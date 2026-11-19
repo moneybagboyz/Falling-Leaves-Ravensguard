@@ -99,6 +99,8 @@ public struct StrikeV2
     public int SituationPoints;
     /// <summary>Mounted charge, missile launch, fall (their files), milli-units.</summary>
     public long ExtraMomentumMilli;
+    /// <summary>A missile (arrow, bolt, thrown object: melee-and-ranged 4.5, 4.6): the blow's momentum is <see cref="ExtraMomentumMilli"/> alone, from the launcher or the throw, not the arm.</summary>
+    public bool Missile;
     /// <summary>True when the blow is shown near the camera. The resolver never reads it (test RS-23).</summary>
     public bool Near;
     public BlockInput Block;

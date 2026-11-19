@@ -25,6 +25,7 @@ public sealed class ResolverV2(CombatTablesV2 tables)
     /// <summary><c>M = M0 x skill x style (x2 prone) x MomentumPm + extras</c>, clamped to [0, 2,000,000] milli (resolver-v2 4.1 step 1).</summary>
     public long InitialMomentumMilli(in StrikeV2 s)
     {
+        if (s.Missile) return s.ExtraMomentumMilli < 0 ? 0 : s.ExtraMomentumMilli > C.MaxMomentumMilli ? C.MaxMomentumMilli : s.ExtraMomentumMilli;
         var atk = s.Weapon.Attacks[s.Attack];
         long m = LayerTest.BaseMomentumMilli(s.SpeciesSizeCm3, s.Strength, atk.VelPm, s.Weapon.MassMg, s.SizeCm3);
         int skill = s.Skill < 0 ? 0 : s.Skill > 100 ? 100 : s.Skill;

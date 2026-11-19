@@ -15,18 +15,21 @@
     "attacks": [
       { "id": "slash",  "name": "Slash",  "verb": "slashes", "type": "edge",  "contact_area": 30, "penetration_mm": 70, "velocity": 1.25 },
       { "id": "stab",   "name": "Stab",   "verb": "stabs",   "type": "point", "contact_area": 15, "penetration_mm": 450, "velocity": 1.25 },
-      { "id": "pommel", "name": "Pommel strike", "verb": "bashes", "type": "blunt", "contact_area": 25, "penetration_mm": 0, "velocity": 1.0 } ] },
+      { "id": "flat",   "name": "Flat of the blade", "verb": "slaps", "type": "blunt", "contact_area": 35, "penetration_mm": 0, "velocity": 0.7 },
+      { "id": "pommel", "name": "Pommel strike", "verb": "bashes", "type": "blunt", "contact_area": 25, "penetration_mm": 0, "velocity": 0.8 } ] },
   { "type": "weapon_shape", "id": "longsword", "name": "Longsword", "family": "blade", "reach_mm": 1500, "strike_ticks": 2,
     "head_volume_cm3": 220, "haft_volume_cm3": 80, "haft_material": "ash", "two_handed": true, "wind_up_s": 0.50, "recover_s": 0.45,
     "attacks": [
       { "id": "slash",  "name": "Slash",  "verb": "slashes", "type": "edge",  "contact_area": 30, "penetration_mm": 85, "velocity": 1.25 },
       { "id": "stab",   "name": "Stab",   "verb": "stabs",   "type": "point", "contact_area": 15, "penetration_mm": 550, "velocity": 1.25 },
-      { "id": "pommel", "name": "Pommel strike", "verb": "bashes", "type": "blunt", "contact_area": 25, "penetration_mm": 0, "velocity": 1.0 } ] },
+      { "id": "flat",   "name": "Flat of the blade", "verb": "slaps", "type": "blunt", "contact_area": 35, "penetration_mm": 0, "velocity": 0.7 },
+      { "id": "pommel", "name": "Pommel strike", "verb": "bashes", "type": "blunt", "contact_area": 25, "penetration_mm": 0, "velocity": 0.8 } ] },
   { "type": "weapon_shape", "id": "falchion", "name": "Falchion", "family": "blade", "reach_mm": 1200, "strike_ticks": 2,
     "head_volume_cm3": 200, "haft_volume_cm3": 60, "haft_material": "ash", "wind_up_s": 0.50, "recover_s": 0.45,
     "attacks": [
       { "id": "chop",   "name": "Chop",   "verb": "chops",   "type": "edge",  "contact_area": 35, "penetration_mm": 80, "velocity": 1.3 },
-      { "id": "pommel", "name": "Pommel strike", "verb": "bashes", "type": "blunt", "contact_area": 25, "penetration_mm": 0, "velocity": 1.0 } ] },
+      { "id": "flat",   "name": "Flat of the blade", "verb": "slaps", "type": "blunt", "contact_area": 35, "penetration_mm": 0, "velocity": 0.7 },
+      { "id": "pommel", "name": "Pommel strike", "verb": "bashes", "type": "blunt", "contact_area": 25, "penetration_mm": 0, "velocity": 0.8 } ] },
   { "type": "weapon_shape", "id": "hand_axe", "name": "Hand axe", "family": "axe", "reach_mm": 1000, "strike_ticks": 2,
     "head_volume_cm3": 80, "haft_volume_cm3": 500, "haft_material": "ash", "wind_up_s": 0.45, "recover_s": 0.45,
     "attacks": [
@@ -43,8 +46,8 @@
       { "id": "hack", "name": "Hack", "verb": "hacks", "type": "edge", "contact_area": 40, "penetration_mm": 160, "velocity": 1.2 },
       { "id": "haft", "name": "Haft strike", "verb": "bashes", "type": "blunt", "contact_area": 30, "penetration_mm": 0, "velocity": 0.8 } ] },
   { "type": "weapon_shape", "id": "mace", "name": "Mace", "family": "hafted", "reach_mm": 1100, "strike_ticks": 3,
-    "head_volume_cm3": 250, "haft_volume_cm3": 300, "haft_material": "ash", "wind_up_s": 0.70, "recover_s": 0.70,
-    "attacks": [ { "id": "bash", "name": "Bash", "verb": "bashes", "type": "blunt", "contact_area": 20, "penetration_mm": 0, "velocity": 1.0 } ] },
+    "head_volume_cm3": 250, "haft_volume_cm3": 300, "haft_material": "ash", "wind_up_s": 0.65, "recover_s": 0.65,
+    "attacks": [ { "id": "bash", "name": "Bash", "verb": "bashes", "type": "blunt", "contact_area": 20, "penetration_mm": 0, "velocity": 1.5, "parry_pm": 600 } ] },
   { "type": "weapon_shape", "id": "flail", "name": "Flail", "family": "hafted", "reach_mm": 1400, "strike_ticks": 3,
     "head_volume_cm3": 200, "haft_volume_cm3": 600, "haft_material": "ash", "wind_up_s": 0.65, "recover_s": 0.70,
     "attacks": [ { "id": "swing", "name": "Swing", "verb": "flails", "type": "blunt", "contact_area": 18, "penetration_mm": 0, "velocity": 1.2, "shield_cover_pm": 500 } ] },
@@ -66,7 +69,7 @@
       { "id": "strike", "name": "Strike", "verb": "strikes", "type": "blunt", "contact_area": 30, "penetration_mm": 0, "velocity": 1.0 },
       { "id": "jab",    "name": "Jab",    "verb": "jabs",    "type": "blunt", "contact_area": 12, "penetration_mm": 0, "velocity": 1.0 } ] },
   { "type": "weapon_shape", "id": "spear", "name": "Spear", "family": "polearm", "reach_mm": 2400, "strike_ticks": 2,
-    "head_volume_cm3": 60, "haft_volume_cm3": 900, "haft_material": "ash", "two_handed": true, "wind_up_s": 0.40, "recover_s": 0.50,
+    "head_volume_cm3": 60, "haft_volume_cm3": 900, "haft_material": "ash", "two_handed": true, "wind_up_s": 0.50, "recover_s": 0.60,
     "attacks": [
       { "id": "thrust", "name": "Thrust", "verb": "thrusts", "type": "point", "contact_area": 12, "penetration_mm": 400, "velocity": 1.3 },
       { "id": "butt",   "name": "Butt strike", "verb": "bashes", "type": "blunt", "contact_area": 15, "penetration_mm": 0, "velocity": 0.8 } ] },
@@ -85,6 +88,13 @@
   { "type": "weapon_shape", "id": "crossbow", "name": "Crossbow", "family": "ranged", "reach_mm": 900, "strike_ticks": 2,
     "head_volume_cm3": 150, "haft_volume_cm3": 2700, "haft_material": "oak", "two_handed": true, "wind_up_s": 0.60, "recover_s": 0.60,
     "attacks": [ { "id": "bash", "name": "Bash", "verb": "bashes", "type": "blunt", "contact_area": 30, "penetration_mm": 0, "velocity": 0.8 } ] },
+
+  // Bare hands (melee-and-ranged 4.6; the Melee skill): a fist and a kick of the body's own bone, for brawls, the subdue stance with nothing blunt, and a disarmed fighter.
+  { "type": "weapon_shape", "id": "fist", "name": "Bare hands", "family": "unarmed", "reach_mm": 700, "strike_ticks": 2,
+    "head_volume_cm3": 400, "wind_up_s": 0.30, "recover_s": 0.30,
+    "attacks": [
+      { "id": "punch", "name": "Punch", "verb": "punches", "type": "blunt", "contact_area": 15, "penetration_mm": 0, "velocity": 0.8 },
+      { "id": "kick",  "name": "Kick",  "verb": "kicks",   "type": "blunt", "contact_area": 30, "penetration_mm": 0, "velocity": 0.9 } ] },
 
   // Natural weapons (anatomy 4.2, 4.4): animal and monster attacks through the same resolver; the material is the instance's (bone).
   // Their momentum uses the creature's own strength and size; monsters are tuned with the site work (P4-H).

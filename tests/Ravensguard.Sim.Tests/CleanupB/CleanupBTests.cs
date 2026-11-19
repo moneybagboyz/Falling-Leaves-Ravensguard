@@ -53,18 +53,20 @@ public class CleanupBTests
     }
 
     [Fact]
-    public void A_fight_is_a_phase_four_stub_that_robs_or_flees_and_is_the_same_every_time()
+    public void A_fight_is_a_real_fight_now_and_its_end_robs_or_lets_go()
     {
+        // Phase 4 P4-C replaced the stub: choosing to fight starts a FightSetup from the cast; AfterFight settles it the same way every time
         var t = NewTravel(); var def = Def(t, "bandit_ambush_small");
         var ev = Ev(t, "bandit_ambush_small", 5);
         var a = EncounterOutcomes.Resolve(t, def, ev, EncounterChoice.Fight, 100_000, 300, id => true);
-        var b = EncounterOutcomes.Resolve(t, def, ev, EncounterChoice.Fight, 100_000, 300, id => true);
-        Assert.Equal(a, b);
-        Assert.Contains(a.Result, new[] { "robbed", "fled" });
-        Assert.Contains("FIGHT_STUB", a.Text);
-        int robbed = 0;
-        for (int k = 0; k < 200; k++) if (EncounterOutcomes.Resolve(t, def, ev with { Sec = 1_000_000 + k * 3600 }, EncounterChoice.Fight, 100_000, 300, id => true).Result == "robbed") robbed++;
-        Assert.InRange(robbed, 100, 190);                                              // a weak party is robbed about 70 times in 100
+        Assert.Equal(a, EncounterOutcomes.Resolve(t, def, ev, EncounterChoice.Fight, 100_000, 300, id => true));
+        Assert.Equal("fight", a.Result);
+        Assert.DoesNotContain("STUB", a.Text);
+        Assert.Equal("won", EncounterOutcomes.AfterFight(ev, true, false, 100_000, id => true).Result);
+        Assert.Equal("fled", EncounterOutcomes.AfterFight(ev, false, true, 100_000, id => true).Result);
+        var lost = EncounterOutcomes.AfterFight(ev, false, false, 100_000, id => true);
+        Assert.Equal("robbed", lost.Result); Assert.Equal(25_000, lost.PayMites);
+        Assert.Equal(0, EncounterOutcomes.AfterFight(ev, false, false, 0, id => true).PayMites);
         // the options: a bandit ambush offers pay, fight and flee; a toll keeper pay and flee; a peddler trade, talk, go on
         Assert.Equal([EncounterChoice.Pay, EncounterChoice.Fight, EncounterChoice.Flee], EncounterOutcomes.Options(def, 5000).Select(o => o.Choice));
         Assert.Equal([EncounterChoice.Pay, EncounterChoice.Flee], EncounterOutcomes.Options(Def(t, "toll_keeper"), 5000).Select(o => o.Choice));

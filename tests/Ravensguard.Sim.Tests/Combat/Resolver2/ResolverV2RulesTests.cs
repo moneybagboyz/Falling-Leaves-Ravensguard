@@ -104,9 +104,9 @@ public class ResolverV2RulesTests(V2Fixture f)
         Assert.Equal(445, r.Block.ShieldLossPm);
         Assert.Equal(f.P("lower_arm_l"), r.Part);                                          // the excess lands, blunt, on the shield forearm
         Assert.DoesNotContain(r.WoundSpan.ToArray(), w => w.Kind == WoundKind.Cut);
-        // a held weapon: 110 + skill / 2, braced neighbours +10% each (max 2)
+        // a held weapon: base + skill / 2 (the base is content, combat/calibration.jsonc: 150 since the P4-C calibration), braced neighbours +10% each (max 2)
         var b = new BlockInput { Kind = BlockKind.Weapon, BlockerSkill = 50 };
-        Assert.Equal(135_000, Blocks.CapacityMilli(b, f.T.Cal));
+        Assert.Equal((f.T.Cal.WeaponBlockBase + 50 / f.T.Cal.WeaponBlockSkillDivisor) * 1000L, Blocks.CapacityMilli(b, f.T.Cal));
         b = new BlockInput { Kind = BlockKind.Shield, Shield = heater, BracedNeighbours = 5 };
         Assert.Equal(240_000, Blocks.CapacityMilli(b, f.T.Cal));
     }
@@ -299,5 +299,6 @@ internal static class Golden
 {
     /// <summary>A sword stab at the right upper arm through cloak, mail, gambeson and shirt (serial 6): the hit roll, four coverage rolls outside in, then the arm's six structures in content order with the artery's rate drawn right after it.</summary>
     public const string DrawOrder = "6|410:0,412:0,412:1,412:2,412:3,413:0,415:0,413:1,413:2,413:3,413:4,413:5";
-    public const ulong Table100k = 3604910463388651317UL;
+    // re-pinned in P4-C: the mace (velocity 1.5) and the pommel (0.8) were recalibrated in content (melee-and-ranged Notes); the formulas are unchanged
+    public const ulong Table100k = 7788444446239837917UL;
 }

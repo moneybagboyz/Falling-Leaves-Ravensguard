@@ -125,6 +125,7 @@ public partial class StreetView
     /// <summary>Once per sim tick: the journey (movement, interrupts, encounters), the camp's fire and hours, the speed the bus allows.</summary>
     void TravelTick()
     {
+        RoadFightFrame();
         var t = _travel; if (t == null || _tfeed == null) return;
         long now = _world.Clock.Now.Seconds;
         _tfeed.Hero.BaseMmPerGs = VehicleSpeedMm();
@@ -229,7 +230,7 @@ public partial class StreetView
         return true;
     }
 
-    /// <summary>The player's choice on the road: pay goes through the hero desk (a ledger transfer at the barrier), trade and talk open their screens with the real person, flee, detour and wait cost time, a fight is a stub until Phase 4.</summary>
+    /// <summary>The player's choice on the road: pay goes through the hero desk (a ledger transfer at the barrier), trade and talk open their screens with the real person, flee, detour and wait cost time, a fight is fought for real (StreetView.Fight).</summary>
     void ChooseEncounter(EncounterOption opt)
     {
         var t = _travel!; var ev = Enc; if (ev == null) return;
@@ -238,6 +239,13 @@ public partial class StreetView
         long coin = _heroLink?.View?.CoinMites ?? 0;
         _rec.Action(Ravensguard.Sim.Diagnostics.HeroAction.EncounterChoice, (long)opt.Choice, now);
         var o = EncounterOutcomes.Resolve(t, def, ev, opt.Choice, coin, _tfeed!.Hero.PartyStrengthPm, id => !t.Travellers.Any(x => x.Id == id));
+        if (o.Result == "fight")
+        {
+            // Phase 4: a real fight in the combat stance; the clock is held for the encounter until it is settled (RoadFightFrame)
+            t.CurrentOpen = false; _encOptions = [];
+            if (StartRoadFight(def, ev, coin)) { t.ScreenPending = true; _router?.ShowToast(L.T(o.Text), 3f); return; }
+            o = EncounterOutcomes.AfterFight(ev, false, true, coin, id => !t.Travellers.Any(x => x.Id == id));
+        }
         if (o.PayMites > 0 && _heroLink != null)
             _heroLink.Issue(new HeroCommand { Kind = HeroCommandKind.EncounterPay, IssuedSec = now, CoinGive = o.PayMites, Person = o.Payee, Tag = ev.Id, Origin = CommandOrigin.Human });
         bool screen = false;

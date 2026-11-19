@@ -7,6 +7,11 @@
     "keep_pm": 950, "cut_cost_pm": 600, "crush_cost_pm": 600, "sever_momentum_pm": 300, "bone_edge_fail_divisor": 2, "strain_reference": 50000,
     "rib_slip_pm": 350, "rib_slip_pen_mm": 80, "muscle_crush_grades": [40, 100], "fracture_pm": [1000, 2000, 4000, 8000], "brain_cut_momentum": 40,
     "guarded_pm": 600, "gap_pm": 350, "flank_pm": 1250, "rear_pm": 1500, "hit_min_bp": 200, "hit_max_bp": 9800, "redirect_pm": 500, "misfit_coverage_pm": 250,
-    "weapon_block_base": 110, "weapon_block_skill_divisor": 2, "braced_neighbour_pm": 100, "weapon_notch_pm_per50": 20,
-    "burn_pm_per_second": 75, "bone_burn_divisor": 3, "max_momentum_milli": 2000000 }
+    "weapon_block_base": 150, "weapon_block_skill_divisor": 2, "braced_neighbour_pm": 100, "weapon_notch_pm_per50": 20,
+    "burn_pm_per_second": 75, "bone_burn_divisor": 3, "max_momentum_milli": 2000000 },
+  // The real-time fight (P4-C, melee-and-ranged 3 to 4.7): every tuned number of the timeline, defence, stamina, the AI and the missiles; the rest are the defaults
+  // in MeleeTuningDef (src/Ravensguard.Content/Defs/CombatDefs.cs). Decisions are logged in docs/specs/phase4/melee-and-ranged.md, Notes.
+  { "type": "melee_tuning", "id": "default",
+    "patience_min_ticks": 12, "patience_max_ticks": 48, "crowded_points": 10, "weapon_cover_base_pm": 380, "react_parry_base_pm": 170,
+    "fragile_loss_per_unit_pm": 4800 }
 ]

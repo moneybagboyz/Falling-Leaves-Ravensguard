@@ -73,6 +73,10 @@ public static class HashesCommand
                 var p = Populator.Populate(r, history, db);
                 lines.Add($"seed {seed} block {rc} region {r.ComputeHash()} landmarks {m.Count} {LandmarkPlacer.ComputeHash(m)} people {p.ComputeHash()}");
             }
+        // Phase 4 (ML-15, OV-1): a seeded 10 v 10 skirmish with spears, shields, a bow, maces and axes, 600 fight ticks: the same FightHash on Windows and Linux
+        var fight = Ravensguard.Sim.Combat.Melee2.FightCalibration.Skirmish(new Ravensguard.Sim.Combat.Melee2.FightContent(new Ravensguard.Sim.Combat.CombatTables(db), db), seed, 10);
+        for (int t = 0; t < 600; t++) fight.StepWithAi();
+        lines.Add($"seed {seed} fight {fight.Hash():X16} active {fight.Fighters.Count(f => f.Active)}");
         return lines;
     }
 

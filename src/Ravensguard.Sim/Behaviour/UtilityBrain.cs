@@ -7,7 +7,9 @@ namespace Ravensguard.Sim.Behaviour;
 /// <summary>What a person is doing now (live-behaviour spec 3.1). Append only; the numbers are saved nowhere (the action is derived), but tests and logs hash them.</summary>
 public enum ActionKind : byte { Sleep, Eat, Drink, Work, Commute, Shop, Socialise, Worship, Shelter, Flee, Rest, Idle, Travel, JobStep, TakeJob,
     /// <summary>Phase 4 (wounds 4.3): first aid on a bleeding neighbour or comrade; scored by <see cref="Ravensguard.Sim.Combat.Wounds.TreatAi"/>, not by the utility profile.</summary>
-    Treat }
+    Treat,
+    /// <summary>Phase 4 (melee-and-ranged 4.7): in a fight, driven by <see cref="Ravensguard.Sim.Combat.Melee2.CombatBrain"/> (an <c>Attacked</c> interrupt puts a person here unless Flee scores higher).</summary>
+    Fight }
 
 /// <summary>
 /// The needs of one person at one moment, each in the unit its curve reads: hours since the last meal in thousandths of an hour, the others in permille. Filled from the person's day

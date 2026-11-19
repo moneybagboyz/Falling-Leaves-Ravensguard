@@ -194,16 +194,41 @@ public sealed class LiveWorld
         Tick++;
         _px = _x; _py = _y; _pz = _z;
         if (Streamer != null) StreamStep();
-        Clock.Advance(TickSeconds);
+        if (Fight != null && Clock.Speed != SimSpeed.Paused)
+        {
+            // a fight never lengthens a tick (overview 6.1): one fight step is one game second at any speed; the view steps the bubble `speed` times a frame instead
+            var sp = Clock.Speed; Clock.Speed = SimSpeed.X1; Clock.Advance(TickSeconds); Clock.Speed = sp;
+        }
+        else Clock.Advance(TickSeconds);
         Wounds?.AdvanceTo(Clock.Now.Seconds);          // bleeding, pain and consciousness at 20 Hz while anyone has an open wound, in or out of a fight (wounds 5)
+        if (Fight != null && Clock.Speed != SimSpeed.Paused) Fight.StepWithAi();
         int mult = (int)Clock.Speed;
         _moving = false;
         if (_usePending) { _usePending = false; TryPortalHere(force: true); }
         if (!_rideCmds.IsEmpty) while (_rideCmds.TryDequeue(out int rc)) RunRideCommand(rc);   // every command since the last step, in the order given
+        if (Fight != null) mult = 0;                    // the hero's feet belong to the fight while it lasts
         if (mult > 0) { if (Ride is { IsMounted: true } or { IsDriving: true } or { Busy: true }) MoveRidden(mult); else MoveHero(mult); }
         NoteWalked();
         Snapshot = Publish();
     }
+
+    // ---------------- the fight in the bubble (P4-C)
+
+    /// <summary>The fight the hero is in (melee 5: stepped on the live tick, after the wounds, at one game second a step); null outside a fight.</summary>
+    public Ravensguard.Sim.Combat.Melee2.FightWorld? Fight { get; private set; }
+    /// <summary>The hero's fighter index in <see cref="Fight"/> (the player's inputs drive it).</summary>
+    public int FightHero { get; private set; } = -1;
+    /// <summary>Rebuilds a fight from its id when a replay reaches the tick it started (the session recorder keeps each fight's starting record).</summary>
+    public Func<long, Ravensguard.Sim.Combat.Melee2.FightWorld?>? FightFactory { get; set; }
+
+    public void AttachFight(Ravensguard.Sim.Combat.Melee2.FightWorld fight, int heroFighter) { Fight = fight; FightHero = heroFighter; }
+    public void EndFight() { Fight = null; FightHero = -1; }
+
+    /// <summary>A replayed fight start: the factory gives back the fight as it was when it began.</summary>
+    public void StartFightById(long id, int heroFighter) { if (FightFactory?.Invoke(id) is { } f) AttachFight(f, heroFighter); }
+
+    /// <summary>One player combat input for the hero's fighter (it takes effect at the next step).</summary>
+    public void FightInput(Ravensguard.Sim.Combat.Melee2.FightInput i) { if (Fight != null && FightHero >= 0) Fight.Input(FightHero, i); }
 
     // ---------------- Codex and map exploration (part of the live state, advanced by the tick) ----------------
 

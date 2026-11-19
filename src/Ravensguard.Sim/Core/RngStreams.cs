@@ -197,6 +197,18 @@ public static class RngStreams
     public const uint WakeJitter = 0x424;
     /// <summary>Melee defence: dodge and parry success (key FightTick, defender, draw = blow serial); the resolver's dodge roll uses it.</summary>
     public const uint MeleeDefence = 0x430;
+    /// <summary>Combat AI: target choice (key FightTick, fighter).</summary>
+    public const uint AiTarget = 0x431;
+    /// <summary>Combat AI: stance noise and tie-breaks, patience, part and attack picks (key FightTick, fighter).</summary>
+    public const uint StanceNoise = 0x432;
+    /// <summary>Stagger and knock-down duration (key FightTick, fighter).</summary>
+    public const uint Stagger = 0x433;
+    /// <summary>Ranged aim error, two draws per shot: lateral, vertical (key FightTick, shooter, draw = shot serial x 2 + k).</summary>
+    public const uint AimError = 0x440;
+    /// <summary>Ammunition breakage and recovery (key fight id, ammo serial).</summary>
+    public const uint AmmoBreak = 0x441;
+    /// <summary>Thrown aim error (key FightTick, thrower).</summary>
+    public const uint ThrownAim = 0x442;
 
     /// <summary>Stream ids that two named uses share on purpose, with why their draws never meet.</summary>
     public static readonly (string A, string B, string Why)[] SharedPairs =

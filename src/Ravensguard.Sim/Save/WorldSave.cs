@@ -68,6 +68,9 @@ public sealed class WorldState
     public Ravensguard.Sim.Onboarding.OnboardingBook? Onboarding { get; set; }
     /// <summary>Everyone's wounds, blood and pain (saved in the "wounds" section while anybody is hurt); shared by the live and the abstract tier.</summary>
     public Ravensguard.Sim.Combat.Wounds.WoundLedger? Wounds { get; set; }
+    /// <summary>A fight in progress (P4-C, overview 8.3): saved in the "fight" section only mid-fight, so a load resumes it at the same FightTick. <see cref="FightSource"/>, when set by the game, is read at a save instead.</summary>
+    public FightRecord? Fight { get; set; }
+    public Func<FightRecord?>? FightSource { get; set; }
     /// <summary>The hero's side of the records (trade-inventory-character spec): worn slots and where each stack sits, the price notebook, the party, the people known (saved in the "party" section when present). The things themselves are item rows, the pack store and the purse in the <see cref="Economy"/>.</summary>
     public Ravensguard.Sim.Trade.HeroParty? Party { get; set; }
     /// <summary>
@@ -353,6 +356,7 @@ public static class WorldSave
             Talk = w.Talk is { IsEmpty: false } tk ? TalkSave.Capture(tk) : null,
             Onboarding = w.Onboarding is { IsEmpty: false } ob ? OnboardingSave.Capture(ob) : null,
             Wounds = w.Wounds is { IsEmpty: false } wl ? WoundSave.Capture(wl) : null,
+            Fight = w.FightSource != null ? w.FightSource() : w.Fight,
             Party = w.Party == null ? null : Ravensguard.Sim.Trade.HeroPartySave.Capture(w.Party),
             HeroPending = (w.HeroPendingSource?.Invoke() ?? w.HeroPending) is { Count: > 0 } hp ? Ravensguard.Sim.Trade.HeroPendingSave.Capture(hp) : null,
             Production = w.Production == null ? null : ProductionSave.Capture(w.Production), Markets = w.Markets == null ? null : MarketsSave.Capture(w.Markets),
@@ -461,6 +465,7 @@ public static class WorldSave
             Talk = file.Sections.ContainsKey(TalkSave.SectionName) ? Decode<TalkSave>(file, TalkSave.SectionName, compressed: true).Restore() : null,
             Onboarding = file.Sections.ContainsKey(OnboardingSave.SectionName) ? Decode<OnboardingSave>(file, OnboardingSave.SectionName, compressed: true).Restore() : null,
             Wounds = file.Sections.ContainsKey(WoundSave.SectionName) ? Decode<WoundSave>(file, WoundSave.SectionName, compressed: true).Restore() : null,
+            Fight = file.Sections.ContainsKey(FightRecord.SectionName) ? Decode<FightRecord>(file, FightRecord.SectionName, compressed: true) : null,
             Party = file.Sections.ContainsKey(PartySection) ? Decode<Ravensguard.Sim.Trade.HeroPartySave>(file, PartySection, compressed: true).Restore() : null,
             HeroPending = file.Sections.ContainsKey(Ravensguard.Sim.Trade.HeroPendingSave.SectionName) ? Decode<Ravensguard.Sim.Trade.HeroPendingSave>(file, Ravensguard.Sim.Trade.HeroPendingSave.SectionName, compressed: true).Restore() : [],
             Hero = hero, Codex = codex, Live = resume, Economy = economy, Abstract = abstractState,
@@ -652,6 +657,7 @@ public sealed class LiveCapture
     internal TalkSave? Talk { get; init; }
     internal OnboardingSave? Onboarding { get; init; }
     internal WoundSave? Wounds { get; init; }
+    internal FightRecord? Fight { get; init; }
     internal Ravensguard.Sim.Trade.HeroPartySave? Party { get; init; }
     internal Ravensguard.Sim.Trade.HeroPendingSave? HeroPending { get; init; }
     internal MarketsSave? Markets { get; init; }
@@ -704,6 +710,7 @@ public sealed class LiveCapture
         if (Talk != null) sections.Add(new(TalkSave.SectionName, SaveCodec.SerializeCompressed(Talk)));
         if (Onboarding != null) sections.Add(new(OnboardingSave.SectionName, SaveCodec.SerializeCompressed(Onboarding)));
         if (Wounds != null) sections.Add(new(WoundSave.SectionName, SaveCodec.SerializeCompressed(Wounds)));
+        if (Fight != null) sections.Add(new(FightRecord.SectionName, SaveCodec.SerializeCompressed(Fight)));
         if (Party != null) sections.Add(new(WorldSave.PartySection, SaveCodec.SerializeCompressed(Party)));
         if (HeroPending != null) sections.Add(new(Ravensguard.Sim.Trade.HeroPendingSave.SectionName, SaveCodec.SerializeCompressed(HeroPending)));
         if (Production != null) sections.Add(new(WorldSave.ProductionSection, SaveCodec.SerializeCompressed(Production)));

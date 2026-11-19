@@ -58,6 +58,7 @@ public sealed class HeroRecord
         foreach (var id in SkillIds) skills[id] = 0;
         foreach (var (id, d) in origin.Skills.OrderBy(kv => kv.Key, StringComparer.Ordinal))
             if (skills.ContainsKey(id)) skills[id] = Math.Clamp(skills[id] + d, 0, MaxLevel);
+        DefaultWeaponFamilies(skills, origin.Skills.Keys);
 
         var inv = new List<HeroItem>();
         foreach (var k in origin.Kit) inv.Add(new HeroItem(k.Item, DefaultMaterial(k.Item), Math.Max(1, k.Count)));
@@ -66,6 +67,18 @@ public sealed class HeroRecord
             Name = name, Female = female, Origin = origin.Id, Attributes = attrs, Skills = skills, Inventory = inv,
             Coin = Math.Max(0, origin.Coin), AmbitionId = origin.Ambition, Milestone = 0,
         };
+    }
+
+    /// <summary>The weapon families (Phase 4) not given by the origin or the save start at 80% of Melee (melee-and-ranged M1; the v6 save migration).</summary>
+    public static void DefaultWeaponFamilies(Dictionary<string, int> skills, IEnumerable<string> given)
+    {
+        var set = new HashSet<string>(given, StringComparer.Ordinal);
+        int melee = skills.TryGetValue(SkillId(SkillEnum.Melee), out var m) ? m : 0;
+        foreach (var f in Ravensguard.Sim.Combat.Melee2.CombatSkills.Families)
+        {
+            string id = SkillId(f);
+            if (!set.Contains(id)) skills[id] = Math.Clamp(melee * Ravensguard.Sim.Combat.Melee2.CombatSkills.MigratePm / 1000, 0, MaxLevel);
+        }
     }
 
     /// <summary>The material a commoner's item of this shape is usually made of (the head of a weapon; the cloth, hide or metal of an armour piece).</summary>

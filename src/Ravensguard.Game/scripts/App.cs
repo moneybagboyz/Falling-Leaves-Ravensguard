@@ -50,6 +50,13 @@ public partial class App : Node
         bool smoke = args.Contains("--smoke");
         if (smoke) _capture = ErrorCapture.Install();
 
+        if (args.Contains("--fight-demo"))
+        {
+            // the combat stance on its own (P4-C): a duel or a skirmish on the shipped fight; --shot-out/--shot-what for screenshots
+            InputBootstrap.Init();
+            AddChild(new World.Combat.FightDemo { Name = "FightDemo" });
+            return;
+        }
         int spike = System.Array.IndexOf(args, "--spike"); // e.g. `-- --spike melee`
         if (spike >= 0 && spike + 1 < args.Length && args[spike + 1] == "melee")
         {
@@ -149,6 +156,9 @@ public partial class App : Node
             Router.Pop(); await Frames(1);
             Router.Push(new World.StreetView(Router)); await Frames(2);
             Router.Pop(); await Frames(1);
+            // the combat stance (P4-C): a duel on the shipped fight draws and steps for a few frames
+            var fight = new World.Combat.FightDemo { Name = "SmokeFight" }; AddChild(fight); await Frames(6);
+            fight.QueueFree(); await Frames(1);
             var f8 = new InputEventKey { Keycode = Key.F8, PhysicalKeycode = Key.F8, Pressed = true };
             _Input(f8); await Frames(2); // F8 opens the report window; opening it twice does nothing
             if (!BugReportScreen.IsOpen) throw new Exception("F8 did not open the bug report window");

@@ -104,6 +104,15 @@ ACTION_COMBATSTANCE_FORMATION_2,Formation 2
 ACTION_COMBATSTANCE_FORMATION_3,Formation 3
 ACTION_COMBATSTANCE_FORMATION_4,Formation 4
 ACTION_COMBATSTANCE_COMBAT_STANCE,Combat stance
+ACTION_COMBATSTANCE_THROW,Throw
+ACTION_COMBATSTANCE_SPRINT,Sprint
+ACTION_COMBATSTANCE_RELOAD,Reload or nock
+ACTION_COMBATSTANCE_ATTACK_NEXT,Next attack type
+ACTION_COMBATSTANCE_WATCH_TOGGLE,Watch mode
+ACTION_COMBATSTANCE_STANCE_NEXT,Next stance
+ACTION_COMBATSTANCE_COMBAT_LOG,Combat log
+ACTION_COMBATSTANCE_LAST_REPORT,Last fight report
+ACTION_COMBATSTANCE_BACK,Back
 ACTION_CALLEDSHOT_PART_PREV,Part prev
 ACTION_CALLEDSHOT_PART_NEXT,Part next
 ACTION_CALLEDSHOT_TYPE_PREV,Type prev
@@ -1910,6 +1919,10 @@ OVERLAY_CRAFT_START,Start the chosen recipe
 OVERLAY_CLOSE,Close
 OVERLAY_TRAVEL_HERE,"Travel here (map, on the chosen place)"
 ACTION_WORLD_HINT_MORE,Hint: learn more
+ACTION_WORLD_WATCH_TOGGLE,Watch mode
+ACTION_WORLD_STANCE_NEXT,Next stance
+ACTION_WORLD_COMBAT_LOG,Combat log
+ACTION_WORLD_LAST_REPORT,Last fight report
 STREET_HELP_BUTTON,?
 STREET_HELP_TIP,Controls for this screen
 HINT_LEARN_MORE,{0} learn more
@@ -2016,7 +2029,7 @@ ENC_KEYS,"1-5: choose    Enter: go on or run    {0}: stop here"
 ENC_PAY,Pay
 ENC_FERRY,Pay the ferryman
 ENC_ALMS,Give alms
-ENC_FIGHT,Fight (combat arrives in Phase 4)
+ENC_FIGHT,Fight
 ENC_FLEE,Run for it
 ENC_TRADE,Trade
 ENC_TALK,Talk
@@ -2030,8 +2043,10 @@ ENC_CANNOT_PAY,You have too little to pay.
 ENC_FLED,You run for it and lose half an hour finding the road again.
 ENC_DETOURED,You pick your way round and lose some time.
 ENC_WAITED,You wait a little.
-ENC_FIGHT_STUB_FLED,"Combat arrives in Phase 4. For now you break away and run."
-ENC_FIGHT_STUB_ROBBED,"Combat arrives in Phase 4. For now they take {0} and you are left shaken."
+ENC_FIGHT_BEGIN,"Steel comes out."
+ENC_FIGHT_WON,"They break off. You stand, breathing hard."
+ENC_FIGHT_FLED,"You break away and run."
+ENC_FIGHT_LOST,"You come to in the dirt. They took {0}."
 ENC_NOTHING_TO_TRADE,They have little to sell today.
 ENC_NOTHING_TO_SAY,They only nod and pass.
 ENC_TRADE_OPEN,
@@ -2226,3 +2241,42 @@ ENC_NAME_BANDITS,Bandits
 HUD_TICK_FAULT,"The world has stopped stepping (see the F8 report). Save and restart."
 HUD_TASK_FAULT,"Something the world was asked to do failed (see the log; F8 reports it)."
 TASK_FAILED,"A world job failed: {0}"
+FIGHT_GAP,gap: {0}
+FIGHT_EV_HIT,{0} hits {1} in the {2}
+FIGHT_EV_BLOCKED,{0} blocks {1}
+FIGHT_EV_PARRIED,{0} parries {1} -- riposte!
+FIGHT_EV_DODGED,{0} dodges {1}
+FIGHT_EV_MISSED,{0} misses {1}
+FIGHT_EV_STOPPED,{1}'s armour stops {0}
+FIGHT_EV_FEINT,{0} feints
+FIGHT_EV_DOWN,{0} goes down
+FIGHT_EV_DEATH,{0} dies
+FIGHT_EV_ROUT,{0} breaks and runs
+FIGHT_EV_SURRENDER,{0} throws down the weapon and yields
+FIGHT_EV_SHOT,{0} looses
+FIGHT_EV_ARROW,An arrow takes {0} in the {1}
+FIGHT_EV_BROKE,{0}'s weapon breaks
+FIGHT_CALL_BLOCK,BLOCK
+FIGHT_CALL_PARRY,PARRY!
+FIGHT_CALL_DODGE,DODGE
+FIGHT_CALL_MISS,miss
+FIGHT_CALL_ARMOUR,armour
+FIGHT_CALL_FEINT,feint
+FIGHT_CALL_DOWN,DOWN
+FIGHT_CALL_DEAD,DEAD
+FIGHT_HEAVY,HEAVY
+FIGHT_STAGGER,stagger
+FIGHT_HELP_1,"WASD move, Shift sprint | LMB hold = wind up, release = strike | RMB hold = block, tap in the red = parry, in your own wind-up = feint"
+FIGHT_HELP_2,"Ctrl+WASD dodge | T called shot (pauses) | 6 attack type | 5 reload | G throw | red tail on a foe's bar = parry now"
+FIGHT_AUTO,Auto
+FIGHT_HUD,"You: {0}  blood {1}%  stamina {2}  pain {3}/{4}  attack {5}  bleeding {6} ml/s"
+FIGHT_HUD_AMMO,"Arrows {0}, {1}"
+FIGHT_LOADED,loaded
+FIGHT_EMPTY,not nocked
+FIGHT_TIME,t = {0:0.0} s
+FIGHT_DOLL_TITLE,"CALLED SHOT on {0} (paused)"
+FIGHT_DOLL_KEYS,"Up/Down part or gap, Left/Right attack, F strike, Esc cancel. Blue: armour; a gap goes past it."
+FIGHT_DOLL_ATTACK,"Attack: < {0} > ({1})"
+FIGHT_DOLL_CHANCE,"{0}: hit chance {1:0}%"
+FIGHT_DEMO_DUEL,"Duel: you (sword, heater) against a bandit. R restarts, K skirmish."
+FIGHT_DEMO_SKIRMISH,"Skirmish: Wolves against Crows, ten a side. R restarts, K duel."

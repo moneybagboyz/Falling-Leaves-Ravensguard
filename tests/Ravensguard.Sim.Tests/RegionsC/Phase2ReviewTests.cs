@@ -199,7 +199,7 @@ public class Phase2ReviewTests(ITestOutputHelper output)
         state.Content = rig.W.Content; // the people go in as a difference from the regenerated ones
         var file = WorldSave.Capture(state, Hash, "0.1");
         Assert.Equal(SaveFormat.CurrentVersion, file.Header.FormatVersion);
-        Assert.Equal(5, SaveFormat.CurrentVersion);   // v4: chunk sections carry their piece palette (Phase 3 cleanup); v5: the optional wounds section (Phase 4 P4-B)
+        Assert.Equal(6, SaveFormat.CurrentVersion);   // v4: chunk sections carry their piece palette (Phase 3 cleanup); v5: the optional wounds section (Phase 4 P4-B); v6: weapon families and the fight section (P4-C)
         var meta = SaveCodec.Deserialize<WorldMeta>(file.Sections[WorldSave.MetaSection].ToArray());
         Assert.NotEqual("", meta.BaselineHash); Assert.Equal(SaveFormat.RegionGeneratorVersion, meta.GeneratorVersion);
         _ = WorldSave.Restore(file, rig.W.Content, Hash, null, rig.W.Continent, rig.W.History);

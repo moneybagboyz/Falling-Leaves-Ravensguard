@@ -42,8 +42,9 @@ public static class SaveFormat
     /// <summary>v2: region sections and the home people carry a baseline hash and generator version (<see cref="BaselineGuard"/>).
     /// v3: seven skills are appended to the Skill enum (Tailoring, Surgery, Speech, Athletics, Tactics, Stealth, Lockpicking), so the hero's skill list grows; the optional "crafting" section is new.
     /// v5: the optional "wounds" section (Phase 4 P4-B: blood, pain, wound records, permanent damage); a v4 save has none and loads with nobody hurt.
-    /// v4: the chunk sections carry the build-piece palette their tile codes are numbered by (<see cref="ChunkStoreData.Palette"/>); a v3 section has none and is read with the legacy palette.</summary>
-    public const int CurrentVersion = 5;
+    /// v4: the chunk sections carry the build-piece palette their tile codes are numbered by (<see cref="ChunkStoreData.Palette"/>); a v3 section has none and is read with the legacy palette.
+    /// v6: six weapon-family skills appended to the Skill enum (the hero record and skill book gain them at 80% of Melee) and the optional "fight" section (a fight in progress, P4-C).</summary>
+    public const int CurrentVersion = 6;
     /// <summary>
     /// Version of everything a saved region is regenerated from (region terrain, landmarks, populator, chunk streaming frame). Bump it whenever generation output changes on
     /// purpose, together with the golden hashes: saves diffed against the old output are then refused with a clear message instead of loading onto different people.
