@@ -239,6 +239,13 @@ These answer the questions in §10. Where this section and a per-spec "default" 
   - **Phase 6** builds the petition and the ruler's decision as politics, charters revoked for broken conditions, and market charters.
   - Granting or revoking a charter is a chronicle event.
 
+- **Prospecting and extraction businesses (user request):** see `prospecting-and-extraction.md`.
+  - The player can prospect: walk, read the land, pan, dig test pits, sink trial shafts, or hire a prospector.
+  - What a person knows is a separate record from the hidden truth, and survey reports are items.
+  - Anyone with the right to the land can found extraction businesses on the resources they know about: woodcutters' camps, sawpits and water sawmills, charcoal clamps, quarries, clay pits and kilns, peat cuttings, salt pans, mines, and bloomeries.
+  - Mineral rights are separate from surface rights: a lord's licence for base metals, the crown's for silver and gold, with royalties.
+  - Build order: it goes in step 4, beside businesses, using streams 0x5C0 to 0x5C2. Estimate: about +0.5 to 1 month, inside the 9 to 10 months if run in parallel.
+
 ## 11. Risks
 
 | Risk | Why it matters | Mitigation |
