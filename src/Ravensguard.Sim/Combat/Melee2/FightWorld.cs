@@ -185,6 +185,7 @@ public sealed partial class FightWorld
     public void StepWithAi()
     {
         foreach (var f in Fighters) if (!f.Player) CombatBrain.Think(this, f);
+        if (Mounts != null) MountedAfterThink();                    // [mounted-combat] horses, the cavalry brain, braced polearms (Combat/Mounted)
         Step();
     }
 
@@ -195,8 +196,10 @@ public sealed partial class FightWorld
         _impacts.Clear();
         foreach (var f in Fighters) UpdateVitals(f);
         if (Tick % K.MoraleEveryTicks == 0) foreach (var f in Fighters) UpdateMorale(f);
+        if (Mounts != null) MountedBeforeCommands();                // [mounted-combat] panic, falls, side-steps, braces
         foreach (var f in Fighters) { ApplyCommand(f); AdvanceState(f); }
         foreach (var f in Fighters) Move(f);
+        if (Mounts != null) MountedAfterMove();                     // [mounted-combat] refusal, the braced strike, the trample
         Separate();
         foreach (var f in Fighters) UpdateBrace(f);
         if (_impacts.Count > 0)
@@ -207,6 +210,7 @@ public sealed partial class FightWorld
             _impacts.Sort();
             foreach (int a in _impacts) ResolveImpact(Fighters[a]);
         }
+        if (Mounts != null) MountedAfterImpacts();                  // [mounted-combat] unhorsings, shattered lances
         StepProjectiles();
         foreach (var f in Fighters) f.Cmd.ClearOneShots();
     }
@@ -306,7 +310,8 @@ public sealed partial class FightWorld
             f.Serial++;
             f.Stamina = Math.Max(0, f.Stamina - SwingCost(f, req.Style));
             f.Thrown++;
-            Emit(FightEventKind.Windup, f.Id, req.Target, req.Part, f.WindNeeded);
+            if (Mounts != null) MountedSwingStart(f);                // [mounted-combat] the couched lance, a lance on foot
+            Emit(FightEventKind.Windup, f.Id, f.Req.Target, f.Req.Part, f.WindNeeded);
             return;
         }
 
@@ -376,6 +381,7 @@ public sealed partial class FightWorld
 
     private void Move(Fighter f)
     {
+        if (Mounts != null && MountedMove(f)) return;               // [mounted-combat] the horse carries its rider
         f.LastMoveMm = 0;
         if (f.Act is FAct.Dead or FAct.Fled or FAct.Surrendered or FAct.Stagger) return;
         if (f.Act == FAct.Down)
@@ -423,6 +429,7 @@ public sealed partial class FightWorld
             {
                 var b = Fighters[j];
                 if (b.Act is FAct.Dead or FAct.Fled or FAct.Surrendered) continue;
+                if (Mounts != null && MountedSkipPair(a, b)) continue;      // [mounted-combat] horses do not push; a horse at speed runs through
                 long dx = b.X - a.X, dy = b.Y - a.Y;
                 if (dx > min || dx < -min || dy > min || dy < -min) continue;
                 long len = FightMath.Len(dx, dy);
@@ -682,6 +689,7 @@ public sealed partial class FightWorld
             h = f.Book.Hash(h);
         }
         foreach (var p in Projectiles) h = p.Hash(h);
+        if (Mounts != null) h = MountedHash(h);                     // [mounted-combat] MountedHash joins the trail
         return h;
     }
 }

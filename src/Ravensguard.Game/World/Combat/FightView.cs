@@ -244,6 +244,7 @@ public partial class FightView : Node2D
                 foreach (var p in t.Plan.Parts) if (!p.IsHosted && g.OnBase(p.BaseIndex) && p.RelPpm > best) { best = p.RelPpm; part = p.Index; }
                 if (part >= 0) list.Add((part, g.Index, L.F("FIGHT_GAP", g.Name.Replace('_', ' '))));
             }
+        MountedChoices(list, t);                                                // [mounted-combat] the mount's parts after the rider's
         return list;
     }
 
@@ -271,7 +272,7 @@ public partial class FightView : Node2D
         else if (Actions.Pressed(e, "calledshot.part_next")) _callSel = (_callSel + 1) % ch.Count;
         else if (Actions.Pressed(e, "calledshot.type_prev")) _callAtk = (_callAtk + h.Weapon.Attacks.Length - 1) % h.Weapon.Attacks.Length;
         else if (Actions.Pressed(e, "calledshot.type_next")) _callAtk = (_callAtk + 1) % h.Weapon.Attacks.Length;
-        else if (Actions.Pressed(e, "calledshot.strike")) { var c = ch[_callSel]; EndCalling(); Send(new FightInput(FightInputKind.CalledShot, _callAtk, c.Part, c.Gap)); }
+        else if (Actions.Pressed(e, "calledshot.strike")) { var c = ch[_callSel]; EndCalling(); if (!MountedCalledShot(c.Part, c.Gap)) Send(new FightInput(FightInputKind.CalledShot, _callAtk, c.Part, c.Gap)); }
         else if (Actions.Pressed(e, "calledshot.cancel") || Actions.Pressed(e, "combatstance.called_shot")) EndCalling();
     }
 
@@ -291,6 +292,7 @@ public partial class FightView : Node2D
     public double CallHitPct(int part, int gap, int attack)
     {
         var h = HeroF; var t = Target(); if (h == null || t == null) return 0;
+        if (MountedHitPct(part, attack) is var mp && mp >= 0) return mp;           // [mounted-combat] a shot at the mount
         var s = StrikeV2.Create(h.Weapon, Math.Clamp(attack, 0, h.Weapon.Attacks.Length - 1), t.Plan, part, h.Skill);
         s.DefenderSkill = t.Skill; s.TargetGap = gap; s.Worn = t.Worn; s.WornCount = t.Worn.Length; s.Facing = W.FacingOf(t, h.X, h.Y);
         return W.Resolver.HitChanceBp(s) / 100.0;
@@ -327,6 +329,7 @@ public partial class FightView : Node2D
                 _ => ((string?)null, Colors.White, (Fighter?)null, ""),
             };
             if (e.Kind == FightEventKind.Hit || e.Kind == FightEventKind.ProjectileHit) if (tf != null) _hitAt[tf.Id] = e.Tick;
+            if (t == null && MountedEvent(e) is { } me) (t, c, at, call) = me;           // [mounted-combat] the mounted events
             if (t == null) continue;
             _log.Add((t, c, e.Tick)); if (_log.Count > 7) _log.RemoveAt(0);
             if (Feedback == null && at != null && call.Length > 0)      // the feedback layer draws the callouts now (severity colours, the facade)
@@ -472,6 +475,7 @@ public partial class FightView : Node2D
             case FAct.Dodge: return ("jog", (t / 2) % 4);
         }
         if (_hitAt.TryGetValue(f.Id, out var h) && t - h < 5) return ("hitreact", 0);
+        if (_riderLift != Vector2.Zero) return ("idle", 0);                       // [mounted-combat] the horse walks, not the rider
         if (f.LastMoveMm > 0) return (f.LastMoveMm > 180 ? "jog" : "walk", (t / 4) % 4);
         return ("idle", (t / 16) % 2);
     }
@@ -484,8 +488,9 @@ public partial class FightView : Node2D
 
     void DrawFighter(Fighter f)
     {
+        if (_riderLift == Vector2.Zero && MountedFigure(f)) return;             // [mounted-combat] horses and riders (FightView.Mounted.cs)
         if (f.Act == FAct.Fled) return;
-        var pos = Screen(f.X, f.Y);
+        var pos = Screen(f.X, f.Y) + _riderLift;
         float z = Zoom;
         DrawSetTransform(pos, 0, new Vector2(1, 0.32f));
         DrawCircle(Vector2.Zero, 11 * z, new Color(0, 0, 0, 0.28f));
@@ -542,7 +547,8 @@ public partial class FightView : Node2D
 
     void DrawBars(Fighter f)
     {
-        var pos = Screen(f.X, f.Y);
+        if (MountedBars(f)) return;                                             // [mounted-combat] a horse's panic and stamina
+        var pos = Screen(f.X, f.Y) + BarLift(f);
         float z = Zoom, bw = 16 * z, x = pos.X - bw / 2, y = pos.Y - 60 * z;
         if (f.Act == FAct.Down) y = pos.Y - 24 * z;
         float blood = Math.Clamp(1 - f.Book.LossPm / 500f, 0, 1);
@@ -587,6 +593,7 @@ public partial class FightView : Node2D
             if (h.Launcher != null) lines.Add(L.F("FIGHT_HUD_AMMO", h.Ammo, h.Loaded ? L.T("FIGHT_LOADED") : L.T("FIGHT_EMPTY")));
         }
         lines.Add(L.F("FIGHT_TIME", W.Tick / 20.0));
+        DrawMountedHud(sz);                                                     // [mounted-combat] the charge meter, the horse
         for (int i = 0; i < lines.Count; i++)
         {
             DrawString(_font, new Vector2(11, 23 + i * 18), lines[i], HorizontalAlignment.Left, sz.X - 20, 14, Colors.Black);

@@ -38,17 +38,19 @@ public partial class FightDemo : Node2D
         string Arg(string n, string d) { int i = Array.IndexOf(args, n); return i >= 0 && i + 1 < args.Length ? args[i + 1] : d; }
         int k = Array.IndexOf(args, "--fight-demo");
         _skirmish = k >= 0 && k + 1 < args.Length && args[k + 1] == "skirmish";
+        _mounted = k >= 0 && k + 1 < args.Length && args[k + 1] == "mounted";             // [mounted-combat] FightDemo.Mounted.cs
         _seed = ulong.TryParse(Arg("--seed", "7"), out var s) ? s : 7;
         _shotOut = Arg("--shot-out", ""); if (_shotOut.Length == 0) _shotOut = null;
         _shotWhat = Arg("--shot-what", "windup");
         Start();
         if (_shotOut != null) _ = Shot();
-        GD.Print($"FightDemo ready: {(_skirmish ? "skirmish" : "duel")} seed {_seed}");
+        GD.Print($"FightDemo ready: {(_mounted ? "mounted" : _skirmish ? "skirmish" : "duel")} seed {_seed}");
     }
 
     FightWorld Build()
     {
         var c = Content();
+        if (_mounted) return BuildMounted(c);
         if (_skirmish)
         {
             var sk = FightCalibration.Skirmish(c, _seed, 10);
@@ -81,7 +83,7 @@ public partial class FightDemo : Node2D
         }
         else _view.Replace(_w);
         if (!_skirmish && hero >= 0) { _view.Log.Info(hero).Name = "Aldric"; _view.Log.Info(1 - hero).Name = "Bram"; }       // the log names people
-        _view.Banner = L.T(_skirmish ? "FIGHT_DEMO_SKIRMISH" : "FIGHT_DEMO_DUEL");
+        _view.Banner = _mounted ? L.T("mt_demo_mounted") : L.T(_skirmish ? "FIGHT_DEMO_SKIRMISH" : "FIGHT_DEMO_DUEL");
         GetTree().CreateTimer(3.0).Timeout += () => { if (IsInstanceValid(_view)) _view.Banner = ""; };
     }
 
@@ -89,7 +91,7 @@ public partial class FightDemo : Node2D
     {
         if (e is not InputEventKey { Pressed: true, Echo: false } k || _view.Calling) return;
         if (k.Keycode == Key.R) { _seed++; Start(); }
-        else if (k.Keycode == Key.K) { _skirmish = !_skirmish; Start(); }
+        else if (k.Keycode == Key.K) { if (_mounted) _mounted = false; else if (_skirmish) { _skirmish = false; _mounted = true; } else _skirmish = true; Start(); }
         else if (Actions.Pressed(e, "combatstance.back")) GetTree().Quit();
     }
 
@@ -139,6 +141,9 @@ public partial class FightDemo : Node2D
                 _view.OpenReport();
                 break;
             }
+            case "charge" or "impact" or "brace" or "unhorsed":
+                StageMounted(_shotWhat!, hero);                     // [mounted-combat]
+                break;
             case "calledshot":
                 _view.Advance(30);
                 hero.Player = true;

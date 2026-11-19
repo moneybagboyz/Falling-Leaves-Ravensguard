@@ -243,6 +243,7 @@ public sealed class CombatTablesV2
     private static int[] CoverageFor(ArmourShapeDef s, BodyPlanV2 p)
     {
         var c = new int[p.BaseIds.Count];
+        if (s.Body.Length > 0 && s.Body != p.Id) return c;                    // barding covers only the plan it is made for (mounted-combat 3.1)
         for (int b = 0; b < c.Length; b++) if (s.Coverage.TryGetValue(p.BaseIds[b], out var v)) c[b] = R(v * 1000);
         return c;
     }

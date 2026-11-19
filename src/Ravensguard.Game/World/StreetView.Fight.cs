@@ -56,6 +56,7 @@ public partial class StreetView
         if (ledger == null) { ledger = new WoundLedger(rt?.State.Seed ?? 1, _world.Clock.Now.Seconds); _world.AttachWounds(ledger); }
         var setup = FightSetup.Encounter(fc, def, ev, HeroKit(fc), [], rt?.State.Seed ?? 1);
         var fight = setup.Start(fc, ledger);
+        if (_ride is { IsMounted: true } ride) Ravensguard.Sim.Combat.Mounted.MountedRide.MountHero(fight, setup.PlayerIndex, ride);   // [mounted-combat] a rider fights from the saddle
         _rec.StartFight(fight, setup.PlayerIndex);
         _rec.SetSpeed(SimSpeed.X1);
         _roadFight = (ev, coin, -1);

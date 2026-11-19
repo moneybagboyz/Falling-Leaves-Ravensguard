@@ -90,7 +90,7 @@ public sealed class FightRecord
             Stance = k.Stance, Plan = k.Plan, Blunted = k.Blunted,
             NowShape = f.Weapon.Shape.Id, NowMaterial = f.Weapon.Head.Id, NowQuality = (byte)f.Weapon.Quality, NowImprovised = f.Improvised?.Id ?? "", HasShield = f.Shield != null,
             NowThrowShapes = [.. f.Throwables.Select(t => t.Shape)], NowThrowMaterials = [.. f.Throwables.Select(t => t.Material)], NowThrowCounts = [.. f.Throwables.Select(t => t.Count)], NowThrowImprovised = [.. f.Throwables.Select(t => t.Improvised)],
-            State = Pack(f),
+            State = w.Mounts == null ? Pack(f) : [.. Pack(f), .. w.MountedTail(f)],      // [mounted-combat] a mounted fight's layer rides at the end of each row
             Book = ownBook ? WoundSave.Of(f.Book.Key, f.Book) : null,
         };
     }
@@ -174,6 +174,7 @@ public sealed class FightRecord
             for (int i = 0; i < r.NowThrowShapes.Length; i++) f.Throwables.Add(new ThrowStock(r.NowThrowShapes[i], r.NowThrowMaterials[i], r.NowThrowCounts[i], r.NowThrowImprovised[i]));
             Unpack(f, r.State);
         }
+        w.RestoreMounted([.. Fighters.Select(r => r.State)]);          // [mounted-combat] nothing for a foot fight
         foreach (var r in Projectiles)
         {
             var s = r.State;

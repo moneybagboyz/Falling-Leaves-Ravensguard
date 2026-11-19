@@ -262,8 +262,8 @@ public class AnatomyTests(V2Fixture f)
     public void Content_Phase4ItemsAndPlansLoadAndValidate()
     {
         var shapes = f.Db.All<WeaponShapeDef>().ToList();
-        Assert.Equal(18, shapes.Count(s => s.Family is not ("natural" or "practice" or "unarmed")));
-        Assert.Equal(42, f.Db.All<ArmourShapeDef>().Count());
+        Assert.Equal(22, shapes.Count(s => s.Family is not ("natural" or "practice" or "unarmed")));     // 18 and the lance, tourney lance, its stub and the billhook (mounted combat)
+        Assert.Equal(46, f.Db.All<ArmourShapeDef>().Count());                                             // 42 and four barding rows
         Assert.Equal(4, f.Db.All<ShieldShapeDef>().Count());
         Assert.Equal(new[] { "cave_beast", "draugr", "horse", "human", "quadruped" }, f.T.Plans.Select(p => p.Id).OrderBy(x => x));
         foreach (var s in shapes)
@@ -274,7 +274,9 @@ public class AnatomyTests(V2Fixture f)
         var human = f.Db.Get<BodyPlanDef>("human").Parts.Select(p => p.Id).ToHashSet();
         foreach (var a in f.Db.All<ArmourShapeDef>())
         {
-            Assert.All(a.Coverage.Keys, k => Assert.Contains(k, human));
+            // barding is made for the horse (mounted combat 3.1): its coverage is on horse parts and applies to no other plan
+            var plan = a.Body.Length > 0 ? f.Db.Get<BodyPlanDef>(a.Body).Parts.Select(p => p.Id).ToHashSet() : human;
+            Assert.All(a.Coverage.Keys, k => Assert.Contains(k, plan));
             Assert.All(a.Gaps, g => Assert.True(f.Human.GapIndex(g) >= 0, $"{a.Id} gap {g}"));
             Assert.InRange(a.BluntAbsorbPm, 0, 600);
         }

@@ -1,0 +1,22 @@
+// Mounted weapons (mounted-combat 3.1). The lance is couched under one arm (one-handed), 3.6 m long; a couched charge adds the horse's momentum through
+// the resolver (combat/mounted.jsonc). A blow of 150 units or more shatters it with 60% and leaves the stub. On foot it is unwieldy (-30 points, wind-up x1.5).
+// The tourney lance has a blunt coronal and takes half the run-up. The billhook's hook pulls a rider out of the saddle (unhorse x2).
+[
+  { "type": "weapon_shape", "id": "lance", "name": "Lance", "family": "polearm", "reach_mm": 3600, "strike_ticks": 2,
+    "head_volume_cm3": 38, "haft_volume_cm3": 4400, "haft_material": "ash", "wind_up_s": 0.60, "recover_s": 0.80,
+    "attacks": [
+      { "id": "couch", "name": "Couched thrust", "verb": "runs through", "type": "point", "contact_area": 10, "penetration_mm": 600, "velocity": 1.3, "parry_pm": 400 },
+      { "id": "bash",  "name": "Haft strike", "verb": "bashes", "type": "blunt", "contact_area": 20, "penetration_mm": 0, "velocity": 0.8 } ] },
+  { "type": "weapon_shape", "id": "tourney_lance", "name": "Tourney lance", "family": "polearm", "reach_mm": 3600, "strike_ticks": 2,
+    "head_volume_cm3": 60, "haft_volume_cm3": 4000, "haft_material": "ash", "wind_up_s": 0.60, "recover_s": 0.80,
+    "attacks": [
+      { "id": "couch", "name": "Couched coronal", "verb": "strikes", "type": "blunt", "contact_area": 30, "penetration_mm": 0, "velocity": 1.3, "parry_pm": 400 } ] },
+  { "type": "weapon_shape", "id": "lance_stub", "name": "Broken lance", "family": "hafted", "reach_mm": 2000, "strike_ticks": 2,
+    "head_volume_cm3": 2000, "wind_up_s": 0.55, "recover_s": 0.55,
+    "attacks": [ { "id": "bash", "name": "Haft strike", "verb": "bashes", "type": "blunt", "contact_area": 25, "penetration_mm": 0, "velocity": 0.8 } ] },
+  { "type": "weapon_shape", "id": "billhook", "name": "Billhook", "family": "polearm", "reach_mm": 2300, "strike_ticks": 3,
+    "head_volume_cm3": 110, "haft_volume_cm3": 900, "haft_material": "ash", "two_handed": true, "wind_up_s": 0.60, "recover_s": 0.65,
+    "attacks": [
+      { "id": "hook",   "name": "Hook", "verb": "hooks", "type": "edge", "contact_area": 25, "penetration_mm": 90, "velocity": 1.2, "hook": true },
+      { "id": "thrust", "name": "Thrust", "verb": "thrusts", "type": "point", "contact_area": 12, "penetration_mm": 300, "velocity": 1.2 } ] }
+]

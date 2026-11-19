@@ -1,0 +1,8 @@
+// The war horse (docs/specs/phase4/mounted-combat.md 3.1; the breed horses-and-carts.md reserved for Phase 4). Trained for war (900) and steady (temper 10):
+// it flinches less than a palfrey (700) in the refusal and panic formulas. Its id sorts after every Phase 3 breed, so the saved breed indices do not move.
+[
+  { "type": "species", "id": "warhorse_courser", "species": "Horse", "breed": "courser", "name": "Courser", "mass_kg": 480, "carry_kg": 150, "pull_n": 560,
+    "gait_cmps": { "walk": 230, "trot": 520, "gallop": 1250 }, "stamina_sp": 10000, "stamina_cost_sp_per_m": { "walk": 0, "trot": 2, "gallop": 21 }, "regen_sp_per_gs": { "walk": 5, "rest": 15 },
+    "idle_hay_kg_day": 8, "work_hay_kg_day": 9, "work_oats_hg_day": 30, "water_l_day": 40, "shoe_life_km": 600, "price_mites": 300000, "body_plan": "horse",
+    "sprite": "object.horse_riding", "ridden": true, "draught": false, "trained_pm": 900, "temper": 10 }
+]

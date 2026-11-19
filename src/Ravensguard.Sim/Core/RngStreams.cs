@@ -209,6 +209,15 @@ public static class RngStreams
     public const uint AmmoBreak = 0x441;
     /// <summary>Thrown aim error (key FightTick, thrower).</summary>
     public const uint ThrownAim = 0x442;
+    // mounted-combat.md 6 (0x470-0x473), keyed FightTick
+    /// <summary>Mounted: unhorse roll (draw 1), pin chance (draw 2), lance shatter (draw 3); key FightTick, rider (shatter: the lancer), draw + 8 x (attacker + 1).</summary>
+    public const uint UnhorseRoll = 0x470;
+    /// <summary>Mounted: the horse's panic effects (rearing throws, bolt direction) and refusal before braced polearms (key FightTick, horse).</summary>
+    public const uint HorsePanic = 0x471;
+    /// <summary>Mounted: where an unhorsed rider lands (draw 0 the limb group, draw 1 the side; key FightTick, rider).</summary>
+    public const uint FallPlacement = 0x472;
+    /// <summary>Mounted: a galloping horse slips on ice or stumbles on rubble (key FightTick, horse).</summary>
+    public const uint TerrainSlip = 0x473;
 
     // ---------- feedback and flavour (P4-D): cosmetic, never read by the simulation, never hashed ----------
     /// <summary>Flavour text: which template of each slot a line uses (key FightTick, line serial, draw = slot x 8 + attempt). Presentation only.</summary>
