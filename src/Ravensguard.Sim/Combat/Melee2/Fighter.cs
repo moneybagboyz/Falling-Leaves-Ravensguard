@@ -87,6 +87,8 @@ public sealed class Fighter
     public int ImprovisedPm = 1000, ImprovisedBlows;
     public required BodyPlanV2 Plan;
     public required WoundBook Book;
+    /// <summary>The book is the world ledger's (a person's or the hero's), not the fight's own.</summary>
+    public bool LedgerBook;
     public required CombatStanceDef Stance;
     public int Skill, ShieldSkill, ThrowSkill, ArcherySkill;
 

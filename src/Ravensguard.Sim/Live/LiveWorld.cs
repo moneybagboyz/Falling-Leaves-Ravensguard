@@ -235,6 +235,26 @@ public sealed partial class LiveWorld
     /// <summary>A replayed fight start: the factory gives back the fight as it was when it began.</summary>
     public void StartFightById(long id, int heroFighter) { if (FightFactory?.Invoke(id) is { } f) AttachFight(f, heroFighter); }
 
+    /// <summary>
+    /// The auto-dress stop-gap (until the Phase 5 treatment screen): when the fight is over, the hero's bleeding wounds are dressed with what the pack holds (<see cref="Ravensguard.Sim.Combat.Wounds.FieldDressing"/>),
+    /// by the hero or, when <paramref name="actor"/> is a companion, by that companion; under the ledger's lock (the book is the ledger's). Called while the fight is still attached.
+    /// </summary>
+    public Ravensguard.Sim.Combat.Wounds.DressOutcome DressAfterFight(int bandages, bool rope, int skill, ulong actor)
+    {
+        if (Fight is not { } f || FightHero < 0 || FightHero >= f.Fighters.Count) return LastDressing = Ravensguard.Sim.Combat.Wounds.DressOutcome.None;
+        var h = f.Fighters[FightHero];
+        object gate = f.Ledger?.Sync ?? f;
+        lock (gate)
+        {
+            LastDressing = Ravensguard.Sim.Combat.Wounds.FieldDressing.Dress(h.Book, h.Plan, bandages, rope, skill, actor, Math.Max(f.GameSec, Clock.Now.Seconds));
+            if (f.Ledger != null) f.KeepBooksInLedger();             // the hero's book stays the ledger's (it goes on bleeding or healing after the fight)
+        }
+        return LastDressing;
+    }
+
+    /// <summary>The last <see cref="DressAfterFight"/>'s outcome (not saved: the game reads it at once).</summary>
+    public Ravensguard.Sim.Combat.Wounds.DressOutcome LastDressing { get; private set; } = Ravensguard.Sim.Combat.Wounds.DressOutcome.None;
+
     /// <summary>One player combat input for the hero's fighter (it takes effect at the next step).</summary>
     public void FightInput(Ravensguard.Sim.Combat.Melee2.FightInput i) { if (Fight != null && FightHero >= 0) Fight.Input(FightHero, i); }
 

@@ -85,8 +85,10 @@ public sealed partial class FightWorld
         }
         int carriedG = armourG + (int)(weapon.MassMg / 1000) + (shield != null ? shield.Def.MassG : 0);
         int capG = 15000 + 2500 * kit.Strength / 125;
-        var book = Ledger != null && kit.Person != 0
-            ? Ledger.For(kit.Person, plan, GameSec, kit.SizeCm3, kit.Toughness)
+        // the ledger holds the books of people (and of the hero, whose id is 0, the "nobody" of a nameless bandit: hence the player test; review, auto-dress follow-up)
+        bool ledgerBook = Ledger != null && (kit.Person != 0 || player);
+        var book = ledgerBook
+            ? Ledger!.For(kit.Person, plan, GameSec, kit.SizeCm3, kit.Toughness)
             : new WoundBook(Seed, (FightId << 16) + (ulong)Fighters.Count + 1, (int)((long)plan.BloodMl * kit.SizeCm3 / plan.SizeCm3), kit.Toughness, plan.Id) { LastSec = GameSec };
         int id = Fighters.Count;
         var (fx, fy) = FightMath.Norm(kit.FaceX, kit.FaceY);
@@ -98,7 +100,7 @@ public sealed partial class FightWorld
             OverKg = Math.Max(0, (carriedG - capG) / 1000), Launcher = launcher, Plan = plan, Book = book, Stance = Content.Stance(kit.Stance),
             Skill = kit.Skill, ShieldSkill = kit.ShieldSkill >= 0 ? kit.ShieldSkill : kit.Skill, ThrowSkill = kit.ThrowSkill >= 0 ? kit.ThrowSkill : kit.Skill,
             ArcherySkill = kit.ArcherySkill >= 0 ? kit.ArcherySkill : kit.Skill, Improvised = imp,
-            X = kit.X, Y = kit.Y, FX = fx, FY = fy, BraceX = kit.X, BraceY = kit.Y, BraceSince = Tick, Stamina = K.StaminaMaxX100, Morale = kit.Courage,
+            X = kit.X, Y = kit.Y, FX = fx, FY = fy, BraceX = kit.X, BraceY = kit.Y, BraceSince = Tick, Stamina = K.StaminaMaxX100, Morale = kit.Courage, LedgerBook = ledgerBook,
         };
         if (launcher != null && kit.Ammo != null && Content.Ammo.TryGetValue(kit.Ammo, out var ammo))
         {
@@ -242,14 +244,14 @@ public sealed partial class FightWorld
     /// advance left every fighter writing into a book the ledger no longer held: the fight's wounds were never saved, never bled or healed after the fight, and the defeat table and the abstract
     /// tier never saw them. After each step a hurt fighter's book goes back into the ledger (unless the ledger has since taken a hurt book of its own for that person).
     /// </summary>
-    private void KeepBooksInLedger()
+    public void KeepBooksInLedger()
     {
         var l = Ledger!;
         lock (l.Sync)
             foreach (var f in Fighters)
             {
                 ulong key = f.Kit.Person;
-                if (key == 0 || f.Book.Empty) continue;
+                if (!f.LedgerBook || f.Book.Empty) continue;
                 if (l.Books.TryGetValue(key, out var held) && (ReferenceEquals(held, f.Book) || !held.Empty)) continue;
                 l.Books[key] = f.Book;
             }

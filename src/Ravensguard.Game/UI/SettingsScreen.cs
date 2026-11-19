@@ -240,6 +240,7 @@ public partial class SettingsScreen : Control
         v.AddChild(new Label { Text = L.T("fl_set_slow_tip"), ThemeTypeVariation = "HintLabel", AutowrapMode = TextServer.AutowrapMode.WordSmart });
         v.AddChild(Toggle("fl_set_captions", Settings.Captions, on => Settings.Captions = on));
         v.AddChild(Toggle("fl_set_reduce_blood", Settings.ReduceBlood, on => Settings.ReduceBlood = on));
+        var dress = Toggle("wd_set_auto_dress", Settings.AutoDress, on => Settings.AutoDress = on); dress.TooltipText = L.T("wd_set_auto_dress_tip"); v.AddChild(dress);
         var lrow = new HBoxContainer();
         lrow.AddChild(new Label { Text = L.T("fl_set_logsize"), SizeFlagsHorizontal = SizeFlags.ExpandFill });
         var lopt = new OptionButton();

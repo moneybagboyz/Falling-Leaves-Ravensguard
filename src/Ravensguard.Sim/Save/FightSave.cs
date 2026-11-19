@@ -104,7 +104,7 @@ public sealed class FightRecord
     private static FighterRow Row(FightWorld w, Fighter f)
     {
         var k = f.Kit;
-        bool ownBook = w.Ledger == null || k.Person == 0;
+        bool ownBook = w.Ledger == null || !f.LedgerBook;
         return new FighterRow
         {
             Name = k.Name, Team = k.Team, Person = k.Person, Player = f.Player,
@@ -190,7 +190,12 @@ public sealed class FightRecord
                 X = st[8], Y = st[9], FaceX = st[10], FaceY = st[11], Stance = r.Stance, Plan = r.Plan, Blunted = r.Blunted, Tactics = st.Length > 12 ? st[12] : -1,
             };
             var f = w.Add(kit, r.Player);
-            if (r.Book != null) f.Book = WoundSave.ToBook(r.Book, Seed);
+            if (r.Book != null) { f.Book = WoundSave.ToBook(r.Book, Seed); f.LedgerBook = false; }
+            else if (ledger != null && UsesLedger && !f.LedgerBook)
+            {
+                // a ledger book saved in the "wounds" section for a fighter the kit alone does not mark (the hero, id 0, handed to the AI by watch mode when saved)
+                f.Book = ledger.For(kit.Person, f.Plan, w.GameSec, kit.SizeCm3, kit.Toughness); f.LedgerBook = true;
+            }
             // what is in hand now
             if (r.NowImprovised.Length > 0) { f.Improvised = content.Improvised[r.NowImprovised]; f.Weapon = content.ImprovisedWeapon(f.Improvised); }
             else { f.Improvised = null; f.Weapon = content.T.Weapon(r.NowShape, r.NowMaterial, (Quality)r.NowQuality); }

@@ -77,6 +77,7 @@ About **130** golden tests plus six overview integration tests (section 11). Con
 | A new street when a settlement's plots run out (growth G3) | deferred to Phase 6 zoning (land Q3) |
 | Horse breeding and foals (phase-3 horses Q2) | deferred to Phase 6 (estates and studs); recorded at P5-I |
 | Blunt weapons damage plate, rings burst (phase-4 open item 4) | Phase 4 close-out; Phase 5 repairs it (crafting 4.5 `rerivet_mail`, `beat_out_plate`) |
+| The treatment screen in the street (the paper doll), physicians and their prices, `medicine/*.jsonc`, `make_crutch`, Treat utility scoring, tourniquet grade drops (phase-4 review, "Still open") | crafting 4.1 (medicine and the crutch as recipes), businesses 4.5 (the physician as a business). **It replaces the auto-dress stop-gap** (phase-4 review: `FieldDressing`, `LiveWorld.DressAfterFight`, `StreetView.AutoDress`, the `wd_*` keys and the "Bind my wounds after a fight" setting): when the screen lands, the after-fight dressing becomes its "dress all bleeding" button and the automatic call and setting go |
 
 ## 3. Build order
 

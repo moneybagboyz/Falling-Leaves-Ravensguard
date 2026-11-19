@@ -137,6 +137,13 @@ public sealed class SessionRecorder
     public void LeaveSite() { Commands.Append(ReplayCommand.SiteEnd(World.Tick)); World.DetachSite(); }
     public void SiteInput(Ravensguard.Sim.Sites.CrawlInput i) { Commands.Append(ReplayCommand.Site(World.Tick, i)); World.SiteInput(i); }
 
+    /// <summary>The auto-dress when a fight ends (recorded, so a replay dresses the same wounds at the same tick); the outcome says what to take out of the pack.</summary>
+    public Ravensguard.Sim.Combat.Wounds.DressOutcome Dress(int bandages, bool rope, int skill, ulong actor)
+    {
+        Commands.Append(ReplayCommand.Dress(World.Tick, bandages, rope, skill, actor));
+        return World.DressAfterFight(bandages, rope, skill, actor);
+    }
+
     public void Step()
     {
         World.Step();

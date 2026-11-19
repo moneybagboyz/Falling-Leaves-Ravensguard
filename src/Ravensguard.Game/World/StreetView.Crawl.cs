@@ -128,6 +128,7 @@ public partial class StreetView
             crawl = new SiteCrawl(rec.Map, sc, fc, ledger, _world.Clock.Now.Seconds, rt.State.Seed, rec.Known);
             crawl.Add(HeroMember(sc));
             foreach (var m in PartyMembers(fc)) crawl.Add(m);          // P4 close-out: the party goes down with the hero
+            crawl.AutoDress = Settings.AutoDress;                        // the auto-dress stop-gap after a fight below (saved with the crawl)
         }
         crawl.OwnsFight = false; crawl.Sync = book.Sync;
         if (_source.Region is { } region) crawl.Surgeon = SurgeonInfo.Nearest(region, site.X, site.Y);
@@ -211,6 +212,10 @@ public partial class StreetView
             rt.State.SiteSource = null;
         }
         _rec.SetTorch(c.Hero.Light.Lit);
+        // the bandages the hero carried down came from the pack: what he used below (his own dressing, the auto-dress) leaves it at the barrier
+        int packBandages = (int)(_heroLink?.View?.Goods.Where(g => g.Id == "bandage").Sum(g => g.Qty) ?? 0);
+        if (!c.Hero.Dead && _heroLink != null && packBandages > c.Hero.Bandages)
+            _heroLink.Issue(Ravensguard.Sim.Combat.Aftermath.AftermathDesk.DressCommand(packBandages - c.Hero.Bandages, 0, _world.Clock.Now.Seconds));
         if (c.Hero.Dead) { _router?.ShowToast(L.T("ex_ui_died_below"), 6f); HeroDied("su_cause_below"); }   // the heir takes over (StreetView.Succession.cs)
         else if (_heroLink != null && _crawlSite != null && (c.Hero.Loot.Count > 0 || c.Hero.TorchesUsed > 0))
             SiteCommand(SiteDesk.TakeCommand(_crawlSite.Id.Value, c.Hero.Loot, c.Hero.TorchesUsed, _world.Clock.Now.Seconds));   // the haul into the pack and the burnt torches out, at the barrier

@@ -5,6 +5,7 @@ using Ravensguard.Sim.Combat.Melee2;
 using Ravensguard.Sim.Combat.Wounds;
 using Ravensguard.Sim.Core;
 using Ravensguard.Sim.Economy;
+using Ravensguard.Sim.Goods;
 using Ravensguard.Sim.Inventory;
 using Ravensguard.Sim.People;
 using Ravensguard.Sim.Trade;
@@ -97,6 +98,23 @@ public static class AftermathDesk
         return new HeroResult(c.Seq, c.Kind, HeroResultCode.Ok, HeroText.Empty, 0, n, c.IssuedSec);
     }
 
+    /// <summary>The auto-dress stop-gap: what the field dressing after a fight took from the hero's pack ("mc:dress|bandages|rope grams"), taken out at the barrier.</summary>
+    public const string DressPrefix = "mc:dress|";
+
+    public static HeroCommand DressCommand(int bandages, int ropeG, long sec) =>
+        new() { Kind = HeroCommandKind.Aftermath, IssuedSec = sec, Tag = string.Create(CultureInfo.InvariantCulture, $"{DressPrefix}{Math.Max(0, bandages)}|{Math.Max(0, ropeG)}"), Origin = CommandOrigin.Human };
+
+    /// <summary>Takes the dressing's bandages and rope out of the pack (as many as are still there: the dressing was done with what the pack held when the fight ended).</summary>
+    private static HeroResult Dress(HeroContext ctx, HeroCommand c)
+    {
+        var p = c.Tag[DressPrefix.Length..].Split('|');
+        long B(int i) => i < p.Length && long.TryParse(p[i], NumberStyles.Integer, CultureInfo.InvariantCulture, out var v) ? Math.Max(0, v) : 0;
+        var g = ctx.Econ.Goods; long used = 0;
+        if (B(0) > 0 && g.TryIdOf("bandage", out var bandage)) used += ctx.Pack.DestroyUpTo(bandage, B(0), DestroyReason.Consumed);
+        if (B(1) > 0 && g.TryIdOf("rope", out var rope)) ctx.Pack.DestroyUpTo(rope, B(1), DestroyReason.Consumed);
+        return new HeroResult(c.Seq, c.Kind, HeroResultCode.Ok, HeroText.Empty, 0, used, c.IssuedSec);
+    }
+
     public static HeroCommand ControlCommand(EntityId companion, long sec) =>
         new() { Kind = HeroCommandKind.Aftermath, IssuedSec = sec, Tag = ControlPrefix + companion.Value.ToString(CultureInfo.InvariantCulture), Origin = CommandOrigin.Human };
     public static HeroCommand ReleaseCommand(long sec) => new() { Kind = HeroCommandKind.Aftermath, IssuedSec = sec, Tag = ReleasePrefix, Origin = CommandOrigin.Human };
@@ -166,6 +184,7 @@ public static class AftermathDesk
     {
         var book = BookOf(ctx.State, ctx.Content);
         if (c.Tag.StartsWith(WearPrefix, StringComparison.Ordinal)) return Wear(ctx, c);              // P4 close-out: the fight's armour wear onto the item rows
+        if (c.Tag.StartsWith(DressPrefix, StringComparison.Ordinal)) return Dress(ctx, c);            // the auto-dress stop-gap: the bandages it used
         if (c.Tag.StartsWith(ControlPrefix, StringComparison.Ordinal) || c.Tag.StartsWith(ReleasePrefix, StringComparison.Ordinal) || c.Tag.StartsWith(RescuePrefix, StringComparison.Ordinal))
             return Rescue(ctx, book, c);                                                   // P4 close-out: the rescue control switch
         if (c.Tag.StartsWith(ActPrefix, StringComparison.Ordinal))
