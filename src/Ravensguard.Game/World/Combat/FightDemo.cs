@@ -143,6 +143,7 @@ public partial class FightDemo : Node2D
                 break;
             }
         }
+        if (_shotWhat == "wounded") _view.ClearCallouts();
         _view.QueueRedraw();
         await Frames(6);
         var img = GetViewport().GetTexture().GetImage();

@@ -81,6 +81,9 @@ public partial class FightView : Node2D
     /// <summary>Steps the fight <paramref name="ticks"/> times without drawing (screenshots, tests of the scene).</summary>
     public void Advance(int ticks) { for (int i = 0; i < ticks; i++) W.StepWithAi(); Consume(); _cam = Centre(); }
 
+    /// <summary>Drops the floating callouts (a staged screenshot: they only age while the view runs).</summary>
+    public void ClearCallouts() => _callouts.Clear();
+
     public void Replace(FightWorld w) { W = w; _evCursor = 0; _log.Clear(); _hitAt.Clear(); _cam = Centre(); }
 
     /// <summary>The camera looks at the hero (or the middle of the fight) a metre above the feet, so the figures stand in the middle of the screen.</summary>

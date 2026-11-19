@@ -51,7 +51,8 @@ public sealed class SaveMigrator
             var hero = SaveCodec.Deserialize<Ravensguard.Sim.Characters.HeroSave>(hb);
             var rec = Ravensguard.Sim.Characters.HeroRecord.FromSave(hero);
             var skills = new Dictionary<string, int>(rec.Skills, StringComparer.Ordinal);
-            Ravensguard.Sim.Characters.HeroRecord.DefaultWeaponFamilies(skills, hero.SkillIds);
+            // a v5 save never trained a family: an id written at 0 by an earlier step's rewrite (v3 lists every enum id) counts as not given
+            Ravensguard.Sim.Characters.HeroRecord.DefaultWeaponFamilies(skills, hero.SkillIds.Where((id, i) => i < hero.SkillLevels.Length && hero.SkillLevels[i] > 0));
             var save = rec.ToSave();
             save.SkillLevels = [.. save.SkillIds.Select(id => skills.GetValueOrDefault(id))];
             sections[WorldSave.HeroSection] = SaveCodec.Serialize(save);
