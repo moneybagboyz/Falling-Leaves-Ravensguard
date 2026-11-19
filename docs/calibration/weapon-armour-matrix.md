@@ -1,7 +1,7 @@
 # Weapons against armour (Phase 4 close-out, items 2 and 4)
 
 Made with `dotnet run --project tools/Ravensguard.Calibrate -c Release -- --matrix` (400 first blows and 100 series per cell, `Sim/Combat/Melee2/WeaponMatrix.cs`) on the shipped
-content. A realism check judged against the expectations the user set (docs/reviews/phase-4-open.md item 2), not a balance target: weapons may be better or worse than one another.
+content. A realism check judged against the expectations the user set (docs/reviews/phase-4.md item 2), not a balance target: weapons may be better or worse than one another.
 The test `WeaponArmourTests` pins the directions, not these numbers.
 
 How a cell is measured: a skill-50 man (strength 1,250) strikes a skill-50 man in the given harness on the trunk (`upper_body`), from the front, normal swings (missiles at 10 m; a thrown

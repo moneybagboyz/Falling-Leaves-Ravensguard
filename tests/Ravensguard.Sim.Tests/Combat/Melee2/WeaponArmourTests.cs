@@ -11,7 +11,7 @@ using Ravensguard.Sim.Tests.Dialogue;
 namespace Ravensguard.Sim.Tests.Combat.Melee2;
 
 /// <summary>
-/// Phase 4 close-out (docs/reviews/phase-4-open.md items 1 to 5): the weapon x armour matrix's expectation directions (not its numbers), blunt damage to rigid armour
+/// Phase 4 close-out (docs/reviews/phase-4.md items 1 to 5): the weapon x armour matrix's expectation directions (not its numbers), blunt damage to rigid armour
 /// (dents, buckles, burst rings, broken straps) in the resolver, the fight, the save and the flavour log, the counter to the spear (inside its reach), and the mounted reach.
 /// </summary>
 [Collection("fight")]

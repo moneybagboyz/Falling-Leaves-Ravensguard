@@ -1,5 +1,5 @@
 // tools/calibrate --matrix (Phase 4 close-out item 2): every melee weapon and missile against six harnesses, on the trunk and through the armpit gap, through the shipped resolver,
-// the wound book and the armour wear. A realism check judged against expectations (docs/reviews/phase-4-open.md item 2), not a balance target.
+// the wound book and the armour wear. A realism check judged against expectations (docs/reviews/phase-4.md item 2), not a balance target.
 //   dotnet run --project tools/Ravensguard.Calibrate -c Release -- --matrix [--n 400] [--trials 100] [--only name] [--range 10]
 using System.Text;
 using Ravensguard.Sim.Combat.Melee2;
