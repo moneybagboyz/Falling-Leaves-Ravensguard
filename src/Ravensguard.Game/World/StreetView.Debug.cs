@@ -75,6 +75,8 @@ public partial class StreetView
             case "jobs": OpenWork(); return true;
             case "codex": OpenCodex(); return true;
             case "qmenu": OpenQMenu(); return true;
+            case "land": OpenLand(false, force: true); return true;          // P5-A2
+            case "deeds": OpenLand(true); return true;                        // P5-A2
             case "overlay": ShowControls(); return true;
             default: return false;
         }

@@ -29,6 +29,8 @@ public sealed class GrowthSystem
     /// <summary>Where visited chunks hear of new buildings and fields; null in a world with no chunks (the headless soak).</summary>
     public IGrowthChunkSink? ChunkSink { get; set; }
     public bool Enabled { get; set; } = true;
+    /// <summary>P5-A2: lots play holds or lets (a bought vacant house, a leased one): growth does not refit them. Set by the land wiring; null: none.</summary>
+    public Func<int, int, bool>? LandHolds { get; set; }
     private readonly GoodCatalog _cat;
 
     public GrowthSystem(EconomyWorld ew) { _ew = ew; _cat = ew.World.Economy.Goods; }
@@ -183,6 +185,7 @@ public sealed class GrowthSystem
         {
             var st = Region.Settlements[s]; bool town = st.Class == SettlementClass.Town;
             var claimed = new HashSet<int>(State.Projects.Where(p => p.Settlement == s && p.Lot >= 0).Select(p => p.Lot));
+            if (LandHolds != null) for (int l = 0; l < st.Plan.Lots.Count; l++) if (st.Plan.Lots[l].Vacant && LandHolds(s, l)) claimed.Add(l);     // P5-A2: a vacant house bought or let
             var reserved = State.Projects.Where(p => p.Settlement == s && p.Kind != ProjectKind.Assart && p.Lot < 0).Select(p => p.Rect).ToList();
             int lot = RegionGrowth.FindVacantLot(Region, s, claimed);
             var pr = new BuildProject { Serial = State.NextSerial, Kind = ProjectKind.Cottage, Settlement = s, StartDay = day, Lot = lot };
