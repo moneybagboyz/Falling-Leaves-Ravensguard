@@ -223,6 +223,22 @@ Hourly H2: abstract construction and vehicle sites <= 2 ms; steward rules <= 0.0
 | T16 | Hero's kin at the start | inheritance 3 | small, by origin |
 | T17 | Masterwork rate and rust rate | items 2, 3 | about 5% for a master with the best tools; 2 pm a day damp |
 
+## 10a. Decided with the user (Nov 2026)
+
+These answer the questions in §10. Where this section and a per-spec "default" disagree, this section wins.
+- **Building pace:** real worker-hours. A cottage takes one person about 25 game days and a crew of six about 4. 8x is allowed while building somewhere safe.
+- **Heirs when continuing as a companion:** a will decides. A will costs 2 crowns at a church or the reeve; a companion named in it inherits everything. Without a will, the companion keeps what they carry and the body's goods, and land and businesses go to blood kin, else to the lord.
+- **Claims inside a lord's land:** a licence costs 10 crowns an acre and gives a protected claim. Claiming without one is allowed but marked as squatting, and the lord can evict you from Phase 6. Outside any lord's land, claims are free but nobody protects them.
+- **Collapse:** the floor groans and dust falls for about 10 game seconds, then it falls, and anyone on it takes real fall wounds.
+- **Artifact tier and stewards:** the user did not choose, so the recommended defaults stand. No tier above masterwork (about 1 in 10 masterworks is named, with a history, but is no stronger). Stewards are honest in Phase 5; skimming arrives with Phase 6's corrupt officials.
+- **Charters to found a settlement (user request).** The ruler of a realm, or of a faction that holds land, can grant a **founding charter** for a new settlement on wild or royal land.
+  - The charter is a deed with conditions: a site, a deadline to settle a minimum number of households, dues owed to the grantor, and sometimes military service.
+  - You petition for one in person or through a vassal lord. The grant depends on your reputation, the ruler's opinion, a fee or gift, and whether the land is contested.
+  - Once settled, the place grows by the existing rules: a village at 80+ people with a chapel or mill; a town when the ruler grants a **market charter** (a second, separate grant).
+  - **Phase 5** builds the deed, the conditions, the founding flow, recruiting real households, and growth into a village.
+  - **Phase 6** builds the petition and the ruler's decision as politics, charters revoked for broken conditions, and market charters.
+  - Granting or revoking a charter is a chronicle event.
+
 ## 11. Risks
 
 | Risk | Why it matters | Mitigation |

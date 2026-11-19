@@ -1214,6 +1214,7 @@ This section comes from a full read of the legacy code by four auditors (economy
   - **Taxes:** real transfers (rent per acre, hearth tax, tithe, market tolls) collected by the reeve. Arrears lead to debt, then eviction. Higher tax levels create more grievances.
   - **Sponsorship** means funding a contract, which earns patron reputation and naming. Donations go into a real store. Shares are equity in a Business that has its own ledger.
   - **Founding:** a charter is a deed to wild land. You recruit real households, who carry their own goods. It becomes a village once it has 80+ people and a chapel or mill.
+    - **Charters come from rulers (decided with the user):** the king or a landholding faction's ruler grants a founding charter, with a site, a deadline and dues; you petition for it. A market charter, granted separately, makes the settlement a town. The deed and the founding flow come in Phase 5; the political decision and revocation in Phase 6.
   - **Recruits** are idle young adults who actually live in the settlement. The levy is one man per 10 households in peace, one per 5 in war, and each levied man is taken out of the harvest.
 
 ### 4A.3 Combat and characters

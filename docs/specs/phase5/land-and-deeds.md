@@ -95,6 +95,28 @@ Everything else (walking, trading at a door) is unchanged. Refusals name the hol
 | S5 (tax step) | dues and lease rents, arrears (existing system reads `DuesMitesPerSeason`) |
 | Load | `LandRegistry.Build` and change-log replay |
 
+## 4a. Founding charters (decided with the user, Nov 2026)
+
+A **founding charter** is a deed kind (`DeedKind.FoundingCharter`) granted by a realm's ruler, or by a landholding faction's ruler, over a named site of wild or royal land. Its data:
+- grantor (the realm or faction id) and grantee (a person);
+- the site, as a set of parcels or tiles;
+- `settle_by_day` and `min_households` (default: 5 households within 2 game years);
+- dues to the grantor (coin per year, or a share of the harvest);
+- optional service owed (men for days per year);
+- a fee paid at grant, through the ledger.
+
+Phase 5 rules:
+- **Phase 5's simple grant rule:** the petition is made in person at the ruler's seat. It is granted if the grantee's reputation with the realm is at least 0, the fee is paid, and the site is not claimed or contested. Phase 6 replaces this with the full political decision.
+- **Settling:** the grantee recruits real households (they walk there with their own goods). When enough are settled by the deadline, the charter is fulfilled.
+- **Growth:** a village forms at 80+ people with a chapel or a mill.
+- **Failure:** a missed deadline marks the charter as lapsed. In Phase 5 a lapsed charter is only recorded; revocation is Phase 6.
+
+Tests:
+- **LD-C1:** a granted charter creates the deed and moves the fee to the grantor's treasury, with coin conserved.
+- **LD-C2:** 5 households settled before the deadline fulfil the charter, and 4 do not.
+- **LD-C3:** a site that overlaps an existing claim is refused.
+- **LD-C4:** grant and fulfilment are chronicle events with causes.
+
 ## 5. Determinism
 No random draws: listings follow `FindPlot` order, buyers are chosen by (coin descending, household id), ties by id. Stream 0x500 is reserved for Phase 6 disputes and asserted never drawn. Prices integer mites.
 
