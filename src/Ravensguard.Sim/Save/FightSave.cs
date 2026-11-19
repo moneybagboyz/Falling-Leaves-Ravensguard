@@ -56,6 +56,8 @@ public sealed class FightRecord
     [Key(9)] public bool UsesLedger { get; set; }
     /// <summary>What started it (FightSetup kind) and the encounter id, so the game can settle it when it ends.</summary>
     [Key(10)] public string Kind { get; set; } = ""; [Key(11)] public string Cause { get; set; } = "";
+    /// <summary>P4-D (save v7): each fighter's morale state in id order (<see cref="Ravensguard.Sim.Combat.Morale.MoraleState.Pack"/>); null in a v6 record (the model starts afresh).</summary>
+    [Key(20)] public long[][]? Morale { get; set; }
 
     // ---------------------------------------------------------------- capture
 
@@ -70,6 +72,7 @@ public sealed class FightRecord
             Ammo = p.Ammo, Shape = p.Shape, Material = p.Material,
         })];
         r.Ground = [.. w.Ground.Select(g => new GroundRow { Shape = g.Shape, Material = g.Material, X = g.X, Y = g.Y, Damaged = g.Damaged, Ammo = g.Ammo })];
+        r.Morale = w.CaptureMorale();                                         // P4-D hook
         var spent = w.SpentAmmo.OrderBy(kv => kv.Key, StringComparer.Ordinal).ToArray();
         r.SpentAmmoIds = [.. spent.Select(kv => kv.Key)]; r.SpentAmmoCounts = [.. spent.Select(kv => kv.Value)];
         return r;
@@ -186,6 +189,7 @@ public sealed class FightRecord
         }
         foreach (var g in Ground) w.Ground.Add(new GroundItem(g.Shape, g.Material, g.X, g.Y, g.Damaged, g.Ammo));
         for (int i = 0; i < SpentAmmoIds.Length; i++) w.SpentAmmo[SpentAmmoIds[i]] = SpentAmmoCounts[i];
+        w.RestoreMorale(Morale);                                              // P4-D hook
         return w;
     }
 

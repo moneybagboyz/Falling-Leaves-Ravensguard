@@ -120,6 +120,7 @@ public sealed partial class FightWorld
     {
         get
         {
+            if (Disengaged) return true;                // P4-D hook: both sides walked away for 15 s (morale 4.3)
             int team = -1;
             foreach (var f in Fighters)
             {
@@ -143,6 +144,7 @@ public sealed partial class FightWorld
 
     private void Emit(FightEventKind kind, int actor, int target, int part = -1, int a = 0, int b = 0)
     {
+        if (kind is FightEventKind.Windup or FightEventKind.Shot or FightEventKind.Throw) _engageTick = Tick;   // P4-D hook: the walk-away clock (morale 4.3)
         if (RecordEvents) Events.Add(new FightEvent(Tick, kind, actor, target, (short)part, a, b));
     }
 
@@ -171,6 +173,7 @@ public sealed partial class FightWorld
             case FightInputKind.Reload: c.Reload = true; break;
             case FightInputKind.Throw: c.Throw = (i.A, i.B); break;
             case FightInputKind.Target: f.Brain.Target = i.A; break;
+            case FightInputKind.Yield: Yield(f); break;       // P4-D hook: the Q-menu yield (4.2)
             case FightInputKind.CalledShot: c.Start = new AttackReq { Attack = i.A, Target = f.Brain.Target, Part = i.B, Gap = i.C, Auto = true }; break;
         }
     }
@@ -190,7 +193,7 @@ public sealed partial class FightWorld
         Tick++;
         _impacts.Clear();
         foreach (var f in Fighters) UpdateVitals(f);
-        if (Tick % K.MoraleEveryTicks == 0) foreach (var f in Fighters) UpdateMorale(f);
+        MoraleStep();                                   // P4-D hook: morale at 2 Hz, staggered by id (Morale/FightWorld.Morale.cs)
         foreach (var f in Fighters) { ApplyCommand(f); AdvanceState(f); }
         foreach (var f in Fighters) Move(f);
         Separate();
@@ -590,7 +593,7 @@ public sealed partial class FightWorld
         if (hadArm && !f.WeaponArm && f.Active)
         {
             if (f.Act is FAct.Windup or FAct.Drawing or FAct.Aiming) { f.Act = FAct.Idle; }
-            f.MoralePenalty += K.LimbLossPenalty;
+            MoraleOnLimbLost(f);                        // P4-D hook
             Emit(FightEventKind.Disarmed, f.Id, -1);
         }
         if (hadShield && !f.ShieldArm && f.Shield != null) Emit(FightEventKind.Disarmed, f.Id, -1, -1, 1);
@@ -617,49 +620,10 @@ public sealed partial class FightWorld
     {
         if (f.Announced) return;
         f.Announced = true;
-        foreach (var o in Fighters)
-            if (o.Id != f.Id && o.Team == f.Team && o.Active && DistMm(o, f) <= 10_000) o.MoralePenalty += K.FriendDownPenalty;
+        MoraleOnFallen(f);                              // P4-D hook: friends within 10 m count the fall at their next update
     }
 
-    // ------------------------------------------------------------------ morale (the spike's rules; morale-capture-succession replaces them)
-
-    private void UpdateMorale(Fighter f)
-    {
-        if (!f.Active) return;
-        f.MoralePenalty = Math.Max(0, f.MoralePenalty - 1);
-        var b = f.Book;
-        int painPm = (int)Math.Min(1000, b.PainX100 * 1000L / Math.Max(1, b.KnockoutPainX100));
-        f.Morale = Math.Clamp(f.Kit.Courage - f.MoralePenalty - painPm * K.PainMoralePm / 10_000 - b.LossPm / 10, 0, 100);
-        if (f.Player) return;
-        var st = f.Stance;
-        bool flee = f.Morale < Math.Max(K.RoutBelow, st.FleeMoraleBelow) || b.LossPm >= st.FleeBloodLossPm && st.FleeBloodLossPm > 0;
-        if (!f.Routing && flee)
-        {
-            f.Routing = true;
-            if (f.Act is FAct.Windup or FAct.Block or FAct.Drawing or FAct.Aiming) f.Act = FAct.Idle;
-            Emit(FightEventKind.Rout, f.Id, -1);
-        }
-        else if (f.Routing && f.Morale > K.RallyAbove && b.LossPm < st.FleeBloodLossPm)
-        {
-            f.Routing = false;
-            Emit(FightEventKind.Rally, f.Id, -1);
-        }
-        if (!f.Routing) return;
-        Fighter? near = null; long nd = long.MaxValue;
-        foreach (var e in Fighters) if (e.Team != f.Team && e.Active) { long d = DistMm(e, f); if (d < nd) { nd = d; near = e; } }
-        if (near == null || nd > 20_000)
-        {
-            f.Act = FAct.Fled; f.EndedAt = Tick;
-            Emit(FightEventKind.Fled, f.Id, -1);
-            Announce(f);
-        }
-        else if (f.Morale < K.SurrenderBelow && nd <= 2 * K.BodyRadiusMm + 900)
-        {
-            f.Act = FAct.Surrendered; f.EndedAt = Tick;
-            Emit(FightEventKind.Surrender, f.Id, near.Id);
-            Announce(f);
-        }
-    }
+    // morale: morale-capture-succession 4.1 (P4-D) lives in Combat/Morale/FightWorld.Morale.cs
 
     // ------------------------------------------------------------------ hash
 
@@ -676,8 +640,10 @@ public sealed partial class FightWorld
             h = FightMath.Mix(h, f.Ammo | (f.Loaded ? 1 << 20 : 0)); h = FightMath.Mix(h, f.ShieldPm); h = FightMath.Mix(h, f.ImprovisedPm);
             h = FightMath.Mix(h, f.Morale | f.MoralePenalty << 8 | (f.Routing ? 1 << 20 : 0));
             h = f.Book.Hash(h);
+            h = f.M.Hash(h);                            // P4-D hook: the MoraleHash joins the FightHash
         }
         foreach (var p in Projectiles) h = p.Hash(h);
+        h = FightMath.Mix(h, _engageTick);              // P4-D hook: the walk-away clock
         return h;
     }
 }

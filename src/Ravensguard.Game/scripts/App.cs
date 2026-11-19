@@ -57,6 +57,13 @@ public partial class App : Node
             AddChild(new World.Combat.FightDemo { Name = "FightDemo" });
             return;
         }
+        if (args.Contains("--captivity-demo"))
+        {
+            // P4-D hook: the defeat and captivity screens on their own; --shot-out for screenshots
+            InputBootstrap.Init();
+            AddChild(new World.Combat.CaptivityDemo { Name = "CaptivityDemo" });
+            return;
+        }
         int spike = System.Array.IndexOf(args, "--spike"); // e.g. `-- --spike melee`
         if (spike >= 0 && spike + 1 < args.Length && args[spike + 1] == "melee")
         {

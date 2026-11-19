@@ -75,6 +75,8 @@ public enum FightInputKind : byte
     Target = 10,
     /// <summary>A called shot struck from the paused menu (T, then F): A = attack index, B = part index, C = gap index (-1); the swing releases itself at the end of its wind-up.</summary>
     CalledShot = 11,
+    /// <summary>P4-D (morale 4.2): the hero yields (the Q-menu verb on self); the winner's side accepts or refuses as for any surrender.</summary>
+    Yield = 20,
 }
 
 public readonly record struct FightInput(FightInputKind Kind, int A = 0, int B = 0, int C = 0);

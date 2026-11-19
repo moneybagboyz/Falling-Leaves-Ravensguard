@@ -148,6 +148,17 @@ public static class Phase3Smoke
                 Fit(sv.DebugHud!, "the camp panel", view);
                 Key(Godot.Key.Escape); await Frames(tree, 4);
             }
+            // P4-D hook: the defeat and captivity screens fit 960x540 and keep the screen keys from the street view under them
+            for (int which = 0; which < 2; which++)
+            {
+                var screen = sv.DebugShowAftermath(which); await Frames(tree, 8);
+                string what = which == 0 ? "the defeat screen" : "the captivity screen";
+                Fit(screen, what, view);
+                foreach (var k in new[] { Godot.Key.I, Godot.Key.J, Godot.Key.C }) { Key(k); await Frames(tree, 2); }
+                if (router.Top != sv) throw new Exception("a screen key opened " + router.Top?.GetType().Name + " under " + what);
+                sv.DebugCloseAftermath(); await Frames(tree, 3);
+            }
+            GD.Print("[smoke]   defeat and captivity screens: fit, keys guarded");
         }
         finally { win.Size = oldSize; await Frames(tree, 2); }
     }

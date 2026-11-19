@@ -1377,6 +1377,7 @@ public partial class StreetView : Control, IHandlesBack
     {
         if (!Visible) return;
         if (_router is { HasModal: true }) return; // the pause menu (or any dialog) owns the keys; Esc is the router's (it closes the menu) and F8 is the App's
+        if (AftermathInput(e)) { GetViewport().SetInputAsHandled(); return; }   // P4-D hook: the defeat and captivity screens' guard, the yield verb
         if (ObInput(e)) { GetViewport().SetInputAsHandled(); return; }
         if (e is InputEventKey { Pressed: true } && Actions.Pressed(e, "world.back") && (_campOpen || _travel?.Journey is { State: Ravensguard.Sim.Travel.JourneyState.Travelling or Ravensguard.Sim.Travel.JourneyState.Paused }) && TravelInput(e)) { GetViewport().SetInputAsHandled(); return; }
         if (_router != null && Actions.Pressed(e, "world.back"))

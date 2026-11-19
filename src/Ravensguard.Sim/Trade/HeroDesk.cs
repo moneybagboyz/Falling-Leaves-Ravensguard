@@ -20,6 +20,8 @@ public enum HeroCommandKind : byte
     EncounterPay,
     /// <summary>Appended (Phase 3 review finding 6): the hero takes the job <c>Job</c> (his position in <c>X</c>, <c>Y</c>, region millimetres), or walks away from it (<c>JobAbandon</c>, <c>Tag</c> "away" when the distance rule asked).</summary>
     JobClaim, JobAbandon,
+    /// <summary>Appended (Phase 4 P4-D): a lost fight's defeat (the request in <c>Tag</c>, "mc:defeat|...") or a captive's attempt ("mc:act|verb"), applied by <see cref="Ravensguard.Sim.Combat.Aftermath.AftermathDesk"/>.</summary>
+    Aftermath,
 }
 
 /// <summary>Where the hero crafts (built on the main thread from what is in reach, copied into the command).</summary>
@@ -370,6 +372,7 @@ public sealed class HeroDesk
                 HeroCommandKind.EncounterPay => EncounterPay(ctx, c),
                 HeroCommandKind.JobClaim => JobClaim(ctx, c),
                 HeroCommandKind.JobAbandon => JobAbandon(ctx, c),
+                HeroCommandKind.Aftermath => Ravensguard.Sim.Combat.Aftermath.AftermathDesk.Apply(ctx, c),     // P4-D hook
                 _ => R(c, HeroResultCode.Invalid, T("HERO_UNKNOWN_COMMAND")),
             };
         }

@@ -1,0 +1,16 @@
+// Defeat outcomes by winner, captivity, ransom and escapes (morale-capture-succession 4.4 to 4.7). Money in mites, chances permille, work in sim-seconds.
+// Captivity is by bandits and armies only in Phase 4; guards end with a fine and release, jail and slavery are Phase 6.
+[
+  { "type": "captivity_rules", "id": "default",
+    "winner_by_archetype": { "bandit": "bandits", "soldier": "army", "guard": "guards", "wolf": "beasts", "bear": "beasts", "cave_beast": "beasts", "draugr": "draugr", "mob": "locals" },
+    "pittance_pm": 50, "pittance_min_mites": 20, "carry_base_g": 15000, "carry_per_strength_g": 2500, "robber_carries_g": 12000, "armour_keep_mites": 400,
+    "mercy_pm": 500, "cruel_kill_pm": 500, "beast_finish_pm": 500, "beast_feed_minutes": 5,
+    "left_shapes": ["shirt", "braies", "boots", "shoes", "hose", "chemise", "smock"], "left_goods": ["bread"], "food_left_g": 1000,
+    "kidnap_min_mites": 1000, "bandit_hold_days": 10, "army_hold_days": 40, "bandit_release_pm": 400, "bandit_ransom_pm": 400,
+    "bandit_guards_min": 2, "bandit_guards_max": 3, "army_guards": 2, "shift_hours": 6, "army_care_dress_pm": 700, "caught_pain_x100": 2000,
+    "rank_levy": 1300, "rank_man_at_arms": 4000, "rank_knight": 20000, "rank_baron": 100000, "wanderer_floor": 1500,
+    "bandit_due_days": 3, "army_due_days": 6, "halve_after_days": 5, "quarter_after_days": 10, "friend_share_pm": 300, "keep_pm": 100,
+    "bonds_difficulty": 40, "bonds_work_s": 120, "hideout_lock": 30, "army_cage_lock": 50, "lock_work_s": 90, "improvised_pick_penalty": 10,
+    "notice_base_pm": 250, "dark_notice_pm": 500, "transfer_every_min_days": 2, "transfer_every_max_days": 6, "transfer_escape_base_pm": 150,
+    "rescue_daily_per_member_pm": 50, "loot_days": 10, "guard_fine_mites": 200 }
+]

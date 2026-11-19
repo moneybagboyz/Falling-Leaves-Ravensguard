@@ -150,6 +150,7 @@ public static class CombatBrain
         if (!reacting && m.React == ReactNone) c.Block = GuardWanted(w, f);
 
         if (f.Routing) { Flee(w, f); return; }
+        if (w.MoraleStepBack(f)) return;                // P4-D hook: a wavering fighter's pace back (morale 4.1)
         var t = PickTarget(w, f, tick);
         if (t == null) { c.Block = false; return; }
         m.Target = t.Id;

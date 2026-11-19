@@ -1,0 +1,18 @@
+// Morale in a live fight (morale-capture-succession 3.1, 4.1). Morale points x100, seconds are sim-seconds, distances in metres, chances permille.
+// Beasts flee by blood loss: the spec's 40% (wolf) and 30% (cave beast) are the v2 wound model's unconscious and collapse bands, never reached awake, so they are 25% and 20% here.
+// morale = courage - penalty - pain_k x pain - blood_loss_k x blood_lost% + captain + banner + shield_wall + winning - outnumbered, clamped 0..100.
+[
+  { "type": "morale_rules", "id": "default",
+    "base_x100": 7000, "friend_down_x100": 600, "friend_down_radius_m": 10, "friend_down_cap_x100": 2400, "decay_x100_per_s": 40,
+    "flanked_x100": 1500, "flanked_for_s": 5, "flank_check_mm": 2500, "hit_taken_x100": 200, "limb_lost_x100": 1500,
+    "routing_neighbour_x100_per_s": 200, "routing_neighbour_radius_m": 8, "routing_cap_x100": 2000, "pain_k_pm": 350, "blood_loss_k_pm": 1000,
+    "captain_x100": 1000, "captain_radius_m": 15, "banner_x100": 800, "banner_radius_m": 25, "shield_wall_x100": 500,
+    "winning_x100": 800, "winning_ratio_pm": 2000, "winning_window_s": 30, "outnumbered_x100": 1000, "outnumbered_ratio_pm": 2000, "outnumbered_radius_m": 12, "alone_x100": 0, "alone_per_foe_x100": 1500, "alone_cap_x100": 6000, "alone_radius_m": 30, "walk_away_s": 15,
+    "leader_down_x100": 2000, "leader_down_radius_m": 30, "banner_lost_x100": 800, "darkness_superstitious_x100": 500,
+    "waver_below_x100": 3500, "recent_loss_s": 15, "waver_step_pm_per_s": 50, "step_back_mm": 750,
+    "rout_below_x100": 2000, "surrender_below_x100": 1000, "rally_above_x100": 4000, "rally_hold_s": 4, "rally_captain_radius_m": 20, "rally_immune_s": 10,
+    "flee_escape_m": 20, "flee_escape_s": 5, "drop_shield_below_x100": 1500, "drop_weapon_below_x100": 1000, "drop_pm": 300, "rout_stamina_x100_per_s": 800,
+    "cornered_m": 3, "flee_path_block_m": 6, "accept_army_pm": 900, "accept_bandit_pm": 1000, "accept_folk_pm": 1000, "refused_retry_s": 10,
+    "wolf_flee_blood_pm": 250, "cave_beast_flee_blood_pm": 200,
+    "trait_x100": { "brave": 1500, "craven": -2000, "drunk": 1000 }, "veteran_x100": 500 }
+]
