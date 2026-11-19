@@ -2537,6 +2537,152 @@ wm_why_yielded,Yielded
 wm_why_fled,Got away
 wm_why_waiting,Waiting
 wm_why_subduing,Subduing: blunt blows only
+ex_chron_taboo,"The graves of {site_name} were robbed; the old folk say the dead there do not forgive."
+ex_chron_draugr_slain,{attacker} laid {name} to rest for good in {site_name}: the dead man walks no more.
+ex_chron_beast_slain,{attacker} killed the beast of {site_name}.
+ex_chron_reoccupied,A new band took {site}.
+ex_chron_flooded,The water rose in {site} after the storms.
+ex_chron_legend,Folk near {settlement} tell of something that walks in {site}.
+ex_r_taboo,"someone robbed the graves at {about}; there is talk of a curse."
+ex_r_slain,"{who} killed the thing that lived in {about}, they say."
+ex_r_legend,"old folk in {place} will not go near {about}: something walks there at night."
+ex_r_reoccupied,outlaws have moved into {about}.
+ex_r_flooded,the workings at {about} flooded after the storms.
+ex_hud_busy_recover,Getting your breath back...
+ex_ev_entered,Your torch flickers over rough stone. Cold air rises from below.
+ex_ev_level,Level {0}.
+ex_ev_door,The door gives with a groan.
+ex_ev_looted,You take what is there ({0}).
+ex_ev_looted_empty,Nothing left worth taking.
+ex_ev_taboo,You have taken from the dead. Something in the dark seems to listen.
+ex_ev_air_gutter,The candle gutters: the air is going bad.
+ex_ev_air_bad,The flame shrinks and your head swims: bad air.
+ex_ev_air_clear,The air is fresher here.
+ex_ev_flame_died,The flame dies in the foul air.
+ex_ev_torch_low,The torch is burning down: a minute left.
+ex_ev_torch_out,The torch goes out. Darkness.
+ex_ev_torch_lit,You light a torch.
+ex_ev_no_light,"No light to be had: no torch left, or nothing to light it with here."
+ex_ev_trap_found,You spot a trap: {0}.
+ex_ev_trap_sprung,A trap goes off: {0}!
+ex_ev_trap_disarmed,You make the trap safe.
+ex_ev_trap_disarm_failed,Your hands slip; the trap is still armed.
+ex_ev_trap_cannot,"That cannot be disarmed, only stepped round."
+ex_ev_fell,You fall hard.
+ex_ev_held,Iron jaws close on your leg.
+ex_ev_freed,You work your leg free.
+ex_ev_creak,The roof creaks. Dust trickles down.
+ex_ev_cave_in,The roof comes down!
+ex_ev_dug,You dig through the rubble.
+ex_ev_water_rising,The water is rising: {0} cm.
+ex_ev_swimming,You are out of your depth: swimming.
+ex_ev_sinking,Your gear drags you under!
+ex_ev_unconscious,The world goes grey; you fall.
+ex_ev_woke,"You come round, gasping."
+ex_ev_died,Death came in the dark.
+ex_ev_monster_woke,Something stirs on its bier: {0} rises.
+ex_ev_beast_woke,A low sound in the dark: {0} has heard you.
+ex_ev_noticed,{0} has seen you.
+ex_ev_fight,{0} comes at you out of the dark!
+ex_ev_fight_over,The fight is over.
+ex_ev_slain,{0} is destroyed.
+ex_ev_ladder_up,You pull the ladder up after you.
+ex_ev_ladder_down,You let the ladder down.
+ex_ev_ladder_missing,The ladder has been pulled up. A rope would do.
+ex_ev_rope,You climb down the rope.
+ex_ev_rope_fell,The rope burns through your hands; you fall.
+ex_ev_retrace,You retrace your steps.
+ex_ev_retrace_done,You are back where you came in.
+ex_ev_retrace_stopped,You stop retracing.
+ex_ev_marked,You chalk a mark on the wall.
+ex_ev_rest,You rest in the dark.
+ex_ev_rest_stopped,Your rest is broken.
+ex_ev_cannot_rest,Not here: the air is bad or the water too deep.
+ex_ev_lost,You have lost your way in the dark.
+ex_ev_found,You know where you are again.
+ex_ev_rats,Rats have been at your food.
+ex_ev_disarming,You work at the trap ({0} s).
+ex_ev_digging,You dig at the rubble ({0} s).
+ex_ev_burning,The torch catches: the dead flesh burns.
+ex_ev_nothing,Nothing to do here.
+ex_ev_blocked,Rubble blocks the way: you need a pick or a shovel.
+ex_ev_treated,You bind the wound.
+ex_someone,Someone
+ex_folk_scavengers,Scavenger
+ex_folk_wolves,Wolf
+ex_folk_bear,Bear
+ex_folk_hermit,Hermit
+ex_folk_bandits,Outlaw
+ex_folk_smugglers,Smuggler
+ex_folk_miners,Miner
+ex_folk_vermin,Vermin
+ex_folk_grave_robber,Grave robber
+ex_folk_draugr,Draugr
+ex_folk_cave_beast,Cave beast
+ex_trap_deadfall,a deadfall
+ex_trap_pit,a pit
+ex_trap_collapsing_floor,rotten boards over a drop
+ex_trap_spring_spears,spring spears
+ex_trap_tripwire_alarm,a tripwire
+ex_trap_bear_trap,a bear trap
+ex_trap_snare,a snare
+ex_hud_level,Level {0}
+ex_hud_light,{0}: {1} min left
+ex_hud_dark,No light
+ex_hud_spares,Spare torches: {0}
+ex_hud_air_gutter,The flame gutters: bad air ahead
+ex_hud_air_bad,Bad air: get out
+ex_hud_air_foul,Foul air!
+ex_hud_swimming,Swimming
+ex_hud_wading,Wading ({0} cm)
+ex_hud_lost,Lost
+ex_hud_exit,"{0} m to the stairs, {1} min at your load"
+ex_hud_no_exit,No way out known
+ex_hud_load,Load {0}/{1} kg
+ex_hud_busy_disarm,Disarming...
+ex_hud_busy_dig,Digging...
+ex_hud_busy_held,Caught in a trap
+ex_hud_retracing,Retracing your steps
+ex_hud_resting,Resting
+ex_hud_surgeon,"Surgeon: {0}, {1:0.0} game day by horse, {2:0.0} on foot"
+ex_light_torch,Torch
+ex_light_candle,Candle
+ex_light_lantern,Lantern
+ex_map_title,Underground: {0}
+ex_map_floor,Floor
+ex_map_way,"Stairs, ladders"
+ex_map_box,"Chests, niches"
+ex_map_water,Water
+ex_map_rubble,Rubble
+ex_map_trap,Traps found
+ex_map_pin,Your marks
+ex_map_known,{0} m² drawn on this level
+ex_map_keys,PgUp/PgDn level   M or Esc close
+ex_q_title,Underground
+ex_q_head,Here
+ex_q_retrace,Retrace steps
+ex_q_mark,Mark (chalk)
+ex_q_map,Map
+ex_q_treat,Bandage a wound
+ex_q_ladder,Pull up the ladder
+ex_q_rest,Rest here
+ex_q_drag,Drag out
+ex_q_leave,Climb out
+ex_q_why_not_bleeding,nothing bleeds
+ex_q_why_no_ladder,no ladder here
+ex_q_why_air,bad air or deep water
+ex_q_why_nobody,nobody to carry
+ex_q_why_not_mouth,only at the stairs out
+ex_ui_keys,WASD move  E act  V torch  Z sneak  M map  Q menu  PgUp/PgDn look  Esc pause
+ex_ui_sneak_on,"Sneaking: half speed, quieter, sharper eyes for traps."
+ex_ui_sneak_off,You stop sneaking.
+ex_ui_no_horses,No horse goes down there: dismount and hitch it at the mouth.
+ex_ui_fade_stone,Your torch flickers over rough stone...
+ex_ui_fade_cave,The cave mouth breathes cold air...
+ex_ui_gen_failed,The way down is choked; you cannot go in.
+ex_ui_left,You climb back into the daylight.
+ex_ui_left_loot,You climb back into the daylight with {0} things worth {1}.
+ex_ui_died_below,You died below ground.
 fl_after_broke_shield1,"{target}'s shield splinters and falls apart."
 fl_after_broke_shield2,"{target}'s shield breaks in half."
 fl_after_broke_tool1,"{target}'s makeshift weapon breaks in {tgt_his} hands."

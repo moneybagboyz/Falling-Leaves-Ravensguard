@@ -35,6 +35,8 @@ public partial class FightView : Node2D
     public Action<bool>? SetPaused { get; init; }
     public float Zoom { get; set; } = 3f;
     public string Banner { get; set; } = "";
+    /// <summary>The ground the fight stands on: grass by default; a site's stone floor underground (P4-H).</summary>
+    public Color Ground { get; set; } = new(0.24f, 0.3f, 0.19f);
 
     readonly RigAtlas _rig;
     Font _font = null!;
@@ -430,7 +432,7 @@ public partial class FightView : Node2D
     public override void _Draw()
     {
         var sz = GetViewportRect().Size;
-        DrawRect(new Rect2(Vector2.Zero, sz), new Color(0.24f, 0.3f, 0.19f));
+        DrawRect(new Rect2(Vector2.Zero, sz), Ground);
         float ppm = Ppm;
         var o = Screen(0, 0);
         var grid = new Color(0, 0, 0, 0.08f);
@@ -580,7 +582,7 @@ public partial class FightView : Node2D
         DrawSetTransform(pos, 0, new Vector2(1, 0.32f));
         DrawCircle(Vector2.Zero, 11 * z, new Color(0, 0, 0, 0.28f));
         DrawSetTransform(Vector2.Zero, 0, Vector2.One);
-        if (f.Plan.Id != "human")
+        if (f.Plan.Id is not ("human" or "draugr"))                         // P4-H: the draugr is the human rig, palette-shifted (overview 10)
         {
             var col = f.Plan.Id == "quadruped" ? new Color(0.45f, 0.42f, 0.38f) : new Color(0.32f, 0.24f, 0.18f);
             float r = f.Plan.Id == "quadruped" ? 9 * z : 16 * z;
@@ -602,6 +604,7 @@ public partial class FightView : Node2D
         if (f.Act == FAct.Dead) tint = new Color(0.55f, 0.5f, 0.5f);
         if (f.Routing) tint = tint * new Color(1, 1, 0.75f);
         tint = Feedback.Tint(f.Id, tint);                                  // the white flash and the wound's red tint (through the facade)
+        if (f.Plan.Id == "draugr") tint = tint * new Color(0.62f, 0.78f, 0.66f);   // P4-H: grave-pale, blue-green dead flesh
         var all = new List<string>(layers); all.AddRange(overlays);
         // west is the side view mirrored: the whole figure is drawn through a flipped transform about the feet (a negative rect size is not a flip in every renderer)
         DrawSetTransform(pos, 0, new Vector2(mirror ? -1 : 1, 1));

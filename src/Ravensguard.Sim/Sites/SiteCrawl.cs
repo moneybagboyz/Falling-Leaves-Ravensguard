@@ -524,7 +524,7 @@ public sealed partial class SiteCrawl
         var h = Hero;
         int air = Map.Air[h.Cell];
         var (em, es) = ExitTime(h);
-        string busy = h.BusyS > 0 ? ((h.BusyTarget >> 24) == 1 ? "disarm" : "dig") : h.HeldS > 0 ? "held" : "";
+        string busy = h.BusyS > 0 ? (h.BusyTarget < 0 ? "recover" : (h.BusyTarget >> 24) == 1 ? "disarm" : "dig") : h.HeldS > 0 ? "held" : "";
         return new CrawlSnapshot(GameSec, h.Level, h.X, h.Y, h.Light.LeftS, h.Light.Lit, h.Light.Kind, h.SpareTorches, air, air < C.K.AirGutter, Map.Water(h.Cell), h.Lost, Fight != null,
             em, es, h.CarriedKg, h.CapacityG / 1000, Resting, h.Retracing, Known.Count, busy, Known.Revision);
     }

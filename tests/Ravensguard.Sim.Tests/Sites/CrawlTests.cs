@@ -45,7 +45,7 @@ public class CrawlTests(SiteFixture fx)
     {
         var (c, h, m) = Crypt();
         Assert.Equal(3, m.Levels);
-        Assert.Empty(m.Inhabitants.Where(n => n.Monster == "draugr"));
+        Assert.DoesNotContain(m.Inhabitants, n => n.Monster == "draugr");
         Assert.NotEmpty(m.Traps);
         int goal = ExFixtures.CryptCell(m);
         c.GoTo(h, goal);
