@@ -111,6 +111,7 @@ public sealed class WorldRuntime : IDisposable
         homeWorld.Economy.Growth.ChunkSink ??= new Ravensguard.Sim.Growth.ChunkDeltaWriter(Ravensguard.Sim.WorldGen.Chunks.ChunkGenerator.For(region, state.Population, content), state.Chunks);
         Records.AdoptHome(homeWorld);
         state.HomeRecords = homeWorld;
+        homeWorld.Sim.Set(state.Wounds ??= new Ravensguard.Sim.Combat.Wounds.WoundLedger(state.Seed, state.Clock.Now.Seconds));   // the wounds both tiers share (Phase 4 P4-B)
         state.Regions = Records;
         if (state.RegionSections.Count > 0) { Records.AttachSections(state.RegionSections); state.RegionSections = new SortedDictionary<int, byte[]>(); } // the pager holds them now
         Scheduler = new RegionScheduler(Records) { DailyRing = dailyRing, MaxParallel = maxParallel > 0 ? maxParallel : Math.Max(1, Math.Min(2, Environment.ProcessorCount - 2)) };

@@ -45,7 +45,7 @@ public static class SystemOrder
     // H3
     public const int Markets = 3_000;
     // H4 slice order (households spec 3.2: plan work, eat, drink, heat, wear, nutrition; then vital rolls, births before deaths)
-    public const int Provisioning = 4_000, FarmSales = 4_050, HouseholdNeeds = 4_100, VitalRolls = 4_200, ProductionDaily = 4_300, MarketDaily = 4_400;
+    public const int Provisioning = 4_000, FarmSales = 4_050, HouseholdNeeds = 4_100, VitalRolls = 4_200, Wounds = 4_250, ProductionDaily = 4_300, MarketDaily = 4_400;
     // H5 hour 0: farming (weather, field events, the day's labour, harvest) first; then population; store spoilage, parish, labour market before the markets'
     // daily globals (structural demand sees today's staff and stock) and production's vacancy counters last (Phase 2 integration, decision I1)
     public const int DailyGlobalsFarming = 4_900, DailyGlobalsPopulation = 5_000, DailyGlobalsSpoilage = 5_020, DailyGlobalsParish = 5_030, DailyGlobalsLabour = 5_040,

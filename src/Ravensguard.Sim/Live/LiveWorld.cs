@@ -195,6 +195,7 @@ public sealed class LiveWorld
         _px = _x; _py = _y; _pz = _z;
         if (Streamer != null) StreamStep();
         Clock.Advance(TickSeconds);
+        Wounds?.AdvanceTo(Clock.Now.Seconds);          // bleeding, pain and consciousness at 20 Hz while anyone has an open wound, in or out of a fight (wounds 5)
         int mult = (int)Clock.Speed;
         _moving = false;
         if (_usePending) { _usePending = false; TryPortalHere(force: true); }
@@ -208,6 +209,10 @@ public sealed class LiveWorld
 
     /// <summary>Hands the world's Codex to the live sim: it is opened from the tick (<see cref="VisitNear"/>) and saved with the run.</summary>
     public void AttachCodex(CodexBook book) => Codex = book;
+
+    /// <summary>The wounds both tiers share (the world state's ledger); stepped by the live clock every tick.</summary>
+    public Ravensguard.Sim.Combat.Wounds.WoundLedger? Wounds { get; private set; }
+    public void AttachWounds(Ravensguard.Sim.Combat.Wounds.WoundLedger ledger) => Wounds = ledger;
 
     /// <summary>Entries opened by the hero's walking since the last call (the view toasts them). Clears the list.</summary>
     public IReadOnlyList<CodexEntry> TakeOpenedCodexEntries()

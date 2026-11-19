@@ -1,0 +1,108 @@
+using Ravensguard.Sim.Abstract;
+using Ravensguard.Sim.Core;
+using Ravensguard.Sim.People;
+using Ravensguard.Sim.People.Vital;
+
+namespace Ravensguard.Sim.Combat.Wounds;
+
+/// <summary>
+/// The abstract tier's hourly wound step (wounds 5): advances the shared <see cref="WoundLedger"/> to the end of the hour (the same function the live tier runs at 20 Hz, so a
+/// bleeder with no help dies in the same sim time), runs the day boundaries (infection, healing), then turns what happened into the person records: a death by blood loss, organ,
+/// brain, breath, sepsis or a lost limb becomes <see cref="Demography.Kill"/> with its cause and the chronicle entry; a malunion lowers the person's strength or dexterity for good.
+/// It also does the first aid the people around a wounded person would give (<see cref="AbstractFirstAid"/>).
+/// </summary>
+public sealed class WoundSystem : AbstractSystem
+{
+    public WoundSystem() : base("wounds", TickPhase.H4DailySlice, SystemOrder.Wounds) { }
+
+    public override void Step(TickContext ctx)
+    {
+        var l = ctx.World.Get<WoundLedger>();
+        if (l == null || l.IsEmpty) return;
+        long to = (ctx.Hour + 1) * 3600;
+        lock (l.Sync)
+        {
+            AbstractFirstAid.Run(ctx.World, l, ctx.Hour * 3600);
+            l.AdvanceTo(to);
+            Resolve(ctx.World, ctx.Outbox, l);
+        }
+    }
+
+    /// <summary>Applies the books' deaths and permanent losses to the person rows; callable from a test.</summary>
+    public static void Resolve(SimWorld w, RegionOutbox ob, WoundLedger l)
+    {
+        var pt = w.People;
+        List<ulong>? gone = null;
+        foreach (var (key, b) in l.Books)
+        {
+            int row = pt.IndexOf(new EntityId(key));
+            foreach (var e in b.DrainEvents())
+            {
+                if (row < 0 || pt.Status[row] != PersonStatus.Alive) continue;
+                if (e.Kind == BookEventKind.Died)
+                {
+                    var cause = CauseOf(b.Death);
+                    Demography.Kill(w, row, cause, new GameTime(e.Sec), ob, Describe(b));
+                    (gone ??= []).Add(key);
+                }
+                else if (e.Kind == BookEventKind.Malunion || e.Kind == BookEventKind.PermanentLoss)
+                {
+                    int idx = e.Note.StartsWith("strength", StringComparison.Ordinal) ? PersonTable.StrengthIdx : e.Note.StartsWith("dexterity", StringComparison.Ordinal) ? PersonTable.DexterityIdx : e.Note.StartsWith("wits", StringComparison.Ordinal) ? PersonTable.WitsIdx : -1;
+                    if (idx >= 0) { int a = row * PersonTable.AttrCount + idx; pt.Attr[a] = (byte)Math.Max(1, pt.Attr[a] - (e.Note.EndsWith(":2", StringComparison.Ordinal) ? 2 : 1)); }
+                }
+            }
+        }
+        if (gone != null) foreach (var k in gone) l.Books.Remove(k);
+    }
+
+    public static DeathCause CauseOf(DeathKind k) => k switch
+    {
+        DeathKind.BloodLoss => DeathCause.BloodLoss, DeathKind.Organ => DeathCause.Organ, DeathKind.Brain => DeathCause.Brain, DeathKind.Breath => DeathCause.Suffocation,
+        DeathKind.Infection => DeathCause.Infection, DeathKind.Ischaemia => DeathCause.Ischaemia, _ => DeathCause.Violence,
+    };
+
+    private static string Describe(WoundBook b) => b.Death switch
+    {
+        DeathKind.BloodLoss => "bled to death of his wounds",
+        DeathKind.Organ => "died of a wound to a vital organ",
+        DeathKind.Brain => "killed by a blow to the head",
+        DeathKind.Breath => "could not breathe after a spinal wound",
+        DeathKind.Infection => "died of sepsis from a wound",
+        _ => "died of his wounds",
+    };
+}
+
+/// <summary>
+/// The abstract tier's first aid (wounds 5): a bleeding person in a settlement is dressed with a chance by who is home. The chance is 90% when a household member is at home,
+/// 40% when only neighbours are, 0 on the road alone; a bandaged wound stops at once for the abstract tier (the hour's closed form starts from the dressed rate).
+/// </summary>
+public static class AbstractFirstAid
+{
+    public static int ChancePct(bool householdHome, bool neighbours) => householdHome ? 90 : neighbours ? 40 : 0;
+
+    public static void Run(SimWorld w, WoundLedger l, long hourStartSec)
+    {
+        var pt = w.People;
+        foreach (var (key, b) in l.Books)
+        {
+            if (b.Dead || b.OpenCount == 0) continue;
+            int row = pt.IndexOf(new EntityId(key));
+            if (row < 0 || pt.Status[row] != PersonStatus.Alive) continue;
+            int hh = pt.Household[row];
+            bool home = hh >= 0 && w.Households.MemberCount[hh] > 1;
+            bool near = hh >= 0 && pt.HomeSettlement[row] >= 0;
+            int pct = ChancePct(home, near);
+            if (pct == 0) continue;
+            if (DetRng.Range(w.Seed, hourStartSec / 3600, key, RngStreams.SurgeryResult, 0x8000_0000u, 0, 100) >= pct) continue;
+            b.AdvanceTo(hourStartSec);
+            for (int n = 0; n < 4; n++)
+            {
+                int i = Treatment.WorstBleeder(b, -1, hourStartSec);
+                if (i < 0) break;
+                var wd = b.Records[i];
+                wd.Dressing = Dressing.Bandage; wd.DressFromS = hourStartSec / MedicineTables.TicksPerSimS; wd.DressedAt = hourStartSec; wd.State = WoundState.Dressed;
+                WoundBook.Retime(ref wd); b.Records[i] = wd;
+            }
+        }
+    }
+}

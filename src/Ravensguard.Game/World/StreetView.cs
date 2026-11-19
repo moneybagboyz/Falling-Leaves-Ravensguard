@@ -183,6 +183,7 @@ public partial class StreetView : Control, IHandlesBack
         BuildScene();
         BuildHud();
         AttachRide();
+        if (Runtime is { } wrt) _world.AttachWounds(wrt.State.Wounds ??= new Ravensguard.Sim.Combat.Wounds.WoundLedger(wrt.State.Seed, wrt.State.Clock.Now.Seconds));   // bleeding runs at 20 Hz in the live tier too (Phase 4 P4-B)
         AttachTravel();
         Resized += FitViewport;
         GetWindow().SizeChanged += FitViewport;

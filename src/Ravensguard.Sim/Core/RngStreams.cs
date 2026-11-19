@@ -185,6 +185,16 @@ public static class RngStreams
     public const uint HitJitter = 0x416;
     /// <summary>Stumble from an unstable joint (key person, tick = GameSec / 20).</summary>
     public const uint Stumble = 0x417;
+    /// <summary>Wounds: daily infection (draw = wound id x 4 + 1), the level rising (+2) and the sepsis death day (+3); key game day, person.</summary>
+    public const uint Infection = 0x420;
+    /// <summary>Wounds: malunion at healing completion (key person, draw wound id).</summary>
+    public const uint Malunion = 0x421;
+    /// <summary>Wounds: set, tendon, ligament, organ and infection-clearing outcomes (key GameSec / 20, surgeon, draw wound id).</summary>
+    public const uint SurgeryResult = 0x422;
+    /// <summary>Wounds: concussion knock-out duration +-10% (key FightTick, person).</summary>
+    public const uint ConcussionJitter = 0x423;
+    /// <summary>Wounds: waking delay 0-4 sim-seconds (key sim-second, person).</summary>
+    public const uint WakeJitter = 0x424;
     /// <summary>Melee defence: dodge and parry success (key FightTick, defender, draw = blow serial); the resolver's dodge roll uses it.</summary>
     public const uint MeleeDefence = 0x430;
 

@@ -78,6 +78,7 @@ public sealed class AbstractSystemRegistry
         // --- Phase 2 systems, one line each ---
         r.Add(new HouseholdNeedsSystem());          // population + households spec: eat, drink, heat, nutrition, spoilage (H4)
         r.Add(new VitalRollsSystem());              // population spec 3.1-3.2: births, conceptions, deaths (H4)
+        r.Add(new Ravensguard.Sim.Combat.Wounds.WoundSystem());   // Phase 4 wounds 5: bleeding, healing and infection of the wounded; deaths and permanent losses to the person rows (H4)
         r.Add(new PopulationDailySystem());         // population spec 3.3, 3.5, 3.6: outbreaks, famine, weekly marriage catch-up (H5)
         r.Add(new PopulationSeasonalSystem());      // population spec 3.3-3.4: marriage matching, dissolution sweep (H6, S6)
         r.Add(new GrowthSeasonalSystem());          // H6 S6: background growth (cottages, fields, businesses)

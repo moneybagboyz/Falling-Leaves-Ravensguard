@@ -39,7 +39,7 @@ public static class Demography
     {
         var pt = w.People; var v = w.Vital; var rates = w.Rates;
         bool notable = pt.Notable[p] != EntityId.None;
-        bool severe = cause is DeathCause.Hunger or DeathCause.Cold or DeathCause.Violence or DeathCause.Disease;
+        bool severe = cause is DeathCause.Hunger or DeathCause.Cold or DeathCause.Violence or DeathCause.Disease or DeathCause.BloodLoss or DeathCause.Organ or DeathCause.Brain or DeathCause.Infection or DeathCause.Suffocation or DeathCause.Ischaemia;
         if (!(rates.ChronicleEveryEvent || notable || severe)) return;
         if (!(rates.ChronicleEveryEvent || notable))
         {
@@ -61,6 +61,12 @@ public static class Demography
             DeathCause.Disease => new Cause(CauseKind.Disease, ev, ev.HasValue ? "outbreak" : "fever and flux"),
             DeathCause.Cold => new Cause(CauseKind.Weather, null, "cold: no firewood in a freezing spell"),
             DeathCause.Violence => new Cause(CauseKind.Wound, null, note.Length > 0 ? note : "violence"),
+            DeathCause.BloodLoss => new Cause(CauseKind.Wound, null, note.Length > 0 ? note : "bled to death"),
+            DeathCause.Organ => new Cause(CauseKind.Wound, null, note.Length > 0 ? note : "a wound to a vital organ"),
+            DeathCause.Brain => new Cause(CauseKind.Wound, null, note.Length > 0 ? note : "a wound to the brain"),
+            DeathCause.Infection => new Cause(CauseKind.Wound, null, note.Length > 0 ? note : "sepsis from a wound"),
+            DeathCause.Suffocation => new Cause(CauseKind.Wound, null, note.Length > 0 ? note : "could not breathe"),
+            DeathCause.Ischaemia => new Cause(CauseKind.Wound, null, note.Length > 0 ? note : "a limb lost to a tourniquet kept on"),
             _ => new Cause(CauseKind.Death, null, note.Length > 0 ? note : "illness or misadventure"),
         };
         ob.Chronicle(when, "death", [pt.IdOf(p)], [c], ("name", pt.FullName(p)), ("age", age.ToString()), ("cause", cause.ToString()),

@@ -96,8 +96,8 @@ public sealed class AbstractSave
                 OutbreakEndDay = (int[])OutbreakEndDay.Clone(), OutbreakMult = (int[])OutbreakMult.Clone(), OutbreakEntry = (ulong[])OutbreakEntry.Clone(),
                 Births = Births, Marriages = Marriages, Immigrants = Immigrants, Emigrants = Emigrants, Alive = Alive, ChronicleDay = ChronicleDay, ChronicleCount = ChronicleCount,
             };
-            if (DeathsByCause.Length != v.DeathsByCause.Length) throw new SaveException("The abstract section has a different death-cause table.");
-            Array.Copy(DeathsByCause, v.DeathsByCause, DeathsByCause.Length);
+            if (DeathsByCause.Length > v.DeathsByCause.Length) throw new SaveException("The abstract section has a different death-cause table.");
+            Array.Copy(DeathsByCause, v.DeathsByCause, DeathsByCause.Length);   // a save from before Phase 4 has the first seven causes
             for (int i = 0; i < YearNumber.Length; i++)
                 v.Years.Add(new YearStats { Year = YearNumber[i], Births = YearBirths[i], Deaths = YearDeaths[i], Marriages = YearMarriages[i], Immigrants = YearImmigrants[i], Emigrants = YearEmigrants[i], PopulationAtStart = YearPopulationAtStart[i] });
             v.EnsureSettlements(pop.Region.Settlements.Count);

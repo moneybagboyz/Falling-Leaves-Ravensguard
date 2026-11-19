@@ -8,7 +8,12 @@ public enum HomelessReason : byte { None, NoRoom, Vagrant }
 /// <summary>Life state of a person row (population spec 2): dead and departed rows are kept so kin links and ids never dangle.</summary>
 public enum PersonStatus : byte { Alive, Dead, Departed }
 /// <summary>Why a person died (population spec 2, chronicle cause kinds); <see cref="None"/> while alive.</summary>
-public enum DeathCause : byte { None, Age, Hunger, Disease, Cold, Violence, Other }
+public enum DeathCause : byte
+{
+    None, Age, Hunger, Disease, Cold, Violence, Other,
+    // Phase 4 (wounds 3.1, appended): what a wound killed by; the chronicle names the cause chain back to the blow
+    BloodLoss, Organ, Brain, Infection, Suffocation, Ischaemia,
+}
 
 /// <summary>Jobs by production chain (plan §4A.1). None covers children and the retired.</summary>
 public enum Occupation : byte

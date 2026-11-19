@@ -91,7 +91,7 @@ public sealed class SimWorld
         void S(string s) => h.AppendData(System.Text.Encoding.ASCII.GetBytes(s));
         S(Population.ComputeHash()); S(Population.ComputeSimHash()); S(Economy.ComputeHash());
         L(Chronicle.Count); L(State.HourDone); L(Vital.Births); L(Vital.Marriages); L(Vital.Immigrants); L(Vital.Emigrants); L(Vital.Alive);
-        foreach (long d in Vital.DeathsByCause) L(d);
+        for (int i = 0; i < Vital.DeathsByCause.Length; i++) if (i < 7 || Vital.DeathsByCause[i] != 0) L(Vital.DeathsByCause[i]);   // the Phase 4 causes join the hash only once used
         return Convert.ToHexString(h.GetHashAndReset());
     }
 }
