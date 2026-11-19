@@ -1,0 +1,9 @@
+// Shields (melee-and-ranged 3.2, resolver-v2 4.8): a separate slot. cover_pm is the chance a guarding bearer catches a frontal blow;
+// capacity is the momentum stopped outright (the excess passes, blunt, to the shield forearm); durability is momentum units of blows
+// before it breaks (permille lost per blow = M x 1000 / durability).
+[
+  { "type": "shield_shape", "id": "buckler",      "name": "Buckler",      "cover_pm": 250, "capacity": 160, "durability": 900,  "mass_g": 900,  "default_material": "iron", "parry_bonus_points": 10 },
+  { "type": "shield_shape", "id": "round_shield", "name": "Round shield", "cover_pm": 400, "capacity": 190, "durability": 600,  "mass_g": 3000, "default_material": "oak" },
+  { "type": "shield_shape", "id": "heater",       "name": "Heater shield","cover_pm": 450, "capacity": 200, "durability": 700,  "mass_g": 3500, "default_material": "oak" },
+  { "type": "shield_shape", "id": "tower",        "name": "Tower shield", "cover_pm": 750, "capacity": 300, "durability": 1100, "mass_g": 7500, "default_material": "oak" }
+]

@@ -1,0 +1,18 @@
+// Phase 4 tissues (anatomy 3.4). Raw numbers follow the existing tissues; every value is an estimate tuned with tools/calibrate.
+[
+  // ligaments hold the six joints; like tendon
+  { "type": "material", "id": "ligament", "name": "Ligament", "category": "tissue", "copy_from": "tendon", "density_kg_m3": 1120, "value_per_kg": 0.5, "pain_pm": 1500 },
+  // the spinal cord: like nerve
+  { "type": "material", "id": "spinal_cord", "name": "Spinal cord", "category": "tissue", "copy_from": "nerve", "density_kg_m3": 1040, "value_per_kg": 0.5, "pain_pm": 2500 },
+  // the barrow dead: leathery dried flesh, about 2.8x the cut need of live flesh; it burns (ignition 250 C)
+  { "type": "material", "id": "dried_flesh", "name": "Dried flesh", "category": "tissue", "density_kg_m3": 900, "value_per_kg": 0.1,
+    "impact_yield_kpa": 20000, "impact_fracture_kpa": 40000, "impact_strain_at_yield": 20000,
+    "shear_yield_kpa": 30000, "shear_fracture_kpa": 60000, "shear_strain_at_yield": 20000, "max_edge": 0.1,
+    "blunt_absorb_pm": 40, "pain_pm": 0, "ignition_point_c": 250 },
+  // animal hide: skin x1.3 in shear (wolf, ox, pig, sheep)
+  { "type": "material", "id": "hide", "name": "Hide", "category": "tissue", "copy_from": "skin", "density_kg_m3": 1100, "value_per_kg": 1.0,
+    "shear_yield_kpa": 13000, "shear_fracture_kpa": 26000, "blunt_absorb_pm": 30 },
+  // thick hide: skin x1.6 in shear (horse, cave beast)
+  { "type": "material", "id": "hide_thick", "name": "Thick hide", "category": "tissue", "copy_from": "skin", "density_kg_m3": 1150, "value_per_kg": 1.5,
+    "shear_yield_kpa": 16000, "shear_fracture_kpa": 32000, "blunt_absorb_pm": 40 },
+]

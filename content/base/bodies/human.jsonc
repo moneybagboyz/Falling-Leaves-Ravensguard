@@ -1,572 +1,139 @@
-// Human body plan (plan §2.6, §4A.3). Relative part sizes are DF's (upper body 18%, lower body 18%, head 5.4%, neck 1.8%,
-// upper arm 3.6%, lower arm 3.6%, hand 1.4%, upper leg 9%, lower leg 7.2%, foot 2.2%; sided parts exist left and right).
-// Layer thicknesses (mm), structure/organ area fractions and bleed rates are estimates; bleed numbers follow plan §4A.3.
+// Human body plan v2 (plan §2.6, §4A.3; docs/specs/phase4/anatomy-and-body-plans.md 3.2 and 3.3).
+// Relative part sizes are DF's (upper body 18%, lower body 18%, head 5.4%, neck 1.8%, upper arm 3.6%, lower arm 3.6%, hand 1.4%,
+// upper leg 9%, lower leg 7.2%, foot 2.2%; sided parts exist left and right). The 10 base ids and 16 instances of v1 stay; v2 adds
+// 12 hosted base ids (19 instances: eyes, ears, nose, skull, jaw, teeth, ribs, collarbones, pelvis, kneecaps, thumbs, fingers) for 35.
+// skull, ribs and pelvis are "shell" parts: the host's bone layer promoted to a part (it keeps the bone layer in the host's stack).
+// Structures sit inside the muscle and are rolled by area when the muscle is cut: vessels and tendons (v1), a motor and a sensory
+// nerve per limb section (v1's single nerve split 50/50, migrated below), ligaments at the six joints, the spinal cord in the neck,
+// upper and lower body (reached mostly from behind: facing_pm). gap_boost multiplies the area when an aimed blow bypassed the
+// armour at that named gap. Layer thicknesses (mm), area fractions and bleed rates are estimates; bleed numbers follow plan §4A.3.
 [
 {
- "type": "body_plan",
- "id": "human",
- "name": "Human",
- "size_cm3": 70000,
- "blood_ml": 5000,
+ "type": "body_plan", "id": "human", "name": "Human", "size_cm3": 70000, "blood_ml": 5000, "blood_ml_per_kg": 71, "tissue_set": "human",
  "parts": [
-  {
-   "id": "upper_body",
-   "name": "Upper body",
-   "relative_size": 0.18,
-   "depth_mm": 200,
-   "layers": [
-    {
-     "tissue": "skin",
-     "thickness_mm": 2
-    },
-    {
-     "tissue": "fat",
-     "thickness_mm": 8
-    },
-    {
-     "tissue": "muscle",
-     "thickness_mm": 25
-    },
-    {
-     "tissue": "bone_tissue",
-     "thickness_mm": 10
-    }
-   ],
-   "organs": [
-    {
-     "id": "heart",
-     "tissue": "organ",
-     "area_fraction": 0.04,
-     "vital": true,
-     "bleed_ml_per_s": 120
-    },
-    {
-     "id": "lung_l",
-     "tissue": "organ",
-     "area_fraction": 0.1,
-     "vital": false,
-     "bleed_ml_per_s": 25
-    },
-    {
-     "id": "lung_r",
-     "tissue": "organ",
-     "area_fraction": 0.1,
-     "vital": false,
-     "bleed_ml_per_s": 25
-    },
-    {
-     "id": "liver",
-     "tissue": "organ",
-     "area_fraction": 0.08,
-     "vital": false,
-     "bleed_ml_per_s": 20
-    },
-    {
-     "id": "spleen",
-     "tissue": "organ",
-     "area_fraction": 0.03,
-     "vital": false,
-     "bleed_ml_per_s": 20
-    },
-    {
-     "id": "stomach",
-     "tissue": "organ",
-     "area_fraction": 0.06,
-     "vital": false,
-     "bleed_ml_per_s": 8
-    }
-   ]
-  },
-  {
-   "id": "lower_body",
-   "name": "Lower body",
-   "relative_size": 0.18,
-   "depth_mm": 180,
-   "layers": [
-    {
-     "tissue": "skin",
-     "thickness_mm": 2
-    },
-    {
-     "tissue": "fat",
-     "thickness_mm": 12
-    },
-    {
-     "tissue": "muscle",
-     "thickness_mm": 25
-    },
-    {
-     "tissue": "bone_tissue",
-     "thickness_mm": 10
-    }
-   ],
-   "parent": "upper_body",
-   "structures": [
-    {
-     "id": "iliac_artery",
-     "kind": "artery",
-     "tissue": "muscle",
-     "area_fraction": 0.03
-    },
-    {
-     "id": "iliac_vein",
-     "kind": "vein",
-     "tissue": "muscle",
-     "area_fraction": 0.03
-    }
-   ],
-   "organs": [
-    {
-     "id": "intestines",
-     "tissue": "organ",
-     "area_fraction": 0.2,
-     "vital": false,
-     "bleed_ml_per_s": 8
-    },
-    {
-     "id": "kidney_l",
-     "tissue": "organ",
-     "area_fraction": 0.03,
-     "vital": false,
-     "bleed_ml_per_s": 15
-    },
-    {
-     "id": "kidney_r",
-     "tissue": "organ",
-     "area_fraction": 0.03,
-     "vital": false,
-     "bleed_ml_per_s": 15
-    },
-    {
-     "id": "bladder",
-     "tissue": "organ",
-     "area_fraction": 0.03,
-     "vital": false,
-     "bleed_ml_per_s": 4
-    }
-   ]
-  },
-  {
-   "id": "neck",
-   "name": "Neck",
-   "relative_size": 0.018,
-   "depth_mm": 110,
-   "layers": [
-    {
-     "tissue": "skin",
-     "thickness_mm": 2
-    },
-    {
-     "tissue": "fat",
-     "thickness_mm": 3
-    },
-    {
-     "tissue": "muscle",
-     "thickness_mm": 20
-    },
-    {
-     "tissue": "bone_tissue",
-     "thickness_mm": 15
-    }
-   ],
-   "parent": "upper_body",
-   "severable": true,
-   "structures": [
-    {
-     "id": "carotid_artery",
-     "kind": "artery",
-     "tissue": "muscle",
-     "area_fraction": 0.06
-    },
-    {
-     "id": "jugular_vein",
-     "kind": "vein",
-     "tissue": "muscle",
-     "area_fraction": 0.06
-    },
-    {
-     "id": "neck_nerve",
-     "kind": "nerve",
-     "tissue": "nerve",
-     "area_fraction": 0.03
-    }
-   ],
-   "organs": [
-    {
-     "id": "trachea",
-     "tissue": "cartilage",
-     "area_fraction": 0.1,
-     "vital": false,
-     "bleed_ml_per_s": 5
-    }
-   ]
-  },
-  {
-   "id": "head",
-   "name": "Head",
-   "relative_size": 0.054,
-   "depth_mm": 190,
-   "layers": [
-    {
-     "tissue": "hair",
-     "thickness_mm": 0.5
-    },
-    {
-     "tissue": "skin",
-     "thickness_mm": 2
-    },
-    {
-     "tissue": "fat",
-     "thickness_mm": 2
-    },
-    {
-     "tissue": "bone_tissue",
-     "thickness_mm": 7
-    }
-   ],
-   "parent": "neck",
-   "organs": [
-    {
-     "id": "brain",
-     "tissue": "organ",
-     "area_fraction": 0.6,
-     "vital": true,
-     "bleed_ml_per_s": 10
-    }
-   ]
-  },
-  {
-   "id": "upper_arm",
-   "name": "Upper arm",
-   "relative_size": 0.036,
-   "depth_mm": 90,
-   "layers": [
-    {
-     "tissue": "skin",
-     "thickness_mm": 2
-    },
-    {
-     "tissue": "fat",
-     "thickness_mm": 5
-    },
-    {
-     "tissue": "muscle",
-     "thickness_mm": 25
-    },
-    {
-     "tissue": "bone_tissue",
-     "thickness_mm": 12
-    }
-   ],
-   "sided": true,
-   "parent": "upper_body",
-   "severable": true,
-   "structures": [
-    {
-     "id": "brachial_artery",
-     "kind": "artery",
-     "tissue": "muscle",
-     "area_fraction": 0.05
-    },
-    {
-     "id": "brachial_vein",
-     "kind": "vein",
-     "tissue": "muscle",
-     "area_fraction": 0.06
-    },
-    {
-     "id": "arm_nerve",
-     "kind": "nerve",
-     "tissue": "nerve",
-     "area_fraction": 0.04
-    },
-    {
-     "id": "biceps_tendon",
-     "kind": "tendon",
-     "tissue": "tendon",
-     "area_fraction": 0.04
-    }
-   ]
-  },
-  {
-   "id": "lower_arm",
-   "name": "Lower arm",
-   "relative_size": 0.036,
-   "depth_mm": 70,
-   "layers": [
-    {
-     "tissue": "skin",
-     "thickness_mm": 1.5
-    },
-    {
-     "tissue": "fat",
-     "thickness_mm": 3
-    },
-    {
-     "tissue": "muscle",
-     "thickness_mm": 15
-    },
-    {
-     "tissue": "bone_tissue",
-     "thickness_mm": 10
-    }
-   ],
-   "sided": true,
-   "parent": "upper_arm",
-   "severable": true,
-   "structures": [
-    {
-     "id": "radial_artery",
-     "kind": "artery",
-     "tissue": "muscle",
-     "area_fraction": 0.05
-    },
-    {
-     "id": "radial_vein",
-     "kind": "vein",
-     "tissue": "muscle",
-     "area_fraction": 0.05
-    },
-    {
-     "id": "forearm_nerve",
-     "kind": "nerve",
-     "tissue": "nerve",
-     "area_fraction": 0.04
-    },
-    {
-     "id": "forearm_tendon",
-     "kind": "tendon",
-     "tissue": "tendon",
-     "area_fraction": 0.08
-    }
-   ]
-  },
-  {
-   "id": "hand",
-   "name": "Hand",
-   "relative_size": 0.014,
-   "depth_mm": 30,
-   "layers": [
-    {
-     "tissue": "skin",
-     "thickness_mm": 1.5
-    },
-    {
-     "tissue": "fat",
-     "thickness_mm": 2
-    },
-    {
-     "tissue": "muscle",
-     "thickness_mm": 6
-    },
-    {
-     "tissue": "bone_tissue",
-     "thickness_mm": 5
-    }
-   ],
-   "sided": true,
-   "parent": "lower_arm",
-   "severable": true,
-   "structures": [
-    {
-     "id": "palmar_artery",
-     "kind": "artery",
-     "tissue": "muscle",
-     "area_fraction": 0.03
-    },
-    {
-     "id": "hand_nerve",
-     "kind": "nerve",
-     "tissue": "nerve",
-     "area_fraction": 0.05
-    },
-    {
-     "id": "finger_tendon",
-     "kind": "tendon",
-     "tissue": "tendon",
-     "area_fraction": 0.1
-    }
-   ]
-  },
-  {
-   "id": "upper_leg",
-   "name": "Upper leg",
-   "relative_size": 0.09,
-   "depth_mm": 140,
-   "layers": [
-    {
-     "tissue": "skin",
-     "thickness_mm": 3
-    },
-    {
-     "tissue": "fat",
-     "thickness_mm": 10
-    },
-    {
-     "tissue": "muscle",
-     "thickness_mm": 40
-    },
-    {
-     "tissue": "bone_tissue",
-     "thickness_mm": 15
-    }
-   ],
-   "sided": true,
-   "parent": "lower_body",
-   "severable": true,
-   "structures": [
-    {
-     "id": "femoral_artery",
-     "kind": "artery",
-     "tissue": "muscle",
-     "area_fraction": 0.07
-    },
-    {
-     "id": "femoral_vein",
-     "kind": "vein",
-     "tissue": "muscle",
-     "area_fraction": 0.08
-    },
-    {
-     "id": "sciatic_nerve",
-     "kind": "nerve",
-     "tissue": "nerve",
-     "area_fraction": 0.04
-    },
-    {
-     "id": "quadriceps_tendon",
-     "kind": "tendon",
-     "tissue": "tendon",
-     "area_fraction": 0.04
-    }
-   ]
-  },
-  {
-   "id": "lower_leg",
-   "name": "Lower leg",
-   "relative_size": 0.072,
-   "depth_mm": 90,
-   "layers": [
-    {
-     "tissue": "skin",
-     "thickness_mm": 2
-    },
-    {
-     "tissue": "fat",
-     "thickness_mm": 4
-    },
-    {
-     "tissue": "muscle",
-     "thickness_mm": 22
-    },
-    {
-     "tissue": "bone_tissue",
-     "thickness_mm": 12
-    }
-   ],
-   "sided": true,
-   "parent": "upper_leg",
-   "severable": true,
-   "structures": [
-    {
-     "id": "tibial_artery",
-     "kind": "artery",
-     "tissue": "muscle",
-     "area_fraction": 0.05
-    },
-    {
-     "id": "tibial_vein",
-     "kind": "vein",
-     "tissue": "muscle",
-     "area_fraction": 0.05
-    },
-    {
-     "id": "leg_nerve",
-     "kind": "nerve",
-     "tissue": "nerve",
-     "area_fraction": 0.04
-    },
-    {
-     "id": "achilles_tendon",
-     "kind": "tendon",
-     "tissue": "tendon",
-     "area_fraction": 0.08
-    }
-   ]
-  },
-  {
-   "id": "foot",
-   "name": "Foot",
-   "relative_size": 0.022,
-   "depth_mm": 50,
-   "layers": [
-    {
-     "tissue": "skin",
-     "thickness_mm": 2
-    },
-    {
-     "tissue": "fat",
-     "thickness_mm": 3
-    },
-    {
-     "tissue": "muscle",
-     "thickness_mm": 8
-    },
-    {
-     "tissue": "bone_tissue",
-     "thickness_mm": 5
-    }
-   ],
-   "sided": true,
-   "parent": "lower_leg",
-   "severable": true,
-   "structures": [
-    {
-     "id": "pedal_artery",
-     "kind": "artery",
-     "tissue": "muscle",
-     "area_fraction": 0.03
-    },
-    {
-     "id": "foot_nerve",
-     "kind": "nerve",
-     "tissue": "nerve",
-     "area_fraction": 0.04
-    },
-    {
-     "id": "foot_tendon",
-     "kind": "tendon",
-     "tissue": "tendon",
-     "area_fraction": 0.08
-    }
-   ]
-  }
+  { "id": "upper_body", "name": "Upper body", "relative_size": 0.18, "depth_mm": 200, "rib_slip": true,
+    "layers": [ { "tissue": "skin", "thickness_mm": 2 }, { "tissue": "fat", "thickness_mm": 8 }, { "tissue": "muscle", "thickness_mm": 25 }, { "tissue": "bone_tissue", "thickness_mm": 10 } ],
+    "structures": [
+      { "id": "cord_back_u", "kind": "spinal_cord", "tissue": "spinal_cord", "area_fraction": 0.02, "facing_pm": { "front": 300, "flank": 800, "rear": 1600 } } ],
+    "organs": [
+      { "id": "heart", "tissue": "organ", "area_fraction": 0.04, "vital": true, "bleed_ml_per_s": 120 },
+      { "id": "lung_l", "tissue": "organ", "area_fraction": 0.1, "bleed_ml_per_s": 25 },
+      { "id": "lung_r", "tissue": "organ", "area_fraction": 0.1, "bleed_ml_per_s": 25 },
+      { "id": "liver", "tissue": "organ", "area_fraction": 0.08, "bleed_ml_per_s": 20 },
+      { "id": "spleen", "tissue": "organ", "area_fraction": 0.03, "bleed_ml_per_s": 20 },
+      { "id": "stomach", "tissue": "organ", "area_fraction": 0.06, "bleed_ml_per_s": 8 } ] },
+  { "id": "lower_body", "name": "Lower body", "relative_size": 0.18, "depth_mm": 180, "parent": "upper_body",
+    "layers": [ { "tissue": "skin", "thickness_mm": 2 }, { "tissue": "fat", "thickness_mm": 12 }, { "tissue": "muscle", "thickness_mm": 25 }, { "tissue": "bone_tissue", "thickness_mm": 10 } ],
+    "structures": [
+      { "id": "iliac_artery", "kind": "artery", "tissue": "muscle", "area_fraction": 0.03 },
+      { "id": "iliac_vein", "kind": "vein", "tissue": "muscle", "area_fraction": 0.03 },
+      { "id": "cord_back_l", "kind": "spinal_cord", "tissue": "spinal_cord", "area_fraction": 0.02, "facing_pm": { "front": 300, "flank": 800, "rear": 1600 } } ],
+    "organs": [
+      { "id": "intestines", "tissue": "organ", "area_fraction": 0.2, "bleed_ml_per_s": 8 },
+      { "id": "kidney_l", "tissue": "organ", "area_fraction": 0.03, "bleed_ml_per_s": 15 },
+      { "id": "kidney_r", "tissue": "organ", "area_fraction": 0.03, "bleed_ml_per_s": 15 },
+      { "id": "bladder", "tissue": "organ", "area_fraction": 0.03, "bleed_ml_per_s": 4 } ] },
+  { "id": "neck", "name": "Neck", "relative_size": 0.018, "depth_mm": 110, "parent": "upper_body", "severable": true, "pain_pm": 1200,
+    "layers": [ { "tissue": "skin", "thickness_mm": 2 }, { "tissue": "fat", "thickness_mm": 3 }, { "tissue": "muscle", "thickness_mm": 20 }, { "tissue": "bone_tissue", "thickness_mm": 15 } ],
+    "structures": [
+      { "id": "carotid_artery", "kind": "artery", "tissue": "muscle", "area_fraction": 0.06 },
+      { "id": "jugular_vein", "kind": "vein", "tissue": "muscle", "area_fraction": 0.06 },
+      { "id": "neck_motor", "kind": "motor_nerve", "tissue": "nerve", "area_fraction": 0.015 },
+      { "id": "neck_sensory", "kind": "sensory_nerve", "tissue": "nerve", "area_fraction": 0.015 },
+      { "id": "cord_neck", "kind": "spinal_cord", "tissue": "spinal_cord", "area_fraction": 0.05, "facing_pm": { "front": 600 } } ],
+    "organs": [ { "id": "trachea", "tissue": "cartilage", "area_fraction": 0.1, "bleed_ml_per_s": 5, "before_bone": true } ] },
+  { "id": "head", "name": "Head", "relative_size": 0.054, "depth_mm": 190, "parent": "neck", "pain_pm": 1300,
+    "layers": [ { "tissue": "hair", "thickness_mm": 0.5 }, { "tissue": "skin", "thickness_mm": 2 }, { "tissue": "fat", "thickness_mm": 2 }, { "tissue": "bone_tissue", "thickness_mm": 7 } ],
+    "organs": [ { "id": "brain", "tissue": "organ", "area_fraction": 0.6, "vital": true, "bleed_ml_per_s": 10 } ] },
+  { "id": "upper_arm", "name": "Upper arm", "relative_size": 0.036, "depth_mm": 90, "sided": true, "parent": "upper_body", "severable": true, "limb": "arm",
+    "layers": [ { "tissue": "skin", "thickness_mm": 2 }, { "tissue": "fat", "thickness_mm": 5 }, { "tissue": "muscle", "thickness_mm": 25 }, { "tissue": "bone_tissue", "thickness_mm": 12 } ],
+    "structures": [
+      { "id": "brachial_artery", "kind": "artery", "tissue": "muscle", "area_fraction": 0.05, "gap_boost": { "armpit": 3.0 } },
+      { "id": "brachial_vein", "kind": "vein", "tissue": "muscle", "area_fraction": 0.06 },
+      { "id": "biceps_tendon", "kind": "tendon", "tissue": "tendon", "area_fraction": 0.04 },
+      { "id": "arm_motor", "kind": "motor_nerve", "tissue": "nerve", "area_fraction": 0.02 },
+      { "id": "arm_sensory", "kind": "sensory_nerve", "tissue": "nerve", "area_fraction": 0.02 },
+      { "id": "shoulder_lig", "kind": "ligament", "tissue": "ligament", "area_fraction": 0.04, "joint": "shoulder", "gap_boost": { "armpit": 3.0 } } ] },
+  { "id": "lower_arm", "name": "Lower arm", "relative_size": 0.036, "depth_mm": 70, "sided": true, "parent": "upper_arm", "severable": true, "limb": "arm",
+    "layers": [ { "tissue": "skin", "thickness_mm": 1.5 }, { "tissue": "fat", "thickness_mm": 3 }, { "tissue": "muscle", "thickness_mm": 15 }, { "tissue": "bone_tissue", "thickness_mm": 10 } ],
+    "structures": [
+      { "id": "radial_artery", "kind": "artery", "tissue": "muscle", "area_fraction": 0.05, "gap_boost": { "inner_elbow": 3.0 } },
+      { "id": "radial_vein", "kind": "vein", "tissue": "muscle", "area_fraction": 0.05 },
+      { "id": "forearm_tendon", "kind": "tendon", "tissue": "tendon", "area_fraction": 0.08 },
+      { "id": "forearm_motor", "kind": "motor_nerve", "tissue": "nerve", "area_fraction": 0.02 },
+      { "id": "forearm_sensory", "kind": "sensory_nerve", "tissue": "nerve", "area_fraction": 0.02 },
+      { "id": "elbow_lig", "kind": "ligament", "tissue": "ligament", "area_fraction": 0.04, "joint": "elbow", "gap_boost": { "inner_elbow": 3.0 } } ] },
+  { "id": "hand", "name": "Hand", "relative_size": 0.014, "depth_mm": 30, "sided": true, "parent": "lower_arm", "severable": true, "limb": "arm",
+    "layers": [ { "tissue": "skin", "thickness_mm": 1.5 }, { "tissue": "fat", "thickness_mm": 2 }, { "tissue": "muscle", "thickness_mm": 6 }, { "tissue": "bone_tissue", "thickness_mm": 5 } ],
+    "structures": [
+      { "id": "palmar_artery", "kind": "artery", "tissue": "muscle", "area_fraction": 0.03 },
+      { "id": "finger_tendon", "kind": "tendon", "tissue": "tendon", "area_fraction": 0.1 },
+      { "id": "hand_motor", "kind": "motor_nerve", "tissue": "nerve", "area_fraction": 0.025 },
+      { "id": "hand_sensory", "kind": "sensory_nerve", "tissue": "nerve", "area_fraction": 0.025 },
+      { "id": "wrist_lig", "kind": "ligament", "tissue": "ligament", "area_fraction": 0.04, "joint": "wrist" } ] },
+  { "id": "upper_leg", "name": "Upper leg", "relative_size": 0.09, "depth_mm": 140, "sided": true, "parent": "lower_body", "severable": true, "limb": "leg",
+    "layers": [ { "tissue": "skin", "thickness_mm": 3 }, { "tissue": "fat", "thickness_mm": 10 }, { "tissue": "muscle", "thickness_mm": 40 }, { "tissue": "bone_tissue", "thickness_mm": 15 } ],
+    "structures": [
+      { "id": "femoral_artery", "kind": "artery", "tissue": "muscle", "area_fraction": 0.07, "gap_boost": { "groin": 2.0 } },
+      { "id": "femoral_vein", "kind": "vein", "tissue": "muscle", "area_fraction": 0.08 },
+      { "id": "quadriceps_tendon", "kind": "tendon", "tissue": "tendon", "area_fraction": 0.04 },
+      { "id": "sciatic_motor", "kind": "motor_nerve", "tissue": "nerve", "area_fraction": 0.02 },
+      { "id": "sciatic_sensory", "kind": "sensory_nerve", "tissue": "nerve", "area_fraction": 0.02 },
+      { "id": "hip_lig", "kind": "ligament", "tissue": "ligament", "area_fraction": 0.04, "joint": "hip", "gap_boost": { "groin": 2.0 } } ] },
+  { "id": "lower_leg", "name": "Lower leg", "relative_size": 0.072, "depth_mm": 90, "sided": true, "parent": "upper_leg", "severable": true, "limb": "leg",
+    "layers": [ { "tissue": "skin", "thickness_mm": 2 }, { "tissue": "fat", "thickness_mm": 4 }, { "tissue": "muscle", "thickness_mm": 22 }, { "tissue": "bone_tissue", "thickness_mm": 12 } ],
+    "structures": [
+      { "id": "tibial_artery", "kind": "artery", "tissue": "muscle", "area_fraction": 0.05, "gap_boost": { "back_of_knee": 3.0 } },
+      { "id": "tibial_vein", "kind": "vein", "tissue": "muscle", "area_fraction": 0.05 },
+      { "id": "achilles_tendon", "kind": "tendon", "tissue": "tendon", "area_fraction": 0.08 },
+      { "id": "leg_motor", "kind": "motor_nerve", "tissue": "nerve", "area_fraction": 0.02 },
+      { "id": "leg_sensory", "kind": "sensory_nerve", "tissue": "nerve", "area_fraction": 0.02 },
+      { "id": "knee_lig", "kind": "ligament", "tissue": "ligament", "area_fraction": 0.04, "joint": "knee", "gap_boost": { "back_of_knee": 3.0 } } ] },
+  { "id": "foot", "name": "Foot", "relative_size": 0.022, "depth_mm": 50, "sided": true, "parent": "lower_leg", "severable": true, "limb": "leg",
+    "layers": [ { "tissue": "skin", "thickness_mm": 2 }, { "tissue": "fat", "thickness_mm": 3 }, { "tissue": "muscle", "thickness_mm": 8 }, { "tissue": "bone_tissue", "thickness_mm": 5 } ],
+    "structures": [
+      { "id": "pedal_artery", "kind": "artery", "tissue": "muscle", "area_fraction": 0.03 },
+      { "id": "foot_tendon", "kind": "tendon", "tissue": "tendon", "area_fraction": 0.08 },
+      { "id": "foot_motor", "kind": "motor_nerve", "tissue": "nerve", "area_fraction": 0.02 },
+      { "id": "foot_sensory", "kind": "sensory_nerve", "tissue": "nerve", "area_fraction": 0.02 },
+      { "id": "ankle_lig", "kind": "ligament", "tissue": "ligament", "area_fraction": 0.04, "joint": "ankle" } ] },
+
+  // ---- hosted parts (v2): reached through the host, or by a called shot (aim_factor_pm x the host's hit chance) ----
+  { "id": "eye", "name": "Eye", "sided": true, "host": "head", "relative_size": 0.0006, "depth_mm": 25, "exposure_gap": "face", "area_fraction": 0.03, "aim_factor_pm": 120,
+    "layers": [ { "tissue": "organ", "thickness_mm": 25 } ], "function": { "sight_pm": 500 }, "pain_pm": 1500 },
+  { "id": "ear", "name": "Ear", "sided": true, "host": "head", "relative_size": 0.0012, "depth_mm": 12, "exposure_gap": "face", "area_fraction": 0.04, "aim_factor_pm": 200, "severable": true,
+    "layers": [ { "tissue": "skin", "thickness_mm": 1 }, { "tissue": "cartilage", "thickness_mm": 3 } ], "function": { "hearing_pm": 500 } },
+  { "id": "nose", "name": "Nose", "host": "head", "relative_size": 0.0014, "depth_mm": 30, "exposure_gap": "face", "area_fraction": 0.04, "aim_factor_pm": 300,
+    "layers": [ { "tissue": "skin", "thickness_mm": 2 }, { "tissue": "cartilage", "thickness_mm": 6 } ], "pain_pm": 1300 },
+  { "id": "skull", "name": "Skull", "host": "head", "relative_size": 0.02, "depth_mm": 7, "shell": true },
+  { "id": "jaw", "name": "Jaw", "host": "head", "relative_size": 0.005, "depth_mm": 40, "exposure_gap": "face", "area_fraction": 0.08, "aim_factor_pm": 400,
+    "layers": [ { "tissue": "skin", "thickness_mm": 2 }, { "tissue": "muscle", "thickness_mm": 6 }, { "tissue": "bone_tissue", "thickness_mm": 10 } ], "function": { "speech_pm": 500 } },
+  { "id": "teeth", "name": "Teeth", "host": "head", "relative_size": 0.001, "depth_mm": 10, "exposure_gap": "face", "area_fraction": 0.03, "aim_factor_pm": 250,
+    "layers": [ { "tissue": "bone_tissue", "thickness_mm": 6 } ] },
+  { "id": "ribs", "name": "Ribs", "sided": true, "host": "upper_body", "relative_size": 0.03, "depth_mm": 10, "shell": true },
+  { "id": "collarbone", "name": "Collarbone", "sided": true, "host": "upper_body", "relative_size": 0.002, "depth_mm": 20, "area_fraction": 0.03, "aim_factor_pm": 300,
+    "layers": [ { "tissue": "skin", "thickness_mm": 2 }, { "tissue": "fat", "thickness_mm": 2 }, { "tissue": "bone_tissue", "thickness_mm": 10 } ] },
+  { "id": "pelvis", "name": "Pelvis", "host": "lower_body", "relative_size": 0.03, "depth_mm": 10, "shell": true },
+  { "id": "kneecap", "name": "Kneecap", "sided": true, "host": "lower_leg", "relative_size": 0.001, "depth_mm": 20, "area_fraction": 0.04, "aim_factor_pm": 250,
+    "layers": [ { "tissue": "skin", "thickness_mm": 2 }, { "tissue": "bone_tissue", "thickness_mm": 8 } ] },
+  { "id": "thumb", "name": "Thumb", "sided": true, "host": "hand", "relative_size": 0.001, "depth_mm": 25, "area_fraction": 0.1, "aim_factor_pm": 250, "severable": true,
+    "layers": [ { "tissue": "skin", "thickness_mm": 1.5 }, { "tissue": "fat", "thickness_mm": 1 }, { "tissue": "muscle", "thickness_mm": 3 }, { "tissue": "bone_tissue", "thickness_mm": 5 } ], "function": { "grip_pm": 300 } },
+  { "id": "fingers", "name": "Fingers", "sided": true, "host": "hand", "relative_size": 0.004, "depth_mm": 20, "area_fraction": 0.25, "aim_factor_pm": 300, "severable": true,
+    "layers": [ { "tissue": "skin", "thickness_mm": 1.5 }, { "tissue": "fat", "thickness_mm": 1 }, { "tissue": "bone_tissue", "thickness_mm": 4 } ], "function": { "grip_pm": 700 } }
  ],
  "named_gaps": [
-  {
-   "name": "armpit",
-   "part": "upper_body"
-  },
-  {
-   "name": "groin",
-   "part": "lower_body"
-  },
-  {
-   "name": "face",
-   "part": "head"
-  },
-  {
-   "name": "neck",
-   "part": "neck"
-  },
-  {
-   "name": "inner_elbow",
-   "part": "lower_arm"
-  },
-  {
-   "name": "back_of_knee",
-   "part": "upper_leg"
-  }
- ]
+  { "name": "armpit", "part": "upper_body", "also": ["upper_arm"] },
+  { "name": "groin", "part": "lower_body", "also": ["upper_leg"] },
+  { "name": "face", "part": "head" },
+  { "name": "neck", "part": "neck" },
+  { "name": "inner_elbow", "part": "lower_arm", "also": ["upper_arm"] },
+  { "name": "back_of_knee", "part": "upper_leg", "also": ["lower_leg"] }
+ ],
+ // v1 had one nerve per limb section; a v1 wound on it loads as a cut of both new nerves (area split 50/50)
+ "migrate": {
+  "neck_nerve": ["neck_motor", "neck_sensory"], "arm_nerve": ["arm_motor", "arm_sensory"], "forearm_nerve": ["forearm_motor", "forearm_sensory"],
+  "hand_nerve": ["hand_motor", "hand_sensory"], "sciatic_nerve": ["sciatic_motor", "sciatic_sensory"], "leg_nerve": ["leg_motor", "leg_sensory"],
+  "foot_nerve": ["foot_motor", "foot_sensory"]
+ }
 }
 ]

@@ -1,31 +1,34 @@
 // Body tissues are materials of the species (plan §2.10). All values are estimates, tuned so that flesh cuts easily
 // and bone is the hard part (bone IY/IF 0.2 and SF 0.13 follow the Material science table).
+// Resolver v2 fields (resolver-v2 3.2, anatomy 3.4): cut_resist_pm and crush_resist_pm multiply a layer's edged and blunt needs
+// (bone 2500 and 5000: rule C2, bone is a real stop), blunt_absorb_pm is the share of momentum a crushed layer soaks up
+// (skin 20, fat 80, muscle 120), pain_pm the pain multiplier for wounds in the tissue.
 [
   { "type": "material", "id": "skin", "name": "Skin", "category": "tissue", "density_kg_m3": 1100, "value_per_kg": 0.5,
     "impact_yield_kpa": 10000, "impact_fracture_kpa": 20000, "impact_strain_at_yield": 50000,
-    "shear_yield_kpa": 10000, "shear_fracture_kpa": 20000, "shear_strain_at_yield": 50000, "max_edge": 0.1 },
+    "shear_yield_kpa": 10000, "shear_fracture_kpa": 20000, "shear_strain_at_yield": 50000, "blunt_absorb_pm": 20, "pain_pm": 700, "max_edge": 0.1 },
   { "type": "material", "id": "fat", "name": "Fat", "category": "tissue", "density_kg_m3": 920, "value_per_kg": 0.5,
     "impact_yield_kpa": 5000, "impact_fracture_kpa": 8000, "impact_strain_at_yield": 50000,
-    "shear_yield_kpa": 5000, "shear_fracture_kpa": 8000, "shear_strain_at_yield": 50000, "max_edge": 0.1 },
+    "shear_yield_kpa": 5000, "shear_fracture_kpa": 8000, "shear_strain_at_yield": 50000, "blunt_absorb_pm": 80, "pain_pm": 500, "max_edge": 0.1 },
   { "type": "material", "id": "muscle", "name": "Muscle", "category": "tissue", "density_kg_m3": 1060, "value_per_kg": 0.5,
     "impact_yield_kpa": 10000, "impact_fracture_kpa": 15000, "impact_strain_at_yield": 50000,
-    "shear_yield_kpa": 8000, "shear_fracture_kpa": 12000, "shear_strain_at_yield": 50000, "max_edge": 0.1 },
+    "shear_yield_kpa": 8000, "shear_fracture_kpa": 12000, "shear_strain_at_yield": 50000, "blunt_absorb_pm": 120, "pain_pm": 1000, "max_edge": 0.1 },
   { "type": "material", "id": "bone_tissue", "name": "Bone (tissue)", "category": "tissue", "density_kg_m3": 1900, "value_per_kg": 0.2,
     "impact_yield_kpa": 200000, "impact_fracture_kpa": 200000, "impact_strain_at_yield": 1000,
-    "shear_yield_kpa": 100000, "shear_fracture_kpa": 130000, "shear_strain_at_yield": 1000, "max_edge": 0.1 },
+    "shear_yield_kpa": 100000, "shear_fracture_kpa": 130000, "shear_strain_at_yield": 1000, "cut_resist_pm": 2500, "crush_resist_pm": 5000, "pain_pm": 1500, "max_edge": 0.1 },
   { "type": "material", "id": "nerve", "name": "Nerve", "category": "tissue", "density_kg_m3": 1040, "value_per_kg": 0.5,
     "impact_yield_kpa": 5000, "impact_fracture_kpa": 8000, "impact_strain_at_yield": 50000,
-    "shear_yield_kpa": 4000, "shear_fracture_kpa": 6000, "shear_strain_at_yield": 50000, "max_edge": 0.1 },
+    "shear_yield_kpa": 4000, "shear_fracture_kpa": 6000, "shear_strain_at_yield": 50000, "pain_pm": 2500, "max_edge": 0.1 },
   { "type": "material", "id": "tendon", "name": "Tendon", "category": "tissue", "density_kg_m3": 1120, "value_per_kg": 0.5,
     "impact_yield_kpa": 20000, "impact_fracture_kpa": 40000, "impact_strain_at_yield": 50000,
     "shear_yield_kpa": 20000, "shear_fracture_kpa": 40000, "shear_strain_at_yield": 50000, "max_edge": 0.1 },
   { "type": "material", "id": "cartilage", "name": "Cartilage", "category": "tissue", "density_kg_m3": 1100, "value_per_kg": 0.5,
     "impact_yield_kpa": 30000, "impact_fracture_kpa": 50000, "impact_strain_at_yield": 20000,
-    "shear_yield_kpa": 30000, "shear_fracture_kpa": 50000, "shear_strain_at_yield": 20000, "max_edge": 0.1 },
+    "shear_yield_kpa": 30000, "shear_fracture_kpa": 50000, "shear_strain_at_yield": 20000, "cut_resist_pm": 1500, "crush_resist_pm": 2000, "pain_pm": 1200, "max_edge": 0.1 },
   { "type": "material", "id": "hair", "name": "Hair", "category": "tissue", "density_kg_m3": 1100, "value_per_kg": 1.0,
     "impact_yield_kpa": 1000, "impact_fracture_kpa": 1500, "impact_strain_at_yield": 50000,
     "shear_yield_kpa": 1000, "shear_fracture_kpa": 1500, "shear_strain_at_yield": 50000, "max_edge": 0.1 },
   { "type": "material", "id": "organ", "name": "Organ", "category": "tissue", "density_kg_m3": 1050, "value_per_kg": 0.5,
     "impact_yield_kpa": 4000, "impact_fracture_kpa": 6000, "impact_strain_at_yield": 50000,
-    "shear_yield_kpa": 3000, "shear_fracture_kpa": 5000, "shear_strain_at_yield": 50000, "max_edge": 0.1 }
+    "shear_yield_kpa": 3000, "shear_fracture_kpa": 5000, "shear_strain_at_yield": 50000, "pain_pm": 1800, "max_edge": 0.1 }
 ]

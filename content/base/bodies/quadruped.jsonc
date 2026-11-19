@@ -1,0 +1,35 @@
+// The shared quadruped plan (anatomy 4.2): dog, wolf, bear, deer, ox, sheep, pig and hen use it (species.body_plan, default "quadruped").
+// Head, neck, torso (chest and belly merged), four legs (one part each); heart, lungs and liver only; a hide over fat, muscle and bone;
+// one nerve structure per part (no ligaments, motor and sensory pairs or cord). Hide thickness by species is a later content pass.
+[
+{
+ "type": "body_plan", "id": "quadruped", "name": "Quadruped", "size_cm3": 60000, "blood_ml": 4200, "blood_ml_per_kg": 70, "untargetable_pm": 60, "tissue_set": "animal",
+ "parts": [
+  { "id": "torso", "name": "Torso", "relative_size": 0.52, "depth_mm": 300, "rib_slip": true,
+    "layers": [ { "tissue": "hide", "thickness_mm": 3 }, { "tissue": "fat", "thickness_mm": 8 }, { "tissue": "muscle", "thickness_mm": 25 }, { "tissue": "bone_tissue", "thickness_mm": 8 } ],
+    "organs": [
+      { "id": "heart", "tissue": "organ", "area_fraction": 0.05, "vital": true, "bleed_ml_per_s": 100 },
+      { "id": "lungs", "tissue": "organ", "area_fraction": 0.2, "bleed_ml_per_s": 25 },
+      { "id": "liver", "tissue": "organ", "area_fraction": 0.08, "bleed_ml_per_s": 20 } ] },
+  { "id": "neck", "name": "Neck", "relative_size": 0.06, "depth_mm": 120, "parent": "torso", "severable": true,
+    "layers": [ { "tissue": "hide", "thickness_mm": 3 }, { "tissue": "fat", "thickness_mm": 4 }, { "tissue": "muscle", "thickness_mm": 25 }, { "tissue": "bone_tissue", "thickness_mm": 12 } ],
+    "structures": [
+      { "id": "carotid_artery", "kind": "artery", "tissue": "muscle", "area_fraction": 0.06, "gap_boost": { "throat": 2.0 } },
+      { "id": "neck_nerve", "kind": "nerve", "tissue": "nerve", "area_fraction": 0.03 } ] },
+  { "id": "head", "name": "Head", "relative_size": 0.08, "depth_mm": 150, "parent": "neck",
+    "layers": [ { "tissue": "hide", "thickness_mm": 3 }, { "tissue": "fat", "thickness_mm": 2 }, { "tissue": "bone_tissue", "thickness_mm": 8 } ],
+    "organs": [ { "id": "brain", "tissue": "organ", "area_fraction": 0.4, "vital": true, "bleed_ml_per_s": 10 } ] },
+  { "id": "fore_leg", "name": "Foreleg", "relative_size": 0.07, "depth_mm": 70, "sided": true, "parent": "torso", "severable": true, "limb": "leg",
+    "layers": [ { "tissue": "hide", "thickness_mm": 3 }, { "tissue": "fat", "thickness_mm": 2 }, { "tissue": "muscle", "thickness_mm": 18 }, { "tissue": "bone_tissue", "thickness_mm": 12 } ],
+    "structures": [ { "id": "fore_artery", "kind": "artery", "tissue": "muscle", "area_fraction": 0.05 }, { "id": "fore_tendon", "kind": "tendon", "tissue": "tendon", "area_fraction": 0.08 },
+      { "id": "fore_nerve", "kind": "nerve", "tissue": "nerve", "area_fraction": 0.03 } ] },
+  { "id": "hind_leg", "name": "Hind leg", "relative_size": 0.07, "depth_mm": 80, "sided": true, "parent": "torso", "severable": true, "limb": "leg",
+    "layers": [ { "tissue": "hide", "thickness_mm": 3 }, { "tissue": "fat", "thickness_mm": 3 }, { "tissue": "muscle", "thickness_mm": 22 }, { "tissue": "bone_tissue", "thickness_mm": 14 } ],
+    "structures": [ { "id": "hind_artery", "kind": "artery", "tissue": "muscle", "area_fraction": 0.05 }, { "id": "hind_tendon", "kind": "tendon", "tissue": "tendon", "area_fraction": 0.08 },
+      { "id": "hind_nerve", "kind": "nerve", "tissue": "nerve", "area_fraction": 0.03 } ] },
+  { "id": "eye", "name": "Eye", "sided": true, "host": "head", "relative_size": 0.0006, "depth_mm": 20, "area_fraction": 0.03, "aim_factor_pm": 100,
+    "layers": [ { "tissue": "organ", "thickness_mm": 20 } ], "function": { "sight_pm": 500 } }
+ ],
+ "named_gaps": [ { "name": "throat", "part": "neck" } ]
+}
+]

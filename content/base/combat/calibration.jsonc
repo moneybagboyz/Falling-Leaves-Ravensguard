@@ -1,0 +1,12 @@
+// Resolver v2 tunables (resolver-v2 4.3 rules C1 to C4, open question R2). Every number is an integer; tools/calibrate reads them.
+// keep_pm: momentum a cut or crushed layer keeps at most (DF 95%); cut_cost_pm / crush_cost_pm: C1 conservation (a layer costs 0.6 x its need);
+// sever_momentum_pm: C4 (30% of the blow's momentum must be left to finish a cut); bone_edge_fail_divisor: C2 (an edge that fails bone meets the
+// crush test at half its ratio); strain_reference: DF's failure conversion (momentum x strain / 50,000).
+[
+  { "type": "combat_calibration", "id": "default",
+    "keep_pm": 950, "cut_cost_pm": 600, "crush_cost_pm": 600, "sever_momentum_pm": 300, "bone_edge_fail_divisor": 2, "strain_reference": 50000,
+    "rib_slip_pm": 350, "rib_slip_pen_mm": 80, "muscle_crush_grades": [40, 100], "fracture_pm": [1000, 2000, 4000, 8000], "brain_cut_momentum": 40,
+    "guarded_pm": 600, "gap_pm": 350, "flank_pm": 1250, "rear_pm": 1500, "hit_min_bp": 200, "hit_max_bp": 9800, "redirect_pm": 500, "misfit_coverage_pm": 250,
+    "weapon_block_base": 110, "weapon_block_skill_divisor": 2, "braced_neighbour_pm": 100, "weapon_notch_pm_per50": 20,
+    "burn_pm_per_second": 75, "bone_burn_divisor": 3, "max_momentum_milli": 2000000 }
+]

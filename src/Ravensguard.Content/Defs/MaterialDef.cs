@@ -37,4 +37,14 @@ public sealed record MaterialDef : ContentDef
 
     public double? MeltingPointC { get; init; }
     public double? IgnitionPointC { get; init; }
+
+    // ---- resolver v2 tissue fields (resolver-v2 3.2, anatomy 3.4); inherited through copy_from ----
+    /// <summary>Multiplier on the edged need, permille (bone 2500: bone is a real stop).</summary>
+    public int? CutResistPm { get; init; }
+    /// <summary>Multiplier on the blunt need, permille (bone 5000).</summary>
+    public int? CrushResistPm { get; init; }
+    /// <summary>Permille of momentum a crushed layer of this material absorbs (fat 80, muscle 120).</summary>
+    public int? BluntAbsorbPm { get; init; }
+    /// <summary>Pain multiplier for wounds in this tissue, permille.</summary>
+    public int? PainPm { get; init; }
 }
