@@ -11,3 +11,6 @@ art/out/
 # OS
 .DS_Store
 Thumbs.db
+
+# Claude Code helper worktrees (temporary)
+.claude/worktrees/
