@@ -1,0 +1,5 @@
+A real v7 save made with the Phase 4 code at 1a10645, before the v8 bump (P5-A1): the Phase 4 review world (TradeWorld: the fixture region, a disgraced squire with his kit, kin) with a ten-fighter
+road fight on the wound ledger saved at tick 60 (every weapon byte 0 = Standard, worn bytes [0,0]). Lines below: the fight hash at load, after the next ticks to the fight's end, and the content hash it was saved under.
+start EBF66B68E34AE6BA tick 60
+after600 B50E27CBAE0E5009 tick 237 over True
+contenthash 51bfa7b9a06a4725d6d12111c5817f81357349b5a005e7bff8be54781e8c4de7
