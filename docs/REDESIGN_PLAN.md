@@ -1559,7 +1559,11 @@ Estimates assume one developer working with an AI assistant. Every phase ends in
 
 ### Phase 5: Property, building, crafting, businesses, vehicle designer (7–10 months)
 - **Land:** `LandRegistry`, deeds and claims; owning and leasing fields; barns, granaries and mills.
+- **Building is hands-on, Kenshi style (decided with the user).** Placing a plan only makes ghost pieces. Every piece is built by a person doing the work: the hero by hand, which trains the building skills, or the hero's own people and hired workers through the job system.
+  - Materials must physically be on site, bought, gathered or carted in. Work stops when they run out or wages go unpaid, and anyone can resume it.
+  - Half-built work stays in the world. Commissioning a builder is the same work done by NPCs for pay, never an instant result.
 - **The player build mode:**
+  - **Both free placement and ready-made plans (decided with the user):** piece by piece on the 1 m grid, or a house plan picked from a library by culture, wealth and purpose (the same blueprints world generation uses, plus any the player saved), fitted to the lot and then built the same hands-on way.
   - Including multi-storey floors, stairs, ladders and trapdoors.
   - **Structural support and collapse**.
   - Save as blueprint.
