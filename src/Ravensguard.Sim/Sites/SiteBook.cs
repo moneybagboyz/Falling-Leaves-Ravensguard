@@ -20,6 +20,7 @@ public sealed class SiteRecord
     /// <summary>Permille of the history's loot still there (abstract scavengers take 5% a year from a few unvisited ruins).</summary>
     public int LootPm = 1000;
     public long FloodSince = -1;
+    /// <summary>A barrow: the grave taboo was broken. A battlefield: the legend's named weapon has been found (<see cref="SiteSurface.Search"/>).</summary>
     public bool Curse;
     public int Visits;
     public bool Generated => Map != null;

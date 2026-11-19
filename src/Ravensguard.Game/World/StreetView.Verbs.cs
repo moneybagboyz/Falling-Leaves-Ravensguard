@@ -125,6 +125,7 @@ public partial class StreetView
         v.Add(new(L.T("AP_D_REST"), () => ApQuick(Named(Directive.Rest(), L.T("AP_D_REST"))), noAp));
         v.Add(new(L.T("Q_AUTO_STOP"), () => { if (_ap != null) ApHost().Stop(); }, _ap == null || !_apView.Enabled ? L.T("Q_AUTO_OFF") : null));
         v.Add(new(L.T("Q_AUTO_PANEL"), OpenAutopilot, noAp));
+        SurfaceSiteVerbs(v);                                // P4-H: search an old battlefield, dig a hoard (StreetView.Crawl.cs)
         _router.Push(new QMenu(_router, L.T("Q_TITLE"), v));
     }
 

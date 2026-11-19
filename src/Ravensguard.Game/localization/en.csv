@@ -2683,6 +2683,11 @@ ex_ui_gen_failed,The way down is choked; you cannot go in.
 ex_ui_left,You climb back into the daylight.
 ex_ui_left_loot,You climb back into the daylight with {0} things worth {1}.
 ex_ui_died_below,You died below ground.
+ex_q_search,Search the field (a minute)
+ex_q_dig,Dig here
+ex_ui_search_none,"You turn over the turf and the bones: nothing worth keeping here."
+ex_ui_search_found,You find {0}.
+ex_ui_dig_none,The hole is empty; someone was here before you.
 fl_after_broke_shield1,"{target}'s shield splinters and falls apart."
 fl_after_broke_shield2,"{target}'s shield breaks in half."
 fl_after_broke_tool1,"{target}'s makeshift weapon breaks in {tgt_his} hands."

@@ -185,6 +185,53 @@ public partial class StreetView
         OpenCrawl(site, rec, cs);
     }
 
+    /// <summary>An old battlefield within 150 m of the hero, or a hoard's marker within 6 m (the surface sites, 4.2).</summary>
+    Site? SurfaceSiteAtHero()
+    {
+        if (_source?.Region is not { } region || _world.Snapshot.Hero.Z != 0) return null;
+        var (wx, wy) = _world.WorldCell;
+        foreach (var s in region.Sites)
+        {
+            long dx = s.X - wx, dy = s.Y - wy, d = dx * dx + dy * dy;
+            if (s.Kind == SiteKind.Battlefield && d <= 150L * 150 || s.Kind == SiteKind.Hoard && d <= 6L * 6) return s;
+        }
+        return null;
+    }
+
+    /// <summary>The Q menu's verbs at a surface site: Search the field (60 sim-seconds a cell), Dig here (a hoard).</summary>
+    void SurfaceSiteVerbs(List<QMenu.Verb> v)
+    {
+        if (SurfaceSiteAtHero() is not { } s || Runtime is not { } rt || _source?.Content == null) return;
+        var sc = SiteWiring.ContentOf(_source.Content);
+        var book = rt.State.Sites ??= new SiteBook();
+        var info = SiteHistoryInfo.Of(s, rt.State.History, _world.Clock.Now.Year);
+        if (s.Kind == SiteKind.Battlefield)
+            v.Insert(1, new QMenu.Verb(L.T("ex_q_search"), () => SearchField(sc, book, info, s, rt.State.Seed)));
+        else
+            v.Insert(1, new QMenu.Verb(L.T("ex_q_dig"), () => DigHoardHere(book, info, s)));
+    }
+
+    void SearchField(SiteContent sc, SiteBook book, SiteHistoryInfo info, Site s, ulong seed)
+    {
+        var rec = book.Record(s.Id.Value);
+        int perception = (Runtime?.State.Hero ?? _hero)?.Attribute(HeroAttr.Perception) ?? 50;
+        LootItem? it;
+        System.Threading.Monitor.Enter(book.Sync);
+        try { int pm = rec.LootPm; bool named = rec.Curse; it = SiteSurface.Search(sc, info, ref pm, ref named, perception, EconomyState.HeroOwner.Value, rec.Visits++, seed); rec.LootPm = pm; rec.Curse = named; }
+        finally { System.Threading.Monitor.Exit(book.Sync); }
+        _router?.ShowToast(it == null ? L.T("ex_ui_search_none") : L.F("ex_ui_search_found", it.Named.Length > 0 ? it.Named : it.Item.Replace('_', ' ')), 4f);
+    }
+
+    void DigHoardHere(SiteBook book, SiteHistoryInfo info, Site s)
+    {
+        var rec = book.Record(s.Id.Value);
+        LootItem? it;
+        System.Threading.Monitor.Enter(book.Sync);
+        try { int pm = rec.LootPm; it = SiteSurface.DigHoard(info, ref pm); rec.LootPm = pm; }
+        finally { System.Threading.Monitor.Exit(book.Sync); }
+        _router?.ShowToast(it == null ? L.T("ex_ui_dig_none") : L.F("ex_ui_search_found", it.Named), 4f);
+    }
+
     /// <summary>Q underground: the crawl's verbs (exploration-and-sites 7).</summary>
     void OpenCrawlMenu()
     {

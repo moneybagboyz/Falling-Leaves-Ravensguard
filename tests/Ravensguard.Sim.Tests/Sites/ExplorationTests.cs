@@ -207,4 +207,22 @@ public class ExplorationTests(SiteFixture fx)
         c.ToggleLight(h); c.Step();
         Assert.True(Seen(25));                                // a torchbearer is a lit target, a beacon
     }
+
+    [Fact]
+    public void EX4b_TheOldBattlefieldsScatterIsFinite_SearchedCellByCell_AndAHoardGivesItsArtefactOnce()
+    {
+        var field = SiteFixture.Of(SiteKind.Battlefield, "battlefield", 5400) with { YearsSince = 40, ArtefactName = "the sword of Ulfric Greycloak" };
+        int full = SiteSurface.Budget(fx.S, field, 1000);
+        Assert.Equal(1500 * 680 / 1000, full);                            // the flat budget x 680 permille after 40 years
+        int pm = 1000; bool named = false; int value = 0, finds = 0;
+        for (int serial = 0; serial < 2000 && pm > 0; serial++)
+            if (SiteSurface.Search(fx.S, field, ref pm, ref named, 50, 7, serial, 3) is { } it) { value += it.ValueMites; finds++; }
+        Assert.True(finds >= 2, $"{finds} finds");
+        Assert.InRange(value, full * 8 / 10, full + 1200);                 // spent down to nothing (the last find may overdraw its share)
+        Assert.Null(SiteSurface.Search(fx.S, field, ref pm, ref named, 50, 7, 99_999, 3));
+        var hoard = SiteFixture.Of(SiteKind.Hoard, "buried", 5401) with { ArtefactName = "the Ravensguard torc" };
+        int hp = 1000;
+        Assert.Equal("the Ravensguard torc", SiteSurface.DigHoard(hoard, ref hp)!.Named);
+        Assert.Null(SiteSurface.DigHoard(hoard, ref hp));
+    }
 }
