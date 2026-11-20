@@ -5304,6 +5304,7 @@ sl_d_who,"Age {0}, best skill {1}. {2}. {3}."
 sl_d_ask,Asks {0} at {1}.
 sl_d_kept,Works at: {0}. Kept: {1}. {2}.
 sl_d_morale,Morale {0}. He holds {1} of the {2} he cost.
+sl_b_morale,Your spirits: {0} of a hundred. Below forty you would run if you were not chained.
 sl_d_term,{0} days of the term remain.
 sl_d_grievance,"He has a grievance: hunger, a beating, or kin sold away."
 sl_d_onrun,He is on the run.

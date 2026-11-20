@@ -142,7 +142,7 @@ public partial class BondageScreen : Control
     {
         _detail.AddChild(UiKit.Title(r.Name));
         _detail.AddChild(UiKit.Body(L.F("sl_d_who", r.Age, r.Skill, L.T("sl_kind_" + r.Kind.ToString().ToLowerInvariant()), L.T("sl_origin_" + r.Origin.ToString().ToLowerInvariant()))));
-        if (r.Ask > 0) _detail.AddChild(UiKit.Body(L.F("sl_d_ask", Money(r.Ask), r.PlaceName)));
+        if (r.AskMites > 0) _detail.AddChild(UiKit.Body(L.F("sl_d_ask", Money(r.AskMites), r.PlaceName)));
         else
         {
             _detail.AddChild(UiKit.Body(L.F("sl_d_kept", L.T("sl_work_" + r.Work.ToString().ToLowerInvariant()), L.T("sl_treat_" + r.Treatment.ToString().ToLowerInvariant()), L.T("sl_chain_" + r.Chain.ToString().ToLowerInvariant()))));
@@ -160,13 +160,13 @@ public partial class BondageScreen : Control
         foreach (var pen in v.Pens)
         {
             _list.AddChild(UiKit.Hint(L.F("sl_pen_of", pen.Name, L.T("sl_law_" + pen.Law.ToString().ToLowerInvariant()))));
-            foreach (var r in pen.Lots) { all.Add(r); Row(r, L.F("sl_row_pen", r.Name, r.Age, r.Skill, L.T("sl_origin_" + r.Origin.ToString().ToLowerInvariant()), Money(r.Ask))); }
+            foreach (var r in pen.Lots) { all.Add(r); Row(r, L.F("sl_row_pen", r.Name, r.Age, r.Skill, L.T("sl_origin_" + r.Origin.ToString().ToLowerInvariant()), Money(r.AskMites))); }
         }
         var sel = all.FirstOrDefault(r => r.Person == _sel) ?? all.FirstOrDefault();
         if (sel == null) return;
         _sel = sel.Person; Detail(sel);
         ulong id = sel.Person;
-        _detail.AddChild(Act(L.F("sl_btn_buy", Money(sel.Ask)), () => _link.Buy(id), true, 220));
+        _detail.AddChild(Act(L.F("sl_btn_buy", Money(sel.AskMites)), () => _link.Buy(id), true, 220));
     }
 
     void BuildSlaves(BondView v)
@@ -195,7 +195,7 @@ public partial class BondageScreen : Control
         _list.AddChild(UiKit.Body(L.F("sl_bond_owner", h.OwnerName, r.PlaceName)));
         _list.AddChild(UiKit.Body(L.F("sl_d_kept", L.T("sl_work_" + r.Work.ToString().ToLowerInvariant()), L.T("sl_treat_" + r.Treatment.ToString().ToLowerInvariant()), L.T("sl_chain_" + r.Chain.ToString().ToLowerInvariant()))));
         _list.AddChild(UiKit.Body(L.F("sl_bond_peculium", Money(h.PeculiumMites), Money(h.PriceMites))));
-        _list.AddChild(UiKit.Hint(L.F("sl_d_morale", r.Morale, Money(h.PeculiumMites), Money(h.PriceMites))));
+        _list.AddChild(UiKit.Hint(L.F("sl_b_morale", r.Morale)));
         _detail.AddChild(UiKit.Title(L.T("sl_ways")));
         _detail.AddChild(UiKit.Body(L.F("sl_way_escape", h.LockPm, L.T(h.Night ? "sl_night" : "sl_day")), true));
         _detail.AddChild(UiKit.Body(L.T("sl_way_run"), true));
