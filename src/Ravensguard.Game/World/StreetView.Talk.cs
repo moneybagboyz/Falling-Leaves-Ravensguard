@@ -34,6 +34,7 @@ public partial class StreetView
         if (Runtime is not { } rt || _source?.Content == null || rt.State.Hero == null) return;
         _talk = TalkLink.Attach(rt, LineBook.From(_source.Content));
         Ravensguard.Sim.Law.LawLink.Attach(rt);                                    // P6-B2: reports and bounties at a day's start, NPC crime at hour 4
+        AttachFamily();                                                            // P6-B3: birthdays, weddings, births, lessons and the kidnappers (StreetView.Family.cs)
     }
 
     void BuildTalkHud(Control hud)
@@ -104,12 +105,12 @@ public partial class StreetView
         return true;
     }
 
-    void OpenTalk(EntityId person, string? shot = null)
+    void OpenTalk(EntityId person, string? shot = null, int[]? press = null)
     {
         if (_heroLink == null || _talk == null || _router == null) { _router?.ShowToast(L.T("MAP_NONE")); return; }
         Raise("dialogue_opened");
         _router.Push(new TalkScreen(_router, _heroLink, _talk, _talk.Book, person, HeroNow, TalkWorldContext, _talkHist, id => { _router.Pop(); OpenTrade(HeroSettlement(), id); }, TalkSeed, UniqueOf(person), FarPlace)
-        { ShotPath = shot, ShotPress = shot != null ? [2, 3, 3, 4] : [], SettlementNames = SettlementNames, OnChoice = i => _rec.Action(Ravensguard.Sim.Diagnostics.HeroAction.TalkChoice, i, (long)person.Value) });
+        { ShotPath = shot, ShotPress = press ?? (shot != null ? [2, 3, 3, 4] : []), SettlementNames = SettlementNames, CourtQuery = CourtOfferFor, OnChoice = i => _rec.Action(Ravensguard.Sim.Diagnostics.HeroAction.TalkChoice, i, (long)person.Value) });
     }
 
     void OpenJournal(string? shot = null, bool trace = false)

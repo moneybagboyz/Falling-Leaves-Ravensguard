@@ -7,6 +7,7 @@ using Ravensguard.Content;
 using Ravensguard.Game.UI.NewGame;
 using Ravensguard.Sim.Core;
 using Ravensguard.Sim.Dialogue;
+using Ravensguard.Sim.Family;
 using Ravensguard.Sim.Rumours;
 using Ravensguard.Sim.Trade;
 
@@ -39,6 +40,10 @@ public partial class TalkScreen : Control
     public string? ShotPath { get; init; }
     /// <summary>Dev: menu entries (1-based) the window presses by itself, in order, a few frames apart, before the picture.</summary>
     public int[] ShotPress { get; init; } = [];
+
+    /// <summary>P6-B3: asks, at a barrier, whether and how the person can be courted (null: no courting here).</summary>
+    public Func<EntityId, Task<CourtOffer>?>? CourtQuery { get; init; }
+    Task<CourtOffer>? _court; CourtOffer? _offer; int _courtIdx = -1;
 
     /// <summary>Called with the index of each dialogue choice the player picks (the session recorder writes it to the replay trace).</summary>
     public Action<int>? OnChoice { get; init; }
@@ -79,6 +84,7 @@ public partial class TalkScreen : Control
         if (_ctx.Place.Length == 0) _ctx.Place = _speaker.Settlement;
         foreach (var f in _flagsTask!.Result) _ctx.Flags.Add(f);
         SyncRelation();
+        _court = CourtQuery?.Invoke(_person);
         ParamResolver.Fill(_ctx, GameText.Instance);
         if (_unique != null && _book.Dialogues.FirstOrDefault(d => d.Speaker == _unique) is { } def) { _run = new DialogueRunner(def, _ctx, GameText.Instance); ShowNode(); }
         else Open();
@@ -138,6 +144,7 @@ public partial class TalkScreen : Control
             if (_ctx.Shopkeeper || _ctx.Job.Length > 0 && !_ctx.Child) Choice(L.T("TALK_TRADE"), () => { Add(Who(), Say("trade")); _openTrade(_person); });
             if (!_ctx.Child) Choice(L.T("TALK_HIRE"), HireMenu);
             if (!_ctx.Child) Choice(L.T("TALK_RECRUIT"), RecruitMenu);
+            if (_offer is { Can: true } o) { _courtIdx = _buttons.Count; Choice(L.F(o.State == CourtState.Betrothed ? "fam_talk_betrothed" : "fam_talk_court", o.Name.Split(' ')[0]), CourtMenu); }        // P6-B3
         }
         Choice(L.T("TALK_LEAVE"), Leave);
     }
@@ -202,6 +209,25 @@ public partial class TalkScreen : Control
         }
     }
 
+    /// <summary>P6-B3 (family 4.1): the courting menu: call on them, a gift, the plea, breaking it off. The sim answers each (a refusal says why); the courtship's state is read again after each.</summary>
+    void CourtMenu()
+    {
+        var o = _offer; if (o is not { Can: true }) { Menu(false); return; }
+        string first = o.Name.Split(' ')[0];
+        Add("", o.State == CourtState.Betrothed ? (o.WeddingDay >= 0 ? L.F("fam_talk_state_betrothed", o.Name, o.WeddingDay) : L.F("fam_talk_state_waits", o.Name))
+            : o.Started ? L.F("fam_talk_state", o.Name, o.Meetings, o.Gifts) : L.F("fam_talk_state_new", o.Name));
+        ClearMenu();
+        if (o.State != CourtState.Betrothed)
+        {
+            Choice(L.F("fam_talk_visit", first), () => Cmd(FamilyDesk.Court(_person, 0, 0), "court"), false);
+            Choice(L.F("fam_talk_gift", first, 100), () => Cmd(FamilyDesk.Court(_person, 100, 0), "court"), false);
+            Choice(L.F("fam_talk_gift", first, 500), () => Cmd(FamilyDesk.Court(_person, 500, 0), "court"), false);
+            if (o.Meetings >= 1) Choice(L.F("fam_talk_ask", first), () => Cmd(FamilyDesk.Ask(_person, 0), "court"), false);
+        }
+        if (o.Started) Choice(L.T("fam_talk_break"), () => Cmd(FamilyDesk.Break(_person, 0), "court"), false);
+        Choice(L.T("TALK_BACK"), () => Menu(false), false);
+    }
+
     void Cmd(HeroCommand c, string kind)
     {
         _lastCmd = kind; _waitSeq = _hw.Issue(c with { IssuedSec = _now() }).Seq; ClearMenu();
@@ -210,6 +236,7 @@ public partial class TalkScreen : Control
     void CmdDone(HeroResult r)
     {
         _waitSeq = 0;
+        if (_lastCmd == "court") { Add("", r.Text); _court = CourtQuery?.Invoke(_person); Menu(false); return; }          // P6-B3: the answer in words, the offer read again
         Add("", r.Text); Add(Who(), Say(_lastCmd, l => r.Ok ? (_lastCmd == "hire" ? l.Id == "hire.deal" : l.Id == "recruit.yes") : (_lastCmd == "hire" ? l.Id == "hire.no" : l.Id == "recruit.no.trust")));
         Menu(false);
     }
@@ -265,6 +292,11 @@ public partial class TalkScreen : Control
             bool done = task.IsCompletedSuccessfully && task.Result;
             _router.ShowToast(L.F(id == "start_contract" ? (done ? "TALK_EFFECT_CONTRACT" : "TALK_EFFECT_CONTRACT_NO") : (done ? "TALK_EFFECT_ITEM" : "TALK_EFFECT_ITEM_NO"), arg.Replace('_', ' ')));
         }
+        if (_court is { IsCompleted: true } ct)
+        {
+            _court = null;
+            if (ct.IsCompletedSuccessfully) { _offer = ct.Result; if (_ready && _run == null && _waitSeq == 0 && _news == null && _buttons.Count > 0 && _buttons.Count <= 12) Menu(_ctx.Tier is RelationTier.Disliked or RelationTier.Hated || _ctx.HeroBloody); }
+        }
         if (!_ready)
         {
             if (_spk != null && _spk.IsCompleted && _flagsTask != null && _flagsTask.IsCompleted) Begin();
@@ -283,7 +315,8 @@ public partial class TalkScreen : Control
         if (ShotPath == null) return;
         _shotWait++;
         int step = (_shotWait - 8) / 14;
-        if (_shotWait >= 8 && (_shotWait - 8) % 14 == 0 && step < ShotPress.Length && _news == null && _waitSeq == 0 && ShotPress[step] - 1 < _buttons.Count) _buttons[ShotPress[step] - 1].EmitSignal(BaseButton.SignalName.Pressed);
+        int pressIdx = step >= 0 && step < ShotPress.Length ? (ShotPress[step] < 0 ? _courtIdx : ShotPress[step] - 1) : -1;          // -1 in ShotPress: the courting entry (P6-B3)
+        if (_shotWait >= 8 && (_shotWait - 8) % 14 == 0 && step < ShotPress.Length && _news == null && _waitSeq == 0 && pressIdx >= 0 && pressIdx < _buttons.Count) _buttons[pressIdx].EmitSignal(BaseButton.SignalName.Pressed);
         if (_shotWait != 20 + 14 * ShotPress.Length + (ShotPress.Length > 0 ? 40 : 0)) return;
         var img = GetViewport().GetTexture().GetImage();
         System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(ShotPath) ?? ".");

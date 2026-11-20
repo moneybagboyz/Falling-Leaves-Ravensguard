@@ -524,7 +524,7 @@ public partial class StreetView : Control, IHandlesBack
     void OpenCharacter()
     {
         if (_router == null || _hero == null || _source?.Content == null) { _router?.ShowToast(L.T("MAP_NONE")); return; }
-        _router.Push(new CharacterScreen(_router, _hero, _source.Content, () => _heroLink?.View, HeroBodyLine) { ShotPath = _opt.Panel == "character" ? _opt.ShotPath : null, OpenProperty = _heroLink != null ? () => OpenLand(true) : null, OpenStanding = _heroLink != null ? OpenStanding : null });   // P5-A2: the deeds
+        _router.Push(new CharacterScreen(_router, _hero, _source.Content, () => _heroLink?.View, HeroBodyLine) { ShotPath = _opt.Panel == "character" ? _opt.ShotPath : null, OpenProperty = _heroLink != null ? () => OpenLand(true) : null, OpenStanding = _heroLink != null ? OpenStanding : null, OpenFamily = _heroLink != null ? () => OpenFamily() : null });   // P5-A2: the deeds
     }
 
     CraftingSession? _crafting;
@@ -979,6 +979,7 @@ public partial class StreetView : Control, IHandlesBack
         LandTick(delta);                                    // P5-A2: the land view, land answers, land screenshots
         BusinessTick(delta);                                // P5-F: the Ledger, businesses and prospecting: views, answers, where the hero is, screenshots
         WillTick(delta);                                    // P5-H: will answers, the will panel's view (StreetView.Will.cs)
+        FamilyTick(delta);                                  // P6-B3: family answers, the family panel, its screenshot (StreetView.Family.cs)
         BuildTick();                                        // P5-B: construction brought up to the clock, built pieces laid into the street, ghosts drawn
         BuildModeTick(delta);                               // P5-C: build mode (StreetView.BuildMode.cs): the preview, the palette, answers to construction commands, the hero's hands
         if (_opt.IsShot && _opt.Weather == "storm" && _frames == Math.Max(2, _opt.Frames - 1)) _wover.Strike(); // dev: catch a lightning flash in the picture

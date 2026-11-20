@@ -133,6 +133,8 @@ public sealed class WorldState
     public Ravensguard.Sim.Society.StandingBook? Standing { get; set; }
     /// <summary>P6-B2: the crimes witnessed, their reports and bounty links, the conviction counts (crime-and-justice 3), in the optional "law" section once any exists (no format bump).</summary>
     public Ravensguard.Sim.Law.CrimeBook? Law { get; set; }
+    /// <summary>P6-B3: the hero's courtships, the children's lessons, kin grievances and the hero's ageing (family-and-lifespan 3), in the optional "family" section once any exists (no format bump).</summary>
+    public Ravensguard.Sim.Family.FamilyBook? Family { get; set; }
     /// <summary>The hero's side of the records (trade-inventory-character spec): worn slots and where each stack sits, the price notebook, the party, the people known (saved in the "party" section when present). The things themselves are item rows, the pack store and the purse in the <see cref="Economy"/>.</summary>
     public Ravensguard.Sim.Trade.HeroParty? Party { get; set; }
     /// <summary>
@@ -444,6 +446,7 @@ public static partial class WorldSave
             Wills = w.Wills is { IsEmpty: false } wlb ? WillsSave.Capture(wlb) : null,                                                // P5-H
             Standing = w.Standing is { IsEmpty: false } stb ? StandingSave.Capture(stb) : null,                                      // P6-A3
             Law = w.Law is { IsEmpty: false } lwb ? CrimeSave.Capture(lwb) : null,                                                    // P6-B2
+            Family = w.Family is { IsEmpty: false } fmb ? FamilySave.Capture(fmb) : null,                                             // P6-B3
             Difficulty = w.Difficulty.IsDefault && w.DifficultyLog.Count == 0 ? null : DifficultySave.Capture(w),                    // P6-A4
             Ownership = w.Ownership is { IsEmpty: false } owb ? OwnershipSave.Capture(owb, w.Economy?.Goods.Hash() ?? "") : null,         // P5-F
             Party = w.Party == null ? null : Ravensguard.Sim.Trade.HeroPartySave.Capture(w.Party),
@@ -612,6 +615,7 @@ public static partial class WorldSave
             Wills = file.Sections.ContainsKey(WillsSave.SectionName) ? Decode<WillsSave>(file, WillsSave.SectionName, compressed: true).Restore() : null,                       // P5-H
             Standing = file.Sections.ContainsKey(StandingSave.SectionName) ? Decode<StandingSave>(file, StandingSave.SectionName, compressed: true).Restore() : null,          // P6-A3
             Law = file.Sections.ContainsKey(CrimeSave.SectionName) ? Decode<CrimeSave>(file, CrimeSave.SectionName, compressed: true).Restore() : null,                       // P6-B2
+            Family = file.Sections.ContainsKey(FamilySave.SectionName) ? Decode<FamilySave>(file, FamilySave.SectionName, compressed: true).Restore() : null,                 // P6-B3
             Ownership = file.Sections.ContainsKey(OwnershipSave.SectionName) ? Decode<OwnershipSave>(file, OwnershipSave.SectionName, compressed: true).Restore() : null,          // P5-F
             Party = file.Sections.ContainsKey(PartySection) ? Decode<Ravensguard.Sim.Trade.HeroPartySave>(file, PartySection, compressed: true).Restore() : null,
             HeroPending = file.Sections.ContainsKey(Ravensguard.Sim.Trade.HeroPendingSave.SectionName) ? Decode<Ravensguard.Sim.Trade.HeroPendingSave>(file, Ravensguard.Sim.Trade.HeroPendingSave.SectionName, compressed: true).Restore() : [],
@@ -829,6 +833,7 @@ public sealed class LiveCapture
     internal WillsSave? Wills { get; init; }                                                                                 // P5-H
     internal StandingSave? Standing { get; init; }                                                                           // P6-A3
     internal CrimeSave? Law { get; init; }                                                                                   // P6-B2
+    internal FamilySave? Family { get; init; }                                                                               // P6-B3
     internal DifficultySave? Difficulty { get; init; }                                                                       // P6-A4
     internal DesignsSave? Designs { get; init; }                                                                             // P5-C
     internal OwnershipSave? Ownership { get; init; }                                                                         // P5-F
@@ -898,6 +903,7 @@ public sealed class LiveCapture
         if (Wills != null) sections.Add(new(WillsSave.SectionName, SaveCodec.SerializeCompressed(Wills)));                   // P5-H (optional, no bump)
         if (Standing != null) sections.Add(new(StandingSave.SectionName, SaveCodec.SerializeCompressed(Standing)));         // P6-A3 (optional, no bump)
         if (Law != null) sections.Add(new(CrimeSave.SectionName, SaveCodec.SerializeCompressed(Law)));                      // P6-B2 (optional, no bump)
+        if (Family != null) sections.Add(new(FamilySave.SectionName, SaveCodec.SerializeCompressed(Family)));                // P6-B3 (optional, no bump)
         if (Difficulty != null) sections.Add(new(DifficultySave.SectionName, SaveCodec.SerializeCompressed(Difficulty)));   // P6-A4 (optional, no bump)
         if (Ownership != null) sections.Add(new(OwnershipSave.SectionName, SaveCodec.SerializeCompressed(Ownership)));       // P5-F (optional, no bump)
         if (Party != null) sections.Add(new(WorldSave.PartySection, SaveCodec.SerializeCompressed(Party)));

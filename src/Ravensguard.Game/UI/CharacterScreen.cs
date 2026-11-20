@@ -31,6 +31,8 @@ public partial class CharacterScreen : Control
     public Action? OpenProperty { get; init; }
     /// <summary>P6-A3: opens the Standing tab (what groups think of the hero, renown, marks); null hides the button.</summary>
     public Action? OpenStanding { get; init; }
+    /// <summary>P6-B3: opens the Family panel (spouse, children, lessons, what age has taken); null hides the button.</summary>
+    public Action? OpenFamily { get; init; }
 
     public CharacterScreen(ScreenRouter router, HeroRecord hero, ContentDatabase db, Func<HeroView?>? view = null, Func<string>? bodyLine = null)
     { _router = router; _hero = hero; _db = db; _view = view; _body = bodyLine; }
@@ -135,6 +137,7 @@ public partial class CharacterScreen : Control
         var back = UiKit.Key(L.T("UI_BACK"), "menu.back", 200); back.Pressed += _router.Pop; bottom.AddChild(back);
         if (OpenProperty is { } prop) { var pb = new Button { Text = L.T("ld_char_property"), CustomMinimumSize = new Vector2(150, 36) }; pb.Pressed += () => { _router.Pop(); prop(); }; bottom.AddChild(pb); }   // P5-A2
         if (OpenStanding is { } stand) { var sb = new Button { Text = L.T("st_open"), CustomMinimumSize = new Vector2(120, 36) }; sb.Pressed += () => { _router.Pop(); stand(); }; bottom.AddChild(sb); }   // P6-A3
+        if (OpenFamily is { } fam) { var fb = new Button { Text = L.T("fam_open"), CustomMinimumSize = new Vector2(120, 36) }; fb.Pressed += () => { _router.Pop(); fam(); }; bottom.AddChild(fb); }   // P6-B3
         bottom.AddChild(UiKit.Hint(L.F("CHAR_CLOSE_HINT", InputBootstrap.Hint("world.panel_character"))));
         root.AddChild(bottom);
     }

@@ -44,6 +44,8 @@ public enum HeroCommandKind : byte
     Will,
     /// <summary>Appended (P6-B2): a crime the street saw ("cj:act|kind|victim|settlement|value|damage|note|build|colours|witnesses|cry"), applied by <see cref="Ravensguard.Sim.Law.CrimeDesk"/>.</summary>
     Crime,
+    /// <summary>Appended (P6-B3): a family act ("fm:court|person|gift", "fm:ask|person", "fm:break|person", "fm:teach|child|course|skill|tutor"), applied by <see cref="Ravensguard.Sim.Family.FamilyDesk"/>.</summary>
+    Family,
 }
 
 /// <summary>Where the hero crafts (built on the main thread from what is in reach, copied into the command).</summary>
@@ -471,6 +473,7 @@ public sealed class HeroDesk
                 HeroCommandKind.Vehicle => Ravensguard.Sim.Carts.VehicleDesk.Apply(ctx, c),                   // P5-G: designs, vehicle sites, commissions, repairs, launches, voyages
                 HeroCommandKind.Will => Ravensguard.Sim.Succession.WillDesk.Apply(ctx, c),                     // P5-H: a will before a priest or the reeve
                 HeroCommandKind.Crime => Ravensguard.Sim.Law.CrimeDesk.Apply(ctx, c),                           // P6-B2: a crime the street saw
+                HeroCommandKind.Family => Ravensguard.Sim.Family.FamilyDesk.Apply(ctx, c),                      // P6-B3: courting, the plea, lessons
                 HeroCommandKind.Business or HeroCommandKind.Prospect => Ravensguard.Sim.Production.BusinessDesk.Apply(ctx, c),   // P5-F: businesses, stewards, stalls, prospecting
                 _ => R(c, HeroResultCode.Invalid, T("HERO_UNKNOWN_COMMAND")),
             };

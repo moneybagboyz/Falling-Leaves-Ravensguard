@@ -4204,6 +4204,114 @@ cj_seen,Seen by {0}.
 cj_unseen,Nobody saw it.
 st_deed_grave_robbing,Robbing a grave
 st_deed_theft,Theft
+ch_family_courting,{suitor} began to court {courted} at {place}.
+ch_family_betrothal,{courted} said yes and was betrothed to {suitor}.
+ch_family_wedding,{bride} and {groom} were married at the church of {place}.
+ch_family_wedding_dowry,{bride} and {groom} were married at the church of {place}; the bride's house gave a dowry of {dowry}.
+ch_family_called_off,The wedding of {suitor} and {courted} was called off.
+ch_family_child_born,{child} was born to {parent} at {place}.
+ch_family_ageing,{hero} turned {age} and felt the years in the joints.
+ch_family_old_age_warning,{hero}'s hands shake in the cold mornings.
+ch_family_died_old_age,{hero} died of old age at {age}.
+ch_family_died_childbed,{hero} died in childbed.
+ch_family_kidnapped,Bandits carried off {victim}; they ask {ransom} of {hero}.
+ch_note_courting,The hero went courting.
+ch_note_betrothal,Both the courted and the head of the house said yes.
+ch_note_courted_and_wed,"The two were courted and betrothed, and the church married them on a holy day."
+ch_note_wedding_lost,One of the two was no longer free to wed.
+ch_note_wedding_no_roof,The couple had no roof to go to.
+ch_note_wedding_church,The church would not marry them.
+ch_note_wedding_fee,The priest's fee could not be paid.
+ch_note_a_child,A child of the hero's marriage.
+ch_note_years,The years take their toll.
+ch_note_old_age,Old age.
+ch_note_childbed,A difficult birth.
+ch_note_kidnappers,A kidnapper band took what it could sell back.
+R_HERO_WEDDING,{who} was married at {place}.
+R_KIN_KIDNAPPED,{who} was carried off by bandits near {place}.
+st_deed_hero_wedding,A wedding
+st_deed_kin_kidnapped,Kin carried off
+su_cause_age,"Old age has done what the road never could."
+su_cause_childbed,"The childbed was too much, and the child's first cry was your last sound."
+fm_no_hero,You are in no state to court anyone.
+fm_gone,They are no longer here.
+fm_hero_wed,You are already married.
+fm_they_wed,They are already married.
+fm_not_so,That is not a match the custom of the place allows.
+fm_too_young,They are too young to marry.
+fm_held,They are held captive.
+fm_head,They keep their own house; you could not court them here.
+fm_kin,They are your own kin.
+fm_already_courting,You are already courting someone.
+fm_already_betrothed,You are betrothed already.
+fm_met_first,"You called on {0}; a first visit, politely made."
+fm_met,You called on {0} again.
+fm_gift_given,You gave {0} a gift worth {1} mites.
+fm_cannot_afford,You cannot afford it.
+fm_not_courted,You have not been courting them yet.
+fm_asked_today,You have asked once today; wait for tomorrow.
+fm_says_no,"{0} will not have you yet (the answer was {1})."
+fm_house_no,"{0} would have you, but {1}, the head of the house, will not."
+fm_church_refuses,The church will not marry you.
+fm_betrothed,"{0} said yes: the wedding is on day {1}, on the holy day."
+fm_betrothed_waits,{0} said yes; the wedding waits until you have a roof with a free bed.
+fm_broken_off,You broke off the courtship.
+fm_no_roof,You have no dwelling with a free bed.
+fm_cannot_afford_fee,You cannot pay the priest's fee.
+fm_wed,"You were married to {0}; the dowry was {1} mites."
+fm_not_your_child,That is not a child of your household.
+fm_grown,They are grown; there is nothing left to teach them as a child.
+fm_no_skill,Say which trade.
+fm_no_tutor,There is no such tutor.
+fm_lessons_set,{0} will have lessons.
+fm_lessons_stopped,{0} will have no lessons.
+fam_open,Family
+fam_title,Family
+fam_intro,"Your wife or husband, your children and what they are taught. A child's lessons begin at seven; one left untaught learns the household's trade from ten, at half the pace."
+fam_loading,Reckoning up the household...
+fam_age,"{0}, {1} years old"
+fam_hazard,"Old age claims {0} in a hundred a year from here. Your next birthday is in {1} days."
+fam_hazard_none,"Old age has not begun to threaten you yet. Your next birthday is in {0} days."
+fam_attr_lost,"{0} {1} ({2} with age)"
+fam_attr_plain,{0} {1}
+fam_spouse,Spouse
+fam_spouse_line,"{0}, {1}, at {2}. {3}"
+fam_no_spouse,You are not married.
+fam_member_dead,"{0}, who died at {1}."
+fam_courting,"Courting {0}: {1} visits, gifts worth {2} mites."
+fam_betrothed,"Betrothed to {0}: the wedding is on day {1}, at the church on the holy day."
+fam_betrothed_waits,Betrothed to {0}; the wedding waits until you have a roof with a free bed.
+fam_no_roof,You hold no dwelling with a free bed yet.
+fam_break,Break off the courtship
+fam_children,Children
+fam_no_children,You have no children yet.
+fam_child_line,"{0}, {1}, at {2}. {3}"
+fam_held,held by bandits
+fam_course,Lessons: {0}
+fam_course_none,none
+fam_course_arms,arms
+fam_course_letters,letters
+fam_course_trade,a trade
+fam_course_church,the church
+fam_course_household,the household's trade
+fam_tutor,Tutor: {0}
+fam_tutor_none,nobody
+fam_learned,Learned so far: {0}.
+fam_untaught,"No lessons set: from ten they pick up the household's trade at half the pace."
+fam_lessons_begin,The lessons have only begun.
+fam_too_young,Too young for lessons: they begin at seven.
+fam_loyalty,Loyalty {0}.
+fam_loyalty_why,"Loyalty {0}, with {1} grievances weighing on it."
+fam_talk_court,Court {0}
+fam_talk_betrothed,Speak of the wedding with {0}
+fam_talk_state_new,You have not courted {0} before.
+fam_talk_state,"You are courting {0}: {1} visits so far, gifts worth {2} mites."
+fam_talk_state_betrothed,"{0} is betrothed to you: the wedding is on day {1}."
+fam_talk_state_waits,"{0} is betrothed to you; the wedding waits for a roof."
+fam_talk_visit,Call on {0}
+fam_talk_gift,Give {0} a gift worth {1} mites
+fam_talk_ask,Ask for {0}'s hand
+fam_talk_break,Break it off
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."
