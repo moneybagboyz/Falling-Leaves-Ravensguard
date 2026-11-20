@@ -42,6 +42,8 @@ public enum HeroCommandKind : byte
     Prospect,
     /// <summary>Appended (P5-H): a will made before a priest or the reeve ("wl:make|witness|person:what:thing:pm|..."), applied by <see cref="Ravensguard.Sim.Succession.WillDesk"/>.</summary>
     Will,
+    /// <summary>Appended (P6-B2): a crime the street saw ("cj:act|kind|victim|settlement|value|damage|note|build|colours|witnesses|cry"), applied by <see cref="Ravensguard.Sim.Law.CrimeDesk"/>.</summary>
+    Crime,
 }
 
 /// <summary>Where the hero crafts (built on the main thread from what is in reach, copied into the command).</summary>
@@ -468,6 +470,7 @@ public sealed class HeroDesk
                 HeroCommandKind.Craft => CraftDesk.Apply(ctx, c),                                              // P5-E: commissions, guilds, apprenticeships, fires
                 HeroCommandKind.Vehicle => Ravensguard.Sim.Carts.VehicleDesk.Apply(ctx, c),                   // P5-G: designs, vehicle sites, commissions, repairs, launches, voyages
                 HeroCommandKind.Will => Ravensguard.Sim.Succession.WillDesk.Apply(ctx, c),                     // P5-H: a will before a priest or the reeve
+                HeroCommandKind.Crime => Ravensguard.Sim.Law.CrimeDesk.Apply(ctx, c),                           // P6-B2: a crime the street saw
                 HeroCommandKind.Business or HeroCommandKind.Prospect => Ravensguard.Sim.Production.BusinessDesk.Apply(ctx, c),   // P5-F: businesses, stewards, stalls, prospecting
                 _ => R(c, HeroResultCode.Invalid, T("HERO_UNKNOWN_COMMAND")),
             };
@@ -790,7 +793,7 @@ public sealed class HeroDesk
         if (c.Order == SquadOrder.Work)
         {
             if (ctx.Jobs?.Invoke() is not { } jt) return R(c, HeroResultCode.Invalid, T("HERO_THERE_NO_WORK_BOARD"));
-            var job = c.Job != EntityId.None ? c.Job : jt.Table.Jobs.Values.Where(j => j.State == JobState.Open).OrderBy(j => Math.Abs(j.P0 - c.X) + Math.Abs(j.P1 - c.Y)).ThenBy(j => j.Id).Select(j => j.Id).FirstOrDefault();
+            var job = c.Job != EntityId.None ? c.Job : jt.Table.Jobs.Values.Where(j => j.State == JobState.Open && j.Kind != OddJobKind.Bounty).OrderBy(j => Math.Abs(j.P0 - c.X) + Math.Abs(j.P1 - c.Y)).ThenBy(j => j.Id).Select(j => j.Id).FirstOrDefault();
             if (job == EntityId.None) { f.Order = SquadOrder.Follow; return R(c, HeroResultCode.NoStock, T("HERO_THERE_NO_OPEN_WORK")); }
             var p = ctx.State.Population.People; int day = (int)(c.IssuedSec / 86400);
             var res = jt.Table.ClaimAll(jt.Env, [new ClaimRequest(job, f.Person, f.PersonIndex, c.IssuedSec, (int)c.Seq, c.X, c.Y, f.MaxSkill, p.AgeYears(f.PersonIndex, day))], c.IssuedSec, ctx.Seed);

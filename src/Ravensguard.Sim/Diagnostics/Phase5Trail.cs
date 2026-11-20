@@ -49,7 +49,7 @@ public static class Phase5Trail
         cw.May = may;
         if (placed.Ok) { cw.DevStock(placed.Site, sec); cw.DevFinish(placed.Site, 99, 0, 0, sec); cw.Destroy(ox + 1, oy + 1, 0, sec, st.Party.Hero, "knocked out"); }
         rt.AdvanceTo(GameTime.FromGameHours(rt.HourDone + 1 + Days * 24L));
-        var (file, standing) = rt.AtBarrier(() => (WorldSave.Capture(rt.State, "h", "0.1"), rt.State.Standing?.Hash() ?? 0UL)).GetAwaiter().GetResult();   // P6-A3: the standing book joins the trail
+        var (file, standing, law) = rt.AtBarrier(() => (WorldSave.Capture(rt.State, "h", "0.1"), rt.State.Standing?.Hash() ?? 0UL, rt.State.Law?.Hash() ?? 0UL)).GetAwaiter().GetResult();   // P6-A3: the standing book joins the trail
         using var sha = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
         sha.AppendData(BitConverter.GetBytes(placed.Ok));
         foreach (var name in Sections.Order(StringComparer.Ordinal))
@@ -58,6 +58,7 @@ public static class Phase5Trail
             if (file.Sections.TryGetValue(name, out var bytes)) { sha.AppendData(BitConverter.GetBytes(bytes.Length)); sha.AppendData(bytes.Span); }
         }
         sha.AppendData(BitConverter.GetBytes(standing));
+        if (law != 0) sha.AppendData(BitConverter.GetBytes(law));          // P6-B2: the LawHash joins the trail only once a crime exists, so a world without crime keeps its pinned hash
         return Convert.ToHexString(sha.GetHashAndReset())[..16];
     }
 }

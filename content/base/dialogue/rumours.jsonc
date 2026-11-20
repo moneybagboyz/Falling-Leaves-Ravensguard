@@ -33,5 +33,13 @@
   {"type": "rumour_type", "id": "skirmish", "entry": "skirmish", "kind": "Battle", "interest_pm": 700, "life_days": 15, "witnesses": "town", "severity": 2, "key": "R_SKIRMISH"},
   {"type": "rumour_type", "id": "mine_collapse", "entry": "mine_collapse", "kind": "Death", "interest_pm": 700, "life_days": 15, "witnesses": "town", "severity": 2, "key": "R_MINE"},
   {"type": "rumour_type", "id": "battle_report", "entry": "battle_report", "kind": "Battle", "interest_pm": 650, "life_days": 15, "witnesses": "traveller", "severity": 2, "key": "ab_rumour_report", "number_key": "lost_a"},
+  {"type": "rumour_type", "id": "theft", "entry": "theft", "kind": "Crime", "interest_pm": 750, "life_days": 10, "witnesses": "seen", "severity": 2, "key": "R_THEFT", "who_key": "doer"},
+  {"type": "rumour_type", "id": "burglary", "entry": "burglary", "kind": "Crime", "interest_pm": 750, "life_days": 12, "witnesses": "seen", "severity": 2, "key": "R_BURGLARY", "who_key": "doer"},
+  {"type": "rumour_type", "id": "poaching", "entry": "poaching", "kind": "Crime", "interest_pm": 750, "life_days": 8, "witnesses": "seen", "severity": 2, "key": "R_POACHING", "who_key": "doer"},
+  {"type": "rumour_type", "id": "assault", "entry": "assault", "kind": "Crime", "interest_pm": 750, "life_days": 8, "witnesses": "seen", "severity": 2, "key": "R_ASSAULT", "who_key": "doer"},
+  {"type": "rumour_type", "id": "murder", "entry": "murder", "kind": "Crime", "interest_pm": 750, "life_days": 40, "witnesses": "seen", "severity": 3, "key": "R_MURDER", "who_key": "doer"},
+  {"type": "rumour_type", "id": "arson", "entry": "arson", "kind": "Crime", "interest_pm": 750, "life_days": 20, "witnesses": "seen", "severity": 2, "key": "R_ARSON", "who_key": "doer"},
+  {"type": "rumour_type", "id": "smuggling", "entry": "smuggling", "kind": "Crime", "interest_pm": 750, "life_days": 10, "witnesses": "seen", "severity": 2, "key": "R_SMUGGLING", "who_key": "doer"},
+  {"type": "rumour_type", "id": "grave_robbing", "entry": "grave_robbing", "kind": "Crime", "interest_pm": 750, "life_days": 30, "witnesses": "seen", "severity": 2, "key": "R_GRAVE_ROBBING", "who_key": "doer"},
   {"type": "talk_settings", "id": "default", "home_pm": 25, "work_pm": 10, "social_pm_by_hour": [0, 0, 0, 0, 0, 0, 8, 11, 14, 17, 17, 17, 19, 17, 17, 17, 17, 19, 28, 34, 34, 28, 8, 0]}
 ]

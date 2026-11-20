@@ -88,7 +88,7 @@ public sealed class JobTable
     public bool HasJob(EntityId worker) => _byWorker.ContainsKey(worker);
 
     /// <summary>Open jobs listed at a settlement, oldest first (the board, or what the reeve and innkeeper tell).</summary>
-    public List<Job> Open(int region, int settlement) => [.. _jobs.Values.Where(j => j.State == JobState.Open && j.Region == region && j.Settlement == settlement).OrderBy(j => j.PostedSec).ThenBy(j => j.Id)];
+    public List<Job> Open(int region, int settlement) => [.. _jobs.Values.Where(j => j.State == JobState.Open && j.Kind != OddJobKind.Bounty && j.Region == region && j.Settlement == settlement).OrderBy(j => j.PostedSec).ThenBy(j => j.Id)];
 
     public static EntityId MakeId(int region, ulong serial) => EntityId.MakeIn(IdKind.Other, region, EntityId.ReservedSerialBit | serial);
 
@@ -98,7 +98,7 @@ public sealed class JobTable
     public Job? Post(JobEnv env, OddJobKind kind, EntityId poster, PurseId posterPurse, int region, int settlement, long nowSec, long deadlineSec, long wageMites, Action<Job>? init = null)
     {
         if (wageMites <= 0 || env.Ledger.Balance(posterPurse).Mites < wageMites) return null;
-        if (_jobs.Values.Count(j => j.State == JobState.Open && j.Region == region && j.Settlement == settlement) >= env.Tuning.BoardCap) return null;
+        if (kind != OddJobKind.Bounty && _jobs.Values.Count(j => j.State == JobState.Open && j.Kind != OddJobKind.Bounty && j.Region == region && j.Settlement == settlement) >= env.Tuning.BoardCap) return null;   // bounties are not work: they never fill the board
         var id = MakeId(region, NextSerial++);
         var escrow = env.Ledger.Open(PurseKind.Chest, id);
         if (!env.Ledger.Transfer(posterPurse, escrow, new Coin(wageMites), JobReasons.Escrow)) throw new InvalidOperationException("escrow transfer failed after a balance check");
@@ -113,6 +113,19 @@ public sealed class JobTable
     {
         if (!_jobs.TryGetValue(id, out var j) || j.State != JobState.Open) return false;
         Refund(env, j); j.State = JobState.Cancelled; return true;
+    }
+
+    /// <summary>
+    /// P6-B2: settles an open bounty (crime-and-justice 4.3): up to <paramref name="pay"/> mites of its escrow go to <paramref name="payee"/> (reason <see cref="TransferReason.Bounty"/>), the rest back to the poster,
+    /// and the job is done. Returns what was paid.
+    /// </summary>
+    public long Settle(JobEnv env, EntityId id, PurseId payee, long pay)
+    {
+        if (!_jobs.TryGetValue(id, out var j) || j.Kind != OddJobKind.Bounty || j.State != JobState.Open) return 0;
+        var escrow = new PurseId(j.Escrow); pay = Math.Clamp(pay, 0, env.Ledger.Balance(escrow).Mites);
+        if (pay > 0 && env.Ledger.Transfer(escrow, payee, new Coin(pay), TransferReason.Bounty)) j.PaidMites += pay; else pay = 0;
+        Refund(env, j); j.State = JobState.Done;
+        return pay;
     }
 
     private void Refund(JobEnv env, Job j)

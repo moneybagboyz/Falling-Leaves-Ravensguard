@@ -44,7 +44,7 @@ public static class RuntimeJobs
         if (claims.Count > 0) foreach (var (_, res) in table.ClaimAll(env, claims, nowSec, rt.State.Seed)) if (res == ClaimResult.Taken) taken++;
         table.Advance(env, nowSec);
         EntityId? lost = hero is { } h ? table.WatchHero(EconomyState.HeroOwner, nowSec, h.XMm, h.YMm, h.Exempt) : null;
-        return new JobSnapshot([.. table.Jobs.Values.Where(j => j.Live).Select(Copy)], [.. table.Jobs.Values.Where(j => j.State == JobState.Open).Select(Copy)], posted, taken, lost);
+        return new JobSnapshot([.. table.Jobs.Values.Where(j => j.Live).Select(Copy)], [.. table.Jobs.Values.Where(j => j.State == JobState.Open && j.Kind != OddJobKind.Bounty).Select(Copy)], posted, taken, lost);
     });
 }
 

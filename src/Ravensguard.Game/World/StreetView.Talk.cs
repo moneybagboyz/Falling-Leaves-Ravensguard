@@ -33,6 +33,7 @@ public partial class StreetView
     {
         if (Runtime is not { } rt || _source?.Content == null || rt.State.Hero == null) return;
         _talk = TalkLink.Attach(rt, LineBook.From(_source.Content));
+        Ravensguard.Sim.Law.LawLink.Attach(rt);                                    // P6-B2: reports and bounties at a day's start, NPC crime at hour 4
     }
 
     void BuildTalkHud(Control hud)
