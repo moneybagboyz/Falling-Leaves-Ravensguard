@@ -1,0 +1,8 @@
+// Lock qualities for the heist sites (heists-and-jailbreaks 3): the time a pick takes (sim-seconds), the skill offset against the Phase 4 lockpick rule, the time to break the door.
+[
+  {"type": "heist_lock", "id": "crude",       "quality": 0, "pick_s": 20,  "offset": 0,   "break_s": 8},
+  {"type": "heist_lock", "id": "common",      "quality": 1, "pick_s": 40,  "offset": -10, "break_s": 14},
+  {"type": "heist_lock", "id": "good",        "quality": 2, "pick_s": 60,  "offset": -20, "break_s": 20},
+  {"type": "heist_lock", "id": "fine",        "quality": 3, "pick_s": 120, "offset": -35, "break_s": 30},
+  {"type": "heist_lock", "id": "masterwork",  "quality": 4, "pick_s": 240, "offset": -50, "break_s": 45}
+]

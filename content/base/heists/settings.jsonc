@@ -1,0 +1,4 @@
+// The numbers of the heist (heists-and-jailbreaks 3, 4). Noise in metres in still air; weather and walls scale it; guards look and listen every five seconds.
+[
+  {"type": "heist_settings", "id": "heists"}
+]
