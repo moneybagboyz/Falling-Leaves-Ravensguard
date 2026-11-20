@@ -79,19 +79,19 @@ public static class Excommunication
     // ============================================================ the ban
 
     /// <summary>Lays the ban (4.6): the mark, the entry, the standing, the opinions, the grievances and the casus belli. Returns the row.</summary>
-    public static ExcommRow Impose(WorldState st, ContentDatabase db, FaithOps.Pass p, PoliticsCtx? pc, EntityId target, int religion, EntityId bishop, EntityId requester, EntityId cause, int day)
+    public static ExcommRow Impose(WorldState st, ContentDatabase db, FaithOps.Pass p, PoliticsCtx? pc, EntityId target, int religion, EntityId bishop, EntityId? requester, EntityId cause, int day)
     {
         var marks = (st.Standing ??= new StandingBook()).Marks; var rel = p.Religions.Get(religion)!;
         marks.Excommunicate(target, religion);
         int row = FaithOps.RowOf(st, target); int settlement = row >= 0 ? p.People.HomeSettlement[row] : -1;
         var ps = new List<ChronParam> { ChronParam.Person("doer", target), ChronParam.Person("bishop", bishop) };
         if (FaithOps.PlaceOf(st, settlement) is var pl && pl != EntityId.None) ps.Add(ChronParam.Place("place", pl));
-        bool asked = requester != EntityId.None;
-        if (asked) ps.Add(ChronParam.Person("asker", requester));
-        var subj = new List<EntityId> { target, bishop }; if (asked) subj.Add(requester);
+        bool asked = requester.HasValue;                                                       // null is nobody: the hero's own id is the zero id (S8)
+        if (asked) ps.Add(ChronParam.Person("asker", requester!.Value));
+        var subj = new List<EntityId> { target, bishop }; if (asked) subj.Add(requester!.Value);
         var entry = FaithOps.Chron(st, FaithOps.SecOf(day), asked ? "excommunication_asked" : "excommunicated", asked ? "ch_faith_excommunicated_asked" : "ch_faith_excommunicated", ps, subj, cause == EntityId.None ? null : cause,
             cause == EntityId.None ? "ch_note_excomm_sins" : "ch_note_excomm_cause");
-        var x = new ExcommRow { Person = target.Value, Religion = rel.Id, Day = day, Entry = entry.Value, Cause = cause.Value, By = bishop.Value, Requester = requester.Value, PilgrimsBefore = p.Book.Pilgrimages };
+        var x = new ExcommRow { Person = target.Value, Religion = rel.Id, Day = day, Entry = entry.Value, Cause = cause.Value, By = bishop.Value, Requester = requester?.Value ?? 0, PilgrimsBefore = p.Book.Pilgrimages };
         p.Pol.Excomms.Add(x);
         FaithStanding.Record(st, db, target, "excommunicated", entry, settlement, 1, 0, true, day);
         if (pc != null) Consequences(st, p, pc, target, religion, entry, day, true);
@@ -102,18 +102,19 @@ public static class Excommunication
     private static void Consequences(WorldState st, FaithOps.Pass p, PoliticsCtx pc, EntityId target, int religion, EntityId entry, int day, bool first)
     {
         var rb = pc.RB; var pb = pc.B; var s = p.S; ulong t = target.Value;
+        bool Rules(int realm) => t == 0 ? pc.HeroRules(realm) : pc.RulerOf(realm) == t;          // the hero's zero id also reads as 'no ruler' (S8)
         if (first)
         {
             var seen = new SortedSet<ulong>();
             foreach (var f in rb.Fiefs.Values)
             {
-                if (f.Holder < 0 || f.Forfeited || (ulong)f.Holder == t || f.Realm < 0 || pc.RulerOf(f.Realm) != t) continue;
+                if (f.Holder < 0 || f.Forfeited || (ulong)f.Holder == t || f.Realm < 0 || !Rules(f.Realm)) continue;
                 if (seen.Add((ulong)f.Holder)) Opinions.Add(pb, rb, (ulong)f.Holder, t, "excommunicated", day, entry.Value);
             }
             foreach (var o in pb.Oaths) if (o.Liege == t && seen.Add(o.Vassal)) Opinions.Add(pb, rb, o.Vassal, t, "excommunicated", day, entry.Value);
             // a casus belli for each ruler of the faith against the banned man's realm
             int against = -1;
-            foreach (int r in pc.AliveRealms()) if (pc.RulerOf(r) == t) { against = r; break; }
+            foreach (int r in pc.AliveRealms()) if (Rules(r)) { against = r; break; }
             if (against < 0) foreach (var f in rb.Fiefs.Values) if (f.Holder == (long)t && !f.Forfeited && f.Realm >= 0) { against = f.Realm; break; }
             if (against >= 0)
                 foreach (int r in pc.AliveRealms())
@@ -196,7 +197,7 @@ public static class Excommunication
         foreach (var (person, ri) in due)
         {
             var see = SeeFor(p, person, ri, pc); if (see == null || see.Bishop < 0) continue;
-            Impose(st, db, p, pc, new EntityId(person), ri, new EntityId((ulong)see.Bishop), EntityId.None, EntityId.None, day); n++;
+            Impose(st, db, p, pc, new EntityId(person), ri, new EntityId((ulong)see.Bishop), null, EntityId.None, day); n++;
         }
         return n;
     }

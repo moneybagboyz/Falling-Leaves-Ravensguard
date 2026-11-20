@@ -250,17 +250,17 @@ public static class Slavery
     }
 
     /// <summary>Manumission by the owner (Q &gt; Free): lawful in any realm (4.3).</summary>
-    public static SlaveResult Manumit(BondWorld bw, BondBook book, EntityId owner, EntityId person, int day, long sec)
+    public static SlaveResult Manumit(BondWorld bw, BondBook book, EntityId owner, EntityId person, int day, long sec, CrimeBook? crimes = null)
     {
         if (book.Of(person) is not { InPen: false } b || b.Owner != owner.Value) return SlaveResult.No("sl_not_yours");
-        return Free(bw, book, person, Ending.Manumission, day, sec);
+        return Free(bw, book, person, Ending.Manumission, day, sec, 0, crimes);
     }
 
     /// <summary>
     /// A slave who has saved his last price buys himself free (4.2): the owner must accept in a debt law and may refuse in a chattel law (a Harsh owner refuses). The coin goes from the slave's own purse to the
     /// owner's (<see cref="TransferReason.SlaveSale"/>); conserved.
     /// </summary>
-    public static SlaveResult SelfPurchase(BondWorld bw, BondBook book, EntityId person, int day, long sec)
+    public static SlaveResult SelfPurchase(BondWorld bw, BondBook book, EntityId person, int day, long sec, CrimeBook? crimes = null)
     {
         if (book.Of(person) is not { InPen: false } b || b.PriceMites <= 0) return SlaveResult.No("sl_not_bonded");
         var owner = new EntityId(b.Owner);
@@ -271,7 +271,7 @@ public static class Slavery
         if (bw.Ledger.Balance(from).Mites < b.PriceMites) return SlaveResult.No("sl_too_poor");
         if (!bw.Ledger.Transfer(from, to, new Coin(b.PriceMites), TransferReason.SlaveSale)) return SlaveResult.No("sl_too_poor");
         long paid = b.PriceMites;
-        var r = Free(bw, book, person, Ending.SelfPurchase, day, sec);
+        var r = Free(bw, book, person, Ending.SelfPurchase, day, sec, 0, crimes);
         return r with { Mites = paid };
     }
 
@@ -279,13 +279,13 @@ public static class Slavery
     /// A friend or kin buys a slave free (4.4: be bought free by a companion): the payer gives his last price to the owner (<see cref="TransferReason.SlaveSale"/>) and the person is free (a rescue). The owner may refuse
     /// in a chattel law only when he is no one's debtor-keeper: here he accepts at the price he paid, so a slave can never be held for ransom beyond it.
     /// </summary>
-    public static SlaveResult BuyFree(BondWorld bw, BondBook book, EntityId payer, EntityId person, int day, long sec)
+    public static SlaveResult BuyFree(BondWorld bw, BondBook book, EntityId payer, EntityId person, int day, long sec, CrimeBook? crimes = null)
     {
         if (book.Of(person) is not { InPen: false } b || b.Owner == payer.Value) return SlaveResult.No("sl_not_bonded");
         if (bw.PurseOf(payer) is not { } from || bw.PurseOf(new EntityId(b.Owner)) is not { } to) return SlaveResult.No("sl_cannot_afford");
         long price = Math.Max(b.PriceMites, 1);
         if (bw.Ledger.Balance(from).Mites < price || !bw.Ledger.Transfer(from, to, new Coin(price), TransferReason.SlaveSale)) return SlaveResult.No("sl_cannot_afford");
-        var r = Free(bw, book, person, Ending.Rescued, day, sec);
+        var r = Free(bw, book, person, Ending.Rescued, day, sec, 0, crimes);
         return r with { Mites = price };
     }
 

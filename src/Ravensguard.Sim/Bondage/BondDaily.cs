@@ -57,7 +57,7 @@ public static class BondDaily
             int tip = b.Treatment switch { Treatment.Kind => bw.D.KindTipMites, Treatment.Fair => bw.D.FairTipMites, _ => 0 };
             if (tip > 0 && b.Kind != BondKind.Convict && bw.PurseOf(owner) is { } op && bw.Ledger.Balance(op).Mites >= tip)
                 bw.Ledger.Transfer(op, bw.PeculiumPurse(person), new Coin(tip), TransferReason.Gift);
-            if (b.PriceMites > 0 && bw.Peculium(person) >= b.PriceMites && Slavery.SelfPurchase(bw, book, person, day, sec).Ok) { bought++; ended++; continue; }
+            if (b.PriceMites > 0 && bw.Peculium(person) >= b.PriceMites && Slavery.SelfPurchase(bw, book, person, day, sec, crimes).Ok) { bought++; ended++; continue; }
             // ---- trust: an owner who has come to trust him frees him after a year (4.4)
             if (b.Treatment != Treatment.Harsh && b.Kind != BondKind.Convict && day - b.Since >= bw.D.TrustFreeDays && owner.Kind != IdKind.Other && bw.W.OpinionPm(bw.OwnerPerson(owner), person) >= bw.D.TrustFreePm)
             { Slavery.Free(bw, book, person, Slavery.Ending.Trust, day, sec, 0, crimes); ended++; continue; }

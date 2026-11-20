@@ -125,6 +125,8 @@ public sealed class LawWorld
         JobEnv? env = e == null || db == null ? null : new JobEnv { Ledger = e.Ledger, Econ = e, Pop = pop, Tuning = Ravensguard.Sim.Behaviour.BehaviourContent.From(db).OddJobs };
         var standing = st.Standing;
         var hero = st.Party?.Hero ?? EntityId.None;
+        // S4: the rule book is the one source of truth for who holds a fief (D2's grants write FiefRow.Holder; no deed is written in the land book). The hero's id is the zero id, so he is asked by this, never by comparing a lord id with None.
+        bool HeroHolds(int f) => st.Party != null && st.Rule?.FiefOf(f) is { Forfeited: false } fr && fr.Holder == (long)hero.Value;
         return new LawWorld
         {
             Chronicle = st.Chronicle, Ids = st.Ids, People = pop.People, Households = pop.Households, SettlementNames = names, SettlementIds = ids, SettlementFief = fief, FiefIds = fiefIds,
@@ -173,8 +175,8 @@ public sealed class LawWorld
                 return null;
             },
             CultureKey = (s, kind) => db != null && s >= 0 && s < region.Settlements.Count && Ravensguard.Sim.Faith.ReligionBook.CultureOf(db, region.Settlements[s].Culture) is { } cu ? cu.Crimes.GetValueOrDefault(kind) : null,
-            LordOf = f => f >= 0 && f < pop.FiefLord.Length && pop.FiefLord[f] >= 0 && pop.FiefLord[f] < pop.People.Count ? pop.People.IdOf(pop.FiefLord[f]) : EntityId.None,
-            HeroLordOf = f => st.Land != null && st.Land.Deeds.Values.Any(d => d.Kind == Ravensguard.Sim.Land.HoldingKind.Fief && d.Subject == f && d.Holder == hero),
+            LordOf = f => HeroHolds(f) ? EntityId.None : f >= 0 && f < pop.FiefLord.Length && pop.FiefLord[f] >= 0 && pop.FiefLord[f] < pop.People.Count ? pop.People.IdOf(pop.FiefLord[f]) : EntityId.None,
+            HeroLordOf = HeroHolds,
             RealmOf = s => s >= 0 && s < region.Settlements.Count ? Math.Max(0, region.Settlements[s].Realm) : 0,
             StandingWithFief = (p, f) => Standing.Of(standing, p, GroupRef.Fief(f)),
             LiteracyOf = p => p == hero ? st.Hero?.Skill(Ravensguard.Sim.Characters.HeroRecord.SkillId(Skill.Literacy)) ?? 0 : pop.People.IndexOf(p) is var r and >= 0 ? pop.People.SkillLevelOf(r, Skill.Literacy) : 0,
