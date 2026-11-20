@@ -311,7 +311,7 @@ public class FamilyPoliticsTests(ITestOutputHelper output)
         long paid = bal0 - led.Balance(heroPurse).Mites; Assert.True(paid > 0);
         Assert.Equal(paid, led.Balance(r.St.Economy.HouseholdPurse[pt.Household[passed]]).Mites - kin0);
         Assert.Equal(total0, led.Audit().Circulating.Mites);
-        Assert.True(r.St.Family!.Contested.Contains(pid.Value));
+        Assert.Contains(pid.Value, r.St.Family!.Contested);
         Assert.Equal(0, Disputes.Contest(r.St, r.P.R.Content, r.St.Party, heroPurse, r.Hero, heir, will, day + 1, 0));   // one dispute each
         // a son the will names, the heir, and a child who still trusts him: no contest
         r.St.Family.Contested.Clear(); r.St.Party.Know(pid).TrustPm = 400;
