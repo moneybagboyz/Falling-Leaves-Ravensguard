@@ -267,5 +267,8 @@
   {"type": "chronicle_type", "id": "bandit_cleared", "text_key": "ch_bandit_cleared", "params": [{"name": "place", "type": "place"}], "cause_kinds": ["Battle", "Other"], "rumour": "bandit_cleared"},
   {"type": "chronicle_type", "id": "manhunt_began", "text_key": "ch_heist_manhunt_began", "params": [{"name": "doer", "type": "person"}, {"name": "hunted", "type": "count"}, {"name": "place", "type": "place"}], "cause_kinds": ["Crime"]},
   {"type": "chronicle_type", "id": "manhunt_ended", "text_key": "ch_heist_manhunt_ended", "params": [{"name": "doer", "type": "person"}, {"name": "place", "type": "place"}], "cause_kinds": ["Crime"]},
-  {"type": "chronicle_type", "id": "locks_changed", "text_key": "ch_heist_locks_changed", "params": [{"name": "place", "type": "place"}], "cause_kinds": ["Crime"], "specific_requires": "either", "note_keys": ["ch_note_heist_keys_taken"]}
+  {"type": "chronicle_type", "id": "locks_changed", "text_key": "ch_heist_locks_changed", "params": [{"name": "place", "type": "place"}], "cause_kinds": ["Crime"], "specific_requires": "either", "note_keys": ["ch_note_heist_keys_taken"]},
+  {"type": "chronicle_type", "id": "street_laid", "text_key": "ch_street_laid", "params": [{"name": "place", "type": "place"}, {"name": "plots", "type": "count"}], "cause_kinds": ["Migration"], "specific_requires": "note", "note_keys": ["ch_note_street_no_plots"]},
+  {"type": "chronicle_type", "id": "land_distress_sale", "text_key": "ch_land_distress_sale", "params": [{"name": "place", "type": "place"}, {"name": "price", "type": "mites"}], "cause_kinds": ["Trade"], "specific_requires": "note", "note_keys": ["ch_note_distress_arrears"]},
+  {"type": "chronicle_type", "id": "soil_improved", "text_key": "ch_soil_improved", "params": [{"name": "place", "type": "place"}, {"name": "what", "type": "text_key"}, {"name": "points", "type": "count"}], "cause_kinds": ["Trade"], "specific_requires": "either", "note_keys": ["ch_note_soil_poor"]}
 ]

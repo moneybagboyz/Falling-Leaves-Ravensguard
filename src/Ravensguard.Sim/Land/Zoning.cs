@@ -47,7 +47,7 @@ public static class Zoning
     private static RectM StreetRect(Street st) => new(Math.Min(st.A.X, st.B.X) - st.WidthM / 2, Math.Min(st.A.Y, st.B.Y) - st.WidthM / 2, Math.Abs(st.A.X - st.B.X) + st.WidthM, Math.Abs(st.A.Y - st.B.Y) + st.WidthM);
 
     /// <summary>The lord's planner: the street a place would get, or null when no end of an existing street has waste to run over with at least <c>2 x StreetLotsPerSideMin</c> plots along it. A pure function of the region.</summary>
-    public static StreetRecord? Plan(RegionData r, int s, LandRulesDef ru, GrowthTuningDef t, int day)
+    public static StreetRecord? Plan(RegionData r, int s, LandRulesDef ru, GrowthTuningDef t, int day, IReadOnlyList<RectM>? reserved = null)
     {
         var st = r.Settlements[s]; var plan = st.Plan; bool town = st.Class == SettlementClass.Town;
         int w = town ? t.PlotWidthTownM : t.PlotWidthVillageM, d = town ? t.PlotDepthTownM : t.PlotDepthVillageM;
@@ -76,8 +76,8 @@ public static class Zoning
                 int len = k * (w + 1) + c.OldW + width;
                 var b = new PointM(c.P.X + c.Dx * len, c.P.Y + c.Dy * len);
                 var street = new Street(c.P, b, width);
-                if (!CorridorOk(r, ru, s, c.P, c.Dx, c.Dy, len, c.OldW / 2 + width / 2 + 1)) continue;
-                var plots = RegionGrowth.PlotsOnStreet(r, s, street, w, d, 2 * kMax);
+                if (!CorridorOk(r, ru, s, c.P, c.Dx, c.Dy, len, c.OldW / 2 + width / 2 + 1, width, reserved)) continue;
+                var plots = RegionGrowth.PlotsOnStreet(r, s, street, w, d, 2 * kMax, reserved);
                 if (plots.Count < 2 * kMin) continue;
                 // trim the street to the far end of the plots it serves
                 int reach = 0;
@@ -88,16 +88,22 @@ public static class Zoning
                 }
                 reach = Math.Min(len, Math.Max(reach, c.OldW + width));
                 var trimmed = new Street(c.P, new PointM(c.P.X + c.Dx * reach, c.P.Y + c.Dy * reach), width);
-                var again = RegionGrowth.PlotsOnStreet(r, s, trimmed, w, d, 2 * kMax);
-                if (again.Count < 2 * kMin) continue;
-                return new StreetRecord(s, trimmed.A, trimmed.B, width, again.Count, day);
+                int count = RegionGrowth.PlotsOnStreet(r, s, trimmed, w, d, 100, reserved).Count;
+                // the street serves 6 to 10 plots: past ten the far end is cut back a plot's width at a time
+                while (count > 2 * kMax && reach > c.OldW + width + w)
+                {
+                    reach -= w; trimmed = new Street(c.P, new PointM(c.P.X + c.Dx * reach, c.P.Y + c.Dy * reach), width);
+                    count = RegionGrowth.PlotsOnStreet(r, s, trimmed, w, d, 100, reserved).Count;
+                }
+                if (count < 2 * kMin || count > 2 * kMax) continue;
+                return new StreetRecord(s, trimmed.A, trimmed.B, width, count, day);
             }
         }
         return null;
     }
 
     /// <summary>The ground a street runs over: dry, level enough, not a field, not the commons, inside the region's margin (sampled every <see cref="SampleStepM"/> metres past the junction).</summary>
-    private static bool CorridorOk(RegionData r, LandRulesDef ru, int s, PointM p, int dx, int dy, int len, int skip)
+    private static bool CorridorOk(RegionData r, LandRulesDef ru, int s, PointM p, int dx, int dy, int len, int skip, int width, IReadOnlyList<RectM>? reserved)
     {
         for (int i = skip; i <= len; i += SampleStepM)
         {
@@ -105,6 +111,7 @@ public static class Zoning
             if (x < 96 || y < 96 || x >= RegionData.Meters - 96 || y >= RegionData.Meters - 96) return false;
             int t = LandRules.TileAt(x, y); if (t < 0 || r.Water[t] != 0 || r.SlopePermille[t] > MaxSlopePermille) return false;
             if (ZoneOf(r, ru, s, x, y) != Zone.Waste) return false;
+            if (reserved != null) { var q = new RectM(x - width / 2, y - width / 2, width, width); foreach (var rv in reserved) if (Overlap(q, rv)) return false; }       // a plot a household is building on is not a street's
         }
         return true;
     }
@@ -136,7 +143,7 @@ public static class Zoning
             if (lw.StreetsAllowed != null && !lw.StreetsAllowed(st.FiefIndex)) continue;
             if (gs.Streets.Any(x => x.Settlement == s && day - x.Day < lw.Rules.StreetCooldownDays)) continue;
             if (lw.FreeLots(s) > 0 || Waiting(lw.Pop, s) <= lw.Rules.StreetWaitingOver) continue;
-            var rec = Plan(r, s, lw.Rules, lw.GrowthTuning, day);
+            var rec = Plan(r, s, lw.Rules, lw.GrowthTuning, day, gs.Projects.Where(p => p.Settlement == s && p.Kind != ProjectKind.Assart && p.Lot < 0).Select(p => p.Rect).ToList());
             if (rec == null) continue;
             Lay(lw, rec, chron);
             laid.Add(rec);

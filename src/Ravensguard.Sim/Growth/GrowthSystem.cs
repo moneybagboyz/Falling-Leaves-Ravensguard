@@ -323,7 +323,7 @@ public sealed class GrowthSystem
     /// P6-D4 (holdings 3.3): a household that bought a lot (a bare plot of the lord's or a vacant house) puts up the house on it: the project is the cottage's, on that lot, paid by the buyer. False when a project
     /// already stands on the lot or the lot is not there. The buyer's reserve and hands are Advance's affair, as for every cottage.
     /// </summary>
-    internal bool StartOn(int s, int lot, int payer, GameTime now)
+    public bool StartOn(int s, int lot, int payer, GameTime now)
     {
         if ((uint)s >= (uint)Region.Settlements.Count || (uint)lot >= (uint)Region.Settlements[s].Plan.Lots.Count || payer < 0) return false;
         if (State.Projects.Any(p => p.Settlement == s && p.Lot == lot)) return false;

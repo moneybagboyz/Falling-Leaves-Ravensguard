@@ -38,6 +38,8 @@ public static class LandDesk
 
     public static HeroCommand Buy(Listing l, long sec) => Cmd(sec, Tag("buy", l.Settlement, l.Lot, l.Rect.X, l.Rect.Y, l.Rect.W, l.Rect.H), l.PriceMites, l.Settlement);
     public static HeroCommand Offer(EntityId deed, long askMites, long sec) => Cmd(sec, Tag("offer", deed.Value, askMites));
+    /// <summary>P6-D4 (holdings 3.3): Q > Offer for this house: the hero offers <paramref name="offerMites"/> to the household that holds the deed; it takes it at the price times 1,100 less a tenth of its trust in him, over 1,000.</summary>
+    public static HeroCommand Bid(EntityId deed, long offerMites, long sec) => Cmd(sec, Tag("bid", deed.Value, offerMites), offerMites);
     public static HeroCommand LeaseField(int parcel, long sec) => Cmd(sec, Tag("lease", parcel));
     public static HeroCommand LeaseHouse(int settlement, int lot, long sec) => Cmd(sec, Tag("house", settlement, lot), 0, settlement);
     public static HeroCommand GiveUp(EntityId deed, bool renew, long sec) => Cmd(sec, Tag("giveup", deed.Value, renew ? 1 : 0));
@@ -82,6 +84,7 @@ public static class LandDesk
             "buy" when p.Length >= 7 && I(1) >= 0 => lw.Buy(hero, hk, I(1), I(2), new RectM(I(3), I(4), I(5), I(6)), c.Limit, day, Chron),
             "offer" when p.Length >= 3 && N(2) >= 0 && N(2) > 0 && MinorHero(ctx, day) => LandResult.No("in_minor_no_sale"),     // P5-H (inheritance 4.4): no deed sale before 16
             "offer" when p.Length >= 3 && N(2) >= 0 => lw.Offer(hero, new EntityId((ulong)N(1)), N(2), day),
+            "bid" when p.Length >= 3 && N(2) > 0 => lw.BidForHouse(hero, hk, new EntityId((ulong)N(1)), N(2), day, Chron),
             "pay" when p.Length >= 2 => lw.PayArrears(hero, hk, new EntityId((ulong)N(1)), day, Chron),
             "lease" when p.Length >= 2 => lw.LeaseParcel(hero, hk, I(1), day, Chron),
             "house" when p.Length >= 3 => lw.LeaseHouse(hero, hk, I(1), I(2), day, Chron),

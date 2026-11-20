@@ -47,7 +47,7 @@ public static class RegionGrowth
     // ---------------------------------------------------------------- streets (P6-D4)
 
     /// <summary>
-    /// A street laid by the lord (holdings 3.4): the plan gains the segment, its corridor is marked built (as a lot's tiles are), and the plan's radius reaches its far end so <see cref="FindPlot"/> finds the plots along it.
+    /// A street laid by the lord (holdings 3.4): the plan gains the segment, its corridor is marked built (as a lot's tiles are), and <see cref="FindPlot"/> finds the plots along it whatever the plan's radius is.
     /// The plots themselves are not records: growth and the lord's listings find them with <see cref="FindPlot"/> as on every other street.
     /// </summary>
     public static void ApplyStreet(RegionData r, StreetRecord rec)
@@ -58,13 +58,10 @@ public static class RegionGrowth
         plan.Streets.Add(new Street(rec.A, rec.B, rec.WidthM));
         int pad = rec.WidthM / 2 + StreetPadM;
         MarkBuilt(r, new RectM(Math.Min(rec.A.X, rec.B.X) - pad, Math.Min(rec.A.Y, rec.B.Y) - pad, Math.Abs(rec.A.X - rec.B.X) + 2 * pad, Math.Abs(rec.A.Y - rec.B.Y) + 2 * pad));
-        long cx = plan.Square.W > 0 ? plan.Square.CenterX : st.CenterX, cy = plan.Square.W > 0 ? plan.Square.CenterY : st.CenterY;
-        long far = Math.Max(Region.Isqrt(Region.Dist2(rec.A.X - cx, rec.A.Y - cy)), Region.Isqrt(Region.Dist2(rec.B.X - cx, rec.B.Y - cy)));
-        plan.RadiusM = Math.Max(plan.RadiusM, (int)far + StreetPadM);
         r.NoteGrown();
     }
 
-    /// <summary>How far past a street's centre line its plots reach and the plan's radius is widened beyond its far end, metres.</summary>
+    /// <summary>How far past a street's edge the tiles marked built reach, metres.</summary>
     public const int StreetPadM = 30;
 
     /// <summary>The region change of <see cref="ApplyLot"/> plus the population's per-lot arrays (a new slot per array, empty; beds from the record). Returns the lot index.</summary>
@@ -115,6 +112,7 @@ public static class RegionGrowth
         rect = default; facing = 0;
         long cx = plan.Square.W > 0 ? plan.Square.CenterX : st.CenterX, cy = plan.Square.W > 0 ? plan.Square.CenterY : st.CenterY;
         long maxR = plan.RadiusM + margin, maxR2 = maxR * maxR;
+        int baseStreets = r.Baseline?.Streets is { } bs && s < bs.Length ? bs[s] : plan.Streets.Count;          // P6-D4: a street the lord laid is built along its whole length, whatever the plan's radius was
         var cands = new List<(long D2, int Street, int Pos, RectM R, byte F)>();
         for (int si = 0; si < plan.Streets.Count; si++)
         {
@@ -131,7 +129,7 @@ public static class RegionGrowth
                     if (horiz) { q = new RectM(u, v0, w, d); f = (byte)(side > 0 ? 0 : 2); }
                     else { q = new RectM(v0, u, d, w); f = (byte)(side > 0 ? 3 : 1); }
                     long dx = q.CenterX - cx, dy = q.CenterY - cy, d2 = dx * dx + dy * dy;
-                    if (d2 > maxR2) continue;
+                    if (d2 > maxR2 && si < baseStreets) continue;
                     cands.Add((d2, si, u * 2 + (side > 0 ? 1 : 0), q, f));
                 }
         }
@@ -148,7 +146,7 @@ public static class RegionGrowth
     /// P6-D4: the plots <see cref="FindPlot"/> would give along one street, in its order (nearest the centre first) and packed the way listings and growth take them (each plot reserves its place, so the next
     /// must clear it). <paramref name="street"/> need not be in the plan yet: the planner counts a street's plots before it lays it. The plan's radius is not applied (the street widens it when laid).
     /// </summary>
-    public static List<(RectM Rect, byte Facing)> PlotsOnStreet(RegionData r, int s, Street street, int w, int d, int max)
+    public static List<(RectM Rect, byte Facing)> PlotsOnStreet(RegionData r, int s, Street street, int w, int d, int max, IReadOnlyList<RectM>? held = null)
     {
         var st = r.Settlements[s]; var plan = st.Plan; var res = new List<(RectM, byte)>();
         long cx = plan.Square.W > 0 ? plan.Square.CenterX : st.CenterX, cy = plan.Square.W > 0 ? plan.Square.CenterY : st.CenterY;
@@ -165,7 +163,7 @@ public static class RegionGrowth
                 cands.Add((dx * dx + dy * dy, u * 2 + (side > 0 ? 1 : 0), q, f));
             }
         cands.Sort((a, b) => a.D2 != b.D2 ? a.D2.CompareTo(b.D2) : a.Pos.CompareTo(b.Pos));
-        var reserved = new List<RectM>();
+        var reserved = new List<RectM>(held ?? []);
         foreach (var (_, _, q, f) in cands)
         {
             if (res.Count >= max) break;

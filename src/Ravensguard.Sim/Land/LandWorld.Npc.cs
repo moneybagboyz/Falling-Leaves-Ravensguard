@@ -56,7 +56,7 @@ public sealed partial class LandWorld
     /// </summary>
     public long OfferFloor(Deed d, EntityId buyer)
     {
-        int trust = Math.Clamp(buyer == EntityId.None ? 0 : TrustOfHero?.Invoke(d.Holder) ?? 0, -1000, 1000);
+        int trust = Math.Clamp(TrustOfHero?.Invoke(d.Holder) ?? 0, -1000, 1000);
         return ValueOf(d) * (Rules.OfferBasePm - trust / 10) / 1000;
     }
 
