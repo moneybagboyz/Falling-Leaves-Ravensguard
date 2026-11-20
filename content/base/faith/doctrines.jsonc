@@ -1,0 +1,9 @@
+// The doctrines of each religion (faith-and-church 3). slavery_stance: forbid | coreligionists_forbidden | accept; usury: forbid | allow; barrow_taboo is the standing cost (0..100) of robbing the dead;
+// tithe_parish_parts : tithe_see_parts : tithe_fabric_parts is how the season's tithe receipts are split (1 : 1 : 1 is the spec's thirds); the fabric part stays in the parish chest, earmarked for repairs and the poor.
+[
+  {"type": "doctrine", "id": "default", "religion": "", "slavery_stance": "accept", "usury": "allow", "barrow_taboo": 50, "church_courts": true, "tithe_parish_parts": 1, "tithe_see_parts": 1, "tithe_fabric_parts": 1},
+  {"type": "doctrine", "id": "old_gods", "religion": "old_gods", "slavery_stance": "accept", "usury": "allow", "fasting": false, "barrow_taboo": 80, "church_courts": false, "clergy_marry": true, "tithe_parish_parts": 1, "tithe_see_parts": 1, "tithe_fabric_parts": 1},
+  {"type": "doctrine", "id": "church_of_the_vale", "religion": "church_of_the_vale", "slavery_stance": "coreligionists_forbidden", "usury": "forbid", "fasting": true, "barrow_taboo": 60, "church_courts": true, "clergy_marry": false, "tithe_parish_parts": 1, "tithe_see_parts": 1, "tithe_fabric_parts": 1},
+  {"type": "doctrine", "id": "hill_saints", "religion": "hill_saints", "slavery_stance": "forbid", "usury": "allow", "fasting": false, "barrow_taboo": 90, "church_courts": true, "clergy_marry": true, "tithe_parish_parts": 1, "tithe_see_parts": 1, "tithe_fabric_parts": 1},
+  {"type": "doctrine", "id": "drowned_saints", "religion": "drowned_saints", "slavery_stance": "accept", "usury": "forbid", "fasting": true, "barrow_taboo": 70, "church_courts": true, "clergy_marry": true, "tithe_parish_parts": 1, "tithe_see_parts": 1, "tithe_fabric_parts": 1}
+]

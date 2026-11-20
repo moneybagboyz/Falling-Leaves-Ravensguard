@@ -31,6 +31,8 @@ public partial class CharacterScreen : Control
     public Action? OpenProperty { get; init; }
     /// <summary>P6-A3: opens the Standing tab (what groups think of the hero, renown, marks); null hides the button.</summary>
     public Action? OpenStanding { get; init; }
+    /// <summary>P6-B4: opens the Faith panel (religion, piety, the church, holy days, pilgrimage); null hides the button.</summary>
+    public Action? OpenFaith { get; init; }
     /// <summary>P6-B1: opens the treatment screen on the hero himself (the Treat button); null hides it.</summary>
     public Action? OpenTreat { get; init; }
 
@@ -137,6 +139,7 @@ public partial class CharacterScreen : Control
         var back = UiKit.Key(L.T("UI_BACK"), "menu.back", 200); back.Pressed += _router.Pop; bottom.AddChild(back);
         if (OpenProperty is { } prop) { var pb = new Button { Text = L.T("ld_char_property"), CustomMinimumSize = new Vector2(150, 36) }; pb.Pressed += () => { _router.Pop(); prop(); }; bottom.AddChild(pb); }   // P5-A2
         if (OpenTreat is { } treat) { var tb = new Button { Text = L.T("tr_char_btn"), CustomMinimumSize = new Vector2(90, 36) }; tb.Pressed += () => { _router.Pop(); treat(); }; bottom.AddChild(tb); }   // P6-B1
+        if (OpenFaith is { } faith) { var fb = new Button { Text = L.T("fa_open"), CustomMinimumSize = new Vector2(90, 36) }; fb.Pressed += () => { _router.Pop(); faith(); }; bottom.AddChild(fb); }   // P6-B4
         if (OpenStanding is { } stand) { var sb = new Button { Text = L.T("st_open"), CustomMinimumSize = new Vector2(120, 36) }; sb.Pressed += () => { _router.Pop(); stand(); }; bottom.AddChild(sb); }   // P6-A3
         bottom.AddChild(UiKit.Hint(L.F("CHAR_CLOSE_HINT", InputBootstrap.Hint("world.panel_character"))));
         root.AddChild(bottom);

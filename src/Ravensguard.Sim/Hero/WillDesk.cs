@@ -45,6 +45,10 @@ public static class WillDesk
         var witness = new EntityId(w);
         int wr = pt.IndexOf(witness);
         if (wr < 0 || pt.Status[wr] != PersonStatus.Alive || Array.IndexOf(Witnesses, pt.Occupation[wr]) < 0) return R(c, HeroResultCode.Refused, HeroText.Of("in_wl_no_witness"));
+        // P6-B4 (faith 4.3): a priest witnesses a will only for someone the church has not shut out (standing with the faith of -500 or less, or excommunicated)
+        if (pt.Occupation[wr] == Occupation.Priest && Faith.ChurchServices.ReligionOf(Faith.FaithWiring.ReligionsOf(st), pt, ctx.Party.Hero) is >= 0 and int hr
+            && !Faith.ChurchServices.Allows(st.Standing, ctx.Party.Hero, hr, Faith.ChurchServices.Service.WillWitness))
+            return R(c, HeroResultCode.Refused, HeroText.Of("fa_services_refused"));
         int wh = pt.Household[wr];
         var witnessPurse = wh >= 0 && wh < e.HouseholdCount ? e.HouseholdPurse[wh] : e.Ledger.Open(PurseKind.Person, witness);
         var bequests = new List<Bequest>();

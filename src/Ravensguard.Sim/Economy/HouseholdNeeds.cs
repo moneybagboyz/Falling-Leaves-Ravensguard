@@ -253,6 +253,12 @@ public static class HouseholdNeeds
 
         long aleNeedG = need.AleMl * c.Def(e.Food.Ale).LitreMassG / 1000;
         long aleDrunk = store.DestroyUpTo(e.Food.Ale, aleNeedG, DestroyReason.Eaten);
+        // a holy day's feast (faith 4.1): the extra of relish and ale comes out of the larder only, so a short house goes without the feast and never hungry for it
+        if (e.FestivePct?.Invoke(hh, day) is > 0 and int feast)
+        {
+            EatRelish(e, store, need.RelishX100 * feast / 100);
+            store.DestroyUpTo(e.Food.Ale, aleNeedG * feast / 100, DestroyReason.Eaten);
+        }
         long saltEaten = store.DestroyUpTo(e.Food.Salt, need.SaltG, DestroyReason.Eaten);
         long burned = store.DestroyUpTo(e.Food.Firewood, need.FuelG, DestroyReason.Burned);
         bool cold = burned < need.FuelG && tMeanC < 0;

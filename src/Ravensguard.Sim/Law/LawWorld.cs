@@ -37,6 +37,8 @@ public sealed class LawWorld
     public Func<int, bool> Desperate { get; init; } = _ => false;
     /// <summary>A person's name for the chronicle's data and the rumour (the hero is not in the person table).</summary>
     public Func<EntityId, string>? NameOf { get; init; }
+    /// <summary>P6-B4 (faith 4.3): told of every crime recorded (the doer and the kind), so a sin costs its piety; null: nobody keeps account.</summary>
+    public Action<EntityId, string>? Committed { get; init; }
 
     public LawSettingsDef S => Law.S;
 
@@ -73,6 +75,7 @@ public sealed class LawWorld
             RenownPm = p => standing != null && standing.Renowns.TryGetValue(p.Value, out var r) ? r.Pm : 0,
             Desperate = hh => e != null && hh >= 0 && hh < e.HouseholdCount && (e.Grievances[hh] & (Grievance.Hunger | Grievance.MissedMeal | Grievance.Tax)) != 0,
             NameOf = p => p == hero ? st.Hero?.Name ?? "" : "",
+            Committed = (doer, kind) => Ravensguard.Sim.Faith.FaithWiring.OnCrime(st, doer, kind),
         };
     }
 }

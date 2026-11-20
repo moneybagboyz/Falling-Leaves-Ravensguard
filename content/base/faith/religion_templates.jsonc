@@ -1,0 +1,20 @@
+// The four base religions (docs/specs/phase6/faith-and-church.md 3): one per base culture, with the tone of the culture. A religion is derived at world creation and at the first load of an older save
+// from this template, its cultures' feast days, the history's saints and the world seed; it is never saved. A mod may share one template between cultures (cultures: [...]).
+[
+  {"type": "religion_template", "id": "old_gods", "name": "The Old Gods of the North", "cultures": ["north"],
+    "deity_terms": ["the Allfather", "the Thunderer", "the Mother of Wells"], "site_term": "hof", "head_title": "the high godi", "see_title": "godi",
+    "founder_given": ["Aesa", "Brandr", "Gunnhild", "Hrolf", "Ingvar", "Sigrun", "Thorgeir", "Ulfhild", "Vigdis", "Orm"],
+    "founder_epithets": ["the Oath-keeper", "the Wanderer", "the Wise", "the Seer", "Bearer of the Spear", "the Hearth-warden"]},
+  {"type": "religion_template", "id": "church_of_the_vale", "name": "The Church of the Vale", "cultures": ["vale"],
+    "deity_terms": ["the Light", "the Maker", "the Shepherd"], "site_term": "minster", "head_title": "the patriarch", "see_title": "bishop",
+    "founder_given": ["Ambrose", "Cuthwin", "Edith", "Godwyn", "Hilda", "Osmund", "Wulfric", "Aldreda", "Benet", "Mildred"],
+    "founder_epithets": ["the Meek", "the Lamp-bearer", "the Healer", "the Preacher", "the Almoner", "the Peacemaker"]},
+  {"type": "religion_template", "id": "hill_saints", "name": "The Hill Saints", "cultures": ["high"],
+    "deity_terms": ["the Hill-Father", "the Lady of the Spring", "the Seven Cairns"], "site_term": "holy well", "head_title": "the abbot of the hills", "see_title": "abbot-bishop",
+    "founder_given": ["Brigid", "Cadoc", "Dwynwen", "Eilidh", "Fergus", "Mael", "Nessa", "Ronan", "Senga", "Tegan"],
+    "founder_epithets": ["of the Cairn", "the Shepherd-saint", "of the Well", "the Hermit", "the Wolf-tamer", "the Cloud-walker"]},
+  {"type": "religion_template", "id": "drowned_saints", "name": "The Faith of the Drowned", "cultures": ["coast"],
+    "deity_terms": ["the Tide-Mother", "the Drowned Saints", "the Lamp of the Deep"], "site_term": "drowned chapel", "head_title": "the keeper of lamps", "see_title": "lamp-bishop",
+    "founder_given": ["Aldous", "Brynja", "Corwen", "Elowen", "Marek", "Nerys", "Ossian", "Perran", "Sorcha", "Tamsin"],
+    "founder_epithets": ["of the Lamp", "the Net-blessed", "who Walked the Waves", "the Salt-saint", "the Last Keeper", "of the Shoals"]}
+]

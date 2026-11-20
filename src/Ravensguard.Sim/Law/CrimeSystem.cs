@@ -63,6 +63,7 @@ public static class CrimeSystem
         w.Chronicle.Add(act);
         rec.Entry = act.Id.Value;
         book.Add(rec);
+        w.Committed?.Invoke(a.Doer, a.Kind);                                                // P6-B4: the sin costs its piety (faith 4.3)
         ChronicleEntry wit;
         if (witnesses.Count == 0)
         {

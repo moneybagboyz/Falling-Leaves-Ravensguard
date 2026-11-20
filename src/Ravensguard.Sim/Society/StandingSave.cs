@@ -13,7 +13,7 @@ public sealed class StandingSave
 {
     public const string SectionName = "standing";
 
-    /// <summary>Per deed: entry, doer, day, place, amount, weight (permille).</summary>
+    /// <summary>Per deed: entry, doer, day, place, amount, weight (permille), and for a deed the church proclaimed a seventh value, 1 (P6-B4; absent otherwise, so older saves keep their bytes).</summary>
     [Key(0)] public long[][] Deeds { get; set; } = [];
     /// <summary>Per deed: its content id.</summary>
     [Key(1)] public string[] DeedIds { get; set; } = [];
@@ -29,7 +29,7 @@ public sealed class StandingSave
 
     public static StandingSave Capture(StandingBook b) => new()
     {
-        Deeds = [.. b.Deeds.Values.Select(d => new long[] { (long)d.Entry.Value, (long)d.Doer.Value, d.Day, d.Place, d.Amount, d.WeightPm })],
+        Deeds = [.. b.Deeds.Values.Select(d => d.Proclaimed ? new long[] { (long)d.Entry.Value, (long)d.Doer.Value, d.Day, d.Place, d.Amount, d.WeightPm, 1 } : new long[] { (long)d.Entry.Value, (long)d.Doer.Value, d.Day, d.Place, d.Amount, d.WeightPm })],
         DeedIds = [.. b.Deeds.Values.Select(d => d.DeedId)],
         Heard = [.. b.Deeds.Values.Select(d => d.Heard.SelectMany(kv => new long[] { kv.Key, kv.Value }).ToArray())],
         Rows = [.. b.Rows.Select(kv => new long[] { (long)kv.Key.Person, kv.Key.Group, kv.Value.ValuePm, kv.Value.Heard, kv.Value.LastDay })],
@@ -47,7 +47,7 @@ public sealed class StandingSave
         {
             var v = Deeds[i]; var h = Heard[i];
             if (v.Length < 6 || h.Length % 2 != 0) throw new SaveException("Corrupt deed in save.");
-            var d = new DeedRecord { Entry = new EntityId((ulong)v[0]), Doer = new EntityId((ulong)v[1]), DeedId = DeedIds[i], Day = (int)v[2], Place = (int)v[3], Amount = (int)v[4], WeightPm = (int)v[5] };
+            var d = new DeedRecord { Entry = new EntityId((ulong)v[0]), Doer = new EntityId((ulong)v[1]), DeedId = DeedIds[i], Day = (int)v[2], Place = (int)v[3], Amount = (int)v[4], WeightPm = (int)v[5], Proclaimed = v.Length > 6 && v[6] != 0 };
             for (int k = 0; k < h.Length; k += 2) d.Heard[(int)h[k]] = (int)h[k + 1];
             b.AddDeed(d);
         }

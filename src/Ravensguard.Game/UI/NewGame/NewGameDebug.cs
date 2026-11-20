@@ -463,6 +463,21 @@ public static class NewGameDebug
                     await Frames(tree, 120);                                          // the view comes from a barrier
                     break;
                 }
+            case "faith":
+                {
+                    // dev (P6-B4): a real new game, the hero gives alms and takes a pilgrim's vow, then the Faith panel opens over him
+                    var w = MakeWorld(Math.Min(years, 60), 7);
+                    var d = NewGameServices.NewDraft(); d.Name = "Shot"; d.LibraryWorldId = w.Info.Id;
+                    router.Push(new RegionBuildScreen(router, d, w));
+                    if (!await Until(tree, () => router.Top is Ravensguard.Game.World.StreetView, 9000)) throw new Exception("faith shot: the region build did not finish");
+                    var sv = (Ravensguard.Game.World.StreetView)router.Top!; var rt = sv.Runtime!;
+                    await Until(tree, () => rt.HourDone >= sv.DebugWorld.Clock.Now.TotalHours, 6000);
+                    await Frames(tree, 60);
+                    sv.DebugWorld.SetSpeed(Ravensguard.Sim.Core.SimSpeed.Paused);
+                    sv.DebugFaith();
+                    await Frames(tree, 150);                                          // the view comes from a barrier
+                    break;
+                }
             case "loadreport":
                 {
                     // dev: the pre-load report of a save made with other content (a made-up one: a good added, one moved, one written off, a mod gone)

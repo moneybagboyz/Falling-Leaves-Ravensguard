@@ -29,7 +29,7 @@ public interface IGroupMap
     /// <summary>The fief a settlement belongs to, or <see cref="GroupRef"/> with a negative index.</summary>
     GroupRef FiefOf(int settlement);
     GroupRef RealmOf(int settlement);
-    /// <summary>The settlements a group spans (a settlement is its own; a religion spans none: hearings by faith are not counted yet, the faith step supplies them).</summary>
+    /// <summary>The settlements a group spans (a settlement is its own; a religion spans the settlements where someone of the faith lives, P6-B4).</summary>
     IReadOnlyList<int> SettlementsOf(GroupRef g);
     /// <summary>The living persons in the group, 0 when unknown.</summary>
     int Members(GroupRef g);
@@ -37,4 +37,8 @@ public interface IGroupMap
     int RegionAdults { get; }
     /// <summary>The settlement a person lives in (an index into the region's people), -1 when unknown.</summary>
     int HomeOf(EntityId person);
+    /// <summary>The religion of a settlement (its culture's), a group with a negative index when it has none (P6-B4: religion groups count).</summary>
+    GroupRef ReligionOf(int settlement) => new(GroupKind.Religion, -1);
+    /// <summary>The religion of a person (their own culture's), a group with a negative index when unknown.</summary>
+    GroupRef ReligionOfPerson(EntityId person) => new(GroupKind.Religion, -1);
 }

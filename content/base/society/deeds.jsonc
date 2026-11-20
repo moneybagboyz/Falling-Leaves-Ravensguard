@@ -24,5 +24,6 @@
   {"type": "deed", "id": "fire_fought",        "entry": "fire_fought",        "settlement_pm": 60},
   {"type": "deed", "id": "plague_nursed",      "entry": "plague_nursed",      "settlement_pm": 90,   "religion_pm": 20},
   {"type": "deed", "id": "oath_broken",        "entry": "oath_broken",        "fief_pm": -120,        "realm_pm": -60,  "religion_pm": -40},
-  {"type": "deed", "id": "contract_done",      "entry": "contract_done",      "settlement_pm": 15}
+  {"type": "deed", "id": "contract_done",      "entry": "contract_done",      "settlement_pm": 15},
+  {"type": "deed", "id": "slave_held",         "entry": "slave_held",         "settlement_pm": -20,  "religion_pm": -60}
 ]
