@@ -133,8 +133,22 @@
    "components": [[{"good": "iron_bar", "kg": 0.3}, {"good": "steel_bar", "kg": 0.3}]],
    "steps": [{"id": "heat", "minutes": 30, "fuel": {"good": "charcoal", "kg": 0.5}}, {"id": "forge", "hours": 8, "fuel": {"good": "charcoal", "kg": 8}}, {"id": "quench", "minutes": 20, "critical": true}],
    "learn": {"auto_at": {"skill": "Smithing", "level": 45}, "master": true}, "note": "The only way back to full condition: a new piece from the old one's metal."},
+  // P6-B6 (holdings 3.8): an anvil from 120 kg of iron bars by a smith's recipe, then set as a piece (anvil_set); 118 kg of block, the scale and scrap the rest
+  {"type": "craft_recipe", "id": "forge_anvil_block", "name": "Forge an anvil block", "category": "smith", "skill": "Smithing", "difficulty": 45, "effort": "heavy", "process": "smithing", "min_light": 60,
+   "using": ["smithing_set"], "tools": [{"quality": "hammering", "level": 2}], "workstation": "anvil",
+   "proficiencies": [{"id": "blacksmithing", "time_mult_pm": 1400, "skill_penalty": 6}],
+   "components": [[{"good": "iron_bar", "kg": 120}]],
+   "steps": [{"id": "heat", "hours": 2, "fuel": {"good": "charcoal", "kg": 20}}, {"id": "forge", "hours": 14, "fuel": {"good": "charcoal", "kg": 70}}, {"id": "quench", "minutes": 30, "critical": true}],
+   "results": [{"good": "anvil_block", "kg": 118}], "byproducts": [{"good": "scrap_iron", "kg": 1.5}], "learn": {"auto_at": {"skill": "Smithing", "level": 45}, "master": true}},
   {"type": "craft_recipe", "id": "oil_item", "name": "Oil against rust", "category": "repair", "skill": "None", "difficulty": 0, "effort": "light", "effect": "oil",
-   "components": [[{"good": "tallow", "kg": 0.01}]], "steps": [{"id": "oil", "minutes": 5}], "learn": {"known_by_all": true}, "note": "Keeps rust off for 30 days."},
+   "components": [[{"good": "tallow", "kg": 0.01}]], "steps": [{"id": "oil", "minutes": 12}], "learn": {"known_by_all": true}, "note": "10 g of oil, 0.2 h: an oiled piece rusts at a quarter of the rate for 30 days."},
+  // P6-B6 (holdings 3.8): obsidian and flint knapping (a stone hammer, 0.3 h, skill floor 10); the blade is brittle (stream 0x532 breaks it on a blow a rigid layer stops)
+  {"type": "craft_recipe", "id": "knap_flint_blade", "name": "Knap a flint blade", "category": "craft", "skill": "Masonry", "difficulty": 10, "effort": "light", "min_light": 60, "brittle": true,
+   "tools": [{"quality": "hammering", "level": 1}], "components": [[{"good": "flint_nodule", "kg": 0.4}]], "steps": [{"id": "knap", "minutes": 18, "critical": true}],
+   "results": [{"item": "dagger", "material": "flint", "kg": 0.25}], "byproducts": [{"good": "waste", "kg": 0.15}], "learn": {"auto_at": {"skill": "Masonry", "level": 10}}, "note": "Chipped, not forged: it takes an edge and no temper."},
+  {"type": "craft_recipe", "id": "knap_obsidian_blade", "name": "Knap an obsidian blade", "category": "craft", "skill": "Masonry", "difficulty": 10, "effort": "light", "min_light": 60, "brittle": true,
+   "tools": [{"quality": "hammering", "level": 1}], "components": [[{"good": "obsidian_nodule", "kg": 0.4}]], "steps": [{"id": "knap", "minutes": 18, "critical": true}],
+   "results": [{"item": "dagger", "material": "obsidian", "kg": 0.25}], "byproducts": [{"good": "waste", "kg": 0.15}], "learn": {"auto_at": {"skill": "Masonry", "level": 10}}, "note": "An edge ten times steel's, and it shatters."},
 
   // ---- field kits ----
   {"type": "craft_recipe", "id": "fletch_arrows", "name": "Fletch arrows", "category": "craft", "skill": "Carpentry", "difficulty": 20, "effort": "light", "min_light": 80,

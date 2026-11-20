@@ -183,6 +183,8 @@ public sealed record CraftRecipeDef : ContentDef
     public string Note { get; init; } = "";
     /// <summary>What the finished work does in the world instead of (or besides) making goods: lit_fire, repair_cart, refit, oil.</summary>
     public string? Effect { get; init; }
+    /// <summary>P6-B6 (holdings 3.8): the finished item is brittle whatever the process (knapped stone breaks on a blow a rigid layer stops, stream 0x532).</summary>
+    public bool Brittle { get; init; }
 
     // ---- P5-E (crafting-full 3.1): one recipe format for the hero, NPCs and businesses ----
     /// <summary>A workshop may queue it; the Phase 2 recipe book is the view of these.</summary>

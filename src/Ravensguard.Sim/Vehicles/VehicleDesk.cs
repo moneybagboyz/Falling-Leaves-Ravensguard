@@ -49,6 +49,22 @@ public static class VehicleDesk
     public static HeroCommand Launch(EntityId vehicle, int people, bool horse, long sec) => Cmd(sec, Tag("launch", Serial(vehicle), people, horse ? 1 : 0));
     public static HeroCommand Voyage(EntityId boat, int waterway, long fromMm, long toMm, long sec, bool shuttle = false) => Cmd(sec, Tag("voyage", Serial(boat), waterway, fromMm, toMm, shuttle ? 1 : 0));
 
+    /// <summary>
+    /// The room a design needs to be built in (its <c>built_at</c>: "yard" for a wheelwright's yard, "slipway" for a boat), looked for within 6 m of where the frame would be laid; null when the design
+    /// needs none, the world has no rooms, or the room is there. Else the refusal's text key.
+    /// </summary>
+    public static string? YardNeeded(HeroContext ctx, RideBook b, string design, long xMm, long yMm)
+    {
+        string at = b.Templates.Find(design)?.Def.BuiltAt ?? "";
+        if (at.Length == 0 || ctx.State.HomeRecords?.Sim.Get<ConstructionWorld>() is not { } cw) return null;
+        string want = at == "slipway" ? "slipway" : "wheelwright_yard";
+        int x0 = (int)(xMm / 1000), y0 = (int)(yMm / 1000);
+        for (int dy = -6; dy <= 6; dy++)
+            for (int dx = -6; dx <= 6; dx++)
+                if (cw.Rooms.RoomAt(x0 + dx, y0 + dy, 0)?.Primary?.Id == want) return null;
+        return at == "slipway" ? "vd_needs_slipway" : "vd_needs_yard";
+    }
+
     private static HeroResult R(HeroCommand c, HeroResultCode code, HeroText text, long mites = 0) => new(c.Seq, c.Kind, code, text, mites, 0, c.IssuedSec);
     private static HeroResult Ans(HeroCommand c, SiteAnswer a, string okKey, params object[] args) =>
         a == SiteAnswer.Ok ? R(c, HeroResultCode.Ok, HeroText.Of(okKey, args)) : R(c, a == SiteAnswer.CannotAfford ? HeroResultCode.CannotAfford : HeroResultCode.Refused, HeroText.Of("vd_no_" + a.ToString().ToLowerInvariant()));
@@ -87,6 +103,8 @@ public static class VehicleDesk
                 }
                 case "build" when p.Length >= 4:
                 {
+                    // P6-B6 (holdings 3.6): a wagon is built in a wheelwright's yard and a boat on a slipway (a room RoomDetector v2 recognises, near where the frame is laid)
+                    if (YardNeeded(ctx, b, S(1), N(2), N(3)) is { } needs) return R(c, HeroResultCode.Refused, HeroText.Of(needs));
                     var (a, v) = VehicleSites.Order(b, S(1), hero, N(2), N(3));
                     return Ans(c, a, "vd_site_ordered", v == null ? "" : b.Vehicles.DesignOf(v).Def.Name);
                 }

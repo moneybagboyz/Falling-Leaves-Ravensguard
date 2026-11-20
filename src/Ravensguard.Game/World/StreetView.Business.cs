@@ -134,9 +134,10 @@ public partial class StreetView
     /// <summary>What the hero carries that the business's recipes take (all of it goes in).</summary>
     IEnumerable<(string Id, long Qty)> SuppliesFor(EntityId b)
     {
-        if (_heroLink?.View is not { } v || Runtime is not { } rt) yield break;
-        var prod = rt.State.Production; var biz = prod?.ById(b); if (biz == null || prod == null) yield break;
-        var inputs = new HashSet<string>(prod.KindOf(biz).Recipes.SelectMany(r => r.Inputs.Select(i => rt.State.Economy!.Goods.StringId(i.Good))), StringComparer.Ordinal);
+        if (_heroLink?.View is not { } v) yield break;
+        // HW-13 (G2): the inputs come with the panel's view (built at a barrier); no table is read on the main thread
+        if (_bizView is not { } bv || bv.Id != b || bv.Inputs is not { } list) yield break;
+        var inputs = new HashSet<string>(list, StringComparer.Ordinal);
         foreach (var g in v.Goods) if (inputs.Contains(g.Id) && g.Qty > 0) yield return (g.Id, g.Qty);
     }
 

@@ -29,5 +29,7 @@
   // The manor: the lord's household and demesne staff (stewards, reeves, servants, guards, labourers, shepherds, ploughmen), paid by the day from the lord's purse (integration decision I9)
   {"type": "business", "id": "manor", "name": "Manor", "owner_occupation": "Lord", "stations": [], "staff_slots": [{"occupation": "Steward", "count": 3, "wage_class": "skilled"}, {"occupation": "Reeve", "count": 3, "wage_class": "skilled"}, {"occupation": "Guard", "count": 14, "wage_class": "skilled"}, {"occupation": "Servant", "count": 30, "wage_class": "unskilled"}, {"occupation": "Labourer", "count": 80, "wage_class": "unskilled"}, {"occupation": "Shepherd", "count": 6, "wage_class": "unskilled"}, {"occupation": "Ploughman", "count": 8, "wage_class": "unskilled"}], "recipes": [], "salaried": true},
   // medicine 4.4: the owner is the Physician; founded_only keeps generation, growth and re-opening away from it.
-  {"type": "business", "id": "physician", "name": "Physician", "owner_occupation": "Physician", "stations": [], "staff_slots": [], "recipes": [], "outputs_sold_as": "shop", "founded_only": true}
+  {"type": "business", "id": "physician", "name": "Physician", "owner_occupation": "Physician", "stations": [], "staff_slots": [], "recipes": [], "outputs_sold_as": "shop", "founded_only": true},
+  // holdings 3.7 (P6-B6): a stud keeps stallions and mares together on fodder and sells the foals; founded like a Phase 5 business, never generated
+  {"type": "business", "id": "stud", "name": "Stud", "owner_occupation": "Farmer", "stations": [], "staff_slots": [{"occupation": "Labourer", "count": 2, "wage_class": "unskilled"}], "recipes": [], "outputs_sold_as": "shop", "founded_only": true}
 ]

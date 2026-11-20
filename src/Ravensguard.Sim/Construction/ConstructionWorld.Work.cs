@@ -789,7 +789,7 @@ public sealed partial class ConstructionWorld
         while (qty > 0)
         {
             long load = Math.Min(perLoad, qty);
-            long pathMm = (long)Math.Sqrt((double)(sx - s.PileX) * (sx - s.PileX) + (double)(sy - s.PileY) * (sy - s.PileY)) * 1000;
+            long pathMm = Core.IntMath.Isqrt((long)(sx - s.PileX) * (sx - s.PileX) + (long)(sy - s.PileY) * (sy - s.PileY)) * 1000;
             long wage = Math.Max(1, JobPay.Haul(jt.Env.Tuning, jt.Env.UnskilledWage, pathMm, Econ.Goods.MassG(good, load)));
             var job = jt.Table.Post(jt.Env, OddJobKind.Haul, s.Payer, payer, RegionId, settlement, nowSec, nowSec + Rules.HaulDeadlineHours * 3600L, wage, j =>
             {

@@ -87,7 +87,7 @@ public static class LandDesk
             "house" when p.Length >= 3 => lw.LeaseHouse(hero, hk, I(1), I(2), day, Chron),
             "giveup" when p.Length >= 3 => lw.GiveUp(hero, new EntityId((ulong)N(1)), N(2) != 0),
             "stall" when p.Length >= 4 => lw.LeaseStall(hero, hk, I(1), I(2), N(3) != 0, day, Chron),
-            "claim" when p.Length >= 4 => HasBanner(ctx, lw) ? lw.Stake(hero, hk, I(1), I(2), N(3) != 0, day, Chron) : LandResult.No("ld_claim_no_banner"),
+            "claim" when p.Length >= 4 => HasBanner(ctx, lw) ? Planted(ctx, lw, lw.Stake(hero, hk, I(1), I(2), N(3) != 0, day, Chron)) : LandResult.No("ld_claim_no_banner"),
             "licence" when p.Length >= 2 => lw.BuyLicence(hero, I(1), day, Chron),
             "pull" when p.Length >= 2 => lw.Pull(hero, I(1), day, Chron),
             "petition" when p.Length >= 6 && N(1) is 0 or 1 => lw.Petition(hero, hk, (GrantorKind)N(1), I(2), I(3), I(4), I(5), day, Chron),
@@ -97,6 +97,16 @@ public static class LandDesk
         if (res == null) return R(c, HeroResultCode.Invalid, HeroText.Of("HERO_MAKES_NO_SENSE"));
         var code = res.Ok ? HeroResultCode.Ok : res.PriceMoved ? HeroResultCode.PriceMoved : res.CannotAfford ? HeroResultCode.CannotAfford : HeroResultCode.Refused;
         return R(c, code, HeroText.Of(res.Key, res.Args), res.Mites);
+    }
+
+    /// <summary>P6-B6 (holdings 3.2): a staked claim uses up the banner that was planted (one piece of the good; an item row of that shape stays, it is a pole and a cloth).</summary>
+    private static LandResult Planted(HeroContext ctx, LandWorld lw, LandResult staked)
+    {
+        if (!staked.Ok) return staked;
+        string b = lw.Rules.ClaimBannerItem; if (b.Length == 0) return staked;
+        var e = ctx.Econ;
+        if (e.Goods.TryIdOf(b, out ushort g) && ctx.Pack.Qty(g) > 0) { ctx.Pack.Destroy(g, 1, Ravensguard.Sim.Goods.DestroyReason.Consumed); return staked; }
+        return staked;
     }
 
     private static bool HasBanner(HeroContext ctx, LandWorld lw)

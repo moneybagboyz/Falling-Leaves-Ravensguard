@@ -18,5 +18,10 @@
   { "type": "material", "id": "thatch", "name": "Thatch", "category": "plant", "density_kg_m3": 150, "value_per_kg": 0.01,
     "impact_yield_kpa": 500, "impact_fracture_kpa": 500, "impact_strain_at_yield": 50000,
     "shear_yield_kpa": 500, "shear_fracture_kpa": 500, "shear_strain_at_yield": 50000,
-    "max_edge": 0.1, "ignition_point_c": 220 }
+    "max_edge": 0.1, "ignition_point_c": 220 },
+  // P6-B6 (holdings 3.8): knapped stone. Obsidian's edge is ten times steel's and it is brittle (the blade breaks as an untempered one does, stream 0x532); flint keeps a good edge and is less brittle.
+  { "type": "material", "id": "flint", "name": "Flint", "category": "stone", "copy_from": "granite", "density_kg_m3": 2600, "value_per_kg": 0.05,
+    "impact_yield_kpa": 12000, "impact_fracture_kpa": 12000, "shear_yield_kpa": 12000, "shear_fracture_kpa": 12000, "max_edge": 4.0, "append_order": 1 },
+  { "type": "material", "id": "obsidian", "name": "Obsidian", "category": "stone", "copy_from": "granite", "density_kg_m3": 2400, "value_per_kg": 0.2,
+    "impact_yield_kpa": 6000, "impact_fracture_kpa": 6000, "shear_yield_kpa": 6000, "shear_fracture_kpa": 6000, "max_edge": 10.0, "append_order": 1 }
 ]

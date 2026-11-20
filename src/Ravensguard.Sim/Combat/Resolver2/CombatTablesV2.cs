@@ -171,7 +171,7 @@ public sealed class CombatTablesV2
         Tiers = Goods.QualityTiers.From(db);
         Cal = CalibrationV2.From(db.All<CombatCalibrationDef>().OrderBy(c => c.Id, StringComparer.Ordinal).FirstOrDefault());
         var mats = new List<MaterialV2>();
-        foreach (var m in resolved.Values.OrderBy(m => m.Id, StringComparer.Ordinal))
+        foreach (var m in resolved.Values.OrderBy(m => m.AppendOrder).ThenBy(m => m.Id, StringComparer.Ordinal))
         {
             var mv = new MaterialV2
             {

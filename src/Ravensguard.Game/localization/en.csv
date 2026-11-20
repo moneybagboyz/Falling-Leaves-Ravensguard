@@ -4540,6 +4540,74 @@ fa_no_pilgrimage,You have no pilgrimage to make.
 fa_vow_taken,"You vow to walk to {0}."
 fa_vow_given_up,You give up your vow.
 fa_pilgrim_arrived,"You kneel at {0}. Piety {1}; the church has heard of it."
+hw_not_your_claim,That is not your claim.
+hw_not_in_claim,That ground is not in your claim.
+hw_tile_not_clearable,"That acre cannot be cleared: it is a field, built on, a road, water or already being cleared."
+hw_clear_started,"You mark out an acre: {0} trees and their stumps, {1} worker-hours in all."
+hw_no_clearing,There is no clearing of yours there.
+hw_clearing_done,That acre is already cleared.
+hw_hero_tired,You have worked the acre as long as a day allows.
+hw_hero_worked,You fell and grub for {0} hours: the acre is {1}% cleared.
+hw_clearing_cleared,The last stump is out: the acre is cleared and is a field of your household.
+hw_crew_full,No more than {0} hands will work one acre.
+hw_nobody_to_hire,Nobody idle will take the work.
+hw_hired,{0} hired for the clearing: {1}.
+hw_dismissed,{0} hands sent home.
+hw_already_sown,That acre is sown.
+hw_not_cleared,The acre is not cleared yet.
+hw_sow_no_field,There is no field there.
+hw_sow_not_now,"It is not the sowing time: spring grain goes in on the 3rd to the 14th, winter grain from the 36th to the 45th day of the year."
+hw_sow_poor_soil,The soil is too poor for any grain of the season.
+hw_sow_no_seed,You carry no seed for it: an acre takes about ten measures.
+hw_sown,You plough and sow the acre with {0}: the claim grows to {1} acres.
+hw_collected,You take {0} kg of logs and firewood from the stumps.
+hw_nothing_to_collect,Nothing lies at the stumps.
+hw_whose,"{0}: {1}, {2}, of {3}."
+hw_whose_wild,Nobody's: wild land.
+hw_what_claim,A claim
+hw_what_field,A field
+hw_what_lot,A lot
+hw_what_stall,A market stall
+hw_what_wild,Wild land
+hw_tenure_freehold,freehold
+hw_tenure_burgage,burgage
+hw_tenure_leasehold,leasehold
+hw_tenure_tenancy,tenancy
+hw_tenure_customary,customary tenure
+hw_tenure_none,an open claim
+hw_holder_you,yours
+hw_holder_stranger,a stranger's
+hw_holder_nobody,nobody's
+hw_cannot_afford_delivery,The goods and the carting cost {0}; you have {1}.
+hw_no_carter,No carter of the place will take it.
+hw_delivered,{0} of {1} bought for {2} and carted to the pile for {3}.
+hw_hauls_posted,"{0} haul jobs posted, {1} in wages."
+hw_installed,The {0} is set and waits for your hands.
+hw_install_waits,The {0} is laid out; it still wants: {1}.
+hw_coppiced,You cut {0} kg of wood from the coppice; it grows again in seven years.
+hw_nothing_to_coppice,There is no coppice to cut there.
+hw_too_hungry,You are faint with hunger: eat before you work on.
+hw_too_tired,You have done a heavy day's work; rest.
+vd_needs_slipway,A boat is laid down on a slipway: build the ways first.
+vd_needs_yard,A wagon is built in a wheelwright's yard: fence a yard with a bay first.
+hw_q_clear,Clear an acre
+hw_q_work,Fell and grub by hand
+hw_q_work_stop,Stop felling
+hw_q_sow_wait,not the sowing time
+BUILD_SITE_NOTHING_MISSING,The pile has everything it needs.
+hw_q_hire,Hire two hands for the clearing
+hw_q_sow,Sow the cleared acre
+hw_q_collect,Take the logs
+hw_q_whose,Whose is this?
+hw_q_clear_status,"The acre: {0}% cleared, {1} of {2} trees down"
+hw_q_head,Holdings
+hw_q_no_claim,Stake a claim first
+hw_q_not_here,Not in your claim
+hw_q_coppice,Cut the coppice
+hw_q_buy_deliver,Buy and deliver what is missing
+hw_q_post_haul,Post haul jobs
+hw_panel_clearing,"Clearing: {0}% ({1} of {2} trees felled, {3} stumps out, {4} hands)"
+ch_note_homestead_acre,An acre cleared for a homestead.
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."

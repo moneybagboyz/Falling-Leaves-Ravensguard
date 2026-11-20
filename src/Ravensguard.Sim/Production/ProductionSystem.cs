@@ -21,6 +21,10 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
     public ProductionContent Content { get; }
     /// <summary>P5-E (crafting-full 4.4): whether a station's batch is worked live (a station-bound craft job); its progress then comes from the live work, not from this system.</summary>
     public Func<Business, int, bool>? LiveStation { get; set; }
+    /// <summary>P6-B6 (holdings 3.8, HW-10): a batch finished at a station of a business (the business, the recipe), so the tool it is worked with can wear; null: nothing wears but the abstract count.</summary>
+    public Action<Business, Recipe, Station>? BatchDone { get; set; }
+    /// <summary>P6-B6 (HW-10): the containers within 6 m of a business's station count as its store; the inputs a batch lacks are taken from them first. Null: the business's own store only.</summary>
+    public Func<Business, IEnumerable<Store>>? NearStores { get; set; }
     /// <summary>P5-F (businesses spec 4.2-4.6): the owner's and steward's orders for the businesses the ownership world steers; null (every other world) runs Phase 2 unchanged.</summary>
     public IBusinessSteering? Steering { get; set; }
     private bool Steered(Business b) => Steering != null && Steering.Steered(b);
@@ -231,6 +235,7 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
         b.Quality[(int)q2]++; b.LastQuality = (int)q2; b.Batches++; BatchesFinished++;
         if (r.WearPpmPerBatch > 0 && DetRng.NextUInt(Seed, now.TotalHours, b.Id.Value, RngStreams.ToolWear, r.Index) < (ulong)r.WearPpmPerBatch * 4_294_967_296UL / 1_000_000UL) b.ToolPiecesWorn++;
         int recipe = st.Recipe;
+        BatchDone?.Invoke(b, r, st);
         st.Recipe = -1; st.ProgressMicro = 0; st.MinSkill = 100; st.Crew.Clear();
         // keep the station busy: the same recipe again if the inputs are on hand
         TryStart(b, st, Content.Recipes.Recipes[recipe], now);
@@ -261,6 +266,12 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
     {
         if (st.Busy || b.State != BusinessState.Open) return false;
         long scale = 1000;
+        if (NearStores != null)
+            foreach (var (g, q) in r.Inputs)
+            {
+                long lack = q - b.Store.Qty(g);
+                if (lack > 0) foreach (var near in NearStores(b)) { lack -= Store.MoveUpTo(near, b.Store, g, lack); if (lack <= 0) break; }
+            }
         foreach (var (g, q) in r.Inputs) scale = Math.Min(scale, b.Store.Qty(g) * 1000 / q);
         if (scale < r.MinBatchPermille) return false;
         foreach (var (g, q) in r.Inputs)

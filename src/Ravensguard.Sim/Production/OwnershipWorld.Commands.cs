@@ -38,7 +38,7 @@ public sealed partial class OwnershipWorld
     /// Opens a business in a building the hero may use (spec 4.1, BS-1): the kind must be one its recognised workshop rooms offer; its stations are the room's stations the kind uses (more forges, more
     /// batches; never more output per input). The capital moves from the hero's purse into the new cash box (<c>Gift</c>; <c>Capital</c> records it, as Phase 2).
     /// </summary>
-    public OwnResult Found(string kindId, int settlement, int lot, int structure, long capital, int day, Func<int, int, bool>? mayUse = null)
+    public OwnResult Found(string kindId, int settlement, int lot, int structure, long capital, int day, Func<int, int, bool>? mayUse = null, IReadOnlyDictionary<string, int>? stationsOverride = null)
     {
         var kind = Prod.Content.Kinds.FirstOrDefault(k => k.Id == kindId);
         if (kind == null || kind.Trader) return OwnResult.No("bz_no_such_kind");
@@ -50,7 +50,7 @@ public sealed partial class OwnershipWorld
             var (cx, cy, _) = Ravensguard.Sim.Building.RoomWorld.Unpack(key);
             if (!mayUse(cx, cy)) return OwnResult.No("bz_not_your_building");
         }
-        var stations = StationsOf(structure);
+        IReadOnlyDictionary<string, int> stations = stationsOverride ?? StationsOf(structure);
         if (!KindsFor(stations).Contains(kind)) return OwnResult.No("bz_no_stations", kindId);
         if (capital < 0 || HeroCoin < capital) return new OwnResult(false, "bz_cannot_afford", [M(capital)], capital, CannotAfford: true);
         var b = Prod.NewBusiness(kind, settlement, lot, row);

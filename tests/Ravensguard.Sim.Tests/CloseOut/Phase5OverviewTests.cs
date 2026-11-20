@@ -2,6 +2,7 @@ using Ravensguard.Content;
 using Ravensguard.Sim.Characters;
 using Ravensguard.Sim.Construction;
 using Ravensguard.Sim.Core;
+using Ravensguard.Sim.Crafting;
 using Ravensguard.Sim.Economy;
 using Ravensguard.Sim.Goods;
 using Ravensguard.Sim.Land;
@@ -58,6 +59,8 @@ public class Phase5OverviewTests(ITestOutputHelper output)
         public void Hours(int hours) => rt.AdvanceTo(GameTime.FromGameHours(rt.HourDone + 1 + hours));
     }
 
+    private static int DayOfYear(long sec) => (int)(sec / 86400 % 60) + 1;
+
     private static SaveFile SaveAt(WorldRuntime rt) => rt.AtBarrier(() => WorldSave.Capture(rt.State, "h", "0.1")).GetAwaiter().GetResult();
 
     // ------------------------------------------------------------------ OV-3: claim a clearing and build a homestead
@@ -86,7 +89,19 @@ public class Phase5OverviewTests(ITestOutputHelper output)
             best = near; at = (x, y);
         }
         Assert.True(best < long.MaxValue, "no wild land near a place in seed 1234");
+        // 1b. P6-B6 (holdings 3.2, HW-2): the banner is made at the bench (a pole and a cloth, 0.5 h; the test's faucet gathers the pole and the cloth) and planted by the stake
+        var noBanner = p.Do(LandDesk.Stake(at.X, at.Y, false, p.Sec));
+        Assert.False(noBanner.Ok);
+        ushort banner = e.Goods.IdOf("claim_banner");
+        var brec = ctx.Recipes["make_claim_banner"];
+        foreach (var slot in brec.Slots) ctx.Pack.Create(slot.Alts[0].Good, slot.Alts[0].Qty, CreateReason.Import);
+        var bstart = p.Do(new HeroCommand { Kind = HeroCommandKind.CraftStart, Recipe = brec.Index, Site = new CraftSiteSpec(255, true, ["knife"], [], []) });
+        Assert.True(bstart.Ok, bstart.Text);
+        var bjob = ctx.Craft.State.Jobs.Values.Single(j => j.Owner == ctx.Party.Hero);
+        Assert.True(p.Do(new HeroCommand { Kind = HeroCommandKind.CraftWork, Job = bjob.Id, UntilSec = p.Sec + 3600 }).Ok);
+        Assert.Equal(1, ctx.Pack.Qty(banner));
         var staked = p.Do(LandDesk.Stake(at.X, at.Y, false, p.Sec));
+        Assert.Equal(0, ctx.Pack.Qty(banner));
         Assert.True(staked.Ok, staked.Text);
         var claim = s.Land!.Claims.Single();
         Assert.Equal((ClaimState.Open, 8, -1, false), (claim.State, claim.Tiles.Length, claim.Fief, claim.Squatting));
@@ -152,7 +167,51 @@ public class Phase5OverviewTests(ITestOutputHelper output)
         Assert.Equal((Tenure.Freehold, 0L, HoldingKind.Claim, ctx.Party.Hero), (deed.Tenure, deed.DuesMitesPerSeason, deed.Kind, deed.Holder));
         Assert.Equal(16, claim.Tiles.Length);
         Assert.Contains(s.Chronicle.All, x => x.TypeId == "claim_improved");
-        // the acre cleared and sown (to 24 tiles) has no command in play: phase-5.md finding S9 (the hero's household as a field's holder is Phase 6's farming work)
+        // 4b. P6-B6 (holdings 3.1, HW-1): the acre cleared by the hero four hours a morning and two hired hands (90 worker-hours), then sown in the window: the claim grows to 24 tiles
+        var hw = s.HomeRecords!.Sim.Get<Ravensguard.Sim.Holdings.HoldingsWorld>()!;
+        var cl = p.Do(Ravensguard.Sim.Holdings.HoldingsDesk.Clear(claim.Serial, -1, p.Sec));
+        Assert.True(cl.Ok, cl.Text);
+        var clearing = hw.Book.Clearings.Single();
+        output.WriteLine($"clearing {clearing.Serial}: tile {clearing.Tile}, {clearing.Trees} trees, {clearing.NeedMilli / 1000} worker-hours");
+        var hh = p.Do(Ravensguard.Sim.Holdings.HoldingsDesk.Hire(clearing.Serial, 2, p.Sec));
+        Assert.True(hh.Ok, hh.Text);
+        int clearDays = 0;
+        while (clearing.State == Ravensguard.Sim.Holdings.ClearingState.Working && clearDays < 30)
+        {
+            long d0 = (p.Sec / 86400) * 86400 + 86400;
+            p.Days(1); clearDays++;
+            long dayStart = (p.Sec / 86400 - 1) * 86400;
+            p.Do(Ravensguard.Sim.Holdings.HoldingsDesk.Work(clearing.Serial, dayStart + 8 * 3600, dayStart + 12 * 3600, p.Sec));
+            _ = d0;
+        }
+        output.WriteLine($"the acre was cleared in {clearDays} days: hero {clearing.HeroMilli / 1000.0:F1} h, {clearing.Felled} trees felled, {clearing.LogsG / 1000} kg of logs and {clearing.FirewoodG / 1000} kg of firewood at the stumps, field {clearing.Parcel}");
+        Assert.Equal(Ravensguard.Sim.Holdings.ClearingState.Cleared, clearing.State);
+        Assert.Equal(90_000, clearing.DoneMilli);
+        Assert.True(clearing.HeroMilli > 0 && clearing.HeroMilli < 90_000, "the hero and the hands share the 90 worker-hours");
+        var farm = s.HomeRecords.Economy.Farming;
+        int hero_hh = Ravensguard.Sim.Construction.ConstructionDesk.HouseholdOf(ctx);
+        Assert.Equal(hero_hh, farm.HolderOf(clearing.Parcel));
+        // sown in the window (the test waits for it as a player would), the seed from the pack (the test's faucet stands for what he bought at the market)
+        int guard = 0;
+        while (farm.SowingSeasonAt(DayOfYear(p.Sec)) == null && guard++ < 70) p.Days(1);
+        foreach (var gid in new[] { "barley", "oats", "peas", "beans", "wheat", "rye" }) ctx.Pack.Create(e.Goods.IdOf(gid), 20_000, CreateReason.Import);
+        var sow = p.Do(Ravensguard.Sim.Holdings.HoldingsDesk.Sow(clearing.Serial, p.Sec));
+        Assert.True(sow.Ok, sow.Text);
+        Assert.Equal(24, claim.Tiles.Length);
+        Assert.Equal(1, claim.SownAcres);
+        Assert.Equal(Ravensguard.Sim.Holdings.ClearingState.Sown, clearing.State);
+        output.WriteLine($"sown with {clearing.Crop} on day {p.Sec / 86400}; the claim is {claim.Tiles.Length} tiles, a {s.Land.Deeds[claim.DeedId].Tenure} deed");
+        Assert.Equal(Tenure.Freehold, s.Land.Deeds[claim.DeedId].Tenure);
+        // on to the harvest: it goes to the hero's barn (the hired hands of the village reap it, paid by his household)
+        var barn = e.OtherStores[Ravensguard.Sim.Farming.FarmIds.Barn(hero_hh)];
+        ushort grain = e.Goods.IdOf(clearing.Crop);
+        Func<long> inBarn = () => barn.Qty(grain) + e.HouseholdStore[hero_hh].Qty(grain);
+        long barnBefore = inBarn();
+        e.Ledger.Mint(e.HouseholdPurse[hero_hh], Coin.FromCrowns(5), SourceReason.Seed);          // the household's purse for the harvest hands (the test's faucet: he pays them out of his takings)
+        seeded = e.Ledger.Audit().Seeded.Mites;
+        for (int d = 0; d < 130 && inBarn() <= barnBefore; d++) p.Days(1);
+        output.WriteLine($"harvest in the hero's barn after day {p.Sec / 86400}: {(inBarn() - barnBefore) / 1000} kg of {clearing.Crop}");
+        Assert.True(inBarn() > barnBefore, "the acre's harvest goes to the hero's barn");
 
         // 5. coin and mass exact; the world saves and loads with the deed
         var audit = e.Ledger.Audit();

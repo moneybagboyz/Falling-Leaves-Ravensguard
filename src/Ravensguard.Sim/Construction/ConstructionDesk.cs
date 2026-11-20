@@ -160,7 +160,19 @@ public static class ConstructionDesk
             case "work" when p.Length >= 7:
             {
                 var tools = cw.ToolQualities(ctx.PackTools());
-                res = cw.HeroWork(hero, hk, hh, GhostId(1), N(2), N(3), I(4), I(5), I(6), tools, (q, s) => Wear(ctx, q, s));
+                // P6-B6 (holdings 3.8, HW-9): heavy work wears a body out and burns food; he eats at noon from his pack or the site's store, and a hungry or tired man stops
+                long workUntil = N(3);
+                var hb = st.Holdings;
+                if (hb != null)
+                {
+                    var gh = cw.Book.Ghosts.GetValueOrDefault(GhostId(1));
+                    var lim = Ravensguard.Sim.Holdings.HeavyWork.Begin(ctx, hb, Math.Max(N(2), cw.Book.HeroWorkedTo), workUntil, gh != null && cw.Site(gh.Site) is { } gsite ? cw.PileOf(gsite) : null);
+                    if (lim.Why != null) { res = ConstructionResult.No(lim.Why); break; }
+                    workUntil = lim.UntilSec;
+                }
+                long workedBefore = Math.Max(N(2), cw.Book.HeroWorkedTo);
+                res = cw.HeroWork(hero, hk, hh, GhostId(1), N(2), workUntil, I(4), I(5), I(6), tools, (q, s) => Wear(ctx, q, s));
+                if (hb != null && res.Ok) Ravensguard.Sim.Holdings.HeavyWork.End(hb, Math.Max(0, cw.Book.HeroWorkedTo - workedBefore));
                 break;
             }
             case "deliver" when p.Length >= 6:
