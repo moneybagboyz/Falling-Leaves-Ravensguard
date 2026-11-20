@@ -116,6 +116,18 @@ public static class Zoning
         return true;
     }
 
+    /// <summary>Women waiting for a home in each place (alive, unmarried, with a marriage wait), one pass over the people.</summary>
+    public static int[] WaitingByPlace(Population pop)
+    {
+        var pt = pop.People; var hht = pop.Households; var n = new int[pop.Region.Settlements.Count];
+        for (int p = 0; p < pt.Count; p++)
+        {
+            if (pt.Status[p] != PersonStatus.Alive || pt.Sex[p] != Sex.Female || pt.Spouse[p] >= 0 || pt.MarriageWait[p] == 0) continue;
+            int hh = pt.Household[p]; if (hh >= 0 && hh < hht.Count && (uint)hht.Settlement[hh] < (uint)n.Length) n[hht.Settlement[hh]]++;
+        }
+        return n;
+    }
+
     /// <summary>Women waiting for a home in a place (alive, unmarried, with a marriage wait).</summary>
     public static int Waiting(Population pop, int settlement)
     {
@@ -135,14 +147,14 @@ public static class Zoning
     public static List<StreetRecord> Seasonal(LandWorld lw, int day, LandChronicleKeyed? chron)
     {
         var laid = new List<StreetRecord>();
-        var r = lw.Region; var gs = lw.GrowthLog;
+        var r = lw.Region; var gs = lw.GrowthLog; var waiting = WaitingByPlace(lw.Pop);
         for (int s = 0; s < r.Settlements.Count; s++)
         {
             var st = r.Settlements[s];
-            if (st.Class == SettlementClass.Farmstead) continue;
+            if (st.Class == SettlementClass.Farmstead || waiting[s] <= lw.Rules.StreetWaitingOver) continue;
             if (lw.StreetsAllowed != null && !lw.StreetsAllowed(st.FiefIndex)) continue;
             if (gs.Streets.Any(x => x.Settlement == s && day - x.Day < lw.Rules.StreetCooldownDays)) continue;
-            if (lw.FreeLots(s) > 0 || Waiting(lw.Pop, s) <= lw.Rules.StreetWaitingOver) continue;
+            if (lw.FreeLots(s) > 0) continue;
             var rec = Plan(r, s, lw.Rules, lw.GrowthTuning, day, gs.Projects.Where(p => p.Settlement == s && p.Kind != ProjectKind.Assart && p.Lot < 0).Select(p => p.Rect).ToList());
             if (rec == null) continue;
             Lay(lw, rec, chron);

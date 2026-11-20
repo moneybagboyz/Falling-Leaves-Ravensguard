@@ -23,9 +23,10 @@ public static class LandMarketNpc
         var sales = new List<NpcSale>(); var r = lw.Region; var hht = lw.Pop.Households;
         var bought = new HashSet<int>();
         int season = day / TimeConst.DaysPerSeason;
+        var cands = Candidates(lw);                                                    // the households that want a dwelling and could pay for the cheapest plot, by place: most places have none, and then nothing else is looked at
         for (int s = 0; s < r.Settlements.Count; s++)
         {
-            var st = r.Settlements[s]; if (st.Class == SettlementClass.Farmstead) continue;
+            var st = r.Settlements[s]; if (st.Class == SettlementClass.Farmstead || cands[s] is not { Count: > 0 } here) continue;
             int lord = LandRegistry.LordHousehold(lw.Pop, s); int done = 0;
             // 1. empty houses whose holder is in arrears
             foreach (var d in lw.Book.Deeds.Values.Where(x => x.Kind == HoldingKind.Lot && x.Settlement == s && !x.IsLease && x.OwedMites > 0 && x.HolderPurse == PurseKind.Household).OrderBy(x => x.Id).ToList())
@@ -34,7 +35,7 @@ public static class LandMarketNpc
                 var (_, lot) = LandIds.SplitLot(d.Subject);
                 if (!lw.LotEmpty(s, lot)) continue;
                 long price = lw.ValueOf(d) * lw.Rules.DistressSalePm / 1000;
-                if (price <= 0 || Buyer(lw, s, lord, price, PlotKey(d.Subject, 0), season, bought) is not { } b) continue;
+                if (price <= 0 || Pick(lw, here, lord, price, PlotKey(d.Subject, 0), season, bought) is not { } b) continue;
                 if (!Distress(lw, d, b, price, day, keyed)) continue;
                 bought.Add(b); done++;
                 sales.Add(new NpcSale(s, lot, d.Holder, hht.IdOf(b), price, true));
@@ -44,7 +45,7 @@ public static class LandMarketNpc
             foreach (var l in lw.Listings(s))
             {
                 if (done >= lw.Rules.NpcBuysPerSeason) break;
-                if (Buyer(lw, s, lord, l.PriceMites, PlotKey(LandIds.LotSubject(s, l.Lot < 0 ? 0xFFFF : l.Lot), l.Rect.X * 4096L + l.Rect.Y), season, bought) is not { } b) continue;
+                if (Pick(lw, here, lord, l.PriceMites, PlotKey(LandIds.LotSubject(s, l.Lot < 0 ? 0xFFFF : l.Lot), l.Rect.X * 4096L + l.Rect.Y), season, bought) is not { } b) continue;
                 var (lordId, _) = LandRegistry.LordOf(lw.Pop, s);
                 var res = lw.Buy(hht.IdOf(b), PurseKind.Household, s, l.Lot, l.Rect, l.PriceMites, day, chron);
                 if (!res.Ok || !lw.Book.Deeds.TryGetValue(res.Deed, out var deed)) continue;
@@ -55,6 +56,26 @@ public static class LandMarketNpc
             }
         }
         return sales;
+    }
+
+    /// <summary>The households that want a dwelling and hold <c>NpcBuyerCoinMultiple</c> times the cheapest plot of their place (its area at the class's price, the lowest demand, the scarcity term), by place, in index order.</summary>
+    private static List<int>?[] Candidates(LandWorld lw)
+    {
+        var r = lw.Region; var hht = lw.Pop.Households; var res = new List<int>?[r.Settlements.Count];
+        var need = new long[r.Settlements.Count];
+        for (int s = 0; s < need.Length; s++)
+        {
+            var st = r.Settlements[s]; bool town = st.Class == SettlementClass.Town;
+            int area = town ? lw.GrowthTuning.PlotWidthTownM * lw.GrowthTuning.PlotDepthTownM : lw.GrowthTuning.PlotWidthVillageM * lw.GrowthTuning.PlotDepthVillageM;
+            need[s] = lw.Scarce(LandRules.PlotPrice(lw.Rules, area, st.Class, lw.Rules.DemandMinPm)) * Math.Max(1, lw.Rules.NpcBuyerCoinMultiple);
+        }
+        for (int h = 0; h < hht.Count; h++)
+        {
+            int s = hht.Settlement[h]; if (hht.MemberCount[h] == 0 || (uint)s >= (uint)res.Length || r.Settlements[s].Class == SettlementClass.Farmstead) continue;
+            if (lw.Econ.Ledger.Balance(lw.Econ.HouseholdPurse[h]).Mites < need[s] || !Wants(lw, h)) continue;
+            (res[s] ??= []).Add(h);
+        }
+        return res;
     }
 
     private static ulong PlotKey(long subject, long extra) => DetRng.Mix((ulong)subject * 0x9E3779B97F4A7C15UL ^ (ulong)extra);
@@ -71,11 +92,18 @@ public static class LandMarketNpc
     /// <summary>The household that buys a plot at a price in a place: the richest of those that want a dwelling and hold <c>NpcBuyerCoinMultiple</c> times the price, exact ties by the stream-0x500 draw, else null.</summary>
     public static int? Buyer(LandWorld lw, int s, int lord, long price, ulong plotKey, int season, HashSet<int> taken)
     {
-        var hht = lw.Pop.Households; long need = price * Math.Max(1, lw.Rules.NpcBuyerCoinMultiple);
+        var hht = lw.Pop.Households; var all = new List<int>();
+        for (int h = 0; h < hht.Count; h++) if (hht.Settlement[h] == s && hht.MemberCount[h] > 0) all.Add(h);
+        return Pick(lw, all, lord, price, plotKey, season, taken);
+    }
+
+    private static int? Pick(LandWorld lw, List<int> hs, int lord, long price, ulong plotKey, int season, HashSet<int> taken)
+    {
+        long need = price * Math.Max(1, lw.Rules.NpcBuyerCoinMultiple);
         int best = -1; long bestCoin = -1; uint bestDraw = uint.MaxValue;
-        for (int h = 0; h < hht.Count; h++)
+        foreach (int h in hs)
         {
-            if (hht.Settlement[h] != s || hht.MemberCount[h] == 0 || h == lord || taken.Contains(h) || !Wants(lw, h)) continue;
+            if (h == lord || taken.Contains(h) || !Wants(lw, h)) continue;
             long coin = lw.Econ.Ledger.Balance(lw.Econ.HouseholdPurse[h]).Mites;
             if (coin < need) continue;
             if (coin > bestCoin) { best = h; bestCoin = coin; bestDraw = uint.MaxValue; continue; }
