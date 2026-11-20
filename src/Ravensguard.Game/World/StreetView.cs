@@ -523,7 +523,7 @@ public partial class StreetView : Control, IHandlesBack
     void OpenCharacter()
     {
         if (_router == null || _hero == null || _source?.Content == null) { _router?.ShowToast(L.T("MAP_NONE")); return; }
-        _router.Push(new CharacterScreen(_router, _hero, _source.Content, () => _heroLink?.View, HeroBodyLine) { ShotPath = _opt.Panel == "character" ? _opt.ShotPath : null, OpenProperty = _heroLink != null ? () => OpenLand(true) : null });   // P5-A2: the deeds
+        _router.Push(new CharacterScreen(_router, _hero, _source.Content, () => _heroLink?.View, HeroBodyLine) { ShotPath = _opt.Panel == "character" ? _opt.ShotPath : null, OpenProperty = _heroLink != null ? () => OpenLand(true) : null, OpenStanding = _heroLink != null ? OpenStanding : null });   // P5-A2: the deeds
     }
 
     CraftingSession? _crafting;

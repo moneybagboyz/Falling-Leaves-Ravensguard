@@ -135,6 +135,8 @@ public static class SuccessionDesk
         string ambition = kinHeir && st.Hero is { AmbitionId.Length: > 0 } old ? old.AmbitionId : DefaultAmbition;
         if (row >= 0 && row < pt.Count) hero = SuccessionOrder.HeroFrom(pt, row, heir.Name, ambition);
         else hero = new HeroRecord { Name = heir.Name, Origin = "heir", Attributes = [50, 50, 50, 50, 50], Skills = HeroRecord.SkillIds.ToDictionary(s => s, _ => 0) };
+        // P6-A3 (reputation 4.4): a kin heir starts at half of the dead hero's name (every standing row and renown), a companion at nothing, and marks never pass; the record lists the groups carried
+        if (st.Standing is { } standing) rec!.ReputationPending = standing.Inherit(ctx.Party.Hero, heir.Person, kinHeir);
         bool heroRows = deadRow >= 0;
         var stay = SuccessionOrder.Stay(SquadOf(ctx.Party, pt), HeroKin.People(book.Kin), heir.Person);
         foreach (var m in ctx.Party.Squad.Members)

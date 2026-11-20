@@ -31,8 +31,10 @@ public static class TalkSystem
     {
         if (hour <= ts.LastHour) return;
         int day = (int)(hour / 24); var set = book.Settings;
+        ts.Rumours.EnsureCounts(p => p >= 0 && p < w.People.Count ? w.People.HomeSettlement[p] : -1);     // P6-A3: hearings counted per home settlement (standing 4.1)
         RumourSeeder.Seed(w, ts, book, hour);
         RumourSpreader.Hour(w, ts, book, hour);
+        ts.AfterSpread?.Invoke(w, hour);                                                                    // P6-A3: the standing book reads the hour's hearings before any rumour expires
         if (day != ts.LastDay)
         {
             ts.Rumours.Purge(r => r.ExpiresDay < day, id => ts.HeroHolds(id));

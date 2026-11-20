@@ -111,6 +111,7 @@ public sealed partial class WoundBook
             if (w.Has(WoundFlags.Compound)) p *= 3;
             if (w.Is(Aid.Dirty)) p = p * 3 / 2;
             if (w.StitchedAt > 0 && w.StitchedAt - w.Born <= 6 * 3600) p /= 2;
+            if (LethalityPct != 100) p = p * LethalityPct / 100;
             if (DetRng.Range(Seed, day, Key, RngStreams.Infection, d1, 0, 1000) < p)
             {
                 w.InfectionLevel = 1; Note(sec, BookEventKind.Infected, w.Part);

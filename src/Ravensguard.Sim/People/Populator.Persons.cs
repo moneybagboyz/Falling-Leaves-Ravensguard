@@ -24,7 +24,7 @@ public sealed partial class Populator
     {
         int i = _p.Add();
         _p.Sex[i] = sex; _p.Culture[i] = (byte)culture; _p.Class[i] = cls;
-        _p.BirthDay[i] = _nowDay - age * TimeConst.DaysPerYear - r.Range(0, TimeConst.DaysPerYear);
+        _p.BirthDay[i] = PersonTable.BirthDayFor(_nowDay, age, r.Range(0, TimeConst.DaysPerYear), _p.AgingPace);
         _p.Household[i] = hh; _p.HomeSettlement[i] = si; _p.HomeLot[i] = (short)lot;
         _p.Family[i] = family;
         bool female = sex == Sex.Female;

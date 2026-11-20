@@ -120,7 +120,7 @@ public partial class RegionBuildScreen : Control
         }
         catch (Exception e) { GD.PushWarning("start date search failed, keeping the nominal day: " + e.Message); }
         var clock = Ravensguard.Sim.Core.GameTime.FromCalendar(pop.NowYear, Ravensguard.Sim.Core.Season.Spring, 1 + dayShift, 8);
-        var world = NewGameWorld.Create(content.Db, w.Continent, w.History, w.Info.File.Continent, w.Info.File.History, rs, site.CellX, site.CellY, pop, hero, codex.ToProgress(), clock);
+        var world = NewGameWorld.Create(content.Db, w.Continent, w.History, w.Info.File.Continent, w.Info.File.History, rs, site.CellX, site.CellY, pop, hero, codex.ToProgress(), clock, difficulty: d.Difficulty with { Ironman = d.Ironman, AgingPace = w.Info.File.History.AgingPace });
         // where the hero starts and who waits there: a safe start near the origin's mentor, with the mentor's first small job posted (onboarding spec 4.1, 4.3)
         if (bi.Origin != null)
         {
@@ -140,7 +140,7 @@ public partial class RegionBuildScreen : Control
             var file = WorldSave.Capture(world, bi.ContentHash, "0.1", NewGameServices.InstalledMods(), d.Ironman);
             var writer = new SaveWriter(lib.RunsDirectory(w.Info.Id), bi.RunName);
             path = (d.Ironman ? writer.WriteIronmanAsync(file) : writer.WriteManualAsync(file, bi.RunName)).GetAwaiter().GetResult();
-            lib.WriteRunInfo(w.Info.Id, bi.RunName, new WorldLibrary.RunInfo(d.Name, d.Female, d.OriginId, bi.Origin?.Ambition ?? "", d.Ironman, site.CellX, site.CellY, bi.Now));
+            lib.WriteRunInfo(w.Info.Id, bi.RunName, new WorldLibrary.RunInfo(d.Name, d.Female, d.OriginId, bi.Origin?.Ambition ?? "", d.Ironman, site.CellX, site.CellY, bi.Now, (d.Difficulty with { Ironman = d.Ironman, AgingPace = w.Info.File.History.AgingPace }).ToArray()));
         }
         catch (Exception e) { saveError = e.Message; GD.PushWarning("could not write the first save: " + e.Message); }
         _at = 4;

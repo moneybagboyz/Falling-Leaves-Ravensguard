@@ -20,7 +20,12 @@ public sealed partial class HistoryGenerator
     private static readonly string[] ArtKinds = ["sword", "axe", "spear", "warhammer", "bow", "shield"];
     private static readonly string[] Trades = ["smith", "armourer", "bowyer", "goldsmith", "swordsmith"];
 
-    private int AgeOf(Notable n) => (n.Alive ? _year : n.DeathYear) - n.BirthYear;
+    private int Pace => _h.AgingPace;
+    /// <summary>Years of age at <c>aging_pace</c>: calendar years since birth times the pace (the yearly hazards below stay per calendar year).</summary>
+    private int AgeAt(Notable n) => (_year - n.BirthYear) * Pace;
+    private int AgeOf(Notable n) => ((n.Alive ? _year : n.DeathYear) - n.BirthYear) * Pace;
+    /// <summary>The birth-year offset of someone <paramref name="ageYears"/> old now.</summary>
+    private int YearsAgo(int ageYears) => ageYears / Pace;
 
     // ---------- yearly and per-tick notable simulation ----------
     private void NotablesPass()
@@ -30,7 +35,7 @@ public sealed partial class HistoryGenerator
         {
             var nb = _h.Notables[i];
             if (!nb.Alive) continue;
-            int age = _year - nb.BirthYear;
+            int age = AgeAt(nb);
             int hz = age < 1 ? 200 : age < 5 ? 30 : age < 15 ? 8 : age < 50 ? 12 : age < 65 ? 30 : 100;
             if (age >= 95 || Chance(nb.Id.Value, S.Death, hz * 250L))
             {
@@ -49,7 +54,7 @@ public sealed partial class HistoryGenerator
     private void Die(Notable n, string cause, EntityId causeEv)
     {
         if (!n.Alive) return;
-        int age = _year - n.BirthYear;
+        int age = AgeAt(n);
         RealmState? r = n.Realm >= 0 && n.Realm < _h.Realms.Count ? Rm(n.Realm) : null;
         var cz = Cz(CauseKind.Death, causeEv, cause);
         EntityId ev = EntityId.None;
@@ -97,7 +102,7 @@ public sealed partial class HistoryGenerator
 
     private string Epithet(Notable n, RealmState r)
     {
-        int age = _year - n.BirthYear;
+        int age = AgeAt(n);
         if (n.Victories >= 5) return "the Conqueror";
         if (n.Victories >= 3) return "the Victorious";
         if (_tick - r.LastFamineTick < 24 && Pct(n.Id.Value, S.Misc, 60)) return "the Hungry";
@@ -117,7 +122,7 @@ public sealed partial class HistoryGenerator
             if (!n.Alive || n.Id == dead.Id || n.Realm != r.Index || n.Role is NotableRole.Ruler or NotableRole.General or NotableRole.Rebel or NotableRole.Outlaw or NotableRole.Saint or NotableRole.MasterCrafter) continue;
             if (n.Father == dead.Id || n.Mother == dead.Id) kids.Add(n);
             else if (dead.Father.Value != 0 && n.Father == dead.Father && n.Realm == r.Index) sibs.Add(n);
-            else if (n.Dynasty == dead.Dynasty && n.Realm == r.Index && _year - n.BirthYear >= 16) others.Add(n);
+            else if (n.Dynasty == dead.Dynasty && n.Realm == r.Index && AgeAt(n) >= 16) others.Add(n);
         }
         int Order(Notable n) => (n.Female ? 1000 : 0) + (n.BirthYear + 500);
         kids.Sort((a, b) => Order(a) != Order(b) ? Order(a).CompareTo(Order(b)) : a.Id.CompareTo(b.Id));
@@ -127,7 +132,7 @@ public sealed partial class HistoryGenerator
         rival = null;
         if (all.Count == 0) return null;
         for (int i = 1; i < all.Count; i++)
-            if (all[i].Ambition >= 55 && _year - all[i].BirthYear >= 16 && !all[i].Female) { rival = all[i]; break; }
+            if (all[i].Ambition >= 55 && AgeAt(all[i]) >= 16 && !all[i].Female) { rival = all[i]; break; }
         return all[0];
     }
 
@@ -147,13 +152,13 @@ public sealed partial class HistoryGenerator
                 Ev("artefact_inherited", $"{heir.Name} inherits {a.Name}", $"{a.Name} passes from {dead.Full} to {heir.Full}", Cap(r), [a.Id, dead.Id, heir.Id], Cz(CauseKind.Death, succ, "inheritance"));
             }
         }
-        int age = _year - heir.BirthYear;
+        int age = AgeAt(heir);
         if (rival != null && Pct(dead.Id.Value, S.Succ, 10 + (age < 16 ? 15 : 0) + rival.Ambition / 10)) SuccessionCrisis(r, heir, rival, succ);
     }
 
     private EntityId Coronate(RealmState r, Notable heir, Notable dead, EntityId causeEv, string verb)
     {
-        int age = _year - heir.BirthYear;
+        int age = AgeAt(heir);
         heir.Role = NotableRole.Ruler; heir.Realm = r.Index; heir.Residence = r.Capital;
         r.Ruler = heir.Id; r.Dynasty = heir.Dynasty;
         var d = _h.GetDynasty(heir.Dynasty); if (d != null) d.Ruling = true;
@@ -210,7 +215,7 @@ public sealed partial class HistoryGenerator
         }
         Notable? pick = null;
         foreach (var n in _h.Notables)
-            if (n.Alive && n.Realm == r.Index && n.Role is NotableRole.General or NotableRole.Noble && _year - n.BirthYear >= 18 && !n.Female && n.Id != dead.Id && n.Role != NotableRole.MasterCrafter)
+            if (n.Alive && n.Realm == r.Index && n.Role is NotableRole.General or NotableRole.Noble && AgeAt(n) >= 18 && !n.Female && n.Id != dead.Id && n.Role != NotableRole.MasterCrafter)
             { if (pick == null || n.Ambition + n.Skill > pick.Ambition + pick.Skill) pick = n; }
         if (pick != null)
         {
@@ -223,7 +228,7 @@ public sealed partial class HistoryGenerator
             return;
         }
         // a distant cousin is found
-        var cousin = NewNotable(NotableRole.Noble, r.CultureId, r.Index, dead.Dynasty, Pct(dead.Id.Value, S.Succ, 25), _year - Roll(dead.Id.Value, S.Succ, 18, 40), EntityId.None, EntityId.None);
+        var cousin = NewNotable(NotableRole.Noble, r.CultureId, r.Index, dead.Dynasty, Pct(dead.Id.Value, S.Succ, 25), _year - YearsAgo(Roll(dead.Id.Value, S.Succ, 18, 40)), EntityId.None, EntityId.None);
         var cr = Ev("succession_crisis", $"The line of {HouseOf(dead)} thins", $"{dead.Full} leaves no heir; a distant cousin, {cousin.Name}, is found", Cap(r), [dead.Id, cousin.Id, r.Id], Cz(CauseKind.Law, deathEv, "no heir of the ruler's body"));
         Coronate(r, cousin, dead, cr, "is raised");
         r.Unrest = Math.Min(100, r.Unrest + 10);
@@ -238,7 +243,7 @@ public sealed partial class HistoryGenerator
             if (!m.Female || !m.Alive || m.Spouse.Value == 0) continue;
             var f = _h.GetNotable(m.Spouse);
             if (f == null || !f.Alive) continue;
-            int age = _year - m.BirthYear;
+            int age = AgeAt(m);
             if (age < 18 || age > MaxMotherAge || m.Kids >= 8) continue;
             int p = 30;
             int realm = m.Role == NotableRole.Ruler ? m.Realm : f.Realm;
@@ -251,7 +256,7 @@ public sealed partial class HistoryGenerator
             var kid = NewNotable(royal ? NotableRole.Heir : NotableRole.Noble, m.Culture, realm, dyn, girl, _year, f.Id, m.Id);
             kid.Residence = m.Residence >= 0 ? m.Residence : f.Residence;
             m.Kids++; f.Kids++;
-            bool firstHeir = ruling && realm >= 0 && !_h.Notables.Any(n => n.Alive && n.Id != kid.Id && n.Role == NotableRole.Heir && (n.Father == f.Id || n.Mother == m.Id) && _year - n.BirthYear < 16);
+            bool firstHeir = ruling && realm >= 0 && !_h.Notables.Any(n => n.Alive && n.Id != kid.Id && n.Role == NotableRole.Heir && (n.Father == f.Id || n.Mother == m.Id) && AgeAt(n) < 16);
             if (firstHeir && realm >= 0)
             {
                 var parent = m.Role == NotableRole.Ruler ? m : f;
@@ -267,7 +272,7 @@ public sealed partial class HistoryGenerator
         {
             var n = _h.Notables[i];
             if (!n.Alive || n.Spouse.Value != 0 || n.Role is not (NotableRole.Ruler or NotableRole.Heir)) continue;
-            int age = _year - n.BirthYear;
+            int age = AgeAt(n);
             if (age < 16 || age > 46 || n.Realm < 0 || !Rm(n.Realm).Alive) continue;
             if (!Pct(n.Id.Value, S.Marry, _s.MarriagePctYear)) continue;
             Notable? mate = null;
@@ -279,7 +284,7 @@ public sealed partial class HistoryGenerator
                     var m = _h.Notables[(start + k) % count];
                     if (!m.Alive || m.Spouse.Value != 0 || m.Female == n.Female || m.Role is not (NotableRole.Ruler or NotableRole.Heir)) continue;
                     if (m.Realm == n.Realm || m.Realm < 0 || !Rm(m.Realm).Alive) continue;
-                    int ma = _year - m.BirthYear;
+                    int ma = AgeAt(m);
                     if (ma < 16 || ma > 46) continue;
                     if (_opinion[n.Realm * _R + m.Realm] < -10 || _atWar[n.Realm] == _atWar[m.Realm] && _atWar[n.Realm] >= 0) continue;
                     if (m.Dynasty == n.Dynasty) continue;
@@ -325,7 +330,7 @@ public sealed partial class HistoryGenerator
         var g = _h.GetNotable(_general[r.Index]);
         if (g != null && g.Alive && g.Realm == r.Index && g.Role == NotableRole.General) return g;
         var house = MinorHouse(r.CultureId, r.Id.Value + (ulong)_tick);
-        g = NewNotable(NotableRole.General, r.CultureId, r.Index, house.Id, false, _year - Roll(r.Id.Value, S.War, 28, 52), EntityId.None, EntityId.None);
+        g = NewNotable(NotableRole.General, r.CultureId, r.Index, house.Id, false, _year - YearsAgo(Roll(r.Id.Value, S.War, 28, 52)), EntityId.None, EntityId.None);
         g.Residence = r.Capital;
         _general[r.Index] = g.Id;
         foreach (var a in _h.Artefacts)
@@ -345,7 +350,7 @@ public sealed partial class HistoryGenerator
             if (!Chance(s.Id.Value, S.Craft, _s.CrafterPermilleYear * 1000L * (s.Kind == SettlementKind.City ? 2 : 1))) continue;
             int cu = _c.CultureId[s.Cell] < 8 ? _c.CultureId[s.Cell] : 0;
             var house = MinorHouse(cu, s.Id.Value + (ulong)_year);
-            var c = NewNotable(NotableRole.MasterCrafter, cu, s.Realm, house.Id, Pct(s.Id.Value, S.Craft, 20), _year - Roll(s.Id.Value, S.Craft, 22, 45), EntityId.None, EntityId.None);
+            var c = NewNotable(NotableRole.MasterCrafter, cu, s.Realm, house.Id, Pct(s.Id.Value, S.Craft, 20), _year - YearsAgo(Roll(s.Id.Value, S.Craft, 22, 45)), EntityId.None, EntityId.None);
             c.Residence = i; c.Skill = 70 + Roll(s.Id.Value, S.Craft, 0, 30);
             string trade = Trades[Roll(s.Id.Value, S.Craft, 0, Trades.Length)];
             c.RiseEvent = Ev("master_crafter", $"{c.Name} the {trade}", $"{c.Full}, master {trade} of {s.Name}, gains renown across {Rm(s.Realm).Name}", s.Cell, [c.Id, s.Id, Rm(s.Realm).Id],
@@ -359,7 +364,7 @@ public sealed partial class HistoryGenerator
         {
             var c = _h.Notables[i];
             if (!c.Alive || c.Role != NotableRole.MasterCrafter || c.Residence < 0) continue;
-            int age = _year - c.BirthYear;
+            int age = AgeAt(c);
             if (age < 25 || age > 65) continue;
             if (_h.Artefacts.Count(a => a.Creator == c.Id) >= 3) continue;
             if (!Chance(c.Id.Value, S.Forge, _s.ArtefactPermilleYear * 1000L)) continue;
@@ -427,7 +432,7 @@ public sealed partial class HistoryGenerator
         if (_h.Notables.Any(n => n.Alive && n.Role == NotableRole.Saint && n.Residence == sIdx)) return;
         int cu = _c.CultureId[s.Cell] < 8 ? _c.CultureId[s.Cell] : 0;
         bool female = Pct(s.Id.Value, S.Saint, 50);
-        var sa = NewNotable(NotableRole.Saint, cu, s.Realm, EntityId.None, female, _year - Roll(s.Id.Value, S.Saint, 28, 60), EntityId.None, EntityId.None);
+        var sa = NewNotable(NotableRole.Saint, cu, s.Realm, EntityId.None, female, _year - YearsAgo(Roll(s.Id.Value, S.Saint, 28, 60)), EntityId.None, EntityId.None);
         sa.Residence = sIdx;
         sa.Epithet = SaintEpithets[Roll(s.Id.Value, S.Saint, 0, SaintEpithets.Length)];
         sa.RiseEvent = Ev("saint_rises", $"Saint {sa.Name} of {s.Name}", $"{sa.Full} tends the stricken of {s.Name} after {why}, and the people call {(female ? "her" : "him")} holy", s.Cell, [sa.Id, s.Id],
@@ -440,7 +445,7 @@ public sealed partial class HistoryGenerator
         int alive = 0; foreach (var o in _h.Notables) if (o.Alive && o.Role == NotableRole.Outlaw) alive++;
         if (alive >= 5 || s.Realm < 0) return;
         int cu = _c.CultureId[s.Cell] < 8 ? _c.CultureId[s.Cell] : 0;
-        var o2 = NewNotable(NotableRole.Outlaw, cu, s.Realm, EntityId.None, false, _year - Roll(s.Id.Value, S.Outlaw, 22, 45), EntityId.None, EntityId.None);
+        var o2 = NewNotable(NotableRole.Outlaw, cu, s.Realm, EntityId.None, false, _year - YearsAgo(Roll(s.Id.Value, S.Outlaw, 22, 45)), EntityId.None, EntityId.None);
         o2.Residence = sIdx; o2.Epithet = "the Hooded";
         o2.RiseEvent = Ev("outlaw_band", $"{o2.Name} raises an outlaw band", $"Hungry and landless men gather under {o2.Name} in the hills above {s.Name}", s.Cell, [o2.Id, s.Id, Rm(s.Realm).Id],
             Cz(CauseKind.Crime, causeEv, $"desperation after the {why}"));

@@ -186,7 +186,7 @@ public sealed class StoreSpoilageSystem : AbstractSystem
         if (ctx.HourOfDay != 1) return;   // off hour 0, which carries the daily globals (decision I40)
         var ew = ctx.World.Get<EconomyWorld>(); if (ew == null) return;
         int t = ctx.World.Env.TMeanC(ctx.Day);
-        foreach (var s in ctx.World.Economy.OtherStores.Values) s.ApplySpoilage(ctx.World.Seed, ctx.Hour, t);
+        foreach (var s in ctx.World.Economy.OtherStores.Values) s.ApplySpoilage(ctx.World.Seed, ctx.Hour, t, 1, ctx.World.Economy.SpoilagePct);
         foreach (var b in ew.Markets.AllBooks()) b.SyncAll();
     }
 }

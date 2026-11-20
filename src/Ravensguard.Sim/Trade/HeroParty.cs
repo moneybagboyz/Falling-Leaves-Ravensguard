@@ -44,6 +44,10 @@ public sealed class HeroParty
 
     public Acquaintance Know(EntityId p) => Known.TryGetValue(p, out var a) ? a : Known[p] = new Acquaintance();
 
+    /// <summary>P6-A3 (reputation 4.3): a stranger who sees the hero's brand starts at <paramref name="brandTrustPm"/> (-200 for a thief's, -400 for a murderer's; 0 when there is none); a person already known is unchanged.</summary>
+    public Acquaintance Know(EntityId p, int brandTrustPm) =>
+        Known.TryGetValue(p, out var a) ? a : Known[p] = brandTrustPm < 0 ? new Acquaintance { TrustPm = brandTrustPm } : new Acquaintance();
+
     /// <summary>
     /// A new hero's things in the world (migration "hero_inventory_to_items" for an older save): every <see cref="HeroItem"/> becomes <c>Count</c> item rows at Common quality and full
     /// condition, worn where they go; with <paramref name="dressAtSec"/> the clothes of their origin's class for that season are added and worn (<see cref="HeroOutfit"/>);

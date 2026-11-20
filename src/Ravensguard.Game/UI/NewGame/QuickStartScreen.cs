@@ -26,7 +26,8 @@ public partial class QuickStartScreen : Control
     Button _sex = null!, _ironman = null!, _world = null!, _advanced = null!;
     RichTextLabel _detail = null!;
     Label _worldInfo = null!, _warn = null!, _ironHelp = null!;
-    VBoxContainer _advBox = null!;
+    VBoxContainer _advBox = null!, _worldBox = null!;
+    DifficultyRows _diff = null!;
     LineEdit _seed = null!;
     ScrollContainer _advScroll = null!;
     bool _advOpen;
@@ -151,7 +152,12 @@ public partial class QuickStartScreen : Control
 
     void BuildAdvanced()
     {
-        _advBox.AddChild(UiKit.Hint(L.T("ADV_HELP"), true));
+        // the ageing pace is the world's: a new world takes the draft's history setting, a library world shows its own
+        _diff = new DifficultyRows(_advBox, () => _d.Difficulty with { AgingPace = WorldPace() }, v => { _d.Difficulty = v; if (_worldIdx == 0) _d.History.AgingPace = v.AgingPace; });
+        _worldBox = new VBoxContainer();
+        _worldBox.AddThemeConstantOverride("separation", 4);
+        _advBox.AddChild(_worldBox);
+        _worldBox.AddChild(UiKit.Hint(L.T("ADV_HELP"), true));
         var seedRow = new HBoxContainer();
         seedRow.AddThemeConstantOverride("separation", 4);
         seedRow.AddChild(new Label { Text = L.T("ADV_SEED"), SizeFlagsHorizontal = SizeFlags.ExpandFill });
@@ -162,7 +168,7 @@ public partial class QuickStartScreen : Control
         var rs = UiKit.Key(L.T("ADV_REROLL_SEED"), "menu.reroll_seed", 140, 28);
         rs.Pressed += RerollSeed;
         seedRow.AddChild(rs);
-        _advBox.AddChild(seedRow);
+        _worldBox.AddChild(seedRow);
 
         var c = _d.Continent; var h = _d.History;
         var layout = new HBoxContainer();
@@ -172,16 +178,18 @@ public partial class QuickStartScreen : Control
         lb.Pressed += () => { c.Layout = (ContinentLayout)(((int)c.Layout + 1) % 3); LayoutText(); };
         LayoutText();
         layout.AddChild(lb);
-        _advBox.AddChild(layout);
-        _advBox.AddChild(UiKit.Stepper(L.T("ADV_PLATES"), () => c.PlateCount, v => c.PlateCount = v, 6, 20, 1));
-        _advBox.AddChild(UiKit.Stepper(L.T("ADV_CULTURES"), () => c.CultureCount, v => c.CultureCount = v, 3, 8, 1));
-        _advBox.AddChild(UiKit.Stepper(L.T("ADV_REALMS"), () => c.RealmCount, v => c.RealmCount = v, 3, 16, 1));
-        _advBox.AddChild(UiKit.Stepper(L.T("ADV_YEARS"), () => h.Years, v => h.Years = v, 50, 500, 25, v => L.F("ADV_YEARS_FMT", v)));
-        _advBox.AddChild(UiKit.Stepper(L.T("ADV_MINERALS"), () => c.MineralDensityPct, v => c.MineralDensityPct = v, 25, 200, 25, v => v + "%"));
-        _advBox.AddChild(UiKit.Stepper(L.T("ADV_SAVAGERY"), () => c.SavageryPct, v => c.SavageryPct = v, 0, 200, 25, v => v + "%"));
-        _advBox.AddChild(UiKit.Stepper(L.T("ADV_MOISTURE"), () => c.MoisturePct, v => c.MoisturePct = v, 50, 150, 10, v => v + "%"));
-        _advBox.AddChild(UiKit.Stepper(L.T("ADV_TEMPERATURE"), () => c.TemperatureOffsetTenths, v => c.TemperatureOffsetTenths = v, -60, 60, 10, v => (v >= 0 ? "+" : "") + (v / 10.0).ToString("0.0") + " C"));
+        _worldBox.AddChild(layout);
+        _worldBox.AddChild(UiKit.Stepper(L.T("ADV_PLATES"), () => c.PlateCount, v => c.PlateCount = v, 6, 20, 1));
+        _worldBox.AddChild(UiKit.Stepper(L.T("ADV_CULTURES"), () => c.CultureCount, v => c.CultureCount = v, 3, 8, 1));
+        _worldBox.AddChild(UiKit.Stepper(L.T("ADV_REALMS"), () => c.RealmCount, v => c.RealmCount = v, 3, 16, 1));
+        _worldBox.AddChild(UiKit.Stepper(L.T("ADV_YEARS"), () => h.Years, v => h.Years = v, 50, 500, 25, v => L.F("ADV_YEARS_FMT", v)));
+        _worldBox.AddChild(UiKit.Stepper(L.T("ADV_MINERALS"), () => c.MineralDensityPct, v => c.MineralDensityPct = v, 25, 200, 25, v => v + "%"));
+        _worldBox.AddChild(UiKit.Stepper(L.T("ADV_SAVAGERY"), () => c.SavageryPct, v => c.SavageryPct = v, 0, 200, 25, v => v + "%"));
+        _worldBox.AddChild(UiKit.Stepper(L.T("ADV_MOISTURE"), () => c.MoisturePct, v => c.MoisturePct = v, 50, 150, 10, v => v + "%"));
+        _worldBox.AddChild(UiKit.Stepper(L.T("ADV_TEMPERATURE"), () => c.TemperatureOffsetTenths, v => c.TemperatureOffsetTenths = v, -60, 60, 10, v => (v >= 0 ? "+" : "") + (v / 10.0).ToString("0.0") + " C"));
     }
+
+    int WorldPace() => _worldIdx == 0 ? _d.History.AgingPace : _library[_worldIdx - 1].File.History.AgingPace;
 
     void RerollSeed()
     {
@@ -210,7 +218,6 @@ public partial class QuickStartScreen : Control
 
     void ToggleAdvanced()
     {
-        if (_worldIdx != 0) return;
         _advOpen = !_advOpen;
         _ironHelp.Visible = !_advOpen; // small windows: the panel gets the room (it scrolls for the rest)
         RefreshToggles();
@@ -236,8 +243,8 @@ public partial class QuickStartScreen : Control
             _d.LibraryWorldId = w.Id;
             var s = w.File.Summary;
             _world.Text = L.F("QS_WORLD_LIB", w.Name);
-            _worldInfo.Text = L.F("QS_WORLD_LIB_INFO", w.Seed, s.Years, s.RealmsAlive, s.Settlements, s.Ruins, w.Runs.Count);
-            _advOpen = false;
+            _worldInfo.Text = L.F("QS_WORLD_LIB_INFO", w.Seed, s.Years, s.RealmsAlive, s.Settlements, s.Ruins, w.Runs.Count)
+                + (w.File.History.AgingPace != 1 ? " " + L.F("DIFF_SHORT_PACE", w.File.History.AgingPace) + "." : "");
         }
         RefreshToggles();
     }
@@ -247,9 +254,10 @@ public partial class QuickStartScreen : Control
         _sex.Text = L.T(_d.Female ? "QS_SEX_FEMALE" : "QS_SEX_MALE");
         _ironman.Text = L.F("QS_IRONMAN", L.T(_d.Ironman ? "UI_ON" : "UI_OFF"));
         bool lib = _worldIdx != 0;
-        _advanced.Disabled = lib;
-        _advanced.Text = lib ? L.T("QS_ADVANCED_LOCKED") : L.T(_advOpen ? "QS_ADVANCED_OPEN" : "QS_ADVANCED");
-        _advScroll.Visible = _advOpen && !lib;
+        _advanced.Text = L.T(_advOpen ? "QS_ADVANCED_OPEN" : "QS_ADVANCED");   // a library world's generation settings are fixed, but its difficulty is still chosen per run
+        _advScroll.Visible = _advOpen;
+        _worldBox.Visible = !lib;
+        _diff.Refresh(lib, WorldPace());
         if (_seed != null && GodotObject.IsInstanceValid(_seed)) _seed.Text = _d.Continent.Seed.ToString();
     }
 

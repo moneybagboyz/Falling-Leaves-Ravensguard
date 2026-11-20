@@ -59,7 +59,41 @@ public sealed class WorldState
     /// <summary>Animals that are individuals, vehicles with their cargo, horse herds, loans and the hero's ride (saved in the "mounts" section once any exists).</summary>
     public Ravensguard.Sim.Animals.RideBook? Mounts { get; set; }
     /// <summary>Journey, camps, snares, carcasses and the interrupt log of travel (saved in the "travel" section once anything has been recorded).</summary>
-    public Ravensguard.Sim.Travel.TravelState? Travel { get; set; }
+    public Ravensguard.Sim.Travel.TravelState? Travel { get => _travel; set { _travel = value; if (value != null) value.BanditPct = _difficulty.BanditPct; } }
+    private Ravensguard.Sim.Travel.TravelState? _travel;
+    private Difficulty _difficulty = Difficulty.Default;
+    private readonly List<DifficultyChange> _difficultyLog = [];
+    /// <summary>The run's honest sliders (difficulty-sliders.md), in the optional "difficulty" section once set away from the default. The ageing pace is the world's (<see cref="HistorySettings"/>), read through here.
+    /// Setting it hands each value to the one place that reads it (wound ledger, travel director, economy); set it after the other parts of the state.</summary>
+    public Difficulty Difficulty
+    {
+        get => HistorySettings is { } hs && hs.AgingPace != _difficulty.AgingPace ? _difficulty with { AgingPace = Math.Clamp(hs.AgingPace, 1, 4) } : _difficulty;
+        set
+        {
+            _difficulty = value;
+            if (_wounds != null) _wounds.LethalityPct = value.WoundLethalityPct;
+            if (_travel != null) _travel.BanditPct = value.BanditPct;
+            if (Economy != null) { Economy.SpoilagePct = value.SpoilagePct; Economy.HarvestVariancePct = value.HarvestVariancePct; }
+        }
+    }
+    /// <summary>Every change of a slider during the run (outside Ironman), oldest first; the save records the history of values.</summary>
+    public List<DifficultyChange> DifficultyLog => _difficultyLog;
+
+    /// <summary>
+    /// DS-7: changes the sliders mid-run. Ironman refuses every change (it locks the other four); the ageing pace is the world's and never changes in a run. A change writes a <c>difficulty_changed</c>
+    /// chronicle entry (cause: the player) and a log row. Returns false when refused or when nothing changes.
+    /// </summary>
+    public bool ChangeDifficulty(Difficulty next, GameTime now)
+    {
+        var cur = Difficulty;
+        next = (next with { Ironman = cur.Ironman, AgingPace = cur.AgingPace }).Normalised();
+        if (cur.Ironman || next == cur) return false;
+        Difficulty = next;
+        _difficultyLog.Add(new DifficultyChange(now.Seconds, next.ToArray()));
+        var data = new Dictionary<string, string>(StringComparer.Ordinal) { ["values"] = string.Join(",", next.ToArray()), ["cause"] = "player" };
+        Chronicle.Add(new ChronicleEntry(Ids.Allocate(IdKind.Event), now, "difficulty_changed", [], [new Cause(CauseKind.Other, null, "the player changed a difficulty slider")], data));
+        return true;
+    }
     /// <summary>Directives, limits, interrupt policy and the log of the hero's and party members' autopilot (saved in the "autopilot" section once anyone turned it on).</summary>
     public Ravensguard.Sim.Autopilot.AutopilotBook? Autopilot { get; set; }
     /// <summary>Rumours and who holds them, relations between people, the hero's heard rumours and dialogue flags (saved in the "talk" section once anything has been recorded).</summary>
@@ -67,7 +101,8 @@ public sealed class WorldState
     /// <summary>The first hour: mentor, jobs, step states and the loan (saved in the "onboarding" section once a new game has set it up).</summary>
     public Ravensguard.Sim.Onboarding.OnboardingBook? Onboarding { get; set; }
     /// <summary>Everyone's wounds, blood and pain (saved in the "wounds" section while anybody is hurt); shared by the live and the abstract tier.</summary>
-    public Ravensguard.Sim.Combat.Wounds.WoundLedger? Wounds { get; set; }
+    public Ravensguard.Sim.Combat.Wounds.WoundLedger? Wounds { get => _wounds; set { _wounds = value; if (value != null) value.LethalityPct = _difficulty.WoundLethalityPct; } }
+    private Ravensguard.Sim.Combat.Wounds.WoundLedger? _wounds;
     /// <summary>A fight in progress (P4-C, overview 8.3): saved in the "fight" section only mid-fight, so a load resumes it at the same FightTick. <see cref="FightSource"/>, when set by the game, is read at a save instead.</summary>
     public FightRecord? Fight { get; set; }
     public Func<FightRecord?>? FightSource { get; set; }
@@ -94,6 +129,8 @@ public sealed class WorldState
     public Ravensguard.Sim.Production.OwnershipBook? Ownership { get; set; }
     /// <summary>P5-H: every will made (inheritance 3), in the optional "wills" section once any exists (no format bump).</summary>
     public Ravensguard.Sim.Succession.WillBook? Wills { get; set; }
+    /// <summary>P6-A3: counted deeds, standing rows, renown and marks (reputation spec 3), in the optional "standing" section once any exists (no format bump).</summary>
+    public Ravensguard.Sim.Society.StandingBook? Standing { get; set; }
     /// <summary>The hero's side of the records (trade-inventory-character spec): worn slots and where each stack sits, the price notebook, the party, the people known (saved in the "party" section when present). The things themselves are item rows, the pack store and the purse in the <see cref="Economy"/>.</summary>
     public Ravensguard.Sim.Trade.HeroParty? Party { get; set; }
     /// <summary>
@@ -396,6 +433,8 @@ public static partial class WorldSave
             Construction = w.Construction is { IsEmpty: false } cnb ? ConstructionSave.Capture(cnb) : null,                          // P5-B
             Designs = w.Designs is { IsEmpty: false } dsb ? DesignsSave.Capture(dsb) : null,                                         // P5-C
             Wills = w.Wills is { IsEmpty: false } wlb ? WillsSave.Capture(wlb) : null,                                                // P5-H
+            Standing = w.Standing is { IsEmpty: false } stb ? StandingSave.Capture(stb) : null,                                      // P6-A3
+            Difficulty = w.Difficulty.IsDefault && w.DifficultyLog.Count == 0 ? null : DifficultySave.Capture(w),                    // P6-A4
             Ownership = w.Ownership is { IsEmpty: false } owb ? OwnershipSave.Capture(owb, w.Economy?.Goods.Hash() ?? "") : null,         // P5-F
             Party = w.Party == null ? null : Ravensguard.Sim.Trade.HeroPartySave.Capture(w.Party),
             HeroPending = (w.HeroPendingSource?.Invoke() ?? w.HeroPending) is { Count: > 0 } hp ? Ravensguard.Sim.Trade.HeroPendingSave.Capture(hp) : null,
@@ -502,6 +541,7 @@ public static partial class WorldSave
             peopleData = PeopleDiffer.Expand(peopleData, EncodePeople(basePop));
         }
         var pop = DecodePeople(peopleData, Decode<RegionLotsData>(file, LotsSection, true), region);
+        pop.People.AgingPace = Math.Clamp(hs.AgingPace, 1, 4);
         Verify("population", meta.PopulationHash, pop.ComputeHash());
 
         var chunks = file.Sections.TryGetValue(ChunksSection, out var cb) ? ChunkStore.FromSection(cb) : new ChunkStore();
@@ -560,6 +600,7 @@ public static partial class WorldSave
             Construction = file.Sections.ContainsKey(ConstructionSave.SectionName) ? Decode<ConstructionSave>(file, ConstructionSave.SectionName, compressed: true).Restore() : null, // P5-B
             Designs = file.Sections.ContainsKey(DesignsSave.SectionName) ? Decode<DesignsSave>(file, DesignsSave.SectionName, compressed: true).Restore() : null,                // P5-C
             Wills = file.Sections.ContainsKey(WillsSave.SectionName) ? Decode<WillsSave>(file, WillsSave.SectionName, compressed: true).Restore() : null,                       // P5-H
+            Standing = file.Sections.ContainsKey(StandingSave.SectionName) ? Decode<StandingSave>(file, StandingSave.SectionName, compressed: true).Restore() : null,          // P6-A3
             Ownership = file.Sections.ContainsKey(OwnershipSave.SectionName) ? Decode<OwnershipSave>(file, OwnershipSave.SectionName, compressed: true).Restore() : null,          // P5-F
             Party = file.Sections.ContainsKey(PartySection) ? Decode<Ravensguard.Sim.Trade.HeroPartySave>(file, PartySection, compressed: true).Restore() : null,
             HeroPending = file.Sections.ContainsKey(Ravensguard.Sim.Trade.HeroPendingSave.SectionName) ? Decode<Ravensguard.Sim.Trade.HeroPendingSave>(file, Ravensguard.Sim.Trade.HeroPendingSave.SectionName, compressed: true).Restore() : [],
@@ -579,6 +620,7 @@ public static partial class WorldSave
         if (hero is { PersonIndex: Ravensguard.Sim.Succession.HeroPerson.Pending } && content != null)
             hero.PersonIndex = Ravensguard.Sim.Succession.HeroPerson.InsertForLoad(pop, economy, content, hero, Ravensguard.Sim.Economy.EconomyState.HeroOwner, cs.Seed,
                 (int)(meta.ClockSeconds / 86400), restored.Succession?.Kin ?? [], restored.Ids);
+        if (file.Sections.ContainsKey(DifficultySave.SectionName)) Decode<DifficultySave>(file, DifficultySave.SectionName, compressed: true).Restore(restored);   // P6-A4: after Economy, Wounds and Travel are set
         return restored;
     }
 
@@ -770,6 +812,8 @@ public sealed class LiveCapture
     internal LandSave? Land { get; init; }                                                                                   // P5-A2
     internal ConstructionSave? Construction { get; init; }                                                                   // P5-B
     internal WillsSave? Wills { get; init; }                                                                                 // P5-H
+    internal StandingSave? Standing { get; init; }                                                                           // P6-A3
+    internal DifficultySave? Difficulty { get; init; }                                                                       // P6-A4
     internal DesignsSave? Designs { get; init; }                                                                             // P5-C
     internal OwnershipSave? Ownership { get; init; }                                                                         // P5-F
     internal Ravensguard.Sim.Trade.HeroPartySave? Party { get; init; }
@@ -836,6 +880,8 @@ public sealed class LiveCapture
         if (Construction != null) sections.Add(new(ConstructionSave.SectionName, SaveCodec.SerializeCompressed(Construction))); // P5-B (optional, no bump)
         if (Designs != null) sections.Add(new(DesignsSave.SectionName, SaveCodec.SerializeCompressed(Designs)));             // P5-C (optional, no bump)
         if (Wills != null) sections.Add(new(WillsSave.SectionName, SaveCodec.SerializeCompressed(Wills)));                   // P5-H (optional, no bump)
+        if (Standing != null) sections.Add(new(StandingSave.SectionName, SaveCodec.SerializeCompressed(Standing)));         // P6-A3 (optional, no bump)
+        if (Difficulty != null) sections.Add(new(DifficultySave.SectionName, SaveCodec.SerializeCompressed(Difficulty)));   // P6-A4 (optional, no bump)
         if (Ownership != null) sections.Add(new(OwnershipSave.SectionName, SaveCodec.SerializeCompressed(Ownership)));       // P5-F (optional, no bump)
         if (Party != null) sections.Add(new(WorldSave.PartySection, SaveCodec.SerializeCompressed(Party)));
         if (HeroPending != null) sections.Add(new(Ravensguard.Sim.Trade.HeroPendingSave.SectionName, SaveCodec.SerializeCompressed(HeroPending)));

@@ -14,7 +14,7 @@ public sealed partial class Populator
         {
             if (!n.Alive || n.Female || n.Realm < 0) continue;
             if (n.Role is not (NotableRole.Noble or NotableRole.General or NotableRole.Heir)) continue;
-            int age = _nowYear - n.BirthYear;
+            int age = (_nowYear - n.BirthYear) * _h.AgingPace;
             if (age < 22 || age > 70) continue;
             if (!res.TryGetValue(n.Realm, out var q)) res[n.Realm] = q = new Queue<Notable>();
             q.Enqueue(n);
@@ -64,7 +64,7 @@ public sealed partial class Populator
         RealmState? realm = f.Realm >= 0 && f.Realm < _h.Realms.Count ? _h.Realms[f.Realm] : null;
         Dynasty? dyn = nb != null ? _h.GetDynasty(nb.Dynasty) : realm != null ? _h.GetDynasty(realm.Dynasty) : null;
         string house = dyn?.Name ?? np.FamilyName(r);
-        int lordAge = nb != null ? _nowYear - nb.BirthYear : r.Range(26, 57);
+        int lordAge = nb != null ? (_nowYear - nb.BirthYear) * _h.AgingPace : r.Range(26, 57);
         string given = nb?.Name ?? "";
 
         int lord = NewLord(r, np, hh, si, lot, Sex.Male, lordAge, house, culture, given, nb?.Epithet ?? "", nb?.Id ?? EntityId.None, dyn?.Id ?? EntityId.None);
@@ -74,10 +74,10 @@ public sealed partial class Populator
         // Wife: the notable's own spouse when alive and of age, otherwise a lady of the same generation.
         int wife = -1;
         Notable? ns = nb != null && nb.Spouse.Value != 0 ? _h.GetNotable(nb.Spouse) : null;
-        bool historic = ns is { Alive: true, Female: true } && _nowYear - ns.BirthYear is >= 18 and <= 60;
+        bool historic = ns is { Alive: true, Female: true } && (_nowYear - ns.BirthYear) * _h.AgingPace is >= 18 and <= 60;
         if (historic || r.Pct(85))
         {
-            int wAge = historic ? _nowYear - ns!.BirthYear : Math.Clamp(lordAge + r.Range(-9, 3), 18, 49);
+            int wAge = historic ? (_nowYear - ns!.BirthYear) * _h.AgingPace : Math.Clamp(lordAge + r.Range(-9, 3), 18, 49);
             wife = NewLord(r, np, hh, si, lot, Sex.Female, wAge, house, culture, historic ? ns!.Name : "", historic ? ns!.Epithet : "", historic ? ns!.Id : EntityId.None, dyn?.Id ?? EntityId.None);
             SetJob(wife, Occupation.None, -1, -1, -1);
             Finish(wife, r, Occupation.None, wAge);

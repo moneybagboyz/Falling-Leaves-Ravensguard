@@ -73,6 +73,7 @@ public sealed record JourneyLog(long StartSec, long EndSec, string Dest, long Di
 public sealed partial class TravelState
 {
     public ulong Seed { get; }
+    public int BanditPct = 100;
     public EntityId HeroId { get; set; } = EntityId.Make(IdKind.Person, 0);
     public TravelSettingsDef Cfg { get; }
     public EncounterTable Table { get; }
