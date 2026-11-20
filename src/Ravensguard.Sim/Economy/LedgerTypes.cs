@@ -35,6 +35,8 @@ public enum TransferReason : byte
     ShareSale,
     /// <summary>P5-F (prospecting spec 5): the right holder's share of what a licensed mine takes. Appended.</summary>
     Royalty,
+    // Phase 6 (overview 8.1, append only; saves pad the count as for Alms): justice, slavery, family, rule and income. Nothing writes them until its own step lands.
+    Fee, Restitution, Bounty, Bribe, SlaveSale, Dowry, Relief, Aid, Subsidy, Tallage, Customs, Loan, Interest, Skim,
 }
 
 /// <summary>The only faucets: the one-off seed money of world creation, silver struck at a mint, and the coin a household brings across a region border (the other region's ledger holds the matching <see cref="SinkReason.Emigrate"/>).</summary>

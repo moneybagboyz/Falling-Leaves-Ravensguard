@@ -20,7 +20,11 @@ public enum LoserRole : byte { Hero, PartyMember, Hireling, Stranger, Soldier }
 public enum Restraint : byte { None, Bound, Chained, Caged }
 public enum CaptiveState : byte { Held, Ransomed, Escaped, Rescued, Released, Dead }
 public enum CareLevel : byte { None, Basic }
-public enum CaptorKind : byte { Bandits, Army }
+public enum CaptorKind : byte { Bandits, Army,
+    /// <summary>Phase 6 (overview 8.1, append only): held in a lord's gaol (crime and justice 4.5). Nothing writes it until C1.</summary>
+    Gaol,
+    /// <summary>Phase 6 (overview 8.1, append only): taken by slavers (slavery spec). Nothing writes it until D1.</summary>
+    Slavers }
 /// <summary>Who pays a ransom (4.6): the faction the captive serves, the captive's household, friends (companions' purses), or nobody.</summary>
 public enum PayerKind : byte { None, Faction, Household, Friends }
 

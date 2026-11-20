@@ -41,16 +41,17 @@ public sealed partial class ContinentTrade
         var robbers = new List<FighterKit>();
         for (int i = 0; i < band; i++) robbers.Add(FightSetup.Roll(fc, bandit, seed, 0x4A00_0000UL + (ulong)i, $"bandit {i + 1}", 1, 0, 0, -FightMath.One, 0) with { Person = 0 });
         ulong battleId = (ulong)ctx.Hour * 4096 + (c.Id.Value & 4095);
-        string town = w.Population.Region.Settlements[c.Settlement].Name;
+        var townId = w.Population.Region.Settlements[c.Settlement].Id;
         var setup = FightSetup.Ambush(victims, robbers, seed, battleId, ctx.Hour * 3600, "caravan_ambush") with { Terrain = new FightTerrain { Base = Footing.Road } };
         var ledger = w.Get<WoundLedger>();
         WoundBook? BookOf(ulong person) { if (ledger == null) return null; lock (ledger.Sync) return ledger.Find(person); }
-        var resolver = new AbstractBattles { BookOf = BookOf, Place = $"the road from {town}" };
+        var resolver = new AbstractBattles { BookOf = BookOf, PlaceKey = BattleChronicle.RoadFrom, PlaceId = townId };
         var rep = resolver.Resolve(setup, fc);
         var br = rep.Battle!;
         // the barrier's commands, in person order: wound books into the ledger, the dead killed with their chain
         var killed = new List<int>();
-        string cause = $"bandits ({band}) ambushed a caravan on the road from {town}";
+        var beganParams = new List<ChronParam> { ChronParam.Count("band", band), ChronParam.Place("place", townId) };
+        var cause = new Cause(CauseKind.Raid, null, "", "ch_note_ambush", beganParams);
         foreach (var cmd in rep.Commands)
         {
             int p = pt.IndexOf(new EntityId(cmd.Person));
@@ -62,12 +63,12 @@ public sealed partial class ContinentTrade
                 var n = br.Notables.FirstOrDefault(x => x.Person == cmd.Person);
                 var book = rep.Commands.FirstOrDefault(x => x.Person == cmd.Person && x.Kind == BattleCommandKind.Wounds)?.Book;
                 var dc = book is { Dead: true } ? WoundSystem.CauseOf(book.Death) : People.DeathCause.Violence;
-                Demography.Kill(w, p, dc, time, ctx.Outbox, BattleChronicle.DeathChain(n, br, cause));
+                Demography.Kill(w, p, dc, time, ctx.Outbox, chain: BattleChronicle.DeathChain(n, br, "ch_began_ambush", beganParams));
                 killed.Add(p);
             }
         }
         bool held = br.Winner == 0;
-        BattleChronicle.Report(ctx.Outbox, time, br, c.Id, town, "the caravan's guards", "bandits", new Cause(CauseKind.Raid, null, cause));
+        BattleChronicle.Report(ctx.Outbox, time, br, c.Id, townId, "ch_side_caravan_guards", "ch_side_bandits", cause);
         if (held)
         {
             ctx.Outbox.Count("caravan_ambush_won");

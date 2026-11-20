@@ -66,6 +66,9 @@ public sealed record BattleInput(IReadOnlyList<FighterKit> Kits, ulong Seed, ulo
     public string Weather { get; init; } = "";
     public IReadOnlyDictionary<int, SideKind> SideKinds { get; init; } = new Dictionary<int, SideKind>();
     public string Place { get; init; } = "";
+    /// <summary>Phase 6 (chronicle-full 4.1): where as a text key (a sentence with {place}) and the settlement id it names; the English <see cref="Place"/> stays for scenario tests.</summary>
+    public string PlaceKey { get; init; } = "";
+    public Ravensguard.Sim.Core.EntityId PlaceId { get; init; }
     public bool Leaders { get; init; } = true;
     /// <summary>Narrow ground (a bridge, a gate, a pass: 4.5) and a fight at night or underground.</summary>
     public bool Narrow { get; init; }
@@ -108,6 +111,8 @@ public sealed class BattleReport
 {
     public ulong Id;
     public string Place = "";
+    public string PlaceKey = "";
+    public Ravensguard.Sim.Core.EntityId PlaceId;
     public long GameSec;
     public int Winner = -1;
     public readonly SideTally[] Sides = [new(), new()];

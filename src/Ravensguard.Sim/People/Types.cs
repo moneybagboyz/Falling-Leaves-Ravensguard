@@ -14,6 +14,8 @@ public enum DeathCause : byte
     None, Age, Hunger, Disease, Cold, Violence, Other,
     // Phase 4 (wounds 3.1, appended): what a wound killed by; the chronicle names the cause chain back to the blow
     BloodLoss, Organ, Brain, Infection, Suffocation, Ischaemia,
+    // Phase 6 (overview 8.1, append only): justice, fire and the childbed; every one goes through the wound book or Demography.Kill with a cause chain
+    Executed, Fire, Childbirth,
 }
 
 /// <summary>Jobs by production chain (plan §4A.1). None covers children and the retired.</summary>
@@ -22,6 +24,8 @@ public enum Occupation : byte
     None, Farmer, Ploughman, Shepherd, Reeve, Miller, Baker, Brewer, Butcher, Smith, Carpenter, Mason, Weaver, Spinner, Tanner, Cobbler,
     Merchant, Innkeeper, Priest, Guard, Labourer, Servant, Fisher, Woodcutter, Miner, CharcoalBurner,
     Lord, Steward, Mayor, GuildMaster,
+    // Phase 6 (overview 8.1, append only): physicians and barbers' trade of medicine, and the cloister
+    Physician, Monk,
 }
 
 public enum Skill : byte

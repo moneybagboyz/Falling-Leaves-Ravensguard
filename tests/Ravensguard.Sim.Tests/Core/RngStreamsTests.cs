@@ -51,11 +51,37 @@ public class RngStreamsTests
         foreach (var (name, v) in all)
         {
             Assert.True(fromSource.Contains((name, v)) || text.Contains(name + " = "), $"stream {name} is not declared in RngStreams.cs");
-            bool ok = v == 0xC0u || (v is >= 0x200u and <= 0x5FFu);                                     // P5-A2: Phase 5 owns 0x500..0x5FF
-            Assert.True(ok, $"stream {name} = 0x{v:X} is outside weather (0xC0), Phase 2 (0x200..0x2FF), Phase 3 (0x300..0x3FF), Phase 4 (0x400..0x4FF) and Phase 5 (0x500..0x5FF)");
+            bool ok = v == 0xC0u || (v is >= 0x200u and <= 0x6FFu);                                     // P6-A2: Phase 6 owns 0x600..0x6FF
+            Assert.True(ok, $"stream {name} = 0x{v:X} is outside weather (0xC0), Phase 2 (0x200..0x2FF), Phase 3 (0x300..0x3FF), Phase 4 (0x400..0x4FF), Phase 5 (0x500..0x5FF) and Phase 6 (0x600..0x6FF)");
         }
         foreach (var (name, v) in all.Where(x => x.Name is nameof(RngStreams.LinePick) or nameof(RngStreams.BarkPick) or nameof(RngStreams.RumourWitness) or nameof(RngStreams.RumourHear) or nameof(RngStreams.RumourDistort) or nameof(RngStreams.GatherPartition)))
             Assert.InRange(v, 0x310u, 0x315u);
+    }
+
+    /// <summary>P6-A2 (overview 5): every Phase 6 stream of the table is registered under its id, and nothing sits in the block outside the table (the free ranges stay free).</summary>
+    [Fact]
+    public void Phase6Block_HoldsExactlyTheTableOfOverviewSection5()
+    {
+        uint[] table = [0x600, 0x610, 0x611, 0x612, 0x613, 0x614, 0x620, 0x630, 0x631, 0x632, 0x633, 0x640, 0x641, 0x642, 0x643, 0x644, 0x650, 0x651, 0x652, 0x653, 0x654,
+            0x660, 0x661, 0x662, 0x663, 0x664, 0x670, 0x671, 0x672, 0x680, 0x681, 0x682, 0x690, 0x691, 0x692, 0x6A0, 0x6B0, 0x6B1, 0x6B2, 0x6B3, 0x6C0, 0x6C1, 0x6C2, 0x6C3,
+            0x6D0, 0x6D1, 0x6D2, 0x6D3, 0x6D4, 0x6E0, 0x6E1];
+        var inBlock = All().Where(x => x.Value is >= 0x600u and <= 0x6FFu).Select(x => x.Value).Order().ToArray();
+        Assert.Equal(table.Order().ToArray(), inBlock);
+        Assert.Equal(0x600u, RngStreams.Physician); Assert.Equal(0x6A0u, RngStreams.ChronicleVariantsReserved); Assert.Equal(0x660u, RngStreams.PurveyanceReserved); Assert.Equal(0x6E0u, RngStreams.HoldingsReserved);
+    }
+
+    /// <summary>The Phase 5 reservations Phase 6 will draw (0x500, 0x540, 0x561) stay unused until their steps land, and the Phase 6 reserved ones are never drawn (chronicle 5, rule 0x660, holdings 0x6E0).</summary>
+    [Fact]
+    public void ReservedStreams_AreNeverDrawnBySimCode()
+    {
+        var root = new DirectoryInfo(Path.GetDirectoryName(SourcePath())!).Parent!;
+        foreach (var f in Directory.EnumerateFiles(root.FullName, "*.cs", SearchOption.AllDirectories))
+        {
+            if (Path.GetFileName(f) == "RngStreams.cs") continue;
+            string src = File.ReadAllText(f);
+            foreach (var n in new[] { nameof(RngStreams.ChronicleVariantsReserved), nameof(RngStreams.PurveyanceReserved), nameof(RngStreams.HoldingsReserved) })
+                Assert.DoesNotContain("RngStreams." + n, src, StringComparison.Ordinal);
+        }
     }
 
     [Fact]

@@ -42,7 +42,7 @@ public sealed class WoundSystem : AbstractSystem
                 if (e.Kind == BookEventKind.Died)
                 {
                     var cause = CauseOf(b.Death);
-                    Demography.Kill(w, row, cause, new GameTime(e.Sec), ob, Describe(b));
+                    Demography.Kill(w, row, cause, new GameTime(e.Sec), ob, chain: Describe(b));
                     (gone ??= []).Add(key);
                 }
                 else if (e.Kind == BookEventKind.Malunion || e.Kind == BookEventKind.PermanentLoss)
@@ -75,15 +75,16 @@ public sealed class WoundSystem : AbstractSystem
         DeathKind.Infection => DeathCause.Infection, DeathKind.Ischaemia => DeathCause.Ischaemia, _ => DeathCause.Violence,
     };
 
-    private static string Describe(WoundBook b) => b.Death switch
+    /// <summary>The death's cause as a key (phase-4 S7, chronicle-full 4.1): the sentence is en.csv's, not the sim's.</summary>
+    private static Cause Describe(WoundBook b) => new(CauseKind.Wound, null, "", b.Death switch
     {
-        DeathKind.BloodLoss => "bled to death of his wounds",
-        DeathKind.Organ => "died of a wound to a vital organ",
-        DeathKind.Brain => "killed by a blow to the head",
-        DeathKind.Breath => "could not breathe after a spinal wound",
-        DeathKind.Infection => "died of sepsis from a wound",
-        _ => "died of his wounds",
-    };
+        DeathKind.BloodLoss => "ch_note_death_bloodloss",
+        DeathKind.Organ => "ch_note_death_organ",
+        DeathKind.Brain => "ch_note_death_brain",
+        DeathKind.Breath => "ch_note_death_breath",
+        DeathKind.Infection => "ch_note_death_infection",
+        _ => "ch_note_death_wounds",
+    });
 }
 
 /// <summary>
