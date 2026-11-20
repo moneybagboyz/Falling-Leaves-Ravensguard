@@ -10,7 +10,11 @@ namespace Ravensguard.Sim.Rumours;
 public sealed record SpeakerInfo(EntityId Person, int Index, string Name, string Job, bool Female, bool Child, int Age, int Mood, bool Shopkeeper, string Settlement, bool Hungry, IReadOnlySet<string> Needs);
 
 /// <summary>The answer to "what is the news": the card the hero now holds, or null when the person had nothing new.</summary>
-public sealed record NewsAnswer(JournalCard? Card, int Hop, bool Traveller);
+public sealed record NewsAnswer(JournalCard? Card, int Hop, bool Traveller)
+{
+    /// <summary>P6-C2 (legends fallback): when they had no fresh rumour, the legend of a place within ten kilometres they tell instead.</summary>
+    public Ravensguard.Sim.Dialogue.LegendTold? Legend { get; init; }
+}
 
 /// <summary>
 /// The talk systems' link to the running world, like the hero's desk (trade spec 4.7): hooks the hour barrier so rumours are seeded and spread, and runs the hero's asks, overhearings and dialogue
@@ -20,6 +24,8 @@ public sealed class TalkLink
 {
     public WorldRuntime Runtime { get; }
     public LineBook Book { get; }
+    /// <summary>P6-C2: the Codex the legends fallback draws on (set by the game once the world's codex is built); null: no legends told.</summary>
+    public Ravensguard.Sim.Codex.CodexBook? Codex { get; set; }
     private volatile JournalView? _view;
     public JournalView? View => _view;
 
@@ -131,13 +137,21 @@ public sealed class TalkLink
             s >= 0 && s < pop.Region.Settlements.Count ? pop.Region.Settlements[s].Name : "", needs.Contains("hungry"), needs);
     });
 
+    private Ravensguard.Sim.Dialogue.LegendTold? LegendFor(int row)
+    {
+        var st = Runtime.State; int s = st.Population.People.HomeSettlement[row];
+        if (Codex == null || s < 0 || s >= st.Population.Region.Settlements.Count) return null;
+        var c = st.Population.Region.Settlements[s];
+        return Ravensguard.Sim.Dialogue.Legends.Tell(Codex, c.CenterX, c.CenterY, row);
+    }
+
     /// <summary>The hero asks the person for the news: the best rumour they hold that the hero does not. The hero's Journal gains a card.</summary>
     public Task<NewsAnswer> AskNews(EntityId person) => Runtime.AtBarrier(() =>
     {
         var w = World(); var ts = State; int i = w.People.IndexOf(person); long hour = Runtime.HourDone;
         if (i < 0) return new NewsAnswer(null, 0, false);
         var told = TalkSystem.WhatTheyTell(ts, i, hour);
-        if (told == null) return new NewsAnswer(null, 0, false);
+        if (told == null) return new NewsAnswer(null, 0, false) { Legend = LegendFor(i) };
         var hh = TalkSystem.HeroHears(w, ts, told.Rumour, i, hour, HearHow.Told);
         Publish(hour);
         var card = _view!.Cards.FirstOrDefault(c => c.Rumour == told.Rumour);

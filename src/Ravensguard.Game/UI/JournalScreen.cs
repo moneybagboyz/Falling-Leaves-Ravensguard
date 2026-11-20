@@ -24,6 +24,10 @@ public partial class JournalScreen : Control
     /// <summary>The first hour's list (onboarding spec 6): shown at the top while it is not complete, with the optional "Pin to map?" button; the game never marks the map unasked.</summary>
     public Func<IReadOnlyList<(string Text, bool Done)>>? GettingStarted { get; init; }
     public Func<string?>? PinMentor { get; init; }
+    /// <summary>P6-C2: opens the Contracts tab (the notice board and what you have taken).</summary>
+    public Action? OpenContracts { get; init; }
+    /// <summary>P6-C2: the name of the one who told a rumour that has been shown false ("a lie, told by Alda"), empty when it is not shown false.</summary>
+    public Func<EntityId, string>? LieLabel { get; init; }
 
     public JournalScreen(ScreenRouter router, TalkLink link, Func<IReadOnlyList<string>> settlementNames, Action openWork) { _router = router; _link = link; _names = settlementNames; _openWork = openWork; _trace = false; }
 
@@ -38,6 +42,7 @@ public partial class JournalScreen : Control
         var work = new Button { Text = L.T("JOURNAL_TAB_WORK"), CustomMinimumSize = new Vector2(120, 28) };
         work.Pressed += () => { _router.Pop(); _openWork(); };
         tabs.AddChild(work);
+        if (OpenContracts != null) { var ct = new Button { Text = L.T("JOURNAL_TAB_CONTRACTS"), CustomMinimumSize = new Vector2(120, 28) }; ct.Pressed += () => { _router.Pop(); OpenContracts(); }; tabs.AddChild(ct); }
         if (GettingStarted?.Invoke() is { Count: > 0 } gs)
         {
             var box = new VBoxContainer(); box.AddThemeConstantOverride("separation", 1);
@@ -72,7 +77,7 @@ public partial class JournalScreen : Control
         var v = _link.View;
         if (!force && ReferenceEquals(v, _view)) return;
         _view = v; _list.Clear();
-        if (v != null) foreach (var c in v.Cards) _list.AddItem($"[{L.T("JOURNAL_CONF_" + c.Confidence.ToUpperInvariant())}] {Words(c)}");
+        if (v != null) foreach (var c in v.Cards) _list.AddItem($"[{L.T("JOURNAL_CONF_" + c.Confidence.ToUpperInvariant())}] {(LieLabel?.Invoke(c.Rumour) is { Length: > 0 } ? L.T("ct_lie_tag") + " " : "")}{Words(c)}");
         _sel = Math.Clamp(_sel, 0, Math.Max(0, (v?.Cards.Count ?? 1) - 1));
         if (v is { Cards.Count: > 0 }) _list.Select(_sel);
         ShowCard();
@@ -84,6 +89,7 @@ public partial class JournalScreen : Control
         if (_view is not { Cards.Count: > 0 }) { _detail.AddChild(UiKit.Body(L.T("JOURNAL_RUMOURS_EMPTY"))); return; }
         var c0 = _view.Cards[_sel];
         _detail.AddChild(UiKit.Body(Words(c0)));
+        if (LieLabel?.Invoke(c0.Rumour) is { Length: > 0 } liar) _detail.AddChild(UiKit.Hint(L.F("ct_lie", liar), true));
         string when = DayName(c0.Day);
         _detail.AddChild(UiKit.Hint(c0.How == HearHow.Overheard ? L.F("JOURNAL_OVERHEARD", c0.TellerName, when) : L.F("JOURNAL_TOLD_BY", c0.TellerName.Length > 0 ? c0.TellerName : L.T("R_WHO_TRAVELLER"), when), true));
         _detail.AddChild(UiKit.Hint(L.F("JOURNAL_PASSED", c0.PassedThrough) + "  ·  " + L.T("JOURNAL_CONF_" + c0.Confidence.ToUpperInvariant()) + (c0.PartlyTrue ? "  ·  " + L.T("JOURNAL_PARTLY") : ""), true));

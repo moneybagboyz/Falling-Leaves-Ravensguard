@@ -35,6 +35,7 @@ public partial class StreetView
         _talk = TalkLink.Attach(rt, LineBook.From(_source.Content));
         Ravensguard.Sim.Law.LawLink.Attach(rt);                                    // P6-B2: reports and bounties at a day's start, NPC crime at hour 4
         AttachFamily();                                                            // P6-B3: birthdays, weddings, births, lessons and the kidnappers (StreetView.Family.cs)
+        AttachWorkBoard();                                                         // P6-C2: the contracts hour, the legends the talk link tells (StreetView.Work.cs)
     }
 
     void BuildTalkHud(Control hud)
@@ -116,7 +117,7 @@ public partial class StreetView
     void OpenJournal(string? shot = null, bool trace = false)
     {
         if (_talk == null || _router == null) { OpenWork(); return; }
-        _router.Push(new JournalScreen(_router, _talk, SettlementNames, OpenWork) { ShotPath = shot, StartTrace = trace, GettingStarted = GettingStarted, PinMentor = Ob?.Complete == false && !_pinned ? PinMentor : null });
+        _router.Push(new JournalScreen(_router, _talk, SettlementNames, OpenWork) { ShotPath = shot, StartTrace = trace, GettingStarted = GettingStarted, PinMentor = Ob?.Complete == false && !_pinned ? PinMentor : null, OpenContracts = OpenWorkBoard, LieLabel = id => _lies.GetValueOrDefault(id.Value, "") });
     }
 
     // ------------------------------------------------------------------ barks and overhearing (a view over the live people; nothing here changes a record)
@@ -156,9 +157,11 @@ public partial class StreetView
         foreach (var p in PeopleNear(12).OrderBy(p => p.Id.Value))
         {
             double d = Math.Sqrt(Math.Pow(p.XMm - c.X, 2) + Math.Pow(p.YMm - c.Y, 2)) / 1000.0;
-            cands.Add(new BarkCandidate(p.Id.Value, idx++, d, p.Occupation.ToString().ToLowerInvariant(), p.Sex == Ravensguard.Sim.People.Sex.Female, 0, RelationTier.Stranger, false, false));
+            var (mood, hungry) = _moods.GetValueOrDefault(p.Id.Value);          // P6-C2: the mood of the day (needs, the house's grievances, the weather) and the hungry variant
+            cands.Add(new BarkCandidate(p.Id.Value, idx++, d, p.Occupation.ToString().ToLowerInvariant(), p.Sex == Ravensguard.Sim.People.Sex.Female, mood, RelationTier.Stranger, hungry, false));
         }
         if (cands.Count == 0) return;
+        RefreshMoods([.. cands.Select(c => new EntityId(c.Id))]);
         var ctx = TalkWorldContext();
         var barks = _barks.Update(_talk!.Book, TalkSeed, _world.Clock.Now.Seconds, _barkClock, cands, ctx, GameText.Instance);
         foreach (var b in barks)

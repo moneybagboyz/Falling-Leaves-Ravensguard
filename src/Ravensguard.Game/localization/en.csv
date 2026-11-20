@@ -4868,7 +4868,7 @@ ct_handed,You hand over {0} g.
 ct_pinned,Pinned to the map.
 ct_unpinned,Taken off the map.
 ct_entered,You entered the lists.
-ct_cannot_enter,You cannot enter: the fair has begun, the lists are full or you cannot pay the fee.
+ct_cannot_enter,"You cannot enter: the fair has begun, the lists are full or you cannot pay the fee."
 ct_bid_won,Your bid is the lowest: the work is yours.
 ct_bid_lost,Your bid was not the lowest.
 ct_slandered,Your lie takes hold.
@@ -4899,7 +4899,7 @@ ct_btn_pin,Pin to map
 ct_btn_unpin,Unpin
 ct_btn_hand,Hand over goods
 ct_btn_report,Report done
-ct_btn_enter,Enter the lists
+ct_btn_enter,Enter the lists ({0})
 ct_state_open,Open
 ct_state_taken,Taken
 ct_state_done,Done
@@ -4910,14 +4910,46 @@ ct_evidence,How it went
 ct_bond,Bond {0}
 ct_bounty_of,"Bounty on {0}"
 ct_lie,"A lie, told by {0}."
+ct_lie_tag,[a lie]
 ct_criminal,A word from someone who trusts you.
-ct_progress,"{0} of {1} g delivered"
+ct_progress,"{0} of {1} kg delivered"
 B_MOOD_LOW_A,Hard times. Hard times.
 B_MOOD_LOW_B,"Nothing goes right, and the rain does not help."
 B_MOOD_LOW_C,I am sick of all of it.
 B_MOOD_HIGH_A,A good day to be alive.
 B_MOOD_HIGH_B,Full belly and a dry roof. Who could ask for more?
 B_MOOD_HIGH_C,I could sing today.
+ct_head,"{0}  ·  you carry {1}  ·  day {2}"
+ct_nowhere,Out on the road
+ct_fair,"The fair's tournament: a purse of {0}. {1}"
+ct_fair_open,"Lists open until the fair on day {0}; {1} have entered."
+ct_fair_on,The lists are drawn and the bouts are fought.
+ct_fair_over,The tournament is over.
+ct_fair_won,"You won the tournament and took the purse."
+ct_entered_tag,You have entered
+ct_no_deadline,no deadline
+ct_bounty_how,Bring the culprit to a guard of the fief: the fief pays out of the coin it has set aside.
+ct_pinned_where,"Pinned: {0} lies {1} of you, about {2} m."
+ct_dir_north,north
+ct_dir_south,south
+ct_dir_east,east
+ct_dir_west,west
+ct_dir_north-east,north-east
+ct_dir_north-west,north-west
+ct_dir_south-east,south-east
+ct_dir_south-west,south-west
+ct_issuer_household,a household
+ct_issuer_business,a workshop
+ct_issuer_fief,the lord's steward
+ct_issuer_church,the church
+ct_issuer_guild,a guild
+ct_issuer_band,someone who does not give a name
+ct_issuer_caravan,a merchant
+ct_issuer_person,a neighbour
+ct_ev_work_taken,You took the work.
+ct_ev_work_done,The work was done and the pay came.
+ct_ev_work_failed,The work was not done: the bond was charged and the standing fell.
+ct_q_board,Notice board
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."

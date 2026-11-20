@@ -29,6 +29,8 @@ public sealed class CodexBook
     private readonly List<(CodexEntry Entry, int X, int Y)> _landmarkPlaces = [];
 
     public IReadOnlyList<CodexEntry> Entries => _entries;
+    /// <summary>P6-C2: the landmarks with the place each stands at (region metres), for the legends a villager tells (<c>Dialogue.Legends</c>).</summary>
+    public IReadOnlyList<(CodexEntry Entry, int X, int Y)> LandmarkPlaces => _landmarkPlaces;
     public CodexEntry? Get(string id) => _byId.GetValueOrDefault(id);
     public int UnlockedCount => _entries.Count(e => e.Unlocked);
     public IEnumerable<CodexEntry> In(CodexCategory c) => _entries.Where(e => e.Category == c);

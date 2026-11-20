@@ -132,6 +132,7 @@ public partial class StreetView
         TreatVerbs(v);                                      // P6-B1: treat the wounded, a physician's Treat me (StreetView.Treatment.cs)
         FaithVerbs(v);                                      // P6-B4: attend the service, give alms, a pilgrim's vow, beside a priest (StreetView.Faith.cs)
         JusticeVerbs(v);                                    // P6-C1: give yourself up beside a guard, hold court with cases on the docket (StreetView.Justice.cs)
+        WorkBoardVerbs(v);                                  // P6-C2: the notice board of contracts v2 (StreetView.Work.cs)
         ContractVerbs(v);                                   // P5-D: the contract board (StreetView.Contracts.cs)
         VehicleVerbs(v);                                    // P5-G: the designer, a vehicle's parts, work, repair, launch (StreetView.Vehicles.cs)
         BusinessVerbs(v);                                   // P5-F: the Ledger, open a business, hire, steward, a share, prospecting (StreetView.Business.cs)
