@@ -19,6 +19,8 @@ public sealed class BondageLink
     public required Action<ulong, Treatment> Treat { get; init; }
     public required Action<ulong, bool> Chain { get; init; }
     public required Action<ulong, BondWork> Work { get; init; }
+    /// <summary>P6-E3: hand a spare weapon to a slave of the party (true) or take it back (false).</summary>
+    public Action<ulong, bool> Arm { get; init; } = (_, _) => { };
     public required Action Escape { get; init; }
     public required Action Run { get; init; }
     public required Action SelfBuy { get; init; }
@@ -185,6 +187,7 @@ public partial class BondageScreen : Control
         row.AddChild(Act(L.T(chained ? "sl_btn_unchain" : "sl_btn_chain"), () => _link.Chain(id, !chained)));
         var nextWork = sel.Work switch { BondWork.Idle => BondWork.Fields, BondWork.Fields => BondWork.Mine, BondWork.Mine => BondWork.House, BondWork.House => BondWork.Follow, _ => BondWork.Idle };
         row.AddChild(Act(L.F("sl_btn_work", L.T("sl_work_" + nextWork.ToString().ToLowerInvariant())), () => _link.Work(id, nextWork), true, 190));
+        if (sel.Work == BondWork.Follow) row.AddChild(Act(L.T(sel.Armed ? "sl_btn_disarm" : "sl_btn_arm"), () => _link.Arm(id, !sel.Armed)));
     }
 
     void BuildBond(BondView v)

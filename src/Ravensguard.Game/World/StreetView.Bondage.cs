@@ -27,6 +27,7 @@ public partial class StreetView
         Treat = (p, t) => _heroLink?.Issue(BondDesk.Treat(new EntityId(p), t, HeroNow())),
         Chain = (p, on) => _heroLink?.Issue(BondDesk.Chain(new EntityId(p), on, HeroNow())),
         Work = (p, w) => _heroLink?.Issue(BondDesk.Work(new EntityId(p), w, HeroNow())),
+        Arm = (p, on) => _heroLink?.Issue(on ? BondDesk.Arm(new EntityId(p), HeroNow()) : BondDesk.Disarm(new EntityId(p), HeroNow())),
         Escape = () => _heroLink?.Issue(BondDesk.Escape(HeroNow())),
         Run = () => _heroLink?.Issue(BondDesk.Run(HeroNow())),
         SelfBuy = () => _heroLink?.Issue(BondDesk.SelfBuy(HeroNow())),

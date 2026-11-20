@@ -7,7 +7,8 @@ namespace Ravensguard.Sim.Trade;
 /// <summary>The order a squad member follows (spec 3.3): it overrides their schedule while it holds.</summary>
 public enum SquadOrder : byte { Follow, Hold, GuardPlace, Work, Rest, Travel, Scatter }
 
-public enum FollowerOrigin : byte { Hired, Recruited }
+/// <summary>Slave (appended, P6-E3): a slave of the hero taken into his party (overview 10a); no wage, never counts against the squad cap.</summary>
+public enum FollowerOrigin : byte { Hired, Recruited, Slave }
 
 public enum HireState : byte { Active, Ended, Quit, Dismissed }
 

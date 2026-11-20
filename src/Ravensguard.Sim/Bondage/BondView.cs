@@ -8,7 +8,7 @@ namespace Ravensguard.Sim.Bondage;
 
 /// <summary>One bonded person as a screen shows him: who, age, his best skill, how he came, how he is kept, what he holds and what he asks or cost, how long he has left.</summary>
 public sealed record BondRow(ulong Person, string Name, int Age, int Skill, BondKind Kind, BondOrigin Origin, Treatment Treatment, Restraint Chain, BondWork Work, int Morale, long PriceMites, long AskMites, long PeculiumMites,
-    int TermDaysLeft, int GrievancePct, bool OnRun, int Place, string PlaceName, ulong Entry);
+    int TermDaysLeft, int GrievancePct, bool OnRun, int Place, string PlaceName, ulong Entry, bool Armed = false);
 
 /// <summary>One pen: the market town, its law and its lots.</summary>
 public sealed record PenRow(int Settlement, string Name, SlaveLaw Law, IReadOnlyList<BondRow> Lots);
@@ -33,7 +33,7 @@ public sealed record BondView(IReadOnlyList<BondRow> Owned, IReadOnlyList<PenRow
             int age = id == hero ? 30 : bw.AgeOf(id, day);
             var held = new[] { b }; var g = Revolts.Share(bw, held, day);
             return new BondRow(b.Person, name, age, bw.BestSkill(id), b.Kind, b.Origin, b.Treatment, b.Chain, b.Work, b.Morale, b.PriceMites, b.Ask, bw.Peculium(id), b.TermEndDay > 0 ? Math.Max(0, b.TermEndDay - day) : -1,
-                g.Aggrieved > 0 ? 100 : 0, b.OnRun, b.Place, bw.W.PlaceName(b.Place), b.Entry);
+                g.Aggrieved > 0 ? 100 : 0, b.OnRun, b.Place, bw.W.PlaceName(b.Place), b.Entry, db != null && st.Economy != null && SlaveParty.WeaponOf(st.Economy, db, id, out _, out _, out _));
         }
         var owned = new List<BondRow>();
         if (hero != Slavery.Nobody)

@@ -37,7 +37,7 @@ public static class SuccessionDesk
 
     /// <summary>The squad as the order reads it.</summary>
     public static List<SquadMember> SquadOf(HeroParty party, PersonTable pt) =>
-        [.. party.Squad.Active.Select(m => new SquadMember(m.Person, pt.IndexOf(m.Person), m.Loyalty, m.JoinedDay, m.Origin == FollowerOrigin.Recruited, m.Name))];
+        [.. party.Squad.Active.Where(m => m.Origin != FollowerOrigin.Slave).Select(m => new SquadMember(m.Person, pt.IndexOf(m.Person), m.Loyalty, m.JoinedDay, m.Origin == FollowerOrigin.Recruited, m.Name))];
 
     /// <summary>Who would continue, in order (the character screen's line, the death screen's list).</summary>
     public static List<SuccessionCandidate> Candidates(Save.WorldState st, HeroParty party, int day)

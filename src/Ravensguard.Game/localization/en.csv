@@ -5618,6 +5618,15 @@ ch_land_distress_sale,"An empty house at {place} was sold for {price} by a house
 ch_note_distress_arrears,The holder was in arrears and could not keep the house.
 ch_soil_improved,"A field at {place} was {what}: fertility up {points}."
 ch_note_soil_poor,The field had fallen below half its fertility.
+sl_not_in_party,He is not in your party.
+sl_already_armed,He already carries a weapon.
+sl_no_spare_weapon,You carry no spare weapon to give him.
+sl_armed,You hand him a weapon.
+sl_disarmed,You take his weapon back.
+sl_not_armed,He carries no weapon.
+sl_party_ran,He bolts from the party and is gone.
+sl_btn_arm,Arm him
+sl_btn_disarm,Take weapon back
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."
