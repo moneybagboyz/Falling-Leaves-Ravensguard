@@ -120,7 +120,10 @@ public class WorldRuntimeResumeTests(ITestOutputHelper output)
     {
         var s = rt.State; var pt = s.Population.People; int day = (int)(sec / 86_400);
         var bw = Ravensguard.Sim.Bondage.BondWiring.World(s, content); var book = s.Bonds = new Ravensguard.Sim.Bondage.BondBook(); var hero = s.Party!.Hero;
-        var adults = Enumerable.Range(0, pt.Count).Where(i => pt.IsAlive(i) && pt.AgeYears(i, day) >= 16 && pt.Status[i] != PersonStatus.Hero && pt.HomeSettlement[i] == town).Take(3).Select(pt.IdOf).ToList();
+        int heroRow = Ravensguard.Sim.Succession.HeroPerson.RowOf(pt, s.Hero, hero);
+        // strangers of the town, from the far end of the table (the runs that play a succession pick their heir from the near end): not the hero's household nor his party
+        var adults = Enumerable.Range(0, pt.Count).Where(i => pt.IsAlive(i) && pt.AgeYears(i, day) >= 16 && pt.Status[i] != PersonStatus.Hero && pt.HomeSettlement[i] == town && pt.Household[i] != pt.Household[heroRow]
+            && !s.Party.Squad.Members.Any(m => m.Person == pt.IdOf(i)) && pt.Father[i] != heroRow && pt.Mother[i] != heroRow && pt.Spouse[i] != heroRow).Reverse().Take(3).Select(pt.IdOf).ToList();
         Assert.Equal(3, adults.Count);
         var mine = Ravensguard.Sim.Bondage.Slavery.Make(bw, book, adults[0], hero, Ravensguard.Sim.Bondage.BondKind.Chattel, Ravensguard.Sim.Bondage.BondOrigin.Sold, day, town, 9_000, 0, 0);
         mine.Treatment = Ravensguard.Sim.Bondage.Treatment.Fair;
