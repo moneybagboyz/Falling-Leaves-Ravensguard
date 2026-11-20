@@ -51,6 +51,20 @@ public static class HoldingsWiring
             if (home.Sim.Get<Ravensguard.Sim.Construction.ConstructionWorld>() is { } cw2 && home.Sim.Get<Ravensguard.Sim.Production.OwnershipWorld>() is { } ow)
                 prodsys.NearStores = b => ow.PremisesStores(b, cw2);
         }
+        // P6-D4 (holdings 3.5): soil improvement; a marl pit is a clay pit within 3 km of the place
+        var sw = new SoilWorld(state.Soil ??= new SoilBook(), land, home.Economy.Farming, state);
+        var marl = new Dictionary<int, bool>();
+        sw.HasMarlPit = s =>
+        {
+            if (marl.TryGetValue(s, out bool has)) return has;
+            var st = home.Population.Region.Settlements[s]; int N = Ravensguard.Sim.WorldGen.Region.Region.Size, tx = st.CenterX / Ravensguard.Sim.WorldGen.Region.Region.TileM, ty = st.CenterY / Ravensguard.Sim.WorldGen.Region.Region.TileM, rad = 3000 / Ravensguard.Sim.WorldGen.Region.Region.TileM;
+            has = false;
+            for (int y = Math.Max(0, ty - rad); y <= Math.Min(N - 1, ty + rad) && !has; y++)
+                for (int x = Math.Max(0, tx - rad); x <= Math.Min(N - 1, tx + rad); x++)
+                    if (home.Economy.Resources.Find(y * N + x, Ravensguard.Sim.Production.ResourceKind.Clay) >= 0) { has = true; break; }
+            return marl[s] = has;
+        };
+        home.Sim.Set(sw);
         var prev = home.Economy.Farming.LeasedOut;
         home.Economy.Farming.LeasedOut = p => prev?.Invoke(p) == true || hw.IsHeld(p);          // the lord's re-let leaves a cleared acre of the hero's household alone
         return hw;

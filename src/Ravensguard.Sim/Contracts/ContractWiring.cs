@@ -80,6 +80,7 @@ public static class ContractWiring
             Companies = () => companies ??= [.. CompaniesOf(st)],
             CompanyDone = c =>
             {
+                if (c.Kind == "soil_improvement") { Ravensguard.Sim.Holdings.SoilWorld.For(st)?.CompanyDone(c); return; }      // P6-D4: the crew's marling or manuring is done
                 if (c.Kind is "clear_bandit_cave" or "clear_lair")
                     st.Chronicle.Add(new ChronicleEntry(st.Ids.Allocate(IdKind.Event), new GameTime(c.TakenDay * 86_400L + 43_200), "bandit_cleared", [], [new Cause(CauseKind.Battle, new EntityId(c.PostedEntry))],
                         new Dictionary<string, string> { ["band"] = c.Target.Value.ToString(System.Globalization.CultureInfo.InvariantCulture), ["by"] = "company" }, TextKey: "ch_bandit_cleared", Params: [ChronParam.Place("place", c.Settlement >= 0 && c.Settlement < region.Settlements.Count ? region.Settlements[c.Settlement].Id : EntityId.None)]));
@@ -151,6 +152,22 @@ public static class ContractWiring
             int hh = pop.People.Household[g[0]]; if (hh < 0 || hh >= e.HouseholdCount) continue;
             yield return new CompanyInfo(EntityId.Make(IdKind.Faction, 0x4A00_0000UL + (ulong)s), pop.Region.Settlements[s].Name + " company", s, g.Count * 12, g.Count, e.HouseholdPurse[hh].Index, "mercenary");
         }
+        // P6-D4: the people without a trade in a place (four or more) work as a crew of farmhands on the soil jobs the holders post (SoilWorld hands them the job after a week); they take no other contract
+        var hands = new List<int>[pop.Region.Settlements.Count];
+        var pt = pop.People; var hht = pop.Households; int day = (int)st.Clock.Now.TotalDays;
+        for (int i = 0; i < pt.Count; i++)
+        {
+            if (pt.Status[i] != PersonStatus.Alive || pt.Occupation[i] is not (Occupation.None or Occupation.Labourer)) continue;       // the day labourers of the place: whoever has no trade, hired out today or not
+            int hh = pt.Household[i]; if (hh < 0 || hh >= hht.Count || hh >= e.HouseholdCount || hht.Class[hh] == SocialClass.Gentry) continue;
+            int age = pt.AgeYears(i, day); if (age < 16 || age >= 60) continue;
+            int s = pt.HomeSettlement[i]; if ((uint)s < (uint)hands.Length) (hands[s] ??= []).Add(i);
+        }
+        for (int s = 0; s < hands.Length; s++)
+        {
+            if (hands[s] is not { Count: >= 4 } h) continue;
+            int hh = pt.Household[h[0]];
+            yield return new CompanyInfo(Ravensguard.Sim.Holdings.SoilWorld.CrewId(s), pop.Region.Settlements[s].Name + " farmhands", s, 120, h.Count, e.HouseholdPurse[hh].Index, "farmhands");
+        }
     }
 
     private static IEnumerable<(EntityId, int)> Fighters(WorldState st, int s)
@@ -176,6 +193,7 @@ public static class ContractWiring
         Tournaments.OnHour(w, book, hour);
         NeedScanner.Hour(w, book, hour);
         ContractSystem.Verify(w, book, day);
+        Ravensguard.Sim.Holdings.SoilWorld.For(st)?.OnHour(w, book, day, hod);          // P6-D4 (holdings 3.5): soil jobs posted on a season's first day, taken by crews, improvements aged
         if (hod == 0 && st.Talk is { } ts)
         {
             Slander.Season(w, book, ts, day);

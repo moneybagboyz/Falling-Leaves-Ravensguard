@@ -23,9 +23,15 @@ public sealed class LandSystem : AbstractSystem
         var lw = ctx.World.Get<LandWorld>(); if (lw == null) return;
         var ob = ctx.Outbox;
         EntityId Chron(GameTime when, string type, IReadOnlyList<EntityId> subjects, IReadOnlyList<Cause> causes, params (string Key, string Value)[] data) => ob.Chronicle(when, type, subjects, causes, data);
+        EntityId Keyed(GameTime when, string type, string key, IReadOnlyList<ChronParam> ps, IReadOnlyList<EntityId> subjects, IReadOnlyList<Cause> causes, params (string Key, string Value)[] data) => ob.Chronicle(when, type, key, ps, subjects, causes, data);
         int day = (int)ctx.Day;
         if (ctx.HourOfDay == DailyHour) lw.Daily(day, Chron);
-        else if (ctx.IsSeasonStartDay) lw.Seasonal(day, Chron);
+        else if (ctx.IsSeasonStartDay)
+        {
+            lw.Seasonal(day, Chron);
+            LandMarketNpc.Seasonal(lw, day, Chron, Keyed);                    // P6-D4 (holdings 3.3): the households' plots, then the lord's new street if none is left (3.4)
+            Zoning.Seasonal(lw, day, Keyed);
+        }
     }
 }
 
@@ -41,6 +47,14 @@ public static class LandWiring
         ew.Growth.LandHolds = lw.HoldsLot;
         ew.Farming.LeasedOut = lw.IsLeased;
         lw.ParcelLet = (parcel, lessee, begin) => MoveParcelHolder(home.Population, lw, parcel, lessee, begin);
+        lw.Seed = home.Sim.Seed;
+        lw.StartBuild = (s, lot, hh, day) => ew.Growth.StartOn(s, lot, hh, GameTime.FromGameHours(day * 24L));                                  // P6-D4: a household that bought a plot builds on it
+        lw.TrustOfHero = holder =>
+        {
+            int hh = home.Population.Households.IndexOf(holder); if (hh < 0) return 0;
+            int head = home.Population.Households.Head[hh]; if (head < 0 || state.Party == null) return 0;
+            return state.Party.Known.TryGetValue(home.Population.People.IdOf(head), out var k) ? k.TrustPm : 0;
+        };
         return lw;
     }
 

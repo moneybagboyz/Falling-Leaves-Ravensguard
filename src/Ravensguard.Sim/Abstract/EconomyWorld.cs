@@ -77,6 +77,7 @@ public sealed class EconomyWorld
         var markets = new MarketSystem(econ, pop, seed);
         var prod = BusinessBuilder.Create(econ, pop, content, seed, markets, layer);
         if (merchantStockPct > 0) markets.SeedMerchantStock(pop.NowDay, 8, merchantStockPct);
+        if (econ.Money.WorldStartStockDays > 0) markets.SeedStockDays(pop.NowDay, 8, econ.Money.WorldStartStockDays);          // P6-D4 HW-14: a calibration hook, off by default
         var chron = new Chronicle();
         var farming = new FarmingSystem(pop.Region, pop, econ, settings ?? FarmingSettings.FromContent(db), weather, chron, world.Ids, seed);
         farming.ProvisionInitialStock();

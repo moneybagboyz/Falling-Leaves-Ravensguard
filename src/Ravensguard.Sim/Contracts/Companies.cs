@@ -14,6 +14,7 @@ public static class Companies
     public static bool Fits(string companyKind, string family) => companyKind switch
     {
         "builder" => family is "build" or "repair",
+        "farmhands" => false,                        // P6-D4: a crew of idle hands, handed the soil jobs by the soil works (never takes from the board by the scorer)
         _ => family is "guard" or "escort" or "hunt" or "clear" or "rescue" or "bounty",
     };
 
@@ -21,7 +22,7 @@ public static class Companies
     public static int HoursOf(WorkContract c, ContractKindDef k) => k.Family switch
     {
         "guard" or "escort" => (int)Math.Max(10, c.Param * 10),
-        "build" => 120, "repair" => 40,
+        "build" => 120, "repair" => c.Kind == "soil_improvement" && c.Param > 0 ? (int)c.Param : 40,         // P6-D4: a soil job carries its worker-hours
         "clear" => 16, "rescue" => 12, "hunt" => 10,
         _ => 8,
     };

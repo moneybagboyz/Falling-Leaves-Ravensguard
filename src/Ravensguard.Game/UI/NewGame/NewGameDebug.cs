@@ -411,6 +411,31 @@ public static class NewGameDebug
                     await Frames(tree, 40);
                     break;
                 }
+            case "soil":
+                {
+                    // dev (P6-D4): a real new game, a field of the hero's household with poor soil beside him and a marl job begun on its neighbour; the Q menu scrolled to the soil verbs
+                    var w = MakeWorld(Math.Min(years, 60), 7);
+                    var d = NewGameServices.NewDraft(); d.Name = "Shot"; d.LibraryWorldId = w.Info.Id;
+                    router.Push(new RegionBuildScreen(router, d, w));
+                    if (!await Until(tree, () => router.Top is Ravensguard.Game.World.StreetView, 9000)) throw new Exception("soil shot: the region build did not finish");
+                    var sv = (Ravensguard.Game.World.StreetView)router.Top!; var rt = sv.Runtime!;
+                    await Until(tree, () => rt.HourDone >= sv.DebugWorld.Clock.Now.TotalHours, 6000);
+                    await Frames(tree, 60);
+                    GD.Print("[soil] " + sv.DebugSoil());
+                    await Frames(tree, 150);
+                    sv.DebugQMenu();
+                    await Frames(tree, 20);
+                    if (router.Top is QMenu qm)
+                    {
+                        var head = qm.FindChildren("*", "Label", true, false).OfType<Label>().FirstOrDefault(l => l.Text == L.T("hw_q_soil"));
+                        if (head != null && qm.FindChildren("*", "ScrollContainer", true, false).FirstOrDefault() is ScrollContainer sc) { await Frames(tree, 2); sc.ScrollVertical = Math.Max(0, sc.ScrollVertical + (int)(head.GlobalPosition.Y - sc.GlobalPosition.Y)); }
+                    }
+                    await Frames(tree, 20);
+                    tree.Root.GetViewport().GetTexture().GetImage().SavePng(outPath.Replace(".png", "-menu.png"));
+                    router.Pop();
+                    await Frames(tree, 40);
+                    break;
+                }
             case "vehicles":
                 {
                     // dev (P5-G): a real new game, then --ng-scene designer (the designer with a wagon) | wagon (a designed wagon driven east) | diagonal (driven south-east, the baked diagonal)

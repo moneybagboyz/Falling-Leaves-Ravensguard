@@ -33,9 +33,36 @@ public static class RegionGrowth
             MarkBuilt(r, rec.Rect);
             plan.RadiusM = Math.Max(plan.RadiusM, (int)Region.Isqrt(Region.Dist2(rec.Rect.CenterX - r.Settlements[rec.Settlement].CenterX, rec.Rect.CenterY - r.Settlements[rec.Settlement].CenterY)));
         }
-        else plan.Lots[rec.Lot] = plan.Lots[rec.Lot] with { Vacant = false };
+        else
+        {
+            var old = plan.Lots[rec.Lot];
+            // P6-D4: a bare plot bought and built on (blueprint "-") takes the house's use, dwelling and blueprint; a vacant house is only taken up again
+            plan.Lots[rec.Lot] = old.BlueprintId == Ravensguard.Sim.Land.LandWorld.BarePlot && rec.Dwelling != DwellingType.None
+                ? old with { Use = rec.Use, Dwelling = rec.Dwelling, BlueprintId = rec.Blueprint, Wealth = rec.Wealth, Vacant = false }
+                : old with { Vacant = false };
+        }
         r.NoteGrown();
     }
+
+    // ---------------------------------------------------------------- streets (P6-D4)
+
+    /// <summary>
+    /// A street laid by the lord (holdings 3.4): the plan gains the segment, its corridor is marked built (as a lot's tiles are), and <see cref="FindPlot"/> finds the plots along it whatever the plan's radius is.
+    /// The plots themselves are not records: growth and the lord's listings find them with <see cref="FindPlot"/> as on every other street.
+    /// </summary>
+    public static void ApplyStreet(RegionData r, StreetRecord rec)
+    {
+        using var _ = r.WriteGrowth();
+        r.PinGrowthBaseline();
+        var st = r.Settlements[rec.Settlement]; var plan = st.Plan;
+        plan.Streets.Add(new Street(rec.A, rec.B, rec.WidthM));
+        int pad = rec.WidthM / 2 + StreetPadM;
+        MarkBuilt(r, new RectM(Math.Min(rec.A.X, rec.B.X) - pad, Math.Min(rec.A.Y, rec.B.Y) - pad, Math.Abs(rec.A.X - rec.B.X) + 2 * pad, Math.Abs(rec.A.Y - rec.B.Y) + 2 * pad));
+        r.NoteGrown();
+    }
+
+    /// <summary>How far past a street's edge the tiles marked built reach, metres.</summary>
+    public const int StreetPadM = 30;
 
     /// <summary>The region change of <see cref="ApplyLot"/> plus the population's per-lot arrays (a new slot per array, empty; beds from the record). Returns the lot index.</summary>
     public static int AddLot(RegionData r, Population pop, LotRecord rec)
@@ -85,6 +112,7 @@ public static class RegionGrowth
         rect = default; facing = 0;
         long cx = plan.Square.W > 0 ? plan.Square.CenterX : st.CenterX, cy = plan.Square.W > 0 ? plan.Square.CenterY : st.CenterY;
         long maxR = plan.RadiusM + margin, maxR2 = maxR * maxR;
+        int baseStreets = r.Baseline?.Streets is { } bs && s < bs.Length ? bs[s] : plan.Streets.Count;          // P6-D4: a street the lord laid is built along its whole length, whatever the plan's radius was
         var cands = new List<(long D2, int Street, int Pos, RectM R, byte F)>();
         for (int si = 0; si < plan.Streets.Count; si++)
         {
@@ -101,7 +129,7 @@ public static class RegionGrowth
                     if (horiz) { q = new RectM(u, v0, w, d); f = (byte)(side > 0 ? 0 : 2); }
                     else { q = new RectM(v0, u, d, w); f = (byte)(side > 0 ? 3 : 1); }
                     long dx = q.CenterX - cx, dy = q.CenterY - cy, d2 = dx * dx + dy * dy;
-                    if (d2 > maxR2) continue;
+                    if (d2 > maxR2 && si < baseStreets) continue;
                     cands.Add((d2, si, u * 2 + (side > 0 ? 1 : 0), q, f));
                 }
         }
@@ -114,16 +142,47 @@ public static class RegionGrowth
         return false;
     }
 
+    /// <summary>
+    /// P6-D4: the plots <see cref="FindPlot"/> would give along one street, in its order (nearest the centre first) and packed the way listings and growth take them (each plot reserves its place, so the next
+    /// must clear it). <paramref name="street"/> need not be in the plan yet: the planner counts a street's plots before it lays it. The plan's radius is not applied (the street widens it when laid).
+    /// </summary>
+    public static List<(RectM Rect, byte Facing)> PlotsOnStreet(RegionData r, int s, Street street, int w, int d, int max, IReadOnlyList<RectM>? held = null)
+    {
+        var st = r.Settlements[s]; var plan = st.Plan; var res = new List<(RectM, byte)>();
+        long cx = plan.Square.W > 0 ? plan.Square.CenterX : st.CenterX, cy = plan.Square.W > 0 ? plan.Square.CenterY : st.CenterY;
+        bool horiz = Math.Abs(street.B.X - street.A.X) >= Math.Abs(street.B.Y - street.A.Y);
+        int lo = horiz ? Math.Min(street.A.X, street.B.X) : Math.Min(street.A.Y, street.B.Y), hi = horiz ? Math.Max(street.A.X, street.B.X) : Math.Max(street.A.Y, street.B.Y);
+        int line = horiz ? (street.A.Y + street.B.Y) / 2 : (street.A.X + street.B.X) / 2, half = street.WidthM / 2 + 1, step = Math.Max(4, w / 2);
+        var cands = new List<(long D2, int Pos, RectM R, byte F)>();
+        for (int side = -1; side <= 1; side += 2)
+            for (int u = lo - w; u <= hi; u += step)
+            {
+                RectM q; byte f; int v0 = side > 0 ? line + half : line - half - d;
+                if (horiz) { q = new RectM(u, v0, w, d); f = (byte)(side > 0 ? 0 : 2); } else { q = new RectM(v0, u, d, w); f = (byte)(side > 0 ? 3 : 1); }
+                long dx = q.CenterX - cx, dy = q.CenterY - cy;
+                cands.Add((dx * dx + dy * dy, u * 2 + (side > 0 ? 1 : 0), q, f));
+            }
+        cands.Sort((a, b) => a.D2 != b.D2 ? a.D2.CompareTo(b.D2) : a.Pos.CompareTo(b.Pos));
+        var reserved = new List<RectM>(held ?? []);
+        foreach (var (_, _, q, f) in cands)
+        {
+            if (res.Count >= max) break;
+            if (!PlotFree(r, s, q, reserved, street)) continue;
+            reserved.Add(q); res.Add((q, f));
+        }
+        return res;
+    }
+
     private static bool Overlaps(RectM a, RectM b, int gap) => a.X < b.Right + gap && b.X < a.Right + gap && a.Y < b.Bottom + gap && b.Y < a.Bottom + gap;
 
-    private static bool PlotFree(RegionData r, int s, RectM q, IReadOnlyList<RectM> reserved)
+    public static bool PlotFree(RegionData r, int s, RectM q, IReadOnlyList<RectM> reserved, Street? extra = null)
     {
         if (q.X < 96 || q.Y < 96 || q.Right >= RegionData.Meters - 96 || q.Bottom >= RegionData.Meters - 96) return false;
         var plan = r.Settlements[s].Plan;
         if (plan.Square.W > 0 && Overlaps(q, plan.Square, 1)) return false;
         foreach (var l in plan.Lots) if (Overlaps(q, l.Rect, 1)) return false;
         foreach (var rv in reserved) if (Overlaps(q, rv, 1)) return false;
-        foreach (var st in plan.Streets)
+        foreach (var st in extra == null ? plan.Streets : plan.Streets.Append(extra))
         {
             var sr = new RectM(Math.Min(st.A.X, st.B.X) - st.WidthM / 2, Math.Min(st.A.Y, st.B.Y) - st.WidthM / 2, Math.Abs(st.A.X - st.B.X) + st.WidthM, Math.Abs(st.A.Y - st.B.Y) + st.WidthM);
             if (Overlaps(q, sr, 0)) return false;
@@ -254,6 +313,13 @@ public static class RegionGrowth
     {
         // the two logs interleave only through the tiles (lots never share tiles with fields), so replaying lots first and parcels second gives the same region
         // idempotent: a region that already carries a record (a world resumed over the terrain it was captured from) is left as it is
+        var seenStreets = new int[r.Settlements.Count];
+        foreach (var sr in st.Streets)
+        {
+            int baseStreets = r.Baseline?.Streets is { } bs && sr.Settlement < bs.Length ? bs[sr.Settlement] : r.Settlements[sr.Settlement].Plan.Streets.Count;
+            if (r.Settlements[sr.Settlement].Plan.Streets.Count > baseStreets + seenStreets[sr.Settlement]++) continue;
+            ApplyStreet(r, sr);
+        }
         foreach (var l in st.Lots) { if (l.NewLot && r.Settlements[l.Settlement].Plan.Lots.Count > l.Lot) continue; ApplyLot(r, l); }
         for (int k = 0; k < st.Parcels.Count; k++)
         {

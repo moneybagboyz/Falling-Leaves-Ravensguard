@@ -10,7 +10,7 @@ public sealed class ContractContent
 {
     public static readonly string[] Families = ["escort", "guard", "hunt", "deliver", "collect", "bounty", "rescue", "recover", "clear", "message", "build", "repair", "labour", "political", "criminal", "faith", "event"];
     /// <summary>The needs the scanner posts today; "hook" kinds wait for the part that owns their need (rule, slavery, heists, faith).</summary>
-    public static readonly string[] BuiltNeeds = ["stock_short", "caravan_leaving", "crime_reported", "band_seen", "captive_held", "fair_charter", "planner", "hands_short"];
+    public static readonly string[] BuiltNeeds = ["stock_short", "caravan_leaving", "crime_reported", "band_seen", "captive_held", "fair_charter", "planner", "hands_short", "soil"];
     public static readonly string[] Needs = [.. BuiltNeeds, "debt_late", "runaway", "relic_stolen", "person_missing", "monster_rumour", "buyer_wants", "lord_war", "hook"];
     public static readonly string[] Issuers = ["household", "business", "fief", "church", "guild", "band", "caravan", "person"];
     public static readonly string[] Verifiers = ["store_gain", "culprit_taken", "band_gone", "captive_free", "site_done", "job_done", "body_found", "chronicle_event", "bout_record", "taker_reports", "none_yet"];

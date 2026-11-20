@@ -421,19 +421,21 @@ public class LandTests(ITestOutputHelper output)
     // ------------------------------------------------------------------ LD-14
 
     [Fact]
-    public void LD14_LandDrawsNothing_Stream0x500IsNeverDrawn_AndTheSameScriptGivesTheSameBook()
+    public void LD14_LandDrawsNothing_Stream0x500IsDrawnOnlyByTheNpcMarketsTies_AndTheSameScriptGivesTheSameBook()
     {
-        Assert.Equal(0x500u, RngStreams.LandDisputesReserved);
+        Assert.Equal(0x500u, RngStreams.LandMarketTies);
         var root = FindRepo();
         foreach (var f in Directory.GetFiles(Path.Combine(root, "src", "Ravensguard.Sim"), "*.cs", SearchOption.AllDirectories))
         {
             if (f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}") || f.EndsWith("RngStreams.cs", StringComparison.Ordinal)) continue;
             var src = File.ReadAllText(f);
-            Assert.DoesNotContain("LandDisputesReserved", src, StringComparison.Ordinal);
+            // P6-D4: stream 0x500 is the NPC land market's exact ties (holdings 3.3) and nobody else's
+            if (!f.EndsWith("LandMarketNpc.cs", StringComparison.Ordinal)) Assert.DoesNotContain("LandMarketTies", src, StringComparison.Ordinal);
             Assert.DoesNotContain("0x500,", src, StringComparison.Ordinal);
         }
         foreach (var f in Directory.GetFiles(Path.Combine(root, "src", "Ravensguard.Sim", "Land"), "*.cs"))
         {
+            if (f.EndsWith("LandMarketNpc.cs", StringComparison.Ordinal)) continue;       // its ties are the one draw (stream 0x500)
             var src = File.ReadAllText(f);
             Assert.DoesNotContain("DetRng", src, StringComparison.Ordinal); Assert.DoesNotContain("RngStream", src, StringComparison.Ordinal); Assert.DoesNotContain("Random", src, StringComparison.Ordinal);
         }

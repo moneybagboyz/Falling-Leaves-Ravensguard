@@ -3038,6 +3038,11 @@ ld_charter_refused_standing,The ruler refused: you are not known well enough in 
 ld_charter_refused_other_realm,The ruler refused: you are of another realm.
 ld_charter_refused_fee,The ruler refused: the fee was too small.
 ld_charter_refused_none,The ruler refused.
+ld_offer_not_for_sale,That deed is not for sale to you.
+ld_offer_use_listing,The lord sells his plots from his own list.
+ld_offer_lived_in,Somebody lives in that house: its holder will not sell it over his head.
+ld_offer_low,The holder wants at least {0} for it.
+ld_offer_taken,"You bought the house in {0} from its holder for {1}."
 iq_tier_crude,crude
 iq_tier_poor,poor
 iq_tier_fine,fine
@@ -4613,6 +4618,28 @@ hw_q_coppice,Cut the coppice
 hw_q_buy_deliver,Buy and deliver what is missing
 hw_q_post_haul,Post haul jobs
 hw_panel_clearing,"Clearing: {0}% ({1} of {2} trees felled, {3} stumps out, {4} hands)"
+hw_soil_no_field,There is no field there.
+hw_soil_not_yours,That field is not your household's.
+hw_soil_busy,A job or an improvement already stands on that field.
+hw_soil_no_marl,"No marl pit lies within three kilometres of the place."
+hw_soil_no_dung,The herds of the place have no dung to spare this year.
+hw_soil_started,"You begin the job (no. {0}): {1} worker-hours."
+hw_soil_no_job,There is no such soil job for you to work.
+hw_soil_not_taken,You have not taken that contract.
+hw_soil_worked,"You work the field: {0} worker-hours still to do."
+hw_soil_done,"The last load is spread: the field gains {0} points of fertility."
+hw_q_soil,Soil
+hw_q_marl,Marl this field
+hw_q_manure,Manure this field
+hw_q_soil_work,Work the soil job
+hw_q_offer,Offer for this house
+hw_q_soil_stop,Stop the soil work
+hw_q_soil_status,"Soil job: the field's fertility {0}, {1}% done"
+hw_q_no_field,Not at one of your fields
+hw_q_offer_at,Offer {0} for this house
+hw_q_no_house,No house with a holder here
+hw_soil_row,"Field {0}: fertility {1}, {2}% done"
+hw_soil_field_row,"Field {0}: fertility {1}"
 ch_note_homestead_acre,An acre cleared for a homestead.
 ch_justice_arrested,{doer} was taken by the guards at {place}.
 ch_justice_pronounced,{doer} was sentenced at {place}: {punishment}.
@@ -5580,6 +5607,17 @@ st_deed_slave_held_year,A year of slaves kept against the faith
 st_deed_slave_bought_debt,Buying a slave where the law frowns on it
 st_deed_slave_sold_own,Selling one of the town's own people
 jl_crime_runaway,Running from an owner
+ch_note_land_bought_offer,The holder took an offer for the house.
+ct_need_soil,a field has fallen below half its fertility and wants marl or dung
+ch_note_ct_need_soil,A field with fertility below 50.
+ct_soil_marl,marled
+ct_soil_manure,manured
+ch_street_laid,"{place} gained a new street, with room for {plots} houses."
+ch_note_street_no_plots,No plot was left for the couples waiting for a home.
+ch_land_distress_sale,"An empty house at {place} was sold for {price} by a household that could not pay its rent."
+ch_note_distress_arrears,The holder was in arrears and could not keep the house.
+ch_soil_improved,"A field at {place} was {what}: fertility up {points}."
+ch_note_soil_poor,The field had fallen below half its fertility.
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."

@@ -130,4 +130,9 @@ public sealed record MoneySettingsDef : ContentDef
     public int LotExpiryDays { get; init; } = 3;
     public int MerchantCashShareBp { get; init; } = 4000;
     public int MerchantStockCapPermilleOfCover { get; init; } = 800;
+    /// <summary>
+    /// P6-D4 (holdings-and-works-v2 3.8, HW-14, conditional on the Phase 5 fun check): at world start the first merchant of every book holds at least this many days of the structural demand of each good that has one
+    /// (5 when the first weeks of a new game are found starved). 0 (the default) leaves the world-start stock as it was.
+    /// </summary>
+    public int WorldStartStockDays { get; init; } = 0;
 }

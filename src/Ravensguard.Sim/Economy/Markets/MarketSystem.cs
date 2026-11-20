@@ -290,6 +290,28 @@ public sealed class MarketSystem
         return total;
     }
 
+    /// <summary>
+    /// P6-D4 (HW-14): tops the first merchant of every book up to <paramref name="days"/> days of the structural demand of each good that has one (as a merchant lot at floor 1.0, reason Seed), where it holds less.
+    /// Returns the units added. Called at world start only when the money settings ask for it (<see cref="MoneySettingsDef.WorldStartStockDays"/>).
+    /// </summary>
+    public long SeedStockDays(int day, int tMeanC, int days)
+    {
+        if (days <= 0) return 0;
+        var demand = ComputeStructuralDemand(day, tMeanC); long total = 0;
+        foreach (var b in AllBooks())
+        {
+            if (b.Merchants.Count == 0) continue;
+            var d = demand[b.SettlementIndex]; var m = b.Merchants[0];
+            for (ushort g = 0; g < d.Length; g++)
+            {
+                long units = d[g] * days - b.Goods[g].StockUnits;
+                if (d[g] <= 0 || units <= 0 || !m.Store.Create(g, units, CreateReason.Seed)) continue;
+                b.List(m, g, units, 1000, day, merchantLot: true); total += units;
+            }
+        }
+        return total;
+    }
+
     /// <summary>The callback of a household's durable order: the new pair, set or tool replaces the worn one (consumed in service) and the due count falls.</summary>
     public Action<TradeResult> DurableHook(int hh, int k)
     {

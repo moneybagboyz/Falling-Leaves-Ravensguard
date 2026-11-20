@@ -67,6 +67,7 @@ public static class Phase5Trail
         if (rt.AtBarrier(() => rt.State.Bonds is { IsEmpty: false } bd ? bd.Hash() : 0UL).GetAwaiter().GetResult() is var bonds and not 0) sha.AppendData(BitConverter.GetBytes(bonds));          // P6-D1: the BondHash joins the trail only once someone is bonded, a band has raided or a captive was taken to a pen
         if (rt.AtBarrier(() => rt.State.Family?.Hash() ?? 0UL).GetAwaiter().GetResult() is var family and not 0) sha.AppendData(BitConverter.GetBytes(family));          // P6-B3: the FamilyHash joins the trail only once a family exists
         if (rt.AtBarrier(() => rt.State.Disease is { IsBlank: false } d ? d.Hash() : 0UL).GetAwaiter().GetResult() is var disease and not 0) sha.AppendData(BitConverter.GetBytes(disease));          // P6-C4: the DiseaseHash joins the trail only once anything has happened
+        if (rt.AtBarrier(() => rt.State.Soil is { IsEmpty: false } sb ? sb.ComputeHash() : "").GetAwaiter().GetResult() is { Length: > 0 } soil) sha.AppendData(Encoding.UTF8.GetBytes(soil));          // P6-D4: the soil works' hash joins the trail only once a job exists (the streets are in the growth hash)
         return Convert.ToHexString(sha.GetHashAndReset())[..16];
     }
 }

@@ -61,7 +61,13 @@ public static partial class WorldSave
         var region = RegionGenerator.Generate(continent, history, meta.EmbarkCellX, meta.EmbarkCellY, rs);
         Verify("region", meta.RegionHash, LayerHashes.Of(region));
         if (meta.LandmarkHash.Length > 0) Verify("landmark", meta.LandmarkHash, LayerHashes.OfLandmarks(LandmarkPlacer.Place(region, history, content)));
-        if (file.Sections.ContainsKey(GrowthSection)) Ravensguard.Sim.Growth.RegionGrowth.Replay(region, Decode<GrowthSave>(file, GrowthSection, compressed: true).Restore());
+        var landWorks = file.Sections.ContainsKey(LandWorksSave.SectionName) ? Decode<LandWorksSave>(file, LandWorksSave.SectionName, compressed: true) : null;
+        if (file.Sections.ContainsKey(GrowthSection) || landWorks is { Streets.Length: > 0 })
+        {
+            var g = file.Sections.ContainsKey(GrowthSection) ? Decode<GrowthSave>(file, GrowthSection, compressed: true).Restore() : new Ravensguard.Sim.Growth.GrowthState();
+            if (landWorks != null) g.Streets.AddRange(landWorks.RestoreStreets());
+            Ravensguard.Sim.Growth.RegionGrowth.Replay(region, g);
+        }
         var people = Decode<PeopleData>(file, PeopleSection, true);
         if (people.Diff != null) BaselineGuard.Verify("The home region", meta.BaselineHash, meta.GeneratorVersion, Populator.Populate(region, history, content));
     }

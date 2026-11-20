@@ -15,5 +15,11 @@
     "claim_licence_mites_per_acre": 1000, "claim_banner_item": "claim_banner", "claim_level_slope_permille": 100, "claim_dry_drainage": 40,
     "store_height_cm": 200, "store_fill_pm": 500, "store_ground_kg_per_m2": 2000, "store_upper_kg_per_m2": 400,
     "charter_site_tiles": 40, "charter_fee_mites": 5000, "charter_dues_mites_per_year": 2000, "charter_service_men": 2, "charter_service_days": 20,
-    "charter_min_households": 5, "charter_settle_years": 2, "charter_min_standing": 0, "charter_war_m": 10000, "charter_village_people": 80 },
+    "charter_min_households": 5, "charter_settle_years": 2, "charter_min_standing": 0, "charter_war_m": 10000, "charter_village_people": 80,
+    // P6-D4 (holdings-and-works-v2 3.3 to 3.5): the NPC land market (a buyer needs twice the price; a seller in arrears takes 90%; an offer for a house is taken at 1,100 less a tenth of the holder's trust, per mille),
+    // new streets (a place with no free plot and more than 3 women waiting, 3 to 5 plots a side, not twice in two game years of 60 days), soil improvement (marl +15 for 20 years, dung +8 for 2 seasons)
+    "npc_buyer_coin_multiple": 2, "distress_sale_pm": 900, "npc_buys_per_season": 2, "offer_base_pm": 1100,
+    "street_waiting_over": 3, "street_cooldown_days": 120, "street_lots_per_side_min": 3, "street_lots_per_side_max": 5, "street_width_m": 5, "common_ring_m": 40,
+    "marl_fertility": 15, "marl_hours": 250, "marl_kg": 40000, "marl_last_years": 20, "manure_fertility": 8, "manure_seasons": 2, "manure_kg": 1000, "manure_hours": 20,
+    "soil_post_below_fertility": 50, "soil_pay_pm": 3200, "soil_posts_per_season": 3, "soil_crew_wait_days": 7, "dung_kg_per_sheep_year": 150, "dung_kg_per_beast_year": 2000 },
 ]

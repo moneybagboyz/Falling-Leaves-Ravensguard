@@ -110,6 +110,7 @@ public class WorldRuntimeResumeTests(ITestOutputHelper output)
         PlayMedicine(rt, ctx, desk, sec);
         PlayContracts(rt, ctx, desk, sec);
         PlayBondage(rt, content, town, sec);
+        PlayLandWorks(rt);
     }
 
     /// <summary>
@@ -134,6 +135,25 @@ public class WorldRuntimeResumeTests(ITestOutputHelper output)
         var crimes = s.Law ?? new Ravensguard.Sim.Law.CrimeBook();
         Ravensguard.Sim.Bondage.BondDaily.Flee(bw, book, crimes, run, day, sec); s.Law = crimes;
         Assert.True(s.Economy!.Ledger.Audit().IsConserved);
+    }
+
+    /// <summary>
+    /// P6-D4: the "landworks" section: a street the lord laid in the first place with room for one (replayed over the regenerated region on load, with the growth log) and a manure job done on a field
+    /// (the book's work, the improvement standing, the field's fertility in the farming section). Save, load and continue must give the same bytes as the uninterrupted run.
+    /// </summary>
+    private static void PlayLandWorks(WorldRuntime rt)
+    {
+        var s = rt.State; var lw = s.HomeRecords!.Sim.Get<Ravensguard.Sim.Land.LandWorld>()!; var sw = Ravensguard.Sim.Holdings.SoilWorld.For(s)!; var reg = s.Population.Region;
+        int day = (int)(rt.HourDone / 24);
+        for (int i = 0; i < reg.Settlements.Count; i++)
+        {
+            if (reg.Settlements[i].Class == SettlementClass.Farmstead || Ravensguard.Sim.Land.Zoning.Plan(reg, i, lw.Rules, lw.GrowthTuning, day) is not { } rec) continue;
+            Ravensguard.Sim.Land.Zoning.Lay(lw, rec, null); break;
+        }
+        Assert.NotEmpty(s.HomeRecords.Economy.Growth.State.Streets);
+        int pc = reg.Parcels.FindIndex(p => p.FieldCount > 0);
+        var w = new Ravensguard.Sim.Holdings.SoilWork { Serial = sw.Book.NextSerial++, Field = reg.Parcels[pc].FieldStart, Parcel = pc, Settlement = reg.Parcels[pc].Settlement, Kind = Ravensguard.Sim.Holdings.SoilKind.Manure, State = Ravensguard.Sim.Holdings.SoilState.Working, NeedMilli = 20_000, DoneMilli = 20_000, PostedDay = day };
+        sw.Book.Works.Add(w); sw.Finish(w, day);
     }
 
     /// <summary>
@@ -422,6 +442,9 @@ public class WorldRuntimeResumeTests(ITestOutputHelper output)
             Assert.Equal(straight.State.Bonds!.Hash(), resumed.State.Bonds!.Hash());
             Assert.Contains(ContractSave.SectionName, want.Keys);                                  // P6-C2: the contracts section, with the escrow chest in the economy section
             Assert.Equal(straight.State.Contracts!.Hash(), resumed.State.Contracts!.Hash());
+            Assert.Contains(Ravensguard.Sim.Save.LandWorksSave.SectionName, want.Keys);                       // P6-D4: a street laid and a soil job done, in the optional landworks section
+            Assert.Equal(straight.State.Soil!.ComputeHash(), resumed.State.Soil!.ComputeHash());
+            Assert.Equal(straight.State.HomeRecords!.Economy.Growth.State.Streets, resumed.State.HomeRecords!.Economy.Growth.State.Streets);
             foreach (var s in new[] { straight.State, resumed.State })
             {
                 Assert.Equal(PersonStatus.Hero, s.Population.People.Status[s.Hero!.PersonIndex]);

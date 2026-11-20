@@ -60,7 +60,7 @@ public static partial class HoldingsDesk
             "dismiss" when p.Length >= 2 => hw.Dismiss(hero, I(1)),
             "sow" when p.Length >= 2 => hw.Sow(hero, I(1), day, ctx.Pack, Chron),
             "collect" when p.Length >= 2 => hw.Collect(hero, I(1), ctx.Pack),
-            _ => Works(ctx, c, p, hw, day),
+            _ => Works(ctx, c, p, hw, day) ?? Soil(ctx, c, p, day),
         };
         if (res == null) return R(c, HeroResultCode.Invalid, HeroText.Of("HERO_MAKES_NO_SENSE"));
         var code = res.Ok ? HeroResultCode.Ok : res.CannotAfford ? HeroResultCode.CannotAfford : HeroResultCode.Refused;

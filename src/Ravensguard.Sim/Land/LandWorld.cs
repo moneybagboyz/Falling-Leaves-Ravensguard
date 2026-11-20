@@ -28,7 +28,7 @@ public sealed record Listing(int Settlement, int Lot, RectM Rect, byte Facing, i
 /// founding charters (spec 4a). Every rule is an integer function of the records; coin moves only by ledger transfers between real purses (never minted), goods only by
 /// <see cref="Store.Move"/>; nothing is drawn at random (stream 0x500 is reserved and never drawn, LD-14). Called at the barrier by the hero's desk and by <see cref="LandSystem"/>.
 /// </summary>
-public sealed class LandWorld
+public sealed partial class LandWorld
 {
     public LandBook Book { get; }
     public Population Pop { get; }

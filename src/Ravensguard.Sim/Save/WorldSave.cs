@@ -140,6 +140,8 @@ public sealed class WorldState
     public Ravensguard.Sim.Burning.FireBook? Fire { get; set; }
     /// <summary>P6-B6: the clearings of the hero's claims, the coppice cut, the mares in foal (holdings-and-works-v2 3.1, 3.7, 3.8), in the optional "holdings" section once any exists (no format bump).</summary>
     public Ravensguard.Sim.Holdings.HoldingsBook? Holdings { get; set; }
+    /// <summary>P6-D4: the soil works of the fields and the improvements standing on them (holdings-and-works-v2 3.5); with the streets the lord laid (they live in <see cref="Growth"/>), the optional "landworks" section.</summary>
+    public Ravensguard.Sim.Holdings.SoilBook? Soil { get; set; }
     /// <summary>P6-B2: the crimes witnessed, their reports and bounty links, the conviction counts (crime-and-justice 3), in the optional "law" section once any exists (no format bump).</summary>
     public Ravensguard.Sim.Law.CrimeBook? Law { get; set; }
     /// <summary>P6-C1: who is held in the gaols, the sentences, the lords' own laws, the hero's docket, the marks the court left on bodies (crime-and-justice 4.4 to 4.7), in the optional "justice" section once any exists (no format bump).</summary>
@@ -396,6 +398,14 @@ public sealed class ChronicleData
 /// </summary>
 public static partial class WorldSave
 {
+    /// <summary>P6-D4: the "landworks" section's content: the streets laid (in the growth log) and the soil book, null while both are empty.</summary>
+    private static LandWorksSave? LandWorksOf(WorldState w)
+    {
+        var streets = (w.Growth ?? w.HomeRecords?.Economy.Growth.State)?.Streets;
+        bool any = streets is { Count: > 0 } || w.Soil is { IsEmpty: false };
+        return any ? LandWorksSave.Capture(streets ?? [], w.Soil is { IsEmpty: false } ? w.Soil : null) : null;
+    }
+
     public const string MetaSection = "meta", PeopleSection = "people", LotsSection = "region.lots", ChunksSection = ChunkStore.SectionName, ChronicleSection = "chronicle", HeroSection = "hero", CodexSection = "codex", LiveSection = "live", EconomySection = "economy", AbstractSection = "abstract", FarmingSection = "farming", ProductionSection = ProductionSave.SectionName, ContinentSection = "continent", GrowthSection = "growth", JobsSection = "jobs", CraftingSection = "crafting", PartySection = "party", MarketsSection = MarketsSave.SectionName, RegionSectionName = "region.";
     public static string RegionSection(int id) => RegionSectionName + id.ToString("D3");
 
@@ -489,6 +499,7 @@ public static partial class WorldSave
             Rule = w.Rule is { IsEmpty: false } rub ? RuleSave.Capture(rub) : null,                                                   // P6-C3
             Politics = w.Politics is { IsEmpty: false } pob ? PoliticsSave.Capture(pob) : null,                                        // P6-D2
             Holdings = w.Holdings is { IsEmpty: false } hdb ? HoldingsSave.Capture(hdb) : null,                                        // P6-B6
+            LandWorks = LandWorksOf(w),                                                                                              // P6-D4
             Difficulty = w.Difficulty.IsDefault && w.DifficultyLog.Count == 0 ? null : DifficultySave.Capture(w),                    // P6-A4
             Ownership = w.Ownership is { IsEmpty: false } owb ? OwnershipSave.Capture(owb, w.Economy?.Goods.Hash() ?? "") : null,         // P5-F
             Party = w.Party == null ? null : Ravensguard.Sim.Trade.HeroPartySave.Capture(w.Party),
@@ -585,7 +596,13 @@ public static partial class WorldSave
 
         // what the abstract world built since generation goes back over the freshly generated region before anything reads its plans, parcels and fields
         Ravensguard.Sim.Growth.GrowthState? growth = null;
-        if (file.Sections.ContainsKey(GrowthSection)) { growth = Decode<GrowthSave>(file, GrowthSection, compressed: true).Restore(); Ravensguard.Sim.Growth.RegionGrowth.Replay(region, growth); }
+        var landWorks = file.Sections.ContainsKey(LandWorksSave.SectionName) ? Decode<LandWorksSave>(file, LandWorksSave.SectionName, compressed: true) : null;      // P6-D4: the streets are replayed with the growth log
+        if (file.Sections.ContainsKey(GrowthSection) || landWorks is { Streets.Length: > 0 })
+        {
+            growth = file.Sections.ContainsKey(GrowthSection) ? Decode<GrowthSave>(file, GrowthSection, compressed: true).Restore() : new Ravensguard.Sim.Growth.GrowthState();
+            if (landWorks != null) growth.Streets.AddRange(landWorks.RestoreStreets());
+            Ravensguard.Sim.Growth.RegionGrowth.Replay(region, growth);
+        }
         var peopleData = Decode<PeopleData>(file, PeopleSection, true);
         if (peopleData.Diff != null)
         {
@@ -669,6 +686,7 @@ public static partial class WorldSave
             Rule = file.Sections.ContainsKey(RuleSave.SectionName) ? Decode<RuleSave>(file, RuleSave.SectionName, compressed: true).Restore() : null,                          // P6-C3
             Politics = file.Sections.ContainsKey(PoliticsSave.SectionName) ? Decode<PoliticsSave>(file, PoliticsSave.SectionName, compressed: true).Restore() : null,          // P6-D2
             Holdings = file.Sections.ContainsKey(HoldingsSave.SectionName) ? Decode<HoldingsSave>(file, HoldingsSave.SectionName, compressed: true).Restore() : null,          // P6-B6
+            Soil = landWorks is { Works.Length: > 0 } or { Effects.Length: > 0 } or { SoilNextSerial: > 1 } ? landWorks.RestoreSoil() : null,                                      // P6-D4
             Ownership = file.Sections.ContainsKey(OwnershipSave.SectionName) ? Decode<OwnershipSave>(file, OwnershipSave.SectionName, compressed: true).Restore() : null,          // P5-F
             Party = file.Sections.ContainsKey(PartySection) ? Decode<Ravensguard.Sim.Trade.HeroPartySave>(file, PartySection, compressed: true).Restore() : null,
             HeroPending = file.Sections.ContainsKey(Ravensguard.Sim.Trade.HeroPendingSave.SectionName) ? Decode<Ravensguard.Sim.Trade.HeroPendingSave>(file, Ravensguard.Sim.Trade.HeroPendingSave.SectionName, compressed: true).Restore() : [],
@@ -898,6 +916,7 @@ public sealed class LiveCapture
     internal RuleSave? Rule { get; init; }                                                                                   // P6-C3
     internal PoliticsSave? Politics { get; init; }                                                                           // P6-D2
     internal HoldingsSave? Holdings { get; init; }                                                                           // P6-B6
+    internal LandWorksSave? LandWorks { get; init; }                                                                         // P6-D4
     internal DifficultySave? Difficulty { get; init; }                                                                       // P6-A4
     internal DesignsSave? Designs { get; init; }                                                                             // P5-C
     internal OwnershipSave? Ownership { get; init; }                                                                         // P5-F
@@ -979,6 +998,7 @@ public sealed class LiveCapture
         if (Rule != null) sections.Add(new(RuleSave.SectionName, SaveCodec.SerializeCompressed(Rule)));                      // P6-C3 (optional, no bump)
         if (Politics != null) sections.Add(new(PoliticsSave.SectionName, SaveCodec.SerializeCompressed(Politics)));          // P6-D2 (optional, no bump)
         if (Holdings != null) sections.Add(new(HoldingsSave.SectionName, SaveCodec.SerializeCompressed(Holdings)));         // P6-B6 (optional, no bump)
+        if (LandWorks != null) sections.Add(new(LandWorksSave.SectionName, SaveCodec.SerializeCompressed(LandWorks)));     // P6-D4 (optional, no bump)
         if (Difficulty != null) sections.Add(new(DifficultySave.SectionName, SaveCodec.SerializeCompressed(Difficulty)));   // P6-A4 (optional, no bump)
         if (Ownership != null) sections.Add(new(OwnershipSave.SectionName, SaveCodec.SerializeCompressed(Ownership)));       // P5-F (optional, no bump)
         if (Party != null) sections.Add(new(WorldSave.PartySection, SaveCodec.SerializeCompressed(Party)));
