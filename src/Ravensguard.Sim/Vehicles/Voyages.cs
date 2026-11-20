@@ -68,7 +68,7 @@ public static class Voyages
     public static long LegSeconds(long lengthMm, int mmps) => mmps <= 0 ? long.MaxValue : (lengthMm * 20 + mmps - 1) / mmps;
 
     /// <summary>Puts a boat on a leg from where it is (<paramref name="atMm"/> along the waterway) to <paramref name="toMm"/>.</summary>
-    public static Voyage Start(RideBook b, VehicleRow boat, WaterPath path, long atMm, long toMm, long nowSec, int highDays = 0)
+    public static Voyage Start(RideBook b, VehicleRow boat, WaterPath path, long atMm, long toMm, long nowSec, int highDays = 0, bool? shuttle = null)
     {
         bool down = toMm >= atMm;
         int width = path.MinWidthCm(atMm, toMm);
@@ -76,7 +76,7 @@ public static class Voyages
         var st = b.Vehicles.StatsOf(boat); var wt = b.Templates.Water;
         var load = BoatMath.Load(st, b.Vehicles.CargoKg(boat), (st.Driver + st.Rowers) * BoatMath.PersonKg, wt);
         var y = b.Works.Voyages.TryGetValue(boat.Id, out var old) ? old : new Voyage { Boat = boat.Id };
-        y.Waterway = path.Id; y.AtMm = atMm; y.ToMm = toMm; y.GroundMmps = speed; y.LegStartSec = nowSec; y.Leg++; y.ArrivedSec = 0;
+        y.Waterway = path.Id; y.AtMm = atMm; y.ToMm = toMm; y.GroundMmps = speed; y.LegStartSec = nowSec; y.Leg++; y.ArrivedSec = 0; if (shuttle != null) y.Shuttle = shuttle.Value;
         y.LegDelaySec = BoatMath.Floats(load.DraftMm, wt.River(width, highDays).DepthMm, wt) ? 0 : BoatMath.LegDelaySeconds(b.Seed, boat.Id, y.Leg);
         b.Works.Voyages[boat.Id] = y;
         boat.Water = WaterState.Afloat;
@@ -99,14 +99,21 @@ public static class Voyages
     public static void Hour(RideBook b, Func<int, WaterPath?> paths, long hour)
     {
         long now = (hour + 1) * 3600;
-        foreach (var y in b.Works.Voyages.Values)
+        foreach (var y in b.Works.Voyages.Values.ToList())
         {
             if (y.ArrivedSec > 0) continue;
             var boat = b.Vehicles.Find(y.Boat); if (boat == null || boat.Driven) continue;       // the hero's own boat moves in the live tier
             var (at, arrived) = Position(y, now);
             if (paths(y.Waterway) is { } p) { var (x, yy, _) = p.At(at); boat.XMm = x; boat.YMm = yy; }
             boat.OdometerMm = Math.Abs(at - y.AtMm);
-            if (arrived) y.ArrivedSec = y.LegStartSec + y.LegDelaySec + LegSeconds(Math.Abs(y.ToMm - y.AtMm), y.GroundMmps);
+            if (!arrived) continue;
+            y.ArrivedSec = y.LegStartSec + y.LegDelaySec + LegSeconds(Math.Abs(y.ToMm - y.AtMm), y.GroundMmps);
+            if (y.Shuttle && paths(y.Waterway) is { } back)
+            {
+                // a regular run: it turns at the end of the leg and goes back, starting when it arrived
+                long from = y.ToMm, to = y.AtMm, when = y.ArrivedSec;
+                Start(b, boat, back, from, to, when);
+            }
         }
     }
 }

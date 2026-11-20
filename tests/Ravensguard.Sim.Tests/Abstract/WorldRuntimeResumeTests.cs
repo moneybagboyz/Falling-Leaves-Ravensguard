@@ -101,6 +101,41 @@ public class WorldRuntimeResumeTests(ITestOutputHelper output)
         var heroId = s.Population.People.IdOf(s.Hero!.PersonIndex);
         s.Crafting.Artefacts.Named[EntityId.Make(IdKind.Item, 0xA27E)] = new Artefact(Artefacts.NameFor(content, s.Seed, new EntityId(77), "Aldric Vane"), heroId, "Aldric Vane", sec);
         PlayCrafting(rt, ctx, town, sec);
+        PlayVehicles(rt, ctx, desk, sec);
+    }
+
+    /// <summary>
+    /// P5-G: a wagon of the hero's own design commissioned from the town's carpenter (his bench and his yard work it hour by hour: half built across the save), and a laden barge on a regular run
+    /// up and down the region's longest river (under way across the save). Both through the hero's desk; the materials and the barge are the test's faucet.
+    /// </summary>
+    private static void PlayVehicles(WorldRuntime rt, HeroContext ctx, HeroDesk desk, long sec)
+    {
+        var s = rt.State; var content = ctx.Content; var reg = s.Population.Region; var people = s.Population.People;
+        var book = Ravensguard.Sim.Carts.VehicleDesk.BookOf(s, content);
+        var des = Ravensguard.Sim.Tests.VehicleDesign.WagonEndToEndTests.Design(book);
+        desk.Issue(Ravensguard.Sim.Carts.VehicleDesk.SaveDesign(des.Id, des.Text(), sec));
+        var prod = s.Production!;
+        var shop = prod.Businesses.Where(b => b.Owner >= 0 && prod.Content.Kinds[b.Kind].Stations.Any(k => k.Kind == "wheelwright_bay") && reg.Settlements[b.Settlement].Class == SettlementClass.Town)
+            .OrderBy(b => b.Index).First();
+        var maker = people.IdOf(shop.Owner);
+        s.Crafting!.Book.Set(maker, Skill.Carpentry, 65 * CraftMath.MicroPerLevel);
+        desk.ApplyDue(ctx, rt.HourDone);
+        var bp = book.Templates.Get(des.Id);
+        foreach (var p in bp.Parts)
+        {
+            var r = ctx.Recipes[book.Templates.PartList[p.Part].Recipe];
+            foreach (var slot in r.Slots) shop.Store.Create(slot.Alts[0].Good, slot.Alts[0].Qty, CreateReason.Import);
+        }
+        var town = reg.Settlements[shop.Settlement];
+        desk.Issue(Ravensguard.Sim.Carts.VehicleDesk.Commission(des.Id, maker, town.CenterX * 1000L, town.CenterY * 1000L, sec));
+        var river = reg.Waterways.OrderByDescending(w => w.LengthM).ThenBy(w => w.Id).First();
+        var barge = book.Vehicles.Create(book.Templates.Get("barge"), ctx.Party.Hero);
+        barge.Cargo.Create(s.Economy!.Goods.IdOf("wheat"), 4_000_000, CreateReason.Import);
+        desk.Issue(Ravensguard.Sim.Carts.VehicleDesk.Voyage(barge.Id, river.Id, 0, river.LengthM * 1000L, sec, shuttle: true));
+        desk.ApplyDue(ctx, rt.HourDone);
+        Assert.All(desk.View!.Results, r => Assert.True(r.Ok, r.Text));
+        Assert.Single(book.Works.Commissions);
+        Assert.Single(book.Works.Voyages);
     }
 
     /// <summary>
@@ -212,7 +247,7 @@ public class WorldRuntimeResumeTests(ITestOutputHelper output)
         if (hero)
         {
             // the Phase 5 step 1 sections are there to compare: land, the hero (a person row in "people", with the party) and the crafting section's named artefact
-            foreach (var k in new[] { LandSave.SectionName, WorldSave.HeroSection, WorldSave.PartySection, WorldSave.CraftingSection, WorldSave.PeopleSection, ConstructionSave.SectionName, DesignsSave.SectionName })
+            foreach (var k in new[] { LandSave.SectionName, WorldSave.HeroSection, WorldSave.PartySection, WorldSave.CraftingSection, WorldSave.PeopleSection, ConstructionSave.SectionName, DesignsSave.SectionName, MountsSave.SectionName })
                 Assert.Contains(k, want.Keys);
             foreach (var s in new[] { straight.State, resumed.State })
             {
@@ -236,12 +271,25 @@ public class WorldRuntimeResumeTests(ITestOutputHelper output)
             // P5-E: the commission was worked (and, uncollected, sold) through the save in both runs, the fire burned, the apprentice and the guild member are there, the fetch job is waiting
             foreach (var s in new[] { straight.State, resumed.State })
             {
-                var c = s.Crafting!.Commissions.Values.Single();
+                var c = s.Crafting!.Commissions.Values.Where(x => x.Client.Kind == IdKind.Person).Single();     // the hero's own (P5-G's wagon parts are the wagon site's)
                 Assert.True(c.State is CommissionState.Working or CommissionState.Ready or CommissionState.Sold, c.State.ToString());   // made over the days, and left uncollected past 15 days: sold
                 Assert.Single(s.Crafting.Members);
                 Assert.Contains(s.Crafting.Jobs.Values, j => j.FetchLeft > 0);
             }
-            Assert.Equal(straight.State.Crafting!.Commissions.Values.Single().State, resumed.State.Crafting!.Commissions.Values.Single().State);
+            Assert.Equal(straight.State.Crafting!.Commissions.Values.Where(c => c.Client.Kind == IdKind.Person).Single().State, resumed.State.Crafting!.Commissions.Values.Where(c => c.Client.Kind == IdKind.Person).Single().State);
+            // P5-G: the commissioned wagon is still being made at the end (parts made and fitted on both sides of the save, at the same hours), the barge is on its run
+            foreach (var s in new[] { straight.State, resumed.State })
+            {
+                var vc = s.Mounts!.Works.Commissions.Values.Single();
+                var wagon = s.Mounts.Vehicles.Find(vc.Vehicle)!;
+                Assert.Equal(Ravensguard.Sim.Carts.VehicleCommissionState.Making, vc.State);
+                Assert.Contains(s.Crafting!.Commissions.Values, c => c.Client == vc.Vehicle && c.State == CommissionState.Collected);
+                Assert.False(wagon.Finished);
+                var y = s.Mounts.Works.Voyages.Values.Single();
+                Assert.Equal(0, y.ArrivedSec);
+            }
+            Assert.Equal(Ravensguard.Sim.Carts.VehicleHash.Of(straight.State.Mounts!), Ravensguard.Sim.Carts.VehicleHash.Of(resumed.State.Mounts!));
+            Assert.Contains("player.market_wagon", resumed.State.Designs!.Designs.Keys);
         }
         var bad = want.Keys.Union(got.Keys).Where(k => !(want.TryGetValue(k, out var x) && got.TryGetValue(k, out var y) && x.AsSpan().SequenceEqual(y))).ToList();
         output.WriteLine($"N {n} M {m} worker {worker} neighbours {neighbours} hero {hero}: {want.Count} sections [{string.Join(", ", want.Keys)}], differing [{string.Join(", ", bad)}]");

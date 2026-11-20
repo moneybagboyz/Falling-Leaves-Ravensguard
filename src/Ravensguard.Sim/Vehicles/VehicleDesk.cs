@@ -22,7 +22,7 @@ namespace Ravensguard.Sim.Carts;
 /// <item><c>vd:crew|vehicle|person|skill</c>, <c>vd:dismiss|vehicle|person</c>, <c>vd:pause|vehicle|1|0</c>.</item>
 /// <item><c>vd:commission|design|maker|x|y</c>, <c>vd:collect|vehicle</c> (in person, the hero's position in X, Y).</item>
 /// <item><c>vd:repair|vehicle|part</c> (the repair line's materials from the pack), <c>vd:replace|vehicle|part|item</c>, <c>vd:launch|vehicle|people|horse</c>.</item>
-/// <item><c>vd:voyage|boat|waterway|from|to</c>: a boat put on a river leg (an NPC crew takes it; the abstract tier moves it).</item>
+/// <item><c>vd:voyage|boat|waterway|from|to|shuttle</c>: a boat put on a river leg (an NPC crew takes it; the abstract tier moves it); a shuttle turns at each end.</item>
 /// </list>
 /// </summary>
 public static class VehicleDesk
@@ -47,7 +47,7 @@ public static class VehicleDesk
     public static HeroCommand Repair(EntityId vehicle, int part, long sec) => Cmd(sec, Tag("repair", Serial(vehicle), part));
     public static HeroCommand Replace(EntityId vehicle, int part, EntityId item, long sec) => Cmd(sec, Tag("replace", Serial(vehicle), part, item.Value));
     public static HeroCommand Launch(EntityId vehicle, int people, bool horse, long sec) => Cmd(sec, Tag("launch", Serial(vehicle), people, horse ? 1 : 0));
-    public static HeroCommand Voyage(EntityId boat, int waterway, long fromMm, long toMm, long sec) => Cmd(sec, Tag("voyage", Serial(boat), waterway, fromMm, toMm));
+    public static HeroCommand Voyage(EntityId boat, int waterway, long fromMm, long toMm, long sec, bool shuttle = false) => Cmd(sec, Tag("voyage", Serial(boat), waterway, fromMm, toMm, shuttle ? 1 : 0));
 
     private static HeroResult R(HeroCommand c, HeroResultCode code, HeroText text, long mites = 0) => new(c.Seq, c.Kind, code, text, mites, 0, c.IssuedSec);
     private static HeroResult Ans(HeroCommand c, SiteAnswer a, string okKey, params object[] args) =>
@@ -158,7 +158,7 @@ public static class VehicleDesk
                 {
                     var v = V(1); if (v == null || !v.IsBoat) return Ans(c, SiteAnswer.NotABoat, "");
                     var w = st.Population.Region.Waterways.FirstOrDefault(x => x.Id == (int)N(2)); if (w == null) return Ans(c, SiteAnswer.Invalid, "");
-                    var y = Voyages.Start(b, v, new WaterPath(w), N(3), N(4), sec);
+                    var y = Voyages.Start(b, v, new WaterPath(w), N(3), N(4), sec, 0, N(5) == 1);
                     return R(c, HeroResultCode.Ok, HeroText.Of("vd_voyage_started", Voyages.LegSeconds(Math.Abs(y.ToMm - y.AtMm), y.GroundMmps) / 3600));
                 }
             }

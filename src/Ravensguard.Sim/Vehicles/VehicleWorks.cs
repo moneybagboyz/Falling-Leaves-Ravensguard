@@ -53,6 +53,8 @@ public sealed class Voyage
     public long LegStartSec, LegDelaySec;
     public int Leg;
     public long ArrivedSec;
+    /// <summary>A barge on a regular run: at each end it turns and goes back (a new leg, its own delay draw).</summary>
+    public bool Shuttle;
     public bool Downstream => ToMm >= AtMm;
 }
 
@@ -95,6 +97,7 @@ public sealed class VehicleWorksSave
     [Key(24)] public long[] VoyDelay { get; set; } = [];
     [Key(25)] public int[] VoyLeg { get; set; } = [];
     [Key(26)] public long[] VoyArrived { get; set; } = [];
+    [Key(27)] public bool[] VoyShuttle { get; set; } = [];
 
     public static VehicleWorksSave Capture(VehicleWorks w)
     {
@@ -107,7 +110,7 @@ public sealed class VehicleWorksSave
             ComParts = [.. c.Select(x => x.PartsMites)], ComInstall = [.. c.Select(x => x.InstallMites)], ComPartIds = [.. c.Select(x => x.Parts.Select(p => p.Value).ToArray())], ComState = [.. c.Select(x => (byte)x.State)],
             ComOrdered = [.. c.Select(x => x.OrderedSec)], ComReady = [.. c.Select(x => x.ReadySec)],
             VoyBoat = [.. v.Select(x => x.Boat.Value)], VoyWaterway = [.. v.Select(x => x.Waterway)], VoyAt = [.. v.Select(x => x.AtMm)], VoyTo = [.. v.Select(x => x.ToMm)], VoySpeed = [.. v.Select(x => x.GroundMmps)],
-            VoyStart = [.. v.Select(x => x.LegStartSec)], VoyDelay = [.. v.Select(x => x.LegDelaySec)], VoyLeg = [.. v.Select(x => x.Leg)], VoyArrived = [.. v.Select(x => x.ArrivedSec)],
+            VoyStart = [.. v.Select(x => x.LegStartSec)], VoyDelay = [.. v.Select(x => x.LegDelaySec)], VoyLeg = [.. v.Select(x => x.Leg)], VoyArrived = [.. v.Select(x => x.ArrivedSec)], VoyShuttle = [.. v.Select(x => x.Shuttle)],
         };
     }
 
@@ -129,7 +132,7 @@ public sealed class VehicleWorksSave
         for (int i = 0; i < VoyBoat.Length; i++)
             w.Voyages[new EntityId(VoyBoat[i])] = new Voyage
             {
-                Boat = new EntityId(VoyBoat[i]), Waterway = VoyWaterway[i], AtMm = VoyAt[i], ToMm = VoyTo[i], GroundMmps = VoySpeed[i], LegStartSec = VoyStart[i], LegDelaySec = VoyDelay[i], Leg = VoyLeg[i], ArrivedSec = VoyArrived[i],
+                Boat = new EntityId(VoyBoat[i]), Waterway = VoyWaterway[i], AtMm = VoyAt[i], ToMm = VoyTo[i], GroundMmps = VoySpeed[i], LegStartSec = VoyStart[i], LegDelaySec = VoyDelay[i], Leg = VoyLeg[i], ArrivedSec = VoyArrived[i], Shuttle = i < VoyShuttle.Length && VoyShuttle[i],
             };
     }
 }

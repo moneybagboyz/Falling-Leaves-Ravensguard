@@ -42,7 +42,7 @@ public class WagonEndToEndTests(ITestOutputHelper output)
     }
 
     /// <summary>The OV-1 wagon: the ox wagon's body, the front axle a pivoting one, no iron (a carpenter makes it all).</summary>
-    private static VehicleDesigner Design(RideBook b)
+    internal static VehicleDesigner Design(RideBook b)
     {
         var d = new VehicleDesigner(b.Templates, b.Breeds) { Id = "player.market_wagon", Name = "Market wagon" };
         d.New(2, 8);
