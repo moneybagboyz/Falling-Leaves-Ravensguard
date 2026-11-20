@@ -435,15 +435,16 @@ public class BusinessTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public void Steward_honesty_and_fair_jitter_streams_are_reserved_and_never_drawn()
+    public void Official_honesty_is_drawn_only_by_the_rule_book_and_fair_jitter_stays_reserved()
     {
-        Assert.Equal(0x540u, RngStreams.StewardHonestyReserved); Assert.Equal(0x541u, RngStreams.FairVisitorsReserved);
+        // P6-C3 (RI-12): 0x540 is now drawn, but only by the Phase 6 rule book; the Phase 5 code that asserted it unused (the steward's brain, the businesses) still never touches it
+        Assert.Equal(0x540u, RngStreams.OfficialHonesty); Assert.Equal(0x541u, RngStreams.FairVisitorsReserved);
         var dir = Path.Combine(Ravensguard.Sim.WorldGen.ContinentSettings.FindBaseContent()!, "..", "..", "src", "Ravensguard.Sim");
         foreach (var f in Directory.EnumerateFiles(dir, "*.cs", SearchOption.AllDirectories))
         {
             if (f.EndsWith("RngStreams.cs", StringComparison.Ordinal) || f.Contains("/obj/", StringComparison.Ordinal)) continue;
             var src = File.ReadAllText(f);
-            Assert.DoesNotContain("StewardHonestyReserved", src, StringComparison.Ordinal);
+            if (!f.Contains("/Rule/", StringComparison.Ordinal)) Assert.DoesNotContain("OfficialHonesty", src, StringComparison.Ordinal);
             Assert.DoesNotContain("FairVisitorsReserved", src, StringComparison.Ordinal);
         }
     }

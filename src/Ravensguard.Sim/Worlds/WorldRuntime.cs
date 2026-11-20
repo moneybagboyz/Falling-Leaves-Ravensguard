@@ -132,6 +132,7 @@ public sealed class WorldRuntime : IDisposable
         Ravensguard.Sim.Holdings.HoldingsWiring.Attach(homeWorld, state, content);                                                                 // P6-B6 hook: the hero's clearings, coppice and breeding (HoldingsSystem), after land and construction
         Ravensguard.Sim.Medicine.MedicineWiring.Attach(homeWorld, state, content);                                                                  // P6-B1 hook: the physicians and the hero's treatment queue (AbstractPhysic, the treatment screen)
         Ravensguard.Sim.Faith.FaithWiring.Attach(homeWorld, state, content);                                                                        // P6-B4 hook: the church (FaithSystem), the holy days' feasts
+        Ravensguard.Sim.Rule.RuleWiring.Attach(homeWorld, state, content);                                                                         // P6-C3 hook: fief deeds, officials, dues, councils, loans, customs (RuleSystem), after land, faith and law
         homeWorld.Sim.Set(new Ravensguard.Sim.Combat.Abstract.AbstractBattleService(content));                                    // P4-G hook: fights nobody watches (abstract battles)
         state.Regions = Records;
         if (state.RegionSections.Count > 0) { Records.AttachSections(state.RegionSections); state.RegionSections = new SortedDictionary<int, byte[]>(); } // the pager holds them now

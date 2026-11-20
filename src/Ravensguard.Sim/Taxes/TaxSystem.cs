@@ -31,6 +31,8 @@ public sealed class TaxSystem
     public bool AtWar { get; set; }
     /// <summary>Test hook (G-T14): the order a settlement's households are visited in; null is ascending index, the rule.</summary>
     public Func<IReadOnlyList<int>, IEnumerable<int>>? HouseholdOrder { get; set; }
+    /// <summary>P6-C3 (rule-and-income 4.8): told after each settlement's round with the hearth tax it brought in (settlement, mites, the day), so the reeve's or bailiff's hands can be seen on it; null when no rule book is installed. Not saved.</summary>
+    public Action<int, long, GameTime, RegionOutbox>? Collected { get; set; }
     /// <summary>The first evictions of the run (diagnostics, not saved).</summary>
     public List<string> EvictedSample { get; } = [];
 
@@ -144,6 +146,7 @@ public sealed class TaxSystem
             causes = $"{evaders} households withheld the hearth tax while grievances ran high";
             ob.Chronicle(now, "tax_evasion", [st.Id], [new Cause(CauseKind.Tax, null, causes)], ("settlement", st.Name), ("households", evaders.ToString()), ("unrest", State.Unrest[s].ToString()));
         }
+        Collected?.Invoke(s, hearthIn, now, ob);
     }
 
     private long CollectHousehold(int h, int s, int day, PurseId dest, int slot, TaxLevel level, bool evasionOn, GameTime now, RegionOutbox ob, ref int evaders)

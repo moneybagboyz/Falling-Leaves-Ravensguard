@@ -1,0 +1,10 @@
+// Offices a lord fills (docs/specs/phase6/rule-and-income.md 3, 4.8): wage in mites a day and the skill asked for.
+[
+  {"type": "office", "id": "reeve",     "name": "reeve",     "wage_mites_per_day": 150},
+  {"type": "office", "id": "bailiff",   "name": "bailiff",   "wage_mites_per_day": 350, "skill": "Law"},
+  {"type": "office", "id": "steward",   "name": "steward",   "wage_mites_per_day": 350, "skill": "Law"},
+  {"type": "office", "id": "sheriff",   "name": "sheriff",   "wage_mites_per_day": 500, "skill": "Law"},
+  {"type": "office", "id": "collector", "name": "customs collector", "wage_mites_per_day": 350, "skill": "Trading"},
+  {"type": "office", "id": "gaoler",    "name": "gaoler",    "wage_mites_per_day": 150, "skill": "Law"},
+  {"type": "office", "id": "treasurer", "name": "treasurer", "wage_mites_per_day": 350, "skill": "Trading"}
+]

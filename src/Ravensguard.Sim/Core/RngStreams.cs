@@ -296,8 +296,8 @@ public static class RngStreams
     public const uint HeroKin = 0x560;
     /// <summary>P5-H inheritance: reserved for Phase 6 disputed inheritances; settling an estate is a pure function of the tables (inheritance 5). Asserted never drawn.</summary>
     public const uint InheritanceDisputesReserved = 0x561;
-    /// <summary>P5-F businesses: reserved for Phase 6 steward honesty (skimming); stewards are honest in Phase 5 (overview 10a). Asserted never drawn.</summary>
-    public const uint StewardHonestyReserved = 0x540;
+    /// <summary>P6-C3 rule: official and steward honesty (rule-and-income 4.8, key the person id). Reserved in Phase 5 and never drawn there; drawn only from the Phase 6 rule book on.</summary>
+    public const uint OfficialHonesty = 0x540;
     /// <summary>P5-F businesses: reserved for fair visitor jitter; the fair demand table does not need it. Asserted never drawn.</summary>
     public const uint FairVisitorsReserved = 0x541;
     /// <summary>P5-F prospecting: a survey's estimate error (key game day, person; draw = tile x 16 + method, the resource in the top bits).</summary>

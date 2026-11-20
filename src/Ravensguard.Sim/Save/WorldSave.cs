@@ -149,6 +149,10 @@ public sealed class WorldState
     public Ravensguard.Sim.Faith.ChurchBook? Church { get; set; }
     /// <summary>P6-B4: the religions of the world, derived from the content and the history (never saved); made on first use once the content is set (see <see cref="Ravensguard.Sim.Faith.FaithWiring.ReligionsOf"/>).</summary>
     public Ravensguard.Sim.Faith.ReligionBook? Religions { get; set; }
+    /// <summary>P6-C3: a loaded save without a "fiefs" section gets its fief deeds, offices and honesty derived when the home region is built (<see cref="Ravensguard.Sim.Rule.RuleWiring.Attach"/>), so reading and writing a save back leaves its bytes alone until the game runs.</summary>
+    public bool RuleSeedPending { get; set; }
+    /// <summary>P6-C3: the rule and income of the home region: fief deeds and policy, offices, dues, loans, councils, grievances (rule-and-income 3), in the optional "fiefs" section (no format bump).</summary>
+    public Ravensguard.Sim.Rule.RuleBook? Rule { get; set; }
     /// <summary>The hero's side of the records (trade-inventory-character spec): worn slots and where each stack sits, the price notebook, the party, the people known (saved in the "party" section when present). The things themselves are item rows, the pack store and the purse in the <see cref="Economy"/>.</summary>
     public Ravensguard.Sim.Trade.HeroParty? Party { get; set; }
     /// <summary>
@@ -464,6 +468,7 @@ public static partial class WorldSave
             Law = w.Law is { IsEmpty: false } lwb ? CrimeSave.Capture(lwb) : null,                                                    // P6-B2
             Family = w.Family is { IsEmpty: false } fmb ? FamilySave.Capture(fmb) : null,                                             // P6-B3
             Church = w.Church is { IsEmpty: false } chb ? FaithSave.Capture(chb) : null,                                              // P6-B4
+            Rule = w.Rule is { IsEmpty: false } rub ? RuleSave.Capture(rub) : null,                                                   // P6-C3
             Holdings = w.Holdings is { IsEmpty: false } hdb ? HoldingsSave.Capture(hdb) : null,                                        // P6-B6
             Difficulty = w.Difficulty.IsDefault && w.DifficultyLog.Count == 0 ? null : DifficultySave.Capture(w),                    // P6-A4
             Ownership = w.Ownership is { IsEmpty: false } owb ? OwnershipSave.Capture(owb, w.Economy?.Goods.Hash() ?? "") : null,         // P5-F
@@ -637,6 +642,7 @@ public static partial class WorldSave
             Law = file.Sections.ContainsKey(CrimeSave.SectionName) ? Decode<CrimeSave>(file, CrimeSave.SectionName, compressed: true).Restore() : null,                       // P6-B2
             Family = file.Sections.ContainsKey(FamilySave.SectionName) ? Decode<FamilySave>(file, FamilySave.SectionName, compressed: true).Restore() : null,                 // P6-B3
             Church = file.Sections.ContainsKey(FaithSave.SectionName) ? Decode<FaithSave>(file, FaithSave.SectionName, compressed: true).Restore() : null,                    // P6-B4
+            Rule = file.Sections.ContainsKey(RuleSave.SectionName) ? Decode<RuleSave>(file, RuleSave.SectionName, compressed: true).Restore() : null,                          // P6-C3
             Holdings = file.Sections.ContainsKey(HoldingsSave.SectionName) ? Decode<HoldingsSave>(file, HoldingsSave.SectionName, compressed: true).Restore() : null,          // P6-B6
             Ownership = file.Sections.ContainsKey(OwnershipSave.SectionName) ? Decode<OwnershipSave>(file, OwnershipSave.SectionName, compressed: true).Restore() : null,          // P5-F
             Party = file.Sections.ContainsKey(PartySection) ? Decode<Ravensguard.Sim.Trade.HeroPartySave>(file, PartySection, compressed: true).Restore() : null,
@@ -859,6 +865,7 @@ public sealed class LiveCapture
     internal CrimeSave? Law { get; init; }                                                                                   // P6-B2
     internal FamilySave? Family { get; init; }                                                                               // P6-B3
     internal FaithSave? Church { get; init; }                                                                                // P6-B4
+    internal RuleSave? Rule { get; init; }                                                                                   // P6-C3
     internal HoldingsSave? Holdings { get; init; }                                                                           // P6-B6
     internal DifficultySave? Difficulty { get; init; }                                                                       // P6-A4
     internal DesignsSave? Designs { get; init; }                                                                             // P5-C
@@ -933,6 +940,7 @@ public sealed class LiveCapture
         if (Law != null) sections.Add(new(CrimeSave.SectionName, SaveCodec.SerializeCompressed(Law)));                      // P6-B2 (optional, no bump)
         if (Family != null) sections.Add(new(FamilySave.SectionName, SaveCodec.SerializeCompressed(Family)));                // P6-B3 (optional, no bump)
         if (Church != null) sections.Add(new(FaithSave.SectionName, SaveCodec.SerializeCompressed(Church)));                // P6-B4 (optional, no bump)
+        if (Rule != null) sections.Add(new(RuleSave.SectionName, SaveCodec.SerializeCompressed(Rule)));                      // P6-C3 (optional, no bump)
         if (Holdings != null) sections.Add(new(HoldingsSave.SectionName, SaveCodec.SerializeCompressed(Holdings)));         // P6-B6 (optional, no bump)
         if (Difficulty != null) sections.Add(new(DifficultySave.SectionName, SaveCodec.SerializeCompressed(Difficulty)));   // P6-A4 (optional, no bump)
         if (Ownership != null) sections.Add(new(OwnershipSave.SectionName, SaveCodec.SerializeCompressed(Ownership)));       // P5-F (optional, no bump)
