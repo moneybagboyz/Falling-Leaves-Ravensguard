@@ -5728,11 +5728,11 @@ ur_nobody_hungry,Nobody is hungry.
 R_UNREST_GRUMBLING,folk in {place} grumble about their lord.
 R_RIOT_RISES,a crowd has risen at {place}.
 R_REVOLT_RISES,{place} is in revolt.
-ch_h_religion_founded,"{place} becomes the holy site of {faith}, founded before the records begin."
-ch_h_war_declared,{a} declares war on {b} (utility {utility}) and marches on the lands about {place}.
+ch_h_religion_founded,{place} is the holy site of {faith}.
+ch_h_war_declared,{a} declares war on {b} (utility {utility}).
 ch_h_plague_reaches,The plague reaches {place}; {dead} die.
-ch_h_unrest_riot,Riots spread through the realm about {place}; unrest stands at {unrest} in a thousand under {ruler}.
-ch_h_unrest_revolt,"The realm about {place} stands on the edge of revolt, unrest at {unrest} in a thousand under {ruler}."
+ch_h_unrest_riot,Riots spread about {place}; unrest {unrest} in a thousand under {ruler}.
+ch_h_unrest_revolt,Revolt looms about {place}; unrest {unrest} in a thousand under {ruler}.
 ch_h_rebellion,{leader} raises the banner of revolt against {ruler} at {place}.
 ch_h_heresy_arises,"A heresy of {faith} takes hold in the realm of {ruler}, about {place}."
 ch_h_heresy_ends,The heresy of {faith} about {place} comes to an end.
