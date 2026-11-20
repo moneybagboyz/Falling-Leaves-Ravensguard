@@ -123,6 +123,7 @@ public sealed class WorldRuntime : IDisposable
         homeWorld.Sim.Set(Ravensguard.Sim.Combat.Aftermath.AftermathDesk.BookOf(state, content));                               // P4-D hook: the captives' hourly step (CaptivitySystem)
         Ravensguard.Sim.Sites.SiteWiring.Attach(homeWorld, state, content, Services.Weather);                                                     // P4-H hook: the sites' book, content and weather (SiteSystem)
         Ravensguard.Sim.Land.LandWiring.Attach(homeWorld, state, content);                                                                          // P5-A2 hook: the land book, the land world (LandSystem), growth's and farming's land hooks
+        Ravensguard.Sim.Construction.ConstructionWiring.Attach(homeWorld, state, content, Services.Weather);                                         // P5-B hook: building sites, ghosts and crews (ConstructionSystem)
         Ravensguard.Sim.Crafting.CraftServiceWiring.Attach(homeWorld, state, content, Services.Weather);                                            // P5-E hook: commissions, fires, apprenticeships, guild dues (CraftSystem)
         homeWorld.Sim.Set(new Ravensguard.Sim.Combat.Abstract.AbstractBattleService(content));                                    // P4-G hook: fights nobody watches (abstract battles)
         state.Regions = Records;

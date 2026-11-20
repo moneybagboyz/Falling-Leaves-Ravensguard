@@ -21,7 +21,8 @@ namespace Ravensguard.Sim.Tests.Abstract;
 /// is saved with <see cref="WorldSave.Capture"/> at a barrier, goes through the codec, is loaded with <see cref="WorldSave.Restore"/> into a fresh runtime and runs M more hours. Every save
 /// section, the abstract continent (compared directly, so a section that is never written cannot hide it) and every resident region's records must equal one uninterrupted run of N + M hours.
 /// The regression test of docs/reviews/resume-drift-diagnosis.md (the continent section was never written; the farming seed-debt table was not grown after a load). The last case adds the
-/// Phase 5 step 1 sections: a hero (a person row since P5-A4, with a party), land bought and a stall rented through the hero's desk (P5-A2) and a named artefact in the crafting section (P5-A1).
+/// Phase 5 step 1 sections: a hero (a person row since P5-A4, with a party), land bought and a stall rented through the hero's desk (P5-A2) and a named artefact in the crafting section (P5-A1);
+/// and P5-B's "construction" section: a two-storey smithy half built on the bought lot by a hired crew across the save.
 /// P5-E extends it with crafting the hour pass moves: a commission at a smith (made, then sold uncollected, across the save), an apprenticeship, a guild membership, a job with a fetch still to walk and a fire burning.
 /// </summary>
 public class WorldRuntimeResumeTests(ITestOutputHelper output)
@@ -56,8 +57,18 @@ public class WorldRuntimeResumeTests(ITestOutputHelper output)
         int town = reg.Settlements.FindIndex(x => x.Class == SettlementClass.Town && lw.Listings(reg.Settlements.IndexOf(x)).Count > 0);
         long sec = rt.HourDone * 3600;
         var desk = new HeroDesk();
-        desk.Issue(LandDesk.Buy(lw.Listings(town)[0], sec));
+        var lot = lw.Listings(town)[0];
+        desk.Issue(LandDesk.Buy(lot, sec));
         desk.Issue(LandDesk.Stall(town, 0, false, sec));
+        // P5-B: a two-storey smithy placed on the lot through the desk, its pile stocked (the test's faucet), a crew hired: it is half built across the save (the "construction" section)
+        desk.Issue(Ravensguard.Sim.Construction.ConstructionDesk.Plan("smithy_house", lot.Rect.X + 1, lot.Rect.Y + 1, 0, false, sec));
+        desk.ApplyDue(ctx, rt.HourDone);
+        Assert.All(desk.View!.Results, r => Assert.True(r.Ok, r.Text));
+        var cw = s.HomeRecords.Sim.Get<Ravensguard.Sim.Construction.ConstructionWorld>()!;
+        var site = s.Construction!.Sites.Values.Single();
+        foreach (var (g, q) in cw.Needed(site)) cw.PileOf(site).Create(g, q, CreateReason.Import);
+        desk.Issue(Ravensguard.Sim.Construction.ConstructionDesk.Hire(site.Id, 3, false, sec));
+        desk.Issue(Ravensguard.Sim.Construction.ConstructionDesk.Hire(site.Id, 2, true, sec));
         desk.ApplyDue(ctx, rt.HourDone);
         Assert.All(desk.View!.Results, r => Assert.True(r.Ok, r.Text));
         s.Crafting ??= new Ravensguard.Sim.Crafting.CraftState();
@@ -175,7 +186,7 @@ public class WorldRuntimeResumeTests(ITestOutputHelper output)
         if (hero)
         {
             // the Phase 5 step 1 sections are there to compare: land, the hero (a person row in "people", with the party) and the crafting section's named artefact
-            foreach (var k in new[] { LandSave.SectionName, WorldSave.HeroSection, WorldSave.PartySection, WorldSave.CraftingSection, WorldSave.PeopleSection })
+            foreach (var k in new[] { LandSave.SectionName, WorldSave.HeroSection, WorldSave.PartySection, WorldSave.CraftingSection, WorldSave.PeopleSection, ConstructionSave.SectionName })
                 Assert.Contains(k, want.Keys);
             foreach (var s in new[] { straight.State, resumed.State })
             {
@@ -186,6 +197,10 @@ public class WorldRuntimeResumeTests(ITestOutputHelper output)
             Assert.Equal(straight.State.Hero!.PersonIndex, resumed.State.Hero!.PersonIndex);
             Assert.Equal(straight.State.Land!.ComputeHash(), resumed.State.Land!.ComputeHash());
             Assert.Equal(straight.State.Crafting!.Artefacts.Hash(), resumed.State.Crafting!.Artefacts.Hash());
+            // P5-B: the smithy is still being built at the end, and both runs built the same pieces at the same seconds
+            Assert.NotEmpty(straight.State.Construction!.Ghosts);
+            Assert.NotEmpty(straight.State.Construction.Built);
+            Assert.Equal(straight.State.Construction.ComputeHash(), resumed.State.Construction!.ComputeHash());
             // P5-E: the commission was worked (and, uncollected, sold) through the save in both runs, the fire burned, the apprentice and the guild member are there, the fetch job is waiting
             foreach (var s in new[] { straight.State, resumed.State })
             {

@@ -43,6 +43,7 @@ public static class RoomValue
         PieceKind.Furniture => 40,
         PieceKind.Workstation => 80,
         PieceKind.Roof => 10,
+        PieceKind.Beam => 80,
         _ => 0,
     };
 }

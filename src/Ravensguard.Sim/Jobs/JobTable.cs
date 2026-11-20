@@ -253,6 +253,29 @@ public sealed class JobTable
         }
     }
 
+    /// <summary>
+    /// P5-B: brings only the claimed jobs <paramref name="which"/> picks up to <paramref name="nowSec"/> (construction's haul jobs to a site's pile, from the hourly tick when no live street
+    /// steps the table): the same phases, pay and failures as <see cref="Advance"/>, never moving a job back to an earlier state when another caller has already run it further.
+    /// </summary>
+    public void AdvanceWhere(JobEnv env, long nowSec, Func<Job, bool> which)
+    {
+        long grace = env.Tuning.GraceHours * 3600L;
+        foreach (var j in _jobs.Values.Where(which).ToList())
+        {
+            if (j.State == JobState.Open) { if (nowSec > j.DeadlineSec) { Refund(env, j); j.State = JobState.Expired; } continue; }
+            if (!j.Live) continue;
+            var ph = Phases(j); var ends = Ends(j, ph);
+            int finished = 0; while (finished < ph.Length && ends[finished] <= nowSec) finished++;
+            if (finished < j.Applied) continue;
+            bool failed = false;
+            for (; j.Applied < finished && !failed; j.Applied++) failed = !ApplyPhase(env, j, ph, j.Applied);
+            if (failed) { Fail(env, j, nowSec); continue; }
+            if (finished >= ph.Length) { Finish(env, j); continue; }
+            if (nowSec > j.DeadlineSec + grace) { Fail(env, j, nowSec); continue; }
+            if (finished > 0) j.State = JobState.Active;
+        }
+    }
+
     private bool ApplyPhase(JobEnv env, Job j, Phase[] ph, int i)
     {
         var p = ph[i];

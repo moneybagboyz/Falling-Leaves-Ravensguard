@@ -115,7 +115,7 @@ public sealed partial class CraftRunner
             long massG = Cat.MassG(a.Good, g);
             if (g > 0 && store.Destroy(a.Good, g, DestroyReason.Consumed)) Econ.Items.SetComponent(ir.ComponentStart, c with { MassG = (int)(c.MassG + massG) });
         }
-        else if (dir < 0 && Cat.TryIdOf("mail_rings", out var rings))
+        else if (dir < 0 && Cat.TryIdOf("scrap_iron", out var rings))
         {
             long out1 = (long)c.MassG * r.Refit.GrowMassPm / 1000;
             if (out1 > 0 && _storeOf(j.Owner) is { } dest)

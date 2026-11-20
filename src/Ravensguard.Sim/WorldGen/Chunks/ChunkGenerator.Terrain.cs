@@ -234,6 +234,19 @@ public sealed partial class ChunkGenerator
 
     // ------------------------------------------------------------------ roads: dirt, cobbled highways, fords and bridges where they meet water
 
+    /// <summary>P5-B: whether a road (or a highway) of the region's network covers this world cell (build mode refuses a piece over a road; build-mode-and-construction 4.1).</summary>
+    public bool IsRoadCell(int wx, int wy)
+    {
+        var segs = new List<int>();
+        _roads.Query(wx, wy, wx + 1, wy + 1, segs);
+        foreach (int si in segs)
+        {
+            Dist(_roads.Segs[si], wx * 100L + 50, wy * 100L + 50, out long d2, out long half2, out _);
+            if (d2 <= half2) return true;
+        }
+        return false;
+    }
+
     private void PaintRoads(Buf b)
     {
         var segs = _segTmp.Value!;

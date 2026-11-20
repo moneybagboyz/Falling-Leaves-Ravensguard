@@ -242,6 +242,29 @@ public static class NewGameDebug
                     else { sv.DebugOnboarding(scene); await Frames(tree, 40); }
                     break;
                 }
+            case "build":
+                {
+                    // dev (P5-B): a real new game, then a staged building site beside the hero: --ng-scene half | scaffold | collapse
+                    var w = MakeWorld(Math.Min(years, 60), 7);
+                    var d = NewGameServices.NewDraft(); d.Name = "Shot"; d.LibraryWorldId = w.Info.Id;
+                    router.Push(new RegionBuildScreen(router, d, w));
+                    if (!await Until(tree, () => router.Top is Ravensguard.Game.World.StreetView, 9000)) throw new Exception("build shot: the region build did not finish");
+                    var sv = (Ravensguard.Game.World.StreetView)router.Top!; var rt = sv.Runtime!;
+                    await Until(tree, () => rt.HourDone >= sv.DebugWorld.Clock.Now.TotalHours, 6000);
+                    await Frames(tree, 60);
+                    string scene = Arg("--ng-scene", "half");
+                    sv.DebugBuild(scene == "fallen" ? "collapse" : scene);
+                    // let the clock run until the crews are at work (a game minute or two), or the floor has fallen; a groan is caught at once, paused
+                    var clock = sv.DebugWorld.Clock; long from = clock.Now.Seconds;
+                    if (scene != "collapse")
+                    {
+                        sv.DebugWorld.SetSpeed(Ravensguard.Sim.Core.SimSpeed.X8);
+                        await Until(tree, () => clock.Now.Seconds >= from + (scene == "fallen" ? 30 : 150), 20000);
+                    }
+                    sv.DebugWorld.SetSpeed(Ravensguard.Sim.Core.SimSpeed.Paused);
+                    await Frames(tree, 30);
+                    break;
+                }
             case "embark":
             case "legends":
                 {

@@ -2910,6 +2910,70 @@ in_kin_spouse,husband or wife
 in_kin_child,child
 in_kin_line,"{0}, your {1}, {2}, of {3}"
 in_kin_dead,"{0}, your {1}, died aged {2}"
+BUILD_GROANS,The floor above groans. Dust is falling!
+BUILD_YOU_FELL,The floor gave way under you.
+BUILD_FELL,The floor came down.
+BUILD_SITE_FINISHED,The last piece of the building is done.
+BUILD_NO_WORLD,No building here: there is no running world.
+BUILD_NO_SITE,There is no building site near you.
+BUILD_PLACED,"Placed {0}: {1} ghost pieces to build."
+BUILD_REFUSED,"Not placed: {0} ({1})"
+BUILD_STOCKED,The site's pile has every material it needs (dev).
+BUILD_FINISHED_N,{0} pieces finished at once (dev).
+BUILD_GROAN_LABEL,"Groaning: falls in {0} s"
+BUILD_HELP,"build plan [blueprint dx dy] | stock | crew [n] [skilled] | finish [n] | collapse"
+cn_already_on_crew,They are already on the crew.
+cn_below_ground,Nothing can be built below the ground yet.
+cn_built_pieces,{0} pieces built.
+cn_cannot_pay,There is not enough coin to pay for that.
+cn_crew_full,The crew is full ({0} at most).
+cn_deconstruct_marked,{0} marked to be taken down.
+cn_deconstruct_will_fall,{0} marked to be taken down. The floor above will fall.
+cn_destroyed,{0} is gone.
+cn_dismissed,Let go from the crew.
+cn_fixture_first,Take out what stands on it first.
+cn_ghost_removed,{0} taken off the plan.
+cn_haul_posted,"{0} haul jobs posted for {1}."
+cn_hired,"{0} hired: {1}."
+cn_load,"{0} carries {1} storey(s); it cannot bear this."
+cn_needs_floor,That needs a floor under it.
+cn_no_board,There is no job board to post on.
+cn_no_ghost,There is nothing planned there.
+cn_no_jetty,"A wall up there needs a wall, post or beam under it, or one beside it."
+cn_no_materials,"The pile has no materials for the {0}."
+cn_no_site,There is no such building site.
+cn_no_support,"Nothing would hold it up: a floor up there needs a wall or post below within 3 tiles, or a beam within 4."
+cn_no_support_yet,"What holds up the {0} is not built yet."
+cn_nobody_to_hire,There is nobody near to hire.
+cn_not_a_follower,They are not one of your followers.
+cn_not_on_crew,They are not on the crew.
+cn_not_your_site,That is not your building site.
+cn_not_your_store,That store is not yours.
+cn_not_yours,"This is {0}'s land."
+cn_nothing_built_here,There is nothing built there.
+cn_nothing_placed,Nothing was placed.
+cn_nothing_to_haul,There is nothing of that to haul.
+cn_nothing_to_unload,You carry none of that.
+cn_occupied,Something is already there. Take it down first.
+cn_on_road,You cannot build on the road.
+cn_pile_too_far,Stand within {0} m of the pile to unload.
+cn_placed,{0} pieces placed as ghosts.
+cn_placed_some,"{0} pieces placed, {1} refused."
+cn_priority_set,That piece comes first now.
+cn_rain,"The {0} will not set in the rain."
+cn_site_paused,The building site stops.
+cn_site_resumed,The building site goes on.
+cn_stairs_blocked,The stair needs the cell above it free.
+cn_too_dark,It is too dark to build out here.
+cn_too_far,Stand within {0} m of the piece.
+cn_too_high,"Nothing can be built above level {0}."
+cn_too_steep,"The ground is too steep ({0} per mille, at most {1})."
+cn_unknown_good,"There is no such good: {0}."
+cn_unknown_piece,"There is no such piece: {0}."
+cn_unknown_plan,"There is no such plan: {0}."
+cn_unloaded,"{1} g of {0} unloaded on the pile."
+cn_worked,You worked {0} minutes on it.
+cn_worker_added,{0} joins the crew.
 cf_looked,You look about for craftsmen.
 cf_not_here,You must be in the craftsman's own town to ask him.
 cf_maker_cannot,He cannot make that: he does not know it or has no workshop for it.

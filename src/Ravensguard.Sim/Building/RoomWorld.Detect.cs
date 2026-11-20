@@ -183,6 +183,12 @@ public sealed partial class RoomWorld
             beds += r.Beds;
             if (!(r.DeclaredPurposes.Count == 1 && r.DeclaredPurposes[0] == "sleeping")) capacity += r.Beds;
         }
+        // P5-B (decided in step 2, recorded in build-mode-and-construction Notes): a house with no Indoor sleeping room at all sleeps round its hearth. A one-room hovel with a
+        // hearth and pallets houses its poor: the beds of its Indoor hearth rooms count (the cottage's type stays; its value tier, Mean, says how poor). A house that has a
+        // bedroom still counts only the bedroom's beds, so nothing a v1 blueprint or RD-5 decided moves.
+        if (beds == 0 && !rooms.Any(r => r.Indoor && r.Primary is { } pp && BedPurposes.Contains(pp.Purpose)))
+            foreach (var r in rooms)
+                if (r.Indoor && r.Primary is { } pp && (pp.Purpose == "hearth" || (pp.Purpose == "gathering" && r.Tags.GetValueOrDefault("hearth") > 0))) { beds += r.Beds; capacity += r.Beds; }
         var entranceCells = entrances.Select(e => new Cell3(e.X, e.Y, e.Z)).ToList();
         bool dwelling = hearth > 0 && beds >= 2 && entranceCells.Count > 0;
         int above = levels.Count(z => z >= 0);

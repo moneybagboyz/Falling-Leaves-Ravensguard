@@ -342,6 +342,25 @@ public sealed class ChunkStreamer
         c.Version++;
     }
 
+    /// <summary>
+    /// P5-B: lays a built (or cleared) piece into a chunk that is loaded, without a delta: construction has already written the delta to the store on the tick worker (or the chunk was never
+    /// visited and is laid from the construction book on every load). The window re-stamps the chunk. False when the chunk is not loaded or nothing changed.
+    /// </summary>
+    public bool SetLoadedTile(int wx, int wy, int z, string? structure, string? fixture)
+    {
+        int cx = FloorDiv(wx, ChunkContent.Size), cy = FloorDiv(wy, ChunkContent.Size);
+        var c = TryGet(cx, cy);
+        if (c == null || z < ChunkKey.MinZ || z > ChunkKey.MaxZ) return false;
+        int lx = wx - cx * ChunkContent.Size, ly = wy - cy * ChunkContent.Size;
+        var lv = c.Level(z);
+        int i = ly * ChunkContent.Size + lx, cur = lv.Tiles[i];
+        int code = TileCode.WithFixture(TileCode.WithStructure(cur, Generator.Palette.Of(structure)), Generator.Palette.Of(fixture));
+        if (code == cur) return false;
+        lv.Tiles[i] = code;
+        c.Version++;
+        return true;
+    }
+
     /// <summary>Removes a prop (a felled tree) by its stable id.</summary>
     public bool RemoveProp(int cx, int cy, int z, ulong id)
     {

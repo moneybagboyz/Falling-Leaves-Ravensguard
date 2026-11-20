@@ -612,13 +612,13 @@ public class CraftingFullTests(BuildingFixture fx, ITestOutputHelper output) : I
     }
 
     [Fact]
-    public void CF16_SalvageMail9kg_Gives6_3kgRings_2_7kgScrap_MassExact()
+    public void CF16_SalvageMail9kg_Gives6_3kgOfRingsAsIron_2_7kgWaste_MassExact()
     {
         var w = new CraftWorld(); var r = w.Db["salvage_mail"];
         var mail = w.Econ.Items.Add(w.Ids, "mail_hauberk", ItemQuality.Common, w.Hero, [new ItemComponent("wrought_iron", 9000, 1000)]);
         var j = w.R.Start(w.R.Plan(r, w.Actor(), w.Site, w.Pack), w.Actor(), w.Hero, w.Pack, w.Now, 0, 0, mail)!;
         w.Work(j);
-        Assert.Equal(6300, w.Qty("mail_rings")); Assert.Equal(2700, w.Qty("scrap_iron"));
+        Assert.Equal(6300, w.Qty("scrap_iron")); Assert.Equal(2700, w.Qty("waste"));             // the rings, re-used as iron, and the rust and broken ends
         Assert.False(w.Econ.Items.IsLive(mail));
         // armour by material: the plates to scrap, the straps to rags, the rest as waste
         var parts = new List<ItemComponent> { new("steel", 5000, 1000), new("leather", 300, 1000) };
@@ -663,9 +663,9 @@ public class CraftingFullTests(BuildingFixture fx, ITestOutputHelper output) : I
         var w = new CraftWorld(seed); var ctx = Ctx(w);
         foreach (var s in Enum.GetValues<Sk>()) { w.Skill(s, 45); w.Skill(s, 70, Maker); }
         Mint(w, w.Hero, 100_000); Mint(w, Maker, 1000);
-        foreach (var id in new[] { "forge_knife", "forge_arming_sword", "fletch_arrows", "sew_gambeson" }) w.St.Know.Learn(w.Hero, w.Db[id].Index);
+        foreach (var id in new[] { "forge_knife", "forge_arming_sword", "forge_chisel", "sew_gambeson" }) w.St.Know.Learn(w.Hero, w.Db[id].Index);
         var knife = w.StartNew("forge_knife"); w.Work(knife, 900);
-        w.Give("arrowheads", 10); var arrows = w.StartNew("fletch_arrows"); w.Work(arrows, 600);
+        var chisel = w.StartNew("forge_chisel"); w.Work(chisel, 600);
         Stock(w, w.Pack, w.Db["forge_arming_sword"]);
         var (_, c) = Commissions.Order(ctx, w.Db["forge_arming_sword"], w.Hero, Maker, true, CraftSources.Of(w.Pack), 8 * 3600, w.Ids);
         w.Skill(Sk.Smithing, 30, Student);
@@ -712,7 +712,7 @@ public class CraftingFullTests(BuildingFixture fx, ITestOutputHelper output) : I
         var w = new CraftWorld(); w.Skill(Sk.Smithing, 30); w.Skill(Sk.Tailoring, 30);
         var kit = new CraftSite { Light = 255, Water = true }; kit.AddTool(w.Db, "field_smith_kit"); kit.AddTool(w.Db, "sewing_kit");
         var mail = w.Econ.Items.Add(w.Ids, "mail_hauberk", ItemQuality.Common, w.Hero, [new ItemComponent("wrought_iron", 9000, 1000)], conditionPermille: 300);
-        w.Give("mail_rings", 200);
+        w.Give("scrap_iron", 200);
         var patch = w.R.Plan(w.Db["field_patch_mail"], w.Actor(), kit, w.Pack);
         Assert.True(patch.CanStart, string.Join(";", patch.Missing));
         Assert.Equal(-5, patch.KitPenalty);
