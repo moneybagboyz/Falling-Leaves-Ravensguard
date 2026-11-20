@@ -1630,6 +1630,20 @@ Estimates assume one developer working with an AI assistant. Every phase ends in
 - Chronicle cause coverage is ≥ 90% specific.
 
 ### Phase 7: Armies, war at scale, ships and naval war (15–20 months)
+- **Step 0, an adversarial economy audit (decided with the user, Nov 2026).** Before armies are built, a review red-teams the whole economy and its findings are fixed first:
+  - **exploits:** money loops, arbitrage, buy-low-sell-high with no cost, duplication;
+  - **collapse under war load:** 2,000 soldiers eating, paid, armed and fed for seasons; levies pulled from the harvest; purveyance; sieges starving towns;
+  - **bottlenecks:** iron, charcoal, timber, grain, carts, labour;
+  - **coin and mass leaks**, and growth headroom after war.
+
+  It ends in a war-load soak, run before the Phase 7 war soak, and a findings list in the review.
+- **Economies of scale for every business (decided with the user, Nov 2026).**
+  - **Advantages of size:** division of labour (a master with journeymen and apprentices on the simple steps); shared fixed costs (one forge, kiln, building, cart, heavy tools); bulk buying and bulk carting; water- and wind-powered machines (fulling mills, trip-hammers, bellows-driven furnaces); munition-grade standard patterns made faster than one-off pieces.
+  - **Limits:** crowding at stations, a steward's span of control, guild size rules, and market demand.
+- **New large buildings for it, in the same blueprint, room and business system as Phase 5.**
+  - **The buildings:** manufactory halls with many stations; an armoury, which stores and maintains kit; water-powered mills (fulling mill, hammer mill, sawmill, bellows furnace); a ropewalk; warehouses; barracks; a granary depot for army supply.
+  - **What they add:** new build pieces (water wheel, trip-hammer, great bellows), room types the room detector recognises, library plans, and business kinds.
+  - **Where they go:** on rivers with enough fall for a wheel, recognised from the region's water.
 - **Battle:** everything in §3d.
   - The battle bubble and the 2,000-soldier budget.
   - Formations, command and the tactical pause.
