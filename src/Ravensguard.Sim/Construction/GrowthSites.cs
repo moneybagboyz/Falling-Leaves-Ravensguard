@@ -236,7 +236,7 @@ public sealed class GrowthSites : IGrowthSites
     /// from the pits within 3 km, thatch bound from the commons' straw (bought from the fief's treasury at the book's reference price), the rest bought at the market (a real order) and carried
     /// there. The payer keeps <paramref name="keep"/> mites back. Returns the coin spent.
     /// </summary>
-    public long Source(int settlement, ushort good, long miss, Store into, MarketParty party, long keep, int day)
+    public long Source(int settlement, ushort good, long miss, Store into, MarketParty party, long keep, int day, int maxRatioPermille = 3000)
     {
         var ew = _g.Economy; var e = _cw.Econ; var cat = e.Goods;
         var book = ew.Markets.BookForSettlement(settlement);
@@ -260,7 +260,7 @@ public sealed class GrowthSites : IGrowthSites
         if (miss <= 0) return spent;
         long limit = Math.Max(0, Bal() - keep);
         if (limit <= 0) return spent;
-        var res = book.Buy(party, good, miss, 3000, day, limit);
+        var res = book.Buy(party, good, miss, maxRatioPermille, day, limit);
         if (res.Qty <= 0) return spent;
         if (party.Store != into) Store.Move(party.Store, into, good, res.Qty);
         return spent + res.PaidMites;

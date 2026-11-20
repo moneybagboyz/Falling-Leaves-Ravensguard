@@ -4,6 +4,7 @@ using Ravensguard.Sim.Economy;
 using Ravensguard.Sim.Economy.Markets;
 using Ravensguard.Sim.Goods;
 using Ravensguard.Sim.Jobs;
+using Ravensguard.Sim.People;
 
 namespace Ravensguard.Sim.Construction;
 
@@ -96,6 +97,22 @@ public sealed partial class ConstructionWorld
 
     private PurseId? PurseOf(PurseKind k, EntityId id) => Econ.Ledger.TryFind(k, id, out var p) ? p : null;
     private PurseId EscrowOf(Contract c) => Econ.Ledger.Open(PurseKind.Chest, c.Escrow);
+    private PurseId MaterialsPurse(Contract c) => Econ.Ledger.Open(PurseKind.Chest, c.MaterialsChest);
+
+    private Store YardOf(Contract c) => Econ.OpenStore(StoreKind.House, c.Yard);
+
+    /// <summary>The contract is over (handed over or stopped): what is left in its materials chest and its yard is the builder's.</summary>
+    private void CloseMaterials(Contract c)
+    {
+        if (Econ.Ledger.TryFind(PurseKind.Chest, c.MaterialsChest, out var m) && Econ.Ledger.Balance(m).Mites is long left and > 0)
+            Econ.Ledger.Transfer(m, PurseOf(c.ContractorKind, c.Contractor) ?? Econ.Ledger.Open(c.ContractorKind, c.Contractor), new Coin(left), JobReasons.Pay);
+        if (Econ.OtherStores.TryGetValue(c.Yard, out var yard) && Builder(c.Contractor)?.Store is { } home)
+        {
+            var rows = new List<(ushort, long)>();
+            for (int i = 0; i < yard.RowCount; i++) if (yard.QtyAt(i) > 0) rows.Add((yard.GoodAt(i), yard.QtyAt(i)));
+            foreach (var (good, qty) in rows) Store.Move(yard, home, good, qty);
+        }
+    }
     private BuilderInfo? Builder(EntityId id) => Builders?.Invoke().FirstOrDefault(b => b.Id == id);
 
     /// <summary>
@@ -122,8 +139,9 @@ public sealed partial class ConstructionWorld
         Book.Contracts[c.Id] = c;
         Econ.Ledger.Transfer(cp, EscrowOf(c), new Coin(third), JobReasons.Escrow);
         c.Stages = 1;
-        // the escrow advances the builder what the materials and their haul cost (at most the third): he buys and carries before he is paid for his work
-        Release(c, EscrowOf(c), PurseOf(b.Kind, b.Id) ?? Econ.Ledger.Open(b.Kind, b.Id), Math.Min(third, bid.MaterialsMites + bid.HaulMites));
+        // the escrow advances the builder what the materials and their haul cost: he buys and carries before he is paid for his work. The advance is kept in the contract's materials
+        // chest, which pays only for the contract's goods (P5-I fix: paid into his business's cash box, the first day's dividend took half of it); what is left is his at the end
+        Release(c, EscrowOf(c), MaterialsPurse(c), Math.Min(third, bid.MaterialsMites + bid.HaulMites));
         StartBuilder(c, s, b, nowSec);
         Chron(nowSec, "contract_signed", [by, b.Id, s.Id], [new Cause(CauseKind.Other, null, "a builder hired at his bid")], ("total", c.TotalMites.ToString()), ("crew", c.Crew.ToString()));
         Publish(nowSec);
@@ -147,46 +165,117 @@ public sealed partial class ConstructionWorld
                 s.Crew.Add(new CrewMember { Person = id, PersonIndex = row, Class = CrewClass.Follower });
                 n++;
             }
+        // P5-I fix: the hands he hires to make up the crew are skilled in the trade with the most work on the site (the bid charges the skilled wage for every hour; they were
+        // labourers with an axe and a spade, laying stone at half the bid's pace), labourers only when no skilled hand is free
+        long carpentry = 0, masonry = 0;
+        foreach (var g in SetOf(s.Id))
+            if (g.Work == GhostWork.Build && CostOf(g).Skill is var sk && sk is Skill.Carpentry or Skill.Masonry) { long u = Math.Max(0, g.WorkNeed - g.WorkDone); if (sk == Skill.Masonry) masonry += u; else carpentry += u; }
+        int before = s.Crew.Count;
+        if (n < c.Crew) Hire(b.Id, -1, s.Id, c.Crew - n, true, nowSec, masonry > carpentry ? Skill.Masonry : Skill.Carpentry);
+        n += s.Crew.Count - before;
         if (n < c.Crew) Hire(b.Id, -1, s.Id, c.Crew - n, false, nowSec);
         if (Book.AdvancedSec < 0) Book.AdvancedSec = nowSec / Rules.QuantumSeconds * Rules.QuantumSeconds;
-        if (c.Kind == ContractKind.Commission) BuyForSite(c, s, b, nowSec);           // posted work: the materials are the client's
+        if (c.Kind == ContractKind.Commission) BuyForSite(c, s, b, nowSec, signing: true);           // posted work: the materials are the client's
         Refresh(s);
     }
 
     /// <summary>
     /// The builder buys what the site still lacks (beyond the pile and his store) from the settlement's sources and its market (real orders: the demand registers in the book), and his
     /// cart brings what he holds to the pile, one working hour at a time: a cart's load per round trip between his yard and the pile (<see cref="ContractRulesDef.CartKg"/>).
+    /// <para>P5-I fix: at signing he buys what the book holds of everything the site lacks (at the price his bid quoted), and from then on, each morning, what the crew's next two days
+    /// of work in build order still lack; never the whole house every morning. The whole of a stone house asked for each morning registered as each day's demand, made the book's
+    /// target cover hundreds of times its stock, and his price limit then refused even the stone the book held; and his coin went to whatever good came first in the catalogue
+    /// instead of the walls the crew stood waiting for. He pays from the contract's materials chest, and from his own purse when it runs dry.</para>
     /// </summary>
-    private void BuyForSite(Contract c, ConstructionSite s, BuilderInfo b, long nowSec, bool buy = true)
+    private void BuyForSite(Contract c, ConstructionSite s, BuilderInfo b, long nowSec, bool buy = true, bool signing = false)
     {
         if (b.Store == null) return;
         var pile = PileOf(s);
+        var yard = YardOf(c);
         var book = Market?.Invoke(b.Settlement);
         var cr = ContractRules;
         long dist = (long)Math.Sqrt((double)(b.X - s.PileX) * (b.X - s.PileX) + (double)(b.Y - s.PileY) * (b.Y - s.PileY));
         long tripSec = 2 * dist * 60 / Math.Max(1, cr.CartMetresPerMinute) + cr.CartLoadMinutes * 60L;
-        long budgetG = cr.CartKg * 1000L * 3600 / Math.Max(60, tripSec);
-        bool moved = false;
-        foreach (var (good, need) in Needed(s))
+        long loadG = cr.CartKg * 1000L * 3600 / Math.Max(60, tripSec);                  // what the cart brings in a working hour
+        if (buy && b.Party != null)
         {
-            long miss = need - pile.Qty(good);
-            if (miss <= 0) continue;
-            long have = b.Store.Qty(good);
-            if (buy && have < miss && b.Party != null)
+            int day = (int)(nowSec / 86400);
+            // what he buys goes into the contract's yard, paid from the contract's materials chest, then from his own purse
+            var chest = new MarketParty(b.Party.Id, MaterialsPurse(c), yard, b.Party.Kind, b.Party.Index);
+            var own = new MarketParty(b.Party.Id, b.Party.Purse, yard, b.Party.Kind, b.Party.Index);
+            long crewDayUnits = (long)Math.Max(1, s.Crew.Count) * Rules.DayHours * 3_600_000_000L;
+            long days = Math.Max(1, LabourUnits(s) / Math.Max(1, crewDayUnits * (1000 - ContractRules.PaceJitterPm) / 1000));
+            long wagesWeek = 0;
+            foreach (var m in s.Crew) if (m.Class != CrewClass.Follower) wagesWeek += 7 * m.WageMitesPerDay;
+            foreach (var (good, lack) in Shortfall(s, yard, b.Store, signing ? long.MaxValue : 2 * crewDayUnits))
             {
-                // the builder's sources are the settlement's (poles, clay, the commons' straw for thatch), then the market
-                if (GrowthSites != null) GrowthSites.Source(b.Settlement, good, miss - have, b.Store, b.Party, 0, (int)(nowSec / 86400));
-                else book?.Buy(b.Party, good, miss - have, 3000, (int)(nowSec / 86400));
+                // the builder's sources are the settlement's (poles, clay, the commons' straw for thatch), then the market.
+                // At signing he asks only for what the book holds (no demand registered for the rest: the mornings' orders ask for it as the crew comes to need it), and a little
+                // over for what spoils in the open before the crew uses it (thatch, iron's rust: the last roof and the anvil waited a week for the kilograms that rotted)
+                long qty = signing ? Math.Min(lack + lack * Econ.Goods.SpoilPpm(good, StoreKind.Open) / 1_000_000 * days, book?.Goods[good].StockUnits ?? 0) : lack;
+                long had = yard.Qty(good), want = qty;
+                foreach (var party in new[] { chest, own })
+                {
+                    // bound by the contract, he pays what the market asks (up to the book's price clamp): under a household's limit of three times the reference the book's stock floor
+                    // refused even the kilogram of iron that rusted in the pile, and the anvil waited for ever. From his own purse he keeps back a week of his hired hands' wages
+                    long keep = party == chest ? 0 : wagesWeek;
+                    if (want <= 0 || Econ.Ledger.Balance(party.Purse).Mites <= keep) continue;
+                    if (GrowthSites != null) GrowthSites.Source(b.Settlement, good, want, yard, party, keep, day, Econ.Money.PriceClampMaxPermille);
+                    else book?.Buy(party, good, want, Econ.Money.PriceClampMaxPermille, day, Econ.Ledger.Balance(party.Purse).Mites - keep);
+                    want = qty - (yard.Qty(good) - had);
+                    if (Econ.Ledger.Balance(party.Purse).Mites > keep) break;          // not short of coin: the sources and the book had no more today
+                }
             }
-            long room = Econ.Goods.IsPiece(good) ? budgetG / Math.Max(1, Econ.Goods.MassG(good, 1)) : budgetG;      // what the cart's load still takes of it
-            long send = Math.Min(Math.Min(miss, b.Store.Qty(good)), room);
-            if (send <= 0) continue;
-            long got = Store.MoveUpTo(b.Store, pile, good, send);
-            budgetG -= Econ.Goods.MassG(good, got);
-            moved |= got > 0;
+        }
+        // the cart: what the crew needs first, as far as a load goes, from the contract's yard and then his own stock
+        long budgetG = loadG;
+        bool moved = false;
+        foreach (var (good, miss) in Shortfall(s, null, null, long.MaxValue))
+        {
+            long left = miss;
+            foreach (var from in new[] { yard, b.Store })
+            {
+                long room = Econ.Goods.IsPiece(good) ? budgetG / Math.Max(1, Econ.Goods.MassG(good, 1)) : budgetG;      // what the cart's load still takes of it
+                long send = Math.Min(Math.Min(left, from.Qty(good)), room);
+                if (send <= 0) continue;
+                long got = Store.MoveUpTo(from, pile, good, send);
+                budgetG -= Econ.Goods.MassG(good, got); left -= got;
+                moved |= got > 0;
+            }
             if (budgetG <= 0) break;
         }
         if (moved) Refresh(s);
+    }
+
+    /// <summary>
+    /// What a site's unstarted ghosts still lack, good by good in the crew's build order (priority, level, kind, distance from the pile, id: the order <see cref="Pick"/> takes ready
+    /// ghosts in), once the pile (and a builder's stores, <paramref name="yard"/> and <paramref name="own"/>) is shared out to the ghosts before them; the ghosts up to
+    /// <paramref name="capUnits"/> of work (the one that crosses it whole).
+    /// </summary>
+    internal List<(ushort Good, long Qty)> Shortfall(ConstructionSite s, Store? yard, Store? own, long capUnits)
+    {
+        var pile = PileOf(s);
+        var avail = new Dictionary<ushort, long>();
+        var at = new Dictionary<ushort, int>();
+        var lack = new List<(ushort Good, long Qty)>();
+        long units = 0;
+        foreach (var g in GhostsOf(s.Id).Where(g => g.Work == GhostWork.Build && !g.Materialised)
+                     .OrderBy(g => -g.Priority).ThenBy(g => g.Z).ThenBy(g => KindRank(CostOf(g).Kind)).ThenBy(g => Math.Abs(g.X - s.PileX) + Math.Abs(g.Y - s.PileY)).ThenBy(g => g.Id))
+        {
+            if (units >= capUnits) break;
+            units += Math.Max(0, g.WorkNeed - g.WorkDone);
+            foreach (var (good, grams) in CostOf(g).Materials)
+            {
+                ushort id = Econ.Goods.IdOf(good);
+                if (!avail.TryGetValue(id, out long have)) have = pile.Qty(id) + (yard?.Qty(id) ?? 0) + (own?.Qty(id) ?? 0);
+                long take = Math.Min(have, grams), miss = grams - take;
+                avail[id] = have - take;
+                if (miss <= 0) continue;
+                if (at.TryGetValue(id, out int i)) lack[i] = (id, lack[i].Qty + miss);
+                else { at[id] = lack.Count; lack.Add((id, miss)); }
+            }
+        }
+        return lack;
     }
 
     /// <summary>
@@ -336,6 +425,7 @@ public sealed partial class ConstructionWorld
                 if (PurseOf(c.ClientKind, c.Client) is { } cp && Econ.Ledger.Balance(cp).Mites >= owe) { Econ.Ledger.Transfer(cp, escrow, new Coin(owe), JobReasons.Escrow); c.Stages = 3; }
             }
             Release(c, escrow, to, Econ.Ledger.Balance(escrow).Mites);
+            CloseMaterials(c);
             c.State = ContractState.Done; c.DoneSec = nowSec;
             Chron(nowSec, "contract_done", [c.Client, c.Contractor, s.Id], [new Cause(CauseKind.Other, null, "the last piece built and handed over")], ("paid", c.ReleasedMites.ToString()));
             return true;
@@ -351,8 +441,16 @@ public sealed partial class ConstructionWorld
         // the second third: the escrow pays the builder the first, the client puts up the second
         Release(c, escrow, to, Econ.Ledger.Balance(escrow).Mites);
         long third = c.TotalMites / 3;
-        if (PurseOf(c.ClientKind, c.Client) is { } p && Econ.Ledger.Balance(p).Mites >= third && Econ.Ledger.Transfer(p, escrow, new Coin(third), JobReasons.Escrow)) { c.Stages = 2; return true; }
+        if (PurseOf(c.ClientKind, c.Client) is { } p && Econ.Ledger.Balance(p).Mites >= third && Econ.Ledger.Transfer(p, escrow, new Coin(third), JobReasons.Escrow))
+        {
+            // P5-I fix: and the escrow advances into the materials chest what the materials and haul cost beyond the first third, as it did at signing (a stone house's materials are
+            // most of its price: held until handover, the second third left the builder unable to buy the upper storey)
+            long still = Math.Max(0, c.MaterialsMites + c.HaulMites - Math.Min(third, c.MaterialsMites + c.HaulMites));
+            Release(c, escrow, MaterialsPurse(c), Math.Min(still, Econ.Ledger.Balance(escrow).Mites));
+            c.Stages = 2; return true;
+        }
         // missed: the builder stops and keeps the stage paid; the half-built house is the client's
+        CloseMaterials(c);
         c.State = ContractState.Stopped; c.DoneSec = nowSec;
         s.Pause = PauseReason.NoWages;
         LetCrewGo(s);

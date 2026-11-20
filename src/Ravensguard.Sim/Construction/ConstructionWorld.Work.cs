@@ -267,7 +267,7 @@ public sealed partial class ConstructionWorld
                     {
                         m.G = g; m.C = CostOf(g);
                         m.Tm = PieceCosts.TimeMultPm(m.C, SkillLevel(m.Person, m.C.Skill, m.PersonIndex));
-                        m.Tp = ToolsOk(m.C, m.Class == CrewClass.Skilled ? _skilledTools ??= CrewTools(CrewClass.Skilled) : _labourTools ??= CrewTools(CrewClass.Labourer)) ? 1000 : Rules.NoToolPm;
+                        m.Tp = ToolsOk(m.C, m.Class == CrewClass.Skilled || (m.Class == CrewClass.Follower && BuilderCrew(s)) ? _skilledTools ??= CrewTools(CrewClass.Skilled) : _labourTools ??= CrewTools(CrewClass.Labourer)) ? 1000 : Rules.NoToolPm;
                     }
                     long w = WorkOn(g, m, left, out bool done);
                     left -= w; m.WorkedTodaySec += w; worked = true; any = true;
@@ -296,6 +296,16 @@ public sealed partial class ConstructionWorld
             s.LinearUntil = lin > 0 ? t0 + q + lin * q : 0; s.LinearWorks = works;
         }
         return any;
+    }
+
+    /// <summary>
+    /// P5-I fix: whether the site's followers are a builder's own people under a signed contract (the owner and staff of a carpentry or masonry business): they bring their trade's tools,
+    /// a skilled hand's kit. They had a labourer's axe and spade, so a mason worked stone half again as slowly as the bid's hours.
+    /// </summary>
+    private bool BuilderCrew(ConstructionSite s)
+    {
+        foreach (var c in Book.Contracts.Values) if (c.Site == s.Id && c.State == ContractState.Signed && c.ContractorKind != PurseKind.Person) return true;
+        return false;
     }
 
     /// <summary>The tool qualities a hired hand brings by class.</summary>
@@ -605,7 +615,10 @@ public sealed partial class ConstructionWorld
     /// Hires <paramref name="count"/> hands for a site from the settlements near it (spec 4.4: labourers and idle adults; skilled: carpenters and masons, Carpentry or Masonry above 30):
     /// adults of 16 to 60 not on another crew, nearest settlement first, the most skilled first for a skilled hand, then person row. Within working hours the day's escrow is put up at once.
     /// </summary>
-    public ConstructionResult Hire(EntityId by, int household, EntityId siteId, int count, bool skilled, long nowSec)
+    public ConstructionResult Hire(EntityId by, int household, EntityId siteId, int count, bool skilled, long nowSec) => Hire(by, household, siteId, count, skilled, nowSec, Skill.None);
+
+    /// <summary>As <see cref="Hire(EntityId, int, EntityId, int, bool, long)"/>; skilled hands are taken best first in <paramref name="trade"/> when one is named (P5-I: a builder hires his job's trade).</summary>
+    public ConstructionResult Hire(EntityId by, int household, EntityId siteId, int count, bool skilled, long nowSec, Skill trade)
     {
         var s = Site(siteId);
         if (s == null || !s.Open) return ConstructionResult.No("cn_no_site");
@@ -636,7 +649,7 @@ public sealed partial class ConstructionWorld
             int sk = Math.Max(pt.SkillLevelOf(i, Skill.Carpentry), pt.SkillLevelOf(i, Skill.Masonry));
             if (skilled) { if (!(occ is Occupation.Carpenter or Occupation.Mason || sk > Rules.SkilledAboveSkill)) continue; }
             else if (occ is not (Occupation.None or Occupation.Labourer)) continue;
-            picks.Add((d, skilled ? -sk : 0, i));
+            picks.Add((d, skilled ? -(trade == Skill.None ? sk : pt.SkillLevelOf(i, trade)) : 0, i));
         }
         picks.Sort();
         var hired = new List<string>();

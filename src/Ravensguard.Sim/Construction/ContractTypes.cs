@@ -51,6 +51,13 @@ public sealed class Contract
 
     public long TotalMites => MaterialsMites + LabourMites + HaulMites;
     public EntityId Escrow => ConstructionIds.EscrowOfContract(Id);
+    /// <summary>
+    /// P5-I: the builder's materials account for this contract (a ledger chest). The escrow advances into it what the materials and their haul cost, out of each stage as it is put up;
+    /// it pays only for the contract's goods, and what is left is his when the contract ends.
+    /// </summary>
+    public EntityId MaterialsChest => ConstructionIds.MaterialsOfContract(Id);
+    /// <summary>P5-I: where the goods he buys for this contract wait for his cart (a store of the contract's own, not his business's: his business sold the bought dressed stone and lime as its own wares).</summary>
+    public EntityId Yard => ConstructionIds.YardOfContract(Id);
     public bool Live => State is ContractState.Open or ContractState.Signed;
 }
 
