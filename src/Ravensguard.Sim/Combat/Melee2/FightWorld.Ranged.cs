@@ -258,6 +258,8 @@ public sealed partial class FightWorld
             var p = Projectiles[pi];
             if (p.Done) continue;
             long f0 = p.Flown, f1 = p.Flown + p.StepMm;
+            long wallAt = Walls != null ? MissileWall(p, f0, f1) : -1;      // [heists] a bolt does not pass a wall
+            if (wallAt >= 0) f1 = wallAt;
             Fighter? hit = null; long bestT = long.MaxValue; long hitLat = 0;
             foreach (var e in Fighters)
             {
@@ -274,6 +276,14 @@ public sealed partial class FightWorld
                 if (t < bestT) { bestT = t; hit = e; hitLat = lat; }
             }
             if (hit != null) { p.Flown = Math.Max(f0, bestT); p.Done = true; ProjectileHit(p, hit, hitLat); continue; }
+            if (wallAt >= 0)
+            {
+                p.Flown = wallAt; p.Done = true;
+                var (wx, wy) = p.At(wallAt);
+                Emit(FightEventKind.ProjectileMiss, p.Shooter, -1, -1, (int)(wallAt / 1000));
+                Spent(p, wx, wy, hit: false);
+                continue;
+            }
             p.Flown = f1;
             if (p.Z(f1) < 0 || f1 >= p.RangeMm)
             {

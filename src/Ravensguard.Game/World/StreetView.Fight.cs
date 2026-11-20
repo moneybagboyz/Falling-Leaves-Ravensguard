@@ -94,6 +94,8 @@ public partial class StreetView
         var wear = new List<(EntityId, int)>();
         for (int i = 0; i < w.Length && i < _heroWorn.Count; i++) if (w[i].ConditionPm < _heroWorn[i].ConditionPm) wear.Add((_heroWorn[i].Item, w[i].ConditionPm));
         if (wear.Count > 0) _heroLink.Issue(AftermathDesk.WearCommand(wear, _world.Clock.Now.Seconds));
+        var blades = fight.WeaponKeepPm().ToList();                                  // P6-D3 (heists 4.4): the blades' wear, and a brittle blade that broke leaving the pack
+        if (blades.Count > 0) _heroLink.Issue(AftermathDesk.WeaponWearCommand(blades.Select(b => (new EntityId(b.Item), b.KeepPm)), _world.Clock.Now.Seconds));
     }
 
     /// <summary>The hero's watch settings (the world's book; its changes go back through <see cref="KeepStance"/>).</summary>
