@@ -299,6 +299,33 @@ public sealed partial class RoomWorld
         }
     }
 
+    /// <summary>
+    /// P5-B: the load path of a save that keeps structure ids (build-mode-and-construction 3.3): the partition as saved (each structure id with its cells), then the counter. Cells
+    /// that the parts do not name get ids after <paramref name="nextId"/> as <see cref="RebuildStructures"/> would; rooms are left for <see cref="RebuildAll"/>.
+    /// </summary>
+    public void RestoreStructures(IEnumerable<(int Id, long[] Cells)> parts, int nextId)
+    {
+        _structOf.Clear(); _members.Clear(); _facts.Clear();
+        foreach (var (id, cells) in parts)
+        {
+            var set = new HashSet<long>();
+            foreach (var k in cells) if (_cells.TryGetValue(k, out var c) && IsMember(c.Structure)) { set.Add(k); _structOf[k] = id; }
+            if (set.Count > 0) _members[id] = set;
+        }
+        _nextStructure = Math.Max(nextId, _members.Count == 0 ? 1 : _members.Keys.Max() + 1);
+        foreach (var part in ComputePartition())
+        {
+            var loose = part.Where(k => !_structOf.ContainsKey(k)).ToArray();
+            if (loose.Length == 0) continue;
+            int id = _nextStructure++;
+            _members[id] = new HashSet<long>(loose);
+            foreach (var k in loose) _structOf[k] = id;
+        }
+    }
+
+    /// <summary>P5-B: every structure with its cells (ascending id, cells ascending): what a save keeps so ids stay stable across a load.</summary>
+    public List<(int Id, long[] Cells)> StructureParts() => _members.OrderBy(m => m.Key).Select(m => (m.Key, m.Value.OrderBy(k => k).ToArray())).ToList();
+
     /// <summary>A copy of the cells with structures and rooms found by full detection: what <see cref="Apply"/> must always equal.</summary>
     public RoomWorld FullTwin()
     {

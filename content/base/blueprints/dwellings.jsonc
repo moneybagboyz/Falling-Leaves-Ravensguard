@@ -605,5 +605,18 @@
       "__________",
       "__________",
       "__________"
+    ] },
+
+  // P5-B (build-mode-and-construction 3.1, BC-2): the golden cottage, 8 x 5 m outside: 19 wattle walls, a door, two windows and 18 cells of packed earth. Built from the plan
+  // library a roof goes over its whole footprint (40 thatch cells): 250.5 worker-hours, logs 394 kg, clay 1,501, thatch 3,000, planks 30, nails 0.3.
+  { "type": "blueprint", "id": "test_cottage", "name": "Wattle cottage", "wealth": "poor",
+    "legend": { "%": "wall_wattle", "o": "window_shuttered", "+": "door_wood", "k": "floor_packed_earth" },
+    "rooms": { "k": "hearth" },
+    "rows": [
+      "%%%o%%%%",
+      "%kkkkkk%",
+      "%kkkkkko",
+      "%kkkkkk%",
+      "%%%+%%%%"
     ] }
 ]

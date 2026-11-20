@@ -1,0 +1,16 @@
+// The rules of hands-on construction (P5-B, docs/specs/phase5/build-mode-and-construction.md 4.3-4.6). Placing a plan only makes ghosts; every piece is built by a person,
+// with its materials in the site's pile; wages go through the ledger. Money in mites, times in game hours or seconds as named.
+[
+  { "type": "construction_rules", "id": "construction",
+    // support and collapse (4.5): the plan's 3-tile rule, a beam's 4-tile reach and 6 m span, a jetty of one tile, z up to +3; the groan before a fall (decided: about 10 s)
+    "support_reach_tiles": 3, "beam_reach_tiles": 4, "beam_span_tiles": 6, "jetty_reach_tiles": 1, "max_level": 3, "max_slope_pm": 100,
+    "groan_seconds": 10, "fall_mm_per_level": 3000, "fall_body_kg": 70,
+    // the work (4.4): two to a cell (four on a stair pair or a forge), x1.5 without the tool, a crew's day 06-16, rain over 2 mm/h and frost stop daub, thatch and lime
+    "workers_per_cell": 2, "workers_per_big_cell": 4, "no_tool_pm": 1500, "day_start_hour": 6, "day_hours": 10, "light_from_hour": 5, "light_to_hour": 21,
+    "rain_stop_tenths_mm_per_hour": 20, "frost_below_c": 0, "unskilled_gain_dx100": 20, "reach_m": 3, "quantum_seconds": 60,
+    "labourer_tools": ["axe", "spade"], "skilled_tools": ["axe", "saw", "hammer", "chisel", "spade"],
+    // crews and wages (4.6): production's classes, 150 and 350 a day; skilled above Carpentry or Masonry 30; three short days and a hand quits
+    "crew_max": 8, "wage_labourer_mites_per_day": 150, "wage_skilled_mites_per_day": 350, "skilled_above_skill": 30, "quit_after_short_days": 3, "hire_radius_m": 6000,
+    // materials on site (4.3): unload within 3 m; a haul job is one carrier's load at full speed (half of a strength-50 carrier's 140 kg)
+    "pile_reach_m": 3, "haul_load_pm": 500, "haul_carrier_strength": 50, "haul_deadline_hours": 48 }
+]

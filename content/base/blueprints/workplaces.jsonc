@@ -94,5 +94,44 @@
         "#vvvv#",
         "######"
       ] }
+    ] },
+
+  // P5-B (BC-15): a two-storey smithy and house: the smithy below (stone walls, flagstones, a forge and an anvil) and the lodging above on timber walls, joined by a stair.
+  { "type": "blueprint", "id": "smithy_house", "name": "Smithy with lodging", "wealth": "middling",
+    "legend": { "#": "wall_stone", "t": "wall_timber", "o": "window_shuttered", "+": "door_wood", "w": "floor_flagstone", "s": "floor_plank", "<": "stairs_up", ">": "stairs_down",
+                "F": "forge", "N": "anvil", "B": "bed" },
+    "rooms": { "w": "work:smithing", "s": "sleeping" },
+    "rows": [
+      "##o##o##",
+      "#wwwwww#",
+      "+wwwwww#",
+      "#wwwwww#",
+      "#ww<www#",
+      "########"
+    ],
+    "fixtures": [
+      "________",
+      "_F______",
+      "________",
+      "_____N__",
+      "________",
+      "________"
+    ],
+    "levels": [
+      { "z": 1, "rows": [
+        "ttottott",
+        "tsssssst",
+        "tsssssst",
+        "tsssssst",
+        "tss>ssst",
+        "tttttttt"
+      ], "fixtures": [
+        "________",
+        "_____BB_",
+        "________",
+        "________",
+        "________",
+        "________"
+      ] }
     ] }
 ]

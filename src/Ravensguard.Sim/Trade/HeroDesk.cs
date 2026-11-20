@@ -30,6 +30,8 @@ public enum HeroCommandKind : byte
     Succession,
     /// <summary>Appended (P5-A2): land at the barrier ("ld:buy|...", lease, stall, claim, licence, pull, petition, settle), applied by <see cref="Ravensguard.Sim.Land.LandDesk"/>.</summary>
     Land,
+    /// <summary>Appended (P5-B): construction at the barrier ("cn:place|...", plan, remove, decon, work, deliver, haul, hire, crew, dismiss, pause, pile, priority), applied by <see cref="Ravensguard.Sim.Construction.ConstructionDesk"/>.</summary>
+    Construction,
 }
 
 /// <summary>Where the hero crafts (built on the main thread from what is in reach, copied into the command).</summary>
@@ -418,6 +420,7 @@ public sealed class HeroDesk
                 HeroCommandKind.Site => Ravensguard.Sim.Sites.SiteDesk.Apply(ctx, c),                          // P4 close-out: loot to the pack, search and dig
                 HeroCommandKind.Succession => Ravensguard.Sim.Succession.SuccessionDesk.Apply(ctx, c),         // P4 close-out: the heir takes over, the estate is settled
                 HeroCommandKind.Land => Ravensguard.Sim.Land.LandDesk.Apply(ctx, c),                           // P5-A2: deeds, leases, claims, charters
+                HeroCommandKind.Construction => Ravensguard.Sim.Construction.ConstructionDesk.Apply(ctx, c),   // P5-B: ghosts, hands-on work, materials, crews
                 _ => R(c, HeroResultCode.Invalid, T("HERO_UNKNOWN_COMMAND")),
             };
         }
