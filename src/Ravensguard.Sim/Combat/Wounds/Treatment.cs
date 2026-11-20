@@ -40,32 +40,22 @@ public readonly record struct TreatResult(bool Ok, bool Success, string Reason, 
 /// </summary>
 public static class Treatment
 {
-    public static int SimSeconds(TreatKind k) => k switch
-    {
-        TreatKind.Pressure => 2, TreatKind.Bandage => 4, TreatKind.Tourniquet => 6, TreatKind.Splint => 12, TreatKind.SetBone => 20, TreatKind.Stitch => 30,
-        TreatKind.Clean => 20, TreatKind.Cauterise => 10, TreatKind.TendonRepair => 90, TreatKind.LigamentRepair => 90, TreatKind.OrganRepair => 180, TreatKind.Amputate => 60, _ => 0,
-    };
+    /// <summary>How long a treatment takes, sim-seconds (content <c>medicine/treatments.jsonc</c>).</summary>
+    public static int SimSeconds(TreatKind k) => MedicineRules.Current.Treat[(int)k].SimS;
 
-    public static int MinSkill(TreatKind k) => k switch
-    {
-        TreatKind.Stitch => 10, TreatKind.TendonRepair => 50, TreatKind.LigamentRepair => 60, TreatKind.OrganRepair => 60, TreatKind.Amputate => 30, _ => 0,
-    };
+    public static int MinSkill(TreatKind k) => MedicineRules.Current.Treat[(int)k].MinSkill;
 
     /// <summary>The items a treatment consumes, as (good, count) alternatives in order; the first that is held is taken.</summary>
-    public static IReadOnlyList<(string Item, int Count)> Needs(TreatKind k) => k switch
-    {
-        TreatKind.Bandage => [("bandage", 1)],
-        TreatKind.Tourniquet => [("rope", 1), ("bandage", 2)],
-        TreatKind.Splint => [("splint", 1)],
-        TreatKind.Stitch or TreatKind.TendonRepair or TreatKind.LigamentRepair or TreatKind.OrganRepair => [("needle_and_thread", 1)],
-        _ => [],
-    };
+    public static IReadOnlyList<(string Item, int Count)> Needs(TreatKind k) => MedicineRules.Current.Treat[(int)k].Needs;
+
+    /// <summary>True when the surgery wants light (content).</summary>
+    public static bool NeedsLight(TreatKind k) => MedicineRules.Current.Treat[(int)k].Light;
 
     private static bool Take(ITreatItems? items, TreatKind k)
     {
         var needs = Needs(k);
         if (needs.Count == 0 || items == null) return needs.Count == 0 || items == null && false;
-        if (k is TreatKind.Stitch or TreatKind.TendonRepair or TreatKind.LigamentRepair or TreatKind.OrganRepair) return items.Has("needle_and_thread", 1);   // a tool: kept
+        if (MedicineRules.Current.Treat[(int)k].ToolQuality.Length > 0) return items.Has(needs[0].Item, needs[0].Count);   // a tool (the sewing needle): kept
         foreach (var (item, n) in needs) if (items.Has(item, n)) { items.Take(item, n); return true; }
         return false;
     }
@@ -95,7 +85,8 @@ public static class Treatment
     /// <summary>The wound a helper should dress first on <paramref name="part"/> (-1: anywhere): the highest remaining undressed external rate, or -1.</summary>
     public static int WorstBleeder(WoundBook b, int part, long sec) => Worst(b, part, sec, w => w.Dressing == Dressing.None);
 
-    public static TreatResult Perform(WoundBook b, BodyPlanV2 plan, in TreatRequest r, ITreatItems? items = null)
+    /// <param name="plan">The patient's body plan; null where none is at hand (the abstract tier): a tourniquet and an amputation then cannot be done.</param>
+    public static TreatResult Perform(WoundBook b, BodyPlanV2? plan, in TreatRequest r, ITreatItems? items = null)
     {
         if (b.Dead) return TreatResult.No("dead");
         b.AdvanceTo(r.GameSec);
@@ -116,13 +107,16 @@ public static class Treatment
                 }
             case TreatKind.ReleasePressure:
                 {
+                    // a pressure hold lets go; a tourniquet is loosened (medicine 4.3): the wound bleeds again at its current rate and the clock of the limb stays where it is
                     for (int i = 0; i < b.Records.Count; i++)
                     {
                         var w = b.Records[i];
-                        if (w.Dressing != Dressing.Pressure || r.Part >= 0 && w.Part != r.Part) continue;
+                        if (w.Dressing == Dressing.Pressure) { if (r.Part >= 0 && w.Part != r.Part) continue; }
+                        else if (w.Dressing == Dressing.Tourniquet) { if (r.Part >= 0 && w.Root != r.Part && w.Part != r.Part) continue; }
+                        else continue;
                         w.Dressing = Dressing.None; if (w.State == WoundState.Dressed) w.State = WoundState.Open; b.Records[i] = w;
                     }
-                    return new(true, true, "", 0);
+                    return new(true, true, "", secs);
                 }
             case TreatKind.Bandage:
                 {
@@ -142,17 +136,22 @@ public static class Treatment
                 }
             case TreatKind.Tourniquet:
                 {
+                    if (plan == null) return TreatResult.No("no body plan");
                     if (r.Part < 0 || plan.Parts[r.Part].Limb == null || plan.Parts[r.Part].IsHosted) return TreatResult.No("a tourniquet goes on a limb");
                     bool any = false;
                     for (int k = 0; k < b.Records.Count; k++)
                         if (Descends(plan, b.Records[k].Part, r.Part) && !b.Records[k].Internal && b.Records[k].BleedX10 > 0 && b.Records[k].State != WoundState.Scar && !b.Records[k].Is(Aid.Resolved)) { any = true; break; }
                     if (!any) return TreatResult.No("nothing bleeds below there");
                     if (!Take(items, TreatKind.Tourniquet)) return TreatResult.No("no rope or bandages");
+                    // the limb's clock never resets (medicine 4.3): a tourniquet tied again carries on from what the limb has already had; the distal parts are noted for the ischaemia steps
+                    uint clock = 0; ulong distal = 0;
+                    for (int k = 0; k < b.Records.Count; k++) if (b.Records[k].Root == r.Part || Descends(plan, b.Records[k].Part, r.Part)) clock = Math.Max(clock, b.Records[k].TourniquetOnS);
+                    for (int pi = 0; pi < plan.Parts.Length && pi < 64; pi++) if (Descends(plan, pi, r.Part)) distal |= 1UL << pi;
                     for (int k = 0; k < b.Records.Count; k++)
                     {
                         var w = b.Records[k];
                         if (!Descends(plan, w.Part, r.Part) || w.Internal || w.BleedX10 <= 0 || w.State == WoundState.Scar || w.Is(Aid.Resolved)) continue;
-                        w.Dressing = Dressing.Tourniquet; w.DressFromS = nowS; w.DressedAt = now; w.Root = (short)r.Part; b.Records[k] = w;
+                        w.Dressing = Dressing.Tourniquet; w.DressFromS = nowS; w.DressedAt = now; w.Root = (short)r.Part; w.TourniquetOnS = clock; w.DistalMask = distal; b.Records[k] = w;
                     }
                     return new(true, true, "", secs);
                 }
@@ -225,6 +224,7 @@ public static class Treatment
             case TreatKind.OrganRepair: return Repair(b, r, WoundCat.Organ, int.MaxValue / 2, 60, secs, items);
             case TreatKind.Amputate:
                 {
+                    if (plan == null) return TreatResult.No("no body plan");
                     if (r.Part < 0 || plan.Parts[r.Part].Limb == null || !plan.Parts[r.Part].Severable) return TreatResult.No("not a limb");
                     bool tq = false;
                     foreach (var w in b.Records) if (w.Dressing == Dressing.Tourniquet && w.Root >= 0 && Descends(plan, r.Part, w.Root) | w.Root == r.Part) { tq = true; break; }

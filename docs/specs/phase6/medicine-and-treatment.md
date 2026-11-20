@@ -88,3 +88,8 @@ Every outcome uses Phase 4's streams (0x420 infection, 0x421 malunion, 0x422 sur
 
 ## 9. Budgets
 Screen open <= 5 ms (the book and the part list); a queued command at the barrier <= 0.05 ms; Treat scoring <= 0.02 ms per candidate (only persons with a bleeding ally in 6 m are scored); `AbstractPhysic` <= 0.5 ms an hour a region; save: physicians 16 B each, `TourniquetOnS` 4 B on the few wounds that have one; content <= 20 KB (Phase 4 budget).
+
+## Notes (P6-A1, medicine sim side)
+- Built: `medicine/*.jsonc` (treatments, healing, relief, aids, prices and rules) read by `MedicineRules` (Phase 4 constants are the defaults; `Install` is called from `RegionServices`); `TourniquetOnS` and `DistalMask` on the wound record (additive save keys 32 and 33, hashed only when non-zero), steps at 360, 1,080 and 2,160 sim-s with warnings at 300, 1,020 and 1,860; `ReleasePressure` now loosens a tourniquet and takes 6 sim-s (Phase 4: 0); `PhysicianBook`, `PhysicianSeeding.Run` (the seeding skeleton calls it), `AbstractPhysic` (before `AbstractFirstAid`), `TreatDesk` (quote and paid treatment), `Crutches`, `UtilityBrain.TreatScore`, recipe `make_crutch`, founded-only business kind `physician`.
+- TODO at merge with A2: `MedicineEnums` stands in for stream 0x600, `Occupation.Physician`, `TransferReason.Fee`; the `physician` kind's owner occupation is `Labourer` until the enum exists; wire the `medicine` section into `WorldSave` and call `PhysicianSeeding.Run` from the seeding pass; give `PhysicianBook.Plans` the combat content's plan lookup.
+- Not done here: guards' kits with bandages (`fight_kits.jsonc`), poppy milk sold only where a physician lives, the surgery room, the live tier filling `ChoiceContext.Treat*`.

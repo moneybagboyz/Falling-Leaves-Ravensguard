@@ -1,0 +1,11 @@
+// The healing table of wounds 3.4 (medicine spec 3), moved out of code with its values unchanged; times are days x 10. Skin, inset and vessel wounds heal in 6 or 10 days
+// (8 or 14 when deep, from half the depth); muscle in 3, 15 or 40 days by grade and a ligament in 12 or 30, both times 1.5 untreated; bone by grade 10/20/28/40 days treated (set or
+// splinted), 15/35/45/60 untreated; a tendon 40 days once repaired; an organ 30 days once repaired; a stump 10 days. An unset fracture of a broken, displaced or shattered bone
+// heals crooked 50, 80 or 100 percent of the time.
+[
+  { "type": "healing_table", "id": "default",
+    "shallow_treated_x10": 60, "shallow_x10": 100, "deep_treated_x10": 80, "deep_x10": 140, "deep_from_pm": 500,
+    "muscle_x10": [30, 150, 400], "ligament_x10": [120, 300], "treated_x10": 10, "untreated_x10": 15,
+    "bone_treated_x10": [100, 200, 280, 400], "bone_x10": [150, 350, 450, 600], "bone_other_x10": 30,
+    "tendon_x10": 400, "organ_repaired_x10": 300, "severed_x10": 100, "malunion_pct": [0, 50, 80, 100] },
+]

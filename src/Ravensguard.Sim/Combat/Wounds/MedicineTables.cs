@@ -38,26 +38,25 @@ public static class MedicineTables
 
     public static int DressPm(Dressing d) => d switch { Dressing.Pressure => PressurePm, Dressing.Bandage => BandagePm, Dressing.Tourniquet => TourniquetPm, _ => 1000 };
 
-    /// <summary>Healing days x 10 for a wound, treated or untreated (wounds 3.4). <paramref name="treated"/>: dressed or stitched, set or splinted, or repaired by surgery.</summary>
-    public static int NeedX10(WoundCat cat, byte grade, int depthPm, bool treated, bool repaired) => cat switch
+    /// <summary>Healing days x 10 for a wound, treated or untreated (wounds 3.4; the table is <c>medicine/healing.jsonc</c>, see <see cref="MedicineRules"/>). <paramref name="treated"/>: dressed or stitched, set or splinted, or repaired by surgery.</summary>
+    public static int NeedX10(WoundCat cat, byte grade, int depthPm, bool treated, bool repaired)
     {
-        WoundCat.Skin or WoundCat.Inset or WoundCat.Vessel => depthPm < 500 ? (treated ? 60 : 100) : (treated ? 80 : 140),
-        WoundCat.Muscle => (grade switch { 1 => 30, 2 => 150, _ => 400 }) * (treated ? 10 : 15) / 10,
-        WoundCat.Bone => grade switch
+        var h = MedicineRules.Current.Healing;
+        int mult = treated ? h.Treated : h.Untreated;
+        static int At(int[] a, int i) => a[Math.Clamp(i, 0, a.Length - 1)];
+        return cat switch
         {
-            1 => treated ? 100 : 150,
-            2 => treated ? 200 : 350,
-            3 => treated ? 280 : 450,
-            4 => treated ? 400 : 600,
-            _ => 30,
-        },
-        WoundCat.Ligament => (grade == 1 ? 120 : 300) * (treated ? 10 : 15) / 10,
-        WoundCat.Tendon => 400,
-        WoundCat.Organ => repaired ? 300 : 0,
-        WoundCat.Severed => 100,
-        _ => 0,
-    };
+            WoundCat.Skin or WoundCat.Inset or WoundCat.Vessel => depthPm < h.DeepFromPm ? (treated ? h.ShallowTreated : h.Shallow) : (treated ? h.DeepTreated : h.Deep),
+            WoundCat.Muscle => At(h.Muscle, grade == 1 ? 0 : grade == 2 ? 1 : int.MaxValue) * mult / 10,
+            WoundCat.Bone => grade is >= 1 and <= 4 ? At(treated ? h.BoneTreated : h.Bone, grade - 1) : h.BoneOther,
+            WoundCat.Ligament => At(h.Ligament, grade == 1 ? 0 : 1) * mult / 10,
+            WoundCat.Tendon => h.Tendon,
+            WoundCat.Organ => repaired ? h.OrganRepaired : 0,
+            WoundCat.Severed => h.Severed,
+            _ => 0,
+        };
+    }
 
     /// <summary>Malunion chance for an unset fracture, percent (cracked 0).</summary>
-    public static int MalunionPct(byte boneGrade) => boneGrade switch { 2 => 50, 3 => 80, 4 => 100, _ => 0 };
+    public static int MalunionPct(byte boneGrade) { var m = MedicineRules.Current.Healing.Malunion; return boneGrade is >= 1 and <= 4 && boneGrade - 1 < m.Length ? m[boneGrade - 1] : 0; }
 }

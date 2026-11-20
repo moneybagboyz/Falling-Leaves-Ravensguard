@@ -185,5 +185,12 @@
   {"type": "craft_recipe", "id": "make_harness", "name": "Make a harness", "category": "craft", "skill": "Cobbling", "difficulty": 35, "effort": "moderate", "workstation": "saddle_tree",
    "tools": [{"quality": "cutting", "level": 1}, {"quality": "sewing", "level": 1}], "proficiencies": [{"id": "saddlery", "time_mult_pm": 1500, "skill_penalty": 8}],
    "components": [[{"good": "leather", "kg": 5.5}], [{"good": "iron_bar", "kg": 0.6}], [{"good": "twine", "kg": 0.1}]],
-   "steps": [{"id": "cut", "hours": 3}, {"id": "stitch", "hours": 12}], "results": [{"good": "harness", "pieces": 1}], "byproducts": [{"good": "rags", "kg": 0.1}], "learn": {"master": true}}
+   "steps": [{"id": "cut", "hours": 3}, {"id": "stitch", "hours": 12}], "results": [{"good": "harness", "pieces": 1}], "byproducts": [{"good": "rags", "kg": 0.1}], "learn": {"master": true}},
+
+  // ---- medicine (medicine spec 3, 4.6) ----
+  {"type": "craft_recipe", "id": "make_crutch", "name": "Make a crutch", "category": "medical", "skill": "Carpentry", "difficulty": 5, "effort": "light",
+   "tools": [{"quality": "cutting", "level": 1}], "proficiencies": [{"id": "woodcraft", "time_mult_pm": 1300, "skill_penalty": 5}], "learn": {"known_by_all": true},
+   "components": [[{"good": "logs", "kg": 2.0}]], "steps": [{"id": "shape", "hours": 1.0, "critical": true}],
+   "results": [{"good": "crutch", "pieces": 1}], "byproducts": [{"good": "shavings", "kg": 0.5, "chance_pm": 1000}],
+   "note": "A pole of ash or oak, shaped and padded; no failure below skill 5. At any station or a field kit."}
 ]

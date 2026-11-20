@@ -67,6 +67,7 @@ public sealed class RegionServices
         Seed = seed; Content = content; Continent = continent; Home = home;
         Weather = RegionWeather.ForContinent(continent);
         FarmSettings = FarmingSettings.FromContent(content);
+        Ravensguard.Sim.Combat.Wounds.MedicineRules.Install(content);          // medicine 3: the treatment times, healing table and fees come from content/base/medicine
     }
 
     /// <summary>The sim seed of a region: the world seed for the home region (so a one-region world is unchanged), a mix of seed and region id for every other.</summary>

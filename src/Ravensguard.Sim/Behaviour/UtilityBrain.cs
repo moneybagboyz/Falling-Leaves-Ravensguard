@@ -35,6 +35,11 @@ public struct ChoiceContext
     public ulong Person;
     /// <summary>The directive and limits of an autopilot person (null for an NPC): a bias per action and a mask of removed actions.</summary>
     public ActionPolicy? Policy;
+    /// <summary>
+    /// Medicine 4.5, filled by the live tier for persons with a bleeding person within 6 m (zero elsewhere, so Treat is never scored): bleeding allies near (kin, household, comrades of the same
+    /// side, party), bleeding strangers near, the person's <c>first_aid</c> proficiency in permille, and his own pain as a percent of his knock-out threshold.
+    /// </summary>
+    public int TreatAlliesNear, TreatStrangersNear, FirstAidPm, OwnPainPct;
 }
 
 public readonly record struct Choice(ActionKind Kind, int Score, ActionKind RunnerUp, int RunnerUpScore);
@@ -127,6 +132,9 @@ public sealed class UtilityBrain
         return s;
     }
 
+    /// <summary>The Treat score of a person (medicine 4.5): see <see cref="Ravensguard.Sim.Combat.Wounds.TreatAi.Score(int, int, int, int)"/>; 0 when nobody bleeds near him.</summary>
+    public static int TreatScore(in ChoiceContext c) => c.TreatAlliesNear <= 0 && c.TreatStrangersNear <= 0 ? 0 : Ravensguard.Sim.Combat.Wounds.TreatAi.Score(c.TreatAlliesNear, c.TreatStrangersNear, c.FirstAidPm, c.OwnPainPct);
+
     public Choice Choose(in NeedInputs n, in ChoiceContext c)
     {
         int best = -1, bestS = int.MinValue, run = -1, runS = int.MinValue;
@@ -137,6 +145,10 @@ public sealed class UtilityBrain
             if (s > bestS || (s == bestS && _acts[i].Kind < _acts[best].Kind)) { run = best; runS = bestS; best = i; bestS = s; }
             else if (s > runS || (s == runS && _acts[i].Kind < _acts[run].Kind)) { run = i; runS = s; }
         }
+        // Treat wins over everything but Flee (and Fight, which the combat brain owns): a bleeding ally near a person who is not running is helped first
+        int treat = TreatScore(c);
+        if (treat > 0 && !(c.Policy != null && c.Policy.Forbids(ActionKind.Treat)) && (best < 0 || _acts[best].Kind != ActionKind.Flee))
+            return new Choice(ActionKind.Treat, treat, best >= 0 ? _acts[best].Kind : ActionKind.Idle, best >= 0 ? bestS : 0);
         if (best < 0) return new Choice(ActionKind.Idle, 0, ActionKind.Idle, 0);
         return new Choice(_acts[best].Kind, bestS, run >= 0 ? _acts[run].Kind : _acts[best].Kind, run >= 0 ? runS : 0);
     }

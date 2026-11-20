@@ -57,12 +57,14 @@ public sealed partial class WoundBook
     public int BloodMl => (int)(BloodUl / 1000);
     /// <summary>Blood lost, permille of the volume.</summary>
     public int LossPm => BloodMaxUl <= 0 ? 0 : (int)((BloodMaxUl - BloodUl) * 1000 / BloodMaxUl);
+    /// <summary>A tourniquet is on a limb (its clock runs, medicine 4.3).</summary>
+    public bool HasTourniquet { get { foreach (var w in Records) if (w.Dressing == Dressing.Tourniquet && !w.Is(Aid.Resolved)) return true; return false; } }
     public bool Weakened => LossPm >= WeakPm;
     public bool Conscious => State is Consciousness.Awake or Consciousness.Dazed or Consciousness.Collapsed;
     public int OpenCount { get { int n = 0; foreach (var w in Records) if (w.Open) n++; return n; } }
 
     /// <summary>Anything to simulate each tick: a bleed, pain, a timer, or blood below the maximum.</summary>
-    public bool Active => !Dead && (BloodUl < BloodMaxUl || PainX100 > 0 || HeartAtSec >= 0 || BreathStopSec >= 0 || State is not (Consciousness.Awake or Consciousness.Dazed) || UnconsciousUntilSec > LastSec || CurrentRateMilli() > 0);
+    public bool Active => !Dead && (BloodUl < BloodMaxUl || HasTourniquet || PainX100 > 0 || HeartAtSec >= 0 || BreathStopSec >= 0 || State is not (Consciousness.Awake or Consciousness.Dazed) || UnconsciousUntilSec > LastSec || CurrentRateMilli() > 0);
     /// <summary>Wounds that keep the book in the ledger: anything unhealed, or any permanent effect.</summary>
     public bool Empty => Records.Count == 0 && !Dead && BloodUl >= BloodMaxUl && PainX100 == 0 && Permanent.Equals(default(PermanentInfo)) && ConcussedUntilDay == 0;
 
@@ -217,6 +219,7 @@ public sealed partial class WoundBook
             ongoing += p;
         }
         PainX100 = (int)((long)PainX100 * PainDecayPct / 100) + ongoing;
+        StepTourniquets(s);
         if ((s + 1) % SimSPerHour == 0 && BloodUl < BloodMaxUl && RegenPm > 0)
             BloodUl = Math.Min(BloodMaxUl, BloodUl + RegenMlPerHour * 1000L * RegenPm / 1000);
         Evaluate(LastSec);
@@ -526,6 +529,7 @@ public sealed partial class WoundBook
         h = Mix(h, (long)Permanent.AmputatedMask);
         foreach (var w in Records)
         {
+            if (w.TourniquetOnS != 0) { h = Mix(h, w.TourniquetOnS); h = Mix(h, (long)w.DistalMask); }
             h = Mix(h, w.Id); h = Mix(h, w.Part); h = Mix(h, w.Tissue); h = Mix(h, w.Structure); h = Mix(h, w.Organ); h = Mix(h, (long)w.Kind | (long)w.Cat << 8 | (long)w.Grade << 16 | (long)w.Count << 24);
             h = Mix(h, w.DepthPm); h = Mix(h, w.BleedX10); h = Mix(h, (long)w.Flags); h = Mix(h, (long)w.State | (long)w.Dressing << 8 | (long)w.Aids << 16 | (w.Internal ? 1L << 24 : 0) | (w.Clots ? 1L << 25 : 0));
             h = Mix(h, w.Born); h = Mix(h, w.DressFromS); h = Mix(h, w.HealX10); h = Mix(h, w.NeedX10); h = Mix(h, w.PainC); h = Mix(h, w.InfectionLevel); h = Mix(h, w.SepsisDay); h = Mix(h, w.DeathDay); h = Mix(h, w.StitchedAt); h = Mix(h, w.DressedAt); h = Mix(h, w.Grade0);
