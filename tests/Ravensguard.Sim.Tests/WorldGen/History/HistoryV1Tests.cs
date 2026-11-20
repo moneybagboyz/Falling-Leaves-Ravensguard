@@ -326,8 +326,8 @@ public class HistoryV1Tests(ITestOutputHelper output)
     {
         var db = Db.Value;
         int Amount(string id) => db.All<OpinionKindDef>().Single(o => o.Id == id).Amount;
-        Assert.Equal(Amount("kin"), HistoryRules.OpKin); Assert.Equal(Amount("marriage"), HistoryRules.OpMarriage); Assert.Equal(Amount("same_religion"), HistoryRules.OpSameReligion);
-        Assert.Equal(Amount("heresy"), HistoryRules.OpHeresy); Assert.Equal(Amount("excommunicated"), HistoryRules.OpExcommunicated); Assert.Equal(Amount("war"), HistoryRules.OpWar);
+        Assert.Equal(HistoryRules.OpKin, Amount("kin")); Assert.Equal(HistoryRules.OpMarriage, Amount("marriage")); Assert.Equal(HistoryRules.OpSameReligion, Amount("same_religion"));
+        Assert.Equal(HistoryRules.OpHeresy, Amount("heresy")); Assert.Equal(HistoryRules.OpExcommunicated, Amount("excommunicated")); Assert.Equal(HistoryRules.OpWar, Amount("war"));
         var fam = Ravensguard.Sim.Family.FamilyContent.From(db);
         for (int age = 0; age < 110; age++) Assert.Equal(fam.OldAgePct(age), HistoryRules.OldAgePctYear(age));     // the hero's table is the notables' (overview 8.3)
     }
