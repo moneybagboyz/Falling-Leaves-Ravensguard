@@ -219,7 +219,7 @@ public static class Slavery
     /// Ends a bond (4.2 Free). The person is a free member of the owner's household when the owner's opinion of him is not below zero (a paid servant), else he leaves for the household he came from. Writes <c>slave_freed</c>
     /// (the deed rows give +30 standing with the settlement and +60 with the religion of the doer who freed him; freeing is lawful anywhere) or the term's own entry. Returns the entry.
     /// </summary>
-    public static SlaveResult Free(BondWorld bw, BondBook book, EntityId person, Ending how, int day, long sec, ulong causeEntry = 0)
+    public static SlaveResult Free(BondWorld bw, BondBook book, EntityId person, Ending how, int day, long sec, ulong causeEntry = 0, CrimeBook? crimes = null)
     {
         if (book.Of(person) is not { } b) return SlaveResult.No("sl_not_bonded");
         var owner = new EntityId(b.Owner);
@@ -227,6 +227,7 @@ public static class Slavery
         bool stays = how is Ending.Manumission or Ending.Will or Ending.Trust or Ending.TermEnded && owner.Kind != IdKind.Other && bw.W.OpinionPm(bw.OwnerPerson(owner), person) >= 0 && bw.HouseholdOf(owner) >= 0;
         int place = b.Place >= 0 ? b.Place : bw.W.HomeOf(person);
         if (b.BountyJob != 0 && bw.W.Jobs is { } jobs && bw.W.JobEnv is { } env) jobs.Cancel(env, new EntityId(b.BountyJob), sec);
+        if (b.RunawayCrime != 0 && crimes?.Get(b.RunawayCrime) is { } rc && rc.State is CrimeState.Reported or CrimeState.Fled or CrimeState.Seen) rc.State = how == Ending.Voided ? CrimeState.Pardoned : CrimeState.Served;       // S5: the bond is gone, so is the runaway charge
         book.Bonds.Remove(person.Value);
         book.FreedTotal++;
         if (person == bw.W.HeroId) bw.W.Marks()?.SetEnslaved(person, false);

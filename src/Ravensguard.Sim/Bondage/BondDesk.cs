@@ -77,7 +77,7 @@ public static class BondDesk
                     return ran ? R(c, HeroResultCode.Ok, "sl_party_ran") : R(c, HeroResultCode.Refused, "sl_not_in_party");
                 }
                 case "fought" when f.Length > 1: SlaveParty.AfterFight(book, ctx.Party.Squad, f[1] == "1"); return R(c, HeroResultCode.Ok, "sl_here");
-                case "here": return Here(bw, book, hero, c, day);
+                case "here": return Here(bw, book, hero, c, day, st.Law);
                 case "selfbuy": return Of(c, Slavery.SelfPurchase(bw, book, hero, day, c.IssuedSec));
                 case "run": return Run(bw, st, book, hero, c, day);
                 case "escape": return Escape(ctx, bw, st, book, hero, c, day);
@@ -88,11 +88,11 @@ public static class BondDesk
     }
 
     /// <summary>He stands in a town: his slaves are there (the law looks at them), and a runaway of his own who has reached a town whose law is none is free.</summary>
-    private static HeroResult Here(BondWorld bw, BondBook book, EntityId hero, HeroCommand c, int day)
+    private static HeroResult Here(BondWorld bw, BondBook book, EntityId hero, HeroCommand c, int day, CrimeBook? crimes)
     {
         if (c.Settlement < 0) return R(c, HeroResultCode.Invalid, "HERO_MAKES_NO_SENSE");
         foreach (var b in book.Bonds.Values.Where(b => b.Owner == hero.Value && !b.InPen)) b.Place = c.Settlement;
-        if (book.Of(hero) is { OnRun: true } && BondDaily.Arrive(bw, book, hero, c.Settlement, day, c.IssuedSec)) return R(c, HeroResultCode.Ok, "sl_free_here");
+        if (book.Of(hero) is { OnRun: true } && BondDaily.Arrive(bw, book, hero, c.Settlement, day, c.IssuedSec, crimes)) return R(c, HeroResultCode.Ok, "sl_free_here");
         return R(c, HeroResultCode.Ok, "sl_here");
     }
 

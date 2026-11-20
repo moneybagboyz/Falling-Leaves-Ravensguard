@@ -97,6 +97,8 @@ public sealed class LawWorld
     public Func<EntityId, (int Stealth, int Athletics, int Lockpicking, int Perception, int Speech)> SkillsOf { get; init; } = _ => (0, 0, 0, 0, 0);
     /// <summary>Whether an exiled person has left the realm by the end of his grace (the hero walked out; an NPC was sent); null: nobody has, so exile ends as outlawry.</summary>
     public Func<EntityId, bool>? HasLeftRealm { get; init; }
+    /// <summary>S5: whether a person is a bonded runaway still on the run: the slave catchers' business, not the guards' (the daily arrest leaves him alone, so he cannot be gaoled and caught at once).</summary>
+    public Func<EntityId, bool>? OnTheRun { get; init; }
     /// <summary>The settlement a person lives in (a row's home), -1 when unknown.</summary>
     public int HomeOf(EntityId p) { int i = People.IndexOf(p); return i >= 0 ? People.HomeSettlement[i] : -1; }
 
@@ -176,6 +178,7 @@ public sealed class LawWorld
             RealmOf = s => s >= 0 && s < region.Settlements.Count ? Math.Max(0, region.Settlements[s].Realm) : 0,
             StandingWithFief = (p, f) => Standing.Of(standing, p, GroupRef.Fief(f)),
             LiteracyOf = p => p == hero ? st.Hero?.Skill(Ravensguard.Sim.Characters.HeroRecord.SkillId(Skill.Literacy)) ?? 0 : pop.People.IndexOf(p) is var r and >= 0 ? pop.People.SkillLevelOf(r, Skill.Literacy) : 0,
+            OnTheRun = p => st.Bonds?.Of(p) is { OnRun: true },
             SkillsOf = p =>
             {
                 var h = st.Hero;

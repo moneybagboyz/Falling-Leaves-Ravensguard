@@ -160,11 +160,19 @@ public static class ContractSystem
                 return Math.Max(c.Delivered, Math.Max(0, now - c.Baseline)) >= c.Grams ? true : null;
             }
             case "culprit_taken":
-                // the culprit held or dead by the taker's side: the taker's own capture, a gaol that holds him, or his death, after the contract was taken
+            {
+                // the culprit held or dead after the contract was taken (S2: a man already in the gaol, or buried, when it was taken pays nothing)
                 if (c.Target == EntityId.None) return null;
-                return w.IsHeld(c.Target) || w.IsDead(c.Target) ? true : null;
+                if (w.IsHeld(c.Target) && (w.HeldSince?.Invoke(c.Target) ?? int.MaxValue) >= c.TakenDay) return true;
+                return w.IsDead(c.Target) && (w.DeadSince?.Invoke(c.Target) ?? int.MaxValue) >= c.TakenDay ? true : null;
+            }
             case "band_gone": return c.Target != EntityId.None && w.BandGone(c.Target) ? true : null;
-            case "captive_free": { var (free, by) = w.CaptiveFree(c.Target); return free && (by == EntityId.None || w.SideOf(c.Taker, by)) ? true : null; }
+            case "captive_free":
+            {
+                // done only when the taker's side freed him (rescued) after the contract was taken; any other ending is moot (see Moot)
+                var e = w.CaptiveFree(c.Target);
+                return e.Known && !e.Held && e.How == "rescued" && e.ByHero && e.EndDay >= c.TakenDay && w.SideOf(c.Taker, w.HeroId) ? true : null;
+            }
             case "job_done":
                 // service: the taker has served the days the contract asked (Param) and the goods, if any, are safe
                 if (GoodsLost(w, c)) return false;
@@ -174,12 +182,32 @@ public static class ContractSystem
         }
     }
 
-    /// <summary>The hourly check of every taken contract: done ones pay, lost goods fail. Ascending contract id.</summary>
+    /// <summary>Whether the need behind a taken contract ended in a way the taker did not answer (S2): the captive was sold, ransomed, released, escaped or died, or the culprit was dead before the contract was taken.</summary>
+    public static bool Moot(ContractWorld w, WorkContract c)
+    {
+        var k = w.Content.Kind(c.Kind); if (k == null) return false;
+        switch (k.Verify)
+        {
+            case "captive_free": { var e = w.CaptiveFree(c.Target); return e.Known && !e.Held; }
+            case "culprit_taken": return c.Target != EntityId.None && w.IsDead(c.Target) && (w.DeadSince?.Invoke(c.Target) ?? int.MaxValue) < c.TakenDay;
+            default: return false;
+        }
+    }
+
+    /// <summary>The need ended without the taker: the contract closes unanswered (no pay, no fault): the escrow returns to the issuer and the bond to the taker.</summary>
+    public static void Void(ContractWorld w, WorkContract c, int day)
+    {
+        Refund(w, c); ReturnBond(w, c);
+        c.State = WorkState.Cancelled; c.ClosedDay = day;
+    }
+
+    /// <summary>The hourly check of every taken contract: done ones pay, lost goods fail, moot ones close unanswered. Ascending contract id.</summary>
     public static void Verify(ContractWorld w, ContractBook book, int day)
     {
         foreach (var c in book.Contracts.Values.Where(x => x.State == WorkState.Taken).ToList())
         {
             var r = Check(w, c, day);
+            if (r == null && Moot(w, c)) { Void(w, c, day); continue; }
             if (r == true) Complete(w, book, c, day);
             else if (r == false) Fail(w, book, c, day, "goods_lost");
         }
@@ -278,7 +306,7 @@ public static class ContractSystem
         {
             if (c.Kind == "tournament_entry") continue;
             if (c.State == WorkState.Open && day >= c.DeadlineDay) Expire(w, book, c, day);
-            else if (c.State == WorkState.Taken && day >= c.DeadlineDay) { var r = Check(w, c, day); if (r == true) Complete(w, book, c, day); else Fail(w, book, c, day, "deadline"); }
+            else if (c.State == WorkState.Taken && day >= c.DeadlineDay) { var r = Check(w, c, day); if (r == true) Complete(w, book, c, day); else if (r == null && Moot(w, c)) Void(w, c, day); else Fail(w, book, c, day, "deadline"); }
             else if (c.Closed && c.ClosedDay >= 0 && day - c.ClosedDay > ContractBook.KeepClosedDays) book.Contracts.Remove(c.Id);
         }
     }

@@ -73,7 +73,11 @@ public static class ContractWiring
             StoreQty = (owner, good) => StoreOf(st, owner)?.Qty(good) ?? 0,
             IsDead = p => { int r = pop.People.IndexOf(p); return r >= 0 && pop.People.Status[r] == PersonStatus.Dead; },
             IsHeld = p => (st.Justice?.Gaol.ContainsKey(p.Value) ?? false) || st.Captivity?.Find(p) is { Held: true },
-            CaptiveFree = p => st.Captivity?.Find(p) is { } c && !c.Held ? (true, EntityId.None) : (false, EntityId.None),
+            CaptiveFree = p => st.Captivity?.Find(p) is { } c
+                ? new CaptiveEnding(true, c.Held, c.Held ? "" : c.State.ToString().ToLowerInvariant(), c.EndedSec >= 0 ? (int)(c.EndedSec / 86_400) : -1, c.State == CaptiveState.Rescued && c.Captor != CaptorKind.Gaol)   // a bandit's captive is only ever rescued by the hero's side (heist, live rescue, his party's abstract rescue)
+                : default,
+            HeldSince = p => st.Justice?.Gaol.TryGetValue(p.Value, out var gr) == true ? gr.SinceDay : st.Captivity?.Find(p) is { Held: true } hc ? hc.SinceDay : -1,
+            DeadSince = p => { int r = pop.People.IndexOf(p); return r >= 0 && pop.People.Status[r] == PersonStatus.Dead ? pop.People.DeathDay[r] : -1; },
             Captives = () => Captives(st),
             Bands = () => Bands(st, content),
             BandGone = band => st.Chronicle.All.Any(en => en.TypeId == "bandit_cleared" && en.Data.TryGetValue("band", out var b) && b == band.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)),

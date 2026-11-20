@@ -74,8 +74,12 @@ public sealed class ContractWorld
     public Func<EntityId, bool> IsDead { get; init; } = _ => false;
     /// <summary>The person is held (in a gaol, or by the taker's side).</summary>
     public Func<EntityId, bool> IsHeld { get; init; } = _ => false;
-    /// <summary>The captive is free of his captors (rescued, released, ransomed, escaped) and the person who freed him, or None.</summary>
-    public Func<EntityId, (bool Free, EntityId By)> CaptiveFree { get; init; } = _ => (false, EntityId.None);
+    /// <summary>How a captive's hold stands (S2): unknown (no captivity row), still held, or ended, with how ("rescued", "ransomed", "released", "escaped", "dead"), the day it ended and whether the hero's side freed him.</summary>
+    public Func<EntityId, CaptiveEnding> CaptiveFree { get; init; } = _ => default;
+    /// <summary>The day a person was last taken into a gaol or a captor's hold, while he is held (-1 when he is not). Null: the day is not known (any hold counts).</summary>
+    public Func<EntityId, int>? HeldSince { get; init; }
+    /// <summary>The day a person died (-1 while alive). Null: the day is not known (any death counts).</summary>
+    public Func<EntityId, int>? DeadSince { get; init; }
     /// <summary>Whether a band is gone (its members dead, fled or captured).</summary>
     public Func<EntityId, bool> BandGone { get; init; } = _ => false;
     /// <summary>Whether a taker's side includes a person (the hero's party, a company's members).</summary>
@@ -122,3 +126,6 @@ public sealed class ContractWorld
     public string PlaceName(int settlement) => settlement >= 0 && settlement < SettlementNames.Length ? SettlementNames[settlement] : "";
     public int FiefOf(int settlement) => settlement >= 0 && settlement < SettlementFief.Length ? SettlementFief[settlement] : -1;
 }
+
+/// <summary>A captive's hold as a contract reads it (S2): whether a captivity row exists, whether he is still held, how and on which day it ended, and whether the hero's side freed him.</summary>
+public readonly record struct CaptiveEnding(bool Known, bool Held, string How, int EndDay, bool ByHero);
