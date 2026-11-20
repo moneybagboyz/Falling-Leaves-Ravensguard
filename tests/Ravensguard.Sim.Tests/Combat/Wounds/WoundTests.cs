@@ -377,4 +377,37 @@ public class WoundTests(V2Fixture f)
         Assert.True(bledMedic < bledNo, $"{bledMedic} with a medic vs {bledNo} without");
         Assert.True(bledMedic * 100 <= ko * 35, $"{100.0 * bledMedic / ko:0}% bled out with treatment (target <= 35%)");
     }
+
+    /// <summary>
+    /// Resume-drift fix 3: a book put into the ledger from outside (an ambush's, a fight's) gets the daily steps of the days after it came, never of the days before, whatever day the
+    /// ledger's own cursor was left at (an empty ledger is not advanced by the abstract tick, and a load rebuilt it from the clock). Its cursor is saved with it; an older save's books
+    /// take the ledger's day.
+    /// </summary>
+    [Fact]
+    public void WB17_ABookPutInLater_GetsOnlyTheDaysAfterIt_WhateverDayTheLedgerWasLeftAt()
+    {
+        const long D0 = 15_000, D1 = 15_019, Born = 15_020;
+        WoundBook Cut() { var b = new WoundBook(3, 9, 5000, 10, "human") { LastSec = Born * Day }; Hit(b, Born * Day, Muscle("upper_leg_l", 0)); return b; }
+        var stale = new WoundLedger(3, D0 * Day); var fresh = new WoundLedger(3, D1 * Day);
+        stale.Adopt(9, Cut(), Born * Day); fresh.Adopt(9, Cut(), Born * Day);
+        stale.AdvanceTo(Born * Day + 3600); fresh.AdvanceTo(Born * Day + 3600);
+        Assert.Equal(fresh.Hash(), stale.Hash());
+        Assert.Equal(WoundState.Open, stale.Books[9].Records[0].State);
+        Assert.Equal(Born, stale.Books[9].DayDone);
+        // the next midnight steps it once, in both
+        stale.AdvanceTo((Born + 1) * Day + 60); fresh.AdvanceTo((Born + 1) * Day + 60);
+        Assert.Equal(fresh.Hash(), stale.Hash());
+        Assert.Equal(Born + 1, stale.Books[9].DayDone);
+
+        // saved and loaded, the cursor comes back; a save from before the cursor (key 31 absent, read as 0) gives each book the ledger's day
+        var save = WoundSave.Capture(stale);
+        Assert.Equal(Born + 2, save.Books[0].DayDonePlus1);
+        var back = SaveCodec.Deserialize<WoundSave>(SaveCodec.Serialize(save)).Restore();
+        Assert.Equal(Born + 1, back.Books[9].DayDone);
+        save.Books[0].DayDonePlus1 = 0; save.LastDay = Born + 1;
+        Assert.Equal(Born + 1, save.Restore().Books[9].DayDone);
+        // a book made by the ledger itself starts on the ledger's day, as before
+        var l = new WoundLedger(3, D0 * Day);
+        Assert.Equal(Born, l.For(5, H, Born * Day + 100).DayDone);
+    }
 }

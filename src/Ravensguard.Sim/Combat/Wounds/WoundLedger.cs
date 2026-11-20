@@ -34,9 +34,22 @@ public sealed class WoundLedger
             if (Books.TryGetValue(key, out var b)) return b;
             long size = sizeCm3 > 0 ? sizeCm3 : plan.SizeCm3;
             int max = (int)((long)plan.BloodMl * size / plan.SizeCm3);
-            b = new WoundBook(Seed, key, max, toughness, plan.Id) { LastSec = nowSec };
+            b = new WoundBook(Seed, key, max, toughness, plan.Id) { LastSec = nowSec, DayDone = LastDay };
             Books[key] = b;
             return b;
+        }
+    }
+
+    /// <summary>
+    /// Puts a book made elsewhere (a fight's, an abstract battle's) into the ledger at <paramref name="nowSec"/>. Its day cursor starts no earlier than that day, so the next
+    /// <see cref="AdvanceTo"/> gives it the daily steps of the days after it came, never those before (whatever day the ledger's own cursor was left at).
+    /// </summary>
+    public void Adopt(ulong key, WoundBook book, long nowSec)
+    {
+        lock (Sync)
+        {
+            book.DayDone = Math.Max(book.DayDone, nowSec / GameSecPerDay);
+            Books[key] = book;
         }
     }
 
@@ -47,8 +60,13 @@ public sealed class WoundLedger
         {
             if (Books.Count == 0) { LastDay = Math.Max(LastDay, sec / GameSecPerDay); return; }
             long dayNow = sec / GameSecPerDay;
-            for (long d = LastDay + 1; d <= dayNow; d++)
-                foreach (var b in Books.Values) b.DailyStep(d);
+            // each book from its own day cursor (a book only touches itself and its rolls are keyed by its seed, day and key, so book by book equals day by day)
+            foreach (var b in Books.Values)
+            {
+                long from = b.DayDone >= 0 ? b.DayDone : LastDay;
+                for (long d = from + 1; d <= dayNow; d++) b.DailyStep(d);
+                b.DayDone = Math.Max(from, dayNow);
+            }
             LastDay = Math.Max(LastDay, dayNow);
             _drop.Clear();
             foreach (var (k, b) in Books)
