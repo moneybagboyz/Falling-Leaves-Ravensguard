@@ -42,5 +42,5 @@ public partial class StreetView
     void OpenChronicleLatest() => OpenChronicle(latestMine: true);
 
     /// <summary>Dev (smoke, shots): the Chronicle opened on the entry with the longest chain of causes, in the view that holds it.</summary>
-    public void DebugChronicle(string? shot = null) => OpenChronicle(shot: shot, deepest: true);
+    public void DebugChronicle(string? scope = null) => OpenChronicle(scope: scope?.ToLowerInvariant() switch { "mylife" => ChronicleScope.MyLife, "here" => ChronicleScope.Here, "legends" => ChronicleScope.Legends, _ => ChronicleScope.Realm }, deepest: true);
 }

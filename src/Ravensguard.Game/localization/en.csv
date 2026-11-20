@@ -5938,7 +5938,7 @@ JOURNAL_HISTORY,History
 ch_note_compacted,"Old entries of common folk, folded away."
 ch_summary_year,"In year {year}, {n} small events of common folk were folded into this line."
 ch_ui_chain,The chain back
-ch_ui_close,{0} or Esc closes the chronicle.
+ch_ui_close,{0} closes it.
 ch_ui_drift,Market drift: {0}
 ch_ui_empty,Nothing is written here yet.
 ch_ui_family_crime,Crime and law
@@ -5951,7 +5951,7 @@ ch_ui_followed,What followed
 ch_ui_loading,Reading the chronicle...
 ch_ui_no_cause,No cause is recorded.
 ch_ui_open_here,Open the place
-ch_ui_previous,Previous entry
+ch_ui_previous,Previous
 ch_ui_root,It began with:
 ch_ui_scope_here,Here
 ch_ui_scope_legends,Legends

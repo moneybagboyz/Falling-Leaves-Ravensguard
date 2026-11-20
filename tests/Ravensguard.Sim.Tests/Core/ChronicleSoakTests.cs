@@ -95,8 +95,9 @@ public class ChronicleSoakTests(ITestOutputHelper output)
         Assert.True(rep.Drift > 0, "the drift labels are counted apart");
         Assert.Equal(0, rep.NoCause);                                                                                                           // CH-5: a cause on every entry,
         Assert.All(c.All, e => Assert.True(e.Causes.Count > 0, e.TypeId));
-        var chains = ChronicleChains.Check(c, types, older: hist);                                                                              // and the chains resolve to earlier entries
+        var chains = ChronicleChains.Check(c, types, maxProblems: 100_000, older: hist);                                                                              // and the chains resolve to earlier entries
         output.WriteLine($"chains: {chains.Entries} entries, {chains.Roots} roots, unresolved {chains.Unresolved}, out of order {chains.OutOfOrder}, illegal roots {chains.IllegalRoots}");
+        foreach (var g in chains.Problems.GroupBy(pr => pr.Split(' ')[0] + (pr.Contains("not earlier") ? " (not earlier)" : pr.Contains("is a root") || pr.Contains("a root,") ? " (illegal root)" : " (other)")).OrderByDescending(g => g.Count())) output.WriteLine($"  chain problem: {g.Key} x{g.Count()}: {g.First()}");
         Assert.Equal(0, chains.Unresolved); Assert.Equal(0, chains.OutOfOrder);
         // the hero's thefts and what they caused are in it
         Assert.Contains(c.All, e => e.TypeId == "crime_witnessed"); Assert.Contains(c.All, e => e.TypeId == "bounty_posted");

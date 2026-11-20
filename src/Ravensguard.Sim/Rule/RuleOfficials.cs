@@ -56,12 +56,12 @@ public static class RuleOfficials
     }
 
     /// <summary>Dismisses an office holder (a lord's choice, an audit, a death).</summary>
-    public static void Dismiss(RuleCtx c, Office o, int day, string noteKey, EntityId? cause = null)
+    public static void Dismiss(RuleCtx c, Office o, int day, string noteKey, EntityId? cause = null, GameTime? at = null)
     {
         if (!o.InOffice) return;
         o.DismissedDay = day;
         var ps = new List<ChronParam> { ChronParam.Person("holder", new EntityId((ulong)o.Holder)), ChronParam.TextKey("office", "ru_office_" + o.Kind.ToString().ToLowerInvariant()) };
-        c.Chron.Chron(RuleCtx.At(day), "official_dismissed", "ch_rule_official_dismissed", ps, [new EntityId((ulong)o.Holder)], [new Cause(CauseKind.Office, cause, NoteKey: noteKey)]);
+        c.Chron.Chron(at ?? RuleCtx.At(day), "official_dismissed", "ch_rule_official_dismissed", ps, [new EntityId((ulong)o.Holder)], [new Cause(CauseKind.Office, cause, NoteKey: noteKey)]);
     }
 
     /// <summary>The chest an office's money is paid into: its fief's treasury, or its realm's.</summary>
@@ -160,8 +160,9 @@ public static class RuleOfficials
                 long repaid = c.PayUpTo(c.HouseholdOf(o.Holder), ChestOf(o), back, TransferReason.Restitution);
                 var rec = Commit(c, o, back, [new EntityId((ulong)auditor)], new EntityId((ulong)auditor), "ch_note_skim_audit", day, report: true);
                 var ps = new List<ChronParam> { ChronParam.Person("holder", new EntityId((ulong)o.Holder)), ChronParam.Mites("amount", back), ChronParam.Mites("repaid", repaid) };
-                var entry = c.Chron.Chron(RuleCtx.At(day), "official_found_skimming", "ch_rule_official_found", ps, [new EntityId((ulong)o.Holder), new EntityId((ulong)auditor)], [new Cause(CauseKind.Office, rec == EntityId.None ? null : rec, NoteKey: "ch_note_audit_found")]);
-                Dismiss(c, o, day, "ch_note_dismissed_for_skimming", entry == EntityId.None ? null : entry);
+                var auditAt = GameTime.FromGameSeconds(day * 86_400L + 13 * 3600L);               // P6-E4: the audit comes after the embezzlement it names (the crime is stamped at noon)
+                var entry = c.Chron.Chron(auditAt, "official_found_skimming", "ch_rule_official_found", ps, [new EntityId((ulong)o.Holder), new EntityId((ulong)auditor)], [new Cause(CauseKind.Office, rec == EntityId.None ? null : rec, NoteKey: "ch_note_audit_found")]);
+                Dismiss(c, o, day, "ch_note_dismissed_for_skimming", entry == EntityId.None ? null : entry, auditAt);
                 c.Deed?.Invoke(new EntityId((ulong)o.Holder), "official_found_skimming", entry, (uint)o.Fief < (uint)c.Region.Fiefs.Count ? c.Region.Fiefs[o.Fief].SeatSettlement : -1, day);        // a thief's name travels (reputation 4.1)
             }
             o.SeasonSkim = 0;

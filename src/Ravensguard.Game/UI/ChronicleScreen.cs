@@ -29,7 +29,7 @@ public partial class ChronicleScreen : Control
     readonly Button[] _tabs = new Button[4];
     ItemList _list = null!;
     Label _count = null!;
-    RichTextLabel _detail = null!;
+    RichTextLabel _detail = null!, _whyText = null!;
     VBoxContainer _links = null!;
     readonly List<EntityId> _shown = [];
     double _acc; int _shotWait;
@@ -85,12 +85,14 @@ public partial class ChronicleScreen : Control
         _detail = new RichTextLabel { BbcodeEnabled = true, FitContent = true, SizeFlagsHorizontal = SizeFlags.ExpandFill, ScrollActive = false };
         rightBox.AddChild(_detail);
         _links = new VBoxContainer(); _links.AddThemeConstantOverride("separation", 3); rightBox.AddChild(_links);
+        _whyText = new RichTextLabel { BbcodeEnabled = true, FitContent = true, SizeFlagsHorizontal = SizeFlags.ExpandFill, ScrollActive = false };
+        rightBox.AddChild(_whyText);
         var scroll = UiKit.Scroll(rightBox);
         var panel = UiKit.Panel(scroll); panel.SizeFlagsHorizontal = SizeFlags.ExpandFill; panel.SizeFlagsVertical = SizeFlags.ExpandFill; panel.SizeFlagsStretchRatio = 45;
         cols.AddChild(panel);
 
         var bottom = new HBoxContainer(); bottom.AddThemeConstantOverride("separation", 8); root.AddChild(bottom);
-        var back = UiKit.Key(L.T("UI_BACK"), "menu.back", 150, 30); back.Pressed += _router.Pop; bottom.AddChild(back);
+        var back = UiKit.Key(L.T("UI_BACK"), "menu.back", 130, 30); back.Pressed += _router.Pop; bottom.AddChild(back);
         _prev = UiKit.Key(L.T("ch_ui_previous"), "menu.previous", 230, 30); _prev.Pressed += Previous; bottom.AddChild(_prev);
         _here = UiKit.Key(L.T("ch_ui_open_here"), "menu.open_here", 230, 30); _here.Pressed += OpenHere; bottom.AddChild(_here);
         bottom.AddChild(UiKit.Hint(L.F("ch_ui_close", InputBootstrap.Hint("world.panel_chronicle"))));
@@ -143,25 +145,28 @@ public partial class ChronicleScreen : Control
         foreach (var ch in _links.GetChildren()) { _links.RemoveChild(ch); ch.QueueFree(); }
         var e = _b.Current;
         _here.Disabled = e == null || PlaceOf(e) == null;
-        if (e == null) { _detail.Text = L.T("ch_ui_empty"); return; }
+        if (e == null) { _detail.Text = L.T("ch_ui_empty"); _whyText.Text = ""; return; }
         var v = _b.View;
         string gold = PixelTheme.Gold.ToHtml(false), dim = PixelTheme.Dim.ToHtml(false);
         string Esc(string s) => s.Replace("[", "[lb]");
-        string heading = _types.Get(e.TypeId) is { } row && L.T(row.TextKey) is { Length: > 0 } h && h != row.TextKey ? h : ChronicleReader.Pretty(e.TypeId);
+        string heading = _types.Get(e.TypeId) is { Def.Legacy: true } row && L.T(row.TextKey) is { Length: > 0 } h && h != row.TextKey ? h : ChronicleReader.Pretty(e.TypeId);
         var sb = new StringBuilder();
         sb.Append($"[color=#{gold}]{Esc(_b.Text(e))}[/color]\n");
         string fam = ChronicleFamilies.Of(e);
         sb.Append($"[color=#{dim}]{UiKit.SeasonName(e.When.Season)} {e.When.Year}, day {e.When.DayOfSeason}  -  {Esc(heading)}{(fam.Length > 0 ? "  -  " + Family(fam) : "")}[/color]\n");
         var who = e.Subjects.Select(s => v.NameOf(s.Value)).Where(n => n.Length > 0).ToList();
         if (who.Count > 0) sb.Append($"\n[color=#{dim}]{L.T("LG_PEOPLE")}[/color] {Esc(string.Join(", ", who))}\n");
-        sb.Append($"\n[color=#{dim}]{L.T("ch_ui_why")}[/color]\n");
+        _detail.Text = sb.ToString();
+        sb.Clear();
+        sb.Append($"[color=#{dim}]{L.T("ch_ui_why")}[/color]\n");
         if (e.Causes.Count == 0) sb.Append("- " + L.T("ch_ui_no_cause") + "\n");
         foreach (var (c, ce) in _b.Why(e))
         {
             bool drift = c.Kind == CauseKind.MarketDrift;
-            string note = ChronicleReader.Note(c, v, L.T, x => x);
+            string note = ChronicleTypes.FormatNote(c, L.T, ChronicleReader.Names(v, x => x));
+            if (note.Length == 0 && ce == null) note = c.Kind.ToString();
             sb.Append("- ").Append(Esc(drift ? L.F("ch_ui_drift", note) : note));
-            if (ce != null) sb.Append($"  [color=#{dim}]<- {Esc(_b.Text(ce))} ({ce.When.Year})[/color]");
+            if (ce != null) sb.Append($"{(note.Length > 0 ? "  " : "")}[color=#{dim}]<- {Esc(_b.Text(ce))} ({ce.When.Year})[/color]");
             sb.Append('\n');
         }
         // the chain back to where it began: the first cause that names an entry, step by step
@@ -174,7 +179,7 @@ public partial class ChronicleScreen : Control
             var rootCause = _b.Why(chain[^1]).FirstOrDefault(w => w.Entry == null);
             sb.Append(new string(' ', chain.Count * 2)).Append($"[color=#{dim}]{L.T("ch_ui_root")}[/color] {(rootCause.Cause != null ? Esc(ChronicleReader.Note(rootCause.Cause, v, L.T, x => x)) : "")}\n");
         }
-        _detail.Text = sb.ToString();
+        _whyText.Text = sb.ToString();
 
         bool first = true;
         foreach (var (c, ce) in _b.Why(e).Where(w => w.Entry != null))

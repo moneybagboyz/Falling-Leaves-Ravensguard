@@ -21,7 +21,7 @@ public static class ChronicleReader
         if (e.TextKey.Length > 0) return ChronicleTypes.Format(e, tr, names);
         if (e.Data.TryGetValue("text", out var t) && t.Length > 0) return t;
         if (e.Data.TryGetValue("title", out var ti) && ti.Length > 0) return ti;
-        string heading = types.Get(e.TypeId) is { } row && tr(row.TextKey) is { Length: > 0 } h && h != row.TextKey ? h : Pretty(e.TypeId);
+        string heading = types.Get(e.TypeId) is { Def.Legacy: true } row && tr(row.TextKey) is { Length: > 0 } h && h != row.TextKey ? h : Pretty(e.TypeId);
         var who = e.Subjects.Select(s => v.NameOf(s.Value)).Where(n => n.Length > 0).Take(2).ToList();
         if (who.Count == 0 && e.Data.TryGetValue("settlement", out var place) && place.Length > 0) who.Add(place);
         return who.Count == 0 ? heading : heading + ": " + string.Join(", ", who);
