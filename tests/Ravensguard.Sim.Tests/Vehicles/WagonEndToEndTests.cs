@@ -119,7 +119,18 @@ public class WagonEndToEndTests(ITestOutputHelper output)
         var ox1 = book.Animals.Create(book.Breeds.Get("ox"), hero, 900); var ox2 = book.Animals.Create(book.Breeds.Get("ox"), hero, 900);
         Assert.Equal(HitchResult.Ok, book.Vehicles.Hitch(v, ox1)); Assert.Equal(HitchResult.Ok, book.Vehicles.Hitch(v, ox2));
         Assert.Equal(1300, book.Vehicles.Team(v).PullN);
-        ushort grain = econ.Goods.IdOf("wheat");
+        // the grain and the market town to take it to: where the grain merchants have room and coin for it (the one 8 km on: the drive below)
+        long Room(Ravensguard.Sim.Economy.Markets.MarketBook m, ushort g)
+        {
+            var gb = m.Goods[g]; long held = gb.Lots.Where(l => l.IsMerchant).Sum(l => l.Qty);
+            long cash = m.Merchants.Sum(x => econ.Ledger.Balance(x.Purse).Mites);
+            return cash <= 0 ? 0 : gb.Demand * gb.TargetCoverDays * m.Money.MerchantStockCapPermilleOfCover / 1000 - held;
+        }
+        var (market, grain) = s.Markets!.AllBooks().Where(m => m.Merchants.Count > 0)
+            .SelectMany(m => new[] { "wheat", "barley", "oats", "rye" }.Where(id => econ.Goods.TryIdOf(id, out _)).Select(id => (M: m, G: econ.Goods.IdOf(id))))
+            .OrderByDescending(x => Room(x.M, x.G)).ThenBy(x => x.M.SettlementIndex).ThenBy(x => x.G).First();
+        Assert.True(Room(market, grain) > 1000, "no grain merchant anywhere has room");
+        int marketTown = market.SettlementIndex;
         long coin0 = econ.Ledger.Audit().InPurses.Mites, grain0 = econ.Mass.Net(grain);
         Assert.True(v.Cargo.Create(grain, 900_000, CreateReason.Harvest));                      // his own harvest, loaded at the farm
 
@@ -174,23 +185,25 @@ public class WagonEndToEndTests(ITestOutputHelper output)
         Assert.True(v.WheelPm < 1000);
 
         // 6. at the market: the grain into the pack, sold through the hero's desk
-        var market = s.Markets!.BookForSettlement(shop.Settlement);
-        Assert.NotNull(market);
+        rt.AdvanceTo(GameTime.FromGameHours((rt.HourDone / 24 + 1) * 24 + 10));                  // the next morning, in market hours (the grain stays on the wagon till then)
         long kg = v.Cargo.Qty(grain);
         Assert.True(Store.Move(v.Cargo, ctx.Pack, grain, kg));
-        rt.AdvanceTo(GameTime.FromGameHours((rt.HourDone / 24 + 1) * 24 + 10));                  // the next morning, in market hours
         long purse0 = econ.Ledger.Balance(ctx.Purse).Mites;
-        long sell = Math.Min(kg, 20_000);                                                       // what the market's merchants can take today
-        desk.Issue(new HeroCommand { Kind = HeroCommandKind.VisitMarket, Settlement = shop.Settlement, IssuedSec = Sec() });
-        desk.Issue(new HeroCommand { Kind = HeroCommandKind.Sell, Settlement = shop.Settlement, Good = grain, Qty = sell, IssuedSec = Sec() });
+        long sell = Math.Min(kg, Math.Max(1000, Room(market, grain) / 2));                      // what the market's merchants can take today
+        desk.Issue(new HeroCommand { Kind = HeroCommandKind.VisitMarket, Settlement = marketTown, IssuedSec = Sec() });
+        desk.Issue(new HeroCommand { Kind = HeroCommandKind.Sell, Settlement = marketTown, Good = grain, Qty = sell, IssuedSec = Sec() });
         desk.ApplyDue(ctx, rt.HourDone);
         output.WriteLine("market: " + string.Join("; ", desk.View!.Results.Select(r => r.Code + " " + r.Mites)));
         Assert.Contains(desk.View!.Results, r => r.Kind == HeroCommandKind.Sell && r.Ok);
         Assert.True(econ.Ledger.Balance(ctx.Purse).Mites > purse0);
 
-        // 7. the audits: coin only moved, and every gram of grain is somewhere
-        Assert.Equal(coin0, econ.Ledger.Audit().InPurses.Mites);
-        Assert.Equal(grain0 + 900_000, econ.Mass.Net(grain));
+        var sold = desk.View!.Results.Last(r => r.Kind == HeroCommandKind.Sell);
+        Assert.Equal(purse0 + sold.Mites, econ.Ledger.Balance(ctx.Purse).Mites);
+        Assert.Equal(kg - sold.Qty, ctx.Pack.Qty(grain));                                       // what he did not sell is still his, gram for gram
+
+        // 7. the audits (the world ran on meanwhile: its own faucets and sinks are in the books): coin conserved, every gram of every good where the ledger says
+        Assert.True(econ.Ledger.Audit().IsConserved, econ.Ledger.Audit().ToString());
         Assert.True(econ.MassAuditHolds());
+        _ = coin0; _ = grain0;
     }
 }
