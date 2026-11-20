@@ -33,6 +33,8 @@ public class ConstructionSaveTests(ITestOutputHelper output)
         return (w, NewGameWorld.Create(w.Content, w.Continent, w.History, cs, hs, w.Settings, home.CellX, home.CellY, pop, hero, null));
     }
 
+    private static T Barrier<T>(WorldRuntime rt, Func<T> f) => rt.AtBarrier(f).GetAwaiter().GetResult();
+
     [Fact]
     public void BC18_SaveMidSite_WithGhostsInProgressAndAGroanPending_SaveLoadSaveIsByteIdentical_AndTheCollapseComesAtTheSameSecond()
     {
@@ -79,7 +81,7 @@ public class ConstructionSaveTests(ITestOutputHelper output)
         Assert.True(cw.GhostsOf(cottage.Id).Any(g => g.WorkDone > 0 || g.Materialised) || cw.GhostsOf(cottage.Id).Any(), "the cottage is still being built");
         // the post goes five seconds before the hour's end: the floor groans across the save
         long end = (ra.HourDone + 1) * 3600;
-        ra.AtBarrier(() => cw.Destroy(x0 + 1, y0 + 8, 0, end - 5, EntityId.None, "test")).GetAwaiter().GetResult();
+        Barrier(ra, () => cw.Destroy(x0 + 1, y0 + 8, 0, end - 5, EntityId.None, "test"));
         var groan = Assert.Single(a.Construction.Groans);
         Assert.Equal(end + 5, groan.FallSec);
         var bytes1 = SaveCodec.Encode(WorldSave.Capture(a, "h", "0.1"));
