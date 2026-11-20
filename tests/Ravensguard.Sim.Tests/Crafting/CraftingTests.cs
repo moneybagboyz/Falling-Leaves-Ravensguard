@@ -545,8 +545,8 @@ public class CraftingTests(ITestOutputHelper output)
         var migrated = SaveMigrator.CreateDefault().Migrate(file);
         Assert.Equal(SaveFormat.CurrentVersion, migrated.Header.FormatVersion); Assert.True(SaveFormat.CurrentVersion >= 3); // v4 (Phase 3 cleanup) added the chunk palette on top
         var back = Ravensguard.Sim.Characters.HeroRecord.FromSave(SaveCodec.Deserialize<Ravensguard.Sim.Characters.HeroSave>(migrated.Sections["hero"]));
-        Assert.Equal(39, back.Skills.Count); Assert.Equal(0, back.Skill("lockpicking")); Assert.Equal(1, back.Skill("farming"));
-        Assert.Equal(39, SaveCodec.Deserialize<Ravensguard.Sim.Characters.HeroSave>(migrated.Sections["hero"]).SkillIds.Length);
+        Assert.Equal(40, back.Skills.Count); Assert.Equal(0, back.Skill("lockpicking")); Assert.Equal(1, back.Skill("farming"));
+        Assert.Equal(40, SaveCodec.Deserialize<Ravensguard.Sim.Characters.HeroSave>(migrated.Sections["hero"]).SkillIds.Length);   // P5-F: + Prospecting
         Assert.Equal(back.Skill("melee") * 8 / 10, back.Skill("blades"));                                                       // v6: the families start at 80% of Melee
     }
 }
