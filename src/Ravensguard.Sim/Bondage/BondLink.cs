@@ -139,7 +139,7 @@ public static class BondWiring
         }
         return new BondWorld
         {
-            W = w, Rules = BondRules.From(db), HeroRow = () => hero == Slavery.Nobody ? -1 : Ravensguard.Sim.Succession.HeroPerson.RowOf(pt, st.Hero, hero),
+            W = w, Rules = BondRules.From(db), Rose = (place, leader, rebels, entry, day) => Ravensguard.Sim.Unrest.UnrestWiring.SlaveRising(st, place, leader, rebels, entry, day), HeroRow = () => hero == Slavery.Nobody ? -1 : Ravensguard.Sim.Succession.HeroPerson.RowOf(pt, st.Hero, hero),
             LawAt = s => s >= 0 && s < laws.Length ? laws[s] : SlaveLaw.None,
             LawOfCulture = c => db != null ? BondRules.Parse(Ravensguard.Sim.Faith.ReligionBook.CultureOf(db, c)?.Slavery) : SlaveLaw.None,
             CultureAt = s => s >= 0 && s < cultures.Length ? cultures[s] : -1,

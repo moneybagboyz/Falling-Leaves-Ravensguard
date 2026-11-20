@@ -135,6 +135,7 @@ public sealed class WorldRuntime : IDisposable
         Ravensguard.Sim.Faith.FaithWiring.Attach(homeWorld, state, content);                                                                        // P6-B4 hook: the church (FaithSystem), the holy days' feasts
         Ravensguard.Sim.Rule.RuleWiring.Attach(homeWorld, state, content);                                                                         // P6-C3 hook: fief deeds, officials, dues, councils, loans, customs (RuleSystem), after land, faith and law
         Ravensguard.Sim.Politics.PoliticsWiring.Attach(homeWorld, state, content);                                                                  // P6-D2 hook: diplomacy and the AI lords (PoliticsSystem), after the rule book it reads and the war cause it feeds
+        Ravensguard.Sim.Unrest.UnrestWiring.Attach(homeWorld, state, content);                                                                     // P6-E1 hook: grievances, the ladder, riots and revolts (UnrestSystem), after the rule and politics books it reads
         homeWorld.Sim.Set(new Ravensguard.Sim.Combat.Abstract.AbstractBattleService(content));                                    // P4-G hook: fights nobody watches (abstract battles)
         state.Regions = Records;
         if (state.RegionSections.Count > 0) { Records.AttachSections(state.RegionSections); state.RegionSections = new SortedDictionary<int, byte[]>(); } // the pager holds them now

@@ -65,5 +65,8 @@
   {"type": "rumour_type", "id": "tournament_announced", "entry": "tournament_announced", "kind": "Landmark", "interest_pm": 500, "life_days": 15, "witnesses": "town", "severity": 1, "key": "R_TOURNAMENT"},
   {"type": "rumour_type", "id": "tournament_won", "entry": "tournament_won", "kind": "Landmark", "interest_pm": 500, "life_days": 15, "witnesses": "town", "severity": 1, "key": "R_TOURNAMENT_WON", "who_key": "who"},
   {"type": "rumour_type", "id": "bandit_cleared", "entry": "bandit_cleared", "kind": "RoadBandits", "interest_pm": 650, "life_days": 15, "witnesses": "town", "severity": 2, "key": "R_BANDIT_CLEARED"},
-  {"type": "talk_settings", "id": "default", "home_pm": 25, "work_pm": 10, "social_pm_by_hour": [0, 0, 0, 0, 0, 0, 8, 11, 14, 17, 17, 17, 19, 17, 17, 17, 17, 19, 28, 34, 34, 28, 8, 0]}
+  {"type": "talk_settings", "id": "default", "home_pm": 25, "work_pm": 10, "social_pm_by_hour": [0, 0, 0, 0, 0, 0, 8, 11, 14, 17, 17, 17, 19, 17, 17, 17, 17, 19, 28, 34, 34, 28, 8, 0]},
+  {"type": "rumour_type", "id": "unrest_grumbling", "entry": "unrest_grumbling", "kind": "Unrest", "interest_pm": 400, "life_days": 12, "witnesses": "elders", "severity": 1, "key": "R_UNREST_GRUMBLING"},
+  {"type": "rumour_type", "id": "riot_rises", "entry": "riot_rises", "kind": "Unrest", "interest_pm": 800, "life_days": 12, "witnesses": "town", "severity": 2, "key": "R_RIOT_RISES"},
+  {"type": "rumour_type", "id": "revolt_rises", "entry": "revolt_rises", "kind": "Unrest", "interest_pm": 900, "life_days": 20, "witnesses": "town", "severity": 3, "key": "R_REVOLT_RISES"}
 ]

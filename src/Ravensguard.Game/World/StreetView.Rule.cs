@@ -32,6 +32,14 @@ public partial class StreetView
             var hht = rt.State.Population.Households;
             var lender = hht.IdOf(Enumerable.Range(0, hht.Count).First(h => hht.MemberCount[h] > 0));
             book.Loans.Add(new Loan { Serial = book.NextLoan++, Lender = Party.OfHousehold(lender), Borrower = Party.OfFief(fief), PrincipalMites = 20_000, RatePmPerSeason = 40, StartDay = day - 20, TermSeasons = 4, SeasonsPaid = 1, State = LoanState.Open });
+            // P6-E1 (unrest 6): two restless settlements of the fief, so the Fief tab shows a rung, the unrest and the top grievances
+            var ub = rt.State.Unrest ??= new Ravensguard.Sim.Unrest.UnrestBook(); var ec = rt.State.Economy!; int staged = 0;
+            for (int si = 0; si < c.Region.Settlements.Count && staged < 2; si++)
+            {
+                if (c.Region.Settlements[si].FiefIndex != fief) continue;
+                ub.Settlements[si] = new Ravensguard.Sim.Unrest.SettlementUnrest { Unrest = staged == 0 ? 520 : 330, Rung = staged == 0 ? 3 : 2 }; staged++;
+                for (int h = 0; h < hht.Count; h++) if (hht.MemberCount[h] > 0 && hht.Settlement[h] == si && h % 5 < 3) ec.Grievances[h] |= Ravensguard.Sim.Economy.Grievance.Hunger | Ravensguard.Sim.Economy.Grievance.Crowding;
+            }
             return 0;
         }).GetAwaiter().GetResult();
         RefreshBusiness();

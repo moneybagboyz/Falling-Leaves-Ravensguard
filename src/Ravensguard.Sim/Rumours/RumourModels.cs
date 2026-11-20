@@ -3,7 +3,9 @@ using Ravensguard.Sim.Core;
 namespace Ravensguard.Sim.Rumours;
 
 /// <summary>What a rumour is about (dialogue spec 3.5).</summary>
-public enum RumourKind : byte { Fire, Raid, Battle, Crime, Death, BirthWedding, Famine, Disease, FloodWeather, TaxLevy, War, RoadBandits, Omen, Landmark, PriceSpike }
+public enum RumourKind : byte { Fire, Raid, Battle, Crime, Death, BirthWedding, Famine, Disease, FloodWeather, TaxLevy, War, RoadBandits, Omen, Landmark, PriceSpike,
+    /// <summary>P6-E1 (unrest 4.1): grumbling, riots and revolts; appended.</summary>
+    Unrest }
 
 /// <summary>How a retelling went wrong (spec 4.6): flags only, never new facts; the rumour keeps the truth.</summary>
 [Flags] public enum Distortion : byte { None = 0, Vague = 1, Exaggerated = 2, Misattributed = 4 }

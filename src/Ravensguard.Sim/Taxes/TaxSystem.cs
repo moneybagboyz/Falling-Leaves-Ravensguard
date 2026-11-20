@@ -33,6 +33,12 @@ public sealed class TaxSystem
     public Func<IReadOnlyList<int>, IEnumerable<int>>? HouseholdOrder { get; set; }
     /// <summary>P6-C3 (rule-and-income 4.8): told after each settlement's round with the hearth tax it brought in (settlement, mites, the day), so the reeve's or bailiff's hands can be seen on it; null when no rule book is installed. Not saved.</summary>
     public Action<int, long, GameTime, RegionOutbox>? Collected { get; set; }
+    /// <summary>P6-E1 (unrest 4.1): whether a household pays no hearth tax this season because its grievances ran high (settlement, household, day); null when no unrest book is installed. Added to Phase 2's own evasion.</summary>
+    public Func<int, int, int, bool>? EvasionHook { get; set; }
+    /// <summary>P6-E1: the unrest part holds the riots and revolts (the Phase 2 granary riot and the revolt-brewing entry are not made); false in a bare world.</summary>
+    public bool RiotsElsewhere { get; set; }
+    /// <summary>P6-E1: told when a household is evicted for arrears (settlement, the household's id, the chronicle entry, the day), so its neighbours' grievance can be raised.</summary>
+    public Action<int, EntityId, EntityId, int>? Evicted { get; set; }
     /// <summary>The first evictions of the run (diagnostics, not saved).</summary>
     public List<string> EvictedSample { get; } = [];
 
@@ -162,6 +168,7 @@ public sealed class TaxSystem
         long owedH = (row?.ArrHearth ?? 0) + dueH, owedD = (row?.ArrDwelling ?? 0) + dueD;
         bool evade = evasionOn && (gr & Grievance.Tax) != 0 && owedH + owedD > 0
             && DetRng.Range(_w.Seed, day, hht.IdOf(h).Value, Stream, 0, 0, 100) < Policy.EvasionChancePctWithGrievance;
+        if (!evade && EvasionHook != null && owedH + owedD > 0 && EvasionHook(s, h, day)) evade = true;
         long avail = Math.Max(0, led.Balance(purse).Mites - (hungry ? (long)hht.MemberCount[h] * Policy.HungerKeepMitesPerMember : 0));
         long payH = 0, payD = 0;
         if (evade) { evaders++; State.Add(TaxTally.HearthEvaded, owedH + owedD); }
@@ -291,8 +298,9 @@ public sealed class TaxSystem
             if (b > 0 && led.Transfer(purse, dest, new Coin(b), TransferReason.Rent)) got += b;
         }
         var reg = _w.Population.Region;
-        ob.Chronicle(now, "eviction", [hht.IdOf(h), reg.Settlements[s].Id], [new Cause(CauseKind.Tax, null, $"evicted for arrears of {seasons} seasons")],
+        var evictEntry = ob.Chronicle(now, "eviction", [hht.IdOf(h), reg.Settlements[s].Id], [new Cause(CauseKind.Tax, null, $"evicted for arrears of {seasons} seasons")],
             ("household", hht.Name[h]), ("owed", owed.ToString()), ("claimed", got.ToString()), ("creditor", Treasuries[slot].Name));
+        Evicted?.Invoke(s, hht.IdOf(h), evictEntry, (int)now.TotalDays);
         State.Add(TaxTally.Evictions, 1); State.Add(TaxTally.EvictedClaim, got);
         if (EvictedSample.Count < 12) EvictedSample.Add($"hh{h} {hht.Class[h]} {hht.Deed[h]} {hht.Dwelling[h]} members {hht.MemberCount[h]} adults {WorkingAdults(h, (int)now.TotalDays)} owed {owed} claim {got} in {reg.Settlements[s].Name} y{now.Year}");
         Demography.DepartHousehold(_w, h, now, ob);
@@ -339,7 +347,7 @@ public sealed class TaxSystem
             if (target > cur)
             {
                 State.Rung[s] = (byte)target; State.QuietDays[s] = 0;
-                if (target == 4)
+                if (target == 4 && !RiotsElsewhere)
                 {
                     State.Add(TaxTally.RevoltsBrewing, 1);
                     ob.Chronicle(now, "revolt_brewing", [reg.Settlements[s].Id], [new Cause(CauseKind.Tax, null, "unrest above the top rung for a month")], ("settlement", reg.Settlements[s].Name), ("unrest", u.ToString()));
@@ -351,7 +359,7 @@ public sealed class TaxSystem
                 else State.QuietDays[s] = 0;
             }
             else State.QuietDays[s] = 0;
-            if (State.Rung[s] >= 3 && day - State.LastRiotDay[s] >= Policy.RiotCooldownDays && cnt[s] > 0) Riot(s, day, now, ob);
+            if (!RiotsElsewhere && State.Rung[s] >= 3 && day - State.LastRiotDay[s] >= Policy.RiotCooldownDays && cnt[s] > 0) Riot(s, day, now, ob);
         }
         ParishWages();
         if (now.DayOfSeason == CatchUpDayOfSeason) CatchUp(now);

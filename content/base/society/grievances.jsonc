@@ -1,0 +1,19 @@
+// Grievances (docs/specs/phase6/unrest-and-revolt.md 3): the points each gives a household, how long an event's grievance lasts in days (0: while the condition lasts) and where a crowd carrying it goes (barn, reeve, manor, gaol).
+// A household is aggrieved at 3 points. A season is 15 days, a year 60.
+[
+  {"type": "grievance_kind", "id": "hunger",        "points": 2, "days": 0,   "target": "barn",  "text_key": "ur_g_hunger",        "note_key": "ch_note_ur_hunger"},
+  {"type": "grievance_kind", "id": "tax_high",      "points": 1, "days": 0,   "target": "reeve", "text_key": "ur_g_tax_high",      "note_key": "ch_note_ur_tax"},
+  {"type": "grievance_kind", "id": "tax_crushing",  "points": 2, "days": 0,   "target": "reeve", "text_key": "ur_g_tax_crushing",  "note_key": "ch_note_ur_tax"},
+  {"type": "grievance_kind", "id": "levy",          "points": 1, "days": 15,  "target": "reeve", "text_key": "ur_g_levy",          "note_key": "ch_note_ur_levy", "lord": true},
+  {"type": "grievance_kind", "id": "crowding",      "points": 1, "days": 0,   "target": "manor", "text_key": "ur_g_crowding",      "note_key": "ch_note_ur_crowding"},
+  {"type": "grievance_kind", "id": "crime",         "points": 1, "days": 0,   "target": "gaol",  "text_key": "ur_g_crime",         "note_key": "ch_note_ur_crime"},
+  {"type": "grievance_kind", "id": "kin_punished",  "points": 1, "days": 60,  "target": "gaol",  "text_key": "ur_g_kin_punished",  "note_key": "ch_note_ur_kin", "lord": true},
+  {"type": "grievance_kind", "id": "wronged",       "points": 1, "days": 60,  "target": "gaol",  "text_key": "ur_g_wronged",       "note_key": "ch_note_ur_wronged", "lord": true},
+  {"type": "grievance_kind", "id": "standing",      "points": 1, "days": 0,   "target": "manor", "text_key": "ur_g_standing",      "note_key": "ch_note_ur_standing", "lord": true},
+  {"type": "grievance_kind", "id": "banned",        "points": 2, "days": 0,   "target": "manor", "text_key": "ur_g_banned",        "note_key": "ch_note_ur_banned", "lord": true},
+  {"type": "grievance_kind", "id": "enclosure",     "points": 1, "days": 120, "target": "manor", "text_key": "ur_g_enclosure",     "note_key": "ch_note_ur_enclosure", "lord": true},
+  {"type": "grievance_kind", "id": "unpaid_wages",  "points": 1, "days": 0,   "target": "manor", "text_key": "ur_g_unpaid_wages",  "note_key": "ch_note_ur_wages", "lord": true},
+  {"type": "grievance_kind", "id": "eviction",      "points": 1, "days": 15,  "target": "manor", "text_key": "ur_g_eviction",      "note_key": "ch_note_ur_eviction", "lord": true},
+  {"type": "grievance_kind", "id": "slavery",       "points": 1, "days": 0,   "target": "manor", "text_key": "ur_g_slavery",       "note_key": "ch_note_ur_slavery"},
+  {"type": "grievance_kind", "id": "purveyance",    "points": 2, "days": 30,  "target": "manor", "text_key": "ur_g_purveyance",    "note_key": "ch_note_ur_purveyance", "lord": true}
+]
