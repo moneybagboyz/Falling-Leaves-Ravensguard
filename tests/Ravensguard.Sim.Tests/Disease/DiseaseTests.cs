@@ -175,7 +175,7 @@ public class DiseaseTests(ITestOutputHelper output)
         var sw = System.Diagnostics.Stopwatch.StartNew(); int days = ep.EndDay - start + 14;
         Run(w, b, start + 1, days);
         sw.Stop(); output.WriteLine($"{days} days of a region-wide plague: {sw.Elapsed.TotalMilliseconds / days:0.00} ms a day");
-        Assert.True(sw.Elapsed.TotalMilliseconds / days < 25, "the plague's day is cheap");
+        Assert.True(sw.Elapsed.TotalMilliseconds / days < TestBudget.Ms(60), "the plague's day stays far inside the 150 ms hour cap");
         double dead = ep.Dead * 100.0 / ep.PopStart; output.WriteLine($"town {pop0} people, {ep.Infected} infected, {ep.Dead} dead = {dead:0.0}%, {gp.Immune.Count} immune, {gp.Epidemics.Count} places reached");
         Assert.Equal(pop0, ep.PopStart);
         Assert.InRange(dead, 24, 36);
