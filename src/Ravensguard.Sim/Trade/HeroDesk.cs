@@ -40,6 +40,8 @@ public enum HeroCommandKind : byte
     Business,
     /// <summary>Appended (P5-F): prospecting and mineral rights ("px:walk|...", start, hire, write, read, licence, site), applied by <see cref="Ravensguard.Sim.Production.BusinessDesk"/>.</summary>
     Prospect,
+    /// <summary>Appended (P5-H): a will made before a priest or the reeve ("wl:make|witness|person:what:thing:pm|..."), applied by <see cref="Ravensguard.Sim.Succession.WillDesk"/>.</summary>
+    Will,
 }
 
 /// <summary>Where the hero crafts (built on the main thread from what is in reach, copied into the command).</summary>
@@ -465,6 +467,7 @@ public sealed class HeroDesk
                 HeroCommandKind.Construction => Ravensguard.Sim.Construction.ConstructionDesk.Apply(ctx, c),   // P5-B: ghosts, hands-on work, materials, crews
                 HeroCommandKind.Craft => CraftDesk.Apply(ctx, c),                                              // P5-E: commissions, guilds, apprenticeships, fires
                 HeroCommandKind.Vehicle => Ravensguard.Sim.Carts.VehicleDesk.Apply(ctx, c),                   // P5-G: designs, vehicle sites, commissions, repairs, launches, voyages
+                HeroCommandKind.Will => Ravensguard.Sim.Succession.WillDesk.Apply(ctx, c),                     // P5-H: a will before a priest or the reeve
                 HeroCommandKind.Business or HeroCommandKind.Prospect => Ravensguard.Sim.Production.BusinessDesk.Apply(ctx, c),   // P5-F: businesses, stewards, stalls, prospecting
                 _ => R(c, HeroResultCode.Invalid, T("HERO_UNKNOWN_COMMAND")),
             };

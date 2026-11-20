@@ -976,6 +976,7 @@ public partial class StreetView : Control, IHandlesBack
         HeroShots(); TalkShots(); ApShots();
         LandTick(delta);                                    // P5-A2: the land view, land answers, land screenshots
         BusinessTick(delta);                                // P5-F: the Ledger, businesses and prospecting: views, answers, where the hero is, screenshots
+        WillTick(delta);                                    // P5-H: will answers, the will panel's view (StreetView.Will.cs)
         BuildTick();                                        // P5-B: construction brought up to the clock, built pieces laid into the street, ghosts drawn
         BuildModeTick(delta);                               // P5-C: build mode (StreetView.BuildMode.cs): the preview, the palette, answers to construction commands, the hero's hands
         if (_opt.IsShot && _opt.Weather == "storm" && _frames == Math.Max(2, _opt.Frames - 1)) _wover.Strike(); // dev: catch a lightning flash in the picture

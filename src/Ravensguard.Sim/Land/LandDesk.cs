@@ -47,6 +47,16 @@ public static class LandDesk
     public static HeroCommand Pull(int claim, long sec) => Cmd(sec, Tag("pull", claim));
     public static HeroCommand Petition(GrantorKind k, int grantor, int atSettlement, int xM, int yM, long sec) => Cmd(sec, Tag("petition", (int)k, grantor, atSettlement, xM, yM), 0, atSettlement);
     public static HeroCommand Settle(int charter, int household, long sec) => Cmd(sec, Tag("settle", charter, household));
+    /// <summary>P5-H: pays what a deed owes (its arrears) now, to its lessor or lord.</summary>
+    public static HeroCommand PayArrears(EntityId deed, long sec) => Cmd(sec, Tag("pay", deed.Value));
+
+    /// <summary>The hero is a minor heir (12 to 15): a guardian runs his property and he may not sell a deed (inheritance 4.4).</summary>
+    public static bool MinorHero(HeroContext ctx, int day)
+    {
+        var pt = ctx.State.Population.People;
+        int row = Ravensguard.Sim.Succession.HeroPerson.RowOf(pt, ctx.Hero, ctx.Party.Hero);
+        return row >= 0 && pt.AgeYears(row, day) < Ravensguard.Sim.Succession.EstateSettler.AdultAge;
+    }
 
     private static HeroResult R(HeroCommand c, HeroResultCode code, HeroText text, long mites = 0) => new(c.Seq, c.Kind, code, text, mites, 0, c.IssuedSec);
 
@@ -70,7 +80,9 @@ public static class LandDesk
         LandResult? res = p[0] switch
         {
             "buy" when p.Length >= 7 && I(1) >= 0 => lw.Buy(hero, hk, I(1), I(2), new RectM(I(3), I(4), I(5), I(6)), c.Limit, day, Chron),
+            "offer" when p.Length >= 3 && N(2) >= 0 && N(2) > 0 && MinorHero(ctx, day) => LandResult.No("in_minor_no_sale"),     // P5-H (inheritance 4.4): no deed sale before 16
             "offer" when p.Length >= 3 && N(2) >= 0 => lw.Offer(hero, new EntityId((ulong)N(1)), N(2), day),
+            "pay" when p.Length >= 2 => lw.PayArrears(hero, hk, new EntityId((ulong)N(1)), day, Chron),
             "lease" when p.Length >= 2 => lw.LeaseParcel(hero, hk, I(1), day, Chron),
             "house" when p.Length >= 3 => lw.LeaseHouse(hero, hk, I(1), I(2), day, Chron),
             "giveup" when p.Length >= 3 => lw.GiveUp(hero, new EntityId((ulong)N(1)), N(2) != 0),

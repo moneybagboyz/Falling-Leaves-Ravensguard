@@ -60,6 +60,8 @@ public static class OnboardingSetup
         };
         if (site.ErrandSettlement >= 0) { var es = st.Population.Region.Settlements[site.ErrandSettlement]; book.ErrandX = Mm(es.CenterX); book.ErrandY = Mm(es.CenterY); }
         if (fh != null && st.Economy != null && st.Population.Region.Settlements.Count > 0) PostFirstJob(st, db, book, fh, cfg, nowSec, seed);
+        // P5-H: an origin that begins with an estate (the tanner's widow: the tannery on its lease, with the husband's arrears) gets it in the start place
+        if (origin.Inherits != null) Ravensguard.Sim.Succession.StartingEstate.Apply(st, db, origin, site.Settlement, nowSec);
         return new SetupResult(book, site, site.Note);
     }
 

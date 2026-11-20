@@ -15,11 +15,21 @@ public enum LedgerTab : byte { Property, Businesses, Sites, Fields, Stalls, Vehi
 /// One row of a Ledger table (spec 6): its id (for the detail), the cells as the screen shows them (already formatted, column order of the tab), sort keys per column (numbers sort as numbers,
 /// text by its ordinal), and the alerts (A filters on them). Built at a barrier; the screen only sorts and filters.
 /// </summary>
-public sealed record LedgerRow(LedgerTab Tab, EntityId Id, string[] Cells, long[] Keys, OwnerAlert Alerts);
+public sealed record LedgerRow(LedgerTab Tab, EntityId Id, string[] Cells, long[] Keys, OwnerAlert Alerts)
+{
+    /// <summary>P5-H (inheritance 6): the row came to the hero by inheritance (the screen marks it "Inherited").</summary>
+    public bool Inherited { get; init; }
+}
 
 /// <summary>The whole Ledger as of a barrier: every row of every tab, where the coin is, the column heads (en.csv keys) per tab.</summary>
 public sealed record LedgerView(int Day, IReadOnlyList<LedgerRow> Rows, long Purse, long Chest, long Boxes, int AlertCount)
 {
+    /// <summary>P5-H: the last estate the hero's line settled (the dead's name, its holdings, what its debts still lack until the creditors' claims at the season's start); empty when none.</summary>
+    public string EstateOf { get; init; } = "";
+    public int EstateLines { get; init; }
+    public long EstateDebts { get; init; }
+    public long EstateUnpaid { get; init; }
+
     public static readonly IReadOnlyDictionary<LedgerTab, string[]> Columns = new Dictionary<LedgerTab, string[]>
     {
         [LedgerTab.Property] = ["lg_col_what", "lg_col_place", "lg_col_tenure", "lg_col_dues", "lg_col_value", "lg_col_ends", "lg_col_alerts"],
@@ -94,12 +104,12 @@ public sealed partial class OwnershipWorld
                 if (d.Kind == HoldingKind.Parcel)
                 {
                     int fields = (uint)d.Subject < (uint)Pop.Region.Parcels.Count ? Pop.Region.Parcels[(int)d.Subject].FieldCount : 0;
-                    rows.Add(new LedgerRow(LedgerTab.Fields, d.Id, [place, fields.ToString(), M(d.DuesMitesPerSeason), d.LeaseEndDay >= 0 ? $"d{d.LeaseEndDay}" : "-", M(d.OwedMites), Alerts(a)], [0, fields, d.DuesMitesPerSeason, d.LeaseEndDay, d.OwedMites, (long)a], a));
+                    rows.Add(new LedgerRow(LedgerTab.Fields, d.Id, [place, fields.ToString(), M(d.DuesMitesPerSeason), d.LeaseEndDay >= 0 ? $"d{d.LeaseEndDay}" : "-", M(d.OwedMites), Alerts(a)], [0, fields, d.DuesMitesPerSeason, d.LeaseEndDay, d.OwedMites, (long)a], a) { Inherited = d.Cause == DeedCause.Inherited });
                 }
                 else if (d.Kind != HoldingKind.Stall)
                 {
                     long value = Land.ValueOf(d);
-                    rows.Add(new LedgerRow(LedgerTab.Property, d.Id, [d.Kind.ToString(), place, d.Tenure.ToString(), M(d.DuesMitesPerSeason), M(value), d.LeaseEndDay >= 0 ? $"d{d.LeaseEndDay}" : "-", Alerts(a)], [(long)d.Kind, 0, (long)d.Tenure, d.DuesMitesPerSeason, value, d.LeaseEndDay, (long)a], a));
+                    rows.Add(new LedgerRow(LedgerTab.Property, d.Id, [d.Kind.ToString(), place, d.Tenure.ToString(), M(d.DuesMitesPerSeason), M(value), d.LeaseEndDay >= 0 ? $"d{d.LeaseEndDay}" : "-", Alerts(a)], [(long)d.Kind, 0, (long)d.Tenure, d.DuesMitesPerSeason, value, d.LeaseEndDay, (long)a], a) { Inherited = d.Cause == DeedCause.Inherited });
                 }
             }
         // businesses and shares
@@ -114,13 +124,13 @@ public sealed partial class OwnershipWorld
                 int slots = KindOf(b).StaffCapacity;
                 string stew = h.Steward >= 0 ? Pop.People.FullName(h.Steward) : "-";
                 rows.Add(new LedgerRow(LedgerTab.Businesses, b.Id, [Name(b), Place(b.Settlement), M(cash), M(profit), $"{b.Staff.Count}/{slots}", Alerts(h.Alerts), stew, M(value), M(h.SentToPurse + h.SentToChest)],
-                    [0, b.Settlement, cash, profit, b.Staff.Count, (long)h.Alerts, h.Steward, value, h.SentToPurse + h.SentToChest], h.Alerts));
+                    [0, b.Settlement, cash, profit, b.Staff.Count, (long)h.Alerts, h.Steward, value, h.SentToPurse + h.SentToChest], h.Alerts) { Inherited = h.InheritedDay >= 0 });
             }
             int pm = h.Shares.Where(s => s.Holder == Hero).Sum(s => s.Pm);
             if (pm > 0)
             {
                 long div = h.History.Count > 0 ? h.History[^1].Paid * pm / 1000 : 0;
-                rows.Add(new LedgerRow(LedgerTab.Shares, b.Id, [Name(b), Place(b.Settlement), $"{pm / 10}%", M(value * pm / 1000), M(div), Alerts(h.Alerts)], [0, b.Settlement, pm, value * pm / 1000, div, (long)h.Alerts], h.Alerts));
+                rows.Add(new LedgerRow(LedgerTab.Shares, b.Id, [Name(b), Place(b.Settlement), $"{pm / 10}%", M(value * pm / 1000), M(div), Alerts(h.Alerts)], [0, b.Settlement, pm, value * pm / 1000, div, (long)h.Alerts], h.Alerts) { Inherited = h.InheritedDay >= 0 });
             }
         }
         // stalls

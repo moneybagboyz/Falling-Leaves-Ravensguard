@@ -45,5 +45,16 @@
     "description": "There is a price on a name that is no longer yours. The greenwood keeps secrets better than the town does.",
     "skills": { "melee": 10, "archery": 10, "forestry": 5 }, "attributes": { "dexterity": 6, "perception": 4 },
     "kit": [ { "item": "dagger" }, { "item": "axe" }, { "item": "cloak" } ], "coin": 10,
-    "start_location": "wilds", "ambition": "clear_your_name", "mentor": "fence" }
+    "start_location": "wilds", "ambition": "clear_your_name", "mentor": "fence" },
+
+  // P5-H (inheritance): the concept book's tanner's widow, the eighth card. She begins with an estate ("inherits"): her late husband's tannery in a house leased from the lord, two seasons of
+  // its rent behind (his debt), a little coin in its box and hides and bark in its store; her children are rows of her household (0 to 2, aged 6 to 14) and the dead husband a row.
+  { "type": "origin", "id": "tanners_widow", "name": "Tanner's widow", "order": 8,
+    "description": "Your husband's vats stand cold. The tannery is yours now, and so are his debts: the lord's rent is two seasons behind, and the town is watching to see if you keep it.",
+    "skills": { "tanning": 15, "trading": 5 }, "attributes": { "toughness": 3 },
+    "kit": [ { "item": "dagger" }, { "item": "tunic" }, { "item": "cloak" } ], "coin": 45,
+    "start_location": "town", "ambition": "keep_the_tannery", "mentor": "journeyman",
+    "age": [28, 36], "occupation": "tanner",
+    "kin": [ { "rel": "spouse_dead", "age": [30, 42], "count": [1, 1] }, { "rel": "child", "age": [6, 14], "count": [0, 2] } ],
+    "inherits": { "business": "tannery", "arrears_seasons": 2, "cash_mites": 600, "stock": { "hide_raw": 100000, "oak_bark": 40000 }, "years": 12 } }
 ]

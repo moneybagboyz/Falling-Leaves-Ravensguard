@@ -159,16 +159,7 @@ public sealed class LandWorld
         var (lordId, lordKind) = LandRegistry.LordOf(Pop, s);
         if (!Pay(buyer, buyerKind, lordId, lordKind, pick.PriceMites, TransferReason.Trade)) return new LandResult(false, "ld_cannot_afford", [Money(pick.PriceMites)], pick.PriceMites, CannotAfford: true);
         int lot = pick.Lot;
-        if (lot < 0)
-        {
-            bool town = st.Class == SettlementClass.Town;
-            lot = st.Plan.Lots.Count;
-            // P5-C: a bought plot is bare ground (BarePlot): with no blueprint, world generation's fallback stamped a townhouse or a cottage on it, so a house the buyer never built stood
-            // in the visited chunks and refused every piece he placed there
-            var rec = new LotRecord(s, lot, true, town ? LotUse.Burgage : LotUse.Cottage, DwellingType.None, BarePlot, pick.Rect, pick.Facing, (byte)(town ? 1 : 0), 0, day);
-            RegionGrowth.Change(Region, _sink(), [new RectM(pick.Rect.X - 4, pick.Rect.Y - 4, pick.Rect.W + 8, pick.Rect.H + 8)], () => RegionGrowth.AddLot(Region, Pop, rec));
-            Growth.Lots.Add(rec);
-        }
+        if (lot < 0) lot = NewLot(s, pick, day);
         var id = LandIds.Of(HoldingKind.Lot, RegionId, LandIds.LotSubject(s, lot));
         var deed = new Deed
         {
@@ -179,6 +170,42 @@ public sealed class LandWorld
         chron(Day(day), "land_bought", [buyer, id, lordId], [new Cause(CauseKind.Trade, null, "bought from the lord")],
             ("settlement", st.Name), ("price", pick.PriceMites.ToString()), ("area_m2", pick.AreaM2.ToString()), ("tenure", pick.Tenure.ToString()));
         return new LandResult(true, "ld_bought", [st.Name, Money(pick.PriceMites), pick.Rect.W, pick.Rect.H], pick.PriceMites, id);
+    }
+
+    /// <summary>A new lot of the plan on a listed plot (through the growth log, so a load replays it and growth never builds on it): bare ground (<see cref="BarePlot"/>).</summary>
+    private int NewLot(int s, Listing pick, int day)
+    {
+        var st = Region.Settlements[s];
+        bool town = st.Class == SettlementClass.Town;
+        int lot = st.Plan.Lots.Count;
+        // P5-C: a bought plot is bare ground (BarePlot): with no blueprint, world generation's fallback stamped a townhouse or a cottage on it, so a house the buyer never built stood
+        // in the visited chunks and refused every piece he placed there
+        var rec = new LotRecord(s, lot, true, town ? LotUse.Burgage : LotUse.Cottage, DwellingType.None, BarePlot, pick.Rect, pick.Facing, (byte)(town ? 1 : 0), 0, day);
+        RegionGrowth.Change(Region, _sink(), [new RectM(pick.Rect.X - 4, pick.Rect.Y - 4, pick.Rect.W + 8, pick.Rect.H + 8)], () => RegionGrowth.AddLot(Region, Pop, rec));
+        Growth.Lots.Add(rec);
+        return lot;
+    }
+
+    /// <summary>
+    /// P5-H: a plot of the lord's let on a lease (the tanner's widow's yard where no house stands vacant): the first plot he lists, as a new lot of the plan, held Leasehold of him for the lease
+    /// term at the plot's dues (a town's burgage rent). The plot stays his; the lease row stands over the derived deed.
+    /// </summary>
+    public LandResult LeasePlot(EntityId lessee, PurseKind lesseeKind, int s, int day, LandChronicle chron)
+    {
+        var pick = Listings(s).FirstOrDefault(x => x.Lot < 0);
+        if (pick == null) return LandResult.No("ld_no_lots");
+        int lot = NewLot(s, pick, day);
+        var (lordId, lordKind) = LandRegistry.LordOf(Pop, s);
+        var st = Region.Settlements[s];
+        var id = LandIds.Of(HoldingKind.Lot, RegionId, LandIds.LotSubject(s, lot));
+        var deed = new Deed
+        {
+            Id = id, Kind = HoldingKind.Lot, Subject = LandIds.LotSubject(s, lot), Settlement = s, Holder = lessee, HolderPurse = lesseeKind, Tenure = Tenure.Leasehold, Lord = st.FiefIndex,
+            DuesMitesPerSeason = Math.Max(1, pick.DuesMites), LeaseEndDay = day + Rules.LeaseTermDays, Lessor = lordId, LessorPurse = lordKind, AcquiredDay = day, Cause = DeedCause.Leased, Rect = pick.Rect,
+        };
+        Put(deed, day);
+        chron(Day(day), "plot_leased", [lessee, id, lordId], [new Cause(CauseKind.Trade, null, "a plot let by the lord")], ("settlement", st.Name), ("rent", deed.DuesMitesPerSeason.ToString()));
+        return new LandResult(true, "ld_leased_house", [st.Name, Money(deed.DuesMitesPerSeason)], deed.DuesMitesPerSeason, id);
     }
 
     /// <summary>
@@ -206,6 +233,20 @@ public sealed class LandWorld
         if (!Book.Deeds.TryGetValue(deedId, out var d) || d.Holder != holder || d.Kind != HoldingKind.Lot || d.IsLease) return LandResult.No("ld_not_yours");
         d.AskMites = Math.Max(0, askMites);
         return new LandResult(true, askMites > 0 ? "ld_offered" : "ld_withdrawn", [Money(askMites)], askMites, deedId);
+    }
+
+    /// <summary>P5-H: pays what a deed of <paramref name="holder"/> owes now (as much of its arrears as the purse holds) to its payee as <c>Rent</c>; cleared arrears end the ladder.</summary>
+    public LandResult PayArrears(EntityId holder, PurseKind kind, EntityId deedId, int day, LandChronicle chron)
+    {
+        if (!Book.Deeds.TryGetValue(deedId, out var d) || d.Holder != holder) return LandResult.No("ld_not_yours");
+        if (d.OwedMites <= 0) return LandResult.No("ld_nothing_owed");
+        var (to, tk) = Payee(d);
+        long pay = Math.Min(d.OwedMites, Balance(holder, kind));
+        if (to == EntityId.None || pay <= 0 || !Pay(holder, kind, to, tk, pay, TransferReason.Rent)) return new LandResult(false, "ld_cannot_afford", [Money(d.OwedMites)], d.OwedMites, CannotAfford: true);
+        d.OwedMites -= pay;
+        if (d.OwedMites == 0) { d.ArrearsSeasons = 0; d.InDebt = false; d.NoticeDay = -1; }
+        chron(Day(day), "arrears_paid", [holder, d.Id, to], [new Cause(CauseKind.Trade, null, "arrears paid")], ("paid", pay.ToString()), ("owed", d.OwedMites.ToString()));
+        return new LandResult(true, d.OwedMites == 0 ? "ld_arrears_cleared" : "ld_arrears_part", [Money(pay), Money(d.OwedMites)], pay, d.Id);
     }
 
     /// <summary>The value of a deed the resale compares the ask with: what the lord would ask today for the same ground.</summary>

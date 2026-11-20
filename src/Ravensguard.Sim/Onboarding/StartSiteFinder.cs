@@ -31,6 +31,7 @@ public static class StartSiteFinder
         "prior" => [Occupation.Priest],
         "steward" => [Occupation.Steward, Occupation.Reeve],
         "fence" => [Occupation.Innkeeper, Occupation.Merchant, Occupation.Woodcutter, Occupation.CharcoalBurner],
+        "journeyman" => [Occupation.Tanner, Occupation.Cobbler, Occupation.Butcher, Occupation.Merchant],   // P5-H: the tanner's widow's mentor, her husband's old journeyman
         _ => [],
     };
 

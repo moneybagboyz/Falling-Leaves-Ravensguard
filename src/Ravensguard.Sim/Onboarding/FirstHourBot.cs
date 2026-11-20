@@ -29,6 +29,8 @@ public sealed class BotReport
     public long FirstJobGameSec, FirstJobGameMinutesAt1x;
     public long RideMetres, MountedMetres;
     public string LoanState = "";
+    /// <summary>P5-H: the business kind an origin inherits ("" none).</summary>
+    public string InheritedKind = "";
     public int Steps;
 
     /// <summary>Real minutes at 1x of the span between two game seconds (20 game seconds per real second).</summary>
@@ -67,7 +69,7 @@ public static class FirstHourBot
 
     public static BotReport Play(HeadlessWorld hw, ContentDatabase db, OriginDef origin, ulong seed, Action<WorldState, string>? observer = null)
     {
-        var rep = new BotReport { Origin = origin.Id, Seed = seed, MentorId = origin.Mentor };
+        var rep = new BotReport { Origin = origin.Id, Seed = seed, MentorId = origin.Mentor, InheritedKind = origin.Inherits?.Business ?? "" };
         try { Script(hw, db, origin, seed, rep, observer); }
         catch (Exception e) { if (rep.Failure.Length == 0) rep.Failure = "exception: " + e.GetType().Name + ": " + e.Message; rep.Timeline.Add(new BotEvent(0, "EXCEPTION " + e)); }
         return rep;
@@ -85,6 +87,13 @@ public static class FirstHourBot
             Economy = econ, Hero = hero, Markets = hw.Economy.Markets, Content = db,
         };
         st.Party = HeroParty.Create(econ, db, st.Ids, hero);
+        if (origin.Inherits != null)
+        {
+            // P5-H: an origin that begins with an estate (the tanner's widow) needs the hero as a person row (her household, her kin) and the businesses, as a new game has them
+            st.Production = hw.Economy.Production;
+            st.Succession = new Ravensguard.Sim.Succession.SuccessionBook();
+            hero.PersonIndex = Ravensguard.Sim.Succession.HeroPerson.Insert(hw.Population, econ, db, hero, EconomyState.HeroOwner, seed, (int)(start / 86400), -1, st.Succession.Kin, null, st.Ids);
+        }
         var table = new JobTable(); st.Jobs = table;
         var env = new JobEnv { Ledger = econ.Ledger, Econ = econ, Pop = hw.Population, Tuning = BehaviourContent.From(db).OddJobs };
         var ctx = new HeroContext(st, st.Party, db) { Jobs = () => (env, table) };
@@ -127,6 +136,9 @@ public static class FirstHourBot
 
         // 4. spend coin at the market through the hero's desk
         if (!Spend(r)) { r.Fail($"could not buy anything at the market (coin {r.Ctx.Coin} mites, cheapest unit {Cheapest(r)})"); return; }
+
+        // 4b. P5-H: the tanner's widow keeps the tannery: she finds it hers, and pays the husband's arrears on its lease to the lord through the desk (as the deeds screen sends it)
+        if (origin.Inherits != null && !KeepTheTannery(r)) return;
 
         // 5. a second talk (the dialogue starts at its repeat node) borrows the animal
         if (origin.Mentor == "caravan_master") Talk(r, origin.Mentor, ["ASK_LOAN"]); else Talk(r, origin.Mentor, ["REPEAT_HORSE", "HORSE_ACCEPT"]);
@@ -223,6 +235,29 @@ public static class FirstHourBot
             }
         }
         return false;
+    }
+
+    /// <summary>The widow's first hour (P5-H): the inherited business is hers, in a leased house with the husband's arrears; she pays them through the hero's desk and the lease is clear.</summary>
+    private static bool KeepTheTannery(Run r)
+    {
+        var st = r.State; int row = st.Hero!.PersonIndex;
+        var biz = st.Production?.Businesses.FirstOrDefault(b => b.Owner == row && row >= 0);
+        if (biz == null) { r.Fail("the widow owns no business"); return false; }
+        var kind = st.Production!.KindOf(biz).Id;
+        if (r.Rep.InheritedKind.Length > 0 && kind != r.Rep.InheritedKind) { r.Fail("the inherited business is a " + kind); return false; }
+        var lease = st.Land?.Deeds.Values.FirstOrDefault(d => d.Holder == r.HeroId && d.IsLease && d.Cause == Ravensguard.Sim.Land.DeedCause.Inherited);
+        long box = st.Economy!.Ledger.Balance(biz.Purse).Mites;
+        r.Log("the " + kind + " is hers (" + biz.Stations.Count + " stations, " + box + " mites in its box)" + (lease != null ? "; the lease owes " + lease.OwedMites + " mites" : "; no lease"));
+        if (lease == null) { r.Fail("the tannery has no lease"); return false; }
+        if (lease.OwedMites <= 0) { r.Fail("the lease owes nothing: the husband's debt is missing"); return false; }
+        long before = r.Ctx.Coin;
+        var cmd = r.Desk.Issue(Ravensguard.Sim.Land.LandDesk.PayArrears(lease.Id, r.Now));
+        r.Desk.ApplyDue(r.Ctx, cmd.Hour);
+        var res = r.Desk.View?.Results.LastOrDefault(x => x.Seq == cmd.Seq);
+        if (res is not { Ok: true } || lease.OwedMites != 0) { r.Fail("could not pay the arrears: " + (res?.Text ?? "no answer")); return false; }
+        r.Log("paid the husband's arrears: " + (before - r.Ctx.Coin) + " mites to the lord; the lease is clear");
+        r.Now += 600;
+        return true;
     }
 
     private static string Cheapest(Run r)

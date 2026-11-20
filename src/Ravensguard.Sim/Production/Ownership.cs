@@ -91,6 +91,8 @@ public sealed class BusinessHolding
     public int MadeToday, MadeDay = -1;
     /// <summary>The second the hero's own work at its stations has been credited to (a second never counts twice).</summary>
     public long HandsToSec;
+    /// <summary>P5-H: the day the hero's line inherited it (-1 never): the Ledger marks the row "Inherited".</summary>
+    public int InheritedDay = -1;
 
     public int OwnerPm => 1000 - Shares.Sum(s => s.Pm);
     public long MeanProfit => History.Count == 0 ? 0 : History.Skip(Math.Max(0, History.Count - 4)).Sum(h => h.Profit) / Math.Min(4, History.Count);
@@ -150,6 +152,7 @@ public sealed class OwnershipBook
             L((long)x.Business.Value); L(x.Steward); L(x.StewardWage); L(x.StewardOwed); L(x.HandsOn ? 1 : 0); L(x.FoundedDay); L(x.RevenueSeason); L(x.SentSeason); L(x.LastSentDay);
             L(x.SentToPurse); L(x.SentToChest); L((long)x.Alerts); L(x.Vein); L(x.Licence); L(x.Unlicensed ? 1 : 0); L(x.RoyaltyPaid); L(x.RoyaltyOwed); L(x.LastMinedG);
             L(x.StewardShortDays); L(x.StewardPaidSeason); L(x.MadeToday); L(x.MadeDay); L(x.HandsToSec);
+            if (x.InheritedDay >= 0) L(x.InheritedDay);
             var o = x.Orders; L(o.KeepGood); L(o.KeepQty); L(o.FloorGood); L(o.FloorMites); L(o.SeasonBudget); L(o.SendEveryDays); L(o.KeepMites); L(o.HireUpTo); L(o.CloseAfterTwoLosses ? 1 : 0); L(o.Recipe); L(o.PerDay);
             L(x.Shares.Count); foreach (var s in x.Shares) { L((long)s.Holder.Value); L(s.Pm); }
             L(x.Premises.Count); foreach (int p in x.Premises) L(p);

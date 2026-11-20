@@ -85,7 +85,7 @@ public sealed class LabourMarket
         {
             if (b.State != BusinessState.Open) continue;
             var kind = _sys.KindOf(b);
-            if (kind.Slots.Length == 0) continue;
+            if (kind.Slots.Length == 0 && !_sys.NeedsMaster(b)) continue;
             int vac = Vacancies(b, kind);
             if (vac <= 0) continue;
             if (!built) { BuildIdle(day); built = true; }
@@ -115,17 +115,16 @@ public sealed class LabourMarket
             int fief = b.Settlement >= 0 ? _pop.Region.Settlements[b.Settlement].FiefIndex : -1;
             if (fief >= 0 && fief < _pop.FiefLord.Length && _pop.FiefLord[fief] >= 0 && people.Status[_pop.FiefLord[fief]] == PersonStatus.Alive) heir = _pop.FiefLord[fief];
         }
-        // (1) the eldest adult child of the dead owner who is alive, sons first
+        // (1) P5-H (inheritance 4.1): the will's heir, else the law's order of the dead owner's kin (sons, daughters, the spouse, siblings, parents: EstateSettler.Heirs), alive, of management age
+        // and owning no other business
+        bool kinHeir = false;
         if (heir < 0 && old >= 0)
         {
-            int best = -1;
-            foreach (int c in ChildrenOf(old))
-            {
-                if (people.Status[c] != PersonStatus.Alive || people.AgeYears(c, day) < ManagementMinAge || people.AgeYears(c, day) >= RetireAge) continue;
-                if (OwnsBusiness(c)) continue;
-                if (best < 0 || Better(people, c, best)) best = c;
-            }
-            heir = best;
+            bool Fit(int c) => c >= 0 && people.Status[c] == PersonStatus.Alive && people.AgeYears(c, day) >= ManagementMinAge && people.AgeYears(c, day) < RetireAge && !OwnsBusiness(c);
+            int w = WillHeir?.Invoke(old, b.Id) ?? -1;
+            if (Fit(w)) heir = w;
+            else foreach (var h in Ravensguard.Sim.Succession.EstateSettler.Heirs(people, old, day, ChildrenOf)) if (Fit(h.Row)) { heir = h.Row; break; }
+            kinHeir = heir >= 0;
         }
         var skill = OccupationInfo.Skills(kind.OwnerOccupation).A;
         // (2) the most skilled adult of the staff
@@ -161,22 +160,29 @@ public sealed class LabourMarket
             _sys.Close(b);
             return;
         }
-        _sys.SetOwner(b, heir);
+        if (kinHeir) _sys.Inherit(b, heir); else _sys.SetOwner(b, heir);       // P5-H: an heir of another trade keeps his own and the business hires a master (IN-10)
         _owners.Add(heir);
-        if (!crewLike) EnsureSkill(heir, skill, StartSkill);
+        if (!crewLike && (b.OwnerWorks || !kinHeir)) EnsureSkill(heir, skill, StartSkill);
         Succeeded++;
     }
 
     private bool OwnsBusiness(int person) => _owners.Contains(person);
 
+    /// <summary>P5-H: the heir a dead owner's will names for a business (-1 none), set by the estates (<c>EstateWiring</c>).</summary>
+    public Func<int, EntityId, int>? WillHeir { get; set; }
+
+    /// <summary>A kind's staff slots, plus one master of its trade when the owner inherited it from another trade and does not work it (P5-H, <see cref="ProductionSystem.NeedsMaster"/>).</summary>
+    private (Occupation Occupation, int Count, WageClass Wage)[] SlotsOf(Business b, BusinessKind kind)
+    {
+        if (!_sys.NeedsMaster(b)) return kind.Slots;
+        var l = kind.Slots.ToList();
+        int i = l.FindIndex(x => x.Occupation == kind.OwnerOccupation);
+        if (i >= 0) l[i] = (l[i].Occupation, l[i].Count + 1, l[i].Wage); else l.Add((kind.OwnerOccupation, 1, WageClass.Skilled));
+        return [.. l];
+    }
+
     private IEnumerable<int> ChildrenOf(int parent) => _children(parent).OrderBy(c => c);
 
-    /// <summary>Sons before daughters, then the elder, then the lower index.</summary>
-    private static bool Better(PersonTable p, int a, int b)
-    {
-        if (p.Sex[a] != p.Sex[b]) return p.Sex[a] == Sex.Male;
-        return p.BirthDay[a] < p.BirthDay[b] || (p.BirthDay[a] == p.BirthDay[b] && a < b);
-    }
 
     // ------------------------------------------------------------------ hiring
 
@@ -184,7 +190,7 @@ public sealed class LabourMarket
     private int Vacancies(Business b, BusinessKind kind)
     {
         int vac = 0;
-        foreach (var (occ, count, wc) in kind.Slots)
+        foreach (var (occ, count, wc) in SlotsOf(b, kind))
         {
             int have = 0; foreach (int s in b.Staff) if (_pop.People.Occupation[s] == occ) have++;
             vac += Math.Max(0, count - have);
@@ -257,7 +263,7 @@ public sealed class LabourMarket
         var people = _pop.People; var ledger = _econ.Ledger;
         var pool = PoolFor(b, kind);
         if (pool.Count == 0) return;
-        foreach (var (occ, count, wc) in kind.Slots)
+        foreach (var (occ, count, wc) in SlotsOf(b, kind))
         {
             int have = 0; foreach (int s in b.Staff) if (people.Occupation[s] == occ) have++;
             int need = count - have;

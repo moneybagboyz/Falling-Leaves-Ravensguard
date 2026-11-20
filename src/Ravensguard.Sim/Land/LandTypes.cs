@@ -12,7 +12,9 @@ public enum HoldingKind : byte { Lot, Parcel, Building, Stall, Claim, Fief, Foun
 public enum Tenure : byte { Freehold, Burgage, Leasehold, Tenancy, Customary }
 
 /// <summary>How a deed came to its holder (the chronicle cause of the change). Append only.</summary>
-public enum DeedCause : byte { Generated, Bought, Inherited, Granted, Claimed, Forfeited, Leased, LeaseEnded, Sold, Evicted, Lapsed }
+public enum DeedCause : byte { Generated, Bought, Inherited, Granted, Claimed, Forfeited, Leased, LeaseEnded, Sold, Evicted, Lapsed,
+    /// <summary>P5-H: fell to the lord with no heir (inheritance 4.1 rule 2).</summary>
+    Escheated }
 
 public enum ClaimState : byte { Open, Deeded, Lapsed, Pulled }
 public enum ImprovementKind : byte { Dwelling, SownAcre }

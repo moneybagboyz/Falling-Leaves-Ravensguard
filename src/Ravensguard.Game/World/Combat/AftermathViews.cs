@@ -209,11 +209,14 @@ public partial class SuccessionView : AftermathPanel
     readonly Action<SuccessionCandidate> _pick;
     readonly Action? _load;
     readonly Action _end;
+    readonly EstateSummary? _estate;
 
-    public SuccessionView(string dead, string cause, IReadOnlyList<SuccessionCandidate> heirs, int all, bool ironman, Action<SuccessionCandidate> pick, Action? load, Action end)
+    public SuccessionView(string dead, string cause, IReadOnlyList<SuccessionCandidate> heirs, int all, bool ironman, Action<SuccessionCandidate> pick, Action? load, Action end, EstateSummary? estate = null)
     {
-        _dead = dead; _cause = cause; _heirs = heirs; _all = all; _ironman = ironman; _pick = pick; _load = load; _end = end;
+        _dead = dead; _cause = cause; _heirs = heirs; _all = all; _ironman = ironman; _pick = pick; _load = load; _end = end; _estate = estate;
     }
+
+    static string M(long mites) => Quotes.Money(mites);
 
     static string Rule(SuccessionCandidate c) => L.T("MC_RULE_" + c.Rule.ToString().ToUpperInvariant());
 
@@ -230,7 +233,22 @@ public partial class SuccessionView : AftermathPanel
             if (_ironman && _all > 1) Line("  " + L.T("su_ironman"));
         }
         Section(L.T("su_estate"));
-        Line("  " + L.T("su_estate_line"));
+        if (_estate is { } e && (e.Lines.Count > 0 || e.CoinMites > 0))
+        {
+            // P5-H (inheritance 4.3, 6): what the heir receives, what goes to other kin and to the lord, the coin after the funeral and the debts
+            Line("  " + L.F("in_su_coin", M(e.CoinMites), M(e.FuneralMites), M(e.DebtsMites)) + (e.Will ? "  " + L.T("in_su_by_will") : ""));
+            if (e.DebtsMites > e.DebtsFromCoinMites) Line("  " + L.F("in_su_claims", M(e.DebtsMites - e.DebtsFromCoinMites)));
+            if (_heirs.Count > 0)
+            {
+                Line("  " + L.F("in_su_you_inherit", _heirs[0].Name, M(e.CoinToHeirMites)) + "  " + (e.Law == "partible" ? L.T("in_su_law_partible") : L.T("in_su_law_primo")));
+                foreach (var l in e.YouInherit.Take(8)) Line("    " + L.F("in_su_line", l.Name, M(l.ValueMites)));
+                if (!e.YouInherit.Any()) Line("    " + L.T("in_su_inherit_nothing"));
+            }
+            if (e.ToOthers.Any()) { Line("  " + L.T("in_su_to_kin")); foreach (var l in e.ToOthers.Take(6)) Line("    " + L.F("in_su_line_to", l.Name, M(l.ValueMites), l.To)); }
+            if (e.ToTheLord.Any()) { Line("  " + L.T("in_su_to_lord")); foreach (var l in e.ToTheLord.Take(6)) Line("    " + L.F("in_su_line_to", l.Name, M(l.ValueMites), l.To)); }
+            Line("  " + L.T("in_su_body_line"));
+        }
+        else Line("  " + L.T("su_estate_line"));
         Button? first = null;
         foreach (var h in _heirs.Take(4)) { var c = h; var b = Btn(L.F("su_btn_continue", c.Name), () => _pick(c), w: 220); first ??= b; }
         if (_load != null) Btn(L.T("su_btn_load"), _load, w: 180);

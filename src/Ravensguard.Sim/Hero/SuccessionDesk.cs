@@ -23,6 +23,8 @@ namespace Ravensguard.Sim.Succession;
 public static class SuccessionDesk
 {
     public const string HeirPrefix = "su:heir|", EndPrefix = "su:end|";
+    /// <summary>The ambition of an heir who is not kin (inheritance 4.3: "find your place").</summary>
+    public const string DefaultAmbition = "find_your_place";
     /// <summary>Estate owners are ids of kind Other from this base (one per estate), clear of the Phase 2 business and market bases.</summary>
     public const ulong EstateBase = 0x0E57_0000_0000UL;
 
@@ -109,6 +111,16 @@ public static class SuccessionDesk
             if (cb.Controlled != EntityId.None) cb.ReleaseControl();
             cb.Publish(cb.Rules, e.Ledger, c.IssuedSec);
         }
+        // P5-H (inheritance 4.2): the estate settles: debts from the coin, then the chest, then the body's goods at bid; every holding to its heir by the will and the law (the play heir keeps
+        // the hero's id, so what he inherits stays put), the rest to kin or the lord; the deeds the play heir holds are on the record
+        if (deadRow >= 0 || heir != null)
+        {
+            bool kin = heir != null && heir.Rule is SuccessionRule.Child or SuccessionRule.Spouse or SuccessionRule.Sibling or SuccessionRule.YoungChild or SuccessionRule.Parent;
+            var ew = EstateWiring.For(st, ctx.Content);
+            var deeds = ew.SettleHero(est, ctx.Party.Hero, deadRow, heir, kin, ctx.Purse, day, c.IssuedSec, heir?.PersonIndex ?? -1, [chest],
+                i => i >= 0 && i < pt.Count && st.Captivity?.Find(pt.IdOf(i)) is { Held: true });
+            if (rec != null) { rec.Deeds.Clear(); rec.Deeds.AddRange(deeds); rec.Coin = e.Ledger.Balance(ctx.Purse).Mites; }
+        }
         if (heir == null)
         {
             st.Chronicle.Add(new ChronicleEntry(st.Ids.Allocate(IdKind.Event), new GameTime(c.IssuedSec), "hero_line_ended", [ctx.Party.Hero], [],
@@ -118,7 +130,10 @@ public static class SuccessionDesk
         // the heir becomes the hero
         int row = heir.PersonIndex;
         HeroRecord hero;
-        if (row >= 0 && row < pt.Count) hero = SuccessionOrder.HeroFrom(pt, row, heir.Name);
+        // the heir's ambition (4.3): the dead hero's goes on with kin (the family's goal), else the heir's own default
+        bool kinHeir = heir.Rule is SuccessionRule.Child or SuccessionRule.Spouse or SuccessionRule.Sibling or SuccessionRule.YoungChild or SuccessionRule.Parent;
+        string ambition = kinHeir && st.Hero is { AmbitionId.Length: > 0 } old ? old.AmbitionId : DefaultAmbition;
+        if (row >= 0 && row < pt.Count) hero = SuccessionOrder.HeroFrom(pt, row, heir.Name, ambition);
         else hero = new HeroRecord { Name = heir.Name, Origin = "heir", Attributes = [50, 50, 50, 50, 50], Skills = HeroRecord.SkillIds.ToDictionary(s => s, _ => 0) };
         bool heroRows = deadRow >= 0;
         var stay = SuccessionOrder.Stay(SquadOf(ctx.Party, pt), HeroKin.People(book.Kin), heir.Person);
@@ -146,6 +161,34 @@ public static class SuccessionDesk
         st.Chronicle.Add(new ChronicleEntry(st.Ids.Allocate(IdKind.Event), new GameTime(c.IssuedSec), "hero_succession", [ctx.Party.Hero, heir.Person], [],
             new Dictionary<string, string> { ["name"] = deadName, ["heir"] = heir.Name, ["rule"] = heir.Rule.ToString(), ["coin"] = rec!.Coin.ToString(CultureInfo.InvariantCulture) }));
         return R(c, HeroResultCode.Ok, HeroText.Of("su_continues", heir.Name), rec.Coin, 1);
+    }
+
+    /// <summary>
+    /// The estate as the succession screen shows it before it settles (inheritance 4.3, 6): what <paramref name="heir"/> (none: the line ends) would receive, what goes to other kin and to the lord,
+    /// the coin after the funeral and the debts. A pure read of the tables (IN-11: the same after a save and a load).
+    /// </summary>
+    public static EstateSummary Estate(Save.WorldState st, HeroParty party, ContentDatabase content, SuccessionCandidate? heir, int day)
+    {
+        if (st.Economy is not { } e) return EstateSummary.Empty;
+        var pt = st.Population.People;
+        int row = HeroPerson.RowOf(pt, st.Hero, party.Hero);
+        if (row < 0 && heir == null) return EstateSummary.Empty;
+        bool kin = heir != null && heir.Rule is SuccessionRule.Child or SuccessionRule.Spouse or SuccessionRule.Sibling or SuccessionRule.YoungChild or SuccessionRule.Parent;
+        var purse = e.Ledger.TryFind(PurseKind.Person, party.Hero, out var p) ? p : (PurseId?)null;
+        return EstateWiring.For(st, content).Summary(party.Hero, row, true, heir == null ? null : new Recipient(heir.PersonIndex, party.Hero, party.Hero, PurseKind.Person, true, false, heir.Name), kin, purse, day,
+            unavailable: i => i >= 0 && i < pt.Count && st.Captivity?.Find(pt.IdOf(i)) is { Held: true });
+    }
+
+    /// <summary>The Ledger with the last estate the hero's line settled (P5-H, inheritance 6: the dead's name, the holdings it passed, its debts and what they still lack).</summary>
+    public static Ravensguard.Sim.Production.LedgerView WithEstate(Save.WorldState st, Ravensguard.Sim.Production.LedgerView v)
+    {
+        if (st.Succession is not { } b || b.Records.Count == 0) return v;
+        var rec = b.Records[^1];
+        var est = b.Estates.FirstOrDefault(e => e.Id == rec.EstateId);
+        if (est == null) return v;
+        int row = st.Population.People.IndexOf(est.Dead);
+        string name = row >= 0 ? st.Population.People.FullName(row) : "";
+        return v with { EstateOf = name, EstateLines = est.Holdings.Count, EstateDebts = est.DebtsMites, EstateUnpaid = est.UnpaidMites };
     }
 
     /// <summary>Where an heir who was a person row lives (region millimetres: the centre of their home settlement), for the game to put the hero there; null when unknown.</summary>

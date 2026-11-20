@@ -20,7 +20,7 @@ namespace Ravensguard.Game.World;
 public partial class StreetView
 {
     SuccessionView? _successionView;
-    Task<List<SuccessionCandidate>>? _heirsTask;
+    Task<(List<SuccessionCandidate> Heirs, EstateSummary Estate)>? _heirsTask;
     long _successionSeq = -1;
     (long X, long Y) _deathPlace;
     long _deathSec;
@@ -34,7 +34,14 @@ public partial class StreetView
         _deathPlace = HeroRegionMm(); _deathSec = _world.Clock.Now.Seconds; _deathCause = causeKey;
         int day = (int)(_deathSec / 86400);
         _rec.SetSpeed(SimSpeed.Paused);
-        _heirsTask = rt.AtBarrier(() => SuccessionDesk.Candidates(rt.State, party, day));
+        var content = rt.State.Content;
+        _heirsTask = rt.AtBarrier(() =>
+        {
+            var h = SuccessionDesk.Candidates(rt.State, party, day);
+            // P5-H: the estate as it would settle for the first heir (the screen's "You inherit" and "Goes to the lord")
+            var est = content != null ? SuccessionDesk.Estate(rt.State, party, content, h.FirstOrDefault(), day) : EstateSummary.Empty;
+            return (h, est);
+        });
     }
 
     /// <summary>Each frame: the order coming back, the heir's command applied.</summary>
@@ -47,11 +54,12 @@ public partial class StreetView
         if (_heirsTask is { IsCompleted: true } t)
         {
             _heirsTask = null;
-            var heirs = t.IsCompletedSuccessfully ? t.Result : [];
+            var heirs = t.IsCompletedSuccessfully ? t.Result.Heirs : [];
+            var estate = t.IsCompletedSuccessfully ? t.Result.Estate : null;
             Layer();
             bool ironman = Run is { Ironman: true };
             _successionView = new SuccessionView(_hero?.Name ?? "", L.T(_deathCause), ironman ? heirs.Take(1).ToList() : heirs, heirs.Count, ironman, PickHeir,
-                !ironman && Run?.ManualEntry() != null ? QuickLoad : null, EndLine) { Name = "SuccessionView" };
+                !ironman && Run?.ManualEntry() != null ? QuickLoad : null, EndLine, estate) { Name = "SuccessionView" };
             _mcLayer!.AddChild(_successionView);
         }
         if (_successionSeq < 0 || _heroLink?.View is not { } v) return;
@@ -109,10 +117,10 @@ public partial class StreetView
     }
 
     /// <summary>Smoke and shots: the succession screen over the street view with the given order.</summary>
-    public Control DebugShowSuccession(List<SuccessionCandidate> heirs, bool ironman)
+    public Control DebugShowSuccession(List<SuccessionCandidate> heirs, bool ironman, EstateSummary? estate = null)
     {
         Layer();
-        _successionView = new SuccessionView(_hero?.Name ?? "Aldric", L.T("su_cause_fight"), ironman ? heirs.Take(1).ToList() : heirs, heirs.Count, ironman, _ => DebugCloseSuccession(), ironman ? null : () => { }, DebugCloseSuccession) { Name = "SuccessionView" };
+        _successionView = new SuccessionView(_hero?.Name ?? "Aldric", L.T("su_cause_fight"), ironman ? heirs.Take(1).ToList() : heirs, heirs.Count, ironman, _ => DebugCloseSuccession(), ironman ? null : () => { }, DebugCloseSuccession, estate) { Name = "SuccessionView" };
         _mcLayer!.AddChild(_successionView);
         return _successionView;
     }

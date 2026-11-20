@@ -66,5 +66,27 @@
       { "id": "find_a_fence", "name": "Find someone who deals in secrets", "conditions": [ { "id": "knows_person", "args": { "kind": "fence", "min_trust": "20" } } ] },
       { "id": "find_the_witness", "name": "Find the witness", "conditions": [ { "id": "knows_person", "args": { "kind": "witness", "min_trust": "10" } } ] },
       { "id": "stand_before_the_court", "name": "Stand before the court", "conditions": [ { "id": "has_reputation_at_least", "args": { "scope": "district", "value": "10" } } ] }
+    ] },
+
+  // P5-H: the tanner's widow's ambition (inheritance: she inherits a tannery and its debts on a lease; the first hour is about keeping it)
+  { "type": "ambition", "id": "keep_the_tannery", "name": "Keep the tannery",
+    "description": "The vats, the lease and the debts are yours. Pay what he owed, keep the pits working, and make the name on the door your own.",
+    "steps": [
+      { "id": "pay_his_debts", "name": "Pay his debts", "description": "The lord's rent is two seasons behind. Pay it before the reeve sends notice.",
+        "conditions": [ { "id": "has_coin_at_least", "args": { "pence": "100" } } ] },
+      { "id": "keep_the_pits_working", "name": "Keep the pits working", "description": "A season with hides in the pits and leather sold.",
+        "conditions": [ { "id": "owns_building", "args": { "kind": "shop" } } ] },
+      { "id": "hire_a_journeyman", "name": "Hire a journeyman", "conditions": [ { "id": "has_followers_at_least", "args": { "count": "1" } } ] },
+      { "id": "the_name_on_the_door", "name": "The name on the door", "description": "Join the tanners' guild in your own name.",
+        "conditions": [ { "id": "has_rank", "args": { "rank": "guild_member" } } ] }
+    ] },
+
+  // P5-H (inheritance 4.3): the ambition of an heir who is not kin (a companion who continues the line)
+  { "type": "ambition", "id": "find_your_place", "name": "Find your place",
+    "description": "You were someone else's companion. Now the road, the name and whatever the will left are yours to make something of.",
+    "steps": [
+      { "id": "a_roof", "name": "A roof of your own", "conditions": [ { "id": "owns_building", "args": { "kind": "dwelling" } } ] },
+      { "id": "a_trade", "name": "A trade", "conditions": [ { "id": "completed_contract_count", "args": { "count": "3" } } ] },
+      { "id": "a_name", "name": "A name", "conditions": [ { "id": "has_reputation_at_least", "args": { "scope": "district", "value": "20" } } ] }
     ] }
 ]

@@ -152,7 +152,8 @@ public sealed class OwnershipSave
             Premises = [.. h.Premises], HandsOn = h.HandsOn, WagePerson = [.. h.Wages.Keys], WageMites = [.. h.Wages.Values], FoundedDay = h.FoundedDay,
             Books = [h.RevenueSeason, h.SentSeason, h.SentToPurse, h.SentToChest, h.RoyaltyPaid, h.RoyaltyOwed, h.LastMinedG, h.StewardPaidSeason, h.HandsToSec],
             History = [.. h.History.SelectMany(r => new long[] { r.Season, r.Revenue, r.Wages, r.Inputs, r.Profit, r.Paid })],
-            Ints = [h.LastSentDay, (int)h.Alerts, h.Vein, h.Licence, h.Unlicensed ? 1 : 0, h.StewardShortDays, h.MadeToday, h.MadeDay],
+            Ints = h.InheritedDay >= 0 ? [h.LastSentDay, (int)h.Alerts, h.Vein, h.Licence, h.Unlicensed ? 1 : 0, h.StewardShortDays, h.MadeToday, h.MadeDay, h.InheritedDay]   // P5-H: a ninth int only once inherited
+                : [h.LastSentDay, (int)h.Alerts, h.Vein, h.Licence, h.Unlicensed ? 1 : 0, h.StewardShortDays, h.MadeToday, h.MadeDay],
             PriceGoods = [.. h.PriceGoods], PriceDays = [.. h.PriceDays.SelectMany(d => d)], Tiles = [.. h.Tiles],
         })];
         s.Stalls = [.. b.Stalls.Values.Select(x => new StallRow { Subject = x.Subject, Settlement = x.Settlement, Business = x.Business, StoreId = x.StoreId.Value, AskPm = x.AskPm, Minder = x.Minder, MindedToSec = x.MindedToSec, Day = x.Day, Books = [x.SoldToday, x.TakingsToday, x.TollToday, x.TakingsSeason, x.SoldSeason] })];
@@ -186,6 +187,7 @@ public sealed class OwnershipSave
                 h.RevenueSeason = r.Books[0]; h.SentSeason = r.Books[1]; h.SentToPurse = r.Books[2]; h.SentToChest = r.Books[3]; h.RoyaltyPaid = r.Books[4]; h.RoyaltyOwed = r.Books[5]; h.LastMinedG = r.Books[6]; h.StewardPaidSeason = r.Books[7]; h.HandsToSec = r.Books[8];
                 for (int i = 0; i + 5 < r.History.Length; i += 6) h.History.Add(new SeasonRow((int)r.History[i], r.History[i + 1], r.History[i + 2], r.History[i + 3], r.History[i + 4], r.History[i + 5]));
                 h.LastSentDay = r.Ints[0]; h.Alerts = (OwnerAlert)r.Ints[1]; h.Vein = r.Ints[2]; h.Licence = r.Ints[3]; h.Unlicensed = r.Ints[4] != 0; h.StewardShortDays = r.Ints[5]; h.MadeToday = r.Ints[6]; h.MadeDay = r.Ints[7];
+                if (r.Ints.Length > 8) h.InheritedDay = r.Ints[8];
                 h.PriceGoods = [.. r.PriceGoods];
                 int w = h.PriceGoods.Length;
                 if (w > 0) for (int i = 0; i + w <= r.PriceDays.Length; i += w) h.PriceDays.Add(r.PriceDays[i..(i + w)]);

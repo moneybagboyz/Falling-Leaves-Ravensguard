@@ -93,6 +93,10 @@ public sealed class SuccessionSave
     /// <summary>The hero's kin (P4 close-out; absent in older saves, which read as none).</summary>
     [Key(6)] public ulong[] KinPeople { get; set; } = [];
     [Key(7)] public byte[] KinRelations { get; set; } = [];
+    /// <summary>P5-H (additive): each estate's holdings, eight longs each (kind, id, value, to, to kind, to row, escheat, claimed by); null when no estate has any (older bytes unchanged).</summary>
+    [Key(8)] public long[][]? EstateHoldings { get; set; }
+    /// <summary>P5-H (additive): each estate's debts, six longs each (kind, creditor, creditor kind, owed, paid, subject).</summary>
+    [Key(9)] public long[][]? EstateDebts { get; set; }
 
     public static SuccessionSave Capture(SuccessionBook b) => new()
     {
@@ -102,6 +106,10 @@ public sealed class SuccessionSave
         RecordText = [.. b.Records.Select(r => new[] { r.ReputationPending, r.RecoverShape }.Concat(r.Deeds).ToArray())],
         RunEnded = b.RunEnded, CurrentHero = b.CurrentHero.Value,
         KinPeople = [.. b.Kin.Select(k => k.Person.Value)], KinRelations = [.. b.Kin.Select(k => (byte)k.Relation)],
+        EstateHoldings = b.Estates.Any(e => e.Holdings.Count > 0 || e.Debts.Count > 0)
+            ? [.. b.Estates.Select(e => e.Holdings.SelectMany(x => new long[] { (long)x.Kind, (long)x.Id.Value, x.ValueMites, (long)x.To.Value, (long)x.ToKind, x.ToRow, x.Escheat ? 1 : 0, (long)x.ClaimedBy.Value }).ToArray())] : null,
+        EstateDebts = b.Estates.Any(e => e.Holdings.Count > 0 || e.Debts.Count > 0)
+            ? [.. b.Estates.Select(e => e.Debts.SelectMany(d => new long[] { (long)d.Kind, (long)d.Creditor.Value, (long)d.CreditorKind, d.OwedMites, d.PaidMites, (long)d.Subject.Value }).ToArray())] : null,
     };
 
     public SuccessionBook Restore()
@@ -119,6 +127,20 @@ public sealed class SuccessionSave
                 Id = (int)v[0], Dead = new EntityId((ulong)v[1]), PlaceX = v[2], PlaceY = v[3], CoinMites = v[4], FuneralMites = v[5], Heir = new EntityId((ulong)v[6]), Claimed = v[7] != 0, Looted = v[8] != 0,
                 Day = (int)v[9], Items = [.. EstateItems[k].Select(i => new EntityId(i))],
             });
+            var est = b.Estates[^1];
+            if (EstateHoldings != null && k < EstateHoldings.Length)
+            {
+                var h = EstateHoldings[k]; if (h.Length % 8 != 0) throw new SaveException("Corrupt estate holdings in save.");
+                for (int j = 0; j < h.Length; j += 8)
+                    est.Holdings.Add(new EstateEntry { Kind = (EstateThing)h[j], Id = new EntityId((ulong)h[j + 1]), ValueMites = h[j + 2], To = new EntityId((ulong)h[j + 3]), ToKind = (Ravensguard.Sim.Economy.PurseKind)h[j + 4],
+                        ToRow = (int)h[j + 5], Escheat = h[j + 6] != 0, ClaimedBy = new EntityId((ulong)h[j + 7]) });
+            }
+            if (EstateDebts != null && k < EstateDebts.Length)
+            {
+                var d = EstateDebts[k]; if (d.Length % 6 != 0) throw new SaveException("Corrupt estate debts in save.");
+                for (int j = 0; j < d.Length; j += 6)
+                    est.Debts.Add(new EstateDebt { Kind = (DebtKind)d[j], Creditor = new EntityId((ulong)d[j + 1]), CreditorKind = (Ravensguard.Sim.Economy.PurseKind)d[j + 2], OwedMites = d[j + 3], PaidMites = d[j + 4], Subject = new EntityId((ulong)d[j + 5]) });
+            }
         }
         for (int k = 0; k < Records.Length; k++)
         {

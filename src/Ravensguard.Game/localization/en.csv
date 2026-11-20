@@ -2919,6 +2919,9 @@ ld_q_deeds,My deeds and claims
 ld_q_stake_waste,Stake a claim (waste of {0})
 ld_q_stake,Stake a claim here
 ld_char_property,Deeds and claims
+ld_nothing_owed,This holding owes nothing.
+ld_arrears_cleared,"Paid {0}: the arrears are cleared."
+ld_arrears_part,"Paid {0}; {1} is still owed."
 iq_tier_crude,crude
 iq_tier_poor,poor
 iq_tier_fine,fine
@@ -2932,6 +2935,83 @@ in_kin_spouse,husband or wife
 in_kin_child,child
 in_kin_line,"{0}, your {1}, {2}, of {3}"
 in_kin_dead,"{0}, your {1}, died aged {2}"
+D_JM_INTRO,"Mistress. I am sorry for your loss; he was a hard master and a fair one. The pits will not wait for grief, though. I have worked these vats at {place} for nine years, and I would like to work them for a tenth."
+D_JM_WORK,"The butcher by the shambles still owes your husband a load of hides, paid for in the spring. Fetch them before he forgets, or sells them twice. It is three hundred paces and a heavy load."
+D_JM_PAY,"I will pay you a carrier's wage from my own purse, and you will pay it back in hides. That is how he and I settled things, and it kept us both honest."
+D_JM_DANGER,"The butcher's dogs, and the butcher's memory. Take the tally stick; he cannot argue with notches."
+D_JM_ACCEPT,"Good. The tally is on the nail by the door. Bring the hides to the yard and I will salt them tonight."
+D_JM_AFTER,"While you are out, mind the reeve. The rent is two seasons behind, and the lord's men do not care whose name was on the lease."
+D_JM_WHO,"His journeyman. I came to him as a boy who could not tell bark from leather. Now I can, and I have nowhere else to be."
+D_JM_PAST,"I tanned for a monastery once, upriver. The brothers paid in prayers. Your husband paid in coin, which feeds better."
+D_JM_FAMILY,"A sister in the next village, married to a cobbler. She buys our leather and complains about it, which is how I know it is good."
+D_JM_ROAD,"The road to the next village is short and dull. The cobbler there has bought from this yard for twenty years, and he knows your husband's mark."
+D_JM_BANDITS,"Outlaws in the woods, they say, but they want horses and silver, not hides. Nobody robs a tanner; they can smell you coming."
+D_JM_FORD,"The ford at the mill floods after rain. A mule will cross it; a fool on foot will not."
+D_JM_TIPS,"Keep the pits limed, the hides turned and the accounts written. The first two keep the leather; the last one keeps the yard."
+D_JM_NEWS,"The guild warden asked after you. He wants to know whether the widow will keep the yard or sell it to his cousin."
+D_JM_MORE,"They say men were robbed on the north road last week. Carry the leather by the south road, and carry it in daylight."
+D_JM_HORSE,"The cobbler in the next village is owed a bale of leather, and we are owed his coin. Take the yard's mule; she knows the way better than you do. Bring her back within three days."
+D_JM_LENT,"The mule is called Patience, and she has none. Load the bale on her left side, take it to the cobbler, and come home before the pits need turning."
+D_JM_REPEAT,"Mistress. The pits are turning. What do you need?"
+D_JM_JOB_DONE,"The hides are salted and in the first pit. In forty days they will be leather, if the rent is paid and the yard is still ours."
+D_JM_ASK_WORK,"What needs doing in the yard?"
+D_JM_ASK_WHO,"Remind me who you are to this yard."
+D_JM_ASK_ROAD,"Where do we sell the leather?"
+D_JM_ASK_NEWS,"What does the town say?"
+D_JM_ASK_HORSE,"Can we spare the mule for a delivery?"
+in_q_head,Wills and estates
+in_q_will,Make a will
+in_q_will_with,"Make a will before {0}"
+in_find_witness,A will needs a witness: find a priest or the reeve.
+in_minor_no_sale,You are not yet sixteen: your guardian keeps the deeds until you are of age.
+in_wl_title,A will
+in_wl_witness,"Witnessed by {0}"
+in_wl_btn_make,"Make the will ({0})"
+in_wl_btn_sign,Sign it
+in_wl_nothing,nothing
+in_wl_all,everything
+in_wl_coin,"{0}% of the coin"
+in_wl_status,"The fee is {0}, paid to the witness. You carry {1}. {2}"
+in_wl_has_will,"You have a will already ({0} lines); a new one replaces it."
+in_wl_no_will,"You have made no will: the law decides, and without kin the lord takes the land."
+in_wl_people,People you know
+in_wl_nobody,You know nobody you could leave anything to.
+in_wl_person,"{0}, {1}, {2}, of {3}"
+in_wl_how_child,your child
+in_wl_how_parent,your parent
+in_wl_how_sibling,your brother or sister
+in_wl_how_spouse,your husband or wife
+in_wl_how_companion,companion
+in_wl_how_follower,follower
+in_wl_how_known,known to you
+in_wl_cycle,Press to change what this person gets.
+in_wl_estate,Your estate as it stands
+in_wl_note,"What the will does not name follows the law: sons first, then daughters, your spouse, younger children, brothers and sisters, parents; with no kin, the lord."
+in_wl_confirm_title,Make this will?
+in_wl_confirm_line,"{0} gets {1}"
+in_wl_confirm_fee,"The fee of {0} goes to {1}, who keeps the will."
+in_wl_made,"Your will is made before {0}. The fee of {1} is paid."
+in_wl_names_nobody,The will must name somebody other than yourself.
+in_wl_coin_over,The shares of the coin cannot add up to more than the whole.
+in_wl_cannot_afford,"You cannot pay the fee of {0}."
+in_wl_no_witness,Only a priest or the reeve can witness a will.
+in_su_coin,"Coin {0}; the funeral {1}; debts {2}"
+in_su_by_will,(by the will)
+in_su_claims,"{0} of the debts are not covered: the creditors claim property at the season's start."
+in_su_you_inherit,"{0} inherits ({1} in coin):"
+in_su_inherit_nothing,nothing but what is carried
+in_su_heir_gets,"{0} would inherit; the law here is {1}."
+in_su_law_primo,primogeniture
+in_su_law_partible,partible (sons share)
+in_su_line,"{0}, worth {1}"
+in_su_line_to,"{0}, worth {1}, to {2}"
+in_su_to_kin,To other kin:
+in_su_to_lord,Goes to the lord:
+in_su_nothing,"Nothing is held: no deeds, businesses or leases."
+in_su_body_line,What the body carried stays where it fell until someone fetches it.
+in_lg_inherited,(inherited)
+in_lg_estate,"Estate of {0}: {1} holdings passed, debts {2} paid."
+in_lg_estate_owed,"Estate of {0}: {1} holdings passed; {3} of its debts unpaid, claimed at the season's start."
 BUILD_GROANS,The floor above groans. Dust is falling!
 BUILD_YOU_FELL,The floor gave way under you.
 BUILD_FELL,The floor came down.

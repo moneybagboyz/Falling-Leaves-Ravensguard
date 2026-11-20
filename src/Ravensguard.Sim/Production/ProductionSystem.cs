@@ -113,6 +113,30 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
         foreach (int s in b.Staff) if (pt.Employer[s] == old || pt.Employer[s] < 0) pt.Employer[s] = heir;
     }
 
+    /// <summary>
+    /// P5-H (inheritance 4.1): the business passes to an heir. An heir already in another trade keeps it and owns the business without working it (the labour market hires one of its trade at its next
+    /// day, <see cref="NeedsMaster"/>); an idle heir or one of the trade takes the owner's trade (<see cref="SetOwner"/>, Phase 2's rule). The owner's dividends go to the heir's household either way.
+    /// </summary>
+    public void Inherit(Business b, int heir)
+    {
+        var pt = Pop.People; var kind = KindOf(b);
+        bool crewLike = kind.Extractions.Length > 0 || kind.Id is "mine" or "manor";
+        if (crewLike || kind.Trader || pt.Occupation[heir] == Occupation.None || pt.Occupation[heir] == kind.OwnerOccupation) { SetOwner(b, heir); if (!crewLike && !kind.Trader && kind.Stations.Length > 0) b.OwnerWorks = true; return; }
+        int old = b.Owner;
+        b.Owner = heir; b.OwnerHousehold = pt.Household[heir]; b.OwnerWorks = false;
+        foreach (int s in b.Staff) if (pt.Employer[s] == old || pt.Employer[s] < 0) pt.Employer[s] = heir;
+    }
+
+    /// <summary>P5-H: a workshop whose owner inherited it from another trade (does not work it): it hires one of its own trade (a master) besides its slots.</summary>
+    public bool NeedsMaster(Business b)
+    {
+        if (b.OwnerWorks || b.Owner < 0 || b.Owner >= Pop.People.Count || b.State != BusinessState.Open) return false;
+        var kind = KindOf(b);
+        if (kind.Trader || kind.Extractions.Length > 0 || kind.Id is "mine" or "manor" || kind.Stations.Length == 0) return false;
+        if (Steering is { } st && st.Steered(b)) return false;
+        return Pop.People.Occupation[b.Owner] != kind.OwnerOccupation;
+    }
+
     /// <summary>The hourly wage a person earns in a class: half for an apprentice (under 16).</summary>
     private int HourlyWage(int person, WageClass c, int day)
     {

@@ -48,4 +48,20 @@ public sealed record OriginDef : ContentDef
     public List<OriginKinDef> Kin { get; init; } = [];
     /// <summary>P5-A4: the occupation the hero's person row carries (a sim <c>Occupation</c> name); empty is none.</summary>
     public string Occupation { get; init; } = "";
+    /// <summary>P5-H: what the hero inherits at the start (the tanner's widow: her husband's tannery on a lease, with its arrears); null for none.</summary>
+    public OriginInheritsDef? Inherits { get; init; }
+}
+
+/// <summary>
+/// P5-H: an origin's inheritance at the start (the tanner's widow): a business of the hero's own in a leased house of the start place (the first vacant house the lord lets, lowest lot), the lease
+/// <c>arrears_seasons</c> of rent behind, the business's cash box and stock (good id to units: grams, or pieces). Applied once by the new game's setup, through the land and ownership rules.
+/// </summary>
+public sealed record OriginInheritsDef
+{
+    [ContentRef(typeof(BusinessDef))] public required string Business { get; init; }
+    public int ArrearsSeasons { get; init; } = 1;
+    public long CashMites { get; init; }
+    public Dictionary<string, long> Stock { get; init; } = [];
+    /// <summary>Years the business had been the family's (its founded day lies that far back).</summary>
+    public int Years { get; init; } = 10;
 }

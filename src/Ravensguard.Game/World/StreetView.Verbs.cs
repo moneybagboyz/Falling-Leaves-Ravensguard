@@ -127,6 +127,7 @@ public partial class StreetView
         v.Add(new(L.T("Q_AUTO_PANEL"), OpenAutopilot, noAp));
         SurfaceSiteVerbs(v);                                // P4-H: search an old battlefield, dig a hoard (StreetView.Crawl.cs)
         LandVerbs(v);                                       // P5-A2: the lot market, the deeds, staking a claim (StreetView.Land.cs)
+        WillVerbs(v);                                       // P5-H: make a will before a priest or the reeve (StreetView.Will.cs)
         ContractVerbs(v);                                   // P5-D: the contract board (StreetView.Contracts.cs)
         VehicleVerbs(v);                                    // P5-G: the designer, a vehicle's parts, work, repair, launch (StreetView.Vehicles.cs)
         BusinessVerbs(v);                                   // P5-F: the Ledger, open a business, hire, steward, a share, prospecting (StreetView.Business.cs)

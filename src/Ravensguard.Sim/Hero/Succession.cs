@@ -25,6 +25,22 @@ public sealed class Estate
     public EntityId Heir;
     public bool Claimed, Looted;
     public int Day;
+    /// <summary>P5-H (inheritance 3): every holding the estate passed (deeds, leases, stalls, claims, charters, businesses, shares, sites, contracts, vehicles, animals, commissions, the chest, coin), to whom.</summary>
+    public List<EstateEntry> Holdings = [];
+    /// <summary>P5-H: the estate's debts (owed wages, rent and dues arrears, commission balances), what was paid of each; what is left is claimed at the next season's start.</summary>
+    public List<EstateDebt> Debts = [];
+    public IEnumerable<EstateEntry> Deeds => Holdings.Where(h => h.Kind is EstateThing.Deed or EstateThing.Claim or EstateThing.Charter);
+    public IEnumerable<EstateEntry> Leases => Holdings.Where(h => h.Kind == EstateThing.Lease);
+    public IEnumerable<EstateEntry> Businesses => Holdings.Where(h => h.Kind == EstateThing.Business);
+    public IEnumerable<EstateEntry> Shares => Holdings.Where(h => h.Kind == EstateThing.Share);
+    public IEnumerable<EstateEntry> Sites => Holdings.Where(h => h.Kind is EstateThing.Site or EstateThing.Contract);
+    public IEnumerable<EstateEntry> Vehicles => Holdings.Where(h => h.Kind == EstateThing.Vehicle);
+    public IEnumerable<EstateEntry> Animals => Holdings.Where(h => h.Kind == EstateThing.Animal);
+    public IEnumerable<EstateEntry> Stores => Holdings.Where(h => h.Kind is EstateThing.Stall or EstateThing.Chest);
+    public long DebtsMites => Debts.Sum(d => d.OwedMites);
+    public long UnpaidMites => Debts.Sum(d => d.Left);
+    /// <summary>The heirs by share: each recipient and the value he received.</summary>
+    public IEnumerable<(EntityId Heir, long Mites)> Heirs => Holdings.GroupBy(h => h.To).OrderBy(g => g.Key).Select(g => (g.Key, g.Sum(x => x.ValueMites)));
 }
 
 /// <summary>The record of a succession (3.2 <c>InheritanceRecord</c>): deeds and reputation are carried as pending (Phase 5 and 6 make them real).</summary>
@@ -54,7 +70,8 @@ public sealed class SuccessionBook
     public readonly List<HeroKinLink> Kin = [];
 
     /// <summary>The <c>EstateHash</c> of the daily trail (6).</summary>
-    public ulong Hash()
+    /// <summary>P5-H: <paramref name="wills"/> (the world's, saved in the "wills" section) are folded in when any exists.</summary>
+    public ulong Hash(WillBook? wills = null)
     {
         ulong h = 14695981039346656037UL;
         void L(long v) => h = Ravensguard.Sim.Combat.Melee2.FightMath.Mix(h, v);
@@ -68,6 +85,14 @@ public sealed class SuccessionBook
             L((long)r.From.Value); L((long)r.To.Value); L((long)r.Rule); L(r.Coin); L(r.EstateId); L(r.Deeds.Count); L(r.ReputationPending.Length); L(r.GameDay); L(r.RecoverShape.Length); L((long)r.Guardian.Value);
         }
         L(RunEnded ? 1 : 0); L((long)CurrentHero.Value);
+        // P5-H: the estate lists, only when an estate has any (older hashes unchanged)
+        if (Estates.Any(e => e.Holdings.Count > 0 || e.Debts.Count > 0))
+            foreach (var e in Estates)
+            {
+                L(e.Holdings.Count); foreach (var x in e.Holdings) { L((long)x.Kind); L((long)x.Id.Value); L(x.ValueMites); L((long)x.To.Value); L((long)x.ToKind); L(x.ToRow); L(x.Escheat ? 1 : 0); L((long)x.ClaimedBy.Value); }
+                L(e.Debts.Count); foreach (var d in e.Debts) { L((long)d.Kind); L((long)d.Creditor.Value); L((long)d.CreditorKind); L(d.OwedMites); L(d.PaidMites); L((long)d.Subject.Value); }
+            }
+        if (wills is { IsEmpty: false } wb) wb.Hash(L);
         if (Kin.Count > 0) { L(Kin.Count); foreach (var k in Kin) { L((long)k.Person.Value); L((long)k.Relation); } }   // only a book with kin hashes them (older hashes unchanged)
         return h;
     }
@@ -174,7 +199,7 @@ public static class SuccessionOrder
     public static IReadOnlyList<SuccessionCandidate> Options(IReadOnlyList<SuccessionCandidate> order, bool ironman) => ironman ? (order.Count > 0 ? [order[0]] : []) : order;
 
     /// <summary>The heir as the new hero (4.8: attributes and skills from the person row; origin "heir").</summary>
-    public static HeroRecord HeroFrom(PersonTable pt, int row, string name)
+    public static HeroRecord HeroFrom(PersonTable pt, int row, string name, string ambition = "")
     {
         var attrs = new int[5];
         for (int i = 0; i < 5; i++) attrs[i] = Math.Clamp(pt.Attribute(row, i), 1, HeroRecord.MaxLevel);
@@ -182,6 +207,6 @@ public static class SuccessionOrder
         foreach (var id in HeroRecord.SkillIds) skills[id] = 0;
         for (int k = 0; k < PersonTable.SkillSlots; k++) { var s = pt.SkillAt(row, k); if (s.Skill != Skill.None) skills[HeroRecord.SkillId(s.Skill)] = Math.Clamp(s.Level, 0, HeroRecord.MaxLevel); }
         HeroRecord.DefaultWeaponFamilies(skills, skills.Where(kv => kv.Value > 0).Select(kv => kv.Key));
-        return new HeroRecord { Name = name, Female = pt.Sex[row] == Sex.Female, Origin = "heir", Attributes = attrs, Skills = skills, Inventory = [], Coin = 0, AmbitionId = "", Milestone = 0 };
+        return new HeroRecord { Name = name, Female = pt.Sex[row] == Sex.Female, Origin = "heir", Attributes = attrs, Skills = skills, Inventory = [], Coin = 0, AmbitionId = ambition, Milestone = 0 };
     }
 }

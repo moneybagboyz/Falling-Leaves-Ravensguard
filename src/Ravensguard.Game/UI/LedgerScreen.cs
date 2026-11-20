@@ -93,7 +93,8 @@ public partial class LedgerScreen : Control, IHandlesBack
         _row = Math.Clamp(_row, 0, Math.Max(0, _rows.Count - 1));
         if (_row < _first) _first = _row; if (_row >= _first + MaxRows) _first = _row - MaxRows + 1;
         int c0 = Math.Clamp(_col - Visible6 + 1, 0, Math.Max(0, cols.Length - Visible6));
-        _status.Text = L.F("lg_status", _rows.Count, L.T(cols[Math.Min(_sortCol, cols.Length - 1)]), L.T(_desc ? "lg_desc" : "lg_asc"), _alerts ? L.T("lg_alerts_only") : "", _search.Length > 0 ? "/" + _search : "", c0 > 0 || cols.Length > Visible6 ? L.F("lg_cols", c0 + 1, Math.Min(cols.Length, c0 + Visible6), cols.Length) : "");
+        string estate = v.EstateOf.Length > 0 ? "   " + L.F(v.EstateUnpaid > 0 ? "in_lg_estate_owed" : "in_lg_estate", v.EstateOf, v.EstateLines, M(v.EstateDebts), M(v.EstateUnpaid)) : "";
+        _status.Text = L.F("lg_status", _rows.Count, L.T(cols[Math.Min(_sortCol, cols.Length - 1)]), L.T(_desc ? "lg_desc" : "lg_asc"), _alerts ? L.T("lg_alerts_only") : "", _search.Length > 0 ? "/" + _search : "", c0 > 0 || cols.Length > Visible6 ? L.F("lg_cols", c0 + 1, Math.Min(cols.Length, c0 + Visible6), cols.Length) : "") + estate;
         // the head row: the visible columns, the sorted one marked, the cursor's highlighted
         var head = new HBoxContainer(); head.AddThemeConstantOverride("separation", 2);
         for (int k = c0; k < Math.Min(cols.Length, c0 + Visible6); k++)
@@ -111,6 +112,7 @@ public partial class LedgerScreen : Control, IHandlesBack
             for (int k = c0; k < Math.Min(cols.Length, c0 + Visible6); k++)
             {
                 string text = cols[k] == "lg_col_alerts" ? AlertText(row.Alerts) : k < row.Cells.Length ? row.Cells[k] : "";
+                if (k == 0 && row.Inherited) text += " " + L.T("in_lg_inherited");                 // P5-H: what came by inheritance is marked
                 var l = Cell(text, k == 0 ? 220 : 110);
                 if (r == _row) l.AddThemeColorOverride("font_color", PixelTheme.Gold);
                 else if (row.Alerts != OwnerAlert.None && cols[k] == "lg_col_alerts") l.AddThemeColorOverride("font_color", new Color(0.95f, 0.45f, 0.35f));

@@ -432,6 +432,21 @@ public static class NewGameDebug
                     await Frames(tree, 240);                                          // the panel's view comes from a barrier
                     break;
                 }
+            case "inheritance":
+                {
+                    // dev (P5-H): a real new game as the tanner's widow (--ng-origin, default tanners_widow: her tannery on its lease with the husband's arrears, her children), then
+                    // --ng-scene will (the will panel before the town's priest) | succession (the succession screen with the estate) | ledger (the Ledger's Property tab, inherited rows marked)
+                    var w = MakeWorld(Math.Min(years, 60), 7);
+                    var d = NewGameServices.NewDraft(); d.Name = "Shot"; d.LibraryWorldId = w.Info.Id; d.OriginId = Arg("--ng-origin", "tanners_widow"); d.Female = true;
+                    router.Push(new RegionBuildScreen(router, d, w));
+                    if (!await Until(tree, () => router.Top is Ravensguard.Game.World.StreetView, 9000)) throw new Exception("inheritance shot: the region build did not finish");
+                    var sv = (Ravensguard.Game.World.StreetView)router.Top!; var rt = sv.Runtime!;
+                    await Until(tree, () => rt.HourDone >= sv.DebugWorld.Clock.Now.TotalHours, 6000);
+                    await Frames(tree, 90);
+                    sv.DebugInheritance(Arg("--ng-scene", "will"));
+                    await Frames(tree, 240);                                          // the views come from a barrier
+                    break;
+                }
             case "loadreport":
                 {
                     // dev: the pre-load report of a save made with other content (a made-up one: a good added, one moved, one written off, a mod gone)
