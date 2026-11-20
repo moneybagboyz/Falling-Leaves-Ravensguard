@@ -51,6 +51,7 @@ public static class BlueprintWriter
         if (meta.Kind == BlueprintKind.RoomTemplate) head.Append(", \"kind\": \"room_template\"");
         if (!string.IsNullOrEmpty(meta.Style)) head.Append(", \"style\": ").Append(Q(meta.Style));
         if (!string.IsNullOrEmpty(meta.Dwelling)) head.Append(", \"dwelling\": ").Append(Q(meta.Dwelling));
+        if (meta.Cultures.Count > 0) head.Append(", \"cultures\": [").Append(string.Join(", ", meta.Cultures.Select(Q))).Append(']');   // P5-C: the plan library's culture filter
         head.Append(',');
 
         // each property is a block of lines; the last block closes the object

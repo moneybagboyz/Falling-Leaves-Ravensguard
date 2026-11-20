@@ -31,6 +31,8 @@ public sealed record BlueprintDef : ContentDef
     [ContentRef(typeof(CultureStyleDef))] public string? Style { get; init; }
     /// <summary>"cottage", "longhouse" or "burgage": the validator checks bed capacity against plan §4A.2.</summary>
     public string? Dwelling { get; init; }
+    /// <summary>P5-C: the culture ids whose plan library lists this plan (build-mode-and-construction 4.1); empty or "any" = every culture. Player blueprints write ["any"].</summary>
+    public List<string> Cultures { get; init; } = [];
     public required Dictionary<string, string> Legend { get; init; }
     /// <summary>Floor letter -> purpose ("sleeping", "hearth", "work:smithing", "storage", "gathering", "worship", "livestock", "watch"). "work:*" accepts any workshop.</summary>
     public Dictionary<string, string> Rooms { get; init; } = [];

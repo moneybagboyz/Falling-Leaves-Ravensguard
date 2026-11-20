@@ -1,4 +1,5 @@
 using System.Globalization;
+using Ravensguard.Content;
 using Ravensguard.Sim.Core;
 using Ravensguard.Sim.Economy;
 using Ravensguard.Sim.Trade;
@@ -17,6 +18,9 @@ namespace Ravensguard.Sim.Construction;
 /// <item><c>cn:deliver|site|good|qty|x|y</c>: unload from the pack into the pile within 3 m.</item>
 /// <item><c>cn:haul|site|srcOwner|sx|sy|good|qty</c>: post haul jobs from a store the hero owns elsewhere.</item>
 /// <item><c>cn:hire|site|count|skilled</c>, <c>cn:crew|site|person</c> (a follower), <c>cn:dismiss|site|person</c>, <c>cn:pause|site|1|0</c>.</item>
+/// <item>P5-C, build mode: <c>cn:plan|...|culture|wealth</c> (a plan of the library at a culture and wealth, the player's designs included), <c>cn:undo</c>, <c>cn:removerect|x0|y0|x1|y1|z</c>,
+/// <c>cn:deconrect|x0|y0|x1|y1|z</c>, <c>cn:roof|x|y|z|piece</c>, <c>cn:stairs|x|y|z|rot</c>, <c>cn:design|save|x0|y0|x1|y1|name64</c> (save as blueprint into the save's designs) and
+/// <c>cn:design|import|id|text64</c> (a design from the player's mod brought into the save before it is placed; base64 texts, so no separator is ever inside).</item>
 /// </list>
 /// </summary>
 public static class ConstructionDesk
@@ -27,7 +31,19 @@ public static class ConstructionDesk
     private static HeroCommand Cmd(long sec, string tag, long x = 0, long y = 0) => new() { Kind = HeroCommandKind.Construction, IssuedSec = sec, Tag = tag, X = x, Y = y, Origin = CommandOrigin.Human };
 
     public static HeroCommand Place(string piece, int x0, int y0, int x1, int y1, int z, string shape, int rot, long sec, ulong site = 0) => Cmd(sec, Tag("place", site, piece, x0, y0, x1, y1, z, shape, rot));
-    public static HeroCommand Plan(string blueprint, int x, int y, int turns, bool mirror, long sec, int pileX = -1, int pileY = -1) => Cmd(sec, Tag("plan", blueprint, x, y, turns, mirror ? 1 : 0, pileX, pileY));
+    public static HeroCommand Plan(string blueprint, int x, int y, int turns, bool mirror, long sec, int pileX = -1, int pileY = -1, string? culture = null, Wealth? wealth = null) =>
+        culture == null && wealth == null ? Cmd(sec, Tag("plan", blueprint, x, y, turns, mirror ? 1 : 0, pileX, pileY))
+        : Cmd(sec, Tag("plan", blueprint, x, y, turns, mirror ? 1 : 0, pileX, pileY, culture ?? "", wealth?.ToString().ToLowerInvariant() ?? ""));     // P5-C: the library's culture and wealth
+    // ---- P5-C: build mode ----
+    public static HeroCommand Undo(long sec) => Cmd(sec, Tag("undo"));
+    public static HeroCommand RemoveRect(int x0, int y0, int x1, int y1, int z, long sec) => Cmd(sec, Tag("removerect", x0, y0, x1, y1, z));
+    public static HeroCommand DeconstructRect(int x0, int y0, int x1, int y1, int z, long sec) => Cmd(sec, Tag("deconrect", x0, y0, x1, y1, z));
+    public static HeroCommand Roof(int x, int y, int z, string piece, long sec) => Cmd(sec, Tag("roof", x, y, z, piece));
+    public static HeroCommand Stairs(int x, int y, int z, int rot, long sec) => Cmd(sec, Tag("stairs", x, y, z, rot));
+    public static HeroCommand SaveDesign(int x0, int y0, int x1, int y1, string name, long sec) => Cmd(sec, Tag("design", "save", x0, y0, x1, y1, B64(name)));
+    public static HeroCommand ImportDesign(string id, string text, long sec) => Cmd(sec, Tag("design", "import", id, B64(text)));
+    private static string B64(string s) => Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(s));
+    private static string UnB64(string s) { try { return System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(s)); } catch (FormatException) { return ""; } }
     public static HeroCommand Remove(int x, int y, int z, GhostSlot slot, long sec) => Cmd(sec, Tag("remove", x, y, z, (int)slot));
     public static HeroCommand Deconstruct(int x, int y, int z, GhostSlot slot, long sec) => Cmd(sec, Tag("decon", x, y, z, (int)slot));
     public static HeroCommand Priority(EntityId ghost, int p, long sec) => Cmd(sec, Tag("priority", ConstructionIds.SerialOf(ghost), p));
@@ -98,7 +114,39 @@ public static class ConstructionDesk
             case "plan" when p.Length >= 6:
             {
                 (int, int)? pile = p.Length >= 8 && I(6) >= 0 ? (I(6), I(7)) : null;
-                res = Placed(cw.PlacePlan(hero, hk, hh, S(1), I(2), I(3), I(4), N(5) != 0, sec, pile));
+                // P5-C: through the plan library (the player's designs, the culture and wealth, no cellar dug); the same cells as P5-B's PlacePlan for a content plan at its own wealth
+                Wealth? wl = S(9) switch { "poor" => Wealth.Poor, "middling" => Wealth.Middling, "rich" => Wealth.Rich, _ => null };
+                cw.Designs = st.Designs ??= new DesignBook();
+                var g = cw.Plans().Grid(S(1), S(8).Length > 0 ? S(8) : null, wl);
+                res = g == null ? ConstructionResult.No("cn_unknown_plan", S(1)) : Placed(cw.PlacePlanGrid(hero, hk, hh, g.Transform(I(4), N(5) != 0), S(1), I(2), I(3), sec, pile));
+                break;
+            }
+            // ---- P5-C: build mode ----
+            case "undo": res = cw.UndoLast(hero, hh, sec); break;
+            case "removerect" when p.Length >= 6: res = cw.CancelRect(hero, hh, I(1), I(2), I(3), I(4), I(5), sec); break;
+            case "deconrect" when p.Length >= 6: res = cw.DeconstructRect(hero, hk, hh, I(1), I(2), I(3), I(4), I(5), sec); break;
+            case "roof" when p.Length >= 5: res = Placed(cw.RoofOver(hero, hk, hh, I(1), I(2), I(3), S(4), sec)); break;
+            case "stairs" when p.Length >= 5: res = Placed(cw.PlaceStairs(hero, hk, hh, I(1), I(2), I(3), (byte)Math.Clamp(I(4), 0, 3), sec)); break;
+            case "design" when p.Length >= 3:
+            {
+                var book = cw.Designs = st.Designs ??= new DesignBook();
+                if (S(1) == "save" && p.Length >= 7)
+                {
+                    var d = cw.Capture(I(2), I(3), I(4), I(5), UnB64(S(6)));
+                    if (d == null) { res = ConstructionResult.No("cn_design_nothing"); break; }
+                    book.Put(d.Id, d.Text);
+                    res = ConstructionResult.Yes(d.Warnings.Count > 0 ? "cn_design_saved_warn" : "cn_design_saved", d.Name, d.Id, d.Warnings.Count, d.Warnings.Count > 0 ? d.Warnings[0].Code : "");
+                }
+                else if (S(1) == "import" && p.Length >= 4)
+                {
+                    string id = S(2), text = UnB64(S(3));
+                    if (!id.StartsWith("player.", StringComparison.Ordinal)) { res = ConstructionResult.No("cn_design_bad", id, "id"); break; }
+                    if (book.Text(id) == text) { res = ConstructionResult.Yes("cn_design_imported", id); break; }
+                    if (cw.Plans().ParseDesign(text, id, out var problem) == null) { res = ConstructionResult.No("cn_design_bad", id, problem.Length > 80 ? problem[..80] : problem); break; }
+                    book.Put(id, text);
+                    res = ConstructionResult.Yes("cn_design_imported", id);
+                }
+                else res = null;
                 break;
             }
             case "remove" when p.Length >= 5: res = cw.Cancel(hero, hh, I(1), I(2), I(3), (GhostSlot)Math.Clamp(I(4), 0, 1), sec); break;

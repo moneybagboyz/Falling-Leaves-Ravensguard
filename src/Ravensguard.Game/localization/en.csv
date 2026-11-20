@@ -2974,6 +2974,29 @@ cn_unknown_plan,"There is no such plan: {0}."
 cn_unloaded,"{1} g of {0} unloaded on the pile."
 cn_worked,You worked {0} minutes on it.
 cn_worker_added,{0} joins the crew.
+cn_prop_in_way,Something stands there that building may not clear (a well or a grave).
+cn_fit_too_wide,"{0} m wide; the lot is {1} m, and {2} m must stay clear at each side."
+cn_fit_too_deep,"{0} m deep; the lot is {1} m deep."
+cn_fit_ground,"The ground at {0}, {1} is a road or too steep."
+cn_fit_no_door,No door of this plan opens to the outside.
+cn_fit_none,The plan does not fit this lot.
+cn_fit_ok,The plan fits the lot.
+cn_fit_no_lot,"No lot here: the plan follows the cursor."
+cn_nothing_to_undo,There is nothing of yours to undo.
+cn_undo_started,Work has started on the last pieces placed: take them off one by one.
+cn_undone,{0} pieces taken off the plan.
+cn_brush_too_big,That is too large an area at once.
+cn_ghosts_removed,{0} pieces taken off the plan.
+cn_decon_many,{0} pieces marked to be taken down.
+cn_decon_many_will_fall,{0} pieces marked to be taken down. Something above will fall.
+cn_roof_no_room,There is no room here to roof over.
+cn_roof_not_enclosed,"The room is not closed in yet: walls and doors first, then the roof."
+cn_roof_done,The room already has a roof.
+cn_design_nothing,There is nothing built or planned in that rectangle.
+cn_design_saved,"Saved as a blueprint: {0} ({1})."
+cn_design_saved_warn,"Saved as a blueprint: {0} ({1}). {2} warning(s), the first: {3}."
+cn_design_bad,"The blueprint {0} cannot be read ({1})."
+cn_design_imported,The blueprint {0} is part of this game now.
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."

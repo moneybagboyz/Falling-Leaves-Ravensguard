@@ -88,6 +88,8 @@ public sealed class WorldState
     public Ravensguard.Sim.Land.LandBook? Land { get; set; }
     /// <summary>P5-B: building sites, ghosts, built cells and their structure ids, groans (build-mode-and-construction 3.2, 3.3), in the optional "construction" section once anything is recorded (no format bump).</summary>
     public Ravensguard.Sim.Construction.ConstructionBook? Construction { get; set; }
+    /// <summary>P5-C: the player's own building plans this save knows (their text), in the optional "designs" section once any is saved or placed (no format bump).</summary>
+    public Ravensguard.Sim.Construction.DesignBook? Designs { get; set; }
     /// <summary>The hero's side of the records (trade-inventory-character spec): worn slots and where each stack sits, the price notebook, the party, the people known (saved in the "party" section when present). The things themselves are item rows, the pack store and the purse in the <see cref="Economy"/>.</summary>
     public Ravensguard.Sim.Trade.HeroParty? Party { get; set; }
     /// <summary>
@@ -380,6 +382,7 @@ public static class WorldSave
             Sites = liveTier.Sites,                                                                                                    // P4-H
             Land = w.Land is { IsEmpty: false } lb ? LandSave.Capture(lb) : null,                                                    // P5-A2
             Construction = w.Construction is { IsEmpty: false } cnb ? ConstructionSave.Capture(cnb) : null,                          // P5-B
+            Designs = w.Designs is { IsEmpty: false } dsb ? DesignsSave.Capture(dsb) : null,                                         // P5-C
             Party = w.Party == null ? null : Ravensguard.Sim.Trade.HeroPartySave.Capture(w.Party),
             HeroPending = (w.HeroPendingSource?.Invoke() ?? w.HeroPending) is { Count: > 0 } hp ? Ravensguard.Sim.Trade.HeroPendingSave.Capture(hp) : null,
             Production = w.Production == null ? null : ProductionSave.Capture(w.Production), Markets = w.Markets == null ? null : MarketsSave.Capture(w.Markets),
@@ -523,6 +526,7 @@ public static class WorldSave
             Sites = file.Sections.ContainsKey(SiteSave.SectionName) ? Decode<SiteSave>(file, SiteSave.SectionName, compressed: true).Restore() : null,                          // P4-H
             Land = file.Sections.ContainsKey(LandSave.SectionName) ? Decode<LandSave>(file, LandSave.SectionName, compressed: true).Restore() : null,                          // P5-A2
             Construction = file.Sections.ContainsKey(ConstructionSave.SectionName) ? Decode<ConstructionSave>(file, ConstructionSave.SectionName, compressed: true).Restore() : null, // P5-B
+            Designs = file.Sections.ContainsKey(DesignsSave.SectionName) ? Decode<DesignsSave>(file, DesignsSave.SectionName, compressed: true).Restore() : null,                // P5-C
             Party = file.Sections.ContainsKey(PartySection) ? Decode<Ravensguard.Sim.Trade.HeroPartySave>(file, PartySection, compressed: true).Restore() : null,
             HeroPending = file.Sections.ContainsKey(Ravensguard.Sim.Trade.HeroPendingSave.SectionName) ? Decode<Ravensguard.Sim.Trade.HeroPendingSave>(file, Ravensguard.Sim.Trade.HeroPendingSave.SectionName, compressed: true).Restore() : [],
             Hero = hero, Codex = codex, Live = resume, Economy = economy, Abstract = abstractState,
@@ -730,6 +734,7 @@ public sealed class LiveCapture
     internal SiteSave? Sites { get; init; }
     internal LandSave? Land { get; init; }                                                                                   // P5-A2
     internal ConstructionSave? Construction { get; init; }                                                                   // P5-B
+    internal DesignsSave? Designs { get; init; }                                                                             // P5-C
     internal Ravensguard.Sim.Trade.HeroPartySave? Party { get; init; }
     internal Ravensguard.Sim.Trade.HeroPendingSave? HeroPending { get; init; }
     internal MarketsSave? Markets { get; init; }
@@ -790,6 +795,7 @@ public sealed class LiveCapture
         if (Sites != null) sections.Add(new(SiteSave.SectionName, SaveCodec.SerializeCompressed(Sites)));                    // P4-H (optional, no bump)
         if (Land != null) sections.Add(new(LandSave.SectionName, SaveCodec.SerializeCompressed(Land)));                      // P5-A2 (optional, no bump)
         if (Construction != null) sections.Add(new(ConstructionSave.SectionName, SaveCodec.SerializeCompressed(Construction))); // P5-B (optional, no bump)
+        if (Designs != null) sections.Add(new(DesignsSave.SectionName, SaveCodec.SerializeCompressed(Designs)));             // P5-C (optional, no bump)
         if (Party != null) sections.Add(new(WorldSave.PartySection, SaveCodec.SerializeCompressed(Party)));
         if (HeroPending != null) sections.Add(new(Ravensguard.Sim.Trade.HeroPendingSave.SectionName, SaveCodec.SerializeCompressed(HeroPending)));
         if (Production != null) sections.Add(new(WorldSave.ProductionSection, SaveCodec.SerializeCompressed(Production)));
