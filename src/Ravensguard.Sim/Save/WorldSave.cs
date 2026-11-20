@@ -373,6 +373,7 @@ public static partial class WorldSave
         // one consistent view of the other regions (resident, paged, which chunk entries are whose); see RegionRecordSet.CaptureView
         var view = w.Regions?.CaptureView();
         var liveTier = CaptureLiveTier(w);
+        var rides = CaptureRides(w);
         return new LiveCapture
         {
             Header = header, Meta = meta, Continent = w.Continent, History = w.History, Region = w.Population.Region,
@@ -381,7 +382,7 @@ public static partial class WorldSave
             Growth = (w.Growth ?? w.HomeRecords?.Economy.Growth.State) is { IsEmpty: false } gs ? GrowthSave.Capture(gs) : null,
             Jobs = w.Jobs is { IsEmpty: false } jt ? JobsSave.Capture(jt) : null,   // counters included (review finding 5)
             Crafting = w.Crafting is { IsEmpty: false } cr ? CraftingSave.Capture(cr) : null,
-            Mounts = w.Mounts is { IsEmpty: false } rb ? MountsSave.Capture(rb) : null,
+            Mounts = rides.Mounts,
             Travel = w.Travel is { IsEmpty: false } tv ? TravelSave.Capture(tv) : null,
             Autopilot = w.Autopilot is { IsEmpty: false } ap ? AutopilotSave.Capture(ap) : null,
             Talk = w.Talk is { IsEmpty: false } tk ? TalkSave.Capture(tk) : null,
@@ -402,7 +403,7 @@ public static partial class WorldSave
             ContinentSt = w.ContinentState == null ? null : ContinentSave.Capture(w.ContinentState),                                // the abstract continent and its caravans (resume-drift fix 1: it was never written)
             Regions = view?.CaptureResident(), PagedRegions = view != null ? view.Paged : new SortedDictionary<int, byte[]>(w.RegionSections.ToDictionary(kv => kv.Key, kv => kv.Value)),
             Tables = (w.Content != null ? IdTables.Of(w.Content).Tables : w.IdTables ?? (w.Economy != null ? IdTables.OfGoods(w.Economy.Goods) : new IdTables())).ToSave(),
-            Hero = w.Hero?.ToSave(), Economy = w.Economy == null ? null : EconomySave.Capture(w.Economy), Abstract = w.Abstract == null ? null : AbstractSave.Capture(w.Abstract, w.Population), Farming = w.Farming == null ? null : FarmingSave.Capture(w.Farming), Codex = codex == null ? null : new CodexSave { Unlocked = codex.Unlocked.ToArray() },
+            Hero = w.Hero?.ToSave(), Economy = rides.Economy, Abstract = w.Abstract == null ? null : AbstractSave.Capture(w.Abstract, w.Population), Farming = w.Farming == null ? null : FarmingSave.Capture(w.Farming), Codex = codex == null ? null : new CodexSave { Unlocked = codex.Unlocked.ToArray() },
             Live = live == null ? null : new LiveSave
             {
                 WorldXRaw = live.WorldXRaw, WorldYRaw = live.WorldYRaw, Z = live.Z, Facing = (byte)live.Facing, Torch = live.Torch, Explored = live.Explored.ToBytes(),
@@ -412,6 +413,22 @@ public static partial class WorldSave
             },
         };
     }
+
+    /// <summary>
+    /// The ride book and the economy's stores, read together under the ride book's lock (P5-I review, finding 2). A save copies the world on the tick worker while the main thread goes on
+    /// stepping, and the live tier moves the hero's horse and vehicle, unloads a bed into the heap (both economy stores when the book is hosted), takes back a loaned animal and runs the
+    /// animals' hours under that lock (<see cref="Ravensguard.Sim.Animals.RideBook.Gate"/>); unlocked, a save could copy a torn vehicle row or fail with "collection was modified".
+    /// The ride book's lock is a leaf on the main thread (nothing else is taken while it is held), so taking it here after the live-tier locks cannot deadlock.
+    /// </summary>
+    public static (MountsSave? Mounts, EconomySave? Economy) CaptureRides(WorldState w) => CaptureRides(w.Mounts, w.Economy);
+
+    /// <summary><see cref="CaptureRides(WorldState)"/> on the two books themselves.</summary>
+    public static (MountsSave? Mounts, EconomySave? Economy) CaptureRides(Ravensguard.Sim.Animals.RideBook? rides, EconomyState? economy)
+    {
+        lock (rides?.Gate ?? RideFree)
+            return (rides is { IsEmpty: false } rb ? MountsSave.Capture(rb) : null, economy == null ? null : EconomySave.Capture(economy));
+    }
+    private static readonly object RideFree = new();
 
     /// <summary>
     /// The parts of a save the live tier changes every 20 Hz step while a fight or a crawl runs: the wound ledger, the fight, its log and the sites with the crawl. A save copies the world on the

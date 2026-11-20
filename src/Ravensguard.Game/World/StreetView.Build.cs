@@ -35,7 +35,7 @@ public partial class StreetView
         if (cw != null)
         {
             cw.HeroCell = (s.OriginX + s.Hero.CellX, s.OriginY + s.Hero.CellY, s.Hero.Z);
-            if (!cw.ViewWanted) { cw.ViewWanted = true; rt.AtBarrier(() => { cw.Publish(_world.Clock.Now.Seconds); return 0; }); }
+            if (!cw.ViewWanted) { cw.ViewWanted = true; long at = _world.Clock.Now.Seconds; rt.AtBarrier(() => { cw.Publish(at); return 0; }); }   // the clock read here, not on the worker (review G3)
         }
         long now = _world.Clock.Now.Seconds;
         var v = book.View;
@@ -60,7 +60,7 @@ public partial class StreetView
             {
                 case ConstructionEventKind.Groan when e.Sec >= now - 15 && !groaned: groaned = true; _router?.ShowToast(L.T("BUILD_GROANS"), 4f); break;
                 case ConstructionEventKind.Fell when e.Sec >= now - 15 && !fell: fell = true; _ghosts?.Shake(); _router?.ShowToast(L.T("BUILD_FELL"), 3f); break;
-                case ConstructionEventKind.HeroFell: _world.DropToLevel(e.Z); _router?.ShowToast(L.T("BUILD_YOU_FELL"), 4f); break;
+                case ConstructionEventKind.HeroFell: _rec.DropToLevel(e.Z); _router?.ShowToast(L.T("BUILD_YOU_FELL"), 4f); break;
                 case ConstructionEventKind.Finished when e.Sec >= now - 60: _router?.ShowToast(L.T("BUILD_SITE_FINISHED"), 3f); break;
             }
         }

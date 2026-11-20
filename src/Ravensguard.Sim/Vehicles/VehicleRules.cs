@@ -79,6 +79,25 @@ public static class VehicleHash
         return Convert.ToHexString(h.GetHashAndReset())[..16];
     }
 
+    /// <summary>
+    /// The live hash trail's part (<c>LiveStateHash.Compute</c>): only what the live tier itself writes, the vehicle the hero drives (its place, facing, odometer, wear, being stuck, water and
+    /// parts), read under the ride book's lock; 0 when he drives none. The other rows, the sites, the commissions and the voyages are the tick worker's (an hour's barrier lands at no fixed
+    /// live tick, and a replay runs without the worker), so they stay out of the trail (P5-I review, finding 1: hashing them made every replay with a site or a voyage diverge, and the main
+    /// thread read them while the worker changed them).
+    /// </summary>
+    public static ulong Live(Animals.RideBook b)
+    {
+        lock (b.Gate)
+        {
+            if (b.DrivenVehicle is not { } v) return 0;
+            using var h = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+            void L(long x) { Span<byte> s = stackalloc byte[8]; BitConverter.TryWriteBytes(s, x); h.AppendData(s); }
+            L((long)v.Id.Value); L(v.XMm); L(v.YMm); L(v.Facing); L(v.OdometerMm); L(v.WearAccMm); L(v.Stuck ? 1 : 0); L((long)v.Water); L(v.WaterInL);
+            foreach (var p in v.Parts) { L(p.SortKey); L(p.Part); L((long)p.State); L(p.HpMilli); }
+            return BitConverter.ToUInt64(h.GetHashAndReset(), 0);
+        }
+    }
+
     /// <summary>VD-20: the numbers of VD-11 to VD-16 in one hash (draft, speeds, depth, the capsize rolls, the swamp water, the fishing, the ferry), the same on every machine.</summary>
     public static string Of(ulong seed)
     {

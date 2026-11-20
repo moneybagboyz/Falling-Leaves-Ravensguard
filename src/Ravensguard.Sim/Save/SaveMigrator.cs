@@ -112,13 +112,19 @@ public sealed class SaveMigrator
         if (sections.TryGetValue(FightRecord.SectionName, out var fb) && fb.Length > 0)
         {
             var rec = SaveCodec.DeserializeCompressed<FightRecord>(fb);
-            foreach (var f in rec.Fighters)
-            {
-                f.WeaponQuality = QualityV8(f.WeaponQuality);
-                f.NowQuality = QualityV8(f.NowQuality);
-                f.WornQualities = [.. f.WornQualities.Select(QualityV8)];
-            }
+            QualitiesV8(rec);
             sections[FightRecord.SectionName] = SaveCodec.SerializeCompressed(rec);
+        }
+        // P5-I review (finding 5): a crawl in progress keeps its own fight record and each member's kit (JSON, the quality as the old enum's number), so their bytes move the same way
+        if (sections.TryGetValue(SiteSave.SectionName, out var sb) && sb.Length > 0)
+        {
+            var sites = SaveCodec.DeserializeCompressed<SiteSave>(sb);
+            if (sites.Active is { } crawl)
+            {
+                if (crawl.Fight.Length > 0) { var rec = FightRecord.FromBytes(crawl.Fight); QualitiesV8(rec); crawl.Fight = rec.ToBytes(); }
+                foreach (var m in crawl.Members) m.KitJson = KitQualitiesV8(m.KitJson);
+                sections[SiteSave.SectionName] = SaveCodec.SerializeCompressed(sites);
+            }
         }
         if (sections.TryGetValue(WorldSave.HeroSection, out var hb))
         {
@@ -126,6 +132,31 @@ public sealed class SaveMigrator
             hero.PersonIndex = Ravensguard.Sim.Succession.HeroPerson.Pending;
             sections[WorldSave.HeroSection] = SaveCodec.Serialize(hero);
         }
+    }
+
+    private static void QualitiesV8(FightRecord rec)
+    {
+        foreach (var f in rec.Fighters)
+        {
+            f.WeaponQuality = QualityV8(f.WeaponQuality);
+            f.NowQuality = QualityV8(f.NowQuality);
+            f.WornQualities = [.. f.WornQualities.Select(QualityV8)];
+        }
+    }
+
+    /// <summary>A crawl member's kit as saved (<c>FighterKit</c> JSON): the weapon's and every worn piece's <c>Quality</c> number moved to the one scale; anything else is kept as written.</summary>
+    public static string KitQualitiesV8(string json)
+    {
+        if (json.Length == 0) return json;
+        var node = System.Text.Json.Nodes.JsonNode.Parse(json);
+        if (node is not System.Text.Json.Nodes.JsonObject kit) return json;
+        static void Fix(System.Text.Json.Nodes.JsonNode? n)
+        {
+            if (n is System.Text.Json.Nodes.JsonObject o && o["Quality"] is System.Text.Json.Nodes.JsonValue v && v.TryGetValue(out int q)) o["Quality"] = (int)QualityV8((byte)Math.Clamp(q, 0, 255));
+        }
+        Fix(kit["Weapon"]);
+        if (kit["Worn"] is System.Text.Json.Nodes.JsonArray worn) foreach (var w in worn) Fix(w);
+        return kit.ToJsonString();
     }
 
     public SaveMigrator Register(int fromVersion, Action<IDictionary<string, byte[]>> step)

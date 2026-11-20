@@ -80,6 +80,8 @@ public static class HashesCommand
         lines.Add($"seed {seed} fight {fight.Hash():X16} active {fight.Fighters.Count(f => f.Active)}");
         // Phase 4 close-out (morale-capture-succession 6): the CaptiveHash of a band's captive and an army's after twelve game days of the hourly step, and the EstateHash of a settled estate
         lines.Add($"seed {seed} captive {CaptiveHash(seed, db):X16} estate {EstateHash(seed):X16}");
+        // Phase 5 review (OV-6's cross-OS part, VD-20): the boats' draft, speeds, capsize rolls (0x550), swamping (0x551), fishing, the ferry and the barge legs' delays (0x552)
+        lines.Add($"seed {seed} vehicles {Ravensguard.Sim.Carts.VehicleHash.Of(seed)}");
         return lines;
     }
 

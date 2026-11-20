@@ -411,6 +411,20 @@ public sealed class RideBook
     /// <summary>Takes back loans that are due: the hero is helped down, the horse goes home (its row is removed; the lender owns it again in the abstract herds).</summary>
     public int ExpireLoans(long nowSec)
     {
+        lock (Gate) return ExpireLoansLocked(nowSec);       // P5-I review, finding 3: the main thread takes the animal back while the tick worker reads the rows
+    }
+
+    /// <summary>
+    /// The vehicle and animal rows as they stand, copied under the book's lock: what a reader on the tick worker walks (the estates' daily pass and their index), since the main thread adds and
+    /// removes rows under that lock (a loan taken back, a mount, a boat) and a plain walk of the lists could meet "collection was modified" and fault the world (P5-I review, finding 3).
+    /// </summary>
+    public (VehicleRow[] Vehicles, Animal[] Animals) RowsNow()
+    {
+        lock (Gate) return ([.. Vehicles.Rows], [.. Animals.Rows]);
+    }
+
+    private int ExpireLoansLocked(long nowSec)
+    {
         int n = 0;
         for (int i = Loans.Count - 1; i >= 0; i--)
         {

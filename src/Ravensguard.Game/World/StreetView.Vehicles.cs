@@ -75,16 +75,23 @@ public partial class StreetView
         if (_ride == null) return;
         v.Add(new(L.T("vd_q_head"), () => { }, Heading: true));
         v.Add(new(L.T("vd_q_design"), () => OpenDesigner(null)));
-        var near = _ride.NearestVehicle(4000);
-        if (near == null) return;
-        var bp = _ride.Vehicles.DesignOf(near);
-        v.Add(new(L.F("vd_q_inspect", bp.Def.Name), () => InspectVehicle(near)));
-        if (!near.Finished && _ride.Works.Sites.ContainsKey(near.Id))
-            v.Add(new(L.F("vd_q_work", bp.Def.Name), () => { long now = HeroNow(); IssueVehicle(VehicleDesk.Work(near.Id, now, now + 3600)); }, _heroLink == null ? L.T("MAP_NONE") : null));
-        int worst = WorstPart(near);
-        if (worst >= 0) v.Add(new(L.F("vd_q_repair", _ride.Templates.PartList[near.Parts[worst].Part].Name), () => IssueVehicle(VehicleDesk.Repair(near.Id, worst, HeroNow())), _heroLink == null ? L.T("MAP_NONE") : null));
-        if (near.Water == WaterState.Slipway && near.Finished)
-            v.Add(new(L.T("vd_q_launch"), () => IssueVehicle(VehicleDesk.Launch(near.Id, 4, near.Team.Count > 0, HeroNow()))));      // the hero and the hands of the yard
+        // the rows, the sites and the parts are read under the ride book's lock: the tick worker's vehicle pass changes them (P5-I review, finding 6)
+        lock (_ride.Gate)
+        {
+            var near = _ride.NearestVehicle(4000);
+            if (near == null) return;
+            var bp = _ride.Vehicles.DesignOf(near);
+            v.Add(new(L.F("vd_q_inspect", bp.Def.Name), () => InspectVehicle(near)));
+            if (!near.Finished && _ride.Works.Sites.ContainsKey(near.Id))
+                v.Add(new(L.F("vd_q_work", bp.Def.Name), () => { long now = HeroNow(); IssueVehicle(VehicleDesk.Work(near.Id, now, now + 3600)); }, _heroLink == null ? L.T("MAP_NONE") : null));
+            int worst = WorstPart(near);
+            if (worst >= 0) v.Add(new(L.F("vd_q_repair", _ride.Templates.PartList[near.Parts[worst].Part].Name), () => IssueVehicle(VehicleDesk.Repair(near.Id, worst, HeroNow())), _heroLink == null ? L.T("MAP_NONE") : null));
+            if (near.Water == WaterState.Slipway && near.Finished)
+            {
+                bool team = near.Team.Count > 0;
+                v.Add(new(L.T("vd_q_launch"), () => IssueVehicle(VehicleDesk.Launch(near.Id, 4, team, HeroNow()))));      // the hero and the hands of the yard
+            }
+        }
     }
 
     void IssueVehicle(Ravensguard.Sim.Trade.HeroCommand c) { if (_heroLink == null) { _router?.ShowToast(L.T("vd_no_world")); return; } _heroLink.Issue(c); }
@@ -105,7 +112,14 @@ public partial class StreetView
     void InspectVehicle(VehicleRow v)
     {
         if (_router == null || _ride == null) return;
-        var bp = _ride.Vehicles.DesignOf(v); var st = _ride.Vehicles.StatsOf(v);
+        string title, body, design;
+        lock (_ride.Gate) (title, body, design) = InspectText(v);   // the parts are the tick worker's too (P5-I review, finding 6)
+        _router.ShowModal(title, body, (L.T("vd_q_design_this"), () => OpenDesigner(design)), (L.T("vd_close"), null));
+    }
+
+    (string Title, string Body, string Design) InspectText(VehicleRow v)
+    {
+        var bp = _ride!.Vehicles.DesignOf(v); var st = _ride.Vehicles.StatsOf(v);
         var sb = new System.Text.StringBuilder();
         sb.Append(L.F("vd_inspect_line", st.MassKg, _ride.Vehicles.CargoKg(v), st.CargoKg, v.Team.Count, st.MaxAnimals)).Append('\n');
         var groups = v.Parts.GroupBy(p => p.Part).OrderBy(g => g.Key);
@@ -117,7 +131,7 @@ public partial class StreetView
             sb.Append(L.F("vd_inspect_part", d.Name, built, broken, ghosts, worst / 10)).Append('\n');
         }
         if (!v.Finished) sb.Append(L.F("vd_inspect_wanted", string.Join(", ", VehicleSites.Wanted(v, _ride.Templates).GroupBy(x => x).Select(x => $"{x.Count()} {_ride.Templates.Parts[x.Key].Name}"))));
-        _router.ShowModal(bp.Def.Name, sb.ToString(), (L.T("vd_q_design_this"), () => OpenDesigner(bp.Id)), (L.T("vd_close"), null));
+        return (bp.Def.Name, sb.ToString(), bp.Id);
     }
 
     /// <summary>Opens the designer on the run's catalog (the player's saved designs included); saving and building go through the hero's desk.</summary>

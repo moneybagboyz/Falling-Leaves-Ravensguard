@@ -140,11 +140,15 @@ public class Phase5FixesTests(ITestOutputHelper output)
         var book = new RideBook(EconFixture.Content, econ, 7);
         w.AttachRide(book);
         Assert.Equal(none, LiveStateHash.Compute(w));                                // an empty ride book leaves the trail as it was
-        var (a, v) = VehicleSites.Order(book, "ox_wagon", EntityId.Make(IdKind.Person, 77), 10_000, 20_000);
+        // the review (phase-5.md, finding 1) narrowed the fold-in to the vehicle the hero drives: a site is the tick worker's, and stays out of the trail
+        var (a, _) = VehicleSites.Order(book, "ox_wagon", EntityId.Make(IdKind.Person, 77), 10_000, 20_000);
         Assert.Equal(SiteAnswer.Ok, a);
+        Assert.Equal(none, LiveStateHash.Compute(w));
+        var v = book.Vehicles.Create(book.Templates.Get("cart"), EntityId.None, 5_500, 5_500);
+        book.Driving = v.Id; v.Driven = true;
         ulong with = LiveStateHash.Compute(w);
         Assert.NotEqual(none, with);
-        v!.XMm += 1500;
+        v.XMm += 1500;
         Assert.NotEqual(with, LiveStateHash.Compute(w));
     }
 

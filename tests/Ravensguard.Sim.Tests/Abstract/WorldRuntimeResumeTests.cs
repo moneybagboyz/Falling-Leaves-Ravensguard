@@ -47,7 +47,7 @@ public class WorldRuntimeResumeTests(ITestOutputHelper output)
     /// The Phase 5 step 1 state, before the save (so the same in both runs): the hero buys a town lot and rents a stall through the hero's desk, as the game sends them (the "land" section),
     /// and a named artefact of the hero's making is on the books (the "crafting" section's names).
     /// </summary>
-    private static void Play(WorldRuntime rt, ContentDatabase content)
+    internal static void Play(WorldRuntime rt, ContentDatabase content)
     {
         var s = rt.State;
         var lw = s.HomeRecords!.Sim.Get<LandWorld>()!;

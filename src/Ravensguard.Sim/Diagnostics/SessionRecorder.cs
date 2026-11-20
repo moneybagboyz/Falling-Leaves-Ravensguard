@@ -133,6 +133,8 @@ public sealed class SessionRecorder
     public void FightInput(Ravensguard.Sim.Combat.Melee2.FightInput i) { Commands.Append(ReplayCommand.Fight(World.Tick, i)); World.FightInput(i); }
 
     // P4-H: the hero underground; the crawl's inputs are recorded like any live input, its start and end too (the game's SiteFactory rebuilds it for a replay)
+    /// <summary>The floor under the hero fell (P5-B): he lands on level <paramref name="z"/>, recorded so a replay drops him at the same tick (P5-I review, finding 4).</summary>
+    public void DropToLevel(int z) { Commands.Append(ReplayCommand.DropLevel(World.Tick, z)); World.DropToLevel(z); }
     public void EnterSite(Ravensguard.Sim.Sites.SiteCrawl crawl) { Commands.Append(ReplayCommand.SiteStart(World.Tick, crawl.Map.SiteId)); World.AttachSite(crawl); }
     public void LeaveSite() { Commands.Append(ReplayCommand.SiteEnd(World.Tick)); World.DetachSite(); }
     public void SiteInput(Ravensguard.Sim.Sites.CrawlInput i) { Commands.Append(ReplayCommand.Site(World.Tick, i)); World.SiteInput(i); }

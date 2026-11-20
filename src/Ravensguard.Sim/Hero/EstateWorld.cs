@@ -133,8 +133,9 @@ public sealed class EstateWorld
         }
         if (State.Mounts is { } rb)
         {
-            foreach (var v in rb.Vehicles.Rows) Add(v.Owner, new Held { Kind = EstateThing.Vehicle, Id = v.Id, Ref = v, Carried = rb.Driving == v.Id });
-            foreach (var a in rb.Animals.Rows)
+            var (vehicles, animals) = rb.RowsNow();                // copied under the ride book's lock (P5-I review, finding 3)
+            foreach (var v in vehicles) Add(v.Owner, new Held { Kind = EstateThing.Vehicle, Id = v.Id, Ref = v, Carried = rb.Driving == v.Id });
+            foreach (var a in animals)
                 if (a.State != AnimalState.Dead) Add(a.Owner, new Held { Kind = EstateThing.Animal, Id = a.Id, Ref = a, Carried = rb.Mounted == a.Id || a.State is AnimalState.Ridden or AnimalState.Following or AnimalState.Hitched });
         }
         if (State.Crafting is { } cs)
@@ -663,7 +664,7 @@ public sealed class EstateWorld
         // a light pass over the books for dead holders (no valuation); the index is built only on a day someone died holding something
         if (State.Land is { } land) { foreach (var d in land.Deeds.Values) Note(d.Holder); foreach (var c in land.Claims) if (c.State == ClaimState.Open) Note(c.Claimant); foreach (var c in land.Charters) if (c.State == CharterState.Granted) Note(c.Grantee); }
         if (State.Construction is { } cb) { foreach (var s in cb.Sites.Values) if (s.Open) Note(s.Owner); foreach (var c in cb.Contracts.Values) if (c.Live) { Note(c.Client); if (c.State == ContractState.Signed) Note(c.Contractor); } }
-        if (State.Mounts is { } rb) { foreach (var v in rb.Vehicles.Rows) Note(v.Owner); foreach (var a in rb.Animals.Rows) if (a.State != AnimalState.Dead) Note(a.Owner); }
+        if (State.Mounts is { } rb) { var (vehicles, animals) = rb.RowsNow(); foreach (var v in vehicles) Note(v.Owner); foreach (var a in animals) if (a.State != AnimalState.Dead) Note(a.Owner); }
         if (State.Crafting is { } cs) { foreach (var c in cs.Commissions.Values) if (c.Open) Note(c.Client); foreach (var a in cs.Apprenticeships.Values) if (!a.Ended) { Note(a.Apprentice); Note(a.Master); } }
         if (State.Ownership is { } ob) foreach (var h in ob.Holdings.Values) foreach (var s in h.Shares) Note(s.Holder);
         if (State.Wills is { } wb) foreach (var t in wb.ByTestator.Keys) Note(t);
