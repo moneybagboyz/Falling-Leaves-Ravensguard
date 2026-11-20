@@ -36,6 +36,45 @@ public sealed record LandRulesDef : ContentDef
     /// <summary>A buying household keeps this many days of an unskilled wage in hand after paying.</summary>
     public int ResaleReserveDays { get; init; } = 20;
 
+    // ---------- the NPC land market, zoning and new streets (holdings-and-works-v2 3.3, 3.4; P6-D4) ----------
+    /// <summary>A household buys a plot of the lord's only with this many times the price in coin (2 x), and a seller with an empty house and arrears sells at this permille of the price.</summary>
+    public int NpcBuyerCoinMultiple { get; init; } = 2;
+    public int DistressSalePm { get; init; } = 900;
+    /// <summary>Most plots the households of one place buy from the lord and from sellers in a season.</summary>
+    public int NpcBuysPerSeason { get; init; } = 2;
+    /// <summary>The hero's offer for a house is accepted at this base permille of its price less the holder's trust over ten: <c>price x (OfferBasePm - trust / 10) / 1000</c> (1,100 - trust / 10).</summary>
+    public int OfferBasePm { get; init; } = 1100;
+    /// <summary>A new street is laid when a place has no free lots and more than this many waiting women; and not twice within this many days.</summary>
+    public int StreetWaitingOver { get; init; } = 3;
+    public int StreetCooldownDays { get; init; } = 120;
+    /// <summary>Lots a new street carries, per side (3 to 5, so 6 to 10 plots), the street's width, metres.</summary>
+    public int StreetLotsPerSideMin { get; init; } = 3;
+    public int StreetLotsPerSideMax { get; init; } = 5;
+    public int StreetWidthM { get; init; } = 5;
+    /// <summary>The open ground left as the commons round a square (metres from it): zoning never lays a street across it.</summary>
+    public int CommonRingM { get; init; } = 40;
+
+    // ---------- soil improvement (holdings 3.5): marling and manuring, an acre being one field ----------
+    /// <summary>Marling: +15 fertility, 250 worker-hours and 40 t of marl an acre; it lasts 20 game years (a year is 60 days), then fades 1 a year.</summary>
+    public int MarlFertility { get; init; } = 15;
+    public int MarlHours { get; init; } = 250;
+    public int MarlKg { get; init; } = 40_000;
+    public int MarlLastYears { get; init; } = 20;
+    /// <summary>Manuring: +8 fertility for 2 seasons, 1 t of dung an acre (and 20 worker-hours to cart and spread it).</summary>
+    public int ManureFertility { get; init; } = 8;
+    public int ManureSeasons { get; init; } = 2;
+    public int ManureKg { get; init; } = 1000;
+    public int ManureHours { get; init; } = 20;
+    /// <summary>A holder posts the work for a field whose fertility is under this; the pay is the hours at the unskilled wage times this permille; at most this many are posted a place a season.</summary>
+    public int SoilPostBelowFertility { get; init; } = 50;
+    public int SoilPayPm { get; init; } = 3200;
+    public int SoilPostsPerSeason { get; init; } = 3;
+    /// <summary>A job nobody takes in this many days is taken by the farmhands of the place (when four idle adults can be found).</summary>
+    public int SoilCrewWaitDays { get; init; } = 7;
+    /// <summary>Dung a year from a sheep folded on the fallow, and from an ox or a cow in the byre, kilograms.</summary>
+    public int DungKgPerSheepYear { get; init; } = 150;
+    public int DungKgPerBeastYear { get; init; } = 2000;
+
     // ---------- market stalls (spec 4.3) ----------
     /// <summary>Stalls in the square of a town and of a village; the season's rent and a fair day's, mites (paid to the town's treasury).</summary>
     public int StallsTown { get; init; } = 6;

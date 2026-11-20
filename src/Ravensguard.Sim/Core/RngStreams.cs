@@ -274,8 +274,8 @@ public static class RngStreams
     /// <summary>Abstract battle: the leader's capture when downed or run down (key battle id, side).</summary>
     public const uint LeaderFate = 0x4A3;
     // ---- Phase 5 (docs/specs/phase5/00-phase5-overview.md 5; Phase 5 owns 0x500..0x5FF) ----
-    /// <summary>P5-A2: reserved for Phase 6 land disputes; land draws nothing (listings, buyers and claims are ordered by ids and coin). Asserted never drawn (LD-14).</summary>
-    public const uint LandDisputesReserved = 0x500;
+    /// <summary>P6-D4 (holdings 3.3): the NPC land market's exact ties: two buyers with the same coin for one plot (key plot, season; draw = the household's id). Nothing else in land draws (LD-14).</summary>
+    public const uint LandMarketTies = 0x500;
     /// <summary>P5-B construction: where a collapse's rubble heap lies, one of the fallen cells (key collapse event id, the count of fallen cells).</summary>
     public const uint CollapseRubble = 0x510;
     /// <summary>P5-B: reserved for P5-D's contractor pace jitter of +-10% a day (key contract id, game day); construction core draws nothing from it.</summary>

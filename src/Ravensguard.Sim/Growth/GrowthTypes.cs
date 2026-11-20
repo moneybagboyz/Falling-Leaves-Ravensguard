@@ -51,6 +51,12 @@ public sealed record LotRecord(int Settlement, int Lot, bool NewLot, LotUse Use,
 /// <summary>A parcel of cleared fields appended to a settlement (tiles ascending, scaled fertility per tile). Replayed over the generated region on load.</summary>
 public sealed record ParcelRecord(int Settlement, ParcelOwner Owner, byte Slot, int[] Tiles, byte[] Fertility, int Day);
 
+/// <summary>
+/// P6-D4 (holdings 3.4): a street the lord laid for a place that ran out of plots (the plan's <see cref="Street"/> from <see cref="A"/> to <see cref="B"/>), replayed over the generated region on load before the lots.
+/// <see cref="Plots"/> is the number of plots the planner found along it (6 to 10), kept for the chronicle and the tests.
+/// </summary>
+public sealed record StreetRecord(int Settlement, PointM A, PointM B, int WidthM, int Plots, int Day);
+
 /// <summary>What growth did in one game year, for the soak table.</summary>
 public sealed class GrowthYear
 {
@@ -74,6 +80,8 @@ public sealed class GrowthState
     public List<GrowthYear> Years { get; } = [];
     /// <summary>Region tiles cleared of wood (assarting), ascending: the resource layer is a function of the generated region, so these rows are marked again after a load.</summary>
     public List<int> ClearedTiles { get; } = [];
+    /// <summary>P6-D4: the streets laid since generation, in order (saved in the optional "landworks" section, not the growth section, so older saves keep their bytes).</summary>
+    public List<StreetRecord> Streets { get; } = [];
     /// <summary>The fertility scale (permille of the tile's fertility) new fields get: that of the generated fields, fixed at the first clearing.</summary>
     public int FertilityScalePermille;
     public long WoodDrawnG, FirewoodMadeG, LogsMadeG, PolesGatheredG;
@@ -87,7 +95,7 @@ public sealed class GrowthState
     }
 
     public bool IsEmpty => Projects.Count == 0 && Lots.Count == 0 && Parcels.Count == 0 && Unmet.Count == 0 && Years.Count == 0 && NextSerial == 1 && ClearedTiles.Count == 0 && FertilityScalePermille == 0
-        && WoodDrawnG == 0 && FirewoodMadeG == 0 && LogsMadeG == 0 && PolesGatheredG == 0;
+        && WoodDrawnG == 0 && FirewoodMadeG == 0 && LogsMadeG == 0 && PolesGatheredG == 0 && Streets.Count == 0;
 
     public string ComputeHash()
     {
@@ -110,6 +118,7 @@ public sealed class GrowthState
         foreach (var (k, v) in Unmet) { L(k); L(v); }
         foreach (var y in Years) { L(y.Year); L(y.CottagesStarted); L(y.CottagesBuilt); L(y.VacantRefitted); L(y.AcresCleared); L(y.ClearingsStarted); L(y.BusinessesOpened); L(y.PlotsGiven); L(y.MovedToTown); L(y.WagesMites); L(y.MaterialsMites); }
         foreach (int t in ClearedTiles) L(t);
+        if (Streets.Count > 0) { L(Streets.Count); foreach (var st in Streets) { L(st.Settlement); L(st.A.X); L(st.A.Y); L(st.B.X); L(st.B.Y); L(st.WidthM); L(st.Plots); L(st.Day); } }     // P6-D4: only once a street exists, so no older hash moves
         return Convert.ToHexString(h.GetHashAndReset());
     }
 }

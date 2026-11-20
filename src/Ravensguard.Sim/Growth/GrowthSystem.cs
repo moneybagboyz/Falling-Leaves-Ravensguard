@@ -313,9 +313,33 @@ public sealed class GrowthSystem
 
     private long MaterialNeedG(BuildProject p, int i)
     {
-        int pct = p.Dwelling == DwellingType.Burgage ? T.BurgagePct : 100; if (p.Lot >= 0) pct = pct * T.VacantRepairPct / 100;
+        int pct = p.Dwelling == DwellingType.Burgage ? T.BurgagePct : 100; if (IsRefit(p)) pct = pct * T.VacantRepairPct / 100;
         return (long)T.CottageMaterials[i].Kg * 1000 * pct / 100;
     }
+    /// <summary>A vacant house taken up again (cheaper): a project on a lot that already has its house. A bare plot a household bought (blueprint "-") is built in full.</summary>
+    private bool IsRefit(BuildProject p) => p.Lot >= 0 && Region.Settlements[p.Settlement].Plan.Lots[p.Lot].BlueprintId != Ravensguard.Sim.Land.LandWorld.BarePlot;
+
+    /// <summary>
+    /// P6-D4 (holdings 3.3): a household that bought a lot (a bare plot of the lord's or a vacant house) puts up the house on it: the project is the cottage's, on that lot, paid by the buyer. False when a project
+    /// already stands on the lot or the lot is not there. The buyer's reserve and hands are Advance's affair, as for every cottage.
+    /// </summary>
+    internal bool StartOn(int s, int lot, int payer, GameTime now)
+    {
+        if ((uint)s >= (uint)Region.Settlements.Count || (uint)lot >= (uint)Region.Settlements[s].Plan.Lots.Count || payer < 0) return false;
+        if (State.Projects.Any(p => p.Settlement == s && p.Lot == lot)) return false;
+        var st = Region.Settlements[s]; var l = st.Plan.Lots[lot]; bool town = st.Class == SettlementClass.Town; bool bare = l.BlueprintId == Ravensguard.Sim.Land.LandWorld.BarePlot;
+        if (!bare && !(l.Vacant && l.Dwelling is DwellingType.Cottage or DwellingType.Longhouse or DwellingType.Burgage)) return false;
+        var pr = new BuildProject { Serial = State.NextSerial, Kind = ProjectKind.Cottage, Settlement = s, StartDay = (int)now.TotalDays, Lot = lot, Rect = l.Rect, Facing = l.Facing, Payer = payer };
+        if (bare) { pr.Use = town ? LotUse.Burgage : LotUse.Cottage; pr.Dwelling = town ? DwellingType.Burgage : DwellingType.Cottage; pr.Blueprint = town ? "burgage_townhouse" : "peasant_cottage"; pr.Wealth = (byte)(town ? 1 : 0); }
+        else { pr.Use = l.Use; pr.Dwelling = l.Dwelling; pr.Blueprint = l.BlueprintId; pr.Wealth = l.Wealth; }
+        pr.Beds = pr.Dwelling switch { DwellingType.Burgage => T.BurgageBeds, DwellingType.Longhouse => T.LonghouseBeds, _ => T.CottageBeds };
+        int pct = pr.Dwelling == DwellingType.Burgage ? T.BurgagePct : 100; if (!bare) pct = pct * T.VacantRepairPct / 100;
+        pr.HoursNeeded = (long)T.CottageWorkerHours * pct / 100 * Wobble(W.Seed, now.TotalHours, pr.Serial, 10) / 100;
+        pr.MaterialG = new long[T.CottageMaterials.Count];
+        State.NextSerial++; State.Projects.Add(pr);
+        return true;
+    }
+
     private bool MaterialsComplete(BuildProject p) { for (int i = 0; i < p.MaterialG.Length; i++) if (p.MaterialG[i] < MaterialNeedG(p, i)) return false; return true; }
 
     /// <summary>

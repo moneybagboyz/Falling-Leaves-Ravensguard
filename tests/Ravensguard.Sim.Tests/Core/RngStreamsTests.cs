@@ -70,7 +70,7 @@ public class RngStreamsTests
         Assert.Equal(0x600u, RngStreams.Physician); Assert.Equal(0x6A0u, RngStreams.ChronicleVariantsReserved); Assert.Equal(0x660u, RngStreams.PurveyanceReserved); Assert.Equal(0x6E0u, RngStreams.HoldingsReserved);
     }
 
-    /// <summary>The Phase 5 reservations Phase 6 will draw (0x500, 0x540, 0x561) stay unused until their steps land, and the Phase 6 reserved ones are never drawn (chronicle 5, rule 0x660, holdings 0x6E0).</summary>
+    /// <summary>The Phase 5 reservations Phase 6 draws (0x500 now drawn by the NPC land market, 0x540, 0x561), and the Phase 6 reserved ones are never drawn (chronicle 5, rule 0x660, holdings 0x6E0).</summary>
     [Fact]
     public void ReservedStreams_AreNeverDrawnBySimCode()
     {

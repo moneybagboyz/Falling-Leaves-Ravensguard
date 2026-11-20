@@ -74,7 +74,7 @@ public sealed class Region
     /// settlement, the totals and the hash of the generated region. Null for a region nobody has grown. The generated region is a pure function of seed and content and is
     /// never stored; growth is saved apart (<c>GrowthSave</c>) and replayed over a freshly generated region, so <see cref="ComputeHash"/> keeps answering with the generated hash.
     /// </summary>
-    public sealed record GrowthBaseline(Lot[][] Lots, int[] SettlementParcels, int Parcels, int Fields, string Hash, int[] ParcelMap, byte[] Built, byte[] Forest);
+    public sealed record GrowthBaseline(Lot[][] Lots, int[] SettlementParcels, int Parcels, int Fields, string Hash, int[] ParcelMap, byte[] Built, byte[] Forest, int[]? Streets = null);
     public GrowthBaseline? Baseline { get; private set; }
     /// <summary>Bumped by every change growth makes; the chunk generator rebuilds its indices when it differs from the version it was made at.</summary>
     public int GrowthVersion { get; private set; }
@@ -83,7 +83,7 @@ public sealed class Region
     public void PinGrowthBaseline()
     {
         if (Baseline != null) return;
-        Baseline = new GrowthBaseline([.. Settlements.Select(s => s.Plan.Lots.ToArray())], [.. Settlements.Select(s => s.Parcels.Count)], Parcels.Count, Fields.Length, ComputeHash(), (int[])ParcelMap.Clone(), (byte[])Built.Clone(), (byte[])Forest.Clone());
+        Baseline = new GrowthBaseline([.. Settlements.Select(s => s.Plan.Lots.ToArray())], [.. Settlements.Select(s => s.Parcels.Count)], Parcels.Count, Fields.Length, ComputeHash(), (int[])ParcelMap.Clone(), (byte[])Built.Clone(), (byte[])Forest.Clone(), [.. Settlements.Select(s => s.Plan.Streets.Count)]);
     }
 
     public void NoteGrown() => GrowthVersion++;
@@ -119,7 +119,7 @@ public sealed class Region
         {
             var s = Settlements[i]; var n = (RegionSettlement)s.CloneShallow();
             var plan = new SettlementPlan { Horizontal = s.Plan.Horizontal, Square = s.Plan.Square, RadiusM = s.Plan.RadiusM, ChurchLot = s.Plan.ChurchLot, ManorLot = s.Plan.ManorLot, MillLot = s.Plan.MillLot };
-            plan.Streets.AddRange(s.Plan.Streets);
+            plan.Streets.AddRange(b.Streets is { } bs && i < bs.Length ? s.Plan.Streets.Take(bs[i]) : s.Plan.Streets);     // P6-D4: the streets as generated
             plan.Lots.AddRange(b.Lots[i]);                      // the lots as generated (a vacant house refitted since stands vacant here)
             n.Plan = plan;
             n.Parcels.Clear();
