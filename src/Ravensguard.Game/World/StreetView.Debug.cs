@@ -81,6 +81,7 @@ public partial class StreetView
             case "business": if (_ledgerView?.Tab(Ravensguard.Sim.Production.LedgerTab.Businesses).FirstOrDefault() is { } brow) { OpenBusiness(brow.Id); return true; } OpenBusiness(EntityId.None); return true;
             case "prospect": OpenProspect(); return true;                     // P5-F
             case "treatment": DebugTreatment(); return true;                  // P6-B1: the treatment screen on a wounded hero
+            case "heist": DebugHeist(); return true;                           // P6-D3: the heist panel over a castle's dungeon at night
             case "court": DebugCourt(); return true;                           // P6-C1: the Court panel over a made-up docket
             case "rule": DebugRule(); return true;                            // P6-C3: the Ledger's Fief tab with a lord's books staged
             case "workboard": DebugWorkBoard(); return true;                  // P6-C2: the contracts screen over a made-up board

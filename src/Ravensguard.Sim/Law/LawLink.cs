@@ -15,6 +15,7 @@ public sealed class LawLink
     {
         var l = new LawLink(rt);
         rt.AfterHour += l.OnHour;
+        Ravensguard.Sim.Heists.HeistLink.Attach(rt);                              // P6-D3: locks changed after a theft, manhunts ended
         return l;
     }
 

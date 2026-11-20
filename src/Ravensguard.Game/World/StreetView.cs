@@ -993,6 +993,7 @@ public partial class StreetView : Control, IHandlesBack
         FaithTick(delta);                                   // P6-B4: faith answers, the Faith panel's view, a pilgrim's arrival (StreetView.Faith.cs)
         JusticeTick(delta);                                 // P6-C1: the cell's view, the docket, the answers to the hero's pleas (StreetView.Justice.cs)
         WorkBoardTick(delta);                               // P6-C2: contract answers, the board's view, the moods the barks read (StreetView.Work.cs)
+        HeistTick();                                        // P6-D3: the answers to the heist's commands (StreetView.Heist.cs)
         BuildTick();                                        // P5-B: construction brought up to the clock, built pieces laid into the street, ghosts drawn
         BuildModeTick(delta);                               // P5-C: build mode (StreetView.BuildMode.cs): the preview, the palette, answers to construction commands, the hero's hands
         if (_opt.IsShot && _opt.Weather == "storm" && _frames == Math.Max(2, _opt.Frames - 1)) _wover.Strike(); // dev: catch a lightning flash in the picture

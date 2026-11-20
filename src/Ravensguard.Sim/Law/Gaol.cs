@@ -209,10 +209,14 @@ public static class Gaol
     // ------------------------------------------------------------------ the gaoler's price
 
     /// <summary>The least offer a gaoler of this honesty will weigh: <c>3 x daily wage x (60 - honesty) / 20</c>; null for an honest man (60 or more), who never takes one.</summary>
-    public static long? BribeFloor(LawWorld w, int honesty) => honesty >= w.S.BribeHonestAt ? null : (long)w.S.BribeMult * w.S.GuardWageMites * (w.S.BribeHonestAt - honesty) / Math.Max(1, w.S.BribeDivisor);
+    public static long? BribeFloor(LawWorld w, int honesty) => BribeFloor(w.S, honesty);
+
+    /// <summary>The same floor from the law's numbers alone (the heists' guards and officials use it: one rule for every official, heists 4.3).</summary>
+    public static long? BribeFloor(Ravensguard.Content.LawSettingsDef s, int honesty) => honesty >= s.BribeHonestAt ? null : (long)s.BribeMult * s.GuardWageMites * (s.BribeHonestAt - honesty) / Math.Max(1, s.BribeDivisor);
 
     /// <summary>The chance (percent) an offer at or over the floor is taken: <c>60 - honesty</c>.</summary>
-    public static int BribePct(LawWorld w, int honesty) => Math.Max(0, w.S.BribeHonestAt - honesty);
+    public static int BribePct(LawWorld w, int honesty) => BribePct(w.S, honesty);
+    public static int BribePct(Ravensguard.Content.LawSettingsDef s, int honesty) => Math.Max(0, s.BribeHonestAt - honesty);
 
     /// <summary>
     /// The prisoner offers the gaoler coin (crime 4.5, <c>heists-and-jailbreaks</c> 4.3: one rule for every official). Under the floor, or an honest man: refused; at or over it taken with P = 60 - honesty percent

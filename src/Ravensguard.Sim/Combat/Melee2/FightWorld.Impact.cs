@@ -189,6 +189,7 @@ public sealed partial class FightWorld
         OnBlow?.Invoke(a, t, _r, s);
         WearArmour(a, t);
         BrittleBlade(a);
+        WearBlades(a, t, s.Block.Kind == BlockKind.Weapon);                                            // [heists] the blades remember the blow (FightWorld.Walls.cs)
         if (Mounts != null) MountedOnBlow(a, t, s);                  // [mounted-combat] unhorse, lance shatter
         if (_r.Blocked)
         {

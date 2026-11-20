@@ -79,6 +79,35 @@ public static class AftermathDesk
     /// <summary>P4 close-out: the fight's wear on the hero's worn pieces, written back to their item rows ("mc:wear|item:condition|..."; condition only, the rows keep the lower one).</summary>
     public const string WearPrefix = "mc:wear|";
 
+    /// <summary>P6-D3 (heists 4.4): the fight's wear on the hero's weapon, written back to its item row ("mc:weapon|item:keepPm|..."): the row keeps that share of its condition, and a blade that broke (0) leaves the pack.</summary>
+    public const string WeaponPrefix = "mc:weapon|";
+
+    public static HeroCommand WeaponWearCommand(IEnumerable<(EntityId Item, int KeepPm)> wear, long sec) =>
+        new() { Kind = HeroCommandKind.Aftermath, IssuedSec = sec, Tag = WeaponPrefix + string.Join("|", wear.Select(w => string.Create(CultureInfo.InvariantCulture, $"{w.Item.Value}:{w.KeepPm}"))), Origin = CommandOrigin.Human };
+
+    private static HeroResult WeaponWear(HeroContext ctx, HeroCommand c)
+    {
+        var items = ctx.Econ.Items; int n = 0;
+        foreach (var part in c.Tag[WeaponPrefix.Length..].Split('|', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var kv = part.Split(':');
+            if (kv.Length != 2 || !ulong.TryParse(kv[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var id) || !int.TryParse(kv[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var keep)) continue;
+            int row = items.IndexOf(new EntityId(id));
+            if (row < 0 || items.At(row).Owner != ctx.Party.Hero) continue;
+            keep = Math.Clamp(keep, 0, 1000);
+            if (keep == 0)
+            {
+                var car = ctx.Party.Carried; car.Equip.Remove(new EntityId(id));
+                for (int q = 0; q < car.QuickBar.Length; q++) if (car.QuickBar[q] == new EntityId(id)) car.QuickBar[q] = EntityId.None;
+                items.Free(new EntityId(id)); n++; continue;
+            }              // a broken brittle blade is gone from the pack
+            ref var r = ref items.At(row);
+            short to = (short)(r.ConditionPermille * keep / 1000);
+            if (to < r.ConditionPermille) { r.ConditionPermille = to; n++; }
+        }
+        return new HeroResult(c.Seq, c.Kind, HeroResultCode.Ok, HeroText.Empty, 0, n, c.IssuedSec);
+    }
+
     public static HeroCommand WearCommand(IEnumerable<(EntityId Item, int ConditionPm)> wear, long sec) =>
         new() { Kind = HeroCommandKind.Aftermath, IssuedSec = sec, Tag = WearPrefix + string.Join("|", wear.Select(w => string.Create(CultureInfo.InvariantCulture, $"{w.Item.Value}:{w.ConditionPm}"))), Origin = CommandOrigin.Human };
 
@@ -184,6 +213,7 @@ public static class AftermathDesk
     private static HeroResult ApplyCore(HeroContext ctx, HeroCommand c)
     {
         var book = BookOf(ctx.State, ctx.Content);
+        if (c.Tag.StartsWith(WeaponPrefix, StringComparison.Ordinal)) return WeaponWear(ctx, c);            // P6-D3: the blades' wear and a broken blade
         if (c.Tag.StartsWith(WearPrefix, StringComparison.Ordinal)) return Wear(ctx, c);              // P4 close-out: the fight's armour wear onto the item rows
         if (c.Tag.StartsWith(DressPrefix, StringComparison.Ordinal)) return Dress(ctx, c);            // a legacy dressing: the bandages it used
         if (c.Tag.StartsWith(ControlPrefix, StringComparison.Ordinal) || c.Tag.StartsWith(ReleasePrefix, StringComparison.Ordinal) || c.Tag.StartsWith(RescuePrefix, StringComparison.Ordinal))

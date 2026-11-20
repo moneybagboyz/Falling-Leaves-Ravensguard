@@ -452,10 +452,11 @@ public sealed partial class FightWorld
         Step(f, c.MoveX, c.MoveY, perTick);
     }
 
-    private static void Step(Fighter f, int dx, int dy, int mm)
+    private void Step(Fighter f, int dx, int dy, int mm)
     {
         var (nx, ny) = FightMath.Norm(dx, dy);
         int mx = (int)((long)nx * mm >> 10), my = (int)((long)ny * mm >> 10);
+        if (Walls != null) (mx, my) = WallSlide(f, mx, my);                   // [heists] an indoor fight: walls and shut doors stop the walk (FightWorld.Walls.cs)
         f.X += mx; f.Y += my;
         f.LastMoveMm = (int)FightMath.Len(mx, my);
     }
@@ -464,6 +465,7 @@ public sealed partial class FightWorld
     private void Separate()
     {
         int min = 2 * K.BodyRadiusMm;
+        var before = Walls != null ? SavePositions() : null;
         for (int i = 0; i < Fighters.Count; i++)
         {
             var a = Fighters[i];
@@ -487,6 +489,7 @@ public sealed partial class FightWorld
                 else { a.X -= ux * push / FightMath.One; a.Y -= uy * push / FightMath.One; b.X += ux * push / FightMath.One; b.Y += uy * push / FightMath.One; }
             }
         }
+        if (before != null) KeepOutOfWalls(before);                              // [heists] a body pushed into a wall goes back
     }
 
     private void Shove(Fighter a, Fighter b, int ux, int uy)
@@ -586,6 +589,7 @@ public sealed partial class FightWorld
         long dx = t.X - a.X, dy = t.Y - a.Y;
         long len = FightMath.Len(dx, dy);
         if (len > reach + K.ReachSlackMm) return false;
+        if (Walls != null && WallBetween(a.X, a.Y, t.X, t.Y)) return false;       // [heists] no blow through a wall
         if (len == 0) return true;
         int dot = (int)((a.FX * dx + a.FY * dy) / len);
         return dot >= K.AttackConeQ10;

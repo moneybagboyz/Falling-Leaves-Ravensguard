@@ -134,7 +134,7 @@ Each step ends with its golden tests green. Parts of one step run in parallel (s
 4. **P6-D** (four parallel parts):
    - **D1 slavery** (needs C1, C2, B4). Gate: SL-1 to SL-14.
    - **D2 diplomacy, AI lords, the road to lord, the Faction screen** (needs C3, B3). Gate: DA-1 to DA-12. **Milestone M-C "the lord".**
-   - **D3 heists and jailbreaks** (needs C1; B5 for fire diversions). Gate: HJ-1 to HJ-12. **Milestone M-D "the breakout".**
+   - **D3 heists and jailbreaks** (needs C1; B5 for fire diversions). Gate: HJ-1 to HJ-12. **Milestone M-D "the breakout".** **Built (P6-D3):** all twelve gates; the heist is a run on its own clock played through recorded commands in a panel, not yet the live tier; details at the end of `heists-and-jailbreaks.md`.
    - **D4 holdings part 2:** the NPC land market, zoning and new streets, soil improvement contracts (needs C2, C3). Gate: HW-3 to HW-5, HW-14, HW-15.
 5. **P6-E** (four parallel parts):
    - **E1 unrest and revolt** (needs C3, D2; D1 for slave revolts). Gate: UR-1 to UR-11.

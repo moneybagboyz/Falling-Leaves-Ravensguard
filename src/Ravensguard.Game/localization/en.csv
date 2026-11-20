@@ -5152,6 +5152,105 @@ ct_ev_work_taken,You took the work.
 ct_ev_work_done,The work was done and the pay came.
 ct_ev_work_failed,The work was not done: the bond was charged and the standing fell.
 ct_q_board,Notice board
+ch_heist_manhunt_began,The watch of {place} turned out to hunt {doer} and {hunted} others along the roads.
+ch_heist_manhunt_ended,The watch of {place} gave up the hunt for {doer}; the price on his head stands.
+ch_heist_locks_changed,The lord of {place} had every lock of his strongholds changed after the theft of a keyring.
+ch_note_heist_keys_taken,a keyring was taken from a sleeper's belt
+hj_q_head,Heists
+hj_q_return,Return to the heist
+hj_q_gaol,Slip into the gaol
+hj_q_strongroom,Slip into the strongroom
+hj_q_vault,Slip into the guild vault
+hj_q_undercroft,Slip into the undercroft
+hj_q_drain,Go down the drain
+hj_q_camp,Creep into the camp
+hj_title,The heist
+hj_none,No heist.
+hj_site_gaol,The gaol
+hj_site_strongroom,The strongroom
+hj_site_vault,The guild vault
+hj_site_undercroft,The undercroft
+hj_site_drain,The drain
+hj_site_camp,The captors' camp
+hj_clock,Night's work: {0}
+hj_alarm,ALARM
+hj_disguised,Unseen: the livery carries you past them
+hj_ear,"Ear: {0}. Nearest: {1}, {2} m"
+hj_ear_none,Ear: {0}. Nobody near.
+hj_ear_silent,Silent
+hj_ear_quiet,Quiet
+hj_ear_loud,Loud
+hj_ls_asleep,asleep
+hj_ls_down,down
+hj_ls_bribed,looking away
+hj_ls_listening,listening
+hj_ls_investigating,investigating
+hj_ls_alert,alert
+hj_keys,Keys you hold for these locks: {0}
+hj_followers,Following you: {0}
+hj_livery_on,Wearing the lord's livery
+hj_torch_on,Torch lit: you can be seen from further off
+hj_stolen,Carried out: {0}
+hj_outer_locked,The outer door is locked behind the alarm.
+hj_busy,{0}: {1} s left
+hj_bk_1,Picking the lock
+hj_bk_2,Breaking in
+hj_bk_3,Searching a sleeper
+hj_bk_4,Dousing the sconce
+hj_bk_5,Prying the grate
+hj_bk_6,Emptying the chest
+hj_bk_7,Cutting the bonds
+hj_outcome_caught,The guards have you.
+hj_outcome_left,You are out.
+hj_help,Arrow keys step (sneaking takes two seconds a step). The eye shows who would see you before you act; the ear what you are making.
+hj_give_up,Give up
+hj_v_pick,"Pick ({0} s, {1}%)"
+hj_v_pickout,"Pick the outer door ({0} s, {1}%)"
+hj_v_key,Use the key
+hj_v_break,Break it open
+hj_v_pry,Pry the grate (30 s)
+hj_v_search,Search the sleeper
+hj_v_subdue,Take him down
+hj_v_bribe,Offer {0}
+hj_v_douse,Douse the sconce
+hj_v_throw,Throw a stone
+hj_v_loot,Empty the chest
+hj_v_free,Free the prisoner
+hj_v_portal,Down the drain
+hj_v_leave,Leave
+hj_v_wait,"Wait, listening"
+hj_v_sneak_on,Sneak
+hj_v_sneak_off,Walk
+hj_v_torch_on,Light the torch
+hj_v_torch_off,Snuff the torch
+hj_v_livery_on,Wear livery
+hj_v_livery_off,Doff livery
+hj_entered,You slip in.
+hj_already_in,You are in one already.
+hj_not_in,You are not in a heist.
+hj_no_such_site,There is nothing like that here to get into.
+hj_done,Done.
+hj_cannot_afford,You cannot afford the offer.
+hj_act_blocked,Something is in the way.
+hj_act_locked,Locked.
+hj_act_nokey,You have no key for it.
+hj_act_stalekey,The lock has been changed: your key is dead iron.
+hj_act_busy,You are at work.
+hj_act_toofar,Too far.
+hj_act_nothing,Nothing to do there.
+hj_act_refused,Not now.
+hj_act_seen,He is awake and sees you.
+hj_act_ended,The heist is over.
+hj_act_notool,You have nothing to do it with.
+hj_bribe_taken,The coin goes into his hand and he looks the other way.
+hj_bribe_refused,"He will not take it, and raises his voice."
+hj_looted,You take {0} from the chest and {1} things besides.
+hj_left_seen,"You are out, but you were seen: {0} freed, and the watch hunts you (manhunt {1})."
+hj_left_unseen_freed,"You are out, unseen, with {0} freed. The empty cell will be found at the next round."
+hj_left_unseen_stolen,"You are out, unseen, with what you took."
+hj_left_nothing,"You are out, and nobody knows you were ever there."
+hj_caught,The guards have you: {0} charges.
+hj_caught_thrown_out,The guards find nothing against you and throw you out.
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."
