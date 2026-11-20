@@ -64,6 +64,14 @@ public sealed class BondLink
         st.Bonds = made.IsEmpty ? null : made;
     }
 
+    /// <summary>A <c>bond_labour</c> sentence starts (slavery 4.1 rule 3, called from the court): the convict is bound to the fief's works for his term.</summary>
+    public static void Convict(WorldState st, ContentDatabase db, EntityId person, int fief, int days, int settlement, long sec, ulong entry)
+    {
+        var bw = BondWiring.World(st, db); var book = st.Bonds ??= new BondBook();
+        Slavery.BindConvict(bw, book, person, fief, days, settlement, (int)(sec / 86_400), sec, entry);
+        if (book.IsEmpty) st.Bonds = null;
+    }
+
     /// <summary>Whether a person is of the hero's household (a raid leaves the hero's own people alone: they are the player's to lose in the street, not in the abstract).</summary>
     private static bool PartyHousehold(WorldState st, EntityId p)
     {

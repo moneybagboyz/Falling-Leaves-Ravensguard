@@ -26,6 +26,9 @@ public static class Slavery
     {
         var d = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var (k, v) in data) d[k] = v;
+        if (!d.ContainsKey("doer") && subjects.Count > 0 && subjects[0].Kind == IdKind.Person) d["doer"] = bw.W.Name(subjects[0]);                        // the rumour names him
+        foreach (var p in ps)
+            if (p.Kind == ChronParamKind.Place && !d.ContainsKey("settlement")) { int at = Array.FindIndex(bw.W.SettlementIds, id => id.Value == (ulong)p.Value); if (at >= 0) d["settlement"] = bw.W.PlaceName(at); }
         var e = new ChronicleEntry(bw.W.Ids.Allocate(IdKind.Event), new GameTime(sec), type, [.. subjects], [cause], d, TextKey: textKey, Params: [.. ps]);
         bw.Chronicle.Add(e);
         return e;
@@ -268,6 +271,20 @@ public static class Slavery
         long paid = b.PriceMites;
         var r = Free(bw, book, person, Ending.SelfPurchase, day, sec);
         return r with { Mites = paid };
+    }
+
+    /// <summary>
+    /// A friend or kin buys a slave free (4.4: be bought free by a companion): the payer gives his last price to the owner (<see cref="TransferReason.SlaveSale"/>) and the person is free (a rescue). The owner may refuse
+    /// in a chattel law only when he is no one's debtor-keeper: here he accepts at the price he paid, so a slave can never be held for ransom beyond it.
+    /// </summary>
+    public static SlaveResult BuyFree(BondWorld bw, BondBook book, EntityId payer, EntityId person, int day, long sec)
+    {
+        if (book.Of(person) is not { InPen: false } b || b.Owner == payer.Value) return SlaveResult.No("sl_not_bonded");
+        if (bw.PurseOf(payer) is not { } from || bw.PurseOf(new EntityId(b.Owner)) is not { } to) return SlaveResult.No("sl_cannot_afford");
+        long price = Math.Max(b.PriceMites, 1);
+        if (bw.Ledger.Balance(from).Mites < price || !bw.Ledger.Transfer(from, to, new Coin(price), TransferReason.SlaveSale)) return SlaveResult.No("sl_cannot_afford");
+        var r = Free(bw, book, person, Ending.Rescued, day, sec);
+        return r with { Mites = price };
     }
 
     // ------------------------------------------------------------------ the owner's settings

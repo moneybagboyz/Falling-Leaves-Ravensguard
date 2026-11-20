@@ -91,6 +91,8 @@ public sealed class LawWorld
     public Action<EntityId, int, long>? Forfeit { get; init; }
     /// <summary>Told when a sentence harsher than the culture's key is pronounced on a convicted of a household (unrest: a grievance for the kin) or an acquittal of the plainly guilty (the victim's): (person, +1 harsher, -1 acquitted).</summary>
     public Action<EntityId, int>? Grievance { get; init; }
+    /// <summary>P6-D1 (slavery 4.1 rule 3): told when a <c>bond_labour</c> sentence starts: the convict, the fief, the days, the settlement, the second and the sentence's chronicle entry. The bondage book binds him to the fief's works for his term; null: nobody keeps account.</summary>
+    public Action<EntityId, int, int, int, long, ulong>? BondLabour { get; init; }
     /// <summary>The captive's skills as the escape rolls read them (stealth, athletics, lockpicking, perception, speech).</summary>
     public Func<EntityId, (int Stealth, int Athletics, int Lockpicking, int Perception, int Speech)> SkillsOf { get; init; } = _ => (0, 0, 0, 0, 0);
     /// <summary>Whether an exiled person has left the realm by the end of his grace (the hero walked out; an NPC was sent); null: nobody has, so exile ends as outlawry.</summary>
@@ -134,6 +136,7 @@ public sealed class LawWorld
             Desperate = hh => e != null && hh >= 0 && hh < e.HouseholdCount && (e.Grievances[hh] & (Ravensguard.Sim.Economy.Grievance.Hunger | Ravensguard.Sim.Economy.Grievance.MissedMeal | Ravensguard.Sim.Economy.Grievance.Tax)) != 0,
             NameOf = p => p == hero ? st.Hero?.Name ?? "" : "",
             Committed = (doer, kind) => Ravensguard.Sim.Faith.FaithWiring.OnCrime(st, doer, kind),
+            BondLabour = db == null ? null : (p, f, days, settlement, sec, entry) => Ravensguard.Sim.Bondage.BondLink.Convict(st, db, p, f, days, settlement, sec, entry),
             // ---- P6-C1: the gaol, the court, the sentences
             HeroId = hero, FiefSeat = region.Fiefs.Select(f => f.SeatSettlement).ToArray(),
             Captives = db != null ? Ravensguard.Sim.Combat.Aftermath.AftermathDesk.BookOf(st, db) : st.Captivity, Rules = st.Captivity?.Rules ?? AftermathRules.Default,
