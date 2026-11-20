@@ -207,6 +207,15 @@ public static class NewGameDebug
                     var db = NewGameServices.Content().Db;
                     var origin = NewGameServices.Origins()[0];
                     var hero = Ravensguard.Sim.Characters.HeroRecord.FromOrigin("Ada", true, origin);
+                    // P5-E: --ng-craft-scene smithy | commission | kit (the station panel from a detected smithy, the Commission tab, a field-kit repair)
+                    string scene = Arg("--ng-craft-scene", "");
+                    if (scene.Length > 0)
+                    {
+                        var (ss, recipe, commission) = CraftShotScenes.Make(db, hero, scene);
+                        router.Push(new CraftingScreen(router, ss) { StartRecipe = Arg("--ng-craft-recipe", recipe), StartCommission = commission });
+                        await Frames(tree, 10);
+                        break;
+                    }
                     var session = new CraftingSession(db, hero, 8 * 3600, true, ["hearth", "oven", "workbench"], 255);
                     session.State.Book.Set(CraftingSession.HeroId, Ravensguard.Sim.People.Skill.Baking, 45_000_000);
                     session.State.Book.Set(CraftingSession.HeroId, Ravensguard.Sim.People.Skill.Tailoring, 12_000_000);

@@ -1,6 +1,7 @@
 using Ravensguard.Content;
 using Ravensguard.Sim.Characters;
 using Ravensguard.Sim.Core;
+using Ravensguard.Sim.Crafting;
 using Ravensguard.Sim.Economy;
 using Ravensguard.Sim.Goods;
 using Ravensguard.Sim.Land;
@@ -22,6 +23,7 @@ namespace Ravensguard.Sim.Tests.Abstract;
 /// The regression test of docs/reviews/resume-drift-diagnosis.md (the continent section was never written; the farming seed-debt table was not grown after a load). The last case adds the
 /// Phase 5 step 1 sections: a hero (a person row since P5-A4, with a party), land bought and a stall rented through the hero's desk (P5-A2) and a named artefact in the crafting section (P5-A1);
 /// and P5-B's "construction" section: a two-storey smithy half built on the bought lot by a hired crew across the save.
+/// P5-E extends it with crafting the hour pass moves: a commission at a smith (made, then sold uncollected, across the save), an apprenticeship, a guild membership, a job with a fetch still to walk and a fire burning.
 /// </summary>
 public class WorldRuntimeResumeTests(ITestOutputHelper output)
 {
@@ -72,6 +74,52 @@ public class WorldRuntimeResumeTests(ITestOutputHelper output)
         s.Crafting ??= new Ravensguard.Sim.Crafting.CraftState();
         var heroId = s.Population.People.IdOf(s.Hero!.PersonIndex);
         s.Crafting.Artefacts.Named[EntityId.Make(IdKind.Item, 0xA27E)] = new Artefact(Artefacts.NameFor(content, s.Seed, new EntityId(77), "Aldric Vane"), heroId, "Aldric Vane", sec);
+        PlayCrafting(rt, ctx, town, sec);
+    }
+
+    /// <summary>
+    /// P5-E: crafting state that the hour pass moves (the runtime's <see cref="CraftSystem"/>): a commission at the region's best smith, made from the hero's steel over the next days; the hero
+    /// apprenticed to him; a guild membership; a job of the hero's with a fetch still to walk; and a fire burning down its wood. All of it must resume exactly.
+    /// </summary>
+    private static void PlayCrafting(WorldRuntime rt, HeroContext ctx, int town, long sec)
+    {
+        var s = rt.State; var cs = s.Crafting!; var people = s.Population.People; var prod = s.Production!;
+        var svc = s.HomeRecords!.Sim.Get<CraftService>()!; var w = svc.Context;
+        var hero = ctx.Party.Hero;
+        var smiths = prod.Businesses.Where(b => b.Owner >= 0 && prod.Content.Kinds[b.Kind].Stations.Any(k => k.Kind == "anvil")).Select(b => people.IdOf(b.Owner))
+            .OrderByDescending(p => cs.Book.Level(p, Skill.Smithing)).ThenBy(p => p).ToList();
+        Assert.NotEmpty(smiths);
+        var smith = smiths[0]; int lv = cs.Book.Level(smith, Skill.Smithing);
+        var r = ctx.Recipes.Recipes.Where(x => x.IsSmithing && x.Results.Any(y => y.IsItem) && x.Difficulty <= lv && x.Guild == null).OrderBy(x => x.Difficulty).ThenBy(x => x.Id, StringComparer.Ordinal).First();
+        foreach (var slot in r.Slots) ctx.Pack.Create(slot.Alts[0].Good, slot.Alts[0].Qty, CreateReason.Seed);
+        foreach (var st in r.Steps) if (st.FuelGood != ItemTable.NoGood) ctx.Pack.Create(st.FuelGood, st.FuelQty, CreateReason.Seed);
+        var (a, cm) = Commissions.Order(w, r, hero, smith, true, CraftSources.Of(ctx.Pack), sec, s.Ids);
+        Assert.Equal(CommissionAnswer.Ok, a);
+        cs.Book.Set(hero, Skill.Smithing, Math.Max(1, lv - 40) * CraftMath.MicroPerLevel);
+        if (lv >= 40) Assert.Equal(ApprenticeAnswer.Ok, Apprenticeships.Start(w, hero, smith, Skill.Smithing, (int)(sec / 86400), s.Ids).Item1);
+        Guilds.SeeAt(cs, hero, w.SettlementOf(smith), (int)(sec / 86400));
+        cs.Members[("smiths", town, hero.Value)] = new GuildMember { Guild = "smiths", Settlement = town, Person = hero, JoinedDay = (int)(sec / 86400), PaidSeason = (int)(sec / 86400) / Guilds.SeasonDays };
+        // a job with materials to fetch from a store elsewhere in the building: started, nothing walked yet
+        var shed = s.Economy!.OpenStore(StoreKind.House, s.Ids.Allocate(IdKind.Other), 0, 0, false);
+        var torch = ctx.Recipes["make_torch"];
+        shed.Create(s.Economy.Goods.IdOf("sticks"), 400, CreateReason.Seed); ctx.Pack.Create(s.Economy.Goods.IdOf("cloth_linen"), 100, CreateReason.Seed); ctx.Pack.Create(s.Economy.Goods.IdOf("tallow"), 50, CreateReason.Seed);
+        var srcs = CraftSources.Of(ctx.Pack); srcs.Add(new CraftSource { Store = shed, Name = "shed", Fetch = true, DistMm = 9000 });
+        var site = new CraftSite { Light = 255, Water = true }; site.AddTool(ctx.Recipes, "knife");
+        var plan = ctx.Craft.Plan(torch, ctx.Actor(), site, srcs);
+        Assert.True(plan.CanStart, string.Join("; ", plan.Missing));
+        var job = ctx.Craft.Start(plan, ctx.Actor(), hero, srcs, sec)!;
+        Assert.True(job.FetchLeft > 0);
+        // a fire burning: kindled, with an extra kilo of wood
+        var kindle = ctx.Recipes["kindle_fire"];
+        foreach (var slot in kindle.Slots) ctx.Pack.Create(slot.Alts[0].Good, slot.Alts[0].Qty, CreateReason.Seed);
+        site.AddTool(ctx.Recipes, "steel_and_flint");
+        var fj = ctx.Craft.Start(ctx.Craft.Plan(kindle, ctx.Actor(), site, ctx.Pack), ctx.Actor(), hero, ctx.Pack, sec, 5000, 5000)!;
+        ctx.Craft.Advance(fj, 3600, sec);
+        var fire = cs.Fires.All.Values.Single();
+        ctx.Pack.Create(s.Economy.Goods.IdOf("firewood"), 1000, CreateReason.Seed);
+        Assert.True(cs.Fires.Feed(s.Economy, fire.Id, ctx.Pack, s.Economy.Goods.IdOf("firewood"), 1000));
+        Assert.NotNull(cm);
+        Assert.True(s.Economy!.MassAuditHolds());
     }
 
     /// <summary>The ring-1 neighbours, built now and taken in (they are then stepped hourly, in parallel with home).</summary>
@@ -153,6 +201,15 @@ public class WorldRuntimeResumeTests(ITestOutputHelper output)
             Assert.NotEmpty(straight.State.Construction!.Ghosts);
             Assert.NotEmpty(straight.State.Construction.Built);
             Assert.Equal(straight.State.Construction.ComputeHash(), resumed.State.Construction!.ComputeHash());
+            // P5-E: the commission was worked (and, uncollected, sold) through the save in both runs, the fire burned, the apprentice and the guild member are there, the fetch job is waiting
+            foreach (var s in new[] { straight.State, resumed.State })
+            {
+                var c = s.Crafting!.Commissions.Values.Single();
+                Assert.True(c.State is CommissionState.Working or CommissionState.Ready or CommissionState.Sold, c.State.ToString());   // made over the days, and left uncollected past 15 days: sold
+                Assert.Single(s.Crafting.Members);
+                Assert.Contains(s.Crafting.Jobs.Values, j => j.FetchLeft > 0);
+            }
+            Assert.Equal(straight.State.Crafting!.Commissions.Values.Single().State, resumed.State.Crafting!.Commissions.Values.Single().State);
         }
         var bad = want.Keys.Union(got.Keys).Where(k => !(want.TryGetValue(k, out var x) && got.TryGetValue(k, out var y) && x.AsSpan().SequenceEqual(y))).ToList();
         output.WriteLine($"N {n} M {m} worker {worker} neighbours {neighbours} hero {hero}: {want.Count} sections [{string.Join(", ", want.Keys)}], differing [{string.Join(", ", bad)}]");

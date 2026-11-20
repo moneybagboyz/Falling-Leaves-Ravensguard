@@ -19,6 +19,8 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
     public EconomyState Econ { get; }
     public Population Pop { get; }
     public ProductionContent Content { get; }
+    /// <summary>P5-E (crafting-full 4.4): whether a station's batch is worked live (a station-bound craft job); its progress then comes from the live work, not from this system.</summary>
+    public Func<Business, int, bool>? LiveStation { get; set; }
     public ulong Seed { get; }
     public MarketSystem? Markets { get; }
     public ResourceLayer? Resources { get; }
@@ -152,12 +154,14 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
         if (b.OwnerWorks && b.Owner >= 0) workers[nw++] = b.Owner;
         foreach (int s in b.Staff) if (nw < 64) workers[nw++] = s;
         Span<bool> used = stackalloc bool[64];
-        foreach (var st in b.Stations)
+        for (int si0 = 0; si0 < b.Stations.Count; si0++)
         {
+            var st = b.Stations[si0];
             st.Crew.Clear();
             if (!st.Busy) continue;
             var r = Content.Recipes.Recipes[st.Recipe];
-            if (st.ProgressMicro < Station.Complete)
+            // P5-E (crafting-full 4.4): a batch worked live by staff in the bubble is a craft job; the abstract credit leaves it alone and only finishes it once it is complete
+            if (st.ProgressMicro < Station.Complete && LiveStation?.Invoke(b, si0) != true)
             {
                 bool wheel = st.Kind == "spinning_wheel";
                 for (int i = 0; i < nw && st.Crew.Count < r.MaxWorkers; i++)

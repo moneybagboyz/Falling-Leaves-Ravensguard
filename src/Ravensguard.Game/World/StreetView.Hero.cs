@@ -110,9 +110,10 @@ public partial class StreetView
     }
 
     /// <summary>The crafting session: bound to the world's hero when there is one (the pack, the jobs and the clock are the world's), else the dev hamlet's own starter pack.</summary>
-    CraftingSession NewCraftingSession(int light)
-        => new(_source!.Content!, _hero!, _world.Clock.Now.Seconds, true, ["hearth", "workbench", "oven", "forge", "anvil"], light, _heroLink)
+    CraftingSession NewCraftingSession(int light, Ravensguard.Sim.Crafting.ReachScan? reach)
+        => new(_source!.Content!, _hero!, _world.Clock.Now.Seconds, true, reach == null ? ["hearth", "workbench", "oven", "forge", "anvil"] : [], light, _heroLink, reach)
         {
+            Settlement = HeroSettlement(),
             WorldNow = _heroLink == null ? null : HeroNow,
             SetWorldSpeed = _heroLink == null ? null : x => _rec.SetSpeed(x switch { 2 => Ravensguard.Sim.Core.SimSpeed.X2, 4 => Ravensguard.Sim.Core.SimSpeed.X4, _ => Ravensguard.Sim.Core.SimSpeed.X1 }),
         };

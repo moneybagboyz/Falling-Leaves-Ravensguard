@@ -42,3 +42,21 @@ Collected while the steps are built. The close-out fixes each item or moves it i
   - a one-room hovel with a hearth and pallets counts as a dwelling;
   - a beam holds floors within 4 tiles (BC-11 cannot be met with 3);
   - rust and rot are wired in construction (piles, rubble and outdoor chests).
+
+## From step 2 (P5-E full crafting)
+- **Important: adding a good breaks every existing save.** The economy section refuses a save made against a different goods table, so P5-E dropped its 7 new goods. That removed the recipes for wire, arrowheads, arrows, shingles, daub and harness, so the fletching kit has no recipe.
+  - A **goods-table migration** is needed: map saved good ids by name onto the current table and add zero rows for new goods, with a SaveMigrator step or a load-time remap.
+  - Without it, content updates and mods that add goods cannot load old saves. Fix in Phase 5, before the close-out, and restore the dropped recipes.
+- **Brittle blades:** `Smithing.BrittleBreaks` exists, but the resolver does not call it.
+- **Crafting, still to do:**
+  - tool wear for businesses and NPCs at stations;
+  - world container stores near the crafter (waits on stores in rooms);
+  - Q on a station or item opening the craft screen filtered;
+  - boat parts (P5-G) and vehicle-part repair;
+  - live staff walking to stations and NPC apprentices from the labour market (P5-F);
+  - syncing refits with the clothing book's fit.
+- **Fixed on the way:** removing an emptied store mid-hour broke the wheat audit, so stores are now removed at the barrier. The world id allocator clashed with region-generated fief and site ids (latent since Phase 3), so crafting ids now start past them.
+- **Decisions to confirm in the review:**
+  - commission materials are laid on the maker's bench at the order;
+  - guilds are derived each time, not saved;
+  - CF-14 tested at skill 45, because 35 is Poor on the one scale.
