@@ -99,6 +99,8 @@ public sealed record FamilySettingsDef : ContentDef
     public int NpcWillDislikePm { get; init; } = -300;
     /// <summary>A creditor sells a business he claimed when its household has not paid the staff for this many days.</summary>
     public int CreditorSellDays { get; init; } = 15;
+    /// <summary>A steward of a minor heir's business is paid this much a day from its cash box.</summary>
+    public long StewardWageMitesPerDay { get; init; } = 60;
     // ---- the hero's ageing (4.6)
     public List<AgeLossRow> AgeLoss { get; init; } = [];
     public List<OldAgeRow> OldAge { get; init; } = [];

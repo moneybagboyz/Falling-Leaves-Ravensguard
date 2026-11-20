@@ -5656,6 +5656,12 @@ ch_note_kin_favoured,A sibling was favoured over him.
 ch_note_kin_distrust,He had lost faith in the hero.
 ch_note_court_law,The court held to the law of the land.
 ch_note_court_will,The court held to the will.
+ch_family_minor_steward,{steward} took over the shop at {place} for {heir} until the heir is grown.
+ch_family_minor_of_age,{heir} came of age and took the shop at {place} back from {steward}.
+ch_family_business_sold,"{seller} sold the claimed shop at {place} to {buyer} for {price}, the staff having gone unpaid."
+ch_note_minor_heir,The heir was under sixteen.
+ch_note_minor_grown,The heir turned sixteen.
+ch_note_staff_unpaid,The staff had gone unpaid for fifteen days.
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."

@@ -34,6 +34,10 @@ public sealed class FamilySave
     [Key(10)] public long[][] Matches { get; set; } = [];
     [Key(11)] public int NextMatch { get; set; } = 1;
     [Key(12)] public long[] Contested { get; set; } = [];
+    /// <summary>P6-E3: per steward of a minor's business: business, heir, steward, since.</summary>
+    [Key(13)] public long[][] Stewards { get; set; } = [];
+    /// <summary>P6-E3: per claimed business with unpaid staff: business, days.</summary>
+    [Key(14)] public long[][] Distress { get; set; } = [];
 
     public static FamilySave Capture(FamilyBook b) => new()
     {
@@ -46,6 +50,7 @@ public sealed class FamilySave
         NextCourtship = b.NextCourtship, LastDay = b.LastDay, LastKidnapSeason = b.LastKidnapSeason, Kidnaps = b.Kidnaps,
         Matches = [.. b.Matches.Values.Select(m => new long[] { m.Id, (long)m.Groom, (long)m.Bride, m.DowryMites, m.Alliance ? 1 : 0, m.WeddingDay, (long)m.State, m.Fief, m.Consent ? 1 : 0, m.Defied ? 1 : 0, m.ProposedDay, m.ByHero ? 1 : 0, m.Score, m.DueSerial, m.Lord })],
         NextMatch = b.NextMatch, Contested = [.. b.Contested.Select(x => (long)x)],
+        Stewards = [.. b.Stewards.Values.Select(t => new long[] { (long)t.Business, (long)t.Heir, (long)t.Steward, t.Since })], Distress = [.. b.Distress.Select(kv => new long[] { (long)kv.Key, kv.Value })],
     };
 
     public FamilyBook Restore()
@@ -82,6 +87,8 @@ public sealed class FamilySave
             b.Matches[m.Id] = m;
         }
         foreach (long x in Contested) b.Contested.Add((ulong)x);
+        foreach (var v in Stewards) { if (v.Length < 4) throw new SaveException("Corrupt steward in save."); b.Stewards[(ulong)v[0]] = new Stewardship { Business = (ulong)v[0], Heir = (ulong)v[1], Steward = (ulong)v[2], Since = (int)v[3] }; }
+        foreach (var v in Distress) { if (v.Length < 2) throw new SaveException("Corrupt distress count in save."); b.Distress[(ulong)v[0]] = (int)v[1]; }
         if (Ageing.Length >= 5 + PersonTable.AttrCount)
         {
             var a = new HeroAgeing { Hero = (ulong)Ageing[0], Row = (int)Ageing[1], LastAge = (int)Ageing[2], LastRollYear = (int)Ageing[3], WarnedYear = (int)Ageing[4] };

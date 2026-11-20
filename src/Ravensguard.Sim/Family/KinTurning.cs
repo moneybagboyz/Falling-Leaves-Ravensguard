@@ -34,7 +34,7 @@ public static class KinTurning
     public static bool Leaves(Ravensguard.Content.FamilySettingsDef s, ulong seed, ulong person, int year) => DetRng.Range(seed, year, person, RngStreams.KinTurning, 0, 0, 100) < s.KinLeavePct;
 
     /// <summary>Whether it is the person's birthday on <paramref name="day"/> (the day his age first reaches the next year at the world's pace).</summary>
-    private static bool Birthday(PersonTable pt, int row, int day) => pt.AgeYears(row, day) > pt.AgeYears(row, day - 1);
+    public static bool Birthday(PersonTable pt, int row, int day) => pt.AgeYears(row, day) > pt.AgeYears(row, day - 1);
 
     /// <summary>
     /// The day's check of the hero's kin (4.5): each adult kin member alive, not the hero, on his birthday, with his loyalty below the turn line, leaves the household with the chance of <c>KinLeavePct</c> (stream 0x642, key the
