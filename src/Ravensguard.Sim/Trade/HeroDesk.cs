@@ -571,7 +571,7 @@ public sealed class HeroDesk
         var setts = ctx.State.Population.Region.Settlements;
         var hs = here.SettlementIndex >= 0 && here.SettlementIndex < setts.Count ? setts[here.SettlementIndex] : null;
         var others = m.AllBooks().Where(b => b != here && b.SettlementIndex >= 0 && b.SettlementIndex < setts.Count)
-            .Select(b => (B: b, D: hs == null ? 0L : (long)Math.Sqrt((double)(setts[b.SettlementIndex].CenterX - hs.CenterX) * (setts[b.SettlementIndex].CenterX - hs.CenterX) + (double)(setts[b.SettlementIndex].CenterY - hs.CenterY) * (setts[b.SettlementIndex].CenterY - hs.CenterY))))
+            .Select(b => (B: b, D: hs == null ? 0L : IntMath.Isqrt((long)(setts[b.SettlementIndex].CenterX - hs.CenterX) * (setts[b.SettlementIndex].CenterX - hs.CenterX) + (long)(setts[b.SettlementIndex].CenterY - hs.CenterY) * (setts[b.SettlementIndex].CenterY - hs.CenterY))))
             .OrderBy(t => t.D).ThenBy(t => t.B.SettlementIndex).Take(6);
         foreach (var (b, d) in others)
         {

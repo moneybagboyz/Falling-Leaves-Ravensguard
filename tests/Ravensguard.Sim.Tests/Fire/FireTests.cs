@@ -510,28 +510,85 @@ public class FireTests(BuildingFixture fx, ITestOutputHelper output) : IClassFix
 
     // ------------------------------------------------------------------ FB-14
 
+    /// <summary>The generated houses of a street (8 x 6 m, timber, a hearth and a bed, no roof: the fire roofs them when it adopts them), 14 m apart along x, as the chunk store would hand them over.</summary>
+    private static void GeneratedStreet(FireWorld fw, int n)
+    {
+        fw.Adopt = (x0, y0, x1, y1) => Enumerable.Range(0, n).SelectMany(i => HouseEdits(i * 14, 0)).Where(e => e.X >= x0 && e.X <= x1 && e.Y >= y0 && e.Y <= y1).ToList();
+    }
+
+    private static IEnumerable<CellEdit> HouseEdits(int x0, int y0)
+    {
+        for (int y = 0; y < 6; y++)
+            for (int x = 0; x < 8; x++)
+            {
+                bool ring = x == 0 || y == 0 || x == 7 || y == 5;
+                yield return new CellEdit(x0 + x, y0 + y, 0, CellLayer.Structure, ring ? (x == 3 && y == 5 ? "door_wood" : "wall_timber") : "floor_plank");
+            }
+        yield return new CellEdit(x0 + 1, y0 + 1, 0, CellLayer.Fixture, "hearth"); yield return new CellEdit(x0 + 5, y0 + 1, 0, CellLayer.Fixture, "bed");
+    }
+
+    /// <summary>What a real load does: a room world of its own (construction's, rebuilt from the built cells only, so none here), the book as saved, the sections as bytes, the world attached over them.</summary>
+    private FireRig Load(FireRig a, ulong seed, int houses)
+    {
+        var fire = SaveCodec.SerializeCompressed(FireSave.Capture(a.Fw.Book));
+        var adopted = FireAdoptedSave.Capture(a.Fw.Book) is { } ad ? SaveCodec.SerializeCompressed(ad) : null;
+        var book = SaveCodec.DeserializeCompressed<FireSave>(fire).Restore();
+        if (adopted != null) SaveCodec.DeserializeCompressed<FireAdoptedSave>(adopted).RestoreInto(book);
+        var b = FireRig.Make(fx, seed, rooms: fx.Lib.NewWorld(), book: book);
+        GeneratedStreet(b.Fw, houses);
+        b.Fw.RestoreAdopted();
+        b.Wx = a.Wx; b.Sec = a.Sec;
+        return b;
+    }
+
     [Fact]
     public void FB14_SaveMidFire_Load_Save_AreTheSameBytes_AndTheFireContinuesToTheSameCells()
     {
+        // the street is generated and adopted by the fire as it spreads; the second world is rebuilt as a load does, over an empty room world (S15)
         var a = Rig(7); a.Wx = Wind5FromWest;
-        a.Street(4, true);
+        GeneratedStreet(a.Fw, 4);
+        a.Fw.EnsureAdopted(0, 0);
         a.Light(0, 0);
         a.Run(150);
         Assert.True(a.Fw.Book.Cells.Count > 5);
+        Assert.NotEmpty(a.Fw.Book.AdoptedBlocks);
         var s1 = SaveCodec.SerializeCompressed(FireSave.Capture(a.Fw.Book));
         var restored = SaveCodec.DeserializeCompressed<FireSave>(s1).Restore();
         var s2 = SaveCodec.SerializeCompressed(FireSave.Capture(restored));
         Assert.True(s1.AsSpan().SequenceEqual(s2), "save, load, save are the same bytes");
         Assert.Equal(a.Fw.Book.Hash(), restored.Hash());
-        // a second world at the same moment (the same pieces), carried by the restored book, goes on to the same cells
-        var b = FireRig.Make(fx, 7, rooms: Clone(a.Rooms), book: restored); b.Wx = Wind5FromWest; b.Sec = a.Sec;
+        var b = Load(a, 7, 4);
+        Assert.Equal(a.Rooms.StructureParts().Select(p => (p.Id, string.Join(',', p.Cells))), b.Rooms.StructureParts().Select(p => (p.Id, string.Join(',', p.Cells))));
+        Assert.Equal(a.Rooms.Dump(), b.Rooms.Dump());
+        var d1 = SaveCodec.SerializeCompressed(FireAdoptedSave.Capture(a.Fw.Book)!); var d2 = SaveCodec.SerializeCompressed(FireAdoptedSave.Capture(b.Fw.Book)!);
+        Assert.True(d1.AsSpan().SequenceEqual(d2), "the adopted section saves the same bytes after a load");
         a.Run(400); b.Run(400);
         Assert.Equal(a.Fw.Book.Hash(), b.Fw.Book.Hash());
         Assert.Equal(a.Fw.Book.Cells.Keys, b.Fw.Book.Cells.Keys);
         Assert.Equal(a.Fw.Book.Scars.Keys, b.Fw.Book.Scars.Keys);
-        // the book is optional: an untouched one is empty and writes nothing
+        // the book is optional: an untouched one is empty and writes nothing, and a fire that adopted nothing writes no adopted section
         Assert.True(new FireBook().IsEmpty);
         Assert.False(a.Fw.Book.IsEmpty);
+        Assert.Null(FireAdoptedSave.Capture(new FireBook { SecDone = 5 }));
+    }
+
+    [Fact]
+    public void S1_ABuildingBurningInTheAbstract_InAnAdoptedGeneratedHouse_SurvivesSaveAndLoad_AndTheDailyRollsSeeTheSameHouses()
+    {
+        var a = Rig(3);
+        GeneratedStreet(a.Fw, 1);
+        a.Fw.EnsureAdopted(2, 2);
+        int st = a.Rooms.StructureAt(2, 2, 0);
+        Assert.True(st > 0 && a.Fw.ProfileOf(st) != null);
+        Assert.True(a.Fw.IgniteBuilding(st, 0, FireCause.Test));
+        var b = Load(a, 3, 1);
+        Assert.Equal(st, b.Rooms.StructureAt(2, 2, 0));                               // the same structure id
+        Assert.NotNull(b.Fw.ProfileOf(st));                                           // a profile to burn
+        Assert.Equal(a.RoofCells(0, 0), b.RoofCells(0, 0));
+        a.Fw.HourStep(1); b.Fw.HourStep(1);
+        Assert.Single(a.Fw.Book.Buildings); Assert.Single(b.Fw.Book.Buildings);       // the load did not drop the fire
+        Assert.Equal(a.Fw.Book.Hash(), b.Fw.Book.Hash());
+        Assert.Equal(a.Rooms.StructureIds.ToList(), b.Rooms.StructureIds.ToList());   // the daily and storm rolls run over the same dwellings
     }
 
     [Fact]
@@ -540,21 +597,6 @@ public class FireTests(BuildingFixture fx, ITestOutputHelper output) : IClassFix
         ulong Hash(ulong seed) { var r = Rig(seed); r.Wx = Wind5FromNorth; r.Street(6); r.Light(0, 0); r.Run(900); return r.Fw.Book.Hash(); }
         Assert.Equal(Hash(3), Hash(3));
         Assert.NotEqual(Hash(3), Hash(4));
-    }
-
-    private RoomWorld Clone(RoomWorld w)
-    {
-        var n = fx.Lib.NewWorld();
-        var edits = new List<CellEdit>();
-        foreach (var st in w.StructureIds)
-            foreach (var k in w.StructureCells(st))
-            {
-                var (x, y, z) = RoomWorld.Unpack(k);
-                if (w.PieceAt(x, y, z) is { } p) edits.Add(new CellEdit(x, y, z, CellLayer.Structure, p.Id));
-                if (w.FixtureAt(x, y, z) is { } f) edits.Add(new CellEdit(x, y, z, CellLayer.Fixture, f.Id));
-            }
-        n.Apply(edits);
-        return n;
     }
 
     // ------------------------------------------------------------------ the faith hook and the response

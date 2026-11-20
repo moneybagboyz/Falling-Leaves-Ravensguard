@@ -65,6 +65,11 @@ public sealed partial class RoomWorld
     public static (int X, int Y, int Z) Unpack(long k) => ((int)(k & 0x1FFFFF) - Bias, (int)((k >> 21) & 0x1FFFFF) - Bias, (int)(k >> 42) - 128);
 
     public int CellCount => _cells.Count;
+    /// <summary>Every cell that holds a piece: key, structure piece id and fixture id (in no particular order; the caller sorts).</summary>
+    public IEnumerable<(long Key, string? Structure, string? Fixture)> CellPieces()
+    {
+        foreach (var (k, c) in _cells) if (c.Structure != null || c.Fixture != null) yield return (k, c.Structure?.Id, c.Fixture?.Id);
+    }
     public PieceInfo? PieceAt(int x, int y, int z) => _cells.TryGetValue(Key(x, y, z), out var c) ? c.Structure : null;
     public PieceInfo? FixtureAt(int x, int y, int z) => _cells.TryGetValue(Key(x, y, z), out var c) ? c.Fixture : null;
     public string? PurposeAt(int x, int y, int z) => _cells.TryGetValue(Key(x, y, z), out var c) && c.Purpose != 0 ? _purposes[c.Purpose] : null;

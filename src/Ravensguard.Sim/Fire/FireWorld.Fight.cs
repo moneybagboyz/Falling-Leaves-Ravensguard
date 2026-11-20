@@ -70,7 +70,7 @@ public sealed partial class FireWorld
         foreach (var c in Book.Cells.Values) { var (x, y, _) = Unpack(c.Key); sx += x; sy += y; n++; }
         int cx = (int)(sx / n), cy = (int)(sy / n);
         int dist = int.MaxValue;
-        if (WaterSources != null) foreach (var (wx, wy) in WaterSources()) dist = Math.Min(dist, (int)Math.Sqrt((double)(wx - cx) * (wx - cx) + (double)(wy - cy) * (wy - cy)));
+        if (WaterSources != null) foreach (var (wx, wy) in WaterSources()) dist = Math.Min(dist, (int)IntMath.Isqrt((long)(wx - cx) * (wx - cx) + (long)(wy - cy) * (wy - cy)));
         if (dist == int.MaxValue) return;                                   // no water to be had: nothing to throw
         int people = _fighters.Count;
         long perSecMilli;

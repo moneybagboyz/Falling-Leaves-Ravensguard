@@ -161,13 +161,13 @@ public sealed partial class FireWorld
     private static int GapM((int X0, int Y0, int X1, int Y1) a, (int X0, int Y0, int X1, int Y1) b)
     {
         int gx = Math.Max(0, Math.Max(b.X0 - a.X1, a.X0 - b.X1)), gy = Math.Max(0, Math.Max(b.Y0 - a.Y1, a.Y0 - b.Y1));
-        return (int)Math.Sqrt((double)gx * gx + (double)gy * gy);
+        return (int)IntMath.Isqrt((long)gx * gx + (long)gy * gy);
     }
 
     private static int GapM(BuildingProfile a, BuildingProfile b)
     {
         int gx = Math.Max(0, Math.Max(b.MinX - a.MaxX, a.MinX - b.MaxX)), gy = Math.Max(0, Math.Max(b.MinY - a.MaxY, a.MinY - b.MaxY));
-        return (int)Math.Sqrt((double)gx * gx + (double)gy * gy);
+        return (int)IntMath.Isqrt((long)gx * gx + (long)gy * gy);
     }
 
     /// <summary>The damage a building takes when it has burned its three hours (4.5): thatch and timber 1000 (gutted); stone walls with a timber roof 400; nothing flammable, 0.</summary>
