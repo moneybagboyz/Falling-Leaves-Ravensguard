@@ -105,6 +105,7 @@ public partial class FamilyPanel : Control
         {
             if (a.Refuses) { _body.AddChild(UiKit.Hint(L.F("fam_arrange_refuses", a.Name), true)); continue; }
             if (a.Candidate.Length == 0) { _body.AddChild(UiKit.Hint(L.F("fam_arrange_none", a.Name, a.Age), true)); continue; }
+            if (!a.Accepts) { _body.AddChild(UiKit.Hint(L.F("fam_arrange_low", a.Name, a.Age, a.Candidate, a.Utility), true)); continue; }
             _body.AddChild(UiKit.Body(L.F(a.NeedsConsent ? "fam_arrange_line_consent" : a.Alliance ? "fam_arrange_line_alliance" : "fam_arrange_line", a.Name, a.Age, a.Candidate, a.Utility, a.DowryMites), true));
             if (Arrange is { } ar) { var ab = new Button { Text = L.F("fam_btn_arrange", a.Name), CustomMinimumSize = new Vector2(260, 30), ClipText = true }; var who = a.Member; ab.Pressed += () => ar(who); _body.AddChild(ab); }
         }

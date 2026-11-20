@@ -5674,6 +5674,7 @@ fam_arrange_line,"{0}, {1}: the houses would consider {2} (answer {3}, dowry {4}
 fam_arrange_line_alliance,"{0}, {1}: an alliance with the house of {2} (answer {3}, dowry {4} mites)."
 fam_arrange_line_consent,"{0}, {1}: {2}, but a fief's heir needs the overlord's consent and fee (answer {3}, dowry {4} mites)."
 fam_btn_arrange,Arrange a match for {0}
+fam_arrange_low,"{0}, {1}: the best the houses would consider is {2}, but the answer ({3}) is under what a head asks (50): a gift to his house or a better name would help."
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."

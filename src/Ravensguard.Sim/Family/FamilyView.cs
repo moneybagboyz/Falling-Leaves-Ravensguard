@@ -19,7 +19,7 @@ public sealed record TutorChoice(EntityId Id, string Name);
 public sealed record MatchLine(string Groom, string Bride, MatchState State, int WeddingDay, long DowryMites, bool Alliance, bool FeeOwing);
 
 /// <summary>A member of the house who could be matched (P6-E3): the best candidate the houses would consider, the answering head's utility, the dowry at the class share, whether it is an alliance, whether the overlord's consent is needed, and whether the member refuses any match (loyalty under the turn line).</summary>
-public sealed record ArrangeLine(EntityId Member, string Name, int Age, string Candidate, int Utility, long DowryMites, bool Alliance, bool NeedsConsent, bool Refuses);
+public sealed record ArrangeLine(EntityId Member, string Name, int Age, string Candidate, int Utility, long DowryMites, bool Alliance, bool NeedsConsent, bool Refuses, bool Accepts = true);
 
 /// <summary>The family panel's data (family-and-lifespan 6), built at a barrier: the hero's age and what it has taken, the spouse and children with their lessons, the courtship under way, the roof and the hazard of old age.</summary>
 public sealed record FamilyView(string HeroName, int HeroAge, int OldAgePct, int NextBirthdayInDays, IReadOnlyList<AgeLossView> Ageing, IReadOnlyList<FamilyMemberView> Members,
@@ -84,7 +84,7 @@ public sealed record FamilyView(string HeroName, int HeroAge, int OldAgePct, int
                 if (m == hero || Matches.WhyNot(w, m, day).Length > 0) continue;
                 var cand = Matches.Candidates(w, m, day, 1).FirstOrDefault();
                 arrange.Add(new ArrangeLine(pt.IdOf(m), pt.FullName(m), pt.AgeYears(m, day), cand?.Name ?? "", cand?.Terms.Total ?? 0, cand?.DowryMites ?? 0, cand?.Alliance ?? false,
-                    cand != null && Matches.ConsentFief(w, m, cand.Row) >= 0, Matches.KinLoyalty(w, pt.IdOf(m)) < f.S.TurnBelowPm));
+                    cand != null && Matches.ConsentFief(w, m, cand.Row) >= 0, Matches.KinLoyalty(w, pt.IdOf(m)) < f.S.TurnBelowPm, (cand?.Terms.Total ?? 0) >= f.S.MatchAcceptAt));
             }
         return new FamilyView(st.Hero.Name, age, f.OldAgePct(age), Math.Max(0, next), losses, members, cp >= 0 ? pt.FullName(cp) : "", cp >= 0 ? pt.IdOf(cp) : EntityId.None, c?.State ?? CourtState.Broken,
             c?.Meetings ?? 0, c?.Gifts ?? 0, c?.WeddingDay ?? -1, Courting.RoofFor(w, hero).Ok, tutors, day, lines, arrange);
