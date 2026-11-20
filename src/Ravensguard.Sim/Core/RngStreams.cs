@@ -294,6 +294,8 @@ public static class RngStreams
     public const uint BargeLegDelay = 0x552;
     /// <summary>Inheritance: the hero's kin at a new game (the origin's kin rows, their ages and counts, the hero's own age; key hero seed).</summary>
     public const uint HeroKin = 0x560;
+    /// <summary>P5-H inheritance: reserved for Phase 6 disputed inheritances; settling an estate is a pure function of the tables (inheritance 5). Asserted never drawn.</summary>
+    public const uint InheritanceDisputesReserved = 0x561;
     /// <summary>P5-F businesses: reserved for Phase 6 steward honesty (skimming); stewards are honest in Phase 5 (overview 10a). Asserted never drawn.</summary>
     public const uint StewardHonestyReserved = 0x540;
     /// <summary>P5-F businesses: reserved for fair visitor jitter; the fair demand table does not need it. Asserted never drawn.</summary>

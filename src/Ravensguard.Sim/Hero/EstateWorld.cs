@@ -92,49 +92,64 @@ public sealed class EstateWorld
 
     private long BusinessValue(Business b) => Own is { } ow ? ow.ValueOf(b) : Econ.Ledger.Balance(b.Purse).Mites;
 
-    /// <summary>Everything <paramref name="holder"/> (row <paramref name="row"/>) holds, in a fixed order (kind, then id). <paramref name="hero"/> adds the home chest; an NPC adds his own purse.</summary>
-    internal List<Held> Gather(EntityId holder, int row, bool hero)
+    /// <summary>
+    /// Every holding of the books by its holder (one pass over each book): deeds, leases and stalls, open claims, granted charters, shares, open building sites, live contracts, vehicles, animals,
+    /// open commissions and apprenticeships (both sides). <paramref name="only"/> restricts it to one holder. The hero's business rows and chest are added by <see cref="Gather"/>.
+    /// </summary>
+    private Dictionary<EntityId, List<Held>> Index(EntityId? only = null)
     {
-        var list = new List<Held>();
+        var idx = new Dictionary<EntityId, List<Held>>();
+        void Add(EntityId holder, Held h) { if (only is { } o && holder != o) return; if (!idx.TryGetValue(holder, out var l)) idx[holder] = l = []; l.Add(h); }
         if (State.Land is { } land)
         {
             foreach (var d in land.Deeds.Values)
             {
-                if (d.Holder != holder) continue;
+                if (only is { } o && d.Holder != o) continue;
                 var k = d.Kind == HoldingKind.Stall ? EstateThing.Stall : d.IsLease ? EstateThing.Lease : EstateThing.Deed;
-                list.Add(new Held { Kind = k, Id = d.Id, Value = DeedValue(d), Settlement = SettlementOf(d), Real = k != EstateThing.Stall, Ref = d });
-                if (d.Kind == HoldingKind.Fief) OnFiefPassed?.Invoke(d.Lord, row);
+                Add(d.Holder, new Held { Kind = k, Id = d.Id, Value = DeedValue(d), Settlement = SettlementOf(d), Real = k != EstateThing.Stall, Ref = d });
             }
-            foreach (var c in land.Claims) if (c.Claimant == holder && c.State == ClaimState.Open)
-                    list.Add(new Held { Kind = EstateThing.Claim, Id = LandIds.Serial(Land?.RegionId ?? 0, c.Serial), Settlement = -1, Real = true, Ref = c });
-            foreach (var c in land.Charters) if (c.Grantee == holder && c.State == CharterState.Granted)
-                    list.Add(new Held { Kind = EstateThing.Charter, Id = LandIds.Serial(Land?.RegionId ?? 0, c.Serial), Settlement = c.Anchor, Real = true, Ref = c });
+            int reg = Land?.RegionId ?? 0;
+            foreach (var c in land.Claims) if (c.State == ClaimState.Open) Add(c.Claimant, new Held { Kind = EstateThing.Claim, Id = LandIds.Serial(reg, c.Serial), Settlement = -1, Real = true, Ref = c });
+            foreach (var c in land.Charters) if (c.State == CharterState.Granted) Add(c.Grantee, new Held { Kind = EstateThing.Charter, Id = LandIds.Serial(reg, c.Serial), Settlement = c.Anchor, Real = true, Ref = c });
         }
-        if (State.Production is { } prod && row >= 0)
-            foreach (var b in prod.Businesses)
-                if (b.Owner == row && b.State == BusinessState.Open) list.Add(new Held { Kind = EstateThing.Business, Id = b.Id, Value = BusinessValue(b), Settlement = b.Settlement, Real = true, Ref = b });
         if (State.Ownership is { } ob && State.Production is { } prod2)
             foreach (var h in ob.Holdings.Values)
                 foreach (var s in h.Shares)
-                    if (s.Holder == holder && prod2.ById(h.Business) is { } b)
-                        list.Add(new Held { Kind = EstateThing.Share, Id = h.Business, Value = Valuation.SharePrice(BusinessValue(b), s.Pm), Settlement = b.Settlement, Ref = h });
+                    if ((only == null || s.Holder == only) && prod2.ById(h.Business) is { } b)
+                        Add(s.Holder, new Held { Kind = EstateThing.Share, Id = h.Business, Value = Valuation.SharePrice(BusinessValue(b), s.Pm), Settlement = b.Settlement, Ref = h });
         if (State.Construction is { } cb)
         {
-            foreach (var s in cb.Sites.Values) if (s.Owner == holder && (s.Open || s.State == SiteState.Abandoned)) list.Add(new Held { Kind = EstateThing.Site, Id = s.Id, Value = s.PaidMites, Real = true, Ref = s });
-            foreach (var c in cb.Contracts.Values) if (c.Client == holder && c.Live) list.Add(new Held { Kind = EstateThing.Contract, Id = c.Id, Value = c.TotalMites, Settlement = c.Settlement, Ref = c });
+            foreach (var s in cb.Sites.Values) if (s.Open || s.State == SiteState.Abandoned) Add(s.Owner, new Held { Kind = EstateThing.Site, Id = s.Id, Value = s.PaidMites, Real = true, Ref = s });
+            foreach (var c in cb.Contracts.Values) if (c.Live) Add(c.Client, new Held { Kind = EstateThing.Contract, Id = c.Id, Value = c.TotalMites, Settlement = c.Settlement, Ref = c });
         }
         if (State.Mounts is { } rb)
         {
-            foreach (var v in rb.Vehicles.Rows) if (v.Owner == holder) list.Add(new Held { Kind = EstateThing.Vehicle, Id = v.Id, Ref = v, Carried = hero && rb.Driving == v.Id });
+            foreach (var v in rb.Vehicles.Rows) Add(v.Owner, new Held { Kind = EstateThing.Vehicle, Id = v.Id, Ref = v, Carried = rb.Driving == v.Id });
             foreach (var a in rb.Animals.Rows)
-                if (a.Owner == holder && a.State != AnimalState.Dead)
-                    list.Add(new Held { Kind = EstateThing.Animal, Id = a.Id, Ref = a, Carried = hero && (rb.Mounted == a.Id || a.State is AnimalState.Ridden or AnimalState.Following or AnimalState.Hitched) });
+                if (a.State != AnimalState.Dead) Add(a.Owner, new Held { Kind = EstateThing.Animal, Id = a.Id, Ref = a, Carried = rb.Mounted == a.Id || a.State is AnimalState.Ridden or AnimalState.Following or AnimalState.Hitched });
         }
         if (State.Crafting is { } cs)
         {
-            foreach (var c in cs.Commissions.Values) if (c.Client == holder && c.Open) list.Add(new Held { Kind = EstateThing.Commission, Id = c.Id, Value = c.Escrow, Ref = c });
-            foreach (var a in cs.Apprenticeships.Values) if (!a.Ended && (a.Apprentice == holder || a.Master == holder)) list.Add(new Held { Kind = EstateThing.Apprenticeship, Id = a.Id, Ref = a });
+            foreach (var c in cs.Commissions.Values) if (c.Open) Add(c.Client, new Held { Kind = EstateThing.Commission, Id = c.Id, Value = c.Escrow, Ref = c });
+            foreach (var a in cs.Apprenticeships.Values)
+                if (!a.Ended) { Add(a.Apprentice, new Held { Kind = EstateThing.Apprenticeship, Id = a.Id, Ref = a }); if (a.Master != a.Apprentice) Add(a.Master, new Held { Kind = EstateThing.Apprenticeship, Id = a.Id, Ref = a }); }
         }
+        return idx;
+    }
+
+    /// <summary>The index of the day's settling (built once by <see cref="Daily"/>), else null: a single estate scans for its holder.</summary>
+    private Dictionary<EntityId, List<Held>>? _index;
+
+    /// <summary>Everything <paramref name="holder"/> (row <paramref name="row"/>) holds, in a fixed order (kind, then id). <paramref name="hero"/> adds his businesses and the home chest.</summary>
+    internal List<Held> Gather(EntityId holder, int row, bool hero)
+    {
+        var src = _index ?? Index(holder);
+        var list = src.TryGetValue(holder, out var l) ? [.. l] : new List<Held>();
+        foreach (var h in list) { if (!hero) h.Carried = false; if (h.Ref is Deed { Kind: HoldingKind.Fief } fd) OnFiefPassed?.Invoke(fd.Lord, row); }
+        // a business: the hero's here; an NPC's passes by the labour market's succession (the same law, EstateSettler.Heirs, and the will through LabourMarket.WillHeir)
+        if (hero && State.Production is { } prod && row >= 0)
+            foreach (var b in prod.Businesses)
+                if (b.Owner == row && b.State == BusinessState.Open) list.Add(new Held { Kind = EstateThing.Business, Id = b.Id, Value = BusinessValue(b), Settlement = b.Settlement, Real = true, Ref = b });
         if (hero && Econ.Ledger.TryFind(PurseKind.Chest, OwnershipWorld.HeroChestId, out var chest) && Econ.Ledger.Balance(chest).Mites > 0)
             list.Add(new Held { Kind = EstateThing.Chest, Id = OwnershipWorld.HeroChestId, Value = Econ.Ledger.Balance(chest).Mites, Ref = chest });
         list.Sort((a, b) => a.Kind != b.Kind ? a.Kind.CompareTo(b.Kind) : a.Id.CompareTo(b.Id));
@@ -616,14 +631,18 @@ public sealed class EstateWorld
         var dead = new SortedSet<EntityId>();
         var hero = EconomyState.HeroOwner;
         void Note(EntityId id) { if (id == hero || id.Kind != IdKind.Person) return; int r = Pt.IndexOf(id); if (r >= 0 && Pt.Status[r] == PersonStatus.Dead) dead.Add(id); }
-        if (State.Land is { } land) { foreach (var d in land.Deeds.Values) if (d.HolderPurse == PurseKind.Person) Note(d.Holder); foreach (var c in land.Claims) if (c.State == ClaimState.Open) Note(c.Claimant); }
-        if (State.Construction is { } cb) foreach (var s in cb.Sites.Values) if (s.Open && s.OwnerKind == PurseKind.Person) Note(s.Owner);
-        if (State.Mounts is { } rb) { foreach (var v in rb.Vehicles.Rows) Note(v.Owner); }
-        if (State.Crafting is { } cs) foreach (var c in cs.Commissions.Values) if (c.Open) Note(c.Client);
+        // a light pass over the books for dead holders (no valuation); the index is built only on a day someone died holding something
+        if (State.Land is { } land) { foreach (var d in land.Deeds.Values) Note(d.Holder); foreach (var c in land.Claims) if (c.State == ClaimState.Open) Note(c.Claimant); foreach (var c in land.Charters) if (c.State == CharterState.Granted) Note(c.Grantee); }
+        if (State.Construction is { } cb) { foreach (var s in cb.Sites.Values) if (s.Open) Note(s.Owner); foreach (var c in cb.Contracts.Values) if (c.Live) Note(c.Client); }
+        if (State.Mounts is { } rb) { foreach (var v in rb.Vehicles.Rows) Note(v.Owner); foreach (var a in rb.Animals.Rows) if (a.State != AnimalState.Dead) Note(a.Owner); }
+        if (State.Crafting is { } cs) { foreach (var c in cs.Commissions.Values) if (c.Open) Note(c.Client); foreach (var a in cs.Apprenticeships.Values) if (!a.Ended) { Note(a.Apprentice); Note(a.Master); } }
         if (State.Ownership is { } ob) foreach (var h in ob.Holdings.Values) foreach (var s in h.Shares) Note(s.Holder);
         if (State.Wills is { } wb) foreach (var t in wb.ByTestator.Keys) Note(t);
+        if (dead.Count == 0) return 0;
+        _index = Index();
         int n = 0;
-        foreach (var id in dead) { SettleNpc(id, day, sec); n++; }
+        try { foreach (var id in dead) { SettleNpc(id, day, sec); n++; } }
+        finally { _index = null; }
         return n;
     }
 
@@ -743,12 +762,12 @@ public sealed class EstateWorld
     }
 }
 
-/// <summary>The estates' place in the abstract tick (inheritance 4.6): NPC estates at hour 1 before the labour market (H4, the day's deaths); creditors' claims on a season's first day (H6, S6).</summary>
+/// <summary>The estates' place in the abstract tick (inheritance 4.6): NPC estates at hour 1 right after the labour market's succession (H4, the day's deaths); creditors' claims on a season's first day (H6, S6).</summary>
 [Ravensguard.Sim.Abstract.AbstractSystem]
 public sealed class EstateSystem : Ravensguard.Sim.Abstract.AbstractSystem
 {
     public const int ClaimHour = 8;
-    public EstateSystem() : base("estates", Ravensguard.Sim.Abstract.TickPhase.H4DailySlice | Ravensguard.Sim.Abstract.TickPhase.H6Seasonal, Ravensguard.Sim.Abstract.SystemOrder.S6Population + 20) { }
+    public EstateSystem() : base("estates", Ravensguard.Sim.Abstract.TickPhase.H4DailySlice | Ravensguard.Sim.Abstract.TickPhase.H6Seasonal, Ravensguard.Sim.Abstract.SystemOrder.DailyGlobalsLabour + 1) { }   // after the labour market (it reads the wills first)
 
     public override void Step(Ravensguard.Sim.Abstract.TickContext ctx)
     {

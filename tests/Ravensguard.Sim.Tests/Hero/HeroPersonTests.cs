@@ -29,31 +29,9 @@ namespace Ravensguard.Sim.Tests.Hero;
 /// </summary>
 public class HeroPersonTests
 {
-    /// <summary>The tanner's widow of the concept book's first hour, as a mod origin (the base cards are the seven of Phase 1; the widow's card, ambition and first hour are content to come).</summary>
-    private const string WidowMod = """
-        [
-          { "type": "origin", "id": "tanners_widow", "name": "Tanner's widow", "description": "Your husband's vats stand cold. The town still owes him, and you owe the town.", "order": 8,
-            "skills": { "tanning": 15, "trading": 5 }, "attributes": { "toughness": 3 }, "kit": [ { "item": "dagger" } ], "coin": 45, "start_location": "town",
-            "ambition": "make_your_fortune", "mentor": "caravan_master", "age": [28, 36], "occupation": "tanner",
-            "kin": [ { "rel": "spouse_dead", "age": [30, 42], "count": [1, 1] }, { "rel": "child", "age": [6, 14], "count": [0, 2] } ] },
-          { "type": "origin", "id": "tanners_widow_two", "name": "Tanner's widow (two children)", "description": "x", "order": 9, "kit": [ { "item": "dagger" } ], "coin": 45,
-            "start_location": "town", "ambition": "make_your_fortune", "mentor": "caravan_master", "age": [28, 36],
-            "kin": [ { "rel": "spouse_dead", "count": [1, 1] }, { "rel": "child", "age": [6, 14], "count": [2, 2] } ] }
-        ]
-        """;
-
-    private static readonly Lazy<ContentDatabase> Widow = new(() =>
-    {
-        using var t = new TempDir();
-        var mod = t.Mod("widow", WidowMod, "\"load_after\": [\"base\"], \"dependencies\": [\"base\"]", "origins.jsonc");
-        var r = new ModLoader(ContentTypeRegistry.Default, BaseVocabulary.Create()).Load([ContinentSettings.FindBaseContent()!, mod]);
-        Assert.True(r.Success, r.Report.ToString());
-        return r.Database;
-    });
-
     private static WorldState NewGame(ulong seed, string origin, bool female, ContentDatabase? db = null)
     {
-        db ??= Widow.Value;
+        db ??= EconFixture.Content;                                                          // P5-H: the tanner's widow is a base origin now (the test mod is gone)
         var w = SeamWorld.Get(seed);
         var home = w.BlockOrigin.Offset(1, 1);
         var dir = ContinentSettings.FindBaseContent()!;
@@ -94,7 +72,7 @@ public class HeroPersonTests
         Assert.True(hh >= 0);
         Assert.Equal(row, hht.Head[hh]);
         Assert.Equal(DwellingType.None, hht.Dwelling[hh]); Assert.Equal(DeedKind.None, hht.Deed[hh]);
-        Assert.Equal(HeroPerson.StartSettlement(st.Population.Region, Widow.Value.Get<OriginDef>("tanners_widow")), hht.Settlement[hh]);
+        Assert.Equal(HeroPerson.StartSettlement(st.Population.Region, EconFixture.Content.Get<OriginDef>("tanners_widow")), hht.Settlement[hh]);
         Assert.Equal(SettlementClass.Town, st.Population.Region.Settlements[hht.Settlement[hh]].Class);
         Assert.DoesNotContain(row, hht.Members(hh));
         // the dead husband
@@ -125,7 +103,7 @@ public class HeroPersonTests
     [Fact]
     public void IN1_TwoChildren_AreFedByTheirHousehold_AndTheOriginsKinFollowTheirRule()
     {
-        var st = NewGame(7, "tanners_widow_two", true);
+        var st = NewGame(7, "tanners_widow", true);
         var pt = st.Population.People; var hht = st.Population.Households; int row = st.Hero!.PersonIndex; int hh = pt.Household[row];
         var children = st.Succession!.Kin.Where(k => k.Relation == KinRelation.Child).Select(k => pt.IndexOf(k.Person)).ToList();
         Assert.Equal(2, children.Count);
@@ -153,11 +131,11 @@ public class HeroPersonTests
     [Fact]
     public void TheHerosRow_SavesLoadsAndSavesToTheSameBytes_AndTheLoadFindsIt()
     {
-        var st = NewGame(7, "tanners_widow_two", true);
+        var st = NewGame(7, "tanners_widow", true);
         int row = st.Hero!.PersonIndex;
         var bytes = SaveCodec.Encode(WorldSave.Capture(st, "widow", "0.1.0"));
-        var back = WorldSave.Restore(SaveCodec.Decode(bytes), Widow.Value, "widow");
-        back.Content = Widow.Value;                                                          // the people go in as a difference from the regenerated ones (as the game's runtime does)
+        var back = WorldSave.Restore(SaveCodec.Decode(bytes), EconFixture.Content, "widow");
+        back.Content = EconFixture.Content;                                                          // the people go in as a difference from the regenerated ones (as the game's runtime does)
         Assert.Equal(row, back.Hero!.PersonIndex);
         var pt = back.Population.People;
         Assert.Equal(PersonStatus.Hero, pt.Status[row]);
@@ -170,8 +148,8 @@ public class HeroPersonTests
     [Fact]
     public void WhenTheHeroDies_TheRowIsDead_AndTheHeirsRowIsTheHerosNow()
     {
-        var st = NewGame(7, "tanners_widow_two", true);
-        var ctx = new HeroContext(st, st.Party!, Widow.Value); var desk = new HeroDesk();
+        var st = NewGame(7, "tanners_widow", true);
+        var ctx = new HeroContext(st, st.Party!, EconFixture.Content); var desk = new HeroDesk();
         var pt = st.Population.People; int row = st.Hero!.PersonIndex; int hh = pt.Household[row];
         long sec = st.Clock.Now.Seconds;
         // the children are under 16: the heir is a companion or nobody; make the elder child of age by the clock's view
