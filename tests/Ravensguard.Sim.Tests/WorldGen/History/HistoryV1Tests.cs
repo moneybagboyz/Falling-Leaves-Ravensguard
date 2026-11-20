@@ -135,6 +135,32 @@ public class HistoryV1Tests(ITestOutputHelper output)
         Assert.Equal(1, a.RulesVersion);
     }
 
+
+    // ------------------------------------------------------------------ the library keeps each world's rules
+
+    [Fact]
+    public void HR1_ALibraryWorldKeepsItsRules_AV0WorldFileHasNoNewKeys_AndBothLoadWithoutALayerChangedRefusal()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "rg-hrv-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var lib = new Ravensguard.Sim.Worlds.WorldLibrary(root);
+            var cs = ContinentSettings.LoadDefaults(Dir.Value); cs.Seed = 21;
+            var h0 = HistorySettings.LoadDefaults(Dir.Value); h0.Seed = 21; h0.Years = 50;
+            var cs1 = ContinentSettings.LoadDefaults(Dir.Value); cs1.Seed = 22;
+            var h1 = HistorySettings.LoadDefaults(Dir.Value).UseRulesV1(Db.Value); h1.Seed = 22; h1.Years = 50;
+            var w0 = lib.Create("Old", cs, h0, "h", "t"); var w1 = lib.Create("New", cs1, h1, "h", "t");
+            string f0 = File.ReadAllText(Path.Combine(lib.FolderOf(w0.Info.Id), "world.json")), f1 = File.ReadAllText(Path.Combine(lib.FolderOf(w1.Info.Id), "world.json"));
+            Assert.DoesNotContain("RulesVersion", f0); Assert.Contains("RulesVersion", f1);
+            var r0 = lib.Load(w0.Info.Id, "h"); var r1 = lib.Load(w1.Info.Id, "h");                 // the hash check regenerates each from its own settings
+            Assert.Equal(0, r0.History.RulesVersion); Assert.Equal(1, r1.History.RulesVersion);
+            Assert.Equal(w0.Info.File.HistoryHash, r0.History.ComputeHash()); Assert.Equal(w1.Info.File.HistoryHash, r1.History.ComputeHash());
+            Assert.Equal(0, lib.List().First(x => x.Id == w0.Info.Id).File.History.RulesVersion);
+            Assert.Equal(1, lib.List().First(x => x.Id == w1.Info.Id).File.History.RulesVersion);
+        }
+        finally { try { Directory.Delete(root, true); } catch (IOException) { } }
+    }
+
     // ------------------------------------------------------------------ HR-2: derived Phase 6 state of a v0 world is pure
 
     [Fact]

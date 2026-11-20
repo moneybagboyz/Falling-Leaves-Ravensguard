@@ -89,7 +89,7 @@ public sealed record PoliticsSettingsDef : ContentDef
     /// <summary>A captured lord's ransom, the Baron rank price of the captivity rules (the wiring copies the content's own figure over this default).</summary>
     public long LordRansomMites { get; init; } = 100000;
     /// <summary>Percent chance a season that a ruler who has a casus belli or a claim and a utility over his threshold takes the field (the pace of declarations: a realm does not fight every season it could).</summary>
-    public int DeclareChancePct { get; init; } = 30;
+    public int DeclareChancePct { get; init; } = 2;
 }
 
 /// <summary>One kind of opinion modifier (<c>politics/opinion.jsonc</c>): its size, how much of it fades each season (0: it stays while its cause lasts) and the sentence the Faction screen shows.</summary>
