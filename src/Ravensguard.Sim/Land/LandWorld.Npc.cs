@@ -78,7 +78,7 @@ public sealed partial class LandWorld
         var seller = d.Holder;
         if (!Transfer(d.Id, buyer, buyerKind, day, DeedCause.Bought)) return LandResult.No("ld_offer_not_for_sale");
         var st = Region.Settlements[d.Settlement];
-        chron(Day(day), "land_bought", [buyer, d.Id, seller], [new Cause(CauseKind.Trade, null, "bought from its holder")], ("settlement", st.Name), ("price", offerMites.ToString()), ("area_m2", (d.Rect.W * d.Rect.H).ToString()), ("tenure", d.Tenure.ToString()));
+        chron(Day(day), "land_bought", [buyer, d.Id, seller], [new Cause(CauseKind.Trade, null, NoteKey: "ch_note_land_bought_offer")], ("settlement", st.Name), ("price", offerMites.ToString()), ("area_m2", (d.Rect.W * d.Rect.H).ToString()), ("tenure", d.Tenure.ToString()));
         return new LandResult(true, "ld_offer_taken", [st.Name, Money(offerMites)], offerMites, d.Id);
     }
 }

@@ -5273,6 +5273,7 @@ hj_left_unseen_stolen,"You are out, unseen, with what you took."
 hj_left_nothing,"You are out, and nobody knows you were ever there."
 hj_caught,The guards have you: {0} charges.
 hj_caught_thrown_out,The guards find nothing against you and throw you out.
+ch_note_land_bought_offer,The holder took an offer for the house.
 ct_need_soil,a field has fallen below half its fertility and wants marl or dung
 ch_note_ct_need_soil,A field with fertility below 50.
 ct_soil_marl,marled
