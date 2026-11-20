@@ -70,7 +70,11 @@ The game today is a deep simulation hidden behind a hard-to-use interface: BBCod
 - **Staged chains of real buildings.** Each stage is its own building with its own crew: for example mine → crusher and washer → ore yard → smeltery → packing, or clay pit → yard → moulding shop → drying sheds → kiln → packing.
 - **An Industry tab in the Ledger** shows each chain as a flow: throughput per stage, the bottleneck, crews, wages and the next upgrade.
 - **Tier upgrades (Level 1–3) are physical, one-click plans.** A builder is hired to install them hands-on from real materials, and the level is recognised from what is actually installed. Each tier sets a minimum and maximum crew.
-- **Medieval technology.** Wheelbarrows and plank runways, then mine carts on wooden rails, then horse gins and water wheels driving pumps, stamps, bellows and trip-hammers. Treadwheel cranes take the place of conveyors and cranes, and a master machine-wright takes the place of a mechanic. |
+- **Medieval technology.** Wheelbarrows and plank runways, then mine carts on wooden rails, then horse gins and water wheels driving pumps, stamps, bellows and trip-hammers. Treadwheel cranes take the place of conveyors and cranes, and a master machine-wright takes the place of a mechanic.
+- **Historical output, plus an honest slider.** Workers produce at historical rates; works grow through big crews and machines. An "industry output" slider (1x–5x) joins the honest world-settings sliders for players who want a faster tycoon game.
+- **Real inputs.** Smelting burns charcoal from charcoal burners (its own chain, which eats woodland), kilns burn firewood, and packing uses barrels and crates from coopers. A shortage stops the stage and the Industry tab says why. No flat "supplies" cost.
+- **Payback.** A well-run Level 1 works repays its buildings in about 2–3 game years at default settings.
+- **Money becomes gold, silver and copper:** 1 gold = 10 silver = 100 copper. The silver piece is today's crown; wages stay in silver. Mints strike all three from mined gold, silver and copper. |
 
 ---
 
@@ -585,7 +589,7 @@ There is no double-click to interact.
    - Attributes (strength, toughness, dexterity, perception, wits) train slowly from what you do.
    - Injuries can permanently lower attributes.
 3. **The economy is a closed money supply** (a redesign, not a port).
-   - **Crowns are minted** only by faction mints, from mined silver.
+   - **Coin is minted** only by faction mints, from mined metal. Until Phase 7 the only coin is the crown (silver). From Phase 7 step 0 there are gold, silver and copper pieces (1 gp = 10 sp = 100 cp; the silver piece is the old crown), decided with the user in Nov 2026.
    - Money moves between people as wages, taxes, rents, trade and tribute.
    - **Leaving the economy:** coin is lost with the dead, buried in hoards, or melted down.
    - **Goods leave the economy:** they are eaten, worn out, burned, or lost.
@@ -1134,7 +1138,7 @@ This section comes from a full read of the legacy code by four auditors (economy
     - A trip runs only if the expected margin beats its cost; an 8 km leg by cart takes about 18 game hours.
     - Tolls are charged at gates and bridges.
   - **Money:**
-    - 1 crown = 1.3 g of silver.
+    - 1 crown = 1.3 g of silver. From Phase 7 the crown becomes the silver piece, with a copper piece worth 1/10 and a gold piece worth 10. Sums are then stored in copper, and older saves are converted at load (×10).
     - Mints take 5–10% seigniorage.
     - Seed ~50 crowns per person at world generation (~1.25 M crowns, ~1.6 t of silver).
     - Silver output is tuned to grow the money supply 1–2% per year.
@@ -1667,8 +1671,14 @@ Estimates assume one developer working with an AI assistant. Every phase ends in
   - **The Industry tab in the Ledger** shows each chain as a flow: throughput and stock per stage, the bottleneck highlighted, crew sliders, wages, and the upgrade available for each stage.
   - **Selling.** Sell at the gate to passing merchants, or send your own caravan: hire a caravan master and guards, pick wagons and a destination, and see the expected margin from the prices you know, with the risk of the road.
     - Prices come from markets, not fixed tables. Distant towns pay more because they lack the goods, and flooding one market drops its price.
-  - **The sheets' numbers are the targets for structure, rescaled to crowns:** the tier jumps, crew ranges and stage ratios. Raw output alone should barely cover wages, and finishing up the chain should be where the profit is.
-  - About 1–2 months, folded into step 0 alongside economies of scale.
+  - **The sheets' numbers are the targets for structure:** the tier jumps, crew ranges and stage ratios. Raw output alone should barely cover wages, and finishing up the chain should be where the profit is.
+  - **Balancing rules (decided with the user after reviewing the sheets' math):**
+    - **Output per worker is historical:** a miner hews about 0.5 t of ore a day, and a pair of sawyers at a pit saw makes about 100–200 board feet. Water-powered tiers multiply that. An honest "industry output" slider (1x–5x) in the world settings scales it for players who want a faster game.
+    - **Inputs are real goods:** charcoal for smelting (about 15 kg per 10 kg of ore, from charcoal burners who cut woodland), firewood for kilns, and barrels and crates for packing. Upkeep is real repair work and materials from wear, not a percentage.
+    - **Payback target:** a well-run Level 1 works repays its buildings in about 2–3 game years at default settings. The step 0 audit checks this, along with whether markets can absorb the output and whether merchants have the coin to buy it.
+    - **The Industry tab's balance sheet** shows income, wages, inputs and upkeep per day and per working week (6 days), all in one coin unit.
+  - **Money: gold, silver and copper (decided with the user).** 1 gp = 10 sp = 100 cp, minted from mined gold, silver and copper. The silver piece is today's crown. Sums are stored in copper, and older saves are converted at load.
+  - About 1–2 months, folded into step 0 alongside economies of scale; the coin change adds about 2 weeks.
 - **Battle:** everything in §3d.
   - The battle bubble and the 2,000-soldier budget.
   - Formations, command and the tactical pause.
