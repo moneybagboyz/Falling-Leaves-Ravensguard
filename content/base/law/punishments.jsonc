@@ -1,0 +1,24 @@
+// Punishment tables (docs/specs/phase6/crime-and-justice.md 3, 4.6): the keys the cultures' "crimes" tables name, each an escalation by the convicted's count of that crime (the first step for a first
+// conviction, the last for every one after). Money is in mites. "severity" orders the keys: a lord may replace a culture's key with any key as mild or milder (his law panel). The bodily kinds
+// (stocks, flogging, branding, hand, hanging) are carried out through the wound system (Phase 4), never as a number.
+[
+  {"type": "punishment", "id": "fine",                  "severity": 1, "steps": [{"kind": "fine", "mites": 100, "value_x": 2}, {"kind": "fine", "mites": 300, "value_x": 4}, {"kind": "fine", "mites": 500, "value_x": 6}]},
+  {"type": "punishment", "id": "penance",               "severity": 1, "steps": [{"kind": "penance", "mites": 50}]},
+  {"type": "punishment", "id": "kin_pays",              "severity": 1, "steps": [{"kind": "kin_pays", "mites": 100, "value_x": 2}]},
+  {"type": "punishment", "id": "restitution_sevenfold", "severity": 2, "steps": [{"kind": "restitution", "mites": 100, "value_x": 7}]},
+  {"type": "punishment", "id": "confiscation_and_fine", "severity": 2, "steps": [{"kind": "confiscation", "mites": 100, "value_x": 2}]},
+  {"type": "punishment", "id": "blood_price",           "severity": 2, "steps": [{"kind": "blood_price", "mites": 3000}]},
+  {"type": "punishment", "id": "gaol",                  "severity": 2, "steps": [{"kind": "gaol", "days": 15, "days_div": 100}]},
+  {"type": "punishment", "id": "bond_labour",           "severity": 2, "steps": [{"kind": "bond_labour", "days": 3, "days_div": 150}]},
+  {"type": "punishment", "id": "weregild",              "severity": 3, "steps": [{"kind": "weregild", "mites": 6000, "days": 15}]},
+  {"type": "punishment", "id": "blood_feud_or_price",   "severity": 3, "steps": [{"kind": "blood_price", "mites": 4000, "days": 15, "feud": 60}]},
+  {"type": "punishment", "id": "flogging",              "severity": 3, "steps": [{"kind": "flogging", "lashes": 20}, {"kind": "flogging", "lashes": 40}, {"kind": "hand"}]},
+  {"type": "punishment", "id": "branding",              "severity": 3, "steps": [{"kind": "branding"}]},
+  {"type": "punishment", "id": "fine_or_hand",          "severity": 4, "steps": [{"kind": "fine", "mites": 100, "value_x": 2}, {"kind": "fine", "mites": 300, "value_x": 4}, {"kind": "hand"}]},
+  {"type": "punishment", "id": "stocks_then_hand",      "severity": 4, "steps": [{"kind": "stocks", "days": 1}, {"kind": "flogging", "lashes": 20}, {"kind": "hand"}]},
+  {"type": "punishment", "id": "exile",                 "severity": 4, "steps": [{"kind": "exile", "days": 3}]},
+  {"type": "punishment", "id": "weregild_or_outlawry",  "severity": 4, "steps": [{"kind": "weregild", "mites": 6000, "days": 15, "unpaid": "outlawry"}]},
+  {"type": "punishment", "id": "outlawry",              "severity": 5, "steps": [{"kind": "outlawry"}]},
+  {"type": "punishment", "id": "hanging",               "severity": 6, "steps": [{"kind": "hanging"}]},
+  {"type": "punishment", "id": "drawn_and_quartered",   "severity": 6, "steps": [{"kind": "hanging", "display": 15}]}
+]

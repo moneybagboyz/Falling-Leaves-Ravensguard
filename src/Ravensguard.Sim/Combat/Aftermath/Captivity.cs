@@ -132,6 +132,35 @@ public sealed class CaptiveBook
         return c;
     }
 
+    /// <summary>
+    /// P6-C1 (crime and justice 4.5): a person taken to a lord's gaol. Bound (chained for a murderer or a traitor), held by the fief (its treasury is the captor's purse), no ransom, no transfers and no hold limit: the
+    /// court decides when he goes (<see cref="Release"/>). The captive's skills are copied as for any capture, so the escape rolls read them.
+    /// </summary>
+    public Captive CaptureGaol(AftermathRules r, EntityId person, bool hero, EntityId fief, PurseRef treasury, EntityId place, long sec, Restraint restraint, (int Stealth, int Athletics, int Lockpicking, int Perception, int Speech) skills, int guards = 2)
+    {
+        int day = (int)(sec / 86400);
+        var c = new Captive
+        {
+            Person = person, IsHero = hero, Captor = CaptorKind.Gaol, CaptorId = fief, CaptorPurse = treasury, Place = place, Restraint = restraint, SinceDay = day, SinceSec = sec, Rank = CaptiveRank.Wanderer,
+            PayerKind = PayerKind.None, DueDay = int.MaxValue, Guards = Math.Max(1, guards), ShiftHours = r.D.ShiftHours, Stash = fief, Care = CareLevel.None, NextTransferDay = int.MaxValue, HoldUntilDay = int.MaxValue,
+            Stealth = skills.Stealth, Athletics = skills.Athletics, Lockpicking = skills.Lockpicking, Perception = skills.Perception, Speech = skills.Speech, LastDay = day,
+        };
+        lock (Sync) Captives[person.Value] = c;
+        return c;
+    }
+
+    /// <summary>P6-C1: the court or the gaoler lets a held person go (served, acquitted, paid, bribed, unfed): his restraint is off and the note says how. False when he was not held.</summary>
+    public bool Release(EntityId person, CaptiveState how, string note, long sec)
+    {
+        lock (Sync)
+        {
+            if (Find(person) is not { Held: true } c) return false;
+            c.State = how; c.EndedSec = sec; c.Note = note; c.Restraint = Restraint.None;
+            if (c.IsHero && Controlled != EntityId.None) Controlled = EntityId.None;
+            return true;
+        }
+    }
+
     // ------------------------------------------------------------------ the captive's own attempts (4.7, live)
 
     /// <summary>
@@ -196,7 +225,7 @@ public sealed class CaptiveBook
                     break;
                 }
                 case CaptiveVerb.TalkToGuard:
-                    res = new(verb, true, false, c.Captor == CaptorKind.Army ? "MC_GUARD_NEWS_ARMY" : "MC_GUARD_NEWS_BANDIT", sec + 300, Ransom.Current(r, c.BaseRansom, c.DueDay, day));
+                    res = new(verb, true, false, c.Captor == CaptorKind.Army ? "MC_GUARD_NEWS_ARMY" : c.Captor == CaptorKind.Gaol ? "MC_GUARD_NEWS_GAOL" : "MC_GUARD_NEWS_BANDIT", sec + 300, Ransom.Current(r, c.BaseRansom, c.DueDay, day));
                     break;
                 case CaptiveVerb.Escape:
                 {
@@ -256,6 +285,7 @@ public sealed class CaptiveBook
 
     private void Day(AftermathRules r, Ledger? ledger, Captive c, int d, Action<Captive, IReadOnlyList<EntityId>>? returnItems)
     {
+        if (c.Captor == CaptorKind.Gaol) return;                                  // P6-C1: the court, not the abstract step, decides when a prisoner of the lord goes
         var D = r.D;
         c.RansomMites = Ransom.Current(r, c.BaseRansom, c.DueDay, d);
         if (d >= c.DueDay && !c.Paid && ledger != null && c.CaptorPurse.Find(ledger) is { } to && Ransom.TryPay(r, ledger, c.PayerKind, c.Payers, to, c.RansomMites))

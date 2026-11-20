@@ -18,16 +18,31 @@ public sealed class LawLink
         return l;
     }
 
+    /// <summary>The courts' hour (P6-C1): the justice book is made when first needed and dropped again while empty, so a world that never held anyone keeps its bytes.</summary>
+    private static void RunJustice(Ravensguard.Sim.Save.WorldState st, LawWorld w, CrimeBook book, long hour)
+    {
+        var jb = st.Justice ?? new JusticeBook();
+        Justice.OnHour(w, book, jb, hour);
+        st.Justice = jb.IsEmpty ? null : jb;
+    }
+
     private void OnHour(long hour)
     {
         int hod = (int)(hour % 24), day = (int)(hour / 24);
-        if (hod is not (0 or 4)) return;
         var st = Runtime.State;
+        if (hod is not (0 or 4) && !Justice.Acts(LawWorld.Light(st), hod)) return;
         if (st.Population.People.Count == 0 || st.Economy == null) return;
         if (hod == 0)
         {
             if (st.Law is not { } book) return;
-            CrimeSystem.Daily(LawWorld.From(st, st.Content), book, day);
+            var w = LawWorld.From(st, st.Content);
+            CrimeSystem.Daily(w, book, day);
+            RunJustice(st, w, book, hour);
+        }
+        else if (hod != 4)
+        {
+            if (st.Law is not { } book) return;
+            RunJustice(st, LawWorld.From(st, st.Content), book, hour);
         }
         else
         {

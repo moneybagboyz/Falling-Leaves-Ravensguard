@@ -253,6 +253,9 @@ public static class AftermathDesk
                     party.Squad.ActiveCount, req.PlaceX, req.PlaceY);
                 break;
             }
+            case DefeatKind.Captured when req.Winner == WinnerKind.Guards:
+                Ravensguard.Sim.Law.Gaol.ArrestHero(state, content, party, req.PlaceX, req.PlaceY, sec);          // P6-C1: the guards arrest him: the fief's gaol, bound, fed, tried on the next court day
+                break;
             case DefeatKind.Captured:
             {
                 // an army: weapons, armour and tools into the detachment's stash; the under layer stays; the purse stays and pays the ransom (with friends')
@@ -265,15 +268,6 @@ public static class AftermathDesk
                 var payers = new List<PurseRef> { new(PurseKind.Person, hero) };
                 book.Capture(R, CaptorKind.Army, hero, true, det, new PurseRef(PurseKind.Chest, det), sec, CaptiveRank.Wanderer, ransom, PayerKind.Household, payers, moved, Skills(state, party),
                     party.Squad.ActiveCount, req.PlaceX, req.PlaceY);
-                break;
-            }
-            case DefeatKind.Ignored:
-            {
-                // guards (Phase 6 stub): a fine paid at the gate to the town's toll purse, then released
-                long want = Math.Min(coin, R.D.GuardFineMites);
-                var toll = state.Markets?.AllBooks().FirstOrDefault()?.TollPurse;
-                if (want > 0 && toll is { } to && to != heroPurse && ledger.Transfer(heroPurse, to, Coin.FromMites(want), AftermathCoin.Plunder)) fine = want;
-                coinLeft = ledger.Balance(heroPurse).Mites;
                 break;
             }
         }

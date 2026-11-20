@@ -52,6 +52,8 @@ public enum HeroCommandKind : byte
     Faith,
     /// <summary>Appended (P6-B6): holdings at the barrier ("hw:clear|claim|tile", work, hire, dismiss, sow, collect, whose, and the works verbs: buy and deliver, post haul jobs, install a workstation), applied by <see cref="Ravensguard.Sim.Holdings.HoldingsDesk"/>.</summary>
     Holdings,
+    /// <summary>Appended (P6-C1): the hero in the cell and on the bench ("jx:surrender|...", plead, restitute, bribe, judge, acquit, adjourn, law), applied by <see cref="Ravensguard.Sim.Law.JusticeDesk"/>.</summary>
+    Justice,
 }
 
 /// <summary>Where the hero crafts (built on the main thread from what is in reach, copied into the command).</summary>
@@ -504,6 +506,7 @@ public sealed class HeroDesk
                 HeroCommandKind.Crime => Ravensguard.Sim.Law.CrimeDesk.Apply(ctx, c),                           // P6-B2: a crime the street saw
                 HeroCommandKind.Family => Ravensguard.Sim.Family.FamilyDesk.Apply(ctx, c),                      // P6-B3: courting, the plea, lessons
                 HeroCommandKind.Faith => Ravensguard.Sim.Faith.FaithDesk.Apply(ctx, c),                         // P6-B4: a service, alms, a pilgrim's vow and arrival
+                HeroCommandKind.Justice => Ravensguard.Sim.Law.JusticeDesk.Apply(ctx, c),                       // P6-C1: surrender, plead, bribe the gaoler, judge, the fief's law
                 HeroCommandKind.Holdings => Ravensguard.Sim.Holdings.HoldingsDesk.Apply(ctx, c),                // P6-B6: clearing and sowing a claim, whose is this, buy and deliver, installing stations
                 HeroCommandKind.Business or HeroCommandKind.Prospect => Ravensguard.Sim.Production.BusinessDesk.Apply(ctx, c),   // P5-F: businesses, stewards, stalls, prospecting
                 _ => R(c, HeroResultCode.Invalid, T("HERO_UNKNOWN_COMMAND")),

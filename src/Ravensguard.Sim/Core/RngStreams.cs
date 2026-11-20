@@ -320,6 +320,8 @@ public static class RngStreams
     public const uint BribeRoll = 0x613;
     /// <summary>P6: crime: NPC crime (key household, day).</summary>
     public const uint NpcCrime = 0x614;
+    /// <summary>P6-C1: crime: whether a guard on duty takes a known culprit today (key crime, day).</summary>
+    public const uint ArrestRoll = 0x615;
     /// <summary>P6: rumours v2: slander (key author, season).</summary>
     public const uint SlanderRoll = 0x620;
     /// <summary>P6: slavery: raids (key region, season).</summary>

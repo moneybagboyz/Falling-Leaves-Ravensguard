@@ -141,6 +141,8 @@ public sealed class WorldState
     public Ravensguard.Sim.Holdings.HoldingsBook? Holdings { get; set; }
     /// <summary>P6-B2: the crimes witnessed, their reports and bounty links, the conviction counts (crime-and-justice 3), in the optional "law" section once any exists (no format bump).</summary>
     public Ravensguard.Sim.Law.CrimeBook? Law { get; set; }
+    /// <summary>P6-C1: who is held in the gaols, the sentences, the lords' own laws, the hero's docket, the marks the court left on bodies (crime-and-justice 4.4 to 4.7), in the optional "justice" section once any exists (no format bump).</summary>
+    public Ravensguard.Sim.Law.JusticeBook? Justice { get; set; }
     /// <summary>P6-B3: the hero's courtships, the children's lessons, kin grievances and the hero's ageing (family-and-lifespan 3), in the optional "family" section once any exists (no format bump).</summary>
     public Ravensguard.Sim.Family.FamilyBook? Family { get; set; }
     /// <summary>P6-B4: a loaded save without a "faith" section gets its church derived when the home region is built (<see cref="Ravensguard.Sim.Faith.FaithWiring.Attach"/>), so reading and writing a save back leaves its bytes alone until the game runs.</summary>
@@ -462,6 +464,7 @@ public static partial class WorldSave
             Medicine = (w.Medicine ?? w.HomeRecords?.Sim.Get<Ravensguard.Sim.Medicine.PhysicianBook>()) is { IsBlank: false } mdb ? mdb.Capture() : null,   // P6-B1
             Fire = w.Fire is { IsEmpty: false } frb ? FireSave.Capture(frb) : null,                                                   // P6-B5
             Law = w.Law is { IsEmpty: false } lwb ? CrimeSave.Capture(lwb) : null,                                                    // P6-B2
+            Justice = w.Justice is { IsEmpty: false } jub ? JusticeSave.Capture(jub) : null,                                           // P6-C1
             Family = w.Family is { IsEmpty: false } fmb ? FamilySave.Capture(fmb) : null,                                             // P6-B3
             Church = w.Church is { IsEmpty: false } chb ? FaithSave.Capture(chb) : null,                                              // P6-B4
             Holdings = w.Holdings is { IsEmpty: false } hdb ? HoldingsSave.Capture(hdb) : null,                                        // P6-B6
@@ -635,6 +638,7 @@ public static partial class WorldSave
             Medicine = file.Sections.ContainsKey(Ravensguard.Sim.Medicine.MedicineSave.SectionName) ? Ravensguard.Sim.Medicine.PhysicianBook.Restore(Decode<Ravensguard.Sim.Medicine.MedicineSave>(file, Ravensguard.Sim.Medicine.MedicineSave.SectionName, compressed: true)) : null,   // P6-B1
             Fire = file.Sections.ContainsKey(FireSave.SectionName) ? Decode<FireSave>(file, FireSave.SectionName, compressed: true).Restore() : null,                            // P6-B5
             Law = file.Sections.ContainsKey(CrimeSave.SectionName) ? Decode<CrimeSave>(file, CrimeSave.SectionName, compressed: true).Restore() : null,                       // P6-B2
+            Justice = file.Sections.ContainsKey(JusticeSave.SectionName) ? Decode<JusticeSave>(file, JusticeSave.SectionName, compressed: true).Restore() : null,              // P6-C1
             Family = file.Sections.ContainsKey(FamilySave.SectionName) ? Decode<FamilySave>(file, FamilySave.SectionName, compressed: true).Restore() : null,                 // P6-B3
             Church = file.Sections.ContainsKey(FaithSave.SectionName) ? Decode<FaithSave>(file, FaithSave.SectionName, compressed: true).Restore() : null,                    // P6-B4
             Holdings = file.Sections.ContainsKey(HoldingsSave.SectionName) ? Decode<HoldingsSave>(file, HoldingsSave.SectionName, compressed: true).Restore() : null,          // P6-B6
@@ -857,6 +861,7 @@ public sealed class LiveCapture
     internal Ravensguard.Sim.Medicine.MedicineSave? Medicine { get; init; }                                                  // P6-B1
     internal FireSave? Fire { get; init; }                                                                                   // P6-B5
     internal CrimeSave? Law { get; init; }                                                                                   // P6-B2
+    internal JusticeSave? Justice { get; init; }                                                                             // P6-C1
     internal FamilySave? Family { get; init; }                                                                               // P6-B3
     internal FaithSave? Church { get; init; }                                                                                // P6-B4
     internal HoldingsSave? Holdings { get; init; }                                                                           // P6-B6
@@ -931,6 +936,7 @@ public sealed class LiveCapture
         if (Medicine != null) sections.Add(new(Ravensguard.Sim.Medicine.MedicineSave.SectionName, SaveCodec.SerializeCompressed(Medicine)));   // P6-B1 (optional, no bump)
         if (Fire != null) sections.Add(new(FireSave.SectionName, SaveCodec.SerializeCompressed(Fire)));                      // P6-B5 (optional, no bump)
         if (Law != null) sections.Add(new(CrimeSave.SectionName, SaveCodec.SerializeCompressed(Law)));                      // P6-B2 (optional, no bump)
+        if (Justice != null) sections.Add(new(JusticeSave.SectionName, SaveCodec.SerializeCompressed(Justice)));             // P6-C1 (optional, no bump)
         if (Family != null) sections.Add(new(FamilySave.SectionName, SaveCodec.SerializeCompressed(Family)));                // P6-B3 (optional, no bump)
         if (Church != null) sections.Add(new(FaithSave.SectionName, SaveCodec.SerializeCompressed(Church)));                // P6-B4 (optional, no bump)
         if (Holdings != null) sections.Add(new(HoldingsSave.SectionName, SaveCodec.SerializeCompressed(Holdings)));         // P6-B6 (optional, no bump)

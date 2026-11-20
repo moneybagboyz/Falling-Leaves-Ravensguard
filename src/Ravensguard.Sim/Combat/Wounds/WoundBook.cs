@@ -275,6 +275,15 @@ public sealed partial class WoundBook
         return inner > outer;
     }
 
+    /// <summary>P6-C1 (crime and justice 4.6): the court's rope. The body is brought to the second, the breath stops and the person dies of it (<see cref="DeathKind.Breath"/>); the caller's chronicle entry says it was the court.</summary>
+    public void Hang(long sec)
+    {
+        AdvanceTo(sec);
+        if (Dead) return;
+        if (BreathStopSec < 0) BreathStopSec = sec;
+        Die(sec, DeathKind.Breath, 0);
+    }
+
     private void Die(long sec, DeathKind kind, ulong wound)
     {
         if (Dead) return;

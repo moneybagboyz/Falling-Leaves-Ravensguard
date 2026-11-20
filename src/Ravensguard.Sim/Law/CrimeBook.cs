@@ -3,7 +3,9 @@ using Ravensguard.Sim.Core;
 namespace Ravensguard.Sim.Law;
 
 /// <summary>Where a crime stands (crime-and-justice 3): seen, reported to the law, the accused named, held in a cell, tried, sentenced, served, fled or pardoned. Append only; later steps (gaol, courts) move it on.</summary>
-public enum CrimeState : byte { Seen, Reported, Accused, Held, Tried, Sentenced, Served, Fled, Pardoned }
+public enum CrimeState : byte { Seen, Reported, Accused, Held, Tried, Sentenced, Served, Fled, Pardoned,
+    /// <summary>P6-C1: the court found no proof and let him go. Appended.</summary>
+    Acquitted }
 
 /// <summary>One who saw: the person and flags (bit 0 he knew who it was, bit 1 he is the actor's kin or friend, bit 2 he fears the actor): what the report's draw reads later.</summary>
 public readonly record struct WitnessRow(ulong Person, byte Flags)
@@ -63,8 +65,8 @@ public sealed class CrimeBook
     public CrimeRecord? Get(int id) => Crimes.GetValueOrDefault(id);
     public int ConvictionsOf(EntityId person, string kind) => Convictions.GetValueOrDefault((person.Value, kind));
 
-    /// <summary>The crimes still in the open for a person (known to be his, not yet served or pardoned), in id order.</summary>
-    public IEnumerable<CrimeRecord> Open(EntityId person) => Crimes.Values.Where(c => c.Known && c.Perpetrator == (long)person.Value && c.State < CrimeState.Served);
+    /// <summary>The crimes still in the open for a person (known to be his, not yet served, pardoned or acquitted; one he ran from is still open), in id order.</summary>
+    public IEnumerable<CrimeRecord> Open(EntityId person) => Crimes.Values.Where(c => c.Known && c.Perpetrator == (long)person.Value && (c.State < CrimeState.Served || c.State == CrimeState.Fled));
 
     /// <summary>The <c>LawHash</c> of the daily trail (crime 5): crimes, convictions and the bounty links in id order.</summary>
     public ulong Hash()

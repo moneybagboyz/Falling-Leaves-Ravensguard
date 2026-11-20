@@ -18,7 +18,7 @@ public static class Bounties
     public static long Amount(CrimeDef d, long value, long damage) => d.BountyFlat + d.BountyValueX * value + (d.BountyDamageDiv > 0 ? damage / d.BountyDamageDiv : 0);
 
     /// <summary>Posts the bounty of a reported crime, escrowed from the treasury of the place's fief (capped at a quarter of it). Returns the job, or null when the crime carries none, the lord has no treasury or it cannot pay.</summary>
-    public static Job? Post(LawWorld w, CrimeRecord rec, long nowSec)
+    public static Job? Post(LawWorld w, CrimeRecord rec, long nowSec, bool outlaw = false)
     {
         var d = w.Law.Get(rec.Kind);
         if (!d.Bounty || d.Civil || w.Jobs == null || w.JobEnv == null || w.Ledger == null || w.TreasuryOf?.Invoke(rec.Settlement) is not { } treasury) return null;
@@ -29,10 +29,11 @@ public static class Bounties
         if (amount <= 0) return null;
         int f = w.FiefOf(rec.Settlement);
         var poster = f >= 0 && f < w.FiefIds.Length ? w.FiefIds[f] : w.Ledger.OwnerOf(treasury);
-        long deadline = d.Permanent ? long.MaxValue / 4 : nowSec + w.S.BountyExpiryDays * 86_400L;
+        bool perm = d.Permanent || outlaw;                                       // P6-C1: an outlaw's bounty never expires and pays dead as alive
+        long deadline = perm ? long.MaxValue / 4 : nowSec + w.S.BountyExpiryDays * 86_400L;
         return w.Jobs.Post(w.JobEnv, OddJobKind.Bounty, poster, treasury, w.RegionId, rec.Settlement, nowSec, deadline, amount, j =>
         {
-            j.P0 = rec.Id; j.P1 = rec.Known ? rec.Perpetrator : -1; j.P2 = (d.DeadPaysAll ? FlagDeadPaysAll : 0) | (d.Permanent ? FlagPermanent : 0);
+            j.P0 = rec.Id; j.P1 = rec.Known ? rec.Perpetrator : -1; j.P2 = (d.DeadPaysAll || outlaw ? FlagDeadPaysAll : 0) | (perm ? FlagPermanent : 0);
             j.Title = "bounty:" + rec.Kind;
         });
     }

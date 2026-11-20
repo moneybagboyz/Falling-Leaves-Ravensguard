@@ -15,7 +15,7 @@ public static class DefeatTable
     /// <summary>
     /// The fate of one defeated person. Bandits rob (a cruel band kills a wounded lone victim with 50%), capture when kidnappers and the ransom is at least 1,000 mites, or when any band sees
     /// at least 1,000 mites a payer could pay; armies take prisoners (the hero and the party, surrendered and knocked-out soldiers; the rest flee); beasts maul (each minute 50% a feeding beast
-    /// finishes a downed victim unless an ally drives it off, for five minutes); a draugr kills the downed; guards fine and release (Phase 6 stub); locals beat and take the purse.
+    /// finishes a downed victim unless an ally drives it off, for five minutes); a draugr kills the downed; guards arrest (P6-C1: the fief's gaol); locals beat and take the purse.
     /// </summary>
     public static DefeatOutcome Decide(AftermathRules rules, ulong seed, ulong fightId, WinnerKind winner, BanditStyleDef? style, LoserFacts l, long time = 0, EntityId place = default)
     {
@@ -56,7 +56,7 @@ public static class DefeatTable
             case WinnerKind.Draugr:
                 return l.AllyStanding && l.State != LoserState.Dying ? O(DefeatKind.Mauled) : O(DefeatKind.Killed, true);   // a draugr finishes the downed unless allies hold the line
             case WinnerKind.Guards:
-                return O(DefeatKind.Ignored);                                                                  // a fine and release at the gate (jail is Phase 6)
+                return O(DefeatKind.Captured);                                                                 // P6-C1: an arrest (the old fine-and-release stub is gone): the fief's gaol takes him (crime-and-justice 4.4)
             case WinnerKind.Locals:
                 return O(DefeatKind.Robbed, st: "purse");
             default:

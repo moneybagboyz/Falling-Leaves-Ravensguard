@@ -167,7 +167,7 @@ Phase 5 owns 0x500..0x5FF; **Phase 6 uses 0x600..0x6FF**, registered in `Core/Rn
 | Stream | Spec | Use | Key |
 |---|---|---|---|
 | 0x600 | medicine | physician seeding; `AbstractPhysic` (draw 1) | person; person, day |
-| 0x610 / 0x611 / 0x612 / 0x613 / 0x614 | crime | reporting; guard recognition by clothes; NPC lord's mercy tie; bribes; NPC crime | crime, witness; guard, person, day; crime; official, day; household, day |
+| 0x610 / 0x611 / 0x612 / 0x613 / 0x614 / 0x615 | crime | reporting; guard recognition by clothes; NPC lord's mercy tie; bribes; NPC crime; arrests (P6-C1) | crime, witness; guard, person, day; crime; official, day; household, day; crime, day |
 | 0x620 | rumours v2 | slander | author, season |
 | 0x630 / 0x631 / 0x632 / 0x633 | slavery | raids; market buyer ties; runaways; revolts | region, season; market, day; person, day; holding, day |
 | 0x640 / 0x641 / 0x642 / 0x643 / 0x644 | family | courtship; child attributes; kin turning; kidnapping; the hero's old age | courtship, day; child; person, year; hero, season; hero, year |
@@ -181,7 +181,7 @@ Phase 5 owns 0x500..0x5FF; **Phase 6 uses 0x600..0x6FF**, registered in `Core/Rn
 | 0x6C0 / 0x6C1 / 0x6C2 / 0x6C3 | fire | spread; sparks; firedamp; accidents and lightning | cell, step; cell, step; site, cell; structure, day |
 | 0x6D0 / 0x6D1 / 0x6D2 / 0x6D3 / 0x6D4 | disease | onset; epidemic length and infection; plague start; spread and carriers; illness death | person, day; settlement / person, day; continent, year; edge, season / caravan; person, start |
 | 0x6E0 / 0x6E1 | holdings | reserved; horse breeding | -; mare, year |
-Reused unchanged: 0x420-0x422 (infection, malunion, surgery), 0x452 (bandit styles), 0x454 (escape window), 0x455 (lock picking), 0x456 (ransom), 0x532 (brittle blades, also knapped stone). History v1 appends ids to the history generator's own table (not this block). Free for growth: 0x601..0x60F, 0x615..0x61F, 0x621..0x62F, 0x634..0x63F, 0x645..0x64F, 0x655..0x65F, 0x665..0x66F, 0x673..0x67F, 0x683..0x68F, 0x693..0x69F, 0x6A1..0x6AF, 0x6B4..0x6BF, 0x6C4..0x6CF, 0x6D5..0x6DF, 0x6E2..0x6FF.
+Reused unchanged: 0x420-0x422 (infection, malunion, surgery), 0x452 (bandit styles), 0x454 (escape window), 0x455 (lock picking), 0x456 (ransom), 0x532 (brittle blades, also knapped stone). History v1 appends ids to the history generator's own table (not this block). Free for growth: 0x601..0x60F, 0x616..0x61F, 0x621..0x62F, 0x634..0x63F, 0x645..0x64F, 0x655..0x65F, 0x665..0x66F, 0x673..0x67F, 0x683..0x68F, 0x693..0x69F, 0x6A1..0x6AF, 0x6B4..0x6BF, 0x6C4..0x6CF, 0x6D5..0x6DF, 0x6E2..0x6FF.
 
 ## 6. Control keys (one consolidated table)
 
