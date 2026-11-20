@@ -14,6 +14,17 @@ public static class TreatAi
 
     public static int Score(int bleedingAlliesNear, int firstAidPm) => bleedingAlliesNear <= 0 ? 0 : Math.Min(1000, 500 + 150 * Math.Min(3, bleedingAlliesNear) + firstAidPm / 10);
 
+    /// <summary>
+    /// The Treat utility score of a person (medicine 4.5): <see cref="Score"/> for bleeding allies within 6 m (kin, household, comrades, party), halved for strangers only, and 0 while
+    /// his own pain is over 60% of his knock-out threshold (<paramref name="ownPainPct"/>, percent of it).
+    /// </summary>
+    public static int Score(int bleedingAlliesNear, int bleedingStrangersNear, int firstAidPm, int ownPainPct)
+    {
+        if (ownPainPct > 60) return 0;
+        if (bleedingAlliesNear > 0) return Score(bleedingAlliesNear, firstAidPm);
+        return Score(bleedingStrangersNear, firstAidPm) / 2;
+    }
+
     /// <summary>The topmost part of the limb chain that holds <paramref name="part"/>, or -1 when it is on the trunk or head.</summary>
     public static int LimbRoot(BodyPlanV2 plan, int part)
     {
@@ -25,14 +36,14 @@ public static class TreatAi
     }
 
     /// <summary>The next treatment a helper with <paramref name="items"/> and <paramref name="skill"/> gives, or null when there is nothing worth doing.</summary>
-    public static TreatRequest? Next(WoundBook patient, BodyPlanV2 plan, ITreatItems items, long now, int skill, ulong actor)
+    public static TreatRequest? Next(WoundBook patient, BodyPlanV2? plan, ITreatItems items, long now, int skill, ulong actor)
     {
         if (patient.Dead) return null;
         int i = Treatment.WorstBleeder(patient, -1, now);
         if (i >= 0)
         {
             var w = patient.Records[i];
-            int root = LimbRoot(plan, w.Part);
+            int root = plan == null ? -1 : LimbRoot(plan, w.Part);
             if (root >= 0 && w.BleedX10 >= TourniquetBleedX10 && (items.Has("rope", 1) || items.Has("bandage", 2))) return new TreatRequest(TreatKind.Tourniquet, root, now, skill, actor);
             if (items.Has("bandage", 1)) return new TreatRequest(TreatKind.Bandage, w.Part, now, skill, actor);
             return new TreatRequest(TreatKind.Pressure, w.Part, now, skill, actor);

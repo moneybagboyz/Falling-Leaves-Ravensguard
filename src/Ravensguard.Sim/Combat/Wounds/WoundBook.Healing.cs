@@ -35,6 +35,68 @@ public sealed partial class WoundBook
         Records.RemoveAll(r => r.State == WoundState.Scar && r.Is(Aid.Resolved) && Records.Count > 24);
     }
 
+    /// <summary>The ischaemia steps of a tourniquet (medicine 4.3), in sim-seconds on the limb.</summary>
+    public const int IschaemiaStep1S = 360, IschaemiaStep2S = 1080, IschaemiaLossS = 2160, IschaemiaWarn1S = 300, IschaemiaWarn2S = 1020, IschaemiaWarnLimbS = 1860;
+
+    /// <summary>
+    /// Once a sim-second (from <c>EndSecond</c>): every wound with a tourniquet on adds a second to its clock; as a limb's clock reaches a step every muscle wound distal to the tourniquet
+    /// drops a grade (bruised to torn, torn to mangled; a limb with none takes a bruise) and pain +10; at 2,160 the limb is lost. The clocks of one limb move together, so a step is
+    /// taken once per limb; warnings come 60 sim-s (one game hour: "loosen it or find a surgeon") before each step. A pure function of the book and the second, so both tiers agree.
+    /// </summary>
+    private void StepTourniquets(long s)
+    {
+        List<short>? roots = null;
+        for (int i = 0; i < Records.Count; i++)
+        {
+            var w = Records[i];
+            if (w.Dressing != Dressing.Tourniquet || w.Is(Aid.Resolved)) continue;
+            w.TourniquetOnS++; Records[i] = w;
+            if (roots == null || !roots.Contains(w.Root)) (roots ??= []).Add(w.Root);
+        }
+        if (roots == null) return;
+        long sec = (s + 1) * TicksPerSimS;
+        foreach (short root in roots)
+        {
+            uint clock = 0; ulong distal = 0;
+            foreach (var w in Records) if (w.Dressing == Dressing.Tourniquet && w.Root == root && !w.Is(Aid.Resolved)) { clock = Math.Max(clock, w.TourniquetOnS); distal |= w.DistalMask; }
+            switch (clock)
+            {
+                case IschaemiaWarn1S: Note(sec, BookEventKind.TourniquetWarning, root, "step:1"); break;
+                case IschaemiaWarn2S: Note(sec, BookEventKind.TourniquetWarning, root, "step:2"); break;
+                case IschaemiaWarnLimbS: Note(sec, BookEventKind.TourniquetWarning, root, "limb"); break;
+                case IschaemiaStep1S: Ischaemia(root, distal, sec, 1); break;
+                case IschaemiaStep2S: Ischaemia(root, distal, sec, 2); break;
+                case IschaemiaLossS:
+                    {
+                        Span<int> gone = stackalloc int[64]; int n = 0;
+                        for (int pi = 0; pi < 64; pi++) if ((distal >> pi & 1) != 0) gone[n++] = pi;
+                        LoseLimb(root, sec, gone[..n]);
+                        break;
+                    }
+            }
+        }
+    }
+
+    private void Ischaemia(short root, ulong distal, long sec, int step)
+    {
+        bool any = false;
+        for (int i = 0; i < Records.Count; i++)
+        {
+            var w = Records[i];
+            if (w.Cat != WoundCat.Muscle || w.Is(Aid.Resolved) || w.State == WoundState.Scar || (w.Part is < 0 or >= 64) || (distal >> w.Part & 1) == 0) continue;
+            any = true;
+            if (w.Grade < 3) { w.Grade++; if (w.Grade0 < w.Grade) w.Grade0 = w.Grade; w.Aids &= ~Aid.HalfDone; Retime(ref w); Records[i] = w; }
+        }
+        if (!any)
+            Records.Add(new WoundRecord
+            {
+                Id = NextId++, Part = root, Tissue = 0, Structure = -1, Organ = -1, Kind = WoundKind.Crush, Cat = WoundCat.Muscle, Grade = (byte)step, Grade0 = (byte)step, DepthPm = 600,
+                State = WoundState.Open, Born = sec, NeedX10 = NeedX10(WoundCat.Muscle, (byte)step, 600, false, false), PainC = 0, Root = root,
+            });
+        PainX100 += 1000;
+        Note(sec, BookEventKind.Ischaemia, root, "step:" + step);
+    }
+
     private static bool BreaksSkin(in WoundRecord w) =>
         w.Cat != WoundCat.Concussion && (w.Kind is WoundKind.Cut or WoundKind.Burn || w.Has(WoundFlags.Severed) || w.Has(WoundFlags.Compound) || w.Cat is WoundCat.Organ or WoundCat.Vessel);
 

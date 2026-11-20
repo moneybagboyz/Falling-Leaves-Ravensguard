@@ -1,0 +1,18 @@
+// What a physician asks, in mites (medicine spec 3; a stitch is two days of a labourer's wage), and the rules of physicians and barber-surgeons (4.4). A barber-surgeon
+// charges 60 percent and offers only the services marked barber. A splint costs 150 plus the splint itself. The price solver may move these by 20 percent with demand.
+[
+  { "type": "medicine_price", "id": "visit", "mites": 50, "barber": true },
+  { "type": "medicine_price", "id": "clean", "mites": 100, "barber": true },
+  { "type": "medicine_price", "id": "stitch", "mites": 300, "barber": true },
+  { "type": "medicine_price", "id": "set_bone", "mites": 400, "barber": true },
+  { "type": "medicine_price", "id": "splint", "mites": 150, "barber": true },
+  { "type": "medicine_price", "id": "tourniquet", "mites": 50, "barber": true },
+  { "type": "medicine_price", "id": "tendon_repair", "mites": 1200 },
+  { "type": "medicine_price", "id": "ligament_repair", "mites": 1500 },
+  { "type": "medicine_price", "id": "organ_repair", "mites": 2000 },
+  { "type": "medicine_price", "id": "amputate", "mites": 800, "barber": true },
+  { "type": "medicine_price", "id": "poppy_dose", "mites": 600 },
+  { "type": "medicine_price", "id": "bed_day", "mites": 60 },
+  { "type": "medicine_rules", "id": "default", "barber_share_pct": 60, "bed_day_mites": 60, "physician_treat_pct": 80, "barber_treat_pct": 60,
+    "people_per_physician": 1000, "barber_min_people": 150, "physician_surgery_base": 45, "physician_surgery_spread": 26, "barber_surgery_base": 25, "barber_surgery_spread": 16 },
+]

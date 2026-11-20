@@ -22,7 +22,8 @@ public sealed class WoundSystem : AbstractSystem
         long to = (ctx.Hour + 1) * 3600;
         lock (l.Sync)
         {
-            AbstractFirstAid.Run(ctx.World, l, ctx.Hour * 3600);
+            var seen = Ravensguard.Sim.Medicine.AbstractPhysic.Run(ctx.World, l, ctx.Hour * 3600);          // medicine 4.4: a physician or barber-surgeon first, where the town has one
+            AbstractFirstAid.Run(ctx.World, l, ctx.Hour * 3600, seen);
             l.AdvanceTo(to);
             Resolve(ctx.World, ctx.Outbox, l);
         }
@@ -94,12 +95,12 @@ public static class AbstractFirstAid
 {
     public static int ChancePct(bool householdHome, bool neighbours) => householdHome ? 90 : neighbours ? 40 : 0;
 
-    public static void Run(SimWorld w, WoundLedger l, long hourStartSec)
+    public static void Run(SimWorld w, WoundLedger l, long hourStartSec, ISet<ulong>? treatedByPhysician = null)
     {
         var pt = w.People;
         foreach (var (key, b) in l.Books)
         {
-            if (b.Dead || b.OpenCount == 0) continue;
+            if (b.Dead || b.OpenCount == 0 || treatedByPhysician != null && treatedByPhysician.Contains(key)) continue;
             int row = pt.IndexOf(new EntityId(key));
             if (row < 0 || pt.Status[row] != PersonStatus.Alive) continue;
             int hh = pt.Household[row];

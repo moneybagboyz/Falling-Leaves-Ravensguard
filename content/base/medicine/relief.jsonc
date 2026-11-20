@@ -1,0 +1,8 @@
+// Pain relief per dose (medicine spec 3; wounds 3.3): points of pain taken off per game hour for 4 game hours. Poppy milk is a physician's good (30 g, 600 mites a dose);
+// it is sold only in towns that have a physician.
+[
+  { "type": "pain_relief", "id": "ale", "points_per_hour": 8, "hours": 4 },
+  { "type": "pain_relief", "id": "poultice", "points_per_hour": 15, "hours": 4 },
+  { "type": "pain_relief", "id": "poppy_milk", "points_per_hour": 40, "hours": 4 },
+  { "type": "good", "id": "poppy_milk", "name": "Poppy milk", "class": "medical", "state": "solid", "unit": "piece", "piece_mass_g": 30, "bulk_litres_per_kg": 1.0, "base_price_mites_per_kg": 20000, "spoil_class": "inert", "tags": ["medical"] },
+]

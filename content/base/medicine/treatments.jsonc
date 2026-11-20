@@ -1,0 +1,18 @@
+// The thirteen treatments (medicine spec 3; wounds 4.3, 4.6): time in sim-seconds (one game minute is three), the surgery skill floor, what each uses (alternatives in order,
+// the first held is taken; the sewing needle is a tool and is kept) and whether it wants light. These are the Phase 4 numbers moved out of code; MT-1 proves they are unchanged
+// (the one new value is the release of a pressure hold or a tourniquet, 6 sim-s; Phase 4 let it take no time).
+[
+  { "type": "treatment", "id": "pressure", "sim_s": 2 },
+  { "type": "treatment", "id": "bandage", "sim_s": 4, "needs": [{"item": "bandage", "count": 1}] },
+  { "type": "treatment", "id": "tourniquet", "sim_s": 6, "needs": [{"item": "rope", "count": 1}, {"item": "bandage", "count": 2}] },
+  { "type": "treatment", "id": "splint", "sim_s": 12, "needs": [{"item": "splint", "count": 1}] },
+  { "type": "treatment", "id": "set_bone", "sim_s": 20 },
+  { "type": "treatment", "id": "stitch", "sim_s": 30, "min_skill": 10, "needs": [{"item": "needle_and_thread", "count": 1}], "tool_quality": "sewing", "tool_level": 1, "light": true },
+  { "type": "treatment", "id": "clean", "sim_s": 20 },
+  { "type": "treatment", "id": "cauterise", "sim_s": 10 },
+  { "type": "treatment", "id": "tendon_repair", "sim_s": 90, "min_skill": 50, "needs": [{"item": "needle_and_thread", "count": 1}], "tool_quality": "sewing", "tool_level": 1, "light": true },
+  { "type": "treatment", "id": "ligament_repair", "sim_s": 90, "min_skill": 60, "needs": [{"item": "needle_and_thread", "count": 1}], "tool_quality": "sewing", "tool_level": 1, "light": true },
+  { "type": "treatment", "id": "organ_repair", "sim_s": 180, "min_skill": 60, "needs": [{"item": "needle_and_thread", "count": 1}], "tool_quality": "sewing", "tool_level": 1, "light": true },
+  { "type": "treatment", "id": "amputate", "sim_s": 60, "min_skill": 30 },
+  { "type": "treatment", "id": "release_pressure", "sim_s": 6 },
+]

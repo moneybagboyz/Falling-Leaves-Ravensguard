@@ -1,0 +1,9 @@
+// Walking and carrying aids (medicine spec 3, 4.6). A crutch takes a hand; with one usable leg it lifts the hop from 250 to 550 permille, two crutches with no usable leg give 0
+// and the patient sits. A splint is the Phase 5 good. A litter (two poles and cloth) is carried by two at the carriers' speed x0.6.
+[
+  { "type": "medical_aid", "id": "crutch", "hands": 1, "one_leg_pm": 550, "no_leg_pm": 0 },
+  { "type": "medical_aid", "id": "splint", "hands": 0 },
+  { "type": "medical_aid", "id": "litter", "hands": 0, "carriers": 2, "carry_speed_pm": 600 },
+  { "type": "good", "id": "crutch", "name": "Crutch", "class": "medical", "state": "solid", "unit": "piece", "piece_mass_g": 1400, "bulk_litres_per_kg": 4.0, "base_price_mites_per_kg": 60, "spoil_class": "planks", "tags": ["medical", "tool"] },
+  { "type": "good", "id": "litter", "name": "Litter", "class": "medical", "state": "solid", "unit": "piece", "piece_mass_g": 6000, "bulk_litres_per_kg": 4.0, "base_price_mites_per_kg": 40, "spoil_class": "planks", "tags": ["medical"] },
+]

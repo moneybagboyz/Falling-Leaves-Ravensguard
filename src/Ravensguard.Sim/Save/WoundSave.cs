@@ -15,13 +15,15 @@ public sealed class WoundRecSave
     [Key(19)] public bool Internal { get; set; } [Key(20)] public bool Clots { get; set; } [Key(21)] public long Born { get; set; } [Key(22)] public long DressFromS { get; set; }
     [Key(23)] public int HealX10 { get; set; } [Key(24)] public int NeedX10 { get; set; } [Key(25)] public int PainC { get; set; } [Key(26)] public byte InfectionLevel { get; set; }
     [Key(27)] public int SepsisDay { get; set; } [Key(28)] public int DeathDay { get; set; } [Key(29)] public long StitchedAt { get; set; } [Key(30)] public long DressedAt { get; set; } [Key(31)] public ulong Cause { get; set; }
+    /// <summary>Medicine 4.3 (additive keys, absent while 0): the tourniquet's clock in sim-seconds and the parts distal to it.</summary>
+    [Key(32)] public uint TourniquetOnS { get; set; } [Key(33)] public ulong DistalMask { get; set; }
 
     public static WoundRecSave Of(in WoundRecord w) => new()
     {
         Id = w.Id, Part = w.Part, Tissue = w.Tissue, Structure = w.Structure, Organ = w.Organ, Root = w.Root, Kind = (byte)w.Kind, Cat = (byte)w.Cat, Grade = w.Grade, Grade0 = w.Grade0, Count = w.Count,
         Residual = w.Residual, DepthPm = w.DepthPm, BleedX10 = w.BleedX10, Flags = (int)w.Flags, State = (byte)w.State, Dressing = (byte)w.Dressing, Aids = (ushort)w.Aids, Attr = (byte)w.Attr,
         Internal = w.Internal, Clots = w.Clots, Born = w.Born, DressFromS = w.DressFromS, HealX10 = w.HealX10, NeedX10 = w.NeedX10, PainC = w.PainC, InfectionLevel = w.InfectionLevel,
-        SepsisDay = w.SepsisDay, DeathDay = w.DeathDay, StitchedAt = w.StitchedAt, DressedAt = w.DressedAt, Cause = w.Cause,
+        SepsisDay = w.SepsisDay, DeathDay = w.DeathDay, StitchedAt = w.StitchedAt, DressedAt = w.DressedAt, Cause = w.Cause, TourniquetOnS = w.TourniquetOnS, DistalMask = w.DistalMask,
     };
 
     public WoundRecord To() => new()
@@ -29,7 +31,7 @@ public sealed class WoundRecSave
         Id = Id, Part = Part, Tissue = Tissue, Structure = Structure, Organ = Organ, Root = Root, Kind = (WoundKind)Kind, Cat = (WoundCat)Cat, Grade = Grade, Grade0 = Grade0, Count = Count,
         Residual = Residual, DepthPm = DepthPm, BleedX10 = BleedX10, Flags = (WoundFlags)Flags, State = (WoundState)State, Dressing = (Dressing)Dressing, Aids = (Aid)Aids, Attr = (AttrLoss)Attr,
         Internal = Internal, Clots = Clots, Born = Born, DressFromS = DressFromS, HealX10 = HealX10, NeedX10 = NeedX10, PainC = PainC, InfectionLevel = InfectionLevel,
-        SepsisDay = SepsisDay, DeathDay = DeathDay, StitchedAt = StitchedAt, DressedAt = DressedAt, Cause = Cause,
+        SepsisDay = SepsisDay, DeathDay = DeathDay, StitchedAt = StitchedAt, DressedAt = DressedAt, Cause = Cause, TourniquetOnS = TourniquetOnS, DistalMask = DistalMask,
     };
 }
 

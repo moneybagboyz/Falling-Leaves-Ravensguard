@@ -66,6 +66,13 @@ public struct WoundRecord
     /// <summary>The game second the wound was stitched.</summary>
     public long StitchedAt, DressedAt;
     public ulong Cause;
+    /// <summary>
+    /// Medicine 4.3: sim-seconds a tourniquet has been on the limb chain, accumulated (a loosened and re-tied tourniquet carries on, no exploit); 0 while none was. Steps at 360
+    /// (every distal muscle one grade worse, pain +10), 1,080 (again) and 2,160 (the limb is lost).
+    /// </summary>
+    public uint TourniquetOnS;
+    /// <summary>Bit per part index of the parts distal to <see cref="Root"/> when the tourniquet was tied (the book holds no plan); 0 without a tourniquet.</summary>
+    public ulong DistalMask;
 
     public readonly bool Has(WoundFlags f) => (Flags & f) == f;
     public readonly bool Is(Aid a) => (Aids & a) != 0;
@@ -87,4 +94,8 @@ public struct PermanentInfo
 
 /// <summary>A change a caller may want to log (the flavour log, the chronicle).</summary>
 public readonly record struct BookEvent(long Sec, BookEventKind Kind, int Part = -1, string Note = "");
-public enum BookEventKind : byte { Collapsed, Unconscious, Woke, Died, Infected, InfectionCleared, Scar, Malunion, PermanentLoss, Dazed, Recovered, Amputated, Sepsis }
+public enum BookEventKind : byte { Collapsed, Unconscious, Woke, Died, Infected, InfectionCleared, Scar, Malunion, PermanentLoss, Dazed, Recovered, Amputated, Sepsis,
+    /// <summary>Medicine 4.3 (appended): the limb under a tourniquet took a step of ischaemia; <c>Note</c> is "step:1" or "step:2".</summary>
+    Ischaemia,
+    /// <summary>Medicine 4.3 (appended): the tourniquet is close to its next step ("loosen it or find a surgeon"); <c>Note</c> is "step:1" or "step:2" or "limb".</summary>
+    TourniquetWarning }
