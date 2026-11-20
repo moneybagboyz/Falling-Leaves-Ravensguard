@@ -37,6 +37,12 @@ public enum TransferReason : byte
     Royalty,
     // Phase 6 (overview 8.1, append only; saves pad the count as for Alms): justice, slavery, family, rule and income. Nothing writes them until its own step lands.
     Fee, Restitution, Bounty, Bribe, SlaveSale, Dowry, Relief, Aid, Subsidy, Tallage, Customs, Loan, Interest, Skim,
+    /// <summary>P6-C2 (contracts 4.1): a contract's pay moved from its issuer's purse into the escrow chest, and a taker's bond into the bond chest. Appended: older saves load with the count padded.</summary>
+    ContractEscrow,
+    /// <summary>P6-C2 (contracts 4.2): the escrow paid to the taker on completion (a company's share to its purse), a tournament's purse to its winner.</summary>
+    ContractPay,
+    /// <summary>P6-C2 (contracts 4.2): the escrow returned to the issuer on failure, expiry or cancel; a bond given back on success or charged to the issuer on a failure.</summary>
+    ContractRefund,
 }
 
 /// <summary>The only faucets: the one-off seed money of world creation, silver struck at a mint, and the coin a household brings across a region border (the other region's ledger holds the matching <see cref="SinkReason.Emigrate"/>).</summary>
