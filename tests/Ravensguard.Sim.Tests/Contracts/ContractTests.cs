@@ -544,6 +544,9 @@ public class ContractTests(ITestOutputHelper output)
     public void TheTransferReasonsAreAppendedAtTheEnd_SoOlderSavesKeepTheirMeaning()
     {
         var all = Enum.GetNames<TransferReason>();
-        Assert.Equal("Skim", all[^4]); Assert.Equal("ContractEscrow", all[^3]); Assert.Equal("ContractPay", all[^2]); Assert.Equal("ContractRefund", all[^1]);
+        // C2's three were appended right after Skim; later parts append after them (D2 Tribute, LordRansom; E1 RiotLoot; E2 Penance, RelicSale; ...), never before
+        int skim = Array.IndexOf(all, "Skim");
+        Assert.True(skim >= 0);
+        Assert.Equal("ContractEscrow", all[skim + 1]); Assert.Equal("ContractPay", all[skim + 2]); Assert.Equal("ContractRefund", all[skim + 3]);
     }
 }
