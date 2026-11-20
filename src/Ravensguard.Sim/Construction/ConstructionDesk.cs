@@ -195,6 +195,15 @@ public static class ConstructionDesk
         return row >= 0 ? pt.Household[row] : -1;
     }
 
+    /// <summary>P5-C: the same for build mode's preview at a barrier (no desk context there).</summary>
+    public static int HouseholdOf(Ravensguard.Sim.Save.WorldState st)
+    {
+        if (st.Hero is not { } h || st.Party is not { } party) return -1;
+        var pt = st.Population.People;
+        int row = Ravensguard.Sim.Succession.HeroPerson.RowOf(pt, h, party.Hero);
+        return row >= 0 ? pt.Household[row] : -1;
+    }
+
     /// <summary>Stores the hero may send goods from: his pack, his household's store, a site pile of his.</summary>
     private static bool OwnedBy(HeroContext ctx, EntityId store)
     {

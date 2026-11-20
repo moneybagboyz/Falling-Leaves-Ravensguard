@@ -175,6 +175,90 @@ public static class NewGameDebug
         finally { try { System.IO.Directory.Delete(tmp, true); } catch { } }
     }
 
+    /// <summary>
+    /// P5-C screenshots of build mode (--ng-shot build --ng-scene place | library | fitted | saveas | site): the hero buys the empty plot nearest him (a dev faucet pays for it; the purchase
+    /// goes through his desk) and walks to it; then free placement with a wall dragged out past the plot's edge (the cells off his land refused, the reason beside the cursor), the plan library
+    /// on that plot, a plan fitted to the plot and placed as ghosts, save as blueprint's rectangle and name over them, and the site panel with a hired crew at work.
+    /// </summary>
+    static async Task BuildModeShot(SceneTree tree, Ravensguard.Game.World.StreetView sv, string scene)
+    {
+        var clock = sv.DebugWorld.Clock;
+        var lot = await sv.DebugBuyLot() ?? throw new Exception("build shot: no empty plot for sale near the hero");
+        GD.Print($"[build] bought the plot {lot}");
+        int cx = lot.X + lot.W / 2, cy = lot.Y + lot.H / 2;
+        // set the hero down at the plot's street edge (dev), then let the desk's hour come round for the purchase
+        var (fx, fy) = lot.Street switch { 0 => (cx, lot.Y - 2), 1 => (lot.Right + 1, cy), 2 => (cx, lot.Bottom + 1), 3 => (lot.X - 2, cy), _ => (cx, cy) };
+        sv.DebugPlaceHero(fx, fy);
+        sv.DebugWorld.SetSpeed(Ravensguard.Sim.Core.SimSpeed.X8);
+        bool may = false;
+        for (int i = 0; i < 600 && !may; i++) { await Frames(tree, 5); may = await sv.DebugMayBuild(cx, cy); }
+        sv.DebugWorld.SetSpeed(Ravensguard.Sim.Core.SimSpeed.Paused);
+        if (!may) throw new Exception("build shot: the plot was not bought");
+        GD.Print($"[build] the plot is the hero's at {clock.Now}; the hero at {sv.DebugHeroCell}");
+        await Frames(tree, 60);
+        if (!sv.DebugBuildMode(true)) throw new Exception("build shot: build mode did not open");
+        sv.DebugPanTo(cx, cy + 4);                                               // the plot in the upper part of the screen, clear of the palette
+        await Frames(tree, 10);
+        string? plan = null;
+        var lib = Ravensguard.Sim.Construction.PlanLibrary.For(NewGameServices.Content().Db);
+        foreach (var id in new[] { "burgage_middling", "burgage_poor", "cottage_two_room", "peasant_cottage", "smithy_house", "test_cottage" })
+            if (lib.Grid(id) is { } g && Ravensguard.Sim.Construction.PlanFitter.Fit(g, lot, lib.Library.Pieces).Ok) { plan = id; break; }
+        switch (scene)
+        {
+            case "place":
+            {
+                // a wattle wall dragged from inside the plot out across its side edge: the cells off the hero's land are refused, with the holder's name
+                // a wattle wall dragged from inside the plot out across its north edge (the west edge for a plot facing north): the cells off the hero's land are refused
+                sv.DebugBuildPiece("wall_wattle");
+                var from = lot.Street == 0 ? (lot.X + 4, lot.Y + 3) : (cx + 5, lot.Y + 3);
+                var to = lot.Street == 0 ? (lot.X - 4, lot.Y + 3) : (cx + 5, lot.Y - 4);
+                sv.DebugPanTo(Math.Min(from.Item1, to.Item1) - 4, Math.Min(from.Item2, to.Item2) + 7);
+                sv.DebugBuildCursor(to.Item1, to.Item2, from);
+                await Until(tree, () => sv.DebugBuildAnswer is { } a && a.Cells.Count > 2, 600);
+                await Frames(tree, 20);
+                break;
+            }
+            case "library":
+                sv.DebugBuildCursor(cx, cy);
+                await Until(tree, () => sv.DebugBuildAnswer is { Lot: not null }, 600);
+                if (!sv.DebugOpenPlanLibrary()) throw new Exception("build shot: the plan library did not open");
+                await Frames(tree, 30);
+                break;
+            default:
+            {
+                if (plan == null) throw new Exception("build shot: no plan fits the plot " + lot);
+                sv.DebugPlan(plan);
+                sv.DebugBuildCursor(cx, cy);
+                await Until(tree, () => sv.DebugBuildAnswer is { Ask.Plan: true, Fit.Ok: true }, 600);
+                await Frames(tree, 10);
+                GD.Print($"[build] {plan} fitted: {sv.DebugBuildAnswer?.Fit}");
+                sv.DebugPlanPlace();
+                if (!await Until(tree, () => sv.DebugGhostCount > 0, 3000)) throw new Exception("build shot: the plan was not placed");
+                if (scene == "fitted") { sv.DebugBuildCursor(cx, cy); await Frames(tree, 30); break; }
+                if (scene == "saveas")
+                {
+                    var d = sv.DebugSaveRect(lot.X, lot.Y, lot.Right - 1, lot.Bottom - 1);
+                    d?.DebugName("My burgage");
+                    await Frames(tree, 20);
+                    break;
+                }
+                // site: hands hired and the pile stocked (the dev faucet), the clock run until they work
+                sv.DebugBuildMode(false);
+                GD.Print("[build] " + sv.DebugDevBuild("stock"));
+                GD.Print("[build] " + sv.DebugDevBuild("finish", "25"));
+                GD.Print("[build] " + sv.DebugDevBuild("crew", "3"));
+                sv.DebugWorld.SetSpeed(Ravensguard.Sim.Core.SimSpeed.X8);
+                long from = clock.Now.Seconds;
+                await Until(tree, () => clock.Now.Seconds >= from + 240, 20000);
+                sv.DebugWorld.SetSpeed(Ravensguard.Sim.Core.SimSpeed.Paused);
+                sv.DebugBuildMode(true);
+                if (!sv.DebugOpenSitePanel()) throw new Exception("build shot: the site panel did not open");
+                await Frames(tree, 40);
+                break;
+            }
+        }
+    }
+
     /// <summary>--ng-shot quickstart|creation|embark|legends --shot-out file.png [--ng-layer N] [--ng-years N] [--ng-hover x,y] [--ng-delay-ms N]</summary>
     public static async Task Shot(SceneTree tree, ScreenRouter router, string[] args)
     {
@@ -244,6 +328,7 @@ public static class NewGameDebug
                     await Until(tree, () => rt.HourDone >= sv.DebugWorld.Clock.Now.TotalHours, 6000);
                     await Frames(tree, 60);
                     string scene = Arg("--ng-scene", "half");
+                    if (scene is "place" or "library" or "fitted" or "saveas" or "site") { await BuildModeShot(tree, sv, scene); break; }   // P5-C
                     sv.DebugBuild(scene == "fallen" ? "collapse" : scene);
                     // let the clock run until the crews are at work (a game minute or two), or the floor has fallen; a groan is caught at once, paused
                     var clock = sv.DebugWorld.Clock; long from = clock.Now.Seconds;
