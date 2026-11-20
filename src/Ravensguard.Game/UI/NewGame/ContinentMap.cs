@@ -234,7 +234,7 @@ public static class ContinentMap
         foreach (var s in h.Settlements)
         {
             if (!s.IsRuin) continue;
-            string cause = s.RuinCauseEvent.Value != 0 && h.Chronicle.Get(s.RuinCauseEvent) is { } ce ? ce.Data.GetValueOrDefault("title", ce.TypeId) : "";
+            string cause = s.RuinCauseEvent.Value != 0 && h.Chronicle.Get(s.RuinCauseEvent) is { } ce ? h.Title(ce, L.T) : "";
             list.Add(new LegendMarker(s.Cell, MarkerKind.Ruin,
                 cause.Length > 0 ? L.F("LEGEND_MARKER_RUIN_CAUSE", s.Name, s.RuinKind, s.RuinTick / 4, cause) : L.F("LEGEND_MARKER_RUIN", s.Name, s.RuinKind, s.RuinTick / 4),
                 s.RuinEvent));

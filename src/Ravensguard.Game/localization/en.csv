@@ -5882,6 +5882,80 @@ fam_arrange_line_alliance,"{0}, {1}: an alliance with the house of {2} (answer {
 fam_arrange_line_consent,"{0}, {1}: {2}, but a fief's heir needs the overlord's consent and fee (answer {3}, dowry {4} mites)."
 fam_btn_arrange,Arrange a match for {0}
 fam_arrange_low,"{0}, {1}: the best the houses would consider is {2}, but the answer ({3}) is under what a head asks (50): a gift to his house or a better name would help."
+ch_h_religion_founded,{place} is the holy site of {faith}.
+ch_h_war_declared,{a} declares war on {b} (utility {utility}).
+ch_h_plague_reaches,The plague reaches {place}; {dead} die.
+ch_h_unrest_riot,Riots spread about {place}; unrest {unrest} in a thousand under {ruler}.
+ch_h_unrest_revolt,Revolt looms about {place}; unrest {unrest} in a thousand under {ruler}.
+ch_h_rebellion,{leader} raises the banner of revolt against {ruler} at {place}.
+ch_h_heresy_arises,"A heresy of {faith} takes hold in the realm of {ruler}, about {place}."
+ch_h_heresy_ends,The heresy of {faith} about {place} comes to an end.
+ch_h_excommunication,"{ruler}, who rules about {place}, is cast out of the church of {faith}."
+ch_h_abbey_founded,{ruler} endows an abbey at {place} in the name of {faith}.
+ch_h_abolition,"{ruler} abolishes slavery in the realm about {place}, as {faith} teaches."
+ch_h_slave_raid,Riders of {raider} carry off {count} people from {place}.
+ch_h_slaves_sold,{count} captives are sold in the market of {place}.
+ch_h_outlaw_dealt,{outlaw} is taken near {place} and meets {punishment}.
+ch_h_rel_old_gods,the Old Gods of the North
+ch_h_rel_church_of_the_vale,the Church of the Vale
+ch_h_rel_hill_saints,the Hill Saints
+ch_h_rel_drowned_saints,the Faith of the Drowned
+ch_h_rel_local,a local faith
+ch_h_pun_hanging,the rope
+ch_h_pun_outlawry,outlawry
+ch_h_pun_exile,exile
+ch_h_pun_fine,a fine
+ch_h_pun_flogging,the lash
+ch_h_pun_gaol,the gaol
+ch_h_pun_bond_labour,bond labour
+ch_h_pun_confiscation_and_fine,confiscation and a fine
+ch_h_pun_blood_price,the blood price
+ch_h_pun_weregild,weregild
+ch_h_pun_stocks_then_hand,the stocks and the hand
+ch_note_h_law,the law and custom of the realm
+ch_note_h_trade,the trade and commissions of a rich town
+ch_note_h_weather,the weather of the season
+ch_note_h_crime,lawlessness in the marches
+ch_note_h_raid,raiding along the border
+ch_note_h_migration,families drifting to better land
+ch_note_h_fire,a fire taking hold in dry weather
+ch_note_h_death,the years and the sicknesses of the age
+ch_note_h_family,the marriages of the royal houses
+ch_note_h_diplomacy,a quarrel between proud courts
+ch_note_h_mineflood,the dangers of the deep workings
+ch_note_h_war,an old war between the early kings
+ch_note_h_disease,a sickness carried along the trade roads
+ch_note_h_faith,the devotion of the people
+ch_note_h_famine,a failed harvest
+ch_note_h_battle,a battle lost or won
+ch_note_h_justice,the justice of the realm
+ch_note_h_slavery,the trade in captives
+ch_note_h_tax,heavy taxes and a hated steward
+ch_note_h_unrest,unrest among the people
+ch_note_h_cb_claim,a claim to lands held by another realm
+ch_note_h_cb_excomm,a ruler cast out of the church
+ch_note_h_cb_insult,an insult to the realm's honour
+ch_note_h_cb_raid,raids along the border
+ch_note_h_cb_succession,a claim on the succession
+ch_note_h_plague_unrest,the plague's toll on the people
+ch_note_h_famine_unrest,a famine that left the people hungry
+ch_note_h_excomm_unrest,a ruler cast out of the church
+ch_note_h_heresy_unrest,a heresy in the realm
+ch_note_h_defeat_unrest,contempt for a ruler who lost a war
+ch_note_h_tax_unrest,taxes the people could not pay
+ch_note_h_heresy_plague,anger and fear after the plague
+ch_note_h_heresy_famine,anger and want after the famine
+ch_note_h_heresy_ruler,a ruler who held to the heresy
+ch_note_h_heresy_run,the heresy running its course
+ch_note_h_war_on_kin,a war against a realm of his own faith
+ch_note_h_piety,the piety of the ruler
+ch_note_h_faith_ancient,"the old founding of the faith, before the records begin"
+ch_note_h_contagion,contagion along the trade roads
+ch_note_h_law_dealt,the law of the culture
+ch_note_h_captives_of_war,the captives of a war
+ch_note_h_weak_neighbour,a weaker neighbour with a thin guard
+ch_note_h_market,a market that buys captives
+WL_RULES,History rules: {0}
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."

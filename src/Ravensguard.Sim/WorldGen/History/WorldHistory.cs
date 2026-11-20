@@ -28,6 +28,13 @@ public sealed class WorldHistory
     /// <summary>Final realm index per continent cell (255 = none).</summary>
     public byte[] FinalOwner { get; set; } = [];
     public int[] FinalPop { get; set; } = [];
+    /// <summary>The rules the history was made with (0 = Phase 1, frozen; 1 = Phase 6).</summary>
+    public int RulesVersion { get; init; }
+    /// <summary>History v1 only: the faiths, the heresies, the excommunications and the slave raids of the legends (empty under v0).</summary>
+    public List<HistoryReligion> Religions { get; } = [];
+    public List<Heresy> Heresies { get; } = [];
+    public List<Excommunication> Excommunications { get; } = [];
+    public List<SlaveRaid> SlaveRaids { get; } = [];
     public long StartPopulation { get; set; }
     public long EndPopulation { get; set; }
 
@@ -47,11 +54,37 @@ public sealed class WorldHistory
     public Artefact? GetArtefact(EntityId id) => _artefacts.GetValueOrDefault(id);
     public IEnumerable<RealmState> AliveRealms => Realms.Where(r => r.Alive);
 
+    /// <summary>The current name of a chronicle parameter's id in these legends (a notable's, a settlement's), "?" when it has none: what a keyed entry's sentence fills its holes with.</summary>
+    public string NameOf(ChronParamKind kind, long id)
+    {
+        var eid = new EntityId((ulong)id);
+        return kind switch
+        {
+            ChronParamKind.Person => GetNotable(eid)?.Full ?? Realms.FirstOrDefault(r => r.Id == eid)?.Name ?? "?",
+            ChronParamKind.Place => GetSettlement(eid)?.Name ?? "?",
+            _ => "?",
+        };
+    }
+
+    /// <summary>The heading of an entry for a viewer: a keyed entry reads as its sentence through <paramref name="tr"/> (en.csv), a legacy entry its English title.</summary>
+    public string Title(ChronicleEntry e, Func<string, string> tr) =>
+        e.TextKey.Length > 0 ? ChronicleTypes.Format(e, tr, NameOf) : e.Data.GetValueOrDefault("title", e.TypeId);
+
+    /// <summary>The body text of a legacy entry; a keyed entry's sentence is its title, so it has none.</summary>
+    public string Text(ChronicleEntry e) => e.TextKey.Length > 0 ? "" : e.Data.GetValueOrDefault("text", "");
+
+    /// <summary>A cause's note for a viewer: its key and parameters through <paramref name="tr"/>, else its legacy English note, else its kind.</summary>
+    public string NoteText(Cause c, Func<string, string> tr)
+    {
+        string n = ChronicleTypes.FormatNote(c, tr, NameOf);
+        return n.Length > 0 ? n : c.Kind.ToString();
+    }
+
     /// <summary>One readable legends line: "Spring 266: Title — text. Cause: ... (event #123)".</summary>
     public string LegendLine(ChronicleEntry e)
     {
         var d = e.Data;
-        string title = d.GetValueOrDefault("title", e.TypeId), text = d.GetValueOrDefault("text", "").TrimEnd('.');
+        string title = d.GetValueOrDefault("title", e.TextKey.Length > 0 ? e.TextKey : e.TypeId), text = d.GetValueOrDefault("text", "").TrimEnd('.');
         var sb = new StringBuilder();
         sb.Append(e.When.Season).Append(' ').Append(e.When.Year).Append(": ").Append(title);
         if (text.Length > 0) sb.Append(" — ").Append(text);
@@ -84,6 +117,8 @@ public sealed class WorldHistory
             foreach (var s in e.Subjects) Id(s);
             foreach (var c in e.Causes) { L((long)c.Kind); if (c.EventId is { } x) Id(x); S(c.Note); }
             foreach (var kv in e.Data.OrderBy(k => k.Key, StringComparer.Ordinal)) { S(kv.Key); S(kv.Value); }
+            if (e.TextKey.Length > 0) { S(e.TextKey); foreach (var p in e.Params ?? []) { S(p.Name); L((long)p.Kind); L(p.Value); S(p.Key); } }
+            foreach (var c in e.Causes) if (c.NoteKey.Length > 0) { S(c.NoteKey); foreach (var p in c.NoteParams ?? []) { S(p.Name); L((long)p.Kind); L(p.Value); S(p.Key); } }
         }
         foreach (var s in Settlements)
         {
@@ -109,6 +144,15 @@ public sealed class WorldHistory
         h.AppendData(FinalOwner);
         foreach (var p in FinalPop) { L(p); }
         L(StartPopulation); L(EndPopulation);
+        if (RulesVersion >= 1)
+        {
+            L(RulesVersion);
+            foreach (var r in Religions) { L(r.Index); S(r.Name); L(r.Culture); Id(r.FoundedEvent); Id(r.Founder); L(r.FoundedTick); L(r.SchismFrom); Id(r.HolySite); }
+            foreach (var x in Heresies) { L(x.Religion); L(x.Realm); L(x.StartTick); L(x.EndTick); Id(x.Event); Id(x.CauseEvent); }
+            foreach (var x in Excommunications) { L(x.Realm); L(x.Tick); L(x.WarTick); L(x.Given); Id(x.Ruler); Id(x.Event); }
+            foreach (var x in SlaveRaids) { L(x.Raider); L(x.Victim); L(x.Captives); L(x.Tick); L(x.Market); Id(x.Event); Id(x.MarketEvent); }
+            foreach (var r in Realms) L(r.Religion);
+        }
         return Convert.ToHexString(h.GetHashAndReset());
     }
 }

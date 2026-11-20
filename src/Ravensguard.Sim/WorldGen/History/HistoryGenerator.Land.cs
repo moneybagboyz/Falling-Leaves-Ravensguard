@@ -388,7 +388,7 @@ public sealed partial class HistoryGenerator
             if (s.IsRuin) continue;
             if (s.Mining > 0 && s.Pop >= 40 && Chance(ent, S.Mine, _s.MineCollapsePermilleYear * 250L)) MineCollapse(i);
         }
-        PlagueStep();
+        if (_v1) PlagueStepV1(); else PlagueStep();
         if (_season == 2) FamineStep();
     }
 
@@ -565,6 +565,7 @@ public sealed partial class HistoryGenerator
             string title = _badStreak[c] > 0 ? $"The Hunger of {_year}" : $"The {cu} Famine";
             var ev = Ev("famine", title, $"After the {what}, the harvest fails across the {cu} lands; some {Num((int)Math.Min(dead, int.MaxValue))} starve", seat?.Cell ?? _c.Cultures[c].SeedCell,
                 subj.ToArray(), Cz(CauseKind.Famine, _weatherEv[c], $"harvest failure after the {what}"));
+            if (_v1) { _hitEv[c] = ev; _hitTick[c] = _tick; _hitPlague[c] = false; }
             for (int i = 0; i < _h.Settlements.Count; i++)
             {
                 var s = _h.Settlements[i];

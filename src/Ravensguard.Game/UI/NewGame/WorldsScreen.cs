@@ -97,7 +97,7 @@ public partial class WorldsScreen : Control
                 continue;
             }
             var b = new Button { ToggleMode = true, Alignment = HorizontalAlignment.Left, CustomMinimumSize = new Vector2(0, 54), ClipText = true, SizeFlagsHorizontal = SizeFlags.ExpandFill };
-            b.Text = $"{w.Name}\n{L.F("WL_ROW", w.Seed, s.Years, s.RealmsAlive, s.Settlements, s.Ruins, w.Runs.Count)}   {w.File.Created}";
+            b.Text = $"{w.Name}\n{L.F("WL_ROW", w.Seed, s.Years, s.RealmsAlive, s.Settlements, s.Ruins, w.Runs.Count)}   {w.File.Created}   {L.F("WL_RULES", Ravensguard.Sim.WorldGen.History.HistoryRules.Label(w.File.History.RulesVersion))}";
             b.AddThemeStyleboxOverride("pressed", PixelTheme.PanelBox(new Color("4b3d31"), PixelTheme.Gold, 6));
             b.AddThemeColorOverride("font_pressed_color", PixelTheme.Gold);
             b.ButtonPressed = i == _sel;
