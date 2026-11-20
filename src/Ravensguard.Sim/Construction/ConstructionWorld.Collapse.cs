@@ -187,6 +187,9 @@ public sealed partial class ConstructionWorld
                 var cur = cells.GetValueOrDefault(k);
                 cells[k] = b.Slot == GhostSlot.Fixture ? (cur.S, b.Piece) : (b.Piece, cur.F);
             }
+            // P5-D: the cells of growth sites handed over to their generated lot stay shown (the chunk's own copy has them from the deltas; a loaded chunk is not rebuilt at once)
+            foreach (var (k, kept) in Book.Kept)
+                if (!cells.ContainsKey(k)) cells[k] = kept;
             _builtList = cells.Select(kv => { var (x, y, z) = ConstructionIds.Unpack(kv.Key); return new BuiltView(x, y, z, kv.Value.S, kv.Value.F); }).ToList();
             _viewBuiltVersion = _builtVersion;
         }

@@ -2974,6 +2974,55 @@ cn_unknown_plan,"There is no such plan: {0}."
 cn_unloaded,"{1} g of {0} unloaded on the pile."
 cn_worked,You worked {0} minutes on it.
 cn_worker_added,{0} joins the crew.
+cn_builder_busy,{0} is already building elsewhere.
+cn_cannot_pay_stage,"You cannot put up {0} now."
+cn_contract_dropped,"You gave the work up. It goes back on the board; what you were paid you keep."
+cn_contract_exists,That site already has a builder.
+cn_contract_posted,"Building work posted: {0} in wages, in escrow."
+cn_contract_signed,"{0} will build it for {1}: a third now into escrow, about {2}.{3} days."
+cn_contract_taken,"You took the work: {0} in wages, paid half at half the work and the rest at handover; due in {1} days."
+cn_no_builder,There is no such builder.
+cn_no_contract,There is no such building work.
+cn_one_contract,You already hold a building contract.
+CONTRACT_TITLE,Building contracts
+CONTRACT_Q,Building work and builders
+CONTRACT_MINE,Your building contract
+CONTRACT_MINE_NONE,You hold no building contract.
+CONTRACT_MINE_ROW,"{0}, {1}: {2}% built, paid {3} of {4}, due in {5} days"
+CONTRACT_MINE_HOW,"Build it by hand: stand at a piece and press E. Followers can join the crew."
+CONTRACT_DROP,Give up
+CONTRACT_DROP_TITLE,Give up the work?
+CONTRACT_DROP_BODY,"{0} goes back on the board. You keep the {1} you were paid."
+CONTRACT_BOARD,"Building work on the notice board ({0})"
+CONTRACT_BOARD_EMPTY,No building work is posted.
+CONTRACT_BOARD_ROW,"{0}, {1}: {2} for {3} h of work; a builder takes it in {4} h"
+CONTRACT_TAKE,Take it
+CONTRACT_TAKE_TITLE,Take the building work?
+CONTRACT_TAKE_BODY,"{0}: {1} in wages for {2} h of work, built by your own hands. Half is paid at half the work, the rest at handover."
+CONTRACT_TAKEN,You took the building work.
+CONTRACT_BIDS,"Builders' bids for {0} ({1} h of work left)"
+CONTRACT_NO_BUILDERS,No carpenter or mason of the region builds for hire.
+CONTRACT_BID_ROW,"{0}: {1}, crew {5}, about {6} days"
+CONTRACT_BID_TIP,"Materials {2} at the local ask, labour {3}, haul {4}"
+CONTRACT_HIRE,Hire
+CONTRACT_HIRE_TITLE,Hire the builder?
+CONTRACT_HIRE_BODY,"{0} builds it for {1}: {2} now into escrow, a third at half the work, the rest at handover. About {3} days, never sooner."
+CONTRACT_HIRED,The builder is hired.
+CONTRACT_COMMISSIONED,Work you have commissioned
+CONTRACT_COMMISSION_ROW,"{0}: {1}, {2}% built, paid {3} of {4}"
+CONTRACT_WORK,Building work
+CONTRACT_YOUR_SITE,your building site
+CONTRACT_STATE_OPEN,on the board
+CONTRACT_STATE_SIGNED,being built
+CONTRACT_STATE_STOPPED,stopped
+CONTRACT_STATE_DONE,handed over
+CONTRACT_STATE_CANCELLED,cancelled
+CONTRACT_DEV_NO_ROOM,There is no open ground near you for a plot.
+CONTRACT_DEV_NO_PAYER,Nobody here could pay for a cottage.
+CONTRACT_DEV_NOT_LAID,The cottage could not be laid out on that plot.
+CONTRACT_DEV_GROWTH,"A cottage of {0}, {1}% built, is now a building site ({2})."
+CONTRACT_DEV_CIVIC,"the lord pays: posted on the board"
+CONTRACT_DEV_HOUSEHOLD,the household builds it
 cf_looked,You look about for craftsmen.
 cf_not_here,You must be in the craftsman's own town to ask him.
 cf_maker_cannot,He cannot make that: he does not know it or has no workshop for it.

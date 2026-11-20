@@ -179,7 +179,7 @@ public partial class StreetView
                 });
                 return res;
             }
-            default: return L.T("BUILD_HELP");
+            default: return DevContracts(a) ?? L.T("BUILD_HELP");                    // P5-D: build growth [civic] [pct] | build hire
         }
     }
 

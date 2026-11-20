@@ -89,6 +89,12 @@ public sealed partial class ConstructionWorld
         {
             if (!RemoveBuilt(k, out var b)) continue;
             var c = Costs[b.Piece];
+            if (!(b.Slot == GhostSlot.Structure && c.Kind == PieceKind.Roof))
+            {
+                long ck = ConstructionIds.CellKey(b.X, b.Y, b.Z);
+                var cur = Book.Kept.GetValueOrDefault(ck);
+                Book.Kept[ck] = b.Slot == GhostSlot.Fixture ? (cur.S, b.Piece) : (b.Piece, cur.F);
+            }
             foreach (var (good, grams) in MaterialIds(c)) if (good != ushort.MaxValue) Book.DematerialisedG[good] = Book.DematerialisedG.GetValueOrDefault(good) + grams;
             Rooms.Apply([new CellEdit(b.X, b.Y, b.Z, b.Slot == GhostSlot.Fixture ? CellLayer.Fixture : CellLayer.Structure, null)]);
             if (b.Slot == GhostSlot.Structure && c.Kind == PieceKind.Roof) roofs.Add((b.X, b.Y, b.Z));

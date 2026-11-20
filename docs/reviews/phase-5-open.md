@@ -25,7 +25,7 @@ Collected while the steps are built. The close-out fixes each item or moves it i
 
 ## From step 2 (P5-B construction core)
 - **Two speed budgets missed:**
-  - 200 sites with 400 workers take about 27 ms per game hour against 2 ms (needs the cheap path for sites nobody is watching, with P5-D);
+  - [x] 200 sites with 400 workers: about 27 ms per game hour against 2 ms. **Met by P5-D's cheap path**: 2.0 to 2.3 ms on a heavily loaded 4-core machine (load 11 to 16), the same bytes as the full walk. Re-measure on the reference PC in P5-I;
   - a 200-cell collapse takes about 65 ms against 3 ms (support re-checks after each post).
 
   The timing test's thresholds are loose for now; profile and fix in P5-I.
@@ -39,6 +39,9 @@ Collected while the steps are built. The close-out fixes each item or moves it i
   - workers walking as LOD-bridge people (they are drawn at their pieces);
   - a `Construct` job on the job board.
 - **Decisions to confirm in the review:**
+  - P5-D: the escrow advances a commissioned builder the materials and the haul at signing (the spec's "a third into escrow"); his ox cart brings his materials to the pile (600 kg a trip) instead of haul jobs through the board;
+  - P5-D: posted work pays the hero half at half the piece-hours and the rest at handover, with no advance; a builder's pace is about 90% of the day, +-10% (0x511 as a late start);
+  - P5-D: visible growth crews work Phase 3's hours a day (own 2 h, hired 4 h); vacant-house refits and assarts stay abstract (assarts are recorded with their hours);
   - a one-room hovel with a hearth and pallets counts as a dwelling;
   - a beam holds floors within 4 tiles (BC-11 cannot be met with 3);
   - rust and rot are wired in construction (piles, rubble and outdoor chests).
@@ -60,3 +63,12 @@ Collected while the steps are built. The close-out fixes each item or moves it i
   - commission materials are laid on the maker's bench at the order;
   - guilds are derived each time, not saved;
   - CF-14 tested at skill 45, because 35 is Poor on the one scale.
+
+## From step 3 (P5-D contracts and visible growth)
+- **Contracts, still to do:**
+  - NPC households and businesses commissioning builders (only the lord's planner posts work; growth households build themselves);
+  - the hero bidding on posted work with his own crew at his own price, and builders bidding against each other;
+  - the builder's cart as a P5-G vehicle.
+- **Growth, still to do:**
+  - assarts as tree-by-tree felling sites (a region change replayed from the growth log);
+  - vacant-house refits as sites.

@@ -215,6 +215,8 @@ public sealed class ConstructionBook
     public volatile ConstructionView? View;
     /// <summary>Recent events for the street view (a piece built, a groan, a fall), newest last; bounded.</summary>
     public List<ConstructionEvent> Events { get; } = [];
+    /// <summary>P5-D, presentation only: cells of growth sites handed over to their generated lot (cell key to structure and fixture), still laid into loaded chunks.</summary>
+    public Dictionary<long, (string? S, string? F)> Kept { get; } = [];
     public long EventSerial;
 
     public ulong Take() => NextSerial++;

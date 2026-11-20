@@ -265,6 +265,30 @@ public static class NewGameDebug
                     await Frames(tree, 30);
                     break;
                 }
+            case "contracts":
+                {
+                    // dev (P5-D): a real new game, then --ng-scene growth (a growth cottage 40% done beside the hero, its household at work) | builder (a builder hired for a cottage)
+                    // | board (the contract board with the lord's posted work and builders' bids)
+                    var w = MakeWorld(Math.Min(years, 60), 7);
+                    var d = NewGameServices.NewDraft(); d.Name = "Shot"; d.LibraryWorldId = w.Info.Id;
+                    router.Push(new RegionBuildScreen(router, d, w));
+                    if (!await Until(tree, () => router.Top is Ravensguard.Game.World.StreetView, 9000)) throw new Exception("contracts shot: the region build did not finish");
+                    var sv = (Ravensguard.Game.World.StreetView)router.Top!; var rt = sv.Runtime!;
+                    await Until(tree, () => rt.HourDone >= sv.DebugWorld.Clock.Now.TotalHours, 6000);
+                    await Frames(tree, 60);
+                    string scene = Arg("--ng-scene", "growth");
+                    sv.DebugContracts(scene);
+                    var clock = sv.DebugWorld.Clock; long from = clock.Now.Seconds;
+                    if (scene != "board")
+                    {
+                        sv.DebugWorld.SetSpeed(Ravensguard.Sim.Core.SimSpeed.X8);
+                        await Until(tree, () => clock.Now.Seconds >= from + (scene == "builder" ? 900 : 240), 60000);
+                    }
+                    sv.DebugWorld.SetSpeed(Ravensguard.Sim.Core.SimSpeed.Paused);
+                    await Frames(tree, 30);
+                    if (scene == "board") { sv.DebugOpenContracts(); await Frames(tree, 40); }
+                    break;
+                }
             case "embark":
             case "legends":
                 {
