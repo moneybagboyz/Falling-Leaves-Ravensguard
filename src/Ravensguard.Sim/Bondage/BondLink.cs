@@ -39,6 +39,7 @@ public sealed class BondLink
     {
         bool seasonDay = day > 0 && day % TimeConst.DaysPerSeason == 0;
         var book = st.Bonds;
+        if (st.Party is { } hp && hp.Squad.Members.Any(m => m.Origin == Ravensguard.Sim.Trade.FollowerOrigin.Slave)) SlaveParty.Sync(book, hp.Squad, st.Population.People, st.Population.Households, hp.Hero, day);   // P6-E3: a freed or dead slave leaves the party
         bool sold = st.Captivity?.Captives.Values.Any(c => c.State == CaptiveState.Released && c.Note == "sold" && !(book?.Swept.Contains(c.Person.Value) ?? false)) == true;
         if ((book == null || book.IsEmpty) && !sold && !seasonDay) return;
         var bw = BondWiring.World(st, db);
@@ -54,6 +55,7 @@ public sealed class BondLink
             var crimes = st.Law ?? new CrimeBook();
             BondDaily.Run(bw, made, crimes, day);
             if (!crimes.IsEmpty) st.Law = crimes;
+            if (st.Party is { } hp2) SlaveParty.Sync(made, hp2.Squad, st.Population.People, st.Population.Households, hp2.Hero, day);       // P6-E3: a slave who ran, was freed or inherited leaves the squad; Follow work joins it
             if (seasonDay)
             {
                 Raids.Market(bw, made, day, sec);

@@ -84,7 +84,7 @@ public static class WillDesk
         int row = HeroPerson.RowOf(pt, st.Hero, party.Hero);
         if (row >= 0) for (int i = 0; i < pt.Count; i++) if (pt.Father[i] == row || pt.Mother[i] == row) Add(pt.IdOf(i), "child");
         foreach (var k in st.Succession?.Kin ?? []) Add(k.Person, k.Relation.ToString().ToLowerInvariant());
-        foreach (var m in party.Squad.Active) Add(m.Person, m.Origin == FollowerOrigin.Recruited ? "companion" : "follower");
+        foreach (var m in party.Squad.Active.Where(m => m.Origin != FollowerOrigin.Slave)) Add(m.Person, m.Origin == FollowerOrigin.Recruited ? "companion" : "follower");
         foreach (var k in party.Known.Keys) Add(k, "known");
         var things = new List<WillThing>();
         if (st.Land is { } land && st.Economy != null)

@@ -69,6 +69,38 @@ public sealed record FamilySettingsDef : ContentDef
     public int KidnapBandPresencePm { get; init; } = 350;
     public int TurnBelowPm { get; init; } = -300;
     public int GrievanceWeightPm { get; init; } = 150;
+    // ---- arranged matches and alliances (4.2, P6-E3): utility = 30 x alliance + standing / StandingDiv + the head's opinion + dowry / MatchDowryDiv - 20 per year of age gap over 10
+    public int MatchAcceptAt { get; init; } = 50;
+    public int MatchAllianceValue { get; init; } = 30;
+    public int MatchStandingDiv { get; init; } = 10;
+    /// <summary>Mites of dowry for one point of utility (0.5 per 100 crowns at 100 mites a crown).</summary>
+    public int MatchDowryDiv { get; init; } = 20_000;
+    public int MatchAgeGapFree { get; init; } = 10;
+    public int MatchAgeGapPenalty { get; init; } = 20;
+    /// <summary>The dowry is negotiated within this percent either way of the class share.</summary>
+    public int MatchDowrySwingPct { get; init; } = 50;
+    /// <summary>A member married off with his own acceptance under this carries the grievance married_off.</summary>
+    public int MarriedOffBelow { get; init; } = 30;
+    /// <summary>The chance (percent) a lord with an unmarried grown child arranges a match on a season's first day (stream 0x645).</summary>
+    public int LordMatchPct { get; init; } = 30;
+    /// <summary>The overlord sells his consent to a fief heir's match only while his opinion of the holder is at least this.</summary>
+    public int ConsentOpinionMin { get; init; } = -20;
+    /// <summary>The marriage alliance's opinion kinds, in both directions (the politics' opinion kinds).</summary>
+    public int AllianceKinOpinion { get; init; } = 20;
+    // ---- kin who turn (4.5, P6-E3)
+    /// <summary>A kin member below the turn line leaves the household with this chance (percent) at his yearly check (stream 0x642).</summary>
+    public int KinLeavePct { get; init; } = 30;
+    /// <summary>A son the will passed over turns to the court at the hero's death below the turn line; the court's own odds start here (permille) that the law overrides the will.</summary>
+    public int ContestLawPm { get; init; } = 600;
+    public int ContestStandingDiv { get; init; } = 10;
+    // ---- estates of NPCs (4.7, P6-E3)
+    public long NpcWillMinMites { get; init; } = 5_000;
+    public int NpcWillPct { get; init; } = 20;
+    public int NpcWillDislikePm { get; init; } = -300;
+    /// <summary>A creditor sells a business he claimed when its household has not paid the staff for this many days.</summary>
+    public int CreditorSellDays { get; init; } = 15;
+    /// <summary>A steward of a minor heir's business is paid this much a day from its cash box.</summary>
+    public long StewardWageMitesPerDay { get; init; } = 60;
     // ---- the hero's ageing (4.6)
     public List<AgeLossRow> AgeLoss { get; init; } = [];
     public List<OldAgeRow> OldAge { get; init; } = [];

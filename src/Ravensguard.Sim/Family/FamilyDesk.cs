@@ -20,6 +20,11 @@ public static class FamilyDesk
     public static HeroCommand Court(EntityId person, long giftMites, long sec) => Make("court|" + U(person.Value) + "|" + giftMites.ToString(CultureInfo.InvariantCulture), sec);
     public static HeroCommand Ask(EntityId person, long sec) => Make("ask|" + U(person.Value), sec);
     public static HeroCommand Break(EntityId person, long sec) => Make("break|" + U(person.Value), sec);
+    /// <summary>Arranges a match for an unmarried member of the household with a candidate (P6-E3, 4.2): the dowry within half the class share either way (-1: the share), <paramref name="defy"/> to marry a fief's heir without the overlord's consent.</summary>
+    public static HeroCommand Arrange(EntityId member, EntityId candidate, long dowry, bool defy, long sec) =>
+        Make("arrange|" + U(member.Value) + "|" + U(candidate.Value) + "|" + dowry.ToString(CultureInfo.InvariantCulture) + "|" + (defy ? 1 : 0), sec);
+    /// <summary>The best candidate for a member at the class share of the dowry, by the answering head's utility (what the panel's Arrange button sends).</summary>
+    public static HeroCommand ArrangeBest(EntityId member, long sec) => Make("arrange|" + U(member.Value) + "|-|-1|0", sec);
     /// <summary>A course for a child with a tutor (the hero's own person id is 0, so "no tutor" is the dash).</summary>
     public static HeroCommand Teach(EntityId child, Course course, Skill skill, EntityId? tutor, long sec) =>
         Make("teach|" + U(child.Value) + "|" + (int)course + "|" + (int)skill + "|" + (tutor is { } t ? U(t.Value) : "-"), sec);
@@ -41,11 +46,24 @@ public static class FamilyDesk
             case "court": r = Courting.Court(w, N(1), (long)N(2), day); break;
             case "ask": r = Courting.Ask(w, N(1), day); break;
             case "break": r = Courting.Break(w, N(1)); break;
+            case "arrange": r = ArrangeFor(w, N(1), f.Length > 2 && f[2] != "-" ? N(2) : 0, f.Length > 2 && f[2] == "-", f.Length > 3 && long.TryParse(f[3], NumberStyles.Integer, CultureInfo.InvariantCulture, out var dow) ? dow : -1, f.Length > 4 && f[4] == "1", day); break;
             case "teach": r = Teach(w, N(1), (Course)N(2), (Skill)N(3), f.Length > 4 && f[4] != "-" ? new EntityId(N(4)) : null, day); break;
             default: return new HeroResult(c.Seq, c.Kind, HeroResultCode.Invalid, HeroText.Of("HERO_MAKES_NO_SENSE"), 0, 0, c.IssuedSec);
         }
         if (w.St.Family is { IsEmpty: true }) w.St.Family = null;
         return R(c, r.Ok, r.Key, r.Args);
+    }
+
+    private static CourtResult ArrangeFor(FamilyWorld w, ulong member, ulong candidate, bool best, long dowry, bool defy, int day)
+    {
+        if (best)
+        {
+            int m = w.People.IndexOf(new EntityId(member));
+            var list = m >= 0 ? Matches.Candidates(w, m, day, 1) : [];
+            if (list.Count == 0) return new(false, "fm_no_candidates");
+            candidate = list[0].Person;
+        }
+        return Matches.Arrange(w, member, candidate, dowry, defy, day);
     }
 
     /// <summary>Sets a child's course and tutor (4.4): the child is a member of the hero's household and old enough to be taught; the tutor is the hero, a household member, the priest of the place or anyone alive (a hired tutor is paid by the day).</summary>

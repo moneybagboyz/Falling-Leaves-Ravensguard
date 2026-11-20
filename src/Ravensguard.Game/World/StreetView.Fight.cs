@@ -3,6 +3,7 @@ using System.Linq;
 using Godot;
 using Ravensguard.Content;
 using Ravensguard.Game.World.Combat;
+using Ravensguard.Sim.Bondage;
 using Ravensguard.Sim.Combat;
 using Ravensguard.Sim.Combat.Aftermath;
 using Ravensguard.Sim.Combat.Melee2;
@@ -78,6 +79,17 @@ public partial class StreetView
         return worn;
     }
 
+    /// <summary>After a road fight (P6-E3): a slave of the party who broke and ran in it is a runaway (unless chained); the rest are steadied by a held field or shaken by a lost one.</summary>
+    void SlavesAfterFight(FightWorld f, bool won)
+    {
+        var st = Runtime?.State; if (_heroLink == null || st?.Bonds == null || st.Party == null || !st.Party.Squad.Members.Any(m => m.Origin == Ravensguard.Sim.Trade.FollowerOrigin.Slave)) return;
+        long now = _world.Clock.Now.Seconds;
+        foreach (var fi in f.Fighters)
+            if (fi.Act == FAct.Fled && fi.Person != 0 && st.Party.Squad.Find(new EntityId(fi.Person)) is { Origin: Ravensguard.Sim.Trade.FollowerOrigin.Slave })
+                _heroLink.Issue(BondDesk.Flee(new EntityId(fi.Person), true, now));
+        _heroLink.Issue(BondDesk.Fought(won, now));
+    }
+
     /// <summary>The pieces start the fight at their item rows' condition (the kit knows only shape and material); set before the fight is recorded, so a replay starts the same.</summary>
     void WornCondition(FightWorld fight, int hero)
     {
@@ -114,8 +126,16 @@ public partial class StreetView
     {
         var fc = FightContentOf(); if (fc == null) return null;
         var book = WatchBookOf();
-        var setup = FightSetup.Encounter(fc, def, ev, HeroKit(fc), [], Runtime?.State.Seed ?? 1);
+        var setup = FightSetup.Encounter(fc, def, ev, HeroKit(fc), SlaveParty.Kits(SlaveStands(fc)), Runtime?.State.Seed ?? 1);       // P6-E3: the armed slaves of the party stand with him
         return setup with { HeroStance = book.StanceOf(fc, EconomyState.HeroOwner, Runtime?.State.Autopilot), StartWatched = book.KeepWatching, Weather = _wx.State.ToString() };   // P4 close-out: the live weather's row
+    }
+
+    /// <summary>The hero's slaves in the party as a fight sees them (P6-E3, overview 10a): armed ones fight, unarmed ones stand back, unchained ones under morale 40 bolt.</summary>
+    List<SlaveStand> SlaveStands(FightContent fc)
+    {
+        var st = Runtime?.State;
+        if (st?.Party == null || st.Economy == null || st.Bonds == null) return [];
+        return SlaveParty.Muster(st.Bonds, st.Party.Squad, st.Economy, fc.Db, BondRules.From(fc.Db));
     }
 
     /// <summary>The encounter's options with the odds on the Fight button (P4-F: "probably lose"; a fight is offered, never forced).</summary>
@@ -136,6 +156,9 @@ public partial class StreetView
         var ledger = rt?.State.Wounds ?? _world.Wounds;
         if (ledger == null) { ledger = new WoundLedger(rt?.State.Seed ?? 1, _world.Clock.Now.Seconds); _world.AttachWounds(ledger); }
         var setup = EncounterSetup(def, ev)!;
+        if (_heroLink != null)
+            foreach (var sl in SlaveStands(fc).Where(x => x.Role == SlaveRole.Flees))                  // P6-E3: a slave under the flee morale and not chained bolts before the first blow: a runaway by the daily path
+                _heroLink.Issue(BondDesk.Flee(sl.Person, false, _world.Clock.Now.Seconds));
         var fight = setup.Start(fc, ledger);
         WornCondition(fight, setup.PlayerIndex);                    // P4 close-out: the pieces as worn as their rows
         if (_ride is { IsMounted: true } ride) Ravensguard.Sim.Combat.Mounted.MountedRide.MountHero(fight, setup.PlayerIndex, ride);   // [mounted-combat] a rider fights from the saddle
@@ -186,6 +209,7 @@ public partial class StreetView
         var hero = f.Fighters[_fightView.Hero];
         bool won = f.DecidedWinner == hero.Team && hero.Act != FAct.Surrendered, fled = hero.Act == FAct.Fled;   // P4-D: the winner of a walk-away too (morale 4.3)
         var t = _travel;
+        SlavesAfterFight(f, won);
         WriteBackWear(f, _fightView.Hero);                         // P4 close-out: the dents and tears onto the hero's clothing rows (before any robbery)
         if (!won && !fled && DefeatHook(rf.Ev, f, _fightView.Hero)) { CloseRoadFight(); return; }   // P4-D hook: the defeat table, robbery, capture (StreetView.Captivity.cs)
         var o = EncounterOutcomes.AfterFight(rf.Ev, won, fled, rf.Coin, id => t == null || !t.Travellers.Any(x => x.Id == id));

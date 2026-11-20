@@ -30,6 +30,14 @@ public sealed class FamilySave
     [Key(7)] public int LastDay { get; set; } = -1;
     [Key(8)] public int LastKidnapSeason { get; set; } = -1;
     [Key(9)] public int Kidnaps { get; set; }
+    /// <summary>P6-E3, per arranged match: id, groom, bride, dowry, alliance, wedding day, state, fief, consent, defied, proposed day, by hero, score, due serial, lord.</summary>
+    [Key(10)] public long[][] Matches { get; set; } = [];
+    [Key(11)] public int NextMatch { get; set; } = 1;
+    [Key(12)] public long[] Contested { get; set; } = [];
+    /// <summary>P6-E3: per steward of a minor's business: business, heir, steward, since.</summary>
+    [Key(13)] public long[][] Stewards { get; set; } = [];
+    /// <summary>P6-E3: per claimed business with unpaid staff: business, days.</summary>
+    [Key(14)] public long[][] Distress { get; set; } = [];
 
     public static FamilySave Capture(FamilyBook b) => new()
     {
@@ -40,6 +48,9 @@ public sealed class FamilySave
         Ageing = b.Ageing is { } a ? new long[] { (long)a.Hero, a.Row, a.LastAge, a.LastRollYear, a.WarnedYear }.Concat(a.Lost.Select(x => (long)x)).ToArray() : [],
         Death = b.Death is { } d ? [d.Day, d.Row, d.Age, (long)d.Cause] : [],
         NextCourtship = b.NextCourtship, LastDay = b.LastDay, LastKidnapSeason = b.LastKidnapSeason, Kidnaps = b.Kidnaps,
+        Matches = [.. b.Matches.Values.Select(m => new long[] { m.Id, (long)m.Groom, (long)m.Bride, m.DowryMites, m.Alliance ? 1 : 0, m.WeddingDay, (long)m.State, m.Fief, m.Consent ? 1 : 0, m.Defied ? 1 : 0, m.ProposedDay, m.ByHero ? 1 : 0, m.Score, m.DueSerial, m.Lord })],
+        NextMatch = b.NextMatch, Contested = [.. b.Contested.Select(x => (long)x)],
+        Stewards = [.. b.Stewards.Values.Select(t => new long[] { (long)t.Business, (long)t.Heir, (long)t.Steward, t.Since })], Distress = [.. b.Distress.Select(kv => new long[] { (long)kv.Key, kv.Value })],
     };
 
     public FamilyBook Restore()
@@ -64,6 +75,20 @@ public sealed class FamilySave
         }
         foreach (var v in Grievances) { if (v.Length < 2) throw new SaveException("Corrupt grievance in save."); b.Grievances[(ulong)v[0]] = (KinGrievance)v[1]; }
         foreach (long x in Born) b.Born.Add((ulong)x);
+        b.NextMatch = NextMatch;
+        foreach (var v in Matches)
+        {
+            if (v.Length < 15) throw new SaveException("Corrupt match in save.");
+            var m = new Match
+            {
+                Id = (int)v[0], Groom = (ulong)v[1], Bride = (ulong)v[2], DowryMites = v[3], Alliance = v[4] != 0, WeddingDay = (int)v[5], State = (MatchState)v[6], Fief = (int)v[7], Consent = v[8] != 0, Defied = v[9] != 0,
+                ProposedDay = (int)v[10], ByHero = v[11] != 0, Score = (int)v[12], DueSerial = (int)v[13], Lord = v[14],
+            };
+            b.Matches[m.Id] = m;
+        }
+        foreach (long x in Contested) b.Contested.Add((ulong)x);
+        foreach (var v in Stewards) { if (v.Length < 4) throw new SaveException("Corrupt steward in save."); b.Stewards[(ulong)v[0]] = new Stewardship { Business = (ulong)v[0], Heir = (ulong)v[1], Steward = (ulong)v[2], Since = (int)v[3] }; }
+        foreach (var v in Distress) { if (v.Length < 2) throw new SaveException("Corrupt distress count in save."); b.Distress[(ulong)v[0]] = (int)v[1]; }
         if (Ageing.Length >= 5 + PersonTable.AttrCount)
         {
             var a = new HeroAgeing { Hero = (ulong)Ageing[0], Row = (int)Ageing[1], LastAge = (int)Ageing[2], LastRollYear = (int)Ageing[3], WarnedYear = (int)Ageing[4] };

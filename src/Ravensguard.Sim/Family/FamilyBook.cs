@@ -83,8 +83,16 @@ public sealed class FamilyBook
     public SortedSet<ulong> Born { get; } = [];
     public int LastDay = -1, LastKidnapSeason = -1;
     public int Kidnaps;
+    /// <summary>Arranged matches (P6-E3, 4.2): the hero's for his household's members and the lords' own; kept while they are open and for a season after.</summary>
+    public SortedDictionary<int, Match> Matches { get; } = [];
+    public int NextMatch = 1;
+    /// <summary>Minors' businesses run by a steward (P6-E3, 4.7), by business id, and the days a claimed business has had its staff unpaid.</summary>
+    public SortedDictionary<ulong, Stewardship> Stewards { get; } = [];
+    public SortedDictionary<ulong, int> Distress { get; } = [];
+    /// <summary>Kin who have already contested the hero's will (one dispute each).</summary>
+    public SortedSet<ulong> Contested { get; } = [];
 
-    public bool IsEmpty => Courtships.Count == 0 && Upbringings.Count == 0 && Grievances.Count == 0 && Ageing == null && Death == null && Born.Count == 0 && LastDay < 0 && Kidnaps == 0;
+    public bool IsEmpty => Courtships.Count == 0 && Upbringings.Count == 0 && Grievances.Count == 0 && Ageing == null && Death == null && Born.Count == 0 && LastDay < 0 && Kidnaps == 0 && Matches.Count == 0 && Contested.Count == 0 && Stewards.Count == 0 && Distress.Count == 0;
 
     public Courtship? CourtshipOf(ulong courted) => Courtships.Values.FirstOrDefault(c => c.Courted == courted && c.State is CourtState.Courting or CourtState.Betrothed);
 
@@ -106,6 +114,15 @@ public sealed class FamilyBook
         foreach (var b in Born) M((long)b);
         if (Ageing is { } a) { M((long)a.Hero); M(a.Row); M(a.LastAge); foreach (int l in a.Lost) M(l); M(a.LastRollYear); M(a.WarnedYear); }
         if (Death is { } d) { M(d.Day); M(d.Row); M(d.Age); M((long)d.Cause); }
+        // P6-E3: mixed only once something is there, so a book that never met a match keeps its hash
+        if (Matches.Count > 0 || Contested.Count > 0 || Stewards.Count > 0 || Distress.Count > 0)
+        {
+            M(NextMatch);
+            foreach (var m in Matches.Values) { M(m.Id); M((long)m.Groom); M((long)m.Bride); M(m.DowryMites); M(m.Alliance ? 1 : 0); M(m.WeddingDay); M((long)m.State); M(m.Fief); M(m.Consent ? 1 : 0); M(m.Defied ? 1 : 0); M(m.ProposedDay); M(m.ByHero ? 1 : 0); M(m.Score); M(m.DueSerial); M(m.Lord); }
+            foreach (var c in Contested) M((long)c);
+            foreach (var t in Stewards.Values) { M((long)t.Business); M((long)t.Heir); M((long)t.Steward); M(t.Since); }
+            foreach (var (k, v) in Distress) { M((long)k); M(v); }
+        }
         return h;
     }
 }

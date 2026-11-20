@@ -538,7 +538,7 @@ public class InheritanceTests(ITestOutputHelper output)
     // ------------------------------------------------------------------ IN-13: no randomness
 
     [Fact]
-    public void IN13_SettlingDrawsNothing_Streams0x457And0x561AreNeverDrawn_AndTheSameDeathGivesTheSameEstate()
+    public void IN13_SettlingDrawsNothing_Stream0x457IsNeverDrawn_0x561OnlyByTheFamilysDisputes_AndTheSameDeathGivesTheSameEstate()
     {
         Assert.Equal(0x457u, RngStreams.SuccessionReserved);
         Assert.Equal(0x561u, RngStreams.InheritanceDisputesReserved);
@@ -547,7 +547,8 @@ public class InheritanceTests(ITestOutputHelper output)
         {
             if (f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}") || f.EndsWith("RngStreams.cs", StringComparison.Ordinal)) continue;
             var src = File.ReadAllText(f);
-            Assert.DoesNotContain("InheritanceDisputesReserved", src, StringComparison.Ordinal);
+            // P6-E3: 0x561 is drawn now, by the family's disputed inheritances (Family/Disputes.cs) and nowhere else; settling an estate itself still draws nothing
+            if (!f.EndsWith(Path.Combine("Family", "Disputes.cs"), StringComparison.Ordinal)) Assert.DoesNotContain("InheritanceDisputesReserved", src, StringComparison.Ordinal);
             Assert.DoesNotContain("SuccessionReserved", src, StringComparison.Ordinal);
             Assert.DoesNotContain("0x561,", src, StringComparison.Ordinal); Assert.DoesNotContain("0x561)", src, StringComparison.Ordinal);
         }

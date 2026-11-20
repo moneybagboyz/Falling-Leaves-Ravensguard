@@ -28,6 +28,10 @@ public static class FamilySystem
         {
             Ageing(w, day, hero);
             Courting.Daily(w, day);
+            if (day % TimeConst.DaysPerSeason == 0) Matches.LordsSeason(w, day);                  // P6-E3: each lord with a grown child looks for an alliance (stream 0x645)
+            Matches.Daily(w, day);
+            KinTurning.Daily(w, day, hero);
+            NpcEstates.Wills(w, day); NpcEstates.Stewards(w, day); NpcEstates.Creditors(w, day);     // P6-E3 (4.7): NPC wills, a steward for a minor's business, a creditor who sells
             Conception(w, day, hero);
             Births(w, day, hero);
             Lessons(w, day, hero);

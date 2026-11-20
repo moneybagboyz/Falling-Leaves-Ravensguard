@@ -49,7 +49,7 @@ public partial class StreetView
         RefreshFamily();
         _router.Push(new FamilyPanel(_router, () => _familyView, RefreshFamily,
             (child, course, tutor) => _heroLink?.Issue(FamilyDesk.Teach(child, course, Ravensguard.Sim.People.Skill.None, tutor, HeroNow())),
-            who => _heroLink?.Issue(FamilyDesk.Break(who, HeroNow()))) { ShotPath = shot });
+            who => _heroLink?.Issue(FamilyDesk.Break(who, HeroNow()))) { ShotPath = shot, Arrange = who => _heroLink?.Issue(FamilyDesk.ArrangeBest(who, HeroNow())) });
     }
 
     /// <summary>Per frame: the family's answers toasted, the panel's view kept fresh while it is up, the dev screenshot.</summary>

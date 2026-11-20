@@ -28,6 +28,12 @@ public static class BondDesk
     public static HeroCommand Escape(long sec) => C("escape", sec);
     public static HeroCommand Run(long sec) => C("run", sec);
     public static HeroCommand SelfBuy(long sec) => C("selfbuy", sec);
+    /// <summary>P6-E3: hand a spare weapon to a slave of the party (<paramref name="item"/> none: the first spare one), take it back, or a slave of the party who bolts (<c>flee|0</c>: before the fight, under the flee morale; <c>flee|1</c>: routed in it).</summary>
+    public static HeroCommand Arm(EntityId person, long sec, EntityId item = default) => C("arm|" + item.Value.ToString(CultureInfo.InvariantCulture), sec, person);
+    public static HeroCommand Disarm(EntityId person, long sec) => C("disarm", sec, person);
+    /// <summary>A road fight ended: the party's slaves are steadied by a held field and shaken by a lost one.</summary>
+    public static HeroCommand Fought(bool won, long sec) => C("fought|" + (won ? 1 : 0), sec);
+    public static HeroCommand Flee(EntityId person, bool inFight, long sec) => C("flee|" + (inFight ? 1 : 0), sec, person);
 
     private static HeroResult R(HeroCommand c, HeroResultCode code, string key, long mites = 0, params object[] args) => new(c.Seq, c.Kind, code, HeroText.Of(key, args), mites, 0, c.IssuedSec);
     private static HeroResult Of(HeroCommand c, SlaveResult r) => R(c, r.Ok ? HeroResultCode.Ok : r.Key is "sl_cannot_afford" ? HeroResultCode.CannotAfford : HeroResultCode.Refused, r.Key, r.Mites);
@@ -40,6 +46,17 @@ public static class BondDesk
         var book = st.Bonds ??= new BondBook();
         try
         {
+            var res = Dispatch(ctx, c, f, st, hero, day, book);
+            if (res.Code == HeroResultCode.Ok) SlaveParty.Sync(book, ctx.Party.Squad, st.Population.People, st.Population.Households, hero, day);        // P6-E3: Follow work is a place in the squad
+            return res;
+        }
+        finally { if (st.Bonds is { IsEmpty: true }) st.Bonds = null; }
+    }
+
+    private static HeroResult Dispatch(HeroContext ctx, HeroCommand c, string[] f, Save.WorldState st, EntityId hero, int day, BondBook book)
+    {
+        try
+        {
             var bw = BondWiring.World(st, ctx.Content);
             switch (f[0])
             {
@@ -50,6 +67,16 @@ public static class BondDesk
                 case "treat" when f.Length > 1 && int.TryParse(f[1], out int t) && t is >= 0 and <= 2: return Of(c, Slavery.SetTreatment(book, hero, c.Person, (Treatment)t));
                 case "chain" when f.Length > 1: return Of(c, Slavery.SetChain(book, hero, c.Person, f[1] == "1"));
                 case "work" when f.Length > 1 && int.TryParse(f[1], out int w) && Enum.IsDefined((BondWork)w): return Of(c, Slavery.SetWork(book, hero, c.Person, (BondWork)w));
+                case "arm": return Of(c, SlaveParty.Arm(ctx.Econ, ctx.Content, ctx.Party, book, hero, c.Person, f.Length > 1 && ulong.TryParse(f[1], out var iv) ? new EntityId(iv) : EntityId.None));
+                case "disarm": return Of(c, SlaveParty.Disarm(ctx.Econ, ctx.Content, book, hero, c.Person));
+                case "flee" when f.Length > 1:
+                {
+                    var crimes = st.Law ?? new CrimeBook();
+                    bool ran = SlaveParty.Flee(bw, book, ctx.Party.Squad, crimes, hero, c.Person, f[1] == "1", day, c.IssuedSec);
+                    if (!crimes.IsEmpty) st.Law = crimes;
+                    return ran ? R(c, HeroResultCode.Ok, "sl_party_ran") : R(c, HeroResultCode.Refused, "sl_not_in_party");
+                }
+                case "fought" when f.Length > 1: SlaveParty.AfterFight(book, ctx.Party.Squad, f[1] == "1"); return R(c, HeroResultCode.Ok, "sl_here");
                 case "here": return Here(bw, book, hero, c, day);
                 case "selfbuy": return Of(c, Slavery.SelfPurchase(bw, book, hero, day, c.IssuedSec));
                 case "run": return Run(bw, st, book, hero, c, day);

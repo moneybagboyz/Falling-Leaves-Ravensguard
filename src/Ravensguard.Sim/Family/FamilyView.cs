@@ -15,10 +15,19 @@ public sealed record AgeLossView(string Attr, int Value, int Lost);
 /// <summary>A tutor the head could name for a child: the hero himself, a member of the household, or the priest of the place.</summary>
 public sealed record TutorChoice(EntityId Id, string Name);
 
+/// <summary>An arranged match as the panel says it (P6-E3): the pair, where it stands, the wedding day, the dowry, whether it joins two lords' houses and whether the overlord's fee is still owing.</summary>
+public sealed record MatchLine(string Groom, string Bride, MatchState State, int WeddingDay, long DowryMites, bool Alliance, bool FeeOwing);
+
+/// <summary>A member of the house who could be matched (P6-E3): the best candidate the houses would consider, the answering head's utility, the dowry at the class share, whether it is an alliance, whether the overlord's consent is needed, and whether the member refuses any match (loyalty under the turn line).</summary>
+public sealed record ArrangeLine(EntityId Member, string Name, int Age, string Candidate, int Utility, long DowryMites, bool Alliance, bool NeedsConsent, bool Refuses, bool Accepts = true);
+
 /// <summary>The family panel's data (family-and-lifespan 6), built at a barrier: the hero's age and what it has taken, the spouse and children with their lessons, the courtship under way, the roof and the hazard of old age.</summary>
 public sealed record FamilyView(string HeroName, int HeroAge, int OldAgePct, int NextBirthdayInDays, IReadOnlyList<AgeLossView> Ageing, IReadOnlyList<FamilyMemberView> Members,
-    string CourtedName, EntityId Courted, CourtState CourtState, int Meetings, long Gifts, int WeddingDay, bool HasRoof, IReadOnlyList<TutorChoice> Tutors, int Day)
+    string CourtedName, EntityId Courted, CourtState CourtState, int Meetings, long Gifts, int WeddingDay, bool HasRoof, IReadOnlyList<TutorChoice> Tutors, int Day,
+    IReadOnlyList<MatchLine>? MatchLines = null, IReadOnlyList<ArrangeLine>? ArrangeLines = null)
 {
+    public IReadOnlyList<MatchLine> OpenMatches => MatchLines ?? [];
+    public IReadOnlyList<ArrangeLine> Arrangeable => ArrangeLines ?? [];
     public FamilyMemberView? Spouse => Members.FirstOrDefault(m => m.Relation == "spouse");
     public IEnumerable<FamilyMemberView> Children => Members.Where(m => m.Child);
 
@@ -61,8 +70,24 @@ public sealed record FamilyView(string HeroName, int HeroAge, int OldAgePct, int
         int home = hh >= 0 ? w.Households.Settlement[hh] : -1;
         for (int i = 0; i < pt.Count; i++) if (pt.Status[i] == PersonStatus.Alive && pt.Occupation[i] == Occupation.Priest && pt.HomeSettlement[i] == home) { tutors.Add(new(pt.IdOf(i), pt.FullName(i))); break; }
         int next = FamilySystem.BirthdayOf(pt, hero, age + 1) - day;
+        // P6-E3 (4.2): the matches under way and the members of the house the head could match
+        var lines = new List<MatchLine>(); var arrange = new List<ArrangeLine>();
+        if (book != null)
+            foreach (var m in book.Matches.Values.Where(m => m.State is MatchState.AwaitingFee or MatchState.Betrothed or MatchState.Wed))
+            {
+                int g = pt.IndexOf(new EntityId(m.Groom)), b = pt.IndexOf(new EntityId(m.Bride));
+                lines.Add(new MatchLine(g >= 0 ? pt.FullName(g) : "", b >= 0 ? pt.FullName(b) : "", m.State, m.WeddingDay, m.DowryMites, m.Alliance, m.State == MatchState.AwaitingFee));
+            }
+        if (hh >= 0)
+            foreach (int m in w.Households.Members(hh).OrderBy(m => m))
+            {
+                if (m == hero || Matches.WhyNot(w, m, day).Length > 0) continue;
+                var cand = Matches.Candidates(w, m, day, 1).FirstOrDefault();
+                arrange.Add(new ArrangeLine(pt.IdOf(m), pt.FullName(m), pt.AgeYears(m, day), cand?.Name ?? "", cand?.Terms.Total ?? 0, cand?.DowryMites ?? 0, cand?.Alliance ?? false,
+                    cand != null && Matches.ConsentFief(w, m, cand.Row) >= 0, Matches.KinLoyalty(w, pt.IdOf(m)) < f.S.TurnBelowPm, (cand?.Terms.Total ?? 0) >= f.S.MatchAcceptAt));
+            }
         return new FamilyView(st.Hero.Name, age, f.OldAgePct(age), Math.Max(0, next), losses, members, cp >= 0 ? pt.FullName(cp) : "", cp >= 0 ? pt.IdOf(cp) : EntityId.None, c?.State ?? CourtState.Broken,
-            c?.Meetings ?? 0, c?.Gifts ?? 0, c?.WeddingDay ?? -1, Courting.RoofFor(w, hero).Ok, tutors, day);
+            c?.Meetings ?? 0, c?.Gifts ?? 0, c?.WeddingDay ?? -1, Courting.RoofFor(w, hero).Ok, tutors, day, lines, arrange);
     }
 }
 

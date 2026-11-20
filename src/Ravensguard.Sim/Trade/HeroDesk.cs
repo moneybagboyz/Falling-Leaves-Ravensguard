@@ -809,7 +809,7 @@ public sealed class HeroDesk
         int day = (int)(c.IssuedSec / 86400); var info = Candidate(ctx, i, c.Person, day);
         int leadership = ctx.Craft.State.Book.Level(ctx.Party.Hero, Skill.Leadership);
         long wage = c.Wage > 0 ? c.Wage : Hiring.FairOffer(ctx.Trade, Hiring.ReservationWage(ctx.Trade, ctx.WageU, info.C.MaxSkill, info.C.TrustPm), info.C);
-        int size = ctx.Party.Squad.Members.Count(m => m.Active && m.Person != c.Person);
+        int size = ctx.Party.Squad.Members.Count(m => m.Active && m.Person != c.Person && m.Origin != FollowerOrigin.Slave);
         var ans = Recruiting.Check(ctx.Trade, info.Known.Familiarity, info.Known.TrustPm, info.Known.ReasonKnown, size, leadership, ctx.Coin, wage, info.C.Alive && info.C.Age >= 14);
         string name = ctx.State.Population.People.FullName(i);
         if (ans != RecruitAnswer.Accept)
@@ -839,6 +839,12 @@ public sealed class HeroDesk
     private HeroResult Dismiss(HeroContext ctx, HeroCommand c)
     {
         var f = ctx.Party.Squad.Find(c.Person); if (f == null) return R(c, HeroResultCode.Invalid, T("HERO_THEY_ARE_NOT"));
+        if (f.Origin == FollowerOrigin.Slave)                                  // P6-E3: a slave of the party is sent back to the house (no wage, no severance)
+        {
+            if (ctx.State.Bonds?.Of(c.Person) is { } sb) sb.Work = Ravensguard.Sim.Bondage.BondWork.House;
+            ctx.Party.Squad.Members.Remove(f);
+            return R(c, HeroResultCode.Ok, T("HERO_GOES_HOME", f.Name));
+        }
         long sev = Recruiting.Severance(ctx.Trade, f.WageMitesPerDay); var e = ctx.Econ;
         var (_, hh) = PersonOf(ctx, c.Person);
         // what was actually paid (review finding 9): what the hero could afford, and nothing when the transfer did not go through or there is no household to pay
