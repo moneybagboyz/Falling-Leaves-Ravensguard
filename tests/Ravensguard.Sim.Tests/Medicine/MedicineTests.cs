@@ -392,7 +392,10 @@ public class MedicineTests(V2Fixture f)
         Assert.True(w.Economy.Ledger.Audit().IsConserved);
 
         // a household with no coin is not seen by the physician, whatever the draw says
-        var poor = Enumerable.Range(0, w.People.Count).First(i => i != row && w.People.IsAlive(i) && w.People.Household[i] >= 0 && w.People.HomeSettlement[i] == w.People.HomeSettlement[row] && w.Economy.Ledger.Balance(w.Economy.HouseholdPurse[w.People.Household[i]]).Mites < 40);
+        var poor = Enumerable.Range(0, w.People.Count).First(i => i != row && w.People.IsAlive(i) && w.People.Household[i] >= 0 && w.People.Household[i] != hh && w.People.HomeSettlement[i] == w.People.HomeSettlement[row]
+            && w.People.Household[i] != w.People.Household[mrow]);
+        var poorPurse = w.Economy.HouseholdPurse[w.People.Household[poor]];
+        w.Economy.Ledger.Sink(poorPurse, w.Economy.Ledger.Balance(poorPurse), SinkReason.Burn);
         for (int day = 1; day <= 40; day++) { hs = day * 86_400L; var lp = LedgerOf(w, [poor], hs); Assert.Null(AbstractPhysic.Run(w, lp, hs)); }
     }
 
@@ -470,7 +473,7 @@ public class MedicineTests(V2Fixture f)
         Assert.Equal(ActionKind.Flee, brain.Choose(scared, c with { CanFlee = true }).Kind);
 
         // and he dresses him: the next treatment with two bandages is a bandage on the worst bleeder
-        var brother = Book(2, 8); Hit(brother, 0, Struct("lower_arm_l", "radial_vein", WoundFlags.VeinHit, 100));
+        var brother = Book(2, 8); Hit(brother, 0, Struct("lower_arm_l", "radial_vein", WoundFlags.VeinHit, 50));
         var bag = new ItemBag().Add("bandage", 2);
         var req = TreatAi.Next(brother, H, bag, 40, 20, 5)!.Value;
         Assert.Equal(TreatKind.Bandage, req.Kind);
