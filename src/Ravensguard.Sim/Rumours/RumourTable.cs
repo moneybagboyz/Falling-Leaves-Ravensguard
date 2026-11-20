@@ -14,6 +14,52 @@ public sealed class RumourTable
     private readonly Dictionary<int, List<EntityId>> _held = [];
     public int HearingCount { get; private set; }
 
+    // ---- P6-A3 (reputation 4.1): hearings counted per home settlement of the listener, kept incrementally (a view: never saved, never hashed; rebuilt after a load)
+    private readonly Dictionary<EntityId, SortedDictionary<int, int>> _heardBy = [];
+    private readonly Dictionary<int, List<EntityId>> _heardIds = [];
+    private readonly SortedSet<EntityId> _touched = [];
+    private bool _countsStale;
+    /// <summary>Where a person lives (their home settlement index, -1 unknown); set by the talk hour so hearings can be counted per settlement.</summary>
+    public Func<int, int>? HomeOf { get; set; }
+    /// <summary>Hearings of a rumour by the listener's home settlement (ascending index); empty when none counted.</summary>
+    public IReadOnlyDictionary<int, int> HeardBySettlement(EntityId rumour) => _heardBy.TryGetValue(rumour, out var d) ? d : EmptyCounts;
+    private static readonly SortedDictionary<int, int> EmptyCounts = [];
+    /// <summary>Rumours that gained hearings (or lost them to a move) since the last drain, ascending id.</summary>
+    public List<EntityId> DrainTouched() { var l = new List<EntityId>(_touched); _touched.Clear(); return l; }
+    /// <summary>The rumours this person has heard, tellable or dropped, in the order heard.</summary>
+    public IReadOnlyList<EntityId> HeardIds(int person) => _heardIds.TryGetValue(person, out var l) ? l : [];
+
+    private void CountHeard(EntityId rumour, int listener)
+    {
+        _heardIds.TryAdd(listener, []); _heardIds[listener].Add(rumour);
+        int s = HomeOf?.Invoke(listener) ?? -1; if (s < 0) return;
+        if (!_heardBy.TryGetValue(rumour, out var d)) _heardBy[rumour] = d = [];
+        d[s] = d.GetValueOrDefault(s) + 1; _touched.Add(rumour);
+    }
+
+    /// <summary>Counts the hearings again from the stored rows (after a load, or when <see cref="HomeOf"/> was first set): the same numbers the increments would have made.</summary>
+    public void EnsureCounts(Func<int, int> homeOf)
+    {
+        bool first = HomeOf == null; HomeOf = homeOf;
+        if (!_countsStale && !first) return;
+        _heardBy.Clear(); _heardIds.Clear(); _countsStale = false;
+        foreach (var (id, list) in _hearings) foreach (var h in list) CountHeard(id, h.Listener);
+        _touched.Clear();
+    }
+
+    /// <summary>A person moved home (RP-9): every deed they had heard counts for the new settlement instead of the old one.</summary>
+    public void Relocate(int person, int from, int to)
+    {
+        if (from == to || !_heardIds.TryGetValue(person, out var ids)) return;
+        foreach (var id in ids)
+        {
+            if (!_heardBy.TryGetValue(id, out var d)) _heardBy[id] = d = [];
+            if (from >= 0 && d.TryGetValue(from, out int n)) { if (n <= 1) d.Remove(from); else d[from] = n - 1; }
+            if (to >= 0) d[to] = d.GetValueOrDefault(to) + 1;
+            _touched.Add(id);
+        }
+    }
+
     public IReadOnlyDictionary<EntityId, Rumour> Rumours => _rumours;
     public int Count => _rumours.Count;
     public Rumour? Get(EntityId id) => _rumours.GetValueOrDefault(id);
@@ -33,7 +79,7 @@ public sealed class RumourTable
         if (!_hearings.TryGetValue(rumour, out var list) || _index.ContainsKey((rumour, h.Listener))) return false;
         _index[(rumour, h.Listener)] = list.Count; list.Add(h); HearingCount++;
         if (!_held.TryGetValue(h.Listener, out var held)) _held[h.Listener] = held = [];
-        held.Add(rumour);
+        held.Add(rumour); CountHeard(rumour, h.Listener);
         if (held.Count > perPersonMax) DropWeakest(h.Listener, held);
         return true;
     }
@@ -60,6 +106,8 @@ public sealed class RumourTable
         foreach (var id in gone)
         {
             foreach (var h in _hearings[id]) { _index.Remove((id, h.Listener)); if (_held.TryGetValue(h.Listener, out var l)) { l.Remove(id); if (l.Count == 0) _held.Remove(h.Listener); } }
+            foreach (var h in _hearings[id]) if (_heardIds.TryGetValue(h.Listener, out var hi)) hi.Remove(id);
+            _heardBy.Remove(id); _touched.Remove(id);
             HearingCount -= _hearings[id].Count; _hearings.Remove(id); _rumours.Remove(id);
         }
         return gone.Count;
@@ -71,7 +119,7 @@ public sealed class RumourTable
         foreach (var p in _held.Keys.Where(gone).ToList()) _held.Remove(p);
     }
 
-    public void Clear() { _rumours.Clear(); _hearings.Clear(); _index.Clear(); _held.Clear(); HearingCount = 0; }
+    public void Clear() { _rumours.Clear(); _hearings.Clear(); _index.Clear(); _held.Clear(); HearingCount = 0; _heardBy.Clear(); _heardIds.Clear(); _touched.Clear(); _countsStale = true; }
 
     /// <summary>Rebuilds the indexes from stored rows (hearings in creation order).</summary>
     public void Restore(IEnumerable<Rumour> rumours, IEnumerable<(EntityId Rumour, Hearing H)> hearings)

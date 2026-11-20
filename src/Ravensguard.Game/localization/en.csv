@@ -3878,6 +3878,60 @@ px_ui_stream,(a stream runs here)
 px_ui_title,Prospecting
 px_ui_unsurveyed,"Unsurveyed: walk it, read it, dig a pit, sink a shaft."
 px_ui_write,Write up what you know of this acre (a survey report)
+st_band_distrusted,Distrusted
+st_band_hated,Hated
+st_band_honoured,Honoured
+st_band_known,Known
+st_band_respected,Respected
+st_band_unknown,Unknown
+st_deed_alms_given,Alms given
+st_deed_arson,Arson
+st_deed_assault,Assault
+st_deed_bounty_collected,A bounty collected
+st_deed_burglary,Burglary
+st_deed_caravan_raid,Raiding a caravan
+st_deed_contract_done,A contract kept
+st_deed_fire_fought,Fighting a fire
+st_deed_monster_slain,A monster slain
+st_deed_murder,Murder
+st_deed_oath_broken,A broken oath
+st_deed_outlaw_raid,Raiding as an outlaw
+st_deed_pilgrimage_done,A pilgrimage made
+st_deed_plague_nursed,Nursing the sick
+st_deed_poaching,Poaching
+st_deed_raid_repelled,A raid beaten off
+st_deed_riot_led,Leading a riot
+st_deed_sentence_served,A sentence served
+st_deed_site_monster_slain,A monster slain in its lair
+st_deed_slave_bought,Buying a slave
+st_deed_slave_freed,Freeing a slave
+st_deed_smuggling,Smuggling
+st_deed_theft_witnessed,Theft
+st_groups,Who thinks what
+st_intro,"What people think of you comes from the deeds they have heard of, near and far. It fades slowly; a murder is never forgotten."
+st_kind_band,Band
+st_kind_fief,Fief
+st_kind_guild,Guild
+st_kind_household,House
+st_kind_realm,Realm
+st_kind_religion,Faith
+st_kind_settlement,Town
+st_loading,Counting what is said of you...
+st_mark_enslaved,In bondage.
+st_mark_excommunicated,Cast out of the church.
+st_mark_murderer,Branded a murderer: strangers who see it start by fearing you.
+st_mark_outlaw_at,"Outlawed in {0}: anyone may kill you there, and the guards attack on sight."
+st_mark_pardoned,Pardoned.
+st_mark_runaway,Branded a runaway.
+st_mark_thief,Branded a thief: strangers who see it start by distrusting you.
+st_marks,Marks you carry
+st_marks_none,None.
+st_none,No one has heard a deed of yours yet.
+st_open,Standing
+st_renown,Renown: {0}.{1}% of the region's adults have heard of you
+st_title,Standing
+st_why_line,"  because of: {0} ({1}), day {2}"
+st_why_none,  nothing counted yet
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."
