@@ -249,6 +249,8 @@ public sealed partial class ConstructionWorld
     private void Repost(Contract c, long nowSec, string why)
     {
         Chron(nowSec, "contract_lapsed", [c.Contractor, c.Site], [new Cause(CauseKind.Other, null, why)]);
+        // the hero's followers leave the crew with him (they built for his wages, not the site's)
+        if (Site(c.Site) is { } s) { foreach (var m in s.Crew) if (m.Class == CrewClass.Follower) m.Ghost = default; s.Crew.RemoveAll(m => m.Class == CrewClass.Follower); s.FastOk = false; }
         c.State = ContractState.Open; c.Contractor = default; c.ContractorKind = PurseKind.Person; c.PostedSec = nowSec; c.SignedSec = 0; c.DueSec = 0;
     }
 
