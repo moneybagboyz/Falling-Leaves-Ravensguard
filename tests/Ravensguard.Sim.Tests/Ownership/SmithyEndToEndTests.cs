@@ -75,21 +75,20 @@ public class SmithyEndToEndTests(ITestOutputHelper output)
         Assert.True(plan.Ok, plan.Text);
         var site = s.Construction!.Sites.Values.Single(x => x.Owner == ctx.Party.Hero);
         Assert.Contains(cw.GhostsOf(site.Id), g => g.Z == 1);                                       // two storeys
-        // the builder: the town's carpenters under contract were the spec's way; P5-D's contract stalls in this world after its first pieces (phase-5-open), so the hero's own crew builds it,
-        // hired through the desk, with the pile stocked (the test's faucet, as the resume test stocks it: buying and hauling the materials is construction's own gate)
-        foreach (var (g, q) in cw.Needed(site)) cw.PileOf(site).Create(g, q, CreateReason.Import);
-        Assert.True(Do(ConstructionDesk.Hire(site.Id, 6, false, Sec())).Ok);
-        Assert.True(Do(ConstructionDesk.Hire(site.Id, 6, true, Sec())).Ok);
+        // the builder: the town's own builder under contract (the spec's way), commissioned through the desk at his bid. A new game's books are empty for its first days, so the town's
+        // merchant holds the plan's goods and the hero brings the anvil's iron (the test's stock, as BC-16 stocks the builder's yard: Construction/ContractSmithyTests)
+        Ravensguard.Sim.Tests.Construction.ContractSmithyTests.StockForContract(cw, site, town, Sec());
+        var bid = cw.Bids(site.Id, 4).First(b => b.Builder.Settlement == town);
+        var signed = Do(ConstructionDesk.Commission(site.Id, bid.Builder.Id, 4, Sec()));
+        Assert.True(signed.Ok, signed.Text);
+        var contract = s.Construction.Contracts.Values.Single(x => x.Kind == ContractKind.Commission);
         long ghosts = cw.GhostsOf(site.Id).Count();
-        int startDay = (int)(Sec() / 86400), days = 0;
-        while (site.State != SiteState.Finished && days < 160)
-        {
-            RunDays(1); days++;
-            if (site.Pause == PauseReason.NoMaterials)                                                  // what rotted in the open pile is stocked again (the same faucet)
-                foreach (var (g, q) in cw.Needed(site)) { long have = cw.PileOf(site).Qty(g); if (have < q) cw.PileOf(site).Create(g, q - have, CreateReason.Import); }
-        }
-        output.WriteLine($"the smithy took {days} days ({site.PiecesBuilt} pieces of {ghosts}), state {site.State} {site.Pause}, crew {site.Crew.Count}, the hero has {Quotes.Money(ctx.Coin)}");
+        int days = 0;
+        while (contract.State == ContractState.Signed && days < 60) { RunDays(1); days++; }
+        output.WriteLine($"{bid.Builder.Name} built the smithy for {Quotes.Money(contract.TotalMites)} in {days} days (bid {bid.ExpectedDaysX10 / 10.0}; {site.PiecesBuilt} pieces of {ghosts}), the hero has {Quotes.Money(ctx.Coin)}");
+        Assert.Equal(ContractState.Done, contract.State);
         Assert.Equal(SiteState.Finished, site.State);
+        Assert.InRange(days, bid.ExpectedDaysX10 / 10, bid.ExpectedDaysX10 / 10 * 5 / 4 + 1);
 
         // 3. open a smithy in its workshop
         int structure = 0;

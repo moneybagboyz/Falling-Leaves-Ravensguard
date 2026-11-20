@@ -158,8 +158,8 @@ public static class ConstructionIds
 {
     public const ulong Base = 0x74UL << 40;
     public const int SiteSlot = 1, GhostSlotId = 2, PileSlot = 3, RubbleSlot = 4, EscrowSlot = 5, EventSlot = 6, ChestSlot = 7;
-    /// <summary>P5-D: a contract and its escrow chest.</summary>
-    public const int ContractSlot = 8, ContractEscrowSlot = 9;
+    /// <summary>P5-D: a contract and its escrow chest; P5-I: the builder's materials chest and yard of a contract.</summary>
+    public const int ContractSlot = 8, ContractEscrowSlot = 9, ContractMaterialsSlot = 10, ContractYardSlot = 11;
 
     public static EntityId Make(int region, int slot, ulong serial) => EntityId.MakeIn(IdKind.Other, region, Base | ((ulong)slot << 36) | (serial & ((1UL << 36) - 1)));
     public static int SlotOf(EntityId id) => (int)((id.Serial >> 36) & 0xF);
@@ -169,6 +169,8 @@ public static class ConstructionIds
     public static EntityId RubbleOf(EntityId site) => Make(site.Region, RubbleSlot, SerialOf(site));
     public static EntityId EscrowOf(EntityId site) => Make(site.Region, EscrowSlot, SerialOf(site));
     public static EntityId EscrowOfContract(EntityId contract) => Make(contract.Region, ContractEscrowSlot, SerialOf(contract));
+    public static EntityId MaterialsOfContract(EntityId contract) => Make(contract.Region, ContractMaterialsSlot, SerialOf(contract));
+    public static EntityId YardOfContract(EntityId contract) => Make(contract.Region, ContractYardSlot, SerialOf(contract));
 
     private const int Bias = 1 << 19;
     /// <summary>(z, y, x) ordered cell key (the same packing as RoomWorld's).</summary>
