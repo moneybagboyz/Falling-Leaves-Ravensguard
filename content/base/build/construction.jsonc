@@ -7,7 +7,7 @@
     "groan_seconds": 10, "fall_mm_per_level": 3000, "fall_body_kg": 70,
     // the work (4.4): two to a cell (four on a stair pair or a forge), x1.5 without the tool, a crew's day 06-16, rain over 2 mm/h and frost stop daub, thatch and lime
     "workers_per_cell": 2, "workers_per_big_cell": 4, "no_tool_pm": 1500, "day_start_hour": 6, "day_hours": 10, "light_from_hour": 5, "light_to_hour": 21,
-    "rain_stop_tenths_mm_per_hour": 20, "frost_below_c": 0, "unskilled_gain_dx100": 20, "reach_m": 3, "quantum_seconds": 60,
+    "rain_stop_tenths_mm_per_hour": 20, "frost_below_c": 0, "unskilled_gain_dx100": 20, "reach_m": 3, "quantum_seconds": 300,
     "labourer_tools": ["axe", "spade"], "skilled_tools": ["axe", "saw", "hammer", "chisel", "spade"],
     // crews and wages (4.6): production's classes, 150 and 350 a day; skilled above Carpentry or Masonry 30; three short days and a hand quits
     "crew_max": 8, "wage_labourer_mites_per_day": 150, "wage_skilled_mites_per_day": 350, "skilled_above_skill": 30, "quit_after_short_days": 3, "hire_radius_m": 6000,

@@ -47,7 +47,7 @@ public sealed record ConstructionRulesDef : ContentDef
     /// <summary>A worker must stand within this many metres of the ghost (the hero's E range).</summary>
     public int ReachM { get; init; } = 3;
     /// <summary>The engine credits work in whole quanta of game time (a pure function of time, whatever the call cadence).</summary>
-    public int QuantumSeconds { get; init; } = 60;
+    public int QuantumSeconds { get; init; } = 300;
     /// <summary>The tools a hired worker brings, by class (craft_tool ids).</summary>
     public List<string> LabourerTools { get; init; } = ["axe", "spade"];
     public List<string> SkilledTools { get; init; } = ["axe", "saw", "hammer", "chisel", "spade"];

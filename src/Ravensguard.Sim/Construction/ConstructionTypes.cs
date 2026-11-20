@@ -75,6 +75,10 @@ public sealed class CrewMember
     public int ShortDays;
     /// <summary>The day the member was paid last and the coin paid in all.</summary>
     public long PaidMites;
+    // derived, never saved: the piece he works, its cost and his time and tool multipliers (rebuilt the same after a load)
+    internal Ghost? G;
+    internal PieceCost? C;
+    internal int Tm, Tp;
 }
 
 /// <summary>A piece to be built or taken down (spec 3.2). Progress is in standard worker-microseconds (one second of a skill-50 worker with the tools is 1,000,000).</summary>
@@ -98,6 +102,8 @@ public sealed class Ghost
     public byte Priority;
     public long PlacedSec;
 
+    /// <summary>Derived, never saved: the piece's cost.</summary>
+    internal PieceCost? CostCache;
     public long CellKey => ConstructionIds.CellKey(X, Y, Z);
     public long SlotKey => ConstructionIds.SlotKey(X, Y, Z, Slot);
     public bool Live => State is GhostState.Planned or GhostState.Blocked or GhostState.Ready or GhostState.InProgress;

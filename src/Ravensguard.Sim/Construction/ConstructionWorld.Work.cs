@@ -72,7 +72,7 @@ public sealed partial class ConstructionWorld
             long day = t0 / 86400;
             if (tod == Rules.DayStartHour * 3600L) { EscrowDay(day, t0); changed = true; }
             if (tod == (Rules.DayStartHour + Rules.DayHours) * 3600L) { PayDay(day, t0); changed = true; }
-            if (tod >= Rules.DayStartHour * 3600L && tod < (Rules.DayStartHour + Rules.DayHours) * 3600L) changed |= WorkQuantum(t0, q);
+            if (tod >= Rules.DayStartHour * 3600L && tod < (Rules.DayStartHour + Rules.DayHours) * 3600L) { long qt0 = System.Diagnostics.Stopwatch.GetTimestamp(); changed |= WorkQuantum(t0, q); DiagQuantumTicks += System.Diagnostics.Stopwatch.GetTimestamp() - qt0; }
             Book.AdvancedSec = t0 + q;
             if (!Busy()) { Book.AdvancedSec = nowSec / q * q; break; }
         }
@@ -90,8 +90,9 @@ public sealed partial class ConstructionWorld
         foreach (var s in Book.Sites.Values)
         {
             if (!s.Open || s.Crew.Count == 0 || s.Pause == PauseReason.Owner) continue;
-            bool dirty = false, worked = false, rainBlocked = false;
+            bool dirty = false, worked = false, rainBlocked = false, removed = false;
             long pileG = -1;
+            _finished.Clear();
             for (int ci = 0; ci < s.Crew.Count; ci++)
             {
                 var m = s.Crew[ci];
@@ -113,17 +114,33 @@ public sealed partial class ConstructionWorld
                 long left = q;
                 while (left > 0)
                 {
-                    var g = m.Ghost != default ? Book.Ghosts.GetValueOrDefault(m.Ghost) : null;
-                    if (g != null && (!g.Live || g.State == GhostState.Blocked || (g.Work == GhostWork.Build && WeatherStops(g, Costs[g.Piece], raining)))) { m.Ghost = default; g = null; }
-                    g ??= Pick(s, m, raining, ref rainBlocked);
-                    if (g == null) break;
-                    if (!Begin(s, g)) { m.Ghost = default; dirty = true; continue; }
-                    m.Ghost = g.Id;
-                    var c = Costs[g.Piece];
-                    long w = WorkOn(g, m.Person, SkillLevel(m.Person, c.Skill, m.PersonIndex), ToolsOk(c, CrewTools(m.Class)), left, out bool done);
+                    // the member's piece, its cost and his rates are cached on him (derived: rebuilt the same after a load) and dropped when the piece or his skill changes
+                    var g = m.G != null && m.G.Id == m.Ghost && m.Ghost != default ? m.G : m.Ghost != default ? Book.Ghosts.GetValueOrDefault(m.Ghost) : null;
+                    if (g != null && (!g.Live || g.State == GhostState.Blocked || (g.Work == GhostWork.Build && raining && WeatherStops(g, CostOf(g), raining)))) { m.Ghost = default; g = null; }
+                    if (g == null)
+                    {
+                        long pt0 = System.Diagnostics.Stopwatch.GetTimestamp();
+                        g = Pick(s, m, raining, ref rainBlocked);
+                        DiagPickTicks += System.Diagnostics.Stopwatch.GetTimestamp() - pt0;
+                        if (g == null) break;
+                        if (!Begin(s, g)) { m.Ghost = default; m.G = null; dirty = true; continue; }
+                        m.Ghost = g.Id;
+                    }
+                    else if (!g.Materialised && !Begin(s, g)) { m.Ghost = default; m.G = null; dirty = true; continue; }
+                    if (m.G != g || m.Tm == 0)
+                    {
+                        m.G = g; m.C = CostOf(g);
+                        m.Tm = PieceCosts.TimeMultPm(m.C, SkillLevel(m.Person, m.C.Skill, m.PersonIndex));
+                        m.Tp = ToolsOk(m.C, m.Class == CrewClass.Skilled ? _skilledTools ??= CrewTools(CrewClass.Skilled) : _labourTools ??= CrewTools(CrewClass.Labourer)) ? 1000 : Rules.NoToolPm;
+                    }
+                    long w = WorkOn(g, m, left, out bool done);
                     left -= w; m.WorkedTodaySec += w; worked = true; any = true;
                     GainSkill(m, g, w, t0 + (q - left));
-                    if (done) { Finish(g, t0 + (q - left), m.Person); m.Ghost = default; dirty = true; pileG = -1; }
+                    if (done)
+                    {
+                        if (g.Work == GhostWork.Build) _finished.Add(ConstructionIds.CellKey(g.X, g.Y, g.Z)); else removed = true;
+                        Finish(g, t0 + (q - left), m.Person); m.Ghost = default; m.G = null; dirty = true; pileG = -1;
+                    }
                 }
                 if (left == q && m.Ghost == default)
                 {
@@ -137,7 +154,7 @@ public sealed partial class ConstructionWorld
                     _idle[m.Person] = (_siteVersion.GetValueOrDefault(s.Id), pileG, raining, rb);
                 }
             }
-            if (dirty) Refresh(s);
+            if (dirty) { long rt0 = System.Diagnostics.Stopwatch.GetTimestamp(); Refresh(s, removed ? null : _finished); DiagRefreshTicks += System.Diagnostics.Stopwatch.GetTimestamp() - rt0; }
             if (s.Pause is PauseReason.None or PauseReason.Rain) s.Pause = !worked && rainBlocked ? PauseReason.Rain : s.Pause == PauseReason.Rain ? PauseReason.None : s.Pause;
         }
         return any;
@@ -189,7 +206,7 @@ public sealed partial class ConstructionWorld
         foreach (var g in GhostsOf(s.Id))
         {
             if (g.State is not (GhostState.Ready or GhostState.InProgress)) continue;
-            var c = Costs[g.Piece];
+            var c = CostOf(g);
             if (g.Work == GhostWork.Build)
             {
                 if (WeatherStops(g, c, raining)) { rainBlocked = true; continue; }
@@ -210,7 +227,7 @@ public sealed partial class ConstructionWorld
     private bool Begin(ConstructionSite s, Ghost g)
     {
         if (g.Work != GhostWork.Build || g.Materialised) return true;
-        var c = Costs[g.Piece];
+        var c = CostOf(g);
         if (!PileHas(s, c)) { g.Block = GhostBlock.Materials; g.State = GhostState.Blocked; return false; }
         var pile = PileOf(s); var own = Econ.OpenStore(StoreKind.Open, g.Id);
         foreach (var (good, grams) in c.Materials) Store.Move(pile, own, Econ.Goods.IdOf(good), grams);
@@ -218,10 +235,25 @@ public sealed partial class ConstructionWorld
         return true;
     }
 
+    private HashSet<string>? _skilledTools, _labourTools;
+    private readonly List<long> _finished = [];
+
+    /// <summary>A crew member on his cached piece and rates (the same arithmetic as <see cref="WorkOn(Ghost, EntityId, int, bool, long, out bool)"/>).</summary>
+    private static long WorkOn(Ghost g, CrewMember m, long seconds, out bool done)
+    {
+        long need = PieceCosts.SecondsFor(g.WorkNeed - g.WorkDone, m.Tm, m.Tp);
+        long w = Math.Min(seconds, Math.Max(0, need));
+        if (w >= need) { g.WorkDone = g.WorkNeed; done = true; }
+        else { g.WorkDone = Math.Min(g.WorkNeed, g.WorkDone + PieceCosts.UnitsFor(w, m.Tm, m.Tp)); done = g.WorkDone >= g.WorkNeed; }
+        g.Builder = m.Person; g.BuiltSkill = m.C!.Skill == Skill.None ? 50 : (1300 - m.Tm) / 6;
+        if (g.State != GhostState.Blocked) g.State = GhostState.InProgress;
+        return w;
+    }
+
     /// <summary>One worker on a ghost for up to <paramref name="seconds"/>: returns the seconds used; <paramref name="done"/> when the piece is finished.</summary>
     private long WorkOn(Ghost g, EntityId who, int skill, bool tools, long seconds, out bool done)
     {
-        var c = Costs[g.Piece];
+        var c = CostOf(g);
         int tm = PieceCosts.TimeMultPm(c, skill), tp = tools ? 1000 : Rules.NoToolPm;
         long need = PieceCosts.SecondsFor(g.WorkNeed - g.WorkDone, tm, tp);
         long w = Math.Min(seconds, Math.Max(0, need));
@@ -234,12 +266,13 @@ public sealed partial class ConstructionWorld
 
     private void GainSkill(CrewMember m, Ghost g, long seconds, long sec)
     {
-        var c = Costs[g.Piece];
+        var c = CostOf(g);
         m.SkillSec += seconds;
         while (m.SkillSec >= 3600)
         {
             m.SkillSec -= 3600;
             Train?.Invoke(m.Person, c.Skill == Skill.None ? Skill.Athletics : c.Skill, c.Skill == Skill.None ? Rules.UnskilledGainDx100 : Math.Max(25, c.Difficulty) * 2, c.Difficulty, sec);
+            m.Tm = 0;                                                                 // a skill gained: the rate is read again
         }
     }
 
@@ -247,16 +280,25 @@ public sealed partial class ConstructionWorld
     /// A piece is finished (spec 4.10, barrier): built, its materials become the piece (destroyed as Materialised, counted in the book's own audit) and it is a tile and a cell of a
     /// structure; taken down, the salvage share goes to the pile and the rest to the site's rubble, the cell is cleared and what it held is checked (a groan when it held something up).
     /// </summary>
+    /// <summary>Diagnostics (budgets): pieces finished and the stopwatch ticks spent finishing them (the barrier part: tiles, rooms, support).</summary>
+    public long DiagFinished, DiagFinishTicks, DiagRefreshTicks, DiagPickTicks, DiagQuantumTicks;
+
     private void Finish(Ghost g, long sec, EntityId by)
     {
+        long t0 = System.Diagnostics.Stopwatch.GetTimestamp();
+        try { FinishCore(g, sec, by); } finally { DiagFinished++; DiagFinishTicks += System.Diagnostics.Stopwatch.GetTimestamp() - t0; }
+    }
+
+    private void FinishCore(Ghost g, long sec, EntityId by)
+    {
         var s = Site(g.Site)!;
-        var c = Costs[g.Piece];
+        var c = CostOf(g);
         if (g.Work == GhostWork.Build)
         {
             if (Econ.OtherStores.TryGetValue(g.Id, out var own))
                 foreach (var (good, qty) in own.Rows()) { own.Destroy(good, qty, DestroyReason.Materialised); Book.MaterialisedG[good] = Book.MaterialisedG.GetValueOrDefault(good) + qty; }
             var b = new BuiltCell { X = g.X, Y = g.Y, Z = g.Z, Slot = g.Slot, Piece = g.Piece, Hp = PieceCosts.BuiltHp(c, g.BuiltSkill), BuiltSkill = g.BuiltSkill, Site = s.Id, BuiltSec = sec };
-            Book.Built[b.SlotKey] = b;
+            AddBuilt(b);
             g.State = GhostState.Built;
             DropGhost(g);
             var change = Rooms.Apply([new CellEdit(g.X, g.Y, g.Z, g.Slot == GhostSlot.Fixture ? CellLayer.Fixture : CellLayer.Structure, g.Piece)]);
@@ -284,7 +326,7 @@ public sealed partial class ConstructionWorld
     private void TakeDown(ConstructionSite s, int x, int y, int z, GhostSlot slot, long sec, EntityId by, string why)
     {
         var key = ConstructionIds.SlotKey(x, y, z, slot);
-        if (!Book.Built.Remove(key, out var b)) return;
+        if (!RemoveBuilt(key, out var b)) return;
         var c = Costs[b.Piece];
         var pile = PileOf(s); var rubble = Econ.OpenStore(StoreKind.Open, s.Rubble);
         if (!Book.Placed.ContainsKey(s.Rubble)) Book.Placed[s.Rubble] = new PlacedStore(s.Rubble, s.PileX, s.PileY, s.PileZ);
@@ -538,7 +580,7 @@ public sealed partial class ConstructionWorld
         foreach (var g in GhostsOf(s.Id))
         {
             if (g.Work != GhostWork.Build || g.Materialised) continue;
-            foreach (var (good, grams) in Costs[g.Piece].Materials) { var id = Econ.Goods.IdOf(good); need[id] = need.GetValueOrDefault(id) + grams; }
+            foreach (var (good, grams) in CostOf(g).Materials) { var id = Econ.Goods.IdOf(good); need[id] = need.GetValueOrDefault(id) + grams; }
         }
         return need;
     }
@@ -644,7 +686,7 @@ public sealed partial class ConstructionWorld
         while (t < untilSec && g != null)
         {
             if (Math.Max(Math.Abs(x - g.X), Math.Abs(y - g.Y)) > Rules.ReachM || Math.Abs(z - g.Z) > 1) { if (worked == 0) return ConstructionResult.No("cn_too_far", Rules.ReachM); break; }
-            var c = Costs[g.Piece];
+            var c = CostOf(g);
             long hod = t % 86400 / 3600;
             if (c.Outdoor && !Sheltered(g.X, g.Y, g.Z) && (hod < Rules.LightFromHour || hod >= Rules.LightToHour)) { if (worked == 0) return ConstructionResult.No("cn_too_dark"); break; }
             if (g.Work == GhostWork.Build && WeatherStops(g, c, RainStops(t))) { if (worked == 0) return ConstructionResult.No("cn_rain", c.Name); break; }
@@ -674,11 +716,11 @@ public sealed partial class ConstructionWorld
     {
         bool dummy = false;
         var me = new CrewMember { Person = s.Owner };
-        foreach (var g in GhostsOf(s.Id).OrderBy(g => g.Z).ThenBy(g => KindRank(Costs[g.Piece].Kind)).ThenBy(g => Math.Max(Math.Abs(g.X - x), Math.Abs(g.Y - y))).ThenBy(g => g.Id))
+        foreach (var g in GhostsOf(s.Id).OrderBy(g => g.Z).ThenBy(g => KindRank(CostOf(g).Kind)).ThenBy(g => Math.Max(Math.Abs(g.X - x), Math.Abs(g.Y - y))).ThenBy(g => g.Id))
         {
             if (g.State is not (GhostState.Ready or GhostState.InProgress)) continue;
             if (Math.Max(Math.Abs(x - g.X), Math.Abs(y - g.Y)) > Rules.ReachM || Math.Abs(z - g.Z) > 1) continue;
-            if (g.Work == GhostWork.Build && !g.Materialised && !PileHas(s, Costs[g.Piece])) continue;
+            if (g.Work == GhostWork.Build && !g.Materialised && !PileHas(s, CostOf(g))) continue;
             return g;
         }
         _ = dummy; _ = me;

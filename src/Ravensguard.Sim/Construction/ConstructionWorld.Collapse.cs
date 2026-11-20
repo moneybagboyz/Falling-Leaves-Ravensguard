@@ -17,23 +17,33 @@ public sealed partial class ConstructionWorld
     {
         var gone = new HashSet<long>(removed); gone.UnionWith(already);
         var doomed = new SortedSet<long>();
+        if (removed.Count == 0) return doomed;
         int r = Math.Max(Rules.SupportReachTiles, Rules.BeamReachTiles) + Rules.BeamSpanTiles + 1;
-        var queue = new SortedSet<long>(removed);
+        int x0 = int.MaxValue, y0 = int.MaxValue, x1 = int.MinValue, y1 = int.MinValue, z0 = int.MaxValue;
+        void Grow(long k) { var (x, y, z) = ConstructionIds.Unpack(k); x0 = Math.Min(x0, x - r); x1 = Math.Max(x1, x + r); y0 = Math.Min(y0, y - r); y1 = Math.Max(y1, y + r); z0 = Math.Min(z0, Math.Max(1, z)); }
+        foreach (var k in removed) Grow(k);
         var at = (CellAt)((x, y, z) => gone.Contains(ConstructionIds.CellKey(x, y, z)) ? null : BuiltStructure(x, y, z));
-        while (queue.Count > 0)
+        // passes over the candidates in (z, y, x) order until nothing more falls; the box grows with what falls (the cascade, BC-14)
+        while (true)
         {
-            long k = queue.Min; queue.Remove(k);
-            var (kx, ky, kz) = ConstructionIds.Unpack(k);
-            var cand = Book.Built.Values.Where(b => b.Slot == GhostSlot.Structure && b.Z >= Math.Max(1, kz) && b.Z <= kz + 1 + 1 && Math.Abs(b.X - kx) <= r && Math.Abs(b.Y - ky) <= r)
-                .Select(b => (Key: ConstructionIds.CellKey(b.X, b.Y, b.Z), B: b)).Where(c => !gone.Contains(c.Key)).OrderBy(c => c.Key).ToList();
-            foreach (var (ck, b) in cand)
+            var cand = new List<BuiltCell>();
+            foreach (var b in Book.Built.Values)
+                if (b.Slot == GhostSlot.Structure && b.Z >= z0 && b.X >= x0 && b.X <= x1 && b.Y >= y0 && b.Y <= y1) cand.Add(b);
+            int bx0 = x0, bx1 = x1, by0 = y0, by1 = y1, bz0 = z0;
+            bool more = true;
+            while (more)
             {
-                if (gone.Contains(ck)) continue;
-                if (Support.Check(b.X, b.Y, b.Z, Costs[b.Piece], (x, y, z) => x == b.X && y == b.Y && z == b.Z ? null : at(x, y, z)).Ok) continue;
-                gone.Add(ck); doomed.Add(ck); queue.Add(ck);
+                more = false;
+                foreach (var b in cand)
+                {
+                    long ck = ConstructionIds.CellKey(b.X, b.Y, b.Z);
+                    if (gone.Contains(ck)) continue;
+                    if (Support.Check(b.X, b.Y, b.Z, Costs[b.Piece], at).Ok) continue;
+                    gone.Add(ck); doomed.Add(ck); more = true; Grow(ck);
+                }
             }
+            if (x0 == bx0 && x1 == bx1 && y0 == by0 && y1 == by1 && z0 == bz0) return doomed;
         }
-        return doomed;
     }
 
     /// <summary>Support was taken away at <paramref name="removed"/>: what no longer stands groans (a pending fall <c>groan_seconds</c> later), unless it already does.</summary>
@@ -105,7 +115,7 @@ public sealed partial class ConstructionWorld
             foreach (var slot in new[] { GhostSlot.Fixture, GhostSlot.Structure })
             {
                 if (GhostAt(x, y, z, slot) is { } gh) { sites.Add(gh.Site); CancelGhost(gh); }
-                if (!Book.Built.Remove(ConstructionIds.SlotKey(x, y, z, slot), out var b)) continue;
+                if (!RemoveBuilt(ConstructionIds.SlotKey(x, y, z, slot), out var b)) continue;
                 Unbuild(Costs[b.Piece], rubble, waste);
                 edits.Add(new CellEdit(x, y, z, slot == GhostSlot.Fixture ? CellLayer.Fixture : CellLayer.Structure, null));
                 if (Site(b.Site) is { } bs) sites.Add(bs.Id);
@@ -159,12 +169,15 @@ public sealed partial class ConstructionWorld
     // ------------------------------------------------------------------ the view (presentation reads only this)
 
     private ConstructionView? _lastView;
+    /// <summary>Set by the street view (the only reader): without it no view is built (a headless world, a test, the hours nobody watches).</summary>
+    public volatile bool ViewWanted;
     private long _viewBuiltVersion = -1;
     private IReadOnlyList<BuiltView> _builtList = [];
 
     /// <summary>Builds and swaps in the view the main thread reads (a copy: sites, ghosts with progress, built cells, groans, crews at their ghosts, recent events).</summary>
     public void Publish(long nowSec)
     {
+        if (!ViewWanted) return;
         if (_viewBuiltVersion != _builtVersion)
         {
             var cells = new SortedDictionary<long, (string? S, string? F)>();
@@ -183,7 +196,7 @@ public sealed partial class ConstructionWorld
         foreach (var g in Book.Ghosts.Values)
         {
             if (!g.Live) continue;
-            var c = Costs[g.Piece];
+            var c = CostOf(g);
             ghosts.Add(new GhostView(g.Id, g.X, g.Y, g.Z, g.Piece, c.Kind, g.State, g.Block, g.Work, (int)(g.WorkNeed <= 0 ? 0 : g.WorkDone * 1000 / g.WorkNeed), workers.GetValueOrDefault(g.Id), g.Site));
         }
         var sites = new List<SiteView>();

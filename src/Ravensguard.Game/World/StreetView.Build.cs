@@ -32,7 +32,11 @@ public partial class StreetView
         var book = rt.State.Construction; if (book == null) return;
         var cw = BuildWorld;
         var s = _world.Snapshot;
-        if (cw != null) cw.HeroCell = (s.OriginX + s.Hero.CellX, s.OriginY + s.Hero.CellY, s.Hero.Z);
+        if (cw != null)
+        {
+            cw.HeroCell = (s.OriginX + s.Hero.CellX, s.OriginY + s.Hero.CellY, s.Hero.Z);
+            if (!cw.ViewWanted) { cw.ViewWanted = true; rt.AtBarrier(() => { cw.Publish(_world.Clock.Now.Seconds); return 0; }); }
+        }
         long now = _world.Clock.Now.Seconds;
         var v = book.View;
         if (_buildTask is { IsCompleted: true } bt)
@@ -40,7 +44,7 @@ public partial class StreetView
             if (bt.IsFaulted) GD.PushWarning("[build] construction step failed: " + bt.Exception?.GetBaseException());
             _buildTask = null;
         }
-        if (cw != null && _buildTask == null && v != null && (v.Sites.Count > 0 || v.Groans.Count > 0) && now - _buildSec >= BuildStrideSec && _world.Clock.Speed != SimSpeed.Paused)
+        if (cw != null && _buildTask == null && (v == null || v.Sites.Count > 0 || v.Groans.Count > 0) && now - _buildSec >= BuildStrideSec && _world.Clock.Speed != SimSpeed.Paused)
         {
             _buildSec = now;
             _buildTask = rt.AtBarrier(() => { cw.AdvanceTo(now); return 0; });

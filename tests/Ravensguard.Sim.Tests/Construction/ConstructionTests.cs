@@ -161,21 +161,21 @@ public class ConstructionTests(ITestOutputHelper output)
         Assert.True(r.W.AddWorker(pr.Site, a, -1, CrewClass.Labourer, 150).Ok);
         Assert.True(r.W.AddWorker(pr.Site, b, -1, CrewClass.Labourer, 150).Ok);
         var s = r.W.Site(pr.Site)!;
-        r.W.AdvanceTo(T0 + 60);                                                        // day 10, 06:00: escrow 300
+        r.W.AdvanceTo(T0 + 300);                                                       // day 10, 06:00 (the first quantum): escrow 300
         Assert.Equal(300, r.Econ.Ledger.Balance(r.Econ.Ledger.Open(PurseKind.Chest, s.Escrow)).Mites);
         Assert.Equal(150, r.Econ.Ledger.Balance(payer).Mites);
-        r.W.AdvanceTo(T0 + 10 * 3600 + 60);                                            // 16:00: paid a full day each
+        r.W.AdvanceTo(T0 + 10 * 3600 + 300);                                           // 16:00: paid a full day each
         Assert.Equal(300, s.PaidMites);
         int built = r.W.Book.Built.Count;
         Assert.True(built > 0);
-        r.W.AdvanceTo(T0 + 86400 + 60);                                                 // day 11, 06:00: 300 needed, 150 left
+        r.W.AdvanceTo(T0 + 86400 + 300);                                                // day 11, 06:00: 300 needed, 150 left
         Assert.Equal(PauseReason.NoWages, s.Pause);
         r.W.AdvanceTo(T0 + 86400 + 10 * 3600);
         Assert.Equal(built, r.W.Book.Built.Count);                                      // progress kept, nothing more done
         r.Econ.Ledger.Mint(payer, new Coin(600), SourceReason.Seed);
         r.W.AdvanceTo(T0 + 86400 + 12 * 3600);
         Assert.Equal(PauseReason.NoWages, s.Pause);                                     // not before the next 06:00
-        r.W.AdvanceTo(T0 + 2 * 86400 + 60);
+        r.W.AdvanceTo(T0 + 2 * 86400 + 300);
         Assert.Equal(PauseReason.None, s.Pause);
         r.W.AdvanceTo(T0 + 2 * 86400 + 3 * 3600);
         Assert.True(r.W.Book.Built.Count > built);

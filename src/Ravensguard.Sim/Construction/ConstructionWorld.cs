@@ -91,7 +91,7 @@ public sealed partial class ConstructionWorld
     public ConstructionWorld(ConstructionBook book, EconomyState econ, PieceCosts costs, int regionId = 0)
     {
         Book = book; Econ = econ; Costs = costs; RegionId = regionId;
-        Support = new SupportRules(costs);
+        Support = new SupportRules(costs) { AnyBeams = () => _beams > 0 || _planBeams };
         Rooms = costs.Library.NewWorld();
         Reindex();
     }
@@ -109,6 +109,8 @@ public sealed partial class ConstructionWorld
             set.Add(g.Id);
         }
         Rooms = Costs.Library.NewWorld();
+        _built.Clear(); _beams = 0;
+        foreach (var b in Book.Built.Values) { _built[b.SlotKey] = b; if (b.Slot == GhostSlot.Structure && Costs.Get(b.Piece)?.Kind == PieceKind.Beam) _beams++; }
         var edits = new List<CellEdit>();
         foreach (var b in Book.Built.Values) edits.Add(new CellEdit(b.X, b.Y, b.Z, b.Slot == GhostSlot.Fixture ? CellLayer.Fixture : CellLayer.Structure, b.Piece));
         if (edits.Count > 0)
@@ -123,7 +125,25 @@ public sealed partial class ConstructionWorld
 
     // ------------------------------------------------------------------ cells
 
-    public BuiltCell? BuiltAt(int x, int y, int z, GhostSlot slot = GhostSlot.Structure) => Book.Built.GetValueOrDefault(ConstructionIds.SlotKey(x, y, z, slot));
+    public BuiltCell? BuiltAt(int x, int y, int z, GhostSlot slot = GhostSlot.Structure) => _built.GetValueOrDefault(ConstructionIds.SlotKey(x, y, z, slot));
+
+    // the built cells hashed for the support checks (the book keeps them sorted for the save); beams counted so a world without any skips the beam scan
+    private readonly Dictionary<long, BuiltCell> _built = [];
+    private bool _planBeams;
+    private int _beams;
+    public bool AnyBeams => _beams > 0;
+    private void AddBuilt(BuiltCell b)
+    {
+        Book.Built[b.SlotKey] = b; _built[b.SlotKey] = b;
+        if (b.Slot == GhostSlot.Structure && Costs.Get(b.Piece)?.Kind == PieceKind.Beam) _beams++;
+    }
+    private bool RemoveBuilt(long key, out BuiltCell b)
+    {
+        if (!Book.Built.Remove(key, out b!)) return false;
+        _built.Remove(key);
+        if (b.Slot == GhostSlot.Structure && Costs.Get(b.Piece)?.Kind == PieceKind.Beam) _beams--;
+        return true;
+    }
     public Ghost? GhostAt(int x, int y, int z, GhostSlot slot = GhostSlot.Structure) => _ghostAt.TryGetValue(ConstructionIds.SlotKey(x, y, z, slot), out var id) ? Book.Ghosts.GetValueOrDefault(id) : null;
     public IEnumerable<Ghost> GhostsOf(EntityId site) => _siteGhosts.TryGetValue(site, out var set) ? set.Select(id => Book.Ghosts[id]) : [];
     public ConstructionSite? Site(EntityId id) => Book.Sites.GetValueOrDefault(id);
@@ -171,6 +191,14 @@ public sealed partial class ConstructionWorld
         string blueprint = "", (int X, int Y)? pile = null, EntityId payer = default, PurseKind payerKind = PurseKind.Person)
     {
         if (cells.Count == 0) return PlaceResult.No("cn_nothing_placed");
+        _planBeams = true;                                   // the planned cells may hold beams: support checks scan for them
+        try { return PlaceCore(owner, ownerKind, household, cells, nowSec, siteId, allOrNothing, blueprint, pile, payer, payerKind); }
+        finally { _planBeams = false; }
+    }
+
+    private PlaceResult PlaceCore(EntityId owner, PurseKind ownerKind, int household, IReadOnlyList<PlaceCell> cells, long nowSec, EntityId siteId, bool allOrNothing,
+        string blueprint, (int X, int Y)? pile, EntityId payer, PurseKind payerKind)
+    {
         var refused = new List<PlaceRefusal>();
         var batch = new Dictionary<long, PieceCost>();
         var batchFix = new HashSet<long>();
@@ -196,7 +224,7 @@ public sealed partial class ConstructionWorld
             }
             var slot = cost.Slot;
             long sk = ConstructionIds.SlotKey(c.X, c.Y, c.Z, slot), ck = ConstructionIds.CellKey(c.X, c.Y, c.Z);
-            if (Book.Built.ContainsKey(sk) || _ghostAt.ContainsKey(sk) || (slot == GhostSlot.Structure ? batch.ContainsKey(ck) : batchFix.Contains(ck))) { No("cn_occupied"); continue; }
+            if (_built.ContainsKey(sk) || _ghostAt.ContainsKey(sk) || (slot == GhostSlot.Structure ? batch.ContainsKey(ck) : batchFix.Contains(ck))) { No("cn_occupied"); continue; }
             if (slot == GhostSlot.Structure && BuiltAt(c.X, c.Y, c.Z) == null && Standing?.Invoke(c.X, c.Y, c.Z) == true) { No("cn_occupied"); continue; }
             if (slot == GhostSlot.Fixture)
             {
@@ -382,28 +410,60 @@ public sealed partial class ConstructionWorld
 
     // ------------------------------------------------------------------ ghost states (spec 3.2)
 
+    /// <summary>A ghost's piece cost (cached on the ghost: derived, the same after a load).</summary>
+    public PieceCost CostOf(Ghost g) => g.CostCache ??= Costs[g.Piece];
+
+    private readonly Dictionary<PieceCost, (ushort Good, long Grams)[]> _goodIds = [];
+    /// <summary>A piece's materials as good ids of this economy.</summary>
+    public (ushort Good, long Grams)[] MaterialIds(PieceCost c)
+    {
+        if (_goodIds.TryGetValue(c, out var ids)) return ids;
+        return _goodIds[c] = [.. c.Materials.Select(m => (Econ.Goods.TryIdOf(m.Good, out var g) ? g : ushort.MaxValue, m.Grams))];
+    }
+
     /// <summary>Whether the pile holds every material of a piece.</summary>
     public bool PileHas(ConstructionSite s, PieceCost c)
     {
+        var ids = MaterialIds(c);
+        if (ids.Length == 0) return true;
         var pile = PileOf(s);
-        foreach (var (good, grams) in c.Materials)
-            if (!Econ.Goods.TryIdOf(good, out var g) || pile.Qty(g) < grams) return false;
+        foreach (var (g, grams) in ids)
+            if (g == ushort.MaxValue || pile.Qty(g) < grams) return false;
         return true;
     }
 
     /// <summary>Recomputes the states of a site's ghosts: what is ready (support built, materials in the pile), what waits and why, and the site's own pause.</summary>
-    public void Refresh(ConstructionSite s)
+    public void Refresh(ConstructionSite s) => Refresh(s, null);
+
+    /// <summary>
+    /// <see cref="Refresh(ConstructionSite)"/> after pieces were only added at <paramref name="built"/> (cell keys): a finished piece can only hold more up, so support is checked again
+    /// only for the ghosts that waited on it near those cells; materials for all.
+    /// </summary>
+    public void Refresh(ConstructionSite s, IReadOnlyList<long>? built)
     {
         Touch(s);
+        // a new piece helps only what is on its level or the one above, within the longest reach (a beam's, and the jetty beside a beam's end)
+        int near = Math.Max(Rules.SupportReachTiles, Rules.BeamReachTiles) + Rules.JettyReachTiles;
+        bool Near(Ghost g)
+        {
+            foreach (var k in built!)
+            {
+                var (x, y, z) = ConstructionIds.Unpack(k);
+                if (g.Z - z is >= 0 and <= 1 && Math.Abs(g.X - x) <= near && Math.Abs(g.Y - y) <= near) return true;
+            }
+            return false;
+        }
         var at = BuiltView();
         bool anyLive = false, anyReady = false, anyMaterials = false;
         foreach (var g in GhostsOf(s.Id))
         {
             anyLive = true;
             if (g.Work == GhostWork.Deconstruct) { g.Block = GhostBlock.None; g.State = g.WorkDone > 0 ? GhostState.InProgress : GhostState.Ready; anyReady = true; continue; }
-            var cost = Costs[g.Piece];
+            var cost = CostOf(g);
             GhostBlock block = GhostBlock.None;
-            if (g.Slot == GhostSlot.Fixture) { if (BuiltStructure(g.X, g.Y, g.Z) is not { } f || !PieceCatalog.IsRoomKind(f.Kind)) block = GhostBlock.Support; }
+            bool supportKnown = built != null && g.State != GhostState.Planned && (g.Block != GhostBlock.Support || !Near(g));
+            if (supportKnown) block = g.Block == GhostBlock.Support ? GhostBlock.Support : GhostBlock.None;
+            else if (g.Slot == GhostSlot.Fixture) { if (BuiltStructure(g.X, g.Y, g.Z) is not { } f || !PieceCatalog.IsRoomKind(f.Kind)) block = GhostBlock.Support; }
             else if (!Support.Check(g.X, g.Y, g.Z, cost, at).Ok) block = GhostBlock.Support;
             if (block == GhostBlock.None && !g.Materialised && !PileHas(s, cost)) block = GhostBlock.Materials;
             g.Block = block;

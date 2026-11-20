@@ -20,6 +20,8 @@ public sealed class SupportRules
     private readonly PieceCosts _costs;
     private readonly ConstructionRulesDef _r;
     public SupportRules(PieceCosts costs) { _costs = costs; _r = costs.Rules; }
+    /// <summary>Whether any beam can be among the cells checked (false lets a check skip the beam scan); null: always scan.</summary>
+    public Func<bool>? AnyBeams { get; init; }
 
     public readonly record struct Verdict(SupportFault Fault, string? Weakest = null, int WeakestCarries = 0)
     {
@@ -69,7 +71,7 @@ public sealed class SupportRules
                 if (Bear(x + dx, y + dy, z - 1, at, 0) >= z) return new(SupportFault.None);
                 Note(s, ref weakest, ref weakCarries);
             }
-        if (c.Kind != PieceKind.Beam)
+        if (c.Kind != PieceKind.Beam && AnyBeams?.Invoke() != false)
         {
             int br = _r.BeamReachTiles;
             for (int dy = -br; dy <= br; dy++)
