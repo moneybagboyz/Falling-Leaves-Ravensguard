@@ -1,0 +1,5 @@
+// Customs by good (docs/specs/phase6/rule-and-income.md 4.4): the percent on goods leaving or entering by a gate; goods with no row pay the realm's rate (3% by default).
+[
+  {"type": "customs_rate", "id": "wool_export", "good": "wool_raw", "export_pct": 10},
+  {"type": "customs_rate", "id": "wine_import", "good": "wine", "import_pct": 5}
+]

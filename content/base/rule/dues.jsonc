@@ -1,0 +1,4 @@
+// The numbers of rule and income (docs/specs/phase6/rule-and-income.md 4): service, aids, relief, wardship, councils, tallage, customs, officials, loans, eviction, charters. The defaults are the spec's.
+[
+  {"type": "rule_settings", "id": "rule"}
+]

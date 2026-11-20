@@ -233,6 +233,7 @@ public sealed partial class ContinentTrade
                 store.Destroy(g, take, DestroyReason.Export);
                 led.Mint(c.Account, new Coin(pay), SourceReason.Immigrate);
                 et.CoinNetIn += pay; ExportedMites += pay; ExportedUnits[g] += take;
+                Ravensguard.Sim.Rule.RuleCustoms.Charge(_ew.World, c.Account, c.Settlement, cat.StringId(g), pay, export: true);       // P6-C3 (rule-and-income 4.4): the realm's customs on what leaves
                 if (k >= 0) et.StockNetOut[k] += cat.MassG(g, take);
             }
             // the realm gate's toll
@@ -260,6 +261,7 @@ public sealed partial class ContinentTrade
                 if (cost <= 0 || !led.Sink(c.Account, new Coin(cost), SinkReason.Emigrate)) continue;
                 store.Create(g, units, CreateReason.Import);
                 et.CoinNetIn -= cost; ImportedMites += cost; ImportedUnits[g] += units;
+                Ravensguard.Sim.Rule.RuleCustoms.Charge(_ew.World, c.Account, c.Settlement, cat.StringId(g), cost, export: false);       // P6-C3: and on what comes in
                 if (k >= 0) et.StockNetOut[k] -= cat.MassG(g, units);
                 capMass -= units * massPerUnit; capVol -= units * volPerUnit;
             }

@@ -11,6 +11,8 @@ public readonly record struct ShareRow(EntityId Holder, int Pm);
 public enum OwnerAlert : ushort
 {
     None = 0, WagesOwed = 1, NoInput = 2, LossSeason = 4, NoStaff = 8, StewardReport = 16, Unlicensed = 32, Exhausted = 64, Flooded = 128, StallUnminded = 256, StewardNoProfit = 512,
+    /// <summary>P6-C3: an official's collections fall a quarter or more short of what was expected (rule-and-income 4.8).</summary>
+    Shortfall = 1024,
 }
 
 /// <summary>

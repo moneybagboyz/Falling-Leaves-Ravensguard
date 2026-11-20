@@ -28,5 +28,8 @@
   {"type": "deed", "id": "hero_wedding",       "entry": "hero_wedding",       "settlement_pm": 40,   "fief_pm": 10},
   {"type": "deed", "id": "kin_kidnapped",      "entry": "kin_kidnapped",      "settlement_pm": -20,  "fief_pm": -10},
   {"type": "deed", "id": "contract_done",      "entry": "contract_done",      "settlement_pm": 15},
+  {"type": "deed", "id": "official_found_skimming", "entry": "official_found_skimming", "settlement_pm": -200, "fief_pm": -100},
+  {"type": "deed", "id": "fief_forfeited",     "entry": "fief_forfeited",     "settlement_pm": -60,  "fief_pm": -150, "realm_pm": -40},
+  {"type": "deed", "id": "loan_default",       "entry": "loan_default",       "settlement_pm": -120},
   {"type": "deed", "id": "slave_held",         "entry": "slave_held",         "settlement_pm": -20,  "religion_pm": -60}
 ]

@@ -689,11 +689,17 @@ public sealed class LandWorld
         int seat = SeatOf(gk, grantor);
         if (seat < 0) return LandResult.No("ld_charter_no_grantor");
         if (atSettlement != seat) return LandResult.No("ld_charter_at_seat", Region.Settlements[seat].Name);
-        if (Book.StandingWith(gk, grantor) < Rules.CharterMinStanding) return LandResult.No("ld_charter_standing");
+        if (CharterJudge == null && Book.StandingWith(gk, grantor) < Rules.CharterMinStanding) return LandResult.No("ld_charter_standing");
         var tiles = CharterSite(gk, grantor, xM, yM);
         if (tiles.Length < Rules.CharterSiteTiles) return LandResult.No("ld_charter_no_site");
-        foreach (int t in tiles) if (Taken(t)) return LandResult.No("ld_charter_contested");
-        if (Region.NearestActiveWarM(xM, yM) < Rules.CharterWarM) return LandResult.No("ld_charter_contested");
+        bool contested = tiles.Any(Taken) || Region.NearestActiveWarM(xM, yM) < Rules.CharterWarM;
+        if (CharterJudge != null)
+        {
+            // P6-C3 (rule-and-income 4.9): charters are politics: the ruler's opinion, the petitioner's standing, the fee and whether the land is contested, and a refusal names its largest negative term
+            var (granted, refusalKey) = CharterJudge(grantee, gk, grantor, Rules.CharterFeeMites, contested);
+            if (!granted) return LandResult.No(refusalKey);
+        }
+        else if (contested) return LandResult.No("ld_charter_contested");
         var (gId, gKind) = gk == GrantorKind.Realm ? (RealmTreasuryId(grantor), PurseKind.Treasury) : (Region.Fiefs[grantor].Id, PurseKind.Treasury);
         long fee = Rules.CharterFeeMites;
         if (Balance(grantee, kind) < fee || !Pay(grantee, kind, gId, gKind, fee, TransferReason.Rent)) return new LandResult(false, "ld_cannot_afford", [Money(fee)], fee, CannotAfford: true);
@@ -719,6 +725,45 @@ public sealed class LandWorld
             ("grantor", grantorName), ("fee", fee.ToString()), ("tiles", tiles.Length.ToString()), ("settle_by", c.SettleByDay.ToString()), ("households", c.MinHouseholds.ToString()),
             ("dues_year", c.DuesMitesPerYear.ToString()), ("service", $"{c.ServiceMen}x{c.ServiceDays}"));
         return new LandResult(true, "ld_charter_granted", [grantorName, Money(fee), c.MinHouseholds, c.SettleByDay], fee, id);
+    }
+
+    /// <summary>P6-C3: the politics of a charter petition (grantee, grantor, the fee, whether the land is contested): granted or the refusal's text key. Null leaves Phase 5's simple standing rule in force. Not saved.</summary>
+    public Func<EntityId, GrantorKind, int, long, bool, (bool Granted, string RefusalKey)>? CharterJudge { get; set; }
+
+    /// <summary>
+    /// P6-C3 (rule-and-income 4.6, 4.9): a deed passes to <paramref name="to"/> by a cause of the book (a mortgage forfeited, a charter revoked): the registry's deed is copied with its new holder and the change recorded.
+    /// Returns false when no such deed exists.
+    /// </summary>
+    public bool Transfer(EntityId deedId, EntityId to, PurseKind toKind, int day, DeedCause cause)
+    {
+        var d = Registry().Get(deedId); if (d == null) return false;
+        var n = d.Clone(); n.Holder = to; n.HolderPurse = toKind; n.AcquiredDay = day; n.Cause = cause; n.AskMites = 0; n.NoticeDay = -1; n.OwedMites = 0; n.ArrearsSeasons = 0; n.InDebt = false;
+        Put(n, day);
+        return true;
+    }
+
+    /// <summary>P6-C3 (rule-and-income 4.9): a charter's deed returns to its grantor (<see cref="DeedCause.Forfeited"/>); the settlers stay as the grantor's tenants. The charter keeps its <see cref="CharterState.Lapsed"/> state.</summary>
+    public bool RevokeCharter(Charter c, int day, LandChronicle chron)
+    {
+        if (!Book.Deeds.TryGetValue(c.DeedId, out var d)) return false;
+        var (gId, gKind) = c.GrantorKind == GrantorKind.Realm ? (RealmTreasuryId(c.Grantor), PurseKind.Treasury) : ((uint)c.Grantor < (uint)Region.Fiefs.Count ? Region.Fiefs[c.Grantor].Id : EntityId.None, PurseKind.Treasury);
+        Book.Deeds.Remove(c.DeedId);
+        Book.Changes.Add(new DeedChange(day, c.DeedId, gId, Tenure.Freehold, 0, -1, DeedCause.Forfeited));
+        c.State = CharterState.Lapsed; if (c.LapseDay < 0) c.LapseDay = day;
+        _ = d; _ = gKind; _ = chron;
+        return true;
+    }
+
+    /// <summary>P6-C3 (rule-and-income 4.7): the lord's eviction of an unlicensed claim: it is <see cref="ClaimState.Pulled"/>, and what the squatter built stays with the lord (a change of the book with <see cref="DeedCause.Evicted"/>).</summary>
+    public bool EvictClaim(Claim c, int day, LandChronicle chron)
+    {
+        if (c.State != ClaimState.Open) return false;
+        c.State = ClaimState.Pulled; c.EndDay = day;
+        EntityId lordId = EntityId.None;
+        if (c.Fief >= 0 && c.Fief < Region.Fiefs.Count) (lordId, _) = LandRegistry.LordOf(Pop, Region.Fiefs[c.Fief].SeatSettlement);
+        Book.Changes.Add(new DeedChange(day, LandIds.Serial(RegionId, c.Serial), lordId, Tenure.Freehold, 0, -1, DeedCause.Evicted));
+        chron(Day(day), "claim_evicted", [c.Claimant, lordId], [new Cause(CauseKind.Law, null, NoteKey: "ch_note_squatter_evicted")], ("claim", c.Serial.ToString()), ("tiles", c.Tiles.Length.ToString()));
+        return true;
     }
 
     public string GrantorName(GrantorKind k, int g) => k == GrantorKind.Fief ? (uint)g < (uint)Region.Fiefs.Count ? Region.Fiefs[g].Name : "" : Region.Realms.FirstOrDefault(r => r.HistoryIndex == g)?.Name ?? $"realm {g}";

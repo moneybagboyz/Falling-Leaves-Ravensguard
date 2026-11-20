@@ -109,6 +109,7 @@ public sealed partial class ContinentTrade
 
     private void TryTrip(GameTime now, ContinentState st, RegionLink rl, MarketBook b, MarketParty m, Business biz, Caravan? car)
     {
+        if (!Ravensguard.Sim.Rule.RuleCustoms.AllowTrip(_ew.World, b.SettlementIndex, (int)now.TotalDays, biz.Index)) return;       // P6-C3 (rule-and-income 4.4): a high customs rate thins the gate's caravans
         var led = _econ.Ledger; long cash = led.Balance(m.Purse).Mites;
         long wagon = Vehicles.PriceMites(VehicleKind.OxWagon);
         long loanRoom = car == null ? Advanceable(b) : 0;
