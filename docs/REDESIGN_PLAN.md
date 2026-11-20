@@ -60,6 +60,7 @@ The game today is a deep simulation hidden behind a hard-to-use interface: BBCod
 | Hero lifespan | **A real lifespan on the slow clock** (Nov 2026). The hero ages through a long campaign, strength fades in later years, and old age can kill, which hands play to the heir you raised (family life, Phase 6) |
 | Family, justice, faith, endings | Full family life for the hero, historically harsh justice, a real faith system (all Phase 6), and optional endings (Phase 8), all decided Nov 2026 |
 | Building | Hands-on, Kenshi style, with both free placement and ready-made house plans (Phase 5, Nov 2026) |
+| Armies on the map | **Hybrid** (Nov 2026). Every lord keeps a small standing warband that roams all year, Mount & Blade style: patrols, escorts, visits to other lords, chasing bandits, and border raids in war. For campaigns, lords muster their levies into large seasonal hosts that march with supply, forage, and go home for the harvest and winter quarters (Phase 7) |
 
 ---
 
