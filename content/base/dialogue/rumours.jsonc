@@ -49,5 +49,16 @@
   {"type": "rumour_type", "id": "outlawed", "entry": "outlawed", "kind": "Crime", "interest_pm": 700, "life_days": 40, "witnesses": "town", "severity": 3, "key": "R_OUTLAWED", "who_key": "doer"},
   {"type": "rumour_type", "id": "hero_wedding", "entry": "hero_wedding", "kind": "BirthWedding", "interest_pm": 600, "life_days": 15, "witnesses": "town", "severity": 1, "key": "R_HERO_WEDDING", "who_key": "groom"},
   {"type": "rumour_type", "id": "kin_kidnapped", "entry": "kin_kidnapped", "kind": "Crime", "interest_pm": 800, "life_days": 20, "witnesses": "household", "severity": 2, "key": "R_KIN_KIDNAPPED", "who_key": "name"},
+  {"type": "rumour_type", "id": "slander_theft", "entry": "slander_told", "kind": "Crime", "interest_pm": 750, "life_days": 10, "witnesses": "seen", "severity": 2, "key": "R_THEFT", "who_key": "doer", "match": {"kind": "theft"}},
+  {"type": "rumour_type", "id": "slander_burglary", "entry": "slander_told", "kind": "Crime", "interest_pm": 750, "life_days": 12, "witnesses": "seen", "severity": 2, "key": "R_BURGLARY", "who_key": "doer", "match": {"kind": "burglary"}},
+  {"type": "rumour_type", "id": "slander_poaching", "entry": "slander_told", "kind": "Crime", "interest_pm": 750, "life_days": 8, "witnesses": "seen", "severity": 2, "key": "R_POACHING", "who_key": "doer", "match": {"kind": "poaching"}},
+  {"type": "rumour_type", "id": "slander_assault", "entry": "slander_told", "kind": "Crime", "interest_pm": 750, "life_days": 8, "witnesses": "seen", "severity": 2, "key": "R_ASSAULT", "who_key": "doer", "match": {"kind": "assault"}},
+  {"type": "rumour_type", "id": "slander_smuggling", "entry": "slander_told", "kind": "Crime", "interest_pm": 750, "life_days": 10, "witnesses": "seen", "severity": 2, "key": "R_SMUGGLING", "who_key": "doer", "match": {"kind": "smuggling"}},
+  {"type": "rumour_type", "id": "slander_exposed", "entry": "slander_exposed", "kind": "Crime", "interest_pm": 700, "life_days": 20, "witnesses": "town", "severity": 2, "key": "R_SLANDER_EXPOSED", "who_key": "doer"},
+  {"type": "rumour_type", "id": "work_done_hero", "entry": "work_done", "kind": "Landmark", "interest_pm": 300, "life_days": 8, "witnesses": "town", "severity": 1, "key": "R_WORK_DONE", "who_key": "who", "match": {"hero": "1"}},
+  {"type": "rumour_type", "id": "work_failed_hero", "entry": "work_failed", "kind": "Landmark", "interest_pm": 350, "life_days": 8, "witnesses": "town", "severity": 1, "key": "R_WORK_FAILED", "who_key": "who", "match": {"hero": "1"}},
+  {"type": "rumour_type", "id": "tournament_announced", "entry": "tournament_announced", "kind": "Landmark", "interest_pm": 500, "life_days": 15, "witnesses": "town", "severity": 1, "key": "R_TOURNAMENT"},
+  {"type": "rumour_type", "id": "tournament_won", "entry": "tournament_won", "kind": "Landmark", "interest_pm": 500, "life_days": 15, "witnesses": "town", "severity": 1, "key": "R_TOURNAMENT_WON", "who_key": "who"},
+  {"type": "rumour_type", "id": "bandit_cleared", "entry": "bandit_cleared", "kind": "RoadBandits", "interest_pm": 650, "life_days": 15, "witnesses": "town", "severity": 2, "key": "R_BANDIT_CLEARED"},
   {"type": "talk_settings", "id": "default", "home_pm": 25, "work_pm": 10, "social_pm_by_hour": [0, 0, 0, 0, 0, 0, 8, 11, 14, 17, 17, 17, 19, 17, 17, 17, 17, 19, 28, 34, 34, 28, 8, 0]}
 ]

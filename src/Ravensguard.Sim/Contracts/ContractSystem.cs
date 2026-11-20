@@ -14,8 +14,8 @@ public enum TakeResult : byte { Taken, NoSuchContract, NotOpen, Hidden, CannotBo
 /// </summary>
 public static class ContractSystem
 {
-    public static EntityId EscrowId(int id) => EntityId.Make(IdKind.Other, 0x47_0000_0000_0000UL | (ulong)id);
-    public static EntityId BondId(int id) => EntityId.Make(IdKind.Other, 0x48_0000_0000_0000UL | (ulong)id);
+    public static EntityId EscrowId(int id) => EntityId.Make(IdKind.Other, 0x47_0000_0000_0000UL | (uint)id);
+    public static EntityId BondId(int id) => EntityId.Make(IdKind.Other, 0x48_0000_0000_0000UL | (uint)id);
     private static string N(long v) => v.ToString(CultureInfo.InvariantCulture);
 
     // ------------------------------------------------------------------ pay
@@ -107,7 +107,7 @@ public static class ContractSystem
         }
         c.State = WorkState.Taken; c.Taker = taker; c.ByCompany = byCompany; c.TakenDay = day;
         if (c.Good >= 0 && c.TargetOwner != EntityId.None) { c.Baseline = w.StoreQty(c.TargetOwner, (ushort)c.Good); c.Delivered = 0; }
-        var ps = new List<ChronParam> { ChronParam.TextKey("kind", "ct_kind_" + c.Kind) }; if (!byCompany) ps.Insert(0, ChronParam.Person("taker", taker));
+        var ps = new List<ChronParam> { ChronParam.TextKey("kind", "ct_kind_" + c.Kind) }; ps.Insert(0, ChronParam.Person("taker", taker));
         var e = new ChronicleEntry(w.Ids.Allocate(IdKind.Event), new GameTime(day * 86_400L + 7200), "work_taken", byCompany ? [] : [taker], [new Cause(CauseKind.Other, new EntityId(c.PostedEntry))],
             new Dictionary<string, string> { ["contract"] = N(id), ["kind"] = c.Kind, ["hero"] = taker == w.HeroId ? "1" : "0" }, TextKey: "ch_work_taken", Params: ps);
         w.Chronicle.Add(e); c.Evidence.Add(e.Id.Value);
@@ -201,10 +201,10 @@ public static class ContractSystem
     {
         var ps = new List<ChronParam> { ChronParam.TextKey("kind", "ct_kind_" + c.Kind), ChronParam.Mites("pay", c.PayMites) };
         var subjects = new List<EntityId>();
-        if (person && !c.ByCompany) { subjects.Add(c.Taker); ps.Insert(0, ChronParam.Person("taker", c.Taker)); }
+        if (person) { if (!c.ByCompany) subjects.Add(c.Taker); ps.Insert(0, ChronParam.Person("taker", c.Taker)); }
         if (w.PlaceId(c.Settlement) != EntityId.None) ps.Add(ChronParam.Place("place", w.PlaceId(c.Settlement)));
         var causes = new List<Cause> { new(CauseKind.Other, new EntityId(c.PostedEntry)) };
-        var data = new Dictionary<string, string> { ["contract"] = N(c.Id), ["kind"] = c.Kind, ["paid"] = N(paid), ["pm"] = N(pm), ["hero"] = person && c.Taker == w.HeroId ? "1" : "0", ["settlement"] = w.PlaceName(c.Settlement) };
+        var data = new Dictionary<string, string> { ["contract"] = N(c.Id), ["kind"] = c.Kind, ["paid"] = N(paid), ["pm"] = N(pm), ["hero"] = person && c.Taker == w.HeroId ? "1" : "0", ["settlement"] = w.PlaceName(c.Settlement), ["who"] = person ? w.Name(c.Taker) : "" };
         var e = new ChronicleEntry(w.Ids.Allocate(IdKind.Event), new GameTime(day * 86_400L), type, subjects, causes, data, TextKey: key, Params: ps);
         w.Chronicle.Add(e); c.Evidence.Add(e.Id.Value);
     }

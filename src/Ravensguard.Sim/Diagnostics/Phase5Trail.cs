@@ -61,6 +61,7 @@ public static class Phase5Trail
         if (rt.State.Fire is { IsEmpty: false } fire) sha.AppendData(BitConverter.GetBytes(fire.Hash()));      // P6-B5: FireHash, only once something has burnt (a fire-free trail keeps its pinned hash)
         if (law != 0) sha.AppendData(BitConverter.GetBytes(law));          // P6-B2: the LawHash joins the trail only once a crime exists, so a world without crime keeps its pinned hash
         if (rt.AtBarrier(() => rt.State.Justice is { IsEmpty: false } jb ? jb.Hash() : 0UL).GetAwaiter().GetResult() is var justice and not 0) sha.AppendData(BitConverter.GetBytes(justice));          // P6-C1: the courts' hash joins the trail only once someone is held or sentenced
+        if (rt.AtBarrier(() => rt.State.Contracts is { IsEmpty: false } ctb ? ctb.Hash() : 0UL).GetAwaiter().GetResult() is var contracts and not 0) sha.AppendData(BitConverter.GetBytes(contracts));          // P6-C2: the ContractHash joins the trail only once a contract, tournament or slander exists
         if (rt.AtBarrier(() => rt.State.Family?.Hash() ?? 0UL).GetAwaiter().GetResult() is var family and not 0) sha.AppendData(BitConverter.GetBytes(family));          // P6-B3: the FamilyHash joins the trail only once a family exists
         return Convert.ToHexString(sha.GetHashAndReset())[..16];
     }

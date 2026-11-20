@@ -40,6 +40,8 @@ public sealed class Rumour
     public bool FromAfar;
     /// <summary>Told by a dialogue's <c>add_rumour</c> with no entry behind it.</summary>
     public bool Authored;
+    /// <summary>P6-C2 (rumours v2, slander): a lie. The rumour spreads like any other; it moves its victim's standing while believed and is shown false when exposed. Saved in the high bit of the facts byte, so older saves keep their bytes.</summary>
+    public bool False;
     public int BornDay => BornHour / 24;
 }
 

@@ -69,7 +69,7 @@ public sealed record ContractSettingsDef : ContentDef
     public long DefamationFineMites { get; init; } = 300;
     public int ExposedAuthorMult { get; init; } = 2;
     /// <summary>A fact older than this many days weighs half (2 seasons).</summary>
-    public int StaleDays { get; init; } = 2 * 30;
+    public int StaleDays { get; init; } = 30;
     /// <summary>The most open contracts a settlement's board holds.</summary>
     public int BoardCap { get; init; } = 12;
     /// <summary>Scanner: how many settlements a game hour looks at.</summary>

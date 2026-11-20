@@ -62,6 +62,8 @@ public sealed class ContractWorld
     public Func<IEnumerable<BandSeen>>? Bands { get; init; }
     public Func<IEnumerable<CaptiveHeld>>? Captives { get; init; }
     public Func<IEnumerable<BuildWanted>>? Builds { get; init; }
+    /// <summary>The builders who bid on a building contract (the region's carpentry and masonry businesses), besides the hero; null: none.</summary>
+    public Func<WorkContract, IEnumerable<Bidder>>? Bidders { get; init; }
     public Func<IEnumerable<HandsShort>>? Hands { get; init; }
     /// <summary>The believed monster or bandit rumours of a settlement (percent of the place who believe), 0 when none.</summary>
     public Func<int, int>? BeliefOf { get; init; }
@@ -84,6 +86,21 @@ public sealed class ContractWorld
     public Func<CompanyInfo, WorkContract, int> RiskPct { get; init; } = (c, k) => Math.Clamp(60 - c.Strength / 2, 5, 90);
     /// <summary>Told when a company's contract succeeds, so the world sees its effect (the band cleared, the captive freed); null: nobody listens.</summary>
     public Action<WorkContract>? CompanyDone { get; init; }
+
+    // ---- tournaments (4.4) and slander (4.5)
+    /// <summary>The settlements with a market charter (they hold the great fair's tournament).</summary>
+    public Func<IEnumerable<int>>? CharterTowns { get; init; }
+    /// <summary>Days from a game day until the great fair begins (0: today), -1 when none is coming.</summary>
+    public Func<long, int>? FairInDays { get; init; }
+    /// <summary>The fighters of a settlement who would enter a tournament, with their rating (the fight odds' power).</summary>
+    public Func<int, IEnumerable<(EntityId Person, int Rating)>>? Fighters { get; init; }
+    /// <summary>The rating of any entrant (the hero's included); 0 when unknown.</summary>
+    public Func<EntityId, int> RatingOf { get; init; } = _ => 100;
+    /// <summary>The winner the sim's own fight records name for a bout of two people since a day (a Phase 4 practice fight's result), or None when no such fight was fought: a tournament's purse is paid from these and nothing else.</summary>
+    public Func<EntityId, EntityId, int, EntityId?>? BoutRecord { get; init; }
+    /// <summary>Whether a person is a rival of another (the <c>Rival</c> flag of the talk book) and his Speech skill.</summary>
+    public Func<EntityId, EntityId, bool>? IsRival { get; init; }
+    public Func<EntityId, int> SpeechOf { get; init; } = _ => 0;
     /// <summary>The hero's standing with a settlement's fief, permille, and a person's trust of another.</summary>
     public Func<EntityId, int, int> StandingWithFief { get; init; } = (_, _) => 0;
     /// <summary>A person's trust in another, permille (the talk book's).</summary>
