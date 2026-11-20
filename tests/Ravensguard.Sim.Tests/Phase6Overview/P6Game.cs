@@ -43,12 +43,13 @@ internal static class P6Game
     }
 
     /// <summary>What the street view attaches at a game's start: the talk, law (with its heist, bond and faith-politics links), family and contracts links.</summary>
-    public static void AttachGameLinks(WorldRuntime rt, ContentDatabase content, bool talk = true)
+    public static FamilyLink AttachGameLinks(WorldRuntime rt, ContentDatabase content, bool talk = true)
     {
         if (talk) TalkLink.Attach(rt, LineBook.From(content));
         LawLink.Attach(rt);
-        FamilyLink.Attach(rt);
+        var family = FamilyLink.Attach(rt);
         ContractLink.Attach(rt);
+        return family;
     }
 
     public static SaveFile SaveAt(WorldRuntime rt) => rt.AtBarrier(() => WorldSave.Capture(rt.State, Hash, "0.1")).GetAwaiter().GetResult();

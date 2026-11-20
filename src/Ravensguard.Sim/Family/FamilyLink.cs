@@ -15,6 +15,9 @@ public sealed class FamilyLink
     private volatile int _cause;
     private FamilyLink(WorldRuntime rt) { Runtime = rt; }
 
+    /// <summary>Tests: the family's numbers to run the day with instead of the content's (the old-age table forced, as FL-10 does; OV-7). Null in the game.</summary>
+    public FamilyContent? ForcedContent { get; set; }
+
     /// <summary>The hero has died of age or in childbed and the heir has not taken up yet.</summary>
     public bool DeathPending => _pending;
     /// <summary>The cause key of the succession screen ("su_cause_age", "su_cause_childbed").</summary>
@@ -35,6 +38,7 @@ public sealed class FamilyLink
         if (hod == 4 && st.Population.People.Count > 0)
         {
             var w = FamilyWorld.From(st, st.Content);
+            if (ForcedContent != null) w = new FamilyWorld { St = w.St, Content = w.Content, F = ForcedContent, HeroId = w.HeroId, Rates = w.Rates, HeldHomes = w.HeldHomes, BandNear = w.BandNear };
             FamilySystem.Daily(w, day);
         }
         var d = st.Family?.Death;
