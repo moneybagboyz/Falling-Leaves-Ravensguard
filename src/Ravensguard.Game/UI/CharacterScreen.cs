@@ -137,7 +137,8 @@ public partial class CharacterScreen : Control
         }
         right.AddChild(UiKit.Hint(L.T("CHAR_SKILLS_NOTE"), true));
 
-        var bottom = new HBoxContainer(); bottom.AddThemeConstantOverride("separation", 8);
+        // P6 merge: the panel buttons (property, treat, faith, standing, family) wrap to a second row rather than widen the screen past 960
+        var bottom = new HFlowContainer(); bottom.AddThemeConstantOverride("h_separation", 8); bottom.AddThemeConstantOverride("v_separation", 4);
         var back = UiKit.Key(L.T("UI_BACK"), "menu.back", 200); back.Pressed += _router.Pop; bottom.AddChild(back);
         if (OpenProperty is { } prop) { var pb = new Button { Text = L.T("ld_char_property"), CustomMinimumSize = new Vector2(150, 36) }; pb.Pressed += () => { _router.Pop(); prop(); }; bottom.AddChild(pb); }   // P5-A2
         if (OpenTreat is { } treat) { var tb = new Button { Text = L.T("tr_char_btn"), CustomMinimumSize = new Vector2(90, 36) }; tb.Pressed += () => { _router.Pop(); treat(); }; bottom.AddChild(tb); }   // P6-B1
