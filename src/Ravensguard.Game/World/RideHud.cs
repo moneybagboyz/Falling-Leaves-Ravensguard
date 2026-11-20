@@ -1,5 +1,6 @@
 using System;
 using Godot;
+using Ravensguard.Game.Inputs;
 using Ravensguard.Game.UI;
 using Ravensguard.Sim.Animals;
 using Ravensguard.Sim.Carts;
@@ -24,6 +25,8 @@ public sealed partial class RideHud : PanelContainer
         AddChild(v);
         v.AddChild(_title); v.AddChild(_barBack); _barBack.AddChild(_bar); _bar.SetAnchorsAndOffsetsPreset(LayoutPreset.LeftWide);
         v.AddChild(_line1); v.AddChild(_line2); v.AddChild(_line3); v.AddChild(_warn);
+        // P5-G: the warning wraps (the stuck line names its four ways out) instead of widening the bar across the screen
+        _warn.AutowrapMode = TextServer.AutowrapMode.WordSmart; _warn.CustomMinimumSize = new Vector2(420, 0);
     }
 
     static string Gait(Gait g) => L.T(g switch { Ravensguard.Sim.Animals.Gait.Gallop => "RIDE_GALLOP", Ravensguard.Sim.Animals.Gait.Trot => "RIDE_TROT", _ => "RIDE_WALK" });
@@ -76,10 +79,20 @@ public sealed partial class RideHud : PanelContainer
         {
             var bp = book.Templates.At(v.TemplateIndex);
             _title.Text = bp.Def.Name;
+            if (book.DrivenVehicle is { IsBoat: true } boat)
+            {
+                // P5-G (vehicle-designer 6): the boat bar: water speed, the current, ground speed, draft and freeboard, how steady it is, the water under the keel
+                var b = book.Boat; int gm = b.GmMm;
+                _line1.Text = L.F("vd_hud_boat1", (b.WaterMmps / 1000.0).ToString("0.0"), (b.CurrentMmps / 1000.0).ToString("+0.0;-0.0;0.0"), (b.GroundMmps / 1000.0).ToString("0.0"));
+                _line2.Text = L.F("vd_hud_boat2", b.DraftMm, b.FreeboardMm, L.T(gm <= 0 ? "vd_gm_capsize" : gm < book.Templates.Water.TenderGmMm ? "vd_gm_tender" : "vd_gm_steady"), gm);
+                _line3.Text = L.F("vd_hud_boat3", Math.Max(0, b.UnderKeelMm), v.CargoKg, v.CargoCapKg);
+                _warn.Text = boat.Water == WaterState.Aground ? L.T("vd_hud_aground") : b.FreeboardMm < book.Templates.Water.WaveFreeboardMm ? L.T("vd_hud_low") : "";
+                return;
+            }
             _line1.Text = L.F("RIDE_CART1", v.CargoKg, v.CargoCapKg, Speed(v.SpeedCmps));
             _line2.Text = L.F("RIDE_CART2", v.AxlePm / 10, Math.Min(v.RatioPm, 9999) / 10, L.T("SURFACE_" + book.Surface.ToString().ToUpperInvariant()));
             _line3.Text = TeamLine(book, v);
-            _warn.Text = v.Stuck ? L.T("RIDE_STUCK") : v.RatioPm > 1000 ? L.T("RIDE_HEAVY") : "";
+            _warn.Text = book.DrivenVehicle is { Broken: true } ? L.T("vd_hud_broken") : v.Stuck ? L.F("vd_hud_stuck", InputBootstrap.Hint("world.act"), InputBootstrap.Hint("world.cart_unload"), InputBootstrap.Hint("world.cart_dig"), InputBootstrap.Hint("world.cart_hitch")) : v.RatioPm > 1000 ? L.T("RIDE_HEAVY") : "";
         }
     }
 }

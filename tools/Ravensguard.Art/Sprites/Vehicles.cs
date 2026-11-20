@@ -31,6 +31,7 @@ public sealed class Vehicles
         new("ox_wagon",      2, 5, 3, HitchStyle.Pole,   BedStyle.Plank,  false, [1, 3], 4, true, 32),
         new("covered_wagon", 2, 5, 2, HitchStyle.Pole,   BedStyle.Plank,  true,  [1, 3], 4, true, 48),
         new("sledge",        2, 2, 1, HitchStyle.Traces, BedStyle.Runner, false, [], -1, false, 24),
+        new("peddler_wagon", 2, 5, 2, HitchStyle.Pole,   BedStyle.Plank,  true,  [1, 3], 4, true, 48),     // P5-G: the covered wagon with a stall counter at the rear
     ];
 
     public static (int W, int H) Size(VehicleSpec s) => ((s.Body + s.Hitch) * Cell + 2 * Pad, s.Rise + s.Cols * Cell + Pad);

@@ -1,0 +1,16 @@
+// docs/specs/phase5/vehicle-designer.md 3.4: river depth and current by the polyline's width class (not measured per segment), a ford's depth, what river-high days add,
+// the water drag (N s2 per m4), the sustained pull of a rower and a poler, the keel's clearance and the tender line, and the capsize, swamping, ferry and fishing numbers of 4.5.
+[
+  { "type": "vehicle_water", "id": "default",
+    "classes": [
+      { "id": "brook",       "max_width_cm": 300,  "depth_mm": 400,  "current_mmps": 400 },
+      { "id": "stream",      "max_width_cm": 1000, "depth_mm": 900,  "current_mmps": 600 },
+      { "id": "river",       "max_width_cm": 4000, "depth_mm": 1800, "current_mmps": 800 },
+      { "id": "great_river", "max_width_cm": 0,    "depth_mm": 3000, "current_mmps": 1000 }
+    ],
+    "ford_depth_mm": 500, "high_day_depth_mm": 300, "high_day_current_mmps": 300, "high_days_cap": 3,
+    "drag_k": 8, "rower_n": 70, "poler_n": 120, "poling_max_depth_mm": 3000, "keel_clearance_mm": 150, "tender_gm_mm": 150,
+    "beam_sea_wind_mps": 10, "capsize_pm": 20, "wave_freeboard_mm": 100, "swamp_lps": 20, "bail_lps": 5,
+    "ferry_mmps": 500, "ferry_fee_person": 15, "ferry_fee_cart": 40,
+    "fish_kg_per_crew_day": 12, "fish_winter_pm": 400, "fish_shore_kg_day": 4 }
+]

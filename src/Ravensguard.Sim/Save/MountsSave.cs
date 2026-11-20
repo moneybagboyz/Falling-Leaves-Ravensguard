@@ -62,6 +62,21 @@ public sealed class VehicleRowSave
     [Key(13)] public bool Driven { get; set; }
     [Key(14)] public ushort[] CargoGood { get; set; } = [];
     [Key(15)] public long[] CargoQty { get; set; } = [];
+    // ---- P5-G (vehicle-designer 3.3): additive keys, expanded from the template at load when absent (a save from before part rows)
+    /// <summary>The design's id (a content template or <c>player.*</c>); empty in an older save, whose <see cref="Template"/> is an index of <see cref="MountsSave.LegacyTemplates"/>.</summary>
+    [Key(16)] public string Design { get; set; } = "";
+    [Key(17)] public short[] PartX { get; set; } = [];
+    [Key(18)] public short[] PartY { get; set; } = [];
+    [Key(19)] public byte[] PartDeck { get; set; } = [];
+    [Key(20)] public byte[] PartOrder { get; set; } = [];
+    /// <summary>Indices of <see cref="MountsSave.PartTable"/> (the section names its parts, so new content parts never shift a save's rows).</summary>
+    [Key(21)] public ushort[] PartIdx { get; set; } = [];
+    [Key(22)] public byte[] PartState { get; set; } = [];
+    [Key(23)] public byte[] PartTier { get; set; } = [];
+    [Key(24)] public int[] PartHp { get; set; } = [];
+    [Key(25)] public int[] PartWork { get; set; } = [];
+    [Key(26)] public byte Water { get; set; }
+    [Key(27)] public int WaterInL { get; set; }
 }
 
 /// <summary>
@@ -95,6 +110,15 @@ public sealed class MountsSave
     [Key(19)] public int RidingUses { get; set; }
     [Key(20)] public ushort[] HeapGood { get; set; } = [];
     [Key(21)] public long[] HeapQty { get; set; } = [];
+    /// <summary>P5-G: the vehicle part ids the rows' <see cref="VehicleRowSave.PartIdx"/> index, in the order they were numbered when saved.</summary>
+    [Key(22)] public string[] PartTable { get; set; } = [];
+    /// <summary>P5-G: vehicle sites, commissions and voyages (absent while there are none).</summary>
+    [Key(23)] public VehicleWorksSave? Works { get; set; }
+    /// <summary>P5-G: the breed ids the animal rows' <see cref="AnimalRowSave.Breed"/> index, in their order when saved (empty in an older save: the content's own order then).</summary>
+    [Key(24)] public string[] BreedTable { get; set; } = [];
+
+    /// <summary>The Phase 3 templates in their index order (ordinal id order of the seven): an older save's <see cref="VehicleRowSave.Template"/>.</summary>
+    public static readonly string[] LegacyTemplates = ["cart", "covered_wagon", "handcart", "hay_wain", "ox_wagon", "sledge", "wheelbarrow"];
 
     public static MountsSave Capture(RideBook b)
     {
@@ -106,15 +130,22 @@ public sealed class MountsSave
                 WaterPpm = a.WaterPpm, ThirstHours = a.ThirstHours, Shoes = (ushort[])a.Shoes.Clone(), ShoeWearU = a.ShoeWearU, Lameness = a.Lameness, LameDays = a.LameDays, Lame3Days = a.Lame3Days, LameHardMm = a.LameHardMm, HealthPm = a.HealthPm,
                 State = (byte)a.State, Stable = a.Stable, Saddled = a.Saddled, Winded = a.Winded, XMm = a.XMm, YMm = a.YMm, OdometerMm = a.OdometerMm, ForcedWindow = a.ForcedWindow, HerdSettlement = a.HerdSettlement, Vehicle = a.Vehicle.Value, LastDay = a.LastDay,
             });
+        var cat = b.Templates;
+        if (b.Vehicles.Rows.Count > 0) o.PartTable = [.. cat.PartList.Select(p => p.Id)];
+        if (b.Animals.Count > 0) o.BreedTable = [.. b.Breeds.All.Select(x => x.Id)];
         foreach (var v in b.Vehicles.Rows)
         {
             var rows = b.Hosted ? [] : v.Cargo.Rows();       // a hosted bed is saved with the economy's other stores
+            var ps = v.Parts;
             o.Vehicles.Add(new VehicleRowSave
             {
                 Id = v.Id.Value, Template = v.Template, Owner = v.Owner.Value, XMm = v.XMm, YMm = v.YMm, Facing = v.Facing, Team = [.. v.Team.Select(t => t.Value)], OdometerMm = v.OdometerMm, WheelPm = v.WheelPm, Stuck = v.Stuck,
                 StuckSinceSec = v.StuckSinceSec, DugUntilSec = v.DugUntilSec, WearAccMm = v.WearAccMm, Driven = v.Driven, CargoGood = [.. rows.Select(r => r.Good)], CargoQty = [.. rows.Select(r => r.Qty)],
+                Design = v.Design, PartX = [.. ps.Select(p => p.X)], PartY = [.. ps.Select(p => p.Y)], PartDeck = [.. ps.Select(p => p.Deck)], PartOrder = [.. ps.Select(p => p.Order)], PartIdx = [.. ps.Select(p => p.Part)],
+                PartState = [.. ps.Select(p => (byte)p.State)], PartTier = [.. ps.Select(p => (byte)p.Tier)], PartHp = [.. ps.Select(p => p.HpMilli)], PartWork = [.. ps.Select(p => p.WorkMilli)], Water = (byte)v.Water, WaterInL = v.WaterInL,
             });
         }
+        o.Works = b.Works.IsEmpty ? null : VehicleWorksSave.Capture(b.Works);
         var hs = b.Herds.Rows().ToList();
         o.HerdSettlement = [.. hs.Select(h => h.Settlement)]; o.HerdSpecies = [.. hs.Select(h => h.Species)]; o.HerdHead = [.. hs.Select(h => h.Head)];
         var hp = b.Hosted ? [] : b.Heap.Rows(); o.HeapGood = [.. hp.Select(r => r.Good)]; o.HeapQty = [.. hp.Select(r => r.Qty)];
@@ -122,34 +153,62 @@ public sealed class MountsSave
         return o;
     }
 
-    /// <summary>Rebuilds the book on the given content, goods and ledger (the economy section has restored the ledger's counts by now).</summary>
-    public RideBook Restore(ContentDatabase content, GoodCatalog goods, MassLedger ledger, ulong seed) => Restore(new RideBook(content, goods, ledger, seed));
+    /// <summary>Rebuilds the book on the given content, goods and ledger (the economy section has restored the ledger's counts by now); the player's vehicle designs come from <paramref name="designs"/>.</summary>
+    public RideBook Restore(ContentDatabase content, GoodCatalog goods, MassLedger ledger, ulong seed, Construction.DesignBook? designs = null) => Restore(new RideBook(content, goods, ledger, seed), designs);
 
     /// <summary>Rebuilds the book on the economy (its beds and heap are the economy's restored stores).</summary>
-    public RideBook Restore(ContentDatabase content, Economy.EconomyState econ, ulong seed) => Restore(new RideBook(content, econ, seed));
+    public RideBook Restore(ContentDatabase content, Economy.EconomyState econ, ulong seed, Construction.DesignBook? designs = null) => Restore(new RideBook(content, econ, seed), designs);
 
-    private RideBook Restore(RideBook b)
+    private RideBook Restore(RideBook b, Construction.DesignBook? designs)
     {
+        if (designs != null) b.AttachDesigns(designs);
+        // P5-G: the breeds by name (a breed added to the content never shifts a save's animals); an older save has no table and keeps the indices
+        var breedMap = new int[BreedTable.Length];
+        for (int i = 0; i < BreedTable.Length; i++) breedMap[i] = b.Breeds.Find(BreedTable[i])?.Index ?? throw new SaveException($"This save has an animal of the breed '{BreedTable[i]}' the game content no longer has.");
         b.Animals.Restore(Animals.Select(r => new Animal
         {
-            Id = new EntityId(r.Id), Breed = r.Breed, Sex = r.Sex, BirthDay = r.BirthDay, Owner = new EntityId(r.Owner), MassKg = r.MassKg, TrainedPm = r.TrainedPm, Temper = r.Temper, StaminaU = r.StaminaU, FatigueU = r.FatigueU,
+            Id = new EntityId(r.Id), Breed = BreedTable.Length > 0 ? breedMap[r.Breed] : r.Breed, Sex = r.Sex, BirthDay = r.BirthDay, Owner = new EntityId(r.Owner), MassKg = r.MassKg, TrainedPm = r.TrainedPm, Temper = r.Temper, StaminaU = r.StaminaU, FatigueU = r.FatigueU,
             FeedCenti = r.FeedCenti, WaterPpm = r.WaterPpm, ThirstHours = r.ThirstHours, Shoes = (ushort[])r.Shoes.Clone(), ShoeWearU = r.ShoeWearU, Lameness = r.Lameness, LameDays = r.LameDays, Lame3Days = r.Lame3Days, LameHardMm = r.LameHardMm,
             HealthPm = r.HealthPm, State = (AnimalState)r.State, Stable = r.Stable, Saddled = r.Saddled, Winded = r.Winded, XMm = r.XMm, YMm = r.YMm, OdometerMm = r.OdometerMm, ForcedWindow = r.ForcedWindow, HerdSettlement = r.HerdSettlement,
             Vehicle = new EntityId(r.Vehicle), LastDay = r.LastDay,
         }), NextAnimal);
         b.Vehicles.ClearForRestore(NextVehicle);
+        var cat = b.Templates;
+        // the section's part table onto the content's (by id): a part the content no longer has refuses the load, as a removed recipe in use does
+        var partMap = new ushort[PartTable.Length];
+        for (int i = 0; i < PartTable.Length; i++)
+        {
+            int pi = cat.PartIndex(PartTable[i]);
+            if (pi < 0) throw new SaveException($"This save has a vehicle part '{PartTable[i]}' the game content no longer has.");
+            partMap[i] = (ushort)pi;
+        }
         foreach (var r in Vehicles)
         {
-            var bp = b.Templates.At(r.Template);
+            string design = r.Design.Length > 0 ? r.Design : r.Template >= 0 && r.Template < LegacyTemplates.Length ? LegacyTemplates[r.Template] : "";
+            var bp = cat.Find(design) ?? throw new SaveException($"This save has a vehicle of the design '{design}', which neither the content nor the save's designs have.");
             var v = new VehicleRow
             {
-                Id = new EntityId(r.Id), Template = r.Template, Owner = new EntityId(r.Owner), XMm = r.XMm, YMm = r.YMm, Facing = r.Facing, Team = [.. r.Team.Select(t => new EntityId(t))], OdometerMm = r.OdometerMm, WheelPm = r.WheelPm,
-                Stuck = r.Stuck, StuckSinceSec = r.StuckSinceSec, DugUntilSec = r.DugUntilSec, WearAccMm = r.WearAccMm, Driven = r.Driven,
+                Id = new EntityId(r.Id), Template = bp.Index, Design = bp.Id, Owner = new EntityId(r.Owner), XMm = r.XMm, YMm = r.YMm, Facing = r.Facing, Team = [.. r.Team.Select(t => new EntityId(t))], OdometerMm = r.OdometerMm,
+                Stuck = r.Stuck, StuckSinceSec = r.StuckSinceSec, DugUntilSec = r.DugUntilSec, WearAccMm = r.WearAccMm, Driven = r.Driven, Water = (WaterState)r.Water, WaterInL = r.WaterInL,
             };
+            if (r.PartState.Length == 0)
+            {
+                // a save from before part rows (v7 or v8 before P5-G): the row expands from its template, every part built, each wheel at the old WheelPm (vehicle-designer 3.3)
+                v.Parts = [.. bp.Parts];
+                b.Vehicles.Restore(v);
+                v.WheelPm = r.WheelPm;
+                if (bp.Stats.Boat) v.Water = WaterState.Afloat;
+            }
+            else
+            {
+                for (int i = 0; i < r.PartState.Length; i++)
+                    v.Parts.Add(new PartRow { X = r.PartX[i], Y = r.PartY[i], Deck = r.PartDeck[i], Order = r.PartOrder[i], Part = partMap[r.PartIdx[i]], State = (PartState)r.PartState[i], Tier = (ItemQuality)r.PartTier[i], HpMilli = r.PartHp[i], WorkMilli = r.PartWork[i] });
+                b.Vehicles.Restore(v);
+            }
             v.Cargo = b.Vehicles.NewStore(v.Id, bp.Stats);
             if (!b.Hosted) v.Cargo.LoadRows(r.CargoGood, r.CargoQty);
-            b.Vehicles.Restore(v);
         }
+        if (Works != null) Works.Restore(b.Works);
         if (!b.Hosted) b.Heap.LoadRows(HeapGood, HeapQty);
         for (int i = 0; i < HerdHead.Length; i++) b.Herds.Set(HerdSettlement[i], HerdSpecies[i], HerdHead[i]);
         for (int i = 0; i < LoanAnimal.Length; i++) b.Loans.Add(new HorseLoan(new EntityId(LoanAnimal[i]), new EntityId(LoanLender[i]), LoanDue[i]));

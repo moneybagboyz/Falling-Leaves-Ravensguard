@@ -521,7 +521,7 @@ public static partial class WorldSave
             Production = production, Markets = markets, RegionSections = regionSections, Growth = growth,
             Jobs = file.Sections.ContainsKey(JobsSection) ? Decode<JobsSave>(file, JobsSection, compressed: true).Restore() : null,
             Crafting = file.Sections.ContainsKey(CraftingSection) ? Decode<CraftingSave>(file, CraftingSection, compressed: true).Restore() : null,
-            Mounts = file.Sections.ContainsKey(MountsSave.SectionName) ? RestoreMounts(Decode<MountsSave>(file, MountsSave.SectionName, compressed: true), content, economy, cs.Seed) : null,
+            Mounts = file.Sections.ContainsKey(MountsSave.SectionName) ? RestoreMounts(Decode<MountsSave>(file, MountsSave.SectionName, compressed: true), content, economy, cs.Seed, file) : null,
             Autopilot = file.Sections.ContainsKey(AutopilotSave.SectionName) ? Decode<AutopilotSave>(file, AutopilotSave.SectionName, compressed: true).Restore() : null,
             Travel = file.Sections.ContainsKey(TravelSave.SectionName) ? RestoreTravel(Decode<TravelSave>(file, TravelSave.SectionName, compressed: true), content, economy, cs.Seed) : null,
             Talk = file.Sections.ContainsKey(TalkSave.SectionName) ? Decode<TalkSave>(file, TalkSave.SectionName, compressed: true).Restore() : null,
@@ -572,12 +572,14 @@ public static partial class WorldSave
     }
 
     /// <summary>The ride book of a save: on the economy's stores when the world has one (their goods are in its section), else on a private goods catalog and ledger (a bare test world).</summary>
-    private static Ravensguard.Sim.Animals.RideBook RestoreMounts(MountsSave m, ContentDatabase? content, EconomyState? economy, ulong seed)
+    private static Ravensguard.Sim.Animals.RideBook RestoreMounts(MountsSave m, ContentDatabase? content, EconomyState? economy, ulong seed, SaveFile file)
     {
         if (content == null) throw new SaveException("The mounts of this save need the game content to be read.");
-        if (economy != null) return m.Restore(content, economy, seed);
+        // P5-G: vehicles of the player's own designs need the designs section first (its texts are read again for the world below)
+        var designs = file.Sections.ContainsKey(DesignsSave.SectionName) ? Decode<DesignsSave>(file, DesignsSave.SectionName, compressed: true).Restore() : null;
+        if (economy != null) return m.Restore(content, economy, seed, designs);
         var goods = new Ravensguard.Sim.Goods.GoodCatalog(content);
-        return m.Restore(content, goods, new Ravensguard.Sim.Goods.MassLedger(goods.Count), seed);
+        return m.Restore(content, goods, new Ravensguard.Sim.Goods.MassLedger(goods.Count), seed, designs);
     }
 
     /// <summary>The travel state of a save: on the economy's stores when the world has one, else on a private goods catalog and ledger.</summary>

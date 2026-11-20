@@ -50,12 +50,14 @@ Collected while the steps are built. The close-out fixes each item or moves it i
 - ~~**Important: adding a good breaks every existing save.**~~ **Done (P5 goods-table fix).** Saves now name their content tables in a "tables" section (no format bump), and every load maps saved goods, craft recipes, proficiencies, business kinds, book recipes and extraction kinds onto the loaded content by name (`Save/ContentRemap`). New goods get empty rows; removed ones follow the content's `migration` entries or are written off with one warning. The 7 goods and the recipes for wire, arrowheads, arrows, shingles, daub and harness are back, so the fletching kit has its recipe. Details in crafting-full.md Notes.
   - **Done (load report):** the header's whole-content hash is no longer a gate (plan §2.11). `WorldSave.Inspect` and `LoadReport` give a pre-load report (content changed, mods added or gone, `ContentRemap`'s notes, whether every regenerated layer still verifies); the load screen and the world library show it with Continue or Cancel. A save is refused only for a layer that no longer regenerates identically, content in use that is gone with no migration (a removed recipe with unfinished work and the like), or a newer format, each naming its cause. The game loads only the base content (and the blueprint mod) today, so it passes no installed-mod list and the mod lines appear only to callers that give one (the tests do).
   - Two more tables are saved by index and not covered yet: the growth projects' business kind (`GrowthSave.PBusiness`, P5-D's area) and the animal breeds (`AnimalRowSave.Breed`, `MountsSave`). Each needs a table in `IdTables` and a rewrite in `ContentRemap.Sections` (with its frozen list) before its content changes.
+  - **Still a gate, for the review:** the header's whole-content hash. `WorldSave.Restore` and `WorldLibrary.Load` refuse a save or world made with different content, even when every regenerated layer still verifies. So in the game a content update still blocks old saves. The goods are no longer the reason. **Decided by plan §2.11** ("worlds and saves from older versions load through SaveMigrator; if content or mods are missing, a readable report lists what's affected before loading"). So replace the refusal with a pre-load report: what changed (goods, recipes, pieces and so on, from `ContentRemap`'s notes, plus missing mods), and load when every regenerated layer still verifies. Refuse only when a layer the save depends on no longer regenerates identically, or a removed recipe has unfinished work. To do in Phase 5, before the close-out.
+  - Two more tables are saved by index and not covered yet: the growth projects' business kind (`GrowthSave.PBusiness`, P5-D's area) and the animal breeds (`AnimalRowSave.Breed`, `MountsSave`; **done in P5-G**: the mounts section names its breeds and vehicle parts by id). Each needs a table in `IdTables` and a rewrite in `ContentRemap.Sections` (with its frozen list) before its content changes.
 - **Brittle blades:** `Smithing.BrittleBreaks` exists, but the resolver does not call it.
 - **Crafting, still to do:**
   - tool wear for businesses and NPCs at stations;
   - world container stores near the crafter (waits on stores in rooms);
   - Q on a station or item opening the craft screen filtered;
-  - boat parts (P5-G) and vehicle-part repair;
+  - ~~boat parts (P5-G) and vehicle-part repair;~~ done in P5-G (`recipes_vehicles.jsonc`, `VehicleSites.Repair`);
   - live staff walking to stations and NPC apprentices from the labour market (P5-F);
   - syncing refits with the clothing book's fit.
 - **Fixed on the way:** removing an emptied store mid-hour broke the wheat audit, so stores are now removed at the barrier. The world id allocator clashed with region-generated fief and site ids (latent since Phase 3), so crafting ids now start past them.
@@ -68,7 +70,7 @@ Collected while the steps are built. The close-out fixes each item or moves it i
 - **Contracts, still to do:**
   - NPC households and businesses commissioning builders (only the lord's planner posts work; growth households build themselves);
   - the hero bidding on posted work with his own crew at his own price, and builders bidding against each other;
-  - the builder's cart as a P5-G vehicle.
+  - the builder's cart as a P5-G vehicle (still open after P5-G: the contractor's cart is the construction world's own number).
 - **Growth, still to do:**
   - assarts as tree-by-tree felling sites (a region change replayed from the growth log);
   - vacant-house refits as sites.
@@ -83,3 +85,25 @@ Collected while the steps are built. The close-out fixes each item or moves it i
   - "Post haul jobs" and "Buy and deliver" on the site panel;
   - a roof material by culture or wealth for library plans (always thatch);
   - the controls overlay's Build page shows only the Build actions, not the World keys kept beside them.
+
+## From step 4 (P5-G vehicles)
+- **Boats in play, still to do:**
+  - a ferry business at a crossing (the ferryman, the rope, the fee: `Ferry.Cross` and the ramps exist; VD-16);
+  - fishing boats in the fishery's daily run (`Fishing.Day` exists; VD-15);
+  - wind and river-high days in the water under the hero's boat (0 wind in play: sails, beam seas and wave swamping are rules and tests only);
+  - people in the water when a boat sinks (waits on Phase 4 drowning; no deaths now).
+- **Vehicles, still to do:**
+  - the designer opens anywhere and "Build this" lays the frame out beside the hero: the wheelwright's room, cartwright's yard and slipway conditions of 4.1 and 4.2 are not checked;
+  - wages for a vehicle site's crew (crews are the hero's people or the commissioned maker; P5-B's wage rules not applied);
+  - the vehicle panel (Q > Inspect) is a modal list, not the part grid with each part's colour;
+  - NPC drivers on the live map (`NpcDriving` is the rule; the caravans keep their Phase 3 legs);
+  - combat damage per part (`VehicleTable.Damage` exists; the resolver does not call it);
+  - the builder's cart (P5-D) as a real vehicle row;
+  - the `VehicleHash` (`VehicleHash.Of`) is compared by VD-18 and the resume test but not folded into the live `StateHashTrail`;
+  - walking on a boat's deck as the vehicle's own sub-grid, ramps and gangplanks as portals (now the cargo and the hero on the bench move with the vehicle, nothing else).
+- **Decisions to confirm in the review:**
+  - additive keys in the "mounts" section, not a v8 -> v9 step (old rows expand from the template at load);
+  - `make_cargo_bed` 2 h (was 8): the ox wagon is 215.8 worker-hours of content, not "about 182";
+  - the designer counts the mud team at the bogging line (ratio 700), not at full speed (600);
+  - the hero's live boat and every vehicle row share one lock (`RideBook.Gate`) with the tick worker's vehicle pass.
+

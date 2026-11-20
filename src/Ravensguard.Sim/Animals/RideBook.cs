@@ -10,7 +10,8 @@ namespace Ravensguard.Sim.Animals;
 public sealed record HorseLoan(EntityId Animal, EntityId Lender, long DueSec);
 
 /// <summary>What the hero's next game second of riding or driving will be.</summary>
-public readonly record struct RideStep(int SpeedMmPerGs, Gait Gait, bool Driving, bool Stuck, bool Blocked);
+/// <remarks>P5-G: <c>RawQ16</c>, when above 0, is the exact step in Q16.16 metres (a boat carries its remainder so a live leg takes exactly the abstract leg's seconds).</remarks>
+public readonly record struct RideStep(int SpeedMmPerGs, Gait Gait, bool Driving, bool Stuck, bool Blocked, int RawQ16 = 0);
 
 /// <summary>What the view shows of the hero's mount: the bars and flags of spec 6.</summary>
 public readonly record struct RideView(bool Mounted, bool Driving, bool Mounting, Gait Gait, int StaminaPm, int FatiguePm, int FeedCenti, int ShoePm, int Lameness, int SpeedCmps, bool Stuck, int CargoKg, int CargoCapKg, int AxlePm, int RatioPm, int BreedIndex, int TemplateIndex,
@@ -31,6 +32,15 @@ public sealed class RideBook
     public HerdLedger Herds { get; } = new();
     public ulong Seed { get; }
     public List<HorseLoan> Loans { get; } = [];
+    /// <summary>P5-G: vehicle sites, commissions and voyages (the abstract side of vehicles, stepped hourly by <see cref="VehicleSystem"/>).</summary>
+    public VehicleWorks Works { get; } = new();
+    /// <summary>
+    /// P5-G: the lock of the book. The tick worker's hourly vehicle pass and the hero desk's vehicle commands take it, and so does the live tier around its per-second ride step and the view around
+    /// its reading of the rows, so a site finished or a barge moved in the hour never meets a frame half way.
+    /// </summary>
+    public object Gate { get; } = new();
+    /// <summary>P5-G: the ground water under the hero's boat (depth, current along the river, river-high days, wind across), set by the game from the waterway; null on land.</summary>
+    public Func<BoatWater?> WaterNow { get; set; } = () => null;
     /// <summary>Goods the hero has dropped from a stuck cart: a heap on the ground, counted by the mass ledger like any store, loaded back when the cart is free.</summary>
     public Store Heap => _heap ??= _openStore(HeapId, 0, 0);
     private Store? _heap;
@@ -78,11 +88,28 @@ public sealed class RideBook
         _openStore = open;
     }
 
+    /// <summary>
+    /// P5-G: registers the player's vehicle designs of a save's designs (vehicle-designer 4.1) so their vehicles load and can be built. A design that no longer validates is skipped with its reason
+    /// (returned), never thrown: its vehicles then fail to load with a clear message.
+    /// </summary>
+    public List<string> AttachDesigns(Construction.DesignBook designs)
+    {
+        var problems = new List<string>();
+        foreach (var (id, (kind, text)) in designs.Designs)
+        {
+            if (kind != Construction.DesignKind.Vehicle) continue;
+            var def = VehicleCatalog.ParseDesign(text, id, out var why);
+            if (def == null) { problems.Add($"{id}: {why}"); continue; }
+            Templates.Register(def, problems);
+        }
+        return problems;
+    }
+
     public bool IsMounted => Mounted != EntityId.None;
     public bool IsDriving => Driving != EntityId.None;
     public bool Busy => MountLeftGs > 0 || DismountLeftGs > 0;
     /// <summary>True when nothing would be saved: no rows and every counter at its start (review finding 5: an emptied book with advanced serials must still be saved, or ids are reused).</summary>
-    public bool IsEmpty => Animals.Count == 0 && Vehicles.Rows.Count == 0 && Herds.IsEmpty && Loans.Count == 0 && (_heap == null || _heap.RowCount == 0)
+    public bool IsEmpty => Animals.Count == 0 && Vehicles.Rows.Count == 0 && Herds.IsEmpty && Loans.Count == 0 && (_heap == null || _heap.RowCount == 0) && Works.IsEmpty
         && Animals.NextSerial == 1 && Vehicles.NextSerial == 1 && RidingUses == 0 && Mounted == EntityId.None && Driving == EntityId.None;
     public Animal? MountedAnimal => IsMounted ? Animals.Find(Mounted) : null;
     public VehicleRow? DrivenVehicle => IsDriving ? Vehicles.Find(Driving) : null;
@@ -182,7 +209,9 @@ public sealed class RideBook
     {
         if (IsMounted || IsDriving) return false;
         var v = NearestVehicle(); if (v == null || v.Broken) return false;
-        Driving = v.Id; v.Driven = true; v.XMm = HeroXMm; v.YMm = HeroYMm; return true;
+        Driving = v.Id; v.Driven = true;
+        if (v.IsBoat) { if (v.Water is WaterState.Slipway or WaterState.Sunk) { Driving = EntityId.None; v.Driven = false; return false; } HeroXMm = v.XMm; HeroYMm = v.YMm; return true; }   // P5-G: the hero steps into the boat
+        v.XMm = HeroXMm; v.YMm = HeroYMm; return true;
     }
 
     public void StopDriving()
@@ -215,7 +244,7 @@ public sealed class RideBook
     public bool Push(int pushers, long nowSec)
     {
         var v = DrivenVehicle ?? NearestVehicle();
-        if (v is not { Stuck: true }) return false;
+        if (v is not { Stuck: true } || v.Broken) return false;                 // P5-G: a broken wheel or axle is not freed by pushing (VD-7)
         var st = Vehicles.StatsOf(v); var tu = Templates.Tuning;
         var (pull, _) = Vehicles.Team(v);
         int people = IsDriving ? RiderKg : 0;
@@ -249,7 +278,7 @@ public sealed class RideBook
     /// </summary>
     public RideStep Plan(bool gallop, bool walk, long nowSec)
     {
-        if (DrivenVehicle is { } v) return PlanCart(v, walk, nowSec);
+        if (DrivenVehicle is { } v) return v.IsBoat ? PlanBoat(v, gallop, walk, nowSec) : PlanCart(v, walk, nowSec);
         if (MountedAnimal is not { } a) return default;
         var b = Breeds.At(a.Breed);
         int ratio = RideMath.LoadRatioPm(RiderKg, b.CarryKg);
@@ -257,6 +286,64 @@ public sealed class RideBook
         var g = RideMath.Allowed(a, b, want, ratio);
         int cmps = RideMath.SpeedCmps(a, b, g, ratio, !a.Saddled, SurfaceModel.PersonSpeedPm(Surface));
         return new RideStep(VehicleMath.MmPerGs(cmps), g, false, false, cmps <= 0);
+    }
+
+    // ------------------------------------------------------------------ P5-G: boats (vehicle-designer 4.5, 6)
+
+    /// <summary>The live boat's last numbers, for the boat HUD: water speed, current, ground speed (mm/s), draft, freeboard, GM, the depth under the keel.</summary>
+    public BoatView Boat { get; private set; }
+    private long _boatAccQ16;
+
+    /// <summary>
+    /// A boat's next game second (W/S row harder or back water, Shift a hard stroke, O drifts with the oars shipped): its power against the water's drag at its draft, plus the current along the way it
+    /// heads. Aground, sunk or on the slipway it does not move. The speed is in mm per game second with the remainder carried, so a live leg takes exactly the abstract leg's seconds (VD-19).
+    /// </summary>
+    private RideStep PlanBoat(VehicleRow v, bool hard, bool drift, long nowSec)
+    {
+        var water = WaterNow();
+        if (v.Water is WaterState.Slipway or WaterState.Sunk || water == null) return new RideStep(0, Gait.Walk, true, false, true);
+        var st = Vehicles.StatsOf(v); var wt = Templates.Water;
+        var load = BoatMath.Load(st, Vehicles.CargoKg(v), RiderKg + st.Rowers * BoatMath.PersonKg, wt);
+        bool floats = BoatMath.Floats(load.DraftMm, water.Value.DepthMm, wt);
+        if (!floats) { v.Water = WaterState.Aground; Boat = BoatView.Of(load, 0, water.Value, 0, true); return new RideStep(0, Gait.Walk, true, true, true); }
+        if (v.Water == WaterState.Aground) v.Water = WaterState.Afloat;
+        long tow = 0; if (st.TowPost && v.Team.Count > 0) tow = Vehicles.Team(v).PullN;
+        long power = drift ? 0 : BoatMath.PowerN(wt, st.Rowers, st.Polers, water.Value.DepthMm, tow, BoatMath.SailN(st.SailM2, water.Value.WindMps, water.Value.SailCosPm), hard);
+        int wv = BoatMath.WaterSpeedMmps(power, wt.DragK, BoatMath.WetMm2(st.WaterplaneMm2, st.PerimeterM, load.DraftMm));
+        int ground = Math.Max(0, wv + water.Value.CurrentAlongMmps);
+        Boat = BoatView.Of(load, wv, water.Value, ground, false);
+        _boatAccQ16 += (long)ground * 65536;                                            // Q16.16 metres x 20,000 (a real second is 20 game seconds, mm to m)
+        int raw = (int)(_boatAccQ16 / 20_000); _boatAccQ16 -= raw * 20_000L; int mm = (int)((long)raw * 1000 >> 16);
+        return new RideStep(mm, hard ? Gait.Gallop : drift ? Gait.Walk : Gait.Trot, true, false, ground <= 0, raw);
+    }
+
+    /// <summary>
+    /// A boat's game second closes: every 20 game seconds the capsize check of a tender boat in beam seas (0x550) and the water a swamped or wave-swept boat takes in (0x551); a boat full of water, or with
+    /// its freeboard under 0, sinks: its cargo goes to the river bed (<see cref="RiverBed"/>, mass exact), the people to the bank (Phase 4 drowning is not wired: no deaths).
+    /// </summary>
+    private void AccountBoat(VehicleRow v, long nowSec)
+    {
+        if (v.Water is not (WaterState.Afloat or WaterState.Aground) || nowSec % 20 != 0) return;
+        var water = WaterNow(); if (water == null) return;
+        var st = Vehicles.StatsOf(v); var wt = Templates.Water;
+        var load = BoatMath.Load(st, Vehicles.CargoKg(v), RiderKg + st.Rowers * BoatMath.PersonKg, wt);
+        int broken = 0; foreach (var p in v.Parts) if (p.State == PartState.Broken && Templates.PartList[p.Part].Tags.Contains("hull")) broken++;
+        v.WaterInL += BoatMath.WaterInL(Seed, v.Id, nowSec, load.FreeboardMm, water.Value.WindMps, water.Value.GreatRiver, broken, 1, wt);
+        bool capsize = BoatMath.CapsizeCheck(Seed, v.Id, nowSec, load.GmMm, water.Value.CrossWindMps, wt);
+        if (load.Swamped || capsize || v.WaterInL > st.HullCells * 400) Sink(v);
+    }
+
+    /// <summary>Where a sunk boat's cargo lies: a store on the river bed (counted by the mass ledger like any store).</summary>
+    public Store RiverBed => _bed ??= _openStore(RiverBedId, 0, 0);
+    private Store? _bed;
+    public static readonly EntityId RiverBedId = EntityId.MakeIn(IdKind.Other, 0, 0x7F0_0001);
+
+    /// <summary>The boat sinks (vehicle-designer 4.5, VD-14): all its cargo moves to the river bed store, so mass is exact; the hero is put on the bank by the view.</summary>
+    public void Sink(VehicleRow v)
+    {
+        foreach (var (good, qty) in v.Cargo.Rows()) Store.Move(v.Cargo, RiverBed, good, qty);
+        v.Water = WaterState.Sunk;
+        if (Driving == v.Id) StopDriving();
     }
 
     private RideStep PlanCart(VehicleRow v, bool walk, long nowSec)
@@ -280,12 +367,13 @@ public sealed class RideBook
             RideMath.StepSecond(a, b, step.Gait, movedMm, RideMath.LoadRatioPm(RiderKg, b.CarryKg), nowSec, Seed, s, forced);
             if (movedMm > 0 && step.Gait != Gait.Walk && nowSec / 60 != _useSec) { _useSec = nowSec / 60; RidingUses += step.Gait == Gait.Gallop ? 80 : 60; }
         }
+        else if (DrivenVehicle is { IsBoat: true } boat) { boat.OdometerMm += movedMm; AccountBoat(boat, nowSec); }
         else if (DrivenVehicle is { } v)
         {
             long before = v.OdometerMm;
             if (movedMm > 0)
             {
-                Vehicles.Wear(v, movedMm);
+                Vehicles.Wear(v, movedMm, VehicleTable.RoughPm(s));
                 foreach (var id in v.Team) if (Animals.Find(id) is { } t) AnimalCare.OnMove(t, Breeds.At(t.Breed), movedMm, s, false, Seed);
                 var res = Vehicles.Speed(v, s, SlopeNow(), RiderKg, nowSec);
                 for (long k = before / 20_000 + 1; k <= v.OdometerMm / 20_000 && !v.Stuck; k++)
@@ -344,6 +432,12 @@ public sealed class RideBook
             var st = Plan(false, false, nowSec);
             return new RideView(true, false, false, st.Gait, a.StaminaSp / 10, a.WorkFatiguePm, a.FeedCenti, a.LowestShoe / 10, a.Lameness, RideMath.SpeedCmps(a, b, st.Gait, RideMath.LoadRatioPm(RiderKg, b.CarryKg), !a.Saddled), false, 0, 0, 0, 0, a.Breed, -1);
         }
+        if (v is { IsBoat: true })
+        {
+            // P5-G: a boat's bar is the boat view (water, current, draft, GM); no pull ratio against a road
+            var st = Vehicles.StatsOf(v);
+            return new RideView(false, true, false, Gait.Walk, 0, 0, 0, 0, 0, Boat.GroundMmps / 10, false, Vehicles.CargoKg(v), st.CargoKg, 0, 0, -1, v.Template, 0, 0, v.Team.Count, st.MaxAnimals, 0, -1);
+        }
         if (v != null)
         {
             var st = Vehicles.StatsOf(v); var r = Vehicles.Speed(v, Surface, SlopeNow(), RiderKg, nowSec);
@@ -352,4 +446,13 @@ public sealed class RideBook
         }
         return new RideView(false, false, MountLeftGs > 0, Gait.Walk, 0, 0, 0, 0, 0, 0, false, 0, 0, 0, 0, -1, -1);
     }
+}
+
+/// <summary>P5-G: the water under the hero's boat as the game reads it from the waterway: depth, the current along the way the boat heads (signed), the wind, across the river, the sail's angle, river-high days.</summary>
+public readonly record struct BoatWater(int DepthMm, int CurrentAlongMmps, int WindMps, int CrossWindMps, int SailCosPm, bool GreatRiver, int HighDays);
+
+/// <summary>P5-G: the boat HUD's numbers (vehicle-designer 6).</summary>
+public readonly record struct BoatView(int WaterMmps, int CurrentMmps, int GroundMmps, int DraftMm, int FreeboardMm, int GmMm, int UnderKeelMm, bool Aground)
+{
+    public static BoatView Of(BoatLoad l, int water, BoatWater w, int ground, bool aground) => new(water, w.CurrentAlongMmps, ground, l.DraftMm, l.FreeboardMm, l.GmMm, w.DepthMm - l.DraftMm, aground);
 }

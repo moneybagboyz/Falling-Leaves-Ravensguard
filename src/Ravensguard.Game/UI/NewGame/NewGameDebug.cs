@@ -370,6 +370,23 @@ public static class NewGameDebug
                     await Frames(tree, 30);
                     break;
                 }
+            case "vehicles":
+                {
+                    // dev (P5-G): a real new game, then --ng-scene designer (the designer with a wagon) | wagon (a designed wagon driven east) | diagonal (driven south-east, the baked diagonal)
+                    // | stuck (an ox wagon stuck on a mud road, the bar's warning) | site (an unfinished wagon beside the hero) | boat (a barge on the nearest water with the hero aboard)
+                    var w = MakeWorld(Math.Min(years, 60), 7);
+                    var d = NewGameServices.NewDraft(); d.Name = "Shot"; d.LibraryWorldId = w.Info.Id;
+                    router.Push(new RegionBuildScreen(router, d, w));
+                    if (!await Until(tree, () => router.Top is Ravensguard.Game.World.StreetView, 9000)) throw new Exception("vehicles shot: the region build did not finish");
+                    var sv = (Ravensguard.Game.World.StreetView)router.Top!; var rt = sv.Runtime!;
+                    await Until(tree, () => rt.HourDone >= sv.DebugWorld.Clock.Now.TotalHours, 6000);
+                    await Frames(tree, 60);
+                    string scene = Arg("--ng-scene", "designer");
+                    if (scene == "boat") { GD.Print("[vehicles] " + sv.DebugVehicles("river")); await Frames(tree, 240); }    // the window streams the river in
+                    GD.Print("[vehicles] " + sv.DebugVehicles(scene));
+                    await Frames(tree, 40);
+                    break;
+                }
             case "contracts":
                 {
                     // dev (P5-D): a real new game, then --ng-scene growth (a growth cottage 40% done beside the hero, its household at work) | builder (a builder hired for a cottage)

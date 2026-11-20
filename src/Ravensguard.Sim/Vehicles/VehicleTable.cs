@@ -4,25 +4,79 @@ using Ravensguard.Sim.Goods;
 
 namespace Ravensguard.Sim.Carts;
 
-/// <summary>One vehicle in the world (horses-and-carts spec 3.3): where it stands, what pulls it and what it carries (the cargo is a real store, so its goods are counted by the mass ledger).</summary>
+/// <summary>Where a boat is (vehicle-designer 4.2, 4.5): on land (every land vehicle), on the slipway (a hull being built or waiting to launch), afloat, aground, or sunk.</summary>
+public enum WaterState : byte { Land, Slipway, Afloat, Aground, Sunk }
+
+/// <summary>
+/// One vehicle in the world (horses-and-carts spec 3.3, vehicle-designer 3.3): where it stands, what pulls it, what it carries (the cargo is a real store, so its goods are counted by the mass ledger) and,
+/// from P5-G, its design and part rows: each part's cell, state and hit points. Mass, cargo and the rest are derived from the built parts (<see cref="VehicleTable.StatsOf"/>), recomputed only when a part
+/// changes (<see cref="Touch"/>).
+/// </summary>
 public sealed class VehicleRow
 {
     public EntityId Id;
+    /// <summary>The design's index in the running catalog (the save keeps <see cref="Design"/>, its id).</summary>
     public int Template;
+    public string Design = "";
     public EntityId Owner;
     public long XMm, YMm;
     public byte Facing;
     public Store Cargo = null!;
     public List<EntityId> Team = [];
     public long OdometerMm;
-    /// <summary>Wheel condition, permille (1000 new, 0 broken).</summary>
-    public int WheelPm = 1000;
     public bool Stuck;
     public long StuckSinceSec, DugUntilSec;
     public long LastDraw = -1;
     public long WearAccMm;
-    public bool Broken => WheelPm <= 0;
     public bool Driven;
+    /// <summary>P5-G: the parts, ordered by deck, row, column and stack order.</summary>
+    public List<PartRow> Parts = [];
+    public WaterState Water;
+    /// <summary>Water inside a boat, litres (a swamped boat sinks).</summary>
+    public int WaterInL;
+    internal VehicleCatalog? Cat;
+    internal VehicleStats? Cached;
+    internal bool? MoveCache;
+
+    /// <summary>A part changed: the derived numbers are recomputed at the next read.</summary>
+    public void Touch() { Cached = null; MoveCache = null; }
+
+    /// <summary>
+    /// Phase 3's wheel condition, permille (1000 new, 0 broken): the worst wheel's hit points against its new ones. Setting it sets every wheel to that share (the old saves' single value, and tests).
+    /// </summary>
+    public int WheelPm
+    {
+        get
+        {
+            if (Cat == null) return 1000;
+            int pm = 1000; bool any = false;
+            foreach (var p in Parts)
+            {
+                var d = Cat.PartList[p.Part]; if (!d.Tags.Contains("wheel") || d.Hp <= 0) continue;
+                if (p.State is PartState.Ghost or PartState.InProgress) continue;
+                any = true; pm = Math.Min(pm, (int)((long)p.HpMilli / d.Hp));
+            }
+            return any ? Math.Clamp(pm, 0, 1000) : 1000;
+        }
+        set
+        {
+            if (Cat == null) return;
+            int v = Math.Clamp(value, 0, 1000);
+            for (int i = 0; i < Parts.Count; i++)
+            {
+                var p = Parts[i]; var d = Cat.PartList[p.Part]; if (!d.Tags.Contains("wheel") || p.State is PartState.Ghost or PartState.InProgress) continue;
+                p.HpMilli = d.Hp * v; p.State = v <= 0 ? PartState.Broken : PartState.Built; Parts[i] = p;
+            }
+            Touch();
+        }
+    }
+
+    /// <summary>A wheel or an axle is broken (it stops; pushing does not free it), or a part it needs to move is not fitted yet (an unfinished wagon, a hull on the slipway).</summary>
+    public bool Broken => Cat != null && (PartGrid.WheelOrAxleBroken(Parts, Cat) || !CanMove);
+    public bool CanMove => Cat == null || (MoveCache ??= PartGrid.CanMove(Parts, Cat));
+    /// <summary>Every part fitted (a finished vehicle; a damaged part still counts as fitted).</summary>
+    public bool Finished { get { foreach (var p in Parts) if (p.State is PartState.Ghost or PartState.InProgress) return false; return true; } }
+    public bool IsBoat => Cat != null && Template >= 0 && Template < Cat.All.Count && Cat.At(Template).Stats.Boat;
 }
 
 public enum HitchResult : byte { Ok, NoHitch, Full, Untrained, Dead, Taken, AxleWouldBreak, WrongBeast }
@@ -54,20 +108,39 @@ public sealed class VehicleTable
 
     public Store NewStore(EntityId id, VehicleStats s) => _open(id, s.CargoKg * 1000L, s.CargoL * 1000L);
 
-    public VehicleRow Create(VehicleBlueprint bp, EntityId owner, long xMm = 0, long yMm = 0)
+    /// <summary>A new vehicle of a design with every part built (a template cart bought or given), or, with <paramref name="ghosts"/>, every part a ghost: an unfinished vehicle site (vehicle-designer 4.2).</summary>
+    public VehicleRow Create(VehicleBlueprint bp, EntityId owner, long xMm = 0, long yMm = 0, bool ghosts = false)
     {
         var id = MakeId(NextSerial++);
-        var r = new VehicleRow { Id = id, Template = bp.Index, Owner = owner, XMm = xMm, YMm = yMm, Cargo = NewStore(id, bp.Stats) };
+        var r = new VehicleRow { Id = id, Template = bp.Index, Design = bp.Id, Owner = owner, XMm = xMm, YMm = yMm, Cargo = NewStore(id, bp.Stats), Cat = Catalog, Parts = [.. bp.Parts] };
+        if (ghosts) for (int i = 0; i < r.Parts.Count; i++) { var p = r.Parts[i]; p.State = PartState.Ghost; p.HpMilli = 0; r.Parts[i] = p; }
+        if (bp.Stats.Boat) r.Water = ghosts ? WaterState.Slipway : WaterState.Afloat;
         _rows.Add(r);
         return r;
     }
 
-    /// <summary>Puts a saved row back (restore): the caller fills the cargo.</summary>
-    public VehicleRow Restore(VehicleRow r) { _rows.Add(r); return r; }
+    /// <summary>Puts a saved row back (restore): the caller fills the cargo. Rows are kept in id order.</summary>
+    public VehicleRow Restore(VehicleRow r)
+    {
+        r.Cat = Catalog; r.Touch();
+        int i = _rows.Count; while (i > 0 && _rows[i - 1].Id.CompareTo(r.Id) > 0) i--;
+        _rows.Insert(i, r); return r;
+    }
     public void ClearForRestore(ulong nextSerial) { _rows.Clear(); NextSerial = nextSerial; }
     public void Remove(VehicleRow r) { foreach (var id in r.Team) if (Animals.Find(id) is { } a) { a.Vehicle = EntityId.None; if (a.State == AnimalState.Hitched) a.State = AnimalState.Free; } _rows.Remove(r); }
 
-    public VehicleStats StatsOf(VehicleRow r) => Catalog.At(r.Template).Stats;
+    /// <summary>The derived numbers of the vehicle's built parts (P5-G: a wagon without its tilt is lighter), cached until a part changes; a finished, undamaged vehicle has its design's numbers exactly.</summary>
+    public VehicleStats StatsOf(VehicleRow r)
+    {
+        if (r.Cached != null) return r.Cached;
+        var bp = Catalog.At(r.Template);
+        r.Cat ??= Catalog;
+        bool all = true; foreach (var p in r.Parts) if (p.State != PartState.Built) { all = false; break; }
+        return r.Cached = all && r.Parts.Count == bp.Parts.Count ? bp.Stats : PartGrid.Derive(bp.Def, r.Parts, Catalog, builtOnly: true);
+    }
+
+    /// <summary>The design a vehicle is built to.</summary>
+    public VehicleBlueprint DesignOf(VehicleRow r) => Catalog.At(r.Template);
 
     /// <summary>Kilograms in the bed (grams rounded up).</summary>
     public int CargoKg(VehicleRow r) => (int)((r.Cargo.TotalMassG() + 999) / 1000);
@@ -176,19 +249,79 @@ public sealed class VehicleTable
 
     // ------------------------------------------------------------------ wear
 
-    /// <summary>Wheels wear 1 permille per 20 m at full axle load, scaled by the load (spec 4.4). A broken wheel stops the cart.</summary>
-    public void Wear(VehicleRow r, long movedMm)
+    /// <summary>Wear of a tier, permille of a Common wheel's (vehicle-designer 4.3: a Fine wheel x0.8).</summary>
+    public static int TierWearPm(ItemQuality q) => q switch { ItemQuality.Crude => 1500, ItemQuality.Poor => 1200, ItemQuality.Fine => 800, ItemQuality.Masterwork => 600, _ => 1000 };
+
+    /// <summary>How hard the ground is on wheels (vehicle-designer 4.3): road 1,000, field and mud and snow 2,000, sand and rubble 4,000 (the rock of a ford's approach counts as field).</summary>
+    public static int RoughPm(Surface s) => s switch
+    {
+        Surface.Paved or Surface.DryRoad or Surface.WetRoad or Surface.Track or Surface.Ice or Surface.PackedSnow => 1000,
+        Surface.Sand => 4000,
+        _ => 2000,
+    };
+
+    /// <summary>
+    /// Wheels wear on the move (vehicle-designer 4.3, Phase 3 spec 4.4): every 20 m at full axle load each built wheel loses a thousandth of its hit points, scaled by the load (x3 above the axle limit), by
+    /// how rough the ground is (<paramref name="roughPm"/>, road 1,000) and by the wheel's own tier and <c>rough_wear_pm</c>. A Common wheel on a road wears exactly as Phase 3's one <c>WheelPm</c> did
+    /// (VD-6). A wheel at 0 is broken and the vehicle stops. Deterministic: no roll.
+    /// </summary>
+    public void Wear(VehicleRow r, long movedMm, int roughPm = 1000)
     {
         var st = StatsOf(r); r.OdometerMm += movedMm;
         if (st.AxleLimitKg <= 0 || st.Wheels == 0) return;
         long loadPm = (long)GrossKg(r) * 1000 / st.AxleLimitKg;
         long mult = loadPm > 1000 ? 3 : 1;
-        r.WearAccMm += movedMm * loadPm * mult / 1000;
+        r.WearAccMm += movedMm * loadPm * mult / 1000 * roughPm / 1000;
         long step = 20_000L / Math.Max(1, Catalog.Tuning.WheelWearPm);
-        while (r.WearAccMm >= step) { r.WearAccMm -= step; r.WheelPm = Math.Max(0, r.WheelPm - 1); }
+        bool broke = false;
+        while (r.WearAccMm >= step)
+        {
+            r.WearAccMm -= step;
+            for (int i = 0; i < r.Parts.Count; i++)
+            {
+                var p = r.Parts[i]; if (p.State != PartState.Built) continue;
+                var d = Catalog.PartList[p.Part]; if (!d.Tags.Contains("wheel")) continue;
+                long loss = (long)d.Hp * TierWearPm(p.Tier) / 1000 * d.RoughWearPm / 1000;
+                if (roughPm <= 1000) loss = (long)d.Hp * TierWearPm(p.Tier) / 1000;      // the part's own rough factor counts only off the road
+                p.HpMilli = (int)Math.Max(0, p.HpMilli - loss);
+                if (p.HpMilli == 0) { p.State = PartState.Broken; broke = true; }
+                r.Parts[i] = p;
+            }
+        }
+        if (broke) r.Touch();
     }
 
+    /// <summary>Phase 3's repair (the cart wheel): every wheel back to new.</summary>
     public void Repair(VehicleRow r) { r.WheelPm = 1000; r.WearAccMm = 0; }
+
+    /// <summary>Repairs one part by <paramref name="addPm"/> of its hit points (vehicle-designer 4.3: the part recipe's repair line, +300); a broken part mended above 0 is whole again.</summary>
+    public void RepairPart(VehicleRow r, int index, int addPm)
+    {
+        var p = r.Parts[index]; if (p.State is PartState.Ghost or PartState.InProgress) return;
+        var d = Catalog.PartList[p.Part];
+        p.HpMilli = (int)Math.Min((long)d.Hp * 1000, p.HpMilli + (long)d.Hp * addPm);
+        if (p.HpMilli > 0) p.State = PartState.Built;
+        r.Parts[index] = p; r.Touch();
+    }
+
+    /// <summary>A drop of more than a metre (a bank, a collapsed bridge) or an overload at once: every axle loses half its hit points (vehicle-designer 4.3).</summary>
+    public void Jolt(VehicleRow r)
+    {
+        for (int i = 0; i < r.Parts.Count; i++)
+        {
+            var p = r.Parts[i]; if (p.State != PartState.Built || !Catalog.PartList[p.Part].Tags.Contains("axle")) continue;
+            p.HpMilli /= 2; if (p.HpMilli == 0) p.State = PartState.Broken; r.Parts[i] = p;
+        }
+        r.Touch();
+    }
+
+    /// <summary>Damage to one part (combat, a fall): hit points off; at 0 it is broken (vehicle-designer 4.3).</summary>
+    public void Damage(VehicleRow r, int index, int hpMilli)
+    {
+        var p = r.Parts[index]; if (p.State != PartState.Built) return;
+        p.HpMilli = Math.Max(0, p.HpMilli - hpMilli); if (p.HpMilli == 0) p.State = PartState.Broken;
+        r.Parts[index] = p; r.Touch();
+    }
 }
 
 /// <summary>Getting stuck and getting out (spec 4.6). All integer, all pure.</summary>

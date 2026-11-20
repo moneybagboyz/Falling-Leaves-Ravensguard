@@ -52,7 +52,38 @@ public sealed record VehiclePartDef : ContentDef
     public int Hp { get; init; } = 100;
     [ContentRef(typeof(VehiclePartDef))] public List<string> NeedsBelow { get; init; } = [];
     public List<string> Tags { get; init; } = [];
+    // ---- P5-G (vehicle-designer 3.1): all optional
+    /// <summary>The designer's palette category: frame, wheels, hitch, cargo, seats, hull, steering, sail, cover, workstations.</summary>
+    public string Category { get; init; } = "";
+    /// <summary>The craft recipe that makes the part (a <c>vehicle_part</c> result); empty for a part nobody makes yet.</summary>
+    public string Recipe { get; init; } = "";
+    /// <summary>The recipe that mends it (a vehicle-part repair line); empty: replace it.</summary>
+    public string Repair { get; init; } = "";
+    /// <summary>Worker-hours to fit it on the frame (the one worker-hour rule applies).</summary>
+    public double InstallH { get; init; }
+    /// <summary>What it steers with: pole (the fore-carriage of a four-wheeler), pivot_axle, shafts, handles, rudder, steering_oar.</summary>
+    public string Steer { get; init; } = "";
+    /// <summary>An axle's load, kilograms (the design's axle limit is the sum, unless the template names one).</summary>
+    public int AxleKg { get; init; }
+    /// <summary>Hull form of a hull cell (permille of the 1 m2 cell at the waterline; block coefficient), and the hull's depth; a keel's form wins over the planks' (BoatMath).</summary>
+    public int WaterplanePm { get; init; }
+    public int HullDepthMm { get; init; }
+    public int BlockPm { get; init; }
+    public bool Buoyant { get; init; }
+    /// <summary>Seats that row, and people who pole (a quant-pole rack).</summary>
+    public int Rowers { get; init; }
+    public int Polers { get; init; }
+    public int SailM2 { get; init; }
+    /// <summary>The part's centre of mass above the keel or the ground, mm.</summary>
+    public int HeightMm { get; init; }
+    /// <summary>Hit-point loss scale on bad ground, permille (a dished wheel takes ruts better).</summary>
+    public int RoughWearPm { get; init; } = 1000;
+    /// <summary>The craft station a part is (a mobile hearth is a <c>hearth</c>), or empty.</summary>
+    public string Station { get; init; } = "";
 }
+
+/// <summary>P5-G: an upper deck of a vehicle design (a barge's cabin roof, a cart's tilt is on deck 0): its rows over the same legend.</summary>
+public sealed record VehicleLevelDef { public int Deck { get; init; } = 1; public List<string> Rows { get; init; } = []; }
 
 /// <summary>A hitch: how many animals pull the vehicle and by what (shafts, pole_yoke, pushed, none).</summary>
 /// <summary><c>slots</c> is the animals of one team (a pair of oxen, one horse); <c>max_animals</c> is how many may be hitched in all (0 means one team): extra teams are added in front, each a tenth less efficient.</summary>
@@ -66,9 +97,11 @@ public sealed record VehicleHitchDef { public int Slots { get; init; } public in
 public sealed record VehicleBlueprintDef : ContentDef
 {
     public required string Name { get; init; }
-    public int BaseSpeedCmps { get; init; } = 250;
+    /// <summary>0: derived from the hitch (P5-G designs).</summary>
+    public int BaseSpeedCmps { get; init; }
     public int AxleLimitKg { get; init; }
-    public int TurningRadiusDm { get; init; } = 40;
+    /// <summary>0: derived from the axles (P5-G: one axle 4 m, two 8 m, x0.6 with a pivoting axle).</summary>
+    public int TurningRadiusDm { get; init; }
     public VehicleHitchDef Hitch { get; init; } = new();
     public int Driver { get; init; } = 1;
     public int Passengers { get; init; }
@@ -80,7 +113,43 @@ public sealed record VehicleBlueprintDef : ContentDef
     public required List<string> Rows { get; init; }
     /// <summary>Sprite id the view draws.</summary>
     public string Sprite { get; init; } = "";
+    /// <summary>P5-G: upper decks (vehicle-designer 4.1), each a grid of the same size over the same legend.</summary>
+    public List<VehicleLevelDef> Levels { get; init; } = [];
+    /// <summary>P5-G: where it is built (<c>yard</c> or <c>slipway</c>) and how it moves on water (<c>poled</c>, <c>rowed</c>, <c>towed</c>, <c>sail</c>, <c>rope</c>), empty on land.</summary>
+    public string BuiltAt { get; init; } = "";
+    public List<string> Power { get; init; } = [];
 }
+
+/// <summary>P5-G (vehicle-designer 3.4): river depth and current by width class, the water drag and the people's pull on oars and poles.</summary>
+[ContentType("vehicle_water")]
+public sealed record VehicleWaterDef : ContentDef
+{
+    /// <summary>Width classes, narrowest first: up to <c>max_width_cm</c> (0: no limit) the depth and the current.</summary>
+    public List<WaterClassDef> Classes { get; init; } = [];
+    public int FordDepthMm { get; init; } = 500;
+    public int HighDayDepthMm { get; init; } = 300;
+    public int HighDayCurrentMmps { get; init; } = 300;
+    public int HighDaysCap { get; init; } = 3;
+    public int DragK { get; init; } = 8;
+    public int RowerN { get; init; } = 70;
+    public int PolerN { get; init; } = 120;
+    public int PolingMaxDepthMm { get; init; } = 3000;
+    public int KeelClearanceMm { get; init; } = 150;
+    public int TenderGmMm { get; init; } = 150;
+    public int BeamSeaWindMps { get; init; } = 10;
+    public int CapsizePm { get; init; } = 20;
+    public int WaveFreeboardMm { get; init; } = 100;
+    public int SwampLps { get; init; } = 20;
+    public int BailLps { get; init; } = 5;
+    public int FerryMmps { get; init; } = 500;
+    public int FerryFeePerson { get; init; } = 15;
+    public int FerryFeeCart { get; init; } = 40;
+    public int FishKgPerCrewDay { get; init; } = 12;
+    public int FishWinterPm { get; init; } = 400;
+    public int FishShoreKgDay { get; init; } = 4;
+}
+
+public sealed record WaterClassDef { public required string Id { get; init; } public int MaxWidthCm { get; init; } public int DepthMm { get; init; } public int CurrentMmps { get; init; } }
 
 /// <summary>Rolling resistance (permille of weight) per surface, and the sledge's own column; the live tier and the abstract caravans read the same table (spec 4.5).</summary>
 [ContentType("vehicle_tuning")]

@@ -92,11 +92,20 @@
     },
     "vehicles_32": {
       "file": "vehicles_32.png",
-      "width": 792,
-      "height": 3212,
+      "width": 984,
+      "height": 5248,
       "cell": [
-        264,
-        292
+        328,
+        328
+      ]
+    },
+    "vparts_32": {
+      "file": "vparts_32.png",
+      "width": 1012,
+      "height": 690,
+      "cell": [
+        46,
+        46
       ]
     },
     "field_8": {
@@ -4517,14 +4526,14 @@
     },
     "vehicle.wheelbarrow.n": {
       "atlas": "vehicles_32",
-      "x": 264,
+      "x": 328,
       "y": 0,
       "w": 40,
       "h": 92
     },
     "vehicle.wheelbarrow.s": {
       "atlas": "vehicles_32",
-      "x": 528,
+      "x": 656,
       "y": 0,
       "w": 40,
       "h": 92
@@ -4532,212 +4541,2613 @@
     "vehicle.handcart": {
       "atlas": "vehicles_32",
       "x": 0,
-      "y": 292,
+      "y": 328,
       "w": 72,
       "h": 62
     },
     "vehicle.handcart.n": {
       "atlas": "vehicles_32",
-      "x": 264,
-      "y": 292,
+      "x": 328,
+      "y": 328,
       "w": 40,
       "h": 94
     },
     "vehicle.handcart.s": {
       "atlas": "vehicles_32",
-      "x": 528,
-      "y": 292,
+      "x": 656,
+      "y": 328,
       "w": 40,
       "h": 94
     },
     "vehicle.handcart_loaded": {
       "atlas": "vehicles_32",
       "x": 0,
-      "y": 584,
+      "y": 656,
       "w": 72,
       "h": 62
     },
     "vehicle.handcart.n_loaded": {
       "atlas": "vehicles_32",
-      "x": 264,
-      "y": 584,
+      "x": 328,
+      "y": 656,
       "w": 40,
       "h": 94
     },
     "vehicle.handcart.s_loaded": {
       "atlas": "vehicles_32",
-      "x": 528,
-      "y": 584,
+      "x": 656,
+      "y": 656,
       "w": 40,
       "h": 94
     },
     "vehicle.cart": {
       "atlas": "vehicles_32",
       "x": 0,
-      "y": 876,
+      "y": 984,
       "w": 168,
       "h": 98
     },
     "vehicle.cart.n": {
       "atlas": "vehicles_32",
-      "x": 264,
-      "y": 876,
+      "x": 328,
+      "y": 984,
       "w": 72,
       "h": 194
     },
     "vehicle.cart.s": {
       "atlas": "vehicles_32",
-      "x": 528,
-      "y": 876,
+      "x": 656,
+      "y": 984,
       "w": 72,
       "h": 194
     },
     "vehicle.cart_loaded": {
       "atlas": "vehicles_32",
       "x": 0,
-      "y": 1168,
+      "y": 1312,
       "w": 168,
       "h": 98
     },
     "vehicle.cart.n_loaded": {
       "atlas": "vehicles_32",
-      "x": 264,
-      "y": 1168,
+      "x": 328,
+      "y": 1312,
       "w": 72,
       "h": 194
     },
     "vehicle.cart.s_loaded": {
       "atlas": "vehicles_32",
-      "x": 528,
-      "y": 1168,
+      "x": 656,
+      "y": 1312,
       "w": 72,
       "h": 194
     },
     "vehicle.hay_wain": {
       "atlas": "vehicles_32",
       "x": 0,
-      "y": 1460,
+      "y": 1640,
       "w": 232,
       "h": 120
     },
     "vehicle.hay_wain.n": {
       "atlas": "vehicles_32",
-      "x": 264,
-      "y": 1460,
+      "x": 328,
+      "y": 1640,
       "w": 72,
       "h": 280
     },
     "vehicle.hay_wain.s": {
       "atlas": "vehicles_32",
-      "x": 528,
-      "y": 1460,
+      "x": 656,
+      "y": 1640,
       "w": 72,
       "h": 280
     },
     "vehicle.ox_wagon": {
       "atlas": "vehicles_32",
       "x": 0,
-      "y": 1752,
+      "y": 1968,
       "w": 264,
       "h": 100
     },
     "vehicle.ox_wagon.n": {
       "atlas": "vehicles_32",
-      "x": 264,
-      "y": 1752,
+      "x": 328,
+      "y": 1968,
       "w": 72,
       "h": 292
     },
     "vehicle.ox_wagon.s": {
       "atlas": "vehicles_32",
-      "x": 528,
-      "y": 1752,
+      "x": 656,
+      "y": 1968,
       "w": 72,
       "h": 292
     },
     "vehicle.ox_wagon_loaded": {
       "atlas": "vehicles_32",
       "x": 0,
-      "y": 2044,
+      "y": 2296,
       "w": 264,
       "h": 100
     },
     "vehicle.ox_wagon.n_loaded": {
       "atlas": "vehicles_32",
-      "x": 264,
-      "y": 2044,
+      "x": 328,
+      "y": 2296,
       "w": 72,
       "h": 292
     },
     "vehicle.ox_wagon.s_loaded": {
       "atlas": "vehicles_32",
-      "x": 528,
-      "y": 2044,
+      "x": 656,
+      "y": 2296,
       "w": 72,
       "h": 292
     },
     "vehicle.covered_wagon": {
       "atlas": "vehicles_32",
       "x": 0,
-      "y": 2336,
+      "y": 2624,
       "w": 232,
       "h": 116
     },
     "vehicle.covered_wagon.n": {
       "atlas": "vehicles_32",
-      "x": 264,
-      "y": 2336,
+      "x": 328,
+      "y": 2624,
       "w": 72,
       "h": 276
     },
     "vehicle.covered_wagon.s": {
       "atlas": "vehicles_32",
-      "x": 528,
-      "y": 2336,
+      "x": 656,
+      "y": 2624,
       "w": 72,
       "h": 276
     },
     "vehicle.sledge": {
       "atlas": "vehicles_32",
       "x": 0,
-      "y": 2628,
+      "y": 2952,
       "w": 104,
       "h": 92
     },
     "vehicle.sledge.n": {
       "atlas": "vehicles_32",
-      "x": 264,
-      "y": 2628,
+      "x": 328,
+      "y": 2952,
       "w": 72,
       "h": 124
     },
     "vehicle.sledge.s": {
       "atlas": "vehicles_32",
-      "x": 528,
-      "y": 2628,
+      "x": 656,
+      "y": 2952,
       "w": 72,
       "h": 124
     },
     "vehicle.sledge_loaded": {
       "atlas": "vehicles_32",
       "x": 0,
-      "y": 2920,
+      "y": 3280,
       "w": 104,
       "h": 92
     },
     "vehicle.sledge.n_loaded": {
       "atlas": "vehicles_32",
-      "x": 264,
-      "y": 2920,
+      "x": 328,
+      "y": 3280,
       "w": 72,
       "h": 124
     },
     "vehicle.sledge.s_loaded": {
       "atlas": "vehicles_32",
-      "x": 528,
-      "y": 2920,
+      "x": 656,
+      "y": 3280,
       "w": 72,
       "h": 124
+    },
+    "vehicle.peddler_wagon": {
+      "atlas": "vehicles_32",
+      "x": 0,
+      "y": 3608,
+      "w": 232,
+      "h": 116
+    },
+    "vehicle.peddler_wagon.n": {
+      "atlas": "vehicles_32",
+      "x": 328,
+      "y": 3608,
+      "w": 72,
+      "h": 276
+    },
+    "vehicle.peddler_wagon.s": {
+      "atlas": "vehicles_32",
+      "x": 656,
+      "y": 3608,
+      "w": 72,
+      "h": 276
+    },
+    "vehicle.rowing_boat": {
+      "atlas": "vehicles_32",
+      "x": 0,
+      "y": 3936,
+      "w": 168,
+      "h": 88
+    },
+    "vehicle.rowing_boat.n": {
+      "atlas": "vehicles_32",
+      "x": 328,
+      "y": 3936,
+      "w": 88,
+      "h": 168
+    },
+    "vehicle.rowing_boat.s": {
+      "atlas": "vehicles_32",
+      "x": 656,
+      "y": 3936,
+      "w": 88,
+      "h": 168
+    },
+    "vehicle.fishing_boat": {
+      "atlas": "vehicles_32",
+      "x": 0,
+      "y": 4264,
+      "w": 200,
+      "h": 88
+    },
+    "vehicle.fishing_boat.n": {
+      "atlas": "vehicles_32",
+      "x": 328,
+      "y": 4264,
+      "w": 88,
+      "h": 200
+    },
+    "vehicle.fishing_boat.s": {
+      "atlas": "vehicles_32",
+      "x": 656,
+      "y": 4264,
+      "w": 88,
+      "h": 200
+    },
+    "vehicle.barge": {
+      "atlas": "vehicles_32",
+      "x": 0,
+      "y": 4592,
+      "w": 328,
+      "h": 124
+    },
+    "vehicle.barge.n": {
+      "atlas": "vehicles_32",
+      "x": 328,
+      "y": 4592,
+      "w": 124,
+      "h": 328
+    },
+    "vehicle.barge.s": {
+      "atlas": "vehicles_32",
+      "x": 656,
+      "y": 4592,
+      "w": 124,
+      "h": 328
+    },
+    "vehicle.ferry": {
+      "atlas": "vehicles_32",
+      "x": 0,
+      "y": 4920,
+      "w": 200,
+      "h": 120
+    },
+    "vehicle.ferry.n": {
+      "atlas": "vehicles_32",
+      "x": 328,
+      "y": 4920,
+      "w": 120,
+      "h": 200
+    },
+    "vehicle.ferry.s": {
+      "atlas": "vehicles_32",
+      "x": 656,
+      "y": 4920,
+      "w": 120,
+      "h": 200
+    },
+    "vpart.frame_plank.e": {
+      "atlas": "vparts_32",
+      "x": 0,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.frame_plank.n": {
+      "atlas": "vparts_32",
+      "x": 46,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.frame_plank.w": {
+      "atlas": "vparts_32",
+      "x": 92,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.frame_plank.s": {
+      "atlas": "vparts_32",
+      "x": 138,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.frame_plank.ne": {
+      "atlas": "vparts_32",
+      "x": 184,
+      "y": 0,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.frame_plank.se": {
+      "atlas": "vparts_32",
+      "x": 230,
+      "y": 0,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.frame_plank.sw": {
+      "atlas": "vparts_32",
+      "x": 276,
+      "y": 0,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.frame_plank.nw": {
+      "atlas": "vparts_32",
+      "x": 322,
+      "y": 0,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.axle_wood.e": {
+      "atlas": "vparts_32",
+      "x": 368,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.axle_wood.n": {
+      "atlas": "vparts_32",
+      "x": 414,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.axle_wood.w": {
+      "atlas": "vparts_32",
+      "x": 460,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.axle_wood.s": {
+      "atlas": "vparts_32",
+      "x": 506,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.axle_wood.ne": {
+      "atlas": "vparts_32",
+      "x": 552,
+      "y": 0,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.axle_wood.se": {
+      "atlas": "vparts_32",
+      "x": 598,
+      "y": 0,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.axle_wood.sw": {
+      "atlas": "vparts_32",
+      "x": 644,
+      "y": 0,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.axle_wood.nw": {
+      "atlas": "vparts_32",
+      "x": 690,
+      "y": 0,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.wheel_solid.e": {
+      "atlas": "vparts_32",
+      "x": 736,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.wheel_solid.n": {
+      "atlas": "vparts_32",
+      "x": 782,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.wheel_solid.w": {
+      "atlas": "vparts_32",
+      "x": 828,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.wheel_solid.s": {
+      "atlas": "vparts_32",
+      "x": 874,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.wheel_solid.ne": {
+      "atlas": "vparts_32",
+      "x": 920,
+      "y": 0,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.wheel_solid.se": {
+      "atlas": "vparts_32",
+      "x": 966,
+      "y": 0,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.wheel_solid.sw": {
+      "atlas": "vparts_32",
+      "x": 0,
+      "y": 46,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.wheel_solid.nw": {
+      "atlas": "vparts_32",
+      "x": 46,
+      "y": 46,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.wheel_spoked.e": {
+      "atlas": "vparts_32",
+      "x": 92,
+      "y": 46,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.wheel_spoked.n": {
+      "atlas": "vparts_32",
+      "x": 138,
+      "y": 46,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.wheel_spoked.w": {
+      "atlas": "vparts_32",
+      "x": 184,
+      "y": 46,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.wheel_spoked.s": {
+      "atlas": "vparts_32",
+      "x": 230,
+      "y": 46,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.wheel_spoked.ne": {
+      "atlas": "vparts_32",
+      "x": 276,
+      "y": 46,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.wheel_spoked.se": {
+      "atlas": "vparts_32",
+      "x": 322,
+      "y": 46,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.wheel_spoked.sw": {
+      "atlas": "vparts_32",
+      "x": 368,
+      "y": 46,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.wheel_spoked.nw": {
+      "atlas": "vparts_32",
+      "x": 414,
+      "y": 46,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.iron_tyre.e": {
+      "atlas": "vparts_32",
+      "x": 460,
+      "y": 46,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.iron_tyre.n": {
+      "atlas": "vparts_32",
+      "x": 506,
+      "y": 46,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.iron_tyre.w": {
+      "atlas": "vparts_32",
+      "x": 552,
+      "y": 46,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.iron_tyre.s": {
+      "atlas": "vparts_32",
+      "x": 598,
+      "y": 46,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.iron_tyre.ne": {
+      "atlas": "vparts_32",
+      "x": 644,
+      "y": 46,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.iron_tyre.se": {
+      "atlas": "vparts_32",
+      "x": 690,
+      "y": 46,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.iron_tyre.sw": {
+      "atlas": "vparts_32",
+      "x": 736,
+      "y": 46,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.iron_tyre.nw": {
+      "atlas": "vparts_32",
+      "x": 782,
+      "y": 46,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.shaft_pair.e": {
+      "atlas": "vparts_32",
+      "x": 828,
+      "y": 46,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.shaft_pair.n": {
+      "atlas": "vparts_32",
+      "x": 874,
+      "y": 46,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.shaft_pair.w": {
+      "atlas": "vparts_32",
+      "x": 920,
+      "y": 46,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.shaft_pair.s": {
+      "atlas": "vparts_32",
+      "x": 966,
+      "y": 46,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.shaft_pair.ne": {
+      "atlas": "vparts_32",
+      "x": 0,
+      "y": 92,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.shaft_pair.se": {
+      "atlas": "vparts_32",
+      "x": 46,
+      "y": 92,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.shaft_pair.sw": {
+      "atlas": "vparts_32",
+      "x": 92,
+      "y": 92,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.shaft_pair.nw": {
+      "atlas": "vparts_32",
+      "x": 138,
+      "y": 92,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.pole_yoke.e": {
+      "atlas": "vparts_32",
+      "x": 184,
+      "y": 92,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.pole_yoke.n": {
+      "atlas": "vparts_32",
+      "x": 230,
+      "y": 92,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.pole_yoke.w": {
+      "atlas": "vparts_32",
+      "x": 276,
+      "y": 92,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.pole_yoke.s": {
+      "atlas": "vparts_32",
+      "x": 322,
+      "y": 92,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.pole_yoke.ne": {
+      "atlas": "vparts_32",
+      "x": 368,
+      "y": 92,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.pole_yoke.se": {
+      "atlas": "vparts_32",
+      "x": 414,
+      "y": 92,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.pole_yoke.sw": {
+      "atlas": "vparts_32",
+      "x": 460,
+      "y": 92,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.pole_yoke.nw": {
+      "atlas": "vparts_32",
+      "x": 506,
+      "y": 92,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.pole_beam.e": {
+      "atlas": "vparts_32",
+      "x": 552,
+      "y": 92,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.pole_beam.n": {
+      "atlas": "vparts_32",
+      "x": 598,
+      "y": 92,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.pole_beam.w": {
+      "atlas": "vparts_32",
+      "x": 644,
+      "y": 92,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.pole_beam.s": {
+      "atlas": "vparts_32",
+      "x": 690,
+      "y": 92,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.pole_beam.ne": {
+      "atlas": "vparts_32",
+      "x": 736,
+      "y": 92,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.pole_beam.se": {
+      "atlas": "vparts_32",
+      "x": 782,
+      "y": 92,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.pole_beam.sw": {
+      "atlas": "vparts_32",
+      "x": 828,
+      "y": 92,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.pole_beam.nw": {
+      "atlas": "vparts_32",
+      "x": 874,
+      "y": 92,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.traces.e": {
+      "atlas": "vparts_32",
+      "x": 920,
+      "y": 92,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.traces.n": {
+      "atlas": "vparts_32",
+      "x": 966,
+      "y": 92,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.traces.w": {
+      "atlas": "vparts_32",
+      "x": 0,
+      "y": 138,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.traces.s": {
+      "atlas": "vparts_32",
+      "x": 46,
+      "y": 138,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.traces.ne": {
+      "atlas": "vparts_32",
+      "x": 92,
+      "y": 138,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.traces.se": {
+      "atlas": "vparts_32",
+      "x": 138,
+      "y": 138,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.traces.sw": {
+      "atlas": "vparts_32",
+      "x": 184,
+      "y": 138,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.traces.nw": {
+      "atlas": "vparts_32",
+      "x": 230,
+      "y": 138,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.cargo_bed.e": {
+      "atlas": "vparts_32",
+      "x": 276,
+      "y": 138,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.cargo_bed.n": {
+      "atlas": "vparts_32",
+      "x": 322,
+      "y": 138,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.cargo_bed.w": {
+      "atlas": "vparts_32",
+      "x": 368,
+      "y": 138,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.cargo_bed.s": {
+      "atlas": "vparts_32",
+      "x": 414,
+      "y": 138,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.cargo_bed.ne": {
+      "atlas": "vparts_32",
+      "x": 460,
+      "y": 138,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.cargo_bed.se": {
+      "atlas": "vparts_32",
+      "x": 506,
+      "y": 138,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.cargo_bed.sw": {
+      "atlas": "vparts_32",
+      "x": 552,
+      "y": 138,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.cargo_bed.nw": {
+      "atlas": "vparts_32",
+      "x": 598,
+      "y": 138,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.cargo_box.e": {
+      "atlas": "vparts_32",
+      "x": 644,
+      "y": 138,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.cargo_box.n": {
+      "atlas": "vparts_32",
+      "x": 690,
+      "y": 138,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.cargo_box.w": {
+      "atlas": "vparts_32",
+      "x": 736,
+      "y": 138,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.cargo_box.s": {
+      "atlas": "vparts_32",
+      "x": 782,
+      "y": 138,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.cargo_box.ne": {
+      "atlas": "vparts_32",
+      "x": 828,
+      "y": 138,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.cargo_box.se": {
+      "atlas": "vparts_32",
+      "x": 874,
+      "y": 138,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.cargo_box.sw": {
+      "atlas": "vparts_32",
+      "x": 920,
+      "y": 138,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.cargo_box.nw": {
+      "atlas": "vparts_32",
+      "x": 966,
+      "y": 138,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.barrow_tray.e": {
+      "atlas": "vparts_32",
+      "x": 0,
+      "y": 184,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.barrow_tray.n": {
+      "atlas": "vparts_32",
+      "x": 46,
+      "y": 184,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.barrow_tray.w": {
+      "atlas": "vparts_32",
+      "x": 92,
+      "y": 184,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.barrow_tray.s": {
+      "atlas": "vparts_32",
+      "x": 138,
+      "y": 184,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.barrow_tray.ne": {
+      "atlas": "vparts_32",
+      "x": 184,
+      "y": 184,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.barrow_tray.se": {
+      "atlas": "vparts_32",
+      "x": 230,
+      "y": 184,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.barrow_tray.sw": {
+      "atlas": "vparts_32",
+      "x": 276,
+      "y": 184,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.barrow_tray.nw": {
+      "atlas": "vparts_32",
+      "x": 322,
+      "y": 184,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.cargo_rack.e": {
+      "atlas": "vparts_32",
+      "x": 368,
+      "y": 184,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.cargo_rack.n": {
+      "atlas": "vparts_32",
+      "x": 414,
+      "y": 184,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.cargo_rack.w": {
+      "atlas": "vparts_32",
+      "x": 460,
+      "y": 184,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.cargo_rack.s": {
+      "atlas": "vparts_32",
+      "x": 506,
+      "y": 184,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.cargo_rack.ne": {
+      "atlas": "vparts_32",
+      "x": 552,
+      "y": 184,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.cargo_rack.se": {
+      "atlas": "vparts_32",
+      "x": 598,
+      "y": 184,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.cargo_rack.sw": {
+      "atlas": "vparts_32",
+      "x": 644,
+      "y": 184,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.cargo_rack.nw": {
+      "atlas": "vparts_32",
+      "x": 690,
+      "y": 184,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.seat_bench.e": {
+      "atlas": "vparts_32",
+      "x": 736,
+      "y": 184,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.seat_bench.n": {
+      "atlas": "vparts_32",
+      "x": 782,
+      "y": 184,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.seat_bench.w": {
+      "atlas": "vparts_32",
+      "x": 828,
+      "y": 184,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.seat_bench.s": {
+      "atlas": "vparts_32",
+      "x": 874,
+      "y": 184,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.seat_bench.ne": {
+      "atlas": "vparts_32",
+      "x": 920,
+      "y": 184,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.seat_bench.se": {
+      "atlas": "vparts_32",
+      "x": 966,
+      "y": 184,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.seat_bench.sw": {
+      "atlas": "vparts_32",
+      "x": 0,
+      "y": 230,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.seat_bench.nw": {
+      "atlas": "vparts_32",
+      "x": 46,
+      "y": 230,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.tilt_hoops.e": {
+      "atlas": "vparts_32",
+      "x": 92,
+      "y": 230,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.tilt_hoops.n": {
+      "atlas": "vparts_32",
+      "x": 138,
+      "y": 230,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.tilt_hoops.w": {
+      "atlas": "vparts_32",
+      "x": 184,
+      "y": 230,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.tilt_hoops.s": {
+      "atlas": "vparts_32",
+      "x": 230,
+      "y": 230,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.tilt_hoops.ne": {
+      "atlas": "vparts_32",
+      "x": 276,
+      "y": 230,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.tilt_hoops.se": {
+      "atlas": "vparts_32",
+      "x": 322,
+      "y": 230,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.tilt_hoops.sw": {
+      "atlas": "vparts_32",
+      "x": 368,
+      "y": 230,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.tilt_hoops.nw": {
+      "atlas": "vparts_32",
+      "x": 414,
+      "y": 230,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.tilt_cloth.e": {
+      "atlas": "vparts_32",
+      "x": 460,
+      "y": 230,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.tilt_cloth.n": {
+      "atlas": "vparts_32",
+      "x": 506,
+      "y": 230,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.tilt_cloth.w": {
+      "atlas": "vparts_32",
+      "x": 552,
+      "y": 230,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.tilt_cloth.s": {
+      "atlas": "vparts_32",
+      "x": 598,
+      "y": 230,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.tilt_cloth.ne": {
+      "atlas": "vparts_32",
+      "x": 644,
+      "y": 230,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.tilt_cloth.se": {
+      "atlas": "vparts_32",
+      "x": 690,
+      "y": 230,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.tilt_cloth.sw": {
+      "atlas": "vparts_32",
+      "x": 736,
+      "y": 230,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.tilt_cloth.nw": {
+      "atlas": "vparts_32",
+      "x": 782,
+      "y": 230,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.runner.e": {
+      "atlas": "vparts_32",
+      "x": 828,
+      "y": 230,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.runner.n": {
+      "atlas": "vparts_32",
+      "x": 874,
+      "y": 230,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.runner.w": {
+      "atlas": "vparts_32",
+      "x": 920,
+      "y": 230,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.runner.s": {
+      "atlas": "vparts_32",
+      "x": 966,
+      "y": 230,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.runner.ne": {
+      "atlas": "vparts_32",
+      "x": 0,
+      "y": 276,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.runner.se": {
+      "atlas": "vparts_32",
+      "x": 46,
+      "y": 276,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.runner.sw": {
+      "atlas": "vparts_32",
+      "x": 92,
+      "y": 276,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.runner.nw": {
+      "atlas": "vparts_32",
+      "x": 138,
+      "y": 276,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.handle_bars.e": {
+      "atlas": "vparts_32",
+      "x": 184,
+      "y": 276,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.handle_bars.n": {
+      "atlas": "vparts_32",
+      "x": 230,
+      "y": 276,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.handle_bars.w": {
+      "atlas": "vparts_32",
+      "x": 276,
+      "y": 276,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.handle_bars.s": {
+      "atlas": "vparts_32",
+      "x": 322,
+      "y": 276,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.handle_bars.ne": {
+      "atlas": "vparts_32",
+      "x": 368,
+      "y": 276,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.handle_bars.se": {
+      "atlas": "vparts_32",
+      "x": 414,
+      "y": 276,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.handle_bars.sw": {
+      "atlas": "vparts_32",
+      "x": 460,
+      "y": 276,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.handle_bars.nw": {
+      "atlas": "vparts_32",
+      "x": 506,
+      "y": 276,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.iron_fitting.e": {
+      "atlas": "vparts_32",
+      "x": 552,
+      "y": 276,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.iron_fitting.n": {
+      "atlas": "vparts_32",
+      "x": 598,
+      "y": 276,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.iron_fitting.w": {
+      "atlas": "vparts_32",
+      "x": 644,
+      "y": 276,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.iron_fitting.s": {
+      "atlas": "vparts_32",
+      "x": 690,
+      "y": 276,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.iron_fitting.ne": {
+      "atlas": "vparts_32",
+      "x": 736,
+      "y": 276,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.iron_fitting.se": {
+      "atlas": "vparts_32",
+      "x": 782,
+      "y": 276,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.iron_fitting.sw": {
+      "atlas": "vparts_32",
+      "x": 828,
+      "y": 276,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.iron_fitting.nw": {
+      "atlas": "vparts_32",
+      "x": 874,
+      "y": 276,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.axle_pivot.e": {
+      "atlas": "vparts_32",
+      "x": 920,
+      "y": 276,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.axle_pivot.n": {
+      "atlas": "vparts_32",
+      "x": 966,
+      "y": 276,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.axle_pivot.w": {
+      "atlas": "vparts_32",
+      "x": 0,
+      "y": 322,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.axle_pivot.s": {
+      "atlas": "vparts_32",
+      "x": 46,
+      "y": 322,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.axle_pivot.ne": {
+      "atlas": "vparts_32",
+      "x": 92,
+      "y": 322,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.axle_pivot.se": {
+      "atlas": "vparts_32",
+      "x": 138,
+      "y": 322,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.axle_pivot.sw": {
+      "atlas": "vparts_32",
+      "x": 184,
+      "y": 322,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.axle_pivot.nw": {
+      "atlas": "vparts_32",
+      "x": 230,
+      "y": 322,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.axle_iron_bound.e": {
+      "atlas": "vparts_32",
+      "x": 276,
+      "y": 322,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.axle_iron_bound.n": {
+      "atlas": "vparts_32",
+      "x": 322,
+      "y": 322,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.axle_iron_bound.w": {
+      "atlas": "vparts_32",
+      "x": 368,
+      "y": 322,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.axle_iron_bound.s": {
+      "atlas": "vparts_32",
+      "x": 414,
+      "y": 322,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.axle_iron_bound.ne": {
+      "atlas": "vparts_32",
+      "x": 460,
+      "y": 322,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.axle_iron_bound.se": {
+      "atlas": "vparts_32",
+      "x": 506,
+      "y": 322,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.axle_iron_bound.sw": {
+      "atlas": "vparts_32",
+      "x": 552,
+      "y": 322,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.axle_iron_bound.nw": {
+      "atlas": "vparts_32",
+      "x": 598,
+      "y": 322,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.wheel_dished.e": {
+      "atlas": "vparts_32",
+      "x": 644,
+      "y": 322,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.wheel_dished.n": {
+      "atlas": "vparts_32",
+      "x": 690,
+      "y": 322,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.wheel_dished.w": {
+      "atlas": "vparts_32",
+      "x": 736,
+      "y": 322,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.wheel_dished.s": {
+      "atlas": "vparts_32",
+      "x": 782,
+      "y": 322,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.wheel_dished.ne": {
+      "atlas": "vparts_32",
+      "x": 828,
+      "y": 322,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.wheel_dished.se": {
+      "atlas": "vparts_32",
+      "x": 874,
+      "y": 322,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.wheel_dished.sw": {
+      "atlas": "vparts_32",
+      "x": 920,
+      "y": 322,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.wheel_dished.nw": {
+      "atlas": "vparts_32",
+      "x": 966,
+      "y": 322,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.brake_shoe.e": {
+      "atlas": "vparts_32",
+      "x": 0,
+      "y": 368,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.brake_shoe.n": {
+      "atlas": "vparts_32",
+      "x": 46,
+      "y": 368,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.brake_shoe.w": {
+      "atlas": "vparts_32",
+      "x": 92,
+      "y": 368,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.brake_shoe.s": {
+      "atlas": "vparts_32",
+      "x": 138,
+      "y": 368,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.brake_shoe.ne": {
+      "atlas": "vparts_32",
+      "x": 184,
+      "y": 368,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.brake_shoe.se": {
+      "atlas": "vparts_32",
+      "x": 230,
+      "y": 368,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.brake_shoe.sw": {
+      "atlas": "vparts_32",
+      "x": 276,
+      "y": 368,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.brake_shoe.nw": {
+      "atlas": "vparts_32",
+      "x": 322,
+      "y": 368,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.drag_shoe.e": {
+      "atlas": "vparts_32",
+      "x": 368,
+      "y": 368,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.drag_shoe.n": {
+      "atlas": "vparts_32",
+      "x": 414,
+      "y": 368,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.drag_shoe.w": {
+      "atlas": "vparts_32",
+      "x": 460,
+      "y": 368,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.drag_shoe.s": {
+      "atlas": "vparts_32",
+      "x": 506,
+      "y": 368,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.drag_shoe.ne": {
+      "atlas": "vparts_32",
+      "x": 552,
+      "y": 368,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.drag_shoe.se": {
+      "atlas": "vparts_32",
+      "x": 598,
+      "y": 368,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.drag_shoe.sw": {
+      "atlas": "vparts_32",
+      "x": 644,
+      "y": 368,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.drag_shoe.nw": {
+      "atlas": "vparts_32",
+      "x": 690,
+      "y": 368,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.hull_plank.e": {
+      "atlas": "vparts_32",
+      "x": 736,
+      "y": 368,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.hull_plank.n": {
+      "atlas": "vparts_32",
+      "x": 782,
+      "y": 368,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.hull_plank.w": {
+      "atlas": "vparts_32",
+      "x": 828,
+      "y": 368,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.hull_plank.s": {
+      "atlas": "vparts_32",
+      "x": 874,
+      "y": 368,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.hull_plank.ne": {
+      "atlas": "vparts_32",
+      "x": 920,
+      "y": 368,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.hull_plank.se": {
+      "atlas": "vparts_32",
+      "x": 966,
+      "y": 368,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.hull_plank.sw": {
+      "atlas": "vparts_32",
+      "x": 0,
+      "y": 414,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.hull_plank.nw": {
+      "atlas": "vparts_32",
+      "x": 46,
+      "y": 414,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.keel.e": {
+      "atlas": "vparts_32",
+      "x": 92,
+      "y": 414,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.keel.n": {
+      "atlas": "vparts_32",
+      "x": 138,
+      "y": 414,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.keel.w": {
+      "atlas": "vparts_32",
+      "x": 184,
+      "y": 414,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.keel.s": {
+      "atlas": "vparts_32",
+      "x": 230,
+      "y": 414,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.keel.ne": {
+      "atlas": "vparts_32",
+      "x": 276,
+      "y": 414,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.keel.se": {
+      "atlas": "vparts_32",
+      "x": 322,
+      "y": 414,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.keel.sw": {
+      "atlas": "vparts_32",
+      "x": 368,
+      "y": 414,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.keel.nw": {
+      "atlas": "vparts_32",
+      "x": 414,
+      "y": 414,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.gunwale.e": {
+      "atlas": "vparts_32",
+      "x": 460,
+      "y": 414,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.gunwale.n": {
+      "atlas": "vparts_32",
+      "x": 506,
+      "y": 414,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.gunwale.w": {
+      "atlas": "vparts_32",
+      "x": 552,
+      "y": 414,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.gunwale.s": {
+      "atlas": "vparts_32",
+      "x": 598,
+      "y": 414,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.gunwale.ne": {
+      "atlas": "vparts_32",
+      "x": 644,
+      "y": 414,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.gunwale.se": {
+      "atlas": "vparts_32",
+      "x": 690,
+      "y": 414,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.gunwale.sw": {
+      "atlas": "vparts_32",
+      "x": 736,
+      "y": 414,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.gunwale.nw": {
+      "atlas": "vparts_32",
+      "x": 782,
+      "y": 414,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.deck_plank.e": {
+      "atlas": "vparts_32",
+      "x": 828,
+      "y": 414,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.deck_plank.n": {
+      "atlas": "vparts_32",
+      "x": 874,
+      "y": 414,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.deck_plank.w": {
+      "atlas": "vparts_32",
+      "x": 920,
+      "y": 414,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.deck_plank.s": {
+      "atlas": "vparts_32",
+      "x": 966,
+      "y": 414,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.deck_plank.ne": {
+      "atlas": "vparts_32",
+      "x": 0,
+      "y": 460,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.deck_plank.se": {
+      "atlas": "vparts_32",
+      "x": 46,
+      "y": 460,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.deck_plank.sw": {
+      "atlas": "vparts_32",
+      "x": 92,
+      "y": 460,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.deck_plank.nw": {
+      "atlas": "vparts_32",
+      "x": 138,
+      "y": 460,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.ferry_ramp.e": {
+      "atlas": "vparts_32",
+      "x": 184,
+      "y": 460,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.ferry_ramp.n": {
+      "atlas": "vparts_32",
+      "x": 230,
+      "y": 460,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.ferry_ramp.w": {
+      "atlas": "vparts_32",
+      "x": 276,
+      "y": 460,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.ferry_ramp.s": {
+      "atlas": "vparts_32",
+      "x": 322,
+      "y": 460,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.ferry_ramp.ne": {
+      "atlas": "vparts_32",
+      "x": 368,
+      "y": 460,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.ferry_ramp.se": {
+      "atlas": "vparts_32",
+      "x": 414,
+      "y": 460,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.ferry_ramp.sw": {
+      "atlas": "vparts_32",
+      "x": 460,
+      "y": 460,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.ferry_ramp.nw": {
+      "atlas": "vparts_32",
+      "x": 506,
+      "y": 460,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.thwart.e": {
+      "atlas": "vparts_32",
+      "x": 552,
+      "y": 460,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.thwart.n": {
+      "atlas": "vparts_32",
+      "x": 598,
+      "y": 460,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.thwart.w": {
+      "atlas": "vparts_32",
+      "x": 644,
+      "y": 460,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.thwart.s": {
+      "atlas": "vparts_32",
+      "x": 690,
+      "y": 460,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.thwart.ne": {
+      "atlas": "vparts_32",
+      "x": 736,
+      "y": 460,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.thwart.se": {
+      "atlas": "vparts_32",
+      "x": 782,
+      "y": 460,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.thwart.sw": {
+      "atlas": "vparts_32",
+      "x": 828,
+      "y": 460,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.thwart.nw": {
+      "atlas": "vparts_32",
+      "x": 874,
+      "y": 460,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.rowlock.e": {
+      "atlas": "vparts_32",
+      "x": 920,
+      "y": 460,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.rowlock.n": {
+      "atlas": "vparts_32",
+      "x": 966,
+      "y": 460,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.rowlock.w": {
+      "atlas": "vparts_32",
+      "x": 0,
+      "y": 506,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.rowlock.s": {
+      "atlas": "vparts_32",
+      "x": 46,
+      "y": 506,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.rowlock.ne": {
+      "atlas": "vparts_32",
+      "x": 92,
+      "y": 506,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.rowlock.se": {
+      "atlas": "vparts_32",
+      "x": 138,
+      "y": 506,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.rowlock.sw": {
+      "atlas": "vparts_32",
+      "x": 184,
+      "y": 506,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.rowlock.nw": {
+      "atlas": "vparts_32",
+      "x": 230,
+      "y": 506,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.quant_pole_rack.e": {
+      "atlas": "vparts_32",
+      "x": 276,
+      "y": 506,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.quant_pole_rack.n": {
+      "atlas": "vparts_32",
+      "x": 322,
+      "y": 506,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.quant_pole_rack.w": {
+      "atlas": "vparts_32",
+      "x": 368,
+      "y": 506,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.quant_pole_rack.s": {
+      "atlas": "vparts_32",
+      "x": 414,
+      "y": 506,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.quant_pole_rack.ne": {
+      "atlas": "vparts_32",
+      "x": 460,
+      "y": 506,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.quant_pole_rack.se": {
+      "atlas": "vparts_32",
+      "x": 506,
+      "y": 506,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.quant_pole_rack.sw": {
+      "atlas": "vparts_32",
+      "x": 552,
+      "y": 506,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.quant_pole_rack.nw": {
+      "atlas": "vparts_32",
+      "x": 598,
+      "y": 506,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.steering_oar.e": {
+      "atlas": "vparts_32",
+      "x": 644,
+      "y": 506,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.steering_oar.n": {
+      "atlas": "vparts_32",
+      "x": 690,
+      "y": 506,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.steering_oar.w": {
+      "atlas": "vparts_32",
+      "x": 736,
+      "y": 506,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.steering_oar.s": {
+      "atlas": "vparts_32",
+      "x": 782,
+      "y": 506,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.steering_oar.ne": {
+      "atlas": "vparts_32",
+      "x": 828,
+      "y": 506,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.steering_oar.se": {
+      "atlas": "vparts_32",
+      "x": 874,
+      "y": 506,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.steering_oar.sw": {
+      "atlas": "vparts_32",
+      "x": 920,
+      "y": 506,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.steering_oar.nw": {
+      "atlas": "vparts_32",
+      "x": 966,
+      "y": 506,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.rudder.e": {
+      "atlas": "vparts_32",
+      "x": 0,
+      "y": 552,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.rudder.n": {
+      "atlas": "vparts_32",
+      "x": 46,
+      "y": 552,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.rudder.w": {
+      "atlas": "vparts_32",
+      "x": 92,
+      "y": 552,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.rudder.s": {
+      "atlas": "vparts_32",
+      "x": 138,
+      "y": 552,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.rudder.ne": {
+      "atlas": "vparts_32",
+      "x": 184,
+      "y": 552,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.rudder.se": {
+      "atlas": "vparts_32",
+      "x": 230,
+      "y": 552,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.rudder.sw": {
+      "atlas": "vparts_32",
+      "x": 276,
+      "y": 552,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.rudder.nw": {
+      "atlas": "vparts_32",
+      "x": 322,
+      "y": 552,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.tow_post.e": {
+      "atlas": "vparts_32",
+      "x": 368,
+      "y": 552,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.tow_post.n": {
+      "atlas": "vparts_32",
+      "x": 414,
+      "y": 552,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.tow_post.w": {
+      "atlas": "vparts_32",
+      "x": 460,
+      "y": 552,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.tow_post.s": {
+      "atlas": "vparts_32",
+      "x": 506,
+      "y": 552,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.tow_post.ne": {
+      "atlas": "vparts_32",
+      "x": 552,
+      "y": 552,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.tow_post.se": {
+      "atlas": "vparts_32",
+      "x": 598,
+      "y": 552,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.tow_post.sw": {
+      "atlas": "vparts_32",
+      "x": 644,
+      "y": 552,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.tow_post.nw": {
+      "atlas": "vparts_32",
+      "x": 690,
+      "y": 552,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.mast.e": {
+      "atlas": "vparts_32",
+      "x": 736,
+      "y": 552,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.mast.n": {
+      "atlas": "vparts_32",
+      "x": 782,
+      "y": 552,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.mast.w": {
+      "atlas": "vparts_32",
+      "x": 828,
+      "y": 552,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.mast.s": {
+      "atlas": "vparts_32",
+      "x": 874,
+      "y": 552,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.mast.ne": {
+      "atlas": "vparts_32",
+      "x": 920,
+      "y": 552,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.mast.se": {
+      "atlas": "vparts_32",
+      "x": 966,
+      "y": 552,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.mast.sw": {
+      "atlas": "vparts_32",
+      "x": 0,
+      "y": 598,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.mast.nw": {
+      "atlas": "vparts_32",
+      "x": 46,
+      "y": 598,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.sail_square.e": {
+      "atlas": "vparts_32",
+      "x": 92,
+      "y": 598,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.sail_square.n": {
+      "atlas": "vparts_32",
+      "x": 138,
+      "y": 598,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.sail_square.w": {
+      "atlas": "vparts_32",
+      "x": 184,
+      "y": 598,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.sail_square.s": {
+      "atlas": "vparts_32",
+      "x": 230,
+      "y": 598,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.sail_square.ne": {
+      "atlas": "vparts_32",
+      "x": 276,
+      "y": 598,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.sail_square.se": {
+      "atlas": "vparts_32",
+      "x": 322,
+      "y": 598,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.sail_square.sw": {
+      "atlas": "vparts_32",
+      "x": 368,
+      "y": 598,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.sail_square.nw": {
+      "atlas": "vparts_32",
+      "x": 414,
+      "y": 598,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.fish_well.e": {
+      "atlas": "vparts_32",
+      "x": 460,
+      "y": 598,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.fish_well.n": {
+      "atlas": "vparts_32",
+      "x": 506,
+      "y": 598,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.fish_well.w": {
+      "atlas": "vparts_32",
+      "x": 552,
+      "y": 598,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.fish_well.s": {
+      "atlas": "vparts_32",
+      "x": 598,
+      "y": 598,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.fish_well.ne": {
+      "atlas": "vparts_32",
+      "x": 644,
+      "y": 598,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.fish_well.se": {
+      "atlas": "vparts_32",
+      "x": 690,
+      "y": 598,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.fish_well.sw": {
+      "atlas": "vparts_32",
+      "x": 736,
+      "y": 598,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.fish_well.nw": {
+      "atlas": "vparts_32",
+      "x": 782,
+      "y": 598,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.cabin_box.e": {
+      "atlas": "vparts_32",
+      "x": 828,
+      "y": 598,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.cabin_box.n": {
+      "atlas": "vparts_32",
+      "x": 874,
+      "y": 598,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.cabin_box.w": {
+      "atlas": "vparts_32",
+      "x": 920,
+      "y": 598,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.cabin_box.s": {
+      "atlas": "vparts_32",
+      "x": 966,
+      "y": 598,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.cabin_box.ne": {
+      "atlas": "vparts_32",
+      "x": 0,
+      "y": 644,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.cabin_box.se": {
+      "atlas": "vparts_32",
+      "x": 46,
+      "y": 644,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.cabin_box.sw": {
+      "atlas": "vparts_32",
+      "x": 92,
+      "y": 644,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.cabin_box.nw": {
+      "atlas": "vparts_32",
+      "x": 138,
+      "y": 644,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.stall_counter.e": {
+      "atlas": "vparts_32",
+      "x": 184,
+      "y": 644,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.stall_counter.n": {
+      "atlas": "vparts_32",
+      "x": 230,
+      "y": 644,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.stall_counter.w": {
+      "atlas": "vparts_32",
+      "x": 276,
+      "y": 644,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.stall_counter.s": {
+      "atlas": "vparts_32",
+      "x": 322,
+      "y": 644,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.stall_counter.ne": {
+      "atlas": "vparts_32",
+      "x": 368,
+      "y": 644,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.stall_counter.se": {
+      "atlas": "vparts_32",
+      "x": 414,
+      "y": 644,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.stall_counter.sw": {
+      "atlas": "vparts_32",
+      "x": 460,
+      "y": 644,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.stall_counter.nw": {
+      "atlas": "vparts_32",
+      "x": 506,
+      "y": 644,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.mobile_hearth.e": {
+      "atlas": "vparts_32",
+      "x": 552,
+      "y": 644,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.mobile_hearth.n": {
+      "atlas": "vparts_32",
+      "x": 598,
+      "y": 644,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.mobile_hearth.w": {
+      "atlas": "vparts_32",
+      "x": 644,
+      "y": 644,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.mobile_hearth.s": {
+      "atlas": "vparts_32",
+      "x": 690,
+      "y": 644,
+      "w": 32,
+      "h": 32
+    },
+    "vpart.mobile_hearth.ne": {
+      "atlas": "vparts_32",
+      "x": 736,
+      "y": 644,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.mobile_hearth.se": {
+      "atlas": "vparts_32",
+      "x": 782,
+      "y": 644,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.mobile_hearth.sw": {
+      "atlas": "vparts_32",
+      "x": 828,
+      "y": 644,
+      "w": 46,
+      "h": 46
+    },
+    "vpart.mobile_hearth.nw": {
+      "atlas": "vparts_32",
+      "x": 874,
+      "y": 644,
+      "w": 46,
+      "h": 46
     },
     "field.grass.0": {
       "atlas": "field_8",
