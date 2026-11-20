@@ -66,6 +66,11 @@ The game today is a deep simulation hidden behind a hard-to-use interface: BBCod
 - **Growth.** No XP levels: soldiers gain weapon skills by fighting and drilling, and are promoted into troop roles (levy → spearman → man-at-arms → knight), each with a loadout, a wage and a skill requirement.
 - **Who arms them.** A historical mix: levies bring gear by their wealth; retinues and mercenaries are armed from their lord's armoury.
 - **Arms industry and army supply (Phase 7).** Armouries stockpiling in peace; munition-grade mass production in large workshops with many hands; the arms trade through the continent; loot recycled through repair and refit; army food from granaries, food rents, purveyance, merchants following the army and foraging. |
+| Industries | Decided Nov 2026, built in Phase 7 (from the user's iron, clay and wood design sheets):
+- **Staged chains of real buildings.** Each stage is its own building with its own crew: for example mine → crusher and washer → ore yard → smeltery → packing, or clay pit → yard → moulding shop → drying sheds → kiln → packing.
+- **An Industry tab in the Ledger** shows each chain as a flow: throughput per stage, the bottleneck, crews, wages and the next upgrade.
+- **Tier upgrades (Level 1–3) are physical, one-click plans.** A builder is hired to install them hands-on from real materials, and the level is recognised from what is actually installed. Each tier sets a minimum and maximum crew.
+- **Medieval technology.** Wheelbarrows and plank runways, then mine carts on wooden rails, then horse gins and water wheels driving pumps, stamps, bellows and trip-hammers. Treadwheel cranes take the place of conveyors and cranes, and a master machine-wright takes the place of a mechanic. |
 
 ---
 
@@ -1422,10 +1427,10 @@ Estimates assume one developer working with an AI assistant. Every phase ends in
 | 4 | Combat anywhere and exploration | 9–12 mo | ~49 mo |
 | 5 | Property, building, crafting, businesses, vehicle designer | 7–10 mo | ~58 mo |
 | 6 | Society, factions, rule, faith and family | 8–11 mo | ~67 mo |
-| 7 | Armies, war at scale, ships and naval war | 15–20 mo | ~83 mo |
-| 8 | Depth, onboarding, polish, 1.0 | 8–12 mo | ~93 mo |
+| 7 | Armies, war at scale, ships and naval war, industries | 16–22 mo | ~84 mo |
+| 8 | Depth, onboarding, polish, 1.0 | 8–12 mo | ~94 mo |
 
-**Total: about 6.5–9 years (79–107 months).** The vehicle designer and ships (§3h) added about 4–7 months, autopilot (§3i) about 1 month, and the seamless continent (§1B) about 2–3 months.
+**Total: about 6.5–9 years (80–109 months).** Industries (Phase 7) added about 1–2 months. The vehicle designer and ships (§3h) added about 4–7 months, autopilot (§3i) about 1 month, and the seamless continent (§1B) about 2–3 months.
 - The concept book's first hour becomes playable end to end at the end of Phase 5, about 4.5 years in.
 - **After 1.0, as free updates:** C# script mods, and anything cut by the overrun rule (§7).
 
@@ -1644,6 +1649,26 @@ Estimates assume one developer working with an AI assistant. Every phase ends in
   - **The buildings:** manufactory halls with many stations; an armoury, which stores and maintains kit; water-powered mills (fulling mill, hammer mill, sawmill, bellows furnace); a ropewalk; warehouses; barracks; a granary depot for army supply.
   - **What they add:** new build pieces (water wheel, trip-hammer, great bellows), room types the room detector recognises, library plans, and business kinds.
   - **Where they go:** on rivers with enough fall for a wheel, recognised from the region's water.
+- **Industries: staged production chains (decided with the user, Nov 2026, from the user's iron, clay and wood sheets).**
+  - **Chains of real buildings.** Each stage is a separate building and business with its own crew and wages:
+    - iron: mine → crusher and washer → ore yard → smeltery → packing;
+    - clay: clay pit → yard → moulding shop (pots, bricks, shingles) → drying sheds → kiln → packing;
+    - wood: felling → hauling → timber yard → saw mill → packing → shipping.
+    
+    Storage, loading and packing are real stages, with hauling throughput that can bottleneck. Packing uses barrels and crates from coopers; packed goods cart better and spoil less.
+  - **Tiers 1–3 per stage,** each a ready-made plan built hands-on:
+    - mines: hand-hauled → carts on wooden rails → horse gin or water-wheel hoist and pumps;
+    - dressing: hand crushing → crusher and washing floor → water-powered stamps;
+    - yards: hand loading → barrows and runways → treadwheel crane;
+    - smelteries and kilns: one, two, then three furnaces with bellows;
+    - saws: pit saw → frame saw → water-powered gang saw.
+    
+    The level is recognised from what is installed. Each tier sets a minimum crew to run and a maximum crew. Output comes from the labour model (§4A.1 rates, skills and proficiencies), with diminishing returns from crowding.
+  - **The Industry tab in the Ledger** shows each chain as a flow: throughput and stock per stage, the bottleneck highlighted, crew sliders, wages, and the upgrade available for each stage.
+  - **Selling.** Sell at the gate to passing merchants, or send your own caravan: hire a caravan master and guards, pick wagons and a destination, and see the expected margin from the prices you know, with the risk of the road.
+    - Prices come from markets, not fixed tables. Distant towns pay more because they lack the goods, and flooding one market drops its price.
+  - **The sheets' numbers are the targets for structure, rescaled to crowns:** the tier jumps, crew ranges and stage ratios. Raw output alone should barely cover wages, and finishing up the chain should be where the profit is.
+  - About 1–2 months, folded into step 0 alongside economies of scale.
 - **Battle:** everything in §3d.
   - The battle bubble and the 2,000-soldier budget.
   - Formations, command and the tactical pause.
