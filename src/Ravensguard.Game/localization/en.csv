@@ -4158,6 +4158,38 @@ DIFF_SHORT_BANDITS,bandits {0}%
 DIFF_SHORT_ECONOMY,economy {0}
 DIFF_SHORT_PLAGUE,plague {0}
 DIFF_SHORT_PACE,aging {0}x
+ch_fire_started,"A fire broke out at {x}, {y}: {cause}"
+ch_fire_ended,"The fire burnt out: {buildings} buildings lost, goods worth {goods} burnt, {deaths} dead."
+ch_fire_fought,{who} fought the fire.
+ch_firedamp_blast,"Firedamp blasted in the dark at {x}, {y}."
+ch_note_fire_hearth,a hearth set the thatch alight
+ch_note_fire_torch,a torch was put to it
+ch_note_fire_arson,it was set alight on purpose
+ch_note_fire_lightning,lightning struck the roof
+ch_note_fire_riot,rioters threw torches
+ch_note_fire_firedamp,firedamp caught from an open flame
+ch_note_fire_spread,it spread from a burning neighbour
+ch_note_fire_test,a test lit it
+ch_note_fire_burnt_out,The fire burnt out.
+ch_note_fire_fought,He was at the buckets.
+ch_note_death_fire,Died in a fire.
+FIRE_HUD_ALARM,Fire! {0}
+FIRE_HUD_ALARM_NEAR,Fire! Close by
+FIRE_HUD_BLUE_FLAME,The flame burns blue.
+FIRE_VERB_SET,Set fire
+FIRE_VERB_FETCH,Fetch water
+FIRE_VERB_PULL,Pull down thatch
+FIRE_LEDGER_ALERT,Your {0} is burning.
+FIRE_LEAKS,The thatch is rotten and the roof leaks.
+FIRE_DIR_N,to the north
+FIRE_DIR_NE,to the north-east
+FIRE_DIR_E,to the east
+FIRE_DIR_SE,to the south-east
+FIRE_DIR_S,to the south
+FIRE_DIR_SW,to the south-west
+FIRE_DIR_W,to the west
+FIRE_DIR_NW,to the north-west
+FIRE_SMOKE_ROOM,The room fills with smoke.
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."

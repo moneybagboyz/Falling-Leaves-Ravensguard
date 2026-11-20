@@ -43,7 +43,14 @@ public sealed class WoundSystem : AbstractSystem
                 if (e.Kind == BookEventKind.Died)
                 {
                     var cause = CauseOf(b.Death);
-                    Demography.Kill(w, row, cause, new GameTime(e.Sec), ob, chain: Describe(b));
+                    var chain = Describe(b);
+                    // P6-B5 (fire 4.6): a person who burned or breathed smoke dies of the fire, and the cause chain reaches the fire's own entry
+                    if (w.Get<Ravensguard.Sim.Burning.FireWorld>() is { } fw && fw.FireOfDeath(key) is { } fire)
+                    {
+                        cause = DeathCause.Fire; chain = new Cause(CauseKind.Fire, fire, "", "ch_note_death_fire");
+                        fw.NoteDeath(key);
+                    }
+                    Demography.Kill(w, row, cause, new GameTime(e.Sec), ob, chain: chain);
                     (gone ??= []).Add(key);
                 }
                 else if (e.Kind == BookEventKind.Malunion || e.Kind == BookEventKind.PermanentLoss)

@@ -1,0 +1,17 @@
+// Fuel classes (docs/specs/phase6/fire-and-burning.md 3). A piece is a class by its own id (pieces), else by its material (and kind); a class with no ignition never burns.
+// Times are sim-seconds (1 sim-second = 20 game seconds); spread_pm is the permille per 5 sim-s that a burning neighbour at intensity 2 lights a touching cell of this class.
+// The numbers are the spec's table; the wattle-and-daub class burns the wattle and cracks the daub; stone, brick, slate, tile, iron and earth are one class with no ignition.
+[
+  {"type": "fuel_class", "id": "thatch", "name": "Thatch, straw and hay", "ignition_c": 250, "spread_pm": 350, "burn_s": 60, "max_intensity": 3, "after": "ash",
+   "materials": ["thatch"], "pieces": ["straw_pallet", "hay_stack"], "sparks": true},
+  {"type": "fuel_class", "id": "floor_beam", "name": "Floor boards and beams", "ignition_c": 300, "spread_pm": 90, "burn_s": 400, "max_intensity": 3, "after": "char",
+   "materials": ["oak", "ash"], "kinds": ["floor", "beam", "stairs_up", "stairs_down", "ladder", "trapdoor"]},
+  {"type": "fuel_class", "id": "timber", "name": "Dry timber, planks and wattle", "ignition_c": 300, "spread_pm": 120, "burn_s": 300, "max_intensity": 3, "after": "char",
+   "materials": ["oak", "ash"], "sparks": true},
+  {"type": "fuel_class", "id": "daub", "name": "Daub over wattle", "ignition_c": 350, "spread_pm": 40, "burn_s": 200, "max_intensity": 1, "after": "cracked",
+   "materials": ["daub"]},
+  {"type": "fuel_class", "id": "turf", "name": "Turf and sod", "ignition_c": 400, "spread_pm": 15, "burn_s": 600, "max_intensity": 1, "after": "smoulder",
+   "materials": ["turf"]},
+  {"type": "fuel_class", "id": "stone", "name": "Stone, brick, slate, tile, iron and earth", "after": "scorched",
+   "materials": ["granite", "limestone", "sandstone", "fired_brick", "wrought_iron", "bronze", "iron", "steel"]}
+]

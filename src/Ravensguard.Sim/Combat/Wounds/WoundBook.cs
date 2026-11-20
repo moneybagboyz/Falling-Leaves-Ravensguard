@@ -66,7 +66,7 @@ public sealed partial class WoundBook
     /// <summary>Anything to simulate each tick: a bleed, pain, a timer, or blood below the maximum.</summary>
     public bool Active => !Dead && (BloodUl < BloodMaxUl || HasTourniquet || PainX100 > 0 || HeartAtSec >= 0 || BreathStopSec >= 0 || State is not (Consciousness.Awake or Consciousness.Dazed) || UnconsciousUntilSec > LastSec || CurrentRateMilli() > 0);
     /// <summary>Wounds that keep the book in the ledger: anything unhealed, or any permanent effect.</summary>
-    public bool Empty => Records.Count == 0 && !Dead && BloodUl >= BloodMaxUl && PainX100 == 0 && Permanent.Equals(default(PermanentInfo)) && ConcussedUntilDay == 0;
+    public bool Empty => Records.Count == 0 && !Dead && BloodUl >= BloodMaxUl && PainX100 == 0 && Permanent.Equals(default(PermanentInfo)) && ConcussedUntilDay == 0 && BreathStopSec < 0;      // P6-B5: a book whose breath is stopped by smoke is not empty
 
     public IReadOnlyList<BookEvent> Events => _events ?? (IReadOnlyList<BookEvent>)Array.Empty<BookEvent>();
     public List<BookEvent> DrainEvents() { var e = _events ?? []; _events = null; return e; }
