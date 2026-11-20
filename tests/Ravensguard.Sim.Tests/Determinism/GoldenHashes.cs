@@ -42,6 +42,7 @@ public class GoldenHashes
         "seed 1 fight 1001F8BDF105658D active 7",
         "seed 1 captive 2BF23152278072D8 estate 20F5B004168F4EF4",
         "seed 1 vehicles 57BDDD5370F59C1F",
+        "seed 1 phase5_trail 2B8A2D54A3187413",
         ],
         [1234] =
         [
@@ -65,6 +66,7 @@ public class GoldenHashes
         "seed 1234 fight 8BAC3738BE098914 active 7",
         "seed 1234 captive 05B4A3623841628E estate AE4BCB2FFDF537FD",
         "seed 1234 vehicles 1BDD9643F168AD56",
+        "seed 1234 phase5_trail 1786D841938C8AA2",
         ],
     };
 
