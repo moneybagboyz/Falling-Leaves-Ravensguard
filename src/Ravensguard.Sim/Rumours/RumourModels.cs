@@ -61,6 +61,8 @@ public struct Hearing
     public HearHow How;
     /// <summary>Held but no longer told (the person's six best were kept); still part of every trace.</summary>
     public bool Dropped;
+    /// <summary>The listener's home settlement when it was heard, plus one (0 unknown: an older save, or no table of homes yet). Phase 6 G1: the per-settlement hearing counts are rebuilt after a load from this, so a load counts exactly what the increments counted.</summary>
+    public short HomeAt;
     public readonly int Day => Hour / 24;
 }
 

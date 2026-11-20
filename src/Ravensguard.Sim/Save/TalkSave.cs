@@ -20,6 +20,8 @@ public sealed class HearingRowSave
 {
     [Key(0)] public ulong Rumour { get; set; } [Key(1)] public int Listener { get; set; } [Key(2)] public int Teller { get; set; } [Key(3)] public int Hour { get; set; } [Key(4)] public byte Hop { get; set; }
     [Key(5)] public byte Flags { get; set; } [Key(6)] public short PlaceAlt { get; set; } [Key(7)] public byte How { get; set; } [Key(8)] public bool Dropped { get; set; }
+    /// <summary>Phase 6 G1 (additive key): the listener's home settlement + 1 when heard (0 unknown).</summary>
+    [Key(9)] public short HomeAt { get; set; }
 }
 
 [MessagePackObject]
@@ -54,7 +56,7 @@ public sealed class TalkSave
         var rt = t.Rumours; var hearings = new List<HearingRowSave>();
         foreach (var (id, _) in rt.Rumours)
             foreach (var h in rt.HearingsOf(id))
-                hearings.Add(new HearingRowSave { Rumour = id.Value, Listener = h.Listener, Teller = h.Teller, Hour = h.Hour, Hop = h.Hop, Flags = (byte)h.Flags, PlaceAlt = h.PlaceAlt, How = (byte)h.How, Dropped = h.Dropped });
+                hearings.Add(new HearingRowSave { Rumour = id.Value, Listener = h.Listener, Teller = h.Teller, Hour = h.Hour, Hop = h.Hop, Flags = (byte)h.Flags, PlaceAlt = h.PlaceAlt, How = (byte)h.How, Dropped = h.Dropped, HomeAt = h.HomeAt });
         return new TalkSave
         {
             Rumours = [.. rt.Rumours.Values.Select(r => new RumourRowSave
@@ -81,7 +83,7 @@ public sealed class TalkSave
         {
             Id = new EntityId(r.Id), Source = new EntityId(r.Source), Kind = (RumourKind)r.Kind, TypeId = r.TypeId, Key = r.TextKey, Settlement = r.Settlement, Place = r.Place, Subjects = [.. r.Subjects.Select(s => new EntityId(s))],
             Severity = r.Severity, BornHour = r.BornHour, ExpiresDay = r.ExpiresDay, LifeDays = r.LifeDays, InterestPm = r.Interest, Number = r.Number, Who = r.Who, About = r.About, FactsMask = (byte)(r.Facts & 0x7F), False = (r.Facts & 0x80) != 0, Witnesses = r.Witnesses, FromAfar = r.FromAfar, Authored = r.Authored,
-        }), Hearings.Select(h => (new EntityId(h.Rumour), new Hearing { Listener = h.Listener, Teller = h.Teller, Hour = h.Hour, Hop = h.Hop, Flags = (Distortion)h.Flags, PlaceAlt = h.PlaceAlt, How = (HearHow)h.How, Dropped = h.Dropped })));
+        }), Hearings.Select(h => (new EntityId(h.Rumour), new Hearing { Listener = h.Listener, Teller = h.Teller, Hour = h.Hour, Hop = h.Hop, Flags = (Distortion)h.Flags, PlaceAlt = h.PlaceAlt, How = (HearHow)h.How, Dropped = h.Dropped, HomeAt = h.HomeAt })));
         foreach (var h in Heard)
         {
             var c = new HeroHearing { Rumour = new EntityId(h.Rumour), Hour = h.Hour, Teller = h.Teller, TellerName = h.TellerName, How = (HearHow)h.How, Hop = h.Hop, Flags = (Distortion)h.Flags, PlaceAlt = h.PlaceAlt, ChainNames = [.. h.ChainNames] };

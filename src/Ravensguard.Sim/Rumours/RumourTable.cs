@@ -29,10 +29,10 @@ public sealed class RumourTable
     /// <summary>The rumours this person has heard, tellable or dropped, in the order heard.</summary>
     public IReadOnlyList<EntityId> HeardIds(int person) => _heardIds.TryGetValue(person, out var l) ? l : [];
 
-    private void CountHeard(EntityId rumour, int listener)
+    private void CountHeard(EntityId rumour, int listener, int s)
     {
         _heardIds.TryAdd(listener, []); _heardIds[listener].Add(rumour);
-        int s = HomeOf?.Invoke(listener) ?? -1; if (s < 0) return;
+        if (s < 0) return;
         if (!_heardBy.TryGetValue(rumour, out var d)) _heardBy[rumour] = d = [];
         d[s] = d.GetValueOrDefault(s) + 1; _touched.Add(rumour);
     }
@@ -43,7 +43,7 @@ public sealed class RumourTable
         bool first = HomeOf == null; HomeOf = homeOf;
         if (!_countsStale && !first) return;
         _heardBy.Clear(); _heardIds.Clear(); _countsStale = false;
-        foreach (var (id, list) in _hearings) foreach (var h in list) CountHeard(id, h.Listener);
+        foreach (var (id, list) in _hearings) foreach (var h in list) CountHeard(id, h.Listener, h.HomeAt > 0 ? h.HomeAt - 1 : homeOf(h.Listener));
         _touched.Clear();
     }
 
@@ -77,9 +77,10 @@ public sealed class RumourTable
     public bool AddHearing(EntityId rumour, Hearing h, int perPersonMax)
     {
         if (!_hearings.TryGetValue(rumour, out var list) || _index.ContainsKey((rumour, h.Listener))) return false;
+        int home = HomeOf?.Invoke(h.Listener) ?? -1; h.HomeAt = (short)(home + 1);
         _index[(rumour, h.Listener)] = list.Count; list.Add(h); HearingCount++;
         if (!_held.TryGetValue(h.Listener, out var held)) _held[h.Listener] = held = [];
-        held.Add(rumour); CountHeard(rumour, h.Listener);
+        held.Add(rumour); CountHeard(rumour, h.Listener, home);
         if (held.Count > perPersonMax) DropWeakest(h.Listener, held);
         return true;
     }
