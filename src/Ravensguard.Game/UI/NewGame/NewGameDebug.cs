@@ -535,6 +535,19 @@ public static class NewGameDebug
                     await Frames(tree, 40);
                     break;
                 }
+            case "bondage":
+            case "bondage_slaves":
+            case "bondage_bond":
+                {
+                    // dev (P6-D1): the bondage panel over a made-up pen (the pen, the hero's two slaves, the enslaved hero's own bond)
+                    var view = Ravensguard.Game.UI.BondageScreen.Demo(what == "bondage_bond");
+                    router.Push(new Ravensguard.Game.UI.BondageScreen(router, new Ravensguard.Game.UI.BondageLink
+                    {
+                        View = () => view, Buy = _ => { }, Sell = _ => { }, Free = _ => { }, Treat = (_, _) => { }, Chain = (_, _) => { }, Work = (_, _) => { }, Escape = () => { }, Run = () => { }, SelfBuy = () => { },
+                    }) { StartTab = what == "bondage" ? 0 : what == "bondage_slaves" ? 1 : 2 });
+                    await Frames(tree, 40);
+                    break;
+                }
             case "heist":
                 {
                     // dev (P6-D3): the heist panel over a castle's dungeon at night, in a real new game

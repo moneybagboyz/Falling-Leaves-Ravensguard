@@ -41,6 +41,11 @@ public static class DefeatTable
                 if (l.Role == LoserRole.Stranger && s.KillWoundedLonePm > 0) return O(DefeatKind.Killed, true, s.Id);
                 return O(DefeatKind.Robbed, st: s.Id);
             }
+            case WinnerKind.Slavers:
+                // P6-D1 (slavery 4.1): slavers take the hero and his party alive (to sell them), rob a wounded stranger, and let hirelings and the unhurt go
+                if (partyLike) return O(DefeatKind.Captured, st: "slavers");
+                if (l.Role == LoserRole.Hireling || l.Role == LoserRole.Stranger && !l.Wounded) return O(DefeatKind.Left, st: "slavers");
+                return O(DefeatKind.Robbed, st: "slavers");
             case WinnerKind.Army:
                 if (partyLike) return O(DefeatKind.Captured);
                 if (l.Role == LoserRole.Soldier && l.State is LoserState.Surrendered or LoserState.KnockedOut or LoserState.Dying) return O(DefeatKind.Captured);

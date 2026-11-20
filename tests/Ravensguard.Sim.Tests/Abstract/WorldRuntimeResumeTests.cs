@@ -109,6 +109,31 @@ public class WorldRuntimeResumeTests(ITestOutputHelper output)
         PlayInheritance(rt, ctx, desk, town, sec);
         PlayMedicine(rt, ctx, desk, sec);
         PlayContracts(rt, ctx, desk, sec);
+        PlayBondage(rt, content, town, sec);
+    }
+
+    /// <summary>
+    /// P6-D1: the "bondage" section: a slave of the hero's (a Fair owner who lets him keep a tip each day), a lot standing in a pen with a band's purse behind it, and a runaway with his owner's bounty on the board. The bonds are
+    /// ticked by the daily pass on both sides of the save and the section's hash must equal at the end.
+    /// </summary>
+    private static void PlayBondage(WorldRuntime rt, ContentDatabase content, int town, long sec)
+    {
+        var s = rt.State; var pt = s.Population.People; int day = (int)(sec / 86_400);
+        var bw = Ravensguard.Sim.Bondage.BondWiring.World(s, content); var book = s.Bonds = new Ravensguard.Sim.Bondage.BondBook(); var hero = s.Party!.Hero;
+        int heroRow = Ravensguard.Sim.Succession.HeroPerson.RowOf(pt, s.Hero, hero);
+        // strangers of the town, from the far end of the table (the runs that play a succession pick their heir from the near end): not the hero's household nor his party
+        var adults = Enumerable.Range(0, pt.Count).Where(i => pt.IsAlive(i) && pt.AgeYears(i, day) >= 16 && pt.Status[i] != PersonStatus.Hero && pt.HomeSettlement[i] == town && pt.Household[i] != pt.Household[heroRow]
+            && !s.Party.Squad.Members.Any(m => m.Person == pt.IdOf(i)) && pt.Father[i] != heroRow && pt.Mother[i] != heroRow && pt.Spouse[i] != heroRow).Reverse().Take(3).Select(pt.IdOf).ToList();
+        Assert.Equal(3, adults.Count);
+        var mine = Ravensguard.Sim.Bondage.Slavery.Make(bw, book, adults[0], hero, Ravensguard.Sim.Bondage.BondKind.Chattel, Ravensguard.Sim.Bondage.BondOrigin.Sold, day, town, 9_000, 0, 0);
+        mine.Treatment = Ravensguard.Sim.Bondage.Treatment.Fair;
+        var band = Ravensguard.Sim.Bondage.Slavery.BandId(s.HomeRegion.Id, 0); Ravensguard.Sim.Bondage.Slavery.BandPurse(bw, band);
+        Ravensguard.Sim.Bondage.Slavery.List(bw, book, adults[1], band, PurseKind.Household, town, day, sec, 0);
+        var run = Ravensguard.Sim.Bondage.Slavery.Make(bw, book, adults[2], band, Ravensguard.Sim.Bondage.BondKind.Chattel, Ravensguard.Sim.Bondage.BondOrigin.Sold, day, town, 9_000, 0, 0);
+        run.Chain = Ravensguard.Sim.Combat.Aftermath.Restraint.None; run.Owner = pt.IdOf(adults.Count).Value;
+        var crimes = s.Law ?? new Ravensguard.Sim.Law.CrimeBook();
+        Ravensguard.Sim.Bondage.BondDaily.Flee(bw, book, crimes, run, day, sec); s.Law = crimes;
+        Assert.True(s.Economy!.Ledger.Audit().IsConserved);
     }
 
     /// <summary>
@@ -393,6 +418,8 @@ public class WorldRuntimeResumeTests(ITestOutputHelper output)
             // the Phase 5 step 1 sections are there to compare: land, the hero (a person row in "people", with the party) and the crafting section's named artefact
             foreach (var k in new[] { LandSave.SectionName, WorldSave.HeroSection, WorldSave.PartySection, WorldSave.CraftingSection, WorldSave.PeopleSection, ConstructionSave.SectionName, DesignsSave.SectionName, MountsSave.SectionName, OwnershipSave.SectionName })
                 Assert.Contains(k, want.Keys);
+            Assert.Contains(Ravensguard.Sim.Save.BondSave.SectionName, want.Keys);                  // P6-D1: the bondage section: a slave, a pen's lot, a runaway
+            Assert.Equal(straight.State.Bonds!.Hash(), resumed.State.Bonds!.Hash());
             Assert.Contains(ContractSave.SectionName, want.Keys);                                  // P6-C2: the contracts section, with the escrow chest in the economy section
             Assert.Equal(straight.State.Contracts!.Hash(), resumed.State.Contracts!.Hash());
             foreach (var s in new[] { straight.State, resumed.State })

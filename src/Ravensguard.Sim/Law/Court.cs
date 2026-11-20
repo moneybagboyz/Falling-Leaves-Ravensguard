@@ -189,7 +189,12 @@ public static class Court
                 if (day < s.EndDay) return false;
                 Done(cb, s, rec); return true;
             case "gaol" or "bond_labour":
-                if (!s.Started) { s.Started = true; s.EndDay = day + Math.Max(1, s.Days); return false; }
+                if (!s.Started)
+                {
+                    s.Started = true; s.EndDay = day + Math.Max(1, s.Days);
+                    if (s.Kind == "bond_labour") w.BondLabour?.Invoke(who, s.Fief, Math.Max(1, s.Days), s.Settlement, sec, s.Entry);      // P6-D1: bound to the fief's works for the term
+                    return false;
+                }
                 if (day < s.EndDay) return false;
                 Done(cb, s, rec); return true;
             case "flogging":

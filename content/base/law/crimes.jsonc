@@ -20,6 +20,7 @@
   {"type": "crime", "id": "bribery",           "cry": false, "bounty": false},
   {"type": "crime", "id": "harbouring",        "cry": false, "bounty": false},
   {"type": "crime", "id": "slaving",           "cry": false, "bounty_flat": 800},
+  {"type": "crime", "id": "runaway",          "cry": false, "bounty_flat": 400},
   {"type": "crime", "id": "jailbreak",         "cry": true,  "bounty_flat": 600},
   {"type": "crime", "id": "squatting",         "cry": false, "civil": true, "bounty": false}
 ]

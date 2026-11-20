@@ -5435,6 +5435,151 @@ ACTION_FACTION_ACT,Ask or act
 ACTION_FACTION_SEARCH,Search
 ACTION_FACTION_BACK,Close the Faction screen
 OVERLAY_FACTION,Faction
+sl_bought,You buy the slave and have him chained to your side.
+sl_sold,You sell the slave to a buyer of the town.
+sl_freed,You free the slave.
+sl_not_for_sale,He is not for sale.
+sl_no_market,There is no slave market in this town.
+sl_cannot_afford,You cannot pay the price.
+sl_not_yours,He is not your slave.
+sl_no_buyer,No one in this town can buy him.
+sl_treatment_set,You change how he is kept.
+sl_chained,He is chained.
+sl_unchained,His chains are off.
+sl_work_set,You set him to other work.
+sl_not_bonded,He is not a slave.
+sl_owner_refuses,His owner will not sell him his freedom.
+sl_too_poor,He has not saved his price.
+sl_law_forbids,The law here allows no bondage.
+sl_already_bonded,He is already bound.
+sl_bound,He is bound for the term of the debt.
+sl_free_here,The law of this place does not return slaves: you are free.
+sl_here,You note the town.
+sl_ran,You walk away from your owner. He will post a bounty on you.
+sl_chained_fast,You are chained: you cannot simply walk away.
+sl_not_chained,You are not in chains: you may simply walk away.
+sl_escape_day,Not by day: the overseer is awake. Wait for the night.
+sl_escaped,The chains fall away. You slip out into the night: your owner will post a bounty.
+sl_escape_caught,The overseer hears you. You are beaten and chained tighter.
+sl_escape_failed,The pick slips. Try again before the night is out.
+sl_title,Slaves
+sl_none,Nobody here is bonded.
+sl_tab_pen,The pen
+sl_tab_slaves,Your slaves
+sl_tab_bond,Your bond
+sl_no_pen,There is no slave pen in this region.
+sl_head_pen,"The pens: who stands for sale, and for how much."
+sl_pen_of,{0}: {1}
+sl_row_pen,"{0}, {1}, skill {2}, {3}, asks {4}"
+sl_no_slaves,You hold no slave.
+sl_head_slaves,"Your slaves: how they are kept, what they hold."
+sl_row_slave,"{0}: {1}, {2}, morale {3}, holds {4}"
+sl_btn_buy,Buy for {0}
+sl_btn_free,Free
+sl_btn_sell,Sell
+sl_btn_treat,Treat: {0}
+sl_btn_chain,Chain
+sl_btn_unchain,Unchain
+sl_btn_work,Work: {0}
+sl_btn_escape,Pick the chains
+sl_btn_run,Walk away
+sl_btn_selfbuy,Buy myself free
+sl_d_who,"Age {0}, best skill {1}. {2}. {3}."
+sl_d_ask,Asks {0} at {1}.
+sl_d_kept,Works at: {0}. Kept: {1}. {2}.
+sl_d_morale,Morale {0}. He holds {1} of the {2} he cost.
+sl_b_morale,Your spirits: {0} of a hundred. Below forty you would run if you were not chained.
+sl_d_term,{0} days of the term remain.
+sl_d_grievance,"He has a grievance: hunger, a beating, or kin sold away."
+sl_d_onrun,He is on the run.
+sl_not_enslaved,You are not enslaved.
+sl_bond_head,You are the slave of {0}.
+sl_bond_owner,"Your owner: {0}, at {1}."
+sl_bond_peculium,You hold {0}. Your price is {1}.
+sl_ways,Ways out
+sl_way_escape,"Pick the chains at night, when the overseer sleeps: {0} in a hundred. It is {1} now."
+sl_way_run,"Walk away while unchained: your owner will post a bounty, and the slave catchers will come."
+sl_way_selfbuy,Save your price ({0}) from the tips a Fair or Kind owner lets you keep.
+sl_way_kin,"A companion or kin may buy you free, or a raid or a revolt may free you."
+sl_way_trust,Win your owner's trust and serve a year: he may free you.
+sl_night,night
+sl_day,day
+sl_q_head,Slaves
+sl_q_pen,The slave pen
+sl_q_slaves,Your slaves ({0})
+sl_q_bond,Your bond
+sl_kind_debt,Bound for debt
+sl_kind_thrall,A thrall
+sl_kind_chattel,A chattel slave
+sl_kind_convict,A convict at the works
+sl_origin_captured,taken captive
+sl_origin_sold,bought and sold
+sl_origin_sentenced,sentenced
+sl_origin_born,born to it
+sl_origin_debt,bound by debt
+sl_treat_harsh,Harsh
+sl_treat_fair,Fair
+sl_treat_kind,Kind
+sl_work_idle,Idle
+sl_work_fields,Fields
+sl_work_mine,The mine
+sl_work_house,The house
+sl_work_follow,Follows you
+sl_chain_none,Unchained
+sl_chain_bound,Bound
+sl_chain_chained,In chains
+sl_chain_caged,Caged
+sl_law_none,No bondage by law
+sl_law_debt,Bondage for debt
+sl_law_warcaptives,Thralls of war
+sl_law_chattel,Slaves bought and sold
+ch_slavery_raid,Slavers raided {place} and took {count} people.
+ch_slavery_listed,{person} was marched to {place} and stood in the pen at {price}.
+ch_slavery_bought,{doer} bought {person} at {place} for {price}.
+ch_slavery_sold,{doer} sold {person} at {place} for {price}.
+ch_slavery_bound,{person} was bound at {place} for {days}.
+ch_slavery_freed,{doer} freed {person} at {place}.
+ch_slavery_term_ended,{person}'s term of bondage ended at {place}.
+ch_slavery_self_bought,{person} bought his own freedom for {price} at {place}.
+ch_slavery_flogged,{doer} had the slaves flogged at {place}.
+ch_slavery_runaway,{person} ran from his owner at {place}.
+ch_slavery_caught,{person} was caught and brought back to {place} by {collector}.
+ch_slavery_revolt,{leader} led {count} slaves in revolt at {place}.
+ch_slavery_held_year,{doer} has kept slaves a whole year against the teaching of the church at {place}: the church names the sin aloud.
+ch_slavery_inherited,{doer} inherited {person} with the estate.
+ch_slavery_born,{person} was born a slave to {mother}.
+ch_crime_runaway,{doer} ran away from {victim} at {place}.
+ch_note_slave_weak_guard,the village kept too few guards
+ch_note_slave_marched,the captive was marched to market after the hold
+ch_note_slave_market,a sale at the pen
+ch_note_slave_debt,a debt was left unpaid
+ch_note_slave_sentence,the court sentenced him to the fief's works
+ch_note_slave_manumitted,his owner freed him
+ch_note_slave_will,his owner's will freed him
+ch_note_slave_term,the term was served
+ch_note_slave_peculium,he saved his price
+ch_note_slave_law,the law of the place forbids slaves
+ch_note_slave_voided,the courts of a free realm do not return slaves
+ch_note_slave_revolt,the slaves rose
+ch_note_slave_trust,his owner came to trust him
+ch_note_slave_rescued,he was bought free
+ch_note_slave_harsh,his owner kept him harshly
+ch_note_slave_unhappy,his spirit broke
+ch_note_slave_caught,the slave catchers found him
+ch_note_slave_estate,he passed with the estate
+ch_note_slave_mother,his mother was a slave
+ch_note_slave_floggings,the floggings
+ch_note_slave_hungry,{count} were hungry
+ch_note_slave_parted,{count} had been parted from kin by a sale
+R_SLAVE_RAID,{number} people were taken by slavers at {place}.
+R_SLAVE_BOUGHT,{who} bought a slave at {place}.
+R_SLAVE_SOLD,{who} sold a slave at {place}.
+R_SLAVE_FREED,{who} freed a slave at {place}.
+R_SLAVE_REVOLT,{who} led {number} slaves in revolt at {place}.
+st_deed_slave_held_year,A year of slaves kept against the faith
+st_deed_slave_bought_debt,Buying a slave where the law frowns on it
+st_deed_slave_sold_own,Selling one of the town's own people
+jl_crime_runaway,Running from an owner
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."

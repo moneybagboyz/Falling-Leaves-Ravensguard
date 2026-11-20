@@ -150,7 +150,7 @@ public static class Phase3Smoke
             if (router.Top != sv) throw new Exception("the street view is not on top");
 
             // every screen: open as its key does, it fits the window, Esc comes back (the control rects stay inside the viewport)
-            foreach (var what in new[] { "trade", "barter", "inventory", "character", "squad", "crafting", "talk", "journal", "autopilot", "map", "picker", "jobs", "codex", "qmenu", "overlay", "land", "deeds", "ledger", "business", "prospect", "will", "treatment", "family", "family_full", "court", "workboard", "workboard_mine", "heist", "faction" })   // P6-D3: the heist panel P6-C2: the contracts screen, on the board and on the Taken tab; P6-B1: the treatment screen; P6-B3: the Family panel, empty and full; P5-A2: land, deeds; P5-F: the Ledger, the business panel, prospecting; P5-H: the will panel
+            foreach (var what in new[] { "trade", "barter", "inventory", "character", "squad", "crafting", "talk", "journal", "autopilot", "map", "picker", "jobs", "codex", "qmenu", "overlay", "land", "deeds", "ledger", "business", "prospect", "will", "treatment", "family", "family_full", "court", "workboard", "workboard_mine", "heist", "faction", "bondage", "bondage_slaves", "bondage_bond" })   // P6-D3: the heist panel P6-C2: the contracts screen, on the board and on the Taken tab; P6-B1: the treatment screen; P6-B3: the Family panel, empty and full; P5-A2: land, deeds; P5-F: the Ledger, the business panel, prospecting; P5-H: the will panel
             {
                 int depth = router.Depth;
                 if (!sv.DebugOpen(what)) throw new Exception("unknown screen " + what);
