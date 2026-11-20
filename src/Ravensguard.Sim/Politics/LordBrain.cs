@@ -134,7 +134,7 @@ public static class LordBrain
                 if (next == lv) return false;
                 tax.SetLevel(f.Fief, next);
                 var e = Entry(c, "lord_action", "ch_dp_lord_action", psAction, [holder, place], o.Note);
-                c.B.Note(c.Day, f.Fief, (ulong)f.Holder, id, o.Note, e.Value);
+                c.B.Note(c.Day, f.Fief, (ulong)f.Holder, o.Def.TextKey, o.Note, e.Value);
                 return true;
             }
             case "gift":
@@ -146,7 +146,7 @@ public static class LordBrain
                 var ps = new List<ChronParam> { ChronParam.Person("giver", holder), RulerParam(c, "receiver", f.Realm), ChronParam.Mites("amount", give) };
                 var e = Entry(c, "lord_gift", "ch_dp_lord_gift", ps, [holder, r.RealmKey(f.Realm)], o.Note);
                 Opinions.Add(c.B, c.RB, c.KeyOf(f.Realm), (ulong)f.Holder, "gift", c.Day, e.Value, Opinions.GiftPoints(c.S, give));
-                c.B.Note(c.Day, f.Fief, (ulong)f.Holder, id, o.Note, e.Value);
+                c.B.Note(c.Day, f.Fief, (ulong)f.Holder, o.Def.TextKey, o.Note, e.Value);
                 return true;
             }
             case "demand_dues":
@@ -162,7 +162,7 @@ public static class LordBrain
                 if (got <= 0) return false;
                 var ps = new List<ChronParam> { ChronParam.Person("lord", holder), ChronParam.Place("place", place), ChronParam.Mites("amount", got) };
                 var e = Entry(c, "dues_demanded", "ch_dp_dues_demanded", ps, [holder, place], o.Note);
-                c.B.Note(c.Day, f.Fief, (ulong)f.Holder, id, o.Note, e.Value);
+                c.B.Note(c.Day, f.Fief, (ulong)f.Holder, o.Def.TextKey, o.Note, e.Value);
                 return true;
             }
             case "dismiss_official":
@@ -171,7 +171,7 @@ public static class LordBrain
                 if (worst == null) return false;
                 RuleOfficials.Dismiss(c.R, worst, c.Day, "ch_note_lord_dismisses");
                 var e = Entry(c, "lord_action", "ch_dp_lord_action", psAction, [holder, place], o.Note);
-                c.B.Note(c.Day, f.Fief, (ulong)f.Holder, id, o.Note, e.Value);
+                c.B.Note(c.Day, f.Fief, (ulong)f.Holder, o.Def.TextKey, o.Note, e.Value);
                 return true;
             }
             case "petition":
@@ -182,14 +182,14 @@ public static class LordBrain
                 c.B.Petitions.Add(new Petition { Person = (ulong)f.Holder, Fief = target, Day = c.Day });
                 var ps = new List<ChronParam> { ChronParam.Person("lord", holder), ChronParam.Place("place", r.SeatPlace(target)), RulerParam(c, "ruler", f.Realm) };
                 var e = Entry(c, "petition_made", "ch_dp_petition", ps, [holder, r.SeatPlace(target)], o.Note);
-                c.B.Note(c.Day, f.Fief, (ulong)f.Holder, id, o.Note, e.Value);
+                c.B.Note(c.Day, f.Fief, (ulong)f.Holder, o.Def.TextKey, o.Note, e.Value);
                 return true;
             }
             case "renounce":
             {
                 var made = Road.Renounce(c, (ulong)f.Holder, o.Note);
                 if (made < 0) return false;
-                c.B.Note(c.Day, f.Fief, (ulong)f.Holder, id, o.Note, 0);
+                c.B.Note(c.Day, f.Fief, (ulong)f.Holder, o.Def.TextKey, o.Note, 0);
                 return true;
             }
         }

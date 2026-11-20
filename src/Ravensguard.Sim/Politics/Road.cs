@@ -116,8 +116,8 @@ public static class Road
     /// <summary>What a ruler's service count for a person is: 25 for each war service on his record, 5 for each contract done in the realm's fiefs.</summary>
     public static int ServiceDone(PoliticsCtx c, EntityId person, int realm)
     {
-        int n = 0; ulong rk = c.KeyOf(realm);
-        foreach (var m in c.B.Mods) if (m.A == rk && m.B == person.Value && m.Kind == "helped_in_war") n += 25;
+        int n = 0; ulong rk = c.KeyOf(realm), pk = Opinions.K(person.Value);
+        foreach (var m in c.B.Mods) if (m.A == rk && m.B == pk && m.Kind == "helped_in_war") n += 25;
         foreach (var f in c.RB.Fiefs.Values) if (f.Realm == realm) n += 5 * c.Links.ContractsDone(person, f.Fief);
         return n;
     }
@@ -202,7 +202,7 @@ public static class Road
         int liege = held[0].Realm;
         int idx = c.HistoryRealms; foreach (var k in c.B.Realms.Keys) if (k >= idx) idx = k + 1;
         var pid = new EntityId(person);
-        var row = c.B.RealmOf(idx); row.Founded = true; row.Ruler = person; row.Name = c.R.NameOf((long)person); row.Banner = (int)(person % 12); row.Parent = liege; row.FoundedDay = c.Day;
+        var row = c.B.RealmOf(idx); row.Founded = true; row.Ruler = person; row.Name = c.Links.IsHero(person) ? c.Links.HeroName() : c.R.NameOf((long)person); row.Banner = (int)(person % 12); row.Parent = liege; row.FoundedDay = c.Day;
         if (c.R.PurseOf(Party.OfRealm(idx)).IsNone) c.R.Led.Open(PurseKind.Treasury, c.R.RealmKey(idx));
         var place = c.R.SeatPlace(held[0].Fief);
         var oath = c.Chron.Chron(RuleCtx.At(c.Day), "oath_renounced", "ch_dp_oath_renounced", [ChronParam.Person("lord", pid), Diplomacy.RulerParam(c, "liege", liege), ChronParam.Place("place", place)],
@@ -222,7 +222,7 @@ public static class Road
         Opinions.Add(c.B, c.RB, c.KeyOf(liege), person, "broken_oath", c.Day, oath.Value, c.S.RenounceLiegeOpinion);
         Opinions.Add(c.B, c.RB, c.KeyOf(liege), c.KeyOf(idx), "broken_oath", c.Day, oath.Value, c.S.RenounceLiegeOpinion);
         Diplomacy.AddCb(c, liege, idx, CbKind.BrokenTreaty, oath);
-        c.Chron.Chron(RuleCtx.At(c.Day), "realm_founded", "ch_dp_realm_founded", [ChronParam.Person("founder", pid), ChronParam.Count("fiefs", c.RB.Fiefs.Values.Count(x => x.Realm == idx)), ChronParam.Count("followers", followed)],
+        c.Chron.Chron(RuleCtx.At(c.Day), "faction_founded", "ch_dp_faction_founded", [ChronParam.Person("founder", pid), ChronParam.Count("fiefs", c.RB.Fiefs.Values.Count(x => x.Realm == idx)), ChronParam.Count("followers", followed)],
             [pid, c.R.RealmKey(idx)], [new Cause(CauseKind.Diplomacy, oath)]);
         return idx;
     }

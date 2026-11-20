@@ -18,6 +18,8 @@ public sealed class PoliticsLinks
     public Func<EntityId, int, int> ContractsDone { get; set; } = (_, _) => 0;
     /// <summary>Whether a person is the hero (the lords' brain leaves his holdings to him).</summary>
     public Func<ulong, bool> IsHero { get; set; } = _ => false;
+    /// <summary>The hero's name (a faction he founds is named for him).</summary>
+    public Func<string> HeroName { get; set; } = () => "";
 }
 
 /// <summary>
@@ -75,7 +77,7 @@ public sealed class PoliticsCtx
     }
 
     /// <summary>The hero rules the realm (so the brain leaves its declarations to him).</summary>
-    public bool HeroRules(int realm) { ulong r = RulerOf(realm); return r != 0 && Links.IsHero(r); }
+    public bool HeroRules(int realm) => RB.Rulers.TryGetValue(realm, out long p) && Links.IsHero((ulong)p);
 
     public LordTrait TraitsOf(int realm)
     {

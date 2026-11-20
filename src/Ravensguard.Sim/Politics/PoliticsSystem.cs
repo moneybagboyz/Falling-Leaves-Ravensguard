@@ -97,6 +97,7 @@ public static class PoliticsWiring
         var links = sim.Get<PoliticsLinks>() ?? new PoliticsLinks(); sim.Set(links);
         links.History = state.History;
         links.IsHero = id => state.Party != null && state.Party.Hero.Value == id;
+        links.HeroName = () => state.Hero?.Name ?? "";
         links.StandingWithFief = (p, fief) => Standing.Of(state.Standing, p, GroupRef.Fief(fief));
         links.RenownPm = p => state.Standing != null && state.Standing.Renowns.TryGetValue(p.Value, out var r) ? r.Pm : 0;
         links.ContractsDone = (p, fief) => ContractsDoneIn(state, p, fief);

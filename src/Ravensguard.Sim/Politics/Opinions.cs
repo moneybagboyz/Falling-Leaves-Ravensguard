@@ -13,10 +13,16 @@ public static class Opinions
 {
     public const int Max = 100;
 
-    public static int Value(RuleBook rb, ulong who, ulong of) => Math.Clamp(rb.Opinion(who, of), -Max, Max);
+    /// <summary>The hero's person id is the zero id (<c>EconomyState.HeroOwner</c>), which the rule book's opinion store reads as "nobody": his opinions are kept under this key instead (a reserved Person serial no one else is given).</summary>
+    public static readonly ulong HeroKey = EntityId.Make(IdKind.Person, (1UL << 47) | (3UL << 40) | 0x4845524FUL).Value;
+
+    /// <summary>The key an id is kept under in the opinion store (the hero's zero id becomes <see cref="HeroKey"/>).</summary>
+    public static ulong K(ulong id) => id == 0 ? HeroKey : id;
+
+    public static int Value(RuleBook rb, ulong who, ulong of) => Math.Clamp(rb.Opinion(K(who), K(of)), -Max, Max);
 
     /// <summary>The sum of one kind's sizes now standing for a pair (a cap is measured against it).</summary>
-    public static int Standing(PoliticsBook pb, ulong a, ulong b, string kind) { int n = 0; foreach (var m in pb.Mods) if (m.A == a && m.B == b && m.Kind == kind) n += m.Amount; return n; }
+    public static int Standing(PoliticsBook pb, ulong a, ulong b, string kind) { a = K(a); b = K(b); int n = 0; foreach (var m in pb.Mods) if (m.A == a && m.B == b && m.Kind == kind) n += m.Amount; return n; }
 
     /// <summary>
     /// Adds a modifier to what <paramref name="a"/> thinks of <paramref name="b"/>: the kind's own size unless <paramref name="amount"/> says another, held to the kind's cap and to plus or minus 100. Returns the points actually added
@@ -24,7 +30,7 @@ public static class Opinions
     /// </summary>
     public static int Add(PoliticsBook pb, RuleBook rb, ulong a, ulong b, string kind, int day, ulong cause = 0, int? amount = null)
     {
-        if (a == 0 || b == 0 || a == b) return 0;
+        a = K(a); b = K(b); if (a == b) return 0;
         pb.OpinionKinds.TryGetValue(kind, out var def);
         int want = amount ?? def?.Amount ?? 0; if (want == 0) return 0;
         if (def != null && def.Cap > 0)
@@ -37,6 +43,8 @@ public static class Opinions
         int now = Math.Clamp(old + want, -Max, Max);
         int applied = now - old; if (applied == 0) return 0;
         rb.AddOpinion(a, b, applied);
+        foreach (var m in pb.Mods)
+            if (m.A == a && m.B == b && m.Kind == kind) { m.Amount += applied; m.Day = day; if (cause != 0) m.Cause = cause; return applied; }       // one row a kind for a pair: it fades as one
         pb.Mods.Add(new OpinionMod { A = a, B = b, Kind = kind, Amount = applied, Day = day, Cause = cause });
         return applied;
     }
@@ -66,11 +74,11 @@ public static class Opinions
     /// <summary>The modifiers behind a value, the largest three by size (ties by day, then kind): what the Opinions tab shows with links to their causes.</summary>
     public static List<OpinionMod> Top(PoliticsBook pb, ulong a, ulong b, int n = 3)
     {
-        var l = new List<OpinionMod>(); foreach (var m in pb.Mods) if (m.A == a && m.B == b) l.Add(m);
+        a = K(a); b = K(b); var l = new List<OpinionMod>(); foreach (var m in pb.Mods) if (m.A == a && m.B == b) l.Add(m);
         l.Sort((x, y) => { int c = Math.Abs(y.Amount).CompareTo(Math.Abs(x.Amount)); if (c != 0) return c; c = y.Day.CompareTo(x.Day); return c != 0 ? c : string.CompareOrdinal(x.Kind, y.Kind); });
         return l.Count > n ? l.GetRange(0, n) : l;
     }
 
     /// <summary>Every party that <paramref name="who"/> holds an opinion of, from the rule book's store, in ascending id: what the Faction screen walks.</summary>
-    public static IEnumerable<(ulong Of, int Value)> Of(RuleBook rb, ulong who) { foreach (var ((w, o), v) in rb.Opinions) if (w == who) yield return (o, Math.Clamp(v, -Max, Max)); }
+    public static IEnumerable<(ulong Of, int Value)> Of(RuleBook rb, ulong who) { who = K(who); foreach (var ((w, o), v) in rb.Opinions) if (w == who) yield return (o, Math.Clamp(v, -Max, Max)); }
 }

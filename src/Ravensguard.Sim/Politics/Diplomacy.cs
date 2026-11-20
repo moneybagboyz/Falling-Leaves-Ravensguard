@@ -296,6 +296,7 @@ public static class Diplomacy
         var realms = c.AliveRealms().ToList();
         Envoys(c, realms);
         Declarations(c, realms);
+        Grants(c, realms);
         Recover(c, realms);
         FoundedRealmsLive(c);
         b.LastSeasonDay = c.Day;
@@ -328,7 +329,7 @@ public static class Diplomacy
     {
         foreach (int a in realms)
         {
-            if (c.B.WarOf(a) != null || c.HeroRules(a) || c.RulerOf(a) == 0) continue;
+            if (c.B.WarOf(a) != null || c.HeroRules(a) || (c.RulerOf(a) == 0 && !c.RB.Rulers.ContainsKey(a))) continue;
             int bestB = -1, bestU = int.MinValue; CasusBelli? bestCb = null; bool bestClaim = false;
             foreach (int bb in realms)
             {
@@ -343,6 +344,30 @@ public static class Diplomacy
             if (DetRng.Range(c.Seed, c.Day, (ulong)a, RngStreams.DiplomacyTies, 4, 0, 100) >= c.S.DeclareChancePct) continue;
             Declare(c, a, bestB, bestCb, bestClaim, bestU);
         }
+    }
+
+    /// <summary>
+    /// A ruler grants a vacant fief of his realm to the best of those who petitioned for one (4.2): <c>opinion + standing / 10 + service done</c>, at least the petition floor. Only a vacant fief moves (the Phase 1 bug fixed by construction).
+    /// </summary>
+    public static int Grants(PoliticsCtx c, List<int> realms)
+    {
+        int n = 0;
+        foreach (int a in realms)
+        {
+            if (c.HeroRules(a)) continue;
+            foreach (var f in c.RB.Fiefs.Values.Where(x => x.Realm == a && Road.Vacant(x)).OrderBy(x => x.Fief).ToList())
+            {
+                ulong best = 0; int bestScore = int.MinValue;
+                foreach (var p in c.B.Petitions.OrderBy(x => x.Person))
+                {
+                    if (!c.R.Alive((long)p.Person) || c.Links.IsHero(p.Person)) continue;
+                    int sc = Road.CandidateScore(c, new EntityId(p.Person), a);
+                    if (sc > bestScore) { bestScore = sc; best = p.Person; }
+                }
+                if (best != 0 && bestScore >= c.S.PetitionOpinion && Road.GrantFief(c, f.Fief, new EntityId(best), "ch_note_dp_petition")) n++;
+            }
+        }
+        return n;
     }
 
     /// <summary>Hosts at peace recover a share of what they lost.</summary>

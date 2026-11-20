@@ -5251,6 +5251,190 @@ hj_left_unseen_stolen,"You are out, unseen, with what you took."
 hj_left_nothing,"You are out, and nobody knows you were ever there."
 hj_caught,The guards have you: {0} charges.
 hj_caught_thrown_out,The guards find nothing against you and throw you out.
+ch_dp_casus_belli_given,{holder} was given cause against {against}: {what}.
+ch_dp_cb_none,no cause
+ch_dp_cb_insult,an insult
+ch_dp_cb_unpaiddues,dues left unpaid
+ch_dp_cb_brokentreaty,a broken treaty
+ch_dp_cb_seizedfief,a seized fief
+ch_dp_cb_raid,a raid
+ch_dp_cb_excommunication,an excommunication
+ch_dp_cb_claim,an old claim
+ch_dp_pact_signed,"{a} and {b} put their seals to a {kind}, to last {days} days."
+ch_dp_pact_ended,The {kind} between {a} and {b} came to its end.
+ch_dp_pact_truce,truce
+ch_dp_pact_alliance,alliance
+ch_dp_pact_vassalage,vassalage
+ch_dp_pact_marriagepact,marriage pact
+ch_dp_pact_tradepact,trade pact
+ch_dp_war_declared,{a} declared war on {b}.
+ch_dp_peace,"{loser} sued for peace with {winner} (war score {score}, weariness {weariness}): {terms}."
+ch_dp_terms_truce,a truce
+ch_dp_terms_tribute,a truce and tribute
+ch_dp_terms_cede,a fief ceded
+ch_dp_fief_ceded,{loser} ceded {place} to {winner}.
+ch_dp_lord_captured,"{lord} was taken at {place} by the host of {captor}; he {how}: {amount}."
+ch_dp_ransom_paid,paid his ransom
+ch_dp_ransom_ceded,could not pay and gave up his land
+ch_dp_lord_action,{lord} {action} at {place}.
+ch_dp_act_set_tax_up,raised the tallage
+ch_dp_act_set_tax_down,eased the tallage
+ch_dp_act_gift,sent his ruler a gift
+ch_dp_act_demand_dues,demanded the dues in arrears
+ch_dp_act_dismiss,dismissed an official who fell short
+ch_dp_act_petition,petitioned for a vacant fief
+ch_dp_act_renounce,renounced his oath
+ch_dp_lord_gift,{giver} gave {receiver} a gift of {amount}.
+ch_dp_dues_demanded,{lord} took {amount} of the dues in arrears at {place}.
+ch_dp_petition,{lord} asked {ruler} for {place}.
+ch_dp_fealty_sworn,{vassal} swore fealty to {lord} at {place}.
+ch_dp_manor_granted,{lord} granted {vassal} the manor of {place}.
+ch_dp_fief_granted,{ruler} granted {place} to {grantee}.
+ch_dp_oath_renounced,{lord} renounced his oath to {liege} at {place}.
+ch_dp_faction_founded,{founder} founded a realm of {fiefs} fiefs; {followers} of his vassals followed him.
+ch_note_dp_cb_claim,he held an old claim on the land
+ch_note_dp_cb_insult,he had been insulted
+ch_note_dp_cb_unpaid,dues stood unpaid to him
+ch_note_dp_cb_treaty,a treaty had been broken
+ch_note_dp_cb_seized,a fief had been seized from him
+ch_note_dp_cb_raid,his lands had been raided
+ch_note_dp_cb_excomm,the other realm's ruler stood excommunicate
+ch_note_dp_pact_terms,the terms were agreed
+ch_note_dp_pact_ran_out,its years ran out
+ch_note_dp_peace_weary,the realm was worn out by the war
+ch_note_dp_treasury_thin,the treasury held less than one season of the payroll
+ch_note_dp_treasury_full,the treasury was full
+ch_note_dp_quiet,the fief was quiet
+ch_note_dp_greedy,he was a greedy man
+ch_note_dp_unrest_high,the households were restless
+ch_note_dp_just,he was a just man
+ch_note_dp_ruler_cold,the ruler thought little of him
+ch_note_dp_ruler_warm,the ruler thought well of him
+ch_note_dp_wealthy,he could well afford it
+ch_note_dp_vacancy,a fief stood vacant
+ch_note_dp_generous,he was a generous man
+ch_note_dp_arrears,dues stood unpaid
+ch_note_dp_thief,an audit found his official short
+ch_note_dp_war,the realm was at war
+ch_note_dp_martial,he was a martial man
+ch_note_dp_own_judgement,it was his own judgement
+ch_note_dp_oath_broken,he would no longer be anyone's man
+ch_note_dp_service_done,he had served the fief well
+ch_note_dp_good_service,his service was rewarded
+ch_note_dp_war_service,his service in the war was rewarded
+ch_note_dp_petition,he had asked for it
+ch_note_dp_goodwill,it was a gift to win goodwill
+dp_op_kin,kinship
+dp_op_marriage,a marriage between their houses
+dp_op_same_religion,the same faith
+dp_op_heresy,heresy
+dp_op_gift,gifts
+dp_op_unpaid_due,dues unpaid
+dp_op_broken_oath,a broken oath
+dp_op_war,war between them
+dp_op_helped_in_war,help given in war
+dp_op_insult,an insult
+dp_op_excommunicated,excommunication
+dp_op_freed_captive,a captive set free
+dp_op_robbed,a robbery
+dp_op_fealty,sworn fealty
+dp_op_granted,a grant
+dp_term_standing,"standing with the fief {0} (needs {1})"
+dp_term_renown,"renown {0} (needs {1})"
+dp_term_contracts,"{0} contracts done for the fief (needs {1})"
+dp_term_opinion,"what he thinks of you {0} (needs {1})"
+dp_term_vassal,he is not your lord
+dp_term_vacant_manor,no manor is free
+dp_term_vacant,the land is held
+dp_term_service,you have done no service in his wars
+dp_no_politics,There is no court here to ask.
+dp_no_lord,There is no lord to ask.
+dp_sworn,You kneel and swear fealty.
+dp_manor_granted,"The lord grants you the manor of {0}."
+dp_fief_granted,"The ruler grants you {0}."
+dp_gift_given,"The gift is taken; he thinks the better of you (+{0})."
+dp_gift_nothing,A gift of nothing is no gift.
+dp_gift_cannot_afford,You cannot afford that gift.
+dp_not_a_lord,You hold no fief to renounce.
+dp_renounced,"You renounce your oath: the realm of {0} is yours."
+dp_already_sworn,You are already some lord's man.
+dp_refused_dp_term_standing,He will say no: the fief thinks too little of you.
+dp_refused_dp_term_renown,He will say no: you are not known enough.
+dp_refused_dp_term_contracts,He will say no: you have not done enough work for him.
+dp_refused_dp_term_opinion,He will say no: he thinks too little of you.
+dp_refused_dp_term_vassal,He will say no: you are not his man.
+dp_refused_dp_term_vacant_manor,He has no manor to give.
+dp_refused_dp_term_vacant,He will say no: the land is held.
+dp_refused_dp_term_service,He will say no: you have not served in his wars.
+dp_refused_dp_no_lord,There is no lord to ask.
+dp_refused_dp_already_sworn,You are already some lord's man.
+dp_refused_dp_no_politics,There is no court here to ask.
+dp_title,Faction
+dp_intro,"Who rules, who thinks what of you, who is at war, and what you may ask."
+dp_tab_realm,Realm
+dp_tab_opinions,Opinions
+dp_tab_treaties,Treaties and wars
+dp_tab_standing,Your standing
+dp_tab_actions,Actions
+dp_rank,Your rank
+dp_rank_wanderer,wanderer
+dp_rank_sellsword,sellsword
+dp_rank_vassal,vassal
+dp_rank_lord,lord
+dp_rank_founder,founder of a faction
+dp_realm_of,"Realm: {0}, ruled by {1}"
+dp_realm_none,You are no part of a realm.
+dp_chain,Chain of lords
+dp_fiefs,Fiefs of the realm
+dp_fief_row,"{0}: held by {1}, treasury {2}"
+dp_fief_vacant,vacant
+dp_fief_yours,you
+dp_vassals,Your vassals
+dp_vassals_none,No one has sworn to you.
+dp_band_poor,poor
+dp_band_modest,modest
+dp_band_comfortable,comfortable
+dp_band_rich,rich
+dp_op_head,What they think of you
+dp_op_none,Nobody of note has an opinion of you yet.
+dp_op_value,"{0}: {1}"
+dp_op_why,"{0} ({1}) since day {2}"
+dp_op_why_none,no particular reason
+dp_treaties_head,Treaties
+dp_treaties_none,No treaties are in force.
+dp_treaty_row,"{0}: {1} and {2}, until day {3}"
+dp_treaty_open,"{0}: {1} and {2}, for as long as it stands"
+dp_treaty_tribute,"{0} a season in tribute"
+dp_wars_head,Wars
+dp_wars_none,No war is being fought.
+dp_war_row,"{0} against {1} ({2}): score {3}, {4} seasons, weariness {5} and {6}"
+dp_log_head,What the lords have done lately
+dp_log_none,Nothing yet.
+dp_log_row,"day {0}: {1} {2}: {3}"
+dp_actions_head,What you may ask
+dp_actions_none,There is nothing to ask of anyone here.
+dp_act_swear,Swear fealty to the lord of {0}
+dp_act_manor,Ask the lord of {0} for a manor
+dp_act_fief,Ask for {0}
+dp_act_gift,Give a gift to the lord of {0}
+dp_act_giftr,Give a gift to the ruler of {0}
+dp_act_renounce,Renounce your oath and found your own realm
+dp_act_yes,"He will say yes."
+dp_act_no,"He will say no: {0}"
+dp_act_hint,"Enter does it. A gift is 100 crowns."
+dp_act_done,Done.
+dp_act_cannot,That cannot be done.
+dp_keys,"Up and Down move, Tab turns the page, Enter asks, Esc closes."
+dp_waiting,Waiting for word from the court.
+ACTION_FACTION_UP,Previous row
+ACTION_FACTION_DOWN,Next row
+ACTION_FACTION_LEFT,Previous page
+ACTION_FACTION_RIGHT,Next page
+ACTION_FACTION_NEXT_TAB,Next tab
+ACTION_FACTION_ACT,Ask or act
+ACTION_FACTION_SEARCH,Search
+ACTION_FACTION_BACK,Close the Faction screen
+OVERLAY_FACTION,Faction
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."
