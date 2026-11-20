@@ -15,7 +15,7 @@ public enum WorldGenPhase { Continent, History, Done }
 /// <see cref="Owner"/> (realm per cell, 255 none) every ten years. Fraction runs 0..1 over the whole job.
 /// </summary>
 public sealed record WorldGenProgress(WorldGenPhase Phase, string Stage, int Step, int Steps, int Year, int Years, ChronicleEntry? Entry,
-    Continent? Continent = null, byte[]? Owner = null)
+    Continent? Continent = null, byte[]? Owner = null, Func<ChronParamKind, long, string>? Names = null)
 {
     public double Fraction => Phase switch
     {
@@ -168,7 +168,7 @@ public sealed class WorldLibrary
             ct.ThrowIfCancellationRequested();
             var first = done;
             done = null; // hand the finished terrain over once
-            progress?.Invoke(new WorldGenProgress(WorldGenPhase.History, "history", 0, 0, p.Year, p.Years, p.Entry, first, p.Owner));
+            progress?.Invoke(new WorldGenProgress(WorldGenPhase.History, "history", 0, 0, p.Year, p.Years, p.Entry, first, p.Owner, p.Names));
         });
         return (c, h);
     }

@@ -25,7 +25,7 @@ public static class NewGameDebug
     {
         var content = NewGameServices.Content();
         var cs = ContinentSettings.LoadDefaults(content.Dir); cs.Seed = seed;
-        var hs = HistorySettings.LoadDefaults(content.Dir); hs.Seed = seed; hs.Years = years;
+        var hs = HistorySettings.LoadDefaults(content.Dir).UseRulesV1(content.Db); hs.Seed = seed; hs.Years = years;   // P6-F: the new-game flow makes Phase 6 worlds
         var w = NewGameServices.Library.Create(WorldLibrary.DefaultName(seed), cs, hs, content.Hash, "smoke");
         NewGameServices.Remember(w);
         return w;

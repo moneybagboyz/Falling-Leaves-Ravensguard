@@ -54,6 +54,32 @@ public sealed class WorldHistory
     public Artefact? GetArtefact(EntityId id) => _artefacts.GetValueOrDefault(id);
     public IEnumerable<RealmState> AliveRealms => Realms.Where(r => r.Alive);
 
+    /// <summary>The current name of a chronicle parameter's id in these legends (a notable's, a settlement's), "?" when it has none: what a keyed entry's sentence fills its holes with.</summary>
+    public string NameOf(ChronParamKind kind, long id)
+    {
+        var eid = new EntityId((ulong)id);
+        return kind switch
+        {
+            ChronParamKind.Person => GetNotable(eid)?.Full ?? Realms.FirstOrDefault(r => r.Id == eid)?.Name ?? "?",
+            ChronParamKind.Place => GetSettlement(eid)?.Name ?? "?",
+            _ => "?",
+        };
+    }
+
+    /// <summary>The heading of an entry for a viewer: a keyed entry reads as its sentence through <paramref name="tr"/> (en.csv), a legacy entry its English title.</summary>
+    public string Title(ChronicleEntry e, Func<string, string> tr) =>
+        e.TextKey.Length > 0 ? ChronicleTypes.Format(e, tr, NameOf) : e.Data.GetValueOrDefault("title", e.TypeId);
+
+    /// <summary>The body text of a legacy entry; a keyed entry's sentence is its title, so it has none.</summary>
+    public string Text(ChronicleEntry e) => e.TextKey.Length > 0 ? "" : e.Data.GetValueOrDefault("text", "");
+
+    /// <summary>A cause's note for a viewer: its key and parameters through <paramref name="tr"/>, else its legacy English note, else its kind.</summary>
+    public string NoteText(Cause c, Func<string, string> tr)
+    {
+        string n = ChronicleTypes.FormatNote(c, tr, NameOf);
+        return n.Length > 0 ? n : c.Kind.ToString();
+    }
+
     /// <summary>One readable legends line: "Spring 266: Title — text. Cause: ... (event #123)".</summary>
     public string LegendLine(ChronicleEntry e)
     {

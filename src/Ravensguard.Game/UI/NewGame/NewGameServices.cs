@@ -118,7 +118,7 @@ public static class NewGameServices
         var d = new NewGameDraft
         {
             Continent = ContinentSettings.LoadDefaults(c.Dir),
-            History = HistorySettings.LoadDefaults(c.Dir),
+            History = HistorySettings.LoadDefaults(c.Dir).UseRulesV1(c.Db),                       // P6-F: a new world gets the Phase 6 history; a library world keeps the rules it was made with
             OriginId = Origins().FirstOrDefault()?.Id ?? "",
         };
         Reseed(d, (ulong)Random.Shared.Next(1, 99_999_999));

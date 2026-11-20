@@ -59,7 +59,7 @@ public partial class LegendsScreen : Control
             foreach (var c in e.Causes) if (c.EventId is { } cid) { if (!_effects.TryGetValue(cid, out var l)) _effects[cid] = l = new(); l.Add(i); }
             _realms[i] = e.Subjects.Where(realmOf.ContainsKey).Select(s => realmOf[s]).Distinct().ToArray();
             _subjects[i] = string.Join(", ", e.Subjects.Select(NameOf).Where(n => n.Length > 0));
-            _blob[i] = $"{e.When.Year} {e.When.Season} {e.TypeId} {e.Data.GetValueOrDefault("title", "")} {e.Data.GetValueOrDefault("text", "")} {_subjects[i]}".ToLowerInvariant();
+            _blob[i] = $"{e.When.Year} {e.When.Season} {e.TypeId} {_h.Title(e, L.T)} {_h.Text(e)} {_subjects[i]}".ToLowerInvariant();
         }
         _types = [""]; _types.AddRange(_all.Select(e => e.TypeId).Distinct().OrderBy(t => t, StringComparer.Ordinal));
         _realmNames = ["", .. _h.Realms.Select(r => r.Name)];
@@ -155,7 +155,7 @@ public partial class LegendsScreen : Control
             if (_shown.Count >= MaxShown) continue;
             _shown.Add(i);
             var e = _all[i];
-            _list.AddItem($"{e.When.Year,3} {UiKit.SeasonName(e.When.Season)[..Math.Min(3, UiKit.SeasonName(e.When.Season).Length)]}  {e.Data.GetValueOrDefault("title", e.TypeId)}");
+            _list.AddItem($"{e.When.Year,3} {UiKit.SeasonName(e.When.Season)[..Math.Min(3, UiKit.SeasonName(e.When.Season).Length)]}  {_h.Title(e, L.T)}");
         }
         _count.Text = total > MaxShown ? L.F("LG_COUNT_MORE", MaxShown, total) : L.F("LG_COUNT", total, _all.Count);
         if (_current >= 0) { int p = _shown.IndexOf(_current); if (p >= 0) _list.Select(p); }
@@ -177,14 +177,14 @@ public partial class LegendsScreen : Control
         var e = _all[idx];
         string gold = PixelTheme.Gold.ToHtml(false), dim = PixelTheme.Dim.ToHtml(false);
         var sb = new StringBuilder();
-        sb.Append($"[color=#{gold}]{e.Data.GetValueOrDefault("title", e.TypeId)}[/color]\n");
+        sb.Append($"[color=#{gold}]{_h.Title(e, L.T)}[/color]\n");
         sb.Append($"[color=#{dim}]{UiKit.SeasonName(e.When.Season)} {e.When.Year}  -  {TypeName(e.TypeId)}[/color]\n\n");
-        sb.Append(e.Data.GetValueOrDefault("text", "")).Append("\n\n");
+        sb.Append(_h.Text(e)).Append("\n\n");
         if (_subjects[idx].Length > 0) sb.Append($"[color=#{dim}]{L.T("LG_PEOPLE")}[/color] {_subjects[idx]}\n");
         if (_realms[idx].Length > 0) sb.Append($"[color=#{dim}]{L.T("LG_REALMS")}[/color] {string.Join(", ", _realms[idx].Select(r => _h.Realms[r].Name))}\n");
         sb.Append($"\n[color=#{dim}]{L.T("LG_WHY")}[/color]\n");
         foreach (var c in e.Causes)
-            sb.Append("- ").Append(c.Note.Length > 0 ? c.Note : c.Kind.ToString()).Append('\n');
+            sb.Append("- ").Append(_h.NoteText(c, L.T)).Append('\n');
         _detail.Text = sb.ToString();
 
         foreach (var ch in _links.GetChildren()) ch.QueueFree();
@@ -193,7 +193,7 @@ public partial class LegendsScreen : Control
         {
             if (c.EventId is not { } cid || !_index.TryGetValue(cid, out var ci)) continue;
             var ce = _all[ci];
-            string text = L.F("LG_CAUSE", ce.When.Year, ce.Data.GetValueOrDefault("title", ce.TypeId));
+            string text = L.F("LG_CAUSE", ce.When.Year, _h.Title(ce, L.T));
             var b = firstCause ? UiKit.Key(text, "menu.follow_cause", 0, 30) : new Button { Text = text, CustomMinimumSize = new Vector2(0, 30), Alignment = HorizontalAlignment.Left };
             b.ClipText = true;
             firstCause = false;
@@ -207,7 +207,7 @@ public partial class LegendsScreen : Control
             foreach (var ei in eff.Take(4))
             {
                 var fe = _all[ei];
-                string text = L.F("LG_EFFECT", fe.When.Year, fe.Data.GetValueOrDefault("title", fe.TypeId));
+                string text = L.F("LG_EFFECT", fe.When.Year, _h.Title(fe, L.T));
                 var b = first ? UiKit.Key(text, "menu.follow_effect", 0, 30) : new Button { Text = text, CustomMinimumSize = new Vector2(0, 30), Alignment = HorizontalAlignment.Left };
                 b.ClipText = true;
                 first = false;

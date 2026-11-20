@@ -3,7 +3,7 @@ using Ravensguard.Sim.Core;
 namespace Ravensguard.Sim.WorldGen.History;
 
 /// <summary>History progress: the year being simulated, the chronicle entry just written (when set) and, every ten years, the realm owner of each continent cell (255 = none).</summary>
-public readonly record struct HistoryProgress(int Year, int Years, ChronicleEntry? Entry, byte[]? Owner = null);
+public readonly record struct HistoryProgress(int Year, int Years, ChronicleEntry? Entry, byte[]? Owner = null, Func<ChronParamKind, long, string>? Names = null);
 
 /// <summary>
 /// Stage 2 world generation: history v0 (plan §1A). Seasonal ticks (4 a year) over the continent grid.
@@ -118,7 +118,7 @@ public sealed partial class HistoryGenerator
         }
         var entry = new ChronicleEntry(id, when, type, subjects, causes, data, key, ps);
         _h.Chronicle.Add(entry);
-        _progress?.Invoke(new HistoryProgress(_year, _s.Years, entry));
+        _progress?.Invoke(new HistoryProgress(_year, _s.Years, entry, null, key.Length > 0 ? _h.NameOf : null));
         return id;
     }
 

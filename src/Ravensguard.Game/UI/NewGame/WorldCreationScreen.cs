@@ -139,7 +139,8 @@ public partial class WorldCreationScreen : Control
         if (p.Entry is { } e)
         {
             _entries++;
-            _log.Add($"{UiKit.SeasonName(e.When.Season)} {e.When.Year}: {e.Data.GetValueOrDefault("title", e.TypeId)} - {e.Data.GetValueOrDefault("text", "").TrimEnd('.')}");
+            string line = e.TextKey.Length > 0 ? Ravensguard.Sim.Core.ChronicleTypes.Format(e, L.T, p.Names ?? ((_, _) => "?")) : $"{e.Data.GetValueOrDefault("title", e.TypeId)} - {e.Data.GetValueOrDefault("text", "").TrimEnd('.')}";   // P6-F: history v1 entries carry keys
+            _log.Add($"{UiKit.SeasonName(e.When.Season)} {e.When.Year}: {line}");
             if (_log.Count > 4 * Lines) _log.RemoveRange(0, _log.Count - Lines);
         }
     }

@@ -84,7 +84,17 @@ public static class HashesCommand
         lines.Add($"seed {seed} vehicles {Ravensguard.Sim.Carts.VehicleHash.Of(seed)}");
         // Phase 6 A2 (phase-5 review S14): a short scripted Phase 5 trail (a new game, a floor built and knocked out, ten days of the whole runtime): land, sites, rooms, ownership, crafting and the chronicle
         lines.Add($"seed {seed} phase5_trail {Ravensguard.Sim.Diagnostics.Phase5Trail.Hash(db, continent, history, cs, hs, rs, pick.CellX, pick.CellY, pop)}");
+        // Phase 6 part F (history-recalibration 5, HR-10): history v1 is its own pinned line (the v0 'history' line above stays frozen for library worlds); two more seeds make three for the Windows/Linux compare
+        lines.Add($"seed {seed} history_v1 {HistoryV1Hash(baseDir, db, seed, continent)}");
+        if (seed == 1) foreach (ulong extra in new ulong[] { 7, 42 }) lines.Add($"seed {extra} history_v1 {HistoryV1Hash(baseDir, db, extra, null)}");
         return lines;
+    }
+
+    static string HistoryV1Hash(string baseDir, ContentDatabase db, ulong seed, Continent? continent)
+    {
+        if (continent == null) { var cs = ContinentSettings.LoadDefaults(baseDir); cs.Seed = seed; continent = ContinentGenerator.Generate(cs); }
+        var hs = HistorySettings.LoadDefaults(baseDir); hs.Seed = seed; hs.UseRulesV1(db);
+        return HistoryGenerator.Generate(continent, hs).ComputeHash();
     }
 
     /// <summary>Two captives (a band's, an army's) taken at day 10 and stepped hourly for twelve days with no ledger: the hourly step's guards, transfers, renegotiation and release.</summary>
