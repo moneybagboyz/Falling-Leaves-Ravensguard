@@ -62,7 +62,7 @@ public static class DiseaseWiring
         var pt = st.Population.People; int row = HeroPerson.RowOf(pt, st.Hero, new EntityId(id)); if (row < 0) return;
         int day = (int)when.TotalDays;
         fam.Death = new PendingDeath { Day = day, Row = row, Age = pt.AgeYears(row, day), Cause = DeathCause.Disease };
-        var name = cause.NoteParams is { Count: > 0 } ps ? new ChronParam("illness", ChronParamKind.TextKey, 0, ps[0].Key) : ChronParam.TextKey("illness", "ill_name_cough");
+        var name = cause.NoteParams is { Count: > 0 } ps ? ChronParam.TextKey("illness", ps[0].Key) : ChronParam.TextKey("illness", "ill_name_cough");
         ob.Chronicle(when, "hero_died_illness", "ch_ill_hero_died", [ChronParam.Person("hero", new EntityId(id)), name], [new EntityId(id)], [cause]);
     }
 }
