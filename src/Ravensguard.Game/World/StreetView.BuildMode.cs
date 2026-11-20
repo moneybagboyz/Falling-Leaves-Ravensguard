@@ -11,6 +11,7 @@ using Ravensguard.Game.World.Build;
 using Ravensguard.Sim.Construction;
 using Ravensguard.Sim.Core;
 using Ravensguard.Sim.Economy;
+using Ravensguard.Sim.Holdings;
 using Ravensguard.Sim.Trade;
 
 namespace Ravensguard.Game.World;
@@ -342,8 +343,21 @@ public partial class StreetView
         Pause = p => IssueBuild(ConstructionDesk.Pause(site, p, HeroNow())),
         Hire = skilled => IssueBuild(ConstructionDesk.Hire(site, 1, skilled, HeroNow())),
         Unload = () => UnloadPack(site),
+        BuyDeliver = () => BuyAndDeliverMissing(site),
+        PostHaul = () => IssueBuild(HoldingsDesk.PostHaul(site, HeroNow())),
         HandWork = on => { _handWork = on; _handFrom = HeroNow(); _handAt = HeroNow(); _router?.ShowToast(L.T(on ? "BUILD_HAND_ON" : "BUILD_HAND_OFF"), 3f); },
     };
+
+    /// <summary>P6-B6 (holdings 3.8): buys what the pile still lacks at the hero's market and has it carted to the pile, one order a good (the sim prices each at the book and adds the carting).</summary>
+    void BuyAndDeliverMissing(EntityId site)
+    {
+        if (Runtime?.State.Construction?.View is not { } cv || cv.Sites.FirstOrDefault(s => s.Id == site) is not { } sv) return;
+        int place = HeroSettlement();
+        if (place < 0) { _router?.ShowToast(L.T("HERO_THERE_NO_MARKET_HERE"), 3f); return; }
+        int n = 0;
+        foreach (var m in sv.Materials.Where(m => m.InPileG < m.NeedG)) { _heroLink?.Issue(HoldingsDesk.BuyDeliver(site, m.Good, m.NeedG - m.InPileG, place, HeroNow())); n++; }
+        if (n == 0) _router?.ShowToast(L.T("BUILD_SITE_NOTHING_MISSING"), 3f);
+    }
 
     /// <summary>Unload what the site needs from the hero's pack into its pile (he must stand within 3 m of it: the sim says so otherwise).</summary>
     void UnloadPack(EntityId site)

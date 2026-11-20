@@ -14,7 +14,7 @@ namespace Ravensguard.Sim.Holdings;
 // business in a generated building, cut coppice.
 public static partial class HoldingsDesk
 {
-    /// <summary>Q on a site: buys <paramref name="qty"/> of a good at the settlement's market and has it carted to the site's pile (the book's price and 2 mites a kilogram-kilometre).</summary>
+    /// <summary>Q on a site: buys <paramref name="qty"/> grams of a good at the settlement's market and has it carted to the site's pile (the book's price and 2 mites a kilogram-kilometre).</summary>
     public static HeroCommand BuyDeliver(EntityId site, string good, long qty, int settlement, long sec) => Cmd(sec, Tag("buydeliver", ConstructionIds.SerialOf(site), good, qty, settlement), settlement);
     /// <summary>The site panel's "Post haul jobs": every missing material the hero's household holds is hauled to the pile by the board's carriers.</summary>
     public static HeroCommand PostHaul(EntityId site, long sec) => Cmd(sec, Tag("posthaul", ConstructionIds.SerialOf(site)));
@@ -39,7 +39,9 @@ public static partial class HoldingsDesk
                 if (site == null || !site.Open) return HoldingsResult.No("cn_no_site");
                 if (site.Owner != hero) return HoldingsResult.No("cn_not_your_site");
                 if (!ctx.Econ.Goods.TryIdOf(p[2], out ushort good)) return HoldingsResult.No("cn_unknown_good", p[2]);
-                return BuyAndDeliver(ctx, cw, site, good, N(3), I(4), day, sec);
+                long grams = N(3);                                                                                 // the site panel's numbers are grams; a piece good is bought by the piece
+                long units = ctx.Econ.Goods.IsPiece(good) ? (grams + ctx.Econ.Goods.MassG(good, 1) - 1) / Math.Max(1, ctx.Econ.Goods.MassG(good, 1)) : grams;
+                return BuyAndDeliver(ctx, cw, site, good, units, I(4), day, sec);
             }
             case "posthaul" when p.Length >= 2 && cw != null:
             {

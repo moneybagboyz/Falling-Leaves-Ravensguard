@@ -156,6 +156,37 @@ public class HoldingsTests(ITestOutputHelper output)
             Assert.True(f1.Sections[name].Span.SequenceEqual(again.Sections[name].Span), $"section '{name}' saves the same bytes after a load");
     }
 
+    [Fact]
+    public void HW1_A_field_the_hero_leases_is_credited_to_his_household_and_goes_back_to_the_lords_when_the_lease_ends()
+    {
+        var (w, s) = Game();
+        using var rt = new WorldRuntime(s, w.Content, new MemoryRegionPager());
+        var ctx = new HeroContext(s, s.Party!, w.Content); var p = new Play(rt, ctx);
+        var lw = s.HomeRecords!.Sim.Get<LandWorld>()!; var farm = s.HomeRecords.Economy.Farming; var e = s.Economy!; var reg = s.Population.Region;
+        e.Ledger.Mint(ctx.Purse, Coin.FromCrowns(50), SourceReason.Seed);
+        // a field that fell back to the lord (the test's setup: its holder left): the one the reeve may let
+        int settlement = Enumerable.Range(0, reg.Settlements.Count).First(i => Ravensguard.Sim.Land.LandRegistry.LordHousehold(s.Population, i) >= 0 && reg.Settlements[i].Parcels.Any(pc => reg.Parcels[pc].Owner.Kind is not (OwnerKind.Demesne or OwnerKind.Glebe)));
+        int parcel = reg.Settlements[settlement].Parcels.First(pc => reg.Parcels[pc].Owner.Kind is not (OwnerKind.Demesne or OwnerKind.Glebe));
+        { int lord0 = Ravensguard.Sim.Land.LandRegistry.LordHousehold(s.Population, settlement); int old = s.Population.ParcelHolder[parcel]; s.Population.ParcelHolder[parcel] = lord0; if (old >= 0) s.Population.Households.ParcelCount[old]--; s.Population.Households.ParcelCount[lord0]++; farm.SyncPopulation(); }
+        Assert.Contains(parcel, lw.LeasableParcels(settlement));
+        int hh = ConstructionDesk.HouseholdOf(ctx);
+        int lord = Ravensguard.Sim.Land.LandRegistry.LordHousehold(s.Population, settlement);
+        Assert.Equal(lord, farm.HolderOf(parcel));
+        Assert.True(p.Do(LandDesk.LeaseField(parcel, p.Sec)).Ok);
+        p.Days(1);
+        Assert.Equal(hh, farm.HolderOf(parcel));                                                         // the harvest is his household's now, not the lord's
+        Assert.Equal(hh, s.Population.ParcelHolder[parcel]);
+        // the lease's term runs out unrenewed: the field is the lord's again
+        var deed = s.Land!.Deeds.Values.Single(d => d.Kind == HoldingKind.Parcel && d.Holder == ctx.Party.Hero);
+        Assert.True(p.Do(LandDesk.GiveUp(deed.Id, false, p.Sec)).Ok);
+        p.Days(Math.Max(1, deed.LeaseEndDay - p.Day + 2));
+        Assert.DoesNotContain(s.Land.Deeds.Values, d => d.Id == deed.Id);
+        Assert.Equal(lord, s.Population.ParcelHolder[parcel]);
+        p.Days(1);
+        Assert.Equal(lord, farm.HolderOf(parcel));
+        Assert.True(e.Ledger.Audit().IsConserved);
+    }
+
     // ------------------------------------------------------------------ HW-2: the banner and "Whose is this?"
 
     [Fact]

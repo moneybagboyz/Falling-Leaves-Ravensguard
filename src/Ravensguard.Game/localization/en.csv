@@ -4397,7 +4397,10 @@ hw_too_tired,You have done a heavy day's work; rest.
 vd_needs_slipway,A boat is laid down on a slipway: build the ways first.
 vd_needs_yard,A wagon is built in a wheelwright's yard: fence a yard with a bay first.
 hw_q_clear,Clear an acre
-hw_q_work,Fell and grub (4 hours)
+hw_q_work,Fell and grub by hand
+hw_q_work_stop,Stop felling
+hw_q_sow_wait,not the sowing time
+BUILD_SITE_NOTHING_MISSING,The pile has everything it needs.
 hw_q_hire,Hire two hands for the clearing
 hw_q_sow,Sow the cleared acre
 hw_q_collect,Take the logs

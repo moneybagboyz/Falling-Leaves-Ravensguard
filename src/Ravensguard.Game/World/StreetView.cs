@@ -984,6 +984,7 @@ public partial class StreetView : Control, IHandlesBack
         if (_opt.Panel == "jobs" && _frames == 420) OpenWork();    // dev: the work panel once the first posting has come back from the tick worker
         HeroShots(); TalkShots(); ApShots();
         LandTick(delta);                                    // P5-A2: the land view, land answers, land screenshots
+        HoldingsTick(delta);                                // P6-B6: the holdings view, hands-on felling, answers (StreetView.Holdings.cs)
         BusinessTick(delta);                                // P5-F: the Ledger, businesses and prospecting: views, answers, where the hero is, screenshots
         WillTick(delta);                                    // P5-H: will answers, the will panel's view (StreetView.Will.cs)
         TreatTick(delta);                                   // P6-B1: the treatment queue performed at the second its work ends, cancelled by a step or a fight (StreetView.Treatment.cs)

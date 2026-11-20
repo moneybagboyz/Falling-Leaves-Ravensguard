@@ -25,6 +25,9 @@ public partial class SitePanel : Control
         public Action<bool>? Hire;
         public Action? Unload;
         public Action<bool>? HandWork;
+        /// <summary>P6-B6 (holdings 3.8): buy what the pile lacks and have it carted; post haul jobs for what the household holds elsewhere.</summary>
+        public Action? BuyDeliver;
+        public Action? PostHaul;
     }
 
     readonly ScreenRouter _router;
@@ -83,6 +86,10 @@ public partial class SitePanel : Control
         B(L.T("BUILD_SITE_UNLOAD"), () => _act.Unload?.Invoke(), 150);
         _handBtn = B("", () => { _act.HandWork?.Invoke(!_hand()); _shown = null; });
         var back = UiKit.Key(L.T("UI_BACK"), "menu.back", 120, 30); back.Pressed += _router.Pop; bar.AddChild(back);
+        var bar2 = new HBoxContainer(); bar2.AddThemeConstantOverride("separation", 6); root.AddChild(bar2);
+        Button B2(string t, Action a, int w = 200) { var b = Small(new Button { Text = t, CustomMinimumSize = new Vector2(w, 30), ClipText = true }); b.Pressed += a; bar2.AddChild(b); return b; }
+        B2(L.T("hw_q_buy_deliver"), () => _act.BuyDeliver?.Invoke(), 260);
+        B2(L.T("hw_q_post_haul"), () => _act.PostHaul?.Invoke(), 200);
         Build();
     }
 

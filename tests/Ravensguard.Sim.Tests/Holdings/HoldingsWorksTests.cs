@@ -217,7 +217,7 @@ public class HoldingsWorksTests(ITestOutputHelper output)
         book.Sync(nails);
         var q = Quotes.Buy(book, nails, qty);
         long coin0 = ctx.Coin; long pile0 = cw.PileOf(site).Qty(nails);
-        var r = p.Do(HoldingsDesk.BuyDeliver(site.Id, e.Goods.StringId(nails), qty, home, p.Sec));
+        var r = p.Do(HoldingsDesk.BuyDeliver(site.Id, e.Goods.StringId(nails), e.Goods.MassG(nails, qty), home, p.Sec));
         output.WriteLine(e.Goods.StringId(nails) + " x" + qty + ": " + r.Text.ToString() + " " + r.Mites);
         if (!r.Ok && r.Text.ToString().Contains("carter")) { output.WriteLine("no carter in this place"); return; }
         Assert.True(r.Ok, r.Text.ToString());
