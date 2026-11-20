@@ -108,7 +108,7 @@ public class FarmingSystemTests(ITestOutputHelper output)
             Assert.Equal(Cfg.Info(F.Crop[f]).BaseG(1100) * 580 / 1000, (long)F.YieldG[f]);     // 30,624 g for wheat
         w.Run(y, 28, 33); w.Run(y + 1, 1, 1);
         var e = w.Chron.ByType("farm.yield_loss").Single(x => x.Data["cause"] == "Drought");
-        Assert.Contains(e.Causes, c => c.Kind == CauseKind.Weather && c.Note.Contains("drought"));
+        Assert.Contains(e.Causes, c => c.Kind == CauseKind.Weather && c.NoteKey == "ch_why_loss_drought");
         Assert.True(e.Data["acres"] != "0");
     }
 
@@ -145,7 +145,7 @@ public class FarmingSystemTests(ITestOutputHelper output)
         var sum = w.State.Summaries.Single();
         Assert.True(sum.LostG[(int)LossCause.Frost] > 0);
         var e = w.Chron.ByType("farm.yield_loss").Single(x => x.Data["cause"] == "Frost");
-        Assert.Contains("late frost on day 14", e.Causes.Single().Note);
+        Assert.Equal("ch_why_loss_frost", e.Causes.Single().NoteKey); Assert.Equal(14, e.Causes.Single().NoteParams!.Single(p => p.Name == "day").Value);      // P6-E4: the note is a key and the day a parameter
         Assert.Equal(CauseKind.Weather, e.Causes.Single().Kind);
     }
 

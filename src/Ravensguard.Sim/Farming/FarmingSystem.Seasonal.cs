@@ -175,23 +175,23 @@ public sealed partial class FarmingSystem
             if (lost * 100 <= sum.Gross0G * 2) continue;                      // the spec's threshold: more than 2% of the region's yield
             string note = cause switch
             {
-                LossCause.Drought => "drought: the spring rains failed",
-                LossCause.Frost => $"late frost on day {FirstFrostDay(c)}",
-                LossCause.Hail => "hail flattened the standing crop",
-                LossCause.Blight => "blight in the grain",
-                LossCause.ColdSummer => "a cold summer",
-                LossCause.Winterkill => "winterkill: hard frost without snow cover",
-                LossCause.WetHarvest => "wet harvest: grain rotted in the sheaf",
-                LossCause.Overdue => "harvest overdue: too few hands",
-                LossCause.Waterlogged => "a wet year: waterlogged fields", LossCause.Trampling => "trampling by armies", LossCause.Fire => "fields burned", _ => "poor weeding",
+                LossCause.Drought => "ch_why_loss_drought",
+                LossCause.Frost => "ch_why_loss_frost",
+                LossCause.Hail => "ch_why_loss_hail",
+                LossCause.Blight => "ch_why_loss_blight",
+                LossCause.ColdSummer => "ch_why_loss_cold_summer",
+                LossCause.Winterkill => "ch_why_loss_winterkill",
+                LossCause.WetHarvest => "ch_why_loss_wet_harvest",
+                LossCause.Overdue => "ch_why_loss_overdue",
+                LossCause.Waterlogged => "ch_why_loss_waterlogged", LossCause.Trampling => "ch_why_loss_trampling", LossCause.Fire => "ch_why_loss_fire", _ => "ch_why_loss_weeds",
             };
             if (cause == LossCause.Weeds) continue;
-            var kind = cause switch { LossCause.Trampling => CauseKind.Raid, LossCause.Fire => CauseKind.Fire, LossCause.Overdue => CauseKind.Other, _ => CauseKind.Weather };
-            Chronicle.Add(new ChronicleEntry(NewEvent(), now, "farm.yield_loss", [], [new Cause(kind, null, note)],
+            var kind = cause switch { LossCause.Trampling => CauseKind.Raid, LossCause.Fire => CauseKind.Fire, LossCause.Overdue => CauseKind.Famine, _ => CauseKind.Weather };
+            Chronicle.Add(new ChronicleEntry(NewEvent(), now, "farm.yield_loss", [], [Why.Of(kind, note, ChronParam.Count("day", cause == LossCause.Frost ? FirstFrostDay(c) : 0))],
                 new Dictionary<string, string> { ["cause"] = cause.ToString(), ["year"] = sum.Year.ToString(), ["acres"] = sum.LostAcresByCause[(int)cause].ToString(), ["lost_g"] = lost.ToString(), ["of_yield_permille"] = (lost * 1000 / sum.Gross0G).ToString() }));
         }
         if (sum.UnharvestedAcres > 0)
-            Chronicle.Add(new ChronicleEntry(NewEvent(), now, "farm.unharvested", [], [new Cause(CauseKind.Famine, null, "fields unharvested")],
+            Chronicle.Add(new ChronicleEntry(NewEvent(), now, "farm.unharvested", [], [Why.Of(CauseKind.Famine, "ch_why_unharvested", ChronParam.Count("acres", sum.UnharvestedAcres))],
                 new Dictionary<string, string> { ["year"] = sum.Year.ToString(), ["acres"] = sum.UnharvestedAcres.ToString() }));
     }
 

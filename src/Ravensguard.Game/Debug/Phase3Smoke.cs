@@ -150,7 +150,7 @@ public static class Phase3Smoke
             if (router.Top != sv) throw new Exception("the street view is not on top");
 
             // every screen: open as its key does, it fits the window, Esc comes back (the control rects stay inside the viewport)
-            foreach (var what in new[] { "trade", "barter", "inventory", "character", "squad", "crafting", "talk", "journal", "autopilot", "map", "picker", "jobs", "codex", "qmenu", "overlay", "land", "deeds", "ledger", "business", "prospect", "will", "treatment", "family", "family_full", "court", "workboard", "workboard_mine", "heist", "faction", "bondage", "bondage_slaves", "bondage_bond" })   // P6-D3: the heist panel P6-C2: the contracts screen, on the board and on the Taken tab; P6-B1: the treatment screen; P6-B3: the Family panel, empty and full; P5-A2: land, deeds; P5-F: the Ledger, the business panel, prospecting; P5-H: the will panel
+            foreach (var what in new[] { "trade", "barter", "inventory", "character", "squad", "crafting", "talk", "journal", "autopilot", "map", "picker", "jobs", "codex", "qmenu", "overlay", "land", "deeds", "ledger", "business", "prospect", "will", "treatment", "family", "family_full", "court", "workboard", "workboard_mine", "heist", "faction", "chronicle", "bondage", "bondage_slaves", "bondage_bond" })   // P6-E4: the Chronicle; P6-D3: the heist panel P6-C2: the contracts screen, on the board and on the Taken tab; P6-B1: the treatment screen; P6-B3: the Family panel, empty and full; P5-A2: land, deeds; P5-F: the Ledger, the business panel, prospecting; P5-H: the will panel
             {
                 int depth = router.Depth;
                 if (!sv.DebugOpen(what)) throw new Exception("unknown screen " + what);
@@ -303,6 +303,26 @@ public static class Phase3Smoke
             if (router.Top != sv) throw new Exception("a screen key opened " + router.Top?.GetType().Name + " under the succession screen");
             sv.DebugCloseSuccession(); await Frames(tree, 3);
             GD.Print("[smoke]   succession screen with the estate: fits, keys guarded");
+            // P6-E4 (chronicle-full 4.4, CH-10): H opens the Chronicle (My life); every view fits 960x540; in the Legends F follows a cause back, D a consequence forward, Backspace returns, Esc closes it
+            Key(Godot.Key.H); await Frames(tree, 3); await Until(tree, () => router.Top is UI.ChronicleScreen { Browser: not null }, 600);
+            if (router.Top is not UI.ChronicleScreen chron) throw new Exception("H did not open the Chronicle (top " + router.Top?.GetType().Name + ")");
+            Fit(router.Top!, "the Chronicle, My life", view);
+            for (int i = 0; i < 3; i++) { Key(Godot.Key.E); await Frames(tree, 3); Fit(router.Top!, "the Chronicle, view " + chron.Browser?.Scope, view); }
+            if (chron.Browser is not { Scope: Ravensguard.Sim.Core.ChronicleScope.Legends } cb) throw new Exception("E did not turn the Chronicle to the Legends (browser " + (chron.Browser == null ? "none" : chron.Browser.Scope + ", " + chron.Browser.Rows.Count + " rows") + ")");
+            var linked = cb.Rows.FirstOrDefault(r => cb.Why(r).Any(w => w.Entry != null)) ?? throw new Exception("the Legends hold no entry with a cause");
+            cb.Open(linked.Id); chron.DebugRefresh(); await Frames(tree, 2);
+            int d0 = cb.TrailDepth; Key(Godot.Key.F); await Frames(tree, 3);
+            if (cb.TrailDepth != d0 + 1) throw new Exception("F did not follow the cause back");
+            Fit(router.Top!, "the Chronicle after F", view);
+            Key(Godot.Key.D); await Frames(tree, 3);
+            if (cb.TrailDepth != d0 + 2) throw new Exception("D did not follow the consequence forward");
+            Key(Godot.Key.Backspace); await Frames(tree, 3);
+            if (cb.TrailDepth != d0 + 1) throw new Exception("Backspace did not return");
+            Key(Godot.Key.Escape); await Frames(tree, 4);
+            foreach (var k in new[] { Godot.Key.H, Godot.Key.E, Godot.Key.F, Godot.Key.D, Godot.Key.Backspace }) Input.ParseInputEvent(new InputEventKey { Keycode = k, PhysicalKeycode = k, Pressed = false });   // released: D is a walk key outside the Chronicle
+            await Frames(tree, 1);
+            if (router.Top != sv) throw new Exception("Esc did not close the Chronicle");
+            GD.Print("[smoke]   the Chronicle: H opens it, every view fits, F and D follow the chain, Backspace returns, Esc closes it");
         }
         finally { win.Size = oldSize; await Frames(tree, 2); }
     }

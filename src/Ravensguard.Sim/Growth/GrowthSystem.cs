@@ -418,7 +418,7 @@ public sealed class GrowthSystem
         yr.CottagesBuilt++;
         ob.Count("cottages_built");
         var hht = W.Households;
-        ob.Chronicle(now, "cottage_built", [hht.IdOf(p.Payer)], [new Cause(CauseKind.Other, null, "couples waited for a home and the household had the coin, poles, daub and thatch")],
+        ob.Chronicle(now, "cottage_built", [hht.IdOf(p.Payer)], [Why.Of(CauseKind.Migration, "ch_why_cottage", ChronParam.Person("owner", hht.IdOf(p.Payer)), ChronParam.Place("place", Region.Settlements[p.Settlement].Id))],
             ("settlement", Region.Settlements[p.Settlement].Name), ("kind", p.Dwelling.ToString()), ("hours", p.HoursNeeded.ToString()), ("paid", p.PaidMites.ToString()));
     }
 
@@ -500,7 +500,7 @@ public sealed class GrowthSystem
         }
         yr.AcresCleared += tiles.Length;
         ob.Count("acres_assarted", tiles.Length);
-        ob.Chronicle(now, "land_cleared", [W.Households.IdOf(p.Payer)], [new Cause(CauseKind.Other, null, "too few arable acres for the people of the village")],
+        ob.Chronicle(now, "land_cleared", [W.Households.IdOf(p.Payer)], [Why.Of(CauseKind.Famine, "ch_why_assart", ChronParam.Place("place", st.Id))],
             ("settlement", st.Name), ("acres", tiles.Length.ToString()), ("wood_kg", (wood / 1000).ToString()));
         return true;
     }
@@ -584,7 +584,7 @@ public sealed class GrowthSystem
             if (premises != null) Sites!.Started(premises, now);                                    // P5-D
             yr.BusinessesOpened++; opened++;
             ob.Count("businesses_opened");
-            ob.Chronicle(now, "business_opened", [pt.IdOf(owner)], [new Cause(CauseKind.MarketDrift, null, "the good was dear and short for seasons on end")],
+            ob.Chronicle(now, "business_opened", [pt.IdOf(owner)], [Why.Of(CauseKind.MarketDrift, "ch_why_business_drift", ChronParam.Place("place", Region.Settlements[s].Id))],
                 ("settlement", Region.Settlements[s].Name), ("kind", kind.Id));
         }
         if (opened > 0) _ew.Labour.Rebuild();

@@ -35,7 +35,7 @@ public sealed class SiteSystem : AbstractSystem
         {
             if (!book.LegendsSeeded) { book.LegendsSeeded = true; Legends(ctx, region); }
             if (ctx.HourOfDay != 23) return;
-            void Chron(string type, Site? site, string note, (string, string)[] data) => ctx.Outbox.Chronicle(ctx.Time, type, site == null ? [] : [site.Id], [new Cause(type == "mine_flooded" ? CauseKind.Weather : CauseKind.Other, null, note)], data);
+            void Chron(string type, Site? site, string note, (string, string)[] data) => ctx.Outbox.Chronicle(ctx.Time, type, site == null ? [] : [site.Id], [Why.Of(type == "mine_flooded" ? CauseKind.Weather : CauseKind.Raid, note, ChronParam.Place("site", site?.Id ?? EntityId.None))], data);
             Daily(book, content, region, ctx.Seed, (int)ctx.Day, Chron);
             if (ctx.Time.DayOfYear == Core.TimeConst.DaysPerYear) Yearly(book, content, region, ctx.Seed, ctx.Year);
         }
@@ -48,7 +48,7 @@ public sealed class SiteSystem : AbstractSystem
         {
             if (!s.MonsterLair) continue;
             int near = Nearest(region, s);
-            ctx.Outbox.Chronicle(ctx.Time, "lair_legend", [s.Id], [new Cause(CauseKind.Other, s.HistoryEvent == EntityId.None ? null : s.HistoryEvent, "an old tale")],
+            ctx.Outbox.Chronicle(ctx.Time, "lair_legend", [s.Id], [Why.After(CauseKind.Raid, s.HistoryEvent == EntityId.None ? null : s.HistoryEvent, "ch_why_lair_tale", ChronParam.Place("site", s.Id))],
                 ("site", s.Name), ("monster", s.LairKind), ("settlement", near >= 0 ? region.Settlements[near].Name : ""), ("text_key", "ex_chron_legend"));
         }
     }
@@ -77,7 +77,7 @@ public sealed class SiteSystem : AbstractSystem
                 r.FloodSince = (long)(day + 1) * 86400;
                 if (r.Map is { } m) m.FloodCm[m.Levels - 1] = Math.Max(m.FloodCm[m.Levels - 1], c.K.FloodHours * c.K.FloodRiseCmPerHour);
                 int near = Nearest(region, s);
-                chronicle("mine_flooded", s, $"heavy rain for {heavy} hours", [("site", s.Name), ("settlement", near >= 0 ? region.Settlements[near].Name : ""), ("text_key", "ex_chron_flooded")]);
+                chronicle("mine_flooded", s, "ch_why_heavy_rain", [("site", s.Name), ("settlement", near >= 0 ? region.Settlements[near].Name : ""), ("text_key", "ex_chron_flooded")]);
             }
         }
         foreach (var (id, r) in book.Records)
@@ -96,7 +96,7 @@ public sealed class SiteSystem : AbstractSystem
             m.Inhabitants.AddRange(band);
             r.Reoccupied++; r.Cleared = -1;
             var site = region.Sites.FirstOrDefault(x => x.Id.Value == id);
-            chronicle("site_reoccupied", site, "a band of outlaws moved in", [("site", site?.Name ?? ""), ("band", band.Count.ToString()), ("text_key", "ex_chron_reoccupied")]);
+            chronicle("site_reoccupied", site, "ch_why_outlaws_moved_in", [("site", site?.Name ?? ""), ("band", band.Count.ToString()), ("text_key", "ex_chron_reoccupied")]);
         }
     }
 

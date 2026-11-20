@@ -342,7 +342,7 @@ public sealed partial class ConstructionWorld
         PileOf(s);
         Book.Placed[s.Pile] = new PlacedStore(s.Pile, px, py, 0);
         if (Book.AdvancedSec < 0 || !Busy()) Book.AdvancedSec = nowSec / Rules.QuantumSeconds * Rules.QuantumSeconds;
-        Chron(nowSec, "site_started", [owner, s.Id], [new Cause(CauseKind.Other, null, blueprint.Length > 0 ? "a plan placed" : "ghosts placed")], ("blueprint", blueprint), ("x", px.ToString()), ("y", py.ToString()));
+        Chron(nowSec, "site_started", [owner, s.Id], [Why.Of(CauseKind.Trade, blueprint.Length > 0 ? "ch_why_plan_placed" : "ch_why_ghosts_placed", ChronParam.Person("owner", owner))], ("blueprint", blueprint), ("x", px.ToString()), ("y", py.ToString()));
         return s;
     }
 

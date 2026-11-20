@@ -141,7 +141,7 @@ public sealed class PopulationDailySystem : AbstractSystem
             int len = DetRng.Range(w.Seed, ctx.Hour, id, VitalStreams.Outbreak, 1, 8, 21);
             bool severe = DetRng.Range(w.Seed, ctx.Hour, id, VitalStreams.Outbreak, 2, 0, 100) < r.OutbreakSeverePct;
             v.OutbreakEndDay[s] = day + len; v.OutbreakMult[s] = severe ? r.OutbreakSevereMultPermille : r.OutbreakMildMultPermille;
-            var eid = ctx.Outbox.Chronicle(ctx.Time, "outbreak", [settlements[s].Id], [new Cause(CauseKind.Disease, null, ctx.Season == Season.Winter ? "winter coughs and fevers" : "summer flux")],
+            var eid = ctx.Outbox.Chronicle(ctx.Time, "outbreak", [settlements[s].Id], [Why.Of(CauseKind.Disease, ctx.Season == Season.Winter ? "ch_why_outbreak_winter" : "ch_why_outbreak_summer", ChronParam.Place("place", settlements[s].Id))],
                 ("settlement", settlements[s].Name), ("days", len.ToString()), ("severity", severe ? "severe" : "mild"));
             v.OutbreakEntry[s] = eid.Value;
         }
@@ -201,8 +201,8 @@ public sealed class PopulationDailySystem : AbstractSystem
                 }
         }
         foreach (var k in new[] { CauseKind.Weather, CauseKind.War, CauseKind.Raid })
-            if (tally.TryGetValue(k, out var t) && (tally.Count(x => x.Value.N > t.N) == 0)) return new Cause(k, t.Last, $"{t.N} such events in the last 120 days");
-        return new Cause(CauseKind.MarketDrift, null, $"{hungry} of {total} households under 3 days of food: supply fell short of demand");
+            if (tally.TryGetValue(k, out var t) && (tally.Count(x => x.Value.N > t.N) == 0)) return Why.After(k, t.Last, "ch_why_famine_events", ChronParam.Count("n", t.N));
+        return Why.Of(CauseKind.MarketDrift, "ch_why_famine_drift", ChronParam.Count("hungry", hungry), ChronParam.Count("total", total));
     }
 }
 

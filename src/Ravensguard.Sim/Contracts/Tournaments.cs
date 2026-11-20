@@ -35,7 +35,7 @@ public static class Tournaments
             int f = w.FiefOf(s); var issuer = f >= 0 && f < w.FiefIds.Length ? w.FiefIds[f] : w.Ledger.OwnerOf(treasury);
             var ps = new List<ChronParam> { ChronParam.Mites("purse", t.PurseMites), ChronParam.Count("fair", t.FairDay) };
             if (w.PlaceId(s) != EntityId.None) ps.Add(ChronParam.Place("place", w.PlaceId(s)));
-            var e = new ChronicleEntry(w.Ids.Allocate(IdKind.Event), new GameTime(day * 86_400L), "tournament_announced", [issuer], [new Cause(CauseKind.Other, null, NoteKey: "ch_note_tournament_fair")],
+            var e = new ChronicleEntry(w.Ids.Allocate(IdKind.Event), new GameTime(day * 86_400L), "tournament_announced", [issuer], [new Cause(CauseKind.Trade, null, NoteKey: "ch_note_tournament_fair")],
                 new Dictionary<string, string> { ["tournament"] = N(tid), ["settlement"] = w.PlaceName(s), ["purse"] = N(t.PurseMites), ["fair_day"] = N(t.FairDay) }, TextKey: "ch_tournament_announced", Params: ps);
             w.Chronicle.Add(e);
             // the entry contract: the purse is its escrow; the board lists it until the fair day
@@ -157,7 +157,7 @@ public static class Tournaments
         t.Paid = true;
         var ps = new List<ChronParam> { ChronParam.Person("winner", new EntityId(winner)), ChronParam.Mites("purse", paid) };
         if (w.PlaceId(t.Settlement) != EntityId.None) ps.Add(ChronParam.Place("place", w.PlaceId(t.Settlement)));
-        var e = new ChronicleEntry(w.Ids.Allocate(IdKind.Event), new GameTime(day * 86_400L + 18 * 3600), "tournament_won", [new EntityId(winner)], [new Cause(CauseKind.Other, null, NoteKey: "ch_note_tournament_final")],
+        var e = new ChronicleEntry(w.Ids.Allocate(IdKind.Event), new GameTime(day * 86_400L + 18 * 3600), "tournament_won", [new EntityId(winner)], [new Cause(CauseKind.Trade, null, NoteKey: "ch_note_tournament_final")],
             new Dictionary<string, string> { ["tournament"] = N(t.Id), ["settlement"] = w.PlaceName(t.Settlement), ["paid"] = N(paid), ["who"] = w.Name(new EntityId(winner)), ["hero"] = new EntityId(winner) == w.HeroId ? "1" : "0" }, TextKey: "ch_tournament_won", Params: ps);
         w.Chronicle.Add(e);
         foreach (var c in book.Contracts.Values.Where(x => x.Kind == "tournament_entry" && x.Param == t.Id && x.Live)) { c.State = WorkState.Done; c.ClosedDay = day; c.Taker = new EntityId(winner); c.Evidence.Add(e.Id.Value); }

@@ -45,7 +45,7 @@ public static class ContractSystem
         ps.Add(ChronParam.Count("days", days));
         var data = new Dictionary<string, string> { ["need"] = need, ["settlement"] = w.PlaceName(settlement) };
         if (good != ushort.MaxValue) { data["good"] = N(good); data["grams"] = N(qty); }
-        var e = new ChronicleEntry(w.Ids.Allocate(IdKind.Event), new GameTime(sec), "work_need", subjects, [new Cause(CauseKind.Other, null, NoteKey: "ch_note_ct_need_" + need)], data, TextKey: "ch_work_need", Params: ps);
+        var e = new ChronicleEntry(w.Ids.Allocate(IdKind.Event), new GameTime(sec), "work_need", subjects, [new Cause(CauseKind.Trade, null, NoteKey: "ch_note_ct_need_" + need)], data, TextKey: "ch_work_need", Params: ps);
         w.Chronicle.Add(e);
         return e;
     }
@@ -69,7 +69,7 @@ public static class ContractSystem
         var ps = new List<ChronParam> { ChronParam.TextKey("kind", "ct_kind_" + kindId), ChronParam.Mites("pay", pay), ChronParam.Count("deadline", c.DeadlineDay) };
         if (w.PlaceId(settlement) != EntityId.None) ps.Add(ChronParam.Place("place", w.PlaceId(settlement)));
         var subjects = new List<EntityId>(); if (issuer != EntityId.None) subjects.Add(issuer);
-        var e = new ChronicleEntry(w.Ids.Allocate(IdKind.Event), new GameTime(day * 86_400L + 3600), "work_posted", subjects, [new Cause(CauseKind.Other, cause.Id)],
+        var e = new ChronicleEntry(w.Ids.Allocate(IdKind.Event), new GameTime(day * 86_400L + 3600), "work_posted", subjects, [new Cause(CauseKind.Trade, cause.Id)],
             new Dictionary<string, string> { ["contract"] = N(id), ["kind"] = kindId, ["pay"] = N(pay), ["deadline"] = N(c.DeadlineDay), ["why"] = k.Why }, TextKey: "ch_work_posted", Params: ps);
         w.Chronicle.Add(e); c.PostedEntry = e.Id.Value;
         book.Contracts[id] = c;
@@ -108,7 +108,7 @@ public static class ContractSystem
         c.State = WorkState.Taken; c.Taker = taker; c.ByCompany = byCompany; c.TakenDay = day;
         if (c.Good >= 0 && c.TargetOwner != EntityId.None) { c.Baseline = w.StoreQty(c.TargetOwner, (ushort)c.Good); c.Delivered = 0; }
         var ps = new List<ChronParam> { ChronParam.TextKey("kind", "ct_kind_" + c.Kind) }; ps.Insert(0, ChronParam.Person("taker", taker));
-        var e = new ChronicleEntry(w.Ids.Allocate(IdKind.Event), new GameTime(day * 86_400L + 7200), "work_taken", byCompany ? [] : [taker], [new Cause(CauseKind.Other, new EntityId(c.PostedEntry))],
+        var e = new ChronicleEntry(w.Ids.Allocate(IdKind.Event), new GameTime(day * 86_400L + 7200), "work_taken", byCompany ? [] : [taker], [new Cause(CauseKind.Trade, new EntityId(c.PostedEntry))],
             new Dictionary<string, string> { ["contract"] = N(id), ["kind"] = c.Kind, ["hero"] = taker == w.HeroId ? "1" : "0" }, TextKey: "ch_work_taken", Params: ps);
         w.Chronicle.Add(e); c.Evidence.Add(e.Id.Value);
         return TakeResult.Taken;
@@ -203,7 +203,7 @@ public static class ContractSystem
         var subjects = new List<EntityId>();
         if (person) { if (!c.ByCompany) subjects.Add(c.Taker); ps.Insert(0, ChronParam.Person("taker", c.Taker)); }
         if (w.PlaceId(c.Settlement) != EntityId.None) ps.Add(ChronParam.Place("place", w.PlaceId(c.Settlement)));
-        var causes = new List<Cause> { new(CauseKind.Other, new EntityId(c.PostedEntry)) };
+        var causes = new List<Cause> { new(CauseKind.Trade, new EntityId(c.PostedEntry)) };
         var data = new Dictionary<string, string> { ["contract"] = N(c.Id), ["kind"] = c.Kind, ["paid"] = N(paid), ["pm"] = N(pm), ["hero"] = person && c.Taker == w.HeroId ? "1" : "0", ["settlement"] = w.PlaceName(c.Settlement), ["who"] = person ? w.Name(c.Taker) : "" };
         var e = new ChronicleEntry(w.Ids.Allocate(IdKind.Event), new GameTime(day * 86_400L), type, subjects, causes, data, TextKey: key, Params: ps);
         w.Chronicle.Add(e); c.Evidence.Add(e.Id.Value);

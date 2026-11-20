@@ -178,7 +178,7 @@ public static class Marriage
         if (w.Rates.ChronicleEveryEvent || notable)
         {
             int hh = pt.Household[man];
-            ob.Chronicle(when, "marriage", [pt.IdOf(woman), pt.IdOf(man)], [new Cause(CauseKind.Other, null, "a wedding: the couple found a home")],
+            ob.Chronicle(when, "marriage", [pt.IdOf(woman), pt.IdOf(man)], [Why.Of(CauseKind.Family, "ch_why_wedding", ChronParam.Person("bride", pt.IdOf(woman)), ChronParam.Person("groom", pt.IdOf(man)))],
                 ("bride", pt.FullName(woman)), ("groom", pt.FullName(man)), ("settlement", w.Population.Region.Settlements[w.Households.Settlement[hh]].Name));
         }
     }

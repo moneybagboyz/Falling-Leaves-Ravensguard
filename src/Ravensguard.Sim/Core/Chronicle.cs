@@ -31,7 +31,7 @@ public sealed class Chronicle
 {
     private readonly Dictionary<EntityId, ChronicleEntry> _byId = new();
     private readonly List<ChronicleEntry> _all = new();
-    private readonly EffectIndex _effects = new();
+    private EffectIndex _effects = new();
 
     public int Count => _all.Count;
     public IReadOnlyList<ChronicleEntry> All => _all;
@@ -43,6 +43,17 @@ public sealed class Chronicle
         if (!_byId.TryAdd(entry.Id, entry)) throw new ArgumentException($"Duplicate chronicle id {entry.Id}.");
         _all.Add(entry);
         _effects.Add(entry);
+    }
+
+    /// <summary>
+    /// Replaces every entry (compaction, chronicle-full 4.5): the list and the effect index are rebuilt from <paramref name="entries"/>, in the order given. Entries are never edited, only dropped
+    /// or summarised by <see cref="ChronicleCompaction"/>.
+    /// </summary>
+    public void Rebuild(IEnumerable<ChronicleEntry> entries)
+    {
+        var list = entries.ToList();
+        _all.Clear(); _byId.Clear(); _effects = new EffectIndex();
+        foreach (var e in list) Add(e);
     }
 
     public ChronicleEntry? Get(EntityId id) => _byId.GetValueOrDefault(id);
@@ -59,22 +70,23 @@ public sealed class Chronicle
 
     /// <summary>
     /// Specific causes, measured (chronicle-full 4.2): entries with at least one specific cause over the entries that are not market-drift labels (1 when none). A cause is
-    /// specific when its kind is not Unknown, Other or MarketDrift and it names an earlier entry, or (for a type whose row accepts a note) carries a note key from the row's allowed list.
+    /// specific when its kind is not Unknown, Other or MarketDrift and it names an earlier entry (of this chronicle or of <c>older</c>, the world history a played region continues), or (for a type whose row accepts a note) carries a note key from the row's allowed list.
     /// </summary>
-    public CoverageReport SpecificCoverage(ChronicleTypes? types = null, Func<ChronicleEntry, bool>? filter = null)
+    public CoverageReport SpecificCoverage(ChronicleTypes? types = null, Func<ChronicleEntry, bool>? filter = null, Chronicle? older = null)
     {
-        int total = 0, specific = 0, drift = 0, noCause = 0;
+        int total = 0, specific = 0, drift = 0, noCause = 0, summaries = 0;
         foreach (var e in _all)
         {
             if (filter != null && !filter(e)) continue;
             total++;
+            if (e.TypeId == ChronicleCompaction.SummaryType) { summaries++; continue; }          // a yearly summary of compacted entries is bookkeeping, counted apart like a drift label
             bool isDrift = e.Causes.Any(c => c.Kind == CauseKind.MarketDrift);
             if (e.Causes.Count == 0) noCause++;
             if (isDrift) { drift++; continue; }
             var row = types?.Get(e.TypeId);
-            if (e.Causes.Any(c => IsSpecific(c, e, row))) specific++;
+            if (e.Causes.Any(c => IsSpecific(c, e, row, older))) specific++;
         }
-        return new CoverageReport(total, specific, drift, noCause);
+        return new CoverageReport(total, specific, drift, noCause, summaries);
     }
 
     /// <summary>
@@ -98,19 +110,19 @@ public sealed class Chronicle
     }
 
     /// <summary>One cause is specific under <paramref name="row"/>'s rule (<c>event</c>, <c>note</c> or <c>either</c>; no row means <c>event</c>).</summary>
-    public bool IsSpecific(Cause c, ChronicleEntry owner, ChronicleTypeRow? row)
+    public bool IsSpecific(Cause c, ChronicleEntry owner, ChronicleTypeRow? row, Chronicle? older = null)
     {
         if (c.Kind is CauseKind.Unknown or CauseKind.Other or CauseKind.MarketDrift) return false;
         string need = row?.SpecificRequires ?? "event";
-        bool ev = c.EventId is { } id && Get(id) is { } cause && cause.When.Seconds <= owner.When.Seconds && !cause.Id.Equals(owner.Id);
+        bool ev = c.EventId is { } id && (Get(id) ?? older?.Get(id)) is { } cause && cause.When.Seconds <= owner.When.Seconds && !cause.Id.Equals(owner.Id);
         bool note = c.NoteKey.Length > 0 && row != null && row.NoteKeys.Contains(c.NoteKey);
         return need switch { "note" => note, "either" => ev || note, _ => ev };
     }
 }
 
-/// <summary>The measure of <see cref="Chronicle.SpecificCoverage"/>: entries counted, those with a specific cause, the market-drift labels (excluded from the denominator) and entries with no cause at all.</summary>
-public readonly record struct CoverageReport(int Entries, int Specific, int Drift, int NoCause)
+/// <summary>The measure of <see cref="Chronicle.SpecificCoverage"/>: entries counted, those with a specific cause, the market-drift labels (excluded from the denominator) and entries with no cause at all (and, apart, the yearly summaries of compacted entries).</summary>
+public readonly record struct CoverageReport(int Entries, int Specific, int Drift, int NoCause, int Summaries = 0)
 {
-    public int Denominator => Entries - Drift;
+    public int Denominator => Entries - Drift - Summaries;
     public double Ratio => Denominator <= 0 ? 1.0 : (double)Specific / Denominator;
 }

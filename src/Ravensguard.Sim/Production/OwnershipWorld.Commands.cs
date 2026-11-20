@@ -60,7 +60,7 @@ public sealed partial class OwnershipWorld
         if (capital > 0) Econ.Ledger.Transfer(HeroPurse, b.Purse, new Coin(capital), TransferReason.Gift);
         b.Capital = capital; b.CashStart = capital;
         var h = Hold(b); h.FoundedDay = day; h.HandsOn = true; if (structure > 0) h.Premises.Add(structure);
-        Event(day, "business_founded", [Hero, b.Id], [new Cause(CauseKind.Trade, null, "the hero opened it")], ("settlement", Pop.Region.Settlements[settlement].Name), ("kind", kind.Id), ("capital", capital.ToString()), ("stations", b.Stations.Count.ToString()));
+        Event(day, "business_founded", [Hero, b.Id], [Why.Of(CauseKind.Trade, "ch_why_hero_opened", ChronParam.Person("who", Hero))], ("settlement", Pop.Region.Settlements[settlement].Name), ("kind", kind.Id), ("capital", capital.ToString()), ("stations", b.Stations.Count.ToString()));
         return new OwnResult(true, "bz_founded", [Name(b), b.Stations.Count, M(capital)], capital, b.Id);
     }
 
@@ -120,7 +120,7 @@ public sealed partial class OwnershipWorld
         var h = Hold(b); h.HandsOn = true; h.FoundedDay = day;
         h.Shares.RemoveAll(s => s.Holder == Hero);
         if (b.Lot >= 0) Land?.ConveyLot(b.Settlement, b.Lot, Hero, PurseKind.Person, day, Ravensguard.Sim.Land.DeedCause.Bought);
-        Event(day, "business_bought", [Hero, b.Id], [new Cause(CauseKind.Trade, null, "bought at its value")], ("settlement", Pop.Region.Settlements[b.Settlement].Name), ("price", price.ToString()));
+        Event(day, "business_bought", [Hero, b.Id], [Why.Of(CauseKind.Trade, "ch_why_bought_value", ChronParam.Person("who", Hero))], ("settlement", Pop.Region.Settlements[b.Settlement].Name), ("price", price.ToString()));
         return new OwnResult(true, "bz_bought", [Name(b), M(price)], price, b.Id);
     }
 
@@ -143,7 +143,7 @@ public sealed partial class OwnershipWorld
         h.HandsOn = false;
         int i = h.Shares.FindIndex(s => s.Holder == Hero);
         if (i >= 0) h.Shares[i] = h.Shares[i] with { Pm = h.Shares[i].Pm + pm }; else { h.Shares.Add(new ShareRow(Hero, pm)); h.Shares.Sort((x, y) => x.Holder.CompareTo(y.Holder)); }
-        Event(day, "share_bought", [Hero, b.Id], [new Cause(CauseKind.Trade, null, "a share of the business")], ("pm", pm.ToString()), ("price", price.ToString()));
+        Event(day, "share_bought", [Hero, b.Id], [Why.Of(CauseKind.Trade, "ch_why_share_bought", ChronParam.Person("who", Hero))], ("pm", pm.ToString()), ("price", price.ToString()));
         return new OwnResult(true, "bz_share_bought", [pm / 10, Name(b), M(price)], price, b.Id);
     }
 
@@ -158,7 +158,7 @@ public sealed partial class OwnershipWorld
         if (!Econ.Ledger.Transfer(Econ.HouseholdPurse[hh], HeroPurse, new Coin(price), TransferReason.ShareSale)) return OwnResult.No("bz_share_no_buyer", M(price));
         h.Shares.RemoveAt(i);
         if (h.Shares.Count == 0 && !IsHeroOwner(b)) { Book.Holdings.Remove(b.Id); _steeredCount = -1; }
-        Event(day, "share_sold", [Hero, b.Id], [new Cause(CauseKind.Trade, null, "sold back to the owner")], ("pm", pm.ToString()), ("price", price.ToString()));
+        Event(day, "share_sold", [Hero, b.Id], [Why.Of(CauseKind.Trade, "ch_why_share_sold", ChronParam.Person("who", Hero))], ("pm", pm.ToString()), ("price", price.ToString()));
         return new OwnResult(true, "bz_share_sold", [pm / 10, Name(b), M(price)], price, b.Id);
     }
 
@@ -202,7 +202,7 @@ public sealed partial class OwnershipWorld
         Prod.Employ(b, person, occ);
         pt.Employer[person] = b.Owner;
         Hold(b).Wages[person] = wagePerDay;
-        Event(day, "hired", [Hero, pt.IdOf(person), b.Id], [new Cause(CauseKind.Trade, null, old != null ? "a better wage" : "work")], ("wage", wagePerDay.ToString()), ("occupation", occ.ToString()));
+        Event(day, "hired", [Hero, pt.IdOf(person), b.Id], [Why.Of(CauseKind.Trade, old != null ? "ch_why_hired_better" : "ch_why_hired_work", ChronParam.Person("who", pt.IdOf(person)))], ("wage", wagePerDay.ToString()), ("occupation", occ.ToString()));
         return new OwnResult(true, old != null ? "bz_hired_away" : "bz_hired", [pt.FullName(person), Name(b), M(wagePerDay)], wagePerDay, b.Id);
     }
 
@@ -242,7 +242,7 @@ public sealed partial class OwnershipWorld
             pt.Occupation[person] = Occupation.Steward; pt.Employer[person] = HeroRow(); pt.WorkSettlement[person] = b.Settlement; pt.WorkLot[person] = (short)Math.Max(-1, b.Lot);
         }
         h.Steward = person; h.StewardWage = Rules.StewardWageMitesPerDay; h.StewardShortDays = 0; h.HandsOn = false;
-        Event(day, "steward_hired", [Hero, pt.IdOf(person), b.Id], [new Cause(CauseKind.Trade, null, "to run it")], ("trading", tr.ToString()), ("leadership", ld.ToString()));
+        Event(day, "steward_hired", [Hero, pt.IdOf(person), b.Id], [Why.Of(CauseKind.Trade, "ch_why_steward", ChronParam.Person("who", pt.IdOf(person)))], ("trading", tr.ToString()), ("leadership", ld.ToString()));
         return new OwnResult(true, "bz_steward_hired", [pt.FullName(person), Name(b), StewardBrain.LagDays(tr, Rules)], h.StewardWage, b.Id);
     }
 

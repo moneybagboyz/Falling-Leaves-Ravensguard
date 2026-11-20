@@ -276,7 +276,7 @@ public sealed class MeleeWorld
 
         double loss = f.BloodLossFrac;
         f.Weakened = loss >= MeleeRules.ShockWeak;
-        if (loss >= MeleeRules.ShockDead) { Kill(f, "bled out"); return; }
+        if (loss >= MeleeRules.ShockDead) { FighterDies(f, "bled out"); return; }
         if (f.CollapseTick >= 0 && Tick >= f.CollapseTick && f.State != Act.Down) GoDown(f, DownReason.Heart, "collapses (heart wound)");
         else if (loss >= MeleeRules.ShockCollapse && f.State != Act.Down)
             GoDown(f, DownReason.Blood, loss >= MeleeRules.ShockUnconscious ? "falls unconscious from blood loss" : "collapses from blood loss");
@@ -297,7 +297,7 @@ public sealed class MeleeWorld
         }
     }
 
-    private void Kill(Fighter f, string why)
+    private void FighterDies(Fighter f, string why)
     {
         if (f.State == Act.Dead) return;
         f.State = Act.Dead; f.Req = null;
@@ -506,7 +506,7 @@ public sealed class MeleeWorld
             ApplyFunctionLoss(t, w);
             if (w.StructureId == "brain")
             {
-                if (w.Kind == WoundKind.Cut) { Kill(t, "brain destroyed"); }
+                if (w.Kind == WoundKind.Cut) { FighterDies(t, "brain destroyed"); }
                 else { t.Pain += 200; }
             }
             if (w.StructureId == "heart" && t.CollapseTick < 0) t.CollapseTick = Tick + 6 * MeleeRules.TickHz;

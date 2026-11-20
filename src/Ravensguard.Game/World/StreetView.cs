@@ -1458,6 +1458,7 @@ public partial class StreetView : Control, IHandlesBack
         else if (Actions.Pressed(e, "world.panel_journal")) OpenJournal();
         else if (Actions.Pressed(e, "world.panel_ledger")) OpenLedger();             // P5-F: L opens the Ledger
         else if (Actions.Pressed(e, "world.panel_faction")) OpenFaction();          // P6-D2: F opens the Faction screen
+        else if (Actions.Pressed(e, "world.panel_chronicle")) OpenChronicle();      // P6-E4: H opens the Chronicle
         else if (Actions.Pressed(e, "world.combat_log")) OpenCombatLog();         // P4-D: F7 and Shift+F7 outside a fight (the last fight's log and report)
         else if (Actions.Pressed(e, "world.last_report")) OpenLastReport();
         else if (Actions.Pressed(e, "world.context_menu")) OpenQMenu();

@@ -641,7 +641,7 @@ public sealed class EstateWorld
     private void Chronicle(Estate est, long sec, Plan p)
     {
         int lord = est.Holdings.Count(h => h.Escheat), kin = est.Holdings.Count(h => !h.Escheat);
-        State.Chronicle.Add(new ChronicleEntry(State.Ids.Allocate(IdKind.Event), new GameTime(sec), "estate_settled", [p.Dead], [new Cause(CauseKind.Death, null, "the death of the holder")],
+        State.Chronicle.Add(new ChronicleEntry(State.Ids.Allocate(IdKind.Event), new GameTime(sec), "estate_settled", [p.Dead], [Why.Of(CauseKind.Death, "ch_why_holder_died", ChronParam.Person("dead", p.Dead))],
             new Dictionary<string, string>
             {
                 ["name"] = p.DeadName, ["holdings"] = est.Holdings.Count.ToString(CultureInfo.InvariantCulture), ["to_kin"] = kin.ToString(CultureInfo.InvariantCulture),
@@ -758,7 +758,7 @@ public sealed class EstateWorld
                         if (pay > 0 && from != back) Econ.Ledger.Transfer(from, back, new Coin(pay), TransferReason.Trade);
                     }
                     n++;
-                    State.Chronicle.Add(new ChronicleEntry(State.Ids.Allocate(IdKind.Event), new GameTime(sec), "estate_claimed", [est.Dead, creditor.Holder, e.Id], [new Cause(CauseKind.Law, null, "a debt of the estate")],
+                    State.Chronicle.Add(new ChronicleEntry(State.Ids.Allocate(IdKind.Event), new GameTime(sec), "estate_claimed", [est.Dead, creditor.Holder, e.Id], [Why.Of(CauseKind.Law, "ch_why_estate_debt", ChronParam.Person("creditor", creditor.Holder), ChronParam.Person("dead", est.Dead))],
                         new Dictionary<string, string> { ["kind"] = e.Kind.ToString(), ["value"] = value.ToString(CultureInfo.InvariantCulture), ["left"] = d.Left.ToString(CultureInfo.InvariantCulture) }));
                 }
             }

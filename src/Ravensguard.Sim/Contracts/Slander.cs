@@ -26,7 +26,7 @@ public static class Slander
         if (Array.IndexOf(Kinds, kind) < 0 || author == victim) return null;
         var ps = new List<ChronParam> { ChronParam.Person("author", author), ChronParam.Person("victim", victim), ChronParam.TextKey("kind", "ch_slander_kind_" + kind) };
         var e = new ChronicleEntry(w.Ids.Allocate(IdKind.Event), new GameTime(sec), "slander_told", [victim, author, listener],
-            [new Cause(CauseKind.Other, null, NoteKey: byHero ? "ch_note_slander_hero" : "ch_note_slander_rival")],
+            [new Cause(CauseKind.Crime, null, NoteKey: byHero ? "ch_note_slander_hero" : "ch_note_slander_rival")],
             new Dictionary<string, string> { ["kind"] = kind, ["doer"] = w.Name(victim), ["false"] = "1", ["seen"] = N((long)author.Value) + "," + N((long)listener.Value), ["settlement"] = w.PlaceName(settlement), ["author"] = w.Name(author) },
             TextKey: "ch_slander_told", Params: ps);
         w.Chronicle.Add(e);
@@ -130,7 +130,7 @@ public static class Slander
         if (standing?.Deed(new EntityId(row.Rumour)) is { } rec) { rec.WeightPm = 0; recompute?.Invoke(new EntityId(row.Victim)); }
         var author = new EntityId(row.Author); var victim = new EntityId(row.Victim);
         var ps = new List<ChronParam> { ChronParam.Person("author", author), ChronParam.Person("victim", victim) };
-        var e = new ChronicleEntry(w.Ids.Allocate(IdKind.Event), new GameTime(day * 86_400L + 3600), "slander_exposed", [author, victim], [new Cause(CauseKind.Other, new EntityId(row.Rumour))],
+        var e = new ChronicleEntry(w.Ids.Allocate(IdKind.Event), new GameTime(day * 86_400L + 3600), "slander_exposed", [author, victim], [new Cause(CauseKind.Crime, new EntityId(row.Rumour))],
             new Dictionary<string, string> { ["how"] = how, ["author"] = w.Name(author), ["victim"] = w.Name(victim), ["doer"] = w.Name(author) }, TextKey: "ch_slander_exposed", Params: ps);
         w.Chronicle.Add(e);
     }
