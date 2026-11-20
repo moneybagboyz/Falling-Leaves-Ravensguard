@@ -58,6 +58,7 @@ public static class Phase5Trail
             if (file.Sections.TryGetValue(name, out var bytes)) { sha.AppendData(BitConverter.GetBytes(bytes.Length)); sha.AppendData(bytes.Span); }
         }
         sha.AppendData(BitConverter.GetBytes(standing));
+        if (rt.State.Fire is { IsEmpty: false } fire) sha.AppendData(BitConverter.GetBytes(fire.Hash()));      // P6-B5: FireHash, only once something has burnt (a fire-free trail keeps its pinned hash)
         if (law != 0) sha.AppendData(BitConverter.GetBytes(law));          // P6-B2: the LawHash joins the trail only once a crime exists, so a world without crime keeps its pinned hash
         return Convert.ToHexString(sha.GetHashAndReset())[..16];
     }

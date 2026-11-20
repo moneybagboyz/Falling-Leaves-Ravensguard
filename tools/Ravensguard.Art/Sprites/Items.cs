@@ -92,5 +92,10 @@ public sealed class Items
         {
             b.Ellipse(8, 8, 5, 5, P["pl4"], true); b.Ellipse(8, 8, 2, 2, P["pl2"], true); b.Set(10, 6, P["bl3"]);
         }));
+        // Phase 6 B5 (fire 4.4): the bucket, empty and full, and the fire hook
+        var fire = new Fire(P, R);
+        yield return ("bucket", () => Item(b => b.Blit(fire.Bucket(false), 0, 0)));
+        yield return ("bucket_full", () => Item(b => b.Blit(fire.Bucket(true), 0, 0)));
+        yield return ("fire_hook", () => Item(b => b.Blit(fire.Hook(), 0, 0)));
     }
 }

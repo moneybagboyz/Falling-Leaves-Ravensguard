@@ -1,0 +1,6 @@
+// Upkeep and the goods that burn (fire and burning 3, 4.7). Condition falls a game year at a time by fuel class (permille of 1000): thatch 5% a year, daub 10%, timber 1%.
+// Below leak_below_pm a roof leaks and its thatch ignites at x1.5 the spread chance; below repair_below_pm the owner's household (or steward) posts a re-thatch or re-daub job.
+[
+  {"type": "fire_upkeep", "id": "base", "decay_pm_per_year": {"thatch": 50, "daub": 100, "timber": 10, "floor_beam": 10, "turf": 30}, "leak_below_pm": 300, "repair_below_pm": 400,
+   "burnable_good_classes": ["grain", "flour", "bread", "pulse", "fodder", "fibre", "cloth", "clothing", "garment", "bedding", "fuel", "timber", "wood", "building", "hide", "leather", "vegetable", "herb", "ale", "household", "pottage"]}
+]

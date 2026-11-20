@@ -80,6 +80,12 @@ public static class CatalogV2
         for (int f = 0; f < 4; f++) { int c = f; Ov($"overlay.rain.{c}", "ov.fall", () => wx.Rain(c)); }
         for (int f = 0; f < 4; f++) { int c = f; Ov($"overlay.snowfall.{c}", "ov.fall", () => wx.SnowFall(c)); }
         for (int v = 0; v < 2; v++) { int c = v; Ov($"overlay.fog.{c}", "ov.fall", () => wx.Fog(c)); }
+        // fire and burning (Phase 6 B5, fire 6): flames in 3 intensities x 4 frames, smoke, and what a fire leaves on the ground
+        var fx = new Fire(pal);
+        for (int i = 1; i <= 3; i++) for (int f = 0; f < 4; f++) { int ci = i, cf = f; Ov($"overlay.fire.{ci}.{cf}", "ov.fire", () => fx.Flame(ci, cf)); }
+        for (int f = 0; f < 4; f++) { int c = f; Ov($"overlay.smoke.{c}", "ov.fire", () => fx.Smoke(c)); }
+        for (int v = 0; v < 2; v++) { int c = v; Ov($"overlay.char.{c}", "ov.scar", () => fx.Char(c)); Ov($"overlay.ash.{c}", "ov.scar", () => fx.Ash(c)); }
+        Ov("overlay.scorch", "ov.scar", fx.Scorch); Ov("overlay.cracked", "ov.scar", fx.Cracked); Ov("overlay.smoulder", "ov.scar", fx.Smoulder); Ov("overlay.rubble_char", "ov.scar", fx.CharredRubble);
 
         // ---- props 32x32
         void O(string id, Func<PixelBuffer> f) => l.Add(new SpriteDef(id, SpriteKind.Object, "props_32", "props.32", 32, 32, f));
