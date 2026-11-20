@@ -49,4 +49,6 @@ public sealed record CultureDef : ContentDef
     public required List<FeastDayDef> FeastDays { get; init; }
     /// <summary>Twelve month names, in calendar order; each month is five days.</summary>
     public required List<string> Months { get; init; }
+    /// <summary>P6-D1 (slavery 3): the culture's law of bondage: <c>none</c> (no slaves; owning or trading is the crime slaving), <c>debt</c> (bond for debt or a sentence, for a term), <c>war_captives</c> (thralls taken in war or raids; children free) or <c>chattel</c> (bought and sold; children follow the mother).</summary>
+    public string Slavery { get; init; } = "none";
 }

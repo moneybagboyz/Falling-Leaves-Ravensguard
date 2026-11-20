@@ -133,6 +133,7 @@ public partial class StreetView
         FaithVerbs(v);                                      // P6-B4: attend the service, give alms, a pilgrim's vow, beside a priest (StreetView.Faith.cs)
         JusticeVerbs(v);                                    // P6-C1: give yourself up beside a guard, hold court with cases on the docket (StreetView.Justice.cs)
         WorkBoardVerbs(v);                                  // P6-C2: the notice board of contracts v2 (StreetView.Work.cs)
+        BondageVerbs(v);                                    // P6-D1: the pen, his slaves, his own bond (StreetView.Bondage.cs)
         HeistVerbs(v);                                      // P6-D3: slip into the gaol, the strongroom, the vault, the undercroft or the drain of the place (StreetView.Heist.cs)
         ContractVerbs(v);                                   // P5-D: the contract board (StreetView.Contracts.cs)
         VehicleVerbs(v);                                    // P5-G: the designer, a vehicle's parts, work, repair, launch (StreetView.Vehicles.cs)

@@ -2,7 +2,7 @@
 // four 15-day seasons of three months each: spring, summer, autumn, winter). Feast days name a month (1..12) and a day (1..5).
 // "crimes" maps a crime id to a punishment table key (resolved later by the law system); hearth_tax is in pence per hearth per year.
 [
-  { "type": "culture", "id": "north", "name": "Northmark", "name_pool": "names_north",
+  { "type": "culture", "id": "north", "slavery": "war_captives", "name": "Northmark", "name_pool": "names_north",
     "building_styles": { "poor": "northern", "middling": "northern", "rich": "common" },
     "roof_palette": ["thatch_straw", "turf_green", "slate_grey"], "wall_palette": ["weathered_oak", "tarred_black", "limewash_white"],
     "inheritance": "partible", "marriage_age": { "male": 18, "female": 16 }, "tithe_percent": 8, "hearth_tax": 6,
@@ -16,7 +16,7 @@
       { "id": "yule", "name": "Yule", "month": 12, "day": 3 }
     ] },
 
-  { "type": "culture", "id": "vale", "name": "Valeholt", "name_pool": "names_vale",
+  { "type": "culture", "id": "vale", "slavery": "none", "name": "Valeholt", "name_pool": "names_vale",
     "building_styles": { "poor": "common", "middling": "common", "rich": "vale_brick" },
     "roof_palette": ["thatch_straw", "clay_tile_red", "slate_grey"], "wall_palette": ["limewash_white", "ochre_daub", "red_brick"],
     "inheritance": "primogeniture", "marriage_age": { "male": 21, "female": 17 }, "tithe_percent": 10, "hearth_tax": 12,
@@ -30,7 +30,7 @@
       { "id": "christmastide", "name": "Christmastide", "month": 12, "day": 4 }
     ] },
 
-  { "type": "culture", "id": "high", "name": "Highmarch", "name_pool": "names_high",
+  { "type": "culture", "id": "high", "slavery": "debt", "name": "Highmarch", "name_pool": "names_high",
     "building_styles": { "poor": "hillfolk", "middling": "hillfolk", "rich": "hillfolk" },
     "roof_palette": ["slate_grey", "stone_slab", "heather_thatch"], "wall_palette": ["grey_granite", "dry_stone", "limewash_white"],
     "inheritance": "elective", "marriage_age": { "male": 19, "female": 16 }, "tithe_percent": 5, "hearth_tax": 4,
@@ -44,7 +44,7 @@
       { "id": "long_night", "name": "The Long Night", "month": 12, "day": 5 }
     ] },
 
-  { "type": "culture", "id": "coast", "name": "Seaboard", "name_pool": "names_coast",
+  { "type": "culture", "id": "coast", "slavery": "chattel", "name": "Seaboard", "name_pool": "names_coast",
     "building_styles": { "poor": "coastal", "middling": "coastal", "rich": "common" },
     "roof_palette": ["tarred_shingle", "thatch_straw", "clay_tile_red"], "wall_palette": ["driftwood_grey", "tarred_black", "limewash_white"],
     "inheritance": "partible", "marriage_age": { "male": 20, "female": 17 }, "tithe_percent": 9, "hearth_tax": 8,
