@@ -31,6 +31,27 @@ public sealed class GrowthSystem
     public bool Enabled { get; set; } = true;
     /// <summary>P5-A2: lots play holds or lets (a bought vacant house, a leased one): growth does not refit them. Set by the land wiring; null: none.</summary>
     public Func<int, int, bool>? LandHolds { get; set; }
+    /// <summary>P5-D: growth made visible: a project on a plot the player has seen is a real building site (build-mode-and-construction 4.9). Set by the construction's wiring; null: Phase 3.</summary>
+    public IGrowthSites? Sites { get; set; }
+    // P5-D: what the visible sites share with the seasonal step (the same rules for buying, digging and paying)
+    internal EconomyWorld Economy => _ew;
+    internal GrowthTuningDef Tuning => T;
+    internal long ReserveMites => Reserve;
+    internal void TopUp(int hh, int settlement, long need) => EnsureCoin(hh, settlement, need);
+    internal List<int> IdleHands(int settlement, int day) { _hands = null; return HandsOf(settlement, day); }
+    internal long DigClay(int settlement, long g, int day) => DrawClay(settlement, g, day);
+    internal int LordOf(int settlement) => LordHousehold(settlement);
+    internal void Complete(BuildProject p, GameTime now, RegionOutbox ob) => CompleteCottage(p, now, ob);
+
+    /// <summary>P5-D: premises built (a visible site finished, or one that could not be laid out): the lot is added as Phase 3 adds it and the business moves in.</summary>
+    internal void CompletePremises(BuildProject p, GameTime now)
+    {
+        var rec = new LotRecord(p.Settlement, Region.Settlements[p.Settlement].Plan.Lots.Count, true, p.Use, DwellingType.None, p.Blueprint, p.Rect, p.Facing, 1, 0, (int)now.TotalDays);
+        RegionGrowth.Change(Region, ChunkSink, [Pad(p.Rect)], () => RegionGrowth.AddLot(Region, W.Population, rec));
+        State.Lots.Add(rec); State.Year(now.Year).PlotsGiven++;
+        foreach (var b in _ew.Production.Businesses)
+            if (b.Kind == p.BusinessKind && b.Settlement == p.Settlement && b.Owner == p.Owner && b.State == BusinessState.Open) { b.Lot = rec.Lot; break; }
+    }
     private readonly GoodCatalog _cat;
 
     public GrowthSystem(EconomyWorld ew) { _ew = ew; _cat = ew.World.Economy.Goods; }
@@ -211,6 +232,7 @@ public sealed class GrowthSystem
             int payer = ChoosePayer(s, cluster, cost, waitBy.Count > 0);
             if (payer < 0) continue;
             pr.Payer = payer; State.NextSerial++; State.Projects.Add(pr);
+            Sites?.Started(pr, now);                                                                // P5-D: a plot the player has seen becomes a site at once
             return true;
         }
         return false;
@@ -241,6 +263,7 @@ public sealed class GrowthSystem
     private bool Advance(BuildProject p, GameTime now, RegionOutbox ob)
     {
         var hht = W.Households; int day = (int)now.TotalDays;
+        if (Sites != null && Sites.Advance(p, now, ob, out bool siteDone)) return siteDone;      // P5-D: a project that is a building site
         if (p.Kind == ProjectKind.Premises) return true;
         if (p.Payer < 0 || p.Payer >= hht.Count || hht.MemberCount[p.Payer] == 0) { State.Year(now.Year); return true; }     // the payer is gone: given up
         var led = W.Economy.Ledger; var e = W.Economy;
@@ -493,17 +516,29 @@ public sealed class GrowthSystem
             int owner = ChooseOwner(s, kind, day);
             if (owner < 0) continue;
             int ohh = pt.Household[owner];
-            int lot = -1; var claimed = new HashSet<int>();
+            int lot = -1; var claimed = new HashSet<int>(); BuildProject? premises = null;
             if (kind.Lot is { } use)
             {
                 bool town = Region.Settlements[s].Class == SettlementClass.Town;
                 if (!RegionGrowth.FindPlot(Region, s, town ? T.BusinessPlotWidthTownM : T.BusinessPlotWidthVillageM, town ? T.BusinessPlotDepthTownM : T.BusinessPlotDepthVillageM, T.PlanMarginM, State.Projects.Where(p => p.Settlement == s && p.Lot < 0).Select(p => p.Rect).ToList(), out var rect, out byte facing)) continue;
                 var hands = HandsOf(s, day); long pay = T.PremisesMites;
                 if (Balance(ohh) < pay + T.BusinessMinOwnerMites / 2) continue;
-                var rec = new LotRecord(s, Region.Settlements[s].Plan.Lots.Count, true, use, DwellingType.None, use switch { LotUse.Smithy => "smithy", LotUse.Tavern => "tavern", _ => "" }, rect, facing, 1, 0, day);
+                string bp = use switch { LotUse.Smithy => "smithy", LotUse.Tavern => "tavern", _ => "" };
+                if (Sites != null && Sites.Shows(rect))
+                {
+                    // P5-D: premises on a plot the player has seen are built in front of him: the business opens at the owner's home and moves in when the house stands
+                    premises = new BuildProject { Serial = State.NextSerial++, Kind = ProjectKind.Premises, Settlement = s, StartDay = day, Payer = ohh, Rect = rect, Facing = facing, Use = use,
+                        Dwelling = DwellingType.None, Blueprint = bp, Wealth = 1, BusinessKind = k, Owner = owner, HoursNeeded = 1 };
+                    State.Projects.Add(premises);
+                    lot = hht.Lot[ohh];
+                }
+                else
+                {
+                var rec = new LotRecord(s, Region.Settlements[s].Plan.Lots.Count, true, use, DwellingType.None, bp, rect, facing, 1, 0, day);
                 RegionGrowth.Change(Region, ChunkSink, [Pad(rect)], () => RegionGrowth.AddLot(Region, W.Population, rec));
                 State.Lots.Add(rec); lot = rec.Lot; yr.PlotsGiven++;
                 PayHands(ohh, hands, pay, now);
+                }
             }
             else lot = hht.Lot[ohh];
             var biz = prod.NewBusiness(kind, s, lot, owner);
@@ -522,6 +557,7 @@ public sealed class GrowthSystem
             }
             biz.CashStart = e.Ledger.Balance(biz.Purse).Mites; biz.Capital = Math.Max(biz.CashStart, 1000);
             State.Unmet.Remove((long)s * 4096 + k);
+            if (premises != null) Sites!.Started(premises, now);                                    // P5-D
             yr.BusinessesOpened++; opened++;
             ob.Count("businesses_opened");
             ob.Chronicle(now, "business_opened", [pt.IdOf(owner)], [new Cause(CauseKind.MarketDrift, null, "the good was dear and short for seasons on end")],

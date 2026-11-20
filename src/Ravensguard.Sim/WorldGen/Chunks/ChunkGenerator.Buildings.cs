@@ -68,40 +68,11 @@ public sealed partial class ChunkGenerator
             wealth = cls switch { SocialClass.Gentry => 2, SocialClass.Burgher => Math.Max(1, wealth), _ => Math.Min(wealth, 1) };
             if (lot.Dwelling == DwellingType.Cottage) wealth = Math.Min(wealth, lot.Wealth);
         }
-        string style = StyleOf(s, wealth);
-        var grid = GridFor(bp, style, wealth);
-        if (grid == null) return null;
-
-        var rect = lot.Rect;
-        ulong hv = H(StLot, rect.X, rect.Y);
-        BuildingGrid? best = null; int bestTurns = 0; bool bestMirror = false; int bestScore = int.MaxValue;
-        var options = new List<(BuildingGrid G, int Turns, bool Mirror, int Score)>();
-        for (int m = 0; m < 2; m++)
-            for (int turns = 0; turns < 4; turns++)
-            {
-                var t = grid.Transform(turns, m == 1);
-                int overflow = Math.Max(0, t.Width - rect.W) + Math.Max(0, t.Height - rect.H);
-                bool door = FrontDoor(t, lot.Facing, out _);
-                int score = overflow * 100 + (door ? 0 : 10) + (rs.Class == SettlementClass.Town ? 0 : 0);
-                options.Add((t, turns, m == 1, score));
-                if (score < bestScore) { bestScore = score; best = t; bestTurns = turns; bestMirror = m == 1; }
-            }
-        var tied = options.Where(o => o.Score == bestScore).ToList();
-        var pick = tied[(int)(hv % (ulong)tied.Count)];
-        best = pick.G; bestTurns = pick.Turns; bestMirror = pick.Mirror;
-
+        var placed = Placement(s, lot, bp, wealth);
+        if (placed is not { } pl) return null;
+        var (best, bestTurns, bestMirror, bestScore, x0, y0, style, hv) = pl;
         int w = best.Width, h = best.Height;
-        int setback = lot.Use is LotUse.Church or LotUse.Chapel ? 3 : lot.Use == LotUse.Manor ? 5 : lot.Use == LotUse.Burgage || rs.Class == SettlementClass.Town ? 0 : 1 + (int)(hv >> 8 & 1);
-        int x0, y0;
-        int jit = (int)((hv >> 16) % 3) - 1;
-        switch (lot.Facing & 3)
-        {
-            case 0: x0 = rect.X + (rect.W - w) / 2 + jit; y0 = rect.Y + setback; break;
-            case 2: x0 = rect.X + (rect.W - w) / 2 + jit; y0 = rect.Bottom - h - setback; break;
-            case 1: x0 = rect.Right - w - setback; y0 = rect.Y + (rect.H - h) / 2 + jit; break;
-            default: x0 = rect.X + setback; y0 = rect.Y + (rect.H - h) / 2 + jit; break;
-        }
-        x0 = Math.Clamp(x0, rect.X, Math.Max(rect.X, rect.Right - w)); y0 = Math.Clamp(y0, rect.Y, Math.Max(rect.Y, rect.Bottom - h));
+        var rect = lot.Rect;
 
         var st = new Stamp { Settlement = s, Lot = lotIdx, Blueprint = bp, Style = style, X0 = x0, Y0 = y0, W = w, H = h, Turns = bestTurns, Mirror = bestMirror, Fits = bestScore < 100 };
         var furnished = best.Clone();
@@ -135,6 +106,59 @@ public sealed partial class ChunkGenerator
         }
         Yard(st, lot, rs, rect, hv);
         return st;
+    }
+
+    /// <summary>
+    /// The placement of a lot's building (shared by <see cref="MakeStamp"/> and P5-D's growth sites): the styled grid in its chosen transform (the door to the street, the least overflow,
+    /// ties by the lot's hash), and its corner by the lot's facing and setback.
+    /// </summary>
+    private (BuildingGrid Grid, int Turns, bool Mirror, int Score, int X0, int Y0, string Style, ulong Hv)? Placement(int s, Lot lot, string bp, int wealth)
+    {
+        var rs = Region.Settlements[s];
+        string style = StyleOf(s, wealth);
+        var grid = GridFor(bp, style, wealth);
+        if (grid == null) return null;
+        var rect = lot.Rect;
+        ulong hv = H(StLot, rect.X, rect.Y);
+        BuildingGrid? best = null; int bestTurns = 0; bool bestMirror = false; int bestScore = int.MaxValue;
+        var options = new List<(BuildingGrid G, int Turns, bool Mirror, int Score)>();
+        for (int m = 0; m < 2; m++)
+            for (int turns = 0; turns < 4; turns++)
+            {
+                var t = grid.Transform(turns, m == 1);
+                int overflow = Math.Max(0, t.Width - rect.W) + Math.Max(0, t.Height - rect.H);
+                bool door = FrontDoor(t, lot.Facing, out _);
+                int score = overflow * 100 + (door ? 0 : 10) + (rs.Class == SettlementClass.Town ? 0 : 0);
+                options.Add((t, turns, m == 1, score));
+                if (score < bestScore) { bestScore = score; best = t; bestTurns = turns; bestMirror = m == 1; }
+            }
+        var tied = options.Where(o => o.Score == bestScore).ToList();
+        var pick = tied[(int)(hv % (ulong)tied.Count)];
+        best = pick.G; bestTurns = pick.Turns; bestMirror = pick.Mirror;
+        int w = best.Width, h = best.Height;
+        int setback = lot.Use is LotUse.Church or LotUse.Chapel ? 3 : lot.Use == LotUse.Manor ? 5 : lot.Use == LotUse.Burgage || rs.Class == SettlementClass.Town ? 0 : 1 + (int)(hv >> 8 & 1);
+        int x0, y0;
+        int jit = (int)((hv >> 16) % 3) - 1;
+        switch (lot.Facing & 3)
+        {
+            case 0: x0 = rect.X + (rect.W - w) / 2 + jit; y0 = rect.Y + setback; break;
+            case 2: x0 = rect.X + (rect.W - w) / 2 + jit; y0 = rect.Bottom - h - setback; break;
+            case 1: x0 = rect.Right - w - setback; y0 = rect.Y + (rect.H - h) / 2 + jit; break;
+            default: x0 = rect.X + setback; y0 = rect.Y + (rect.H - h) / 2 + jit; break;
+        }
+        x0 = Math.Clamp(x0, rect.X, Math.Max(rect.X, rect.Right - w)); y0 = Math.Clamp(y0, rect.Y, Math.Max(rect.Y, rect.Bottom - h));
+        return (best, bestTurns, bestMirror, bestScore, x0, y0, style, hv);
+    }
+
+    /// <summary>
+    /// P5-D: the building a lot not yet in the plan will get when it is added (a growth project's plot): its styled grid in the generator's own transform and its corner, so a visible
+    /// growth site is laid out exactly as the generator stamps the finished lot (no household yet: the lot's own wealth). Null when the blueprint is missing.
+    /// </summary>
+    public (BuildingGrid Grid, int X0, int Y0, string Blueprint)? PlanFor(int settlement, Lot lot)
+    {
+        string bp = Fallback(lot);
+        if (bp.Length == 0) return null;
+        return Placement(settlement, lot, bp, lot.Wealth) is { } p ? (p.Grid, p.X0, p.Y0, bp) : null;
     }
 
     /// <summary>True when the ground floor has an exterior door on the given side (0 north, 1 east, 2 south, 3 west); lists the door cells (local).</summary>

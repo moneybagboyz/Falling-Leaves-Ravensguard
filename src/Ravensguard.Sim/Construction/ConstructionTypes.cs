@@ -55,6 +55,12 @@ public sealed class ConstructionSite
     public EntityId Rubble => ConstructionIds.RubbleOf(Id);
     public EntityId Escrow => ConstructionIds.EscrowOf(Id);
     public bool Open => State is SiteState.Active or SiteState.Paused;
+
+    // P5-D: the cheap path (derived, never saved). After a full quantum the engine works out how many more quanta the site stays linear (every hand on his piece, none finishing,
+    // no skill gained, nobody idle who could find work); those quanta are deferred and applied at once (Settle) before anything else reads or changes the site.
+    internal long LinearUntil;
+    internal int Deferred;
+    internal bool LinearWorks;
 }
 
 /// <summary>One person on a site's crew.</summary>
@@ -75,6 +81,8 @@ public sealed class CrewMember
     public int ShortDays;
     /// <summary>The day the member was paid last and the coin paid in all.</summary>
     public long PaidMites;
+    /// <summary>P5-D: the most seconds a day the member builds (0: the whole working day): a growth crew works Phase 3's hours (own 2 h, hired 4 h a day).</summary>
+    public long DayCapSec;
     // derived, never saved: the piece he works, its cost and his time and tool multipliers (rebuilt the same after a load)
     internal Ghost? G;
     internal PieceCost? C;
@@ -120,6 +128,8 @@ public sealed class BuiltCell
     public EntityId Site;
     public long BuiltSec;
     public long SlotKey => ConstructionIds.SlotKey(X, Y, Z, Slot);
+    /// <summary>P5-D: the piece's cost, cached (derived, never saved): support checks read it for every neighbour.</summary>
+    internal PieceCost? CostCache;
 }
 
 /// <summary>Cells that lost their support and groan before they fall (decided with the user: about 10 game seconds of groaning and dust, then the fall).</summary>
@@ -142,6 +152,8 @@ public static class ConstructionIds
 {
     public const ulong Base = 0x74UL << 40;
     public const int SiteSlot = 1, GhostSlotId = 2, PileSlot = 3, RubbleSlot = 4, EscrowSlot = 5, EventSlot = 6, ChestSlot = 7;
+    /// <summary>P5-D: a contract and its escrow chest.</summary>
+    public const int ContractSlot = 8, ContractEscrowSlot = 9;
 
     public static EntityId Make(int region, int slot, ulong serial) => EntityId.MakeIn(IdKind.Other, region, Base | ((ulong)slot << 36) | (serial & ((1UL << 36) - 1)));
     public static int SlotOf(EntityId id) => (int)((id.Serial >> 36) & 0xF);
@@ -150,6 +162,7 @@ public static class ConstructionIds
     public static EntityId PileOf(EntityId site) => Make(site.Region, PileSlot, SerialOf(site));
     public static EntityId RubbleOf(EntityId site) => Make(site.Region, RubbleSlot, SerialOf(site));
     public static EntityId EscrowOf(EntityId site) => Make(site.Region, EscrowSlot, SerialOf(site));
+    public static EntityId EscrowOfContract(EntityId contract) => Make(contract.Region, ContractEscrowSlot, SerialOf(contract));
 
     private const int Bias = 1 << 19;
     /// <summary>(z, y, x) ordered cell key (the same packing as RoomWorld's).</summary>
@@ -185,8 +198,11 @@ public sealed class ConstructionBook
     public SortedDictionary<ushort, long> DematerialisedG { get; } = [];
     /// <summary>Claims a recognised dwelling has improved (claim serial, structure id), so an improvement counts once.</summary>
     public SortedSet<long> Improved { get; } = [];
+    /// <summary>P5-D: building contracts by id, and growth projects made visible (project serial to its site or clearing).</summary>
+    public SortedDictionary<EntityId, Contract> Contracts { get; } = [];
+    public SortedDictionary<int, GrowthLink> Growth { get; } = [];
 
-    public bool IsEmpty => NextSerial == 1 && Sites.Count == 0 && Ghosts.Count == 0 && Built.Count == 0 && Groans.Count == 0 && Placed.Count == 0;
+    public bool IsEmpty => NextSerial == 1 && Sites.Count == 0 && Ghosts.Count == 0 && Built.Count == 0 && Groans.Count == 0 && Placed.Count == 0 && Contracts.Count == 0 && Growth.Count == 0;
 
     // ---- presentation only (never saved, never hashed) ----
     /// <summary>The newest view for the main thread (swapped whole at a barrier).</summary>
@@ -197,9 +213,14 @@ public sealed class ConstructionBook
 
     public ulong Take() => NextSerial++;
 
+    /// <summary>P5-D: brings the derived copies the world keeps lazily (the structure ids) up to date; the save and the hash call it first. Never saved.</summary>
+    internal Action? Flush;
+    public void Sync() => Flush?.Invoke();
+
     /// <summary>The SiteHash of the daily trail (overview 8.9): sites, ghosts, built cells, groans and placed stores in id order.</summary>
     public string ComputeHash()
     {
+        Sync();
         using var h = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
         var b8 = new byte[8];
         void L(long v) { System.Buffers.Binary.BinaryPrimitives.WriteInt64LittleEndian(b8, v); h.AppendData(b8); }
@@ -231,6 +252,20 @@ public sealed class ConstructionBook
         foreach (var (k, v) in MaterialisedG) { L(k); L(v); }
         foreach (var (k, v) in DematerialisedG) { L(k); L(v); }
         foreach (var k in Improved) L(k);
+        // P5-D: contracts and visible growth (only when there are any, so a book without them hashes as before)
+        if (Contracts.Count > 0 || Growth.Count > 0)
+        {
+            L(Contracts.Count);
+            foreach (var c in Contracts.Values)
+            {
+                L((long)c.Id.Value); L((long)c.Kind); L((long)c.State); L((long)c.Site.Value); L((long)c.Client.Value); L((long)c.ClientKind); L((long)c.Contractor.Value); L((long)c.ContractorKind);
+                S(c.Blueprint); L(c.Settlement); L(c.MaterialsMites); L(c.LabourMites); L(c.HaulMites); L(c.WorkUnits); L(c.Crew); L(c.Stages); L(c.ReleasedMites);
+                L(c.PostedSec); L(c.SignedSec); L(c.DoneSec); L(c.DueSec); L(c.GrowthSerial);
+            }
+            L(Growth.Count);
+            foreach (var g in Growth.Values) { L(g.Serial); L(g.Kind); L((long)g.Site.Value); L(g.Settlement); L(g.X); L(g.Y); L(g.W); L(g.H); L(g.DoneMilli); L(g.NeedMilli); L(g.LinkedSec); }
+            foreach (var s in Sites.Values) foreach (var m in s.Crew) L(m.DayCapSec);
+        }
         return Convert.ToHexString(h.GetHashAndReset());
     }
 }

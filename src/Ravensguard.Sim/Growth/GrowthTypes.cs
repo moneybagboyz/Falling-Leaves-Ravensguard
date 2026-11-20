@@ -1,5 +1,7 @@
 using System.Security.Cryptography;
 using Ravensguard.Sim.WorldGen.Region;
+using Ravensguard.Sim.Abstract;
+using Ravensguard.Sim.Core;
 
 namespace Ravensguard.Sim.Growth;
 
@@ -110,4 +112,18 @@ public sealed class GrowthState
         foreach (int t in ClearedTiles) L(t);
         return Convert.ToHexString(h.GetHashAndReset());
     }
+}
+
+/// <summary>
+/// P5-D: background growth made visible (docs/specs/phase5/build-mode-and-construction.md 4.9). A project whose plot lies in a chunk the player has seen is built as a real construction
+/// site; elsewhere it stays as Phase 3. Set by the construction's wiring on the home region; null in a world without construction (the headless soak), which then grows as Phase 3.
+/// </summary>
+public interface IGrowthSites
+{
+    /// <summary>True when a plot lies in a chunk the player has seen (a new building there must be built in front of him).</summary>
+    bool Shows(RectM plot);
+    /// <summary>A project just started: made a site now when its plot is seen.</summary>
+    void Started(BuildProject p, GameTime now);
+    /// <summary>The seasonal step of a project that is a site: true when the site handles it; <paramref name="done"/> when it is finished or given up (then dropped).</summary>
+    bool Advance(BuildProject p, GameTime now, RegionOutbox ob, out bool done);
 }

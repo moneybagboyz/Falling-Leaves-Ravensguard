@@ -1,0 +1,14 @@
+// Building contracts and visible growth (P5-D, docs/specs/phase5/build-mode-and-construction.md 4.7, 4.9). A bid is materials at the local ask, plus labour (piece-hours x the
+// skilled wage of 350 a 10-hour day x the 1,450 pm margin), plus the haul from the market; paid a third at signing into escrow, a third at half the piece-hours, the rest at
+// handover. Never instant: a crew of four on the 250.5-hour wattle cottage takes about seven game days. Money in mites.
+[
+  { "type": "contract_rules", "id": "contracts",
+    "margin_pm": 1450, "crew_default": 4, "builder_kinds": ["carpentry", "masonry"],
+    "mid_stage_pm": 500,
+    // the contractor's pace (stream 0x511): his crew starts the day up to two hours late, about 90% of the day, +-10%
+    "pace_jitter_pm": 100,
+    // the lord's planner posts civic work on the notice board; the hero has two days to take it before a builder of the region does
+    "notice_days": 2, "due_factor": 3, "min_due_days": 20,
+    // background growth in chunks the player has seen becomes real building sites (cottages, new business premises)
+    "growth_sites": true }
+]

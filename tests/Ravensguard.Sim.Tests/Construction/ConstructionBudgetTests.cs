@@ -33,7 +33,7 @@ public class ConstructionBudgetTests(ITestOutputHelper output)
         long finished = r.W.DiagFinished - f0;
         double crew = (Math.Min(wall, cpu) - finishMs) / hours;
         output.WriteLine($"200 sites, 400 hands, {hours} working hours: wall {wall / hours:F2} ms, cpu {cpu / hours:F2} ms an hour; {finished} pieces finished in {finishMs:F1} ms ({finishMs / Math.Max(1, finished):F3} ms each); the crews' own work {crew:F2} ms an hour (budget 2 ms)");
-        output.WriteLine($"quanta {(r.W.DiagQuantumTicks - qt0) * 1000.0 / Stopwatch.Frequency:F1} ms, refresh {(r.W.DiagRefreshTicks - rf0) * 1000.0 / Stopwatch.Frequency:F1} ms, pick {(r.W.DiagPickTicks - pk0) * 1000.0 / Stopwatch.Frequency:F1} ms");
+        output.WriteLine($"quanta {(r.W.DiagQuantumTicks - qt0) * 1000.0 / Stopwatch.Frequency:F1} ms, refresh {(r.W.DiagRefreshTicks - rf0) * 1000.0 / Stopwatch.Frequency:F1} ms, pick {(r.W.DiagPickTicks - pk0) * 1000.0 / Stopwatch.Frequency:F1} ms, sync {r.W.DiagSyncTicks * 1000.0 / Stopwatch.Frequency:F1} ms, linear {r.W.DiagLinTicks * 1000.0 / Stopwatch.Frequency:F1} ms; quanta walked {r.W.DiagFullQuanta}, applied at once {r.W.DiagLinearQuanta}; begin {r.W.DiagX[0] * 1000.0 / Stopwatch.Frequency:F1} work {r.W.DiagX[1] * 1000.0 / Stopwatch.Frequency:F1} checks {r.W.DiagX[2]} ghosts walked {r.W.DiagX[3]}");
         Assert.True(crew < 150, $"{crew:F2} ms an hour");           // the spec's 2 ms is for abstract sites (P5-D); here every site is worked quantum by quantum (see the Notes)
 
         // a 200-cell collapse: a 20 x 10 upper floor on a grid of posts, every post knocked out but one, then the last

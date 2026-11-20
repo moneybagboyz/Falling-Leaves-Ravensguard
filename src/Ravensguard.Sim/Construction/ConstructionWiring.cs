@@ -39,6 +39,7 @@ public sealed class ConstructionSystem : AbstractSystem
         long end = (ctx.Hour + 1) * 3600;
         cw.AdvanceHauls(end);
         cw.AdvanceTo(end);
+        cw.GrowthSites?.LinkSeen(new GameTime(end));                                   // P5-D: growth projects on plots the player has now seen become sites
         if (ctx.HourOfDay == CorrosionHour) cw.CorrosionDay((int)ctx.Day);
     }
 }
@@ -50,6 +51,7 @@ public static class ConstructionWiring
     {
         var cw = Make(state, content, home.Population, home.Sim.Economy, home.Coord.Id);
         Hook(cw, state, content, home.Sim.Get<LandWorld>(), weather, home.Population, () => home.Sim.Get<WoundLedger>() ?? state.Wounds);
+        HookEconomy(cw, home.Economy, state.Chunks, content);                                  // P5-D: builders, markets, growth made visible
         home.Sim.Set(cw);
         return cw;
     }
@@ -163,6 +165,42 @@ public static class ConstructionWiring
             }
             return -1;
         };
+    }
+
+    /// <summary>
+    /// P5-D: the economy's side of contracts and visible growth: the region's builders (open carpentry and masonry businesses: their owner and staff, their store, purse and market party),
+    /// the market books, and growth's projects on plots the player has seen made sites (<see cref="GrowthSites"/>).
+    /// </summary>
+    public static void HookEconomy(ConstructionWorld cw, EconomyWorld ew, ChunkStore chunks, ContentDatabase content)
+    {
+        var pop = cw.Pop!;
+        cw.Market = s => s >= 0 && s < pop.Region.Settlements.Count ? ew.Markets.BookForSettlement(s) : null;
+        cw.Builders = () => BuildersOf(cw, ew, pop);
+        var gs = new GrowthSites(cw, ew.Growth, chunks, ChunkGenerator.For(pop.Region, pop, content));
+        cw.GrowthSites = gs;
+        ew.Growth.Sites = gs;
+    }
+
+    /// <summary>The region's builders: open businesses of the builder kinds, by id; their people the owner (when he works) and the staff.</summary>
+    public static IReadOnlyList<BuilderInfo> BuildersOf(ConstructionWorld cw, EconomyWorld ew, Population pop)
+    {
+        var kinds = new HashSet<string>(cw.ContractRules.BuilderKinds, StringComparer.Ordinal);
+        var list = new List<BuilderInfo>();
+        var pt = pop.People;
+        foreach (var b in ew.Production.Businesses)
+        {
+            if (b.State != Ravensguard.Sim.Production.BusinessState.Open || b.Kind >= ew.Content.Kinds.Length || !kinds.Contains(ew.Content.Kinds[b.Kind].Id)) continue;
+            var people = new List<int>();
+            if (b.OwnerWorks && b.Owner >= 0) people.Add(b.Owner);
+            foreach (int st in b.Staff) if (st >= 0 && !people.Contains(st)) people.Add(st);
+            int best = 0;
+            foreach (int r in people) if (r >= 0 && r < pt.Count) best = Math.Max(best, Math.Max(pt.SkillLevelOf(r, Skill.Carpentry), pt.SkillLevelOf(r, Skill.Masonry)));
+            var st0 = pop.Region.Settlements[Math.Clamp(b.Settlement, 0, pop.Region.Settlements.Count - 1)];
+            string who = b.Owner >= 0 && b.Owner < pt.Count ? pt.FullName(b.Owner) : ew.Content.Kinds[b.Kind].Id;
+            list.Add(new BuilderInfo(b.Id, PurseKind.Business, $"{who} ({ew.Content.Kinds[b.Kind].Id}, {st0.Name})", b.Settlement, st0.CenterX, st0.CenterY, best, people, b.Store, b.Party));
+        }
+        list.Sort((a, c) => a.Id.CompareTo(c.Id));
+        return list;
     }
 
     private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<ContentDatabase, PiecePalette> Palettes = new();

@@ -17,8 +17,8 @@ public sealed partial class ConstructionWorld
     public bool Busy()
     {
         if (Book.Groans.Count > 0) return true;
-        foreach (var s in Book.Sites.Values) if (s.Open && s.Crew.Count > 0) return true;
-        return false;
+        foreach (var s in _siteList) if (s.Open && s.Crew.Count > 0) return true;
+        return Book.Contracts.Count > 0 && AnyLiveContract();       // P5-D: a contract's stages and notice run on the clock
     }
 
     private (int RainTenths, int TempC) WeatherAt(long hour) => Weather?.Invoke(hour) ?? (0, 12);
@@ -64,22 +64,119 @@ public sealed partial class ConstructionWorld
         if (Book.AdvancedSec < 0) Book.AdvancedSec = nowSec / q * q;
         if (!Busy()) { if (nowSec / q * q > Book.AdvancedSec) Book.AdvancedSec = nowSec / q * q; Publish(nowSec); return; }
         bool changed = false;
+        _advLimit = nowSec / q * q;
         while (Book.AdvancedSec + q <= nowSec)
         {
             long t0 = Book.AdvancedSec;
+            // P5-D: deferred quanta are applied before anything that reads or changes every site (an hour's turn: escrow, pay, the rain; a groan that may fall)
+            if (t0 % 3600 == 0 || Book.Groans.Count > 0) SettleAll(q);
             changed |= ResolveGroans(t0 + q - 1);
             long tod = ((t0 % 86400) + 86400) % 86400;
             long day = t0 / 86400;
             if (tod == Rules.DayStartHour * 3600L) { EscrowDay(day, t0); changed = true; }
             if (tod == (Rules.DayStartHour + Rules.DayHours) * 3600L) { PayDay(day, t0); changed = true; }
+            if (t0 % 3600 == 0 && Book.Contracts.Count > 0) ContractsStep(t0);                  // P5-D: stages, the notice, the builder's morning order
             if (tod >= Rules.DayStartHour * 3600L && tod < (Rules.DayStartHour + Rules.DayHours) * 3600L) { long qt0 = System.Diagnostics.Stopwatch.GetTimestamp(); changed |= WorkQuantum(t0, q); DiagQuantumTicks += System.Diagnostics.Stopwatch.GetTimestamp() - qt0; }
             Book.AdvancedSec = t0 + q;
-            if (!Busy()) { Book.AdvancedSec = nowSec / q * q; break; }
+            if (!Busy()) { SettleAll(q); Book.AdvancedSec = nowSec / q * q; break; }
         }
+        SettleAll(q);
         changed |= ResolveGroans(nowSec);
-        if (changed) SyncStructures();
+        if (changed) { long st0 = System.Diagnostics.Stopwatch.GetTimestamp(); SyncStructures(); DiagSyncTicks += System.Diagnostics.Stopwatch.GetTimestamp() - st0; }
         Publish(nowSec);
     }
+
+    // ------------------------------------------------------------------ P5-D: the cheap path for sites nobody watches
+
+    /// <summary>For tests: walk every quantum of every site in full (the cheap path off). The result is the same bytes either way (ConstructionCheapPathTests).</summary>
+    public bool Eager { get; set; }
+    private long _advLimit;
+    /// <summary>Diagnostics: site quanta walked in full, and deferred and applied at once.</summary>
+    public long DiagFullQuanta, DiagLinearQuanta, DiagSyncTicks, DiagLinTicks;
+    public readonly long[] DiagX = new long[4];
+
+    /// <summary>Applies every site's deferred quanta (and forgets their spans): before an hour's turn, a groan, the end of an advance.</summary>
+    private void SettleAll(long q)
+    {
+        foreach (var s in _siteList) { if (s.Deferred > 0) Settle(s, q); s.LinearUntil = 0; }
+    }
+
+    /// <summary>
+    /// The deferred quanta of a site at once: in each, every hand on his piece adds the same units (his rate does not change: no skill gained, no piece finished, the same weather), as the
+    /// full walk would, in hire order (the last hand on a piece is its builder).
+    /// </summary>
+    private void Settle(ConstructionSite s, long q)
+    {
+        int d = s.Deferred; s.Deferred = 0;
+        if (d == 0 || !s.LinearWorks) return;
+        DiagLinearQuanta += d;
+        foreach (var m in s.Crew)
+        {
+            if (s.Pause == PauseReason.NoWages && m.Class != CrewClass.Follower) continue;
+            if (m.DayCapSec > 0 && m.WorkedTodaySec >= m.DayCapSec) continue;
+            if (m.Job != default || m.Ghost == default || m.G is not { } g || g.Id != m.Ghost) continue;
+            g.WorkDone = Math.Min(g.WorkNeed, g.WorkDone + Units(q, m.Tm, m.Tp) * d);
+            g.Builder = m.Person; g.BuiltSkill = m.C!.Skill == Skill.None ? 50 : (1300 - m.Tm) / 6;
+            if (g.State != GhostState.Blocked) g.State = GhostState.InProgress;
+            m.WorkedTodaySec += q * d; m.SkillSec += q * d;
+        }
+    }
+
+    private readonly List<(Ghost G, CrewMember M, long U)> _lin = [];
+
+    /// <summary>
+    /// After a full quantum at <paramref name="t0"/>: how many of the following quanta (inside this hour and this advance) the site stays linear: every hand either on his piece (materials
+    /// in, not stopped by the weather, his rate read) and not finishing it, not reaching an hour of skill and not his day's cap, or idle with nothing to find (his last look still holds),
+    /// or carrying a haul job; no groan pending. 0 when the next quantum must be walked in full.
+    /// </summary>
+    private int LinearQuanta(ConstructionSite s, long t0, long q, bool raining, out bool works)
+    {
+        works = false;
+        if (Eager || Book.Groans.Count > 0) return 0;
+        long t1 = t0 + q, lim = Math.Min((t0 / 3600 + 1) * 3600, _advLimit);
+        long k = (lim - t1) / q;
+        if (k <= 0) return 0;
+        long pileG = -1;
+        _lin.Clear();
+        foreach (var m in s.Crew)
+        {
+            if (s.Pause == PauseReason.NoWages && m.Class != CrewClass.Follower) continue;
+            if (m.DayCapSec > 0 && m.WorkedTodaySec >= m.DayCapSec) continue;
+            if (m.Job != default) continue;
+            if (m.Ghost == default)
+            {
+                if (!_idle.TryGetValue(m.Person, out var was)) return 0;
+                if (pileG < 0) pileG = PileOf(s).TotalMassG();
+                if (was.Version != _siteVersion.GetValueOrDefault(s.Id) || was.PileG != pileG || was.Rain != raining) return 0;
+                continue;
+            }
+            if (m.G is not { } g || g.Id != m.Ghost || !g.Live || g.State == GhostState.Blocked || m.Tm == 0 || m.C == null) return 0;
+            if (g.Work == GhostWork.Build && (!g.Materialised || WeatherStops(g, CostOf(g), raining))) return 0;
+            k = Math.Min(k, (3599 - m.SkillSec) / q);
+            if (m.DayCapSec > 0) k = Math.Min(k, (m.DayCapSec - m.WorkedTodaySec) / q);
+            if (k <= 0) return 0;
+            _lin.Add((g, m, Units(q, m.Tm, m.Tp)));
+        }
+        works = _lin.Count > 0;
+        if (!works) return (int)k;
+        // The first quantum in which a hand would finish his piece is walked in full. Hand i on a piece (hire order) sees, in quantum j, R - (j - 1) S - P_i left (R what is left now, S
+        // the units all its hands add in a quantum, P_i those of the hands before him); he finishes when that is at most his threshold (SecondsFor(left) <= q).
+        for (int i = 0; i < _lin.Count && k > 0; i++)
+        {
+            var (g, m, _) = _lin[i];
+            long sum = 0, before = 0;
+            for (int o = 0; o < _lin.Count; o++) { if (_lin[o].G != g) continue; sum += _lin[o].U; if (o < i) before += _lin[o].U; }
+            long room = g.WorkNeed - g.WorkDone - before - Threshold(q, m.Tm, m.Tp);
+            if (room <= 0 || sum <= 0) return 0;
+            k = Math.Min(k, (room - 1) / sum + 1);
+        }
+        return (int)k;
+    }
+
+    /// <summary><see cref="PieceCosts.UnitsFor"/> for a quantum, in long arithmetic when it fits.</summary>
+    private static long Units(long q, int tm, int tp) => q < 9_000_000 ? q * 1_000_000_000_000L / ((long)tm * tp) : PieceCosts.UnitsFor(q, tm, tp);
+    /// <summary>The most units left that a hand still finishes within one quantum: the largest R with <c>SecondsFor(R) &lt;= q</c>.</summary>
+    private static long Threshold(long q, int tm, int tp) => q < 9_000_000 ? (q * 1_000_000_000_000L + 499_999_999_999L) / ((long)tm * tp) : (long)(((Int128)q * 1_000_000_000_000L + 499_999_999_999L) / ((long)tm * tp));
 
     private bool WorkQuantum(long t0, long q)
     {
@@ -87,9 +184,19 @@ public sealed partial class ConstructionWorld
         bool raining = RainStops(t0);
         (JobEnv Env, JobTable Table)? jt = null; bool jtRead = false;
         bool hourStart = t0 % 3600 == 0;
-        foreach (var s in Book.Sites.Values)
+        foreach (var s in _siteList)
         {
             if (!s.Open || s.Crew.Count == 0 || s.Pause == PauseReason.Owner) continue;
+            if (s.LinearUntil > t0) { s.Deferred++; any |= s.LinearWorks; continue; }      // P5-D: a linear quantum, applied later at once
+            if (s.Deferred > 0) Settle(s, q);
+            DiagFullQuanta++;
+            // P5-D: a contractor's crew starts its day late by the day's pace jitter (0x511): nothing happens on the site until then
+            long late = LateStart(s, t0);
+            if (late > t0)
+            {
+                s.LinearUntil = Eager ? 0 : Math.Min(Math.Min(late / q * q, (t0 / 3600 + 1) * 3600), _advLimit); s.LinearWorks = false;
+                continue;
+            }
             bool dirty = false, worked = false, rainBlocked = false, removed = false;
             long pileG = -1;
             _finished.Clear();
@@ -97,6 +204,7 @@ public sealed partial class ConstructionWorld
             {
                 var m = s.Crew[ci];
                 if (s.Pause == PauseReason.NoWages && m.Class != CrewClass.Follower) continue;
+                if (m.DayCapSec > 0 && m.WorkedTodaySec >= m.DayCapSec) continue;          // P5-D: a growth crew's hours a day (Phase 3's own and hired hours)
                 if (m.Job != default)
                 {
                     if (!jtRead) { jt = Jobs?.Invoke(); jtRead = true; }
@@ -111,7 +219,8 @@ public sealed partial class ConstructionWorld
                     { rainBlocked |= was.RainBlocked; continue; }
                     _idle.Remove(m.Person);
                 }
-                long left = q;
+                long full = m.DayCapSec > 0 ? Math.Min(q, m.DayCapSec - m.WorkedTodaySec) : q;
+                long left = full;
                 while (left > 0)
                 {
                     // the member's piece, its cost and his rates are cached on him (derived: rebuilt the same after a load) and dropped when the piece or his skill changes
@@ -123,7 +232,7 @@ public sealed partial class ConstructionWorld
                         g = Pick(s, m, raining, ref rainBlocked);
                         DiagPickTicks += System.Diagnostics.Stopwatch.GetTimestamp() - pt0;
                         if (g == null) break;
-                        if (!Begin(s, g)) { m.Ghost = default; m.G = null; dirty = true; continue; }
+                        long bg0 = System.Diagnostics.Stopwatch.GetTimestamp(); bool began = Begin(s, g); DiagX[0] += System.Diagnostics.Stopwatch.GetTimestamp() - bg0; if (!began) { m.Ghost = default; m.G = null; dirty = true; continue; }
                         m.Ghost = g.Id;
                     }
                     else if (!g.Materialised && !Begin(s, g)) { m.Ghost = default; m.G = null; dirty = true; continue; }
@@ -133,13 +242,13 @@ public sealed partial class ConstructionWorld
                         m.Tm = PieceCosts.TimeMultPm(m.C, SkillLevel(m.Person, m.C.Skill, m.PersonIndex));
                         m.Tp = ToolsOk(m.C, m.Class == CrewClass.Skilled ? _skilledTools ??= CrewTools(CrewClass.Skilled) : _labourTools ??= CrewTools(CrewClass.Labourer)) ? 1000 : Rules.NoToolPm;
                     }
-                    long w = WorkOn(g, m, left, out bool done);
+                    long wo0 = System.Diagnostics.Stopwatch.GetTimestamp(); long w = WorkOn(g, m, left, out bool done);
                     left -= w; m.WorkedTodaySec += w; worked = true; any = true;
-                    GainSkill(m, g, w, t0 + (q - left));
+                    GainSkill(m, g, w, t0 + (full - left)); DiagX[1] += System.Diagnostics.Stopwatch.GetTimestamp() - wo0;
                     if (done)
                     {
                         if (g.Work == GhostWork.Build) _finished.Add(ConstructionIds.CellKey(g.X, g.Y, g.Z)); else removed = true;
-                        Finish(g, t0 + (q - left), m.Person); m.Ghost = default; m.G = null; dirty = true; pileG = -1;
+                        Finish(g, t0 + (full - left), m.Person); m.Ghost = default; m.G = null; dirty = true; pileG = -1;
                     }
                 }
                 if (left == q && m.Ghost == default)
@@ -156,6 +265,8 @@ public sealed partial class ConstructionWorld
             }
             if (dirty) { long rt0 = System.Diagnostics.Stopwatch.GetTimestamp(); Refresh(s, removed ? null : _finished); DiagRefreshTicks += System.Diagnostics.Stopwatch.GetTimestamp() - rt0; }
             if (s.Pause is PauseReason.None or PauseReason.Rain) s.Pause = !worked && rainBlocked ? PauseReason.Rain : s.Pause == PauseReason.Rain ? PauseReason.None : s.Pause;
+            long lt0 = System.Diagnostics.Stopwatch.GetTimestamp(); int lin = LinearQuanta(s, t0, q, raining, out bool works); DiagLinTicks += System.Diagnostics.Stopwatch.GetTimestamp() - lt0;
+            s.LinearUntil = lin > 0 ? t0 + q + lin * q : 0; s.LinearWorks = works;
         }
         return any;
     }
@@ -203,22 +314,29 @@ public sealed partial class ConstructionWorld
     private Ghost? Pick(ConstructionSite s, CrewMember m, bool raining, ref bool rainBlocked)
     {
         Ghost? best = null; (int, int, int, long, ulong) bestKey = default;
-        foreach (var g in GhostsOf(s.Id))
+        NewMemo();
+        int skillFor = -1; Skill skillAsked = Skill.None;
+        foreach (var g in SetOf(s.Id))
         {
             if (g.State is not (GhostState.Ready or GhostState.InProgress)) continue;
             var c = CostOf(g);
             if (g.Work == GhostWork.Build)
             {
                 if (WeatherStops(g, c, raining)) { rainBlocked = true; continue; }
-                if (SkillLevel(m.Person, c.Skill, m.PersonIndex) < c.MinSkill) continue;
-                if (!g.Materialised && !PileHas(s, c)) continue;
+                if (c.MinSkill > 0)
+                {
+                    if (skillFor < 0 || skillAsked != c.Skill) { skillAsked = c.Skill; skillFor = SkillLevel(m.Person, c.Skill, m.PersonIndex); }
+                    if (skillFor < c.MinSkill) continue;
+                }
             }
-            int on = 0; foreach (var o in s.Crew) if (o.Ghost == g.Id) on++;
-            if (on >= Costs.MaxWorkers(c)) continue;
             // building rises from the lowest level; taking down starts at the top (roofs, then floors, then walls)
             bool down = g.Work == GhostWork.Deconstruct;
             var key = (-g.Priority, down ? 100 - g.Z : g.Z, down ? 6 - KindRank(c.Kind) : KindRank(c.Kind), (long)Math.Abs(g.X - s.PileX) + Math.Abs(g.Y - s.PileY), g.Id.Value);
-            if (best == null || key.CompareTo(bestKey) < 0) { best = g; bestKey = key; }
+            if (best != null && key.CompareTo(bestKey) >= 0) continue;               // P5-D: the costlier checks only for a ghost that would win
+            if (g.Work == GhostWork.Build && !g.Materialised && !PileHasMemo(s, c)) continue;
+            int on = 0; foreach (var o in s.Crew) if (o.Ghost == g.Id) on++;
+            if (on >= Costs.MaxWorkers(c)) continue;
+            best = g; bestKey = key;
         }
         return best;
     }
@@ -367,9 +485,21 @@ public sealed partial class ConstructionWorld
     /// <summary>Whether the claim <paramref name="serial"/> has been improved by the dwelling <paramref name="structure"/> already (the land hook asks before it improves).</summary>
     public bool ImprovedBy(int serial, int structure) => Book.Improved.Contains(((long)serial << 32) | (uint)structure);
 
-    /// <summary>Keeps the book's copy of the structure ids (saved) in step with the RoomWorld.</summary>
+    /// <summary>
+    /// Keeps the book's copy of the structure ids (saved) in step with the RoomWorld. P5-D: lazily: the copy is marked stale and made when the book is saved or hashed
+    /// (<see cref="ConstructionBook.Sync"/>), not after every hour of work (it walks every built cell).
+    /// </summary>
     public void SyncStructures()
     {
+        _structuresStale = true;
+        Book.Flush = FlushStructures;
+    }
+
+    private bool _structuresStale;
+    private void FlushStructures()
+    {
+        if (!_structuresStale) return;
+        _structuresStale = false;
         Book.Structures = Rooms.StructureParts();
         Book.NextStructureId = Rooms.NextStructureId;
     }
@@ -679,7 +809,7 @@ public sealed partial class ConstructionWorld
         var g = Book.Ghosts.GetValueOrDefault(ghostId);
         if (g == null || !g.Live) return ConstructionResult.No("cn_no_ghost");
         var s = Site(g.Site)!;
-        if (s.Owner != hero && May != null && !May(hero, household, LandAction.Build, g.X, g.Y).Allowed) return ConstructionResult.No("cn_not_your_site");
+        if (s.Owner != hero && !IsContractor(s, hero) && May != null && !May(hero, household, LandAction.Build, g.X, g.Y).Allowed) return ConstructionResult.No("cn_not_your_site");   // P5-D: a contractor works where he was hired
         long from = Math.Max(fromSec, Book.HeroWorkedTo);
         if (untilSec <= from) return ConstructionResult.Yes("cn_worked", 0);
         int done = 0; long worked = 0; long t = from;

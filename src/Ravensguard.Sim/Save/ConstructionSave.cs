@@ -36,6 +36,41 @@ public sealed class ConstructionSave
     [Key(16)] public ushort[] DematGood { get; set; } = [];
     [Key(17)] public long[] DematG { get; set; } = [];
     [Key(18)] public long[] Improved { get; set; } = [];
+    /// <summary>P5-D: building contracts and growth projects made visible (additive keys, empty in a P5-B save).</summary>
+    [Key(19)] public ContractRow[] Contracts { get; set; } = [];
+    [Key(20)] public GrowthRow[] Growth { get; set; } = [];
+
+    [MessagePackObject]
+    public sealed class ContractRow
+    {
+        [Key(0)] public ulong Id { get; set; }
+        /// <summary>Kind, state, client kind, contractor kind.</summary>
+        [Key(1)] public byte[] Flags { get; set; } = [];
+        [Key(2)] public ulong Site { get; set; }
+        [Key(3)] public ulong Client { get; set; }
+        [Key(4)] public ulong Contractor { get; set; }
+        [Key(5)] public string Blueprint { get; set; } = "";
+        [Key(6)] public int Settlement { get; set; }
+        /// <summary>Materials, labour, haul, work units, released, posted, signed, done, due.</summary>
+        [Key(7)] public long[] Money { get; set; } = [];
+        [Key(8)] public int Crew { get; set; }
+        [Key(9)] public int Stages { get; set; }
+        [Key(10)] public int GrowthSerial { get; set; } = -1;
+    }
+
+    [MessagePackObject]
+    public sealed class GrowthRow
+    {
+        [Key(0)] public int Serial { get; set; }
+        [Key(1)] public byte Kind { get; set; }
+        [Key(2)] public ulong Site { get; set; }
+        [Key(3)] public int Settlement { get; set; }
+        /// <summary>x, y, w, h.</summary>
+        [Key(4)] public int[] Rect { get; set; } = [];
+        [Key(5)] public long DoneMilli { get; set; }
+        [Key(6)] public long NeedMilli { get; set; }
+        [Key(7)] public long LinkedSec { get; set; }
+    }
 
     [MessagePackObject]
     public sealed class SiteRow
@@ -74,6 +109,8 @@ public sealed class ConstructionSave
         [Key(7)] public long SkillSec { get; set; }
         [Key(8)] public int ShortDays { get; set; }
         [Key(9)] public long PaidMites { get; set; }
+        /// <summary>P5-D: a growth crew's seconds a day (0: the whole day).</summary>
+        [Key(10)] public long DayCapSec { get; set; }
     }
 
     [MessagePackObject]
@@ -119,7 +156,9 @@ public sealed class ConstructionSave
         [Key(5)] public string Why { get; set; } = "";
     }
 
-    public static ConstructionSave Capture(ConstructionBook b) => new()
+    public static ConstructionSave Capture(ConstructionBook b) { b.Sync(); return CaptureCore(b); }   // P5-D: the lazy structure ids first
+
+    private static ConstructionSave CaptureCore(ConstructionBook b) => new()
     {
         NextSerial = b.NextSerial, AdvancedSec = b.AdvancedSec, HeroWorkedTo = b.HeroWorkedTo, NextStructureId = b.NextStructureId,
         Sites = [.. b.Sites.Values.Select(s => new SiteRow
@@ -130,7 +169,7 @@ public sealed class ConstructionSave
             Crew = [.. s.Crew.Select(m => new CrewRow
             {
                 Person = m.Person.Value, PersonIndex = m.PersonIndex, Class = (byte)m.Class, Wage = m.WageMitesPerDay, Ghost = m.Ghost.Value, Job = m.Job.Value, WorkedTodaySec = m.WorkedTodaySec,
-                SkillSec = m.SkillSec, ShortDays = m.ShortDays, PaidMites = m.PaidMites,
+                SkillSec = m.SkillSec, ShortDays = m.ShortDays, PaidMites = m.PaidMites, DayCapSec = m.DayCapSec,
             })],
         })],
         Ghosts = [.. b.Ghosts.Values.Select(g => new GhostRow
@@ -149,6 +188,16 @@ public sealed class ConstructionSave
         MatGood = [.. b.MaterialisedG.Keys], MatG = [.. b.MaterialisedG.Values],
         DematGood = [.. b.DematerialisedG.Keys], DematG = [.. b.DematerialisedG.Values],
         Improved = [.. b.Improved],
+        Contracts = [.. b.Contracts.Values.Select(c => new ContractRow
+        {
+            Id = c.Id.Value, Flags = [(byte)c.Kind, (byte)c.State, (byte)c.ClientKind, (byte)c.ContractorKind], Site = c.Site.Value, Client = c.Client.Value, Contractor = c.Contractor.Value,
+            Blueprint = c.Blueprint, Settlement = c.Settlement, Money = [c.MaterialsMites, c.LabourMites, c.HaulMites, c.WorkUnits, c.ReleasedMites, c.PostedSec, c.SignedSec, c.DoneSec, c.DueSec],
+            Crew = c.Crew, Stages = c.Stages, GrowthSerial = c.GrowthSerial,
+        })],
+        Growth = [.. b.Growth.Values.Select(g => new GrowthRow
+        {
+            Serial = g.Serial, Kind = g.Kind, Site = g.Site.Value, Settlement = g.Settlement, Rect = [g.X, g.Y, g.W, g.H], DoneMilli = g.DoneMilli, NeedMilli = g.NeedMilli, LinkedSec = g.LinkedSec,
+        })],
     };
 
     public ConstructionBook Restore()
@@ -167,7 +216,7 @@ public sealed class ConstructionSave
                 s.Crew.Add(new CrewMember
                 {
                     Person = new EntityId(c.Person), PersonIndex = c.PersonIndex, Class = (CrewClass)c.Class, WageMitesPerDay = c.Wage, Ghost = new EntityId(c.Ghost), Job = new EntityId(c.Job),
-                    WorkedTodaySec = c.WorkedTodaySec, SkillSec = c.SkillSec, ShortDays = c.ShortDays, PaidMites = c.PaidMites,
+                    WorkedTodaySec = c.WorkedTodaySec, SkillSec = c.SkillSec, ShortDays = c.ShortDays, PaidMites = c.PaidMites, DayCapSec = c.DayCapSec,
                 });
             b.Sites[s.Id] = s;
         }
@@ -194,6 +243,26 @@ public sealed class ConstructionSave
         for (int i = 0; i < MatGood.Length && i < MatG.Length; i++) b.MaterialisedG[MatGood[i]] = MatG[i];
         for (int i = 0; i < DematGood.Length && i < DematG.Length; i++) b.DematerialisedG[DematGood[i]] = DematG[i];
         foreach (var k in Improved) b.Improved.Add(k);
+        foreach (var r in Contracts)
+        {
+            byte F(int i) => i < r.Flags.Length ? r.Flags[i] : (byte)0;
+            long M(int i) => i < r.Money.Length ? r.Money[i] : 0;
+            var c = new Contract
+            {
+                Id = new EntityId(r.Id), Kind = (ContractKind)F(0), State = (ContractState)F(1), ClientKind = (PurseKind)F(2), ContractorKind = (PurseKind)F(3), Site = new EntityId(r.Site),
+                Client = new EntityId(r.Client), Contractor = new EntityId(r.Contractor), Blueprint = r.Blueprint, Settlement = r.Settlement, MaterialsMites = M(0), LabourMites = M(1), HaulMites = M(2),
+                WorkUnits = M(3), ReleasedMites = M(4), PostedSec = M(5), SignedSec = M(6), DoneSec = M(7), DueSec = M(8), Crew = r.Crew, Stages = r.Stages, GrowthSerial = r.GrowthSerial,
+            };
+            b.Contracts[c.Id] = c;
+        }
+        foreach (var r in Growth)
+        {
+            int R(int i) => i < r.Rect.Length ? r.Rect[i] : 0;
+            b.Growth[r.Serial] = new GrowthLink
+            {
+                Serial = r.Serial, Kind = r.Kind, Site = new EntityId(r.Site), Settlement = r.Settlement, X = R(0), Y = R(1), W = R(2), H = R(3), DoneMilli = r.DoneMilli, NeedMilli = r.NeedMilli, LinkedSec = r.LinkedSec,
+            };
+        }
         return b;
     }
 }

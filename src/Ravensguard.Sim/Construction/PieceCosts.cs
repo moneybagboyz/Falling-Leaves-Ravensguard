@@ -31,6 +31,10 @@ public sealed class PieceCost
     /// <summary>The difficulty a skill gain reads (crafting's rule: min skill + 20).</summary>
     public int Difficulty => MinSkill + 20;
     public long TotalGrams => Materials.Sum(m => m.Grams);
+
+    // P5-D: the engine's memo for one pick or refresh (whether the site's pile holds this piece's materials), keyed by a stamp; derived, never saved
+    internal long PileMemoStamp;
+    internal bool PileMemo;
 }
 
 /// <summary>The piece costs of the loaded content (spec 3.1) and the sums of a plan (BC-2).</summary>
@@ -130,9 +134,9 @@ public sealed class PieceCosts
     public static int TimeMultPm(PieceCost c, int skill) => c.Skill == Skill.None ? 1000 : Math.Max(100, 1300 - 6 * Math.Clamp(skill, 0, 100));
 
     /// <summary>Work units one worker adds in <paramref name="seconds"/>: a piece of h hours at multiplier T takes h x T / 1000 hours (units are standard microseconds, so the truncation of a call is a millionth of a second).</summary>
-    public static long UnitsFor(long seconds, int timePm, int toolPm) => (long)((Int128)seconds * 1_000_000_000_000L / ((long)timePm * toolPm));
+    public static long UnitsFor(long seconds, int timePm, int toolPm) => seconds is >= 0 and < 9_000_000 ? seconds * 1_000_000_000_000L / ((long)timePm * toolPm) : (long)((Int128)seconds * 1_000_000_000_000L / ((long)timePm * toolPm));   // P5-D: long arithmetic when it fits (the same result)
     /// <summary>The seconds a worker needs to add <paramref name="units"/>, to the nearest second (whole quanta and split hand-work both land on the exact second).</summary>
-    public static long SecondsFor(long units, int timePm, int toolPm) => (long)(((Int128)units * timePm * toolPm + 500_000_000_000L) / 1_000_000_000_000L);
+    public static long SecondsFor(long units, int timePm, int toolPm) => units is >= 0 and < 2_000_000_000_000L && timePm is > 0 and <= 2000 && toolPm is > 0 and <= 2000 ? (units * timePm * toolPm + 500_000_000_000L) / 1_000_000_000_000L : (long)(((Int128)units * timePm * toolPm + 500_000_000_000L) / 1_000_000_000_000L);
 
     /// <summary>A built piece's hit points by the builder's skill (spec 4.4): <c>hp x (700 + 6 x min(skill, 50)) / 1000</c>.</summary>
     public static int BuiltHp(PieceCost c, int skill) => (int)((long)c.Hp * (700 + 6 * Math.Clamp(skill, 0, 50)) / 1000);

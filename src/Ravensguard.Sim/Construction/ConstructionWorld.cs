@@ -85,7 +85,9 @@ public sealed partial class ConstructionWorld
     public Func<EntityId, string>? NameOf { get; set; }
 
     private readonly Dictionary<long, EntityId> _ghostAt = [];
-    private readonly Dictionary<EntityId, SortedSet<EntityId>> _siteGhosts = [];
+    private readonly Dictionary<EntityId, GhostSet> _siteGhosts = [];      // P5-D: the ghosts themselves, by id (no book lookup per ghost)
+    /// <summary>P5-D: the sites in id order as a flat list (the engine walks it every quantum; ids only grow, so a new site is appended).</summary>
+    private readonly List<ConstructionSite> _siteList = [];
     private long _builtVersion;
 
     public ConstructionWorld(ConstructionBook book, EconomyState econ, PieceCosts costs, int regionId = 0)
@@ -99,14 +101,14 @@ public sealed partial class ConstructionWorld
     /// <summary>Rebuilds the indexes and the live RoomWorld from the book (the load path): the built cells, the saved structure ids, then a full room detection.</summary>
     public void Reindex()
     {
-        _ghostAt.Clear(); _siteGhosts.Clear();
-        foreach (var s in Book.Sites.Keys) _siteGhosts[s] = [];
+        _ghostAt.Clear(); _siteGhosts.Clear(); _siteList.Clear(); _siteList.AddRange(Book.Sites.Values);
+        foreach (var s in Book.Sites.Keys) _siteGhosts[s] = new GhostSet();
         foreach (var g in Book.Ghosts.Values)
         {
             if (!g.Live) continue;
             _ghostAt[g.SlotKey] = g.Id;
-            if (!_siteGhosts.TryGetValue(g.Site, out var set)) _siteGhosts[g.Site] = set = [];
-            set.Add(g.Id);
+            if (!_siteGhosts.TryGetValue(g.Site, out var set)) _siteGhosts[g.Site] = set = new GhostSet();
+            set.Add(g);
         }
         Rooms = Costs.Library.NewWorld();
         _built.Clear(); _beams = 0;
@@ -145,12 +147,15 @@ public sealed partial class ConstructionWorld
         return true;
     }
     public Ghost? GhostAt(int x, int y, int z, GhostSlot slot = GhostSlot.Structure) => _ghostAt.TryGetValue(ConstructionIds.SlotKey(x, y, z, slot), out var id) ? Book.Ghosts.GetValueOrDefault(id) : null;
-    public IEnumerable<Ghost> GhostsOf(EntityId site) => _siteGhosts.TryGetValue(site, out var set) ? set.Select(id => Book.Ghosts[id]) : [];
+    public IEnumerable<Ghost> GhostsOf(EntityId site) => _siteGhosts.TryGetValue(site, out var set) ? set.AsEnumerable() : [];
+    private static readonly GhostSet NoGhosts = new();
+    /// <summary>P5-D: a site's ghosts for the engine's hot loops (walked by index, no allocation).</summary>
+    internal GhostSet SetOf(EntityId site) => _siteGhosts.TryGetValue(site, out var set) ? set : NoGhosts;
     public ConstructionSite? Site(EntityId id) => Book.Sites.GetValueOrDefault(id);
     public Store PileOf(ConstructionSite s) => Econ.OpenStore(StoreKind.Open, s.Pile);
 
     /// <summary>The built structure piece at a cell (what a crew can rest on now).</summary>
-    public PieceCost? BuiltStructure(int x, int y, int z) => BuiltAt(x, y, z) is { } b ? Costs.Get(b.Piece) : null;
+    public PieceCost? BuiltStructure(int x, int y, int z) => _built.TryGetValue(ConstructionIds.SlotKey(x, y, z, GhostSlot.Structure), out var b) ? b.CostCache ??= Costs.Get(b.Piece) : null;   // P5-D: the cost cached on the cell
 
     private CellAt BuiltView(HashSet<long>? without = null) => (x, y, z) =>
     {
@@ -330,8 +335,8 @@ public sealed partial class ConstructionWorld
             Id = ConstructionIds.Make(RegionId, ConstructionIds.SiteSlot, Book.Take()), Region = RegionId, Owner = owner, OwnerKind = ownerKind, Payer = payer, PayerKind = payerKind,
             Deed = deed, PileX = px, PileY = py, PileZ = 0, Blueprint = blueprint, CreatedSec = nowSec,
         };
-        Book.Sites[s.Id] = s;
-        _siteGhosts[s.Id] = [];
+        Book.Sites[s.Id] = s; _siteList.Add(s);
+        _siteGhosts[s.Id] = new GhostSet();
         PileOf(s);
         Book.Placed[s.Pile] = new PlacedStore(s.Pile, px, py, 0);
         if (Book.AdvancedSec < 0 || !Busy()) Book.AdvancedSec = nowSec / Rules.QuantumSeconds * Rules.QuantumSeconds;
@@ -343,8 +348,8 @@ public sealed partial class ConstructionWorld
     {
         Book.Ghosts[g.Id] = g;
         _ghostAt[g.SlotKey] = g.Id;
-        if (!_siteGhosts.TryGetValue(g.Site, out var set)) _siteGhosts[g.Site] = set = [];
-        set.Add(g.Id);
+        if (!_siteGhosts.TryGetValue(g.Site, out var set)) _siteGhosts[g.Site] = set = new GhostSet();
+        set.Add(g);
     }
 
     private void DropGhost(Ghost g)
@@ -432,6 +437,24 @@ public sealed partial class ConstructionWorld
         return true;
     }
 
+    // P5-D: one pick or refresh asks the pile about each kind of piece once (the answer cannot change inside it)
+    private long _memoStamp;
+    private Store? _memoPile;
+    private bool PileHasMemo(ConstructionSite s, PieceCost c)
+    {
+        if (c.PileMemoStamp == _memoStamp) return c.PileMemo;
+        var ids = MaterialIds(c);
+        bool ok = true;
+        if (ids.Length > 0)
+        {
+            var pile = _memoPile ??= PileOf(s);
+            foreach (var (g, grams) in ids) if (g == ushort.MaxValue || pile.Qty(g) < grams) { ok = false; break; }
+        }
+        c.PileMemoStamp = _memoStamp; c.PileMemo = ok;
+        return ok;
+    }
+    private void NewMemo() { _memoStamp++; _memoPile = null; }
+
     /// <summary>Recomputes the states of a site's ghosts: what is ready (support built, materials in the pile), what waits and why, and the site's own pause.</summary>
     public void Refresh(ConstructionSite s) => Refresh(s, null);
 
@@ -442,20 +465,29 @@ public sealed partial class ConstructionWorld
     public void Refresh(ConstructionSite s, IReadOnlyList<long>? built)
     {
         Touch(s);
+        NewMemo();
         // a new piece helps only what is on its level or the one above, within the longest reach (a beam's, and the jetty beside a beam's end)
         int near = Math.Max(Rules.SupportReachTiles, Rules.BeamReachTiles) + Rules.JettyReachTiles;
+        // P5-D: with no beam anywhere, a finished piece holds up only the level above it within the support reach (an upright: wall, post, door or window), or the fixture on its own
+        // floor; everything else it cannot help. With a beam about, the wider rule above.
+        bool wide = AnyBeams || _planBeams;
+        int reach = Rules.SupportReachTiles;
         bool Near(Ghost g)
         {
-            foreach (var k in built!)
+            for (int bi = 0; bi < built!.Count; bi++)
             {
-                var (x, y, z) = ConstructionIds.Unpack(k);
-                if (g.Z - z is >= 0 and <= 1 && Math.Abs(g.X - x) <= near && Math.Abs(g.Y - y) <= near) return true;
+                var (x, y, z) = ConstructionIds.Unpack(built[bi]);
+                int dx = Math.Abs(g.X - x), dy = Math.Abs(g.Y - y);
+                if (wide) { if (g.Z - z is >= 0 and <= 1 && dx <= near && dy <= near) return true; continue; }
+                if (g.Z == z && dx == 0 && dy == 0) return true;
+                if (g.Z == z + 1 && dx <= reach && dy <= reach && BuiltStructure(x, y, z) is { } p && (PieceCosts.IsUpright(p.Kind) || p.Kind == PieceKind.Beam)) return true;
             }
             return false;
         }
         var at = BuiltView();
         bool anyLive = false, anyReady = false, anyMaterials = false;
-        foreach (var g in GhostsOf(s.Id))
+        DiagX[3] += SetOf(s.Id).Count;
+        foreach (var g in SetOf(s.Id))
         {
             anyLive = true;
             if (g.Work == GhostWork.Deconstruct) { g.Block = GhostBlock.None; g.State = g.WorkDone > 0 ? GhostState.InProgress : GhostState.Ready; anyReady = true; continue; }
@@ -464,8 +496,8 @@ public sealed partial class ConstructionWorld
             bool supportKnown = built != null && g.State != GhostState.Planned && (g.Block != GhostBlock.Support || !Near(g));
             if (supportKnown) block = g.Block == GhostBlock.Support ? GhostBlock.Support : GhostBlock.None;
             else if (g.Slot == GhostSlot.Fixture) { if (BuiltStructure(g.X, g.Y, g.Z) is not { } f || !PieceCatalog.IsRoomKind(f.Kind)) block = GhostBlock.Support; }
-            else if (!Support.Check(g.X, g.Y, g.Z, cost, at).Ok) block = GhostBlock.Support;
-            if (block == GhostBlock.None && !g.Materialised && !PileHas(s, cost)) block = GhostBlock.Materials;
+            else { DiagX[2]++; if (!Support.Check(g.X, g.Y, g.Z, cost, at).Ok) block = GhostBlock.Support; }
+            if (block == GhostBlock.None && !g.Materialised && !PileHasMemo(s, cost)) block = GhostBlock.Materials;
             g.Block = block;
             g.State = block != GhostBlock.None ? GhostState.Blocked : g.WorkDone > 0 || g.Materialised ? GhostState.InProgress : GhostState.Ready;
             if (block == GhostBlock.None) anyReady = true;

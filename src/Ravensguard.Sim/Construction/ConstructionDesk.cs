@@ -17,6 +17,7 @@ namespace Ravensguard.Sim.Construction;
 /// <item><c>cn:deliver|site|good|qty|x|y</c>: unload from the pack into the pile within 3 m.</item>
 /// <item><c>cn:haul|site|srcOwner|sx|sy|good|qty</c>: post haul jobs from a store the hero owns elsewhere.</item>
 /// <item><c>cn:hire|site|count|skilled</c>, <c>cn:crew|site|person</c> (a follower), <c>cn:dismiss|site|person</c>, <c>cn:pause|site|1|0</c>.</item>
+/// <item>P5-D contracts: <c>cn:commission|site|builder|crew</c> (hire a builder at his bid), <c>cn:take|contract</c> (take posted work as a job, by hand), <c>cn:drop|contract</c>.</item>
 /// </list>
 /// </summary>
 public static class ConstructionDesk
@@ -38,6 +39,9 @@ public static class ConstructionDesk
     public static HeroCommand Crew(EntityId site, EntityId person, long sec) => Cmd(sec, Tag("crew", ConstructionIds.SerialOf(site), person.Value));
     public static HeroCommand Dismiss(EntityId site, EntityId person, long sec) => Cmd(sec, Tag("dismiss", ConstructionIds.SerialOf(site), person.Value));
     public static HeroCommand Pause(EntityId site, bool pause, long sec) => Cmd(sec, Tag("pause", ConstructionIds.SerialOf(site), pause ? 1 : 0));
+    public static HeroCommand Commission(EntityId site, EntityId builder, int crew, long sec) => Cmd(sec, Tag("commission", ConstructionIds.SerialOf(site), builder.Value, crew));
+    public static HeroCommand TakeContract(EntityId contract, long sec) => Cmd(sec, Tag("take", ConstructionIds.SerialOf(contract)));
+    public static HeroCommand DropContract(EntityId contract, long sec) => Cmd(sec, Tag("drop", ConstructionIds.SerialOf(contract)));
 
     private static HeroResult R(HeroCommand c, HeroResultCode code, HeroText text, long mites = 0) => new(c.Seq, c.Kind, code, text, mites, 0, c.IssuedSec);
 
@@ -85,6 +89,7 @@ public static class ConstructionDesk
         long sec = c.IssuedSec;
         EntityId SiteId(int i) => ConstructionIds.Make(cw.RegionId, ConstructionIds.SiteSlot, (ulong)Math.Max(0, N(i)));
         EntityId GhostId(int i) => ConstructionIds.Make(cw.RegionId, ConstructionIds.GhostSlotId, (ulong)Math.Max(0, N(i)));
+        EntityId ContractId(int i) => ConstructionIds.Make(cw.RegionId, ConstructionIds.ContractSlot, (ulong)Math.Max(0, N(i)));
         ConstructionResult? res;
         switch (p[0])
         {
@@ -130,6 +135,9 @@ public static class ConstructionDesk
             }
             case "dismiss" when p.Length >= 3: res = cw.Dismiss(hero, SiteId(1), new EntityId((ulong)N(2)), sec); break;
             case "pause" when p.Length >= 3: res = cw.SetPaused(hero, hk, hh, SiteId(1), N(2) != 0, sec); break;
+            case "commission" when p.Length >= 4: res = cw.Commission(hero, hk, SiteId(1), new EntityId((ulong)N(2)), Math.Clamp(I(3), 1, 8), sec); break;       // P5-D
+            case "take" when p.Length >= 2: res = cw.Take(hero, hk, ContractId(1), sec); break;
+            case "drop" when p.Length >= 2: res = cw.Drop(hero, ContractId(1), sec); break;
             default: res = null; break;
         }
         if (res == null) return R(c, HeroResultCode.Invalid, HeroText.Of("HERO_MAKES_NO_SENSE"));
