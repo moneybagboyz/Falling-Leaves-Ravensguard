@@ -3,6 +3,12 @@ using Ravensguard.Sim.Law;
 
 namespace Ravensguard.Sim.Heists;
 
+/// <summary>A door of the map as the screen acts on it: its lock quality (-1 plain, -2 a grate), its state (0 locked or shut, 1 unlocked, 2 open, 3 broken) and whether the hero has its key.</summary>
+public sealed record HeistDoorView(int Index, int X, int Y, int Quality, bool Cell, bool Grate, int State, bool HasKey);
+
+/// <summary>A prisoner's slot: where, who lies there (0 empty) and whether he is free.</summary>
+public sealed record HeistSlotView(int Slot, int X, int Y, ulong Person, bool Freed);
+
 /// <summary>One guard as the screen may show him: where, what he is doing, and whether the hero can see him now (lit and in the line of sight, or within two metres).</summary>
 public sealed record HeistGuardView(int Index, int X, int Y, GState State, bool Visible, bool Keeper);
 
@@ -45,6 +51,19 @@ public sealed class HeistView
     public long Stolen { get; init; }
     public bool Partner { get; init; }
     public IReadOnlyList<HeistGuardView> Guards { get; init; } = [];
+    public IReadOnlyList<HeistDoorView> Doors { get; init; } = [];
+    public IReadOnlyList<(int Index, int X, int Y, bool Out)> Sconces { get; init; } = [];
+    public IReadOnlyList<HeistSlotView> Slots { get; init; } = [];
+    public (int X, int Y) Chest { get; init; } = (-1, -1);
+    public bool ChestTaken { get; init; }
+    public (int X, int Y) Exit { get; init; } = (-1, -1);
+    public bool OuterLocked { get; init; }
+    public bool OnPortal { get; init; }
+    /// <summary>The seconds of a lock's pick, by quality, as the rules have them (the screen shows the time and the chance before he starts).</summary>
+    public IReadOnlyList<int> PickS { get; init; } = [];
+    /// <summary>The chance (percent) one finished attempt opens a lock of each quality, for the hero's skill.</summary>
+    public IReadOnlyList<int> PickPct { get; init; } = [];
+    public string TimeText => $"{Sec / 3600 % 24:00}:{Sec / 60 % 60:00}";
     public IReadOnlyList<(int X, int Y)> Heard { get; init; } = [];
 
     public static HeistView? Of(HeistRun? run)
@@ -75,12 +94,17 @@ public sealed class HeistView
             guards.Add(new HeistGuardView(i, g.X, g.Y, g.State, vis, g.Keeper));
         }
         var near = run.NearestGuard(); var (eye, disguised) = run.Eye();
+        var doors = m.Doors.Select(d => new HeistDoorView(d.Index, d.X, d.Y, d.Quality, d.Cell, d.Grate, s.Door.Length > d.Index ? s.Door[d.Index] : 0, run.HasKey(s, d.Index))).ToList();
+        var slots = m.Slots.Select((p, k) => new HeistSlotView(k, p.X, p.Y, k < s.Slot.Length ? s.Slot[k] : 0, k < s.Freed.Length && s.Freed[k])).ToList();
+        int outer = HeistRun.OuterIndex(m);
         return new HeistView
         {
             Template = s.Template, Kind = s.Kind, Settlement = s.Settlement, W = m.W, H = m.H, Glyphs = glyphs, Light = light, HeroX = run.X, HeroY = run.Y, Sneak = run.Sneak ? 1 : run.Running ? 2 : 0, Torch = run.Torch,
             Livery = run.Livery, LiveryLord = run.LiveryLord, Alarm = s.Alarm, Eye = eye, Disguised = disguised, Ear = Noise.Loudness(run.StepMetres), Nearest = near?.State ?? GState.Patrol, NearestM = near?.DistM ?? -1,
             Sec = run.Sec, Busy = run.BusyLeft, BusyKind = run.BusyKind, BusyTotal = run.BusyTotal, Keys = run.Keys.Count(k => k.Site == s.Id && k.Generation == s.LockGen), Followers = run.Followers.Count, Outcome = run.Outcome,
-            SeenBy = run.Seen.Count, Stolen = run.Stolen, Partner = run.Partner != 0, Guards = guards,
+            SeenBy = run.Seen.Count, Stolen = run.Stolen, Partner = run.Partner != 0, Guards = guards, Doors = doors, Slots = slots, Sconces = [.. m.Sconces.Select((c, i) => (i, c.X, c.Y, i < s.SconceOut.Length && s.SconceOut[i]))],
+            Chest = m.Chest, ChestTaken = s.ChestDay >= 0 && run.Sec / 86_400 < s.ChestDay + 30, Exit = m.Exit, OuterLocked = outer < s.Door.Length && s.Door[outer] == 0, OnPortal = (run.X, run.Y) == m.PortalA || (run.X, run.Y) == m.PortalB,
+            PickS = [.. Enumerable.Range(0, 5).Select(q => Locks.PickTimeS(run.R, q))], PickPct = [.. Enumerable.Range(0, 5).Select(q => Locks.PickPm(run.R, run.Lockpicking, q) / 10)],
         };
     }
 }

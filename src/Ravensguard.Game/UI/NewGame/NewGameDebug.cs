@@ -526,6 +526,21 @@ public static class NewGameDebug
                     await Frames(tree, 40);
                     break;
                 }
+            case "heist":
+                {
+                    // dev (P6-D3): the heist panel over a castle's dungeon at night, in a real new game
+                    var w = MakeWorld(Math.Min(years, 60), 7);
+                    var d = NewGameServices.NewDraft(); d.Name = "Shot"; d.LibraryWorldId = w.Info.Id;
+                    router.Push(new RegionBuildScreen(router, d, w));
+                    if (!await Until(tree, () => router.Top is Ravensguard.Game.World.StreetView, 9000)) throw new Exception("heist shot: the region build did not finish");
+                    var sv = (Ravensguard.Game.World.StreetView)router.Top!; var rt = sv.Runtime!;
+                    await Until(tree, () => rt.HourDone >= sv.DebugWorld.Clock.Now.TotalHours, 6000);
+                    await Frames(tree, 60);
+                    sv.DebugWorld.SetSpeed(Ravensguard.Sim.Core.SimSpeed.Paused);
+                    sv.DebugHeist();
+                    await Frames(tree, 60);
+                    break;
+                }
             case "cell":
                 {
                     // dev (P6-C1): the gaol cell of a held hero, with the sentence to expect and the ways out
