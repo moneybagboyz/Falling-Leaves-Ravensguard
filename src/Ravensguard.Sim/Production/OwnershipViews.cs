@@ -157,12 +157,17 @@ public sealed partial class OwnershipWorld
             }
         // vehicles and animals
         if (rides != null)
+        lock (rides.Gate)                                            // P5-G: the vehicle rows share one lock with the tick worker's vehicle pass
         {
             foreach (var veh in rides.Vehicles.Rows)
             {
                 if (veh.Owner != Hero) continue;
-                var a = veh.Stuck ? OwnerAlert.NoInput : OwnerAlert.None;
-                rows.Add(new LedgerRow(LedgerTab.Vehicles, veh.Id, ["vehicle", Quotes.Weight(veh.Cargo.TotalMassG()), veh.Stuck ? "stuck" : "ok", $"{veh.XMm / 1000},{veh.YMm / 1000}", Alerts(a), veh.Id.Value.ToString()], [0, veh.Cargo.TotalMassG(), veh.Stuck ? 1 : 0, 0, (long)a, (long)veh.Id.Value], a));
+                // every vehicle the hero owns (P5-G: his own designs, a commissioned or half-built one, a boat afloat, aground or sunk)
+                (string state, int code) = veh.Water == Ravensguard.Sim.Carts.WaterState.Sunk ? ("sunk", 5) : veh.Water == Ravensguard.Sim.Carts.WaterState.Aground ? ("aground", 4)
+                    : !veh.Finished ? ("building", 3) : veh.Broken ? ("broken", 2) : veh.Stuck ? ("stuck", 1) : veh.Water == Ravensguard.Sim.Carts.WaterState.Afloat ? ("afloat", 0) : ("ok", 0);
+                var a = code is 1 or 2 or 4 or 5 ? OwnerAlert.NoInput : OwnerAlert.None;
+                string what = veh.Design.Length > 0 ? veh.Design : "vehicle";
+                rows.Add(new LedgerRow(LedgerTab.Vehicles, veh.Id, [what, Quotes.Weight(veh.Cargo.TotalMassG()), state, $"{veh.XMm / 1000},{veh.YMm / 1000}", Alerts(a), veh.Id.Value.ToString()], [0, veh.Cargo.TotalMassG(), code, 0, (long)a, (long)veh.Id.Value], a));
             }
             foreach (var an in rides.Animals.Rows)
             {

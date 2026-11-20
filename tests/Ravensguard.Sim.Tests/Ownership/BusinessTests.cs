@@ -283,8 +283,11 @@ public class BusinessTests(ITestOutputHelper output)
         foreach (int p in first40.Skip(25)) Assert.Equal(Occupation.None, r.P.Occupation[p]);
         foreach (var g in first40.GroupBy(p => r.P.Household[p]))
             Assert.Equal(before[g.First()] + 150 * g.Count(p => taken.Contains(p)), r.Led.Balance(r.W.Econ.HouseholdPurse[g.Key]).Mites);
-        // the order: by distance from the square, then the person id
+        // the order: nobody has worked yet, so by distance from the square, then the person id
         Assert.Equal(idle[s].Take(25), taken);
+        // the next morning those without a day's work come first, then the longest since (the hiring order, decided in P5-F)
+        var again = dl.Idle(day + 1);
+        Assert.Equal(idle[s].Skip(25).Concat(taken), again[s]);
         Assert.True(r.CoinExact());
         output.WriteLine($"settlement {s}: {idle[s].Count} idle, 25 hired");
     }

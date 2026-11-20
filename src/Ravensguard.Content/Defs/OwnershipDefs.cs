@@ -45,7 +45,7 @@ public sealed record OwnershipRulesDef : ContentDef
     public int DayLabourMinAge { get; init; } = 16;
     public int DayLabourMaxAge { get; init; } = 59;
     /// <summary>A labourer with no day's work for this many days is idle again (no occupation).</summary>
-    public int DayLabourLapseDays { get; init; } = 15;
+    public int DayLabourLapseDays { get; init; } = 30;
     /// <summary>Day-labour days in a season that make a worker a candidate for a staff post first.</summary>
     public int DayLabourPriorityDays { get; init; } = 10;
     /// <summary>
