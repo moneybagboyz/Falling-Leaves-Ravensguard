@@ -22,6 +22,11 @@ public sealed partial class WoundBook
     public DownReason Down;
     /// <summary>The last game second processed.</summary>
     public long LastSec;
+    /// <summary>
+    /// The book's own day cursor: the last game day whose daily step it has had, or the day it joined the ledger (its birth day), so a book never gets the daily steps of days
+    /// before it existed. -1 until a ledger counts it (a book put in by hand then starts from the ledger's <see cref="WoundLedger.LastDay"/>, as before).
+    /// </summary>
+    public long DayDone = -1;
     public long UnconsciousUntilSec, HeartAtSec = -1, BreathStopSec = -1, CalmSince = -1, DeathSec = -1;
     public int ConcussedUntilDay;
     public DeathKind Death;

@@ -101,8 +101,7 @@ public class LandSaveTests(ITestOutputHelper output)
         Assert.Equal(a.Land.ComputeHash(), b.Land.ComputeHash());
         var fa = WorldSave.Capture(a, "h", "0.1"); var fb = WorldSave.Capture(b, "h", "0.1");
         Assert.True(fa.Sections[LandSave.SectionName].Span.SequenceEqual(fb.Sections[LandSave.SectionName].Span));
-        // (the whole runtime world is compared hour for hour at the region level below: a runtime reloaded mid-game differs from the one that ran on in its economy even
-        // without land, so the exact go-on check is the region section's, as growth's is)
+        // (the whole runtime, every section with land among them, is compared after a load in WorldRuntimeResumeTests since the resume-drift fix; the region-level check is below)
     }
 
     /// <summary>The home region's records with the land installed (as <see cref="LandWiring.Attach"/> does), over a given book.</summary>

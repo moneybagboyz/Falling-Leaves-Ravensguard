@@ -45,6 +45,8 @@ public sealed class WoundBookSave
     [Key(24)] public byte Malunions { get; set; } [Key(25)] public byte Concussions { get; set; } [Key(26)] public ulong AmputatedMask { get; set; }
     [Key(27)] public int Conc0 { get; set; } [Key(28)] public int Conc1 { get; set; } [Key(29)] public int Conc2 { get; set; }
     [Key(30)] public WoundRecSave[] Records { get; set; } = [];
+    /// <summary>The book's day cursor plus one (<see cref="WoundBook.DayDone"/>); 0 in a save from before it, read as the ledger's last day.</summary>
+    [Key(31)] public long DayDonePlus1 { get; set; }
 }
 
 /// <summary>The "wounds" section: the ledger of wounded people (wounds 3.1). Absent while nobody is hurt; a book is 24-odd bytes a wound before compression.</summary>
@@ -70,7 +72,7 @@ public sealed class WoundSave
         Death = (byte)b.Death, DeathWound = b.DeathWound, Latch = b.Latch, NextId = b.NextId, RegenPm = b.RegenPm,
         StrengthLoss = b.Permanent.StrengthLoss, DexterityLoss = b.Permanent.DexterityLoss, WitsLoss = b.Permanent.WitsLoss, SpeechCap = b.Permanent.SpeechCap, Malunions = b.Permanent.Malunions,
         Concussions = b.Permanent.Concussions, AmputatedMask = b.Permanent.AmputatedMask, Conc0 = b.Permanent.Conc0, Conc1 = b.Permanent.Conc1, Conc2 = b.Permanent.Conc2,
-        Records = [.. b.Records.Select(r => WoundRecSave.Of(r))],
+        Records = [.. b.Records.Select(r => WoundRecSave.Of(r))], DayDonePlus1 = b.DayDone + 1,
     };
 
     public static WoundBook ToBook(WoundBookSave s, ulong seed)
@@ -79,7 +81,7 @@ public sealed class WoundSave
         {
             BloodUl = s.BloodUl, BloodMaxUl = s.BloodMaxUl, PainX100 = s.PainX100, State = (Consciousness)s.State, Down = (DownReason)s.Down, LastSec = s.LastSec, UnconsciousUntilSec = s.UnconsciousUntilSec,
             HeartAtSec = s.HeartAtSec, BreathStopSec = s.BreathStopSec, CalmSince = s.CalmSince, DeathSec = s.DeathSec, ConcussedUntilDay = s.ConcussedUntilDay, Death = (DeathKind)s.Death,
-            DeathWound = s.DeathWound, Latch = s.Latch, NextId = s.NextId, RegenPm = s.RegenPm,
+            DeathWound = s.DeathWound, Latch = s.Latch, NextId = s.NextId, RegenPm = s.RegenPm, DayDone = s.DayDonePlus1 - 1,
             Permanent = new PermanentInfo
             {
                 StrengthLoss = s.StrengthLoss, DexterityLoss = s.DexterityLoss, WitsLoss = s.WitsLoss, SpeechCap = s.SpeechCap, Malunions = s.Malunions, Concussions = s.Concussions,
@@ -93,7 +95,12 @@ public sealed class WoundSave
     public WoundLedger Restore()
     {
         var l = new WoundLedger(Seed) { LastDay = LastDay };
-        foreach (var s in Books) l.Books[s.Key] = ToBook(s, Seed);
+        foreach (var s in Books)
+        {
+            var b = ToBook(s, Seed);
+            if (b.DayDone < 0) b.DayDone = LastDay;     // a save from before the per-book cursor: every book was on the ledger's
+            l.Books[s.Key] = b;
+        }
         return l;
     }
 }
