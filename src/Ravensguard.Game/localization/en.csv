@@ -3279,6 +3279,178 @@ cf_ui_other_piece,Other piece
 cf_ui_expected,"Expected: {0}"
 cf_ui_tip_edge,"Edge {0}% of the {1}'s best"
 cf_ui_tip_protection,"Protection x{0} ({1})"
+bz_alert_wagesowed,"{0}: wages are owed."
+bz_alert_noinput,"{0}: the stations stand idle (no inputs)."
+bz_alert_lossseason,"{0} lost money last season."
+bz_alert_nostaff,"{0} has no staff."
+bz_alert_stewardreport,"{0}: the steward's report is in."
+bz_alert_unlicensed,"{0} is worked without a licence."
+bz_alert_exhausted,"{0}: the workings are nearly exhausted."
+bz_alert_flooded,"{0}: the mine is flooded."
+bz_alert_stallunminded,"{0}: nobody minds the stall."
+bz_alert_stewardnoprofit,"{0}: no profit to send."
+bz_already_staff,"{0} already works there."
+bz_already_yours,"It is yours already."
+bz_bad_orders,"Those orders make no sense."
+bz_bad_share,"That is no share."
+bz_bad_wage,"Name a wage."
+bz_batch_done,"A batch of {0} is done ({1} min of work) at {2}."
+bz_bought,"You bought {0} for {1}."
+bz_box_empty,"The cash box is empty."
+bz_cannot_afford,"You cannot afford {0}."
+bz_cannot_hire,"They cannot be hired."
+bz_cash_in,"{0} put into the cash box of {1}."
+bz_cash_out,"{0} taken from the cash box of {1}."
+bz_closed_losses,"{0} closed after two losing seasons, as you ordered."
+bz_fired,"{0} is let go."
+bz_founded,"{0} is open: {1} stations, {2} in the cash box."
+bz_founded_site,"{0} is open on {1} acres of the resource, {2} in the cash box."
+bz_hired,"{0} works for {1} at {2} a day."
+bz_hired_away,"{0} leaves his post and works for {1} at {2} a day."
+bz_minded,"You minded the stall at {0}: {1} sold for {2}."
+bz_no_hero,"There is no one to own it."
+bz_no_inputs,"Not enough in the store for {0}."
+bz_no_owner,"Nobody owns it to sell you a share."
+bz_no_place,"Not in a place."
+bz_no_recipe,"Nothing to make at that station."
+bz_no_share,"You hold no share of it."
+bz_no_stall,"No stall."
+bz_no_station,"No such station."
+bz_no_stations,"No room here holds the stations a {0} needs."
+bz_no_steward,"It has no steward."
+bz_no_such_business,"No such business."
+bz_no_such_kind,"No such kind of business."
+bz_none_to_supply,"You have none of that to put in."
+bz_none_to_take,"There is none of that to take."
+bz_not_for_sale,"{0} is not for sale."
+bz_not_staff,"Not one of the staff."
+bz_not_yours,"It is not yours."
+bz_nothing_done,"Nothing to credit."
+bz_orders_set,"Orders set for {0}."
+bz_price_moved,"The price has moved: it is now {0}."
+bz_report,"{0}'s report on {1}: {2} in the box, {3} staff, last season {4}, sent to you {5}."
+bz_share_bought,"You bought {0}% of {1} for {2}."
+bz_share_control,"An owner sells at most {0}% and keeps control."
+bz_share_no_buyer,"The owner cannot buy your share back for {0}."
+bz_share_sold,"You sold {0}% of {1} for {2}."
+bz_stall_ask,"Your ask is {0}% of the market's."
+bz_stall_minder,"{0} minds the stall."
+bz_stall_no_minder,"Nobody minds the stall now."
+bz_stall_not_leased,"Lease the stall from the town first."
+bz_stall_open,"Your stall at {0} is set up."
+bz_stall_stocked,"{0} of {1} laid out on the stall."
+bz_steward_full,"{0} already runs all the properties he can ({1})."
+bz_steward_gone,"{0} is no longer your steward."
+bz_steward_hired,"{0} stewards {1} (plans with prices {2} days old)."
+bz_steward_quit,"{0} has left {1}: unpaid."
+bz_steward_unfit,"{0} cannot steward (Trading {1}, Leadership {2}: 30 and 20 needed)."
+bz_supplied,"{0} of {1} put into the store of {2}."
+bz_taken,"{0} of {1} taken."
+bz_wage_too_low,"{0} earns {1} a day already."
+bz_will_not_work,"{0} will not work for you."
+bz_worked,"You worked at {0} for {1} min ({2})."
+lg_col_alerts,Alerts
+lg_col_arrears,Owed
+lg_col_cargo,Load
+lg_col_cash,Cash
+lg_col_crew,Crew
+lg_col_dividend,Dividend
+lg_col_done,Done
+lg_col_dues,Dues
+lg_col_ends,Ends
+lg_col_escrow,Escrow days
+lg_col_fields,Fields
+lg_col_id,Id
+lg_col_lag,Price lag
+lg_col_minder,Minder
+lg_col_missing,Missing
+lg_col_name,Name
+lg_col_place,Place
+lg_col_profit,Profit
+lg_col_rent,Rent
+lg_col_runs,Runs
+lg_col_season,Season
+lg_col_sells,Sells
+lg_col_sent,Sent
+lg_col_share,Share
+lg_col_staff,Staff
+lg_col_state,State
+lg_col_steward,Steward
+lg_col_tenure,Tenure
+lg_col_today,Today
+lg_col_trading,Trading
+lg_col_value,Value
+lg_col_wage,Wage
+lg_col_what,What
+lg_col_where,Where
+px_bad_footprint,"The workings must lie on one to sixteen acres."
+px_bad_method,"No such way of prospecting."
+px_bad_place,"Not here."
+px_busy,"You are prospecting already."
+px_cancelled,"You stop prospecting."
+px_dir_0,north
+px_dir_1,north-east
+px_dir_2,east
+px_dir_3,south-east
+px_dir_4,south
+px_dir_5,south-west
+px_dir_6,west
+px_dir_7,north-west
+px_found,"Found {0}: about {1} ({2}% sure)."
+px_found_nothing,"Nothing worth the digging here."
+px_hint,"The rocks and plants speak of {0} to the {1}."
+px_hired,"{0} will {1} there for {2} days ({3})."
+px_licensed,"Licensed to mine {0} by {1}: {2} paid, {3}% royalty."
+px_m_readland,read the land
+px_m_pan,pan the stream
+px_m_testpit,dig a test pit
+px_m_trialshaft,sink a trial shaft
+px_m_walk,walk and look
+px_m_report,read a report
+px_m_hired,hire a prospector
+px_mine_cave_in,"A cave-in at {0}: closed for 15 days."
+px_mine_flooded,"{0} is flooded."
+px_need_skill,"Reading the land needs Prospecting {0} (you have {1})."
+px_need_tools,"You need {0}."
+px_needs_survey,"Survey the {0} first (a test pit or a trial shaft)."
+px_no_ore_known,"You know of no ore body here."
+px_no_right_holder,"Nobody holds the right here."
+px_no_stream,"There is no stream here to pan."
+px_no_surface_right,"You have no right to the land there."
+px_not_a_report,"That is no survey report of yours."
+px_not_flooded,"It is not flooded."
+px_nothing,"Nothing to stop."
+px_nothing_known,"You know nothing of this ground."
+px_off_resource,"There is no {0} under that ground."
+px_pan,"Colours of {0} in the pan."
+px_pan_nothing,"Only sand in the pan."
+px_pumped,"{0} is pumped out ({1})."
+px_r_strike,"they say there is {about} in the hills near {place}."
+px_read_nothing,"The land tells you nothing more."
+px_report_delivered,"A survey report of the ground at {0},{1} is in your pack."
+px_report_read,"You read the report: {0} findings."
+px_report_written,"You write up the ground at {0},{1}: {2} findings."
+px_res_fish,fish
+px_res_wood,wood
+px_res_game,game
+px_res_peat,peat
+px_res_forage,forage
+px_res_pasture,pasture
+px_res_clay,clay
+px_res_sand,sand
+px_res_stone,building stone
+px_res_salt,salt
+px_res_iron,iron ore
+px_res_copper,copper ore
+px_res_tin,tin ore
+px_res_silver,silver ore
+px_res_gold,gold
+px_res_coal,coal
+px_res_ore,ore
+px_started,"You {0} ({1} h)."
+px_vein_licensed,"That vein is licensed already."
+px_vein_worked,"That vein is worked already."
+px_worked_out,"That vein is worked out."
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."

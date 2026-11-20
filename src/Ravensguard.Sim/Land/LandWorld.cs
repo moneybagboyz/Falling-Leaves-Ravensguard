@@ -181,6 +181,25 @@ public sealed class LandWorld
         return new LandResult(true, "ld_bought", [st.Name, Money(pick.PriceMites), pick.Rect.W, pick.Rect.H], pick.PriceMites, id);
     }
 
+    /// <summary>
+    /// P5-F (businesses spec 4.1): the deed of a lot passes to a new holder with the business on it (a bought workshop's premises): a burgage in a town, else a freehold, the lot's dues as the
+    /// derived deed had them. The book's deed then stands over the derived one (the household that kept the business no longer holds its ground).
+    /// </summary>
+    public LandResult ConveyLot(int s, int lot, EntityId to, PurseKind toKind, int day, DeedCause cause)
+    {
+        if ((uint)s >= (uint)Region.Settlements.Count || (uint)lot >= (uint)Region.Settlements[s].Plan.Lots.Count) return LandResult.No("ld_not_yours");
+        var st = Region.Settlements[s]; var l = st.Plan.Lots[lot];
+        var id = LandIds.Of(HoldingKind.Lot, RegionId, LandIds.LotSubject(s, lot));
+        bool town = st.Class == SettlementClass.Town;
+        var deed = new Deed
+        {
+            Id = id, Kind = HoldingKind.Lot, Subject = LandIds.LotSubject(s, lot), Settlement = s, Holder = to, HolderPurse = toKind, Tenure = town ? Tenure.Burgage : Tenure.Freehold, Lord = st.FiefIndex,
+            DuesMitesPerSeason = town ? Rules.BurgageRentMitesPerSeason : Math.Max(1, Rules.QuitRentMitesPerAcreSeason * l.Rect.W * l.Rect.H / 4047), AcquiredDay = day, Cause = cause, Rect = l.Rect,
+        };
+        Put(deed, day);
+        return new LandResult(true, "ld_bought", [st.Name, Money(0), l.Rect.W, l.Rect.H], 0, id);
+    }
+
     /// <summary>Offers a deed for sale at <paramref name="askMites"/> (0 withdraws it). Only a bought plot can be offered (spec 4.2 resale).</summary>
     public LandResult Offer(EntityId holder, EntityId deedId, long askMites, int day)
     {

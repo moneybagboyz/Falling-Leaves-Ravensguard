@@ -40,7 +40,7 @@ public sealed partial class AutopilotWorld
     {
         d.StartDay = (int)(at / 86400); d.StartCoin = coin; d.State = DirectiveState.Active; st.LastProgressSec = at;
         Book.Log.Add(at, st.Person, LogCode.Directive, $"Directive: {d.Name} ({d.Kind})");
-        if (d.Kind is DirectiveKind.Tend or DirectiveKind.PursueAmbition)
+        if (d.Kind is DirectiveKind.PursueAmbition || (d.Kind == DirectiveKind.Tend && d.TargetKind != 5))   // P5-F: Tend runs at a property (a stall: TargetKind 5); without one, and Pursue ambition (Phase 6), it is skipped
         {
             d.State = DirectiveState.Blocked;
             Book.Log.Add(at, st.Person, LogCode.Directive, $"{d.Kind} is not ready yet (a later phase): skipped");

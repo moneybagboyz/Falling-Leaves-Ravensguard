@@ -493,7 +493,7 @@ public sealed class GrowthSystem
             int s = book.SettlementIndex;
             foreach (var kind in kinds)
             {
-                if (kind.Trader || kind.Stations.Length == 0 || kind.Extractions.Length > 0 || kind.Id is "mine" or "manor" or "charcoal_crew" or "mill" or "woodlot" or "fishery" || kind.Recipes.Length == 0) continue;
+                if (kind.Trader || kind.FoundedOnly || kind.Stations.Length == 0 || kind.Extractions.Length > 0 || kind.Id is "mine" or "manor" or "charcoal_crew" or "mill" or "woodlot" or "fishery" || kind.Recipes.Length == 0) continue;
                 long key = (long)s * 4096 + kind.Index; bool want = false;
                 foreach (var r in kind.Recipes)
                 {

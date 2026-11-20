@@ -32,6 +32,8 @@ public enum Skill : byte
     Tailoring, Surgery, Speech, Athletics, Tactics, Stealth, Lockpicking,
     // Phase 4 (append only, melee-and-ranged M1 / overview Q4): the weapon families; Melee stays for bare hands. A save migration (v6) copies Melee x0.8 into each.
     Blades, Axes, Hafted, Polearms, Shields, Throwing,
+    // Phase 5 (append only, prospecting-and-extraction 4): finding what a place holds; trains by use, starts from Perception
+    Prospecting,
 }
 
 /// <summary>A skill slot of a Person: which skill and its 0..100 level.</summary>

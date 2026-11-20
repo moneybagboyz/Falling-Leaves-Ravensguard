@@ -38,11 +38,14 @@ public static partial class ContentRemap
                 case WorldSave.CraftingSection when GoodsMove || Moves(R) || Moves(P): { var s = Decode<CraftingSave>(bytes, name); Crafting(s); return SaveCodec.SerializeCompressed(s); }
                 case WorldSave.JobsSection when GoodsMove: { var s = Decode<JobsSave>(bytes, name); Jobs(s); return SaveCodec.SerializeCompressed(s); }
                 case AutopilotSave.SectionName when GoodsMove: { var s = Decode<AutopilotSave>(bytes, name); Autopilot(s); return SaveCodec.SerializeCompressed(s); }
+                case OwnershipSave.SectionName when GoodsMove || Moves(B): { var s = Decode<OwnershipSave>(bytes, name); Ownership(s); return SaveCodec.SerializeCompressed(s); }   // P5-F
+                case WorldSave.GrowthSection when Moves(K): { var s = Decode<GrowthSave>(bytes, name); Growth(s); return SaveCodec.SerializeCompressed(s); }     // P5-F: new business kinds
             }
             if (name.StartsWith(WorldSave.RegionSectionName, StringComparison.Ordinal) && int.TryParse(name.AsSpan(WorldSave.RegionSectionName.Length), out _))
             {
                 var s = Decode<RegionSectionData>(bytes, name);
                 Economy(s.Economy); Production(s.Production); Markets(s.Markets);
+                if (s.Growth != null && Moves(K)) Growth(s.Growth);                                  // P5-F
                 return SaveCodec.SerializeCompressed(s);
             }
             return bytes.ToArray();
@@ -153,6 +156,47 @@ public static partial class ContentRemap
                 for (int i = 0; i < p.JobKind.Length; i++)
                     p.JobKind[i] = X![p.JobKind[i]] is int n and >= 0 ? (ushort)n
                         : throw new SaveException($"This save has a crew at an extraction the game content no longer has ('{(p.JobKind[i] < X.Old.Length ? X.Old[p.JobKind[i]] : "?")}').");
+        }
+
+        /// <summary>
+        /// P5-F: the growth section names business kinds by index too (a project's kind, the unmet wants keyed <c>settlement x 4096 + kind</c>): mapped by name when the kind table moves. A project of
+        /// a kind no longer in the game keeps no kind (-1); an unmet want of one is dropped.
+        /// </summary>
+        private void Growth(GrowthSave g)
+        {
+            for (int i = 0; i + 1 < g.PBusiness.Length; i += 2)
+            {
+                int k = g.PBusiness[i]; if (k < 0) continue;
+                int n = k < K!.Old.Length ? K[k] : -1;
+                if (n < 0) Count("growth projects' business kinds");
+                g.PBusiness[i] = n;
+            }
+            var unmet = new SortedDictionary<long, int>();
+            for (int i = 0; i < g.UnmetKey.Length && i < g.UnmetVal.Length; i++)
+            {
+                long key = g.UnmetKey[i]; int k = (int)(key % 4096); long s = key / 4096;
+                int n = k < K!.Old.Length ? K[k] : -1;
+                if (n < 0) { Count("unmet business wants"); continue; }
+                unmet[s * 4096 + n] = g.UnmetVal[i];
+            }
+            g.UnmetKey = [.. unmet.Keys]; g.UnmetVal = [.. unmet.Values];
+        }
+
+        /// <summary>P5-F: the ownership section's goods (a directive's kept and floored good, the steward's price memory) and book recipes (the "make N a day" order), by name.</summary>
+        private void Ownership(OwnershipSave o)
+        {
+            foreach (var h in o.Holdings)
+            {
+                if (GoodsMove)
+                {
+                    for (int k = 0; k < 2 && k < h.OrderInts.Length; k++) if (h.OrderInts[k] >= 0) { int n = h.OrderInts[k] < G!.Old.Length ? G[h.OrderInts[k]] : -1; if (n < 0) Count("directives' goods"); h.OrderInts[k] = n; }
+                    var pg = h.PriceGoods.Select(g => G![g]).ToArray();
+                    if (pg.Any(n => n < 0)) { h.PriceGoods = []; h.PriceDays = []; }       // the steward forgets prices of a good no longer in the game: he looks again tomorrow
+                    else h.PriceGoods = [.. pg.Select(n => (ushort)n)];
+                }
+                if (Moves(B) && h.OrderInts.Length > 4 && h.OrderInts[4] >= 0) { int n = B![h.OrderInts[4]]; if (n < 0) Count("directives' recipes"); h.OrderInts[4] = n; }
+            }
+            if (GoodsMove && o.GoodsHash.Length > 0) o.GoodsHash = _hash;
         }
 
         private void Markets(MarketsSave m)

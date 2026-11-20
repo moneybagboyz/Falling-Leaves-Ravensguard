@@ -36,6 +36,8 @@ public sealed class EconomyWorld
     /// <summary>Background growth: cottages, assarted fields and new businesses built by the abstract world (plan 4A.2).</summary>
     public Ravensguard.Sim.Growth.GrowthSystem Growth { get; }
     public EconomyCounters Counters { get; } = new();
+    /// <summary>P5-F (businesses spec 4.3): the hiring hour in every settlement's square.</summary>
+    public DayLabour DayLabour { get; }
     /// <summary>Farming writes its chronicle here; the farming system moves the new entries to the tick outbox after each daily step.</summary>
     public Chronicle FarmChronicle { get; }
     internal int FarmChronicleDrained;
@@ -59,6 +61,7 @@ public sealed class EconomyWorld
         farming.IsEmployedElsewhere = Labour.IsAwayFromFarm;
         farming.ManorLordOf = Labour.ManorLordOf;
         Growth = new Ravensguard.Sim.Growth.GrowthSystem(this);
+        DayLabour = new DayLabour(production, world.Population, world.Economy, content.Ownership, Labour);
         Labour.Rebuild();
     }
 

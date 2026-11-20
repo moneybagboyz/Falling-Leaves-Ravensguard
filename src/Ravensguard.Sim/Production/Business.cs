@@ -22,6 +22,9 @@ public sealed class BusinessKind
     public bool Trader;
     /// <summary>Staff are paid by the day they are on the books (manor, stall) not by the batch.</summary>
     public bool Salaried;
+    /// <summary>P5-F: founded only by the player (never generated or grown); its recipes' worker-hours in permille (a water sawmill: 125).</summary>
+    public bool FoundedOnly;
+    public int LabourPm = 1000;
     public int StaffCapacity => Slots.Sum(s => s.Count);
     /// <summary>The recipes a station of this kind works, in recipe order (built once per recipe list and shared by the region workers: the planner asks for every station every day).</summary>
     public Recipe[] RecipesFor(string station)
@@ -52,6 +55,8 @@ public sealed class ProductionContent
     public TaxPolicyDef Tax { get; init; } = new TaxPolicyDef { Id = "default" };
     /// <summary>The tunables of background growth (cottages, assarting, new businesses).</summary>
     public GrowthTuningDef Growth { get; init; } = new GrowthTuningDef { Id = "growth" };
+    /// <summary>P5-F: owned businesses, stewards, day labour and stalls.</summary>
+    public OwnershipRulesDef Ownership { get; init; } = new OwnershipRulesDef { Id = "default" };
 
     public BusinessKind Kind(string id) => Kinds.First(k => k.Id == id);
 
@@ -62,7 +67,7 @@ public sealed class ProductionContent
         var kinds = new List<BusinessKind>();
         foreach (var d in db.All<BusinessDef>().OrderBy(b => b.Id, StringComparer.Ordinal))
         {
-            var k = new BusinessKind { Index = (ushort)kinds.Count, Id = d.Id, Trader = d.Trader, Salaried = d.Salaried || d.Trader, OwnerOccupation = Enum.Parse<Occupation>(d.OwnerOccupation) };
+            var k = new BusinessKind { Index = (ushort)kinds.Count, Id = d.Id, Trader = d.Trader, Salaried = d.Salaried || d.Trader, OwnerOccupation = Enum.Parse<Occupation>(d.OwnerOccupation), FoundedOnly = d.FoundedOnly, LabourPm = Math.Clamp(d.LabourPm, 1, 1000) };
             if (d.LotUse.Length > 0) k.Lot = Enum.Parse<LotUse>(d.LotUse);
             foreach (var s in d.Stations) if (Array.IndexOf(RecipeBook.StationKinds, s.Kind) < 0) throw new InvalidDataException($"business '{d.Id}': unknown station kind '{s.Kind}'");
             k.Stations = [.. d.Stations.Select(s => (s.Kind, s.Count))];
@@ -75,7 +80,8 @@ public sealed class ProductionContent
         var cfg = db.All<ResourceSettingsDef>().OrderBy(x => x.Id, StringComparer.Ordinal).FirstOrDefault() ?? new ResourceSettingsDef { Id = "resources" };
         return new ProductionContent { Recipes = book, Kinds = [.. kinds], Extractions = ext, Settings = cfg, Spending = [.. db.All<SpendingRuleDef>().OrderBy(x => x.Id, StringComparer.Ordinal)],
             Tax = db.All<TaxPolicyDef>().OrderBy(x => x.Id, StringComparer.Ordinal).FirstOrDefault() ?? new TaxPolicyDef { Id = "default" },
-            Growth = db.All<GrowthTuningDef>().OrderBy(x => x.Id, StringComparer.Ordinal).FirstOrDefault() ?? new GrowthTuningDef { Id = "growth" } };
+            Growth = db.All<GrowthTuningDef>().OrderBy(x => x.Id, StringComparer.Ordinal).FirstOrDefault() ?? new GrowthTuningDef { Id = "growth" },
+            Ownership = db.All<OwnershipRulesDef>().OrderBy(x => x.Id, StringComparer.Ordinal).FirstOrDefault() ?? new OwnershipRulesDef { Id = "default" } };
     }
 }
 

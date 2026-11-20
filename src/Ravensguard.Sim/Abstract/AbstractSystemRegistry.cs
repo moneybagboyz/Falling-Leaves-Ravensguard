@@ -95,6 +95,7 @@ public sealed class AbstractSystemRegistry
         r.Add(new StoreSpoilageSystem());           // H5: spoilage of barns, granaries, business and market stores
         r.Add(new ParishSystem());                  // H5: charity and tithe sales
         r.Add(new LabourSystem());                  // H5: hiring, succession
+        r.Add(new DayLabourSystem());               // P5-F: H4 hour 6: the hiring hour in every square (businesses spec 4.3)
         r.Add(new MarketDailySystem());             // H5: structural demand, demand EMA, lot expiry
         r.Add(new ContinentTradeSystem());          // H4 hour 3: merchants plan caravan trips to the gates (continent tick v1)
         r.Add(new CaravanHourSystem());             // H1: caravans advance an hour

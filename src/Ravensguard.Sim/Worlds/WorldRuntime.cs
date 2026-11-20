@@ -125,6 +125,7 @@ public sealed class WorldRuntime : IDisposable
         Ravensguard.Sim.Land.LandWiring.Attach(homeWorld, state, content);                                                                          // P5-A2 hook: the land book, the land world (LandSystem), growth's and farming's land hooks
         Ravensguard.Sim.Construction.ConstructionWiring.Attach(homeWorld, state, content, Services.Weather);                                         // P5-B hook: building sites, ghosts and crews (ConstructionSystem)
         Ravensguard.Sim.Crafting.CraftServiceWiring.Attach(homeWorld, state, content, Services.Weather);                                            // P5-E hook: commissions, fires, apprenticeships, guild dues (CraftSystem)
+        Ravensguard.Sim.Production.OwnershipWiring.Attach(homeWorld, state, content);                                                              // P5-F hook: the hero's businesses, stewards, stalls, prospecting (OwnershipSystem)
         homeWorld.Sim.Set(new Ravensguard.Sim.Combat.Abstract.AbstractBattleService(content));                                    // P4-G hook: fights nobody watches (abstract battles)
         state.Regions = Records;
         if (state.RegionSections.Count > 0) { Records.AttachSections(state.RegionSections); state.RegionSections = new SortedDictionary<int, byte[]>(); } // the pager holds them now

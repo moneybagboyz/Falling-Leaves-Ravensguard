@@ -242,6 +242,13 @@ public sealed class ProductionSave
     /// <summary>Per resource kind (index = kind, 16 entries): the amount the rows of class 2 gained, and the share of the gap to the cap (per mille) the rows of class 4 gained.</summary>
     [Key(63)] public long[] ResKindDelta { get; set; } = [];
     [Key(64)] public int[] ResKindFracPermille { get; set; } = [];
+    // P5-F (businesses spec 4.3): day labourers, sparse by person (additive keys, no format bump; empty in older saves)
+    [Key(65)] public int[] DlPerson { get; set; } = [];
+    [Key(66)] public int[] DlLastDay { get; set; } = [];
+    [Key(67)] public int[] DlSeason { get; set; } = [];
+    [Key(68)] public int[] DlDays { get; set; } = [];
+    /// <summary>Hired, paid mites, lapsed, posts offered.</summary>
+    [Key(69)] public long[] DlCounters { get; set; } = [];
 
     /// <summary>The per mille share of <paramref name="gap"/> that <paramref name="delta"/> is exactly (<c>gap * f / 1000 == delta</c>), null when none of the 1..1000 does.</summary>
     private static int? FracOf(long delta, long gap)
@@ -276,6 +283,12 @@ public sealed class ProductionSave
             ProducedUnits = (long[])p.ProducedUnits.Clone(), ConsumedUnits = (long[])p.ConsumedUnits.Clone(),
             Counters = [p.MassViolations, p.BatchesFinished, p.BatchesStarted, p.ForgivenArrearsMites, p.QuitCount],
         };
+        var dl = p.DayLabour;
+        if (!dl.IsEmpty)
+        {
+            s.DlPerson = [.. dl.Workers.Keys]; s.DlLastDay = [.. dl.Workers.Values.Select(w => w.LastDay)]; s.DlSeason = [.. dl.Workers.Values.Select(w => w.Season)]; s.DlDays = [.. dl.Workers.Values.Select(w => w.Days)];
+            s.DlCounters = [dl.Hired, dl.PaidMites, dl.Lapsed, dl.PostsOffered];
+        }
         _ = n;
         if (p.Resources != null)
         {
@@ -374,6 +387,8 @@ public sealed class ProductionSave
                 sys.AddMine(new MineWorks { SiteIndex = MineSite[m], SiteId = new EntityId(MineSiteId[m]), Mineral = (WorldGen.MineralType)MineMineral[m], RemainingG = MineRemaining[m], InitialG = MineInitial[m], Levels = MineLevels[m], State = (MineStateKind)MineState[m], ClosedUntilDay = MineClosedUntil[m] });
             Array.Copy(ProducedUnits, sys.ProducedUnits, ProducedUnits.Length); Array.Copy(ConsumedUnits, sys.ConsumedUnits, ConsumedUnits.Length);
             sys.MassViolations = Counters[0]; sys.BatchesFinished = Counters[1]; sys.BatchesStarted = Counters[2]; sys.ForgivenArrearsMites = Counters[3]; sys.QuitCount = Counters[4];
+            for (int i = 0; i < DlPerson.Length; i++) sys.DayLabour.Workers[DlPerson[i]] = (DlLastDay[i], DlSeason[i], DlDays[i]);
+            if (DlCounters.Length >= 4) { sys.DayLabour.Hired = DlCounters[0]; sys.DayLabour.PaidMites = DlCounters[1]; sys.DayLabour.Lapsed = DlCounters[2]; sys.DayLabour.PostsOffered = DlCounters[3]; }
             return sys;
         }
         catch (Exception ex) when (ex is IndexOutOfRangeException or ArgumentException or InvalidDataException or KeyNotFoundException)

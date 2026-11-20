@@ -85,6 +85,39 @@ public static class AbroadDealing
         return R(c, HeroResultCode.Ok, T("ABROAD_BOUGHT", Amount(there, g, r.Qty), there.Goods.Def(g).Name.ToLowerInvariant(), b.Name, Quotes.Money(r.PaidMites)), r.PaidMites, r.Qty);
     }
 
+    /// <summary>
+    /// P5-F (businesses spec 4.5, BS-15; the Phase 3 carried limit "items and barter abroad"): an item row sold to a merchant of another region at its bid of <c>ItemTable.ValueMites</c>, as at home.
+    /// The row crosses the border whole: it leaves the home item table and a row of the same shape, quality, condition and parts is the merchant's in the other region's; the coin comes back over
+    /// the border the way a deal's coin does. Both regions' audits hold and the item is neither lost nor doubled.
+    /// </summary>
+    public static HeroResult SellItem(HeroContext ctx, HeroCommand c, long valueMites)
+    {
+        var b = BookOf(ctx, c.Region, c.Settlement); if (b == null) return R(c, HeroResultCode.NoMarket, T("ABROAD_THERE_NO_MARKET_THERE"));
+        var there = b.Econ; var e = ctx.Econ; int row = e.Items.IndexOf(c.Item);
+        if (row < 0 || e.Items.At(row).Owner != ctx.Party.Hero) return R(c, HeroResultCode.Invalid, T("HERO_DO_NOT_HAVE"));
+        if ((e.Items.At(row).Flags & ItemFlags.Stolen) != 0) return R(c, HeroResultCode.Refused, T("HERO_I_DON_T_BUY"));
+        if (!b.IsOpen((int)(c.IssuedSec / 3600 % 24))) return R(c, HeroResultCode.Closed, T("HERO_STALLS_ARE_SHUT"));
+        long bid = ItemPricing.Bid(valueMites, b.Money.SpreadHalfPermille, ctx.Party.Inspected.Contains(c.Item), ctx.Trade.SellUnknownConditionPm);
+        if (bid <= 0) return R(c, HeroResultCode.Refused, T("HERO_WORTH_NOTHING_THEM"));
+        if (c.Limit > 0 && bid < c.Limit) return R(c, HeroResultCode.PriceMoved, T("HERO_THEY_NOW_OFFER", Quotes.Money(bid)), bid);
+        var (vp, _) = Visitor(there); long pre = there.Ledger.Balance(vp).Mites;
+        foreach (var m in b.Merchants)
+        {
+            if (there.Ledger.Balance(m.Purse).Mites < bid) continue;
+            if (!there.Ledger.Transfer(m.Purse, vp, Coin.FromMites(bid), TransferReason.Trade)) continue;
+            ref var it = ref e.Items.At(row);
+            var parts = e.Items.ComponentsOf(row).ToList();
+            foreach (int k in ctx.Party.Carried.Rows(e).ToArray()) if (e.Items.At(k).Parent == row) e.Items.At(k).Parent = -1;   // its contents stay with the hero
+            var made = there.Items.Add(ctx.State.Ids, it.Shape, it.Quality, m.Id, parts, it.Good, it.LabourHours, it.Skill, it.ConditionPermille);
+            ref var nr = ref there.Items.Get(made); nr.Wear = it.Wear; nr.Flags = it.Flags; nr.Stains = it.Stains;
+            string shape = it.Shape;
+            e.Items.Free(c.Item);
+            CoinHome(ctx, there, vp, pre);
+            return R(c, HeroResultCode.Ok, T("HERO_SOLD", ctx.Rules.Name(shape).ToLowerInvariant(), Quotes.Money(bid)), bid, 1);
+        }
+        return R(c, HeroResultCode.TheyCannotAfford, T("HERO_NO_MERCHANT_HAS", Quotes.Money(bid)));
+    }
+
     public static HeroResult Sell(HeroContext ctx, HeroCommand c)
     {
         var b = BookOf(ctx, c.Region, c.Settlement); if (b == null) return R(c, HeroResultCode.NoMarket, T("ABROAD_THERE_NO_MARKET_THERE"));

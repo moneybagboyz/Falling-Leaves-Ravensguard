@@ -1,0 +1,13 @@
+// P5-F (prospecting-and-extraction 4): the prospector's tools, sold at market like any hardware (made by smiths and carpenters in Phase 6's tool recipes), and the tool qualities the
+// methods read: a pan for the gravel of a stream, a spade and a pick for a test pit, a pick or an auger for a trial shaft.
+[
+  { "type": "good", "id": "pan",   "name": "Prospector's pan", "class": "hardware", "state": "solid", "unit": "piece", "piece_mass_g": 900,  "bulk_litres_per_kg": 3.0, "base_price_mites_per_kg": 60, "spoil_class": "iron", "target_cover_days": 60, "tags": ["metal"] },
+  { "type": "good", "id": "pick",  "name": "Pick",             "class": "hardware", "state": "solid", "unit": "piece", "piece_mass_g": 2600, "bulk_litres_per_kg": 0.8, "base_price_mites_per_kg": 45, "spoil_class": "iron", "target_cover_days": 60, "tags": ["metal"] },
+  { "type": "good", "id": "spade", "name": "Spade",            "class": "hardware", "state": "solid", "unit": "piece", "piece_mass_g": 2000, "bulk_litres_per_kg": 1.0, "base_price_mites_per_kg": 40, "spoil_class": "iron", "target_cover_days": 60, "tags": ["metal"] },
+  { "type": "good", "id": "auger", "name": "Auger",            "class": "hardware", "state": "solid", "unit": "piece", "piece_mass_g": 3000, "bulk_litres_per_kg": 0.6, "base_price_mites_per_kg": 70, "spoil_class": "iron", "target_cover_days": 60, "tags": ["metal"] },
+  { "type": "craft_tool", "id": "pan",   "name": "Prospector's pan", "qualities": { "panning": 1 }, "wear_pm_per_hour": { "panning": 1 } },
+  { "type": "craft_tool", "id": "pick",  "name": "Pick",  "qualities": { "picking": 1, "digging": 1 }, "wear_pm_per_hour": { "picking": 2, "digging": 2 } },
+  { "type": "craft_tool", "id": "auger", "name": "Auger", "qualities": { "boring": 1 }, "wear_pm_per_hour": { "boring": 2 } },
+  // a strike is talked of in the town nearest it (the rumour system): other prospectors and the lord's interest follow
+  {"type": "rumour_type", "id": "ore_strike", "entry": "ore_strike", "kind": "Landmark", "interest_pm": 850, "life_days": 30, "witnesses": "town", "severity": 2, "key": "px_r_strike", "about_key": "mineral"}
+]

@@ -20,7 +20,7 @@ public static class BusinessBuilder
     {
         var sys = new ProductionSystem(econ, pop, content, seed, markets, resources);
         var byOcc = new Dictionary<Occupation, BusinessKind>();
-        foreach (var k in content.Kinds) if (k.Id != "mine") byOcc[k.OwnerOccupation] = k;
+        foreach (var k in content.Kinds) if (k.Id != "mine" && !k.FoundedOnly) byOcc[k.OwnerOccupation] = k;      // P5-F: a kind only the player founds is never generated
         var people = pop.People;
 
         var groups = new SortedDictionary<(int Settlement, int Lot, Occupation Occ), List<int>>();

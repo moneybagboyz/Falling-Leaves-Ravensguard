@@ -4,7 +4,7 @@ using Ravensguard.Sim.Travel;
 
 namespace Ravensguard.Sim.Autopilot;
 
-/// <summary>What a directive asks (autopilot spec 3.1). <c>Tend</c> and <c>PursueAmbition</c> are stubs until Phase 5 and 6; they raise <see cref="DirectiveState.Blocked"/>.</summary>
+/// <summary>What a directive asks (autopilot spec 3.1). <c>Tend</c> minds the hero's stall (P5-F, businesses spec 4.4); <c>PursueAmbition</c> is a stub until Phase 6 and raises <see cref="DirectiveState.Blocked"/>.</summary>
 public enum DirectiveKind : byte { Work, TradeRoute, Travel, Train, Guard, Escort, Rest, Tend, PursueAmbition }
 
 /// <summary>When a directive ends.</summary>
@@ -49,6 +49,8 @@ public sealed class Directive
     public static Directive TravelTo(long xMm, long yMm, string name) => new() { Kind = DirectiveKind.Travel, Params = [xMm, yMm, 0, 0], Until = UntilKind.Done, Name = name };
     public static Directive Rest(int days = 0) => new() { Kind = DirectiveKind.Rest, Until = days > 0 ? UntilKind.Days : UntilKind.Healed, UntilValue = days, Name = "Rest" };
     public static Directive Guard(int settlement, int days = 0) => new() { Kind = DirectiveKind.Guard, TargetKind = 1, Target = settlement, Until = days > 0 ? UntilKind.Days : UntilKind.Forever, UntilValue = days, Name = "Guard" };
+    /// <summary>P5-F (businesses spec 4.4, BS-16): tend a property: mind the stall <paramref name="stallSubject"/> in the market hours (the hero is there), rest by schedule.</summary>
+    public static Directive Tend(long stallSubject, int days = 0) => new() { Kind = DirectiveKind.Tend, TargetKind = 5, Target = stallSubject, Until = days > 0 ? UntilKind.Days : UntilKind.Forever, UntilValue = days, Name = "Tend the stall" };
     public static Directive Escort(EntityId target) => new() { Kind = DirectiveKind.Escort, TargetKind = 2, Target = (long)target.Value, Until = UntilKind.Forever, Name = "Escort" };
     public static Directive TradeRoute(int a, int b, ushort good, long gramsPerTrip, int minMarginPm) => new() { Kind = DirectiveKind.TradeRoute, TargetKind = 4, Target = a, Params = [b, good, gramsPerTrip, minMarginPm], Until = UntilKind.Forever, Name = "Trade route" };
 

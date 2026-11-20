@@ -21,11 +21,19 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
     public ProductionContent Content { get; }
     /// <summary>P5-E (crafting-full 4.4): whether a station's batch is worked live (a station-bound craft job); its progress then comes from the live work, not from this system.</summary>
     public Func<Business, int, bool>? LiveStation { get; set; }
+    /// <summary>P5-F (businesses spec 4.2-4.6): the owner's and steward's orders for the businesses the ownership world steers; null (every other world) runs Phase 2 unchanged.</summary>
+    public IBusinessSteering? Steering { get; set; }
+    private bool Steered(Business b) => Steering != null && Steering.Steered(b);
+    private bool OwnedByHero(Business b) => Steering != null && Steering.Steered(b) && Steering.Owned(b);
+    /// <summary>The hourly wage a staff member of a steered business is paid (his agreed wage), else the class wage.</summary>
+    private int WageOf(Business b, int person, int classHourly) => Steered(b) ? Steering!.WagePerHour(b, person, classHourly) : classHourly;
     public ulong Seed { get; }
     public MarketSystem? Markets { get; }
     public ResourceLayer? Resources { get; }
     public List<Business> Businesses { get; } = [];
     public List<MineWorks> Mines { get; } = [];
+    /// <summary>P5-F (businesses spec 4.3): who has worked by the day lately (saved with the production section).</summary>
+    public DayLabourBook DayLabour { get; } = new();
     /// <summary>Weather at a settlement and time; null means always clear.</summary>
     public Func<int, GameTime, WeatherState>? WeatherAt { get; set; }
 
@@ -166,7 +174,7 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
                 bool wheel = st.Kind == "spinning_wheel";
                 for (int i = 0; i < nw && st.Crew.Count < r.MaxWorkers; i++)
                     if (!used[i] && IsWorker(b, workers[i], wheel ? 1 : 0)) { used[i] = true; st.Crew.Add(workers[i]); }
-                long hm = (long)r.WorkerHours * st.ScalePermille;
+                long hm = (long)r.WorkerHours * st.ScalePermille * kind.LabourPm / 1000;          // P5-F: a water sawmill's wheel does most of the sawing (LabourPm 125); 1000 elsewhere
                 foreach (int p in st.Crew)
                 {
                     int skill = r.Skill == Skill.None ? 40 : people.SkillLevelOf(p, r.Skill);
@@ -174,7 +182,7 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
                     long mult = 1300 - 6 * skill;
                     st.ProgressMicro += Station.PerWorkerHour(hm, mult);
                     int si = b.Staff.IndexOf(p);
-                    if (si >= 0) b.Owed[si] += HourlyWage(p, r.Wage, (int)now.TotalDays);
+                    if (si >= 0) b.Owed[si] += WageOf(b, p, HourlyWage(p, r.Wage, (int)now.TotalDays));
                 }
             }
             if (st.ProgressMicro >= Station.Complete && now.TotalHours >= st.BusyUntilHour) Finish(b, st, now);
@@ -205,6 +213,24 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
     }
 
     private static long CeilScale(long q, int scale) => (q * scale + 999) / 1000;
+
+    /// <summary>
+    /// P5-F (businesses spec 4.2, BS-5): someone's own hands at a station for <paramref name="seconds"/> (the hero at his smithy's anvil): an idle station starts a batch of <paramref name="start"/>
+    /// from the business's store, the time is credited at the one worker-hour rule (<c>1300 - 6 x skill</c>), a finished batch is made into the store and counted in the books. False when
+    /// the station is idle and the inputs are short.
+    /// </summary>
+    public bool CreditHands(Business b, int si, Recipe? start, int skill, long seconds, GameTime now)
+    {
+        var st = b.Stations[si];
+        if (!st.Busy && (start == null || !TryStart(b, st, start, now))) return false;
+        var r = Content.Recipes.Recipes[st.Recipe];
+        long hm = (long)r.WorkerHours * st.ScalePermille * KindOf(b).LabourPm / 1000;
+        long per = Station.PerWorkerHour(hm, 1300 - 6 * Math.Clamp(skill, 0, 100));
+        st.ProgressMicro = Math.Min(Station.Complete, st.ProgressMicro + (long)((Int128)per * seconds / 3600));
+        st.MinSkill = Math.Min(st.MinSkill, skill);
+        if (st.ProgressMicro >= Station.Complete && now.TotalHours >= st.BusyUntilHour) Finish(b, st, now);
+        return true;
+    }
 
     /// <summary>Starts a batch of <paramref name="r"/> on a station: whole batches, or a part batch down to the recipe's minimum when inputs are short. False (nothing consumed) when too short.</summary>
     public bool TryStart(Business b, Station st, Recipe r, GameTime now)
@@ -248,6 +274,7 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
                 // the tile is empty: the crew moves to the best other tile of the same resource at once (resources spec 3.6)
                 var s = Pop.Region.Settlements[b.Settlement];
                 job.Row = PickTile(k, s.CenterX, s.CenterY, k.Resource ?? ResourceKind.Wood);
+                if (Steered(b)) job.Row = Steering!.TileFor(b, k, job.Row);                 // P5-F: an extraction business founded on its own tiles works those
             }
             if (job.Row < 0 || job.Workers <= 0) { workerCursor += job.Workers; continue; }
             int weather = WeatherMultFor(b, k, now);
@@ -255,13 +282,14 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
             {
                 int p = b.Staff[workerCursor];
                 int skill = k.Skill == Skill.None ? 40 : people.SkillLevelOf(p, k.Skill);
-                b.Owed[workerCursor] += HourlyWage(p, WageClass.Unskilled, (int)now.TotalDays);
+                b.Owed[workerCursor] += WageOf(b, p, HourlyWage(p, WageClass.Unskilled, (int)now.TotalDays));
                 long g = Extraction.GramsPerWorkerHour(k, now, weather, skill, Resources.StockG(job.Row), Resources.CapG(job.Row), WorkdayHours);
                 if (g <= 0) continue;
                 long got = Resources.Take(job.Row, g, (int)now.TotalDays);
                 if (got <= 0) continue;
                 b.Store.Create(k.OutGood, got, ReasonFor(k)); ProducedUnits[k.OutGood] += got;
                 foreach (var (bg, pm) in k.Byproducts) { long by = got * pm / 1000; if (by > 0) { b.Store.Create(bg, by, ReasonFor(k)); ProducedUnits[bg] += by; } }
+                if (Steered(b)) Steering!.Extracted(b, k.OutGood, got, now);
             }
         }
     }
@@ -273,9 +301,9 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
         var k = Content.Extractions.FirstOrDefault(e => e.IsMine && e.OutGood == Econ.Goods.IdOf(ore)); if (k == null) return;
         int miners = b.Staff.Count(p => Pop.People.Occupation[p] == Occupation.Miner);
         int haulers = b.Staff.Count - miners;
-        for (int i = 0; i < b.Staff.Count; i++) b.Owed[i] += RecipeBook.WagePerDay(WageClass.Unskilled) * (Pop.People.AgeYears(b.Staff[i], (int)now.TotalDays) < 16 ? 50 : 100) / 100;
+        for (int i = 0; i < b.Staff.Count; i++) b.Owed[i] += WageOf(b, b.Staff[i], RecipeBook.WagePerHour(WageClass.Unskilled)) * WorkdayHours * (Pop.People.AgeYears(b.Staff[i], (int)now.TotalDays) < 16 ? 50 : 100) / 100;
         long g = mine.Mine(mine.DayYieldG(k, miners, b.Staff.Count > 0 && haulers == 0 && miners > 0 ? -1 : haulers, 1000, (int)now.TotalDays));
-        if (g > 0) { b.Store.Create(k.OutGood, g, CreateReason.Mined); ProducedUnits[k.OutGood] += g; }
+        if (g > 0) { b.Store.Create(k.OutGood, g, CreateReason.Mined); ProducedUnits[k.OutGood] += g; if (Steered(b)) Steering!.Extracted(b, k.OutGood, g, now); }
     }
 
     /// <summary>S3: mine hazards for every mine (flood, cave-in), returns the events for the chronicle.</summary>
@@ -284,7 +312,7 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
         var res = new List<(Business, MineHazard)>();
         foreach (var b in Businesses)
         {
-            if (b.Mine < 0) continue;
+            if (b.Mine < 0 || Mines[b.Mine].SiteIndex < 0) continue;              // P5-F: a mine the hero opened rolls its own hazards (stream 0x5C2, ownership seasonal)
             var h = Mines[b.Mine].RollHazards(Seed, now, wetYear, riverHigh, Content.Settings);
             if (h.Flood || h.CaveIn) res.Add((b, h));
         }
@@ -304,7 +332,7 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
             if (kind.Salaried) { AccrueDayWages(b, kind, day); if (kind.Id == "manor") TopUpFromOwner(b); }
             PayWages(b, now);
             if (kind.Trader || kind.Salaried && kind.Stations.Length == 0) continue;
-            if (kind.Extractions.Length == 0 && b.Mine < 0) TopUpWorkshop(b, day);
+            if (kind.Extractions.Length == 0 && b.Mine < 0 && !OwnedByHero(b)) TopUpWorkshop(b, day);   // P5-F: the hero's business gets no Phase 2 top-ups: he puts coin in himself
             SellOutputs(b, kind, day);
             if (kind.Extractions.Length > 0 || b.Mine >= 0) PlanExtraction(b, kind, now);
             else PlanStations(b, kind, now);
@@ -385,10 +413,12 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
         foreach (var r in kind.Recipes) foreach (var (g, _) in r.Outputs) if (!consumed.Contains(g)) sellable.Add(g);
         foreach (var e in kind.Extractions) { sellable.Add(e.OutGood); foreach (var (bg, _) in e.Byproducts) sellable.Add(bg); }
         if (b.Mine >= 0) foreach (var e in Content.Extractions) if (e.IsMine) sellable.Add(e.OutGood);
+        bool steered = Steered(b);
         foreach (ushort g in sellable)
         {
-            long have = b.Store.Qty(g);
-            if (have > 0) book.SellOrList(b.Party, g, have, 900, day);
+            long have = b.Store.Qty(g); int floor = 900;
+            if (steered && Steering!.Sale(b, g) is { } sale) { floor = sale.FloorPm; have -= sale.Keep; }    // P5-F: the owner's floor price and the stock he keeps (or sells at his stall)
+            if (have > 0) book.SellOrList(b.Party, g, have, floor, day);
         }
     }
 
@@ -456,7 +486,9 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
         {
             if (st.Busy) { busy++; continue; }
             Recipe? best = null; long bestMargin = 0; int bestHours = 1;
-            foreach (var r in kind.RecipesFor(st.Kind))
+            bool steered = Steered(b);
+            var ordered = steered ? Steering!.Ordered(b, kind, st.Kind) : null;
+            foreach (var r in ordered != null ? [ordered] : kind.RecipesFor(st.Kind))
             {
                 if (book != null)
                 {
@@ -464,7 +496,8 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
                     if (gb.StockUnits >= 2L * gb.Demand * gb.TargetCoverDays) continue;     // do not flood the market
                 }
                 // the best margin per worker-hour, compared as margin_a x hours_b > margin_b x hours_a (no division); only a positive margin is worth starting
-                long m = ExpectedMarginMicro(b, r); int h = Math.Max(1, r.WorkerHours);
+                long m = (steered ? Steering!.MarginMicro(b, r) : null) ?? ExpectedMarginMicro(b, r); int h = Math.Max(1, r.WorkerHours);
+                if (ordered != null && m <= 0) m = 1;                                         // the owner's order is made whatever its margin
                 if (m > 0 && (Int128)m * bestHours > (Int128)bestMargin * h) { bestMargin = m; bestHours = h; best = r; }
             }
             if (best == null) continue;
@@ -478,7 +511,7 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
                 Int128 affordable = budget > 0 ? budget / perBatch : 0;
                 if (affordable >= 1) batches = (int)affordable; else { batches = 1; permille = budget > 0 ? (int)(budget * 1000 / perBatch) : 0; }
             }
-            if (permille > 0) { PostInputOrders(b, best, book, batches, permille); budget -= perBatch * batches * permille / 1000; }
+            if (permille > 0 && (!steered || Steering!.MayBuyInputs(b))) { PostInputOrders(b, best, book, batches, permille); budget -= perBatch * batches * permille / 1000; }
         }
         if (busy == 0 && b.Stations.Count > 0) b.IdleDays++; else b.IdleDays = 0;
     }
@@ -511,11 +544,14 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
         {
             if (book != null) { var gb = book.Goods[k.OutGood]; if (gb.StockUnits >= 2L * gb.Demand * gb.TargetCoverDays && scored.Count > 1) continue; }
             int row = PickTile(k, s.CenterX, s.CenterY, k.Resource ?? ResourceKind.Wood);
+            if (Steered(b)) row = Steering!.TileFor(b, k, row);                                       // P5-F: on its own tiles
             b.Jobs.Add(new CrewJob { Kind = k.Index, Row = row, Workers = n });
             return;
         }
         var first = scored[0].k;
-        b.Jobs.Add(new CrewJob { Kind = first.Index, Row = PickTile(first, s.CenterX, s.CenterY, first.Resource ?? ResourceKind.Wood), Workers = n });
+        int frow = PickTile(first, s.CenterX, s.CenterY, first.Resource ?? ResourceKind.Wood);
+        if (Steered(b)) frow = Steering!.TileFor(b, first, frow);
+        b.Jobs.Add(new CrewJob { Kind = first.Index, Row = frow, Workers = n });
     }
 
     /// <summary>What a worker-day of the extraction is worth at the book's mid, micro-mites (integer, review finding 8; only its order matters).</summary>
@@ -607,10 +643,14 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
             else
             {
                 long div = kind.Salaried && kind.Stations.Length == 0 ? 0 : Labour.Dividend(cash, b.WageBillPerDay, b.InputSpendPerDay, Labour.PayoutPct, b.Capital);
-                if (div > 0 && b.OwnerHousehold >= 0 && ledger.Transfer(b.Purse, Econ.HouseholdPurse[b.OwnerHousehold], new Coin(div), TransferReason.Dividend)) { b.Dividends += div; b.DividendsSeason += div; cash -= div; }
+                bool steered = Steered(b);
+                // P5-F: a business with shareholders pays every holder pro rata (the ownership world); else the Phase 2 transfer to the owner's household
+                if (div > 0 && steered && Steering!.PayDividend(b, div)) { b.Dividends += div; b.DividendsSeason += div; cash -= div; }
+                else if (div > 0 && b.OwnerHousehold >= 0 && ledger.Transfer(b.Purse, Econ.HouseholdPurse[b.OwnerHousehold], new Coin(div), TransferReason.Dividend)) { b.Dividends += div; b.DividendsSeason += div; cash -= div; }
                 bool costCentre = (kind.Salaried && kind.Stations.Length == 0) || kind.Extractions.Length > 0;       // a manor has no revenue, a crew works the lord's woods and waters: neither is closed for losses
                 b.LossSeasons = net < 0 && !costCentre ? (byte)Math.Min(255, b.LossSeasons + 1) : (byte)0;
-                if (b.LossSeasons >= 3 && cash < 5 * b.WageBillPerDay) Close(b);
+                if (steered) Steering!.SeasonClosed(b, net, cash);
+                if (b.LossSeasons >= 3 && cash < 5 * b.WageBillPerDay && !OwnedByHero(b)) Close(b);             // P5-F: the hero's business closes by his order (the "close if loss" directive), not by Phase 2's rule
             }
             if (b.State == BusinessState.Open) Markets?.ExtraCoin.Add((b.Settlement, cash));
             b.WagesSeason = 0; b.InputsSeason = 0; b.DividendsSeason = 0; b.CashStart = ledger.Balance(b.Purse).Mites;

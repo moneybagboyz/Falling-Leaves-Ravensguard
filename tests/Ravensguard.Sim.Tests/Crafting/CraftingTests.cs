@@ -537,7 +537,7 @@ public class CraftingTests(ITestOutputHelper output)
     [Fact]
     public void SaveMigration_V2ToV3_TheHeroGainsTheSevenNewSkillsAtZero_AndTheEnumGrewAtTheEnd()
     {
-        Assert.Equal(40, Enum.GetValues<Sk>().Length);                                                                     // Phase 4 appended the six weapon families
+        Assert.Equal(41, Enum.GetValues<Sk>().Length);                                                                     // Phase 4 appended the six weapon families, P5-F Prospecting
         Assert.Equal(26, (int)Sk.Theology); Assert.Equal(27, (int)Sk.Tailoring); Assert.Equal(33, (int)Sk.Lockpicking);      // appended: stored bytes of older skills do not move
         var old = Enum.GetValues<Sk>().Where(x => x != Sk.None && x < Sk.Tailoring).Select(x => Ravensguard.Sim.Characters.HeroRecord.SkillId(x)).ToArray();
         var hero = new Ravensguard.Sim.Characters.HeroSave { Name = "Ada", Origin = "x", Attributes = [50, 50, 50, 50, 50], SkillIds = old, SkillLevels = old.Select((_, i) => i + 1).ToArray() };

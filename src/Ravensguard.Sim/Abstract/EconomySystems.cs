@@ -215,6 +215,17 @@ public sealed class LabourSystem : AbstractSystem
     }
 }
 
+/// <summary>P5-F (businesses spec 4.3, 4.7): H4 at hour 6 (away from the heavy hour 0): the hiring hour in every settlement's square, the day labourers taken and paid.</summary>
+public sealed class DayLabourSystem : AbstractSystem
+{
+    public DayLabourSystem() : base("day-labour", TickPhase.H4DailySlice, SystemOrder.DailyGlobalsLabour + 5) { }
+    public override void Step(TickContext ctx)
+    {
+        var ew = ctx.World.Get<EconomyWorld>(); if (ew == null || ctx.HourOfDay != ew.DayLabour.Rules.DayLabourHour) return;
+        ew.DayLabour.Hour(ctx.Time);
+    }
+}
+
 /// <summary>H5: structural demand, the demand EMA, lot expiry and import requests of every book.</summary>
 public sealed class MarketDailySystem : AbstractSystem
 {

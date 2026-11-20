@@ -1,0 +1,15 @@
+// Owned businesses, shares, stewards, day labour and stalls (docs/specs/phase5/businesses-stewards-ledger.md, P5-F). Money in mites (100 to the crown), shares in permille.
+// A steward plans with prices max(0, 10 - Trading / 10) days old and keeps 15 days of costs x (1500 - 5 x Leadership) / 1000; he runs 3 + Leadership / 20 properties (at most 6).
+// Day labour: the hiring hour at 06:00 in every square; the lord's works pay 8 permille a day of the coin his treasury and his household hold above 200 crowns.
+[
+  { "type": "ownership_rules", "id": "default",
+    "goodwill_seasons": 2, "share_cap_pm": 490, "closed_sale_pm": 700, "sell_owner_age": 60, "sell_loss_seasons": 2,
+    "steward_min_trading": 30, "steward_min_leadership": 20, "steward_wage_mites_per_day": 350,
+    "steward_properties_base": 3, "steward_properties_per_leadership": 20, "steward_properties_max": 6,
+    "steward_lag_max_days": 10, "steward_lag_per_trading": 10,
+    "reserve_days": 15, "reserve_base_pm": 1500, "reserve_per_leadership_pm": 5, "send_every_days": 5, "keep_mites": 1000,
+    "day_labour_hour": 6, "day_labour_wage_mites": 150, "day_labour_hours": 10, "day_labour_min_age": 16, "day_labour_max_age": 59,
+    "day_labour_lapse_days": 15, "day_labour_priority_days": 10, "lord_works_pm_per_day": 8, "lord_works_reserve_mites": 20000,
+    "stall_demand_pm": 1000, "stall_fair_demand_pm": 1500, "stall_market_hours": 8,
+    "report_every_days": 7 }
+]

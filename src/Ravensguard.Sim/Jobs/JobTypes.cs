@@ -4,7 +4,9 @@ using Ravensguard.Sim.Economy;
 namespace Ravensguard.Sim.Jobs;
 
 /// <summary>The kinds of paid work a person can take (live-behaviour spec 4.6). Append only.</summary>
-public enum OddJobKind : byte { Haul, Guard, Escort, TendShop, FarmWork, Deliver, Fetch, Craft }
+public enum OddJobKind : byte { Haul, Guard, Escort, TendShop, FarmWork, Deliver, Fetch, Craft,
+    /// <summary>P5-F (businesses spec 4.3): a day's work taken at the hiring hour in the square (the hiring hour fills and pays them at once; transient). Appended.</summary>
+    DayLabour }
 
 /// <summary><c>Open -> Claimed -> Active -> Done | Failed | Expired | Cancelled</c>.</summary>
 public enum JobState : byte { Open, Claimed, Active, Done, Failed, Expired, Cancelled }

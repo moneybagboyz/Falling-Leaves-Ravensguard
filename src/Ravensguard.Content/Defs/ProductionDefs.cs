@@ -86,6 +86,10 @@ public sealed record BusinessDef : ContentDef
     public bool Trader { get; init; }
     /// <summary>True when staff earn a day's wage for every day they are on the books (a manor's household and demesne staff, a stall's hands) rather than by the worker-hour of a recipe.</summary>
     public bool Salaried { get; init; }
+    /// <summary>P5-F: a kind only the player founds (extraction businesses where the resources are, a bloomery, a sawmill): world generation and background growth never open one.</summary>
+    public bool FoundedOnly { get; init; }
+    /// <summary>P5-F: the worker-hours of its recipes in permille (a water sawmill's wheel does seven eighths of the sawing: 125).</summary>
+    public int LabourPm { get; init; } = 1000;
 }
 
 /// <summary>

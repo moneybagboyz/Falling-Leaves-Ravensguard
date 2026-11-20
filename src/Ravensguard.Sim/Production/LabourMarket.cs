@@ -98,7 +98,7 @@ public sealed class LabourMarket
     {
         if (b.Owner < 0) return false;
         var p = _pop.People;
-        if (p.Status[b.Owner] != PersonStatus.Alive) return false;
+        if (p.Status[b.Owner] != PersonStatus.Alive && p.Status[b.Owner] != PersonStatus.Hero) return false;     // P5-F: the hero owns businesses (his row's status is Hero)
         return true;
     }
 
@@ -189,8 +189,12 @@ public sealed class LabourMarket
             int have = 0; foreach (int s in b.Staff) if (_pop.People.Occupation[s] == occ) have++;
             vac += Math.Max(0, count - have);
         }
+        if (_sys.Steering is { } st && st.Steered(b)) vac = Math.Min(vac, Math.Max(0, st.HireCap(b) - b.Staff.Count));   // P5-F: the owner's "hire up to n" (a hands-on owner hires himself)
         return vac;
     }
+
+    /// <summary>P5-F (businesses spec 4.3): a day labourer of ten days a season is a candidate for a staff post before the others (null: none).</summary>
+    public Func<int, bool>? Priority { get; set; }
 
     private void BuildIdle(int day, bool rebuild = false)
     {
@@ -264,14 +268,17 @@ public sealed class LabourMarket
             for (int k = 0; k < need; k++)
             {
                 if (!CanCarry(b, kind, wage)) break;
+                if (_sys.Steering is { } steer && steer.Steered(b) && b.Staff.Count >= steer.HireCap(b)) break;      // P5-F: the owner's cap
                 // adults first (skill, then lower index); apprentices (12-15) only for a craft post when no adult is idle
                 int pick = -1, ps = -1;
                 bool apprentice = false;
+                bool pri = false; var prio = Priority;
                 foreach (int c in pool)
                 {
                     if (IsStaff(c) || people.Status[c] != PersonStatus.Alive || people.AgeYears(c, day) < minAge) continue;
                     int sk = manor ? PoorFirst(c) : people.SkillLevelOf(c, skill);
-                    if (sk > ps || (sk == ps && c < pick)) { ps = sk; pick = c; }
+                    bool cp = prio != null && prio(c);
+                    if ((cp && !pri) || (cp == pri && (sk > ps || (sk == ps && c < pick)))) { ps = sk; pick = c; pri = cp; }
                 }
                 if (pick < 0 && minAge > ApprenticeMinAge && occ != Occupation.Merchant)
                     foreach (int c in pool)
@@ -328,6 +335,7 @@ public sealed class LabourMarket
         {
             if (b.State != BusinessState.Closed || done.Contains(b.Settlement)) continue;
             var kind = _sys.KindOf(b);
+            if (kind.FoundedOnly || (_sys.Steering is { } steer && steer.Steered(b))) continue;            // P5-F: the hero's closed business is his (he sells it or opens it again)
             var book = _sys.Markets.BookForSettlement(b.Settlement); bool wanted = false;
             if (kind.Trader)
             {

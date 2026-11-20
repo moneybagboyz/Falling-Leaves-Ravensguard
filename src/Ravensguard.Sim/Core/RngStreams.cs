@@ -288,6 +288,16 @@ public static class RngStreams
     public const uint BrittleBreak = 0x532;
     /// <summary>Inheritance: the hero's kin at a new game (the origin's kin rows, their ages and counts, the hero's own age; key hero seed).</summary>
     public const uint HeroKin = 0x560;
+    /// <summary>P5-F businesses: reserved for Phase 6 steward honesty (skimming); stewards are honest in Phase 5 (overview 10a). Asserted never drawn.</summary>
+    public const uint StewardHonestyReserved = 0x540;
+    /// <summary>P5-F businesses: reserved for fair visitor jitter; the fair demand table does not need it. Asserted never drawn.</summary>
+    public const uint FairVisitorsReserved = 0x541;
+    /// <summary>P5-F prospecting: a survey's estimate error (key game day, person; draw = tile x 16 + method, the resource in the top bits).</summary>
+    public const uint ProspectError = 0x5C0;
+    /// <summary>P5-F prospecting: whether reading the land notices a hidden ore body within reach (key game day, person; draw = tile x 64 + vein).</summary>
+    public const uint ProspectHint = 0x5C1;
+    /// <summary>P5-F extraction: flooding and cave-ins at a mine the player opened (key the season's hour, the mine's id).</summary>
+    public const uint NewMineHazard = 0x5C2;
 
     /// <summary>Stream ids that two named uses share on purpose, with why their draws never meet.</summary>
     public static readonly (string A, string B, string Why)[] SharedPairs =

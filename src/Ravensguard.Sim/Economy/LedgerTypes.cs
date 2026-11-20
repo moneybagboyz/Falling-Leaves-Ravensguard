@@ -31,6 +31,10 @@ public enum TransferReason : byte
     Trade, Wage, Rent, Hearth, Toll, Tithe, MarketToll, Dividend, Seigniorage, Inheritance, Escheat, Hoard, Stipend, Fine, Gift,
     /// <summary>Charity in coin to the destitute (lords' almonry, the parish, the fief's dole, a rich household's alms; integration decision I37). Appended: saves older than it load with the count padded.</summary>
     Alms,
+    /// <summary>P5-F (businesses spec 4.1): a share of a business bought or sold back. Appended: older saves load with the count padded, as for <see cref="Alms"/>.</summary>
+    ShareSale,
+    /// <summary>P5-F (prospecting spec 5): the right holder's share of what a licensed mine takes. Appended.</summary>
+    Royalty,
 }
 
 /// <summary>The only faucets: the one-off seed money of world creation, silver struck at a mint, and the coin a household brings across a region border (the other region's ledger holds the matching <see cref="SinkReason.Emigrate"/>).</summary>

@@ -208,6 +208,7 @@ public sealed partial class AutopilotWorld
         if (!st.Enabled || st.Paused || BusOf(st).Paused) return;
         d = st.Active;
 
+        if (d is { Kind: DirectiveKind.Tend } && Tend(st, d, at)) { st.Today.SecByAction[(int)ActionKind.Work] += WindowSec; return; }   // P5-F
         var pol = BuildPolicy(st, d, at, coin, day);
         bool boardHere = BoardHere(a, d);
         var job = JobOfPerson(st.Person);
@@ -230,6 +231,20 @@ public sealed partial class AutopilotWorld
         if (kind is ActionKind.Sleep or ActionKind.Rest) st.LastProgressSec = at;
         st.Today.SecByAction[(int)kind] += WindowSec;
         CheckStuck(st, d, at);
+    }
+
+    /// <summary>
+    /// P5-F (businesses spec 4.4): the Tend directive at a stall: in the market hours the hero minds it (one recorded mind command at each hour's start, for the hour, as a player at the stall
+    /// would send), out of them the ordinary day (meals, sleep) goes on. The hero is taken to be at the stall (the walk there is the Travel directive's).
+    /// </summary>
+    private bool Tend(AutopilotState st, Directive d, long at)
+    {
+        int hod = (int)(at % 86400 / 3600);
+        var money = Ctx.Econ.Money;
+        if (hod < money.MarketOpenHour || hod >= money.MarketCloseHour) return false;
+        if (at % 3600 < WindowSec) IssueCmd(Ravensguard.Sim.Production.BusinessDesk.Mind(d.Target, at - at % 3600, at - at % 3600 + 3600) with { Origin = CommandOrigin.Autopilot });
+        st.LastProgressSec = at;
+        return true;
     }
 
     private static bool MovesOn(DirectiveKind k) => k is DirectiveKind.Travel or DirectiveKind.TradeRoute or DirectiveKind.Escort;

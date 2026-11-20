@@ -1,0 +1,21 @@
+// Prospecting, mineral rights and extraction businesses (docs/specs/phase5/prospecting-and-extraction.md, P5-F).
+// Estimates are the truth plus an error: a trial shaft +-30% at skill 50 and +-10% at 90; a walk-by or a pit 60% at skill 0 falling to 10% at 90.
+// Licences: base metals of the lord (20 crowns), silver and gold of the crown (50 crowns); a royalty of 10% of what is mined, at the market's mid, by the ledger.
+[
+  { "type": "prospect_rules", "id": "default",
+    "walk_confidence_pm": 200, "read_min_skill": 20, "read_hours": 1, "read_hint_m": 200, "read_confidence_pm": 350,
+    "pan_hours": 2, "pan_upstream_tiles": 40, "pit_hours": 6, "pit_confidence_pm": 700,
+    "shaft_hours": 48, "shaft_confidence_pm": 850, "error_at50_pm": 300, "error_at90_pm": 100, "error_at0_pm": 600,
+    "hire_mites_per_day": 350, "hire_skill": 55, "report_shape": "survey_report", "report_material": "leather", "report_mass_g": 30,
+    "licence_fee_base_mites": 2000, "licence_fee_precious_mites": 5000, "royalty_pm": 100, "mine_share_of_vein_pm": 1000,
+    "new_mine_levels": 1, "new_mine_flood_pm": 30, "new_mine_cave_in_pm": 5,
+    "sites": [
+      { "kind": "woodlot", "resource": "Wood", "name": "Woodcutters' camp" },
+      { "kind": "charcoal_crew", "resource": "Wood", "name": "Charcoal clamp" },
+      { "kind": "quarry", "resource": "Stone", "needs_survey": true, "name": "Quarry" },
+      { "kind": "clay_pit", "resource": "Clay", "needs_survey": true, "name": "Clay pit" },
+      { "kind": "peat_cuttings", "resource": "Peat", "name": "Peat cuttings" },
+      { "kind": "salt_pan", "resource": "Salt", "name": "Salt pan" },
+      { "kind": "mine", "resource": "Mine", "needs_survey": true, "needs_licence": true, "name": "Mine" }
+    ] }
+]

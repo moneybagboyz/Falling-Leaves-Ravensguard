@@ -34,6 +34,10 @@ public enum HeroCommandKind : byte
     Construction,
     /// <summary>Appended (P5-E): crafting at the barrier ("cf:order|...", collect, cancel, join, apprentice, leave, teach, apart, feed, look), applied by <see cref="Ravensguard.Sim.Crafting.CraftDesk"/>.</summary>
     Craft,
+    /// <summary>Appended (P5-F): businesses, shares, stewards and stalls at the barrier ("bz:found|...", buy, share, hire, steward, orders, supply, work, stall, mind, at), applied by <see cref="Ravensguard.Sim.Production.BusinessDesk"/>.</summary>
+    Business,
+    /// <summary>Appended (P5-F): prospecting and mineral rights ("px:walk|...", start, hire, write, read, licence, site), applied by <see cref="Ravensguard.Sim.Production.BusinessDesk"/>.</summary>
+    Prospect,
 }
 
 /// <summary>Where the hero crafts (built on the main thread from what is in reach, copied into the command).</summary>
@@ -366,6 +370,12 @@ public sealed class HeroDesk
         else notes = CraftDesk.Hourly(ctx, h);
         if (ctx.Craft.State.Dead.Count > 0) ctx.Craft.SweepDeadStores();                       // the stores the tick emptied go at the barrier
         foreach (var t in notes) { _craftDirty = true; _results.Add(new HeroResult(0, HeroCommandKind.Craft, HeroResultCode.Ok, t, AtSec: h * 3600)); }
+        // P5-F: steward reports, alerts and prospecting finds of the hour
+        if (ctx.State.HomeRecords?.Sim.Get<Ravensguard.Sim.Production.OwnershipWorld>() is { Notices.Count: > 0 } own)
+        {
+            foreach (var t in own.Notices) _results.Add(new HeroResult(0, HeroCommandKind.Business, HeroResultCode.Ok, t, AtSec: h * 3600));
+            own.Notices.Clear();
+        }
         ctx.Party.Carried.Tidy(ctx.Econ);
         ApplyDue(ctx, h, publish: false);
         MirrorHero(ctx);
@@ -452,6 +462,7 @@ public sealed class HeroDesk
                 HeroCommandKind.Land => Ravensguard.Sim.Land.LandDesk.Apply(ctx, c),                           // P5-A2: deeds, leases, claims, charters
                 HeroCommandKind.Construction => Ravensguard.Sim.Construction.ConstructionDesk.Apply(ctx, c),   // P5-B: ghosts, hands-on work, materials, crews
                 HeroCommandKind.Craft => CraftDesk.Apply(ctx, c),                                              // P5-E: commissions, guilds, apprenticeships, fires
+                HeroCommandKind.Business or HeroCommandKind.Prospect => Ravensguard.Sim.Production.BusinessDesk.Apply(ctx, c),   // P5-F: businesses, stewards, stalls, prospecting
                 _ => R(c, HeroResultCode.Invalid, T("HERO_UNKNOWN_COMMAND")),
             };
         }
@@ -557,6 +568,7 @@ public sealed class HeroDesk
 
     private HeroResult SellItem(HeroContext ctx, HeroCommand c)
     {
+        if (ctx.IsAbroad(c.Region)) return ctx.Econ.Items.IndexOf(c.Item) is int ix and >= 0 ? AbroadDealing.SellItem(ctx, c, ItemValue(ctx, ix)) : R(c, HeroResultCode.Invalid, T("HERO_DO_NOT_HAVE"));   // P5-F (businesses spec 4.5): item rows abroad at their value
         var b = ctx.Book(c.Settlement); if (b == null) return R(c, HeroResultCode.NoMarket, T("HERO_THERE_NO_MARKET_HERE"));
         var e = ctx.Econ; int row = e.Items.IndexOf(c.Item);
         if (row < 0 || e.Items.At(row).Owner != ctx.Party.Hero) return R(c, HeroResultCode.Invalid, T("HERO_DO_NOT_HAVE"));
