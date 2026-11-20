@@ -8,7 +8,7 @@ namespace Ravensguard.Sim.WorldGen.History;
 /// </summary>
 public sealed record HistoryStats(
     int Years, int StartRealms, int RealmsFell, int Wars, int NeighbourPairs, int WarShareMille, int PairsEverWarredMille, int WarsPerPairCenturyMille,
-    int Plagues, int Ruins, int LandRegions, int RuinsPer1000Regions, int Saints, int Cultures, int Heresies, int Schisms, int Excommunications, int SlaveRaids, int Rebellions)
+    int Plagues, int Ruins, int LandRegions, int RuinsPer1000Regions, int Saints, int Cultures, int Heresies, int Schisms, int Excommunications, int SlaveRaids, int Rebellions, int ExcommunicationsUsed = 0, int ExcommunicationsGiven = 0)
 {
     /// <summary>Measures <paramref name="h"/> over <paramref name="c"/> (the continent it was made on).</summary>
     public static HistoryStats Of(Continent c, WorldHistory h)
@@ -65,7 +65,7 @@ public sealed record HistoryStats(
         int perCentury = avgPairs == 0 || h.Years == 0 ? 0 : (int)((long)h.Wars.Count * 100_000 / avgPairs / h.Years);
         return new HistoryStats(h.Years, startRealms, fell, h.Wars.Count, avgPairs, pairSeasons == 0 ? 0 : (int)(warSeasons * 1000 / pairSeasons),
             allPairs.Count == 0 ? 0 : everNeighbour * 1000 / allPairs.Count, perCentury, plagues, ruins, landRegions, landRegions == 0 ? 0 : ruins * 1000 / landRegions, saints, cultures,
-            heresies, schisms, h.Excommunications.Count, h.SlaveRaids.Count, rebellions);
+            heresies, schisms, h.Excommunications.Count, h.SlaveRaids.Count, rebellions, h.Excommunications.Count(x => x.WarTick >= 0 && x.WarTick - x.Tick <= 40), h.Excommunications.Count(x => x.Given > 0));
     }
 
     public override string ToString() =>

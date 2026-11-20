@@ -432,6 +432,7 @@ public sealed partial class HistoryGenerator
         if (!Pct(s.Id.Value, S.Saint, 8)) return;
         if (_h.Notables.Any(n => n.Alive && n.Role == NotableRole.Saint && n.Residence == sIdx)) return;
         int cu = _c.CultureId[s.Cell] < 8 ? _c.CultureId[s.Cell] : 0;
+        if (_v1 && _h.Notables.Count(n => n.Role == NotableRole.Saint && n.Culture == cu) >= HistoryRules.SaintsPerFaithMax) return;      // a faith keeps a feast for few saints (with its founders, 4 to 12)
         bool female = Pct(s.Id.Value, S.Saint, 50);
         var sa = NewNotable(NotableRole.Saint, cu, s.Realm, EntityId.None, female, _year - YearsAgo(Roll(s.Id.Value, S.Saint, 28, 60)), EntityId.None, EntityId.None);
         sa.Residence = sIdx;

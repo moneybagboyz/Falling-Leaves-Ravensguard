@@ -28,6 +28,17 @@ public sealed partial class HistoryGenerator
             if (site != null)
                 rel.FoundedEvent = EvK("h_religion_founded", "ch_h_religion_founded", [ChronParam.TextKey("faith", FaithKey(rule)), ChronParam.Place("place", site.Id)], site.Cell, [site.Id],
                     CzK(CauseKind.Faith, EntityId.None, "ch_note_h_faith_ancient"));
+            // the faith's founder-saint, alive at the holy site when the records open (the derived religion adds its founders to the history's saints)
+            if (site != null && site.Realm >= 0)
+            {
+                bool female = Pct(site.Id.Value, S.Faith, 50);
+                var sa = NewNotable(NotableRole.Saint, c, site.Realm, EntityId.None, female, _year - YearsAgo(Roll(site.Id.Value, S.Faith, 30, 61)), EntityId.None, EntityId.None);
+                sa.Residence = _h.Settlements.IndexOf(site);
+                sa.Epithet = SaintEpithets[Roll(site.Id.Value, S.Faith, 0, SaintEpithets.Length)];
+                rel.Founder = sa.Id;
+                sa.RiseEvent = Ev("saint_rises", $"Saint {sa.Name} of {site.Name}", $"{sa.Full} keeps the first shrine of the faith at {site.Name}, and the people call {(female ? "her" : "him")} holy", site.Cell, [sa.Id, site.Id],
+                    Cz(CauseKind.Faith, rel.FoundedEvent, "the founding of the faith"));
+            }
             _h.Religions.Add(rel);
         }
         foreach (var r in _h.Realms) r.Religion = Math.Clamp(r.CultureId, 0, Math.Max(0, nc - 1));
@@ -102,14 +113,18 @@ public sealed partial class HistoryGenerator
     {
         var ev = EvK("h_excommunication", "ch_h_excommunication", [RulerParam(r), PlaceOf(r), FaithParam(r)], Cap(r), [ruler.Id, r.Id], CzK(CauseKind.Faith, cause, key));
         _excommUntil[r.Index] = _tick + HistoryRules.ExcommunicationYears * 4; _excommRuler[r.Index] = ruler.Id;
-        _h.Excommunications.Add(new Excommunication { Realm = r.Index, Tick = _tick, Ruler = ruler.Id, Event = ev });
+        var exc = new Excommunication { Realm = r.Index, Tick = _tick, Ruler = ruler.Id, Event = ev };
+        _h.Excommunications.Add(exc);
         // neighbours of the faith may use it as a casus belli
         for (int x = 0; x < _h.Realms.Count; x++)
         {
             var rx = Rm(x);
-            if (x == r.Index || !rx.Alive || FaithOf(rx) != FaithOf(r) || _heresyOf[x] >= 0 || Contact(x, r.Index) == 0 || rx.Ruler.Value == 0) continue;
+            if (x == r.Index || !rx.Alive || _heresyOf[x] >= 0 || Contact(x, r.Index) == 0 || rx.Ruler.Value == 0) continue;
+            // a realm of the faith, or any realm whose ruler is pious (the ban is a call to arms for the devout of other creeds too)
+            if (FaithOf(rx) != FaithOf(r) && !(_h.GetNotable(rx.Ruler) is { } rn && LordTraits.Has(LordTraits.OfRuler(_seed, rn.Id.Value, rn.Ambition), LordTrait.Pious))) continue;
             if (_cb[x * _R + r.Index].Kind != CasusBelliKind.None && _cb[x * _R + r.Index].Kind != CasusBelliKind.Insult) continue;
             PutCb(x, r.Index, CasusBelliKind.Excommunication, ev, "excommunication");
+            exc.Given++;
         }
     }
 

@@ -149,7 +149,7 @@ public sealed class WorldHistory
             L(RulesVersion);
             foreach (var r in Religions) { L(r.Index); S(r.Name); L(r.Culture); Id(r.FoundedEvent); Id(r.Founder); L(r.FoundedTick); L(r.SchismFrom); Id(r.HolySite); }
             foreach (var x in Heresies) { L(x.Religion); L(x.Realm); L(x.StartTick); L(x.EndTick); Id(x.Event); Id(x.CauseEvent); }
-            foreach (var x in Excommunications) { L(x.Realm); L(x.Tick); L(x.WarTick); Id(x.Ruler); Id(x.Event); }
+            foreach (var x in Excommunications) { L(x.Realm); L(x.Tick); L(x.WarTick); L(x.Given); Id(x.Ruler); Id(x.Event); }
             foreach (var x in SlaveRaids) { L(x.Raider); L(x.Victim); L(x.Captives); L(x.Tick); L(x.Market); Id(x.Event); Id(x.MarketEvent); }
             foreach (var r in Realms) L(r.Religion);
         }

@@ -23,7 +23,7 @@ public static class HistoryRules
 
     // ---- war and peace (4.2). A realm that has a quarrel declares at the utility's threshold; the gate keeps a season's declarations to the ruler's will (calibrated, 4.4).
     public const int WarGatePct = 4;
-    public const int ExcommWarGatePct = 35;
+    public const int ExcommWarGatePct = 60;
     public const int RealmsRef = 24;
     /// <summary>Peace: a side that sues (weariness less its score at the sue gap) is met with this chance a season.</summary>
     public const int PeaceAcceptPct = 15;
@@ -43,6 +43,7 @@ public static class HistoryRules
     public const int HamletEmptyPct = 25;              // a hamlet the plague reaches is emptied this often (4.2)
     public const int HeresyPermilleYear = 50;          // per religion and year, when a famine or plague hit it and a realm of it is aggrieved
     public const int HeresyYearsMax = 25;
+    public const int SaintsPerFaithMax = 7;            // history's saints of one faith (the derived religion adds 3 to 5 founders: 4 to 12 in all)
     public const int ExcommunicationPctYear = 25;      // a heretic ruler, per year
     public const int ExcommunicationWarPctYear = 2;    // an ambitious ruler at war with a realm of his own faith, per year
     public const int ExcommunicationYears = 10;

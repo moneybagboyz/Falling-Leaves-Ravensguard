@@ -176,6 +176,8 @@ public sealed class Heresy
 public sealed class Excommunication
 {
     public int Realm, Tick, WarTick = -1;
+    /// <summary>How many neighbouring realms of the faith were given the ban as a casus belli.</summary>
+    public int Given;
     public EntityId Ruler, Event;
 }
 

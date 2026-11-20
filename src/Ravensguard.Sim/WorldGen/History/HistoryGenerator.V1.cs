@@ -94,14 +94,14 @@ public sealed partial class HistoryGenerator
                 var rb = Rm(b);
                 var cb = _cb[a * _R + b];
                 bool cultural = ra.CultureId != rb.CultureId && _cultCount[b * 8 + Math.Clamp(ra.CultureId, 0, 7)] >= 8;
-                bool claim = cb.Kind == CasusBelliKind.BorderClaim || cultural || Grudge(a, b) >= 30;
+                bool claim = cb.Kind is CasusBelliKind.BorderClaim or CasusBelliKind.Excommunication || cultural || Grudge(a, b) >= 30;   // the church's ban gives its neighbours a claim to the banned ruler's lands
                 int cbw = cb.Kind switch
                 {
                     CasusBelliKind.Succession => WarUtility.CbWeight(pol, CbKind.SeizedFief), CasusBelliKind.Raid => WarUtility.CbWeight(pol, CbKind.Raid), CasusBelliKind.Insult => WarUtility.CbWeight(pol, CbKind.Insult),
                     CasusBelliKind.Excommunication => WarUtility.CbWeight(pol, CbKind.Excommunication), _ => 0,
                 };
                 if (!claim && cb.Kind == CasusBelliKind.None) continue;
-                if (_opinion[a * _R + b] >= 25) continue;                                                          // kin and friends do not fight each other
+                if (_opinion[a * _R + b] >= 25 && cb.Kind != CasusBelliKind.Excommunication) continue;                                                          // kin and friends do not fight each other
                 long payroll = Levy(ra) / 12 + 1;
                 int lost = _tick - ra.LastFamineTick < 8 ? 300 : pol.HarvestLostPermille;
                 var inp = new WarInputs(claim, cbw, Levy(ra), Levy(rb) + 1, (int)Math.Min(100, ra.Treasury / payroll), (Season)_season, WarUtility.HarvestCost(pol, lost), _alliance[a * _R + b] > _tick, _truce[a * _R + b] > _tick);
@@ -121,7 +121,7 @@ public sealed partial class HistoryGenerator
         string baseName = WarName(a, b, kind == CasusBelliKind.Excommunication ? CasusBelliKind.BorderClaim : kind, naval);
         var w = new WarRecord
         {
-            Index = _h.Wars.Count, Attacker = a.Index, Defender = b.Index, StartTick = _tick, Cb = kind, CbEvent = cb.Event, CbNote = cb.Note, Naval = naval,
+            Index = _h.Wars.Count, Attacker = a.Index, Defender = b.Index, StartTick = _tick, Cb = kind, CbEvent = cb.Event, CbNote = cb.Note ?? (kind == CasusBelliKind.BorderClaim ? "a claim on lands held by another realm" : ""), Naval = naval,
             Name = $"{baseName} ({_year})", ArmyA = Levy(a), ArmyD = Levy(b) * 11 / 10,
         };
         string noteKey = kind switch { CasusBelliKind.Succession => "ch_note_h_cb_succession", CasusBelliKind.Raid => "ch_note_h_cb_raid", CasusBelliKind.Insult => "ch_note_h_cb_insult", CasusBelliKind.Excommunication => "ch_note_h_cb_excomm", _ => "ch_note_h_cb_claim" };

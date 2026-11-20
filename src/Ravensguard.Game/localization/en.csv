@@ -5801,6 +5801,7 @@ ch_note_h_law_dealt,the law of the culture
 ch_note_h_captives_of_war,the captives of a war
 ch_note_h_weak_neighbour,a weaker neighbour with a thin guard
 ch_note_h_market,a market that buys captives
+WL_RULES,History rules: {0}
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."
