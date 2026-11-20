@@ -84,7 +84,7 @@ public sealed partial class ConstructionWorld
                 if (!gone.Contains(ConstructionIds.CellKey(x, y, zz)) && BuiltStructure(x, y, zz) is { } p && PieceCatalog.IsRoomKind(p.Kind)) return zz;
             return 0;
         }
-        var first = ConstructionIds.Unpack(fallen[0]);
+        var first = ConstructionIds.Unpack(fallen[DetRng.Range(Seed, (long)g.EventId, (ulong)fallen.Count, RngStreams.CollapseRubble, 0, 0, fallen.Count)]);
         int lz0 = LandZ(first.X, first.Y, first.Z);
         var rubbleId = ConstructionIds.Make(RegionId, ConstructionIds.RubbleSlot, (1UL << 35) | (g.EventId & 0xFFFFFFFF));
         var wasteId = ConstructionIds.Make(RegionId, ConstructionIds.ChestSlot, (1UL << 35) | (g.EventId & 0xFFFFFFFF));

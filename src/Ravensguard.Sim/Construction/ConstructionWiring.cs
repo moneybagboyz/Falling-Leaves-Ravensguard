@@ -71,38 +71,14 @@ public static class ConstructionWiring
     private static ConstructionWorld Make(WorldState state, ContentDatabase content, Population pop, EconomyState econ, int region)
     {
         var book = state.Construction ??= new ConstructionBook();
-        return new ConstructionWorld(book, econ, PieceCosts.Of(content), region) { Pop = pop, Content = content };
+        return new ConstructionWorld(book, econ, PieceCosts.Of(content), region) { Pop = pop, Content = content, Seed = state.Seed };
     }
 
     private static void Hook(ConstructionWorld cw, WorldState state, ContentDatabase content, LandWorld? land, RegionWeather? weather, Population pop, Func<WoundLedger?> wounds)
     {
         var econ = cw.Econ;
         var hero = EconomyState.HeroOwner;
-        // the land rule, from a registry rebuilt when the land book or the day changes (a registry costs tens of milliseconds; placements are rare)
-        if (land != null)
-        {
-            LandRegistry? reg = null; string sig = "";
-            cw.May = (p, hh, act, x, y) =>
-            {
-                var b = land.Book;
-                string now = $"{b.Changes.Count}|{b.Claims.Count}|{b.Charters.Count}|{b.Deeds.Count}|{b.NextSerial}|{b.Claims.Sum(c => c.Tiles.Length)}|{(int)b.Claims.Sum(c => (int)c.State)}|{pop.Households.Count}";
-                if (reg == null || now != sig) { reg = land.Registry(); sig = now; }
-                return reg.May(p, hh, act, x, y);
-            };
-            cw.DwellingBuilt = (x, y, day) =>
-            {
-                int t = LandRules.TileAt(x, y);
-                foreach (var c in land.Book.Claims)
-                {
-                    if (c.State is not (ClaimState.Open or ClaimState.Deeded) || Array.BinarySearch(c.Tiles, t) < 0) continue;
-                    int st = cw.Rooms.StructureAt(x, y, 0) is var s0 and > 0 ? s0 : cw.Rooms.StructureAt(x, y, 1);
-                    if (cw.ImprovedBy(c.Serial, st)) return -1;
-                    land.Improve(c.Serial, ImprovementKind.Dwelling, day, (when, type, subjects, causes, data) => cw.Chronicle?.Invoke(when, type, subjects, causes, data) ?? default);
-                    return c.Serial;
-                }
-                return -1;
-            };
-        }
+        if (land != null) HookLand(cw, land, pop);
         var region = pop.Region;
         ChunkGenerator? gen = null;
         cw.Ground = (x, y) =>
@@ -143,6 +119,34 @@ public static class ConstructionWiring
         cw.Fall = (p, mm, ev, sec) => FallWounds.Apply(content, wounds(), p, mm, ev, sec, state.Seed);
         cw.PeopleOn = cells => cw.HeroCell is { } hc && cells.Contains(ConstructionIds.CellKey(hc.X, hc.Y, hc.Z)) ? [(hero, hc.X, hc.Y, hc.Z)] : [];
         cw.Moved = (p, x, y, z) => { if (p == hero) cw.HeroLanded(x, y, z); };
+    }
+
+    /// <summary>
+    /// The land's hooks (land 4.1, 4.4): who may build where, from a registry rebuilt when the land book changes (a registry costs tens of milliseconds; placements are rare), and the claim
+    /// a recognised dwelling improves (once per structure).
+    /// </summary>
+    public static void HookLand(ConstructionWorld cw, LandWorld land, Population pop)
+    {
+        LandRegistry? reg = null; string sig = "";
+        cw.May = (p, hh, act, x, y) =>
+        {
+            string now = land.Book.ComputeHash() + "|" + pop.Households.Count;
+            if (reg == null || now != sig) { reg = land.Registry(); sig = now; }
+            return reg.May(p, hh, act, x, y);
+        };
+        cw.DwellingBuilt = (x, y, day) =>
+        {
+            int t = LandRules.TileAt(x, y);
+            foreach (var c in land.Book.Claims)
+            {
+                if (c.State is not (ClaimState.Open or ClaimState.Deeded) || Array.BinarySearch(c.Tiles, t) < 0) continue;
+                int st = cw.Rooms.StructureAt(x, y, 0) is var s0 and > 0 ? s0 : cw.Rooms.StructureAt(x, y, 1);
+                if (cw.ImprovedBy(c.Serial, st)) return -1;
+                land.Improve(c.Serial, ImprovementKind.Dwelling, day, (when, type, subjects, causes, data) => cw.Chronicle?.Invoke(when, type, subjects, causes, data) ?? default);
+                return c.Serial;
+            }
+            return -1;
+        };
     }
 
     private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<ContentDatabase, PiecePalette> Palettes = new();

@@ -50,6 +50,8 @@ public sealed partial class ConstructionWorld
     public RoomWorld Rooms { get; private set; }
     public int RegionId { get; }
     public Population? Pop { get; init; }
+    /// <summary>The world seed (counter streams 0x510, 0x416).</summary>
+    public ulong Seed { get; init; }
 
     // ---- hooks (null: the default) ----
     /// <summary>The land rule (LandRegistry.May); null: building is allowed everywhere (a test world without land).</summary>
