@@ -61,6 +61,8 @@ public sealed class ScheduleBook
     public PlanRt[] Guards { get; }
     public PlanRt Fallback { get; }
     public BehaviourContent Content { get; }
+    /// <summary>P6-B4 (faith 4.1): the feast days of each continent culture index as a mask of the 60-day year (see <c>HolyCalendar.FeastMasks</c>); null: only the weekly holy day.</summary>
+    public ulong[]? FeastMasks { get; init; }
 
     public ScheduleBook(BehaviourContent c)
     {

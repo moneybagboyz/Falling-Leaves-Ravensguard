@@ -16,7 +16,7 @@ public static class RuntimePeople
     {
         var res = new List<PeopleRecords>();
         var h = Facts.GetOrCreateValue(rt);
-        h.Book ??= new ScheduleBook(BehaviourContent.From(rt.Services.Content));
+        h.Book ??= new ScheduleBook(BehaviourContent.From(rt.Services.Content)) { FeastMasks = Ravensguard.Sim.Faith.HolyCalendar.FeastMasks(rt.Services.Content) };   // P6-B4: a culture's feasts are holy days of its people
         foreach (var rw in rt.Records.Resident.OrderBy(r => r.Coord.Id))
         {
             var jobs = rw.Sim.Get<AbstractJobTable>();

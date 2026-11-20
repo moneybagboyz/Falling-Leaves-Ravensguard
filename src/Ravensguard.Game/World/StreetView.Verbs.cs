@@ -129,6 +129,7 @@ public partial class StreetView
         LandVerbs(v);                                       // P5-A2: the lot market, the deeds, staking a claim (StreetView.Land.cs)
         WillVerbs(v);                                       // P5-H: make a will before a priest or the reeve (StreetView.Will.cs)
         TreatVerbs(v);                                      // P6-B1: treat the wounded, a physician's Treat me (StreetView.Treatment.cs)
+        FaithVerbs(v);                                      // P6-B4: attend the service, give alms, a pilgrim's vow, beside a priest (StreetView.Faith.cs)
         ContractVerbs(v);                                   // P5-D: the contract board (StreetView.Contracts.cs)
         VehicleVerbs(v);                                    // P5-G: the designer, a vehicle's parts, work, repair, launch (StreetView.Vehicles.cs)
         BusinessVerbs(v);                                   // P5-F: the Ledger, open a business, hire, steward, a share, prospecting (StreetView.Business.cs)

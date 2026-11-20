@@ -18,12 +18,13 @@ public sealed record StandingView(IReadOnlyList<StandingLine> Lines, int RenownP
     public static StandingView Of(WorldState st, DeedTable deeds, EntityId person, int day)
     {
         if (st.Standing is not { } book) return Empty with { Day = day };
-        var region = st.Population.Region; var map = new RegionGroups(region, st.Population.People, day);
+        var region = st.Population.Region; var religions = Ravensguard.Sim.Faith.FaithWiring.ReligionsOf(st); var map = new RegionGroups(region, st.Population.People, day, religions);
         string Name(GroupRef g) => g.Kind switch
         {
             GroupKind.Settlement when g.Index >= 0 && g.Index < region.Settlements.Count => region.Settlements[g.Index].Name,
             GroupKind.Fief when g.Index >= 0 && g.Index < region.Fiefs.Count => region.Fiefs[g.Index].Name,
             GroupKind.Realm => region.Realms.FirstOrDefault(r => r.HistoryIndex == g.Index)?.Name ?? "",
+            GroupKind.Religion => religions.Get(g.Index)?.Name ?? "",
             _ => "",
         };
         var lines = new List<StandingLine>();

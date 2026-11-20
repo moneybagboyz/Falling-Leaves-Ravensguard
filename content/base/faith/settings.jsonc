@@ -1,0 +1,6 @@
+// The numbers of faith and church (docs/specs/phase6/faith-and-church.md 4): piety, holy days and services, the tithe split and the see, pilgrimage. The defaults are the spec's.
+[
+  {"type": "faith_settings", "id": "faith"},
+  // what the hero is given on arriving at a shrine (a pilgrim's badge); the loot tables never pick it
+  {"type": "site_item", "id": "pilgrim_badge", "name": "Pilgrim's badge", "mass_g": 30, "value_mites": 8, "kind": "church", "material": "tin"}
+]

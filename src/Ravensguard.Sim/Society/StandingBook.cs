@@ -17,6 +17,8 @@ public sealed class DeedRecord
     public int Amount = 1;
     /// <summary>What share of it the doer still carries, in permille: 1000, or 500 once a kin heir took the name up (4.4), 0 for a companion heir.</summary>
     public int WeightPm = 1000;
+    /// <summary>P6-B4: the church proclaims it (a pilgrimage at the shrine): the whole faith has heard, so the religion group counts it in full; it adds nothing to renown (nobody outside the faith is told).</summary>
+    public bool Proclaimed;
     /// <summary>Hearings by the listener's home settlement (ascending), the last count the rumour table gave.</summary>
     public SortedDictionary<int, int> Heard = [];
     public int HeardTotal => Heard.Values.Sum();
@@ -130,11 +132,14 @@ public sealed class StandingBook
         yield return GroupRef.Settlement(place);
         var f = map.FiefOf(place); if (!f.IsNone) yield return f;
         var r = map.RealmOf(place); if (!r.IsNone) yield return r;
+        var rl = map.ReligionOf(place); if (!rl.IsNone) yield return rl;                                  // P6-B4: the faith of the place hears of it, and the doer's own
+        var dr = map.ReligionOfPerson(rec.Doer); if (!dr.IsNone && dr != rl) yield return dr;
     }
 
     private static int HeardIn(DeedRecord rec, GroupRef g, IGroupMap map)
     {
         if (g.Kind == GroupKind.Settlement) return rec.Heard.GetValueOrDefault(g.Index);
+        if (g.Kind == GroupKind.Religion && rec.Proclaimed) return map.Members(g);
         int n = 0; foreach (int s in map.SettlementsOf(g)) n += rec.Heard.GetValueOrDefault(s);
         return n;
     }
@@ -262,6 +267,7 @@ public sealed class StandingBook
         foreach (var (k, d) in Deeds)
         {
             M(k); M(d.Doer.Value); M((ulong)(uint)d.Day); M((ulong)(uint)d.Place); M((ulong)(uint)d.Amount); M((ulong)(uint)d.WeightPm);
+            if (d.Proclaimed) M(0x5052UL);
             foreach (char c in d.DeedId) M(c);
             foreach (var (s, n) in d.Heard) { M((ulong)(uint)s); M((ulong)(uint)n); }
         }

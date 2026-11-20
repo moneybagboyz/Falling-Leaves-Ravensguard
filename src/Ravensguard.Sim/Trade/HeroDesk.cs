@@ -48,6 +48,8 @@ public enum HeroCommandKind : byte
     Crime,
     /// <summary>Appended (P6-B3): a family act ("fm:court|person|gift", "fm:ask|person", "fm:break|person", "fm:teach|child|course|skill|tutor"), applied by <see cref="Ravensguard.Sim.Family.FamilyDesk"/>.</summary>
     Family,
+    /// <summary>Appended (P6-B4): the hero's acts of faith at the barrier ("fa:attend|settlement", alms, vow, arrive, abandon), applied by <see cref="Ravensguard.Sim.Faith.FaithDesk"/>.</summary>
+    Faith,
 }
 
 /// <summary>Where the hero crafts (built on the main thread from what is in reach, copied into the command).</summary>
@@ -499,6 +501,7 @@ public sealed class HeroDesk
                 HeroCommandKind.Treat => Ravensguard.Sim.Medicine.HeroTreatDesk.Apply(ctx, c),                // P6-B1: the treatment screen's verbs, the physician's fee
                 HeroCommandKind.Crime => Ravensguard.Sim.Law.CrimeDesk.Apply(ctx, c),                           // P6-B2: a crime the street saw
                 HeroCommandKind.Family => Ravensguard.Sim.Family.FamilyDesk.Apply(ctx, c),                      // P6-B3: courting, the plea, lessons
+                HeroCommandKind.Faith => Ravensguard.Sim.Faith.FaithDesk.Apply(ctx, c),                         // P6-B4: a service, alms, a pilgrim's vow and arrival
                 HeroCommandKind.Business or HeroCommandKind.Prospect => Ravensguard.Sim.Production.BusinessDesk.Apply(ctx, c),   // P5-F: businesses, stewards, stalls, prospecting
                 _ => R(c, HeroResultCode.Invalid, T("HERO_UNKNOWN_COMMAND")),
             };

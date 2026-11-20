@@ -4454,6 +4454,92 @@ fam_talk_visit,Call on {0}
 fam_talk_gift,Give {0} a gift worth {1} mites
 fam_talk_ask,Ask for {0}'s hand
 fam_talk_break,Break it off
+st_deed_slave_held,Slaves kept against the faith
+ch_faith_see_vacant,The see of {place} fell vacant when {bishop} died.
+ch_faith_see_seized,The lord took {amount} of the vacant see's receipts at {place}.
+ch_faith_bishop_elected,{bishop} was chosen bishop at {place}.
+ch_faith_alms,{doer} gave {amount} in alms at {place}.
+ch_faith_pilgrim_start,{doer} vowed a pilgrimage to {place}.
+ch_faith_pilgrim_done,{doer} came to {place} as a pilgrim.
+ch_faith_slave_held,{doer} kept slaves against the teaching of the church at {place}.
+ch_note_see_bishop_died,The bishop died and the see had no head.
+ch_note_see_vacant_receipts,A vacant see's receipts fall to the lord until the chapter chooses a bishop.
+ch_note_chapter_election,The chapter chose the most pious of the senior priests.
+ch_note_alms_charity,Charity moved the giver.
+ch_note_pilgrim_vow,A vow to walk to the holy place.
+ch_note_slave_against_doctrine,The doctrine of the faith forbids it.
+fa_open,Faith
+fa_title,Faith and the church
+fa_loading,Reading the church's books...
+fa_no_faith,You keep no faith the church knows.
+fa_religion_line,"You follow {0}, who worship {1}."
+fa_piety,Your piety
+fa_band_lax,lax
+fa_band_observant,observant
+fa_band_pious,pious
+fa_band_devout,devout
+fa_standing,Standing with the church
+fa_excommunicated,"Excommunicated: no wedding, no burial in holy ground, no will witnessed."
+fa_refuses,"The priests refuse you a wedding, a burial and a witness to your will."
+fa_head_church,The church here
+fa_priest_of,"Priest of {0}"
+fa_bishop_of,"Bishop of {0}"
+fa_vacant,the living is vacant
+fa_vacant_see,the see is vacant
+fa_last_service,"Last holy day's service: {0} of {1} adults came."
+fa_head_days,Holy days
+fa_today,"Today: {0}"
+fa_attended_yes,you were at the service
+fa_attended_no,the service is today
+fa_in_days,in {0} days
+fa_saint_day,Feast of {0}
+fa_head_doctrine,What the faith teaches
+fa_doc_slavery_forbid,No believer may own a slave
+fa_doc_slavery_coreligionists_forbidden,No believer may own a believer
+fa_doc_slavery_accept,Slavery is accepted
+fa_doc_usury_forbid,Usury is forbidden
+fa_doc_usury_allow,Lending at interest is allowed
+fa_doc_fasting,A fast one day in five
+fa_doc_no_fasting,No fast days
+fa_doc_church_courts,Clergy are tried by the church
+fa_doc_no_church_courts,Clergy answer to the lord's court
+fa_doc_clergy_marry,Priests may marry
+fa_doc_clergy_celibate,Priests do not marry
+fa_head_pilgrim,Pilgrimage
+fa_holy_site,Holy site
+fa_none,none in these parts
+fa_done,Pilgrimages made
+fa_on_pilgrimage,On pilgrimage
+fa_walk_to,Walk to {0}
+fa_btn_giveup,Give up the vow
+fa_btn_vow_site,"Vow to walk to {0} (the holy site)"
+fa_btn_vow,"Vow to walk to the shrine at {0}"
+fa_pilgrim_note,"Walk there and the road does the rest: piety, the church's good word, a badge. The sick feel better; nothing more."
+fa_btn_attend,Attend the service
+fa_btn_alms,Give alms (1 crown)
+fa_not_in_town,There is no church within reach.
+fa_q_head,The church
+fa_q_panel,Faith and the church
+fa_q_attend,Attend the service
+fa_q_attend_with,Attend the service with {0}
+fa_q_alms,Give alms (1 crown)
+fa_q_pilgrimage,Pilgrimage
+fa_find_priest,You need to be beside a priest.
+fa_no_church,There is no church here.
+fa_other_faith,This is not your church.
+fa_refused,The church will not receive you.
+fa_services_refused,The priest will not witness it: the church has shut its doors to you.
+fa_no_service_today,There is no service today.
+fa_already_attended,You have already prayed today.
+fa_attended,"You keep {0} at the service. Piety {1}."
+fa_alms_given,"You give {0} to the poor of {1}."
+fa_cannot_afford,You cannot give {0}.
+fa_already_pilgrim,You are already bound by a vow.
+fa_no_shrine,There is no shrine there.
+fa_no_pilgrimage,You have no pilgrimage to make.
+fa_vow_taken,"You vow to walk to {0}."
+fa_vow_given_up,You give up your vow.
+fa_pilgrim_arrived,"You kneel at {0}. Piety {1}; the church has heard of it."
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."

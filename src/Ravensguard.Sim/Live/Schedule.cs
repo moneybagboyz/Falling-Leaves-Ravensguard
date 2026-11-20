@@ -62,6 +62,8 @@ public readonly struct PersonAnchors
     /// <summary>Latitude in tenths of a degree (the sun's day); the plan this person follows and the tuning it reads.</summary>
     public int LatTenths { get; init; }
     public Ravensguard.Sim.Behaviour.ScheduleBook? Book { get; init; }
+    /// <summary>P6-B4 (faith 4.1): the days of the 60-day year (bit doy - 1) that the home culture keeps as feasts, on top of the weekly holy day; 0 for none.</summary>
+    public ulong HolyMask { get; init; }
     /// <summary>The bed (millimetres, level) and whether the household has a placed one.</summary>
     public bool HasBed { get; init; }
     /// <summary>P6-B1 (medicine 4.5): the household row plus one (kin who share a roof are allies for first aid), 0 for none, and the surgery level (first aid skill).</summary>
@@ -135,7 +137,7 @@ public readonly struct PersonAnchors
             Id = p.IdOf(index), Region = regionId, Index = index, Seed = seed, Occupation = occ, Sex = p.Sex[index], Class = p.Class[index], Name = p.FullName(index), Child = child,
             HasWork = hasWork, WorkInField = field, HasSquare = hasSq, HomeX = hx, HomeY = hy, HomeJit = hj, HomeJitY = hjy, HomeFacing = hf, HomeSettlement = hs, HomeLot = p.HomeLot[index],
             WorkX = wx, WorkY = wy, WorkJit = wj, WorkJitY = wjy, WorkFacing = wf, WorkSettlement = ws, WorkLot = wl, SquareX = sx, SquareY = sy, SquareJit = sj, SquareJitY = sjy,
-            FieldTiles = tiles, LatTenths = lat, Book = book0, HasBed = hasBed, BedX = bedx, BedY = bedy, BedZ = bedz, BedAxis = bedAxis, HasChurch = hasChurch, ChurchX = cx, ChurchY = cy, ChurchJit = cj, ChurchJitY = cjy,
+            FieldTiles = tiles, LatTenths = lat, Book = book0, HolyMask = book0.FeastMasks is { } fm && hs >= 0 && hs < r.Settlements.Count ? fm[(byte)r.Settlements[hs].Culture] : 0UL, HasBed = hasBed, BedX = bedx, BedY = bedy, BedZ = bedz, BedAxis = bedAxis, HasChurch = hasChurch, ChurchX = cx, ChurchY = cy, ChurchJit = cj, ChurchJitY = cjy,
             Household = p.Household[index] + 1, SurgeryLevel = p.SkillLevelOf(index, Skill.Surgery),
             Stalls = hs >= 0 && facts != null ? facts.StallsOf(hs) is { Length: > 0 } sp ? sp : null : null, QueueGapMm = book0.Content.Crowd.QueueGapMm,
         };
@@ -246,7 +248,7 @@ public static class Schedule
             bool on = b.When switch
             {
                 DayKind.Always => true, DayKind.Normal => !info.Market && !info.Fair, DayKind.Market => info.Market && !info.Fair, DayKind.Fair => info.Fair,
-                DayKind.Holy => info.Holy, _ => false,
+                DayKind.Holy => info.Holy || (a.HolyMask >> (info.DayOfYear - 1) & 1UL) != 0, _ => false,
             };
             if (!on) continue;
             if (b.SharePm < 1000 && DetRng.Range(a.Seed, day, a.Id.Value, RngStreams.ScheduleJitter, (uint)(16 + bi), 0, 1000) >= b.SharePm) continue;

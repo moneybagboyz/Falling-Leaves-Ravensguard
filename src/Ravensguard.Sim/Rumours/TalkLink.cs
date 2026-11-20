@@ -59,7 +59,7 @@ public sealed class TalkLink
         if (!ReferenceEquals(st.Content, _deedContent)) { _deedContent = st.Content; _deeds = Ravensguard.Sim.Society.DeedTable.From(st.Content); }
         if (_deeds.Count == 0) { State.Rumours.DrainTouched(); return; }
         int day = (int)(hour / 24);
-        if (_groups == null || _groupsDay != day || _groupsPeople != st.Population.People.Count) { _groups = new Ravensguard.Sim.Society.RegionGroups(st.Population.Region, st.Population.People, day); _groupsDay = day; _groupsPeople = st.Population.People.Count; }
+        if (_groups == null || _groupsDay != day || _groupsPeople != st.Population.People.Count) { _groups = new Ravensguard.Sim.Society.RegionGroups(st.Population.Region, st.Population.People, day, Ravensguard.Sim.Faith.FaithWiring.ReligionsOf(st)); _groupsDay = day; _groupsPeople = st.Population.People.Count; }
         Ravensguard.Sim.Society.StandingSystem.OnHour(() => st.Standing ??= new Ravensguard.Sim.Society.StandingBook(), st.Standing, _deeds, _groups, w, State, hour);
     }
 

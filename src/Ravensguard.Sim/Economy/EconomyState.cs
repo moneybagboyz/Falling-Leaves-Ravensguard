@@ -44,6 +44,8 @@ public sealed class EconomyState
     public EconomyTuningDef Tuning { get; set; } = new() { Id = "economy" };
     /// <summary>The woodland households gather fuel from (review finding 4); null in bare economies (unit tests), where gathering creates the wood as before.</summary>
     public IFuelGatherer? FuelGatherer { get; set; }
+    /// <summary>P6-B4 (faith 4.1): the percent of extra relish and ale a household eats on a holy day of its faith (household, game day); null or 0 for an ordinary day. Not saved: the church binds it when the world runs.</summary>
+    public Func<int, int, int>? FestivePct { get; set; }
     private readonly NeedsBasketDef[] _baskets;
     /// <summary>Which goods are staples, relishes, ale, salt and fuel (derived from good tags and classes).</summary>
     public FoodPlan Food { get; }

@@ -123,7 +123,7 @@ Each step ends with its golden tests green. Parts of one step run in parallel (s
    - **B1 the treatment screen** and the auto-dress removed (needs A1). Gate: MT-2, MT-5, MT-6, MT-13, MT-14. **Milestone M-A "the surgeon".**  **Built (P6-B1):** the screen, the commands and the queue, physicians seated at the seeding pass, the live medics, the auto-dress gone; details at the end of `medicine-and-treatment.md`.
    - **B2 crime core:** seen/unseen, witnesses, recognition, the hue and cry, reports, bounties (escrowed as Phase 3 jobs until C2 lands). Needs A2, A3. Gate: CJ-1 to CJ-4, CJ-13, CJ-15.
    - **B3 family core:** courting, weddings, dowries, children, upbringing, the hero's ageing and old age, kidnapping. Needs A3. Gate: FL-1 to FL-4, FL-7 to FL-11, FL-15.
-   - **B4 faith core:** derived religions, offices and holders, the tithe split, holy days, piety, pilgrimages. Needs A2, A3. Gate: FC-1 to FC-5, FC-10, FC-12, FC-13.
+   - **B4 faith core:** derived religions, offices and holders, the tithe split, holy days, piety, pilgrimages. Needs A2, A3. Gate: FC-1 to FC-5, FC-10, FC-12, FC-13. **Built (P6-B4):** all of it; religions are derived (`ReligionBook.Derive`), the offices are saved in the optional "faith" section and bound by `FaithSeedStep` (a new game at once, an older save when the runtime starts), religion groups count in standing; details at the end of `faith-and-church.md`. The believed miracles (10a) are left for E2.
    - **B5 fire and burning** (independent). Gate: FB-1 to FB-14.
    - **B6 holdings part 1:** 3.1, 3.2, 3.6, 3.7, 3.8. Gate: HW-1, HW-2, HW-6 to HW-13.
 3. **P6-C** (four parallel parts):
