@@ -116,7 +116,7 @@ public class HeistTests(ITestOutputHelper output)
         Assert.Equal(400, Noise.RangeCm(s, s.NoisePickM, 0, 0, false));
         Assert.Equal(340, Noise.RangeCm(s, s.NoisePickM, 1, 0, false));                       // light rain x 0.85
         Assert.Equal(200, Noise.RangeCm(s, s.NoisePickM, 3, 0, false));                       // a storm x 0.5
-        Assert.Equal(250, Noise.RangeCm(s, 40, 3, 4, false));                                 // a shout (40 m) in a storm through four walls: 40 x 0.5 x 0.0625
+        Assert.Equal(125, Noise.RangeCm(s, 40, 3, 4, false));                                 // a shout (40 m) in a storm through four walls: 40 x 0.5 x 0.0625
         Assert.True(Noise.Heard(s, s.NoisePickM, 0, 1, false, 200)); Assert.False(Noise.Heard(s, s.NoisePickM, 0, 1, false, 201));
         Assert.True(Noise.Heard(s, s.NoisePickM, 2, 1, false, 140)); Assert.False(Noise.Heard(s, s.NoisePickM, 2, 1, false, 141));
         // the sources of the spec's table
