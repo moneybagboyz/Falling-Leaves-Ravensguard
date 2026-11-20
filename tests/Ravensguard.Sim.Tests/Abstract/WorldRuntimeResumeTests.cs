@@ -103,6 +103,38 @@ public class WorldRuntimeResumeTests(ITestOutputHelper output)
         PlayCrafting(rt, ctx, town, sec);
         PlayOwnership(rt, ctx, desk, town, sec, content);
         PlayVehicles(rt, ctx, desk, sec);
+        PlayInheritance(rt, ctx, desk, town, sec);
+    }
+
+    /// <summary>
+    /// P5-H: a will of the hero's made before the town's priest through the desk (the "wills" section), and an estate mid-settlement: a townsman who leased a stall in his own name dies owing
+    /// more rent than he left; his estate is settled before the save with the debt unpaid, and the lessor's claim on the stall falls at the season's start inside M (the estates' S6 step).
+    /// </summary>
+    private static void PlayInheritance(WorldRuntime rt, HeroContext ctx, HeroDesk desk, int town, long sec)
+    {
+        var s = rt.State; var pt = s.Population.People; var e = s.Economy!;
+        int day = (int)(sec / 86400);
+        int priest = Enumerable.Range(0, pt.Count).First(i => pt.Status[i] == PersonStatus.Alive && pt.Occupation[i] is Occupation.Priest or Occupation.Reeve && pt.Household[i] >= 0);
+        int heir = Enumerable.Range(0, pt.Count).First(i => pt.Status[i] == PersonStatus.Alive && pt.HomeSettlement[i] == town && pt.AgeYears(i, day) is >= 20 and < 40 && pt.Occupation[i] == Occupation.Merchant);
+        desk.Issue(Ravensguard.Sim.Succession.WillDesk.Make(pt.IdOf(priest), [new Ravensguard.Sim.Succession.Bequest(pt.IdOf(heir), Ravensguard.Sim.Succession.BequestWhat.All)], sec));
+        desk.ApplyDue(ctx, rt.HourDone);
+        Assert.True(desk.View!.Results.Last().Ok, desk.View.Results.Last().Text);
+        // the townsman: an empty lot of the town held in his own name, its dues long unpaid, dead today
+        int man = Enumerable.Range(0, pt.Count).First(i => pt.Status[i] == PersonStatus.Alive && pt.HomeSettlement[i] == town && pt.AgeYears(i, day) is >= 40 and < 60 && pt.Occupation[i] == Occupation.Merchant && i != heir);
+        var id = pt.IdOf(man);
+        e.Ledger.Mint(e.Ledger.Open(PurseKind.Person, id), Coin.FromCrowns(40), SourceReason.Seed);
+        var lw = s.HomeRecords!.Sim.Get<LandWorld>()!;
+        var lots = s.Population.Region.Settlements[town].Plan.Lots;
+        int lot = Enumerable.Range(0, lots.Count).First(l => s.Population.LotHousehold[town][l] < 0 && !lw.HoldsLot(town, l));
+        var conv = lw.ConveyLot(town, lot, id, PurseKind.Person, day, DeedCause.Bought);
+        Assert.True(conv.Ok, conv.Key);
+        s.Land!.Deeds[conv.Deed].OwedMites = 90_000;
+        var ob = new Ravensguard.Sim.Abstract.RegionOutbox(s.Ids);
+        Ravensguard.Sim.People.Vital.Demography.Kill(s.HomeRecords.Sim, man, DeathCause.Age, new GameTime(sec), ob);
+        var ew = s.HomeRecords.Sim.Get<Ravensguard.Sim.Succession.EstateWorld>()!;
+        Assert.Equal(1, ew.Daily(day, sec));
+        var est = s.Succession!.Estates.Last();
+        Assert.True(est.UnpaidMites > 0);
     }
 
     /// <summary>
@@ -356,6 +388,15 @@ public class WorldRuntimeResumeTests(ITestOutputHelper output)
                 Assert.Contains(lv, r => r.Id == y.Boat);
             }
             Assert.Equal(Ravensguard.Sim.Carts.VehicleHash.Of(straight.State.Mounts!), Ravensguard.Sim.Carts.VehicleHash.Of(resumed.State.Mounts!));
+            // P5-H: the will is in both runs; the townsman's estate was mid-settlement at the save and the lord's claim on his lot fell at the season's start in both runs alike
+            foreach (var s in new[] { straight.State, resumed.State })
+            {
+                Assert.NotNull(s.Wills!.Of(EconomyState.HeroOwner));
+                var est = s.Succession!.Estates.Last();
+                Assert.Contains(est.Holdings, h => h.Kind == Ravensguard.Sim.Succession.EstateThing.Deed && h.ClaimedBy != EntityId.None);
+            }
+            Assert.Contains(Ravensguard.Sim.Save.WillsSave.SectionName, want.Keys);
+            Assert.Equal(straight.State.Succession!.Hash(straight.State.Wills), resumed.State.Succession!.Hash(resumed.State.Wills));
             Assert.Contains("player.market_wagon", resumed.State.Designs!.Designs.Keys);
         }
         var bad = want.Keys.Union(got.Keys).Where(k => !(want.TryGetValue(k, out var x) && got.TryGetValue(k, out var y) && x.AsSpan().SequenceEqual(y))).ToList();

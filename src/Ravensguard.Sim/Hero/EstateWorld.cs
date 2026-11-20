@@ -583,7 +583,7 @@ public sealed class EstateWorld
             if (j >= 0) bh.Shares[j] = new ShareRow(to.Holder, bh.Shares[j].Pm + row.Pm); else bh.Shares.Add(new ShareRow(to.Holder, row.Pm));
             bh.Shares.Sort((a, b) => a.Holder.CompareTo(b.Holder));
         }
-        if (biz != null && Own is { } ow && !ow.IsHeroOwner(biz) && !bh.Shares.Any(s => s.Holder == ow.Hero)) State.Ownership!.Holdings.Remove(bh.Business);
+        if (biz != null && Own is { } ow && !ow.IsHeroOwner(biz) && bh.Shares.Count == 0) State.Ownership!.Holdings.Remove(bh.Business);   // nobody but the owner holds it any more
     }
 
     /// <summary>Whose share rows a transfer rewrites (the dead's id, or the holder a creditor claims from).</summary>
