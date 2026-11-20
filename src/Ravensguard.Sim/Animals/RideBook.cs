@@ -10,7 +10,8 @@ namespace Ravensguard.Sim.Animals;
 public sealed record HorseLoan(EntityId Animal, EntityId Lender, long DueSec);
 
 /// <summary>What the hero's next game second of riding or driving will be.</summary>
-public readonly record struct RideStep(int SpeedMmPerGs, Gait Gait, bool Driving, bool Stuck, bool Blocked);
+/// <remarks>P5-G: <c>RawQ16</c>, when above 0, is the exact step in Q16.16 metres (a boat carries its remainder so a live leg takes exactly the abstract leg's seconds).</remarks>
+public readonly record struct RideStep(int SpeedMmPerGs, Gait Gait, bool Driving, bool Stuck, bool Blocked, int RawQ16 = 0);
 
 /// <summary>What the view shows of the hero's mount: the bars and flags of spec 6.</summary>
 public readonly record struct RideView(bool Mounted, bool Driving, bool Mounting, Gait Gait, int StaminaPm, int FatiguePm, int FeedCenti, int ShoePm, int Lameness, int SpeedCmps, bool Stuck, int CargoKg, int CargoCapKg, int AxlePm, int RatioPm, int BreedIndex, int TemplateIndex,
@@ -208,7 +209,9 @@ public sealed class RideBook
     {
         if (IsMounted || IsDriving) return false;
         var v = NearestVehicle(); if (v == null || v.Broken) return false;
-        Driving = v.Id; v.Driven = true; v.XMm = HeroXMm; v.YMm = HeroYMm; return true;
+        Driving = v.Id; v.Driven = true;
+        if (v.IsBoat) { if (v.Water is WaterState.Slipway or WaterState.Sunk) { Driving = EntityId.None; v.Driven = false; return false; } HeroXMm = v.XMm; HeroYMm = v.YMm; return true; }   // P5-G: the hero steps into the boat
+        v.XMm = HeroXMm; v.YMm = HeroYMm; return true;
     }
 
     public void StopDriving()
@@ -289,7 +292,7 @@ public sealed class RideBook
 
     /// <summary>The live boat's last numbers, for the boat HUD: water speed, current, ground speed (mm/s), draft, freeboard, GM, the depth under the keel.</summary>
     public BoatView Boat { get; private set; }
-    private int _boatAccMm20;
+    private long _boatAccQ16;
 
     /// <summary>
     /// A boat's next game second (W/S row harder or back water, Shift a hard stroke, O drifts with the oars shipped): its power against the water's drag at its draft, plus the current along the way it
@@ -309,9 +312,9 @@ public sealed class RideBook
         int wv = BoatMath.WaterSpeedMmps(power, wt.DragK, BoatMath.WetMm2(st.WaterplaneMm2, st.PerimeterM, load.DraftMm));
         int ground = Math.Max(0, wv + water.Value.CurrentAlongMmps);
         Boat = BoatView.Of(load, wv, water.Value, ground, false);
-        _boatAccMm20 += ground;
-        int mm = _boatAccMm20 / 20; _boatAccMm20 -= mm * 20;
-        return new RideStep(mm, hard ? Gait.Gallop : drift ? Gait.Walk : Gait.Trot, true, false, ground <= 0);
+        _boatAccQ16 += (long)ground * 65536;                                            // Q16.16 metres x 20,000 (a real second is 20 game seconds, mm to m)
+        int raw = (int)(_boatAccQ16 / 20_000); _boatAccQ16 -= raw * 20_000L; int mm = (int)((long)raw * 1000 >> 16);
+        return new RideStep(mm, hard ? Gait.Gallop : drift ? Gait.Walk : Gait.Trot, true, false, ground <= 0, raw);
     }
 
     /// <summary>
