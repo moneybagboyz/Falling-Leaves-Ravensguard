@@ -3,6 +3,9 @@
 // Wheels share a cell with the frame and the bed above them (two wheels of an axle are the two cells of a row, or a pair in one cell of a 1 m barrow). Real sizes: handcart 1 x 2 m, cart 2 x 5 m (3 m body, 2 m shafts),
 // hay wain 2 x 7 m, ox wagon 2 x 8 m (5 m body, 3 m pole), covered wagon 2 x 7 m.
 // Derived stats (mass, cargo kg and litres) are checked against the Phase 2 caravan vehicles (cart 500 kg / 1,000 L, ox wagon 1,000 / 2,000, handcart 150 / 300).
+// P5-G (vehicle-designer 3.2): five more templates, the boats' rows run from the stern (first) to the bow (last). built_at is where they are built (a yard or a slipway); power lists how a boat moves.
+// A boat's hull is every cell with hull planks; a keel gives it the fine lines of a rowing or fishing boat, a barge and a ferry are flat-bottomed. Hitch kind "tow" is a towing team on the bank (the tow post),
+// "rope" a ferry hauled along its rope, "rowed" a boat that only its rowers move.
 // hitch.slots is the animals of one team (a pair of oxen, one horse); hitch.max_animals is how many may be hitched in all (extra teams go in front, each pair pulling a tenth less than the last).
 [
   { "type": "vehicle_blueprint", "id": "wheelbarrow", "name": "Wheelbarrow", "base_speed_cmps": 150, "axle_limit_kg": 0, "turning_radius_dm": 10, "hitch": { "slots": 0, "kind": "pushed" }, "driver": 1,
@@ -25,5 +28,23 @@
                 "R": ["wheel_spoked", "iron_tyre", "frame_plank", "cargo_bed", "tilt_hoops", "tilt_cloth"], "S": ["frame_plank", "seat_bench"], "p": ["pole_beam"], "y": ["pole_yoke", "iron_fitting"] },
     "rows": [ "TT", "LR", "BB", "LR", "SS", "pp", "yy" ], "sprite": "vehicle.covered_wagon" },
   { "type": "vehicle_blueprint", "id": "sledge", "name": "Sledge", "base_speed_cmps": 250, "axle_limit_kg": 0, "turning_radius_dm": 30, "hitch": { "slots": 1, "max_animals": 2, "kind": "traces" }, "driver": 1, "runners": true,
-    "legend": { "b": ["runner", "cargo_bed"], "t": ["traces"] }, "rows": [ "bb", "bb", "tt" ], "sprite": "vehicle.sledge" }
+    "legend": { "b": ["runner", "cargo_bed"], "t": ["traces"] }, "rows": [ "bb", "bb", "tt" ], "sprite": "vehicle.sledge" },
+  { "type": "vehicle_blueprint", "id": "peddler_wagon", "name": "Peddler's wagon", "base_speed_cmps": 250, "axle_limit_kg": 1200, "turning_radius_dm": 80, "hitch": { "slots": 2, "max_animals": 4, "kind": "pole_yoke" }, "driver": 1, "passengers": 1, "built_at": "yard",
+    "legend": { "K": ["frame_plank", "stall_counter", "tilt_hoops", "tilt_cloth"], "B": ["frame_plank", "cargo_bed", "tilt_hoops", "tilt_cloth"], "L": ["axle_wood", "wheel_spoked", "iron_tyre", "frame_plank", "cargo_bed", "tilt_hoops", "tilt_cloth"],
+                "R": ["wheel_spoked", "iron_tyre", "frame_plank", "cargo_bed", "tilt_hoops", "tilt_cloth"], "S": ["frame_plank", "seat_bench"], "p": ["pole_beam"], "y": ["pole_yoke", "iron_fitting"] },
+    "rows": [ "KK", "LR", "BB", "LR", "SS", "pp", "yy" ], "sprite": "vehicle.peddler_wagon" },
+  { "type": "vehicle_blueprint", "id": "rowing_boat", "name": "Rowing boat", "base_speed_cmps": 150, "hitch": { "slots": 0, "kind": "rowed" }, "driver": 0, "passengers": 2, "built_at": "slipway", "power": ["rowed"],
+    "legend": { "k": ["keel", "hull_plank", "gunwale"], "h": ["hull_plank", "gunwale"], "T": ["keel", "hull_plank", "gunwale", "thwart", "rowlock"], "o": ["hull_plank", "gunwale", "rowlock"] },
+    "rows": [ "kh", "To", "kh", "To", "kh" ], "sprite": "vehicle.rowing_boat" },
+  { "type": "vehicle_blueprint", "id": "fishing_boat", "name": "Fishing boat", "base_speed_cmps": 150, "hitch": { "slots": 0, "kind": "rowed" }, "driver": 0, "passengers": 1, "built_at": "slipway", "power": ["rowed"],
+    "legend": { "k": ["keel", "hull_plank", "gunwale"], "h": ["hull_plank", "gunwale"], "S": ["hull_plank", "gunwale", "steering_oar"], "T": ["keel", "hull_plank", "gunwale", "thwart", "rowlock"], "o": ["hull_plank", "gunwale", "rowlock"],
+                "F": ["hull_plank", "gunwale", "fish_well"] },
+    "rows": [ "kS", "To", "kF", "kF", "To", "kh" ], "sprite": "vehicle.fishing_boat" },
+  { "type": "vehicle_blueprint", "id": "barge", "name": "River barge", "base_speed_cmps": 150, "hitch": { "slots": 1, "max_animals": 2, "kind": "tow" }, "driver": 1, "passengers": 2, "built_at": "slipway", "power": ["poled", "towed"],
+    "legend": { "G": ["hull_plank", "gunwale", "deck_plank"], "H": ["hull_plank", "deck_plank"], "R": ["hull_plank", "deck_plank", "rudder"], "Q": ["hull_plank", "gunwale", "deck_plank", "quant_pole_rack"],
+                "P": ["hull_plank", "deck_plank", "tow_post"] },
+    "rows": [ "GRG", "QHQ", "GHG", "GHG", "GHG", "GHG", "GHG", "GHG", "QHQ", "GPG" ], "sprite": "vehicle.barge" },
+  { "type": "vehicle_blueprint", "id": "ferry", "name": "Ferry", "base_speed_cmps": 50, "hitch": { "slots": 0, "kind": "rope" }, "driver": 1, "passengers": 8, "built_at": "slipway", "power": ["rope"],
+    "legend": { "A": ["hull_plank", "deck_plank", "ferry_ramp"], "H": ["hull_plank", "deck_plank"], "G": ["hull_plank", "gunwale", "deck_plank"], "T": ["hull_plank", "gunwale", "deck_plank", "tow_post"] },
+    "rows": [ "AAA", "GHG", "THT", "GHG", "GHG", "AAA" ], "sprite": "vehicle.ferry" }
 ]

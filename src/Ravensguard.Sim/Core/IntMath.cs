@@ -70,4 +70,15 @@ public static class IntMath
         Int128 h = 2 * (Int128)c + 1;
         return 8 * (Int128)n >= h * h * h ? c + 1 : c;
     }
+
+    /// <summary>P5-G (vehicle-designer 5): the floor of the square root of a non-negative integer (boat speeds).</summary>
+    public static long Isqrt(long n)
+    {
+        if (n < 0) throw new ArgumentOutOfRangeException(nameof(n));
+        if (n < 2) return n;
+        long x = (long)Math.Sqrt(n);                                              // a guess; corrected below so the result is exact on every machine
+        while (x * x > n) x--;
+        while ((x + 1) * (x + 1) <= n) x++;
+        return x;
+    }
 }
