@@ -120,7 +120,16 @@ public sealed class EstateWorld
         if (State.Construction is { } cb)
         {
             foreach (var s in cb.Sites.Values) if (s.Open || s.State == SiteState.Abandoned) Add(s.Owner, new Held { Kind = EstateThing.Site, Id = s.Id, Value = s.PaidMites, Real = true, Ref = s });
-            foreach (var c in cb.Contracts.Values) if (c.Live) Add(c.Client, new Held { Kind = EstateThing.Contract, Id = c.Id, Value = c.TotalMites, Settlement = c.Settlement, Ref = c });
+            // a contract in progress: the client's side is an asset (what his escrow still holds for the builder; the materials chest and the yard are the builder's account and stay with the
+            // contract), the hero's own building job (a posted contract he took) is personal labour and goes back on the board
+            foreach (var c in cb.Contracts.Values)
+            {
+                if (!c.Live) continue;
+                long escrow = Econ.Ledger.TryFind(PurseKind.Chest, c.Escrow, out var ep) ? Econ.Ledger.Balance(ep).Mites : 0;
+                Add(c.Client, new Held { Kind = EstateThing.Contract, Id = c.Id, Value = escrow, Settlement = c.Settlement, Ref = c });
+                if (c.State == ContractState.Signed && c.ContractorKind == PurseKind.Person && c.Contractor != c.Client)
+                    Add(c.Contractor, new Held { Kind = EstateThing.Contract, Id = c.Id, Settlement = c.Settlement, Ref = new ContractorJob(c) });
+            }
         }
         if (State.Mounts is { } rb)
         {
@@ -136,6 +145,9 @@ public sealed class EstateWorld
         }
         return idx;
     }
+
+    /// <summary>The dead's own building job under a contract he took (the contractor's side).</summary>
+    private sealed record ContractorJob(Contract C);
 
     /// <summary>The index of the day's settling (built once by <see cref="Daily"/>), else null: a single estate scans for its holder.</summary>
     private Dictionary<EntityId, List<Held>>? _index;
@@ -276,6 +288,10 @@ public sealed class EstateWorld
             for (int k = 0; k < mov.Count; k++) deal[mov[k].i] = dm[k];
         }
         for (int i = 0; i < held.Count; i++) p.Lines.Add((held[i], To(held[i], p, sons.Count > 1 ? deal[i] : -1)));
+        // a contract follows its site: whoever gets the half-built house is the client who pays its stages
+        var siteTo = p.Lines.Where(l => l.H.Ref is ConstructionSite).ToDictionary(l => l.H.Id, l => l.To);
+        for (int i = 0; i < p.Lines.Count; i++)
+            if (p.Lines[i].H.Ref is Contract c && siteTo.TryGetValue(c.Site, out var st)) p.Lines[i] = (p.Lines[i].H, st);
         p.Debts = DebtsOf(held);
         return p;
     }
@@ -324,6 +340,7 @@ public sealed class EstateWorld
             case BusinessHolding bh: return "share of " + (State.Production?.ById(bh.Business) is { } sb && Own is { } ow ? ow.NameOf(sb) : "a business");
             case ConstructionSite s: return "building site" + (s.Blueprint.Length > 0 ? " (" + s.Blueprint + ")" : "");
             case Contract c: return "contract " + c.Blueprint;
+            case ContractorJob j: return "building job " + j.C.Blueprint;
             case VehicleRow v: return v.Design.Length > 0 ? v.Design : "vehicle";
             case Animal: return "animal";
             case Commission: return "commission";
@@ -339,7 +356,7 @@ public sealed class EstateWorld
     {
         var p = MakePlan(dead, row, hero, playHeir, playHeirKin, purse, day, unavailable);
         long coin = p.HasPurse ? Econ.Ledger.Balance(p.Purse).Mites : 0;
-        long funeral = playHeir != null || row >= 0 ? coin * funeralPm / 1000 : 0;
+        long funeral = playHeir != null ? coin * funeralPm / 1000 : 0;                          // as Phase 4: no funeral is paid when the line ends
         long debts = p.Debts.Sum(d => d.OwedMites);
         long chest = p.Lines.Where(l => l.H.Kind == EstateThing.Chest).Sum(l => l.H.Value);
         long fromCoin = Math.Min(debts, coin - funeral + chest);
@@ -492,10 +509,22 @@ public sealed class EstateWorld
             case Business b: PassBusiness(b, to, day, heroRowNow, guardian); break;
             case BusinessHolding bh: PassShare(bh, h, to); break;
             case ConstructionSite s:
-                if (!to.Hero) { s.Owner = to.Holder; s.OwnerKind = to.Kind; s.Payer = to.Holder; s.PayerKind = to.Kind; }
-                if (s.Open) { s.Pause = PauseReason.Owner; s.State = SiteState.Paused; foreach (var c in s.Crew) c.Ghost = default; }   // the heir says when it resumes (4.2 rule 3)
+            {
+                // a builder under a signed contract pays his own crew and goes on building (the heir, as client, pays the stages); a site of the dead's own hands pauses until the heir says
+                bool contracted = State.Construction?.Contracts.Values.Any(c => c.Site == s.Id && c.State == ContractState.Signed && c.Contractor != _shareFrom) == true;
+                if (!to.Hero)
+                {
+                    s.Owner = to.Holder; s.OwnerKind = to.Kind;
+                    if (s.Payer == _shareFrom || !contracted) { s.Payer = to.Holder; s.PayerKind = to.Kind; }
+                }
+                if (s.Open && !contracted) { s.Pause = PauseReason.Owner; s.State = SiteState.Paused; foreach (var c in s.Crew) c.Ghost = default; }   // the heir says when it resumes (4.2 rule 3)
                 break;
-            case Contract c: if (!to.Hero) { c.Client = to.Holder; c.ClientKind = to.Kind; } break;
+            }
+            case Contract c: if (!to.Hero) { c.Client = to.Holder; c.ClientKind = to.Kind; } break;   // the escrow, the materials chest and the yard stay with the contract
+            case ContractorJob j:
+                // his own job: given up, back on the board (he keeps what he was paid); with no construction world loaded the contract is left to its due day
+                if (State.Construction != null && State.Economy != null) ConstructionWiring.For(State, Content).Drop(j.C.Contractor, j.C.Id, (long)day * 86400);
+                break;
             case VehicleRow v: if (!to.Hero) v.Owner = to.Holder; break;
             case Animal a: if (!to.Hero) a.Owner = to.Holder; break;
             case Commission c: if (!to.Hero) c.Client = to.Row >= 0 ? to.Person : to.Holder; break;
@@ -633,7 +662,7 @@ public sealed class EstateWorld
         void Note(EntityId id) { if (id == hero || id.Kind != IdKind.Person) return; int r = Pt.IndexOf(id); if (r >= 0 && Pt.Status[r] == PersonStatus.Dead) dead.Add(id); }
         // a light pass over the books for dead holders (no valuation); the index is built only on a day someone died holding something
         if (State.Land is { } land) { foreach (var d in land.Deeds.Values) Note(d.Holder); foreach (var c in land.Claims) if (c.State == ClaimState.Open) Note(c.Claimant); foreach (var c in land.Charters) if (c.State == CharterState.Granted) Note(c.Grantee); }
-        if (State.Construction is { } cb) { foreach (var s in cb.Sites.Values) if (s.Open) Note(s.Owner); foreach (var c in cb.Contracts.Values) if (c.Live) Note(c.Client); }
+        if (State.Construction is { } cb) { foreach (var s in cb.Sites.Values) if (s.Open) Note(s.Owner); foreach (var c in cb.Contracts.Values) if (c.Live) { Note(c.Client); if (c.State == ContractState.Signed) Note(c.Contractor); } }
         if (State.Mounts is { } rb) { foreach (var v in rb.Vehicles.Rows) Note(v.Owner); foreach (var a in rb.Animals.Rows) if (a.State != AnimalState.Dead) Note(a.Owner); }
         if (State.Crafting is { } cs) { foreach (var c in cs.Commissions.Values) if (c.Open) Note(c.Client); foreach (var a in cs.Apprenticeships.Values) if (!a.Ended) { Note(a.Apprentice); Note(a.Master); } }
         if (State.Ownership is { } ob) foreach (var h in ob.Holdings.Values) foreach (var s in h.Shares) Note(s.Holder);

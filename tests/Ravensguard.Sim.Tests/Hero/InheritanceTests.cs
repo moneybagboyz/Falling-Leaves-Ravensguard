@@ -328,6 +328,51 @@ public class InheritanceTests(ITestOutputHelper output)
         Assert.False(bad.Ok);
     }
 
+    /// <summary>
+    /// A contract in progress (P5-D, with P5-I's materials chest and yard): the hero commissioned a builder for his house and dies; the contract follows the site to its heir (here the lord: a
+    /// companion, no will, no kin), the builder goes on building at his own crew's cost, and the client's escrow, the builder's materials chest and the yard's goods stay with the contract.
+    /// A building job the hero had taken himself goes back on the board.
+    /// </summary>
+    [Fact]
+    public void IN5b_AContractInProgress_FollowsTheSite_ItsEscrowChestAndYardStayWithIt_AndTheHerosOwnJobGoesBackOnTheBoard()
+    {
+        var (r, c, _, _, _) = Lonely();
+        var cb = r.St.Construction ??= new Ravensguard.Sim.Construction.ConstructionBook();
+        int reg = r.Land.RegionId;
+        var builder = r.Prod.Businesses.First(b => b.State == BusinessState.Open && b.Owner >= 0 && b.Owner != r.HeroRow);
+        var site = new Ravensguard.Sim.Construction.ConstructionSite { Id = Ravensguard.Sim.Construction.ConstructionIds.Make(reg, Ravensguard.Sim.Construction.ConstructionIds.SiteSlot, 9001), Region = reg,
+            Owner = r.Ctx.Party.Hero, Payer = builder.Id, PayerKind = PurseKind.Business, State = Ravensguard.Sim.Construction.SiteState.Active, Blueprint = "test_cottage" };
+        cb.Sites[site.Id] = site;
+        var contract = new Ravensguard.Sim.Construction.Contract { Id = Ravensguard.Sim.Construction.ConstructionIds.Make(reg, Ravensguard.Sim.Construction.ConstructionIds.ContractSlot, 9001),
+            Kind = default, State = Ravensguard.Sim.Construction.ContractState.Signed, Site = site.Id, Client = r.Ctx.Party.Hero, ClientKind = PurseKind.Person, Contractor = builder.Id,
+            ContractorKind = PurseKind.Business, Blueprint = "test_cottage", Settlement = r.Town, Stages = 1 };
+        cb.Contracts[contract.Id] = contract;
+        var escrow = r.Led.Open(PurseKind.Chest, contract.Escrow); r.Led.Mint(escrow, new Coin(5000), SourceReason.Seed);
+        var chest = r.Led.Open(PurseKind.Chest, contract.MaterialsChest); r.Led.Mint(chest, new Coin(3000), SourceReason.Seed);
+        var yard = r.St.Economy!.OpenStore(Ravensguard.Sim.Goods.StoreKind.House, contract.Yard); yard.Create(r.St.Economy.Goods.IdOf("wheat"), 40_000, Ravensguard.Sim.Goods.CreateReason.Seed);
+        // and a building job the hero took from the board
+        var site2 = new Ravensguard.Sim.Construction.ConstructionSite { Id = Ravensguard.Sim.Construction.ConstructionIds.Make(reg, Ravensguard.Sim.Construction.ConstructionIds.SiteSlot, 9002), Region = reg,
+            Owner = r.Est.LordAt(r.Town).Holder, Payer = r.Est.LordAt(r.Town).Holder, State = Ravensguard.Sim.Construction.SiteState.Active };
+        cb.Sites[site2.Id] = site2;
+        var job = new Ravensguard.Sim.Construction.Contract { Id = Ravensguard.Sim.Construction.ConstructionIds.Make(reg, Ravensguard.Sim.Construction.ConstructionIds.ContractSlot, 9002),
+            State = Ravensguard.Sim.Construction.ContractState.Signed, Site = site2.Id, Client = site2.Owner, ClientKind = PurseKind.Treasury, Contractor = r.Ctx.Party.Hero, ContractorKind = PurseKind.Person, Settlement = r.Town };
+        cb.Contracts[job.Id] = job;
+        long total = r.TotalCoin;
+        var lord = r.Est.LordAt(r.Town);
+        var sum = SuccessionDesk.Estate(r.St, r.St.Party!, Db, SuccessionDesk.Candidates(r.St, r.St.Party!, r.Day).First(), r.Day);
+        Assert.Contains(sum.Lines, l => l.Kind == EstateThing.Contract && l.Id == contract.Id && l.ValueMites == 5000 && l.Escheat);
+        Assert.True(r.Die(r.Pt.IdOf(c)).Ok);
+        Assert.Equal(lord.Holder, site.Owner); Assert.Equal(lord.Holder, contract.Client); Assert.Equal(lord.Kind, contract.ClientKind);   // the contract follows the site
+        Assert.Equal(builder.Id, site.Payer);                                                // the builder pays his crew, as before
+        Assert.Equal(Ravensguard.Sim.Construction.SiteState.Active, site.State);            // and goes on building
+        Assert.Equal(Ravensguard.Sim.Construction.ContractState.Signed, contract.State);
+        Assert.Equal(5000, r.Led.Balance(escrow).Mites); Assert.Equal(3000, r.Led.Balance(chest).Mites);   // the escrow and the materials chest stay with the contract
+        Assert.Equal(40_000, yard.Qty(r.St.Economy.Goods.IdOf("wheat")));                    // and the yard's goods
+        Assert.Equal(Ravensguard.Sim.Construction.ContractState.Open, job.State);           // his own job: back on the board
+        Assert.Equal(EntityId.None, job.Contractor);
+        Assert.Equal(total, r.TotalCoin); Assert.True(r.St.Economy.MassAuditHolds());
+    }
+
     [Fact]
     public void IN7_DebtsAboveTheCoin_CoinThenGoodsAtBid_ThenAtTheSeasonsStartTheStallAndTheSharesAreClaimedBeforeTheShop()
     {
