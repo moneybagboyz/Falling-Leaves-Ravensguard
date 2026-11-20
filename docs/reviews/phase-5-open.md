@@ -4,7 +4,7 @@ Collected while the steps are built. The close-out fixes each item or moves it i
 
 ## From step 1
 - **AB13 100 v 100 abstract battle budget (3 ms).** It now fails locally even with the machine fairly quiet: 3.1 to 4.3 ms. It passes on CI with the 5x allowance. Its speed-up moved to Phase 7, but re-measure on the reference PC; if it is over budget there too, move the budget with the work, rather than letting a red local run become normal.
-- **Tanner's widow origin.** She exists only in a test mod (IN-1). The default, unless the user decides otherwise, is to add her as a real 8th origin with step 5, inheritance.
+- ~~**Tanner's widow origin.** She exists only in a test mod (IN-1).~~ Done in P5-H: the eighth base origin (her tannery on a lease with the husband's arrears, "Keep the tannery", the journeyman's first hour, `--autoplay` 8/8); the test mod is gone.
 - **Items, still to do:**
   - weapon condition set by fights;
   - the "Edge 82%" and "Protection x1.4" tooltip lines;
@@ -124,4 +124,22 @@ Collected while the steps are built. The close-out fixes each item or moves it i
   - `make_cargo_bed` 2 h (was 8): the ox wagon is 215.8 worker-hours of content, not "about 182";
   - the designer counts the mud team at the bogging line (ratio 700), not at full speed (600);
   - the hero's live boat and every vehicle row share one lock (`RideBook.Gate`) with the tick worker's vehicle pass.
+## From step 5 (P5-H inheritance)
+- **OV-5 as one scripted run** (an Ironman hero with a smithy, a leased field and a half-built barn dies; his son of 17 resumes the barn): every part is tested (IN-4 with deeds, a business, wages and a paused site), not yet as the close-out's single script.
+- **Inheritance, still to do:**
+  - a creditor or an heir selling a claimed or inherited business at S6 when the household cannot pay the staff (Phase 2's three-loss-season closure stands in);
+  - an NPC heir under 16 with a guardian running his business (NPC minors only take a business at 16, the labour market's rule);
+  - NPCs making wills (only the hero makes one in play; NPC wills work and are tested, IN-3);
+  - the hero's crafting skills and known recipes are keyed by the hero's id, so the heir keeps the dead hero's (a Phase 4 leftover of the shared id);
+  - children of the hero's name show a trailing space when the hero has no family name ("Brearael , your child"): `PersonTable.FullName` joins an empty family name;
+  - the Ledger's Property tab values a leasehold at the plot's price (the land's `ValueOf`), the estate at its season's dues.
+- **Decisions to confirm in the review:**
+  - the law's order puts children under 12 after the parents, before escheat (the spec stops at parents);
+  - the existing culture field `inheritance` is the law (no `inheritance_law` key): Northmark is partible as Phase 1 wrote it;
+  - an NPC business with no kin heir goes, formally the lord's, to Phase 2's best staff member or idle adult (the lord does not own every orphaned workshop);
+  - an heir of another trade keeps his trade and the business hires a master (one slot of its trade added while he owns it);
+  - only estates of things held in a person's own name, or with a will, are recorded (household property passes with the household), so soak saves do not grow with every death;
+  - debts unpaid are claimed on a season's first day at 08:00, after the dues of the day before and before the land's dues at 09:00;
+  - a companion keeps the purse, the body's things and the animals and vehicle with the party; the home chest, land, businesses, shares, stalls and sites follow the law;
+  - the widow starts at her household's town (`StartSiteFinder` prefers it when it has a mentor and an errand), and her tannery stands in the lord's first vacant house there, else on a plot he lets.
 
