@@ -86,9 +86,10 @@ public partial class StreetView
         HeistView? view = null;
         if (run != null)
         {
-            run.Lockpicking = 70; run.Stealth = 60; run.SetSneak(true); run.SetTorch(true);
+            run.Lockpicking = 70; run.Stealth = 60; run.SetSneak(true);
             run.Here.Slot[0] = 1; run.Here.Slot[2] = 2;
-            run.GoTo(4, 4); run.Advance(2);
+            run.Here.Door[6] = 2; run.Here.Door[7] = 2;                            // the way in is open: the demo starts in the cell block
+            run.X = 2; run.Y = 4; run.Advance(1);                                  // beside the first cell's bars, in the light of a sconce, the round at the far end of the corridor
             view = HeistView.Of(run);
         }
         _router.Push(new HeistScreen(_router, () => view, _ => { }, () => { }) { ShotPath = shot });

@@ -4864,7 +4864,7 @@ hj_ls_bribed,looking away
 hj_ls_listening,listening
 hj_ls_investigating,investigating
 hj_ls_alert,alert
-hj_keys,Keys that fit: {0}
+hj_keys,Keys you hold for these locks: {0}
 hj_followers,Following you: {0}
 hj_livery_on,Wearing the lord's livery
 hj_torch_on,Torch lit: you can be seen from further off
@@ -4901,8 +4901,8 @@ hj_v_sneak_on,Sneak
 hj_v_sneak_off,Walk
 hj_v_torch_on,Light the torch
 hj_v_torch_off,Snuff the torch
-hj_v_livery_on,Put on the livery
-hj_v_livery_off,Take off the livery
+hj_v_livery_on,Wear livery
+hj_v_livery_off,Doff livery
 hj_entered,You slip in.
 hj_already_in,You are in one already.
 hj_not_in,You are not in a heist.
