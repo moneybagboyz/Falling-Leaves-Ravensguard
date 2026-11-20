@@ -104,7 +104,7 @@ public static class UnrestLedger
             rows.Add([Mark + "ur_row_rung", name, su.Unrest.ToString(CultureInfo.InvariantCulture), Mark + "ur_rung_" + su.Rung, riot != null ? Mark + "ur_riot_on" : "", ""]);
             var hs = new List<int>(); for (int h = 0; h < hht.Count; h++) if (hht.MemberCount[h] > 0 && hht.Settlement[h] == s) hs.Add(h);
             var a = UnrestEngine.Assess(c, s, hs);
-            foreach (var (k, n) in a.Counts.OrderByDescending(x => x.Value).ThenBy(x => x.Key, StringComparer.Ordinal).Take(3))
+            foreach (var (k, n) in UnrestEngine.Ranked(c, a).Take(3))
                 rows.Add([Mark + b.Kinds[k].TextKey, name, n.ToString(CultureInfo.InvariantCulture), "", "", ""]);
         }
         return rows;

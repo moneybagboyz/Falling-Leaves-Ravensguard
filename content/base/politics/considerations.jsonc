@@ -40,5 +40,20 @@
     {"input": "at_war",          "curve": [[0, 400], [1, 1000]], "note_key": "ch_note_dp_war"},
     {"input": "trait_martial",   "curve": [[0, 0], [1, 1000]], "note_key": "ch_note_dp_martial"},
     {"input": "wealth_units",    "curve": [[10, 0], [40, 1000]], "note_key": "ch_note_dp_wealthy"}
+  ]},
+  {"type": "lord_action", "id": "dole", "actor": "lord", "text_key": "ch_dp_act_dole", "considerations": [
+    {"input": "unrest_rung",     "curve": [[1, 0], [2, 700], [3, 1000]], "note_key": "ch_note_dp_unrest_high"},
+    {"input": "trait_kind",      "curve": [[0, 400], [1, 1000]], "note_key": "ch_note_dp_generous"},
+    {"input": "treasury_tenths", "curve": [[3, 0], [10, 600], [30, 1000]], "note_key": "ch_note_dp_treasury_full"}
+  ]},
+  {"type": "lord_action", "id": "punish", "actor": "lord", "text_key": "ch_dp_act_punish", "considerations": [
+    {"input": "unrest_rung",     "curve": [[1, 0], [2, 500], [3, 1000]], "note_key": "ch_note_dp_unrest_high"},
+    {"input": "riot_leader",     "curve": [[0, 0], [1, 1000]], "note_key": "ch_note_dp_unrest_high"},
+    {"input": "trait_hard",      "curve": [[0, 0], [1, 1000]], "note_key": "ch_note_dp_greedy"}
+  ]},
+  {"type": "lord_action", "id": "pardon", "actor": "lord", "text_key": "ch_dp_act_pardon", "considerations": [
+    {"input": "riot_leader",     "curve": [[0, 0], [1, 800]], "note_key": "ch_note_dp_unrest_high"},
+    {"input": "trait_kind",      "curve": [[0, 0], [1, 1000]], "note_key": "ch_note_dp_just"},
+    {"input": "unrest_rung",     "curve": [[0, 300], [2, 1000]]}
   ]}
 ]

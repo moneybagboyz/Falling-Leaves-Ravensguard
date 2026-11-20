@@ -43,5 +43,9 @@
   {"type": "deed", "id": "slander_exposed",   "entry": "slander_exposed", "settlement_pm": -120, "fief_pm": -60},
   {"type": "deed", "id": "work_done_hero",    "entry": "work_done",   "match": {"hero": "1"}, "settlement_pm": 10, "fief_pm": 5, "per_key": "pm", "per_unit": 10, "per_max": 30},
   {"type": "deed", "id": "work_failed_hero",  "entry": "work_failed", "match": {"hero": "1"}, "settlement_pm": -10, "fief_pm": -5, "per_key": "pm", "per_unit": 10, "per_max": 60},
-  {"type": "deed", "id": "tournament_won",    "entry": "tournament_won", "match": {"hero": "1"}, "settlement_pm": 80, "fief_pm": 30}
+  {"type": "deed", "id": "tournament_won",    "entry": "tournament_won", "match": {"hero": "1"}, "settlement_pm": 80, "fief_pm": 30},
+  {"type": "deed", "id": "unrest_grumbling", "entry": "unrest_grumbling", "settlement_pm": -5},
+  {"type": "deed", "id": "riot_joined", "entry": "riot_joined", "settlement_pm": 40, "fief_pm": -60},
+  {"type": "deed", "id": "riot_guards", "entry": "riot_guards", "settlement_pm": -40, "fief_pm": 30},
+  {"type": "deed", "id": "riot_mediated", "entry": "riot_mediated", "settlement_pm": 20, "fief_pm": 10}
 ]

@@ -5580,6 +5580,116 @@ st_deed_slave_held_year,A year of slaves kept against the faith
 st_deed_slave_bought_debt,Buying a slave where the law frowns on it
 st_deed_slave_sold_own,Selling one of the town's own people
 jl_crime_runaway,Running from an owner
+ch_ur_rung,{place} is restless: {households} households aggrieved ({unrest} in a thousand)
+ch_ur_grumbling,There is grumbling in {place} against {lord} ({unrest} in a thousand aggrieved).
+ch_ur_riot_rises,A crowd led by {leader} rises in {place} and goes for {target}.
+ch_ur_riot_ends,The riot at {place} led by {leader} ends: {how}; {deaths} dead; {loot} carried off.
+ch_ur_revolt_rises,{claimant} raises a revolt at {place}: {rebels} men against {defenders}.
+ch_ur_revolt_won,The rebels win at {place}: {claimant} takes the fief from {lord} ({how}); {dead} dead.
+ch_ur_revolt_lost,The revolt at {place} is put down ({dead} dead); {leader} will be tried for treason.
+ch_ur_slave_won,The bonded of {place} beat the guards under {leader} ({dead} dead); the survivors flee as a free band.
+ch_ur_slave_lost,The guards of {place} put down the rising under {leader} ({dead} dead); the survivors flee.
+ch_ur_concession,{lord} {action} at {place}.
+ch_ur_riot_joined,{doer} joined the crowd at {place}.
+ch_ur_riot_guards,{doer} stood with the guards at {place}.
+ch_ur_riot_mediated,{doer} talked the crowd at {place} home.
+ch_t_unrest_rung,Unrest
+ch_t_unrest_grumbling,Grumbling
+ch_t_riot_rises,Riot
+ch_t_riot_ends,End of a riot
+ch_t_revolt_rises,Revolt
+ch_t_revolt_won,Revolt won
+ch_t_revolt_lost,Revolt put down
+ch_t_slave_rising_won,Rising of the bonded won
+ch_t_slave_rising_lost,Rising of the bonded put down
+ch_t_unrest_concession,A lord's answer to unrest
+ch_t_riot_joined,Joined a riot
+ch_t_riot_guards,Stood with the guards
+ch_t_riot_mediated,Mediated a riot
+ch_note_ur_hunger,{count} households were hungry
+ch_note_ur_tax,{count} households were taxed beyond bearing
+ch_note_ur_levy,{count} households paid a levy
+ch_note_ur_crowding,{count} households were crowded
+ch_note_ur_crime,{count} households were wronged by crime
+ch_note_ur_kin,{count} households had kin punished too hard
+ch_note_ur_wronged,{count} households saw the guilty go free
+ch_note_ur_standing,{count} households thought little of their lord
+ch_note_ur_banned,{count} households lived under their lord's ban
+ch_note_ur_enclosure,{count} households lost their common
+ch_note_ur_wages,{count} households were not paid
+ch_note_ur_eviction,{count} households saw a neighbour evicted
+ch_note_ur_slavery,{count} households lived beside bondage the law forbids
+ch_note_ur_purveyance,{count} households had their goods taken for the lord's table
+ch_note_ur_unknown,Unrest of no one cause
+ch_note_ur_trigger_eviction,an eviction set it off
+ch_note_ur_trigger_hanging,a hanging set it off
+ch_note_ur_trigger_tallage,a tallage set it off
+ch_note_ur_riot_dispersed,the guards broke up the crowd
+ch_note_ur_riot_ran,the riot ran its course
+ch_note_ur_revolt_riot,the riot was put down with deaths
+ch_note_ur_revolt_fought,the fight at the seat
+ch_note_ur_revolt_won,the rebels carried the day
+ch_note_ur_revolt_lost,the lord's men carried the day
+ch_note_ur_pardon_mercy,he showed mercy
+ch_note_ur_jailbreak,the crowd opened the gaol
+ch_note_crime_riot,in a riot
+ch_note_crime_revolt,in a revolt
+ch_dp_act_dole,gave a grain dole
+ch_dp_act_punish,hanged the riot's leaders
+ch_dp_act_pardon,pardoned the leaders
+ur_target_barn,the lord's barn
+ur_target_reeve,the reeve and the chest
+ur_target_manor,the manor
+ur_target_gaol,the gaol
+ur_end_dispersed,the guards dispersed it
+ur_end_conceded,the lord conceded
+ur_end_burnedout,it burned itself out
+ur_liege_accepts,the liege accepts him
+ur_liege_refuses,the liege refuses him
+ur_liege_none,no liege to ask
+ur_c_tax,lowered the tax
+ur_c_dole,gave a grain dole
+ur_c_pardon,pardoned the leaders
+ur_c_punish,hanged the leaders
+ur_g_hunger,Hunger
+ur_g_tax_high,A heavy tax
+ur_g_tax_crushing,A crushing tax
+ur_g_levy,A levy
+ur_g_crowding,Crowding
+ur_g_crime,Crime
+ur_g_kin_punished,Kin harshly punished
+ur_g_wronged,The guilty went free
+ur_g_standing,The lord's name
+ur_g_banned,The lord under ban
+ur_g_enclosure,A common enclosed
+ur_g_unpaid_wages,Unpaid wages
+ur_g_eviction,A neighbour evicted
+ur_g_slavery,Bondage against the law
+ur_g_purveyance,Purveyance
+ur_rung_0,Quiet
+ur_rung_1,Grumbling
+ur_rung_2,Evasion
+ur_rung_3,Riot
+ur_rung_4,Revolt
+ur_row_rung,Unrest
+ur_riot_on,A riot
+ur_no_unrest,Nothing is stirring.
+ur_refused_over,That riot is over.
+ur_joined,You join the crowd at {0}.
+ur_with_guards,You stand with the guards at {0}.
+ur_cannot_lead,They have a better leader than you.
+ur_leads,You lead the crowd at {0}.
+ur_mediate_failed,They will not listen.
+ur_mediate_lord_refuses,The lord will not give way.
+ur_mediated,The lord gives way and the crowd goes home.
+ur_not_your_fief,That is not your fief.
+ur_pardoned,{0} grievances pardoned.
+ur_nothing_to_pardon,There is nothing to pardon.
+ur_doled,{0} households fed from your barn.
+ur_nobody_hungry,Nobody is hungry.
+R_UNREST_GRUMBLING,folk in {place} grumble about their lord.
+R_RIOT_RISES,a crowd has risen at {place}.
+R_REVOLT_RISES,{place} is in revolt.
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."

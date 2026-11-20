@@ -171,7 +171,7 @@ public static class UnrestEngine
     public static List<Cause> CausesOf(UnrestCtx c, Assessment a, int take = 3)
     {
         var causes = new List<Cause>();
-        foreach (var (k, n) in a.Counts.OrderByDescending(x => x.Value).ThenBy(x => x.Key, StringComparer.Ordinal).Take(take))
+        foreach (var (k, n) in Ranked(c, a).Take(take))
         {
             var def = c.B.Kinds[k];
             var kind = k == "hunger" ? CauseKind.Famine : k.StartsWith("tax", StringComparison.Ordinal) ? CauseKind.Tax : CauseKind.Unrest;
@@ -180,6 +180,10 @@ public static class UnrestEngine
         if (causes.Count == 0) causes.Add(new Cause(CauseKind.Unrest, null, "", "ch_note_ur_unknown"));
         return causes;
     }
+
+    /// <summary>The counts largest first; a tie goes to the kind that weighs more points, then by id.</summary>
+    public static IEnumerable<(string Kind, int Count)> Ranked(UnrestCtx c, Assessment a) =>
+        a.Counts.Select(x => (Kind: x.Key, Count: x.Value)).OrderByDescending(x => x.Count).ThenByDescending(x => c.B.Kinds.TryGetValue(x.Kind, out var d) ? d.Points : 0).ThenBy(x => x.Kind, StringComparer.Ordinal);
 
     private static void RungRose(UnrestCtx c, int s, int f, SettlementUnrest su, int rung, int u, Assessment a)
     {
@@ -220,7 +224,8 @@ public static class UnrestEngine
     {
         var pt = c.W.People; var hht = c.W.Households;
         var rows = new List<int>();
-        if (census.Adults.TryGetValue(s, out var adults)) foreach (int r in adults) if (a.AggrievedSet.Contains(pt.Household[r])) rows.Add(r);
+        long lordId = f >= 0 ? c.LordOf(f) : -1;
+        if (census.Adults.TryGetValue(s, out var adults)) foreach (int r in adults) if (a.AggrievedSet.Contains(pt.Household[r]) && (long)pt.IdOf(r).Value != lordId) rows.Add(r);
         if (rows.Count == 0) return null;
         int leaderRow = LeaderOf(c, s, rows); if (leaderRow < 0) return null;
         ulong leader = pt.IdOf(leaderRow).Value;
@@ -237,7 +242,7 @@ public static class UnrestEngine
         int need = Math.Min(rows.Count, c.S.CrowdMinPeople);
         foreach (var (_, id) in order.OrderBy(x => x.Key).ThenBy(x => x.Id)) { if (crowd.Count >= need) break; crowd.Add(id); }
         riot.Crowd = [.. crowd];
-        riot.Counts = [.. a.Counts.OrderByDescending(x => x.Value).ThenBy(x => x.Key, StringComparer.Ordinal).Select(x => (x.Key, x.Value))];
+        riot.Counts = [.. Ranked(c, a)];
         riot.TopKind = riot.Counts.Count > 0 ? riot.Counts[0].Kind : "";
         riot.Target = riot.TopKind.Length > 0 && c.B.Kinds.TryGetValue(riot.TopKind, out var def) ? UnrestRules.TargetOf(def.Target) : RiotTarget.Manor;
         var place = c.PlaceId(s); var lid = new EntityId(leader);
@@ -457,7 +462,7 @@ public static class UnrestEngine
             if (!census.Adults.TryGetValue(s, out var adults)) continue;
             foreach (int r in adults)
             {
-                if (pt.Sex[r] != Sex.Male || !asm.AggrievedSet.Contains(pt.Household[r])) continue;
+                if (pt.Sex[r] != Sex.Male || !asm.AggrievedSet.Contains(pt.Household[r]) || (long)pt.IdOf(r).Value == c.LordOf(fief)) continue;
                 ulong id = pt.IdOf(r).Value;
                 if (DetRng.Next(c.Seed, c.Day, id, RngStreams.RevoltAndEvasion, 100u + (uint)v.Id) % (ulong)Math.Max(1, c.S.LevyOneIn) == 0) v.Rebels.Add(id);
             }
