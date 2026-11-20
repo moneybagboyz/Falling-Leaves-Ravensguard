@@ -157,7 +157,7 @@ public sealed partial class AutopilotWorld
     {
         var jt = Jobs?.Invoke(); if (jt == null) return false;
         long key = _boardClock / 300;
-        if (key != _boardKey) { _boardKey = key; _boardHas = jt.Value.Table.Jobs.Values.Any(j => j.State == JobState.Open); }
+        if (key != _boardKey) { _boardKey = key; _boardHas = jt.Value.Table.Jobs.Values.Any(j => j.State == JobState.Open && j.Kind != OddJobKind.Bounty); }
         return _boardHas;
     }
     private long _boardClock;
@@ -280,10 +280,10 @@ public sealed partial class AutopilotWorld
         if (npcRule)
         {
             if (kind != ActionKind.TakeJob || DetRng.Range(a.Seed, at / 20, a.Id.Value, RngStreams.UtilityNoise, 99, 0, 24) != 0) return null;
-            return jt.Value.Table.Jobs.Values.Where(j => j.State == JobState.Open && j.Settlement == home && j.Region == region && j.MinAge <= 18 && j.MinSkill == 0).OrderBy(j => j.PostedSec).ThenBy(j => j.Id).FirstOrDefault();
+            return jt.Value.Table.Jobs.Values.Where(j => j.State == JobState.Open && j.Kind != OddJobKind.Bounty && j.Settlement == home && j.Region == region && j.MinAge <= 18 && j.MinSkill == 0).OrderBy(j => j.PostedSec).ThenBy(j => j.Id).FirstOrDefault();
         }
         var dir = d!; Job? best = null; long bestRate = -1; int sunset = Daylight.SunsetMinute(LatTenths, DoY(at));
-        foreach (var j in jt.Value.Table.Jobs.Values.Where(j => j.State == JobState.Open && j.Region == region && j.Settlement == (dir.Kind == DirectiveKind.Guard && dir.TargetKind == 1 ? (int)dir.Target : home)).OrderBy(j => j.Id))
+        foreach (var j in jt.Value.Table.Jobs.Values.Where(j => j.State == JobState.Open && j.Kind != OddJobKind.Bounty && j.Region == region && j.Settlement == (dir.Kind == DirectiveKind.Guard && dir.TargetKind == 1 ? (int)dir.Target : home)).OrderBy(j => j.Id))
         {
             if (j.MinAge > 25 || j.MinSkill > 20) continue;
             if (dir.Kind == DirectiveKind.Guard && j.Kind != OddJobKind.Guard) continue;

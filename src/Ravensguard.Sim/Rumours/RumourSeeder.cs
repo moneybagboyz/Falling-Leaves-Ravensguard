@@ -111,6 +111,12 @@ public static class RumourSeeder
         }
         switch (policy)
         {
+            case "seen":
+                // P6-B2 (crime 4.1): the people who saw the act and knew who did it (the entry's own "seen" list of person ids): they and no one else know the deed at first
+                if (e.Data.TryGetValue("seen", out var seen))
+                    foreach (var part in seen.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                        if (ulong.TryParse(part, out ulong v) && p.IndexOf(new EntityId(v)) is int si && si >= 0 && Array.IndexOf(residents, si) >= 0) Add(si);
+                break;
             case "household":
                 foreach (var id in e.Subjects)
                 {

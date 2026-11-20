@@ -44,6 +44,8 @@ public enum HeroCommandKind : byte
     Will,
     /// <summary>Appended (P6-B1): the treatment screen at the barrier ("tr:do|patient|kind|part", all, cancel, phys), applied by <see cref="Ravensguard.Sim.Medicine.HeroTreatDesk"/>; the queue's steps are performed at the second their work ends.</summary>
     Treat,
+    /// <summary>Appended (P6-B2): a crime the street saw ("cj:act|kind|victim|settlement|value|damage|note|build|colours|witnesses|cry"), applied by <see cref="Ravensguard.Sim.Law.CrimeDesk"/>.</summary>
+    Crime,
 }
 
 /// <summary>Where the hero crafts (built on the main thread from what is in reach, copied into the command).</summary>
@@ -493,6 +495,7 @@ public sealed class HeroDesk
                 HeroCommandKind.Vehicle => Ravensguard.Sim.Carts.VehicleDesk.Apply(ctx, c),                   // P5-G: designs, vehicle sites, commissions, repairs, launches, voyages
                 HeroCommandKind.Will => Ravensguard.Sim.Succession.WillDesk.Apply(ctx, c),                     // P5-H: a will before a priest or the reeve
                 HeroCommandKind.Treat => Ravensguard.Sim.Medicine.HeroTreatDesk.Apply(ctx, c),                // P6-B1: the treatment screen's verbs, the physician's fee
+                HeroCommandKind.Crime => Ravensguard.Sim.Law.CrimeDesk.Apply(ctx, c),                           // P6-B2: a crime the street saw
                 HeroCommandKind.Business or HeroCommandKind.Prospect => Ravensguard.Sim.Production.BusinessDesk.Apply(ctx, c),   // P5-F: businesses, stewards, stalls, prospecting
                 _ => R(c, HeroResultCode.Invalid, T("HERO_UNKNOWN_COMMAND")),
             };
@@ -815,7 +818,7 @@ public sealed class HeroDesk
         if (c.Order == SquadOrder.Work)
         {
             if (ctx.Jobs?.Invoke() is not { } jt) return R(c, HeroResultCode.Invalid, T("HERO_THERE_NO_WORK_BOARD"));
-            var job = c.Job != EntityId.None ? c.Job : jt.Table.Jobs.Values.Where(j => j.State == JobState.Open).OrderBy(j => Math.Abs(j.P0 - c.X) + Math.Abs(j.P1 - c.Y)).ThenBy(j => j.Id).Select(j => j.Id).FirstOrDefault();
+            var job = c.Job != EntityId.None ? c.Job : jt.Table.Jobs.Values.Where(j => j.State == JobState.Open && j.Kind != OddJobKind.Bounty).OrderBy(j => Math.Abs(j.P0 - c.X) + Math.Abs(j.P1 - c.Y)).ThenBy(j => j.Id).Select(j => j.Id).FirstOrDefault();
             if (job == EntityId.None) { f.Order = SquadOrder.Follow; return R(c, HeroResultCode.NoStock, T("HERO_THERE_NO_OPEN_WORK")); }
             var p = ctx.State.Population.People; int day = (int)(c.IssuedSec / 86400);
             var res = jt.Table.ClaimAll(jt.Env, [new ClaimRequest(job, f.Person, f.PersonIndex, c.IssuedSec, (int)c.Seq, c.X, c.Y, f.MaxSkill, p.AgeYears(f.PersonIndex, day))], c.IssuedSec, ctx.Seed);

@@ -474,6 +474,7 @@ public partial class StreetView : Control, IHandlesBack
         v.AddChild(_bandLabel);
         if (_hero != null) v.AddChild(new Label { Text = L.F("STREET_HERO_HINT", _hero.Name, H("world.panel_character"), H("world.panel_codex")), ThemeTypeVariation = "HintLabel" });
         BuildAutopilotHud(v);
+        BuildEye(v);                                           // P6-B2: the eye (Seen n / Unseen) while a crime could be done
         _faultLabel = new Label { Visible = false, Modulate = new Color(1f, 0.55f, 0.4f), AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(290, 0) };
         v.AddChild(_faultLabel);
         hud.AddChild(top);
@@ -585,6 +586,7 @@ public partial class StreetView : Control, IHandlesBack
             _levelBoxes[i].AddThemeColorOverride("font_color", view ? PixelTheme.Gold : hero ? PixelTheme.Body : PixelTheme.Dim);
         }
         _levelLabel.Text = _viewZ == s.Hero.Z ? "" : L.T("STREET_LEVEL_VIEWING");
+        UpdateEye(s);
     }
 
     // ------------------------------------------------------------------ level tiles
