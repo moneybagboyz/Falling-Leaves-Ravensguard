@@ -236,7 +236,7 @@ public sealed class SoilWorld
 
     // ------------------------------------------------------------------ the hero
 
-    private int HeroHousehold()
+    public int HeroHousehold()
     {
         var pt = St.Population.People; int row = Ravensguard.Sim.Succession.HeroPerson.RowOf(pt, St.Hero, St.Party?.Hero ?? EntityId.None);
         return row < 0 ? -1 : pt.Household[row];

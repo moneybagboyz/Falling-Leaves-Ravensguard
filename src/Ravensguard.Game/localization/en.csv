@@ -4633,6 +4633,11 @@ hw_q_marl,Marl this field
 hw_q_manure,Manure this field
 hw_q_soil_work,Work the soil job
 hw_q_offer,Offer for this house
+hw_q_soil_stop,Stop the soil work
+hw_q_soil_status,"Soil job: the field's fertility {0}, {1}% done"
+hw_q_no_field,Not at one of your fields
+hw_q_offer_at,Offer {0} for this house
+hw_q_no_house,No house with a holder here
 hw_soil_row,"Field {0}: fertility {1}, {2}% done"
 hw_soil_field_row,"Field {0}: fertility {1}"
 ch_note_homestead_acre,An acre cleared for a homestead.
