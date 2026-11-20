@@ -112,6 +112,8 @@ public sealed class DiseaseBook
     public ContinentPlague Continent { get; set; } = new();
     /// <summary>Count of plagues this region has had (the next one's immunity starts clean).</summary>
     public int LastDay = -1;
+    /// <summary>The settlements within 12 km of each (derived from the region, never saved).</summary>
+    public int[][]? Near;
 
     public PlagueSeverity Severity { get => Continent.Severity; set => Continent.Severity = value; }
 

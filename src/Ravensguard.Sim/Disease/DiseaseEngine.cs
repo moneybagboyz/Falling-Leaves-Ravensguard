@@ -303,19 +303,21 @@ public static class DiseaseEngine
     private static void InfectPeople(SimWorld w, DiseaseBook b, GreatPlague gp, int day, GameTime now, RegionOutbox ob)
     {
         var pt = w.People; var hht = w.Households; var sd = S;
-        if (gp.Epidemics.Values.All(e => !e.Active || day < e.StartDay)) return;
+        var byS = new Epidemic?[w.Population.Region.Settlements.Count]; bool any = false;
+        foreach (var ep in gp.Epidemics.Values) if (ep.Active && day >= ep.StartDay && day < ep.EndDay && ep.Settlement < byS.Length) { byS[ep.Settlement] = ep; any = true; }
+        if (!any) return;
         for (int i = 0; i < pt.Count; i++)
         {
             if (pt.Status[i] is not (PersonStatus.Alive or PersonStatus.Hero)) continue;
             int s = pt.HomeSettlement[i];
-            if (!gp.Epidemics.TryGetValue(s, out var ep) || !ep.Active || day >= ep.EndDay) continue;
+            if ((uint)s >= (uint)byS.Length || byS[s] is not { } ep) continue;
             ulong id = pt.IdOf(i).Value;
-            if (gp.Immune.Contains(id) || gp.Cases.ContainsKey(id)) continue;
+            if (gp.Cases.ContainsKey(id) || gp.Immune.Contains(id)) continue;
             long ppm = ep.DailyPpm; int hh = pt.Household[i];
             if (hh >= 0)
             {
                 if (hht.MemberCount[hh] > hht.Beds[hh]) ppm = ppm * sd.CrowdingMultPct / 100;
-                if (gp.Burned.TryGetValue(hh, out int until) && until >= day) ppm = ppm * (100 - sd.BeddingBurnedPct) / 100;
+                if (gp.Burned.Count > 0 && gp.Burned.TryGetValue(hh, out int until) && until >= day) ppm = ppm * (100 - sd.BeddingBurnedPct) / 100;
             }
             if (!VitalMath.Roll(w.Seed, day, id, RngStreams.EpidemicRoll, 2, (int)Math.Min(1_000_000, ppm))) continue;
             Infect(w, b, gp, ep, id, day);
@@ -372,37 +374,62 @@ public static class DiseaseEngine
 
     private static long Dist2(RegionSettlement a, RegionSettlement b) { long dx = a.CenterX - b.CenterX, dy = a.CenterY - b.CenterY; return dx * dx + dy * dy; }
 
-    /// <summary>The plague walks the roads inside the region (4.3): each infected settlement and each other within 12 km; 3 percent a day x traffic (1 to 5) over a distance factor, a fifth of it into a closed town.</summary>
-    private static void SpreadAmongSettlements(SimWorld w, DiseaseBook b, GreatPlague gp, int day, GameTime now, RegionOutbox ob)
+    /// <summary>
+    /// The chance (ppm) a day that an infected settlement <paramref name="a"/> infects <paramref name="t"/> (4.3): 3 percent x the traffic between them (1 to 5, from the two places' people) over a distance factor
+    /// (1 at the door, 2 at 12 km), a fifth of it into a closed town; 0 beyond 12 km. <paramref name="pops"/> are the living by settlement (built here when null).
+    /// </summary>
+    public static long InTownPpm(SimWorld w, int a, int t, bool quarantined, int[]? pops = null)
     {
         var settlements = w.Population.Region.Settlements; var sd = S; long reach = sd.RoadKm * 1000L;
-        var pops = new int[settlements.Count]; var pt = w.People;
-        for (int i = 0; i < pt.Count; i++) if (pt.Status[i] == PersonStatus.Alive && (uint)pt.HomeSettlement[i] < (uint)pops.Length) pops[pt.HomeSettlement[i]]++;
-        foreach (var (a, epa) in gp.Epidemics.ToList())
+        long d2 = Dist2(settlements[a], settlements[t]); if (d2 > reach * reach) return 0;
+        if (pops == null)
         {
-            if (!epa.Active || day >= epa.EndDay) continue;
-            for (int t = 0; t < settlements.Count; t++)
-            {
-                if (t == a || gp.Epidemics.ContainsKey(t)) continue;
-                long d2 = Dist2(settlements[a], settlements[t]); if (d2 > reach * reach) continue;
-                long dist = Ravensguard.Sim.Production.ProductionSystem.ISqrt(d2);
-                long traffic = Math.Clamp(1 + (pops[a] + pops[t]) / 1500, 1, 5);
-                long distFactorPm = 1000 + dist * 1000 / reach;
-                long ppm = sd.RegionSpreadPermille * 1000L * traffic * 1000 / distFactorPm;
-                if (gp.Quarantined(t, day)) ppm = ppm * sd.QuarantineMultPct / 100;
-                ulong key = settlements[a].Id.Value * 1_000_003UL ^ settlements[t].Id.Value;
-                if (VitalMath.Roll(w.Seed, day, key, RngStreams.PlagueSpread, 2, (int)Math.Min(1_000_000, ppm)))
-                    StartEpidemic(w, b, gp, t, day, now, ob, new EntityId(epa.Entry), "ch_note_plague_road");
-            }
+            pops = new int[settlements.Count]; var pt = w.People;
+            for (int i = 0; i < pt.Count; i++) if (pt.Status[i] == PersonStatus.Alive && (uint)pt.HomeSettlement[i] < (uint)pops.Length) pops[pt.HomeSettlement[i]]++;
         }
-        // a lord closes the gates of a town a neighbour's sickness is near (4.4)
+        long dist = Ravensguard.Sim.Production.ProductionSystem.ISqrt(d2);
+        long traffic = Math.Clamp(1 + (pops[a] + pops[t]) / 1500, 1, 5);
+        long distFactorPm = 1000 + dist * 1000 / reach;
+        long ppm = sd.RegionSpreadPermille * 1000L * traffic * 1000 / distFactorPm;
+        if (quarantined) ppm = ppm * sd.QuarantineMultPct / 100;
+        return Math.Min(1_000_000, ppm);
+    }
+
+    /// <summary>The settlements within 12 km of each settlement, in index order (computed once per region and kept; settlements do not move).</summary>
+    public static int[][] NearTable(SimWorld w, DiseaseBook b)
+    {
+        var settlements = w.Population.Region.Settlements;
+        if (b.Near != null && b.Near.Length == settlements.Count) return b.Near;
+        long reach = S.RoadKm * 1000L; var near = new int[settlements.Count][];
+        for (int a = 0; a < near.Length; a++)
+        {
+            var l = new List<int>();
+            for (int t = 0; t < near.Length; t++) if (t != a && Dist2(settlements[a], settlements[t]) <= reach * reach) l.Add(t);
+            near[a] = [.. l];
+        }
+        return b.Near = near;
+    }
+
+    /// <summary>The plague walks the roads inside the region (4.3), and a lord closes the gates of a town a neighbour's sickness is near (4.4).</summary>
+    private static void SpreadAmongSettlements(SimWorld w, DiseaseBook b, GreatPlague gp, int day, GameTime now, RegionOutbox ob)
+    {
+        var settlements = w.Population.Region.Settlements; var sd = S; var near = NearTable(w, b);
+        int[]? pops = null;
         foreach (var (a, epa) in gp.Epidemics.ToList())
         {
             if (!epa.Active) continue;
-            for (int t = 0; t < settlements.Count; t++)
+            foreach (int t in near[a])
             {
-                if (t == a || gp.Epidemics.ContainsKey(t) || gp.Quarantined(t, day) || settlements[t].Class == SettlementClass.Farmstead) continue;
-                if (Dist2(settlements[a], settlements[t]) > reach * reach) continue;
+                if (gp.Epidemics.ContainsKey(t)) continue;
+                if (pops == null) { pops = new int[settlements.Count]; var pt = w.People; for (int i = 0; i < pt.Count; i++) if (pt.Status[i] == PersonStatus.Alive && (uint)pt.HomeSettlement[i] < (uint)pops.Length) pops[pt.HomeSettlement[i]]++; }
+                if (day < epa.EndDay)
+                {
+                    long ppm = InTownPpm(w, a, t, gp.Quarantined(t, day), pops);
+                    ulong key = settlements[a].Id.Value * 1_000_003UL ^ settlements[t].Id.Value;
+                    if (ppm > 0 && VitalMath.Roll(w.Seed, day, key, RngStreams.PlagueSpread, 2, (int)ppm)) { StartEpidemic(w, b, gp, t, day, now, ob, new EntityId(epa.Entry), "ch_note_plague_road"); continue; }
+                }
+                // a lord closes the gates of a town of any size but a hamlet, once
+                if (gp.Quarantined(t, day) || settlements[t].Class == SettlementClass.Farmstead) continue;
                 if (VitalMath.Roll(w.Seed, day, settlements[t].Id.Value, RngStreams.PlagueSpread, 3, sd.QuarantineLordPct * 10_000)) Quarantine(w, b, gp, t, day, sd.QuarantineDays, now, ob, new EntityId(epa.Entry));
             }
         }
@@ -417,7 +444,8 @@ public static class DiseaseEngine
             [new Cause(CauseKind.Disease, cause.Value != 0 ? cause : null, NoteKey: "ch_note_plague_near")], ("days", days.ToString()));
     }
 
-    private static void CloseEpidemics(SimWorld w, DiseaseBook b, GreatPlague gp, int day, GameTime now, RegionOutbox ob)
+    /// <summary>Epidemics that have run their days end (a small place that lost 40 percent may be abandoned, 4.3), and the plague is over when nothing is left to burn.</summary>
+    public static void CloseEpidemics(SimWorld w, DiseaseBook b, GreatPlague gp, int day, GameTime now, RegionOutbox ob)
     {
         var settlements = w.Population.Region.Settlements; var sd = S; var pt = w.People;
         foreach (var (s, ep) in gp.Epidemics.ToList())
