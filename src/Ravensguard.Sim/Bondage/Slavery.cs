@@ -184,7 +184,7 @@ public static class Slavery
     {
         int place = bw.W.HomeOf(debtor);
         var law = bw.LawAt(place);
-        if (law == SlaveLaw.None) return SlaveResult.No("sl_law_none");
+        if (law == SlaveLaw.None) return SlaveResult.No("sl_law_forbids");
         if (book.Has(debtor)) return SlaveResult.No("sl_already_bonded");
         int days = (int)Math.Max(1, debtMites / Math.Max(1, bw.D.DebtDayWageMites));
         var kind = law == SlaveLaw.Debt ? BondKind.Debt : law == SlaveLaw.WarCaptives ? BondKind.Thrall : BondKind.Chattel;

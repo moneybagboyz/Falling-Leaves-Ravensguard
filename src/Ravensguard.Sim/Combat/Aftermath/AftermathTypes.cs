@@ -6,7 +6,9 @@ using Ravensguard.Sim.Economy;
 namespace Ravensguard.Sim.Combat.Aftermath;
 
 /// <summary>Who won a fight, for the defeat table (morale-capture-succession 4.4).</summary>
-public enum WinnerKind : byte { None, Bandits, Army, Beasts, Draugr, Guards, Locals, Folk }
+public enum WinnerKind : byte { None, Bandits, Army, Beasts, Draugr, Guards, Locals, Folk,
+    /// <summary>Phase 6 (slavery 4.1, appended): a slaver band; its captives are held ten days and then sold (the bondage pens).</summary>
+    Slavers }
 
 /// <summary>What a defeat cost (3.2 <c>DefeatOutcome.Kind</c>); <see cref="Left"/> is a person the winners did not touch.</summary>
 public enum DefeatKind : byte { Robbed, Captured, Killed, Mauled, Ignored, Yielded, Left }
@@ -80,7 +82,7 @@ public sealed class AftermathRules
 
     public static WinnerKind Parse(string k) => k switch
     {
-        "bandits" => WinnerKind.Bandits, "army" => WinnerKind.Army, "beasts" => WinnerKind.Beasts, "draugr" => WinnerKind.Draugr, "guards" => WinnerKind.Guards, "locals" => WinnerKind.Locals,
+        "bandits" => WinnerKind.Bandits, "slavers" => WinnerKind.Slavers, "army" => WinnerKind.Army, "beasts" => WinnerKind.Beasts, "draugr" => WinnerKind.Draugr, "guards" => WinnerKind.Guards, "locals" => WinnerKind.Locals,
         _ => WinnerKind.Folk,
     };
 
@@ -96,7 +98,7 @@ public sealed class AftermathRules
     /// <summary>The morale side kind a winner kind fights as (who accepts surrenders, 4.2).</summary>
     public static Morale.SideKind SideOf(WinnerKind k) => k switch
     {
-        WinnerKind.Army => Morale.SideKind.Army, WinnerKind.Bandits => Morale.SideKind.Bandits, WinnerKind.Beasts => Morale.SideKind.Beasts, WinnerKind.Draugr => Morale.SideKind.Draugr,
+        WinnerKind.Army => Morale.SideKind.Army, WinnerKind.Bandits or WinnerKind.Slavers => Morale.SideKind.Bandits, WinnerKind.Beasts => Morale.SideKind.Beasts, WinnerKind.Draugr => Morale.SideKind.Draugr,
         WinnerKind.Guards => Morale.SideKind.Guards, WinnerKind.Locals => Morale.SideKind.Locals, _ => Morale.SideKind.Folk,
     };
 }

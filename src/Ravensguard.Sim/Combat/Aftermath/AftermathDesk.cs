@@ -283,6 +283,15 @@ public static class AftermathDesk
                     party.Squad.ActiveCount, req.PlaceX, req.PlaceY);
                 break;
             }
+            case DefeatKind.Captured when req.Winner == WinnerKind.Slavers:
+            {
+                // P6-D1: stripped like a bandit's captive, held by the band for ten days, then sold at a market (the bondage sweep) and enslaved
+                Rob(false);
+                var band = AftermathCoin.BandId(req.FightId);
+                book.Capture(R, CaptorKind.Slavers, hero, true, band, new PurseRef(PurseKind.Household, band), sec, CaptiveRank.Wanderer, ransom, payer, friends, [], Skills(state, party),
+                    party.Squad.ActiveCount, req.PlaceX, req.PlaceY);
+                break;
+            }
             case DefeatKind.Captured when req.Winner == WinnerKind.Guards:
                 Ravensguard.Sim.Law.Gaol.ArrestHero(state, content, party, req.PlaceX, req.PlaceY, sec);          // P6-C1: the guards arrest him: the fief's gaol, bound, fed, tried on the next court day
                 break;

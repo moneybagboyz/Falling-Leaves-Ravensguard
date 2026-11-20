@@ -43,7 +43,7 @@ public static class BondDaily
             if (b.OnRun) { var r = RunawayDay(bw, book, crimes, b, day, sec); if (r == 1) caught++; else if (r == 2) voided++; continue; }
             // ---- the owner's place and the law of it (4.3)
             int here = bw.PlaceOfOwner(owner);
-            if (person != bw.W.HeroId || here >= 0) { if (here >= 0) b.Place = here; }
+            if (owner != bw.W.HeroId && here >= 0) b.Place = here;                          // the hero's slaves are where he told the world he stands (BondDesk 'here')
             if (b.Place >= 0 && bw.LawAt(b.Place) == SlaveLaw.None && owner.Kind is IdKind.Person or IdKind.Household && Observe(bw, book, crimes, b, day, sec)) { seen++; continue; }
             // ---- feeding and handling by treatment (4.2)
             Feed(bw, b, owner, day);
