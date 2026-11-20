@@ -86,10 +86,12 @@ public sealed class BondBook
     /// <summary>Captives whose "sold" fate has been taken up (pen listed): never listed twice.</summary>
     public readonly SortedSet<ulong> Swept = [];
     /// <summary>People freed by the law, a revolt or a will, counted for the view.</summary>
+    /// <summary>Per owner (person id): the consecutive seasons he has kept slaves against his faith (4 are a year: the church names it, slavery 4.3).</summary>
+    public readonly SortedDictionary<ulong, int> HeldSeasons = [];
     public int FreedTotal;
     public int LastDay = -1, LastSeason = -1;
 
-    public bool IsEmpty => Bonds.Count == 0 && Bands.Count == 0 && Rebels.Count == 0 && Swept.Count == 0 && FreedTotal == 0;
+    public bool IsEmpty => Bonds.Count == 0 && Bands.Count == 0 && Rebels.Count == 0 && Swept.Count == 0;
 
     public Bond? Of(EntityId person) => Bonds.GetValueOrDefault(person.Value);
     public bool Has(EntityId person) => Bonds.ContainsKey(person.Value);
@@ -116,6 +118,7 @@ public sealed class BondBook
         foreach (var (k, s) in Bands) { M(k); M((ulong)(uint)s.Camp); M((ulong)(uint)s.Size); M((ulong)(uint)s.LastRaidSeason); M((ulong)(uint)s.Raids); }
         foreach (var r in Rebels) { M(r.Leader); M((ulong)(uint)r.Place); M((ulong)(uint)r.Day); M((ulong)(uint)r.Members); M(r.Entry); }
         foreach (var s in Swept) M(s);
+        foreach (var (k, n) in HeldSeasons) { M(k); M((ulong)(uint)n); }
         M((ulong)(uint)FreedTotal); M((ulong)(uint)LastDay); M((ulong)(uint)LastSeason);
         return h;
     }

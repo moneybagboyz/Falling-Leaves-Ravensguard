@@ -84,7 +84,7 @@ public static class BondDaily
     /// <summary>The owner died (11): the bond passes with the estate (as a holding does): to the household he led, else to his fief (escheat). Returns whether it changed hands.</summary>
     private static bool Inherit(BondWorld bw, BondBook book, Bond b, EntityId owner, long sec)
     {
-        EntityId heir = EntityId.None;
+        EntityId heir = Slavery.Nobody;
         int hh = owner.Kind == IdKind.Person ? bw.HouseholdOf(owner) : -1;
         if (hh >= 0 && bw.W.Households is { } t && t.MemberCount[hh] > 0) heir = t.IdOf(hh);
         else
@@ -93,12 +93,12 @@ public static class BondDaily
             int f = bw.W.FiefOf(s);
             if (f >= 0 && f < bw.W.FiefIds.Length) heir = bw.W.FiefIds[f];
         }
-        if (heir == EntityId.None || heir.Value == b.Owner) return false;
+        if (heir == Slavery.Nobody || heir.Value == b.Owner) return false;
         b.Owner = heir.Value; b.Since = Math.Max(b.Since, (int)(sec / 86_400));
         var who = bw.OwnerPerson(heir); var person = new EntityId(b.Person);
         var ps = new List<ChronParam> { ChronParam.Person("person", person) };
-        if (who != EntityId.None) ps.Insert(0, ChronParam.Person("doer", who));
-        var e = Slavery.Write(bw, sec, "slave_inherited", "ch_slavery_inherited", who != EntityId.None ? [who, person] : [person], Slavery.Note("ch_note_slave_estate", b.Entry), ps);
+        if (who != Slavery.Nobody) ps.Insert(0, ChronParam.Person("doer", who));
+        var e = Slavery.Write(bw, sec, "slave_inherited", "ch_slavery_inherited", who != Slavery.Nobody ? [who, person] : [person], Slavery.Note("ch_note_slave_estate", b.Entry), ps);
         b.Entry = e.Id.Value;
         if (heir.Kind == IdKind.Household && person != bw.W.HeroId) bw.Move(person, bw.HouseholdOf(heir));
         return true;
@@ -121,9 +121,9 @@ public static class BondDaily
     {
         var who = bw.OwnerPerson(owner); int n = bw.W.People.Count > 0 ? 1 : 1;
         var ps = new List<ChronParam> { ChronParam.Count("count", n) };
-        if (who != EntityId.None) ps.Insert(0, ChronParam.Person("doer", who));
+        if (who != Slavery.Nobody) ps.Insert(0, ChronParam.Person("doer", who));
         ps.AddRange(bw.PlaceParams(b.Place));
-        return Slavery.Write(bw, sec, "slave_flogged", "ch_slavery_flogged", who != EntityId.None ? [who, new EntityId(b.Person)] : [new EntityId(b.Person)], Slavery.Note("ch_note_slave_harsh", b.Entry), ps).Id.Value;
+        return Slavery.Write(bw, sec, "slave_flogged", "ch_slavery_flogged", who != Slavery.Nobody ? [who, new EntityId(b.Person)] : [new EntityId(b.Person)], Slavery.Note("ch_note_slave_harsh", b.Entry), ps).Id.Value;
     }
 
     // ------------------------------------------------------------------ the law looks (4.3)
@@ -137,7 +137,7 @@ public static class BondDaily
     {
         if (crimes == null) return false;
         var owner = new EntityId(b.Owner); var person = new EntityId(b.Person); var doer = bw.OwnerPerson(owner);
-        if (doer == EntityId.None) return false;
+        if (doer == Slavery.Nobody) return false;
         if (DetRng.Range(bw.Seed, day, b.Person, RngStreams.SlaveMarketTies, 100, 0, 1000) >= 500) return false;     // nobody looked today
         int witness = -1; var pt = bw.People;
         for (int i = 0; i < pt.Count && witness < 0; i++)
@@ -165,9 +165,9 @@ public static class BondDaily
         b.RunawayDay = Math.Max(1, day); b.Chain = Restraint.None;
         var ps = new List<ChronParam> { ChronParam.Person("person", person) };
         ps.AddRange(bw.PlaceParams(from));
-        var e = Slavery.Write(bw, sec, "slave_runaway", "ch_slavery_runaway", who != EntityId.None ? [person, who] : [person], Slavery.Note(b.Treatment == Treatment.Harsh ? "ch_note_slave_harsh" : "ch_note_slave_unhappy", b.Entry), ps);
+        var e = Slavery.Write(bw, sec, "slave_runaway", "ch_slavery_runaway", who != Slavery.Nobody ? [person, who] : [person], Slavery.Note(b.Treatment == Treatment.Harsh ? "ch_note_slave_harsh" : "ch_note_slave_unhappy", b.Entry), ps);
         b.Entry = e.Id.Value;
-        if (crimes != null && who != EntityId.None)
+        if (crimes != null && who != Slavery.Nobody)
         {
             long price = Math.Max(1, b.PriceMites);
             var rec = CrimeSystem.Commit(bw.W, crimes, new ActSpec("runaway", person, who, from, sec, price, 0, "ch_note_crime_greed"), [new WitnessRow(who.Value, WitnessRow.KnewIt)], ActorLook.None);
@@ -197,21 +197,21 @@ public static class BondDaily
     {
         var person = new EntityId(b.Person);
         int seat = home >= 0 ? Gaol.SeatOf(bw.W, bw.W.FiefOf(home), home) : -1;
-        EntityId collector = EntityId.None; long paid = 0;
+        EntityId collector = Slavery.Nobody; long paid = 0;
         var guards = seat >= 0 ? Guards.Of(bw.People, seat) : [];
         if (guards.Count > 0) collector = bw.People.IdOf(guards[0]);
         if (b.BountyJob != 0 && crimes != null && bw.W.Jobs != null)
         {
-            if (collector != EntityId.None && bw.W.PurseOf(collector) is { } pay) paid = Bounties.Collect(bw.W, crimes, new EntityId(b.BountyJob), collector, pay, true, sec);
+            if (collector != Slavery.Nobody && bw.W.PurseOf(collector) is { } pay) paid = Bounties.Collect(bw.W, crimes, new EntityId(b.BountyJob), collector, pay, true, sec);
             else if (bw.W.JobEnv is { } env) bw.W.Jobs.Cancel(env, new EntityId(b.BountyJob), sec);
             if (crimes.Get(b.RunawayCrime) is { } rec) rec.State = CrimeState.Served;
         }
         b.BountyJob = 0; b.RunawayCrime = 0; b.RunawayDay = 0; b.Chain = Restraint.Chained; b.Place = home; b.Morale = bw.D.MoraleStart;
         if (b.Treatment == Treatment.Harsh) { b.FlogDay = day; bw.W.Marks()?.AddBrand(person, Brand.Runaway); }
         var ps = new List<ChronParam> { ChronParam.Person("person", person) };
-        if (collector != EntityId.None) ps.Add(ChronParam.Person("collector", collector));
+        if (collector != Slavery.Nobody) ps.Add(ChronParam.Person("collector", collector));
         ps.AddRange(bw.PlaceParams(home));
-        var e = Slavery.Write(bw, sec, "slave_caught", "ch_slavery_caught", collector != EntityId.None ? [collector, person] : [person], Slavery.Note("ch_note_slave_caught", b.Entry), ps, ("paid", Slavery.N(paid)));
+        var e = Slavery.Write(bw, sec, "slave_caught", "ch_slavery_caught", collector != Slavery.Nobody ? [collector, person] : [person], Slavery.Note("ch_note_slave_caught", b.Entry), ps, ("paid", Slavery.N(paid)));
         b.Entry = e.Id.Value;
     }
 

@@ -43,8 +43,11 @@ public static class SuccessionDesk
     public static List<SuccessionCandidate> Candidates(Save.WorldState st, HeroParty party, int day)
     {
         var pt = st.Population.People;
-        return HeroKin.OrderForHero(pt, st.Succession?.Kin ?? [], day, SquadOf(party, pt), (i, id) => st.Captivity?.Find(id) != null || st.Bonds?.Has(id) == true);       // P6-D1: a bonded kin is not a play heir (slavery 4.4)
+        return HeroKin.OrderForHero(pt, st.Succession?.Kin ?? [], day, SquadOf(party, pt), Unavailable(st));
     }
+
+    /// <summary>Who cannot continue the line: a captive, and (P6-D1, slavery 4.4 and SL-12) anyone bonded: a slave is not a play heir.</summary>
+    public static Func<int, EntityId, bool> Unavailable(Save.WorldState st) => (i, id) => st.Captivity?.Find(id) != null || st.Bonds?.Has(id) == true;
 
     private static HeroResult R(HeroCommand c, HeroResultCode code, HeroText text, long mites = 0, long qty = 0) => new(c.Seq, c.Kind, code, text, mites, qty, c.IssuedSec);
 

@@ -23,6 +23,8 @@ public sealed class BondSave
     [Key(3)] public long[] Swept { get; set; } = [];
     /// <summary>Freed total, last daily pass, last season pass.</summary>
     [Key(4)] public long[] Counters { get; set; } = [];
+    /// <summary>Per owner: person id, consecutive seasons kept against his faith.</summary>
+    [Key(5)] public long[][] Held { get; set; } = [];
 
     public static BondSave Capture(BondBook b) => new()
     {
@@ -35,6 +37,7 @@ public sealed class BondSave
         Rebels = [.. b.Rebels.Select(x => new long[] { (long)x.Leader, x.Place, x.Day, x.Members, (long)x.Entry })],
         Swept = [.. b.Swept.Select(x => (long)x)],
         Counters = [b.FreedTotal, b.LastDay, b.LastSeason],
+        Held = [.. b.HeldSeasons.Select(kv => new long[] { (long)kv.Key, kv.Value })],
     };
 
     public BondBook Restore()
@@ -62,6 +65,7 @@ public sealed class BondSave
             b.Rebels.Add(new RebelBand { Leader = (ulong)v[0], Place = (int)v[1], Day = (int)v[2], Members = (int)v[3], Entry = (ulong)v[4] });
         }
         foreach (long s in Swept) b.Swept.Add((ulong)s);
+        foreach (var v in Held) { if (v.Length < 2) throw new SaveException("Corrupt held count in save."); b.HeldSeasons[(ulong)v[0]] = (int)v[1]; }
         return b;
     }
 }

@@ -25,7 +25,7 @@ public sealed record BondView(IReadOnlyList<BondRow> Owned, IReadOnlyList<PenRow
     public static BondView? Of(WorldState st, ContentDatabase? db, int day)
     {
         var book = st.Bonds; if (book == null || book.IsEmpty) return null;
-        var bw = BondWiring.World(st, db); var hero = st.Party?.Hero ?? EntityId.None; var region = st.Population.Region;
+        var bw = BondWiring.World(st, db); var hero = st.Party?.Hero ?? Slavery.Nobody; var region = st.Population.Region;
         BondRow Row(Bond b)
         {
             var id = new EntityId(b.Person); int row = bw.RowOf(id);
@@ -36,13 +36,13 @@ public sealed record BondView(IReadOnlyList<BondRow> Owned, IReadOnlyList<PenRow
                 g.Aggrieved > 0 ? 100 : 0, b.OnRun, b.Place, bw.W.PlaceName(b.Place), b.Entry);
         }
         var owned = new List<BondRow>();
-        if (hero != EntityId.None)
+        if (hero != Slavery.Nobody)
             foreach (var b in book.Bonds.Values.Where(b => !b.InPen && b.Owner == hero.Value && b.Person != hero.Value)) owned.Add(Row(b));
         var pens = new List<PenRow>();
         foreach (var g in book.Bonds.Values.Where(b => b.InPen && b.Place >= 0).GroupBy(b => b.Place).OrderBy(g => g.Key))
             pens.Add(new PenRow(g.Key, g.Key < region.Settlements.Count ? region.Settlements[g.Key].Name : "", bw.LawAt(g.Key), [.. g.OrderBy(b => b.Person).Select(Row)]));
         HeroBond? hb = null;
-        if (hero != EntityId.None && book.Of(hero) is { InPen: false } hbond)
+        if (hero != Slavery.Nobody && book.Of(hero) is { InPen: false } hbond)
         {
             var rules = st.Captivity?.Rules ?? AftermathRules.Default;
             var (_, _, lockp, _, _) = bw.W.SkillsOf(hero);

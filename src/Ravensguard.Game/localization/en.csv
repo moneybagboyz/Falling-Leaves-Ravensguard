@@ -5360,6 +5360,7 @@ ch_slavery_flogged,{doer} had the slaves flogged at {place}.
 ch_slavery_runaway,{person} ran from his owner at {place}.
 ch_slavery_caught,{person} was caught and brought back to {place} by {collector}.
 ch_slavery_revolt,{leader} led {count} slaves in revolt at {place}.
+ch_slavery_held_year,{doer} has kept slaves a whole year against the teaching of the church at {place}: the church names the sin aloud.
 ch_slavery_inherited,{doer} inherited {person} with the estate.
 ch_slavery_born,{person} was born a slave to {mother}.
 ch_crime_runaway,{doer} ran away from {victim} at {place}.
@@ -5390,6 +5391,7 @@ R_SLAVE_BOUGHT,{who} bought a slave at {place}.
 R_SLAVE_SOLD,{who} sold a slave at {place}.
 R_SLAVE_FREED,{who} freed a slave at {place}.
 R_SLAVE_REVOLT,{who} led {number} slaves in revolt at {place}.
+st_deed_slave_held_year,A year of slaves kept against the faith
 st_deed_slave_bought_debt,Buying a slave where the law frowns on it
 st_deed_slave_sold_own,Selling one of the town's own people
 jl_crime_runaway,Running from an owner

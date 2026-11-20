@@ -76,7 +76,9 @@ public sealed class BondWorld
     public Chronicle Chronicle => W.Chronicle;
     public ulong Seed => W.Seed;
 
-    public int RowOf(EntityId p) => People.IndexOf(p);
+    /// <summary>The hero's row in the person table when his id does not name it (null: by id).</summary>
+    public Func<int>? HeroRow { get; init; }
+    public int RowOf(EntityId p) { int r = People.IndexOf(p); return r < 0 && p == W.HeroId && HeroRow != null ? HeroRow() : r; }
     public int AgeOf(EntityId p, int day) { int r = RowOf(p); return r < 0 ? 30 : People.AgeYears(r, day); }
 
     /// <summary>The best of a person's skills (the price counts the trade skill).</summary>
@@ -124,7 +126,7 @@ public sealed class BondWorld
         if (owner.Kind == IdKind.Person) return owner;
         int hh = HouseholdOf(owner);
         if (hh >= 0 && W.Households is { } hht && hht.Head[hh] is var h and >= 0 && h < People.Count) return People.IdOf(h);
-        return EntityId.None;
+        return Slavery.Nobody;
     }
 
     /// <summary>The settlement an owner is in, for the law of the place (a household's own, a person's here), -1 unknown.</summary>

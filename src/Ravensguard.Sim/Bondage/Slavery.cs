@@ -42,7 +42,8 @@ public static class Slavery
     /// <summary>Whether a pen may stand in a place: the markets of chattel towns and the fairs of war-captive towns (slavery 3).</summary>
     public static bool HasMarket(SlaveLaw l) => l is SlaveLaw.Chattel or SlaveLaw.WarCaptives;
 
-    private static ChronParam[] Doer(EntityId who) => who == EntityId.None ? [] : [ChronParam.Person("doer", who)];
+    /// <summary>"No one": the hero's own id is the value 0 (<c>EconomyState.HeroOwner</c>, which is also <c>EntityId.None</c>), so a missing person is the largest value instead.</summary>
+    public static readonly EntityId Nobody = new(ulong.MaxValue);
 
     // ------------------------------------------------------------------ making a bond
 
@@ -119,9 +120,9 @@ public static class Slavery
         if (person != bw.W.HeroId && bw.HouseholdOf(buyer) is var hh and >= 0) bw.Move(person, hh);
         if (person == bw.W.HeroId) bw.W.Marks()?.SetEnslaved(person, true);
         var ps = new List<ChronParam> { ChronParam.Person("person", person), ChronParam.Mites("price", price) };
-        if (doer != EntityId.None) ps.Insert(0, ChronParam.Person("doer", doer));
+        if (doer != Nobody) ps.Insert(0, ChronParam.Person("doer", doer));
         ps.AddRange(bw.PlaceParams(market));
-        var subj = doer != EntityId.None ? new List<EntityId> { doer, person } : [person];
+        var subj = doer != Nobody ? new List<EntityId> { doer, person } : [person];
         var e = Write(bw, sec, "slave_bought", "ch_slavery_bought", subj, Note("ch_note_slave_market", b.Entry), ps, ("law", LawName(law)), ("price", N(price)));
         b.Entry = e.Id.Value;
         if (b.SeparatedDay < 0) b.SeparatedDay = day;
@@ -167,9 +168,9 @@ public static class Slavery
         if (kin) b.SeparatedDay = day;
         if (person != bw.W.HeroId && bw.HouseholdOf(buyer.Value) is var hh and >= 0) bw.Move(person, hh);
         var ps = new List<ChronParam> { ChronParam.Person("person", person), ChronParam.Mites("price", price) };
-        if (doer != EntityId.None) ps.Insert(0, ChronParam.Person("doer", doer));
+        if (doer != Nobody) ps.Insert(0, ChronParam.Person("doer", doer));
         ps.AddRange(bw.PlaceParams(market));
-        var e = Write(bw, sec, "slave_sold", "ch_slavery_sold", doer != EntityId.None ? [doer, person] : [person], Note("ch_note_slave_market", b.Entry), ps, ("law", LawName(law)), ("own", own ? "1" : "0"), ("price", N(price)));
+        var e = Write(bw, sec, "slave_sold", "ch_slavery_sold", doer != Nobody ? [doer, person] : [person], Note("ch_note_slave_market", b.Entry), ps, ("law", LawName(law)), ("own", own ? "1" : "0"), ("price", N(price)));
         b.Entry = e.Id.Value;
         return new SlaveResult(true, "sl_sold", price, e.Id.Value);
     }
@@ -222,7 +223,7 @@ public static class Slavery
     {
         if (book.Of(person) is not { } b) return SlaveResult.No("sl_not_bonded");
         var owner = new EntityId(b.Owner);
-        var doer = how is Ending.Manumission or Ending.Will or Ending.Trust ? bw.OwnerPerson(owner) : EntityId.None;
+        var doer = how is Ending.Manumission or Ending.Will or Ending.Trust ? bw.OwnerPerson(owner) : Nobody;
         bool stays = how is Ending.Manumission or Ending.Will or Ending.Trust or Ending.TermEnded && owner.Kind != IdKind.Other && bw.W.OpinionPm(bw.OwnerPerson(owner), person) >= 0 && bw.HouseholdOf(owner) >= 0;
         int place = b.Place >= 0 ? b.Place : bw.W.HomeOf(person);
         if (b.BountyJob != 0 && bw.W.Jobs is { } jobs && bw.W.JobEnv is { } env) jobs.Cancel(env, new EntityId(b.BountyJob), sec);
@@ -238,10 +239,10 @@ public static class Slavery
             Ending.Law => "ch_note_slave_law", Ending.Voided => "ch_note_slave_voided", Ending.Revolt => "ch_note_slave_revolt", Ending.Trust => "ch_note_slave_trust", _ => "ch_note_slave_rescued",
         };
         var ps = new List<ChronParam> { ChronParam.Person("person", person) };
-        if (doer != EntityId.None) ps.Insert(0, ChronParam.Person("doer", doer));
+        if (doer != Nobody) ps.Insert(0, ChronParam.Person("doer", doer));
         if (how == Ending.SelfPurchase) ps.Add(ChronParam.Mites("price", b.PriceMites));
         ps.AddRange(bw.PlaceParams(place));
-        var subj = doer != EntityId.None ? new List<EntityId> { doer, person } : [person];
+        var subj = doer != Nobody ? new List<EntityId> { doer, person } : [person];
         var cause = new Cause(CauseKind.Slavery, causeEntry != 0 ? new EntityId(causeEntry) : b.Entry != 0 ? new EntityId(b.Entry) : null, NoteKey: note);
         var e = Write(bw, sec, type, key, subj, cause, ps, ("law", LawName(bw.LawAt(place))), ("stays", stays ? "1" : "0"), ("how", how.ToString()));
         return new SlaveResult(true, "sl_freed", stays ? 1 : 0, e.Id.Value);

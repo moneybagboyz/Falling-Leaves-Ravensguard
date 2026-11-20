@@ -75,8 +75,8 @@ public sealed class BondLink
     /// <summary>Whether a person is of the hero's household (a raid leaves the hero's own people alone: they are the player's to lose in the street, not in the abstract).</summary>
     private static bool PartyHousehold(WorldState st, EntityId p)
     {
-        var pt = st.Population.People; int row = pt.IndexOf(p); var hero = st.Party?.Hero ?? EntityId.None;
-        int hr = hero == EntityId.None ? -1 : pt.IndexOf(hero);
+        var pt = st.Population.People; int row = pt.IndexOf(p); var hero = st.Party?.Hero ?? Slavery.Nobody;
+        int hr = hero == Slavery.Nobody ? -1 : Ravensguard.Sim.Succession.HeroPerson.RowOf(pt, st.Hero, hero);
         return row >= 0 && hr >= 0 && pt.Household[row] >= 0 && pt.Household[row] == pt.Household[hr];
     }
 
@@ -91,11 +91,24 @@ public sealed class BondLink
         var pt = st.Population.People;
         foreach (var g in book.Bonds.Values.Where(b => !b.InPen && new EntityId(b.Owner).Kind is IdKind.Person or IdKind.Household).GroupBy(b => b.Owner).OrderBy(g => g.Key))
         {
-            var owner = bw.OwnerPerson(new EntityId(g.Key)); if (owner == EntityId.None) continue;
-            int orow = pt.IndexOf(owner); int oreg = orow >= 0 ? religions.OfCulture(pt.Culture[orow]) : -1;
+            var owner = bw.OwnerPerson(new EntityId(g.Key)); if (owner == Slavery.Nobody) continue;
+            int orow = bw.RowOf(owner); int oreg = orow >= 0 ? religions.OfCulture(pt.Culture[orow]) : -1;
             var slaves = g.OrderBy(b => b.Person).ToList();
             int RelOf(int i) { int r = pt.IndexOf(new EntityId(slaves[i].Person)); return r >= 0 ? religions.OfCulture(pt.Culture[r]) : -1; }
-            Ravensguard.Sim.Faith.ChurchServices.SlaveHeldSeason(st, db, owner, oreg, slaves.Count, RelOf, bw.PlaceOfOwner(new EntityId(g.Key)), new GameTime(sec));
+            int at = bw.PlaceOfOwner(new EntityId(g.Key)); var when = new GameTime(sec);
+            Ravensguard.Sim.Faith.ChurchServices.SlaveHeldSeason(st, db, owner, oreg, slaves.Count, RelOf, at, when);
+            // four seasons in a row make a year: the church names the sin aloud and the faith hears it in full (slavery 4.3: -500 with the religion)
+            bool against = Enumerable.Range(0, slaves.Count).Any(i => Ravensguard.Sim.Faith.ChurchServices.SlaveHoldingForbidden(religions, oreg, RelOf(i)));
+            if (!against) { book.HeldSeasons.Remove(owner.Value); continue; }
+            int n = book.HeldSeasons.GetValueOrDefault(owner.Value) + 1;
+            if (n >= 4)
+            {
+                n = 0;
+                var ps = new List<ChronParam> { ChronParam.Person("doer", owner) }; ps.AddRange(bw.PlaceParams(at));
+                var e = Slavery.Write(bw, sec, "slave_held_year", "ch_slavery_held_year", [owner], new Cause(CauseKind.Faith, null, NoteKey: "ch_note_slave_against_doctrine"), ps);
+                Ravensguard.Sim.Faith.FaithStanding.Record(st, db, owner, "slave_held_year", e.Id, at, 1, -1, true, (int)when.TotalDays);
+            }
+            book.HeldSeasons[owner.Value] = n;
         }
     }
 }
@@ -113,7 +126,7 @@ public static class BondWiring
             cultures[s] = region.Settlements[s].Culture;
             laws[s] = db != null ? BondRules.Parse(Ravensguard.Sim.Faith.ReligionBook.CultureOf(db, cultures[s])?.Slavery) : SlaveLaw.None;
         }
-        var hero = st.Party?.Hero ?? EntityId.None;
+        var hero = st.Party?.Hero ?? Slavery.Nobody;
         int[]? guards = null;
         int GuardCount(int s)
         {
@@ -126,7 +139,7 @@ public static class BondWiring
         }
         return new BondWorld
         {
-            W = w, Rules = BondRules.From(db),
+            W = w, Rules = BondRules.From(db), HeroRow = () => hero == Slavery.Nobody ? -1 : Ravensguard.Sim.Succession.HeroPerson.RowOf(pt, st.Hero, hero),
             LawAt = s => s >= 0 && s < laws.Length ? laws[s] : SlaveLaw.None,
             LawOfCulture = c => db != null ? BondRules.Parse(Ravensguard.Sim.Faith.ReligionBook.CultureOf(db, c)?.Slavery) : SlaveLaw.None,
             CultureAt = s => s >= 0 && s < cultures.Length ? cultures[s] : -1,
