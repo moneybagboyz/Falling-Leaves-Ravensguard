@@ -43,6 +43,10 @@ public enum TransferReason : byte
     ContractPay,
     /// <summary>P6-C2 (contracts 4.2): the escrow returned to the issuer on failure, expiry or cancel; a bond given back on success or charged to the issuer on a failure.</summary>
     ContractRefund,
+    /// <summary>P6-D2 (diplomacy 4.1): a beaten realm's tribute to the winner, a season's share of its receipts for the years of the truce's terms. Appended: older saves load with the count padded.</summary>
+    Tribute,
+    /// <summary>P6-D2 (diplomacy 4.5): a captured lord's ransom at the Baron rank price, paid to his captor's realm. Appended.</summary>
+    LordRansom,
 }
 
 /// <summary>The only faucets: the one-off seed money of world creation, silver struck at a mint, and the coin a household brings across a region border (the other region's ledger holds the matching <see cref="SinkReason.Emigrate"/>).</summary>

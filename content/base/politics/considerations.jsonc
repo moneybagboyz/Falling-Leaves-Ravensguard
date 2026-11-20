@@ -1,0 +1,44 @@
+// What lords and rulers may do each season (diplomacy-and-ai-lords 4.2) and what weighs on each: a curve over a named input gives 0..1000, the curves are multiplied into the action's utility, and a lord takes the best one or two
+// above 300. The strongest consideration with a note is the cause the chronicle gives. Inputs: treasury_tenths (the fief's coin in tenths of a season's payroll), unrest_pm and arrears_pm (the households in grievance or arrears,
+// permille), room_up / room_down (the tax level may move), opinion_ruler (-100..100), wealth_units (tens of crowns the lord's household holds), thief (an official far short of what was expected), vacancy_realm, petitioned,
+// owed (dues in arrears owed to him), at_war, renege (the lord's dislike of his ruler, 0..100) and trait_* (0 or 1).
+[
+  {"type": "lord_action", "id": "set_tax_up", "actor": "lord", "text_key": "ch_dp_act_set_tax_up", "considerations": [
+    {"input": "treasury_tenths", "curve": [[0, 1000], [10, 900], [30, 250], [60, 0]], "note_key": "ch_note_dp_treasury_thin"},
+    {"input": "unrest_pm",       "curve": [[0, 1000], [150, 800], [300, 250], [500, 0]], "note_key": "ch_note_dp_quiet"},
+    {"input": "room_up",         "curve": [[0, 0], [1, 1000]]},
+    {"input": "trait_greedy",    "curve": [[0, 650], [1, 1000]], "note_key": "ch_note_dp_greedy"}
+  ]},
+  {"type": "lord_action", "id": "set_tax_down", "actor": "lord", "text_key": "ch_dp_act_set_tax_down", "considerations": [
+    {"input": "unrest_pm",       "curve": [[100, 0], [300, 500], [500, 1000]], "note_key": "ch_note_dp_unrest_high"},
+    {"input": "treasury_tenths", "curve": [[5, 0], [20, 600], [50, 1000]], "note_key": "ch_note_dp_treasury_full"},
+    {"input": "room_down",       "curve": [[0, 0], [1, 1000]]},
+    {"input": "trait_just",      "curve": [[0, 700], [1, 1000]], "note_key": "ch_note_dp_just"}
+  ]},
+  {"type": "lord_action", "id": "gift", "actor": "lord", "text_key": "ch_dp_act_gift", "considerations": [
+    {"input": "opinion_ruler",   "curve": [[-100, 1000], [20, 800], [50, 200], [80, 0]], "note_key": "ch_note_dp_ruler_cold"},
+    {"input": "wealth_units",    "curve": [[2, 0], [6, 600], [20, 1000]], "note_key": "ch_note_dp_wealthy"},
+    {"input": "vacancy_realm",   "curve": [[0, 550], [1, 1000]], "note_key": "ch_note_dp_vacancy"},
+    {"input": "trait_generous",  "curve": [[0, 600], [1, 1000]], "note_key": "ch_note_dp_generous"}
+  ]},
+  {"type": "lord_action", "id": "demand_dues", "actor": "lord", "text_key": "ch_dp_act_demand_dues", "considerations": [
+    {"input": "owed",            "curve": [[0, 0], [1, 1000]], "note_key": "ch_note_dp_arrears"},
+    {"input": "trait_cruel",     "curve": [[0, 800], [1, 1000]]}
+  ]},
+  {"type": "lord_action", "id": "dismiss_official", "actor": "lord", "text_key": "ch_dp_act_dismiss", "considerations": [
+    {"input": "thief",           "curve": [[0, 0], [1, 1000]], "note_key": "ch_note_dp_thief"},
+    {"input": "trait_just",      "curve": [[0, 800], [1, 1000]]}
+  ]},
+  {"type": "lord_action", "id": "petition", "actor": "lord", "text_key": "ch_dp_act_petition", "considerations": [
+    {"input": "vacancy_realm",   "curve": [[0, 0], [1, 1000]], "note_key": "ch_note_dp_vacancy"},
+    {"input": "opinion_ruler",   "curve": [[0, 0], [30, 500], [60, 1000]], "note_key": "ch_note_dp_ruler_warm"},
+    {"input": "petitioned",      "curve": [[0, 1000], [1, 0]]},
+    {"input": "trait_greedy",    "curve": [[0, 650], [1, 1000]], "note_key": "ch_note_dp_greedy"}
+  ]},
+  {"type": "lord_action", "id": "renounce", "actor": "lord", "min": 700, "text_key": "ch_dp_act_renounce", "considerations": [
+    {"input": "renege",          "curve": [[40, 0], [60, 700], [90, 1000]], "note_key": "ch_note_dp_ruler_cold"},
+    {"input": "at_war",          "curve": [[0, 400], [1, 1000]], "note_key": "ch_note_dp_war"},
+    {"input": "trait_martial",   "curve": [[0, 0], [1, 1000]], "note_key": "ch_note_dp_martial"},
+    {"input": "wealth_units",    "curve": [[10, 0], [40, 1000]], "note_key": "ch_note_dp_wealthy"}
+  ]}
+]

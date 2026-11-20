@@ -1,0 +1,4 @@
+// The numbers of diplomacy and the AI lords (docs/specs/phase6/diplomacy-and-ai-lords.md 3, 4): the war utility's terms and thresholds, peace by war score and weariness, the road to lord and the lords' planning. The defaults are the spec's.
+[
+  {"type": "politics_settings", "id": "politics"}
+]

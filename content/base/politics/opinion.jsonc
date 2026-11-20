@@ -1,0 +1,19 @@
+// Opinion modifiers (diplomacy-and-ai-lords 3): the size of each kind, the points that fade at a season's start (0: it stays while its cause lasts), the cap for one pair and the sentence the Faction screen shows.
+// What a lord thinks of another is the sum, -100..100, kept in the rule book's opinion store; these rows are why.
+[
+  {"type": "opinion_kind", "id": "kin",            "amount": 20,  "decay_per_season": 0,  "text_key": "dp_op_kin"},
+  {"type": "opinion_kind", "id": "marriage",       "amount": 30,  "decay_per_season": 0,  "text_key": "dp_op_marriage"},
+  {"type": "opinion_kind", "id": "same_religion",  "amount": 10,  "decay_per_season": 0,  "text_key": "dp_op_same_religion"},
+  {"type": "opinion_kind", "id": "heresy",         "amount": -40, "decay_per_season": 0,  "text_key": "dp_op_heresy"},
+  {"type": "opinion_kind", "id": "gift",           "amount": 1,   "decay_per_season": 5,  "cap": 20, "text_key": "dp_op_gift"},
+  {"type": "opinion_kind", "id": "unpaid_due",     "amount": -20, "decay_per_season": 5,  "text_key": "dp_op_unpaid_due"},
+  {"type": "opinion_kind", "id": "broken_oath",    "amount": -60, "decay_per_season": 0,  "text_key": "dp_op_broken_oath"},
+  {"type": "opinion_kind", "id": "war",            "amount": -50, "decay_per_season": 10, "text_key": "dp_op_war"},
+  {"type": "opinion_kind", "id": "helped_in_war",  "amount": 25,  "decay_per_season": 0,  "text_key": "dp_op_helped_in_war"},
+  {"type": "opinion_kind", "id": "insult",         "amount": -15, "decay_per_season": 5,  "text_key": "dp_op_insult"},
+  {"type": "opinion_kind", "id": "excommunicated", "amount": -30, "decay_per_season": 0,  "text_key": "dp_op_excommunicated"},
+  {"type": "opinion_kind", "id": "freed_captive",  "amount": 25,  "decay_per_season": 0,  "text_key": "dp_op_freed_captive"},
+  {"type": "opinion_kind", "id": "robbed",         "amount": -40, "decay_per_season": 5,  "text_key": "dp_op_robbed"},
+  {"type": "opinion_kind", "id": "fealty",         "amount": 10,  "decay_per_season": 0,  "text_key": "dp_op_fealty"},
+  {"type": "opinion_kind", "id": "granted",        "amount": 20,  "decay_per_season": 5,  "text_key": "dp_op_granted"}
+]
