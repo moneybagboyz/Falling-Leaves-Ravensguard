@@ -152,12 +152,12 @@ public static class ContractWiring
             int hh = pop.People.Household[g[0]]; if (hh < 0 || hh >= e.HouseholdCount) continue;
             yield return new CompanyInfo(EntityId.Make(IdKind.Faction, 0x4A00_0000UL + (ulong)s), pop.Region.Settlements[s].Name + " company", s, g.Count * 12, g.Count, e.HouseholdPurse[hh].Index, "mercenary");
         }
-        // P6-D4: the idle hands of a place work as a crew of farmhands on the soil jobs the holders post (SoilWorld hands them the job after a week); they take no other contract
+        // P6-D4: the people without a trade in a place (four or more) work as a crew of farmhands on the soil jobs the holders post (SoilWorld hands them the job after a week); they take no other contract
         var hands = new List<int>[pop.Region.Settlements.Count];
         var pt = pop.People; var hht = pop.Households; int day = (int)st.Clock.Now.TotalDays;
         for (int i = 0; i < pt.Count; i++)
         {
-            if (pt.Status[i] != PersonStatus.Alive || pt.Employer[i] >= 0 || pt.Occupation[i] is not (Occupation.None or Occupation.Labourer)) continue;
+            if (pt.Status[i] != PersonStatus.Alive || pt.Occupation[i] is not (Occupation.None or Occupation.Labourer)) continue;       // the day labourers of the place: whoever has no trade, hired out today or not
             int hh = pt.Household[i]; if (hh < 0 || hh >= hht.Count || hh >= e.HouseholdCount || hht.Class[hh] == SocialClass.Gentry) continue;
             int age = pt.AgeYears(i, day); if (age < 16 || age >= 60) continue;
             int s = pt.HomeSettlement[i]; if ((uint)s < (uint)hands.Length) (hands[s] ??= []).Add(i);
