@@ -206,25 +206,6 @@ public static class Phase3Smoke
             if (router.Top != sv) throw new Exception("Esc did not close the Faction screen");
             GD.Print("[smoke]   the Faction screen: F opens it, every page fits, the world keys are off under it, Esc closes it");
 
-            // P6-E4 (chronicle-full 4.4, CH-10): H opens the Chronicle (My life); every view fits 960x540; in the Legends F follows a cause back, D a consequence forward, Backspace returns, Esc closes it
-            Key(Godot.Key.H); await Frames(tree, 40);
-            if (router.Top is not UI.ChronicleScreen chron) throw new Exception("H did not open the Chronicle (top " + router.Top?.GetType().Name + ")");
-            Fit(router.Top!, "the Chronicle, My life", view);
-            for (int i = 0; i < 3; i++) { Key(Godot.Key.E); await Frames(tree, 8); Fit(router.Top!, "the Chronicle, view " + chron.Browser?.Scope, view); }
-            if (chron.Browser is not { Scope: Ravensguard.Sim.Core.ChronicleScope.Legends } cb) throw new Exception("E did not turn the Chronicle to the Legends");
-            var linked = cb.Rows.FirstOrDefault(r => cb.Why(r).Any(w => w.Entry != null)) ?? throw new Exception("the Legends hold no entry with a cause");
-            cb.Open(linked.Id); chron.DebugRefresh(); await Frames(tree, 4);
-            int d0 = cb.TrailDepth; Key(Godot.Key.F); await Frames(tree, 6);
-            if (cb.TrailDepth != d0 + 1) throw new Exception("F did not follow the cause back");
-            Fit(router.Top!, "the Chronicle after F", view);
-            Key(Godot.Key.D); await Frames(tree, 6);
-            if (cb.TrailDepth != d0 + 2) throw new Exception("D did not follow the consequence forward");
-            Key(Godot.Key.Backspace); await Frames(tree, 6);
-            if (cb.TrailDepth != d0 + 1) throw new Exception("Backspace did not return");
-            Key(Godot.Key.Escape); await Frames(tree, 4);
-            if (router.Top != sv) throw new Exception("Esc did not close the Chronicle");
-            GD.Print("[smoke]   the Chronicle: H opens it, every view fits, F and D follow the chain, Backspace returns, Esc closes it");
-
             // P6-B1 (MT-14): the treatment screen on a wounded hero: it fits 960x540, offers verbs (each row readable), the street keys are off under it, Esc closes it
             if (!sv.DebugOpen("treatment")) throw new Exception("the treatment screen is not known to the smoke");
             await Frames(tree, 40);
@@ -322,6 +303,26 @@ public static class Phase3Smoke
             if (router.Top != sv) throw new Exception("a screen key opened " + router.Top?.GetType().Name + " under the succession screen");
             sv.DebugCloseSuccession(); await Frames(tree, 3);
             GD.Print("[smoke]   succession screen with the estate: fits, keys guarded");
+            // P6-E4 (chronicle-full 4.4, CH-10): H opens the Chronicle (My life); every view fits 960x540; in the Legends F follows a cause back, D a consequence forward, Backspace returns, Esc closes it
+            Key(Godot.Key.H); await Frames(tree, 3); await Until(tree, () => router.Top is UI.ChronicleScreen { Browser: not null }, 600);
+            if (router.Top is not UI.ChronicleScreen chron) throw new Exception("H did not open the Chronicle (top " + router.Top?.GetType().Name + ")");
+            Fit(router.Top!, "the Chronicle, My life", view);
+            for (int i = 0; i < 3; i++) { Key(Godot.Key.E); await Frames(tree, 3); Fit(router.Top!, "the Chronicle, view " + chron.Browser?.Scope, view); }
+            if (chron.Browser is not { Scope: Ravensguard.Sim.Core.ChronicleScope.Legends } cb) throw new Exception("E did not turn the Chronicle to the Legends (browser " + (chron.Browser == null ? "none" : chron.Browser.Scope + ", " + chron.Browser.Rows.Count + " rows") + ")");
+            var linked = cb.Rows.FirstOrDefault(r => cb.Why(r).Any(w => w.Entry != null)) ?? throw new Exception("the Legends hold no entry with a cause");
+            cb.Open(linked.Id); chron.DebugRefresh(); await Frames(tree, 2);
+            int d0 = cb.TrailDepth; Key(Godot.Key.F); await Frames(tree, 3);
+            if (cb.TrailDepth != d0 + 1) throw new Exception("F did not follow the cause back");
+            Fit(router.Top!, "the Chronicle after F", view);
+            Key(Godot.Key.D); await Frames(tree, 3);
+            if (cb.TrailDepth != d0 + 2) throw new Exception("D did not follow the consequence forward");
+            Key(Godot.Key.Backspace); await Frames(tree, 3);
+            if (cb.TrailDepth != d0 + 1) throw new Exception("Backspace did not return");
+            Key(Godot.Key.Escape); await Frames(tree, 4);
+            foreach (var k in new[] { Godot.Key.H, Godot.Key.E, Godot.Key.F, Godot.Key.D, Godot.Key.Backspace }) Input.ParseInputEvent(new InputEventKey { Keycode = k, PhysicalKeycode = k, Pressed = false });   // released: D is a walk key outside the Chronicle
+            await Frames(tree, 1);
+            if (router.Top != sv) throw new Exception("Esc did not close the Chronicle");
+            GD.Print("[smoke]   the Chronicle: H opens it, every view fits, F and D follow the chain, Backspace returns, Esc closes it");
         }
         finally { win.Size = oldSize; await Frames(tree, 2); }
     }

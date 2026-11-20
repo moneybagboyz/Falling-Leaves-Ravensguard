@@ -20,7 +20,7 @@ public partial class StreetView
         if (Runtime is not { } rt) return;
         if (_chTask is { IsCompleted: true } t) { if (t.IsCompletedSuccessfully && t.Result != null) _chView = t.Result; _chTask = null; }
         int at = HeroSettlement(); var seen = _chView;
-        _chTask ??= Bar(rt, () => seen != null && seen.Entries.Count == rt.State.Chronicle.Count ? seen : ChronicleView.Of(rt.State, at));
+        _chTask ??= Bar(rt, () => (ChronicleView?)(seen != null && seen.Entries.Count == rt.State.Chronicle.Count ? seen : ChronicleView.Of(rt.State, at)));
     }
 
     /// <summary>H: the Chronicle, at the hero's own life (or at <paramref name="focus"/>, an entry: a rumour's source, a contract's posting, the cause of a defeat).</summary>

@@ -121,6 +121,31 @@ public class CrimeTests(ITestOutputHelper output)
         Assert.Empty(r.Jobs.Open(0, 0));
     }
 
+    /// <summary>CH-7 (chronicle-full 7, P6-E4): the theft entry of CJ-1 lists, as what followed, the witnessing, then the report and the bounty down the chain; the Chronicle's browser walks it forward and back.</summary>
+    [Fact]
+    public void CH7_TheTheftEntry_ListsWhatFollowed_WitnessedReportedAndTheBounty_AndTheBrowserWalksItBothWays()
+    {
+        var r = new Rig();
+        var obs = new List<Observer> { r.At(4, 2), r.At(5, 8), r.At(6, 12), r.At(7, 20, 5), r.At(8, 0, 25), r.At(9, 0, 60) };
+        var res = CrimeSystem.Commit(r.Law, r.Book, new ActSpec("theft", Hero, r.Id(4), 0, 3 * 86_400L + 10 * 3600, 240, 0, "ch_note_crime_hero"), new Scene(DayPhase.Day), Actor(), obs);
+        CrimeSystem.Daily(r.Law, r.Book, 3); CrimeSystem.Daily(r.Law, r.Book, 4);
+        var rec = res.Record!;
+        var posted = r.C.Get(new EntityId(rec.BountyEntry))!; var reported = r.C.Get(posted.Causes[0].EventId!.Value)!; var witnessed = r.C.Get(reported.Causes[0].EventId!.Value)!; var theft = r.C.Get(witnessed.Causes[0].EventId!.Value)!;
+        var view = new ChronicleView
+        {
+            Entries = r.C.All.ToArray(), History = new Chronicle(), Names = new Dictionary<ulong, string>(), Goods = new Dictionary<int, string>(),
+            Mine = new HashSet<ulong>(), Here = new HashSet<ulong>(), Realm = new HashSet<ulong>(),
+        };
+        var b = new ChronicleBrowser(view, ChronicleTypes.Of([]), e => e.TypeId);
+        Assert.Contains(witnessed.Id, b.Followed(theft).Select(x => x.Id));                                          // the theft's own list has the witnessing
+        Assert.True(b.Open(theft.Id));
+        var seen = new List<string>(); var chain = new[] { witnessed.Id, reported.Id, posted.Id };
+        foreach (var next in chain) { var f = b.Followed(b.Current!); int i = f.ToList().FindIndex(x => x.Id == next); Assert.True(i >= 0, "what followed " + b.Current!.TypeId + " does not list " + next); Assert.True(b.FollowEffect(i)); seen.Add(b.Current!.TypeId); }
+        Assert.Equal(["crime_witnessed", "crime_reported", "bounty_posted"], seen.ToArray());
+        int steps = 0; while (b.Current!.Id != theft.Id && b.FollowCause()) steps++;                                  // and back along the Why to the theft
+        Assert.Equal(theft.Id, b.Current!.Id); Assert.Equal(3, steps);
+    }
+
     [Fact]
     public void CJ1_TheBountyIsCappedAtAQuarterOfTheTreasury_AndPaysAllAliveOrHalfDead_TheRestGoingBack()
     {
