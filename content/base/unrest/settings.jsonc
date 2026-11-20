@@ -1,0 +1,4 @@
+// The numbers of unrest and revolt (docs/specs/phase6/unrest-and-revolt.md 3, 4): the aggrieved line, the rungs in permille, the riot's trigger and crowd, the revolt's triggers and battle, the fear after a loss and the concessions. The defaults are the spec's.
+[
+  {"type": "unrest_settings", "id": "unrest"}
+]

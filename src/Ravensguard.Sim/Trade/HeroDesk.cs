@@ -64,6 +64,8 @@ public enum HeroCommandKind : byte
     Heist,
     /// <summary>Appended (P6-D2): the hero's politics at the barrier ("dp:swear|fief", manor, fief, gift, giftr, renounce), applied by <see cref="Ravensguard.Sim.Politics.PoliticsDesk"/>.</summary>
     Diplomacy,
+    /// <summary>Appended (P6-E1): the hero in a riot or as a lord facing unrest ("ur:join|riot", lead, guards, mediate, dole, pardon), applied by <see cref="Ravensguard.Sim.Unrest.UnrestDesk"/>.</summary>
+    Unrest,
 }
 
 /// <summary>Where the hero crafts (built on the main thread from what is in reach, copied into the command).</summary>
@@ -525,6 +527,7 @@ public sealed class HeroDesk
                 HeroCommandKind.Heist => Ravensguard.Sim.Heists.HeistDesk.Apply(ctx, c),                         // P6-D3: slip into a site, pick, search, bribe, free, leave
                 HeroCommandKind.Disease => Ravensguard.Sim.Disease.DiseaseDesk.Apply(ctx, c),                      // P6-C4: nursing, the physician's call, burning bedding, a quarantine
                 HeroCommandKind.Diplomacy => Ravensguard.Sim.Politics.PoliticsDesk.Apply(ctx, c),                // P6-D2: fealty, manors, fiefs, gifts, renouncing the oath
+                HeroCommandKind.Unrest => Ravensguard.Sim.Unrest.UnrestDesk.Apply(ctx, c),                      // P6-E1: join, lead, stand with the guards or mediate a riot; a dole and a pardon as lord
                 HeroCommandKind.Rule => Ravensguard.Sim.Rule.RuleDesk.Apply(ctx, c),                           // P6-C3: policy, officials, councils, loans, charters
                 HeroCommandKind.Contract => Ravensguard.Sim.Contracts.ContractDesk.Apply(ctx, c),                // P6-C2: take, hand over, pin, enter, bid, speak ill
                 HeroCommandKind.Holdings => Ravensguard.Sim.Holdings.HoldingsDesk.Apply(ctx, c),                // P6-B6: clearing and sowing a claim, whose is this, buy and deliver, installing stations

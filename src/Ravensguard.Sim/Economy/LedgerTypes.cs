@@ -47,6 +47,8 @@ public enum TransferReason : byte
     Tribute,
     /// <summary>P6-D2 (diplomacy 4.5): a captured lord's ransom at the Baron rank price, paid to his captor's realm. Appended.</summary>
     LordRansom,
+    /// <summary>P6-E1 (unrest 4.2): coin a riot carried off from a fief's chest to the rioters' households (the crime of theft is on each carrier). Appended: older saves load with the count padded.</summary>
+    RiotLoot,
 }
 
 /// <summary>The only faucets: the one-off seed money of world creation, silver struck at a mint, and the coin a household brings across a region border (the other region's ledger holds the matching <see cref="SinkReason.Emigrate"/>).</summary>
