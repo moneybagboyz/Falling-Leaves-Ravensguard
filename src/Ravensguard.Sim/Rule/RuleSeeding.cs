@@ -25,10 +25,13 @@ public static class RuleSeeding
     }
 
     /// <summary>Builds the book of the home region as the people stand (fiefs, offices, honesty; no dues, loans or councils yet).</summary>
-    public static RuleBook Build(WorldState st, ContentDatabase? db)
+    public static RuleBook Build(WorldState st, ContentDatabase? db) => Build(st.Population, db, st.Seed);
+
+    /// <summary>Builds the book from the people alone (the world's seed and content): what a headless world without a world state uses.</summary>
+    public static RuleBook Build(Population pop, ContentDatabase? db, ulong seed)
     {
-        var b = Bind(new RuleBook(), db, st.Seed);
-        var pop = st.Population; var region = pop.Region; var pt = pop.People; int day = pop.NowDay;
+        var b = Bind(new RuleBook(), db, seed);
+        var region = pop.Region; var pt = pop.People; int day = pop.NowDay;
         for (int f = 0; f < region.Fiefs.Count; f++)
         {
             var fi = region.Fiefs[f];
@@ -40,9 +43,9 @@ public static class RuleSeeding
         for (int f = 0; f < region.Fiefs.Count; f++)
         {
             int reeve = Pick(pop, f, seatOnly: true, Skill.Leadership, day, -1, lordHouse(f));
-            if (reeve >= 0) AppointAtSeed(b, st.Seed, OfficeKind.Reeve, f, region.Fiefs[f].Realm, pt.IdOf(reeve), day);
+            if (reeve >= 0) AppointAtSeed(b, seed, OfficeKind.Reeve, f, region.Fiefs[f].Realm, pt.IdOf(reeve), day);
             int bailiff = Pick(pop, f, seatOnly: false, Skill.Law, day, reeve, lordHouse(f));
-            if (bailiff >= 0) AppointAtSeed(b, st.Seed, OfficeKind.Bailiff, f, region.Fiefs[f].Realm, pt.IdOf(bailiff), day);
+            if (bailiff >= 0) AppointAtSeed(b, seed, OfficeKind.Bailiff, f, region.Fiefs[f].Realm, pt.IdOf(bailiff), day);
         }
         foreach (int realm in region.Fiefs.Select(x => x.Realm).Where(r => r >= 0).Distinct().OrderBy(r => r))
         {
@@ -50,7 +53,7 @@ public static class RuleSeeding
             for (int f = 0; f < region.Fiefs.Count; f++) if (region.Fiefs[f].Realm == realm && (seat < 0 || region.Settlements[region.Fiefs[f].SeatSettlement].TargetPop > region.Settlements[region.Fiefs[seat].SeatSettlement].TargetPop)) seat = f;
             if (seat < 0) continue;
             int coll = PickInSettlement(pop, region.Fiefs[seat].SeatSettlement, Skill.Trading, day, -1, lordHouse(seat));
-            if (coll >= 0) AppointAtSeed(b, st.Seed, OfficeKind.CustomsCollector, -1, realm, pt.IdOf(coll), day);
+            if (coll >= 0) AppointAtSeed(b, seed, OfficeKind.CustomsCollector, -1, realm, pt.IdOf(coll), day);
         }
         return b;
     }

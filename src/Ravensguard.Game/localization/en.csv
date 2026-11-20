@@ -4608,6 +4608,126 @@ hw_q_buy_deliver,Buy and deliver what is missing
 hw_q_post_haul,Post haul jobs
 hw_panel_clearing,"Clearing: {0}% ({1} of {2} trees felled, {3} stumps out, {4} hands)"
 ch_note_homestead_acre,An acre cleared for a homestead.
+ch_rule_official_appointed,{holder} was made {office} of {place}.
+ch_rule_official_dismissed,{holder} was dismissed from the post of {office}.
+ch_rule_official_found,{holder} was found to have kept {amount} of the lord's money and repaid {repaid}.
+ch_rule_fief_escheated,"The lord of {place} left no heir, and the fief returned to its overlord."
+ch_rule_fief_inherited,{heir} took the lordship of {place}.
+ch_rule_wardship_begun,{heir} was too young to hold {place}; the overlord took it in ward until day {until}.
+ch_rule_wardship_ended,The ward of {place} ended; the heir came of age.
+ch_rule_aid_called,{place} owes its overlord an aid of {amount} for {occasion}.
+ch_rule_marriage_sold,The overlord sold his consent to a marriage of the house of {place} for {amount}.
+ch_rule_marriage_fined,The house of {place} married without the overlord's consent and was fined {amount}.
+ch_rule_due_arrears,A due of {amount} ({due}) went unpaid.
+ch_rule_fief_forfeited,"{holder} lost {place} to the overlord's court, still owing {owed}."
+ch_rule_subsidy_granted,"The council granted a subsidy: {yes} for, {no} against."
+ch_rule_subsidy_refused,"The council refused a subsidy: {yes} for, {no} against."
+ch_rule_subsidy_collected,The subsidy was taken from {households} households: {amount}.
+ch_rule_tallage_taken,Tallage of {amount} was taken from {households} households of {place}.
+ch_rule_loan_made,A loan of {amount} was made for {seasons} seasons.
+ch_rule_loan_repaid,A loan of {amount} was repaid with {interest} interest.
+ch_rule_loan_default,A loan went into default with {amount} unpaid after {seasons} seasons late.
+ch_rule_charter_extended,{holder} paid {amount} to extend a charter's deadline.
+ch_rule_charter_revoked,The charter held by {holder} was revoked.
+ch_rule_market_charter,"{holder} was granted a market charter for {place}, for {fee}; it is a town."
+ch_rule_eviction_notice,{squatter} was served notice to leave the waste near {place} or pay {licence} within {days} days.
+ch_rule_claim_evicted,{squatter}'s claim of {tiles} acres was cleared by the lord.
+ch_rule_rents_commuted,The lord of {place} changed the rent of {leases} leases.
+ch_note_lord_appoints,The lord chose him for the post.
+ch_note_official_died,The holder died.
+ch_note_dismissed_for_skimming,He was found skimming the lord's receipts.
+ch_note_lord_dismisses,The lord dismissed him.
+ch_note_audit_found,The lord's audit found his accounts short.
+ch_note_skim_seen,A colleague saw him take coin from the chest.
+ch_note_skim_audit,The lord's audit found him taking coin from the chest.
+ch_note_line_died_out,The lord's line died out.
+ch_note_lord_died,The old lord died.
+ch_note_fief_granted,The overlord granted the fief.
+ch_note_heir_under_age,The heir was under sixteen.
+ch_note_heir_of_age,The heir reached sixteen.
+ch_note_feudal_aid,The overlord called the feudal aid his vassals owe him.
+ch_note_overlord_consent,A fief's heir needs the overlord's consent to marry.
+ch_note_married_without_consent,The match was made without consent.
+ch_note_due_unpaid,The payer did not have the coin when it fell due.
+ch_note_service_unpaid,The vassal's men did not report.
+ch_note_relief_unpaid,The heir did not pay his relief within four seasons.
+ch_note_council_defence,The ruler asked it to defend the realm.
+ch_note_council_casus_belli,The ruler asked it for a war with a just cause.
+ch_note_council_no_war,The ruler asked it though there was no war.
+ch_note_council_granted,The council had granted it.
+ch_note_tallage_at_will,The ruler took tallage at will.
+ch_note_loan_asked,The borrower asked for coin.
+ch_note_loan_term_ended,The loan's term ran out.
+ch_note_loan_deed_forfeit,The mortgaged deed passed to the lender.
+ch_note_loan_unpaid,Two seasons passed without payment.
+ch_note_charter_extension_paid,The holder paid for one more year.
+ch_note_charter_lapsed,The settlers did not come in time.
+ch_note_charter_arrears,Its dues were two seasons behind.
+ch_note_market_petition,"The settlement had the people and a square, and petitioned."
+ch_note_squatting_on_waste,He staked a claim on the lord's waste without a licence.
+ch_note_squatter_evicted,The licence was not bought in time.
+ch_note_lord_takes_coin,The lord took his rents in coin.
+ch_note_lord_takes_grain,The lord took his rents in grain.
+ru_office_reeve,reeve
+ru_office_bailiff,bailiff
+ru_office_steward,steward
+ru_office_sheriff,sheriff
+ru_office_customscollector,customs collector
+ru_office_gaoler,gaoler
+ru_office_treasurer,treasurer
+ru_due_relief,relief
+ru_due_aid,aid
+ru_due_service,service
+ru_due_marriagefee,marriage fee
+ru_due_subsidy,subsidy
+ru_due_tallage,tallage
+ru_due_rent,rent
+ru_due_labour,labour
+ru_due_wardship,wardship
+ru_occasion_ransom,the overlord's ransom
+ru_occasion_knighting,his eldest son's knighting
+ru_occasion_marriage,his eldest daughter's marriage
+ld_charter_refused_contested,The ruler refused: the land is contested.
+ld_charter_refused_opinion,The ruler refused: he thinks too little of you.
+ld_charter_refused_standing,The ruler refused: you are not known well enough in his realm.
+ld_charter_refused_other_realm,The ruler refused: you are of another realm.
+ld_charter_refused_fee,The ruler refused: the fee was too small.
+ld_charter_refused_none,The ruler refused.
+ru_no_rule,There is no rule book here.
+ru_not_your_fief,That is not your fief.
+ru_not_ruler,You do not rule that realm.
+ru_not_your_town,That town is not yours to tax.
+ru_not_your_loan,That is not your loan.
+ru_not_your_due,That is not your due.
+ru_level_set,The hearth tax of {0} is now {1}.
+ru_level_low,low
+ru_level_normal,normal
+ru_level_high,high
+ru_level_crushing,crushing
+ru_commute_once_a_year,You may change your rents once a year.
+ru_rents_commuted,{0} leases changed.
+ru_appointed,{0} is now your {1}.
+ru_cannot_hold_office,He cannot hold that office.
+ru_dismissed,{0} was dismissed.
+ru_council_granted,"The council granted the subsidy: {0} for, {1} against."
+ru_council_refused,"The council refused: {0} for, {1} against."
+ru_tallage_taken,You took {0} in tallage.
+ru_customs_set,Customs are now {0}%.
+ru_customs_range,Customs may be 0 to 15%.
+ru_no_lender,No one will lend you that.
+ru_loan_made,You borrowed {0} at {1}% a season.
+ru_loan_repaid,You repaid {0}.
+ru_cannot_afford,You cannot afford {0}.
+ru_loan_bad_terms,Those terms make no sense.
+ru_loan_credit_closed,Your credit is closed.
+ru_loan_usury_forbidden,His faith forbids lending at interest.
+ru_loan_lender_short,The lender does not have the coin.
+ru_market_granted,{0} is now a market town.
+ru_market_not_eligible,It needs 200 people and an open square.
+ru_charter_extended,The charter's deadline was extended a year.
+ru_extend_refused,That charter cannot be extended.
+ru_due_paid,You paid {0}.
+ru_aid_called,{0} vassals were called for the aid.
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."

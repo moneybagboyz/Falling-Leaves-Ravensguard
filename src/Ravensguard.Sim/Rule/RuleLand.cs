@@ -65,7 +65,8 @@ public static class RuleLand
             string why = "";
             if (ch.State == CharterState.Lapsed)
             {
-                if (ch.Grantee != c.Hero && !c.B.Extended.Contains(ch.Serial) && Extend(c, ch.Serial, day) == "") continue;       // an NPC holder pays the extension if he can
+                bool heroHolds = c.Hero != EntityId.None && ch.Grantee == c.Hero;
+                if (!heroHolds && !c.B.Extended.Contains(ch.Serial) && Extend(c, ch.Serial, day) == "") continue;       // an NPC holder pays the extension if he can
                 why = "ch_note_charter_lapsed";
             }
             else if (land.Book.Deeds.TryGetValue(ch.DeedId, out var d) && d.ArrearsSeasons >= c.S.CharterArrearsSeasons) why = "ch_note_charter_arrears";
