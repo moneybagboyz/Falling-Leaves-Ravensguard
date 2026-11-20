@@ -556,6 +556,23 @@ public static class NewGameDebug
                     await Frames(tree, 150);                                          // the view comes from a barrier
                     break;
                 }
+            case "disease":
+                {
+                    // dev (P6-C4): a real new game, the hero is ill with a party member nursing him, the plague is in the region and wages are dear: the Character screen
+                    var w = MakeWorld(Math.Min(years, 60), 7);
+                    var d = NewGameServices.NewDraft(); d.Name = "Shot"; d.LibraryWorldId = w.Info.Id;
+                    router.Push(new RegionBuildScreen(router, d, w));
+                    if (!await Until(tree, () => router.Top is Ravensguard.Game.World.StreetView, 9000)) throw new Exception("disease shot: the region build did not finish");
+                    var sv = (Ravensguard.Game.World.StreetView)router.Top!; var rt = sv.Runtime!;
+                    await Until(tree, () => rt.HourDone >= sv.DebugWorld.Clock.Now.TotalHours, 6000);
+                    await Frames(tree, 60);
+                    sv.DebugWorld.SetSpeed(Ravensguard.Sim.Core.SimSpeed.Paused);
+                    sv.DebugDisease();
+                    await Frames(tree, 150);                                          // the view comes from a barrier
+                    sv.DebugOpen("character");
+                    await Frames(tree, 30);
+                    break;
+                }
             case "loadreport":
                 {
                     // dev: the pre-load report of a save made with other content (a made-up one: a good added, one moved, one written off, a mod gone)

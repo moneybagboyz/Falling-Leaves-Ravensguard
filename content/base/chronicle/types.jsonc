@@ -60,7 +60,7 @@
   {"type": "chronicle_type", "id": "contract_taken", "text_key": "ch_t_contract_taken", "legacy": true},
   {"type": "chronicle_type", "id": "cottage_built", "text_key": "ch_t_cottage_built", "legacy": true, "rumour": "cottage_built"},
   {"type": "chronicle_type", "id": "coup", "text_key": "ch_t_coup", "legacy": true},
-  {"type": "chronicle_type", "id": "death", "text_key": "ch_t_death", "legacy": true, "rumour": "death", "specific_requires": "either", "note_keys": ["ch_note_fight_death"]},
+  {"type": "chronicle_type", "id": "death", "text_key": "ch_t_death", "legacy": true, "rumour": "death", "specific_requires": "either", "note_keys": ["ch_note_fight_death", "ch_note_ill_death", "ch_note_plague_death"]},
   {"type": "chronicle_type", "id": "emigration", "text_key": "ch_t_emigration", "legacy": true},
   {"type": "chronicle_type", "id": "escheat", "text_key": "ch_t_escheat", "legacy": true},
   {"type": "chronicle_type", "id": "estate_claimed", "text_key": "ch_t_estate_claimed", "legacy": true},
@@ -224,5 +224,9 @@
   {"type": "chronicle_type", "id": "sentence_served", "text_key": "ch_justice_served", "params": [{"name": "doer", "type": "person"}, {"name": "place", "type": "place"}], "cause_kinds": ["Justice", "Crime"]},
   {"type": "chronicle_type", "id": "gaol_released", "text_key": "ch_justice_released", "params": [{"name": "doer", "type": "person"}, {"name": "why", "type": "text_key"}, {"name": "place", "type": "place"}], "cause_kinds": ["Justice", "Crime"]},
   {"type": "chronicle_type", "id": "bribe_taken", "text_key": "ch_justice_bribe_taken", "params": [{"name": "official", "type": "person"}, {"name": "doer", "type": "person"}, {"name": "amount", "type": "mites"}, {"name": "place", "type": "place"}], "cause_kinds": ["Justice", "Crime"]},
-  {"type": "chronicle_type", "id": "bribe_refused", "text_key": "ch_justice_bribe_refused", "params": [{"name": "official", "type": "person"}, {"name": "doer", "type": "person"}, {"name": "place", "type": "place"}], "cause_kinds": ["Justice", "Crime"]}
+  {"type": "chronicle_type", "id": "bribe_refused", "text_key": "ch_justice_bribe_refused", "params": [{"name": "official", "type": "person"}, {"name": "doer", "type": "person"}, {"name": "place", "type": "place"}], "cause_kinds": ["Justice", "Crime"]},
+  {"type": "chronicle_type", "id": "illness_began", "text_key": "ch_ill_began", "params": [{"name": "person", "type": "person"}, {"name": "illness", "type": "text_key"}], "cause_kinds": ["Illness"], "specific_requires": "note", "note_keys": ["ch_note_ill_cold_wet", "ch_note_ill_winter", "ch_note_ill_housemate", "ch_note_ill_marsh", "ch_note_ill_camp_water", "ch_note_ill_army_camp", "ch_note_ill_after_cough"]},
+  {"type": "chronicle_type", "id": "hero_died_illness", "text_key": "ch_ill_hero_died", "params": [{"name": "hero", "type": "person"}, {"name": "illness", "type": "text_key"}], "cause_kinds": ["Illness", "Disease"], "specific_requires": "either", "note_keys": ["ch_note_ill_death", "ch_note_plague_death"]},
+  {"type": "chronicle_type", "id": "plague_settlement", "text_key": "ch_plague_settlement", "params": [{"name": "plague", "type": "text_key"}, {"name": "place", "type": "place"}, {"name": "days", "type": "days"}], "cause_kinds": ["Disease"], "specific_requires": "either", "note_keys": ["ch_note_plague_arrived", "ch_note_plague_road"]},
+  {"type": "chronicle_type", "id": "plague_quarantine", "text_key": "ch_plague_quarantine", "params": [{"name": "place", "type": "place"}, {"name": "days", "type": "days"}], "cause_kinds": ["Disease"], "specific_requires": "either", "note_keys": ["ch_note_plague_near"]}
 ]

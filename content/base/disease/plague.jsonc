@@ -1,0 +1,5 @@
+// The numbers of everyday illness onset, the great plague and the economy's answer (docs/specs/phase6/disease-and-plague.md 3, 4). The plague's start chance and mortality are the world setting
+// (Difficulty, plague severity); a settlement's epidemic runs 30 to 60 game days. A game year is 60 days, a season 15.
+[
+  { "type": "disease_settings", "id": "disease" }
+]

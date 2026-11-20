@@ -67,6 +67,7 @@ public sealed class RegionServices
         Seed = seed; Content = content; Continent = continent; Home = home;
         Weather = RegionWeather.ForContinent(continent);
         FarmSettings = FarmingSettings.FromContent(content);
+        Ravensguard.Sim.Disease.DiseaseRules.Install(content);                    // disease 3: the illnesses and the plague's numbers come from content/base/medicine and disease
         Ravensguard.Sim.Combat.Wounds.MedicineRules.Install(content);          // medicine 3: the treatment times, healing table and fees come from content/base/medicine
     }
 

@@ -62,6 +62,7 @@ public static class Phase5Trail
         if (law != 0) sha.AppendData(BitConverter.GetBytes(law));          // P6-B2: the LawHash joins the trail only once a crime exists, so a world without crime keeps its pinned hash
         if (rt.AtBarrier(() => rt.State.Justice is { IsEmpty: false } jb ? jb.Hash() : 0UL).GetAwaiter().GetResult() is var justice and not 0) sha.AppendData(BitConverter.GetBytes(justice));          // P6-C1: the courts' hash joins the trail only once someone is held or sentenced
         if (rt.AtBarrier(() => rt.State.Family?.Hash() ?? 0UL).GetAwaiter().GetResult() is var family and not 0) sha.AppendData(BitConverter.GetBytes(family));          // P6-B3: the FamilyHash joins the trail only once a family exists
+        if (rt.AtBarrier(() => rt.State.Disease is { IsBlank: false } d ? d.Hash() : 0UL).GetAwaiter().GetResult() is var disease and not 0) sha.AppendData(BitConverter.GetBytes(disease));          // P6-C4: the DiseaseHash joins the trail only once anything has happened
         return Convert.ToHexString(sha.GetHashAndReset())[..16];
     }
 }

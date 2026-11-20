@@ -46,6 +46,7 @@ public static class ContinentTick
         }
         TradeFlows(st, isRes, ref grainFlow, ref coinFlow);
         long moved = Migration(st, res, isRes, day);
+        Ravensguard.Sim.Disease.ContinentPlagueStep.Run(st, id => isRes[id], now, season);        // P6-C4: the great plague's start and spread (S9)
         int news = News(st, res, isRes, now, season);
         Orders(st, res, isRes);
         st.LastSeason = season; st.TicksRun++;
@@ -380,6 +381,8 @@ public static class ContinentTick
                 var s = st.Summaries[id]; if (s.Pop <= 0) continue;
                 if (HarvestFactor(st, id, now.Year) < 600) fresh.Add((id, new NewsItem(NewsKind.HarvestFailure, (byte)id, HarvestFactor(st, id, now.Year), day, 0)));
             }
+        foreach (var (pr, mag) in st.Plague.PendingNews) fresh.Add((pr, new NewsItem(NewsKind.Plague, (byte)pr, mag, day, 0)));        // P6-C4: word of the plague travels like any news
+        st.Plague.PendingNews.Clear();
         foreach (var (origin, item) in fresh)
         {
             // breadth-first up to three hops along the roads; each hop ages the word by the road's length at courier pace

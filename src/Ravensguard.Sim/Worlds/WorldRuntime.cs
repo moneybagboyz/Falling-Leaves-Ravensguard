@@ -131,6 +131,7 @@ public sealed class WorldRuntime : IDisposable
         Ravensguard.Sim.Succession.EstateWiring.Attach(homeWorld, state, content);                                                                 // P5-H hook: estates of the dead, creditors' claims, the labour market's wills (EstateSystem)
         Ravensguard.Sim.Holdings.HoldingsWiring.Attach(homeWorld, state, content);                                                                 // P6-B6 hook: the hero's clearings, coppice and breeding (HoldingsSystem), after land and construction
         Ravensguard.Sim.Medicine.MedicineWiring.Attach(homeWorld, state, content);                                                                  // P6-B1 hook: the physicians and the hero's treatment queue (AbstractPhysic, the treatment screen)
+        Ravensguard.Sim.Disease.DiseaseWiring.Attach(homeWorld, state, content);                                                                    // P6-C4 hook: illnesses, the great plague, the scarcity terms (DiseaseSystem)
         Ravensguard.Sim.Faith.FaithWiring.Attach(homeWorld, state, content);                                                                        // P6-B4 hook: the church (FaithSystem), the holy days' feasts
         homeWorld.Sim.Set(new Ravensguard.Sim.Combat.Abstract.AbstractBattleService(content));                                    // P4-G hook: fights nobody watches (abstract battles)
         state.Regions = Records;

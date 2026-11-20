@@ -77,6 +77,7 @@ public sealed class VitalRollsSystem : AbstractSystem
         int crowding = VitalMath.Crowding(hht.MemberCount[hh], beds);
         bool cold = (e.Grievances[hh] & Grievance.Cold) != 0;
         int outbreak = v.OutbreakEndDay[s] > day ? v.OutbreakMult[s] : 1000;
+        bool physician = outbreak > 1000 && w.Get<Ravensguard.Sim.Medicine.PhysicianBook>() is { IsEmpty: false } pbook && pbook.Physicians(s) > 0;
         _dead.Clear();
         var causes = new List<DeathCause>();
         foreach (int p in _members)
@@ -84,6 +85,7 @@ public sealed class VitalRollsSystem : AbstractSystem
             if (pt.Status[p] != PersonStatus.Alive) continue;
             int age = w.AgeOn(p, day), cd = e.NutritionCd[p];
             int om = outbreak > 1000 && (cd < 2500 || age < 5 || age >= 60) ? outbreak : 1000;
+            if (om > 1000 && physician) om = 1000 + (om - 1000) * (100 - Ravensguard.Sim.Disease.DiseaseRules.Current.S.AbstractPhysicOutbreakCutPct) / 100;       // P6-C4 (disease 4.1): where a physician treats, a sick household's outbreak multiplier is a quarter lower
             var hz = VitalMath.Hazard(rates, age, cd, crowding, town, cold, om);
             ulong id = pt.IdOf(p).Value;
             if (age >= rates.MaxAgeYears) { _dead.Add(p); causes.Add(DeathCause.Age); continue; }

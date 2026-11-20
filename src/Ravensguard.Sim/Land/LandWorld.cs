@@ -34,6 +34,8 @@ public sealed class LandWorld
     public Population Pop { get; }
     public RegionData Region => Pop.Region;
     public EconomyState Econ { get; }
+    /// <summary>P6-C4 (disease-and-plague 4.5): a price of land or of a new lease as the scarcity term has it (a third of the holdings empty: about half); 1000 permille leaves it as calibrated.</summary>
+    public long Scarce(long mites) => mites * Econ.LandMultPm / 1000;
     public LandRulesDef Rules { get; }
     public GrowthTuningDef GrowthTuning { get; }
     public MarketSystem? Markets { get; }
@@ -136,7 +138,7 @@ public sealed class LandWorld
             var lot = lots[l];
             if (!lot.Vacant || lot.Dwelling is not (DwellingType.Cottage or DwellingType.Longhouse or DwellingType.Burgage) || claimed.Contains(l) || HoldsLot(s, l)) continue;
             int area = lot.Rect.W * lot.Rect.H; long bv = BuildingValue(s, lot.Dwelling);
-            res.Add(new Listing(s, l, lot.Rect, lot.Facing, area, LandRules.PlotPrice(Rules, area, st.Class, demand, bv), LandRules.PlotDues(Rules, st.Class, area), LandRules.PlotTenure(st.Class), bv));
+            res.Add(new Listing(s, l, lot.Rect, lot.Facing, area, Scarce(LandRules.PlotPrice(Rules, area, st.Class, demand, bv)), LandRules.PlotDues(Rules, st.Class, area), LandRules.PlotTenure(st.Class), bv));
         }
         bool town = st.Class == SettlementClass.Town;
         int w = town ? GrowthTuning.PlotWidthTownM : GrowthTuning.PlotWidthVillageM, d = town ? GrowthTuning.PlotDepthTownM : GrowthTuning.PlotDepthVillageM;
@@ -144,7 +146,7 @@ public sealed class LandWorld
         {
             reserved.Add(rect);
             int area = rect.W * rect.H;
-            res.Add(new Listing(s, -1, rect, facing, area, LandRules.PlotPrice(Rules, area, st.Class, demand), LandRules.PlotDues(Rules, st.Class, area), LandRules.PlotTenure(st.Class), 0));
+            res.Add(new Listing(s, -1, rect, facing, area, Scarce(LandRules.PlotPrice(Rules, area, st.Class, demand)), LandRules.PlotDues(Rules, st.Class, area), LandRules.PlotTenure(st.Class), 0));
         }
         return res;
     }
@@ -274,7 +276,7 @@ public sealed class LandWorld
         var st = Region.Settlements[d.Settlement]; var (_, l) = LandIds.SplitLot(d.Subject);
         int area = d.Rect.W * d.Rect.H;
         var dw = l < st.Plan.Lots.Count ? st.Plan.Lots[l].Dwelling : DwellingType.None;
-        return LandRules.PlotPrice(Rules, area, st.Class, LandRules.DemandPm(Rules, LandRules.CrowdedPct(Rules, Pop.Households, d.Settlement)), BuildingValue(d.Settlement, dw));
+        return Scarce(LandRules.PlotPrice(Rules, area, st.Class, LandRules.DemandPm(Rules, LandRules.CrowdedPct(Rules, Pop.Households, d.Settlement)), BuildingValue(d.Settlement, dw)));
     }
 
     /// <summary>
@@ -332,7 +334,7 @@ public sealed class LandWorld
         var deed = new Deed
         {
             Id = id, Kind = HoldingKind.Parcel, Subject = p, Settlement = pc.Settlement, Holder = lessee, HolderPurse = lesseeKind, Tenure = Tenure.Leasehold, Lord = Region.Settlements[pc.Settlement].FiefIndex,
-            DuesMitesPerSeason = LandRules.FieldLeasePerSeason(Rules, pc.FieldCount), LeaseEndDay = day + Rules.LeaseTermDays, Lessor = lordId, LessorPurse = lordKind, AcquiredDay = day, Cause = DeedCause.Leased,
+            DuesMitesPerSeason = Scarce(LandRules.FieldLeasePerSeason(Rules, pc.FieldCount)), LeaseEndDay = day + Rules.LeaseTermDays, Lessor = lordId, LessorPurse = lordKind, AcquiredDay = day, Cause = DeedCause.Leased,
         };
         Put(deed, day);
         ParcelLet?.Invoke(p, lessee, true);
@@ -383,7 +385,7 @@ public sealed class LandWorld
         var deed = new Deed
         {
             Id = id, Kind = HoldingKind.Building, Subject = LandIds.LotSubject(s, lot), Settlement = s, Holder = lessee, HolderPurse = lesseeKind, Tenure = Tenure.Leasehold, Lord = Region.Settlements[s].FiefIndex,
-            DuesMitesPerSeason = LandRules.HouseRent(Rules, l.Dwelling), LeaseEndDay = day + Rules.LeaseTermDays, Lessor = lordId, LessorPurse = lordKind, AcquiredDay = day, Cause = DeedCause.Leased, Rect = l.Rect,
+            DuesMitesPerSeason = Scarce(LandRules.HouseRent(Rules, l.Dwelling)), LeaseEndDay = day + Rules.LeaseTermDays, Lessor = lordId, LessorPurse = lordKind, AcquiredDay = day, Cause = DeedCause.Leased, Rect = l.Rect,
         };
         Put(deed, day);
         HouseStore(deed);
