@@ -48,7 +48,10 @@ public static class UnrestDesk
                 var place = uc.PlaceId(riot.Settlement);
                 void Deed(string id)
                 {
-                    var e = uc.Chron.Chron(uc.Now, id, "ch_ur_" + id, [ChronParam.Person("doer", hero), ChronParam.Place("place", place)], [hero, place], [new Cause(CauseKind.Unrest, new EntityId(riot.RiseEntry), "", "ch_note_ur_riot_ran")]);
+                    string tkey = "ch_ur_" + id;
+                    var dps = new List<ChronParam> { ChronParam.Person("doer", hero), ChronParam.Place("place", place) };
+                    var dwhy = new Cause(CauseKind.Unrest, new EntityId(riot.RiseEntry), "", "ch_note_ur_riot_ran");
+                    var e = uc.Chron.Chron(uc.Now, id, tkey, dps, [hero, place], [dwhy]);
                     uc.Links.Deed?.Invoke(hero, id, e, riot.Settlement, day);
                 }
                 switch (f[0])
@@ -76,7 +79,7 @@ public static class UnrestDesk
                 if (fr == null || fr.Holder != heroId || fr.Forfeited) return R(c, HeroResultCode.Refused, "ur_not_your_fief");
                 if (f[0] == "pardon") { int n = UnrestConcede.Pardon(uc, fief, "ch_note_ur_pardon_mercy"); return n > 0 ? R(c, HeroResultCode.Ok, "ur_pardoned", n) : R(c, HeroResultCode.Refused, "ur_nothing_to_pardon"); }
                 var from = uc.R.HouseholdOf(heroId);
-                int fed = UnrestConcede.Dole(uc, fief, from, "ch_note_ur_unrest_high");
+                int fed = UnrestConcede.Dole(uc, fief, from, "ch_note_dp_unrest_high");
                 return fed > 0 ? R(c, HeroResultCode.Ok, "ur_doled", fed) : R(c, HeroResultCode.Refused, "ur_nobody_hungry");
             }
         }

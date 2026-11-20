@@ -187,10 +187,9 @@ public static class UnrestEngine
 
     private static void RungRose(UnrestCtx c, int s, int f, SettlementUnrest su, int rung, int u, Assessment a)
     {
-        string type = rung >= 2 ? "unrest_rung" : "unrest_rung";
         var place = c.PlaceId(s);
         var ps = new List<ChronParam> { ChronParam.Place("place", place), ChronParam.Count("rung", rung), ChronParam.Count("unrest", u), ChronParam.Count("households", a.Aggrieved.Count) };
-        c.Chron.Chron(c.Now, type, "ch_ur_rung", ps, [place], CausesOf(c, a));
+        c.Chron.Chron(c.Now, "unrest_rung", "ch_ur_rung", ps, [place], CausesOf(c, a));
     }
 
     private static void Grumble(UnrestCtx c, int s, int f, SettlementUnrest su, int u, Assessment a)

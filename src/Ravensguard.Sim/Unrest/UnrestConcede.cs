@@ -52,7 +52,7 @@ public static class UnrestConcede
     // ------------------------------------------------------------------ the lord's concessions
 
     /// <summary>Lowers a fief's tax one level (the grievance of the level is a point less at once). False when it is at the lowest.</summary>
-    public static bool LowerTax(UnrestCtx c, int fief, string noteKey = "ch_note_ur_unrest_high")
+    public static bool LowerTax(UnrestCtx c, int fief, string noteKey = "ch_note_dp_unrest_high")
     {
         var tax = c.R.Tax; if (tax == null) return false;
         var lv = tax.LevelOfFief(fief); if (lv <= TaxLevel.Low) return false;
@@ -62,7 +62,7 @@ public static class UnrestConcede
     }
 
     /// <summary>The lord's barn feeds the hungry: each hungry household of the fief gets the dole's coin from the payer (the fief's chest when none is named) and its hunger points are cleared while the dole lasts. Returns the households fed.</summary>
-    public static int Dole(UnrestCtx c, int fief, Party payer, string noteKey = "ch_note_ur_unrest_high")
+    public static int Dole(UnrestCtx c, int fief, Party payer, string noteKey = "ch_note_dp_unrest_high")
     {
         var e = c.W.Economy; int fed = 0; long coin = 0;
         if (payer.IsNone) payer = Party.OfFief(fief);
@@ -106,12 +106,12 @@ public static class UnrestConcede
         return true;
     }
 
-    private static void Entry(UnrestCtx c, int fief, string type, string action, string noteKey, long coin = 0)
+    private static void Entry(UnrestCtx c, int fief, string _, string action, string noteKey, long coin = 0)
     {
         var lord = c.LordOf(fief); var place = c.R.SeatPlace(fief);
         var ps = new List<ChronParam> { ChronParam.Place("place", place), ChronParam.TextKey("action", action), ChronParam.Mites("coin", coin) };
         var subj = new List<EntityId> { place }; if (lord >= 0) { ps.Add(ChronParam.Person("lord", new EntityId((ulong)lord))); subj.Insert(0, new EntityId((ulong)lord)); }
-        c.Chron.Chron(c.Now, type, "ch_ur_concession", ps, subj, [Why(noteKey)]);
+        c.Chron.Chron(c.Now, "unrest_concession", "ch_ur_concession", ps, subj, [Why(noteKey)]);
     }
 
     // ------------------------------------------------------------------ the lord's utility and the hero's mediation
