@@ -4,7 +4,7 @@ using System.Text;
 namespace Ravensguard.Sim.Construction;
 
 /// <summary>What a design is a plan of (overview 7: the "designs" section holds building plans now and vehicle designs from P5-G).</summary>
-public enum DesignKind : byte { Building = 0 }
+public enum DesignKind : byte { Building = 0, Vehicle = 1 }
 
 /// <summary>
 /// P5-C: the player's own designs this save knows (build-mode-and-construction 4.8, overview 7): the jsonc text of every player blueprint saved in this game or placed from the player's

@@ -28,11 +28,29 @@ public sealed class RideSprites
     readonly HashSet<EntityId> _seen = new();
     readonly Dictionary<EntityId, bool> _flip = new();
     readonly Dictionary<EntityId, Facing> _face = new();
+    readonly Dictionary<EntityId, VehicleComposite> _composites = new();
+    readonly Dictionary<EntityId, Vector2> _lastPos = new();
+    readonly Dictionary<EntityId, int> _dir8 = new();
+
+    /// <summary>Screenshots: every standing vehicle drawn in this facing of eight (-1: their own).</summary>
+    public static int DebugDir8 = -1;
+
+    static bool HasBroken(VehicleRow v) { foreach (var p in v.Parts) if (p.State == PartState.Broken) return true; return false; }
+
+    /// <summary>A cheap change count of a vehicle's parts (their states and whether each still has hit points): the composite redraws only when it moves.</summary>
+    static int Revision(VehicleRow v)
+    {
+        int h = v.Parts.Count;
+        foreach (var p in v.Parts) h = h * 31 + (int)p.State * 7 + (p.HpMilli > 0 ? 1 : 0);
+        return h;
+    }
     double _t;
 
     public RideSprites(Node2D parent, ArtAtlas art) { _parent = parent; _art = art; }
 
-    public int Count => _animals.Count + _vehicles.Count;
+    public int Count => _animals.Count + _vehicles.Count + _composites.Count;
+    /// <summary>Vehicles drawn from their parts this frame (P5-G; smoke and screenshots).</summary>
+    public int Composites => _composites.Count;
 
     /// <summary>What the hero's sprite should do this frame: how far to lift it, and whether it is on a mount or a bench (a seated pose is not drawn; the standing one is).</summary>
     public readonly record struct HeroSeat(float Lift, bool Seated, Facing Facing);
@@ -75,27 +93,52 @@ public sealed class RideSprites
             if (loaded && _art.Has(id + "_loaded")) id += "_loaded";
             else if (loaded && ns && _art.Has(baseId + (face == Facing.North ? ".n" : ".s") + "_loaded")) id = baseId + (face == Facing.North ? ".n_loaded" : ".s_loaded");
             if (!_art.Has(id)) { ns = false; id = baseId; }
-            var node = Get(_vehicles, v.Id, id);
-            if (node.Texture != _art.Texture(id)) node.Texture = _art.Texture(id);
             var pos = driven ? heroFeet + new Vector2(0, -1) : ToPx(v.XMm, v.YMm);
-            const int pad = 4;
-            int th = node.Texture.GetHeight(), tw = node.Texture.GetWidth();
-            node.Position = pos; node.Visible = visible; node.FlipH = !ns && west;
             float front = (st.LengthCells - SeatCell(st)) * Tile;
-            if (ns)
+            // P5-G: a design of the player's, an unfinished vehicle, a damaged one, or a driven one heading on a diagonal is drawn from its parts (VehicleComposite)
+            int dir8 = face switch { Facing.North => 6, Facing.South => 2, Facing.West => 4, _ => 0 };
+            if (driven)
             {
-                int rise = th - pad - st.LengthCells * Tile;
-                float ay = face == Facing.South ? rise + SeatCell(st) * Tile : rise + (st.LengthCells - SeatCell(st)) * Tile;
-                node.Offset = new Vector2(-tw / 2f, -ay);
+                var mv = pos - _lastPos.GetValueOrDefault(v.Id, pos);
+                if (mv.LengthSquared() > 0.25f) { int d8 = VehicleComposite.Dir8Of(mv.X, mv.Y); if (d8 >= 0) _dir8[v.Id] = d8; }
+                _lastPos[v.Id] = pos;
+                dir8 = _dir8.GetValueOrDefault(v.Id, dir8);
+            }
+            if (!driven && DebugDir8 >= 0) dir8 = DebugDir8;
+            bool composite = bp.Player || !v.Finished || HasBroken(v) || (dir8 & 1) == 1;
+            if (composite)
+            {
+                if (_vehicles.Remove(v.Id, out var old)) old.QueueFree();
+                _seen.Add(v.Id);
+                if (!_composites.TryGetValue(v.Id, out var comp)) { comp = new VehicleComposite(_art); _composites[v.Id] = comp; _parent.AddChild(comp); }
+                comp.Set(book.Templates, v.Parts, st.WidthCells, st.LengthCells, SeatCell(st), Revision(v));
+                comp.Dir8 = dir8; comp.Position = pos; comp.Visible = visible; comp.Stuck = v.Stuck;
+                comp.ZIndex = 0;
             }
             else
             {
-                var (ax, ay) = Anchor(st, th);
-                node.Offset = new Vector2(west ? ax - tw : -ax, -ay);
+                if (_composites.Remove(v.Id, out var oldc)) oldc.QueueFree();
+                var node = Get(_vehicles, v.Id, id);
+                if (node.Texture != _art.Texture(id)) node.Texture = _art.Texture(id);
+                const int pad = 4;
+                int th = node.Texture.GetHeight(), tw = node.Texture.GetWidth();
+                node.Position = pos + (v.Stuck ? new Vector2((float)Math.Round(Math.Sin(_t * 20) * 1.0), 0) : Vector2.Zero); node.Visible = visible; node.FlipH = !ns && west;
+                if (ns)
+                {
+                    int rise = th - pad - st.LengthCells * Tile;
+                    float ay = face == Facing.South ? rise + SeatCell(st) * Tile : rise + (st.LengthCells - SeatCell(st)) * Tile;
+                    node.Offset = new Vector2(-tw / 2f, -ay);
+                }
+                else
+                {
+                    var (ax, ay) = Anchor(st, th);
+                    node.Offset = new Vector2(west ? ax - tw : -ax, -ay);
+                }
             }
             if (driven) { lift = BenchLift; seated = true; seatFacing = west ? Facing.West : Facing.East; }
             // the team stands in front: pairs side by side across the pole, further pairs one behind another ahead of them
-            Vector2 fwd = face switch { Facing.West => new(-1, 0), Facing.North => new(0, -1), Facing.South => new(0, 1), _ => new(1, 0) }, side = new Vector2(-fwd.Y, fwd.X);
+            Vector2 fwd = composite ? new Vector2((float)Math.Cos(dir8 * Math.PI / 4), (float)Math.Sin(dir8 * Math.PI / 4))       // P5-G: a composite's team leads on its own facing, diagonals too
+                : face switch { Facing.West => new(-1, 0), Facing.North => new(0, -1), Facing.South => new(0, 1), _ => new(1, 0) }, side = new Vector2(-fwd.Y, fwd.X);
             int n = 0;
             foreach (var tid in v.Team)
             {
@@ -111,6 +154,7 @@ public sealed class RideSprites
         }
         foreach (var key in new List<EntityId>(_animals.Keys)) if (!_seen.Contains(key)) { _animals[key].QueueFree(); _animals.Remove(key); }
         foreach (var key in new List<EntityId>(_vehicles.Keys)) if (!_seen.Contains(key)) { _vehicles[key].QueueFree(); _vehicles.Remove(key); }
+        foreach (var key in new List<EntityId>(_composites.Keys)) if (!_seen.Contains(key)) { _composites[key].QueueFree(); _composites.Remove(key); }
         return new HeroSeat(lift, seated, seatFacing);
     }
 

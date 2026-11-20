@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Godot;
 using Ravensguard.Game.Inputs;
@@ -19,7 +20,7 @@ public static class Phase3Smoke
     static async Task Frames(SceneTree t, int n) { for (int i = 0; i < n; i++) await t.ToSignal(t, SceneTree.SignalName.ProcessFrame); }
     static async Task<bool> Until(SceneTree t, Func<bool> done, int max) { for (int i = 0; i < max && !done(); i++) await Frames(t, 1); return done(); }
 
-    static void Key(Key k, bool shift = false) => Input.ParseInputEvent(new InputEventKey { Keycode = k, PhysicalKeycode = k, Pressed = true, ShiftPressed = shift });
+    static void Key(Key k, bool shift = false, bool ctrl = false) => Input.ParseInputEvent(new InputEventKey { Keycode = k, PhysicalKeycode = k, Pressed = true, ShiftPressed = shift, CtrlPressed = ctrl });
 
     /// <summary>Controls that lie (even partly) outside <paramref name="view"/> and scrolling bodies whose content is wider than the box; empty when the screen fits.</summary>
     public static List<string> Misfits(Control root, Rect2 view)
@@ -104,6 +105,37 @@ public static class Phase3Smoke
         GD.Print("[smoke]   build mode: the site panel fits, the save-as dialog is modal, B closes");
     }
 
+    /// <summary>
+    /// P5-G: the vehicle designer at 960 x 540 (vehicle-designer 6): Q > Design a vehicle opens it and it fits; a wagon is placed part by part and the stats pane follows; T turns the preview through
+    /// the eight facings, M mirrors, Ctrl+Z undoes; Ctrl+O's list is modal (no designer key acts under it) and Esc closes it; Esc closes the designer back to the street.
+    /// </summary>
+    static async Task VehicleDesigner(SceneTree tree, ScreenRouter router, StreetView sv, Rect2 view)
+    {
+        var d = sv.OpenDesigner(null) ?? throw new Exception("the vehicle designer did not open");
+        await Frames(tree, 8);
+        if (router.Top != d) throw new Exception("the designer is not on top");
+        Fit(d, "the vehicle designer", view);
+        d.DebugLoad("ox_wagon"); await Frames(tree, 3);
+        if (!d.Model.Stats().CanBuild) throw new Exception("the ox wagon does not validate in the designer: " + string.Join(", ", d.Model.Stats().Issues.Select(i => i.Code)));
+        int rev = d.Model.Revision;
+        Key(Godot.Key.M); await Frames(tree, 2);
+        if (d.Model.Revision == rev) throw new Exception("M did not mirror the design");
+        Key(Godot.Key.Z, ctrl: true); await Frames(tree, 2);
+        for (int k = 0; k < 8; k++) { Key(Godot.Key.T); await Frames(tree, 1); }
+        Fit(d, "the vehicle designer (stats)", view);
+        Key(Godot.Key.O, ctrl: true); await Frames(tree, 6);
+        if (router.Top is not QMenu) throw new Exception("Ctrl+O did not open the design list (top " + router.Top?.GetType().Name + ")");
+        Fit(router.Top!, "the design list", view);
+        int before = d.Model.Revision;
+        Key(Godot.Key.M); Key(Godot.Key.N, ctrl: true); await Frames(tree, 2);
+        if (d.Model.Revision != before) throw new Exception("a designer key acted under its open list");
+        Key(Godot.Key.Escape); await Frames(tree, 4);
+        if (router.Top != d) throw new Exception("Esc did not return from the design list to the designer");
+        Key(Godot.Key.Escape); await Frames(tree, 4);
+        if (router.Top != sv) throw new Exception("Esc did not close the designer (top " + router.Top?.GetType().Name + ")");
+        GD.Print("[smoke]   vehicle designer: fits, parts and stats, T/M/Ctrl+Z, the list is modal, Esc returns");
+    }
+
     public static async Task Run(SceneTree tree, ScreenRouter router, StreetView sv)
     {
         var win = tree.Root;
@@ -134,6 +166,7 @@ public static class Phase3Smoke
             }
 
             await BuildMode(tree, router, sv, view);                                          // P5-C
+            await VehicleDesigner(tree, router, sv, view);                                    // P5-G
 
             // P5-F: L opens the Ledger (its own context: the street keys are off under it), Tab turns its pages, a row's detail is a modal over it, Esc closes it
             Key(Godot.Key.L); await Frames(tree, 30);

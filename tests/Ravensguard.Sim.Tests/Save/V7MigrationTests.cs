@@ -41,8 +41,11 @@ public class V7MigrationTests
         Assert.Equal(HeroPerson.Pending, SaveCodec.Deserialize<Ravensguard.Sim.Characters.HeroSave>(file.Sections[WorldSave.HeroSection].ToArray()).PersonIndex);
         Assert.Equal(new byte[] { 2, 2, 3, 3, 3, 4, 4 }, Enumerable.Range(0, 7).Select(b => SaveMigrator.QualityV8((byte)b)).ToArray());
 
-        // the world loads (the content of this build differs from the one the save was made with only by Phase 5 rows the regenerated world does not read, so the load is told the save's own hash)
-        var st = WorldSave.Restore(file, EconFixture.Content, raw.Header.ContentHash);
+        // the world loads through the normal path with this build's own content hash, not the save's (plan 2.11): the content changed, and the report says what it does while every regenerated layer still verifies
+        var rep = WorldSave.Inspect(file, EconFixture.Content, EconFixture.ContentHash);
+        Assert.True(rep.ContentChanged); Assert.True(rep.CanLoad); Assert.True(rep.LayersChecked); Assert.True(rep.NeedsConfirmation);
+        Assert.Contains(rep.Changes, c => c.Contains("'good'"));
+        var st = WorldSave.Restore(file, EconFixture.Content, EconFixture.ContentHash);
         // the goods-table fix: the step stamps the Phase 4 tables, and the load maps the 104 goods of the save onto this content's by name (P5-E's goods are new, empty rows)
         Assert.Equal(LegacyIdTables.V7.Get(IdTables.Goods), IdTables.FromSave(SaveCodec.Deserialize<IdTablesSave>(file.Sections[IdTablesSave.SectionName].ToArray())).Get(IdTables.Goods));
         var v7e = SaveCodec.DeserializeCompressed<EconomySave>(raw.Sections[WorldSave.EconomySection].ToArray());
@@ -75,10 +78,10 @@ public class V7MigrationTests
         Assert.Equal(0xB50E27CBAE0E5009UL, resumed.Hash());
 
         // and the migrated world is a v8 world: save, load, save give the same bytes, with the hero's row in the people section
-        var bytes = SaveCodec.Encode(WorldSave.Capture(st, raw.Header.ContentHash, "0.1.0"));
-        var back = WorldSave.Restore(SaveCodec.Decode(bytes), EconFixture.Content, raw.Header.ContentHash);
+        var bytes = SaveCodec.Encode(WorldSave.Capture(st, EconFixture.ContentHash, "0.1.0"));
+        var back = WorldSave.Restore(SaveCodec.Decode(bytes), EconFixture.Content, EconFixture.ContentHash);
         Assert.Equal(row, back.Hero!.PersonIndex);
         Assert.Equal(PersonStatus.Hero, back.Population.People.Status[row]);
-        Assert.Equal(bytes, SaveCodec.Encode(WorldSave.Capture(back, raw.Header.ContentHash, "0.1.0")));
+        Assert.Equal(bytes, SaveCodec.Encode(WorldSave.Capture(back, EconFixture.ContentHash, "0.1.0")));
     }
 }

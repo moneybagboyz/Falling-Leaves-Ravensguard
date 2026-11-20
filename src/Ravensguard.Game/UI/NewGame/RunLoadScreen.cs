@@ -31,6 +31,9 @@ public partial class RunLoadScreen : Control
     readonly CancellationTokenSource _cts = new();
     volatile int _at;
     bool _done;
+    volatile LoadReport? _ask;                                  // set by the worker when the content changed; the main thread shows it, the worker waits for the answer
+    bool _asked;
+    readonly TaskCompletionSource<bool> _answer = new();
 
     RunLoadScreen(ScreenRouter router, RunEntry entry) { _router = router; _entry = entry; }
 
@@ -78,6 +81,15 @@ public partial class RunLoadScreen : Control
         _at = 1;
         var file = new SaveReader().Load(bi.Entry.Path);
         ct.ThrowIfCancellationRequested();
+        // the pre-load report (plan 2.11): refused with its cause, or shown for Continue / Cancel before anything is loaded
+        var report = WorldSave.Inspect(file, content.Db, content.Hash, null, world.Continent, world.History);
+        if (!report.CanLoad) throw new SaveException(report.ToText());
+        if (report.NeedsConfirmation)
+        {
+            _ask = report;
+            if (!_answer.Task.WaitAsync(ct).GetAwaiter().GetResult()) throw new OperationCanceledException(ct);
+        }
+        ct.ThrowIfCancellationRequested();
         _at = 2;
         var state = WorldSave.Restore(file, content.Db, content.Hash, null, world.Continent, world.History);
         state.Content = content.Db; // the next save diffs the people against the regenerated ones (note N24)
@@ -113,6 +125,11 @@ public partial class RunLoadScreen : Control
     public override void _Process(double delta)
     {
         if (_task == null || _done) return;
+        if (_ask is { } ask && !_asked)
+        {
+            _asked = true;
+            LoadReportDialog.Ask(_router, ask, false, () => _answer.TrySetResult(true), () => { _answer.TrySetResult(false); _done = true; _router.Pop(); });
+        }
         Refresh();
         if (!_task.IsCompleted) return;
         _done = true;

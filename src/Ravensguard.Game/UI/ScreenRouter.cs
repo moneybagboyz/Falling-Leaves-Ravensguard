@@ -99,7 +99,12 @@ public partial class ScreenRouter : Control
     public void ShowModal(string title, string body, params (string label, System.Action? onPress)[] buttons) => ShowModal(title, body, null, buttons);
 
     /// <summary>Modal dialog that also tells <paramref name="onClosed"/> when it closes for any reason (a button or Esc), before the pressed button's own callback runs.</summary>
-    public void ShowModal(string title, string body, System.Action? onClosed, params (string label, System.Action? onPress)[] buttons)
+    public void ShowModal(string title, string body, System.Action? onClosed, params (string label, System.Action? onPress)[] buttons) => ShowModalCore(title, body, onClosed, false, buttons);
+
+    /// <summary>Modal dialog for a long report: the body is wide and scrolls, so it reads at 960 x 540 however many lines it has.</summary>
+    public void ShowReportModal(string title, string body, System.Action? onClosed, params (string label, System.Action? onPress)[] buttons) => ShowModalCore(title, body, onClosed, true, buttons);
+
+    void ShowModalCore(string title, string body, System.Action? onClosed, bool scroll, (string label, System.Action? onPress)[] buttons)
     {
         CloseModal();
         _modalClosed = onClosed;
@@ -114,7 +119,14 @@ public partial class ScreenRouter : Control
         v.AddThemeConstantOverride("separation", 12);
         panel.AddChild(v);
         v.AddChild(new Label { Text = title, ThemeTypeVariation = "TitleLabel" });
-        v.AddChild(new Label { Text = body, AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(360, 0) });
+        var bodyLabel = new Label { Text = body, AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(scroll ? 620 : 360, 0), SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        if (scroll)
+        {
+            var sc = new ScrollContainer { CustomMinimumSize = new Vector2(640, 280), HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
+            sc.AddChild(bodyLabel);
+            v.AddChild(sc);
+        }
+        else v.AddChild(bodyLabel);
         var row = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.End };
         v.AddChild(row);
         Button? first = null;

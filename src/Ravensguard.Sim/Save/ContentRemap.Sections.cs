@@ -59,12 +59,12 @@ public static partial class ContentRemap
                 var parts = new List<string>();
                 if (t.Added > 0) parts.Add($"{t.Added} new");
                 if (t.Migrated.Count > 0) parts.Add("moved " + string.Join(", ", t.Migrated));
-                if (t.Dropped.Count > 0 && t != G) parts.Add("no longer in the game, dropped: " + string.Join(", ", t.Dropped));
+                if (t.Dropped.Count > 0) parts.Add((t == G ? "no longer in the game: " : "no longer in the game, dropped: ") + string.Join(", ", t.Dropped));
                 notes.Add($"Content table '{t.Table}' changed since this save ({(parts.Count > 0 ? string.Join("; ", parts) : "reordered")}); the save was mapped onto it by name.");
             }
-            if (G is { Dropped.Count: > 0 })
+            if (G is { Dropped.Count: > 0 } && G.Dropped.Any(id => _writtenOff[Array.IndexOf(G.Old, id)] != 0))
             {
-                var off = string.Join(", ", G.Dropped.Select(id => string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{id} {_writtenOff[Array.IndexOf(G.Old, id)]:N0}")));
+                var off = string.Join(", ", G.Dropped.Where(id => _writtenOff[Array.IndexOf(G.Old, id)] != 0).Select(id => string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{id} {_writtenOff[Array.IndexOf(G.Old, id)]:N0}")));
                 var rec = _dropped.Count > 0 ? " Records dropped with them: " + string.Join(", ", _dropped.Select(kv => $"{kv.Value} {kv.Key}")) + "." : "";
                 notes.Add($"Warning: goods no longer in the game were written off (quantity in grams, or pieces): {off}. Their ledger columns went with their stock, so the mass and coin audits stay exact.{rec}");
             }

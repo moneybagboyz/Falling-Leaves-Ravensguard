@@ -23,6 +23,12 @@ public class VehicleScaleTests(ITestOutputHelper output)
         new("ox_wagon",      (2, 2), (4, 5), (2, 3), (800, 1200), (200, 450)),
         new("covered_wagon", (2, 2), (4, 5), (2, 3), (600, 1000), (250, 500)),
         new("sledge",        (1, 2), (2, 3), (1, 1), (300, 600),  (40, 150)),
+        // P5-G (vehicle-designer 3.2): a peddler's covered wagon, and the river boats (rows from the stern; the hitch rows are a barge's tow post, none on a rowed boat)
+        new("peddler_wagon", (2, 2), (4, 5), (2, 3), (600, 1000), (250, 550)),
+        new("rowing_boat",   (2, 2), (5, 5), (0, 0), (200, 600),  (150, 350)),                // a 5 m boat about 1.5-2 m in the beam
+        new("fishing_boat",  (2, 2), (6, 6), (0, 0), (200, 700),  (150, 400)),
+        new("barge",         (3, 3), (9, 10), (0, 1), (6000, 14000), (800, 3000)),            // a 10 m river barge, 3 m beam, 6-14 t of freight
+        new("ferry",         (3, 3), (6, 6), (0, 0), (3000, 8000), (500, 2000)),              // a 6 m flat with ramps at both ends: a cart and its team
     ];
 
     [Fact]
@@ -41,7 +47,7 @@ public class VehicleScaleTests(ITestOutputHelper output)
             Assert.InRange(st.CargoKg, t.CargoKg.Min, t.CargoKg.Max);
             Assert.InRange(st.MassKg, t.MassKg.Min, t.MassKg.Max);
             Assert.True(st.CargoL >= st.CargoKg, $"{t.Id}: a litre of load weighs at most a kilogram");
-            Assert.True(st.WidthCells <= 2, $"{t.Id}: no vehicle is wider than a 2 m track");
+            Assert.True(st.Boat || st.WidthCells <= 2, $"{t.Id}: no land vehicle is wider than a 2 m track");
             if (st.Wheels > 0 && st.AxleLimitKg > 0) Assert.True(st.AxleLimitKg >= st.MassKg + st.CargoKg * 8 / 10, $"{t.Id}: the axles carry at least 80 percent of a full load");
         }
     }

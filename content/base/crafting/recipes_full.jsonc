@@ -165,7 +165,7 @@
    "learn": {"auto_at": {"skill": "Carpentry", "level": 25}, "master": true}},
   {"type": "craft_recipe", "id": "make_cargo_bed", "name": "Make a cargo bed", "category": "craft", "skill": "Carpentry", "difficulty": 25, "effort": "moderate", "workstation": "workbench",
    "tools": [{"quality": "sawing", "level": 1}, {"quality": "hammering", "level": 1}], "proficiencies": [{"id": "cartwright", "time_mult_pm": 1400, "skill_penalty": 6}],
-   "components": [[{"good": "timber_planks", "kg": 11.0}], [{"good": "nails", "kg": 0.3}]], "steps": [{"id": "build", "hours": 8}], "results": [{"vehicle_part": "cargo_bed", "material": "oak", "kg": 10.0}],
+   "components": [[{"good": "timber_planks", "kg": 11.0}], [{"good": "nails", "kg": 0.3}]], "steps": [{"id": "build", "hours": 2}], "results": [{"vehicle_part": "cargo_bed", "material": "oak", "kg": 10.0}],
    "byproducts": [{"good": "shavings", "kg": 1.0}], "learn": {"auto_at": {"skill": "Carpentry", "level": 30}, "master": true}},
 
   // ---- building materials, leather and cloth ----

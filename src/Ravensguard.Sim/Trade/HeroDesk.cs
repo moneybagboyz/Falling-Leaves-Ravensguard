@@ -34,6 +34,8 @@ public enum HeroCommandKind : byte
     Construction,
     /// <summary>Appended (P5-E): crafting at the barrier ("cf:order|...", collect, cancel, join, apprentice, leave, teach, apart, feed, look), applied by <see cref="Ravensguard.Sim.Crafting.CraftDesk"/>.</summary>
     Craft,
+    /// <summary>Appended (P5-G): vehicles at the barrier ("vd:design|...", build, deposit, work, crew, commission, collect, repair, replace, launch, voyage), applied by <see cref="Ravensguard.Sim.Carts.VehicleDesk"/>.</summary>
+    Vehicle,
     /// <summary>Appended (P5-F): businesses, shares, stewards and stalls at the barrier ("bz:found|...", buy, share, hire, steward, orders, supply, work, stall, mind, at), applied by <see cref="Ravensguard.Sim.Production.BusinessDesk"/>.</summary>
     Business,
     /// <summary>Appended (P5-F): prospecting and mineral rights ("px:walk|...", start, hire, write, read, licence, site), applied by <see cref="Ravensguard.Sim.Production.BusinessDesk"/>.</summary>
@@ -462,6 +464,7 @@ public sealed class HeroDesk
                 HeroCommandKind.Land => Ravensguard.Sim.Land.LandDesk.Apply(ctx, c),                           // P5-A2: deeds, leases, claims, charters
                 HeroCommandKind.Construction => Ravensguard.Sim.Construction.ConstructionDesk.Apply(ctx, c),   // P5-B: ghosts, hands-on work, materials, crews
                 HeroCommandKind.Craft => CraftDesk.Apply(ctx, c),                                              // P5-E: commissions, guilds, apprenticeships, fires
+                HeroCommandKind.Vehicle => Ravensguard.Sim.Carts.VehicleDesk.Apply(ctx, c),                   // P5-G: designs, vehicle sites, commissions, repairs, launches, voyages
                 HeroCommandKind.Business or HeroCommandKind.Prospect => Ravensguard.Sim.Production.BusinessDesk.Apply(ctx, c),   // P5-F: businesses, stewards, stalls, prospecting
                 _ => R(c, HeroResultCode.Invalid, T("HERO_UNKNOWN_COMMAND")),
             };

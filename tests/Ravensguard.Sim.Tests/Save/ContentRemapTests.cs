@@ -196,7 +196,9 @@ public class ContentRemapTests
         var restoredRecipes = new[] { "draw_wire", "fletch_arrows", "forge_arrowheads", "make_harness", "mix_daub", "rive_shingles" };
         var v8 = LegacyIdTables.V8;
         Assert.Equal(cur.Get(IdTables.Goods)!.Except(restoredGoods), v8.Get(IdTables.Goods)!);
-        Assert.Equal(cur.Get(IdTables.CraftRecipes)!.Except(restoredRecipes), v8.Get(IdTables.CraftRecipes)!);
+        // P5-G added the vehicle parts' recipes and repair lines (content/base/crafting/recipes_vehicles.jsonc): new ids, so a v8 save's crafting section maps by name
+        var p5g = new[] { "make_yoke", "make_pole", "make_traces", "make_cargo_box", "make_barrow_tray", "make_cargo_rack", "make_seat_bench", "make_tilt_hoops", "sew_tilt_cloth", "make_runner", "make_handle_bars", "make_pivot_axle", "make_iron_bound_axle", "make_dished_wheel", "make_brake_shoe", "forge_drag_shoe", "saw_hull_plank", "shape_keel", "make_gunwale", "saw_deck_plank", "make_ferry_ramp", "make_thwart", "make_oars", "make_quant_pole", "make_steering_oar", "make_rudder", "make_tow_post", "make_mast", "sew_square_sail", "make_fish_well", "make_cabin_box", "make_stall_counter", "build_mobile_hearth", "repair_hull_plank", "repair_vehicle_frame" };
+        Assert.Equal(cur.Get(IdTables.CraftRecipes)!.Except(restoredRecipes).Except(p5g), v8.Get(IdTables.CraftRecipes)!);
         foreach (var t in new[] { IdTables.Proficiencies, IdTables.BookRecipes, IdTables.Extractions }) Assert.Equal(cur.Get(t)!, v8.Get(t)!);
         Assert.Equal(cur.Get(IdTables.Businesses)!.Except(newKinds), v8.Get(IdTables.Businesses)!);
         // the v7 tables differ only by Phase 3's recipes and proficiencies, every one of which is still in the content

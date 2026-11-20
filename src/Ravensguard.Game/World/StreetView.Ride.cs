@@ -42,6 +42,7 @@ public partial class StreetView
         Debug.DevContext.Build = DevBuild;      // P5-B
         if (_opt.Rooms) ShowRooms();            // P5-A3
         if (_opt.Ride != null) DevRide(_opt.Ride);
+        AttachBoats();                          // P5-G: boats on the rivers (StreetView.Vehicles.cs)
     }
 
     string DevRideConsole(string cmd, string[] a)
@@ -66,7 +67,7 @@ public partial class StreetView
             }
             case "mud": r.SurfaceOverride = a.Length > 0 && a[0] == "off" ? null : Surface.DeepMud; return r.SurfaceOverride == null ? "mud off" : "deep mud";
         }
-        return "?";
+        return DevVehicles(cmd, a);             // P5-G: designer, site, boat, break
     }
 
     /// <summary>A template vehicle standing with its seat level with the hero and its near side a metre and a half in front of them, the first <paramref name="animals"/> of its team hitched, and a load.</summary>
@@ -105,7 +106,7 @@ public partial class StreetView
         if (_ride == null) return;
         long now = _world.Clock.Now.Seconds, hour = now / 3600;
         if (_rideHour == long.MinValue) _rideHour = hour;
-        for (; _rideHour < hour; _rideHour++) _ride.Hour(_rideHour + 1);
+        lock (_ride.Gate) for (; _rideHour < hour; _rideHour++) _ride.Hour(_rideHour + 1);
         if (_world.Tick % 20 == 0 && _ride.ExpireLoans(now) > 0) _router?.ShowToast(L.T("RIDE_LOAN_DUE"));
         if (_ride.IsMounted || _ride.IsDriving) { if (!_rideHinted) { _rideHinted = true; _router?.ShowToast(L.F("RIDE_HINT_FIRST", H("world.act"), H("world.sprint"), H("mounted.walk_toggle")), 5f); } }
         else _walkToggle = false;
@@ -147,10 +148,11 @@ public partial class StreetView
     {
         if (_ride == null || _rideSprites == null) return;
         RideContext();
-        var seat = _rideSprites.Sync(_ride, h.Facing, h.Moving, feet, GetProcessDeltaTime(), h.Z == _viewZ);
+        RideSprites.HeroSeat seat;
+        lock (_ride.Gate) seat = _rideSprites.Sync(_ride, h.Facing, h.Moving, feet, GetProcessDeltaTime(), h.Z == _viewZ);   // P5-G: the tick worker's vehicle pass writes under the same lock
         _heroSprite.Lift = seat.Seated ? seat.Lift : 0f;
         if (seat.Seated) _heroSprite.Pose(seat.Facing, "ride", 0);                      // sitting astride, side view; the horse's and cart's sprites are side-on too
-        _rideHud?.Update(_ride, _world.Clock.Now.Seconds);
+        lock (_ride.Gate) _rideHud?.Update(_ride, _world.Clock.Now.Seconds);
         if (_world.RideMsgSerial != _rideMsg) { _rideMsg = _world.RideMsgSerial; _router?.ShowToast(L.F(_world.LastRideKey, _world.LastRideArg)); }
     }
 

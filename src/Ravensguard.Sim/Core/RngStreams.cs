@@ -286,6 +286,12 @@ public static class RngStreams
     public const uint NamedArtefact = 0x531;
     /// <summary>P5-E (crafting-full 4.3): a brittle blade breaks when a rigid layer stops its blow, 30 pm (key FightTick, item id).</summary>
     public const uint BrittleBreak = 0x532;
+    /// <summary>P5-G (vehicle-designer 4.5): a tender boat capsizes in beam seas, 20 pm per 20 game seconds (key GameSec / 20, boat).</summary>
+    public const uint BoatCapsize = 0x550;
+    /// <summary>P5-G: the jitter of the water a swamped boat takes in (key GameSec / 20, boat).</summary>
+    public const uint BoatSwampJitter = 0x551;
+    /// <summary>P5-G: an abstract barge leg's delay (key barge id, leg).</summary>
+    public const uint BargeLegDelay = 0x552;
     /// <summary>Inheritance: the hero's kin at a new game (the origin's kin rows, their ages and counts, the hero's own age; key hero seed).</summary>
     public const uint HeroKin = 0x560;
     /// <summary>P5-F businesses: reserved for Phase 6 steward honesty (skimming); stewards are honest in Phase 5 (overview 10a). Asserted never drawn.</summary>

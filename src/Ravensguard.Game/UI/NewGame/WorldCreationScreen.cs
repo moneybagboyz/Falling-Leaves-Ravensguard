@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Godot;
 using Ravensguard.Sim.Core;
+using Ravensguard.Sim.Save;
 using Ravensguard.Sim.WorldGen;
 using Ravensguard.Sim.Worlds;
 
@@ -84,7 +85,20 @@ public partial class WorldCreationScreen : Control
             return;
         }
         if (_draft is { LibraryWorldId: null }) _job = WorldJob.Create(_draft.WorldName, _draft.Continent, _draft.History, content.Hash, NewGameServices.NowText());
-        else _job = WorldJob.Open(_open?.Id ?? _draft!.LibraryWorldId!, content.Hash);
+        else
+        {
+            string id = _open?.Id ?? _draft!.LibraryWorldId!;
+            var report = NewGameServices.Library.TryRead(id) is { } info ? LoadReport.ForWorld(info.File, content.Hash) : null;
+            if (report is { NeedsConfirmation: true })
+            {
+                // a world made with other content: told first (plan 2.11); its land and history still have to regenerate as they were, and it is refused with the cause if they do not
+                _done = true;                                                                  // nothing runs until the player continues
+                LoadReportDialog.Ask(_router, report, true,
+                    () => { _done = false; _job = WorldJob.Open(id, content.Hash); },
+                    () => { _router.Pop(); });
+            }
+            else _job = WorldJob.Open(id, content.Hash);
+        }
     }
 
     public override void _ExitTree() => _job?.Cancel();

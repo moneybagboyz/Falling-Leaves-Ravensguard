@@ -215,10 +215,10 @@ public sealed partial class LiveWorld
         int mult = (int)Clock.Speed;
         _moving = false;
         if (_usePending) { _usePending = false; TryPortalHere(force: true); }
-        if (!_rideCmds.IsEmpty) while (_rideCmds.TryDequeue(out int rc)) RunRideCommand(rc);   // every command since the last step, in the order given
+        if (!_rideCmds.IsEmpty) lock (Ride?.Gate ?? _rideCmds) while (_rideCmds.TryDequeue(out int rc)) RunRideCommand(rc);   // every command since the last step, in the order given (P5-G: under the ride book's lock)
         if (Site != null) { SiteTick(); mult = 0; }    // [exploration] hook: the hero underground (Sites/LiveWorld.Site.cs)
         if (Fight != null) mult = 0;                    // the hero's feet belong to the fight while it lasts
-        if (mult > 0) { if (Ride is { IsMounted: true } or { IsDriving: true } or { Busy: true }) MoveRidden(mult); else MoveHero(mult); }
+        if (mult > 0) { if (Ride is { IsMounted: true } or { IsDriving: true } or { Busy: true }) { lock (Ride.Gate) MoveRidden(mult); } else MoveHero(mult); }
         NoteWalked();
         Snapshot = Publish();
     }
@@ -479,8 +479,9 @@ public sealed partial class LiveWorld
             case RideCode.Hitch: { var r = Ride.HitchNearest(); Say("RIDE_HITCH_" + r.ToString().ToUpperInvariant()); break; }
             case RideCode.Unhitch: Ride.UnhitchAll(); Say("RIDE_UNHITCHED"); break;
             case RideCode.Drive:
-                if (Ride.IsDriving) Ride.StopDriving();
+                if (Ride.IsDriving) { bool boat = Ride.DrivenVehicle is { IsBoat: true }; Ride.StopDriving(); if (boat) LandFromBoat(); }
                 else if (!Ride.StartDriving()) Say("RIDE_NO_CART");
+                else if (Ride.DrivenVehicle is { IsBoat: true } b) { long bx = b.XMm, by = b.YMm; TravelPlace(bx, by, _facing); _moving = false; SyncRide(); Say("RIDE_BOARDED"); }   // P5-G: E at the bank boards the boat
                 break;
             case RideCode.Push: Say(Ride.Push(1, now) ? "RIDE_PUSH_FREE" : "RIDE_PUSH_STUCK"); break;
             case RideCode.Unload: Say("RIDE_UNLOADED", Ride.UnloadToHeap(100)); break;
@@ -507,7 +508,7 @@ public sealed partial class LiveWorld
             bool wants = _input.Any || _path != null;
             if (wants && !step.Blocked && step.SpeedMmPerGs > 0)
             {
-                Fixed budget = Fixed.FromRatio(step.SpeedMmPerGs, 1000);
+                Fixed budget = step.RawQ16 > 0 ? Fixed.FromRaw(step.RawQ16) : Fixed.FromRatio(step.SpeedMmPerGs, 1000);
                 if (_input.Any) StepInput(budget); else FollowPath(budget);
             }
             else if (_input.Any) SetFacing(_input.Dx, _input.Dy);
@@ -578,11 +579,29 @@ public sealed partial class LiveWorld
         return moved;
     }
 
-    /// <summary>The hero is a 0.6 m square: all four corners must stand on open cells of the current level.</summary>
+    /// <summary>The hero is a 0.6 m square: all four corners must stand on open cells of the current level. In a boat (P5-G) they must be water the boat floats in (<see cref="Navigable"/>).</summary>
     public bool Free(Fixed x, Fixed y)
     {
         int x0 = (x - Radius).Floor(), x1 = (x + Radius).Floor(), y0 = (y - Radius).Floor(), y1 = (y + Radius).Floor();
+        if (Navigable != null && Ride?.DrivenVehicle is { IsBoat: true }) return Navigable(x0, y0, _z) && Navigable(x1, y0, _z) && Navigable(x0, y1, _z) && Navigable(x1, y1, _z);
         return Grid.IsOpen(x0, y0, _z) && Grid.IsOpen(x1, y0, _z) && Grid.IsOpen(x0, y1, _z) && Grid.IsOpen(x1, y1, _z);
+    }
+
+    /// <summary>P5-G: the cells a boat may be in (water deep enough for its draft), set by the view from the map's ground; null: every open cell (tests).</summary>
+    public Func<int, int, int, bool>? Navigable { get; set; }
+
+    /// <summary>P5-G: E in a boat lands: the hero steps onto the nearest open bank cell within 2 m (the boat stays where it is); with none he stays aboard.</summary>
+    private void LandFromBoat()
+    {
+        int cx = _x.Floor(), cy = _y.Floor();
+        for (int r = 1; r <= 2; r++)
+            for (int dy = -r; dy <= r; dy++)
+                for (int dx = -r; dx <= r; dx++)
+                {
+                    if (Math.Max(Math.Abs(dx), Math.Abs(dy)) != r) continue;
+                    if (!Grid.IsOpen(cx + dx, cy + dy, _z) || (Navigable?.Invoke(cx + dx, cy + dy, _z) ?? false)) continue;
+                    _x = Fixed.FromInt(cx + dx) + Fixed.Half; _y = Fixed.FromInt(cy + dy) + Fixed.Half; SyncRide(); Say("RIDE_LANDED"); return;
+                }
     }
 
     private void AutoPortal() => TryPortalHere(force: false);

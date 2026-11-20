@@ -313,7 +313,7 @@ public sealed class ChronicleData
 /// Stored: meta (seed, settings, clock, ids, layer hashes), people (persons, households, kin links), region.lots, chunks, chronicle.
 /// Regenerated from seed + content on load (and verified by hash): continent, history, region terrain/settlements/parcels.
 /// </summary>
-public static class WorldSave
+public static partial class WorldSave
 {
     public const string MetaSection = "meta", PeopleSection = "people", LotsSection = "region.lots", ChunksSection = ChunkStore.SectionName, ChronicleSection = "chronicle", HeroSection = "hero", CodexSection = "codex", LiveSection = "live", EconomySection = "economy", AbstractSection = "abstract", FarmingSection = "farming", ProductionSection = ProductionSave.SectionName, ContinentSection = "continent", GrowthSection = "growth", JobsSection = "jobs", CraftingSection = "crafting", PartySection = "party", MarketsSection = MarketsSave.SectionName, RegionSectionName = "region.";
     public static string RegionSection(int id) => RegionSectionName + id.ToString("D3");
@@ -442,10 +442,8 @@ public static class WorldSave
     public static WorldState Restore(SaveFile file, ContentDatabase content, string currentContentHash, IReadOnlyList<ModEntry>? installedMods = null,
         Continent? knownContinent = null, WorldHistory? knownHistory = null)
     {
+        // a save made with other content loads (plan 2.11): the layers it regenerates are verified below by their hashes, and the content ids by ContentRemap; Inspect reports both first
         var report = new SaveReader().CheckCompatibility(file.Header, currentContentHash, installedMods ?? file.Header.Mods);
-        if (!report.ContentHashMatches)
-            throw new SaveException("This save cannot be loaded because the game content changed since it was made "
-                + $"(saved content {Short(file.Header.ContentHash)}, installed {Short(currentContentHash)}). The world is regenerated from the content, so it would differ. " + report.ToText().Trim());
         if (!report.CanLoad) throw new SaveException(report.ToText().Trim());
         // every saved content index (goods, recipes, proficiencies, business kinds...) onto this content by name, before any section is read (P5 goods-table fix)
         var remap = ContentRemap.Apply(file, content);
@@ -526,7 +524,7 @@ public static class WorldSave
             Production = production, Markets = markets, RegionSections = regionSections, Growth = growth,
             Jobs = file.Sections.ContainsKey(JobsSection) ? Decode<JobsSave>(file, JobsSection, compressed: true).Restore() : null,
             Crafting = file.Sections.ContainsKey(CraftingSection) ? Decode<CraftingSave>(file, CraftingSection, compressed: true).Restore() : null,
-            Mounts = file.Sections.ContainsKey(MountsSave.SectionName) ? RestoreMounts(Decode<MountsSave>(file, MountsSave.SectionName, compressed: true), content, economy, cs.Seed) : null,
+            Mounts = file.Sections.ContainsKey(MountsSave.SectionName) ? RestoreMounts(Decode<MountsSave>(file, MountsSave.SectionName, compressed: true), content, economy, cs.Seed, file) : null,
             Autopilot = file.Sections.ContainsKey(AutopilotSave.SectionName) ? Decode<AutopilotSave>(file, AutopilotSave.SectionName, compressed: true).Restore() : null,
             Travel = file.Sections.ContainsKey(TravelSave.SectionName) ? RestoreTravel(Decode<TravelSave>(file, TravelSave.SectionName, compressed: true), content, economy, cs.Seed) : null,
             Talk = file.Sections.ContainsKey(TalkSave.SectionName) ? Decode<TalkSave>(file, TalkSave.SectionName, compressed: true).Restore() : null,
@@ -570,8 +568,6 @@ public static class WorldSave
         return HeroRegionTracker.OfFrameCell(w.HomeRegion, c.X, c.Y);
     }
 
-    private static string Short(string h) => h.Length > 12 ? h[..12] : h;
-
     private static void Verify(string layer, string stored, string actual)
     {
         if (!string.Equals(stored, actual, StringComparison.Ordinal))
@@ -580,12 +576,14 @@ public static class WorldSave
     }
 
     /// <summary>The ride book of a save: on the economy's stores when the world has one (their goods are in its section), else on a private goods catalog and ledger (a bare test world).</summary>
-    private static Ravensguard.Sim.Animals.RideBook RestoreMounts(MountsSave m, ContentDatabase? content, EconomyState? economy, ulong seed)
+    private static Ravensguard.Sim.Animals.RideBook RestoreMounts(MountsSave m, ContentDatabase? content, EconomyState? economy, ulong seed, SaveFile file)
     {
         if (content == null) throw new SaveException("The mounts of this save need the game content to be read.");
-        if (economy != null) return m.Restore(content, economy, seed);
+        // P5-G: vehicles of the player's own designs need the designs section first (its texts are read again for the world below)
+        var designs = file.Sections.ContainsKey(DesignsSave.SectionName) ? Decode<DesignsSave>(file, DesignsSave.SectionName, compressed: true).Restore() : null;
+        if (economy != null) return m.Restore(content, economy, seed, designs);
         var goods = new Ravensguard.Sim.Goods.GoodCatalog(content);
-        return m.Restore(content, goods, new Ravensguard.Sim.Goods.MassLedger(goods.Count), seed);
+        return m.Restore(content, goods, new Ravensguard.Sim.Goods.MassLedger(goods.Count), seed, designs);
     }
 
     /// <summary>The travel state of a save: on the economy's stores when the world has one, else on a private goods catalog and ledger.</summary>
