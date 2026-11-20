@@ -81,6 +81,7 @@ public partial class RunLoadScreen : Control
         _at = 2;
         var state = WorldSave.Restore(file, content.Db, content.Hash, null, world.Continent, world.History);
         state.Content = content.Db; // the next save diffs the people against the regenerated ones (note N24)
+        foreach (var note in state.LoadNotes) GD.PushWarning(note);   // content ids mapped by name, goods written off (ContentRemap)
         ct.ThrowIfCancellationRequested();
         _at = 3;
         // the abstract world of the run: the home region's records from their sections, the other regions' sections waiting in a folder until the hero comes near

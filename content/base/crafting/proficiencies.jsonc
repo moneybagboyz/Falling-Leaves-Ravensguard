@@ -56,7 +56,7 @@
   // P5-E (crafting-full 4.6): eight manuscripts
   { "type": "manuscript", "id": "smiths_notes", "name": "A smith's notes", "recipes": ["forge_knife", "forge_chisel", "forge_hinges", "reedge_blade"] },
   { "type": "manuscript", "id": "wheelwrights_rule", "name": "The wheelwright's rule", "recipes": ["make_spoked_wheel", "make_solid_wheel", "make_axle"] },
-  { "type": "manuscript", "id": "masons_book", "name": "A mason's book", "recipes": ["dress_stone", "burn_lime", "fire_bricks"] },
+  { "type": "manuscript", "id": "masons_book", "name": "A mason's book", "recipes": ["mix_daub", "rive_shingles"] },
   { "type": "manuscript", "id": "dyers_receipts", "name": "Dyers' receipts", "recipes": ["sew_gambeson"] },
   { "type": "manuscript", "id": "shipwrights_lines", "name": "Shipwright's lines", "recipes": ["cut_frame_plank", "make_cargo_bed"] }
 ]

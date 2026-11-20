@@ -114,6 +114,13 @@ public sealed class WorldState
     /// <c>new LiveWorld(streamer, state.Live, ...)</c> resumes there; <see cref="Clock"/> already holds the saved live clock.</summary>
     public LiveResume? Live { get; init; }
     public ulong Seed => ContinentSettings.Seed;
+    /// <summary>
+    /// The content id tables this world saves (the "tables" section, <see cref="IdTablesSave"/>) when <see cref="Content"/> is not set: a restored world gets the tables of the content it was
+    /// loaded with, for the tables its save named. Null: a world built without content saves its economy's goods table only.
+    /// </summary>
+    public IdTables? IdTables { get; set; }
+    /// <summary>What the load did to fit the save to the content (<see cref="ContentRemap"/>): goods, recipes and other ids mapped by name, and anything written off. Empty when nothing changed.</summary>
+    public IReadOnlyList<string> LoadNotes { get; set; } = [];
 }
 
 // ---------------- section DTOs (explicit [Key] order; all lists in index/id order, so bytes are deterministic) ----------------
@@ -385,6 +392,7 @@ public static class WorldSave
             Production = w.Production == null ? null : ProductionSave.Capture(w.Production), Markets = w.Markets == null ? null : MarketsSave.Capture(w.Markets),
             ContinentSt = w.ContinentState == null ? null : ContinentSave.Capture(w.ContinentState),                                // the abstract continent and its caravans (resume-drift fix 1: it was never written)
             Regions = view?.CaptureResident(), PagedRegions = view != null ? view.Paged : new SortedDictionary<int, byte[]>(w.RegionSections.ToDictionary(kv => kv.Key, kv => kv.Value)),
+            Tables = (w.Content != null ? IdTables.Of(w.Content).Tables : w.IdTables ?? (w.Economy != null ? IdTables.OfGoods(w.Economy.Goods) : new IdTables())).ToSave(),
             Hero = w.Hero?.ToSave(), Economy = w.Economy == null ? null : EconomySave.Capture(w.Economy), Abstract = w.Abstract == null ? null : AbstractSave.Capture(w.Abstract, w.Population), Farming = w.Farming == null ? null : FarmingSave.Capture(w.Farming), Codex = codex == null ? null : new CodexSave { Unlocked = codex.Unlocked.ToArray() },
             Live = live == null ? null : new LiveSave
             {
@@ -433,6 +441,9 @@ public static class WorldSave
             throw new SaveException("This save cannot be loaded because the game content changed since it was made "
                 + $"(saved content {Short(file.Header.ContentHash)}, installed {Short(currentContentHash)}). The world is regenerated from the content, so it would differ. " + report.ToText().Trim());
         if (!report.CanLoad) throw new SaveException(report.ToText().Trim());
+        // every saved content index (goods, recipes, proficiencies, business kinds...) onto this content by name, before any section is read (P5 goods-table fix)
+        var remap = ContentRemap.Apply(file, content);
+        file = remap.File;
 
         var meta = Decode<WorldMeta>(file, MetaSection, compressed: false);
         var cs = JsonSerializer.Deserialize<ContinentSettings>(meta.ContinentSettingsJson, Json) ?? throw new SaveException("Corrupt continent settings in save.");
@@ -532,6 +543,7 @@ public static class WorldSave
             Continent = continent, History = history, Population = pop,
             Clock = new SimClock(new GameTime(meta.ClockSeconds), meta.ClockMsRemainder) { Speed = (SimSpeed)meta.ClockSpeed },
             Ids = IdAllocator.FromState(meta.IdState), Chunks = chunks, Chronicle = chronicle,
+            IdTables = remap.Tables, LoadNotes = remap.Notes,
         };
         // P5-A4: a migrated v7 save's hero gets the person row now (the v8 step marks it pending); a v8 save holds it in the people diff already, and its status in the
         // abstract section's vital columns; a bare world without that section (tools, test fixtures) has only the hero section's index to say which row is the hero's
@@ -734,6 +746,7 @@ public sealed class LiveCapture
     internal Ravensguard.Sim.Trade.HeroPendingSave? HeroPending { get; init; }
     internal MarketsSave? Markets { get; init; }
     internal ContinentSave? ContinentSt { get; init; }
+    internal IdTablesSave? Tables { get; init; }
     /// <summary>Captured sections of the resident regions other than home, and the stored sections of the paged ones.</summary>
     internal SortedDictionary<int, RegionSectionData>? Regions { get; init; }
     internal SortedDictionary<int, byte[]> PagedRegions { get; init; } = [];
@@ -767,6 +780,7 @@ public sealed class LiveCapture
             new(WorldSave.ChronicleSection, SaveCodec.SerializeCompressed(Chronicle)),
         };
         // additive sections: absent for worlds that have no hero, Codex or live state yet, so older saves and tests keep their bytes
+        if (Tables != null) sections.Add(new(IdTablesSave.SectionName, SaveCodec.Serialize(Tables)));          // P5 goods-table fix: always written (no format bump)
         if (Hero != null) sections.Add(new(WorldSave.HeroSection, SaveCodec.Serialize(Hero)));
         if (Codex != null) sections.Add(new(WorldSave.CodexSection, SaveCodec.Serialize(Codex)));
         if (Live != null) sections.Add(new(WorldSave.LiveSection, SaveCodec.SerializeCompressed(Live)));

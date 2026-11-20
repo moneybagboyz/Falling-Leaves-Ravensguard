@@ -61,7 +61,7 @@ public static class CraftShotScenes
                 Skills(s, (Skill.Smithing, 25));
                 s.Site.AddTool(s.Db, "field_smith_kit");
                 s.Econ.Items.Add(new IdAllocator(), "mail_hauberk", ItemQuality.Common, Hero, [new ItemComponent("wrought_iron", 9000, 1000)], conditionPermille: 380);
-                Give(s, ("scrap_iron", 300));
+                Give(s, ("mail_rings", 300));
                 return (s, "field_patch_mail", false);
             }
         }
