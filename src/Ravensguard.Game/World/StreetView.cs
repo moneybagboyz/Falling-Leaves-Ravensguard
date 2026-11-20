@@ -976,6 +976,7 @@ public partial class StreetView : Control, IHandlesBack
         HeroShots(); TalkShots(); ApShots();
         LandTick(delta);                                    // P5-A2: the land view, land answers, land screenshots
         BuildTick();                                        // P5-B: construction brought up to the clock, built pieces laid into the street, ghosts drawn
+        BuildModeTick(delta);                               // P5-C: build mode (StreetView.BuildMode.cs): the preview, the palette, answers to construction commands, the hero's hands
         if (_opt.IsShot && _opt.Weather == "storm" && _frames == Math.Max(2, _opt.Frames - 1)) _wover.Strike(); // dev: catch a lightning flash in the picture
         if (_opt.IsShot && !_opt.MapShot && _opt.Panel == null && !_quitting && _frames >= _opt.Frames && ShotReady()) Shoot();
         if (bench && _benchT >= _opt.BenchSeconds) Finish();
@@ -1394,6 +1395,7 @@ public partial class StreetView : Control, IHandlesBack
         if (AftermathInput(e)) { GetViewport().SetInputAsHandled(); return; }   // P4-D hook: the defeat and captivity screens' guard, the yield verb
         if (SuccessionInput(e)) { GetViewport().SetInputAsHandled(); return; }  // P4 close-out: the succession screen's guard (StreetView.Succession.cs)
         if (ObInput(e)) { GetViewport().SetInputAsHandled(); return; }
+        if (BuildInput(e)) { GetViewport().SetInputAsHandled(); return; }       // P5-C: build mode's keys and clicks (StreetView.BuildMode.cs)
         if (e is InputEventKey { Pressed: true } && Actions.Pressed(e, "world.back") && (_campOpen || _travel?.Journey is { State: Ravensguard.Sim.Travel.JourneyState.Travelling or Ravensguard.Sim.Travel.JourneyState.Paused }) && TravelInput(e)) { GetViewport().SetInputAsHandled(); return; }
         if (_router != null && Actions.Pressed(e, "world.back"))
         {
@@ -1424,6 +1426,7 @@ public partial class StreetView : Control, IHandlesBack
         else if (Actions.Pressed(e, "world.zoom_in")) SetBand(_band - 1);
         else if (Actions.Pressed(e, "world.zoom_out")) SetBand(_band + 1);
         else if (Actions.Pressed(e, "world.map")) OpenMap();
+        else if (Actions.Pressed(e, "world.build")) OpenBuildMode();             // P5-C: B opens build mode
         else if (Actions.Pressed(e, "world.panel_character")) OpenCharacter();
         else if (Actions.Pressed(e, "world.panel_codex")) OpenCodex();
         else if (Actions.Pressed(e, "world.make")) OpenCrafting();

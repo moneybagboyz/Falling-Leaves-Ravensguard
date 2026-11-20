@@ -29,7 +29,7 @@ Collected while the steps are built. The close-out fixes each item or moves it i
   - a 200-cell collapse takes about 65 ms against 3 ms (support re-checks after each post).
 
   The timing test's thresholds are loose for now; profile and fix in P5-I.
-- **Placement ignores trees and props** under a footprint. Clearing them should be part of building.
+- ~~**Placement ignores trees and props** under a footprint.~~ Done in P5-C: building clears them; a well or a grave refuses the piece. The felled tree's logs are not kept yet.
 - **Construction, still to do:**
   - "buy and deliver" from the market to the pile;
   - taking down generated buildings;
@@ -72,3 +72,14 @@ Collected while the steps are built. The close-out fixes each item or moves it i
 - **Growth, still to do:**
   - assarts as tree-by-tree felling sites (a region change replayed from the growth log);
   - vacant-house refits as sites.
+## From step 3 (P5-C build mode)
+- **BC-10 names a plan that fits.** `merchant_house` is 7 m wide and fits an 11 m plot inside its 1 m side setbacks; the test uses the inn. Confirm, or change the spec's example.
+- **A bought plot got a generated house** (world generation's fallback for a lot with no blueprint), invisible until the chunk streamed again, refusing every piece. Fixed in P5-C (`LandWorld.BarePlot`); a save made before keeps the house in its growth log: decide whether the migration should clear it.
+- **Cellars are left out** of library plans (nothing is dug in Phase 5); the stair down becomes floor. Digging belongs with prospecting and extraction.
+- **Build mode, still to do:**
+  - a water check in `PlanFitter` (no water hook in construction);
+  - reusing the lot's standing walls, and Deconstruct ghosts for what is in the way (spec 4.2's last sentence);
+  - the Q-menu verbs on a ghost and E on a ghost;
+  - "Post haul jobs" and "Buy and deliver" on the site panel;
+  - a roof material by culture or wealth for library plans (always thatch);
+  - the controls overlay's Build page shows only the Build actions, not the World keys kept beside them.

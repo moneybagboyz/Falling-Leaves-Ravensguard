@@ -124,6 +124,23 @@ ACTION_BUILD_ROTATE_CCW,Rotate ccw
 ACTION_BUILD_ROTATE_CW,Rotate cw
 ACTION_BUILD_CANCEL,Cancel
 ACTION_BUILD_REMOVE_GHOST,Remove ghost
+ACTION_BUILD_PAN_UP,Pan up
+ACTION_BUILD_PAN_DOWN,Pan down
+ACTION_BUILD_PAN_LEFT,Pan left
+ACTION_BUILD_PAN_RIGHT,Pan right
+ACTION_BUILD_PIECE_PREV,Previous piece
+ACTION_BUILD_PIECE_NEXT,Next piece
+ACTION_BUILD_CATEGORY_PREV,Previous category
+ACTION_BUILD_CATEGORY_NEXT,Next category
+ACTION_BUILD_PLAN_LIBRARY,Plan library
+ACTION_BUILD_MIRROR,Mirror the plan
+ACTION_BUILD_ROOF_OVER,Roof over
+ACTION_BUILD_DECONSTRUCT,Take down (brush)
+ACTION_BUILD_COMMIT,Commit the plan
+ACTION_BUILD_UNDO,Undo the last placement
+ACTION_BUILD_SAVE_BLUEPRINT,Save as blueprint
+ACTION_BUILD_SITE_PANEL,Site panel
+ACTION_BUILD_CLOSE,Close build mode
 ACTION_MENU_UP,Up
 ACTION_MENU_DOWN,Down
 ACTION_MENU_LEFT,Left
@@ -3023,6 +3040,162 @@ CONTRACT_DEV_NOT_LAID,The cottage could not be laid out on that plot.
 CONTRACT_DEV_GROWTH,"A cottage of {0}, {1}% built, is now a building site ({2})."
 CONTRACT_DEV_CIVIC,"the lord pays: posted on the board"
 CONTRACT_DEV_HOUSEHOLD,the household builds it
+cn_prop_in_way,Something stands there that building may not clear (a well or a grave).
+cn_fit_too_wide,"{0} m wide; the lot is {1} m, and {2} m must stay clear at each side."
+cn_fit_too_deep,"{0} m deep; the lot is {1} m deep."
+cn_fit_ground,"At {0}, {1} a building stands, or the ground is a road or too steep."
+cn_fit_no_door,No door of this plan opens to the outside.
+cn_fit_none,The plan does not fit this lot.
+cn_fit_ok,The plan fits the lot.
+cn_fit_no_lot,"No lot here: the plan follows the cursor."
+cn_nothing_to_undo,There is nothing of yours to undo.
+cn_undo_started,Work has started on the last pieces placed: take them off one by one.
+cn_undone,{0} pieces taken off the plan.
+cn_brush_too_big,That is too large an area at once.
+cn_ghosts_removed,{0} pieces taken off the plan.
+cn_decon_many,{0} pieces marked to be taken down.
+cn_decon_many_will_fall,{0} pieces marked to be taken down. Something above will fall.
+cn_roof_no_room,There is no room here to roof over.
+cn_roof_not_enclosed,"The room is not closed in yet: walls and doors first, then the roof."
+cn_roof_done,The room already has a roof.
+cn_design_nothing,There is nothing built or planned in that rectangle.
+cn_design_saved,"Saved as a blueprint: {0} ({1})."
+cn_design_saved_warn,"Saved as a blueprint: {0} ({1}). {2} warning(s), the first: {3}."
+cn_design_bad,"The blueprint {0} cannot be read ({1})."
+cn_design_imported,The blueprint {0} is part of this game now.
+BUILD_NOT_IN_FIGHT,Not while fighting.
+BUILD_NOT_MOUNTED,"Get down first: you cannot build from the saddle or a wagon."
+BUILD_WAIT,A moment: the plan is still being checked.
+BUILD_PLAN_REFUSED,"The plan cannot go here: {0} ({1} pieces refused)."
+BUILD_TITLE,"Build: level {0}, facing {1}"
+BUILD_FACING_0,north
+BUILD_FACING_1,east
+BUILD_FACING_2,south
+BUILD_FACING_3,west
+BUILD_HAND_TAG,(working by hand)
+BUILD_TOOL_PIECE,"{0} ({1}): click, or drag a line or an area"
+BUILD_TOOL_PLAN,"Plan: {0} (Z / X turn, M mirror, Enter places)"
+BUILD_TOOL_TAKEDOWN,Take down: drag over built pieces
+BUILD_TOOL_SAVERECT,Save as blueprint: drag over what you built
+BUILD_TOOL_NONE,Pick a piece.
+BUILD_KEYS_HINT,"RMB removes, {0}{1} turn, {2}{3} level, Shift outline"
+BUILD_CAT_WALLS,Walls and posts
+BUILD_CAT_FLOORS,Floors
+BUILD_CAT_ROOFS,Roofs
+BUILD_CAT_OPENINGS,Doors and windows
+BUILD_CAT_STAIRS,Stairs and ladders
+BUILD_CAT_FURNITURE,Furniture
+BUILD_CAT_WORKSTATIONS,Workstations
+BUILD_CAT_FENCES,Fences and gates
+BUILD_PIECE_ROW,{0} ({1})
+BUILD_NO_PIECES,Nothing to build here.
+BUILD_COST_LINE,"{0} cells: {1} worker-hours; {2}; about {3} at book price"
+BUILD_MAT_KG,{0} {1} kg
+BUILD_NO_MATERIALS,no materials
+BUILD_REFUSED_N,"{0} refused: {1}"
+BUILD_ALL_OK,Every piece can go here.
+BUILD_CLEARS,"{0} cell(s) with a tree or clutter: building clears them."
+BUILD_PLAN_TRANSFORM,"Turned {0} degrees, {1}"
+BUILD_MIRRORED,mirrored
+BUILD_NOT_MIRRORED,not mirrored
+BUILD_FIT_STREET,"Fits the lot ({0} x {1} m), front door to the street."
+BUILD_FIT_OK,"Fits the lot ({0} x {1} m)."
+BUILD_FIT_NO,Does not fit the lot: {0}
+BUILD_BTN_PLANS,Plans
+BUILD_BTN_COMMIT,Commit plan
+BUILD_BTN_ROOF,Roof over
+BUILD_BTN_TAKEDOWN,Take down
+BUILD_BTN_SAVEAS,Save as
+BUILD_BTN_SITE,Site
+BUILD_BTN_UNDO,Undo
+BUILD_BTN_CLOSE,Close
+BUILD_HAND_ON,"You set to work with your own hands on the nearest piece."
+BUILD_HAND_OFF,You stop working on the building.
+BUILD_HAND_NONE,"No piece ready to build within 3 m of you: you stop."
+BUILD_NOTHING_TO_UNLOAD,You carry nothing this site needs.
+BUILD_LIB_TITLE,Plan library
+BUILD_LIB_STATUS,"{0} of {1} plans. {2}"
+BUILD_LIB_LOT,"The lot under the cursor: {0} x {1} m."
+BUILD_LIB_NO_LOT,No lot under the cursor: a plan is placed where you point.
+BUILD_LIB_BROKEN,"{0} of your blueprints could not be read."
+BUILD_LIB_ANY_CULTURE,Any culture
+BUILD_LIB_ANY_WEALTH,Any wealth
+BUILD_WEALTH_POOR,Poor
+BUILD_WEALTH_MIDDLING,Middling
+BUILD_WEALTH_RICH,Rich
+BUILD_PURPOSE_ANY,Any purpose
+BUILD_PURPOSE_DWELLING,Dwelling
+BUILD_PURPOSE_WORKSHOP,Workshop or shop
+BUILD_PURPOSE_STORAGE,Storage
+BUILD_PURPOSE_LIVESTOCK,Livestock
+BUILD_PURPOSE_CIVIC,Civic and other
+BUILD_LIB_FITS,Fits this lot
+BUILD_LIB_ROW,"{0}  {1} x {2} m, {3} level(s), {4}"
+BUILD_LIB_ROW_YOURS,"{0} (yours)  {1} x {2} m, {3} level(s), {4}"
+BUILD_LIB_YOURS,(your blueprint)
+BUILD_LIB_NONE,No plan matches these filters.
+BUILD_LIB_SIZE,"{0} x {1} m; levels: {2}; built {3}."
+BUILD_LIB_NO_CELLAR,"Its cellar is left out: nothing is dug below the ground yet."
+BUILD_LIB_CREW,"{0} worker-hours: {1} days for one worker, {2} for a crew of six (10-hour days)."
+BUILD_LIB_PLACE,Place this plan
+BUILD_LEVEL_GROUND,ground
+BUILD_ROOMS_HEAD,When built
+BUILD_ROOMS_NONE,No room yet: walls all round and a roof make one.
+BUILD_ROOM_PLAIN,A room
+BUILD_ROOM_LINE,"{0}: {1} ({2})"
+BUILD_ROOM_AREA,{0} sq m
+BUILD_ROOM_INDOOR,indoor
+BUILD_ROOM_UNROOFED,closed in but open to the sky
+BUILD_ROOM_OPEN,not closed in
+BUILD_ROOM_BEDS,{0} beds
+BUILD_ROOM_GAPS,"(lacks: {0})"
+BUILD_VALUE_MEAN,mean
+BUILD_VALUE_PLAIN,plain
+BUILD_VALUE_DECENT,decent
+BUILD_VALUE_FINE,fine
+BUILD_VALUE_GRAND,grand
+BUILD_SITE_TITLE,Building site: {0}
+BUILD_SITE_TITLE_NONE,Building site
+BUILD_SITE_OWN_DESIGN,your own design
+BUILD_SITE_PROGRESS,"{3} pieces built, {4} to go; on those, {0} of {1} worker-hours done ({2}%); {5} kg in the pile."
+BUILD_SITE_WORKING,"Working: {0} of {1} hands at a piece."
+BUILD_SITE_NO_CREW,"Nobody works here: hire hands, or build it yourself."
+BUILD_SITE_NO_MATERIALS,"Stopped: no {0} on site."
+BUILD_SITE_NO_WAGES,"Stopped: the wages for tomorrow are not there."
+BUILD_SITE_RAIN,"Stopped: it is raining on the daub and thatch."
+BUILD_SITE_NIGHT,Stopped for the night.
+BUILD_SITE_STOPPED,Stopped by you.
+BUILD_SITE_FINISHED_STATE,Finished.
+BUILD_SITE_ABANDONED,"Abandoned: anyone the land allows may take it up again."
+BUILD_SITE_MATERIALS,Materials
+BUILD_SITE_COL_GOOD,Good
+BUILD_SITE_COL_NEED,Needed
+BUILD_SITE_COL_PILE,In the pile
+BUILD_SITE_COL_WAY,On the way
+BUILD_SITE_NOTHING_NEEDED,Nothing more is needed.
+BUILD_SITE_CREW,Crew
+BUILD_SITE_NO_HANDS,No hands yet.
+BUILD_SITE_CREW_ROW,"{0}, {1}, {2} a day, {3} h today, {4}"
+BUILD_CREW_FOLLOWER,your follower
+BUILD_CREW_LABOURER,labourer
+BUILD_CREW_SKILLED,skilled
+BUILD_CREW_AT_WORK,at work
+BUILD_CREW_IDLE,idle
+BUILD_SITE_WAGES,"Wages in escrow: {0} ({1} a day: {2} day(s))."
+BUILD_SITE_WAGES_NONE,"No wages owed. In escrow: {0}."
+BUILD_SITE_PAUSE,Stop work
+BUILD_SITE_RESUME,Start work
+BUILD_SITE_HIRE,Hire a labourer
+BUILD_SITE_HIRE_SKILLED,Hire a skilled hand
+BUILD_SITE_UNLOAD,Unload your pack
+BUILD_SITE_HAND,Work by hand
+BUILD_SITE_HAND_STOP,Stop working
+BUILD_SAVE_TITLE,Save as blueprint
+BUILD_SAVE_BODY,"The plan of what stands and is planned in the {0} x {1} m rectangle, every level, as a blueprint you can place again here or in another game."
+BUILD_SAVE_PLACEHOLDER,A name for the plan
+BUILD_SAVE_NOTE,"It is kept in this game and in your blueprints folder (the mod 'player')."
+BUILD_SAVE_OK,Save
+BUILD_SAVE_DEFAULT_NAME,My building
 cf_looked,You look about for craftsmen.
 cf_not_here,You must be in the craftsman's own town to ask him.
 cf_maker_cannot,He cannot make that: he does not know it or has no workshop for it.

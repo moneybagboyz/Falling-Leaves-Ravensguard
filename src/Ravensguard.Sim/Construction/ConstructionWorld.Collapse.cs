@@ -221,7 +221,7 @@ public sealed partial class ConstructionWorld
             foreach (var m in s.Crew)
             {
                 var g = m.Ghost != default ? Book.Ghosts.GetValueOrDefault(m.Ghost) : null;
-                crew.Add(new CrewView(m.Person, NameOf?.Invoke(m.Person) ?? "", g?.X ?? s.PileX, g?.Y ?? s.PileY + 1, g?.Z ?? s.PileZ, g != null, m.Class, m.WageMitesPerDay));
+                crew.Add(new CrewView(m.Person, NameOf?.Invoke(m.Person) ?? "", g?.X ?? s.PileX, g?.Y ?? s.PileY + 1, g?.Z ?? s.PileZ, g != null, m.Class, m.WageMitesPerDay) { Site = s.Id, WorkedTodaySec = m.WorkedTodaySec });   // P5-C: Site, WorkedTodaySec
             }
         }
         var groans = Book.Groans.Select(g => new GroanView(g.EventId, g.StartSec, g.FallSec, g.Cells.Select(k => { var (x, y, z) = ConstructionIds.Unpack(k); return (x, y, z); }).ToList())).ToList();
@@ -238,7 +238,12 @@ public sealed record SiteView(EntityId Id, string Blueprint, SiteState State, Pa
     IReadOnlyList<SiteMaterial> Materials, long EscrowMites, EntityId Owner, long PileG);
 public sealed record BuiltView(int X, int Y, int Z, string? Structure, string? Fixture);
 public sealed record GroanView(ulong Event, long StartSec, long FallSec, IReadOnlyList<(int X, int Y, int Z)> Cells);
-public sealed record CrewView(EntityId Person, string Name, int X, int Y, int Z, bool Working, CrewClass Class, long WageMites);
+public sealed record CrewView(EntityId Person, string Name, int X, int Y, int Z, bool Working, CrewClass Class, long WageMites)
+{
+    /// <summary>P5-C: the site the member works for, and the seconds worked today (the site panel's crew rows).</summary>
+    public EntityId Site { get; init; }
+    public long WorkedTodaySec { get; init; }
+}
 
 /// <summary>What the main thread sees of construction at the last barrier: an immutable copy (build-mode-and-construction 6).</summary>
 public sealed record ConstructionView(long Sec, long BuiltVersion, IReadOnlyList<SiteView> Sites, IReadOnlyList<GhostView> Ghosts, IReadOnlyList<BuiltView> Built, IReadOnlyList<GroanView> Groans,

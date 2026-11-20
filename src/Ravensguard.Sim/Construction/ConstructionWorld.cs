@@ -197,12 +197,12 @@ public sealed partial class ConstructionWorld
     {
         if (cells.Count == 0) return PlaceResult.No("cn_nothing_placed");
         _planBeams = true;                                   // the planned cells may hold beams: support checks scan for them
-        try { return PlaceCore(owner, ownerKind, household, cells, nowSec, siteId, allOrNothing, blueprint, pile, payer, payerKind); }
+        try { return PlaceCore(owner, ownerKind, household, cells, nowSec, siteId, allOrNothing, blueprint, pile, payer, payerKind, dryRun: false); }
         finally { _planBeams = false; }
     }
 
     private PlaceResult PlaceCore(EntityId owner, PurseKind ownerKind, int household, IReadOnlyList<PlaceCell> cells, long nowSec, EntityId siteId, bool allOrNothing,
-        string blueprint, (int X, int Y)? pile, EntityId payer, PurseKind payerKind)
+        string blueprint, (int X, int Y)? pile, EntityId payer, PurseKind payerKind, bool dryRun)
     {
         var refused = new List<PlaceRefusal>();
         var batch = new Dictionary<long, PieceCost>();
@@ -231,6 +231,7 @@ public sealed partial class ConstructionWorld
             long sk = ConstructionIds.SlotKey(c.X, c.Y, c.Z, slot), ck = ConstructionIds.CellKey(c.X, c.Y, c.Z);
             if (_built.ContainsKey(sk) || _ghostAt.ContainsKey(sk) || (slot == GhostSlot.Structure ? batch.ContainsKey(ck) : batchFix.Contains(ck))) { No("cn_occupied"); continue; }
             if (slot == GhostSlot.Structure && BuiltAt(c.X, c.Y, c.Z) == null && Standing?.Invoke(c.X, c.Y, c.Z) == true) { No("cn_occupied"); continue; }
+            if (slot == GhostSlot.Structure && PropAt?.Invoke(c.X, c.Y, c.Z) == PropHere.Blocks) { No("cn_prop_in_way"); continue; }   // P5-C: a well or a grave is not cleared by building
             if (slot == GhostSlot.Fixture)
             {
                 var floor = batch.GetValueOrDefault(ck) ?? BuiltStructure(c.X, c.Y, c.Z) ?? (GhostAt(c.X, c.Y, c.Z) is { Work: GhostWork.Build } fg ? Costs.Get(fg.Piece) : null);
@@ -264,6 +265,7 @@ public sealed partial class ConstructionWorld
             ok.Remove((c, cost));
             batch.Remove(ConstructionIds.CellKey(c.X, c.Y, c.Z));
         }
+        if (dryRun) return new PlaceResult(ok.Count > 0 && !(allOrNothing && refused.Count > 0), default, [], refused, refused.Count == 0 ? "cn_placed" : "cn_placed_some", [ok.Count, refused.Count]);   // P5-C: build mode's preview
         if (ok.Count == 0 || (allOrNothing && refused.Count > 0))
             return new PlaceResult(false, default, [], refused, refused.Count > 0 ? refused[0].Key : "cn_nothing_placed", refused.Count > 0 ? refused[0].Args : []);
         // the site

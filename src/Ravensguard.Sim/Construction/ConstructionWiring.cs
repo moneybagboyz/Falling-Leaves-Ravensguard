@@ -73,7 +73,7 @@ public static class ConstructionWiring
     private static ConstructionWorld Make(WorldState state, ContentDatabase content, Population pop, EconomyState econ, int region)
     {
         var book = state.Construction ??= new ConstructionBook();
-        return new ConstructionWorld(book, econ, PieceCosts.Of(content), region) { Pop = pop, Content = content, Seed = state.Seed };
+        return new ConstructionWorld(book, econ, PieceCosts.Of(content), region) { Pop = pop, Content = content, Seed = state.Seed, Designs = state.Designs ??= new DesignBook() };   // P5-C: Designs
     }
 
     private static void Hook(ConstructionWorld cw, WorldState state, ContentDatabase content, LandWorld? land, RegionWeather? weather, Population pop, Func<WoundLedger?> wounds)
@@ -104,6 +104,17 @@ public static class ConstructionWiring
             if (c == null) return false;
             int code = c.Tiles.GetValueOrDefault((y - cy * ChunkContent.Size) * ChunkContent.Size + x - cx * ChunkContent.Size);
             return lib.Pieces.KindOf(pal.Id(TileCode.Structure(code))) is { } k && k != PieceKind.Ground;
+        };
+        // P5-C: the trees and props on a cell of a visited chunk (build mode clears the natural ones; a well or a grave refuses the piece)
+        cw.PropAt = (x, y, z) =>
+        {
+            int cx = ChunkStreamer.FloorDiv(x, ChunkContent.Size), cy = ChunkStreamer.FloorDiv(y, ChunkContent.Size);
+            if (state.Chunks.GetSnapshot(new ChunkKey(cx, cy, 0)) == null || z < ChunkKey.MinZ || z > ChunkKey.MaxZ) return PropHere.None;
+            var key = new ChunkKey(cx, cy, z);
+            int ops = state.Chunks.DeltaOpCount(key);
+            if (!standingCache.TryGetValue(key, out var hit) || hit.Ops != ops) standingCache[key] = hit = (ops, state.Chunks.Rebuild(key));
+            if (standingCache.Count > 64) standingCache.Clear();
+            return PropClearing.Here(hit.Content, x - cx * ChunkContent.Size, y - cy * ChunkContent.Size);
         };
         if (weather != null)
         {
@@ -146,6 +157,22 @@ public static class ConstructionWiring
     public static void HookLand(ConstructionWorld cw, LandWorld land, Population pop)
     {
         LandRegistry? reg = null; string sig = "";
+        // P5-C: the lot under a point for the plan fitter: a settlement lot with its street side (the lot's facing), or a claim's tiles without one
+        cw.LotAt = (x, y) =>
+        {
+            string now = land.Book.ComputeHash() + "|" + pop.Households.Count;
+            if (reg == null || now != sig) { reg = land.Registry(); sig = now; }
+            var (s, l) = reg.LotAt(x, y);
+            if (s >= 0) { var lot = pop.Region.Settlements[s].Plan.Lots[l]; return new FitLot(lot.Rect.X, lot.Rect.Y, lot.Rect.W, lot.Rect.H, lot.Facing & 3); }
+            int t = LandRules.TileAt(x, y);
+            foreach (var c in land.Book.Claims)
+            {
+                if (c.State is not (ClaimState.Open or ClaimState.Deeded) || Array.BinarySearch(c.Tiles, t) < 0) continue;
+                int n = Ravensguard.Sim.WorldGen.Region.Region.Size, tm = Ravensguard.Sim.WorldGen.Region.Region.TileM;
+                return new FitLot(t % n * tm, t / n * tm, tm, tm, -1);
+            }
+            return null;
+        };
         cw.May = (p, hh, act, x, y) =>
         {
             string now = land.Book.ComputeHash() + "|" + pop.Households.Count;
@@ -225,8 +252,13 @@ public sealed class ChunkTileSink(ChunkStore store, PiecePalette palette) : ITil
         int lx = x - cx * ChunkContent.Size, ly = y - cy * ChunkContent.Size;
         int cur = store.Rebuild(key) is { } content ? content.Tiles.GetValueOrDefault(ly * ChunkContent.Size + lx) : 0;
         int code = TileCode.WithFixture(TileCode.WithStructure(cur, palette.Of(structure)), palette.Of(fixture));
-        if (code == cur) return;
-        store.AppendDelta(key, [Ravensguard.Sim.Save.ChunkOp.SetTile(lx, ly, code)]);
+        // P5-C: a piece laid on a cell clears the trees and props there (PropClearing; build mode refused the ones it may not clear)
+        var clear = new List<Ravensguard.Sim.Save.ChunkOp>();
+        if (structure != null && store.Rebuild(key) is { } now)
+            foreach (var (id, p) in PropClearing.At(now, lx, ly)) if (PropClearing.Of(p.Kind) == PropHere.Clears) clear.Add(Ravensguard.Sim.Save.ChunkOp.RemoveObject(new EntityId(id)));
+        if (code == cur && clear.Count == 0) return;
+        if (code != cur) clear.Add(Ravensguard.Sim.Save.ChunkOp.SetTile(lx, ly, code));
+        store.AppendDelta(key, clear);
         Written++;
     }
 }

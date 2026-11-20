@@ -110,6 +110,9 @@ public sealed class LandWorld
     /// The plots a settlement's lord offers now (spec 4.2): vacant houses he holds (lowest lot first), then new plots in <see cref="RegionGrowth.FindPlot"/>'s order (nearest the square first), up to the
     /// listing count of the place, at today's price. Growth's builds reserve their plots, so a plot a household has started on is never listed; a pure function of the records.
     /// </summary>
+    /// <summary>P5-C: the blueprint id of a plot sold bare (no blueprint by that id exists, so world generation stamps nothing on it).</summary>
+    public const string BarePlot = "-";
+
     public List<Listing> Listings(int s)
     {
         var res = new List<Listing>();
@@ -160,7 +163,9 @@ public sealed class LandWorld
         {
             bool town = st.Class == SettlementClass.Town;
             lot = st.Plan.Lots.Count;
-            var rec = new LotRecord(s, lot, true, town ? LotUse.Burgage : LotUse.Cottage, DwellingType.None, "", pick.Rect, pick.Facing, (byte)(town ? 1 : 0), 0, day);
+            // P5-C: a bought plot is bare ground (BarePlot): with no blueprint, world generation's fallback stamped a townhouse or a cottage on it, so a house the buyer never built stood
+            // in the visited chunks and refused every piece he placed there
+            var rec = new LotRecord(s, lot, true, town ? LotUse.Burgage : LotUse.Cottage, DwellingType.None, BarePlot, pick.Rect, pick.Facing, (byte)(town ? 1 : 0), 0, day);
             RegionGrowth.Change(Region, _sink(), [new RectM(pick.Rect.X - 4, pick.Rect.Y - 4, pick.Rect.W + 8, pick.Rect.H + 8)], () => RegionGrowth.AddLot(Region, Pop, rec));
             Growth.Lots.Add(rec);
         }

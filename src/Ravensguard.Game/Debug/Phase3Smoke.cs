@@ -61,6 +61,49 @@ public static class Phase3Smoke
         if (bad.Count > 0) throw new Exception($"{what} does not fit {view.Size.X}x{view.Size.Y}: " + string.Join(" | ", bad.GetRange(0, Math.Min(10, bad.Count))));
     }
 
+    /// <summary>
+    /// P5-C: build mode at 960 x 540 (build-mode-and-construction 6): B opens it and its palette fits; the World's screen keys stay off under it; P opens the plan library (it fits, Esc comes
+    /// back to build mode); J opens the site panel of a staged site (it fits, Esc comes back); Ctrl+S's name dialog is modal (no build key under it) and Esc closes it; B closes build mode.
+    /// </summary>
+    static async Task BuildMode(SceneTree tree, ScreenRouter router, StreetView sv, Rect2 view)
+    {
+        Key(Godot.Key.B); await Frames(tree, 6);
+        if (!sv.BuildModeOn) throw new Exception("B did not open build mode");
+        await Frames(tree, 30);                                                                // the barrier answers the first preview
+        Fit(sv.DebugHud!, "build mode's palette", view);
+        foreach (var k in new[] { Godot.Key.I, Godot.Key.C, Godot.Key.N, Godot.Key.Y, Godot.Key.K }) { Key(k); await Frames(tree, 2); }
+        if (router.Top != sv || !sv.BuildModeOn) throw new Exception($"a World screen key opened {router.Top?.GetType().Name} under build mode");
+        Key(Godot.Key.P); await Frames(tree, 8);
+        if (router.Top is not World.Build.PlanLibraryPanel) throw new Exception("P did not open the plan library (top " + router.Top?.GetType().Name + ")");
+        await Frames(tree, 20);
+        Fit(router.Top!, "the plan library", view);
+        Key(Godot.Key.Escape); await Frames(tree, 4);
+        if (router.Top != sv || !sv.BuildModeOn) throw new Exception("Esc did not return from the plan library to build mode");
+        GD.Print("[smoke]   build mode: palette fits, World keys off, the plan library fits, Esc returns");
+        // a site beside the hero (the dev console's staging: the land rule lifted for the one call), then its panel
+        sv.DebugBuild("half");
+        if (!await Until(tree, () => sv.DebugGhostCount > 0, 600)) throw new Exception("the staged site shows no ghosts");
+        Key(Godot.Key.J); await Frames(tree, 8);
+        if (router.Top is not World.Build.SitePanel) throw new Exception("J did not open the site panel (top " + router.Top?.GetType().Name + ")");
+        await Frames(tree, 30);
+        Fit(router.Top!, "the site panel", view);
+        Key(Godot.Key.Escape); await Frames(tree, 4);
+        if (router.Top != sv || !sv.BuildModeOn) throw new Exception("Esc did not return from the site panel to build mode");
+        // save as blueprint: the name dialog over the street is modal
+        var (hx, hy) = sv.DebugHeroCell;
+        var dlg = sv.DebugSaveRect(hx - 4, hy - 4, hx + 4, hy + 4) ?? throw new Exception("the save-as dialog did not open");
+        await Frames(tree, 6);
+        Fit(sv.DebugHud!, "the save-as dialog", view);
+        foreach (var k in new[] { Godot.Key.B, Godot.Key.P, Godot.Key.J, Godot.Key.Delete }) { Key(k); await Frames(tree, 2); }
+        if (router.Top != sv || !sv.BuildModeOn || !GodotObject.IsInstanceValid(dlg) || !dlg.IsInsideTree()) throw new Exception("a build key acted under the save-as dialog");
+        Key(Godot.Key.Escape); await Frames(tree, 4);
+        if (GodotObject.IsInstanceValid(dlg) && dlg.IsInsideTree()) throw new Exception("Esc did not close the save-as dialog");
+        if (!sv.BuildModeOn) throw new Exception("Esc on the dialog closed build mode too");
+        Key(Godot.Key.B); await Frames(tree, 4);
+        if (sv.BuildModeOn) throw new Exception("B did not close build mode");
+        GD.Print("[smoke]   build mode: the site panel fits, the save-as dialog is modal, B closes");
+    }
+
     public static async Task Run(SceneTree tree, ScreenRouter router, StreetView sv)
     {
         var win = tree.Root;
@@ -89,6 +132,8 @@ public static class Phase3Smoke
                 if (router.Top != sv || router.Depth != depth || router.HasModal) throw new Exception($"{what}: Esc did not return to the street view (top {router.Top?.GetType().Name}, depth {router.Depth} of {depth})");
                 GD.Print($"[smoke]   {what}: fits, Esc returns");
             }
+
+            await BuildMode(tree, router, sv, view);                                          // P5-C
 
             // the bar of the party, the controls overlay on F10 (also ?), the F8 report window
             sv.DebugPartyBar(); await Frames(tree, 2);

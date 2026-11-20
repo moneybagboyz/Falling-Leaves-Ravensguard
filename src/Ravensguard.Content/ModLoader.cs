@@ -205,6 +205,29 @@ public sealed class ModLoader(ContentTypeRegistry? registry = null, ContentVocab
         }
     }
 
+    /// <summary>
+    /// P5-C: the definitions of type <typeparamref name="T"/> in one content file's text (a player blueprint embedded in a save, or one file of the player's mod), parsed and deserialised as
+    /// <see cref="Load"/> does, without the cross-file checks (the caller validates what it needs). Problems go to the report with their line.
+    /// </summary>
+    public IReadOnlyList<(T Def, SourceLocation Location, IReadOnlyDictionary<string, SourceLocation> Props)> ReadText<T>(string text, string displayPath, ContentReport report) where T : ContentDef
+    {
+        var res = new List<(T, SourceLocation, IReadOnlyDictionary<string, SourceLocation>)>();
+        string want = _registry.NameOf(typeof(T));
+        foreach (var raw in ContentFileParser.Parse(System.Text.Encoding.UTF8.GetBytes(text), displayPath, report))
+        {
+            if (!TryString(raw.Node, "type", out var type) || type != want) { report.Error(raw.Location, $"expected a \"{want}\" definition"); continue; }
+            var node = (JsonObject)raw.Node.DeepClone();
+            node.Remove("type");
+            try
+            {
+                if (node.Deserialize<T>(ContentDatabase.SerializerOptions) is { } v) res.Add((v, raw.Location, raw.PropertyLocations));
+                else report.Error(raw.Location, $"{type} deserialised to null");
+            }
+            catch (JsonException ex) { report.Error(raw.Location, $"{type}: {ex.Message}"); }
+        }
+        return res;
+    }
+
     private static bool TryString(JsonObject o, string key, out string value)
     {
         if (o[key] is JsonValue v && v.TryGetValue<string>(out var s)) { value = s; return true; }

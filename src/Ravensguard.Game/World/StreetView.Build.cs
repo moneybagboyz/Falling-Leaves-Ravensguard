@@ -83,6 +83,7 @@ public partial class StreetView
             var k = (b.X, b.Y, b.Z); now.Add(k);
             if (_builtShown.TryGetValue(k, out var was) && was == (b.Structure, b.Fixture)) continue;
             if (st.SetLoadedTile(b.X, b.Y, b.Z, b.Structure, b.Fixture)) laid++;
+            if (b.Structure != null) st.ClearLoadedProps(b.X, b.Y, b.Z, k => PropClearing.Of(k) == PropHere.Clears);   // P5-C: building clears the trees and clutter there
             _builtShown[k] = (b.Structure, b.Fixture);
         }
         foreach (var k in _builtShown.Keys.Where(k => !now.Contains(k)).ToList())
@@ -249,24 +250,7 @@ public partial class StreetView
             if (_shake > 0) { _shake = Math.Max(0, _shake - delta); Position = _shake > 0 ? new Vector2((float)Math.Sin(_t * 60) * 3, 0) : Vector2.Zero; }
         }
 
-        string? Sprite(GhostView g) => g.Kind switch
-        {
-            PieceKind.Wall => g.Piece.Contains("wattle") ? "terrain.wall_wattle" : g.Piece.Contains("stone") || g.Piece.Contains("brick") ? "terrain.wall_stone" : "terrain.wall_timber",
-            PieceKind.Window => g.Piece.Contains("arrow") || g.Piece.Contains("open") ? "terrain.wall_stone_win" : "terrain.wall_timber_win",
-            PieceKind.Door => "terrain.door_h",
-            PieceKind.Floor => g.Piece == "floor_plank" ? "terrain.wood_floor" : g.Piece == "floor_packed_earth" ? "terrain.earth_floor" : "terrain.flagstone",
-            PieceKind.StairsUp => "terrain.stairs_up",
-            PieceKind.StairsDown => "terrain.stairs_down",
-            PieceKind.Ladder => "object.ladder",
-            PieceKind.Trapdoor => "object.trapdoor",
-            PieceKind.Post => "object.stake",
-            PieceKind.Furniture or PieceKind.Workstation => g.Piece switch
-            {
-                "bed" or "bunk" or "straw_pallet" => "object.bed", "forge" => "object.forge", "anvil" => "object.anvil", "table" => "object.table", "chest" => "object.chest",
-                "hearth" or "hearth_central" or "hearth_chimney" => "object.hearth", _ => "object.crate",
-            },
-            _ => null,
-        };
+        static string? Sprite(GhostView g) => Build.BuildCatalog.Sprite(g.Piece, g.Kind);      // P5-C: one table for the ghosts and build mode's preview
 
         Rect2 Cell(int x, int y) => new(new Vector2((x - 0) * Tile, (y - 0) * Tile), new Vector2(Tile, Tile));
 

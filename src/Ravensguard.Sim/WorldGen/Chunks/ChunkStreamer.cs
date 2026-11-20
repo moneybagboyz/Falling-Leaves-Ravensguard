@@ -361,6 +361,23 @@ public sealed class ChunkStreamer
         return true;
     }
 
+    /// <summary>
+    /// P5-C: the props on a cell of a loaded chunk that building clears (<paramref name="clears"/>), taken out without a delta: construction's tile sink wrote the <c>RemoveObject</c> for a
+    /// visited chunk already. The window re-stamps the chunk. False when the chunk is not loaded or nothing stood there.
+    /// </summary>
+    public bool ClearLoadedProps(int wx, int wy, int z, Func<PropKind, bool> clears)
+    {
+        int cx = FloorDiv(wx, ChunkContent.Size), cy = FloorDiv(wy, ChunkContent.Size);
+        var c = TryGet(cx, cy);
+        if (c == null || z < ChunkKey.MinZ || z > ChunkKey.MaxZ) return false;
+        int lx = wx - cx * ChunkContent.Size, ly = wy - cy * ChunkContent.Size;
+        var props = c.Level(z).Props;
+        var gone = props.Where(kv => kv.Value.X == lx && kv.Value.Y == ly && clears(kv.Value.Kind)).Select(kv => kv.Key).ToList();
+        foreach (var id in gone) props.Remove(id);
+        if (gone.Count > 0) c.Version++;
+        return gone.Count > 0;
+    }
+
     /// <summary>Removes a prop (a felled tree) by its stable id.</summary>
     public bool RemoveProp(int cx, int cy, int z, ulong id)
     {

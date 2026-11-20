@@ -133,11 +133,29 @@ public static class InputDefs
         A(S, "cancel", K(Key.Escape));
 
         // Build
-        A(B, "place", M(MouseButton.Left));
+        A(B, "place", M(MouseButton.Left), M(MouseButton.Left, Mods.Shift)); // P5-C: Shift with a drag draws an outline (read as a modifier, as the blueprint editor does)
         A(B, "rotate_ccw", K(Key.Z));
         A(B, "rotate_cw", K(Key.X));
         A(B, "cancel", K(Key.Escape));
         A(B, "remove_ghost", M(MouseButton.Right));
+        // P5-C (overview 6): build mode's own keys; the World keys other than time, camera, level, overlay, save and bug report are off while it is open
+        A(B, "pan_up", K(Key.W));
+        A(B, "pan_down", K(Key.S));
+        A(B, "pan_left", K(Key.A));
+        A(B, "pan_right", K(Key.D));
+        A(B, "piece_prev", K(Key.Comma));
+        A(B, "piece_next", K(Key.Period));
+        A(B, "category_prev", K(Key.Bracketleft));
+        A(B, "category_next", K(Key.Bracketright));
+        A(B, "plan_library", K(Key.P));
+        A(B, "mirror", K(Key.M));
+        A(B, "roof_over", K(Key.R));
+        A(B, "deconstruct", K(Key.Delete));
+        A(B, "commit", K(Key.Enter));
+        A(B, "undo", K(Key.Z, Mods.Ctrl));
+        A(B, "save_blueprint", K(Key.S, Mods.Ctrl));
+        A(B, "site_panel", K(Key.J));
+        A(B, "close", K(Key.B));
 
         // Menu
         A(U, "up", K(Key.Up));

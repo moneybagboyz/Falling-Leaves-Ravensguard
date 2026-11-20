@@ -34,12 +34,19 @@ public static class ContextRules
             or (InputContext.World, InputContext.Choice) or (InputContext.Choice, InputContext.World);
     }
 
-    /// <summary>World actions that are off while Build is active (Build rebinds their keys: Z/X, Esc, left/right click).</summary>
-    public static readonly IReadOnlySet<string> BuildSuppressedWorld = new HashSet<string> { "act", "context_menu", "back", "sneak", "combat_stance" };
+    /// <summary>
+    /// World actions that stay on while Build is active (P5-C, overview 6: time, camera, level, nameplates, the overlay, save and load, the bug report); every other World action is off,
+    /// so Build can take their keys (WASD pans, Z / X rotate, P, M, R, J, B, Enter, Esc, the clicks).
+    /// </summary>
+    public static readonly IReadOnlySet<string> BuildKeptWorld = new HashSet<string>
+    {
+        "pause", "speed_1", "speed_2", "speed_4", "speed_8", "camera_up", "camera_down", "camera_left", "camera_right", "zoom_in", "zoom_out", "camera_home",
+        "level_up", "level_down", "nameplates", "controls_overlay", "quicksave", "quickload", "report_bug",
+    };
 
     /// <summary>True when <paramref name="lower"/> is switched off while <paramref name="active"/> is on top.</summary>
     public static bool Suppresses(InputContext active, InputAction lower) =>
-        (active == InputContext.Build && lower.Context == InputContext.World && BuildSuppressedWorld.Contains(lower.Name))
+        (active == InputContext.Build && lower.Context == InputContext.World && !BuildKeptWorld.Contains(lower.Name))
         || (active == InputContext.Choice && lower.Context == InputContext.World && ChoiceSuppressedWorld.Contains(lower.Name));
 
     /// <summary>World actions that are off while a numbered list (road encounter, camp panel) is open: the choice digits take the speed digits' keys.</summary>
@@ -66,6 +73,8 @@ public sealed class KeyMap
         // Phase 4: Shift+F6 / Shift+F7 are matched exactly beside F6 / F7
         ("world.watch_toggle", "world.stance_next"), ("world.combat_log", "world.last_report"),
         ("combatstance.watch_toggle", "combatstance.stance_next"), ("combatstance.combat_log", "combatstance.last_report"),
+        // P5-C: build mode reads Ctrl+Z (undo) beside Z (rotate) and Ctrl+S (save as blueprint) beside S (pan down) exactly
+        ("build.rotate_ccw", "build.undo"), ("build.pan_down", "build.save_blueprint"),
     };
 
     readonly Dictionary<string, List<Binding>> _bindings = new();
