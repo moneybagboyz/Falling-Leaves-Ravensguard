@@ -15,7 +15,8 @@ public static class Demography
     // ------------------------------------------------------------------ deaths
 
     /// <summary>Kills a living person: marks the row, widows the spouse, takes the person out of the household and runs succession (spec 3.1, 3.8).</summary>
-    public static void Kill(SimWorld w, int p, DeathCause cause, GameTime when, RegionOutbox ob, string note = "")
+    /// <param name="chain">Phase 6 (chronicle-full 4.1): the death's cause as a key and typed parameters (a wound's description, a fight's chain); wins over <paramref name="note"/>, the legacy English note older writers still pass.</param>
+    public static void Kill(SimWorld w, int p, DeathCause cause, GameTime when, RegionOutbox ob, string note = "", Cause? chain = null)
     {
         var pt = w.People;
         if (pt.Status[p] != PersonStatus.Alive) return;
@@ -30,16 +31,16 @@ public static class Demography
         ob.Count("deaths");
         int sp = pt.Spouse[p];
         if (sp >= 0 && pt.Spouse[sp] == p) pt.Spouse[sp] = -1;           // the partner is widowed; the dead keep the link as a record
-        ChronicleDeath(w, p, cause, age, settlement, when, ob, note);
+        ChronicleDeath(w, p, cause, age, settlement, when, ob, note, chain);
         ReleaseOffice(w, p);
         if (hh >= 0 && w.Households.RemoveMember(hh, p)) MemberLeft(w, hh, p, when, ob);
     }
 
-    private static void ChronicleDeath(SimWorld w, int p, DeathCause cause, int age, int settlement, GameTime when, RegionOutbox ob, string note)
+    private static void ChronicleDeath(SimWorld w, int p, DeathCause cause, int age, int settlement, GameTime when, RegionOutbox ob, string note, Cause? chain = null)
     {
         var pt = w.People; var v = w.Vital; var rates = w.Rates;
         bool notable = pt.Notable[p] != EntityId.None;
-        bool severe = cause is DeathCause.Hunger or DeathCause.Cold or DeathCause.Violence or DeathCause.Disease or DeathCause.BloodLoss or DeathCause.Organ or DeathCause.Brain or DeathCause.Infection or DeathCause.Suffocation or DeathCause.Ischaemia;
+        bool severe = cause is DeathCause.Hunger or DeathCause.Cold or DeathCause.Violence or DeathCause.Disease or DeathCause.BloodLoss or DeathCause.Organ or DeathCause.Brain or DeathCause.Infection or DeathCause.Suffocation or DeathCause.Ischaemia or DeathCause.Executed or DeathCause.Fire or DeathCause.Childbirth;
         if (!(rates.ChronicleEveryEvent || notable || severe)) return;
         if (!(rates.ChronicleEveryEvent || notable))
         {
@@ -54,7 +55,7 @@ public static class Demography
             if (cause == DeathCause.Hunger && v.FamineEntry[settlement] != 0) ev = new EntityId(v.FamineEntry[settlement]);
             if (cause == DeathCause.Disease && v.OutbreakEntry[settlement] != 0) ev = new EntityId(v.OutbreakEntry[settlement]);
         }
-        Cause c = cause switch
+        Cause c = chain ?? cause switch
         {
             DeathCause.Age => new Cause(CauseKind.Death, null, "old age"),
             DeathCause.Hunger => new Cause(CauseKind.Famine, ev, "starvation: the nutrition reserve ran out"),

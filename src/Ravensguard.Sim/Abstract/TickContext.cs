@@ -41,7 +41,8 @@ public sealed class TickContext
 }
 
 /// <summary>A chronicle entry drafted by the worker; it is appended to the <see cref="Chronicle"/> at the barrier, in draft order.</summary>
-public sealed record PendingChronicle(EntityId Id, GameTime When, string TypeId, IReadOnlyList<EntityId> Subjects, IReadOnlyList<Cause> Causes, IReadOnlyDictionary<string, string> Data);
+public sealed record PendingChronicle(EntityId Id, GameTime When, string TypeId, IReadOnlyList<EntityId> Subjects, IReadOnlyList<Cause> Causes, IReadOnlyDictionary<string, string> Data,
+    string TextKey = "", IReadOnlyList<ChronParam>? Params = null);
 
 /// <summary>
 /// What an hour step produces for the main thread (abstract spec 2.5): chronicle entries, events for subscribers and counters. Built by the worker, applied by
@@ -72,6 +73,16 @@ public sealed class RegionOutbox
         return id;
     }
 
+    /// <summary>Drafts a keyed entry (chronicle-full 4.1, no English in the sim): the text key and typed parameters instead of a sentence; <paramref name="data"/> keeps machine fields only.</summary>
+    public EntityId Chronicle(GameTime when, string typeId, string textKey, IReadOnlyList<ChronParam> parameters, IReadOnlyList<EntityId> subjects, IReadOnlyList<Cause> causes, params (string Key, string Value)[] data)
+    {
+        var id = _ids.Allocate(IdKind.Event);
+        var d = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var (k, v) in data) d[k] = v;
+        _entries.Add(new PendingChronicle(id, when, typeId, subjects, causes, d, textKey, parameters));
+        return id;
+    }
+
     public void Publish<T>(T evt) where T : notnull => _events.Add(evt);
 
     public void Count(string counter, long delta = 1) => _counters[counter] = _counters.GetValueOrDefault(counter) + delta;
@@ -79,7 +90,7 @@ public sealed class RegionOutbox
     /// <summary>Appends the drafted entries to the chronicle, publishes the events on the bus and returns the counters; the outbox is emptied.</summary>
     internal void ApplyTo(Chronicle chronicle, SimEvents? bus, IDictionary<string, long> totals)
     {
-        foreach (var e in _entries) chronicle.Add(new ChronicleEntry(e.Id, e.When, e.TypeId, e.Subjects, e.Causes, e.Data));
+        foreach (var e in _entries) chronicle.Add(new ChronicleEntry(e.Id, e.When, e.TypeId, e.Subjects, e.Causes, e.Data, e.TextKey, e.Params));
         if (bus != null) foreach (var ev in _events) PublishBoxed(bus, ev);
         foreach (var (k, v) in _counters) totals[k] = (totals.TryGetValue(k, out var cur) ? cur : 0) + v;
         _entries.Clear(); _events.Clear(); _counters.Clear();

@@ -38,7 +38,7 @@ public static class NewGameWorld
                 startSettlement, links, rw.Sim, rw.Ids);
             if (links.Count > 0) { kin = new Ravensguard.Sim.Succession.SuccessionBook(); kin.Kin.AddRange(links); }
         }
-        return new WorldState
+        var created = new WorldState
         {
             Succession = kin,
             Hero = hero, Codex = codex, Content = content, HomeRecords = rw,
@@ -48,5 +48,7 @@ public static class NewGameWorld
             Continent = continent, History = history, Population = pop, Clock = new SimClock(clock ?? GameTime.FromCalendar(pop.NowYear, Season.Spring, 1, 8)),
             Ids = rw.Ids, Chunks = new ChunkStore(), Chronicle = rw.Chronicle, ContinentState = cont,
         };
+        Phase6Seeding.Run(created, content, null);                  // P6-A2 (overview 7): the seeding pass after the population; no step is registered yet
+        return created;
     }
 }

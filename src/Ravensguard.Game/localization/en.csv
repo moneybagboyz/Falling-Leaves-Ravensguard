@@ -3878,6 +3878,197 @@ px_ui_stream,(a stream runs here)
 px_ui_title,Prospecting
 px_ui_unsurveyed,"Unsurveyed: walk it, read it, dig a pit, sink a shaft."
 px_ui_write,Write up what you know of this acre (a survey report)
+ch_note_death_bloodloss,Bled to death of his wounds.
+ch_note_death_organ,Died of a wound to a vital organ.
+ch_note_death_brain,Killed by a blow to the head.
+ch_note_death_breath,Could not breathe after a spinal wound.
+ch_note_death_infection,Died of sepsis from a wound.
+ch_note_death_wounds,Died of his wounds.
+ch_note_ambush,Bandits ({band}) ambushed a caravan on the road from {place}.
+ch_began_ambush,bandits ({band}) ambushed a caravan on the road from {place}
+ch_note_fight_death,"{how} {where}, which began when {began}."
+ch_how_killed,Killed
+ch_how_killed_by,Killed by {weapon} ({wound})
+ch_at_fight_road_from,at the fight on the road from {place}
+ch_in_a_fight,in a fight
+ch_on_road_from,on the road from {place}
+ch_on_the_road,on the road
+ch_weapon_arrow,an arrow
+ch_weapon_javelin,a thrown javelin
+ch_weapon_axe,an axe
+ch_weapon_hands,bare hands
+ch_weapon_lance,a lance
+ch_weapon_club,a club
+ch_weapon_mace,a mace
+ch_weapon_spear,a spear
+ch_weapon_dagger,a dagger
+ch_weapon_blade,a blade
+ch_wound_killing,a killing blow
+ch_wound_limb,a limb taken
+ch_wound_grave,a grave wound
+ch_wound_serious,a serious wound
+ch_wound_light,a wound
+ch_side_caravan_guards,the caravan's guards
+ch_side_bandits,bandits
+ch_outcome_a,{a} held the field
+ch_outcome_b,{b} held the field
+ch_outcome_none,neither held the field
+ch_report_battle,"Word reached {settlement} that {a} and {b} fought {where}; {a} lost {lost_a}, {b} lost {lost_b}, and {outcome}."
+ch_t_arrears_paid,Arrears paid
+ch_t_artefact_buried,Artefact buried
+ch_t_artefact_captured,Artefact captured
+ch_t_artefact_forged,Artefact forged
+ch_t_artefact_gifted,Artefact gifted
+ch_t_artefact_inherited,Artefact inherited
+ch_t_artefact_lost,Artefact lost
+ch_t_artefact_made,Artefact made
+ch_t_artefact_recovered,Artefact recovered
+ch_t_artefact_stolen,Artefact stolen
+ch_t_autopilot_arrived,Autopilot arrived
+ch_t_autopilot_attacked,Autopilot attacked
+ch_t_autopilot_bigchoice,Autopilot bigchoice
+ch_t_autopilot_deal,Autopilot deal
+ch_t_autopilot_injured,Autopilot injured
+ch_t_autopilot_job_paid,Autopilot job paid
+ch_t_autopilot_start,Autopilot start
+ch_t_autopilot_stop,Autopilot stop
+ch_t_bad_year,Bad year
+ch_t_bandit_raid,Bandit raid
+ch_t_battle,Battle
+ch_t_betrayal,Betrayal
+ch_t_birth,Birth
+ch_t_border_raid,Border raid
+ch_t_builder_quit,Builder quit
+ch_t_business_bought,Business bought
+ch_t_business_founded,Business founded
+ch_t_business_opened,Business opened
+ch_t_caravan_lost,Caravan lost
+ch_t_caravan_raid,Caravan raid
+ch_t_charter_fulfilled,Charter fulfilled
+ch_t_charter_granted,Charter granted
+ch_t_charter_lapsed,Charter lapsed
+ch_t_charter_settled,Charter settled
+ch_t_charter_village,Charter village
+ch_t_claim_deeded,Claim deeded
+ch_t_claim_improved,Claim improved
+ch_t_claim_lapsed,Claim lapsed
+ch_t_claim_licensed,Claim licensed
+ch_t_claim_pressed,Claim pressed
+ch_t_claim_pulled,Claim pulled
+ch_t_claim_staked,Claim staked
+ch_t_claimant_executed,Claimant executed
+ch_t_collapse,Collapse
+ch_t_contract_done,Contract done
+ch_t_contract_lapsed,Contract lapsed
+ch_t_contract_posted,Contract posted
+ch_t_contract_signed,Contract signed
+ch_t_contract_stopped,Contract stopped
+ch_t_contract_taken,Contract taken
+ch_t_cottage_built,Cottage built
+ch_t_coup,Coup
+ch_t_death,Death
+ch_t_emigration,Emigration
+ch_t_escheat,Escheat
+ch_t_estate_claimed,Estate claimed
+ch_t_estate_settled,Estate settled
+ch_t_eviction,Eviction
+ch_t_famine,Famine
+ch_t_farm_cull,Farm cull
+ch_t_farm_unharvested,Farm unharvested
+ch_t_farm_yield_loss,Farm yield loss
+ch_t_fight_capture,Fight capture
+ch_t_fight_death,Fight death
+ch_t_fight_maiming,Fight maiming
+ch_t_fight_watched,Fight watched
+ch_t_fire,Fire
+ch_t_flood,Flood
+ch_t_floor_groans,Floor groans
+ch_t_guardianship,Guardianship
+ch_t_guild_offence,Guild offence
+ch_t_heir_born,Heir born
+ch_t_heir_died,Heir died
+ch_t_hero_line_ended,Hero line ended
+ch_t_hero_succession,Hero succession
+ch_t_hired,Hired
+ch_t_house_leased,House leased
+ch_t_immigration,Immigration
+ch_t_insult,Insult
+ch_t_lair_legend,Lair legend
+ch_t_land_bought,Land bought
+ch_t_land_cleared,Land cleared
+ch_t_land_debt,Land debt
+ch_t_land_evicted,Land evicted
+ch_t_land_leased,Land leased
+ch_t_land_notice,Land notice
+ch_t_land_sold,Land sold
+ch_t_lease_ended,Lease ended
+ch_t_line_extinct,Line extinct
+ch_t_loan_angry,Loan angry
+ch_t_loan_lost,Loan lost
+ch_t_loan_returned,Loan returned
+ch_t_marriage,Marriage
+ch_t_master_crafter,Master crafter
+ch_t_mine_collapse,Mine collapse
+ch_t_mine_flooded,Mine flooded
+ch_t_mining_licence,Mining licence
+ch_t_old_battle,Old battle
+ch_t_ore_strike,Ore strike
+ch_t_outbreak,Outbreak
+ch_t_outlaw_band,Outlaw band
+ch_t_outlaw_raid,Outlaw raid
+ch_t_outlaw_slain,Outlaw slain
+ch_t_peace_signed,Peace signed
+ch_t_plague_begins,Plague begins
+ch_t_plague_ends,Plague ends
+ch_t_plague_spreads,Plague spreads
+ch_t_plot_leased,Plot leased
+ch_t_realm_fell,Realm fell
+ch_t_realm_founded,Realm founded
+ch_t_realm_merged,Realm merged
+ch_t_realm_split,Realm split
+ch_t_rebellion,Rebellion
+ch_t_rebellion_crushed,Rebellion crushed
+ch_t_revolt_brewing,Revolt brewing
+ch_t_riot,Riot
+ch_t_ruler_died,Ruler died
+ch_t_saint_died,Saint died
+ch_t_saint_martyred,Saint martyred
+ch_t_saint_rises,Saint rises
+ch_t_settlement_abandoned,Settlement abandoned
+ch_t_settlement_captured,Settlement captured
+ch_t_settlement_emptied,Settlement emptied
+ch_t_settlement_grew,Settlement grew
+ch_t_settlement_pillaged,Settlement pillaged
+ch_t_settlement_sacked,Settlement sacked
+ch_t_settlement_starved,Settlement starved
+ch_t_share_bought,Share bought
+ch_t_share_sold,Share sold
+ch_t_siege_begins,Siege begins
+ch_t_siege_lifted,Siege lifted
+ch_t_site_finished,Site finished
+ch_t_site_monster_slain,Site monster slain
+ch_t_site_reoccupied,Site reoccupied
+ch_t_site_started,Site started
+ch_t_site_stopped,Site stopped
+ch_t_skirmish,Skirmish
+ch_t_spring_failed,Spring failed
+ch_t_squad_member_quit,Squad member quit
+ch_t_stall_rented,Stall rented
+ch_t_steward_hired,Steward hired
+ch_t_succession,Succession
+ch_t_succession_crisis,Succession crisis
+ch_t_taboo_robbed,Taboo robbed
+ch_t_tax_evasion,Tax evasion
+ch_t_tithe_dispute,Tithe dispute
+ch_t_trade_route,Trade route
+ch_t_treaty_lapses,Treaty lapses
+ch_t_tribute_imposed,Tribute imposed
+ch_t_unlicensed_mine,Unlicensed mine
+ch_t_usurpation,Usurpation
+ch_t_vassalage_sworn,Vassalage sworn
+ch_t_war_declared,War declared
+ch_t_will_made,Will made
+ch_t_word_reached,Word reached
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."

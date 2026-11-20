@@ -6,7 +6,9 @@ namespace Ravensguard.Sim.Jobs;
 /// <summary>The kinds of paid work a person can take (live-behaviour spec 4.6). Append only.</summary>
 public enum OddJobKind : byte { Haul, Guard, Escort, TendShop, FarmWork, Deliver, Fetch, Craft,
     /// <summary>P5-F (businesses spec 4.3): a day's work taken at the hiring hour in the square (the hiring hour fills and pays them at once; transient). Appended.</summary>
-    DayLabour }
+    DayLabour,
+    /// <summary>Phase 6 (overview 8.1, append only): a paid hand at a fire (fire and burning 4.4). Nothing writes it until B5.</summary>
+    FightFire }
 
 /// <summary><c>Open -> Claimed -> Active -> Done | Failed | Expired | Cancelled</c>.</summary>
 public enum JobState : byte { Open, Claimed, Active, Done, Failed, Expired, Cancelled }

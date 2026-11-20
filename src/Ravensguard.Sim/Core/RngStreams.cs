@@ -307,6 +307,110 @@ public static class RngStreams
     /// <summary>P5-F extraction: flooding and cave-ins at a mine the player opened (key the season's hour, the mine's id).</summary>
     public const uint NewMineHazard = 0x5C2;
 
+    // ---- Phase 6 (docs/specs/phase6/00-phase6-overview.md 5; Phase 6 owns 0x600..0x6FF; P6-A2 registers them all, each step draws its own). Keys are ids and game time, never a live tick ----
+    /// <summary>P6: medicine: physician seeding at the Phase 6 seeding pass (key person) and AbstractPhysic's draw 1 (key person, day).</summary>
+    public const uint Physician = 0x600;
+    /// <summary>P6: crime: whether a witness reports (key crime, witness).</summary>
+    public const uint CrimeReporting = 0x610;
+    /// <summary>P6: crime: guard recognition by clothes (key guard, person, day).</summary>
+    public const uint GuardRecognition = 0x611;
+    /// <summary>P6: crime: an NPC lord's mercy tie (key crime).</summary>
+    public const uint LordMercyTie = 0x612;
+    /// <summary>P6: crime: bribes (key official, day).</summary>
+    public const uint BribeRoll = 0x613;
+    /// <summary>P6: crime: NPC crime (key household, day).</summary>
+    public const uint NpcCrime = 0x614;
+    /// <summary>P6: rumours v2: slander (key author, season).</summary>
+    public const uint SlanderRoll = 0x620;
+    /// <summary>P6: slavery: raids (key region, season).</summary>
+    public const uint SlaveRaids = 0x630;
+    /// <summary>P6: slavery: market buyer ties (key market, day).</summary>
+    public const uint SlaveMarketTies = 0x631;
+    /// <summary>P6: slavery: runaways (key person, day).</summary>
+    public const uint RunawayRoll = 0x632;
+    /// <summary>P6: slavery: revolts (key holding, day).</summary>
+    public const uint SlaveRevoltRoll = 0x633;
+    /// <summary>P6: family: courtship (key courtship, day).</summary>
+    public const uint CourtshipRoll = 0x640;
+    /// <summary>P6: family: child attributes (key child).</summary>
+    public const uint ChildAttributes = 0x641;
+    /// <summary>P6: family: kin who turn (key person, year).</summary>
+    public const uint KinTurning = 0x642;
+    /// <summary>P6: family: kidnapping (key hero, season).</summary>
+    public const uint Kidnapping = 0x643;
+    /// <summary>P6: family: the hero's old age (key hero, year).</summary>
+    public const uint HeroOldAge = 0x644;
+    /// <summary>P6: faith: religions for v0 worlds (key culture).</summary>
+    public const uint ReligionsForV0Worlds = 0x650;
+    /// <summary>P6: faith: founders and holy days (key religion).</summary>
+    public const uint FaithFoundersAndHolyDays = 0x651;
+    /// <summary>P6: faith: heresy (key settlement, season / person).</summary>
+    public const uint HeresyRoll = 0x652;
+    /// <summary>P6: faith: pilgrim events (key party, day).</summary>
+    public const uint PilgrimEvents = 0x653;
+    /// <summary>P6: faith: witch hunts (key settlement, season).</summary>
+    public const uint WitchHunts = 0x654;
+    /// <summary>P6: rule: reserved for purveyance (Phase 7); asserted never drawn.</summary>
+    public const uint PurveyanceReserved = 0x660;
+    /// <summary>P6: rule: skim seen and audits (key official, season).</summary>
+    public const uint SkimSeenAndAudits = 0x661;
+    /// <summary>P6: rule: council votes (key council, member).</summary>
+    public const uint CouncilVotes = 0x662;
+    /// <summary>P6: rule: lender ties (key borrower, season).</summary>
+    public const uint LenderTies = 0x663;
+    /// <summary>P6: rule: smuggling (key caravan, day).</summary>
+    public const uint Smuggling = 0x664;
+    /// <summary>P6: diplomacy: lord traits (key person).</summary>
+    public const uint LordTraits = 0x670;
+    /// <summary>P6: diplomacy: utility ties (key lord, season).</summary>
+    public const uint DiplomacyTies = 0x671;
+    /// <summary>P6: diplomacy: envoy events (key envoy, day).</summary>
+    public const uint EnvoyEvents = 0x672;
+    /// <summary>P6: unrest: leader ties (key settlement, day).</summary>
+    public const uint UnrestLeaderTies = 0x680;
+    /// <summary>P6: unrest: riot joiners (key person, riot).</summary>
+    public const uint RiotJoiners = 0x681;
+    /// <summary>P6: unrest: revolt and evasion (key household, season).</summary>
+    public const uint RevoltAndEvasion = 0x682;
+    /// <summary>P6: contracts: company ties (key company, day).</summary>
+    public const uint CompanyTies = 0x690;
+    /// <summary>P6: contracts: pay rounding (key contract).</summary>
+    public const uint PayRounding = 0x691;
+    /// <summary>P6: contracts: tournament brackets (key tournament, round).</summary>
+    public const uint TournamentBrackets = 0x692;
+    /// <summary>P6: chronicle: reserved for template variants; asserted never drawn.</summary>
+    public const uint ChronicleVariantsReserved = 0x6A0;
+    /// <summary>P6: heists: patrol jitter (key site, night).</summary>
+    public const uint PatrolJitter = 0x6B0;
+    /// <summary>P6: heists: sleepers waking (key guard, search).</summary>
+    public const uint SleepersWaking = 0x6B1;
+    /// <summary>P6: heists: vault contents (key site).</summary>
+    public const uint VaultContents = 0x6B2;
+    /// <summary>P6: heists: disguise borderline (key guard, hour).</summary>
+    public const uint DisguiseBorderline = 0x6B3;
+    /// <summary>P6: fire: spread (key cell, step).</summary>
+    public const uint FireSpread = 0x6C0;
+    /// <summary>P6: fire: sparks (key cell, step).</summary>
+    public const uint FireSparks = 0x6C1;
+    /// <summary>P6: fire: firedamp (key site, cell).</summary>
+    public const uint Firedamp = 0x6C2;
+    /// <summary>P6: fire: accidents and lightning (key structure, day).</summary>
+    public const uint FireAccidents = 0x6C3;
+    /// <summary>P6: disease: onset (key person, day).</summary>
+    public const uint IllnessOnset = 0x6D0;
+    /// <summary>P6: disease: epidemic length and infection (key settlement / person, day).</summary>
+    public const uint EpidemicRoll = 0x6D1;
+    /// <summary>P6: disease: plague start (key continent, year).</summary>
+    public const uint PlagueStart = 0x6D2;
+    /// <summary>P6: disease: spread and carriers (key edge, season / caravan).</summary>
+    public const uint PlagueSpread = 0x6D3;
+    /// <summary>P6: disease: illness death (key person, start).</summary>
+    public const uint IllnessDeath = 0x6D4;
+    /// <summary>P6: holdings: reserved; asserted never drawn.</summary>
+    public const uint HoldingsReserved = 0x6E0;
+    /// <summary>P6: holdings: horse breeding (key mare, year).</summary>
+    public const uint HorseBreeding = 0x6E1;
+
     /// <summary>Stream ids that two named uses share on purpose, with why their draws never meet.</summary>
     public static readonly (string A, string B, string Why)[] SharedPairs =
     [

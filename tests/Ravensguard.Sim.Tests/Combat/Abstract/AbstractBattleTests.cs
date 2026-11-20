@@ -314,20 +314,23 @@ public class AbstractBattleTests(FightFixture fx, ITestOutputHelper output)
         {
             var kits = Kits(Scenario.A, (ulong)(90_000 + seed), out _, out _).Select((k, i) => k with { Person = k.Team == 0 ? (ulong)(1000 + i) : 0 }).ToList();
             var setup = new FightSetup(FightKind.Raid, kits, (ulong)seed, (ulong)(9000 + seed), 8 * 3600, "raid") { SideKinds = new Dictionary<int, SideKind> { [1] = SideKind.Bandits } };
-            var rep = new AbstractBattles { Place = "the Oakford road" }.Resolve(setup, fx.C);
+            var oakford = EntityId.Make(IdKind.Settlement, 1);
+            var rep = new AbstractBattles { Place = "the Oakford road", PlaceKey = BattleChronicle.RoadFrom, PlaceId = oakford }.Resolve(setup, fx.C);
             Assert.False(rep.Stub);
             var br = rep.Battle!;
-            var id = BattleChronicle.Report(ob, new GameTime(8 * 3600), br, EntityId.None, "Oakford", "the militia", "bandits", new Cause(CauseKind.Raid, null, "bandits raided the Oakford farms"));
+            var id = BattleChronicle.Report(ob, new GameTime(8 * 3600), br, EntityId.None, oakford, "ch_side_militia", "ch_side_bandits", new Cause(CauseKind.Raid, null, "", "ch_note_raid_farms", [ChronParam.Place("place", oakford)]));
             reports++;
             foreach (var n in br.Notables.Where(n => n.Person != 0 && n.Fate == BattleFate.Dead))
             {
                 named++;
-                var chain = BattleChronicle.DeathChain(n, br, "bandits raided the Oakford farms");
-                if (chain.Contains("at the fight on the Oakford road") && chain.Contains("which began when bandits raided")) chains++;
+                var chain = BattleChronicle.DeathChain(n, br, "ch_began_raid_farms", [ChronParam.Place("place", oakford)]);
+                // the chain is a key and typed parameters (phase-4 S7): where is the road from Oakford, what began it a text key
+                if (chain.NoteKey == "ch_note_fight_death" && chain.NoteParams!.Any(p => p is { Name: "where", Key: "ch_at_fight_road_from" }) && chain.NoteParams!.Any(p => p is { Name: "began", Key: "ch_began_raid_farms" })
+                    && chain.NoteParams!.Any(p => p is { Name: "place", Kind: ChronParamKind.Place } && p.Value == (long)oakford.Value)) chains++;
             }
         }
         Assert.Equal(reports, ob.Entries.Count(e => e.TypeId == BattleChronicle.TypeId));
-        Assert.All(ob.Entries, e => { Assert.NotEmpty(e.Causes); Assert.Equal("1", e.Data["report"]); Assert.StartsWith("Word reached Oakford", e.Data["text"]); Assert.Equal(BattleChronicle.Key, e.Data["key"]); });
+        Assert.All(ob.Entries, e => { Assert.NotEmpty(e.Causes); Assert.Equal("1", e.Data["report"]); Assert.Equal(BattleChronicle.Key, e.TextKey); Assert.DoesNotContain("text", e.Data.Keys); Assert.NotEmpty(e.Params!); });
         Assert.True(named > 0);
         Assert.Equal(named, chains);                                                                 // coverage 100%
     }
@@ -347,7 +350,7 @@ public class AbstractBattleTests(FightFixture fx, ITestOutputHelper output)
             + string.Join(", ", hw.World.Chronicle.All.GroupBy(e => e.TypeId).Where(g => g.Key.Contains("caravan") || g.Key.Contains("battle") || g.Key.Contains("death")).Select(g => $"{g.Key} {g.Count()}")));
         Assert.True(ew.Trade.Ambushes > 0 && reports.Count > 0);                                     // a caravan with a crew fights; one with none is simply robbed (no fight to report)
         Assert.True(reports.Count <= ew.Trade.Ambushes);
-        Assert.All(reports, e => { Assert.NotEmpty(e.Causes); Assert.StartsWith("Word reached ", e.Data["text"]); });
+        Assert.All(reports, e => { Assert.NotEmpty(e.Causes); Assert.Equal(BattleChronicle.Key, e.TextKey); Assert.Equal("ch_note_ambush", e.Causes[0].NoteKey); });
         var audit = ew.World.Economy.Ledger.Audit();
         Assert.True(audit.IsConserved);
         Assert.Equal(coin0, audit.InPurses.Mites + st.TotalCoin());

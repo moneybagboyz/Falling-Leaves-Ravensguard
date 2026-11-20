@@ -21,12 +21,15 @@ public sealed class AbstractBattles : IAbstractFights
     public Func<ulong, WoundBook?>? BookOf { get; init; }
     /// <summary>The place's name for the report ("the road from Oakford").</summary>
     public string Place { get; init; } = "";
+    /// <summary>Phase 6 (chronicle-full 4.1): where as a text key and the settlement it names; what the chronicle writes (the English <see cref="Place"/> is for scenario runs).</summary>
+    public string PlaceKey { get; init; } = "";
+    public Ravensguard.Sim.Core.EntityId PlaceId { get; init; }
 
     public AbstractFightReport Resolve(FightSetup setup, FightContent content)
     {
         var tables = WoundTables.For(content.Db);
         if (tables == null) return AbstractFightStub.Instance.Resolve(setup, content);
-        var b = new AbstractBattle(content, tables, InputOf(setup, BookOf, Place));
+        var b = new AbstractBattle(content, tables, InputOf(setup, BookOf, Place, PlaceKey, PlaceId));
         var rep = b.Run();
         var outBy = new Dictionary<int, int>();
         foreach (var s in b.Soldiers) { int t = s.Kit.Team; outBy[t] = outBy.GetValueOrDefault(t) + (s.Status == SoldierStatus.Active && !s.Routing ? 0 : 1); }
@@ -35,9 +38,9 @@ public sealed class AbstractBattles : IAbstractFights
     }
 
     /// <summary>The battle's input from a fight setup (its kits, seed, id, start, cause, sides, ground and weather; a rider is a kit on a horse of the setup, none in v1's setups).</summary>
-    public static BattleInput InputOf(FightSetup s, Func<ulong, WoundBook?>? bookOf = null, string place = "") => new(s.Kits, s.Seed, s.FightId, s.GameSec, s.Cause)
+    public static BattleInput InputOf(FightSetup s, Func<ulong, WoundBook?>? bookOf = null, string place = "", string placeKey = "", Ravensguard.Sim.Core.EntityId placeId = default) => new(s.Kits, s.Seed, s.FightId, s.GameSec, s.Cause)
     {
-        Terrain = s.Terrain, Weather = s.Weather, SideKinds = s.SideKinds, Place = place, BookOf = bookOf,
+        Terrain = s.Terrain, Weather = s.Weather, SideKinds = s.SideKinds, Place = place, PlaceKey = placeKey, PlaceId = placeId, BookOf = bookOf,
         Night = s.GameSec / 3600 % 24 is >= 21 or < 5,
     };
 }

@@ -124,7 +124,7 @@ public sealed class AbstractBattle
         }
         // the swings of a line are not in step: each soldier starts at his own phase of the blow rate (0x4A0)
         foreach (var so in Soldiers) { so.BlowAccPm = so.Mounted ? 0 : R(RngStreams.AbstractNoise, 0, (ulong)(so.Index + 1) << 8, 2, 1000); so.ShotAccPm = R(RngStreams.AbstractNoise, 0, (ulong)(so.Index + 1) << 8, 3, 1000); }
-        Report.Id = input.BattleId; Report.Place = input.Place; Report.GameSec = input.GameSec; Report.Cause = input.Cause;
+        Report.Id = input.BattleId; Report.Place = input.Place; Report.PlaceKey = input.PlaceKey; Report.PlaceId = input.PlaceId; Report.GameSec = input.GameSec; Report.Cause = input.Cause;
         Report.Teams.Add(Team[0]); Report.Teams.Add(Team[1]);
         for (int s = 0; s < 2; s++) Report.Sides[s].Start = _start[s];
         Report.QualityX100 = QualityX100();

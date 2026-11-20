@@ -9,7 +9,9 @@ public enum ActionKind : byte { Sleep, Eat, Drink, Work, Commute, Shop, Socialis
     /// <summary>Phase 4 (wounds 4.3): first aid on a bleeding neighbour or comrade; scored by <see cref="Ravensguard.Sim.Combat.Wounds.TreatAi"/>, not by the utility profile.</summary>
     Treat,
     /// <summary>Phase 4 (melee-and-ranged 4.7): in a fight, driven by <see cref="Ravensguard.Sim.Combat.Melee2.CombatBrain"/> (an <c>Attacked</c> interrupt puts a person here unless Flee scores higher).</summary>
-    Fight }
+    Fight,
+    /// <summary>Phase 6 (overview 8.1, append only): fire fighting (buckets, pulling down thatch), a riot's rioters and a guard's pursuit; nothing scores them until B5, E1 and B2.</summary>
+    FightFire, Riot, Pursue }
 
 /// <summary>
 /// The needs of one person at one moment, each in the unit its curve reads: hours since the last meal in thousandths of an hour, the others in permille. Filled from the person's day

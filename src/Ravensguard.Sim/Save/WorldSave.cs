@@ -293,6 +293,10 @@ public sealed class ChronicleEntryData
     [Key(4)] public List<CauseData> Causes { get; set; } = [];
     /// <summary>Sorted by key (ordinal): alternating key, value.</summary>
     [Key(5)] public string[] Data { get; set; } = [];
+    /// <summary>Phase 6 (chronicle-full 3), additive: the entry's text key ("" for a v8 entry that keeps its English in Data and the causes' notes).</summary>
+    [Key(6)] public string TextKey { get; set; } = "";
+    /// <summary>Phase 6, additive: the typed parameters, flattened by <see cref="ChronicleTypes.Encode"/>.</summary>
+    [Key(7)] public string[] Params { get; set; } = [];
 }
 
 [MessagePackObject]
@@ -302,6 +306,9 @@ public sealed class CauseData
     [Key(1)] public ulong EventId { get; set; }
     [Key(2)] public bool HasEvent { get; set; }
     [Key(3)] public string Note { get; set; } = "";
+    /// <summary>Phase 6, additive: the note's text key and parameters (empty on a legacy note).</summary>
+    [Key(4)] public string NoteKey { get; set; } = "";
+    [Key(5)] public string[] NoteParams { get; set; } = [];
 }
 
 [MessagePackObject]
@@ -579,6 +586,9 @@ public static partial class WorldSave
         if (hero is { PersonIndex: Ravensguard.Sim.Succession.HeroPerson.Pending } && content != null)
             hero.PersonIndex = Ravensguard.Sim.Succession.HeroPerson.InsertForLoad(pop, economy, content, hero, Ravensguard.Sim.Economy.EconomyState.HeroOwner, cs.Seed,
                 (int)(meta.ClockSeconds / 86400), restored.Succession?.Kin ?? [], restored.Ids);
+        // P6-A2 (overview 7): the first load of a save without the Phase 6 sections derives them from the seed and ids, as a new game does; the load report says so
+        var seeded = Ravensguard.Sim.Worlds.Phase6Seeding.Run(restored, content, file.Sections.Keys.ToArray());
+        if (seeded.Count > 0) restored.LoadNotes = [.. restored.LoadNotes, .. seeded];
         return restored;
     }
 
@@ -698,13 +708,13 @@ public static partial class WorldSave
 
     // ---------- chronicle ----------
 
-    internal static ChronicleData EncodeChronicle(Chronicle c)
+    public static ChronicleData EncodeChronicle(Chronicle c)
     {
         var d = new ChronicleData();
         foreach (var e in c.All) // append order is the canonical order
         {
-            var x = new ChronicleEntryData { Id = e.Id.Value, When = e.When.Seconds, TypeId = e.TypeId, Subjects = e.Subjects.Select(s => s.Value).ToArray() };
-            foreach (var cs in e.Causes) x.Causes.Add(new CauseData { Kind = (int)cs.Kind, HasEvent = cs.EventId.HasValue, EventId = cs.EventId?.Value ?? 0, Note = cs.Note });
+            var x = new ChronicleEntryData { Id = e.Id.Value, When = e.When.Seconds, TypeId = e.TypeId, Subjects = e.Subjects.Select(s => s.Value).ToArray(), TextKey = e.TextKey, Params = ChronicleTypes.Encode(e.Params) };
+            foreach (var cs in e.Causes) x.Causes.Add(new CauseData { Kind = (int)cs.Kind, HasEvent = cs.EventId.HasValue, EventId = cs.EventId?.Value ?? 0, Note = cs.Note, NoteKey = cs.NoteKey, NoteParams = ChronicleTypes.Encode(cs.NoteParams) });
             var data = new List<string>();
             foreach (var kv in e.Data.OrderBy(k => k.Key, StringComparer.Ordinal)) { data.Add(kv.Key); data.Add(kv.Value); }
             x.Data = data.ToArray();
@@ -713,7 +723,7 @@ public static partial class WorldSave
         return d;
     }
 
-    internal static Chronicle DecodeChronicle(ChronicleData d)
+    public static Chronicle DecodeChronicle(ChronicleData d)
     {
         var c = new Chronicle();
         foreach (var x in d.Entries)
@@ -721,7 +731,8 @@ public static partial class WorldSave
             var data = new Dictionary<string, string>(StringComparer.Ordinal);
             for (int i = 0; i + 1 < x.Data.Length; i += 2) data[x.Data[i]] = x.Data[i + 1];
             c.Add(new ChronicleEntry(new EntityId(x.Id), new GameTime(x.When), x.TypeId, x.Subjects.Select(s => new EntityId(s)).ToList(),
-                x.Causes.Select(k => new Cause((CauseKind)k.Kind, k.HasEvent ? new EntityId(k.EventId) : null, k.Note)).ToList(), data));
+                x.Causes.Select(k => new Cause((CauseKind)k.Kind, k.HasEvent ? new EntityId(k.EventId) : null, k.Note, k.NoteKey ?? "", ChronicleTypes.Decode(k.NoteParams ?? []))).ToList(), data,
+                x.TextKey ?? "", ChronicleTypes.Decode(x.Params ?? [])));
         }
         return c;
     }
