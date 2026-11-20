@@ -34,8 +34,8 @@ public static class Diplomacy
         return id.Kind == IdKind.Faction && ((id.Counter >> 40) & 1) == 1 ? (int)(id.Counter & 0xFFFFFFFFUL) : -1;
     }
 
-    /// <summary>History's tick (a season) as a game day.</summary>
-    public static int DayOfTick(int tick) => tick / 4 * TimeConst.DaysPerYear + tick % 4 * TimeConst.DaysPerSeason;
+    /// <summary>History's tick (a season) as a game day: the history ended at the season the book was first read (the game's start), each tick a season of days before or after it.</summary>
+    public static int DayOfTick(int tick, int endTick, int nowDay) => nowDay + (tick - endTick) * TimeConst.DaysPerSeason;
 
     // ------------------------------------------------------------------ casus belli
 
@@ -115,13 +115,13 @@ public static class Diplomacy
         {
             if (!w.Alive || !c.Alive(w.Attacker) || !c.Alive(w.Defender)) continue;
             var kind = w.Cb switch { CasusBelliKind.Insult => CbKind.Insult, CasusBelliKind.Raid => CbKind.Raid, _ => CbKind.Claim };
-            b.Wars.Add(new War { Serial = b.NextWar++, Attacker = w.Attacker, Defender = w.Defender, StartDay = DayOfTick(w.StartTick), Cb = kind, CbEntry = w.CbEvent.Value, DeclEntry = w.DeclEvent.Value,
+            b.Wars.Add(new War { Serial = b.NextWar++, Attacker = w.Attacker, Defender = w.Defender, StartDay = DayOfTick(w.StartTick, endTick, c.Day), Cb = kind, CbEntry = w.CbEvent.Value, DeclEntry = w.DeclEvent.Value,
                 Score = Math.Clamp(w.Score, -100, 100), Seasons = Math.Max(0, endTick - w.StartTick) });
         }
         foreach (var t in h.Treaties)
         {
             if (t.ExpiryTick <= endTick || !c.Alive(t.A) || !c.Alive(t.B)) continue;
-            var p = new Pact { Serial = b.NextPact++, A = t.A, B = t.B, StartDay = DayOfTick(t.StartTick), ExpiryDay = DayOfTick(t.ExpiryTick), Cause = t.Event.Value };
+            var p = new Pact { Serial = b.NextPact++, A = t.A, B = t.B, StartDay = DayOfTick(t.StartTick, endTick, c.Day), ExpiryDay = DayOfTick(t.ExpiryTick, endTick, c.Day), Cause = t.Event.Value };
             switch (t.Kind)
             {
                 case Ravensguard.Sim.WorldGen.History.TreatyKind.Truce: p.Kind = PactKind.Truce; break;

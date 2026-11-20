@@ -580,6 +580,22 @@ public static class NewGameDebug
                     await Frames(tree, 150);                                          // the view comes from a barrier
                     break;
                 }
+            case "faction":
+                {
+                    // dev (P6-D2): a real new game with a war on, a truce, the lords' opinions, a vacant fief and a record of service staged; the Faction screen opens on its Actions tab
+                    var w = MakeWorld(Math.Min(years, 60), 7);
+                    var d = NewGameServices.NewDraft(); d.Name = "Shot"; d.LibraryWorldId = w.Info.Id;
+                    router.Push(new RegionBuildScreen(router, d, w));
+                    if (!await Until(tree, () => router.Top is Ravensguard.Game.World.StreetView, 9000)) throw new Exception("faction shot: the region build did not finish");
+                    var sv = (Ravensguard.Game.World.StreetView)router.Top!; var rt = sv.Runtime!;
+                    await Until(tree, () => rt.HourDone >= sv.DebugWorld.Clock.Now.TotalHours, 6000);
+                    await Frames(tree, 60);
+                    sv.DebugWorld.SetSpeed(Ravensguard.Sim.Core.SimSpeed.Paused);
+                    string tab = System.Environment.GetEnvironmentVariable("RG_FACTION_TAB") ?? "";
+                    sv.DebugFaction(tab.Equals("opinions", StringComparison.OrdinalIgnoreCase) ? Ravensguard.Game.UI.FactionScreen.Tab.Opinions : tab.Equals("treaties", StringComparison.OrdinalIgnoreCase) ? Ravensguard.Game.UI.FactionScreen.Tab.Treaties : tab.Equals("realm", StringComparison.OrdinalIgnoreCase) ? Ravensguard.Game.UI.FactionScreen.Tab.Realm : Ravensguard.Game.UI.FactionScreen.Tab.Actions);
+                    await Frames(tree, 150);                                          // the view comes from a barrier
+                    break;
+                }
             case "rule":
                 {
                     // dev (P6-C3): a real new game, the hero made lord of his fief with a thief for a bailiff, a relief in arrears and a loan, then the Ledger opens on the Fief tab

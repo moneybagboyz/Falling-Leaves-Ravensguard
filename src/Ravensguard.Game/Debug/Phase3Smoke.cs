@@ -150,7 +150,7 @@ public static class Phase3Smoke
             if (router.Top != sv) throw new Exception("the street view is not on top");
 
             // every screen: open as its key does, it fits the window, Esc comes back (the control rects stay inside the viewport)
-            foreach (var what in new[] { "trade", "barter", "inventory", "character", "squad", "crafting", "talk", "journal", "autopilot", "map", "picker", "jobs", "codex", "qmenu", "overlay", "land", "deeds", "ledger", "business", "prospect", "will", "treatment", "family", "family_full", "court", "workboard", "workboard_mine", "heist" })   // P6-D3: the heist panel P6-C2: the contracts screen, on the board and on the Taken tab; P6-B1: the treatment screen; P6-B3: the Family panel, empty and full; P5-A2: land, deeds; P5-F: the Ledger, the business panel, prospecting; P5-H: the will panel
+            foreach (var what in new[] { "trade", "barter", "inventory", "character", "squad", "crafting", "talk", "journal", "autopilot", "map", "picker", "jobs", "codex", "qmenu", "overlay", "land", "deeds", "ledger", "business", "prospect", "will", "treatment", "family", "family_full", "court", "workboard", "workboard_mine", "heist", "faction" })   // P6-D3: the heist panel P6-C2: the contracts screen, on the board and on the Taken tab; P6-B1: the treatment screen; P6-B3: the Family panel, empty and full; P5-A2: land, deeds; P5-F: the Ledger, the business panel, prospecting; P5-H: the will panel
             {
                 int depth = router.Depth;
                 if (!sv.DebugOpen(what)) throw new Exception("unknown screen " + what);
@@ -190,6 +190,21 @@ public static class Phase3Smoke
             Key(Godot.Key.Escape); await Frames(tree, 4);
             if (router.Top != sv) throw new Exception("Esc did not close the Ledger's Fief tab");
             GD.Print("[smoke]   the Ledger's Fief tab: fits, Esc closes it");
+
+            // P6-D2 (diplomacy-and-ai-lords 6): F opens the Faction screen (its own context: the street keys are off under it); every tab fits 960x540, Tab turns the pages, Esc closes it
+            Key(Godot.Key.F); await Frames(tree, 40);
+            if (router.Top is not UI.FactionScreen) throw new Exception("F did not open the Faction screen (top " + router.Top?.GetType().Name + ")");
+            for (int i = 0; i < 5; i++) { Fit(router.Top!, "the Faction screen, page " + i, view); Key(Godot.Key.Tab); await Frames(tree, 6); }
+            foreach (var k in new[] { Godot.Key.Down, Godot.Key.Up, Godot.Key.I, Godot.Key.M })
+            {
+                Key(k); await Frames(tree, 3);
+                Input.ParseInputEvent(new InputEventKey { Keycode = k, PhysicalKeycode = k, Pressed = false });
+                await Frames(tree, 1);
+            }
+            if (router.Top is not UI.FactionScreen) throw new Exception("a world key opened something over the Faction screen");
+            Key(Godot.Key.Escape); await Frames(tree, 4);
+            if (router.Top != sv) throw new Exception("Esc did not close the Faction screen");
+            GD.Print("[smoke]   the Faction screen: F opens it, every page fits, the world keys are off under it, Esc closes it");
 
             // P6-B1 (MT-14): the treatment screen on a wounded hero: it fits 960x540, offers verbs (each row readable), the street keys are off under it, Esc closes it
             if (!sv.DebugOpen("treatment")) throw new Exception("the treatment screen is not known to the smoke");

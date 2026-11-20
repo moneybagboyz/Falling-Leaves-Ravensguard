@@ -5413,10 +5413,10 @@ dp_log_none,Nothing yet.
 dp_log_row,"day {0}: {1} {2}: {3}"
 dp_actions_head,What you may ask
 dp_actions_none,There is nothing to ask of anyone here.
-dp_act_swear,Swear fealty to the lord of {0}
-dp_act_manor,Ask the lord of {0} for a manor
+dp_act_swear,Swear fealty to the lord holding {0}
+dp_act_manor,Ask the lord holding {0} for a manor
 dp_act_fief,Ask for {0}
-dp_act_gift,Give a gift to the lord of {0}
+dp_act_gift,Give a gift to the lord holding {0}
 dp_act_giftr,Give a gift to the ruler of {0}
 dp_act_renounce,Renounce your oath and found your own realm
 dp_act_yes,"He will say yes."

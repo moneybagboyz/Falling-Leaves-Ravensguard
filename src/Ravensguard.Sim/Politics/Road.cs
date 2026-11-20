@@ -64,7 +64,7 @@ public static class Road
         {
             if (s == fi[fief].SeatSettlement) continue;
             var m = c.B.ManorAt(s);
-            if (m != null && m.Holder >= 0 && c.R.Alive(m.Holder)) continue;
+            if (m != null && m.Holder >= 0 && (c.R.Alive(m.Holder) || c.Links.IsHero((ulong)m.Holder))) continue;                         // the hero's zero id is not a row of the people table
             l.Add(s);
         }
         l.Sort(); return l;

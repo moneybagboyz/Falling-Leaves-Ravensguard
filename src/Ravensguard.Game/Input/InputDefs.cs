@@ -19,7 +19,7 @@ public static class InputDefs
         const InputContext G = InputContext.Global, W = InputContext.World, C = InputContext.CombatStance,
             S = InputContext.CalledShot, B = InputContext.Build, U = InputContext.Menu, E = InputContext.BlueprintEditor, T = InputContext.Trade, R = InputContext.Mounted, H = InputContext.Choice,
             V = InputContext.VehicleDesigner,
-            Lg = InputContext.Ledger, Tr = InputContext.Treatment;
+            Lg = InputContext.Ledger, Tr = InputContext.Treatment, Fc = InputContext.Faction;
 
         // Global
         A(G, "console", Binding.P(Key.Quoteleft)); // physical: the backtick key position on any layout
@@ -232,6 +232,16 @@ public static class InputDefs
         A(Tr, "dress_all", K(Key.D));
         A(Tr, "next_patient", K(Key.Tab));
         A(Tr, "back", K(Key.Escape));
+
+        // The Faction screen (P6-D2, diplomacy-and-ai-lords 6, overview 6): a modal screen alone with Global, mirroring the Ledger; the realm, who thinks what of the hero, treaties and wars, his standing and what he may ask.
+        A(Fc, "up", K(Key.Up));
+        A(Fc, "down", K(Key.Down));
+        A(Fc, "left", K(Key.Left));
+        A(Fc, "right", K(Key.Right));
+        A(Fc, "next_tab", K(Key.Tab));
+        A(Fc, "act", K(Key.Enter));
+        A(Fc, "search", K(Key.Slash));
+        A(Fc, "back", K(Key.Escape));
 
         // Blueprint editor (dev tool, plan 2.11). A standalone context like Menu: only Global stays live beside it.
         A(E, "primary", M(MouseButton.Left), M(MouseButton.Left, Mods.Shift)); // Shift on rectangles = outline only

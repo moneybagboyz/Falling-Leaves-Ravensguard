@@ -990,6 +990,7 @@ public partial class StreetView : Control, IHandlesBack
         TreatTick(delta);                                   // P6-B1: the treatment queue performed at the second its work ends, cancelled by a step or a fight (StreetView.Treatment.cs)
         FireTick();                                         // P6-B5: fire stepped to the clock, flames, smoke and scars drawn (StreetView.Fire.cs)
         DiseaseTick();                                      // P6-C4: answers to nursing and the physician's call (StreetView.Disease.cs)
+        FactionTick();                                      // P6-D2: answers to the hero's politics (StreetView.Faction.cs)
         FaithTick(delta);                                   // P6-B4: faith answers, the Faith panel's view, a pilgrim's arrival (StreetView.Faith.cs)
         JusticeTick(delta);                                 // P6-C1: the cell's view, the docket, the answers to the hero's pleas (StreetView.Justice.cs)
         WorkBoardTick(delta);                               // P6-C2: contract answers, the board's view, the moods the barks read (StreetView.Work.cs)
@@ -1454,6 +1455,7 @@ public partial class StreetView : Control, IHandlesBack
         else if (Actions.Pressed(e, "world.autopilot")) OpenAutopilot();
         else if (Actions.Pressed(e, "world.panel_journal")) OpenJournal();
         else if (Actions.Pressed(e, "world.panel_ledger")) OpenLedger();             // P5-F: L opens the Ledger
+        else if (Actions.Pressed(e, "world.panel_faction")) OpenFaction();          // P6-D2: F opens the Faction screen
         else if (Actions.Pressed(e, "world.combat_log")) OpenCombatLog();         // P4-D: F7 and Shift+F7 outside a fight (the last fight's log and report)
         else if (Actions.Pressed(e, "world.last_report")) OpenLastReport();
         else if (Actions.Pressed(e, "world.context_menu")) OpenQMenu();
