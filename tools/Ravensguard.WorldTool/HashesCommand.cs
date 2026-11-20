@@ -27,7 +27,7 @@ public static class HashesCommand
         return 0;
     }
 
-    /// <summary>The lines printed for one seed, in order: continent, history, embark pick, region, landmarks, weather, codex, people and four sample chunks. The golden-hash tests compare these.</summary>
+    /// <summary>The lines printed for one seed, in order: continent, history, embark pick, region, landmarks, weather, codex, people and four sample chunks (then gates, blocks, fight, captive and estate, vehicles and the Phase 5 trail). The golden-hash tests compare these.</summary>
     public static List<string> Lines(ulong seed, string baseDir, ContentDatabase db)
     {
         var lines = new List<string>();
@@ -82,6 +82,8 @@ public static class HashesCommand
         lines.Add($"seed {seed} captive {CaptiveHash(seed, db):X16} estate {EstateHash(seed):X16}");
         // Phase 5 review (OV-6's cross-OS part, VD-20): the boats' draft, speeds, capsize rolls (0x550), swamping (0x551), fishing, the ferry and the barge legs' delays (0x552)
         lines.Add($"seed {seed} vehicles {Ravensguard.Sim.Carts.VehicleHash.Of(seed)}");
+        // Phase 6 A2 (phase-5 review S14): a short scripted Phase 5 trail (a new game, a floor built and knocked out, ten days of the whole runtime): land, sites, rooms, ownership, crafting and the chronicle
+        lines.Add($"seed {seed} phase5_trail {Ravensguard.Sim.Diagnostics.Phase5Trail.Hash(db, continent, history, cs, hs, rs, pick.CellX, pick.CellY, pop)}");
         return lines;
     }
 
