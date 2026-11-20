@@ -54,7 +54,7 @@ public static class LordBrain
                 case "petitioned": { foreach (var p in c.B.Petitions) if (p.Person == lord) return 1; return 0; }
                 case "owed": { foreach (var d in c.RB.Dues) if (d.State is DueState.Arrears or DueState.Grievance && d.Owing > 0 && (d.Payee == Party.OfFief(f.Fief) || d.Payee == r.HouseholdOf(f.Holder)) && r.Balance(d.Payer) > 0) return 1; return 0; }
                 case "at_war": return f.Realm >= 0 && c.B.WarOf(f.Realm) != null ? 1 : 0;
-                case "renege": return f.Realm < 0 ? 0 : -Opinions.Value(c.RB, lord, c.KeyOf(f.Realm));
+                case "renege": return f.Realm < 0 ? 0 : -Opinions.Value(c.RB, lord, c.KeyOf(f.Realm)) + Ravensguard.Sim.Faith.Excommunication.FealtyPenalty(c, f.Realm);      // P6-E2: a banned overlord frees his vassals (fealty utility -40)
                 case "own_strength_pm": return f.Realm < 0 ? 1000 : (int)(c.Strength(f.Realm) * 1000 / Math.Max(1, c.Strength(RootOpponent(f.Realm))));
                 case "unrest_rung": { var ub = c.R.W.Get<Ravensguard.Sim.Unrest.UnrestBook>(); if (ub == null) return 0; int m = 0; foreach (var st in c.R.Region.Settlements) if (st.FiefIndex == f.Fief) m = Math.Max(m, ub.RungOf(c.R.Region.Settlements.IndexOf(st))); return m; }
                 case "riot_leader": { var ub = c.R.W.Get<Ravensguard.Sim.Unrest.UnrestBook>(); if (ub == null) return 0; foreach (var rt in ub.Riots) if (rt.Fief == f.Fief && rt.State == Ravensguard.Sim.Unrest.RiotState.Ended && c.Day - rt.StartDay <= 30 && !ub.Pardoned.Contains(rt.Leader)) return 1; return 0; }

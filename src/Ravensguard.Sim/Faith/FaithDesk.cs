@@ -32,12 +32,43 @@ public static class FaithStanding
     }
 }
 
+/// <summary>
+/// What the hero's parish says of the faith's politics (P6-E2): superstition where he stands, a heresy there and the bishop's answer, his ban and what penance asks, the relics on the altar and in his pack (a fake is known only
+/// to one who can tell), the ones a pardoner offers, whether a slain monster's head is still to show, and the believed miracles of late with their natural explanations.
+/// </summary>
+public sealed record FaithPoliticsView(int Fear, bool AvoidsNight, string HeresyChange, int HeresyAdherents, int HeresyAdults, byte HeresyResponse, bool Interdict, bool Banned, long PenanceMites, bool PilgrimageSince,
+    IReadOnlyList<(ulong Key, string Name, bool Carried, bool Fake, bool Venerable)> Held, IReadOnlyList<(ulong Key, string Name)> ForSale, bool CanShowHead,
+    IReadOnlyList<(string KindKey, string NoteKey, bool Disputed, int Day)> Miracles, long CharmMites)
+{
+    public static readonly FaithPoliticsView Empty = new(0, false, "", 0, 0, 0, false, false, 0, false, [], [], false, [], 0);
+
+    public static FaithPoliticsView Of(WorldState st, EntityId hero, int home, int religion, int day)
+    {
+        var p = FaithOps.Of(st); if (p == null) return Empty;
+        var s = p.S; int lvl = home >= 0 ? Superstition.Of(p, home) : 0;
+        var h = home >= 0 ? p.Pol.Heresies.GetValueOrDefault(home) : null;
+        var x = p.Pol.ActiveFor(hero.Value);
+        long due = x == null ? 0 : Excommunication.PenanceDue(st, p, hero).Sum(d => d.Mites);
+        int row = FaithOps.RowOf(st, hero);
+        var relics = new List<(ulong, string, bool, bool, bool)>();
+        int season = day / TimeConst.DaysPerSeason;
+        if (home >= 0)
+            foreach (var r in Relics.OnAltar(p, home)) relics.Add((r.Key, r.Name, false, false, p.Pol.VenerateSeason != season));
+        foreach (var r in Relics.CarriedBy(p, hero)) relics.Add((r.Key, r.Name, true, row >= 0 && Relics.SpotsFake(s, p.People, row) && r.Fake, false));
+        var sale = new List<(ulong, string)>();
+        if (home >= 0) foreach (var r in p.Pol.Relics.Values) if (r.Holder == 2 && r.At == home) sale.Add((r.Key, r.Name));
+        var mir = p.Pol.Miracles.OrderByDescending(m => m.Day).Take(3).Select(m => ("fa_miracle_" + m.Kind, m.Natural, m.Disputed, m.Day)).ToList();
+        return new FaithPoliticsView(lvl, Superstition.AvoidsNight(s, lvl), h?.Change ?? "", h?.Adherents.Count ?? 0, h?.Adults ?? 0, h?.Response ?? 0, h?.Interdict ?? false, x != null, due, x != null && p.Book.Pilgrimages > x.PilgrimsBefore,
+            relics, sale, Superstition.UnshownKills(st, p, hero).Count > 0, mir, s.CharmMites);
+    }
+}
+
 /// <summary>The hero's side of the church, as the Faith panel shows it (faith-and-church 6): built at a barrier, read only.</summary>
 public sealed record FaithView(string ReligionName, string ReligionId, string Deity, int PietyNow, string PietyBandKey, int StandingPm, StandingBand Band, bool Excommunicated,
     string PriestName, string BishopName, string ParishName, bool ParishVacant, string SeeName, bool SeeVacant,
     IReadOnlyList<(string Name, int InDays, bool Today, bool Saint)> HolyDays, IReadOnlyList<string> Doctrines, string HolySiteName, int HolySiteSettlement, bool OnPilgrimage, string PilgrimTarget, int PilgrimagesDone,
     bool ServiceToday, string FeastToday, bool AttendedToday, int LastServiceDay, int ServiceAdults, int ServiceAttended, int Day,
-    IReadOnlyList<(string Name, int Settlement, bool Site)> Shrines, int HomeSettlement, int Saints, int PilgrimSettlement = -1)
+    IReadOnlyList<(string Name, int Settlement, bool Site)> Shrines, int HomeSettlement, int Saints, int PilgrimSettlement = -1, FaithPoliticsView? Politics = null)
 {
     public static readonly FaithView Empty = new("", "", "", 0, "fa_band_observant", 0, StandingBand.Unknown, false, "", "", "", false, "", false, [], [], "", -1, false, "", 0, false, "", false, -1, 0, 0, 0, [], -1, 0);
 
@@ -69,7 +100,7 @@ public sealed record FaithView(string ReligionName, string ReligionId, string De
             parish == null ? "" : PersonName(parish.Priest), see == null ? "" : PersonName(see.Bishop), Name(home), parish is { Priest: < 0 }, see == null ? "" : Name(see.Seat), see is { Bishop: < 0 },
             days, docs, Name(site), site, pg != null, pg == null ? "" : Name(pg.Target), book.Pilgrimages,
             today != null, today?.Name ?? "", book.LastServiceDay == day, parish?.ServiceDay ?? -1, parish?.Adults ?? 0, parish?.Attended ?? 0, day,
-            [.. shrines.Select((s, i) => (Name(s), s, i == 0))], home, rel.Saints.Count, pg?.Target ?? -1);
+            [.. shrines.Select((s, i) => (Name(s), s, i == 0))], home, rel.Saints.Count, pg?.Target ?? -1, FaithPoliticsView.Of(st, hero, home, ri, day));
     }
 }
 
@@ -95,6 +126,22 @@ public static class FaithDesk
     public static HeroCommand Arrive(int settlement, long sec) => Make("arrive|" + N(settlement), settlement, sec);
     /// <summary>Give up the pilgrimage.</summary>
     public static HeroCommand Abandon(long sec) => Make("abandon", -1, sec);
+    // ---- P6-E2: excommunication, relics, superstition (faith 4.4, 4.6, 4.7)
+    /// <summary>Ask the bishop to excommunicate <paramref name="target"/> (a person id) on the chronicle entry <paramref name="cause"/>, at the gift of 100 crowns.</summary>
+    public static HeroCommand AskBan(long target, long cause, long sec) => Make("ban|" + N(target) + "|" + N(cause), -1, sec);
+    /// <summary>Do penance: a tenth of the hero's treasury (or coin) to his see, once a pilgrimage has been made since the ban.</summary>
+    public static HeroCommand Penance(long sec) => Make("penance", -1, sec);
+    /// <summary>Take the relic <paramref name="key"/> from the altar of <paramref name="settlement"/>; <paramref name="seen"/> says whether the priest or a worshipper saw it.</summary>
+    public static HeroCommand Steal(int settlement, ulong key, bool seen, long sec) => Make("steal|" + N(settlement) + "|" + N((long)key) + "|" + (seen ? "1" : "0"), settlement, sec);
+    public static HeroCommand Venerate(int settlement, ulong key, long sec) => Make("venerate|" + N(settlement) + "|" + N((long)key), settlement, sec);
+    /// <summary>Sell a relic the hero carries to the church of <paramref name="settlement"/>.</summary>
+    public static HeroCommand SellRelic(int settlement, ulong key, long sec) => Make("sellrelic|" + N(settlement) + "|" + N((long)key), settlement, sec);
+    /// <summary>Buy the relic a pardoner offers at <paramref name="settlement"/>.</summary>
+    public static HeroCommand BuyRelic(int settlement, ulong key, long sec) => Make("buyrelic|" + N(settlement) + "|" + N((long)key), settlement, sec);
+    /// <summary>Show the head of a slain monster at <paramref name="settlement"/>.</summary>
+    public static HeroCommand ShowHead(int settlement, long sec) => Make("head|" + N(settlement), settlement, sec);
+    /// <summary>Buy a charm from the priest of <paramref name="settlement"/>.</summary>
+    public static HeroCommand Charm(int settlement, long sec) => Make("charm|" + N(settlement), settlement, sec);
 
     private static HeroResult R(HeroCommand c, HeroResultCode code, string key, params object[] args) => new(c.Seq, c.Kind, code, HeroText.Of(key, args), 0, 0, c.IssuedSec);
 
@@ -112,6 +159,7 @@ public static class FaithDesk
         if (ri < 0) return R(c, HeroResultCode.Refused, "fa_no_faith");
         var rel = book.Religions.Get(ri)!;
         int S(int i) { return f.Length > i && int.TryParse(f[i], NumberStyles.Integer, CultureInfo.InvariantCulture, out int v) ? v : -1; }
+        long L(int i) { return f.Length > i && long.TryParse(f[i], NumberStyles.Integer, CultureInfo.InvariantCulture, out long v) ? v : -1; }
         switch (f[0])
         {
             case "attend":
@@ -120,11 +168,60 @@ public static class FaithDesk
                 if (p == null) return R(c, HeroResultCode.Invalid, "fa_no_church");
                 if (book.Religions.OfSettlement(region, s) != ri) return R(c, HeroResultCode.Refused, "fa_other_faith");
                 if (!ChurchServices.Allows(st.Standing, hero, ri, ChurchServices.Service.Absolution)) return R(c, HeroResultCode.Refused, "fa_refused");
+                if (st.FaithPol?.Heresies.TryGetValue(s, out var inter) == true && inter.Interdict) return R(c, HeroResultCode.Refused, "fa_interdict");
                 if (rel.HolyDayOn(day % TimeConst.DaysPerYear + 1) is not { } hd) return R(c, HeroResultCode.Refused, "fa_no_service_today");
                 if (book.LastServiceDay == day) return R(c, HeroResultCode.Refused, "fa_already_attended");
                 book.LastServiceDay = day; book.HeroId = (long)hero.Value;
                 int now = Piety.Adjust(book, pt, hero, book.Settings.ServicePiety);
                 return new HeroResult(c.Seq, c.Kind, HeroResultCode.Ok, HeroText.Of("fa_attended", hd.Name, now), 0, now, c.IssuedSec);
+            }
+            case "ban":
+            {
+                long target = L(1), cause = L(2);
+                string key = Excommunication.Request(st, ctx.Content, hero, new EntityId((ulong)target), new EntityId((ulong)cause), day, out _);
+                if (key.Length > 0) return R(c, key == "fa_cannot_afford" ? HeroResultCode.CannotAfford : HeroResultCode.Refused, key, Quotes.Money(book.Settings.ExcommunicationGiftMites));
+                return new HeroResult(c.Seq, c.Kind, HeroResultCode.Ok, HeroText.Of("fa_ban_laid", pt.IndexOf(new EntityId((ulong)target)) is var tr and >= 0 ? pt.FullName(tr) : ""), book.Settings.ExcommunicationGiftMites, 0, c.IssuedSec);
+            }
+            case "penance":
+            {
+                var x = st.FaithPol?.ActiveFor(hero.Value);
+                string key = Excommunication.Penance(st, ctx.Content, hero, x != null && book.Pilgrimages > x.PilgrimsBefore, day);
+                return key.Length > 0 ? R(c, HeroResultCode.Refused, key) : R(c, HeroResultCode.Ok, "fa_penance_done");
+            }
+            case "steal":
+            {
+                int s = S(1); ulong k = (ulong)L(2); bool seen = S(3) == 1;
+                string key = Relics.Steal(st, ctx.Content, hero, s, k, seen, day, out var info);
+                return key.Length > 0 ? R(c, HeroResultCode.Refused, key) : R(c, HeroResultCode.Ok, seen ? "fa_relic_taken_seen" : "fa_relic_taken", info?.Name ?? "");
+            }
+            case "venerate":
+            {
+                string key = Relics.Venerate(st, ctx.Content, hero, S(1), (ulong)L(2), day, out int piety);
+                return key.Length > 0 ? R(c, HeroResultCode.Refused, key) : new HeroResult(c.Seq, c.Kind, HeroResultCode.Ok, HeroText.Of("fa_venerated", piety), 0, piety, c.IssuedSec);
+            }
+            case "sellrelic":
+            {
+                string key = Relics.Sell(st, ctx.Content, hero, S(1), (ulong)L(2), day, out long paid);
+                return key.Length > 0 ? R(c, HeroResultCode.Refused, key) : new HeroResult(c.Seq, c.Kind, HeroResultCode.Ok, HeroText.Of("fa_relic_sold", Quotes.Money(paid)), paid, 0, c.IssuedSec);
+            }
+            case "buyrelic":
+            {
+                string key = Relics.Buy(st, ctx.Content, hero, S(1), (ulong)L(2), day);
+                return key.Length > 0 ? R(c, key == "fa_cannot_afford" ? HeroResultCode.CannotAfford : HeroResultCode.Refused, key, Quotes.Money(book.Settings.RelicPriceMites)) : R(c, HeroResultCode.Ok, "fa_relic_bought");
+            }
+            case "head":
+            {
+                string key = Superstition.ShowHead(st, ctx.Content, hero, S(1), day, out int level);
+                return key.Length > 0 ? R(c, HeroResultCode.Refused, key) : new HeroResult(c.Seq, c.Kind, HeroResultCode.Ok, HeroText.Of("fa_head_shown", level), 0, level, c.IssuedSec);
+            }
+            case "charm":
+            {
+                int s = S(1); var p = book.ParishAt(s);
+                if (p == null || p.Priest < 0) return R(c, HeroResultCode.Refused, "fa_no_church");
+                var to = FaithOps.PurseOf(st, new EntityId((ulong)p.Priest));
+                if (to.IsNone || !ctx.Econ.Ledger.Transfer(ctx.Purse, to, new Coin(book.Settings.CharmMites), TransferReason.Trade)) return R(c, HeroResultCode.CannotAfford, "fa_cannot_afford", Quotes.Money(book.Settings.CharmMites));
+                SiteDesk.Make(ctx, new LootItem("charm", "tin", 20, 20, 1000));
+                return R(c, HeroResultCode.Ok, "fa_charm_bought");
             }
             case "alms":
             {
@@ -175,7 +272,8 @@ public static class FaithDesk
                 FaithStanding.Record(st, ctx.Content, hero, "pilgrimage_done", e.Id, s, 1, 0, true, day);
                 // the badge: an item of the shrine's tin, in the pack
                 SiteDesk.Make(ctx, new LootItem(book.Settings.BadgeItem, "tin", 8, 30, 1000));
-                // a sick pilgrim feels better at once (5 days of it follow, the daily pass): pain lower, no cure
+                // a sick pilgrim feels better at once (5 days of it follow, the daily pass): pain lower, no cure; a hurt one is watched for a natural recovery (believed miracles, 10a)
+                Miracles.WatchPilgrim(st, ctx.Content, hero, s, e.Id, day);
                 if (st.Wounds is { } wl && wl.Books.TryGetValue(hero.Value, out var wb)) wb.Relieve(book.Settings.ShrinePainRelief);
                 return new HeroResult(c.Seq, c.Kind, HeroResultCode.Ok, HeroText.Of("fa_pilgrim_arrived", region.Settlements[s].Name, piety), 0, piety, c.IssuedSec);
             }

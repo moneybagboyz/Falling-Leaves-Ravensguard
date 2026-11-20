@@ -87,4 +87,70 @@ public sealed record FaithSettingsDef : ContentDef
     // ---- doctrines in play
     /// <summary>Owning a slave against the doctrine costs this much piety a season (4.3).</summary>
     public int SlaveSeasonPiety { get; init; } = 10;
+
+    // ---- heresy (4.5, P6-E2)
+    /// <summary>A heresy starts where a priest of Theology and piety at least these has a grievance with his bishop or hunger has struck: P = HeresyStartPm permille a season (stream 0x652).</summary>
+    public int HeresyTheology { get; init; } = 50;
+    public int HeresyPiety { get; init; } = 80;
+    public int HeresyStartPm { get; init; } = 20;
+    /// <summary>The share of a settlement's households in hunger that counts as a famine (percent).</summary>
+    public int FamineSharePct { get; init; } = 25;
+    /// <summary>A hearing converts with P = HeresyBasePm + HeresyPerGrievancePm x grievances - piety / HeresyPietyDivisor, in permille; each adherent is heard by this many a day.</summary>
+    public int HeresyBasePm { get; init; } = 100;
+    public int HeresyPerGrievancePm { get; init; } = 20;
+    public int HeresyPietyDivisor { get; init; } = 5;
+    public int HearingsPerAdherent { get; init; } = 1;
+    /// <summary>A bishop preaching against a heresy takes this percent of its adherents back a season.</summary>
+    public int PreachCutPct { get; init; } = 20;
+    /// <summary>A bishop whose piety reaches this tries the preacher; one whose piety is under <see cref="BishopLaxPiety"/> lets it be.</summary>
+    public int BishopTryPiety { get; init; } = 70;
+    public int BishopLaxPiety { get; init; } = 40;
+    /// <summary>A heresy with this percent of a settlement's adults draws an interdict from a bishop of piety at least <see cref="BishopTryPiety"/> - 10; each household then bears this many grievances.</summary>
+    public int InterdictSharePct { get; init; } = 30;
+    public int InterdictGrievances { get; init; } = 2;
+    public int InterdictGrievanceSeasons { get; init; } = 1;
+    // ---- excommunication (4.6)
+    /// <summary>A ruler asks for a rival's excommunication with the bishop's opinion at least this, at a gift of this much (100 crowns).</summary>
+    public int ExcommunicationOpinion { get; init; } = 50;
+    public long ExcommunicationGiftMites { get; init; } = 10000;
+    /// <summary>His vassals' fealty utility drops this much; his fiefs bear this many grievances for this many seasons (renewed while it lasts).</summary>
+    public int ExcommunicationFealty { get; init; } = 40;
+    public int ExcommunicationGrievances { get; init; } = 2;
+    public int ExcommunicationGrievanceSeasons { get; init; } = 4;
+    /// <summary>The chronicle entry types a request may name as its cause.</summary>
+    public List<string> ExcommunicationCauses { get; init; } = ["oath_broken", "sacrilege", "heresy", "arson", "grave_robbing", "burglary"];
+    /// <summary>Penance: this percent of the sinner's treasury (or household coin) to the see, and a pilgrimage made since.</summary>
+    public int PenancePct { get; init; } = 10;
+    /// <summary>A new bishop lifts the ban of the one before with this percent chance (stream 0x652).</summary>
+    public int GracePct { get; init; } = 30;
+    // ---- relics (4.4)
+    public int SacrilegeStandingPm { get; init; } = -300;
+    public int VeneratePiety { get; init; } = 2;
+    /// <summary>A church buys a relic of the hero's at this much (a fake too, until it is exposed).</summary>
+    public long RelicPriceMites { get; init; } = 5000;
+    /// <summary>A pardoner's fake is spotted with Wits at least this or Theology at least the second number.</summary>
+    public int FakeWits { get; init; } = 60;
+    public int FakeTheology { get; init; } = 30;
+    /// <summary>A fake that a church bought is exposed each season with this chance in percent (stream 0x656).</summary>
+    public int FakeExposePct { get; init; } = 25;
+    public int FakeExposedPiety { get; init; } = 10;
+    // ---- superstition (4.7)
+    public int LairPoints { get; init; } = 30;
+    public int LairKm { get; init; } = 10;
+    public int BarrowPoints { get; init; } = 15;
+    public int RumourPoints { get; init; } = 10;
+    public int RumourSharePct { get; init; } = 50;
+    public int SuperstitionFall { get; init; } = 5;
+    /// <summary>At this level villagers avoid the night roads and the barrow and buy charms; at <see cref="WitchHuntAt"/> a witch hunt may start (P = WitchHuntPm permille a season, stream 0x654).</summary>
+    public int SuperstitionNight { get; init; } = 40;
+    public int WitchHuntAt { get; init; } = 70;
+    public int WitchHuntPm { get; init; } = 100;
+    public int HeadShownDrop { get; init; } = 40;
+    public long CharmMites { get; init; } = 20;
+    // ---- believed miracles (overview 10a, stream 0x655)
+    /// <summary>After a pilgrim's recovery or a fire that stopped at a church, the folk call it a miracle with this chance in percent.</summary>
+    public int MiraclePct { get; init; } = 15;
+    public int MiraclePiety { get; init; } = 2;
+    /// <summary>A believed miracle is disputed (sceptics, rival clergy) with this chance in percent (stream 0x655 draw 3).</summary>
+    public int MiracleDisputePct { get; init; } = 30;
 }

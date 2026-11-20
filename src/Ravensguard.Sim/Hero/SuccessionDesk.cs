@@ -88,6 +88,7 @@ public static class SuccessionDesk
             if (v > bestValue) { bestValue = v; recover = shape; }
         }
         var (est, rec) = SuccessionOrder.Settle(book, e.Ledger, ctx.Party.Hero, ctx.Purse, heir, ctx.Purse, funeral, items, [], day, x, y, recover);
+        Ravensguard.Sim.Faith.FaithWiring.OnBurial(st, ctx.Party.Hero, near, day);                       // P6-E2: the church may refuse holy ground (faith 4.3, FC-10)
         // the estate lies where the hero fell: the rows and the stacks pass to its owner
         var owner = EstateOwner(est.Id);
         foreach (int r in rows) e.Items.At(r).Owner = owner;

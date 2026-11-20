@@ -16,6 +16,13 @@ public sealed class FaithLink
     public required Action<long> Alms { get; init; }
     public required Action<int> Vow { get; init; }
     public required Action Abandon { get; init; }
+    // ---- P6-E2: the faith's politics (each a recorded hero command)
+    public Action Penance { get; init; } = () => { };
+    public Action<ulong> Venerate { get; init; } = _ => { };
+    public Action<ulong> SellRelic { get; init; } = _ => { };
+    public Action<ulong> BuyRelic { get; init; } = _ => { };
+    public Action ShowHead { get; init; } = () => { };
+    public Action Charm { get; init; } = () => { };
 }
 
 /// <summary>
@@ -132,6 +139,55 @@ public partial class FaithScreen : Control
                 right.AddChild(b);
             }
             right.AddChild(Dim(L.T("fa_pilgrim_note")));
+        }
+        if (v.Politics is { } pv) Politics(v, pv);
+    }
+
+    Button Small(string text, string name, Action act)
+    {
+        var b = new Button { Text = text, Name = name, CustomMinimumSize = new Vector2(0, 28), SizeFlagsHorizontal = SizeFlags.ShrinkBegin };
+        b.Pressed += () => { act(); _link.Refresh(); };
+        return b;
+    }
+
+    /// <summary>The faith's politics (P6-E2): superstition, a heresy and the bishop's answer, a ban and its penance, relics, a pardoner's offer, a monster's head, believed miracles with the natural explanation beside each.</summary>
+    void Politics(FaithView v, FaithPoliticsView pv)
+    {
+        _body.AddChild(UiKit.Hint(L.T("fa_head_politics")));
+        _body.AddChild(Row(L.T("fa_fear"), pv.AvoidsNight ? L.F("fa_fear_night", pv.Fear) : pv.Fear.ToString()));
+        if (pv.AvoidsNight) _body.AddChild(Small(L.F("fa_btn_charm", pv.CharmMites), "charm", _link.Charm));
+        if (pv.CanShowHead) _body.AddChild(Small(L.T("fa_btn_head"), "head", _link.ShowHead));
+        if (pv.HeresyChange.Length > 0)
+        {
+            _body.AddChild(Row(L.T("fa_heresy_here"), L.F("fa_heresy_line", L.T("fa_heresy_" + pv.HeresyChange), pv.HeresyAdherents, pv.HeresyAdults), new Color(0.9f, 0.55f, 0.4f)));
+            _body.AddChild(Dim(L.T("fa_heresy_resp_" + pv.HeresyResponse)));
+            if (pv.Interdict) _body.AddChild(Dim(L.T("fa_interdict_line")));
+        }
+        if (pv.Banned)
+        {
+            _body.AddChild(Row(L.T("fa_ban_head"), L.F("fa_ban_line", Ravensguard.Sim.Trade.Quotes.Money(pv.PenanceMites)), new Color(0.9f, 0.45f, 0.4f)));
+            if (pv.PilgrimageSince) _body.AddChild(Small(L.T("fa_btn_penance"), "penance", _link.Penance)); else _body.AddChild(Dim(L.T("fa_penance_needs")));
+        }
+        foreach (var (key, name, carried, fake, venerable) in pv.Held)
+        {
+            var row = new HBoxContainer(); row.AddThemeConstantOverride("separation", 8);
+            row.AddChild(new Label { Text = (carried ? L.T("fa_relic_carried") : L.T("fa_relic_altar")) + name + (fake ? L.T("fa_relic_fake") : ""), SizeFlagsHorizontal = SizeFlags.ExpandFill, ClipText = true });
+            ulong k = key;
+            if (carried) row.AddChild(Small(L.T("fa_btn_sell"), "sell" + key, () => _link.SellRelic(k)));
+            else if (venerable) row.AddChild(Small(L.T("fa_btn_venerate"), "venerate" + key, () => _link.Venerate(k)));
+            _body.AddChild(row);
+        }
+        foreach (var (key, name) in pv.ForSale)
+        {
+            var row = new HBoxContainer(); row.AddThemeConstantOverride("separation", 8);
+            row.AddChild(new Label { Text = L.F("fa_for_sale", name), SizeFlagsHorizontal = SizeFlags.ExpandFill, ClipText = true });
+            ulong k = key; row.AddChild(Small(L.T("fa_btn_buy"), "buy" + key, () => _link.BuyRelic(k)));
+            _body.AddChild(row);
+        }
+        foreach (var (kind, note, disputed, day) in pv.Miracles)
+        {
+            _body.AddChild(Row(L.T("fa_head_miracle"), L.T(kind) + (disputed ? L.T("fa_miracle_disputed") : ""), PixelTheme.Gold));
+            _body.AddChild(Dim(L.F("fa_miracle_natural", L.T(note))));
         }
     }
 

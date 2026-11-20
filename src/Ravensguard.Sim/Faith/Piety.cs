@@ -62,6 +62,21 @@ public static class ChurchServices
         return service == Service.Clergy ? st >= 0 : !Standing.ChurchRefuses(st);
     }
 
+    /// <summary>
+    /// Whether the church refuses the wedding of two people (4.3, FC-10): either one banned, or standing -500 or less with his faith (<see cref="Allows"/>). A world without a church refuses nothing.
+    /// </summary>
+    public static bool RefusesWedding(Save.WorldState st, EntityId a, EntityId b)
+    {
+        var religions = FaithWiring.ReligionsOf(st); if (religions.Count == 0) return false;
+        foreach (var who in new[] { a, b })
+        {
+            int row = Succession.HeroPerson.RowOf(st.Population.People, st.Hero, who); if (row < 0) row = st.Population.People.IndexOf(who);
+            int ri = row >= 0 ? religions.OfCulture(st.Population.People.Culture[row]) : -1;
+            if (ri >= 0 && !Allows(st.Standing, who, ri, Service.Wedding)) return true;
+        }
+        return false;
+    }
+
     /// <summary>The person's religion (their culture's), -1 for none.</summary>
     public static int ReligionOf(ReligionBook religions, PersonTable pt, EntityId person)
     {

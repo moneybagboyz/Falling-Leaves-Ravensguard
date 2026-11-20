@@ -5728,6 +5728,103 @@ ur_nobody_hungry,Nobody is hungry.
 R_UNREST_GRUMBLING,folk in {place} grumble about their lord.
 R_RIOT_RISES,a crowd has risen at {place}.
 R_REVOLT_RISES,{place} is in revolt.
+ch_faith_heresy_begun,{preacher} began to teach at {place} that {doctrine}.
+ch_note_heresy_grievance,A priest of learning had a grievance with his bishop.
+ch_note_heresy_famine,Hunger made the people listen.
+ch_faith_heresy_preached,{bishop} preached against the teaching of {preacher} at {place}.
+ch_note_bishop_pious,The bishop is a pious man and would not let it spread.
+ch_faith_heresy_charged,{bishop} asked the lord to try {preacher} for heresy at {place}.
+ch_note_bishop_zeal,The bishop's zeal for the faith was great.
+ch_faith_interdict,{bishop} laid {place} under interdict for the teaching of {preacher}.
+ch_note_heresy_widespread,The heresy had taken hold of a third of the grown people.
+ch_faith_heresy_ended,The teaching that {doctrine} faded at {place}.
+ch_note_heresy_faded,Its last followers were gone.
+ch_faith_excommunicated,{bishop} excommunicated {doer}.
+ch_note_excomm_sins,"His sins had cost him the church's trust, and they went on."
+ch_faith_excommunicated_asked,{bishop} excommunicated {doer} at the asking of {asker}.
+ch_note_excomm_cause,A ruler the bishop trusted asked for it and named a cause.
+ch_faith_penance_done,{doer} did penance and paid {amount}; the church took him back.
+ch_note_penance,A tenth of his treasury and a pilgrimage.
+ch_faith_grace,A new bishop forgave {doer} and lifted the ban.
+ch_note_new_bishop_grace,The new bishop did not hold the old one's quarrel.
+ch_faith_relic_taken,The altar at {place} was found bare: a relic was gone.
+ch_note_altar_bare,Nobody saw who took it.
+ch_faith_pardoner_came,A pardoner came to {place} with a relic to sell.
+ch_note_pardoner_trade,Pardoners go from town to town selling bones.
+ch_faith_fake_exposed,A relic at {place} was shown to be a fake.
+ch_note_fake_exposed,Someone who knew bones looked at it.
+ch_faith_head_shown,{doer} showed the head of a slain monster at {place}.
+ch_note_monster_slain,He had slain it.
+ch_faith_witch_hunt,{place} blamed {accused} for its misfortune and cried witch.
+ch_note_superstition_high,Fear of the dark things had grown great there.
+ch_faith_witch_hunt_stopped,{bishop} stopped the hunt for {accused} at {place}.
+ch_note_bishop_merciful,The bishop would have no blood on the church's hands.
+ch_faith_witch_hunt_tried,{accused} was handed to the lord's court at {place}.
+ch_note_bishop_silent,No one stood between the crowd and the court.
+ch_faith_miracle_cure,The people of {place} called the recovery of {doer} after the pilgrimage a miracle.
+ch_note_miracle_natural_recovery,He healed as wounds heal; the pilgrimage came first.
+ch_faith_miracle_fire,The people of {place} called it a miracle that the fire stopped at the church.
+ch_note_miracle_stone_wall,The church walls are stone and stone does not burn.
+ch_note_miracle_rain,Rain fell on the roofs.
+ch_note_miracle_wind,The wind turned.
+ch_faith_miracle_disputed,Sceptics at {place} disputed the miracle.
+ch_note_miracle_dispute,Sceptics and rival clergy gave other reasons.
+ch_faith_burial_refused,The church refused {doer} burial in holy ground.
+ch_note_services_refused,He had lost the church's trust.
+fa_head_politics,The faith's politics
+fa_fear,Fear of the dark things
+fa_fear_night,{0}: folk keep off the night roads and the barrow
+fa_btn_charm,Buy a charm ({0} mites)
+fa_btn_head,Show a slain monster's head
+fa_heresy_here,Heresy here
+fa_heresy_line,{0} ({1} of {2} adults)
+fa_heresy_tithe_poor,the whole tithe belongs to the poor
+fa_heresy_slavery_forbid,no believer may keep a slave
+fa_heresy_usury_forbid,no one may lend at interest
+fa_heresy_fasting_strict,the fast must be kept every other day
+fa_heresy_resp_0,The bishop has not yet answered it.
+fa_heresy_resp_1,The bishop preaches against it.
+fa_heresy_resp_2,The bishop has asked the lord to try the preacher.
+fa_heresy_resp_3,The bishop has laid the town under interdict.
+fa_heresy_resp_4,The bishop lets it be.
+fa_interdict_line,Interdict: no services are held here.
+fa_ban_head,Excommunicated
+fa_ban_line,Penance: a tenth of your treasury ({0}) and a pilgrimage.
+fa_btn_penance,Do penance
+fa_penance_needs,"Make a pilgrimage first, then do penance."
+fa_relic_altar,On the altar: 
+fa_relic_carried,You carry: 
+fa_relic_fake, (a fake)
+fa_btn_venerate,Venerate
+fa_btn_sell,Sell to the church
+fa_btn_buy,Buy
+fa_for_sale,A pardoner offers: {0}
+fa_head_miracle,Believed miracle
+fa_miracle_cure,A pilgrim's recovery
+fa_miracle_fire_stopped,A fire that stopped at the church
+fa_miracle_disputed, (disputed)
+fa_miracle_natural,Yet: {0}
+fa_ban_laid,The bishop excommunicates {0}.
+fa_penance_done,You do penance and the church takes you back.
+fa_relic_taken,"You take {0} from the altar, unseen."
+fa_relic_taken_seen,"You take {0} from the altar, and you are seen. It is sacrilege."
+fa_venerated,You venerate the relic. Piety {0}.
+fa_relic_sold,The church pays you {0} for the relic.
+fa_relic_bought,You buy the relic.
+fa_head_shown,You show the head. The people breathe easier (fear {0}).
+fa_charm_bought,The priest sells you a charm.
+fa_interdict,The town is under interdict; there is no service.
+fa_excomm_self,You cannot ask for your own excommunication.
+fa_excomm_already,He is already excommunicated.
+fa_excomm_no_cause,That is no cause the church will hear.
+fa_excomm_no_bishop,There is no bishop to ask.
+fa_excomm_cold,The bishop thinks too little of you to do it.
+fa_no_relic,There is no such relic here.
+fa_already_venerated,You have venerated a relic this season.
+fa_no_head,You have no monster's head to show.
+fa_not_excommunicated,You are not excommunicated.
+fa_penance_no_pilgrimage,The church asks a pilgrimage first.
+fa_miracle_note,Believed miracles keep a natural reason beside them.
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."

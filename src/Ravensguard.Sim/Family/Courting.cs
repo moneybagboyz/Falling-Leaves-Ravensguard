@@ -124,7 +124,7 @@ public static class Courting
         int head = w.Households.Head[hh];
         int headScore = head >= 0 && head != p ? Score(w, hero, head, hh, c.Id, day, 1) : int.MaxValue;
         if (headScore < w.S.YesAt) { c.Consent = ConsentState.No; return new(false, "fm_house_no", name, pt.FullName(head)); }
-        if (w.St.Standing?.Marks is { } marks && (marks.Of(w.HeroId)?.Excommunicated.Count > 0 || marks.Of(pt.IdOf(p))?.Excommunicated.Count > 0)) return new(false, "fm_church_refuses");
+        if (Ravensguard.Sim.Faith.ChurchServices.RefusesWedding(w.St, w.HeroId, pt.IdOf(p))) return new(false, "fm_church_refuses");      // P6-E2: a ban or a standing under -500 with the faith
         c.Consent = ConsentState.Yes; c.State = CourtState.Betrothed;
         var roof = RoofFor(w, hero);
         if (roof.Ok) c.WeddingDay = FamilyRules.NextHolyDay(w.S, day);
@@ -214,7 +214,7 @@ public static class Courting
     public static CourtResult Wed(FamilyWorld w, Courtship c, int hero, int p, int day)
     {
         var pt = w.People; var hht = w.Households; var s = w.S; var ledger = w.Ledger;
-        if (w.St.Standing?.Marks is { } marks && (marks.Of(w.HeroId)?.Excommunicated.Count > 0 || marks.Of(pt.IdOf(p))?.Excommunicated.Count > 0)) return new(false, "fm_church_refuses");
+        if (Ravensguard.Sim.Faith.ChurchServices.RefusesWedding(w.St, w.HeroId, pt.IdOf(p))) return new(false, "fm_church_refuses");      // P6-E2: a ban or a standing under -500 with the faith
         var roof = RoofFor(w, hero);
         if (!roof.Ok) return new(false, "fm_no_roof");
         int heroHh = pt.Household[hero], fromHh = pt.Household[p], settlement = roof.Settlement;

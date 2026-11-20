@@ -47,5 +47,11 @@
   {"type": "deed", "id": "unrest_grumbling", "entry": "unrest_grumbling", "settlement_pm": -5},
   {"type": "deed", "id": "riot_joined", "entry": "riot_joined", "settlement_pm": 40, "fief_pm": -60},
   {"type": "deed", "id": "riot_guards", "entry": "riot_guards", "settlement_pm": -40, "fief_pm": 30},
-  {"type": "deed", "id": "riot_mediated", "entry": "riot_mediated", "settlement_pm": 20, "fief_pm": 10}
+  {"type": "deed", "id": "riot_mediated", "entry": "riot_mediated", "settlement_pm": 20, "fief_pm": 10},
+  {"type": "deed", "id": "sacrilege",          "entry": "sacrilege",          "settlement_pm": -150, "fief_pm": -60, "religion_pm": -300},
+  {"type": "deed", "id": "excommunicated",     "entry": "excommunicated",     "settlement_pm": -100, "religion_pm": -1000},
+  {"type": "deed", "id": "excommunicated_asked", "entry": "excommunication_asked", "settlement_pm": -100, "religion_pm": -1000},
+  {"type": "deed", "id": "church_penance_done", "entry": "church_penance_done", "religion_pm": 900},
+  {"type": "deed", "id": "grace_granted",      "entry": "grace_granted",      "religion_pm": 900},
+  {"type": "deed", "id": "monster_head_shown", "entry": "monster_head_shown", "settlement_pm": 100, "religion_pm": 40}
 ]
