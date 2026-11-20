@@ -100,6 +100,7 @@ public sealed partial class RoomWorld
     private static bool Satisfies(RoomTypeDef t, RoomV2 r)
     {
         if (t.Enclosed && !r.Enclosed) return false;
+        if (t.MinZ is int mz && r.Z < mz) return false;
         if (r.Area < t.MinArea || (t.MaxArea > 0 && r.Area > t.MaxArea)) return false;
         if (t.Roofed == false) { if (r.Indoor) return false; }
         else if ((t.Roofed == true || t.Enclosed) && !r.Indoor) return false;

@@ -32,4 +32,6 @@ public sealed record RoomTypeDef : ContentDef
     public string? StorageKind { get; init; }
     /// <summary>The room counts toward a dwelling (sleeping, hearth, solar, hall).</summary>
     public bool DwellingPart { get; init; }
+    /// <summary>The lowest level the room may stand on (null = any). A loft is above the ground floor (min_z 1), so a ground-floor sleeping room with a ladder up stays a bedroom.</summary>
+    public int? MinZ { get; init; }
 }

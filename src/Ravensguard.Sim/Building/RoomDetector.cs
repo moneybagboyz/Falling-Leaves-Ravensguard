@@ -88,7 +88,7 @@ public sealed class RoomDetector(PieceCatalog pieces, IReadOnlyList<RoomTypeDef>
                 if (PieceCatalog.IsRoomKind(kind.Value) && !seen[ni]) { seen[ni] = true; q.Enqueue((nx, ny)); }
             }
         }
-        var matches = roomTypes.Where(t => Satisfies(t, cells.Count, enclosed, tags))
+        var matches = roomTypes.Where(t => Satisfies(t, cells.Count, enclosed, tags, lv.Z))
             .OrderByDescending(t => t.Priority).ThenBy(t => t.Id, StringComparer.Ordinal).ToList();
         var declared = letters.Select(c => g.Rooms[c]).Distinct().OrderBy(s => s, StringComparer.Ordinal).ToList();
         return new DetectedRoom
@@ -106,9 +106,10 @@ public sealed class RoomDetector(PieceCatalog pieces, IReadOnlyList<RoomTypeDef>
         foreach (var t in PieceCatalog.TagsOf(p)) tags[t] = tags.GetValueOrDefault(t) + 1;
     }
 
-    public static bool Satisfies(RoomTypeDef t, int area, bool enclosed, IReadOnlyDictionary<string, int> tags)
+    public static bool Satisfies(RoomTypeDef t, int area, bool enclosed, IReadOnlyDictionary<string, int> tags, int z = 0)
     {
         if (t.Enclosed && !enclosed) return false;
+        if (t.MinZ is int mz && z < mz) return false;
         if (t.Roofed == false) return false; // P5-A3: unroofed (yard) types are v2's; v1 sees finished blueprints
         if (area < t.MinArea || (t.MaxArea > 0 && area > t.MaxArea)) return false;
         foreach (var r in t.Requires)

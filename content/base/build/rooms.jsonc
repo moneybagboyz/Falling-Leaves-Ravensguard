@@ -52,5 +52,5 @@
   // the loft is the sleeping room under the roof that a ladder reaches (its beds count toward a dwelling).
   { "type": "room_type", "id": "slipway",          "name": "Slipway",            "purpose": "slipway",  "priority": 58, "enclosed": false, "roofed": false, "min_area": 6,  "requires": [{ "tag": "station:shipwright" }] },
   { "type": "room_type", "id": "wheelwright_yard", "name": "Wheelwright's yard", "purpose": "work:wheelwrighting", "priority": 58, "roofed": false, "min_area": 12, "requires": [{ "tag": "station:wheelwright" }] },
-  { "type": "room_type", "id": "loft",             "name": "Loft",               "purpose": "loft",     "dwelling_part": true, "priority": 42, "min_area": 4, "max_area": 30, "requires": [{ "tag": "bed" }, { "tag": "ladder" }] }
+  { "type": "room_type", "id": "loft",             "name": "Loft",               "purpose": "loft",     "dwelling_part": true, "priority": 42, "min_area": 4, "max_area": 30, "min_z": 1, "requires": [{ "tag": "bed" }, { "tag": "ladder" }] }
 ]
