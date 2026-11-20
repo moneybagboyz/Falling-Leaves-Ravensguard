@@ -37,6 +37,8 @@ public partial class CharacterScreen : Control
     public Action? OpenTreat { get; init; }
     /// <summary>P6-B3: opens the Family panel (spouse, children, lessons, what age has taken); null hides the button.</summary>
     public Action? OpenFamily { get; init; }
+    /// <summary>P6-C4: nurse a sick person (false) or ask a physician to call (true); null hides the buttons.</summary>
+    public Action<ulong, bool>? Care { get; init; }
 
     public CharacterScreen(ScreenRouter router, HeroRecord hero, ContentDatabase db, Func<HeroView?>? view = null, Func<string>? bodyLine = null)
     { _router = router; _hero = hero; _db = db; _view = view; _body = bodyLine; }
@@ -73,6 +75,30 @@ public partial class CharacterScreen : Control
         }
         else left.AddChild(UiKit.Body(L.T("CHAR_NO_AMBITION")));
         if (_body?.Invoke() is { Length: > 0 } body) left.AddChild(UiKit.Body(L.F("CHAR_CONDITIONS", body), true));
+        if (v is { Ill.Count: > 0 })
+        {
+            // P6-C4 (disease-and-plague 6): who is sick, the day of it, the care he has and his risk; the hero can sit with him or send for a physician
+            left.AddChild(UiKit.Hint(L.T("dz_ill_head")));
+            foreach (var ill in v.Ill)
+            {
+                string care = L.T(ill.Care == Ravensguard.Sim.Disease.IllnessCare.Physician ? "dz_care_physician" : ill.Care == Ravensguard.Sim.Disease.IllnessCare.Nursed ? "dz_care_nursed" : "dz_care_none");
+                left.AddChild(UiKit.Body(L.F("dz_ill_row", ill.PersonName, L.T(ill.IllnessKey), ill.Day, ill.Course, care, L.T(ill.RiskKey)) + (ill.BedBound ? L.T("dz_ill_bed") : ""), true));
+                if (Care is { } careCb)
+                {
+                    var br = new HBoxContainer(); br.AddThemeConstantOverride("separation", 6);
+                    ulong pid = ill.Person;
+                    var nb = new Button { Text = L.T("dz_btn_nurse"), CustomMinimumSize = new Vector2(90, 28) }; nb.Pressed += () => careCb(pid, false); br.AddChild(nb);
+                    var pb = new Button { Text = L.T("dz_btn_phys"), CustomMinimumSize = new Vector2(110, 28) }; pb.Pressed += () => careCb(pid, true); br.AddChild(pb);
+                    left.AddChild(br);
+                }
+            }
+        }
+        if (v != null && (v.Scarcity.WageMultPm != 1000 || v.Scarcity.LandMultPm != 1000 || v.Scarcity.PlagueActive))
+        {
+            left.AddChild(UiKit.Hint(L.T("dz_scarcity_head")));
+            if (v.Scarcity.PlagueActive) left.AddChild(UiKit.Body(L.F("dz_plague_line", L.T(v.Scarcity.PlagueNameKey), v.Scarcity.PlagueDead), true));
+            if (v.Scarcity.WageMultPm != 1000 || v.Scarcity.LandMultPm != 1000) left.AddChild(UiKit.Body(L.F("dz_scarcity", (v.Scarcity.WageMultPm / 1000.0).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture), (v.Scarcity.LandMultPm / 1000.0).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)), true));
+        }
         if (v != null) left.AddChild(InventoryScreen.LoadBar(v, 160));
 
         left.AddChild(UiKit.Hint(L.T("CHAR_ATTRIBUTES")));

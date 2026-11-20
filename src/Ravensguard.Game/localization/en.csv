@@ -4662,6 +4662,7 @@ dz_ill_head,Sickness
 dz_btn_nurse,Nurse
 dz_btn_phys,Physician
 dz_scarcity,"Wages x{0}, land x{1} of what they were"
+dz_scarcity_head,The times
 dz_plague_line,"{0}: {1} dead in the region"
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."

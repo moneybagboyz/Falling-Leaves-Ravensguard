@@ -25,8 +25,9 @@ public static class DiseaseView
             if (b.Illnesses.TryGetValue(t.Id, out var i))
             {
                 var r = rules.Row(i.Kind);
-                list.Add(new IllnessView(t.Id, pt.FullName(row), DiseaseRules.NameKey(i.Kind), day - i.StartDay + 1, Math.Max(1, r.CourseDays - (i.Cared ? r.CareShortensDays : 0)), i.Care,
-                    RiskKeyOf(rules.DeathPpm(i.Kind, i.Care, b.Severity)), r.BedBound, hasHero && t.Id == hero, false));
+                var shown = i.PhysicianUntil >= day ? IllnessCare.Physician : i.NursedUntil >= day && i.Care != IllnessCare.Physician ? IllnessCare.Nursed : i.Care;
+                list.Add(new IllnessView(t.Id, pt.FullName(row), DiseaseRules.NameKey(i.Kind), day - i.StartDay + 1, Math.Max(1, r.CourseDays - (i.Cared || shown != IllnessCare.None ? r.CareShortensDays : 0)), shown,
+                    RiskKeyOf(rules.DeathPpm(i.Kind, shown, b.Severity)), r.BedBound, hasHero && t.Id == hero, false));
             }
             else if (b.Plague?.Cases.TryGetValue(t.Id, out var c) == true)
             {
