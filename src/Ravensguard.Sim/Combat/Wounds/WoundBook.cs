@@ -37,6 +37,8 @@ public sealed partial class WoundBook
     /// <summary>Blood regeneration, permille of 25 ml per game hour (fed 1000, hungry 400, starving 0).</summary>
     public int RegenPm = 1000;
     public ulong Seed, Key;
+    /// <summary>Difficulty (wound lethality): percent of the calibrated bleed rate at a wound's creation and of the infection chance per day. Set by the ledger; not saved (the run's record holds it).</summary>
+    public int LethalityPct = 100;
     public string PlanId = "human";
     private List<BookEvent>? _events;
 
@@ -332,6 +334,8 @@ public sealed partial class WoundBook
         Note(sec, BookEventKind.Dazed);
     }
 
+    private int Scale(int bleedX10) => LethalityPct == 100 ? bleedX10 : bleedX10 <= 0 ? bleedX10 : Math.Max(1, (int)((long)bleedX10 * LethalityPct / 100));
+
     private WoundRecord Make(BodyPlanV2 plan, BodyState bs, in WoundV2 w, long sec, ulong cause, bool dirty)
     {
         var part = plan.Parts[w.Part];
@@ -339,7 +343,7 @@ public sealed partial class WoundBook
         var rec = new WoundRecord
         {
             Id = NextId++, Part = w.Part, Tissue = w.Tissue, Structure = w.Structure, Organ = w.Organ, Kind = w.Kind, Cat = cat, Grade = w.Grade, Grade0 = w.Grade, Count = w.Count,
-            Residual = w.Residual, DepthPm = (ushort)Math.Clamp(w.DepthPm, 0, 1000), BleedX10 = plan.Bleeds ? w.BleedX10 : 0, Flags = w.Flags, Born = sec, Cause = cause,
+            Residual = w.Residual, DepthPm = (ushort)Math.Clamp(w.DepthPm, 0, 1000), BleedX10 = plan.Bleeds ? Scale(w.BleedX10) : 0, Flags = w.Flags, Born = sec, Cause = cause,
             Internal = w.Organ >= 0 && w.BleedX10 > 0, Clots = plan.Bleeds && w.Structure < 0 && w.Organ < 0 && !w.Has(WoundFlags.Severed) && !w.Has(WoundFlags.ArteryHit) && !w.Has(WoundFlags.VeinHit),
             Aids = dirty ? Aid.Dirty : Aid.None,
         };

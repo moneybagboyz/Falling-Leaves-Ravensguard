@@ -27,6 +27,8 @@ public sealed class NewGameDraft
     public bool Female;
     public string OriginId = "";
     public bool Ironman;
+    /// <summary>The honest sliders (difficulty-sliders.md); Ironman and the ageing pace are taken from <see cref="Ironman"/> and the world when the run starts.</summary>
+    public Ravensguard.Sim.Core.Difficulty Difficulty = Ravensguard.Sim.Core.Difficulty.Default;
     /// <summary>Library world folder id, or null for a new world.</summary>
     public string? LibraryWorldId;
     public string WorldName = "";

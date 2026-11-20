@@ -81,7 +81,7 @@ public sealed class PersonTable
     /// <summary>Deep copy of the table (strings are immutable and shared).</summary>
     public PersonTable Clone()
     {
-        var c = new PersonTable(Count, _baseCounter);
+        var c = new PersonTable(Count, _baseCounter) { AgingPace = AgingPace };
         for (int i = 0; i < Count; i++) c.Add();
         void Cp<T>(T[] src, T[] dst) => Array.Copy(src, dst, Math.Min(src.Length, dst.Length));
         Cp(Given, c.Given); Cp(Family, c.Family); Cp(Byname, c.Byname); Cp(Sex, c.Sex); Cp(BirthDay, c.BirthDay); Cp(Culture, c.Culture); Cp(Household, c.Household);
@@ -157,7 +157,12 @@ public sealed class PersonTable
 
     private static T[] G<T>(T[] a, int n) { var r = new T[n]; Array.Copy(a, r, a.Length); return r; }
 
-    public int AgeYears(int i, int nowDay) => Math.Max(0, (nowDay - BirthDay[i]) / TimeConst.DaysPerYear);
+    /// <summary>The world's ageing pace (1 to 4, <c>aging_pace</c>): only the ageing clock scales, so a person is <c>(days lived) x pace / 60</c> years old and the per-year vital chances stay per game year.</summary>
+    public int AgingPace = 1;
+    public int AgeYears(int i, int nowDay) => AgeYearsOf(BirthDay[i], nowDay, AgingPace);
+    public static int AgeYearsOf(int birthDay, long nowDay, int pace) => (int)Math.Max(0, (nowDay - birthDay) * Math.Max(1, pace) / TimeConst.DaysPerYear);
+    /// <summary>The birth day of someone <paramref name="ageYears"/> years and <paramref name="extraDays"/> (0..59, in ageing days) old on <paramref name="nowDay"/> at <paramref name="pace"/>.</summary>
+    public static int BirthDayFor(long nowDay, int ageYears, int extraDays, int pace) => (int)(nowDay - ((long)ageYears * TimeConst.DaysPerYear + extraDays) / Math.Max(1, pace));
     public string FullName(int i)
     {
         string n = Family[i].Length > 0 ? $"{Given[i]} {Family[i]}" : Given[i];      // P5-I: no trailing space when there is no family name

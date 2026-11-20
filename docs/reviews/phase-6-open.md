@@ -11,3 +11,8 @@ Collected while the steps are built. The close-out fixes each item or moves it i
   - A2 should fold `StandingBook.Hash()` into the daily hash trail.
   - Renown and `Heard` use the best single deed, not the union of everyone who heard any deed.
   - The hero is person 0, which equals `EntityId.None`'s value, so `DeedTable.DoerOf` returns a nullable. This same id clash has caused bugs before (Phase 4 S13); consider giving the hero a non-zero id in a later save step.
+- **A4 difficulty, not wired yet:**
+  - Bandit band spawns, slaver raids (D1) and the great plague (C4) must read `BanditPct` and the plague accessors when they are built.
+  - Fight-only wound books, abstract battle books and resident regions other than the home economy keep the default 100.
+  - The Advanced panel's difficulty rows were not rendered at 960x540.
+  - For the close-out: run the 100-year population soak at aging pace 1, 2, 3 and 4 (only a one-year 4x check was run).

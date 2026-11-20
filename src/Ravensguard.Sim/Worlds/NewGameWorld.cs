@@ -21,12 +21,12 @@ public static class NewGameWorld
     /// <see cref="WorldState.HomeRecords"/>, which <see cref="WorldRuntime"/> adopts as it is; its clock is <paramref name="clock"/> (default: 08:00 on the first day of spring of the year history ended).
     /// </summary>
     public static WorldState Create(ContentDatabase content, Continent continent, WorldHistory history, ContinentSettings cs, HistorySettings hs, RegionSettings rs,
-        int cellX, int cellY, Population pop, HeroRecord? hero, CodexProgress? codex, GameTime? clock = null, int startSettlement = -1)
+        int cellX, int cellY, Population pop, HeroRecord? hero, CodexProgress? codex, GameTime? clock = null, int startSettlement = -1, Difficulty? difficulty = null)
     {
         var home = RegionCoord.Snap(cellX, cellY);
         var sv = new RegionServices(cs.Seed, content, continent, home) { History = history };
         var rw = RegionWorld.CreateFresh(sv, home, pop);
-        if (hero != null) rw.Sim.Economy.SeedHero(hero.Coin);
+        if (hero != null) rw.Sim.Economy.SeedHero((difficulty ?? Difficulty.Default).ScaleOriginCoin(hero.Coin));
         var cont = sv.AbstractContinent!;                          // made by the home region itself (RegionServices.EnsureContinent), over this world's history
         var start = clock ?? GameTime.FromCalendar(pop.NowYear, Season.Spring, 1, 8);
         Ravensguard.Sim.Succession.SuccessionBook? kin = null;
@@ -38,7 +38,7 @@ public static class NewGameWorld
                 startSettlement, links, rw.Sim, rw.Ids);
             if (links.Count > 0) { kin = new Ravensguard.Sim.Succession.SuccessionBook(); kin.Kin.AddRange(links); }
         }
-        return new WorldState
+        var state = new WorldState
         {
             Succession = kin,
             Hero = hero, Codex = codex, Content = content, HomeRecords = rw,
@@ -48,5 +48,7 @@ public static class NewGameWorld
             Continent = continent, History = history, Population = pop, Clock = new SimClock(clock ?? GameTime.FromCalendar(pop.NowYear, Season.Spring, 1, 8)),
             Ids = rw.Ids, Chunks = new ChunkStore(), Chronicle = rw.Chronicle, ContinentState = cont,
         };
+        if (difficulty != null) state.Difficulty = difficulty;            // after the economy is set: it hands the multipliers on
+        return state;
     }
 }

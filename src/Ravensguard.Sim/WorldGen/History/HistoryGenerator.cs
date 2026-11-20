@@ -42,7 +42,7 @@ public sealed partial class HistoryGenerator
     private HistoryGenerator(Continent c, HistorySettings s)
     {
         _c = c; _s = s; _seed = s.Seed;
-        _h = new WorldHistory { Seed = s.Seed, Years = s.Years };
+        _h = new WorldHistory { Seed = s.Seed, Years = s.Years, AgingPace = Math.Clamp(s.AgingPace, 1, 4) };
         _names = new NameGen(s.Seed, c.Cultures);
         _R = Math.Max(s.MaxRealms, c.Realms.Count + 8);
         _border = new int[_R * _R]; _opinion = new int[_R * _R]; _truce = new int[_R * _R]; _cb = new CbState[_R * _R];
@@ -265,20 +265,20 @@ public sealed partial class HistoryGenerator
         r.Dynasty = dyn.Id;
         bool female = Pct((ulong)r.Index, S.Init, 15);
         int age = Roll((ulong)r.Index, S.Init, 24, 56);
-        var ruler = NewNotable(NotableRole.Ruler, r.CultureId, r.Index, dyn.Id, female, -age, EntityId.None, EntityId.None);
+        var ruler = NewNotable(NotableRole.Ruler, r.CultureId, r.Index, dyn.Id, female, -(age / _h.AgingPace), EntityId.None, EntityId.None);
         dyn.Founder = ruler.Id;
         ruler.Residence = r.Capital;
         r.Ruler = ruler.Id;
         var spouse = NewConsort(ruler, age + Roll((ulong)r.Index, S.Init, -6, 4));
         int kids = Roll((ulong)r.Index, S.Init, 0, 4);
-        int motherAge = -(ruler.Female ? ruler : spouse).BirthYear;
+        int motherAge = -(ruler.Female ? ruler : spouse).BirthYear * _h.AgingPace;
         for (int k = 0; k < kids; k++)
         {
             // the mother was 18..MaxMotherAge when each child was born (older rulers' children are simply older)
             int hi = motherAge - 18 - k * 3, lo = Math.Max(1, motherAge - MaxMotherAge);
             if (hi < lo) break;
             var father = ruler.Female ? spouse : ruler; var mother = ruler.Female ? ruler : spouse;
-            var kid = NewNotable(NotableRole.Heir, r.CultureId, r.Index, father.Dynasty, Pct((ulong)r.Index * 7 + (ulong)k, S.Init, 50), -Roll((ulong)r.Index * 5 + (ulong)k, S.Init, lo, hi + 1), father.Id, mother.Id);
+            var kid = NewNotable(NotableRole.Heir, r.CultureId, r.Index, father.Dynasty, Pct((ulong)r.Index * 7 + (ulong)k, S.Init, 50), -(Roll((ulong)r.Index * 5 + (ulong)k, S.Init, lo, hi + 1) / _h.AgingPace), father.Id, mother.Id);
             kid.Residence = r.Capital;
         }
         r.Treasury = Math.Max(500, r.Pop / 20);
@@ -320,7 +320,7 @@ public sealed partial class HistoryGenerator
     {
         int cu = spouse.Culture;
         var house = MinorHouse(cu, spouse.Id.Value);
-        var c = NewNotable(NotableRole.Noble, cu, spouse.Realm, house.Id, !spouse.Female, spouse.BirthYear + Math.Clamp(Roll(spouse.Id.Value, S.Marry, -6, 5), -6, 5), EntityId.None, EntityId.None);
+        var c = NewNotable(NotableRole.Noble, cu, spouse.Realm, house.Id, !spouse.Female, spouse.BirthYear + Math.Clamp(Roll(spouse.Id.Value, S.Marry, -6, 5), -6, 5) / _h.AgingPace, EntityId.None, EntityId.None);
         c.Residence = spouse.Residence;
         c.Spouse = spouse.Id; spouse.Spouse = c.Id;
         return c;

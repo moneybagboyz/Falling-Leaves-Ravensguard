@@ -7,6 +7,8 @@ public sealed class HistorySettings
 {
     public ulong Seed { get; set; } = 1;
     public int Years { get; set; } = 250;
+    /// <summary>The world's <c>aging_pace</c> world setting: 1 (historical, the default), 2, 3 or 4. Only the ageing clock scales; yearly chances stay per game year.</summary>
+    public int AgingPace { get; set; } = 1;
     public int RuralGrowthPermilleYear { get; set; } = 30;
     public int CapacityScalePct { get; set; } = 240;
     public int StartFillPct { get; set; } = 72;

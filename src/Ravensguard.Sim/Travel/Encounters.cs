@@ -122,6 +122,10 @@ public static class EncounterDirector
         return Math.Clamp(p, 0, 1_000_000);
     }
 
+    /// <summary>The weight of a row: the calibrated weight, except that road bandits (ambush, toll demand, block) scale with the bandit frequency slider.</summary>
+    private static int Weight(TravelState st, EncounterDef d)
+        => st.BanditPct == 100 || d.Kind is not ("Ambush" or "Demand" or "Block") ? d.WeightPm : Math.Max(1, (int)((long)d.WeightPm * st.BanditPct / 100));
+
     public static bool IsEarlyDisabled(TravelSettingsDef c, EncounterDef d) => c.SafeDisabledKinds.Contains(d.Kind);
 
     /// <summary>
@@ -146,12 +150,12 @@ public static class EncounterDirector
             if (st.LastById.TryGetValue(d.Id, out long last) && sec - last < d.CooldownGameHours * TimeConst.SecondsPerHour) continue;
             bool ok = true; foreach (var c in d.Conditions) if (!EncounterConditions.Holds(c, s, h)) { ok = false; break; }
             if (!ok) continue;
-            elig.Add(d); weightTotal += d.WeightPm;
+            elig.Add(d); weightTotal += Weight(st, d);
         }
         int pick = weightTotal > 0 ? DetRng.Range(st.Seed, hour, st.HeroId.Value, RngStreams.EncounterRoll, 6 + slot, 0, (int)weightTotal) : 0;
         if (roll >= p || elig.Count == 0) return null;
         if (st.LastEncounterSec != long.MinValue && sec - st.LastEncounterSec < cfg.MinGapMinutes * TimeConst.SecondsPerMinute) return null;
-        foreach (var d in elig) { if (pick < d.WeightPm) return d; pick -= d.WeightPm; }
+        foreach (var d in elig) { int wt = Weight(st, d); if (pick < wt) return d; pick -= wt; }
         return elig[^1];
     }
 }

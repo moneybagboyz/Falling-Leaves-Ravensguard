@@ -77,7 +77,7 @@ public sealed class SimWorld
     public void Set<T>(T service) where T : class => _services[typeof(T)] = service;
 
     /// <summary>The age in whole years of a person on a game day.</summary>
-    public int AgeOn(int person, long day) => Math.Max(0, (int)(day - People.BirthDay[person]) / TimeConst.DaysPerYear);
+    public int AgeOn(int person, long day) => PersonTable.AgeYearsOf(People.BirthDay[person], day, People.AgingPace);
 
     /// <summary>
     /// One digest of the running world (population, vital columns, economy, chronicle size, counters) for the determinism tests: equal worlds give equal hashes,
