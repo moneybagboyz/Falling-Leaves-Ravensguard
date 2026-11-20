@@ -412,7 +412,7 @@ public static class NewGameDebug
                     sv.DebugWorld.SetSpeed(Ravensguard.Sim.Core.SimSpeed.Paused);
                     await Frames(tree, 90);
                     sv.DebugBusinessOpen(scene);
-                    await Frames(tree, 60);
+                    await Frames(tree, 240);                                          // the panel's view comes from a barrier
                     break;
                 }
             case "embark":

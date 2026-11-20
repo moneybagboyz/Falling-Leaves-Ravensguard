@@ -108,8 +108,9 @@ public sealed class DayLabour
     }
 
     /// <summary>
-    /// The well-off households' day work (decided here, P5-F: gardens, carting, building repairs, the harvest of a burgher's croft): a gentry or burgher household of the place holding more than the
-    /// reserve spends the same permille of the rest a day on hands, for the idle the lord's works left. Households by index.
+    /// The well-off households' day work (decided here, P5-F: gardens, carting, building repairs, a burgher's croft, a lord's manor farms beyond his own fief): a lord's, gentry or burgher household
+    /// holding more than the reserve spends the same permille of the rest a day on hands, for the idle the lord's works left: first those of its own place, then (the hands walk in from the villages
+    /// around) those of any place, settlements in ascending order. Households by index; what a lord already paid for his works counts against his share.
     /// </summary>
     private List<DayPost> HouseWorks(List<int>[] idle, List<DayPost> taken)
     {
@@ -117,19 +118,30 @@ public sealed class DayLabour
         if (_r.LordWorksPmPerDay <= 0) return posts;
         var left = new int[idle.Length];
         for (int s = 0; s < idle.Length; s++) left[s] = idle[s].Count;
-        foreach (var p in taken) left[p.Settlement] = Math.Max(0, left[p.Settlement] - p.Hands);
+        var used = new Dictionary<PurseId, long>();
+        foreach (var p in taken) { left[p.Settlement] = Math.Max(0, left[p.Settlement] - p.Hands); used[p.Payer] = used.GetValueOrDefault(p.Payer) + p.Hands; }
+        if (left.All(x => x == 0)) return posts;
         var lords = new HashSet<int>(_pop.FiefLordHousehold);
+        var payers = new List<(int Settlement, PurseId Purse, long Hands)>();
         for (int h = 0; h < hht.Count && h < _econ.HouseholdCount; h++)
         {
-            int s = hht.Settlement[h];
-            if ((uint)s >= (uint)left.Length || left[s] <= 0 || hht.MemberCount[h] == 0 || lords.Contains(h)) continue;
-            if (hht.Class[h] is not (SocialClass.Gentry or SocialClass.Burgher)) continue;
-            long spare = led.Balance(_econ.HouseholdPurse[h]).Mites - _r.LordWorksReserveMites;
-            int hands = (int)Math.Min(left[s], Math.Max(0, spare) * _r.LordWorksPmPerDay / 1000 / wage);
-            if (hands <= 0) continue;
-            posts.Add(new DayPost(s, hands, _econ.HouseholdPurse[h], "house"));
-            left[s] -= hands;
+            if (hht.MemberCount[h] == 0 || !(lords.Contains(h) || hht.Class[h] is SocialClass.Gentry or SocialClass.Burgher)) continue;
+            var purse = _econ.HouseholdPurse[h];
+            long spare = led.Balance(purse).Mites - _r.LordWorksReserveMites;
+            long hands = Math.Max(0, spare) * _r.LordWorksPmPerDay / 1000 / wage - used.GetValueOrDefault(purse);
+            if (hands > 0) payers.Add((hht.Settlement[h], purse, hands));
         }
+        void Pay(int k, int s)
+        {
+            int n = (int)Math.Min(left[s], payers[k].Hands);
+            if (n <= 0) return;
+            posts.Add(new DayPost(s, n, payers[k].Purse, "house"));
+            left[s] -= n; payers[k] = payers[k] with { Hands = payers[k].Hands - n };
+        }
+        for (int k = 0; k < payers.Count; k++) if ((uint)payers[k].Settlement < (uint)left.Length) Pay(k, payers[k].Settlement);
+        int sc = 0;
+        for (int k = 0; k < payers.Count && sc < left.Length; k++)
+            while (payers[k].Hands > 0 && sc < left.Length) { if (left[sc] == 0) { sc++; continue; } Pay(k, sc); }
         return posts;
     }
 
@@ -162,7 +174,7 @@ public sealed class DayLabour
             {
                 int person = list[next[post.Settlement]];
                 int hh = p.Household[person];
-                if (hh < 0 || hh >= _econ.HouseholdCount) { next[post.Settlement]++; k--; continue; }
+                if (hh < 0 || hh >= _econ.HouseholdCount || _econ.HouseholdPurse[hh] == post.Payer) { next[post.Settlement]++; k--; continue; } // a household does not hire its own
                 if (!_econ.Ledger.Transfer(post.Payer, _econ.HouseholdPurse[hh], new Coin(wage), TransferReason.Wage)) break;
                 next[post.Settlement]++;
                 Take(person, post.Settlement, day, season);

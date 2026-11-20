@@ -267,7 +267,11 @@ public class BusinessTests(ITestOutputHelper output)
         var dl = new DayLabour(r.W.Sys, r.W.Pop, r.W.Econ, rules, r.W.Economy.Labour);
         int day = r.Day; r.W.Economy.Labour.Rebuild();
         var idle = dl.Idle(day);
-        int s = Enumerable.Range(0, idle.Length).First(i => idle[i].Count >= 40);
+        // the hiring hour is for the landless: a fresh world has few, so the town's households give up their fields (the test's doing) until 40 adults stand idle there
+        int s = r.Town(); var hht = r.W.Pop.Households;
+        for (int h = 0; h < hht.Count && idle[s].Count < 40; h++)
+            if (hht.Settlement[h] == s && hht.ParcelCount[h] > 0) { hht.ParcelCount[h] = 0; idle = dl.Idle(day); }
+        Assert.True(idle[s].Count >= 40, $"{idle[s].Count} idle");
         var first40 = idle[s].Take(40).ToList();
         dl.Posts = (st, d) => st == s ? [new DayPost(s, 25, payer, "test")] : [];
         var before = first40.ToDictionary(p => p, p => r.Led.Balance(r.W.Econ.HouseholdPurse[r.P.Household[p]]).Mites);
