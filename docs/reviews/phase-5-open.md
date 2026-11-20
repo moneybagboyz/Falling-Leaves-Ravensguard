@@ -96,7 +96,9 @@ Collected while the steps are built. The close-out fixes each item or moves it i
   - the vehicle panel (Q > Inspect) is a modal list, not the part grid with each part's colour;
   - NPC drivers on the live map (`NpcDriving` is the rule; the caravans keep their Phase 3 legs);
   - combat damage per part (`VehicleTable.Damage` exists; the resolver does not call it);
-  - the builder's cart (P5-D) as a real vehicle row.
+  - the builder's cart (P5-D) as a real vehicle row;
+  - the `VehicleHash` (`VehicleHash.Of`) is compared by VD-18 and the resume test but not folded into the live `StateHashTrail`;
+  - walking on a boat's deck as the vehicle's own sub-grid, ramps and gangplanks as portals (now the cargo and the hero on the bench move with the vehicle, nothing else).
 - **Decisions to confirm in the review:**
   - additive keys in the "mounts" section, not a v8 -> v9 step (old rows expand from the template at load);
   - `make_cargo_bed` 2 h (was 8): the ox wagon is 215.8 worker-hours of content, not "about 182";
