@@ -1,4 +1,6 @@
+using System.Text.Json.Serialization;
 using Ravensguard.Content;
+using Ravensguard.Sim.Faith;
 
 namespace Ravensguard.Sim.WorldGen.History;
 
@@ -66,6 +68,45 @@ public sealed class HistorySettings
     public int VassalYearsMin { get; set; } = 20;
     public int VassalYearsMax { get; set; } = 45;
 
+    /// <summary>
+    /// The history rules (history-recalibration 3, 4.1): 0 is Phase 1's history, frozen (the code path and its hashes are pinned forever; a world in the library regenerates it
+    /// identically), 1 is Phase 6's. Absent in a world file or save means 0, and 0 is never written, so an older record keeps its bytes. New worlds are made with 1 (<see cref="UseRulesV1"/>).
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public int RulesVersion { get; set; }
+
+    /// <summary>History v1: what each continent culture holds, read once from the content at world creation and kept with the world's settings so the history regenerates from them alone (null under v0).</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<HistoryCultureRule>? CultureRules { get; set; }
+
+    [JsonIgnore] public bool IsV1 => RulesVersion >= 1;
+
+    /// <summary>Makes these settings the Phase 6 rules and reads each continent culture's religion, law of bondage and the religion's stance from the content (the base mod folder).</summary>
+    public HistorySettings UseRulesV1(string? baseModFolder)
+    {
+        RulesVersion = 1;
+        CultureRules = [];
+        if (baseModFolder == null || !Directory.Exists(baseModFolder)) return this;
+        var db = new ModLoader(ContentTypeRegistry.Default).Load([baseModFolder]).Database;
+        return UseRulesV1(db);
+    }
+
+    public HistorySettings UseRulesV1(ContentDatabase db)
+    {
+        RulesVersion = 1;
+        CultureRules = [];
+        var templates = db.All<ReligionTemplateDef>().OrderBy(t => t.Id, StringComparer.Ordinal).ToList();
+        var doctrines = db.All<DoctrineDef>().ToList();
+        for (int c = 0; c < 8; c++)
+        {
+            var cu = ReligionBook.CultureOf(db, c);
+            var tpl = cu == null ? null : templates.FirstOrDefault(t => t.Cultures.Contains(cu.Id));
+            string stance = tpl == null ? "accept" : (doctrines.FirstOrDefault(d => d.Religion == tpl.Id)?.SlaveryStance ?? "accept");
+            CultureRules.Add(new HistoryCultureRule { Religion = tpl?.Name ?? "", ReligionId = tpl?.Id ?? "", Slavery = cu?.Slavery ?? "none", Stance = stance, Crime = cu != null && cu.Crimes.TryGetValue("arson", out var cr) ? cr : "" });
+        }
+        return this;
+    }
+
     public static HistorySettings FromDef(HistorySettingsDef d) => new()
     {
         Years = d.Years, RuralGrowthPermilleYear = d.RuralGrowthPermilleYear, CapacityScalePct = d.CapacityScalePct,
@@ -91,4 +132,15 @@ public sealed class HistorySettings
         }
         return new HistorySettings();
     }
+}
+
+/// <summary>History v1: one continent culture's religion (its template's name, empty when none), law of bondage (<c>none</c>, <c>debt</c>, <c>war_captives</c>, <c>chattel</c>), the faith's stance on slavery and the culture's punishment for the gravest crimes.</summary>
+public sealed class HistoryCultureRule
+{
+    public string Religion { get; set; } = "";
+    /// <summary>The religion template's id (the text key of its name is <c>ch_h_rel_</c> + this).</summary>
+    public string ReligionId { get; set; } = "";
+    public string Slavery { get; set; } = "none";
+    public string Stance { get; set; } = "accept";
+    public string Crime { get; set; } = "";
 }

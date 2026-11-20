@@ -37,7 +37,7 @@ public sealed partial class HistoryGenerator
             if (!nb.Alive) continue;
             int age = AgeAt(nb);
             int hz = age < 1 ? 200 : age < 5 ? 30 : age < 15 ? 8 : age < 50 ? 12 : age < 65 ? 30 : 100;
-            if (age >= 95 || Chance(nb.Id.Value, S.Death, hz * 250L))
+            if (age >= (_v1 ? 100 : 95) || Chance(nb.Id.Value, S.Death, _v1 ? NotableDeathPpmV1(age) : hz * 250L))
             {
                 string why = age >= 60 ? "old age" : age < 5 ? "a childhood fever" : Roll(nb.Id.Value, S.Death, 0, 4) switch { 0 => "a wasting sickness", 1 => "a fever", 2 => "a fall from a horse", _ => "an infected wound" };
                 Die(nb, why, EntityId.None);
@@ -305,6 +305,7 @@ public sealed partial class HistoryGenerator
                 _opinion[ra * _R + rb] = Math.Min(100, _opinion[ra * _R + rb] + 25); _opinion[rb * _R + ra] = Math.Min(100, _opinion[rb * _R + ra] + 25);
                 _truce[ra * _R + rb] = _truce[rb * _R + ra] = _tick + 60;
                 _h.Treaties.Add(new Treaty(ra, rb, TreatyKind.MarriageAlliance, _tick, _tick + 60, ev));
+                if (_v1) _alliance[ra * _R + rb] = _alliance[rb * _R + ra] = _tick + 60;
                 // a dowry heirloom may change realms
                 foreach (var a in _h.Artefacts)
                 {
@@ -460,7 +461,7 @@ public sealed partial class HistoryGenerator
             var lair = _h.Settlements[o.Residence];
             if (Chance(o.Id.Value, S.Outlaw, 70_000))
             {
-                var ev = Ev("outlaw_slain", $"{o.Name} is taken", $"{o.Full} is hunted down by the men of {(lair.Realm >= 0 ? Rm(lair.Realm).Name : "the shire")} and hanged", lair.Cell, [o.Id],
+                var ev = _v1 ? OutlawDealtV1(o, lair) : Ev("outlaw_slain", $"{o.Name} is taken", $"{o.Full} is hunted down by the men of {(lair.Realm >= 0 ? Rm(lair.Realm).Name : "the shire")} and hanged", lair.Cell, [o.Id],
                     Cz(CauseKind.Law, o.RiseEvent, "the king's justice"));
                 foreach (var a in _h.Artefacts)
                 {
@@ -468,7 +469,7 @@ public sealed partial class HistoryGenerator
                     if (lair.Realm >= 0 && Pct(a.Id.Value, S.Art, 55)) { a.Holder = Rm(lair.Realm).Id; a.Transfers++; Ev("artefact_recovered", $"{a.Name} is recovered", $"{a.Name} is taken from {o.Name}'s hoard and returned to {Rm(lair.Realm).Name}", lair.Cell, [a.Id], Cz(CauseKind.Law, ev, "the outlaw's capture")); }
                     else ArtefactVanish(a, ArtefactStatus.Buried, lair.Cell, ev, $"hidden in {o.Name}'s lair, which was never found");
                 }
-                MarkDead(o, "hanged", ev);
+                MarkDead(o, _v1 ? "justice by the law of his culture" : "hanged", ev);
                 continue;
             }
             if (!Chance(o.Id.Value, S.Outlaw, 110_000)) continue;

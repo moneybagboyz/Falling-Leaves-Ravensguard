@@ -63,7 +63,7 @@ public sealed partial class HistoryGenerator
                 {
                     if (a == b || !Rm(a).Alive || !Rm(b).Alive) continue;
                     int bd = _border[a * _R + b];
-                    int target = (Rm(a).CultureId == Rm(b).CultureId ? 15 : -5) - Math.Min(25, bd / 3) - Grudge(a, b) / 3;
+                    int target = _v1 ? OpinionTarget(a, b) : (Rm(a).CultureId == Rm(b).CultureId ? 15 : -5) - Math.Min(25, bd / 3) - Grudge(a, b) / 3;
                     int o = _opinion[a * _R + b];
                     _opinion[a * _R + b] = o + Math.Clamp(target - o, -3, 3);
                 }
@@ -88,6 +88,7 @@ public sealed partial class HistoryGenerator
                 Incident(a, b);
             }
 
+        if (_v1) { DeclarationsV1(); return; }
         // war declarations (utility, plan §4A.4); a crowded continent does not fight proportionally more
         int alive = Math.Max(1, _h.Realms.Count(q => q.Alive));
         // an age at peace grows restless; an age of war grows weary
@@ -103,14 +104,14 @@ public sealed partial class HistoryGenerator
                 if (a == b || !Rm(b).Alive || AtWar(b) || Contact(a, b) == 0) continue;
                 var cb = _cb[a * _R + b];
                 if (cb.Kind == CasusBelliKind.None || _truce[a * _R + b] > _tick) continue;
-                int u = WarUtility(ra, Rm(b), cb);
+                int u = WarUtilityV0(ra, Rm(b), cb);
                 if (u > bestU) { bestU = u; bestB = b; }
             }
             if (bestB >= 0 && bestU >= _s.WarUtilityThreshold && Chance(ra.Id.Value, S.War, _s.WarChancePct * 10_000L * pace / 100 * Math.Min(alive, _s.WarRealmsRef) / Math.Max(alive, _s.WarRealmsRef))) DeclareWar(ra, Rm(bestB), _cb[a * _R + bestB]);
         }
     }
 
-    private int WarUtility(RealmState a, RealmState b, CbState cb)
+    private int WarUtilityV0(RealmState a, RealmState b, CbState cb)
     {
         var ruler = _h.GetNotable(a.Ruler);
         int claim = Math.Min(35, _cultCount[b.Index * 8 + Math.Clamp(a.CultureId, 0, 7)] / 2 + Grudge(a.Index, b.Index) / 3 + _border[a.Index * _R + b.Index] / 6);
@@ -650,8 +651,12 @@ public sealed partial class HistoryGenerator
         bool attWin = w.Score >= 60, defWin = w.Score <= -60;
         bool tired = w.WearyA + w.WearyD >= 170 || w.WearyA >= 110 || w.WearyD >= 110;
         bool drawn = years >= 12;
-        if (!(attWin || defWin || tired || drawn) || _tick - w.StartTick < 3) return;
-        if (!Pct(w.DeclEvent.Value + (ulong)_tick, S.War, 40)) return;
+        if (_v1) { if (!PeaceDueV1(w)) return; }
+        else
+        {
+            if (!(attWin || defWin || tired || drawn) || _tick - w.StartTick < 3) return;
+            if (!Pct(w.DeclEvent.Value + (ulong)_tick, S.War, 40)) return;
+        }
         var A = Rm(w.Attacker); var D = Rm(w.Defender);
         string outcome = w.Score >= 40 ? $"victory for {A.Name}" : w.Score <= -40 ? $"victory for {D.Name}" : "a stalemate";
         RealmState? winner = w.Score >= 40 ? A : w.Score <= -40 ? D : null;
@@ -681,13 +686,23 @@ public sealed partial class HistoryGenerator
     /// <summary>A decisive victory can bind the loser: it pays tribute for a decade or two, or swears vassalage for a generation.</summary>
     private void ImposeTerms(WarRecord w, RealmState winner, RealmState loser, EntityId peaceEv)
     {
-        int roll = Roll(w.DeclEvent.Value, S.War, 0, 100);
         bool smaller = loser.Cells * 100 < winner.Cells * 85;
         TreatyKind kind;
         int years;
+        if (_v1)
+        {
+            var terms = Ravensguard.Sim.Politics.WarUtility.TermsFor(HistoryRules.Politics, Math.Abs(w.Score));
+            if (terms == Ravensguard.Sim.Politics.WarUtility.Terms.Truce) return;
+            if (terms == Ravensguard.Sim.Politics.WarUtility.Terms.CedeFief && smaller) { kind = TreatyKind.Vassalage; years = Roll(w.DeclEvent.Value, S.War, _s.VassalYearsMin, _s.VassalYearsMax + 1); }
+            else { kind = TreatyKind.Tribute; years = Roll(w.DeclEvent.Value, S.War, 8, 21); }
+        }
+        else
+        {
+        int roll = Roll(w.DeclEvent.Value, S.War, 0, 100);
         if (roll < _s.VassalagePct && smaller) { kind = TreatyKind.Vassalage; years = Roll(w.DeclEvent.Value, S.War, _s.VassalYearsMin, _s.VassalYearsMax + 1); }
         else if (roll < _s.VassalagePct + _s.TributePct) { kind = TreatyKind.Tribute; years = Roll(w.DeclEvent.Value, S.War, 8, 21); }
         else return;
+        }
         int expiry = _tick + years * 4;
         string title, text, note;
         if (kind == TreatyKind.Vassalage)
@@ -759,6 +774,7 @@ public sealed partial class HistoryGenerator
             if (!r.Alive) continue;
             if (r.Cells <= 0) { FallRealm(r); continue; }
             var ruler = _h.GetNotable(r.Ruler);
+            if (_v1) { LifecycleV1(r, ruler); continue; }
             if (r.Cells >= 100 && !AtWar(a) && Chance(r.Id.Value, S.Rebel, _s.RebellionPpmTick * (40L + r.Unrest * 3) / 100)) Rebellion(r);
             if (!r.Alive) continue;
             if (ruler is { Alive: true } && Chance(r.Id.Value, S.Coup, _s.CoupPpmTick * (30L + r.Unrest * 2) / 100)) Coup(r, ruler);

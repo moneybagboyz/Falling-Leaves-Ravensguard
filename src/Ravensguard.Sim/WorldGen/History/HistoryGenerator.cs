@@ -20,7 +20,9 @@ public sealed partial class HistoryGenerator
     {
         public const uint Pop = 1, Found = 2, Name = 3, Weather = 4, Fire = 5, Flood = 6, Mine = 7, Plague = 8, Famine = 9, Death = 10, Birth = 11,
             Marry = 12, Craft = 13, Forge = 14, Outlaw = 15, Incident = 16, War = 17, Battle = 18, Siege = 19, Succ = 20, Rebel = 21, Coup = 22,
-            Misc = 23, Art = 24, Saint = 25, Route = 26, Init = 27, Text = 28;
+            Misc = 23, Art = 24, Saint = 25, Route = 26, Init = 27, Text = 28,
+            // history v1 (history-recalibration 3): appended, never drawn by v0
+            Faith = 29, Heresy = 30, Slavery = 31, Law = 32, Marriage = 33, Unrest = 34;
     }
 
     private readonly Continent _c;
@@ -30,6 +32,7 @@ public sealed partial class HistoryGenerator
     private readonly IdAllocator _ids = new();
     private readonly NameGen _names;
     private readonly int _R;
+    private readonly bool _v1;
     private int _tick, _year, _season, _evInTick;
     private uint _dc;
 
@@ -42,12 +45,14 @@ public sealed partial class HistoryGenerator
     private HistoryGenerator(Continent c, HistorySettings s)
     {
         _c = c; _s = s; _seed = s.Seed;
-        _h = new WorldHistory { Seed = s.Seed, Years = s.Years, AgingPace = Math.Clamp(s.AgingPace, 1, 4) };
+        _h = new WorldHistory { Seed = s.Seed, Years = s.Years, AgingPace = Math.Clamp(s.AgingPace, 1, 4), RulesVersion = s.RulesVersion };
+        _v1 = s.RulesVersion >= 1;
         _names = new NameGen(s.Seed, c.Cultures);
         _R = Math.Max(s.MaxRealms, c.Realms.Count + 8);
         _border = new int[_R * _R]; _opinion = new int[_R * _R]; _truce = new int[_R * _R]; _cb = new CbState[_R * _R];
         _cultCount = new int[_R * 8]; _atWar = new int[_R]; Array.Fill(_atWar, -1);
         _general = new EntityId[_R];
+        if (_v1) InitV1();
     }
 
     private Action<HistoryProgress>? _progress;
@@ -89,11 +94,29 @@ public sealed partial class HistoryGenerator
     private EntityId Ev(string type, string title, string text, int cell, EntityId[] subjects, params Cause[] causes)
     {
         if (causes.Length == 0) throw new ArgumentException("every event needs a cause");
+        var data = new Dictionary<string, string> { ["title"] = title, ["text"] = text, ["cell"] = cell.ToString(System.Globalization.CultureInfo.InvariantCulture) };
+        return Emit(type, data, subjects, causes, "", null);
+    }
+
+    /// <summary>A history v1 entry: a text key and typed parameters (ids, not names), no English (chronicle-full 3).</summary>
+    private EntityId EvK(string type, string key, ChronParam[] ps, int cell, EntityId[] subjects, params Cause[] causes)
+    {
+        if (causes.Length == 0) throw new ArgumentException("every event needs a cause");
+        var data = new Dictionary<string, string> { ["cell"] = cell.ToString(System.Globalization.CultureInfo.InvariantCulture) };
+        return Emit(type, data, subjects, causes, key, ps);
+    }
+
+    private EntityId Emit(string type, Dictionary<string, string> data, EntityId[] subjects, Cause[] causes, string key, ChronParam[]? ps)
+    {
         var id = _ids.Allocate(IdKind.Event);
         int day = 1 + Math.Min(TimeConst.DaysPerSeason - 1, _evInTick++);
         var when = GameTime.FromCalendar(_year, (Season)_season, day);
-        var data = new Dictionary<string, string> { ["title"] = title, ["text"] = text, ["cell"] = cell.ToString(System.Globalization.CultureInfo.InvariantCulture) };
-        var entry = new ChronicleEntry(id, when, type, subjects, causes, data);
+        if (_v1)
+        {
+            if (key.Length == 0) { causes = (Cause[])causes.Clone(); for (int k = 0; k < causes.Length; k++) causes[k] = Upgrade(type, causes[k]); }
+            if (_extra != null) { foreach (var kv in _extra) data[kv.Key] = kv.Value; _extra = null; }
+        }
+        var entry = new ChronicleEntry(id, when, type, subjects, causes, data, key, ps);
         _h.Chronicle.Add(entry);
         _progress?.Invoke(new HistoryProgress(_year, _s.Years, entry));
         return id;
@@ -134,6 +157,7 @@ public sealed partial class HistoryGenerator
             PoliticsPass();
             WarsPass();
             LifecyclePass();
+            if (_v1) { FaithPassV1(); SocietyPassV1(); }
             if (_tick % (Math.Max(1, _s.RouteRefreshYears) * 4) == 0 && _tick > 0) RoutesPass();
             if (_season == 0 && _year > 0 && _year % 50 == 0) TakeSnapshot(_year);
         }
@@ -190,6 +214,7 @@ public sealed partial class HistoryGenerator
         FoundingPass(true);
         MinorFoundingPass(true);
         for (int k = 0; k < _h.Realms.Count; k++) InitRuler(_h.Realms[k]);
+        if (_v1) SetupFaithV1();
         foreach (var s in _h.Settlements) s.PeakKind = s.Kind;
         AncientBattles();
         RoutesPass();

@@ -5,7 +5,7 @@ namespace Ravensguard.Sim.WorldGen.History;
 public enum SettlementKind { Hamlet, Village, Town, City }
 public enum NotableRole { Noble, Ruler, Heir, General, Rebel, MasterCrafter, Saint, Outlaw }
 public enum ArtefactStatus { Held, Lost, Buried }
-public enum CasusBelliKind { None, BorderClaim, Insult, Succession, Raid }
+public enum CasusBelliKind { None, BorderClaim, Insult, Succession, Raid, Excommunication }
 
 public sealed class Settlement
 {
@@ -51,6 +51,8 @@ public sealed class RealmState
     public int WarsWon, WarsLost;
     public EntityId LastDefeatEvent, LastLossEvent;
     public int LastFamineTick = -100;
+    /// <summary>History v1: the realm's faith (an index into <see cref="WorldHistory.Religions"/>), -1 under v0.</summary>
+    public int Religion = -1;
 }
 
 public sealed class Notable
@@ -148,3 +150,38 @@ public sealed record Snapshot(int Year, byte[] Owner);
 public enum TreatyKind { Truce, MarriageAlliance, Tribute, Vassalage }
 /// <summary>For Tribute and Vassalage, <c>A</c> is the winner (overlord) and <c>B</c> the realm that pays or serves.</summary>
 public sealed record Treaty(int A, int B, TreatyKind Kind, int StartTick, int ExpiryTick, EntityId Event);
+
+/// <summary>History v1 (history-recalibration 4.2): a religion of the legends. Founded at year 0, one per culture; a schism adds more (<see cref="SchismFrom"/> names the faith it broke from).</summary>
+public sealed class HistoryReligion
+{
+    public int Index;
+    public string Name = "";
+    public int Culture;
+    public EntityId FoundedEvent, Founder;
+    public int FoundedTick;
+    public int SchismFrom = -1;
+    /// <summary>The settlement that holds its holy site (a history settlement id), none when it fell.</summary>
+    public EntityId HolySite;
+}
+
+/// <summary>History v1: a heresy that rose in a religion (<see cref="Religion"/>) and found a realm. It ends when the realm returns to the faith or turns it into a religion (a schism).</summary>
+public sealed class Heresy
+{
+    public int Religion, Realm, StartTick, EndTick = -1;
+    public EntityId Event, CauseEvent;
+    public bool Alive => EndTick < 0;
+}
+
+/// <summary>History v1: a ruler cut off from the church. The excommunication is a casus belli for the realm's neighbours of the faith; <see cref="WarTick"/> is when one used it (-1 until then).</summary>
+public sealed class Excommunication
+{
+    public int Realm, Tick, WarTick = -1;
+    public EntityId Ruler, Event;
+}
+
+/// <summary>History v1: a slave raid by a realm whose culture holds bondage by capture, and where its captives were sold.</summary>
+public sealed class SlaveRaid
+{
+    public int Raider, Victim, Captives, Tick, Market = -1;
+    public EntityId Event, MarketEvent;
+}
