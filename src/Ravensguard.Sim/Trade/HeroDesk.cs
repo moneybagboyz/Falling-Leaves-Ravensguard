@@ -177,7 +177,7 @@ public sealed class HeroContext
     /// <summary>The job table and its environment, for Work orders (null outside a running game).</summary>
     public Func<(JobEnv Env, JobTable Table)?>? Jobs { get; init; }
     /// <summary>P5-E: the crafting rules' view of the world (purses, makers, guild towns).</summary>
-    public CraftContext CraftContext => _craftWorld ??= CraftWiring.For(State, Econ, Craft, Party.Hero, Purse, () => Pack);
+    public CraftContext CraftContext => _craftWorld ??= CraftWiring.For(State, Econ, Craft, Party.Hero, () => Purse, () => Pack);
     private CraftContext? _craftWorld;
     /// <summary>P5-E: the settlement the hero's crafting screen looks at (the last craft command's place); -1 none. Not saved: a view setting.</summary>
     public int CraftSettlement { get; set; } = -1;
@@ -358,7 +358,12 @@ public sealed class HeroDesk
                 _results.Add(new HeroResult(0, HeroCommandKind.CraftWork, HeroResultCode.Ok, CraftText(ctx, ev), AtSec: ev.AtSec));
             }
         // P5-E: the makers work the commissions, the fires burn, and at a day's start the apprenticeships, the guild dues
-        foreach (var t in CraftDesk.Hourly(ctx, h)) { _craftDirty = true; _results.Add(new HeroResult(0, HeroCommandKind.Craft, HeroResultCode.Ok, t, AtSec: h * 3600)); }
+        // (the runtime's CraftSystem runs them when it is installed: the desk only passes its notices on)
+        List<HeroText> notes;
+        if (ctx.State.HomeRecords?.Sim.Get<CraftService>() is { } svc) { notes = [.. svc.Notices]; svc.Notices.Clear(); }
+        else notes = CraftDesk.Hourly(ctx, h);
+        if (ctx.Craft.State.Dead.Count > 0) ctx.Craft.SweepDeadStores();                       // the stores the tick emptied go at the barrier
+        foreach (var t in notes) { _craftDirty = true; _results.Add(new HeroResult(0, HeroCommandKind.Craft, HeroResultCode.Ok, t, AtSec: h * 3600)); }
         ctx.Party.Carried.Tidy(ctx.Econ);
         ApplyDue(ctx, h, publish: false);
         MirrorHero(ctx);

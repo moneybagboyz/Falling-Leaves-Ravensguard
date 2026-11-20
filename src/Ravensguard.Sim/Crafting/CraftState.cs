@@ -96,10 +96,12 @@ public sealed class CraftState
     public SortedDictionary<EntityId, int> OiledUntil { get; } = [];
     /// <summary>Recipes queued at business stations (crafting-full 4.4).</summary>
     public List<QueuedCraft> Queue { get; } = [];
+    /// <summary>Stores emptied inside the abstract tick, taken out of the economy at the next barrier.</summary>
+    public SortedSet<EntityId> Dead { get; } = [];
 
     public bool IsEmpty => _jobs.Count == 0 && Book.Count == 0 && Records.Count == 0 && Sessions.Count == 0 && Artefacts.Count == 0 && Know.RecipeRows().Length == 0 && Know.ProfRows().Length == 0 && Know.WatchRows().Length == 0
         && Commissions.Count == 0 && Apprenticeships.Count == 0 && Members.Count == 0 && Offences.Count == 0 && Residence.Count == 0 && Fires.Count == 0 && ForgeHot.Count == 0 && Fits.Count == 0
-        && OiledUntil.Count == 0 && Queue.Count == 0;
+        && OiledUntil.Count == 0 && Queue.Count == 0 && Dead.Count == 0;
 
     public CraftJob? Get(EntityId id) => _jobs.GetValueOrDefault(id);
     public void Add(CraftJob j) => _jobs[j.Id] = j;

@@ -217,6 +217,7 @@ public sealed class CraftingSave
     [Key(38)] public ulong[] OilItem { get; set; } = [];
     [Key(39)] public int[] OilUntil { get; set; } = [];
     [Key(40)] public List<QueuedCraftRow> Queue { get; set; } = [];
+    [Key(41)] public ulong[] Dead { get; set; } = [];
 
     public static CraftingSave Capture(CraftState s)
     {
@@ -262,6 +263,7 @@ public sealed class CraftingSave
         o.ForgeX = [.. s.ForgeHot.Keys.Select(k => k.X)]; o.ForgeY = [.. s.ForgeHot.Keys.Select(k => k.Y)]; o.ForgeUntil = [.. s.ForgeHot.Values];
         o.FitItem = [.. s.Fits.Keys.Select(k => k.Value)]; o.FitCm3 = [.. s.Fits.Values];
         o.OilItem = [.. s.OiledUntil.Keys.Select(k => k.Value)]; o.OilUntil = [.. s.OiledUntil.Values];
+        o.Dead = [.. s.Dead.Select(d => d.Value)];
         foreach (var q in s.Queue) o.Queue.Add(new QueuedCraftRow { Id = q.Id.Value, Business = q.Business.Value, Station = q.StationIndex, Recipe = q.Recipe, Batch = q.Batch, QueuedAtHour = q.QueuedAtHour, Commission = q.Commission.Value });
         return o;
     }
@@ -308,6 +310,7 @@ public sealed class CraftingSave
         for (int i = 0; i < ForgeX.Length && i < ForgeY.Length && i < ForgeUntil.Length; i++) s.ForgeHot[(ForgeX[i], ForgeY[i])] = ForgeUntil[i];
         for (int i = 0; i < FitItem.Length && i < FitCm3.Length; i++) s.Fits[new EntityId(FitItem[i])] = FitCm3[i];
         for (int i = 0; i < OilItem.Length && i < OilUntil.Length; i++) s.OiledUntil[new EntityId(OilItem[i])] = OilUntil[i];
+        foreach (var d in Dead ?? []) s.Dead.Add(new EntityId(d));
         foreach (var q in Queue ?? [])
             s.Queue.Add(new QueuedCraft { Id = new EntityId(q.Id), Business = new EntityId(q.Business), StationIndex = q.Station, Recipe = q.Recipe, Batch = q.Batch, QueuedAtHour = q.QueuedAtHour, Commission = new EntityId(q.Commission) });
         return s;

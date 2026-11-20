@@ -442,7 +442,7 @@ public sealed partial class CraftRunner
         if (mass > 0) store.Create(into, mass, CreateReason.Other);
         var dest = _storeOf(j.Owner);
         if (dest != null) Store.MoveUpTo(store, dest, into, store.Qty(into));
-        if (store.RowCount == 0) Econ.OtherStores.Remove(j.Id);
+        if (store.RowCount == 0) DropStore(j.Id);
         j.State = CraftJobState.Ruined;
         ev.Add(new CraftEvent(CraftEventKind.Ruined, j.Id, j.Owner, now, Cat.Def(into).Name, (int)mass));
     }
@@ -563,7 +563,7 @@ public sealed partial class CraftRunner
         // what is left in the job's store was consumed (burned for a fire)
         var why = r.Effect == "lit_fire" ? DestroyReason.Burned : DestroyReason.Consumed;
         foreach (var (g, q) in store.Rows()) store.Destroy(g, q, why);
-        if (!ReferenceEquals(store, dest)) Econ.OtherStores.Remove(j.Id);
+        if (!ReferenceEquals(store, dest)) DropStore(j.Id);
         j.State = CraftJobState.Done;
     }
 

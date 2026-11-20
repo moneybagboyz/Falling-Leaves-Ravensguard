@@ -475,7 +475,10 @@ public class CraftingFullTests(BuildingFixture fx, ITestOutputHelper output) : I
         Stock(w, w.Pack, r);
         var (a, c) = Commissions.Order(ctx, r, w.Hero, Maker, true, CraftSources.Of(w.Pack), now, w.Ids);
         Assert.Equal(CommissionAnswer.Ok, a);
-        Assert.Equal(0, w.Qty("steel_bar")); Assert.Equal(1400, w.Econ.OtherStores[c!.Id].Qty(w.Econ.Goods.IdOf("steel_bar")));
+        Assert.Equal(0, w.Qty("steel_bar"));
+        Assert.Equal(CommissionState.Working, c!.State);                                // laid out on his bench at once: in the job's store, waiting for his hours
+        Assert.Equal(1400, w.Econ.OtherStores[c.Job].Qty(w.Econ.Goods.IdOf("steel_bar")));
+        Assert.False(Commissions.WorkDone(w.St, c));
         Assert.Equal(c.LabourMites, c.PriceMites);
         // never instant: he works it in his hours, day by day
         long h = 8; while (c.State != CommissionState.Ready && h < 24 * 20) Commissions.Hourly(ctx, h++);

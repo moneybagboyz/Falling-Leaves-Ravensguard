@@ -22,6 +22,26 @@ public sealed partial class CraftRunner
 
     public const int DefaultBodyCm3 = 70_000, OilDays = 30;
 
+    /// <summary>
+    /// Set for the runner of the abstract tick (<see cref="CraftSystem"/>): an emptied store is not taken out of the economy in the middle of an hour (the other systems of the hour keep their
+    /// order of stores) but listed in <see cref="CraftState.Dead"/> and taken out at the next barrier (<see cref="SweepDeadStores"/>).
+    /// </summary>
+    public bool InTick { get; set; }
+
+    /// <summary>Takes an emptied store out of the economy now, or at the next barrier when working inside the tick.</summary>
+    public void DropStore(EntityId id)
+    {
+        if (InTick) State.Dead.Add(id);
+        else Econ.OtherStores.Remove(id);
+    }
+
+    /// <summary>The barrier's sweep: the stores emptied inside the tick go, if they are still empty.</summary>
+    public void SweepDeadStores()
+    {
+        foreach (var id in State.Dead) if (Econ.OtherStores.TryGetValue(id, out var s) && s.RowCount == 0) Econ.OtherStores.Remove(id);
+        State.Dead.Clear();
+    }
+
     /// <summary>An item a job made: a commission keeps it for its client to collect; the hook is told.</summary>
     private void Kept(CraftJob j, EntityId item)
     {
@@ -190,6 +210,9 @@ public sealed partial class CraftRunner
     /// <summary>Burns the fires to now (the hour pass, and when the screen asks); rain over 5 mm an hour puts them out.</summary>
     public List<Fire> BurnFires(long nowSec, int rainTenthsMmPerHour)
         => Cat.TryIdOf("firewood", out var fw) ? State.Fires.Advance(Econ, fw, nowSec, rainTenthsMmPerHour) : [];
+
+    /// <summary>Removes the fires that are out; their leftover wood goes to <paramref name="give"/>, their emptied stores as <see cref="DropStore"/> says.</summary>
+    public void SweepFires(Func<EntityId, Store?> give) => State.Fires.Sweep(Econ, give, DropStore);
 
     // ---- learning: an apprentice gains at double rate on his master's trade (crafting-full 4.6) ----
 

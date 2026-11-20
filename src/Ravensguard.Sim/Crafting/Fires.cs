@@ -63,7 +63,7 @@ public sealed class FireBook
                 // the fuel runs out part-way: it went out when the last of it burned
                 if (have > 0) fuel!.Destroy(firewood, have, DestroyReason.Burned);
                 f.BurnedToSec += have * 3600 / BurnGPerHour; f.Out = true; outNow.Add(f);
-                if (fuel != null && fuel.RowCount == 0) econ.OtherStores.Remove(f.Id);
+                // the empty fuel store stays until the day's sweep (removing a store in the middle of the hour would shift the other systems' store order)
                 continue;
             }
             if (burn > 0) { fuel!.Destroy(firewood, burn, DestroyReason.Burned); f.BurnedToSec += burn * 3600 / BurnGPerHour; }
@@ -73,14 +73,14 @@ public sealed class FireBook
     }
 
     /// <summary>Removes fires that are out (their leftover wood stays in its store, given to <paramref name="give"/> when it says where).</summary>
-    public void Sweep(EconomyState econ, Func<EntityId, Store?> give)
+    public void Sweep(EconomyState econ, Func<EntityId, Store?> give, Action<EntityId>? drop = null)
     {
         foreach (var f in _fires.Values.Where(x => x.Out).ToList())
         {
-            if (econ.OtherStores.TryGetValue(f.Id, out var fuel) && give(f.Owner) is { } dest)
+            if (econ.OtherStores.TryGetValue(f.Id, out var fuel))
             {
-                foreach (var (g, q) in fuel.Rows().ToList()) Store.Move(fuel, dest, g, q);
-                if (fuel.RowCount == 0) econ.OtherStores.Remove(f.Id);
+                if (give(f.Owner) is { } dest) foreach (var (g, q) in fuel.Rows().ToList()) Store.Move(fuel, dest, g, q);
+                if (fuel.RowCount == 0) { if (drop != null) drop(f.Id); else econ.OtherStores.Remove(f.Id); }
             }
             _fires.Remove(f.Id);
         }

@@ -15,7 +15,7 @@ namespace Ravensguard.Sim.Crafting;
 /// </summary>
 public static class CraftWiring
 {
-    public static CraftContext For(WorldState state, EconomyState e, CraftRunner runner, EntityId hero, PurseId heroPurse, Func<Store> pack)
+    public static CraftContext For(WorldState state, EconomyState e, CraftRunner runner, EntityId hero, Func<PurseId?> heroPurse, Func<Store> pack)
     {
         var pop = state.Population; var people = pop.People; var region = pop.Region;
         int Day() => (int)(state.Clock.Now.Seconds / 86400);
@@ -46,7 +46,7 @@ public static class CraftWiring
             Econ = e, Runner = runner,
             PurseOf = p =>
             {
-                if (p == hero) return heroPurse;
+                if (p == hero) return heroPurse();
                 int i = people.IndexOf(p);
                 if (i >= 0 && people.Household[i] >= 0 && people.Household[i] < e.HouseholdCount) return e.HouseholdPurse[people.Household[i]];
                 return e.Ledger.TryFind(PurseKind.Person, p, out var pp) ? pp : null;

@@ -160,7 +160,10 @@ public static class Commissions
             long q = q0;
             foreach (var src in clientSources) { long t = Math.Min(q, src.Store.Qty(g)); if (t > 0 && Store.Move(src.Store, store, g, t)) q -= t; if (q == 0) break; }
         }
+        // what a maker knows by his trade (MakerKnows) is written down, so his plan at the bench reads it
+        if (!w.Runner.State.Know.Knows(r, maker, w.Runner.State.Book)) w.Runner.State.Know.Learn(maker, r.Index);
         w.Runner.State.Commissions[c.Id] = c;
+        Begin(w, c, nowSec);
         return (CommissionAnswer.Ok, c);
     }
 
@@ -181,15 +184,8 @@ public static class Commissions
             var r = w.Runner.Db[c.Recipe];
             if (c.State == CommissionState.Queued)
             {
-                var site = w.SiteOf(c.Maker, r); if (site == null) continue;
-                var srcs = new CraftSources();
-                if (w.Econ.OtherStores.TryGetValue(c.Id, out var cs0)) srcs.Add(new CraftSource { Store = cs0, Id = c.Id, Name = "commission" });
-                if (!c.MaterialsFromClient && w.StoreOf(c.Maker) is { } ms) srcs.Add(new CraftSource { Store = ms, Id = c.Maker, Name = "maker" });
-                var plan = w.Runner.Plan(r, w.ActorOf(c.Maker), site, srcs, c.Batch, [.. c.Choice.Select(x => (int)x)], hasTarget: true);
-                if (!plan.CanStart) continue;            // he lacks the materials or the tools: it waits in his queue
-                var job = w.Runner.Start(plan, w.ActorOf(c.Maker), c.Id, srcs, hour * 3600, 0, 0, default, c.FitTo);
-                if (job == null) continue;
-                job.Commission = c.Id; c.Job = job.Id; c.State = CommissionState.Working; changed.Add(c);
+                if (!Begin(w, c, hour * 3600)) continue;            // he lacks the materials or the tools: it waits in his queue
+                changed.Add(c);
             }
             var j = st.Get(c.Job);
             if (j == null) continue;
@@ -203,6 +199,28 @@ public static class Commissions
         }
         return changed;
     }
+
+    /// <summary>
+    /// The work is laid out on his bench: the materials (the client's, held in the commission's store, else his own) go into the job's store at once, so nothing he was given spoils or wanders
+    /// before he works it. False when he lacks the materials, the tools or the station: the commission waits in his queue.
+    /// </summary>
+    private static bool Begin(CraftContext w, Commission c, long nowSec)
+    {
+        var r = w.Runner.Db[c.Recipe];
+        var site = w.SiteOf(c.Maker, r); if (site == null) return false;
+        var srcs = new CraftSources();
+        if (w.Econ.OtherStores.TryGetValue(c.Id, out var cs0)) srcs.Add(new CraftSource { Store = cs0, Id = c.Id, Name = "commission" });
+        if (!c.MaterialsFromClient && w.StoreOf(c.Maker) is { } ms) srcs.Add(new CraftSource { Store = ms, Id = c.Maker, Name = "maker" });
+        var plan = w.Runner.Plan(r, w.ActorOf(c.Maker), site, srcs, c.Batch, [.. c.Choice.Select(x => (int)x)], hasTarget: true);
+        if (!plan.CanStart) return false;
+        var job = w.Runner.Start(plan, w.ActorOf(c.Maker), c.Id, srcs, nowSec, 0, 0, default, c.FitTo);
+        if (job == null) return false;
+        job.Commission = c.Id; c.Job = job.Id; c.State = CommissionState.Working;
+        return true;
+    }
+
+    /// <summary>Whether the maker has put any work into it yet (before that, a cancel refunds everything).</summary>
+    public static bool WorkDone(CraftState st, Commission c) => c.Job != EntityId.None && st.Get(c.Job) is { } j && (j.TotalSeconds > 0 || j.Closed);
 
     /// <summary>
     /// The client collects in person (E on the maker or his counter): only the client, only in the maker's settlement, only when Ready. The rest of the price goes to the maker with the escrow;
@@ -235,13 +253,14 @@ public static class Commissions
         if (c.State is not (CommissionState.Queued or CommissionState.Working)) return CommissionAnswer.Gone;
         if (w.PurseOf(c.Client) is not { } cp || w.PurseOf(c.Maker) is not { } mp) return CommissionAnswer.NoMaker;
         var escrow = w.Ledger.Open(PurseKind.Chest, c.Id);
-        long toMaker = c.State == CommissionState.Working ? Math.Min(c.Escrow, c.LabourMites / 2) : 0;
+        bool started = WorkDone(w.Runner.State, c);
+        long toMaker = started ? Math.Min(c.Escrow, c.LabourMites / 2) : 0;
         if (toMaker > 0) w.Ledger.Transfer(escrow, mp, new Coin(toMaker), TransferReason.Trade);
         if (c.Escrow - toMaker > 0) w.Ledger.Transfer(escrow, cp, new Coin(c.Escrow - toMaker), TransferReason.Trade);
         if (c.State == CommissionState.Working && w.Runner.State.Get(c.Job) is { } j)
         {
-            // the work in hand stays with the maker
-            var dest = w.StoreOf(c.Maker);
+            // work begun: the materials in hand stay with the maker; not begun: the client's come back to him, the maker's to the maker
+            var dest = started || !c.MaterialsFromClient ? w.StoreOf(c.Maker) : to;
             if (w.Econ.OtherStores.TryGetValue(j.Id, out var js) && dest != null) { foreach (var (g, q) in js.Rows().ToList()) Store.Move(js, dest, g, q); }
             if (js != null && js.RowCount == 0) w.Econ.OtherStores.Remove(j.Id);
             w.Runner.State.Remove(j.Id);
@@ -262,7 +281,7 @@ public static class Commissions
                 w.Ledger.Transfer(mp, cp, new Coin(Math.Min(c.ClientMaterialsMites, w.Ledger.Balance(mp).Mites)), TransferReason.Trade);
         }
         foreach (var id in c.Items) if (w.Econ.Items.IsLive(id)) w.Econ.Items.Get(id).Owner = c.Maker;
-        if (w.Econ.OtherStores.TryGetValue(c.Id, out var s) && w.StoreOf(c.Maker) is { } dest) { foreach (var (g, q) in s.Rows().ToList()) Store.Move(s, dest, g, q); if (s.RowCount == 0) w.Econ.OtherStores.Remove(c.Id); }
+        if (w.Econ.OtherStores.TryGetValue(c.Id, out var s) && w.StoreOf(c.Maker) is { } dest) { foreach (var (g, q) in s.Rows().ToList()) Store.Move(s, dest, g, q); if (s.RowCount == 0) w.Runner.DropStore(c.Id); }
         c.Escrow = 0; c.State = CommissionState.Sold;
     }
 }

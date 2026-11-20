@@ -149,30 +149,35 @@ public static class CraftDesk
     /// The end of a game hour (the hero desk's after-hour pass): the commissions worked by their makers, the fires burned; at a day's start the apprenticeships' day, the guild dues and the fires
     /// that are out swept. Returns the commissions of the hero that changed (for his messages).
     /// </summary>
-    public static List<HeroText> Hourly(HeroContext ctx, long hour)
+    public static List<HeroText> Hourly(HeroContext ctx, long hour) => HourlyCore(ctx.CraftContext, hour, ctx.Party.Hero, ctx.RainTenthsMm?.Invoke() ?? 0);
+
+    /// <summary>
+    /// The hour's crafting for the whole world (the <see cref="CraftSystem"/>, or the hero desk when no runtime installed one): commissions, fires, and at a day's start the apprenticeships, the guild
+    /// dues and the fires that are out swept. Only saved state and the hour decide what happens, so a loaded world goes on exactly as one that never stopped. Returns the hero's messages.
+    /// </summary>
+    public static List<HeroText> HourlyCore(CraftContext w, long hour, EntityId hero, int rainTenthsMm)
     {
-        var w = ctx.CraftContext; var st = ctx.Craft.State; var msgs = new List<HeroText>(); var hero = ctx.Party.Hero;
+        var st = w.Runner.State; var db = w.Runner.Db; var msgs = new List<HeroText>();
         if (st.Commissions.Count > 0)
             foreach (var cm in Commissions.Hourly(w, hour))
                 if (cm.Client == hero)
                     msgs.Add(cm.State switch
                     {
-                        CommissionState.Working => HeroText.Of("cf_commission_started", ctx.Recipes[cm.Recipe].Name),
-                        CommissionState.Ready => HeroText.Of("cf_commission_ready", ctx.Recipes[cm.Recipe].Name),
-                        CommissionState.Sold => HeroText.Of("cf_commission_sold", ctx.Recipes[cm.Recipe].Name),
+                        CommissionState.Working => HeroText.Of("cf_commission_started", db[cm.Recipe].Name),
+                        CommissionState.Ready => HeroText.Of("cf_commission_ready", db[cm.Recipe].Name),
+                        CommissionState.Sold => HeroText.Of("cf_commission_sold", db[cm.Recipe].Name),
                         _ => HeroText.Empty,
                     });
-        if (st.Fires.Count > 0) { ctx.Craft.BurnFires(hour * 3600, ctx.RainTenthsMm?.Invoke() ?? 0); }
+        if (st.Fires.Count > 0) w.Runner.BurnFires(hour * 3600, rainTenthsMm);
         if (hour % 24 == 0)
         {
             int day = (int)(hour / 24);
-            if (ctx.CraftSettlement >= 0) Guilds.SeeAt(st, hero, ctx.CraftSettlement, day);
             if (st.Apprenticeships.Count > 0)
                 foreach (var (a, r) in Apprenticeships.Day(w, day, a => a.Apprentice != hero || st.Residence.TryGetValue(hero.Value, out var res) && res.Settlement == w.SettlementOf(a.Master)))
                     if (a.Apprentice == hero) msgs.Add(HeroText.Of("cf_learnt", r.Name));
             if (st.Members.Count > 0)
-                foreach (var m in Guilds.Dues(w, day)) if (m.Person == hero) msgs.Add(HeroText.Of("cf_expelled", ctx.Recipes.Guilds.TryGetValue(m.Guild, out var g) ? g.Name : m.Guild));
-            if (st.Fires.Count > 0) st.Fires.Sweep(ctx.Econ, o => o == hero ? ctx.Pack : null);
+                foreach (var m in Guilds.Dues(w, day)) if (m.Person == hero) msgs.Add(HeroText.Of("cf_expelled", db.Guilds.TryGetValue(m.Guild, out var g) ? g.Name : m.Guild));
+            if (st.Fires.Count > 0) w.Runner.SweepFires(o => o == hero ? w.StoreOf(hero) : null);
         }
         return [.. msgs.Where(m => !m.IsEmpty)];
     }
