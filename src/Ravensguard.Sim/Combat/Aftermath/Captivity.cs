@@ -305,6 +305,7 @@ public sealed class CaptiveBook
         if (d >= c.HoldUntilDay)
         {
             if (c.Captor == CaptorKind.Army) { Free(r, c, CaptiveState.Released, (long)d * 86400, "exchanged", returnItems); return; }
+            if (c.Captor == CaptorKind.Slavers) { Free(r, c, CaptiveState.Released, (long)d * 86400, "sold", null); return; }       // P6-D1: a slaver's hold ends in a sale (the bondage sweep stands him in a pen), never in a release
             int fate = EscapeTable.Roll(Seed, d, c.Person, RngStreams.CaptiveEvent, 6);
             if (fate < D.BanditReleasePm) { Free(r, c, CaptiveState.Released, (long)d * 86400, "stripped", null); return; }
             if (fate < D.BanditReleasePm + D.BanditRansomPm && ledger != null && c.CaptorPurse.Find(ledger) is { } to2 && Ransom.TryPay(r, ledger, c.PayerKind, c.Payers, to2, c.RansomMites))

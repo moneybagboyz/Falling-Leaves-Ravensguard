@@ -1,0 +1,6 @@
+// Slavery (docs/specs/phase6/slavery.md 3): the price table, raids, owners, runaways and revolts. Money in mites, chances permille, times in game days. The price of an adult of 16 to 50 in health is 9,000 mites
+// (about 90 days of an unskilled wage, net of keep); x1.5 with a trade skill of 40, x2 a master of 70; a child under 12 x0.4, 12 to 15 x0.7, over 50 x0.4; maimed x0.5; infirm x0.2.
+// A culture's law is its "slavery" field in cultures/cultures.jsonc: none | debt | war_captives | chattel. The standing and piety deltas of buying, selling and freeing are rows of society/deeds.jsonc.
+[
+  {"type": "slavery_rules", "id": "slavery"}
+]
