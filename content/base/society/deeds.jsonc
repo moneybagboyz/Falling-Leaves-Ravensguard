@@ -19,6 +19,7 @@
   {"type": "deed", "id": "site_monster_slain", "entry": "site_monster_slain", "settlement_pm": 200,  "fief_pm": 60,   "realm_pm": 20},
   {"type": "deed", "id": "bounty_collected",   "entry": "bounty_collected",   "fief_pm": 40},
   {"type": "deed", "id": "riot_led",           "entry": "riot_led",           "fief_pm": -200,        "settlement_pm": 80},
+  {"type": "deed", "id": "sentence_stocks",    "entry": "sentence_stocks",    "settlement_pm": -20},
   {"type": "deed", "id": "sentence_served",    "entry": "sentence_served",    "settlement_pm": 30,   "fief_pm": 15},
   {"type": "deed", "id": "raid_repelled",      "entry": "raid_repelled",      "settlement_pm": 120,  "fief_pm": 40},
   {"type": "deed", "id": "fire_fought",        "entry": "fire_fought",        "settlement_pm": 60},

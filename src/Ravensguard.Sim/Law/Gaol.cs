@@ -24,6 +24,11 @@ public static class Gaol
     {
         var d = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var (k, v) in data) d[k] = v;
+        foreach (var p in ps)                                                          // the rumour of a public sentence reads the place and the doer from the data
+        {
+            if (p.Kind == ChronParamKind.Place && !d.ContainsKey("settlement")) { int i = Array.IndexOf(w.SettlementIds, new EntityId((ulong)p.Value)); if (i >= 0) d["settlement"] = w.PlaceName(i); }
+            else if (p is { Kind: ChronParamKind.Person, Name: "doer" } && !d.ContainsKey("doer")) d["doer"] = w.Name(new EntityId((ulong)p.Value));
+        }
         var e = new ChronicleEntry(w.Ids.Allocate(IdKind.Event), new GameTime(sec), type, subjects, [cause != 0 ? new Cause(CauseKind.Justice, new EntityId(cause)) : new Cause(CauseKind.Justice)], d, TextKey: textKey, Params: ps);
         w.Chronicle.Add(e);
         return e;
@@ -68,7 +73,7 @@ public static class Gaol
     }
 
     /// <summary>The cell door shuts: the row, the <c>crime_arrested</c> entry on <paramref name="cause"/>, and the captive of the fief (chained when <paramref name="heavy"/>). Used by an arrest and by a debtor held again.</summary>
-    internal static GaolRow Hold(LawWorld w, JusticeBook jb, EntityId person, int fief, int seat, long sec, bool inAct, bool heavy, ulong cause, int crime, EntityId arrester = default)
+    public static GaolRow Hold(LawWorld w, JusticeBook jb, EntityId person, int fief, int seat, long sec, bool inAct, bool heavy, ulong cause, int crime, EntityId arrester = default)
     {
         var ps = new List<ChronParam> { ChronParam.Person("doer", person) }; ps.AddRange(PlaceOpt(w, seat));
         var subj = new List<EntityId> { person }; if (arrester != EntityId.None) subj.Add(arrester);
@@ -263,7 +268,7 @@ public static class Gaol
             if (cap.State is not (CaptiveState.Escaped or CaptiveState.Rescued)) { jb.Gaol.Remove(pv); continue; }       // let go by us (released) leaves no trace here
             jb.Gaol.Remove(pv);
             foreach (int id in row.Crimes) if (cb.Get(id) is { State: CrimeState.Held } c) c.State = CrimeState.Fled;
-            foreach (var s in jb.Sentences.Values) if (s.Person == pv && s.State == SentenceState.Pending) s.State = SentenceState.Avoided;
+            foreach (var s in jb.Sentences.Values) if (s.Person == pv && s.State == SentenceState.Pending) { s.State = SentenceState.Avoided; if (cb.Get(s.Crime) is { } sc) sc.State = CrimeState.Fled; }
             var gaoler = new EntityId(row.Gaoler);
             var witnesses = gaoler == EntityId.None ? [] : new List<WitnessRow> { new(gaoler.Value, WitnessRow.KnewIt) };
             var rec = CrimeSystem.Commit(w, cb, new ActSpec("jailbreak", who, gaoler, row.Settlement, sec, 0, 0, "ch_note_crime_escape"), witnesses, ActorLook.None);

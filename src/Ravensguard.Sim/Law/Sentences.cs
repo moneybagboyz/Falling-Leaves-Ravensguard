@@ -6,8 +6,10 @@ namespace Ravensguard.Sim.Law;
 /// <summary>What the court would do to the accused of one crime (crime-and-justice 4.6, 4.7): the key and the step, what it comes to, and why it is that step (the law panel's, mercy, harshness, clergy).</summary>
 public sealed record Expected(string Key, int Step, string Kind, long Mites, int Days, int Lashes, int Display, int Feud, string Unpaid, int Severity, int Priors, int Mercy, bool Clergy, bool LordsLaw, string CultureKey)
 {
-    /// <summary>The text key of the punishment in en.csv (<c>jl_pun_&lt;key&gt;</c>), for the cell and the court panel.</summary>
-    public string TextKey => "jl_pun_" + Key;
+    /// <summary>The text key of what is done in en.csv (<c>jl_step_&lt;kind&gt;</c>), for the chronicle, the cell and the court panel.</summary>
+    public string TextKey => "jl_step_" + Kind;
+    /// <summary>The text key of the table itself (the law panel's row).</summary>
+    public string KeyText => "jl_pun_" + Key;
 }
 
 /// <summary>

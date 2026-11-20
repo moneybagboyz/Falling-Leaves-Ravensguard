@@ -64,16 +64,16 @@ public static class JusticeDesk
                     long due = rec.ValueMites;
                     var from = w.PurseOf(hero); var to = w.VictimPurse(rec.Victim);
                     if (from == null || to == null || w.Ledger == null || from == to) return R(c, HeroResultCode.Refused, "jx_nobody_to_pay");
-                    if (due > 0 && !w.Ledger.Transfer(from.Value, to.Value, Coin.FromMites(due), TransferReason.Restitution)) return R(c, HeroResultCode.CannotAfford, "jx_cannot_afford", due);
+                    if (due > 0 && !w.Ledger.Transfer(from.Value, to.Value, Coin.FromMites(due), TransferReason.Restitution)) return R(c, HeroResultCode.CannotAfford, "jx_cannot_afford", Quotes.Money(due));
                     jb.Restituted.Add(rc);
-                    return new HeroResult(c.Seq, c.Kind, HeroResultCode.Ok, HeroText.Of("jx_restituted", due), due, 0, c.IssuedSec);
+                    return new HeroResult(c.Seq, c.Kind, HeroResultCode.Ok, HeroText.Of("jx_restituted", Quotes.Money(due)), due, 0, c.IssuedSec);
                 }
                 case "bribe" when f.Length >= 2 && long.TryParse(f[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out long offer):
                 {
                     var o = Gaol.Bribe(w, cb, jb, hero, offer, c.IssuedSec);
                     return o switch
                     {
-                        BribeOutcome.Taken => new HeroResult(c.Seq, c.Kind, HeroResultCode.Ok, HeroText.Of("jx_bribe_taken", offer), offer, 0, c.IssuedSec),
+                        BribeOutcome.Taken => new HeroResult(c.Seq, c.Kind, HeroResultCode.Ok, HeroText.Of("jx_bribe_taken", Quotes.Money(offer)), offer, 0, c.IssuedSec),
                         BribeOutcome.NotHeld => R(c, HeroResultCode.Refused, "jx_not_held"),
                         BribeOutcome.Cannot => R(c, HeroResultCode.CannotAfford, "jx_bribe_cannot"),
                         _ => R(c, HeroResultCode.Refused, "jx_bribe_refused"),

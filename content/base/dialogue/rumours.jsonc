@@ -41,6 +41,12 @@
   {"type": "rumour_type", "id": "arson", "entry": "arson", "kind": "Crime", "interest_pm": 750, "life_days": 20, "witnesses": "seen", "severity": 2, "key": "R_ARSON", "who_key": "doer"},
   {"type": "rumour_type", "id": "smuggling", "entry": "smuggling", "kind": "Crime", "interest_pm": 750, "life_days": 10, "witnesses": "seen", "severity": 2, "key": "R_SMUGGLING", "who_key": "doer"},
   {"type": "rumour_type", "id": "grave_robbing", "entry": "grave_robbing", "kind": "Crime", "interest_pm": 750, "life_days": 30, "witnesses": "seen", "severity": 2, "key": "R_GRAVE_ROBBING", "who_key": "doer"},
+  {"type": "rumour_type", "id": "sentence_stocks", "entry": "sentence_stocks", "kind": "Crime", "interest_pm": 700, "life_days": 6, "witnesses": "town", "severity": 1, "key": "R_STOCKS", "who_key": "doer"},
+  {"type": "rumour_type", "id": "sentence_flogged", "entry": "sentence_flogged", "kind": "Crime", "interest_pm": 700, "life_days": 8, "witnesses": "town", "severity": 2, "key": "R_FLOGGED", "who_key": "doer"},
+  {"type": "rumour_type", "id": "sentence_branded", "entry": "sentence_branded", "kind": "Crime", "interest_pm": 700, "life_days": 20, "witnesses": "town", "severity": 2, "key": "R_BRANDED", "who_key": "doer"},
+  {"type": "rumour_type", "id": "sentence_hand", "entry": "sentence_hand", "kind": "Crime", "interest_pm": 700, "life_days": 30, "witnesses": "town", "severity": 2, "key": "R_HAND", "who_key": "doer"},
+  {"type": "rumour_type", "id": "sentence_hanged", "entry": "sentence_hanged", "kind": "Crime", "interest_pm": 700, "life_days": 30, "witnesses": "town", "severity": 3, "key": "R_HANGED", "who_key": "doer"},
+  {"type": "rumour_type", "id": "outlawed", "entry": "outlawed", "kind": "Crime", "interest_pm": 700, "life_days": 40, "witnesses": "town", "severity": 3, "key": "R_OUTLAWED", "who_key": "doer"},
   {"type": "rumour_type", "id": "hero_wedding", "entry": "hero_wedding", "kind": "BirthWedding", "interest_pm": 600, "life_days": 15, "witnesses": "town", "severity": 1, "key": "R_HERO_WEDDING", "who_key": "groom"},
   {"type": "rumour_type", "id": "kin_kidnapped", "entry": "kin_kidnapped", "kind": "Crime", "interest_pm": 800, "life_days": 20, "witnesses": "household", "severity": 2, "key": "R_KIN_KIDNAPPED", "who_key": "name"},
   {"type": "talk_settings", "id": "default", "home_pm": 25, "work_pm": 10, "social_pm_by_hour": [0, 0, 0, 0, 0, 0, 8, 11, 14, 17, 17, 17, 19, 17, 17, 17, 17, 19, 28, 34, 34, 28, 8, 0]}

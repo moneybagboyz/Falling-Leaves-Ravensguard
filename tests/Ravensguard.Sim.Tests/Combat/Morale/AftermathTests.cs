@@ -279,7 +279,11 @@ public class AftermathTests(FightFixture fx, ITestOutputHelper output)
                 Assert.Contains(k.Item["sword"], state.Captivity.Hero.StashItems);
                 break;
             case WinnerKind.Locals: Assert.Equal(DefeatKind.Robbed, rep.Kind); Assert.Equal(5000, rep.CoinTaken); Assert.Empty(rep.ItemsTaken); break;
-            case WinnerKind.Guards: Assert.Equal(DefeatKind.Ignored, rep.Kind); break;
+            case WinnerKind.Guards:                                                  // P6-C1: an arrest, not a fine and release (CJ-5)
+                Assert.Equal(DefeatKind.Captured, rep.Kind); Assert.Equal(0, rep.Fine); Assert.Equal(5000, e.Ledger.Balance(k.Purse).Mites);
+                Assert.True(state.Captivity!.HeroHeld); Assert.Equal(CaptorKind.Gaol, state.Captivity.Hero!.Captor); Assert.Equal(Restraint.Bound, state.Captivity.Hero.Restraint);
+                Assert.True(state.Justice!.Gaol.ContainsKey(party.Hero.Value)); Assert.Contains(state.Law!.Crimes.Values, c => c.Kind == "assault" && c.State == Ravensguard.Sim.Law.CrimeState.Held);
+                break;
         }
     }
 
@@ -392,7 +396,7 @@ public class AftermathTests(FightFixture fx, ITestOutputHelper output)
         Assert.Equal(DefeatKind.Left, DefeatTable.Decide(R, 1, 1, WinnerKind.Army, null, F(st: LoserState.Standing, role: LoserRole.Soldier)).Kind);
         Assert.Equal(DefeatKind.Killed, DefeatTable.Decide(R, 1, 1, WinnerKind.Draugr, null, F()).Kind);
         Assert.Equal(DefeatKind.Mauled, DefeatTable.Decide(R, 1, 1, WinnerKind.Beasts, null, F(ally: true)).Kind);
-        Assert.Equal(DefeatKind.Ignored, DefeatTable.Decide(R, 1, 1, WinnerKind.Guards, null, F()).Kind);
+        Assert.Equal(DefeatKind.Captured, DefeatTable.Decide(R, 1, 1, WinnerKind.Guards, null, F()).Kind);       // P6-C1: guards arrest
         Assert.Equal(WinnerKind.Army, R.WinnerOf("soldier")); Assert.Equal(WinnerKind.Bandits, R.WinnerOf("bandit")); Assert.Equal(WinnerKind.Beasts, R.WinnerOf("wolf"));
         // the band's style is one per band: 70 / 15 / 15
         var counts = new Dictionary<string, int>();

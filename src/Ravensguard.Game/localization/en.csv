@@ -4608,6 +4608,92 @@ hw_q_buy_deliver,Buy and deliver what is missing
 hw_q_post_haul,Post haul jobs
 hw_panel_clearing,"Clearing: {0}% ({1} of {2} trees felled, {3} stumps out, {4} hands)"
 ch_note_homestead_acre,An acre cleared for a homestead.
+ch_justice_arrested,{doer} was taken by the guards at {place}.
+ch_justice_pronounced,{doer} was sentenced at {place}: {punishment}.
+ch_justice_acquitted,{doer} was acquitted at {place}: no witness stood against them.
+ch_justice_stocks,{doer} was set in the stocks at {place}.
+ch_justice_flogged,{doer} was flogged at {place}: {lashes} lashes.
+ch_justice_branded,{doer} was branded at {place}.
+ch_justice_hand,{doer}'s hand was struck off at {place}.
+ch_justice_hanged,{doer} was hanged at {place}.
+ch_justice_displayed,{doer}'s body was left on show at {place} for {days} days.
+ch_justice_outlawed,{doer} was declared an outlaw at {place}.
+ch_justice_exile,{doer} was ordered out of the realm within {days} days at {place}.
+ch_justice_fine,{doer} paid a fine of {amount} at {place}.
+ch_justice_restitution,{doer} paid {amount} to the injured party at {place}.
+ch_justice_penance,{doer} did penance at {place} and gave {amount} to the church.
+ch_justice_served,{doer} served the sentence and went free at {place}.
+ch_justice_released,{doer} was let out of the cells at {place}: {why}.
+ch_justice_bribe_taken,{official} took {amount} from {doer} and looked the other way at {place}.
+ch_justice_bribe_refused,{official} refused a bribe from {doer} at {place}.
+ch_note_crime_escape,broke out of the gaol
+jl_why_unfed,the fief could not feed them
+jl_why_served,the sentence was served
+jl_why_acquitted,the court found no proof
+jl_why_paid,the fine was paid
+jl_step_fine,a fine
+jl_step_stocks,the stocks
+jl_step_flogging,flogging
+jl_step_branding,the brand
+jl_step_hand,the loss of a hand
+jl_step_hanging,hanging
+jl_step_weregild,weregild to the kin
+jl_step_outlawry,outlawry
+jl_step_restitution,restitution to the victim
+jl_step_gaol,a term in the gaol
+jl_step_bond_labour,bond labour
+jl_step_penance,penance
+jl_step_exile,exile
+jl_step_blood_price,a blood price
+jl_step_confiscation,confiscation and a fine
+jl_step_kin_pays,a fine paid by the kin
+jl_pun_fine,Fine
+jl_pun_penance,Penance
+jl_pun_kin_pays,The kin pay
+jl_pun_restitution_sevenfold,Sevenfold restitution
+jl_pun_confiscation_and_fine,Confiscation and fine
+jl_pun_blood_price,Blood price
+jl_pun_gaol,Gaol
+jl_pun_bond_labour,Bond labour
+jl_pun_weregild,Weregild
+jl_pun_blood_feud_or_price,Blood feud or price
+jl_pun_flogging,Flogging
+jl_pun_branding,Branding
+jl_pun_fine_or_hand,"Fine, then the hand"
+jl_pun_stocks_then_hand,"Stocks, then the hand"
+jl_pun_exile,Exile
+jl_pun_weregild_or_outlawry,Weregild or outlawry
+jl_pun_outlawry,Outlawry
+jl_pun_hanging,Hanging
+jl_pun_drawn_and_quartered,Drawn and quartered
+R_STOCKS,{who} was put in the stocks at {place}.
+R_FLOGGED,{who} was flogged at {place}.
+R_BRANDED,{who} was branded at {place}.
+R_HAND,{who}'s hand was cut off at {place}.
+R_HANGED,{who} was hanged at {place}.
+R_OUTLAWED,{who} was declared an outlaw at {place}.
+MC_GUARD_NEWS_GAOL,"""The court sits on the last day of the month. Say nothing, eat your bread, and it will go as the law goes."""
+jx_nothing_charged,Nothing is charged against you.
+jx_surrendered,You give yourself up to the guards: {0} charges.
+jx_no_such_charge,No such charge stands against you.
+jx_claimed_clergy,You claim benefit of clergy.
+jx_pleaded_guilty,You plead guilty.
+jx_already_restituted,You have already made restitution.
+jx_nobody_to_pay,There is nobody to pay.
+jx_cannot_afford,You cannot find {0}.
+jx_restituted,You pay {0} to the one you wronged.
+jx_bribe_taken,"{0} changes hands, and the gaoler looks the other way."
+jx_not_held,You are not in a cell.
+jx_bribe_cannot,You cannot offer that.
+jx_bribe_refused,"The gaoler refuses, and will remember the offer."
+jx_judged,Judgment is given.
+jx_no_such_case,No such case is before the court.
+jx_acquitted,Acquitted.
+jx_adjourned,The court is adjourned; the steward judges {0} cases.
+jx_not_your_fief,That fief is not yours to give law to.
+jx_law_reset,The law of that crime is the culture's again.
+jx_law_not_allowed,Custom does not allow that.
+jx_law_set,The fief's law is set.
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."
