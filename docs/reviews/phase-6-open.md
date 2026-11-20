@@ -24,3 +24,10 @@ Collected while the steps are built. The close-out fixes each item or moves it i
   - `PhysicianBook.Plans` needs the combat content's plan lookup.
   - Not done: guards' kit bandages; poppy milk sold only where a physician is; surgery room recognition; the live tier filling `ChoiceContext.Treat*`.
 - **Merge note:** the Phase 5 trail hash was re-pinned after A1 (seed 1 E94BE59F8BF56007, seed 1234 1ADA8B7E4D87D8C0). Medicine's physicians change healing in the trail's 10 days; the generated layers are unchanged.
+
+## From step 2, B5 fire and burning
+- Q verbs (Set fire, Fetch water, Pull down thatch) have en.csv keys (`FIRE_VERB_*`) but no QMenu entries; no live NPC fighters yet (`FireWorld.FightersNear` is unset in the game, only the hero is in `PeopleNear`); `FireAi` scores are not called by the live brain.
+- Firedamp: nothing in `Sites` calls `FireWorld.FlameIn` or shows the blue flame / HUD line (`FIRE_HUD_BLUE_FLAME`).
+- Generated settlement buildings are only in the fire's room world after adoption from chunks (`FireWiring.Scan`, roofs added by `RoofOver`); abstract accidents therefore cover adopted and built structures only, `AbleAdultsNear` and `StoresOfStructure` are unset, and generated roofs have no upkeep marks (`MarkMade`); the yearly decay and re-thatch job are derived on request, nothing posts the job.
+- Fire in chunk-adopted buildings writes back only through `ITileSink`; chronicle rumour row for `fire_ended` not added; `Ravensguard.Sim.Burning` namespace name differs from the spec's `Sim/Fire` folder on purpose.
+- The `WoundBook.Empty` rule now keeps a book whose breath is stopped; the `DeathCause.Fire` chain is in `WoundSystem.Resolve`.
