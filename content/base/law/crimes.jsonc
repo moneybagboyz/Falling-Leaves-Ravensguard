@@ -1,0 +1,25 @@
+// Crimes (docs/specs/phase6/crime-and-justice.md 3, 4.3): the act's chronicle entry type, who raises the cry, and the bounty a lord posts on a report.
+// bounty = bounty_flat + bounty_value_x x value (+ damage / bounty_damage_div), capped at a quarter of the fief treasury. The deed rows of society/deeds.jsonc read the same entry types.
+[
+  {"type": "crime", "id": "theft",             "cry": true,  "bounty_flat": 100,  "bounty_value_x": 2},
+  {"type": "crime", "id": "burglary",          "cry": true,  "bounty_flat": 100,  "bounty_value_x": 2},
+  {"type": "crime", "id": "pickpocketing",     "cry": true,  "bounty_flat": 100,  "bounty_value_x": 2},
+  {"type": "crime", "id": "poaching",          "cry": false, "bounty_flat": 150},
+  {"type": "crime", "id": "assault",           "cry": true,  "bounty_flat": 500},
+  {"type": "crime", "id": "murder",            "cry": true,  "bounty_flat": 3000, "dead_pays_all": true, "permanent": true},
+  {"type": "crime", "id": "arson",             "cry": true,  "bounty_flat": 2000, "bounty_damage_div": 10},
+  {"type": "crime", "id": "trespass",          "cry": false, "bounty": false},
+  {"type": "crime", "id": "smuggling",         "cry": false, "bounty_flat": 400},
+  {"type": "crime", "id": "unlicensed_mining", "cry": false, "bounty_flat": 300},
+  {"type": "crime", "id": "grave_robbing",     "cry": true,  "taboo": true, "bounty_flat": 1000, "bounty_value_x": 1},
+  {"type": "crime", "id": "sacrilege",         "cry": true,  "taboo": true, "bounty_flat": 1000},
+  {"type": "crime", "id": "heresy",            "cry": false, "taboo": true, "bounty": false},
+  {"type": "crime", "id": "treason",           "cry": false, "bounty_flat": 10000, "dead_pays_all": true, "permanent": true},
+  {"type": "crime", "id": "debt_default",      "cry": false, "civil": true, "bounty": false},
+  {"type": "crime", "id": "embezzlement",      "cry": false, "bounty_flat": 500, "bounty_value_x": 1},
+  {"type": "crime", "id": "bribery",           "cry": false, "bounty": false},
+  {"type": "crime", "id": "harbouring",        "cry": false, "bounty": false},
+  {"type": "crime", "id": "slaving",           "cry": false, "bounty_flat": 800},
+  {"type": "crime", "id": "jailbreak",         "cry": true,  "bounty_flat": 600},
+  {"type": "crime", "id": "squatting",         "cry": false, "civil": true, "bounty": false}
+]

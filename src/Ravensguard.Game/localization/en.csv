@@ -4190,6 +4190,52 @@ FIRE_DIR_SW,to the south-west
 FIRE_DIR_W,to the west
 FIRE_DIR_NW,to the north-west
 FIRE_SMOKE_ROOM,The room fills with smoke.
+ch_crime_theft,{doer} stole goods worth {value} at {place}.
+ch_crime_burglary,{doer} broke into a house at {place} and took goods worth {value}.
+ch_crime_pickpocketing,{doer} picked a pocket at {place} and took {value}.
+ch_crime_poaching,{doer} poached game on the lord's land near {place}.
+ch_crime_assault,{doer} struck {victim} at {place}.
+ch_crime_murder,{doer} killed {victim} at {place}.
+ch_crime_arson,{doer} set a fire at {place}.
+ch_crime_trespass,{doer} trespassed at {place}.
+ch_crime_smuggling,{doer} smuggled goods past the toll near {place}.
+ch_crime_unlicensed_mining,{doer} dug ore without a licence near {place}.
+ch_crime_grave_robbing,"{doer} robbed a grave near {place}, taking goods worth {value}."
+ch_crime_sacrilege,{doer} profaned holy ground at {place}.
+ch_crime_heresy,{doer} was heard preaching against the church at {place}.
+ch_crime_treason,{doer} plotted against the lord of {place}.
+ch_crime_debt_default,{doer} defaulted on a debt at {place}.
+ch_crime_embezzlement,{doer} embezzled {value} from the lord's accounts at {place}.
+ch_crime_bribery,{doer} offered a bribe at {place}.
+ch_crime_harbouring,{doer} hid a fugitive at {place}.
+ch_crime_slaving,{doer} dealt in slaves against the law at {place}.
+ch_crime_jailbreak,{doer} broke a prisoner out of the cells at {place}.
+ch_crime_squatting,{doer} squatted on land at {place}.
+ch_note_crime_hero,The hero chose to.
+ch_note_crime_hunger,The household was hungry.
+ch_note_crime_quarrel,A quarrel between neighbours.
+ch_note_crime_greed,Greed.
+ch_note_crime_taboo,A taboo was broken.
+ch_crime_witnessed,{witness} saw {doer} commit the crime at {place} (seen by {witnesses}).
+ch_crime_reported,{witness} reported the crime at {place} to the law.
+ch_crime_discovered,{victim} found the loss at {place}.
+ch_crime_bounty,A bounty of {amount} was posted at {place} on the word of {witness}.
+ch_crime_cry,{witness} raised the hue and cry: {heard} heard it and {guards} guards turned out.
+ch_crime_bounty_paid,{collector} brought the culprit in and was paid {amount}.
+R_THEFT,{who} was seen stealing at {place}.
+R_BURGLARY,{who} was seen breaking into a house at {place}.
+R_POACHING,{who} was seen poaching near {place}.
+R_ASSAULT,{who} was seen beating a neighbour at {place}.
+R_MURDER,{who} was seen killing a man at {place}.
+R_ARSON,{who} was seen setting a fire at {place}.
+R_SMUGGLING,{who} was seen smuggling goods past the toll near {place}.
+R_GRAVE_ROBBING,{who} was seen robbing a grave near {place}.
+CJ_HUD_SEEN,Seen ({0})
+CJ_HUD_UNSEEN,Unseen
+cj_seen,Seen by {0}.
+cj_unseen,Nobody saw it.
+st_deed_grave_robbing,Robbing a grave
+st_deed_theft,Theft
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."
