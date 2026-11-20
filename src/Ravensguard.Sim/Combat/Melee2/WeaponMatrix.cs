@@ -152,7 +152,7 @@ public static class WeaponMatrix
         WornV2[] Fresh()
         {
             var a = new WornV2[h.Worn.Length];
-            for (int i = 0; i < a.Length; i++) a[i] = WornV2.Of(T.Armour(h.Worn[i].ShapeId, h.Worn[i].MaterialId), CombatTablesV2.QualityPm[(int)h.Worn[i].Quality], fitCm3: 70000);
+            for (int i = 0; i < a.Length; i++) a[i] = WornV2.Of(T.Armour(h.Worn[i].ShapeId, h.Worn[i].MaterialId), T.Qa(h.Worn[i].Quality), fitCm3: 70000);
             return a;
         }
         StrikeV2 Strike(WornV2[] worn, ulong missing)

@@ -37,6 +37,27 @@ public static class CraftMath
         return n;
     }
 
+    /// <summary>
+    /// The expected tiers of a crafted item over the 41 rolls with the masterwork inspiration (items-quality-and-wear 4.2, P5-A1), in thousandths of a roll (the row sums to 41,000): a roll that
+    /// reaches Masterwork counts <c>inspire_pm</c> to it and the rest to Fine. A master at 85 (skill 75, tools +10): Common 5,000, Fine 34,000, Masterwork 2,000 (IQ-5).
+    /// </summary>
+    public static long[] QualityMilli(int effectiveSkill, int toolBonus, int otherBonus, int tierDrop = 0)
+    {
+        var n = new long[5];
+        for (int roll = -20; roll <= 20; roll++)
+        {
+            int score = effectiveSkill + roll + Math.Clamp(toolBonus, -10, 10) + otherBonus;
+            var t = ItemQualityRules.FromScore(score);
+            if (t == ItemQuality.Masterwork)
+            {
+                int ip = QualityTiers.InspirePm(score);
+                n[(int)Drop(ItemQuality.Masterwork, tierDrop)] += ip; n[(int)Drop(ItemQuality.Fine, tierDrop)] += 1000 - ip;
+            }
+            else n[(int)Drop(t, tierDrop)] += 1000;
+        }
+        return n;
+    }
+
     public static ItemQuality Drop(ItemQuality q, int tiers) => (ItemQuality)Math.Max(0, (int)q - Math.Max(0, tiers));
 
     /// <summary>Seconds of one step: base x proficiencies x tool (1500 for an improvised tool) x skill, all permille, rounded half up.</summary>

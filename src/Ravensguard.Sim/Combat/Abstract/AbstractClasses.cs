@@ -90,7 +90,7 @@ public static class AbstractClasses
             foreach (var w in worn)
             {
                 if (!t.HasMaterial(w.MaterialId)) continue;
-                if (t.TryArmour(w.ShapeId, w.MaterialId, out var a)) ws.Add(WornV2.Of(a, CombatTablesV2.QualityPm[(int)w.Quality]));
+                if (t.TryArmour(w.ShapeId, w.MaterialId, out var a)) ws.Add(WornV2.Of(a, t.Qa(w.Quality)));
             }
             v = RiskEstimate.ProtectionPm(p, ws);
             cache.ByKey[key] = v;

@@ -32,6 +32,15 @@ public sealed class CraftRunner
         db.Goods.TryIdOf("waste", out _waste); db.Goods.TryIdOf("rags", out _rags);
     }
 
+    /// <summary>P5-A1: the content (named artefacts read their name pool and which shapes may carry a name); null leaves masterworks unnamed.</summary>
+    public Ravensguard.Content.ContentDatabase? Content { get; set; }
+    /// <summary>P5-A1: where <c>artefact_made</c> is written; null writes none.</summary>
+    public Chronicle? Chronicle { get; set; }
+    /// <summary>P5-A1: a maker's name for an artefact's name and its chronicle line (the hero's, a person row's).</summary>
+    public Func<EntityId, string>? NameOf { get; set; }
+    /// <summary>The quality scale the results and repairs read.</summary>
+    public QualityTiers Tiers { get; set; } = QualityTiers.Default;
+
     private GoodCatalog Cat => Db.Goods;
     private bool Ambient(ushort g) => Cat.HasTag(g, "ambient");
     private int SkillOf(EntityId who, CraftRecipe r) => r.Skill == Skill.None ? 40 : State.Book.Level(who, r.Skill);
@@ -141,7 +150,7 @@ public sealed class CraftRunner
         if (r.IsRepair)
         {
             if (!Econ.Items.IsLive(target)) return null;
-            if (Econ.Items.Get(target).ConditionPermille >= r.Repair!.Max) return null;
+            if (Econ.Items.Get(target).ConditionPermille >= RepairCap(r, Econ.Items.Get(target).Quality, SkillOf(who.Id, r))) return null;
         }
         var id = _ids.Allocate(IdKind.Other);
         var store = Econ.OpenStore(StoreKind.House, id, 0, 0, false);
@@ -369,6 +378,9 @@ public sealed class CraftRunner
 
     // ------------------------------------------------------------------ the result
 
+    /// <summary>The best a repair recipe restores an item of tier <paramref name="item"/> to, by a repairer of effective skill <paramref name="skill"/> (items-quality-and-wear 4.5).</summary>
+    public int RepairCap(CraftRecipe r, ItemQuality item, int skill) => Math.Min(r.Repair?.Max ?? 1000, Tiers.RepairCapFor(item, skill));
+
     private void Finish(CraftJob j, CraftRecipe r, long now, List<CraftEvent> ev)
     {
         var store = Econ.OtherStores[j.Id]; var dest = _storeOf(j.Owner) ?? store;
@@ -390,10 +402,14 @@ public sealed class CraftRunner
                 {
                     for (int u = 0; u < j.Batch; u++)
                     {
-                        var q = CraftMath.Drop(ItemQualityRules.FromScore(ItemQualityRules.Score(_seed, j.StartedSec, j.Crafter, (uint)(j.Id.Counter & 0xFFFFF) * 64 + (uint)(k * 8 + u + 1), j.EffSkill, j.ToolBonus) + j.LightPenalty),
-                            j.TierDrop + (j.Failed ? 1 : 0));
+                        // P5-A1 (items-quality-and-wear 4.2): the score's tier, but Masterwork only on the inspiration roll (stream 0x530, key crafter, job id x 64 + unit)
+                        uint unit = (uint)(j.Id.Counter & 0xFFFFF) * 64 + (uint)(k * 8 + u + 1);
+                        int score = ItemQualityRules.Score(_seed, j.StartedSec, j.Crafter, unit, j.EffSkill, j.ToolBonus) + j.LightPenalty;
+                        var q = CraftMath.Drop(ItemQualityRules.Crafted(_seed, j.StartedSec, j.Crafter, unit, score), j.TierDrop + (j.Failed ? 1 : 0));
                         var id = Econ.Items.Add(_ids, x.Shape!, q, j.Owner, [new ItemComponent(x.Material!, (int)x.MassG, 1000)], ItemTable.NoGood, (int)labourH, Math.Clamp(j.EffSkill, 0, 100));
                         State.Records[id] = new CraftedRecord(r.Index, [.. r.Slots.Select((s, i) => (s.Alts[j.Choice[i]].Good, s.Alts[j.Choice[i]].Qty))]);
+                        if (q == ItemQuality.Masterwork && Content != null)
+                            Artefacts.TryName(Content, _seed, Econ.Items, id, j.Crafter, NameOf?.Invoke(j.Crafter) ?? "", now, State.Artefacts, Chronicle, _ids);
                         made++;
                         ev.Add(new CraftEvent(CraftEventKind.Finished, j.Id, j.Crafter, now, x.Shape!, (int)q));
                     }
@@ -416,7 +432,12 @@ public sealed class CraftRunner
         if (r.IsRepair && Econ.Items.IsLive(j.Target))
         {
             ref var row = ref Econ.Items.Get(j.Target); var rp = r.Repair!;
-            row.ConditionPermille = (short)Math.Min(rp.Max, row.ConditionPermille + rp.Add);
+            // P5-A1 (items-quality-and-wear 4.5): the cap is the recipe's, lowered to min(cap[item tier], cap[the repairer's tier] + 50); each repair is counted in the top bits of Wear
+            // (-100 pm of value each, at most 300); a failed repair drops the item a tier and still uses the materials
+            int cap = RepairCap(r, row.Quality, j.EffSkill);
+            if (j.Failed) row.Quality = CraftMath.Drop(row.Quality, 1);
+            else row.ConditionPermille = (short)Math.Max(row.ConditionPermille, Math.Min(cap, row.ConditionPermille + rp.Add));
+            row.Wear = QualityTiers.WithRepairCount(row.Wear, QualityTiers.RepairCount(row.Wear) + 1);
             if (rp.Flag == "repaired") row.Flags |= ItemFlags.Repaired;
         }
         if (made == 0) ev.Add(new CraftEvent(CraftEventKind.Finished, j.Id, j.Crafter, now, r.Effect.Length > 0 ? r.Effect : r.Id, (int)quality));

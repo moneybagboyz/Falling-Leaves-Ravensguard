@@ -55,7 +55,9 @@ public partial class StreetView
         string name = _hero?.Name ?? rec?.Name ?? L.T("wm_hero_unnamed");
         if (rec == null)
             return new FighterKit { Name = name, Person = EconomyState.HeroOwner.Value, Weapon = new WeaponInstance("dagger", "iron"), Worn = worn, Skill = 30 };
-        return FightSetup.HeroKit(fc, rec, worn, EconomyState.HeroOwner.Value, name);
+        // P5-A4: the weapon is chosen from what the pack really holds (loot included, with its quality), not the record's starting kit
+        var carried = _heroLink?.View is { } v ? Ravensguard.Sim.Inventory.HeroPack.Things(v.Items, v.Goods, id => fc.Ammo.ContainsKey(id) || id == "javelin") : null;
+        return FightSetup.HeroKit(fc, rec, worn, EconomyState.HeroOwner.Value, name, carried);
     }
 
     /// <summary>The hero's worn item rows in the order of the kit's worn pieces (empty for the stand-in shirt and tunic), with their condition before the fight.</summary>
@@ -71,7 +73,7 @@ public partial class StreetView
             if (it.Slot == Ravensguard.Sim.Inventory.EquipSlot.None || !fc.Db.TryGet<ArmourShapeDef>(it.Shape, out var a)) continue;
             string mat = it.Material.Length > 0 && fc.T.HasMaterial(it.Material) ? it.Material : a.DefaultMaterial ?? "";
             if (mat.Length == 0 || !fc.T.HasMaterial(mat)) continue;
-            worn.Add(new WornItem(it.Shape, mat)); _heroWorn.Add((it.Id, it.ConditionPermille));
+            worn.Add(new WornItem(it.Shape, mat, it.Quality)); _heroWorn.Add((it.Id, it.ConditionPermille));    // P5-A1: the row's tier is the piece's Qa
         }
         return worn;
     }

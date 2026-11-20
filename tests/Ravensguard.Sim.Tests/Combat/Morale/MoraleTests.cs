@@ -259,11 +259,13 @@ public class MoraleTests(FightFixture fx, ITestOutputHelper output)
         var w = FightCalibration.Skirmish(fx.C, 5, 3);
         for (int i = 0; i < 60; i++) w.StepWithAi();
         var rec = FightRecord.Capture(w, "test"); rec.Morale = null;                 // what a v6 save holds
+        foreach (var f in rec.Fighters) { f.WeaponQuality = 0; f.NowQuality = 0; f.WornQualities = new byte[f.WornQualities.Length]; }   // and its old scale (Standard 0), which v8 remaps to Common
         var file = new SaveFile(new SaveHeader { FormatVersion = 6 }, [new(FightRecord.SectionName, SaveCodec.SerializeCompressed(rec))]);
         var migrated = SaveMigrator.CreateDefault().Migrate(file);
-        Assert.Equal(7, migrated.Header.FormatVersion);
+        Assert.Equal(SaveFormat.CurrentVersion, migrated.Header.FormatVersion);      // v7, and on to v8 (P5-A1)
         var back = SaveCodec.DeserializeCompressed<FightRecord>(migrated.Sections[FightRecord.SectionName].ToArray());
         Assert.NotNull(back.Morale);
+        Assert.All(back.Fighters, f => Assert.Equal((byte)Ravensguard.Sim.Goods.ItemQuality.Common, f.WeaponQuality));
         var fw = back.Restore(fx.C);
         for (int i = 0; i < 40; i++) fw.StepWithAi();
         Assert.All(fw.Fighters, f => Assert.True(f.M.Has(MoraleFlags.Inited)));

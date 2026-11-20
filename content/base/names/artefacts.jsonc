@@ -1,0 +1,7 @@
+// Named artefacts (items-quality-and-wear 4.2, P5-A1): about one masterwork in ten gets a name, "{epithet} of {maker}", a maker and a chronicle line. It fights as a masterwork.
+[
+  { "type": "artefact_names", "id": "default", "pattern": "{epithet} of {maker}",
+    "epithets": ["The Widowmaker", "The Grey Tooth", "Oathkeeper", "The Long Answer", "Ravensbane", "The Quiet Word", "Hearthguard", "The Iron Promise", "Thornheart",
+                 "The Last Light", "Wolfsong", "The Black Ledger", "Stormward", "The Old Debt", "Saltbrand", "The Morning Star", "Ashfall", "The Patient Edge",
+                 "Kingsmercy", "The Crooked Mile", "Frostbite", "The Bright Wall", "Gravewatch", "The Second Chance"] }
+]

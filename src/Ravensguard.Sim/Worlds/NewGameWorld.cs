@@ -21,7 +21,7 @@ public static class NewGameWorld
     /// <see cref="WorldState.HomeRecords"/>, which <see cref="WorldRuntime"/> adopts as it is; its clock is <paramref name="clock"/> (default: 08:00 on the first day of spring of the year history ended).
     /// </summary>
     public static WorldState Create(ContentDatabase content, Continent continent, WorldHistory history, ContinentSettings cs, HistorySettings hs, RegionSettings rs,
-        int cellX, int cellY, Population pop, HeroRecord? hero, CodexProgress? codex, GameTime? clock = null)
+        int cellX, int cellY, Population pop, HeroRecord? hero, CodexProgress? codex, GameTime? clock = null, int startSettlement = -1)
     {
         var home = RegionCoord.Snap(cellX, cellY);
         var sv = new RegionServices(cs.Seed, content, continent, home) { History = history };
@@ -30,9 +30,12 @@ public static class NewGameWorld
         var cont = sv.AbstractContinent!;                          // made by the home region itself (RegionServices.EnsureContinent), over this world's history
         var start = clock ?? GameTime.FromCalendar(pop.NowYear, Season.Spring, 1, 8);
         Ravensguard.Sim.Succession.SuccessionBook? kin = null;
-        if (hero != null)                                          // P4 close-out: the hero's family in the person table, for the kinship order of succession
+        if (hero != null)
         {
-            var links = Ravensguard.Sim.Succession.HeroKin.Choose(pop.People, pop.Households, pop.Region.Settlements.Count, (int)start.TotalDays);
+            // P5-A4 (inheritance 3): the hero is a row of the person table, in a household of the hero's own, with the origin's kin (stream 0x560) or, by default, the Phase 4 family
+            var links = new List<Ravensguard.Sim.Succession.HeroKinLink>();
+            hero.PersonIndex = Ravensguard.Sim.Succession.HeroPerson.Insert(pop, rw.Sim.Economy, content, hero, Ravensguard.Sim.Economy.EconomyState.HeroOwner, cs.Seed, (int)start.TotalDays,
+                startSettlement, links, rw.Sim, rw.Ids);
             if (links.Count > 0) { kin = new Ravensguard.Sim.Succession.SuccessionBook(); kin.Kin.AddRange(links); }
         }
         return new WorldState

@@ -276,6 +276,12 @@ public static class RngStreams
     // ---- Phase 5 (docs/specs/phase5/00-phase5-overview.md 5; Phase 5 owns 0x500..0x5FF) ----
     /// <summary>P5-A2: reserved for Phase 6 land disputes; land draws nothing (listings, buyers and claims are ordered by ids and coin). Asserted never drawn (LD-14).</summary>
     public const uint LandDisputesReserved = 0x500;
+    /// <summary>Items: the masterwork inspiration roll of a crafted item whose score reaches Masterwork (key crafter, job id x 64 + unit).</summary>
+    public const uint MasterworkInspiration = 0x530;
+    /// <summary>Items: whether a masterwork weapon, armour piece or jewel is a named artefact, and its name (key item id).</summary>
+    public const uint NamedArtefact = 0x531;
+    /// <summary>Inheritance: the hero's kin at a new game (the origin's kin rows, their ages and counts, the hero's own age; key hero seed).</summary>
+    public const uint HeroKin = 0x560;
 
     /// <summary>Stream ids that two named uses share on purpose, with why their draws never meet.</summary>
     public static readonly (string A, string B, string Why)[] SharedPairs =

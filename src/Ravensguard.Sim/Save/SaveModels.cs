@@ -44,8 +44,10 @@ public static class SaveFormat
     /// v5: the optional "wounds" section (Phase 4 P4-B: blood, pain, wound records, permanent damage); a v4 save has none and loads with nobody hurt.
     /// v4: the chunk sections carry the build-piece palette their tile codes are numbered by (<see cref="ChunkStoreData.Palette"/>); a v3 section has none and is read with the legacy palette.
     /// v6: six weapon-family skills appended to the Skill enum (the hero record and skill book gain them at 80% of Melee) and the optional "fight" section (a fight in progress, P4-C).
-    /// v7: the optional "captivity" and "succession" sections (P4-D: captives, ransoms, estates, inheritance records) and each fighter's morale state in a fight record (key 20).</summary>
-    public const int CurrentVersion = 7;
+    /// v7: the optional "captivity" and "succession" sections (P4-D: captives, ransoms, estates, inheritance records) and each fighter's morale state in a fight record (key 20).
+    /// v8 (Phase 5, P5-A1 and P5-A4): one quality scale (a fight record's quality bytes are <c>ItemQuality</c>, no longer DF's seven), the hero is a person row (the people diff holds the
+    /// hero's row and household, the hero section its <c>PersonIndex</c>), named artefacts in the "crafting" section; later Phase 5 steps add optional sections only.</summary>
+    public const int CurrentVersion = 8;
     /// <summary>
     /// Version of everything a saved region is regenerated from (region terrain, landmarks, populator, chunk streaming frame). Bump it whenever generation output changes on
     /// purpose, together with the golden hashes: saves diffed against the old output are then refused with a clear message instead of loading onto different people.

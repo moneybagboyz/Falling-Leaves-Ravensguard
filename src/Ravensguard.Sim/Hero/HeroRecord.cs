@@ -5,8 +5,8 @@ using SkillEnum = Ravensguard.Sim.People.Skill;
 
 namespace Ravensguard.Sim.Characters;
 
-/// <summary>One kind of thing the hero carries: an item shape id (weapon_shape or armour_shape), the material it is made of and how many.</summary>
-public sealed record HeroItem(string Shape, string Material, int Count = 1);
+/// <summary>One kind of thing the hero carries: an item shape id (weapon_shape or armour_shape), the material it is made of, how many, and its quality (P5-A1; Common for the origin kit).</summary>
+public sealed record HeroItem(string Shape, string Material, int Count = 1, Ravensguard.Sim.Goods.ItemQuality Quality = Ravensguard.Sim.Goods.ItemQuality.Common);
 
 /// <summary>The hero's five attributes, in their fixed order (plan section 3 item 2).</summary>
 public enum HeroAttr { Strength, Toughness, Dexterity, Perception, Wits }
@@ -34,6 +34,8 @@ public sealed class HeroRecord
     public string AmbitionId { get; init; } = "";
     /// <summary>Index of the ambition step being worked on; equals the step count when the ambition is done.</summary>
     public int Milestone { get; set; }
+    /// <summary>P5-A4: the hero's row in the home region's person table (<see cref="Ravensguard.Sim.Succession.HeroPerson"/>); -1 none, -2 a v7 save whose row the load inserts.</summary>
+    public int PersonIndex { get; set; } = -1;
 
     public int Attribute(HeroAttr a) => Attributes[(int)a];
     public int Skill(string id) => Skills.TryGetValue(id, out var v) ? v : 0;
@@ -61,7 +63,7 @@ public sealed class HeroRecord
         DefaultWeaponFamilies(skills, origin.Skills.Keys);
 
         var inv = new List<HeroItem>();
-        foreach (var k in origin.Kit) inv.Add(new HeroItem(k.Item, DefaultMaterial(k.Item), Math.Max(1, k.Count)));
+        foreach (var k in origin.Kit) inv.Add(new HeroItem(k.Item, DefaultMaterial(k.Item), Math.Max(1, k.Count), (Ravensguard.Sim.Goods.ItemQuality)QualityNames.Tier(k.Quality)));
         return new HeroRecord
         {
             Name = name, Female = female, Origin = origin.Id, Attributes = attrs, Skills = skills, Inventory = inv,
@@ -112,7 +114,7 @@ public sealed class HeroRecord
         Name = Name, Female = Female, Origin = Origin, Attributes = (int[])Attributes.Clone(),
         SkillIds = SkillIds.ToArray(), SkillLevels = SkillIds.Select(Skill).ToArray(),
         ItemShapes = Inventory.Select(i => i.Shape).ToArray(), ItemMaterials = Inventory.Select(i => i.Material).ToArray(), ItemCounts = Inventory.Select(i => i.Count).ToArray(),
-        Coin = Coin, AmbitionId = AmbitionId, Milestone = Milestone,
+        Coin = Coin, AmbitionId = AmbitionId, Milestone = Milestone, PersonIndex = PersonIndex,
     };
 
     public static HeroRecord FromSave(HeroSave s)
@@ -127,7 +129,7 @@ public sealed class HeroRecord
         return new HeroRecord
         {
             Name = s.Name, Female = s.Female, Origin = s.Origin, Attributes = (int[])s.Attributes.Clone(), Skills = skills, Inventory = inv,
-            Coin = s.Coin, AmbitionId = s.AmbitionId, Milestone = s.Milestone,
+            Coin = s.Coin, AmbitionId = s.AmbitionId, Milestone = s.Milestone, PersonIndex = s.PersonIndex,
         };
     }
 }
@@ -148,6 +150,8 @@ public sealed class HeroSave
     [Key(9)] public int Coin { get; set; }
     [Key(10)] public string AmbitionId { get; set; } = "";
     [Key(11)] public int Milestone { get; set; }
+    /// <summary>P5-A4 (save v8): the hero's person row; -1 none; a v7 save migrates to -2 (inserted at load).</summary>
+    [Key(12)] public int PersonIndex { get; set; } = -1;
 }
 
 /// <summary>Save form of the Codex progress.</summary>

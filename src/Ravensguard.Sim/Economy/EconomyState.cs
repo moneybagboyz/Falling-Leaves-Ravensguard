@@ -175,10 +175,14 @@ public sealed class EconomyState
     public void SeedStartingStock(Population pop) => SeedStartingStock(pop.Households);
 
     /// <summary>Starting stock for a household table.</summary>
-    public void SeedStartingStock(HouseholdTable h)
+    public void SeedStartingStock(HouseholdTable h) => SeedStartingStock(h, 0, h.Count);
+
+    /// <summary>Starting stock for the households <paramref name="from"/> to <paramref name="to"/> - 1 (P5-A4: the hero's own household with children, made at the new game).</summary>
+    public void SeedStartingStock(HouseholdTable h, int from, int to = -1)
     {
         ushort wheat = Goods.IdOf("wheat"), peas = Goods.IdOf("peas"), wood = Goods.IdOf("firewood"), salt = Goods.IdOf("salt"), ale = Goods.IdOf("ale");
-        for (int i = 0; i < h.Count; i++)
+        if (to < 0) to = from + 1;
+        for (int i = from; i < to && i < h.Count; i++)
         {
             int n = h.MemberCount[i]; if (n == 0) continue;
             var b = Basket(h.Class[i]); var s = HouseholdStore[i];

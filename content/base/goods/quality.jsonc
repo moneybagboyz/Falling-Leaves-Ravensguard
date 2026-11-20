@@ -1,0 +1,8 @@
+// The one quality scale (items-quality-and-wear 3, P5-A1). Every number permille, indexed by tier: crude, poor, common, fine, masterwork.
+// combat_pm is Qw and Qa (the edge and the armour layer tests); value_pm the price; wear_pm the wear an item takes; repair_cap_pm the best a repair restores;
+// score_from the crafting score a tier starts at. No artifact tier: a legendary piece is a named masterwork with a history, no stronger.
+[
+  { "type": "quality_tiers", "id": "default",
+    "combat_pm": [800, 900, 1000, 1400, 2000], "value_pm": [500, 800, 1000, 1600, 3000], "wear_pm": [1600, 1250, 1000, 800, 600],
+    "repair_cap_pm": [700, 800, 900, 950, 1000], "score_from": [0, 15, 40, 70, 90] }
+]

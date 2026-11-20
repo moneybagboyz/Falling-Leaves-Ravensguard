@@ -27,7 +27,7 @@ public sealed class SiteBlows
     public WornV2[] Worn(FighterKit k)
     {
         var a = new WornV2[k.Worn.Count];
-        for (int i = 0; i < a.Length; i++) a[i] = WornV2.Of(_fc.T.Armour(k.Worn[i].ShapeId, k.Worn[i].MaterialId), CombatTablesV2.QualityPm[(int)k.Worn[i].Quality], fitCm3: k.SizeCm3);
+        for (int i = 0; i < a.Length; i++) a[i] = WornV2.Of(_fc.T.Armour(k.Worn[i].ShapeId, k.Worn[i].MaterialId), _fc.T.Qa(k.Worn[i].Quality), fitCm3: k.SizeCm3);
         return a;
     }
 

@@ -23,7 +23,7 @@ public sealed record LayerProps(
 }
 
 public sealed record WeaponStats(
-    WeaponShapeDef Shape, ResolvedMaterial HeadMaterial, Quality Quality, LayerProps Head,
+    WeaponShapeDef Shape, ResolvedMaterial HeadMaterial, Goods.ItemQuality Quality, LayerProps Head,
     double TotalMassMg, double VolumeCm3, double Qw)
 {
     public double MassKg => TotalMassMg / 1e6;
@@ -54,7 +54,7 @@ public sealed record ArmourStats(ArmourShapeDef Shape, ResolvedMaterial Material
 /// </summary>
 public sealed class CombatTables
 {
-    private readonly Dictionary<(string, string, Quality), WeaponStats> _weapons = [];
+    private readonly Dictionary<(string, string, Goods.ItemQuality), WeaponStats> _weapons = [];
     private readonly Dictionary<(string, string), ArmourStats> _armour = [];
     private readonly Dictionary<string, LayerProps> _tissues = new(StringComparer.Ordinal);
 
@@ -77,8 +77,8 @@ public sealed class CombatTables
         WeaponShapes = db.All<WeaponShapeDef>().ToDictionary(s => s.Id, StringComparer.Ordinal);
         foreach (var s in WeaponShapes.Values)
             foreach (var m in materials.Values.Where(m => WeaponCategories.Contains(m.Category)))
-                for (int q = 0; q < QualityTable.Count; q++)
-                    _weapons[(s.Id, m.Id, (Quality)q)] = BuildWeapon(s, m, (Quality)q, materials);
+                for (int q = 0; q < Goods.QualityTiers.Count; q++)
+                    _weapons[(s.Id, m.Id, (Goods.ItemQuality)q)] = BuildWeapon(s, m, (Goods.ItemQuality)q, materials);
 
         ArmourShapes = db.All<ArmourShapeDef>().ToDictionary(s => s.Id, StringComparer.Ordinal);
         foreach (var s in ArmourShapes.Values)
@@ -92,7 +92,7 @@ public sealed class CombatTables
     /// <summary>The resolver v2 tables (integer derived stats per weapon, armour piece, shield, tissue and body plan; resolver-v2 3.1).</summary>
     public Resolver2.CombatTablesV2 V2 { get; }
 
-    private static WeaponStats BuildWeapon(WeaponShapeDef s, ResolvedMaterial head, Quality q, Dictionary<string, ResolvedMaterial> materials)
+    private static WeaponStats BuildWeapon(WeaponShapeDef s, ResolvedMaterial head, Goods.ItemQuality q, Dictionary<string, ResolvedMaterial> materials)
     {
         double mass = head.DensityKgM3 * s.HeadVolumeCm3;
         if (s.HaftVolumeCm3 > 0)
@@ -100,14 +100,14 @@ public sealed class CombatTables
             var haft = s.HaftMaterial != null ? materials[s.HaftMaterial] : head;
             mass += haft.DensityKgM3 * s.HaftVolumeCm3;
         }
-        return new WeaponStats(s, head, q, LayerProps.From(head), mass, s.HeadVolumeCm3 + s.HaftVolumeCm3, QualityTable.EdgeMultiplier(q));
+        return new WeaponStats(s, head, q, LayerProps.From(head), mass, s.HeadVolumeCm3 + s.HaftVolumeCm3, Goods.QualityTiers.Default.Combat(q) / 1000.0);
     }
 
     public LayerProps Tissue(string materialId) =>
         _tissues.TryGetValue(materialId, out var p) ? p : throw new KeyNotFoundException($"unknown material '{materialId}'");
 
     public WeaponStats Weapon(WeaponInstance w) => Weapon(w.ShapeId, w.MaterialId, w.Quality);
-    public WeaponStats Weapon(string shape, string material, Quality quality = Quality.Standard) =>
+    public WeaponStats Weapon(string shape, string material, Goods.ItemQuality quality = Goods.ItemQuality.Common) =>
         _weapons.TryGetValue((shape, material, quality), out var s) ? s
             : throw new KeyNotFoundException($"no weapon stats for shape '{shape}' in material '{material}'");
 

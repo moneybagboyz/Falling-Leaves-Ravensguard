@@ -97,7 +97,7 @@ public class SuccessionTests
         Assert.True(l.Audit().IsConserved);
         Assert.Equal([sword, boots], est.Items); Assert.True(est.Looted);
         Assert.Equal(heir!.Person, est.Heir);
-        Assert.NotNull(rec); Assert.Equal(950, rec!.Coin); Assert.Empty(rec.DeedsPending); Assert.Equal("", rec.ReputationPending); Assert.Equal("arming_sword", rec.RecoverShape);
+        Assert.NotNull(rec); Assert.Equal(950, rec!.Coin); Assert.Empty(rec.Deeds); Assert.Equal("", rec.ReputationPending); Assert.Equal("arming_sword", rec.RecoverShape);
         Assert.Equal(heir.Person, book.CurrentHero);
         // who stays: kin always, companions with loyalty 500 or more
         var stay = SuccessionOrder.Stay([.. Squad, new(EntityId.Make(IdKind.Person, 5005), -1, 200, 1, true)], new HashSet<EntityId>(), heir.Person);

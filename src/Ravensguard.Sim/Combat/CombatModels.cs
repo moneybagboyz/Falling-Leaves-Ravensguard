@@ -74,10 +74,10 @@ public sealed record LayerTrace(string Layer, bool IsArmour, LayerOutcome Outcom
 public sealed record Attacker(int Strength, int Skill, int SizeCm3 = 70000, int SpeciesSizeCm3 = 70000);
 
 /// <summary>A weapon instance: shape × head material × quality (the haft material comes from the shape).</summary>
-public sealed record WeaponInstance(string ShapeId, string MaterialId, Quality Quality = Quality.Standard);
+public sealed record WeaponInstance(string ShapeId, string MaterialId, Goods.ItemQuality Quality = Goods.ItemQuality.Common);
 
 /// <summary>A worn armour/clothing piece: shape × material × quality.</summary>
-public sealed record WornItem(string ShapeId, string MaterialId, Quality Quality = Quality.Standard);
+public sealed record WornItem(string ShapeId, string MaterialId, Goods.ItemQuality Quality = Goods.ItemQuality.Common);
 
 public sealed record Defender(
     BodyPlan Plan, int SizeCm3, IReadOnlyList<WornItem> Worn, int Skill = 0,

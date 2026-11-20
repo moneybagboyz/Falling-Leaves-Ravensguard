@@ -33,6 +33,8 @@ public sealed class Store
 
     public static bool DefaultEnforced(StoreKind kind) => kind is StoreKind.Granary or StoreKind.Barn or StoreKind.Chest or StoreKind.Sealed;
 
+    /// <summary>The goods catalogue this store counts in.</summary>
+    public GoodCatalog Catalog => _cat;
     public int RowCount => _n;
     public ushort GoodAt(int row) => _good[row];
     public long QtyAt(int row) => _qty[row];

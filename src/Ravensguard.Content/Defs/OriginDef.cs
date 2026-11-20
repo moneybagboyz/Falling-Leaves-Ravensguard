@@ -5,6 +5,19 @@ public sealed record KitItemDef
 {
     public required string Item { get; init; }
     public int Count { get; init; } = 1;
+    /// <summary>The item quality (crude, poor, common, fine, masterwork); empty is common (P5-A1). An old seven-tier name loads with a warning.</summary>
+    [ItemQualityField] public string? Quality { get; init; }
+}
+
+/// <summary>
+/// Kin an origin starts with (inheritance 3, P5-A4): a relation (<c>child</c>, <c>spouse_dead</c>, <c>parent</c>, <c>sibling</c>), an age range in years and a count range, rolled with
+/// stream 0x560 keyed on the hero seed. A dead spouse is a row that died before the game began; the others are living people of the start settlement.
+/// </summary>
+public sealed record OriginKinDef
+{
+    public required string Rel { get; init; }
+    public List<int> Age { get; init; } = [];
+    public List<int> Count { get; init; } = [];
 }
 
 /// <summary>
@@ -29,4 +42,10 @@ public sealed record OriginDef : ContentDef
     [ContentRef(typeof(AmbitionDef))] public required string Ambition { get; init; }
     /// <summary>The kind of NPC who gives the first small contract (plan §3: a caravan master, a reeve ...).</summary>
     public required string Mentor { get; init; }
+    /// <summary>P5-A4: the hero's age at the start in years, [min, max] (default 22 to 30); rolled with stream 0x560.</summary>
+    public List<int> Age { get; init; } = [];
+    /// <summary>P5-A4: real kin by origin (inheritance 3). Empty: the Phase 4 rule, the grown child of a household of the start region (<c>HeroKin.Choose</c>).</summary>
+    public List<OriginKinDef> Kin { get; init; } = [];
+    /// <summary>P5-A4: the occupation the hero's person row carries (a sim <c>Occupation</c> name); empty is none.</summary>
+    public string Occupation { get; init; } = "";
 }

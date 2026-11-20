@@ -18,11 +18,11 @@
   { "type": "craft_station", "id": "campfire", "name": "Lit fire",  "pieces": [], "provides": { "heat": 2, "cooking": 1 } },
 
   // tools: what a carried item can do
-  { "type": "craft_tool", "id": "knife",   "name": "Knife",   "qualities": { "cutting": 1 } },
-  { "type": "craft_tool", "id": "axe",     "name": "Axe",     "qualities": { "cutting": 1, "chopping": 1 } },
-  { "type": "craft_tool", "id": "saw",     "name": "Saw",     "qualities": { "sawing": 1 } },
-  { "type": "craft_tool", "id": "needle",  "name": "Needle",  "qualities": { "sewing": 1 } },
-  { "type": "craft_tool", "id": "hammer",  "name": "Hammer",  "qualities": { "hammering": 2 } },
+  { "type": "craft_tool", "id": "knife",   "name": "Knife",   "qualities": { "cutting": 1 }, "wear_pm_per_hour": { "cutting": 1 } },
+  { "type": "craft_tool", "id": "axe",     "name": "Axe",     "qualities": { "cutting": 1, "chopping": 1 }, "wear_pm_per_hour": { "cutting": 1, "chopping": 2 } },
+  { "type": "craft_tool", "id": "saw",     "name": "Saw",     "qualities": { "sawing": 1 }, "wear_pm_per_hour": { "sawing": 1.5 } },
+  { "type": "craft_tool", "id": "needle",  "name": "Needle",  "qualities": { "sewing": 1 }, "wear_pm_per_hour": { "sewing": 0.5 } },
+  { "type": "craft_tool", "id": "hammer",  "name": "Hammer",  "qualities": { "hammering": 2 }, "wear_pm_per_hour": { "hammering": 1 } },
   { "type": "craft_tool", "id": "steel_and_flint", "name": "Steel and flint", "qualities": { "fire_starting": 1 } },
   { "type": "craft_tool", "id": "pot",     "name": "Cooking pot", "qualities": { "cooking": 1, "boiling": 1 } },
   { "type": "craft_tool", "id": "quern",   "name": "Quern",   "qualities": { "milling": 1 } },
@@ -30,5 +30,9 @@
   { "type": "craft_tool", "id": "spindle", "name": "Spindle", "qualities": { "spinning": 1 } },
   { "type": "craft_tool", "id": "tongs",   "name": "Smith's tongs", "qualities": { "gripping": 1 } },
   { "type": "craft_tool", "id": "tub",     "name": "Wooden tub", "qualities": { "soaking": 1 } },
-  { "type": "craft_tool", "id": "crock",   "name": "Crock or barrel", "qualities": { "storage": 1 } }
+  { "type": "craft_tool", "id": "crock",   "name": "Crock or barrel", "qualities": { "storage": 1 } },
+  // P5-A1 (items-quality-and-wear 4.3): the appended qualities, and the wear an attended hour takes at Common (permille of condition; the tier's wear_pm scales it)
+  { "type": "craft_tool", "id": "chisel",  "name": "Chisel",  "qualities": { "chiselling": 1, "cutting": 1 }, "wear_pm_per_hour": { "chiselling": 3, "cutting": 3 } },
+  { "type": "craft_tool", "id": "spade",   "name": "Spade",   "qualities": { "digging": 1 }, "wear_pm_per_hour": { "digging": 2 } },
+  { "type": "craft_tool", "id": "crowbar", "name": "Crowbar", "qualities": { "prying": 1, "lifting": 1 }, "wear_pm_per_hour": { "prying": 1, "lifting": 1 } }
 ]

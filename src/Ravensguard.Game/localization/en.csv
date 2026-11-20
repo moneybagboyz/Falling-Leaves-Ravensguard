@@ -2897,6 +2897,19 @@ ld_q_deeds,My deeds and claims
 ld_q_stake_waste,Stake a claim (waste of {0})
 ld_q_stake,Stake a claim here
 ld_char_property,Deeds and claims
+iq_tier_crude,crude
+iq_tier_poor,poor
+iq_tier_fine,fine
+iq_tier_masterwork,masterwork
+iq_named,"{0}, a {1}"
+in_family,Family
+in_family_none,You have no family in this land.
+in_kin_parent,parent
+in_kin_sibling,brother or sister
+in_kin_spouse,husband or wife
+in_kin_child,child
+in_kin_line,"{0}, your {1}, {2}, of {3}"
+in_kin_dead,"{0}, your {1}, died aged {2}"
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."

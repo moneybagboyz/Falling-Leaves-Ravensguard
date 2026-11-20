@@ -152,11 +152,9 @@ public partial class RegionBuildScreen : Control
     /// <summary>The settlement the character starts in: the kind the origin asks for if it is clear of active wars (10 km) and monster lairs (3 km), else any safe one (plan §3f).</summary>
     internal static string ChooseStart(RegionData region, Ravensguard.Content.OriginDef? o)
     {
-        string want = o?.StartLocation ?? "village";
-        SettlementClass cls = want == "town" ? SettlementClass.Town : SettlementClass.Village;
-        var safe = region.Settlements.Where(s => region.IsSafeStart(s.CenterX, s.CenterY)).ToList();
-        var pick = safe.FirstOrDefault(s => s.Class == cls) ?? safe.FirstOrDefault() ?? region.Settlements.FirstOrDefault();
-        return pick?.Name ?? "";
+        // one rule with the sim, so the hero's person row and household stand where the game puts the hero (P5-A4)
+        int s = Ravensguard.Sim.Succession.HeroPerson.StartSettlement(region, o);
+        return s >= 0 ? region.Settlements[s].Name : "";
     }
 
     void Refresh()

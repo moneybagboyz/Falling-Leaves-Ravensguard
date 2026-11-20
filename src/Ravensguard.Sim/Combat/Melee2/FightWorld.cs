@@ -79,7 +79,7 @@ public sealed partial class FightWorld
         {
             var w = kit.Worn[i];
             var a = T.Armour(w.ShapeId, w.MaterialId);
-            worn[i] = WornV2.Of(a, CombatTablesV2.QualityPm[(int)w.Quality], fitCm3: kit.SizeCm3);
+            worn[i] = WornV2.Of(a, T.Qa(w.Quality), fitCm3: kit.SizeCm3);
             int defDensity = a.Shape.DefaultMaterial != null && T.HasMaterial(a.Shape.DefaultMaterial) ? T.Material(a.Shape.DefaultMaterial).DensityKgM3 : a.DensityKgM3;
             armourG += defDensity <= 0 ? a.Shape.MassG : (int)((long)a.Shape.MassG * a.DensityKgM3 / defDensity);
         }

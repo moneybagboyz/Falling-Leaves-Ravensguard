@@ -42,7 +42,7 @@ public class RngStreamsTests
     [Fact]
     public void EveryStreamIsInAKnownBlock_ReadFromTheSource_SoNewStreamsNeverBreakThisTest()
     {
-        // the names and ids come from Core/RngStreams.cs itself (no hand list): weather's 0xC0, Phase 2's 0x200..0x2FF, Phase 3's 0x300..0x3FF and Phase 4's 0x400..0x4FF
+        // the names and ids come from Core/RngStreams.cs itself (no hand list): weather's 0xC0, Phase 2's 0x200..0x2FF, Phase 3's 0x300..0x3FF, Phase 4's 0x400..0x4FF and Phase 5's 0x500..0x5FF
         string text = File.ReadAllText(SourcePath());
         var fromSource = System.Text.RegularExpressions.Regex.Matches(text, @"\b(?<n>[A-Z][A-Za-z0-9]*)\s*=\s*0x(?<v>[0-9A-Fa-f]+)\b")
             .Select(m => (Name: m.Groups["n"].Value, Value: Convert.ToUInt32(m.Groups["v"].Value, 16))).ToList();

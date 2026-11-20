@@ -34,7 +34,8 @@ public sealed class InheritanceRecord
     public SuccessionRule Rule;
     public long Coin;
     public int EstateId;
-    public List<string> DeedsPending = [];
+    /// <summary>The deeds passed (v8: was <c>DeedsPending</c>; empty in every v7 save, and until P5-H settles estates with deeds).</summary>
+    public List<string> Deeds = [];
     public string ReputationPending = "";
     public int GameDay;
     /// <summary>A quest hint for the heir ("recover {name}'s sword"): the shape of the best weapon left on the body, empty when none.</summary>
@@ -64,7 +65,7 @@ public sealed class SuccessionBook
         }
         foreach (var r in Records)
         {
-            L((long)r.From.Value); L((long)r.To.Value); L((long)r.Rule); L(r.Coin); L(r.EstateId); L(r.DeedsPending.Count); L(r.ReputationPending.Length); L(r.GameDay); L(r.RecoverShape.Length); L((long)r.Guardian.Value);
+            L((long)r.From.Value); L((long)r.To.Value); L((long)r.Rule); L(r.Coin); L(r.EstateId); L(r.Deeds.Count); L(r.ReputationPending.Length); L(r.GameDay); L(r.RecoverShape.Length); L((long)r.Guardian.Value);
         }
         L(RunEnded ? 1 : 0); L((long)CurrentHero.Value);
         if (Kin.Count > 0) { L(Kin.Count); foreach (var k in Kin) { L((long)k.Person.Value); L((long)k.Relation); } }   // only a book with kin hashes them (older hashes unchanged)

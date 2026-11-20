@@ -31,7 +31,7 @@ public sealed class V1Adapter
         var w = t.Weapon(input.Weapon.ShapeId, input.Weapon.MaterialId, input.Weapon.Quality);
         if (!_worn.TryGetValue(input.Defender.Worn, out var worn))
         {
-            worn = [.. input.Defender.Worn.Select(i => WornV2.Of(t.Armour(i.ShapeId, i.MaterialId), CombatTablesV2.QualityPm[(int)i.Quality]))];
+            worn = [.. input.Defender.Worn.Select(i => WornV2.Of(t.Armour(i.ShapeId, i.MaterialId), t.Qa(i.Quality)))];
             _worn[input.Defender.Worn] = worn;
         }
         ulong guarded = 0;

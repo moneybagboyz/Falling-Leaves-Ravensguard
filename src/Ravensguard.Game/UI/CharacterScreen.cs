@@ -89,6 +89,14 @@ public partial class CharacterScreen : Control
             var worn = v.Items.Where(x => x.Slot != Ravensguard.Sim.Inventory.EquipSlot.None).Select(x => x.Name.ToLowerInvariant()).ToList();
             left.AddChild(UiKit.Body(L.F("CHAR_WEARING", worn.Count > 0 ? string.Join(", ", worn) : L.T("CHAR_NOTHING")), true));
             left.AddChild(UiKit.Hint(L.F("CHAR_SQUAD", v.Squad.Count(m => m.Active), v.SquadCap, InputBootstrap.Hint("world.panel_squad"))));
+            // P5-A4 (inheritance 6): the hero's family, as the person table has them
+            left.AddChild(UiKit.Hint(L.T("in_family")));
+            if (v.Family.Count == 0) left.AddChild(UiKit.Body(L.T("in_family_none"), true));
+            foreach (var k in v.Family)
+            {
+                string rel = L.T("in_kin_" + k.Relation.ToString().ToLowerInvariant());
+                left.AddChild(UiKit.Body(k.Alive ? L.F("in_kin_line", k.Name, rel, k.Age, k.Place) : L.F("in_kin_dead", k.Name, rel, k.Age), true));
+            }
         }
 
         // ---- right: skills by use

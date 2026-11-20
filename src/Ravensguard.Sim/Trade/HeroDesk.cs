@@ -107,6 +107,9 @@ public sealed record MarketView(int Settlement, string Name, bool Open, int Day,
 public sealed record PersonView(EntityId Id, string Name, int Age, string Trade, int MaxSkill, int Familiarity, int TrustPm, bool ReasonKnown, IReadOnlyList<(ushort Good, long Qty)> Goods,
     long CoinMites, long ReservationWage, long FairOffer, RecruitAnswer RecruitCheck, bool Survive, bool InSquad);
 
+/// <summary>One of the hero's kin for the character screen: name, how related, age (or age at death), alive or not, and where they live.</summary>
+public sealed record KinView(string Name, Ravensguard.Sim.Succession.KinRelation Relation, int Age, bool Alive, string Place);
+
 /// <summary>A tracked skill as the character sheet shows it: the level in micro-levels and the second it was last used.</summary>
 public readonly record struct SkillRow(Skill Skill, long Micro, long LastGainSec);
 
@@ -140,6 +143,8 @@ public sealed record HeroView
     public int SquadCap { get; init; } = 2;
     public CraftState? Crafting { get; init; }
     public IReadOnlyList<HeroResult> Results { get; init; } = [];
+    /// <summary>P5-A4: the hero's kin as the person table has them (the character screen's family: inheritance 6).</summary>
+    public IReadOnlyList<KinView> Family { get; init; } = [];
     public int Day => (int)(HourDone / 24);
 }
 
@@ -179,11 +184,28 @@ public sealed class HeroContext
             if (p == party.Hero) return hero?.Skill(HeroRecord.SkillId(s)) ?? 0;
             int i = people.IndexOf(p); return i >= 0 ? people.SkillLevelOf(i, s) : 0;
         };
-        Craft = new CraftRunner(Recipes, e, cs, state.Seed, state.Ids, o => o == party.Hero ? party.Carried.Pack(e) : e.OtherStores.GetValueOrDefault(o));
+        Craft = new CraftRunner(Recipes, e, cs, state.Seed, state.Ids, o => o == party.Hero ? party.Carried.Pack(e) : e.OtherStores.GetValueOrDefault(o))
+        {
+            // P5-A1: a masterwork may be a named artefact, with its chronicle line and its maker's name
+            Content = content, Chronicle = state.Chronicle, Tiers = QualityTiers.From(content),
+            NameOf = p => { if (p == party.Hero) return state.Hero?.Name ?? ""; int i = people.IndexOf(p); return i >= 0 ? people.FullName(i) : ""; },
+        };
         Purse = e.Ledger.Open(PurseKind.Person, party.Hero);
     }
 
     public Store Pack => Party.Carried.Pack(Econ);
+    /// <summary>P5-A1: tool wear by the content's rates and the quality scale.</summary>
+    public ToolWear ToolWear => _toolWear ??= new ToolWear(Content);
+    private ToolWear? _toolWear;
+    /// <summary>A material's category (metal, wood, cloth, leather...), for scrap.</summary>
+    public string? MaterialCategory(string material) => Content.TryGet<MaterialDef>(material, out var m) ? m.Category : null;
+    /// <summary>P5-A4: the craft tools the hero's pack really holds (item rows and goods whose shape is a <c>craft_tool</c>; a dagger cuts as a knife).</summary>
+    public List<string> PackTools()
+    {
+        var e = Econ;
+        var shapes = Party.Carried.Rows(e).Select(i => e.Items.At(i).Shape).Concat(Pack.Rows().Where(x => x.Qty > 0).Select(x => e.Goods.StringId(x.Good)));
+        return HeroPack.Tools(shapes, Recipes.Tools.ContainsKey);
+    }
     public MarketParty HeroMarketParty => new(Party.Hero, Purse, Pack, PartyKind.Household, int.MaxValue);
     public long Coin => Econ.Ledger.Balance(Purse).Mites;
     /// <summary>True when <paramref name="region"/> names a resident region other than the hero's own.</summary>
@@ -285,8 +307,18 @@ public sealed class HeroDesk
         }
         if (_results.Count > 40) _results.RemoveRange(0, _results.Count - 40);
         _craftDirty = true;                                  // any command may touch the crafting state (a skill use, a job)
+        MirrorHero(ctx);
         if (publish) Publish(ctx, hourDone);
         return due.Count;
+    }
+
+    /// <summary>P5-A4: the hero's person row mirrors the record at the barrier (one direction, hero to row: attributes and the four best skills).</summary>
+    private static void MirrorHero(HeroContext ctx)
+    {
+        if (ctx.Hero is not { } h) return;
+        var pt = ctx.State.Population.People;
+        int row = Ravensguard.Sim.Succession.HeroPerson.RowOf(pt, h, ctx.Party.Hero);
+        if (row >= 0) Ravensguard.Sim.Succession.HeroPerson.Mirror(pt, row, h);
     }
 
     /// <summary>
@@ -304,6 +336,7 @@ public sealed class HeroDesk
             }
         ctx.Party.Carried.Tidy(ctx.Econ);
         ApplyDue(ctx, h, publish: false);
+        MirrorHero(ctx);
         Publish(ctx, h);
     }
 
@@ -791,6 +824,7 @@ public sealed class HeroDesk
         var r = ctx.Recipes[c.Recipe];
         if (!ctx.Craft.State.Know.Knows(r, ctx.Party.Hero, ctx.Craft.State.Book)) return R(c, HeroResultCode.NotKnown, T("HERO_DO_NOT_KNOW_HOW"));
         var site = (c.Site ?? new CraftSiteSpec(255, true, [], [], [])).Build(ctx.Recipes);
+        foreach (var t in ctx.PackTools()) site.AddTool(ctx.Recipes, t);                      // P5-A4: the tools really in the pack count, whatever the screen sent
         var plan = ctx.Craft.Plan(r, ctx.Actor(), site, ctx.Pack, Math.Max(1, c.Batch), c.Choice);
         if (!plan.CanStart) return R(c, HeroResultCode.NoStock, T("HERO_LACK_WHAT_NEEDS"));
         var job = ctx.Craft.Start(plan, ctx.Actor(), ctx.Party.Hero, ctx.Pack, c.IssuedSec, c.X, c.Y);
@@ -805,10 +839,33 @@ public sealed class HeroDesk
         if (j == null || j.Closed || j.Owner != ctx.Party.Hero) return R(c, HeroResultCode.Invalid, HeroText.Empty);
         long from = ctx.Party.WorkedTo.GetValueOrDefault(j.Id, c.UntilSec);
         if (j.State != CraftJobState.Active || c.UntilSec <= from) { ctx.Party.WorkedTo[j.Id] = Math.Max(from, c.UntilSec); return R(c, HeroResultCode.Ok, HeroText.Empty); }
-        var ev = ctx.Craft.Advance(j, c.UntilSec - from, from);
+        long worked = c.UntilSec - from;
+        var ev = ctx.Craft.Advance(j, worked, from);
+        WearTools(ctx, ctx.Recipes[j.Recipe], worked);
         ctx.Party.WorkedTo[j.Id] = c.UntilSec;
         if (j.Closed) ctx.Party.WorkedTo.Remove(j.Id);
         return CraftEvents(ctx, c, ev, HeroText.Empty);
+    }
+
+    /// <summary>
+    /// P5-A1 (items-quality-and-wear 4.3): the attended seconds wear the pack's tool rows the recipe used (for each tool quality, the first row in pack order whose shape is a craft tool with
+    /// a wear rate for it); a tool worn to 0 breaks into scrap in the pack. Tools at a station and in a business are P5-E's (crafting-full 4.1).
+    /// </summary>
+    private static void WearTools(HeroContext ctx, Ravensguard.Sim.Crafting.CraftRecipe r, long seconds)
+    {
+        if (seconds <= 0 || r.Tools.Length == 0) return;
+        var e = ctx.Econ; var rows = ctx.Party.Carried.Rows(e).ToList();
+        foreach (var need in r.Tools)
+            foreach (int row in rows)
+            {
+                if (e.Items.At(row).Id == EntityId.None || ctx.ToolWear.MilliPerHour(e.Items.At(row).Shape, need.Quality) <= 0) continue;
+                if (ctx.ToolWear.Use(e.Items, row, need.Quality, seconds, ctx.Pack, ctx.MaterialCategory))
+                {
+                    var gone = ctx.Party.Carried.Equip.Keys.Where(k => !e.Items.IsLive(k)).ToList();
+                    foreach (var k in gone) ctx.Party.Carried.Equip.Remove(k);
+                }
+                break;
+            }
     }
 
     private HeroResult CraftPause(HeroContext ctx, HeroCommand c)
@@ -875,8 +932,24 @@ public sealed class HeroDesk
             WornCapacityMl = wornCap, WornVolumeMl = wornUsed,
             Skills = skills, Attributes = attrs, AttrMilli = (int[])party.AttrMilli.Clone(), Notes = [.. party.Notebook.Notes], BookNames = names, Traded = [.. party.Traded], Market = mv, Person = pv,
             Squad = [.. party.Squad.Members.Select(FollowerRow.Of).Select(r => r.Restore())], SquadCap = Recruiting.SquadCap(ctx.Trade, leadership),
-            Crafting = CraftCopy(ctx, hourDone), Results = [.. _results],
+            Crafting = CraftCopy(ctx, hourDone), Results = [.. _results], Family = FamilyOf(ctx, (int)(hourDone / 24)),
         };
+    }
+
+    /// <summary>The hero's kin rows, in the order the succession book keeps them.</summary>
+    private static List<KinView> FamilyOf(HeroContext ctx, int day)
+    {
+        var list = new List<KinView>();
+        var pt = ctx.State.Population.People; var region = ctx.State.Population.Region;
+        foreach (var k in ctx.State.Succession?.Kin ?? [])
+        {
+            int i = pt.IndexOf(k.Person); if (i < 0) continue;
+            bool alive = pt.Status[i] == PersonStatus.Alive;
+            int age = alive ? pt.AgeYears(i, day) : pt.DeathDay[i] >= 0 ? pt.AgeYears(i, pt.DeathDay[i]) : pt.AgeYears(i, day);
+            int s = pt.HomeSettlement[i];
+            list.Add(new KinView(pt.FullName(i), k.Relation, age, alive, s >= 0 && s < region.Settlements.Count ? region.Settlements[s].Name : ""));
+        }
+        return list;
     }
 
     // ------------------------------------------------------------------ the view's heavy parts, kept between barriers (review finding 15)

@@ -91,6 +91,17 @@ public static class SuccessionDesk
         var carried = ctx.Party.Carried;
         carried.Equip.Clear(); carried.GoodIn.Clear(); Array.Clear(carried.QuickBar);
         string deadName = st.Hero?.Name ?? "";
+        // P5-A4: the dead hero's person row is dead (the row stays, as every dead person's does); the household the hero headed passes to its eldest member
+        int deadRow = HeroPerson.RowOf(pt, st.Hero, ctx.Party.Hero);
+        if (deadRow >= 0)
+        {
+            pt.Status[deadRow] = PersonStatus.Dead; pt.DeathDay[deadRow] = day; pt.DeathCause[deadRow] = DeathCause.Other;
+            int sp = pt.Spouse[deadRow]; if (sp >= 0 && sp < pt.Count && pt.Spouse[sp] == deadRow) pt.Spouse[sp] = -1;
+            var hht = st.Population.Households; int hhd = pt.Household[deadRow];
+            if (hhd >= 0 && hhd < hht.Count && hht.Head[hhd] == deadRow)
+                hht.Head[hhd] = hht.Members(hhd).Where(m => m >= 0 && m < pt.Count && pt.Status[m] == PersonStatus.Alive).OrderBy(m => pt.BirthDay[m]).ThenBy(m => m).DefaultIfEmpty(-1).First();
+            st.Population.ResetKin();
+        }
         // a hero who died held (wounds bleed on in captivity, review finding 3): the captive is dead, so the heir, who takes up the same hero id, is not held
         if (st.Captivity is { } cb && cb.Find(ctx.Party.Hero) is { Held: true } cap)
         {
@@ -109,6 +120,7 @@ public static class SuccessionDesk
         HeroRecord hero;
         if (row >= 0 && row < pt.Count) hero = SuccessionOrder.HeroFrom(pt, row, heir.Name);
         else hero = new HeroRecord { Name = heir.Name, Origin = "heir", Attributes = [50, 50, 50, 50, 50], Skills = HeroRecord.SkillIds.ToDictionary(s => s, _ => 0) };
+        bool heroRows = deadRow >= 0;
         var stay = SuccessionOrder.Stay(SquadOf(ctx.Party, pt), HeroKin.People(book.Kin), heir.Person);
         foreach (var m in ctx.Party.Squad.Members)
             if (m.Active && (m.Person == heir.Person || !stay.Contains(m.Person))) m.State = m.Person == heir.Person ? HireState.Ended : HireState.Dismissed;
@@ -122,6 +134,8 @@ public static class SuccessionDesk
                 Demography.Depart(sim, row, new GameTime(c.IssuedSec), ob);
                 ob.ApplyTo(st.Chronicle, null, new Dictionary<string, long>(StringComparer.Ordinal));
             }
+            // P5-A4: in a world where the hero is a row, the heir's row is the hero's now (not a villager who left: never brought back by migration)
+            if (heroRows && pt.Status[row] is PersonStatus.Alive or PersonStatus.Departed) { pt.Status[row] = PersonStatus.Hero; hero.PersonIndex = row; HeroPerson.Mirror(pt, row, hero); }
         }
         st.Hero = hero;
         Array.Clear(ctx.Party.AttrMilli);

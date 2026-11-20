@@ -12,7 +12,8 @@ public sealed class SaveMigrator
     /// The game's migrations. v1 -> v2: v1 saves have no baseline guard (empty hashes) and are loaded unguarded; their format is otherwise unchanged (every v2 key is additive),
     /// so the step only re-stamps the version. A v1 save made while a region without people held chunks lost those chunks (fixed in v2); nothing can recover them.
     /// </summary>
-    public static SaveMigrator CreateDefault() => new SaveMigrator().Register(1, _ => { }).Register(2, MigrateSkillsV3).Register(3, MigrateChunkPaletteV4).Register(4, _ => { }).Register(5, MigrateWeaponFamiliesV6).Register(6, MigrateMoraleV7);
+    public static SaveMigrator CreateDefault() => new SaveMigrator().Register(1, _ => { }).Register(2, MigrateSkillsV3).Register(3, MigrateChunkPaletteV4).Register(4, _ => { }).Register(5, MigrateWeaponFamiliesV6).Register(6, MigrateMoraleV7)
+        .Register(7, MigratePhase5V8);
 
     /// <summary>
     /// v2 -> v3: the Skill enum gained seven entries at its end, so the hero's skill lists (parallel arrays of ids and levels) gain them at level 0. People rows store skills as the enum's byte values, which
@@ -84,6 +85,44 @@ public sealed class SaveMigrator
         if (rec.Morale != null) return;
         rec.Morale = [];          // an empty table: every fighter's morale is initialised from its kit on the next step
         sections[FightRecord.SectionName] = SaveCodec.SerializeCompressed(rec);
+    }
+
+    /// <summary>
+    /// The old DF scale's byte (Standard 0, WellCrafted 1, FinelyCrafted 2, Superior 3, Exceptional 4, Masterwork 5, Artifact 6) as the one scale's (<c>ItemQuality</c>: Crude 0, Poor 1, Common 2,
+    /// Fine 3, Masterwork 4), through the content alias map (items-quality-and-wear 6): standard and well crafted are common, finely crafted, superior and exceptional fine, masterwork and
+    /// artifact masterwork. Without it a v7 byte 0 would read as Crude.
+    /// </summary>
+    public static byte QualityV8(byte old) => old switch { 0 or 1 => 2, 2 or 3 or 4 => 3, _ => 4 };
+
+    /// <summary>
+    /// v7 -> v8 (Phase 5 step 1, the one migrator step of the phase: overview 7). Three stored meanings change:
+    /// (1) P5-A1: a fight record's quality bytes (each fighter's weapon, key 6; the weapon now held, key 25; the worn pieces, key 10) are remapped from the DF scale to <c>ItemQuality</c>
+    /// (<see cref="QualityV8"/>; item rows always stored <c>ItemQuality</c> and keep their bytes);
+    /// (2) P5-A4: the hero becomes a person row: the hero section's <c>PersonIndex</c> is set to pending, and the load inserts the row and the hero's household from the Phase 4 kin links
+    /// (<see cref="Ravensguard.Sim.Succession.HeroPerson.InsertForLoad"/>: it needs the regenerated people, which a section step does not have); an inheritance record's <c>DeedsPending</c>
+    /// is now <c>Deeds</c> (the same key, empty in every v7 save);
+    /// (3) the hook for P5-G (vehicle-designer 3.3, not part of step 1): the "mounts" section's vehicle rows keep <c>WheelPm</c> here. When part rows land they are additive keys on the
+    /// vehicle row, and a v8 row without them is expanded from its template at load, so P5-G needs no second step; if it cannot be additive, P5-G registers a v8 -> v9 step here.
+    /// </summary>
+    private static void MigratePhase5V8(IDictionary<string, byte[]> sections)
+    {
+        if (sections.TryGetValue(FightRecord.SectionName, out var fb) && fb.Length > 0)
+        {
+            var rec = SaveCodec.DeserializeCompressed<FightRecord>(fb);
+            foreach (var f in rec.Fighters)
+            {
+                f.WeaponQuality = QualityV8(f.WeaponQuality);
+                f.NowQuality = QualityV8(f.NowQuality);
+                f.WornQualities = [.. f.WornQualities.Select(QualityV8)];
+            }
+            sections[FightRecord.SectionName] = SaveCodec.SerializeCompressed(rec);
+        }
+        if (sections.TryGetValue(WorldSave.HeroSection, out var hb))
+        {
+            var hero = SaveCodec.Deserialize<Ravensguard.Sim.Characters.HeroSave>(hb);
+            hero.PersonIndex = Ravensguard.Sim.Succession.HeroPerson.Pending;
+            sections[WorldSave.HeroSection] = SaveCodec.Serialize(hero);
+        }
     }
 
     public SaveMigrator Register(int fromVersion, Action<IDictionary<string, byte[]>> step)

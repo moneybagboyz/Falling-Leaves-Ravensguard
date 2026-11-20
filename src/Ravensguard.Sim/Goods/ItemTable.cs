@@ -2,7 +2,9 @@ using Ravensguard.Sim.Core;
 
 namespace Ravensguard.Sim.Goods;
 
-[Flags] public enum ItemFlags : byte { None = 0, Stained = 1, Burning = 2, Wet = 4, Repaired = 8, Stolen = 16 }
+/// <summary>Item flags. Appended in Phase 5 (items-quality-and-wear, overview 8.1): <see cref="Named"/> (a named artefact), <see cref="Oiled"/> (no rust for 30 days),
+/// <see cref="Brittle"/> (an untempered blade, crafting-full 4.3). The byte is now full: the next flag widens it with a save migration.</summary>
+[Flags] public enum ItemFlags : byte { None = 0, Stained = 1, Burning = 2, Wet = 4, Repaired = 8, Stolen = 16, Named = 32, Oiled = 64, Brittle = 128 }
 
 /// <summary>One part of an item: the material (content id), its mass in grams and its own condition (items spec 2.3).</summary>
 public readonly record struct ItemComponent(string Material, int MassG, short ConditionPermille);
@@ -100,7 +102,7 @@ public sealed class ItemTable
         var r = _rows[row]; long basis = 0;
         for (int k = 0; k < r.ComponentCount; k++) { var c = _components[r.ComponentStart + k]; basis += ItemMath.MaterialMites(c.MassG, valueCrownsPerKg(c.Material)); }
         basis += ItemMath.LabourMites(r.LabourHours, wageMitesPerHour, r.Skill);
-        return ItemMath.ValueMites(basis, r.Quality, r.ConditionPermille, r.Stains);
+        return ItemMath.ValueMites(basis, r.Quality, r.ConditionPermille, r.Stains, r.Wear);
     }
 
     // ---- save support: live rows only, in row order, with parents remapped (the Compact of items spec 4) ----
