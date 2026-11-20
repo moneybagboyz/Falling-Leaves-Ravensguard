@@ -69,7 +69,7 @@ public sealed partial class ConstructionWorld
         {
             long t0 = Book.AdvancedSec;
             // P5-D: deferred quanta are applied before anything that reads or changes every site (an hour's turn: escrow, pay, the rain; a groan that may fall)
-            if (t0 % 3600 == 0 || Book.Groans.Count > 0) SettleAll(q);
+            if (Book.Groans.Count > 0 || (t0 % 3600 == 0 && (((t0 % 86400) + 86400) % 86400 == Rules.DayStartHour * 3600L || ((t0 % 86400) + 86400) % 86400 == (Rules.DayStartHour + Rules.DayHours) * 3600L))) SettleAll(q);
             changed |= ResolveGroans(t0 + q - 1);
             long tod = ((t0 % 86400) + 86400) % 86400;
             long day = t0 / 86400;
@@ -93,7 +93,6 @@ public sealed partial class ConstructionWorld
     private long _advLimit;
     /// <summary>Diagnostics: site quanta walked in full, and deferred and applied at once.</summary>
     public long DiagFullQuanta, DiagLinearQuanta, DiagSyncTicks, DiagLinTicks;
-    public readonly long[] DiagX = new long[4];
 
     /// <summary>Applies every site's deferred quanta (and forgets their spans): before an hour's turn, a groan, the end of an advance.</summary>
     private void SettleAll(long q)
@@ -118,7 +117,15 @@ public sealed partial class ConstructionWorld
             g.WorkDone = Math.Min(g.WorkNeed, g.WorkDone + Units(q, m.Tm, m.Tp) * d);
             g.Builder = m.Person; g.BuiltSkill = m.C!.Skill == Skill.None ? 50 : (1300 - m.Tm) / 6;
             if (g.State != GhostState.Blocked) g.State = GhostState.InProgress;
-            m.WorkedTodaySec += q * d; m.SkillSec += q * d;
+            m.WorkedTodaySec += q * d;
+            if (m.C.Skill != Skill.None) { m.SkillSec += q * d; continue; }
+            // an unskilled piece: the hours of Athletics gained on the way, each at the end of its quantum as the full walk gains them (the rate does not depend on the skill)
+            var c = m.C;
+            for (int j = 0; j < d; j++)
+            {
+                m.SkillSec += q;
+                while (m.SkillSec >= 3600) { m.SkillSec -= 3600; Train?.Invoke(m.Person, Skill.Athletics, Rules.UnskilledGainDx100, c.Difficulty, s.LinearFrom + (j + 1) * q); }
+            }
         }
     }
 
@@ -133,10 +140,12 @@ public sealed partial class ConstructionWorld
     {
         works = false;
         if (Eager || Book.Groans.Count > 0) return 0;
-        long t1 = t0 + q, lim = Math.Min((t0 / 3600 + 1) * 3600, _advLimit);
-        long k = (lim - t1) / q;
-        if (k <= 0) return 0;
+        long t1 = t0 + q, hourEnd = (t0 / 3600 + 1) * 3600;
+        long k = (Math.Min(hourEnd, _advLimit) - t1) / q;
+        if (k <= 0 && hourEnd >= _advLimit) return 0;
         long pileG = -1;
+        bool cross = true;                              // the span may run on past the hour's end: nobody idle (an idle hand looks again at each hour), no contract, the same rain
+        k = long.MaxValue;
         _lin.Clear();
         foreach (var m in s.Crew)
         {
@@ -148,17 +157,28 @@ public sealed partial class ConstructionWorld
                 if (!_idle.TryGetValue(m.Person, out var was)) return 0;
                 if (pileG < 0) pileG = PileOf(s).TotalMassG();
                 if (was.Version != _siteVersion.GetValueOrDefault(s.Id) || was.PileG != pileG || was.Rain != raining) return 0;
+                cross = false;
                 continue;
             }
             if (m.G is not { } g || g.Id != m.Ghost || !g.Live || g.State == GhostState.Blocked || m.Tm == 0 || m.C == null) return 0;
             if (g.Work == GhostWork.Build && (!g.Materialised || WeatherStops(g, CostOf(g), raining))) return 0;
-            k = Math.Min(k, (3599 - m.SkillSec) / q);
+            if (m.C.Skill != Skill.None) k = Math.Min(k, (3599 - m.SkillSec) / q);         // a skilled hand's hour of skill may change his rate: walked in full
             if (m.DayCapSec > 0) k = Math.Min(k, (m.DayCapSec - m.WorkedTodaySec) / q);
             if (k <= 0) return 0;
             _lin.Add((g, m, Units(q, m.Tm, m.Tp)));
         }
+        // how far the span may run: this hour, or on through the following hours of the working day while the rain does not change (spans never pass an advance's end)
+        long lim = hourEnd;
+        if (cross && (Book.Contracts.Count == 0 || ContractOf(s.Id) == null))
+        {
+            long dayEnd = t0 / 86400 * 86400 + (Rules.DayStartHour + Rules.DayHours) * 3600L;
+            while (lim < dayEnd && lim < _advLimit && RainStops(lim) == raining) lim += 3600;
+            RainStops(t0);
+        }
+        k = Math.Min(k, (Math.Min(lim, _advLimit) - t1) / q);
+        if (k <= 0) return 0;
         works = _lin.Count > 0;
-        if (!works) return (int)k;
+        if (!works) return (int)Math.Min(k, (Math.Min(hourEnd, _advLimit) - t1) / q);
         // The first quantum in which a hand would finish his piece is walked in full. Hand i on a piece (hire order) sees, in quantum j, R - (j - 1) S - P_i left (R what is left now, S
         // the units all its hands add in a quantum, P_i those of the hands before him); he finishes when that is at most his threshold (SecondsFor(left) <= q).
         for (int i = 0; i < _lin.Count && k > 0; i++)
@@ -187,16 +207,23 @@ public sealed partial class ConstructionWorld
         foreach (var s in _siteList)
         {
             if (!s.Open || s.Crew.Count == 0 || s.Pause == PauseReason.Owner) continue;
-            if (s.LinearUntil > t0) { s.Deferred++; any |= s.LinearWorks; continue; }      // P5-D: a linear quantum, applied later at once
+            if (s.LinearUntil > t0) { if (s.Deferred++ == 0) s.LinearFrom = t0; any |= s.LinearWorks; continue; }      // P5-D: a linear quantum, applied later at once
             if (s.Deferred > 0) Settle(s, q);
-            DiagFullQuanta++;
             // P5-D: a contractor's crew starts its day late by the day's pace jitter (0x511): nothing happens on the site until then
             long late = LateStart(s, t0);
             if (late > t0)
             {
+                DiagFullQuanta++;
                 s.LinearUntil = Eager ? 0 : Math.Min(Math.Min(late / q * q, (t0 / 3600 + 1) * 3600), _advLimit); s.LinearWorks = false;
                 continue;
             }
+            // P5-D: a site already linear as the last advance left it (every hand on his piece, the same weather) defers this quantum too, without a full walk first
+            if (s.Pause != PauseReason.Rain && LinearQuanta(s, t0 - q, q, raining, out bool pre) is int k0 and > 0)
+            {
+                s.LinearUntil = t0 + k0 * q; s.LinearWorks = pre; s.Deferred = 1; s.LinearFrom = t0; any |= pre;
+                continue;
+            }
+            DiagFullQuanta++;
             bool dirty = false, worked = false, rainBlocked = false, removed = false;
             long pileG = -1;
             _finished.Clear();
@@ -232,7 +259,7 @@ public sealed partial class ConstructionWorld
                         g = Pick(s, m, raining, ref rainBlocked);
                         DiagPickTicks += System.Diagnostics.Stopwatch.GetTimestamp() - pt0;
                         if (g == null) break;
-                        long bg0 = System.Diagnostics.Stopwatch.GetTimestamp(); bool began = Begin(s, g); DiagX[0] += System.Diagnostics.Stopwatch.GetTimestamp() - bg0; if (!began) { m.Ghost = default; m.G = null; dirty = true; continue; }
+                        if (!Begin(s, g)) { m.Ghost = default; m.G = null; dirty = true; continue; }
                         m.Ghost = g.Id;
                     }
                     else if (!g.Materialised && !Begin(s, g)) { m.Ghost = default; m.G = null; dirty = true; continue; }
@@ -242,9 +269,9 @@ public sealed partial class ConstructionWorld
                         m.Tm = PieceCosts.TimeMultPm(m.C, SkillLevel(m.Person, m.C.Skill, m.PersonIndex));
                         m.Tp = ToolsOk(m.C, m.Class == CrewClass.Skilled ? _skilledTools ??= CrewTools(CrewClass.Skilled) : _labourTools ??= CrewTools(CrewClass.Labourer)) ? 1000 : Rules.NoToolPm;
                     }
-                    long wo0 = System.Diagnostics.Stopwatch.GetTimestamp(); long w = WorkOn(g, m, left, out bool done);
+                    long w = WorkOn(g, m, left, out bool done);
                     left -= w; m.WorkedTodaySec += w; worked = true; any = true;
-                    GainSkill(m, g, w, t0 + (full - left)); DiagX[1] += System.Diagnostics.Stopwatch.GetTimestamp() - wo0;
+                    GainSkill(m, g, w, t0 + (full - left));
                     if (done)
                     {
                         if (g.Work == GhostWork.Build) _finished.Add(ConstructionIds.CellKey(g.X, g.Y, g.Z)); else removed = true;
@@ -346,7 +373,7 @@ public sealed partial class ConstructionWorld
     {
         if (g.Work != GhostWork.Build || g.Materialised) return true;
         var c = CostOf(g);
-        if (!PileHas(s, c)) { g.Block = GhostBlock.Materials; g.State = GhostState.Blocked; return false; }
+        if (!PileHas(s, c)) { g.Block = GhostBlock.Materials; g.State = GhostState.Blocked; s.FastOk = false; return false; }
         var pile = PileOf(s); var own = Econ.OpenStore(StoreKind.Open, g.Id);
         foreach (var (good, grams) in c.Materials) Store.Move(pile, own, Econ.Goods.IdOf(good), grams);
         g.Materialised = true; g.State = GhostState.InProgress;
@@ -390,7 +417,7 @@ public sealed partial class ConstructionWorld
         {
             m.SkillSec -= 3600;
             Train?.Invoke(m.Person, c.Skill == Skill.None ? Skill.Athletics : c.Skill, c.Skill == Skill.None ? Rules.UnskilledGainDx100 : Math.Max(25, c.Difficulty) * 2, c.Difficulty, sec);
-            m.Tm = 0;                                                                 // a skill gained: the rate is read again
+            if (c.Skill != Skill.None) m.Tm = 0;                                     // a skill gained: the rate is read again (P5-D: an unskilled piece's rate never changes)
         }
     }
 

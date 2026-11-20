@@ -32,9 +32,8 @@ public sealed class PieceCost
     public int Difficulty => MinSkill + 20;
     public long TotalGrams => Materials.Sum(m => m.Grams);
 
-    // P5-D: the engine's memo for one pick or refresh (whether the site's pile holds this piece's materials), keyed by a stamp; derived, never saved
-    internal long PileMemoStamp;
-    internal bool PileMemo;
+    /// <summary>P5-D: a dense index of the piece among the content's (a world's per-piece memo; the costs are shared by every world of the content).</summary>
+    internal int Index;
 }
 
 /// <summary>The piece costs of the loaded content (spec 3.1) and the sums of a plan (BC-2).</summary>
@@ -54,6 +53,7 @@ public sealed class PieceCosts
             var b = p.Build;
             _by[p.Id] = new PieceCost
             {
+                Index = _by.Count,
                 Id = p.Id, Kind = p.Kind, Name = p.Name, HasBuild = b != null,
                 Skill = SkillOf(b?.Skill), MilliHours = (long)Math.Round((b?.WorkerHours ?? 1.0) * 1000.0),
                 Tools = b == null ? [] : b.Tools.Select(t => (t.Quality, t.Level)).ToArray(),

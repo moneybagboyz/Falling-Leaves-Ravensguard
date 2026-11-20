@@ -17,6 +17,7 @@ public class ConstructionCheapPathTests(ITestOutputHelper output)
     {
         var r = ConstructionRig.Make(crowns: 100_000);
         r.W.Eager = eager;
+        r.W.VerifyRefresh = eager;                                     // the full walk also checks every quick refresh against a full one
         r.W.Weather = h => (h % 7 == 3 || h % 11 == 5 ? 50 : 0, 12);
         long t = ConstructionRig.Day10;
         for (int i = 0; i < 30; i++)
@@ -65,7 +66,7 @@ public class ConstructionCheapPathTests(ITestOutputHelper output)
         r.W.AdvanceTo(end);
         rig = r;
         r.AssertMass(); r.AssertCoin();
-        return r.W.Book.ComputeHash() + "|" + string.Join(",", r.Trained.Select(x => $"{x.P.Value}:{x.S}:{x.Sec}")) + "|" + string.Join(",", r.Chron.Select(c => $"{c.Type}@{c.Sec}"))
+        return r.W.Book.ComputeHash() + "|" + string.Join(",", r.Trained.OrderBy(x => x.P.Value).ThenBy(x => x.Sec).ThenBy(x => x.S).Select(x => $"{x.P.Value}:{x.S}:{x.Sec}")) + "|" + string.Join(",", r.Chron.Select(c => $"{c.Type}@{c.Sec}"))
             + "|" + r.Econ.Ledger.Audit().InPurses.Mites;
     }
 

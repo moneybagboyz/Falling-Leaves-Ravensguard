@@ -287,6 +287,8 @@ public sealed partial class ConstructionWorld
         {
             var s = Site(c.Site);
             if (s == null) continue;
+            if (s.Deferred > 0) Settle(s, Math.Max(1, Rules.QuantumSeconds));          // the cheap path's deferred quanta first: a stage reads the work done
+            s.LinearUntil = 0;
             switch (c.State)
             {
                 case ContractState.Open:

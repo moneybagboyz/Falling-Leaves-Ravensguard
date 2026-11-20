@@ -60,7 +60,13 @@ public sealed class ConstructionSite
     // no skill gained, nobody idle who could find work); those quanta are deferred and applied at once (Settle) before anything else reads or changes the site.
     internal long LinearUntil;
     internal int Deferred;
+    internal long LinearFrom;
     internal bool LinearWorks;
+    // P5-D: what the last full refresh left, for the quick refresh after pieces are finished (derived, never saved)
+    internal List<Ghost>? SupportWait;
+    internal List<(PieceCost C, bool Ok)>? PileSeen;
+    internal int ReadyCount, MatCount;
+    internal bool FastOk;
 }
 
 /// <summary>One person on a site's crew.</summary>

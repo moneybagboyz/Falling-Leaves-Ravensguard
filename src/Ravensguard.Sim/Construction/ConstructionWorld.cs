@@ -377,6 +377,7 @@ public sealed partial class ConstructionWorld
     private void CancelGhost(Ghost g)
     {
         var s = Site(g.Site);
+        if (s != null) s.FastOk = false;                                   // P5-D: the quick refresh's counts no longer hold
         if (s != null && g.Materialised && g.Work == GhostWork.Build && Econ.OtherStores.TryGetValue(g.Id, out var st))
             foreach (var (good, qty) in st.Rows()) Store.Move(st, PileOf(s), good, qty);
         g.State = GhostState.Cancelled;
@@ -438,11 +439,14 @@ public sealed partial class ConstructionWorld
     }
 
     // P5-D: one pick or refresh asks the pile about each kind of piece once (the answer cannot change inside it)
-    private long _memoStamp;
+    private long _memoStamp = 1;
+    private long[] _memoAt = [];
+    private bool[] _memoOk = [];
     private Store? _memoPile;
     private bool PileHasMemo(ConstructionSite s, PieceCost c)
     {
-        if (c.PileMemoStamp == _memoStamp) return c.PileMemo;
+        if (c.Index >= _memoAt.Length) { Array.Resize(ref _memoAt, Costs.All.Count() + 1); Array.Resize(ref _memoOk, _memoAt.Length); }
+        if (_memoAt[c.Index] == _memoStamp) return _memoOk[c.Index];
         var ids = MaterialIds(c);
         bool ok = true;
         if (ids.Length > 0)
@@ -450,10 +454,15 @@ public sealed partial class ConstructionWorld
             var pile = _memoPile ??= PileOf(s);
             foreach (var (g, grams) in ids) if (g == ushort.MaxValue || pile.Qty(g) < grams) { ok = false; break; }
         }
-        c.PileMemoStamp = _memoStamp; c.PileMemo = ok;
+        _memoAt[c.Index] = _memoStamp; _memoOk[c.Index] = ok;
+        _memoTrack?.Add((c, ok));
         return ok;
     }
     private void NewMemo() { _memoStamp++; _memoPile = null; }
+    private List<(PieceCost C, bool Ok)>? _memoTrack;
+
+    /// <summary>For tests: after each quick refresh, a full one must leave every ghost and the site as it was (ConstructionCheapPathTests).</summary>
+    public bool VerifyRefresh { get; set; }
 
     /// <summary>Recomputes the states of a site's ghosts: what is ready (support built, materials in the pile), what waits and why, and the site's own pause.</summary>
     public void Refresh(ConstructionSite s) => Refresh(s, null);
@@ -464,45 +473,84 @@ public sealed partial class ConstructionWorld
     /// </summary>
     public void Refresh(ConstructionSite s, IReadOnlyList<long>? built)
     {
-        Touch(s);
+        if (built != null && s.FastOk && QuickRefresh(s, built))
+        {
+            if (VerifyRefresh) Verify(s, built);
+            return;
+        }
+        FullRefresh(s, built);
+    }
+
+    private void Verify(ConstructionSite s, IReadOnlyList<long> built)
+    {
+        var want = SetOf(s.Id).AsEnumerable().Select(g => (g.Id, g.Block, g.State)).ToList(); var pause = s.Pause; var state = s.State;
+        long v = _siteVersion.GetValueOrDefault(s.Id);
+        FullRefresh(s, built);
+        _siteVersion[s.Id] = v;
+        var got = SetOf(s.Id).AsEnumerable().Select(g => (g.Id, g.Block, g.State)).ToList();
+        if (!want.SequenceEqual(got) || pause != s.Pause || state != s.State)
+        {
+            var diff = want.Zip(got).Where(p => p.First != p.Second).Select(p => $"{p.First} vs {p.Second} ({Book.Ghosts.GetValueOrDefault(p.First.Id)?.Piece})").Take(4);
+            throw new InvalidOperationException($"the quick refresh of site {s.Id} differs from the full one: {pause}/{state} vs {s.Pause}/{s.State}; {string.Join("; ", diff)}");
+        }
+    }
+
+    /// <summary>
+    /// P5-D: the refresh after pieces were finished, from what the last full refresh left (the ghosts waiting on support, the counts of ready and materials-short ghosts, the pile's answer for
+    /// each kind of piece): when the pile still answers the same for every kind, only the ghosts waiting on support near the new pieces can change; else false (a full refresh).
+    /// </summary>
+    private bool QuickRefresh(ConstructionSite s, IReadOnlyList<long> built)
+    {
         NewMemo();
-        // a new piece helps only what is on its level or the one above, within the longest reach (a beam's, and the jetty beside a beam's end)
-        int near = Math.Max(Rules.SupportReachTiles, Rules.BeamReachTiles) + Rules.JettyReachTiles;
-        // P5-D: with no beam anywhere, a finished piece holds up only the level above it within the support reach (an upright: wall, post, door or window), or the fixture on its own
-        // floor; everything else it cannot help. With a beam about, the wider rule above.
-        bool wide = AnyBeams || _planBeams;
-        int reach = Rules.SupportReachTiles;
-        bool Near(Ghost g)
+        _memoTrack = null;
+        foreach (var (c, ok) in s.PileSeen!) if (PileHasMemo(s, c) != ok) return false;
+        Touch(s);
+        _memoTrack = s.PileSeen;
+        try
         {
-            for (int bi = 0; bi < built!.Count; bi++)
+            s.ReadyCount -= built.Count;                  // each finished piece was a ready one
+            var wait = s.SupportWait!;
+            var at = BuiltView();
+            for (int i = 0; i < wait.Count; i++)
             {
-                var (x, y, z) = ConstructionIds.Unpack(built[bi]);
-                int dx = Math.Abs(g.X - x), dy = Math.Abs(g.Y - y);
-                if (wide) { if (g.Z - z is >= 0 and <= 1 && dx <= near && dy <= near) return true; continue; }
-                if (g.Z == z && dx == 0 && dy == 0) return true;
-                if (g.Z == z + 1 && dx <= reach && dy <= reach && BuiltStructure(x, y, z) is { } p && (PieceCosts.IsUpright(p.Kind) || p.Kind == PieceKind.Beam)) return true;
+                var g = wait[i];
+                if (!g.Live) { wait.RemoveAt(i--); continue; }
+                if (!NearBuilt(g, built)) continue;
+                bool holds = g.Slot == GhostSlot.Fixture ? BuiltStructure(g.X, g.Y, g.Z) is { } f && PieceCatalog.IsRoomKind(f.Kind) : Support.Check(g.X, g.Y, g.Z, CostOf(g), at).Ok;
+                if (!holds) continue;
+                var block = !g.Materialised && !PileHasMemo(s, CostOf(g)) ? GhostBlock.Materials : GhostBlock.None;
+                g.Block = block;
+                g.State = block != GhostBlock.None ? GhostState.Blocked : g.WorkDone > 0 || g.Materialised ? GhostState.InProgress : GhostState.Ready;
+                if (block == GhostBlock.None) s.ReadyCount++; else s.MatCount++;
+                wait.RemoveAt(i--);
             }
-            return false;
         }
-        var at = BuiltView();
-        bool anyLive = false, anyReady = false, anyMaterials = false;
-        DiagX[3] += SetOf(s.Id).Count;
-        foreach (var g in SetOf(s.Id))
+        finally { _memoTrack = null; }
+        SitePause(s, SetOf(s.Id).Count > 0, s.ReadyCount > 0, s.MatCount > 0);
+        return true;
+    }
+
+    /// <summary>
+    /// Whether a piece finished at one of <paramref name="built"/> can hold <paramref name="g"/> up. P5-D: with no beam anywhere, only the level above it within the support reach (when it is
+    /// an upright: wall, post, door or window) or the fixture on its own floor; with a beam about, P5-B's wider rule (its level and the one above, within a beam's reach and a jetty).
+    /// </summary>
+    private bool NearBuilt(Ghost g, IReadOnlyList<long> built)
+    {
+        int near = Math.Max(Rules.SupportReachTiles, Rules.BeamReachTiles) + Rules.JettyReachTiles, reach = Rules.SupportReachTiles;
+        bool wide = AnyBeams || _planBeams;
+        for (int bi = 0; bi < built.Count; bi++)
         {
-            anyLive = true;
-            if (g.Work == GhostWork.Deconstruct) { g.Block = GhostBlock.None; g.State = g.WorkDone > 0 ? GhostState.InProgress : GhostState.Ready; anyReady = true; continue; }
-            var cost = CostOf(g);
-            GhostBlock block = GhostBlock.None;
-            bool supportKnown = built != null && g.State != GhostState.Planned && (g.Block != GhostBlock.Support || !Near(g));
-            if (supportKnown) block = g.Block == GhostBlock.Support ? GhostBlock.Support : GhostBlock.None;
-            else if (g.Slot == GhostSlot.Fixture) { if (BuiltStructure(g.X, g.Y, g.Z) is not { } f || !PieceCatalog.IsRoomKind(f.Kind)) block = GhostBlock.Support; }
-            else { DiagX[2]++; if (!Support.Check(g.X, g.Y, g.Z, cost, at).Ok) block = GhostBlock.Support; }
-            if (block == GhostBlock.None && !g.Materialised && !PileHasMemo(s, cost)) block = GhostBlock.Materials;
-            g.Block = block;
-            g.State = block != GhostBlock.None ? GhostState.Blocked : g.WorkDone > 0 || g.Materialised ? GhostState.InProgress : GhostState.Ready;
-            if (block == GhostBlock.None) anyReady = true;
-            if (block == GhostBlock.Materials) anyMaterials = true;
+            var (x, y, z) = ConstructionIds.Unpack(built[bi]);
+            int dx = Math.Abs(g.X - x), dy = Math.Abs(g.Y - y);
+            if (wide) { if (g.Z - z is >= 0 and <= 1 && dx <= near && dy <= near) return true; continue; }
+            if (g.Z == z && dx == 0 && dy == 0) return true;
+            if (g.Z == z + 1 && dx <= reach && dy <= reach && BuiltStructure(x, y, z) is { } p && (PieceCosts.IsUpright(p.Kind) || p.Kind == PieceKind.Beam)) return true;
         }
+        return false;
+    }
+
+    private static void SitePause(ConstructionSite s, bool anyLive, bool anyReady, bool anyMaterials)
+    {
         if (!anyLive)
         {
             if (s.State == SiteState.Active || s.State == SiteState.Paused) s.State = SiteState.Finished;
@@ -511,5 +559,39 @@ public sealed partial class ConstructionWorld
         }
         if (s.Pause is PauseReason.Owner or PauseReason.NoWages) return;
         s.Pause = !anyReady && anyMaterials ? PauseReason.NoMaterials : PauseReason.None;
+    }
+
+    private void FullRefresh(ConstructionSite s, IReadOnlyList<long>? built)
+    {
+        Touch(s);
+        NewMemo();
+        var wait = s.SupportWait ??= []; wait.Clear();
+        var seen = s.PileSeen ??= []; seen.Clear();
+        _memoTrack = seen;
+        int ready = 0, mats = 0;
+        // a new piece helps only what can rest on it (NearBuilt)
+        bool Near(Ghost g) => NearBuilt(g, built!);
+        var at = BuiltView();
+        bool anyLive = false, anyReady = false, anyMaterials = false;
+        foreach (var g in SetOf(s.Id))
+        {
+            anyLive = true;
+            if (g.Work == GhostWork.Deconstruct) { g.Block = GhostBlock.None; g.State = g.WorkDone > 0 ? GhostState.InProgress : GhostState.Ready; anyReady = true; ready++; continue; }
+            var cost = CostOf(g);
+            GhostBlock block = GhostBlock.None;
+            bool supportKnown = built != null && g.State != GhostState.Planned && (g.Block != GhostBlock.Support || !Near(g));
+            if (supportKnown) block = g.Block == GhostBlock.Support ? GhostBlock.Support : GhostBlock.None;
+            else if (g.Slot == GhostSlot.Fixture) { if (BuiltStructure(g.X, g.Y, g.Z) is not { } f || !PieceCatalog.IsRoomKind(f.Kind)) block = GhostBlock.Support; }
+            else if (!Support.Check(g.X, g.Y, g.Z, cost, at).Ok) block = GhostBlock.Support;
+            if (block == GhostBlock.None && !g.Materialised && !PileHasMemo(s, cost)) block = GhostBlock.Materials;
+            g.Block = block;
+            g.State = block != GhostBlock.None ? GhostState.Blocked : g.WorkDone > 0 || g.Materialised ? GhostState.InProgress : GhostState.Ready;
+            if (block == GhostBlock.None) { anyReady = true; ready++; }
+            if (block == GhostBlock.Materials) { anyMaterials = true; mats++; }
+            if (block == GhostBlock.Support) wait.Add(g);
+        }
+        _memoTrack = null;
+        s.ReadyCount = ready; s.MatCount = mats; s.FastOk = true;
+        SitePause(s, anyLive, anyReady, anyMaterials);
     }
 }
