@@ -171,9 +171,9 @@ public static class Excommunication
         var ps = new List<ChronParam> { ChronParam.Person("doer", target) };
         if (paid > 0) ps.Add(ChronParam.Mites("amount", paid));
         if (FaithOps.PlaceOf(st, settlement) is var pl && pl != EntityId.None) ps.Add(ChronParam.Place("place", pl));
-        string type = textKey == "ch_faith_grace" ? "grace_granted" : "penance_done";
+        string type = textKey == "ch_faith_grace" ? "grace_granted" : "church_penance_done";
         var e = FaithOps.Chron(st, FaithOps.SecOf(day), type, textKey, ps, [target], new EntityId(x.Entry), noteKey);
-        FaithStanding.Record(st, db, target, "penance_done", e, settlement, 1, 0, true, day);
+        FaithStanding.Record(st, db, target, type == "grace_granted" ? "grace_granted" : "church_penance_done", e, settlement, 1, 0, true, day);
     }
 
     // ============================================================ the day and the season

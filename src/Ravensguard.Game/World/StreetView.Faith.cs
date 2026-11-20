@@ -104,7 +104,7 @@ public partial class StreetView
     public void DebugFaith(string? shot = null)
     {
         if (Runtime is not { } rt || _heroLink == null || rt.State.Party is not { } party || rt.State.Content is not { } content || rt.State.Church == null) { _router?.ShowToast(L.T("MAP_NONE")); return; }
-        long now = HeroNow(); int at = Math.Max(0, HeroSettlement());
+        long now = HeroNow(); int where = HeroSettlement(); int at = Math.Max(0, where);
         rt.AtBarrier(() =>
         {
             var ctx = new HeroContext(rt.State, party, content);
@@ -115,6 +115,25 @@ public partial class StreetView
             FaithDesk.Apply(ctx, FaithDesk.Alms(parish, 300, now) with { Seq = 9001 });
             var site = ri >= 0 ? FaithWiring.ReligionsOf(rt.State).HolySiteIn(rt.State.Population.Region, ri) : -1;
             if (site >= 0) FaithDesk.Apply(ctx, FaithDesk.Vow(parish, site, now) with { Seq = 9002 });
+            // P6-E2: a heresy in the parish, fear of the dark, a relic on the altar and one in the pack, a believed miracle with its natural reason, a pardoner's offer
+            int day = (int)(now / 86400); var pol = rt.State.FaithPol ??= new ChurchPolitics(); var religions = FaithWiring.ReligionsOf(rt.State);
+            parish = where >= 0 ? where : row >= 0 ? rt.State.Population.People.HomeSettlement[row] : parish;      // staged where the panel looks: the parish he stands in
+            if (book.ParishAt(parish) is { Priest: >= 0 } par)
+            {
+                var h = Heresy.Start(rt.State, content, parish, new EntityId((ulong)par.Priest), "tithe_poor", day);
+                if (h != null) { for (int i = 0; i < rt.State.Population.People.Count && h.Adherents.Count < 30; i++) if (rt.State.Population.People.IsAlive(i) && rt.State.Population.People.HomeSettlement[i] == parish) h.Adherents.Add(rt.State.Population.People.IdOf(i).Value); h.Adults = 90; }
+            }
+            if (FaithOps.Of(rt.State, content) is { } fp)
+            {
+                Superstition.Add(fp, parish, 55);
+                string rid = ri >= 0 ? religions.Get(ri)!.Id : "";
+                pol.Relics[91] = new RelicRow { Key = 91, Name = "Bone of Saint Aldric", Religion = rid, Holder = 0, At = parish };
+                pol.Relics[92] = new RelicRow { Key = 92, Name = "Finger of Saint Wend", Religion = rid, Holder = 1, Person = party.Hero.Value };
+                pol.Relics[93] = new RelicRow { Key = 93, Name = "Tooth of Saint Orm", Religion = rid, Holder = 2, At = parish, Fake = true };
+                pol.Miracles.Add(new MiracleRow { Day = day, Settlement = parish, Kind = "fire_stopped", Natural = "ch_note_miracle_stone_wall", Disputed = true });
+                var see = book.SeeOf(religions.Get(ri)?.Id ?? "", ChurchSeeding.RealmOf(rt.State.Population.Region, parish));
+                if (see is { Bishop: >= 0 } && ri >= 0) Excommunication.Impose(rt.State, content, fp, null, party.Hero, ri, new EntityId((ulong)see.Bishop), EntityId.None, EntityId.None, day);
+            }
             return 0;
         }).GetAwaiter().GetResult();
         OpenFaith();
