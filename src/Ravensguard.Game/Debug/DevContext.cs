@@ -15,6 +15,8 @@ public static class DevContext
     public static Func<string, string[], string>? Ride { get; set; }
     /// <summary>P5-A3: the street view room overlay (rooms, rooms off).</summary>
     public static Func<string[], string>? Rooms { get; set; }
+    /// <summary>P5-B: the street view's construction (dev only): build plan [blueprint dx dy], stock, crew [n] [skilled], finish [n], collapse.</summary>
+    public static Func<string[], string>? Build { get; set; }
     /// <summary>The street view's travel (travel-encounters-camp spec): <c>camp</c>, <c>wood</c>, <c>encounter [id]</c>, <c>kill [species]</c>, <c>butcher</c>. Null when no street is running.</summary>
     public static Func<string, string[], string>? Travel { get; set; }
 
@@ -40,6 +42,7 @@ public static class DevContext
         r.Register("kill", "kill [species] - a game animal killed here off the land's stock (red_deer, boar, roe_deer, hare, fox)", a => Travel?.Invoke("kill", a) ?? "no street running");
         r.Register("butcher", "butcher - butcher the oldest carcass into the hero's pack", a => Travel?.Invoke("butcher", a) ?? "no street running");
         r.Register("rooms", "rooms [off] - outline the rooms RoomDetector v2 recognises around the hero (P5-A3)", a => Rooms?.Invoke(a) ?? "no street running");
+        r.Register("build", "build plan [blueprint dx dy] | stock | crew [n] [skilled] | finish [n] | collapse - ghosts of a plan beside the hero, materials into the pile, hired hands, pieces done at once (dev), a floor knocked off its post (P5-B)", a => Build?.Invoke(a) ?? "no street running");
         r.Register("clear", "Clear the console log", _ => { clear(); return ""; });
     }
 }

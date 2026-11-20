@@ -14,15 +14,32 @@ namespace Ravensguard.Sim.Construction;
 public sealed partial class ConstructionWorld
 {
     /// <summary>True while anything has to be advanced in game time: a crew on an open site, or a groan.</summary>
-    public bool Busy() => Book.Groans.Count > 0 || Book.Sites.Values.Any(s => s.Open && s.Crew.Count > 0);
+    public bool Busy()
+    {
+        if (Book.Groans.Count > 0) return true;
+        foreach (var s in Book.Sites.Values) if (s.Open && s.Crew.Count > 0) return true;
+        return false;
+    }
 
     private (int RainTenths, int TempC) WeatherAt(long hour) => Weather?.Invoke(hour) ?? (0, 12);
 
+    private long _wxHour = long.MinValue;
+    private bool _wxStops;
+
+    /// <summary>Whether daub, thatch and lime stop in this game hour (rain over 2 mm an hour, or frost); asked once an hour.</summary>
     private bool RainStops(long sec)
     {
-        var (rain, t) = WeatherAt(sec / 3600);
-        return rain > Rules.RainStopTenthsMmPerHour || t < Rules.FrostBelowC;
+        long h = sec / 3600;
+        if (h == _wxHour) return _wxStops;
+        var (rain, t) = WeatherAt(h);
+        _wxHour = h; _wxStops = rain > Rules.RainStopTenthsMmPerHour || t < Rules.FrostBelowC;
+        return _wxStops;
     }
+
+    /// <summary>What an idle crew member last found nothing to do with (the site's version, the pile's mass, the rain): while it holds, looking again finds nothing again.</summary>
+    private readonly Dictionary<EntityId, (long Version, long PileG, bool Rain, bool RainBlocked)> _idle = [];
+    private readonly Dictionary<EntityId, long> _siteVersion = [];
+    private void Touch(ConstructionSite s) => _siteVersion[s.Id] = _siteVersion.GetValueOrDefault(s.Id) + 1;
 
     /// <summary>A cell under a built structure piece (a roof, a floor or a wall above): the weather does not reach it.</summary>
     public bool Sheltered(int x, int y, int z) => BuiltAt(x, y, z + 1) != null;
@@ -68,18 +85,30 @@ public sealed partial class ConstructionWorld
     {
         bool any = false;
         bool raining = RainStops(t0);
-        var jt = Jobs?.Invoke();
-        foreach (var s in Book.Sites.Values.ToList())
+        (JobEnv Env, JobTable Table)? jt = null; bool jtRead = false;
+        bool hourStart = t0 % 3600 == 0;
+        foreach (var s in Book.Sites.Values)
         {
             if (!s.Open || s.Crew.Count == 0 || s.Pause == PauseReason.Owner) continue;
             bool dirty = false, worked = false, rainBlocked = false;
-            foreach (var m in s.Crew.ToList())
+            long pileG = -1;
+            for (int ci = 0; ci < s.Crew.Count; ci++)
             {
+                var m = s.Crew[ci];
                 if (s.Pause == PauseReason.NoWages && m.Class != CrewClass.Follower) continue;
                 if (m.Job != default)
                 {
+                    if (!jtRead) { jt = Jobs?.Invoke(); jtRead = true; }
                     if (jt is { } j0 && j0.Table.Get(m.Job) is { Live: true }) continue;
                     m.Job = default;
+                }
+                if (m.Ghost == default)
+                {
+                    // an idle hand looks again only when something could have changed: the site, its pile, the rain
+                    if (pileG < 0) pileG = PileOf(s).TotalMassG();
+                    if (_idle.TryGetValue(m.Person, out var was) && was.Version == _siteVersion.GetValueOrDefault(s.Id) && was.PileG == pileG && was.Rain == raining && !hourStart)
+                    { rainBlocked |= was.RainBlocked; continue; }
+                    _idle.Remove(m.Person);
                 }
                 long left = q;
                 while (left > 0)
@@ -90,12 +119,23 @@ public sealed partial class ConstructionWorld
                     if (g == null) break;
                     if (!Begin(s, g)) { m.Ghost = default; dirty = true; continue; }
                     m.Ghost = g.Id;
-                    long w = WorkOn(g, m.Person, SkillLevel(m.Person, Costs[g.Piece].Skill, m.PersonIndex), ToolsOk(Costs[g.Piece], CrewTools(m.Class)), left, out bool done);
+                    var c = Costs[g.Piece];
+                    long w = WorkOn(g, m.Person, SkillLevel(m.Person, c.Skill, m.PersonIndex), ToolsOk(c, CrewTools(m.Class)), left, out bool done);
                     left -= w; m.WorkedTodaySec += w; worked = true; any = true;
                     GainSkill(m, g, w, t0 + (q - left));
-                    if (done) { Finish(g, t0 + (q - left), m.Person); m.Ghost = default; dirty = true; }
+                    if (done) { Finish(g, t0 + (q - left), m.Person); m.Ghost = default; dirty = true; pileG = -1; }
                 }
-                if (left == q && m.Ghost == default && jt is { } j && TakeHaul(j.Env, j.Table, s, m, t0)) any = true;
+                if (left == q && m.Ghost == default)
+                {
+                    if (hourStart)
+                    {
+                        if (!jtRead) { jt = Jobs?.Invoke(); jtRead = true; }
+                        if (jt is { } j && TakeHaul(j.Env, j.Table, s, m, t0)) { any = true; continue; }
+                    }
+                    if (pileG < 0) pileG = PileOf(s).TotalMassG();
+                    bool rb = false; _ = Pick(s, m, raining, ref rb);
+                    _idle[m.Person] = (_siteVersion.GetValueOrDefault(s.Id), pileG, raining, rb);
+                }
             }
             if (dirty) Refresh(s);
             if (s.Pause is PauseReason.None or PauseReason.Rain) s.Pause = !worked && rainBlocked ? PauseReason.Rain : s.Pause == PauseReason.Rain ? PauseReason.None : s.Pause;
@@ -158,7 +198,9 @@ public sealed partial class ConstructionWorld
             }
             int on = 0; foreach (var o in s.Crew) if (o.Ghost == g.Id) on++;
             if (on >= Costs.MaxWorkers(c)) continue;
-            var key = (-g.Priority, g.Z, KindRank(c.Kind), (long)Math.Abs(g.X - s.PileX) + Math.Abs(g.Y - s.PileY), g.Id.Value);
+            // building rises from the lowest level; taking down starts at the top (roofs, then floors, then walls)
+            bool down = g.Work == GhostWork.Deconstruct;
+            var key = (-g.Priority, down ? 100 - g.Z : g.Z, down ? 6 - KindRank(c.Kind) : KindRank(c.Kind), (long)Math.Abs(g.X - s.PileX) + Math.Abs(g.Y - s.PileY), g.Id.Value);
             if (best == null || key.CompareTo(bestKey) < 0) { best = g; bestKey = key; }
         }
         return best;

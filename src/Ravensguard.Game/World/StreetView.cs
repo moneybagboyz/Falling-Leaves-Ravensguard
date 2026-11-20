@@ -974,6 +974,7 @@ public partial class StreetView : Control, IHandlesBack
         if (_opt.Panel == "jobs" && _frames == 420) OpenWork();    // dev: the work panel once the first posting has come back from the tick worker
         HeroShots(); TalkShots(); ApShots();
         LandTick(delta);                                    // P5-A2: the land view, land answers, land screenshots
+        BuildTick();                                        // P5-B: construction brought up to the clock, built pieces laid into the street, ghosts drawn
         if (_opt.IsShot && _opt.Weather == "storm" && _frames == Math.Max(2, _opt.Frames - 1)) _wover.Strike(); // dev: catch a lightning flash in the picture
         if (_opt.IsShot && !_opt.MapShot && _opt.Panel == null && !_quitting && _frames >= _opt.Frames && ShotReady()) Shoot();
         if (bench && _benchT >= _opt.BenchSeconds) Finish();

@@ -209,7 +209,8 @@ public sealed partial class ConstructionWorld
             }
         }
         var groans = Book.Groans.Select(g => new GroanView(g.EventId, g.StartSec, g.FallSec, g.Cells.Select(k => { var (x, y, z) = ConstructionIds.Unpack(k); return (x, y, z); }).ToList())).ToList();
-        var placed = Book.Placed.Values.Where(p => Econ.OtherStores.TryGetValue(p.Owner, out var st) && st.RowCount > 0).Select(p => (p.X, p.Y, p.Z, Econ.OtherStores[p.Owner].TotalMassG())).ToList();
+        var placed = Book.Placed.Values.Where(p => Econ.OtherStores.TryGetValue(p.Owner, out var st) && st.RowCount > 0)
+            .Select(p => (p.X, p.Y, p.Z, Econ.OtherStores[p.Owner].TotalMassG(), ConstructionIds.SlotOf(p.Owner) is ConstructionIds.RubbleSlot || (ConstructionIds.SlotOf(p.Owner) == ConstructionIds.ChestSlot && (ConstructionIds.SerialOf(p.Owner) & (1UL << 35)) != 0))).ToList();
         _lastView = new ConstructionView(nowSec, _viewBuiltVersion, sites, ghosts, _builtList, groans, crew, [.. Book.Events], placed);
         Book.View = _lastView;
     }
@@ -225,4 +226,4 @@ public sealed record CrewView(EntityId Person, string Name, int X, int Y, int Z,
 
 /// <summary>What the main thread sees of construction at the last barrier: an immutable copy (build-mode-and-construction 6).</summary>
 public sealed record ConstructionView(long Sec, long BuiltVersion, IReadOnlyList<SiteView> Sites, IReadOnlyList<GhostView> Ghosts, IReadOnlyList<BuiltView> Built, IReadOnlyList<GroanView> Groans,
-    IReadOnlyList<CrewView> Crew, IReadOnlyList<ConstructionEvent> Events, IReadOnlyList<(int X, int Y, int Z, long MassG)> Piles);
+    IReadOnlyList<CrewView> Crew, IReadOnlyList<ConstructionEvent> Events, IReadOnlyList<(int X, int Y, int Z, long MassG, bool Rubble)> Piles);

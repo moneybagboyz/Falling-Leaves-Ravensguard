@@ -58,6 +58,8 @@ public sealed partial class ConstructionWorld
     public Func<EntityId, int, LandAction, int, int, MayResult>? May { get; set; }
     /// <summary>The ground under a cell: a road on it, and its slope in permille. Null: no road, flat.</summary>
     public Func<int, int, (bool Road, int SlopePm)>? Ground { get; set; }
+    /// <summary>Whether a piece already stands at a cell that the book does not know (a generated building in the chunks). Null: nothing does.</summary>
+    public Func<int, int, int, bool>? Standing { get; set; }
     /// <summary>Rain (tenths of a mm an hour) and temperature (C) of a game hour at the site. Null: dry, 12 C.</summary>
     public Func<long, (int RainTenths, int TempC)>? Weather { get; set; }
     /// <summary>A person's level in a skill; null: the person table, 0 for others.</summary>
@@ -195,6 +197,7 @@ public sealed partial class ConstructionWorld
             var slot = cost.Slot;
             long sk = ConstructionIds.SlotKey(c.X, c.Y, c.Z, slot), ck = ConstructionIds.CellKey(c.X, c.Y, c.Z);
             if (Book.Built.ContainsKey(sk) || _ghostAt.ContainsKey(sk) || (slot == GhostSlot.Structure ? batch.ContainsKey(ck) : batchFix.Contains(ck))) { No("cn_occupied"); continue; }
+            if (slot == GhostSlot.Structure && BuiltAt(c.X, c.Y, c.Z) == null && Standing?.Invoke(c.X, c.Y, c.Z) == true) { No("cn_occupied"); continue; }
             if (slot == GhostSlot.Fixture)
             {
                 var floor = batch.GetValueOrDefault(ck) ?? BuiltStructure(c.X, c.Y, c.Z) ?? (GhostAt(c.X, c.Y, c.Z) is { Work: GhostWork.Build } fg ? Costs.Get(fg.Piece) : null);
@@ -358,7 +361,10 @@ public sealed partial class ConstructionWorld
         if (_ghostAt.ContainsKey(b.SlotKey)) return ConstructionResult.No("cn_occupied");
         if (slot == GhostSlot.Structure && BuiltAt(x, y, z, GhostSlot.Fixture) != null) return ConstructionResult.No("cn_fixture_first");
         if (May != null && !May(by, household, LandAction.Demolish, x, y).Allowed) return ConstructionResult.No("cn_not_yours", May(by, household, LandAction.Demolish, x, y).HolderName);
-        var site = Site(b.Site) is { Open: true } os ? os : NearSite(by, x, y) ?? NewSite(by, byKind, by, byKind, May?.Invoke(by, household, LandAction.Demolish, x, y).Deed ?? default, x, y + 1, "", nowSec);
+        var site = Site(b.Site);
+        if (site is { Open: false } && site.Owner == by && site.State == SiteState.Finished) site.State = SiteState.Active;     // the site that built it takes it down again
+        if (site is not { Open: true }) site = NearSite(by, x, y) ?? NewSite(by, byKind, by, byKind, May?.Invoke(by, household, LandAction.Demolish, x, y).Deed ?? default, x, y + 1, "", nowSec);
+        if (Book.AdvancedSec < 0 || !Busy()) Book.AdvancedSec = nowSec / Rules.QuantumSeconds * Rules.QuantumSeconds;
         var cost = Costs[b.Piece];
         var g = new Ghost
         {
@@ -388,6 +394,7 @@ public sealed partial class ConstructionWorld
     /// <summary>Recomputes the states of a site's ghosts: what is ready (support built, materials in the pile), what waits and why, and the site's own pause.</summary>
     public void Refresh(ConstructionSite s)
     {
+        Touch(s);
         var at = BuiltView();
         bool anyLive = false, anyReady = false, anyMaterials = false;
         foreach (var g in GhostsOf(s.Id))

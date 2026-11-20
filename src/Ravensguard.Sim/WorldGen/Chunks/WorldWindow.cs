@@ -178,6 +178,7 @@ public sealed class WorldWindow
         }
         _lights[(c.X, c.Y)] = lights;
         if (_portalsDone.Add((c.X, c.Y))) AddPortals(c, bx, by);
+        else Ravensguard.Sim.Construction.ConstructionPortals.Sync(Grid, (x, y, z) => _pieces.KindOf(Map.StructureAt(x, y, z)), bx, by, ChunkContent.Size, ChunkContent.Size);   // P5-B: a re-stamped chunk (a piece built or fallen) keeps its stairs and ladders in step
     }
 
     /// <summary>Stairs and ladders become portals to the cell above when the piece above is their other end (same rule as the blueprint placer).</summary>

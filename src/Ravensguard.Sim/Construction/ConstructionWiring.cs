@@ -87,6 +87,22 @@ public static class ConstructionWiring
             int tx = Math.Clamp(x / Ravensguard.Sim.WorldGen.Region.Region.TileM, 0, Ravensguard.Sim.WorldGen.Region.Region.Size - 1), ty = Math.Clamp(y / Ravensguard.Sim.WorldGen.Region.Region.TileM, 0, Ravensguard.Sim.WorldGen.Region.Region.Size - 1);
             return (gen.IsRoadCell(x, y), region.SlopePermille[Ravensguard.Sim.WorldGen.Region.Region.Index(tx, ty)]);
         };
+        var pal = BuildingPalette(content); var lib = PieceCosts.Of(content).Library;
+        var standingCache = new Dictionary<ChunkKey, (int Ops, Ravensguard.Sim.Save.ChunkContent? Content)>();
+        cw.Standing = (x, y, z) =>
+        {
+            // a generated building in a visited chunk (what the chunk store holds; construction's own cells are the book's)
+            int cx = ChunkStreamer.FloorDiv(x, ChunkContent.Size), cy = ChunkStreamer.FloorDiv(y, ChunkContent.Size);
+            if (state.Chunks.GetSnapshot(new ChunkKey(cx, cy, 0)) == null || z < ChunkKey.MinZ || z > ChunkKey.MaxZ) return false;
+            var key = new ChunkKey(cx, cy, z);
+            int ops = state.Chunks.DeltaOpCount(key);
+            if (!standingCache.TryGetValue(key, out var hit) || hit.Ops != ops) standingCache[key] = hit = (ops, state.Chunks.Rebuild(key));
+            if (standingCache.Count > 64) standingCache.Clear();
+            var c = hit.Content;
+            if (c == null) return false;
+            int code = c.Tiles.GetValueOrDefault((y - cy * ChunkContent.Size) * ChunkContent.Size + x - cx * ChunkContent.Size);
+            return lib.Pieces.KindOf(pal.Id(TileCode.Structure(code))) is { } k && k != PieceKind.Ground;
+        };
         if (weather != null)
         {
             int cell = (state.EmbarkCellY + 8) * Continent.Size + state.EmbarkCellX + 8;

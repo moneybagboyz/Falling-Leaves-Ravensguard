@@ -177,6 +177,13 @@ public sealed partial class LiveWorld
         _facing = facing; _path = null; _moving = true;
     }
 
+    /// <summary>P5-B: the floor under the hero fell: he lands on level <paramref name="z"/> of the same cell (the fall's wounds are the sim's, through the resolver).</summary>
+    public void DropToLevel(int z)
+    {
+        if (z == _z) return;
+        _z = z; _path = null; _stuck = 0; _portalLock = null; _lightDirty = true;
+    }
+
     /// <summary>Uses the portal under the hero's feet (stairs, ladder, trapdoor), if any.</summary>
     public bool UsePortal()
     {
