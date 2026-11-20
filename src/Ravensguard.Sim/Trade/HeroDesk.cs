@@ -30,16 +30,23 @@ public enum HeroCommandKind : byte
     Succession,
     /// <summary>Appended (P5-A2): land at the barrier ("ld:buy|...", lease, stall, claim, licence, pull, petition, settle), applied by <see cref="Ravensguard.Sim.Land.LandDesk"/>.</summary>
     Land,
+    /// <summary>Appended (P5-E): crafting at the barrier ("cf:order|...", collect, cancel, join, apprentice, leave, teach, apart, feed, look), applied by <see cref="Ravensguard.Sim.Crafting.CraftDesk"/>.</summary>
+    Craft,
 }
 
 /// <summary>Where the hero crafts (built on the main thread from what is in reach, copied into the command).</summary>
 public sealed record CraftSiteSpec(int Light, bool Water, string[] Tools, string[] Stations, string[] Improvised)
 {
+    /// <summary>P5-E (crafting-full 4.2): each station's best tier (by index of <see cref="Stations"/>; missing: Common), and the room the stations were read from.</summary>
+    public byte[] StationTiers { get; init; } = [];
+    public string Room { get; init; } = "";
+
     public CraftSite Build(RecipeDb db)
     {
-        var s = new CraftSite { Light = Light, Water = Water };
+        var s = new CraftSite { Light = Light, Water = Water, RoomName = Room };
         foreach (var t in Tools) if (db.Tools.ContainsKey(t)) s.AddTool(db, t);
-        foreach (var st in Stations) if (db.Stations.ContainsKey(st)) s.AddStation(db, st);
+        for (int k = 0; k < Stations.Length; k++)
+            if (db.Stations.ContainsKey(Stations[k])) s.AddStation(db, Stations[k], k < StationTiers.Length && StationTiers[k] <= (byte)ItemQuality.Masterwork ? (ItemQuality)StationTiers[k] : ItemQuality.Common);
         foreach (var i in Improvised) s.WithImprovised(i);
         return s;
     }
@@ -142,6 +149,8 @@ public sealed record HeroView
     public IReadOnlyList<Follower> Squad { get; init; } = [];
     public int SquadCap { get; init; } = 2;
     public CraftState? Crafting { get; init; }
+    /// <summary>P5-E: the place's makers, guilds and the hero's apprenticeship (the crafting screen's Commission tab), when a crafting screen wants it.</summary>
+    public CraftPlaceView? CraftPlace { get; init; }
     public IReadOnlyList<HeroResult> Results { get; init; } = [];
     /// <summary>P5-A4: the hero's kin as the person table has them (the character screen's family: inheritance 6).</summary>
     public IReadOnlyList<KinView> Family { get; init; } = [];
@@ -167,6 +176,13 @@ public sealed class HeroContext
     public ulong Seed => State.Seed;
     /// <summary>The job table and its environment, for Work orders (null outside a running game).</summary>
     public Func<(JobEnv Env, JobTable Table)?>? Jobs { get; init; }
+    /// <summary>P5-E: the crafting rules' view of the world (purses, makers, guild towns).</summary>
+    public CraftContext CraftContext => _craftWorld ??= CraftWiring.For(State, Econ, Craft, Party.Hero, Purse, () => Pack);
+    private CraftContext? _craftWorld;
+    /// <summary>P5-E: the settlement the hero's crafting screen looks at (the last craft command's place); -1 none. Not saved: a view setting.</summary>
+    public int CraftSettlement { get; set; } = -1;
+    /// <summary>P5-E: the rain where the hero is, tenths of a mm an hour (fires go out over 5 mm); null: none.</summary>
+    public Func<int>? RainTenthsMm { get; init; }
 
     public HeroContext(WorldState state, HeroParty party, ContentDatabase content)
     {
@@ -189,7 +205,14 @@ public sealed class HeroContext
             // P5-A1: a masterwork may be a named artefact, with its chronicle line and its maker's name
             Content = content, Chronicle = state.Chronicle, Tiers = QualityTiers.From(content),
             NameOf = p => { if (p == party.Hero) return state.Hero?.Name ?? ""; int i = people.IndexOf(p); return i >= 0 ? people.FullName(i) : ""; },
+            MaterialCategory = m => content.TryGet<MaterialDef>(m, out var md) ? md.Category : null,
         };
+        // P5-E (crafting-full 4.4): a business batch worked live completes its station; the production system leaves a live station's progress to the live work
+        if (state.Production is { } prod)
+        {
+            Craft.StationDone = WorkshopBridge.Done(prod.ById);
+            prod.LiveStation ??= (b, i) => cs.Jobs.Count > 0 && WorkshopBridge.IsLive(cs, b, i);
+        }
         Purse = e.Ledger.Open(PurseKind.Person, party.Hero);
     }
 
@@ -334,6 +357,8 @@ public sealed class HeroDesk
                 _craftDirty = true;
                 _results.Add(new HeroResult(0, HeroCommandKind.CraftWork, HeroResultCode.Ok, CraftText(ctx, ev), AtSec: ev.AtSec));
             }
+        // P5-E: the makers work the commissions, the fires burn, and at a day's start the apprenticeships, the guild dues
+        foreach (var t in CraftDesk.Hourly(ctx, h)) { _craftDirty = true; _results.Add(new HeroResult(0, HeroCommandKind.Craft, HeroResultCode.Ok, t, AtSec: h * 3600)); }
         ctx.Party.Carried.Tidy(ctx.Econ);
         ApplyDue(ctx, h, publish: false);
         MirrorHero(ctx);
@@ -418,6 +443,7 @@ public sealed class HeroDesk
                 HeroCommandKind.Site => Ravensguard.Sim.Sites.SiteDesk.Apply(ctx, c),                          // P4 close-out: loot to the pack, search and dig
                 HeroCommandKind.Succession => Ravensguard.Sim.Succession.SuccessionDesk.Apply(ctx, c),         // P4 close-out: the heir takes over, the estate is settled
                 HeroCommandKind.Land => Ravensguard.Sim.Land.LandDesk.Apply(ctx, c),                           // P5-A2: deeds, leases, claims, charters
+                HeroCommandKind.Craft => CraftDesk.Apply(ctx, c),                                              // P5-E: commissions, guilds, apprenticeships, fires
                 _ => R(c, HeroResultCode.Invalid, T("HERO_UNKNOWN_COMMAND")),
             };
         }
@@ -825,9 +851,15 @@ public sealed class HeroDesk
         if (!ctx.Craft.State.Know.Knows(r, ctx.Party.Hero, ctx.Craft.State.Book)) return R(c, HeroResultCode.NotKnown, T("HERO_DO_NOT_KNOW_HOW"));
         var site = (c.Site ?? new CraftSiteSpec(255, true, [], [], [])).Build(ctx.Recipes);
         foreach (var t in ctx.PackTools()) site.AddTool(ctx.Recipes, t);                      // P5-A4: the tools really in the pack count, whatever the screen sent
-        var plan = ctx.Craft.Plan(r, ctx.Actor(), site, ctx.Pack, Math.Max(1, c.Batch), c.Choice);
+        // P5-E (crafting-full 4.1, 4.3): a lit fire near is a hearth and a light; a forge still hot from the last work needs no cold start
+        ctx.Craft.BurnFires(c.IssuedSec, 0);
+        if (ctx.Craft.State.Fires.StationNear(c.X, c.Y)) site.AddStation(ctx.Recipes, "campfire");
+        site.Light = Math.Max(site.Light, ctx.Craft.State.Fires.LightAt(c.X, c.Y));
+        site.ForgeHot = ctx.Craft.ForgeIsHot(c.X, c.Y, c.IssuedSec);
+        bool hasTarget = !r.NeedsTarget || ctx.Econ.Items.IsLive(c.Item) && ctx.Econ.Items.Get(c.Item).Owner == ctx.Party.Hero;
+        var plan = ctx.Craft.Plan(r, ctx.Actor(), site, CraftSources.Of(ctx.Pack), Math.Max(1, c.Batch), c.Choice, hasTarget, c.Tag == "skip_temper");
         if (!plan.CanStart) return R(c, HeroResultCode.NoStock, T("HERO_LACK_WHAT_NEEDS"));
-        var job = ctx.Craft.Start(plan, ctx.Actor(), ctx.Party.Hero, ctx.Pack, c.IssuedSec, c.X, c.Y);
+        var job = ctx.Craft.Start(plan, ctx.Actor(), ctx.Party.Hero, plan.Sources, c.IssuedSec, c.X, c.Y, r.NeedsTarget ? c.Item : default, Ravensguard.Sim.Crafting.CraftRunner.DefaultBodyCm3);
         if (job == null) return R(c, HeroResultCode.NoStock, T("HERO_LACK_WHAT_NEEDS"));
         ctx.Party.WorkedTo[job.Id] = c.IssuedSec;
         return R(c, HeroResultCode.Ok, T("HERO_START", r.Name), 0, (long)job.Id.Value);
@@ -932,7 +964,7 @@ public sealed class HeroDesk
             WornCapacityMl = wornCap, WornVolumeMl = wornUsed,
             Skills = skills, Attributes = attrs, AttrMilli = (int[])party.AttrMilli.Clone(), Notes = [.. party.Notebook.Notes], BookNames = names, Traded = [.. party.Traded], Market = mv, Person = pv,
             Squad = [.. party.Squad.Members.Select(FollowerRow.Of).Select(r => r.Restore())], SquadCap = Recruiting.SquadCap(ctx.Trade, leadership),
-            Crafting = CraftCopy(ctx, hourDone), Results = [.. _results], Family = FamilyOf(ctx, (int)(hourDone / 24)),
+            Crafting = CraftCopy(ctx, hourDone), CraftPlace = PlaceView(ctx, hourDone), Results = [.. _results], Family = FamilyOf(ctx, (int)(hourDone / 24)),
         };
     }
 
@@ -990,6 +1022,19 @@ public sealed class HeroDesk
         }
         _merchKey = key; _merchItems = res;
         return res;
+    }
+
+    private (int Settlement, long Day, long Seq) _placeKey = (-2, -1, -1);
+    private CraftPlaceView? _place;
+
+    /// <summary>P5-E: the place view for the crafting screen, only while one wants it, made again when the place, the day or the hero's last command changed.</summary>
+    private CraftPlaceView? PlaceView(HeroContext ctx, long hourDone)
+    {
+        if (!(CraftViewWanted?.Invoke() ?? false) && _place == null) return null;
+        var key = (ctx.CraftSettlement, hourDone / 24, ctx.Party.LastSeq);
+        if (key == _placeKey && _place != null) return _place;
+        _placeKey = key; _place = CraftDesk.View(ctx, ctx.CraftSettlement, (int)(hourDone / 24));
+        return _place;
     }
 
     /// <summary>The crafting state for the view: copied again when a command was applied, the hourly pass moved a job of the hero's, the day turned, or there is none yet; else the last copy.</summary>

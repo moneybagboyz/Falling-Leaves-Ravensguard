@@ -1,0 +1,24 @@
+// P5-E (crafting-full 3.2): the workstation pieces of the one station vocabulary that the Phase 1 to 4 piece list did not have. A workstation piece counts as the
+// craft_station that lists it (requirements.jsonc), in its room and within 6 m (RoomDetector v2 4.4). Kept in their own file, after pieces.jsonc, so the piece
+// numbers of everything before stay as they were.
+[
+  { "type": "build_piece", "id": "butcher_block",  "name": "Butcher's block",  "kind": "workstation", "glyph": "b", "material": "oak",         "station": "butchery", "kg": 120 },
+  { "type": "build_piece", "id": "salting_tub",    "name": "Salting tub",      "kind": "workstation", "glyph": "u", "material": "oak",         "station": "butchery", "kg": 60 },
+  { "type": "build_piece", "id": "cheese_press",   "name": "Cheese press",     "kind": "workstation", "glyph": "c", "material": "oak",         "station": "dairy", "kg": 80 },
+  { "type": "build_piece", "id": "candle_table",   "name": "Candle table",     "kind": "workstation", "glyph": "t", "material": "oak",         "station": "chandlery", "kg": 40 },
+  { "type": "build_piece", "id": "spinning_wheel", "name": "Spinning wheel",   "kind": "workstation", "glyph": "o", "material": "oak",         "station": "weaving", "kg": 25 },
+  { "type": "build_piece", "id": "fulling_tub",    "name": "Fulling tub",      "kind": "workstation", "glyph": "u", "material": "oak",         "station": "weaving", "kg": 90 },
+  { "type": "build_piece", "id": "dye_vat",        "name": "Dye vat",          "kind": "workstation", "glyph": "v", "material": "oak",         "station": "weaving", "kg": 90 },
+  { "type": "build_piece", "id": "tailor_bench",   "name": "Tailor's bench",   "kind": "workstation", "glyph": "K", "material": "oak",         "station": "weaving", "kg": 50 },
+  { "type": "build_piece", "id": "cobbler_bench",  "name": "Cobbler's bench",  "kind": "workstation", "glyph": "K", "material": "oak",         "station": "tanning", "kg": 50 },
+  { "type": "build_piece", "id": "saddle_tree",    "name": "Saddle tree",      "kind": "workstation", "glyph": "Y", "material": "oak",         "station": "tanning", "kg": 30 },
+  { "type": "build_piece", "id": "bloomery",       "name": "Bloomery",         "kind": "workstation", "glyph": "B", "material": "granite",     "station": "smithing", "kg": 1200 },
+  { "type": "build_piece", "id": "cupel_hearth",   "name": "Cupel hearth",     "kind": "workstation", "glyph": "H", "material": "fired_brick", "station": "smithing", "kg": 400 },
+  { "type": "build_piece", "id": "wheel_pit",      "name": "Wheel pit",        "kind": "workstation", "glyph": "o", "material": "oak",         "station": "carpentry", "kg": 100 },
+  { "type": "build_piece", "id": "spoke_bench",    "name": "Spoke bench",      "kind": "workstation", "glyph": "K", "material": "oak",         "station": "carpentry", "kg": 50 },
+  { "type": "build_piece", "id": "tyre_ring",      "name": "Tyre ring",        "kind": "workstation", "glyph": "o", "material": "granite",     "station": "smithing", "kg": 300 },
+  { "type": "build_piece", "id": "brick_clamp",    "name": "Brick clamp",      "kind": "workstation", "glyph": "^", "material": "fired_brick", "station": "firing", "kg": 600 },
+  { "type": "build_piece", "id": "lime_kiln",      "name": "Lime kiln",        "kind": "workstation", "glyph": "I", "material": "limestone",   "station": "firing", "kg": 2000 },
+  { "type": "build_piece", "id": "mason_banker",   "name": "Mason's banker",   "kind": "workstation", "glyph": "K", "material": "granite",     "station": "masonry", "kg": 300 },
+  { "type": "build_piece", "id": "slipway_ways",   "name": "Slipway ways",     "kind": "workstation", "glyph": "=", "material": "oak",         "station": "shipwright", "kg": 800 }
+]

@@ -52,6 +52,8 @@ public sealed class ItemTable
     public ref ItemRow At(int index) => ref _rows[index];
     public ref ItemRow Get(EntityId id) => ref _rows[_byId[id]];
     public ItemComponent Component(int index) => _components[index];
+    /// <summary>P5-E (crafting-full 4.5): a refit changes the mass of a component (wire woven into mail, rings taken out).</summary>
+    public void SetComponent(int index, ItemComponent c) => _components[index] = c;
     public IEnumerable<ItemComponent> ComponentsOf(int row) { var r = _rows[row]; for (int k = 0; k < r.ComponentCount; k++) yield return _components[r.ComponentStart + k]; }
 
     /// <summary>Live row indices ascending.</summary>

@@ -2910,6 +2910,50 @@ in_kin_spouse,husband or wife
 in_kin_child,child
 in_kin_line,"{0}, your {1}, {2}, of {3}"
 in_kin_dead,"{0}, your {1}, died aged {2}"
+cf_looked,You look about for craftsmen.
+cf_not_here,You must be in the craftsman's own town to ask him.
+cf_maker_cannot,He cannot make that: he does not know it or has no workshop for it.
+cf_price_moved,"The price has changed: now {0}."
+cf_ordered,"Ordered: {0} for {1}, half paid now. Ready in about {2} days."
+cf_cannot_afford,You cannot afford it.
+cf_no_materials,You do not have the materials you meant to bring.
+cf_collect_in_person,You must collect it yourself from the craftsman.
+cf_collected,"You collect your {0}."
+cf_not_ready,It is not ready yet.
+cf_gone,That commission is closed.
+cf_cancelled,You cancel the commission.
+cf_joined,"You are now a member of the {0}."
+cf_join_noguild,There is no such guild here.
+cf_join_alreadymember,You are already a member.
+cf_join_notresident,You must have lived here fifteen days to join.
+cf_join_toounskilled,The guild finds your work too poor to admit you.
+cf_join_cannotafford,You cannot pay the entry fee.
+cf_join_notmember,You are not a member.
+cf_apprenticed,"You are apprenticed for {0} days: you work his station unpaid and learn his trade."
+cf_apprentice_mastertoounskilled,He is not master enough to take an apprentice.
+cf_apprentice_masterfull,He already has as many apprentices as he can keep.
+cf_apprentice_candidatetoounskilled,He will not take someone so far below him.
+cf_apprentice_alreadyapprenticed,You are already apprenticed.
+cf_apprentice_notknown,He does not practise that trade.
+cf_left_apprenticeship,"You leave the apprenticeship, keeping the {0} recipes you learnt."
+cf_guild_only,That is a guild secret: it is taught only in the guild.
+cf_cannot_teach,You cannot teach that.
+cf_teaching,"You begin teaching {0}."
+cf_cannot_take_apart,You cannot take that apart.
+cf_took_apart,"You take apart the {0} and learn how it was made."
+cf_fed,You feed the fire.
+cf_fire_out,The fire is out.
+cf_commission_started,"Your commission is begun: {0}."
+cf_commission_ready,"Your commission is ready to collect: {0}."
+cf_commission_sold,"You left your {0} too long; the craftsman has sold it."
+cf_learnt,"Your master teaches you: {0}."
+cf_expelled,"You are expelled from the {0} for unpaid dues."
+cf_cstate_queued,queued
+cf_cstate_working,being made
+cf_cstate_ready,ready to collect
+cf_cstate_collected,collected
+cf_cstate_cancelled,cancelled
+cf_cstate_sold,sold
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."
