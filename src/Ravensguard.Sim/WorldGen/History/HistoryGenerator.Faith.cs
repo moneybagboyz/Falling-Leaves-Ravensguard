@@ -11,6 +11,8 @@ namespace Ravensguard.Sim.WorldGen.History;
 public sealed partial class HistoryGenerator
 {
     private HistoryCultureRule? RuleOf(int culture) => _s.CultureRules != null && culture >= 0 && culture < _s.CultureRules.Count ? _s.CultureRules[culture] : null;
+    /// <summary>Two continent cultures share a religion when their template is the same (the derived religion counts the saints of all of them).</summary>
+    private bool SameFaith(int a, int b) => a == b || (RuleOf(a) is { ReligionId.Length: > 0 } x && RuleOf(b) is { } y && x.ReligionId == y.ReligionId);
     private static string FaithKey(HistoryCultureRule? r) => r == null || r.ReligionId.Length == 0 ? "ch_h_rel_local" : "ch_h_rel_" + r.ReligionId;
     private ChronParam FaithParam(RealmState r) => ChronParam.TextKey("faith", FaithKey(RuleOf(FaithOf(r))));
 
