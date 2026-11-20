@@ -151,7 +151,7 @@ public sealed class SoilWorld
                 if (KindFor(s, day) is not { } kind) break;
                 long pay = PayOf(kind);
                 if (w.Ledger.Balance(pr).Mites < pay) break;
-                var need = ContractSystem.NeedEntry(w, "soil", s, day * 86_400L + 9 * 3600, [issuer]);
+                var need = ContractSystem.NeedEntry(w, "soil", s, day * 86_400L + 600, [issuer]);
                 int serial = Book.NextSerial;
                 var posted1 = ContractSystem.Post(w, cb, "soil_improvement", issuer, pr, s, pay, day, need, x => x.Param = HoursOf(kind));
                 if (posted1 == null) break;

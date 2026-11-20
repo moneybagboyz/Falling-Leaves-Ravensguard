@@ -1,0 +1,316 @@
+using System.Diagnostics;
+using System.Text;
+using Ravensguard.Content;
+using Ravensguard.Sim.Abstract;
+using Ravensguard.Sim.Characters;
+using Ravensguard.Sim.Combat;
+using Ravensguard.Sim.Combat.Flavour;
+using Ravensguard.Sim.Economy;
+using Ravensguard.Sim.Combat.Melee2;
+using Ravensguard.Sim.Core;
+using Ravensguard.Sim.Dialogue;
+using Ravensguard.Sim.Family;
+using Ravensguard.Sim.Burning;
+using Ravensguard.Sim.Law;
+using Ravensguard.Sim.People;
+using Ravensguard.Sim.Rumours;
+using Ravensguard.Sim.Save;
+using Ravensguard.Sim.Tests.Combat.Flavour;
+using Ravensguard.Sim.Tests.Seamless;
+using Ravensguard.Sim.Trade;
+using Ravensguard.Sim.WorldGen.Region;
+using Ravensguard.Sim.Worlds;
+using Xunit;
+using Xunit.Abstractions;
+
+namespace Ravensguard.Sim.Tests.CloseOut;
+
+/// <summary>
+/// The Phase 6 close-out soaks (P6-G2). <b>OV-5</b> (overview section 4): ten game years of seed 1234 with the hero bot and every Phase 6 system attached (the game's own links: talk, law with heists, bonds and faith
+/// politics, family, contracts): the bot steals and gives himself up (a trial), courts and weds, burns a house, fights; specific coverage >= 0.90, a cause on every entry, every chain resolves, coin and mass exact,
+/// the population inside the Phase 2 band. <b>The 100-year soak</b> (overview section 3 step 7) runs the same script for a hundred years, prints a yearly table and the type counts by decade, and checks the
+/// invariants of the nightly list; it takes about half an hour, so it runs only when <c>FL_SOAK100=1</c> (and writes its table to <c>FL_SOAK_LOG</c> when set): <c>Category=Soak</c>.
+/// </summary>
+public class Phase6SoakTests(ITestOutputHelper output)
+{
+    private const string Hash = "h";
+    private const int DaysPerYear = TimeConst.DaysPerYear;
+
+    // ---------------------------------------------------------------- the world and the bot
+
+    internal static (SeamWorld W, WorldState St) Game(ulong seed, PlagueSeverity? plague = null)
+    {
+        var (w, st) = Ravensguard.Sim.Tests.Core.ChronicleSoakTests.Game(seed);
+        if (plague is { } p) st.ChangeDifficulty(st.Difficulty with { Plague = p }, st.Clock.Now);
+        return (w, st);
+    }
+
+    /// <summary>The game's own links, in the game's order (StreetView.Talk.cs): talk, law (with heists, bonds and faith politics), family, contracts.</summary>
+    internal static WorldRuntime Boot(SeamWorld w, WorldState st)
+    {
+        var rt = new WorldRuntime(st, w.Content, new MemoryRegionPager());
+        Phase6Links.AttachAll(rt, w.Content);
+        return rt;
+    }
+
+    /// <summary>One thing the hero bot does at a game day (counted from the start) of a year; <see cref="Every"/> years apart (1: every year).</summary>
+    private sealed record Act(string Name, int Day, int Every, int FromYear, Action<WorldRuntime, SeamWorld> Do);
+
+    private static List<Act> Script() =>
+    [
+        new("steal", 10, 1, 1, Steal),
+        new("surrender", 13, 1, 1, Surrender),            // reported at the next day's hour 0, the court day follows
+        new("court", 20, 1, 1, Court),                     // a no when he is wed already; the wedding is on the next holy day
+        new("fire", 30, 3, 1, Burn),
+        new("fight", 40, 2, 1, Fight),
+    ];
+
+    private static T At<T>(WorldRuntime rt, Func<T> job) => rt.AtBarrier(job).GetAwaiter().GetResult();
+
+    private static void Steal(WorldRuntime rt, SeamWorld w) => At(rt, () =>
+    {
+        var s = rt.State; var pt = s.Population.People; int town = pt.HomeSettlement[s.Hero!.PersonIndex];
+        var witnesses = Enumerable.Range(0, pt.Count).Where(i => pt.IsAlive(i) && pt.HomeSettlement[i] == town && pt.AgeYears(i, (int)(rt.HourDone / 24)) >= 18 && i != s.Hero.PersonIndex).Take(3).ToList();
+        if (witnesses.Count < 3) return 0;
+        var ctx = new HeroContext(s, s.Party!, w.Content); var desk = new HeroDesk();
+        desk.Issue(CrimeDesk.Act("theft", pt.IdOf(witnesses[0]), town, 240, 0, "ch_note_crime_hero", new ActorLook([0xA03030u], 2),
+            [new WitnessRow(pt.IdOf(witnesses[0]).Value, WitnessRow.KnewIt), new WitnessRow(pt.IdOf(witnesses[1]).Value, WitnessRow.KnewIt), new WitnessRow(pt.IdOf(witnesses[2]).Value, 0)], null, rt.HourDone * 3600 + 600));
+        desk.ApplyDue(ctx, rt.HourDone + 1);
+        return 1;
+    });
+
+    private static void Surrender(WorldRuntime rt, SeamWorld w) => At(rt, () =>
+    {
+        var s = rt.State; if (s.Captivity is { HeroHeld: true }) return 0;
+        var ctx = new HeroContext(s, s.Party!, w.Content); var desk = new HeroDesk();
+        desk.Issue(JusticeDesk.Surrender(-1, rt.HourDone * 3600));
+        desk.ApplyDue(ctx, rt.HourDone + 1);
+        return 1;
+    });
+
+    /// <summary>The bot courts the first fitting person (the way FamilyDemo does it: a roof, the house's trust), asks, and the family's day weds them on the next holy day.</summary>
+    private static void Court(WorldRuntime rt, SeamWorld w) => At(rt, () =>
+    {
+        var s = rt.State; var fw = FamilyWorld.From(s, w.Content); int hero = fw.HeroRow; if (hero < 0) return 0;
+        var pt = fw.People; var hht = fw.Households; int hh = pt.Household[hero]; int day = (int)(rt.HourDone / 24);
+        if (pt.Spouse[hero] >= 0 || s.Family?.Courtships.Values.Any(c => c.State == CourtState.Courting || c.State == CourtState.Betrothed) == true) return 0;
+        if (hht.Lot[hh] < 0) { hht.Lot[hh] = 0; hht.Dwelling[hh] = DwellingType.Cottage; hht.Beds[hh] = 6; }
+        var want = pt.Sex[hero] == Sex.Female ? Sex.Male : Sex.Female;
+        for (int i = 0; i < pt.Count; i++)
+        {
+            if (i == hero || pt.Status[i] != PersonStatus.Alive || pt.Sex[i] != want || pt.Spouse[i] >= 0) continue;
+            int a = pt.AgeYears(i, day), bh = pt.Household[i];
+            if (a < 22 || a > 34 || bh < 0 || bh == hh || hht.Head[bh] < 0 || hht.Head[bh] == i || Courting.WhyNot(fw, hero, i, day).Length > 0) continue;
+            int head = hht.Head[bh]; hht.Class[bh] = pt.Class[hero];
+            s.Party!.Know(pt.IdOf(i)).TrustPm = 900; s.Party.Know(pt.IdOf(head)).TrustPm = 900;
+            var ctx = new HeroContext(s, s.Party, w.Content); var desk = new HeroDesk(); long sec = rt.HourDone * 3600 + 60;
+            desk.Issue(FamilyDesk.Court(pt.IdOf(i), 0, sec)); desk.Issue(FamilyDesk.Ask(pt.IdOf(i), sec + 1));
+            desk.ApplyDue(ctx, rt.HourDone + 1);
+            return 1;
+        }
+        return 0;
+    });
+
+    /// <summary>The bot lights the first dwelling of the home region with a torch: a hero's fire_started, and the fire's own chain after it.</summary>
+    private static void Burn(WorldRuntime rt, SeamWorld w) => At(rt, () =>
+    {
+        var fw = rt.State.HomeRecords?.Sim.Get<FireWorld>(); if (fw == null) return 0;
+        foreach (var p in fw.Profiles())
+            if (p.Dwelling && fw.IgniteBuilding(p.Structure, rt.HourDone + 1, FireCause.Person(rt.State.Party!.Hero, "torch"))) return 1;
+        return 0;
+    });
+
+    private static FlavourFixture? _fx;
+    /// <summary>The bot is in a fight with two soldiers of a lord and the chronicle writes it as it writes every fight (FightChronicle).</summary>
+    private static void Fight(WorldRuntime rt, SeamWorld w)
+    {
+        _fx ??= new FlavourFixture(); var fx = _fx;
+        ulong heroId = At(rt, () => rt.State.Party!.Hero.Value);
+        FightLog? log = null;
+        for (ulong seed = 1; seed < 40 && log == null; seed++)
+        {
+            var fw = new FightWorld(fx.C, seed + (ulong)rt.HourDone, seed, 8 * 3600) { RecordEvents = true };
+            for (int i = 0; i < 3; i++)
+                fw.Add(new FighterKit { Name = i == 0 ? "Aldric Vane" : $"Friend {i}", Team = 0, Person = heroId + (ulong)i * 0, Weapon = new WeaponInstance("mace", "iron"), Skill = 50, X = -1500, Y = i * 900, FaceX = 1024, Worn = [new("shirt", "linen")] });
+            for (int i = 0; i < 3; i++)
+                fw.Add(new FighterKit { Name = $"Soldier {i}", Team = 1, Weapon = new WeaponInstance("axe", "iron"), Skill = 50, X = 1500, Y = i * 900, FaceX = -1024, Stance = "aggressive", Worn = [new("shirt", "linen")] });
+            var r = FlavourRecorder.Attach(fw, null, fx.Book);
+            while (!fw.IsOver && fw.Tick < 20 * 120) fw.StepWithAi();
+            r.Finish();
+            log = r.Log;
+        }
+        if (log == null) return;
+        At(rt, () => { FightChronicle.Write(log, rt.State.Chronicle, rt.State.Ids, fx.Book, fx.Text); return 0; });
+    }
+
+    // ---------------------------------------------------------------- the run
+
+    private sealed class YearRow
+    {
+        public int Year; public long Alive, Households, Births, Deaths, Idle, Hungry, DietPoor, Continent; public int ChronEntries, ChronAllRegions;
+        public double RelishRatio, AleRatio, StapleRatio, Secs; public bool Coin, Mass; public int PlagueActive, PlagueInfected, PlagueDead;
+        public long Bytes; public string Snap = "";
+    }
+
+    private sealed class Soak
+    {
+        public WorldRuntime Rt = null!; public SeamWorld W = null!; public WorldState St = null!;
+        public readonly List<YearRow> Rows = [];
+        public readonly Dictionary<string, int> Acts = [];
+        public long Start; public long Alive0, Households0;
+        public Action<string> Log = _ => { };
+    }
+
+    private static YearRow Sample(Soak k, int year, bool measureSave)
+    {
+        var rt = k.Rt;
+        return At(rt, () =>
+        {
+            var st = rt.State; var home = rt.Records.HomeWorld!; var sim = home.Sim; var e = sim.Economy; var p = sim.People; long day = sim.State.HourDone / 24;
+            var r = new YearRow { Year = year };
+            long alive = 0, idle = 0;
+            for (int i = 0; i < p.Count; i++)
+            {
+                if (p.Status[i] != PersonStatus.Alive) continue;
+                alive++; int age = sim.AgeOn(i, day);
+                if (age is >= 16 and < 60 && p.Occupation[i] == Occupation.None && !(sim.Households.ParcelCount[Math.Max(0, p.Household[i])] > 0)) idle++;
+            }
+            r.Alive = alive; r.Idle = idle; r.Births = sim.Vital.Births; r.Deaths = sim.Vital.Deaths;
+            long hh = 0, hungry = 0, poor = 0;
+            for (int h = 0; h < sim.Households.Count; h++) { if (sim.Households.MemberCount[h] == 0) continue; hh++; if ((e.Grievances[h] & Grievance.MissedMeal) != 0) hungry++; if (e.DietPoor[h]) poor++; }
+            r.Households = hh; r.Hungry = hungry; r.DietPoor = poor;
+            // prices of the relishes, the ale and the staples against their base, over the books that have a merchant
+            long relN = 0, relS = 0, aleN = 0, aleS = 0, stN = 0, stS = 0;
+            foreach (var b in home.Economy.Markets.AllBooks())
+            {
+                if (b.Merchants.Count == 0) continue;
+                foreach (var g in e.Food.Relishes) if (b.Goods[g].StockUnits > 0) { relN++; relS += b.MidRatioPermille(g); }
+                if (b.Goods[e.Food.Ale].StockUnits > 0) { aleN++; aleS += b.MidRatioPermille(e.Food.Ale); }
+                foreach (var name in new[] { "wheat", "rye", "bread" }) { ushort g = e.Goods.IdOf(name); if (b.Goods[g].StockUnits > 0) { stN++; stS += b.MidRatioPermille(g); } }
+            }
+            r.RelishRatio = relN == 0 ? 0 : relS / 1000.0 / relN; r.AleRatio = aleN == 0 ? 0 : aleS / 1000.0 / aleN; r.StapleRatio = stN == 0 ? 0 : stS / 1000.0 / stN;
+            r.Coin = e.Ledger.Audit().IsConserved; r.Mass = e.MassAuditHolds();
+            r.ChronEntries = st.Chronicle.Count; r.ChronAllRegions = rt.Records.Resident.Sum(x => x.Chronicle.Count);
+            if (st.ContinentState is { } cs)
+            {
+                long pop = 0; foreach (var s in cs.Summaries) if (!s.Detailed) pop += s.Pop;
+                r.Continent = pop; r.PlagueActive = cs.Plague.Active ? 1 : 0; r.PlagueInfected = cs.Plague.Infected.Count; r.PlagueDead = cs.Plague.DeadEstimate;
+            }
+            var sn = rt.Snapshot; r.Snap = $"res {sn.Resident}/{sn.Detailed}/{sn.Daily}/{sn.Paged} maxHr {sn.MaxHourMs:0}ms rumours {st.Talk?.Rumours.Count}/{st.Talk?.Rumours.HearingCount}";
+            if (measureSave) r.Bytes = SaveCodec.Encode(WorldSave.Capture(st, Hash, "0.1")).Length;
+            return r;
+        });
+    }
+
+    private static string RowText(YearRow r) =>
+        $"y{r.Year,3} alive {r.Alive,6} hh {r.Households,5} idle {r.Idle,5} hungryHH {r.Hungry,4} dietPoor {r.DietPoor,5} births {r.Births,7} deaths {r.Deaths,7} relish {r.RelishRatio:0.00} ale {r.AleRatio:0.00} staple {r.StapleRatio:0.00} " +
+        $"chron {r.ChronEntries,7}/{r.ChronAllRegions,7} continentPop {r.Continent,8} plague {r.PlagueActive}/{r.PlagueInfected}/{r.PlagueDead} {(r.Coin && r.Mass ? "ok" : "FAIL")} {r.Secs:0}s {r.Snap}" + (r.Bytes > 0 ? $" save {r.Bytes / 1024.0 / 1024:0.0} MB" : "");
+
+    private Soak Run(int years, PlagueSeverity? plague, int[]? saveYears, Action<Soak, int>? each = null)
+    {
+        var (w, st) = Game(1234, plague);
+        var k = new Soak { W = w, St = st };
+        string? logPath = Environment.GetEnvironmentVariable("FL_SOAK_LOG");
+        k.Log = s => { output.WriteLine(s); if (logPath != null) File.AppendAllText(logPath, s + "\n"); };
+        k.Rt = Boot(w, st);
+        var rt = k.Rt;
+        k.Start = rt.HourDone + 1; k.Start += (24 - k.Start % 24) % 24;     // game day boundary
+        var script = Script();
+        var sw = Stopwatch.StartNew(); double last = 0;
+        for (int y = 1; y <= years; y++)
+        {
+            double actSecs = 0;
+            var today = script.Where(a => y >= a.FromYear && (y - a.FromYear) % a.Every == 0).OrderBy(a => a.Day).ToList();
+            foreach (var a in today)
+            {
+                rt.AdvanceTo(GameTime.FromGameHours(k.Start + ((y - 1) * DaysPerYear + a.Day) * 24L));
+                var sa = Stopwatch.StartNew(); a.Do(rt, w); actSecs += sa.Elapsed.TotalSeconds; k.Acts[a.Name] = k.Acts.GetValueOrDefault(a.Name) + 1;
+            }
+            rt.AdvanceTo(GameTime.FromGameHours(k.Start + y * DaysPerYear * 24L));
+            var row = Sample(k, y, saveYears?.Contains(y) == true);
+            if (y == 1) { k.Alive0 = row.Alive; k.Households0 = row.Households; }
+            row.Secs = sw.Elapsed.TotalSeconds - last; row.Snap += $" acts {actSecs:0.0}s"; last = sw.Elapsed.TotalSeconds;
+            k.Rows.Add(row); k.Log(RowText(row));
+            each?.Invoke(k, y);
+        }
+        return k;
+    }
+
+    // ---------------------------------------------------------------- OV-5
+
+    [Fact, Trait("Category", "Soak")]
+    public void OV5_TenGameYearsWithTheHeroBotAndEverySystem_AreNinetyPercentSpecific_EveryEntryHasACause_ChainsResolve_CoinAndMassAreExact()
+    {
+        var k = Run(10, null, [10]);
+        using var rt = k.Rt; var st = k.St; var types = ChronicleTypes.From(k.W.Content); var c = st.Chronicle; var hist = k.W.History.Chronicle;
+        output.WriteLine("hero acts: " + string.Join(", ", k.Acts.Select(a => a.Key + " " + a.Value)));
+        var rep = c.SpecificCoverage(types, older: hist);
+        output.WriteLine($"{c.Count} entries: specific {rep.Specific}, drift {rep.Drift}, no cause {rep.NoCause}, summaries {rep.Summaries}; ratio {rep.Ratio:0.000}");
+        foreach (var g in c.All.Where(e => !e.Causes.Any(x => x.Kind == CauseKind.MarketDrift) && !e.Causes.Any(x => c.IsSpecific(x, e, types.Get(e.TypeId), hist))).GroupBy(e => e.TypeId).OrderByDescending(g => g.Count()))
+            output.WriteLine($"  not specific: {g.Key} x{g.Count()} ({string.Join(",", g.SelectMany(e => e.Causes).Select(x => x.Kind).Distinct())})");
+        output.WriteLine("types: " + string.Join(", ", c.All.GroupBy(e => e.TypeId).OrderByDescending(g => g.Count()).Take(60).Select(g => g.Key + " " + g.Count())));
+        Assert.True(rep.Ratio >= 0.90, $"specific coverage {rep.Ratio:0.000}");
+        var p6 = c.SpecificCoverage(types, e => types.Get(e.TypeId) is { Def.Legacy: false }, hist);
+        output.WriteLine($"Phase 6 types: {p6.Entries} entries, ratio {p6.Ratio:0.000}");
+        Assert.True(p6.Entries == 0 || p6.Ratio >= 0.95);
+        Assert.Equal(0, rep.NoCause); Assert.All(c.All, e => Assert.True(e.Causes.Count > 0, e.TypeId));
+        var chains = ChronicleChains.Check(c, types, maxProblems: 100_000, older: hist);
+        output.WriteLine($"chains: {chains.Entries} entries, {chains.Roots} roots, unresolved {chains.Unresolved}, out of order {chains.OutOfOrder}, illegal roots {chains.IllegalRoots}");
+        foreach (var g in chains.Problems.GroupBy(pr => pr.Split(' ')[0] + (pr.Contains("not earlier") ? " (not earlier)" : pr.Contains("is a root") || pr.Contains("a root,") ? " (illegal root)" : " (other)")).OrderByDescending(g => g.Count())) output.WriteLine($"  chain problem: {g.Key} x{g.Count()}: {g.First()}");
+        Assert.Equal(0, chains.Unresolved); Assert.Equal(0, chains.OutOfOrder); Assert.Equal(0, chains.IllegalRoots);
+        // the widened bot's acts are in it, with their chains
+        foreach (var t in new[] { "crime_witnessed", "bounty_posted", "crime_arrested", "sentence_pronounced", "courtship_begun", "betrothal", "hero_wedding", "fire_started" })
+            Assert.True(c.All.Any(e => e.TypeId == t), $"the hero bot's run has no {t} entry");
+        Assert.True(c.All.Any(e => e.TypeId.StartsWith("fight_", StringComparison.Ordinal)), "no fight entry");
+        // Phase 2-5 gates over the ten years: coin and mass exact every year, the population in the band, households within 10 percent, idle adults under 800
+        Assert.All(k.Rows, r => { Assert.True(r.Coin, $"coin audit failed in year {r.Year}"); Assert.True(r.Mass, $"mass audit failed in year {r.Year}"); });
+        Assert.All(k.Rows, r =>
+        {
+            Assert.InRange(r.Alive, k.Alive0 * 90 / 100, k.Alive0 * 125 / 100);
+            Assert.InRange(r.Households, k.Households0 * 90 / 100, k.Households0 * 110 / 100);
+            Assert.True(r.Idle < 800, $"{r.Idle} idle adults in year {r.Year}");
+        });
+        Assert.True(At(rt, () => rt.State.Economy!.Ledger.Audit().IsConserved));
+    }
+
+    // ---------------------------------------------------------------- the 100-year soak
+
+    [Fact, Trait("Category", "Soak")]
+    public void Soak100Years_EverySystem_PopulationWithinTenPercent_CoinAndMassExact_NoRealmCollapseFromUnrestAlone()
+    {
+        if (Environment.GetEnvironmentVariable("FL_SOAK100") != "1") { output.WriteLine("skipped: set FL_SOAK100=1 (about half an hour)"); return; }
+        PlagueSeverity? plague = Environment.GetEnvironmentVariable("FL_SOAK_PLAGUE") is { } pl && Enum.TryParse<PlagueSeverity>(pl, out var ps) ? ps : null;
+        int years = int.TryParse(Environment.GetEnvironmentVariable("FL_SOAK_YEARS"), out var ny) ? ny : 100;
+        var k = Run(years, plague, [1, 10, 25, 50, 100]);
+        using var rt = k.Rt; var st = k.St; var c = st.Chronicle;
+        k.Log("hero acts: " + string.Join(", ", k.Acts.Select(a => a.Key + " " + a.Value)));
+        // the type counts by decade, over the home chronicle and every resident region's (the continent's own events are written to the home chronicle)
+        var all = At(rt, () => rt.Records.Resident.Select(x => (x.Coord.Id == rt.Records.Home.Id, x.Chronicle.All.ToList())).ToList());
+        var byDecade = new SortedDictionary<string, int[]>(StringComparer.Ordinal);
+        foreach (var (isHome, list) in all)
+            foreach (var e in list)
+            {
+                int d = Math.Clamp((int)(e.When.TotalDays / DaysPerYear - k.Start / 24 / DaysPerYear) / Math.Max(1, years / 10), 0, 9);
+                string key = (isHome ? "" : "ring:") + e.TypeId;
+                if (!byDecade.TryGetValue(key, out var a)) byDecade[key] = a = new int[10];
+                a[d]++;
+            }
+        k.Log("type counts by tenth of the run (history entries fall in the first bucket):");
+        foreach (var (t, a) in byDecade.OrderByDescending(x => x.Value.Sum())) k.Log($"  {t,-28} {a.Sum(),8} | {string.Join(' ', a.Select(x => x.ToString().PadLeft(6)))}");
+        Assert.All(k.Rows, r => { Assert.True(r.Coin, $"coin audit failed in year {r.Year}"); Assert.True(r.Mass, $"mass audit failed in year {r.Year}"); });
+        Assert.All(k.Rows, r =>
+        {
+            Assert.InRange(r.Alive, k.Alive0 * 90 / 100, k.Alive0 * 125 / 100);
+            Assert.InRange(r.Households, k.Households0 * 90 / 100, k.Households0 * 110 / 100);
+        });
+        var types = ChronicleTypes.From(k.W.Content);
+        var rep = c.SpecificCoverage(types, older: k.W.History.Chronicle);
+        k.Log($"chronicle {c.Count} entries, specific ratio {rep.Ratio:0.000}, no cause {rep.NoCause}, summaries {rep.Summaries}");
+        Assert.True(rep.Ratio >= 0.90); Assert.Equal(0, rep.NoCause);
+        var chains = ChronicleChains.Check(c, types, maxProblems: 100_000, older: k.W.History.Chronicle);
+        k.Log($"chains: unresolved {chains.Unresolved}, out of order {chains.OutOfOrder}, illegal roots {chains.IllegalRoots}");
+        Assert.Equal(0, chains.Unresolved); Assert.Equal(0, chains.OutOfOrder);
+        var sizes = At(rt, () => WorldSave.Capture(rt.State, Hash, "0.1").Sections.OrderByDescending(s => s.Value.Length).Take(12).Select(s => $"{s.Key} {s.Value.Length / 1024.0 / 1024:0.00} MB").ToList());
+        k.Log("largest save sections at the end: " + string.Join(", ", sizes));
+    }
+}

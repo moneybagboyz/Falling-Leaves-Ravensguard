@@ -50,8 +50,11 @@ public sealed class RelationTable(int cap = 20000)
 
     private void Evict()
     {
-        var worst = _rows.OrderBy(kv => kv.Value.Familiarity).ThenBy(kv => kv.Value.LastMetDay).ThenBy(kv => kv.Key).First().Key;
-        _rows.Remove(worst);
+        // the least familiar, then the longest unmet, then the lowest key: one linear scan (the full sort this replaces cost 3 ms a new pair once the table was full: 40 s a game year from year 6, P6-G2)
+        (int, int) worst = default; byte wf = 0; int wd = 0; bool any = false;
+        foreach (var (k, r) in _rows)
+            if (!any || r.Familiarity < wf || (r.Familiarity == wf && (r.LastMetDay < wd || (r.LastMetDay == wd && k.CompareTo(worst) < 0)))) { worst = k; wf = r.Familiarity; wd = r.LastMetDay; any = true; }
+        if (any) _rows.Remove(worst);
     }
 
     /// <summary>Familiarity falls by 1 for every <c>FamiliarityDecayDays</c> since the pair last met; rows that reach 0 with no trust are dropped.</summary>
