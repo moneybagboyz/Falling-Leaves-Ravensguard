@@ -124,7 +124,7 @@ public static class Courting
         int head = w.Households.Head[hh];
         int headScore = head >= 0 && head != p ? Score(w, hero, head, hh, c.Id, day, 1) : int.MaxValue;
         if (headScore < w.S.YesAt) { c.Consent = ConsentState.No; return new(false, "fm_house_no", name, pt.FullName(head)); }
-        if (w.St.Standing?.Marks is { } marks && (marks.Of(w.HeroId)?.Excommunicated.Count > 0 || marks.Of(pt.IdOf(p))?.Excommunicated.Count > 0)) return new(false, "fm_church_refuses");
+        if (!ChurchAllows(w, w.HeroId) || !ChurchAllows(w, pt.IdOf(p))) return new(false, "fm_church_refuses");
         c.Consent = ConsentState.Yes; c.State = CourtState.Betrothed;
         var roof = RoofFor(w, hero);
         if (roof.Ok) c.WeddingDay = FamilyRules.NextHolyDay(w.S, day);
@@ -141,6 +141,22 @@ public static class Courting
         if (c == null) return new(false, "fm_not_courted");
         c.State = CourtState.Broken;
         return new(true, "fm_broken_off");
+    }
+
+    // ------------------------------------------------------------------ the church (the one call site of the wedding's refusal, B4's hook)
+
+    /// <summary>
+    /// Whether the church will marry a person (faith-and-church 4.3): <see cref="Faith.ChurchServices.Allows"/> for the wedding, with their own religion (their culture's): not excommunicated, and a standing with the
+    /// religion above the floor of -500. A world without a faith book answers as the old rule did (an excommunicated person is refused). The one place the family asks, for courtships and arranged matches alike.
+    /// </summary>
+    public static bool ChurchAllows(FamilyWorld w, EntityId person)
+    {
+        var st = w.St;
+        if (st.Standing?.Marks is { } marks && marks.Of(person)?.Excommunicated.Count > 0) return false;
+        if (w.Content == null) return true;
+        int row = w.RowOf(person); if (row < 0) return true;
+        int religion = Faith.FaithWiring.ReligionsOf(st, w.Content).OfCulture(w.People.Culture[row]);
+        return Faith.ChurchServices.Allows(st.Standing, person, religion, Faith.ChurchServices.Service.Wedding);
     }
 
     // ------------------------------------------------------------------ a roof
@@ -214,7 +230,7 @@ public static class Courting
     public static CourtResult Wed(FamilyWorld w, Courtship c, int hero, int p, int day)
     {
         var pt = w.People; var hht = w.Households; var s = w.S; var ledger = w.Ledger;
-        if (w.St.Standing?.Marks is { } marks && (marks.Of(w.HeroId)?.Excommunicated.Count > 0 || marks.Of(pt.IdOf(p))?.Excommunicated.Count > 0)) return new(false, "fm_church_refuses");
+        if (!ChurchAllows(w, w.HeroId) || !ChurchAllows(w, pt.IdOf(p))) return new(false, "fm_church_refuses");
         var roof = RoofFor(w, hero);
         if (!roof.Ok) return new(false, "fm_no_roof");
         int heroHh = pt.Household[hero], fromHh = pt.Household[p], settlement = roof.Settlement;

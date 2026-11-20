@@ -294,7 +294,7 @@ public static class RngStreams
     public const uint BargeLegDelay = 0x552;
     /// <summary>Inheritance: the hero's kin at a new game (the origin's kin rows, their ages and counts, the hero's own age; key hero seed).</summary>
     public const uint HeroKin = 0x560;
-    /// <summary>P5-H inheritance: reserved for Phase 6 disputed inheritances; settling an estate is a pure function of the tables (inheritance 5). Asserted never drawn.</summary>
+    /// <summary>P5-H inheritance: reserved for Phase 6 disputed inheritances; settling an estate is a pure function of the tables (inheritance 5) and never draws. Drawn since P6-E3 only by <c>Family/Disputes.cs</c> (a child who contests a will, key the claimant and the day).</summary>
     public const uint InheritanceDisputesReserved = 0x561;
     /// <summary>P6-C3 rule: official and steward honesty (rule-and-income 4.8, key the person id). Reserved in Phase 5 and never drawn there; drawn only from the Phase 6 rule book on.</summary>
     public const uint OfficialHonesty = 0x540;
@@ -342,6 +342,10 @@ public static class RngStreams
     public const uint Kidnapping = 0x643;
     /// <summary>P6: family: the hero's old age (key hero, year).</summary>
     public const uint HeroOldAge = 0x644;
+    /// <summary>P6-E3: family: a lord's choice to arrange a match on a season's first day (key the lord's house, season).</summary>
+    public const uint LordMatches = 0x645;
+    /// <summary>P6-E3: family: an NPC head of household makes a will (key person, year).</summary>
+    public const uint NpcWills = 0x646;
     /// <summary>P6: faith: religions for v0 worlds (key culture).</summary>
     public const uint ReligionsForV0Worlds = 0x650;
     /// <summary>P6: faith: founders and holy days (key religion).</summary>

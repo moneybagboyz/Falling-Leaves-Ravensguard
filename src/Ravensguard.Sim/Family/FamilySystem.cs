@@ -28,6 +28,9 @@ public static class FamilySystem
         {
             Ageing(w, day, hero);
             Courting.Daily(w, day);
+            if (day % TimeConst.DaysPerSeason == 0) Matches.LordsSeason(w, day);                  // P6-E3: each lord with a grown child looks for an alliance (stream 0x645)
+            Matches.Daily(w, day);
+            KinTurning.Daily(w, day, hero);
             Conception(w, day, hero);
             Births(w, day, hero);
             Lessons(w, day, hero);

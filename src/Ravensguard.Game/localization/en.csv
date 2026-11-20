@@ -5627,6 +5627,35 @@ sl_not_armed,He carries no weapon.
 sl_party_ran,He bolts from the party and is gone.
 sl_btn_arm,Arm him
 sl_btn_disarm,Take weapon back
+fm_not_your_member,That is not a member of your household.
+fm_match_open,A match is already arranged for them.
+fm_not_a_fit,"The houses would not think of it (the same sex, the same house, kin or too far apart in rank)."
+fm_kin_refuses,{0} has lost faith in you and will not hear of a match.
+fm_dowry_range,"The dowry must be between {0} and {1} mites, half the custom of the class either way."
+fm_match_no,"{0}'s house will not have it (the answer was {1})."
+fm_overlord_refuses,The overlord will not sell his consent to the match.
+fm_match_waits_fee,"The match with {0} is agreed, but the overlord's fee is not yet paid."
+fm_match_made,"The match with {0} is made; the wedding is on day {1}."
+fm_no_candidates,There is no one the houses would consider.
+ch_family_match_arranged,{groom} and {bride} were promised to each other by their houses at {place}.
+ch_family_match_wed,"{bride} and {groom} were married at the church of {place}; the bride's house gave {dowry}."
+ch_family_kin_left,{person} left {hero}'s household for another roof at {place}.
+ch_family_contested,"{person} contested {heir}'s inheritance before the court of {place}, and the court {outcome}."
+ch_family_contest_law,overruled the will
+ch_family_contest_will,held to the will
+ch_note_match_head,The head of the house arranged the match.
+ch_note_match_lord,The lord of the house looked for an alliance.
+ch_note_match_wed,The match was kept.
+ch_note_match_alliance,The marriage joined two lords' houses.
+ch_note_marriage_pact,The two houses were joined by marriage.
+ch_note_kin_neglected,He felt neglected.
+ch_note_kin_punished,He was harshly punished.
+ch_note_kin_passed_over,He was passed over by the will.
+ch_note_kin_married_off,He was married off against his will.
+ch_note_kin_favoured,A sibling was favoured over him.
+ch_note_kin_distrust,He had lost faith in the hero.
+ch_note_court_law,The court held to the law of the land.
+ch_note_court_will,The court held to the will.
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."

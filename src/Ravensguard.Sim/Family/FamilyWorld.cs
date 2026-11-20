@@ -61,6 +61,30 @@ public sealed class FamilyWorld
     /// <summary>Whether a kidnapper band roams within reach of the hero's home in a season (a stand-in until bands are world objects: a draw on the season).</summary>
     public Func<int, bool> BandNear { get; init; } = _ => false;
 
+    // ------------------------------------------------------------------ the rule and the politics (P6-E3)
+
+    /// <summary>The rule's context at the barrier (fiefs, dues, overlords); null in a world without a rule book or a home sim.</summary>
+    public Ravensguard.Sim.Rule.RuleCtx? RuleAt()
+    {
+        var sim = St.HomeRecords?.Sim; var rb = St.Rule;
+        return sim == null || rb == null ? null : Ravensguard.Sim.Rule.RuleWiring.Context(sim, rb, Ravensguard.Sim.Rule.RuleChron.Of(St.Chronicle, St.Ids));
+    }
+
+    /// <summary>The politics' context (opinions, treaties) over the rule's; null when the world keeps no politics.</summary>
+    public Ravensguard.Sim.Politics.PoliticsCtx? PoliticsAt(int day)
+    {
+        var sim = St.HomeRecords?.Sim; var rb = St.Rule;
+        if (sim == null || rb == null || St.Politics == null) return null;
+        Ravensguard.Sim.Politics.PoliticsWiring.Bind(St.Politics, Content, St.Seed);
+        return Ravensguard.Sim.Politics.PoliticsEngine.Context(sim, St.Politics, rb, Ravensguard.Sim.Rule.RuleChron.Of(St.Chronicle, St.Ids), day);
+    }
+
+    /// <summary>A person's standing with a settlement's people (permille); the hero's own through <see cref="StandingPm"/>.</summary>
+    public int StandingOf(EntityId person, int settlement) => Standing.Of(St.Standing, person, new GroupRef(GroupKind.Settlement, settlement));
+
+    /// <summary>The person's row: the hero's through his record (his id is zero), anyone else's by id.</summary>
+    public int RowOf(EntityId person) => person == HeroId ? HeroRow : People.IndexOf(person);
+
     public static FamilyWorld From(WorldState st, ContentDatabase? db)
     {
         var heroId = st.Party?.Hero ?? EconomyState.HeroOwner;

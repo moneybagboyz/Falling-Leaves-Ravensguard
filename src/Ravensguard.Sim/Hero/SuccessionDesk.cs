@@ -116,6 +116,7 @@ public static class SuccessionDesk
         }
         // P5-H (inheritance 4.2): the estate settles: debts from the coin, then the chest, then the body's goods at bid; every holding to its heir by the will and the law (the play heir keeps
         // the hero's id, so what he inherits stays put), the rest to kin or the lord; the deeds the play heir holds are on the record
+        var willBefore = st.Wills?.Of(ctx.Party.Hero);                                  // P6-E3: the will as it stood, for a child it passed over (family 4.5)
         if (deadRow >= 0 || heir != null)
         {
             bool kin = heir != null && heir.Rule is SuccessionRule.Child or SuccessionRule.Spouse or SuccessionRule.Sibling or SuccessionRule.YoungChild or SuccessionRule.Parent;
@@ -164,6 +165,7 @@ public static class SuccessionDesk
         foreach (var (shape, material) in HeroOutfit.For(ctx.Content, hero, c.IssuedSec))
             carried.EquipItem(e, ctx.Rules, carried.MakeItem(e, ctx.Content, ctx.Rules, ctx.Factory, st.Ids, shape, material));
         foreach (var shape in new[] { "belt_pouch", "satchel" }) carried.EquipItem(e, ctx.Rules, carried.MakeItem(e, ctx.Content, ctx.Rules, ctx.Factory, st.Ids, shape));
+        Ravensguard.Sim.Family.Disputes.Contest(st, ctx.Content, ctx.Party, ctx.Purse, deadRow, row, willBefore, day, c.IssuedSec);     // P6-E3: a child the will passed over may contest it (the reserved stream)
         st.Chronicle.Add(new ChronicleEntry(st.Ids.Allocate(IdKind.Event), new GameTime(c.IssuedSec), "hero_succession", [ctx.Party.Hero, heir.Person], [],
             new Dictionary<string, string> { ["name"] = deadName, ["heir"] = heir.Name, ["rule"] = heir.Rule.ToString(), ["coin"] = rec!.Coin.ToString(CultureInfo.InvariantCulture) }));
         return R(c, HeroResultCode.Ok, HeroText.Of("su_continues", heir.Name), rec.Coin, 1);
