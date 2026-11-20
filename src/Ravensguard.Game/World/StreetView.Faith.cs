@@ -61,6 +61,12 @@ public partial class StreetView
         },
         Vow = target => { _arrivalSent = false; _heroLink?.Issue(FaithDesk.Vow(HeroSettlement(), target, HeroNow())); },
         Abandon = () => _heroLink?.Issue(FaithDesk.Abandon(HeroNow())),
+        Penance = () => _heroLink?.Issue(FaithDesk.Penance(HeroNow())),
+        Venerate = key => { int s = HeroSettlement(); if (s >= 0) _heroLink?.Issue(FaithDesk.Venerate(s, key, HeroNow())); },
+        SellRelic = key => { int s = HeroSettlement(); if (s >= 0) _heroLink?.Issue(FaithDesk.SellRelic(s, key, HeroNow())); },
+        BuyRelic = key => { int s = HeroSettlement(); if (s >= 0) _heroLink?.Issue(FaithDesk.BuyRelic(s, key, HeroNow())); },
+        ShowHead = () => { int s = HeroSettlement(); if (s >= 0) _heroLink?.Issue(FaithDesk.ShowHead(s, HeroNow())); },
+        Charm = () => { int s = HeroSettlement(); if (s >= 0) _heroLink?.Issue(FaithDesk.Charm(s, HeroNow())); },
     };
 
     /// <summary>Per frame: the answers to faith commands toasted, the view kept fresh while the panel is up (and now and then otherwise), a pilgrim's arrival in the shrine's town.</summary>

@@ -43,5 +43,11 @@
   {"type": "deed", "id": "slander_exposed",   "entry": "slander_exposed", "settlement_pm": -120, "fief_pm": -60},
   {"type": "deed", "id": "work_done_hero",    "entry": "work_done",   "match": {"hero": "1"}, "settlement_pm": 10, "fief_pm": 5, "per_key": "pm", "per_unit": 10, "per_max": 30},
   {"type": "deed", "id": "work_failed_hero",  "entry": "work_failed", "match": {"hero": "1"}, "settlement_pm": -10, "fief_pm": -5, "per_key": "pm", "per_unit": 10, "per_max": 60},
-  {"type": "deed", "id": "tournament_won",    "entry": "tournament_won", "match": {"hero": "1"}, "settlement_pm": 80, "fief_pm": 30}
+  {"type": "deed", "id": "tournament_won",    "entry": "tournament_won", "match": {"hero": "1"}, "settlement_pm": 80, "fief_pm": 30},
+  {"type": "deed", "id": "sacrilege",          "entry": "sacrilege",          "settlement_pm": -150, "fief_pm": -60, "religion_pm": -300},
+  {"type": "deed", "id": "excommunicated",     "entry": "excommunicated",     "settlement_pm": -100, "religion_pm": -1000},
+  {"type": "deed", "id": "excommunicated_asked", "entry": "excommunication_asked", "settlement_pm": -100, "religion_pm": -1000},
+  {"type": "deed", "id": "penance_done",       "entry": "penance_done",       "religion_pm": 900},
+  {"type": "deed", "id": "grace_granted",      "entry": "grace_granted",      "religion_pm": 900},
+  {"type": "deed", "id": "monster_head_shown", "entry": "monster_head_shown", "settlement_pm": 100, "religion_pm": 40}
 ]

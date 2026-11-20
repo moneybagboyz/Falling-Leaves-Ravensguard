@@ -32,12 +32,43 @@ public static class FaithStanding
     }
 }
 
+/// <summary>
+/// What the hero's parish says of the faith's politics (P6-E2): superstition where he stands, a heresy there and the bishop's answer, his ban and what penance asks, the relics on the altar and in his pack (a fake is known only
+/// to one who can tell), the ones a pardoner offers, whether a slain monster's head is still to show, and the believed miracles of late with their natural explanations.
+/// </summary>
+public sealed record FaithPoliticsView(int Fear, bool AvoidsNight, string HeresyChange, int HeresyAdherents, int HeresyAdults, byte HeresyResponse, bool Interdict, bool Banned, long PenanceMites, bool PilgrimageSince,
+    IReadOnlyList<(ulong Key, string Name, bool Carried, bool Fake, bool Venerable)> Held, IReadOnlyList<(ulong Key, string Name)> ForSale, bool CanShowHead,
+    IReadOnlyList<(string KindKey, string NoteKey, bool Disputed, int Day)> Miracles, long CharmMites)
+{
+    public static readonly FaithPoliticsView Empty = new(0, false, "", 0, 0, 0, false, false, 0, false, [], [], false, [], 0);
+
+    public static FaithPoliticsView Of(WorldState st, EntityId hero, int home, int religion, int day)
+    {
+        var p = FaithOps.Of(st); if (p == null) return Empty;
+        var s = p.S; int lvl = home >= 0 ? Superstition.Of(p, home) : 0;
+        var h = home >= 0 ? p.Pol.Heresies.GetValueOrDefault(home) : null;
+        var x = p.Pol.ActiveFor(hero.Value);
+        long due = x == null ? 0 : Excommunication.PenanceDue(st, p, hero).Sum(d => d.Mites);
+        int row = FaithOps.RowOf(st, hero);
+        var relics = new List<(ulong, string, bool, bool, bool)>();
+        int season = day / TimeConst.DaysPerSeason;
+        if (home >= 0)
+            foreach (var r in Relics.OnAltar(p, home)) relics.Add((r.Key, r.Name, false, false, p.Pol.VenerateSeason != season));
+        foreach (var r in Relics.CarriedBy(p, hero)) relics.Add((r.Key, r.Name, true, row >= 0 && Relics.SpotsFake(s, p.People, row) && r.Fake, false));
+        var sale = new List<(ulong, string)>();
+        if (home >= 0) foreach (var r in p.Pol.Relics.Values) if (r.Holder == 2 && r.At == home) sale.Add((r.Key, r.Name));
+        var mir = p.Pol.Miracles.OrderByDescending(m => m.Day).Take(3).Select(m => ("fa_miracle_" + m.Kind, m.Natural, m.Disputed, m.Day)).ToList();
+        return new FaithPoliticsView(lvl, Superstition.AvoidsNight(s, lvl), h?.Change ?? "", h?.Adherents.Count ?? 0, h?.Adults ?? 0, h?.Response ?? 0, h?.Interdict ?? false, x != null, due, x != null && p.Book.Pilgrimages > x.PilgrimsBefore,
+            relics, sale, Superstition.UnshownKills(st, p, hero).Count > 0, mir, s.CharmMites);
+    }
+}
+
 /// <summary>The hero's side of the church, as the Faith panel shows it (faith-and-church 6): built at a barrier, read only.</summary>
 public sealed record FaithView(string ReligionName, string ReligionId, string Deity, int PietyNow, string PietyBandKey, int StandingPm, StandingBand Band, bool Excommunicated,
     string PriestName, string BishopName, string ParishName, bool ParishVacant, string SeeName, bool SeeVacant,
     IReadOnlyList<(string Name, int InDays, bool Today, bool Saint)> HolyDays, IReadOnlyList<string> Doctrines, string HolySiteName, int HolySiteSettlement, bool OnPilgrimage, string PilgrimTarget, int PilgrimagesDone,
     bool ServiceToday, string FeastToday, bool AttendedToday, int LastServiceDay, int ServiceAdults, int ServiceAttended, int Day,
-    IReadOnlyList<(string Name, int Settlement, bool Site)> Shrines, int HomeSettlement, int Saints, int PilgrimSettlement = -1)
+    IReadOnlyList<(string Name, int Settlement, bool Site)> Shrines, int HomeSettlement, int Saints, int PilgrimSettlement = -1, FaithPoliticsView? Politics = null)
 {
     public static readonly FaithView Empty = new("", "", "", 0, "fa_band_observant", 0, StandingBand.Unknown, false, "", "", "", false, "", false, [], [], "", -1, false, "", 0, false, "", false, -1, 0, 0, 0, [], -1, 0);
 
@@ -69,7 +100,7 @@ public sealed record FaithView(string ReligionName, string ReligionId, string De
             parish == null ? "" : PersonName(parish.Priest), see == null ? "" : PersonName(see.Bishop), Name(home), parish is { Priest: < 0 }, see == null ? "" : Name(see.Seat), see is { Bishop: < 0 },
             days, docs, Name(site), site, pg != null, pg == null ? "" : Name(pg.Target), book.Pilgrimages,
             today != null, today?.Name ?? "", book.LastServiceDay == day, parish?.ServiceDay ?? -1, parish?.Adults ?? 0, parish?.Attended ?? 0, day,
-            [.. shrines.Select((s, i) => (Name(s), s, i == 0))], home, rel.Saints.Count, pg?.Target ?? -1);
+            [.. shrines.Select((s, i) => (Name(s), s, i == 0))], home, rel.Saints.Count, pg?.Target ?? -1, FaithPoliticsView.Of(st, hero, home, ri, day));
     }
 }
 

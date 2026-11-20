@@ -10,14 +10,14 @@ namespace Ravensguard.Sim.Faith;
 /// miracles are looked for; at hour 2 of a season's first day the heresies begin and are answered, the bishops ban, the bans are kept up, superstition falls and witch hunts are settled, pardoners come and fakes are
 /// exposed. Runs on the tick worker after the hour's own passes. No book is written while nothing happens: a world that never meets a heresy keeps its bytes.
 /// </summary>
-public sealed class FaithLink
+public sealed class FaithPoliticsLink
 {
     public WorldRuntime Runtime { get; }
-    private FaithLink(WorldRuntime rt) { Runtime = rt; }
+    private FaithPoliticsLink(WorldRuntime rt) { Runtime = rt; }
 
-    public static FaithLink Attach(WorldRuntime rt)
+    public static FaithPoliticsLink Attach(WorldRuntime rt)
     {
-        var l = new FaithLink(rt);
+        var l = new FaithPoliticsLink(rt);
         rt.AfterHour += l.OnHour;
         return l;
     }

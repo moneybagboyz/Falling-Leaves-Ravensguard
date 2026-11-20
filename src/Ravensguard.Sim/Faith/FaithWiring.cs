@@ -39,6 +39,22 @@ public static class FaithWiring
         if (cost > 0) Piety.Adjust(b, st.Population.People, doer, -cost);
     }
 
+    /// <summary>
+    /// A person is buried (faith 4.3, FC-10): if the church refuses him holy ground (banned, or standing -500 or less with his faith) the chronicle says so; the funeral's coin goes where it went before (the lord's treasury),
+    /// the body is not laid in the churchyard. Returns whether he was refused.
+    /// </summary>
+    public static bool OnBurial(WorldState st, EntityId dead, int settlement, int day)
+    {
+        var religions = ReligionsOf(st); if (religions.Count == 0) return false;
+        int ri = ChurchServices.ReligionOf(religions, st.Population.People, dead);
+        if (ri < 0 && st.Hero != null) { int hr = Succession.HeroPerson.RowOf(st.Population.People, st.Hero, dead); ri = hr >= 0 ? religions.OfCulture(st.Population.People.Culture[hr]) : -1; }
+        if (ri < 0 || ChurchServices.Allows(st.Standing, dead, ri, ChurchServices.Service.Burial)) return false;
+        var ps = new List<ChronParam> { ChronParam.Person("doer", dead) };
+        if (settlement >= 0 && settlement < st.Population.Region.Settlements.Count) ps.Add(ChronParam.Place("place", st.Population.Region.Settlements[settlement].Id));
+        FaithOps.Chron(st, day * 86_400L + 3600, "burial_refused", "ch_faith_burial_refused", ps, [dead], null, "ch_note_services_refused");
+        return true;
+    }
+
     public static ChurchBook? Attach(RegionWorld home, WorldState state, ContentDatabase content)
     {
         var book = state.Church;
