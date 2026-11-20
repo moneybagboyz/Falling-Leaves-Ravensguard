@@ -44,9 +44,9 @@ Collected while the steps are built. The close-out fixes each item or moves it i
   - rust and rot are wired in construction (piles, rubble and outdoor chests).
 
 ## From step 2 (P5-E full crafting)
-- **Important: adding a good breaks every existing save.** The economy section refuses a save made against a different goods table, so P5-E dropped its 7 new goods. That removed the recipes for wire, arrowheads, arrows, shingles, daub and harness, so the fletching kit has no recipe.
-  - A **goods-table migration** is needed: map saved good ids by name onto the current table and add zero rows for new goods, with a SaveMigrator step or a load-time remap.
-  - Without it, content updates and mods that add goods cannot load old saves. Fix in Phase 5, before the close-out, and restore the dropped recipes.
+- ~~**Important: adding a good breaks every existing save.**~~ **Done (P5 goods-table fix).** Saves now name their content tables in a "tables" section (no format bump), and every load maps saved goods, craft recipes, proficiencies, business kinds, book recipes and extraction kinds onto the loaded content by name (`Save/ContentRemap`). New goods get empty rows; removed ones follow the content's `migration` entries or are written off with one warning. The 7 goods and the recipes for wire, arrowheads, arrows, shingles, daub and harness are back, so the fletching kit has its recipe. Details in crafting-full.md Notes.
+  - **Still a gate, for the review:** the header's whole-content hash. `WorldSave.Restore` and `WorldLibrary.Load` refuse a save or world made with different content, even when every regenerated layer still verifies. So in the game a content update still blocks old saves. The goods are no longer the reason. Relaxing the gate to rely on the layer hashes is a policy decision.
+  - Two more tables are saved by index and not covered yet: the growth projects' business kind (`GrowthSave.PBusiness`, P5-D's area) and the animal breeds (`AnimalRowSave.Breed`, `MountsSave`). Each needs a table in `IdTables` and a rewrite in `ContentRemap.Sections` (with its frozen list) before its content changes.
 - **Brittle blades:** `Smithing.BrittleBreaks` exists, but the resolver does not call it.
 - **Crafting, still to do:**
   - tool wear for businesses and NPCs at stations;

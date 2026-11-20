@@ -103,9 +103,12 @@ public sealed class SaveMigrator
     /// is now <c>Deeds</c> (the same key, empty in every v7 save);
     /// (3) the hook for P5-G (vehicle-designer 3.3, not part of step 1): the "mounts" section's vehicle rows keep <c>WheelPm</c> here. When part rows land they are additive keys on the
     /// vehicle row, and a v8 row without them is expanded from its template at load, so P5-G needs no second step; if it cannot be additive, P5-G registers a v8 -> v9 step here.
+    /// (4) the goods-table fix (after step 2): a v7 save's content indices were numbered by the Phase 4 content, so the step stamps the "tables" section with those tables
+    /// (<see cref="LegacyIdTables.V7"/>: Phase 3's 34 craft recipes and 12 proficiencies, which Phase 5 renumbered) and the load maps them by name like any other content change.
     /// </summary>
     private static void MigratePhase5V8(IDictionary<string, byte[]> sections)
     {
+        if (!sections.ContainsKey(IdTablesSave.SectionName)) sections[IdTablesSave.SectionName] = SaveCodec.Serialize(LegacyIdTables.V7.ToSave());
         if (sections.TryGetValue(FightRecord.SectionName, out var fb) && fb.Length > 0)
         {
             var rec = SaveCodec.DeserializeCompressed<FightRecord>(fb);

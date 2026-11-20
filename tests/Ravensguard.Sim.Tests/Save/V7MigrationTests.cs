@@ -43,6 +43,19 @@ public class V7MigrationTests
 
         // the world loads (the content of this build differs from the one the save was made with only by Phase 5 rows the regenerated world does not read, so the load is told the save's own hash)
         var st = WorldSave.Restore(file, EconFixture.Content, raw.Header.ContentHash);
+        // the goods-table fix: the step stamps the Phase 4 tables, and the load maps the 104 goods of the save onto this content's by name (P5-E's goods are new, empty rows)
+        Assert.Equal(LegacyIdTables.V7.Get(IdTables.Goods), IdTables.FromSave(SaveCodec.Deserialize<IdTablesSave>(file.Sections[IdTablesSave.SectionName].ToArray())).Get(IdTables.Goods));
+        var v7e = SaveCodec.DeserializeCompressed<EconomySave>(raw.Sections[WorldSave.EconomySection].ToArray());
+        var names = LegacyIdTables.V7.Get(IdTables.Goods)!;
+        Assert.Equal(names.Length, v7e.GoodCount);
+        Assert.True(st.Economy!.Goods.Count > names.Length);
+        var loaded = st.Economy.HouseholdStore.Take(st.Economy.HouseholdCount).Concat(st.Economy.OtherStores.Values).ToDictionary(x => x.Owner.Value);   // by owner: the hero's household row is inserted at load
+        for (int i = 0, at = 0; i < v7e.StoreOwner.Length; i++)
+        {
+            var want = Enumerable.Range(at, v7e.StoreRowCount[i]).Select(k => (names[v7e.RowGood[k]], v7e.RowQty[k])).ToArray(); at += v7e.StoreRowCount[i];
+            Assert.Equal(want, loaded[v7e.StoreOwner[i]].Rows().Select(r => (st.Economy.Goods.StringId(r.Good), r.Qty)).ToArray());
+        }
+        Assert.True(st.Economy.MassAuditHolds());
         var pt = st.Population.People;
         int row = st.Hero!.PersonIndex;
         Assert.True(row >= 0);

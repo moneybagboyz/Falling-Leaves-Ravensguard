@@ -58,6 +58,11 @@ public sealed class MarketsSave
     [Key(35)] public int[] OrderHookArg { get; set; } = [];
     /// <summary>An order's spending cap in mites (review finding 3); empty in older saves (no cap).</summary>
     [Key(36)] public long[] OrderMaxSpend { get; set; } = [];
+    /// <summary>
+    /// Goods whose price rows a load leaves as a freshly built book has them (content goods newer than the save, set by <see cref="ContentRemap"/>); empty in every captured section,
+    /// so the next save writes their rows as they have become.
+    /// </summary>
+    [Key(37)] public int[] FreshGoods { get; set; } = [];
 
     public static MarketsSave Capture(MarketSystem ms)
     {
@@ -107,6 +112,7 @@ public sealed class MarketsSave
                 if (hh >= 0) return ms.HouseholdParty(hh);
                 return ms.StewardById(id) ?? throw new SaveException("A market lot or order belongs to an unknown owner.");
             }
+            var fresh = new HashSet<int>(FreshGoods);
             for (int bi = 0; bi < books.Count; bi++)
             {
                 var b = books[bi];
@@ -115,6 +121,7 @@ public sealed class MarketsSave
                 for (int g = 0; g < goods; g++)
                 {
                     var gb = b.Goods[g]; int k = bi * goods + g;
+                    if (fresh.Contains(g)) { gb.Lots.Clear(); gb.StockUnits = 0; continue; }
                     gb.RefMicro = RefMicro[k]; gb.DemandEma = DemandEma[k]; gb.StructuralDemand = StructuralDemand[k]; gb.LastTradedDay = LastTradedDay[k];
                     gb.DemandToday = DemandToday[k]; gb.TradedToday = TradedToday[k]; gb.FloorDemand = FloorDemand[k]; gb.Lots.Clear(); gb.StockUnits = 0;
                 }

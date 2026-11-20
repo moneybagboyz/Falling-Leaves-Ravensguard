@@ -120,7 +120,7 @@ public class EconomySaveTests
             Assert.Contains(contains, ex.Message);
         }
         Check(d => d.PurseBalance[0] += 1, "economy");                    // coin from nowhere: the ledger no longer balances
-        Check(d => d.GoodsHash = "00", "goods table");
+        Check(d => d.GoodCount++, "goods table");                           // the goods do not match the table the save names (a stale hash alone is restamped: the goods are mapped by name)
         Check(d => d.RowQty[0] += 5, "mass ledger");                          // goods from nowhere: the mass ledger no longer matches
         Check(d => d.HouseholdCount++, "population");
     }
