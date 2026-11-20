@@ -7,6 +7,7 @@ using Xunit.Abstractions;
 namespace Ravensguard.Sim.Tests.Construction;
 
 /// <summary>The budgets of build-mode-and-construction 9 (overview 9.1, 9.2): 200 sites worked an hour, a piece finished, a collapse of 200 cells. Measured with margins for a loaded machine.</summary>
+[Collection(TimingCollection.Name)]
 public class ConstructionBudgetTests(ITestOutputHelper output)
 {
     [Fact, Trait("Category", "Timing")]
@@ -34,8 +35,7 @@ public class ConstructionBudgetTests(ITestOutputHelper output)
         double crew = (Math.Min(wall, cpu) - finishMs) / hours;
         output.WriteLine($"200 sites, 400 hands, {hours} working hours: wall {wall / hours:F2} ms, cpu {cpu / hours:F2} ms an hour; {finished} pieces finished in {finishMs:F1} ms ({finishMs / Math.Max(1, finished):F3} ms each); the crews' own work {crew:F2} ms an hour (budget 2 ms)");
         output.WriteLine($"quanta {(r.W.DiagQuantumTicks - qt0) * 1000.0 / Stopwatch.Frequency:F1} ms, refresh {(r.W.DiagRefreshTicks - rf0) * 1000.0 / Stopwatch.Frequency:F1} ms, pick {(r.W.DiagPickTicks - pk0) * 1000.0 / Stopwatch.Frequency:F1} ms, sync {r.W.DiagSyncTicks * 1000.0 / Stopwatch.Frequency:F1} ms, linear {r.W.DiagLinTicks * 1000.0 / Stopwatch.Frequency:F1} ms; quanta walked {r.W.DiagFullQuanta}, applied at once {r.W.DiagLinearQuanta}");
-        // P5-D: the cheap path (quanta deferred and applied at once, the quick refresh): about 2 ms an hour on a heavily loaded machine (budget 2 ms); a 10x allowance for CI load
-        Assert.True(crew < 20, $"{crew:F2} ms an hour");
+                Assert.True(crew < TestBudget.Ms(3), $"{crew:F2} ms an hour");           // Phase 6 G1 (Phase 5 S11): back on TestBudget; budget 2 ms, 3 ms with the margin a loaded shared machine needs, 5x on CI
         Assert.True(r.W.DiagLinearQuanta > 10 * r.W.DiagFullQuanta, "most site quanta take the cheap path");
 
         // a 200-cell collapse: a 20 x 10 upper floor on a grid of posts, every post knocked out, then the fall. The first run warms the JIT; the best of the next four is the figure
@@ -47,9 +47,9 @@ public class ConstructionBudgetTests(ITestOutputHelper output)
         }
         output.WriteLine($"{perPiece:F3} ms a piece finished (budget 0.5 ms)");
         output.WriteLine($"200-cell collapse: the last post out and the fall {last:F2} ms, all fifteen posts out and the fall {total:F2} ms (budget 3 ms)");
-        Assert.True(perPiece < 5, $"{perPiece:F3} ms a piece");
-        Assert.True(last < 30, $"{last:F1} ms");                     // P5-I: 10x allowance for CI load; about 2 ms on a quiet 4-core machine
-        Assert.True(total < 60, $"{total:F1} ms");
+        Assert.True(perPiece < TestBudget.Ms(0.5), $"{perPiece:F3} ms a piece");
+        Assert.True(last < TestBudget.Ms(3), $"{last:F1} ms");
+        Assert.True(total < TestBudget.Ms(8), $"{total:F1} ms");
     }
 
     private static (double Total, double Last, double PerPiece) Collapse200()
