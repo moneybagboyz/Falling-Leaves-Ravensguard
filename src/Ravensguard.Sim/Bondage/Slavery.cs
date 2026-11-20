@@ -287,6 +287,30 @@ public static class Slavery
         return r with { Mites = price };
     }
 
+    /// <summary>
+    /// The enslaved person picks his chains (4.4): only at night, when the overseer sleeps; the chance is the Phase 4 lock rule (stream 0x455, keyed on the second of the attempt over 20), a failed pick may be noticed
+    /// (a beating, a tighter chain). On success he is out of the chains and on the run: the owner posts the runaway's bounty (<see cref="BondDaily.Flee"/>).
+    /// </summary>
+    public static SlaveResult Escape(BondWorld bw, BondBook book, CrimeBook crimes, AftermathRules rules, EntityId person, long sec, int stealth, int lockpicking)
+    {
+        if (book.Of(person) is not { InPen: false, OnRun: false } b) return SlaveResult.No("sl_not_bonded");
+        if (b.Chain == Restraint.None) return SlaveResult.No("sl_not_chained");
+        if (!EscapeTable.Dark(sec)) return SlaveResult.No("sl_escape_day");
+        int pm = EscapeTable.LockPm(rules, lockpicking, CaptorKind.Slavers, false); long key = sec / 20; int day = (int)(sec / 86_400);
+        if (EscapeTable.Roll(bw.Seed, key, person, RngStreams.LockPick, 0) < pm)
+        {
+            b.Chain = Restraint.None;
+            BondDaily.Flee(bw, book, crimes, b, day, sec);
+            return new SlaveResult(true, "sl_escaped");
+        }
+        if (EscapeTable.Roll(bw.Seed, key, person, RngStreams.LockPick, 1) < EscapeTable.NoticePm(rules, stealth, true))
+        {
+            b.Chain = Restraint.Chained; b.FlogDay = day; b.Morale = Math.Max(0, b.Morale - 10);
+            return SlaveResult.No("sl_escape_caught");
+        }
+        return SlaveResult.No("sl_escape_failed");
+    }
+
     // ------------------------------------------------------------------ the owner's settings
 
     public static SlaveResult SetTreatment(BondBook book, EntityId owner, EntityId person, Treatment t)

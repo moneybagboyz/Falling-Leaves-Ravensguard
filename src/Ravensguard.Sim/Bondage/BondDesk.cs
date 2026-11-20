@@ -79,32 +79,14 @@ public static class BondDesk
         return R(c, HeroResultCode.Ok, "sl_ran");
     }
 
-    /// <summary>
-    /// The enslaved hero picks his chains (4.4): only at night, when the overseer sleeps; the chance is the Phase 4 lock rule (stream 0x455, the key the second of the attempt over 20), a failed pick may be noticed (a beating and
-    /// a tighter chain). On success he is out of the chains and on the run: the owner posts the runaway's bounty.
-    /// </summary>
+    /// <summary>The enslaved hero picks his chains (4.4): <see cref="Slavery.Escape"/> with the hero's stealth and lock-picking.</summary>
     private static HeroResult Escape(HeroContext ctx, BondWorld bw, Save.WorldState st, BondBook book, EntityId hero, HeroCommand c, int day)
     {
-        if (book.Of(hero) is not { InPen: false, OnRun: false } b) return R(c, HeroResultCode.Refused, "sl_not_bonded");
-        if (b.Chain == Restraint.None) return R(c, HeroResultCode.Refused, "sl_not_chained");
-        if (!EscapeTable.Dark(c.IssuedSec)) return R(c, HeroResultCode.Refused, "sl_escape_day");
-        var rules = st.Captivity?.Rules ?? AftermathRules.Default;
         var (stealth, _, lockp, _, _) = bw.W.SkillsOf(hero);
-        int pm = EscapeTable.LockPm(rules, lockp, CaptorKind.Slavers, false);
-        long key = c.IssuedSec / 20;
-        if (EscapeTable.Roll(ctx.Seed, key, hero, RngStreams.LockPick, 0) < pm)
-        {
-            b.Chain = Restraint.None;
-            var crimes = st.Law ?? new CrimeBook();
-            BondDaily.Flee(bw, book, crimes, b, day, c.IssuedSec);
-            if (!crimes.IsEmpty) st.Law = crimes;
-            return R(c, HeroResultCode.Ok, "sl_escaped");
-        }
-        if (EscapeTable.Roll(ctx.Seed, key, hero, RngStreams.LockPick, 1) < EscapeTable.NoticePm(rules, stealth, true))
-        {
-            b.Chain = Restraint.Chained; b.FlogDay = day; b.Morale = Math.Max(0, b.Morale - 10);
-            return R(c, HeroResultCode.Refused, "sl_escape_caught");
-        }
-        return R(c, HeroResultCode.Refused, "sl_escape_failed");
+        var crimes = st.Law ?? new CrimeBook();
+        var res = Slavery.Escape(bw, book, crimes, st.Captivity?.Rules ?? AftermathRules.Default, hero, c.IssuedSec, stealth, lockp);
+        if (!crimes.IsEmpty) st.Law = crimes;
+        _ = ctx; _ = day;
+        return Of(c, res);
     }
 }
