@@ -81,4 +81,51 @@ public class ContractTests(ITestOutputHelper output)
         Assert.Contains(r.L.Chron, x => x.TypeId == "contract_done");
         r.AssertCoin(); r.AssertMass();
     }
+
+    [Fact]
+    public void AMissedStage_StopsTheBuilder_WhoKeepsWhatWasPaid_AndTheHalfBuiltHouseStaysTheClients()
+    {
+        using var r = ContractRig.Make(crowns: 2000);
+        var site = Lot(r);
+        var s = r.W.Site(site)!;
+        var bid = r.W.Bids(site, 4)[0];
+        var yard = bid.Builder.Store!;
+        foreach (var (g, kg) in new[] { ("thatch", 3000L), ("timber_planks", 30L), ("nails", 1L) }) yard.Create(r.L.W.Econ.Goods.IdOf(g), kg * 1000, Ravensguard.Sim.Goods.CreateReason.Import);
+        long t = T0;
+        Assert.True(r.W.Commission(r.Hero, PurseKind.Person, site, bid.Builder.Id, 4, t).Ok);
+        var c = r.W.Book.Contracts.Values.Single();
+        long builder0 = r.Led.Balance(r.Led.Open(PurseKind.Business, bid.Builder.Id)).Mites;
+        r.L.Drain();                                                                   // the hero spends everything else: he cannot put up the second third
+        r.Run(ref t, T0 + 10 * 86400L);
+        Assert.Equal(ContractState.Stopped, c.State);
+        Assert.Empty(s.Crew);                                                           // the builder left with his crew
+        Assert.Equal(r.Hero, s.Payer);                                                  // the site is the client's again
+        Assert.Equal(c.TotalMites / 3, c.ReleasedMites);                              // he keeps the stage paid
+        int built = s.PiecesBuilt;
+        Assert.InRange(built, 10, 79);                                                  // the half-built house stays
+        Assert.Equal(built, r.W.Book.Built.Values.Count(b => b.Site == site));
+        Assert.Contains(r.L.Chron, x => x.TypeId == "contract_stopped");
+        output.WriteLine($"stopped with {built} pieces built; the builder was paid {c.ReleasedMites} (his purse {builder0} -> {r.Led.Balance(r.Led.Open(PurseKind.Business, bid.Builder.Id)).Mites})");
+        r.AssertCoin(); r.AssertMass();
+    }
+
+    [Fact]
+    public void AContract_AndAGrowthSite_SaveAndLoad_ToTheSameBytes()
+    {
+        using var r = ContractRig.Make(crowns: 2000);
+        var site = Lot(r);
+        var bid = r.W.Bids(site, 4)[0];
+        long t = T0;
+        Assert.True(r.W.Commission(r.Hero, PurseKind.Person, site, bid.Builder.Id, 4, t).Ok);
+        r.Run(ref t, T0 + 2 * 86400L + 3 * 3600);
+        r.W.Book.Growth[77] = new GrowthLink { Serial = 77, Kind = GrowthSites.KindAssart, Settlement = 1, X = 64, Y = 128, W = 128, H = 64, DoneMilli = 12_000, NeedMilli = 720_000, LinkedSec = t };
+        r.W.Site(site)!.Crew[^1].DayCapSec = 4 * 3600;
+        var bytes = Ravensguard.Sim.Save.SaveCodec.SerializeCompressed(Ravensguard.Sim.Save.ConstructionSave.Capture(r.W.Book));
+        var back = Ravensguard.Sim.Save.SaveCodec.DeserializeCompressed<Ravensguard.Sim.Save.ConstructionSave>(bytes).Restore();
+        Assert.Equal(r.W.Book.ComputeHash(), back.ComputeHash());
+        var again = Ravensguard.Sim.Save.SaveCodec.SerializeCompressed(Ravensguard.Sim.Save.ConstructionSave.Capture(back));
+        Assert.Equal(bytes, again);
+        Assert.Single(back.Contracts); Assert.Single(back.Growth);
+        Assert.Equal(r.W.Book.Contracts.Values.Single().ReleasedMites, back.Contracts.Values.Single().ReleasedMites);
+    }
 }

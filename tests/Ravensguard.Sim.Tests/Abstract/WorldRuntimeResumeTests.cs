@@ -71,6 +71,30 @@ public class WorldRuntimeResumeTests(ITestOutputHelper output)
         desk.Issue(Ravensguard.Sim.Construction.ConstructionDesk.Hire(site.Id, 2, true, sec));
         desk.ApplyDue(ctx, rt.HourDone);
         Assert.All(desk.View!.Results, r => Assert.True(r.Ok, r.Text));
+        // P5-D: a growth cottage the lord pays for, 60 of its 250 hours done, on a village plot the player has seen: a real site (the hours mapped onto pieces) with its civic
+        // contract on the notice board, which the hero takes through the desk as a job (the "construction" section's contracts and growth links, the growth section's project)
+        var growth = s.HomeRecords.Economy.Growth;
+        int vil = Enumerable.Range(0, reg.Settlements.Count).First(i => reg.Settlements[i].Class == SettlementClass.Village && Ravensguard.Sim.Growth.RegionGrowth.FindPlot(reg, i, 16, 38, 30, [], out _, out _));
+        Ravensguard.Sim.Growth.RegionGrowth.FindPlot(reg, vil, 16, 38, 30, [], out var plot, out byte facing);
+        var tune = growth.Tuning;
+        growth.State.Projects.Add(new Ravensguard.Sim.Growth.BuildProject
+        {
+            Serial = growth.State.NextSerial++, Kind = Ravensguard.Sim.Growth.ProjectKind.Cottage, Settlement = vil, StartDay = (int)(sec / 86400) - 10, Payer = growth.LordOf(vil), Rect = plot, Facing = facing,
+            Use = LotUse.Cottage, Dwelling = DwellingType.Cottage, Blueprint = "peasant_cottage", Beds = tune.CottageBeds, HoursNeeded = 250, HoursDone = 60, MaterialG = [.. tune.CottageMaterials.Select(m => (long)m.Kg * 1000)],
+        });
+        var gen = Ravensguard.Sim.WorldGen.Chunks.ChunkGenerator.For(reg, s.Population, content);
+        for (int cy = plot.Y / 32; cy <= (plot.Bottom - 1) / 32; cy++)
+            for (int cx = plot.X / 32; cx <= (plot.Right - 1) / 32; cx++)
+            {
+                var levels = gen.GenerateLevels(cx, cy);
+                s.Chunks.RecordFirstVisit(new ChunkKey(cx, cy, 0), Ravensguard.Sim.WorldGen.Chunks.ChunkGenerator.Version, levels.ContentHash, levels.Levels[0]);
+            }
+        cw.GrowthSites!.LinkSeen(new GameTime(sec));
+        var civic = s.Construction.Contracts.Values.Single();
+        desk.Issue(Ravensguard.Sim.Construction.ConstructionDesk.TakeContract(civic.Id, sec));
+        desk.ApplyDue(ctx, rt.HourDone);
+        Assert.All(desk.View!.Results, r => Assert.True(r.Ok, r.Text));
+        Assert.Equal(Ravensguard.Sim.Construction.ContractState.Signed, civic.State);
         s.Crafting ??= new Ravensguard.Sim.Crafting.CraftState();
         var heroId = s.Population.People.IdOf(s.Hero!.PersonIndex);
         s.Crafting.Artefacts.Named[EntityId.Make(IdKind.Item, 0xA27E)] = new Artefact(Artefacts.NameFor(content, s.Seed, new EntityId(77), "Aldric Vane"), heroId, "Aldric Vane", sec);
@@ -201,6 +225,9 @@ public class WorldRuntimeResumeTests(ITestOutputHelper output)
             Assert.NotEmpty(straight.State.Construction!.Ghosts);
             Assert.NotEmpty(straight.State.Construction.Built);
             Assert.Equal(straight.State.Construction.ComputeHash(), resumed.State.Construction!.ComputeHash());
+            // P5-D: the civic contract the hero took and the visible growth site are there at the end of both runs
+            Assert.NotEmpty(straight.State.Construction.Contracts);
+            Assert.NotEmpty(straight.State.Construction.Growth);
             // P5-E: the commission was worked (and, uncollected, sold) through the save in both runs, the fire burned, the apprentice and the guild member are there, the fetch job is waiting
             foreach (var s in new[] { straight.State, resumed.State })
             {

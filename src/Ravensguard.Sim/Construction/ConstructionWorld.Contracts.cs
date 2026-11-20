@@ -353,11 +353,28 @@ public sealed partial class ConstructionWorld
         // missed: the builder stops and keeps the stage paid; the half-built house is the client's
         c.State = ContractState.Stopped; c.DoneSec = nowSec;
         s.Pause = PauseReason.NoWages;
-        foreach (var m in s.Crew) m.Ghost = default;
-        s.Crew.RemoveAll(m => m.Class == CrewClass.Follower);
+        LetCrewGo(s);
         Event(ConstructionEventKind.Paused, nowSec, s.PileX, s.PileY, s.PileZ, "", s.Id);
         Chron(nowSec, "contract_stopped", [c.Client, c.Contractor, s.Id], [new Cause(CauseKind.Other, null, "the client missed a stage payment")], ("owed", third.ToString()));
         return true;
+    }
+
+    /// <summary>The builder leaves with all his crew: each hired hand is paid for his hours today out of the site's escrow, the rest goes back to the builder; the site is the client's again.</summary>
+    private void LetCrewGo(ConstructionSite s)
+    {
+        long dayLen = Rules.DayHours * 3600L;
+        var escrow = EscrowPurse(s);
+        foreach (var m in s.Crew)
+        {
+            m.Ghost = default;
+            if (!Paid(m) || m.WorkedTodaySec <= 0) continue;
+            long pay = Math.Min(Econ.Ledger.Balance(escrow).Mites, m.WageMitesPerDay * Math.Min(m.WorkedTodaySec, dayLen) / dayLen);
+            if (pay > 0 && (PayeeOf?.Invoke(m.Person) ?? (Econ.Ledger.TryFind(PurseKind.Person, m.Person, out var pp) ? pp : null)) is { } to && Econ.Ledger.Transfer(escrow, to, new Coin(pay), JobReasons.Pay))
+            { m.PaidMites += pay; s.PaidMites += pay; }
+        }
+        s.Crew.Clear();
+        long left = Econ.Ledger.Balance(escrow).Mites;
+        if (left > 0 && PayerPurse(s) is { } back && Econ.Ledger.Transfer(escrow, back, new Coin(left), JobReasons.Refund)) s.RefundedMites += left;
     }
 
     private void Release(Contract c, PurseId escrow, PurseId to, long mites)
