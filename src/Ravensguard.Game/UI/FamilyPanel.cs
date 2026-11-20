@@ -23,6 +23,8 @@ public partial class FamilyPanel : Control
     readonly Action _refresh;
     readonly Action<EntityId, Course, EntityId?> _teach;
     readonly Action<EntityId>? _breakOff;
+    /// <summary>P6-E3: arrange a match for a member of the house with the best candidate the houses would consider.</summary>
+    public Action<EntityId>? Arrange { get; init; }
     VBoxContainer _body = null!;
     FamilyView? _shown;
     double _acc;
@@ -88,6 +90,23 @@ public partial class FamilyPanel : Control
             else _body.AddChild(UiKit.Body(L.F("fam_courting", v.CourtedName, v.Meetings, v.Gifts), true));
             if (!v.HasRoof) _body.AddChild(UiKit.Hint(L.T("fam_no_roof"), true));
             if (_breakOff is { } br) { var b = new Button { Text = L.T("fam_break"), CustomMinimumSize = new Vector2(180, 30) }; b.Pressed += () => br(v.Courted); _body.AddChild(b); }
+        }
+
+        // P6-E3: the matches under way and the members the head could match (family 4.2)
+        if (v.OpenMatches.Count > 0 || v.Arrangeable.Count > 0) _body.AddChild(UiKit.Hint(L.T("fam_matches")));
+        foreach (var m in v.OpenMatches)
+            _body.AddChild(UiKit.Body(m.State switch
+            {
+                MatchState.AwaitingFee => L.F("fam_match_fee", m.Groom, m.Bride),
+                MatchState.Wed => L.F("fam_match_wed", m.Groom, m.Bride),
+                _ => L.F(m.Alliance ? "fam_match_alliance" : "fam_match_betrothed", m.Groom, m.Bride, m.WeddingDay, m.DowryMites),
+            }, true));
+        foreach (var a in v.Arrangeable)
+        {
+            if (a.Refuses) { _body.AddChild(UiKit.Hint(L.F("fam_arrange_refuses", a.Name), true)); continue; }
+            if (a.Candidate.Length == 0) { _body.AddChild(UiKit.Hint(L.F("fam_arrange_none", a.Name, a.Age), true)); continue; }
+            _body.AddChild(UiKit.Body(L.F(a.NeedsConsent ? "fam_arrange_line_consent" : a.Alliance ? "fam_arrange_line_alliance" : "fam_arrange_line", a.Name, a.Age, a.Candidate, a.Utility, a.DowryMites), true));
+            if (Arrange is { } ar) { var ab = new Button { Text = L.F("fam_btn_arrange", a.Name), CustomMinimumSize = new Vector2(260, 30), ClipText = true }; var who = a.Member; ab.Pressed += () => ar(who); _body.AddChild(ab); }
         }
 
         // the children

@@ -131,7 +131,7 @@ public static class Matches
     private static int MinAge(FamilyWorld w, int row) => w.People.Sex[row] == Sex.Female ? w.Rates.MarryAgeMinFemale : w.Rates.MarryAgeMinMale;
 
     /// <summary>Why a person cannot be matched ("" when they can): free, grown to marrying age, not held, not bonded.</summary>
-    public static string WhyNot(FamilyWorld w, int row, int day)
+    public static string WhyNot(FamilyWorld w, int row, int day, HashSet<ulong>? promised = null)
     {
         var pt = w.People;
         if (row < 0 || row >= pt.Count || pt.Status[row] != PersonStatus.Alive) return "fm_gone";
@@ -140,21 +140,29 @@ public static class Matches
         if (w.St.Captivity?.Find(pt.IdOf(row)) is { Held: true }) return "fm_held";
         if (w.St.Bonds?.Has(pt.IdOf(row)) == true) return "fm_held";
         if (pt.Household[row] < 0) return "fm_not_so";
-        if (w.Book.Matches.Values.Any(m => m.State is MatchState.AwaitingFee or MatchState.Betrothed && (m.Groom == pt.IdOf(row).Value || m.Bride == pt.IdOf(row).Value))) return "fm_match_open";
+        if (promised != null ? promised.Contains(pt.IdOf(row).Value) : w.Book.Matches.Values.Any(m => m.State is MatchState.AwaitingFee or MatchState.Betrothed && (m.Groom == pt.IdOf(row).Value || m.Bride == pt.IdOf(row).Value))) return "fm_match_open";
         return "";
+    }
+
+    /// <summary>The people promised in a match still open (so a candidate search reads the set once, not the book for each person).</summary>
+    private static HashSet<ulong> Promised(FamilyWorld w)
+    {
+        var set = new HashSet<ulong>();
+        foreach (var m in w.Book.Matches.Values) if (m.State is MatchState.AwaitingFee or MatchState.Betrothed) { set.Add(m.Groom); set.Add(m.Bride); }
+        return set;
     }
 
     /// <summary>The loyalty of a kin member of the hero (4.5): his trust in the hero less 150 a grievance.</summary>
     public static int KinLoyalty(FamilyWorld w, EntityId person) => FamilyBook.Loyalty(w.TrustPm(person), w.Book.Grievances.GetValueOrDefault(person.Value), w.S.GrievanceWeightPm);
 
-    private static bool Fits(FamilyWorld w, int member, int cand, int day)
+    private static bool Fits(FamilyWorld w, int member, int cand, int day, HashSet<int>? kin2 = null, HashSet<ulong>? promised = null)
     {
         var pt = w.People;
         if (pt.Sex[member] == pt.Sex[cand] || pt.Household[member] == pt.Household[cand]) return false;
         int hh = pt.Household[cand]; if (w.Households.Head[hh] == cand) return false;
         if (Math.Abs((int)w.Households.Class[pt.Household[member]] - (int)w.Households.Class[hh]) > 1) return false;
-        if (Courting.Kin2(w, member).Contains(cand)) return false;
-        return WhyNot(w, cand, day).Length == 0;
+        if ((kin2 ?? Courting.Kin2(w, member)).Contains(cand)) return false;
+        return WhyNot(w, cand, day, promised ?? Promised(w)).Length == 0;
     }
 
     /// <summary>The candidates for a member (4.2): persons of the same or the next class who are free and not kin, with the answering house's utility at the class share of the dowry; best first (utility, then the lower row).</summary>
@@ -162,10 +170,10 @@ public static class Matches
     {
         var pt = w.People; var res = new List<MatchCandidate>();
         if (WhyNot(w, member, day).Length > 0) return res;
-        int mh = pt.Household[member];
+        int mh = pt.Household[member]; var kin2 = Courting.Kin2(w, member); var promised = Promised(w);
         for (int c = 0; c < pt.Count; c++)
         {
-            if (c == member || !Fits(w, member, c, day)) continue;
+            if (c == member || pt.Status[c] != PersonStatus.Alive || pt.Sex[c] == pt.Sex[member] || !Fits(w, member, c, day, kin2, promised)) continue;
             int ch = pt.Household[c]; var (groom, bride) = pt.Sex[member] == Sex.Male ? (member, c) : (c, member);
             int brideHouse = pt.Household[bride];
             long dowry = ClassShare(w, brideHouse);

@@ -37,7 +37,7 @@ public static class FamilyDemo
         Courting.Wed(w, c, hero, bride, Math.Max(day, c.WeddingDay));
         if (pt.Spouse[hero] != bride) return -1;
         var sb = st.Succession ??= new SuccessionBook();
-        foreach (var (years, name) in new[] { (7, "Wren"), (3, "Edda") })
+        foreach (var (years, name) in new[] { (7, "Wren"), (3, "Edda"), (23, "Ysolde") })
         {
             st.Ids.EnsureNext(IdKind.Person, pt.BaseCounter + (ulong)pt.Count); st.Ids.Allocate(IdKind.Person);
             int ch = pt.Add(); st.Economy!.AddPerson(ch);

@@ -2355,6 +2355,7 @@ MC_DEFEAT_BODY_IGNORED,"{0} took a fine at the gate and sent you on your way."
 MC_DEFEAT_BODY_YIELDED,"{0} accepted your surrender and left you be."
 MC_DEFEAT_BODY_LEFT,"{0} are gone. Nobody touched you."
 MC_WINNER_NONE,Nobody
+MC_WINNER_SLAVERS,The slavers
 MC_WINNER_BANDITS,The bandits
 MC_WINNER_ARMY,The soldiers
 MC_WINNER_BEASTS,The beasts
@@ -5662,6 +5663,17 @@ ch_family_business_sold,"{seller} sold the claimed shop at {place} to {buyer} fo
 ch_note_minor_heir,The heir was under sixteen.
 ch_note_minor_grown,The heir turned sixteen.
 ch_note_staff_unpaid,The staff had gone unpaid for fifteen days.
+fam_matches,Matches
+fam_match_fee,"{0} and {1} are promised, but the overlord's fee is not yet paid."
+fam_match_wed,{0} and {1} are married.
+fam_match_betrothed,"{0} and {1} are promised; the wedding is on day {2}, with a dowry of {3} mites."
+fam_match_alliance,"{0} and {1} are promised, joining two lords' houses; the wedding is on day {2}, with a dowry of {3} mites."
+fam_arrange_refuses,{0} has lost faith in you and will not hear of a match.
+fam_arrange_none,"No house would consider {0}, {1}, for now."
+fam_arrange_line,"{0}, {1}: the houses would consider {2} (answer {3}, dowry {4} mites)."
+fam_arrange_line_alliance,"{0}, {1}: an alliance with the house of {2} (answer {3}, dowry {4} mites)."
+fam_arrange_line_consent,"{0}, {1}: {2}, but a fief's heir needs the overlord's consent and fee (answer {3}, dowry {4} mites)."
+fam_btn_arrange,Arrange a match for {0}
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."
