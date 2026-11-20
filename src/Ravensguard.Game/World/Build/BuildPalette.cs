@@ -35,7 +35,7 @@ public partial class BuildPalette : PanelContainer
     static T Small<T>(T c) where T : Control { c.AddThemeFontSizeOverride("font_size", Font); return c; }
     static Label Lbl(string t = "", bool wrap = false) => Small(new Label { Text = t, AutowrapMode = wrap ? TextServer.AutowrapMode.WordSmart : TextServer.AutowrapMode.Off, ClipText = !wrap, MouseFilter = MouseFilterEnum.Ignore });
 
-    Button Btn(string text, string action, Action? press, int w = 150)
+    Button Btn(string text, string action, Action? press, int w = 118)
     {
         var b = Small(new Button { Text = text + "  " + InputBootstrap.Hint(action), CustomMinimumSize = new Vector2(w, 22), Alignment = HorizontalAlignment.Left, ClipText = true, FocusMode = FocusModeEnum.None });
         b.Pressed += () => press?.Invoke();
@@ -46,7 +46,7 @@ public partial class BuildPalette : PanelContainer
     {
         MouseFilter = MouseFilterEnum.Stop;
         AnchorTop = 1; AnchorBottom = 1; AnchorLeft = 0; AnchorRight = 0;
-        OffsetLeft = 12; OffsetRight = 12 + 640; OffsetTop = -214; OffsetBottom = -8;
+        OffsetLeft = 12; OffsetRight = 12 + 720; OffsetTop = -214; OffsetBottom = -8;
         GrowVertical = GrowDirection.Begin;
         var row = new HBoxContainer(); row.AddThemeConstantOverride("separation", 10); AddChild(row);
 
@@ -71,7 +71,7 @@ public partial class BuildPalette : PanelContainer
         var kl = Lbl(keys); kl.TooltipText = keys; kl.MouseFilter = MouseFilterEnum.Stop; kl.AddThemeColorOverride("font_color", PixelTheme.Dim); b.AddChild(kl);
 
         // the tools
-        var c = new VBoxContainer { CustomMinimumSize = new Vector2(150, 0) }; c.AddThemeConstantOverride("separation", 2); row.AddChild(c);
+        var c = new GridContainer { Columns = 2 }; c.AddThemeConstantOverride("h_separation", 3); c.AddThemeConstantOverride("v_separation", 3); row.AddChild(c);
         c.AddChild(Btn(L.T("BUILD_BTN_PLANS"), "build.plan_library", () => _act.Library?.Invoke()));
         _commit = Btn(L.T("BUILD_BTN_COMMIT"), "build.commit", () => _act.Commit?.Invoke()); c.AddChild(_commit);
         c.AddChild(Btn(L.T("BUILD_BTN_ROOF"), "build.roof_over", () => _act.Roof?.Invoke()));

@@ -250,6 +250,23 @@ public class BuildModeTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public void ABoughtPlot_IsBareGround_NoGeneratedHouseIsStampedOnIt()
+    {
+        // the land's purchase of a new plot records a lot with no blueprint to stamp: world generation's fallback (a townhouse, a cottage) must not build on it
+        var w = Ravensguard.Sim.Tests.Seamless.SeamWorld.Get(1234);
+        var region = Ravensguard.Sim.WorldGen.Region.RegionGenerator.Generate(w.Continent, w.History, w.BlockOrigin.Offset(1, 1), w.Settings);
+        var pop = Ravensguard.Sim.People.Populator.Populate(region, w.History, w.Content);
+        int s = region.Settlements.FindIndex(x => x.Class == Ravensguard.Sim.WorldGen.Region.SettlementClass.Town);
+        int lot = region.Settlements[s].Plan.Lots.Count;
+        var rect = region.Settlements[s].Plan.Lots[0].Rect;
+        var rec = new Ravensguard.Sim.Growth.LotRecord(s, lot, true, Ravensguard.Sim.WorldGen.Region.LotUse.Burgage, Ravensguard.Sim.WorldGen.Region.DwellingType.None, Ravensguard.Sim.Land.LandWorld.BarePlot,
+            new Ravensguard.Sim.WorldGen.Region.RectM(rect.X, rect.Y - 200, 11, 28), 0, 1, 0, 0);
+        Ravensguard.Sim.Growth.RegionGrowth.AddLot(region, pop, rec);
+        var gen = new ChunkGenerator(region, pop, w.Content);
+        Assert.Null(gen.StampOf(s, lot));
+    }
+
+    [Fact]
     public void PropClearing_TreesAndCratesClear_WellsAndGravesBlock()
     {
         Assert.Equal(PropHere.Clears, PropClearing.Of(PropKind.Tree));

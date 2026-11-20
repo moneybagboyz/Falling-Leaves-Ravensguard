@@ -35,8 +35,8 @@ public sealed partial class ConstructionWorld
     public PlanLibrary Plans(IEnumerable<(string Id, string Text)>? extra = null) =>
         Content != null ? PlanLibrary.For(Content, Designs, extra) : new PlanLibrary(Costs.Library, [], (Designs?.Designs.Select(kv => (kv.Key, kv.Value.Text)) ?? []).Concat(extra ?? []));
 
-    /// <summary>Whether a ground cell takes a plan (the fitter's ground rule): not a road, not steeper than the floor limit.</summary>
-    public bool GroundTakes(int x, int y) => Ground?.Invoke(x, y) is not { } g || (!g.Road && g.SlopePm <= Rules.MaxSlopePm);
+    /// <summary>Whether a ground cell takes a plan (the fitter's ground rule): not a road, not steeper than the floor limit, no generated building standing there.</summary>
+    public bool GroundTakes(int x, int y) => (Ground?.Invoke(x, y) is not { } g || (!g.Road && g.SlopePm <= Rules.MaxSlopePm)) && Standing?.Invoke(x, y, 0) != true;
 
     // ------------------------------------------------------------------ the preview (nothing changes)
 

@@ -171,8 +171,11 @@ public class HeroRuntimeTests
             Assert.True(dup.Count == 0, $"context {grp.Key}: {string.Join(", ", dup)} bound twice");
         }
         // C, I and P are bound once in World and nowhere in the contexts live beside it (Global always, Build over World; KeyMap.ActiveTogether)
-        foreach (var key in new[] { "Key.C", "Key.I", "Key.P" })
+        foreach (var key in new[] { "Key.C", "Key.I" })
             Assert.Single(all, a => a.Ctx is "W" or "G" or "B" && a.Keys.Contains(key));
+        // P5-C (overview 6): P is the squad in World and the plan library in Build, where World's P is suppressed (ContextRules.BuildKeptWorld)
+        Assert.Single(all, a => a.Ctx is "W" or "G" && a.Keys.Contains("Key.P"));
+        Assert.Equal("plan_library", Assert.Single(all, a => a.Ctx == "B" && a.Keys.Contains("Key.P")).Name);
         // the trade screen's own keys (a modal context) include N for the notebook and Tab for the pane
         Assert.Contains(all, a => a.Ctx == "T" && a.Name == "notebook" && a.Keys.Contains("Key.N"));
         Assert.Contains(all, a => a.Ctx == "T" && a.Name == "pane" && a.Keys.Contains("Key.Tab"));

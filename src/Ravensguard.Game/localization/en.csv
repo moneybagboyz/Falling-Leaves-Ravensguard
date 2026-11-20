@@ -2994,7 +2994,7 @@ cn_worker_added,{0} joins the crew.
 cn_prop_in_way,Something stands there that building may not clear (a well or a grave).
 cn_fit_too_wide,"{0} m wide; the lot is {1} m, and {2} m must stay clear at each side."
 cn_fit_too_deep,"{0} m deep; the lot is {1} m deep."
-cn_fit_ground,"The ground at {0}, {1} is a road or too steep."
+cn_fit_ground,"At {0}, {1} a building stands, or the ground is a road or too steep."
 cn_fit_no_door,No door of this plan opens to the outside.
 cn_fit_none,The plan does not fit this lot.
 cn_fit_ok,The plan fits the lot.
@@ -3108,7 +3108,7 @@ BUILD_VALUE_GRAND,grand
 BUILD_SITE_TITLE,Building site: {0}
 BUILD_SITE_TITLE_NONE,Building site
 BUILD_SITE_OWN_DESIGN,your own design
-BUILD_SITE_PROGRESS,"{0} of {1} worker-hours done ({2}%); {3} pieces built, {4} to go; {5} kg in the pile."
+BUILD_SITE_PROGRESS,"{3} pieces built, {4} to go; on those, {0} of {1} worker-hours done ({2}%); {5} kg in the pile."
 BUILD_SITE_WORKING,"Working: {0} of {1} hands at a piece."
 BUILD_SITE_NO_CREW,"Nobody works here: hire hands, or build it yourself."
 BUILD_SITE_NO_MATERIALS,"Stopped: no {0} on site."

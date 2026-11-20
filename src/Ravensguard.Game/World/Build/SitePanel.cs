@@ -33,6 +33,8 @@ public partial class SitePanel : Control
     readonly Func<List<PlannedRoom>?> _rooms;
     readonly Acts _act;
     readonly Func<bool> _hand;
+    /// <summary>A plan's name by its id (the content's or the player's); null: the id made readable.</summary>
+    public Func<string, string?>? PlanName { get; init; }
     Label _title = null!, _state = null!, _progress = null!, _wages = null!;
     GridContainer _mats = null!;
     VBoxContainer _crew = null!, _roomBox = null!;
@@ -118,7 +120,7 @@ public partial class SitePanel : Control
         var v = _view(); _shown = v;
         var s = Site();
         if (s == null) { _title.Text = L.T("BUILD_SITE_TITLE_NONE"); _state.Text = L.T("BUILD_NO_SITE"); return; }
-        _title.Text = L.F("BUILD_SITE_TITLE", s.Blueprint.Length > 0 ? UiKit.Pretty(s.Blueprint.StartsWith("player.", StringComparison.Ordinal) ? s.Blueprint[7..] : s.Blueprint) : L.T("BUILD_SITE_OWN_DESIGN"));
+        _title.Text = L.F("BUILD_SITE_TITLE", s.Blueprint.Length > 0 ? PlanName?.Invoke(s.Blueprint) ?? UiKit.Pretty(s.Blueprint.StartsWith("player.", StringComparison.Ordinal) ? s.Blueprint[7..] : s.Blueprint) : L.T("BUILD_SITE_OWN_DESIGN"));
         _state.Text = StateText(s);
         _state.RemoveThemeColorOverride("font_color");
         if (s.Pause != PauseReason.None || s.State != SiteState.Active) _state.AddThemeColorOverride("font_color", new Color(1f, 0.72f, 0.4f));

@@ -333,7 +333,7 @@ public partial class StreetView
         var id = site.Id;
         Task<List<PlannedRoom>>? rooms = BuildWorld is { } cw ? Bar(rt, () => cw.PlannedRooms(id)) : null;
         _router.Push(new SitePanel(_router, () => rt.State.Construction?.View, id, () => rooms is { IsCompletedSuccessfully: true } r ? r.Result : null, SiteAct(id), () => _handWork)
-            { Name = "SitePanel" });
+            { Name = "SitePanel", PlanName = id => Catalog?.Costs.Library.Blueprints.FirstOrDefault(b => b.Def.Id == id)?.Def.Name });
         return true;
     }
 
@@ -515,7 +515,11 @@ public partial class StreetView
             if (i >= 0) { _bCatIdx = c; _bPieceIdx = i; _bTool = BTool.Piece; RefreshPalette(); return; }
         }
     }
-    public void DebugPlan(string id, string? culture = null) { _bCulture = culture ?? _bCulture; PlanChosen(id, Catalog?.Costs.Library.Blueprints.FirstOrDefault(b => b.Def.Id == id)?.Def.Name ?? id, _bCulture, null, null); }
+    public void DebugPlan(string id, int index = -1)
+    {
+        PlanChosen(id, Catalog?.Costs.Library.Blueprints.FirstOrDefault(b => b.Def.Id == id)?.Def.Name ?? id, _bCulture, null, null);
+        if (index >= 0) { (_bTurns, _bMirror) = PlanFitter.Transform(index); _bAuto = false; }
+    }
     public void DebugPlanPlace() => CommitPlan();
     /// <summary>Screenshot hook: the dev console's <c>build</c> verbs (stock, finish, crew) on the site nearest the hero.</summary>
     public string DebugDevBuild(params string[] args) => DevBuild(args);
@@ -524,7 +528,7 @@ public partial class StreetView
     public void DebugPanTo(int x, int y) { var s = _world.Snapshot; _pan = new Vector2((x - s.OriginX - s.Hero.CellX) * Tile, (y - s.OriginY - s.Hero.CellY) * Tile); ClampPan(); }
 
     /// <summary>
-    /// Screenshot hook (dev only, a faucet): the empty plot for sale nearest the hero in his place, the coin for it minted into his purse, and the purchase sent through his desk as play
+    /// Screenshot hook (dev only, a faucet): the empty plot for sale nearest the hero in his place (a new plot, no vacant house on it), the coin for it minted into his purse, and the purchase sent through his desk as play
     /// sends it. Returns the plot (region metres, its street side), or null when the place sells none.
     /// </summary>
     public async Task<FitLot?> DebugBuyLot()
@@ -534,7 +538,7 @@ public partial class StreetView
         var pick = await Bar(rt, () =>
         {
             if (LandOf(rt) is not { } lw || rt.State.Party is not { } party) return null;
-            var l = lw.Listings(s).Where(x => x.BuildingMites == 0).OrderBy(x => Math.Abs(x.Rect.CenterX - hx) + Math.Abs(x.Rect.CenterY - hy)).ThenBy(x => x.Lot).FirstOrDefault();
+            var l = lw.Listings(s).Where(x => x.Lot < 0).OrderBy(x => Math.Abs(x.Rect.CenterX - hx) + Math.Abs(x.Rect.CenterY - hy)).ThenBy(x => x.Lot).FirstOrDefault();
             if (l == null) return null;
             var ctx = new HeroContext(rt.State, party, db);
             rt.State.Economy!.Ledger.Mint(ctx.Purse, Coin.FromMites(l.PriceMites + 50_000), SourceReason.Seed);

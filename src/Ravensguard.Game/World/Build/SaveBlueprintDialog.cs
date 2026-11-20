@@ -24,7 +24,7 @@ public partial class SaveBlueprintDialog : Control
     public override void _Ready()
     {
         SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-        MouseFilter = MouseFilterEnum.Stop;
+        MouseFilter = MouseFilterEnum.Stop; ZIndex = 120;                                 // over the first hour's hint bar (80)
         var dim = new ColorRect { Color = new Color(0, 0, 0, 0.35f), MouseFilter = MouseFilterEnum.Stop };
         dim.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect); AddChild(dim);
         var center = new CenterContainer(); center.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect); AddChild(center);

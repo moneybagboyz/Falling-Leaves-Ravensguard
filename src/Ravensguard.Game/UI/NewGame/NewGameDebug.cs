@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Godot;
+using Ravensguard.Sim.Construction;
 using Ravensguard.Sim.WorldGen;
 using Ravensguard.Sim.WorldGen.History;
 using Ravensguard.Sim.Worlds;
@@ -227,13 +228,32 @@ public static class NewGameDebug
             default:
             {
                 if (plan == null) throw new Exception("build shot: no plan fits the plot " + lot);
-                sv.DebugPlan(plan);
+                // the first plan and turn whose every cell may go here (a plot can hold a yard's fences or paving: the preview refuses those cells)
+                string? best = null; int bestIdx = -1, bestRefused = int.MaxValue;
+                foreach (var id in new[] { plan, "burgage_poor", "peasant_cottage", "test_cottage", "cottage_two_room", "smithy_house" })
+                {
+                    for (int idx = -1; idx < 8 && bestRefused > 0; idx++)
+                    {
+                        sv.DebugPlan(id, idx);
+                        sv.DebugBuildCursor(cx, cy);
+                        var want = PlanFitter.Transform(Math.Max(0, idx));
+                        await Until(tree, () => sv.DebugBuildAnswer is { Ask.Plan: true } a && a.Ask.PlanId == id && a.Ask.Auto == (idx < 0) && (idx < 0 || (a.Ask.Turns == want.Turns && a.Ask.Mirror == want.Mirror)), 600);
+                        var ans = sv.DebugBuildAnswer;
+                        if (ans?.Fit is { Ok: true } && ans.Preview.Refused.Count < bestRefused) { best = id; bestIdx = idx; bestRefused = ans.Preview.Refused.Count; }
+                    }
+                    if (bestRefused == 0) break;
+                }
+                if (best == null) throw new Exception("build shot: no plan fits the plot " + lot);
+                sv.DebugPlan(best, bestIdx);
                 sv.DebugBuildCursor(cx, cy);
-                await Until(tree, () => sv.DebugBuildAnswer is { Ask.Plan: true, Fit.Ok: true }, 600);
+                await Until(tree, () => sv.DebugBuildAnswer is { Ask.Plan: true, Fit.Ok: true } a && a.Ask.PlanId == best, 600);
                 await Frames(tree, 10);
-                GD.Print($"[build] {plan} fitted: {sv.DebugBuildAnswer?.Fit}");
+                GD.Print($"[build] {best} fitted: {sv.DebugBuildAnswer?.Fit}; refused: " + string.Join(", ", (sv.DebugBuildAnswer?.Preview.Refused ?? []).Take(6).Select(r => $"{r.Piece}@{r.X},{r.Y},{r.Z}:{r.Key}")));
                 sv.DebugPlanPlace();
-                if (!await Until(tree, () => sv.DebugGhostCount > 0, 3000)) throw new Exception("build shot: the plan was not placed");
+                sv.DebugWorld.SetSpeed(Ravensguard.Sim.Core.SimSpeed.X8);                 // the desk applies the command at its hour's barrier
+                bool placed = await Until(tree, () => sv.DebugGhostCount > 0, 6000);
+                sv.DebugWorld.SetSpeed(Ravensguard.Sim.Core.SimSpeed.Paused);
+                if (!placed) throw new Exception("build shot: the plan was not placed");
                 if (scene == "fitted") { sv.DebugBuildCursor(cx, cy); await Frames(tree, 30); break; }
                 if (scene == "saveas")
                 {
