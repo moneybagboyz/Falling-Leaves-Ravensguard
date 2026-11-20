@@ -35,12 +35,12 @@ public sealed class GrowthSystem
     public IGrowthSites? Sites { get; set; }
     // P5-D: what the visible sites share with the seasonal step (the same rules for buying, digging and paying)
     internal EconomyWorld Economy => _ew;
-    internal GrowthTuningDef Tuning => T;
+    public GrowthTuningDef Tuning => T;
     internal long ReserveMites => Reserve;
     internal void TopUp(int hh, int settlement, long need) => EnsureCoin(hh, settlement, need);
     internal List<int> IdleHands(int settlement, int day) { _hands = null; return HandsOf(settlement, day); }
     internal long DigClay(int settlement, long g, int day) => DrawClay(settlement, g, day);
-    internal int LordOf(int settlement) => LordHousehold(settlement);
+    public int LordOf(int settlement) => LordHousehold(settlement);
     internal void Complete(BuildProject p, GameTime now, RegionOutbox ob) => CompleteCottage(p, now, ob);
 
     /// <summary>P5-D: premises built (a visible site finished, or one that could not be laid out): the lot is added as Phase 3 adds it and the business moves in.</summary>

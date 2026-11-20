@@ -15,6 +15,11 @@ public sealed record ContractRulesDef : ContentDef
     /// <summary>Builders are the region's carpentry and masonry businesses (business kind ids).</summary>
     public List<string> BuilderKinds { get; init; } = ["carpentry", "masonry"];
 
+    /// <summary>The builder's cart brings his materials to the pile: a load per round trip (kg), its pace (m a minute, an ox cart) and the minutes to load and unload it.</summary>
+    public int CartKg { get; init; } = 600;
+    public int CartMetresPerMinute { get; init; } = 60;
+    public int CartLoadMinutes { get; init; } = 15;
+
     // ---------- the stages (spec 4.7) ----------
     /// <summary>The share of the work (piece-hours) built at which the second stage falls due, permille.</summary>
     public int MidStagePm { get; init; } = 500;

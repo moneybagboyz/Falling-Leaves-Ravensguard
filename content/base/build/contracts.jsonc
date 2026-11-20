@@ -4,6 +4,8 @@
 [
   { "type": "contract_rules", "id": "contracts",
     "margin_pm": 1450, "crew_default": 4, "builder_kinds": ["carpentry", "masonry"],
+    // the builder's ox cart brings what he buys to the pile: 600 kg a round trip at 60 m a minute, a quarter of an hour to load and unload
+    "cart_kg": 600, "cart_metres_per_minute": 60, "cart_load_minutes": 15,
     "mid_stage_pm": 500,
     // the contractor's pace (stream 0x511): his crew starts the day up to two hours late, about 90% of the day, +-10%
     "pace_jitter_pm": 100,

@@ -9,7 +9,7 @@ namespace Ravensguard.Sim.Construction;
 
 /// <summary>
 /// P5-D: building contracts (spec 4.7). A site's owner commissions a builder (a carpentry or masonry business of the region) at a bid: materials at the local ask, labour (piece-hours x the
-/// skilled wage x the 1,450 pm margin), the haul. A third goes into the contract's escrow at signing, a third at half the piece-hours (the first released to the builder), the rest at
+/// skilled wage x the 1,450 pm margin), the haul. A third goes into the contract's escrow at signing (it advances the builder the materials and the haul), a third at half the piece-hours (the rest of the first released to the builder), the rest at
 /// handover; a missed stage stops the builder, who keeps the stage paid, and the half-built house stays the client's. The builder buys the materials at the market (real orders) and hauls
 /// them to the pile through haul jobs his crew takes; his crew (his owner and staff, hired hands to make up the number) does the same ghost work by the same rules, never instant, at his
 /// day's pace (0x511). The lord's planner posts civic work on the notice board with the whole price in escrow: the hero can take it as a job and build it by hand, or a builder of the
@@ -42,7 +42,7 @@ public sealed partial class ConstructionWorld
     }
 
     /// <summary>Labour of a bid: piece-hours x the skilled wage of a 10-hour day x the margin (BC-16: 250.5 h x 350 x 1.45 / 10 = 12,712).</summary>
-    public long LabourMites(long units) => (long)((Int128)units * Rules.WageSkilledMitesPerDay * ContractRules.MarginPm / (3_600_000L * Rules.DayHours * 1000L));
+    public long LabourMites(long units) => (long)((Int128)units * Rules.WageSkilledMitesPerDay * ContractRules.MarginPm / (3_600_000_000L * Rules.DayHours * 1000L));
 
     /// <summary>A builder's bid for a site (spec 4.7): materials still missing from the pile at the ask of his market, the labour, the haul from his market to the pile; crew and days.</summary>
     public ContractBid Bid(ConstructionSite s, BuilderInfo b, int crew = 0, bool materials = true)
@@ -59,7 +59,7 @@ public sealed partial class ConstructionWorld
             {
                 long miss = Math.Max(0, need - pile.Qty(good));
                 if (miss == 0) continue;
-                if (book != null) mats += (long)((Int128)miss * book.AskMicro(good) / PriceCurve.Micro);
+                if (book != null) mats += AskFor(book, good, miss);
                 if (jt is { } j)
                 {
                     long per = Econ.Goods.IsPiece(good) ? Math.Max(1, HaulLoadG / Math.Max(1, Econ.Goods.MassG(good, 1))) : HaulLoadG;
@@ -73,6 +73,18 @@ public sealed partial class ConstructionWorld
         long dayUnits = (long)crew * Rules.DayHours * 3_600_000_000L * (1000 - ContractRules.PaceJitterPm) / 1000;
         int days10 = dayUnits <= 0 ? 0 : (int)((units * 10 + dayUnits - 1) / dayUnits);
         return new ContractBid(b, mats, LabourMites(units), haul, units / 3_600_000, crew, days10);
+    }
+
+    /// <summary>
+    /// Materials at the local ask: what buying them from the book would cost now when it holds them, else the ask at the book's reference price (the builder gets them from the
+    /// settlement's sources or the next delivery: an empty book's curve price is not what anyone pays).
+    /// </summary>
+    public static long AskFor(MarketBook book, ushort good, long qty)
+    {
+        if (qty <= 0) return 0;
+        var gb = book.Goods[good];
+        if (gb.StockUnits >= qty) return book.QuoteBuy(good, qty);
+        return (long)((Int128)qty * gb.RefMicro * (1000 + book.Money.SpreadHalfPermille) / 1000 / PriceCurve.Micro);
     }
 
     /// <summary>Every builder's bid for a site, cheapest first (then id).</summary>
@@ -110,6 +122,8 @@ public sealed partial class ConstructionWorld
         Book.Contracts[c.Id] = c;
         Econ.Ledger.Transfer(cp, EscrowOf(c), new Coin(third), JobReasons.Escrow);
         c.Stages = 1;
+        // the escrow advances the builder what the materials and their haul cost (at most the third): he buys and carries before he is paid for his work
+        Release(c, EscrowOf(c), PurseOf(b.Kind, b.Id) ?? Econ.Ledger.Open(b.Kind, b.Id), Math.Min(third, bid.MaterialsMites + bid.HaulMites));
         StartBuilder(c, s, b, nowSec);
         Chron(nowSec, "contract_signed", [by, b.Id, s.Id], [new Cause(CauseKind.Other, null, "a builder hired at his bid")], ("total", c.TotalMites.ToString()), ("crew", c.Crew.ToString()));
         Publish(nowSec);
@@ -140,32 +154,39 @@ public sealed partial class ConstructionWorld
     }
 
     /// <summary>
-    /// The builder buys what the site still lacks (beyond the pile, his store and the loads on their way) at the market of his settlement, a real order whose demand registers in the book,
-    /// and posts the haul of what he holds to the pile (his idle hands take it first).
+    /// The builder buys what the site still lacks (beyond the pile and his store) from the settlement's sources and its market (real orders: the demand registers in the book), and his
+    /// cart brings what he holds to the pile, one working hour at a time: a cart's load per round trip between his yard and the pile (<see cref="ContractRulesDef.CartKg"/>).
     /// </summary>
-    private void BuyForSite(Contract c, ConstructionSite s, BuilderInfo b, long nowSec)
+    private void BuyForSite(Contract c, ConstructionSite s, BuilderInfo b, long nowSec, bool buy = true)
     {
         if (b.Store == null) return;
         var pile = PileOf(s);
-        var coming = new Dictionary<ushort, long>();
-        if (Jobs?.Invoke() is { } jt)
-            foreach (var j in jt.Table.Jobs.Values)
-                if (j.Live && j.Kind == OddJobKind.Haul && j.DstOwner == s.Pile) coming[(ushort)j.P4] = coming.GetValueOrDefault((ushort)j.P4) + j.P5;
         var book = Market?.Invoke(b.Settlement);
+        var cr = ContractRules;
+        long dist = (long)Math.Sqrt((double)(b.X - s.PileX) * (b.X - s.PileX) + (double)(b.Y - s.PileY) * (b.Y - s.PileY));
+        long tripSec = 2 * dist * 60 / Math.Max(1, cr.CartMetresPerMinute) + cr.CartLoadMinutes * 60L;
+        long budgetG = cr.CartKg * 1000L * 3600 / Math.Max(60, tripSec);
+        bool moved = false;
         foreach (var (good, need) in Needed(s))
         {
-            long miss = need - pile.Qty(good) - coming.GetValueOrDefault(good);
+            long miss = need - pile.Qty(good);
             if (miss <= 0) continue;
             long have = b.Store.Qty(good);
-            if (have < miss && b.Party != null)
+            if (buy && have < miss && b.Party != null)
             {
-                // P5-D: the builder's sources are the settlement's (poles, clay, the commons' straw for thatch), then the market
+                // the builder's sources are the settlement's (poles, clay, the commons' straw for thatch), then the market
                 if (GrowthSites != null) GrowthSites.Source(b.Settlement, good, miss - have, b.Store, b.Party, 0, (int)(nowSec / 86400));
                 else book?.Buy(b.Party, good, miss - have, 3000, (int)(nowSec / 86400));
             }
-            long send = Math.Min(miss, b.Store.Qty(good));
-            if (send > 0) PostHaul(s.Id, b.Id, b.X, b.Y, good, send, nowSec, b.Settlement);
+            long room = Econ.Goods.IsPiece(good) ? budgetG / Math.Max(1, Econ.Goods.MassG(good, 1)) : budgetG;      // what the cart's load still takes of it
+            long send = Math.Min(Math.Min(miss, b.Store.Qty(good)), room);
+            if (send <= 0) continue;
+            long got = Store.MoveUpTo(b.Store, pile, good, send);
+            budgetG -= Econ.Goods.MassG(good, got);
+            moved |= got > 0;
+            if (budgetG <= 0) break;
         }
+        if (moved) Refresh(s);
     }
 
     /// <summary>
@@ -274,7 +295,10 @@ public sealed partial class ConstructionWorld
                 case ContractState.Signed:
                     any |= Stage(c, s, nowSec);
                     if (c.State == ContractState.Signed && c.ContractorKind == PurseKind.Person && c.DueSec > 0 && nowSec >= c.DueSec) { Repost(c, nowSec, "not finished by the due day"); any = true; }
-                    if (c.State == ContractState.Signed && c.Kind == ContractKind.Commission && nowSec % 86400 == Rules.DayStartHour * 3600L && Builder(c.Contractor) is { } b) BuyForSite(c, s, b, nowSec);
+                    // the builder orders at 06:00 and has his loads carried every working hour (the board takes a few at a time)
+                    long tod = nowSec % 86400;
+                    if (c.State == ContractState.Signed && c.Kind == ContractKind.Commission && tod >= Rules.DayStartHour * 3600L && tod < (Rules.DayStartHour + Rules.DayHours) * 3600L
+                        && Builder(c.Contractor) is { } b) BuyForSite(c, s, b, nowSec, buy: tod == Rules.DayStartHour * 3600L);
                     break;
                 case ContractState.Done or ContractState.Stopped:
                     // the builder's crew is gone (paid at the day's end): the site is the client's again

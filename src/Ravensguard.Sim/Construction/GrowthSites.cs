@@ -232,7 +232,7 @@ public sealed class GrowthSites : IGrowthSites
     }
 
     /// <summary>
-    /// Gets up to <paramref name="miss"/> of a building good by Phase 3's sources into <paramref name="into"/> (a pile, or a builder's store): poles cut in the settlement's woodland, clay dug
+    /// Gets up to <paramref name="miss"/> of a building good by Phase 3's sources into <paramref name="into"/> (a pile, or a builder's store): poles cut in the settlement's woodland (all it gives: Phase 3 buys 30% at a market that rarely holds logs), clay dug
     /// from the pits within 3 km, thatch bound from the commons' straw (bought from the fief's treasury at the book's reference price), the rest bought at the market (a real order) and carried
     /// there. The payer keeps <paramref name="keep"/> mites back. Returns the coin spent.
     /// </summary>
@@ -243,7 +243,7 @@ public sealed class GrowthSites : IGrowthSites
         long Bal() => e.Ledger.Balance(party.Purse).Mites;
         long spent = 0;
         string id = cat.StringId(good);
-        if (id == "logs") { long got = ew.Woodland.Draw(settlement, miss * _g.Tuning.PolesFromWoodlandPct / 100, day); if (got > 0) { into.Create(good, got, CreateReason.Cut); _g.State.PolesGatheredG += got; miss -= got; } }
+        if (id == "logs") { long got = ew.Woodland.Draw(settlement, miss, day); if (got > 0) { into.Create(good, got, CreateReason.Cut); _g.State.PolesGatheredG += got; miss -= got; } }
         else if (id == "clay") { long got = _g.DigClay(settlement, miss, day); if (got > 0) { into.Create(good, got, CreateReason.Mined); miss -= got; } }
         else if (id == "thatch" && e.OtherStores.TryGetValue(Ravensguard.Sim.Farming.FarmIds.Fodder(settlement), out var fodder))
         {
