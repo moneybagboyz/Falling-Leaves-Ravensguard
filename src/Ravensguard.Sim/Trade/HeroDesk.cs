@@ -46,6 +46,8 @@ public enum HeroCommandKind : byte
     Treat,
     /// <summary>Appended (P6-B2): a crime the street saw ("cj:act|kind|victim|settlement|value|damage|note|build|colours|witnesses|cry"), applied by <see cref="Ravensguard.Sim.Law.CrimeDesk"/>.</summary>
     Crime,
+    /// <summary>Appended (P6-B6): holdings at the barrier ("hw:clear|claim|tile", work, hire, dismiss, sow, collect, whose, and the works verbs: buy and deliver, post haul jobs, install a workstation), applied by <see cref="Ravensguard.Sim.Holdings.HoldingsDesk"/>.</summary>
+    Holdings,
 }
 
 /// <summary>Where the hero crafts (built on the main thread from what is in reach, copied into the command).</summary>
@@ -496,6 +498,7 @@ public sealed class HeroDesk
                 HeroCommandKind.Will => Ravensguard.Sim.Succession.WillDesk.Apply(ctx, c),                     // P5-H: a will before a priest or the reeve
                 HeroCommandKind.Treat => Ravensguard.Sim.Medicine.HeroTreatDesk.Apply(ctx, c),                // P6-B1: the treatment screen's verbs, the physician's fee
                 HeroCommandKind.Crime => Ravensguard.Sim.Law.CrimeDesk.Apply(ctx, c),                           // P6-B2: a crime the street saw
+                HeroCommandKind.Holdings => Ravensguard.Sim.Holdings.HoldingsDesk.Apply(ctx, c),                // P6-B6: clearing and sowing a claim, whose is this, buy and deliver, installing stations
                 HeroCommandKind.Business or HeroCommandKind.Prospect => Ravensguard.Sim.Production.BusinessDesk.Apply(ctx, c),   // P5-F: businesses, stewards, stalls, prospecting
                 _ => R(c, HeroResultCode.Invalid, T("HERO_UNKNOWN_COMMAND")),
             };

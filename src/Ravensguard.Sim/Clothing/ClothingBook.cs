@@ -80,6 +80,17 @@ public sealed class ClothingBook
     public Tracked? Of(EntityId person) => _people.GetValueOrDefault(person);
     public ItemExtra ExtraOf(EntityId item) => _extra.GetValueOrDefault(item);
 
+    /// <summary>P6-B6 (holdings 3.8, HW-10): the fit size (cm3) of a garment the book keeps, or 0 for a piece it does not know (the refit's read).</summary>
+    public int FitOf(EntityId item) => _extra.TryGetValue(item, out var e) ? e.FitCm3 : 0;
+
+    /// <summary>P6-B6: a refit writes the garment's fit size; false when the book does not keep the piece (the crafting state keeps its fit then).</summary>
+    public bool SetFit(EntityId item, int fitCm3)
+    {
+        if (!_extra.TryGetValue(item, out var e)) return false;
+        e.FitCm3 = fitCm3; _extra[item] = e;
+        return true;
+    }
+
     public ClothingBook(ContentDatabase db)
     {
         Db = db; Tuning = ExposureTuning.From(db); _materials = MaterialResolver.ResolveAll(db);

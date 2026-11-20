@@ -74,7 +74,7 @@ public sealed record BusinessView(EntityId Id, int Index, string Name, string Ki
     IReadOnlyList<StaffView> Staff, int Slots, IReadOnlyList<StationView> Stations, IReadOnlyList<(string Good, string Name, long Qty, bool Piece)> Stock, IReadOnlyList<RecipeView> Recipes,
     Directives Orders, int Steward, string StewardName, int StewardTrading, int StewardLeadership, int StewardLag, long StewardReserve, IReadOnlyList<SeasonRow> History,
     long SentToPurse, long SentToChest, long HeroPurse, long Chest, OwnerAlert Alerts, int OwnerPm, int HeroPm, IReadOnlyList<CandidateView> Hire, IReadOnlyList<CandidateView> Stewards,
-    long RoyaltyPaid, bool Unlicensed, long MineRemainingG, long MineInitialG, string MineState, long StallSubject, long DailyCost, string OrderedRecipe);
+    long RoyaltyPaid, bool Unlicensed, long MineRemainingG, long MineInitialG, string MineState, long StallSubject, long DailyCost, string OrderedRecipe, IReadOnlyList<string>? Inputs = null);
 
 /// <summary>A known resource at a tile, as the overlay and the survey panel show it.</summary>
 public sealed record KnownView(int Tile, int Resource, long EstG, int GradePm, int ConfidencePm, int Day, ProspectMethod Method);
@@ -236,7 +236,8 @@ public sealed partial class OwnershipWorld
             staff, kind.StaffCapacity, stations, stock, recipes, h?.Orders.Clone() ?? new Directives(), stew, stew >= 0 ? pt.FullName(stew) : "", tr, ld, stew >= 0 ? StewardBrain.LagDays(tr, Rules) : 0,
             stew >= 0 ? StewardBrain.Reserve(daily, ld, Rules) : 0, h?.History.ToList() ?? [], h?.SentToPurse ?? 0, h?.SentToChest ?? 0, HeroCoin, ChestCoin, h?.Alerts ?? OwnerAlert.None,
             h?.OwnerPm ?? 1000, h?.Shares.Where(s => s.Holder == Hero).Sum(s => s.Pm) ?? 0, hire, stewards, h?.RoyaltyPaid ?? 0, h?.Unlicensed ?? false, mine?.RemainingG ?? 0, mine?.InitialG ?? 0,
-            mine?.State.ToString() ?? "", StallOf(b)?.Subject ?? -1, daily, h != null && h.Orders.Recipe >= 0 && h.Orders.Recipe < Prod.Content.Recipes.Recipes.Count ? Prod.Content.Recipes.Recipes[h.Orders.Recipe].Id : "");
+            mine?.State.ToString() ?? "", StallOf(b)?.Subject ?? -1, daily, h != null && h.Orders.Recipe >= 0 && h.Orders.Recipe < Prod.Content.Recipes.Recipes.Count ? Prod.Content.Recipes.Recipes[h.Orders.Recipe].Id : "",
+            kind.Recipes.SelectMany(r => r.Inputs.Select(i => Econ.Goods.StringId(i.Good))).Distinct().OrderBy(x => x, StringComparer.Ordinal).ToList());
     }
 
     /// <summary>The prospecting view where the hero stands (the overlay reads <paramref name="radiusTiles"/> around him).</summary>

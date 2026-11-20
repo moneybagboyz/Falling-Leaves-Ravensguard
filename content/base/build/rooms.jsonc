@@ -47,5 +47,10 @@
   { "type": "room_type", "id": "barn",        "name": "Barn",             "purpose": "storage",   "storage_kind": "hay",   "priority": 21, "min_area": 12, "requires": [{ "tag": "hay", "min": 2 }] },
   { "type": "room_type", "id": "malt_house",  "name": "Malt house",       "purpose": "storage",   "storage_kind": "general", "priority": 23, "min_area": 6, "requires": [{ "tag": "malt" }] },
   { "type": "room_type", "id": "taproom",     "name": "Taproom",          "purpose": "gathering", "priority": 48, "min_area": 12, "requires": [{ "tag": "table", "min": 2 }, { "tag": "cellar_store" }] },
-  { "type": "room_type", "id": "kitchen_large","name": "Great kitchen",   "purpose": "hearth",    "dwelling_part": true, "priority": 52, "min_area": 16, "requires": [{ "tag": "hearth" }, { "tag": "table" }, { "tag": "storage" }] }
+  { "type": "room_type", "id": "kitchen_large","name": "Great kitchen",   "purpose": "hearth",    "dwelling_part": true, "priority": 52, "min_area": 16, "requires": [{ "tag": "hearth" }, { "tag": "table" }, { "tag": "storage" }] },
+  // P6-B6 (holdings 3.6): where a vehicle is built. A boat is laid down on a slipway (open ground that holds the ways), a wagon or cart in a wheelwright's yard (a fenced, unroofed yard with a bay);
+  // the loft is the sleeping room under the roof that a ladder reaches (its beds count toward a dwelling).
+  { "type": "room_type", "id": "slipway",          "name": "Slipway",            "purpose": "slipway",  "priority": 58, "enclosed": false, "roofed": false, "min_area": 6,  "requires": [{ "tag": "station:shipwright" }] },
+  { "type": "room_type", "id": "wheelwright_yard", "name": "Wheelwright's yard", "purpose": "work:wheelwrighting", "priority": 58, "roofed": false, "min_area": 12, "requires": [{ "tag": "station:wheelwright" }] },
+  { "type": "room_type", "id": "loft",             "name": "Loft",               "purpose": "loft",     "dwelling_part": true, "priority": 42, "min_area": 4, "max_area": 30, "requires": [{ "tag": "bed" }, { "tag": "ladder" }] }
 ]

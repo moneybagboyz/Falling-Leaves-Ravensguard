@@ -499,7 +499,7 @@ public sealed partial class CraftRunner
         // the material an item is made of: the chosen alternative's when it names one (iron where the recipe wants steel)
         string? altMaterial = null;
         for (int i = 0; i < r.Slots.Length; i++) if (r.Slots[i].Alts[j.Choice[i]].Material is { } m) { altMaterial = m; break; }
-        bool brittle = r.IsSmithing && Smithing.TemperSkipped(r, j);
+        bool brittle = r.Brittle || r.IsSmithing && Smithing.TemperSkipped(r, j);
         int made = 0;
         if (!r.IsPractice)
             for (int k = 0; k < r.Results.Length; k++)

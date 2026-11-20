@@ -13,6 +13,8 @@ public sealed record ResolvedMaterial(
     public int CrushResistPm { get; init; } = 1000;
     public int BluntAbsorbPm { get; init; }
     public int PainPm { get; init; } = 1000;
+    /// <summary>P6-B6: the order group of the resolver's material table (0: Phases 1-5, by id; later ones after them).</summary>
+    public int AppendOrder { get; init; }
 }
 
 /// <summary>Resolves <c>copy_from</c> chains (the content pipeline has no generic inheritance).</summary>
@@ -48,7 +50,7 @@ public static class MaterialResolver
             D(m => m.MaxEdge) ?? 0.1, D(m => m.MeltingPointC), D(m => m.IgnitionPointC))
         {
             CutResistPm = I(m => m.CutResistPm) ?? 1000, CrushResistPm = I(m => m.CrushResistPm) ?? 1000,
-            BluntAbsorbPm = I(m => m.BluntAbsorbPm) ?? 0, PainPm = I(m => m.PainPm) ?? 1000,
+            BluntAbsorbPm = I(m => m.BluntAbsorbPm) ?? 0, PainPm = I(m => m.PainPm) ?? 1000, AppendOrder = self.AppendOrder,
         };
     }
 }

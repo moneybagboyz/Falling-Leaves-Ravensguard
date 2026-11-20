@@ -12,7 +12,7 @@
     "arrears_debt_seasons": 3, "arrears_evict_seasons": 6, "eviction_notice_days": 15,
     "house_rent_cottage_mites_per_season": 100, "house_rent_longhouse_mites_per_season": 150, "house_rent_burgage_mites_per_season": 400,
     "claim_start_tiles": 8, "claim_max_tiles": 40, "claim_tiles_per_improvement": 8, "claim_improve_within_days": 60, "claim_min_m_from_plan": 1500,
-    "claim_licence_mites_per_acre": 1000, "claim_banner_item": "", "claim_level_slope_permille": 100, "claim_dry_drainage": 40,
+    "claim_licence_mites_per_acre": 1000, "claim_banner_item": "claim_banner", "claim_level_slope_permille": 100, "claim_dry_drainage": 40,
     "store_height_cm": 200, "store_fill_pm": 500, "store_ground_kg_per_m2": 2000, "store_upper_kg_per_m2": 400,
     "charter_site_tiles": 40, "charter_fee_mites": 5000, "charter_dues_mites_per_year": 2000, "charter_service_men": 2, "charter_service_days": 20,
     "charter_min_households": 5, "charter_settle_years": 2, "charter_min_standing": 0, "charter_war_m": 10000, "charter_village_people": 80 },

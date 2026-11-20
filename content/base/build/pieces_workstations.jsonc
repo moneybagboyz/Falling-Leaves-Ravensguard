@@ -39,5 +39,10 @@
   { "type": "build_piece", "id": "mason_banker",   "name": "Mason's banker",   "kind": "workstation", "glyph": "K", "material": "granite",     "station": "masonry", "kg": 300,
     "build": { "skill": "masonry", "worker_hours": 6, "materials": [{ "good": "stone_raw", "kg": 320 }], "hp": 600, "salvage_pm": 800 } },
   { "type": "build_piece", "id": "slipway_ways",   "name": "Slipway ways",     "kind": "workstation", "glyph": "=", "material": "oak",         "station": "shipwright", "kg": 800,
-    "build": { "skill": "carpentry", "worker_hours": 60, "tools": [{ "quality": "sawing" }, { "quality": "digging" }], "materials": [{ "good": "logs", "kg": 700 }, { "good": "timber_planks", "kg": 150 }], "hp": 800, "salvage_pm": 600 } }
+    "build": { "skill": "carpentry", "worker_hours": 60, "tools": [{ "quality": "sawing" }, { "quality": "digging" }], "materials": [{ "good": "logs", "kg": 700 }, { "good": "timber_planks", "kg": 150 }], "hp": 800, "salvage_pm": 600 } },
+  { "type": "build_piece", "id": "wheelwright_bay", "name": "Wheelwright's bay", "kind": "workstation", "glyph": "W", "material": "oak", "station": "wheelwright", "kg": 400,
+    "build": { "skill": "carpentry", "worker_hours": 20, "tools": [{ "quality": "sawing" }], "materials": [{ "good": "logs", "kg": 300 }, { "good": "timber_planks", "kg": 60 }], "hp": 500, "salvage_pm": 600 } },
+  // P6-B6 (holdings 3.8): the anvil set from a forged block (install from items); the same station as the anvil built from bars
+  { "type": "build_piece", "id": "anvil_set", "name": "Anvil (forged block set)", "kind": "workstation", "glyph": "N", "material": "wrought_iron", "station": "smithing", "kg": 118,
+    "build": { "skill": "none", "worker_hours": 1, "materials": [{ "good": "anvil_block", "kg": 118 }], "hp": 2000, "salvage_pm": 900, "outdoor_work": false } }
 ]

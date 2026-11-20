@@ -55,7 +55,7 @@ public sealed partial class ConstructionWorld
             var pile = PileOf(s);
             var book = Market?.Invoke(b.Settlement);
             var jt = Jobs?.Invoke();
-            long pathMm = (long)Math.Sqrt((double)(b.X - s.PileX) * (b.X - s.PileX) + (double)(b.Y - s.PileY) * (b.Y - s.PileY)) * 1000;
+            long pathMm = Core.IntMath.Isqrt((long)(b.X - s.PileX) * (b.X - s.PileX) + (long)(b.Y - s.PileY) * (b.Y - s.PileY)) * 1000;
             foreach (var (good, need) in Needed(s))
             {
                 long miss = Math.Max(0, need - pile.Qty(good));
@@ -201,7 +201,7 @@ public sealed partial class ConstructionWorld
         var yard = YardOf(c);
         var book = Market?.Invoke(b.Settlement);
         var cr = ContractRules;
-        long dist = (long)Math.Sqrt((double)(b.X - s.PileX) * (b.X - s.PileX) + (double)(b.Y - s.PileY) * (b.Y - s.PileY));
+        long dist = Core.IntMath.Isqrt((long)(b.X - s.PileX) * (b.X - s.PileX) + (long)(b.Y - s.PileY) * (b.Y - s.PileY));
         long tripSec = 2 * dist * 60 / Math.Max(1, cr.CartMetresPerMinute) + cr.CartLoadMinutes * 60L;
         long loadG = cr.CartKg * 1000L * 3600 / Math.Max(60, tripSec);                  // what the cart brings in a working hour
         if (buy && b.Party != null)

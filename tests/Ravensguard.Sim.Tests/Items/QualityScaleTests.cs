@@ -160,7 +160,7 @@ public class QualityScaleTests
     // ------------------------------------------------------------------ IQ-10
 
     [Fact]
-    public void IQ10_ASteelSwordInAnUnroofedShedRusts60In30Days_AnOiledOneNot()
+    public void IQ10_ASteelSwordInAnUnroofedShedRusts60In30Days_AnOiledOneAQuarterAsFast()
     {
         var e = EconFixture.NewEconomy(); var ids = new IdAllocator(); var owner = EntityId.Make(IdKind.Person, 902);
         int sword = e.Items.IndexOf(e.Items.Add(ids, "arming_sword", ItemQuality.Common, owner, [new ItemComponent("steel", 1413, 1000), new ItemComponent("ash", 40, 1000)]));
@@ -176,12 +176,12 @@ public class QualityScaleTests
             Corrosion.Day(e.Items, indoors, Exposure.Dry, d, false, 0, null, Cat);
         }
         Assert.Equal(940, e.Items.At(sword).ConditionPermille);
-        Assert.Equal(1000, e.Items.At(oiled).ConditionPermille);
+        Assert.Equal(985, e.Items.At(oiled).ConditionPermille);                            // P6-B6 (HW-12): a quarter of the rate, not none
         Assert.Equal(880, e.Items.At(mail).ConditionPermille);                              // rings rust twice as fast
         Assert.Equal(1000, e.Items.At(indoors).ConditionPermille);
         // the oil wears off after its 30 days
         Corrosion.Day(e.Items, oiled, Exposure.Damp, 31, false, Corrosion.OilDays, null, Cat);
-        Assert.Equal(998, e.Items.At(oiled).ConditionPermille);
+        Assert.Equal(983, e.Items.At(oiled).ConditionPermille);
         Assert.Equal(ItemFlags.None, e.Items.At(oiled).Flags & ItemFlags.Oiled);
     }
 

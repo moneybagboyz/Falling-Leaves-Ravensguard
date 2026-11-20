@@ -192,9 +192,9 @@ public class ContentRemapTests
     {
         var cur = IdTables.Of(EconFixture.Content).Tables;
         var restoredGoods = new[] { "arrowheads", "arrows", "daub", "harness", "iron_wire", "mail_rings", "shingles", "auger", "pan", "pick", "spade" };      // P5-F: the prospector's tools
-        var p6Goods = new[] { "crutch", "litter", "poppy_milk" };                                                                                                    // P6-A1: medicine/aids.jsonc and relief.jsonc
-        var newKinds = new[] { "bloomery", "brickworks", "clay_pit", "peat_cuttings", "quarry", "salt_pan", "sawpit", "water_sawmill", "physician" };              // P5-F: kinds the player founds; P6-A1: the physician's business
-        var restoredRecipes = new[] { "draw_wire", "fletch_arrows", "forge_arrowheads", "make_harness", "mix_daub", "rive_shingles", "make_crutch" };
+        var p6Goods = new[] { "crutch", "litter", "poppy_milk", "claim_banner", "flint_nodule", "obsidian_nodule", "anvil_block" };                                  // P6-A1: medicine/aids.jsonc and relief.jsonc; P6-B6: the banner, the knapping stock and the forged anvil block
+        var newKinds = new[] { "bloomery", "brickworks", "clay_pit", "peat_cuttings", "quarry", "salt_pan", "sawpit", "water_sawmill", "physician", "stud" };              // P5-F: kinds the player founds; P6-A1: the physician's business
+        var restoredRecipes = new[] { "draw_wire", "fletch_arrows", "forge_arrowheads", "make_harness", "mix_daub", "rive_shingles", "make_crutch", "make_claim_banner", "knap_flint_blade", "knap_obsidian_blade", "forge_anvil_block" };
         var v8 = LegacyIdTables.V8;
         Assert.Equal(cur.Get(IdTables.Goods)!.Except(restoredGoods).Except(p6Goods), v8.Get(IdTables.Goods)!);
         // P5-G added the vehicle parts' recipes and repair lines (content/base/crafting/recipes_vehicles.jsonc): new ids, so a v8 save's crafting section maps by name

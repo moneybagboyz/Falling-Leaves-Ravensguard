@@ -84,6 +84,12 @@ public sealed class LandWorld
         return false;
     }
 
+    /// <summary>
+    /// P6-B6 (holdings 3.1): a field parcel was let to a person (<c>begin</c>) or came back to the lord (lease ended, eviction). The wiring moves the parcel's holder household in the population
+    /// table, so the farm tables credit the harvest to the lessee's barn, as they credit any holder's.
+    /// </summary>
+    public Action<int, EntityId, bool>? ParcelLet { get; set; }
+
     /// <summary>Whether a parcel is let on a lease of the book (the lord's re-let leaves it alone).</summary>
     public bool IsLeased(int parcel)
     {
@@ -329,6 +335,7 @@ public sealed class LandWorld
             DuesMitesPerSeason = LandRules.FieldLeasePerSeason(Rules, pc.FieldCount), LeaseEndDay = day + Rules.LeaseTermDays, Lessor = lordId, LessorPurse = lordKind, AcquiredDay = day, Cause = DeedCause.Leased,
         };
         Put(deed, day);
+        ParcelLet?.Invoke(p, lessee, true);
         chron(Day(day), "land_leased", [lessee, id, lordId], [new Cause(CauseKind.Trade, null, "a field let by the lord")], ("parcel", p.ToString()), ("fields", pc.FieldCount.ToString()), ("rent", deed.DuesMitesPerSeason.ToString()));
         return new LandResult(true, "ld_leased_field", [pc.FieldCount, Money(deed.DuesMitesPerSeason)], deed.DuesMitesPerSeason, id);
     }
@@ -468,6 +475,7 @@ public sealed class LandWorld
             Book.DistrainedMites += value;
         }
         Book.Deeds.Remove(d.Id);
+        if (d.Kind == HoldingKind.Parcel && d.IsLease) ParcelLet?.Invoke((int)d.Subject, d.Holder, false);
         Book.Changes.Add(new DeedChange(day, d.Id, to, Tenure.Freehold, 0, -1, DeedCause.Evicted));
         foreach (var c in Book.Claims) if (c.DeedId == d.Id && c.State != ClaimState.Lapsed) { c.State = ClaimState.Lapsed; c.EndDay = day; }
         chron(Day(day), "land_evicted", [d.Holder, d.Id, to], [new Cause(CauseKind.Law, null, "arrears and notice")], ("owed", d.OwedMites.ToString()), ("distraint", value.ToString()));
@@ -812,6 +820,7 @@ public sealed class LandWorld
                 continue;
             }
             Book.Deeds.Remove(d.Id);
+            if (d.Kind == HoldingKind.Parcel) ParcelLet?.Invoke((int)d.Subject, d.Holder, false);
             Book.Changes.Add(new DeedChange(day, d.Id, d.Lessor, Tenure.Freehold, 0, -1, DeedCause.LeaseEnded));
             chron(Day(day), "lease_ended", [d.Holder, d.Id, d.Lessor], [new Cause(CauseKind.Trade, null, "the term ran out")], ("kind", d.Kind.ToString()));
         }

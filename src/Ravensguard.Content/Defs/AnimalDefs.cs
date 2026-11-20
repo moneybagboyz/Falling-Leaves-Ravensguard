@@ -38,6 +38,12 @@ public sealed record SpeciesDef : ContentDef
     /// <summary>Mounted combat (Phase 4): training and temper a horse of this breed is bred with (a war horse 900 and steady 10); 0 training keeps the herd's roll.</summary>
     public int TrainedPm { get; init; }
     public int Temper { get; init; }
+    /// <summary>P6-B6 (holdings 3.7): the chance in percent that a mare and a stallion kept together breed in a game year (60); 0 for a species that does not breed as individuals (an ox is a herd count, a mule is sterile).</summary>
+    public int FoalPct { get; init; } = 60;
+    /// <summary>P6-B6: game days from covering to foaling (11 months scaled x60/365, as human pregnancy is 45).</summary>
+    public int GestationDays { get; init; } = 56;
+    /// <summary>P6-B6: the age in game years at which a foal can be ridden or worked.</summary>
+    public int MaturityYears { get; init; } = 3;
 }
 
 /// <summary>One part of a vehicle (spec 3.3): what it weighs, what it carries, how tough it is and what it needs below it.</summary>

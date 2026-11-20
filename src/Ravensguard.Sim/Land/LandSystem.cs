@@ -40,7 +40,29 @@ public static class LandWiring
         home.Sim.Set(lw);
         ew.Growth.LandHolds = lw.HoldsLot;
         ew.Farming.LeasedOut = lw.IsLeased;
+        lw.ParcelLet = (parcel, lessee, begin) => MoveParcelHolder(home.Population, lw, parcel, lessee, begin);
         return lw;
+    }
+
+    /// <summary>
+    /// P6-B6 (holdings 3.1): a leased field's harvest is its lessee's: the population's parcel holder becomes the lessee's household (a person's own household, or the household itself), and goes
+    /// back to the lord's household when the lease ends. Farming reads the holder table at its next daily sync; the lord's rent is the book's, so the farm tables carry no landlord for it.
+    /// </summary>
+    public static void MoveParcelHolder(Ravensguard.Sim.People.Population pop, LandWorld lw, int parcel, EntityId lessee, bool begin)
+    {
+        var holders = pop.ParcelHolder; if ((uint)parcel >= (uint)holders.Length) return;
+        var hht = pop.Households; int to;
+        if (begin)
+        {
+            int row = pop.People.IndexOf(lessee);
+            to = row >= 0 ? pop.People.Household[row] : hht.IndexOf(lessee);
+            if (to < 0 || to >= hht.Count) return;
+        }
+        else to = LandRegistry.LordHousehold(pop, pop.Region.Parcels[parcel].Settlement);
+        int from = holders[parcel]; if (from == to) return;
+        holders[parcel] = to;
+        if (from >= 0 && from < hht.Count && hht.ParcelCount[from] > 0) hht.ParcelCount[from]--;
+        if (to >= 0 && to < hht.Count) hht.ParcelCount[to]++;
     }
 
     /// <summary>The land world a desk command works on: the home region's when the runtime installed one, else one over the world state's own records (a world without regions: tests, the first-hour bot).</summary>

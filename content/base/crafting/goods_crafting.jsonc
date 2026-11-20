@@ -23,5 +23,12 @@
   { "type": "good", "id": "bedroll",   "name": "Bedroll",   "class": "bedding", "state": "solid", "unit": "piece", "piece_mass_g": 3200, "bulk_litres_per_kg": 4.0, "base_price_mites_per_kg": 700, "spoil_class": "cloth", "tags": ["cloth"] },
   { "type": "good", "id": "hood",      "name": "Hood",      "class": "clothing", "state": "solid", "unit": "piece", "piece_mass_g": 350, "bulk_litres_per_kg": 3.0, "base_price_mites_per_kg": 1800, "spoil_class": "cloth", "tags": ["cloth"] },
   { "type": "good", "id": "horseshoe_set", "name": "Horseshoe set", "class": "hardware", "state": "solid", "unit": "piece", "piece_mass_g": 1400, "bulk_litres_per_kg": 0.6, "base_price_mites_per_kg": 700, "spoil_class": "iron", "tags": ["metal"] },
-  { "type": "good", "id": "tool_handle", "name": "Tool handle", "class": "wood", "state": "solid", "unit": "piece", "piece_mass_g": 400, "bulk_litres_per_kg": 3.0, "base_price_mites_per_kg": 15, "spoil_class": "planks", "tags": ["wood"] }
+  { "type": "good", "id": "tool_handle", "name": "Tool handle", "class": "wood", "state": "solid", "unit": "piece", "piece_mass_g": 400, "bulk_litres_per_kg": 3.0, "base_price_mites_per_kg": 15, "spoil_class": "planks", "tags": ["wood"] },
+  // P6-B6 (holdings 3.8): knapping stock, picked from the ground, not traded
+  { "type": "good", "id": "flint_nodule", "name": "Flint nodule", "class": "stone", "state": "solid", "bulk_litres_per_kg": 0.5, "base_price_mites_per_kg": 4, "spoil_class": "inert", "tradable": false, "tags": ["material"] },
+  { "type": "good", "id": "obsidian_nodule", "name": "Obsidian nodule", "class": "stone", "state": "solid", "bulk_litres_per_kg": 0.5, "base_price_mites_per_kg": 10, "spoil_class": "inert", "tradable": false, "tags": ["material"] },
+  // holdings 3.2 (P6-B6): the banner a claim is staked with (a pole and a cloth); planting it uses it up
+  { "type": "good", "id": "claim_banner", "name": "Claim banner", "class": "light", "state": "solid", "unit": "piece", "piece_mass_g": 900, "bulk_litres_per_kg": 4.0, "base_price_mites_per_kg": 6, "spoil_class": "planks", "tradable": false, "tags": ["light"] },
+  // holdings 3.8 (P6-B6): an anvil forged from 120 kg of iron bars is an item before it is a piece: it is carried to the workshop and set (the piece anvil_set)
+  { "type": "good", "id": "anvil_block", "name": "Anvil block", "class": "hardware", "state": "solid", "bulk_litres_per_kg": 0.13, "base_price_mites_per_kg": 600, "spoil_class": "iron", "tradable": false, "tags": ["metal"] }
 ]

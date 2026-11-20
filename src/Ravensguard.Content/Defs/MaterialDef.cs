@@ -34,6 +34,8 @@ public sealed record MaterialDef : ContentDef
     public double? ShearFractureKpa { get; init; }
     public double? ShearStrainAtYield { get; init; }
     public double? MaxEdge { get; init; }
+    /// <summary>P6-B6: 0 for the materials of Phases 1 to 5; a material added later says 1 so the resolver's table indexes (hashed in the fixed-seed fights) of the older ones do not move. Not inherited.</summary>
+    public int AppendOrder { get; init; }
 
     public double? MeltingPointC { get; init; }
     public double? IgnitionPointC { get; init; }

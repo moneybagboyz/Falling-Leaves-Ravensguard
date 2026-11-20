@@ -62,6 +62,7 @@ public class LandSaveTests(ITestOutputHelper output)
         desk.Issue(LandDesk.Buy(lot, sec));
         desk.Issue(LandDesk.LeaseField(parcel, sec));
         desk.Issue(LandDesk.Stall(town, 0, false, sec));
+        ctx.Pack.Create(ctx.Econ.Goods.IdOf("claim_banner"), 1, Ravensguard.Sim.Goods.CreateReason.Import);                                        // P6-B6: a claim is staked with a banner
         desk.Issue(LandDesk.Stake(wild.X, wild.Y, false, sec));
         desk.ApplyDue(ctx, rt.HourDone);
         Assert.All(desk.View!.Results, r => Assert.True(r.Ok, r.Text));

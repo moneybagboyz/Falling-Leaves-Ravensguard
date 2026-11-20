@@ -64,6 +64,8 @@ public sealed class CraftRecipe
 {
     public ushort Index;
     public string Id = "", Name = "", Category = "", Effort = "light", Culture = "any", Secret = "none", Note = "", Effect = "";
+    /// <summary>P6-B6: the item made is brittle whatever the process (knapped stone).</summary>
+    public bool Brittle;
     public Skill Skill;
     public int Difficulty, MinLight, Morale, BatchMax = 1, TimeScalePm = 800;
     public CompSlot[] Slots = [];
@@ -262,7 +264,7 @@ public sealed class RecipeDb
     private static CraftRecipe? Resolve(CraftRecipeDef d, ContentDatabase db, GoodCatalog cat, Dictionary<string, CraftToolDef> tools, Dictionary<string, CraftStationDef> stations,
         Dictionary<string, RequirementSetDef> sets, HashSet<string> profIds, SortedSet<string> qualities, List<ManuscriptDef> manuscripts, List<string> errs)
     {
-        var r = new CraftRecipe { Id = d.Id, Name = d.Name, Category = d.Category, Effort = d.Effort, Difficulty = d.Difficulty, MinLight = d.MinLight, Morale = d.Morale, Culture = d.Culture, Secret = d.Secret, Note = d.Note, Effect = d.Effect ?? "" };
+        var r = new CraftRecipe { Id = d.Id, Name = d.Name, Category = d.Category, Effort = d.Effort, Difficulty = d.Difficulty, MinLight = d.MinLight, Morale = d.Morale, Culture = d.Culture, Secret = d.Secret, Note = d.Note, Effect = d.Effect ?? "", Brittle = d.Brittle };
         if (Array.IndexOf(Categories, d.Category) < 0) errs.Add($"unknown category '{d.Category}'");
         if (Array.IndexOf(Efforts, d.Effort) < 0) errs.Add($"unknown effort '{d.Effort}'");
         if (d.Difficulty is < 0 or > 100) errs.Add("difficulty must be 0..100");
