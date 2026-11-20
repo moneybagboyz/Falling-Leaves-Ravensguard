@@ -3878,6 +3878,39 @@ px_ui_stream,(a stream runs here)
 px_ui_title,Prospecting
 px_ui_unsurveyed,"Unsurveyed: walk it, read it, dig a pit, sink a shaft."
 px_ui_write,Write up what you know of this acre (a survey report)
+UI_PCT,{0}%
+DIFF_HELP,"Difficulty is chosen openly: each setting changes only what it names, and nothing adjusts itself to how you are doing."
+DIFF_WOUNDS,Wound lethality
+DIFF_WOUNDS_100,Brutal (100%)
+DIFF_WOUNDS_85,Hard (85%)
+DIFF_WOUNDS_70,Mild (70%)
+DIFF_WOUNDS_130,Merciless (130%)
+DIFF_WOUNDS_HELP,Bleeding and infection: {0}% of the calibrated rates.
+DIFF_BANDITS,Bandit frequency
+DIFF_BANDITS_HELP,"Ambushes, tolls and road blocks: {0}% of the calibrated weight."
+DIFF_ECONOMY,Economy harshness
+DIFF_ECONOMY_NORMAL,Normal
+DIFF_ECONOMY_LENIENT,Lenient
+DIFF_ECONOMY_HARSH,Harsh
+DIFF_ECONOMY_HELP,"Your starting coin {0}%, harvest swings {1}%, spoilage {2}% of normal."
+DIFF_PLAGUE,Plague severity
+DIFF_PLAGUE_NORMAL,Normal
+DIFF_PLAGUE_OFF,Off
+DIFF_PLAGUE_RARE,Rare
+DIFF_PLAGUE_FREQUENT,Frequent
+DIFF_PLAGUE_HELP,"The great plague starts {0} a continent-year; its deaths are {1}% of the calibrated rate."
+DIFF_PACE,Aging pace
+DIFF_PACE_1,1x (historical)
+DIFF_PACE_2,2x
+DIFF_PACE_3,3x
+DIFF_PACE_4,4x
+DIFF_PACE_HELP,"Childhood, adulthood and old age pass {0}x as fast for everyone, so families turn over faster. Yearly chances of illness and death are unchanged. Fixed when the world is made."
+DIFF_PACE_FIXED,This world ages at {0}x; it was fixed when the world was made.
+DIFF_SHORT_WOUNDS,wounds {0}%
+DIFF_SHORT_BANDITS,bandits {0}%
+DIFF_SHORT_ECONOMY,economy {0}
+DIFF_SHORT_PLAGUE,plague {0}
+DIFF_SHORT_PACE,aging {0}x
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."

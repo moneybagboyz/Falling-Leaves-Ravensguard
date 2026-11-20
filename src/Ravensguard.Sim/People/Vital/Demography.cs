@@ -20,7 +20,7 @@ public static class Demography
         var pt = w.People;
         if (pt.Status[p] != PersonStatus.Alive) return;
         long day = when.TotalDays;
-        int age = Math.Max(0, (int)(day - pt.BirthDay[p]) / TimeConst.DaysPerYear);
+        int age = PersonTable.AgeYearsOf(pt.BirthDay[p], day, pt.AgingPace);
         int hh = pt.Household[p];
         int settlement = hh >= 0 ? w.Households.Settlement[hh] : pt.HomeSettlement[p];
         pt.Status[p] = PersonStatus.Dead; pt.DeathDay[p] = (int)day; pt.DeathCause[p] = cause; pt.PregnantUntilDay[p] = -1; pt.FatherOfUnborn[p] = -1;
@@ -458,7 +458,7 @@ public static class Demography
             if (pt.IdOf(p) != id) throw new InvalidOperationException("person id out of step with the table");
             bool adult = i < 2, female = i == 1 || (!adult && DetRng.Range(w.Seed, when.TotalHours, id.Value, VitalStreams.Conception, 2, 0, 2) == 1);
             int age = adult ? (i == 0 ? 28 : 25) : 1 + DetRng.Range(w.Seed, when.TotalHours, id.Value, VitalStreams.Conception, 3, 0, 10);
-            pt.Sex[p] = female ? Sex.Female : Sex.Male; pt.BirthDay[p] = (int)(day - (long)age * TimeConst.DaysPerYear - DetRng.Range(w.Seed, when.TotalHours, id.Value, VitalStreams.Conception, 4, 0, 59));
+            pt.Sex[p] = female ? Sex.Female : Sex.Male; pt.BirthDay[p] = PersonTable.BirthDayFor(day, age, DetRng.Range(w.Seed, when.TotalHours, id.Value, VitalStreams.Conception, 4, 0, 59), pt.AgingPace);
             pt.Culture[p] = (byte)culture; pt.Class[p] = SocialClass.Peasant; pt.Family[p] = family;
             pt.Given[p] = pool != null ? pool.Given(female, new Rnd(w.Seed, id.Value, VitalStreams.Name)) : (female ? "Settler" : "Settler");
             pt.Household[p] = hh; pt.HomeSettlement[p] = s; pt.HomeLot[p] = (short)l; pt.Bed[p] = -1; pt.Status[p] = PersonStatus.Alive;

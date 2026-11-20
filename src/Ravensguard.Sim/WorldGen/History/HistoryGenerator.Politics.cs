@@ -888,7 +888,7 @@ public sealed partial class HistoryGenerator
         var seat = _h.Settlements[pick];
         int cu = _c.CultureId[seat.Cell] < 8 ? _c.CultureId[seat.Cell] : r.CultureId;
         var dyn = NewDynasty(cu, EntityId.None, _year);
-        var rebel = NewNotable(NotableRole.Rebel, cu, r.Index, dyn.Id, Pct(seat.Id.Value, S.Rebel, 15), _year - Roll(seat.Id.Value, S.Rebel, 25, 50), EntityId.None, EntityId.None);
+        var rebel = NewNotable(NotableRole.Rebel, cu, r.Index, dyn.Id, Pct(seat.Id.Value, S.Rebel, 15), _year - YearsAgo(Roll(seat.Id.Value, S.Rebel, 25, 50)), EntityId.None, EntityId.None);
         dyn.Founder = rebel.Id; rebel.Residence = pick; rebel.Ambition = 70 + Roll(seat.Id.Value, S.Rebel, 0, 30);
         Cause cz;
         string note;

@@ -12,6 +12,8 @@ public sealed class WoundLedger
 {
     public readonly SortedDictionary<ulong, WoundBook> Books = [];
     public ulong Seed;
+    /// <summary>Difficulty (wound lethality), percent of the calibrated bleed rate at a wound's creation and of the infection chance per day; handed to every book the ledger holds.</summary>
+    public int LethalityPct = 100;
     /// <summary>The last game day whose daily step has run.</summary>
     public long LastDay;
     /// <summary>Tick and day steps may come from the live thread and the tick worker; both take this lock.</summary>
@@ -34,7 +36,7 @@ public sealed class WoundLedger
             if (Books.TryGetValue(key, out var b)) return b;
             long size = sizeCm3 > 0 ? sizeCm3 : plan.SizeCm3;
             int max = (int)((long)plan.BloodMl * size / plan.SizeCm3);
-            b = new WoundBook(Seed, key, max, toughness, plan.Id) { LastSec = nowSec, DayDone = LastDay };
+            b = new WoundBook(Seed, key, max, toughness, plan.Id) { LastSec = nowSec, DayDone = LastDay, LethalityPct = LethalityPct };
             Books[key] = b;
             return b;
         }
@@ -49,6 +51,7 @@ public sealed class WoundLedger
         lock (Sync)
         {
             book.DayDone = Math.Max(book.DayDone, nowSec / GameSecPerDay);
+            book.LethalityPct = LethalityPct;
             Books[key] = book;
         }
     }
@@ -63,6 +66,7 @@ public sealed class WoundLedger
             // each book from its own day cursor (a book only touches itself and its rolls are keyed by its seed, day and key, so book by book equals day by day)
             foreach (var b in Books.Values)
             {
+                b.LethalityPct = LethalityPct;
                 long from = b.DayDone >= 0 ? b.DayDone : LastDay;
                 for (long d = from + 1; d <= dayNow; d++) b.DailyStep(d);
                 b.DayDone = Math.Max(from, dayNow);

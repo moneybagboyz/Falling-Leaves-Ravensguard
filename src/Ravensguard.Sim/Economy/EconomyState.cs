@@ -204,11 +204,14 @@ public sealed class EconomyState
     }
 
     /// <summary>One day of spoilage over every store, households first then the others, ascending owner id (items spec 4: the H4 slice).</summary>
+    /// <summary>Difficulty (economy harshness): spoilage rates and harvest-variance amplitude in percent of the calibrated value; 100 is the game as calibrated.</summary>
+    public int SpoilagePct = 100, HarvestVariancePct = 100;
+
     public long ApplyDailySpoilage(ulong seed, long hourKey, int tempC)
     {
         long lost = 0;
-        for (int i = 0; i < _householdCount; i++) lost += HouseholdStore[i].ApplySpoilage(seed, hourKey, tempC);
-        foreach (var s in OtherStores.Values) lost += s.ApplySpoilage(seed, hourKey, tempC);
+        for (int i = 0; i < _householdCount; i++) lost += HouseholdStore[i].ApplySpoilage(seed, hourKey, tempC, 1, SpoilagePct);
+        foreach (var s in OtherStores.Values) lost += s.ApplySpoilage(seed, hourKey, tempC, 1, SpoilagePct);
         return lost;
     }
 

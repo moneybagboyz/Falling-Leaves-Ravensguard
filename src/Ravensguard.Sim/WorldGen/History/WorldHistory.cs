@@ -9,6 +9,8 @@ public sealed class WorldHistory
 {
     public ulong Seed { get; init; }
     public int Years { get; init; }
+    /// <summary>The world's <c>aging_pace</c> (1 to 4) the history was simulated with: a notable is <c>(years since birth) x pace</c> years old.</summary>
+    public int AgingPace { get; init; } = 1;
     public Chronicle Chronicle { get; } = new();
     public List<Settlement> Settlements { get; } = [];
     public List<RealmState> Realms { get; } = [];
@@ -75,7 +77,7 @@ public sealed class WorldHistory
         void S(string s) { L(s.Length); h.AppendData(Encoding.UTF8.GetBytes(s)); }
         void Id(EntityId id) => L((long)id.Value);
 
-        L((long)Seed); L(Years);
+        L((long)Seed); L(Years); if (AgingPace != 1) L(AgingPace);
         foreach (var e in Chronicle.All)
         {
             Id(e.Id); L(e.When.Seconds); S(e.TypeId);

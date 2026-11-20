@@ -60,7 +60,7 @@ public sealed partial class Populator
         ulong rb = EntityId.RegionBase(RegionCoord.OfCell(_r.CellX, _r.CellY).Id);
         pBase |= rb; hBase |= rb;
         int cap = Math.Max(1024, _r.TotalPopulation + _r.TotalPopulation / 20);
-        _p = new PersonTable(cap, pBase);
+        _p = new PersonTable(cap, pBase) { AgingPace = _h.AgingPace };
         _hh = new HouseholdTable(Math.Max(256, _r.TotalHouseholds + _r.TotalHouseholds / 10), hBase);
 
         _lotHousehold = new int[ns][]; _lotBeds = new int[ns][]; _lotKeeper = new int[ns][]; _lotFarm = new bool[ns][]; _lotOwnedParcel = new bool[ns][];

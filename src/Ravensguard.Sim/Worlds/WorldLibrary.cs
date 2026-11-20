@@ -185,7 +185,7 @@ public sealed class WorldLibrary
     }
 
     /// <summary>Starting details of a run, stored next to its save (the character itself is made when the hero entity exists).</summary>
-    public sealed record RunInfo(string CharacterName, bool Female, string OriginId, string AmbitionId, bool Ironman, int EmbarkCellX, int EmbarkCellY, string Created);
+    public sealed record RunInfo(string CharacterName, bool Female, string OriginId, string AmbitionId, bool Ironman, int EmbarkCellX, int EmbarkCellY, string Created, int[]? Difficulty = null);
 
     public void WriteRunInfo(string id, string runName, RunInfo info)
     {

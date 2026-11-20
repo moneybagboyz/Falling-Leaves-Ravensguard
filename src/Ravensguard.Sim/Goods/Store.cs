@@ -153,7 +153,7 @@ public sealed class Store
     /// <c>(seed, hourKey, owner, 0x222, good)</c>, so the expectation is exact and the result is a pure function of the key. Returns the quantity destroyed
     /// (reason Spoiled). <paramref name="leakMult"/> is the roof-leak multiplier (1 normally, 10 under a damaged roof).
     /// </summary>
-    public long ApplySpoilage(ulong seed, long hourKey, int tempC, int leakMult = 1)
+    public long ApplySpoilage(ulong seed, long hourKey, int tempC, int leakMult = 1, int spoilPct = 100)
     {
         long lost = 0;
         int mult = GoodCatalog.TempMultPermille(tempC);
@@ -162,7 +162,7 @@ public sealed class Store
             ushort g = _good[i]; long q = _qty[i];
             int ppm = _cat.SpoilPpm(g, Kind);
             if (ppm == 0) continue;
-            Int128 num = (Int128)q * ppm * (_cat.TempSensitive(g) ? mult : 1000) * leakMult; // permille units: divide by 1e6 (ppm) x 1000 (permille)
+            Int128 num = (Int128)q * ppm * (_cat.TempSensitive(g) ? mult : 1000) * leakMult * spoilPct / 100; // permille units: divide by 1e6 (ppm) x 1000 (permille)
             long whole = (long)(num / 1_000_000_000);
             long frac = (long)(num % 1_000_000_000);                                             // 0 .. 999,999,999 of 1e9
             uint u = DetRng.NextUInt(seed, hourKey, Owner.Value, RngStreams.Spoilage, g);

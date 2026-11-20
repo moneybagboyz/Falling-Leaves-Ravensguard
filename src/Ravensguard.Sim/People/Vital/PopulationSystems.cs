@@ -25,7 +25,7 @@ public sealed class HouseholdNeedsSystem : AbstractSystem
             if (w.Get<EconomyWorld>() != null) { HouseholdNeeds.Produce(e, hht, hh, ctx.DayOfYear, _veg, _eggs, _wood, _tMean); HouseholdNeeds.HomeBrew(e, w.People, hht, hh, day, _barley); }
             HouseholdNeeds.RunDay(e, w.People, hht, hh, day, _tMean);
             HouseholdNeeds.RollDurables(e, hht, hh, w.Seed, ctx.Hour);
-            e.HouseholdStore[hh].ApplySpoilage(w.Seed, ctx.Hour, _tMean);
+            e.HouseholdStore[hh].ApplySpoilage(w.Seed, ctx.Hour, _tMean, 1, e.SpoilagePct);
         }
     }
 }

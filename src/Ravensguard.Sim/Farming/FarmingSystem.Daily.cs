@@ -147,7 +147,7 @@ public sealed partial class FarmingSystem
                 int bl = blight ? _d.BlightYieldPermille : 1000;
                 int rs = F.Has(f, FieldFlags.Resown) ? _d.ResowYieldPermille : 1000;
                 int wx = YieldMath.Combine(rain, coldF, wk, bl, weed, rs);
-                int var = YieldMath.VariancePermille(Seed, hourKey, F.Id[f], _d.VarianceSpreadPermille);
+                int var = 1000 + (YieldMath.VariancePermille(Seed, hourKey, F.Id[f], _d.VarianceSpreadPermille) - 1000) * Econ.HarvestVariancePct / 100;
                 long gross = YieldMath.GrossG(baseG, F.SownFertility[f], wx, var, F.DamagePermille[f]);
                 // attribute the loss to its causes (each against the undamaged base yield; overlaps are second order)
                 void Attr(LossCause cause, int factor) { if (factor < 1000) State.AddLoss(cause, g0 * (1000 - factor) / 1000, 1); }

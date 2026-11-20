@@ -82,7 +82,7 @@ public static class HeroPerson
         pt.SetForeignId(row, heroId);
         var (given, family) = SplitName(hero.Name);
         pt.Given[row] = given; pt.Family[row] = family; pt.Sex[row] = hero.Female ? Sex.Female : Sex.Male;
-        pt.BirthDay[row] = nowDay - age * TimeConst.DaysPerYear - r.Range(0, TimeConst.DaysPerYear);
+        pt.BirthDay[row] = PersonTable.BirthDayFor(nowDay, age, r.Range(0, TimeConst.DaysPerYear), pt.AgingPace);
         pt.Culture[row] = (byte)Math.Clamp(culture, 0, 255); pt.Household[row] = hh; pt.HomeSettlement[row] = settlement; pt.Class[row] = cls;
         pt.Occupation[row] = Enum.TryParse<Occupation>(origin?.Occupation ?? "", true, out var occ) ? occ : Occupation.None;
         pt.Status[row] = PersonStatus.Hero;
@@ -107,7 +107,7 @@ public static class HeroPerson
                             pt.Given[sp] = names.Given(female, new Rnd(seed, pt.IdOf(sp).Value, RngStreams.HeroKin)); pt.Family[sp] = family; pt.Sex[sp] = female ? Sex.Female : Sex.Male;
                             int spAge = RollIn(r, k.Age, age, age + 6);
                             int died = r.Range(30, 2 * TimeConst.DaysPerYear);
-                            pt.BirthDay[sp] = nowDay - spAge * TimeConst.DaysPerYear - r.Range(0, TimeConst.DaysPerYear);
+                            pt.BirthDay[sp] = PersonTable.BirthDayFor(nowDay, spAge, r.Range(0, TimeConst.DaysPerYear), pt.AgingPace);
                             pt.Culture[sp] = pt.Culture[row]; pt.Household[sp] = hh; pt.HomeSettlement[sp] = settlement; pt.Class[sp] = cls;
                             pt.Occupation[sp] = pt.Occupation[row];
                             pt.Status[sp] = PersonStatus.Dead; pt.DeathDay[sp] = nowDay - died; pt.DeathCause[sp] = DeathCause.Disease;
@@ -122,7 +122,7 @@ public static class HeroPerson
                             bool female = r.Range(0, 2) == 0;
                             pt.Given[c] = names.Given(female, new Rnd(seed, pt.IdOf(c).Value, RngStreams.HeroKin)); pt.Family[c] = family; pt.Sex[c] = female ? Sex.Female : Sex.Male;
                             int cAge = RollIn(r, k.Age, 6, 14);
-                            pt.BirthDay[c] = nowDay - cAge * TimeConst.DaysPerYear - r.Range(0, TimeConst.DaysPerYear);
+                            pt.BirthDay[c] = PersonTable.BirthDayFor(nowDay, cAge, r.Range(0, TimeConst.DaysPerYear), pt.AgingPace);
                             pt.Culture[c] = pt.Culture[row]; pt.Household[c] = hh; pt.HomeSettlement[c] = settlement; pt.Class[c] = cls;
                             if (hero.Female) { pt.Mother[c] = row; pt.Father[c] = spouseDead; } else { pt.Father[c] = row; pt.Mother[c] = spouseDead; }
                             pt.Status[c] = PersonStatus.Alive;
