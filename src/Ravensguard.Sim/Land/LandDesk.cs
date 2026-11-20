@@ -125,7 +125,7 @@ public static class LandDesk
         var r = lw.Region; var book = lw.Book;
         bool inPlace = (uint)settlement < (uint)r.Settlements.Count;
         var listings = inPlace ? lw.Listings(settlement) : [];
-        var fields = inPlace ? lw.LeasableParcels(settlement).Select(pp => (pp, r.Parcels[pp].FieldCount, LandRules.FieldLeasePerSeason(lw.Rules, r.Parcels[pp].FieldCount))).Take(6).ToList() : [];
+        var fields = inPlace ? lw.LeasableParcels(settlement).Select(pp => (pp, r.Parcels[pp].FieldCount, lw.Scarce(LandRules.FieldLeasePerSeason(lw.Rules, r.Parcels[pp].FieldCount)))).Take(6).ToList() : [];
         var stalls = new List<int>();
         if (inPlace)
             for (int k = 0; k < lw.StallCount(settlement); k++)

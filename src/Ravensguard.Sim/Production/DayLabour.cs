@@ -78,7 +78,7 @@ public sealed class DayLabour
     /// <summary>The lord's works of each fief for the day: the hands the treasury and the lord's purse pay for above their reserve, shared among its settlements by their idle.</summary>
     private List<DayPost> LordWorks(List<int>[] idle)
     {
-        var posts = new List<DayPost>(); var reg = _pop.Region; var led = _econ.Ledger; long wage = _r.DayLabourWageMites;
+        var posts = new List<DayPost>(); var reg = _pop.Region; var led = _econ.Ledger; long wage = _r.DayLabourWageMites * _econ.WageMultPm / 1000;
         if (_r.LordWorksPmPerDay <= 0) return posts;
         for (int f = 0; f < reg.Fiefs.Count; f++)
         {
@@ -115,7 +115,7 @@ public sealed class DayLabour
     /// </summary>
     private List<DayPost> HouseWorks(List<int>[] idle, List<DayPost> taken)
     {
-        var posts = new List<DayPost>(); var hht = _pop.Households; var led = _econ.Ledger; long wage = _r.DayLabourWageMites;
+        var posts = new List<DayPost>(); var hht = _pop.Households; var led = _econ.Ledger; long wage = _r.DayLabourWageMites * _econ.WageMultPm / 1000;
         if (_r.LordWorksPmPerDay <= 0) return posts;
         var left = new int[idle.Length];
         for (int s = 0; s < idle.Length; s++) left[s] = idle[s].Count;
@@ -177,7 +177,7 @@ public sealed class DayLabour
         posts.AddRange(LordWorks(idle));
         posts.AddRange(HouseWorks(idle, posts));
         var next = new int[idle.Length];
-        int hired = 0; long wage = _r.DayLabourWageMites;
+        int hired = 0; long wage = _r.DayLabourWageMites * _econ.WageMultPm / 1000;
         foreach (var post in posts)
         {
             Book.PostsOffered += post.Hands;

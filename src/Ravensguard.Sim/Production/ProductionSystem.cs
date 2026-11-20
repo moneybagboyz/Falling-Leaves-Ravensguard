@@ -381,7 +381,7 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
         {
             int p = b.Staff[i]; var occ = Pop.People.Occupation[p]; var wc = kind.Trader ? WageClass.Skilled : WageClass.Unskilled;
             foreach (var sl in kind.Slots) if (sl.Occupation == occ) { wc = sl.Wage; break; }
-            b.Owed[i] += RecipeBook.WagePerDay(wc) * (Pop.People.AgeYears(p, day) < 16 ? 50 : 100) / 100;
+            b.Owed[i] += RecipeBook.WagePerDay(wc) * Econ.WageMultPm / 1000 * (Pop.People.AgeYears(p, day) < 16 ? 50 : 100) / 100;
             if (kind.Id == "manor") Livery(b, p);
         }
     }
@@ -642,7 +642,7 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
             if (!vacancy) { b.UnfilledDays = 0; continue; }
             b.UnfilledDays++;
             if (b.UnfilledDays % 15 == 0)
-                b.WageOfferMites = (short)Labour.NextOffer(RecipeBook.WagePerDay(kind.Slots[0].Wage), b.WageOfferMites);
+                b.WageOfferMites = (short)Labour.NextOffer(RecipeBook.WagePerDay(kind.Slots[0].Wage) * Econ.WageMultPm / 1000, b.WageOfferMites);
         }
     }
 

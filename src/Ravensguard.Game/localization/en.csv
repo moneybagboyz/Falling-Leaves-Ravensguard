@@ -4608,6 +4608,61 @@ hw_q_buy_deliver,Buy and deliver what is missing
 hw_q_post_haul,Post haul jobs
 hw_panel_clearing,"Clearing: {0}% ({1} of {2} trees felled, {3} stumps out, {4} hands)"
 ch_note_homestead_acre,An acre cleared for a homestead.
+ill_name_cough,a cough
+ill_name_ague,the ague
+ill_name_flux,the flux
+ill_name_lung_fever,a lung fever
+ill_name_wound_fever,a wound fever
+ill_name_plague,the plague
+plague_name_grey_death,The Grey Death
+plague_name_sweating_sickness,The Sweating Sickness
+plague_name_red_plague,The Red Plague
+plague_name_wasting,The Wasting
+plague_name_black_cough,The Black Cough
+plague_name_pale_fever,The Pale Fever
+ch_ill_began,{person} fell ill of {illness}.
+ch_ill_hero_died,{hero} died of {illness}.
+ch_plague_begins,{plague} begins to spread along the trade roads.
+ch_plague_settlement,{plague} reaches {place}; it will rage there for about {days} days.
+ch_plague_quarantine,{place} closes its gates for {days} days against the sickness.
+ch_plague_emptied,{plague} leaves {place} with {dead} dead; the few who live flee and the place stands empty.
+ch_plague_waned,{plague} burns itself out after {dead} deaths in {places} places.
+ch_note_ill_cold_wet,Out in the cold and wet.
+ch_note_ill_winter,The winter coughs.
+ch_note_ill_housemate,Caught from someone in the house.
+ch_note_ill_marsh,Bad air from the marsh.
+ch_note_ill_camp_water,Drank unboiled water at camp.
+ch_note_ill_army_camp,The crowded army camp.
+ch_note_ill_after_cough,A cough that went to the lungs.
+ch_note_ill_death,Died of {illness} on the {days}th day of it.
+ch_note_plague_roads,It followed the trade roads.
+ch_note_plague_arrived,It came in with the carriers on the road.
+ch_note_plague_road,It spread from the neighbouring town along the road.
+ch_note_plague_near,The sickness is a few miles away.
+ch_note_plague_death,Died of {plague} {days} days after catching it.
+ch_note_plague_emptied,Too few were left to hold the place.
+ch_note_plague_course,It ran its course.
+dz_nothing_ill,He is not ill.
+dz_no_physician,There is no physician here to call.
+dz_physician_called,The physician will call each day for {0} a visit.
+dz_nursing,Someone sits with the sick one.
+dz_no_plague,There is no plague here.
+dz_bedding_burned,The dead's bedding is burnt.
+dz_quarantined,{0} closes its gates for {1} days.
+dz_risk_low,little risk
+dz_risk_some,some risk
+dz_risk_high,high risk
+dz_risk_grave,grave risk
+dz_care_none,no care
+dz_care_nursed,nursed
+dz_care_physician,a physician calls
+dz_ill_row,"{0}: {1}, day {2} of {3}, {4}, {5}"
+dz_ill_bed,"  Bed-bound."
+dz_ill_head,Sickness
+dz_btn_nurse,Nurse
+dz_btn_phys,Physician
+dz_scarcity,"Wages x{0}, land x{1} of what they were"
+dz_plague_line,"{0}: {1} dead in the region"
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."

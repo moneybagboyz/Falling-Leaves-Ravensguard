@@ -208,6 +208,8 @@ public sealed class EconomyState
     /// <summary>One day of spoilage over every store, households first then the others, ascending owner id (items spec 4: the H4 slice).</summary>
     /// <summary>Difficulty (economy harshness): spoilage rates and harvest-variance amplitude in percent of the calibrated value; 100 is the game as calibrated.</summary>
     public int SpoilagePct = 100, HarvestVariancePct = 100;
+    /// <summary>P6-C4 (disease-and-plague 4.5): the scarcity terms, permille. Wages (day labour, salaried posts, wage offers) are multiplied by <see cref="WageMultPm"/> and the prices of lots and new leases by <see cref="LandMultPm"/>; 1000 is the world as calibrated. Written only by the disease system at S5, saved in the "disease" section.</summary>
+    public int WageMultPm = 1000, LandMultPm = 1000;
 
     public long ApplyDailySpoilage(ulong seed, long hourKey, int tempC)
     {

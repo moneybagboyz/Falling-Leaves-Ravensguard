@@ -1,0 +1,9 @@
+// The everyday illnesses (docs/specs/phase6/disease-and-plague.md 3): course in game days, the one death check at the worst day (parts per million: untreated, nursed, physician) and the effects.
+// The id is the IllnessKind in snake case. Wound fever is the Phase 4 infection and has no row here; the great plague is the contagion of disease/plague.jsonc.
+[
+  { "type": "illness", "id": "cough", "course_days": 5, "worst_day": 3, "contagious": true, "stamina_regen_loss_pct": 20, "noise_m": 4 },
+  { "type": "illness", "id": "ague", "course_days": 7, "worst_day": 4, "death_untreated_ppm": 5000, "death_nursed_ppm": 2000, "death_physician_ppm": 1000, "strength_loss": 10, "sleep_extra_hours": 4 },
+  { "type": "illness", "id": "flux", "course_days": 6, "worst_day": 3, "contagious": true, "death_untreated_ppm": 30000, "death_nursed_ppm": 10000, "death_physician_ppm": 5000, "stamina_regen_loss_pct": 30, "water_need_pct": 200 },
+  { "type": "illness", "id": "lung_fever", "course_days": 10, "worst_day": 6, "death_untreated_ppm": 100000, "death_nursed_ppm": 50000, "death_physician_ppm": 30000, "bed_bound": true },
+  { "type": "illness", "id": "plague", "course_days": 10, "worst_day": 6, "contagious": true, "death_untreated_ppm": 600000, "death_nursed_ppm": 550000, "death_physician_ppm": 500000, "bed_bound": true, "care_shortens_days": 0 }
+]

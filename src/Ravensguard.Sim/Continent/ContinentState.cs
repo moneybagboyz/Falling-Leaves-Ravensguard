@@ -34,6 +34,8 @@ public sealed class ContinentState
     public int DangerBonus { get; set; }
     /// <summary>Coin sunk by the economy into the continent and sourced back, since the world began (reports; the totals must meet).</summary>
     public long NewsSeen { get; set; }
+    /// <summary>P6-C4: the great plague as the continent holds it (disease-and-plague 4.2, 4.3); saved in the optional "disease" section, never in this one.</summary>
+    public Ravensguard.Sim.Disease.ContinentPlague Plague { get; set; } = new();
     /// <summary>A name for each region (its largest settlement), for the chronicle's "word reached ..."; derived from the history, not saved.</summary>
     public string[] Names { get; set; } = Enumerable.Range(0, Regions).Select(i => $"region {i}").ToArray();
     /// <summary>The year's harvest of a region as permille of a normal one (the continent's weather); null: a plain noise draw.</summary>
