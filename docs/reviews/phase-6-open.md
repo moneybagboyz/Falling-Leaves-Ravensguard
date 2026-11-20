@@ -16,3 +16,11 @@ Collected while the steps are built. The close-out fixes each item or moves it i
   - Fight-only wound books, abstract battle books and resident regions other than the home economy keep the default 100.
   - The Advanced panel's difficulty rows were not rendered at 960x540.
   - For the close-out: run the 100-year population soak at aging pace 1, 2, 3 and 4 (only a one-year 4x check was run).
+- **A1 medicine, integration left for B1 (the treatment screen helper):**
+  - Replace the `MedicineEnums` name lookups with A2's real enums: stream 0x600 `RngStreams.Physician`, `Occupation.Physician`, `TransferReason.Fee`.
+  - The `physician` business kind's owner occupation should become `Physician`.
+  - `WorldSave` must read and write the `medicine` section.
+  - `PhysicianSeeding.Run` must be registered as a Phase 6 seeding step.
+  - `PhysicianBook.Plans` needs the combat content's plan lookup.
+  - Not done: guards' kit bandages; poppy milk sold only where a physician is; surgery room recognition; the live tier filling `ChoiceContext.Treat*`.
+- **Merge note:** the Phase 5 trail hash was re-pinned after A1 (seed 1 E94BE59F8BF56007, seed 1234 1ADA8B7E4D87D8C0). Medicine's physicians change healing in the trail's 10 days; the generated layers are unchanged.
