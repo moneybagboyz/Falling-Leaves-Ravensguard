@@ -269,6 +269,29 @@ Hour 0 (H5) additions: standing <= 1 ms, unrest <= 1 ms, illnesses and the regio
 | T16 | Ageing table | family 4.6 | strength from 40, the old-age hazard from 50 (1%, 3%, 10%, 20%) |
 | T17 | Market charter threshold | rule 4.4 | 200 people and an open square |
 
+## 10a. Decided with the user (Nov 2026)
+
+Where this section and a spec's "default" disagree, this section wins.
+- **Ageing has a world setting for faster ageing** (the user did not want the historical pace only).
+  - Add `aging_pace` to the world settings and to the difficulty sliders (`difficulty-sliders.md`): 1x (historical, the default), 2x, 3x or 4x.
+  - It speeds childhood, adulthood and old age together for everyone (hero and NPCs alike), so dynasties turn over faster.
+  - The vital rates' per-year chances stay per game year; only the ageing clock scales.
+  - Heirs aged 12 to 15 are playable with a guardian, as in `family-and-lifespan.md`.
+  - The history simulation uses the world's setting, so ages stay consistent.
+  - Test: a child at 4x comes of age in a quarter of the 1x game days, and population soaks hold at every pace.
+- **Harsh sentences can fall on the hero, with ways out.**
+  - The expected sentence is shown in the cell before the court day, with every way out: fine, mercy, benefit of clergy, bribe, escape or rescue.
+  - A lost hand and hanging are included.
+- **Slaves in the party** follow and work, fight only if armed, and flee below morale 40 unless chained. A freed slave can be recruited like any companion.
+- **Rare, ambiguous miracles** (the user chose these over none).
+  - Very rare events that people read as miracles: a cure after a pilgrimage or relic, a saved harvest, a fire that stops at a church door.
+  - Each always has a possible natural explanation in the sim: the cure is a natural recovery roll made after the faith event; the fire stops at a stone wall or because the wind changed.
+  - The chronicle records them as believed miracles, they raise piety and a saint's or relic's fame, and they can be disputed: sceptics, rival clergy, heresy charges.
+  - No supernatural mechanics; the rare monsters stay the only real horrors.
+  - Put this in `faith-and-church.md` with its own small stream and golden tests: rates, the natural explanation always present, the chronicle cause.
+- **Worlds already in the library** keep their history exactly as generated; religions, officials and laws are added at load. New worlds get the recalibrated history. (This was the default; the user did not object.)
+- **Cut order** as proposed in §3 (the default).
+
 ## 11. Risks
 
 | Risk | Why it matters | Mitigation |
