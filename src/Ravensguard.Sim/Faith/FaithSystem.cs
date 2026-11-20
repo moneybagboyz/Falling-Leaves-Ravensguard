@@ -185,6 +185,7 @@ public static class FaithEngine
         {
             if (holy[p.Settlement] is not { } hd) continue;
             p.ServiceDay = day; p.Adults = adults[p.Settlement]; p.Attended = (int)(pm[p.Settlement] / 1000);
+            if (w.Get<ChurchPolitics>()?.Heresies.TryGetValue(p.Settlement, out var hr) == true && hr.Interdict) p.Attended = 0;      // an interdict: no services (P6-E2, 4.5)
             list.Add(new ServiceReport(p.Settlement, hd.Name, p.Adults, p.Attended));
         }
         return list;

@@ -53,6 +53,7 @@ public static class FaithWiring
         state.ChurchSeedPending = false;
         Bind(state, content);
         home.Sim.Set(book);
+        home.Sim.Set(state.FaithPol ??= new ChurchPolitics());                                                  // P6-E2: heresy, excommunication, relics, superstition (an empty book is not saved)
         var region = state.Population.Region;
         // a holy day's feast: the household of a parish whose faith keeps the day eats and drinks more (the extra comes out of what the larder holds, never into the need)
         home.Sim.Economy.FestivePct = (hh, day) =>

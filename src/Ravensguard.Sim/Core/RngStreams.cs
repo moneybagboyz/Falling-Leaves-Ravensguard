@@ -352,6 +352,10 @@ public static class RngStreams
     public const uint PilgrimEvents = 0x653;
     /// <summary>P6: faith: witch hunts (key settlement, season).</summary>
     public const uint WitchHunts = 0x654;
+    /// <summary>P6-E2: faith: believed miracles (key person or structure, day); every one has a natural explanation recorded beside it (overview 10a).</summary>
+    public const uint BelievedMiracles = 0x655;
+    /// <summary>P6-E2: faith: pardoners' fake relics and their exposure (key relic, season).</summary>
+    public const uint FakeRelics = 0x656;
     /// <summary>P6: rule: reserved for purveyance (Phase 7); asserted never drawn.</summary>
     public const uint PurveyanceReserved = 0x660;
     /// <summary>P6: rule: skim seen and audits (key official, season).</summary>

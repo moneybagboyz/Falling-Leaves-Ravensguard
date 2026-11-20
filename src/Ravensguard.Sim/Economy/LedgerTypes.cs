@@ -47,6 +47,10 @@ public enum TransferReason : byte
     Tribute,
     /// <summary>P6-D2 (diplomacy 4.5): a captured lord's ransom at the Baron rank price, paid to his captor's realm. Appended.</summary>
     LordRansom,
+    /// <summary>P6-E2 (faith 4.6): a tenth of an excommunicate's treasury to the see as penance. Appended: older saves load with the count padded.</summary>
+    Penance,
+    /// <summary>P6-E2 (faith 4.4): a church pays for a relic. Appended.</summary>
+    RelicSale,
 }
 
 /// <summary>The only faucets: the one-off seed money of world creation, silver struck at a mint, and the coin a household brings across a region border (the other region's ledger holds the matching <see cref="SinkReason.Emigrate"/>).</summary>
