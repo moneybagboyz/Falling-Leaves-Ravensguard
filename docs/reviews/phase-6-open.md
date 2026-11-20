@@ -24,3 +24,10 @@ Collected while the steps are built. The close-out fixes each item or moves it i
   - `PhysicianBook.Plans` needs the combat content's plan lookup.
   - Not done: guards' kit bandages; poppy milk sold only where a physician is; surgery room recognition; the live tier filling `ChoiceContext.Treat*`.
 - **Merge note:** the Phase 5 trail hash was re-pinned after A1 (seed 1 E94BE59F8BF56007, seed 1234 1ADA8B7E4D87D8C0). Medicine's physicians change healing in the trail's 10 days; the generated layers are unchanged.
+
+## From step 2, part B2 (crime core)
+- **Live tier gaps for crime:** no sneak mode (`MoveMode` is Walk, Jog, Sprint), so the HUD eye and the act read the full sight range; no hero verb lifts goods from a stall (the eye shows near a stall prop; `CrimeDesk.Act` is recorded and tested but nothing in the game issues it); the barrow crawl's `TabooRobbed` does not ask who saw (`CrimeSystem.Commit` with `grave_robbing` is tested with an observer at the mouth); the clothes' outer-layer dyes are not read into `ActorLook` yet.
+- **C1 hooks:** guards' `Pursue` from `CryResult.Pursuers`, arrest and `Held`, `Bounties.Collect` at a capture, the `Wanted` list in the Journal (`Bounties.OnPerson`), the readers in `Standing` (`AttackedOnSight`, `Watched`, `MercySteps`) for guards and courts, `CrimeBook.Convictions` for sentence steps, mark writes (brand, outlaw) from sentences.
+- **C2:** bounties are `OddJobKind.Bounty` jobs; contracts v2 should take them over (their `P0` crime id, `P1` perpetrator, `P2` flags) and the "report at the next contact with a guard" rule (reports run at hour 0 of the next day for now).
+- **Calibration:** `NpcTheftPer10k` is 1.5% a day per desperate household (the spec's 0.5% gives a tenth of its volume); decide at close-out with a real soak (the share of households with a hunger grievance in a real run is not measured here). NPC crime moves no goods or coin. Site-pile theft (0.2% a night) not written.
+- **Hero id:** the hero is person 0 (`EntityId.None`); crime code carries "unknown perpetrator" as -1 and never tests an id against `None`.

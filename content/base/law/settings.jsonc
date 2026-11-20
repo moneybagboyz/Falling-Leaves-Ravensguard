@@ -1,0 +1,4 @@
+// The numbers of seeing, recognising, the hue and cry, reports, bounties and NPC crime (crime-and-justice 4.1 to 4.3, 4.8). Distances in metres; the defaults are the spec's.
+[
+  {"type": "law_settings", "id": "law"}
+]

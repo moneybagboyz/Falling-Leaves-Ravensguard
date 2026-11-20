@@ -8,7 +8,9 @@ public enum OddJobKind : byte { Haul, Guard, Escort, TendShop, FarmWork, Deliver
     /// <summary>P5-F (businesses spec 4.3): a day's work taken at the hiring hour in the square (the hiring hour fills and pays them at once; transient). Appended.</summary>
     DayLabour,
     /// <summary>Phase 6 (overview 8.1, append only): a paid hand at a fire (fire and burning 4.4). Nothing writes it until B5.</summary>
-    FightFire }
+    FightFire,
+    /// <summary>Phase 6 (crime-and-justice 4.3, P6-B2): a bounty on a culprit, its coin escrowed from the fief treasury; nobody works it, whoever brings the culprit in is paid by <c>JobTable.Settle</c>. Appended.</summary>
+    Bounty }
 
 /// <summary><c>Open -> Claimed -> Active -> Done | Failed | Expired | Cancelled</c>.</summary>
 public enum JobState : byte { Open, Claimed, Active, Done, Failed, Expired, Cancelled }
