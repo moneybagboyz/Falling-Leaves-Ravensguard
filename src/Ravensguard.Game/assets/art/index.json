@@ -29,7 +29,7 @@
     },
     "items_16": {
       "file": "items_16.png",
-      "width": 256,
+      "width": 304,
       "height": 16,
       "cell": [
         16,
@@ -65,8 +65,8 @@
     },
     "overlays_32": {
       "file": "overlays_32.png",
-      "width": 736,
-      "height": 32,
+      "width": 1024,
+      "height": 64,
       "cell": [
         32,
         32
@@ -1139,6 +1139,27 @@
     "item.bandage": {
       "atlas": "items_16",
       "x": 240,
+      "y": 0,
+      "w": 16,
+      "h": 16
+    },
+    "item.bucket": {
+      "atlas": "items_16",
+      "x": 256,
+      "y": 0,
+      "w": 16,
+      "h": 16
+    },
+    "item.bucket_full": {
+      "atlas": "items_16",
+      "x": 272,
+      "y": 0,
+      "w": 16,
+      "h": 16
+    },
+    "item.fire_hook": {
+      "atlas": "items_16",
+      "x": 288,
       "y": 0,
       "w": 16,
       "h": 16
@@ -4017,6 +4038,174 @@
       "atlas": "overlays_32",
       "x": 704,
       "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "overlay.fire.1.0": {
+      "atlas": "overlays_32",
+      "x": 736,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "overlay.fire.1.1": {
+      "atlas": "overlays_32",
+      "x": 768,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "overlay.fire.1.2": {
+      "atlas": "overlays_32",
+      "x": 800,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "overlay.fire.1.3": {
+      "atlas": "overlays_32",
+      "x": 832,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "overlay.fire.2.0": {
+      "atlas": "overlays_32",
+      "x": 864,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "overlay.fire.2.1": {
+      "atlas": "overlays_32",
+      "x": 896,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "overlay.fire.2.2": {
+      "atlas": "overlays_32",
+      "x": 928,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "overlay.fire.2.3": {
+      "atlas": "overlays_32",
+      "x": 960,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "overlay.fire.3.0": {
+      "atlas": "overlays_32",
+      "x": 992,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "overlay.fire.3.1": {
+      "atlas": "overlays_32",
+      "x": 0,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "overlay.fire.3.2": {
+      "atlas": "overlays_32",
+      "x": 32,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "overlay.fire.3.3": {
+      "atlas": "overlays_32",
+      "x": 64,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "overlay.smoke.0": {
+      "atlas": "overlays_32",
+      "x": 96,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "overlay.smoke.1": {
+      "atlas": "overlays_32",
+      "x": 128,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "overlay.smoke.2": {
+      "atlas": "overlays_32",
+      "x": 160,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "overlay.smoke.3": {
+      "atlas": "overlays_32",
+      "x": 192,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "overlay.char.0": {
+      "atlas": "overlays_32",
+      "x": 224,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "overlay.ash.0": {
+      "atlas": "overlays_32",
+      "x": 256,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "overlay.char.1": {
+      "atlas": "overlays_32",
+      "x": 288,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "overlay.ash.1": {
+      "atlas": "overlays_32",
+      "x": 320,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "overlay.scorch": {
+      "atlas": "overlays_32",
+      "x": 352,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "overlay.cracked": {
+      "atlas": "overlays_32",
+      "x": 384,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "overlay.smoulder": {
+      "atlas": "overlays_32",
+      "x": 416,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "overlay.rubble_char": {
+      "atlas": "overlays_32",
+      "x": 448,
+      "y": 32,
       "w": 32,
       "h": 32
     },

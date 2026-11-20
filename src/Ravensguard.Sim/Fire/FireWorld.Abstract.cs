@@ -76,6 +76,7 @@ public sealed partial class FireWorld
         var id = Chronicle?.Invoke(GameTime.FromGameHours(hour), "fire_started", "ch_fire_started", parameters, cause.Subjects, cause.Causes,
             [("x", p.CentreX.ToString()), ("y", p.CentreY.ToString()), ("structure", structure.ToString()), ("cause", cause.Kind)]) ?? EntityId.None;
         if (id == EntityId.None) id = EntityId.Make(IdKind.Event, 0xF1E_0000_0000UL | Book.NextSerial++);
+        Touched();
         Book.Buildings[structure] = new BuildingFire { Structure = structure, StartHour = hour, Fire = id.Value, CauseKind = cause.Kind, Flammable = p.FlammableCells };
         Book.Incidents[id.Value] = new FireIncident { Entry = id.Value, StartSec = hour * 3600, CauseKind = cause.Kind };
         return true;
@@ -88,6 +89,7 @@ public sealed partial class FireWorld
     public void HourStep(long hour)
     {
         if (Book.Buildings.Count == 0) return;
+        Touched();
         long sec = (hour + 1) * 3600;
         var w = WeatherAt(hour * 3600);
         if (w.Raining) Book.LastRainSec = hour * 3600;
@@ -265,6 +267,7 @@ public sealed partial class FireWorld
     {
         if (!Book.Buildings.TryGetValue(structure, out var b)) return 0;
         Book.Buildings.Remove(structure);
+        Touched();
         if (Book.Cells.Count == 0 && Book.Exposed.Count == 0) Book.SecDone = FireClock.SimS(sec) - 1;
         int n = 0;
         var keys = Rooms.StructureCells(structure).ToList();
@@ -290,6 +293,7 @@ public sealed partial class FireWorld
     public int Retire(long hour)
     {
         if (Book.Cells.Count == 0) return 0;
+        Touched();
         var byStructure = new SortedDictionary<int, (ulong Fire, int Cells)>();
         var loose = new List<long>();
         foreach (var c in Book.Cells.Values)

@@ -91,6 +91,7 @@ public sealed partial class FireWorld
         if (incident == 0) incident = StartIncident(x, y, z, gameSec, cause);
         if (Book.Cells.Count == 0 && Book.Exposed.Count == 0) Book.SecDone = FireClock.SimS(gameSec) - 1;
         Add(key, fuel, gameSec, incident);
+        Touched();
         return true;
     }
 
@@ -197,6 +198,7 @@ public sealed partial class FireWorld
     private void Second(long s)
     {
         long sec = s * FireClock.GameSecPerSimS;
+        Touched();
         _keys.Clear(); _keys.AddRange(Book.Cells.Keys);
         // spread, sparks and the rain's hand, on the step
         if (s % FireClock.SpreadEveryS == 0 && _keys.Count > 0) SpreadStep(s / FireClock.SpreadEveryS, sec);
