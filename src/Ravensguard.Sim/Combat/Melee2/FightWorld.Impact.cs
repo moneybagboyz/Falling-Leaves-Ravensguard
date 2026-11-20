@@ -188,6 +188,7 @@ public sealed partial class FightWorld
         Resolver.Resolve(s, KeyOf(a, serial), _r);
         OnBlow?.Invoke(a, t, _r, s);
         WearArmour(a, t);
+        BrittleBlade(a);
         if (Mounts != null) MountedOnBlow(a, t, s);                  // [mounted-combat] unhorse, lance shatter
         if (_r.Blocked)
         {
@@ -241,6 +242,17 @@ public sealed partial class FightWorld
         Emit(FightEventKind.Broke, t.Id, -1, -1, 1);
         Ground.Add(new GroundItem(t.Shield.Def.Id, t.Shield.Def.DefaultMaterial ?? "oak", t.X, t.Y, true));
         t.Shield = null;
+    }
+
+    /// <summary>P5-I (crafting-full 4.3): an untempered blade whose blow a rigid layer stopped breaks with <see cref="Crafting.Smithing.BrittleBreakPm"/> permille (stream 0x532, fight tick, item id); the fighter is left bare-handed.</summary>
+    private void BrittleBlade(Fighter a)
+    {
+        if (a.Kit.Weapon is not { Brittle: true } w || a.Broke || !_r.RigidStop) return;
+        ulong item = w.ItemId != 0 ? w.ItemId : (ulong)(a.Id + 1);
+        if (!Crafting.Smithing.BrittleBreaks(Seed, Tick, new EntityId(item), true, true)) return;
+        a.Broke = true;
+        Emit(FightEventKind.Broke, a.Id, -1, -1, 2);
+        Disarm(a);
     }
 
     /// <summary>A fragile improvised weapon loses condition by the momentum of each blow (melee 4.6); a bottle breaks on its first.</summary>

@@ -158,7 +158,11 @@ public sealed class PersonTable
     private static T[] G<T>(T[] a, int n) { var r = new T[n]; Array.Copy(a, r, a.Length); return r; }
 
     public int AgeYears(int i, int nowDay) => Math.Max(0, (nowDay - BirthDay[i]) / TimeConst.DaysPerYear);
-    public string FullName(int i) => Byname[i].Length > 0 ? $"{Given[i]} {Family[i]} {Byname[i]}" : $"{Given[i]} {Family[i]}";
+    public string FullName(int i)
+    {
+        string n = Family[i].Length > 0 ? $"{Given[i]} {Family[i]}" : Given[i];      // P5-I: no trailing space when there is no family name
+        return Byname[i].Length > 0 ? $"{n} {Byname[i]}" : n;
+    }
 
     public int Attribute(int i, int which) => Attr[i * AttrCount + which];
     public SkillLevel SkillAt(int i, int slot) => new((Skill)Skills[(i * SkillSlots + slot) * 2], Skills[(i * SkillSlots + slot) * 2 + 1]);

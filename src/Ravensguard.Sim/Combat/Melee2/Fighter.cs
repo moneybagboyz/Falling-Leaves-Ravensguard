@@ -84,6 +84,8 @@ public sealed class Fighter
     public bool Loaded;
     public readonly List<ThrowStock> Throwables = [];
     public ImprovisedDef? Improvised;
+    /// <summary>P5-I: the brittle blade broke this fight (it is not drawn again).</summary>
+    public bool Broke;
     public int ImprovisedPm = 1000, ImprovisedBlows;
     public required BodyPlanV2 Plan;
     public required WoundBook Book;

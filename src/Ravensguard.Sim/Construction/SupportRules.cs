@@ -29,8 +29,15 @@ public sealed class SupportRules
     }
 
     /// <summary>Whether <paramref name="c"/> can stand at (x, y, z) among the cells <paramref name="at"/> shows (the cell itself is not read).</summary>
-    public Verdict Check(int x, int y, int z, PieceCost c, CellAt at)
+    public Verdict Check(int x, int y, int z, PieceCost c, CellAt at) => Check(x, y, z, c, at, out _, out _);
+
+    /// <summary>
+    /// <see cref="Check"/>, also naming the support that carries the piece when one does at its level below (<paramref name="wx"/> is <see cref="int.MinValue"/> when none is named: a fixture, the
+    /// ground, a beam run). P5-I: <see cref="HintHolds"/> re-tests only that support, so a piece that has stood is confirmed without the scan of its whole reach.
+    /// </summary>
+    public Verdict Check(int x, int y, int z, PieceCost c, CellAt at, out int wx, out int wy)
     {
+        wx = wy = int.MinValue;
         if (z <= 0) return new(SupportFault.None);
         if (PieceCosts.IsFixture(c.Kind)) return new(SupportFault.None);       // a fixture stands on the floor of its own cell (checked by placement)
         string? weakest = null; int weakCarries = 0;
@@ -41,7 +48,7 @@ public sealed class SupportRules
         {
             any = true;
             int bear = Bear(x, y, z - 1, at, 0);
-            if (bear >= z) return new(SupportFault.None);
+            if (bear >= z) { wx = x; wy = y; return new(SupportFault.None); }
             Note(below, ref weakest, ref weakCarries);
         }
         if (PieceCosts.IsUpright(c.Kind))
@@ -55,7 +62,7 @@ public sealed class SupportRules
                     var s = at(x + dx, y + dy, z - 1);
                     if (s == null || !PieceCosts.IsSupport(s.Kind)) continue;
                     any = true;
-                    if (Bear(x + dx, y + dy, z - 1, at, 0) >= z) return new(SupportFault.None);
+                    if (Bear(x + dx, y + dy, z - 1, at, 0) >= z) { wx = x + dx; wy = y + dy; return new(SupportFault.None); }
                     Note(s, ref weakest, ref weakCarries);
                 }
             return any ? new(SupportFault.Load, weakest, weakCarries) : new(SupportFault.Jetty);
@@ -68,7 +75,7 @@ public sealed class SupportRules
                 var s = at(x + dx, y + dy, z - 1);
                 if (s == null || !PieceCosts.IsSupport(s.Kind)) continue;
                 any = true;
-                if (Bear(x + dx, y + dy, z - 1, at, 0) >= z) return new(SupportFault.None);
+                if (Bear(x + dx, y + dy, z - 1, at, 0) >= z) { wx = x + dx; wy = y + dy; return new(SupportFault.None); }
                 Note(s, ref weakest, ref weakCarries);
             }
         if (c.Kind != PieceKind.Beam && AnyBeams?.Invoke() != false)
@@ -89,6 +96,23 @@ public sealed class SupportRules
         else if (BeamBear(x, y, z, at, self: c) is int bb && bb >= 0)
             return bb >= z ? new(SupportFault.None) : new(SupportFault.Load, weakest, weakCarries);
         return any ? new(SupportFault.Load, weakest, weakCarries) : new(SupportFault.NoSupport);
+    }
+
+    /// <summary>
+    /// Whether the support a former <see cref="Check"/> named still carries the piece: the same cell and the same tests as the scan makes of it (so a true here is a true there; a false
+    /// settles nothing, the scan decides).
+    /// </summary>
+    public bool HintHolds(int x, int y, int z, PieceCost c, CellAt at, int wx, int wy)
+    {
+        if (z <= 0 || wx == int.MinValue) return false;
+        int dx = wx - x, dy = wy - y;
+        var s = at(wx, wy, z - 1);
+        if (s == null) return false;
+        if (dx == 0 && dy == 0 && (PieceCosts.IsUpright(s.Kind) || (s.Kind == PieceKind.Beam && PieceCosts.IsUpright(c.Kind)))) return Bear(wx, wy, z - 1, at, 0) >= z;
+        if (!PieceCosts.IsSupport(s.Kind)) return false;
+        int reach = PieceCosts.IsUpright(c.Kind) ? _r.JettyReachTiles : PieceCosts.IsFloorBearing(c.Kind) ? _r.SupportReachTiles : -1;
+        if (Math.Abs(dx) > reach || Math.Abs(dy) > reach) return false;
+        return Bear(wx, wy, z - 1, at, 0) >= z;
     }
 
     private static void Note(PieceCost p, ref string? weakest, ref int carries)

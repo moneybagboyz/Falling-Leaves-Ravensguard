@@ -260,11 +260,21 @@ public static class VehicleSites
     }
 
     /// <summary>The hourly pass of the owners' own sites (H2): each crew member works an hour in the working hours (08:00-18:00) where the next part is on the pile.</summary>
-    public static void SiteHour(RideBook b, ItemTable items, VehicleSite site, long hour)
+    public static void SiteHour(RideBook b, ItemTable items, VehicleSite site, long hour, Economy.Ledger? ledger = null)
     {
         if (site.Paused || site.Commission != EntityId.None || site.DoneSec > 0) return;
         int hod = (int)(hour % 24); if (hod < 8 || hod >= 18) return;
         var v = b.Vehicles.Find(site.Vehicle); if (v == null) return;
-        for (int k = 0; k < site.Crew.Count; k++) Work(b, items, v, MilliPerHour(site.CrewSkill[k]), (hour + 1) * 3600);
+        for (int k = 0; k < site.Crew.Count; k++)
+        {
+            // P5-I: the owner pays each hand's hour through the ledger (the skill's hourly wage, as a construction crew's); a site whose owner cannot pay stands that hour. The owner's own hours are free.
+            if (ledger != null && site.Crew[k] != site.Owner)
+            {
+                long wage = Commissions.WagePerHour(site.CrewSkill[k]);
+                if (!ledger.TryFind(PurseKind.Person, site.Owner, out var from) || !ledger.TryFind(PurseKind.Person, site.Crew[k], out var to)) continue;
+                if (ledger.Balance(from).Mites < wage || !ledger.Transfer(from, to, new Coin(wage), TransferReason.Wage)) continue;
+            }
+            Work(b, items, v, MilliPerHour(site.CrewSkill[k]), (hour + 1) * 3600);
+        }
     }
 }

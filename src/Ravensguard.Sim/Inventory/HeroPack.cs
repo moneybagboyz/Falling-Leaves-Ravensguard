@@ -19,7 +19,7 @@ public static class HeroPack
         {
             ref var row = ref e.Items.At(r);
             string mat = row.ComponentCount > 0 ? e.Items.Component(row.ComponentStart).Material : "";
-            list.Add(new HeroItem(row.Shape, mat, 1, row.Quality));
+            list.Add(new HeroItem(row.Shape, mat, 1, row.Quality, (row.Flags & ItemFlags.Brittle) != 0, row.Id.Value));
         }
         if (isShape != null)
             foreach (var (g, q) in carried.Pack(e).Rows())
@@ -34,7 +34,7 @@ public static class HeroPack
     public static List<HeroItem> Things(IEnumerable<CarriedItem> items, IEnumerable<CarriedGood> goods, Func<string, bool>? isShape = null)
     {
         var list = new List<HeroItem>();
-        foreach (var it in items) list.Add(new HeroItem(it.Shape, it.Material, 1, it.Quality));
+        foreach (var it in items) list.Add(new HeroItem(it.Shape, it.Material, 1, it.Quality, (it.Flags & ItemFlags.Brittle) != 0, it.Id.Value));
         if (isShape != null) foreach (var g in goods) if (g.Qty > 0 && isShape(g.Id)) list.Add(new HeroItem(g.Id, HeroRecord.DefaultMaterial(g.Id), (int)Math.Min(int.MaxValue, g.Qty)));
         return list;
     }

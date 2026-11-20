@@ -45,6 +45,13 @@ public sealed class SkillBook
         return gain;
     }
 
+    /// <summary>P5-I: forgets everything kept under one id (an heir who takes up a dead hero's id starts from his own record, not the dead's learning).</summary>
+    public void Forget(EntityId p)
+    {
+        foreach (var k in _micro.Keys.Where(k => k.Person == p.Value).ToList()) _micro.Remove(k);
+        foreach (var k in _uses.Keys.Where(k => k.Person == p.Value).ToList()) _uses.Remove(k);
+    }
+
     // ---- save support ----
     public (ulong Person, byte Skill, long Micro)[] MicroRows() => [.. _micro.Select(kv => (kv.Key.Person, kv.Key.Skill, kv.Value))];
     public (ulong Person, byte Skill, long Hour, int Uses)[] UseRows() => [.. _uses.Select(kv => (kv.Key.Person, kv.Key.Skill, kv.Value.Hour, kv.Value.Uses))];

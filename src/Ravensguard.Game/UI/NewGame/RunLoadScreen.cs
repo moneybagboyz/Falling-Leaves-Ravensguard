@@ -82,7 +82,9 @@ public partial class RunLoadScreen : Control
         var file = new SaveReader().Load(bi.Entry.Path);
         ct.ThrowIfCancellationRequested();
         // the pre-load report (plan 2.11): refused with its cause, or shown for Continue / Cancel before anything is loaded
-        var report = WorldSave.Inspect(file, content.Db, content.Hash, null, world.Continent, world.History);
+        // a save from before the game recorded its mods holds none: nothing to compare then, so it is not reported as every mod added
+        var mods = file.Header.Mods.Count == 0 ? null : content.Installed;
+        var report = WorldSave.Inspect(file, content.Db, content.Hash, mods, world.Continent, world.History);
         if (!report.CanLoad) throw new SaveException(report.ToText());
         if (report.NeedsConfirmation)
         {
@@ -91,7 +93,7 @@ public partial class RunLoadScreen : Control
         }
         ct.ThrowIfCancellationRequested();
         _at = 2;
-        var state = WorldSave.Restore(file, content.Db, content.Hash, null, world.Continent, world.History);
+        var state = WorldSave.Restore(file, content.Db, content.Hash, mods, world.Continent, world.History);
         state.Content = content.Db; // the next save diffs the people against the regenerated ones (note N24)
         foreach (var note in state.LoadNotes) GD.PushWarning(note);   // content ids mapped by name, goods written off (ContentRemap)
         ct.ThrowIfCancellationRequested();

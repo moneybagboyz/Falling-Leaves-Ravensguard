@@ -77,15 +77,22 @@ public sealed partial class ConstructionWorld
     }
 
     /// <summary>
-    /// Materials at the local ask: what buying them from the book would cost now when it holds them, else the ask at the book's reference price (the builder gets them from the
-    /// settlement's sources or the next delivery: an empty book's curve price is not what anyone pays).
+    /// Materials at the local ask: what buying them from the book would cost now when it holds them; what it holds is priced as it sells it and the rest at the book's own ask at its present
+    /// stock, never under the reference price. P5-I: this used to price what the book lacked at its reference, far under what a new game's towns charge (iron bars at three to four times it for
+    /// the first two months, rough stone at two and a half times on day 3, nothing at all on day 0), so bids were short of what the builder then paid. The book's own ask is the region's real
+    /// expectation: an empty book asks its clamp (4 x), and it falls as the deliveries come in.
     /// </summary>
     public static long AskFor(MarketBook book, ushort good, long qty)
     {
         if (qty <= 0) return 0;
         var gb = book.Goods[good];
-        if (gb.StockUnits >= qty) return book.QuoteBuy(good, qty);
-        return (long)((Int128)qty * gb.RefMicro * (1000 + book.Money.SpreadHalfPermille) / 1000 / PriceCurve.Micro);
+        long have = Math.Min(gb.StockUnits, qty), cost = have > 0 ? book.QuoteBuy(good, have) : 0, rest = qty - have;
+        if (rest > 0)
+        {
+            long floor = (long)((Int128)gb.RefMicro * (1000 + book.Money.SpreadHalfPermille) / 1000);
+            cost += (long)((Int128)rest * Math.Max(book.AskMicro(good), floor) / PriceCurve.Micro);
+        }
+        return cost;
     }
 
     /// <summary>Every builder's bid for a site, cheapest first (then id).</summary>

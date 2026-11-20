@@ -14,7 +14,11 @@ using Ravensguard.Sim.Worlds;
 namespace Ravensguard.Game.UI.NewGame;
 
 /// <summary>Loaded base content plus its hash (the world library records the hash a world was made with).</summary>
-public sealed record ContentBundle(ContentDatabase Db, string Hash, string Dir);
+public sealed record ContentBundle(ContentDatabase Db, string Hash, string Dir, IReadOnlyList<Ravensguard.Sim.Save.ModEntry>? Mods = null)
+{
+    /// <summary>The mods really loaded (id and version, load order): what saves record and the load report compares (P5-I).</summary>
+    public IReadOnlyList<Ravensguard.Sim.Save.ModEntry> Installed => Mods ?? [];
+}
 
 /// <summary>What the player has chosen so far in the new-game flow. Plain data; screens read and write it, nothing else does.</summary>
 public sealed class NewGameDraft
@@ -76,6 +80,9 @@ public static class NewGameServices
     /// <summary>Forgets the loaded content, so the next <see cref="Content"/> call reads base plus the user blueprint mod again (the blueprint editor raises a reload after each save: hot reload).</summary>
     public static void InvalidateContent() => _content = null;
 
+    /// <summary>The mods the game loaded, as the save header records them.</summary>
+    public static IReadOnlyList<Ravensguard.Sim.Save.ModEntry> InstalledMods() => Content().Installed;
+
     public static ContentBundle Content()
     {
         if (_content != null) return _content;
@@ -90,15 +97,15 @@ public static class NewGameServices
             var cache = ProjectSettings.GlobalizePath("user://content_cache");
             var r = new ModLoader(ContentTypeRegistry.Default, BaseVocabulary.Create()).Load([full], cache);
             if (!r.Success) throw new InvalidOperationException("content failed to load: " + r.Report);
-            var db = r.Database;
+            var db = r.Database; var mods = r.Manifests;
             // the user blueprint mod (saved by the blueprint editor) is part of what regions are generated from; the hash stays the base content's, so library worlds keep loading
             var userMod = Tools.BlueprintEditor.EditorLibrary.UserModDir;
             if (File.Exists(Path.Combine(userMod, "mod.json")))
             {
                 var all = new ModLoader(ContentTypeRegistry.Default, BaseVocabulary.Create()).Load([full, userMod]);
-                if (all.Success) db = all.Database; else GD.PushWarning("user blueprints not loaded: " + all.Report);
+                if (all.Success) { db = all.Database; mods = all.Manifests; } else GD.PushWarning("user blueprints not loaded: " + all.Report);
             }
-            return _content = new ContentBundle(db, r.Hash ?? "", full);
+            return _content = new ContentBundle(db, r.Hash ?? "", full, [.. mods.Select(m => new Ravensguard.Sim.Save.ModEntry(m.Id, m.Version))]);
         }
         throw new InvalidOperationException("content/base not found");
     }

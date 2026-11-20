@@ -30,13 +30,13 @@ public sealed class VehicleSystem : AbstractSystem
     {
         var svc = ctx.World.Get<VehicleService>(); if (svc?.Book() is not { } b) return;
         if (b.Works.IsEmpty) return;
-        lock (b.Gate) Hour(b, svc.Craft(), svc.Paths, ctx.World.Economy.Items, ctx.Hour);
+        lock (b.Gate) Hour(b, svc.Craft(), svc.Paths, ctx.World.Economy.Items, ctx.Hour, ctx.World.Economy.Ledger);
     }
 
     /// <summary>One hour of every site, commission and voyage, in id order.</summary>
-    public static void Hour(RideBook b, CraftContext? craft, Func<int, WaterPath?> paths, Goods.ItemTable items, long hour)
+    public static void Hour(RideBook b, CraftContext? craft, Func<int, WaterPath?> paths, Goods.ItemTable items, long hour, Economy.Ledger? ledger = null)
     {
-        foreach (var s in b.Works.Sites.Values.ToList()) VehicleSites.SiteHour(b, items, s, hour);
+        foreach (var s in b.Works.Sites.Values.ToList()) VehicleSites.SiteHour(b, items, s, hour, ledger);
         if (craft != null) foreach (var c in b.Works.Commissions.Values.ToList()) VehicleSites.CommissionHour(b, craft, c, hour);
         Voyages.Hour(b, paths, hour);
     }

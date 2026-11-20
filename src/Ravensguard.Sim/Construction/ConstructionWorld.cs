@@ -111,7 +111,7 @@ public sealed partial class ConstructionWorld
             set.Add(g);
         }
         Rooms = Costs.Library.NewWorld();
-        _built.Clear(); _beams = 0;
+        _built.Clear(); _witness.Clear(); _beams = 0;
         foreach (var b in Book.Built.Values) { _built[b.SlotKey] = b; if (b.Slot == GhostSlot.Structure && Costs.Get(b.Piece)?.Kind == PieceKind.Beam) _beams++; }
         var edits = new List<CellEdit>();
         foreach (var b in Book.Built.Values) edits.Add(new CellEdit(b.X, b.Y, b.Z, b.Slot == GhostSlot.Fixture ? CellLayer.Fixture : CellLayer.Structure, b.Piece));
@@ -142,7 +142,7 @@ public sealed partial class ConstructionWorld
     private bool RemoveBuilt(long key, out BuiltCell b)
     {
         if (!Book.Built.Remove(key, out b!)) return false;
-        _built.Remove(key);
+        _built.Remove(key); _witness.Remove(key / 2);
         if (b.Slot == GhostSlot.Structure && Costs.Get(b.Piece)?.Kind == PieceKind.Beam) _beams--;
         return true;
     }

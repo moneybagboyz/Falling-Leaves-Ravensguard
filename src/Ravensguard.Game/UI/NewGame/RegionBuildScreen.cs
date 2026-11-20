@@ -137,7 +137,7 @@ public partial class RegionBuildScreen : Control
         try
         {
             var lib = bi.Library;
-            var file = WorldSave.Capture(world, bi.ContentHash, "0.1", null, d.Ironman);
+            var file = WorldSave.Capture(world, bi.ContentHash, "0.1", NewGameServices.InstalledMods(), d.Ironman);
             var writer = new SaveWriter(lib.RunsDirectory(w.Info.Id), bi.RunName);
             path = (d.Ironman ? writer.WriteIronmanAsync(file) : writer.WriteManualAsync(file, bi.RunName)).GetAwaiter().GetResult();
             lib.WriteRunInfo(w.Info.Id, bi.RunName, new WorldLibrary.RunInfo(d.Name, d.Female, d.OriginId, bi.Origin?.Ambition ?? "", d.Ironman, site.CellX, site.CellY, bi.Now));

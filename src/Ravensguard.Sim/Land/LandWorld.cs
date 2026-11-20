@@ -249,6 +249,18 @@ public sealed class LandWorld
         return new LandResult(true, d.OwedMites == 0 ? "ld_arrears_cleared" : "ld_arrears_part", [Money(pay), Money(d.OwedMites)], pay, d.Id);
     }
 
+    /// <summary>
+    /// P5-I: what a holder's deed is worth to him today: a freehold or burgage the plot's price; a leasehold or tenancy only the rights that are left in it, its season's dues for each season still
+    /// to run (an open-ended tenure counts a year), never more than the plot's price; customary tenure the same as a tenancy.
+    /// </summary>
+    public long HoldingValue(Deed d, int day)
+    {
+        long price = ValueOf(d);
+        if (d.Tenure is Tenure.Freehold or Tenure.Burgage) return price;
+        int seasons = d.LeaseEndDay >= 0 ? Math.Max(0, (d.LeaseEndDay - day + TimeConst.DaysPerSeason - 1) / TimeConst.DaysPerSeason) : 4;
+        return Math.Min(price, Math.Max(0, d.DuesMitesPerSeason) * seasons);
+    }
+
     /// <summary>The value of a deed the resale compares the ask with: what the lord would ask today for the same ground.</summary>
     public long ValueOf(Deed d)
     {

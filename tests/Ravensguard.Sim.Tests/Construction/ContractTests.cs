@@ -33,7 +33,7 @@ public class ContractTests(ITestOutputHelper output)
     [Fact]
     public void BC16_ACarpentryBusinessBuildsTheCottage_AtItsBid_InAboutSevenDays()
     {
-        using var r = ContractRig.Make(crowns: 2000);
+        using var r = ContractRig.Make(crowns: 4000);      // P5-I: the bid prices the book's lack at its ask (an empty book asks 4 x), so the cottage costs the client more than at the reference prices
         var site = Lot(r);
         var s = r.W.Site(site)!;
         var bids = r.W.Bids(site, 4);
@@ -45,7 +45,8 @@ public class ContractTests(ITestOutputHelper output)
         Assert.Equal(12_712, bid.LabourMites);
         var book = r.W.Market!(bid.Builder.Settlement)!;
         foreach (var (g, q) in r.W.Needed(s)) output.WriteLine($"  {r.L.W.Econ.Goods.StringId(g)} {q} g: ask {book.AskMicro(g)} micro, ref {book.Goods[g].RefMicro}, stock {book.Goods[g].StockUnits}");
-        long mats = r.W.Needed(s).Sum(kv => ConstructionWorld.AskFor(book, kv.Key, kv.Value));
+        var pile0 = r.W.PileOf(s);
+        long mats = r.W.Needed(s).Sum(kv => ConstructionWorld.AskFor(book, kv.Key, Math.Max(0, kv.Value - pile0.Qty(kv.Key))));
         Assert.Equal(mats, bid.MaterialsMites);
         Assert.True(bid.HaulMites > 0);
         // the builder's yard holds the goods a fresh world's books have none of yet (the test's stock): thatch, planks, nails; poles and clay he gets from the woodland and the pits

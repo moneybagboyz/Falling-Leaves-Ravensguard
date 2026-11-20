@@ -13,6 +13,9 @@ public sealed partial class ConstructionWorld
     /// The built structure cells that stand no more once <paramref name="removed"/> are gone (and <paramref name="already"/>, cells already doomed): every cell at or above the lowest removed
     /// level within reach of a removed cell is checked again, in (z, y, x) order, and what falls is checked around in turn until nothing more does (the cascade, BC-14).
     /// </summary>
+    /// <summary>P5-I: the support that last carried a cell (x << 32 | y, one level below): a hint only, never saved; <see cref="SupportRules.HintHolds"/> decides whether it still does, so a piece that has stood is confirmed in a lookup instead of the scan of its whole reach.</summary>
+    private readonly Dictionary<long, long> _witness = [];
+
     public SortedSet<long> Doomed(IReadOnlyCollection<long> removed, IReadOnlyCollection<long> already)
     {
         var gone = new HashSet<long>(removed); gone.UnionWith(already);
@@ -22,7 +25,7 @@ public sealed partial class ConstructionWorld
         int x0 = int.MaxValue, y0 = int.MaxValue, x1 = int.MinValue, y1 = int.MinValue, z0 = int.MaxValue;
         void Grow(long k) { var (x, y, z) = ConstructionIds.Unpack(k); x0 = Math.Min(x0, x - r); x1 = Math.Max(x1, x + r); y0 = Math.Min(y0, y - r); y1 = Math.Max(y1, y + r); z0 = Math.Min(z0, Math.Max(1, z)); }
         foreach (var k in removed) Grow(k);
-        var at = (CellAt)((x, y, z) => gone.Contains(ConstructionIds.CellKey(x, y, z)) ? null : BuiltStructure(x, y, z));
+        var at = (CellAt)((x, y, z) => BuiltStructure(x, y, z) is { } p && !gone.Contains(ConstructionIds.CellKey(x, y, z)) ? p : null);      // P5-I: most cells of a reach are empty: ask the built cells first
         // passes over the candidates in (z, y, x) order until nothing more falls; the box grows with what falls (the cascade, BC-14)
         while (true)
         {
@@ -38,7 +41,9 @@ public sealed partial class ConstructionWorld
                 {
                     long ck = ConstructionIds.CellKey(b.X, b.Y, b.Z);
                     if (gone.Contains(ck)) continue;
-                    if (Support.Check(b.X, b.Y, b.Z, Costs[b.Piece], at).Ok) continue;
+                    var pc = Costs[b.Piece];
+                    if (_witness.TryGetValue(ck, out var wk) && Support.HintHolds(b.X, b.Y, b.Z, pc, at, (int)(wk >> 32), (int)(uint)wk)) continue;      // P5-I: the support that carried it still does
+                    if (Support.Check(b.X, b.Y, b.Z, pc, at, out int wx, out int wy).Ok) { if (wx != int.MinValue) _witness[ck] = ((long)wx << 32) | (uint)wy; else _witness.Remove(ck); continue; }
                     gone.Add(ck); doomed.Add(ck); more = true; Grow(ck);
                 }
             }

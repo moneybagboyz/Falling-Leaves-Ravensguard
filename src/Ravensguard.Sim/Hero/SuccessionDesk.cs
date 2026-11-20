@@ -153,6 +153,7 @@ public static class SuccessionDesk
             if (heroRows && pt.Status[row] is PersonStatus.Alive or PersonStatus.Departed) { pt.Status[row] = PersonStatus.Hero; hero.PersonIndex = row; HeroPerson.Mirror(pt, row, hero); }
         }
         st.Hero = hero;
+        if (st.Crafting is { } cr) { cr.Book.Forget(ctx.Party.Hero); cr.Know.Forget(ctx.Party.Hero); }      // P5-I: the heir takes up the id, not the dead hero's craft: his skills come from his own record
         Array.Clear(ctx.Party.AttrMilli);
         if (st.Wounds is { } wl) lock (wl.Sync) wl.Books.Remove(ctx.Party.Hero.Value);      // the dead body's wounds are not the heir's
         foreach (var (shape, material) in HeroOutfit.For(ctx.Content, hero, c.IssuedSec))

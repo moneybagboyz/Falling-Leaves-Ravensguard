@@ -210,6 +210,7 @@ public sealed class ResolverV2(CombatTablesV2 tables)
             }
             else res = BluntArmour(s, st, w.QualityPm, cm, a, false, fallArea > 0, ref m, ref step);
             step.Outcome = res; step.OutMilli = m;
+            if (st.Rigid && res is LayerOutcome.Stopped or LayerOutcome.Deflected && fallArea == 0) r.RigidStop = true;
             if (st.Rigid && step.Harm is ArmourHarm.Dented or ArmourHarm.Buckled && !w.Slipped && w.ConditionPm - step.WearPm < C.StrapBelowPm) step.Harm = ArmourHarm.Strap;  // battered loose
             r.Add(step);
             if (res == LayerOutcome.Deflected) { r.Deflected = true; m = 0; r.FinalMilli = 0; return; }

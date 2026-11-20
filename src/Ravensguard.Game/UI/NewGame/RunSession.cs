@@ -18,6 +18,7 @@ public sealed class RunSession
 {
     readonly WorldLibrary _library;
     readonly string _contentHash, _worldId, _runName;
+    readonly IReadOnlyList<Ravensguard.Sim.Save.ModEntry> _mods = NewGameServices.InstalledMods();      // fixed at the start of the run (P5-I)
     SaveWriter? _writer; // one per run: its gate keeps two writes (manual, autosave) from touching the directory at once
 
     public RunSession(WorldState state, string runName, bool ironman, string? lastPath, WorldLibrary library, string contentHash, string worldId, WorldRuntime? runtime = null)
@@ -54,8 +55,8 @@ public sealed class RunSession
     public Task<LiveCapture> SnapshotAsync(LiveWorld world)
     {
         var resume = world.CaptureResume();
-        return Runtime != null ? Runtime.AtBarrier(() => WorldSave.SnapshotLive(State, resume, _contentHash, "0.1", null, Ironman))
-            : Task.FromResult(WorldSave.SnapshotLive(State, resume, _contentHash, "0.1", null, Ironman));
+        return Runtime != null ? Runtime.AtBarrier(() => WorldSave.SnapshotLive(State, resume, _contentHash, "0.1", _mods, Ironman))
+            : Task.FromResult(WorldSave.SnapshotLive(State, resume, _contentHash, "0.1", _mods, Ironman));
     }
 
     /// <summary>Worker thread: encodes the snapshot and writes it (Ironman: the Ironman slot with its backups; else the run's manual slot, or the rotating autosaves). Resolves to the file written.</summary>

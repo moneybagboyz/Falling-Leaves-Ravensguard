@@ -47,6 +47,15 @@ public sealed class Knowledge
     public int Tries(EntityId p, ushort recipe) => _tries.GetValueOrDefault((p.Value, recipe));
     public void AddTry(EntityId p, ushort recipe) => _tries[(p.Value, recipe)] = Tries(p, recipe) + 1;
 
+    /// <summary>P5-I: forgets the recipes, proficiencies, watching and tries kept under one id (the heir who takes a dead hero's id does not inherit his craft).</summary>
+    public void Forget(EntityId p)
+    {
+        _recipes.Remove(p.Value);
+        foreach (var k in _prof.Keys.Where(k => k.Item1 == p.Value).ToList()) _prof.Remove(k);
+        foreach (var k in _watch.Keys.Where(k => k.Item1 == p.Value).ToList()) _watch.Remove(k);
+        foreach (var k in _tries.Keys.Where(k => k.Item1 == p.Value).ToList()) _tries.Remove(k);
+    }
+
     // ---- save support ----
     public (ulong Person, ushort Recipe)[] RecipeRows() => [.. _recipes.SelectMany(kv => kv.Value.Select(r => (kv.Key, r)))];
     public (ulong Person, ushort Prof, long Raw)[] ProfRows() => [.. _prof.Select(kv => (kv.Key.Item1, kv.Key.Item2, kv.Value))];

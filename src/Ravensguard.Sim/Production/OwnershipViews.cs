@@ -108,7 +108,7 @@ public sealed partial class OwnershipWorld
                 }
                 else if (d.Kind != HoldingKind.Stall)
                 {
-                    long value = Land.ValueOf(d);
+                    long value = Land.HoldingValue(d, day);
                     rows.Add(new LedgerRow(LedgerTab.Property, d.Id, [d.Kind.ToString(), place, d.Tenure.ToString(), M(d.DuesMitesPerSeason), M(value), d.LeaseEndDay >= 0 ? $"d{d.LeaseEndDay}" : "-", Alerts(a)], [(long)d.Kind, 0, (long)d.Tenure, d.DuesMitesPerSeason, value, d.LeaseEndDay, (long)a], a) { Inherited = d.Cause == DeedCause.Inherited });
                 }
             }

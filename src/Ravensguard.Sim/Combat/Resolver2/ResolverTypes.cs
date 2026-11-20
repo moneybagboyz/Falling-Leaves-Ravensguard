@@ -185,6 +185,8 @@ public sealed class BlowResult
 {
     public const int MaxWounds = 32, MaxSteps = 32, MaxDraws = 96;
     public bool Hit, Redirected, Severed, Deflected, Blocked, Dodged, Parried, RibSlip;
+    /// <summary>P5-I: a rigid worn layer (plate, lamellar, a helm) stopped the blow instead of being cut: what breaks an untempered (brittle) blade (crafting-full 4.3). Not part of <see cref="Hash"/>.</summary>
+    public bool RigidStop;
     public int Part = -1;
     public long InitialMilli, FinalMilli;
     public BlockOutcome Block;
@@ -201,7 +203,7 @@ public sealed class BlowResult
 
     public void Reset()
     {
-        Hit = Redirected = Severed = Deflected = Blocked = Dodged = Parried = RibSlip = false;
+        Hit = Redirected = Severed = Deflected = Blocked = Dodged = Parried = RibSlip = RigidStop = false;
         Part = -1; InitialMilli = FinalMilli = 0; Block = default; WoundCount = StepCount = DrawCount = 0;
     }
 

@@ -144,7 +144,7 @@ public sealed record FightSetup(FightKind Kind, IReadOnlyList<FighterKit> Kits, 
             if (it.Shape == "javelin") { throws.Add(new ThrowStock(it.Shape, it.Material, it.Count)); continue; }
             if (!shapes.TryGetValue(it.Shape, out var sh) || sh.Family is "ranged" or "natural" or "practice" or "unarmed" || !c.T.HasMaterial(it.Material)) continue;
             int score = Sk(CombatSkills.Of(FightWorld.FamilyOf(sh))) * 10 + (int)(sh.HeadVolumeCm3 / 100) + (int)it.Quality;    // P5-A1: of two alike, the better made
-            if (score > bestScore) { bestScore = score; best = new WeaponInstance(it.Shape, it.Material, it.Quality); }
+            if (score > bestScore) { bestScore = score; best = new WeaponInstance(it.Shape, it.Material, it.Quality, it.Brittle, it.ItemId); }
         }
         if (best != null) { launcher = null; ammo = null; ammoCount = 0; }
         else if (launcher == null || ammo == null) launcher = null;

@@ -38,7 +38,22 @@ public class ConstructionBudgetTests(ITestOutputHelper output)
         Assert.True(crew < 20, $"{crew:F2} ms an hour");
         Assert.True(r.W.DiagLinearQuanta > 10 * r.W.DiagFullQuanta, "most site quanta take the cheap path");
 
-        // a 200-cell collapse: a 20 x 10 upper floor on a grid of posts, every post knocked out but one, then the last
+        // a 200-cell collapse: a 20 x 10 upper floor on a grid of posts, every post knocked out, then the fall. The first run warms the JIT; the best of the next four is the figure
+        double total = double.MaxValue, last = double.MaxValue, perPiece = double.MaxValue;
+        for (int rep = 0; rep < 5; rep++)
+        {
+            var (tt, ll, pp) = Collapse200();
+            if (rep > 0) { total = Math.Min(total, tt); last = Math.Min(last, ll); perPiece = Math.Min(perPiece, pp); }
+        }
+        output.WriteLine($"{perPiece:F3} ms a piece finished (budget 0.5 ms)");
+        output.WriteLine($"200-cell collapse: the last post out and the fall {last:F2} ms, all fifteen posts out and the fall {total:F2} ms (budget 3 ms)");
+        Assert.True(perPiece < 5, $"{perPiece:F3} ms a piece");
+        Assert.True(last < 30, $"{last:F1} ms");                     // P5-I: 10x allowance for CI load; about 2 ms on a quiet 4-core machine
+        Assert.True(total < 60, $"{total:F1} ms");
+    }
+
+    private static (double Total, double Last, double PerPiece) Collapse200()
+    {
         var r2 = ConstructionRig.Make(); long t2 = ConstructionRig.Day10;
         var posts = new List<PlaceCell>();
         for (int y = 0; y < 10; y += 4) for (int x = 0; x < 20; x += 4) posts.Add(new PlaceCell(5000 + x + 1, 5000 + y + 1, 0, "post_timber"));
@@ -52,15 +67,17 @@ public class ConstructionBudgetTests(ITestOutputHelper output)
         var fsw = Stopwatch.StartNew();
         int n = r2.W.DevFinish(fp.Site, 999, 0, 0, t2);
         double perPiece = fsw.Elapsed.TotalMilliseconds / n;
-        output.WriteLine($"{n} pieces finished: {perPiece:F3} ms a piece (budget 0.5 ms)");
-        Assert.True(perPiece < 5, $"{perPiece:F3} ms a piece");
         var csw = Stopwatch.StartNew();
-        foreach (var p in posts) r2.W.Destroy(p.X, p.Y, 0, t2, EntityId.None, "budget");
+        double lastStart = 0;
+        for (int i = 0; i < posts.Count; i++)
+        {
+            if (i == posts.Count - 1) lastStart = csw.Elapsed.TotalMilliseconds;
+            r2.W.Destroy(posts[i].X, posts[i].Y, 0, t2, EntityId.None, "budget");
+        }
         r2.W.AdvanceTo(t2 + 30);
         double ms = csw.Elapsed.TotalMilliseconds;
         Assert.Equal(0, r2.W.Book.Built.Values.Count(b => b.Z == 1));
-        output.WriteLine($"200-cell collapse (posts out, groan, fall): {ms:F1} ms (budget 3 ms)");
-        Assert.True(ms < 150, $"{ms:F1} ms");
         r2.AssertMass();
+        return (ms, ms - lastStart, perPiece);
     }
 }

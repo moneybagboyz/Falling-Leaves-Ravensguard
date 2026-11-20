@@ -8,6 +8,8 @@ public sealed class ModLoadResult
     public required ContentDatabase Database { get; init; }
     public required ContentReport Report { get; init; }
     public IReadOnlyList<string> LoadOrder { get; init; } = [];
+    /// <summary>The manifests of the mods that were loaded, in load order (P5-I: what a save records and the load report compares).</summary>
+    public IReadOnlyList<ModManifest> Manifests { get; init; } = [];
     public bool FromCache { get; init; }
     public string? Hash { get; init; }
     public bool Success => !Report.HasErrors;
@@ -116,7 +118,7 @@ public sealed class ModLoader(ContentTypeRegistry? registry = null, ContentVocab
             cacheKey = ContentHasher.CacheKey(hash, _registry, vocabulary);
             var cached = cache.TryLoad(cacheKey, _registry);
             if (cached != null)
-                return new ModLoadResult { Database = cached, Report = report, LoadOrder = ids, FromCache = true, Hash = hash };
+                return new ModLoadResult { Database = cached, Report = report, LoadOrder = ids, Manifests = [.. order.Select(o => o.Manifest)], FromCache = true, Hash = hash };
         }
 
         var db = new ContentDatabase(_registry);
@@ -132,7 +134,7 @@ public sealed class ModLoader(ContentTypeRegistry? registry = null, ContentVocab
                 report.Warning(null, $"Could not write the content cache ({ex.Message}); content was loaded without it.");
             }
         }
-        return new ModLoadResult { Database = db, Report = report, LoadOrder = ids, Hash = hash };
+        return new ModLoadResult { Database = db, Report = report, LoadOrder = ids, Manifests = [.. order.Select(o => o.Manifest)], Hash = hash };
     }
 
     private void LoadMod(ModInfo mod, ContentDatabase db, ContentReport report)

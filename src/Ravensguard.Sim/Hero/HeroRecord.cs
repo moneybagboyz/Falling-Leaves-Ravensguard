@@ -6,7 +6,7 @@ using SkillEnum = Ravensguard.Sim.People.Skill;
 namespace Ravensguard.Sim.Characters;
 
 /// <summary>One kind of thing the hero carries: an item shape id (weapon_shape or armour_shape), the material it is made of, how many, and its quality (P5-A1; Common for the origin kit).</summary>
-public sealed record HeroItem(string Shape, string Material, int Count = 1, Ravensguard.Sim.Goods.ItemQuality Quality = Ravensguard.Sim.Goods.ItemQuality.Common);
+public sealed record HeroItem(string Shape, string Material, int Count = 1, Ravensguard.Sim.Goods.ItemQuality Quality = Ravensguard.Sim.Goods.ItemQuality.Common, bool Brittle = false, ulong ItemId = 0);
 
 /// <summary>The hero's five attributes, in their fixed order (plan section 3 item 2).</summary>
 public enum HeroAttr { Strength, Toughness, Dexterity, Perception, Wits }

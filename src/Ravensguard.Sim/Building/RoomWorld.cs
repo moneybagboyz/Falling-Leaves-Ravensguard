@@ -211,6 +211,7 @@ public sealed partial class RoomWorld
             if (_structOf.TryGetValue(nk, out var s) && s == old) nbrs.Add(nk);
         }
         if (nbrs.Count < 2) return;
+        if (StillOnePiece(nbrs, old)) return;                       // P5-I: the neighbours still meet: nothing split (found without walking the whole structure)
         var comps = new List<(long Min, List<long> Cells)>();
         var seen = new HashSet<long>();
         foreach (var start in nbrs)
@@ -240,6 +241,50 @@ public sealed partial class RoomWorld
             _members[id] = mem;
             Invalidate(id, change);
             change.Structures.Add(new StructureEvent(StructureEventKind.Split, old, id));
+        }
+    }
+
+    /// <summary>
+    /// P5-I: whether the neighbours of a removed cell are still one piece of structure <paramref name="id"/>. Walks outward from each neighbour in step (breadth first) and joins two walks
+    /// where they meet; true as soon as all are joined (a floor with one cell gone is joined in a few steps, not after a walk of the whole floor), false when a walk runs out alone (a real
+    /// split: the caller then partitions the structure as before, so ids stay what they were).
+    /// </summary>
+    private bool StillOnePiece(List<long> starts, int id)
+    {
+        int n = starts.Count;
+        var owner = new Dictionary<long, int>(); var queues = new List<long>[n]; var head = new int[n]; var parent = new int[n];
+        for (int i = 0; i < n; i++) { owner[starts[i]] = i; queues[i] = [starts[i]]; parent[i] = i; }
+        int Find(int a) { while (parent[a] != a) a = parent[a] = parent[parent[a]]; return a; }
+        int groups = n;
+        while (true)
+        {
+            bool progressed = false;
+            for (int i = 0; i < n; i++)
+            {
+                if (head[i] >= queues[i].Count) continue;
+                progressed = true;
+                var (cx, cy, cz) = Unpack(queues[i][head[i]++]);
+                foreach (var (dx, dy, dz) in N6)
+                {
+                    var nk = Key(cx + dx, cy + dy, cz + dz);
+                    if (!_structOf.TryGetValue(nk, out var s) || s != id) continue;
+                    if (owner.TryGetValue(nk, out var o))
+                    {
+                        int a = Find(i), b = Find(o);
+                        if (a != b) { parent[a] = b; if (--groups == 1) return true; }
+                    }
+                    else { owner[nk] = i; queues[i].Add(nk); }
+                }
+            }
+            if (!progressed) return false;
+            // a walk that has run out without meeting the others is a whole piece of its own
+            for (int i = 0; i < n; i++)
+                if (head[i] >= queues[i].Count)
+                {
+                    int g = Find(i); bool alive = false;
+                    for (int j = 0; j < n && !alive; j++) alive = Find(j) == g && head[j] < queues[j].Count;
+                    if (!alive && groups > 1) return false;
+                }
         }
     }
 
