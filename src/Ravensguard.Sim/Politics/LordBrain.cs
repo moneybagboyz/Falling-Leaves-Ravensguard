@@ -56,6 +56,10 @@ public static class LordBrain
                 case "at_war": return f.Realm >= 0 && c.B.WarOf(f.Realm) != null ? 1 : 0;
                 case "renege": return f.Realm < 0 ? 0 : -Opinions.Value(c.RB, lord, c.KeyOf(f.Realm));
                 case "own_strength_pm": return f.Realm < 0 ? 1000 : (int)(c.Strength(f.Realm) * 1000 / Math.Max(1, c.Strength(RootOpponent(f.Realm))));
+                case "unrest_rung": { var ub = c.R.W.Get<Ravensguard.Sim.Unrest.UnrestBook>(); if (ub == null) return 0; int m = 0; foreach (var st in c.R.Region.Settlements) if (st.FiefIndex == f.Fief) m = Math.Max(m, ub.RungOf(c.R.Region.Settlements.IndexOf(st))); return m; }
+                case "riot_leader": { var ub = c.R.W.Get<Ravensguard.Sim.Unrest.UnrestBook>(); if (ub == null) return 0; foreach (var rt in ub.Riots) if (rt.Fief == f.Fief && rt.State == Ravensguard.Sim.Unrest.RiotState.Ended && c.Day - rt.StartDay <= 30 && !ub.Pardoned.Contains(rt.Leader)) return 1; return 0; }
+                case "trait_kind": return (_t & (LordTrait.Just | LordTrait.Generous)) != 0 ? 1 : 0;
+                case "trait_hard": return (_t & (LordTrait.Greedy | LordTrait.Cruel)) != 0 ? 1 : 0;
                 case "trait_greedy": return Has(LordTrait.Greedy);
                 case "trait_generous": return Has(LordTrait.Generous);
                 case "trait_just": return Has(LordTrait.Just);
@@ -184,6 +188,15 @@ public static class LordBrain
                 var e = Entry(c, "petition_made", "ch_dp_petition", ps, [holder, r.SeatPlace(target)], o.Note);
                 c.B.Note(c.Day, f.Fief, (ulong)f.Holder, o.Def.TextKey, o.Note, e.Value);
                 return true;
+            }
+            case "dole": case "pardon": case "punish":
+            {
+                var uc = Ravensguard.Sim.Unrest.UnrestWiring.CtxFor(c); if (uc == null) return false;
+                bool ok = id == "dole" ? Ravensguard.Sim.Unrest.UnrestConcede.Dole(uc, f.Fief, Party.OfFief(f.Fief), o.Note.Length > 0 ? o.Note : "ch_note_dp_own_judgement") > 0
+                    : id == "pardon" ? Ravensguard.Sim.Unrest.UnrestConcede.Pardon(uc, f.Fief, o.Note.Length > 0 ? o.Note : "ch_note_dp_own_judgement") > 0
+                    : Ravensguard.Sim.Unrest.UnrestConcede.Punish(uc, f.Fief, o.Note.Length > 0 ? o.Note : "ch_note_dp_own_judgement");
+                if (ok) c.B.Note(c.Day, f.Fief, (ulong)f.Holder, o.Def.TextKey, o.Note, 0);
+                return ok;
             }
             case "renounce":
             {

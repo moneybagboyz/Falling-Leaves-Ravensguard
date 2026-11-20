@@ -136,6 +136,7 @@ public sealed class LawWorld
             Desperate = hh => e != null && hh >= 0 && hh < e.HouseholdCount && (e.Grievances[hh] & (Ravensguard.Sim.Economy.Grievance.Hunger | Ravensguard.Sim.Economy.Grievance.MissedMeal | Ravensguard.Sim.Economy.Grievance.Tax)) != 0,
             NameOf = p => p == hero ? st.Hero?.Name ?? "" : "",
             Committed = (doer, kind) => Ravensguard.Sim.Faith.FaithWiring.OnCrime(st, doer, kind),
+            Grievance = (who, sign) => { if (st.Unrest is { } unb && st.HomeRecords != null) Ravensguard.Sim.Unrest.UnrestConcede.KinHarsh(unb, st.HomeRecords.Sim, who, sign, (int)(st.Clock.Now.TotalDays)); },       // P6-E1 (UR-4)
             BondLabour = db == null ? null : (p, f, days, settlement, sec, entry) => Ravensguard.Sim.Bondage.BondLink.Convict(st, db, p, f, days, settlement, sec, entry),
             // ---- P6-C1: the gaol, the court, the sentences
             HeroId = hero, FiefSeat = region.Fiefs.Select(f => f.SeatSettlement).ToArray(),

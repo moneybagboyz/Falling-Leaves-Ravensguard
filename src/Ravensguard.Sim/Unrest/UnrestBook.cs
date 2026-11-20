@@ -96,7 +96,9 @@ public sealed class UnrestBook
     public readonly SortedDictionary<int, int> DoleUntil = [];
     /// <summary>People pardoned after a riot (their kin's points cleared and their crime dropped).</summary>
     public readonly SortedSet<ulong> Pardoned = [];
-    public int NextRiot = 1, NextRevolt = 1, LastDay = -1;
+    public int NextRiot = 1, NextRevolt = 1;
+    /// <summary>The day of the last daily pass: not saved (a day's pass runs once at hour 0 of the tick; this only keeps a test or a catch-up from running one twice), so a world that keeps no grievance keeps no section.</summary>
+    public int LastDay = -1;
 
     // ---- not saved: bound when the book is attached
     public UnrestSettingsDef Settings { get; set; } = new() { Id = "unrest" };
@@ -104,7 +106,7 @@ public sealed class UnrestBook
     public IReadOnlyList<GrievanceKindDef> KindList { get; set; } = [];
     public ulong Seed { get; set; }
 
-    public bool IsEmpty => Rows.Count == 0 && Settlements.Count == 0 && Riots.Count == 0 && Revolts.Count == 0 && DoleUntil.Count == 0 && Pardoned.Count == 0 && NextRiot == 1 && NextRevolt == 1 && LastDay < 0;
+    public bool IsEmpty => Rows.Count == 0 && Settlements.Count == 0 && Riots.Count == 0 && Revolts.Count == 0 && DoleUntil.Count == 0 && Pardoned.Count == 0 && NextRiot == 1 && NextRevolt == 1;
 
     public SettlementUnrest Of(int settlement)
     {
@@ -169,7 +171,7 @@ public sealed class UnrestBook
         }
         foreach (var (k, d) in DoleUntil) { M(k); M(d); }
         foreach (var p in Pardoned) M((long)p);
-        M(NextRiot); M(NextRevolt); M(LastDay);
+        M(NextRiot); M(NextRevolt);
         return h;
     }
 }

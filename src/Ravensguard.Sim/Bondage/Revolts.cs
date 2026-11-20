@@ -78,5 +78,6 @@ public static class Revolts
         }
         book.FreedTotal += held.Count;
         book.Rebels.Add(new RebelBand { Leader = leader.Person, Place = place, Day = day, Members = held.Count, Entry = e.Id.Value });
+        bw.Rose?.Invoke(place, leader.Person, [.. held.Select(b => b.Person)], e.Id.Value, day);          // P6-E1: the guards answer (a revolt of the bonded, fought on the next day)
     }
 }

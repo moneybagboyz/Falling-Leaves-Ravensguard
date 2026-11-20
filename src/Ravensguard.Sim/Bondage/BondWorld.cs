@@ -78,6 +78,8 @@ public sealed class BondWorld
 
     /// <summary>The hero's row in the person table when his id does not name it (null: by id).</summary>
     public Func<int>? HeroRow { get; init; }
+    /// <summary>P6-E1: told when a holding's bonded have risen (place, leader, the rebels, D1's entry, day): unrest turns it into a revolt of the bonded the guards answer.</summary>
+    public Action<int, ulong, IReadOnlyList<ulong>, ulong, int>? Rose { get; init; }
     public int RowOf(EntityId p) { int r = People.IndexOf(p); return r < 0 && p == W.HeroId && HeroRow != null ? HeroRow() : r; }
     public int AgeOf(EntityId p, int day) { int r = RowOf(p); return r < 0 ? 30 : People.AgeYears(r, day); }
 

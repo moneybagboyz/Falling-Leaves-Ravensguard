@@ -68,6 +68,8 @@ public static class RuleLedger
                 Add("ru_office_" + o.Kind.ToString().ToLowerInvariant(), c.NameOf(o.Holder), o.Collected, short_ + "%", "d" + o.AppointedDay, alert ? OwnerAlert.Shortfall : OwnerAlert.None);
             }
         }
+        foreach (var cells in Ravensguard.Sim.Unrest.UnrestLedger.Lines(st, shown, day))                          // P6-E1: the rung, the unrest and the top grievances of each restless settlement
+            rows.Add(new LedgerRow(LedgerTab.Fief, new EntityId((ulong)(++serial)), cells, [serial, 0, 0, 0, 0, 0], OwnerAlert.None));
         // the dues and loans the hero (or his fief) owes up and down the chain
         var mineFiefs = held.ToHashSet(); var me = Party.OfPerson(new EntityId((ulong)hero)); var myHh = c.HouseholdOf(hero);
         bool Mine(Party p) => p == me || p == myHh || (p.Kind == PartyKind.Fief && mineFiefs.Contains((int)p.Id));
