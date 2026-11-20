@@ -118,11 +118,14 @@ public sealed class RecipeBook
         return [.. res];
     }
 
-    /// <summary>Builds the book from the content; throws <see cref="InvalidDataException"/> listing every problem.</summary>
+    /// <summary>
+    /// Builds the book from the content; throws <see cref="InvalidDataException"/> listing every problem. P5-E (crafting-full 3.1): the book is a derived view of the business craft recipes
+    /// (<see cref="Ravensguard.Sim.Crafting.RecipeUnifier"/>), plus any Phase 2 <c>recipe</c> rows a mod still ships.
+    /// </summary>
     public static RecipeBook Build(ContentDatabase db, GoodCatalog cat)
     {
         var list = new List<Recipe>(); var errs = new List<string>();
-        foreach (var d in db.All<RecipeDef>().OrderBy(r => r.Id, StringComparer.Ordinal))
+        foreach (var d in Ravensguard.Sim.Crafting.RecipeUnifier.BookDefs(db).OrderBy(r => r.Id, StringComparer.Ordinal))
         {
             errs.AddRange(Validate(d, cat, out var r));
             if (r != null) { r.Index = (ushort)list.Count; list.Add(r); }

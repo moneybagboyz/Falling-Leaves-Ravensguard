@@ -34,10 +34,14 @@ public class CraftingTests(ITestOutputHelper output)
     public void K1_DataValidation_34RecipesLoad_EverythingResolves_NoCycle_UnattendedStepsHaveDeadlineAndGrace()
     {
         var w = new CraftWorld();
-        Assert.Equal(34, w.Db.Recipes.Count);
-        Assert.Equal(12, w.Db.Proficiencies.Count);
+        // P5-E (crafting-full 4.9): Phase 3's 34 hands-on recipes are all still there, in one format with the 41 business recipes and the Phase 5 ones (CF-2 checks the totals)
+        foreach (var id in new[] { "kindle_fire", "bake_loaf", "salt_meat", "sew_shirt", "forge_horseshoe_set", "practice_spoon", "refit_garment", "repair_cart_wheel" }) Assert.True(w.Db.TryGet(id, out var p3) && !p3.Business, id);
+        string[] phase3 = ["kindle_fire", "make_torch", "make_candle", "cook_pottage", "roast_meat", "bake_flatbread", "bake_loaf", "brew_home_ale", "salt_meat", "make_soft_cheese", "grind_meal", "bandage_linen", "herbal_poultice", "wooden_splint", "mend_garment", "patch_garment", "sew_shirt", "sew_hood", "sew_bedroll", "refit_garment", "lye_soap", "spin_twine", "braid_rope", "brain_tan_hide", "make_snare", "carve_handle", "repair_cart_wheel", "forge_horseshoe_set", "sharpen_blade", "forge_nails_small", "mend_tool", "practice_sampler", "practice_billet", "practice_spoon"];
+        Assert.Equal(34, phase3.Length);
+        foreach (var id in phase3) Assert.True(w.Db.TryGet(id, out var r3) && !r3.Business, id);
+        Assert.True(w.Db.Proficiencies.Count >= 40);
         Assert.Equal(5, w.Db.Sets.Count);
-        Assert.Equal(3, w.Db.Manuscripts.Count);
+        Assert.Equal(8, w.Db.Manuscripts.Count);
         foreach (var cat in RecipeDb.Categories) Assert.Contains(w.Db.Recipes, r => r.Category == cat);
         Assert.Equal(3, w.Db.Recipes.Count(r => r.IsPractice));
         for (int i = 1; i < w.Db.Recipes.Count; i++) Assert.True(string.CompareOrdinal(w.Db.Recipes[i - 1].Id, w.Db.Recipes[i].Id) < 0);
@@ -398,7 +402,8 @@ public class CraftingTests(ITestOutputHelper output)
         }
         output.WriteLine($"done {done} failed {failed} ruined {ruined}");
         Assert.True(done > 100 && ruined > 3 && failed > 3);
-        Assert.DoesNotContain(w.Econ.OtherStores, kv => kv.Value.RowCount > 0 && kv.Key.Kind == IdKind.Other);       // no job store keeps anything once closed
+        // no job store keeps anything once closed (P5-E: a kindled fire is a world object whose fuel store holds its firewood until it burns)
+        Assert.DoesNotContain(w.Econ.OtherStores, kv => kv.Value.RowCount > 0 && kv.Key.Kind == IdKind.Other && !w.St.Fires.All.ContainsKey(kv.Key));
         Assert.True(w.Audit());
     }
 

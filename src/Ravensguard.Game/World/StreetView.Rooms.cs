@@ -31,11 +31,24 @@ public partial class StreetView
     /// <summary>Detects the rooms around the hero and draws them. Returns the number of rooms found (-1: no content).</summary>
     public int ShowRooms()
     {
-        try { _roomsLib ??= LoadLibrary(); } catch (Exception e) { GD.PushWarning("[rooms] " + e.Message); return -1; }
+        var w = RoomsNearHero(RoomsRadius); if (w == null) return -1;
+        var m = Map;
+        _roomsOv?.QueueFree();
+        _roomsOv = new RoomsOverlay(w, m.OriginX, m.OriginY, () => _viewZ) { Name = "RoomsOverlay", ZIndex = 50 };
+        _street.AddChild(_roomsOv);
+        int count = w.Rooms.Count(r => r.Primary != null);
+        GD.Print($"[rooms] {w.Rooms.Count} rooms near the hero, {count} recognised, {w.StructureIds.Count()} structures");
+        return w.Rooms.Count;
+    }
+
+    /// <summary>RoomDetector v2 over the built cells within <paramref name="radius"/> cells of the hero, roofs laid (generated buildings are finished). Null without content.</summary>
+    RoomWorld? RoomsNearHero(int radius)
+    {
+        try { _roomsLib ??= LoadLibrary(); } catch (Exception e) { GD.PushWarning("[rooms] " + e.Message); return null; }
         var w = _roomsLib.NewWorld();
         var m = Map; var g = m.Grid; var s = _world.Snapshot;
-        int x0 = Math.Max(0, s.Hero.CellX - RoomsRadius), x1 = Math.Min(g.Width, s.Hero.CellX + RoomsRadius);
-        int y0 = Math.Max(0, s.Hero.CellY - RoomsRadius), y1 = Math.Min(g.Height, s.Hero.CellY + RoomsRadius);
+        int x0 = Math.Max(0, s.Hero.CellX - radius), x1 = Math.Min(g.Width, s.Hero.CellX + radius);
+        int y0 = Math.Max(0, s.Hero.CellY - radius), y1 = Math.Min(g.Height, s.Hero.CellY + radius);
         var edits = new List<CellEdit>();
         for (int z = g.MinZ; z <= g.MaxZ; z++)
             for (int y = y0; y < y1; y++)
@@ -46,13 +59,19 @@ public partial class StreetView
                 }
         w.Apply(edits);
         w.RoofOver("roof_thatch");
-        _roomsOv?.QueueFree();
-        _roomsOv = new RoomsOverlay(w, m.OriginX, m.OriginY, () => _viewZ) { Name = "RoomsOverlay", ZIndex = 50 };
-        _street.AddChild(_roomsOv);
-        int count = w.Rooms.Count(r => r.Primary != null);
-        GD.Print($"[rooms] {w.Rooms.Count} rooms near the hero, {count} recognised, {w.StructureIds.Count()} structures");
-        return w.Rooms.Count;
+        return w;
     }
+
+    /// <summary>P5-E (crafting-full 4.1): the stations of the hero's room and within 6 m, read from the map for the crafting screen. Null without content.</summary>
+    Ravensguard.Sim.Crafting.ReachScan? CraftReachHere(int light)
+    {
+        if (_source?.Content is not { } content) return null;
+        var w = RoomsNearHero(12); if (w == null) return null;
+        _craftDb ??= Ravensguard.Sim.Crafting.RecipeDb.Build(content, new Ravensguard.Sim.Goods.GoodCatalog(content));
+        var h = _world.Snapshot.Hero;
+        return Ravensguard.Sim.Crafting.CraftReach.Scan(w, _craftDb, h.CellX, h.CellY, h.Z, null, [], light);
+    }
+    Ravensguard.Sim.Crafting.RecipeDb? _craftDb;
 
     /// <summary>Smoke hook: rooms found around the hero (the overlay is left on).</summary>
     public int DebugRoomCount() => ShowRooms();

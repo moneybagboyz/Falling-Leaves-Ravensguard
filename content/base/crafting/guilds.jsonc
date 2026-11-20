@@ -1,0 +1,15 @@
+// Guilds (crafting-full 3.4, 4.8): templates. The world has one guild of a template in each chartered town with at least three businesses of its trades (generated without
+// a draw; its master is the most skilled person of those trades there, ties by person id). Secrets are taught only by members, to members. Fees in mites; a season is 15 days.
+[
+  { "type": "guild", "id": "smiths", "name": "Smiths' guild", "settlement_class": "town", "trades": ["Smith"], "skill": "Smithing", "secrets": ["forge_longsword"],
+    "entry_fee_mites": 5000, "dues_mites_per_season": 300, "min_skill": 40, "residence_days": 15 },
+  { "type": "guild", "id": "weavers", "name": "Weavers' guild", "settlement_class": "town", "trades": ["Weaver", "Spinner"], "skill": "Weaving", "secrets": [],
+    "entry_fee_mites": 3000, "dues_mites_per_season": 200, "min_skill": 35, "residence_days": 15 },
+  { "type": "guild", "id": "leatherworkers", "name": "Leatherworkers' guild", "settlement_class": "town", "trades": ["Tanner", "Cobbler"], "skill": "Cobbling", "secrets": [],
+    "entry_fee_mites": 3000, "dues_mites_per_season": 200, "min_skill": 35, "residence_days": 15 },
+
+  // the numbers of apprenticeships, commissions and reach (crafting-full 4.1, 4.6, 4.7; decided with the user: reach 6 m, materials in the building fetched at walking pace)
+  { "type": "craft_settings", "id": "default", "apprentice_term_days": 15, "apprentice_days_per_recipe": 2, "apprentice_hours_per_day": 10, "apprentice_max_per_master": 2,
+    "apprentice_master_min_skill": 40, "commission_margin_pm": 1450, "commission_window_days": 15, "maker_hours_per_day": 10, "maker_day_start_hour": 8,
+    "reach_mm": 6000, "walk_mm_per_sec": 1200, "fetch_handle_sec": 30 }
+]

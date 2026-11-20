@@ -533,7 +533,8 @@ public partial class StreetView : Control, IHandlesBack
     {
         if (_router == null || _hero == null || _source?.Content == null) { _router?.ShowToast(L.T("MAP_NONE")); return; }
         int light = _world.Clock.Now.Hour is < 6 or >= 20 ? 120 : 255;
-        _crafting ??= NewCraftingSession(light);
+        // P5-E: the stations come from the room the hero stands in (and within 6 m), read afresh each time the screen opens
+        _crafting = NewCraftingSession(light, CraftReachHere(light));
         _crafting.NowSec = _world.Clock.Now.Seconds; _crafting.Site.Light = light;
         _router.Push(new CraftingScreen(_router, _crafting) { ShotPath = _opt.Panel == "crafting" ? _opt.ShotPath : null, StartRecipe = _opt.Panel == "crafting" ? _opt.PanelEntry : null });
     }

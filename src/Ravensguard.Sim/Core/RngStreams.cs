@@ -284,6 +284,8 @@ public static class RngStreams
     public const uint MasterworkInspiration = 0x530;
     /// <summary>Items: whether a masterwork weapon, armour piece or jewel is a named artefact, and its name (key item id).</summary>
     public const uint NamedArtefact = 0x531;
+    /// <summary>P5-E (crafting-full 4.3): a brittle blade breaks when a rigid layer stops its blow, 30 pm (key FightTick, item id).</summary>
+    public const uint BrittleBreak = 0x532;
     /// <summary>Inheritance: the hero's kin at a new game (the origin's kin rows, their ages and counts, the hero's own age; key hero seed).</summary>
     public const uint HeroKin = 0x560;
 

@@ -6,7 +6,12 @@ using Ravensguard.Sim.People;
 namespace Ravensguard.Sim.Crafting;
 
 /// <summary>One alternative of a component slot, resolved: a good and a quantity (grams for kg and litre goods, a count for pieces).</summary>
-public sealed record CompAlt(ushort Good, long Qty, bool Keep, string? NeedsStep);
+public sealed record CompAlt(ushort Good, long Qty, bool Keep, string? NeedsStep)
+{
+    /// <summary>P5-E (crafting-full 4.3): the score bonus of this alternative (iron where steel is wanted: -5) and the material an item result is then made of.</summary>
+    public int Bonus { get; init; }
+    public string? Material { get; init; }
+}
 
 /// <summary>A component slot: the first alternative the crafter can supply is used.</summary>
 public sealed class CompSlot { public CompAlt[] Alts = []; }
@@ -23,7 +28,17 @@ public sealed class CStep
     public ushort RuinedInto = ItemTable.NoGood;
     public ushort FuelGood = ItemTable.NoGood;
     public long FuelQty;
+    /// <summary>P5-E: a step the crafter may leave out (temper).</summary>
+    public bool Optional;
+    /// <summary>P5-E (crafting-full 4.3): the smithing step this is (heat, forge, quench, temper), or none.</summary>
+    public SmithStep Smith;
 }
+
+/// <summary>The steps of a smithing recipe (crafting-full 4.3).</summary>
+public enum SmithStep : byte { None, Heat, Forge, Quench, Temper }
+
+/// <summary>What a result is (crafting-full 3.1): a good, an item shape (weapon or armour), a craft tool, a vehicle part or an installed build piece; all but goods are item rows.</summary>
+public enum ResultKind : byte { Good, Item, Tool, VehiclePart, BuildPiece }
 
 public sealed class CResult
 {
@@ -34,8 +49,12 @@ public sealed class CResult
     public long Qty;
     /// <summary>Mass in grams (of the good's quantity, or of the item).</summary>
     public long MassG;
+    public ResultKind Kind;
     public bool IsItem => Shape != null;
 }
+
+/// <summary>P5-E (crafting-full 4.5): a salvage line resolved: a good, its permille of the item's mass and the material category it comes from (null: the whole item).</summary>
+public sealed record SalvageLine(ushort Good, int Pm, string? Category);
 
 public sealed record CByproduct(ushort Good, long Qty, int ChancePm, long MassG);
 public sealed record ProfUse(ushort Prof, int TimeMultPm, int SkillPenalty);
@@ -63,6 +82,23 @@ public sealed class CraftRecipe
     public bool IsPractice; public int PracticeDx100, PracticeCap = 100;
     public CraftRepairDef? Repair;
     public bool IsRepair => Repair != null;
+    // ---- P5-E (crafting-full 3.1, 4.3, 4.5, 4.8) ----
+    public bool Business, Commissionable, BusinessQuality = true;
+    public int WorkersMax = 2, MinBatchPm = 1000;
+    public string WageClass = "skilled", BookId = "";
+    /// <summary>The guild whose secret this is (<c>secret: "guild:&lt;id&gt;"</c>), or null.</summary>
+    public string? Guild;
+    public bool IsSmithing;
+    public CraftRefitDef? Refit;
+    public SalvageLine[] Salvage = [];
+    public string SalvageTarget = "";
+    public ushort SalvageRest = ItemTable.NoGood;
+    public bool Reforge;
+    /// <summary>Acts on an item the crafter names (mend, refit, salvage, reforge, oil).</summary>
+    public bool NeedsTarget => IsRepair || Refit != null || Salvage.Length > 0 || Reforge || Effect == "oil";
+    public bool HasStep(SmithStep k) { foreach (var s in Steps) if (s.Smith == k) return true; return false; }
+    /// <summary>A blade, spring or edged tool: a smithing recipe with a temper step.</summary>
+    public bool Edged => HasStep(SmithStep.Temper);
     public long AttendedSeconds() { long s = 0; foreach (var st in Steps) if (st.Attended && !st.Conditional) s += st.Seconds; return s; }
     public bool HasUnattended { get { foreach (var s in Steps) if (!s.Attended) return true; return false; } }
 }
@@ -73,7 +109,7 @@ public sealed class CraftRecipe
 /// </summary>
 public sealed class RecipeDb
 {
-    public static readonly string[] Categories = ["fire", "food", "medical", "cloth", "craft", "smith", "practice"];
+    public static readonly string[] Categories = ["fire", "food", "medical", "cloth", "craft", "smith", "practice", "build", "repair"];
     public static readonly string[] Efforts = ["light", "moderate", "heavy"];
 
     public GoodCatalog Goods { get; }
@@ -84,6 +120,13 @@ public sealed class RecipeDb
     public IReadOnlyDictionary<string, CraftToolDef> Tools { get; }
     public IReadOnlyList<ManuscriptDef> Manuscripts { get; }
     public IReadOnlyCollection<string> KnownQualities { get; }
+    /// <summary>P5-E: the guild templates (crafting-full 3.4) by id.</summary>
+    public IReadOnlyDictionary<string, GuildDef> Guilds { get; private init; } = new Dictionary<string, GuildDef>();
+    /// <summary>P5-E: the numbers of apprenticeships, commissions and reach.</summary>
+    public CraftSettingsDef Settings { get; private init; } = new() { Id = "default" };
+    /// <summary>The business recipes by their book id (the Phase 2 id).</summary>
+    public CraftRecipe? ByBookId(string bookId) => _byBook.GetValueOrDefault(bookId);
+    private readonly Dictionary<string, CraftRecipe> _byBook = new(StringComparer.Ordinal);
     private readonly Dictionary<string, CraftRecipe> _byId = new(StringComparer.Ordinal);
     private readonly Dictionary<string, ushort> _profIndex = new(StringComparer.Ordinal);
     private readonly Dictionary<string, ushort> _manuscriptIndex = new(StringComparer.Ordinal);
@@ -92,7 +135,7 @@ public sealed class RecipeDb
         Dictionary<string, CraftToolDef> tools, List<ManuscriptDef> manuscripts, SortedSet<string> qualities)
     {
         Goods = goods; Recipes = recipes; Proficiencies = profs; Sets = sets; Stations = stations; Tools = tools; Manuscripts = manuscripts; KnownQualities = qualities;
-        foreach (var r in recipes) _byId[r.Id] = r;
+        foreach (var r in recipes) { _byId[r.Id] = r; if (r.Business) _byBook[r.BookId] = r; }
         for (int i = 0; i < profs.Count; i++) _profIndex[profs[i].Id] = (ushort)i;
         for (int i = 0; i < manuscripts.Count; i++) _manuscriptIndex[manuscripts[i].Id] = (ushort)i;
     }
@@ -142,6 +185,7 @@ public sealed class RecipeDb
         var sets = db.All<RequirementSetDef>().OrderBy(t => t.Id, StringComparer.Ordinal).ToDictionary(t => t.Id, StringComparer.Ordinal);
         var profs = db.All<ProficiencyDef>().OrderBy(t => t.Id, StringComparer.Ordinal).ToList();
         var manus = db.All<ManuscriptDef>().OrderBy(t => t.Id, StringComparer.Ordinal).ToList();
+        var guilds = db.All<GuildDef>().OrderBy(t => t.Id, StringComparer.Ordinal).ToDictionary(t => t.Id, StringComparer.Ordinal);
         var qualities = new SortedSet<string>(StringComparer.Ordinal);
         foreach (var t in tools.Values) foreach (var q in t.Qualities.Keys) qualities.Add(q);
         foreach (var s in stations.Values) foreach (var q in s.Provides.Keys) qualities.Add(q);
@@ -157,10 +201,12 @@ public sealed class RecipeDb
             foreach (var r in m.Recipes) if (!db.Contains("craft_recipe", r)) errs.Add($"{Loc("manuscript", m.Id)}: manuscript '{m.Id}' teaches unknown recipe '{r}'");
 
         var list = new List<CraftRecipe>();
-        foreach (var d in db.All<CraftRecipeDef>().OrderBy(r => r.Id, StringComparer.Ordinal))
+        var defs = RecipeUnifier.CraftDefs(db).OrderBy(r => r.Id, StringComparer.Ordinal).ToList();
+        foreach (var d in defs)
         {
             var local = new List<string>();
             var r = Resolve(d, db, cat, tools, stations, sets, pIds, qualities, manus, local);
+            if (r != null) ResolveFull(d, cat, guilds, r, local);
             foreach (var e in local) errs.Add($"{Loc("craft_recipe", d.Id)}: recipe '{d.Id}': {e}");
             if (r != null && local.Count == 0) { r.Index = (ushort)list.Count; list.Add(r); }
         }
@@ -168,12 +214,17 @@ public sealed class RecipeDb
         // the proficiency list order is the ordinal order (profs came sorted); recipe prof ids resolve against it
         var idx = new Dictionary<string, ushort>(StringComparer.Ordinal);
         for (int i = 0; i < profs.Count; i++) idx[profs[i].Id] = (ushort)i;
+        var byId = defs.ToDictionary(d => d.Id, StringComparer.Ordinal);
         foreach (var r in list)
         {
-            var d = db.Get<CraftRecipeDef>(r.Id);
+            var d = byId[r.Id];
             r.Profs = [.. d.Proficiencies.Select(p => new ProfUse(idx[p.Id], p.TimeMultPm, p.SkillPenalty))];
         }
-        return new RecipeDb(cat, list, profs, sets, stations, tools, manus, qualities);
+        foreach (var g in guilds.Values)
+            foreach (var sec in g.Secrets) if (!byId.ContainsKey(sec)) errs.Add($"{Loc("guild", g.Id)}: guild '{g.Id}' guards unknown recipe '{sec}'");
+        if (errs.Count > 0) return null;
+        var settings = db.All<CraftSettingsDef>().OrderBy(t => t.Id, StringComparer.Ordinal).FirstOrDefault() ?? new CraftSettingsDef { Id = "default" };
+        return new RecipeDb(cat, list, profs, sets, stations, tools, manus, qualities) { Guilds = guilds, Settings = settings };
     }
 
     private static IEnumerable<string> FindCycle(List<ProficiencyDef> profs)
@@ -231,7 +282,8 @@ public sealed class RecipeDb
                 if (!cat.TryIdOf(a.Good, out var g)) { errs.Add($"unknown component good '{a.Good}' in slot {i + 1}"); continue; }
                 long q = Qty(a, cat, g, errs, "component");
                 if (a.NeedsStep != null && !stepIds.Contains(a.NeedsStep)) errs.Add($"component '{a.Good}' needs unknown step '{a.NeedsStep}'");
-                alts.Add(new CompAlt(g, q, a.Keep, a.NeedsStep));
+                if (a.Material != null && !db.Contains("material", a.Material)) errs.Add($"component '{a.Good}' names unknown material '{a.Material}'");
+                alts.Add(new CompAlt(g, q, a.Keep, a.NeedsStep) { Bonus = a.Bonus, Material = a.Material });
             }
             slots.Add(new CompSlot { Alts = [.. alts] });
         }
@@ -254,7 +306,7 @@ public sealed class RecipeDb
             if (!seen.Add(s.Id)) errs.Add($"step '{s.Id}' listed twice");
             long sec = (long)Math.Round(s.Minutes * 60.0 + s.Hours * 3600.0);
             if (sec <= 0) errs.Add($"step '{s.Id}' has no time");
-            var cs = new CStep { Id = s.Id, Seconds = sec, Attended = s.Attended, Critical = s.Critical, Outdoor = s.Outdoor, Container = s.Container,
+            var cs = new CStep { Id = s.Id, Seconds = sec, Attended = s.Attended, Critical = s.Critical, Outdoor = s.Outdoor, Container = s.Container, Optional = s.Optional,
                 Conditional = d.Components.Any(c => c.Any(a => a.NeedsStep == s.Id)) };
             if (s.Critical) critical++;
             if (!s.Attended)
@@ -285,12 +337,22 @@ public sealed class RecipeDb
         var results = new List<CResult>();
         foreach (var x in d.Results)
         {
-            if (x.Item != null)
+            if (x.VehiclePart != null || x.BuildPiece != null || (x.Item != null && tools.ContainsKey(x.Item) && !db.Contains("weapon_shape", x.Item) && !db.Contains("armour_shape", x.Item)))
+            {
+                var kind = x.VehiclePart != null ? ResultKind.VehiclePart : x.BuildPiece != null ? ResultKind.BuildPiece : ResultKind.Tool;
+                string shape = x.VehiclePart ?? x.BuildPiece ?? x.Item!;
+                if (kind == ResultKind.VehiclePart && !db.Contains("vehicle_part", shape)) errs.Add($"unknown vehicle part '{shape}'");
+                if (kind == ResultKind.BuildPiece && !db.Contains("build_piece", shape)) errs.Add($"unknown build piece '{shape}'");
+                if (x.Material == null || !db.Contains("material", x.Material)) errs.Add($"{shape} needs a known material (got '{x.Material}')");
+                if (x.Kg <= 0) errs.Add($"{shape} needs its mass in kg");
+                results.Add(new CResult { Shape = shape, Material = x.Material, Qty = 1, MassG = (long)Math.Round(x.Kg * 1000), Kind = kind });
+            }
+            else if (x.Item != null)
             {
                 if (!db.Contains("armour_shape", x.Item) && !db.Contains("weapon_shape", x.Item)) errs.Add($"unknown item shape '{x.Item}'");
                 if (x.Material == null || !db.Contains("material", x.Material)) errs.Add($"item '{x.Item}' needs a known material (got '{x.Material}')");
                 if (x.Kg <= 0) errs.Add($"item '{x.Item}' needs its mass in kg");
-                results.Add(new CResult { Shape = x.Item, Material = x.Material, Qty = 1, MassG = (long)Math.Round(x.Kg * 1000) });
+                results.Add(new CResult { Shape = x.Item, Material = x.Material, Qty = 1, MassG = (long)Math.Round(x.Kg * 1000), Kind = ResultKind.Item });
             }
             else if (x.Good != null && cat.TryIdOf(x.Good, out var g))
             {
@@ -315,8 +377,8 @@ public sealed class RecipeDb
         r.IsPractice = d.Practice != null;
         if (d.Practice != null) { r.PracticeDx100 = d.Practice.GainDx100; r.PracticeCap = d.Practice.CapLevel; if (r.Results.Length > 0) errs.Add("a practice recipe gives no item"); }
         r.Repair = d.Repair;
-        if (d.Repair != null && d.Repair.Target is not ("garment" or "tool" or "blade")) errs.Add($"unknown repair target '{d.Repair.Target}'");
-        if (r.Results.Length == 0 && !r.IsPractice && !r.IsRepair && string.IsNullOrEmpty(r.Effect)) errs.Add("makes nothing: give results, practice, repair or effect");
+        if (d.Repair != null && d.Repair.Target is not ("garment" or "tool" or "blade" or "mail" or "plate" or "leather" or "armour")) errs.Add($"unknown repair target '{d.Repair.Target}'");
+        if (r.Results.Length == 0 && !r.IsPractice && !r.IsRepair && string.IsNullOrEmpty(r.Effect) && d.Refit == null && d.Salvage == null && !d.Reforge) errs.Add("makes nothing: give results, practice, repair, refit, salvage, reforge or effect");
 
         // mass: outputs + by-products <= inputs + adds (spec 4.1)
         long inG = 0; foreach (var slot in r.Slots) if (slot.Alts.Length > 0) inG += slot.Alts.Min(a => cat.MassG(a.Good, a.Qty));
@@ -337,6 +399,53 @@ public sealed class RecipeDb
             else { r.Manuscript = l.Manuscript; if (!m.Recipes.Contains(d.Id)) errs.Add($"manuscript '{l.Manuscript}' does not list this recipe"); }
         }
         return r;
+    }
+
+    /// <summary>P5-E: the fields of the one format beyond Phase 3's (business, smithing, refit, salvage, reforge, guild secrets), checked the same way.</summary>
+    private static void ResolveFull(CraftRecipeDef d, GoodCatalog cat, Dictionary<string, GuildDef> guilds, CraftRecipe r, List<string> errs)
+    {
+        r.Business = d.Business; r.WorkersMax = Math.Max(1, d.WorkersMax); r.WageClass = d.WageClass; r.BookId = RecipeUnifier.BookId(d); r.MinBatchPm = d.Batch.MinPm; r.BusinessQuality = d.BusinessQuality;
+        if (d.WageClass is not ("unskilled" or "skilled" or "master")) errs.Add($"unknown wage_class '{d.WageClass}'");
+        if (d.Business && d.Workstation == null) errs.Add("a business recipe needs its workstation");
+        if (d.Batch.MinPm is < 1 or > 1000) errs.Add("batch.min_pm must be 1..1000");
+        r.Commissionable = d.Commission ?? r.Results.Any(x => x.IsItem);
+        if (d.Secret is not "none")
+        {
+            if (!d.Secret.StartsWith("guild:", StringComparison.Ordinal)) errs.Add($"secret must be none or guild:<id> (got '{d.Secret}')");
+            else { r.Guild = d.Secret[6..]; if (!guilds.ContainsKey(r.Guild)) errs.Add($"secret names unknown guild '{r.Guild}'"); }
+        }
+        // smithing (crafting-full 4.3): heat, forge, quench and temper steps by id
+        if (d.Process != null)
+        {
+            if (d.Process != "smithing") errs.Add($"unknown process '{d.Process}'");
+            else
+            {
+                r.IsSmithing = true;
+                foreach (var s in r.Steps) s.Smith = s.Id switch { "heat" => SmithStep.Heat, "forge" => SmithStep.Forge, "quench" => SmithStep.Quench, "temper" => SmithStep.Temper, _ => SmithStep.None };
+                if (!r.HasStep(SmithStep.Forge)) errs.Add("a smithing recipe needs a 'forge' step");
+                foreach (var s in r.Steps) if (s.Smith == SmithStep.Quench && !s.Critical) errs.Add("the quench is the critical step of a smithing recipe");
+            }
+        }
+        foreach (var s in r.Steps) if (s.Optional && (s.Critical || !s.Attended)) errs.Add($"step '{s.Id}' cannot be optional: only an attended step that is not critical can be left out");
+        // refit, salvage, reforge (crafting-full 4.5)
+        r.Refit = d.Refit;
+        if (d.Refit != null && d.Refit.Target is not ("garment" or "mail" or "plate")) errs.Add($"unknown refit target '{d.Refit.Target}'");
+        if (d.Salvage != null)
+        {
+            r.SalvageTarget = d.Salvage.Target;
+            if (d.Salvage.Target is not ("mail" or "armour")) errs.Add($"unknown salvage target '{d.Salvage.Target}'");
+            var lines = new List<SalvageLine>();
+            foreach (var l in d.Salvage.Into)
+            {
+                if (!cat.TryIdOf(l.Good, out var g)) { errs.Add($"salvage gives unknown good '{l.Good}'"); continue; }
+                if (cat.IsPiece(g)) errs.Add($"salvage gives a counted good '{l.Good}'; salvage is by mass");
+                if (l.Pm is <= 0 or > 1000) errs.Add($"salvage line '{l.Good}' needs pm 1..1000");
+                lines.Add(new SalvageLine(g, l.Pm, l.Category));
+            }
+            r.Salvage = [.. lines];
+            if (!cat.TryIdOf(d.Salvage.Rest, out var rest) || cat.IsPiece(rest)) errs.Add($"salvage rest '{d.Salvage.Rest}' must be a kilogram good"); else r.SalvageRest = rest;
+        }
+        r.Reforge = d.Reforge;
     }
 
     /// <summary>Plain-text dump (tests, tools).</summary>

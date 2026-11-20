@@ -28,7 +28,7 @@ public class ConstructionTests(ITestOutputHelper output)
         var goods = new GoodCatalog(db);
         var tools = db.All<CraftToolDef>().SelectMany(t => t.Qualities.Keys).ToHashSet();
         var pieces = db.All<BuildPieceDef>().ToList();
-        Assert.Equal(80, pieces.Count);
+        Assert.Equal(99, pieces.Count);                                       // 80 with P5-B, plus the 19 workstation pieces of P5-E (crafting-full 3.2)
         foreach (var p in pieces)
         {
             Assert.True(p.Build != null, $"{p.Id} has no build cost");
