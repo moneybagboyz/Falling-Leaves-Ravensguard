@@ -162,8 +162,11 @@ public static class SuccessionDesk
         if (st.Crafting is { } cr) { cr.Book.Forget(ctx.Party.Hero); cr.Know.Forget(ctx.Party.Hero); }      // P5-I: the heir takes up the id, not the dead hero's craft: his skills come from his own record
         Array.Clear(ctx.Party.AttrMilli);
         if (st.Wounds is { } wl) lock (wl.Sync) wl.Books.Remove(ctx.Party.Hero.Value);      // the dead body's wounds are not the heir's
-        foreach (var (shape, material) in HeroOutfit.For(ctx.Content, hero, c.IssuedSec))
-            carried.EquipItem(e, ctx.Rules, carried.MakeItem(e, ctx.Content, ctx.Rules, ctx.Factory, st.Ids, shape, material));
+        // P6-E3 (family 4.7, FL-14): the heir keeps his own clothes: dressed by his own class, trade and body as the street saw him, not by an origin he never had; the origin's outfit only when his wardrobe holds nothing
+        int ownClothes = row >= 0 && row < pt.Count ? Ravensguard.Sim.Family.HeirWardrobe.Dress(e, ctx.Content, ctx.Rules, ctx.Factory, st.Ids, carried, Ravensguard.Sim.Family.HeirWardrobe.For(ctx.Content, pt, row, st.Seed, c.IssuedSec)) : 0;
+        if (ownClothes == 0)
+            foreach (var (shape, material) in HeroOutfit.For(ctx.Content, hero, c.IssuedSec))
+                carried.EquipItem(e, ctx.Rules, carried.MakeItem(e, ctx.Content, ctx.Rules, ctx.Factory, st.Ids, shape, material));
         foreach (var shape in new[] { "belt_pouch", "satchel" }) carried.EquipItem(e, ctx.Rules, carried.MakeItem(e, ctx.Content, ctx.Rules, ctx.Factory, st.Ids, shape));
         Ravensguard.Sim.Family.Disputes.Contest(st, ctx.Content, ctx.Party, ctx.Purse, deadRow, row, willBefore, day, c.IssuedSec);     // P6-E3: a child the will passed over may contest it (the reserved stream)
         st.Chronicle.Add(new ChronicleEntry(st.Ids.Allocate(IdKind.Event), new GameTime(c.IssuedSec), "hero_succession", [ctx.Party.Hero, heir.Person], [],

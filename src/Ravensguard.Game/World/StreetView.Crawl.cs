@@ -215,7 +215,14 @@ public partial class StreetView
         int packBandages = (int)(_heroLink?.View?.Goods.Where(g => g.Id == "bandage").Sum(g => g.Qty) ?? 0);
         if (!c.Hero.Dead && _heroLink != null && packBandages > c.Hero.Bandages)
             _heroLink.Issue(Ravensguard.Sim.Combat.Aftermath.AftermathDesk.DressCommand(packBandages - c.Hero.Bandages, 0, _world.Clock.Now.Seconds));
-        if (c.Hero.Dead) { _router?.ShowToast(L.T("ex_ui_died_below"), 6f); HeroDied("su_cause_below"); }   // the heir takes over (StreetView.Succession.cs)
+        if (c.Hero.Dead)
+        {
+            _router?.ShowToast(L.T("ex_ui_died_below"), 6f);
+            // P6-E3 (family 4.7, FL-14): the haul he carried is carried up to the mouth with the body: into the pack at the barrier, so the estate sweeps it into the chest where he is laid, not left in the crawl
+            if (_heroLink != null && _crawlSite != null && (c.Hero.Loot.Count > 0 || c.Hero.TorchesUsed > 0))
+                SiteCommand(SiteDesk.TakeCommand(_crawlSite.Id.Value, c.Hero.Loot, c.Hero.TorchesUsed, _world.Clock.Now.Seconds));
+            HeroDied("su_cause_below");                                       // the heir takes over (StreetView.Succession.cs)
+        }
         else if (_heroLink != null && _crawlSite != null && (c.Hero.Loot.Count > 0 || c.Hero.TorchesUsed > 0))
             SiteCommand(SiteDesk.TakeCommand(_crawlSite.Id.Value, c.Hero.Loot, c.Hero.TorchesUsed, _world.Clock.Now.Seconds));   // the haul into the pack and the burnt torches out, at the barrier
         else _router?.ShowToast(L.T("ex_ui_left"), 5f);

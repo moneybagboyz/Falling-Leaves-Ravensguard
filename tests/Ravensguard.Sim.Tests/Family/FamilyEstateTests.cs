@@ -4,6 +4,8 @@ using Ravensguard.Sim.Economy;
 using Ravensguard.Sim.Family;
 using Ravensguard.Sim.People;
 using Ravensguard.Sim.Production;
+using Ravensguard.Sim.Sites;
+using Ravensguard.Sim.Trade;
 using Ravensguard.Sim.Save;
 using Ravensguard.Sim.Succession;
 using Ravensguard.Sim.Tests.Politics;
@@ -144,5 +146,55 @@ public class FamilyEstateTests(ITestOutputHelper output)
         var st2 = WorldSave.Restore(SaveCodec.Decode(SaveCodec.Encode(file)), r.P.R.Content, "b", null, r.P.R.W.Continent, r.P.R.W.History);
         Assert.Equal(hash, st2.Family!.Hash()); Assert.Equal(3, st2.Family.Distress[7]); Assert.Equal(9UL, st2.Family.Stewards[7].Steward);
         Assert.Equal(file.Sections[FamilySave.SectionName].ToArray(), WorldSave.Capture(st2, "b", "0.1").Sections[FamilySave.SectionName].ToArray());
+    }
+
+    // ---------------------------------------------------------------- FL-14
+
+    private static int AddKid(Rig r, int heroRow, int age, Sex sex, SocialClass cls)
+    {
+        var pt = r.Pt; var st = r.St; int hh = pt.Household[heroRow];
+        st.Ids.EnsureNext(IdKind.Person, pt.BaseCounter + (ulong)pt.Count); st.Ids.Allocate(IdKind.Person);
+        int c = pt.Add(); st.Economy!.AddPerson(c);
+        pt.Given[c] = "Wren"; pt.Family[c] = pt.Family[heroRow]; pt.Sex[c] = sex; pt.BirthDay[c] = PersonTable.BirthDayFor(r.Day, age, 0, pt.AgingPace);
+        pt.Father[c] = heroRow; pt.Mother[c] = -1; pt.Household[c] = hh; pt.HomeSettlement[c] = r.Hht.Settlement[hh]; pt.Class[c] = cls; pt.Status[c] = PersonStatus.Alive; pt.Culture[c] = pt.Culture[heroRow];
+        r.Hht.AddMemberLater(hh, c); st.Population.ResetKin();
+        (st.Succession ??= new SuccessionBook()).Kin.Add(new HeroKinLink(pt.IdOf(c), KinRelation.Child));
+        return c;
+    }
+
+    [Fact]
+    public void FL14_TheHeirKeepsHisOwnClothes_DressedByHisOwnClassAndBody_NotByAnOriginHeNeverHad()
+    {
+        using var r = new Rig(); var pt = r.Pt; int hero = r.St.Hero!.PersonIndex;
+        int heir = AddKid(r, hero, 20, Sex.Male, SocialClass.Gentry);
+        long sec = r.Day * 86_400L + 3_600;
+        var own = HeirWardrobe.For(r.P.R.Content, pt, heir, r.St.Seed, sec);
+        Assert.NotEmpty(own);
+        Assert.Equal(own.Select(p => p.Shape), HeirWardrobe.For(r.P.R.Content, pt, heir, r.St.Seed, sec).Select(p => p.Shape));       // the same pieces each time: a stable draw on his id
+        var res = r.P.R.Do(SuccessionDesk.HeirCommand(pt.IdOf(heir), 0, 0, sec), sec);
+        Assert.True(res.Code == HeroResultCode.Ok, res.Text.ToString());
+        var party = r.St.Party!; var worn = party.Carried.Equip.Keys.Select(id => r.St.Economy!.Items.Get(id).Shape).ToList();
+        foreach (var p in own) Assert.Contains(p.Shape, worn);                                       // every piece of his own is on him
+        Assert.Equal(own.Count + 2, worn.Count);                                                      // and nothing more by class (the pouch and the satchel are the kit's)
+        Assert.Equal(heir, r.St.Hero!.PersonIndex);
+    }
+
+    [Fact]
+    public void FL14_AHeroWhoDiesBelowGroundLeavesTheHaulInTheEstateChestAtTheMouth_NotInTheCrawl()
+    {
+        using var r = new Rig(); var e = r.St.Economy!;
+        long sec = r.Day * 86_400L + 3_600;
+        var loot = new LootItem("arming_sword", "iron", 500, 1_200, 800);
+        // the crawl's haul comes up with the body (the game issues the take before the heir's command)
+        Assert.True(r.P.R.Do(SiteDesk.TakeCommand(42, [loot], 0, sec), sec).Code == HeroResultCode.Ok);
+        var hero = r.St.Party!.Hero;
+        var sword = e.Items.LiveRows().Select(i => e.Items.At(i)).Where(it => it.Owner == hero && it.Shape == "arming_sword").Select(it => it.Id).ToList();
+        Assert.NotEmpty(sword);
+        long mouthX = 123_000, mouthY = 456_000;
+        var res = r.P.R.Do(SuccessionDesk.EndCommand(mouthX, mouthY, sec + 10), sec + 10);
+        Assert.True(res.Code == HeroResultCode.Ok, res.Text.ToString());
+        var est = r.St.Succession!.Estates.Last();
+        Assert.Equal(mouthX, est.PlaceX); Assert.Equal(mouthY, est.PlaceY);
+        foreach (var id in sword) { Assert.Contains(id, est.Items); Assert.Equal(SuccessionDesk.EstateOwner(est.Id), e.Items.Get(id).Owner); }
     }
 }
