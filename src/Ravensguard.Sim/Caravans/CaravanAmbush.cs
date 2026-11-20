@@ -56,7 +56,7 @@ public sealed partial class ContinentTrade
             int p = pt.IndexOf(new EntityId(cmd.Person));
             if (p < 0) continue;
             if (cmd.Kind == BattleCommandKind.Wounds && cmd.Book != null && ledger != null && !cmd.Book.Dead)
-                lock (ledger.Sync) ledger.Books[cmd.Person] = cmd.Book;
+                ledger.Adopt(cmd.Person, cmd.Book, ctx.Hour * 3600);           // its day cursor starts at the ambush's day (resume-drift fix 3)
             if (cmd.Kind == BattleCommandKind.Status && cmd.Status == SoldierStatus.Dead && pt.Status[p] == People.PersonStatus.Alive)
             {
                 var n = br.Notables.FirstOrDefault(x => x.Person == cmd.Person);

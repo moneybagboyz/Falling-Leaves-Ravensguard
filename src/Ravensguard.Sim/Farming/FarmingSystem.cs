@@ -273,6 +273,13 @@ public sealed partial class FarmingSystem
     /// <summary>P5-A2: parcels let on a lease of the land book (the re-let leaves them alone); set by the land wiring. Null: none.</summary>
     public Func<int, bool>? LeasedOut { get; set; }
 
+    /// <summary>Grows the seed-debt table (part of the saved state) to at least <paramref name="households"/> rows; a no-op when it is long enough.</summary>
+    private void GrowSeedDebt(int households)
+    {
+        if (State.SeedDebtG.Length >= households) return;
+        var sd = State.SeedDebtG; Array.Resize(ref sd, households); State.SeedDebtG = sd;
+    }
+
     /// <summary>
     /// Brings the farming tables in step with a population that grows and changes hands (births, weddings, inheritance, escheat, emigration): the household
     /// arrays grow, parcels whose holder changed in the population table pass to the new holder (with the barn stock), barns open for new holders and the
@@ -281,11 +288,9 @@ public sealed partial class FarmingSystem
     public void SyncPopulation()
     {
         int nh = Pop.Households.Count, np = P.Count;
-        if (_hhHours.Length < nh)
-        {
-            Array.Resize(ref _hhHours, nh); Array.Resize(ref _isHolder, nh);
-            if (State.SeedDebtG.Length < nh) { var sd = State.SeedDebtG; Array.Resize(ref sd, nh); State.SeedDebtG = sd; }
-        }
+        if (_hhHours.Length < nh) { Array.Resize(ref _hhHours, nh); Array.Resize(ref _isHolder, nh); }
+        // the saved table grows on its own: after a load the working arrays already have the new households (the constructor sizes them), the saved table does not (resume-drift fix 2)
+        GrowSeedDebt(nh);
         bool changed = false;
         var src = Pop.ParcelHolder;
         for (int p = 0; p < np && p < src.Length; p++)

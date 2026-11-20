@@ -86,9 +86,13 @@ public sealed class WorldRuntime : IDisposable
         var home = state.HomeRegion;
         Services = new RegionServices(state.Seed, content, state.Continent, home) { History = state.History };
         var region = state.Population.Region;
-        // the abstract continent: the one the game was made or saved with, else a fresh one over the history (a save from before the continent tick)
+        // the abstract continent: the one the game was made or saved with, else a fresh one over the history (a save without the continent section: one from before the
+        // continent tick, or one written before the resume-drift fix, when the section was never written). It is ticked once below, the way a new game makes it.
+        bool freshContinent = state.ContinentState == null;
         if (state.ContinentState == null)
         {
+            if (state.RegionSections.Count > 0)
+                System.Diagnostics.Trace.TraceWarning("This save has other regions but no continent section: the continent is rebuilt, and caravans and travellers in flight are lost.");
             var fresh = Ravensguard.Sim.Continental.ContinentState.Create(state.Seed, state.History, home.Id, (int)(state.Abstract?.Vital.Alive ?? state.Population.People.Count),
                 state.Economy?.Ledger.Audit().InPurses.Mites ?? 0);
             state.ContinentState = fresh;
@@ -105,6 +109,10 @@ public sealed class WorldRuntime : IDisposable
         if (!Manager.IsReady(home)) Manager.Adopt(home, region, state.Population);
         Records = new RegionRecordSet(Services, Manager, state.Chunks, pager);
         var homeWorld = state.HomeRecords ?? RegionWorld.ForHome(Services, state);
+        // a rebuilt continent gets the tick a new game's gets when it is made (RegionServices.EnsureContinent): prices and summaries, and LastSeason set to this season,
+        // so the scheduler does not run this season's tick a second time after the load
+        if (freshContinent)
+            Ravensguard.Sim.Continental.ContinentTick.Run(state.ContinentState!, [new Ravensguard.Sim.Continental.ResidentRegion(home.Id, homeWorld.Economy)], GameTime.FromGameHours(homeWorld.HourDone + 1));
         if (!homeWorld.Economy.Trade.IsBound) homeWorld.Economy.BindContinent(new Ravensguard.Sim.Economy.Markets.ContinentLink(state.ContinentState, home.Id));
         else homeWorld.Economy.BindContinent(new Ravensguard.Sim.Economy.Markets.ContinentLink(state.ContinentState, home.Id));
         // what the abstract world builds in the home region reaches the chunks the player has already seen as ID-keyed deltas (plan 2.2); a chunk not yet seen is generated from the changed plan

@@ -253,7 +253,7 @@ public sealed partial class FightWorld
                 ulong key = f.Kit.Person;
                 if (!f.LedgerBook || f.Book.Empty) continue;
                 if (l.Books.TryGetValue(key, out var held) && (ReferenceEquals(held, f.Book) || !held.Empty)) continue;
-                l.Books[key] = f.Book;
+                l.Adopt(key, f.Book, GameSec);                                  // its day cursor starts today, not at a day the ledger was left at
             }
     }
 

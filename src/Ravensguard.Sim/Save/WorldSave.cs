@@ -380,6 +380,7 @@ public static class WorldSave
             Party = w.Party == null ? null : Ravensguard.Sim.Trade.HeroPartySave.Capture(w.Party),
             HeroPending = (w.HeroPendingSource?.Invoke() ?? w.HeroPending) is { Count: > 0 } hp ? Ravensguard.Sim.Trade.HeroPendingSave.Capture(hp) : null,
             Production = w.Production == null ? null : ProductionSave.Capture(w.Production), Markets = w.Markets == null ? null : MarketsSave.Capture(w.Markets),
+            ContinentSt = w.ContinentState == null ? null : ContinentSave.Capture(w.ContinentState),                                // the abstract continent and its caravans (resume-drift fix 1: it was never written)
             Regions = view?.CaptureResident(), PagedRegions = view != null ? view.Paged : new SortedDictionary<int, byte[]>(w.RegionSections.ToDictionary(kv => kv.Key, kv => kv.Value)),
             Hero = w.Hero?.ToSave(), Economy = w.Economy == null ? null : EconomySave.Capture(w.Economy), Abstract = w.Abstract == null ? null : AbstractSave.Capture(w.Abstract, w.Population), Farming = w.Farming == null ? null : FarmingSave.Capture(w.Farming), Codex = codex == null ? null : new CodexSave { Unlocked = codex.Unlocked.ToArray() },
             Live = live == null ? null : new LiveSave

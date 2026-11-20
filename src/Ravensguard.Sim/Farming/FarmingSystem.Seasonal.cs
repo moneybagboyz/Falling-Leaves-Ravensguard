@@ -320,6 +320,8 @@ public sealed partial class FarmingSystem
                 if (ReferenceEquals(lender, own)) break;
                 got += Store.MoveUpTo(lender, own, g, short_ - got);
             }
+            if (got == 0) continue;
+            GrowSeedDebt(Math.Max(h + 1, Pop.Households.Count));                 // never past the end of a short table on the worker (SyncPopulation normally sized it already)
             State.SeedDebtG[h] += got * 120 / 100;
         }
         ExchangeSeed(winter, need);
@@ -396,6 +398,7 @@ public sealed partial class FarmingSystem
     /// <summary>A holder with a seed debt pays it from the grain it has just threshed, in kind, before the grain reaches its own stock (spec 7: repaid next harvest).</summary>
     private void RepayFromThreshing(int household, ushort good, long threshedG)
     {
+        if ((uint)household >= (uint)State.SeedDebtG.Length) return;     // a household past the table has no debt (and must not throw on the worker)
         long debt = State.SeedDebtG[household]; if (debt <= 0 || threshedG <= 0) return;
         var own = HouseStore(household); var lender = LenderOf(household); if (ReferenceEquals(lender, own)) return;
         long moved = Store.MoveUpTo(own, lender, good, Math.Min(debt, threshedG));
