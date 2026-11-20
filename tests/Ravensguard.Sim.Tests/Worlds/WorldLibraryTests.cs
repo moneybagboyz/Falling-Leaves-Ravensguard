@@ -122,7 +122,7 @@ public class WorldLibraryTests(ITestOutputHelper output) : IDisposable
     }
 
     [Fact]
-    public void Content_hash_mismatch_and_bad_names_are_refused()
+    public void Bad_names_are_refused_and_other_content_is_no_gate()
     {
         var lib = new WorldLibrary(_root);
         var (cs, hs) = Settings(2);
@@ -134,6 +134,6 @@ public class WorldLibraryTests(ITestOutputHelper output) : IDisposable
         var l = lib.List();
         Assert.Equal(2, l.Count);
         Assert.NotEqual(l[0].Id, l[1].Id);
-        Assert.Throws<WorldLibraryException>(() => lib.Load(l[0].Id, "other"));
+        Assert.Equal(l[0].Id, lib.Load(l[0].Id, "other").Info.Id);   // other content: reported by LoadReport.ForWorld, loaded when the layers still verify (plan 2.11)
     }
 }

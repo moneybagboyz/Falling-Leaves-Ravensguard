@@ -394,6 +394,24 @@ public static class NewGameDebug
                     if (scene == "board") { sv.DebugOpenContracts(); await Frames(tree, 40); }
                     break;
                 }
+            case "loadreport":
+                {
+                    // dev: the pre-load report of a save made with other content (a made-up one: a good added, one moved, one written off, a mod gone)
+                    var rep = new Ravensguard.Sim.Save.LoadReport
+                    {
+                        ContentChanged = true, LayersChecked = true,
+                        MissingMods = [new Ravensguard.Sim.Save.ModEntry("old_tools", "1.2.0")], ExtraMods = [new Ravensguard.Sim.Save.ModEntry("fine_cloth", "0.3.0")],
+                        Changes =
+                        [
+                            "Content table 'good' changed since this save (3 new; moved aa_old_scrap -> scrap_iron; no longer in the game: zz_relic); the save was mapped onto it by name.",
+                            "Content table 'craft_recipe' changed since this save (1 new; moved bake_bread_old -> bake_bread); the save was mapped onto it by name.",
+                            "Warning: goods no longer in the game were written off (quantity in grams, or pieces): zz_relic 3,700. Their ledger columns went with their stock, so the mass and coin audits stay exact.",
+                        ],
+                    };
+                    LoadReportDialog.Ask(router, rep, false, () => { }, () => { });
+                    await Frames(tree, 6);
+                    break;
+                }
             case "embark":
             case "legends":
                 {

@@ -125,12 +125,16 @@ public class WorldSaveTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public void ContentHashMismatch_GivesReadableError()
+    public void ContentHashMismatch_IsNoGate_TheReportSaysSo_AndTheLayersDecide()
     {
+        // plan 2.11: other content is reported and loaded; only a layer that regenerates differently refuses (LoadReportTests)
         var b = Shared.Value;
         var file = SaveCodec.Decode(SaveCodec.Encode(WorldSave.Capture(b.World, b.ContentHash, "0.1.0")));
-        var ex = Assert.Throws<SaveException>(() => WorldSave.Restore(file, b.Content, "deadbeef" + b.ContentHash[8..]));
-        Assert.Contains("content changed", ex.Message);
+        string other = "deadbeef" + b.ContentHash[8..];
+        var rep = WorldSave.Inspect(file, b.Content, other);
+        Assert.True(rep.ContentChanged); Assert.True(rep.CanLoad); Assert.True(rep.LayersChecked); Assert.True(rep.NeedsConfirmation);
+        Assert.Contains("content changed", rep.ToText());
+        Assert.NotNull(WorldSave.Restore(file, b.Content, other));
     }
 
     [Fact]

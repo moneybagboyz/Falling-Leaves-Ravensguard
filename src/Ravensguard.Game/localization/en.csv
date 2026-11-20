@@ -612,6 +612,11 @@ LOAD_STEP_SAVE,Reading the save
 LOAD_STEP_REGION,Rebuilding the region
 LOAD_STEP_VIEW,Back to the hero
 LOAD_FAILED,"The run could not be loaded: {0}"
+LOADREPORT_TITLE,This save was made with other content
+LOADREPORT_WORLD_TITLE,This world was made with other content
+LOADREPORT_INTRO,Loading it will change the following. Nothing is changed on disk until you save.
+LOADREPORT_CONTINUE,Continue
+LOADREPORT_CANCEL,Cancel
 REPORT_TITLE,Report a bug (testers)
 REPORT_LOCAL_ONLY,"The report is a zip saved on this computer. The game never sends anything. You choose who gets it."
 REPORT_CATEGORY,Kind of report

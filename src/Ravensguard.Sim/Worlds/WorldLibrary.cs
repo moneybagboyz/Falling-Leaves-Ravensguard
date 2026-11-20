@@ -142,16 +142,14 @@ public sealed class WorldLibrary
         return new LoadedWorld(new WorldInfo(id, file, []), continent, history);
     }
 
-    /// <summary>Regenerates the continent and history of a library world once and verifies them against the stored hashes.</summary>
+    /// <summary>Regenerates the continent and history of a library world once and verifies them against the stored hashes. A world made with other content opens when they still verify (<see cref="LoadReport.ForWorld"/> tells the player first); it is refused, naming the content, when they do not.</summary>
     public LoadedWorld Load(string id, string? currentContentHash = null, Action<WorldGenProgress>? progress = null, CancellationToken ct = default)
     {
         var info = TryRead(id) ?? throw new WorldLibraryException($"World '{id}' is not in the library.");
         var f = info.File;
-        if (currentContentHash != null && f.ContentHash.Length > 0 && f.ContentHash != currentContentHash)
-            throw new WorldLibraryException($"World '{f.Name}' was made with different game content (saved {Short(f.ContentHash)}, installed {Short(currentContentHash)}) and would not regenerate the same.");
         var (continent, history) = Generate(f.Continent, f.History, progress, ct);
         if (continent.ComputeHash() != f.ContinentHash || history.ComputeHash() != f.HistoryHash)
-            throw new WorldLibraryException($"World '{f.Name}' no longer regenerates identically (the world generator changed since it was made).");
+            throw new WorldLibraryException($"World '{f.Name}' no longer regenerates identically ({(currentContentHash != null && f.ContentHash.Length > 0 && f.ContentHash != currentContentHash ? $"the game content changed since it was made (saved {Short(f.ContentHash)}, installed {Short(currentContentHash)}) and its land or history now come out differently" : "the world generator changed since it was made")}).");
         progress?.Invoke(new WorldGenProgress(WorldGenPhase.Done, "done", 1, 1, f.History.Years, f.History.Years, null));
         return new LoadedWorld(info, continent, history);
     }
