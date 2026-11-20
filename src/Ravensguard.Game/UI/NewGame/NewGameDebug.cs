@@ -477,6 +477,21 @@ public static class NewGameDebug
                     await Frames(tree, 120);                                          // the view comes from a barrier
                     break;
                 }
+            case "family":
+                {
+                    // dev (P6-B3): a real new game as a man (--ng-origin, default discharged_soldier), then --ng-scene panel (married, two children, a course under way: the Family panel) | talk (the courting menu
+                    // in the talk window) | empty (the panel of a hero with no family)
+                    var w = MakeWorld(Math.Min(years, 60), 7);
+                    var d = NewGameServices.NewDraft(); d.Name = "Shot"; d.LibraryWorldId = w.Info.Id; d.OriginId = Arg("--ng-origin", "discharged_soldier");
+                    router.Push(new RegionBuildScreen(router, d, w));
+                    if (!await Until(tree, () => router.Top is Ravensguard.Game.World.StreetView, 9000)) throw new Exception("family shot: the region build did not finish");
+                    var sv = (Ravensguard.Game.World.StreetView)router.Top!; var rt = sv.Runtime!;
+                    await Until(tree, () => rt.HourDone >= sv.DebugWorld.Clock.Now.TotalHours, 6000);
+                    await Frames(tree, 90);
+                    sv.DebugFamily(Arg("--ng-scene", "panel"), outPath);
+                    await Frames(tree, 240);                                          // the views come from a barrier
+                    break;
+                }
             case "loadreport":
                 {
                     // dev: the pre-load report of a save made with other content (a made-up one: a good added, one moved, one written off, a mod gone)

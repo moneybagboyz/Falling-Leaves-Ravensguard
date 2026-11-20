@@ -82,6 +82,8 @@ public partial class StreetView
             case "prospect": OpenProspect(); return true;                     // P5-F
             case "treatment": DebugTreatment(); return true;                  // P6-B1: the treatment screen on a wounded hero
             case "will": DebugInheritance("will"); return true;               // P5-H: the will panel (witnessed by the place's priest, found at the barrier)
+            case "family": DebugFamily("empty"); return true;                 // P6-B3: the Family panel of a hero with no family
+            case "family_full": DebugFamily("panel"); return true;            // P6-B3: married, two children, a course under way
             case "overlay": ShowControls(); return true;
             default: return false;
         }

@@ -1,0 +1,20 @@
+// Family life (docs/specs/phase6/family-and-lifespan.md 3, 4): courting, the wedding, dowries, children and their lessons, kin and kidnapping, and the hero's ageing table with the old-age hazard.
+// Years are game years of ageing (the aging_pace setting scales when a birthday falls, never these tables).
+[
+  {
+    "type": "family_settings", "id": "family",
+    "age_loss": [
+      {"attr": "strength",   "from": 40, "to": 49,  "every": 2, "amount": 1},
+      {"attr": "strength",   "from": 50, "to": 59,  "every": 1, "amount": 1},
+      {"attr": "strength",   "from": 60, "to": 200, "every": 1, "amount": 2},
+      {"attr": "toughness",  "from": 45, "to": 59,  "every": 1, "amount": 1},
+      {"attr": "toughness",  "from": 60, "to": 200, "every": 1, "amount": 2},
+      {"attr": "dexterity",  "from": 45, "to": 200, "every": 1, "amount": 1},
+      {"attr": "perception", "from": 50, "to": 200, "every": 1, "amount": 1},
+      {"attr": "wits",       "from": 65, "to": 200, "every": 1, "amount": 1}
+    ],
+    "old_age": [
+      {"from": 0, "pct": 0}, {"from": 50, "pct": 1}, {"from": 60, "pct": 3}, {"from": 65, "pct": 10}, {"from": 75, "pct": 20}
+    ]
+  }
+]

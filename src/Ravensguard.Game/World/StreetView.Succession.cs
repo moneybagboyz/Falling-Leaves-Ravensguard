@@ -51,6 +51,9 @@ public partial class StreetView
         if (_fightView == null && _crawl == null && _successionView == null && _heirsTask == null && _successionSeq < 0
             && Runtime?.State.Wounds?.Find(Ravensguard.Sim.Economy.EconomyState.HeroOwner.Value) is { Dead: true })
             HeroDied("su_cause_wounds");
+        // P6-B3 (family 4.6): old age, or the childbed, has taken the hero; the heir he raised takes over
+        if (_fightView == null && _crawl == null && _successionView == null && _heirsTask == null && _successionSeq < 0 && _familyLink is { DeathPending: true } fl)
+            HeroDied(fl.CauseKey);
         if (_heirsTask is { IsCompleted: true } t)
         {
             _heirsTask = null;
