@@ -137,7 +137,7 @@ public sealed class TaxSystem
         int slot = Treasuries.PayeeSlot[s]; if (slot < 0) return;
         int day = (int)now.TotalDays; EnsureCaches(now.TotalHours);
         var st = reg.Settlements[s]; var dest = Treasuries[slot].Purse; var level = State.Level(st.FiefIndex);
-        bool evasionOn = State.Rung[s] >= 2; long hearthIn = 0; int evaders = 0; string causes = "";
+        bool evasionOn = State.Rung[s] >= 2; long hearthIn = 0; int evaders = 0;
         foreach (int h in HouseholdOrder != null ? HouseholdOrder(_bySettlement[s]) : _bySettlement[s])
             hearthIn += CollectHousehold(h, s, day, dest, slot, level, evasionOn, now, ob, ref evaders);
         int realm = Treasuries.RealmSlotOfSettlement[s];
@@ -149,8 +149,7 @@ public sealed class TaxSystem
         if (evaders > 0 && State.LastEvasionDay[s] != day)
         {
             State.LastEvasionDay[s] = day; State.Add(TaxTally.EvasionEvents, 1);
-            causes = $"{evaders} households withheld the hearth tax while grievances ran high";
-            ob.Chronicle(now, "tax_evasion", [st.Id], [new Cause(CauseKind.Tax, null, causes)], ("settlement", st.Name), ("households", evaders.ToString()), ("unrest", State.Unrest[s].ToString()));
+            ob.Chronicle(now, "tax_evasion", [st.Id], [Why.Of(CauseKind.Tax, "ch_why_tax_evasion", ChronParam.Place("place", st.Id), ChronParam.Count("n", evaders))], ("settlement", st.Name), ("households", evaders.ToString()), ("unrest", State.Unrest[s].ToString()));
         }
         Collected?.Invoke(s, hearthIn, now, ob);
     }
@@ -298,7 +297,7 @@ public sealed class TaxSystem
             if (b > 0 && led.Transfer(purse, dest, new Coin(b), TransferReason.Rent)) got += b;
         }
         var reg = _w.Population.Region;
-        var evictEntry = ob.Chronicle(now, "eviction", [hht.IdOf(h), reg.Settlements[s].Id], [new Cause(CauseKind.Tax, null, $"evicted for arrears of {seasons} seasons")],
+        var evictEntry = ob.Chronicle(now, "eviction", [hht.IdOf(h), reg.Settlements[s].Id], [Why.Of(CauseKind.Tax, "ch_why_evicted", ChronParam.Place("place", reg.Settlements[s].Id), ChronParam.Count("seasons", seasons))],
             ("household", hht.Name[h]), ("owed", owed.ToString()), ("claimed", got.ToString()), ("creditor", Treasuries[slot].Name));
         Evicted?.Invoke(s, hht.IdOf(h), evictEntry, (int)now.TotalDays);
         State.Add(TaxTally.Evictions, 1); State.Add(TaxTally.EvictedClaim, got);
@@ -350,7 +349,7 @@ public sealed class TaxSystem
                 if (target == 4 && !RiotsElsewhere)
                 {
                     State.Add(TaxTally.RevoltsBrewing, 1);
-                    ob.Chronicle(now, "revolt_brewing", [reg.Settlements[s].Id], [new Cause(CauseKind.Tax, null, "unrest above the top rung for a month")], ("settlement", reg.Settlements[s].Name), ("unrest", u.ToString()));
+                    ob.Chronicle(now, "revolt_brewing", [reg.Settlements[s].Id], [Why.Of(CauseKind.Tax, "ch_why_revolt_brewing", ChronParam.Place("place", reg.Settlements[s].Id))], ("settlement", reg.Settlements[s].Name), ("unrest", u.ToString()));
                 }
             }
             else if (target < cur)
@@ -390,9 +389,9 @@ public sealed class TaxSystem
             }
         int hungry = riders.Count(h => (e.Grievances[h] & Grievance.Hunger) != 0), taxed = riders.Count(h => (e.Grievances[h] & Grievance.Tax) != 0);
         var causes = new List<Cause>();
-        if (taxed > 0) causes.Add(new Cause(CauseKind.Tax, null, $"{taxed} rioters under the tax"));
-        if (hungry > 0) causes.Add(new Cause(CauseKind.Famine, null, $"{hungry} rioters hungry"));
-        if (causes.Count == 0) causes.Add(new Cause(CauseKind.Other, null, "unrest"));
+        if (taxed > 0) causes.Add(Why.Of(CauseKind.Tax, "ch_why_riot_tax", ChronParam.Place("place", reg.Settlements[s].Id), ChronParam.Count("n", taxed)));
+        if (hungry > 0) causes.Add(Why.Of(CauseKind.Famine, "ch_why_riot_hunger", ChronParam.Place("place", reg.Settlements[s].Id), ChronParam.Count("n", hungry)));
+        if (causes.Count == 0) causes.Add(Why.Of(CauseKind.Unrest, "ch_why_riot_unrest", ChronParam.Place("place", reg.Settlements[s].Id)));
         ob.Chronicle(now, "riot", [reg.Settlements[s].Id], causes, ("settlement", reg.Settlements[s].Name), ("rioters", riders.Count.ToString()), ("grain_g", moved.ToString()), ("unrest", State.Unrest[s].ToString()));
         State.Add(TaxTally.Riots, 1); State.Add(TaxTally.RiotGrainG, moved);
     }

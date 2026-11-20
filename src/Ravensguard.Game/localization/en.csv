@@ -5825,6 +5825,115 @@ fa_no_head,You have no monster's head to show.
 fa_not_excommunicated,You are not excommunicated.
 fa_penance_no_pilgrimage,The church asks a pilgrimage first.
 fa_miracle_note,Believed miracles keep a natural reason beside them.
+ch_why_age,"{who} died of old age, at {age}."
+ch_why_arrears_evicted,{holder} was evicted for arrears to {lord} and the notice that ran out.
+ch_why_arrears_notice,{holder} was in arrears to {lord}.
+ch_why_arrears_paid,{holder} paid the arrears.
+ch_why_assart,Too few arable acres for the people of {place}.
+ch_why_birth,A child was born to {mother}.
+ch_why_bloodloss,{who} bled to death.
+ch_why_bought_value,{who} bought it at its value.
+ch_why_brain,{who} died of a wound to the brain.
+ch_why_builder_hired,{client} hired a builder at his bid.
+ch_why_builder_took,"{builder}, a builder of the region, took the posted work."
+ch_why_business_drift,The good was dear and short in {place} for seasons on end.
+ch_why_caravan_defence,{who} was killed defending a caravan.
+ch_why_caravan_lost,Robbers on the road from {place} took the cargo and the crew; the merchant's wagons are gone.
+ch_why_caravan_raid,Bandits ({band}) took {pct} percent of a caravan on the road from {place}.
+ch_why_caravan_robbery,{who} was killed in a robbery on the road.
+ch_why_charter_in_time,The households were settled in time.
+ch_why_charter_petition,{grantee} petitioned in person at {seat}.
+ch_why_charter_recruited,Recruited to the charter's site.
+ch_why_charter_too_few,Too few households were settled by the deadline.
+ch_why_charter_village,A village grew on the charter's site.
+ch_why_claim_acre,{claimant} sowed an acre of the claim.
+ch_why_claim_deeded,{claimant} made the claim good with a dwelling.
+ch_why_claim_dwelling,{claimant} raised a dwelling on the claim.
+ch_why_claim_lapsed,{claimant} made no improvement in time.
+ch_why_claim_licensed,{claimant} staked the claim by the lord's licence.
+ch_why_claim_pulled,{claimant} pulled up the banner.
+ch_why_claim_squat,{claimant} squatted on the lord's waste.
+ch_why_claim_wild,{claimant} staked wild land.
+ch_why_cold,{who} froze in a freezing spell with no firewood.
+ch_why_cottage,"Couples in {place} waited for a home and the household had the coin, poles, daub and thatch."
+ch_why_crowded,The household left a crowded dwelling in {place}.
+ch_why_cull,Short of fodder in {place}: sheep slaughtered before winter.
+ch_why_dues_unpaid,{holder} left the dues to {lord} unpaid.
+ch_why_estate_debt,{creditor} claimed a debt of the estate of {dead}.
+ch_why_evicted,Evicted from {place} for arrears of {seasons} seasons.
+ch_why_famine_drift,{hungry} of {total} households were under 3 days of food: supply fell short of demand.
+ch_why_famine_events,{n} such events in the last 120 days.
+ch_why_fever,{who} died of fever and flux.
+ch_why_field_let,"A field let by the lord, {lord}."
+ch_why_ghosts_placed,{owner} placed ghosts.
+ch_why_handed_over,{builder} built the last piece and handed it over.
+ch_why_hero_opened,{who} opened it.
+ch_why_hired_better,{who} went for a better wage.
+ch_why_hired_work,{who} wanted work.
+ch_why_holder_died,"{dead}, the holder, died."
+ch_why_house_let,"A vacant house let by the lord, {lord}."
+ch_why_hunger,{who} starved: the nutrition reserve ran out.
+ch_why_husband_died,The husband died and {heir} took the estate.
+ch_why_infection,{who} died of sepsis from a wound.
+ch_why_ischaemia,"{who} lost a limb to a tourniquet kept on, and died."
+ch_why_lair_tale,An old tale is told of the lair {site}.
+ch_why_land_bought_lord,"Bought from the lord, {lord}."
+ch_why_land_seekers,A family came over the border to {place} looking for land.
+ch_why_land_sold,{seller} sold to a household of the place.
+ch_why_last_piece,The last piece was built for {owner}.
+ch_why_lease_ran_out,{holder}'s term ran out.
+ch_why_licence_bought,{claimant} bought the lord's licence.
+ch_why_licence_petitioned,{who} petitioned for a licence.
+ch_why_minors_left,{head} died and only minors remained.
+ch_why_misadventure,{who} died of illness or misadventure.
+ch_why_missed_payment,{client} missed a stage payment.
+ch_why_no_heir,There was no heir: the estate in {place} fell to the lord.
+ch_why_no_wages,{owner} could not pay the wages.
+ch_why_on_resource,{who} founded it on the resource.
+ch_why_organ,{who} died of a wound to a vital organ.
+ch_why_outbreak,{who} caught the sickness going round the town.
+ch_why_outbreak_summer,Summer flux spread through {place}.
+ch_why_outbreak_winter,Winter coughs and fevers spread through {place}.
+ch_why_plan_placed,{owner} placed a plan.
+ch_why_planner_wants,The lord's planner wants it built.
+ch_why_plot_let,"A plot let by the lord, {lord}."
+ch_why_revolt_brewing,Unrest in {place} stood above the top rung for a month.
+ch_why_riot_hunger,{n} rioters in {place} were hungry.
+ch_why_riot_tax,{n} rioters in {place} were under the tax.
+ch_why_riot_unrest,Unrest in {place} boiled over.
+ch_why_share_bought,{who} bought a share of the business.
+ch_why_share_sold,{who} sold the share back to the owner.
+ch_why_stall_day,A stall in {place} for a fair day.
+ch_why_stall_season,A stall in {place} for a season.
+ch_why_steward,{who} was hired to run it.
+ch_why_suffocation,{who} could not breathe.
+ch_why_taken_board,{who} took it from the notice board.
+ch_why_tax_evasion,{n} households in {place} withheld the hearth tax while grievances ran high.
+ch_why_trial_shaft,{who} sank a trial shaft.
+ch_why_unharvested,{acres} acres of fields went unharvested.
+ch_why_unlicensed,{who} opened a mine without the right holder's licence.
+ch_why_violence,{who} was killed in violence.
+ch_why_water,Water rose in the workings.
+ch_why_wedding,{bride} and {groom} wed: the couple found a home.
+ch_why_work_offered,{client} offered work on the board.
+ch_why_loss_blight,Blight in the grain.
+ch_why_loss_cold_summer,A cold summer.
+ch_why_loss_drought,Drought: the spring rains failed.
+ch_why_loss_fire,Fields burned.
+ch_why_loss_frost,"A late frost, on day {day}."
+ch_why_loss_hail,Hail flattened the standing crop.
+ch_why_loss_overdue,The harvest ran overdue: too few hands.
+ch_why_loss_trampling,Trampling by armies.
+ch_why_loss_waterlogged,A wet year: waterlogged fields.
+ch_why_loss_weeds,Poor weeding.
+ch_why_loss_wet_harvest,A wet harvest: grain rotted in the sheaf.
+ch_why_loss_winterkill,Winterkill: hard frost without snow cover.
+ch_why_artefact_maker,{maker} made it with a master's hand.
+ch_why_builder_unpaid,{builder} quit: the wages went unpaid.
+ch_why_contract_given_up,{contractor} gave the work up.
+ch_why_contract_lapsed,The contract with {contractor} lapsed.
+ch_why_heavy_rain,Heavy rain fell on the workings of {site} for hours on end.
+ch_why_outlaws_moved_in,A band of outlaws moved into {site}.
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."

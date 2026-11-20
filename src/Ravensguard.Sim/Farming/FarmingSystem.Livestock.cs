@@ -131,7 +131,7 @@ public sealed partial class FarmingSystem
             if (cull <= 0 && cullCows <= 0) continue;
             lv.Sheep[s] -= cull; lv.Cows[s] -= cullCows;
             Slaughtered(s, "sheep", cull); Slaughtered(s, "cow", cullCows);
-            Chronicle.Add(new ChronicleEntry(NewEvent(), now, "farm.cull", [Region.Settlements[s].Id], [new Cause(CauseKind.Weather, null, "short of fodder: sheep slaughtered before winter")],
+            Chronicle.Add(new ChronicleEntry(NewEvent(), now, "farm.cull", [Region.Settlements[s].Id], [Why.Of(CauseKind.Weather, "ch_why_cull", ChronParam.Place("place", Region.Settlements[s].Id))],
                 new Dictionary<string, string> { ["settlement"] = Region.Settlements[s].Name, ["culled"] = cull.ToString(), ["permille"] = permille.ToString() }));
         }
     }

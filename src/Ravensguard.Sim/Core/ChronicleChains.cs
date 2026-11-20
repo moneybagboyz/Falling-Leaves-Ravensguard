@@ -13,7 +13,7 @@ public sealed record ChainReport(int Entries, int Roots, int Unresolved, int Out
 /// </summary>
 public static class ChronicleChains
 {
-    public static ChainReport Check(Chronicle c, ChronicleTypes? types = null, int maxProblems = 20)
+    public static ChainReport Check(Chronicle c, ChronicleTypes? types = null, int maxProblems = 20, Chronicle? older = null)
     {
         var pos = new Dictionary<EntityId, int>(c.Count);
         for (int i = 0; i < c.Count; i++) pos[c.All[i].Id] = i;
@@ -28,7 +28,10 @@ public static class ChronicleChains
             {
                 if (cs.EventId is not { } id) continue;
                 anyEvent = true;
-                if (!pos.TryGetValue(id, out int j)) { unresolved++; Note($"{e.TypeId} {e.Id}: cause names {id}, which is not in the chronicle"); }
+                if (!pos.TryGetValue(id, out int j))
+                {
+                    if (older?.Get(id) is { } oe && oe.When.Seconds <= e.When.Seconds) continue;                  // an entry of the history this region continues: earlier by construction
+                    unresolved++; Note($"{e.TypeId} {e.Id}: cause names {id}, which is not in the chronicle"); }
                 else if (j >= i || c.All[j].When.Seconds > e.When.Seconds) { outOfOrder++; Note($"{e.TypeId} {e.Id}: cause {id} ({c.All[j].TypeId}) is not earlier"); }
             }
             if (anyEvent) continue;

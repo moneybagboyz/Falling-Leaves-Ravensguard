@@ -65,7 +65,7 @@ public static class StartingEstate
         var ow = OwnershipWiring.For(st, db);
         var h = ow.Hold(b);
         h.FoundedDay = day - Math.Max(0, inh.Years) * TimeConst.DaysPerYear; h.HandsOn = true; h.InheritedDay = day;
-        Chron(new GameTime(nowSec), "estate_settled", [heroId, b.Id], [new Cause(CauseKind.Death, null, "the husband's death")],
+        Chron(new GameTime(nowSec), "estate_settled", [heroId, b.Id], [Why.Of(CauseKind.Death, "ch_why_husband_died", ChronParam.Person("heir", heroId))],
             ("name", hero.Name), ("business", kind.Id), ("arrears", arrears.ToString(System.Globalization.CultureInfo.InvariantCulture)));
         return new StartingEstateResult(b.Id, lease, arrears, lot < 0 ? "no house to let: the business has no premises" : "");
     }

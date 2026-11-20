@@ -161,7 +161,7 @@ public sealed partial class ContinentTrade
         for (int i = 0; i < dead && i < c.Crew.Length; i++)
         {
             int p = c.Crew[c.Crew.Length - 1 - i];                                           // guards stand in front, drivers behind: the guards are the first to go
-            if (w.People.Status[p] == PersonStatus.Alive) { Demography.Kill(w, p, DeathCause.Violence, time, ctx.Outbox, "killed defending a caravan"); killed.Add(p); }
+            if (w.People.Status[p] == PersonStatus.Alive) { Demography.Kill(w, p, DeathCause.Violence, time, ctx.Outbox, "ch_why_caravan_defence"); killed.Add(p); }
         }
         int lostPct = DetRng.Range(ctx.Seed, ctx.Hour, key, StreamCaravan, 4, 50, 101);
         var chest = _econ.OpenStore(StoreKind.Chest, LootOwner(c.Home), 0, 0, enforce: false);
@@ -172,10 +172,9 @@ public sealed partial class ContinentTrade
         long coin = led.Balance(c.Account).Mites * lostPct / 100;
         if (coin > 0 && led.Transfer(c.Account, hoard, new Coin(coin), TransferReason.Hoard)) LootMites += coin;
         bool masterDead = false;
-        if (c.Master >= 0 && w.People.Status[c.Master] == PersonStatus.Alive && DetRng.Range(ctx.Seed, ctx.Hour, key, StreamCaravan, 5, 0, 100) < 15) { Demography.Kill(w, c.Master, DeathCause.Violence, time, ctx.Outbox, "killed in a robbery on the road"); masterDead = true; }
+        if (c.Master >= 0 && w.People.Status[c.Master] == PersonStatus.Alive && DetRng.Range(ctx.Seed, ctx.Hour, key, StreamCaravan, 5, 0, 100) < 15) { Demography.Kill(w, c.Master, DeathCause.Violence, time, ctx.Outbox, "ch_why_caravan_robbery"); masterDead = true; }
         var survivors = c.Crew.Where(p => w.People.Status[p] == PersonStatus.Alive).ToArray();
-        string where = $"on the road from {w.Population.Region.Settlements[c.Settlement].Name}";
-        ctx.Outbox.Chronicle(time, "caravan_raid", [c.Id], [new Cause(CauseKind.Raid, null, $"bandits ({band}) took {lostPct} percent of a caravan {where}; danger {c.DangerX}")],
+        ctx.Outbox.Chronicle(time, "caravan_raid", [c.Id], [Why.Of(CauseKind.Raid, "ch_why_caravan_raid", ChronParam.Count("band", band), ChronParam.Count("pct", lostPct), ChronParam.Place("place", w.Population.Region.Settlements[c.Settlement].Id))],
             ("caravan", c.Id.ToString()), ("lost_percent", lostPct.ToString()), ("dead", killed.Count.ToString()), ("goods_g", goods.ToString()), ("coin_mites", coin.ToString()));
         Ravensguard.Sim.Core.EntityId none = EntityId.None; _ = none;
         if (survivors.Length == 0 || masterDead || lostPct >= 100 && store.RowCount == 0 && led.Balance(c.Account).Mites == 0)
@@ -202,7 +201,7 @@ public sealed partial class ContinentTrade
         c.Crew = []; c.Guards = 0;
         c.State = CaravanState.Lost; c.LostDay = (int)time.TotalDays; c.Region = c.Home;
         CaravansLost++;
-        ctx.Outbox.Chronicle(time, "caravan_lost", [c.Id], [new Cause(CauseKind.Raid, null, "robbers took the cargo and the crew; the merchant's wagons are gone")], ("caravan", c.Id.ToString()), ("settlement", _ew.World.Population.Region.Settlements[c.Settlement].Name));
+        ctx.Outbox.Chronicle(time, "caravan_lost", [c.Id], [Why.Of(CauseKind.Raid, "ch_why_caravan_lost", ChronParam.Place("place", _ew.World.Population.Region.Settlements[c.Settlement].Id))], ("caravan", c.Id.ToString()), ("settlement", _ew.World.Population.Region.Settlements[c.Settlement].Name));
         var home = st.Summaries[c.Home]; home.News.Add(new NewsItem(NewsKind.CaravanLost, (byte)c.Home, 1, (int)time.TotalDays, 0)); if (home.News.Count > RegionSummary.NewsCap) home.News.RemoveAt(0);
     }
 

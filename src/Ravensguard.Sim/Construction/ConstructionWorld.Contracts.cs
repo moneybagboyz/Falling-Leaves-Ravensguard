@@ -150,7 +150,7 @@ public sealed partial class ConstructionWorld
         // chest, which pays only for the contract's goods (P5-I fix: paid into his business's cash box, the first day's dividend took half of it); what is left is his at the end
         Release(c, EscrowOf(c), MaterialsPurse(c), Math.Min(third, bid.MaterialsMites + bid.HaulMites));
         StartBuilder(c, s, b, nowSec);
-        Chron(nowSec, "contract_signed", [by, b.Id, s.Id], [new Cause(CauseKind.Other, null, "a builder hired at his bid")], ("total", c.TotalMites.ToString()), ("crew", c.Crew.ToString()));
+        Chron(nowSec, "contract_signed", [by, b.Id, s.Id], [Why.Of(CauseKind.Trade, "ch_why_builder_hired", ChronParam.Person("client", by))], ("total", c.TotalMites.ToString()), ("crew", c.Crew.ToString()));
         Publish(nowSec);
         return new ConstructionResult(true, "cn_contract_signed", [b.Name, c.TotalMites, bid.ExpectedDaysX10 / 10, bid.ExpectedDaysX10 % 10], third, c.Id);
     }
@@ -304,7 +304,7 @@ public sealed partial class ConstructionWorld
         Book.Contracts[c.Id] = c;
         Econ.Ledger.Transfer(cp, EscrowOf(c), new Coin(labour), JobReasons.Escrow);
         c.Stages = 3;
-        Chron(nowSec, "contract_posted", [client, s.Id], [new Cause(CauseKind.Other, null, kind == ContractKind.Civic ? "the lord's planner wants it built" : "work offered on the board")], ("wages", labour.ToString()));
+        Chron(nowSec, "contract_posted", [client, s.Id], [Why.Of(CauseKind.Trade, kind == ContractKind.Civic ? "ch_why_planner_wants" : "ch_why_work_offered", ChronParam.Person("client", client))], ("wages", labour.ToString()));
         Publish(nowSec);
         return new ConstructionResult(true, "cn_contract_posted", [labour], labour, c.Id);
     }
@@ -328,7 +328,7 @@ public sealed partial class ConstructionWorld
         Econ.Ledger.Open(heroKind, hero);
         if (s.State == SiteState.Paused && s.Pause == PauseReason.Owner) { s.State = SiteState.Active; s.Pause = PauseReason.None; }
         Refresh(s);
-        Chron(nowSec, "contract_taken", [hero, s.Id], [new Cause(CauseKind.Other, null, "taken from the notice board")], ("wages", c.LabourMites.ToString()));
+        Chron(nowSec, "contract_taken", [hero, s.Id], [Why.Of(CauseKind.Trade, "ch_why_taken_board", ChronParam.Person("who", hero))], ("wages", c.LabourMites.ToString()));
         Publish(nowSec);
         return new ConstructionResult(true, "cn_contract_taken", [c.LabourMites, (c.DueSec - nowSec) / 86400], 0, c.Id);
     }
@@ -344,7 +344,7 @@ public sealed partial class ConstructionWorld
 
     private void Repost(Contract c, long nowSec, string why)
     {
-        Chron(nowSec, "contract_lapsed", [c.Contractor, c.Site], [new Cause(CauseKind.Other, null, why)]);
+        Chron(nowSec, "contract_lapsed", [c.Contractor, c.Site], [Why.Of(CauseKind.Trade, why == "given up" ? "ch_why_contract_given_up" : "ch_why_contract_lapsed", ChronParam.Person("contractor", c.Contractor))]);
         // the hero's followers leave the crew with him (they built for his wages, not the site's)
         if (Site(c.Site) is { } s) { foreach (var m in s.Crew) if (m.Class == CrewClass.Follower) m.Ghost = default; s.Crew.RemoveAll(m => m.Class == CrewClass.Follower); s.FastOk = false; }
         c.State = ContractState.Open; c.Contractor = default; c.ContractorKind = PurseKind.Person; c.PostedSec = nowSec; c.SignedSec = 0; c.DueSec = 0;
@@ -434,7 +434,7 @@ public sealed partial class ConstructionWorld
             Release(c, escrow, to, Econ.Ledger.Balance(escrow).Mites);
             CloseMaterials(c);
             c.State = ContractState.Done; c.DoneSec = nowSec;
-            Chron(nowSec, "contract_done", [c.Client, c.Contractor, s.Id], [new Cause(CauseKind.Other, null, "the last piece built and handed over")], ("paid", c.ReleasedMites.ToString()));
+            Chron(nowSec, "contract_done", [c.Client, c.Contractor, s.Id], [Why.Of(CauseKind.Trade, "ch_why_handed_over", ChronParam.Person("builder", c.Contractor))], ("paid", c.ReleasedMites.ToString()));
             return true;
         }
         if (done * 1000 < c.WorkUnits * ContractRules.MidStagePm) return false;
@@ -462,7 +462,7 @@ public sealed partial class ConstructionWorld
         s.Pause = PauseReason.NoWages;
         LetCrewGo(s);
         Event(ConstructionEventKind.Paused, nowSec, s.PileX, s.PileY, s.PileZ, "", s.Id);
-        Chron(nowSec, "contract_stopped", [c.Client, c.Contractor, s.Id], [new Cause(CauseKind.Other, null, "the client missed a stage payment")], ("owed", third.ToString()));
+        Chron(nowSec, "contract_stopped", [c.Client, c.Contractor, s.Id], [Why.Of(CauseKind.Trade, "ch_why_missed_payment", ChronParam.Person("client", c.Client))], ("owed", third.ToString()));
         return true;
     }
 
@@ -502,7 +502,7 @@ public sealed partial class ConstructionWorld
         c.State = ContractState.Signed; c.Contractor = best.Id; c.ContractorKind = best.Kind; c.SignedSec = nowSec; c.WorkUnits = LabourUnits(s);
         Econ.Ledger.Open(best.Kind, best.Id);
         StartBuilder(c, s, best, nowSec);
-        Chron(nowSec, "contract_taken", [best.Id, s.Id], [new Cause(CauseKind.Other, null, "a builder of the region took the posted work")], ("wages", c.LabourMites.ToString()));
+        Chron(nowSec, "contract_taken", [best.Id, s.Id], [Why.Of(CauseKind.Trade, "ch_why_builder_took", ChronParam.Person("builder", best.Id))], ("wages", c.LabourMites.ToString()));
         return true;
     }
 }

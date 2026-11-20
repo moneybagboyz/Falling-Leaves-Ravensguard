@@ -473,7 +473,7 @@ public sealed partial class ConstructionWorld
         {
             s.State = SiteState.Finished;
             Event(ConstructionEventKind.Finished, sec, s.PileX, s.PileY, s.PileZ, s.Blueprint, s.Id);
-            Chron(sec, "site_finished", [s.Owner, s.Id], [new Cause(CauseKind.Other, null, "the last piece built")], ("blueprint", s.Blueprint), ("pieces", s.PiecesBuilt.ToString()));
+            Chron(sec, "site_finished", [s.Owner, s.Id], [Why.Of(CauseKind.Trade, "ch_why_last_piece", ChronParam.Person("owner", s.Owner))], ("blueprint", s.Blueprint), ("pieces", s.PiecesBuilt.ToString()));
         }
     }
 
@@ -574,14 +574,14 @@ public sealed partial class ConstructionWorld
         {
             s.Pause = PauseReason.NoWages;
             Event(ConstructionEventKind.Paused, sec, s.PileX, s.PileY, s.PileZ, "", s.Id);
-            Chron(sec, "site_stopped", [s.Owner, s.Id], [new Cause(CauseKind.Other, null, "no wages")], ("need", need.ToString()));
+            Chron(sec, "site_stopped", [s.Owner, s.Id], [Why.Of(CauseKind.Trade, "ch_why_no_wages", ChronParam.Person("owner", s.Owner))], ("need", need.ToString()));
         }
         foreach (var m in s.Crew.Where(Paid).ToList())
         {
             m.Ghost = default;
             if (++m.ShortDays < Rules.QuitAfterShortDays) continue;
             s.Crew.Remove(m);
-            Chron(sec, "builder_quit", [m.Person, s.Id], [new Cause(CauseKind.Other, null, "unpaid")], ("days", m.ShortDays.ToString()));
+            Chron(sec, "builder_quit", [m.Person, s.Id], [Why.Of(CauseKind.Trade, "ch_why_builder_unpaid", ChronParam.Person("builder", m.Person))], ("days", m.ShortDays.ToString()));
         }
     }
 

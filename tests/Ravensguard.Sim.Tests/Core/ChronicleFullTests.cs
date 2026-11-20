@@ -149,8 +149,8 @@ public class ChronicleFullTests(ITestOutputHelper output)
         if (total < LegacySentenceNotes) output.WriteLine($"lower LegacySentenceNotes to {total}");
     }
 
-    /// <summary>The count of sentence notes left in the sim at P6-A2 (Phase 2-5 writers and history v0). Lower it as writers move to keys.</summary>
-    private const int LegacySentenceNotes = 83;
+    /// <summary>The count of sentence notes left in the sim: 83 at P6-A2, 3 after P6-E4 (the continent tick's word_reached, which part F moves, and history v0's two seed causes, frozen with v0 worlds). Lower it as writers move to keys.</summary>
+    private const int LegacySentenceNotes = 3;
 
     // ---------------------------------------------------------------- CH-3
 

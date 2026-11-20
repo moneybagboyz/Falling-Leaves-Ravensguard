@@ -246,7 +246,7 @@ public sealed partial class HoldingsWorld
         });
         gs.Parcels.Add(rec);
         c.Parcel = pidx;
-        chron(Day(day), "land_cleared", [c.Owner], [new Cause(CauseKind.Other, null, NoteKey: "ch_note_homestead_acre")],
+        chron(Day(day), "land_cleared", [c.Owner], [new Cause(CauseKind.Law, null, NoteKey: "ch_note_homestead_acre")],
             ("settlement", s >= 0 ? r.Settlements[s].Name : ""), ("acres", "1"), ("wood_kg", ((c.LogsG + c.FirewoodG) / 1000).ToString()));
     }
 

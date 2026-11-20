@@ -115,7 +115,7 @@ public sealed partial class OwnershipWorld
                 if (ResourceCode.IsOre(r.Resource) && r.Method != ProspectMethod.Report)
                 {
                     int s = NearestSettlement(j.Tile);
-                    Event(day, "ore_strike", [j.Person], [new Cause(CauseKind.Trade, null, "a trial shaft")], ("settlement", s >= 0 ? Pop.Region.Settlements[s].Name : ""), ("mineral", ResourceCode.Mineral(r.Resource).ToString().ToLowerInvariant()), ("tonnes", (r.EstG / 1_000_000).ToString()));
+                    Event(day, "ore_strike", [j.Person], [Why.Of(CauseKind.Trade, "ch_why_trial_shaft", ChronParam.Person("who", j.Person))], ("settlement", s >= 0 ? Pop.Region.Settlements[s].Name : ""), ("mineral", ResourceCode.Mineral(r.Resource).ToString().ToLowerInvariant()), ("tonnes", (r.EstG / 1_000_000).ToString()));
                 }
         }
         jobs.RemoveAll(j => j.Done);
@@ -190,7 +190,7 @@ public sealed partial class OwnershipWorld
         Book.Licences.Add(lic);
         foreach (var h in Book.Holdings.Values) if (h.Vein == body.Vein && h.Licence < 0) { h.Licence = lic.Serial; h.Unlicensed = false; h.Alerts &= ~OwnerAlert.Unlicensed; }
         string grantor = Land?.GrantorName(gh.Kind, gh.Index) ?? "";
-        Event(day, "mining_licence", [Hero], [new Cause(CauseKind.Law, null, "a licence petitioned for")], ("grantor", grantor), ("mineral", body.Mineral.ToString().ToLowerInvariant()), ("fee", fee.ToString()));
+        Event(day, "mining_licence", [Hero], [Why.Of(CauseKind.Law, "ch_why_licence_petitioned", ChronParam.Person("who", Hero))], ("grantor", grantor), ("mineral", body.Mineral.ToString().ToLowerInvariant()), ("fee", fee.ToString()));
         return new OwnResult(true, "px_licensed", [HeroText.Of("px_res_" + body.Mineral.ToString().ToLowerInvariant()), grantor, M(fee), PRules.RoyaltyPm / 10], fee);
     }
 
@@ -258,10 +258,10 @@ public sealed partial class OwnershipWorld
             {
                 h.Unlicensed = true; h.Alerts |= OwnerAlert.Unlicensed;
                 var witnesses = Pop.People.Count > 0 ? new List<EntityId>() : [];
-                Event(day, "unlicensed_mine", [Hero, b.Id], [new Cause(CauseKind.Crime, null, "a mine opened without the right holder's licence")], ("settlement", Pop.Region.Settlements[s].Name), ("mineral", v.Mineral.ToString().ToLowerInvariant()));
+                Event(day, "unlicensed_mine", [Hero, b.Id], [Why.Of(CauseKind.Crime, "ch_why_unlicensed", ChronParam.Person("who", Hero))], ("settlement", Pop.Region.Settlements[s].Name), ("mineral", v.Mineral.ToString().ToLowerInvariant()));
             }
         }
-        Event(day, "business_founded", [Hero, b.Id], [new Cause(CauseKind.Trade, null, "on the resource")], ("settlement", Pop.Region.Settlements[s].Name), ("kind", kind.Id), ("capital", capital.ToString()), ("tiles", onTiles.Count.ToString()));
+        Event(day, "business_founded", [Hero, b.Id], [Why.Of(CauseKind.Trade, "ch_why_on_resource", ChronParam.Person("who", Hero))], ("settlement", Pop.Region.Settlements[s].Name), ("kind", kind.Id), ("capital", capital.ToString()), ("tiles", onTiles.Count.ToString()));
         return new OwnResult(true, "bz_founded_site", [Name(b), onTiles.Count, M(capital)], capital, b.Id);
     }
 
@@ -279,7 +279,7 @@ public sealed partial class OwnershipWorld
             uint a = DetRng.NextUInt(Seed, hour, m.SiteId.Value, RngStreams.NewMineHazard, 0), c = DetRng.NextUInt(Seed, hour, m.SiteId.Value, RngStreams.NewMineHazard, 1);
             bool flood = (long)a * 1000 < (long)PRules.NewMineFloodPm * m.Levels * 4_294_967_296L;
             bool cave = (long)c * 1000 < (long)PRules.NewMineCaveInPm * m.Levels * 4_294_967_296L;
-            if (flood) { m.State = MineStateKind.Flooded; Notices.Add(HeroText.Of("px_mine_flooded", Name(b))); Event(day, "mine_flooded", [b.Id], [new Cause(CauseKind.MineFlood, null, "water in the workings")], ("site", Name(b))); }
+            if (flood) { m.State = MineStateKind.Flooded; Notices.Add(HeroText.Of("px_mine_flooded", Name(b))); Event(day, "mine_flooded", [b.Id], [Why.Of(CauseKind.MineFlood, "ch_why_water", ChronParam.Place("mine", b.Id))], ("site", Name(b))); }
             if (cave) { m.ClosedUntilDay = day + 15; Notices.Add(HeroText.Of("px_mine_cave_in", Name(b))); }
         }
     }

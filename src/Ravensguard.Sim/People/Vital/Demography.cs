@@ -55,20 +55,23 @@ public static class Demography
             if (cause == DeathCause.Hunger && v.FamineEntry[settlement] != 0) ev = new EntityId(v.FamineEntry[settlement]);
             if (cause == DeathCause.Disease && v.OutbreakEntry[settlement] != 0) ev = new EntityId(v.OutbreakEntry[settlement]);
         }
+        var who = ChronParam.Person("who", pt.IdOf(p));
+        // a caller's note is a key (ch_...) or, from a legacy writer, English shown as written; with none, the cause's own key names the dead
+        Cause Hurt(string fallback) => note.StartsWith("ch_", StringComparison.Ordinal) ? Why.Of(CauseKind.Wound, note, who) : note.Length > 0 ? new Cause(CauseKind.Wound, null, note) : Why.Of(CauseKind.Wound, fallback, who);
         Cause c = chain ?? cause switch
         {
-            DeathCause.Age => new Cause(CauseKind.Death, null, "old age"),
-            DeathCause.Hunger => new Cause(CauseKind.Famine, ev, "starvation: the nutrition reserve ran out"),
-            DeathCause.Disease => new Cause(CauseKind.Disease, ev, ev.HasValue ? "outbreak" : "fever and flux"),
-            DeathCause.Cold => new Cause(CauseKind.Weather, null, "cold: no firewood in a freezing spell"),
-            DeathCause.Violence => new Cause(CauseKind.Wound, null, note.Length > 0 ? note : "violence"),
-            DeathCause.BloodLoss => new Cause(CauseKind.Wound, null, note.Length > 0 ? note : "bled to death"),
-            DeathCause.Organ => new Cause(CauseKind.Wound, null, note.Length > 0 ? note : "a wound to a vital organ"),
-            DeathCause.Brain => new Cause(CauseKind.Wound, null, note.Length > 0 ? note : "a wound to the brain"),
-            DeathCause.Infection => new Cause(CauseKind.Wound, null, note.Length > 0 ? note : "sepsis from a wound"),
-            DeathCause.Suffocation => new Cause(CauseKind.Wound, null, note.Length > 0 ? note : "could not breathe"),
-            DeathCause.Ischaemia => new Cause(CauseKind.Wound, null, note.Length > 0 ? note : "a limb lost to a tourniquet kept on"),
-            _ => new Cause(CauseKind.Death, null, note.Length > 0 ? note : "illness or misadventure"),
+            DeathCause.Age => Why.Of(CauseKind.Death, "ch_why_age", who, ChronParam.Count("age", age)),
+            DeathCause.Hunger => Why.After(CauseKind.Famine, ev, "ch_why_hunger", who),
+            DeathCause.Disease => Why.After(CauseKind.Disease, ev, ev.HasValue ? "ch_why_outbreak" : "ch_why_fever", who),
+            DeathCause.Cold => Why.Of(CauseKind.Weather, "ch_why_cold", who),
+            DeathCause.Violence => Hurt("ch_why_violence"),
+            DeathCause.BloodLoss => Hurt("ch_why_bloodloss"),
+            DeathCause.Organ => Hurt("ch_why_organ"),
+            DeathCause.Brain => Hurt("ch_why_brain"),
+            DeathCause.Infection => Hurt("ch_why_infection"),
+            DeathCause.Suffocation => Hurt("ch_why_suffocation"),
+            DeathCause.Ischaemia => Hurt("ch_why_ischaemia"),
+            _ => note.Length > 0 && !note.StartsWith("ch_", StringComparison.Ordinal) ? new Cause(CauseKind.Death, null, note) : Why.Of(CauseKind.Death, note.Length > 0 ? note : "ch_why_misadventure", who),
         };
         ob.Chronicle(when, "death", [pt.IdOf(p)], [c], ("name", pt.FullName(p)), ("age", age.ToString()), ("cause", cause.ToString()),
             ("settlement", settlement >= 0 ? w.Population.Region.Settlements[settlement].Name : ""));
@@ -154,7 +157,7 @@ public static class Demography
         ob.Count(kin ? "orphans_to_kin" : "orphans_to_parish", kids.Length);
         if (!kin || w.Rates.ChronicleEveryEvent)
             ob.Chronicle(when, kin ? "guardianship" : "escheat", [hht.IdOf(hh), hht.IdOf(guardian)],
-                [new Cause(CauseKind.Death, null, "the head died and only minors remained")], ("household", hht.Name[hh]), ("minors", kids.Length.ToString()));
+                [Why.Of(CauseKind.Death, "ch_why_minors_left", ChronParam.Person("head", pt.IdOf(oldHead)))], ("household", hht.Name[hh]), ("minors", kids.Length.ToString()));
     }
 
     private static int FindKinHousehold(SimWorld w, int hh, int[] kids, int fief, int day)
@@ -231,7 +234,7 @@ public static class Demography
             EscheatAssets(w, hh, fief, TransferReason.Escheat);
             RelocateParcels(w, hh, LordHousehold(w, fief, -1, exclude: hh));
             ob.Count("escheat");
-            ob.Chronicle(when, "escheat", [hht.IdOf(hh)], [new Cause(CauseKind.Death, null, "no heir: the estate fell to the lord")], ("household", hht.Name[hh]),
+            ob.Chronicle(when, "escheat", [hht.IdOf(hh)], [Why.Of(CauseKind.Death, "ch_why_no_heir", ChronParam.Place("place", w.Population.Region.Settlements[hht.Settlement[hh]].Id))], ("household", hht.Name[hh]),
                 ("settlement", w.Population.Region.Settlements[hht.Settlement[hh]].Name));
         }
         VacateDwelling(w, hh);
@@ -373,7 +376,7 @@ public static class Demography
         RelocateParcels(w, hh, LordHousehold(w, fief, -1, exclude: hh));
         VacateDwelling(w, hh);
         if (w.Rates.ChronicleEveryEvent)
-            ob.Chronicle(when, "emigration", [hht.IdOf(hh)], [new Cause(CauseKind.Migration, null, "the household left a crowded dwelling")], ("household", hht.Name[hh]), ("members", members.Length.ToString()));
+            ob.Chronicle(when, "emigration", [hht.IdOf(hh)], [Why.Of(CauseKind.Migration, "ch_why_crowded", ChronParam.Place("place", w.Population.Region.Settlements[hht.Settlement[hh]].Id))], ("household", hht.Name[hh]), ("members", members.Length.ToString()));
     }
 
     // ------------------------------------------------------------------ immigration
@@ -481,7 +484,7 @@ public static class Demography
         pop.ResetKin();
         GiveStake(w, hh, stakeFor(persons));
         ob.Count("immigrants", persons); LastSettled = persons;
-        if (w.Rates.ChronicleEveryEvent) ob.Chronicle(when, "immigration", [hid], [new Cause(CauseKind.Migration, null, "a family came over the border looking for land")], ("household", family), ("members", persons.ToString()), ("settlement", pop.Region.Settlements[s].Name));
+        if (w.Rates.ChronicleEveryEvent) ob.Chronicle(when, "immigration", [hid], [Why.Of(CauseKind.Migration, "ch_why_land_seekers", ChronParam.Place("place", pop.Region.Settlements[s].Id))], ("household", family), ("members", persons.ToString()), ("settlement", pop.Region.Settlements[s].Name));
         _ = salt;
         return hh;
     }
@@ -547,7 +550,7 @@ public static class Demography
         ob.Count("births");
         bool notable = pt.Notable[mother] != EntityId.None || (pt.Father[c] >= 0 && pt.Notable[pt.Father[c]] != EntityId.None);
         if (w.Rates.ChronicleEveryEvent || notable)
-            ob.Chronicle(when, "birth", pt.Father[c] >= 0 ? [id, motherId, pt.IdOf(pt.Father[c])] : [id, motherId], [new Cause(CauseKind.Other, null, "a child is born")],
+            ob.Chronicle(when, "birth", pt.Father[c] >= 0 ? [id, motherId, pt.IdOf(pt.Father[c])] : [id, motherId], [Why.Of(CauseKind.Family, "ch_why_birth", ChronParam.Person("mother", motherId))],
                 ("name", pt.FullName(c)), ("sex", female ? "female" : "male"), ("settlement", w.Population.Region.Settlements[hht.Settlement[hh]].Name));
         return c;
     }

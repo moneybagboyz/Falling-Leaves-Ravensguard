@@ -175,7 +175,7 @@ public sealed partial class LandWorld
             DuesMitesPerSeason = pick.DuesMites, AcquiredDay = day, Cause = DeedCause.Bought, Rect = pick.Rect,
         };
         Put(deed, day);
-        chron(Day(day), "land_bought", [buyer, id, lordId], [new Cause(CauseKind.Trade, null, "bought from the lord")],
+        chron(Day(day), "land_bought", [buyer, id, lordId], [Why.Of(CauseKind.Trade, "ch_why_land_bought_lord", ChronParam.Person("lord", lordId))],
             ("settlement", st.Name), ("price", pick.PriceMites.ToString()), ("area_m2", pick.AreaM2.ToString()), ("tenure", pick.Tenure.ToString()));
         return new LandResult(true, "ld_bought", [st.Name, Money(pick.PriceMites), pick.Rect.W, pick.Rect.H], pick.PriceMites, id);
     }
@@ -212,7 +212,7 @@ public sealed partial class LandWorld
             DuesMitesPerSeason = Math.Max(1, pick.DuesMites), LeaseEndDay = day + Rules.LeaseTermDays, Lessor = lordId, LessorPurse = lordKind, AcquiredDay = day, Cause = DeedCause.Leased, Rect = pick.Rect,
         };
         Put(deed, day);
-        chron(Day(day), "plot_leased", [lessee, id, lordId], [new Cause(CauseKind.Trade, null, "a plot let by the lord")], ("settlement", st.Name), ("rent", deed.DuesMitesPerSeason.ToString()));
+        chron(Day(day), "plot_leased", [lessee, id, lordId], [Why.Of(CauseKind.Trade, "ch_why_plot_let", ChronParam.Person("lord", lordId))], ("settlement", st.Name), ("rent", deed.DuesMitesPerSeason.ToString()));
         return new LandResult(true, "ld_leased_house", [st.Name, Money(deed.DuesMitesPerSeason)], deed.DuesMitesPerSeason, id);
     }
 
@@ -253,7 +253,7 @@ public sealed partial class LandWorld
         if (to == EntityId.None || pay <= 0 || !Pay(holder, kind, to, tk, pay, TransferReason.Rent)) return new LandResult(false, "ld_cannot_afford", [Money(d.OwedMites)], d.OwedMites, CannotAfford: true);
         d.OwedMites -= pay;
         if (d.OwedMites == 0) { d.ArrearsSeasons = 0; d.InDebt = false; d.NoticeDay = -1; }
-        chron(Day(day), "arrears_paid", [holder, d.Id, to], [new Cause(CauseKind.Trade, null, "arrears paid")], ("paid", pay.ToString()), ("owed", d.OwedMites.ToString()));
+        chron(Day(day), "arrears_paid", [holder, d.Id, to], [Why.Of(CauseKind.Trade, "ch_why_arrears_paid", ChronParam.Person("holder", holder))], ("paid", pay.ToString()), ("owed", d.OwedMites.ToString()));
         return new LandResult(true, d.OwedMites == 0 ? "ld_arrears_cleared" : "ld_arrears_part", [Money(pay), Money(d.OwedMites)], pay, d.Id);
     }
 
@@ -306,7 +306,7 @@ public sealed partial class LandWorld
             if (!Pay(buyerId, PurseKind.Household, d.Holder, d.HolderPurse, price, TransferReason.Trade)) continue;
             d.Holder = buyerId; d.HolderPurse = PurseKind.Household; d.AskMites = 0; d.AcquiredDay = day; d.Cause = DeedCause.Sold;
             Book.Changes.Add(new DeedChange(day, d.Id, d.Holder, d.Tenure, d.DuesMitesPerSeason, d.LeaseEndDay, DeedCause.Sold));
-            chron(Day(day), "land_sold", [seller, buyerId, d.Id], [new Cause(CauseKind.Trade, null, "sold to a household of the place")], ("price", price.ToString()), ("household", hht.Name[best]));
+            chron(Day(day), "land_sold", [seller, buyerId, d.Id], [Why.Of(CauseKind.Trade, "ch_why_land_sold", ChronParam.Person("seller", seller))], ("price", price.ToString()), ("household", hht.Name[best]));
         }
     }
 
@@ -338,7 +338,7 @@ public sealed partial class LandWorld
         };
         Put(deed, day);
         ParcelLet?.Invoke(p, lessee, true);
-        chron(Day(day), "land_leased", [lessee, id, lordId], [new Cause(CauseKind.Trade, null, "a field let by the lord")], ("parcel", p.ToString()), ("fields", pc.FieldCount.ToString()), ("rent", deed.DuesMitesPerSeason.ToString()));
+        chron(Day(day), "land_leased", [lessee, id, lordId], [Why.Of(CauseKind.Trade, "ch_why_field_let", ChronParam.Person("lord", lordId))], ("parcel", p.ToString()), ("fields", pc.FieldCount.ToString()), ("rent", deed.DuesMitesPerSeason.ToString()));
         return new LandResult(true, "ld_leased_field", [pc.FieldCount, Money(deed.DuesMitesPerSeason)], deed.DuesMitesPerSeason, id);
     }
 
@@ -370,7 +370,7 @@ public sealed partial class LandWorld
             LeaseEndDay = fairDay ? day + 1 : NextSeasonStart(day), Lessor = townId, LessorPurse = townKind, AcquiredDay = day, Cause = DeedCause.Leased, Renew = false,
         };
         Put(deed, day);
-        chron(Day(day), "stall_rented", [lessee, id, townId], [new Cause(CauseKind.Trade, null, fairDay ? "a fair day" : "a season")], ("settlement", Region.Settlements[s].Name), ("rent", rent.ToString()));
+        chron(Day(day), "stall_rented", [lessee, id, townId], [Why.Of(CauseKind.Trade, fairDay ? "ch_why_stall_day" : "ch_why_stall_season", ChronParam.Place("place", townId))], ("settlement", Region.Settlements[s].Name), ("rent", rent.ToString()));
         return new LandResult(true, fairDay ? "ld_stall_day" : "ld_stall_season", [Region.Settlements[s].Name, Money(rent)], rent, id);
     }
 
@@ -389,7 +389,7 @@ public sealed partial class LandWorld
         };
         Put(deed, day);
         HouseStore(deed);
-        chron(Day(day), "house_leased", [lessee, id, lordId], [new Cause(CauseKind.Trade, null, "a vacant house let by the lord")], ("settlement", Region.Settlements[s].Name), ("rent", deed.DuesMitesPerSeason.ToString()));
+        chron(Day(day), "house_leased", [lessee, id, lordId], [Why.Of(CauseKind.Trade, "ch_why_house_let", ChronParam.Person("lord", lordId))], ("settlement", Region.Settlements[s].Name), ("rent", deed.DuesMitesPerSeason.ToString()));
         return new LandResult(true, "ld_leased_house", [Region.Settlements[s].Name, Money(deed.DuesMitesPerSeason)], deed.DuesMitesPerSeason, id);
     }
 
@@ -446,12 +446,12 @@ public sealed partial class LandWorld
             if (d.ArrearsSeasons >= Rules.ArrearsDebtSeasons && !d.InDebt)
             {
                 d.InDebt = true;
-                chron(Day(day), "land_debt", [d.Holder, d.Id, to], [new Cause(CauseKind.Tax, null, "dues unpaid")], ("owed", d.OwedMites.ToString()), ("seasons", d.ArrearsSeasons.ToString()));
+                chron(Day(day), "land_debt", [d.Holder, d.Id, to], [Why.Of(CauseKind.Tax, "ch_why_dues_unpaid", ChronParam.Person("holder", d.Holder), ChronParam.Person("lord", to))], ("owed", d.OwedMites.ToString()), ("seasons", d.ArrearsSeasons.ToString()));
             }
             if (d.ArrearsSeasons >= Rules.ArrearsEvictSeasons && d.NoticeDay < 0 && d.Kind != HoldingKind.FoundingCharter)
             {
                 d.NoticeDay = day + Rules.EvictionNoticeDays;
-                chron(Day(day), "land_notice", [d.Holder, d.Id, to], [new Cause(CauseKind.Law, null, "arrears")], ("owed", d.OwedMites.ToString()), ("until", d.NoticeDay.ToString()));
+                chron(Day(day), "land_notice", [d.Holder, d.Id, to], [Why.Of(CauseKind.Law, "ch_why_arrears_notice", ChronParam.Person("holder", d.Holder), ChronParam.Person("lord", to))], ("owed", d.OwedMites.ToString()), ("until", d.NoticeDay.ToString()));
             }
         }
     }
@@ -480,7 +480,7 @@ public sealed partial class LandWorld
         if (d.Kind == HoldingKind.Parcel && d.IsLease) ParcelLet?.Invoke((int)d.Subject, d.Holder, false);
         Book.Changes.Add(new DeedChange(day, d.Id, to, Tenure.Freehold, 0, -1, DeedCause.Evicted));
         foreach (var c in Book.Claims) if (c.DeedId == d.Id && c.State != ClaimState.Lapsed) { c.State = ClaimState.Lapsed; c.EndDay = day; }
-        chron(Day(day), "land_evicted", [d.Holder, d.Id, to], [new Cause(CauseKind.Law, null, "arrears and notice")], ("owed", d.OwedMites.ToString()), ("distraint", value.ToString()));
+        chron(Day(day), "land_evicted", [d.Holder, d.Id, to], [Why.Of(CauseKind.Law, "ch_why_arrears_evicted", ChronParam.Person("holder", d.Holder), ChronParam.Person("lord", to))], ("owed", d.OwedMites.ToString()), ("distraint", value.ToString()));
         return value;
     }
 
@@ -579,7 +579,7 @@ public sealed partial class LandWorld
         };
         Book.Claims.Add(c);
         var subj = new List<EntityId> { claimant }; if (lordId != EntityId.None) subj.Add(lordId);
-        chron(Day(day), "claim_staked", subj, [new Cause(CauseKind.Law, null, c.Squatting ? "squatting on the lord's waste" : c.Licensed ? "licensed by the lord" : "wild land")],
+        chron(Day(day), "claim_staked", subj, [Why.Of(CauseKind.Law, c.Squatting ? "ch_why_claim_squat" : c.Licensed ? "ch_why_claim_licensed" : "ch_why_claim_wild", ChronParam.Person("claimant", c.Claimant))],
             ("claim", c.Serial.ToString()), ("tiles", tiles.Length.ToString()), ("fief", fief >= 0 ? Region.Fiefs[fief].Name : ""), ("licence", fee.ToString()), ("squatting", c.Squatting ? "1" : "0"));
         string key = c.Squatting ? "ld_claim_squatting" : c.Licensed ? "ld_claim_licensed" : "ld_claim_free";
         return new LandResult(true, key, [tiles.Length, Money(fee)], fee, LandIds.Serial(RegionId, c.Serial));
@@ -596,7 +596,7 @@ public sealed partial class LandWorld
         if (Balance(claimant, c.ClaimantPurse) < fee || !Pay(claimant, c.ClaimantPurse, lordId, lordKind, fee, TransferReason.Rent)) return new LandResult(false, "ld_cannot_afford", [Money(fee)], fee, CannotAfford: true);
         c.Squatting = false; c.Licensed = true; c.LicenceMites += fee;
         if (c.DwellingDay >= 0 && c.State == ClaimState.Open) MakeClaimDeed(c, day, chron);
-        chron(Day(day), "claim_licensed", [claimant, lordId], [new Cause(CauseKind.Law, null, "licence bought")], ("claim", serial.ToString()), ("licence", fee.ToString()));
+        chron(Day(day), "claim_licensed", [claimant, lordId], [Why.Of(CauseKind.Law, "ch_why_licence_bought", ChronParam.Person("claimant", claimant))], ("claim", serial.ToString()), ("licence", fee.ToString()));
         return new LandResult(true, "ld_claim_licensed", [c.Tiles.Length, Money(fee)], fee, LandIds.Serial(RegionId, serial));
     }
 
@@ -613,7 +613,7 @@ public sealed partial class LandWorld
         if (kind == ImprovementKind.SownAcre) c.SownAcres++;
         int want = Math.Min(Rules.ClaimMaxTiles, c.Tiles.Length + Rules.ClaimTilesPerImprovement);
         if (want > c.Tiles.Length) c.Tiles = Grow(-1, c.Tiles, want, c.BannerX, c.BannerY, t => ClaimTileOk(t, c.Fief, c.Tiles));
-        chron(Day(day), "claim_improved", [c.Claimant], [new Cause(CauseKind.Other, null, kind == ImprovementKind.Dwelling ? "a dwelling" : "an acre sown")], ("claim", serial.ToString()), ("tiles", c.Tiles.Length.ToString()));
+        chron(Day(day), "claim_improved", [c.Claimant], [Why.Of(CauseKind.Law, kind == ImprovementKind.Dwelling ? "ch_why_claim_dwelling" : "ch_why_claim_acre", ChronParam.Person("claimant", c.Claimant))], ("claim", serial.ToString()), ("tiles", c.Tiles.Length.ToString()));
         if (c.State == ClaimState.Open && c.DwellingDay >= 0 && !c.Squatting) MakeClaimDeed(c, day, chron);
         return new LandResult(true, "ld_claim_improved", [c.Tiles.Length], 0, LandIds.Serial(RegionId, serial));
     }
@@ -631,7 +631,7 @@ public sealed partial class LandWorld
         };
         Put(d, day);
         c.State = ClaimState.Deeded; c.DeedId = id;
-        chron(Day(day), "claim_deeded", [c.Claimant, id], [new Cause(CauseKind.Law, null, "a claim made good with a dwelling")], ("claim", c.Serial.ToString()), ("tenure", d.Tenure.ToString()), ("tiles", c.Tiles.Length.ToString()));
+        chron(Day(day), "claim_deeded", [c.Claimant, id], [Why.Of(CauseKind.Law, "ch_why_claim_deeded", ChronParam.Person("claimant", c.Claimant))], ("claim", c.Serial.ToString()), ("tenure", d.Tenure.ToString()), ("tiles", c.Tiles.Length.ToString()));
     }
 
     /// <summary>Pulls up the banner: an open claim ends (a deeded one stands; the deed no longer needs it).</summary>
@@ -640,7 +640,7 @@ public sealed partial class LandWorld
         var c = Book.ClaimOf(serial);
         if (c == null || c.Claimant != claimant || c.State != ClaimState.Open) return LandResult.No(c?.State == ClaimState.Deeded ? "ld_claim_deeded_stays" : "ld_not_yours");
         c.State = ClaimState.Pulled; c.EndDay = day;
-        chron(Day(day), "claim_pulled", [claimant], [new Cause(CauseKind.Other, null, "banner pulled up")], ("claim", serial.ToString()));
+        chron(Day(day), "claim_pulled", [claimant], [Why.Of(CauseKind.Law, "ch_why_claim_pulled", ChronParam.Person("claimant", claimant))], ("claim", serial.ToString()));
         return new LandResult(true, "ld_claim_pulled", [], 0, LandIds.Serial(RegionId, serial));
     }
 
@@ -721,7 +721,7 @@ public sealed partial class LandWorld
         };
         Put(deed, day);
         string grantorName = GrantorName(gk, grantor);
-        c.GrantEvent = chron(Day(day), "charter_granted", [grantee, gId, id], [new Cause(CauseKind.Law, null, "a petition in person at " + Region.Settlements[seat].Name)],
+        c.GrantEvent = chron(Day(day), "charter_granted", [grantee, gId, id], [Why.Of(CauseKind.Law, "ch_why_charter_petition", ChronParam.Person("grantee", grantee), ChronParam.Place("seat", Region.Settlements[seat].Id))],
             ("grantor", grantorName), ("fee", fee.ToString()), ("tiles", tiles.Length.ToString()), ("settle_by", c.SettleByDay.ToString()), ("households", c.MinHouseholds.ToString()),
             ("dues_year", c.DuesMitesPerYear.ToString()), ("service", $"{c.ServiceMen}x{c.ServiceDays}"));
         return new LandResult(true, "ld_charter_granted", [grantorName, Money(fee), c.MinHouseholds, c.SettleByDay], fee, id);
@@ -795,7 +795,7 @@ public sealed partial class LandWorld
         foreach (int m in hht.Members(hh)) { pt.HomeSettlement[m] = c.Anchor; pt.HomeLot[m] = -1; pt.Bed[m] = -1; if (pt.Status[m] == PersonStatus.Alive) pt.Homeless[m] = HomelessReason.NoRoom; }
         var id = hht.IdOf(hh);
         c.Households.Add(id);
-        chron(Day(day), "charter_settled", [id, grantee, c.DeedId], [new Cause(CauseKind.Migration, c.GrantEvent, "recruited to the charter's site")], ("household", hht.Name[hh]), ("settled", Settled(c).ToString()));
+        chron(Day(day), "charter_settled", [id, grantee, c.DeedId], [Why.After(CauseKind.Migration, c.GrantEvent, "ch_why_charter_recruited")], ("household", hht.Name[hh]), ("settled", Settled(c).ToString()));
         CheckCharter(c, day, chron);
         return new LandResult(true, "ld_settled", [hht.Name[hh], Settled(c), c.MinHouseholds], 0, c.DeedId);
     }
@@ -828,12 +828,12 @@ public sealed partial class LandWorld
             if (n >= c.MinHouseholds && day <= c.SettleByDay)
             {
                 c.State = CharterState.Fulfilled; c.FulfilDay = day;
-                chron(Day(day), "charter_fulfilled", [c.Grantee, c.DeedId], [new Cause(CauseKind.Law, c.GrantEvent, "the households were settled in time")], ("settled", n.ToString()), ("deadline", c.SettleByDay.ToString()));
+                chron(Day(day), "charter_fulfilled", [c.Grantee, c.DeedId], [Why.After(CauseKind.Law, c.GrantEvent, "ch_why_charter_in_time")], ("settled", n.ToString()), ("deadline", c.SettleByDay.ToString()));
             }
             else if (day > c.SettleByDay)
             {
                 c.State = CharterState.Lapsed; c.LapseDay = day;
-                chron(Day(day), "charter_lapsed", [c.Grantee, c.DeedId], [new Cause(CauseKind.Law, c.GrantEvent, "too few households by the deadline")], ("settled", n.ToString()), ("needed", c.MinHouseholds.ToString()));
+                chron(Day(day), "charter_lapsed", [c.Grantee, c.DeedId], [Why.After(CauseKind.Law, c.GrantEvent, "ch_why_charter_too_few")], ("settled", n.ToString()), ("needed", c.MinHouseholds.ToString()));
             }
         }
         if (c.State == CharterState.Fulfilled && c.VillageDay < 0)
@@ -844,7 +844,7 @@ public sealed partial class LandWorld
             bool church = Region.Settlements[c.Anchor].Plan.Lots.Any(l => l.Use is LotUse.Chapel or LotUse.Church or LotUse.Mill && Array.BinarySearch(c.Tiles, LandRules.TileAt(l.Rect.CenterX, l.Rect.CenterY)) >= 0);
             if (!church) return;
             c.VillageDay = day;
-            chron(Day(day), "charter_village", [c.Grantee, c.DeedId], [new Cause(CauseKind.Migration, c.GrantEvent, "a village grew on the charter's site")], ("people", people.ToString()));
+            chron(Day(day), "charter_village", [c.Grantee, c.DeedId], [Why.After(CauseKind.Migration, c.GrantEvent, "ch_why_charter_village")], ("people", people.ToString()));
         }
     }
 
@@ -869,13 +869,13 @@ public sealed partial class LandWorld
             Book.Deeds.Remove(d.Id);
             if (d.Kind == HoldingKind.Parcel) ParcelLet?.Invoke((int)d.Subject, d.Holder, false);
             Book.Changes.Add(new DeedChange(day, d.Id, d.Lessor, Tenure.Freehold, 0, -1, DeedCause.LeaseEnded));
-            chron(Day(day), "lease_ended", [d.Holder, d.Id, d.Lessor], [new Cause(CauseKind.Trade, null, "the term ran out")], ("kind", d.Kind.ToString()));
+            chron(Day(day), "lease_ended", [d.Holder, d.Id, d.Lessor], [Why.Of(CauseKind.Trade, "ch_why_lease_ran_out", ChronParam.Person("holder", d.Holder))], ("kind", d.Kind.ToString()));
         }
         foreach (var c in Book.Claims)
         {
             if (c.State != ClaimState.Open || c.Improvements > 0 || day < c.StakeDay + Rules.ClaimImproveWithinDays) continue;
             c.State = ClaimState.Lapsed; c.EndDay = day;
-            chron(Day(day), "claim_lapsed", [c.Claimant], [new Cause(CauseKind.Law, null, "no improvement in time")], ("claim", c.Serial.ToString()), ("tiles", c.Tiles.Length.ToString()));
+            chron(Day(day), "claim_lapsed", [c.Claimant], [Why.Of(CauseKind.Law, "ch_why_claim_lapsed", ChronParam.Person("claimant", c.Claimant))], ("claim", c.Serial.ToString()), ("tiles", c.Tiles.Length.ToString()));
         }
         foreach (var c in Book.Charters) CheckCharter(c, day, chron);
     }

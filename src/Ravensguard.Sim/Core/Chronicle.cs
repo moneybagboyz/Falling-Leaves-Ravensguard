@@ -59,9 +59,9 @@ public sealed class Chronicle
 
     /// <summary>
     /// Specific causes, measured (chronicle-full 4.2): entries with at least one specific cause over the entries that are not market-drift labels (1 when none). A cause is
-    /// specific when its kind is not Unknown, Other or MarketDrift and it names an earlier entry, or (for a type whose row accepts a note) carries a note key from the row's allowed list.
+    /// specific when its kind is not Unknown, Other or MarketDrift and it names an earlier entry (of this chronicle or of <c>older</c>, the world history a played region continues), or (for a type whose row accepts a note) carries a note key from the row's allowed list.
     /// </summary>
-    public CoverageReport SpecificCoverage(ChronicleTypes? types = null, Func<ChronicleEntry, bool>? filter = null)
+    public CoverageReport SpecificCoverage(ChronicleTypes? types = null, Func<ChronicleEntry, bool>? filter = null, Chronicle? older = null)
     {
         int total = 0, specific = 0, drift = 0, noCause = 0;
         foreach (var e in _all)
@@ -72,7 +72,7 @@ public sealed class Chronicle
             if (e.Causes.Count == 0) noCause++;
             if (isDrift) { drift++; continue; }
             var row = types?.Get(e.TypeId);
-            if (e.Causes.Any(c => IsSpecific(c, e, row))) specific++;
+            if (e.Causes.Any(c => IsSpecific(c, e, row, older))) specific++;
         }
         return new CoverageReport(total, specific, drift, noCause);
     }
@@ -98,11 +98,11 @@ public sealed class Chronicle
     }
 
     /// <summary>One cause is specific under <paramref name="row"/>'s rule (<c>event</c>, <c>note</c> or <c>either</c>; no row means <c>event</c>).</summary>
-    public bool IsSpecific(Cause c, ChronicleEntry owner, ChronicleTypeRow? row)
+    public bool IsSpecific(Cause c, ChronicleEntry owner, ChronicleTypeRow? row, Chronicle? older = null)
     {
         if (c.Kind is CauseKind.Unknown or CauseKind.Other or CauseKind.MarketDrift) return false;
         string need = row?.SpecificRequires ?? "event";
-        bool ev = c.EventId is { } id && Get(id) is { } cause && cause.When.Seconds <= owner.When.Seconds && !cause.Id.Equals(owner.Id);
+        bool ev = c.EventId is { } id && (Get(id) ?? older?.Get(id)) is { } cause && cause.When.Seconds <= owner.When.Seconds && !cause.Id.Equals(owner.Id);
         bool note = c.NoteKey.Length > 0 && row != null && row.NoteKeys.Contains(c.NoteKey);
         return need switch { "note" => note, "either" => ev || note, _ => ev };
     }
