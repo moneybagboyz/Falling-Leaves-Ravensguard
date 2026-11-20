@@ -50,6 +50,9 @@ public sealed class LiveActor
     public Tracked? Body;
     public int ColdPm, WetPm, HeatPm;
     public bool Indoors;
+    /// <summary>P6-B1 (medicine 4.5): what he carries to help with (guards and soldiers: 2 bandages and a rope), made when first needed; the game time his last treatment ends.</summary>
+    public Ravensguard.Sim.Combat.Wounds.ItemBag? Kit;
+    public long TreatBusyUntil;
 }
 
 /// <summary>What the street view draws of one promoted person this tick.</summary>
@@ -394,7 +397,9 @@ public sealed partial class PeopleBridge
         var brain = UtilityBrain.Default;
         // the one function every person's choice goes through (the hero and party members on autopilot call it too: Behaviour/PersonDecision)
         bool boardHere = _board.Count > 0 && _board.Any(j => j.Settlement == a.A.HomeSettlement && j.Region == a.A.Region);
-        var ch = PersonDecision.Decide(brain, a.A, at, a.Intent, a.IntentSince, boardHere, a.ColdPm, a.WetPm, a.HeatPm, a.Body != null, a.Indoors).Choice;
+        var treat = TreatNear(a, at, out var patient);
+        var ch = PersonDecision.Decide(brain, a.A, at, a.Intent, a.IntentSince, boardHere, a.ColdPm, a.WetPm, a.HeatPm, a.Body != null, a.Indoors, treat: treat).Choice;
+        if (ch.Kind == ActionKind.Treat && patient != null) GiveFirstAid(a, patient, at);
         if (ch.Kind != a.Intent) { a.Intent = ch.Kind; a.IntentSince = at; }
         a.Why = ch.Kind == ActionKind.TakeJob ? "Looking for work" : $"{ch.Kind} {ch.Score}";
         // a person who would take the job does not rush it the same second as everyone else: they get round to it, on average, once in eight minutes (a draw keyed on the window, never on the tick)
@@ -403,6 +408,81 @@ public sealed partial class PeopleBridge
             var job = _board.Where(j => j.Settlement == a.A.HomeSettlement && j.Region == a.A.Region && j.MinAge <= 18 && j.MinSkill == 0).OrderBy(j => j.PostedSec).ThenBy(j => j.Id).FirstOrDefault();
             if (job != null) _claims.Add(new ClaimRequest(job.Id, a.Binding.Person, a.Binding.Index, at, _claims.Count, a.X - a.OriginXMm, a.Y - a.OriginYMm, 0, 30));
         }
+    }
+
+    // ------------------------------------------------------------------ first aid (medicine 4.5, P6-B1)
+
+    /// <summary>The wounds both tiers share; null (the default) leaves every live person without a patient, so Treat is never scored.</summary>
+    public Ravensguard.Sim.Combat.Wounds.WoundLedger? Wounds { get; set; }
+    /// <summary>Body plans by id for a tourniquet (null: pressure and bandages only).</summary>
+    public Func<string, Ravensguard.Sim.Combat.Resolver2.BodyPlanV2?>? Plans { get; set; }
+    /// <summary>Where the hero stands (his person id and continent millimetres), so his companions can help him: he is no live actor. Null: nobody.</summary>
+    public Func<(ulong Id, long X, long Y)?>? HeroAt { get; set; }
+    /// <summary>Treatments given so far by live people (a diagnostic).</summary>
+    public int Treatments { get; private set; }
+    public const long TreatReachMm = 6000;
+
+    /// <summary>Bleeding people within 6 m of this person who are not dressed: allies (the same household, or both of the hero's party) and strangers, and the nearest of them to help (allies first).</summary>
+    private TreatInputs TreatNear(LiveActor a, long at, out Ravensguard.Sim.Combat.Wounds.WoundBook? patient)
+    {
+        patient = null;
+        var l = Wounds; if (l == null || l.Books.Count == 0 || a.A.Child) return default;
+        int allies = 0, strangers = 0; long bestD = long.MaxValue; bool bestAlly = false; ulong bestKey = 0;
+        long x = a.X, y = a.Y; bool party = _followers.ContainsKey(a.Binding.Person);
+        lock (l.Sync)
+        {
+            foreach (var (key, book) in l.Books)
+            {
+                if (key == a.Binding.Person.Value || book.Dead || Ravensguard.Sim.Combat.Wounds.Treatment.WorstBleeder(book, -1, at) < 0) continue;
+                var oid = new EntityId(key);
+                if (!_live.TryGetValue(oid, out var o)) continue;
+                long d2 = PathPlan.Dist(o.X - x, o.Y - y);
+                if (d2 > TreatReachMm) continue;
+                bool ally = a.A.Household > 0 && o.A.Household == a.A.Household && o.A.Region == a.A.Region || party && _followers.ContainsKey(oid);
+                if (ally) allies++; else strangers++;
+                if (ally && !bestAlly || ally == bestAlly && d2 < bestD) { bestAlly = ally; bestD = d2; bestKey = key; }
+            }
+            // the hero is no live actor: the game says where he stands, and his companions help him first
+            if (HeroAt?.Invoke() is { } h && h.Id != a.Binding.Person.Value && l.Find(h.Id) is { Dead: false } hb && Ravensguard.Sim.Combat.Wounds.Treatment.WorstBleeder(hb, -1, at) >= 0 && PathPlan.Dist(h.X - x, h.Y - y) <= TreatReachMm)
+            {
+                if (party) allies++; else strangers++;
+                if (party && !bestAlly || party == bestAlly && PathPlan.Dist(h.X - x, h.Y - y) < bestD) { bestAlly = party; bestD = PathPlan.Dist(h.X - x, h.Y - y); bestKey = h.Id; }
+            }
+            if (allies + strangers == 0) return default;
+            patient = l.Find(bestKey);
+            var own = l.Find(a.Binding.Person.Value);
+            int pain = own == null || own.KnockoutPainX100 <= 0 ? 0 : (int)(own.PainX100 * 100L / own.KnockoutPainX100);
+            return new TreatInputs(allies, strangers, a.A.SurgeryLevel * 10, pain);
+        }
+    }
+
+    /// <summary>The next treatment of <see cref="Ravensguard.Sim.Combat.Wounds.TreatAi.Next"/> with what he carries, performed at the second its work ends; he is busy until then.</summary>
+    private void GiveFirstAid(LiveActor a, Ravensguard.Sim.Combat.Wounds.WoundBook patient, long at)
+    {
+        if (at < a.TreatBusyUntil) return;
+        a.Kit ??= KitOf(a, KitFor);
+        var plan = Plans?.Invoke(patient.PlanId);
+        lock (Wounds!.Sync)
+        {
+            if (Ravensguard.Sim.Combat.Wounds.TreatAi.Next(patient, plan, a.Kit, at, a.A.SurgeryLevel, a.Binding.Person.Value) is not { } req) return;
+            if (req.Kind is not (Ravensguard.Sim.Combat.Wounds.TreatKind.Pressure or Ravensguard.Sim.Combat.Wounds.TreatKind.Bandage or Ravensguard.Sim.Combat.Wounds.TreatKind.Tourniquet)) return;   // a helper on the road stops the blood; the rest waits for a surgeon
+            long finish = at + (long)Ravensguard.Sim.Combat.Wounds.Treatment.SimSeconds(req.Kind) * Ravensguard.Sim.Combat.Wounds.MedicineTables.TicksPerSimS;
+            var res = Ravensguard.Sim.Combat.Wounds.Treatment.Perform(patient, plan, req with { GameSec = finish }, a.Kit);
+            if (!res.Ok) return;
+            a.TreatBusyUntil = finish; Treatments++;
+        }
+    }
+
+    /// <summary>What a person of an occupation carries to help with, (bandages, ropes): the game reads it from the fight kits (bandages and rope of the guard and soldier rows); the default is the guard's 2 and 1.</summary>
+    public Func<Occupation, (int Bandages, int Rope)>? KitFor { get; set; }
+
+    private static Ravensguard.Sim.Combat.Wounds.ItemBag KitOf(LiveActor a, Func<Occupation, (int Bandages, int Rope)>? kitFor)
+    {
+        var k = new Ravensguard.Sim.Combat.Wounds.ItemBag();
+        var (b, r) = kitFor?.Invoke(a.A.Occupation) ?? (a.A.Occupation is Occupation.Guard ? (2, 1) : (0, 0));       // medicine 4.5: guards and soldiers carry 2 bandages and a rope
+        if (b > 0) k.Add("bandage", b);
+        if (r > 0) k.Add("rope", r);
+        return k;
     }
 
     /// <summary>

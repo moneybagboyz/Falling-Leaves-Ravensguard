@@ -17,7 +17,6 @@ public static class Settings
     public static bool Captions { get; set; } = false;
     public static bool ReduceBlood { get; set; } = false;
     /// <summary>The auto-dress stop-gap: the hero binds his bleeding wounds when a fight ends (until the Phase 5 treatment screen).</summary>
-    public static bool AutoDress { get; set; } = true;
     public static int LogTextSize { get; set; } = 1;
     public static string LogFilter { get; set; } = "";
     /// <summary>What this profile has been taught and the hint setting (onboarding spec 3.1): kept in the profile's settings file, not in a world save, so a new world does not re-teach what the player knows.</summary>
@@ -33,7 +32,6 @@ public static class Settings
         SlowMotion = ReadBool(cfg, "accessibility", "slow_motion", true);
         Captions = ReadBool(cfg, "accessibility", "captions", false);
         ReduceBlood = ReadBool(cfg, "accessibility", "reduce_blood", false);
-        AutoDress = ReadBool(cfg, "combat", "auto_dress", true);
         LogTextSize = Mathf.Clamp(ReadInt(cfg, "accessibility", "log_text_size", 1), 1, 3);
         var lf = cfg.GetValue("combat", "log_filter", "");
         LogFilter = lf.VariantType == Variant.Type.String ? lf.AsString() : "";
@@ -63,7 +61,6 @@ public static class Settings
         cfg.SetValue("accessibility", "slow_motion", SlowMotion);
         cfg.SetValue("accessibility", "captions", Captions);
         cfg.SetValue("accessibility", "reduce_blood", ReduceBlood);
-        cfg.SetValue("combat", "auto_dress", AutoDress);
         cfg.SetValue("accessibility", "log_text_size", LogTextSize);
         cfg.SetValue("combat", "log_filter", LogFilter);
         cfg.SetValue("hints", "profile", Hints.ToJson());

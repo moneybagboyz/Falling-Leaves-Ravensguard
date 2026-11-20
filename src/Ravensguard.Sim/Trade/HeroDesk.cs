@@ -42,6 +42,8 @@ public enum HeroCommandKind : byte
     Prospect,
     /// <summary>Appended (P5-H): a will made before a priest or the reeve ("wl:make|witness|person:what:thing:pm|..."), applied by <see cref="Ravensguard.Sim.Succession.WillDesk"/>.</summary>
     Will,
+    /// <summary>Appended (P6-B1): the treatment screen at the barrier ("tr:do|patient|kind|part", all, cancel, phys), applied by <see cref="Ravensguard.Sim.Medicine.HeroTreatDesk"/>; the queue's steps are performed at the second their work ends.</summary>
+    Treat,
 }
 
 /// <summary>Where the hero crafts (built on the main thread from what is in reach, copied into the command).</summary>
@@ -323,6 +325,27 @@ public sealed class HeroDesk
             if (due.Count == 0) { if (publish && _view == null) Publish(ctx, hourDone); return 0; }
             _pending.RemoveAll(c => c.Hour <= hourDone);
         }
+        return Run(ctx, due, hourDone, publish);
+    }
+
+    /// <summary>
+    /// P6-B1: applies at once, in sequence order, the queued commands of one kind whatever hour they were asked in (the treatment screen's verbs: the work takes sim-seconds, not the rest of a game hour).
+    /// Tick worker only, at a barrier.
+    /// </summary>
+    public int ApplyNow(HeroContext ctx, HeroCommandKind kind, long hourDone, bool publish = true)
+    {
+        List<HeroCommand> due;
+        lock (_gate)
+        {
+            due = [.. _pending.Where(c => c.Kind == kind).OrderBy(c => c.Seq)];
+            if (due.Count == 0) return 0;
+            _pending.RemoveAll(c => c.Kind == kind);
+        }
+        return Run(ctx, due, hourDone, publish);
+    }
+
+    private int Run(HeroContext ctx, List<HeroCommand> due, long hourDone, bool publish)
+    {
         foreach (var c in due)
         {
             HeroResult r;
@@ -380,6 +403,7 @@ public sealed class HeroDesk
             foreach (var t in own.Notices) _results.Add(new HeroResult(0, HeroCommandKind.Business, HeroResultCode.Ok, t, AtSec: h * 3600));
             own.Notices.Clear();
         }
+        Ravensguard.Sim.Medicine.HeroTreatDesk.Advance(ctx, (h + 1) * 3600);                   // P6-B1: treatment steps whose work has ended by the hour's end
         ctx.Party.Carried.Tidy(ctx.Econ);
         ApplyDue(ctx, h, publish: false);
         MirrorHero(ctx);
@@ -468,6 +492,7 @@ public sealed class HeroDesk
                 HeroCommandKind.Craft => CraftDesk.Apply(ctx, c),                                              // P5-E: commissions, guilds, apprenticeships, fires
                 HeroCommandKind.Vehicle => Ravensguard.Sim.Carts.VehicleDesk.Apply(ctx, c),                   // P5-G: designs, vehicle sites, commissions, repairs, launches, voyages
                 HeroCommandKind.Will => Ravensguard.Sim.Succession.WillDesk.Apply(ctx, c),                     // P5-H: a will before a priest or the reeve
+                HeroCommandKind.Treat => Ravensguard.Sim.Medicine.HeroTreatDesk.Apply(ctx, c),                // P6-B1: the treatment screen's verbs, the physician's fee
                 HeroCommandKind.Business or HeroCommandKind.Prospect => Ravensguard.Sim.Production.BusinessDesk.Apply(ctx, c),   // P5-F: businesses, stewards, stalls, prospecting
                 _ => R(c, HeroResultCode.Invalid, T("HERO_UNKNOWN_COMMAND")),
             };

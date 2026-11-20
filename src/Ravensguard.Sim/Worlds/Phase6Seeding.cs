@@ -37,8 +37,8 @@ public static class Phase6Seeding
     /// <summary>The note the load report shows when a pass derived something for a loaded save (overview 7).</summary>
     public const string LoadNote = "Phase 6 state derived at load";
 
-    /// <summary>The registered steps. Empty at P6-A2; each Phase 6 part adds its own (kept in <see cref="PlannedOrder"/> order).</summary>
-    public static readonly IReadOnlyList<IPhase6SeedStep> DefaultSteps = [];
+    /// <summary>The registered steps (physicians at P6-B1); each Phase 6 part adds its own (kept in <see cref="PlannedOrder"/> order).</summary>
+    public static readonly IReadOnlyList<IPhase6SeedStep> DefaultSteps = [new Ravensguard.Sim.Medicine.PhysicianSeedStep()];
 
     /// <summary>Whether a save already holds any Phase 6 section.</summary>
     public static bool HasAnySection(IReadOnlyCollection<string> sectionNames) => SectionNames.Any(sectionNames.Contains);

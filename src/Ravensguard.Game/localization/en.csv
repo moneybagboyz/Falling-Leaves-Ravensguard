@@ -2785,13 +2785,123 @@ rs_too_far,The camp is still too far: creep within fifteen metres of it.
 rs_now_you_are,"You are {0} now. Creep north to the captors' camp and press E to free {1}."
 rs_hud,"Rescue: you are {0}. Reach the camp, then E to free {1}."
 fr_resumed,The fight goes on where it stood. Unpause when ready.
-wd_dress_bandage,You bind the wound on your {0}.
-wd_dress_tourniquet,You tie a tourniquet above the wound on your {0}.
-wd_dress_bandage_by,{1} binds the wound on your {0}.
-wd_dress_tourniquet_by,{1} ties a tourniquet above the wound on your {0}.
-wd_dress_nothing,"You are bleeding, and you have nothing to bind it with."
-wd_set_auto_dress,Bind my wounds after a fight
-wd_set_auto_dress_tip,"When a fight ends, the hero binds his bleeding wounds with the bandages in his pack (until the treatment screen comes)."
+tr_title,Treatment: {0}
+tr_you,yourself
+tr_status,Blood {0} of {1} ml. {2}. Pain {3}%. Surgery {4}. Bandages {5}.
+tr_bleeding,Bleeding {0} ml/s
+tr_not_bleeding,Not bleeding
+tr_collapse,collapse in {0} s
+tr_dead,{0} is dead: there is nothing to treat.
+tr_nothing_here,Nothing is wrong with this part.
+tr_waiting,Looking at the wounds...
+tr_no_wounds_at_all,{0} has no wounds that need treating.
+tr_wounds,Wounds
+tr_kind_cut,cut
+tr_kind_crush,crush
+tr_kind_burn,burn
+tr_cat_skin,skin
+tr_cat_muscle,muscle
+tr_cat_bone,bone
+tr_cat_ligament,ligament
+tr_cat_tendon,tendon
+tr_cat_nerve,nerve
+tr_cat_spine,spine
+tr_cat_vessel,vessel
+tr_cat_organ,organ
+tr_cat_severed,severed
+tr_cat_concussion,concussion
+tr_cat_inset,embedded
+tr_state_open,open
+tr_state_dressed,dressed
+tr_state_stitched,stitched
+tr_state_healing,healing
+tr_state_scar,scar
+tr_state_infected,infected
+tr_dressing_pressure,held by a hand
+tr_dressing_bandage,bandaged
+tr_dressing_tourniquet,tourniquet
+tr_dressing_splint,splinted
+tr_wound_line,"{0} {1}, {2}{3}"
+tr_wound_bleed,", {0} ml/s"
+tr_wound_infection,", infection {0}"
+tr_tq_clock,Tourniquet: next step in {0} s. Loosen it or find a surgeon.
+tr_verb_pressure,Press with a hand
+tr_verb_bandage,Bandage
+tr_verb_tourniquet,Tie a tourniquet
+tr_verb_splint,Splint
+tr_verb_set_bone,Set the bone
+tr_verb_stitch,Stitch
+tr_verb_clean,Clean the wound
+tr_verb_cauterise,Cauterise
+tr_verb_tendon_repair,Repair the tendon
+tr_verb_ligament_repair,Repair the ligament
+tr_verb_organ_repair,Repair the organ
+tr_verb_amputate,Amputate
+tr_verb_release_pressure,Let go
+tr_col_verb,Verb
+tr_col_time,Time
+tr_col_uses,Uses
+tr_col_chance,Chance
+tr_col_fee,Fee
+tr_time,{0} s
+tr_chance,{0}%
+tr_uses_nothing,-
+tr_uses_missing,{0} (none)
+tr_refuse_two_hands,needs both hands
+tr_refuse_skill,needs surgery {0}
+tr_btn_dress,Dress all bleeding
+tr_btn_patient,Patient
+tr_btn_back,Back
+tr_btn_pay,Pay and be treated
+tr_queue,Queue: {0}
+tr_queue_empty,Nothing queued.
+tr_step_dress_all,dress all bleeding
+tr_step,{0} ({1}) in {2} s
+tr_log_done,{0}: done
+tr_log_failed,{0}: {1}
+tr_keys,"{0} part, {1} verb, {2} do it, {3} dress all, {4} next patient, {5} back"
+tr_patient,Patient {0} of {1}: {2}
+tr_quote_head,"{0} would do, for the fees shown (a pick is marked, none picked means all):"
+tr_quote_total,Total {0}; you hold {1}.
+tr_quote_empty,He sees nothing he can do.
+tr_pick_mark,[x]
+tr_pick_none,[ ]
+tr_nobody,No wounds are on the books.
+tr_cancelled,You stop what you were doing.
+tr_nothing_queued,Nothing was queued.
+tr_bad,That makes no sense.
+tr_no_wounds,There is nothing to treat there.
+tr_two_hands,You cannot do that to yourself: it needs both hands.
+tr_skill,That needs surgery skill {0}.
+tr_queue_full,You have queued all you can.
+tr_queued,Queued.
+tr_no_physician,He is no physician.
+tr_nothing_to_do,He sees nothing there to do.
+tr_cannot_pay,You cannot pay his fee.
+tr_could_not,He could not do it.
+tr_physician_done,{0} done; {1} paid.
+tr_q_head,The wounded
+tr_q_treat,Treat {0}
+tr_q_treat_me,Treat me ({0})
+tr_q_self,Treat my wounds
+tr_q_refuses,{0} will not let a stranger touch him
+tr_q_not_hurt,not hurt
+tr_char_btn,Treat
+tr_after_bleeding,{0} wounds still bleed.
+tr_after_btn,Treat the wounds
+tr_stop_moved,You stop treating: you moved.
+tr_stop_fight,You stop treating: a fight has begun.
+tr_stop_hit,You stop treating: you were hit.
+ACTION_TREATMENT_UP,Previous part
+ACTION_TREATMENT_DOWN,Next part
+ACTION_TREATMENT_LEFT,Previous verb
+ACTION_TREATMENT_RIGHT,Next verb
+ACTION_TREATMENT_ACCEPT,Do the verb
+ACTION_TREATMENT_DRESS_ALL,Dress all bleeding
+ACTION_TREATMENT_NEXT_PATIENT,Next patient in reach
+ACTION_TREATMENT_BACK,Close the treatment screen
+CONTEXT_TREATMENT,The treatment screen
+OVERLAY_TREATMENT,Treatment
 ROOMS_ON,"Room overlay on: {0} rooms near you (level {1}). Type 'rooms off' to hide it."
 ROOMS_OFF,Room overlay off.
 ROOMS_NO_CONTENT,Room overlay: the content did not load.

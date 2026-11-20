@@ -1,5 +1,8 @@
 using Ravensguard.Content;
 using Ravensguard.Sim.Characters;
+using Ravensguard.Sim.Combat;
+using Ravensguard.Sim.Combat.Resolver2;
+using Ravensguard.Sim.Combat.Wounds;
 using Ravensguard.Sim.Core;
 using Ravensguard.Sim.Crafting;
 using Ravensguard.Sim.Economy;
@@ -104,6 +107,40 @@ public class WorldRuntimeResumeTests(ITestOutputHelper output)
         PlayOwnership(rt, ctx, desk, town, sec, content);
         PlayVehicles(rt, ctx, desk, sec);
         PlayInheritance(rt, ctx, desk, town, sec);
+        PlayMedicine(rt, ctx, desk, sec);
+    }
+
+    /// <summary>
+    /// P6-B1: the "medicine" section with a physician's treatment in progress. The new game seated its physicians at the seeding pass; a wounded townsman of a physician's town whose household can
+    /// pay is on the books (the abstract physic treats him inside the day, across the save), and the hero lies hurt with a "dress all bleeding" planned and waiting for its second (his queue is saved).
+    /// </summary>
+    private static void PlayMedicine(WorldRuntime rt, HeroContext ctx, HeroDesk desk, long sec)
+    {
+        var s = rt.State; var pt = s.Population.People; var e = s.Economy!;
+        var book = s.Medicine ?? throw new InvalidOperationException("the new game seated no physician");
+        Assert.False(book.IsEmpty);
+        var man = book.Rows.First(r => r.Kind == Ravensguard.Sim.Medicine.PhysicianKind.Physician);
+        var plan = Ravensguard.Sim.Medicine.MedicineWiring.PlanOf(ctx.Content, "human")!;
+        int day = (int)(sec / 86400); var ledger = s.Wounds!;
+        WoundV2 Cut(string part, string structure, WoundFlags fl, int rate10)
+        {
+            int p = plan.IndexOf(part); var pp = plan.Parts[p]; int si = Array.FindIndex(pp.Structures, x => x.Id == structure);
+            return new WoundV2 { Part = (short)p, Tissue = (short)pp.Structures[si].Tissue.Index, Structure = (short)si, Organ = -1, Kind = WoundKind.Cut, DepthPm = 1000, BleedX10 = rate10, Flags = fl };
+        }
+        int patient = Enumerable.Range(0, pt.Count).First(i => pt.Status[i] == PersonStatus.Alive && pt.HomeSettlement[i] == man.Settlement && pt.AgeYears(i, day) is >= 20 and < 50 && pt.Household[i] >= 0
+            && pt.IdOf(i).Value != man.Person && pt.Occupation[i] != Occupation.Physician);
+        e.Ledger.Mint(e.HouseholdPurse[pt.Household[patient]], Coin.FromCrowns(5), SourceReason.Seed);
+        var pb = ledger.For(pt.IdOf(patient).Value, plan, sec);
+        pb.Apply(plan, [Cut("upper_arm_l", "brachial_vein", WoundFlags.VeinHit, 40)], sec, sec, 0x77, 0, false);
+        // the hero: hurt, bandages in the pack, a dress-all queued at the barrier and planned (its work ends a little after the save)
+        ctx.Pack.Create(e.Goods.IdOf("bandage"), 4, CreateReason.Seed);
+        var hb = ledger.For(ctx.Party.Hero.Value, plan, sec);
+        hb.Apply(plan, [Cut("lower_leg_r", "tibial_vein", WoundFlags.VeinHit, 30)], sec, sec, 0x78, 0, false);
+        desk.Issue(Ravensguard.Sim.Medicine.HeroTreatDesk.DressAll(ctx.Party.Hero.Value, 3, sec));
+        desk.ApplyDue(ctx, rt.HourDone);
+        Assert.True(desk.View!.Results.Last().Ok, desk.View.Results.Last().Text);
+        Assert.Equal(0, Ravensguard.Sim.Medicine.HeroTreatDesk.Advance(ctx, sec));
+        Assert.Single(book.Queue.Steps); Assert.True(book.Queue.Steps[0].Planned);
     }
 
     /// <summary>

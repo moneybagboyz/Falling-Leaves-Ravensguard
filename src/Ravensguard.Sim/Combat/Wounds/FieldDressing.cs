@@ -13,8 +13,7 @@ public sealed record DressOutcome(IReadOnlyList<DressStep> Steps, int BandagesUs
 }
 
 /// <summary>
-/// The stop-gap until the Phase 5 treatment screen (docs/reviews/phase-4.md, "auto-dress after fights", approved by the user): when a fight ends the hero (or, when he is down, a
-/// conscious companion) dresses his bleeding wounds, worst first by rate (<see cref="Treatment.WorstBleeder"/>), with what the pack holds: a tourniquet on a limb whose wound is
+/// The planner behind the treatment screen's "Dress all bleeding" (medicine 4.1; the Phase 4 auto-dress after a fight is gone): the bleeding wounds are dressed, worst first by rate (<see cref="Treatment.WorstBleeder"/>), with what the pack holds: a tourniquet on a limb whose wound is
 /// arterial when the pack has rope or two bandages for it (the treatment's own needs), else a bandage; with no bandages nothing is done. Each dressing takes its real time
 /// (<see cref="Treatment.SimSeconds"/>) and is performed at the second it is finished, so the blood lost meanwhile is lost; the rules, skill floors and timings are
 /// <see cref="Treatment"/>'s. Pure on the book: the caller supplies the counts and takes the outcome's use out of the pack.
@@ -34,14 +33,7 @@ public static class FieldDressing
         long t = startSec;
         for (int n = 0; n < max; n++)
         {
-            int i = Treatment.WorstBleeder(b, -1, t);
-            if (i < 0) break;
-            var w = b.Records[i];
-            int root = TreatAi.LimbRoot(plan, w.Part);
-            TreatKind k; int part;
-            if (root >= 0 && w.Has(WoundFlags.ArteryHit) && (bag.Has("rope", 1) || bag.Has("bandage", 2))) { k = TreatKind.Tourniquet; part = root; }
-            else if (bag.Has("bandage", 1)) { k = TreatKind.Bandage; part = w.Part; }
-            else break;
+            if (PlanStep(b, plan, bag, t) is not var (k, part)) break;
             long done = t + (long)Treatment.SimSeconds(k) * TicksPerSimS;
             var r = Treatment.Perform(b, plan, new TreatRequest(k, part, done, skill, actor), bag);
             if (!r.Ok) break;
@@ -49,6 +41,21 @@ public static class FieldDressing
             t = done;
         }
         return steps.Count == 0 ? DressOutcome.None : new DressOutcome(steps, bandages - bag.Bandages, bag.RopeUsed, t, actor);
+    }
+
+    /// <summary>
+    /// The next dressing at tick <paramref name="t"/>: the worst undressed bleeder by rate, a tourniquet when it is arterial on a limb and the items allow, else a bandage; null when nothing
+    /// bleeds or the items run out. The treatment screen's "Dress all bleeding" asks this one step at a time, each when the one before has ended.
+    /// </summary>
+    public static (TreatKind Kind, int Part)? PlanStep(WoundBook b, BodyPlanV2 plan, ITreatItems items, long t)
+    {
+        int i = Treatment.WorstBleeder(b, -1, t);
+        if (i < 0) return null;
+        var w = b.Records[i];
+        int root = TreatAi.LimbRoot(plan, w.Part);
+        if (root >= 0 && w.Has(WoundFlags.ArteryHit) && (items.Has("rope", 1) || items.Has("bandage", 2))) return (TreatKind.Tourniquet, root);
+        if (items.Has("bandage", 1)) return (TreatKind.Bandage, w.Part);
+        return null;
     }
 
     private sealed class Bag(int bandages, bool rope) : ITreatItems

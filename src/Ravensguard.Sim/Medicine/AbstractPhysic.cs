@@ -43,7 +43,7 @@ public static class AbstractPhysic
             if (hh < 0 || s < 0) continue;
             var men = book.In(s); if (men.Count == 0) continue;
             var man = men[(int)(key % (ulong)men.Count)];
-            if (DetRng.Range(w.Seed, day, key, MedicineEnums.PhysicianStream, 1, 0, 100) >= TreatPct(man.Kind)) continue;
+            if (DetRng.Range(w.Seed, day, key, RngStreams.Physician, 1, 0, 100) >= TreatPct(man.Kind)) continue;
             int mrow = pt.IndexOf(new EntityId(man.Person)); if (mrow < 0 || pt.Status[mrow] != PersonStatus.Alive) continue;
             var purse = econ.HouseholdPurse[hh];
             if (econ.Ledger.Balance(purse).Mites < PhysicianFees.VisitFee(man.Kind)) continue;
@@ -74,7 +74,7 @@ public static class AbstractPhysic
             if (fee > 0 && econ.Ledger.Balance(payer).Mites < fee) break;
             var res = Treatment.Perform(b, plan, r with { GameSec = finish }, items);
             if (!res.Ok) break;
-            if (fee > 0) econ.Ledger.Transfer(payer, payee, new Coin(fee), MedicineEnums.FeeReason);
+            if (fee > 0) econ.Ledger.Transfer(payer, payee, new Coin(fee), TransferReason.Fee);
             if (visit) visited = true;
             any = true; t = finish;
         }

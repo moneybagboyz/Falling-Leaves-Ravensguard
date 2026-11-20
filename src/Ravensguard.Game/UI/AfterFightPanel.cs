@@ -18,6 +18,9 @@ public partial class AfterFightPanel : Control
     readonly AfterFightReport _report;
     readonly int _spoils, _arrows;
     public Action? Closed { get; set; }
+    /// <summary>P6-B1 (medicine 4.2): opens the treatment screen on the hero; with <see cref="Bleeding"/> above 0 the report says how many wounds still bleed and offers it.</summary>
+    public Action? Treat { get; init; }
+    public int Bleeding { get; init; }
 
     public AfterFightPanel(AfterFightReport report, int groundItems = 0, int arrows = 0) { _report = report; _spoils = groundItems; _arrows = arrows; Name = "AfterFightPanel"; }
 
@@ -52,6 +55,7 @@ public partial class AfterFightPanel : Control
         Line(body, L.T("fl_ui_rep_skills"), false, true);
 
         Section(body, "fl_ui_rep_wounds");
+        if (Bleeding > 0) { var cta = Line(body, L.F("tr_after_bleeding", Bleeding), true); cta.AddThemeColorOverride("font_color", PixelTheme.Warn); }
         if (r.Wounds.Count == 0 && r.MinorWounds == 0) Line(body, L.T("fl_ui_rep_no_wounds"), false, true);
         if (r.MinorWounds > 0) Line(body, L.F("fl_ui_rep_minor", r.MinorWounds), false, true);
         foreach (var w in r.Wounds)
@@ -76,6 +80,7 @@ public partial class AfterFightPanel : Control
 
         var bottom = new HBoxContainer(); bottom.AddThemeConstantOverride("separation", 8); root.AddChild(bottom);
         var close = new Button { Text = L.T("fl_ui_close"), CustomMinimumSize = new Vector2(160, 32) }; close.Pressed += Close; bottom.AddChild(close);
+        if (Treat != null && Bleeding > 0) { var tb = new Button { Text = L.T("tr_after_btn"), CustomMinimumSize = new Vector2(180, 32) }; tb.Pressed += () => { Close(); Treat(); }; bottom.AddChild(tb); }
         bottom.AddChild(UiKit.Hint(L.F("fl_ui_close_hint", InputBootstrap.Hint("world.last_report"))));
         close.GrabFocus();
     }

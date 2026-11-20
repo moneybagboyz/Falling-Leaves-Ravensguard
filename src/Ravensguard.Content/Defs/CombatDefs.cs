@@ -321,4 +321,7 @@ public sealed record FightKitDef : ContentDef
     public string Ammo { get; init; } = "";
     public int AmmoCount { get; init; } = 12;
     public List<string> Throwables { get; init; } = [];
+    /// <summary>Medicine 4.5 (P6-B1): bandages and ropes the person carries to help a bleeding comrade (guards and soldiers 2 and 1).</summary>
+    public int Bandages { get; init; }
+    public int Rope { get; init; }
 }

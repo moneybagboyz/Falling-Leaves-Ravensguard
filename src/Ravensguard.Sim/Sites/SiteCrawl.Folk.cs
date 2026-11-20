@@ -352,26 +352,6 @@ public sealed partial class SiteCrawl
         if (f.IsOver) EndFight();
     }
 
-    /// <summary>
-    /// The auto-dress stop-gap below ground (as the road fight's, StreetView.AutoDress): the hero's bleeding wounds bound with the bandages he carries down, by himself when he is awake,
-    /// else by the first member who can act, worst first, each in its real time (the dresser is busy that long). A crawl's rope is a climbing rope and is not cut up for a tourniquet.
-    /// </summary>
-    private void DressHeroAfterFight()
-    {
-        var h = Hero;
-        if (h.Dead) return;
-        var book = BookOf(h);
-        if (Treatment.WorstBleeder(book, -1, GameSec) < 0) return;
-        var by = book.Conscious && !h.Unconscious ? h : Members.FirstOrDefault(m => m != h && m.CanAct);
-        if (by == null || by.Bandages <= 0) return;
-        DressOutcome o;
-        lock (Ledger.Sync) o = FieldDressing.Dress(book, h.Plan, by.Bandages, false, by.FirstAid, by.Person, GameSec);
-        if (o.Steps.Count == 0) return;
-        by.Bandages = Math.Max(0, by.Bandages - o.BandagesUsed);
-        by.BusyS = Math.Max(by.BusyS, (int)((o.EndSec - GameSec + MedicineTables.TicksPerSimS - 1) / MedicineTables.TicksPerSimS)); by.BusyTarget = -1;
-        foreach (var st in o.Steps) Note(CrawlEventKind.Treated, Members.IndexOf(by), (int)st.Kind);
-    }
-
     /// <summary>The fight is over: the dead stay dead, the fled come back in three days (a beast to its lair, bleeding), a slain monster is a chronicle event with renown (4.9).</summary>
     public void EndFight()
     {
@@ -413,7 +393,6 @@ public sealed partial class SiteCrawl
         LastFightEnd = $"tick {f.Tick} " + string.Join(",", f.Fighters.Select(x => x.Name + ":" + x.Act + ":t" + x.Team));
         Fight = null;
         Note(CrawlEventKind.FightEnded, winner);
-        if (AutoDress) DressHeroAfterFight();
         if (!Map.Inhabitants.Any(n => n.Hostile && n.State is not (InhabitantState.Dead or InhabitantState.Fled or InhabitantState.Away))) ClearedDay = Day;
         _lightDirty = _mapDirty = true;
     }

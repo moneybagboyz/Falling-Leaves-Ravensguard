@@ -150,7 +150,7 @@ public static class Phase3Smoke
             if (router.Top != sv) throw new Exception("the street view is not on top");
 
             // every screen: open as its key does, it fits the window, Esc comes back (the control rects stay inside the viewport)
-            foreach (var what in new[] { "trade", "barter", "inventory", "character", "squad", "crafting", "talk", "journal", "autopilot", "map", "picker", "jobs", "codex", "qmenu", "overlay", "land", "deeds", "ledger", "business", "prospect", "will" })   // P5-A2: land, deeds; P5-F: the Ledger, the business panel, prospecting; P5-H: the will panel
+            foreach (var what in new[] { "trade", "barter", "inventory", "character", "squad", "crafting", "talk", "journal", "autopilot", "map", "picker", "jobs", "codex", "qmenu", "overlay", "land", "deeds", "ledger", "business", "prospect", "will", "treatment" })   // P5-A2: land, deeds; P5-F: the Ledger, the business panel, prospecting; P5-H: the will panel; P6-B1: the treatment screen
             {
                 int depth = router.Depth;
                 if (!sv.DebugOpen(what)) throw new Exception("unknown screen " + what);
@@ -182,6 +182,24 @@ public static class Phase3Smoke
             Key(Godot.Key.Escape); await Frames(tree, 4);
             if (router.Top != sv) throw new Exception("Esc did not close the Ledger");
             GD.Print("[smoke]   the Ledger: L opens it, the world keys are off under it, Esc closes it");
+
+            // P6-B1 (MT-14): the treatment screen on a wounded hero: it fits 960x540, offers verbs (each row readable), the street keys are off under it, Esc closes it
+            if (!sv.DebugOpen("treatment")) throw new Exception("the treatment screen is not known to the smoke");
+            await Frames(tree, 40);
+            if (router.Top is not UI.TreatmentScreen ts) throw new Exception("the treatment screen did not open (top " + router.Top?.GetType().Name + ")");
+            Fit(ts, "the treatment screen", view);
+            if (ts.Verbs <= 0) throw new Exception("the treatment screen offers no verb on a bleeding hero");
+            foreach (var k in new[] { Godot.Key.Down, Godot.Key.Up, Godot.Key.Right, Godot.Key.Left, Godot.Key.Tab, Godot.Key.I, Godot.Key.J, Godot.Key.C, Godot.Key.L, Godot.Key.N })
+            {
+                Key(k); await Frames(tree, 3);
+                Input.ParseInputEvent(new InputEventKey { Keycode = k, PhysicalKeycode = k, Pressed = false });
+                await Frames(tree, 1);
+            }
+            if (router.Top is not UI.TreatmentScreen) throw new Exception("a world key opened " + router.Top?.GetType().Name + " over the treatment screen");
+            Fit(router.Top!, "the treatment screen (after the keys)", view);
+            Key(Godot.Key.Escape); await Frames(tree, 4);
+            if (router.Top != sv) throw new Exception("Esc did not close the treatment screen");
+            GD.Print("[smoke]   the treatment screen: fits, its verbs read, the street keys are off under it, Esc closes it");
 
             // the bar of the party, the controls overlay on F10 (also ?), the F8 report window
             sv.DebugPartyBar(); await Frames(tree, 2);

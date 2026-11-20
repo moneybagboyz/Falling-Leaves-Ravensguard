@@ -128,7 +128,6 @@ public partial class StreetView
             crawl = new SiteCrawl(rec.Map, sc, fc, ledger, _world.Clock.Now.Seconds, rt.State.Seed, rec.Known);
             crawl.Add(HeroMember(sc));
             foreach (var m in PartyMembers(fc)) crawl.Add(m);          // P4 close-out: the party goes down with the hero
-            crawl.AutoDress = Settings.AutoDress;                        // the auto-dress stop-gap after a fight below (saved with the crawl)
         }
         crawl.OwnsFight = false; crawl.Sync = book.Sync;
         if (_source.Region is { } region) crawl.Surgeon = SurgeonInfo.Nearest(region, site.X, site.Y);
@@ -212,7 +211,7 @@ public partial class StreetView
             rt.State.SiteSource = null;
         }
         _rec.SetTorch(c.Hero.Light.Lit);
-        // the bandages the hero carried down came from the pack: what he used below (his own dressing, the auto-dress) leaves it at the barrier
+        // the bandages the hero carried down came from the pack: what he used below (his own dressing) leaves it at the barrier
         int packBandages = (int)(_heroLink?.View?.Goods.Where(g => g.Id == "bandage").Sum(g => g.Qty) ?? 0);
         if (!c.Hero.Dead && _heroLink != null && packBandages > c.Hero.Bandages)
             _heroLink.Issue(Ravensguard.Sim.Combat.Aftermath.AftermathDesk.DressCommand(packBandages - c.Hero.Bandages, 0, _world.Clock.Now.Seconds));

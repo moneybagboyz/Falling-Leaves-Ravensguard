@@ -98,13 +98,14 @@ public static class AftermathDesk
         return new HeroResult(c.Seq, c.Kind, HeroResultCode.Ok, HeroText.Empty, 0, n, c.IssuedSec);
     }
 
-    /// <summary>The auto-dress stop-gap: what the field dressing after a fight took from the hero's pack ("mc:dress|bandages|rope grams"), taken out at the barrier.</summary>
+    /// <summary>What a dressing took from the pack ("mc:dress|bandages|rope grams"): the road's auto-dress is gone (P6-B1: the treatment screen takes its own items at the second its work ends), but a crawl's own
+    /// treatment below ground still sends the bandages it used, and a save or a trace from before may hold one.</summary>
     public const string DressPrefix = "mc:dress|";
 
     public static HeroCommand DressCommand(int bandages, int ropeG, long sec) =>
         new() { Kind = HeroCommandKind.Aftermath, IssuedSec = sec, Tag = string.Create(CultureInfo.InvariantCulture, $"{DressPrefix}{Math.Max(0, bandages)}|{Math.Max(0, ropeG)}"), Origin = CommandOrigin.Human };
 
-    /// <summary>Takes the dressing's bandages and rope out of the pack (as many as are still there: the dressing was done with what the pack held when the fight ended).</summary>
+    /// <summary>Takes the dressing's bandages and rope out of the pack (as many as are still there).</summary>
     private static HeroResult Dress(HeroContext ctx, HeroCommand c)
     {
         var p = c.Tag[DressPrefix.Length..].Split('|');
@@ -184,7 +185,7 @@ public static class AftermathDesk
     {
         var book = BookOf(ctx.State, ctx.Content);
         if (c.Tag.StartsWith(WearPrefix, StringComparison.Ordinal)) return Wear(ctx, c);              // P4 close-out: the fight's armour wear onto the item rows
-        if (c.Tag.StartsWith(DressPrefix, StringComparison.Ordinal)) return Dress(ctx, c);            // the auto-dress stop-gap: the bandages it used
+        if (c.Tag.StartsWith(DressPrefix, StringComparison.Ordinal)) return Dress(ctx, c);            // a legacy dressing: the bandages it used
         if (c.Tag.StartsWith(ControlPrefix, StringComparison.Ordinal) || c.Tag.StartsWith(ReleasePrefix, StringComparison.Ordinal) || c.Tag.StartsWith(RescuePrefix, StringComparison.Ordinal))
             return Rescue(ctx, book, c);                                                   // P4 close-out: the rescue control switch
         if (c.Tag.StartsWith(ActPrefix, StringComparison.Ordinal))

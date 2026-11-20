@@ -64,6 +64,9 @@ public readonly struct PersonAnchors
     public Ravensguard.Sim.Behaviour.ScheduleBook? Book { get; init; }
     /// <summary>The bed (millimetres, level) and whether the household has a placed one.</summary>
     public bool HasBed { get; init; }
+    /// <summary>P6-B1 (medicine 4.5): the household row plus one (kin who share a roof are allies for first aid), 0 for none, and the surgery level (first aid skill).</summary>
+    public int Household { get; init; }
+    public int SurgeryLevel { get; init; }
     public long BedX { get; init; }
     public long BedY { get; init; }
     public int BedZ { get; init; }
@@ -133,6 +136,7 @@ public readonly struct PersonAnchors
             HasWork = hasWork, WorkInField = field, HasSquare = hasSq, HomeX = hx, HomeY = hy, HomeJit = hj, HomeJitY = hjy, HomeFacing = hf, HomeSettlement = hs, HomeLot = p.HomeLot[index],
             WorkX = wx, WorkY = wy, WorkJit = wj, WorkJitY = wjy, WorkFacing = wf, WorkSettlement = ws, WorkLot = wl, SquareX = sx, SquareY = sy, SquareJit = sj, SquareJitY = sjy,
             FieldTiles = tiles, LatTenths = lat, Book = book0, HasBed = hasBed, BedX = bedx, BedY = bedy, BedZ = bedz, BedAxis = bedAxis, HasChurch = hasChurch, ChurchX = cx, ChurchY = cy, ChurchJit = cj, ChurchJitY = cjy,
+            Household = p.Household[index] + 1, SurgeryLevel = p.SkillLevelOf(index, Skill.Surgery),
             Stalls = hs >= 0 && facts != null ? facts.StallsOf(hs) is { Length: > 0 } sp ? sp : null : null, QueueGapMm = book0.Content.Crowd.QueueGapMm,
         };
     }

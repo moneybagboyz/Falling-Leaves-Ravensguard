@@ -128,6 +128,7 @@ public sealed class WorldRuntime : IDisposable
         Ravensguard.Sim.Carts.VehicleWiring.Attach(homeWorld, state, content);                                                                      // P5-G hook: vehicle sites, commissions and voyages (VehicleSystem)
         Ravensguard.Sim.Production.OwnershipWiring.Attach(homeWorld, state, content);                                                              // P5-F hook: the hero's businesses, stewards, stalls, prospecting (OwnershipSystem)
         Ravensguard.Sim.Succession.EstateWiring.Attach(homeWorld, state, content);                                                                 // P5-H hook: estates of the dead, creditors' claims, the labour market's wills (EstateSystem)
+        Ravensguard.Sim.Medicine.MedicineWiring.Attach(homeWorld, state, content);                                                                  // P6-B1 hook: the physicians and the hero's treatment queue (AbstractPhysic, the treatment screen)
         homeWorld.Sim.Set(new Ravensguard.Sim.Combat.Abstract.AbstractBattleService(content));                                    // P4-G hook: fights nobody watches (abstract battles)
         state.Regions = Records;
         if (state.RegionSections.Count > 0) { Records.AttachSections(state.RegionSections); state.RegionSections = new SortedDictionary<int, byte[]>(); } // the pager holds them now

@@ -43,8 +43,6 @@ public sealed partial class SiteCrawl
     public bool OwnsFight { get; set; } = true;
     /// <summary>The hero fights under the AI (watch mode, tests, the autoplay); false: the player's inputs drive the hero's fighter.</summary>
     public bool HeroAi { get; set; }
-    /// <summary>The auto-dress stop-gap after a fight (the game's setting; saved with the crawl).</summary>
-    public bool AutoDress { get; set; } = true;
 
     private readonly Queue<CrawlInput> _inputs = new();
     private LightFramePair _pair;

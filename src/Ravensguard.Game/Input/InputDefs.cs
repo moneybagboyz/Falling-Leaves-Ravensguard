@@ -19,7 +19,7 @@ public static class InputDefs
         const InputContext G = InputContext.Global, W = InputContext.World, C = InputContext.CombatStance,
             S = InputContext.CalledShot, B = InputContext.Build, U = InputContext.Menu, E = InputContext.BlueprintEditor, T = InputContext.Trade, R = InputContext.Mounted, H = InputContext.Choice,
             V = InputContext.VehicleDesigner,
-            Lg = InputContext.Ledger;
+            Lg = InputContext.Ledger, Tr = InputContext.Treatment;
 
         // Global
         A(G, "console", Binding.P(Key.Quoteleft)); // physical: the backtick key position on any layout
@@ -222,6 +222,16 @@ public static class InputDefs
         A(Lg, "alerts", K(Key.A));
         A(Lg, "open", K(Key.Enter));
         A(Lg, "back", K(Key.Escape));
+
+        // The treatment screen (P6-B1, medicine 4.1, overview 6): a modal screen alone with Global; the paper-doll's parts, the verbs of a part, the patients in reach.
+        A(Tr, "up", K(Key.Up));
+        A(Tr, "down", K(Key.Down));
+        A(Tr, "left", K(Key.Left));
+        A(Tr, "right", K(Key.Right));
+        A(Tr, "accept", K(Key.Enter));
+        A(Tr, "dress_all", K(Key.D));
+        A(Tr, "next_patient", K(Key.Tab));
+        A(Tr, "back", K(Key.Escape));
 
         // Blueprint editor (dev tool, plan 2.11). A standalone context like Menu: only Global stays live beside it.
         A(E, "primary", M(MouseButton.Left), M(MouseButton.Left, Mods.Shift)); // Shift on rectangles = outline only

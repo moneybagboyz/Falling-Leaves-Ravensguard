@@ -120,7 +120,7 @@ Each step ends with its golden tests green. Parts of one step run in parallel (s
    - **A3 standing and marks.** Files: `Sim/Society/*`, `RumourTable` (heard counts), `SuccessionDesk` (reputation). Gate: RP-1 to RP-10.
    - **A4 difficulty sliders.** Gate: DS-1 to DS-7.
 2. **P6-B** (six parallel parts):
-   - **B1 the treatment screen** and the auto-dress removed (needs A1). Gate: MT-2, MT-5, MT-6, MT-13, MT-14. **Milestone M-A "the surgeon".**
+   - **B1 the treatment screen** and the auto-dress removed (needs A1). Gate: MT-2, MT-5, MT-6, MT-13, MT-14. **Milestone M-A "the surgeon".**  **Built (P6-B1):** the screen, the commands and the queue, physicians seated at the seeding pass, the live medics, the auto-dress gone; details at the end of `medicine-and-treatment.md`.
    - **B2 crime core:** seen/unseen, witnesses, recognition, the hue and cry, reports, bounties (escrowed as Phase 3 jobs until C2 lands). Needs A2, A3. Gate: CJ-1 to CJ-4, CJ-13, CJ-15.
    - **B3 family core:** courting, weddings, dowries, children, upbringing, the hero's ageing and old age, kidnapping. Needs A3. Gate: FL-1 to FL-4, FL-7 to FL-11, FL-15.
    - **B4 faith core:** derived religions, offices and holders, the tithe split, holy days, piety, pilgrimages. Needs A2, A3. Gate: FC-1 to FC-5, FC-10, FC-12, FC-13.

@@ -184,7 +184,7 @@ public static class SelfTest
         Check(t.Count == 2 && t[0].SequenceEqual(["a", "x, y"]) && t[1].SequenceEqual(["b", "say \"hi\""]), "the CSV checker misreads quoted fields");
         // every key the code asks the player's text for with a fixed name exists (the new ones of the Phase 3 fixes)
         var keys = rows.Select(r => r[0]).ToHashSet();
-        foreach (var k in new[] { "TALK_LEGEND", "TRADE_GOOD_N", "TRAVEL_CAMP_YOU", "TRAVEL_CLOCK_PAUSED", "SHELTER_TENT", "SURFACE_DEEPMUD", "REPORT_CAT_BUG", "CRASH_SAVED", "HUD_TICK_FAULT", "CONTEXT_CHOICE", "ACTION_CHOICE_PICK_9" })
+        foreach (var k in new[] { "TALK_LEGEND", "TRADE_GOOD_N", "TRAVEL_CAMP_YOU", "TRAVEL_CLOCK_PAUSED", "SHELTER_TENT", "SURFACE_DEEPMUD", "REPORT_CAT_BUG", "CRASH_SAVED", "HUD_TICK_FAULT", "CONTEXT_CHOICE", "ACTION_CHOICE_PICK_9", "CONTEXT_TREATMENT", "ACTION_TREATMENT_DRESS_ALL", "OVERLAY_TREATMENT", "tr_title", "tr_verb_bandage", "tr_refuse_two_hands" })
             Check(keys.Contains(k), "en.csv lacks " + k);
     }
 

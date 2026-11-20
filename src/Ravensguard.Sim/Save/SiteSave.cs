@@ -104,7 +104,7 @@ public sealed class SiteSave
         var s = new CrawlSave
         {
             Site = c.Map.SiteId, GameSec = c.GameSec, Steps = c.Steps, FloodSince = c.FloodSince, ClearedDay = c.ClearedDay, Slain = [.. c.Slain],
-            Flags = c.AutoDress ? [c.TabooBroken, c.GraveTaken, c.Resting, c.HeroAi] : [c.TabooBroken, c.GraveTaken, c.Resting, c.HeroAi, true], CaveIns = [.. c.CaveIns.SelectMany(p => new[] { p.Zone, p.Cell, p.Radius, p.AtSec, (long)p.EventId })],
+            Flags = [c.TabooBroken, c.GraveTaken, c.Resting, c.HeroAi], CaveIns = [.. c.CaveIns.SelectMany(p => new[] { p.Zone, p.Cell, p.Radius, p.AtSec, (long)p.EventId })],
         };
         foreach (var m in c.Members)
             s.Members.Add(new CrawlMemberSave

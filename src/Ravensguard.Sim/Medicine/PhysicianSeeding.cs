@@ -12,7 +12,7 @@ namespace Ravensguard.Sim.Medicine;
 /// more. Keyed on the world seed and person ids only (the ages are those of the generation's own "now", never the day the pass runs), so a new game and a v8 save loaded later derive the same men.
 /// The pick is the adult of the settlement with the highest <see cref="Skill.Surgery"/>, else the highest Wits, lowest row first; people who run a business, a manor or the church are not asked. His
 /// Surgery becomes at least 45 + Range(0, 26) (barber 25 + Range(0, 16)), stream 0x600 draw 0; he takes the <c>physician</c> business (his own capital 0) when the world has an economy, and the
-/// occupation <c>Physician</c> once A2's enum has it. The shared seeding-pass skeleton (A2) calls <see cref="Run"/>.
+/// occupation <c>Physician</c>. The shared seeding-pass skeleton (A2) calls <see cref="Run"/>.
 /// </summary>
 public static class PhysicianSeeding
 {
@@ -61,7 +61,7 @@ public static class PhysicianSeeding
                 picked.Add(best);
                 ulong id = pt.IdOf(best).Value;
                 int lo = who == PhysicianKind.Physician ? rules.PhysicianSurgeryBase : rules.BarberSurgeryBase, spread = who == PhysicianKind.Physician ? rules.PhysicianSurgerySpread : rules.BarberSurgerySpread;
-                int level = Math.Max(bSurg, lo + DetRng.Range(w.Seed, 0, id, MedicineEnums.PhysicianStream, 0, 0, Math.Max(1, spread)));
+                int level = Math.Max(bSurg, lo + DetRng.Range(w.Seed, 0, id, RngStreams.Physician, 0, 0, Math.Max(1, spread)));
                 SetSurgery(pt, best, level);
                 int biz = -1;
                 if (ew != null && kind != null)
@@ -70,7 +70,7 @@ public static class PhysicianSeeding
                     ew.Production.SetOwner(b, best); b.OwnerWorks = false;
                     b.CashStart = 0; b.Capital = 0; biz = b.Index; founded = true;
                 }
-                if (MedicineEnums.PhysicianOccupation is { } occ) { pt.Occupation[best] = occ; pt.WorkSettlement[best] = s; }
+                pt.Occupation[best] = Occupation.Physician; pt.WorkSettlement[best] = s;
                 book.Add(new PhysicianRow(id, biz, who, s));
             }
         }

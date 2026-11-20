@@ -15,7 +15,7 @@ public enum ReplayKind : byte { Input = 1, Speed = 2, Torch = 3, MoveTo = 4, Use
     Fight = 13, FightStart = 14, FightEnd = 15,
     /// <summary>P4-H: a crawl input (A = <c>CrawlInputKind</c>, B and C its arguments), and the hero going down into a site (A = site id) and coming up.</summary>
     Site = 16, SiteStart = 17, SiteEnd = 18,
-    /// <summary>The field dressing when a fight ends (the auto-dress stop-gap; A = bandages held, plus 1 &lt;&lt; 32 when the pack has rope; B = the dresser's skill; C = the dresser's person id, 0 the hero).</summary>
+    /// <summary>The field dressing when a fight ended (the Phase 4 auto-dress stop-gap, gone at P6-B1: an old trace's command is read and skipped; A = bandages held, plus 1 &lt;&lt; 32 when the pack has rope; B = the dresser's skill; C = the dresser's person id, 0 the hero).</summary>
     Dress = 19,
     /// <summary>P5-I review (finding 4): the floor under the hero fell and he landed a level down (A = the level); the construction world's fall is the tick worker's, so the replay is told.</summary>
     DropLevel = 20 }
@@ -46,7 +46,6 @@ public readonly record struct ReplayCommand(long Tick, ReplayKind Kind, long A =
     public static ReplayCommand Site(long tick, Ravensguard.Sim.Sites.CrawlInput i) => new(tick, ReplayKind.Site, (int)i.Kind, i.A, i.B);
     public static ReplayCommand SiteStart(long tick, ulong site) => new(tick, ReplayKind.SiteStart, (long)site);
     public static ReplayCommand SiteEnd(long tick) => new(tick, ReplayKind.SiteEnd);
-    public static ReplayCommand Dress(long tick, int bandages, bool rope, int skill, ulong actor) => new(tick, ReplayKind.Dress, (long)bandages | (rope ? 1L << 32 : 0), skill, (long)actor);
     public static ReplayCommand DropLevel(long tick, int z) => new(tick, ReplayKind.DropLevel, z);
     public Ravensguard.Sim.Combat.Melee2.FightInput AsFightInput => new((Ravensguard.Sim.Combat.Melee2.FightInputKind)(int)A, (int)B, (int)(C >> 32), (int)(uint)C);
     /// <summary>True for the kinds that act on the world's records rather than on the live sim.</summary>
@@ -98,7 +97,7 @@ public readonly record struct ReplayCommand(long Tick, ReplayKind Kind, long A =
             case ReplayKind.Site: w.SiteInput(new Ravensguard.Sim.Sites.CrawlInput((Ravensguard.Sim.Sites.CrawlInputKind)(int)A, (int)B, (int)C)); break;   // P4-H
             case ReplayKind.SiteStart: w.EnterSiteById((ulong)A); break;
             case ReplayKind.SiteEnd: w.DetachSite(); break;
-            case ReplayKind.Dress: w.DressAfterFight((int)(A & 0xFFFF_FFFF), (A >> 32) != 0, (int)B, (ulong)C); break;
+            case ReplayKind.Dress: break;                                   // P6-B1: the auto-dress is gone; the treatment screen's commands are hero commands (ReplayKind.Hero)
             case ReplayKind.DropLevel: w.DropToLevel((int)A); break;
             // Hero and Action change the world's records (the desk, the camp, the autopilot book): nothing in the live sim
         }

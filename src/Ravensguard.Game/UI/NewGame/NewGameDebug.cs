@@ -448,6 +448,21 @@ public static class NewGameDebug
                     await Frames(tree, 240);                                          // the views come from a barrier
                     break;
                 }
+            case "treatment":
+                {
+                    // dev (P6-B1): a real new game, the hero hurt (a cut forearm vein, a deep cut across the chest) with bandages and a splint in his pack, then the treatment screen over him
+                    var w = MakeWorld(Math.Min(years, 60), 7);
+                    var d = NewGameServices.NewDraft(); d.Name = "Shot"; d.LibraryWorldId = w.Info.Id;
+                    router.Push(new RegionBuildScreen(router, d, w));
+                    if (!await Until(tree, () => router.Top is Ravensguard.Game.World.StreetView, 9000)) throw new Exception("treatment shot: the region build did not finish");
+                    var sv = (Ravensguard.Game.World.StreetView)router.Top!; var rt = sv.Runtime!;
+                    await Until(tree, () => rt.HourDone >= sv.DebugWorld.Clock.Now.TotalHours, 6000);
+                    await Frames(tree, 60);
+                    sv.DebugWorld.SetSpeed(Ravensguard.Sim.Core.SimSpeed.Paused);
+                    sv.DebugTreatment();
+                    await Frames(tree, 120);                                          // the view comes from a barrier
+                    break;
+                }
             case "loadreport":
                 {
                     // dev: the pre-load report of a save made with other content (a made-up one: a good added, one moved, one written off, a mod gone)

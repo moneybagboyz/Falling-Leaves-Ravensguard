@@ -71,7 +71,7 @@ public static class TreatDesk
             long finish = t + (long)Treatment.SimSeconds(line.Kind) * MedicineTables.TicksPerSimS;
             var res = Treatment.Perform(patient, plan, new TreatRequest(line.Kind, line.Part, finish, skill, manId, light), kit);
             if (!res.Ok) { outcomes.Add(new DeskOutcome(line, false, false, res.Reason, 0)); continue; }
-            if (line.FeeMites > 0) ledger.Transfer(payer, payee, new Coin(line.FeeMites), MedicineEnums.FeeReason);
+            if (line.FeeMites > 0) ledger.Transfer(payer, payee, new Coin(line.FeeMites), TransferReason.Fee);
             outcomes.Add(new DeskOutcome(line, true, res.Success, res.Reason, line.FeeMites));
             t = finish;
         }

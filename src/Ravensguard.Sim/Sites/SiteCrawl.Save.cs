@@ -21,7 +21,6 @@ public sealed partial class SiteCrawl
         var crawl = new SiteCrawl(r.Map!, c, fc, ledger, s.GameSec, seed, r.Known);
         crawl.Steps = s.Steps; crawl.FloodSince = s.FloodSince; crawl.ClearedDay = s.ClearedDay; crawl.Slain.AddRange(s.Slain);
         if (s.Flags.Length >= 4) { crawl.TabooBroken = s.Flags[0]; crawl.GraveTaken = s.Flags[1]; crawl.Resting = s.Flags[2]; crawl.HeroAi = s.Flags[3]; }
-        crawl.AutoDress = !(s.Flags.Length >= 5 && s.Flags[4]);                    // a fifth flag (set) means the auto-dress is off; older saves have four
         crawl._loudWindow = s.Loud;
         for (int i = 0; i + 4 < s.CaveIns.Length; i += 5) crawl.CaveIns.Add(new PendingCaveIn((int)s.CaveIns[i], (int)s.CaveIns[i + 1], (int)s.CaveIns[i + 2], s.CaveIns[i + 3], (ulong)s.CaveIns[i + 4]));
         foreach (var ms in s.Members)

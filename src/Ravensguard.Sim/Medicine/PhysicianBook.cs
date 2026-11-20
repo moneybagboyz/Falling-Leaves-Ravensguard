@@ -13,20 +13,6 @@ public enum PhysicianKind : byte { Physician, Barber }
 public readonly record struct PhysicianRow([property: Key(0)] ulong Person, [property: Key(1)] int Business, [property: Key(2)] PhysicianKind Kind, [property: Key(3)] int Settlement);
 
 /// <summary>
-/// Local stand-ins for what the Phase 6 shared plumbing (A2) registers: the stream of physician seeding and <c>AbstractPhysic</c>, <c>Occupation.Physician</c> and
-/// <c>TransferReason.Fee</c>. TODO(P6 merge): replace with <c>RngStreams.Physician</c> (0x600), <c>Occupation.Physician</c> and <c>TransferReason.Fee</c> and delete this class; until
-/// then the occupation and the reason are looked up by name, so the code works before and after the enums grow, and the occupation stays unchanged while it does not exist.
-/// </summary>
-public static class MedicineEnums
-{
-    /// <summary>Physician seeding (key person id, draw 0) and <c>AbstractPhysic</c> (key person id, tick = game day, draw 1); overview 5, 0x600.</summary>
-    public const uint PhysicianStream = 0x600;
-    public static readonly Occupation? PhysicianOccupation = Enum.TryParse<Occupation>("Physician", out var o) ? o : null;
-    /// <summary>The fee's ledger reason: <c>Fee</c> when A2's enum has it, else a <c>Gift</c> (the coin moves either way and the audit holds).</summary>
-    public static readonly TransferReason FeeReason = Enum.TryParse<TransferReason>("Fee", out var r) ? r : TransferReason.Gift;
-}
-
-/// <summary>
 /// The physicians and barber-surgeons of a region (medicine 4.4), kept in the world's service bag and saved in the optional <c>medicine</c> section (absent while empty). Rows are
 /// kept in ascending person id, so every walk is in stable-id order.
 /// </summary>
@@ -39,9 +25,14 @@ public sealed class PhysicianBook
     /// <summary>Resolves a person's body plan by id for the abstract tier's tourniquets; null leaves the physic to bandages and pressure (set by the host that holds the combat content).</summary>
     public Func<string, BodyPlanV2?>? Plans { get; set; }
 
+    /// <summary>The hero's treatment queue (medicine 4.1, MT-13): saved with the physicians in the optional <c>medicine</c> section.</summary>
+    public TreatQueue Queue { get; private set; } = new();
+
     public IReadOnlyList<PhysicianRow> Rows => _rows;
     public int Count => _rows.Count;
     public bool IsEmpty => _rows.Count == 0;
+    /// <summary>True when there is nothing to save: no physician and nothing queued.</summary>
+    public bool IsBlank => _rows.Count == 0 && Queue.IsEmpty;
 
     public void Add(PhysicianRow row)
     {
@@ -80,12 +71,13 @@ public sealed class PhysicianBook
         return true;
     }
 
-    public MedicineSave Capture() => new() { Physicians = [.. _rows] };
+    public MedicineSave Capture() => new() { Physicians = [.. _rows], Queue = Queue.IsEmpty ? null : Queue.Capture() };
 
     public static PhysicianBook Restore(MedicineSave s)
     {
         var b = new PhysicianBook();
         foreach (var r in s.Physicians) b.Add(r);
+        b.Queue = TreatQueue.Restore(s.Queue);
         return b;
     }
 }
@@ -96,4 +88,6 @@ public sealed class MedicineSave
 {
     public const string SectionName = "medicine";
     [Key(0)] public PhysicianRow[] Physicians { get; set; } = [];
+    /// <summary>The hero's treatment steps still waiting (absent while none).</summary>
+    [Key(1)] public TreatStep[]? Queue { get; set; }
 }

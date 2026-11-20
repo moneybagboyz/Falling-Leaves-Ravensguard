@@ -68,4 +68,38 @@ public sealed class HeroWorld
 
     /// <summary>A barrier job: apply what is due and publish a fresh view.</summary>
     public Task<int> Kick() => Runtime.AtBarrier(() => { int n = Desk.ApplyDue(Context(), Runtime.HourDone); if (n == 0) Desk.Publish(Context(), Runtime.HourDone); return n; });
+
+    // ------------------------------------------------------------------ the treatment screen (P6-B1, medicine 4.1)
+
+    /// <summary>
+    /// Queues a treatment command (<see cref="HeroCommandKind.Treat"/>), recorded like every hero command, and applies it at once at a barrier (a verb takes sim-seconds, so it does not wait for the end
+    /// of the game hour), then performs the steps whose work has ended by <paramref name="nowSec"/> (read on the main thread). Main thread.
+    /// </summary>
+    public HeroCommand IssueTreat(HeroCommand c, long nowSec)
+    {
+        c = Desk.Issue(c);
+        Issued?.Invoke(c);
+        _ = Runtime.AtBarrier(() =>
+        {
+            var ctx = Context();
+            Desk.ApplyNow(ctx, HeroCommandKind.Treat, Runtime.HourDone, publish: false);
+            Ravensguard.Sim.Medicine.HeroTreatDesk.Advance(ctx, nowSec);
+            Desk.Publish(ctx, Runtime.HourDone);
+            return 0;
+        });
+        return c;
+    }
+
+    /// <summary>Performs the queue's steps whose work has ended by <paramref name="nowSec"/>; returns how many were done. Main thread (the game calls it each frame while a queue waits).</summary>
+    public Task<int> TreatTick(long nowSec) => Runtime.AtBarrier(() =>
+    {
+        var ctx = Context();
+        int n = Ravensguard.Sim.Medicine.HeroTreatDesk.Advance(ctx, nowSec);
+        if (n > 0) Desk.Publish(ctx, Runtime.HourDone);
+        return n;
+    });
+
+    /// <summary>The treatment screen's view of a patient (a physician's quote when <paramref name="physician"/> is given), built at a barrier; null when the patient has no wounds on the books.</summary>
+    public Task<Ravensguard.Sim.Medicine.TreatView?> TreatView(ulong patient, long nowSec, ulong? physician = null) =>
+        Runtime.AtBarrier(() => Ravensguard.Sim.Medicine.TreatViews.ForHero(Context(), patient, nowSec, physician));
 }

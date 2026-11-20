@@ -66,7 +66,7 @@ public partial class StreetView
     void OpenReportFor(AfterFightReport rep, int ground, int arrows)
     {
         if (_router == null || _reportScreen != null && IsInstanceValid(_reportScreen)) return;
-        var panel = new AfterFightPanel(rep, ground, arrows);
+        var panel = new AfterFightPanel(rep, ground, arrows) { Bleeding = HeroBleedingWounds(), Treat = () => Callable.From(OpenTreatmentSelf).CallDeferred() };    // P6-B1: the call to action opens the treatment screen
         panel.Closed = () => { _router.Pop(); _reportScreen = null; };
         _reportScreen = panel;
         _router.Push(panel);

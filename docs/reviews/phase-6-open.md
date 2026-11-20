@@ -16,11 +16,14 @@ Collected while the steps are built. The close-out fixes each item or moves it i
   - Fight-only wound books, abstract battle books and resident regions other than the home economy keep the default 100.
   - The Advanced panel's difficulty rows were not rendered at 960x540.
   - For the close-out: run the 100-year population soak at aging pace 1, 2, 3 and 4 (only a one-year 4x check was run).
-- **A1 medicine, integration left for B1 (the treatment screen helper):**
-  - Replace the `MedicineEnums` name lookups with A2's real enums: stream 0x600 `RngStreams.Physician`, `Occupation.Physician`, `TransferReason.Fee`.
-  - The `physician` business kind's owner occupation should become `Physician`.
-  - `WorldSave` must read and write the `medicine` section.
-  - `PhysicianSeeding.Run` must be registered as a Phase 6 seeding step.
-  - `PhysicianBook.Plans` needs the combat content's plan lookup.
-  - Not done: guards' kit bandages; poppy milk sold only where a physician is; surgery room recognition; the live tier filling `ChoiceContext.Treat*`.
+- **A1 medicine, integration left for B1 (done in P6-B1):**
+  - [x] Replace the `MedicineEnums` name lookups with A2's real enums: stream 0x600 `RngStreams.Physician`, `Occupation.Physician`, `TransferReason.Fee`.
+  - [x] The `physician` business kind's owner occupation is `Physician`.
+  - [x] `WorldSave` reads and writes the `medicine` section (the physicians and the hero's treatment queue).
+  - [x] `PhysicianSeeding.Run` is registered as a Phase 6 seeding step (`PhysicianSeedStep`; a loaded save is seeded when the home region is built).
+  - [x] `PhysicianBook.Plans` has the combat content's plan lookup (`MedicineWiring.PlanOf`).
+  - [x] Guards' kit bandages (`bandages` and `rope` on the guard and soldier fight kits); the live tier fills `ChoiceContext.Treat*` and gives first aid.
+  - [ ] Still not done: poppy milk sold only where a physician is; surgery room recognition; physicians for resident regions other than the home region; the HUD injury line's tourniquet and tendon warnings; the cause chain in wound tooltips; trust and kin as consent; the bed-day; a live-medic end-to-end test.
+- **B1 treatment screen, auto-dress removed:** [x] `FieldDressing`'s auto-dress call sites, `LiveWorld.DressAfterFight`, `Settings.AutoDress` and its row are gone; an old trace's Dress command is skipped. The crawl below ground keeps its own Treat input and its bandage command (`AftermathDesk.DressCommand`).
+- **Merge note (B1):** the Phase 5 trail hash was re-pinned again after the physicians were seated at a new game (seed 1 B724181ADCA59FF0, seed 1234 9BE661FFB1CB5663). B2 and B5 will also touch `GoldenHashes.cs`, `en.csv` (B1's keys replace the `wd_*` rows near line 2788), `WorldSave.cs` and `HeroCommandKind` (`Treat` is appended after `Will`).
 - **Merge note:** the Phase 5 trail hash was re-pinned after A1 (seed 1 E94BE59F8BF56007, seed 1234 1ADA8B7E4D87D8C0). Medicine's physicians change healing in the trail's 10 days; the generated layers are unchanged.

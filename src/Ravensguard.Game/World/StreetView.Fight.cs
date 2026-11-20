@@ -179,7 +179,7 @@ public partial class StreetView
         var f = _world.Fight;
         if (f == null) { CloseRoadFight(); return; }
         if (!f.IsOver) return;
-        if (rf.EndedTick < 0) { _roadFight = rf with { EndedTick = f.Tick }; AutoDress(f, _fightView.Hero); return; }
+        if (rf.EndedTick < 0) { _roadFight = rf with { EndedTick = f.Tick }; return; }
         if (f.Tick - rf.EndedTick < 40) return;
         var hero = f.Fighters[_fightView.Hero];
         bool won = f.DecidedWinner == hero.Team && hero.Act != FAct.Surrendered, fled = hero.Act == FAct.Fled;   // P4-D: the winner of a walk-away too (morale 4.3)
@@ -197,46 +197,6 @@ public partial class StreetView
     }
 
     bool _fightResumeChecked;
-
-    /// <summary>
-    /// The auto-dress stop-gap (approved; the Phase 5 treatment screen replaces it): when a road or site fight the hero did not lose is over, his bleeding wounds are bound, worst first, with
-    /// the bandages (and rope, for an arterial limb wound) in his pack; by himself when conscious, else by the first conscious companion in the party. It runs in the live tier at once
-    /// (recorded, so a replay binds the same wounds), each dressing in its real time; what it used leaves the pack at the barrier (a hero command). Off in Settings: nothing is done.
-    /// </summary>
-    void AutoDress(FightWorld f, int heroIndex)
-    {
-        if (!Settings.AutoDress || heroIndex < 0 || heroIndex >= f.Fighters.Count) return;
-        var hero = f.Fighters[heroIndex];
-        bool lost = f.DecidedWinner >= 0 && f.DecidedWinner != hero.Team || hero.Act == FAct.Surrendered;
-        if (lost || hero.Act == FAct.Dead || hero.Book.Dead || Ravensguard.Sim.Combat.Wounds.Treatment.WorstBleeder(hero.Book, -1, f.GameSec) < 0) return;
-        int bandages = 0; long ropeG = 0;
-        foreach (var g in _heroLink?.View?.Goods ?? []) { if (g.Id == "bandage") bandages += (int)Math.Min(int.MaxValue, g.Qty); else if (g.Id == "rope") ropeG += g.Qty; }
-        bool rope = ropeG >= Ravensguard.Sim.Combat.Wounds.FieldDressing.TourniquetRopeG;
-        ulong actor = 0; int skill = (Runtime?.State.Hero ?? _hero)?.Skill("surgery") ?? 0; string helper = "";
-        if (!hero.Book.Conscious)
-        {
-            // a conscious companion of the party binds him (members in id order); nobody: nothing is done
-            var rt = Runtime; var pt = rt?.State.Population.People;
-            var who = (_heroLink?.View?.Squad ?? []).Where(m => m.Active).OrderBy(m => m.Person.Value)
-                .FirstOrDefault(m => rt?.State.Wounds?.Find(m.Person.Value) is not { } b || b.Conscious && !b.Dead);
-            if (who == null) return;
-            actor = who.Person.Value; helper = who.Name;
-            int row = pt?.IndexOf(who.Person) ?? -1;
-            skill = row >= 0 ? pt!.SkillLevelOf(row, Ravensguard.Sim.People.Skill.Surgery) : 0;
-        }
-        if (bandages <= 0 && !rope) { _router?.ShowToast(L.T("wd_dress_nothing"), 5f); return; }
-        var o = _rec.Dress(bandages, rope, skill, actor);
-        if (o.Steps.Count == 0) return;
-        if (_heroLink != null) _heroLink.Issue(Ravensguard.Sim.Combat.Aftermath.AftermathDesk.DressCommand(o.BandagesUsed, o.RopeUsed * Ravensguard.Sim.Combat.Wounds.FieldDressing.TourniquetRopeG, _world.Clock.Now.Seconds));
-        var lines = new List<string>();
-        foreach (var st in o.Steps)
-        {
-            string part = Ravensguard.Sim.Combat.Flavour.FlavourDescribe.PartName(Ravensguard.Game.UI.GameText.Instance, hero.Plan.Parts[st.Part].Id, out _, out _);
-            string key = st.Kind == Ravensguard.Sim.Combat.Wounds.TreatKind.Tourniquet ? "wd_dress_tourniquet" : "wd_dress_bandage";
-            lines.Add(helper.Length == 0 ? L.F(key, part) : L.F(key + "_by", part, helper));
-        }
-        _router?.ShowToast(string.Join("\n", lines), 6f);
-    }
 
     /// <summary>
     /// A save made mid-fight (P4 close-out): the fight record of the "fight" section is rebuilt where it stood (same FightTick, books, morale, watch and weather) and attached to the live world

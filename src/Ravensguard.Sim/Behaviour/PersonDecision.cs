@@ -4,6 +4,9 @@ using Ravensguard.Sim.People;
 namespace Ravensguard.Sim.Behaviour;
 
 /// <summary>What the brain was fed and what it said, for one person at one window (the explanation and the tests read it).</summary>
+/// <summary>Medicine 4.5: what the live tier knows of the wounded near a person (bleeding allies and strangers within 6 m, his first-aid permille, his own pain as a percent of his knock-out threshold).</summary>
+public readonly record struct TreatInputs(int Allies, int Strangers, int FirstAidPm, int OwnPainPct);
+
 public readonly record struct DecisionResult(Choice Choice, NeedInputs Needs, ChoiceContext Context);
 
 /// <summary>
@@ -21,7 +24,7 @@ public static class PersonDecision
     public static bool BoardOpen(in PersonAnchors a, in ChoiceContext ctx, bool boardHasJobsHere)
         => boardHasJobsHere && ctx.Scheduled == ActionKind.Idle && !ctx.Dark && !a.Child && (!a.HasWork || a.Occupation == Occupation.Labourer || a.Class == SocialClass.Peasant);
 
-    public static DecisionResult Decide(UtilityBrain brain, in PersonAnchors a, long at, ActionKind current, long intentSince, bool boardHasJobsHere, int coldPm, int wetPm, int heatPm, bool hasBody, bool indoors, ActionPolicy? policy = null, bool forceBoard = false, int threatPm = 0)
+    public static DecisionResult Decide(UtilityBrain brain, in PersonAnchors a, long at, ActionKind current, long intentSince, bool boardHasJobsHere, int coldPm, int wetPm, int heatPm, bool hasBody, bool indoors, ActionPolicy? policy = null, bool forceBoard = false, int threatPm = 0, TreatInputs treat = default)
     {
         NeedModel.Read(a, at, out var needs, out var ctx);
         ctx.Current = current; ctx.MinutesInCurrent = intentSince == long.MinValue ? 999 : (int)((at - intentSince) / 60);
@@ -31,6 +34,7 @@ public static class PersonDecision
         ctx.CanShelter = hasBody && !indoors && (coldPm > 0 || wetPm > 200 || heatPm > 0);
         ctx.CanFlee = threatPm > 0;
         ctx.Policy = policy;
+        ctx.TreatAlliesNear = treat.Allies; ctx.TreatStrangersNear = treat.Strangers; ctx.FirstAidPm = treat.FirstAidPm; ctx.OwnPainPct = treat.OwnPainPct;
         return new DecisionResult(brain.Choose(needs, ctx), needs, ctx);
     }
 }
