@@ -4694,6 +4694,86 @@ jx_not_your_fief,That fief is not yours to give law to.
 jx_law_reset,The law of that crime is the culture's again.
 jx_law_not_allowed,Custom does not allow that.
 jx_law_set,The fief's law is set.
+jl_crime_theft,Theft
+jl_crime_burglary,Burglary
+jl_crime_pickpocketing,Pickpocketing
+jl_crime_poaching,Poaching
+jl_crime_assault,Assault
+jl_crime_murder,Murder
+jl_crime_arson,Arson
+jl_crime_trespass,Trespass
+jl_crime_smuggling,Smuggling
+jl_crime_unlicensed_mining,Unlicensed mining
+jl_crime_grave_robbing,Grave robbing
+jl_crime_sacrilege,Sacrilege
+jl_crime_heresy,Heresy
+jl_crime_treason,Treason
+jl_crime_debt_default,Default on a debt
+jl_crime_embezzlement,Embezzlement
+jl_crime_bribery,Bribery
+jl_crime_harbouring,Harbouring a fugitive
+jl_crime_slaving,Slaving
+jl_crime_jailbreak,Breaking out of gaol
+jl_crime_squatting,Squatting
+jl_what_money,"{0}, {1}"
+jl_what_lashes,"{0}, {1} lashes"
+jl_what_days,"{0}, {1} days"
+jl_conviction_0,first conviction
+jl_conviction_1,second conviction
+jl_conviction_2,third conviction
+jl_conviction_3,repeated conviction
+jl_by_law,The law ({0})
+jl_by_lords_law,The lord's own law ({0})
+jl_by_clergy,Benefit of clergy
+jl_mercy_down,(mercy: a step lighter)
+jl_mercy_up,(the lord's ill will: a step heavier)
+jl_charge_line,"{0}, {1}. {2}: {3}"
+jl_proof_confessed,You have pleaded guilty: the court needs no witness.
+jl_proof_in_act,Taken in the act: the court needs no witness.
+jl_proof_witness,{0} of {1} who knew you can come to the court.
+jl_proof_none,No one who knew you can come: without proof the court must acquit.
+MC_CAPTIVE_TITLE_GAOL,In the lord's gaol
+MC_DEFEAT_TITLE_ARRESTED,You wake in the guards' hands
+MC_DEFEAT_BODY_ARRESTED,{0} took you in. You will lie in the lord's gaol until the court sits on the last day of the month.
+MC_FIRST_ARRESTED,"See what the court will do, and weigh the ways out: pay, make it good, plead, bribe the gaoler, or slip away."
+jl_cell_court_today,The court sits today.
+jl_cell_court_in,The court sits in {0} days.
+jl_cell_fed,Bread given {0} days.
+jl_cell_charges,THE CHARGES AND THE SENTENCE TO EXPECT
+jl_cell_serving,SERVING
+jl_cell_serving_until,"{0}, until day {1}."
+jl_cell_serving_at,"{0}, carried out on day {1}."
+jl_cell_ways,WAYS OUT
+jl_way_pay,Pay what the sentence asks ({0}).
+jl_way_restitution,Make it good to the one you wronged ({0}) for a lighter sentence.
+jl_way_mercy,Mercy: the fief thinks well enough of you to lower it a step.
+jl_way_clergy,"Benefit of clergy (letters, and the church's court): penance instead."
+jl_way_bribe,Offer the gaoler coin (he wants {0} at least).
+jl_way_escape,Slip the bonds or pick the lock.
+jl_way_rescue,Friends who would come for you.
+jl_btn_guilty,Plead guilty
+jl_btn_clergy,Clergy
+jl_btn_restitute,Make it good
+jl_btn_bribe,Bribe
+jl_court_title,The court
+jl_court_empty,No cases are before the court.
+jl_court_status,"{0} cases wait for judgment. What you leave undecided at the next sitting, the steward judges."
+jl_court_case,{0}: {1}
+jl_court_accused,{0} stands accused of {1}.
+jl_court_value,What was taken or lost: {0}.
+jl_court_no_proof,You may not convict.
+jl_court_law,THE LAW
+jl_court_instead,"OR, IN ITS PLACE (! harsher than custom: the convicted's kin will not forget it)"
+jl_court_chosen,You will pronounce: {0}.
+jl_court_pronounce,Pronounce
+jl_court_acquit,Acquit
+jl_court_adjourn,Adjourn
+jl_docket_toast,The court sits: {0} cases wait for your judgment.
+jl_q_head,LAW
+jl_q_surrender,Give yourself up to the guards
+jl_q_court,Hold court
+jl_find_guard,Find a guard.
+su_cause_executed,The court's rope ended it.
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."

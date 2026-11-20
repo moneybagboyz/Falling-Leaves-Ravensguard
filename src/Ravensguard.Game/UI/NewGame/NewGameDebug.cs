@@ -518,6 +518,29 @@ public static class NewGameDebug
                     await Frames(tree, 240);                                          // the views come from a barrier
                     break;
                 }
+            case "court":
+                {
+                    // dev (P6-C1): the Court panel over a made-up docket
+                    var view = Ravensguard.Game.UI.CourtScreen.Demo();
+                    router.Push(new Ravensguard.Game.UI.CourtScreen(router, () => view, (_, _) => { }, _ => { }, () => { }));
+                    await Frames(tree, 40);
+                    break;
+                }
+            case "cell":
+                {
+                    // dev (P6-C1): the gaol cell of a held hero, with the sentence to expect and the ways out
+                    var w = MakeWorld(Math.Min(years, 60), 7);
+                    var d = NewGameServices.NewDraft(); d.Name = "Shot"; d.LibraryWorldId = w.Info.Id;
+                    router.Push(new RegionBuildScreen(router, d, w));
+                    if (!await Until(tree, () => router.Top is Ravensguard.Game.World.StreetView, 9000)) throw new Exception("cell shot: the region build did not finish");
+                    var sv = (Ravensguard.Game.World.StreetView)router.Top!; var rt = sv.Runtime!;
+                    await Until(tree, () => rt.HourDone >= sv.DebugWorld.Clock.Now.TotalHours, 6000);
+                    await Frames(tree, 60);
+                    sv.DebugWorld.SetSpeed(Ravensguard.Sim.Core.SimSpeed.Paused);
+                    sv.DebugShowAftermath(2);
+                    await Frames(tree, 60);
+                    break;
+                }
             case "faith":
                 {
                     // dev (P6-B4): a real new game, the hero gives alms and takes a pilgrim's vow, then the Faith panel opens over him

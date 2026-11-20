@@ -50,7 +50,7 @@ public partial class StreetView
         // the hero bled out or died of a wound outside a fight or a crawl (on the road, in captivity): the wounds go on in the ledger after the fight now (review finding 3)
         if (_fightView == null && _crawl == null && _successionView == null && _heirsTask == null && _successionSeq < 0
             && Runtime?.State.Wounds?.Find(Ravensguard.Sim.Economy.EconomyState.HeroOwner.Value) is { Dead: true })
-            HeroDied("su_cause_wounds");
+            HeroDied(Runtime.State.Justice is { HeroExecuted: not 0 } ? "su_cause_executed" : "su_cause_wounds");      // P6-C1: the court's rope has its own words
         // P6-B3 (family 4.6): old age, or the childbed, has taken the hero; the heir he raised takes over
         if (_fightView == null && _crawl == null && _successionView == null && _heirsTask == null && _successionSeq < 0 && _familyLink is { DeathPending: true } fl)
             HeroDied(fl.CauseKey);

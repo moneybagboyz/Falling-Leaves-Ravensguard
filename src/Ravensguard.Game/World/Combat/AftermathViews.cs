@@ -91,8 +91,9 @@ public partial class DefeatView : AftermathPanel
     protected override void Build()
     {
         string who = L.T("MC_WINNER_" + _r.Winner.ToString().ToUpperInvariant());
-        Heading.Text = L.T("MC_DEFEAT_TITLE_" + _r.Kind.ToString().ToUpperInvariant());
-        Line(L.F("MC_DEFEAT_BODY_" + _r.Kind.ToString().ToUpperInvariant(), who, Money(_r.CoinTaken)));
+        bool arrest = _r.Kind == DefeatKind.Captured && _r.Winner == WinnerKind.Guards;                    // P6-C1: the guards take him to the lord's gaol
+        Heading.Text = L.T(arrest ? "MC_DEFEAT_TITLE_ARRESTED" : "MC_DEFEAT_TITLE_" + _r.Kind.ToString().ToUpperInvariant());
+        Line(L.F(arrest ? "MC_DEFEAT_BODY_ARRESTED" : "MC_DEFEAT_BODY_" + _r.Kind.ToString().ToUpperInvariant(), who, Money(_r.CoinTaken)));
         if (_r.Kind is DefeatKind.Robbed or DefeatKind.Captured)
         {
             Section(L.T("MC_TAKEN"));
@@ -118,7 +119,7 @@ public partial class DefeatView : AftermathPanel
             Section(L.T("MC_FIRST"));
             if (_r.Bleeding || _r.NeedsDoctor) Line("  " + L.T("MC_FIRST_TREAT"));
             if (_r.Kind == DefeatKind.Robbed && _r.Winner == WinnerKind.Bandits) Line("  " + L.T("MC_FIRST_TRACK"));
-            if (_r.Kind == DefeatKind.Captured) Line("  " + L.T("MC_FIRST_CAPTIVE"));
+            if (_r.Kind == DefeatKind.Captured) Line("  " + L.T(_r.Winner == WinnerKind.Guards ? "MC_FIRST_ARRESTED" : "MC_FIRST_CAPTIVE"));
             Line("  " + L.T("MC_FIRST_ROAD"));
         }
         var b = Btn(L.T(_r.Kind == DefeatKind.Captured ? "MC_BTN_CAPTIVITY" : _r.Kind == DefeatKind.Killed ? "su_btn_on" : "MC_BTN_GET_UP"), _continue, w: 220);
@@ -142,6 +143,10 @@ public partial class CaptivityView : AftermathPanel
     /// <summary>The free companions who could come for the hero (P4 close-out, 4.7): the first is offered as "Take control of {name}" (the rescue control switch), with <see cref="TakeControl"/>.</summary>
     public Func<IReadOnlyList<(Ravensguard.Sim.Core.EntityId Id, string Name)>>? Rescuers;
     public Action<Ravensguard.Sim.Core.EntityId>? TakeControl;
+    /// <summary>P6-C1 (crime and justice 4.5, 6, 10a): the cell as the court sees it (charges, the expected sentence, the proof, the ways out), and the acts of the accused ("guilty", "clergy", "restitute", "bribe").</summary>
+    public Func<Ravensguard.Sim.Law.CellView?>? Cell;
+    public Action<string>? Plea;
+    Ravensguard.Sim.Law.CellView? _cellShown;
 
     public CaptivityView(Func<CaptiveView?> view, Action<CaptiveVerb> act, Func<bool> waiting) { _view = view; _act = act; _waiting = waiting; }
 
@@ -153,7 +158,8 @@ public partial class CaptivityView : AftermathPanel
         if (_poll < 0.25) return;
         _poll = 0;
         var v = _view();
-        if (!ReferenceEquals(v, _shown)) { _shown = v; Rebuild(); }
+        var cell = Cell?.Invoke();
+        if (!ReferenceEquals(v, _shown) || !ReferenceEquals(cell, _cellShown)) { _shown = v; _cellShown = cell; Rebuild(); }
     }
 
     void Rebuild()
@@ -161,6 +167,7 @@ public partial class CaptivityView : AftermathPanel
         Clear(Body); Clear(Buttons);
         var v = _shown;
         if (v == null) { Heading.Text = L.T("MC_CAPTIVE_TITLE_BANDITS"); Line(L.T("MC_CAPTIVE_WAIT")); return; }
+        if (v.Captor == CaptorKind.Gaol) { GaolBody(v); return; }
         Heading.Text = L.T(v.Captor == CaptorKind.Army ? "MC_CAPTIVE_TITLE_ARMY" : "MC_CAPTIVE_TITLE_BANDITS");
         Section(L.T("MC_STATUS"));
         Line("  " + L.T("MC_RESTRAINT_" + v.Restraint.ToString().ToUpperInvariant()));
@@ -193,6 +200,58 @@ public partial class CaptivityView : AftermathPanel
         Btn(L.T("MC_OPT_WORK"), () => { }, false, 100).TooltipText = L.T("MC_OPT_WORK_LATER");
         if (Rescuers?.Invoke() is { Count: > 0 } rs && TakeControl != null)                 // the rescue control switch (Tab in the spec's table; a button here, the screen is modal)
             Btn(L.F("rs_btn_control", rs[0].Name), () => TakeControl(rs[0].Id), held && !busy, 200);
+    }
+}
+
+public partial class CaptivityView
+{
+    /// <summary>The lord's gaol (P6-C1): who holds him and how, what he is charged with and the sentence to expect (with every reason), the proof, what is being served, the ways out, and what he can do.</summary>
+    void GaolBody(CaptiveView v)
+    {
+        Heading.Text = L.T("MC_CAPTIVE_TITLE_GAOL");
+        var c = _cellShown ?? Cell?.Invoke();
+        Section(L.T("MC_STATUS"));
+        Line("  " + L.T("MC_RESTRAINT_" + v.Restraint.ToString().ToUpperInvariant()));
+        Line("  " + L.F("MC_GUARDS", v.Guards, v.GuardsAwake, L.T(v.Dark ? "MC_NIGHT" : "MC_DAY")));
+        if (c != null) Line("  " + L.F(c.CourtInDays == 0 ? "jl_cell_court_today" : "jl_cell_court_in", c.CourtInDays) + "  " + L.F("jl_cell_fed", c.FedDays));
+        if (c != null && c.Charges.Count > 0)
+        {
+            Section(L.T("jl_cell_charges"));
+            foreach (var ch in c.Charges)
+            {
+                Line("  " + Ravensguard.Game.UI.JusticeText.Line(ch.Kind, ch.Expected));
+                Line("    " + Ravensguard.Game.UI.JusticeText.Proof(ch.Witnesses, ch.Attending, ch.InAct, ch.Confessed));
+            }
+        }
+        if (c != null && c.Serving.Count > 0)
+        {
+            Section(L.T("jl_cell_serving"));
+            foreach (var s in c.Serving) Line("  " + L.F(s.EndDay >= 0 ? "jl_cell_serving_until" : "jl_cell_serving_at", L.T("jl_step_" + s.Kind), s.EndDay >= 0 ? s.EndDay : s.DueDay));
+        }
+        if (c != null)
+        {
+            Section(L.T("jl_cell_ways"));
+            foreach (var w in c.WaysOut) Line("  " + (w.Available ? "+ " : "- ") + L.F(w.Key, Money(w.Mites)));
+        }
+        Section(L.T("MC_ODDS"));
+        if (v.Restraint == Restraint.Bound) Line("  " + L.F("MC_ODDS_BONDS", v.BondsPm / 10));
+        else Line("  " + (v.HasPick ? L.F("MC_ODDS_LOCK", v.LockPm / 10, L.T(v.ImprovisedPick ? "MC_PICK_NAIL" : "MC_PICK_TOOL")) : L.T("MC_ODDS_NO_PICK")));
+        Line("  " + L.F("MC_ODDS_NOTICE", v.NoticePm / 10));
+        if (v.Last is { } last) { Section(L.T("MC_LAST")); Line("  " + L.F(last.Text, Money(last.Mites))); }
+        if (Pending?.Invoke() is { Length: > 0 } p) Line(p);
+        bool held = v.State == CaptiveState.Held, busy = _waiting();
+        var ways = c?.WaysOut.ToDictionary(w => w.Key) ?? [];
+        Btn(L.T("jl_btn_guilty"), () => Plea?.Invoke("guilty"), held && !busy && c is { Charges.Count: > 0 }, 110);
+        Btn(L.T("jl_btn_clergy"), () => Plea?.Invoke("clergy"), held && !busy && ways.TryGetValue("jl_way_clergy", out var cl) && cl.Available, 110);
+        Btn(L.T("jl_btn_restitute"), () => Plea?.Invoke("restitute"), held && !busy && ways.TryGetValue("jl_way_restitution", out var rs) && rs.Available, 120);
+        Btn(L.T("jl_btn_bribe"), () => Plea?.Invoke("bribe"), held && !busy && ways.TryGetValue("jl_way_bribe", out var br) && br.Available, 120);
+        Btn(L.T("MC_OPT_PICK"), () => _act(CaptiveVerb.PickLock), held && !busy && v.Restraint is Restraint.Chained or Restraint.Caged && v.HasPick, 100);
+        Btn(L.T("MC_OPT_BONDS"), () => _act(CaptiveVerb.WorkBonds), held && !busy && v.Restraint == Restraint.Bound, 100);
+        Btn(L.T("MC_OPT_SEARCH"), () => _act(CaptiveVerb.Search), held && !busy && !v.HasPick && v.Restraint != Restraint.Bound, 100);
+        Btn(L.T("MC_OPT_TALK"), () => _act(CaptiveVerb.TalkToGuard), held && !busy, 90);
+        Btn(L.T("MC_OPT_WAIT"), () => _act(CaptiveVerb.Wait), held, 80).GrabFocus();
+        if (Rescuers?.Invoke() is { Count: > 0 } rsc && TakeControl != null)
+            Btn(L.F("rs_btn_control", rsc[0].Name), () => TakeControl(rsc[0].Id), held && !busy, 200);
     }
 }
 

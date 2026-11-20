@@ -150,7 +150,7 @@ public static class Phase3Smoke
             if (router.Top != sv) throw new Exception("the street view is not on top");
 
             // every screen: open as its key does, it fits the window, Esc comes back (the control rects stay inside the viewport)
-            foreach (var what in new[] { "trade", "barter", "inventory", "character", "squad", "crafting", "talk", "journal", "autopilot", "map", "picker", "jobs", "codex", "qmenu", "overlay", "land", "deeds", "ledger", "business", "prospect", "will", "treatment", "family", "family_full" })   // P6-B1: the treatment screen; P6-B3: the Family panel, empty and full; P5-A2: land, deeds; P5-F: the Ledger, the business panel, prospecting; P5-H: the will panel
+            foreach (var what in new[] { "trade", "barter", "inventory", "character", "squad", "crafting", "talk", "journal", "autopilot", "map", "picker", "jobs", "codex", "qmenu", "overlay", "land", "deeds", "ledger", "business", "prospect", "will", "treatment", "family", "family_full", "court" })   // P6-B1: the treatment screen; P6-B3: the Family panel, empty and full; P5-A2: land, deeds; P5-F: the Ledger, the business panel, prospecting; P5-H: the will panel
             {
                 int depth = router.Depth;
                 if (!sv.DebugOpen(what)) throw new Exception("unknown screen " + what);
@@ -262,10 +262,10 @@ public static class Phase3Smoke
                 Key(Godot.Key.Escape); await Frames(tree, 4);
             }
             // P4-D hook: the defeat and captivity screens fit 960x540 and keep the screen keys from the street view under them
-            for (int which = 0; which < 2; which++)
+            for (int which = 0; which < 3; which++)
             {
                 var screen = sv.DebugShowAftermath(which); await Frames(tree, 8);
-                string what = which == 0 ? "the defeat screen" : "the captivity screen";
+                string what = which == 0 ? "the defeat screen" : which == 1 ? "the captivity screen" : "the gaol cell";             // P6-C1: the gaol cell, with the sentence to expect and the ways out
                 Fit(screen, what, view);
                 foreach (var k in new[] { Godot.Key.I, Godot.Key.J, Godot.Key.C }) { Key(k); await Frames(tree, 2); }
                 if (router.Top != sv) throw new Exception("a screen key opened " + router.Top?.GetType().Name + " under " + what);

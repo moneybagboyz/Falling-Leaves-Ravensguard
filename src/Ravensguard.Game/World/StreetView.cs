@@ -990,6 +990,7 @@ public partial class StreetView : Control, IHandlesBack
         TreatTick(delta);                                   // P6-B1: the treatment queue performed at the second its work ends, cancelled by a step or a fight (StreetView.Treatment.cs)
         FireTick();                                         // P6-B5: fire stepped to the clock, flames, smoke and scars drawn (StreetView.Fire.cs)
         FaithTick(delta);                                   // P6-B4: faith answers, the Faith panel's view, a pilgrim's arrival (StreetView.Faith.cs)
+        JusticeTick(delta);                                 // P6-C1: the cell's view, the docket, the answers to the hero's pleas (StreetView.Justice.cs)
         BuildTick();                                        // P5-B: construction brought up to the clock, built pieces laid into the street, ghosts drawn
         BuildModeTick(delta);                               // P5-C: build mode (StreetView.BuildMode.cs): the preview, the palette, answers to construction commands, the hero's hands
         if (_opt.IsShot && _opt.Weather == "storm" && _frames == Math.Max(2, _opt.Frames - 1)) _wover.Strike(); // dev: catch a lightning flash in the picture

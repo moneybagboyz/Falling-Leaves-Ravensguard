@@ -109,6 +109,7 @@ public partial class StreetView
             Name = "CaptivityView", Pending = () => _captiveActSec >= 0 ? L.T("MC_WORKING") : "",
             Rescuers = () => [.. (_heroLink?.View?.Squad ?? []).Where(m => m.Active).OrderByDescending(m => m.Loyalty).ThenBy(m => m.Person.Value).Select(m => (m.Person, m.Name))],
             TakeControl = AskControl,
+            Cell = () => _cell, Plea = PleaAct,                                         // P6-C1: the cell's charges, the sentence to expect, the ways out
         };
         _mcLayer!.AddChild(_captivityView);
     }
@@ -212,9 +213,20 @@ public partial class StreetView
             _mcLayer!.AddChild(_defeatView);
             return _defeatView;
         }
-        var v = new CaptiveView(Ravensguard.Sim.Economy.EconomyState.HeroOwner, CaptorKind.Army, Restraint.Caged, CaptiveState.Held, 2, 2, false, 1500, PayerKind.Household, 800, 6, 1, 40, true, true,
+        var v = new CaptiveView(Ravensguard.Sim.Economy.EconomyState.HeroOwner, which == 2 ? CaptorKind.Gaol : CaptorKind.Army, which == 2 ? Restraint.Bound : Restraint.Caged, CaptiveState.Held, 2, 2, false, 1500, PayerKind.Household, 800, 6, 1, 40, true, true,
             500, 400, 250, false, 0, 1, "", null, 0, 0);
-        _captivityView = new CaptivityView(() => v, _ => { }, () => false) { Name = "CaptivityView" };
+        Ravensguard.Sim.Law.CellView? cell = null;
+        if (which == 2)
+        {
+            Ravensguard.Sim.Law.Expected E(string key, string kind, int step, long mites = 0, int days = 0, int lashes = 0, int sev = 4, int priors = 0, int mercy = 0) => new(key, step, kind, mites, days, lashes, 0, 0, "gaol", sev, priors, mercy, false, false, "stocks_then_hand");
+            cell = new Ravensguard.Sim.Law.CellView(0, 0, 1, 3, 2, false,
+                [new Ravensguard.Sim.Law.ChargeView(1, "theft", 240, E("stocks_then_hand", "flogging", 1, lashes: 20, priors: 1), 3, 2, false, false, false, false),
+                 new Ravensguard.Sim.Law.ChargeView(2, "assault", 0, E("fine", "fine", 0, 100, sev: 1), 1, 0, true, false, false, false)],
+                [new Ravensguard.Sim.Law.ServingView(3, "gaol", "gaol", 0, 15, 0, 5, 20, Ravensguard.Sim.Law.SentenceState.Pending)],
+                [new Ravensguard.Sim.Law.WayOut("jl_way_pay", true, 580), new Ravensguard.Sim.Law.WayOut("jl_way_restitution", true, 240), new Ravensguard.Sim.Law.WayOut("jl_way_mercy", false),
+                 new Ravensguard.Sim.Law.WayOut("jl_way_clergy", false), new Ravensguard.Sim.Law.WayOut("jl_way_bribe", true, 900), new Ravensguard.Sim.Law.WayOut("jl_way_escape", true), new Ravensguard.Sim.Law.WayOut("jl_way_rescue", false)]);
+        }
+        _captivityView = new CaptivityView(() => v, _ => { }, () => false) { Name = "CaptivityView", Cell = () => cell, Plea = _ => { } };
         _mcLayer!.AddChild(_captivityView);
         return _captivityView;
     }
