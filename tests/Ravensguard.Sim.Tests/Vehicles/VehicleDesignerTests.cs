@@ -77,6 +77,20 @@ public class VehicleDesignerTests(ITestOutputHelper output)
         Assert.True(cat.Get("fishing_boat").Stats.FishWell && cat.Get("ferry").Stats.Ramps && cat.Get("peddler_wagon").Stats.Shop);
     }
 
+    [Fact]
+    public void EveryPart_HasItsFourDrawnViewsAndFourBakedDiagonals_InTheGamesArtAtlas()
+    {
+        string? dir = AppContext.BaseDirectory; while (dir != null && !File.Exists(Path.Combine(dir, "Ravensguard.slnx"))) dir = Path.GetDirectoryName(dir);
+        using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(Path.Combine(dir!, "src", "Ravensguard.Game", "assets", "art", "index.json")));
+        var sprites = doc.RootElement.GetProperty("sprites");
+        foreach (var p in new Rig().Cat.PartList)
+            foreach (var v in new[] { "e", "n", "w", "s", "ne", "se", "sw", "nw" })
+            {
+                Assert.True(sprites.TryGetProperty($"vpart.{p.Id}.{v}", out var sp), $"vpart.{p.Id}.{v}");
+                Assert.Equal(v.Length == 1 ? 32 : 46, sp.GetProperty("w").GetInt32());
+            }
+    }
+
     // ------------------------------------------------------------------ VD-2, VD-3: designer stats = template
 
     [Fact]
@@ -373,6 +387,24 @@ public class VehicleDesignerTests(ITestOutputHelper output)
         var ramps = Ferry.Ramps(ferry, r.Cat);
         Assert.Equal(6, ramps.Count);                                                          // both ends: the cells a cart drives on and off over
         Assert.All(ramps, c => Assert.True(c.Y == 0 || c.Y == ferry.Stats.LengthCells - 1));
+    }
+
+    // ------------------------------------------------------------------ 4.4: NPC drivers, fords
+
+    [Fact]
+    public void NpcDrivers_KeepFivePercentBelowTheStuckLine_AvoidMud_AndFordsCloseToWagonsFirst()
+    {
+        var tu = VehicleTuning.Default;
+        Assert.Equal(650, NpcDriving.MaxRatioPm);
+        Assert.Equal(3000, NpcDriving.RouteCostPm(tu, Surface.MudRoad, false));
+        Assert.Equal(1000, NpcDriving.RouteCostPm(tu, Surface.DryRoad, false));
+        Assert.True(NpcDriving.WillDrive(1200, tu, Surface.DryRoad, false));                     // no bog on a dry road
+        Assert.True(NpcDriving.WillDrive(640, tu, Surface.MudRoad, false));
+        Assert.False(NpcDriving.WillDrive(690, tu, Surface.MudRoad, false));                     // the hero would still try at 690 (the stuck rolls start above 700)
+        Assert.Equal(0, Stuck.StuckPm(690, Surface.MudRoad));
+        // fords close to wagons first (Phase 3 4.7), and to loaded barges too (vehicle-designer 4.5)
+        Assert.False(Fords.IsOpen(Crosser.Wagon, 1)); Assert.True(Fords.IsOpen(Crosser.Rider, 1)); Assert.True(Fords.IsOpen(Crosser.Walker, 2));
+        Assert.False(BoatMath.Floats(654, WaterTuning.Default.FordDepth(0), WaterTuning.Default));
     }
 
     // ------------------------------------------------------------------ VD-20: determinism

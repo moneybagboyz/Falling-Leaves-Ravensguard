@@ -432,6 +432,12 @@ public sealed class RideBook
             var st = Plan(false, false, nowSec);
             return new RideView(true, false, false, st.Gait, a.StaminaSp / 10, a.WorkFatiguePm, a.FeedCenti, a.LowestShoe / 10, a.Lameness, RideMath.SpeedCmps(a, b, st.Gait, RideMath.LoadRatioPm(RiderKg, b.CarryKg), !a.Saddled), false, 0, 0, 0, 0, a.Breed, -1);
         }
+        if (v is { IsBoat: true })
+        {
+            // P5-G: a boat's bar is the boat view (water, current, draft, GM); no pull ratio against a road
+            var st = Vehicles.StatsOf(v);
+            return new RideView(false, true, false, Gait.Walk, 0, 0, 0, 0, 0, Boat.GroundMmps / 10, false, Vehicles.CargoKg(v), st.CargoKg, 0, 0, -1, v.Template, 0, 0, v.Team.Count, st.MaxAnimals, 0, -1);
+        }
         if (v != null)
         {
             var st = Vehicles.StatsOf(v); var r = Vehicles.Speed(v, Surface, SlopeNow(), RiderKg, nowSec);

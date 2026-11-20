@@ -382,6 +382,7 @@ public static class NewGameDebug
                     await Until(tree, () => rt.HourDone >= sv.DebugWorld.Clock.Now.TotalHours, 6000);
                     await Frames(tree, 60);
                     string scene = Arg("--ng-scene", "designer");
+                    if (scene == "boat") { GD.Print("[vehicles] " + sv.DebugVehicles("river")); await Frames(tree, 240); }    // the window streams the river in
                     GD.Print("[vehicles] " + sv.DebugVehicles(scene));
                     await Frames(tree, 40);
                     break;

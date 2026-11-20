@@ -216,6 +216,22 @@ public partial class StreetView
                 if (scene == "wagon") { var t = r.Vehicles.Create(r.Templates.Get("ox_wagon"), Ravensguard.Sim.Core.EntityId.None, x + 5000, y + 3000); _ = t; }
                 return scene;
             }
+            case "river":
+            {
+                // the hero set down on the bank of the widest water near him (a river's middle point), so the window streams the river in
+                if (Runtime?.State.Population.Region is not { } reg) return "no region";
+                var (hx, hy) = HeroRegionMm(); long best = long.MaxValue; (int X, int Y) at = (0, 0);
+                foreach (var w in reg.Waterways.Where(w => w.WidthCm.Length > 0 && w.WidthCm.Max() >= 600))
+                    for (int i = 0; i < w.Points.Length; i++)
+                    {
+                        if (i >= w.WidthCm.Length || w.WidthCm[i] < 600) continue;
+                        long dx = w.Points[i].X - hx / 1000, dy = w.Points[i].Y - hy / 1000, d = dx * dx + dy * dy;
+                        if (d < best) { best = d; at = (w.Points[i].X, w.Points[i].Y); }
+                    }
+                if (best == long.MaxValue) return "no river in the region";
+                DebugPlaceHero(at.X, at.Y + 12);
+                return $"set down by the river at {at.X},{at.Y}";
+            }
             case "site": return DevVehicles("site", ["ox_wagon"]);
             case "boat": return DevVehicles("boat", ["barge"]);
         }
