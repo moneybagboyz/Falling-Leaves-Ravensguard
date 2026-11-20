@@ -50,7 +50,7 @@
   // P5-H (inheritance): the concept book's tanner's widow, the eighth card. She begins with an estate ("inherits"): her late husband's tannery in a house leased from the lord, two seasons of
   // its rent behind (his debt), a little coin in its box and hides and bark in its store; her children are rows of her household (0 to 2, aged 6 to 14) and the dead husband a row.
   { "type": "origin", "id": "tanners_widow", "name": "Tanner's widow", "order": 8,
-    "description": "Your husband's vats stand cold. The tannery is yours now, and so are his debts: the lord's rent is two seasons behind, and the town is watching to see if you keep it.",
+    "description": "Your husband's vats stand cold. The tannery is yours now, and so are his debts: two seasons of the lord's rent.", "sex": "female",
     "skills": { "tanning": 15, "trading": 5 }, "attributes": { "toughness": 3 },
     "kit": [ { "item": "dagger" }, { "item": "tunic" }, { "item": "cloak" } ], "coin": 45,
     "start_location": "town", "ambition": "keep_the_tannery", "mentor": "journeyman",

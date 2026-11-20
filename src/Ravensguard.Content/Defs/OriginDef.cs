@@ -48,6 +48,8 @@ public sealed record OriginDef : ContentDef
     public List<OriginKinDef> Kin { get; init; } = [];
     /// <summary>P5-A4: the occupation the hero's person row carries (a sim <c>Occupation</c> name); empty is none.</summary>
     public string Occupation { get; init; } = "";
+    /// <summary>P5-H: the sex the card picks on the Quick Start screen ("female", "male"; empty leaves the player's choice): the tanner's widow is a woman.</summary>
+    public string Sex { get; init; } = "";
     /// <summary>P5-H: what the hero inherits at the start (the tanner's widow: her husband's tannery on a lease, with its arrears); null for none.</summary>
     public OriginInheritsDef? Inherits { get; init; }
 }

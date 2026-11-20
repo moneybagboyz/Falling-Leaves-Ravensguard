@@ -15,7 +15,7 @@ public class FirstHourBotTests(ITestOutputHelper output)
             output.WriteLine(rep.Render());
             reports.Add(rep);
         }
-        Assert.Equal(7, reports.Count);
+        Assert.Equal(8, reports.Count);                                                       // P5-H: the tanner's widow is the eighth origin
         Assert.All(reports, r => Assert.True(r.Passed, r.Render()));
     }
 }

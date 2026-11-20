@@ -295,6 +295,7 @@ public static class NewGameDebug
                     var q = new QuickStartScreen(router); router.Push(q);
                     await Frames(tree, 4);
                     if (Arg("--ng-advanced", "0") == "1") { q.DebugAdvanced(); await Frames(tree, 3); }
+                    if (Arg("--ng-origin", "").Length > 0) { q.DebugSelect(Arg("--ng-origin", "")); await Frames(tree, 3); }   // P5-H: the widow's card picked
                     break;
                 }
             case "creation":

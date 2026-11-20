@@ -205,6 +205,8 @@ public partial class QuickStartScreen : Control
     void ToggleIronman() { _d.Ironman = !_d.Ironman; RefreshToggles(); }
 
     public void DebugAdvanced() => ToggleAdvanced();
+    /// <summary>Dev (shots): picks an origin card as a click would.</summary>
+    public void DebugSelect(string id) => SelectOrigin(id);
 
     void ToggleAdvanced()
     {
@@ -257,6 +259,7 @@ public partial class QuickStartScreen : Control
         _d.OriginId = id;
         card.SetPressedNoSignal(true);
         var o = _origins.First(x => x.Id == id);
+        if (o.Sex is "female" or "male" && _d.Female != (o.Sex == "female")) { _d.Female = o.Sex == "female"; RefreshToggles(); }   // P5-H: the widow's card is a woman's
         var db = NewGameServices.Content().Db;
         string Item(KitItemDef k)
         {

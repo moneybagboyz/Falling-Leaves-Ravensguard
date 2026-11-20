@@ -150,7 +150,7 @@ public static class Phase3Smoke
             if (router.Top != sv) throw new Exception("the street view is not on top");
 
             // every screen: open as its key does, it fits the window, Esc comes back (the control rects stay inside the viewport)
-            foreach (var what in new[] { "trade", "barter", "inventory", "character", "squad", "crafting", "talk", "journal", "autopilot", "map", "picker", "jobs", "codex", "qmenu", "overlay", "land", "deeds", "ledger", "business", "prospect" })   // P5-A2: land, deeds; P5-F: the Ledger, the business panel, prospecting
+            foreach (var what in new[] { "trade", "barter", "inventory", "character", "squad", "crafting", "talk", "journal", "autopilot", "map", "picker", "jobs", "codex", "qmenu", "overlay", "land", "deeds", "ledger", "business", "prospect", "will" })   // P5-A2: land, deeds; P5-F: the Ledger, the business panel, prospecting; P5-H: the will panel
             {
                 int depth = router.Depth;
                 if (!sv.DebugOpen(what)) throw new Exception("unknown screen " + what);
@@ -254,6 +254,14 @@ public static class Phase3Smoke
                 sv.DebugCloseAftermath(); await Frames(tree, 3);
             }
             GD.Print("[smoke]   defeat and captivity screens: fit, keys guarded");
+            // P5-H: the succession screen with the estate ("You inherit", "Goes to the lord") fits and keeps the screen keys from the street view under it
+            sv.DebugInheritance("succession"); await Frames(tree, 8);
+            if (sv.DebugSuccessionView is not { } succ) throw new Exception("the succession screen with the estate did not open");
+            Fit(succ, "the succession screen with the estate", view);
+            foreach (var k in new[] { Godot.Key.I, Godot.Key.J, Godot.Key.C, Godot.Key.L }) { Key(k); await Frames(tree, 2); }
+            if (router.Top != sv) throw new Exception("a screen key opened " + router.Top?.GetType().Name + " under the succession screen");
+            sv.DebugCloseSuccession(); await Frames(tree, 3);
+            GD.Print("[smoke]   succession screen with the estate: fits, keys guarded");
         }
         finally { win.Size = oldSize; await Frames(tree, 2); }
     }

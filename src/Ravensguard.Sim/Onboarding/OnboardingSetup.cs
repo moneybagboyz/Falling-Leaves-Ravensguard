@@ -49,7 +49,10 @@ public static class OnboardingSetup
     public static SetupResult Create(WorldState st, ContentDatabase db, OriginDef origin, long nowSec, ulong seed)
     {
         var content = OnboardingContent.From(db); var cfg = content.Settings;
-        var site = StartSiteFinder.Find(st.Population, origin.StartLocation, origin.Mentor, seed, cfg.WarSafeM, cfg.LairSafeM);
+        // P5-H: an origin with an estate starts at the hero's household (the widow's town: her children, her husband's yard)
+        int home = -1;
+        if (origin.Inherits != null && st.Hero is { } hr && Ravensguard.Sim.Succession.HeroPerson.RowOf(st.Population.People, hr, EconomyState.HeroOwner) is int row && row >= 0) home = st.Population.People.HomeSettlement[row];
+        var site = StartSiteFinder.Find(st.Population, origin.StartLocation, origin.Mentor, seed, cfg.WarSafeM, cfg.LairSafeM, home);
         if (!site.Found) return new SetupResult(null, site, site.Note);
         var fh = content.Of(origin.Id);
         var book = new OnboardingBook

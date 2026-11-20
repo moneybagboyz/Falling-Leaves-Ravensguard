@@ -105,7 +105,7 @@ public class OnboardingTests
                 Assert.Equal(s, StartSiteFinder.Find(pop, o.StartLocation, o.Mentor, 99));
             }
         }
-        Assert.Equal(21, starts);
+        Assert.Equal(24, starts);                                                            // 3 worlds x 8 origins (P5-H: the tanner's widow)
         Assert.True(relaxed < starts, "every start was a relaxed fallback");
     }
 

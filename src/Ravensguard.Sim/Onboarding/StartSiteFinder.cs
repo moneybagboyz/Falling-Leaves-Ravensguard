@@ -139,9 +139,15 @@ public static class StartSiteFinder
     }
 
     /// <summary>Finds the start for an origin. <paramref name="kind"/> is the origin's <c>start_location</c>, <paramref name="mentor"/> the id its mentor has.</summary>
-    public static StartSite Find(Population pop, string kind, string mentor, ulong seed, int warSafeM = 10_000, int lairSafeM = 3_000)
+    public static StartSite Find(Population pop, string kind, string mentor, ulong seed, int warSafeM = 10_000, int lairSafeM = 3_000, int prefer = -1)
     {
         var r = pop.Region;
+        // P5-H: an origin whose home is fixed (the tanner's widow: her household and her husband's yard) starts there when the place passes the whole cluster, else when it has the mentor at all
+        if (prefer >= 0 && prefer < r.Settlements.Count)
+        {
+            var c = Evaluate(pop, prefer, mentor, warSafeM, lairSafeM, seed, strict: true) ?? Evaluate(pop, prefer, mentor, warSafeM, lairSafeM, seed, strict: false);
+            if (c != null && c.Mentor >= 0 && c.Errand >= 0) return new StartSite(c.Settlement, c.X, c.Y, kind, c.Mentor, c.MentorX, c.MentorY, c.Errand, !c.Full, c.Full ? "" : "home");
+        }
         foreach (var (k, relaxed) in new[] { kind }.Concat(FallbackKinds(kind)).Select((k, i) => (k, i > 0)))
         {
             var cs = Of(r, k).Select(i => Evaluate(pop, i, mentor, warSafeM, lairSafeM, seed, strict: true)).Where(c => c != null).Cast<Cand>().ToList();

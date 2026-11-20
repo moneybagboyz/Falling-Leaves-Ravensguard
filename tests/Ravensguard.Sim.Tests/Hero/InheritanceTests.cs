@@ -29,7 +29,7 @@ public class InheritanceTests(ITestOutputHelper output)
 {
     private static ContentDatabase Db => EconFixture.Content;
 
-    private static WorldState Game(ulong seed, string origin, bool female = false)
+    internal static WorldState Game(ulong seed, string origin, bool female = false)
     {
         var w = SeamWorld.Get(seed);
         var home = w.BlockOrigin.Offset(1, 1);
@@ -45,7 +45,7 @@ public class InheritanceTests(ITestOutputHelper output)
         return st;
     }
 
-    private sealed class Rig
+    internal sealed class Rig
     {
         public required WorldState St;
         public required HeroContext Ctx;
@@ -159,7 +159,7 @@ public class InheritanceTests(ITestOutputHelper output)
         return (r, smith, wife, son24, son19, daughter, smithy, hh, house);
     }
 
-    private static void Kill(Rig r, int p)
+    internal static void Kill(Rig r, int p)
     {
         var sim = r.St.HomeRecords!.Sim;
         var ob = new Ravensguard.Sim.Abstract.RegionOutbox(r.St.Ids);
@@ -490,46 +490,6 @@ public class InheritanceTests(ITestOutputHelper output)
 
     // ------------------------------------------------------------------ IN-12: a plague's day
 
-    [Fact]
-    [Trait("Category", "Timing")]
-    public void IN12_APlagueDay_1500DeathsWithHoldings_SettleWithin30ms_CoinMassAndDeedsExact()
-    {
-        var r = Rig.Of(Game(1234, "disgraced_squire"));
-        var land = r.Land; var book = r.St.Land!;
-        var dead = new List<int>();
-        int serial = 1_000_000;
-        // a first small day warms the code (JIT): ten deaths
-        for (int pass = 0; pass < 2; pass++)
-        {
-        int want = pass == 0 ? 10 : 1500;
-        dead.Clear();
-        for (int i = 0; i < r.Pt.Count && dead.Count < want; i++)
-        {
-            if (r.Pt.Status[i] != PersonStatus.Alive || r.Pt.Household[i] < 0 || r.Pt.HomeSettlement[i] < 0) continue;
-            var id = r.Pt.IdOf(i);
-            var d = new Deed { Id = LandIds.Serial(land.RegionId, serial++), Kind = HoldingKind.Claim, Subject = serial, Settlement = r.Pt.HomeSettlement[i], Holder = id, HolderPurse = PurseKind.Person, Tenure = Tenure.Freehold,
-                Lord = r.St.Population.Region.Settlements[r.Pt.HomeSettlement[i]].FiefIndex, DuesMitesPerSeason = 10, Cause = DeedCause.Claimed };
-            book.Deeds[d.Id] = d;
-            r.Led.Mint(r.Led.Open(PurseKind.Person, id), new Coin(100), SourceReason.Seed);
-            dead.Add(i);
-        }
-        Assert.Equal(want, dead.Count);
-        foreach (int p in dead) Kill(r, p);
-        if (pass == 0) { Assert.Equal(10, r.Est.Daily(r.Day, r.Sec)); continue; }
-        long total = r.TotalCoin; int deeds = book.Deeds.Count;
-        var sw = System.Diagnostics.Stopwatch.StartNew();
-        int n = r.Est.Daily(r.Day, r.Sec);
-        sw.Stop();
-        output.WriteLine($"{n} estates settled in {sw.Elapsed.TotalMilliseconds:0.0} ms");
-        Assert.Equal(0, n == 1500 ? 0 : 1);
-        Assert.True(sw.Elapsed.TotalMilliseconds <= TestBudget.Ms(30) * 2, $"{sw.Elapsed.TotalMilliseconds:0.0} ms");    // the budget is 30 ms on the reference PC (a loaded test machine is allowed twice that)
-        Assert.Equal(total, r.TotalCoin); Assert.True(r.St.Economy!.MassAuditHolds()); Assert.Equal(deeds, book.Deeds.Count);
-        Assert.True(r.Led.Audit().IsConserved);
-        Assert.DoesNotContain(book.Deeds.Values, d => d.HolderPurse == PurseKind.Person && dead.Contains(r.Pt.IndexOf(d.Holder)));
-        foreach (int p in dead) Assert.Equal(0, r.Led.Balance(r.Led.Open(PurseKind.Person, r.Pt.IdOf(p))).Mites);
-        }
-    }
-
     // ------------------------------------------------------------------ IN-13: no randomness
 
     [Fact]
@@ -587,5 +547,56 @@ public class InheritanceTests(ITestOutputHelper output)
         var view = WillDesk.View(st, st.Party!, Db, r.Day);
         Assert.Contains(view.People, p => p.How == "child");
         Assert.True(r.Led.Audit().IsConserved);
+    }
+}
+
+/// <summary>IN-12 (inheritance 9, 4.5): a great plague's day, 1,500 deaths of people holding something, settled within the 30 ms budget; alone in the timing collection (fairly measured).</summary>
+[Collection(TimingCollection.Name)]
+public class InheritanceBudgetTests(ITestOutputHelper output)
+{
+    [Fact]
+    public void IN12_APlagueDay_1500DeathsWithHoldings_SettleWithin30ms_CoinMassAndDeedsExact()
+    {
+        var r = InheritanceTests.Rig.Of(InheritanceTests.Game(1234, "disgraced_squire"));
+        var land = r.Land; var book = r.St.Land!;
+        int serial = 1_000_000, next = 0;
+        // a day of deaths: each of the next alive people holds a deed in his own name and coin in his purse, and dies
+        List<int> Plague(int want)
+        {
+            var dead = new List<int>();
+            for (; next < r.Pt.Count && dead.Count < want; next++)
+            {
+                int i = next;
+                if (r.Pt.Status[i] != PersonStatus.Alive || r.Pt.Household[i] < 0 || r.Pt.HomeSettlement[i] < 0) continue;
+                var id = r.Pt.IdOf(i);
+                var d = new Deed { Id = LandIds.Serial(land.RegionId, serial++), Kind = HoldingKind.Claim, Subject = serial, Settlement = r.Pt.HomeSettlement[i], Holder = id, HolderPurse = PurseKind.Person, Tenure = Tenure.Freehold,
+                    Lord = r.St.Population.Region.Settlements[r.Pt.HomeSettlement[i]].FiefIndex, DuesMitesPerSeason = 10, Cause = DeedCause.Claimed };
+                book.Deeds[d.Id] = d;
+                r.Led.Mint(r.Led.Open(PurseKind.Person, id), new Coin(100), SourceReason.Seed);
+                dead.Add(i);
+            }
+            Assert.Equal(want, dead.Count);
+            foreach (int p in dead) InheritanceTests.Kill(r, p);
+            return dead;
+        }
+        Plague(10);
+        Assert.Equal(10, r.Est.Daily(r.Day, r.Sec));                                         // a small day first warms the code
+        double best = TestBudget.BestPass(30, 3, () =>
+        {
+            var dead = Plague(1500);
+            long total = r.TotalCoin; int deeds = book.Deeds.Count;
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            int n = r.Est.Daily(r.Day, r.Sec);
+            sw.Stop();
+            output.WriteLine($"{n} estates settled in {sw.Elapsed.TotalMilliseconds:0.0} ms");
+            Assert.Equal(1500, n);
+            Assert.Equal(total, r.TotalCoin); Assert.True(r.St.Economy!.MassAuditHolds()); Assert.Equal(deeds, book.Deeds.Count);
+            Assert.True(r.Led.Audit().IsConserved);
+            var gone = dead.Select(p => r.Pt.IdOf(p)).ToHashSet();
+            Assert.DoesNotContain(book.Deeds.Values, d => gone.Contains(d.Holder));
+            foreach (var id in gone) Assert.Equal(0, r.Led.Balance(r.Led.Open(PurseKind.Person, id)).Mites);
+            return sw.Elapsed.TotalMilliseconds;
+        });
+        Assert.True(best <= TestBudget.Ms(30), $"best {best:0.0} ms");
     }
 }

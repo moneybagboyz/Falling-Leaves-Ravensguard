@@ -126,6 +126,7 @@ public partial class StreetView
     }
 
     public void DebugCloseSuccession() { _successionView?.QueueFree(); _successionView = null; }
+    public Control? DebugSuccessionView => _successionView;
 
     bool SuccessionInput(InputEvent e) => (_successionView != null || _heirsTask != null) && e is InputEventKey && !Ravensguard.Game.Inputs.Actions.Pressed(e, "world.back");
 }
