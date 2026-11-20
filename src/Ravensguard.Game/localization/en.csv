@@ -2954,6 +2954,45 @@ cf_cstate_ready,ready to collect
 cf_cstate_collected,collected
 cf_cstate_cancelled,cancelled
 cf_cstate_sold,sold
+cf_ui_cat_build,Build
+cf_ui_cat_repair,Repair
+cf_ui_tab_commission,Commission
+cf_ui_no_station,No workstation in reach: field work only
+cf_ui_in_reach,In reach
+cf_ui_kit,field kit
+cf_ui_hint_tool,"Needs {0} {1}: from {2}"
+cf_ui_hint_fetch,"Fetched from the {0}: {1} in {2} trips (+{3} min)"
+cf_ui_a_craftsman,a craftsman
+cf_ui_skip_temper,Skip the temper (30 min faster: -5 and brittle)
+cf_ui_bring_materials,I bring the materials
+cf_ui_guild_recipe,"Guild recipe of the {0}: taught only in the guild"
+cf_ui_no_target,Nothing of yours to work on
+cf_ui_target,"On: {0} ({1}%)"
+cf_ui_term_station,"station {0}"
+cf_ui_term_material,"material {0}"
+cf_ui_term_mastery,"mastery {0}"
+cf_ui_term_kit,"field kit {0}"
+cf_ui_term_process,"smithing {0}"
+cf_ui_brittle,"Untempered: the blade will be brittle and may snap against plate."
+cf_ui_commission_for,"Commission: {0}"
+cf_ui_asking,Asking about for craftsmen...
+cf_ui_no_makers,No craftsman here makes that.
+cf_ui_maker_line,"{0}, {1} (skill {2}): {3}, ready in {4} days"
+cf_ui_order,Order
+cf_ui_ordered,"Ordered {0} from {1}. Half the price is paid now."
+cf_ui_note_bring,"You leave your materials with him, marked yours; you pay his labour."
+cf_ui_note_his,"He supplies the materials at his ask; half now, half when you collect in person."
+cf_ui_your_commissions,Your commissions
+cf_ui_none_yet,None yet.
+cf_ui_ready_now,ready: collect in person
+cf_ui_ready_in,"ready in {0} days"
+cf_ui_commission_line,"{0} from {1}: {2} {3}, {4} still owed"
+cf_ui_collect,Collect
+cf_ui_cancel,Cancel
+cf_ui_other_piece,Other piece
+cf_ui_expected,"Expected: {0}"
+cf_ui_tip_edge,"Edge {0}% of the {1}'s best"
+cf_ui_tip_protection,"Protection x{0} ({1})"
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."

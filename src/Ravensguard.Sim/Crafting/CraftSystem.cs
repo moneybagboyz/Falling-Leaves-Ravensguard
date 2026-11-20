@@ -38,7 +38,10 @@ public sealed class CraftSystem : AbstractSystem
     public override void Step(TickContext ctx)
     {
         var svc = ctx.World.Get<CraftService>(); if (svc == null) return;
-        svc.Notices.AddRange(CraftDesk.HourlyCore(svc.Context, ctx.Hour, svc.Hero, svc.HeavyRain(ctx.Hour) ? 60 : 0));
+        var st = svc.Runner.State;
+        if (st.Commissions.Count == 0 && st.Fires.Count == 0 && st.Apprenticeships.Count == 0 && st.Members.Count == 0) return;
+        int rain = st.Fires.Count > 0 && svc.HeavyRain(ctx.Hour) ? 60 : 0;           // the weather is read only while a fire burns
+        svc.Notices.AddRange(CraftDesk.HourlyCore(svc.Context, ctx.Hour, svc.Hero, rain));
     }
 }
 

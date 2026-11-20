@@ -19,7 +19,7 @@ namespace Ravensguard.Game.UI;
 /// on the world clock (trade spec 4.7). The screen itself only reads: it plans on a mirror of the hero's pack and crafting state, refreshed from each <see cref="HeroView"/>, so every number it
 /// shows is <see cref="CraftRunner.Plan"/> on the same goods and skills the work uses. Without a world (the dev hamlet) it keeps the old starter bundle and runs the work locally.
 /// </summary>
-public sealed class CraftingSession
+public sealed partial class CraftingSession
 {
     public RecipeDb Db { get; }
     public CraftRunner Runner { get; private set; }
@@ -40,9 +40,9 @@ public sealed class CraftingSession
     HeroView? _seen;
     readonly IdAllocator _ids = new();
 
-    public CraftingSession(ContentDatabase content, HeroRecord hero, long nowSec, bool starterPack, string[] stations, int light, HeroWorld? world = null)
+    public CraftingSession(ContentDatabase content, HeroRecord hero, long nowSec, bool starterPack, string[] stations, int light, HeroWorld? world = null, ReachScan? reach = null)
     {
-        Hero = hero; NowSec = nowSec; World = world;
+        Hero = hero; NowSec = nowSec; World = world; Reach = reach;
         Econ = EconomyState.FromContent(content, 1, 1);
         Db = RecipeDb.Build(content, Econ.Goods);
         Pack = Econ.OpenStore(StoreKind.House, HeroId, 0, 0, false);
@@ -52,7 +52,10 @@ public sealed class CraftingSession
         var tools = new List<string> { "knife", "steel_and_flint", "needle", "pot" };
         var carried = world?.View is { } view ? view.Items.Select(i => i.Shape).Concat(view.Goods.Select(g => g.Id)) : hero.Inventory.Select(i => i.Shape);
         tools.AddRange(HeroPack.Tools(carried, Db.Tools.ContainsKey));
-        SiteSpec = new CraftSiteSpec(light, true, [.. tools.Distinct()], [.. stations.Where(Db.Stations.ContainsKey)], ["hammering"]);
+        // P5-E (crafting-full 4.1): the stations of the real room and within 6 m when the street view read them, with their tiers; else the ones given
+        var st = reach != null ? reach.Stations.Select(s => s.Station).ToArray() : stations.Where(Db.Stations.ContainsKey).ToArray();
+        var tiers = reach != null ? reach.Stations.Select(s => (byte)s.Tier).ToArray() : [];
+        SiteSpec = new CraftSiteSpec(light, true, [.. tools.Distinct()], st, ["hammering"]) { StationTiers = tiers, Room = reach?.RoomName ?? "" };
         Site = SiteSpec.Build(Db);
         if (world == null && starterPack) Stock();
         Refresh();
@@ -89,9 +92,10 @@ public sealed class CraftingSession
     }
 
     public bool KnowsIt(CraftRecipe r) => State.Know.Knows(r, HeroId, State.Book);
-    public CraftPlan Plan(CraftRecipe r, int batch, int[]? forced = null) => Runner.Plan(r, Actor, Site, Pack, batch, forced);
+    public CraftPlan Plan(CraftRecipe r, int batch, int[]? forced = null, bool skipTemper = false)
+        => Runner.Plan(r, Actor, Site, CraftSources.Of(Pack), batch, forced, !r.NeedsTarget || TargetFor(r) != EntityId.None, skipTemper);
 
-    public IEnumerable<CraftJob> Unfinished() => State.Jobs.Values.Where(j => !j.Closed && (World == null || j.Owner == HeroId)).OrderBy(j => j.Id);
+    public IEnumerable<CraftJob> Unfinished() => State.Jobs.Values.Where(j => !j.Closed && (World == null ? j.Crafter == HeroId : j.Owner == HeroId)).OrderBy(j => j.Id);
     public CraftJob? Find(EntityId id) => State.Get(id);
     public int SkillLevel(CraftRecipe r) => r.Skill == Skill.None ? 0 : State.Book.Level(HeroId, r.Skill);
 
@@ -105,8 +109,10 @@ public sealed class CraftingSession
     /// <summary>Starts the plan. Local: the job at once. World: null (the job appears in the next view; <see cref="PendingStart"/> says it is on its way).</summary>
     public CraftJob? Start(CraftPlan plan)
     {
-        if (World == null) return Runner.Start(plan, Actor, HeroId, Pack, NowSec);
-        World.Issue(new HeroCommand { Kind = HeroCommandKind.CraftStart, IssuedSec = Now, Recipe = plan.Recipe.Index, Batch = plan.Batch, Choice = [.. plan.Choice.Select(c => (int)c)], Site = SiteSpec });
+        var target = plan.Recipe.NeedsTarget ? TargetFor(plan.Recipe) : EntityId.None;
+        if (World == null) return Runner.Start(plan, Actor, HeroId, plan.Sources.Count > 0 ? plan.Sources : CraftSources.Of(Pack), NowSec, 0, 0, target, CraftRunner.DefaultBodyCm3);
+        World.Issue(new HeroCommand { Kind = HeroCommandKind.CraftStart, IssuedSec = Now, Recipe = plan.Recipe.Index, Batch = plan.Batch, Choice = [.. plan.Choice.Select(c => (int)c)], Site = SiteSpec,
+            Item = target, Tag = plan.SkipTemper ? "skip_temper" : "" });
         PendingStart = plan.Recipe.Index;
         return null;
     }

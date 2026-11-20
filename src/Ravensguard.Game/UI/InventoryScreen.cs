@@ -116,6 +116,15 @@ public partial class InventoryScreen : Control
         string label = v.Crafting?.Artefacts.Of(it.Id) is { } art ? L.F("iq_named", art.Name, tier + it.Name.ToLowerInvariant()) : tier + it.Name;
         var nameLabel = new Label { Text = new string(' ', indent * 4) + slot + label + (cond.Length > 0 ? $", {cond}" : ""), SizeFlagsHorizontal = SizeFlags.ExpandFill, ClipText = true };
         if ((it.Flags & Ravensguard.Sim.Goods.ItemFlags.Named) != 0) nameLabel.ThemeTypeVariation = "GoldLabel";
+        // P5-E (items-quality-and-wear 7): the tooltip says what the tier and the wear do: a weapon's edge against the best its material takes (a masterwork at full condition), an armour's protection
+        var tiers = Ravensguard.Sim.Goods.QualityTiers.Default;
+        if (_hw.Content.Contains("weapon_shape", it.Shape))
+            nameLabel.TooltipText = L.F("cf_ui_tip_edge", Ravensguard.Sim.Goods.QualityTiers.EdgePm(tiers.Combat(it.Quality), it.ConditionPermille) * 100 / tiers.Combat(Ravensguard.Sim.Goods.ItemQuality.Masterwork),
+                it.Material.Length > 0 ? it.Material.Replace('_', ' ') : it.Name.ToLowerInvariant()) + ((it.Flags & Ravensguard.Sim.Goods.ItemFlags.Brittle) != 0 ? "\n" + L.T("cf_ui_brittle") : "");
+        else if (_hw.Content.Contains("armour_shape", it.Shape))
+            nameLabel.TooltipText = L.F("cf_ui_tip_protection", (tiers.Combat(it.Quality) / 1000.0).ToString("0.0#", System.Globalization.CultureInfo.InvariantCulture),
+                it.Quality == Ravensguard.Sim.Goods.ItemQuality.Common ? L.T("Q_COMMON").ToLowerInvariant() : L.T("iq_tier_" + it.Quality.ToString().ToLowerInvariant()));
+        if (nameLabel.TooltipText.Length > 0) nameLabel.MouseFilter = MouseFilterEnum.Stop;
         row.AddChild(nameLabel);
         row.AddChild(new Label { Text = $"{Kg(it.MassG)} kg", CustomMinimumSize = new Vector2(70, 0), HorizontalAlignment = HorizontalAlignment.Right });
         row.AddChild(new Label { Text = Quotes.Money(it.ValueMites), CustomMinimumSize = new Vector2(90, 0), HorizontalAlignment = HorizontalAlignment.Right, ThemeTypeVariation = "HintLabel" });
