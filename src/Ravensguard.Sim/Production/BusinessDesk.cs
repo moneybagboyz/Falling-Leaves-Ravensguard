@@ -45,6 +45,7 @@ public static class BusinessDesk
     public static HeroCommand Minder(long subject, int person, long sec) => Cmd(sec, B("minder", subject, person));
     public static HeroCommand At(int settlement, long sec) => Cmd(sec, B("at", settlement));
     public static HeroCommand Pump(EntityId biz, long sec) => Cmd(sec, B("pump", biz.Value));
+    public static HeroCommand FromChest(long mites, long sec) => Cmd(sec, B("chest", mites));
     // ---- prospecting
     public static HeroCommand Walk(int tile, long sec) => Cmd(sec, P("walk", tile));
     public static HeroCommand Start(ProspectMethod m, int tile, long sec) => Cmd(sec, P("start", (int)m, tile));
@@ -67,6 +68,7 @@ public static class BusinessDesk
         string S(int i) => i < p.Length ? p[i] : "";
         var ow = OwnershipWiring.For(ctx.State, ctx.Content);
         var e = ctx.Econ; int day = (int)(c.IssuedSec / 86400);
+        ow.Today = Math.Max(ow.Today, day);
         var st = ctx.State;
         ow.Chron ??= (when, type, subjects, causes, data) =>
         {
@@ -95,7 +97,7 @@ public static class BusinessDesk
         {
             res = p[0] switch
             {
-                "found" when p.Length >= 5 && N(2) >= 0 => ow.Found(S(1), I(2), I(3), I(4), c.Limit, day),
+                "found" when p.Length >= 5 && N(2) >= 0 => ow.Found(S(1), I(2), I(3), I(4), c.Limit, day, MayUseBuilding(ctx, ow)),
                 "site" when p.Length >= 6 => ow.FoundExtraction(S(1), I(2), I(3), I(4), I(5), c.Limit, day, MayUse(ctx, ow)),
                 "buy" when p.Length >= 2 => ow.Buy(Id(1), c.Limit, day),
                 "share" when p.Length >= 3 => ow.BuyShare(Id(1), I(2), c.Limit, day),
@@ -117,6 +119,7 @@ public static class BusinessDesk
                 "minder" when p.Length >= 3 => ow.StallMinder(N(1), I(2)),
                 "at" when p.Length >= 2 && N(1) >= -2 => At(ow, I(1)),
                 "pump" when p.Length >= 2 => ow.Pump(Id(1)),
+                "chest" when p.Length >= 2 && N(1) > 0 => ow.FromChest(N(1)),
                 _ => null,
             };
         }
@@ -141,6 +144,14 @@ public static class BusinessDesk
         if (ow.Land == null) return null;
         var reg = ow.Land.Registry(); int hh = ow.HeroHousehold;
         return (x, y) => reg.May(ctx.Party.Hero, hh, LandAction.Build, x, y).Allowed;
+    }
+
+    /// <summary>A building the hero may use (land 4.1): he may build there or store goods there (his deed, a lease of the house, a claim).</summary>
+    private static Func<int, int, bool>? MayUseBuilding(HeroContext ctx, OwnershipWorld ow)
+    {
+        if (ow.Land == null) return null;
+        var reg = ow.Land.Registry(); int hh = ow.HeroHousehold;
+        return (x, y) => reg.May(ctx.Party.Hero, hh, LandAction.Build, x, y).Allowed || reg.May(ctx.Party.Hero, hh, LandAction.Store, x, y).Allowed;
     }
 
     public static int TileAt(long xM, long yM) => (int)Math.Clamp(yM / RegionData.TileM, 0, RegionData.Size - 1) * RegionData.Size + (int)Math.Clamp(xM / RegionData.TileM, 0, RegionData.Size - 1);

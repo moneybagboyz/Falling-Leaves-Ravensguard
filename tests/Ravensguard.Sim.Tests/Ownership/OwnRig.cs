@@ -10,7 +10,7 @@ using Ravensguard.Sim.Tests.Economy;
 using Ravensguard.Sim.Tests.Production;
 using Ravensguard.Sim.WorldGen.Region;
 
-namespace Ravensguard.Sim.Tests.Business;
+namespace Ravensguard.Sim.Tests.Ownership;
 
 /// <summary>
 /// A private world of seed 1234 (its own region, people and economy) with a hero row (the hero's household is his home chest), his purse seeded, the land and ownership installed as the runtime
@@ -49,7 +49,7 @@ internal sealed class OwnRig : IDisposable
     }
 
     public long Coin => Led.Balance(HeroPurse).Mites;
-    public long Chest => Led.Balance(W.Econ.HouseholdPurse[P.Household[HeroRow]]).Mites;
+    public long Chest => O.ChestCoin;
     public int Day => (int)((W.Sim.State.HourDone + 1) / 24);
     public long Sec => (W.Sim.State.HourDone + 1) * 3600;
     public ushort G(string id) => W.Econ.Goods.IdOf(id);

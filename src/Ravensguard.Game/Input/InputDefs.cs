@@ -17,7 +17,8 @@ public static class InputDefs
     static InputDefs()
     {
         const InputContext G = InputContext.Global, W = InputContext.World, C = InputContext.CombatStance,
-            S = InputContext.CalledShot, B = InputContext.Build, U = InputContext.Menu, E = InputContext.BlueprintEditor, T = InputContext.Trade, R = InputContext.Mounted, H = InputContext.Choice;
+            S = InputContext.CalledShot, B = InputContext.Build, U = InputContext.Menu, E = InputContext.BlueprintEditor, T = InputContext.Trade, R = InputContext.Mounted, H = InputContext.Choice,
+            Lg = InputContext.Ledger;
 
         // Global
         A(G, "console", Binding.P(Key.Quoteleft)); // physical: the backtick key position on any layout
@@ -208,6 +209,18 @@ public static class InputDefs
         A(T, "pane", K(Key.Tab));
         A(T, "notebook", K(Key.N));
         A(T, "cancel", K(Key.Escape));
+
+        // The Ledger (P5-F, businesses spec 6, overview 6): a modal screen alone with Global; sortable tables of every property, business, site, field, stall, vehicle, share and steward.
+        A(Lg, "up", K(Key.Up));
+        A(Lg, "down", K(Key.Down));
+        A(Lg, "left", K(Key.Left));
+        A(Lg, "right", K(Key.Right));
+        A(Lg, "next_tab", K(Key.Tab));
+        A(Lg, "sort", K(Key.S));
+        A(Lg, "search", K(Key.Slash));
+        A(Lg, "alerts", K(Key.A));
+        A(Lg, "open", K(Key.Enter));
+        A(Lg, "back", K(Key.Escape));
 
         // Blueprint editor (dev tool, plan 2.11). A standalone context like Menu: only Global stays live beside it.
         A(E, "primary", M(MouseButton.Left), M(MouseButton.Left, Mods.Shift)); // Shift on rectangles = outline only

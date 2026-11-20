@@ -194,7 +194,7 @@ public sealed class LabourMarket
     }
 
     /// <summary>P5-F (businesses spec 4.3): a day labourer of ten days a season is a candidate for a staff post before the others (null: none).</summary>
-    public Func<int, bool>? Priority { get; set; }
+    public Func<int, int, bool>? Priority { get; set; }
 
     private void BuildIdle(int day, bool rebuild = false)
     {
@@ -277,7 +277,7 @@ public sealed class LabourMarket
                 {
                     if (IsStaff(c) || people.Status[c] != PersonStatus.Alive || people.AgeYears(c, day) < minAge) continue;
                     int sk = manor ? PoorFirst(c) : people.SkillLevelOf(c, skill);
-                    bool cp = prio != null && prio(c);
+                    bool cp = prio != null && prio(c, day);
                     if ((cp && !pri) || (cp == pri && (sk > ps || (sk == ps && c < pick)))) { ps = sk; pick = c; pri = cp; }
                 }
                 if (pick < 0 && minAge > ApprenticeMinAge && occ != Occupation.Merchant)

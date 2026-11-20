@@ -25,7 +25,7 @@ public interface IBusinessSteering
     /// <summary>Pays a dividend among the holders (true: paid here; false: the Phase 2 transfer to the owner's household).</summary>
     bool PayDividend(Business b, long dividend);
     /// <summary>A season closed: its net (cash change plus what was paid out), before the season books are reset.</summary>
-    void SeasonClosed(Business b, long net, long cash);
+    void SeasonClosed(Business b, long net, long cash, Ravensguard.Sim.Core.GameTime now);
     /// <summary>What an extraction or a mine took today (grams of the good), for royalties and exhaustion.</summary>
     void Extracted(Business b, ushort good, long grams, Ravensguard.Sim.Core.GameTime now);
     /// <summary>The most staff the labour market may hire for it (int.MaxValue: the kind's slots).</summary>

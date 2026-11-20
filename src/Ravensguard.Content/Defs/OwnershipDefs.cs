@@ -62,6 +62,8 @@ public sealed record OwnershipRulesDef : ContentDef
     public int StallFairDemandPm { get; init; } = 1500;
     /// <summary>Stalls of a settlement share the book's demand of a good: a stall sells at most demand x stall_demand / stalls per day.</summary>
     public int StallMarketHours { get; init; } = 8;
+    /// <summary>The passers-by a minded stall draws whatever the book's demand for its goods: each household of the place spends up to this much a market day at it (mites; decided here, P5-F).</summary>
+    public int StallFootfallMitesPerHousehold { get; init; } = 1;
 
     // ---------- the Ledger (spec 6) ----------
     /// <summary>A steward's report in the Journal every this many days.</summary>

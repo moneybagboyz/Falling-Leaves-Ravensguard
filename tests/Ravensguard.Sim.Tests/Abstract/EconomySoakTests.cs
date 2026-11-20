@@ -90,8 +90,11 @@ public class EconomySoakTests(ITestOutputHelper output)
     public void HundredYears_RealSystems_KeepEveryInvariant_AndMeetTheTargets()
     {
         using var w = SoakWorld.Create();
-        RunAndAssert(w.Headless, 100, every: 5);
+        var soak = RunAndAssert(w.Headless, 100, every: 5);
         Assert.Contains(w.Sys.Businesses, b => b.State == BusinessState.Open);
+        // BS-18 (P5-F, businesses spec 4.3): with the hiring hour, the landless idle adults at year 100 stay under 800 (Phase 3 measured 2,101; 1,738 before the day labour)
+        Assert.True(soak.Rows[^1].Idle < 800, $"landless idle adults at year 100: {soak.Rows[^1].Idle}");
+        output.WriteLine($"day labour: {w.Sys.DayLabour.Hired:N0} days hired, {w.Sys.DayLabour.PaidMites / 100:N0} crowns paid, {w.Sys.DayLabour.Workers.Count} labourers on the books");
     }
 
     /// <summary>Twenty-five game years of seed 1 (a second world, about 4 minutes): the same targets.</summary>
@@ -102,7 +105,7 @@ public class EconomySoakTests(ITestOutputHelper output)
         RunAndAssert(hw, 25, every: 1);
     }
 
-    private void RunAndAssert(HeadlessWorld hw, int years, int every)
+    private EconomySoak RunAndAssert(HeadlessWorld hw, int years, int every)
     {
         var soak = new EconomySoak(hw); var led = hw.World.Economy.Ledger;
         output.WriteLine(EconomySoak.Header());
@@ -119,6 +122,7 @@ public class EconomySoakTests(ITestOutputHelper output)
         output.WriteLine(EconomySoak.Summary(soak)); output.WriteLine(soak.Ticker.Stats.Report());
         Assert.True(soak.Ticker.Stats.P99HourMs < 150);
         AssertTargets(soak.Rows, start);
+        return soak;
     }
 
     /// <summary>

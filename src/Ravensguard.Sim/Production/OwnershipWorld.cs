@@ -49,6 +49,8 @@ public sealed partial class OwnershipWorld : IBusinessSteering
     /// <summary>What the desk shows the hero after each hour (steward reports, alerts, prospecting results).</summary>
     public List<HeroText> Notices { get; } = [];
 
+    /// <summary>The game day as of the last hour or command (the tick's clock: the population's own day is its generation day).</summary>
+    public int Today { get; set; }
     private readonly HashSet<int> _steered = [];
     private int _steeredCount = -1;
 
@@ -70,13 +72,28 @@ public sealed partial class OwnershipWorld : IBusinessSteering
     /// <summary>The hero's household (his home chest's coin, decided: the household's purse is the chest at home), -1 none.</summary>
     public int HeroHousehold { get { int r = HeroRow(); return r >= 0 && r < Pop.People.Count ? Pop.People.Household[r] : -1; } }
     public long HeroCoin => Econ.Ledger.Balance(HeroPurse).Mites;
-    public long ChestCoin => HeroHousehold is int h and >= 0 && h < Econ.HouseholdCount ? Econ.Ledger.Balance(Econ.HouseholdPurse[h]).Mites : 0;
+    /// <summary>
+    /// The hero's chest at home (decided: a purse of its own, <see cref="PurseKind.Chest"/>, kept apart from his household's spending): what a steward sends and what dividends pay while he is
+    /// away sits here, and he takes it in person at home. Opened only when coin first goes in, so a world that never pays into it keeps its bytes.
+    /// </summary>
+    public static readonly EntityId HeroChestId = EntityId.Make(IdKind.Other, 0x5EUL << 40);
+    public long ChestCoin => Econ.Ledger.TryFind(PurseKind.Chest, HeroChestId, out var c) ? Econ.Ledger.Balance(c).Mites : 0;
+    /// <summary>The settlement of the hero's home (his household's), -1 none.</summary>
+    public int HomeSettlement => HeroHousehold is int h and >= 0 && h < Pop.Households.Count ? Pop.Households.Settlement[h] : -1;
     /// <summary>Where the hero's profit goes: his purse when he is at the place, else the chest at home (coin never travels by magic).</summary>
     public PurseId PayeeFor(int settlement, out bool chest)
     {
-        int hh = HeroHousehold;
-        chest = Book.HeroAt != settlement && hh >= 0 && hh < Econ.HouseholdCount;
-        return chest ? Econ.HouseholdPurse[hh] : HeroPurse;
+        chest = Book.HeroAt != settlement;
+        return chest ? Econ.Ledger.Open(PurseKind.Chest, HeroChestId) : HeroPurse;
+    }
+
+    /// <summary>The hero takes coin from his chest at home (in person: he must be at his home settlement).</summary>
+    public OwnResult FromChest(long mites)
+    {
+        if (Book.HeroAt != HomeSettlement || HomeSettlement < 0) return OwnResult.No("bz_chest_at_home");
+        long take = Math.Min(mites, ChestCoin);
+        if (take <= 0 || !Econ.Ledger.TryFind(PurseKind.Chest, HeroChestId, out var c) || !Econ.Ledger.Transfer(c, HeroPurse, new Coin(take), TransferReason.Gift)) return OwnResult.No("bz_chest_empty");
+        return new OwnResult(true, "bz_chest_taken", [M(take)], take);
     }
 
     private void Reindex()
@@ -179,10 +196,10 @@ public sealed partial class OwnershipWorld : IBusinessSteering
         return true;
     }
 
-    public void SeasonClosed(Business b, long net, long cash)
+    public void SeasonClosed(Business b, long net, long cash, GameTime now)
     {
         if (H(b) is not { } h) return;
-        int season = (int)(Pop.NowDay / TimeConst.DaysPerSeason);
+        int season = (int)(now.TotalDays / TimeConst.DaysPerSeason) - 1;                          // the season that just closed
         long revenue = Math.Max(0, net + b.WagesSeason + b.InputsSeason + h.StewardPaidSeason);
         h.History.Add(new SeasonRow(season, revenue, b.WagesSeason + h.StewardPaidSeason, b.InputsSeason, net, b.DividendsSeason));
         while (h.History.Count > 4) h.History.RemoveAt(0);

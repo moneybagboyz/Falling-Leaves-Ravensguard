@@ -975,6 +975,7 @@ public partial class StreetView : Control, IHandlesBack
         if (_opt.Panel == "jobs" && _frames == 420) OpenWork();    // dev: the work panel once the first posting has come back from the tick worker
         HeroShots(); TalkShots(); ApShots();
         LandTick(delta);                                    // P5-A2: the land view, land answers, land screenshots
+        BusinessTick(delta);                                // P5-F: the Ledger, businesses and prospecting: views, answers, where the hero is, screenshots
         BuildTick();                                        // P5-B: construction brought up to the clock, built pieces laid into the street, ghosts drawn
         BuildModeTick(delta);                               // P5-C: build mode (StreetView.BuildMode.cs): the preview, the palette, answers to construction commands, the hero's hands
         if (_opt.IsShot && _opt.Weather == "storm" && _frames == Math.Max(2, _opt.Frames - 1)) _wover.Strike(); // dev: catch a lightning flash in the picture
@@ -1434,6 +1435,7 @@ public partial class StreetView : Control, IHandlesBack
         else if (Actions.Pressed(e, "world.panel_squad")) OpenSquad();
         else if (Actions.Pressed(e, "world.autopilot")) OpenAutopilot();
         else if (Actions.Pressed(e, "world.panel_journal")) OpenJournal();
+        else if (Actions.Pressed(e, "world.panel_ledger")) OpenLedger();             // P5-F: L opens the Ledger
         else if (Actions.Pressed(e, "world.combat_log")) OpenCombatLog();         // P4-D: F7 and Shift+F7 outside a fight (the last fight's log and report)
         else if (Actions.Pressed(e, "world.last_report")) OpenLastReport();
         else if (Actions.Pressed(e, "world.context_menu")) OpenQMenu();

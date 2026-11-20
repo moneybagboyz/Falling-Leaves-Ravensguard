@@ -118,7 +118,7 @@ public static class Phase3Smoke
             if (router.Top != sv) throw new Exception("the street view is not on top");
 
             // every screen: open as its key does, it fits the window, Esc comes back (the control rects stay inside the viewport)
-            foreach (var what in new[] { "trade", "barter", "inventory", "character", "squad", "crafting", "talk", "journal", "autopilot", "map", "picker", "jobs", "codex", "qmenu", "overlay", "land", "deeds" })   // P5-A2: land, deeds
+            foreach (var what in new[] { "trade", "barter", "inventory", "character", "squad", "crafting", "talk", "journal", "autopilot", "map", "picker", "jobs", "codex", "qmenu", "overlay", "land", "deeds", "ledger", "business", "prospect" })   // P5-A2: land, deeds; P5-F: the Ledger, the business panel, prospecting
             {
                 int depth = router.Depth;
                 if (!sv.DebugOpen(what)) throw new Exception("unknown screen " + what);
@@ -134,6 +134,21 @@ public static class Phase3Smoke
             }
 
             await BuildMode(tree, router, sv, view);                                          // P5-C
+
+            // P5-F: L opens the Ledger (its own context: the street keys are off under it), Tab turns its pages, a row's detail is a modal over it, Esc closes it
+            Key(Godot.Key.L); await Frames(tree, 30);
+            if (router.Top is not UI.LedgerScreen) throw new Exception("L did not open the Ledger (top " + router.Top?.GetType().Name + ")");
+            Fit(router.Top!, "the Ledger", view);
+            foreach (var k in new[] { Godot.Key.Tab, Godot.Key.S, Godot.Key.A, Godot.Key.I, Godot.Key.M })
+            {
+                Key(k); await Frames(tree, 3);
+                Input.ParseInputEvent(new InputEventKey { Keycode = k, PhysicalKeycode = k, Pressed = false });   // released: S and A are the walk keys outside the Ledger
+                await Frames(tree, 1);
+            }
+            if (router.Top is not UI.LedgerScreen) throw new Exception("a world key opened something over the Ledger");
+            Key(Godot.Key.Escape); await Frames(tree, 4);
+            if (router.Top != sv) throw new Exception("Esc did not close the Ledger");
+            GD.Print("[smoke]   the Ledger: L opens it, the world keys are off under it, Esc closes it");
 
             // the bar of the party, the controls overlay on F10 (also ?), the F8 report window
             sv.DebugPartyBar(); await Frames(tree, 2);
@@ -155,7 +170,7 @@ public static class Phase3Smoke
             // the pause menu owns the keys: N, I, J, Y, comma open nothing under it; Esc closes it
             if (!sv.DebugEsc()) throw new Exception("Esc did not open the pause menu");
             await Frames(tree, 3);
-            foreach (var k in new[] { Godot.Key.N, Godot.Key.I, Godot.Key.J, Godot.Key.Y, Godot.Key.C, Godot.Key.P, Godot.Key.Comma }) { Key(k); await Frames(tree, 2); }
+            foreach (var k in new[] { Godot.Key.N, Godot.Key.I, Godot.Key.J, Godot.Key.Y, Godot.Key.C, Godot.Key.P, Godot.Key.Comma, Godot.Key.L }) { Key(k); await Frames(tree, 2); }   // P5-F: L too
             if (router.Top != sv || !router.HasModal) throw new Exception($"a screen key opened something under the pause menu (top {router.Top?.GetType().Name}, modal {router.HasModal})");
             Key(Godot.Key.Escape); await Frames(tree, 4);
             if (router.Top != sv || router.HasModal) throw new Exception("Esc did not close the pause menu");

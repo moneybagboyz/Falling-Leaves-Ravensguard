@@ -649,7 +649,7 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
                 else if (div > 0 && b.OwnerHousehold >= 0 && ledger.Transfer(b.Purse, Econ.HouseholdPurse[b.OwnerHousehold], new Coin(div), TransferReason.Dividend)) { b.Dividends += div; b.DividendsSeason += div; cash -= div; }
                 bool costCentre = (kind.Salaried && kind.Stations.Length == 0) || kind.Extractions.Length > 0;       // a manor has no revenue, a crew works the lord's woods and waters: neither is closed for losses
                 b.LossSeasons = net < 0 && !costCentre ? (byte)Math.Min(255, b.LossSeasons + 1) : (byte)0;
-                if (steered) Steering!.SeasonClosed(b, net, cash);
+                if (steered) Steering!.SeasonClosed(b, net, cash, now);
                 if (b.LossSeasons >= 3 && cash < 5 * b.WageBillPerDay && !OwnedByHero(b)) Close(b);             // P5-F: the hero's business closes by his order (the "close if loss" directive), not by Phase 2's rule
             }
             if (b.State == BusinessState.Open) Markets?.ExtraCoin.Add((b.Settlement, cash));

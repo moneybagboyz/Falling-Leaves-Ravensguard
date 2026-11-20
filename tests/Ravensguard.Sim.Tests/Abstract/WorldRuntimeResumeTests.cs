@@ -101,7 +101,59 @@ public class WorldRuntimeResumeTests(ITestOutputHelper output)
         var heroId = s.Population.People.IdOf(s.Hero!.PersonIndex);
         s.Crafting.Artefacts.Named[EntityId.Make(IdKind.Item, 0xA27E)] = new Artefact(Artefacts.NameFor(content, s.Seed, new EntityId(77), "Aldric Vane"), heroId, "Aldric Vane", sec);
         PlayCrafting(rt, ctx, town, sec);
+        PlayOwnership(rt, ctx, desk, town, sec, content);
     }
+
+    /// <summary>
+    /// P5-F: a business of the hero's with a steward (a smithy in the town, its staff hired through the desk), the stall rented above selling its goods minded by its smith, a prospect record (a walk
+    /// and a trial shaft's finding), and a working mine on a licensed vein with its miners: all of it is stepped by the hour pass across the save (the "ownership" section).
+    /// </summary>
+    private static void PlayOwnership(WorldRuntime rt, HeroContext ctx, HeroDesk desk, int town, long sec, ContentDatabase content)
+    {
+        var s = rt.State; var ow = s.HomeRecords!.Sim.Get<Ravensguard.Sim.Production.OwnershipWorld>()!;
+        var pt = s.Population.People; var prod = s.Production!;
+        int day = (int)(sec / 86400);
+        // the smithy: owned as founding makes it (no finished room yet: the plan above is half built), capital from the purse
+        var kind = prod.Content.Kind("smithy");
+        var b = prod.NewBusiness(kind, town, -1, s.Hero!.PersonIndex); b.OwnerWorks = false;
+        foreach (var (st, n) in kind.Stations) for (int i = 0; i < Math.Max(1, n); i++) b.Stations.Add(new Ravensguard.Sim.Production.Station { Kind = st });
+        s.Economy!.Ledger.Transfer(ctx.Purse, b.Purse, new Coin(20_000), TransferReason.Gift); b.Capital = 20_000; b.CashStart = 20_000;
+        ow.Hold(b).FoundedDay = day;
+        b.Store.Create(s.Economy.Goods.IdOf("iron_bar"), 60_000, CreateReason.Import);
+        var idle = Enumerable.Range(0, pt.Count).Where(i => pt.Status[i] == PersonStatus.Alive && pt.HomeSettlement[i] == town && pt.Occupation[i] == Occupation.None && pt.Employer[i] < 0 && pt.AgeYears(i, day) is >= 20 and < 50
+            && s.Population.Households.Class[pt.Household[i]] != SocialClass.Gentry).ToList();
+        int steward = idle[0]; pt.SetSkill(steward, 0, Skill.Trading, 45); pt.SetSkill(steward, 1, Skill.Leadership, 30);
+        desk.Issue(Ravensguard.Sim.Production.BusinessDesk.Hire(b.Id, idle[1], 380, sec));
+        desk.Issue(Ravensguard.Sim.Production.BusinessDesk.Steward(b.Id, steward, sec));
+        desk.Issue(Ravensguard.Sim.Production.BusinessDesk.Orders(b.Id, "recipe=forge_nails,send_days=3,keep_mites=2000", sec));
+        desk.Issue(Ravensguard.Sim.Production.BusinessDesk.Stall(town, 0, b.Index, sec));
+        desk.Issue(Ravensguard.Sim.Production.BusinessDesk.Minder(Ravensguard.Sim.Land.LandIds.StallSubject(town, 0), idle[1], sec));
+        desk.Issue(Ravensguard.Sim.Production.BusinessDesk.At(town, sec));
+        // a prospect record: a walk past, and a trial shaft's finding on an ore vein with a right holder
+        int tile = -1; Ravensguard.Sim.Prospecting.OreBody body = default;
+        foreach (var v in s.Population.Region.Veins)
+        {
+            if (!Ravensguard.Sim.Prospecting.ProspectTruth.IsOre(v.Type) || v.Type is Ravensguard.Sim.WorldGen.MineralType.Silver or Ravensguard.Sim.WorldGen.MineralType.Gold) continue;
+            int t = Ravensguard.Sim.WorldGen.Region.Region.Index(v.TileX, v.TileY);
+            if (ow.Truth.OreAt(t) is { } ob && ob.Mineral == v.Type && ow.RightHolder(t, v.Type) != null) { tile = t; body = ob; break; }
+        }
+        Assert.True(tile >= 0);
+        desk.Issue(Ravensguard.Sim.Production.BusinessDesk.Walk(tile, sec));
+        var rules = content.All<Ravensguard.Content.ProspectRulesDef>().Single();
+        foreach (var r in Ravensguard.Sim.Prospecting.Prospector.TrialShaft(ow.Truth, rules, s.Seed, ctx.Party.Hero, tile, 60, day)) ow.Book.Prospects.Learn(r);
+        desk.Issue(Ravensguard.Sim.Production.BusinessDesk.Licence(tile, sec));
+        int N = Ravensguard.Sim.WorldGen.Region.Region.Size, M = Ravensguard.Sim.WorldGen.Region.Region.TileM; int x = tile % N * M + 8, y = tile / N * M + 8;
+        desk.Issue(Ravensguard.Sim.Production.BusinessDesk.FoundSite("mine", x, y, x + 16, y + 16, 15_000, sec));
+        desk.ApplyDue(ctx, rt.HourDone);
+        Assert.All(desk.View!.Results.TakeLast(9), r => Assert.True(r.Ok || r.Text.Length == 0, r.Text));
+        var mine = prod.Businesses.Last(x2 => x2.Owner == s.Hero.PersonIndex && x2.Mine >= 0);
+        foreach (int p in idle.Skip(2).Take(4)) desk.Issue(Ravensguard.Sim.Production.BusinessDesk.Hire(mine.Id, p, 160, sec));
+        desk.ApplyDue(ctx, rt.HourDone);
+        Assert.All(desk.View!.Results.TakeLast(4), r => Assert.True(r.Ok, r.Text));
+        Assert.Equal(4, mine.Staff.Count);
+        Assert.False(ow.Book.IsEmpty);
+    }
+
 
     /// <summary>
     /// P5-E: crafting state that the hour pass moves (the runtime's <see cref="CraftSystem"/>): a commission at the region's best smith, made from the hero's steel over the next days; the hero
@@ -212,7 +264,7 @@ public class WorldRuntimeResumeTests(ITestOutputHelper output)
         if (hero)
         {
             // the Phase 5 step 1 sections are there to compare: land, the hero (a person row in "people", with the party) and the crafting section's named artefact
-            foreach (var k in new[] { LandSave.SectionName, WorldSave.HeroSection, WorldSave.PartySection, WorldSave.CraftingSection, WorldSave.PeopleSection, ConstructionSave.SectionName, DesignsSave.SectionName })
+            foreach (var k in new[] { LandSave.SectionName, WorldSave.HeroSection, WorldSave.PartySection, WorldSave.CraftingSection, WorldSave.PeopleSection, ConstructionSave.SectionName, DesignsSave.SectionName, OwnershipSave.SectionName })
                 Assert.Contains(k, want.Keys);
             foreach (var s in new[] { straight.State, resumed.State })
             {
@@ -242,6 +294,17 @@ public class WorldRuntimeResumeTests(ITestOutputHelper output)
                 Assert.Contains(s.Crafting.Jobs.Values, j => j.FetchLeft > 0);
             }
             Assert.Equal(straight.State.Crafting!.Commissions.Values.Single().State, resumed.State.Crafting!.Commissions.Values.Single().State);
+            // P5-F: the steward ran the smithy and sent profit, the stall sold, the mine mined and paid its royalty, in both runs alike
+            foreach (var s in new[] { straight.State, resumed.State })
+            {
+                var o = s.Ownership!;
+                var smithy = o.Holdings.Values.Single(h => h.Steward >= 0);
+                Assert.True(s.Production!.ById(smithy.Business)!.Batches > 0 || smithy.PriceDays.Count > 0);
+                var mh = o.Holdings.Values.Single(h => h.Vein >= 0);
+                Assert.True(mh.LastMinedG > 0); Assert.True(mh.RoyaltyPaid > 0);
+                Assert.NotEmpty(o.Prospects.Rows); Assert.Single(o.Licences); Assert.Single(o.Stalls);
+            }
+            Assert.Equal(straight.State.Ownership!.ComputeHash(), resumed.State.Ownership!.ComputeHash());
         }
         var bad = want.Keys.Union(got.Keys).Where(k => !(want.TryGetValue(k, out var x) && got.TryGetValue(k, out var y) && x.AsSpan().SequenceEqual(y))).ToList();
         output.WriteLine($"N {n} M {m} worker {worker} neighbours {neighbours} hero {hero}: {want.Count} sections [{string.Join(", ", want.Keys)}], differing [{string.Join(", ", bad)}]");

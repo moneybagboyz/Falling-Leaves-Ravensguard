@@ -13,7 +13,7 @@ using Ravensguard.Sim.Trade;
 using Xunit.Abstractions;
 using BusinessRow = Ravensguard.Sim.Production.Business;
 
-namespace Ravensguard.Sim.Tests.Business;
+namespace Ravensguard.Sim.Tests.Ownership;
 
 /// <summary>P5-F: the businesses, shares, stewards, day labour, stalls and the Ledger gate BS-1 to BS-17 (docs/specs/phase5/businesses-stewards-ledger.md 7); BS-18 is the 100-year soak.</summary>
 public class BusinessTests(ITestOutputHelper output)
@@ -285,9 +285,8 @@ public class BusinessTests(ITestOutputHelper output)
         output.WriteLine($"settlement {s}: {idle[s].Count} idle, 25 hired");
     }
 
-    private static (int Stall, long Subject) LeaseStall(OwnRig r, int town, bool fair)
+    private static (int Stall, long Subject) LeaseStall(OwnRig r, int town, bool fair, int day)
     {
-        int day = r.Day;
         EntityId C(GameTime w, string t, IReadOnlyList<EntityId> s, IReadOnlyList<Cause> c, params (string, string)[] d) => default;
         var lease = r.L.LeaseStall(r.Hero, PurseKind.Person, town, 0, fair, day, C);
         Assert.True(lease.Ok, lease.Key);
@@ -303,11 +302,10 @@ public class BusinessTests(ITestOutputHelper output)
             using var r = OwnRig.Make(crowns: 500, ticker: false);
             int town = r.Town();
             int day = r.Day;
-            if (fair) { while (!r.O.FairDay(town, day)) day++; r.W.Pop.NowDay = day; }
+            if (fair) { while (!r.O.FairDay(town, day)) day++; }
             else while (r.O.FairDay(town, day)) day++;
-            r.W.Pop.NowDay = day;
             var tp = LandRegistry.TownOf(r.W.Pop.Region, town); long town0 = r.Led.Balance(r.Led.Open(tp.Kind, tp.Holder)).Mites, coin0 = r.Coin;
-            var (_, subject) = LeaseStall(r, town, fair);
+            var (_, subject) = LeaseStall(r, town, fair, day);
             fee = coin0 - r.Coin;
             var pack = r.W.Econ.OpenStore(StoreKind.Open, EntityId.Make(IdKind.Other, 4243));
             pack.Create(r.G("nails"), 20_000, CreateReason.Import);
@@ -373,8 +371,7 @@ public class BusinessTests(ITestOutputHelper output)
         {
             using var r = OwnRig.Make(crowns: 500, ticker: false);
             int town = r.Town(); int day = r.Day; while (r.O.FairDay(town, day)) day++;
-            r.W.Pop.NowDay = day;
-            var (_, subject) = LeaseStall(r, town, false);
+            var (_, subject) = LeaseStall(r, town, false, day);
             var pack = r.W.Econ.OpenStore(StoreKind.Open, EntityId.Make(IdKind.Other, 4244));
             pack.Create(r.G("nails"), 20_000, CreateReason.Import);
             r.O.StallStock(subject, pack, r.G("nails"), 20_000);

@@ -16,6 +16,7 @@ public sealed partial class OwnershipWorld
     public void Hour(long hour)
     {
         int hod = (int)(hour % 24), day = (int)(hour / 24);
+        Today = Math.Max(Today, day);
         if (Book.ToastDay != day) { Book.ToastDay = day; Book.Toasted = OwnerAlert.None; }
         foreach (var h in Book.Holdings.Values.ToList())
             if (Prod.ById(h.Business) is { } b && b.Index % 24 == hod) Slice(b, h, day);
@@ -84,7 +85,7 @@ public sealed partial class OwnershipWorld
         long w = 0;
         foreach (int p in b.Staff) w += h.Wages.TryGetValue(p, out int x) ? x : CurrentWage(p, out _);
         if (h.Steward >= 0) w += h.StewardWage;
-        int dayInSeason = Math.Max(1, (int)(Pop.NowDay % TimeConst.DaysPerSeason) + 1);
+        int dayInSeason = Math.Max(1, Today % TimeConst.DaysPerSeason + 1);
         return w + Math.Max(b.InputSpendPerDay, b.InputsSeason / dayInSeason);
     }
 
@@ -155,7 +156,7 @@ public sealed partial class OwnershipWorld
         if (Land != null)
         {
             var id = Ravensguard.Sim.Land.LandIds.Of(Ravensguard.Sim.Land.HoldingKind.Stall, Land.RegionId, subject);
-            if (!Land.Book.Deeds.TryGetValue(id, out var d) || d.Holder != Hero || d.LeaseEndDay <= Pop.NowDay) return OwnResult.No("bz_stall_not_leased");
+            if (!Land.Book.Deeds.TryGetValue(id, out var d) || d.Holder != Hero || d.LeaseEndDay <= Today) return OwnResult.No("bz_stall_not_leased");
         }
         if (business >= 0 && (business >= Prod.Businesses.Count || !IsHeroOwner(Prod.Businesses[business]))) return OwnResult.No("bz_not_yours");
         if (!Book.Stalls.TryGetValue(subject, out var s))
@@ -214,7 +215,7 @@ public sealed partial class OwnershipWorld
         int stalls = Math.Max(1, Land?.StallCount(s.Settlement) ?? 1);
         int pm = FairDay(s.Settlement, day) ? Rules.StallFairDemandPm : Rules.StallDemandPm;
         if (StallStore(s) is not { } store) return;
-        var r = StallTrade.SellHour(Econ, book, Pop, store, StallPurse(s), s.Settlement, stalls, pm, Rules.StallMarketHours, s.AskPm, hour);
+        var r = StallTrade.SellHour(Econ, book, Pop, store, StallPurse(s), s.Settlement, stalls, pm, Rules.StallMarketHours, s.AskPm, hour, Rules.StallFootfallMitesPerHousehold);
         s.SoldToday += r.Units; s.TakingsToday += r.Mites; s.TollToday += r.Toll; s.SoldSeason += r.Units; s.TakingsSeason += r.Mites;
         if (s.Business >= 0 && s.Business < Prod.Businesses.Count && H(Prod.Businesses[s.Business]) is { } bh) bh.RevenueSeason += r.Mites;
     }
@@ -238,7 +239,8 @@ public sealed partial class OwnershipWorld
 
 /// <summary>
 /// Selling at a stall (spec 4.5): goods in the stall's store sell to the settlement's shoppers by the market's rules, at the book's per-unit ask (scaled by the owner's ask), while somebody minds
-/// it. A minded stall meets up to <c>demand x stall_demand_pm / 1000 / stalls</c> of a good a market day (a fair day's footfall is 1,500), spread over the market hours; a higher ask sells
+/// it. A minded stall meets up to <c>demand x stall_demand_pm / 1000 / stalls</c> of a good a market day, or what its passers-by spend (<c>households x footfall mites</c>) if more; a fair day's
+/// footfall is 1,500 permille; spread over the market hours; a higher ask sells
 /// fewer. Buyers are the settlement's households in a turn kept by the hour (ascending index from a cursor), each paying what it can; the seller pays the market toll (5%, <c>MarketToll</c>).
 /// Coin by ledger transfers only, goods by store moves only. Pure in its inputs.
 /// </summary>
@@ -246,7 +248,7 @@ public static class StallTrade
 {
     public readonly record struct Sale(long Units, long Mites, long Toll);
 
-    public static Sale SellHour(EconomyState econ, MarketBook book, Population pop, Store stock, PurseId seller, int settlement, int stalls, int demandPm, int marketHours, int askPm, long hour)
+    public static Sale SellHour(EconomyState econ, MarketBook book, Population pop, Store stock, PurseId seller, int settlement, int stalls, int demandPm, int marketHours, int askPm, long hour, int footfallMitesPerHousehold = 0)
     {
         long units = 0, mites = 0, toll = 0;
         var rows = stock.Rows();
@@ -261,13 +263,14 @@ public static class StallTrade
         {
             if (have <= 0) continue;
             var gb = book.Goods[g];
-            long perDay = Math.Max(1, gb.Demand * demandPm / 1000 / Math.Max(1, stalls));
+            long unitMicro = book.AskMicro(g) * askPm / 1000;
+            if (unitMicro <= 0) continue;
+            long footfall = (long)((Int128)homes.Count * footfallMitesPerHousehold * demandPm / 1000 * PriceCurve.Micro / unitMicro);
+            long perDay = Math.Max(1, Math.Max(gb.Demand * demandPm / 1000 / Math.Max(1, stalls), footfall));
             long cap = Math.Max(1, (perDay + marketHours - 1) / Math.Max(1, marketHours));
             if (askPm > 1000) cap = cap * Math.Max(0, 2000 - askPm) / 1000;                 // dearer than the book: fewer buyers
             long q = Math.Min(have, cap);
             if (q <= 0) continue;
-            long unitMicro = book.AskMicro(g) * askPm / 1000;
-            if (unitMicro <= 0) continue;
             long left = q;
             for (int k = 0; k < homes.Count && left > 0; k++)
             {

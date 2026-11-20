@@ -128,6 +128,7 @@ public partial class StreetView
         SurfaceSiteVerbs(v);                                // P4-H: search an old battlefield, dig a hoard (StreetView.Crawl.cs)
         LandVerbs(v);                                       // P5-A2: the lot market, the deeds, staking a claim (StreetView.Land.cs)
         ContractVerbs(v);                                   // P5-D: the contract board (StreetView.Contracts.cs)
+        BusinessVerbs(v);                                   // P5-F: the Ledger, open a business, hire, steward, a share, prospecting (StreetView.Business.cs)
         _router.Push(new QMenu(_router, L.T("Q_TITLE"), v));
     }
 

@@ -394,6 +394,27 @@ public static class NewGameDebug
                     if (scene == "board") { sv.DebugOpenContracts(); await Frames(tree, 40); }
                     break;
                 }
+            case "business":
+                {
+                    // dev (P5-F): a real new game, a little of everything owned set up at the barrier (DevBusinesses), then --ng-scene ledger | business | stall | prospect | licence
+                    var w = MakeWorld(Math.Min(years, 60), 7);
+                    var d = NewGameServices.NewDraft(); d.Name = "Shot"; d.LibraryWorldId = w.Info.Id;
+                    router.Push(new RegionBuildScreen(router, d, w));
+                    if (!await Until(tree, () => router.Top is Ravensguard.Game.World.StreetView, 9000)) throw new Exception("business shot: the region build did not finish");
+                    var sv = (Ravensguard.Game.World.StreetView)router.Top!; var rt = sv.Runtime!;
+                    await Until(tree, () => rt.HourDone >= sv.DebugWorld.Clock.Now.TotalHours, 6000);
+                    await Frames(tree, 60);
+                    string scene = Arg("--ng-scene", "ledger");
+                    sv.DebugBusinessShot(scene);
+                    sv.DebugWorld.SetSpeed(Ravensguard.Sim.Core.SimSpeed.X8);
+                    var clock = sv.DebugWorld.Clock; long from = clock.Now.Seconds;
+                    await Until(tree, () => clock.Now.Seconds >= from + 3 * 3600, 60000);
+                    sv.DebugWorld.SetSpeed(Ravensguard.Sim.Core.SimSpeed.Paused);
+                    await Frames(tree, 90);
+                    sv.DebugBusinessOpen(scene);
+                    await Frames(tree, 60);
+                    break;
+                }
             case "embark":
             case "legends":
                 {

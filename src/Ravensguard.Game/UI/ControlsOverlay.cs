@@ -33,6 +33,7 @@ public partial class ControlsOverlay : Control
         new("travel", ["world.map", "world.context_menu", "world.camp", "world.forage", "world.speed_1", "world.speed_2", "world.speed_4", "world.speed_8", "choice.pick_1", "choice.pick_2", "choice.pick_3", "world.pause", "world.sprint", "world.panel_journal"], [("Enter", "OVERLAY_TRAVEL_HERE")], null),
         new("called_shot", [.. Of(InputContext.CalledShot)], [], InputContext.CalledShot),
         new("build", [.. Of(InputContext.Build)], [], InputContext.Build),
+        new("ledger", [.. Of(InputContext.Ledger)], [], InputContext.Ledger),                            // P5-F
     ];
 
     public static OverlayView View(string id) => Views().First(v => v.Id == id);
@@ -70,7 +71,7 @@ public partial class ControlsOverlay : Control
         var margin = UiKit.Margin(this, 24);
         var root = new VBoxContainer(); root.AddThemeConstantOverride("separation", 8); margin.AddChild(root);
         root.AddChild(UiKit.Title(L.F("OVERLAY_TITLE", L.T(_view.TitleKey))));
-        var tabs = new HBoxContainer(); tabs.AddThemeConstantOverride("separation", 6); root.AddChild(tabs);
+        var tabs = new HFlowContainer(); tabs.AddThemeConstantOverride("h_separation", 6); tabs.AddThemeConstantOverride("v_separation", 4); root.AddChild(tabs);   // P5-F: the pages wrap (the Ledger's made them wider than 960)
         foreach (var v in Views())
         {
             var b = new Button { Text = L.T(v.TitleKey), ToggleMode = true, ButtonPressed = v.Id == _view.Id, CustomMinimumSize = new Vector2(96, 26) };

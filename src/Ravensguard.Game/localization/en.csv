@@ -3324,6 +3324,7 @@ bz_none_to_supply,"You have none of that to put in."
 bz_none_to_take,"There is none of that to take."
 bz_not_for_sale,"{0} is not for sale."
 bz_not_staff,"Not one of the staff."
+bz_not_your_building,"That building is not yours to use."
 bz_not_yours,"It is not yours."
 bz_nothing_done,"Nothing to credit."
 bz_orders_set,"Orders set for {0}."
@@ -3451,6 +3452,186 @@ px_started,"You {0} ({1} h)."
 px_vein_licensed,"That vein is licensed already."
 px_vein_worked,"That vein is worked already."
 px_worked_out,"That vein is worked out."
+bz_chest_at_home,"Your chest is at home: go there for it."
+bz_chest_empty,"The chest is empty."
+bz_chest_taken,"{0} taken from your chest."
+ACTION_LEDGER_UP,Previous row
+ACTION_LEDGER_DOWN,Next row
+ACTION_LEDGER_LEFT,Previous column
+ACTION_LEDGER_RIGHT,Next column
+ACTION_LEDGER_NEXT_TAB,Next tab
+ACTION_LEDGER_SORT,Sort by the column
+ACTION_LEDGER_SEARCH,Search
+ACTION_LEDGER_ALERTS,Alerts only
+ACTION_LEDGER_OPEN,Open the row
+ACTION_LEDGER_BACK,Close the Ledger
+CONTEXT_LEDGER,The Ledger (its tables)
+OVERLAY_LEDGER,Ledger
+bz_kind_bakery,bakery
+bz_kind_mill,mill
+bz_kind_brewery,brewery
+bz_kind_tavern,tavern
+bz_kind_butchery,butchery
+bz_kind_smithy,smithy
+bz_kind_weavery,weavery
+bz_kind_tannery,tannery
+bz_kind_cobbler,cobbler's
+bz_kind_carpentry,carpenter's yard
+bz_kind_masonry,mason's yard
+bz_kind_merchant_stall,merchant's stall
+bz_kind_woodlot,woodcutters' camp
+bz_kind_fishery,fishery
+bz_kind_charcoal_crew,charcoal clamp
+bz_kind_mine,mine
+bz_kind_quarry,quarry
+bz_kind_clay_pit,clay pit
+bz_kind_peat_cuttings,peat cuttings
+bz_kind_salt_pan,salt pan
+bz_kind_sawpit,sawpit
+bz_kind_water_sawmill,water sawmill
+bz_kind_brickworks,brickworks
+bz_kind_bloomery,bloomery
+bz_kind_manor,manor
+bz_q_btn_buy,Buy the share
+bz_q_btn_open,Open it
+bz_q_found_body,"Open a {0} here? The stations: {1}. {2} goes from your purse into its cash box."
+bz_q_found_title,Open a business
+bz_q_head,Business
+bz_q_hire_for,"Hire {0} for {1}"
+bz_q_ledger,The Ledger (L)
+bz_q_no_business,They own no business.
+bz_q_no_workshop,"Stand in a workshop room of a building you may use."
+bz_q_open,"Open a {0} here"
+bz_q_open_none,Open a business here
+bz_q_share,"Buy a share of {0}'s business"
+bz_q_share_body,"40% of {0} at its value: {1}. You share its dividends; the owner keeps control."
+bz_q_share_title,Buy a share
+bz_q_steward,"Make {0} steward of {1}"
+bz_ui_alert_wagesowed,wages owed
+bz_ui_alert_noinput,no inputs
+bz_ui_alert_lossseason,loss
+bz_ui_alert_nostaff,no staff
+bz_ui_alert_stewardreport,report
+bz_ui_alert_unlicensed,unlicensed
+bz_ui_alert_exhausted,exhausted
+bz_ui_alert_flooded,flooded
+bz_ui_alert_stallunminded,stall unminded
+bz_ui_alert_stewardnoprofit,no profit
+bz_ui_btn_dismiss,Dismiss
+bz_ui_btn_fire,Let go
+bz_ui_btn_hire,Hire at {0}
+bz_ui_btn_in,Put in {0}
+bz_ui_btn_mind,Mind an hour
+bz_ui_btn_next,Next
+bz_ui_btn_out,Take {0}
+bz_ui_btn_pump,Pump it out
+bz_ui_btn_sell,Sell back
+bz_ui_btn_stall,Sell at a stall
+bz_ui_btn_steward,Make steward
+bz_ui_btn_supply,Supply
+bz_ui_btn_take,Take goods
+bz_ui_btn_toggle,Change
+bz_ui_by_margin,by margin (the planner)
+bz_ui_cand_row,"{0}, {1}, skill {2}, earns {3}"
+bz_ui_cash,The cash box
+bz_ui_empty,empty
+bz_ui_fire_body,"Let {0} go? What he is owed is paid first if the box can."
+bz_ui_fire_title,Let go
+bz_ui_hands_on,You run it yourself (hands-on): the planner only suggests.
+bz_ui_history,The last four seasons
+bz_ui_history_row,"{0} of year {1}: revenue {2}, wages {3}, inputs {4}, profit {5}, paid out {6}"
+bz_ui_idle,idle
+bz_ui_mine,"Ore left about {0} of {1} ({2}); royalty paid {3} {4}"
+bz_ui_money,Where is the money?
+bz_ui_money_row,"Cash box {0}; your purse {1}; your chest at home {2}; sent to your purse {3}, to your chest {4}; costs a day {5}"
+bz_ui_no_history,No season has closed yet.
+bz_ui_no_steward_here,Nobody here could steward it (Trading 30 and Leadership 20).
+bz_ui_order_close,"Close after two losing seasons: {0}"
+bz_ui_order_hire,"Hire up to: {0}"
+bz_ui_order_recipe,"Make: {0}"
+bz_ui_order_send,"Send profit every {0} days, keep {1} in the box"
+bz_ui_orders,Directives
+bz_ui_owed,"(owed {0})"
+bz_ui_owner,yours
+bz_ui_projection,"At the solver's prices a smith of skill 50 earns about {0} a season on nails; a steward costs {1} a season."
+bz_ui_recipe_row,"{0} at the {1}: margin {2} a batch of {3} h, {4} an hour"
+bz_ui_sell_share,Sell your share back to the owner at its value
+bz_ui_share_note,"You hold {0}% of it; the owner keeps {1}%. You see its books; he runs it."
+bz_ui_shareholder,"a {0}% share"
+bz_ui_slots,its posts
+bz_ui_staff,"Staff {0} of {1}"
+bz_ui_staff_row,"{0}, {1}, skill {2}, {3} a day {4}"
+bz_ui_stall_off,It sells at the market's lots. A stall of your own sells minded.
+bz_ui_stall_on,It sells from your stall (minded by its minder or by you).
+bz_ui_station_row,"{0}: {1} {2}%"
+bz_ui_stations,Stations
+bz_ui_status,"Cash {0}, worth {1}, staff {2}/{3}, a season about {4}; {5}"
+bz_ui_steward,The steward
+bz_ui_steward_cand,"{0}: Trading {1}, Leadership {2}"
+bz_ui_steward_row,"{0}: Trading {1}, Leadership {2}; prices {3} days old; keeps {4}"
+bz_ui_stock,"In the store: {0}"
+bz_ui_title,Business
+bz_ui_unlicensed,(unlicensed)
+bz_ui_yes,yes
+bz_ui_no,no
+lg_alerts_only,alerts only
+lg_asc,ascending
+lg_desc,descending
+lg_cols,"columns {0}-{1} of {2}"
+lg_empty_property,"No deeds yet: buy a plot or lease a house at the lord's officer."
+lg_empty_businesses,"No business yet: open one in a workshop room (Q), or buy one."
+lg_empty_sites,No building sites.
+lg_empty_fields,No leased fields.
+lg_empty_stalls,No stalls: rent one at the lord's officer.
+lg_empty_vehicles,No carts or animals.
+lg_empty_shares,No shares: buy one from an owner (Q beside him).
+lg_empty_stewards,No stewards.
+lg_keys,"{0} sort, {1} search, {2} alerts only, {3} open, {4} next tab, {5} close"
+lg_money,"Purse {0}, chest {1}, boxes {2}, {3} alerts"
+lg_search,search the rows
+lg_status,"{0} rows, by {1} {2} {3} {4} {5}"
+lg_tab_property,Property
+lg_tab_businesses,Businesses
+lg_tab_sites,Sites
+lg_tab_fields,Fields
+lg_tab_stalls,Stalls
+lg_tab_vehicles,Vehicles
+lg_tab_shares,Shares
+lg_tab_stewards,Stewards
+lg_title,The Ledger
+lg_waiting,…
+px_q_head,Prospecting
+px_q_licence,Petition for a mining licence
+px_q_method,"Prospect: {0}"
+px_q_prospect,What do I know of this ground?
+px_ui_btn_petition,Petition
+px_ui_btn_read,Read
+px_ui_btn_start,Start
+px_ui_btn_stop,Stop
+px_ui_btn_write,Write it up
+px_ui_grade,"grade {0}%"
+px_ui_here,This acre
+px_ui_hint_row,"Signs of {0} to the {1} (from {2},{3})"
+px_ui_job,"Working: {0} ({1} h)"
+px_ui_known_row,"{0}: about {1} {2} ({3}% sure, {4})"
+px_ui_licence_row,"Licensed: {0} at {1},{2}, royalty {3}%"
+px_ui_method_row,"{0} ({1} h) {2}"
+px_ui_methods,The ways to look
+px_ui_no_ore_here,No ore body known under this acre.
+px_ui_nothing,nothing
+px_ui_pan_row,"Panned at {0},{1}: {2}"
+px_ui_petition_body,"The right to the ore here is {0}'s. A licence costs {1}, and {2}% of the value of what is mined goes to the right holder after. Mining without one is a crime."
+px_ui_petition_title,A mining licence
+px_ui_report_row,"A survey report ({0} findings), sheet {1}"
+px_ui_reports,Survey reports
+px_ui_right_row,"The right holder: {0}; licence {1}"
+px_ui_rights,Mineral rights
+px_ui_signs,Signs
+px_ui_status,"Acre {0},{1}; your Prospecting {2} {3}"
+px_ui_stream,(a stream runs here)
+px_ui_title,Prospecting
+px_ui_unsurveyed,"Unsurveyed: walk it, read it, dig a pit, sink a shaft."
+px_ui_write,Write up what you know of this acre (a survey report)
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."

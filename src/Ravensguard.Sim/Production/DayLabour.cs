@@ -23,7 +23,8 @@ public readonly record struct DayPost(int Settlement, int Hands, PurseId Payer, 
 /// The hiring hour (businesses spec 4.3): every settlement at 06:00 in the square. Posts come from the work there is that day: construction sites, farms short of hands, businesses with a one-day
 /// need, haulage (<see cref="Posts"/>, set by the region's systems), and the lord's works (decided here, P5-F: ditching, hedging, carting and roads on the demesne, paid from the fief's treasury and the
 /// lord's purse above their reserve, <c>lord_works_pm_per_day</c> of it a day: the lords' idle coin is the plan's "haulage and farms short of hands" in the abstract). Idle adults of 16 to 59
-/// without a staff post take them first come by (distance from the square, person id) at the unskilled wage (150 mites, 10 hours), paid from the post's purse at the hour (the day's work
+/// of landless households (a landed household's own work their fields) without a staff post take them first come by (distance from the square, person id) at the unskilled wage (150 mites,
+/// 10 hours), paid from the post's purse at the hour (the day's work
 /// is the post; the save never holds half a day). A day labourer is a <see cref="Occupation.Labourer"/> while he has worked within <c>lapse</c> days; ten days in a season and he is a candidate
 /// for a staff post first. No draws: the order is the people's distance and id.
 /// </summary>
@@ -46,8 +47,8 @@ public sealed class DayLabour
     }
 
     /// <summary>Ten days of day labour this season: a candidate for a staff post first.</summary>
-    public bool Priority(int person)
-        => Book.Workers.TryGetValue(person, out var w) && w.Season == _pop.NowDay / TimeConst.DaysPerSeason && w.Days >= _r.DayLabourPriorityDays;
+    public bool Priority(int person, int day)
+        => Book.Workers.TryGetValue(person, out var w) && w.Season == day / TimeConst.DaysPerSeason && w.Days >= _r.DayLabourPriorityDays;
 
     /// <summary>The idle adults of each settlement who may take a day's work, by (distance from the square, person id).</summary>
     public List<int>[] Idle(int day)
@@ -61,6 +62,7 @@ public sealed class DayLabour
             if (p.Occupation[i] is not (Occupation.None or Occupation.Labourer)) continue;
             int age = p.AgeYears(i, day); if (age < _r.DayLabourMinAge || age > _r.DayLabourMaxAge) continue;
             int hh = p.Household[i]; if (hh < 0 || hht.Class[hh] == SocialClass.Gentry) continue;
+            if (hht.ParcelCount[hh] > 0) continue;                                                   // a landed household's own work their fields: the hiring hour is for the landless
             int s = p.HomeSettlement[i]; if ((uint)s >= (uint)lists.Length) continue;
             var st = reg.Settlements[s]; long d = 0;
             int lot = hht.Lot[hh];
@@ -105,6 +107,32 @@ public sealed class DayLabour
         return posts;
     }
 
+    /// <summary>
+    /// The well-off households' day work (decided here, P5-F: gardens, carting, building repairs, the harvest of a burgher's croft): a gentry or burgher household of the place holding more than the
+    /// reserve spends the same permille of the rest a day on hands, for the idle the lord's works left. Households by index.
+    /// </summary>
+    private List<DayPost> HouseWorks(List<int>[] idle, List<DayPost> taken)
+    {
+        var posts = new List<DayPost>(); var hht = _pop.Households; var led = _econ.Ledger; long wage = _r.DayLabourWageMites;
+        if (_r.LordWorksPmPerDay <= 0) return posts;
+        var left = new int[idle.Length];
+        for (int s = 0; s < idle.Length; s++) left[s] = idle[s].Count;
+        foreach (var p in taken) left[p.Settlement] = Math.Max(0, left[p.Settlement] - p.Hands);
+        var lords = new HashSet<int>(_pop.FiefLordHousehold);
+        for (int h = 0; h < hht.Count && h < _econ.HouseholdCount; h++)
+        {
+            int s = hht.Settlement[h];
+            if ((uint)s >= (uint)left.Length || left[s] <= 0 || hht.MemberCount[h] == 0 || lords.Contains(h)) continue;
+            if (hht.Class[h] is not (SocialClass.Gentry or SocialClass.Burgher)) continue;
+            long spare = led.Balance(_econ.HouseholdPurse[h]).Mites - _r.LordWorksReserveMites;
+            int hands = (int)Math.Min(left[s], Math.Max(0, spare) * _r.LordWorksPmPerDay / 1000 / wage);
+            if (hands <= 0) continue;
+            posts.Add(new DayPost(s, hands, _econ.HouseholdPurse[h], "house"));
+            left[s] -= hands;
+        }
+        return posts;
+    }
+
     /// <summary>The hiring hour (H4 at 06:00): lapsed labourers go back to idle, the posts are filled first come and paid. Returns the hands hired.</summary>
     public int Hour(GameTime now)
     {
@@ -123,6 +151,7 @@ public sealed class DayLabour
         var posts = new List<DayPost>();
         if (Posts != null) for (int s = 0; s < idle.Length; s++) if (idle[s].Count > 0) posts.AddRange(Posts(s, day));
         posts.AddRange(LordWorks(idle));
+        posts.AddRange(HouseWorks(idle, posts));
         var next = new int[idle.Length];
         int hired = 0; long wage = _r.DayLabourWageMites;
         foreach (var post in posts)

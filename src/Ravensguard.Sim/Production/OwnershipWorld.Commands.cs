@@ -38,12 +38,18 @@ public sealed partial class OwnershipWorld
     /// Opens a business in a building the hero may use (spec 4.1, BS-1): the kind must be one its recognised workshop rooms offer; its stations are the room's stations the kind uses (more forges, more
     /// batches; never more output per input). The capital moves from the hero's purse into the new cash box (<c>Gift</c>; <c>Capital</c> records it, as Phase 2).
     /// </summary>
-    public OwnResult Found(string kindId, int settlement, int lot, int structure, long capital, int day)
+    public OwnResult Found(string kindId, int settlement, int lot, int structure, long capital, int day, Func<int, int, bool>? mayUse = null)
     {
         var kind = Prod.Content.Kinds.FirstOrDefault(k => k.Id == kindId);
         if (kind == null || kind.Trader) return OwnResult.No("bz_no_such_kind");
         if ((uint)settlement >= (uint)Pop.Region.Settlements.Count) return OwnResult.No("bz_no_place");
         int row = HeroRow(); if (row < 0) return OwnResult.No("bz_no_hero");
+        // the building must be one the hero may use (land 4.1): his deed, a lease, a claim
+        if (mayUse != null && Rooms?.Invoke() is { } rw && rw.StructureCells(structure).FirstOrDefault() is long key && key != 0)
+        {
+            var (cx, cy, _) = Ravensguard.Sim.Building.RoomWorld.Unpack(key);
+            if (!mayUse(cx, cy)) return OwnResult.No("bz_not_your_building");
+        }
         var stations = StationsOf(structure);
         if (!KindsFor(stations).Contains(kind)) return OwnResult.No("bz_no_stations", kindId);
         if (capital < 0 || HeroCoin < capital) return new OwnResult(false, "bz_cannot_afford", [M(capital)], capital, CannotAfford: true);
@@ -205,7 +211,7 @@ public sealed partial class OwnershipWorld
     {
         if (BusinessOf(biz) is not { } b || !IsHeroOwner(b)) return OwnResult.No("bz_not_yours");
         int i = b.Staff.IndexOf(person); if (i < 0) return OwnResult.No("bz_not_staff");
-        Prod.PayWages(b, new GameTime(Pop.NowDay * 86400L));
+        Prod.PayWages(b, GameTime.FromGameDays(Today));
         i = b.Staff.IndexOf(person); if (i < 0) return OwnResult.Yes("bz_fired", Pop.People.FullName(person));
         Prod.DropStaff(b, i, alive: true);
         H(b)?.Wages.Remove(person);

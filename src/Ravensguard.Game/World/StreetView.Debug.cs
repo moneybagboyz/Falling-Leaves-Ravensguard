@@ -77,6 +77,9 @@ public partial class StreetView
             case "qmenu": OpenQMenu(); return true;
             case "land": OpenLand(false, force: true); return true;          // P5-A2
             case "deeds": OpenLand(true); return true;                        // P5-A2
+            case "ledger": OpenLedger(); return true;                         // P5-F
+            case "business": if (_ledgerView?.Tab(Ravensguard.Sim.Production.LedgerTab.Businesses).FirstOrDefault() is { } brow) { OpenBusiness(brow.Id); return true; } OpenBusiness(EntityId.None); return true;
+            case "prospect": OpenProspect(); return true;                     // P5-F
             case "overlay": ShowControls(); return true;
             default: return false;
         }

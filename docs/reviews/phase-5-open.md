@@ -83,3 +83,22 @@ Collected while the steps are built. The close-out fixes each item or moves it i
   - "Post haul jobs" and "Buy and deliver" on the site panel;
   - a roof material by culture or wealth for library plans (always thatch);
   - the controls overlay's Build page shows only the Build actions, not the World keys kept beside them.
+
+## From step 4 (P5-F businesses, stewards, day labour, stalls, the Ledger; prospecting and extraction)
+- **The contract builder stalls** (P5-D's area, found by OV-2): a carpenter commissioned for `smithy_house` in seed 1234's town took the escrow and built 4 of its 148 pieces in 160 days. OV-2 builds the smithy with the hero's own crew and a stocked pile instead; the spec names a contractor. To look at with P5-D's builder sourcing (his materials and cart) in P5-I.
+- **Businesses, still to do:**
+  - live staff walking to the stations in the bubble (crafting-full 4.4's bridge has the queue API; the abstract tier credits the hours everywhere);
+  - business and NPC tool wear at stations (the abstract `wear_ppm_per_batch` counter stays; no tool rows);
+  - NPC apprentices from the labour market;
+  - founding in a generated building (only construction's buildings have rooms with stations; a generated business can be bought);
+  - day-labour posts from construction sites, farms short of hands and haulage (only the lord's works post today, through `DayLabour.Posts`);
+  - a separate stall panel (the business panel and the Ledger's Stalls tab show a stall);
+  - the hero's shares of NPC businesses bought only at the owner beside him (the Q menu) or by command.
+- **Decisions to confirm in the review:**
+  - the home chest is a purse of its own (`PurseKind.Chest`), not the hero's household purse, so the household's spending never touches the profit; the steward and the dividends pay the hero's purse only when the street last said he is at the business's place;
+  - day labour: the lord's works pay 8 pm a day of the coin the fief's treasury and the lord's household hold above 200 crowns; only the landless take the day's work (a landed household's own work their fields); the day is paid at the hiring hour;
+  - a minded stall sells the larger of the book's demand share and its passers-by's spending (1 mite a household a market day);
+  - eight founded-only business kinds (never generated or grown) were added, which moved the business-kind indices: the growth section's project kinds and unmet wants are now remapped by name with the others;
+  - prospecting: the ore body is the region's vein; one `Skill.Prospecting` appended (the overview said no skill would be added; the prospecting spec, decided later, asks for one).
+- **Prospecting, still to do:** the resource overlay in build mode and on the map (it is in the prospecting panel); a new mine as a walkable underground site; clear-felling and coppice; carting distance as a quarry's cost; common rights and grievances; copying a report.
+- **Land (from its open list):** leased fields still credit the lord's household's farming; the hero has a household now (A4), but the farm tables need it as the parcel's holder: not changed here (farming's area), for P5-H or the close-out.

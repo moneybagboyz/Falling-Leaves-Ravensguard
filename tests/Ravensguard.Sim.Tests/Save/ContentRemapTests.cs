@@ -191,12 +191,14 @@ public class ContentRemapTests
     public void D_TheFrozenTables_AreTheContentBeforeTheRestoredGoodsAndRecipes()
     {
         var cur = IdTables.Of(EconFixture.Content).Tables;
-        var restoredGoods = new[] { "arrowheads", "arrows", "daub", "harness", "iron_wire", "mail_rings", "shingles" };
+        var restoredGoods = new[] { "arrowheads", "arrows", "daub", "harness", "iron_wire", "mail_rings", "shingles", "auger", "pan", "pick", "spade" };      // P5-F: the prospector's tools
+        var newKinds = new[] { "bloomery", "brickworks", "clay_pit", "peat_cuttings", "quarry", "salt_pan", "sawpit", "water_sawmill" };                           // P5-F: kinds the player founds
         var restoredRecipes = new[] { "draw_wire", "fletch_arrows", "forge_arrowheads", "make_harness", "mix_daub", "rive_shingles" };
         var v8 = LegacyIdTables.V8;
         Assert.Equal(cur.Get(IdTables.Goods)!.Except(restoredGoods), v8.Get(IdTables.Goods)!);
         Assert.Equal(cur.Get(IdTables.CraftRecipes)!.Except(restoredRecipes), v8.Get(IdTables.CraftRecipes)!);
-        foreach (var t in new[] { IdTables.Proficiencies, IdTables.Businesses, IdTables.BookRecipes, IdTables.Extractions }) Assert.Equal(cur.Get(t)!, v8.Get(t)!);
+        foreach (var t in new[] { IdTables.Proficiencies, IdTables.BookRecipes, IdTables.Extractions }) Assert.Equal(cur.Get(t)!, v8.Get(t)!);
+        Assert.Equal(cur.Get(IdTables.Businesses)!.Except(newKinds), v8.Get(IdTables.Businesses)!);
         // the v7 tables differ only by Phase 3's recipes and proficiencies, every one of which is still in the content
         Assert.Subset(new HashSet<string>(cur.Get(IdTables.CraftRecipes)!), new HashSet<string>(LegacyIdTables.V7.Get(IdTables.CraftRecipes)!));
         Assert.Subset(new HashSet<string>(cur.Get(IdTables.Proficiencies)!), new HashSet<string>(LegacyIdTables.V7.Get(IdTables.Proficiencies)!));
