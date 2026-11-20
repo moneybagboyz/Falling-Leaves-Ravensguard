@@ -104,8 +104,10 @@ public static class RuleLoans
             var (to, kind) = l.Lender.Kind switch { PartyKind.Household => (new EntityId((ulong)l.Lender.Id), PurseKind.Household), PartyKind.Fief => (c.FiefKey((int)l.Lender.Id), PurseKind.Treasury), PartyKind.Realm => (c.RealmKey((int)l.Lender.Id), PurseKind.Treasury), _ => (new EntityId((ulong)l.Lender.Id), PurseKind.Person) };
             took = c.Land.Transfer(new EntityId(l.DeedId), to, kind, day, DeedCause.Forfeited);
         }
-        c.Chron.Chron(RuleCtx.At(day), "loan_default", "ch_rule_loan_default", [ChronParam.Mites("amount", l.Owing), ChronParam.Count("seasons", l.LateSeasons)], [c.KeyOf(l.Lender), c.KeyOf(l.Borrower)],
+        var entry = c.Chron.Chron(RuleCtx.At(day), "loan_default", "ch_rule_loan_default", [ChronParam.Mites("amount", l.Owing), ChronParam.Count("seasons", l.LateSeasons)], [c.KeyOf(l.Lender), c.KeyOf(l.Borrower)],
             [new Cause(CauseKind.Law, l.Entry == 0 ? null : new EntityId(l.Entry), NoteKey: took ? "ch_note_loan_deed_forfeit" : "ch_note_loan_unpaid")]);
+        var head = HeadOf(c, l.Borrower);
+        if (head != EntityId.None) { int row = c.People.IndexOf(head); c.Deed?.Invoke(head, "loan_default", entry, row >= 0 ? c.People.HomeSettlement[row] : -1, day); }       // a defaulter's name travels
     }
 
     /// <summary>

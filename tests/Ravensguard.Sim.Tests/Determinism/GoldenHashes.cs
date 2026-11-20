@@ -42,7 +42,7 @@ public class GoldenHashes
         "seed 1 fight 1001F8BDF105658D active 7",
         "seed 1 captive 2BF23152278072D8 estate 20F5B004168F4EF4",
         "seed 1 vehicles 57BDDD5370F59C1F",
-        "seed 1 phase5_trail 805E2B3E23F51DF0",       // P6 step 2 merge: B4 (the trail holds a hill-faith feast: extra relish and ale) plus B6, re-pinned: the scripted world saves the goods, recipe, piece and business tables, and the content gained the claim banner, knapping stock, anvil block, the wheelwright's bay and anvil set, the stud and five recipes (new ids, mapped by name on load)
+        "seed 1 phase5_trail B04BF1FA8B40655D",       // P6-C3 (rule and income): re-pinned: the scripted world now carries the "fiefs" section (fief deeds, offices, honesty) and its seasons pay the officials, skim and take customs; no other line moved. Before: 805E2B3E23F51DF0 (P6 step 2 merge, B4 + B6)
         ],
         [1234] =
         [
@@ -66,7 +66,7 @@ public class GoldenHashes
         "seed 1234 fight 8BAC3738BE098914 active 7",
         "seed 1234 captive 05B4A3623841628E estate AE4BCB2FFDF537FD",
         "seed 1234 vehicles 1BDD9643F168AD56",
-        "seed 1234 phase5_trail 3BFB1315529BEDE5",     // P6 step 2 merge (B4 + B6): as seed 1
+        "seed 1234 phase5_trail DB491DF7DD1CBB13",     // P6-C3: as seed 1 (before: 3BFB1315529BEDE5)
         ],
     };
 

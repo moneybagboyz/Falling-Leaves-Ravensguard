@@ -3032,6 +3032,12 @@ ld_char_property,Deeds and claims
 ld_nothing_owed,This holding owes nothing.
 ld_arrears_cleared,"Paid {0}: the arrears are cleared."
 ld_arrears_part,"Paid {0}; {1} is still owed."
+ld_charter_refused_contested,The ruler refused: the land is contested.
+ld_charter_refused_opinion,The ruler refused: he thinks too little of you.
+ld_charter_refused_standing,The ruler refused: you are not known well enough in his realm.
+ld_charter_refused_other_realm,The ruler refused: you are of another realm.
+ld_charter_refused_fee,The ruler refused: the fee was too small.
+ld_charter_refused_none,The ruler refused.
 iq_tier_crude,crude
 iq_tier_poor,poor
 iq_tier_fine,fine
@@ -4687,12 +4693,6 @@ ru_due_wardship,wardship
 ru_occasion_ransom,the overlord's ransom
 ru_occasion_knighting,his eldest son's knighting
 ru_occasion_marriage,his eldest daughter's marriage
-ld_charter_refused_contested,The ruler refused: the land is contested.
-ld_charter_refused_opinion,The ruler refused: he thinks too little of you.
-ld_charter_refused_standing,The ruler refused: you are not known well enough in his realm.
-ld_charter_refused_other_realm,The ruler refused: you are of another realm.
-ld_charter_refused_fee,The ruler refused: the fee was too small.
-ld_charter_refused_none,The ruler refused.
 ru_no_rule,There is no rule book here.
 ru_not_your_fief,That is not your fief.
 ru_not_ruler,You do not rule that realm.

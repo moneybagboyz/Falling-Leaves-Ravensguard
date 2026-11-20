@@ -37,7 +37,7 @@ public static class RuleSeeding
             var fi = region.Fiefs[f];
             int lord = f < pop.FiefLord.Length ? pop.FiefLord[f] : -1;
             var (men, days) = RuleMath.ServiceOf(b.Settings, manor: false, fi.Households);
-            b.Fiefs[f] = new FiefRow { Fief = f, Holder = lord >= 0 && pt.IsAlive(lord) ? (long)pt.IdOf(lord).Value : -1, Realm = fi.Realm, Rights = FiefRights.All, ServiceMen = men, ServiceDays = days, TookDay = -1 };
+            b.Fiefs[f] = new FiefRow { Fief = f, Holder = lord >= 0 && pt.IsAlive(lord) ? (long)pt.IdOf(lord).Value : -1, PopLord = lord >= 0 && pt.IsAlive(lord) ? (long)pt.IdOf(lord).Value : -1, Realm = fi.Realm, Rights = FiefRights.All, ServiceMen = men, ServiceDays = days, TookDay = -1 };
         }
         int lordHouse(int f) => f < pop.FiefLordHousehold.Length ? pop.FiefLordHousehold[f] : -1;
         for (int f = 0; f < region.Fiefs.Count; f++)

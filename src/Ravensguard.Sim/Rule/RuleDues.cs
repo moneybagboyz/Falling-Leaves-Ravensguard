@@ -50,8 +50,9 @@ public static class RuleDues
             if (f.Forfeited) continue;
             int lordRow = f.Fief < pop.FiefLord.Length ? pop.FiefLord[f.Fief] : -1;
             long now = lordRow >= 0 && c.People.IsAlive(lordRow) ? (long)c.People.IdOf(lordRow).Value : -1;
-            if (now == f.Holder) continue;
-            long was = f.Holder;
+            if (now == f.PopLord) continue;                                                              // the people still name the lord they named
+            long was = f.PopLord; f.PopLord = now;
+            if (f.Holder != was) continue;                                                              // a grant put someone else in the deed (the hero): the line's change is not his
             if (now < 0)
             {
                 f.Holder = -1; n++;
@@ -223,8 +224,9 @@ public static class RuleDues
         if (f == null || f.Forfeited) return;
         long was = f.Holder; f.Forfeited = true; f.Holder = -1; f.Rights = FiefRights.None;
         d.State = DueState.Waived;
-        c.Chron.Chron(RuleCtx.At(day), "fief_forfeited", "ch_rule_fief_forfeited", [ChronParam.Person("holder", new EntityId((ulong)Math.Max(0, was))), ChronParam.Place("place", c.SeatPlace(f.Fief)), ChronParam.Mites("owed", d.Owing)],
-            [c.FiefKey(f.Fief)], [new Cause(CauseKind.Law, d.Entry == 0 ? null : new EntityId(d.Entry), NoteKey: "ch_note_relief_unpaid")]);
+        var entry = c.Chron.Chron(RuleCtx.At(day), "fief_forfeited", "ch_rule_fief_forfeited", [ChronParam.Person("holder", new EntityId((ulong)Math.Max(0, was))), ChronParam.Place("place", c.SeatPlace(f.Fief)), ChronParam.Mites("owed", d.Owing)],
+            [new EntityId((ulong)Math.Max(0, was)), c.FiefKey(f.Fief)], [new Cause(CauseKind.Law, d.Entry == 0 ? null : new EntityId(d.Entry), NoteKey: "ch_note_relief_unpaid")]);
+        if (was >= 0) c.Deed?.Invoke(new EntityId((ulong)was), "fief_forfeited", entry, (uint)f.Fief < (uint)c.Region.Fiefs.Count ? c.Region.Fiefs[f.Fief].SeatSettlement : -1, day);
     }
 
     // ------------------------------------------------------------------ labour service (4.1)

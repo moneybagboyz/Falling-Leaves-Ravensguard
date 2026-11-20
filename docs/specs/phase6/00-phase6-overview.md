@@ -129,7 +129,7 @@ Each step ends with its golden tests green. Parts of one step run in parallel (s
 3. **P6-C** (four parallel parts):
    - **C1 justice:** guards' shifts, arrest, gaol, court days, sentences through wounds, the hero as judge (needs B2, A1). Gate: CJ-5 to CJ-12, CJ-14, CJ-16, CJ-17. **Milestone M-B "the court"** (the month-4 checkpoint).
    - **C2 contracts v2 and rumours v2** (needs A3, B2). Gate: CR-1 to CR-14.
-   - **C3 rule and income** (needs A3; RI-15 eviction after C1's guards). Gate: RI-1 to RI-19.
+   - **C3 rule and income** (needs A3; RI-15 eviction after C1's guards). Gate: RI-1 to RI-19. **Built (P6-C3):** all of it; the rule book is the optional "fiefs" section (`FiefRow` stands in for a `HoldingKind.Fief` deed), the Ledger has a Fief tab, eviction is complete up to a hook for C1's guards; details and what is left at the end of `rule-and-income.md`.
    - **C4 disease and plague** (needs A1). Gate: DP-1 to DP-12.
 4. **P6-D** (four parallel parts):
    - **D1 slavery** (needs C1, C2, B4). Gate: SL-1 to SL-14.

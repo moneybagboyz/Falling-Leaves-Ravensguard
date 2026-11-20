@@ -24,7 +24,7 @@ public static class RuleWiring
         return new RuleCtx
         {
             W = w, B = book, Ew = w.Get<EconomyWorld>(), Chron = chron, Land = w.Get<LandWorld>(),
-            Crime = links?.Crime, StandingWithRealm = links?.StandingWithRealm ?? ((_, _) => 0), Hero = links?.Hero() ?? EntityId.None, HasHero = links?.HasHero ?? false, GuardsEnforce = links?.GuardsEnforce, WarCause = links?.WarCause ?? (_ => ""),
+            Crime = links?.Crime, StandingWithRealm = links?.StandingWithRealm ?? ((_, _) => 0), Hero = links?.Hero() ?? EntityId.None, HasHero = links?.HasHero ?? false, Deed = links?.Deed, GuardsEnforce = links?.GuardsEnforce, WarCause = links?.WarCause ?? (_ => ""),
         };
     }
 
@@ -73,6 +73,7 @@ public static class RuleWiring
         Install(home.Sim, home.Economy, book, state.Population.Region);
         var links = home.Sim.Get<RuleLinks>()!;
         links.Hero = () => state.Party?.Hero ?? EntityId.None; links.HasHero = true;
+        links.Deed = (doer, deedId, entry, place, day) => { if (state.Content != null) Ravensguard.Sim.Faith.FaithStanding.Record(state, state.Content, doer, deedId, entry, place, 1, -1, false, day); };
         links.StandingWithRealm = (p, realm) => realm < 0 ? 0 : Standing.Of(state.Standing, p, GroupRef.Realm(realm));
         links.Crime = sc =>
         {

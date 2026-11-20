@@ -43,6 +43,8 @@ public sealed class RuleCtx
     public RuleChron Chron { get; init; } = RuleChron.Silent;
     /// <summary>Hands an embezzlement to the law (B2's crime core): null when no law is installed (a bare world).</summary>
     public Func<SkimCrime, EntityId>? Crime { get; init; }
+    /// <summary>Puts a deed of the rule into the standing book (the doer, the deed row's id, the chronicle entry, the settlement it was heard in, the day): null when no standing is kept (reputation 4.1).</summary>
+    public Action<EntityId, string, EntityId, int, int>? Deed { get; init; }
     /// <summary>The land world (charters, claims) when there is one.</summary>
     public LandWorld? Land { get; init; }
     /// <summary>The justice step's guards take an eviction order over (claim serial, fief, day): true when they will finish it with <see cref="RuleLand.Complete"/>; null or false carries the order out at once.</summary>

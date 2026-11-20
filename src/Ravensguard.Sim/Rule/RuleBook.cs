@@ -59,6 +59,8 @@ public sealed class FiefRow
     public int TookDay = -1;
     /// <summary>The overlord's court has taken the deed back (an unpaid relief, a treason): the fief has no holder until a new grant, whoever lives in the manor (rule-and-income 4.2).</summary>
     public bool Forfeited;
+    /// <summary>The lord the population last named for this fief (a person id, -1 none): a change in it is the line's succession; a holder set by a grant (the hero's) is left alone while it stays.</summary>
+    public long PopLord = -1;
     public long LastYearReceipts => Receipts[0] + Receipts[1] + Receipts[2] + Receipts[3];
 }
 
@@ -232,7 +234,7 @@ public sealed class RuleBook
         {
             M(k); M(f.Holder); M(f.Realm); M(f.OverlordFief); M((long)f.Rights); M(f.ServiceMen); M(f.ServiceDays); M(f.RentInCoin ? 1 : 0); M(f.CommuteDay); M(f.MarketDays);
             foreach (long r in f.Receipts) M(r);
-            M(f.WardUntilDay); M(f.Guardian); M(f.TookDay); M(f.Forfeited ? 1 : 0);
+            M(f.WardUntilDay); M(f.Guardian); M(f.TookDay); M(f.Forfeited ? 1 : 0); M(f.PopLord);
         }
         foreach (var o in Offices) { M(o.Serial); M((long)o.Kind); M(o.Holder); M(o.Fief); M(o.Realm); M(o.WageMitesPerDay); M(o.Honesty); M(o.AppointedDay); M(o.Collected); M(o.Expected); M(o.Skimmed); M(o.Found); M(o.SeasonSkim); M(o.DismissedDay); }
         foreach (var (k, v) in Honesty) { M((long)k); M(v); }

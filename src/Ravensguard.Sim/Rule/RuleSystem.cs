@@ -16,6 +16,7 @@ public sealed class RuleLinks
     public bool HasHero { get; set; }
     public Func<int, int, int, bool>? GuardsEnforce { get; set; }
     public Func<int, string> WarCause { get; set; } = _ => "";
+    public Action<EntityId, string, EntityId, int, int>? Deed { get; set; }
 }
 
 /// <summary>

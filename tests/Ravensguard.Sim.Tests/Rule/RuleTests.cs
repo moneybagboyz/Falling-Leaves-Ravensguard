@@ -163,6 +163,19 @@ public class RuleTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public void AFiefGrantedToTheHero_IsNotTakenBackByTheLinesSuccession_ButTheLinesChangeStillMovesTheRowItFollows()
+    {
+        using var rig = RuleRig.Make(); var c = rig.C;
+        var f = rig.Fief(); long was = f.Holder;
+        f.Holder = 12345;                                                                      // a grant: the deed is someone else's now
+        Assert.Equal(0, RuleDues.Succession(c, rig.Day)); Assert.Equal(12345, f.Holder);
+        int heir = AdultAt(rig, 25, 45); rig.W.Pop.FiefLord[f.Fief] = heir;                    // the old line changes hands: the people's lord moves, the grantee's deed does not
+        Assert.Equal(0, RuleDues.Succession(c, rig.Day + 1)); Assert.Equal(12345, f.Holder); Assert.Equal((long)rig.People.IdOf(heir).Value, f.PopLord);
+        Assert.Empty(rig.B.Dues);
+        _ = was;
+    }
+
+    [Fact]
     public void RI5_AnHeirOfTwelve_PutsTheFiefInWard_TheOverlordTakesTheReceiptsAndPaysTheGuardianAFifth()
     {
         Assert.Equal(2_000, RuleMath.GuardianKeep(10_000, 20));
@@ -326,7 +339,7 @@ public class RuleTests(ITestOutputHelper output)
     {
         Assert.Equal(70, RuleMath.AuditPct(S, 60, 40)); Assert.Equal(90, RuleMath.AuditPct(S, 100, 0)); Assert.Equal(30, RuleMath.AuditPct(S, 0, 0));
         using var rig = RuleRig.Make(); var c = rig.C;
-        var (off, s) = Bailiff(rig); off.Honesty = 20;
+        var (off, s) = Bailiff(rig); off.Honesty = 20; off.AppointedDay = rig.Day - 15;                 // in his post a season already: audits and sightings begin after the first
         int found = 0, season = 0; long skimmed = 0;
         for (; season < 12 && found == 0; season++)                                           // 70% a season: found within a few
         {
@@ -353,7 +366,7 @@ public class RuleTests(ITestOutputHelper output)
     public void RI11b_AColleagueWhoHandlesTheSameChestMaySeeTheSkimming_ThatIsAWitnessedEmbezzlement()
     {
         using var rig = RuleRig.Make(); var c = rig.C;
-        var (off, s) = Bailiff(rig); off.Honesty = 20;
+        var (off, s) = Bailiff(rig); off.Honesty = 20; off.AppointedDay = rig.Day - 15;
         int seen = 0;
         for (int season = 0; season < 40 && seen == 0; season++)                               // 20% a season
         {
@@ -581,7 +594,7 @@ public class RuleTests(ITestOutputHelper output)
     {
         using var rig = RuleRig.Make(ticker: true);
         var c0 = rig.C;
-        var (off, _) = Bailiff(rig); off.Honesty = 20;                                           // a thief in the first fief with a bailiff
+        var (off, _) = Bailiff(rig); off.Honesty = 20;                                           // a thief in the first fief with a bailiff (his post begins at the start: audited from the second season)
         int realm = off.Realm >= 0 ? off.Realm : rig.Fief().Realm;
         foreach (var f in rig.B.Fiefs.Values.Where(f => f.Realm == realm && f.Holder >= 0)) rig.B.AddOpinion((ulong)f.Holder, c0.RealmKey(realm).Value, 100);
         RuleCouncil.Call(c0, realm, "defence", rig.Day);

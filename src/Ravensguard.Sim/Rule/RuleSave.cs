@@ -12,7 +12,7 @@ public sealed class RuleSave
 {
     public const string SectionName = "fiefs";
 
-    /// <summary>Per fief: fief, holder, realm, overlord fief, rights, service men, service days, rent in coin, commute day, market days, ward until, guardian, took day, the four receipts, forfeited.</summary>
+    /// <summary>Per fief: fief, holder, realm, overlord fief, rights, service men, service days, rent in coin, commute day, market days, ward until, guardian, took day, the four receipts, forfeited, the population's lord.</summary>
     [Key(0)] public long[][] Fiefs { get; set; } = [];
     /// <summary>Per office: serial, kind, holder, fief, realm, wage, honesty, appointed, collected, expected, skimmed, found, dismissed, season skim.</summary>
     [Key(1)] public long[][] Offices { get; set; } = [];
@@ -53,7 +53,7 @@ public sealed class RuleSave
         foreach (int k in b.Revoked) small.Add([9, k, 0]);
         return new RuleSave
         {
-            Fiefs = [.. b.Fiefs.Values.Select(f => new long[] { f.Fief, f.Holder, f.Realm, f.OverlordFief, (long)f.Rights, f.ServiceMen, f.ServiceDays, f.RentInCoin ? 1 : 0, f.CommuteDay, f.MarketDays, f.WardUntilDay, f.Guardian, f.TookDay, f.Receipts[0], f.Receipts[1], f.Receipts[2], f.Receipts[3], f.Forfeited ? 1 : 0 })],
+            Fiefs = [.. b.Fiefs.Values.Select(f => new long[] { f.Fief, f.Holder, f.Realm, f.OverlordFief, (long)f.Rights, f.ServiceMen, f.ServiceDays, f.RentInCoin ? 1 : 0, f.CommuteDay, f.MarketDays, f.WardUntilDay, f.Guardian, f.TookDay, f.Receipts[0], f.Receipts[1], f.Receipts[2], f.Receipts[3], f.Forfeited ? 1 : 0, f.PopLord })],
             Offices = [.. b.Offices.Select(o => new long[] { o.Serial, (long)o.Kind, o.Holder, o.Fief, o.Realm, o.WageMitesPerDay, o.Honesty, o.AppointedDay, o.Collected, o.Expected, o.Skimmed, o.Found, o.DismissedDay, o.SeasonSkim })],
             Honesty = [.. b.Honesty.Select(kv => new long[] { (long)kv.Key, kv.Value })],
             Dues = [.. b.Dues.Select(d => new long[] { d.Serial, (long)d.Kind, (long)d.Payer.Kind, d.Payer.Id, (long)d.Payee.Kind, d.Payee.Id, d.AmountMites, d.Units, d.DueDay, d.PaidMites, (long)d.State, (long)d.Entry })],
@@ -74,11 +74,11 @@ public sealed class RuleSave
         var b = new RuleBook { NextOffice = (int)Counters[0], NextDue = (int)Counters[1], NextLoan = (int)Counters[2], NextCouncil = (int)Counters[3], NextLevy = (int)Counters[4], LastDay = (int)Counters[5], LastSeasonDay = (int)Counters[6], LastLabourDay = (int)Counters[7] };
         foreach (var v in Fiefs)
         {
-            if (v.Length < 18) throw new SaveException("Corrupt fief in save.");
+            if (v.Length < 19) throw new SaveException("Corrupt fief in save.");
             b.Fiefs[(int)v[0]] = new FiefRow
             {
                 Fief = (int)v[0], Holder = v[1], Realm = (int)v[2], OverlordFief = (int)v[3], Rights = (FiefRights)v[4], ServiceMen = (int)v[5], ServiceDays = (int)v[6], RentInCoin = v[7] != 0, CommuteDay = (int)v[8], MarketDays = (byte)v[9],
-                WardUntilDay = (int)v[10], Guardian = v[11], TookDay = (int)v[12], Receipts = [v[13], v[14], v[15], v[16]], Forfeited = v[17] != 0,
+                WardUntilDay = (int)v[10], Guardian = v[11], TookDay = (int)v[12], Receipts = [v[13], v[14], v[15], v[16]], Forfeited = v[17] != 0, PopLord = v[18],
             };
         }
         foreach (var v in Offices)

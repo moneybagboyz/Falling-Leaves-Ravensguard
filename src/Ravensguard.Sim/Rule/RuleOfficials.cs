@@ -125,7 +125,7 @@ public static class RuleOfficials
         int n = 0; int season = day / TimeConst.DaysPerSeason;
         foreach (var o in c.B.Offices.ToList())
         {
-            if (!o.InOffice || o.SeasonSkim <= 0) continue;
+            if (!o.InOffice || o.SeasonSkim <= 0 || day - o.AppointedDay < TimeConst.DaysPerSeason) continue;            // a post's first season is nobody's audit
             var colleagues = c.B.Offices.Where(x => x.InOffice && x.Fief == o.Fief && (o.Fief >= 0 || x.Realm == o.Realm) && x.Serial != o.Serial).OrderBy(x => x.Serial).ToList();
             foreach (var col in colleagues)
             {
@@ -147,11 +147,11 @@ public static class RuleOfficials
         int found = 0; int season = day / TimeConst.DaysPerSeason;
         foreach (var o in c.B.Offices.ToList())
         {
-            if (!o.InOffice || o.Fief < 0) continue;
+            if (!o.InOffice || o.Fief < 0 || day - o.AppointedDay < TimeConst.DaysPerSeason) continue;                 // the first season of a post is not audited (what he took stays on his record for the next)
             var fr = c.B.FiefOf(o.Fief);
             long auditor = fr?.Holder ?? -1;
             var treasurer = c.B.OfficeOf(OfficeKind.Treasurer, o.Fief); if (treasurer != null && treasurer.Serial != o.Serial) auditor = treasurer.Holder;
-            if (auditor < 0 || auditor == o.Holder || !c.Alive(auditor)) { o.SeasonSkim = 0; continue; }          // nobody to audit him this season
+            if (auditor < 0 || auditor == o.Holder || (c.RowOf(auditor) >= 0 && !c.Alive(auditor))) { o.SeasonSkim = 0; continue; }          // nobody to audit him this season (a lord who is the hero has no person row: his books are audited all the same)
             int p = RuleMath.AuditPct(c.S, c.Law(auditor), c.Law(o.Holder));
             bool hit = DetRng.Range(c.Seed, season, (ulong)o.Serial, RngStreams.SkimSeenAndAudits, 0, 0, 100) < p;
             if (hit && o.SeasonSkim > 0)
@@ -162,6 +162,7 @@ public static class RuleOfficials
                 var ps = new List<ChronParam> { ChronParam.Person("holder", new EntityId((ulong)o.Holder)), ChronParam.Mites("amount", back), ChronParam.Mites("repaid", repaid) };
                 var entry = c.Chron.Chron(RuleCtx.At(day), "official_found_skimming", "ch_rule_official_found", ps, [new EntityId((ulong)o.Holder), new EntityId((ulong)auditor)], [new Cause(CauseKind.Office, rec == EntityId.None ? null : rec, NoteKey: "ch_note_audit_found")]);
                 Dismiss(c, o, day, "ch_note_dismissed_for_skimming", entry == EntityId.None ? null : entry);
+                c.Deed?.Invoke(new EntityId((ulong)o.Holder), "official_found_skimming", entry, (uint)o.Fief < (uint)c.Region.Fiefs.Count ? c.Region.Fiefs[o.Fief].SeatSettlement : -1, day);        // a thief's name travels (reputation 4.1)
             }
             o.SeasonSkim = 0;
         }
