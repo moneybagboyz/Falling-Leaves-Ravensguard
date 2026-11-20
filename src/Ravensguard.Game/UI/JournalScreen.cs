@@ -28,6 +28,8 @@ public partial class JournalScreen : Control
     public Action? OpenContracts { get; init; }
     /// <summary>P6-C2: the name of the one who told a rumour that has been shown false ("a lie, told by Alda"), empty when it is not shown false.</summary>
     public Func<EntityId, string>? LieLabel { get; init; }
+    /// <summary>P6-E4: opens the Chronicle at the entry a rumour began with (the card History link).</summary>
+    public Action<EntityId>? OpenHistory { get; init; }
 
     public JournalScreen(ScreenRouter router, TalkLink link, Func<IReadOnlyList<string>> settlementNames, Action openWork) { _router = router; _link = link; _names = settlementNames; _openWork = openWork; _trace = false; }
 
@@ -96,6 +98,7 @@ public partial class JournalScreen : Control
         var how = new Button { Text = _trace ? L.T("JOURNAL_HIDE") : L.T("JOURNAL_HOW"), CustomMinimumSize = new Vector2(220, 28) };
         how.Pressed += () => { _trace = !_trace; ShowCard(); };
         _detail.AddChild(how);
+        if (c0.Source.Found && OpenHistory != null) { var hist = new Button { Text = L.T("JOURNAL_HISTORY"), CustomMinimumSize = new Vector2(220, 28) }; var he = c0.Source.Entry; hist.Pressed += () => OpenHistory(he); _detail.AddChild(hist); }
         if (!_trace) return;
         _detail.AddChild(new Label { Text = c0.How == HearHow.Overheard ? L.F("TRACE_OVERHEARD", c0.TellerName, "", DayName(c0.Day)).Replace("  ", " ") : L.F("TRACE_HEARD_FROM", c0.TellerName.Length > 0 ? c0.TellerName : L.T("R_WHO_TRAVELLER"), DayName(c0.Day)), AutowrapMode = TextServer.AutowrapMode.WordSmart });
         foreach (var s in c0.Steps)

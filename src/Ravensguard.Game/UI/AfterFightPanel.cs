@@ -21,6 +21,8 @@ public partial class AfterFightPanel : Control
     /// <summary>P6-B1 (medicine 4.2): opens the treatment screen on the hero; with <see cref="Bleeding"/> above 0 the report says how many wounds still bleed and offers it.</summary>
     public Action? Treat { get; init; }
     public int Bleeding { get; init; }
+    /// <summary>P6-E4 (REDESIGN_PLAN 3f, failure teaches): opens the Chronicle at the latest entry about the hero, so a defeat shows its cause chain.</summary>
+    public Action? Why { get; init; }
 
     public AfterFightPanel(AfterFightReport report, int groundItems = 0, int arrows = 0) { _report = report; _spoils = groundItems; _arrows = arrows; Name = "AfterFightPanel"; }
 
@@ -81,6 +83,7 @@ public partial class AfterFightPanel : Control
         var bottom = new HBoxContainer(); bottom.AddThemeConstantOverride("separation", 8); root.AddChild(bottom);
         var close = new Button { Text = L.T("fl_ui_close"), CustomMinimumSize = new Vector2(160, 32) }; close.Pressed += Close; bottom.AddChild(close);
         if (Treat != null && Bleeding > 0) { var tb = new Button { Text = L.T("tr_after_btn"), CustomMinimumSize = new Vector2(180, 32) }; tb.Pressed += () => { Close(); Treat(); }; bottom.AddChild(tb); }
+        if (Why != null && (r.Wounds.Count > 0 || r.Fallen.Count > 0)) { var wb = new Button { Text = L.T("ch_ui_why_btn"), CustomMinimumSize = new Vector2(220, 32) }; wb.Pressed += () => { Close(); Why(); }; bottom.AddChild(wb); }
         bottom.AddChild(UiKit.Hint(L.F("fl_ui_close_hint", InputBootstrap.Hint("world.last_report"))));
         close.GrabFocus();
     }

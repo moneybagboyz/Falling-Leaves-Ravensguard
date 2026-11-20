@@ -26,6 +26,8 @@ public partial class ContractsScreen : Control
     public string? ShotPath { get; init; }
     /// <summary>Dev: start on the Taken tab.</summary>
     public bool StartMine { get; init; }
+    /// <summary>P6-E4: opens the Chronicle at the entry that posted a contract (its History).</summary>
+    public Action<EntityId>? OpenHistory { get; init; }
 
     public ContractsScreen(ScreenRouter router, Func<ContractsView?> data, ContractActions act, Func<(long X, long Y)> heroXY) { _router = router; _data = data; _act = act; _hero = heroXY; }
 
@@ -108,6 +110,7 @@ public partial class ContractsScreen : Control
             if (r.Grams > 0) { var h = new Button { Text = L.T("ct_btn_hand"), CustomMinimumSize = new Vector2(150, 28) }; h.Pressed += () => _act.Hand(id); buttons.AddChild(h); }
             var rp = new Button { Text = L.T("ct_btn_report"), CustomMinimumSize = new Vector2(120, 28) }; rp.Pressed += () => _act.Report(id); buttons.AddChild(rp);
         }
+        if (r.PostedEntry != 0 && OpenHistory != null) { var hb = new Button { Text = L.T("ct_btn_history"), CustomMinimumSize = new Vector2(120, 28) }; var he = new EntityId(r.PostedEntry); hb.Pressed += () => OpenHistory(he); buttons.AddChild(hb); }
         var pin = new Button { Text = L.T(r.Pinned ? "ct_btn_unpin" : "ct_btn_pin"), CustomMinimumSize = new Vector2(120, 28) }; bool on = !r.Pinned; pin.Pressed += () => _act.Pin(id, on); buttons.AddChild(pin);
         if (r.Evidence.Count > 0)
         {

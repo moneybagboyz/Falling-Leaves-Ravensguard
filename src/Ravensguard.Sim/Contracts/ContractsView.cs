@@ -7,7 +7,7 @@ namespace Ravensguard.Sim.Contracts;
 
 /// <summary>One contract as the board and the Journal show it (a copy made at a barrier: the screens read, never write).</summary>
 public sealed record ContractRow(int Id, string Kind, long PayMites, int DeadlineDay, string IssuerKind, string WhyKey, long WhyArg, WorkState State, bool Mine, bool Pinned, bool Criminal, int Settlement, string PlaceName,
-    long PlaceXM, long PlaceYM, long Delivered, long Grams, long BondMites, bool FromJob, IReadOnlyList<(string Type, int Day)> Evidence);
+    long PlaceXM, long PlaceYM, long Delivered, long Grams, long BondMites, bool FromJob, IReadOnlyList<(string Type, int Day)> Evidence, ulong PostedEntry = 0);
 
 /// <summary>A tournament as the fair's board shows it.</summary>
 public sealed record TournamentRow(int Id, string Place, long PurseMites, long FeeMites, int FairDay, int Entrants, bool Entered, bool Drawn, bool Paid, bool Cancelled, bool HeroWon);
@@ -41,7 +41,7 @@ public sealed class ContractsView
                 bool onBoard = c.Open && c.Settlement == settlement && (k is not { Crime: true } || (w?.TrustPm(c.Issuer, hero) ?? 0) >= 300);
                 if (!mine && !onBoard) continue;
                 var (x, y) = XY(c.Settlement);
-                var row = new ContractRow(c.Id, c.Kind, c.PayMites, c.DeadlineDay, k?.Issuer ?? "person", "ct_why_" + (k?.Why ?? "other"), c.Param, c.State, mine, c.Pinned, k is { Crime: true }, c.Settlement, PlaceOf(c.Settlement), x, y, c.Delivered, c.Grams, c.BondMites, false, Ev(c));
+                var row = new ContractRow(c.Id, c.Kind, c.PayMites, c.DeadlineDay, k?.Issuer ?? "person", "ct_why_" + (k?.Why ?? "other"), c.Param, c.State, mine, c.Pinned, k is { Crime: true }, c.Settlement, PlaceOf(c.Settlement), x, y, c.Delivered, c.Grams, c.BondMites, false, Ev(c), c.PostedEntry);
                 (mine ? v.Mine : v.Board).Add(row);
             }
         if (st.Jobs != null)

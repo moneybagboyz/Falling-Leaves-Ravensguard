@@ -335,5 +335,6 @@
   {"type": "chronicle_type", "id": "miracle_cure", "text_key": "ch_faith_miracle_cure", "params": [{"name": "place", "type": "place"}, {"name": "doer", "type": "person"}], "cause_kinds": ["Faith"], "specific_requires": "note", "note_keys": ["ch_note_miracle_natural_recovery"]},
   {"type": "chronicle_type", "id": "miracle_fire", "text_key": "ch_faith_miracle_fire", "params": [{"name": "place", "type": "place"}], "cause_kinds": ["Faith"], "specific_requires": "note", "note_keys": ["ch_note_miracle_stone_wall", "ch_note_miracle_rain", "ch_note_miracle_wind"]},
   {"type": "chronicle_type", "id": "miracle_disputed", "text_key": "ch_faith_miracle_disputed", "params": [{"name": "place", "type": "place"}], "cause_kinds": ["Faith"], "specific_requires": "note", "note_keys": ["ch_note_miracle_dispute"]},
-  {"type": "chronicle_type", "id": "burial_refused", "text_key": "ch_faith_burial_refused", "params": [{"name": "doer", "type": "person"}], "cause_kinds": ["Faith"], "specific_requires": "note", "note_keys": ["ch_note_services_refused"]}
+  {"type": "chronicle_type", "id": "burial_refused", "text_key": "ch_faith_burial_refused", "params": [{"name": "doer", "type": "person"}], "cause_kinds": ["Faith"], "specific_requires": "note", "note_keys": ["ch_note_services_refused"]},
+  {"type": "chronicle_type", "id": "chronicle_summary", "text_key": "ch_summary_year", "params": [{"name": "year", "type": "count"}, {"name": "n", "type": "count"}], "cause_kinds": ["Death"], "root": true, "specific_requires": "note", "note_keys": ["ch_note_compacted"]}
 ]

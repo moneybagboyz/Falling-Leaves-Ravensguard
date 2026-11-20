@@ -59,7 +59,7 @@ public partial class StreetView
             id => { var r = _wbView?.Mine.FirstOrDefault(x => x.Id == id); if (r != null) _heroLink.Issue(ContractDesk.Deliver(id, Math.Max(0, r.Grams - r.Delivered), now())); _wbAcc = 99; },
             id => { _heroLink.Issue(ContractDesk.Report(id, now())); _wbAcc = 99; },
             tid => { _heroLink.Issue(ContractDesk.Enter(tid, now())); _wbAcc = 99; });
-        _router.Push(new ContractsScreen(_router, () => _wbView, act, () => { var (x, y) = HeroRegionMm(); return (x, y); }) { StartMine = mine, ShotPath = shot });
+        _router.Push(new ContractsScreen(_router, () => _wbView, act, () => { var (x, y) = HeroRegionMm(); return (x, y); }) { StartMine = mine, ShotPath = shot, OpenHistory = id => OpenChronicle(id, ChronicleScope.Here) });
     }
 
     /// <summary>Per frame: the answers to contract commands toasted, the board's view kept fresh while it is up, the people's moods for the barks.</summary>
