@@ -59,7 +59,7 @@ public static class ContractWiring
         var fairs = db != null ? Ravensguard.Sim.Travel.FairBook.From(db) : null;
         long Dist(int a, int b) => a < 0 || b < 0 || a >= region.Settlements.Count || b >= region.Settlements.Count ? 0 :
             IntMath.Isqrt((long)(region.Settlements[a].CenterX - region.Settlements[b].CenterX) * (region.Settlements[a].CenterX - region.Settlements[b].CenterX) + (long)(region.Settlements[a].CenterY - region.Settlements[b].CenterY) * (region.Settlements[a].CenterY - region.Settlements[b].CenterY));
-        var talk = st.Talk;
+        var talk = st.Talk; List<CompanyInfo>? companies = null;       // the guards of every settlement are walked once per world view, not once per call
         return new ContractWorld
         {
             Chronicle = st.Chronicle, Ids = st.Ids, Ledger = e.Ledger, People = pop.People, SettlementNames = [.. region.Settlements.Select(s => s.Name)], SettlementIds = [.. region.Settlements.Select(s => s.Id)],
@@ -77,7 +77,7 @@ public static class ContractWiring
             Captives = () => Captives(st),
             Bands = () => Bands(st, content),
             BandGone = band => st.Chronicle.All.Any(en => en.TypeId == "bandit_cleared" && en.Data.TryGetValue("band", out var b) && b == band.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)),
-            Companies = () => CompaniesOf(st),
+            Companies = () => companies ??= [.. CompaniesOf(st)],
             CompanyDone = c =>
             {
                 if (c.Kind is "clear_bandit_cave" or "clear_lair")
@@ -108,9 +108,10 @@ public static class ContractWiring
         var prod = st.Production; if (prod == null) yield break;
         foreach (var b in prod.Businesses)
         {
-            if (b.State != BusinessState.Open || b.Store == null) continue;
+            if (b.State != BusinessState.Open || b.Store == null || b.IdleDays < 3) continue;
             var kind = prod.KindOf(b); var need = new SortedDictionary<ushort, long>();
-            foreach (var r in kind.Recipes) foreach (var (g, q) in r.Inputs) { long perDay = Math.Max(1, q / Math.Max(1, r.DurationDays)); if (perDay > need.GetValueOrDefault(g)) need[g] = perDay; }
+            // a real deficit: the workshop has stood idle three days or more and a batch of one of its recipes lacks an input the store should hold (a shop that is merely between orders posts nothing)
+            foreach (var r in kind.Recipes) foreach (var (g, q) in r.Inputs) { if (b.Store.Qty(g) >= q) continue; long perDay = Math.Max(1, q / Math.Max(1, r.DurationDays)); if (perDay > need.GetValueOrDefault(g)) need[g] = perDay; }
             foreach (var (g, perDay) in need)
             {
                 long have = b.Store.Qty(g); int days = (int)Math.Min(1000, have / perDay);

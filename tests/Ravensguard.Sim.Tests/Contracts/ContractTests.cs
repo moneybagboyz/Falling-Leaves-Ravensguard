@@ -127,7 +127,7 @@ public class ContractTests(ITestOutputHelper output)
         Assert.Equal(WorkState.Expired, c.State); Assert.Equal(poorer + 660, r.L.Balance(r.SmithyPurse).Mites); Assert.Equal(0, r.L.Balance(new PurseId(c.Escrow)).Mites);
         Assert.Equal(16, c.ClosedDay);
         ContractSystem.Expiries(r.W, r.B, 17); Assert.Equal(poorer + 660, r.L.Balance(r.SmithyPurse).Mites);   // nothing twice
-        Assert.Single(r.Of("work_expired"));
+        Assert.Empty(r.Of("work_expired"));                                                      // an unanswered posting lapsing is not news
         // a taken contract that is not done at its day fails: the escrow returns and the standing entry is the failure's
         var r2 = new Rig(); r2.Needs.Add(r2.CharcoalNeed()); var c2 = r2.Scan(10).Single();
         Assert.Equal(TakeResult.Taken, ContractSystem.Take(r2.W, r2.B, c2.Id, Hero, r2.HeroPurse, 11));

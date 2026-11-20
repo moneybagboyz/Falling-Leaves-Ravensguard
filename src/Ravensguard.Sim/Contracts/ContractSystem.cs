@@ -244,7 +244,7 @@ public static class ContractSystem
     {
         Refund(w, c);
         c.State = WorkState.Expired; c.ClosedDay = day;
-        CloseEntry(w, c, "work_expired", "ch_work_expired", day, 0, 0, false);
+        // (an unanswered posting lapsing is not news: no chronicle entry, the contract row keeps its state and day)
     }
 
     /// <summary>The issuer takes an open contract down (the need is gone): the escrow returns.</summary>

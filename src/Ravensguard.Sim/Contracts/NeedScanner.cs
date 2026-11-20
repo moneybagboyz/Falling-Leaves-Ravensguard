@@ -11,7 +11,8 @@ namespace Ravensguard.Sim.Contracts;
 /// </summary>
 public static class NeedScanner
 {
-    private static bool Live(ContractBook book, Func<WorkContract, bool> same) => book.Contracts.Values.Any(c => c.Live && same(c));
+    /// <summary>Whether this need already has a contract: one still live, or one that closed less than <c>RepostDays</c> ago (a need nobody answered is not posted again at once, so a shortage does not flood the board and the chronicle).</summary>
+    private static bool Posted(ContractWorld w, ContractBook book, int day, Func<WorkContract, bool> same) => book.Contracts.Values.Any(c => same(c) && (c.Live || c.ClosedDay >= 0 && day - c.ClosedDay < w.S.RepostDays));
 
     /// <summary>Scans one settlement at <paramref name="day"/> (hour 1 of it is when contracts show); returns the contracts posted.</summary>
     public static List<WorkContract> Scan(ContractWorld w, ContractBook book, int settlement, int day)
@@ -19,6 +20,7 @@ public static class NeedScanner
         var posted = new List<WorkContract>();
         if (settlement < 0 || settlement >= w.SettlementNames.Length) return posted;
         long sec = day * 86_400L + 3600;
+        Lapse(w, book, settlement, day);
         StockShort(w, book, settlement, day, sec, posted);
         Caravans(w, book, settlement, day, sec, posted);
         Bands(w, book, settlement, day, sec, posted);
@@ -26,6 +28,19 @@ public static class NeedScanner
         Builds(w, book, settlement, day, sec, posted);
         Hands(w, book, settlement, day, sec, posted);
         return posted;
+    }
+
+    /// <summary>
+    /// A shortage the world has made good by itself (a merchant brought the goods, the days of stock rose again) takes down the delivery nobody had yet taken: the escrow goes back to the issuer. A contract that is
+    /// taken stays the taker's: his hand-over still counts.
+    /// </summary>
+    private static void Lapse(ContractWorld w, ContractBook book, int settlement, int day)
+    {
+        if (w.StockNeeds == null) return;
+        var open = book.Contracts.Values.Where(c => c.Open && c.Settlement == settlement && c.Kind == "deliver_goods").ToList();
+        if (open.Count == 0) return;
+        var still = new HashSet<(EntityId, int)>(w.StockNeeds().Where(n => n.Settlement == settlement && n.DaysLeft < w.S.StockDaysMin).Select(n => (n.Owner, (int)n.Good)));
+        foreach (var c in open) if (!still.Contains((c.TargetOwner, c.Good))) ContractSystem.Cancel(w, book, c.Id, day);
     }
 
     /// <summary>A household's or business's store below the days of an input it buys, with no merchant holding any within the reach: a delivery contract, the pay of kilometres x kilograms.</summary>
@@ -36,7 +51,7 @@ public static class NeedScanner
         foreach (var n in w.StockNeeds().Where(x => x.Settlement == s).OrderBy(x => x.Owner).ThenBy(x => x.Good))
         {
             if (n.DaysLeft >= w.S.StockDaysMin) continue;
-            if (Live(book, c => c.Kind == "deliver_goods" && c.TargetOwner == n.Owner && c.Good == n.Good)) continue;
+            if (Posted(w, book, day, c => c.Kind == "deliver_goods" && c.TargetOwner == n.Owner && c.Good == n.Good)) continue;
             bool merchant = false;
             for (int t = 0; t < w.SettlementNames.Length && !merchant; t++)
                 if (w.DistanceM(s, t) <= w.S.MerchantReachM && w.MerchantHolds(t, n.Good, n.Grams)) merchant = true;
@@ -55,7 +70,7 @@ public static class NeedScanner
         var k = w.Content.Kind("guard_caravan"); if (k == null) return;
         foreach (var cv in w.Caravans().Where(x => x.Settlement == s && x.ValueMites > w.S.CaravanGuardValueMites).OrderBy(x => x.Caravan))
         {
-            if (Live(book, c => c.Target == cv.Caravan && c.Kind is "guard_caravan" or "escort_caravan")) continue;
+            if (Posted(w, book, day, c => c.Target == cv.Caravan && c.Kind is "guard_caravan" or "escort_caravan")) continue;
             if (w.PurseOfOwner(cv.Owner) is not { } purse) continue;
             long pay = ContractSystem.PayOf(k, Math.Max(1, cv.Days), Math.Max(1, cv.Guards));
             if (w.Ledger.Balance(purse).Mites < pay) continue;
@@ -71,7 +86,7 @@ public static class NeedScanner
         var k = w.Content.Kind("clear_bandit_cave"); if (k == null) return;
         foreach (var b in w.Bands().Where(x => x.Settlement == s && day - x.LastSeenDay <= w.S.BandSeenDays).OrderBy(x => x.Band))
         {
-            if (Live(book, c => c.Target == b.Band && c.Kind == "clear_bandit_cave")) continue;
+            if (Posted(w, book, day, c => c.Target == b.Band && c.Kind == "clear_bandit_cave")) continue;
             if (w.TreasuryOf(s) is not { } purse) continue;
             int f = w.FiefOf(s); var issuer = f >= 0 && f < w.FiefIds.Length ? w.FiefIds[f] : w.Ledger.OwnerOf(purse);
             long pay = k.PayBase + 200L * Math.Max(0, b.Members - 4);                // a bigger band is worth more
@@ -88,7 +103,7 @@ public static class NeedScanner
         var k = w.Content.Kind("rescue_captive"); if (k == null) return;
         foreach (var cp in w.Captives().Where(x => x.Settlement == s).OrderBy(x => x.Person))
         {
-            if (Live(book, c => c.Target == cp.Person && c.Kind == "rescue_captive")) continue;
+            if (Posted(w, book, day, c => c.Target == cp.Person && c.Kind == "rescue_captive")) continue;
             if (w.PurseOfOwner(cp.Household) is not { } purse) continue;
             long pay = Math.Max(k.PayBase, cp.RansomMites / 4);
             if (w.Ledger.Balance(purse).Mites < pay) continue;
@@ -103,7 +118,7 @@ public static class NeedScanner
         if (w.Builds == null || w.Content.Kind("build_cottage") == null) return;
         foreach (var b in w.Builds().Where(x => x.Settlement == s).OrderBy(x => x.Client))
         {
-            if (Live(book, c => c.Kind == "build_cottage" && c.Issuer == b.Client)) continue;
+            if (Posted(w, book, day, c => c.Kind == "build_cottage" && c.Issuer == b.Client)) continue;
             if (w.PurseOfOwner(b.Client) is not { } purse || w.Ledger.Balance(purse).Mites < b.BudgetMites) continue;
             var need = ContractSystem.NeedEntry(w, "planner", s, sec, [b.Client]);
             if (ContractSystem.Post(w, book, "build_cottage", b.Client, purse, s, b.BudgetMites, day, need) is { } c1) posted.Add(c1);
@@ -118,7 +133,7 @@ public static class NeedScanner
         {
             string kind = h.Kind switch { "harvest" => "harvest_hands", "haul" => "haul_for_site", _ => "day_labour" };
             if (w.Content.Kind(kind) is not { } k) continue;
-            if (Live(book, c => c.Kind == kind && c.Issuer == h.Owner)) continue;
+            if (Posted(w, book, day, c => c.Kind == kind && c.Issuer == h.Owner)) continue;
             if (w.PurseOfOwner(h.Owner) is not { } purse) continue;
             long pay = ContractSystem.PayOf(k, Math.Max(1, h.Hands));
             if (w.Ledger.Balance(purse).Mites < pay) continue;

@@ -74,6 +74,8 @@ public sealed record ContractSettingsDef : ContentDef
     public int BoardCap { get; init; } = 12;
     /// <summary>Scanner: how many settlements a game hour looks at.</summary>
     public int ScanSettlementsPerHour { get; init; } = 1;
+    /// <summary>A need whose contract closed unanswered is not posted again for this many days.</summary>
+    public int RepostDays { get; init; } = 30;
     /// <summary>A company takes a contract that scores at least this many mites an hour (the unskilled wage of a ten-hour day over ten).</summary>
     public long CompanyMinHourlyMites { get; init; } = 30;
 }

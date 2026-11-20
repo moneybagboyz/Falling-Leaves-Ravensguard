@@ -108,6 +108,29 @@ public class WorldRuntimeResumeTests(ITestOutputHelper output)
         PlayVehicles(rt, ctx, desk, sec);
         PlayInheritance(rt, ctx, desk, town, sec);
         PlayMedicine(rt, ctx, desk, sec);
+        PlayContracts(rt, ctx, desk, sec);
+    }
+
+    /// <summary>
+    /// P6-C2: the "contracts" section with its escrow in the ledger: the fief of the town posts a bounty-style contract on a person (a real transfer from its treasury into the escrow chest), the hero takes it through the
+    /// desk (the recorded <c>ct:take</c> command), and a slander is on the books. The section, the chest's coin and the chronicle entries must equal across the save.
+    /// </summary>
+    private static void PlayContracts(WorldRuntime rt, HeroContext ctx, HeroDesk desk, long sec)
+    {
+        var s = rt.State; var w = Ravensguard.Sim.Contracts.ContractWiring.From(s, s.Content ?? ctx.Content);
+        var reg = s.Population.Region; int town = Enumerable.Range(0, reg.Settlements.Count).First(i => w.TreasuryOf(i) is { } t && w.FiefOf(i) >= 0 && s.Economy!.Ledger.Balance(t).Mites > 10_000);
+        var book = s.Contracts ??= new Ravensguard.Sim.Contracts.ContractBook();
+        var need = Ravensguard.Sim.Contracts.ContractSystem.NeedEntry(w, "band_seen", town, sec, []);
+        var c = Ravensguard.Sim.Contracts.ContractSystem.Post(w, book, "hunt_man", w.FiefIds[w.FiefOf(town)], w.TreasuryOf(town)!.Value, town, 3_000, (int)(sec / 86_400), need, k => k.Target = s.Population.People.IdOf(5));
+        Assert.NotNull(c);
+        desk.Issue(Ravensguard.Sim.Contracts.ContractDesk.Take(c!.Id, sec));
+        desk.ApplyDue(ctx, rt.HourDone);
+        Assert.All(desk.View!.Results, r => Assert.True(r.Ok, r.Text));
+        Assert.Equal(Ravensguard.Sim.Contracts.WorkState.Taken, c.State);
+        var view = Ravensguard.Sim.Contracts.ContractsView.Build(s, s.Content ?? ctx.Content, town, (int)(sec / 86_400), s.Party!.Hero, w);       // the Journal's Contracts tab reads this
+        Assert.Contains(view.Mine, r => r.Id == c.Id && r.State == Ravensguard.Sim.Contracts.WorkState.Taken);
+        book.Slanders.Add(new Ravensguard.Sim.Contracts.SlanderRow { Rumour = 4242, Author = s.Population.People.IdOf(6).Value, Victim = s.Population.People.IdOf(7).Value, Day = (int)(sec / 86_400) });
+        Assert.True(s.Economy!.Ledger.Audit().IsConserved);
     }
 
     /// <summary>
@@ -370,6 +393,8 @@ public class WorldRuntimeResumeTests(ITestOutputHelper output)
             // the Phase 5 step 1 sections are there to compare: land, the hero (a person row in "people", with the party) and the crafting section's named artefact
             foreach (var k in new[] { LandSave.SectionName, WorldSave.HeroSection, WorldSave.PartySection, WorldSave.CraftingSection, WorldSave.PeopleSection, ConstructionSave.SectionName, DesignsSave.SectionName, MountsSave.SectionName, OwnershipSave.SectionName })
                 Assert.Contains(k, want.Keys);
+            Assert.Contains(ContractSave.SectionName, want.Keys);                                  // P6-C2: the contracts section, with the escrow chest in the economy section
+            Assert.Equal(straight.State.Contracts!.Hash(), resumed.State.Contracts!.Hash());
             foreach (var s in new[] { straight.State, resumed.State })
             {
                 Assert.Equal(PersonStatus.Hero, s.Population.People.Status[s.Hero!.PersonIndex]);

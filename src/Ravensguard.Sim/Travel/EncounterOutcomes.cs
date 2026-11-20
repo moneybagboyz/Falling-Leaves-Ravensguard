@@ -26,6 +26,19 @@ public sealed record EncounterOutcome(EncounterChoice Choice, string Result, lon
 public static class EncounterOutcomes
 {
     public const long FleeDelaySec = 30 * 60, DetourDelaySec = 20 * 60, WaitDelaySec = 60;
+
+    /// <summary>
+    /// P6-C2 (carried from watch-mode): what the autopilot does at an encounter that offers a fight. It fights only when the odds rule says so (<c>RiskEstimate.AutopilotFights</c>: the odds at least 1000 less its maximum risk), else it pays
+    /// when paying is offered and affordable, else it flees (or detours, or waits); it never accepts a fight whose odds were not estimated. Null when the encounter offers no choice it makes (a trade, a talk: it goes on).
+    /// </summary>
+    public static EncounterChoice? AutopilotChoose(IReadOnlyList<EncounterOption> options, int maxRiskPm, long coinMites)
+    {
+        var fight = options.FirstOrDefault(o => o.Choice == EncounterChoice.Fight);
+        if (fight != null && fight.OddsPm >= 0 && Ravensguard.Sim.Combat.Watch.RiskEstimate.AutopilotFights(fight.OddsPm, maxRiskPm)) return EncounterChoice.Fight;
+        if (options.FirstOrDefault(o => o.Choice == EncounterChoice.Pay) is { } pay && pay.Mites <= coinMites) return EncounterChoice.Pay;
+        foreach (var c in new[] { EncounterChoice.Flee, EncounterChoice.Detour, EncounterChoice.Wait }) if (options.Any(o => o.Choice == c)) return c;
+        return options.Any(o => o.Choice == EncounterChoice.GoOn) ? EncounterChoice.GoOn : null;
+    }
     public const long FerryMites = 30, AlmsMites = 10;
 
     /// <summary>The toll a demand asks of a hero holding <paramref name="coinMites"/>: a toll keeper a fiftieth (10 to 400), highwaymen a tenth, an ambush a sixth (10 at least), never more than the hero has.</summary>
