@@ -6,10 +6,14 @@ namespace Ravensguard.Sim.Heists;
 public enum HeistKind : byte { Gaol, Strongroom, Vault, Undercroft, Drain, Camp }
 
 /// <summary>One cell of a heist map: walls and rock block; a door, a cell's bars, a grate or the chest are things to deal with; the culvert is the drain's floor; the exit and the two portals are the ways between places.</summary>
-public enum HTile : byte { Rock, Wall, Floor, Culvert, Door, CellDoor, Grate, Chest, Exit, PortalA, PortalB }
+public enum HTile : byte { Rock, Wall, Floor, Culvert, Door, CellDoor, Grate, Chest, Exit, PortalA, PortalB }  // Grate is kept for old saves; a grate is a Door tile whose HDoor is a grate
 
 /// <summary>A door of a map: where, its lock quality (-1 none: a plain door; 0 Crude to 4 Masterwork), whether it is a cell's bars.</summary>
-public sealed record HDoor(int Index, int X, int Y, int Quality, bool Cell);
+public sealed record HDoor(int Index, int X, int Y, int Quality, bool Cell)
+{
+    /// <summary>A drain grate: no lock, pried loose with a tool (30 s, noise 8).</summary>
+    public bool Grate => Quality == -2;
+}
 
 /// <summary>
 /// The static map of a heist site, parsed from a template (<see cref="HeistTemplateDef"/>): tiles, doors in row-major order, the sconces, hiding spots, beds, guard posts, prisoners' slots, patrol waypoints in order, the chest, the way in and the
@@ -62,7 +66,7 @@ public sealed class HeistMap
                 char ch = x < t.Rows[y].Length ? t.Rows[y][x] : ' ';
                 HTile tile = ch switch
                 {
-                    ' ' => HTile.Rock, '#' => HTile.Wall, '~' => HTile.Culvert, '+' or '1' or '2' or '3' or '4' or '5' => HTile.Door, 'c' => HTile.CellDoor, 'g' => HTile.Grate, 'T' => HTile.Chest,
+                    ' ' => HTile.Rock, '#' => HTile.Wall, '~' => HTile.Culvert, '+' or '1' or '2' or '3' or '4' or '5' or 'g' => HTile.Door, 'c' => HTile.CellDoor, 'T' => HTile.Chest,
                     'x' => HTile.Exit, 'u' => HTile.PortalA, 'D' => HTile.PortalB, _ => HTile.Floor,
                 };
                 tiles[y * w + x] = tile;
@@ -70,6 +74,7 @@ public sealed class HeistMap
                 {
                     case '+': m.Doors.Add(new HDoor(m.Doors.Count, x, y, -1, false)); break;
                     case >= '1' and <= '5': m.Doors.Add(new HDoor(m.Doors.Count, x, y, ch - '1', false)); break;
+                    case 'g': m.Doors.Add(new HDoor(m.Doors.Count, x, y, -2, false)); break;
                     case 'c': m.Doors.Add(new HDoor(m.Doors.Count, x, y, Math.Clamp(t.CellLock, 0, 4), true)); break;
                     case 's': m.Sconces.Add((x, y)); break;
                     case 'h': m.Hides.Add((x, y)); break;

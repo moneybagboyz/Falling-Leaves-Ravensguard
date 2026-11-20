@@ -56,6 +56,8 @@ public enum HeroCommandKind : byte
     Justice,
     /// <summary>Appended (P6-C4): the hero's care of the sick and the plague's responses at the barrier ("dz:nurse|person", phys, burn, quarantine), applied by <see cref="Ravensguard.Sim.Disease.DiseaseDesk"/>.</summary>
     Disease,
+    /// <summary>Appended (P6-D3): the hero's heist at the barrier ("hj:enter|settlement|kind|weather", "hj:do|action", "hj:end"), applied by <see cref="Ravensguard.Sim.Heists.HeistDesk"/>.</summary>
+    Heist,
 }
 
 /// <summary>Where the hero crafts (built on the main thread from what is in reach, copied into the command).</summary>
@@ -181,6 +183,8 @@ public sealed record HeroView
     /// <summary>P6-C4: the sick among the hero, his household and his party (the character screen's illness rows), and the wage and land terms.</summary>
     public IReadOnlyList<Ravensguard.Sim.Disease.IllnessView> Ill { get; init; } = [];
     public Ravensguard.Sim.Disease.ScarcityView Scarcity { get; init; } = new(1000, 1000, false, 0, "");
+    /// <summary>P6-D3: the heist in play as the screen reads it (null: none).</summary>
+    public Ravensguard.Sim.Heists.HeistView? Heist { get; init; }
     public int Day => (int)(HourDone / 24);
 }
 
@@ -512,6 +516,7 @@ public sealed class HeroDesk
                 HeroCommandKind.Family => Ravensguard.Sim.Family.FamilyDesk.Apply(ctx, c),                      // P6-B3: courting, the plea, lessons
                 HeroCommandKind.Faith => Ravensguard.Sim.Faith.FaithDesk.Apply(ctx, c),                         // P6-B4: a service, alms, a pilgrim's vow and arrival
                 HeroCommandKind.Justice => Ravensguard.Sim.Law.JusticeDesk.Apply(ctx, c),                       // P6-C1: surrender, plead, bribe the gaoler, judge, the fief's law
+                HeroCommandKind.Heist => Ravensguard.Sim.Heists.HeistDesk.Apply(ctx, c),                         // P6-D3: slip into a site, pick, search, bribe, free, leave
                 HeroCommandKind.Disease => Ravensguard.Sim.Disease.DiseaseDesk.Apply(ctx, c),                      // P6-C4: nursing, the physician's call, burning bedding, a quarantine
                 HeroCommandKind.Holdings => Ravensguard.Sim.Holdings.HoldingsDesk.Apply(ctx, c),                // P6-B6: clearing and sowing a claim, whose is this, buy and deliver, installing stations
                 HeroCommandKind.Business or HeroCommandKind.Prospect => Ravensguard.Sim.Production.BusinessDesk.Apply(ctx, c),   // P5-F: businesses, stewards, stalls, prospecting
@@ -1038,6 +1043,7 @@ public sealed class HeroDesk
             Squad = [.. party.Squad.Members.Select(FollowerRow.Of).Select(r => r.Restore())], SquadCap = Recruiting.SquadCap(ctx.Trade, leadership),
             Crafting = CraftCopy(ctx, hourDone), CraftPlace = PlaceView(ctx, hourDone), Results = [.. _results], Family = FamilyOf(ctx, (int)(hourDone / 24)),
             Ill = Ravensguard.Sim.Disease.DiseaseView.Of(ctx.State, (int)(hourDone / 24)), Scarcity = Ravensguard.Sim.Disease.DiseaseView.ScarcityOf(ctx.State.Disease),
+            Heist = Ravensguard.Sim.Heists.HeistView.Of(ctx.State.Heists?.Run),
         };
     }
 

@@ -55,6 +55,8 @@ public sealed class HSite
     public int ChangeDay = -1;
     public int ChestDay = -1;
     public int Visits;
+    /// <summary>The chronicle entry that explains a lock change (the theft's), 0 when none.</summary>
+    public ulong ChangeCause;
     /// <summary>The goods and papers in the chest beyond its purse (rolled once at generation, stream 0x6B2), item ids; taken with the chest.</summary>
     public List<string> Extras = [];
     // ---- run state (cleared when nobody is in)
@@ -69,6 +71,7 @@ public sealed class HSite
     public long FireUntil;
     /// <summary>The noises of the last seconds that guards have yet to listen to: second, x, y, metres, kind (0 ordinary, 1 shout), a source tag.</summary>
     public List<long[]> Noises = [];
+    public long NoiseSeq;
 
     public HeistMap? Map { get; set; }
 
