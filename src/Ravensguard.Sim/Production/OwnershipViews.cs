@@ -9,7 +9,9 @@ using RegionData = Ravensguard.Sim.WorldGen.Region.Region;
 namespace Ravensguard.Sim.Production;
 
 /// <summary>The Ledger's tabs (businesses spec 6), in screen order.</summary>
-public enum LedgerTab : byte { Property, Businesses, Sites, Fields, Stalls, Vehicles, Shares, Stewards }
+public enum LedgerTab : byte { Property, Businesses, Sites, Fields, Stalls, Vehicles, Shares, Stewards,
+    /// <summary>P6-C3 (rule-and-income 6): the lord's books: receipts by source, arrears, grievances, officials' records, dues and loans. Appended.</summary>
+    Fief }
 
 /// <summary>
 /// One row of a Ledger table (spec 6): its id (for the detail), the cells as the screen shows them (already formatted, column order of the tab), sort keys per column (numbers sort as numbers,
@@ -40,6 +42,7 @@ public sealed record LedgerView(int Day, IReadOnlyList<LedgerRow> Rows, long Pur
         [LedgerTab.Vehicles] = ["lg_col_what", "lg_col_cargo", "lg_col_state", "lg_col_where", "lg_col_alerts", "lg_col_id"],
         [LedgerTab.Shares] = ["lg_col_name", "lg_col_place", "lg_col_share", "lg_col_value", "lg_col_dividend", "lg_col_alerts"],
         [LedgerTab.Stewards] = ["lg_col_name", "lg_col_runs", "lg_col_trading", "lg_col_lag", "lg_col_wage", "lg_col_alerts"],
+        [LedgerTab.Fief] = Ravensguard.Sim.Rule.RuleLedger.Columns,
     };
 
     public IEnumerable<LedgerRow> Tab(LedgerTab t) => Rows.Where(r => r.Tab == t);

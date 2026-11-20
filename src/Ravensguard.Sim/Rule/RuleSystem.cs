@@ -12,6 +12,8 @@ public sealed class RuleLinks
     public Func<SkimCrime, EntityId>? Crime { get; set; }
     public Func<EntityId, int, int> StandingWithRealm { get; set; } = (_, _) => 0;
     public Func<EntityId> Hero { get; set; } = () => EntityId.None;
+    /// <summary>Whether <see cref="Hero"/> names a hero (the game's wiring sets it; the hero's id may be the zero id, so zero cannot mean none).</summary>
+    public bool HasHero { get; set; }
     public Func<int, int, int, bool>? GuardsEnforce { get; set; }
     public Func<int, string> WarCause { get; set; } = _ => "";
 }

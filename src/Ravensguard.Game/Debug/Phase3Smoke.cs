@@ -182,6 +182,14 @@ public static class Phase3Smoke
             Key(Godot.Key.Escape); await Frames(tree, 4);
             if (router.Top != sv) throw new Exception("Esc did not close the Ledger");
             GD.Print("[smoke]   the Ledger: L opens it, the world keys are off under it, Esc closes it");
+            // P6-C3 (rule-and-income 6): the Ledger's Fief tab (receipts by source, arrears, grievances, officials, dues, loans) fits 960x540 and its rows read
+            Key(Godot.Key.L); await Frames(tree, 30);
+            if (router.Top is not UI.LedgerScreen) throw new Exception("L did not open the Ledger for the Fief tab");
+            for (int i = 0; i < 7; i++) { Key(Godot.Key.Tab); await Frames(tree, 3); }                 // Businesses -> Fief
+            Fit(router.Top!, "the Ledger's Fief tab", view);
+            Key(Godot.Key.Escape); await Frames(tree, 4);
+            if (router.Top != sv) throw new Exception("Esc did not close the Ledger's Fief tab");
+            GD.Print("[smoke]   the Ledger's Fief tab: fits, Esc closes it");
 
             // P6-B1 (MT-14): the treatment screen on a wounded hero: it fits 960x540, offers verbs (each row readable), the street keys are off under it, Esc closes it
             if (!sv.DebugOpen("treatment")) throw new Exception("the treatment screen is not known to the smoke");

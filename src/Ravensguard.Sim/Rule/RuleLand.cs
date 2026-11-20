@@ -65,7 +65,7 @@ public static class RuleLand
             string why = "";
             if (ch.State == CharterState.Lapsed)
             {
-                bool heroHolds = c.Hero != EntityId.None && ch.Grantee == c.Hero;
+                bool heroHolds = c.HasHero && ch.Grantee == c.Hero;
                 if (!heroHolds && !c.B.Extended.Contains(ch.Serial) && Extend(c, ch.Serial, day) == "") continue;       // an NPC holder pays the extension if he can
                 why = "ch_note_charter_lapsed";
             }
@@ -159,6 +159,7 @@ public static class RuleLand
     {
         var land = c.Land; var cl = land?.Book.ClaimOf(serial); if (cl == null) return false;
         c.B.EvictionNotices.Remove(serial); c.B.EvictionOrders.Remove(serial);
-        return land!.EvictClaim(cl, day, (when, type, subj, causes, data) => c.Chron.Chron(when, type, EvictedKey, [ChronParam.Person("squatter", cl.Claimant), ChronParam.Count("tiles", cl.Tiles.Length)], subj, causes, data));
+        List<ChronParam> ps = [ChronParam.Person("squatter", cl.Claimant), ChronParam.Count("tiles", cl.Tiles.Length)];
+        return land!.EvictClaim(cl, day, (when, type, subj, causes, data) => c.Chron.Chron(when, type, EvictedKey, ps, subj, causes, data));
     }
 }

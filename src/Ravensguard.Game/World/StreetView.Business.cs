@@ -38,8 +38,8 @@ public partial class StreetView
     {
         if (Runtime is not { } rt || _heroLink == null) return;
         int day = (int)(HeroNow() / 86400);
-        if (_ledgerTask is { IsCompleted: true } lt) { if (lt.IsCompletedSuccessfully) { _ledgerView = lt.Result; _ownsAny = _ledgerView is { Rows.Count: > 0 }; } _ledgerTask = null; }
-        _ledgerTask ??= Bar(rt, () => OwnOf(rt) is { } ow ? Ravensguard.Sim.Succession.SuccessionDesk.WithEstate(rt.State, ow.Ledger(day, rt.State.HomeRecords?.Sim.Get<ConstructionWorld>(), rt.State.Mounts)) : null);
+        if (_ledgerTask is { IsCompleted: true } lt) { if (lt.IsCompletedSuccessfully) { _ledgerView = lt.Result; _ownsAny = _ledgerView != null && _ledgerView.Rows.Any(r => r.Tab != LedgerTab.Fief); } _ledgerTask = null; }
+        _ledgerTask ??= Bar(rt, () => OwnOf(rt) is { } ow ? Ravensguard.Sim.Rule.RuleLedger.With(rt.State, Ravensguard.Sim.Succession.SuccessionDesk.WithEstate(rt.State, ow.Ledger(day, rt.State.HomeRecords?.Sim.Get<ConstructionWorld>(), rt.State.Mounts)), day) : null);
         if (_bizTask is { IsCompleted: true } bt) { if (bt.IsCompletedSuccessfully) _bizView = bt.Result; _bizTask = null; }
         var id = _bizId;
         if (id != EntityId.None) _bizTask ??= Bar(rt, () => OwnOf(rt)?.Detail(id, day));

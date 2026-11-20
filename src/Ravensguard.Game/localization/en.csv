@@ -4728,6 +4728,32 @@ ru_charter_extended,The charter's deadline was extended a year.
 ru_extend_refused,That charter cannot be extended.
 ru_due_paid,You paid {0}.
 ru_aid_called,{0} vassals were called for the aid.
+lg_tab_fief,Fief
+lg_empty_fief,"No fief books: a lord's receipts, arrears, officials, dues and loans show here."
+lg_col_who,With
+lg_col_amount,Amount
+bz_ui_alert_shortfall,short
+ru_row_policy,Hearth tax a household
+ru_row_arrears,Arrears
+ru_row_grievances,Grievances
+ru_row_loan,Loan
+ru_rent_coin,rents in coin
+ru_rent_kind,rents in grain
+ru_src_hearth,Receipts: hearth tax
+ru_src_rent,Receipts: rents
+ru_src_toll,Receipts: tolls
+ru_src_markettoll,Receipts: market tolls
+ru_src_fine,Receipts: fines
+ru_src_customs,Receipts: customs
+ru_src_subsidy,Receipts: subsidy
+ru_src_tallage,Receipts: tallage
+ru_src_fee,Receipts: fees
+ru_src_royalty,Receipts: royalties
+ru_state_due,due
+ru_state_paid,paid
+ru_state_arrears,in arrears
+ru_state_waived,waived
+ru_state_grievance,a grievance
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."

@@ -49,6 +49,8 @@ public sealed class RuleCtx
     public Func<int, int, int, bool>? GuardsEnforce { get; init; }
     /// <summary>The hero's person id, for his own deeds (none: empty).</summary>
     public EntityId Hero { get; init; }
+    /// <summary>Whether <see cref="Hero"/> is a real hero (the hero's id can be the zero id, so it cannot be told from none by value).</summary>
+    public bool HasHero { get; init; }
     /// <summary>A person's standing with a realm in permille (the standing book's), 0 when none.</summary>
     public Func<EntityId, int, int> StandingWithRealm { get; init; } = (_, _) => 0;
     /// <summary>Whether a ruler's realm is at war and why (for the council's NPC rule): "" none, "defence" or "casus_belli".</summary>

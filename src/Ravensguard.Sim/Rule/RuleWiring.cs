@@ -24,7 +24,7 @@ public static class RuleWiring
         return new RuleCtx
         {
             W = w, B = book, Ew = w.Get<EconomyWorld>(), Chron = chron, Land = w.Get<LandWorld>(),
-            Crime = links?.Crime, StandingWithRealm = links?.StandingWithRealm ?? ((_, _) => 0), Hero = links?.Hero() ?? EntityId.None, GuardsEnforce = links?.GuardsEnforce, WarCause = links?.WarCause ?? (_ => ""),
+            Crime = links?.Crime, StandingWithRealm = links?.StandingWithRealm ?? ((_, _) => 0), Hero = links?.Hero() ?? EntityId.None, HasHero = links?.HasHero ?? false, GuardsEnforce = links?.GuardsEnforce, WarCause = links?.WarCause ?? (_ => ""),
         };
     }
 
@@ -72,7 +72,7 @@ public static class RuleWiring
         Bind(state, content);
         Install(home.Sim, home.Economy, book, state.Population.Region);
         var links = home.Sim.Get<RuleLinks>()!;
-        links.Hero = () => state.Party?.Hero ?? EntityId.None;
+        links.Hero = () => state.Party?.Hero ?? EntityId.None; links.HasHero = true;
         links.StandingWithRealm = (p, realm) => realm < 0 ? 0 : Standing.Of(state.Standing, p, GroupRef.Realm(realm));
         links.Crime = sc =>
         {

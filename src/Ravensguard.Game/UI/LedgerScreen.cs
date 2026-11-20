@@ -112,6 +112,7 @@ public partial class LedgerScreen : Control, IHandlesBack
             for (int k = c0; k < Math.Min(cols.Length, c0 + Visible6); k++)
             {
                 string text = cols[k] == "lg_col_alerts" ? AlertText(row.Alerts) : k < row.Cells.Length ? row.Cells[k] : "";
+                if (text.StartsWith(Ravensguard.Sim.Rule.RuleLedger.Mark, StringComparison.Ordinal)) text = L.T(text[1..]);        // P6-C3: the Fief tab's rows carry text keys
                 if (k == 0 && row.Inherited) text += " " + L.T("in_lg_inherited");                 // P5-H: what came by inheritance is marked
                 var l = Cell(text, k == 0 ? 220 : 110);
                 if (r == _row) l.AddThemeColorOverride("font_color", PixelTheme.Gold);
