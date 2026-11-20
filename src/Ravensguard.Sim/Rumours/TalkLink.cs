@@ -40,9 +40,27 @@ public sealed class TalkLink
     {
         // the home region's chronicle and people are the ones this reads; a world without people yet has nothing to talk about
         if (Runtime.State.Population.People.Count == 0) return;
+        State.AfterSpread = _standingHook ??= StandingHook;
         TalkSystem.AfterHour(World(), State, Book, hour);
         CarryRumours(hour);
         Publish(hour);
+    }
+
+    // ---- P6-A3: the standing book reads each hour's hearings (reputation 4.5); the deed table comes from the content, the groups from the region (rebuilt each day)
+    private Action<TalkWorld, long>? _standingHook;
+    private Ravensguard.Content.ContentDatabase? _deedContent;
+    private Ravensguard.Sim.Society.DeedTable _deeds = Ravensguard.Sim.Society.DeedTable.Empty;
+    private Ravensguard.Sim.Society.RegionGroups? _groups;
+    private int _groupsDay = -1, _groupsPeople = -1;
+
+    private void StandingHook(TalkWorld w, long hour)
+    {
+        var st = Runtime.State;
+        if (!ReferenceEquals(st.Content, _deedContent)) { _deedContent = st.Content; _deeds = Ravensguard.Sim.Society.DeedTable.From(st.Content); }
+        if (_deeds.Count == 0) { State.Rumours.DrainTouched(); return; }
+        int day = (int)(hour / 24);
+        if (_groups == null || _groupsDay != day || _groupsPeople != st.Population.People.Count) { _groups = new Ravensguard.Sim.Society.RegionGroups(st.Population.Region, st.Population.People, day); _groupsDay = day; _groupsPeople = st.Population.People.Count; }
+        Ravensguard.Sim.Society.StandingSystem.OnHour(() => st.Standing ??= new Ravensguard.Sim.Society.StandingBook(), st.Standing, _deeds, _groups, w, State, hour);
     }
 
     // ---- caravans carry rumours between regions (Phase 3 cleanup B, item 7)

@@ -42,6 +42,8 @@ public sealed class TalkState
     public int LastDay = -1;
     public ulong NextAuthored = 1;
     public List<Pass> Passes { get; } = [];
+    /// <summary>P6-A3: called after each hour's rumours are seeded and spread (before any expiry), by whoever keeps the standing book; never saved.</summary>
+    public Action<TalkWorld, long>? AfterSpread { get; set; }
     internal int[][]? Residents;
     internal int ResidentsDay = -1, ResidentsCount = -1;
 

@@ -707,7 +707,7 @@ public sealed class HeroDesk
     {
         var (i, _) = PersonOf(ctx, c.Person); if (i < 0) return R(c, HeroResultCode.Invalid, T("HERO_THEY_ARE_GONE"));
         _person = c.Person;
-        var k = ctx.Party.Know(c.Person);
+        var k = ctx.Party.Know(c.Person, ctx.State.Standing?.Marks.FirstMeetingTrustPm(ctx.Party.Hero) ?? 0);     // P6-A3: a brand a stranger sees lowers the first trust
         if (k.LastTalkHour != c.Hour) { k.Familiarity = Math.Min(100, k.Familiarity + 10); k.TrustPm = Math.Min(1000, k.TrustPm + 25); k.LastTalkHour = c.Hour; }
         if (k.Familiarity >= ctx.Trade.RecruitFamiliarityMin) k.ReasonKnown = true;
         Progress.Use(ctx.Craft.State.Book, ctx.Party.Hero, Progress.Talk, 40, c.IssuedSec);

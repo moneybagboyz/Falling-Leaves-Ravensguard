@@ -1,0 +1,27 @@
+// Deeds: what a chronicle entry does to its doer's standing (docs/specs/phase6/reputation-and-standing.md 3, 4.1). Numbers are permille at full knowledge: the share of a group's members who
+// have heard of it scales them. Types a later Phase 6 step writes (crime, slavery, faith, contracts) are listed so the table is complete when they land; a type nobody writes does nothing.
+[
+  {"type": "deed", "id": "theft_witnessed",    "entry": "theft_witnessed",    "settlement_pm": -60,  "fief_pm": -30},
+  {"type": "deed", "id": "burglary",           "entry": "burglary",           "settlement_pm": -90,  "fief_pm": -45},
+  {"type": "deed", "id": "assault",            "entry": "assault",            "settlement_pm": -80,  "fief_pm": -40},
+  {"type": "deed", "id": "murder",             "entry": "murder",             "settlement_pm": -300, "fief_pm": -150, "realm_pm": -50, "religion_pm": -40},
+  {"type": "deed", "id": "arson",              "entry": "arson",              "settlement_pm": -250, "fief_pm": -120, "realm_pm": -30, "religion_pm": -30},
+  {"type": "deed", "id": "poaching",           "entry": "poaching",           "settlement_pm": -10,  "fief_pm": -40},
+  {"type": "deed", "id": "smuggling",          "entry": "smuggling",          "fief_pm": -50,         "realm_pm": -20},
+  {"type": "deed", "id": "outlaw_raid",        "entry": "outlaw_raid",        "settlement_pm": -200, "fief_pm": -100, "realm_pm": -30},
+  {"type": "deed", "id": "caravan_raid",       "entry": "caravan_raid",       "settlement_pm": -80,  "fief_pm": -80,  "realm_pm": -30},
+  {"type": "deed", "id": "slave_bought",       "entry": "slave_bought",       "settlement_pm": -40,  "religion_pm": -30, "match": {"law": "none"}},
+  {"type": "deed", "id": "slave_freed",        "entry": "slave_freed",        "settlement_pm": 30,   "religion_pm": 60},
+  {"type": "deed", "id": "alms_given",         "entry": "alms_given",         "settlement_pm": 5,    "religion_pm": 3, "per_key": "mites", "per_unit": 100, "per_max": 40},
+  {"type": "deed", "id": "pilgrimage_done",    "entry": "pilgrimage_done",    "religion_pm": 80},
+  {"type": "deed", "id": "monster_slain",      "entry": "monster_slain",      "settlement_pm": 200,  "fief_pm": 60,   "realm_pm": 20},
+  {"type": "deed", "id": "site_monster_slain", "entry": "site_monster_slain", "settlement_pm": 200,  "fief_pm": 60,   "realm_pm": 20},
+  {"type": "deed", "id": "bounty_collected",   "entry": "bounty_collected",   "fief_pm": 40},
+  {"type": "deed", "id": "riot_led",           "entry": "riot_led",           "fief_pm": -200,        "settlement_pm": 80},
+  {"type": "deed", "id": "sentence_served",    "entry": "sentence_served",    "settlement_pm": 30,   "fief_pm": 15},
+  {"type": "deed", "id": "raid_repelled",      "entry": "raid_repelled",      "settlement_pm": 120,  "fief_pm": 40},
+  {"type": "deed", "id": "fire_fought",        "entry": "fire_fought",        "settlement_pm": 60},
+  {"type": "deed", "id": "plague_nursed",      "entry": "plague_nursed",      "settlement_pm": 90,   "religion_pm": 20},
+  {"type": "deed", "id": "oath_broken",        "entry": "oath_broken",        "fief_pm": -120,        "realm_pm": -60,  "religion_pm": -40},
+  {"type": "deed", "id": "contract_done",      "entry": "contract_done",      "settlement_pm": 15}
+]

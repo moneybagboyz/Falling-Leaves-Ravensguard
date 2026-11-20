@@ -94,6 +94,8 @@ public sealed class WorldState
     public Ravensguard.Sim.Production.OwnershipBook? Ownership { get; set; }
     /// <summary>P5-H: every will made (inheritance 3), in the optional "wills" section once any exists (no format bump).</summary>
     public Ravensguard.Sim.Succession.WillBook? Wills { get; set; }
+    /// <summary>P6-A3: counted deeds, standing rows, renown and marks (reputation spec 3), in the optional "standing" section once any exists (no format bump).</summary>
+    public Ravensguard.Sim.Society.StandingBook? Standing { get; set; }
     /// <summary>The hero's side of the records (trade-inventory-character spec): worn slots and where each stack sits, the price notebook, the party, the people known (saved in the "party" section when present). The things themselves are item rows, the pack store and the purse in the <see cref="Economy"/>.</summary>
     public Ravensguard.Sim.Trade.HeroParty? Party { get; set; }
     /// <summary>
@@ -403,6 +405,7 @@ public static partial class WorldSave
             Construction = w.Construction is { IsEmpty: false } cnb ? ConstructionSave.Capture(cnb) : null,                          // P5-B
             Designs = w.Designs is { IsEmpty: false } dsb ? DesignsSave.Capture(dsb) : null,                                         // P5-C
             Wills = w.Wills is { IsEmpty: false } wlb ? WillsSave.Capture(wlb) : null,                                                // P5-H
+            Standing = w.Standing is { IsEmpty: false } stb ? StandingSave.Capture(stb) : null,                                      // P6-A3
             Ownership = w.Ownership is { IsEmpty: false } owb ? OwnershipSave.Capture(owb, w.Economy?.Goods.Hash() ?? "") : null,         // P5-F
             Party = w.Party == null ? null : Ravensguard.Sim.Trade.HeroPartySave.Capture(w.Party),
             HeroPending = (w.HeroPendingSource?.Invoke() ?? w.HeroPending) is { Count: > 0 } hp ? Ravensguard.Sim.Trade.HeroPendingSave.Capture(hp) : null,
@@ -567,6 +570,7 @@ public static partial class WorldSave
             Construction = file.Sections.ContainsKey(ConstructionSave.SectionName) ? Decode<ConstructionSave>(file, ConstructionSave.SectionName, compressed: true).Restore() : null, // P5-B
             Designs = file.Sections.ContainsKey(DesignsSave.SectionName) ? Decode<DesignsSave>(file, DesignsSave.SectionName, compressed: true).Restore() : null,                // P5-C
             Wills = file.Sections.ContainsKey(WillsSave.SectionName) ? Decode<WillsSave>(file, WillsSave.SectionName, compressed: true).Restore() : null,                       // P5-H
+            Standing = file.Sections.ContainsKey(StandingSave.SectionName) ? Decode<StandingSave>(file, StandingSave.SectionName, compressed: true).Restore() : null,          // P6-A3
             Ownership = file.Sections.ContainsKey(OwnershipSave.SectionName) ? Decode<OwnershipSave>(file, OwnershipSave.SectionName, compressed: true).Restore() : null,          // P5-F
             Party = file.Sections.ContainsKey(PartySection) ? Decode<Ravensguard.Sim.Trade.HeroPartySave>(file, PartySection, compressed: true).Restore() : null,
             HeroPending = file.Sections.ContainsKey(Ravensguard.Sim.Trade.HeroPendingSave.SectionName) ? Decode<Ravensguard.Sim.Trade.HeroPendingSave>(file, Ravensguard.Sim.Trade.HeroPendingSave.SectionName, compressed: true).Restore() : [],
@@ -781,6 +785,7 @@ public sealed class LiveCapture
     internal LandSave? Land { get; init; }                                                                                   // P5-A2
     internal ConstructionSave? Construction { get; init; }                                                                   // P5-B
     internal WillsSave? Wills { get; init; }                                                                                 // P5-H
+    internal StandingSave? Standing { get; init; }                                                                           // P6-A3
     internal DesignsSave? Designs { get; init; }                                                                             // P5-C
     internal OwnershipSave? Ownership { get; init; }                                                                         // P5-F
     internal Ravensguard.Sim.Trade.HeroPartySave? Party { get; init; }
@@ -847,6 +852,7 @@ public sealed class LiveCapture
         if (Construction != null) sections.Add(new(ConstructionSave.SectionName, SaveCodec.SerializeCompressed(Construction))); // P5-B (optional, no bump)
         if (Designs != null) sections.Add(new(DesignsSave.SectionName, SaveCodec.SerializeCompressed(Designs)));             // P5-C (optional, no bump)
         if (Wills != null) sections.Add(new(WillsSave.SectionName, SaveCodec.SerializeCompressed(Wills)));                   // P5-H (optional, no bump)
+        if (Standing != null) sections.Add(new(StandingSave.SectionName, SaveCodec.SerializeCompressed(Standing)));         // P6-A3 (optional, no bump)
         if (Ownership != null) sections.Add(new(OwnershipSave.SectionName, SaveCodec.SerializeCompressed(Ownership)));       // P5-F (optional, no bump)
         if (Party != null) sections.Add(new(WorldSave.PartySection, SaveCodec.SerializeCompressed(Party)));
         if (HeroPending != null) sections.Add(new(Ravensguard.Sim.Trade.HeroPendingSave.SectionName, SaveCodec.SerializeCompressed(HeroPending)));
