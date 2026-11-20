@@ -4976,6 +4976,182 @@ ru_state_paid,paid
 ru_state_arrears,in arrears
 ru_state_waived,waived
 ru_state_grievance,a grievance
+ch_work_need,{place}: {what}.
+ct_need_stock_short,"a house or workshop is down to {days} days of {good}"
+ct_need_caravan_leaving,a caravan is about to leave with goods worth guarding
+ct_need_band_seen,a band was seen near the road not long ago
+ct_need_captive_held,a captive is held for ransom
+ct_need_planner,a household wants a cottage built
+ct_need_hands_short,hands are short for the work in hand
+ch_note_ct_need_stock_short,The store is short and no merchant has any within reach.
+ch_note_ct_need_caravan_leaving,A caravan carrying goods worth guarding.
+ch_note_ct_need_band_seen,A band seen near the road.
+ch_note_ct_need_captive_held,A captive held for ransom.
+ch_note_ct_need_planner,A household wants a cottage.
+ch_note_ct_need_hands_short,Work with too few hands.
+ch_work_posted,"Work posted at {place}: {kind}, {pay}, to be done by day {deadline}."
+ch_work_taken,{taker} took the work: {kind}.
+ch_work_done,{taker} finished the work ({kind}) at {place} and was paid.
+ch_work_failed,{taker} did not finish the work ({kind}) at {place}; the pay went back to the one who posted it.
+ch_work_expired,"The work ({kind}) at {place} found no taker by its day, and the pay went back."
+ch_tournament_announced,"A tournament is called at {place} for the fair on day {fair}: a purse of {purse}."
+ch_tournament_won,{winner} won the tournament at {place} and took the purse.
+ch_note_tournament_fair,The great fair of a chartered town.
+ch_note_tournament_final,The final bout was fought and recorded.
+ch_slander_told,"{author} told a lie about {victim}: {kind}."
+ch_slander_kind_theft,that {victim} stole
+ch_slander_kind_burglary,that {victim} broke into a house
+ch_slander_kind_poaching,that {victim} poached
+ch_slander_kind_assault,that {victim} struck someone
+ch_slander_kind_smuggling,that {victim} smuggled
+ch_slander_exposed,The lie {author} told about {victim} was shown to be false.
+ch_note_slander_rival,A rival's spite.
+ch_note_slander_hero,The hero spoke ill of them.
+ch_bandit_cleared,The band that lurked near {place} was cleared.
+R_SLANDER_EXPOSED,{who} was caught lying about a neighbour.
+R_WORK_DONE,{who} did the work they were hired for.
+R_WORK_FAILED,{who} left the work they were hired for undone.
+R_TOURNAMENT,A tournament is called at {place} for the fair.
+R_TOURNAMENT_WON,{who} won the tournament at {place}.
+R_BANDIT_CLEARED,The band that lurked near {place} has been cleared.
+ct_kind_escort_caravan,Escort a caravan
+ct_kind_escort_pilgrims,Escort a pilgrim party
+ct_kind_escort_bride,Escort a bride
+ct_kind_guard_caravan,Guard a caravan
+ct_kind_guard_house,Guard a house
+ct_kind_guard_harvest,Guard the harvest
+ct_kind_garrison_duty,Garrison duty
+ct_kind_hunt_beast,Hunt a beast
+ct_kind_hunt_man,Hunt a man
+ct_kind_bounty_dead_or_alive,Bounty: dead or alive
+ct_kind_catch_runaway,Catch a runaway
+ct_kind_deliver_goods,Deliver goods
+ct_kind_deliver_message,Deliver a message
+ct_kind_carry_tax_wagon,Carry a tax wagon
+ct_kind_collect_debt,Collect a debt
+ct_kind_collect_rents,Collect the rents
+ct_kind_recover_stolen_goods,Recover stolen goods
+ct_kind_recover_relic,Recover a relic
+ct_kind_rescue_captive,Rescue a captive
+ct_kind_ransom_delivery,Carry a ransom
+ct_kind_clear_bandit_cave,Clear a bandit cave
+ct_kind_clear_lair,Clear a lair
+ct_kind_find_missing_person,Find a missing person
+ct_kind_scout_road,Scout a road
+ct_kind_survey_for_lord,Survey for a lord
+ct_kind_build_cottage,Build a cottage
+ct_kind_repair_building,Repair a building
+ct_kind_soil_improvement,Improve the soil
+ct_kind_clear_rubble,Clear the rubble
+ct_kind_harvest_hands,Harvest hands
+ct_kind_day_labour,Day labour
+ct_kind_haul_for_site,Haul for a site
+ct_kind_smuggle,Smuggle goods
+ct_kind_steal_to_order,Steal to order
+ct_kind_heist_vault,Rob a vault
+ct_kind_break_out,Break someone out
+ct_kind_kidnap,Kidnap
+ct_kind_slander_rival,Slander a rival
+ct_kind_take_a_fief,Take a fief
+ct_kind_carry_oath_or_treaty,Carry an oath or a treaty
+ct_kind_tournament_entry,Enter the tournament
+ct_taken,You took the work: {0}.
+ct_cannot_bond,You cannot put up the bond.
+ct_busy,You already have work in hand.
+ct_hidden,Nobody has offered you that.
+ct_not_open,That work is not on offer.
+ct_abandoned,You put the work down; your standing suffers for it.
+ct_not_yours,That is not your work.
+ct_reported,You made your report.
+ct_cannot_report,There is nothing to report on that.
+ct_no_store,There is nowhere to put the goods.
+ct_nothing_to_hand,You carry none of what is wanted.
+ct_handed,You hand over {0} g.
+ct_pinned,Pinned to the map.
+ct_unpinned,Taken off the map.
+ct_entered,You entered the lists.
+ct_cannot_enter,"You cannot enter: the fair has begun, the lists are full or you cannot pay the fee."
+ct_bid_won,Your bid is the lowest: the work is yours.
+ct_bid_lost,Your bid was not the lowest.
+ct_slandered,Your lie takes hold.
+ct_not_believed,They do not believe you.
+ct_answered,You answer the lie before the court.
+ct_nothing_to_answer,There is no lie to answer.
+JOURNAL_TAB_CONTRACTS,Contracts
+ct_title,Contracts
+ct_tab_board,On offer here
+ct_tab_mine,Taken
+ct_empty_board,Nothing is posted here.
+ct_empty_mine,You have taken no work.
+ct_pay,Pay {0}
+ct_deadline,by day {0}
+ct_by,Posted by {0}
+ct_why_stock_short,"The store has {0} days of what it needs and no merchant near has any."
+ct_why_caravan_leaving,A caravan with goods worth guarding is about to leave.
+ct_why_band_seen,A band has been seen near the road.
+ct_why_captive_held,A captive is held and his household wants him back.
+ct_why_planner,A household wants a house built.
+ct_why_hands_short,There is work and too few hands.
+ct_why_fair_charter,The great fair is coming.
+ct_why_crime,A crime was reported and the culprit is known.
+ct_why_other,Somebody needs it done.
+ct_btn_take,Take it
+ct_btn_abandon,Put it down
+ct_btn_pin,Pin to map
+ct_btn_unpin,Unpin
+ct_btn_hand,Hand over goods
+ct_btn_report,Report done
+ct_btn_enter,Enter the lists ({0})
+ct_state_open,Open
+ct_state_taken,Taken
+ct_state_done,Done
+ct_state_failed,Failed
+ct_state_expired,Lapsed
+ct_state_cancelled,Called off
+ct_evidence,How it went
+ct_bond,Bond {0}
+ct_bounty_of,"Bounty on {0}"
+ct_lie,"A lie, told by {0}."
+ct_lie_tag,[a lie]
+ct_criminal,A word from someone who trusts you.
+ct_progress,"{0} of {1} kg delivered"
+B_MOOD_LOW_A,Hard times. Hard times.
+B_MOOD_LOW_B,"Nothing goes right, and the rain does not help."
+B_MOOD_LOW_C,I am sick of all of it.
+B_MOOD_HIGH_A,A good day to be alive.
+B_MOOD_HIGH_B,Full belly and a dry roof. Who could ask for more?
+B_MOOD_HIGH_C,I could sing today.
+ct_head,"{0}  ·  you carry {1}  ·  day {2}"
+ct_nowhere,Out on the road
+ct_fair,"The fair's tournament: a purse of {0}. {1}"
+ct_fair_open,"Lists open until the fair on day {0}; {1} have entered."
+ct_fair_on,The lists are drawn and the bouts are fought.
+ct_fair_over,The tournament is over.
+ct_fair_won,"You won the tournament and took the purse."
+ct_entered_tag,You have entered
+ct_no_deadline,no deadline
+ct_bounty_how,Bring the culprit to a guard of the fief: the fief pays out of the coin it has set aside.
+ct_pinned_where,"Pinned: {0} lies {1} of you, about {2} m."
+ct_dir_north,north
+ct_dir_south,south
+ct_dir_east,east
+ct_dir_west,west
+ct_dir_north-east,north-east
+ct_dir_north-west,north-west
+ct_dir_south-east,south-east
+ct_dir_south-west,south-west
+ct_issuer_household,a household
+ct_issuer_business,a workshop
+ct_issuer_fief,the lord's steward
+ct_issuer_church,the church
+ct_issuer_guild,a guild
+ct_issuer_band,someone who does not give a name
+ct_issuer_caravan,a merchant
+ct_issuer_person,a neighbour
+ct_ev_work_taken,You took the work.
+ct_ev_work_done,The work was done and the pay came.
+ct_ev_work_failed,The work was not done: the bond was charged and the standing fell.
+ct_q_board,Notice board
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."

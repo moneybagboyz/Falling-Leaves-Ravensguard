@@ -60,7 +60,7 @@ public sealed class TalkSave
             Rumours = [.. rt.Rumours.Values.Select(r => new RumourRowSave
             {
                 Id = r.Id.Value, Source = r.Source.Value, Kind = (byte)r.Kind, TypeId = r.TypeId, TextKey = r.Key, Settlement = r.Settlement, Place = r.Place, Subjects = [.. r.Subjects.Select(s => s.Value)], Severity = r.Severity,
-                BornHour = r.BornHour, ExpiresDay = r.ExpiresDay, LifeDays = r.LifeDays, Interest = r.InterestPm, Number = r.Number, Who = r.Who, About = r.About, Facts = r.FactsMask, Witnesses = r.Witnesses, FromAfar = r.FromAfar, Authored = r.Authored,
+                BornHour = r.BornHour, ExpiresDay = r.ExpiresDay, LifeDays = r.LifeDays, Interest = r.InterestPm, Number = r.Number, Who = r.Who, About = r.About, Facts = (byte)(r.FactsMask | (r.False ? 0x80 : 0)), Witnesses = r.Witnesses, FromAfar = r.FromAfar, Authored = r.Authored,
             })],
             Hearings = [.. hearings],
             Heard = [.. t.Heard.Select(h => new HeroHearingSave
@@ -80,7 +80,7 @@ public sealed class TalkSave
         t.Rumours.Restore(Rumours.Select(r => new Rumour
         {
             Id = new EntityId(r.Id), Source = new EntityId(r.Source), Kind = (RumourKind)r.Kind, TypeId = r.TypeId, Key = r.TextKey, Settlement = r.Settlement, Place = r.Place, Subjects = [.. r.Subjects.Select(s => new EntityId(s))],
-            Severity = r.Severity, BornHour = r.BornHour, ExpiresDay = r.ExpiresDay, LifeDays = r.LifeDays, InterestPm = r.Interest, Number = r.Number, Who = r.Who, About = r.About, FactsMask = r.Facts, Witnesses = r.Witnesses, FromAfar = r.FromAfar, Authored = r.Authored,
+            Severity = r.Severity, BornHour = r.BornHour, ExpiresDay = r.ExpiresDay, LifeDays = r.LifeDays, InterestPm = r.Interest, Number = r.Number, Who = r.Who, About = r.About, FactsMask = (byte)(r.Facts & 0x7F), False = (r.Facts & 0x80) != 0, Witnesses = r.Witnesses, FromAfar = r.FromAfar, Authored = r.Authored,
         }), Hearings.Select(h => (new EntityId(h.Rumour), new Hearing { Listener = h.Listener, Teller = h.Teller, Hour = h.Hour, Hop = h.Hop, Flags = (Distortion)h.Flags, PlaceAlt = h.PlaceAlt, How = (HearHow)h.How, Dropped = h.Dropped })));
         foreach (var h in Heard)
         {

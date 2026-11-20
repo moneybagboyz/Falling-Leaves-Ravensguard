@@ -115,5 +115,11 @@
   {"type": "bark", "id": "combat.7", "key": "B_COMBAT_7", "radius_m": 25, "cooldown_s": 10, "duration_s": 3, "channel": "combat", "conditions": [{"id": "in_combat"}]},
   {"type": "bark", "id": "combat.8", "key": "B_COMBAT_8", "radius_m": 25, "cooldown_s": 10, "duration_s": 3, "channel": "combat", "conditions": [{"id": "in_combat"}]},
   {"type": "bark", "id": "combat.9", "key": "B_COMBAT_9", "radius_m": 25, "cooldown_s": 10, "duration_s": 3, "channel": "combat", "conditions": [{"id": "in_combat"}]},
-  {"type": "bark", "id": "combat.10", "key": "B_COMBAT_10", "radius_m": 25, "cooldown_s": 10, "duration_s": 3, "channel": "combat", "conditions": [{"id": "in_combat"}]}
+  {"type": "bark", "id": "combat.10", "key": "B_COMBAT_10", "radius_m": 25, "cooldown_s": 10, "duration_s": 3, "channel": "combat", "conditions": [{"id": "in_combat"}]},
+  {"type": "bark", "id": "mood.low.a", "key": "B_MOOD_LOW_A", "radius_m": 8, "cooldown_s": 60, "duration_s": 3, "channel": "ambient", "conditions": [{"id": "mood_below", "args": {"value": "-20"}}]},
+  {"type": "bark", "id": "mood.low.b", "key": "B_MOOD_LOW_B", "radius_m": 8, "cooldown_s": 60, "duration_s": 3, "channel": "ambient", "conditions": [{"id": "mood_below", "args": {"value": "-20"}}]},
+  {"type": "bark", "id": "mood.low.c", "key": "B_MOOD_LOW_C", "radius_m": 8, "cooldown_s": 60, "duration_s": 3, "channel": "ambient", "conditions": [{"id": "mood_below", "args": {"value": "-20"}}]},
+  {"type": "bark", "id": "mood.high.a", "key": "B_MOOD_HIGH_A", "radius_m": 8, "cooldown_s": 60, "duration_s": 3, "channel": "ambient", "conditions": [{"id": "mood_above", "args": {"value": "20"}}]},
+  {"type": "bark", "id": "mood.high.b", "key": "B_MOOD_HIGH_B", "radius_m": 8, "cooldown_s": 60, "duration_s": 3, "channel": "ambient", "conditions": [{"id": "mood_above", "args": {"value": "20"}}]},
+  {"type": "bark", "id": "mood.high.c", "key": "B_MOOD_HIGH_C", "radius_m": 8, "cooldown_s": 60, "duration_s": 3, "channel": "ambient", "conditions": [{"id": "mood_above", "args": {"value": "20"}}]}
 ]

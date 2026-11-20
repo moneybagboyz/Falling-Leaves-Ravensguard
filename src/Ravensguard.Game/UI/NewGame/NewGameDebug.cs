@@ -526,6 +526,15 @@ public static class NewGameDebug
                     await Frames(tree, 40);
                     break;
                 }
+            case "workboard":
+            case "workboard_mine":
+                {
+                    // dev (P6-C2): the contracts screen over a made-up board (workboard_mine: on the Taken tab, with the evidence and the pin)
+                    var view = Ravensguard.Game.UI.ContractsScreen.Demo();
+                    router.Push(new Ravensguard.Game.UI.ContractsScreen(router, () => view, new Ravensguard.Game.UI.ContractActions(_ => { }, _ => { }, (_, _) => { }, _ => { }, _ => { }, _ => { }), () => (390_000, 290_000)) { StartMine = what == "workboard_mine" });
+                    await Frames(tree, 40);
+                    break;
+                }
             case "cell":
                 {
                     // dev (P6-C1): the gaol cell of a held hero, with the sentence to expect and the ways out

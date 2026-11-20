@@ -48,6 +48,21 @@ public static class MoodSystem
 
     public static MoodBand Band(int mood, TalkSettingsDef s) => mood < s.MoodLowBelow ? MoodBand.Low : mood > s.MoodHighAbove ? MoodBand.High : MoodBand.Mid;
 
+    /// <summary>P6-C2 (mood in barks): the weather moves the day's mood: rain and frost -8, a storm or a blizzard -12, a fine day or a heatwave nothing (spec 4.5; the numbers are the same for everyone).</summary>
+    public static int Weathered(int mood, string weather, TalkSettingsDef s) => weather switch { "LightRain" or "HeavyRain" or "Rain" or "Frost" or "Snow" => mood - 8, "Thunderstorm" or "Blizzard" or "Storm" => mood - 12, _ => mood };
+
+    /// <summary>P6-C2: a household's open grievances (tax, the lord, crime) weigh on its people: -5 each.</summary>
+    public static int Grieved(int mood, Ravensguard.Sim.Economy.Grievance g, TalkSettingsDef s) => mood - 5 * (((g & Ravensguard.Sim.Economy.Grievance.Tax) != 0 ? 1 : 0) + ((g & Ravensguard.Sim.Economy.Grievance.Lord) != 0 ? 1 : 0) + ((g & Ravensguard.Sim.Economy.Grievance.Crime) != 0 ? 1 : 0));
+
+    /// <summary>P6-C2: the mood a bark reads for a person of the abstract world: the daily mood from needs, the grievances of his house, the weather; and whether he is hungry (a day's food or less at home).</summary>
+    public static (int Mood, bool Hungry) ForBark(Population pop, Ravensguard.Sim.Economy.EconomyState? econ, int person, int day, string weather, TalkSettingsDef s)
+    {
+        int hh = pop.People.Household[person]; int mood = Of(pop, econ, person, day, s);
+        if (econ != null && hh >= 0 && hh < econ.Grievances.Length) mood = Grieved(mood, econ.Grievances[hh], s);
+        bool hungry = econ != null && hh >= 0 && hh < econ.FoodCoverDaysX10.Length && econ.FoodCoverDaysX10[hh] < 10;
+        return (Math.Clamp(Weathered(mood, weather, s), -100, 100), hungry);
+    }
+
     /// <summary>
     /// The mood of a person of the abstract world today, from what the records hold: the household's food cover (3 days and more is fed, under one day hungry), a home, a crowded dwelling
     /// (more people than beds), winter without fuel cover as cold, and a parent or spouse dead within 15 days.

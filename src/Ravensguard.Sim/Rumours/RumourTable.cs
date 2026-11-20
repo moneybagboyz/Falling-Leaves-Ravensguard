@@ -142,6 +142,7 @@ public sealed class RumourTable
         {
             h = M(h, id.Value); h = M(h, r.Source.Value); h = M(h, (ulong)r.Kind); h = M(h, (ulong)(uint)r.Settlement); h = M(h, (ulong)(uint)r.BornHour); h = M(h, (ulong)(uint)r.ExpiresDay);
             h = M(h, (ulong)(uint)r.Number); h = M(h, r.FactsMask); foreach (var c in r.Place) h = M(h, c);
+            if (r.False) h = M(h, 0xFA15EUL);                      // P6-C2: the false flag, only for a lie (so a world with none keeps its hash)
             foreach (var hr in _hearings[id]) { h = M(h, (ulong)(uint)hr.Listener); h = M(h, (ulong)(uint)hr.Teller); h = M(h, (ulong)(uint)hr.Hour); h = M(h, (ulong)(hr.Hop | (byte)hr.Flags << 8 | (byte)hr.How << 16 | (hr.Dropped ? 1 << 24 : 0))); }
         }
         return h;

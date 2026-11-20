@@ -58,6 +58,8 @@ public enum HeroCommandKind : byte
     Disease,
     /// <summary>Appended (P6-C3): rule and income at the barrier ("ru:level|fief|0..3", rent, appoint, dismiss, council, tallage, customs, loan, repay, market, extend, pay, aid), applied by <see cref="Ravensguard.Sim.Rule.RuleDesk"/>.</summary>
     Rule,
+    /// <summary>Appended (P6-C2): the contract board and the fair at the barrier ("ct:take|abandon|report|deliver|pin|enter|bid|slander|answer"), applied by <see cref="Ravensguard.Sim.Contracts.ContractDesk"/>.</summary>
+    Contract,
 }
 
 /// <summary>Where the hero crafts (built on the main thread from what is in reach, copied into the command).</summary>
@@ -516,6 +518,7 @@ public sealed class HeroDesk
                 HeroCommandKind.Justice => Ravensguard.Sim.Law.JusticeDesk.Apply(ctx, c),                       // P6-C1: surrender, plead, bribe the gaoler, judge, the fief's law
                 HeroCommandKind.Disease => Ravensguard.Sim.Disease.DiseaseDesk.Apply(ctx, c),                      // P6-C4: nursing, the physician's call, burning bedding, a quarantine
                 HeroCommandKind.Rule => Ravensguard.Sim.Rule.RuleDesk.Apply(ctx, c),                           // P6-C3: policy, officials, councils, loans, charters
+                HeroCommandKind.Contract => Ravensguard.Sim.Contracts.ContractDesk.Apply(ctx, c),                // P6-C2: take, hand over, pin, enter, bid, speak ill
                 HeroCommandKind.Holdings => Ravensguard.Sim.Holdings.HoldingsDesk.Apply(ctx, c),                // P6-B6: clearing and sowing a claim, whose is this, buy and deliver, installing stations
                 HeroCommandKind.Business or HeroCommandKind.Prospect => Ravensguard.Sim.Production.BusinessDesk.Apply(ctx, c),   // P5-F: businesses, stewards, stalls, prospecting
                 _ => R(c, HeroResultCode.Invalid, T("HERO_UNKNOWN_COMMAND")),

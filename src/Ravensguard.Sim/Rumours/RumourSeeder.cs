@@ -79,7 +79,7 @@ public static class RumourSeeder
                 Id = e.Id, Source = e.Id, Kind = Enum.Parse<RumourKind>(row.Kind), TypeId = row.Id, Key = row.Key, Settlement = afar ? -1 : s,
                 Place = afar ? Data("origin") : w.SettlementNames[s], Subjects = [.. e.Subjects.Take(2)], Severity = (byte)row.Severity, BornHour = (int)Math.Min(e.When.TotalHours, hour),
                 ExpiresDay = entryDay + row.LifeDays, LifeDays = row.LifeDays, InterestPm = row.InterestPm, Number = Int(e, row.NumberKey), Who = Data(row.WhoKey), About = Data(row.AboutKey),
-                Witnesses = [.. wit], FromAfar = afar,
+                Witnesses = [.. wit], FromAfar = afar, False = e.Data.TryGetValue("false", out var fl) && fl == "1",
             };
             if (row.NumberKey.Length == 0) r.FactsMask &= 0b0111;
             ts.Rumours.Add(r); made++;
