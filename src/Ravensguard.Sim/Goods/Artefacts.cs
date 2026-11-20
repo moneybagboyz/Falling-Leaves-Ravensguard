@@ -67,8 +67,11 @@ public static class Artefacts
         r.Flags |= ItemFlags.Named;
         book.Named[item] = new Artefact(name, maker, makerName, nowSec);
         if (chronicle != null && ids != null)
-            chronicle.Add(new ChronicleEntry(ids.Allocate(IdKind.Event), new GameTime(nowSec), ChronicleType, [item, maker], [Why.Of(CauseKind.Trade, "ch_why_artefact_maker", ChronParam.Person("maker", maker))],
+        {
+            var madeBy = Why.Of(CauseKind.Trade, "ch_why_artefact_maker", ChronParam.Person("maker", maker));
+            chronicle.Add(new ChronicleEntry(ids.Allocate(IdKind.Event), new GameTime(nowSec), ChronicleType, [item, maker], [madeBy],
                 new Dictionary<string, string> { ["name"] = name, ["maker"] = makerName, ["maker_id"] = maker.Value.ToString(System.Globalization.CultureInfo.InvariantCulture), ["shape"] = r.Shape }));
+        }
         return name;
     }
 }
