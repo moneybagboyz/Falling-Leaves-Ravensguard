@@ -17,7 +17,8 @@ public static class InputDefs
     static InputDefs()
     {
         const InputContext G = InputContext.Global, W = InputContext.World, C = InputContext.CombatStance,
-            S = InputContext.CalledShot, B = InputContext.Build, U = InputContext.Menu, E = InputContext.BlueprintEditor, T = InputContext.Trade, R = InputContext.Mounted, H = InputContext.Choice;
+            S = InputContext.CalledShot, B = InputContext.Build, U = InputContext.Menu, E = InputContext.BlueprintEditor, T = InputContext.Trade, R = InputContext.Mounted, H = InputContext.Choice,
+            V = InputContext.VehicleDesigner;
 
         // Global
         A(G, "console", Binding.P(Key.Quoteleft)); // physical: the backtick key position on any layout
@@ -251,5 +252,31 @@ public static class InputDefs
         A(E, "save", K(Key.S, Mods.Ctrl));
         A(E, "save_as", K(Key.F2));
         A(E, "close", K(Key.Escape));
+
+        // Vehicle designer (P5-G, overview 6): a standalone context like the blueprint editor, alone with Global
+        A(V, "place", M(MouseButton.Left));
+        A(V, "remove", M(MouseButton.Right));
+        A(V, "zoom_in", K(Key.Equal), M(MouseButton.WheelUp));
+        A(V, "zoom_out", K(Key.Minus), M(MouseButton.WheelDown));
+        A(V, "pan_up", K(Key.Up));
+        A(V, "pan_down", K(Key.Down));
+        A(V, "pan_left", K(Key.Left));
+        A(V, "pan_right", K(Key.Right));
+        A(V, "part_prev", K(Key.Comma));
+        A(V, "part_next", K(Key.Period));
+        A(V, "category_prev", K(Key.Bracketleft));
+        A(V, "category_next", K(Key.Bracketright));
+        A(V, "deck_up", K(Key.Pageup));
+        A(V, "deck_down", K(Key.Pagedown));
+        A(V, "rotate", K(Key.T));
+        A(V, "mirror", K(Key.M));
+        A(V, "undo", K(Key.Z, Mods.Ctrl));
+        A(V, "redo", K(Key.Y, Mods.Ctrl));
+        A(V, "new", K(Key.N, Mods.Ctrl));
+        A(V, "open", K(Key.O, Mods.Ctrl));
+        A(V, "save", K(Key.S, Mods.Ctrl));
+        A(V, "stats_pane", K(Key.Tab));
+        A(V, "build", K(Key.Enter));
+        A(V, "close", K(Key.Escape));
     }
 }

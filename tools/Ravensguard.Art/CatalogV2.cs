@@ -136,6 +136,22 @@ public static class CatalogV2
             }
         }
 
+        // ---- P5-G (vehicle-designer 6): the river boats' templates (east, north, south) and every vehicle part in four drawn views and four baked diagonals, for designed vehicles
+        var vp = new VehicleParts(pal);
+        foreach (var bs in VehicleParts.Boats)
+        {
+            var spec = bs; var (bw, bh) = VehicleParts.Size(spec); var (nw2, nh2) = VehicleParts.SizeNS(spec);
+            l.Add(new SpriteDef("vehicle." + spec.Id, SpriteKind.Object, "vehicles_32", "vehicles", bw, bh, () => vp.Boat(spec)));
+            l.Add(new SpriteDef($"vehicle.{spec.Id}.n", SpriteKind.Object, "vehicles_32", "vehicles", nw2, nh2, () => vp.BoatNS(spec, true)));
+            l.Add(new SpriteDef($"vehicle.{spec.Id}.s", SpriteKind.Object, "vehicles_32", "vehicles", nw2, nh2, () => vp.BoatNS(spec, false)));
+        }
+        foreach (var part in VehicleParts.Parts)
+        {
+            string id = part;
+            foreach (var v in VehicleParts.Views) { string vv = v; l.Add(new SpriteDef($"vpart.{id}.{vv}", SpriteKind.Object, "vparts_32", "vehicle_parts", VehicleParts.Cell, VehicleParts.Cell, () => vp.Draw(id, vv))); }
+            foreach (var v in VehicleParts.Diagonals) { string vv = v; l.Add(new SpriteDef($"vpart.{id}.{vv}", SpriteKind.Object, "vparts_32", "vehicle_parts", VehicleParts.Diag, VehicleParts.Diag, () => vp.Draw(id, vv))); }
+        }
+
         AddMinis(l, pal, g, t);
     }
 

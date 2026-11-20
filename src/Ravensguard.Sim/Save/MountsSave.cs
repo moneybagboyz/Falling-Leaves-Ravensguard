@@ -114,6 +114,8 @@ public sealed class MountsSave
     [Key(22)] public string[] PartTable { get; set; } = [];
     /// <summary>P5-G: vehicle sites, commissions and voyages (absent while there are none).</summary>
     [Key(23)] public VehicleWorksSave? Works { get; set; }
+    /// <summary>P5-G: the breed ids the animal rows' <see cref="AnimalRowSave.Breed"/> index, in their order when saved (empty in an older save: the content's own order then).</summary>
+    [Key(24)] public string[] BreedTable { get; set; } = [];
 
     /// <summary>The Phase 3 templates in their index order (ordinal id order of the seven): an older save's <see cref="VehicleRowSave.Template"/>.</summary>
     public static readonly string[] LegacyTemplates = ["cart", "covered_wagon", "handcart", "hay_wain", "ox_wagon", "sledge", "wheelbarrow"];
@@ -130,6 +132,7 @@ public sealed class MountsSave
             });
         var cat = b.Templates;
         if (b.Vehicles.Rows.Count > 0) o.PartTable = [.. cat.PartList.Select(p => p.Id)];
+        if (b.Animals.Count > 0) o.BreedTable = [.. b.Breeds.All.Select(x => x.Id)];
         foreach (var v in b.Vehicles.Rows)
         {
             var rows = b.Hosted ? [] : v.Cargo.Rows();       // a hosted bed is saved with the economy's other stores
@@ -159,9 +162,12 @@ public sealed class MountsSave
     private RideBook Restore(RideBook b, Construction.DesignBook? designs)
     {
         if (designs != null) b.AttachDesigns(designs);
+        // P5-G: the breeds by name (a breed added to the content never shifts a save's animals); an older save has no table and keeps the indices
+        var breedMap = new int[BreedTable.Length];
+        for (int i = 0; i < BreedTable.Length; i++) breedMap[i] = b.Breeds.Find(BreedTable[i])?.Index ?? throw new SaveException($"This save has an animal of the breed '{BreedTable[i]}' the game content no longer has.");
         b.Animals.Restore(Animals.Select(r => new Animal
         {
-            Id = new EntityId(r.Id), Breed = r.Breed, Sex = r.Sex, BirthDay = r.BirthDay, Owner = new EntityId(r.Owner), MassKg = r.MassKg, TrainedPm = r.TrainedPm, Temper = r.Temper, StaminaU = r.StaminaU, FatigueU = r.FatigueU,
+            Id = new EntityId(r.Id), Breed = BreedTable.Length > 0 ? breedMap[r.Breed] : r.Breed, Sex = r.Sex, BirthDay = r.BirthDay, Owner = new EntityId(r.Owner), MassKg = r.MassKg, TrainedPm = r.TrainedPm, Temper = r.Temper, StaminaU = r.StaminaU, FatigueU = r.FatigueU,
             FeedCenti = r.FeedCenti, WaterPpm = r.WaterPpm, ThirstHours = r.ThirstHours, Shoes = (ushort[])r.Shoes.Clone(), ShoeWearU = r.ShoeWearU, Lameness = r.Lameness, LameDays = r.LameDays, Lame3Days = r.Lame3Days, LameHardMm = r.LameHardMm,
             HealthPm = r.HealthPm, State = (AnimalState)r.State, Stable = r.Stable, Saddled = r.Saddled, Winded = r.Winded, XMm = r.XMm, YMm = r.YMm, OdometerMm = r.OdometerMm, ForcedWindow = r.ForcedWindow, HerdSettlement = r.HerdSettlement,
             Vehicle = new EntityId(r.Vehicle), LastDay = r.LastDay,

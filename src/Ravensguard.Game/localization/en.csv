@@ -3279,6 +3279,167 @@ cf_ui_other_piece,Other piece
 cf_ui_expected,"Expected: {0}"
 cf_ui_tip_edge,"Edge {0}% of the {1}'s best"
 cf_ui_tip_protection,"Protection x{0} ({1})"
+ACTION_VEHICLEDESIGNER_PLACE,Place the part
+ACTION_VEHICLEDESIGNER_REMOVE,Remove the top part
+ACTION_VEHICLEDESIGNER_ZOOM_IN,Zoom in
+ACTION_VEHICLEDESIGNER_ZOOM_OUT,Zoom out
+ACTION_VEHICLEDESIGNER_PAN_UP,Pan up
+ACTION_VEHICLEDESIGNER_PAN_DOWN,Pan down
+ACTION_VEHICLEDESIGNER_PAN_LEFT,Pan left
+ACTION_VEHICLEDESIGNER_PAN_RIGHT,Pan right
+ACTION_VEHICLEDESIGNER_PART_PREV,Previous part
+ACTION_VEHICLEDESIGNER_PART_NEXT,Next part
+ACTION_VEHICLEDESIGNER_CATEGORY_PREV,Previous category
+ACTION_VEHICLEDESIGNER_CATEGORY_NEXT,Next category
+ACTION_VEHICLEDESIGNER_DECK_UP,Deck up
+ACTION_VEHICLEDESIGNER_DECK_DOWN,Deck down
+ACTION_VEHICLEDESIGNER_ROTATE,Turn the preview
+ACTION_VEHICLEDESIGNER_MIRROR,Mirror the design
+ACTION_VEHICLEDESIGNER_UNDO,Undo
+ACTION_VEHICLEDESIGNER_REDO,Redo
+ACTION_VEHICLEDESIGNER_NEW,New design
+ACTION_VEHICLEDESIGNER_OPEN,Open a design
+ACTION_VEHICLEDESIGNER_SAVE,Save the design
+ACTION_VEHICLEDESIGNER_STATS_PANE,Show or hide the stats
+ACTION_VEHICLEDESIGNER_BUILD,Build this
+ACTION_VEHICLEDESIGNER_CLOSE,Close the designer
+OVERLAY_VEHICLE_DESIGNER,Designer
+RIDE_BOARDED,You step into the boat.
+RIDE_LANDED,You step ashore.
+vd_title,Vehicle designer
+vd_name,Name of the design
+vd_new,New
+vd_open,Open
+vd_save,Save
+vd_build,Build this
+vd_close,Close
+vd_deck_up,Deck up
+vd_deck_down,Deck down
+vd_rotate,Turn
+vd_mirror,Mirror
+vd_undo,Undo
+vd_redo,Redo
+vd_resize,"Grow or shrink the grid (W across, L along)"
+vd_deck,"Deck {0} of {1}, {2} x {3} m"
+vd_front,front
+vd_preview_hint,{0} turns it an eighth
+vd_stats_pane,Stats
+vd_stats_hidden,Stats hidden
+vd_status,"Part: {0}.  {1} places it on a cell, {2} takes the top part off."
+vd_cat_frame,Frame
+vd_cat_wheels,Wheels and axles
+vd_cat_hitch,Hitch
+vd_cat_cargo,Cargo
+vd_cat_seats,Seats
+vd_cat_hull,Hull
+vd_cat_steering,Steering
+vd_cat_sail,Sail and oars
+vd_cat_cover,Cover
+vd_cat_workstations,Workstations
+vd_st_mass,Mass {0} kg; cargo {1} kg / {2} L
+vd_st_crew,"Driver {0}, passengers {1}, seats {2}, rowers {3}"
+vd_st_pull,"Pull needed: {0} N on dry road ({1}), {2} N in mud ({3}); {4}"
+vd_st_radius,"Turning radius {0} m; axle limit {1} kg, full load {2}%"
+vd_st_speeds,With {0} {1}: {2} m/s
+vd_st_draft,"Draft {0} mm empty, {1} mm full; freeboard {2} mm; GM {3} mm, {4}"
+vd_st_boat_speeds,"Speed: rowed {0:0.0}, poled {1:0.0}, towed {2:0.0}, downstream {3:0.0} m/s"
+vd_st_river,"Loaded, it floats in a {0} or deeper"
+vd_st_river_none,"Loaded, it floats in no river here"
+vd_st_ok,Ready to build.
+vd_river_brook,brook
+vd_river_stream,stream
+vd_river_river,river
+vd_river_great_river,great river
+vd_gm_steady,steady
+vd_gm_tender,tender
+vd_gm_capsize,will capsize
+vd_beast_ox,ox
+vd_beasts_ox,oxen
+vd_beast_horse_draught,draught horse
+vd_beasts_horse_draught,draught horses
+vd_beast_none,people
+vd_beasts_none,people
+vd_issue_empty,No parts yet.
+vd_issue_legend_key,A legend key must be one character.
+vd_issue_unknown_part,Unknown part {0}.
+vd_issue_unknown_key,A cell uses an unknown key.
+vd_issue_row_width,Rows of different widths.
+vd_issue_unsupported,{0} has nothing under it to stand on.
+vd_issue_no_frame,A cell has no frame under its parts.
+vd_issue_hitch_max,The hitch takes fewer animals than one team.
+vd_issue_no_pull_point,Animals pull it but it has no {0} to pull by.
+vd_issue_pushed_only,With no hitch it must be pushed.
+vd_issue_no_seat,A driven vehicle needs a seat.
+vd_issue_no_seat_passengers,It carries {0} passengers but has no seat.
+vd_issue_unpaired_wheel,{0} wheels: wheels come in pairs on an axle.
+vd_issue_axles_short,Too few axles for the wheels ({0}).
+vd_issue_no_steering,"Nothing steers it: a pole or a pivoting axle on a four-wheeler, a rudder, a steering oar or oars on a boat."
+vd_issue_hull_gap,A gap in the hull planking: it leaks.
+vd_issue_capsizes,It capsizes (GM {0} mm).
+vd_issue_swamps_full,Fully loaded it swamps (freeboard {0} mm).
+vd_issue_tender,Tender (GM {0} mm): it may capsize in beam seas.
+vd_issue_too_deep,Too deep for the river here ({0} mm).
+vd_issue_no_power,Nothing moves it on the water.
+vd_place_outofgrid,Outside the grid.
+vd_place_unknownpart,Unknown part.
+vd_place_needsbelow,It needs its support under it first.
+vd_place_full,That cell is full.
+vd_open_player,{0} (yours)
+vd_need_name,Give the design a name first.
+vd_saved,{0} saved to this game and to your designs.
+vd_saved_disk,{0} saved to your designs.
+vd_cannot_build,Not while the design has errors (in red).
+vd_no_world,Only in a game.
+vd_build_ordered,{0}: the frame is laid out beside you. Bring the parts and work on it.
+vd_design_saved,Design {0} saved.
+vd_design_saved_invalid,Design {0} saved; it cannot be built while it has errors.
+vd_site_ordered,The {0} is laid out: every part still to make and fit.
+vd_part_deposited,The part is on the pile.
+vd_site_finished,Finished: it is ready to move.
+vd_site_waits_part,You fitted what was there ({0} h); the next part is not made yet.
+vd_site_worked,{0} hours of work on it.
+vd_crew_joined,They join the work.
+vd_crew_left,They leave the work.
+vd_site_paused,Work stopped.
+vd_site_resumed,Work goes on.
+vd_commissioned,"Commissioned: {0} mites in all, the parts' half now."
+vd_collected,You take the {0} from the yard.
+vd_repaired,Mended ({0} h of work).
+vd_launched,Launched: {0} minutes to run her down the slipway.
+vd_voyage_started,Under way: about {0} hours.
+vd_no_ok,Done.
+vd_no_nodesign,No such design.
+vd_no_invalid,That design has errors.
+vd_no_notyours,Not yours to work on.
+vd_no_nopart,No such part.
+vd_no_wrongpart,That part is not wanted here.
+vd_no_finished,It is finished.
+vd_no_notfinished,The hull is not finished.
+vd_no_needshands,It takes four people or a team to launch her.
+vd_no_nomaker,Nobody here can make every part.
+vd_no_cannotafford,You cannot afford it.
+vd_no_nothere,Collect it in person at the yard.
+vd_no_notready,Not ready yet.
+vd_no_nomaterials,You lack the materials for the repair.
+vd_no_afloat,She is already afloat.
+vd_no_notaboat,That is not a boat.
+vd_q_head,Vehicles
+vd_q_design,Design a vehicle
+vd_q_design_this,Open in the designer
+vd_q_inspect,Inspect the {0}
+vd_q_work,Work on the {0} for an hour
+vd_q_repair,Repair the {0}
+vd_q_launch,Launch her
+vd_inspect_line,Mass {0} kg; load {1} of {2} kg; team {3} of {4}
+vd_inspect_part,"{0}: {1} whole, {2} broken, {3} to fit; worst {4}%"
+vd_inspect_wanted,Still wanted: {0}
+vd_hud_boat1,"Water {0} m/s, current {1}, over ground {2} m/s"
+vd_hud_boat2,"Draft {0} mm, freeboard {1} mm; {2} (GM {3} mm)"
+vd_hud_boat3,Under the keel {0} mm; load {1} of {2} kg
+vd_hud_aground,"Aground: unload, pole off, or wait for high water."
+vd_hud_low,Low in the water: waves come in.
+vd_hud_broken,A wheel or an axle is broken: it will not move until it is mended or replaced.
+vd_hud_stuck,"Stuck in the mud! {0} push, {1} unload, {2} dig, {3} another team."
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."
