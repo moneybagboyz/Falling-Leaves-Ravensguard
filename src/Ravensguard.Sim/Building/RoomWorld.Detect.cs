@@ -23,6 +23,8 @@ public sealed partial class RoomWorld
         var purposes = new SortedSet<ushort>();
         var doors = new SortedDictionary<long, bool>();
         var walls = new HashSet<long>();
+        var windows = new HashSet<long>();
+        var doorTags = new HashSet<string>(StringComparer.Ordinal);
         long floorValue = 0, furnValue = 0, wallValue = 0;
         var stations = new SortedDictionary<string, int>(StringComparer.Ordinal);
         for (int i = 0; i < cells.Count; i++)
@@ -46,7 +48,8 @@ public sealed partial class RoomWorld
                 var nk = Key(nx, ny, z);
                 if (!_cells.TryGetValue(nk, out var nc) || nc.Structure == null || nc.Structure.Kind == PieceKind.Ground) { enclosed = false; continue; }
                 var kind = nc.Structure.Kind;
-                if (kind == PieceKind.Door && !doors.ContainsKey(nk)) doors[nk] = IsExteriorDoor(nx, ny, z);
+                if (kind == PieceKind.Door && !doors.ContainsKey(nk)) { doors[nk] = IsExteriorDoor(nx, ny, z); foreach (var dt in nc.Structure.Tags) doorTags.Add(dt); }
+                if (kind == PieceKind.Window) windows.Add(nk);
                 if (kind is PieceKind.Wall or PieceKind.Window or PieceKind.Door or PieceKind.Post && walls.Add(nk)) wallValue += nc.Structure.ValueMites;
                 if (PieceCatalog.IsRoomKind(kind))
                 {
@@ -72,9 +75,11 @@ public sealed partial class RoomWorld
         room.DeclaredPurposes = purposes.Select(p => _purposes[p]).OrderBy(s => s, StringComparer.Ordinal).ToList();
         room.Stations = stations;
         room.ValuePerM2 = (int)((furnValue + (floorValue + wallValue) / 2) / area);
+        var (blen, bwid) = RoomShape.Box(cells.Select(k => { var (cx, cy, _) = Unpack(k); return (cx, cy); }));
+        room.Shape = new RoomShape(blen, bwid, windows.Count, doors.Count, doorTags);
         room.Matches = _types.Where(t => Satisfies(t, room)).ToList();
         var primary = room.Primary;
-        if (primary?.StorageKind != null) { room.StorageKind = primary.StorageKind; room.StorageL = (long)area * LitresPerM2; }
+        if (primary?.StorageKind != null) { room.StorageKind = primary.StorageKind; room.StorageL = (long)area * (primary.StorageLitresPerM2 > 0 ? primary.StorageLitresPerM2 : LitresPerM2); }
         room.PurposeGaps = Gaps(room);
         return room;
     }
@@ -107,7 +112,7 @@ public sealed partial class RoomWorld
         if (t.MinValue > 0 && r.ValuePerM2 < t.MinValue) return false;
         foreach (var q in t.Requires)
             if (r.Tags.GetValueOrDefault(q.Tag) < q.Min) return false;
-        return true;
+        return RoomRules.Extra(t, r.Area, r.Tags, r.Shape);
     }
 
     /// <summary>Spec 4.6: what the best candidate type for the declared purpose still lacks.</summary>
@@ -115,7 +120,10 @@ public sealed partial class RoomWorld
     {
         if (r.DeclaredPurposes.Count != 1 || r.PurposeMatches) return [];
         string[]? best = null;
-        foreach (var t in _types.Where(t => BuildingLibrary.PurposeMatches(r.DeclaredPurposes[0], t.Purpose)))
+        // P7-LB2: a purpose a small type can deliver is reported against the small types (a bare storeroom lacks storage, not warehouse bays); the large types answer only where no small type does
+        var cands = _types.Where(t => BuildingLibrary.PurposeMatches(r.DeclaredPurposes[0], t.Purpose)).ToList();
+        if (cands.Any(t => !t.Large)) cands.RemoveAll(t => t.Large);
+        foreach (var t in cands)
         {
             var gaps = new SortedSet<string>(StringComparer.Ordinal);
             foreach (var q in t.Requires) if (r.Tags.GetValueOrDefault(q.Tag) < q.Min) gaps.Add(q.Tag);

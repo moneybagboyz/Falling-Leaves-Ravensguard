@@ -52,6 +52,7 @@ public static class BlueprintWriter
         if (!string.IsNullOrEmpty(meta.Style)) head.Append(", \"style\": ").Append(Q(meta.Style));
         if (!string.IsNullOrEmpty(meta.Dwelling)) head.Append(", \"dwelling\": ").Append(Q(meta.Dwelling));
         if (meta.Cultures.Count > 0) head.Append(", \"cultures\": [").Append(string.Join(", ", meta.Cultures.Select(Q))).Append(']');   // P5-C: the plan library's culture filter
+        if (meta.PowerW > 0) head.Append(", \"power_w\": ").Append(meta.PowerW);   // P7-LB2: the watts a powered plan's machines need (the writer used to drop it)
         head.Append(',');
 
         // each property is a block of lines; the last block closes the object

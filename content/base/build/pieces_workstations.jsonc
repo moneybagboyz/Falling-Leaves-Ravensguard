@@ -22,7 +22,7 @@
     "build": { "skill": "carpentry", "worker_hours": 6, "tools": [{ "quality": "sawing" }], "materials": [{ "good": "timber_planks", "kg": 45 }, { "good": "nails", "kg": 0.3 }], "hp": 100, "salvage_pm": 700 } },
   { "type": "build_piece", "id": "saddle_tree",    "name": "Saddle tree",      "kind": "workstation", "glyph": "Y", "material": "oak",         "station": "tanning", "kg": 30,
     "build": { "skill": "carpentry", "worker_hours": 6, "tools": [{ "quality": "sawing" }], "materials": [{ "good": "timber_planks", "kg": 20 }, { "good": "logs", "kg": 12 }], "hp": 80, "salvage_pm": 700 } },
-  { "type": "build_piece", "id": "bloomery",       "name": "Bloomery",         "kind": "workstation", "glyph": "B", "material": "granite",     "station": "smithing", "kg": 1200,
+  { "type": "build_piece", "id": "bloomery",       "name": "Bloomery",         "kind": "workstation", "glyph": "B", "material": "granite",     "station": "smithing", "tags": ["bloomery"], "kg": 1200,
     "build": { "skill": "masonry", "worker_hours": 40, "materials": [{ "good": "stone_raw", "kg": 900 }, { "good": "clay", "kg": 300 }], "hp": 900, "salvage_pm": 500, "rain_stops": true } },
   { "type": "build_piece", "id": "cupel_hearth",   "name": "Cupel hearth",     "kind": "workstation", "glyph": "H", "material": "fired_brick", "station": "smithing", "kg": 400,
     "build": { "skill": "masonry", "worker_hours": 16, "materials": [{ "good": "bricks", "kg": 350 }, { "good": "clay", "kg": 60 }], "hp": 500, "salvage_pm": 600, "rain_stops": true } },

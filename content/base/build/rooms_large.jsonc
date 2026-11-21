@@ -1,0 +1,20 @@
+// P7-LB2 (large-buildings 4.4): the eleven large room types, appended after rooms.jsonc. Each has a priority above the small room it would otherwise read as, and the purpose of that small room where there is
+// one (so a plan declares "work:smithing" and the detector may read it as a hammer mill), a new purpose where there is none. The geometry rules (min_length, min_width, max_width, light_per_m2, door_tag, max_doors,
+// min_station_count) are read by both detectors (Building/RoomShape.cs).
+[
+  // a hall: 120 m2 and more under one roof, six stations of one family, a window or lamp for every 20 m2 (the manufactory hall's crowding floor 3 m2 and span +4 are in Production/Works/Halls.cs)
+  { "type": "room_type", "large": true, "id": "manufactory_hall", "name": "Manufactory hall", "purpose": "work:manufactory", "priority": 62, "min_area": 120, "light_per_m2": 20, "min_station_count": 6 },
+  { "type": "room_type", "large": true, "id": "hammer_mill",   "name": "Hammer mill",   "purpose": "work:smithing", "priority": 64, "min_area": 12, "requires": [{ "tag": "trip_hammer" }, { "tag": "station:smithing" }] },
+  { "type": "room_type", "large": true, "id": "fulling_mill",  "name": "Fulling mill",  "purpose": "work:weaving",  "priority": 64, "min_area": 12, "requires": [{ "tag": "fulling_stocks" }, { "tag": "station:weaving" }] },
+  { "type": "room_type", "large": true, "id": "saw_mill",      "name": "Saw mill",      "purpose": "work:sawing",   "priority": 64, "min_area": 12, "requires": [{ "tag": "sawing_machine" }] },
+  { "type": "room_type", "large": true, "id": "furnace_house", "name": "Furnace house", "purpose": "work:smithing", "priority": 66, "min_area": 12, "requires": [{ "tag": "great_bellows" }, { "tag": "bloomery" }] },
+  { "type": "room_type", "large": true, "id": "stamp_mill",    "name": "Stamp mill",    "purpose": "work:crushing", "priority": 64, "min_area": 12, "requires": [{ "tag": "stamp_battery" }, { "tag": "dressing_floor" }] },
+  // a covered or open-sided walk, 60 m or more long and 3 to 6 m wide, with a rope wheel and a traveller
+  { "type": "room_type", "large": true, "id": "ropewalk",      "name": "Ropewalk",      "purpose": "work:ropemaking", "priority": 64, "enclosed": false, "min_area": 180, "min_length": 60, "min_width": 3, "max_width": 6, "requires": [{ "tag": "rope_wheel" }, { "tag": "rope_traveller" }] },
+  // storage: a warehouse stacks 1,500 litres a m2, a granary depot is a raised one-door grain house
+  { "type": "room_type", "large": true, "id": "warehouse",     "name": "Warehouse",     "purpose": "storage", "storage_kind": "warehouse", "storage_litres_per_m2": 1500, "priority": 26, "min_area": 60, "requires": [{ "tag": "warehouse_bay", "min": 6 }] },
+  { "type": "room_type", "large": true, "id": "granary_depot", "name": "Granary depot", "purpose": "storage", "storage_kind": "grain", "priority": 27, "min_area": 80, "max_doors": 1, "requires": [{ "tag": "granary_bin", "min": 4 }, { "tag": "staddle_floor" }] },
+  // kit and men: a lockable room with stands or racks, and a room of bunks with a rack (the hearth in the building is checked by the barracks' upkeep)
+  { "type": "room_type", "large": true, "id": "armoury",       "name": "Armoury",       "purpose": "armoury", "priority": 57, "min_area": 20, "door_tag": "lockable", "requires": [{ "tag": "arms_store", "min": 2 }] },
+  { "type": "room_type", "large": true, "id": "barracks",      "name": "Barracks",      "purpose": "barracks", "priority": 58, "min_area": 24, "requires": [{ "tag": "bunk", "min": 4 }, { "tag": "weapon_rack" }] }
+]

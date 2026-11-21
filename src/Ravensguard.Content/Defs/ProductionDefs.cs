@@ -92,6 +92,8 @@ public sealed record BusinessDef : ContentDef
     public int LabourPm { get; init; } = 1000;
     /// <summary>P7-LB1: the worker-hours in permille while the premises' machines are powered (a saw mill's gang saw: 125); 0: no machine changes it.</summary>
     public int PoweredLabourPm { get; init; }
+    /// <summary>P7-LB2: a kind loaded after every ordinary kind and every stage kind (by id among the late ones), so adding it moves no earlier business-kind index (the loader sorts the rest by id).</summary>
+    public bool Late { get; init; }
 }
 
 /// <summary>

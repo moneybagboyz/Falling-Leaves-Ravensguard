@@ -39,6 +39,8 @@ public sealed class RecipeBook
         "oven", "mill_stones", "malt_floor", "brew_vat", "butcher_block", "cheese_press", "salting_tub", "spinning_wheel", "loom", "fulling_tub", "dye_vat",
         "tailor_bench", "tan_pit", "cobbler_bench", "saddle_tree", "charcoal_clamp", "bloomery", "forge", "anvil", "cupel_hearth", "saw_pit", "brick_clamp", "kiln",
         "lime_kiln", "mason_yard", "barrel_bench", "wheelwright_bay", "work_bench", "candle_table",
+        // P7-LB2: the ropewalk and the stamp battery
+        "rope_walk", "stamp_battery",
     ];
 
     public const int WageUnskilledPerHour = ItemMath.WageUnskilled, WageSkilledPerHour = ItemMath.WageSkilled, WageMasterPerHour = ItemMath.WageMaster;

@@ -85,6 +85,8 @@ public sealed class RoomV2
     public int Beds { get; internal set; }
     public List<RoomDoor> Doors { get; internal set; } = [];
     public bool HasExteriorDoor => Doors.Any(d => d.Exterior);
+    /// <summary>P7-LB2: the bounding box, the windows and the doors with their tags, for the large room types' rules.</summary>
+    public RoomShape Shape { get; internal set; }
     public List<RoomTypeDef> Matches { get; internal set; } = [];
     public RoomTypeDef? Primary => Matches.Count > 0 ? Matches[0] : null;
     public List<string> DeclaredPurposes { get; internal set; } = [];

@@ -79,7 +79,7 @@ public sealed class ProductionContent
         var book = RecipeBook.Build(db, cat);
         var ext = Extraction.Load(db, cat);
         var kinds = new List<BusinessKind>();
-        foreach (var d in db.All<BusinessDef>().OrderBy(b => b.Id, StringComparer.Ordinal))
+        BusinessKind Make(BusinessDef d)
         {
             var k = new BusinessKind { Index = (ushort)kinds.Count, Id = d.Id, Trader = d.Trader, Salaried = d.Salaried || d.Trader, OwnerOccupation = Enum.Parse<Occupation>(d.OwnerOccupation), FoundedOnly = d.FoundedOnly, LabourPm = Math.Clamp(d.LabourPm, 1, 1000), PoweredLabourPm = Math.Clamp(d.PoweredLabourPm, 0, 1000) };
             if (d.LotUse.Length > 0) k.Lot = Enum.Parse<LotUse>(d.LotUse);
@@ -89,8 +89,9 @@ public sealed class ProductionContent
             k.Recipes = [.. d.Recipes.Select(id => book.TryGet(id, out var r) ? r : throw new InvalidDataException($"business '{d.Id}': unknown recipe '{id}'"))];
             foreach (var r in k.Recipes) if (!k.Stations.Any(s => s.Kind == r.Station)) throw new InvalidDataException($"business '{d.Id}': recipe '{r.Id}' needs a '{r.Station}' station it does not have");
             k.Extractions = [.. d.Extractions.Select(id => ext.FirstOrDefault(e => e.Id == id) ?? throw new InvalidDataException($"business '{d.Id}': unknown extraction '{id}'"))];
-            kinds.Add(k);
+            return k;
         }
+        foreach (var d in db.All<BusinessDef>().Where(b => !b.Late).OrderBy(b => b.Id, StringComparer.Ordinal)) kinds.Add(Make(d));
         var industry = Industry.IndustryContent.Load(db, cat);
         foreach (var sk in industry.Stages)
         {
@@ -98,6 +99,8 @@ public sealed class ProductionContent
             var bk = new BusinessKind { Index = (ushort)kinds.Count, Id = sk.Id, OwnerOccupation = Occupation.Lord, FoundedOnly = true, Stage = sk, Slots = [(sk.Primary, sk.Tiers[^1].CrewMax, sk.Wage)] };
             sk.Business = bk; kinds.Add(bk);
         }
+        // P7-LB2: the large buildings' kinds come last (by id), so adding them moves no earlier index
+        foreach (var d in db.All<BusinessDef>().Where(b => b.Late).OrderBy(b => b.Id, StringComparer.Ordinal)) kinds.Add(Make(d));
         var cfg = db.All<ResourceSettingsDef>().OrderBy(x => x.Id, StringComparer.Ordinal).FirstOrDefault() ?? new ResourceSettingsDef { Id = "resources" };
         var scale = db.All<ScaleSettingsDef>().OrderBy(x => x.Id, StringComparer.Ordinal).FirstOrDefault() ?? new ScaleSettingsDef { Id = "default" };
         foreach (var r in book.Recipes) r.Grades = GradesFor(scale, r);

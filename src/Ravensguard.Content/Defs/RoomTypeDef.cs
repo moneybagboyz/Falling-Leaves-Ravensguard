@@ -34,4 +34,23 @@ public sealed record RoomTypeDef : ContentDef
     public bool DwellingPart { get; init; }
     /// <summary>The lowest level the room may stand on (null = any). A loft is above the ground floor (min_z 1), so a ground-floor sleeping room with a ladder up stays a bedroom.</summary>
     public int? MinZ { get; init; }
+
+    // P7-LB2 (large-buildings 4.4): append-only geometry rules for the large buildings; every default leaves the rule off, so no earlier type changes.
+    /// <summary>The longer side of the room's bounding box must be at least this many metres (0 = none).</summary>
+    public int MinLength { get; init; }
+    /// <summary>The shorter side of the bounding box at least / at most this (0 = none).</summary>
+    public int MinWidth { get; init; }
+    public int MaxWidth { get; init; }
+    /// <summary>One window or lamp (a piece tagged <c>lamp</c>) on the room's edge or inside it for every this many m2, rounded down, at least 1 (0 = none).</summary>
+    public int LightPerM2 { get; init; }
+    /// <summary>A door of the room must carry this tag (a lockable door); null = none.</summary>
+    public string? DoorTag { get; init; }
+    /// <summary>At most this many doors on the room's edge (0 = no limit).</summary>
+    public int MaxDoors { get; init; }
+    /// <summary>Some craft station (<c>station:x</c> tag) must appear at least this many times in the room (0 = none).</summary>
+    public int MinStationCount { get; init; }
+    /// <summary>Litres of storage a m2 of the room holds (0 = the default 1,000; a warehouse stacks to 1,500).</summary>
+    public int StorageLitresPerM2 { get; init; }
+    /// <summary>One of the large buildings' types: when a declared purpose can also be met by a small room type, the purpose-gap report names the small type's gaps (a bare storeroom lacks a "storage" piece, not warehouse bays).</summary>
+    public bool Large { get; init; }
 }
