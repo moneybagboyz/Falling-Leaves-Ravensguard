@@ -33,7 +33,7 @@ public sealed partial class ContinentTrade
         EdgeTrade? Any() { foreach (var e in rl.Edges) if (!st.Summaries[e.Neighbour].Detailed) return e; return null; }
         foreach (var b in _books())
         {
-            if (b.Merchants.Count == 0) continue;
+            if (b.Merchants.Count == 0 || b.Blockaded) continue;
             MarketParty? m = null; long best = -1;
             foreach (var x in b.Merchants) { long c = led.Balance(x.Purse).Mites; if (c > best) { best = c; m = x; } }
             if (m == null) continue;

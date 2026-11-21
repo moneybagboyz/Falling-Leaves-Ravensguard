@@ -95,6 +95,8 @@ public sealed class MarketBook
     private readonly List<BuyOrder> _orders = [];
     public List<MarketParty> Merchants { get; } = [];
     public List<ImportRequest> ImportRequests { get; } = [];
+    /// <summary>P7-EA1 (army-economy 4.8): a besieged town's book takes no imports and sends no exports (caravans, the regional carters and the export desk skip it). Set by <c>HostSupply.SiegeBlockade</c>; saved in the <c>warsupply</c> section, not here.</summary>
+    public bool Blockaded { get; set; }
     /// <summary>Open minutes: sessions run at hours open..close-1.</summary>
     public bool IsOpen(int hour) => hour >= Money.MarketOpenHour && hour < Money.MarketCloseHour;
 

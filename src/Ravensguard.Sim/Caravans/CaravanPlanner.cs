@@ -89,7 +89,7 @@ public sealed partial class ContinentTrade
         if (rl.Edges.Count == 0) return;
         foreach (var b in _books())
         {
-            if (b.Merchants.Count == 0 || !IsMainBook(b)) continue;
+            if (b.Merchants.Count == 0 || b.Blockaded || !IsMainBook(b)) continue;
             foreach (var m in b.Merchants)
             {
                 var biz = _ew.Production.ById(m.Id);
