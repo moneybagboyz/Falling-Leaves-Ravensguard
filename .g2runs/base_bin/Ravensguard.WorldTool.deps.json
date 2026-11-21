@@ -1,0 +1,106 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v10.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v10.0": {
+      "Ravensguard.WorldTool/1.0.0": {
+        "dependencies": {
+          "Ravensguard.Content": "1.0.0",
+          "Ravensguard.Sim": "1.0.0"
+        },
+        "runtime": {
+          "Ravensguard.WorldTool.dll": {}
+        }
+      },
+      "MessagePack/3.1.12": {
+        "dependencies": {
+          "MessagePack.Annotations": "3.1.12",
+          "Microsoft.NET.StringTools": "17.11.4"
+        },
+        "runtime": {
+          "lib/net9.0/MessagePack.dll": {
+            "assemblyVersion": "3.1.12.0",
+            "fileVersion": "3.1.12.0"
+          }
+        }
+      },
+      "MessagePack.Annotations/3.1.12": {
+        "runtime": {
+          "lib/netstandard2.0/MessagePack.Annotations.dll": {
+            "assemblyVersion": "3.1.12.0",
+            "fileVersion": "3.1.12.0"
+          }
+        }
+      },
+      "Microsoft.NET.StringTools/17.11.4": {
+        "runtime": {
+          "lib/net8.0/Microsoft.NET.StringTools.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "17.11.4.40609"
+          }
+        }
+      },
+      "Ravensguard.Content/1.0.0": {
+        "runtime": {
+          "Ravensguard.Content.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      },
+      "Ravensguard.Sim/1.0.0": {
+        "dependencies": {
+          "MessagePack": "3.1.12",
+          "Ravensguard.Content": "1.0.0"
+        },
+        "runtime": {
+          "Ravensguard.Sim.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "Ravensguard.WorldTool/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "MessagePack/3.1.12": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-m1QEsd59gUj82ji5tEQbZiyjV6y0F7cYfGVhil6pAlNZpyzR7ze9TucMu4lPpi8cZAV8aNl3D9/T9J1HbFz15Q==",
+      "path": "messagepack/3.1.12",
+      "hashPath": "messagepack.3.1.12.nupkg.sha512"
+    },
+    "MessagePack.Annotations/3.1.12": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-LdI67sY7F3KK+JsrG02+DP1XFkowaZSoyfL2M88hjm1MOOsjf8amBLAJolV+zxoPUZf3uGbKzq1cMQD8PlpSpA==",
+      "path": "messagepack.annotations/3.1.12",
+      "hashPath": "messagepack.annotations.3.1.12.nupkg.sha512"
+    },
+    "Microsoft.NET.StringTools/17.11.4": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-mudqUHhNpeqIdJoUx2YDWZO/I9uEDYVowan89R6wsomfnUJQk6HteoQTlNjZDixhT2B4IXMkMtgZtoceIjLRmA==",
+      "path": "microsoft.net.stringtools/17.11.4",
+      "hashPath": "microsoft.net.stringtools.17.11.4.nupkg.sha512"
+    },
+    "Ravensguard.Content/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Ravensguard.Sim/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

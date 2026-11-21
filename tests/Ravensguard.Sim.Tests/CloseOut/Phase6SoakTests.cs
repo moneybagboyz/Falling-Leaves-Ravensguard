@@ -292,6 +292,30 @@ public class Phase6SoakTests(ITestOutputHelper output)
         Assert.True(At(rt, () => rt.State.Economy!.Ledger.Audit().IsConserved));
     }
 
+    /// <summary>Which game years the great plague would start in on seed 1234's continent (a pure roll), by the slider: how many a hundred years holds. Nothing is simulated.</summary>
+    [Fact]
+    public void ThePlagueStartYears_OfSeed1234_ArePrintedBySlider()
+    {
+        var (_, st) = Game(1234);
+        foreach (var sev in new[] { PlagueSeverity.Normal, PlagueSeverity.Rare, PlagueSeverity.Frequent })
+        {
+            var years = Enumerable.Range(0, 400).Where(y => Ravensguard.Sim.Disease.ContinentPlagueStep.Starts(st.Seed, y, sev)).ToList();
+            output.WriteLine($"{sev}: world seed {st.Seed}, start years in 0..399: {string.Join(",", years)} ({years.Count(y => y < 130)} within 130)");
+        }
+    }
+
+    /// <summary>The Phase 4 site placer's count per kind in a new game's region, over a few seeds (the plan's table says 8-15 ruins and crypts, 10-20 caves, 2-5 mines, 3-8 barrows a 32 km region). Prints only.</summary>
+    [Fact]
+    public void TheSitesPerRegion_OfSomeSeeds_ArePrintedByKind()
+    {
+        foreach (ulong seed in new ulong[] { 1234, 1, 2, 3, 4 })
+        {
+            var (_, st) = Game(seed);
+            var sites = st.Population.Region.Sites;
+            output.WriteLine($"seed {seed}: {string.Join(", ", sites.GroupBy(x => x.Kind).OrderBy(g => g.Key).Select(g => g.Key + " " + g.Count()))}; ruins by sub: {string.Join(", ", sites.Where(x => x.Kind == Ravensguard.Sim.WorldGen.Region.SiteKind.Ruin).GroupBy(x => x.SubKind).Select(g => g.Key + " " + g.Count()))}");
+        }
+    }
+
     // ---------------------------------------------------------------- the 100-year soak
 
     [Fact, Trait("Category", "Soak")]
