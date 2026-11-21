@@ -39,6 +39,8 @@ public sealed partial class FireWorld
     /// <summary>The people the fire can reach, appended to the list (the live tier's bubble and the hero).</summary>
     public Action<List<FirePerson>>? PeopleNear { get; set; }
     public Action<IncidentEnded>? Ended { get; set; }
+    /// <summary>P7-SG-A: a structure piece burnt out of a cell (cell, the piece's id, the fire's chronicle entry, game second), after the room world and the street's tiles were written: the siege's walls turn a burnt gate or palisade into rubble and let what it held fall.</summary>
+    public Action<int, int, int, string, EntityId, long>? PieceBurnt { get; set; }
 
     private readonly Dictionary<string, int> _classOf = new(StringComparer.Ordinal);
 
@@ -444,6 +446,7 @@ public sealed partial class FireWorld
     {
         var edits = new List<CellEdit>();
         var builtTaken = new List<(int X, int Y, int Z)>();
+        List<(int X, int Y, int Z, string Piece, EntityId Cause)>? lost = null;
         foreach (var k in keys)
         {
             if (!Book.Cells.TryGetValue(k, out var c)) continue;
@@ -461,12 +464,14 @@ public sealed partial class FireWorld
             if (burnF && !(Destroy?.Invoke(x, y, z, true, true, sec, cause) ?? false)) edits.Add(new CellEdit(x, y, z, CellLayer.Fixture, null));
             if (burnS && !(Destroy?.Invoke(x, y, z, false, true, sec, cause) ?? false)) edits.Add(new CellEdit(x, y, z, CellLayer.Structure, null));
             if (burnS || burnF) builtTaken.Add((x, y, z));
+            if (burnS && s != null && PieceBurnt != null) (lost ??= []).Add((x, y, z, s.Id, cause));
         }
         if (edits.Count > 0)
         {
             Rooms.Apply(edits);
             if (Tiles != null) foreach (var (x, y, z) in builtTaken) Tiles.Set(x, y, z, Rooms.PieceAt(x, y, z)?.Id, Rooms.FixtureAt(x, y, z)?.Id);
         }
+        if (lost != null) foreach (var (x, y, z, piece, cause) in lost) PieceBurnt!(x, y, z, piece, cause, sec);
     }
 
     /// <summary>Burns every cell out at once (a gap longer than <see cref="MaxCatchUpS"/>): the fire did what it would have done.</summary>

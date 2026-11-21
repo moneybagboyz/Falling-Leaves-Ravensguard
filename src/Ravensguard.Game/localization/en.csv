@@ -6282,6 +6282,13 @@ so_stripped,His {0} piece is taken off.
 so_nothing_there,He wears nothing there.
 so_role_set,He is now a {0}.
 so_discharged,"He is discharged; {0} pieces went back to the armoury."
+ch_sg_breached,"The wall was breached at {x}, {y}: a gap {width} m wide."
+ch_sg_fell,"The wall-walk fell where the wall was struck down at {x}, {y}: {cells} cells came down and {people} people with them."
+ch_sg_repaired,"Masons mended {cells} cells of the wall at {x}, {y}."
+ch_note_sg_blow,the wall was battered down
+ch_note_sg_burnt,the fire burnt the wall out
+ch_note_sg_undermined,the wall beneath it was struck down
+ch_note_sg_masons,the masons set the stones again
 ui_ind_empty,"You run no works. Found one at a mill site or a surveyed deposit and its chain appears here."
 ui_ind_keys,"{0} stage, {1} crew, {2} upgrade plan, {3} route, {4} wage, {5} send caravan, {6} next tab, {7} close"
 ui_ind_keys_short,Industry

@@ -1,0 +1,14 @@
+// P7-SG-A (sieges-and-engines 3.1): the walls of a siege. One row per wall-like piece: the impact threshold in kg m/s (below it a blow does nothing) and what the cell becomes at 0 hit points at ground level.
+// The hit points are the piece's own (build.hp in build/pieces.jsonc). Damage per blow = max(0, momentum - threshold) / damage_divisor. Whether a piece burns is the fire's fuel table (fire/fuels.jsonc), not this file.
+[
+  { "type": "siege_rules", "id": "siege_rules", "damage_divisor": 60, "breach_min_width_m": 2, "max_thickness_m": 8 },
+
+  { "type": "wall_stat", "id": "wall_stone",       "threshold": 1500, "rubble": "rubble_stone" },
+  { "type": "wall_stat", "id": "wall_crenellated", "threshold": 1200, "rubble": "rubble_stone" },
+  { "type": "wall_stat", "id": "wall_brick",       "threshold": 1000, "rubble": "rubble_stone" },
+  { "type": "wall_stat", "id": "wall_timber",      "threshold": 300,  "rubble": "rubble_timber" },
+  { "type": "wall_stat", "id": "palisade",         "threshold": 250,  "rubble": "rubble_timber" },
+  { "type": "wall_stat", "id": "gate_wood",        "threshold": 200,  "rubble": "rubble_timber" },
+  { "type": "wall_stat", "id": "gate_iron",        "threshold": 400,  "rubble": "rubble_timber" },
+  { "type": "wall_stat", "id": "floor_wall_walk",  "threshold": 300,  "rubble": "" }
+]
