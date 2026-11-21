@@ -288,6 +288,10 @@ public sealed record GuildDef : ContentDef
     public long DuesMitesPerSeason { get; init; } = 300;
     public int MinSkill { get; init; } = 40;
     public int ResidenceDays { get; init; } = 15;
+    /// <summary>P7-ES1 (economies-of-scale 5.3): a member's shop of the trade inside the liberty may have at most this many journeymen, apprentices and stations of the trade, unless the lord licenses a manufactory.</summary>
+    public int MaxJourneymen { get; init; } = 3;
+    public int MaxApprentices { get; init; } = 2;
+    public int MaxStations { get; init; } = 2;
 }
 
 /// <summary>P5-E (crafting-full 4.6, 4.7): the numbers of apprenticeships and commissions.</summary>

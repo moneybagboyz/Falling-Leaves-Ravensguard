@@ -57,6 +57,14 @@ public sealed class ProductionContent
     public GrowthTuningDef Growth { get; init; } = new GrowthTuningDef { Id = "growth" };
     /// <summary>P5-F: owned businesses, stewards, day labour and stalls.</summary>
     public OwnershipRulesDef Ownership { get; init; } = new OwnershipRulesDef { Id = "default" };
+    /// <summary>P7-ES1: division of labour, crowding, span and the guild caps' numbers (economies-of-scale 3).</summary>
+    public ScaleSettingsDef Scale { get; init; } = new ScaleSettingsDef { Id = "default" };
+    /// <summary>P7-ES1: a station kind's crew limit k (5.1).</summary>
+    public int CrewMax(string station)
+    {
+        foreach (var r in Scale.CrewMax) if (r.Station == station) return Math.Max(1, r.Max);
+        return Math.Max(1, Scale.CrewMaxDefault);
+    }
 
     public BusinessKind Kind(string id) => Kinds.First(k => k.Id == id);
 
@@ -78,10 +86,21 @@ public sealed class ProductionContent
             kinds.Add(k);
         }
         var cfg = db.All<ResourceSettingsDef>().OrderBy(x => x.Id, StringComparer.Ordinal).FirstOrDefault() ?? new ResourceSettingsDef { Id = "resources" };
+        var scale = db.All<ScaleSettingsDef>().OrderBy(x => x.Id, StringComparer.Ordinal).FirstOrDefault() ?? new ScaleSettingsDef { Id = "default" };
+        foreach (var r in book.Recipes) r.Grades = GradesFor(scale, r);
         return new ProductionContent { Recipes = book, Kinds = [.. kinds], Extractions = ext, Settings = cfg, Spending = [.. db.All<SpendingRuleDef>().OrderBy(x => x.Id, StringComparer.Ordinal)],
             Tax = db.All<TaxPolicyDef>().OrderBy(x => x.Id, StringComparer.Ordinal).FirstOrDefault() ?? new TaxPolicyDef { Id = "default" },
             Growth = db.All<GrowthTuningDef>().OrderBy(x => x.Id, StringComparer.Ordinal).FirstOrDefault() ?? new GrowthTuningDef { Id = "growth" },
-            Ownership = db.All<OwnershipRulesDef>().OrderBy(x => x.Id, StringComparer.Ordinal).FirstOrDefault() ?? new OwnershipRulesDef { Id = "default" } };
+            Ownership = db.All<OwnershipRulesDef>().OrderBy(x => x.Id, StringComparer.Ordinal).FirstOrDefault() ?? new OwnershipRulesDef { Id = "default" }, Scale = scale };
+    }
+
+    /// <summary>The grades of a recipe (economies-of-scale 3): a row naming its id wins, then one naming its skill; none means every step is a hand's. Rows that do not sum to 1,000 are a content error.</summary>
+    public static Grades GradesFor(ScaleSettingsDef s, Recipe r)
+    {
+        ScaleGradeRow? row = s.Grades.FirstOrDefault(g => g.Recipe.Length > 0 && g.Recipe == r.Id) ?? s.Grades.FirstOrDefault(g => g.Recipe.Length == 0 && g.Skill.Length > 0 && g.Skill == r.Skill.ToString());
+        if (row == null) return Grades.Plain;
+        if (row.GradesPm.Count != 3 || row.GradesPm.Sum() != 1000 || row.GradesPm.Any(x => x < 0)) throw new InvalidDataException($"scale_settings: grades_pm for '{(row.Recipe.Length > 0 ? row.Recipe : row.Skill)}' must be three non-negative numbers summing 1000");
+        return new Grades(row.GradesPm[0], row.GradesPm[1], row.GradesPm[2]);
     }
 }
 

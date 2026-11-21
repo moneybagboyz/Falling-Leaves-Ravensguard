@@ -38,6 +38,8 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
     public List<MineWorks> Mines { get; } = [];
     /// <summary>P5-F (businesses spec 4.3): who has worked by the day lately (saved with the production section).</summary>
     public DayLabourBook DayLabour { get; } = new();
+    /// <summary>P7-ES1 (economies-of-scale 3): appointed foremen (their day wage and their place in the span of control), licences and fines; null in a world without the book.</summary>
+    public ScaleBook? Scale { get; set; }
     /// <summary>Weather at a settlement and time; null means always clear.</summary>
     public Func<int, GameTime, WeatherState>? WeatherAt { get; set; }
 
@@ -181,16 +183,24 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
         return wheelOnly == 1 ? spinner : !spinner;
     }
 
+    /// <summary>
+    /// H2 work at a business's stations. Crews are assigned as in Phase 2 (owner first, then staff ascending, up to the recipe's workers); then each batch's progress is credited by division of labour (P7-ES1,
+    /// economies-of-scale 4.1, 5.1, 5.2): the master's steps, the journeyman's and the hands' (<see cref="Crews.Rate"/>), a master's reach over the business's other stations, crowding beyond a station's crew limit
+    /// and the span of control. A recipe with no grades, a crew within its limit and its span is exactly Phase 2's sum of worker-hours (so generated trades without a grade row keep their numbers).
+    /// </summary>
     private void WorkStations(Business b, BusinessKind kind, GameTime now)
     {
-        var people = Pop.People;
+        var people = Pop.People; var sc = Content.Scale; int day = (int)now.TotalDays;
         // gather workers: owner first (if working), then staff ascending
         Span<int> workers = stackalloc int[64];
         int nw = 0;
         if (b.OwnerWorks && b.Owner >= 0) workers[nw++] = b.Owner;
         foreach (int s in b.Staff) if (nw < 64) workers[nw++] = s;
         Span<bool> used = stackalloc bool[64];
-        for (int si0 = 0; si0 < b.Stations.Count; si0++)
+        int ns = b.Stations.Count;
+        Span<bool> credited = ns <= 64 ? stackalloc bool[64] : new bool[ns];
+        int nCredited = 0; bool anyDivided = false;
+        for (int si0 = 0; si0 < ns; si0++)
         {
             var st = b.Stations[si0];
             st.Crew.Clear();
@@ -202,19 +212,108 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
                 bool wheel = st.Kind == "spinning_wheel";
                 for (int i = 0; i < nw && st.Crew.Count < r.MaxWorkers; i++)
                     if (!used[i] && IsWorker(b, workers[i], wheel ? 1 : 0)) { used[i] = true; st.Crew.Add(workers[i]); }
+                if (st.Crew.Count > 0) { credited[si0] = true; nCredited++; anyDivided |= r.Grades.Divided; }
+            }
+        }
+        // the master's reach (4.1): a master serves the M steps of several stations of the business at once, his time (and wage) split between them; at most one visiting master a station
+        Dictionary<int, int>? served = null; Dictionary<int, List<int>>? visitors = null;
+        if (anyDivided && nCredited > 1) MastersReach(b, credited, ns, day, out served, out visitors);
+        // the span of control (5.2): overseers are the owner, the masters at work and the appointed foremen
+        int speed = 1000;
+        if (nCredited > 0)
+        {
+            int crew = 0; for (int i = 0; i < nw; i++) if (used[i]) crew++;
+            if (crew > sc.SpanBase) speed = SpanSpeed(b, crew, credited, ns, day);
+        }
+        for (int si0 = 0; si0 < ns; si0++)
+        {
+            var st = b.Stations[si0];
+            if (!st.Busy) continue;
+            var r = Content.Recipes.Recipes[st.Recipe];
+            if (credited[si0])
+            {
                 long hm = (long)r.WorkerHours * st.ScalePermille * kind.LabourPm / 1000;          // P5-F: a water sawmill's wheel does most of the sawing (LabourPm 125); 1000 elsewhere
+                bool divided = r.Grades.Divided; int k = Content.CrewMax(st.Kind);
+                long cM = 0, cJ = 0, cA = 0; int pos = 0;
                 foreach (int p in st.Crew)
                 {
                     int skill = r.Skill == Skill.None ? 40 : people.SkillLevelOf(p, r.Skill);
                     st.MinSkill = Math.Min(st.MinSkill, skill);
-                    long mult = 1300 - 6 * skill;
-                    st.ProgressMicro += Station.PerWorkerHour(hm, mult);
+                    long per = Station.PerWorkerHour(hm, 1300 - 6 * skill);
+                    int share = served != null && served.TryGetValue(p, out int n) ? 1000 / n : 1000;
+                    int slot = Crews.SlotPm(pos++, k);
+                    long c = share == 1000 && slot == 1000 ? per : per * share / 1000 * slot / 1000;
+                    var cls = r.Wage; var role = CrewRole.Hand;
+                    if (divided) { role = Crews.RoleOf(sc, skill, people.AgeYears(p, day)); cls = Crews.WageOf(role, r.Wage); }
+                    if (role == CrewRole.Master) cM += c; else if (role == CrewRole.Journeyman) cJ += c; else cA += c;
                     int si = b.Staff.IndexOf(p);
-                    if (si >= 0) b.Owed[si] += WageOf(b, p, HourlyWage(p, r.Wage, (int)now.TotalDays));
+                    if (si >= 0) { long wage = WageOf(b, p, HourlyWage(p, cls, day)); b.Owed[si] += share == 1000 ? wage : wage * share / 1000; }
                 }
+                if (visitors != null && visitors.TryGetValue(si0, out var vs))
+                    foreach (int p in vs)
+                    {
+                        int skill = r.Skill == Skill.None ? 40 : people.SkillLevelOf(p, r.Skill);
+                        int share = 1000 / served![p];
+                        cM += Station.PerWorkerHour(hm, 1300 - 6 * skill) * share / 1000;
+                        int si = b.Staff.IndexOf(p);
+                        if (si >= 0) b.Owed[si] += WageOf(b, p, HourlyWage(p, Crews.WageOf(CrewRole.Master, r.Wage), day)) * share / 1000;
+                    }
+                long rate = divided ? Crews.Rate(cM, cJ, cA, r.Grades, sc.UnsupervisedPm) : cA;
+                st.ProgressMicro += speed == 1000 ? rate : rate * speed / 1000;
             }
             if (st.ProgressMicro >= Station.Complete && now.TotalHours >= st.BusyUntilHour) Finish(b, st, now);
         }
+    }
+
+    /// <summary>Which masters serve more than one station (4.1's reach, ES-3): a master at one station of a divided recipe also visits the business's other credited divided stations that have no master, up to his reach.</summary>
+    private void MastersReach(Business b, Span<bool> credited, int ns, int day, out Dictionary<int, int>? served, out Dictionary<int, List<int>>? visitors)
+    {
+        served = null; visitors = null;
+        var people = Pop.People; var sc = Content.Scale;
+        var hasMaster = new bool[ns];
+        bool IsMaster(int p, Recipe r) => Crews.RoleOf(sc, r.Skill == Skill.None ? 40 : people.SkillLevelOf(p, r.Skill), people.AgeYears(p, day)) == CrewRole.Master;
+        for (int s = 0; s < ns; s++)
+        {
+            if (!credited[s]) continue; var r = Content.Recipes.Recipes[b.Stations[s].Recipe];
+            if (r.Grades.Divided && r.Grades.M > 0) foreach (int p in b.Stations[s].Crew) if (IsMaster(p, r)) { hasMaster[s] = true; break; }
+        }
+        for (int s = 0; s < ns; s++)
+        {
+            if (!credited[s]) continue; var r = Content.Recipes.Recipes[b.Stations[s].Recipe];
+            if (!r.Grades.Divided) continue;
+            foreach (int p in b.Stations[s].Crew)
+            {
+                if (!IsMaster(p, r)) continue;
+                int reach = Crews.Reach(sc, people.SkillLevelOf(p, Skill.Leadership)), visits = 0;
+                for (int t = 0; t < ns && visits < reach - 1; t++)
+                {
+                    if (t == s || !credited[t] || hasMaster[t]) continue;
+                    var rt = Content.Recipes.Recipes[b.Stations[t].Recipe];
+                    if (!rt.Grades.Divided || rt.Grades.M == 0 || !IsMaster(p, rt)) continue;
+                    hasMaster[t] = true; visits++;
+                    visitors ??= [];
+                    if (!visitors.TryGetValue(t, out var l)) visitors[t] = l = [];
+                    l.Add(p);
+                }
+                if (visits > 0) (served ??= [])[p] = 1 + visits;
+            }
+        }
+    }
+
+    /// <summary>The speed of a crew larger than the overseers' span (5.2, ES-6): the owner, the masters at work and the appointed foremen each oversee <c>6 + Leadership / 10</c> workers.</summary>
+    private int SpanSpeed(Business b, int crew, Span<bool> credited, int ns, int day)
+    {
+        var people = Pop.People; var sc = Content.Scale; var seen = new HashSet<int>(); int span = 0;
+        void Overseer(int p) { if (seen.Add(p)) span += Crews.Span(sc, people.SkillLevelOf(p, Skill.Leadership)); }
+        if (b.Owner >= 0) Overseer(b.Owner);
+        for (int s = 0; s < ns; s++)
+        {
+            if (!credited[s]) continue; var r = Content.Recipes.Recipes[b.Stations[s].Recipe];
+            if (!r.Grades.Divided) continue;
+            foreach (int p in b.Stations[s].Crew) if (Crews.RoleOf(sc, r.Skill == Skill.None ? 40 : people.SkillLevelOf(p, r.Skill), people.AgeYears(p, day)) == CrewRole.Master) Overseer(p);
+        }
+        if (Scale != null && Scale.Foremen.TryGetValue(b.Id.Value, out var fm)) foreach (int p in fm) if (b.Staff.Contains(p)) Overseer(p);
+        return Crews.SpeedPm(sc, crew, span);
     }
 
     private void Finish(Business b, Station st, GameTime now)
@@ -365,12 +464,25 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
             if (b.State != BusinessState.Open || b.Index % 24 != hour) continue;
             var kind = KindOf(b);
             if (kind.Salaried) { AccrueDayWages(b, kind, day); if (kind.Id == "manor") TopUpFromOwner(b); }
+            if (Scale != null && Scale.Foremen.Count > 0) AccrueForemen(b);
             PayWages(b, now);
             if (kind.Trader || kind.Salaried && kind.Stations.Length == 0) continue;
             if (kind.Extractions.Length == 0 && b.Mine < 0 && !OwnedByHero(b)) TopUpWorkshop(b, day);   // P5-F: the hero's business gets no Phase 2 top-ups: he puts coin in himself
             SellOutputs(b, kind, day);
             if (kind.Extractions.Length > 0 || b.Mine >= 0) PlanExtraction(b, kind, now);
             else PlanStations(b, kind, now);
+        }
+    }
+
+    /// <summary>P7-ES1 (economies-of-scale 5.2): an appointed foreman's extra day wage (50 mites) accrues with the rest of his wages; one who left the staff stops being a foreman.</summary>
+    private void AccrueForemen(Business b)
+    {
+        if (!Scale!.Foremen.TryGetValue(b.Id.Value, out var set)) return;
+        foreach (int p in set.ToArray())
+        {
+            int i = b.Staff.IndexOf(p);
+            if (i < 0) { Scale.Forget(b.Id.Value, p); continue; }
+            b.Owed[i] += Content.Scale.ForemanWageMitesPerDay;
         }
     }
 

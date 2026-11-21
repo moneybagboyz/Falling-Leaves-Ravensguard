@@ -1,0 +1,26 @@
+// Economies of scale, part 1 (docs/specs/phase7/economies-of-scale.md 4.1, 5; P7-ES1): division of labour, crowding, span of control, the manufactory licence. Money in mites.
+// grades_pm: the permille of a recipe's worker-hours done by the master's steps, the journeyman's steps and the apprentice's or hand's steps (sum 1,000). A recipe with no row is all hand steps (no division).
+// A row names a recipe id (wins) or a skill; weaving 100/300/600, tailoring 200/400/400, brewing 200/300/500, carpentry 150/450/400 (sawing 0/300/700), charcoal 0/200/800, brick moulding 50/150/800.
+[
+  { "type": "scale_settings", "id": "default",
+    "grades": [
+      { "skill": "Smithing", "grades_pm": [200, 400, 400] },
+      { "skill": "Weaving", "grades_pm": [100, 300, 600] },
+      { "skill": "Tailoring", "grades_pm": [200, 400, 400] },
+      { "skill": "Brewing", "grades_pm": [200, 300, 500] },
+      { "skill": "Carpentry", "grades_pm": [150, 450, 400] },
+      { "recipe": "saw_planks", "grades_pm": [0, 300, 700] },
+      { "recipe": "burn_charcoal", "grades_pm": [0, 200, 800] },
+      { "recipe": "fire_bricks", "grades_pm": [50, 150, 800] }
+    ],
+    "crew_max": [
+      { "station": "anvil", "max": 3 }, { "station": "forge", "max": 4 }, { "station": "loom", "max": 2 }, { "station": "saw_pit", "max": 2 },
+      { "station": "brick_clamp", "max": 3 }, { "station": "kiln", "max": 6 }, { "station": "bloomery", "max": 4 }
+    ],
+    "crew_max_default": 6, "unsupervised_pm": 1500, "master_skill": 60, "journeyman_skill": 30,
+    "reach_base": 2, "reach_per_leadership": 30, "reach_max": 4,
+    "span_base": 6, "span_per_leadership": 10, "span_max": 16, "span_per_excess_pm": 25, "span_floor_pm": 500,
+    "foreman_min_leadership": 20, "foreman_wage_mites_per_day": 50,
+    "guild_fine_per_over_mites": 2000, "inspection_pct": 50, "fines_to_close": 3, "fine_opinion": -20, "fine_keep_days": 120,
+    "licence_fee_mites": 5000, "licence_season_mites": 500, "licence_per_granted_penalty": 20 }
+]
