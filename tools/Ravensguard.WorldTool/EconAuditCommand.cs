@@ -24,14 +24,14 @@ public static class EconAuditCommand
             }
         }
         var hw = HeadlessWorld.Create(seed, BaseContent.Require());
-        var rows = EconAudit.Run(hw.Economy);
+        var rows = EconAudit.Run(hw.Economy, hw.Content);
         Console.Write(EconAudit.Format(rows));
         return strict && rows.Any(r => r.State == AuditState.Fail) ? 1 : 0;
     }
 
     public static int RunWarLoad(string[] args)
     {
-        ulong seed = 1234; int years = 25; bool control = false, quiet = false, links = true;
+        ulong seed = 1234; int years = 25; bool control = false, quiet = false, links = true, withControl = false;
         for (int i = 1; i < args.Length; i++)
         {
             switch (args[i])
@@ -41,16 +41,25 @@ public static class EconAuditCommand
                 case "--control": control = true; break;
                 case "--quiet": quiet = true; break;
                 case "--no-links": links = false; break;
+                case "--with-control": withControl = true; break;
                 default: Console.Error.WriteLine($"unknown option {args[i]}"); return 1;
             }
         }
         var sw = Stopwatch.StartNew();
+        List<WarYearRow>? ctlRows = null;
+        if (withControl && !control)
+        {
+            using var c = WarLoadRun.Create(seed, BaseContent.Require(), attachLinks: links);
+            var cs = new WarLoadSoak(c, years, control: true); cs.Run(); ctlRows = cs.Rows;
+            Console.WriteLine($"control run (no load) done in {sw.Elapsed.TotalSeconds:0.0} s");
+        }
         using var run = WarLoadRun.Create(seed, BaseContent.Require(), attachLinks: links);
         Console.WriteLine($"seed {seed}: {run.State.Population.People.Count:N0} people, {run.State.Population.Households.Count:N0} households, built in {sw.ElapsedMilliseconds} ms; links attached: {run.LinksAttached}{(control ? "; CONTROL (no load)" : "")}");
         Console.WriteLine(WarLoadSoak.Header());
         var soak = new WarLoadSoak(run, years, control);
         soak.Run(r => { if (!quiet) Console.WriteLine(WarLoadSoak.Format(r)); });
-        Console.WriteLine($"{years} years in {sw.Elapsed.TotalSeconds:0.0} s; gates WL-1 (coin) and WL-2 (mass) every day: {(soak.Ok ? "pass" : "FAIL " + soak.FirstFailure)}; the other gates (WL-3 to WL-15) are the audit run's (EA2)");
+        Console.WriteLine($"{years} years in {sw.Elapsed.TotalSeconds:0.0} s; gates WL-1 (coin) and WL-2 (mass) every day: {(soak.Ok ? "pass" : "FAIL " + soak.FirstFailure)}");
+        if (!control) { Console.WriteLine("war-load gates (economy-audit 5.3):"); Console.Write(WarGates.Format(WarGates.Evaluate(soak.Rows, ctlRows))); }
         return soak.Ok ? 0 : 1;
     }
 }

@@ -22,9 +22,9 @@ public sealed class WarTally
 {
     public long ManDaysFed, ManDaysHungry, ManDaysPaid, ManDaysUnpaid, Deserted, BoughtStapleG, BaggageStapleG, PaidMites, BoughtMites, ShortStapleG;
     /// <summary>Coin the realm sent to the pay chest at the muster, and the arrears the realm still owed when the host disbanded.</summary>
-    public long FundedMites, ArrearsMites;
+    public long FundedMites, ArrearsMites, AidMites, TallageMites;
     public int Mustered, Days;
-    public void Reset() { ManDaysFed = ManDaysHungry = ManDaysPaid = ManDaysUnpaid = Deserted = BoughtStapleG = BaggageStapleG = PaidMites = BoughtMites = ShortStapleG = FundedMites = ArrearsMites = 0; Mustered = Days = 0; }
+    public void Reset() { ManDaysFed = ManDaysHungry = ManDaysPaid = ManDaysUnpaid = Deserted = BoughtStapleG = BaggageStapleG = PaidMites = BoughtMites = ShortStapleG = FundedMites = ArrearsMites = AidMites = TallageMites = 0; Mustered = Days = 0; }
 }
 
 /// <summary>
@@ -52,6 +52,9 @@ public sealed class WarLoad
     public int Mustered { get => Tally.Mustered; private set => Tally.Mustered = value; }
     /// <summary>The last day's result (null before the first slot).</summary>
     public DayResult? LastResult { get; private set; }
+
+    /// <summary>The realm raises the coin of the campaign before the muster (aid from the fiefs, then a tallage: <see cref="WarFunding"/>, the audit's decision EA_F7). Off by default so a test that funds the chest itself stays as it was.</summary>
+    public bool RealmRaises { get; set; }
 
     public WarLoad(HostSupply hs, WarLoadSpec spec, ulong seed, int warId, WarTally? tally = null) { _hs = hs; _ew = hs.Economy; Spec = spec; _seed = seed; WarId = warId; Tally = tally ?? new WarTally(); }
 
@@ -118,6 +121,7 @@ public sealed class WarLoad
         {
             var a = _hs.Account(Host); var needs = _hs.Needs(Host, n);
             long fund = (needs.PayMites + needs.StapleG * 45 / 1000 + needs.FodderHayG * 12 / 1000 + needs.FodderOatsG * 30 / 1000) * fundDays;
+            if (RealmRaises) { var (aid, tallage) = WarFunding.Raise(_ew, treasury, fund); Tally.AidMites += aid; Tally.TallageMites += tallage; }
             fund = Math.Min(fund, led.Balance(treasury).Mites);
             if (fund > 0 && led.Transfer(treasury, chest, new Coin(fund), TransferReason.Hoard)) Tally.FundedMites += fund;
             _ = a;

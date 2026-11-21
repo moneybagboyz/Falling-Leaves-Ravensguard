@@ -19,7 +19,7 @@ public class EconAuditTests(ITestOutputHelper output)
     {
         Assert.Equal(SpecRows, EconAudit.Ids);
         using var run = AuditWorld.Create(links: false);
-        var rows = EconAudit.Run(run.Economy);
+        var rows = EconAudit.Run(run.Economy, run.State.Content);
         Assert.Equal(SpecRows, rows.Select(r => r.Id).ToArray());
         Assert.All(rows, r =>
         {
@@ -35,12 +35,16 @@ public class EconAuditTests(ITestOutputHelper output)
         Assert.Equal(AuditState.Fail, rows.Single(r => r.Id == "S-3").State);
         Assert.Equal(AuditState.Pass, rows.Single(r => r.Id == "L2").State);
         Assert.Equal(AuditState.Pass, rows.Single(r => r.Id == "L5").State);
+        // P7-EA2: the content-derived rows are measured, not pending (the failing ones are the audit's findings, EA_F1 to EA_F5)
+        foreach (var id in new[] { "X2", "X3", "X4", "X5", "X6", "X7", "X14", "L3", "S-2", "S-4", "I4", "L6" }) Assert.NotEqual(AuditState.Pending, rows.Single(r => r.Id == id).State);
+        Assert.Equal(AuditState.Fail, rows.Single(r => r.Id == "X5").State); Assert.Equal(AuditState.Fail, rows.Single(r => r.Id == "S-2").State);
+        Assert.Equal(AuditState.Pass, rows.Single(r => r.Id == "X3").State); Assert.Equal(AuditState.Pass, rows.Single(r => r.Id == "X14").State);
     }
 
     [Fact]
     public void Audit_IsADeterministicReadOfTheWorld()
     {
         using var a = AuditWorld.Create(links: false); using var b = AuditWorld.Create(links: false);
-        Assert.Equal(EconAudit.Format(EconAudit.Run(a.Economy)), EconAudit.Format(EconAudit.Run(b.Economy)));
+        Assert.Equal(EconAudit.Format(EconAudit.Run(a.Economy, a.State.Content)), EconAudit.Format(EconAudit.Run(b.Economy, b.State.Content)));
     }
 }
