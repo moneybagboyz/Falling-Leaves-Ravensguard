@@ -146,6 +146,12 @@ public static class ContractWiring
             if (r.Kind == RumourKind.RoadBandits && r.Settlement >= 0 && !r.FromAfar && ts.Rumours.HearingsOf(r.Id).Count >= 3) yield return new BandSeen(r.Id, r.Settlement, r.BornDay, 6);
     }
 
+    /// <summary>
+    /// People without a trade a place needs for a crew of farmhands. Four (P6-D4) left most places with no crew once the growth system found the idle adults work: in a 100-year soak (P6-G2) the crews took 448 soil
+    /// jobs in the first decade, 103 in the sixth and none after, while the holders kept posting 5,000 a decade (boards full of open soil jobs, fertility drifting down, famines 8 a decade at the start, 75 at the end).
+    /// </summary>
+    public const int CrewMinHands = 2;
+
     private static IEnumerable<CompanyInfo> CompaniesOf(WorldState st)
     {
         var pop = st.Population; var e = st.Economy; if (e == null) yield break;
@@ -168,7 +174,7 @@ public static class ContractWiring
         }
         for (int s = 0; s < hands.Length; s++)
         {
-            if (hands[s] is not { Count: >= 4 } h) continue;
+            if (hands[s] is not { Count: >= CrewMinHands } h) continue;
             int hh = pt.Household[h[0]];
             yield return new CompanyInfo(Ravensguard.Sim.Holdings.SoilWorld.CrewId(s), pop.Region.Settlements[s].Name + " farmhands", s, 120, h.Count, e.HouseholdPurse[hh].Index, "farmhands");
         }
