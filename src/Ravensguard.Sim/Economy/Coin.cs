@@ -3,16 +3,31 @@ using System.Globalization;
 namespace Ravensguard.Sim.Economy;
 
 /// <summary>
-/// An amount of money in mites, 1/100 of a crown (overview 2.1, E1). A 64-bit integer with checked arithmetic: overflow throws, it never wraps.
+/// An amount of money in mites (overview 2.1, E1; coinage 2): a mite is a tenth of a copper piece, a copper piece is 10 mites, a silver piece (the old crown) 100, a gold piece 1,000.
+/// A 64-bit integer with checked arithmetic: overflow throws, it never wraps.
 /// Negative values are legal only as differences; no purse may hold one.
 /// </summary>
 public readonly record struct Coin(long Mites) : IComparable<Coin>
 {
     public const long MitesPerCrown = 100;
+    /// <summary>P7-CN1 (coinage 2.3): the three coins in mites. A crown is a silver piece.</summary>
+    public const long MitesPerCopper = 10, MitesPerSilver = 100, MitesPerGold = 1000;
     public static readonly Coin Zero = new(0);
 
     public static Coin FromMites(long mites) => new(mites);
     public static Coin FromCrowns(long crowns) => new(checked(crowns * MitesPerCrown));
+    public static Coin FromCopper(long copper) => new(checked(copper * MitesPerCopper));
+    public static Coin FromSilver(long silver) => new(checked(silver * MitesPerSilver));
+    public static Coin FromGold(long gold) => new(checked(gold * MitesPerGold));
+
+    /// <summary>The amount as money of account, greedy: gold, silver and copper pieces and the mites left (a tenth of a copper each). A negative amount is split by its size and the caller keeps the sign.</summary>
+    public void Parts(out long gold, out long silver, out long copper, out long mites)
+    {
+        long m = Mites < 0 ? -Mites : Mites;
+        gold = m / MitesPerGold; m %= MitesPerGold;
+        silver = m / MitesPerSilver; m %= MitesPerSilver;
+        copper = m / MitesPerCopper; mites = m % MitesPerCopper;
+    }
 
     /// <summary>Whole crowns, truncated toward zero.</summary>
     public long WholeCrowns => Mites / MitesPerCrown;

@@ -135,4 +135,21 @@ public sealed record MoneySettingsDef : ContentDef
     /// (5 when the first weeks of a new game are found starved). 0 (the default) leaves the world-start stock as it was.
     /// </summary>
     public int WorldStartStockDays { get; init; } = 0;
+
+    // P7-CN1 (coinage 5.8, additive): the gold piece and the copper token, the mints' staff and the changers' fee
+    /// <summary>Gold in a gold piece (mg), the mint's cut on gold (basis points), copper in a copper piece (mg) and the cap of copper coin's face in permille of the money supply.</summary>
+    public int GoldPieceMg { get; init; } = 1100;
+    public int GoldSeigniorageBp { get; init; } = 500;
+    public int CopperPieceMg { get; init; } = 5000;
+    public int CopperCapPermille { get; init; } = 40;
+    /// <summary>A money changer's fee in permille of the amount changed.</summary>
+    public int ChangerFeePermille { get; init; } = 20;
+    /// <summary>A payment of at least this many mites carries gold pieces with it (opted-in payers).</summary>
+    public int GoldTransferMinMites { get; init; } = 10_000;
+    /// <summary>Pieces one moneyer strikes in a working day, and the mint master's daily wage.</summary>
+    public int MoneyerPiecesPerDay { get; init; } = 3000;
+    public int MintMasterWageMites { get; init; } = 500;
+    /// <summary>Gold in a tonne of dressed ore, mg, and what a worker pans from a stream in a day, mg.</summary>
+    public int GoldGradeMgPerT { get; init; } = 6000;
+    public int PanGoldMgPerDay { get; init; } = 300;
 }

@@ -6,5 +6,7 @@
   {"type": "office", "id": "sheriff",   "name": "sheriff",   "wage_mites_per_day": 500, "skill": "Law"},
   {"type": "office", "id": "collector", "name": "customs collector", "wage_mites_per_day": 350, "skill": "Trading"},
   {"type": "office", "id": "gaoler",    "name": "gaoler",    "wage_mites_per_day": 150, "skill": "Law"},
-  {"type": "office", "id": "treasurer", "name": "treasurer", "wage_mites_per_day": 350, "skill": "Trading"}
+  {"type": "office", "id": "treasurer", "name": "treasurer", "wage_mites_per_day": 350, "skill": "Trading"},
+  // P7-CN1 (coinage 5.1): the realm's mint master, paid from the realm's treasury
+  {"type": "office", "id": "mintmaster", "name": "mint master", "wage_mites_per_day": 500, "skill": "Trading"}
 ]

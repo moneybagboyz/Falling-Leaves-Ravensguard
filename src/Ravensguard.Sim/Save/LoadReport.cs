@@ -25,6 +25,30 @@ public sealed class LoadReport
     /// <summary>Why the load would be refused, one cause each. Empty when the load can go ahead.</summary>
     public IReadOnlyList<string> Refusals { get; init; } = [];
 
+    /// <summary>
+    /// P7-CN1 (coinage 2.3): informational notices that never ask for confirmation (<see cref="NeedsConfirmation"/> ignores them): a save written before Phase 7 is told that money now shows as gold, silver and copper and that nothing in the save changed.
+    /// </summary>
+    public IReadOnlyList<string> Notices { get; init; } = [];
+
+    /// <summary>The first game version that writes Phase 7 saves (the build's major.minor); a header below it is an older game's.</summary>
+    public const string Phase7FirstVersion = "0.4.0";
+
+    /// <summary>The coinage notice (coinage 2.3).</summary>
+    public const string CoinageNotice = "Money is now shown as gold, silver and copper. One old crown is one silver piece (ten copper). Nothing in this save changed.";
+
+    /// <summary>Whether a save's header version is older than <see cref="Phase7FirstVersion"/>: an unreadable version counts as older (the game wrote "0.1" for a long time).</summary>
+    public static bool IsBeforePhase7(string gameVersion)
+    {
+        static bool Parse(string v, out int major, out int minor)
+        {
+            major = minor = 0; var parts = v.Split('.', '-', ' ');
+            return parts.Length >= 2 && int.TryParse(parts[0], out major) && int.TryParse(parts[1], out minor);
+        }
+        Parse(Phase7FirstVersion, out int fm, out int fn);
+        if (!Parse(gameVersion ?? "", out int m, out int n)) return true;
+        return m < fm || (m == fm && n < fn);
+    }
+
     public bool CanLoad => Refusals.Count == 0;
     /// <summary>Whether the player is asked before loading: something differs from the content the save was made with.</summary>
     public bool NeedsConfirmation => CanLoad && (ContentChanged || MissingMods.Count > 0 || ChangedMods.Count > 0 || ExtraMods.Count > 0 || Changes.Count > 0);
@@ -50,6 +74,7 @@ public sealed class LoadReport
         foreach (var m in ChangedMods) sb.AppendLine($"Mod changed: {m.Id} (made with {m.SavedVersion}, installed {m.InstalledVersion}).");
         foreach (var m in ExtraMods) sb.AppendLine($"New mod not in this save: {m.Id} ({m.Version}).");
         foreach (var c in Changes) sb.AppendLine(c);
+        foreach (var n in Notices) sb.AppendLine(n);
         if (CanLoad && LayersChecked) sb.AppendLine("The world, its history and its people still regenerate exactly as saved.");
         if (sb.Length == 0) sb.AppendLine("Nothing changed.");
         return sb.ToString().TrimEnd();

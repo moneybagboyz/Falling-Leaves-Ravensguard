@@ -86,6 +86,7 @@ public partial class RunLoadScreen : Control
         var mods = file.Header.Mods.Count == 0 ? null : content.Installed;
         var report = WorldSave.Inspect(file, content.Db, content.Hash, mods, world.Continent, world.History);
         if (!report.CanLoad) throw new SaveException(report.ToText());
+        foreach (var notice in report.Notices) GD.PushWarning(notice);   // P7-CN1: informational, never asks (coinage 2.3)
         if (report.NeedsConfirmation)
         {
             _ask = report;

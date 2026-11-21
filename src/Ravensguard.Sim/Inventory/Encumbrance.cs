@@ -12,6 +12,20 @@ public static class Encumbrance
     /// <summary>Mass of coin: <c>mites x 13 / 1000</c> grams (1,000 crowns = 100,000 mites = 1,300 g; T-7).</summary>
     public static long CoinMassG(long mites) => Math.Max(0, mites) * 13 / 1000;
 
+    /// <summary>
+    /// P7-CN1 (coinage 5.3): the mass of a purse's coin, gold counted by its pieces: <c>(gold x 1,100 + (balance - gold x 1,000) x 13) / 1,000</c> grams (silver and copper count as silver). A chest of 50 gp weighs 55 g of gold, 650 g of silver.
+    /// The pieces are the gold book's, for a purse that tracks them; any other purse weighs as silver, as before.
+    /// </summary>
+    public static long CoinMassG(Economy.Ledger ledger, Economy.PurseId purse) => CoinMassMg(ledger, purse) / 1000;
+
+    /// <summary>The same in milligrams, exact: 9 gp and 1,000 mites in silver weigh 9,900 + 13,000 = 22,900 mg (CN-10).</summary>
+    public static long CoinMassMg(Economy.Ledger ledger, Economy.PurseId purse)
+    {
+        long bal = Math.Max(0, ledger.Balance(purse).Mites);
+        long gold = Math.Min(ledger.Coinage?.Pieces(purse) ?? 0, bal / Economy.Coin.MitesPerGold);
+        return gold * Economy.MintMath.GoldPieceMg + (bal - gold * Economy.Coin.MitesPerGold) * 13;
+    }
+
     /// <summary>Load ratio in permille, rounded down.</summary>
     public static int RatioPm(long massG, long capacityG) => capacityG <= 0 ? int.MaxValue : (int)Math.Min(int.MaxValue, Math.Max(0, massG) * 1000 / capacityG);
 

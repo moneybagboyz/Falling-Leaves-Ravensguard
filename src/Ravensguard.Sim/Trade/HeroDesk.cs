@@ -550,6 +550,7 @@ public sealed class HeroDesk
                 HeroCommandKind.Contract => Ravensguard.Sim.Contracts.ContractDesk.Apply(ctx, c),                // P6-C2: take, hand over, pin, enter, bid, speak ill
                 HeroCommandKind.Holdings => Ravensguard.Sim.Holdings.HoldingsDesk.Apply(ctx, c),                // P6-B6: clearing and sowing a claim, whose is this, buy and deliver, installing stations
                 HeroCommandKind.Industry => Ravensguard.Sim.Production.Industry.IndustryDesk.Apply(ctx, c),                    // P7-IN1: founding a works, crews, wages, routing, links, the works' cash
+                HeroCommandKind.Coin => Ravensguard.Sim.Economy.CoinDesk.Apply(ctx, c),                                  // P7-CN1: sell metal at the mint, change money, melt coin (cn: is also construction's text prefix: routed by kind)
                 HeroCommandKind.Business or HeroCommandKind.Prospect => Ravensguard.Sim.Production.BusinessDesk.Apply(ctx, c),   // P5-F: businesses, stewards, stalls, prospecting
                 _ => R(c, HeroResultCode.Invalid, T("HERO_UNKNOWN_COMMAND")),
             };

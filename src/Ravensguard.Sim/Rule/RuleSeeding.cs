@@ -70,7 +70,14 @@ public static class RuleSeeding
             if (c.B.OfficeOf(OfficeKind.Reeve, f.Fief) == null) { reeveRow = Pick(pop, f.Fief, true, Skill.Leadership, day, -1, lordHouse); if (reeveRow >= 0 && RuleOfficials.Appoint(c, OfficeKind.Reeve, f.Fief, f.Realm, (long)pop.People.IdOf(reeveRow).Value, day) != null) n++; }
             if (c.B.OfficeOf(OfficeKind.Bailiff, f.Fief) == null) { int br = Pick(pop, f.Fief, false, Skill.Law, day, reeveRow, lordHouse); if (br >= 0 && RuleOfficials.Appoint(c, OfficeKind.Bailiff, f.Fief, f.Realm, (long)pop.People.IdOf(br).Value, day) != null) n++; }
         }
-        _ = region;
+        // P7-CN1 (coinage 5.1): each realm's mint has a master, the best trader of its town (Trading 30 asked; a realm whose town has nobody better takes the best there is); a mint master dies or is dismissed like any other office holder
+        foreach (var m in Ravensguard.Sim.Economy.MintWorld.Derive(region))
+        {
+            if (c.B.OfficeOfRealm(OfficeKind.MintMaster, m.Realm) != null) continue;
+            int lordHouse = -1; foreach (var f in c.B.Fiefs.Values) if (f.Realm == m.Realm && f.Fief < pop.FiefLordHousehold.Length) { lordHouse = pop.FiefLordHousehold[f.Fief]; break; }
+            int row = PickInSettlement(pop, m.Settlement, Skill.Trading, day, -1, lordHouse);
+            if (row >= 0 && RuleOfficials.Appoint(c, OfficeKind.MintMaster, -1, m.Realm, (long)pop.People.IdOf(row).Value, day) != null) n++;
+        }
         return n;
     }
 

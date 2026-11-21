@@ -113,7 +113,7 @@ public static class GameDiagnostics
 
     static string Safe(Func<string> f) { try { return f(); } catch (Exception) { return ""; } }
 
-    public const string BuildVersion = "0.3.0-dev";
+    public const string BuildVersion = "0.4.0-dev";
     public static BuildInfo BuildInfoNow() => new() { Version = BuildVersion, Git = Safe(() => ReadGit()), Flavour = OS.IsDebugBuild() ? "Dev" : "Release", ContentHash = ContentHashProvider?.Invoke() ?? "" };
     /// <summary>Set once the content is loaded (the hash of base content and mods).</summary>
     public static Func<string>? ContentHashProvider { get; set; }
