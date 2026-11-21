@@ -197,7 +197,7 @@ public class IndustrySellingTests(ITestOutputHelper output)
         var plain = SaveCodec.SerializeCompressed(IndustrySave.Capture(t.Book));
         var back = SaveCodec.DeserializeCompressed<IndustrySave>(plain).Restore();
         Assert.Equal(plain, SaveCodec.SerializeCompressed(IndustrySave.Capture(back)));
-        Assert.Null(IndustrySave.Capture(t.Book).Selling);
+        Assert.Null(IndustrySave.Capture(t.Book).Extras);                                      // nothing to say about selling: the section is what it was before IN4
         // an order, a trip with a manifest and a tally survive a round trip byte for byte
         var s = t.W.Stages[4]; s.Order = new CaravanOrder { Kind = DestKind.Neighbour, Dest = 17, Vehicle = 1, Wagons = 3, Guards = 2, Standing = true, Fleet = 0x1234, Master = 5 };
         var trip = new OwnTrip { Caravan = 0x1234, Stage = s.Business, Kind = DestKind.Neighbour, Dest = 17, Master = 5, DepartDay = 9, Days = 6, Wagons = 3, Guards = 2, Float = 12_000, Sales = 7_000, QuotedMargin = 5_000, QuotedRisk = 200, QuotedValue = 40_000, QuotedGross = 40_000, FodderPerDay = 90, Sold = true };
@@ -232,8 +232,8 @@ public class IndustrySellingTests(ITestOutputHelper output)
     private sealed class Rig : IDisposable
     {
         public SeamWorld W; public WorldState State; public WorldRuntime Rt; public IndustryWorld Iw; public Works Works = null!; public WorkStage Stage = null!; public Business Biz = null!;
-        public HeroDesk Desk = new(); public HeroContext Ctx; public int Town, Dest; public long Sec => Rt.HourDone * 3600;
-        public Rig(long capital = 800_000, long barG = 1_000_000)
+        public bool Boost; public HeroDesk Desk = new(); public HeroContext Ctx; public int Town, Dest; public long Sec => Rt.HourDone * 3600;
+        public Rig(long capital = 800_000, long barG = 1_000_000, bool boost = true)
         {
             (W, State) = Game();
             Rt = new WorldRuntime(State, W.Content, new MemoryRegionPager());
@@ -253,14 +253,27 @@ public class IndustrySellingTests(ITestOutputHelper output)
             for (int i = 0; i < reg.Settlements.Count; i++)
             {
                 if (i == Town || reg.Settlements[i].Class != SettlementClass.Town && reg.Settlements[i].Class != SettlementClass.Village) continue;
+                if (s.Markets!.BookForSettlement(i).Merchants.Count == 0 || s.Markets.BookOf[i] != i) continue;
                 var o = new CaravanOrder { Kind = DestKind.Town, Dest = i };
                 if (Iw.Caravans.PathOf(Town, o, out _) is not { } path || path.LengthMm < 3_000_000) continue;
                 if (path.LengthMm < best) { best = path.LengthMm; Dest = i; }
             }
             Assert.True(Dest >= 0, "no town to send a caravan to");
+            // the destination is a smithing town that lacks iron: 60 kg of bar a day of demand, its merchants flush (the region's own small villages ask for grams a day, which is the absorption the spec warns of)
+            var dbook = s.Markets!.BookForSettlement(Dest); var dg = dbook.Goods[Bar];
+            Boost = boost; if (boost) dg.StructuralDemand = 60_000;
+            if (boost) foreach (var m in dbook.Merchants) s.Economy.Ledger.Mint(m.Purse, new Coin(3_000_000), SourceReason.Seed);
         }
         public ushort Bar => State.Economy!.Goods.IdOf("iron_bar");
-        public void Run(long hours) => Rt.AdvanceTo(GameTime.FromGameHours(Rt.HourDone + hours));
+        /// <summary>Steps the runtime; the smithing town's standing demand is kept up each hour (the economy recomputes structural demand every day from the town's own small trades).</summary>
+        public void Run(long hours)
+        {
+            for (long h = 0; h < hours; h++)
+            {
+                if (Boost) State.Markets!.BookForSettlement(Dest).Goods[Bar].StructuralDemand = 60_000;
+                Rt.AdvanceTo(GameTime.FromGameHours(Rt.HourDone + 1));
+            }
+        }
         public void Issue(HeroCommand c) { Desk.Issue(c); Desk.ApplyDue(Ctx, Rt.HourDone); }
         public HeroResult Last => Desk.View!.Results[^1];
         public (long Coin, long Mass) Audit() => (State.Economy!.Ledger.Audit().InPurses.Mites + State.ContinentState!.TotalCoin(), 0);
@@ -289,6 +302,7 @@ public class IndustrySellingTests(ITestOutputHelper output)
         Assert.True(q.GrossMites > 0 && q.Days >= 2);
         output.WriteLine($"IN-18 quote to town {rig.Dest}: {q.PathMm / 1000} m, {q.Days} days, {q.MovingHours} moving hours, danger {q.Danger}");
         foreach (var (k, v) in q.Parts()) output.WriteLine($"   {k,-18} {v,10:N0}");
+        { var bk = rig.State.Markets!.BookForSettlement(rig.Dest); var gb = bk.Goods[rig.Bar]; output.WriteLine($"   dest book: merchants {bk.Merchants.Count} cash {string.Join(',', bk.Merchants.Select(m => rig.State.Economy!.Ledger.Balance(m.Purse).Mites))} stock {gb.StockUnits} demand {gb.Demand} cover {gb.TargetCoverDays} ref {gb.RefMicro} bid {bk.BidMicro(rig.Bar)}"); }
         output.WriteLine($"   margin {q.MarginMites:N0}; sold {q.LoadG - q.UnsoldG} of {q.LoadG} g; price age {q.PriceAgeDays}, known {q.PriceKnown}");
         // the hero's notebook: an old price is discounted by its age (1 percent a day), a price the book shows today is not
         var book = rig.State.Markets!.BookForSettlement(rig.Dest); var nb = new PriceNotebook();
@@ -321,10 +335,10 @@ public class IndustrySellingTests(ITestOutputHelper output)
         Assert.Equal(coin0, led.Audit().InPurses.Mites + s.ContinentState.TotalCoin());          // the wagons and the float are transfers
         Assert.True(led.Balance(rig.Biz.Purse).Mites < purse0);
         output.WriteLine($"quote margin {quote.MarginMites:N0} (sales {quote.GrossMites:N0}, costs {quote.CostsMites:N0}, risk {quote.RiskMites:N0}), {quote.Days} days; float {trip.Float:N0}");
-        long soldSeen = 0;
+        long soldSeen = 0, hStart = rig.Rt.HourDone;
         for (int h = 0; h < 24 * 40 && s.Industry.Trips.Count > 0; h++) { rig.Run(1); soldSeen = Math.Max(soldSeen, trip.Sales); if (h % 24 == 0) { Assert.True(led.Audit().IsConserved); Assert.True(s.Economy.MassAuditHolds()); } }
         var works = s.Industry.Works[0];
-        output.WriteLine($"trip ended after {(rig.Rt.HourDone - rig.Sec / 3600)} h: trips {works.CaravanTrips}, lost {works.CaravansLost}, sold {works.CaravanSoldMites:N0}, net {works.CaravanNetMites:N0}; chronicle {s.Chronicle.ByType("caravan_returned").Count()}");
+        output.WriteLine($"trip ended after {rig.Rt.HourDone - hStart} h (quoted margin {quote.MarginMites:N0}): trips {works.CaravanTrips}, lost {works.CaravansLost}, sold {works.CaravanSoldMites:N0}, net {works.CaravanNetMites:N0}; chronicle {s.Chronicle.ByType("caravan_returned").Count()}");
         Assert.Empty(s.Industry.Trips);
         Assert.True(led.Audit().IsConserved); Assert.True(s.Economy.MassAuditHolds());
         Assert.Equal(coin0, led.Audit().InPurses.Mites + s.ContinentState.TotalCoin());
@@ -338,6 +352,24 @@ public class IndustrySellingTests(ITestOutputHelper output)
             Assert.True(works.CaravanNetMites > -(trip.Float));
         }
         else Assert.Equal(1, works.CaravansLost);                                             // or the road took it: capital lost, never conjured back
+    }
+
+    [Fact]
+    public void PlanSaleToMerchants_IsExactlyWhatSellToMerchantsThenDoes()
+    {
+        using var rig = new Rig();
+        var s = rig.State; var book = s.Markets!.BookForSettlement(rig.Dest); var led = s.Economy!.Ledger;
+        const long qty = 700_000;
+        var plan = book.PlanSaleToMerchants(rig.Bar, qty);
+        Assert.True(plan.Qty > 0);
+        var store = s.Economy.OpenStore(StoreKind.Chest, EntityId.Make(IdKind.Other, 0x7777), 0, 0, enforce: false); store.Create(rig.Bar, qty, CreateReason.Seed);
+        var purse = led.Open(PurseKind.Caravan, EntityId.Make(IdKind.Other, 0x7777));
+        var party = new MarketParty(EntityId.Make(IdKind.Other, 0x7777), purse, store, Ravensguard.Sim.Economy.Markets.PartyKind.Business, -1);
+        long stock0 = book.Goods[rig.Bar].StockUnits;
+        var real = book.SellToMerchants(party, rig.Bar, qty, (int)(rig.Rt.HourDone / 24));
+        Assert.Equal(plan.Qty, real.Qty); Assert.Equal(plan.PaidMites, real.PaidMites); Assert.Equal(plan.TollMites, real.TollMites);
+        Assert.Equal(stock0 + real.Qty, book.Goods[rig.Bar].StockUnits);
+        Assert.Equal(real.PaidMites - real.TollMites, led.Balance(purse).Mites);
     }
 
     [Fact]
@@ -378,6 +410,27 @@ public class IndustrySellingTests(ITestOutputHelper output)
         Assert.Equal(coin0, led.Audit().InPurses.Mites + st.TotalCoin());                          // coin that crossed is on the continent's books: the total is whole
         if (works.CaravanTrips == 1) Assert.True(rig.State.HomeRecords.Economy.Trade.ExportedMites > exported0);
         _ = trip;
+    }
+
+    /// <summary>The worked example of the overview's 10b: an L3 iron works makes about 173 kg of bar a day, 4 t in 23 days; the gate's books take it at a falling price, the works' own four wagons carry it to the border.</summary>
+    [Fact]
+    public void Example_AnL3IronWorksSurplus_AtTheGateAndOnFourWagonsToTheBorder_PrintedByPart()
+    {
+        using var rig = new Rig(barG: 4_000_000, boost: false);
+        var s = rig.State; var st = s.ContinentState!; var rl = st.Link(s.HomeRegion.Id);
+        var edge = rl.Edges.Where(e => !st.Summaries[e.Neighbour].Detailed && st.Summaries[e.Neighbour].Pop > 0 && !st.Edges[e.Edge].Closed && rig.Iw.Caravans.PathOf(rig.Town, new CaravanOrder { Kind = DestKind.Neighbour, Dest = e.Neighbour }, out _) != null).OrderBy(e => e.Neighbour).First();
+        int day = (int)(rig.Rt.HourDone / 24);
+        var gate = rig.Iw.QuoteGate(rig.Works, rig.Stage, rig.Bar, 4_000_000);
+        var view = rig.Iw.ViewGate(rig.Stage.Business, rig.Bar);
+        var order = new CaravanOrder { Kind = DestKind.Neighbour, Dest = edge.Neighbour, Vehicle = 2, Wagons = 4, Guards = 2 };
+        var q = rig.Iw.Caravans.Quote(rig.Stage.Business, order, day);
+        Assert.True(q.Ok, q.Why);
+        output.WriteLine($"4 t of bar at the gate: book {gate.Settlement}, gross {gate.GrossMites:N0}, carting {gate.CartMites + gate.CartTollMites:N0}, net {gate.NetMites:N0} ({gate.NetMites / 4000:N0} a kg); the books take {view.AbsorbPerDay / 1000:N0} kg a day, the desk has room for {view.DeskRoomMites:N0}");
+        output.WriteLine($"4 wagons to region {edge.Neighbour}: {q.PathMm / 1000:N0} m, {q.Days} days ({q.MovingHours} moving hours), danger {q.Danger}, ambush {q.AmbushPpm / 10_000.0:F1} percent; sold {(q.LoadG - q.UnsoldG) / 1000:N0} of {q.LoadG / 1000:N0} kg");
+        foreach (var (k, v) in q.Parts()) output.WriteLine($"   {k,-18} {v,12:N0}");
+        output.WriteLine($"   margin {q.MarginMites:N0} ({q.MarginMites / 4000:N0} a kg, {q.MarginMites / Math.Max(1, q.Days):N0} a day)");
+        Assert.Equal(q.GrossMites - q.CostsMites - q.RiskMites, q.MarginMites);
+        Assert.True(q.Wagons == 4 && q.Drivers == 1 && q.Guards == 2);
     }
 
     [Fact]
@@ -457,9 +510,15 @@ public class IndustrySellingTests(ITestOutputHelper output)
         using var resumed = new WorldRuntime(st, straight.W.Content, new MemoryRegionPager());
         Assert.Single(resumed.State.Industry!.Trips);
         Assert.NotNull(resumed.State.HomeRecords!.Economy.Trade.Own);
-        resumed.AdvanceTo(GameTime.FromGameHours(h0 + 40 + 24 * 14));
+        while (resumed.HourDone < h0 + 40 + 24 * 14) { resumed.State.Markets!.BookForSettlement(straight.Dest).Goods[straight.Bar].StructuralDemand = 60_000; resumed.AdvanceTo(GameTime.FromGameHours(resumed.HourDone + 1)); }   // the same faucet as the Rig's
         var got = Sections(resumed);
         output.WriteLine($"trips {straight.State.Industry.Works[0].CaravanTrips} lost {straight.State.Industry.Works[0].CaravansLost}; industry hash {straight.State.Industry.Hash():x} v {resumed.State.Industry!.Hash():x}");
+        output.WriteLine("differing sections: " + string.Join(", ", want.Keys.Union(got.Keys).Where(k => !(want.TryGetValue(k, out var x0) && got.TryGetValue(k, out var y0) && x0.AsSpan().SequenceEqual(y0)))));
+        {
+            var a = IndustrySave.Capture(straight.State.Industry); var b = IndustrySave.Capture(resumed.State.Industry);
+            void Diff(string name, long[][]? x, long[][]? y) { if (x == null || y == null) { output.WriteLine($"{name}: {(x == null)} {(y == null)}"); return; } for (int i = 0; i < Math.Max(x.Length, y.Length); i++) { var r1 = i < x.Length ? x[i] : []; var r2 = i < y.Length ? y[i] : []; for (int j = 0; j < Math.Max(r1.Length, r2.Length); j++) if ((j < r1.Length ? r1[j] : -99) != (j < r2.Length ? r2[j] : -99)) output.WriteLine($"{name}[{i}][{j}] {(j < r1.Length ? r1[j] : -99)} v {(j < r2.Length ? r2[j] : -99)}"); } }
+            Diff("works", a.Works, b.Works); Diff("stages", a.Stages, b.Stages); Diff("rings", a.Rings, b.Rings); Diff("links", a.Links, b.Links); Diff("extras", a.Extras, b.Extras);
+        }
         Assert.Equal(straight.State.Industry.Hash(), resumed.State.Industry.Hash());
         Assert.Equal(straight.State.Industry.Works[0].CaravanSoldMites, resumed.State.Industry.Works[0].CaravanSoldMites);
         var bad = want.Keys.Union(got.Keys).Where(k => !(want.TryGetValue(k, out var x) && got.TryGetValue(k, out var y) && x.AsSpan().SequenceEqual(y))).ToList();

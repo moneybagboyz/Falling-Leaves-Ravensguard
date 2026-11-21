@@ -24,10 +24,8 @@ public sealed class IndustrySave
     [Key(4)] public long[][] Links { get; set; } = [];
     /// <summary>Per works: how many stages it has.</summary>
     [Key(5)] public int[] StageCounts { get; set; } = [];
-    /// <summary>P7-IN2, per stage in the same order: the site rectangle (x0, y0, x1, y1), the upgrade tier and its construction site, then the drying batches (age, grams pairs) after a count, then the packed rows (good, container, grams, containers) after a count. Null while no stage uses any.</summary>
+    /// <summary>P7-IN2, per stage in the same order: the site rectangle (x0, y0, x1, y1), the upgrade tier and its construction site, then the drying batches (age, grams pairs) after a count, then the packed rows (good, container, grams, containers) after a count. Null while no stage uses any. P7-IN4: after the per-stage rows, tagged rows of selling (written only while a stage has an order, a trip is in flight or a works has a tally, so a section without them keeps its bytes): <c>1</c> a stage's caravan order (business, kind, destination, vehicle, wagons, guards, standing, fleet, master), <c>2</c> a trip in flight (caravan, stage, kind, destination, master, departure day, days, wagons, guards, float, sales, quoted margin, risk, value and gross, fodder a day, sold, then the manifest's count and its good and grams pairs), <c>3</c> a works' caravan tally (works index, trips, lost, sold, net).</summary>
     [Key(6)] public long[][]? Extras { get; set; }
-    /// <summary>P7-IN4, selling, tagged rows: <c>1</c> a stage's caravan order (business, kind, destination, vehicle, wagons, guards, standing, fleet, master), <c>2</c> a trip in flight (caravan, stage, kind, destination, master, departure day, days, wagons, guards, float, sales, quoted margin, risk, value and gross, fodder a day, sold, then the manifest's count and its good and grams pairs), <c>3</c> a works' caravan tally (works index, trips, lost, sold, net). Null while no works has an order, a trip or a tally.</summary>
-    [Key(7)] public long[][]? Selling { get; set; }
 
     public static IndustrySave Capture(IndustryBook b)
     {
@@ -68,8 +66,7 @@ public sealed class IndustrySave
         for (int i = 0; i < b.Works.Count; i++) { var w = b.Works[i]; if (w.HasSellingTally) sell.Add([3, i, w.CaravanTrips, w.CaravansLost, w.CaravanSoldMites, w.CaravanNetMites]); }
         return new IndustrySave
         {
-            Selling = sell.Count > 0 ? [.. sell] : null,
-            Extras = anyExtra ? [.. extras] : null,
+            Extras = anyExtra || sell.Count > 0 ? [.. extras, .. sell] : null,
             Works = [.. b.Works.Select(w => new long[] { w.Owner, w.Settlement, w.BuildingsCostMites, w.CumulativeNetMites, w.StartedDay, w.PaidBackDay, w.Closed ? 1 : 0, w.EndBalance, w.Injected, w.InputsPaid })],
             Chains = [.. b.Works.Select(w => w.Chain)], StageCounts = [.. b.Works.Select(w => w.Stages.Count)],
             Stages = [.. stages], Rings = [.. rings], Links = [.. links],
@@ -109,9 +106,10 @@ public sealed class IndustrySave
             }
             b.Works.Add(w);
         }
-        if (Selling != null)
-            foreach (var r in Selling)
+        if (Extras != null)
+            for (int xi = si; xi < Extras.Length; xi++)
             {
+                var r = Extras[xi];
                 if (r.Length < 1) throw new SaveException("Corrupt selling row in save.");
                 switch (r[0])
                 {
