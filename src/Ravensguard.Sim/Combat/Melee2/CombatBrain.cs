@@ -44,6 +44,7 @@ public static class CombatBrain
         if (tick <= f.TreatBusyUntil) { c.MoveX = c.MoveY = 0; c.Sprint = false; c.Start = null; return; }   // P4-F: kneeling to press or bandage (watch-mode 4.3)
         if (!near && (tick + f.Id) % Math.Max(1, w.K.AiFarEveryTicks) != 0) { Carry(w, f, tick); return; }
         Decide(w, f, tick);
+        if (f.FmRow >= 0 && w.Formations != null) w.Formations.Leash(w, f, tick);          // [P7 BB-B] a fighting member keeps to his leash (4.4)
     }
 
     /// <summary>Between far thinks: the reaction plan still runs (it is a trigger) and the held move and guard stay as they were.</summary>
@@ -156,6 +157,7 @@ public static class CombatBrain
     {
         var c = f.Cmd; var K = w.K; ref var m = ref f.Brain; var st = f.Stance;
         c.MoveX = c.MoveY = 0; c.Sprint = false;
+        if (f.FmRow >= 0 && w.Formations != null) w.Formations.ClearPace(f);
         bool reacting = m.React is ReactBlock or ReactParry && tick <= m.HoldBlockUntil;
         if (!reacting && m.React == ReactNone) c.Block = GuardWanted(w, f);
 
@@ -163,6 +165,7 @@ public static class CombatBrain
         if (w.MoraleStepBack(f)) return;                // P4-D hook: a wavering fighter's pace back (morale 4.1)
         var orders = w.OrdersOf(f.Team);
         if (StanceBias.FallBack(w, f, orders)) return;      // P4-F: "fall back to me" (the order wheel, F4)
+        if (f.FmRow >= 0 && w.Formations != null && w.Formations.Steer(w, f, tick)) return;   // [P7 BB-B] a formation member steers to his slot until an enemy is within 3 m (4.4)
         var t = PickTarget(w, f, tick);
         if (t == null) { c.Block = false; if (w.ProtectOf(f) is { } alone) StanceBias.FollowCharge(w, f, alone); return; }   // P4-F: no threat: keep by the charge
         m.Target = t.Id;
@@ -174,7 +177,7 @@ public static class CombatBrain
         // ranged: keep 15 to 40 m, shoot when loaded, nock or span when safe ("hold fire" keeps the arrow nocked)
         if (f.Ranged && st.UseRanged && (f.Loaded || f.Ammo > 0))
         {
-            if (orders.HoldFire) { if (!f.Loaded && f.Act == FAct.Idle) c.Reload = true; return; }                   // P4-F: hold fire: nocked and waiting
+            if (orders.HoldFire || w.FormationHoldsFire(f)) { if (!f.Loaded && f.Act == FAct.Idle) c.Reload = true; return; }                   // P4-F: hold fire: nocked and waiting
             bool meleeFoe = !t.Ranged;
             // an archer backs off and nocks as he goes (close-out item 3: he used to run without nocking, outpace the swordsman for ever and end the fight walked away);
             // not a crossbowman, whose windlass needs him standing
@@ -186,7 +189,7 @@ public static class CombatBrain
             }
             if (dist > K.ArcherMaxMm) { c.MoveX = ux; c.MoveY = uy; return; }
             if (!f.Loaded && f.Act == FAct.Idle) { c.Reload = true; return; }
-            if (f.Loaded && f.Act is FAct.Idle or FAct.Block) c.Start = new AttackReq { Attack = 0, Target = t.Id, Part = -1, Gap = -1, Auto = true };
+            if (f.Loaded && f.Act is FAct.Idle or FAct.Block && w.FormationSafeShot(f, t)) c.Start = new AttackReq { Attack = 0, Target = t.Id, Part = -1, Gap = -1, Auto = true };
             return;
         }
 
@@ -300,6 +303,10 @@ public static class CombatBrain
         }
         if (ax == 0 && ay == 0) { ax = -f.FX; ay = -f.FY; }
         var (ux, uy) = FightMath.Norm(ax, ay);
+        if (w.Formations?.EntryDir(f) is { } en)             // [P7 BB-B] the routed run toward their side's entry point (4.6)
+        {
+            if (ax == 0 && ay == 0) (ux, uy) = en; else { var (mx, my) = FightMath.Norm(ux + en.X, uy + en.Y); (ux, uy) = mx == 0 && my == 0 ? en : (mx, my); }
+        }
         c.MoveX = ux; c.MoveY = uy; c.FaceX = ux; c.FaceY = uy; c.Sprint = f.Stamina > 1500;
     }
 

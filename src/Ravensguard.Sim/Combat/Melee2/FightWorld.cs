@@ -206,6 +206,7 @@ public sealed partial class FightWorld
     /// <summary>The brain thinks for every fighter it drives, then one step.</summary>
     public void StepWithAi()
     {
+        Formations?.Step(this);                                     // [P7 BB-B] slots, orders, captains: before the brains read their slots
         foreach (var f in Fighters) if (!f.Player) CombatBrain.Think(this, f);
         if (Mounts != null) MountedAfterThink();                    // [mounted-combat] horses, the cavalry brain, braced polearms (Combat/Mounted)
         Step();
@@ -447,6 +448,7 @@ public sealed partial class FightWorld
         bool sprint = c.Sprint && f.Act == FAct.Idle && f.Stamina > 0 && f.Shield?.Def.Id != "tower";
         if (sprint) { speed = K.SprintMmps; f.Stamina = Math.Max(0, f.Stamina - K.SprintPerSX100 / 20); }
         int pm = f.Act switch { FAct.Windup or FAct.Strike or FAct.Recover => K.AttackMovePm, FAct.Block or FAct.Aiming or FAct.Drawing => K.GuardMovePm, _ => 1000 };
+        if (!sprint && Formations != null && f.FmRow >= 0) { int fp = Formations.PaceOf(f); if (fp > 0 && fp < speed) speed = fp; }      // [P7 BB-B] a formation member keeps the formation's step
         speed = (int)((long)speed * pm / 1000 * f.WalkPm / 1000);
         if (f.Book.Weakened) speed = speed * 800 / 1000;
         speed = WeatherSpeed(speed);                                       // [P4 close-out] weather hook (FightWorld.Weather.cs)
@@ -726,6 +728,7 @@ public sealed partial class FightWorld
         foreach (var p in Projectiles) h = p.Hash(h);
         if (Mounts != null) h = MountedHash(h);                     // [mounted-combat] MountedHash joins the trail
         h = WeatherHash(h);                                         // [P4 close-out] the weather row, when set (FightWorld.Weather.cs)
+        if (Formations != null) h = Formations.Hash(h);               // [P7 BB-B] the formation book joins the trail when there is one
         h = FightMath.Mix(h, _engageTick);              // P4-D hook: the walk-away clock
         return h;
     }

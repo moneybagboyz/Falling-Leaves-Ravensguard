@@ -107,6 +107,10 @@ public sealed class Fighter
     public int BraceX, BraceY, BraceSince, UnbracedUntil = -1;
     public int LastMoveMm;
 
+    // ---- Phase 7 BB-B: the formation this fighter stands in (Sim/Battle): its row in the fight's formation book and his index among its members (-1: none); the slot steering flag of this think (not saved) ----
+    public int FmRow = -1, FmMember = -1;
+    internal bool FmSteer;
+
     // ---- the action ----
     public FAct Act;
     public int ActTicks;

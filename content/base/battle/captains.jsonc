@@ -1,0 +1,15 @@
+// P7-BB-B (battle-bubble-and-formations 4.7): what a captain may do, by his Tactics. Each rule is a code name the captain layer knows; a captain uses every rule at or below his Tactics.
+[
+  { "type": "captain_rule", "id": "advance", "tactics": 0, "rule": "advance_nearest" },
+  { "type": "captain_rule", "id": "archers_at_will", "tactics": 0, "rule": "archers_at_will" },
+  { "type": "captain_rule", "id": "hold_outnumbered", "tactics": 0, "rule": "hold_if_outnumbered" },
+  { "type": "captain_rule", "id": "wall_vs_missiles", "tactics": 30, "rule": "wall_against_missiles" },
+  { "type": "captain_rule", "id": "set_vs_cavalry", "tactics": 30, "rule": "set_against_cavalry" },
+  { "type": "captain_rule", "id": "hold_fire_far", "tactics": 30, "rule": "hold_fire_beyond_range" },
+  { "type": "captain_rule", "id": "face_flank", "tactics": 50, "rule": "face_flank_attack" },
+  { "type": "captain_rule", "id": "reserve", "tactics": 50, "rule": "keep_reserve" },
+  { "type": "captain_rule", "id": "pull_back_archers", "tactics": 50, "rule": "pull_back_archers" },
+  { "type": "captain_rule", "id": "flank_engaged", "tactics": 70, "rule": "flank_engaged_enemy" },
+  { "type": "captain_rule", "id": "rally_reform", "tactics": 70, "rule": "rally_broken" },
+  { "type": "captain_rule", "id": "time_charge", "tactics": 70, "rule": "charge_on_reload" }
+]

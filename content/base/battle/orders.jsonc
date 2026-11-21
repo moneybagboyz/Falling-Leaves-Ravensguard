@@ -1,0 +1,25 @@
+// P7-BB-B (battle-bubble-and-formations 3.3): which orders a horn can carry (advance, charge, hold, retreat, rally), which are carried out at a jog, and which are momentary (a shape or a fire mode: they
+// take effect on arrival and leave the movement order as it was).
+[
+  { "type": "battle_order", "id": "move_to" },
+  { "type": "battle_order", "id": "advance", "horn": true },
+  { "type": "battle_order", "id": "charge", "horn": true, "jog": true },
+  { "type": "battle_order", "id": "hold", "horn": true },
+  { "type": "battle_order", "id": "follow_me" },
+  { "type": "battle_order", "id": "flank_left" },
+  { "type": "battle_order", "id": "flank_right" },
+  { "type": "battle_order", "id": "shield_wall", "momentary": true },
+  { "type": "battle_order", "id": "loose", "momentary": true },
+  { "type": "battle_order", "id": "line", "momentary": true },
+  { "type": "battle_order", "id": "column", "momentary": true },
+  { "type": "battle_order", "id": "set_against_cavalry", "momentary": true },
+  { "type": "battle_order", "id": "fire_at_will", "momentary": true },
+  { "type": "battle_order", "id": "hold_fire", "momentary": true },
+  { "type": "battle_order", "id": "attack_formation" },
+  { "type": "battle_order", "id": "retreat", "horn": true, "jog": true },
+  { "type": "battle_order", "id": "rally", "horn": true },
+  { "type": "battle_order", "id": "face", "momentary": true },
+  { "type": "battle_order", "id": "wheel", "momentary": true },
+  { "type": "battle_order", "id": "dismount", "momentary": true },
+  { "type": "battle_order", "id": "mount", "momentary": true }
+]

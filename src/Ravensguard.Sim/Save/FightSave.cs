@@ -68,6 +68,8 @@ public sealed class FightRecord
     [Key(23)] public long[]? Inside { get; set; }
     /// <summary>P4 close-out (no format bump): the fight's weather row by its state name; "" for a fight without one (older records).</summary>
     [Key(24)] public string Weather { get; set; } = "";
+    /// <summary>P7 BB-B (no format bump): the fight's formation book (<see cref="Ravensguard.Sim.Battle.FormationBook.Pack"/>); null for a fight with no formations, so a fight that never formed one keeps its bytes.</summary>
+    [Key(25)] public long[]? Formations { get; set; }
 
     // ---------------------------------------------------------------- capture
 
@@ -92,6 +94,7 @@ public sealed class FightRecord
         })];
         r.Ground = [.. w.Ground.Select(g => new GroundRow { Shape = g.Shape, Material = g.Material, X = g.X, Y = g.Y, Damaged = g.Damaged, Ammo = g.Ammo })];
         r.Morale = w.CaptureMorale();                                         // P4-D hook
+        r.Formations = w.Formations?.Pack();                                  // P7 BB-B hook
         r.Watch = WatchRow.Capture(w);                                        // P4-F hook
         if (w.Fighters.Any(f => f.InsideUntil != -1 || f.InsideOf != -1)) r.Inside = [.. w.Fighters.SelectMany(f => new long[] { f.InsideUntil, f.InsideOf })];
         if (w.Fighters.Any(f => f.Worn.Any(x => !x.Pristine)))
@@ -221,6 +224,7 @@ public sealed class FightRecord
         foreach (var g in Ground) w.Ground.Add(new GroundItem(g.Shape, g.Material, g.X, g.Y, g.Damaged, g.Ammo));
         for (int i = 0; i < SpentAmmoIds.Length; i++) w.SpentAmmo[SpentAmmoIds[i]] = SpentAmmoCounts[i];
         w.RestoreMorale(Morale);                                              // P4-D hook
+        w.RestoreFormations(Formations);                                      // P7 BB-B hook
         Watch?.Restore(w);                                                    // P4-F hook
         if (Inside != null)
             for (int i = 0; i < w.Fighters.Count && 2 * i + 1 < Inside.Length; i++) { w.Fighters[i].InsideUntil = (int)Inside[2 * i]; w.Fighters[i].InsideOf = (int)Inside[2 * i + 1]; }

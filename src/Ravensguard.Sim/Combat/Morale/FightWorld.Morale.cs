@@ -111,7 +111,7 @@ public sealed partial class FightWorld
         EnsureMorale(t);
         var D = MoraleK.D;
         t.M.PenaltyX100 += D.HitTakenX100; t.M.LastLossTick = Tick;
-        if (facing != Facing.Front) { t.M.FlankedUntil = Tick + D.FlankedForS * MoraleRules.TicksPerS; t.FlankedUntil = t.M.FlankedUntil; }
+        if (facing != Facing.Front) { t.M.FlankedUntil = Tick + D.FlankedForS * MoraleRules.TicksPerS; t.FlankedUntil = t.M.FlankedUntil; Formations?.NoteFlankBlow(t, Tick); }
     }
 
     private void MoraleOnLimbLost(Fighter f)
@@ -140,6 +140,7 @@ public sealed partial class FightWorld
             if (f.M.Has(MoraleFlags.Captain) && d <= rl) { o.M.PenaltyX100 += D.LeaderDownX100; o.M.LastLossTick = Tick; }
             if (f.M.Has(MoraleFlags.Banner) && d <= rb) { o.M.PenaltyX100 += D.BannerLostX100; o.M.LastLossTick = Tick; }
         }
+        if (f.M.Has(MoraleFlags.Captain) && Formations != null) Formations.CaptainFell(this, f);       // [P7 BB-B] the whole formation feels its captain fall (4.6)
     }
 
     /// <summary>Blows from behind against a routing fighter hit x1.5 (4.1), permille of the momentum.</summary>
@@ -203,7 +204,7 @@ public sealed partial class FightWorld
         int pain = (int)Math.Min(100, f.Book.PainX100 * 100L / Math.Max(1, f.Book.KnockoutPainX100));
         bool outnumbered = foes > 0 && (long)foes * 1000 >= (long)D.OutnumberedRatioPm * friends;
         return new MoraleTerms(m.CourageX100, m.PenaltyX100, m.RoutAccX100, Tick < m.FlankedUntil ? D.FlankedX100 : 0, pain, f.Book.LossPm,
-            captain ? D.CaptainX100 : 0, banner ? D.BannerX100 : 0, Braced(f) ? D.ShieldWallX100 : 0, Winning(f.Team) ? D.WinningX100 : 0, outnumbered ? D.OutnumberedX100 : 0,
+            captain ? D.CaptainX100 : 0, banner ? D.BannerX100 : 0, Braced(f) || Formations != null && Formations.WallBonus(f) ? D.ShieldWallX100 : 0, Winning(f.Team) ? D.WinningX100 : 0, outnumbered ? D.OutnumberedX100 : 0,
             0, !company && foes > 0 ? Math.Min(D.AloneCapX100, D.AloneX100 + D.AlonePerFoeX100 * (foesAround - 1)) : 0);
     }
 
@@ -300,19 +301,23 @@ public sealed partial class FightWorld
     /// <summary>An active, standing friend carrying <paramref name="flag"/> (captain or banner) within <paramref name="r"/>: walks the carriers listed for this morale step, or the neighbours when called outside one.</summary>
     private bool CarrierWithin(Fighter f, long r, MoraleFlags flag)
     {
+        // [P7 BB-B] the hero's aura (4.6): his captain's reach is 10 m + Leadership / 5 m when that is more than the usual radius
+        long hero = flag == MoraleFlags.Captain && Formations != null && Formations.Hero >= 0 ? Formations.AuraMm(Fighters[Formations.Hero]) : 0;
         if (_inMoraleStep)
         {
             foreach (int oid in flag == MoraleFlags.Captain ? _captainIds : _bannerIds)
             {
                 var o = Fighters[oid];
-                if (o.Id != f.Id && o.Team == f.Team && o.Active && !o.Routing && o.M.Has(flag) && DistMm(f, o) <= r) return true;
+                long reach = o.Id == Formations?.Hero ? Math.Max(r, hero) : r;
+                if (o.Id != f.Id && o.Team == f.Team && o.Active && !o.Routing && o.M.Has(flag) && DistMm(f, o) <= reach) return true;
             }
             return false;
         }
-        foreach (int oid in Near(0, f, r))
+        foreach (int oid in Near(0, f, Math.Max(r, hero)))
         {
             var o = Fighters[oid];
-            if (o.Id != f.Id && o.Team == f.Team && o.Active && !o.Routing && o.M.Has(flag) && DistMm(f, o) <= r) return true;
+            long reach = o.Id == Formations?.Hero ? Math.Max(r, hero) : r;
+            if (o.Id != f.Id && o.Team == f.Team && o.Active && !o.Routing && o.M.Has(flag) && DistMm(f, o) <= reach) return true;
         }
         return false;
     }

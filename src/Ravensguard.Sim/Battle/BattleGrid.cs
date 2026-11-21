@@ -13,7 +13,7 @@ namespace Ravensguard.Sim.Battle;
 /// shove, after a knock-back), not only straight after a rebuild; the fight rebuilds after movement and separation and whenever the drift passes half a cell, which is a speed matter only.
 /// Outliers (a fighter fled a kilometre off) are clamped into the border cells of a grid of at most 512 x 512 cells, which can only add candidates, never lose one.
 /// </para>
-/// Not thread-safe: the query scratch is shared, so a grid is used only by the thread that steps its fight. <see cref="FormationId"/> is reserved for BB-B and stays 0.
+/// Not thread-safe: the query scratch is shared, so a grid is used only by the thread that steps its fight. <see cref="FormationId"/> is the fighter's formation row + 1 (BB-B; 0: none).
 /// </summary>
 public sealed class BattleGrid
 {
@@ -76,7 +76,7 @@ public sealed class BattleGrid
         {
             var f = fighters[i];
             int x = f.X, y = f.Y;
-            X[i] = x; Y[i] = y; Team[i] = f.Team; ActBits[i] = f.Active ? 1 : 0;
+            X[i] = x; Y[i] = y; Team[i] = f.Team; ActBits[i] = f.Active ? 1 : 0; FormationId[i] = f.FmRow + 1;
             if (x < minX) minX = x; if (x > maxX) maxX = x;
             if (y < minY) minY = y; if (y > maxY) maxY = y;
         }

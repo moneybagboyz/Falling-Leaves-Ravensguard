@@ -1,0 +1,20 @@
+// P7-BB-B (battle-bubble-and-formations 3.2, 4.3 to 4.7): formation shapes and the formation layer's constants. Spacing and leash in mm, speeds in mm a second, turn in degrees a second.
+// Wedge (cavalry spec) and wagon fort (sieges spec) lay out as a line until their parts land. The schiltron never moves or turns (pace 0); the fall back ring is about the commander.
+[
+  { "type": "formation_shape", "id": "line", "lateral_mm": 1000, "rank_mm": 1200, "ranks": 4, "turn_deg_per_s": 30, "walk_mmps": 1500, "jog_mmps": 3000, "leash_mm": 2000 },
+  { "type": "formation_shape", "id": "shield_wall", "lateral_mm": 800, "rank_mm": 1000, "ranks": 3, "turn_deg_per_s": 15, "walk_mmps": 1000, "jog_mmps": 1000, "leash_mm": 2000 },
+  { "type": "formation_shape", "id": "loose", "lateral_mm": 2500, "rank_mm": 2500, "ranks": 2, "turn_deg_per_s": 90, "walk_mmps": 1500, "jog_mmps": 3000, "leash_mm": 6000 },
+  { "type": "formation_shape", "id": "column", "lateral_mm": 1500, "rank_mm": 1500, "ranks": 0, "abreast": 3, "turn_deg_per_s": 45, "walk_mmps": 1300, "jog_mmps": 1300, "leash_mm": 3000 },
+  { "type": "formation_shape", "id": "schiltron", "lateral_mm": 900, "rank_mm": 900, "ranks": 2, "layout": "schiltron", "turn_deg_per_s": 0, "walk_mmps": 0, "jog_mmps": 0, "leash_mm": 2000 },
+  { "type": "formation_shape", "id": "wedge", "lateral_mm": 1000, "rank_mm": 1200, "ranks": 4, "turn_deg_per_s": 30, "walk_mmps": 1500, "jog_mmps": 3000, "leash_mm": 2000 },
+  { "type": "formation_shape", "id": "wagon_fort", "lateral_mm": 1000, "rank_mm": 1200, "ranks": 4, "turn_deg_per_s": 30, "walk_mmps": 1500, "jog_mmps": 3000, "leash_mm": 2000 },
+  { "type": "formation_shape", "id": "fall_back", "lateral_mm": 1000, "rank_mm": 1000, "ranks": 1, "layout": "fall_back", "ring_mm": 3000, "turn_deg_per_s": 90, "walk_mmps": 3000, "jog_mmps": 3000, "leash_mm": 2000 },
+  { "type": "battle_rules", "id": "default",
+    "close_ticks": 40, "close_drill_div": 25, "hesitate_max_ticks": 10, "cohesion_mm": 2000, "cohesion_min_pm": 600, "brake_percentile": 20, "contact_mm": 3000,
+    "deploy_rank_mm": 1500, "deploy_pace_mmps": 3000, "deploy_drill_cut_pm": 500,
+    "delay_base_ticks": 80, "delay_leadership_num": 4, "delay_leadership_den": 5, "delay_min_ticks": 10, "voice_range_mm": 60000, "horn_extra_ticks": 20, "runner_mmps": 5000,
+    "max_queue": 4, "stagger_ticks": 10, "charge_max_ticks": 600, "arrive_mm": 3000, "retreat_mm": 80000, "flank_offset_mm": 15000,
+    "flanked_share_pm": 100, "rout_share": 500, "rout_cascade_x100": 2000, "neighbour_cascade_x100": 1000, "neighbour_cascade_radius_m": 30, "aura_base_m": 10, "aura_leadership_div": 5,
+    "captain_takeover_s": 30, "redecide_min_ticks": 40, "redecide_base_ticks": 200, "redecide_tactics_mul": 2, "missile_range_m": 150, "flank_alert_ticks": 20, "pull_back_archers_m": 40,
+    "archer_safe_mm": 5000, "outnumbered_pm": 2000 }
+]
