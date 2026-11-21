@@ -87,7 +87,8 @@ public class HostSupplyTests
             Assert.True(hs.IsOnCampaign(p)); Assert.True(run.Economy.Farming.IsEmployedElsewhere!(p));      // his household has lost his labour
             Assert.Equal(fief, region.Settlements[hh.Settlement[pt.Household[p]]].FiefIndex);
         });
-        Assert.Equal(m.Persons.OrderBy(p => pt.Household[p]).ToArray(), m.Persons.ToArray());               // ascending household
+        bool Hand(int p) { var o = pt.Occupation[p]; return o is Occupation.Farmer or Occupation.Ploughman or Occupation.Labourer or Occupation.Shepherd || (o == Occupation.None && hh.Class[pt.Household[p]] == SocialClass.Peasant); }
+        Assert.Equal(m.Persons.OrderBy(p => Hand(p) ? 0 : 1).ThenBy(p => pt.Household[p]).ToArray(), m.Persons.ToArray());   // P7-EA3c: field hands first, each group in ascending household
         var again = hs.Muster(h, fief, 25);                                                                  // nobody is drawn twice
         Assert.Empty(again.Persons.Intersect(m.Persons));
         hs.Release(h, m.Persons.Take(5).ToList());

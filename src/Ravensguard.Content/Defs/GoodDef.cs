@@ -150,6 +150,6 @@ public sealed record MoneySettingsDef : ContentDef
     public int MoneyerPiecesPerDay { get; init; } = 3000;
     public int MintMasterWageMites { get; init; } = 500;
     /// <summary>Gold in a tonne of dressed ore, mg, and what a worker pans from a stream in a day, mg.</summary>
-    public int GoldGradeMgPerT { get; init; } = 6000;
+    public int GoldGradeMgPerT { get; init; } = 1000;
     public int PanGoldMgPerDay { get; init; } = 300;
 }

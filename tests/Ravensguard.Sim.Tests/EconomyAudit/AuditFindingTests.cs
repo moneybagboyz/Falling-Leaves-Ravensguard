@@ -51,13 +51,14 @@ public class AuditFindingTests(ITestOutputHelper output)
         output.WriteLine($"raised {a.Aid:N0} in aid and {a.Tallage:N0} in tallage = {(double)(a.Aid + a.Tallage) / 128_340_000:P1} of the region's coin; treasury now {a.Held:N0}");
     }
 
-    /// <summary>EA_F9 (W4 / WL-6, Medium): 1,040 levies out through the Y8 harvest cost the harvest nothing (-0.2% against the control, the spec asks for 10-35%). Needs the control and the war: a Soak test.</summary>
-    [Fact(Skip = "EA_F9 owned by P7-AE2 / P7-EA3b (levy quotas and the harvest's sensitivity to the labour a levy takes); remove Skip when the levy bites"), Trait("Category", "Soak")]
+    /// <summary>EA_F9 (W4 / WL-6, Medium), EA3c made the levy take field hands first (HostSupply.Muster) and counted children of 7 to 11 at the harvest (overview 10c); 1,040 levies out through the Y8 harvest still cost it only about 0.4% against the control (the spec asks 10 to 35%), so the test stays skipped. Needs the control and the war: a Soak test.</summary>
+    [Fact(Skip = "EA_F9 still open after P7-EA3c: the levy takes field hands first and children help (10c), but the Y8 harvest stays -0.4% against the control because reaping is not labour-bound (see docs/reviews/phase-7-audit.md, EA_F9); needs the user's call on harvest labour and the reaping deadline"), Trait("Category", "Soak")]
     public void EA_F9_LeviesOutThroughTheHarvest_CutTheHarvest10To35Percent()
     {
         using var war = AuditWorld.Create(); using var ctl = AuditWorld.Create();
         var w = new WarLoadSoak(war, 8); w.Run(); var c = new WarLoadSoak(ctl, 8, control: true); c.Run();
         double drop = 1 - (double)w.Rows[7].HarvestT / c.Rows[7].HarvestT;
+        output.WriteLine($"Y8 harvest {w.Rows[7].HarvestT} t against the control's {c.Rows[7].HarvestT} t = {drop:P1} below; levies mustered Y8 {w.Rows[7].Mustered}; farm hours unmet Y8 {w.Rows[7].FarmUnmetH:N0} against {c.Rows[7].FarmUnmetH:N0}");
         Assert.InRange(drop, 0.10, 0.35);
     }
 }

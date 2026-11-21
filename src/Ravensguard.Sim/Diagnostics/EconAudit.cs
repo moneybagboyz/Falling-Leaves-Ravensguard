@@ -65,7 +65,7 @@ public static class EconAudit
         new("I3", "industry", "Merchants have the coin", ">= 30 days of the works' sales", "EA3b with the scripted works (needs IN2 chains)"),
         new("I4", "industry", "Raw output barely covers wages", "a raw stage earns 1.0-1.5x its wage bill at book prices", "fixed in EA3a (EA_F1, the R1 rule)"),
         new("S-1", "suspects", "Raw extraction is worth about 8.7x its wage", "1.0-1.5x after R1 (EA_F1)", "measured here"),
-        new("S-2", "suspects", "Silver yield: 3 kg of silver from 1 t of galena", "after F-4: 1-2% of the money supply a year", "EA3 (F-4)"),
+        new("S-2", "suspects", "Silver yield: kg of silver from 1 t of galena (0.15 after EA_F4; was 3)", "after F-4: 1-2% of the money supply a year", "EA3 (F-4)"),
         new("S-3", "suspects", "No mint runs: MintMath.StrikeInto has no caller", "coinage.md 5.1 wires mints", "measured here"),
         new("S-4", "suspects", "Loot below material", "melt value / listed value <= 1.2", "fixed in EA3a (EA_F2)"),
         new("S-5", "suspects", "Phase 6 S10 and S14", "no Burn outside tests; tribute moves real coin", "EA3 (F-3)"),
@@ -146,8 +146,9 @@ public static class EconAudit
                 return (AuditState.Pass, "phase-6 S14 closed in P7-0B: Diplomacy.AbstractHolding is a documented holding purse and tribute moves real coin (EA_F3 tests)");
             case "S-2" or "L6" when db != null:
             {
-                var (galena, silver, mites) = AuditMeasures.SilverPerWorkerDay(db, cat);
-                return (AuditState.Fail, $"a silver miner digs {galena:0} kg of galena = {silver:0.0} kg of silver = {mites:N0} mites a worker-day, {mites / AuditMeasures.UnskilledWagePerDay:0}x the wage; 22 worker-days a year would be 2% of this region's money supply; no mint strikes it yet, so the exposure is latent until CN1 (finding EA_F4)");
+                var (galena, silver, mites, grade) = AuditMeasures.SilverPerWorkerDay(db, cat);
+                bool ok = grade is >= 0.01 and <= 0.05;
+                return (ok ? AuditState.Pass : AuditState.Fail, $"silver is {grade:0.000}% of the galena (pass 0.01-0.05%: argentiferous galena, 0.15 kg of silver a tonne); a silver miner digs {galena:0} kg of galena = {silver:0.00} kg of silver = {mites:N0} mites a worker-day; the realised growth of the money supply from the struck silver is measured by MoneyGrowthTests (EA_F4, P7-EA3c: 1-2% a game year on seeds 1234 and 42)");
             }
             case "I4" when db != null:
             {

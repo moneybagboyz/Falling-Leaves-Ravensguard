@@ -48,6 +48,8 @@ public sealed partial class FarmingSystem
     private int[] _pendingThresh = [];
     private bool[] _isHolder;
     private int[] _hhHours;
+    /// <summary>P7-EA3c (overview 10c): each household's children's hours a day, good for the harvest tasks (Reap, BindCart, hay) only.</summary>
+    private int[] _hhChild;
     private int[][] _householdsOf;
     private int[] _popHolder;
     private readonly long[] _rainToday = new long[CellCropClimate.Cells];
@@ -73,7 +75,7 @@ public sealed partial class FarmingSystem
         int nh = pop.Households.Count;
         _isHolder = new bool[nh];
         for (int p = 0; p < np; p++) if (P.Holder[p] >= 0) _isHolder[P.Holder[p]] = true;
-        _hhHours = new int[nh];
+        _hhHours = new int[nh]; _hhChild = new int[nh];
         var lists = new List<int>[ns]; for (int s = 0; s < ns; s++) lists[s] = [];
         for (int h = 0; h < nh; h++) { int s = pop.Households.Settlement[h]; if ((uint)s < (uint)ns) lists[s].Add(h); }
         _householdsOf = lists.Select(l => l.ToArray()).ToArray();
@@ -289,6 +291,7 @@ public sealed partial class FarmingSystem
     {
         int nh = Pop.Households.Count, np = P.Count;
         if (_hhHours.Length < nh) { Array.Resize(ref _hhHours, nh); Array.Resize(ref _isHolder, nh); }
+        if (_hhChild.Length < nh) Array.Resize(ref _hhChild, nh);
         // the saved table grows on its own: after a load the working arrays already have the new households (the constructor sizes them), the saved table does not (resume-drift fix 2)
         GrowSeedDebt(nh);
         bool changed = false;
@@ -335,12 +338,18 @@ public sealed partial class FarmingSystem
         var demesneHands = new int[n];
         for (int h = 0; h < n; h++)
         {
-            int hours = 0;
+            int hours = 0, child = 0;
             if (hh.MemberCount[h] > 0 && (hh.Class[h] != SocialClass.Gentry || _isHolder[h]))
                 foreach (int m in hh.Members(h))
                 {
                     int age = people.AgeYears(m, day);
-                    if (age < 12) continue;
+                    if (age < 12)
+                    {
+                        // a child of a farming household binds, stooks and carries in the harvest (overview 10c): a share of a day for those tasks only
+                        if (age >= _d.ChildHarvestMinAge && people.Status[m] == PersonStatus.Alive && people.Occupation[m] == Occupation.None && (hh.Class[h] == SocialClass.Peasant || _isHolder[h]))
+                            child += _wh * _d.ChildHarvestPct / 100;
+                        continue;
+                    }
                     if (people.Status[m] != PersonStatus.Alive) continue;
                     var occ = people.Occupation[m];
                     bool hand = occ is Occupation.Farmer or Occupation.Ploughman or Occupation.Labourer or Occupation.Shepherd
@@ -353,10 +362,10 @@ public sealed partial class FarmingSystem
                     if (lord >= 0 && lord < n && _isHolder[lord]) { demesneHands[lord] += hrs; continue; }
                     hours += hrs;
                 }
-            _hhHours[h] = hours;
+            _hhHours[h] = hours; _hhChild[h] = child;
         }
         for (int h = 0; h < n; h++) _hhHours[h] += demesneHands[h];
-        for (int h = n; h < _hhHours.Length; h++) _hhHours[h] = 0;
+        for (int h = n; h < _hhHours.Length; h++) { _hhHours[h] = 0; _hhChild[h] = 0; }
     }
 
     /// <summary>When true (the integrated economy), unoccupied members of landless households are seasonal hands too; the standalone farming tests keep the original rule.</summary>
