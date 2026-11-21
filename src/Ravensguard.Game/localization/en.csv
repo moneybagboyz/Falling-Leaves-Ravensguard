@@ -3044,6 +3044,11 @@ ld_offer_use_listing,The lord sells his plots from his own list.
 ld_offer_lived_in,Somebody lives in that house: its holder will not sell it over his head.
 ld_offer_low,The holder wants at least {0} for it.
 ld_offer_taken,"You bought the house in {0} from its holder for {1}."
+ld_licence_refused_opinion,The lord thinks too little of you to grant the licence.
+ld_licence_refused_standing,Your standing in the realm is too low for the licence.
+ld_licence_refused_guild_master,The guild master speaks against the licence.
+ld_licence_refused_licences,The guild says the town already has licensed works enough in the trade.
+ld_licence_refused_fee,The fee is too small to tip the lord.
 iq_tier_crude,crude
 iq_tier_poor,poor
 iq_tier_fine,fine
@@ -5028,11 +5033,6 @@ sc_contract_no_book,There is no market book to fix a price from.
 sc_couple_no_station,That business has no such station.
 sc_coupled,The station is coupled to the machine at that cell.
 sc_uncoupled,The station is no longer coupled to a machine.
-ld_licence_refused_opinion,The lord thinks too little of you to grant the licence.
-ld_licence_refused_standing,Your standing in the realm is too low for the licence.
-ld_licence_refused_guild_master,The guild master speaks against the licence.
-ld_licence_refused_licences,The guild says the town already has licensed works enough in the trade.
-ld_licence_refused_fee,The fee is too small to tip the lord.
 ch_note_charter_lapsed,The settlers did not come in time.
 ch_note_charter_arrears,Its dues were two seasons behind.
 ch_note_market_petition,"The settlement had the people and a square, and petitioned."
