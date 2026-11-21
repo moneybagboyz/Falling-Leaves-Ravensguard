@@ -53,6 +53,7 @@ public static class NeedScanner
         foreach (var n in w.StockNeeds().Where(x => x.Settlement == s).OrderBy(x => x.Owner).ThenBy(x => x.Good))
         {
             if (n.DaysLeft >= w.S.StockDaysMin) continue;
+            if (book.Contracts.Values.Count(x => x.Open && x.Settlement == s) >= w.S.BoardCap) break;      // the board filled while this list was walked: no need entry without a posting after it
             if (Posted(w, book, day, c => c.Kind == "deliver_goods" && c.TargetOwner == n.Owner && c.Good == n.Good)) continue;
             bool merchant = false;
             for (int t = 0; t < w.SettlementNames.Length && !merchant; t++)

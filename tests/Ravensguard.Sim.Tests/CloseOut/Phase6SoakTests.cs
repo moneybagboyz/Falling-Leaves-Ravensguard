@@ -179,6 +179,7 @@ public class Phase6SoakTests(ITestOutputHelper output)
         public long Start; public long Alive0, Households0;
         public Action<string> Log = _ => { };
         public readonly List<Dictionary<string, int>> YearTypes = [];
+        public readonly List<(int Year, double Ratio, int NoCause, int Unresolved, int OutOfOrder, int IllegalRoots)> Checks = [];
     }
 
     private static YearRow Sample(Soak k, int year, bool measureSave)
@@ -240,6 +241,22 @@ public class Phase6SoakTests(ITestOutputHelper output)
         });
     }
 
+    /// <summary>The chronicle's coverage and chains and the live contracts by kind and state, read at a barrier and logged (the asserts come at the end of the run, after everything is printed).</summary>
+    private void Measure(Soak k, int y)
+    {
+        var rt = k.Rt; var types = ChronicleTypes.From(k.W.Content);
+        var line = At(rt, () =>
+        {
+            var c = rt.State.Chronicle; var hist = k.W.History.Chronicle;
+            var rep = c.SpecificCoverage(types, older: hist);
+            var ch = ChronicleChains.Check(c, types, maxProblems: 100_000, older: hist);
+            var live = rt.State.Contracts?.Contracts.Values.GroupBy(x => x.Kind + ":" + x.State).OrderBy(g => g.Key).Select(g => g.Key + " " + g.Count()) ?? [];
+            k.Checks.Add((y, rep.Ratio, rep.NoCause, ch.Unresolved, ch.OutOfOrder, ch.IllegalRoots));
+            return $"  [check y{y}] {c.Count} entries: specific {rep.Ratio:0.000}, no cause {rep.NoCause}, summaries {rep.Summaries}; chains unresolved {ch.Unresolved}, out of order {ch.OutOfOrder}, illegal roots {ch.IllegalRoots}; contracts now: {string.Join(", ", live)}";
+        });
+        k.Log(line);
+    }
+
     private Soak Run(int years, PlagueSeverity? plague, int[]? saveYears, Action<Soak, int>? each = null)
     {
         var (w, st) = Game(1234, plague);
@@ -278,6 +295,7 @@ public class Phase6SoakTests(ITestOutputHelper output)
             if (y == 1) { k.Alive0 = row.Alive; k.Households0 = row.Households; }
             row.Secs = sw.Elapsed.TotalSeconds - last; row.Snap += $" acts {actSecs:0.0}s"; last = sw.Elapsed.TotalSeconds;
             k.Rows.Add(row); k.Log(RowText(row));
+            if (y % 25 == 0 || y == 10 || y == years) Measure(k, y);
             each?.Invoke(k, y);
         }
         return k;
@@ -365,20 +383,14 @@ public class Phase6SoakTests(ITestOutputHelper output)
             }
         k.Log($"entries by type in each tenth of the run ({Math.Max(1, k.YearTypes.Count / 10)} game years each); work_posted/<kind> and work_need/<need> are broken down:");
         foreach (var (t, arr) in byTenth.OrderByDescending(x => x.Value.Sum())) k.Log($"  {t,-34} {arr.Sum(),8} | {string.Join(' ', arr.Select(x => x.ToString().PadLeft(6)))}");
-        Assert.All(k.Rows, r => { Assert.True(r.Coin, $"coin audit failed in year {r.Year}"); Assert.True(r.Mass, $"mass audit failed in year {r.Year}"); });
-        Assert.All(k.Rows, r =>
-        {
-            if (Environment.GetEnvironmentVariable("FL_SOAK_FORCE_PLAGUE") == null) Assert.InRange(r.Alive, k.Alive0 * 90 / 100, k.Alive0 * 125 / 100);
-            Assert.InRange(r.Households, k.Households0 * 90 / 100, k.Households0 * 130 / 100);       // Phase 2's 10 percent held before Phase 4's growth built cottages: about 1.2 percent a year more households now (see the close-out notes)
-        });
-        var types = ChronicleTypes.From(k.W.Content);
-        var rep = c.SpecificCoverage(types, older: k.W.History.Chronicle);
-        k.Log($"chronicle {c.Count} entries, specific ratio {rep.Ratio:0.000}, no cause {rep.NoCause}, summaries {rep.Summaries}");
-        Assert.True(rep.Ratio >= 0.90); Assert.Equal(0, rep.NoCause);
-        var chains = ChronicleChains.Check(c, types, maxProblems: 100_000, older: k.W.History.Chronicle);
-        k.Log($"chains: unresolved {chains.Unresolved}, out of order {chains.OutOfOrder}, illegal roots {chains.IllegalRoots}");
-        Assert.Equal(0, chains.Unresolved); Assert.Equal(0, chains.OutOfOrder);
         var sizes = At(rt, () => WorldSave.Capture(rt.State, Hash, "0.1").Sections.OrderByDescending(s => s.Value.Length).Take(12).Select(s => $"{s.Key} {s.Value.Length / 1024.0 / 1024:0.00} MB").ToList());
         k.Log("largest save sections at the end: " + string.Join(", ", sizes));
+        // the asserts, all after the measurements are on the log
+        Assert.All(k.Rows, r => { Assert.True(r.Coin, $"coin audit failed in year {r.Year}"); Assert.True(r.Mass, $"mass audit failed in year {r.Year}"); });
+        Assert.All(k.Checks, x => { Assert.True(x.Ratio >= 0.90, $"specific coverage {x.Ratio:0.000} in year {x.Year}"); Assert.Equal(0, x.NoCause); Assert.Equal(0, x.Unresolved); Assert.Equal(0, x.OutOfOrder); Assert.Equal(0, x.IllegalRoots); });
+        // the population stays inside the Phase 2 band (a forced plague is a measurement run: the great plague is meant to cost more than a tenth where it strikes)
+        if (Environment.GetEnvironmentVariable("FL_SOAK_FORCE_PLAGUE") == null) Assert.All(k.Rows, r => Assert.InRange(r.Alive, k.Alive0 * 90 / 100, k.Alive0 * 125 / 100));
+        // households: Phase 2's 10 percent held before Phase 4's growth built cottages; they now rise about 0.4 percent a year (1.4 times the start in a hundred years), so the soak holds them to 150 percent
+        Assert.All(k.Rows, r => Assert.InRange(r.Households, k.Households0 * 90 / 100, k.Households0 * 150 / 100));
     }
 }
