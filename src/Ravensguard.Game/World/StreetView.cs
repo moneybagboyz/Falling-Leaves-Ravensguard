@@ -988,6 +988,7 @@ public partial class StreetView : Control, IHandlesBack
         SoilTick(delta);                                    // P6-D4: the soil view, hands-on soil work (StreetView.Soil.cs)
         BusinessTick(delta);                                // P5-F: the Ledger, businesses and prospecting: views, answers, where the hero is, screenshots
         WillTick(delta);                                    // P5-H: will answers, the will panel's view (StreetView.Will.cs)
+        CoinTick(delta);                                    // P7-CN2: coin answers, the mint and changer panels' view (StreetView.Coinage.cs)
         TreatTick(delta);                                   // P6-B1: the treatment queue performed at the second its work ends, cancelled by a step or a fight (StreetView.Treatment.cs)
         FireTick();                                         // P6-B5: fire stepped to the clock, flames, smoke and scars drawn (StreetView.Fire.cs)
         DiseaseTick();                                      // P6-C4: answers to nursing and the physician's call (StreetView.Disease.cs)

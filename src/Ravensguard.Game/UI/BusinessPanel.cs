@@ -164,8 +164,8 @@ public partial class BusinessPanel : Control
         if (v.Costs is { } co && (co.Recipes.Count > 0 || co.Machines.Count > 0 || co.Contracts.Count > 0))
         {
             _body.AddChild(UiKit.Hint(L.T("bz_ui_costs")));
-            foreach (var cr in co.Recipes.Take(6))
-                _body.AddChild(Row(L.F("bz_ui_cost_row", cr.Recipe, Micro(cr.InputsMicroPerUnit + cr.WagesMicroPerUnit), Micro(cr.UnitCostMicroToday), Micro(cr.UnitCostMicroAtCap), cr.CapPerDay > 0 ? Quotes.Weight(cr.CapPerDay) : "-", cr.Stops ? L.T("bz_ui_cost_stops") : ""), cr.Stops));
+            foreach (var rc in co.Recipes.Take(6))
+                _body.AddChild(Row(L.F("bz_ui_cost_row", rc.Recipe, Micro(rc.InputsMicroPerUnit + rc.WagesMicroPerUnit), Micro(rc.UnitCostMicroToday), Micro(rc.UnitCostMicroAtCap), rc.CapPerDay > 0 ? Quotes.Weight(rc.CapPerDay) : "-", rc.Stops ? L.T("bz_ui_cost_stops") : ""), rc.Stops));
             foreach (var mr in co.Machines)
                 _body.AddChild(Row(mr.Cause.Length == 0 ? L.F("bz_ui_machine_on", mr.Kind, mr.LabourPm / 10) : L.F("bz_ui_machine_off", mr.Kind, L.T(mr.Cause)), mr.Cause.Length > 0));
             foreach (var ct in co.Contracts)

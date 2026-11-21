@@ -88,6 +88,8 @@ public partial class StreetView
             case "court": DebugCourt(); return true;                           // P6-C1: the Court panel over a made-up docket
             case "faction": DebugFaction(); return true;                      // P6-D2: the Faction screen over a staged war, opinions and a vacant fief
             case "industry": DebugIndustry(); return true;                    // P7-IN3: the Ledger's Industry tab over a staged iron works
+            case "mint": DebugCoin("mint"); return true;                      // P7-CN2: the mint counter over a made-up view
+            case "changer": DebugCoin("changer"); return true;                // P7-CN2: the money changer over a made-up view
             case "rule": DebugRule(); return true;                            // P6-C3: the Ledger's Fief tab with a lord's books staged
             case "workboard": DebugWorkBoard(); return true;                  // P6-C2: the contracts screen over a made-up board
             case "workboard_mine": DebugWorkBoard(null, true); return true;   // P6-C2: and on the Taken tab

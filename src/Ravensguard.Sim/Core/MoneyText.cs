@@ -95,11 +95,14 @@ public static class MoneyText
     public static string Pieces(long gold, long silver, long copper, long massGrams, Func<string, string>? tr = null)
         => string.Format(CultureInfo.InvariantCulture, Tr(tr, KeyPieces), gold, silver, copper, massGrams);
 
-    /// <summary>The pieces of an amount held as money of account (the greedy split): for a purse that tracks no gold the silver and copper are the rest.</summary>
-    public static string Pieces(long mites, Func<string, string>? tr = null)
+    /// <summary>
+    /// The pieces of a purse worth <paramref name="mites"/> that holds <paramref name="goldPieces"/> gold pieces (0 for a purse that tracks no gold): the gold counted, silver and copper from the rest, and the coins' mass.
+    /// 12,345 mites with no gold: "123 silver, 4 copper (160 g)" (the mites under a copper are not a piece).
+    /// </summary>
+    public static string PiecesOf(long mites, long goldPieces = 0, Func<string, string>? tr = null)
     {
-        new Coin(Math.Max(0, mites)).Parts(out long g, out long s, out long c, out _);
-        return Pieces(g, s, c, Inventory.Encumbrance.CoinMassG(mites), tr);
+        long m = Math.Max(0, mites), g = Math.Min(Math.Max(0, goldPieces), m / Coin.MitesPerGold), rest = m - g * Coin.MitesPerGold;
+        return Pieces(g, rest / Coin.MitesPerSilver, rest % Coin.MitesPerSilver / Coin.MitesPerCopper, Inventory.Encumbrance.CoinMassG(m), tr);
     }
 }
 

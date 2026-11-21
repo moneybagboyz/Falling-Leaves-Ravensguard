@@ -161,8 +161,8 @@ public class TradeInventoryTests
         Assert.Equal(3_312, sell.TotalMites);
         Assert.Equal(166, sell.TollMites);
         Assert.Equal(3_146, sell.NetMites);
-        Assert.Equal("1.94", Quotes.PerUnit(buy.FirstUnitMicro, false));
-        Assert.Equal("38 cr 88 m", Quotes.Money(3_888));
+        Assert.Equal("1 sp 9.4 cp a kg", Quotes.PerUnit(buy.FirstUnitMicro, false));
+        Assert.Equal("3 gp 8 sp 9 cp", Quotes.Money(3_888));
     }
 
     [Fact]
@@ -242,7 +242,7 @@ public class TradeInventoryTests
         Assert.Equal(6, age);
         var cls = LastHeard.AgeClass(age, Settings.PriceAgeFreshDays, Settings.PriceAgeOldDays);
         Assert.Equal(PriceAge.Aged, cls);
-        Assert.Equal("1.84 (6 d)", LastHeard.Cell(n.AskMicro, false, age, cls));
+        Assert.Equal("1 sp 8.4 cp a kg (6 d)", LastHeard.Cell(n.AskMicro, false, age, cls));
         Assert.Equal(PriceAge.Fresh, LastHeard.AgeClass(3));
         Assert.Equal(PriceAge.Old, LastHeard.AgeClass(16));
         Assert.EndsWith("?", LastHeard.Cell(n.AskMicro, false, 16, PriceAge.Old));

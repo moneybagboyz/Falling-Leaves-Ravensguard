@@ -207,6 +207,17 @@ public static class Phase3Smoke
             if (router.Top != sv) throw new Exception("Esc did not close the Ledger's Industry tab");
             GD.Print("[smoke]   the Ledger's Industry tab: fits, its keys stay in the Ledger, Esc closes it");
 
+            // P7-CN2 (coinage 9): the mint counter and the money changer fit 960x540 over a made-up view with every row live; Esc closes each
+            foreach (var counter in new[] { "mint", "changer" })
+            {
+                sv.DebugCoin(counter); await Frames(tree, 20);
+                if (router.Top is not UI.CoinPanel) throw new Exception($"the {counter} panel did not open (top " + router.Top?.GetType().Name + ")");
+                Fit(router.Top!, $"the {counter} panel", view);
+                Key(Godot.Key.Escape); await Frames(tree, 4);
+                if (router.Top != sv) throw new Exception($"Esc did not close the {counter} panel");
+            }
+            GD.Print("[smoke]   the mint counter and the money changer: fit, Esc closes them");
+
             // P6-D2 (diplomacy-and-ai-lords 6): F opens the Faction screen (its own context: the street keys are off under it); every tab fits 960x540, Tab turns the pages, Esc closes it
             Key(Godot.Key.F); await Frames(tree, 40);
             if (router.Top is not UI.FactionScreen) throw new Exception("F did not open the Faction screen (top " + router.Top?.GetType().Name + ")");

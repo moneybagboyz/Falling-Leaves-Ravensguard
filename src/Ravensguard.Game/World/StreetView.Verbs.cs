@@ -130,6 +130,7 @@ public partial class StreetView
         HoldingsVerbs(v);                                   // P6-B6: whose is this, clear an acre of the claim, felling by hand, sowing, the logs (StreetView.Holdings.cs)
         SoilVerbs(v);                                       // P6-D4: marl or manure a field of his, work the soil job, offer for a house (StreetView.Soil.cs)
         WillVerbs(v);                                       // P5-H: make a will before a priest or the reeve (StreetView.Will.cs)
+        CoinVerbs(v);                                       // P7-CN2: sell metal at the mint, change money (StreetView.Coinage.cs)
         TreatVerbs(v);                                      // P6-B1: treat the wounded, a physician's Treat me (StreetView.Treatment.cs)
         FaithVerbs(v);                                      // P6-B4: attend the service, give alms, a pilgrim's vow, beside a priest (StreetView.Faith.cs)
         JusticeVerbs(v);                                    // P6-C1: give yourself up beside a guard, hold court with cases on the docket (StreetView.Justice.cs)

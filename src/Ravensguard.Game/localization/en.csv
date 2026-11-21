@@ -6361,6 +6361,35 @@ co_too_small,That is too little to change into a gold piece.
 co_changed,"The changer gave you {0} gold pieces for a fee of {1:money}."
 co_melted,"You melted {0} pieces into metal."
 co_cannot_melt,You have not got that many pieces to melt.
+co_q_head,Coin
+co_q_mint,Sell metal at the mint
+co_q_changer,Change money
+co_ui_mint_title,The mint
+co_ui_changer_title,The money changer
+co_ui_wait,Waiting for the counter.
+co_ui_purse,"Your purse: {0}. Gold pieces held: {1}."
+co_ui_gold,gold
+co_ui_silver,silver
+co_ui_copper,copper
+co_ui_carry,"You carry {1} of {0}."
+co_ui_rate,"A kilogram pays {0} after the mint's cut."
+co_ui_rate_copper,"Copper is struck at face while the realm's copper stays within its cap; the mint pays the market's bid for the metal and hands back what it cannot use."
+co_ui_sell,Sell {0}
+co_ui_sell_all,Sell all
+co_ui_queue,"The moneyers are behind: {0} of gold and {1} of silver wait to be struck."
+co_ui_chg_fee,"The changer keeps {0} in a thousand. Gold pieces to be had today: {1}."
+co_ui_chg_silver_head,"Your coin: {0}. Change to gold:"
+co_ui_chg_to_gold,"Change {0} (fee {1})"
+co_ui_chg_gold_head,"Your gold: {0} pieces. Change to silver:"
+co_ui_chg_to_silver,"{0} gold (fee {1})"
+co_ui_chg_all_silver,All {0} gold pieces
+mt_gp,gp
+mt_sp,sp
+mt_cp,cp
+mt_per_kg,a kg
+mt_per_pack,per {0} kg
+mt_each,each
+mt_pieces,"{0} gold, {1} silver, {2} copper ({3} g)"
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."
