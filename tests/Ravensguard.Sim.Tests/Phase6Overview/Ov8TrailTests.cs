@@ -62,11 +62,11 @@ public class Ov8TrailTests(ITestOutputHelper output)
         var chron = rep.State!.Chronicle.All;
         foreach (var type in new[] { "sentence_flogged", "fire_started", "fire_ended", "riot", "riot_rises", "riot_ends", "riot_guards", "slave_sold", "plague_begins", "plague_settlement", "official_appointed", "manhunt_began" })
             output.WriteLine($"{type}: {chron.Count(c => c.TypeId == type)}");
-        Assert.NotEmpty(chron.Where(c => c.TypeId == "sentence_flogged"));          // the court day flogged him, through the wound book
-        Assert.NotEmpty(chron.Where(c => c.TypeId == "fire_ended" && c.Data.GetValueOrDefault("cause") == "hearth"));          // the hearth fire burnt out, its cause in the entry
-        Assert.NotEmpty(chron.Where(c => c.TypeId is "riot_rises" or "riot"));
-        Assert.NotEmpty(chron.Where(c => c.TypeId == "slave_sold"));
-        Assert.NotEmpty(chron.Where(c => c.TypeId == "plague_begins")); Assert.NotEmpty(chron.Where(c => c.TypeId == "plague_settlement"));
+        Assert.Contains(chron, c => c.TypeId == "sentence_flogged");          // the court day flogged him, through the wound book
+        Assert.Contains(chron, c => c.TypeId == "fire_ended" && c.Data.GetValueOrDefault("cause") == "hearth");          // the hearth fire burnt out, its cause in the entry
+        Assert.Contains(chron, c => c.TypeId is "riot_rises" or "riot");
+        Assert.Contains(chron, c => c.TypeId == "slave_sold");
+        Assert.Contains(chron, c => c.TypeId == "plague_begins"); Assert.Contains(chron, c => c.TypeId == "plague_settlement");
         Assert.Contains(rep.State.Law!.Crimes.Values, c => c.Kind == "jailbreak");
         Assert.True(rep.State.Economy!.Ledger.Audit().IsConserved);
 
