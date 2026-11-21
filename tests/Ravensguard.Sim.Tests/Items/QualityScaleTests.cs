@@ -255,7 +255,7 @@ public class QualityScaleTests
         Assert.Equal(named, book.Count);
         var lines = chronicle.All.Where(c => c.TypeId == Artefacts.ChronicleType).ToList();
         Assert.Equal(named, lines.Count);
-        Assert.All(lines, c => Assert.Equal(maker, c.Causes.Single().EventId));
+        Assert.All(lines, c => Assert.Equal((long)maker.Value, c.Causes.Single().NoteParams!.Single(p => p.Name == "maker").Value));   // P6-E4: the maker is the cause's keyed parameter ("ch_why_artefact_maker"), not an event id
         // not a masterwork, or not a weapon, armour piece or jewel: never named; and no tier above masterwork
         var fine = items.Add(ids, "arming_sword", ItemQuality.Fine, maker, [new ItemComponent("steel", 1413, 1000)]);
         Assert.Null(Artefacts.TryName(Db, 7, items, fine, maker, "W", 0, book, null, null));
