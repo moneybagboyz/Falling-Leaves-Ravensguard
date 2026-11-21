@@ -125,7 +125,7 @@ public sealed partial class FightWorld
         if (f.Launcher is not { } l || !f.Loaded || f.AmmoDef == null) { f.Act = FAct.Idle; return; }
         bool early = f.Act == FAct.Drawing && f.DrawElapsed < DrawTicks(f);
         int aimed = f.Act == FAct.Aiming ? Tick - f.AimSince : 0;
-        Fighter? t = f.Req.Target >= 0 && f.Req.Target < Fighters.Count ? Fighters[f.Req.Target] : NearestEnemy(f);
+        Fighter? t = f.Req.Target >= 0 && f.Req.Target < Fighters.Count ? Fighters[f.Req.Target] : NearestEnemyOf(f);
         int tx, ty, tz;
         if (t != null) { tx = t.X; ty = t.Y; tz = f.Req.Part >= 0 && f.Req.Part < t.Plan.Parts.Length ? PartHeightMm(t.Plan.Parts[f.Req.Part]) : K.AimHeightMm; }
         else { tx = f.X + f.FX * 30; ty = f.Y + f.FY * 30; tz = K.AimHeightMm; }
@@ -158,8 +158,10 @@ public sealed partial class FightWorld
         if (d >= K.AutoLobMinM * 1000L && !Thrown(stream))
         {
             var (ux, uy) = FightMath.Norm(dx, dy);
-            foreach (var o in Fighters)
+            // a friend counts only when along < d x LobSkip and lat <= 2 capsules, so he lies within that and a little more of the shooter
+            foreach (int oid in Near(0, f, Math.Max(d, d * K.LobSkipPm / 1000) + d / 50 + 2 * K.CapsuleRadiusMm + 1000))
             {
+                var o = Fighters[oid];
                 if (o.Id == f.Id || o.Team != f.Team || !o.Active) continue;
                 long rx = o.X - f.X, ry = o.Y - f.Y;
                 long along = (rx * ux + ry * uy) / FightMath.One, lat = Math.Abs((rx * uy - ry * ux) / FightMath.One);
@@ -233,8 +235,9 @@ public sealed partial class FightWorld
         int v = ThrowSpeedMmps(massG, (int)((long)f.Kit.Strength * f.StrengthPm / 1000));
         int sigma = AimSigmaMdeg(f.ThrowSkill, false, K.AimFullTicks, f.LastMoveMm * 20 > K.MoveCancelMmps, f.OneEye, K.ThrowSigmaMdeg);
         Fighter? aimed = null; long bd = long.MaxValue;
-        foreach (var e in Fighters)
+        foreach (int eid in Near(0, f.ThrowTargetX, f.ThrowTargetY, 1500))
         {
+            var e = Fighters[eid];
             if (e.Team == f.Team || !e.Active) continue;
             long d = FightMath.Len(e.X - f.ThrowTargetX, e.Y - f.ThrowTargetY);
             if (d < 1500 && d < bd) { bd = d; aimed = e; }
@@ -261,8 +264,11 @@ public sealed partial class FightWorld
             long wallAt = Walls != null ? MissileWall(p, f0, f1) : -1;      // [heists] a bolt does not pass a wall
             if (wallAt >= 0) f1 = wallAt;
             Fighter? hit = null; long bestT = long.MaxValue; long hitLat = 0;
-            foreach (var e in Fighters)
+            // only the fighters near the segment this tick can be hit: the capsule test below needs t in [f0, f1] +- a capsule and |lat| <= a capsule (a little extra for the Q10 direction)
+            var (mx, my) = p.At((f0 + f1) / 2);
+            foreach (int eid in Near(0, mx, my, Math.Abs(f1 - f0) / 2 + 2 * K.CapsuleRadiusMm + Math.Max(f0, f1) / 50 + 1000))
             {
+                var e = Fighters[eid];
                 if (e.Act is FAct.Dead or FAct.Fled) continue;
                 long rx = e.X - p.X0, ry = e.Y - p.Y0;
                 long t = (rx * p.DirX + ry * p.DirY) / FightMath.One;

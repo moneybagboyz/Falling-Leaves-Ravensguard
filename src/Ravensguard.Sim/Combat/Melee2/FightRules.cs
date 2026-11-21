@@ -43,9 +43,7 @@ public sealed partial class FightWorld
 
     private int NearestEnemyId(Fighter f)
     {
-        int best = -1; long bd = long.MaxValue;
-        foreach (var e in Fighters) if (e.Team != f.Team && e.Active) { long d = DistMm(e, f); if (d < bd) { bd = d; best = e.Id; } }
-        return best;
+        return NearestEnemyOf(f)?.Id ?? -1;
     }
 
     // ------------------------------------------------------------------ treating in the fight (watch-mode 4.3, wounds 4.3)
@@ -78,8 +76,7 @@ public sealed partial class FightWorld
 
     private bool EnemyWithin(Fighter f, long mm)
     {
-        foreach (var e in Fighters) if (e.Team != f.Team && e.Active && DistMm(e, f) <= mm) return true;
-        return false;
+        return AnyEnemyWithin(f, mm);
     }
 
     private Fighter? Patient(Fighter f)
@@ -90,8 +87,9 @@ public sealed partial class FightWorld
         if (Bleeds(f, 1)) return f;
         if (f.Act == FAct.Fled) return null;
         Fighter? best = null; int bestRate = 0;
-        foreach (var o in Fighters)
+        foreach (int oid in Near(0, f, TreatAllyMm))
         {
+            var o = Fighters[oid];
             if (o.Id == f.Id || o.Team != f.Team || o.Act is FAct.Fled || DistMm(f, o) > TreatAllyMm) continue;
             int i = Treatment.WorstBleeder(o.Book, -1, now);
             if (i < 0 || o.Book.Dead) continue;

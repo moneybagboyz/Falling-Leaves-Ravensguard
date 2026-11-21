@@ -72,7 +72,10 @@ public sealed class Fighter
     // ---- the kit as the step reads it ----
     public required WeaponV2 Weapon;
     public string Family = "";
-    public int ReachMm, StrikeTicks, BaseWindTicks, BaseRecoverTicks;
+    public int StrikeTicks, BaseWindTicks, BaseRecoverTicks;
+    private int _reachMm;
+    /// <summary>The weapon's reach (mm). A property so the battle grid sees a reach change (BB-A: the AI's incoming-blow scan sizes its query by the largest reach in the fight).</summary>
+    public int ReachMm { get => _reachMm; set { _reachMm = value; Grid?.NoteReach(value); } }
     public ShieldV2? Shield;
     public int ShieldPm = 1000;
     public required WornV2[] Worn;
@@ -95,7 +98,12 @@ public sealed class Fighter
     public int Skill, ShieldSkill, ThrowSkill, ArcherySkill;
 
     // ---- position ----
-    public int X, Y, FX, FY;
+    public int FX, FY;
+    private int _x, _y;
+    /// <summary>The fight's grid (BB-A); set by <see cref="FightWorld.Add"/>. A position write tells it how far this fighter has drifted from where the grid last saw it, which is what keeps a query exact between rebuilds.</summary>
+    internal Ravensguard.Sim.Battle.BattleGrid? Grid;
+    public int X { get => _x; set { _x = value; Grid?.NoteX(Id, value); } }
+    public int Y { get => _y; set { _y = value; Grid?.NoteY(Id, value); } }
     public int BraceX, BraceY, BraceSince, UnbracedUntil = -1;
     public int LastMoveMm;
 

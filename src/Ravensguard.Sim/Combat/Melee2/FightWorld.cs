@@ -110,6 +110,7 @@ public sealed partial class FightWorld
         foreach (var t in kit.Throwables) if (t.Count > 0) f.Throwables.Add(t);
         f.Brain.Target = -1; f.Brain.ReactSerialFoe = -1;
         Fighters.Add(f);
+        f.Grid = Grid; Grid.Dirty = true; Grid.NoteReach(f.ReachMm);   // BB-A: the grid sees this fighter's moves and reach
         RefreshBody(f);
         if (f.Stance.NoLethal) SheatheFor(f);                   // P4-F hook: a no-lethal stance fights with the flat, the butt, or bare hands (watch-mode 4.3)
         return f;
@@ -221,7 +222,9 @@ public sealed partial class FightWorld
         foreach (var f in Fighters) { ApplyCommand(f); AdvanceState(f); }
         foreach (var f in Fighters) Move(f);
         if (Mounts != null) MountedAfterMove();                     // [mounted-combat] refusal, the braced strike, the trample
+        RebuildGrid();                                              // BB-A: after movement
         Separate();
+        RebuildGrid();                                              // BB-A: after separation (bodies pushed, a bearer shoved)
         foreach (var f in Fighters) UpdateBrace(f);
         if (_impacts.Count > 0)
         {
@@ -466,28 +469,42 @@ public sealed partial class FightWorld
     {
         int min = 2 * K.BodyRadiusMm;
         var before = Walls != null ? SavePositions() : null;
+        // The old loop was O(n^2): every a against every later b, in id order, on positions that earlier pushes had already moved. The grid hands a its neighbours (ascending id, a box
+        // widened by every fighter's drift, so a body pushed earlier in this very pass is still found); a itself moves as it is pushed, so when it has strayed past SepSlack from where the
+        // box was cut the box is cut again around it and the walk resumes after the last b it tested. Each b is tested once per a, exactly as before.
+        const int slack = 600;
         for (int i = 0; i < Fighters.Count; i++)
         {
             var a = Fighters[i];
             if (a.Act is FAct.Dead or FAct.Fled or FAct.Surrendered) continue;
-            for (int j = i + 1; j < Fighters.Count; j++)
+            int last = i;
+            bool again;
+            do
             {
-                var b = Fighters[j];
-                if (b.Act is FAct.Dead or FAct.Fled or FAct.Surrendered) continue;
-                if (Mounts != null && MountedSkipPair(a, b)) continue;      // [mounted-combat] horses do not push; a horse at speed runs through
-                long dx = b.X - a.X, dy = b.Y - a.Y;
-                if (dx > min || dx < -min || dy > min || dy < -min) continue;
-                long len = FightMath.Len(dx, dy);
-                if (len >= min) continue;
-                int ux, uy;
-                if (len == 0) { ux = FightMath.One; uy = 0; } else { ux = (int)(dx * FightMath.One / len); uy = (int)(dy * FightMath.One / len); }
-                int push = (int)((min - len) / 2);
-                bool aFixed = a.Act == FAct.Down, bFixed = b.Act == FAct.Down;
-                if (a.Team != b.Team && !aFixed && !bFixed) Shove(a, b, ux, uy);
-                if (aFixed && !bFixed) { b.X += ux * push * 2 / FightMath.One; b.Y += uy * push * 2 / FightMath.One; }
-                else if (bFixed && !aFixed) { a.X -= ux * push * 2 / FightMath.One; a.Y -= uy * push * 2 / FightMath.One; }
-                else { a.X -= ux * push / FightMath.One; a.Y -= uy * push / FightMath.One; b.X += ux * push / FightMath.One; b.Y += uy * push / FightMath.One; }
-            }
+                again = false;
+                int cx = a.X, cy = a.Y;
+                foreach (int j in Near(0, cx, cy, min + slack))
+                {
+                    if (j <= last) continue;
+                    last = j;
+                    var b = Fighters[j];
+                    if (b.Act is FAct.Dead or FAct.Fled or FAct.Surrendered) continue;
+                    if (Mounts != null && MountedSkipPair(a, b)) continue;      // [mounted-combat] horses do not push; a horse at speed runs through
+                    long dx = b.X - a.X, dy = b.Y - a.Y;
+                    if (dx > min || dx < -min || dy > min || dy < -min) continue;
+                    long len = FightMath.Len(dx, dy);
+                    if (len >= min) continue;
+                    int ux, uy;
+                    if (len == 0) { ux = FightMath.One; uy = 0; } else { ux = (int)(dx * FightMath.One / len); uy = (int)(dy * FightMath.One / len); }
+                    int push = (int)((min - len) / 2);
+                    bool aFixed = a.Act == FAct.Down, bFixed = b.Act == FAct.Down;
+                    if (a.Team != b.Team && !aFixed && !bFixed) Shove(a, b, ux, uy);
+                    if (aFixed && !bFixed) { b.X += ux * push * 2 / FightMath.One; b.Y += uy * push * 2 / FightMath.One; }
+                    else if (bFixed && !aFixed) { a.X -= ux * push * 2 / FightMath.One; a.Y -= uy * push * 2 / FightMath.One; }
+                    else { a.X -= ux * push / FightMath.One; a.Y -= uy * push / FightMath.One; b.X += ux * push / FightMath.One; b.Y += uy * push / FightMath.One; }
+                    if (Math.Abs(a.X - cx) > slack || Math.Abs(a.Y - cy) > slack) { again = true; break; }
+                }
+            } while (again);
         }
         if (before != null) KeepOutOfWalls(before);                              // [heists] a body pushed into a wall goes back
     }
@@ -524,8 +541,9 @@ public sealed partial class FightWorld
     private int AdjacentBraced(Fighter f, Fighter? except = null)
     {
         int n = 0;
-        foreach (var o in Fighters)
+        foreach (int oid in Near(2, f, K.WallSpacingMm))
         {
+            var o = Fighters[oid];
             if (o.Id == f.Id || o == except || o.Team != f.Team || !Braced(o)) continue;
             long dx = o.X - f.X, dy = o.Y - f.Y;
             if (dx * dx + dy * dy > (long)K.WallSpacingMm * K.WallSpacingMm) continue;
@@ -546,8 +564,9 @@ public sealed partial class FightWorld
         if (n >= 2) return n;
         if (n == 0) return 0;
         // one neighbour: the wall counts only if that neighbour has another (three in a row)
-        foreach (var o in Fighters)
+        foreach (int oid in Near(1, f, K.WallSpacingMm))
         {
+            var o = Fighters[oid];
             if (o.Id == f.Id || o.Team != f.Team || !Braced(o)) continue;
             long dx = o.X - f.X, dy = o.Y - f.Y;
             if (dx * dx + dy * dy > (long)K.WallSpacingMm * K.WallSpacingMm) continue;
@@ -560,8 +579,9 @@ public sealed partial class FightWorld
     public bool OverWall(Fighter a)
     {
         if (a.Family != "polearms") return false;
-        foreach (var o in Fighters)
+        foreach (int oid in Near(1, a, (long)(K.WallSpacingMm * 1.5) + 1))      // sqrt(2) x the spacing, rounded up
         {
+            var o = Fighters[oid];
             if (o.Id == a.Id || o.Team != a.Team || !Braced(o)) continue;
             long dx = o.X - a.X, dy = o.Y - a.Y;
             if (dx * dx + dy * dy > (long)K.WallSpacingMm * K.WallSpacingMm * 2) continue;

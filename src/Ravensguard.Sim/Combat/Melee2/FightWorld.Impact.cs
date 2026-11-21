@@ -56,8 +56,9 @@ public sealed partial class FightWorld
             if (t.Team != a.Team && Hittable(t) && InStrike(a, t, ReachAgainst(a, t))) return t;
         }
         Fighter? best = null; long bd = long.MaxValue;
-        foreach (var t in Fighters)
+        foreach (int tid in Near(0, a, Math.Max(a.ReachMm, 500) + K.ReachSlackMm))     // ReachAgainst never exceeds the attacker's own reach; InStrike is within reach + slack
         {
+            var t = Fighters[tid];
             if (t.Team == a.Team || !Hittable(t) || !InStrike(a, t, ReachAgainst(a, t))) continue;
             long d = DistMm(a, t) + (_snapAct[t.Id] == FAct.Down ? 5000 : 0);       // prefer someone still standing
             if (d < bd) { bd = d; best = t; }

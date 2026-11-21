@@ -15,6 +15,13 @@ public sealed partial class FightWorld
 {
     private MoraleRules? _moraleK;
     private int _engageTick;
+    /// <summary>BB-A: the fighter count at the last morale step, when every fighter's morale was initialised (a fall before the first step still initialises the whole side, as the old scan did).</summary>
+    private int _moraleEnsured;
+    /// <summary>BB-A: inside the morale step the down and dead do not change, so a side's "winning" reading is worked out once, not once a fighter.</summary>
+    private bool _inMoraleStep;
+    private readonly Dictionary<int, bool> _winning = [];
+    private int _rallyN = -1;
+    private readonly Dictionary<int, (int X, int Y)> _rally = [];
 
     /// <summary>No swing, shot or throw begun for 15 s (and the fight has run that long): both sides walked away, the fight is over (4.3).</summary>
     public bool Disengaged => Tick >= MoraleK.D.WalkAwayS * MoraleRules.TicksPerS && Tick - _engageTick >= MoraleK.D.WalkAwayS * MoraleRules.TicksPerS;
@@ -88,7 +95,10 @@ public sealed partial class FightWorld
     private void MoraleStep()
     {
         foreach (var f in Fighters) EnsureMorale(f);
+        _moraleEnsured = Fighters.Count;
+        _winning.Clear(); _inMoraleStep = true;
         foreach (var f in Fighters) if ((Tick + f.Id) % MoraleRules.EveryTicks == 0) UpdateMorale(f);
+        _inMoraleStep = false;
     }
 
     /// <summary>A blow taken costs 2 points; one from the flank or behind sets the 15 point flank term for 5 s (re-applied while flank blows land).</summary>
@@ -112,8 +122,10 @@ public sealed partial class FightWorld
         var D = MoraleK.D;
         bool counts = f.Act is FAct.Down or FAct.Dead or FAct.Surrendered;
         long r = D.FriendDownRadiusM * 1000L, rl = D.LeaderDownRadiusM * 1000L, rb = D.BannerRadiusM * 1000L;
-        foreach (var o in Fighters)
+        if (_moraleEnsured != Fighters.Count) foreach (var o in Fighters) if (o.Id != f.Id && o.Team == f.Team && o.Active) EnsureMorale(o);   // a fall before the first morale step
+        foreach (int oid in Near(0, f, Math.Max(r, Math.Max(rl, rb))))
         {
+            var o = Fighters[oid];
             if (o.Id == f.Id || o.Team != f.Team || !o.Active) continue;
             EnsureMorale(o);
             long d = DistMm(o, f);
@@ -153,8 +165,9 @@ public sealed partial class FightWorld
         long ra = D.AloneRadiusM * 1000L;
         int foes = 0, friends = 1, foesAround = 0; bool company = false;
         bool captain = m.Has(MoraleFlags.Captain), banner = m.Has(MoraleFlags.Banner);
-        foreach (var o in Fighters)
+        foreach (int oid in Near(0, f, Math.Max(Math.Max(ra, ro), Math.Max(rc, rb))))
         {
+            var o = Fighters[oid];
             if (o.Id == f.Id || !o.Active) continue;
             long d = DistMm(f, o);
             if (o.Team == f.Team)
@@ -177,13 +190,16 @@ public sealed partial class FightWorld
     /// <summary>The side has at least 2:1 kills (enemies down or dead, not themselves) in the last 30 s.</summary>
     private bool Winning(int team)
     {
+        if (_inMoraleStep && _winning.TryGetValue(team, out bool known)) return known;
         int window = MoraleK.D.WinningWindowS * MoraleRules.TicksPerS, ours = 0, theirs = 0;
         foreach (var o in Fighters)
         {
             if (o.Act is not (FAct.Down or FAct.Dead) || o.EndedAt < Tick - window) continue;
             if (o.Team == team) theirs++; else ours++;
         }
-        return ours >= 2 && (long)ours * 1000 >= (long)MoraleK.D.WinningRatioPm * theirs;
+        bool winning = ours >= 2 && (long)ours * 1000 >= (long)MoraleK.D.WinningRatioPm * theirs;
+        if (_inMoraleStep) _winning[team] = winning;
+        return winning;
     }
 
     private void UpdateMorale(Fighter f)
@@ -193,8 +209,9 @@ public sealed partial class FightWorld
         m.PenaltyX100 = Math.Max(0, m.PenaltyX100 - R.DecayPerUpdate);
         if (m.PendingFalls > 0) { m.PenaltyX100 += Math.Min(D.FriendDownCapX100, m.PendingFalls * D.FriendDownX100); m.PendingFalls = 0; m.LastLossTick = Tick; }
         int routing = 0; long rr = D.RoutingNeighbourRadiusM * 1000L;
-        foreach (var o in Fighters)
+        foreach (int oid in Near(0, f, rr))
         {
+            var o = Fighters[oid];
             if (o.Id == f.Id || !o.Active && !o.Routing) continue;
             if (o.Team == f.Team) { if (o.Routing && DistMm(f, o) <= rr) routing++; }
         }
@@ -260,8 +277,11 @@ public sealed partial class FightWorld
 
     private bool CaptainWithin(Fighter f, long r)
     {
-        foreach (var o in Fighters)
+        foreach (int oid in Near(0, f, r))
+        {
+            var o = Fighters[oid];
             if (o.Id != f.Id && o.Team == f.Team && o.Active && !o.Routing && o.M.Has(MoraleFlags.Captain) && DistMm(f, o) <= r) return true;
+        }
         return false;
     }
 
@@ -285,9 +305,7 @@ public sealed partial class FightWorld
     private void EscapeCheck(Fighter f)
     {
         var D = MoraleK.D; ref var m = ref f.M;
-        long nd = long.MaxValue;
-        foreach (var e in Fighters) if (e.Team != f.Team && e.Active) nd = Math.Min(nd, DistMm(e, f));
-        if (nd <= D.FleeEscapeM * 1000L) { m.EscapeSince = -1; return; }
+        if (AnyEnemyWithin(f, D.FleeEscapeM * 1000L)) { m.EscapeSince = -1; return; }       // the nearest enemy was only ever compared with the escape distance
         if (m.EscapeSince < 0) { m.EscapeSince = Tick; return; }
         if (Tick - m.EscapeSince < D.FleeEscapeS * MoraleRules.TicksPerS) return;
         f.Act = FAct.Fled; f.EndedAt = Tick; f.Routing = false; m.Mood = MoraleMood.Fled;
@@ -332,8 +350,9 @@ public sealed partial class FightWorld
         var (ax, ay) = FightMath.Norm(px - f.X, py - f.Y);
         if (ax == 0 && ay == 0) ax = FightMath.One;
         int quads = 0;
-        foreach (var e in Fighters)
+        foreach (int eid in Near(0, f, r))
         {
+            var e = Fighters[eid];
             if (e.Team == f.Team || !e.Active || DistMm(f, e) > r) continue;
             var (ux, uy) = FightMath.Norm(e.X - f.X, e.Y - f.Y);
             int dot = FightMath.Dot(ax, ay, ux, uy), cross = (int)(((long)ax * uy - (long)ay * ux) >> 10);
@@ -350,8 +369,9 @@ public sealed partial class FightWorld
         var (px, py) = RallyPoint(f.Team);
         var (dx0, dy0) = FightMath.Norm(px - f.X, py - f.Y);
         bool path = dx0 != 0 || dy0 != 0;
-        foreach (var e in Fighters)
+        foreach (int eid in Near(0, f, rp))
         {
+            var e = Fighters[eid];
             if (e.Team == f.Team || !e.Active) continue;
             long d = DistMm(f, e);
             if (d > rp) continue;
@@ -371,9 +391,14 @@ public sealed partial class FightWorld
     /// <summary>Where a side rallies and flees to: the centre of where its fighters stood at the start.</summary>
     public (int X, int Y) RallyPoint(int team)
     {
+        // where the side stood at the start never changes (the kits are fixed), so it is worked out once per team (and again if fighters join), not once per morale reading
+        if (_rallyN != Fighters.Count) { _rally.Clear(); _rallyN = Fighters.Count; }
+        if (_rally.TryGetValue(team, out var known)) return known;
         long sx = 0, sy = 0; int n = 0;
         foreach (var o in Fighters) if (o.Team == team) { sx += o.Kit.X; sy += o.Kit.Y; n++; }
-        return n == 0 ? (0, 0) : ((int)(sx / n), (int)(sy / n));
+        var p = n == 0 ? (0, 0) : ((int)(sx / n), (int)(sy / n));
+        _rally[team] = p;
+        return p;
     }
 
     /// <summary>
@@ -382,8 +407,7 @@ public sealed partial class FightWorld
     /// </summary>
     private bool TrySurrender(Fighter f)
     {
-        Fighter? w = null; long nd = long.MaxValue;
-        foreach (var e in Fighters) if (e.Team != f.Team && e.Active) { long d = DistMm(e, f); if (d < nd) { nd = d; w = e; } }
+        var w = NearestEnemyOf(f);
         if (w == null) return false;
         EnsureMorale(w);
         int accept = w.Stance.NoLethal ? 1000 : MoraleK.AcceptPm(w.M.Side);      // P4-F: a no-lethal fighter accepts a surrender at once (watch-mode 4.3)
