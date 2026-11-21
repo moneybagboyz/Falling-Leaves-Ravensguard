@@ -116,11 +116,11 @@ public sealed class MineWorks
         State = s.Mine == WorldGen.Region.MineState.Active ? MineStateKind.Active : s.Mine == WorldGen.Region.MineState.Flooded ? MineStateKind.Flooded : MineStateKind.Closed,
     };
 
-    /// <summary>Ore good a mineral yields (iron_ore, copper_ore, tin_ore, galena, coal, salt; stone and gold are not worked in Phase 2).</summary>
+    /// <summary>Ore good a mineral yields (iron_ore, copper_ore, tin_ore, galena, gold_ore, coal, salt; stone is not worked in Phase 2; gold is, from Phase 7).</summary>
     public static string? OreGood(WorldGen.MineralType m) => m switch
     {
         WorldGen.MineralType.Iron => "iron_ore", WorldGen.MineralType.Copper => "copper_ore", WorldGen.MineralType.Tin => "tin_ore",
-        WorldGen.MineralType.Silver => "galena", WorldGen.MineralType.Coal => "coal", WorldGen.MineralType.Salt => "salt", _ => null,
+        WorldGen.MineralType.Silver => "galena", WorldGen.MineralType.Gold => "gold_ore", WorldGen.MineralType.Coal => "coal", WorldGen.MineralType.Salt => "salt", _ => null,
     };
 
     /// <summary>Grams mined in one worker-day by <paramref name="miners"/> (and <paramref name="haulers"/>, -1 for hauling not limiting): <c>0.5 t each</c>, bad air halves it past 40% mined at 2+ levels.</summary>

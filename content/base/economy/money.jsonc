@@ -1,9 +1,13 @@
 // Money constants (money spec 6). 1 crown = 100 mites ~ 1 silver penny ~ 1.3 g silver. Seed shares are percent of the world's seed money and sum to 100.
+// P7-CN1: sums are stored in mites, a tenth of a copper piece (1 cp = 10 mites, 1 sp = 100, 1 gp = 1,000); the seed key keeps its name (a crown is a silver piece).
 // Market keys: half spread 8% per side, 5% toll paid by sellers, session hours 06..18, price clamp 0.3x..4x, drift by a quarter per season toward base x local coin per person.
 [
   { "type": "money_settings", "id": "money", "crown_silver_mg": 1300, "mint_seigniorage_bp": 750, "seed_money_crowns_per_person": 50,
     "seed_gentry_pct": 20, "seed_burgher_pct": 35, "seed_peasant_pct": 30, "seed_treasury_pct": 12, "seed_parish_pct": 3,
     "spread_half_permille": 80, "market_toll_permille": 50, "market_open_hour": 6, "market_close_hour": 18,
     "price_clamp_min_permille": 300, "price_clamp_max_permille": 4000, "ref_drift_divisor": 4, "demand_ema_days": 7, "seed_cpp_mites": 5000,
-    "lot_expiry_days": 3, "merchant_cash_share_bp": 4000, "merchant_stock_cap_permille_of_cover": 800 },
+    "lot_expiry_days": 3, "merchant_cash_share_bp": 4000, "merchant_stock_cap_permille_of_cover": 800,
+    // P7-CN1 (coinage 5.8): a gold piece is 1,000 mites (1,100 mg), a silver piece 100 (1,300 mg, the old crown), a copper piece 10 (5,000 mg, token coin capped at 4% of the money supply)
+    "gold_piece_mg": 1100, "gold_seigniorage_bp": 500, "copper_piece_mg": 5000, "copper_cap_permille": 40, "changer_fee_permille": 20, "gold_transfer_min_mites": 10000,
+    "moneyer_pieces_per_day": 3000, "mint_master_wage_mites": 500, "gold_grade_mg_per_t": 6000, "pan_gold_mg_per_day": 300 },
 ]

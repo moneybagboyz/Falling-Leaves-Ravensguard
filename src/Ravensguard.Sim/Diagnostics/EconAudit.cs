@@ -112,7 +112,7 @@ public static class EconAudit
             case "S-3":
             {
                 long minted = led.Sourced(SourceReason.Mint).Mites;
-                return (minted == 0 ? AuditState.Fail : AuditState.Info, minted == 0 ? "no mint has struck a coin in this world: the money supply grows only by border trade (coinage.md 5.1 wires the mints)" : $"{minted} mites minted");
+                return (minted == 0 ? AuditState.Fail : AuditState.Pass, minted == 0 ? "no mint has struck a coin in this world: the money supply grows only by border trade (coinage.md 5.1 wires the mints)" : $"{minted} mites minted (P7-CN1: the mints strike the metal delivered)");
             }
             case "S-6":
                 return (AuditState.Info, $"border coin so far: immigrated {led.Sourced(SourceReason.Immigrate).Mites}, emigrated {led.Sunk(SinkReason.Emigrate).Mites} mites (exports are paid by Immigrate within the season budget)");

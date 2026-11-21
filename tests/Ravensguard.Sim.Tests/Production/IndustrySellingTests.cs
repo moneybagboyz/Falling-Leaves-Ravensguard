@@ -394,7 +394,7 @@ public class IndustrySellingTests(ITestOutputHelper output)
         var s = rig.State; var led = s.Economy!.Ledger; var st = s.ContinentState!; int home = s.HomeRegion.Id;
         var rl = st.Link(home);
         var edge = rl.Edges.Where(e => !st.Summaries[e.Neighbour].Detailed && st.Summaries[e.Neighbour].Pop > 0 && !st.Edges[e.Edge].Closed && rig.Iw.Caravans.PathOf(rig.Town, new CaravanOrder { Kind = DestKind.Neighbour, Dest = e.Neighbour }, out _) != null).OrderBy(e => e.Neighbour).First();
-        long coin0 = led.Audit().InPurses.Mites + st.TotalCoin();
+        long coin0 = led.Audit().InPurses.Mites + st.TotalCoin() - Struck(led);   // P7-CN1: the mints strike the hearths' silver meanwhile
         rig.Issue(IndustryDesk.Order(new EntityId(rig.Stage.Business), "gate", edge.Neighbour, "cart", 2, 1, false, rig.Sec)); Assert.True(rig.Last.Ok, rig.Last.Text.ToString());
         var q = rig.Iw.Caravans.Quote(rig.Stage.Business, null, (int)(rig.Rt.HourDone / 24));
         Assert.True(q.Ok, q.Why); Assert.Equal(DestKind.Neighbour, q.Kind);
@@ -407,7 +407,7 @@ public class IndustrySellingTests(ITestOutputHelper output)
         output.WriteLine($"gate trip: trips {works.CaravanTrips}, lost {works.CaravansLost}, sold {works.CaravanSoldMites:N0}, net {works.CaravanNetMites:N0}, exported {rig.State.HomeRecords.Economy.Trade.ExportedMites - exported0:N0}");
         Assert.Empty(s.Industry.Trips);
         Assert.True(led.Audit().IsConserved); Assert.True(s.Economy.MassAuditHolds());
-        Assert.Equal(coin0, led.Audit().InPurses.Mites + st.TotalCoin());                          // coin that crossed is on the continent's books: the total is whole
+        Assert.Equal(coin0, led.Audit().InPurses.Mites + st.TotalCoin() - Struck(led));                          // coin that crossed is on the continent's books: the total is whole
         if (works.CaravanTrips == 1) Assert.True(rig.State.HomeRecords.Economy.Trade.ExportedMites > exported0);
         _ = trip;
     }
@@ -439,7 +439,7 @@ public class IndustrySellingTests(ITestOutputHelper output)
         using var rig = new Rig();
         var s = rig.State; var led = s.Economy!.Ledger; var st = s.ContinentState!;
         st.DangerBonus = 100;                                                               // a road at danger 100 is ambushed within weeks
-        long coin0 = led.Audit().InPurses.Mites + st.TotalCoin();
+        long coin0 = led.Audit().InPurses.Mites + st.TotalCoin() - Struck(led);   // P7-CN1: the mints strike the hearths' silver meanwhile
         rig.Issue(IndustryDesk.Order(new EntityId(rig.Stage.Business), "town", rig.Dest, "ox", 1, 0, true, rig.Sec)); Assert.True(rig.Last.Ok);
         int sent = 0, lost0 = 0;
         for (int day = 0; day < 200 && s.Industry!.Works[0].CaravansLost == 0; day++)
@@ -453,7 +453,7 @@ public class IndustrySellingTests(ITestOutputHelper output)
         output.WriteLine($"sent {sent} caravans, trips {works.CaravanTrips}, lost {works.CaravansLost}, net {works.CaravanNetMites:N0}");
         Assert.True(sent >= 1);
         Assert.True(s.Economy.MassAuditHolds());
-        long coin1 = led.Audit().InPurses.Mites + st.TotalCoin();
+        long coin1 = led.Audit().InPurses.Mites + st.TotalCoin() - Struck(led);
         Assert.Equal(coin0, coin1);                                                         // the test's own bar is no coin
         if (works.CaravansLost > 0) { Assert.True(works.CaravanNetMites < 0 || works.CaravanTrips > 0); Assert.Equal(0UL, s.Industry.Works[0].Stages[^1].Order!.Fleet); }
         _ = lost0;
@@ -539,4 +539,6 @@ public class IndustrySellingTests(ITestOutputHelper output)
         }
         Assert.Equal(Run(), Run());
     }
+    /// <summary>Coin the mints struck less coin melted or burned since the start (P7-CN1): the purses' total moves by exactly this.</summary>
+    private static long Struck(Ledger led) { var a = led.Audit(); return a.Minted.Mites - a.Melted.Mites - a.Burned.Mites; }
 }

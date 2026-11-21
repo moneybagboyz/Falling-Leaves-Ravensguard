@@ -43,6 +43,7 @@ public static partial class WorldSave
             ContentChanged = !compat.ContentHashMatches, NeedsMigration = compat.NeedsMigration && compat.FormatSupported,
             MissingMods = compat.MissingMods, ChangedMods = compat.ChangedMods, ExtraMods = compat.ExtraMods,
             Changes = changes, LayersChecked = checkedLayers, Refusals = refusals,
+            Notices = compat.FormatSupported && LoadReport.IsBeforePhase7(file.Header.GameVersion) ? [LoadReport.CoinageNotice] : [],
         };
     }
 

@@ -178,6 +178,8 @@ public sealed class WorldState
     public Ravensguard.Sim.Unrest.UnrestBook? Unrest { get; set; }
     /// <summary>P7-ES1: appointed foremen, manufactory licences, guild fines and closing orders (economies-of-scale 3, 6), in the optional "scale" section once any exists (no format bump).</summary>
     public Ravensguard.Sim.Production.ScaleBook? Scale { get; set; }
+    /// <summary>P7-CN1: the gold book and copper count, the metal waiting at each mint and what the mints struck (coinage 6), in the optional "coinage" section once any exists (no format bump). Its stock is the ledger's <see cref="Ravensguard.Sim.Economy.Ledger.Coinage"/>.</summary>
+    public Ravensguard.Sim.Economy.CoinageBook? Coinage { get; set; }
     /// <summary>P7-IN1: the works with their stages, links, routing, crew targets, wage offers, balance rings and payback counters (industries 3.2, 7), in the optional "industry" section once any exists (no format bump).</summary>
     public Ravensguard.Sim.Production.Industry.IndustryBook? Industry { get; set; }
     /// <summary>P7-SC-A: the soldiers' rows (role, lord, what each wears and was issued from an armoury) and the refit jobs waiting for an armourer (soldiers-and-companies 3.3), in the optional "soldiers" section once any exists (no format bump).</summary>
@@ -518,6 +520,7 @@ public static partial class WorldSave
             Politics = w.Politics is { IsEmpty: false } pob ? PoliticsSave.Capture(pob) : null,                                        // P6-D2
             Unrest = w.Unrest is { IsEmpty: false } unb ? UnrestSave.Capture(unb) : null,                                              // P6-E1
             Scale = w.Scale is { IsEmpty: false } scb ? ScaleSave.Capture(scb) : null,                                                // P7-ES1
+            Coinage = w.Coinage is { IsEmpty: false } coinb ? CoinageSave.Capture(coinb) : null,                                           // P7-CN1
             Industry = w.Industry is { IsEmpty: false } inb ? IndustrySave.Capture(inb) : null,                                        // P7-IN1
             Soldiers = w.Soldiers is { IsEmpty: false } sob ? SoldierSave.Capture(sob) : null,                                          // P7-SC-A
             Holdings = w.Holdings is { IsEmpty: false } hdb ? HoldingsSave.Capture(hdb) : null,                                        // P6-B6
@@ -712,6 +715,7 @@ public static partial class WorldSave
             Politics = file.Sections.ContainsKey(PoliticsSave.SectionName) ? Decode<PoliticsSave>(file, PoliticsSave.SectionName, compressed: true).Restore() : null,          // P6-D2
             Unrest = file.Sections.ContainsKey(UnrestSave.SectionName) ? Decode<UnrestSave>(file, UnrestSave.SectionName, compressed: true).Restore() : null,          // P6-E1
             Scale = file.Sections.ContainsKey(ScaleSave.SectionName) ? Decode<ScaleSave>(file, ScaleSave.SectionName, compressed: true).Restore() : null,                // P7-ES1
+            Coinage = file.Sections.ContainsKey(CoinageSave.SectionName) ? Decode<CoinageSave>(file, CoinageSave.SectionName, compressed: true).Restore() : null,          // P7-CN1
             Industry = file.Sections.ContainsKey(IndustrySave.SectionName) ? Decode<IndustrySave>(file, IndustrySave.SectionName, compressed: true).Restore() : null,      // P7-IN1
             Soldiers = file.Sections.ContainsKey(SoldierSave.SectionName) ? Decode<SoldierSave>(file, SoldierSave.SectionName, compressed: true).Restore() : null,      // P7-SC-A
             Holdings = file.Sections.ContainsKey(HoldingsSave.SectionName) ? Decode<HoldingsSave>(file, HoldingsSave.SectionName, compressed: true).Restore() : null,          // P6-B6
@@ -728,6 +732,7 @@ public static partial class WorldSave
             Ids = IdAllocator.FromState(meta.IdState), Chunks = chunks, Chronicle = chronicle,
             IdTables = remap.Tables, LoadNotes = remap.Notes,
         };
+        if (restored.Coinage != null && economy != null) economy.Ledger.Coinage = restored.Coinage.Stock;        // P7-CN1: the gold book is the ledger's hook again
         // P5-A4: a migrated v7 save's hero gets the person row now (the v8 step marks it pending); a v8 save holds it in the people diff already, and its status in the
         // abstract section's vital columns; a bare world without that section (tools, test fixtures) has only the hero section's index to say which row is the hero's
         if (hero is { PersonIndex: >= 0 } hp && hp.PersonIndex < pop.People.Count && abstractState == null && pop.People.Status[hp.PersonIndex] == PersonStatus.Alive)
@@ -960,6 +965,7 @@ public sealed class LiveCapture
     internal PoliticsSave? Politics { get; init; }                                                                           // P6-D2
     internal UnrestSave? Unrest { get; init; }                                                                               // P6-E1
     internal ScaleSave? Scale { get; init; }                                                                                 // P7-ES1
+    internal CoinageSave? Coinage { get; init; }                                                                             // P7-CN1
     internal IndustrySave? Industry { get; init; }                                                                           // P7-IN1
     internal SoldierSave? Soldiers { get; init; }                                                                            // P7-SC-A
     internal HoldingsSave? Holdings { get; init; }                                                                           // P6-B6
@@ -1050,6 +1056,7 @@ public sealed class LiveCapture
         if (Politics != null) sections.Add(new(PoliticsSave.SectionName, SaveCodec.SerializeCompressed(Politics)));          // P6-D2 (optional, no bump)
         if (Unrest != null) sections.Add(new(UnrestSave.SectionName, SaveCodec.SerializeCompressed(Unrest)));              // P6-E1 (optional, no bump)
         if (Scale != null) sections.Add(new(ScaleSave.SectionName, SaveCodec.SerializeCompressed(Scale)));                  // P7-ES1 (optional, no bump)
+        if (Coinage != null) sections.Add(new(CoinageSave.SectionName, SaveCodec.SerializeCompressed(Coinage)));            // P7-CN1 (optional, no bump)
         if (Industry != null) sections.Add(new(IndustrySave.SectionName, SaveCodec.SerializeCompressed(Industry)));         // P7-IN1 (optional, no bump)
         if (Soldiers != null) sections.Add(new(SoldierSave.SectionName, SaveCodec.SerializeCompressed(Soldiers)));          // P7-SC-A (optional, no bump)
         if (Holdings != null) sections.Add(new(HoldingsSave.SectionName, SaveCodec.SerializeCompressed(Holdings)));         // P6-B6 (optional, no bump)

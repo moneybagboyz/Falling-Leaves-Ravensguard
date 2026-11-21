@@ -55,8 +55,8 @@ public sealed class RunSession
     public Task<LiveCapture> SnapshotAsync(LiveWorld world)
     {
         var resume = world.CaptureResume();
-        return Runtime != null ? Runtime.AtBarrier(() => WorldSave.SnapshotLive(State, resume, _contentHash, "0.1", _mods, Ironman))
-            : Task.FromResult(WorldSave.SnapshotLive(State, resume, _contentHash, "0.1", _mods, Ironman));
+        return Runtime != null ? Runtime.AtBarrier(() => WorldSave.SnapshotLive(State, resume, _contentHash, Ravensguard.Game.Diagnostics.GameDiagnostics.BuildVersion, _mods, Ironman))
+            : Task.FromResult(WorldSave.SnapshotLive(State, resume, _contentHash, Ravensguard.Game.Diagnostics.GameDiagnostics.BuildVersion, _mods, Ironman));
     }
 
     /// <summary>Worker thread: encodes the snapshot and writes it (Ironman: the Ironman slot with its backups; else the run's manual slot, or the rotating autosaves). Resolves to the file written.</summary>

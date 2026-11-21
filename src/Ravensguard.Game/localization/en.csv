@@ -5078,6 +5078,7 @@ ru_office_sheriff,sheriff
 ru_office_customscollector,customs collector
 ru_office_gaoler,gaoler
 ru_office_treasurer,treasurer
+ru_office_mintmaster,mint master
 ru_due_relief,relief
 ru_due_aid,aid
 ru_due_service,service
@@ -6343,6 +6344,27 @@ ui_ind_row_inputs,Inputs
 ui_ind_row_upkeep,Upkeep
 ui_ind_row_royalties,Royalties
 ui_ind_row_net,Net
+ch_coin_mint_struck,"The mint at {place} struck {gold} gold, {silver} silver and {copper} copper pieces this season and kept {seigniorage}."
+ch_coin_copper_capped,"The mint at {place} turned back {kg} kg of copper: copper coin may not pass a fortieth of the realm's money."
+ch_note_mint_season,The moneyers' season at the mint.
+ch_note_copper_cap,The copper cap held the mint back.
+co_no_mint,There is no mint in this town.
+co_mint_shut,The mint takes metal from the sixth hour to the eighteenth.
+co_mint_closed,The mint has no master in office and strikes nothing.
+co_no_metal,There is no such metal in the world.
+co_not_enough_metal,You do not carry that much of it.
+co_use_copper_counter,Copper goes over the copper counter.
+co_copper_capped,"The mint will take no more copper: the realm holds all the copper coin it may."
+co_sold_metal,"The mint took {0} g and struck {1} pieces; you were paid {2}."
+co_metal_queued,"The mint took {0} g; the moneyers will strike it in their turn."
+co_no_changer,There is no money changer in this town.
+co_no_gold,There is no gold to be had here today.
+co_cannot_afford,You cannot cover that.
+co_bad_amount,That is not an amount to change.
+co_too_small,That is too little to change into a gold piece.
+co_changed,"The changer gave you {0} gold pieces for a fee of {1}."
+co_melted,"You melted {0} pieces into metal."
+co_cannot_melt,You have not got that many pieces to melt.
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."

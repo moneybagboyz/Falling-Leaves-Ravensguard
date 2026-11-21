@@ -44,6 +44,8 @@
   { "type": "good", "id": "iron_bar",   "name": "Iron bar",   "class": "metal", "state": "solid", "bulk_litres_per_kg": 0.13, "base_price_mites_per_kg": 480, "spoil_class": "iron", "target_cover_days": 60, "material": "iron", "tags": ["metal"] },
   { "type": "good", "id": "steel_bar",  "name": "Steel bar",  "class": "metal", "state": "solid", "bulk_litres_per_kg": 0.13, "base_price_mites_per_kg": 731.5, "spoil_class": "iron", "target_cover_days": 60, "material": "steel", "tags": ["metal"] },
   { "type": "good", "id": "silver",     "name": "Silver",     "class": "metal", "state": "solid", "bulk_litres_per_kg": 0.1,  "base_price_mites_per_kg": 76920, "spoil_class": "inert", "target_cover_days": 60, "material": "silver", "tags": ["metal", "precious"] },
+  // P7-CN1 (coinage 5.6, 5.8): gold bullion, 1,000 mites per 1,100 mg (909,090.9 mites a kilogram: gold to silver 11.8 : 1), the metal a mint strikes into gold pieces
+  { "type": "good", "id": "gold",       "name": "Gold",       "class": "metal", "state": "solid", "bulk_litres_per_kg": 0.05, "base_price_mites_per_kg": 909090.9, "spoil_class": "inert", "target_cover_days": 60, "material": "gold", "tags": ["metal", "precious"] },
 
   // ---- counted pieces that can become item instances (items spec 2.3)
   { "type": "good", "id": "arming_sword", "name": "Arming sword", "class": "weapon", "state": "solid", "unit": "piece", "piece_mass_g": 1453, "bulk_litres_per_kg": 0.5, "base_price_mites_per_kg": 2506, "spoil_class": "iron", "target_cover_days": 60, "material": "steel", "shape": "arming_sword", "tags": ["weapon"] },

@@ -181,8 +181,10 @@ public class AuditProbeTests(ITestOutputHelper output)
         ("Sim/Diagnostics/Phase6Trail.cs", 1, "Seed: the Phase 6 trail's fixture"),
         ("Sim/Trade/AbroadDealing.cs", 2, "CoinIn: the hero's dealing abroad, the same coin leaves by CoinOut (Sink Emigrate) on the other call"),
         ("Sim/Hero/StartingEstate.cs", 1, "Seed: the hero's estate at the start"),
+        ("Sim/Economy/Mints.cs", 2, "Mint: the mint strikes coin for the gold or silver delivered (into the seller's purse) and token copper at face (P7-CN1); the metal is destroyed as Materialised"),
         ("Game/UI/CraftingSession.Full.cs", 1, "Seed: the dev hamlet's smith (a dev scene, never in a world)"),
         ("Game/World/StreetView.Business.cs", 1, "Seed: the dev faucet of the screenshot scene (DevBusinesses)"),
+        ("Game/World/StreetView.Industry.cs", 1, "Seed: the dev faucet of the Industry tab's screenshot scene (P7-IN3)"),
         ("Game/World/StreetView.Contracts.cs", 1, "Seed: a dev command that stocks a stage and its coin"),
         ("Game/World/StreetView.BuildMode.cs", 1, "Seed: a dev command that buys the nearest lot"),
     ];

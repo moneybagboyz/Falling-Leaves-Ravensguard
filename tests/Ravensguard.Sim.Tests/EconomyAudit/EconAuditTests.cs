@@ -32,7 +32,7 @@ public class EconAuditTests(ITestOutputHelper output)
         output.WriteLine(text);
         // the suspects the harness measures itself agree with the spec's reading of Phase 6
         Assert.Equal(AuditState.Pass, rows.Single(r => r.Id == "S-1").State); Assert.Contains("woodcutting 1.", rows.Single(r => r.Id == "S-1").Result);      // EA3a: R1 (EA_F1) took the 8.8x to 1.4x
-        Assert.Equal(AuditState.Fail, rows.Single(r => r.Id == "S-3").State);
+        Assert.Equal(AuditState.Fail, rows.Single(r => r.Id == "S-3").State);   // the audit's short world strikes nothing yet: P7-CN1's mint needs a mint master, appointed at the first season's vacancy pass (CN-16)
         Assert.Equal(AuditState.Pass, rows.Single(r => r.Id == "L2").State);
         Assert.Equal(AuditState.Pass, rows.Single(r => r.Id == "L5").State);
         // P7-EA2: the content-derived rows are measured, not pending (the failing ones are the audit's findings, EA_F1 to EA_F5)

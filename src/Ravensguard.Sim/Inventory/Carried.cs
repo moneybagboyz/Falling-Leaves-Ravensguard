@@ -44,7 +44,7 @@ public sealed class Carried
         long m = 0;
         foreach (int i in Rows(e)) m += e.Items.MassG(i, e.Goods);
         m += Pack(e).TotalMassG();
-        if (purse is { } p && p != PurseId.None) m += Encumbrance.CoinMassG(e.Ledger.Balance(p).Mites);
+        if (purse is { } p && p != PurseId.None) m += Encumbrance.CoinMassG(e.Ledger, p);                       // P7-CN1: gold pieces weigh less than the silver they are worth
         return m;
     }
 

@@ -127,7 +127,7 @@ public class RuleRuntimeTests(ITestOutputHelper output)
             var audit0 = r.State.Economy!.Ledger.Audit();
             r.Runtime.AdvanceTo(GameTime.FromGameHours(h0 + 24 * 31));
             var led = r.State.Economy!.Ledger;
-            Assert.True(led.Audit().IsConserved); Assert.Equal(audit0.Minted, led.Audit().Minted);
+            Assert.True(led.Audit().IsConserved); Assert.Equal(audit0.Seeded, led.Audit().Seeded);   // P7-CN1: the mints strike what the hearths send, so Minted moves; the audit stays exact
             Assert.True(led.Flow(TransferReason.Wage).Mites > 0);
             Assert.True(r.Book.LastDay > 0); Assert.Contains(r.Book.Fiefs.Values, f => f.Receipts[0] > 0);       // the receipts were rolled from the treasuries' books
             output.WriteLine($"offices {r.Book.Offices.Count(o => o.InOffice)} collected {r.Book.Offices.Sum(o => o.Collected)} skimmed {r.Book.Offices.Sum(o => o.Skimmed)} expected {r.Book.Offices.Sum(o => o.Expected)}");

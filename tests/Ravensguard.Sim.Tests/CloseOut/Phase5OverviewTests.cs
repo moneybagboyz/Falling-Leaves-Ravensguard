@@ -215,7 +215,7 @@ public class Phase5OverviewTests(ITestOutputHelper output)
 
         // 5. coin and mass exact; the world saves and loads with the deed
         var audit = e.Ledger.Audit();
-        Assert.True(audit.IsConserved); Assert.Equal(seeded, audit.Seeded.Mites); Assert.Equal(0, audit.Minted.Mites);
+        Assert.True(audit.IsConserved); Assert.Equal(seeded, audit.Seeded.Mites); Assert.Equal(audit.Sourced.Mites, audit.Seeded.Mites + audit.Minted.Mites + audit.Immigrated.Mites);   // P7-CN1: Minted is what the mints struck
         Assert.True(e.MassAuditHolds());
         var back = WorldSave.Restore(SaveCodec.Decode(SaveCodec.Encode(SaveAt(rt))), w.Content, "h", null, w.Continent, w.History);
         Assert.Equal(s.Land.ComputeHash(), back.Land!.ComputeHash());
@@ -291,7 +291,7 @@ public class Phase5OverviewTests(ITestOutputHelper output)
         Assert.True(stall.TakingsSeason > 0);
         Assert.True(ctx.Coin > coin1);
         var audit = e.Ledger.Audit();
-        Assert.True(audit.IsConserved); Assert.Equal(seeded, audit.Seeded.Mites); Assert.Equal(0, audit.Minted.Mites);
+        Assert.True(audit.IsConserved); Assert.Equal(seeded, audit.Seeded.Mites); Assert.Equal(audit.Sourced.Mites, audit.Seeded.Mites + audit.Minted.Mites + audit.Immigrated.Mites);   // P7-CN1: Minted is what the mints struck
         Assert.True(e.MassAuditHolds());
     }
 

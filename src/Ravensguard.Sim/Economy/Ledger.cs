@@ -27,6 +27,9 @@ public sealed class Ledger
     private long _seq;
     private long[]? _in, _out;          // per purse x transfer reason, only while tracking (diagnostics: who earns what)
 
+    /// <summary>P7-CN1 (coinage 5.2): the gold book. Null in a world that never struck gold; set by the coinage wiring or the first strike. One null test on every transfer when absent.</summary>
+    public CoinStock? Coinage { get; set; }
+
     private readonly LedgerEntry[] _recent;
     private int _recentHead, _recentCount;
 
@@ -79,6 +82,7 @@ public sealed class Ledger
         _balance[from.Index] -= amount.Mites; _balance[to.Index] = newTo;
         _flowCoin[(int)why] = checked(_flowCoin[(int)why] + amount.Mites); _flowCount[(int)why]++;
         if (_in != null) Track(from.Index, to.Index, (int)why, amount.Mites);
+        Coinage?.AfterTransfer(this, from, to, amount.Mites);
         Observer?.Invoke(from, to, why, amount.Mites);
         Tap?.Invoke(from, to, why, amount.Mites);
         Log(from, to, amount, (byte)why, false, false, chronicleEvent);
@@ -87,7 +91,7 @@ public sealed class Ledger
 
     /// <summary>
     /// Creates coin. A documented faucet: <see cref="SourceReason.Seed"/> once at world creation (before day 0) and <see cref="SourceReason.Mint"/> when a mint
-    /// strikes silver (see <see cref="MintMath"/>). Nothing else may call it.
+    /// strikes gold, silver or copper from metal it took in (see <see cref="MintMath"/> and <see cref="MintWorld"/>). Nothing else may call it.
     /// </summary>
     public void Mint(PurseId into, Coin amount, SourceReason why, EntityId? chronicleEvent = null)
     {
@@ -106,6 +110,7 @@ public sealed class Ledger
         if (amount.Mites <= 0) throw new ArgumentOutOfRangeException(nameof(amount), "a sink must be positive");
         if (_balance[from.Index] < amount.Mites) return false;
         _balance[from.Index] -= amount.Mites; _sunk[(int)why] = checked(_sunk[(int)why] + amount.Mites);
+        Coinage?.AfterSink(this, from);
         Log(from, PurseId.None, amount, (byte)why, false, true, chronicleEvent);
         return true;
     }

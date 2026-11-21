@@ -215,6 +215,8 @@ public sealed class RuleBook
 
     public FiefRow? FiefOf(int fief) => Fiefs.GetValueOrDefault(fief);
     public Office? OfficeOf(OfficeKind kind, int fief) { foreach (var o in Offices) if (o.InOffice && o.Kind == kind && o.Fief == fief) return o; return null; }
+    /// <summary>A realm office in post (customs collector, mint master): the holder, or null.</summary>
+    public Office? OfficeOfRealm(OfficeKind kind, int realm) { foreach (var o in Offices) if (o.InOffice && o.Kind == kind && o.Fief < 0 && o.Realm == realm) return o; return null; }
     public Office? OfficeById(int serial) { foreach (var o in Offices) if (o.Serial == serial) return o; return null; }
     public IEnumerable<Office> OfficesOf(int fief) => Offices.Where(o => o.InOffice && o.Fief == fief);
     public Loan? LoanById(int serial) { foreach (var l in Loans) if (l.Serial == serial) return l; return null; }

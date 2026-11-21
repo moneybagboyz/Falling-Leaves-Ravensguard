@@ -33,7 +33,7 @@ public static class RuleOfficials
     }
 
     /// <summary>Skill an office asks for: Law for bailiffs, sheriffs, gaolers and stewards, Trading for collectors and treasurers, none for a reeve.</summary>
-    public static Skill SkillOf(OfficeKind kind) => kind switch { OfficeKind.Bailiff or OfficeKind.Sheriff or OfficeKind.Gaoler or OfficeKind.Steward => Skill.Law, OfficeKind.CustomsCollector or OfficeKind.Treasurer => Skill.Trading, _ => Skill.None };
+    public static Skill SkillOf(OfficeKind kind) => kind switch { OfficeKind.Bailiff or OfficeKind.Sheriff or OfficeKind.Gaoler or OfficeKind.Steward => Skill.Law, OfficeKind.CustomsCollector or OfficeKind.Treasurer or OfficeKind.MintMaster => Skill.Trading, _ => Skill.None };
 
     // ------------------------------------------------------------------ appointment
 
