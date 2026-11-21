@@ -32,10 +32,9 @@ public partial class StreetView
     void AttachTalk()
     {
         if (Runtime is not { } rt || _source?.Content == null || rt.State.Hero == null) return;
-        _talk = TalkLink.Attach(rt, LineBook.From(_source.Content));
-        Ravensguard.Sim.Law.LawLink.Attach(rt);                                    // P6-B2: reports and bounties at a day's start, NPC crime at hour 4
-        AttachFamily();                                                            // P6-B3: birthdays, weddings, births, lessons and the kidnappers (StreetView.Family.cs)
-        AttachWorkBoard();                                                         // P6-C2: the contracts hour, the legends the talk link tells (StreetView.Work.cs)
+        var links = Ravensguard.Sim.Worlds.Phase6Links.AttachAll(rt, _source.Content);   // talk, law, family, contracts in the one order the soaks use too (P6-G2)
+        _talk = links.Talk; _familyLink = links.Family;
+        if (_talk != null) _talk.Codex = _source?.Codex;                          // the legends the talk link tells (P6-C2)
     }
 
     void BuildTalkHud(Control hud)

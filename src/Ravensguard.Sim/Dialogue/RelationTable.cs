@@ -48,10 +48,14 @@ public sealed class RelationTable(int cap = 20000)
         if (_rows.Count > cap) Evict();
     }
 
+    /// <summary>
+    /// Over the cap, the worst twentieth of the cap goes at once (least familiar, then longest unmet, then lowest key): one sort every cap/20 new pairs instead of one per new pair. A full sort for each new pair
+    /// cost 3 ms once the table was full, 40 game-year seconds from year 6 of a soak (P6-G2); the batch keeps the same order of who goes first.
+    /// </summary>
     private void Evict()
     {
-        var worst = _rows.OrderBy(kv => kv.Value.Familiarity).ThenBy(kv => kv.Value.LastMetDay).ThenBy(kv => kv.Key).First().Key;
-        _rows.Remove(worst);
+        int drop = Math.Max(1, cap / 20);
+        foreach (var k in _rows.OrderBy(kv => kv.Value.Familiarity).ThenBy(kv => kv.Value.LastMetDay).ThenBy(kv => kv.Key).Take(drop).Select(kv => kv.Key).ToList()) _rows.Remove(k);
     }
 
     /// <summary>Familiarity falls by 1 for every <c>FamiliarityDecayDays</c> since the pair last met; rows that reach 0 with no trust are dropped.</summary>

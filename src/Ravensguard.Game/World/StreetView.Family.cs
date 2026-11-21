@@ -20,12 +20,6 @@ public partial class StreetView
     FamilyView? _familyView; Task<FamilyView?>? _familyTask;
     long _familySeen; double _familyAcc; int _familyShot;
 
-    void AttachFamily()
-    {
-        if (Runtime is not { } rt || rt.State.Hero == null) return;
-        _familyLink = FamilyLink.Attach(rt);
-    }
-
     void RefreshFamily()
     {
         if (Runtime is not { } rt || rt.State.Content is not { } content) return;

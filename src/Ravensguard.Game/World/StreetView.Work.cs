@@ -25,14 +25,6 @@ public partial class StreetView
     Task<Dictionary<ulong, string>>? _liesTask; double _liesAcc;
     Task<Dictionary<ulong, (int, bool)>?>? _moodTask; double _moodAcc;
 
-    /// <summary>Attaches the contracts' hour to the running world and hands the world's Codex to the talk link (the legends a villager tells when he has no news).</summary>
-    void AttachWorkBoard()
-    {
-        if (Runtime is not { } rt) return;
-        ContractLink.Attach(rt);
-        if (_talk != null) _talk.Codex = _source?.Codex;
-    }
-
     ContractsView? BuildWorkBoard(Ravensguard.Sim.Save.WorldState st, int settlement, int day, EntityId hero)
         => st.Economy == null ? null : ContractsView.Build(st, st.Content, settlement, day, hero, ContractWiring.From(st, st.Content));
 

@@ -127,10 +127,13 @@ public sealed class SoilWorld
         var hero = St.Party?.Hero ?? EntityId.None; int heroHh = HeroHousehold();
         var pop = Land.Pop; var hht = pop.Households; var r = Region; var F = this.F;
         if (w.Content.Kind("soil_improvement") == null) return posted;
+        var crews = new HashSet<EntityId>(w.Companies().Select(x => x.Id));
         for (int p = 0; p < r.Parcels.Count; p++)
         {
             var pc = r.Parcels[p]; int s = pc.Settlement;
             if (pc.Owner.Kind == OwnerKind.Glebe || perPlace.GetValueOrDefault(s) >= Rules.SoilPostsPerSeason) continue;
+            // no crew in the place, no job: a posting nobody can take only fills the board (the soak of P6-G2 had 500 open soil jobs on 36 boards by year 25 and no delivery ever posted again, 39,000 need entries a century)
+            if (!crews.Contains(CrewId(s))) continue;
             EntityId issuer; PurseId? purse;
             if (pc.Owner.Kind == OwnerKind.Demesne)
             {
@@ -151,7 +154,7 @@ public sealed class SoilWorld
                 if (KindFor(s, day) is not { } kind) break;
                 long pay = PayOf(kind);
                 if (w.Ledger.Balance(pr).Mites < pay) break;
-                var need = ContractSystem.NeedEntry(w, "soil", s, day * 86_400L + 9 * 3600, [issuer]);
+                var need = ContractSystem.NeedEntry(w, "soil", s, day * 86_400L + 600, [issuer]);
                 int serial = Book.NextSerial;
                 var posted1 = ContractSystem.Post(w, cb, "soil_improvement", issuer, pr, s, pay, day, need, x => x.Param = HoursOf(kind));
                 if (posted1 == null) break;
