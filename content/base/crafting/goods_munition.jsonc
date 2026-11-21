@@ -1,5 +1,5 @@
 // Munition-grade pieces made in runs of a standard pattern (P7-ES2; economies-of-scale.md 4.6). Prices solved from the recipes (the price solver's rule).
 [
-  { "type": "good", "id": "spearheads", "name": "Spearheads", "class": "weapon", "state": "solid", "unit": "piece", "piece_mass_g": 400, "bulk_litres_per_kg": 0.3, "base_price_mites_per_kg": 691, "spoil_class": "iron", "target_cover_days": 60, "tags": ["metal", "ammunition"] },
-  { "type": "good", "id": "kettle_hats", "name": "Kettle hats", "class": "weapon", "state": "solid", "unit": "piece", "piece_mass_g": 1500, "bulk_litres_per_kg": 1.5, "base_price_mites_per_kg": 703, "spoil_class": "iron", "target_cover_days": 60, "tags": ["metal"] }
+  { "type": "good", "id": "spearheads", "name": "Spearheads", "class": "weapon", "state": "solid", "unit": "piece", "piece_mass_g": 400, "bulk_litres_per_kg": 0.3, "base_price_mites_per_kg": 276.395, "spoil_class": "iron", "target_cover_days": 60, "tags": ["metal", "ammunition"] },
+  { "type": "good", "id": "kettle_hats", "name": "Kettle hats", "class": "weapon", "state": "solid", "unit": "piece", "piece_mass_g": 1500, "bulk_litres_per_kg": 1.5, "base_price_mites_per_kg": 1053.8063, "spoil_class": "iron", "target_cover_days": 60, "tags": ["metal"] }
 ]
