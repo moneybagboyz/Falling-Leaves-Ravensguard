@@ -1,0 +1,3 @@
+# The user's industry design sheets (Nov 2026)
+
+The iron, clay and wood production-chain sheets and their balance-sheet spreadsheets, as the user supplied them. They are the source for `docs/specs/phase7/industries.md`: their stage chains, tier jumps, crew ranges and stage ratios are the targets for structure; their outputs and prices are rescaled to historical rates and the game's coin (decided with the user: historical output with an industry slider, real inputs, a 2-3 game-year payback, gold/silver/copper coins). The review of the spreadsheet maths (units of upkeep and supplies, x6 vs x7 weeks, label/rate mismatches) is in the conversation summary recorded in `docs/REDESIGN_PLAN.md` (Industries row and Phase 7 section).
