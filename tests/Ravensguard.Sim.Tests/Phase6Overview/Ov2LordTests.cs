@@ -17,7 +17,7 @@ namespace Ravensguard.Sim.Tests.Phase6Overview;
 /// OV-2 (overview 4, "you can rise to lord"): on a whole running game of seed 1234 the hero (every step a command through his desk, as the autoplay bot and the screens send them) does three contracts in a lord's fief,
 /// is offered fealty and swears, is granted a manor, serves in the realm's war, is granted a vacant fief and pays relief, appoints a reeve and a bailiff, rules a season whose receipts are on the Fief tab, has the skimming
 /// bailiff found by the audit, and the world runs about two game years (120 days). Coin and deeds stay exact. The game's own gaps (the lords' guard, escort and bounty contracts are not events a headless hero can finish; the
-/// war-service contract kinds wait for the lords' war aims) are named in docs/reviews/phase-6-open.md: the contracts are three deliveries in the fief, the war service is recorded as C2's war-aim contract does.
+/// war-service contract kinds wait for the lords' war aims) are named in docs/reviews/phase-6.md: the contracts are three deliveries in the fief, the war service is recorded as C2's war-aim contract does.
 /// </summary>
 public class Ov2LordTests(ITestOutputHelper output)
 {

@@ -24,7 +24,7 @@ namespace Ravensguard.Sim.Tests.Phase6Overview;
 /// each with a budget test through <see cref="TestBudget"/>. The abstract systems are timed by the ticker (<see cref="RegionWorld.RecordSystemTimings"/>, per call, in the day's first hour and on a season's first day), the links of the
 /// hour (talk and standing, law and justice, family, contracts, heists, bonds, faith politics) by a stopwatch round each handler; the figures are the best of two passes (this machine is shared: a pass with another process on the CPU is
 /// forgiven, a persistent regression is not, as <see cref="TestBudget.BestPass"/>); the micro budgets (a court day, a sentence's wounds, the witnesses, the standing pass, the Chronicle's opening) are best of five. The
-/// numbers of docs/reviews/phase-6-open.md "Close-out G1: budgets measured" come from the output of these tests. The tests run alone after the parallel ones.
+/// numbers of docs/reviews/phase-6.md "Close-out G1: budgets measured" come from the output of these tests. The tests run alone after the parallel ones.
 /// </summary>
 [Collection(TimingCollection.Name)]
 public class Phase6BudgetTests(ITestOutputHelper output)

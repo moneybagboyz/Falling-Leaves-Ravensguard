@@ -45,7 +45,7 @@ public class Ov1TheftTests(ITestOutputHelper output)
         Assert.Equal((CrimeState.Seen, true, true), (rec.State, rec.Known, rec.Cried));
         Assert.True(rec.Witnesses.First(x => x.Person == wynn.Value).Recognised);
 
-        // the hero is away before the guards come: nobody holds him, nothing is posted on the day (the live tier's guard pursuit is a gap, see phase-6-open.md)
+        // the hero is away before the guards come: nobody holds him, nothing is posted on the day (the live tier's guard pursuit is a gap, see phase-6.md)
         rt.AdvanceTo(GameTime.FromGameHours(h0 + 23));
         Assert.Null(s.Captivity?.Hero); Assert.Equal(CrimeState.Seen, rec.State); Assert.Equal(0UL, rec.BountyJob);
 

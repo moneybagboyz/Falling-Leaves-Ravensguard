@@ -1600,6 +1600,7 @@ Estimates assume one developer working with an AI assistant. Every phase ends in
 **Done when:** you can design a wagon, have it built, drive it loaded to market and get it stuck in mud; you can buy a lot, build a two-storey smithy, hire a smith, supply iron and see profit while away; you can claim a clearing and build a homestead; the concept book's first hour plays end to end.
 
 ### Phase 6: Society, factions, rule (8–11 months)
+**Status: closed 21 Nov 2026** (review and close-out: `docs/reviews/phase-6.md`; fun check: `docs/playtests/phase-6-checklist.md`).
 - **Crime and justice:** crime and witnesses, bounties, guards, jail, slavery (captivity complete); reputation.
   - **Historically harsh punishments (decided with the user):** fines, the stocks, flogging, branding, outlawry, a hand cut off for repeat theft, and hanging for murder or treason.
   - Maiming goes through the real anatomy and wound system, so a lost hand stays lost.
@@ -1640,6 +1641,7 @@ Estimates assume one developer working with an AI assistant. Every phase ends in
 - Chronicle cause coverage is ≥ 90% specific.
 
 ### Phase 7: Armies, war at scale, ships and naval war (15–20 months)
+**Status: in progress since 21 Nov 2026** (specs and build order: `docs/specs/phase7/00-phase7-overview.md`; the user's decisions in its §10a).
 - **Step 0, an adversarial economy audit (decided with the user, Nov 2026).** Before armies are built, a review red-teams the whole economy and its findings are fixed first:
   - **exploits:** money loops, arbitrage, buy-low-sell-high with no cost, duplication;
   - **collapse under war load:** 2,000 soldiers eating, paid, armed and fed for seasons; levies pulled from the harvest; purveyance; sieges starving towns;
