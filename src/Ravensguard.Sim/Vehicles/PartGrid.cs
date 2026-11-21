@@ -198,7 +198,8 @@ public static class PartGrid
         {
             if (st.Steer is not ("rudder" or "steering_oar" or "oars" or "rope")) E("no_steering");
             // a hull with a gap: a cell of the hull's outline (its rectangle on deck 0) with no hull plank leaks
-            var cells = Expand(d, cat).Where(r => r.Deck == 0 && cat.PartList[r.Part].Id == "hull_plank").Select(r => (X: (int)r.X, Y: (int)r.Y)).ToHashSet();
+            // (P7-SH-A: a plank is any hull part that is not the keel, so the sea hulls count as planking too)
+            var cells = Expand(d, cat).Where(r => r.Deck == 0 && cat.PartList[r.Part].Tags.Contains("hull") && !cat.PartList[r.Part].Tags.Contains("keel")).Select(r => (X: (int)r.X, Y: (int)r.Y)).ToHashSet();
             var hullish = Expand(d, cat).Where(r => r.Deck == 0 && cat.PartList[r.Part].Tags.Contains("hull")).Select(r => (X: (int)r.X, Y: (int)r.Y)).ToList();
             int x0 = hullish.Min(c => c.X), x1 = hullish.Max(c => c.X), y0 = hullish.Min(c => c.Y), y1 = hullish.Max(c => c.Y);
             for (int y = y0; y <= y1; y++) for (int x = x0; x <= x1; x++) if (!cells.Contains((x, y))) E("hull_gap", x, y);
@@ -209,11 +210,24 @@ public static class PartGrid
             if (full.GmMm <= 0 || empty.GmMm <= 0) E("capsizes", arg: Math.Min(full.GmMm, empty.GmMm).ToString(System.Globalization.CultureInfo.InvariantCulture));
             else if (full.GmMm < wt.TenderGmMm) W("tender", arg: full.GmMm.ToString(System.Globalization.CultureInfo.InvariantCulture));
             if (full.FreeboardMm < 0) E("swamps_full", arg: full.FreeboardMm.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            else if (SeaHull(d, cat) && full.FreeboardMm < st.HullDepthMm * LowFreeboardPm / 1000) W("overloaded", arg: full.FreeboardMm.ToString(System.Globalization.CultureInfo.InvariantCulture));
             if (localDepthMm > 0 && full.DraftMm + wt.KeelClearanceMm > localDepthMm) W("too_deep", arg: $"{full.DraftMm + wt.KeelClearanceMm}/{localDepthMm}");
             bool moves = st.Rowers > 0 || st.Polers > 0 || st.SailM2 > 0 || st.TowPost || d.Hitch.Kind == "rope";
             if (!moves) W("no_power");
         }
         return issues;
+    }
+
+    /// <summary>P7-SH-A (ships-and-naval-war 3.1, SH-1): a sea ship fully loaded with under this share (permille) of its hull's depth left above the water is overloaded: the designer warns before it swamps.</summary>
+    public const int LowFreeboardPm = 200;
+
+    /// <summary>A design whose hull is of the sea planking (parts tagged <c>sea</c>).</summary>
+    private static bool SeaHull(VehicleBlueprintDef d, VehicleCatalog cat)
+    {
+        foreach (var ids in d.Legend.Values)
+            foreach (var id in ids)
+                if (cat.PartIndex(id) is int pi && pi >= 0 && cat.PartList[pi].Tags.Contains("hull") && cat.PartList[pi].Tags.Contains("sea")) return true;
+        return false;
     }
 
     /// <summary>The English line of an issue for logs and content errors (the game shows <c>vd_issue_{code}</c> through tr()).</summary>
@@ -239,6 +253,7 @@ public static class PartGrid
             "hull_gap" => $"a gap in the hull planking{at}: it leaks",
             "capsizes" => $"it capsizes (GM {i.Arg} mm)",
             "swamps_full" => $"fully loaded it swamps (freeboard {i.Arg} mm)",
+            "overloaded" => $"overloaded: fully laden only {i.Arg} mm of side stands above the water",
             "tender" => $"tender (GM {i.Arg} mm): it may capsize in beam seas",
             "too_deep" => $"too deep for the local river ({i.Arg} mm)",
             "no_power" => "nothing moves it on the water",

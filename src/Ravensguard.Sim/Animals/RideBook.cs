@@ -319,7 +319,7 @@ public sealed class RideBook
 
     /// <summary>
     /// A boat's game second closes: every 20 game seconds the capsize check of a tender boat in beam seas (0x550) and the water a swamped or wave-swept boat takes in (0x551); a boat full of water, or with
-    /// its freeboard under 0, sinks: its cargo goes to the river bed (<see cref="RiverBed"/>, mass exact), the people to the bank (Phase 4 drowning is not wired: no deaths).
+    /// its freeboard under 0, sinks: its cargo goes to the river bed (<see cref="RiverBed"/>, mass exact) and its people to the water (<see cref="OnSunk"/>: P7-SH-A, they swim, sink or drown).
     /// </summary>
     private void AccountBoat(VehicleRow v, long nowSec)
     {
@@ -338,11 +338,15 @@ public sealed class RideBook
     private Store? _bed;
     public static readonly EntityId RiverBedId = EntityId.MakeIn(IdKind.Other, 0, 0x7F0_0001);
 
-    /// <summary>The boat sinks (vehicle-designer 4.5, VD-14): all its cargo moves to the river bed store, so mass is exact; the hero is put on the bank by the view.</summary>
+    /// <summary>P7-SH-A: told when a boat sinks (after its cargo went to the river bed): the host puts the people aboard into <see cref="Ravensguard.Sim.Naval.Swimmers"/>, where they swim, sink or drown by the breath rule. Unhooked, the hero is put on the bank by the view as before.</summary>
+    public Action<VehicleRow>? OnSunk { get; set; }
+
+    /// <summary>The boat sinks (vehicle-designer 4.5, VD-14): all its cargo moves to the river bed store, so mass is exact; its people go to <see cref="OnSunk"/>.</summary>
     public void Sink(VehicleRow v)
     {
         foreach (var (good, qty) in v.Cargo.Rows()) Store.Move(v.Cargo, RiverBed, good, qty);
         v.Water = WaterState.Sunk;
+        OnSunk?.Invoke(v);
         if (Driving == v.Id) StopDriving();
     }
 

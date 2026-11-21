@@ -13,6 +13,9 @@ public class VehicleDesignerTests(ITestOutputHelper output)
 {
     internal const ulong Seed = 7;
 
+    /// <summary>The nine sea parts of P7-SH-A (their art is a later part).</summary>
+    internal static readonly string[] SeaPartIds = ["hull_plank_sea", "hull_plank_long", "castle_fore", "castle_aft", "fighting_top", "stem_post", "boarding_plank", "ship_ladder", "sail_square_sea"];
+
     internal sealed class Rig
     {
         public readonly GoodCatalog Goods = EconFixture.Catalog();
@@ -46,12 +49,12 @@ public class VehicleDesignerTests(ITestOutputHelper output)
     // ------------------------------------------------------------------ VD-1: content
 
     [Fact]
-    public void VD1_FortyOneParts_TwelveTemplatesValidate_EveryPartRecipeResolves_ThePhase3StatsUnchanged()
+    public void VD1_FiftyParts_FifteenTemplatesValidate_EveryPartRecipeResolves_ThePhase3StatsUnchanged()
     {
         var r = new Rig(); var cat = r.Cat;
         Assert.Empty(cat.Errors);
-        Assert.Equal(41, cat.PartList.Count);                                                   // "about 40": the 19 of Phase 3 and 22 new
-        Assert.Equal(12, cat.All.Count);
+        Assert.Equal(50, cat.PartList.Count);                                                   // "about 40": the 19 of Phase 3, 22 new, and the 9 sea parts of P7-SH-A
+        Assert.Equal(15, cat.All.Count);                                                          // + longship, cog, war cog (P7-SH-A)
         var recipes = Ravensguard.Sim.Crafting.RecipeDb.Build(EconFixture.Content, r.Goods);
         foreach (var p in cat.PartList)
         {
@@ -83,7 +86,7 @@ public class VehicleDesignerTests(ITestOutputHelper output)
         string? dir = AppContext.BaseDirectory; while (dir != null && !File.Exists(Path.Combine(dir, "Ravensguard.slnx"))) dir = Path.GetDirectoryName(dir);
         using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(Path.Combine(dir!, "src", "Ravensguard.Game", "assets", "art", "index.json")));
         var sprites = doc.RootElement.GetProperty("sprites");
-        foreach (var p in new Rig().Cat.PartList)
+        foreach (var p in new Rig().Cat.PartList.Where(x => !SeaPartIds.Contains(x.Id)))                // the sea parts' art is a later part (P7-SH-A left it out)
             foreach (var v in new[] { "e", "n", "w", "s", "ne", "se", "sw", "nw" })
             {
                 Assert.True(sprites.TryGetProperty($"vpart.{p.Id}.{v}", out var sp), $"vpart.{p.Id}.{v}");
@@ -118,7 +121,7 @@ public class VehicleDesignerTests(ITestOutputHelper output)
         Assert.Empty(errs); Assert.NotNull(bp);
         Assert.Equal((300, 1000, 2000, 1500, 80), (bp!.Stats.MassKg, bp.Stats.CargoKg, bp.Stats.CargoL, bp.Stats.AxleLimitKg, bp.Stats.TurningRadiusDm));
         Assert.Equal(text, VehicleDesigner.WriteText(def!));
-        Assert.Equal(13, r.Cat.All.Count);
+        Assert.Equal(16, r.Cat.All.Count);
     }
 
     [Fact]

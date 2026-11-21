@@ -217,6 +217,7 @@ public sealed partial class FightWorld
     {
         Tick++;
         _impacts.Clear();
+        if (Carriers != null) CarriersBefore();                     // [P7-SH-A] the ships move and carry their people (FightWorld.Carriers.cs)
         foreach (var f in Fighters) UpdateVitals(f);
         MoraleStep();                                   // P4-D hook: morale at 2 Hz, staggered by id (Morale/FightWorld.Morale.cs)
         if (Mounts != null) MountedBeforeCommands();                // [mounted-combat] panic, falls, side-steps, braces
@@ -226,6 +227,7 @@ public sealed partial class FightWorld
         RebuildGrid();                                              // BB-A: after movement
         Separate();
         RebuildGrid();                                              // BB-A: after separation (bodies pushed, a bearer shoved)
+        if (Carriers != null) CarriersAfter();                      // [P7-SH-A] riders re-seated in their ship's frame; a man past the rail is overboard
         foreach (var f in Fighters) UpdateBrace(f);
         if (_impacts.Count > 0)
         {
@@ -729,6 +731,7 @@ public sealed partial class FightWorld
         if (Mounts != null) h = MountedHash(h);                     // [mounted-combat] MountedHash joins the trail
         h = WeatherHash(h);                                         // [P4 close-out] the weather row, when set (FightWorld.Weather.cs)
         if (Formations != null) h = Formations.Hash(h);               // [P7 BB-B] the formation book joins the trail when there is one
+        if (Carriers != null) h = Carriers.Hash(h);                 // [P7-SH-A] the ships, their riders and the swimmers join the trail
         h = FightMath.Mix(h, _engageTick);              // P4-D hook: the walk-away clock
         return h;
     }

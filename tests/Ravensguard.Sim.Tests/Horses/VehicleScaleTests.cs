@@ -29,6 +29,10 @@ public class VehicleScaleTests(ITestOutputHelper output)
         new("fishing_boat",  (2, 2), (6, 6), (0, 0), (200, 700),  (150, 400)),
         new("barge",         (3, 3), (9, 10), (0, 1), (6000, 14000), (800, 3000)),            // a 10 m river barge, 3 m beam, 6-14 t of freight
         new("ferry",         (3, 3), (6, 6), (0, 0), (3000, 8000), (500, 2000)),              // a 6 m flat with ramps at both ends: a cart and its team
+        // P7-SH-A (ships-and-naval-war 3.1): the sea ships. A 24 x 5 m longship of about 9 t, a 22 x 7 m cog of about 40 t with 100 t of freight, the war cog with its castles and 60 t
+        new("longship",      (5, 5), (24, 24), (0, 0), (7500, 8500), (8500, 9500)),
+        new("cog",           (7, 7), (22, 22), (0, 0), (95_000, 105_000), (38_000, 42_000)),
+        new("war_cog",       (7, 7), (22, 22), (0, 0), (55_000, 65_000), (36_000, 46_000)),
     ];
 
     [Fact]
@@ -80,7 +84,7 @@ public class VehicleScaleTests(ITestOutputHelper output)
         Assert.NotNull(dir);
         using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(Path.Combine(dir, "src", "Ravensguard.Game", "assets", "art", "index.json")));
         var sprites = doc.RootElement.GetProperty("sprites");
-        foreach (var b in Book().Templates.All)
+        foreach (var b in Book().Templates.All.Where(x => x.Id is not ("longship" or "cog" or "war_cog")))                  // the sea ships' sprites are a later part (P7-SH-A left the art out)
         {
             Assert.True(sprites.TryGetProperty(b.Def.Sprite, out var sp), $"{b.Id}: sprite '{b.Def.Sprite}' is not in the art atlas");
             int w = sp.GetProperty("w").GetInt32(), h = sp.GetProperty("h").GetInt32(), margin = 4;

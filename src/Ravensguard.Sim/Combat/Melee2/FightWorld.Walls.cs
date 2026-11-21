@@ -7,6 +7,12 @@ public interface IFightWalls
     bool BlocksMissile(int xMm, int yMm);
 }
 
+/// <summary>P7-SH-A: walls that depend on who walks (a ship's decks: a man on a castle and a man under it stand on different floors). <see cref="Using"/> names the fighter whose body is about to be tested.</summary>
+public interface IFighterWalls : IFightWalls
+{
+    void Using(int fighterId);
+}
+
 /// <summary>
 /// [heists] Indoor fights use walls (heists-and-jailbreaks 4.4): with <see cref="Walls"/> set, a fighter cannot walk into a blocked cell (his body is a circle, so a doorway one metre wide holds one man at a time), a body pushed by another goes back
 /// out of a wall, no blow lands through a wall, and a missile stops at the first wall in its way. The fight's settle path also reports what its blades suffered (<see cref="WeaponKeepPm"/>): each blow that was blocked, stopped by armour or landed
@@ -27,6 +33,7 @@ public sealed partial class FightWorld
     /// <summary>The step cut down to what the walls allow: all of it, else along one axis (a slide along a wall), else none.</summary>
     private (int, int) WallSlide(Fighter f, int mx, int my)
     {
+        if (Walls is IFighterWalls fw) fw.Using(f.Id);
         if (FreeAt(f.X + mx, f.Y + my)) return (mx, my);
         if (mx != 0 && FreeAt(f.X + mx, f.Y)) return (mx, 0);
         if (my != 0 && FreeAt(f.X, f.Y + my)) return (0, my);
@@ -40,6 +47,7 @@ public sealed partial class FightWorld
         for (int i = 0; i < Fighters.Count; i++)
         {
             var f = Fighters[i];
+            if (Walls is IFighterWalls fw) fw.Using(f.Id);
             if (FreeAt(f.X, f.Y)) continue;
             if (FreeAt(before[i].X, f.Y)) f.X = before[i].X;
             else if (FreeAt(f.X, before[i].Y)) f.Y = before[i].Y;

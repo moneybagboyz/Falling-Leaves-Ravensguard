@@ -3588,6 +3588,7 @@ vd_issue_swamps_full,Fully loaded it swamps (freeboard {0} mm).
 vd_issue_tender,Tender (GM {0} mm): it may capsize in beam seas.
 vd_issue_too_deep,Too deep for the river here ({0} mm).
 vd_issue_no_power,Nothing moves it on the water.
+vd_issue_overloaded,"Overloaded: fully laden only {0} mm of side stands above the water."
 vd_place_outofgrid,Outside the grid.
 vd_place_unknownpart,Unknown part.
 vd_place_needsbelow,It needs its support under it first.

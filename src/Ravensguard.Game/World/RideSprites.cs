@@ -105,7 +105,7 @@ public sealed class RideSprites
                 dir8 = _dir8.GetValueOrDefault(v.Id, dir8);
             }
             if (!driven && DebugDir8 >= 0) dir8 = DebugDir8;
-            bool composite = bp.Player || !v.Finished || HasBroken(v) || (dir8 & 1) == 1;
+            bool composite = bp.Player || !_art.Has(id) || !v.Finished || HasBroken(v) || (dir8 & 1) == 1;      // P7-SH-A: a template with no drawn sprite yet (the sea ships) is drawn from its parts
             if (composite)
             {
                 if (_vehicles.Remove(v.Id, out var old)) old.QueueFree();
