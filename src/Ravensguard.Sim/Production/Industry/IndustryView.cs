@@ -27,9 +27,9 @@ public sealed record SellGood(string Good, long StockG, string GateTown, long Ne
 public sealed record CaravanLine(bool Ok, string Why, string Dest, int Wagons, int Guards, int Days, long GrossMites, long CostMites, long RiskMites, long MarginMites, long GateNetMites, int PriceAgeDays, bool Away,
     IReadOnlyList<(string Key, long Mites)> Parts);
 
-/// <summary>A stage as the tab shows it: the box of the flow, the detail and the sell lines.</summary>
+/// <summary>A stage as the tab shows it (<c>PlanX</c> and <c>PlanY</c>: where the one-click upgrade puts the next plan, two metres east of the premises, level with their north edge): the box of the flow, the detail and the sell lines.</summary>
 public sealed record StageView(ulong Business, string KindId, string Name, int Tier, int TierCount, int Have, int Need, int CrewTarget, int CrewMin, int CrewMax, int WageOfferPm, long WagePerDayMites,
-    long MadeG, long PotentialG, StageStop Stop, string StopGood, int StopDays, bool ShortHanded, bool Handling, Routing Route, bool HasOrder, bool HasSite, IReadOnlyList<StockView> Stock,
+    long MadeG, long PotentialG, StageStop Stop, string StopGood, int StopDays, bool ShortHanded, bool Handling, bool Piece, Routing Route, bool HasOrder, bool HasSite, int PlanX, int PlanY, IReadOnlyList<StockView> Stock,
     IReadOnlyList<InputView> Inputs, UpgradeView? Upgrade, IReadOnlyList<SellGood> Sell, CaravanLine? Caravan);
 
 /// <summary>The link into stage <see cref="To"/>: its length, what carries, what it can move in a day (<c>-1</c>: the crews' own hands, unlimited) and what moved on the last day.</summary>
@@ -160,7 +160,7 @@ public static class IndustryViews
         CaravanLine? car = null;
         if (s.Order != null) car = Caravan(iw, w, s, b, day, notes);
         return new StageView(s.Business, k.Id, k.Name, s.Tier, k.TierCount, st?.Have ?? b.Staff.Count, st?.Need ?? t.CrewMin, Math.Clamp(s.CrewTarget, t.CrewMin, t.CrewMax), t.CrewMin, t.CrewMax, s.WageOfferPm, wage,
-            made, pot, stop, stopGood != ushort.MaxValue ? Name(stopGood) : "", s.StopDays, st?.ShortHanded ?? false, k.IsHandling, s.Route, s.Order != null, s.HasSite, stock, inputs, Upgrade(iw, w, s, k, t, st, wage, b), sell, car);
+            made, pot, stop, stopGood != ushort.MaxValue ? Name(stopGood) : "", s.StopDays, st?.ShortHanded ?? false, k.IsHandling, cat.IsPiece(k.Main), s.Route, s.Order != null, s.HasSite, s.SiteX1 + 2, s.SiteY0, stock, inputs, Upgrade(iw, w, s, k, t, st, wage, b), sell, car);
     }
 
     private static UpgradeView? Upgrade(IndustryWorld iw, Works w, WorkStage s, StageKind k, StageTier t, StageStatus? st, long wage, Business b)

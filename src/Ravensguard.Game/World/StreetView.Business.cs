@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Godot;
 using Ravensguard.Game.Inputs;
 using Ravensguard.Game.UI;
+using Ravensguard.Sim.Production.Industry;
 using Ravensguard.Sim.Construction;
 using Ravensguard.Sim.Core;
 using Ravensguard.Sim.Economy;
@@ -27,6 +28,7 @@ namespace Ravensguard.Game.World;
 public partial class StreetView
 {
     LedgerView? _ledgerView; Task<LedgerView?>? _ledgerTask;
+    Ravensguard.Sim.Production.Industry.IndustryView? _industryView; Task<Ravensguard.Sim.Production.Industry.IndustryView?>? _industryTask;
     BusinessView? _bizView; Task<BusinessView?>? _bizTask; EntityId _bizId;
     ProspectView? _pxView; Task<ProspectView?>? _pxTask; int _pxTileOverride = -1;
     double _bizAcc; long _bizSeen; int _bizAt = int.MinValue, _walkTile = -1; bool _ownsAny;
@@ -40,6 +42,10 @@ public partial class StreetView
         int day = (int)(HeroNow() / 86400);
         if (_ledgerTask is { IsCompleted: true } lt) { if (lt.IsCompletedSuccessfully) { _ledgerView = lt.Result; _ownsAny = _ledgerView != null && _ledgerView.Rows.Any(r => r.Tab != LedgerTab.Fief); } _ledgerTask = null; }
         _ledgerTask ??= Bar(rt, () => OwnOf(rt) is { } ow ? Ravensguard.Sim.Rule.RuleLedger.With(rt.State, Ravensguard.Sim.Succession.SuccessionDesk.WithEstate(rt.State, ow.Ledger(day, rt.State.HomeRecords?.Sim.Get<ConstructionWorld>(), rt.State.Mounts)), day) : null);
+        // P7-IN3: the Industry tab's view of the hero's works, from the same barrier cadence (only while the hero has works)
+        if (_industryTask is { IsCompleted: true } it) { if (it.IsCompletedSuccessfully) _industryView = it.Result; _industryTask = null; }
+        if (rt.State.Industry is { IsEmpty: false }) _industryTask ??= Bar(rt, () => Ravensguard.Sim.Production.Industry.IndustryWiring.For(rt.State, rt.State.Content!) is { } iw ? Ravensguard.Sim.Production.Industry.IndustryViews.Build(iw, rt.State.Hero?.PersonIndex ?? -1, day, rt.State.Party?.Notebook) : null);
+        else _industryView = null;
         if (_bizTask is { IsCompleted: true } bt) { if (bt.IsCompletedSuccessfully) _bizView = bt.Result; _bizTask = null; }
         var id = _bizId;
         if (id != EntityId.None) _bizTask ??= Bar(rt, () => OwnOf(rt)?.Detail(id, day));
@@ -65,7 +71,7 @@ public partial class StreetView
         _bizAcc += delta;
         if (_bizAcc >= 2.0) { _bizAcc = 0; RefreshBusiness(); }
         if (_heroLink?.View is { } v)
-            foreach (var r in v.Results.Where(r => r.Kind is HeroCommandKind.Business or HeroCommandKind.Prospect && r.Seq >= 0 && (r.Seq > _bizSeen || r.Seq == 0 && r.AtSec > _bizSeenSec)))
+            foreach (var r in v.Results.Where(r => r.Kind is HeroCommandKind.Business or HeroCommandKind.Prospect or HeroCommandKind.Industry && r.Seq >= 0 && (r.Seq > _bizSeen || r.Seq == 0 && r.AtSec > _bizSeenSec)))
             {
                 if (!r.Message.IsEmpty) _router?.ShowToast(r.Text, 4f);
                 if (r.Seq > 0) _bizSeen = r.Seq; else _bizSeenSec = r.AtSec;
@@ -97,8 +103,22 @@ public partial class StreetView
     {
         if (_router == null || Runtime == null || _heroLink == null) { _router?.ShowToast(L.T("MAP_NONE")); return; }
         RefreshBusiness();
-        _router.Push(new LedgerScreen(_router, () => { RefreshBusiness(); return _ledgerView; }, OpenBusiness) { ShotPath = _opt.Panel == "ledger" ? _opt.ShotPath : null, StartTab = tab });
+        _router.Push(new LedgerScreen(_router, () => { RefreshBusiness(); return _ledgerView; }, OpenBusiness, () => _industryView, IndustryAct()) { ShotPath = _opt.Panel == "ledger" ? _opt.ShotPath : null, StartTab = tab });
     }
+
+    /// <summary>P7-IN3: what the Industry tab asks, each one an <c>in:</c> command through the hero desk (crew, wage, route, send, the next tier's plan placed beside the premises).</summary>
+    IndustryActions IndustryAct() => new()
+    {
+        Crew = (b, n) => IssueBiz(IndustryDesk.Crew(new EntityId(b), n, HeroNow())),
+        Wage = (b, pm) => IssueBiz(IndustryDesk.Wage(new EntityId(b), pm, HeroNow())),
+        Route = (b, r) => IssueBiz(IndustryDesk.Route(new EntityId(b), r, HeroNow())),
+        Send = b => IssueBiz(IndustryDesk.Send(new EntityId(b), HeroNow())),
+        Upgrade = b =>
+        {
+            if (_industryView?.Works.SelectMany(w => w.Stages).FirstOrDefault(x => x.Business == b) is not { HasSite: true } st) { _router?.ShowToast(L.T("ui_ind_no_site")); return; }
+            IssueBiz(IndustryDesk.Upgrade(new EntityId(b), st.PlanX, st.PlanY, 0, HeroNow()));
+        },
+    };
 
     void OpenBusiness(EntityId id)
     {
