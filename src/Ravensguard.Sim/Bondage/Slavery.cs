@@ -129,14 +129,14 @@ public static class Slavery
         return new SlaveResult(true, "sl_bought", price, e.Id.Value);
     }
 
-    /// <summary>The household of a settlement that would buy a lot at a price today: coin of at least the multiple of the price and a free bed; richest first, household id on a tie (the draw 0x631 keyed on the market and the day breaks equal purses).</summary>
-    public static EntityId? Buyer(BondWorld bw, int settlement, long price, int day, uint lot)
+    /// <summary>The household of a settlement (other than <paramref name="not"/>, the seller) that would buy a lot at a price today: coin of at least the multiple of the price and a free bed; richest first, household id on a tie (the draw 0x631 keyed on the market and the day breaks equal purses).</summary>
+    public static EntityId? Buyer(BondWorld bw, int settlement, long price, int day, uint lot, EntityId? not = null)
     {
         var hht = bw.W.Households; if (hht == null) return null;
         var cand = new List<(long Coin, int Hh)>();
         for (int h = 0; h < hht.Count; h++)
         {
-            if (hht.MemberCount[h] <= 0 || hht.Settlement[h] != settlement || hht.Beds[h] - hht.MemberCount[h] < 1) continue;
+            if (hht.MemberCount[h] <= 0 || hht.Settlement[h] != settlement || hht.Beds[h] - hht.MemberCount[h] < 1 || not is { } seller && hht.IdOf(h) == seller) continue;      // P6-G1: a household does not buy its own man (a purse cannot pay itself)
             var pu = bw.PurseOf(hht.IdOf(h)); if (pu is not { } p) continue;
             long coin = bw.Ledger.Balance(p).Mites;
             if (coin >= (long)bw.D.BuyerCoinX * price) cand.Add((coin, h));
@@ -158,7 +158,7 @@ public static class Slavery
         var law = bw.LawAt(market);
         if (!HasMarket(law)) return SlaveResult.No("sl_no_market");
         long price = bw.PriceOf(person, day) * bw.D.SellPm / 1000;
-        var buyer = Buyer(bw, market, price, day, 7);
+        var buyer = Buyer(bw, market, price, day, 7, owner);
         if (buyer == null || bw.PurseOf(buyer.Value) is not { } from || bw.PurseOf(owner) is not { } to) return SlaveResult.No("sl_no_buyer");
         if (!bw.Ledger.Transfer(from, to, new Coin(price), TransferReason.SlaveSale)) return SlaveResult.No("sl_no_buyer");
         int row = bw.RowOf(person); bool own = row >= 0 && bw.W.People.Culture[row] == bw.CultureAt(market);
