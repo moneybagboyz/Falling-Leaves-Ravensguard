@@ -1,0 +1,5 @@
+// Content migrations of business kinds (ContentRemap, large-buildings 5): a save naming an old kind loads onto its successor and the load report lists the move.
+[
+  // P7-LB1: the Phase 5 water sawmill is a saw mill; its 125 permille of worker-hours applies only while a powered gang saw drives it (a mill with no wheel runs at 1,000).
+  { "type": "migration", "target_type": "business", "from": "water_sawmill", "to": "saw_mill" }
+]

@@ -35,6 +35,15 @@ public sealed partial class ConstructionWorld
     public PlanLibrary Plans(IEnumerable<(string Id, string Text)>? extra = null) =>
         Content != null ? PlanLibrary.For(Content, Designs, extra) : new PlanLibrary(Costs.Library, [], (Designs?.Designs.Select(kv => (kv.Key, kv.Value.Text)) ?? []).Concat(extra ?? []));
 
+    /// <summary>P7-LB1 (large-buildings 4.6): the water check of a powered plan (set by the power wiring: the region's water and the content's wheels); null: no check.</summary>
+    public Func<BuildingGrid, int, int, int, (bool Ok, int HaveW, string Key)>? PowerCheck { get; set; }
+
+    /// <summary>P7-LB1: the power rules over this world's built pieces (set by <see cref="Ravensguard.Sim.Building.PowerWiring"/>); null in a world without them.</summary>
+    public Ravensguard.Sim.Building.PowerWorld? Power { get; set; }
+
+    /// <summary>The plan's water check for a need in watts (null when the plan needs no power or no check is wired).</summary>
+    public PlanPower? PlanPowerOf(int powerW) => powerW > 0 && PowerCheck is { } c ? new PlanPower(powerW, (g, x, y) => c(g, x, y, powerW)) : null;
+
     /// <summary>Whether a ground cell takes a plan (the fitter's ground rule): not a road, not steeper than the floor limit, no generated building standing there.</summary>
     public bool GroundTakes(int x, int y) => (Ground?.Invoke(x, y) is not { } g || (!g.Road && g.SlopePm <= Rules.MaxSlopePm)) && Standing?.Invoke(x, y, 0) != true;
 
@@ -59,11 +68,12 @@ public sealed partial class ConstructionWorld
     public List<PlaceCell> PlanPlaceCells(BuildingGrid g, int ox, int oy) => [.. PlanLibrary.Cells(g, Costs).Select(c => new PlaceCell(ox + c.X, oy + c.Y, c.Z, c.Piece))];
 
     /// <summary>A plan from the library fitted to the lot under (x, y): the best of the eight transforms (spec 4.2), or the plan at the given transform (the player turned or mirrored it).</summary>
-    public (PlanFit Fit, FitLot? Lot) FitPlan(BuildingGrid g, int x, int y, int index = -1)
+    public (PlanFit Fit, FitLot? Lot) FitPlan(BuildingGrid g, int x, int y, int index = -1, int powerW = 0)
     {
         var lot = LotAt?.Invoke(x, y);
         if (lot == null) return (PlanFit.No("cn_fit_no_lot"), null);
-        var fit = index < 0 ? PlanFitter.Fit(g, lot.Value, Costs.Library.Pieces, GroundTakes) : PlanFitter.FitAt(g, index, lot.Value, Costs.Library.Pieces, GroundTakes);
+        var power = PlanPowerOf(powerW);
+        var fit = index < 0 ? PlanFitter.Fit(g, lot.Value, Costs.Library.Pieces, GroundTakes, power) : PlanFitter.FitAt(g, index, lot.Value, Costs.Library.Pieces, GroundTakes, power);
         return (fit, lot);
     }
 

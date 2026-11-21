@@ -14,6 +14,9 @@ public readonly record struct FitLot(int X, int Y, int W, int H, int Street = -1
     public bool Contains(int x, int y) => x >= X && x < Right && y >= Y && y < Bottom;
 }
 
+/// <summary>P7-LB1 (large-buildings 4.6): a powered plan's water check: the watts the plan needs at its wheel, and the check that answers for a placed grid (ok, watts at autumn flow, en.csv key when refused).</summary>
+public sealed record PlanPower(int NeedW, Func<BuildingGrid, int, int, (bool Ok, int HaveW, string Key)> Check);
+
 /// <summary>A plan fitted to a lot (spec 4.2): the transform (index = mirror x 4 + quarter turns), the corner in region metres and the transformed grid; or why it does not fit.</summary>
 public sealed record PlanFit(bool Ok, int Index, int Turns, bool Mirror, int X, int Y, int W, int H, BuildingGrid? Grid, bool DoorToStreet, string Key, object[] Args)
 {
@@ -35,13 +38,13 @@ public static class PlanFitter
     public static int IndexOf(int turns, bool mirror) => (((turns % 4) + 4) % 4) + (mirror ? 4 : 0);
 
     /// <summary>The best of the eight transforms on the lot, or the reason none fits (the first that applies: too wide, too deep, the ground, no door).</summary>
-    public static PlanFit Fit(BuildingGrid g, FitLot lot, PieceCatalog pieces, Func<int, int, bool>? groundOk = null)
+    public static PlanFit Fit(BuildingGrid g, FitLot lot, PieceCatalog pieces, Func<int, int, bool>? groundOk = null, PlanPower? power = null)
     {
         PlanFit? best = null, firstNo = null;
         int narrowest = int.MaxValue, shallowest = int.MaxValue;
         for (int i = 0; i < 8; i++)
         {
-            var f = FitAt(g, i, lot, pieces, groundOk);
+            var f = FitAt(g, i, lot, pieces, groundOk, power);
             if (f.Ok)
             {
                 if (best == null || (f.DoorToStreet && !best.DoorToStreet)) best = f;
@@ -67,7 +70,7 @@ public static class PlanFitter
     private static int UsableDeep(FitLot lot) => lot.Depth - (lot.Street < 0 ? 2 : 1) * SideSetback;
 
     /// <summary>One transform on the lot with the fit check (the player's own rotation and mirror, spec 4.1: Z / X rotate, M mirrors).</summary>
-    public static PlanFit FitAt(BuildingGrid g, int index, FitLot lot, PieceCatalog pieces, Func<int, int, bool>? groundOk = null)
+    public static PlanFit FitAt(BuildingGrid g, int index, FitLot lot, PieceCatalog pieces, Func<int, int, bool>? groundOk = null, PlanPower? power = null)
     {
         var (turns, mirror) = Transform(index);
         var t = g.Transform(turns, mirror);
@@ -106,6 +109,12 @@ public static class PlanFitter
                     if (lot.Street switch { 0 => yy == 0, 1 => xx == w - 1, 2 => yy == h - 1, 3 => xx == 0, _ => false }) streetDoor = true;
                 }
         if (!anyDoor) return PlanFit.No("cn_fit_no_door") with { Index = index, Turns = turns, Mirror = mirror };
+        // P7-LB1: a powered plan stands only where its wheel's cell lies on a bank and the autumn watts meet its need (a plan that needs no power is never asked)
+        if (power is { NeedW: > 0 })
+        {
+            var (ok, have, key) = power.Check(t, x, y);
+            if (!ok) return PlanFit.No(key, have, power.NeedW) with { Index = index, Turns = turns, Mirror = mirror };
+        }
         return new PlanFit(true, index, turns, mirror, x, y, w, h, t, streetDoor || lot.Street < 0, "cn_fit_ok", []);
     }
 }

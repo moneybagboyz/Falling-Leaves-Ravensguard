@@ -45,6 +45,8 @@ public static class ConstructionDesk
     public static HeroCommand ImportDesign(string id, string text, long sec) => Cmd(sec, Tag("design", "import", id, B64(text)));
     private static string B64(string s) => Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(s));
     private static string UnB64(string s) { try { return System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(s)); } catch (FormatException) { return ""; } }
+    /// <summary>P7-LB1: shuts or opens the sluice built at a cell (<c>cn:sluice|x|y|z|shut</c>).</summary>
+    public static HeroCommand Sluice(int x, int y, int z, bool shut, long sec) => Cmd(sec, Tag("sluice", x, y, z, shut ? 1 : 0));
     public static HeroCommand Remove(int x, int y, int z, GhostSlot slot, long sec) => Cmd(sec, Tag("remove", x, y, z, (int)slot));
     public static HeroCommand Deconstruct(int x, int y, int z, GhostSlot slot, long sec) => Cmd(sec, Tag("decon", x, y, z, (int)slot));
     public static HeroCommand Priority(EntityId ghost, int p, long sec) => Cmd(sec, Tag("priority", ConstructionIds.SerialOf(ghost), p));
@@ -123,7 +125,12 @@ public static class ConstructionDesk
                 Wealth? wl = S(9) switch { "poor" => Wealth.Poor, "middling" => Wealth.Middling, "rich" => Wealth.Rich, _ => null };
                 cw.Designs = st.Designs ??= new DesignBook();
                 var g = cw.Plans().Grid(S(1), S(8).Length > 0 ? S(8) : null, wl);
-                res = g == null ? ConstructionResult.No("cn_unknown_plan", S(1)) : Placed(cw.PlacePlanGrid(hero, hk, hh, g.Transform(I(4), N(5) != 0), S(1), I(2), I(3), sec, pile));
+                if (g == null) { res = ConstructionResult.No("cn_unknown_plan", S(1)); break; }
+                var turned = g.Transform(I(4), N(5) != 0);
+                // P7-LB1 (large-buildings 4.6): a powered plan is placed only where its wheel's water gives what it needs in autumn
+                int needW = cw.Plans().Get(S(1))?.Entry.Def.PowerW ?? 0;
+                if (needW > 0 && cw.PowerCheck is { } pc && pc(turned, I(2), I(3), needW) is { Ok: false } bad) { res = ConstructionResult.No(bad.Key, bad.HaveW, needW); break; }
+                res = Placed(cw.PlacePlanGrid(hero, hk, hh, turned, S(1), I(2), I(3), sec, pile));
                 break;
             }
             // ---- P5-C: build mode ----
@@ -154,6 +161,9 @@ public static class ConstructionDesk
                 else res = null;
                 break;
             }
+            case "sluice" when p.Length >= 5:                                   // P7-LB1: the machine panel's switch: a shut sluice stops the wheel
+                res = cw.Power is { } pw && pw.SetSluice(I(1), I(2), I(3), N(4) != 0) ? ConstructionResult.Yes(N(4) != 0 ? "lb_sluice_shut_ok" : "lb_sluice_open_ok") : ConstructionResult.No("lb_no_sluice");
+                break;
             case "remove" when p.Length >= 5: res = cw.Cancel(hero, hh, I(1), I(2), I(3), (GhostSlot)Math.Clamp(I(4), 0, 1), sec); break;
             case "decon" when p.Length >= 5: res = cw.MarkDeconstruct(hero, hk, hh, I(1), I(2), I(3), (GhostSlot)Math.Clamp(I(4), 0, 1), sec); break;
             case "priority" when p.Length >= 3: res = cw.SetPriority(GhostId(1), (byte)Math.Clamp(I(2), 0, 3), sec); break;

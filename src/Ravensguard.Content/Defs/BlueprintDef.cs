@@ -39,4 +39,6 @@ public sealed record BlueprintDef : ContentDef
     public required List<string> Rows { get; init; }
     public List<string>? Fixtures { get; init; }
     public List<BlueprintLevelDef> Levels { get; init; } = [];
+    /// <summary>P7-LB1 (large-buildings 4.6): the watts the plan's machines need at the wheel; above 0 the plan is a powered plan and the fitter's water check applies (0: not powered).</summary>
+    public int PowerW { get; init; }
 }

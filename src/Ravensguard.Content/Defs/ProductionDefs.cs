@@ -90,6 +90,8 @@ public sealed record BusinessDef : ContentDef
     public bool FoundedOnly { get; init; }
     /// <summary>P5-F: the worker-hours of its recipes in permille (a water sawmill's wheel does seven eighths of the sawing: 125).</summary>
     public int LabourPm { get; init; } = 1000;
+    /// <summary>P7-LB1: the worker-hours in permille while the premises' machines are powered (a saw mill's gang saw: 125); 0: no machine changes it.</summary>
+    public int PoweredLabourPm { get; init; }
 }
 
 /// <summary>

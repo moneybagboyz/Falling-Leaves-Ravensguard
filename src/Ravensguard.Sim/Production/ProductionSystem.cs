@@ -21,6 +21,8 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
     public ProductionContent Content { get; }
     /// <summary>P5-E (crafting-full 4.4): whether a station's batch is worked live (a station-bound craft job); its progress then comes from the live work, not from this system.</summary>
     public Func<Business, int, bool>? LiveStation { get; set; }
+    /// <summary>P7-LB1 (large-buildings 4.1, 4.3): the worker-hours in permille of a station while its premises' machines run (the power net's share of a machine's labour_pm); null or no answer: the business kind's <see cref="BusinessKind.LabourPm"/>.</summary>
+    public Func<Business, int, int?>? StationLabourPm { get; set; }
     /// <summary>P6-B6 (holdings 3.8, HW-10): a batch finished at a station of a business (the business, the recipe), so the tool it is worked with can wear; null: nothing wears but the abstract count.</summary>
     public Action<Business, Recipe, Station>? BatchDone { get; set; }
     /// <summary>P6-B6 (HW-10): the containers within 6 m of a business's station count as its store; the inputs a batch lacks are taken from them first. Null: the business's own store only.</summary>
@@ -202,7 +204,7 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
                 bool wheel = st.Kind == "spinning_wheel";
                 for (int i = 0; i < nw && st.Crew.Count < r.MaxWorkers; i++)
                     if (!used[i] && IsWorker(b, workers[i], wheel ? 1 : 0)) { used[i] = true; st.Crew.Add(workers[i]); }
-                long hm = (long)r.WorkerHours * st.ScalePermille * kind.LabourPm / 1000;          // P5-F: a water sawmill's wheel does most of the sawing (LabourPm 125); 1000 elsewhere
+                long hm = (long)r.WorkerHours * st.ScalePermille * (StationLabourPm?.Invoke(b, si0) ?? kind.LabourPm) / 1000;          // P5-F: a sawmill's wheel does most of the sawing; P7-LB1: only while its machines are powered (the hook), else the kind's 1000
                 foreach (int p in st.Crew)
                 {
                     int skill = r.Skill == Skill.None ? 40 : people.SkillLevelOf(p, r.Skill);
@@ -253,7 +255,7 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
         var st = b.Stations[si];
         if (!st.Busy && (start == null || !TryStart(b, st, start, now))) return false;
         var r = Content.Recipes.Recipes[st.Recipe];
-        long hm = (long)r.WorkerHours * st.ScalePermille * KindOf(b).LabourPm / 1000;
+        long hm = (long)r.WorkerHours * st.ScalePermille * (StationLabourPm?.Invoke(b, si) ?? KindOf(b).LabourPm) / 1000;
         long per = Station.PerWorkerHour(hm, 1300 - 6 * Math.Clamp(skill, 0, 100));
         st.ProgressMicro = Math.Min(Station.Complete, st.ProgressMicro + (long)((Int128)per * seconds / 3600));
         st.MinSkill = Math.Min(st.MinSkill, skill);

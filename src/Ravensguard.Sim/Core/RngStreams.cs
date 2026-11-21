@@ -420,6 +420,10 @@ public static class RngStreams
     public const uint HoldingsReserved = 0x6E0;
     /// <summary>P6: holdings: horse breeding (key mare, year).</summary>
     public const uint HorseBreeding = 0x6E1;
+    /// <summary>P7-LB1: large buildings: machine and wheel breakdowns, a running day's chance (key built piece, day).</summary>
+    public const uint MachineBreakdown = 0x730;
+    /// <summary>P7-LB1: large buildings: flood damage to a wheel on a river-high day with the sluice open (key built piece, day).</summary>
+    public const uint FloodDamage = 0x731;
 
     /// <summary>Stream ids that two named uses share on purpose, with why their draws never meet.</summary>
     public static readonly (string A, string B, string Why)[] SharedPairs =

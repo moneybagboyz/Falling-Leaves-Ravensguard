@@ -209,6 +209,8 @@ public sealed class ConstructionBook
     /// <summary>P5-D: building contracts by id, and growth projects made visible (project serial to its site or clearing).</summary>
     public SortedDictionary<EntityId, Contract> Contracts { get; } = [];
     public SortedDictionary<int, GrowthLink> Growth { get; } = [];
+    /// <summary>P7-LB1 (large-buildings 5): the sluices that are shut (slot keys of the built sluice pieces); empty while every sluice is open (the default), so a book without a shut sluice hashes and saves as before.</summary>
+    public SortedSet<long> SluiceShut { get; } = [];
 
     public bool IsEmpty => NextSerial == 1 && Sites.Count == 0 && Ghosts.Count == 0 && Built.Count == 0 && Groans.Count == 0 && Placed.Count == 0 && Contracts.Count == 0 && Growth.Count == 0;
 
@@ -276,6 +278,8 @@ public sealed class ConstructionBook
             foreach (var g in Growth.Values) { L(g.Serial); L(g.Kind); L((long)g.Site.Value); L(g.Settlement); L(g.X); L(g.Y); L(g.W); L(g.H); L(g.DoneMilli); L(g.NeedMilli); L(g.LinkedSec); }
             foreach (var s in Sites.Values) foreach (var m in s.Crew) L(m.DayCapSec);
         }
+        // P7-LB1: shut sluices (only when there are any)
+        if (SluiceShut.Count > 0) { L(SluiceShut.Count); foreach (var k in SluiceShut) L(k); }
         return Convert.ToHexString(h.GetHashAndReset());
     }
 }

@@ -1,0 +1,12 @@
+// P7-LB1 (large-buildings 4.1, 4.2; LBQ-1): the constants of water, wind and animal power. Flow is litres a second, heads are millimetres, power is watts, shares are permille.
+// season_pm runs spring, summer, autumn, winter. Every value here is the shipped default of the record, written out so a mod can change one.
+[
+  { "type": "water_power_rules", "id": "water_power",
+    "flow_lps_per_km2": 15, "season_pm": [1600, 600, 1000, 800],
+    "frozen_days": 3, "frozen_below_c": -5, "thaw_days": 2, "thaw_above_c": 0, "ice_lookback_days": 120, "river_high_flow_pm": 2000,
+    "no_leat_fall_m": 30, "leat_max_m": 300, "leat_head_cap_mm": 4000, "weir_head_mm": 1000, "weir_max_width_cm": 1000,
+    "bank_reach_m": 6, "shaft_reach_m": 12, "couple_reach_m": 3,
+    "site_sample_m": 32, "site_spacing_m": 200, "site_min_w": 2000,
+    "wear_hp_per_day": 1, "breakdown_pm": 2, "breakdown_loss_pct": 20, "half_effect_below_pct": 50, "flood_pct": 5, "flood_loss_pct": 30,
+    "wind_k": 19, "wind_min_mps": 3, "wind_max_mps": 15, "wind_clear_m": 30 }
+]

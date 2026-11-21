@@ -39,6 +39,8 @@ public sealed class ConstructionSave
     /// <summary>P5-D: building contracts and growth projects made visible (additive keys, empty in a P5-B save).</summary>
     [Key(19)] public ContractRow[] Contracts { get; set; } = [];
     [Key(20)] public GrowthRow[] Growth { get; set; } = [];
+    /// <summary>P7-LB1: the slot keys of the sluices that are shut (additive; empty while all are open).</summary>
+    [Key(21)] public long[] SluiceShut { get; set; } = [];
 
     [MessagePackObject]
     public sealed class ContractRow
@@ -198,6 +200,7 @@ public sealed class ConstructionSave
         {
             Serial = g.Serial, Kind = g.Kind, Site = g.Site.Value, Settlement = g.Settlement, Rect = [g.X, g.Y, g.W, g.H], DoneMilli = g.DoneMilli, NeedMilli = g.NeedMilli, LinkedSec = g.LinkedSec,
         })],
+        SluiceShut = [.. b.SluiceShut],
     };
 
     public ConstructionBook Restore()
@@ -263,6 +266,7 @@ public sealed class ConstructionSave
                 Serial = r.Serial, Kind = r.Kind, Site = new EntityId(r.Site), Settlement = r.Settlement, X = R(0), Y = R(1), W = R(2), H = R(3), DoneMilli = r.DoneMilli, NeedMilli = r.NeedMilli, LinkedSec = r.LinkedSec,
             };
         }
+        foreach (var k in SluiceShut) b.SluiceShut.Add(k);
         return b;
     }
 }

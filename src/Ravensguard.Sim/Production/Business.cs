@@ -25,6 +25,8 @@ public sealed class BusinessKind
     /// <summary>P5-F: founded only by the player (never generated or grown); its recipes' worker-hours in permille (a water sawmill: 125).</summary>
     public bool FoundedOnly;
     public int LabourPm = 1000;
+    /// <summary>P7-LB1: the worker-hours in permille while the premises' machines are powered (0: no machine changes it); a saw mill's gang saw: 125.</summary>
+    public int PoweredLabourPm;
     public int StaffCapacity => Slots.Sum(s => s.Count);
     /// <summary>The recipes a station of this kind works, in recipe order (built once per recipe list and shared by the region workers: the planner asks for every station every day).</summary>
     public Recipe[] RecipesFor(string station)
@@ -67,7 +69,7 @@ public sealed class ProductionContent
         var kinds = new List<BusinessKind>();
         foreach (var d in db.All<BusinessDef>().OrderBy(b => b.Id, StringComparer.Ordinal))
         {
-            var k = new BusinessKind { Index = (ushort)kinds.Count, Id = d.Id, Trader = d.Trader, Salaried = d.Salaried || d.Trader, OwnerOccupation = Enum.Parse<Occupation>(d.OwnerOccupation), FoundedOnly = d.FoundedOnly, LabourPm = Math.Clamp(d.LabourPm, 1, 1000) };
+            var k = new BusinessKind { Index = (ushort)kinds.Count, Id = d.Id, Trader = d.Trader, Salaried = d.Salaried || d.Trader, OwnerOccupation = Enum.Parse<Occupation>(d.OwnerOccupation), FoundedOnly = d.FoundedOnly, LabourPm = Math.Clamp(d.LabourPm, 1, 1000), PoweredLabourPm = Math.Clamp(d.PoweredLabourPm, 0, 1000) };
             if (d.LotUse.Length > 0) k.Lot = Enum.Parse<LotUse>(d.LotUse);
             foreach (var s in d.Stations) if (Array.IndexOf(RecipeBook.StationKinds, s.Kind) < 0) throw new InvalidDataException($"business '{d.Id}': unknown station kind '{s.Kind}'");
             k.Stations = [.. d.Stations.Select(s => (s.Kind, s.Count))];

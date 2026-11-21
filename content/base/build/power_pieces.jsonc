@@ -1,0 +1,30 @@
+// P7-LB1 (large-buildings 3.2, 4.1-4.3): what a build piece does in a power net. Wheels give watts from the water (eta, rated, head band); shafts carry them; machines draw
+// them and couple to a station piece within 3 m (labour_pm and capacity_mult are what the powered station gets). Only a millstone or a pump takes wind (wind_ok).
+[
+  // wheels
+  { "type": "power_piece", "id": "waterwheel",       "piece": "waterwheel",       "role": "wheel", "eta_pm": 400, "rated_w": 4000, "head_min_mm": 1000, "head_max_mm": 2500, "water": "any" },
+  { "type": "power_piece", "id": "undershot_wheel",  "piece": "undershot_wheel",  "role": "wheel", "eta_pm": 200, "rated_w": 3000, "head_min_mm": 300,  "head_max_mm": 0,    "water": "river" },
+  { "type": "power_piece", "id": "overshot_wheel",   "piece": "overshot_wheel",   "role": "wheel", "eta_pm": 600, "rated_w": 5000, "head_min_mm": 2500, "head_max_mm": 0,    "water": "any", "needs_leat": true },
+  { "type": "power_piece", "id": "windmill_post",    "piece": "windmill_post",    "role": "windmill", "rated_w": 4000 },
+  { "type": "power_piece", "id": "horse_gin",        "piece": "horse_gin",        "role": "gin", "rated_w": 1000 },
+  // water works and the switch
+  { "type": "power_piece", "id": "weir",             "piece": "weir",             "role": "weir" },
+  { "type": "power_piece", "id": "leat",             "piece": "leat",             "role": "leat" },
+  { "type": "power_piece", "id": "sluice",           "piece": "sluice",           "role": "switch" },
+  // transmission
+  { "type": "power_piece", "id": "line_shaft",       "piece": "line_shaft",       "role": "shaft" },
+  { "type": "power_piece", "id": "cam_shaft",        "piece": "cam_shaft",        "role": "shaft" },
+  { "type": "power_piece", "id": "brake_wheel",      "piece": "brake_wheel",      "role": "shaft" },
+  // machines
+  { "type": "power_piece", "id": "trip_hammer",      "piece": "trip_hammer",      "role": "machine", "draw_w": 2000, "couples": ["anvil", "anvil_set", "forge"], "needs_cam": true, "labour_pm": 375 },
+  { "type": "power_piece", "id": "great_bellows",    "piece": "great_bellows",    "role": "machine", "draw_w": 1000, "couples": ["bloomery"], "labour_pm": 500, "capacity_mult": 2 },
+  { "type": "power_piece", "id": "fulling_stocks",   "piece": "fulling_stocks",   "role": "machine", "draw_w": 1500, "couples": ["fulling_tub"], "needs_cam": true, "labour_pm": 125 },
+  { "type": "power_piece", "id": "gang_saw_frame",   "piece": "gang_saw_frame",   "role": "machine", "draw_w": 3000, "couples": ["sawpit"], "labour_pm": 125 },
+  { "type": "power_piece", "id": "stamp_battery",    "piece": "stamp_battery",    "role": "machine", "draw_w": 2500, "needs_cam": true, "labour_pm": 100 },
+  { "type": "power_piece", "id": "pug_mill",         "piece": "pug_mill",         "role": "machine", "draw_w": 1500, "labour_pm": 100 },
+  { "type": "power_piece", "id": "hoist_drum",       "piece": "hoist_drum",       "role": "machine", "draw_w": 1000 },
+  { "type": "power_piece", "id": "rag_pump",         "piece": "rag_pump",         "role": "machine", "draw_w": 1000, "wind_ok": true },
+  { "type": "power_piece", "id": "millstone",        "piece": "millstone",        "role": "machine", "draw_w": 1500, "wind_ok": true },
+  // human power: no watts
+  { "type": "power_piece", "id": "treadwheel_crane", "piece": "treadwheel_crane", "role": "crane" }
+]
