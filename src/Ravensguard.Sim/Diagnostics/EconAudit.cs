@@ -26,7 +26,7 @@ public static class EconAudit
         new("X2", "exploits", "Sell to the gate's export desk, buy back from the same market", "desk bid < book ask for every tracked good", "EA2 probe EA-2"),
         new("X3", "exploits", "Craft, then salvage or disassemble", "value out / value in < 1 for every recipe and piece", "EA2 probe EA-3"),
         new("X4", "exploits", "Build with bought materials, demolish, sell the salvage", "loses 10-30%", "EA2 probe EA-3"),
-        new("X5", "exploits", "Loot items valued below their material", "melt value / listed value <= 1.2 for every loot row", "EA2 probe EA-4 (fix F-2)"),
+        new("X5", "exploits", "Loot items valued below their material", "melt value / listed value <= 1.2 for every loot row", "EA2 probe EA-4; fixed in EA3a (EA_F2)"),
         new("X6", "exploits", "Melt coin when bullion is dear, strike when cheap", "a margin only inside the 7.5% seigniorage band", "EA2 probe EA-5"),
         new("X7", "exploits", "Copper token coin", "only mints hold dies; the copper cap bounds the faucet", "EA2 read (coinage.md 5.1)"),
         new("X8", "exploits", "Loans: borrow, lend on, default", "interest and principal only move coin; a default forfeits security", "read in docs/reviews/phase-7-audit.md (RI-13 and RI-14 stay green)"),
@@ -63,11 +63,11 @@ public static class EconAudit
         new("I1", "industry", "Payback of the scripted L1 works at 1x near a town", "100-200 game days", "EA3b with the scripted works (needs IN2 chains)"),
         new("I2", "industry", "Markets absorb the works' output", "80% of the output sold within 5 days at >= 90% of the opening bid", "EA3b with the scripted works (needs IN2 chains)"),
         new("I3", "industry", "Merchants have the coin", ">= 30 days of the works' sales", "EA3b with the scripted works (needs IN2 chains)"),
-        new("I4", "industry", "Raw output barely covers wages", "a raw stage earns 1.0-1.5x its wage bill at book prices", "EA3 (F-1, the R1 rule)"),
-        new("S-1", "suspects", "Raw extraction is worth about 8.7x its wage", "after F-1: 1.0-1.5x", "measured here"),
+        new("I4", "industry", "Raw output barely covers wages", "a raw stage earns 1.0-1.5x its wage bill at book prices", "fixed in EA3a (EA_F1, the R1 rule)"),
+        new("S-1", "suspects", "Raw extraction is worth about 8.7x its wage", "1.0-1.5x after R1 (EA_F1)", "measured here"),
         new("S-2", "suspects", "Silver yield: 3 kg of silver from 1 t of galena", "after F-4: 1-2% of the money supply a year", "EA3 (F-4)"),
         new("S-3", "suspects", "No mint runs: MintMath.StrikeInto has no caller", "coinage.md 5.1 wires mints", "measured here"),
-        new("S-4", "suspects", "Loot below material", "melt value / listed value <= 1.2", "EA3 (F-2)"),
+        new("S-4", "suspects", "Loot below material", "melt value / listed value <= 1.2", "fixed in EA3a (EA_F2)"),
         new("S-5", "suspects", "Phase 6 S10 and S14", "no Burn outside tests; tribute moves real coin", "EA3 (F-3)"),
         new("S-6", "suspects", "The border faucet: exports paid by Immigrate up to the neighbour's season budget", "the bound holds against an L3 works", "measured here (this world's border coin)"),
         new("S-7", "suspects", "Coin mass is mites x 13 / 1000 g, silver only", "coinage.md 5.3", "CN1"),
@@ -158,10 +158,9 @@ public static class EconAudit
             {
                 // value of one worker-day of the bulk raw kinds at the content's base prices against the unskilled day wage
                 const long wage = 150; var parts = new List<string>(); double worst = 0;
-                foreach (var k in ew.Content.Extractions.Where(x => x.RateGPerWorkerDay >= 100_000).OrderBy(x => x.Id, StringComparer.Ordinal))
+                foreach (var r in db != null ? AuditMeasures.RawRatios(db, cat) : [])
                 {
-                    double value = k.RateGPerWorkerDay / 1000.0 * cat.Def(k.OutGood).BasePriceMitesPerKg; double ratio = value / wage;
-                    worst = Math.Max(worst, ratio); parts.Add($"{k.Id} {ratio:0.0}x");
+                    worst = Math.Max(worst, r.Ratio); parts.Add($"{r.Id} {r.Ratio:0.0}x");
                 }
                 return (worst > 1.5 ? AuditState.Fail : AuditState.Pass, $"value of a worker-day at base prices over the {wage}-mite unskilled wage: {string.Join(", ", parts)}");
             }

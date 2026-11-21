@@ -19,7 +19,6 @@ namespace Ravensguard.Sim.Tests.EconomyAudit;
 public class AuditProbeTests(ITestOutputHelper output)
 {
     private static ContentDatabase Db => EconFixture.Content;
-    private const string Owner = "owned by P7-EA3a (the audit's fixes); remove Skip when the fix lands";
 
     // ------------------------------------------------------------------ X5 / EA-4: loot against its material
 
@@ -33,17 +32,19 @@ public class AuditProbeTests(ITestOutputHelper output)
         foreach (var r in rows.OrderByDescending(x => x.Ratio)) output.WriteLine($"{r.Id,-20}{r.MassG,7}{r.Listed,8}  {r.Material,-9}{r.MatMites,15}{r.Ratio,8:0.0}");
         int over = rows.Count(r => r.Ratio > 1.2);
         output.WriteLine($"{over} of {rows.Count} loot rows are worth more than 1.2x their listed value as material; worst {rows.OrderByDescending(r => r.Ratio).First().Id} at {rows.Max(r => r.Ratio):0}x");
-        // today: the gold torc and the silver pieces are worth two orders of magnitude more than the site budget that places them
-        var torc = rows.Single(r => r.Id == "gold_torc"); Assert.True(torc.Ratio > 100, $"gold torc {torc.Ratio}");
+        // EA3a: the listed value is the material value (the audited tag had the gold torc at 206x and the reliquary at 205x)
+        Assert.All(rows, r => Assert.InRange(r.Ratio, 0.0, 1.2));
         Assert.DoesNotContain(rows, r => r.Id == "skull");        // listed at nothing by design
-        Assert.True(rows.Single(r => r.Id == "reliquary").Ratio > 100);
+        Assert.InRange(rows.Single(r => r.Id == "gold_torc").Ratio, 0.8, 1.2);
     }
 
-    [Fact(Skip = "EA_F2 " + Owner)]
+    [Fact]
     public void EA_F2_EveryLootRow_IsWithin1p2OfItsMaterialValue()
     {
         var bad = LootRatios().Where(r => r.Ratio > 1.2).Select(r => $"{r.Id} {r.Ratio:0.0}x").ToList();
         Assert.True(bad.Count == 0, string.Join(", ", bad));
+        var badEntries = AuditMeasures.LootEntryRatios(Db).Where(r => r.Ratio > 1.2).Select(r => $"{r.Table}/{r.Item} {r.Ratio:0.0}x").ToList();
+        Assert.True(badEntries.Count == 0, string.Join(", ", badEntries));   // the loot tables' own rows (what the site budget spends) agree with the pack too
     }
 
     // ------------------------------------------------------------------ X6 / EA-5: striking and melting against the bullion price
@@ -95,14 +96,15 @@ public class AuditProbeTests(ITestOutputHelper output)
         var rows = RawRatios(); Assert.NotEmpty(rows);
         output.WriteLine("extraction          good        kg/day  mites/kg  value/day  x wage(150)");
         foreach (var r in rows) output.WriteLine($"{r.Id,-19} {r.Good,-11}{r.Kg,8:0}{r.Price,10:0.00}{r.Value,11:0}{r.Ratio,8:0.0}x");
-        Assert.True(rows.Single(r => r.Id == "woodcutting").Ratio > 8, "the 8.8x of the suspects list");
-        Assert.True(rows.Single(r => r.Id == "mining_iron").Ratio > 8);
-        Assert.True(rows.Single(r => r.Id == "clay_digging").Ratio > 8);
+        // EA3a (R1): the 8.7x of the suspects list is 1.0 to 1.5x
+        Assert.InRange(rows.Single(r => r.Id == "woodcutting").Ratio, 1.0, 1.5);
+        Assert.InRange(rows.Single(r => r.Id == "mining_iron").Ratio, 1.0, 1.5);       // at the composite rate of the dressed ore (109 kg a worker-day)
+        Assert.InRange(rows.Single(r => r.Id == "clay_digging").Ratio, 1.0, 1.5);
         // the R1 prices (economy-audit 4.8) that would put each at 1.25 x its wage: price = 150 x 1.25 / kg a day
         output.WriteLine("R1 price for 1.25x wage (mites a kg): " + string.Join(", ", rows.Select(r => $"{r.Good} {150 * 1.25 / r.Kg:0.00}")));
     }
 
-    [Fact(Skip = "EA_F1 " + Owner)]
+    [Fact]
     public void EA_F1_RawExtraction_EarnsBetween1And1p5TimesItsWage()
     {
         var bad = RawRatios().Where(r => r.Ratio is < 1.0 or > 1.5).Select(r => $"{r.Id} {r.Ratio:0.0}x").ToList();
@@ -227,7 +229,10 @@ public class AuditProbeTests(ITestOutputHelper output)
     {
         var cat = EconFixture.Catalog(); double P(string g) => cat.Def(cat.IdOf(g)).BasePriceMitesPerKg;
         output.WriteLine($"rope {P("rope")} mites a kg = {P("rope") / P("iron_bar"):0.0}x bar iron ({P("iron_bar"):0.0}); linen cloth {P("cloth_linen"):0.0}; twine {P("twine"):0.0}");
-        Assert.Equal(2000, P("rope"), 1);
-        Assert.True(P("rope") > 3.9 * P("iron_bar"));
+        // EA3a: rope (EA_F6) is its twine and forty minutes of braiding, not 2,000 a kg; and the R1 table of economy-audit 4.8 is in the content
+        Assert.Equal(298, P("rope"), 1);
+        Assert.True(P("rope") < 0.7 * P("iron_bar"));
+        foreach (var (g, want) in new (string, double)[] { ("logs", 0.2), ("firewood", 0.3), ("clay", 0.1), ("iron_ore_rough", 0.6), ("iron_ore", 1.8), ("charcoal", 12), ("iron_bloom", 240), ("iron_bar", 480), ("timber_planks", 3.0), ("bricks", 1.2) })
+            Assert.Equal(want, P(g), 3);
     }
 }
