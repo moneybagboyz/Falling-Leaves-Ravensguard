@@ -56,7 +56,7 @@ public static class CombatBrain
 
     private static void Crawl(FightWorld w, Fighter f)
     {
-        var e = w.NearestEnemy(f);
+        var e = w.NearestEnemyOf(f);
         if (e == null) return;
         var (ux, uy) = FightMath.Norm(f.X - e.X, f.Y - e.Y);
         f.Cmd.MoveX = ux; f.Cmd.MoveY = uy;
@@ -88,8 +88,9 @@ public static class CombatBrain
         if (f.Act is not (FAct.Idle or FAct.Block or FAct.Recover or FAct.Stagger or FAct.Aiming or FAct.Reloading)) return;
         // the most imminent blow aimed at this fighter
         Fighter? foeNext = null; int best = int.MaxValue;
-        foreach (var e in w.Fighters)
+        foreach (int eid in w.Near(0, f, w.Grid.MaxReachMm + K.ReachSlackMm + 600))        // nobody reaches further than the longest weapon in the fight
         {
+            var e = w.Fighters[eid];
             if (e.Team == f.Team || e.Act != FAct.Windup || e.Req.Kind != BlowKind.Melee) continue;
             if (e.Req.Target >= 0 && e.Req.Target != f.Id) continue;
             if (w.DistMm(e, f) > w.ReachAgainst(e, f) + K.ReachSlackMm + 600) continue;
@@ -264,14 +265,23 @@ public static class CombatBrain
         Fighter? cur = m.Target >= 0 && m.Target < w.Fighters.Count ? w.Fighters[m.Target] : null;
         bool keep = cur != null && cur.Team != f.Team && cur.Active && !(cur.Routing && w.DistMm(f, cur) > pursue) && tick % 20 != f.Id % 20;
         if (keep) return cur;
+        // the nearest enemy by distance (a foe aiming at us counts 2 m nearer under the "threat" priority), searched outward in doubling boxes: everything outside a box of r is
+        // farther than r, so once the best is no farther than r - 2000 nothing outside can beat or tie it. Same candidates in the same ascending order as the full scan.
         Fighter? best = null; long bd = long.MaxValue;
-        foreach (var o in w.Fighters)
+        for (long r = 16_000; ; r *= 2)
         {
-            if (o.Team == f.Team || !o.Active) continue;
-            long d = w.DistMm(f, o);
-            if (o.Routing && d > pursue) continue;
-            if (f.Stance.TargetPriority == "threat" && o.Brain.Target == f.Id) d -= 2000;
-            if (d < bd || (d == bd && best != null && o.Id < best.Id)) { bd = d; best = o; }
+            bool all = !w.UseGrid || r >= (1L << 33);
+            best = null; bd = long.MaxValue;
+            foreach (int oid in all ? w.Near(0, f.X, f.Y, 1L << 41) : w.Near(0, f, r))
+            {
+                var o = w.Fighters[oid];
+                if (o.Team == f.Team || !o.Active) continue;
+                long d = w.DistMm(f, o);
+                if (o.Routing && d > pursue) continue;
+                if (f.Stance.TargetPriority == "threat" && o.Brain.Target == f.Id) d -= 2000;
+                if (d < bd || (d == bd && best != null && o.Id < best.Id)) { bd = d; best = o; }
+            }
+            if (all || best != null && bd <= r - 2000 - 2) break;
         }
         return best;
     }
@@ -281,8 +291,9 @@ public static class CombatBrain
         var c = f.Cmd;
         c.Block = false;
         long ax = 0, ay = 0;
-        foreach (var e in w.Fighters)
+        foreach (int eid in w.Near(0, f, 25_000))
         {
+            var e = w.Fighters[eid];
             if (e.Team == f.Team || !e.Active) continue;
             long dx = f.X - e.X, dy = f.Y - e.Y, d = Math.Max(1, FightMath.Len(dx, dy));
             if (d < 25_000) { ax += dx * 1_000_000 / (d * d / 1000 + 1); ay += dy * 1_000_000 / (d * d / 1000 + 1); }
