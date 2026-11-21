@@ -83,7 +83,7 @@ public sealed partial class FarmingSystem
         int doy = now.DayOfYear; long demand = 0, supply = 0, own = 0, hired = 0, wages = 0;
         bool premium = doy >= 26 && doy <= 35;
         int wagePct = premium ? _d.HarvestWagePct : 100;
-        var pool = new List<(int Hh, int Avail)>();
+        var pool = new List<(int Hh, int Avail)>(); var childPool = new List<(int Hh, int Avail)>();
         RetrySowing(doy, now);
         for (int s = 0; s < Region.Settlements.Count; s++)
         {
@@ -103,20 +103,25 @@ public sealed partial class FarmingSystem
 
             // 1. each household works its own parcels, earliest deadline first
             _needs.Sort((a, b) => a.Holder != b.Holder ? a.Holder.CompareTo(b.Holder) : a.Deadline != b.Deadline ? a.Deadline.CompareTo(b.Deadline) : a.Parcel != b.Parcel ? a.Parcel.CompareTo(b.Parcel) : TaskRank(a.Task).CompareTo(TaskRank(b.Task)));
-            pool.Clear();
-            var left = new Dictionary<int, int>();
-            foreach (int hh0 in _householdsOf[s]) supply += _hhHours[hh0];
+            pool.Clear(); childPool.Clear();
+            var left = new Dictionary<int, int>(); var childLeft = new Dictionary<int, int>();
+            foreach (int hh0 in _householdsOf[s]) supply += _hhHours[hh0] + _hhChild[hh0];
             for (int i = 0; i < _needs.Count;)
             {
-                int holder = _needs[i].Holder; int remaining = _hhHours[holder];
+                int holder = _needs[i].Holder; int remaining = _hhHours[holder], childRem = _hhChild[holder];
                 for (; i < _needs.Count && _needs[i].Holder == holder; i++)
                 {
                     var nd = _needs[i];
+                    if (childRem > 0 && nd.Task is FarmTask.Reap or FarmTask.BindCart)          // the children's hours serve the harvest only, and go first (they can do nothing else)
+                    {
+                        long c = Math.Min(childRem, HoursFor(nd.Parcel, nd.Task, doy));
+                        if (c > 0) { Apply(nd.Parcel, nd.Task, c, now); childRem -= (int)c; own += c; }
+                    }
                     long h = Math.Min(remaining, HoursFor(nd.Parcel, nd.Task, doy));
                     if (h <= 0) continue;
                     Apply(nd.Parcel, nd.Task, h, now); remaining -= (int)h; own += h;
                 }
-                left[holder] = remaining;
+                left[holder] = remaining; childLeft[holder] = childRem;
             }
             // 2. the labour pool: households' leftover hours and non-holders' hours
             foreach (int hh in _householdsOf[s])
@@ -124,43 +129,51 @@ public sealed partial class FarmingSystem
                 int avail;
                 avail = left.TryGetValue(hh, out int l) ? l : _hhHours[hh];
                 if (avail > 0) pool.Add((hh, avail));
+                int cav = childLeft.TryGetValue(hh, out int cl) ? cl : _hhChild[hh];
+                if (cav > 0) childPool.Add((hh, cav));
             }
-            int first = 0;                                   // pool entries before this are used up
+            int first = 0, firstChild = 0;                   // pool entries before this are used up
             _needs.Sort((a, b) => a.Tier != b.Tier ? a.Tier.CompareTo(b.Tier) : a.Deadline != b.Deadline ? a.Deadline.CompareTo(b.Deadline) : a.Parcel != b.Parcel ? a.Parcel.CompareTo(b.Parcel) : TaskRank(a.Task).CompareTo(TaskRank(b.Task)));
             foreach (var nd in _needs)
             {
                 long want = HoursFor(nd.Parcel, nd.Task, doy);
                 int payer = nd.Holder; var payerPurse = Econ.HouseholdPurse[payer];
-                for (int j = first; j < pool.Count && want > 0; j++)
+                bool harvest = nd.Task is FarmTask.Reap or FarmTask.BindCart;
+                for (int pass = harvest ? 0 : 1; pass < 2 && want > 0; pass++)                  // a neighbour's children first (harvest tasks only), then the adults
                 {
-                    var (hh, avail) = pool[j];
-                    if (avail <= 0) { if (j == first) first++; continue; }
-                    if (hh == payer) continue;
-                    long take = Math.Min(want, avail);
-                    long wage = _d.WageLabourerMitesPerDay;
-                    if (wage > 0)
+                    var list = pass == 0 ? childPool : pool; ref int fst = ref (pass == 0 ? ref firstChild : ref first);
+                    for (int j = fst; j < list.Count && want > 0; j++)
                     {
-                        long bal = Econ.Ledger.Balance(payerPurse).Mites, per = wage * wagePct;   // mites x 100 per day
-                        long afford = bal * 100 * _wh / per;
-                        take = Math.Min(take, afford);
-                        if (take <= 0) break;
-                        long pay = take * per / (100L * _wh);
-                        if (pay > 0 && Econ.Ledger.Transfer(payerPurse, Econ.HouseholdPurse[hh], Coin.FromMites(pay), TransferReason.Wage)) wages += pay;
+                        var (hh, avail) = list[j];
+                        if (avail <= 0) { if (j == fst) fst++; continue; }
+                        if (hh == payer) continue;
+                        long take = Math.Min(want, avail);
+                        long wage = _d.WageLabourerMitesPerDay;
+                        if (wage > 0)
+                        {
+                            long bal = Econ.Ledger.Balance(payerPurse).Mites, per = wage * wagePct;   // mites x 100 per day
+                            long afford = bal * 100 * _wh / per;
+                            take = Math.Min(take, afford);
+                            if (take <= 0) break;
+                            long pay = take * per / (100L * _wh);
+                            if (pay > 0 && Econ.Ledger.Transfer(payerPurse, Econ.HouseholdPurse[hh], Coin.FromMites(pay), TransferReason.Wage)) wages += pay;
+                        }
+                        Apply(nd.Parcel, nd.Task, take, now); hired += take; want -= take;
+                        if (P.HiredHands[nd.Parcel] < 8) P.HiredHands[nd.Parcel]++;
+                        list[j] = (hh, avail - (int)take);
                     }
-                    Apply(nd.Parcel, nd.Task, take, now); hired += take; want -= take;
-                    if (P.HiredHands[nd.Parcel] < 8) P.HiredHands[nd.Parcel]++;
-                    pool[j] = (hh, avail - (int)take);
                 }
             }
             if (hayHours > 0)
             {
                 long want = hayHours;
-                for (int j = first; j < pool.Count && want > 0; j++)
-                {
-                    var (hh, avail) = pool[j]; if (avail <= 0) continue;
-                    long take = Math.Min(want, avail);
-                    ApplyHay(s, take); hired += take; want -= take; pool[j] = (hh, avail - (int)take);
-                }
+                foreach (var list in new[] { childPool, pool })                                   // haymaking is harvest work: the children first
+                    for (int j = 0; j < list.Count && want > 0; j++)
+                    {
+                        var (hh, avail) = list[j]; if (avail <= 0) continue;
+                        long take = Math.Min(want, avail);
+                        ApplyHay(s, take); hired += take; want -= take; list[j] = (hh, avail - (int)take);
+                    }
             }
         }
         long unmet = 0;
@@ -190,7 +203,7 @@ public sealed partial class FarmingSystem
         long demand = 0, supply = 0;
         for (int p = 0; p < P.Count; p++) foreach (var t in ParcelTasks) demand += HoursFor(p, t, doy);
         for (int s = 0; s < Region.Settlements.Count; s++) demand += HayHours(s, doy);
-        for (int h = 0; h < _hhHours.Length; h++) supply += _hhHours[h];
+        for (int h = 0; h < _hhHours.Length; h++) supply += _hhHours[h] + _hhChild[h];
         return (demand, supply);
     }
 

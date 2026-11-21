@@ -65,7 +65,7 @@ public static class EconAudit
         new("I3", "industry", "Merchants have the coin", ">= 30 days of the works' sales", "EA3b with the scripted works (needs IN2 chains)"),
         new("I4", "industry", "Raw output barely covers wages", "a raw stage earns 1.0-1.5x its wage bill at book prices", "fixed in EA3a (EA_F1, the R1 rule)"),
         new("S-1", "suspects", "Raw extraction is worth about 8.7x its wage", "1.0-1.5x after R1 (EA_F1)", "measured here"),
-        new("S-2", "suspects", "Silver yield: 3 kg of silver from 1 t of galena", "after F-4: 1-2% of the money supply a year", "EA3 (F-4)"),
+        new("S-2", "suspects", "Silver yield: kg of silver from 1 t of galena (0.15 after EA_F4; was 3)", "after F-4: 1-2% of the money supply a year", "EA3 (F-4)"),
         new("S-3", "suspects", "No mint runs: MintMath.StrikeInto has no caller", "coinage.md 5.1 wires mints", "measured here"),
         new("S-4", "suspects", "Loot below material", "melt value / listed value <= 1.2", "fixed in EA3a (EA_F2)"),
         new("S-5", "suspects", "Phase 6 S10 and S14", "no Burn outside tests; tribute moves real coin", "EA3 (F-3)"),

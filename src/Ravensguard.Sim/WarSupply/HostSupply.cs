@@ -371,30 +371,40 @@ public sealed class HostSupply
     public bool IsOnCampaign(int person) => Book.OnCampaign.ContainsKey(person);
 
     /// <summary>
-    /// Levies from a fief (army-economy 3.3): the households of the fief's settlements in index order, one man each (a man aged 16 to 45, not the household's head when another can go, not on a staff, not already on campaign);
-    /// a household that evades (<see cref="Evades"/>) gives none. The men are marked on campaign and counted as levies of the host.
+    /// Levies from a fief (army-economy 3.3; P7-EA3c, finding EA_F9): the households of the fief's settlements, one man each (a man aged 16 to 45, not on a staff, not already on campaign), **field hands first**: a household whose man works the land
+    /// (a farmer, ploughman, labourer or shepherd, or an unoccupied man of a peasant household) is asked before one whose man does not, each group in household order, so a summer levy takes the hands the harvest needs. In a household the man who is not the head
+    /// goes before the head, a field hand before another. A household that evades (<see cref="Evades"/>) gives none. The men are marked on campaign and counted as levies of the host.
     /// </summary>
     public MusterResult Muster(HostId h, int fief, int men)
     {
         var a = Acc(h); int day = Day;
         var hh = _pop.Households; var pt = _pop.People; var region = _pop.Region; var picked = new List<int>(); int evaded = 0, asked = 0;
-        for (int i = 0; i < hh.Count && picked.Count < men; i++)
+        var hands = new List<(int Hh, int Man)>(); var others = new List<(int Hh, int Man)>();
+        for (int i = 0; i < hh.Count; i++)
         {
             int s = hh.Settlement[i]; if (s < 0 || s >= region.Settlements.Count || region.Settlements[s].FiefIndex != fief || hh.MemberCount[i] == 0) continue;
-            int pick = -1;
+            int pick = -1; bool pickHand = false;
             foreach (int m in hh.Members(i))
             {
                 if (pt.Sex[m] != Sex.Male || pt.Status[m] != PersonStatus.Alive || Book.OnCampaign.ContainsKey(m) || Economy.Labour.IsStaff(m)) continue;
                 int age = pt.AgeYears(m, day); if (age < SupplyConfig.LevyMinAge || age > SupplyConfig.LevyMaxAge) continue;
-                if (pick < 0 || (pick == hh.Head[i] && m != hh.Head[i])) pick = m;
-                if (m != hh.Head[i]) break;
+                var occ = pt.Occupation[m];
+                bool hand = occ is Occupation.Farmer or Occupation.Ploughman or Occupation.Labourer or Occupation.Shepherd || (occ == Occupation.None && hh.Class[i] == SocialClass.Peasant);
+                bool better = pick < 0 || (hand && !pickHand) || (hand == pickHand && pick == hh.Head[i] && m != hh.Head[i]);
+                if (better) { pick = m; pickHand = hand; }
             }
             if (pick < 0) continue;
-            asked++;
-            if (Evades?.Invoke(s, i, day) == true) { evaded++; continue; }
-            picked.Add(pick);
-            if (a.HomeSettlement < 0) a.HomeSettlement = s;
+            (pickHand ? hands : others).Add((i, pick));
         }
+        foreach (var group in new[] { hands, others })
+            foreach (var (i, pick) in group)
+            {
+                if (picked.Count >= men) break;
+                int s = hh.Settlement[i]; asked++;
+                if (Evades?.Invoke(s, i, day) == true) { evaded++; continue; }
+                picked.Add(pick);
+                if (a.HomeSettlement < 0) a.HomeSettlement = s;
+            }
         foreach (int p in picked) Book.OnCampaign[p] = a.Id;
         a.Men[(int)TroopRole.Levy] += picked.Count;
         return new MusterResult(picked, evaded, asked);
