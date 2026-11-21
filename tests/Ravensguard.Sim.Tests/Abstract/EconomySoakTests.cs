@@ -120,7 +120,7 @@ public class EconomySoakTests(ITestOutputHelper output)
         });
         output.WriteLine($"{years} years in {sw.Elapsed.TotalSeconds:0} s");
         output.WriteLine(EconomySoak.Summary(soak)); output.WriteLine(soak.Ticker.Stats.Report());
-        Assert.True(soak.Ticker.Stats.P99HourMs < 150);
+        Assert.True(soak.Ticker.Stats.P99HourMs < TestBudget.Ms(150), $"p99 hour {soak.Ticker.Stats.P99HourMs:0.0} ms");   // the plan's hourly budget on the reference PC; shared runners get the suite's x5
         AssertTargets(soak.Rows, start);
         return soak;
     }
