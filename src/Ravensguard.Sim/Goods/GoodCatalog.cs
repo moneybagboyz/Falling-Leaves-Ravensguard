@@ -5,7 +5,9 @@ using Ravensguard.Content;
 namespace Ravensguard.Sim.Goods;
 
 /// <summary>Kind of store stock sits in; it picks the column of the spoilage table (items spec 3.6).</summary>
-public enum StoreKind : byte { Open, House, Barn, Sealed, Granary, Cellar, Chest }
+public enum StoreKind : byte { Open, House, Barn, Sealed, Granary, Cellar, Chest,
+    /// <summary>P7-LB2 (large-buildings 4.4): a warehouse: grain at the granary rate, packed goods (a class with its own sealed rate) at the sealed rate, other goods at half the house rate. Appended: saves hold the byte.</summary>
+    Warehouse }
 
 /// <summary>
 /// Runtime view of the good definitions: dense <c>ushort</c> ids by ordinal string order (overview 2.2), integer per-good constants and the spoilage table.
@@ -13,7 +15,7 @@ public enum StoreKind : byte { Open, House, Barn, Sealed, Granary, Cellar, Chest
 /// </summary>
 public sealed class GoodCatalog
 {
-    public const int StoreKindCount = 7;
+    public const int StoreKindCount = 8;
     private readonly GoodDef[] _defs;
     private readonly Dictionary<string, ushort> _byId = new(StringComparer.Ordinal);
     private readonly int[] _bulkPermille;       // litres per kg x 1000
@@ -54,6 +56,7 @@ public sealed class GoodCatalog
             p[(int)StoreKind.Sealed] = s.SealedPpm ?? s.HousePpm;
             p[(int)StoreKind.Granary] = s.GranaryPpm ?? s.HousePpm;
             p[(int)StoreKind.Cellar] = s.CellarPpm ?? s.HousePpm;
+            p[(int)StoreKind.Warehouse] = s.Id == "grain" ? s.GranaryPpm ?? s.HousePpm / 2 : s.SealedPpm ?? s.HousePpm / 2;
             _spoilPpm[r] = p;
         }
         for (int i = 0; i < _defs.Length; i++)

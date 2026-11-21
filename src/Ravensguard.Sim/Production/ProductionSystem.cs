@@ -23,6 +23,8 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
     public Func<Business, int, bool>? LiveStation { get; set; }
     /// <summary>P7-LB1 (large-buildings 4.1, 4.3): the worker-hours in permille of a station while its premises' machines run (the power net's share of a machine's labour_pm); null or no answer: the business kind's <see cref="BusinessKind.LabourPm"/>.</summary>
     public Func<Business, int, int?>? StationLabourPm { get; set; }
+    /// <summary>P7-LB2 (large-buildings 4.4): the span a manufactory hall adds to each of its business's overseers (one view across the floor: +4); null or 0: none.</summary>
+    public Func<Business, int>? SpanBonus { get; set; }
     /// <summary>P6-B6 (holdings 3.8, HW-10): a batch finished at a station of a business (the business, the recipe), so the tool it is worked with can wear; null: nothing wears but the abstract count.</summary>
     public Action<Business, Recipe, Station>? BatchDone { get; set; }
     /// <summary>P6-B6 (HW-10): the containers within 6 m of a business's station count as its store; the inputs a batch lacks are taken from them first. Null: the business's own store only.</summary>
@@ -308,7 +310,8 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
     private int SpanSpeed(Business b, int crew, Span<bool> credited, int ns, int day)
     {
         var people = Pop.People; var sc = Content.Scale; var seen = new HashSet<int>(); int span = 0;
-        void Overseer(int p) { if (seen.Add(p)) span += Crews.Span(sc, people.SkillLevelOf(p, Skill.Leadership)); }
+        int hall = SpanBonus?.Invoke(b) ?? 0;
+        void Overseer(int p) { if (seen.Add(p)) span += Crews.Span(sc, people.SkillLevelOf(p, Skill.Leadership)) + hall; }
         if (b.Owner >= 0) Overseer(b.Owner);
         for (int s = 0; s < ns; s++)
         {
