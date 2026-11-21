@@ -21,6 +21,8 @@ public static class NeedScanner
         if (settlement < 0 || settlement >= w.SettlementNames.Length) return posted;
         long sec = day * 86_400L + 3600;
         Lapse(w, book, settlement, day);
+        // a full board posts nothing, so a need written now would be a chronicle entry with no contract after it (P6-G2: 2.3 stock_short entries for each delivery posted over eight game years); wait for a place
+        if (book.Contracts.Values.Count(x => x.Open && x.Settlement == settlement) >= w.S.BoardCap) return posted;
         StockShort(w, book, settlement, day, sec, posted);
         Caravans(w, book, settlement, day, sec, posted);
         Bands(w, book, settlement, day, sec, posted);

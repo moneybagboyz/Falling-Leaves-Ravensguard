@@ -178,6 +178,7 @@ public class Phase6SoakTests(ITestOutputHelper output)
         public readonly Dictionary<string, int> Acts = [];
         public long Start; public long Alive0, Households0;
         public Action<string> Log = _ => { };
+        public readonly List<Dictionary<string, int>> YearTypes = [];
     }
 
     private static YearRow Sample(Soak k, int year, bool measureSave)
@@ -215,7 +216,7 @@ public class Phase6SoakTests(ITestOutputHelper output)
                 long pop = 0; foreach (var s in cs.Summaries) if (!s.Detailed) pop += s.Pop;
                 r.Continent = pop; r.PlagueActive = cs.Plague.Active ? 1 : 0; r.PlagueInfected = cs.Plague.Infected.Count; r.PlagueDead = cs.Plague.DeadEstimate;
             }
-            var sn = rt.Snapshot; r.Snap = $"res {sn.Resident}/{sn.Detailed}/{sn.Daily}/{sn.Paged} maxHr {sn.MaxHourMs:0}ms rumours {st.Talk?.Rumours.Count}/{st.Talk?.Rumours.HearingCount}";
+            var sn = rt.Snapshot; r.Snap = $"res {sn.Resident}/{sn.Detailed}/{sn.Daily}/{sn.Paged} maxHr {sn.MaxHourMs:0}ms rumours {st.Talk?.Rumours.Count}/{st.Talk?.Rumours.HearingCount} rel {st.Talk?.Relations.Count} held {st.Talk?.Rumours.Held.Count} passes {st.Talk?.Passes.Count} people {st.Population.People.Count} crimes {st.Law?.Crimes.Count} contracts {st.Contracts?.Contracts.Count}";
             if (measureSave) r.Bytes = SaveCodec.Encode(WorldSave.Capture(st, Hash, "0.1")).Length;
             return r;
         });
@@ -224,6 +225,20 @@ public class Phase6SoakTests(ITestOutputHelper output)
     private static string RowText(YearRow r) =>
         $"y{r.Year,3} alive {r.Alive,6} hh {r.Households,5} idle {r.Idle,5} hungryHH {r.Hungry,4} dietPoor {r.DietPoor,5} births {r.Births,7} deaths {r.Deaths,7} relish {r.RelishRatio:0.00} ale {r.AleRatio:0.00} staple {r.StapleRatio:0.00} " +
         $"chron {r.ChronEntries,7}/{r.ChronAllRegions,7} continentPop {r.Continent,8} plague {r.PlagueActive}/{r.PlagueInfected}/{r.PlagueDead} {(r.Coin && r.Mass ? "ok" : "FAIL")} {r.Secs:0}s {r.Snap}" + (r.Bytes > 0 ? $" save {r.Bytes / 1024.0 / 1024:0.0} MB" : "");
+
+    /// <summary>The dice are not waited for (the start is a one-in-a-hundred roll a year): the great plague starts in the home region at the first spring day of the year the variable names, as the tick's own start would have it.</summary>
+    private static void ForcePlague(WorldRuntime rt, Soak k)
+    {
+        rt.AdvanceTo(GameTime.FromGameHours(k.Start + ((k.Rows.Count) * DaysPerYear + 1) * 24L));
+        At(rt, () =>
+        {
+            var cs = rt.State.ContinentState!; var cp = cs.Plague; var now = GameTime.FromGameHours(rt.HourDone);
+            cp.NowDay = (int)now.TotalDays; cp.Active = true; cp.Id++; cp.Origin = rt.Records.Home.Id; cp.StartDay = cp.NowDay; cp.StartSeason = Ravensguard.Sim.Continental.ContinentTick.SeasonOf(now);
+            cp.NameIndex = 0; cp.DeadEstimate = 0; cp.PendingNews.Add((cp.Origin, 0));
+            k.Log($"forced plague at year {k.Rows.Count + 1} day 1, origin region {cp.Origin}, severity {cp.Severity}");
+            return 0;
+        });
+    }
 
     private Soak Run(int years, PlagueSeverity? plague, int[]? saveYears, Action<Soak, int>? each = null)
     {
@@ -239,6 +254,7 @@ public class Phase6SoakTests(ITestOutputHelper output)
         for (int y = 1; y <= years; y++)
         {
             double actSecs = 0;
+            if (int.TryParse(Environment.GetEnvironmentVariable("FL_SOAK_FORCE_PLAGUE"), out int fy) && fy == y) ForcePlague(rt, k);
             var today = script.Where(a => y >= a.FromYear && (y - a.FromYear) % a.Every == 0).OrderBy(a => a.Day).ToList();
             foreach (var a in today)
             {
@@ -247,6 +263,18 @@ public class Phase6SoakTests(ITestOutputHelper output)
             }
             rt.AdvanceTo(GameTime.FromGameHours(k.Start + y * DaysPerYear * 24L));
             var row = Sample(k, y, saveYears?.Contains(y) == true);
+            At(rt, () =>
+            {
+                var d = new Dictionary<string, int>(); var all = rt.State.Chronicle.All; long y0 = k.Start / 24 + (y - 1L) * DaysPerYear;
+                for (int i = all.Count - 1; i >= 0 && all[i].When.TotalDays >= y0 - 1; i--)
+                {
+                    var e = all[i]; if (e.When.TotalDays < y0) continue;
+                    d[e.TypeId] = d.GetValueOrDefault(e.TypeId) + 1;
+                    if (e.TypeId == "work_posted" && e.Data.TryGetValue("kind", out var kd)) d["work_posted/" + kd] = d.GetValueOrDefault("work_posted/" + kd) + 1;
+                    if (e.TypeId == "work_need" && e.Data.TryGetValue("need", out var nd)) d["work_need/" + nd] = d.GetValueOrDefault("work_need/" + nd) + 1;
+                }
+                k.YearTypes.Add(d); return 0;
+            });
             if (y == 1) { k.Alive0 = row.Alive; k.Households0 = row.Households; }
             row.Secs = sw.Elapsed.TotalSeconds - last; row.Snap += $" acts {actSecs:0.0}s"; last = sw.Elapsed.TotalSeconds;
             k.Rows.Add(row); k.Log(RowText(row));
@@ -300,7 +328,7 @@ public class Phase6SoakTests(ITestOutputHelper output)
         foreach (var sev in new[] { PlagueSeverity.Normal, PlagueSeverity.Rare, PlagueSeverity.Frequent })
         {
             var years = Enumerable.Range(0, 400).Where(y => Ravensguard.Sim.Disease.ContinentPlagueStep.Starts(st.Seed, y, sev)).ToList();
-            output.WriteLine($"{sev}: world seed {st.Seed}, start years in 0..399: {string.Join(",", years)} ({years.Count(y => y < 130)} within 130)");
+            output.WriteLine($"{sev}: game starts in year {st.Clock.Now.Year}, world seed {st.Seed}, start years in 0..399: {string.Join(",", years)} ({years.Count(y => y < 130)} within 130)");
         }
     }
 
@@ -327,23 +355,20 @@ public class Phase6SoakTests(ITestOutputHelper output)
         var k = Run(years, plague, [1, 10, 25, 50, 100]);
         using var rt = k.Rt; var st = k.St; var c = st.Chronicle;
         k.Log("hero acts: " + string.Join(", ", k.Acts.Select(a => a.Key + " " + a.Value)));
-        // the type counts by decade, over the home chronicle and every resident region's (the continent's own events are written to the home chronicle)
-        var all = At(rt, () => rt.Records.Resident.Select(x => (x.Coord.Id == rt.Records.Home.Id, x.Chronicle.All.ToList())).ToList());
-        var byDecade = new SortedDictionary<string, int[]>(StringComparer.Ordinal);
-        foreach (var (isHome, list) in all)
-            foreach (var e in list)
+        // the entries of each game year by type, counted as the year closed (the yearly compaction later folds old commoners' entries into summaries, so a final scan would undercount the early years); in tenths of the run
+        var byTenth = new SortedDictionary<string, int[]>(StringComparer.Ordinal);
+        for (int y = 0; y < k.YearTypes.Count; y++)
+            foreach (var (key, n) in k.YearTypes[y])
             {
-                int d = Math.Clamp((int)(e.When.TotalDays / DaysPerYear - k.Start / 24 / DaysPerYear) / Math.Max(1, years / 10), 0, 9);
-                string key = (isHome ? "" : "ring:") + e.TypeId;
-                if (!byDecade.TryGetValue(key, out var a)) byDecade[key] = a = new int[10];
-                a[d]++;
+                if (!byTenth.TryGetValue(key, out var arr)) byTenth[key] = arr = new int[10];
+                arr[Math.Min(9, y * 10 / Math.Max(1, k.YearTypes.Count))] += n;
             }
-        k.Log("type counts by tenth of the run (history entries fall in the first bucket):");
-        foreach (var (t, a) in byDecade.OrderByDescending(x => x.Value.Sum())) k.Log($"  {t,-28} {a.Sum(),8} | {string.Join(' ', a.Select(x => x.ToString().PadLeft(6)))}");
+        k.Log($"entries by type in each tenth of the run ({Math.Max(1, k.YearTypes.Count / 10)} game years each); work_posted/<kind> and work_need/<need> are broken down:");
+        foreach (var (t, arr) in byTenth.OrderByDescending(x => x.Value.Sum())) k.Log($"  {t,-34} {arr.Sum(),8} | {string.Join(' ', arr.Select(x => x.ToString().PadLeft(6)))}");
         Assert.All(k.Rows, r => { Assert.True(r.Coin, $"coin audit failed in year {r.Year}"); Assert.True(r.Mass, $"mass audit failed in year {r.Year}"); });
         Assert.All(k.Rows, r =>
         {
-            Assert.InRange(r.Alive, k.Alive0 * 90 / 100, k.Alive0 * 125 / 100);
+            if (Environment.GetEnvironmentVariable("FL_SOAK_FORCE_PLAGUE") == null) Assert.InRange(r.Alive, k.Alive0 * 90 / 100, k.Alive0 * 125 / 100);
             Assert.InRange(r.Households, k.Households0 * 90 / 100, k.Households0 * 130 / 100);       // Phase 2's 10 percent held before Phase 4's growth built cottages: about 1.2 percent a year more households now (see the close-out notes)
         });
         var types = ChronicleTypes.From(k.W.Content);
