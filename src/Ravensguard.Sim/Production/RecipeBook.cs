@@ -21,6 +21,8 @@ public sealed class Recipe
     public WageClass Wage;
     /// <summary>P7-ES1: the grades the worker-hours divide into (economies-of-scale 4.1); set from the scale content when the production content loads, <see cref="Grades.Plain"/> otherwise.</summary>
     public Grades Grades = Grades.Plain;
+    /// <summary>P7-ES2: the standard pattern of a munition-grade recipe (economies-of-scale 4.6), from the scale content; null for every ordinary recipe.</summary>
+    public RecipePattern? Pattern;
     public long InputMassG(GoodCatalog c) { long s = 0; foreach (var (g, q) in Inputs) s += c.MassG(g, q); return s; }
     public long OutputMassG(GoodCatalog c) { long s = 0; foreach (var (g, q) in Outputs) s += c.MassG(g, q); return s; }
 }

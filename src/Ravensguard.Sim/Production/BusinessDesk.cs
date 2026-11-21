@@ -51,6 +51,11 @@ public static class BusinessDesk
     public static HeroCommand Foreman(EntityId biz, int person, long sec) => Cmd(sec, B("foreman", biz.Value, person));
     public static HeroCommand Unforeman(EntityId biz, int person, long sec) => Cmd(sec, B("unforeman", biz.Value, person));
     public static HeroCommand Manufactory(EntityId biz, long sec) => Cmd(sec, B("manufactory", biz.Value));
+    // ---- economies of scale, part 2 (P7-ES2): a supply contract between two businesses (one of them the hero's), ended by either party; a station coupled to a machine's cell
+    public static HeroCommand Contract(EntityId seller, EntityId buyer, string good, long qty, int everyDays, int seasons, bool carterIsSeller, long sec) => Cmd(sec, B("contract", seller.Value, buyer.Value, good, qty, everyDays, seasons, carterIsSeller ? 1 : 0));
+    public static HeroCommand EndContract(int id, long sec) => Cmd(sec, B("endcontract", id));
+    public static HeroCommand Couple(EntityId biz, int station, int x, int y, int z, long sec) => Cmd(sec, B("couple", biz.Value, station, x, y, z));
+    public static HeroCommand Uncouple(EntityId biz, int station, long sec) => Cmd(sec, B("uncouple", biz.Value, station));
     // ---- prospecting
     public static HeroCommand Walk(int tile, long sec) => Cmd(sec, P("walk", tile));
     public static HeroCommand Start(ProspectMethod m, int tile, long sec) => Cmd(sec, P("start", (int)m, tile));
@@ -128,6 +133,10 @@ public static class BusinessDesk
                 "foreman" when p.Length >= 3 => ScaleOf(ctx, ow, Id(1), (sw, b) => sw.Appoint(b, I(2))),
                 "unforeman" when p.Length >= 3 => ScaleOf(ctx, ow, Id(1), (sw, b) => sw.Dismiss(b, I(2))),
                 "manufactory" when p.Length >= 2 => ScaleOf(ctx, ow, Id(1), (sw, b) => { sw.Chron = RuleChron.Of(st.Chronicle, st.Ids); return sw.Petition(b, ctx.Party.Hero, ow.HeroPurse, day); }),
+                "contract" when p.Length >= 8 && N(4) > 0 && Good(3, out var g5) => ContractOf(ctx, ow, Id(1), Id(2), (sw, sell, buy) => sw.Offer(sell, buy, g5, N(4), I(5), I(6), N(7) != 0, day)),
+                "endcontract" when p.Length >= 2 => ContractEnd(ctx, ow, I(1), day),
+                "couple" when p.Length >= 6 => ScaleOf(ctx, ow, Id(1), (sw, b) => sw.Couple(b, I(2), I(3), I(4), I(5))),
+                "uncouple" when p.Length >= 3 => ScaleOf(ctx, ow, Id(1), (sw, b) => sw.Uncouple(b, I(2))),
                 _ => null,
             };
         }
@@ -142,6 +151,22 @@ public static class BusinessDesk
     {
         if (ow.BusinessOf(biz) is not { } b || !ow.IsHeroOwner(b)) return OwnResult.No("bz_not_yours");
         return act(ScaleWiring.For(ctx.State, ctx.Content), b);
+    }
+
+    /// <summary>A supply contract between two open businesses, one of them the hero's (P7-ES2).</summary>
+    private static OwnResult ContractOf(HeroContext ctx, OwnershipWorld ow, EntityId seller, EntityId buyer, Func<ScaleWorld, Business, Business, OwnResult> act)
+    {
+        if (ow.BusinessOf(seller) is not { } s || ow.BusinessOf(buyer) is not { } b) return OwnResult.No("sc_contract_unknown");
+        if (!ow.IsHeroOwner(s) && !ow.IsHeroOwner(b)) return OwnResult.No("sc_contract_not_party");
+        return act(ScaleWiring.For(ctx.State, ctx.Content), s, b);
+    }
+
+    private static OwnResult ContractEnd(HeroContext ctx, OwnershipWorld ow, int id, int day)
+    {
+        var sw = ScaleWiring.For(ctx.State, ctx.Content);
+        if (sw.Book.Contract(id) is not { } c) return OwnResult.No("sc_contract_unknown");
+        if ((ow.BusinessOf(new EntityId(c.Seller)) is not { } s || !ow.IsHeroOwner(s)) && (ow.BusinessOf(new EntityId(c.Buyer)) is not { } b || !ow.IsHeroOwner(b))) return OwnResult.No("sc_contract_not_party");
+        return sw.End(id, day);
     }
 
     private static OwnResult At(OwnershipWorld ow, int settlement) { ow.Book.HeroAt = settlement; return OwnResult.Yes(""); }

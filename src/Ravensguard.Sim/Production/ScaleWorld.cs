@@ -15,7 +15,7 @@ namespace Ravensguard.Sim.Production;
 /// order after three), manufactory licences and their season's rent, and appointed foremen. Every coin is one ledger transfer; the draw is stream 0x721; nothing here runs on the hour (the hourly crews are
 /// <see cref="ProductionSystem"/>'s, over <see cref="Crews"/>).
 /// </summary>
-public sealed class ScaleWorld
+public sealed partial class ScaleWorld
 {
     public ScaleBook Book { get; }
     public ProductionSystem Prod { get; }
@@ -160,7 +160,7 @@ public sealed class ScaleWorld
     }
 }
 
-/// <summary>The scale step's place in the abstract tick: a season's first day at hour 9 (the ownership world's slot), after the hour's production. A no-op in a world without a <see cref="ScaleWorld"/> (only the home region has one).</summary>
+/// <summary>The scale step's place in the abstract tick: the day's supply contracts and, on a season's first day, the guilds' inspection, at hour 9 (the ownership world's slot), after the hour's production. A no-op in a world without a <see cref="ScaleWorld"/> (only the home region has one).</summary>
 [AbstractSystem]
 public sealed class ScaleSystem : AbstractSystem
 {
@@ -168,10 +168,11 @@ public sealed class ScaleSystem : AbstractSystem
 
     public override void Step(TickContext ctx)
     {
-        if (ctx.HourOfDay != 9 || ctx.Day % TimeConst.DaysPerSeason != 0) return;
+        if (ctx.HourOfDay != 9) return;
         var sw = ctx.World.Get<ScaleWorld>(); if (sw == null) return;
         sw.Chron = RuleChron.Of(ctx.Outbox);
-        sw.Seasonal((int)ctx.Day);
+        if (ctx.Day % TimeConst.DaysPerSeason == 0) sw.Seasonal((int)ctx.Day);
+        sw.Daily((int)ctx.Day);                                                                  // P7-ES2: the supply contracts falling due
     }
 }
 
@@ -202,6 +203,19 @@ public static class ScaleWiring
         sw.OpinionOf = (who, of) => state.Rule?.Opinion(who, of) ?? 0;
         sw.AddOpinion = (who, of, d) => state.Rule?.AddOpinion(who, of, d);
         sw.StandingWithRealm = (p, realm) => realm < 0 ? 0 : Standing.Of(state.Standing, p, GroupRef.Realm(realm));
+        sw.CarterOf = (settlement, day) => Ravensguard.Sim.Holdings.HoldingsDesk.CarterOf(state, settlement, day);
+        // P7-ES2 (4.5): a station coupled to a machine takes its labour from the premises' power net; no coupling, or no net there: the kind's own labour_pm
+        prod.StationLabourPm = (b, si) =>
+        {
+            if (state.Scale is not { Couplings.Count: > 0 } sb || sb.CouplingOf(b.Id.Value, si) is not { } k) return null;
+            var pw = state.HomeRecords?.Sim.Get<Ravensguard.Sim.Building.PowerWorld>(); return pw?.LabourPmAt(k.X, k.Y, k.Z);
+        };
+        prod.StationMachineWhy = (b, si) =>
+        {
+            if (state.Scale?.CouplingOf(b.Id.Value, si) is not { } k || state.HomeRecords?.Sim.Get<Ravensguard.Sim.Building.PowerWorld>() is not { } pw) return "sc_machine_idle";
+            foreach (var n in pw.Nets) foreach (var m in n.Machines) if (m.Station is { } sp && sp.X == k.X && sp.Y == k.Y && sp.Z == k.Z) return n.Why.Length > 0 ? n.Why : "sc_machine_idle";
+            return "sc_machine_none";
+        };
         return sw;
     }
 }

@@ -100,7 +100,13 @@ public sealed class ProductionContent
         }
         var cfg = db.All<ResourceSettingsDef>().OrderBy(x => x.Id, StringComparer.Ordinal).FirstOrDefault() ?? new ResourceSettingsDef { Id = "resources" };
         var scale = db.All<ScaleSettingsDef>().OrderBy(x => x.Id, StringComparer.Ordinal).FirstOrDefault() ?? new ScaleSettingsDef { Id = "default" };
-        foreach (var r in book.Recipes) r.Grades = GradesFor(scale, r);
+        foreach (var r in book.Recipes)
+        {
+            r.Grades = GradesFor(scale, r);
+            r.Pattern = Patterns.Of(scale, r.Id);
+            if (r.Pattern != null && r.WorkerHours != Patterns.FullHours(r.Pattern)) throw new InvalidDataException($"scale_settings: recipe '{r.Id}' has {r.WorkerHours} worker-hours but its pattern's full run is {Patterns.FullHours(r.Pattern)}");
+        }
+        foreach (var row in scale.Patterns) if (!book.TryGet(row.Recipe, out _)) throw new InvalidDataException($"scale_settings: pattern names unknown recipe '{row.Recipe}'");
         return new ProductionContent { Recipes = book, Kinds = [.. kinds], Extractions = ext, Settings = cfg, Spending = [.. db.All<SpendingRuleDef>().OrderBy(x => x.Id, StringComparer.Ordinal)],
             Tax = db.All<TaxPolicyDef>().OrderBy(x => x.Id, StringComparer.Ordinal).FirstOrDefault() ?? new TaxPolicyDef { Id = "default" },
             Growth = db.All<GrowthTuningDef>().OrderBy(x => x.Id, StringComparer.Ordinal).FirstOrDefault() ?? new GrowthTuningDef { Id = "growth" }, Industries = industry,

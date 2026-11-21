@@ -3860,6 +3860,7 @@ bz_kind_water_sawmill,water sawmill
 bz_kind_brickworks,brickworks
 bz_kind_bloomery,bloomery
 bz_kind_manor,manor
+bz_kind_munition_works,munition works
 bz_q_btn_buy,Buy the share
 bz_q_btn_open,Open it
 bz_q_found_body,"Open a {0} here? The stations: {1}. {2} goes from your purse into its cash box."
@@ -4933,6 +4934,8 @@ ch_scale_licensed,{holder} was licensed to run a manufactory at {place} for {fee
 ch_scale_guild_fine,The guild fined {owner}'s shop at {place} {fine} for keeping {over} over its size rules.
 ch_note_manufactory_petition,The lord granted the petition for a fee.
 ch_note_guild_cap_exceeded,"The guild's inspectors counted more journeymen, apprentices or stations than a member's shop may keep."
+ch_scale_contract_broken,"{seller}'s supply of {good} to {buyer} was broken after {missed} missed deliveries."
+ch_note_contract_missed,The deliveries were late past the days the contract allowed.
 in_no_such_chain,There is no such chain of works.
 in_no_owner,There is no one to own the works.
 in_founded,"The {0} works is open, with {1} in its cash box."
@@ -5003,6 +5006,17 @@ sc_foreman_is_master,A master of the trade oversees by his craft; appoint a jour
 sc_foreman_appointed,{0} is now a foreman.
 sc_not_foreman,He is not a foreman.
 sc_foreman_dismissed,{0} is no longer a foreman.
+sc_contract_signed,Supply contract signed: {0} every {1} days for {2} seasons.
+sc_contract_ended,The supply contract is ended.
+sc_contract_not_party,You are neither the seller nor the buyer.
+sc_contract_unknown,There is no such contract.
+sc_contract_too_small,A supply contract needs at least {0} a delivery.
+sc_contract_terms,A contract runs 1 to {0} seasons and the days between deliveries at least 1.
+sc_contract_same,A business cannot contract with itself.
+sc_contract_no_book,There is no market book to fix a price from.
+sc_couple_no_station,That business has no such station.
+sc_coupled,The station is coupled to the machine at that cell.
+sc_uncoupled,The station is no longer coupled to a machine.
 ld_licence_refused_opinion,The lord thinks too little of you to grant the licence.
 ld_licence_refused_standing,Your standing in the realm is too low for the licence.
 ld_licence_refused_guild_master,The guild master speaks against the licence.

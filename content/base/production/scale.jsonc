@@ -22,5 +22,31 @@
     "span_base": 6, "span_per_leadership": 10, "span_max": 16, "span_per_excess_pm": 25, "span_floor_pm": 500,
     "foreman_min_leadership": 20, "foreman_wage_mites_per_day": 50,
     "guild_fine_per_over_mites": 2000, "inspection_pct": 50, "fines_to_close": 3, "fine_opinion": -20, "fine_keep_days": 120,
-    "licence_fee_mites": 5000, "licence_season_mites": 500, "licence_per_granted_penalty": 20 }
+    "licence_fee_mites": 5000, "licence_season_mites": 500, "licence_per_granted_penalty": 20,
+    // Economies of scale, part 2 (P7-ES2; economies-of-scale.md 4.2 to 4.6, 5.4). Heat: a lit station burns lit_fuel_g_per_h whatever works it and share_max batches share one lit station (a forge bar's 10 kg is 8 lit hours x 1 kg + 2 kg a batch).
+    // Firing: fixed_pm is the share of a full load's fuel one firing burns however small the load (a Scotch brick kiln: 4,000 of 22,000 kg). Patterns: setup_h once a run, piece_h a piece, a run of up to run_max; a business with 3 runs in the last 2 seasons works the pieces at 850 permille.
+    "heat": [
+      { "station": "forge", "fuel": "charcoal", "lit_fuel_g_per_h": 1000, "share_max": 2 },
+      { "station": "oven", "fuel": "firewood", "lit_fuel_g_per_h": 1500, "share_max": 2 }
+    ],
+    "firing": [
+      { "station": "brick_clamp", "fuel": "firewood", "fixed_pm": 180 },
+      { "station": "kiln", "fuel": "firewood", "fixed_pm": 150 },
+      { "station": "lime_kiln", "fuel": "firewood", "fixed_pm": 150 }
+    ],
+    "patterns": [
+      { "recipe": "forge_spearheads", "setup_h": 6, "piece_h": 1.2, "run_max": 20 },
+      { "recipe": "forge_kettle_hats", "setup_h": 16, "piece_h": 5, "run_max": 20 }
+    ],
+    "practice_runs": 3, "practice_seasons": 2, "practice_pm": 850, "pattern_quality_cap": "Common",
+    // Supply contracts: at least 500 kg a delivery (or 10 gp a season of piece goods), every 5 days, 1 to 4 seasons, the price within 50 permille of the seller's mid.
+    "contract_min_g": 500000, "contract_min_season_mites": 10000, "contract_every_days": 5, "contract_max_seasons": 4, "contract_band_pm": 50, "contract_late_days": 2, "contract_misses_to_break": 2, "contract_broken_opinion": -20,
+    // Carting: a cart 500 kg, an ox wagon 1 t at 290 m an hour, a four-horse wagon 2 t; the team eats hay and oats at the book price (12 and 30 a kg when the book has none).
+    "vehicles": [
+      { "id": "cart", "load_kg": 500, "wage_mites_per_day": 150, "hay_kg_per_day": 8, "oats_kg_per_day": 2.5, "speed_m_per_h": 450 },
+      { "id": "ox_wagon", "load_kg": 1000, "wage_mites_per_day": 150, "hay_kg_per_day": 20, "oats_kg_per_day": 0, "speed_m_per_h": 290 },
+      { "id": "horse_wagon", "load_kg": 2000, "wage_mites_per_day": 150, "hay_kg_per_day": 32, "oats_kg_per_day": 10, "speed_m_per_h": 450 }
+    ],
+    "hay_mites_per_kg": 12, "oats_mites_per_kg": 30, "half_empty_pm": 600,
+    "absorb_reach_m": 8000, "absorb_bid_margin_pm": 1050, "absorb_hold_days": 3 }
 ]

@@ -23,6 +23,8 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
     public Func<Business, int, bool>? LiveStation { get; set; }
     /// <summary>P7-LB1 (large-buildings 4.1, 4.3): the worker-hours in permille of a station while its premises' machines run (the power net's share of a machine's labour_pm); null or no answer: the business kind's <see cref="BusinessKind.LabourPm"/>.</summary>
     public Func<Business, int, int?>? StationLabourPm { get; set; }
+    /// <summary>P7-ES2 (economies-of-scale 4.5, ES-15): why a coupled station's machine is not running (a content key such as <c>lb_frozen</c>), for the Costs section; null: no answer.</summary>
+    public Func<Business, int, string>? StationMachineWhy { get; set; }
     /// <summary>P6-B6 (holdings 3.8, HW-10): a batch finished at a station of a business (the business, the recipe), so the tool it is worked with can wear; null: nothing wears but the abstract count.</summary>
     public Action<Business, Recipe, Station>? BatchDone { get; set; }
     /// <summary>P6-B6 (HW-10): the containers within 6 m of a business's station count as its store; the inputs a batch lacks are taken from them first. Null: the business's own store only.</summary>
@@ -236,7 +238,7 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
             var r = Content.Recipes.Recipes[st.Recipe];
             if (credited[si0])
             {
-                long hm = (long)r.WorkerHours * st.ScalePermille * (StationLabourPm?.Invoke(b, si0) ?? kind.LabourPm) / 1000;          // P5-F: a sawmill's wheel does most of the sawing; P7-LB1: only while its machines are powered
+                long hm = HoursTimesScale(b, r, st.ScalePermille, day) * (StationLabourPm?.Invoke(b, si0) ?? kind.LabourPm) / 1000;     // P5-F: a sawmill's wheel does most of the sawing; P7-LB1/ES2: only while its machines are powered
                 bool divided = r.Grades.Divided; int k = Content.CrewMax(st.Kind);
                 long cM = 0, cJ = 0, cA = 0, visitM = 0; int pos = 0;
                 foreach (int p in st.Crew)
@@ -268,6 +270,20 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
     /// <summary>A person's role at a batch of the business: the owner at work is the master of his own house whatever his skill (an owner-operator supervises himself), else by skill and age (<see cref="Crews.RoleOf"/>).</summary>
     public CrewRole RoleAt(Business b, int person, int skill, int day)
         => person == b.Owner && b.OwnerWorks ? CrewRole.Master : Crews.RoleOf(Content.Scale, skill, Pop.People.AgeYears(person, day));
+
+    /// <summary>
+    /// A batch's <c>worker-hours x scale permille</c> (P7-ES2, economies-of-scale 4.6): a plain recipe's hours times the batch scale; a standard pattern's setup once plus its pieces (<c>run_max x scale</c> of them) at the piece hours,
+    /// less when the business has practice (3 runs in the last 2 seasons).
+    /// </summary>
+    public long HoursTimesScale(Business b, Recipe r, int scalePm, int day)
+    {
+        if (r.Pattern == null) return (long)r.WorkerHours * scalePm;
+        return Patterns.HoursTimesScale(r.Pattern, scalePm, Practised(b, r, day), Content.Scale.PracticePm);
+    }
+
+    /// <summary>Whether the business has practice at a pattern recipe: the configured runs of it finished within the configured seasons.</summary>
+    public bool Practised(Business b, Recipe r, int day)
+        => r.Pattern != null && Scale != null && Scale.Practised(b.Id.Value, r.Id, day, Content.Scale.PracticeRuns, Content.Scale.PracticeSeasons * Ravensguard.Sim.Core.TimeConst.DaysPerSeason);
 
     /// <summary>Which masters serve more than one station (4.1's reach, ES-3): a master at one station of a divided recipe also visits the business's other credited divided stations that have no master, up to his reach.</summary>
     private void MastersReach(Business b, Span<bool> credited, int ns, int day, out Dictionary<int, int>? served, out Dictionary<int, List<int>>? visitors)
@@ -335,6 +351,11 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
         if (outMass > inMass + r.AddsG * st.ScalePermille / 1000 + 1) MassViolations++;
         int minSkill = st.MinSkill == 100 && st.Crew.Count == 0 ? 50 : st.MinSkill;
         var q2 = ItemQualityRules.FromScore(ItemQualityRules.Score(Seed, now.TotalHours, b.Id, (uint)b.Batches, minSkill, 0));
+        if (r.Pattern != null)
+        {
+            q2 = Patterns.Capped(r.Pattern, q2);                                                          // P7-ES2 (4.6): munition-grade runs never beat common
+            Scale?.RecordRun(b.Id.Value, r.Id, (int)now.TotalDays);
+        }
         b.Quality[(int)q2]++; b.LastQuality = (int)q2; b.Batches++; BatchesFinished++;
         if (r.WearPpmPerBatch > 0 && DetRng.NextUInt(Seed, now.TotalHours, b.Id.Value, RngStreams.ToolWear, r.Index) < (ulong)r.WearPpmPerBatch * 4_294_967_296UL / 1_000_000UL) b.ToolPiecesWorn++;
         int recipe = st.Recipe;
@@ -347,6 +368,42 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
     private static long CeilScale(long q, int scale) => (q * scale + 999) / 1000;
 
     /// <summary>
+    /// The fuel a batch needs at a heat or firing station (P7-ES2, economies-of-scale 4.2), written over <paramref name="need"/> (full-batch quantity per input) and <paramref name="fixedPm"/> (a firing's fixed share of that quantity, else 0).
+    /// At a heat station the fixed part of the fuel (the lit hours) is saved for the minutes the batch overlaps a batch at a mate station of the same hearth (<c>share_max</c> to a hearth, the business's stations of the kind in order):
+    /// the second bar forged side by side burns only its own 2 kg, so two burn 12 kg, 6 kg each.
+    /// </summary>
+    private void FuelPlan(Business b, Station st, Recipe r, Span<long> need, Span<int> fixedPm)
+    {
+        var sc = Content.Scale;
+        if (FixedCosts.FiringOf(sc, st.Kind) is { } fr)
+        {
+            for (int i = 0; i < r.Inputs.Length; i++) if (Econ.Goods.StringId(r.Inputs[i].Good) == fr.Fuel) fixedPm[i] = fr.FixedPm;
+            return;
+        }
+        if (FixedCosts.HeatOf(sc, st.Kind) is not { } hr || hr.ShareMax < 2) return;
+        int fi = -1;
+        for (int i = 0; i < r.Inputs.Length; i++) if (Econ.Goods.StringId(r.Inputs[i].Good) == hr.Fuel) fi = i;
+        if (fi < 0) return;
+        int ordinal = 0, self = -1; var ofKind = new List<Station>();
+        foreach (var s2 in b.Stations) if (s2.Kind == st.Kind) { if (ReferenceEquals(s2, st)) self = ordinal; ofKind.Add(s2); ordinal++; }
+        if (self < 0) return;
+        int group = self / hr.ShareMax; long remaining = 0;
+        for (int o = group * hr.ShareMax; o < Math.Min(ofKind.Count, (group + 1) * hr.ShareMax); o++)
+        {
+            var mate = ofKind[o];
+            if (ReferenceEquals(mate, st) || !mate.Busy) continue;
+            var mr = Content.Recipes.Recipes[mate.Recipe];
+            bool burns = false; foreach (var (mg, _) in mr.Inputs) if (Econ.Goods.StringId(mg) == hr.Fuel) burns = true;
+            if (!burns) continue;
+            long left = (long)mr.WorkerHours * 60 * mate.ScalePermille / 1000 * Math.Max(0, Station.Complete - mate.ProgressMicro) / Station.Complete;
+            remaining = Math.Max(remaining, left);
+        }
+        if (remaining <= 0) return;
+        long fuel = need[fi], fixedG = FixedCosts.HeatFixedG(fuel, hr.LitFuelGPerH, r.WorkerHours);
+        need[fi] = fuel - FixedCosts.SharedDiscountG(fixedG, (long)r.WorkerHours * 60, remaining);
+    }
+
+    /// <summary>
     /// P5-F (businesses spec 4.2, BS-5): someone's own hands at a station for <paramref name="seconds"/> (the hero at his smithy's anvil): an idle station starts a batch of <paramref name="start"/>
     /// from the business's store, the time is credited at the one worker-hour rule (<c>1300 - 6 x skill</c>), a finished batch is made into the store and counted in the books. False when
     /// the station is idle and the inputs are short.
@@ -356,7 +413,7 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
         var st = b.Stations[si];
         if (!st.Busy && (start == null || !TryStart(b, st, start, now))) return false;
         var r = Content.Recipes.Recipes[st.Recipe];
-        long hm = (long)r.WorkerHours * st.ScalePermille * (StationLabourPm?.Invoke(b, si) ?? KindOf(b).LabourPm) / 1000;
+        long hm = HoursTimesScale(b, r, st.ScalePermille, (int)now.TotalDays) * (StationLabourPm?.Invoke(b, si) ?? KindOf(b).LabourPm) / 1000;
         long per = Station.PerWorkerHour(hm, 1300 - 6 * Math.Clamp(skill, 0, 100));
         st.ProgressMicro = Math.Min(Station.Complete, st.ProgressMicro + (long)((Int128)per * seconds / 3600));
         st.MinSkill = Math.Min(st.MinSkill, skill);
@@ -375,12 +432,24 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
                 long lack = q - b.Store.Qty(g);
                 if (lack > 0) foreach (var near in NearStores(b)) { lack -= Store.MoveUpTo(near, b.Store, g, lack); if (lack <= 0) break; }
             }
-        foreach (var (g, q) in r.Inputs) scale = Math.Min(scale, b.Store.Qty(g) * 1000 / q);
-        if (scale < r.MinBatchPermille) return false;
-        foreach (var (g, q) in r.Inputs)
+        // P7-ES2 (economies-of-scale 4.2): a hearth already lit beside this one saves the fixed part of the fuel; a firing burns its fixed part however small the load. Every other input is Phase 2's rule
+        var sc = Content.Scale;
+        Span<long> need = stackalloc long[Math.Max(1, r.Inputs.Length)];
+        Span<int> fixedPm = stackalloc int[Math.Max(1, r.Inputs.Length)];
+        for (int i = 0; i < r.Inputs.Length; i++) { need[i] = r.Inputs[i].Qty; fixedPm[i] = 0; }
+        if (sc.Heat.Count > 0 || sc.Firing.Count > 0) FuelPlan(b, st, r, need, fixedPm);
+        for (int i = 0; i < r.Inputs.Length; i++)
         {
-            long take = CeilScale(q, (int)scale);
-            if (!b.Store.Destroy(g, take, DestroyReason.Consumed)) throw new InvalidOperationException("batch inputs vanished");
+            long have = b.Store.Qty(r.Inputs[i].Good);
+            long si = fixedPm[i] > 0 ? FixedCosts.FiringScale(need[i], fixedPm[i], have) : need[i] <= 0 ? 1000 : have * 1000 / need[i];
+            scale = Math.Min(scale, si);
+        }
+        if (scale < r.MinBatchPermille) return false;
+        for (int i = 0; i < r.Inputs.Length; i++)
+        {
+            var g = r.Inputs[i].Good;
+            long take = fixedPm[i] > 0 ? FixedCosts.FiringQty(need[i], fixedPm[i], (int)scale) : CeilScale(need[i], (int)scale);
+            if (take > 0 && !b.Store.Destroy(g, take, DestroyReason.Consumed)) throw new InvalidOperationException("batch inputs vanished");
             ConsumedUnits[g] += take;
         }
         st.Recipe = r.Index; st.ProgressMicro = 0; st.ScalePermille = (int)scale; st.StartedHour = now.TotalHours; st.MinSkill = 100;
@@ -633,6 +702,45 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
         return Math.Max(1, n);
     }
 
+    /// <summary>
+    /// Market absorption of a recipe's main output (P7-ES2, economies-of-scale 5.4): the cap a day over the books within 8 km (each book's demand a day less the share the other producers of the kind there serve) and the desk's room, the stock the
+    /// business already holds (store plus batches under way), the book's bid at the stock the next batch would reach, and the unit variable cost; <c>Stops</c> when the business holds more than three days of the cap and the bid is under the cost
+    /// times 1.05. A business is never stopped while it holds less (it may always make a first batch), and selling beyond the cap stays allowed.
+    /// </summary>
+    public AbsorbView AbsorbView(Business b, Recipe r, MarketBook book, bool planner = false)
+    {
+        var sc = Content.Scale; ushort g = r.Outputs[0].Good;
+        long held = b.Store.Qty(g);
+        foreach (var st0 in b.Stations)
+            if (st0.Busy) { var sr = Content.Recipes.Recipes[st0.Recipe]; foreach (var (og, oq) in sr.Outputs) if (og == g) held += oq * st0.ScalePermille / 1000; }
+        if (planner && held == 0) return new AbsorbView(g, 0, 0, 0, 0, false);              // a business with nothing on hand may always make a batch
+        var reg = Pop.Region; long outQ = Math.Max(1, r.Outputs[0].Qty);
+        var home = reg.Settlements[b.Settlement]; long reach2 = (long)sc.AbsorbReachM * sc.AbsorbReachM;
+        var others = new Dictionary<int, int>();
+        foreach (var x in Businesses)
+        {
+            if (x == b || x.State != BusinessState.Open || x.Kind != b.Kind || (uint)x.Settlement >= (uint)reg.Settlements.Count) continue;
+            others[x.Settlement] = others.GetValueOrDefault(x.Settlement) + 1;
+        }
+        var parts = new List<(long, int)>(); long desk = 0;
+        for (int s = 0; s < reg.Settlements.Count; s++)
+        {
+            long dx = reg.Settlements[s].CenterX - home.CenterX, dy = reg.Settlements[s].CenterY - home.CenterY;
+            if (s != b.Settlement && dx * dx + dy * dy > reach2) continue;
+            var sb = Markets!.BookForSettlement(s); var gb = sb.Goods[g];
+            parts.Add((gb.Demand, Absorption.CompetitorsPm(others.GetValueOrDefault(s))));
+            foreach (var ir in sb.ImportRequests) if (ir.Good == g) desk += ir.Qty / Math.Max(1, gb.TargetCoverDays);
+        }
+        long cap = Absorption.CapPerDay(parts, desk);
+        Int128 cost = (Int128)r.WorkerHours * RecipeBook.WagePerHour(r.Wage) * PriceCurve.Micro;
+        foreach (var (ig, iq) in r.Inputs) cost += (Int128)iq * PriceMicro(book, ig, true);
+        long unitVar = (long)(cost / outQ);
+        var gbk = book.Goods[g];
+        long bid = book.Curve(g).MidMicro(gbk.StockUnits + held + outQ) * (1000 - book.Money.SpreadHalfPermille) / 1000;
+        bool stops = held >= cap * sc.AbsorbHoldDays && Absorption.BidBelowCost(bid, unitVar, sc.AbsorbBidMarginPm);
+        return new AbsorbView(g, cap, held, bid, unitVar, stops);
+    }
+
     private void PlanStations(Business b, BusinessKind kind, GameTime now)
     {
         var book = Markets?.BookForSettlement(b.Settlement);
@@ -650,6 +758,7 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
                 {
                     ushort main = r.Outputs[0].Good; var gb = book.Goods[main];
                     if (gb.StockUnits >= 2L * gb.Demand * gb.TargetCoverDays) continue;     // do not flood the market
+                    if (ordered == null && AbsorbView(b, r, book, planner: true) is { Stops: true }) continue;   // P7-ES2 (5.4): the markets in reach take no more at a price above cost
                 }
                 // the best margin per worker-hour, compared as margin_a x hours_b > margin_b x hours_a (no division); only a positive margin is worth starting
                 long m = (steered ? Steering!.MarginMicro(b, r) : null) ?? ExpectedMarginMicro(b, r); int h = Math.Max(1, r.WorkerHours);
