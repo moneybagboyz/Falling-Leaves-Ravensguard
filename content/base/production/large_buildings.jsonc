@@ -1,0 +1,10 @@
+// P7-LB2 (large-buildings 4.4): the constants of the large buildings' rooms (floor space, armoury capacity and care, warehouse and depot capacity, rents, rotation, barracks upkeep). Money in mites.
+[
+  { "type": "large_building_rules", "id": "large_buildings",
+    "crowding_m2": 4, "hall_crowding_m2": 3, "hall_span_bonus": 4,
+    "stand_armours": 1, "rack_weapons": 10, "rack_polearms": 4, "shelf_helmets": 10, "shelf_shields": 6, "chest_sheaves": 40,
+    "items_per_armourer": 300, "armourer_skill": 30, "care_minutes": 6, "care_days": 30, "cold_mult_pm": 2000, "rack_weapon_max_g": 3000,
+    "warehouse_litres_per_m2": 1500, "rent_mites_per_m3_season": 20,
+    "depot_kg_per_m2": 750, "depot_rotate_seasons": 2,
+    "barracks_straw_kg_per_bed": 1, "barracks_straw_days": 15 }
+]

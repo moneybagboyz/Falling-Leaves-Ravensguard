@@ -67,6 +67,8 @@ public sealed class RoomDetector(PieceCatalog pieces, IReadOnlyList<RoomTypeDef>
         int beds = 0;
         var letters = new HashSet<char>();
         var doors = new Dictionary<(int, int), RoomDoor>();
+        var doorTags = new HashSet<string>(StringComparer.Ordinal);
+        var windows = new HashSet<(int, int)>();
         while (q.Count > 0)
         {
             var (x, y) = q.Dequeue();
@@ -84,11 +86,17 @@ public sealed class RoomDetector(PieceCatalog pieces, IReadOnlyList<RoomTypeDef>
                 var kind = pieces.KindOf(id);
                 if (kind == null || kind == PieceKind.Ground) { enclosed = false; continue; }
                 if (kind == PieceKind.Door && !doors.ContainsKey((nx, ny)))
+                {
                     doors[(nx, ny)] = new RoomDoor(new Cell3(nx, ny, lv.Z), IsExteriorDoor(lv, nx, ny));
+                    if (id != null && pieces.TryGet(id, out var dp)) foreach (var t in dp.Tags) doorTags.Add(t);
+                }
+                if (kind == PieceKind.Window) windows.Add((nx, ny));
                 if (PieceCatalog.IsRoomKind(kind.Value) && !seen[ni]) { seen[ni] = true; q.Enqueue((nx, ny)); }
             }
         }
-        var matches = roomTypes.Where(t => Satisfies(t, cells.Count, enclosed, tags, lv.Z))
+        var (len, wid) = RoomShape.Box(cells);
+        var shape = new RoomShape(len, wid, windows.Count, doors.Count, doorTags);
+        var matches = roomTypes.Where(t => Satisfies(t, cells.Count, enclosed, tags, lv.Z, shape))
             .OrderByDescending(t => t.Priority).ThenBy(t => t.Id, StringComparer.Ordinal).ToList();
         var declared = letters.Select(c => g.Rooms[c]).Distinct().OrderBy(s => s, StringComparer.Ordinal).ToList();
         return new DetectedRoom
@@ -106,7 +114,7 @@ public sealed class RoomDetector(PieceCatalog pieces, IReadOnlyList<RoomTypeDef>
         foreach (var t in PieceCatalog.TagsOf(p)) tags[t] = tags.GetValueOrDefault(t) + 1;
     }
 
-    public static bool Satisfies(RoomTypeDef t, int area, bool enclosed, IReadOnlyDictionary<string, int> tags, int z = 0)
+    public static bool Satisfies(RoomTypeDef t, int area, bool enclosed, IReadOnlyDictionary<string, int> tags, int z = 0, RoomShape? shape = null)
     {
         if (t.Enclosed && !enclosed) return false;
         if (t.MinZ is int mz && z < mz) return false;
@@ -114,7 +122,8 @@ public sealed class RoomDetector(PieceCatalog pieces, IReadOnlyList<RoomTypeDef>
         if (area < t.MinArea || (t.MaxArea > 0 && area > t.MaxArea)) return false;
         foreach (var r in t.Requires)
             if (tags.GetValueOrDefault(r.Tag) < r.Min) return false;
-        return true;
+        if (shape is { } sh) return RoomRules.Extra(t, area, tags, sh);
+        return !RoomRules.Any(t);
     }
 
     /// <summary>A door that opens onto outdoor ground, empty space or (on the ground level) the edge of the footprint.</summary>

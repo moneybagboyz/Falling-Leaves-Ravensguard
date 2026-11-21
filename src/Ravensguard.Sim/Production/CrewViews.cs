@@ -22,7 +22,8 @@ public static class CrewViews
     {
         var pt = prod.Pop.People; var sc = prod.Content.Scale; var rows = new List<CrewStationView>();
         var seen = new HashSet<int>(); int span = 0;
-        void Overseer(int p) { if (seen.Add(p)) span += Crews.Span(sc, pt.SkillLevelOf(p, Skill.Leadership)); }
+        int hall = prod.SpanBonus?.Invoke(b) ?? 0;
+        void Overseer(int p) { if (seen.Add(p)) span += Crews.Span(sc, pt.SkillLevelOf(p, Skill.Leadership)) + hall; }
         if (b.Owner >= 0) Overseer(b.Owner);
         var crew = new HashSet<int>();
         for (int i = 0; i < b.Stations.Count; i++)

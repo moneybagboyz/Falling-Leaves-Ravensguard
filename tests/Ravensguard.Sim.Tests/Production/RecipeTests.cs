@@ -116,9 +116,9 @@ public class RecipeTests
     }
 
     /// <summary>Recipes that share a co-product or make pinned silver are priced by another recipe's solution, so the 45% rule is exact only for the owning recipes.</summary>
-    private static readonly HashSet<string> BandExempt = ["slaughter_pig", "slaughter_sheep", "cupel_silver", "forge_sword"];
+    private static readonly HashSet<string> BandExempt = ["slaughter_pig", "slaughter_sheep", "cupel_silver", "forge_sword", "lay_rope"];   // P7-LB2: lay_rope makes rope, whose price is the audit's (R1)
     /// <summary>Goods whose price comes from elsewhere: silver is pegged to the crown, the sword to the items spec value.</summary>
-    public static readonly HashSet<string> Pinned = ["silver", "arming_sword"];
+    public static readonly HashSet<string> Pinned = ["silver", "arming_sword", "rope"];   // P7-LB2: rope stays at its content price (2,000 mites a kg) until the economy audit reprices it under R1; the ropewalk's recipe feeds it
 
     [Fact]
     public void GB12_RecipeMarginBand_EveryRecipeAtSolverPrices_EarnsFortyFivePercentOfWages()

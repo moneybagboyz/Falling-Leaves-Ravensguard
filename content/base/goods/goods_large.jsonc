@@ -1,0 +1,4 @@
+// P7-LB2 (large-buildings LBQ-3): hemp fibre, the ropewalk's fibre. Grown like flax once a farming row exists; until then an import good at the gate. The base price is a placeholder (the audit reprices under R1).
+[
+  { "type": "good", "id": "hemp_fibre", "name": "Hemp fibre", "class": "fibre", "state": "fibre", "bulk_litres_per_kg": 4.0, "base_price_mites_per_kg": 40, "spoil_class": "cloth", "target_cover_days": 60, "tags": ["material"] }
+]

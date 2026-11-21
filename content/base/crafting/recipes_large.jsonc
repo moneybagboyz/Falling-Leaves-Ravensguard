@@ -1,0 +1,7 @@
+// P7-LB2 (large-buildings 4.4): the ropewalk and the stamp mill's station. lay_rope: 100 kg of hemp fibre to 90 kg of rope, a crew of 4 (one journeyman, three hands), 12 hours a batch, at the walk's rope wheel and traveller.
+// The stamp battery is a station kind with no recipe of its own: crushing ore is the industries' crusher stage (industries.md), whose tiers the battery's labour_pm 100 serves.
+[
+  { "type": "craft_station", "id": "rope_walk", "name": "Rope walk", "pieces": ["rope_traveller", "rope_wheel"], "provides": { "ropemaking": 1 } },
+  { "type": "craft_station", "id": "stamp_battery", "name": "Stamp battery", "pieces": ["stamp_battery"], "provides": { "crushing": 1 } },
+  {"type": "craft_recipe", "id": "lay_rope", "name": "Lay rope", "category": "cloth", "skill": "Weaving", "difficulty": 20, "effort": "moderate", "components": [[{"good": "hemp_fibre", "kg": 100}]], "workstation": "rope_walk", "steps": [{"id": "work", "hours": 12}], "results": [{"good": "rope", "kg": 90}], "batch": {"max": 1, "min_pm": 100}, "business": true, "workers_max": 4, "wage_class": "unskilled"}
+]

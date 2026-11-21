@@ -48,10 +48,12 @@ public static class BlueprintWriter
         string id = meta.Id;
         var head = new StringBuilder("  { \"type\": \"blueprint\", \"id\": ").Append(Q(id)).Append(", \"name\": ").Append(Q(meta.Name));
         head.Append(", \"wealth\": ").Append(Q(meta.Wealth.ToString().ToLowerInvariant()));
+        if (meta.OpenAir) head.Append(", \"open_air\": true");   // P7-IN2: an open-air plan (pieces on bare ground; no roof, no door asked of it)
         if (meta.Kind == BlueprintKind.RoomTemplate) head.Append(", \"kind\": \"room_template\"");
         if (!string.IsNullOrEmpty(meta.Style)) head.Append(", \"style\": ").Append(Q(meta.Style));
         if (!string.IsNullOrEmpty(meta.Dwelling)) head.Append(", \"dwelling\": ").Append(Q(meta.Dwelling));
         if (meta.Cultures.Count > 0) head.Append(", \"cultures\": [").Append(string.Join(", ", meta.Cultures.Select(Q))).Append(']');   // P5-C: the plan library's culture filter
+        if (meta.PowerW > 0) head.Append(", \"power_w\": ").Append(meta.PowerW);   // P7-LB2: the watts a powered plan's machines need (the writer used to drop it)
         head.Append(',');
 
         // each property is a block of lines; the last block closes the object

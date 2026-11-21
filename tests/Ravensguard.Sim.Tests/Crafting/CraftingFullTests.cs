@@ -75,10 +75,10 @@ public class CraftingFullTests(BuildingFixture fx, ITestOutputHelper output) : I
         Assert.Equal(a.Inputs, b.Inputs); Assert.Equal(a.Outputs, b.Outputs);
     }
 
-    private static void SameRecipe(Recipe a, Recipe b)
+    private static void SameRecipe(Recipe a, Recipe b, bool ignoreIndex = false)
     {
-        Assert.Equal((a.Index, a.Id, a.Station, a.Skill, a.WorkerHours, a.MaxWorkers, a.DurationDays, a.MinBatchPermille, a.WearPpmPerBatch, a.AddsG, a.HasTool, a.Quality, a.Wage),
-                     (b.Index, b.Id, b.Station, b.Skill, b.WorkerHours, b.MaxWorkers, b.DurationDays, b.MinBatchPermille, b.WearPpmPerBatch, b.AddsG, b.HasTool, b.Quality, b.Wage));
+        Assert.Equal((ignoreIndex ? 0 : a.Index, a.Id, a.Station, a.Skill, a.WorkerHours, a.MaxWorkers, a.DurationDays, a.MinBatchPermille, a.WearPpmPerBatch, a.AddsG, a.HasTool, a.Quality, a.Wage),
+                     (ignoreIndex ? 0 : b.Index, b.Id, b.Station, b.Skill, b.WorkerHours, b.MaxWorkers, b.DurationDays, b.MinBatchPermille, b.WearPpmPerBatch, b.AddsG, b.HasTool, b.Quality, b.Wage));
         Assert.Equal(a.Inputs, b.Inputs); Assert.Equal(a.Outputs, b.Outputs);
     }
 
@@ -92,7 +92,7 @@ public class CraftingFullTests(BuildingFixture fx, ITestOutputHelper output) : I
         Assert.Equal(41, old.Count);
         var oldBook = RecipeBook.Build(old, cat);
         var view = RecipeBook.Build(EconFixture.Content, cat);                       // the derived view of the business craft recipes
-        Assert.Equal(oldBook.Recipes.Count + 3, view.Recipes.Count);                  // P7-IN2 make_dry_cask and P7-ES2 forge_spearheads and forge_kettle_hats are the business recipes beyond Phase 2's 41
+        Assert.Equal(oldBook.Recipes.Count + 4, view.Recipes.Count);                  // P7-IN2 make_dry_cask and P7-ES2 forge_spearheads and forge_kettle_hats and P7-LB2 lay_rope are the business recipes beyond Phase 2's 41
         foreach (var o in oldBook.Recipes) SameRecipeIgnoringIndex(o, view.Recipes.Single(v => v.Id == o.Id));   // P7-IN2/ES2: the new recipes sort in among them, so the indices after it move; the rows match by id
         // a mod's Phase 2 row converts into the one format and back to the same book row
         var round = RecipeBook.Build(old.Select(d => RecipeUnifier.ToBook(EconFixture.Content, RecipeUnifier.ToCraft(d))), cat);
@@ -112,7 +112,7 @@ public class CraftingFullTests(BuildingFixture fx, ITestOutputHelper output) : I
         var w = new CraftWorld();
         output.WriteLine($"{w.Db.Recipes.Count} recipes ({w.Db.Recipes.Count(r => r.Business)} business), {w.Db.Proficiencies.Count} proficiencies, {w.Db.Stations.Count} stations, {w.Db.Manuscripts.Count} manuscripts");
         Assert.True(w.Db.Recipes.Count >= 80);
-        Assert.Equal(44, w.Db.Recipes.Count(r => r.Business));   // P7-IN2: make_dry_cask, P7-ES2: forge_spearheads and forge_kettle_hats (41 before)
+        Assert.Equal(45, w.Db.Recipes.Count(r => r.Business));   // P7-IN2: make_dry_cask, P7-ES2: forge_spearheads and forge_kettle_hats P7-LB2: lay_rope (41 before)
         foreach (var r in w.Db.Recipes) Assert.True(w.Db.OutputMassG(r) <= w.Db.InputMassG(r) + r.AddsG, r.Id);
         Assert.True(w.Db.Proficiencies.Count >= 40);
         Assert.Equal(8, w.Db.Manuscripts.Count);
