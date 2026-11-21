@@ -20,6 +20,8 @@ public sealed partial class FightWorld
     /// <summary>BB-A: inside the morale step the down and dead do not change, so a side's "winning" reading is worked out once, not once a fighter.</summary>
     private bool _inMoraleStep;
     private readonly Dictionary<int, bool> _winning = [];
+    /// <summary>BB-A: the fighters carrying a captain's or a banner's flag, ascending id, listed once at the start of a morale step (a handful, so "is a captain within 15 m" walks the list, not a 25 m box of a dense block).</summary>
+    private readonly List<int> _captainIds = [], _bannerIds = [];
     private int _rallyN = -1;
     private readonly Dictionary<int, (int X, int Y)> _rally = [];
 
@@ -96,7 +98,9 @@ public sealed partial class FightWorld
     {
         foreach (var f in Fighters) EnsureMorale(f);
         _moraleEnsured = Fighters.Count;
-        _winning.Clear(); _inMoraleStep = true;
+        _winning.Clear(); _captainIds.Clear(); _bannerIds.Clear();
+        foreach (var f in Fighters) { if (f.M.Has(MoraleFlags.Captain)) _captainIds.Add(f.Id); if (f.M.Has(MoraleFlags.Banner)) _bannerIds.Add(f.Id); }
+        _inMoraleStep = true;
         foreach (var f in Fighters) if ((Tick + f.Id) % MoraleRules.EveryTicks == 0) UpdateMorale(f);
         _inMoraleStep = false;
     }
@@ -123,7 +127,10 @@ public sealed partial class FightWorld
         bool counts = f.Act is FAct.Down or FAct.Dead or FAct.Surrendered;
         long r = D.FriendDownRadiusM * 1000L, rl = D.LeaderDownRadiusM * 1000L, rb = D.BannerRadiusM * 1000L;
         if (_moraleEnsured != Fighters.Count) foreach (var o in Fighters) if (o.Id != f.Id && o.Team == f.Team && o.Active) EnsureMorale(o);   // a fall before the first morale step
-        foreach (int oid in Near(0, f, Math.Max(r, Math.Max(rl, rb))))
+        long reach = r;                                                                      // only a fallen captain or banner is felt further than the friend-down radius
+        if (f.M.Has(MoraleFlags.Captain)) reach = Math.Max(reach, rl);
+        if (f.M.Has(MoraleFlags.Banner)) reach = Math.Max(reach, rb);
+        foreach (int oid in Near(0, f, reach))
         {
             var o = Fighters[oid];
             if (o.Id == f.Id || o.Team != f.Team || !o.Active) continue;
@@ -165,7 +172,9 @@ public sealed partial class FightWorld
         long ra = D.AloneRadiusM * 1000L;
         int foes = 0, friends = 1, foesAround = 0; bool company = false;
         bool captain = m.Has(MoraleFlags.Captain), banner = m.Has(MoraleFlags.Banner);
-        foreach (int oid in Near(0, f, Math.Max(Math.Max(ra, ro), Math.Max(rc, rb))))
+        // Pass 1: the outnumbered radius. A dense block has a thousand fighters within the 30 m "alone" radius, so that wide look is made only when this one finds no friend (company)
+        // and a foe (the lone fighter's term), which is the only case that reads it; the captain and banner are looked for among the listed carriers, not by distance scan.
+        foreach (int oid in Near(0, f, ro))
         {
             var o = Fighters[oid];
             if (o.Id == f.Id || !o.Active) continue;
@@ -175,10 +184,21 @@ public sealed partial class FightWorld
                 if (o.Routing) continue;
                 if (d <= ra) company = true;
                 if (d <= ro) friends++;
-                if (d <= rc && o.M.Has(MoraleFlags.Captain)) captain = true;
-                if (d <= rb && o.M.Has(MoraleFlags.Banner)) banner = true;
             }
-            else { if (d <= ro) foes++; if (d <= ra) foesAround++; }
+            else if (d <= ro) foes++;
+        }
+        if (!captain) captain = CarrierWithin(f, rc, MoraleFlags.Captain);
+        if (!banner) banner = CarrierWithin(f, rb, MoraleFlags.Banner);
+        if (!company && foes > 0)
+        {
+            foreach (int oid in Near(0, f, ra))
+            {
+                var o = Fighters[oid];
+                if (o.Id == f.Id || !o.Active) continue;
+                long d = DistMm(f, o);
+                if (o.Team == f.Team) { if (!o.Routing && d <= ra) company = true; }
+                else if (d <= ra) foesAround++;
+            }
         }
         int pain = (int)Math.Min(100, f.Book.PainX100 * 100L / Math.Max(1, f.Book.KnockoutPainX100));
         bool outnumbered = foes > 0 && (long)foes * 1000 >= (long)D.OutnumberedRatioPm * friends;
@@ -275,12 +295,24 @@ public sealed partial class FightWorld
         return st.FleeOddsBelowPm > 0 && Ravensguard.Sim.Combat.Watch.RiskEstimate.Odds(this, f).OddsPm < st.FleeOddsBelowPm;
     }
 
-    private bool CaptainWithin(Fighter f, long r)
+    private bool CaptainWithin(Fighter f, long r) => CarrierWithin(f, r, MoraleFlags.Captain);
+
+    /// <summary>An active, standing friend carrying <paramref name="flag"/> (captain or banner) within <paramref name="r"/>: walks the carriers listed for this morale step, or the neighbours when called outside one.</summary>
+    private bool CarrierWithin(Fighter f, long r, MoraleFlags flag)
     {
+        if (_inMoraleStep)
+        {
+            foreach (int oid in flag == MoraleFlags.Captain ? _captainIds : _bannerIds)
+            {
+                var o = Fighters[oid];
+                if (o.Id != f.Id && o.Team == f.Team && o.Active && !o.Routing && o.M.Has(flag) && DistMm(f, o) <= r) return true;
+            }
+            return false;
+        }
         foreach (int oid in Near(0, f, r))
         {
             var o = Fighters[oid];
-            if (o.Id != f.Id && o.Team == f.Team && o.Active && !o.Routing && o.M.Has(MoraleFlags.Captain) && DistMm(f, o) <= r) return true;
+            if (o.Id != f.Id && o.Team == f.Team && o.Active && !o.Routing && o.M.Has(flag) && DistMm(f, o) <= r) return true;
         }
         return false;
     }

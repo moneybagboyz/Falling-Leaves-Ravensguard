@@ -182,7 +182,7 @@ public class BattleGridTests(FightFixture fx, ITestOutputHelper output)
                 int face = team == 0 ? FightMath.One : -FightMath.One;
                 var kit = i % 3 == 0 ? FightCalibration.KitOf("s", team, FightCalibration.Spear, FightCalibration.Padded, null, skill, x, face)
                     : FightCalibration.KitOf("s", team, FightCalibration.Sword, i % 3 == 1 ? FightCalibration.Mailed : FightCalibration.Padded, team == 0 ? "heater" : "round_shield", skill, x, face);
-                w.Add(kit with { Y = y });
+                w.Add(kit with { Y = y, Courage = 100 });
             }
         return w;
     }
@@ -208,19 +208,21 @@ public class BattleGridBudgetTests(FightFixture fx, ITestOutputHelper output) : 
 
     private (double Avg, double WorstMinute, double ScanAvg) Budget(int perSide, int ticks, bool grid)
     {
-        var w = Block(7, perSide, perSide >= 1000 ? 7 : 6, 2400);
-        w.UseGrid = grid;
+        // the Phase 4 skirmish at scale: two lines of perSide meeting, the hero (the level-of-detail centre) at one end, so only the fighters within 60 m of him think at 20 Hz
+        var w = FightCalibration.Skirmish(fx.C, 5, perSide); w.RecordEvents = false; w.UseGrid = grid; w.LodCentre = (-7000, 0);
         for (int i = 0; i < 40; i++) w.StepWithAi();                                  // warm up: JIT, the buffers' growth
         double sum = 0, worst = 0, minuteWorst = 0; int minuteTicks = 0;
         var sw = new Stopwatch();
-        for (int i = 0; i < ticks; i++)
+        int run = 0;
+        for (int i = 0; i < ticks && !w.IsOver; i++)
         {
+            run++;
             sw.Restart(); w.StepWithAi(); double ms = sw.Elapsed.TotalMilliseconds;
             sum += ms; minuteWorst = Math.Max(minuteWorst, ms);
             if (++minuteTicks == 1200) { worst = Math.Max(worst, minuteWorst); minuteWorst = 0; minuteTicks = 0; }
         }
         worst = Math.Max(worst, minuteWorst);
-        return (sum / ticks, worst, 0);
+        return (sum / Math.Max(1, run), worst, 0);
     }
 
     [Fact]
