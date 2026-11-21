@@ -22,7 +22,7 @@ public sealed partial class ContinentTrade
         foreach (var c in st.Caravans.All.ToList())
         {
             if (c.Home != region || c.State is CaravanState.Idle or CaravanState.Lost) continue;
-            if (ctx.HourOfDay == 0) PayWages(c);
+            if (ctx.HourOfDay == 0) { if (Own?.Owns(c) == true) Own.PayWages(c, time); else PayWages(c); }
             switch (c.State)
             {
                 case CaravanState.Loading:
@@ -34,7 +34,7 @@ public sealed partial class ContinentTrade
                     Move(ctx, st, c, endSec, time);
                     break;
                 case CaravanState.AtGate:
-                    if (endSec >= c.WaitUntilSec) { GateTrade(ctx, st, c, time); }
+                    if (endSec >= c.WaitUntilSec) { if (Own?.Owns(c) == true) Own.Arrive(ctx, this, c, time); else GateTrade(ctx, st, c, time); }
                     Rest(c, endSec);
                     break;
             }
@@ -201,6 +201,7 @@ public sealed partial class ContinentTrade
         c.Crew = []; c.Guards = 0;
         c.State = CaravanState.Lost; c.LostDay = (int)time.TotalDays; c.Region = c.Home;
         CaravansLost++;
+        if (Own?.Owns(c) == true) Own.Lost(ctx, this, c, time);                            // P7-IN4: the works writes the trip off
         ctx.Outbox.Chronicle(time, "caravan_lost", [c.Id], [Why.Of(CauseKind.Raid, "ch_why_caravan_lost", ChronParam.Place("place", _ew.World.Population.Region.Settlements[c.Settlement].Id))], ("caravan", c.Id.ToString()), ("settlement", _ew.World.Population.Region.Settlements[c.Settlement].Name));
         var home = st.Summaries[c.Home]; home.News.Add(new NewsItem(NewsKind.CaravanLost, (byte)c.Home, 1, (int)time.TotalDays, 0)); if (home.News.Count > RegionSummary.NewsCap) home.News.RemoveAt(0);
     }
@@ -208,7 +209,19 @@ public sealed partial class ContinentTrade
     // ------------------------------------------------------------------ at the gate
 
     /// <summary>Sells the cargo to the neighbour's summary, pays the gate toll, buys the back-haul (caravans spec 3.5, 3.6). Coin and goods are booked as crossing the border.</summary>
-    private void GateTrade(TickContext ctx, ContinentState st, Caravan c, GameTime time)
+    private void GateTrade(TickContext ctx, ContinentState st, Caravan c, GameTime time) => GateTradeCore(ctx, st, c, time);
+
+    /// <summary>P7-IN4: a works' own caravan at a border gate sells as every caravan does; the owner's hook reads what it made from <see cref="ExportedMites"/>.</summary>
+    public void GateTradeAt(TickContext ctx, Caravan c, GameTime time) => GateTradeCore(ctx, Link.State, c, time);
+
+    /// <summary>The caravan is home with its trip done: back to idle, the guards released.</summary>
+    public void EndTrip(Caravan c)
+    {
+        c.State = CaravanState.Idle; c.Region = c.Home; c.Dist = 0; c.PrevDist = 0; c.Trips++; TripsDone++;
+        c.GuardsRelease(_ew.World.People);
+    }
+
+    private void GateTradeCore(TickContext ctx, ContinentState st, Caravan c, GameTime time)
     {
         var led = _econ.Ledger; var cat = _econ.Goods; var rl = Link.Mine; var et = rl.ForNeighbour(c.Neighbour);
         var store = _econ.OpenStore(StoreKind.Chest, c.Id, 0, 0, enforce: false);
@@ -276,6 +289,7 @@ public sealed partial class ContinentTrade
 
     private void Settle(TickContext ctx, ContinentState st, Caravan c, GameTime time)
     {
+        if (Own?.Owns(c) == true) { Own.Home(ctx, this, c, time); return; }                  // P7-IN4: a works' own caravan settles with its works
         var led = _econ.Ledger; var pt = _ew.World.People; var books = _books();
         var book = books.FirstOrDefault(b => b.SettlementIndex == c.Settlement);
         var biz = c.OwnerBusiness >= 0 && c.OwnerBusiness < _ew.Production.Businesses.Count ? _ew.Production.Businesses[c.OwnerBusiness] : null;

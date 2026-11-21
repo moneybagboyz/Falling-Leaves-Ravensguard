@@ -129,4 +129,27 @@ public sealed record IndustrySettingsDef : ContentDef
     public int AccidentFallMm { get; init; } = 3000;
     /// <summary>Mites a worker-hour of hand building is priced at when a tier plan's bill is added to the works' buildings cost (5.3a).</summary>
     public int PlanLabourMites { get; init; } = 30;
+
+    // ---- P7-IN4 (industries 5.10): selling at the gate and your own caravan
+    /// <summary>The caravan master's pay: a day's wage and a share of the sales (permille), and the Trading skill a master needs.</summary>
+    public int MasterWageMites { get; init; } = 500;
+    public int MasterSharePm { get; init; } = 20;
+    public int MasterMinTrading { get; init; } = 40;
+    /// <summary>A hired driver's and a guard's day on the road, mites (the caravan-guard danger premium, 1,500-2,000 a day).</summary>
+    public int DriverWageMites { get; init; } = 150;
+    public int GuardWageMites { get; init; } = 1750;
+    /// <summary>Wear on the wagons: permille of their price a day on the road, paid to the region's wainwrights when the caravan is home.</summary>
+    public int WagonWearPmPerDay { get; init; } = 3;
+    /// <summary>The share of the cargo a successful ambush takes, permille (Phase 2's robbery: 50 to 100 percent of the goods, 60 is the usual).</summary>
+    public int AmbushTakePm { get; init; } = 600;
+    /// <summary>A standing order sends a caravan only when the stage holds at least this share of the fleet's load, permille.</summary>
+    public int MinLoadPm { get; init; } = 600;
+    /// <summary>Wagons a works' caravan may have, and the most a gate buyer holds of a good beyond its target cover (a border neighbour stops taking at this share of its cover, permille).</summary>
+    public int MaxWagons { get; init; } = 8;
+    public int NeighbourHoldPm { get; init; } = 2000;
+    /// <summary>A price heard of a place loses this much of its worth a day of age, permille (the planner's rule), and the float a trip carries over its quoted costs, permille.</summary>
+    public int PriceAgePmPerDay { get; init; } = 10;
+    public int FloatPm { get; init; } = 1150;
+    /// <summary>Days a stage's output is held back for a supply contract: the goods of this many deliveries stay in its store (the rest goes to the gate).</summary>
+    public int ContractHoldDeliveries { get; init; } = 3;
 }

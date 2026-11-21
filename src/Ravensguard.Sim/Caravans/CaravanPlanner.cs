@@ -393,24 +393,27 @@ public sealed partial class ContinentTrade
     }
 
     /// <summary>The wagons are bought from the region's carpenters (their purses get the coin, ascending business, the market's own town first).</summary>
-    private bool PayWainwrights(MarketParty m, MarketBook b, long price)
+    internal bool PayWainwrights(MarketParty m, MarketBook b, long price, PurseId? from = null)
     {
-        var led = _econ.Ledger; long left = price;
+        var led = _econ.Ledger; long left = price; var payer = from ?? m.Purse;
         var shops = _ew.Production.Businesses.Where(x => x.State == BusinessState.Open && _ew.Production.KindOf(x).Id == "carpentry").OrderBy(x => x.Settlement == b.SettlementIndex ? 0 : 1).ThenBy(x => x.Index).ToList();
-        if (shops.Count == 0) return led.Transfer(m.Purse, b.TollPurse, new Coin(price), TransferReason.Trade);
+        if (shops.Count == 0) return led.Transfer(payer, b.TollPurse, new Coin(price), TransferReason.Trade);
         for (int i = 0; left > 0; i++)
         {
             long part = Math.Min(left, Math.Max(1, price / Math.Min(shops.Count, 3) + 1));
-            if (!led.Transfer(m.Purse, shops[i % shops.Count].Purse, new Coin(part), TransferReason.Trade)) return false;
+            if (!led.Transfer(payer, shops[i % shops.Count].Purse, new Coin(part), TransferReason.Trade)) return false;
             left -= part;
         }
         return true;
     }
 
+    /// <summary>The id of the next caravan founded in this region (P7-IN4: a works founds its fleet the way a merchant does).</summary>
+    public EntityId NewCaravanId() => EntityId.Make(IdKind.Other, CaravanIdBase + EntityId.RegionBase(Link.Region) + Link.State.NextCaravanSerial(Link.Region));
+
     public const ulong CaravanIdBase = 0x400_0000;
     public static bool IsCaravanId(EntityId id) => id.Kind == IdKind.Other && (id.Counter & EntityId.SerialMask) >= CaravanIdBase && (id.Counter & EntityId.SerialMask) < CaravanIdBase + 0x100_0000;
 
-    private int DangerOf(CaravanPath path, ContinentState st)
+    public int DangerOf(CaravanPath path, ContinentState st)
     {
         var region = _ew.World.Population.Region; int hide = 0;
         var home = RegionCoord.OfCell(region.CellX, region.CellY);
@@ -427,7 +430,7 @@ public sealed partial class ContinentTrade
     /// Hires <paramref name="n"/> people from the settlement's idle adults (men of 16 to 50 with no trade and no employer, not a head of a household, not a farm child): drivers
     /// (<paramref name="role"/> 0) or guards (1). Fewer when fewer are free. They keep their household and bed; their wages are paid to it.
     /// </summary>
-    private int[] HireCrew(int settlement, int n, int role, GameTime now)
+    public int[] HireCrew(int settlement, int n, int role, GameTime now)
     {
         if (n <= 0) return [];
         var w = _ew.World; var pt = w.People; var hht = w.Households; long day = now.TotalDays;

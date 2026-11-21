@@ -141,7 +141,8 @@ public sealed partial class IndustryWorld : IStageHost
     public OwnResult SetRoute(ulong business, Routing route)
     {
         if (Find(business) is not { } f) return OwnResult.No("in_no_such_stage");
-        if (route is Routing.Contract or Routing.Caravan) return OwnResult.No("in_route_later");
+        if (route == Routing.Contract && !HasContract(business)) return OwnResult.No("in_route_no_contract");
+        if (route == Routing.Caravan && f.S.Order == null) return OwnResult.No("in_caravan_no_order");
         f.S.Route = route;
         return OwnResult.Yes("in_route_set");
     }
@@ -267,6 +268,7 @@ public sealed partial class IndustryWorld : IStageHost
         for (int i = 0; i < runs.Count; i++) if (runs[i] != null) Wage(runs[i], day, now);
         for (int i = 0; i < runs.Count; i++) if (runs[i] != null) Buy(w, i, runs[i], day);
         for (int i = 0; i < runs.Count; i++) if (runs[i] != null) Finish(w, runs[i], day, now);
+        DispatchStanding(w, day, now);                                               // P7-IN4: a stage's standing caravan order
         w.EndBalance = Led.Balance(head.Purse).Mites;
         long net = 0; foreach (var s in w.Stages) net += s.Net(day, 1);
         w.CumulativeNetMites += net;
@@ -277,7 +279,7 @@ public sealed partial class IndustryWorld : IStageHost
     {
         if (income <= 0) return;
         var sellers = new List<WorkStage>();
-        foreach (var r in runs) if (r != null && r.S.Route == Routing.Gate) sellers.Add(r.S);
+        foreach (var r in runs) if (r != null && r.S.Route is Routing.Gate or Routing.Contract or Routing.Caravan) sellers.Add(r.S);
         if (sellers.Count == 0) sellers.Add(w.Stages[0]);
         long each = income / sellers.Count, rem = income - each * sellers.Count;
         for (int i = 0; i < sellers.Count; i++) sellers[i].Add(day, WorkStage.Income, each + (i == 0 ? rem : 0));
@@ -419,6 +421,7 @@ public sealed partial class IndustryWorld : IStageHost
         return (long)r.Crew.Count * Set.WorkdayHours * 1000 * (pot - madeG) / pot;
     }
 
+    internal static ushort[] OutputsOf(StageKind k) => ForwardGoods(k);
     private static ushort[] ForwardGoods(StageKind k) => k.IsHandling ? [k.Main, .. k.Outputs.Select(o => o.Good).Where(g => g != k.Main)] : [.. k.Outputs.Select(o => o.Good)];
 
     /// <summary>Moves a stage's goods on (4.3, 5.10): to the next stage, bounded by the link's hauling, the stage's own handling (a handling stage's crews, and the spare hours lent at the first tier) and the next store's room; or to the gate.</summary>
@@ -454,17 +457,18 @@ public sealed partial class IndustryWorld : IStageHost
                 }
             }
         }
-        if (s.Route == Routing.Store) return;
+        if (s.Route is Routing.Store or Routing.Caravan) return;                                                                // kept in the stage's store (a caravan's order sends it from there)
+        if (s.Route == Routing.Contract && !HasContract(b.Id.Value)) s.Route = Routing.Gate;                                    // the contract ended: the goods go to the gate again
         if (k.IsHandling) PackStage(r, limit);
         long moved = 0;
-        if (s.Route == Routing.Gate)
+        if (s.Route is Routing.Gate or Routing.Contract)
         {
             if (Prod.Markets == null) return;
-            var book = Prod.Markets.BookForSettlement(b.Settlement);
             foreach (var g in ForwardGoods(k))
             {
-                long q = Math.Min(b.Store.Qty(g), limit - moved); if (q <= 0) continue;
-                long sold = book.SellOrList(b.Party, g, q, 900, day);
+                long hold = s.Route == Routing.Contract ? ContractHold(b.Id.Value, g) : 0;                                       // the contracts' deliveries stay in the store
+                long q = Math.Min(b.Store.Qty(g) - hold, limit - moved); if (q <= 0) continue;
+                long sold = SellAtGate(w, s, b, g, q, day);
                 moved += sold;
                 if (sold > 0) Unpack(s, g, sold, b.Store);
             }
