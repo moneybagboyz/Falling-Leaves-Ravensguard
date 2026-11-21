@@ -143,7 +143,7 @@ public class HostSupplyTests
     public void AWorldWithoutAHost_HasNoWarSupplySection()
     {
         var b = Tests.Economy.EconFixture.Shared;
-        var st = Ravensguard.Sim.Worlds.NewGameWorld.Create(b.Content, b.Continent, b.History, b.Cs, b.Hs, b.Rs, b.CellX, b.CellY, b.Pop.Clone(), null, null);
+        var st = Ravensguard.Sim.Worlds.NewGameWorld.Create(b.Content, b.Continent, b.History, b.Cs, b.Hs, b.Rs, b.CellX, b.CellY, AuditWorld.FreshPop(), null, null);
         Assert.Null(st.WarSupply);
         Assert.DoesNotContain(WarSupplySave.SectionName, WorldSave.Capture(st, "h", "0.1").Sections.Keys);
         Assert.Null(st.HomeRecords!.Sim.Get<HostSupply>());
