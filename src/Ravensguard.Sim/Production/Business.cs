@@ -27,6 +27,8 @@ public sealed class BusinessKind
     public int LabourPm = 1000;
     /// <summary>P7-LB1: the worker-hours in permille while the premises' machines are powered (0: no machine changes it); a saw mill's gang saw: 125.</summary>
     public int PoweredLabourPm;
+    /// <summary>P7-IN1: the stage kind a business of this kind is a stage of (a works' stage, run by <c>IndustryWorld</c>, never by Phase 2's planner); null for every ordinary kind.</summary>
+    public Industry.StageKind? Stage;
     public int StaffCapacity => Slots.Sum(s => s.Count);
     /// <summary>The recipes a station of this kind works, in recipe order (built once per recipe list and shared by the region workers: the planner asks for every station every day).</summary>
     public Recipe[] RecipesFor(string station)
@@ -61,6 +63,8 @@ public sealed class ProductionContent
     public OwnershipRulesDef Ownership { get; init; } = new OwnershipRulesDef { Id = "default" };
     /// <summary>P7-ES1: division of labour, crowding, span and the guild caps' numbers (economies-of-scale 3).</summary>
     public ScaleSettingsDef Scale { get; init; } = new ScaleSettingsDef { Id = "default" };
+    /// <summary>P7-IN1: the staged chains and stage kinds (industries 3.1); their business kinds are the last entries of <see cref="Kinds"/>.</summary>
+    public Industry.IndustryContent Industries { get; init; } = Industry.IndustryContent.Empty;
     /// <summary>P7-ES1: a station kind's crew limit k (5.1).</summary>
     public int CrewMax(string station)
     {
@@ -87,12 +91,19 @@ public sealed class ProductionContent
             k.Extractions = [.. d.Extractions.Select(id => ext.FirstOrDefault(e => e.Id == id) ?? throw new InvalidDataException($"business '{d.Id}': unknown extraction '{id}'"))];
             kinds.Add(k);
         }
+        var industry = Industry.IndustryContent.Load(db, cat);
+        foreach (var sk in industry.Stages)
+        {
+            // P7-IN1: a stage kind is a business kind of its own (appended after every ordinary kind, so none of their indices move); staff come through the works' crew target, never the kind's slots
+            var bk = new BusinessKind { Index = (ushort)kinds.Count, Id = sk.Id, OwnerOccupation = Occupation.Lord, FoundedOnly = true, Stage = sk, Slots = [(sk.Primary, sk.Tiers[^1].CrewMax, sk.Wage)] };
+            sk.Business = bk; kinds.Add(bk);
+        }
         var cfg = db.All<ResourceSettingsDef>().OrderBy(x => x.Id, StringComparer.Ordinal).FirstOrDefault() ?? new ResourceSettingsDef { Id = "resources" };
         var scale = db.All<ScaleSettingsDef>().OrderBy(x => x.Id, StringComparer.Ordinal).FirstOrDefault() ?? new ScaleSettingsDef { Id = "default" };
         foreach (var r in book.Recipes) r.Grades = GradesFor(scale, r);
         return new ProductionContent { Recipes = book, Kinds = [.. kinds], Extractions = ext, Settings = cfg, Spending = [.. db.All<SpendingRuleDef>().OrderBy(x => x.Id, StringComparer.Ordinal)],
             Tax = db.All<TaxPolicyDef>().OrderBy(x => x.Id, StringComparer.Ordinal).FirstOrDefault() ?? new TaxPolicyDef { Id = "default" },
-            Growth = db.All<GrowthTuningDef>().OrderBy(x => x.Id, StringComparer.Ordinal).FirstOrDefault() ?? new GrowthTuningDef { Id = "growth" },
+            Growth = db.All<GrowthTuningDef>().OrderBy(x => x.Id, StringComparer.Ordinal).FirstOrDefault() ?? new GrowthTuningDef { Id = "growth" }, Industries = industry,
             Ownership = db.All<OwnershipRulesDef>().OrderBy(x => x.Id, StringComparer.Ordinal).FirstOrDefault() ?? new OwnershipRulesDef { Id = "default" }, Scale = scale };
     }
 

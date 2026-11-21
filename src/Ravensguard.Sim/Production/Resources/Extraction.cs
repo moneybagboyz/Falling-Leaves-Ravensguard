@@ -124,12 +124,12 @@ public sealed class MineWorks
     };
 
     /// <summary>Grams mined in one worker-day by <paramref name="miners"/> (and <paramref name="haulers"/>, -1 for hauling not limiting): <c>0.5 t each</c>, bad air halves it past 40% mined at 2+ levels.</summary>
-    public long DayYieldG(ExtractionKind k, int miners, int haulers, int skillMult = 1000, int today = int.MaxValue)
+    public long DayYieldG(ExtractionKind k, int miners, int haulers, int skillMult = 1000, int today = int.MaxValue, long rateOverrideG = -1)
     {
         if (today < ClosedUntilDay || State != MineStateKind.Active || miners <= 0 || RemainingG <= 0) return 0;
         int eff = Math.Min(miners, MaxMiners);
         if (haulers >= 0) eff = Math.Min(eff, 2 * haulers);
-        long g = k.RateGPerWorkerDay * eff * skillMult / 1000;
+        long g = (rateOverrideG >= 0 ? rateOverrideG : k.RateGPerWorkerDay) * eff * skillMult / 1000;
         if (Levels >= 2 && InitialG > 0 && MinedG * 100 > InitialG * 40) g /= 2;
         return Math.Min(g, RemainingG);
     }
