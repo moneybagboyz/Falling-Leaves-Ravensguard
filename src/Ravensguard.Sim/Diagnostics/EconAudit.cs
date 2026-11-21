@@ -146,8 +146,9 @@ public static class EconAudit
                 return (AuditState.Pass, "phase-6 S14 closed in P7-0B: Diplomacy.AbstractHolding is a documented holding purse and tribute moves real coin (EA_F3 tests)");
             case "S-2" or "L6" when db != null:
             {
-                var (galena, silver, mites) = AuditMeasures.SilverPerWorkerDay(db, cat);
-                return (AuditState.Fail, $"a silver miner digs {galena:0} kg of galena = {silver:0.0} kg of silver = {mites:N0} mites a worker-day, {mites / AuditMeasures.UnskilledWagePerDay:0}x the wage; 22 worker-days a year would be 2% of this region's money supply; no mint strikes it yet, so the exposure is latent until CN1 (finding EA_F4)");
+                var (galena, silver, mites, grade) = AuditMeasures.SilverPerWorkerDay(db, cat);
+                bool ok = grade is >= 0.01 and <= 0.05;
+                return (ok ? AuditState.Pass : AuditState.Fail, $"silver is {grade:0.000}% of the galena (pass 0.01-0.05%: argentiferous galena, 0.15 kg of silver a tonne); a silver miner digs {galena:0} kg of galena = {silver:0.00} kg of silver = {mites:N0} mites a worker-day; the realised growth of the money supply from the struck silver is measured by MoneyGrowthTests (EA_F4, P7-EA3c: 1-2% a game year on seeds 1234 and 42)");
             }
             case "I4" when db != null:
             {

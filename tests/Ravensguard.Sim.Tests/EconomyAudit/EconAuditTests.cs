@@ -38,7 +38,7 @@ public class EconAuditTests(ITestOutputHelper output)
         // P7-EA2: the content-derived rows are measured, not pending (the failing ones are the audit's findings, EA_F1 to EA_F5)
         foreach (var id in new[] { "X2", "X3", "X4", "X5", "X6", "X7", "X14", "L3", "S-2", "S-4", "I4", "L6" }) Assert.NotEqual(AuditState.Pending, rows.Single(r => r.Id == id).State);
         Assert.Equal(AuditState.Pass, rows.Single(r => r.Id == "X5").State); Assert.Equal(AuditState.Pass, rows.Single(r => r.Id == "S-4").State); Assert.Equal(AuditState.Pass, rows.Single(r => r.Id == "I4").State);   // EA_F2, EA_F1 fixed in EA3a
-        Assert.Equal(AuditState.Fail, rows.Single(r => r.Id == "S-2").State);                                                                                                                  // EA_F4 stays open: CN1 pins the silver rate
+        Assert.Equal(AuditState.Pass, rows.Single(r => r.Id == "S-2").State); Assert.Equal(AuditState.Pass, rows.Single(r => r.Id == "L6").State);   // EA_F4 fixed in EA3c (deposit grade)
         Assert.Equal(AuditState.Pass, rows.Single(r => r.Id == "X3").State); Assert.Equal(AuditState.Pass, rows.Single(r => r.Id == "X14").State);
     }
 

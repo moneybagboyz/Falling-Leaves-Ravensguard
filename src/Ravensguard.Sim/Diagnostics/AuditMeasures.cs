@@ -63,12 +63,14 @@ public static class AuditMeasures
         return list;
     }
 
-    /// <summary>S-2: silver from a worker-day of silver mining (galena smelted to argentiferous lead, then cupelled: 3 kg of silver from 1,000 kg of galena) at silver's base price.</summary>
-    public static (double GalenaKg, double SilverKg, double Mites) SilverPerWorkerDay(ContentDatabase db, GoodCatalog cat)
+    /// <summary>S-2: silver from a worker-day of silver mining (galena smelted to argentiferous lead, then cupelled; the grade is read from the two recipes, P7-EA3c) at silver's base price. <c>GradePct</c> is silver's share of the galena, per cent.</summary>
+    public static (double GalenaKg, double SilverKg, double Mites, double GradePct) SilverPerWorkerDay(ContentDatabase db, GoodCatalog cat)
     {
         var mine = db.Get<ExtractionDef>("mining_silver"); double galena = mine.RateGPerWorkerDay / 1000.0;
-        double silver = galena * 0.6 / 600 * 3;
-        return (galena, silver, silver * cat.Def(cat.IdOf("silver")).BasePriceMitesPerKg);
+        var smelt = db.Get<CraftRecipeDef>("smelt_galena"); var cupel = db.Get<CraftRecipeDef>("cupel_silver");
+        double galenaIn = smelt.Components[0][0].Kg, leadOut = smelt.Results[0].Kg, leadIn = cupel.Components[0][0].Kg, silverOut = cupel.Results.First(r => r.Good == "silver").Kg;
+        double silverPerGalena = leadOut / leadIn * silverOut / galenaIn, silver = galena * silverPerGalena;
+        return (galena, silver, silver * cat.Def(cat.IdOf("silver")).BasePriceMitesPerKg, silverPerGalena * 100.0);
     }
 
     /// <summary>X2: the border desk's export bid (after the seller's toll) over the book's ask, for a non-staple at the target stock and at the glut threshold where the desk acts, and for a staple at the threshold.</summary>

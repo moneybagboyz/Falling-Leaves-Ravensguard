@@ -89,17 +89,17 @@ public class RecipeTests
     }
 
     [Fact]
-    public void GB15_SilverChain_ThousandKgGalena_ThreeKgSilver_2307CrownsStruck()
+    public void GB15_SilverChain_ThousandKgGalena_150gSilver_115CrownsStruck()
     {
         var smelt = ProdKit.Recipes["smelt_galena"]; var cupel = ProdKit.Recipes["cupel_silver"];
         Assert.Equal(1_000_000, smelt.Inputs.First(i => Cat.StringId(i.Good) == "galena").Qty);
         Assert.Equal(600_000, smelt.Outputs[0].Qty);                                    // 600 kg argentiferous lead
         Assert.Equal(600_000, cupel.Inputs.First(i => Cat.StringId(i.Good) == "lead_argentiferous").Qty);
         long silverG = cupel.Outputs.First(o => Cat.StringId(o.Good) == "silver").Qty;
-        Assert.Equal(3_000, silverG);                                                   // 3.0 kg = 3,000 g per tonne of galena
+        Assert.Equal(150, silverG);                                                     // 0.15 kg = 150 g per tonne of galena (P7-EA3c, EA_F4: 0.015%)
         Assert.Equal(540_000, cupel.Outputs.First(o => Cat.StringId(o.Good) == "lead").Qty);
         var strike = MintMath.Strike(silverG * 1000, 750);
-        Assert.Equal(2_307, strike.Struck.WholeCrowns);
+        Assert.Equal(115, strike.Struck.WholeCrowns);
     }
 
     [Fact]

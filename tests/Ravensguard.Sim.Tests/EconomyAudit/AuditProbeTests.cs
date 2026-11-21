@@ -120,14 +120,14 @@ public class AuditProbeTests(ITestOutputHelper output)
         var mine = Db.Get<ExtractionDef>("mining_silver"); Assert.Equal("galena", mine.OutputGood);
         double galenaKg = mine.RateGPerWorkerDay / 1000.0;
         var smelt = Db.Get<CraftRecipeDef>("smelt_galena"); var cupel = Db.Get<CraftRecipeDef>("cupel_silver");
-        // smelt_galena: 1,000 kg galena -> 600 kg argentiferous lead; cupel_silver: 600 kg of it -> 3 kg silver and 540 kg lead
-        double silverKg = galenaKg * 0.6 / 600 * 3, silverPrice = cat.Def(cat.IdOf("silver")).BasePriceMitesPerKg, perDay = silverKg * silverPrice;
+        // smelt_galena: 1,000 kg galena -> 600 kg argentiferous lead; cupel_silver: 600 kg of it -> 0.15 kg silver (P7-EA3c) and 540 kg lead
+        double silverKg = galenaKg * 0.6 / 600 * 0.15, silverPrice = cat.Def(cat.IdOf("silver")).BasePriceMitesPerKg, perDay = silverKg * silverPrice;
         const double MoneySupplyMites = 128_340_000;          // seed 1234 at the tag (AuditFacts: 1.2834 million crowns)
         double perYearCrewDays = MoneySupplyMites * 0.02 / perDay;
         output.WriteLine($"a silver miner digs {galenaKg:0} kg of galena a day = {silverKg:0.00} kg of silver = {perDay:N0} mites a worker-day ({perDay / 150:0}x the unskilled wage)");
         output.WriteLine($"(the generated crews are small: the world probe measures what two silver mines really made in four years)\n2% of the region's money supply ({MoneySupplyMites * 0.02:N0} mites) is {perYearCrewDays:0.0} worker-days of silver mining a year; a crew of 20 for a 60-day year is {20 * 60 * perDay:N0} mites = {20 * 60 * perDay / MoneySupplyMites:P0} of the supply");
-        Assert.True(silverKg > 1.4 && silverKg < 1.6);
-        Assert.True(perDay / 150 > 700);
+        Assert.InRange(silverKg, 0.07, 0.08);
+        Assert.Equal(0.015, AuditMeasures.SilverPerWorkerDay(Db, cat).GradePct, 4);
         Assert.NotNull(smelt); Assert.NotNull(cupel);
     }
 

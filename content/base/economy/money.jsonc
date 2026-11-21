@@ -9,5 +9,5 @@
     "lot_expiry_days": 3, "merchant_cash_share_bp": 4000, "merchant_stock_cap_permille_of_cover": 800,
     // P7-CN1 (coinage 5.8): a gold piece is 1,000 mites (1,100 mg), a silver piece 100 (1,300 mg, the old crown), a copper piece 10 (5,000 mg, token coin capped at 4% of the money supply)
     "gold_piece_mg": 1100, "gold_seigniorage_bp": 500, "copper_piece_mg": 5000, "copper_cap_permille": 40, "changer_fee_permille": 20, "gold_transfer_min_mites": 10000,
-    "moneyer_pieces_per_day": 3000, "mint_master_wage_mites": 500, "gold_grade_mg_per_t": 6000, "pan_gold_mg_per_day": 300 },
+    "moneyer_pieces_per_day": 3000, "mint_master_wage_mites": 500, "gold_grade_mg_per_t": 1000, "pan_gold_mg_per_day": 300 },
 ]
