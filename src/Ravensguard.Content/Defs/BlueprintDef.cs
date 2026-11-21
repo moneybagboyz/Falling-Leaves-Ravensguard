@@ -41,4 +41,6 @@ public sealed record BlueprintDef : ContentDef
     public List<BlueprintLevelDef> Levels { get; init; } = [];
     /// <summary>P7-LB1 (large-buildings 4.6): the watts the plan's machines need at the wheel; above 0 the plan is a powered plan and the fitter's water check applies (0: not powered).</summary>
     public int PowerW { get; init; }
+    /// <summary>P7-IN2: an open-air plan (the industry tier plans: pieces laid on bare ground, no walls or door); the validator does not ask it for an exterior door.</summary>
+    public bool OpenAir { get; init; }
 }

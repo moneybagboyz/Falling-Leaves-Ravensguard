@@ -152,7 +152,7 @@ public sealed class PlanLibrary
                 ground.Structure[i] = floor;
             }
         }
-        return new BuildingGrid(g.Id, g.Width, g.Height, g.Rooms, levels);
+        return new BuildingGrid(g.Id, g.Width, g.Height, g.Rooms, levels) { OpenAir = g.OpenAir };
     }
 
     /// <summary>
@@ -161,7 +161,7 @@ public sealed class PlanLibrary
     /// </summary>
     public static List<(int X, int Y, int Z, string Piece)> Cells(BuildingGrid g, PieceCosts costs)
     {
-        bool ownRoof = g.Levels.Values.Any(l => l.Structure.Any(s => s != null && costs.Library.Pieces.KindOf(s) == PieceKind.Roof));
+        bool ownRoof = g.OpenAir || g.Levels.Values.Any(l => l.Structure.Any(s => s != null && costs.Library.Pieces.KindOf(s) == PieceKind.Roof));
         return costs.PlanCells(g, ownRoof ? null : "roof_thatch");
     }
 

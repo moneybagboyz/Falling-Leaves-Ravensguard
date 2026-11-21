@@ -1,7 +1,11 @@
 using System.Globalization;
 using Ravensguard.Content;
 using Ravensguard.Sim.Abstract;
+using Ravensguard.Sim.Building;
+using Ravensguard.Sim.Combat.Wounds;
+using Ravensguard.Sim.Construction;
 using Ravensguard.Sim.Core;
+using Ravensguard.Sim.Economy;
 using Ravensguard.Sim.Rule;
 using Ravensguard.Sim.Save;
 using Ravensguard.Sim.Trade;
@@ -34,6 +38,7 @@ public static class IndustryWiring
     public static IndustryWorld Attach(RegionWorld home, WorldState state, ContentDatabase content)
     {
         var iw = Make(state, content, home.Economy.Production);
+        Hook(iw, home.Sim.Get<ConstructionWorld>(), home.Sim.Get<PowerWorld>(), () => home.Sim.Get<WoundLedger>() ?? state.Wounds, state, content);
         home.Sim.Set(iw);
         return iw;
     }
@@ -42,10 +47,30 @@ public static class IndustryWiring
     public static IndustryWorld For(WorldState state, ContentDatabase content)
     {
         if (state.HomeRecords?.Sim.Get<IndustryWorld>() is { } iw) return iw;
-        return Loose.GetValue(state, s => Make(s, content, s.Production ?? throw new InvalidOperationException("industry needs the world's production")));
+        return Loose.GetValue(state, s =>
+        {
+            var w = Make(s, content, s.Production ?? throw new InvalidOperationException("industry needs the world's production"));
+            Hook(w, s.HomeRecords?.Sim.Get<ConstructionWorld>(), s.HomeRecords?.Sim.Get<PowerWorld>(), () => s.Wounds, s, content);
+            return w;
+        });
     }
 
     private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<WorldState, IndustryWorld> Loose = new();
+
+    /// <summary>
+    /// Wires the premises' side (P7-IN2): the construction book the tiers are recognised from, the power rules' nets and river-high days, and the wound book an accident goes through. Anything the world lacks stays null and the rule is off.
+    /// </summary>
+    public static void Hook(IndustryWorld iw, ConstructionWorld? cw, PowerWorld? power, Func<WoundLedger?> wounds, WorldState state, ContentDatabase content)
+    {
+        iw.Build = cw; iw.Power = power; iw.RiverHighDays = power?.RiverHighDays;
+        iw.Injure = (person, heightMm, ev, sec) =>
+        {
+            var ledger = wounds(); if (ledger == null) return false;
+            var id = iw.Prod.Pop.People.IdOf(person);
+            FallWounds.Apply(content, ledger, id, heightMm, ev, sec, state.Seed);
+            return ledger.Find(id.Value)?.Dead == true;
+        };
+    }
 
     private static IndustryWorld Make(WorldState state, ContentDatabase content, ProductionSystem prod)
     {
@@ -71,6 +96,34 @@ public static class IndustryDesk
     public static HeroCommand Route(EntityId stage, string route, long sec) => Cmd(sec, Tag("route", stage.Value, route));
     public static HeroCommand Link(EntityId works, int to, int distanceM, int carts, int wagons, long sec) => Cmd(sec, Tag("link", works.Value, to, distanceM, carts, wagons));
     public static HeroCommand Cash(EntityId works, long mites, long sec) => Cmd(sec, Tag("cash", works.Value, mites));
+    /// <summary>P7-IN2: the stage's premises, the rectangle its tier is recognised from (inclusive region metres).</summary>
+    public static HeroCommand Site(EntityId stage, int x0, int y0, int x1, int y1, long sec) => Cmd(sec, Tag("site", stage.Value, x0, y0, x1, y1));
+    /// <summary>P7-IN2: the next tier's plan placed as ghosts beside the stage's premises, at (x, y) turned <paramref name="turns"/> quarter turns; commission a builder with the construction desk's <c>cn:commission</c> on the site the result names.</summary>
+    public static HeroCommand Upgrade(EntityId stage, int x, int y, int turns, long sec) => Cmd(sec, Tag("upgrade", stage.Value, x, y, turns));
+
+    /// <summary>
+    /// The Upgrade button (industries 5.3): the next tier's plan (<c>blueprints/industry_tiers.jsonc</c>) is placed as ghosts at the given corner, the stage's site grows to take its footprint, and the tier changes when the last required piece is built (recognition).
+    /// The player builds it, sets his people to it or commissions a builder through the construction desk on the site named in the result.
+    /// </summary>
+    private static OwnResult Upgrade(HeroContext ctx, IndustryWorld iw, ulong stage, int x, int y, int turns, long sec)
+    {
+        var st = ctx.State;
+        var book = st.Industry; var found = book?.StageOf(stage); if (found == null) return OwnResult.No("in_no_such_stage");
+        var ws = found.Value.Works.Stages[found.Value.Index];
+        if (iw.NextUpgrade(ws) is not { } next) return OwnResult.No("in_top_tier");
+        if (next.Plan.Length == 0) return OwnResult.No("in_no_plan");
+        var cw = ConstructionWiring.For(st, ctx.Content);
+        iw.Build ??= cw;
+        cw.Designs = st.Designs ??= new DesignBook();
+        var g = cw.Plans().Grid(next.Plan);
+        if (g == null) return OwnResult.No("cn_unknown_plan", next.Plan);
+        var turned = g.Transform(Math.Clamp(turns, 0, 3), false);
+        int hh = ConstructionDesk.HouseholdOf(ctx);
+        var pr = cw.PlacePlanGrid(ctx.Party.Hero, PurseKind.Person, hh, turned, next.Plan, x, y, sec);
+        if (!pr.Ok) return new OwnResult(false, pr.Key, pr.Args);
+        var res = iw.BeginUpgrade(stage, x, y, turned.Width, turned.Height, (long)ConstructionIds.SerialOf(pr.Site));
+        return new OwnResult(true, "in_upgrade_placed", [next.Tier, pr.Ghosts.Count], 0, pr.Site);
+    }
 
     private static HeroResult R(HeroCommand c, HeroResultCode code, HeroText text, long mites = 0) => new(c.Seq, c.Kind, code, text, mites, 0, c.IssuedSec);
 
@@ -94,6 +147,8 @@ public static class IndustryDesk
             "route" when p.Length >= 3 && Enum.TryParse<Routing>(S(2), true, out var rt) => Mine((ulong)N(1)) ? iw.SetRoute((ulong)N(1), rt) : OwnResult.No("in_not_yours"),
             "link" when p.Length >= 6 => Mine((ulong)N(1)) ? iw.SetLink((ulong)N(1), I(2), I(3), I(4), I(5)) : OwnResult.No("in_not_yours"),
             "cash" when p.Length >= 3 && N(2) != 0 && N(2) != long.MinValue => Mine((ulong)N(1)) ? iw.Cash((ulong)N(1), purse, N(2)) : OwnResult.No("in_not_yours"),
+            "site" when p.Length >= 6 => Mine((ulong)N(1)) ? iw.SetSite((ulong)N(1), I(2), I(3), I(4), I(5)) : OwnResult.No("in_not_yours"),
+            "upgrade" when p.Length >= 5 => Mine((ulong)N(1)) ? Upgrade(ctx, iw, (ulong)N(1), I(2), I(3), I(4), c.IssuedSec) : OwnResult.No("in_not_yours"),
             _ => null,
         };
         if (res == null) return R(c, HeroResultCode.Invalid, HeroText.Of("HERO_MAKES_NO_SENSE"));

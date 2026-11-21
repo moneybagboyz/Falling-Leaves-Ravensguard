@@ -32,6 +32,16 @@ public sealed class WorkStage
     public long InputsSeen;
     /// <summary>The last day the stage ran, -1 before its first.</summary>
     public int LastDay = -1;
+    /// <summary>The stage's premises: the rectangle of the home region (metres, inclusive) whose built pieces its tier is recognised from (5.2); empty until the owner sets one or an upgrade's plan is placed (then the tier is whatever <see cref="Tier"/> says, as in IN1).</summary>
+    public int SiteX0, SiteY0, SiteX1 = -1, SiteY1 = -1;
+    public bool HasSite => SiteX1 >= SiteX0 && SiteY1 >= SiteY0;
+    /// <summary>The tier an upgrade in hand is building toward (0: none) and the construction site's serial that builds it.</summary>
+    public int UpgradeTo;
+    public long UpgradeSite;
+    /// <summary>A drying stage's batches: how old each is in thousandths of a drying day and its grams (oldest first; 5.1, 5.6).</summary>
+    public List<(long AgeMilli, long G)> Dwell { get; } = [];
+    /// <summary>What the stage's store holds packed: per good, the container and the grams and containers bound together (5.9).</summary>
+    public List<PackedRow> Packed { get; } = [];
     public long[] Ring = new long[RingDays * RingColumns];
     public int[] RingStamp = NewStamps();
 
@@ -54,6 +64,13 @@ public sealed class WorkStage
     }
 
     public long Net(int today, int days = RingDays) => Sum(Income, today, days) - Sum(Wages, today, days) - Sum(Inputs, today, days) - Sum(Upkeep, today, days) - Sum(Royalties, today, days);
+}
+
+/// <summary>Goods packed in containers in a stage's store (industries 5.9, <c>PackedStock</c>): the grams of <see cref="Good"/> sit in <see cref="Containers"/> of the <see cref="Container"/> good.</summary>
+public sealed class PackedRow
+{
+    public ushort Good, Container;
+    public long Grams, Containers;
 }
 
 /// <summary>The link from one stage to the next (industries 4.3): the distance between their stores and what carries the goods beyond the crews' own reach.</summary>
@@ -116,6 +133,9 @@ public sealed class IndustryBook
             {
                 M((long)s.Business); M(s.Tier); M(s.CrewTarget); M(s.WageOfferPm); M((int)s.Route); M(s.DistanceM); M((int)s.Stop); M(s.StopGood); M(s.StopDays); M(s.Batch); M(s.LastDay); M(s.InputsSeen);
                 foreach (long r in s.Ring) M(r); foreach (int t in s.RingStamp) M(t);
+                M(s.SiteX0); M(s.SiteY0); M(s.SiteX1); M(s.SiteY1); M(s.UpgradeTo); M(s.UpgradeSite);
+                foreach (var (a, g) in s.Dwell) { M(a); M(g); }
+                foreach (var p in s.Packed) { M(p.Good); M(p.Container); M(p.Grams); M(p.Containers); }
             }
             M(-1);
             foreach (var l in w.Links) { M(l.From); M(l.To); M(l.DistanceM); M(l.Carts); M(l.Wagons); M(l.Crane ? 1 : 0); M(l.Packed ? 1 : 0); }

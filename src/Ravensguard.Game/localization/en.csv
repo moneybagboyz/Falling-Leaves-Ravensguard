@@ -4949,6 +4949,16 @@ in_cash_in,{0} put into the works' cash box.
 in_cash_out,{0} taken out of the works' cash box.
 ch_ind_founded,{owner} opened a {chain} works at {place}.
 ch_ind_stopped,"The {stage} of {owner}'s works at {place} stood still for {days} days: {reason}."
+ch_ind_upgraded,"The {stage} of {owner}'s works at {place} was brought up to its tier {tier}."
+ch_note_stage_upgraded,The pieces of the next tier were built and stand in the stage's premises.
+ch_ind_accident,"{who} was killed at the {stage} of {owner}'s works at {place}."
+ch_note_stage_accident,A day's work at the stage went wrong.
+in_site_set,The stage's premises are set; its tier is read from the pieces standing in them.
+in_site_bad,The premises must be a rectangle of at most 48 metres each way.
+in_top_tier,The stage is at its highest tier.
+in_no_plan,There is no plan for that tier.
+in_upgrade_begun,The upgrade to tier {0} is begun.
+in_upgrade_placed,The plan for tier {0} is laid out ({1} pieces); build it yourself or commission a builder.
 ch_note_works_founded,The works was built to make a living from the ground.
 ch_note_stage_stopped,The stage could not carry on its work.
 ind_chain_iron,iron

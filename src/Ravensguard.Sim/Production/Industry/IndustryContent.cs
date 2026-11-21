@@ -19,6 +19,32 @@ public sealed class StageTier
     public bool AnyDistance;
     public string Plan = "";
     public string[] Recognise = [];
+    /// <summary>The recognise rule parsed (5.2): every clause must hold; a clause is a list of alternatives, each a piece and the number needed.</summary>
+    public RecogniseClause[] Clauses = [];
+    /// <summary>Grams a day the stage still does without its machines' power; -1 until resolved against the tier below.</summary>
+    public long CapacityUnpoweredG = -1;
+    public int AccidentPpm = 200, WinterPm = 1000, DryDays, DryWinterPm = 1000, LossLoPm, LossHiPm, BarPm;
+    public long FineryG;
+    public bool Floods;
+}
+
+/// <summary>One clause of a tier's recognition: any one of the alternatives (a piece and the count it needs) satisfies it.</summary>
+public sealed class RecogniseClause
+{
+    public (string Piece, int Count)[] Any = [];
+    public static RecogniseClause Parse(string text)
+    {
+        var alts = new List<(string, int)>();
+        foreach (var part in text.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            int star = part.IndexOf('*');
+            if (star < 0) alts.Add((part, 1));
+            else alts.Add((part[..star], int.TryParse(part[(star + 1)..], out int n) ? Math.Max(1, n) : 1));
+        }
+        return new RecogniseClause { Any = [.. alts] };
+    }
+    public bool Met(IReadOnlyDictionary<string, int> counts) { foreach (var (p, n) in Any) if (counts.TryGetValue(p, out int have) && have >= n) return true; return false; }
+    public override string ToString() => string.Join(" or ", Any.Select(a => a.Count > 1 ? $"{a.Piece} x{a.Count}" : a.Piece));
 }
 
 /// <summary>A stage kind (industries 3.1) resolved against the goods: the roles, the occupations, the flows and the three tiers.</summary>
@@ -36,6 +62,9 @@ public sealed class StageKind
     public (ushort Good, int Pm, bool Fuel)[] Inputs = [];
     public (ushort Good, int Pm)[] Outputs = [];
     public int WastePm, YieldLoPm, YieldHiPm, RefDistanceM;
+    /// <summary>A packing stage's container good (65535: none) and the grams a container holds.</summary>
+    public ushort Container = ushort.MaxValue;
+    public long ContainerG;
     public StageTier[] Tiers = [];
     /// <summary>The business kind (an entry of <see cref="ProductionContent.Kinds"/>) a stage of this kind runs as.</summary>
     public BusinessKind Business = null!;
@@ -91,15 +120,20 @@ public sealed class IndustryContent
                 Inputs = [.. d.Inputs.Select(i => (cat.IdOf(i.Good), i.PerMainPm, i.Fuel))],
                 Outputs = [.. d.Outputs.Select(o => (cat.IdOf(o.Good), o.PerMainPm))],
                 WastePm = d.WastePm, YieldLoPm = d.YieldLoPm, YieldHiPm = d.YieldHiPm, RefDistanceM = d.RefDistanceM,
+                Container = d.Container.Length > 0 ? cat.IdOf(d.Container) : ushort.MaxValue, ContainerG = d.ContainerKg * 1000L,
             };
             if (d.Tiers.Count == 0) throw new InvalidDataException($"stage kind '{d.Id}' has no tiers");
             k.Tiers = [.. d.Tiers.OrderBy(t => t.Tier).Select(t => new StageTier
             {
                 Tier = t.Tier, CrewMin = t.CrewMin, CrewMax = t.CrewMax, RateG = t.Rate * 1000L, CapacityG = t.Capacity * 1000L, SupportPm = t.SupportPm, PowerW = t.PowerW,
-                StoreG = t.StoreKg * 1000L, InputPm = t.InputPm, AnyDistance = t.AnyDistance, Plan = t.Plan, Recognise = [.. t.Recognise],
+                StoreG = t.StoreKg * 1000L, InputPm = t.InputPm, AnyDistance = t.AnyDistance, Plan = t.Plan, Recognise = [.. t.Recognise], Clauses = [.. t.Recognise.Select(RecogniseClause.Parse)],
+                CapacityUnpoweredG = t.CapacityUnpowered < 0 ? -1 : t.CapacityUnpowered * 1000L, AccidentPpm = t.AccidentPpm, WinterPm = t.WinterPm, DryDays = t.DryDays, DryWinterPm = t.DryWinterPm,
+                LossLoPm = t.LossLoPm, LossHiPm = t.LossHiPm, BarPm = t.BarPm, FineryG = t.FineryKg * 1000L, Floods = t.Floods,
             })];
             for (int i = 0; i < k.Tiers.Length; i++)
                 if (k.Tiers[i].Tier != i + 1 || k.Tiers[i].CrewMin > k.Tiers[i].CrewMax) throw new InvalidDataException($"stage kind '{d.Id}': tier {i + 1} is out of order or its crew band is empty");
+            for (int i = 1; i < k.Tiers.Length; i++) if (k.Tiers[i].CapacityUnpoweredG < 0) k.Tiers[i].CapacityUnpoweredG = k.Tiers[i - 1].CapacityG;
+            if (k.Tiers[0].CapacityUnpoweredG < 0) k.Tiers[0].CapacityUnpoweredG = k.Tiers[0].CapacityG;
             stages.Add(k);
         }
         var chains = new List<ChainKind>();
