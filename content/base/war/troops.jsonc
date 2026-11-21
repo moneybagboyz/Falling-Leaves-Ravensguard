@@ -1,0 +1,19 @@
+// P7-SC-A (soldiers-and-companies 3.1): the troop roles. Priority is the fill order (the lowest is kitted first, 4.2); wages are copper a day (the Phase 2 soldier wage 250 mites = 25 cp is the spearman's, the
+// historical ratios archer 1, man-at-arms 3, knight 6); a mercenary is paid the soldier_rules multiple of them (x1.5, rounded down). A role with `requires` needs all of them, one of `requires_any` (a weapon
+// family). Knights are dubbed (SC-B), never promoted by skill alone. `levy_by_wealth` is the household's own gear, chosen by the household's wealth (4.3).
+[
+  { "type": "troop_role", "id": "levy", "name": "Levy", "priority": 7, "loadout": "levy_by_wealth", "wage_cp": 0, "wage_after_service_cp": 15, "ransom_class": "levy", "next": ["spearman", "archer"] },
+  { "type": "troop_role", "id": "spearman", "name": "Spearman", "priority": 5, "loadout": "spearman", "wage_cp": 25, "ransom_class": "levy",
+    "requires": { "Polearms": 25, "Shields": 15 }, "next": ["sergeant", "man_at_arms"] },
+  { "type": "troop_role", "id": "archer", "name": "Archer", "priority": 4, "loadout": "archer", "wage_cp": 25, "ransom_class": "levy", "requires": { "Archery": 30 }, "next": ["man_at_arms"] },
+  { "type": "troop_role", "id": "crossbowman", "name": "Crossbowman", "priority": 3, "loadout": "crossbowman", "wage_cp": 30, "ransom_class": "levy", "requires": { "Archery": 20 }, "next": ["man_at_arms"] },
+  { "type": "troop_role", "id": "sergeant", "name": "Sergeant (light horse)", "priority": 2, "loadout": "light_horse", "wage_cp": 50, "ransom_class": "man_at_arms",
+    "requires": { "Riding": 35 }, "requires_any": { "Blades": 30, "Axes": 30, "Hafted": 30, "Polearms": 30 }, "next": ["man_at_arms"] },
+  { "type": "troop_role", "id": "man_at_arms", "name": "Man-at-arms", "priority": 1, "loadout": "man_at_arms", "wage_cp": 75, "ransom_class": "man_at_arms",
+    "requires": { "Shields": 30 }, "requires_any": { "Blades": 45, "Axes": 45, "Hafted": 45, "Polearms": 45 }, "next": ["knight"] },
+  { "type": "troop_role", "id": "knight", "name": "Knight", "priority": 0, "loadout": "knight", "wage_cp": 150, "ransom_class": "knight", "dubbed": true,
+    "requires": { "Riding": 45 }, "requires_any": { "Blades": 55, "Axes": 55, "Hafted": 55, "Polearms": 55 } },
+  { "type": "troop_role", "id": "engineer", "name": "Engineer", "priority": 6, "loadout": "engineer", "wage_cp": 40, "ransom_class": "levy", "requires": { "Carpentry": 30 } },
+  { "type": "troop_role", "id": "sailor", "name": "Sailor", "priority": 6, "loadout": "sailor", "wage_cp": 25, "ransom_class": "levy" },
+  { "type": "troop_role", "id": "marine", "name": "Marine", "priority": 5, "loadout": "marine", "wage_cp": 30, "ransom_class": "levy" }
+]

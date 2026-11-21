@@ -6235,6 +6235,20 @@ ch_works_wheel_flood,"A flood wrecked the water wheel at {x}, {y}."
 ch_works_depot_filled,"The granary depot at {x}, {y} reached its target: {tonnes} tonnes of grain laid up."
 ch_note_depot_target,The lord's steward kept the depot to its target.
 ch_note_wheel_river_high,the river ran high and its sluice was open
+so_no_such_role,There is no such troop role.
+so_no_such_person,"That is no living person of sixteen or more."
+so_already_soldier,He is a soldier already.
+so_not_qualified,"He does not have the skills of a {0}."
+so_enlisted,He is enlisted as a {0}.
+so_no_soldiers,You have no soldiers to kit.
+so_filled,"{0} pieces issued from the armoury, {1} sent to the armourers to be refitted, {2} required pieces it could not give."
+so_not_yours,That is not one of your soldiers.
+so_equipped,The {0} piece is changed.
+so_cannot_equip,"That piece will not do for his {0}, or is not his or the armoury's."
+so_stripped,His {0} piece is taken off.
+so_nothing_there,He wears nothing there.
+so_role_set,He is now a {0}.
+so_discharged,"He is discharged; {0} pieces went back to the armoury."
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."

@@ -196,6 +196,16 @@ public sealed class Armouries
         return new IssueResult(given, gaps);
     }
 
+    /// <summary>P7-SC-A: issues one chosen item (the military's loadout filler picks the item, <see cref="Issue"/> picks by shape): it leaves the stock, its owner becomes the holder and the issue book says so. False when it is not in this armoury's stock.</summary>
+    public bool IssueItem(long key, EntityId id, EntityId holder, int day)
+    {
+        int row = _items.IndexOf(id);
+        if (row < 0 || !_book.ArmouryStock.TryGetValue(key, out var set) || !set.Remove(id.Value)) return false;
+        _items.At(row).Owner = holder;
+        _book.Issues.Add(new IssueRow(key, id.Value, holder.Value, day));
+        return true;
+    }
+
     /// <summary>Takes issued items back (with whatever wear they have): each must be in the issue book of this armoury. Returns how many went back.</summary>
     public int Return(long key, IReadOnlyList<EntityId> items)
     {

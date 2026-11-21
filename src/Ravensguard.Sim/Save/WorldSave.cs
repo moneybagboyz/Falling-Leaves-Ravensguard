@@ -180,6 +180,8 @@ public sealed class WorldState
     public Ravensguard.Sim.Production.ScaleBook? Scale { get; set; }
     /// <summary>P7-IN1: the works with their stages, links, routing, crew targets, wage offers, balance rings and payback counters (industries 3.2, 7), in the optional "industry" section once any exists (no format bump).</summary>
     public Ravensguard.Sim.Production.Industry.IndustryBook? Industry { get; set; }
+    /// <summary>P7-SC-A: the soldiers' rows (role, lord, what each wears and was issued from an armoury) and the refit jobs waiting for an armourer (soldiers-and-companies 3.3), in the optional "soldiers" section once any exists (no format bump).</summary>
+    public Ravensguard.Sim.Soldiers.SoldierBook? Soldiers { get; set; }
     /// <summary>The hero's side of the records (trade-inventory-character spec): worn slots and where each stack sits, the price notebook, the party, the people known (saved in the "party" section when present). The things themselves are item rows, the pack store and the purse in the <see cref="Economy"/>.</summary>
     public Ravensguard.Sim.Trade.HeroParty? Party { get; set; }
     /// <summary>
@@ -517,6 +519,7 @@ public static partial class WorldSave
             Unrest = w.Unrest is { IsEmpty: false } unb ? UnrestSave.Capture(unb) : null,                                              // P6-E1
             Scale = w.Scale is { IsEmpty: false } scb ? ScaleSave.Capture(scb) : null,                                                // P7-ES1
             Industry = w.Industry is { IsEmpty: false } inb ? IndustrySave.Capture(inb) : null,                                        // P7-IN1
+            Soldiers = w.Soldiers is { IsEmpty: false } sob ? SoldierSave.Capture(sob) : null,                                          // P7-SC-A
             Holdings = w.Holdings is { IsEmpty: false } hdb ? HoldingsSave.Capture(hdb) : null,                                        // P6-B6
             LandWorks = LandWorksOf(w),                                                                                              // P6-D4
             Difficulty = w.Difficulty.IsDefault && w.DifficultyLog.Count == 0 ? null : DifficultySave.Capture(w),                    // P6-A4
@@ -710,6 +713,7 @@ public static partial class WorldSave
             Unrest = file.Sections.ContainsKey(UnrestSave.SectionName) ? Decode<UnrestSave>(file, UnrestSave.SectionName, compressed: true).Restore() : null,          // P6-E1
             Scale = file.Sections.ContainsKey(ScaleSave.SectionName) ? Decode<ScaleSave>(file, ScaleSave.SectionName, compressed: true).Restore() : null,                // P7-ES1
             Industry = file.Sections.ContainsKey(IndustrySave.SectionName) ? Decode<IndustrySave>(file, IndustrySave.SectionName, compressed: true).Restore() : null,      // P7-IN1
+            Soldiers = file.Sections.ContainsKey(SoldierSave.SectionName) ? Decode<SoldierSave>(file, SoldierSave.SectionName, compressed: true).Restore() : null,      // P7-SC-A
             Holdings = file.Sections.ContainsKey(HoldingsSave.SectionName) ? Decode<HoldingsSave>(file, HoldingsSave.SectionName, compressed: true).Restore() : null,          // P6-B6
             Soil = landWorks is { Works.Length: > 0 } or { Effects.Length: > 0 } or { SoilNextSerial: > 1 } ? landWorks.RestoreSoil() : null,                                      // P6-D4
             Ownership = file.Sections.ContainsKey(OwnershipSave.SectionName) ? Decode<OwnershipSave>(file, OwnershipSave.SectionName, compressed: true).Restore() : null,          // P5-F
@@ -957,6 +961,7 @@ public sealed class LiveCapture
     internal UnrestSave? Unrest { get; init; }                                                                               // P6-E1
     internal ScaleSave? Scale { get; init; }                                                                                 // P7-ES1
     internal IndustrySave? Industry { get; init; }                                                                           // P7-IN1
+    internal SoldierSave? Soldiers { get; init; }                                                                            // P7-SC-A
     internal HoldingsSave? Holdings { get; init; }                                                                           // P6-B6
     internal LandWorksSave? LandWorks { get; init; }                                                                         // P6-D4
     internal DifficultySave? Difficulty { get; init; }                                                                       // P6-A4
@@ -1046,6 +1051,7 @@ public sealed class LiveCapture
         if (Unrest != null) sections.Add(new(UnrestSave.SectionName, SaveCodec.SerializeCompressed(Unrest)));              // P6-E1 (optional, no bump)
         if (Scale != null) sections.Add(new(ScaleSave.SectionName, SaveCodec.SerializeCompressed(Scale)));                  // P7-ES1 (optional, no bump)
         if (Industry != null) sections.Add(new(IndustrySave.SectionName, SaveCodec.SerializeCompressed(Industry)));         // P7-IN1 (optional, no bump)
+        if (Soldiers != null) sections.Add(new(SoldierSave.SectionName, SaveCodec.SerializeCompressed(Soldiers)));          // P7-SC-A (optional, no bump)
         if (Holdings != null) sections.Add(new(HoldingsSave.SectionName, SaveCodec.SerializeCompressed(Holdings)));         // P6-B6 (optional, no bump)
         if (LandWorks != null) sections.Add(new(LandWorksSave.SectionName, SaveCodec.SerializeCompressed(LandWorks)));     // P6-D4 (optional, no bump)
         if (Difficulty != null) sections.Add(new(DifficultySave.SectionName, SaveCodec.SerializeCompressed(Difficulty)));   // P6-A4 (optional, no bump)
