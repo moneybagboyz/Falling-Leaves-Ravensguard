@@ -193,7 +193,7 @@ public class ContentRemapTests
         var cur = IdTables.Of(EconFixture.Content).Tables;
         var restoredGoods = new[] { "arrowheads", "arrows", "daub", "harness", "iron_wire", "mail_rings", "shingles", "auger", "pan", "pick", "spade" };      // P5-F: the prospector's tools
         var p6Goods = new[] { "crutch", "litter", "poppy_milk", "claim_banner", "flint_nodule", "obsidian_nodule", "anvil_block" };                                  // P6-A1: medicine/aids.jsonc and relief.jsonc; P6-B6: the banner, the knapping stock and the forged anvil block
-        var p7Goods = new[] { "iron_ore_rough", "tempered_clay", "bricks_green" };                                                                                  // P7-IN1: goods of the staged industries
+        var p7Goods = new[] { "iron_ore_rough", "tempered_clay", "bricks_green", "dry_cask" };                                                                                  // P7-IN1: goods of the staged industries
         var p7Stages = new[] { "stage_iron_mine", "stage_iron_crusher", "stage_iron_yard", "stage_iron_smeltery", "stage_iron_packing", "stage_clay_pit", "stage_clay_yard", "stage_clay_moulding", "stage_clay_drying", "stage_clay_kiln", "stage_clay_packing", "stage_wood_felling", "stage_wood_hauling", "stage_wood_yard", "stage_wood_sawmill", "stage_wood_packing", "stage_wood_shipping" };   // P7-IN1: the stage kinds
         var newKinds = new[] { "bloomery", "brickworks", "clay_pit", "peat_cuttings", "quarry", "salt_pan", "sawpit", "water_sawmill", "physician", "stud", "saw_mill" };              // P5-F: kinds the player founds; P6-A1: the physician's business
         var restoredRecipes = new[] { "draw_wire", "fletch_arrows", "forge_arrowheads", "make_harness", "mix_daub", "rive_shingles", "make_crutch", "make_claim_banner", "knap_flint_blade", "knap_obsidian_blade", "forge_anvil_block" };
@@ -201,8 +201,9 @@ public class ContentRemapTests
         Assert.Equal(cur.Get(IdTables.Goods)!.Except(restoredGoods).Except(p6Goods).Except(p7Goods), v8.Get(IdTables.Goods)!);
         // P5-G added the vehicle parts' recipes and repair lines (content/base/crafting/recipes_vehicles.jsonc): new ids, so a v8 save's crafting section maps by name
         var p5g = new[] { "make_yoke", "make_pole", "make_traces", "make_cargo_box", "make_barrow_tray", "make_cargo_rack", "make_seat_bench", "make_tilt_hoops", "sew_tilt_cloth", "make_runner", "make_handle_bars", "make_pivot_axle", "make_iron_bound_axle", "make_dished_wheel", "make_brake_shoe", "forge_drag_shoe", "saw_hull_plank", "shape_keel", "make_gunwale", "saw_deck_plank", "make_ferry_ramp", "make_thwart", "make_oars", "make_quant_pole", "make_steering_oar", "make_rudder", "make_tow_post", "make_mast", "sew_square_sail", "make_fish_well", "make_cabin_box", "make_stall_counter", "build_mobile_hearth", "repair_hull_plank", "repair_vehicle_frame" };
-        Assert.Equal(cur.Get(IdTables.CraftRecipes)!.Except(restoredRecipes).Except(p5g), v8.Get(IdTables.CraftRecipes)!);
-        foreach (var t in new[] { IdTables.Proficiencies, IdTables.BookRecipes, IdTables.Extractions }) Assert.Equal(cur.Get(t)!, v8.Get(t)!);
+        Assert.Equal(cur.Get(IdTables.CraftRecipes)!.Except(restoredRecipes).Except(p5g).Except(["make_dry_cask"]), v8.Get(IdTables.CraftRecipes)!);          // P7-IN2: the cooperage recipe
+        foreach (var t in new[] { IdTables.Proficiencies, IdTables.Extractions }) Assert.Equal(cur.Get(t)!, v8.Get(t)!);
+        Assert.Equal(cur.Get(IdTables.BookRecipes)!.Except(["make_dry_cask"]), v8.Get(IdTables.BookRecipes)!);                            // P7-IN2: the cooperage recipe is in the recipe book
         Assert.Equal(cur.Get(IdTables.Businesses)!.Except(newKinds).Except(p7Stages), v8.Get(IdTables.Businesses)!);
         // the v7 tables differ only by Phase 3's recipes and proficiencies, every one of which is still in the content
         Assert.Subset(new HashSet<string>(cur.Get(IdTables.CraftRecipes)!), new HashSet<string>(LegacyIdTables.V7.Get(IdTables.CraftRecipes)!));
