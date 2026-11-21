@@ -28,7 +28,7 @@ public class ConstructionTests(ITestOutputHelper output)
         var goods = new GoodCatalog(db);
         var tools = db.All<CraftToolDef>().SelectMany(t => t.Qualities.Keys).ToHashSet();
         var pieces = db.All<BuildPieceDef>().ToList();
-        Assert.Equal(101, pieces.Count);                                      // 80 with P5-B, plus the 19 workstation pieces of P5-E (crafting-full 3.2), plus P6-B6's wheelwright's bay and the anvil set from a forged block (holdings 3.6, 3.8)
+        Assert.Equal(128, pieces.Count);                                      // 80 with P5-B, plus the 19 workstation pieces of P5-E (crafting-full 3.2), plus P6-B6's wheelwright's bay and the anvil set from a forged block (holdings 3.6, 3.8), plus the 27 power, machine and large-building pieces of P7-LB1 (large-buildings 3.2)
         foreach (var p in pieces)
         {
             Assert.True(p.Build != null, $"{p.Id} has no build cost");

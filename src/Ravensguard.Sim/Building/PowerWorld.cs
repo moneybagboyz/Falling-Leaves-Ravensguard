@@ -49,7 +49,7 @@ public sealed class PowerWorld
         var list = new List<PowerCell>();
         foreach (var b in Cw.Book.Built.Values)
         {
-            if (b.Slot != GhostSlot.Fixture || Cat.Get(b.Piece) == null) continue;
+            if (b.Slot != GhostSlot.Fixture || (Cat.Get(b.Piece) == null && !Cat.Stations.Contains(b.Piece))) continue;
             var c = Cw.Costs.Get(b.Piece);
             list.Add(new PowerCell(b.X, b.Y, b.Z, b.Piece, b.Hp, c == null ? b.Hp : PieceCosts.BuiltHp(c, b.BuiltSkill), b.SlotKey));
         }

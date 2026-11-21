@@ -11,12 +11,16 @@ public sealed class PowerCatalog
     /// <summary>The water wheels, by piece id: what a mill-site search tries.</summary>
     public IReadOnlyList<PowerPieceDef> Wheels { get; }
 
-    public PowerCatalog(ContentDatabase db)
+    public PowerCatalog(ContentDatabase db, WaterPowerRulesDef? rules = null)
     {
-        Rules = db.All<WaterPowerRulesDef>().OrderBy(r => r.Id, StringComparer.Ordinal).FirstOrDefault() ?? new WaterPowerRulesDef { Id = "water_power" };
+        Rules = rules ?? db.All<WaterPowerRulesDef>().OrderBy(r => r.Id, StringComparer.Ordinal).FirstOrDefault() ?? new WaterPowerRulesDef { Id = "water_power" };
         foreach (var d in db.All<PowerPieceDef>().OrderBy(d => d.Id, StringComparer.Ordinal)) _by[d.Piece] = d;
         Wheels = [.. _by.Values.Where(d => d.Role == "wheel").OrderBy(d => d.Piece, StringComparer.Ordinal)];
+        Stations = [.. _by.Values.SelectMany(d => d.Couples).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal)];
     }
+
+    /// <summary>The station pieces machines couple to (an anvil, a bloomery, a fulling tub...): the net walk needs them in its cells too.</summary>
+    public IReadOnlyList<string> Stations { get; }
 
     private static readonly ConditionalWeakTable<ContentDatabase, PowerCatalog> Cache = new();
     public static PowerCatalog Of(ContentDatabase db) => Cache.GetValue(db, d => new PowerCatalog(d));

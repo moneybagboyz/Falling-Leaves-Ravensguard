@@ -6092,6 +6092,28 @@ ch_ui_title,Chronicle
 ch_ui_why,Why it happened
 ch_ui_why_btn,Why did this happen?
 ct_btn_history,History
+bz_kind_saw_mill,saw mill
+cn_fit_power,"Not enough fall here: {0} W of {1} W."
+cn_fit_no_bank,A water wheel of this plan must stand on the bank of a stream or river.
+cn_fit_no_wheel,This plan needs a water wheel and has none.
+lb_head_low,"The head here is {0} mm; this wheel needs {1} mm or more."
+lb_head_high,"The head here is {0} mm; this wheel works only up to {2} mm."
+lb_need_river,This wheel needs a river; a stream is too small for it.
+lb_need_leat,This wheel needs a leat from a weir to carry its water.
+lb_no_flow,No water is running.
+lb_no_water,No stream or river is known here.
+lb_no_bank,The wheel does not stand on a bank.
+lb_frozen,The water is frozen; the wheel is stopped.
+lb_sluice_shut,The sluice is shut; the wheel is stopped.
+lb_wind_blocked,A building stands in the wind's way.
+lb_wind_calm,There is too little wind to turn the sails.
+lb_wind_furled,The wind is too strong; the sails are furled.
+lb_worn_out,The wheel is worn out and must be mended.
+lb_sluice_shut_ok,The sluice is shut.
+lb_sluice_open_ok,The sluice is open.
+lb_no_sluice,No sluice stands there.
+ch_works_wheel_flood,"A flood wrecked the water wheel at {x}, {y}."
+ch_note_wheel_river_high,the river ran high and its sluice was open
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."
