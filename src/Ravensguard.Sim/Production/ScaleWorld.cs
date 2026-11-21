@@ -195,6 +195,13 @@ public static class ScaleWiring
 
     private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<WorldState, ScaleWorld> Loose = new();
 
+    /// <summary>The machines' labour hook (4.5): a station coupled to a machine's cell takes the labour the premises' power net gives it; no coupling, or no powered machine there: null, and the kind's own <c>labour_pm</c> stands.</summary>
+    public static Func<Business, int, int?> MachineLabour(Func<ScaleBook?> book, Func<Ravensguard.Sim.Building.PowerWorld?> power) => (b, si) =>
+    {
+        if (book() is not { Couplings.Count: > 0 } sb || sb.CouplingOf(b.Id.Value, si) is not { } k) return null;
+        return power()?.LabourPmAt(k.X, k.Y, k.Z);
+    };
+
     private static ScaleWorld Make(WorldState state, ContentDatabase content, ProductionSystem prod)
     {
         var book = state.Scale ??= new ScaleBook();
@@ -205,11 +212,7 @@ public static class ScaleWiring
         sw.StandingWithRealm = (p, realm) => realm < 0 ? 0 : Standing.Of(state.Standing, p, GroupRef.Realm(realm));
         sw.CarterOf = (settlement, day) => Ravensguard.Sim.Holdings.HoldingsDesk.CarterOf(state, settlement, day);
         // P7-ES2 (4.5): a station coupled to a machine takes its labour from the premises' power net; no coupling, or no net there: the kind's own labour_pm
-        prod.StationLabourPm = (b, si) =>
-        {
-            if (state.Scale is not { Couplings.Count: > 0 } sb || sb.CouplingOf(b.Id.Value, si) is not { } k) return null;
-            var pw = state.HomeRecords?.Sim.Get<Ravensguard.Sim.Building.PowerWorld>(); return pw?.LabourPmAt(k.X, k.Y, k.Z);
-        };
+        prod.StationLabourPm = MachineLabour(() => state.Scale, () => state.HomeRecords?.Sim.Get<Ravensguard.Sim.Building.PowerWorld>());
         prod.StationMachineWhy = (b, si) =>
         {
             if (state.Scale?.CouplingOf(b.Id.Value, si) is not { } k || state.HomeRecords?.Sim.Get<Ravensguard.Sim.Building.PowerWorld>() is not { } pw) return "sc_machine_idle";

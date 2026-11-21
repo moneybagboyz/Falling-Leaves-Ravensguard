@@ -33,10 +33,10 @@ public sealed partial class ScaleWorld
         if (book == null) return OwnResult.No("sc_contract_no_book");
         long mid = book.MidMicro(good);
         int ts = seller.Owner >= 0 ? pt.SkillLevelOf(seller.Owner, Skill.Trading) : 0, tb = buyer.Owner >= 0 ? pt.SkillLevelOf(buyer.Owner, Skill.Trading) : 0;
-        long price = Contracts.PriceMicro(mid, ts, tb, ss.ContractBandPm);
+        long price = SupplyTerms.PriceMicro(mid, ts, tb, ss.ContractBandPm);
         bool piece = Prod.Econ.Goods.IsPiece(good);
         if (!piece && qty < ss.ContractMinG) return OwnResult.No("sc_contract_too_small", ss.ContractMinG / 1000);
-        if (piece && Contracts.SeasonMites(qty, price, everyDays, TimeConst.DaysPerSeason) < ss.ContractMinSeasonMites) return OwnResult.No("sc_contract_too_small", ss.ContractMinSeasonMites);
+        if (piece && SupplyTerms.SeasonMites(qty, price, everyDays, TimeConst.DaysPerSeason) < ss.ContractMinSeasonMites) return OwnResult.No("sc_contract_too_small", ss.ContractMinSeasonMites);
         var c = new SupplyContract
         {
             Id = Book.NextContractId++, Seller = seller.Id.Value, Buyer = buyer.Id.Value, Good = Prod.Econ.Goods.StringId(good), QtyPerDelivery = qty, EveryDays = everyDays,
@@ -111,7 +111,7 @@ public sealed partial class ScaleWorld
         if (!Prod.Econ.Goods.TryIdOf(c.Good, out var g)) return false;
         long qty = c.QtyPerDelivery;
         if (seller.Store.Qty(g) < qty) return false;
-        long pay = Contracts.PayMites(qty, c.PriceMicro);
+        long pay = SupplyTerms.PayMites(qty, c.PriceMicro);
         var reg = Prod.Pop.Region;
         long dist = 0; bool gate = false;
         if ((uint)seller.Settlement < (uint)reg.Settlements.Count && (uint)buyer.Settlement < (uint)reg.Settlements.Count && seller.Settlement != buyer.Settlement)

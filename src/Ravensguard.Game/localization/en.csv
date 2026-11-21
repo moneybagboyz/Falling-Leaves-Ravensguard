@@ -3945,6 +3945,17 @@ bz_ui_btn_appoint,Make foreman
 bz_ui_btn_unappoint,Dismiss foreman
 bz_ui_guild_row,"Guild {0}: {1} over its size rules, {2} fines{3}"
 bz_ui_licensed,", licensed"
+bz_ui_costs,Costs
+bz_ui_cost_row,"{0}: {1} a kg to make, {2} a kg at today's output, {3} at the cap; the markets in reach take {4} a day{5}"
+bz_ui_cost_stops,", stopped: the price is under cost"
+bz_ui_machine_on,"{0}: machine at work, labour {1}%"
+bz_ui_machine_off,"{0}: machine idle ({1})"
+bz_ui_contract_row,"Contract {0}: {1} {2}, {3}, {4} every {5} days; {6} delivered, {7} missed ({8})"
+bz_ui_contract_to,sells to
+bz_ui_contract_from,buys from
+bz_ui_btn_end_contract,End
+sc_machine_idle,the machine is not turning
+sc_machine_none,no machine stands at that cell
 bz_ui_btn_licence,Ask a licence
 bz_ui_status,"Cash {0}, worth {1}, staff {2}/{3}, a season about {4}; {5}"
 bz_ui_steward,The steward

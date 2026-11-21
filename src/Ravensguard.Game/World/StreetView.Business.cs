@@ -132,6 +132,7 @@ public partial class StreetView
         Foreman = (b, p) => IssueBiz(BusinessDesk.Foreman(b, p, HeroNow())),
         Unforeman = (b, p) => IssueBiz(BusinessDesk.Unforeman(b, p, HeroNow())),
         Manufactory = b => IssueBiz(BusinessDesk.Manufactory(b, HeroNow())),
+        EndContract = id => IssueBiz(BusinessDesk.EndContract(id, HeroNow())),
     };
 
     /// <summary>What the hero carries that the business's recipes take (all of it goes in).</summary>

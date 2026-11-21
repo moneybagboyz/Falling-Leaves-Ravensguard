@@ -48,7 +48,7 @@ public static class Carting
 }
 
 /// <summary>Supply contracts, pure rules (4.3): the price fixed at signing and the payment on delivery.</summary>
-public static class Contracts
+public static class SupplyTerms
 {
     /// <summary>The signing price: the seller's book mid times <c>1,000 + (Trading_seller - Trading_buyer) / 2</c> permille, within the band (50) of the mid. ES-8: equal Trading is the mid itself.</summary>
     public static long PriceMicro(long midMicro, int tradingSeller, int tradingBuyer, int bandPm)

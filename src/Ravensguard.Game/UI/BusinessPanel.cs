@@ -28,6 +28,8 @@ public sealed class BusinessActions
     public Action<EntityId, int>? Foreman;
     public Action<EntityId, int>? Unforeman;
     public Action<EntityId>? Manufactory;
+    /// <summary>P7-ES2: end a supply contract the hero is a party to.</summary>
+    public Action<int>? EndContract;
 }
 
 /// <summary>
@@ -73,6 +75,8 @@ public partial class BusinessPanel : Control
     }
 
     static string M(long m) => Quotes.Money(m);
+    /// <summary>Micro-mites a gram as mites a kilogram with one decimal.</summary>
+    static string Micro(long microPerGram) => $"{microPerGram / 1000}.{microPerGram % 1000 / 100}";
 
     Label Row(string text, bool dim = false)
     {
@@ -155,6 +159,21 @@ public partial class BusinessPanel : Control
             }
             if (cw.Guild.Length > 0)
                 _body.AddChild(Line(L.F("bz_ui_guild_row", cw.Guild, cw.OverCaps, cw.Fines, cw.Licensed ? L.T("bz_ui_licensed") : ""), (L.T("bz_ui_btn_licence"), v.Owned && !cw.Licensed ? () => _act.Manufactory?.Invoke(id) : null, v.Owned && !cw.Licensed)));
+        }
+        // costs (P7-ES2, economies-of-scale 9): the variable cost of a unit, the unit cost at today's output and at the cap the markets in reach set, the machines and the supply contracts
+        if (v.Costs is { } co && (co.Recipes.Count > 0 || co.Machines.Count > 0 || co.Contracts.Count > 0))
+        {
+            _body.AddChild(UiKit.Hint(L.T("bz_ui_costs")));
+            foreach (var cr in co.Recipes.Take(6))
+                _body.AddChild(Row(L.F("bz_ui_cost_row", cr.Recipe, Micro(cr.InputsMicroPerUnit + cr.WagesMicroPerUnit), Micro(cr.UnitCostMicroToday), Micro(cr.UnitCostMicroAtCap), cr.CapPerDay > 0 ? Quotes.Weight(cr.CapPerDay) : "-", cr.Stops ? L.T("bz_ui_cost_stops") : ""), cr.Stops));
+            foreach (var mr in co.Machines)
+                _body.AddChild(Row(mr.Cause.Length == 0 ? L.F("bz_ui_machine_on", mr.Kind, mr.LabourPm / 10) : L.F("bz_ui_machine_off", mr.Kind, L.T(mr.Cause)), mr.Cause.Length > 0));
+            foreach (var ct in co.Contracts)
+            {
+                var c = ct;
+                _body.AddChild(Line(L.F("bz_ui_contract_row", c.Id, c.Seller ? L.T("bz_ui_contract_to") : L.T("bz_ui_contract_from"), c.Other, c.Good, Quotes.Weight(c.QtyPerDelivery), c.EveryDays, c.Delivered, c.Missed, c.State),
+                    (L.T("bz_ui_btn_end_contract"), v.Owned && c.State == "Open" ? () => _act.EndContract?.Invoke(c.Id) : null, v.Owned && c.State == "Open")));
+            }
         }
         // stations, store, recipes
         _body.AddChild(UiKit.Hint(L.T("bz_ui_stations")));
