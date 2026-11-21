@@ -57,6 +57,7 @@ public sealed class RumourTable
             if (from >= 0 && d.TryGetValue(from, out int n)) { if (n <= 1) d.Remove(from); else d[from] = n - 1; }
             if (to >= 0) d[to] = d.GetValueOrDefault(to) + 1;
             _touched.Add(id);
+            if (_index.TryGetValue((id, person), out int hi)) { var l = _hearings[id]; var h = l[hi]; h.HomeAt = (short)(to + 1); l[hi] = h; }      // the load rebuilds from where he lives now
         }
     }
 
