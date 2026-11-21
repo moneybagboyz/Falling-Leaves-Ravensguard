@@ -51,8 +51,8 @@ public class RngStreamsTests
         foreach (var (name, v) in all)
         {
             Assert.True(fromSource.Contains((name, v)) || text.Contains(name + " = "), $"stream {name} is not declared in RngStreams.cs");
-            bool ok = v == 0xC0u || (v is >= 0x200u and <= 0x6FFu);                                     // P6-A2: Phase 6 owns 0x600..0x6FF
-            Assert.True(ok, $"stream {name} = 0x{v:X} is outside weather (0xC0), Phase 2 (0x200..0x2FF), Phase 3 (0x300..0x3FF), Phase 4 (0x400..0x4FF), Phase 5 (0x500..0x5FF) and Phase 6 (0x600..0x6FF)");
+            bool ok = v == 0xC0u || (v is >= 0x200u and <= 0x7FFu);                                     // P6-A2: Phase 6 owns 0x600..0x6FF; P7: Phase 7 owns 0x700..0x7FF
+            Assert.True(ok, $"stream {name} = 0x{v:X} is outside weather (0xC0), Phase 2 (0x200..0x2FF), Phase 3 (0x300..0x3FF), Phase 4 (0x400..0x4FF), Phase 5 (0x500..0x5FF), Phase 6 (0x600..0x6FF) and Phase 7 (0x700..0x7FF)");
         }
         foreach (var (name, v) in all.Where(x => x.Name is nameof(RngStreams.LinePick) or nameof(RngStreams.BarkPick) or nameof(RngStreams.RumourWitness) or nameof(RngStreams.RumourHear) or nameof(RngStreams.RumourDistort) or nameof(RngStreams.GatherPartition)))
             Assert.InRange(v, 0x310u, 0x315u);
