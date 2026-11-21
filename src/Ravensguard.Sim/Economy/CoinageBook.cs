@@ -33,6 +33,17 @@ public sealed class CoinageBook
 
     public bool IsEmpty => Stock.IsEmpty && Queue.Count == 0 && Season.Count == 0 && Used.Count == 0;
 
+    /// <summary>The <c>CoinHash</c> of the Phase 7 trail (coinage 6): the stock, the gold book and the queues, in order. Joins the trail once the book is non-empty; empty text while it is empty.</summary>
+    public string Hash()
+    {
+        if (IsEmpty) return "";
+        var s = Stock;
+        var text = string.Join("|", s.GoldStruck, s.GoldMelted, s.CopperStruck, s.CopperMelted, s.Loose, s.GoldMeltDustMg, s.SilverMeltDustMg, s.CopperMeltDustMg,
+            string.Join(",", s.Opted.Select(kv => kv.Key + ":" + kv.Value)), string.Join(",", s.Extra),
+            string.Join(",", Queue.Select(d => $"{d.Realm}:{(int)d.Metal}:{d.Mg}:{d.Seller}")), string.Join(",", Season.Select(r => $"{r.Realm}:{r.Gold}:{r.Silver}:{r.Copper}:{r.Seigniorage}:{r.CopperCapped}")));
+        return Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(text)))[..16];
+    }
+
     public MintSeasonRow SeasonOf(int realm)
     {
         foreach (var r in Season) if (r.Realm == realm) return r;

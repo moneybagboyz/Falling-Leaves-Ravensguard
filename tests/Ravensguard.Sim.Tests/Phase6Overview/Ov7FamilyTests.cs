@@ -147,7 +147,7 @@ public class Ov7FamilyTests(ITestOutputHelper output)
         _ = fiefHolder;
         p.Days(10);
         Assert.True(e.Ledger.Audit().IsConserved); Assert.Equal(seeded, e.Ledger.Audit().Seeded.Mites);
-        Assert.Equal(0, e.Ledger.Audit().Minted.Mites);
+        Assert.True(e.Ledger.Audit().IsConserved);   // P7-CN1: the mints strike the silver the hearths send (Minted is no longer 0)
         _ = coinBefore;
     }
 }

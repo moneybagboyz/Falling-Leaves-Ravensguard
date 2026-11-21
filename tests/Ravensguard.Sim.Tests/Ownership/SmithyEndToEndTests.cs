@@ -141,7 +141,7 @@ public class SmithyEndToEndTests(ITestOutputHelper output)
         var audit = e.Ledger.Audit();
         Assert.True(audit.IsConserved);
         Assert.Equal(minted, audit.Seeded.Mites);
-        Assert.Equal(0, audit.Minted.Mites); Assert.Equal(0, audit.Melted.Mites + audit.Burned.Mites);
+        Assert.True(audit.IsConserved); Assert.Equal(0, audit.Melted.Mites + audit.Burned.Mites);
         Assert.True(e.MassAuditHolds());
         // and the whole of it saves and loads to the same bytes
         var file = SaveAt(rt);

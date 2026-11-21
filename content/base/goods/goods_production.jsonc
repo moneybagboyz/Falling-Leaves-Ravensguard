@@ -30,7 +30,7 @@
   { "type": "good", "id": "peat", "name": "Peat", "class": "fuel", "state": "solid", "bulk_litres_per_kg": 3.0, "base_price_mites_per_kg": 4.4, "spoil_class": "firewood", "target_cover_days": 20, "tags": ["fuel"] },
   { "type": "good", "id": "copper_ore", "name": "Copper ore", "class": "ore", "state": "solid", "bulk_litres_per_kg": 0.4, "base_price_mites_per_kg": 2.6, "spoil_class": "inert", "target_cover_days": 60, "tags": ["ore"] },
   // P7-CN1 (coinage 5.6): gold ore, 6 g of gold a tonne by default (refine_gold; a deposit's grade is the audit's F-4)
-  { "type": "good", "id": "gold_ore", "name": "Gold ore", "class": "ore", "state": "solid", "bulk_litres_per_kg": 0.4, "base_price_mites_per_kg": 3.5, "spoil_class": "inert", "target_cover_days": 60, "tags": ["ore"] },
+  { "type": "good", "id": "gold_ore", "name": "Gold ore", "class": "ore", "state": "solid", "bulk_litres_per_kg": 0.4, "base_price_mites_per_kg": 3.2325, "spoil_class": "inert", "target_cover_days": 60, "tags": ["ore"] },
   { "type": "good", "id": "tin_ore", "name": "Tin ore", "class": "ore", "state": "solid", "bulk_litres_per_kg": 0.4, "base_price_mites_per_kg": 2.6, "spoil_class": "inert", "target_cover_days": 60, "tags": ["ore"] },
   { "type": "good", "id": "galena", "name": "Galena", "class": "ore", "state": "solid", "bulk_litres_per_kg": 0.4, "base_price_mites_per_kg": 2.6, "spoil_class": "inert", "target_cover_days": 60, "tags": ["ore"] },
   { "type": "good", "id": "copper", "name": "Copper", "class": "metal", "state": "solid", "bulk_litres_per_kg": 0.13, "base_price_mites_per_kg": 168.9167, "spoil_class": "iron", "target_cover_days": 60, "tags": ["metal"] },

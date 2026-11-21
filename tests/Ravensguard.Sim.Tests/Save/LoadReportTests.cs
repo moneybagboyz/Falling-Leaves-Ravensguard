@@ -100,7 +100,7 @@ public class LoadReportTests
         var file = SaveCodec.Decode(Bytes(WorldOnA(), A.Value.Hash, ModsA));
         var rep = WorldSave.Inspect(file, A.Value.Db, A.Value.Hash, ModsA);
         Assert.False(rep.NeedsConfirmation); Assert.False(rep.ContentChanged); Assert.False(rep.LayersChecked); Assert.True(rep.CanLoad);
-        Assert.Equal("Nothing changed.", rep.ToText());
+        Assert.Equal(LoadReport.CoinageNotice, rep.ToText());          // P7-CN1: the fixture is written by a pre-Phase 7 version: only the informational coinage notice, never a question
     }
 
     [Fact]

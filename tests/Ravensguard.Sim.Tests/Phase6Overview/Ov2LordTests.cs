@@ -119,7 +119,7 @@ public class Ov2LordTests(ITestOutputHelper output)
         var audit = e.Ledger.Audit();
         Assert.True(audit.IsConserved);
         Assert.Equal(seeded, audit.Seeded.Mites);                                                           // every mite since the faucet of the purse is accounted for (nothing minted by the rule, the relief, the wages or the skim)
-        Assert.Equal(0, audit.Minted.Mites);
+        Assert.True(audit.IsConserved);   // P7-CN1: the mints strike the silver the hearths send (Minted is no longer 0)
         Assert.Equal(heldByHero0 + 1, s.Rule.Fiefs.Values.Count(f => f.Holder == (long)hero.Value)); Assert.Equal(fiefsHeld, s.Rule.Fiefs.Count);
         Assert.Equal(mineFief, s.Rule.Fiefs.Values.Single(f => f.Holder == (long)hero.Value).Fief);
         Assert.True(e.MassAuditHolds());

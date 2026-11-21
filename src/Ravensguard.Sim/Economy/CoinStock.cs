@@ -63,7 +63,7 @@ public sealed class CoinStock
     /// </summary>
     internal void AfterTransfer(Ledger l, PurseId from, PurseId to, long amount)
     {
-        if (!Opted.TryGetValue(from.Index, out long g) || g <= 0) return;
+        if (Opted.Count == 0 || !Opted.TryGetValue(from.Index, out long g) || g <= 0) return;
         if (amount >= TransferMinMites)
         {
             long mv = Math.Min(g, amount / Coin.MitesPerGold);
