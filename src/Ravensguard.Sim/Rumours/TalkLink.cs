@@ -33,10 +33,13 @@ public sealed class TalkLink
 
     public static TalkLink Attach(WorldRuntime rt, LineBook? book = null)
     {
-        var l = new TalkLink(rt, book ?? LineBook.Default);
-        rt.AfterHour += l.OnHour;
-        _ = rt.AtBarrier(() => { l.Publish(rt.HourDone); return 0; });
-        return l;
+        return rt.LinkOnce(() =>
+        {
+            var l = new TalkLink(rt, book ?? LineBook.Default);
+            rt.AfterHour += l.OnHour;
+            _ = rt.AtBarrier(() => { l.Publish(rt.HourDone); return 0; });
+            return l;
+        });
     }
 
     private TalkState State => Runtime.State.Talk ??= new TalkState();

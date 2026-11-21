@@ -33,7 +33,7 @@ public sealed class TaxSystem
     public Func<IReadOnlyList<int>, IEnumerable<int>>? HouseholdOrder { get; set; }
     /// <summary>P6-C3 (rule-and-income 4.8): told after each settlement's round with the hearth tax it brought in (settlement, mites, the day), so the reeve's or bailiff's hands can be seen on it; null when no rule book is installed. Not saved.</summary>
     public Action<int, long, GameTime, RegionOutbox>? Collected { get; set; }
-    /// <summary>P6-E1 (unrest 4.1): whether a household pays no hearth tax this season because its grievances ran high (settlement, household, day); null when no unrest book is installed. Added to Phase 2's own evasion.</summary>
+    /// <summary>P6-E1 (unrest 4.1): whether a household pays no hearth tax this season because its grievances ran high (settlement, household, day); null when no unrest book is installed. S13: replaces Phase 2's own evasion roll (one owner).</summary>
     public Func<int, int, int, bool>? EvasionHook { get; set; }
     /// <summary>P6-E1: the unrest part holds the riots and revolts (the Phase 2 granary riot and the revolt-brewing entry are not made); false in a bare world.</summary>
     public bool RiotsElsewhere { get; set; }
@@ -165,7 +165,8 @@ public sealed class TaxSystem
         long dueD = hht.Deed[h] == DeedKind.Rented ? DwellingRent(hht.Dwelling[h]) : 0;
         State.Add(TaxTally.HearthDue, dueH);
         long owedH = (row?.ArrHearth ?? 0) + dueH, owedD = (row?.ArrDwelling ?? 0) + dueD;
-        bool evade = evasionOn && (gr & Grievance.Tax) != 0 && owedH + owedD > 0
+        // S13 (P7-0B): one owner. With unrest attached (EvasionHook set) E1's rung-2 roll decides evasion and Phase 2's own roll is skipped.
+        bool evade = evasionOn && EvasionHook == null && (gr & Grievance.Tax) != 0 && owedH + owedD > 0
             && DetRng.Range(_w.Seed, day, hht.IdOf(h).Value, Stream, 0, 0, 100) < Policy.EvasionChancePctWithGrievance;
         if (!evade && EvasionHook != null && owedH + owedD > 0 && EvasionHook(s, h, day)) evade = true;
         long avail = Math.Max(0, led.Balance(purse).Mites - (hungry ? (long)hht.MemberCount[h] * Policy.HungerKeepMitesPerMember : 0));

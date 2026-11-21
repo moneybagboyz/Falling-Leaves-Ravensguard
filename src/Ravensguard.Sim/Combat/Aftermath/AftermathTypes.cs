@@ -106,8 +106,8 @@ public sealed class AftermathRules
 /// <summary>Coin reasons of the aftermath (the ledger's reasons are shared with saves and the treasury view, so these are aliases, as the jobs' escrow is).</summary>
 public static class AftermathCoin
 {
-    /// <summary>Robbed coin and a guard's fine.</summary>
-    public static readonly TransferReason Plunder = TransferReason.Fine;
+    /// <summary>Robbed coin (P7-0B: its own reason, no longer Fine).</summary>
+    public static readonly TransferReason Plunder = TransferReason.Plunder;
     public static readonly TransferReason Ransom = TransferReason.Fine;
     public static readonly TransferReason Funeral = TransferReason.Tithe;
     public static readonly TransferReason Inherit = TransferReason.Inheritance;

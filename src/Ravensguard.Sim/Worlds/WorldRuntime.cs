@@ -51,6 +51,19 @@ public sealed class WorldRuntime : IDisposable
 
     /// <summary>Called on the tick worker right after each hour is stepped, before the barrier's snapshot is swapped in (the hero's command desk hangs here).</summary>
     public event Action<long>? AfterHour;
+
+    // ---- P7-0B (review finding G1): the hourly links of Phase 6 (talk, law, family, contracts) belong to the runtime, not to the Godot street view
+    private readonly Dictionary<Type, object> _links = [];
+    private ContentDatabase? _linkContent;
+    /// <summary>The Phase 6 links (talk, law, family, contracts): attached by <see cref="Start"/> when the world has a hero, or by a harness that steps with <see cref="AdvanceTo"/> through <see cref="Phase6Links.AttachAll"/> (null until then).</summary>
+    public Phase6LinkSet? Phase6 { get; internal set; }
+
+    /// <summary>Makes a link once per runtime: a second <c>Attach</c> of the same kind (a test that attaches by hand, then <see cref="Start"/>) gets the first one back, so an hour never runs twice.</summary>
+    internal T LinkOnce<T>(Func<T> make) where T : class
+    {
+        if (_links.TryGetValue(typeof(T), out var have)) return (T)have;
+        var made = make(); _links[typeof(T)] = made; return made;
+    }
     /// <summary>The worker's last failure (null while healthy). The runtime stops starting hours after it; the game reports it once.</summary>
     public Exception? Fault => Volatile.Read(ref _fault);
     public RuntimeSnapshot Snapshot => _snapshot;
@@ -82,7 +95,7 @@ public sealed class WorldRuntime : IDisposable
     [System.Diagnostics.CodeAnalysis.MemberNotNull(nameof(State), nameof(Services), nameof(Manager), nameof(Records), nameof(Scheduler), nameof(Hero), nameof(_snapshot))]
     private void Init(WorldState state, ContentDatabase content, IRegionPager? pager, bool trimTerrain, int dailyRing, int maxParallel, RegionManager? manager)
     {
-        State = state;
+        State = state; _linkContent = content;
         var home = state.HomeRegion;
         Services = new RegionServices(state.Seed, content, state.Continent, home) { History = state.History };
         var region = state.Population.Region;
@@ -169,6 +182,7 @@ public sealed class WorldRuntime : IDisposable
     public void Start()
     {
         if (_worker != null) return;
+        if (Phase6 == null && _links.Count == 0 && _linkContent != null && State.Hero != null) Phase6Links.AttachAll(this, _linkContent);   // G1 (P7-0B): the game's hourly links are the runtime's: talk, law, family, contracts in the one order, behind the hero, before the first hour (not when a harness attached links by hand: it chose its own set)
         _worker = new Thread(WorkerLoop) { IsBackground = true, Name = "region-tick", Priority = ThreadPriority.BelowNormal };
         _worker.Start();
     }

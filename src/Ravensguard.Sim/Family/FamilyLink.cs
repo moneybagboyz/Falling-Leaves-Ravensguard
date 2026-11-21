@@ -25,9 +25,7 @@ public sealed class FamilyLink
 
     public static FamilyLink Attach(WorldRuntime rt)
     {
-        var l = new FamilyLink(rt);
-        rt.AfterHour += l.OnHour;
-        return l;
+        return rt.LinkOnce(() => { var l = new FamilyLink(rt); rt.AfterHour += l.OnHour; return l; });
     }
 
     private void OnHour(long hour)

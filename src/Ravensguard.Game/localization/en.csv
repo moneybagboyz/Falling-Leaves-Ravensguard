@@ -5371,6 +5371,8 @@ ch_dp_cb_excommunication,an excommunication
 ch_dp_cb_claim,an old claim
 ch_dp_pact_signed,"{a} and {b} put their seals to a {kind}, to last {days} days."
 ch_dp_pact_ended,The {kind} between {a} and {b} came to its end.
+ch_dp_ruler_died,"{ruler} dies of old age at {age}, and the realm mourns."
+ch_dp_succession,"{heir} takes the crown after {dead}."
 ch_dp_pact_truce,truce
 ch_dp_pact_alliance,alliance
 ch_dp_pact_vassalage,vassalage
@@ -5410,6 +5412,7 @@ ch_note_dp_cb_raid,his lands had been raided
 ch_note_dp_cb_excomm,the other realm's ruler stood excommunicate
 ch_note_dp_pact_terms,the terms were agreed
 ch_note_dp_pact_ran_out,its years ran out
+ch_note_dp_old_age,the years had come to him
 ch_note_dp_peace_weary,the realm was worn out by the war
 ch_note_dp_treasury_thin,the treasury held less than one season of the payroll
 ch_note_dp_treasury_full,the treasury was full

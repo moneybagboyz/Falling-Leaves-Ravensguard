@@ -147,6 +147,13 @@ public sealed class LawWorld
             Captives = db != null ? Ravensguard.Sim.Combat.Aftermath.AftermathDesk.BookOf(st, db) : st.Captivity, Rules = st.Captivity?.Rules ?? AftermathRules.Default,
             Wounds = st.Wounds, Human = db != null && st.Wounds != null ? Humans.GetValue(db, d => new Ravensguard.Sim.Combat.CombatTables(d).V2.Plan("human")) : null,
             Marks = () => (st.Standing ??= new StandingBook()).Marks,
+            // S11 (P7-0B): what one person thinks of another is the talk book's trust, as ContractWiring.TrustPm reads it (the hero is asked through the party's known book)
+            OpinionPm = (a, b) =>
+            {
+                if (b == hero) return st.Party != null && st.Party.Known.TryGetValue(a, out var k) ? k.TrustPm : 0;
+                int ia = pop.People.IndexOf(a), ib = pop.People.IndexOf(b);
+                return st.Talk != null && ia >= 0 && ib >= 0 ? st.Talk.Relations.Of(ia, ib).TrustPm : 0;
+            },
             PurseOf = p =>
             {
                 if (e == null) return null;
@@ -168,11 +175,24 @@ public sealed class LawWorld
             },
             RationPayee = s =>
             {
+                // S10 (P7-0B): the baker's or miller's purse in this place, else in the nearest place that has one (squared tile distance, ties to the lower index)
                 if (e == null) return null;
-                foreach (var occ in new[] { Occupation.Baker, Occupation.Miller })
-                    for (int i = 0; i < pop.People.Count; i++)
-                        if (pop.People.IsAlive(i) && pop.People.Occupation[i] == occ && pop.People.HomeSettlement[i] == s && pop.People.Household[i] is var hh and >= 0 && hh < e.HouseholdCount) return e.HouseholdPurse[hh];
-                return null;
+                PurseId? best = null; long bestD = long.MaxValue;
+                for (int i = 0; i < pop.People.Count; i++)
+                {
+                    if (!pop.People.IsAlive(i) || pop.People.Occupation[i] is not (Occupation.Baker or Occupation.Miller)) continue;
+                    int home = pop.People.HomeSettlement[i], hh = pop.People.Household[i];
+                    if (hh < 0 || hh >= e.HouseholdCount || home < 0 || home >= region.Settlements.Count) continue;
+                    long d = 0;
+                    if (home != s && s >= 0 && s < region.Settlements.Count)
+                    {
+                        long dx = region.Settlements[home].CenterX - region.Settlements[s].CenterX, dy = region.Settlements[home].CenterY - region.Settlements[s].CenterY;
+                        d = 1 + dx * dx + dy * dy;
+                    }
+                    else if (home != s) d = long.MaxValue - 1;
+                    if (d < bestD) { bestD = d; best = e.HouseholdPurse[hh]; }
+                }
+                return best;
             },
             CultureKey = (s, kind) => db != null && s >= 0 && s < region.Settlements.Count && Ravensguard.Sim.Faith.ReligionBook.CultureOf(db, region.Settlements[s].Culture) is { } cu ? cu.Crimes.GetValueOrDefault(kind) : null,
             LordOf = f => HeroHolds(f) ? EntityId.None : f >= 0 && f < pop.FiefLord.Length && pop.FiefLord[f] >= 0 && pop.FiefLord[f] < pop.People.Count ? pop.People.IdOf(pop.FiefLord[f]) : EntityId.None,

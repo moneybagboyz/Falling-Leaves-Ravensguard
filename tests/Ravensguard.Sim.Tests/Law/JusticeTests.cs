@@ -34,7 +34,7 @@ public class JusticeTests(ITestOutputHelper output)
     private sealed class Rig
     {
         public Chronicle C; public LawWorld W = null!; public CrimeBook Cb = new(); public JusticeBook Jb = new(); public Ledger L = new(); public JobTable Jobs = new(); public PurseId Treasury;
-        public CaptiveBook Cap; public WoundLedger Wounds; public MarkBook Marks = new(); public PersonTable P; public IdAllocator Ids = new();
+        public PurseId? Baker; public CaptiveBook Cap; public WoundLedger Wounds; public MarkBook Marks = new(); public PersonTable P; public IdAllocator Ids = new();
         public Dictionary<int, PurseId> Hh = [];
         public List<(EntityId Who, long Sec, ulong Entry)> Hanged = []; public List<(EntityId Who, int Realm)> Forfeits = []; public List<(EntityId Who, int Delta)> Grievances = [];
         public Func<EntityId, int, int> Standing = (_, _) => 0; public Func<EntityId, int> Literacy = _ => 0; public Func<EntityId, int> Honesty = _ => 45;
@@ -57,7 +57,7 @@ public class JusticeTests(ITestOutputHelper output)
                 CultureKey = culture, PurseOf = Purse, VictimPurse = v => v == 0 ? null : Purse(new EntityId(v)), LordOf = _ => P.IdOf(1), HeroLordOf = _ => HeroLord,
                 StandingWithFief = (p, f) => Standing(p, f), LiteracyOf = p => Literacy(p), HonestyOf = p => Honesty(p),
                 Execute = (p, sec, entry) => { Hanged.Add((p, sec, entry)); int r = P.IndexOf(p); if (r >= 0) P.Status[r] = PersonStatus.Dead; },
-                Forfeit = (p, realm, sec) => Forfeits.Add((p, realm)), Grievance = (p, d) => Grievances.Add((p, d)), RationPayee = _ => null,
+                Forfeit = (p, realm, sec) => Forfeits.Add((p, realm)), Grievance = (p, d) => Grievances.Add((p, d)), RationPayee = _ => Baker,
             };
         }
 
@@ -104,6 +104,7 @@ public class JusticeTests(ITestOutputHelper output)
         var arrested = r.Of("crime_arrested").Single();
         Assert.Equal(rec.Reported, arrested.Causes[0].EventId!.Value.Value);
         // fed one measure a day (3 mites) from the fief treasury for three days
+        r.Baker = r.L.Open(PurseKind.Household, EntityId.Make(IdKind.Household, 900));      // S10: the ration is bought from a baker's purse
         long t0 = r.L.Balance(r.Treasury).Mites;
         for (int d = 3; d <= 5; d++) Gaol.Feed(r.W, r.Cb, r.Jb, d, Rig.Sec(d, 0));
         Assert.Equal(t0 - 3 * r.W.S.RationMites, r.L.Balance(r.Treasury).Mites);
@@ -119,6 +120,20 @@ public class JusticeTests(ITestOutputHelper output)
         Gaol.Feed(r.W, r.Cb, r.Jb, 7, Rig.Sec(7, 0)); Assert.False(r.Held(thief));
         Assert.Equal(CrimeState.Reported, rec.State);
         Assert.Contains(r.Of("gaol_released"), e => e.Params!.Any(p => p.Key == "jl_why_unfed"));
+    }
+
+    [Fact]
+    public void EA_F3_S10_ARationWithNoBakerInTheRegionIsNeverBurned_TheTreasuryKeepsItsCoin()
+    {
+        var r = new Rig(Vale);
+        var thief = r.Id(30); r.Crime(thief, "theft", 1);
+        Gaol.Arrest(r.W, r.Cb, r.Jb, thief, 0, Rig.Sec(2, 10), inAct: false, r.Id(0));
+        long t0 = r.L.Balance(r.Treasury).Mites, burnt0 = r.L.Sunk(SinkReason.Burn).Mites;
+        for (int d = 3; d <= 5; d++) Gaol.Feed(r.W, r.Cb, r.Jb, d, Rig.Sec(d, 0));
+        Assert.Equal(3, r.Jb.Gaol[thief.Value].FedDays);
+        Assert.Equal(burnt0, r.L.Sunk(SinkReason.Burn).Mites);                          // fails before P7-0B: three rations were burned
+        Assert.Equal(t0, r.L.Balance(r.Treasury).Mites);                                // the seat's own treasury bought the bread from its own stores
+        Assert.True(r.L.Audit().IsConserved);
     }
 
     [Fact]

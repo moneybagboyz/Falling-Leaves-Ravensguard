@@ -14,9 +14,7 @@ public sealed class ContractLink
 
     public static ContractLink Attach(WorldRuntime rt)
     {
-        var l = new ContractLink(rt);
-        rt.AfterHour += l.OnHour;
-        return l;
+        return rt.LinkOnce(() => { var l = new ContractLink(rt); rt.AfterHour += l.OnHour; return l; });
     }
 
     private void OnHour(long hour) => ContractWiring.OnHour(Runtime.State, hour);

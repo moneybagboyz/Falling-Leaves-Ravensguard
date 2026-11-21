@@ -32,7 +32,7 @@ public partial class StreetView
     void AttachTalk()
     {
         if (Runtime is not { } rt || _source?.Content == null || rt.State.Hero == null) return;
-        var links = Ravensguard.Sim.Worlds.Phase6Links.AttachAll(rt, _source.Content);   // talk, law, family, contracts in the one order the soaks use too (P6-G2)
+        var links = Ravensguard.Sim.Worlds.Phase6Links.AttachAll(rt, _source.Content);   // P7-0B: the runtime attached them at Start (behind the hero); this hands back the same set
         _talk = links.Talk; _familyLink = links.Family;
         if (_talk != null) _talk.Codex = _source?.Codex;                          // the legends the talk link tells (P6-C2)
     }
