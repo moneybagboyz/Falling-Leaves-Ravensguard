@@ -50,7 +50,7 @@ public static class Phase6Trail
     private static string Money(long m) => m.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
     public static Phase6TrailReport Run(ContentDatabase db, Continent continent, WorldHistory history, ContinentSettings cs, HistorySettings hs, RegionSettings rs, int cellX, int cellY, Population pop,
-        Action<WorldRuntime, WorldState, int>? atPoint = null)
+        Action<WorldRuntime, WorldState, int>? atPoint = null, Action<WorldRuntime>? onStart = null, Action<WorldRuntime, WorldState>? onEnd = null)
     {
         var report = new Phase6TrailReport();
         var origin = db.All<OriginDef>().OrderBy(o => o.Order).First();
@@ -62,6 +62,7 @@ public static class Phase6Trail
         LawLink.Attach(rt);                                                      // with the heist, bond and faith-politics links
         FamilyLink.Attach(rt);
         ContractLink.Attach(rt);
+        onStart?.Invoke(rt);                                                      // tests: the budgets time each link of the hour from here
         var ctx = new HeroContext(st, st.Party!, db);
         var desk = new HeroDesk();
         var pt = st.Population.People; var region = st.Population.Region; var e = st.Economy!;
@@ -100,6 +101,7 @@ public static class Phase6Trail
             rt.AdvanceTo(GameTime.FromGameHours(dayStart + 24));
         }
         _ = thief;
+        onEnd?.Invoke(rt, st);                                                    // tests: read the ticker's timings before the runtime is disposed
 
         // ---- the hash: every section of the save, in name order
         var file = WorldSave.Capture(st, "h", "0.1");

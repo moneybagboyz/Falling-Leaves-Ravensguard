@@ -236,7 +236,7 @@ public sealed class WorldTicker : IDisposable
             {
                 long s0 = _opt.RecordTimings ? Stopwatch.GetTimestamp() : 0;
                 s.Step(c);
-                if (_opt.RecordTimings) { long dt = Stopwatch.GetTimestamp() - s0; Stats.SystemCell(s.Name).Add(dt); Stats.HourSystem(s.Name, dt); }
+                if (_opt.RecordTimings) { long dt = Stopwatch.GetTimestamp() - s0; Stats.SystemCell(s.Name).Add(dt); Stats.HourSystem(s.Name, dt); if (hour0) Stats.SystemCell0(s.Name).Add(dt); if (seasonDay) Stats.SystemCellSeason(s.Name).Add(dt); }
             }
             if (_opt.RecordTimings) Stats.Phase(phase).Add(Stopwatch.GetTimestamp() - p0);
         }

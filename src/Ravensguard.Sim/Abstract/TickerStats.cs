@@ -33,6 +33,13 @@ public sealed class TickerStats
     public TimingCell Phase(TickPhase p) => _phases[System.Numerics.BitOperations.TrailingZeroCount((int)p)];
     public IReadOnlyDictionary<string, TimingCell> Systems => _systems;
 
+    private readonly Dictionary<string, TimingCell> _systems0 = new(StringComparer.Ordinal), _systemsSeason = new(StringComparer.Ordinal);
+    /// <summary>The same systems' calls in the day's first hour only (the daily passes), and on the first day of a season (Phase 6 budgets, close-out G1).</summary>
+    public IReadOnlyDictionary<string, TimingCell> SystemsHour0 => _systems0;
+    public IReadOnlyDictionary<string, TimingCell> SystemsSeasonDay => _systemsSeason;
+    internal TimingCell SystemCell0(string name) { if (!_systems0.TryGetValue(name, out var c)) _systems0[name] = c = new TimingCell(); return c; }
+    internal TimingCell SystemCellSeason(string name) { if (!_systemsSeason.TryGetValue(name, out var c)) _systemsSeason[name] = c = new TimingCell(); return c; }
+
     internal TimingCell SystemCell(string name)
     {
         if (!_systems.TryGetValue(name, out var c)) _systems[name] = c = new TimingCell();
