@@ -92,6 +92,8 @@ public sealed class ProductionContent
             return k;
         }
         foreach (var d in db.All<BusinessDef>().Where(b => !b.Late).OrderBy(b => b.Id, StringComparer.Ordinal)) kinds.Add(Make(d));
+        // P7-LB2: the large buildings' kinds come right after the ordinary ones (by id), so no ordinary index moves; the stage kinds follow them
+        foreach (var d in db.All<BusinessDef>().Where(b => b.Late).OrderBy(b => b.Id, StringComparer.Ordinal)) kinds.Add(Make(d));
         var industry = Industry.IndustryContent.Load(db, cat);
         foreach (var sk in industry.Stages)
         {
@@ -99,8 +101,6 @@ public sealed class ProductionContent
             var bk = new BusinessKind { Index = (ushort)kinds.Count, Id = sk.Id, OwnerOccupation = Occupation.Lord, FoundedOnly = true, Stage = sk, Slots = [(sk.Primary, sk.Tiers[^1].CrewMax, sk.Wage)] };
             sk.Business = bk; kinds.Add(bk);
         }
-        // P7-LB2: the large buildings' kinds come last (by id), so adding them moves no earlier index
-        foreach (var d in db.All<BusinessDef>().Where(b => b.Late).OrderBy(b => b.Id, StringComparer.Ordinal)) kinds.Add(Make(d));
         var cfg = db.All<ResourceSettingsDef>().OrderBy(x => x.Id, StringComparer.Ordinal).FirstOrDefault() ?? new ResourceSettingsDef { Id = "resources" };
         var scale = db.All<ScaleSettingsDef>().OrderBy(x => x.Id, StringComparer.Ordinal).FirstOrDefault() ?? new ScaleSettingsDef { Id = "default" };
         foreach (var r in book.Recipes) r.Grades = GradesFor(scale, r);

@@ -54,7 +54,9 @@ public class LargeBuildingTests(ITestOutputHelper output)
         // the late kinds come after every other kind (and the stage kinds), so no earlier index moved
         var prod = ProductionContent.Load(Db, new GoodCatalog(Db));
         var late = new[] { "armoury", "fulling_mill", "furnace_house", "granary_depot", "hammer_mill", "ropewalk", "stamp_mill", "warehouse" };
-        Assert.Equal(late, prod.Kinds.TakeLast(late.Length).Select(k => k.Id).ToArray());
+        int first = Array.FindIndex(prod.Kinds, k => k.Id == late[0]);
+        Assert.Equal(late, prod.Kinds.Skip(first).Take(late.Length).Select(k => k.Id).ToArray());          // right after the ordinary kinds, before the stage kinds
+        Assert.True(prod.Kinds.Take(first).All(k => k.Stage == null) && prod.Kinds.Skip(first + late.Length).All(k => k.Stage != null));
         Assert.Equal(375, prod.Kind("hammer_mill").PoweredLabourPm); Assert.Equal(500, prod.Kind("furnace_house").PoweredLabourPm);
         Assert.Equal(125, prod.Kind("fulling_mill").PoweredLabourPm); Assert.Equal(100, prod.Kind("stamp_mill").PoweredLabourPm);
         Assert.True(prod.Kind("armoury").Salaried && prod.Kind("granary_depot").Salaried && prod.Kind("warehouse").Salaried);
@@ -420,6 +422,20 @@ public class LargeBuildingTests(ITestOutputHelper output)
         Assert.Equal(a.Bytes, SaveCodec.SerializeCompressed(WorksSave.Capture(restored)));
         output.WriteLine($"works hash {a.Hash}, {a.Bytes.Length} bytes, {a.Dump}");
         Assert.True(a.Bytes.Length < 30_000);                                                  // <= 30 KB a region
+    }
+
+    [Fact]
+    public void RealmSeats_GetAKeepAndADepot_ByTheSeedAndTheSettlementsId_NotTheDay()
+    {
+        var region = EconFixture.Pop.Region;
+        var plan = SeatBuildings.Plan(region, EconFixture.Seed);
+        Assert.NotEmpty(plan);
+        Assert.Equal(plan, SeatBuildings.Plan(region, EconFixture.Seed));
+        Assert.All(plan.GroupBy(p => p.Settlement), g => Assert.Equal([SeatBuildings.Keep, SeatBuildings.Depot], g.Select(p => p.Plan).ToArray()));
+        Assert.All(plan, p => Assert.InRange(p.Turns, 0, 3));
+        Assert.Equal(plan.Select(p => p.Settlement).OrderBy(s => s), plan.Select(p => p.Settlement));
+        var seats = SeatBuildings.Seats(region);
+        Assert.All(seats, kv => Assert.Contains(plan, p => p.Settlement == kv.Value));
     }
 
     [Fact]
