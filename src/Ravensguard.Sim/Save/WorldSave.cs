@@ -719,6 +719,8 @@ public static partial class WorldSave
         // P6-A2 (overview 7): the first load of a save without the Phase 6 sections derives them from the seed and ids, as a new game does; the load report says so
         var seeded = Ravensguard.Sim.Worlds.Phase6Seeding.Run(restored, content, file.Sections.Keys.ToArray());
         if (seeded.Count > 0) restored.LoadNotes = [.. restored.LoadNotes, .. seeded];
+        var seeded7 = Ravensguard.Sim.Worlds.Phase7Seeding.Run(restored, content, file.Sections.Keys.ToArray());       // P7-0A: appended to the Phase 6 pass
+        if (seeded7.Count > 0) restored.LoadNotes = [.. restored.LoadNotes, .. seeded7];
         return restored;
     }
 

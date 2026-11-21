@@ -51,8 +51,8 @@ public class RngStreamsTests
         foreach (var (name, v) in all)
         {
             Assert.True(fromSource.Contains((name, v)) || text.Contains(name + " = "), $"stream {name} is not declared in RngStreams.cs");
-            bool ok = v == 0xC0u || (v is >= 0x200u and <= 0x6FFu);                                     // P6-A2: Phase 6 owns 0x600..0x6FF
-            Assert.True(ok, $"stream {name} = 0x{v:X} is outside weather (0xC0), Phase 2 (0x200..0x2FF), Phase 3 (0x300..0x3FF), Phase 4 (0x400..0x4FF), Phase 5 (0x500..0x5FF) and Phase 6 (0x600..0x6FF)");
+            bool ok = v == 0xC0u || (v is >= 0x200u and <= 0x7EFu);                                     // P6-A2: Phase 6 owns 0x600..0x6FF; P7-0A: Phase 7 owns 0x700..0x7FF (0x7F0..0x7FF unassigned, checked below)
+            Assert.True(ok, $"stream {name} = 0x{v:X} is outside weather (0xC0), Phase 2 (0x200..0x2FF), Phase 3 (0x300..0x3FF), Phase 4 (0x400..0x4FF), Phase 5 (0x500..0x5FF), Phase 6 (0x600..0x6FF) and Phase 7 (0x700..0x7EF; 0x7F0..0x7FF is the reserve)");
         }
         foreach (var (name, v) in all.Where(x => x.Name is nameof(RngStreams.LinePick) or nameof(RngStreams.BarkPick) or nameof(RngStreams.RumourWitness) or nameof(RngStreams.RumourHear) or nameof(RngStreams.RumourDistort) or nameof(RngStreams.GatherPartition)))
             Assert.InRange(v, 0x310u, 0x315u);
@@ -79,7 +79,7 @@ public class RngStreamsTests
         {
             if (Path.GetFileName(f) == "RngStreams.cs") continue;
             string src = File.ReadAllText(f);
-            foreach (var n in new[] { nameof(RngStreams.ChronicleVariantsReserved), nameof(RngStreams.PurveyanceReserved), nameof(RngStreams.HoldingsReserved) })
+            foreach (var n in new[] { nameof(RngStreams.ChronicleVariantsReserved), nameof(RngStreams.PurveyanceReserved), nameof(RngStreams.HoldingsReserved), nameof(RngStreams.CoinageReserved) })
                 Assert.DoesNotContain("RngStreams." + n, src, StringComparison.Ordinal);
         }
     }
@@ -92,5 +92,34 @@ public class RngStreamsTests
         Assert.Equal(RngStreams.Death, VitalStreams.Death); Assert.Equal(RngStreams.Name, VitalStreams.Name); Assert.Equal(RngStreams.Attributes, VitalStreams.Attributes);
         Assert.Equal(RngStreams.TaxEvents, TaxSystem.Stream);
         Assert.Equal(0x212u, RngStreams.Herds); Assert.Equal(0x221u, RngStreams.ToolWear); Assert.Equal(0x2C8u, RngStreams.Durables); Assert.Equal(0x2E0u, RngStreams.EnvJitter);
+    }
+
+    /// <summary>P7-0A (overview 5): every Phase 7 stream of the table is registered under its id; nothing else sits in 0x700..0x7FF, and 0x7F0..0x7FF stays unassigned.</summary>
+    [Fact]
+    public void Phase7Block_HoldsExactlyTheTableOfOverviewSection5()
+    {
+        uint[] table = [0x700, 0x701, 0x710, 0x720, 0x721, 0x730, 0x731, 0x740, 0x741, 0x742, 0x743, 0x750, 0x751, 0x752, 0x753, 0x754,
+            0x780, 0x781, 0x782, 0x783, 0x790, 0x791, 0x792, 0x793, 0x7A0, 0x7A1, 0x7A2, 0x7A3, 0x7A4, 0x7A5, 0x7A6, 0x7B0, 0x7B1, 0x7B2, 0x7B3, 0x7B4,
+            0x7C0, 0x7C1, 0x7C2, 0x7C3, 0x7C4, 0x7C5, 0x7D0, 0x7D1, 0x7D2, 0x7D3, 0x7D4, 0x7D5, 0x7E0, 0x7E1, 0x7E2, 0x7E3, 0x7E4];
+        var inBlock = All().Where(x => x.Value is >= 0x700u and <= 0x7FFu).Select(x => x.Value).Order().ToArray();
+        Assert.Equal(table.Order().ToArray(), inBlock);
+        Assert.DoesNotContain(inBlock, v => v >= 0x7F0u);
+        Assert.Equal(0x700u, RngStreams.WarLoadMusterJitter); Assert.Equal(0x701u, RngStreams.ExploitBot); Assert.Equal(0x7E4u, RngStreams.WarSoakVariation); Assert.Equal(0x710u, RngStreams.CoinageReserved);
+        // the economy block is 0x700..0x77F and the military one 0x780..0x7EF
+        Assert.All(inBlock.Where(v => v < 0x780u), v => Assert.InRange(v, 0x700u, 0x754u));
+    }
+
+    /// <summary>P7-0A: the bot and load streams (0x700 WarLoad, 0x701 the exploit bot, 0x7E4 the war soak) are drawn only by the audit and soak harnesses (Diagnostics), never by sim code a game started from the menu runs; the coinage reserve is never drawn (above).</summary>
+    [Fact]
+    public void BotAndLoadStreams_AreNeverDrawnOutsideTheHarnesses()
+    {
+        var root = new DirectoryInfo(Path.GetDirectoryName(SourcePath())!).Parent!;
+        foreach (var f in Directory.EnumerateFiles(root.FullName, "*.cs", SearchOption.AllDirectories))
+        {
+            if (Path.GetFileName(f) == "RngStreams.cs" || f.Contains(Path.DirectorySeparatorChar + "Diagnostics" + Path.DirectorySeparatorChar)) continue;
+            string src = File.ReadAllText(f);
+            foreach (var n in new[] { nameof(RngStreams.WarLoadMusterJitter), nameof(RngStreams.ExploitBot), nameof(RngStreams.WarSoakVariation) })
+                Assert.True(!src.Contains("RngStreams." + n, StringComparison.Ordinal), $"{Path.GetFileName(f)} draws harness stream {n}; only Sim/Diagnostics may");
+        }
     }
 }

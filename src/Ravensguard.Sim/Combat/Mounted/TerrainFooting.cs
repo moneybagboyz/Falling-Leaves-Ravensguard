@@ -5,7 +5,9 @@ using Ravensguard.Sim.Carts;
 namespace Ravensguard.Sim.Combat.Mounted;
 
 /// <summary>The ground under a horse (mounted-combat 4.5). Append only: saved in a mounted fight.</summary>
-public enum Footing : byte { Road, Field, Rough, Mud, Snow, Ice, Woods, Ford, DeepWater, Portal }
+public enum Footing : byte { Road, Field, Rough, Mud, Snow, Ice, Woods, Ford, DeepWater, Portal,
+    // Phase 7 (overview 8.1, append only): field works and rubble
+    Stakes, Ditch, Rubble }
 
 /// <summary>One footing class as integers (content <c>combat/mounted.jsonc</c> <c>footing</c>).</summary>
 public readonly record struct FootingRule(int SpeedPm, bool Charge, int MaxMmps, int SlipPmPerS, bool Forbidden);

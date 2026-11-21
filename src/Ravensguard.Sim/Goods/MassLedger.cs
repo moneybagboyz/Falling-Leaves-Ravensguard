@@ -4,7 +4,9 @@ namespace Ravensguard.Sim.Goods;
 public enum CreateReason : byte { Harvest, Mined, Cut, Caught, Hunted, Brewed, Crafted, Seed, Import, Dematerialised, Other }
 
 /// <summary>Why goods ceased to exist (items spec 2.2). Each is a documented sink counted by the <see cref="MassLedger"/>.</summary>
-public enum DestroyReason : byte { Eaten, Burned, Spoiled, Worn, Sown, Consumed, Lost, Export, Materialised, Other }
+public enum DestroyReason : byte { Eaten, Burned, Spoiled, Worn, Sown, Consumed, Lost, Export, Materialised, Other,
+    /// <summary>Phase 7 (overview 8.1, append only): tailings and slag, and forage trampled by a host.</summary>
+    Waste, Trampled }
 
 /// <summary>
 /// Per good and reason counters of every create and destroy, for the mass audit: <c>created - destroyed == stock delta</c> exactly (items spec 2.2, soak 9.1).
