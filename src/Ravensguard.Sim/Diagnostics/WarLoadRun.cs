@@ -56,15 +56,17 @@ public sealed class WarLoadRun : IDisposable
         var st = NewGameWorld.Create(db, continent, history, cs, hs, rs, cellX, cellY, pop, null, null);
         st.Content = db;
         var rt = new WorldRuntime(st, db, new MemoryRegionPager());
-        if (attachLinks)
-        {
-            // as the street view does, in its order: the law (with the heist, bond and faith-politics links), the family, the contracts
-            Ravensguard.Sim.Law.LawLink.Attach(rt);
-            Ravensguard.Sim.Family.FamilyLink.Attach(rt);
-            Ravensguard.Sim.Contracts.ContractLink.Attach(rt);
-        }
+        if (attachLinks) AttachLinks(rt);
         var supply = WarSupplyWiring.Ensure(st.HomeRecords!, st);
         return new WarLoadRun(st, rt, supply, attachLinks);
+    }
+
+    /// <summary>The game's own links, as the street view attaches them and in its order: the law (with the heist, bond and faith-politics links), the family, the contracts (economy-audit finding G1: a headless run has none unless it attaches them).</summary>
+    public static void AttachLinks(WorldRuntime rt)
+    {
+        Ravensguard.Sim.Law.LawLink.Attach(rt);
+        Ravensguard.Sim.Family.FamilyLink.Attach(rt);
+        Ravensguard.Sim.Contracts.ContractLink.Attach(rt);
     }
 
     public long HourDone => Runtime.HourDone;
