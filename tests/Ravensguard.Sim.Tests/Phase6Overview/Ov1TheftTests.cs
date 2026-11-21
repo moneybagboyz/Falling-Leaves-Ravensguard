@@ -72,6 +72,8 @@ public class Ov1TheftTests(ITestOutputHelper output)
         Assert.Contains(wynnName, Line(chain[1]));                                                   // "<witness> reported the crime ..."
         Assert.Contains(wynnName, Line(chain[2]));                                                   // "<witness> saw <doer> commit the crime ... (seen by 5)"
         Assert.Contains("(seen by 5)", Line(chain[2]));
+        string heroName = view.NameOf(0);                                                           // the hero is person 0: his deeds read with his name, not "someone"
+        Assert.False(string.IsNullOrEmpty(heroName)); Assert.Contains(heroName, Line(chain[3]));
         Assert.Contains("A bounty of", Line(chain[0])); Assert.Contains(wynnName, Line(chain[0]));    // "...posted at <place> on the word of <witness>"
         Assert.Contains("stole goods worth", Line(chain[3]));
         // the Why of the bounty is the report, whose Why is the witnessing

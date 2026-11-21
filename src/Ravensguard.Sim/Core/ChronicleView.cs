@@ -127,6 +127,13 @@ public sealed class ChronicleView
                 else if (p.Kind == ChronParamKind.Good && st.Economy?.Goods is { } gc && p.Value >= 0 && p.Value < gc.Count) goods[(int)p.Value] = gc.Def((ushort)p.Value).Name;
             }
         }
+        // the hero's person id is 0 (EntityId.None by value), which Name() skips as "nobody": name him here so his own deeds read with his name, not "someone" (P6 close-out G1)
+        if (st.Hero != null)
+        {
+            string hn = heroIdx >= 0 ? pt.FullName(heroIdx) : "";
+            if (hn.Length == 0) hn = st.Hero!.Name;
+            if (hn.Length > 0) names[heroId.Value] = hn;
+        }
         foreach (var e in all)
         {
             foreach (var s in e.Subjects) Name(s.Value);
