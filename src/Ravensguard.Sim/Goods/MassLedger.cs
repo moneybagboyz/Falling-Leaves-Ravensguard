@@ -47,11 +47,37 @@ public sealed class MassLedger
     public long Net(ushort good) => TotalCreated(good) - TotalDestroyed(good);
 
     public long[] CreatedState() => (long[])_created.Clone();
-    public long[] DestroyedState() => (long[])_destroyed.Clone();
+    /// <summary>The destroy reasons every save before Phase 7 holds per good (<see cref="DestroyReason.Other"/> was the last).</summary>
+    public const int LegacyDestroyReasons = (int)DestroyReason.Other + 1;
+
+    /// <summary>
+    /// The per-good destroyed counters, <b>compact</b>: each row is as wide as the highest reason any good has used (never narrower than <see cref="LegacyDestroyReasons"/>), so a world that never wastes or tramples
+    /// saves the bytes it saved before the Phase 7 reasons were appended, and a save from before them restores into the wider table (<see cref="Restore"/>).
+    /// </summary>
+    public long[] DestroyedState()
+    {
+        int w = LegacyDestroyReasons;
+        for (int g = 0; g < GoodCount; g++) for (int r = w; r < DestroyReasons; r++) if (_destroyed[g * DestroyReasons + r] != 0) w = r + 1;
+        if (w == DestroyReasons) return (long[])_destroyed.Clone();
+        var o = new long[GoodCount * w];
+        for (int g = 0; g < GoodCount; g++) Array.Copy(_destroyed, g * DestroyReasons, o, g * w, w);
+        return o;
+    }
+
+    /// <summary>The row width of a saved destroyed array (<see cref="DestroyedState"/>), or -1 when its length fits no width of this build.</summary>
+    public static int DestroyedWidth(int goodCount, int length)
+    {
+        if (goodCount == 0) return length == 0 ? DestroyReasons : -1;
+        if (length % goodCount != 0) return -1;
+        int w = length / goodCount;
+        return w >= LegacyDestroyReasons && w <= DestroyReasons ? w : -1;
+    }
 
     public void Restore(long[] created, long[] destroyed)
     {
-        if (created.Length != _created.Length || destroyed.Length != _destroyed.Length) throw new ArgumentException("mass ledger shape mismatch");
-        Array.Copy(created, _created, created.Length); Array.Copy(destroyed, _destroyed, destroyed.Length);
+        int w = DestroyedWidth(GoodCount, destroyed.Length);
+        if (created.Length != _created.Length || w < 0) throw new ArgumentException("mass ledger shape mismatch");
+        Array.Copy(created, _created, created.Length);
+        for (int g = 0; g < GoodCount; g++) Array.Copy(destroyed, g * w, _destroyed, g * DestroyReasons, w);       // a save narrower than this build's reasons leaves the new ones at 0
     }
 }

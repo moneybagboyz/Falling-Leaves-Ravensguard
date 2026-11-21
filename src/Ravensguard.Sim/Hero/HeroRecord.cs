@@ -109,10 +109,17 @@ public sealed class HeroRecord
 
     // ------------------------------------------------------------------ saving
 
+    /// <summary>
+    /// The skills a save writes: every skill, except that a Phase 7 skill (<c>Seamanship</c>, <c>Engineering</c>, the last of the enum) the hero has never trained is left out, so a hero that never used them saves the bytes
+    /// it saved before they were appended; a load leaves an absent skill at 0.
+    /// </summary>
+    private IEnumerable<string> SavedSkillIds() => SkillIds.Where(id => Skill(id) != 0 || !PhaseSevenSkillIds.Contains(id));
+    private static readonly HashSet<string> PhaseSevenSkillIds = [SkillId(SkillEnum.Seamanship), SkillId(SkillEnum.Engineering)];
+
     public HeroSave ToSave() => new()
     {
         Name = Name, Female = Female, Origin = Origin, Attributes = (int[])Attributes.Clone(),
-        SkillIds = SkillIds.ToArray(), SkillLevels = SkillIds.Select(Skill).ToArray(),
+        SkillIds = SavedSkillIds().ToArray(), SkillLevels = SavedSkillIds().Select(Skill).ToArray(),
         ItemShapes = Inventory.Select(i => i.Shape).ToArray(), ItemMaterials = Inventory.Select(i => i.Material).ToArray(), ItemCounts = Inventory.Select(i => i.Count).ToArray(),
         Coin = Coin, AmbitionId = AmbitionId, Milestone = Milestone, PersonIndex = PersonIndex,
     };

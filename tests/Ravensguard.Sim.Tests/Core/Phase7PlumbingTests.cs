@@ -156,4 +156,76 @@ public class Phase7PlumbingTests
         Assert.Equal("", Ravensguard.Sim.Diagnostics.Phase7Trail.Hash(1));
         Assert.Empty(Ravensguard.Sim.Diagnostics.Phase7Trail.Parts(1234));
     }
+
+    // ---- the by-reason tables: a world that never used the Phase 7 reasons saves the bytes it did before; a save from before them loads; a world that uses them round trips
+
+    private const int LegacyReasons = (int)TransferReason.RelicSale + 1;
+
+    [Fact]
+    public void LedgerFlow_IsSavedAsWideAsTheHighestReasonUsed_AndRoundTrips()
+    {
+        var l = new Ledger();
+        var a = l.Open(PurseKind.Household, EntityId.Make(IdKind.Household, 1)); var b = l.Open(PurseKind.Treasury, EntityId.Make(IdKind.Other, 1));
+        l.Mint(a, new Coin(10_000), SourceReason.Seed);
+        Assert.True(l.Transfer(a, b, new Coin(100), TransferReason.Tithe));
+        var old = l.Export();
+        Assert.Equal(LegacyReasons, old.FlowCoin.Length); Assert.Equal(LegacyReasons, old.FlowCount.Length);     // no Phase 7 reason used: the pre-Phase 7 width
+        Assert.True(l.Transfer(a, b, new Coin(300), TransferReason.Plunder));
+        var wide = l.Export();
+        Assert.Equal((int)TransferReason.Plunder + 1, wide.FlowCoin.Length);
+        var back = Ledger.Import(wide);
+        Assert.Equal(300, back.Flow(TransferReason.Plunder).Mites); Assert.Equal(100, back.Flow(TransferReason.Tithe).Mites);
+        Assert.Equal(1, back.FlowCount(TransferReason.Plunder));
+        Assert.Equal(100, Ledger.Import(old).Flow(TransferReason.Tithe).Mites);                                    // a Phase 6 save loads
+    }
+
+    [Fact]
+    public void MassLedger_DestroyedIsSavedCompact_ALegacyWidthRestores_AndANewReasonRoundTrips()
+    {
+        var m = new MassLedger(3);
+        var destroy = typeof(MassLedger).GetMethod("Destroyed", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance, [typeof(ushort), typeof(DestroyReason), typeof(long)])!;
+        destroy.Invoke(m, [(ushort)1, DestroyReason.Eaten, 7L]); destroy.Invoke(m, [(ushort)2, DestroyReason.Other, 9L]);
+        Assert.Equal(3 * MassLedger.LegacyDestroyReasons, m.DestroyedState().Length);                              // no Phase 7 reason used: the old width, the old bytes
+        var restored = new MassLedger(3); restored.Restore(m.CreatedState(), m.DestroyedState());
+        Assert.Equal(7, restored.Destroyed(1, DestroyReason.Eaten)); Assert.Equal(9, restored.Destroyed(2, DestroyReason.Other)); Assert.Equal(0, restored.Destroyed(2, DestroyReason.Waste));
+        destroy.Invoke(m, [(ushort)0, DestroyReason.Trampled, 4L]);
+        Assert.Equal(3 * MassLedger.DestroyReasons, m.DestroyedState().Length);
+        var wide = new MassLedger(3); wide.Restore(m.CreatedState(), m.DestroyedState());
+        Assert.Equal(4, wide.Destroyed(0, DestroyReason.Trampled)); Assert.Equal(9, wide.Destroyed(2, DestroyReason.Other)); Assert.Equal(m.TotalDestroyed(2), wide.TotalDestroyed(2));
+        Assert.Equal(-1, MassLedger.DestroyedWidth(3, 3 * MassLedger.DestroyReasons + 3));
+    }
+
+    [Fact]
+    public void TreasuryTables_AreSavedCompact_AndANewReasonSurvivesASaveAndALoad()
+    {
+        var s = new Ravensguard.Sim.Taxes.TaxState(); s.Shape(2, 1, 3);
+        s.Income[1 * s.Reasons + (int)TransferReason.Tithe] = 11;
+        var old = Ravensguard.Sim.Taxes.TaxSave.Capture(s);
+        Assert.Equal(LegacyReasons, old.Reasons); Assert.Equal(3 * LegacyReasons, old.Income.Length);              // unchanged bytes for a world that never used a Phase 7 reason
+        s.Expense[2 * s.Reasons + (int)TransferReason.Plunder] = 5;
+        var wide = Ravensguard.Sim.Taxes.TaxSave.Capture(s);
+        Assert.Equal((int)TransferReason.Plunder + 1, wide.Reasons);
+        foreach (var save in new[] { old, wide })
+        {
+            var back = save.Restore(); back.Shape(2, 1, 3);
+            Assert.Equal(Ledger.TransferReasons, back.Reasons);
+            Assert.Equal(11, back.Income[1 * back.Reasons + (int)TransferReason.Tithe]);
+        }
+        var b2 = wide.Restore(); b2.Shape(2, 1, 3);
+        Assert.Equal(5, b2.Expense[2 * b2.Reasons + (int)TransferReason.Plunder]);
+    }
+
+    [Fact]
+    public void HeroSave_LeavesAnUntrainedPhase7SkillOut_ALoadReadsItAs0_AndATrainedOneIsKept()
+    {
+        var skills = Ravensguard.Sim.Characters.HeroRecord.SkillIds.ToDictionary(x => x, _ => 0, StringComparer.Ordinal);
+        var hero = new Ravensguard.Sim.Characters.HeroRecord { Name = "H", Origin = "x", Attributes = [50, 50, 50, 50, 50], Skills = skills };
+        var save = hero.ToSave();
+        Assert.Equal(Ravensguard.Sim.Characters.HeroRecord.SkillIds.Count - 2, save.SkillIds.Length);              // the two Phase 7 skills are not written while 0
+        Assert.DoesNotContain("seamanship", save.SkillIds);
+        Assert.Equal(0, Ravensguard.Sim.Characters.HeroRecord.FromSave(save).Skill("engineering"));
+        skills["seamanship"] = 30;
+        var trained = Ravensguard.Sim.Characters.HeroRecord.FromSave(hero.ToSave());
+        Assert.Equal(30, trained.Skill("seamanship"));
+    }
 }

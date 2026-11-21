@@ -171,7 +171,10 @@ public sealed class Ledger
     {
         var owner = new ulong[_count]; var kind = new byte[_count]; var bal = new long[_count];
         for (int i = 0; i < _count; i++) { owner[i] = _owner[i].Value; kind[i] = (byte)_kind[i]; bal[i] = _balance[i]; }
-        return new State(owner, kind, bal, (long[])_sourced.Clone(), (long[])_sunk.Clone(), (long[])_flowCoin.Clone(), (long[])_flowCount.Clone(), _seq);
+        // the flow counters are trimmed of trailing zeros down to the pre-Phase 7 count, so a world that never used the Phase 7 reasons keeps its bytes (Import pads shorter arrays)
+        int keep = (int)TransferReason.RelicSale + 1;
+        for (int r = TransferReasons - 1; r >= keep; r--) if (_flowCoin[r] != 0 || _flowCount[r] != 0) { keep = r + 1; break; }
+        return new State(owner, kind, bal, (long[])_sourced.Clone(), (long[])_sunk.Clone(), _flowCoin[..keep], _flowCount[..keep], _seq);
     }
 
     /// <summary>Rebuilds a ledger from saved state and checks that it is conserved; throws <see cref="InvalidDataException"/> otherwise.</summary>
