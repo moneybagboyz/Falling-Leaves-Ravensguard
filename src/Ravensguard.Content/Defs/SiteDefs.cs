@@ -110,7 +110,7 @@ public sealed record SiteLootEntryDef
 {
     /// <summary>An item shape (a weapon, armour or a site item row) and its material.</summary>
     public required string Item { get; init; }
-    public string Material { get; init; } = "iron";
+    public string Material { get; init; } = "";
     public int ValueMites { get; init; } = 100;
     public int Weight { get; init; } = 10;
     public int MassG { get; init; } = 1000;

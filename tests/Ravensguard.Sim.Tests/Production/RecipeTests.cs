@@ -116,9 +116,13 @@ public class RecipeTests
     }
 
     /// <summary>Recipes that share a co-product or make pinned silver are priced by another recipe's solution, so the 45% rule is exact only for the owning recipes.</summary>
-    private static readonly HashSet<string> BandExempt = ["slaughter_pig", "slaughter_sheep", "cupel_silver", "forge_sword", "lay_rope"];   // P7-LB2: lay_rope makes rope, whose price is the audit's (R1)
-    /// <summary>Goods whose price comes from elsewhere: silver is pegged to the crown, the sword to the items spec value.</summary>
-    public static readonly HashSet<string> Pinned = ["silver", "arming_sword", "rope"];   // P7-LB2: rope stays at its content price (2,000 mites a kg) until the economy audit reprices it under R1; the ropewalk's recipe feeds it
+    private static readonly HashSet<string> BandExempt = ["slaughter_pig", "slaughter_sheep", "cupel_silver", "forge_sword", "burn_charcoal", "smelt_bloom", "forge_bar", "saw_planks", "fire_bricks", "lay_rope"];   // P7-LB2: lay_rope makes rope, whose price is the audit's (R1, EA_F6)
+    /// <summary>
+    /// Goods whose price comes from elsewhere: silver is pegged to the crown, the sword to the items spec value, and (P7-EA3a, the R1 rule) the five finishing goods of the industries' worked
+    /// examples (charcoal 12, iron bloom 240, iron bar 480, planks 3.0, bricks 1.2: economy-audit 4.8, industries 5.11), which the user's R1 table sets so that raw goods earn 1.0 to 1.5 times their
+    /// wage and the profit of a works is in finishing; their recipes earn more than the 45% band at those prices (the band-exempt list), every good derived from them is still solved.
+    /// </summary>
+    public static readonly HashSet<string> Pinned = ["silver", "arming_sword", "charcoal", "iron_bloom", "iron_bar", "timber_planks", "bricks", "rope"];   // rope: EA_F6 set it from twine (298 a kg); the ropewalk's recipe feeds it
 
     [Fact]
     public void GB12_RecipeMarginBand_EveryRecipeAtSolverPrices_EarnsFortyFivePercentOfWages()

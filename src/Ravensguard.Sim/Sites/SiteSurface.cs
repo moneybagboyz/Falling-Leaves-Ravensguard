@@ -57,6 +57,6 @@ public static class SiteSurface
     {
         if (lootPm <= 0 || h.ArtefactName.Length == 0) return null;
         lootPm = 0;
-        return new LootItem("gold_torc", "", 2000, 300, 1000, h.ArtefactName, false, true);
+        return new LootItem("gold_torc", "gold", 9615, 10, 1000, h.ArtefactName, false, true);   // EA_F2: a thin gold torc of 10 g: the pack values it at its 9,615 mites of gold, as the find is listed
     }
 }

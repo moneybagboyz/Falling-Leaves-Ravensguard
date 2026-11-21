@@ -3,7 +3,7 @@
 [
   {"type": "faith_settings", "id": "faith"},
   // what the hero is given on arriving at a shrine (a pilgrim's badge); the loot tables never pick it
-  {"type": "site_item", "id": "pilgrim_badge", "name": "Pilgrim's badge", "mass_g": 30, "value_mites": 8, "kind": "church", "material": "tin"},
+  {"type": "site_item", "id": "pilgrim_badge", "name": "Pilgrim's badge", "mass_g": 30, "value_mites": 18, "kind": "church", "material": "tin"},
   // a charm bought from the priest where superstition is high (P6-E2, 4.7)
   {"type": "site_item", "id": "charm", "name": "Charm", "mass_g": 20, "value_mites": 20, "kind": "church", "material": "tin"}
 ]

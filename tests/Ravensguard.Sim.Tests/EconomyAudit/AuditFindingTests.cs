@@ -16,7 +16,7 @@ public class AuditFindingTests(ITestOutputHelper output)
     private const string Owner = "owned by P7-EA3a (the audit's fixes); remove Skip when the fix lands";
 
     /// <summary>EA_F5 (X2, Low): the border desk pays the book's reference less 5 to 10%, whatever the book's own price is; at the glut threshold where it acts the book's ask is 0.65 of the reference, so the desk bids above it.</summary>
-    [Fact(Skip = "EA_F5 " + Owner)]
+    [Fact(Skip = "EA_F5 accepted by the user as a known limit (Low, sign-off 21 Nov 2026); switch on if the desk is ever repriced")]
     public void EA_F5_DeskExportBid_IsNeverAboveTheBooksAsk()
     {
         var (_, glut, staple) = AuditMeasures.DeskOverAsk(EconFixture.Content.All<Ravensguard.Content.MoneySettingsDef>().Single());
@@ -24,7 +24,7 @@ public class AuditFindingTests(ITestOutputHelper output)
     }
 
     /// <summary>EA_F6 (Medium, with F-1): rope is priced at 2,000 mites a kg, four times bar iron and ten times the linen it is made of per kg of labour; the R1 repricing sets it from its labour.</summary>
-    [Fact(Skip = "EA_F6 " + Owner)]
+    [Fact]
     public void EA_F6_Rope_IsNotDearerThanBarIron()
     {
         var cat = EconFixture.Catalog();

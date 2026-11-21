@@ -26,13 +26,38 @@ public static class AuditMeasures
         return list;
     }
 
-    /// <summary>S-1 / I4: a worker-day of each bulk raw kind (100 kg or more a day) at the content's base price, over the unskilled day wage.</summary>
+    /// <summary>
+    /// X5 for the loot tables' own rows (what the site budget spends): every entry that places a site item, at the entry's mass and the material the pack will make it of (the entry's, else the item's),
+    /// as material value over the entry's listed value. A table row that disagrees with the pack is the finding EA_F2 again.
+    /// </summary>
+    public static List<(string Table, string Item, int MassG, int Listed, string Material, long MatMites, double Ratio)> LootEntryRatios(ContentDatabase db)
+    {
+        var items = db.All<SiteItemDef>().ToDictionary(x => x.Id, StringComparer.Ordinal);
+        var list = new List<(string, string, int, int, string, long, double)>();
+        foreach (var tb in db.All<SiteLootTableDef>().OrderBy(x => x.Id, StringComparer.Ordinal))
+            foreach (var e in tb.Entries)
+            {
+                if (!items.TryGetValue(e.Item, out var it) || e.ValueMites <= 0) continue;
+                string mat = e.Material.Length > 0 ? e.Material : it.Material.Length > 0 ? it.Material : "bone";
+                if (!db.TryGet<MaterialDef>(mat, out var m)) continue;
+                long melt = ItemMath.MaterialMites(e.MassG, m.ValuePerKg);
+                list.Add((tb.Id, e.Item, e.MassG, e.ValueMites, mat, melt, (double)melt / e.ValueMites));
+            }
+        return list;
+    }
+
+    /// <summary>
+    /// S-1 / I4: a worker-day of each bulk raw kind (40 kg or more a day) at the content's base price, over the unskilled day wage. A generated mine's ore is the industries' composite
+    /// (hew, haul and dress, 109 kg of dressed ore a worker-day, <c>IndustryRates.Composite</c>), so for the composite good the composite rate replaces the extraction row's own.
+    /// </summary>
     public static List<(string Id, string Good, double Kg, double Price, double Value, double Ratio)> RawRatios(ContentDatabase db, GoodCatalog cat)
     {
+        var ind = Ravensguard.Sim.Production.Industry.IndustryContent.Load(db, cat);
+        string compGood = ind.CompositeGPerWorkerDay > 0 ? cat.StringId(ind.CompositeGood) : "";
         var list = new List<(string, string, double, double, double, double)>();
-        foreach (var k in db.All<ExtractionDef>().Where(x => x.RateGPerWorkerDay >= 100_000).OrderBy(x => x.Id, StringComparer.Ordinal))
+        foreach (var k in db.All<ExtractionDef>().Where(x => x.RateGPerWorkerDay >= 40_000).OrderBy(x => x.Id, StringComparer.Ordinal))
         {
-            double price = cat.Def(cat.IdOf(k.OutputGood)).BasePriceMitesPerKg, kg = k.RateGPerWorkerDay / 1000.0, value = kg * price;
+            double kg = (k.OutputGood == compGood ? ind.CompositeGPerWorkerDay : k.RateGPerWorkerDay) / 1000.0, price = cat.Def(cat.IdOf(k.OutputGood)).BasePriceMitesPerKg, value = kg * price;
             list.Add((k.Id, k.OutputGood, kg, price, value, value / UnskilledWagePerDay));
         }
         return list;

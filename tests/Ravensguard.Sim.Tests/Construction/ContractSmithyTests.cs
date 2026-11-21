@@ -100,11 +100,17 @@ public class ContractSmithyTests(ITestOutputHelper output)
         Assert.Equal(Math.Min(c.TotalMites / 3, c.MaterialsMites + c.HaulMites), c.ReleasedMites);  // advanced into the contract's materials chest, not his cash box
         Assert.InRange(e.Ledger.Balance(chest).Mites, 0, c.ReleasedMites);                          // (he bought what the book held at once)
 
-        int days = 0;
-        while (c.State == ContractState.Signed && days < 40)
+        int days = 0, starved = 0;
+        while (c.State == ContractState.Signed && days < 50)
         {
             rt.AdvanceTo(GameTime.FromGameHours(rt.HourDone + 1 + 24));
             days++;
+            if (site.Pause == PauseReason.NoMaterials)
+            {
+                starved++;
+                // a pause is the market's, not the builder's: the town's book had none of a good the site still needs (other buyers took what the test stocked)
+                Assert.Contains(cw.Needed(site), kv => cw.PileOf(site).Qty(kv.Key) < kv.Value && cw.Market!(town)!.Goods[kv.Key].StockUnits < kv.Value - cw.PileOf(site).Qty(kv.Key));
+            }
             output.WriteLine($"day {days}: pieces {site.PiecesBuilt}/{ghosts}, {site.State}/{site.Pause}, crew {site.Crew.Count}, chest {e.Ledger.Balance(chest).Mites}, builder {e.Ledger.Balance(bid.Builder.Party!.Purse).Mites}, stages {c.Stages}, pile {cw.PileOf(site).TotalMassG() / 1000} kg");
             if (site.Pause == PauseReason.NoMaterials) output.WriteLine("   short: " + string.Join(", ", cw.Needed(site).Where(kv => cw.PileOf(site).Qty(kv.Key) < kv.Value).Select(kv => $"{e.Goods.StringId(kv.Key)} {kv.Value - cw.PileOf(site).Qty(kv.Key)} (book {cw.Market!(town)!.Goods[kv.Key].StockUnits}, yard {bid.Builder.Store!.Qty(kv.Key)})")) + " in " + string.Join(",", cw.GhostsOf(site.Id).Where(g => g.Block == GhostBlock.Materials).Select(g => g.Piece)));
         }
@@ -117,7 +123,9 @@ public class ContractSmithyTests(ITestOutputHelper output)
         // the bid's days (at 90% of the working day) +-10%, the 0x511 pace: never sooner than the piece-hours at the crew's full day, never later than at 80% of it, and a day for
         // the haul (the cart's first loads); BC-16's rule for the cottage. 23.9 days bid, 26.6 taken (the hired masons and the builder's own work at their own skills)
         double fullDay = bid.MilliHours / 1000.0 / (bid.Crew * 10.0);
-        Assert.InRange(took, fullDay, fullDay / 0.8 + 1);
+        // the builder's pace is under test; days the site stood waiting for goods the town's market did not have are the market's (after the R1 repricing cheaper timber lets more
+        // households build cottages, and their thatch can empty the book before the roof stage buys it)
+        Assert.InRange(took - starved, fullDay, fullDay / 0.8 + 1);
         Assert.InRange(bid.ExpectedDaysX10 / 10.0, fullDay, fullDay / 0.8);
         Assert.Equal(c.TotalMites, c.ReleasedMites);
         Assert.Equal(3, c.Stages);                                                                  // the client put up every stage: a third (here the materials), to two thirds, the rest
