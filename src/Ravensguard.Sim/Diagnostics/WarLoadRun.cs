@@ -126,6 +126,16 @@ public sealed class WarYearRow
     public long Alive, HungerDeaths, HarvestT, RegionCoin;
     public long ManDaysFed, ManDaysHungry, ManDaysUnpaid, BoughtKg, PaidMites, Deserted, Mustered, ArrearsMites, FundedMites;
     public int SiegeDaysOfFood = -1;
+    /// <summary>What the realm raised for the campaign (aid from the fiefs, tallage on the households).</summary>
+    public long AidMites, TallageMites;
+    /// <summary>Idle adults (16-59, no occupation, no land) at the year's end; wages paid a day over the year; coin in purses at the year's end (the money supply).</summary>
+    public long Idle, WagesPerDay, MoneySupply;
+    /// <summary>The staple price (mites a kg, the mean of the grains and bread over the books) over the year: the towns within 8 km of the route and the whole region, mean and peak of the daily value, in mites a kg.</summary>
+    public long RouteMeanMilli, RoutePeakMilli, RegionMeanMilli, RegionPeakMilli;
+    /// <summary>Merchants holding at least the solvency floor (10 crowns), per cent, at the year's end.</summary>
+    public int SolventPct;
+    /// <summary>Farm labour hours wanted and left undone over the year (the planner's running totals): a levy out through the harvest shows as hours undone.</summary>
+    public long FarmDemandH, FarmUnmetH;
     public bool CoinOk, MassOk;
     public string Hash = "";
 }
@@ -133,6 +143,12 @@ public sealed class WarYearRow
 /// <summary>The war-load soak on a <see cref="WarLoadRun"/>: runs the scenario and the control, one row a year. The gates that need the audit's own measures (WL-3 to WL-12, WL-14, WL-15) are EA2's; the first cut gates WL-1 and WL-2 (coin and mass exact every day) and prints the rest.</summary>
 public sealed class WarLoadSoak(WarLoadRun run, int years, bool control = false)
 {
+    /// <summary>The realm raises the coin of each campaign (<see cref="WarFunding"/>); false leaves the chest to whatever the treasury holds (the first cut's behaviour).</summary>
+    public bool RealmRaises { get; set; } = true;
+    private long _routeSum, _routePeak, _regionSum, _regionPeak, _samples, _wage0, _demand0, _unmet0;
+    private int[] _routeBooks = [];
+    private ushort[] _stapleIds = [];
+
     public List<WarYearRow> Rows { get; } = [];
     public bool Ok { get; private set; } = true;
     public string FirstFailure { get; private set; } = "";
@@ -146,16 +162,18 @@ public sealed class WarLoadSoak(WarLoadRun run, int years, bool control = false)
         var largest = Enumerable.Range(0, region.Settlements.Count).OrderByDescending(s => region.Settlements[s].TargetPop).ThenBy(s => s).First();
         home = largest; siegeTown = largest; gate = WarLoad.FarthestSettlement(region, home);
         long hunger0 = run.State.Abstract!.Vital.DeathsByCause[(int)DeathCause.Hunger];
+        PrepareIndex(region, home, gate);
+        _wage0 = run.Econ.Ledger.Flow(TransferReason.Wage).Mites; _demand0 = run.Economy.Farming.TotalDemandH; _unmet0 = run.Economy.Farming.TotalUnmetH;
         for (int y = 1; y <= years; y++)
         {
-            tally.Reset();
+            tally.Reset(); _routeSum = _routePeak = _regionSum = _regionPeak = _samples = 0;
             for (int d = 1; d <= TimeConst.DaysPerYear; d++)
             {
                 int day = startYearDay + (y - 1) * TimeConst.DaysPerYear + d - 1;
                 if (!control && load == null)
                 {
                     foreach (var c in WarLoadScenario.Campaigns)
-                        if (c.Year == y && WarLoad.MusterDay(run.Seed, c.FromDay, c.Id, y * 4) == d) { camp = c; load = new WarLoad(sup, WarLoadSpec.Army2000, run.Seed, c.Id, tally); break; }
+                        if (c.Year == y && WarLoad.MusterDay(run.Seed, c.FromDay, c.Id, y * 4) == d) { camp = c; load = new WarLoad(sup, WarLoadSpec.Army2000, run.Seed, c.Id, tally) { RealmRaises = RealmRaises }; break; }
                     if (load != null) { run.BeforeSlot(day); load.Begin(home, gate); }
                 }
                 run.BeforeSlot(day);
@@ -181,6 +199,7 @@ public sealed class WarLoadSoak(WarLoadRun run, int years, bool control = false)
                     if (!run.CoinConserved || !run.MassOk) Fail($"day {day}: coin {run.CoinConserved}, mass {run.MassOk}");
                     if (camp != null && y == camp.ToYear && d == camp.ToDay) { if (sup.IsBlockaded(siegeTown)) sup.SiegeBlockade(siegeTown, false, load.Host); load.End(); load = null; camp = null; }
                 }
+                Sample();
                 run.AdvanceToDayEnd(day);
             }
             var row = Row(y, tally, hunger0, sup, siegeTown);
@@ -205,11 +224,62 @@ public sealed class WarLoadSoak(WarLoadRun run, int years, bool control = false)
         };
         if (!row.CoinOk || !row.MassOk) Fail($"year {y} end: coin {row.CoinOk}, mass {row.MassOk}");
         row.Hash = sup.Book.Hash();
+        row.AidMites = t.AidMites; row.TallageMites = t.TallageMites;
+        row.MoneySupply = row.RegionCoin;
+        long wage = led.Flow(TransferReason.Wage).Mites; row.WagesPerDay = (wage - _wage0) / TimeConst.DaysPerYear; _wage0 = wage;
+        row.RouteMeanMilli = _samples == 0 ? 0 : _routeSum / _samples; row.RoutePeakMilli = _routePeak; row.RegionMeanMilli = _samples == 0 ? 0 : _regionSum / _samples; row.RegionPeakMilli = _regionPeak;
+        var fm = run.Economy.Farming; row.FarmDemandH = fm.TotalDemandH - _demand0; row.FarmUnmetH = fm.TotalUnmetH - _unmet0; _demand0 = fm.TotalDemandH; _unmet0 = fm.TotalUnmetH;
+        MeasureWorld(row);
         return row;
     }
 
-    public static string Header() => "year   alive hunger-dead harvest-t   fed-md  hungry-md  unpaid-md  bought-kg   funded-mites  paid-mites  deserted  levies  arrears  siege-food  coin  mass  supplyhash";
+    /// <summary>The towns within 8 km of the host's route (the route's own stops included) and the staple goods the price index is taken over.</summary>
+    private void PrepareIndex(Ravensguard.Sim.WorldGen.Region.Region region, int home, int gate)
+    {
+        var route = WarLoad.RouteFor(region, home, gate).Distinct().ToArray(); var near = new List<int>();
+        var markets = run.Economy.Markets;
+        for (int s = 0; s < region.Settlements.Count; s++)
+        {
+            if (markets.Books[markets.BookOf[s]] == null) continue;
+            foreach (int r in route)
+            {
+                long dx = region.Settlements[s].CenterX - region.Settlements[r].CenterX, dy = region.Settlements[s].CenterY - region.Settlements[r].CenterY;
+                if (dx * dx + dy * dy <= 8000L * 8000L) { near.Add(markets.BookOf[s]); break; }
+            }
+        }
+        _routeBooks = [.. near.Distinct().Order()];
+        var cat = run.Econ.Goods; var ids = new List<ushort>();
+        foreach (var g in new[] { "wheat", "rye", "barley", "bread" }) if (cat.TryIdOf(g, out var id)) ids.Add(id);
+        _stapleIds = [.. ids];
+    }
+
+    private long MeanStaple(IEnumerable<Ravensguard.Sim.Economy.Markets.MarketBook> books)
+    {
+        long sum = 0, n = 0;
+        foreach (var b in books) { foreach (var g in _stapleIds) { sum += b.MidMicro(g); n++; } }
+        return n == 0 ? 0 : sum / n / 1000;       // micro-mites a gram / 1000 = mites a kg
+    }
+
+    private void Sample()
+    {
+        var markets = run.Economy.Markets;
+        long route = MeanStaple(_routeBooks.Select(i => markets.Books[i]!)), region = MeanStaple(markets.AllBooks());
+        _routeSum += route; _regionSum += region; _routePeak = Math.Max(_routePeak, route); _regionPeak = Math.Max(_regionPeak, region); _samples++;
+    }
+
+    private void MeasureWorld(WarYearRow row)
+    {
+        var sim = run.Economy.World; var p = sim.People; long day = run.HourDone / 24; long idle = 0;
+        for (int i = 0; i < p.Count; i++)
+            if (p.Status[i] == Ravensguard.Sim.People.PersonStatus.Alive) { int age = sim.AgeOn(i, day); if (age is >= 16 and < 60 && p.Occupation[i] == Ravensguard.Sim.People.Occupation.None && !(sim.Households.ParcelCount[Math.Max(0, p.Household[i])] > 0)) idle++; }
+        row.Idle = idle;
+        int merchants = 0, solvent = 0;
+        foreach (var b in run.Economy.Markets.AllBooks()) foreach (var m in b.Merchants) { merchants++; if (run.Econ.Ledger.Balance(m.Purse).Mites >= Ravensguard.Sim.Production.ProductionSystem.MerchantSolventMites) solvent++; }
+        row.SolventPct = merchants == 0 ? 100 : solvent * 100 / merchants;
+    }
+
+    public static string Header() => "year   alive hunger-dead harvest-t   fed-md  hungry-md  unpaid-md  bought-kg   funded-mites  paid-mites  deserted  levies  arrears  siege-food  raised-aid raised-tall  idle  wages/d  money-supply  route-mean route-peak region-mean region-peak solvent% farm-demand-h farm-unmet-h  coin  mass  supplyhash";
 
     public static string Format(WarYearRow r) =>
-        $"{r.Year,4} {r.Alive,7} {r.HungerDeaths,11} {r.HarvestT,9} {r.ManDaysFed,8} {r.ManDaysHungry,10} {r.ManDaysUnpaid,10} {r.BoughtKg,10} {r.FundedMites,13} {r.PaidMites,11} {r.Deserted,9} {r.Mustered,7} {r.ArrearsMites,8} {(r.SiegeDaysOfFood < 0 ? "-" : r.SiegeDaysOfFood.ToString()),11}  {(r.CoinOk ? "ok" : "FAIL"),-4}  {(r.MassOk ? "ok" : "FAIL"),-4}  {r.Hash}";
+        $"{r.Year,4} {r.Alive,7} {r.HungerDeaths,11} {r.HarvestT,9} {r.ManDaysFed,8} {r.ManDaysHungry,10} {r.ManDaysUnpaid,10} {r.BoughtKg,10} {r.FundedMites,13} {r.PaidMites,11} {r.Deserted,9} {r.Mustered,7} {r.ArrearsMites,8} {(r.SiegeDaysOfFood < 0 ? "-" : r.SiegeDaysOfFood.ToString()),11} {r.AidMites,10} {r.TallageMites,11} {r.Idle,5} {r.WagesPerDay,8} {r.MoneySupply,13} {r.RouteMeanMilli,10} {r.RoutePeakMilli,10} {r.RegionMeanMilli,11} {r.RegionPeakMilli,11} {r.SolventPct,8} {r.FarmDemandH,13} {r.FarmUnmetH,12}  {(r.CoinOk ? "ok" : "FAIL"),-4}  {(r.MassOk ? "ok" : "FAIL"),-4}  {r.Hash}";
 }

@@ -152,6 +152,19 @@ public class WarLoadTests(ITestOutputHelper output)
         Assert.Empty(run.Supply.Book.OnCampaign);
     }
 
+    /// <summary>P7-EA2: the war-load soak with its control, seed 1234, years 1 to 10 (about 5 minutes), the audit's gates read from the rows. The gates that pass at the tag are asserted; the two that fail are the findings EA_F9 (WL-6) and EA_F10 (WL-10's wording) and are printed.</summary>
+    [Fact, Trait("Category", "Soak")]
+    public void WarLoadSoak_Years1To10_WithControl_Gates()
+    {
+        List<WarYearRow> ctl; using (var c = AuditWorld.Create()) { var cs = new WarLoadSoak(c, 10, control: true); cs.Run(); Assert.True(cs.Ok, cs.FirstFailure); ctl = cs.Rows; }
+        using var run = AuditWorld.Create();
+        var soak = new WarLoadSoak(run, 10); soak.Run(r => output.WriteLine(WarLoadSoak.Format(r)));
+        Assert.True(soak.Ok, soak.FirstFailure);
+        var gates = WarGates.Evaluate(soak.Rows, ctl); output.WriteLine(WarGates.Format(gates));
+        foreach (var id in new[] { "WL-1", "WL-2", "WL-3", "WL-4", "WL-5", "WL-8", "WL-11" }) Assert.Equal(AuditState.Pass, gates.Single(g => g.Id == id).State);
+        Assert.Equal(AuditState.Fail, gates.Single(g => g.Id == "WL-6").State);          // the finding EA_F9: the levies do not cut the harvest
+    }
+
     /// <summary>The nightly one: the whole 25-year scenario on seed 1234 (the five seeds and WL-1 to WL-15 are EA3's EA-15). About 5 minutes.</summary>
     [Fact, Trait("Category", "Soak")]
     public void WarLoadSoak_Full25Years_Seed1234_NightlyKeepsCoinAndMassExact()

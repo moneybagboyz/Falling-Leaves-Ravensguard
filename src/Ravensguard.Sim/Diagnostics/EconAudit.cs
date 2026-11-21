@@ -1,3 +1,4 @@
+using Ravensguard.Content;
 using Ravensguard.Sim.Abstract;
 using Ravensguard.Sim.Economy;
 using Ravensguard.Sim.Goods;
@@ -21,47 +22,47 @@ public static class EconAudit
 
     private static readonly Def[] Rows =
     [
-        new("X1", "exploits", "Buy at one book's ask and sell at a neighbour's bid (8 km), on foot (30 kg) and by cart (500 kg)", "<= 525 mites a day on foot after spread, toll, carting; by cart only a real price gap", "EA2 probe EA-1"),
+        new("X1", "exploits", "Buy at one book's ask and sell at a neighbour's bid (8 km), on foot (30 kg) and by cart (500 kg)", "<= 525 mites a day on foot after spread, toll, carting; by cart only a real price gap", "the trader bot, AuditBotTests EA-1 / EA-14 (a Soak test); numbers in docs/reviews/phase-7-audit.md"),
         new("X2", "exploits", "Sell to the gate's export desk, buy back from the same market", "desk bid < book ask for every tracked good", "EA2 probe EA-2"),
         new("X3", "exploits", "Craft, then salvage or disassemble", "value out / value in < 1 for every recipe and piece", "EA2 probe EA-3"),
         new("X4", "exploits", "Build with bought materials, demolish, sell the salvage", "loses 10-30%", "EA2 probe EA-3"),
         new("X5", "exploits", "Loot items valued below their material", "melt value / listed value <= 1.2 for every loot row", "EA2 probe EA-4 (fix F-2)"),
         new("X6", "exploits", "Melt coin when bullion is dear, strike when cheap", "a margin only inside the 7.5% seigniorage band", "EA2 probe EA-5"),
         new("X7", "exploits", "Copper token coin", "only mints hold dies; the copper cap bounds the faucet", "EA2 read (coinage.md 5.1)"),
-        new("X8", "exploits", "Loans: borrow, lend on, default", "interest and principal only move coin; a default forfeits security", "EA2 probe (RI-13, RI-14)"),
-        new("X9", "exploits", "Stall footfall and fair days", "every mite of stall income from a household purse", "EA2 probe"),
-        new("X10", "exploits", "Contracts escrow, bonds, tournament purses", "no contract pays without the work", "EA2 probe"),
-        new("X11", "exploits", "Duplication across splits, merges, stores, carts, saves and the LOD bridge", "MassLedger and ItemTable exact after 1,000 random moves (0x701)", "EA2 probe EA-6"),
-        new("X12", "exploits", "The industry output slider at 5x", "payback shortens by about the slider; no coin appears", "EA2 probe (industries 5.7)"),
-        new("X13", "exploits", "Arbitrage between realms' mints through a money changer", "the changer's fee exceeds the seigniorage gap", "EA2 probe"),
+        new("X8", "exploits", "Loans: borrow, lend on, default", "interest and principal only move coin; a default forfeits security", "read in docs/reviews/phase-7-audit.md (RI-13 and RI-14 stay green)"),
+        new("X9", "exploits", "Stall footfall and fair days", "every mite of stall income from a household purse", "read in docs/reviews/phase-7-audit.md"),
+        new("X10", "exploits", "Contracts escrow, bonds, tournament purses", "no contract pays without the work", "read in docs/reviews/phase-7-audit.md"),
+        new("X11", "exploits", "Duplication across splits, merges, stores, carts, saves and the LOD bridge", "MassLedger and ItemTable exact after 1,000 random moves (0x701)", "AuditBotTests EA-6 (1,000 moves with saves between)"),
+        new("X12", "exploits", "The industry output slider at 5x", "payback shortens by about the slider; no coin appears", "not in the audited tag (no output slider until IN2): re-run by EA3b"),
+        new("X13", "exploits", "Arbitrage between realms' mints through a money changer", "the changer's fee exceeds the seigniorage gap", "not in the audited tag (no mint, no changer until CN1): CN1 pins it"),
         new("X14", "exploits", "Standing.PriceMites (A3) not yet called by the market book", "wired as a merchant-side transfer, or left unwired; never a mint", "EA2 read"),
-        new("W1", "war load", "2,000 men fed 1 kg of grain a day for 15-30 days, 300 horses", "price index on the march route within WL-4", "EA2 war-load soak (WL-4)"),
-        new("W2", "war load", "Paid: levies unpaid the first 10 days of service, then 150; retinue and mercenaries; 400 men paid by the realm", "treasury days funded; arrears; desertions reported", "EA2 war-load soak (WL-8)"),
+        new("W1", "war load", "2,000 men fed 1 kg of grain a day for 15-30 days, 300 horses", "price index on the march route within WL-4", "the war-load soak (WL-4): war-load --with-control"),
+        new("W2", "war load", "Paid: levies unpaid the first 10 days of service, then 150; retinue and mercenaries; 400 men paid by the realm", "treasury days funded; arrears; desertions reported", "the war-load soak (WL-8): war-load --with-control"),
         new("W3", "war load", "Armed: 960 kits from the lords' armouries, the rest by wealth", "days to fill; first input to run dry", "AE3 (kit) then EA2 (WL-9)"),
-        new("W4", "war load", "Levies out of the harvest (1 in 5 households in war)", "harvest shortfall vs the control (WL-6)", "EA2 war-load soak (WL-6)"),
+        new("W4", "war load", "Levies out of the harvest (1 in 5 households in war)", "harvest shortfall vs the control (WL-6)", "the war-load soak (WL-6): war-load --with-control"),
         new("W5", "war load", "Purveyance in two campaign years", "grievances, riots, tallies unpaid (WL-7)", "AE2 (purveyance) then EA2"),
-        new("W6", "war load", "A 60-day siege of the region's largest town", "days of food; deaths; prices inside; recovery (WL-5)", "EA2 war-load soak (WL-5)"),
-        new("W7", "war load", "Baggage: 60 carts (30 t) for 15 days of grain", "carts and draught animals in the region; carts purveyed", "EA2 war-load soak"),
-        new("B1", "bottlenecks", "Iron", "days of cover per book; region output vs demand", "EA2 war-load soak"),
-        new("B2", "bottlenecks", "Charcoal", "woodland acres cut vs coppice regrowth", "EA2 war-load soak"),
-        new("B3", "bottlenecks", "Timber", "logs and planks for carts, engines, ships and building", "EA2 war-load soak"),
-        new("B4", "bottlenecks", "Grain", "the region's surplus after households, the levy's lost labour and the army", "EA2 war-load soak"),
-        new("B5", "bottlenecks", "Carts", "vehicles and draught animals vs a baggage train's 60", "EA2 war-load soak"),
-        new("B6", "bottlenecks", "Labour", "idle adults < 800; men missing from the harvest; wages vs class rate", "EA2 war-load soak"),
+        new("W6", "war load", "A 60-day siege of the region's largest town", "days of food; deaths; prices inside; recovery (WL-5)", "the war-load soak (WL-5): war-load --with-control"),
+        new("W7", "war load", "Baggage: 60 carts (30 t) for 15 days of grain", "carts and draught animals in the region; carts purveyed", "the war-load soak: war-load --with-control"),
+        new("B1", "bottlenecks", "Iron", "days of cover per book; region output vs demand", "the war-load soak: war-load --with-control"),
+        new("B2", "bottlenecks", "Charcoal", "woodland acres cut vs coppice regrowth", "the war-load soak: war-load --with-control"),
+        new("B3", "bottlenecks", "Timber", "logs and planks for carts, engines, ships and building", "the war-load soak: war-load --with-control"),
+        new("B4", "bottlenecks", "Grain", "the region's surplus after households, the levy's lost labour and the army", "the war-load soak: war-load --with-control"),
+        new("B5", "bottlenecks", "Carts", "vehicles and draught animals vs a baggage train's 60", "the war-load soak: war-load --with-control"),
+        new("B6", "bottlenecks", "Labour", "idle adults < 800; men missing from the harvest; wages vs class rate", "the war-load soak: war-load --with-control"),
         new("L1", "leaks", "Every Ledger.Mint call", "each a documented source with a continent-side sink (decision I33)", "EA2 grep (EA-7)"),
         new("L2", "leaks", "Every Ledger.Sink", "Burn only in tests (fix F-3)", "EA2 grep (EA-8)"),
         new("L3", "leaks", "Abstract deltas standing in for coin", "a documented holding purse; real coin where there is a purse", "EA2 read (S14, fix F-3)"),
-        new("L4", "leaks", "Every Store.Destroy reason", "no Other in the war load", "EA2 war-load soak"),
+        new("L4", "leaks", "Every Store.Destroy reason", "no Other in the war load", "the war-load soak: war-load --with-control"),
         new("L5", "leaks", "Headless soak attachments (phase-6 G1)", "the war-load soak attaches law, family and contracts as the game does", "EA1 harness"),
         new("L6", "leaks", "Money supply growth from mines once mints are wired", "see S-2", "EA3 (F-4)"),
-        new("G1", "growth", "Population at Y25 vs Y5", ">= 95%", "EA2 war-load soak (WL-10)"),
-        new("G2", "growth", "Wages paid a day region-wide at Y15 vs the Y3-Y5 mean", "within 10%", "EA2 war-load soak (WL-10)"),
-        new("G3", "growth", "Idle adults at Y15", "< 800", "EA2 war-load soak (WL-10)"),
-        new("G4", "growth", "Money supply growth Y1-Y25", "0.5-2.5% a year on average; no year below -5% or above +8%", "EA2 war-load soak (WL-3)"),
-        new("G5", "growth", "Room for new works within 4 km of a town", "a site each for L1 iron, clay and wood works on seed 1234 and three other seeds", "EA2 probe"),
-        new("I1", "industry", "Payback of the scripted L1 works at 1x near a town", "100-200 game days", "IN2 then EA2"),
-        new("I2", "industry", "Markets absorb the works' output", "80% of the output sold within 5 days at >= 90% of the opening bid", "IN2 then EA2"),
-        new("I3", "industry", "Merchants have the coin", ">= 30 days of the works' sales", "IN2 then EA2"),
+        new("G1", "growth", "Population at Y25 vs Y5", ">= 95%", "the war-load soak (WL-10): war-load --with-control"),
+        new("G2", "growth", "Wages paid a day region-wide at Y15 vs the Y3-Y5 mean", "within 10%", "the war-load soak (WL-10): war-load --with-control"),
+        new("G3", "growth", "Idle adults at Y15", "< 800", "the war-load soak (WL-10): war-load --with-control"),
+        new("G4", "growth", "Money supply growth Y1-Y25", "0.5-2.5% a year on average; no year below -5% or above +8%", "the war-load soak (WL-3): war-load --with-control"),
+        new("G5", "growth", "Room for new works within 4 km of a town", "a site each for L1 iron, clay and wood works on seed 1234 and three other seeds", "AuditProbeTests / the soak: needs the L1 sites of IN2"),
+        new("I1", "industry", "Payback of the scripted L1 works at 1x near a town", "100-200 game days", "EA3b with the scripted works (needs IN2 chains)"),
+        new("I2", "industry", "Markets absorb the works' output", "80% of the output sold within 5 days at >= 90% of the opening bid", "EA3b with the scripted works (needs IN2 chains)"),
+        new("I3", "industry", "Merchants have the coin", ">= 30 days of the works' sales", "EA3b with the scripted works (needs IN2 chains)"),
         new("I4", "industry", "Raw output barely covers wages", "a raw stage earns 1.0-1.5x its wage bill at book prices", "EA3 (F-1, the R1 rule)"),
         new("S-1", "suspects", "Raw extraction is worth about 8.7x its wage", "after F-1: 1.0-1.5x", "measured here"),
         new("S-2", "suspects", "Silver yield: 3 kg of silver from 1 t of galena", "after F-4: 1-2% of the money supply a year", "EA3 (F-4)"),
@@ -74,13 +75,13 @@ public static class EconAudit
     ];
 
     /// <summary>The whole checklist for a running economy, every row with a result.</summary>
-    public static IReadOnlyList<AuditRow> Run(EconomyWorld ew)
+    public static IReadOnlyList<AuditRow> Run(EconomyWorld ew, ContentDatabase? db = null)
     {
         var econ = ew.World.Economy; var led = econ.Ledger; var cat = econ.Goods;
         var list = new List<AuditRow>(Rows.Length);
         foreach (var d in Rows)
         {
-            var (state, text) = Measure(d.Id, ew, econ, led, cat);
+            var (state, text) = Measure(d.Id, ew, econ, led, cat, db);
             if (state == AuditState.Pending) text = $"not measured by the harness: {d.Closer}";
             list.Add(new AuditRow(d.Id, d.Section, d.Title, d.Criterion, state, text));
         }
@@ -90,7 +91,7 @@ public static class EconAudit
     /// <summary>The checklist's ids in order (the golden test pins them against the spec's table).</summary>
     public static IReadOnlyList<string> Ids => [.. Rows.Select(r => r.Id)];
 
-    private static (AuditState, string) Measure(string id, EconomyWorld ew, EconomyState econ, Ledger led, GoodCatalog cat)
+    private static (AuditState, string) Measure(string id, EconomyWorld ew, EconomyState econ, Ledger led, GoodCatalog cat, ContentDatabase? db)
     {
         switch (id)
         {
@@ -115,6 +116,44 @@ public static class EconAudit
             }
             case "S-6":
                 return (AuditState.Info, $"border coin so far: immigrated {led.Sourced(SourceReason.Immigrate).Mites}, emigrated {led.Sunk(SinkReason.Emigrate).Mites} mites (exports are paid by Immigrate within the season budget)");
+            case "X2" when db != null:
+            {
+                var (target, glut, stapleGlut) = AuditMeasures.DeskOverAsk(econ.Money);
+                return (glut < 1 ? AuditState.Pass : AuditState.Fail, $"the desk's export bid after the toll is {target:P0} of the book's ask at target stock (no loop) but {glut:P0} ({stapleGlut:P0} for a staple) of it at the glut threshold, 2.8x cover, where the desk acts: it pays the book's reference, not the glut price (finding EA_F5)");
+            }
+            case "X3" when db != null:
+            {
+                var s = AuditMeasures.Salvage(db);
+                return (s.MaxSalvagePm <= 900 ? AuditState.Pass : AuditState.Fail, $"{s.Pieces} build pieces return at most {s.MaxSalvagePm / 10}% of their materials; salvage_mail returns 44% and salvage_armour 1-3% of the material value (mail rings are not tradable): value out never reaches value in");
+            }
+            case "X4" when db != null:
+            {
+                var s = AuditMeasures.Salvage(db);
+                return (s.MaxSalvagePm <= 900 ? AuditState.Pass : AuditState.Fail, $"a demolition returns the same goods at most {s.MaxSalvagePm / 10}%; {s.Over700} of {s.Pieces} pieces return more than 70% (a loss under the 30% the target names); none returns more than it took");
+            }
+            case "X5" or "S-4" when db != null:
+            {
+                var rows = AuditMeasures.LootRatios(db); int over = rows.Count(r => r.Ratio > 1.2); var worst = rows.OrderByDescending(r => r.Ratio).Take(3).Select(r => $"{r.Id} {r.Ratio:0}x").ToList();
+                return (over == 0 ? AuditState.Pass : AuditState.Fail, $"{over} of {rows.Count} loot rows are worth more than 1.2x their listed value as material; worst {string.Join(", ", worst)} (the pack values a loot item by its material, the site budget by the listed value; finding EA_F2)");
+            }
+            case "X6":
+                return (AuditState.Info, "no mint or melt runs in this tag; by the arithmetic a strike returns 92.5% of coin parity (a profit while bullion is below 0.925x of parity, +208% at 0.3x) and a melt returns parity with no fee (a profit above 1.0x, +300% at 4x): CN1 must close both (finding EA_F8)");
+            case "X7":
+                return (AuditState.Info, "no copper coin or mint exists in this tag (coinage.md is CN1's); the cap and the dies are CN1's to test");
+            case "X14":
+                return (AuditState.Pass, "Standing.PriceMites has no caller (AuditProbeTests checks): the rebate is unwired, so it can pay nothing");
+            case "L3":
+                return (AuditState.Pass, "phase-6 S14 closed in P7-0B: Diplomacy.AbstractHolding is a documented holding purse and tribute moves real coin (EA_F3 tests)");
+            case "S-2" or "L6" when db != null:
+            {
+                var (galena, silver, mites) = AuditMeasures.SilverPerWorkerDay(db, cat);
+                return (AuditState.Fail, $"a silver miner digs {galena:0} kg of galena = {silver:0.0} kg of silver = {mites:N0} mites a worker-day, {mites / AuditMeasures.UnskilledWagePerDay:0}x the wage; 22 worker-days a year would be 2% of this region's money supply; no mint strikes it yet, so the exposure is latent until CN1 (finding EA_F4)");
+            }
+            case "I4" when db != null:
+            {
+                var rows = AuditMeasures.RawRatios(db, cat); double worst = rows.Max(r => r.Ratio);
+                return (worst > 1.5 ? AuditState.Fail : AuditState.Pass, $"raw stages earn {rows.Min(r => r.Ratio):0.0}x to {worst:0.0}x their wage at book prices (pass 1.0-1.5x; finding EA_F1)");
+            }
             case "S-1":
             {
                 // value of one worker-day of the bulk raw kinds at the content's base prices against the unskilled day wage
