@@ -29,11 +29,7 @@ public sealed class TaxState
 
     public void Shape(int settlements, int fiefs, int slots)
     {
-        if (Reasons != Ledger.TransferReasons)      // a save from before a transfer reason was appended: re-pad every row of the by-reason tables
-        {
-            Income = Repad(Income); Expense = Repad(Expense); LastIncome = Repad(LastIncome); LastExpense = Repad(LastExpense);
-            Reasons = Ledger.TransferReasons;
-        }
+        PadReasons();
         if (FiefLevel.Length != fiefs) { var n = new byte[fiefs]; Array.Fill(n, (byte)TaxLevel.Normal); Array.Copy(FiefLevel, n, Math.Min(FiefLevel.Length, fiefs)); FiefLevel = n; }
         Unrest = Fit(Unrest, settlements); QuietDays = Fit(QuietDays, settlements); TopDays = Fit(TopDays, settlements); Rung = Fit(Rung, settlements);
         if (LastRiotDay.Length != settlements) { var n = new int[settlements]; Array.Fill(n, int.MinValue / 2); Array.Copy(LastRiotDay, n, Math.Min(LastRiotDay.Length, settlements)); LastRiotDay = n; }
@@ -42,6 +38,14 @@ public sealed class TaxState
         int w = slots * Reasons;
         Income = Fit(Income, w); Expense = Fit(Expense, w); LastIncome = Fit(LastIncome, w); LastExpense = Fit(LastExpense, w);
         WageOwed = Fit(WageOwed, slots); LordPaid = Fit(LordPaid, slots); LastLordPaid = Fit(LastLordPaid, slots);
+    }
+
+    /// <summary>A save from before a transfer reason was appended (or one saved compact, see <see cref="TaxSave.Capture"/>): re-pads every row of the by-reason tables to this build's reasons.</summary>
+    public void PadReasons()
+    {
+        if (Reasons == Ledger.TransferReasons) return;
+        Income = Repad(Income); Expense = Repad(Expense); LastIncome = Repad(LastIncome); LastExpense = Repad(LastExpense);
+        Reasons = Ledger.TransferReasons;
     }
 
     private long[] Repad(long[] a)
@@ -96,14 +100,19 @@ public sealed class TaxSave
             var r = rows[i].Value; hh[i] = rows[i].Key; seasons[i] = r.Seasons;
             vals[i * 4] = r.ArrHearth; vals[i * 4 + 1] = r.ArrDwelling; vals[i * 4 + 2] = r.DebtHearth; vals[i * 4 + 3] = r.DebtDwelling;
         }
+        // the by-reason tables are saved as wide as the highest reason any row has used (never narrower than the pre-Phase 7 count): a world that never used the Phase 7 reasons keeps its bytes, and Shape re-pads a narrower save
+        int R = s.Reasons, w = Math.Min(R, (int)TransferReason.RelicSale + 1);
+        foreach (var a in new[] { s.Income, s.Expense, s.LastIncome, s.LastExpense })
+            for (int i = 0; i < a.Length; i++) if (a[i] != 0 && i % R >= w) w = i % R + 1;
+        long[] Narrow(long[] a) { if (w == R) return (long[])a.Clone(); int n = a.Length / R; var o = new long[n * w]; for (int i = 0; i < n; i++) Array.Copy(a, i * R, o, i * w, w); return o; }
         return new TaxSave
         {
             FiefLevel = (byte[])s.FiefLevel.Clone(), ArrHh = hh, ArrValues = vals, ArrSeasons = seasons,
             Unrest = (short[])s.Unrest.Clone(), QuietDays = (short[])s.QuietDays.Clone(), TopDays = (short[])s.TopDays.Clone(), Rung = (byte[])s.Rung.Clone(),
             LastRiotDay = (int[])s.LastRiotDay.Clone(), LastEvasionDay = (int[])s.LastEvasionDay.Clone(), FiefUnrest = (short[])s.FiefUnrest.Clone(), LevyDue = (int[])s.LevyDue.Clone(),
-            Income = (long[])s.Income.Clone(), Expense = (long[])s.Expense.Clone(), LastIncome = (long[])s.LastIncome.Clone(), LastExpense = (long[])s.LastExpense.Clone(),
+            Income = Narrow(s.Income), Expense = Narrow(s.Expense), LastIncome = Narrow(s.LastIncome), LastExpense = Narrow(s.LastExpense),
             WageOwed = (long[])s.WageOwed.Clone(), LordPaid = (long[])s.LordPaid.Clone(), LastLordPaid = (long[])s.LastLordPaid.Clone(), Tally = (long[])s.Tally.Clone(),
-            LastRollDay = s.LastRollDay, Reasons = s.Reasons,
+            LastRollDay = s.LastRollDay, Reasons = w,
         };
     }
 
@@ -116,6 +125,7 @@ public sealed class TaxSave
             Income = (long[])Income.Clone(), Expense = (long[])Expense.Clone(), LastIncome = (long[])LastIncome.Clone(), LastExpense = (long[])LastExpense.Clone(),
             WageOwed = (long[])WageOwed.Clone(), LordPaid = (long[])LordPaid.Clone(), LastLordPaid = (long[])LastLordPaid.Clone(), LastRollDay = LastRollDay, Reasons = Reasons == 0 ? Ledger.TransferReasons : Reasons,
         };
+        s.PadReasons();
         Array.Copy(Tally, s.Tally, Math.Min(Tally.Length, s.Tally.Length));
         for (int i = 0; i < ArrHh.Length; i++)
             s.Arrears[ArrHh[i]] = new ArrearsRow { ArrHearth = ArrValues[i * 4], ArrDwelling = ArrValues[i * 4 + 1], DebtHearth = ArrValues[i * 4 + 2], DebtDwelling = ArrValues[i * 4 + 3], Seasons = ArrSeasons[i] };

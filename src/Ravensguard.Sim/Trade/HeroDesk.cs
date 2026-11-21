@@ -68,6 +68,19 @@ public enum HeroCommandKind : byte
     Bondage,
     /// <summary>Appended (P6-E1): the hero in a riot or as a lord facing unrest ("ur:join|riot", lead, guards, mediate, dole, pardon), applied by <see cref="Ravensguard.Sim.Unrest.UnrestDesk"/>.</summary>
     Unrest,
+    // Phase 7 (overview 8.1, append only): every new hero command is recorded (the Phase 5 S1 and S4 replay lessons); each part adds its applier
+    /// <summary>Appended (Phase 7 industries): "in:" commands.</summary>
+    Industry,
+    /// <summary>Appended (Phase 7 coinage): "cn:" commands.</summary>
+    Coin,
+    /// <summary>Appended (Phase 7 army economy): "ws:" commands (policy, warrant, serve or pay).</summary>
+    WarSupply,
+    /// <summary>Appended (Phase 7 armies): "ar:" commands (armies and sieges).</summary>
+    Army,
+    /// <summary>Appended (Phase 7 soldiers): "so:" commands.</summary>
+    Soldier,
+    /// <summary>Appended (Phase 7 ships): "nv:" commands.</summary>
+    Naval,
 }
 
 /// <summary>Where the hero crafts (built on the main thread from what is in reach, copied into the command).</summary>

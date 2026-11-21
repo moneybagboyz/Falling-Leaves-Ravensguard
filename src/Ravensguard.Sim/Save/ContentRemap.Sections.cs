@@ -120,7 +120,7 @@ public static partial class ContentRemap
                     counts[i] = g.Length; rg.AddRange(g); rq.AddRange(q);
                 }
                 e.StoreRowCount = counts; e.RowGood = [.. rg]; e.RowQty = [.. rq];
-                e.MassCreated = PerGood(e.MassCreated, MassLedger.CreateReasons); e.MassDestroyed = PerGood(e.MassDestroyed, MassLedger.DestroyReasons);
+                e.MassCreated = PerGood(e.MassCreated, MassLedger.CreateReasons); e.MassDestroyed = PerGood(e.MassDestroyed, MassLedger.DestroyedWidth(G.Old.Length, e.MassDestroyed.Length) is var dw and >= 0 ? dw : MassLedger.DestroyReasons);
                 for (int i = 0; i < e.ItemGood.Length; i++) { int n = Good(e.ItemGood[i]); e.ItemGood[i] = n < 0 ? ItemTable.NoGood : (ushort)n; }
                 for (int i = 0; i < e.ItemContentsGood.Length; i++)
                 {

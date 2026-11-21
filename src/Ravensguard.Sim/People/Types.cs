@@ -26,6 +26,8 @@ public enum Occupation : byte
     Lord, Steward, Mayor, GuildMaster,
     // Phase 6 (overview 8.1, append only): physicians and barbers' trade of medicine, and the cloister
     Physician, Monk,
+    // Phase 7 (overview 8.1, append only): the soldier's, the outlaw's and the sailor's trades
+    Soldier, Bandit, Sailor,
 }
 
 public enum Skill : byte
@@ -38,6 +40,8 @@ public enum Skill : byte
     Blades, Axes, Hafted, Polearms, Shields, Throwing,
     // Phase 5 (append only, prospecting-and-extraction 4): finding what a place holds; trains by use, starts from Perception
     Prospecting,
+    // Phase 7 (overview 8.1, append only): the sea, and engines (aiming, building); absent skills read 0
+    Seamanship, Engineering,
 }
 
 /// <summary>A skill slot of a Person: which skill and its 0..100 level.</summary>

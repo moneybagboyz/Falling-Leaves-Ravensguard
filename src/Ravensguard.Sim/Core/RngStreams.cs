@@ -421,6 +421,114 @@ public static class RngStreams
     /// <summary>P6: holdings: horse breeding (key mare, year).</summary>
     public const uint HorseBreeding = 0x6E1;
 
+    // ---- Phase 7 (overview 5): Phase 7 owns 0x700..0x7FF; economy 0x700..0x77F, military 0x780..0x7EF, 0x7F0..0x7FF unassigned. Registered now; each part draws its own. ----
+    /// <summary>P7: economy audit: WarLoad muster jitter and forage ties (key war, season).</summary>
+    public const uint WarLoadMusterJitter = 0x700;
+    /// <summary>P7: economy audit: the exploit bot and X11's moves (key bot, day); never drawn by a game started from the menu.</summary>
+    public const uint ExploitBot = 0x701;
+    /// <summary>P7: coinage: reserved for coining and clipping crimes (Phase 8); asserted never drawn.</summary>
+    public const uint CoinageReserved = 0x710;
+    /// <summary>P7: economies of scale: an apprentice or hand spoiling a batch (key business, station, batch).</summary>
+    public const uint ApprenticeSpoil = 0x720;
+    /// <summary>P7: economies of scale: guild inspection (key guild, business, season).</summary>
+    public const uint GuildInspection = 0x721;
+    /// <summary>P7: large buildings: machine and wheel breakdowns (key piece, day).</summary>
+    public const uint MachineBreakdown = 0x730;
+    /// <summary>P7: large buildings: flood damage (key wheel piece, day).</summary>
+    public const uint FloodDamage = 0x731;
+    /// <summary>P7: industries: stage accidents (key stage, day).</summary>
+    public const uint StageAccident = 0x740;
+    /// <summary>P7: industries: ore yield per batch (key ore body, batch).</summary>
+    public const uint OreYield = 0x741;
+    /// <summary>P7: industries: kiln losses (key kiln, firing).</summary>
+    public const uint KilnLoss = 0x742;
+    /// <summary>P7: industries: own-caravan ties (key caravan, day).</summary>
+    public const uint OwnCaravanTies = 0x743;
+    /// <summary>P7: army economy: forage yield, the one forage rule (key tile, day).</summary>
+    public const uint ForageYield = 0x750;
+    /// <summary>P7: army economy: sutlers joining (key host, day).</summary>
+    public const uint SutlersJoin = 0x751;
+    /// <summary>P7: army economy: loot condition (key item, battle).</summary>
+    public const uint LootCondition = 0x752;
+    /// <summary>P7: army economy: a vassal's serve or pay (key vassal, season).</summary>
+    public const uint VassalServeOrPay = 0x753;
+    /// <summary>P7: army economy: arms caravans (key realm pair, season).</summary>
+    public const uint ArmsCaravans = 0x754;
+    /// <summary>P7: battle bubble: captain ties (key battle, formation, tick/40).</summary>
+    public const uint CaptainTies = 0x780;
+    /// <summary>P7: battle bubble: a wave's entry jitter (key battle, side, wave).</summary>
+    public const uint WaveEntryJitter = 0x781;
+    /// <summary>P7: battle bubble: rank-closing hesitation (key battle, fighter, slot change).</summary>
+    public const uint RankClosingHesitation = 0x782;
+    /// <summary>P7: battle bubble: a runner's route (key battle, order).</summary>
+    public const uint RunnerRoute = 0x783;
+    /// <summary>P7: cavalry: fall or jump over a fallen horse (key battle, rider, obstacle).</summary>
+    public const uint HorseFall = 0x790;
+    /// <summary>P7: cavalry: kick and bite target (key battle, horse, tick).</summary>
+    public const uint KickAndBite = 0x791;
+    /// <summary>P7: cavalry: branches (key battle, rider, second).</summary>
+    public const uint CavalryBranches = 0x792;
+    /// <summary>P7: cavalry: horse-holder ties (key battle, formation).</summary>
+    public const uint HorseHolderTies = 0x793;
+    /// <summary>P7: armies: desertion (key person, day).</summary>
+    public const uint Desertion = 0x7A0;
+    /// <summary>P7: armies: deserter to bandit and drift home (key person, day / band, season).</summary>
+    public const uint DeserterDrift = 0x7A1;
+    /// <summary>P7: armies: warband task and raid ties (key warband, day).</summary>
+    public const uint WarbandTies = 0x7A2;
+    /// <summary>P7: armies: persons made for a host from outside (key host, index).</summary>
+    public const uint HostPersonsFromOutside = 0x7A3;
+    /// <summary>P7: armies: a scout caught (key scout, day).</summary>
+    public const uint ScoutCaught = 0x7A4;
+    /// <summary>P7: armies: campaign target ties (key realm, season).</summary>
+    public const uint CampaignTargetTies = 0x7A5;
+    /// <summary>P7: armies: camp pitch jitter (key host, camp).</summary>
+    public const uint CampPitchJitter = 0x7A6;
+    /// <summary>P7: soldiers: company loyalty (key company, day).</summary>
+    public const uint CompanyLoyalty = 0x7B0;
+    /// <summary>P7: soldiers: company seeding (key region, index).</summary>
+    public const uint CompanySeeding = 0x7B1;
+    /// <summary>P7: soldiers: changing sides (key company, war).</summary>
+    public const uint ChangingSides = 0x7B2;
+    /// <summary>P7: soldiers: prisoners killed by a cruel captor (key battle, prisoner).</summary>
+    public const uint PrisonersKilled = 0x7B3;
+    /// <summary>P7: soldiers: parole broken (key person, season).</summary>
+    public const uint ParoleBroken = 0x7B4;
+    /// <summary>P7: sieges: an engine shot's landing (key engine, shot).</summary>
+    public const uint EngineShotLanding = 0x7C0;
+    /// <summary>P7: sieges: a ladder pushed off (key ladder, try).</summary>
+    public const uint LadderPushedOff = 0x7C1;
+    /// <summary>P7: sieges: a missile from below meeting a merlon (key battle, projectile).</summary>
+    public const uint MissileMeetsMerlon = 0x7C2;
+    /// <summary>P7: sieges: sack fires, deaths, captives (key siege, house).</summary>
+    public const uint SackRolls = 0x7C3;
+    /// <summary>P7: sieges: a runner slipping the blockade (key siege, person, night).</summary>
+    public const uint BlockadeRunner = 0x7C4;
+    /// <summary>P7: sieges: siege AI ties (key siege, day).</summary>
+    public const uint SiegeAiTies = 0x7C5;
+    /// <summary>P7: ships: capsize in a beam sea (key ship, 20 s step).</summary>
+    public const uint BeamSeaCapsize = 0x7D0;
+    /// <summary>P7: ships: wreck damage (key ship, cell).</summary>
+    public const uint WreckDamage = 0x7D1;
+    /// <summary>P7: ships: shedding kit under water (key person, second).</summary>
+    public const uint SheddingKit = 0x7D2;
+    /// <summary>P7: ships: sea raid ties and size (key realm, season).</summary>
+    public const uint SeaRaidTies = 0x7D3;
+    /// <summary>P7: ships: persons for an arriving crew (key ship, index).</summary>
+    public const uint CrewFromOutside = 0x7D4;
+    /// <summary>P7: ships: a grapple's catch (key ship pair, throw).</summary>
+    public const uint GrappleCatch = 0x7D5;
+    /// <summary>P7: abstract war: v2 block placement and reserve ties (key battle, side).</summary>
+    public const uint BlockPlacement = 0x7E0;
+    /// <summary>P7: abstract war: trample and fall in a pass (key battle, rider, step).</summary>
+    public const uint TrampleAndFall = 0x7E1;
+    /// <summary>P7: abstract war: count-battle rounding (key battle, step, class).</summary>
+    public const uint CountBattleRounding = 0x7E2;
+    /// <summary>P7: abstract war: count-host forage and siege rounding (key host, day).</summary>
+    public const uint CountHostRounding = 0x7E3;
+    /// <summary>P7: abstract war: the war soak's world variation (key world, year); never drawn by a game started from the menu.</summary>
+    public const uint WarSoakVariation = 0x7E4;
+
     /// <summary>Stream ids that two named uses share on purpose, with why their draws never meet.</summary>
     public static readonly (string A, string B, string Why)[] SharedPairs =
     [

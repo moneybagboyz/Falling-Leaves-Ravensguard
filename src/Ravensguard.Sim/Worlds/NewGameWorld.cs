@@ -50,6 +50,7 @@ public static class NewGameWorld
         };
         if (difficulty != null) state.Difficulty = difficulty;            // after the economy is set: it hands the multipliers on
         Phase6Seeding.Run(state, content, null);                    // P6-A2 (overview 7): the seeding pass after the population and difficulty
+        Phase7Seeding.Run(state, content, null);                    // P7-0A (overview 7): the Phase 7 pass, appended to the Phase 6 one (no steps registered yet)
         return state;
     }
 }
