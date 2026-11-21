@@ -1,6 +1,7 @@
 using Ravensguard.Content;
 using Ravensguard.Sim.Construction;
 using Ravensguard.Sim.Core;
+using Ravensguard.Sim.Save;
 
 namespace Ravensguard.Sim.Building;
 
@@ -39,7 +40,10 @@ public sealed class PowerWorld
 
     public WaterPowerRulesDef Rules => Cat.Rules;
 
-    public PowerWorld(ConstructionWorld cw, PowerCatalog cat, ulong seed) { Cw = cw; Cat = cat; Seed = seed; }
+    /// <summary>The works' saved state: the sluices that are shut (the "works" section).</summary>
+    public WorksBook Works { get; }
+
+    public PowerWorld(ConstructionWorld cw, PowerCatalog cat, ulong seed, WorksBook? works = null) { Cw = cw; Cat = cat; Seed = seed; Works = works ?? new WorksBook(); }
 
     // ------------------------------------------------------------------ the nets
 
@@ -56,7 +60,7 @@ public sealed class PowerWorld
         return list;
     }
 
-    public bool IsShut(PowerCell sluice) => Cw.Book.SluiceShut.Contains(sluice.Key);
+    public bool IsShut(PowerCell sluice) => Works.SluiceShut.Contains(sluice.Key);
 
     /// <summary>Derives the nets and works out the watts of <paramref name="day"/> without wearing anything (the panel's and the plan checks' read).</summary>
     public IReadOnlyList<PowerNet> Refresh(long day)
@@ -198,7 +202,7 @@ public sealed class PowerWorld
     {
         var key = ConstructionIds.SlotKey(x, y, z, GhostSlot.Fixture);
         if (Cw.Book.Built.GetValueOrDefault(key) is not { } b || Cat.Get(b.Piece)?.Role != "switch") return false;
-        if (shut) Cw.Book.SluiceShut.Add(key); else Cw.Book.SluiceShut.Remove(key);
+        if (shut) Works.SluiceShut.Add(key); else Works.SluiceShut.Remove(key);
         return true;
     }
 

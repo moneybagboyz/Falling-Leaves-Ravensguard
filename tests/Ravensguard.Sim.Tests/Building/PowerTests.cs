@@ -344,18 +344,19 @@ public class PowerTests(ITestOutputHelper output)
     // ---------------------------------------------------------------- the sluice and the save
 
     [Fact]
-    public void TheSluiceState_IsSavedAdditively_AndAnEmptyOneChangesNothing()
+    public void TheSluiceState_IsInTheWorksSection_AndConstructionKeepsItsBytes()
     {
         var (rig, pw) = World(sluice: true);
-        string clean = rig.W.Book.ComputeHash();
-        var empty = ConstructionSave.Capture(rig.W.Book);
-        Assert.Empty(empty.SluiceShut);
+        byte[] before = SaveCodec.Serialize(ConstructionSave.Capture(rig.W.Book));
+        Assert.True(pw.Works.IsEmpty);                                          // nothing shut: nothing to write
         Assert.True(pw.SetSluice(WheelX, WheelY + 1, 0, true));
-        Assert.NotEqual(clean, rig.W.Book.ComputeHash());
-        var back = SaveCodec.Deserialize<ConstructionSave>(SaveCodec.Serialize(ConstructionSave.Capture(rig.W.Book))).Restore();
-        Assert.Equal(rig.W.Book.SluiceShut, back.SluiceShut); Assert.Equal(rig.W.Book.ComputeHash(), back.ComputeHash());
+        Assert.Equal(before, SaveCodec.Serialize(ConstructionSave.Capture(rig.W.Book)));   // the construction section never carries it
+        Assert.False(pw.Works.IsEmpty);
+        var back = SaveCodec.Deserialize<WorksSave>(SaveCodec.Serialize(WorksSave.Capture(pw.Works))).Restore();
+        Assert.Equal(pw.Works.SluiceShut, back.SluiceShut);
+        Assert.Equal("works", WorksSave.SectionName); Assert.Contains("works", Ravensguard.Sim.Worlds.Phase7Seeding.SectionNames);
         Assert.True(pw.SetSluice(WheelX, WheelY + 1, 0, false));
-        Assert.Equal(clean, rig.W.Book.ComputeHash());                       // open again: the hash is what it was
+        Assert.True(pw.Works.IsEmpty);
     }
 
     [Fact]

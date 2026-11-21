@@ -3,7 +3,9 @@ using Ravensguard.Sim.Combat.Watch;
 namespace Ravensguard.Sim.Combat.Watch
 {
     /// <summary>The formation cards (watch-mode 4.4, plan 2.8: F1-F4): a line, a shield wall, loose skirmish order, and "fall back to me". <c>Auto</c> is the captain's own choice. Append only.</summary>
-    public enum Formation : byte { Auto, Line, ShieldWall, Loose, FallBack }
+    public enum Formation : byte { Auto, Line, ShieldWall, Loose, FallBack,
+        // Phase 7 (overview 8.1, append only)
+        Column, Wedge, Schiltron, WagonFort }
 
     /// <summary>The player's orders to the side (watch-mode 4.1): focus a target, hold fire, fall back to the hero, protect someone, and clear them. Append only.</summary>
     public enum SquadOrderKind : byte { Clear, Focus, HoldFire, FallBack, Protect }

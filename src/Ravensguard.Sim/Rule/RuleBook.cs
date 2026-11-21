@@ -7,10 +7,14 @@ namespace Ravensguard.Sim.Rule;
 [Flags] public enum FiefRights : byte { None = 0, Tax = 1, Levy = 2, Judge = 4, Market = 8, All = 15 }
 
 /// <summary>The offices a lord fills (rule-and-income 3). Append only.</summary>
-public enum OfficeKind : byte { Reeve, Bailiff, Steward, Sheriff, CustomsCollector, Gaoler, Treasurer }
+public enum OfficeKind : byte { Reeve, Bailiff, Steward, Sheriff, CustomsCollector, Gaoler, Treasurer,
+    /// <summary>Phase 7 (overview 8.1): the realm's mint master. Appended.</summary>
+    MintMaster }
 
 /// <summary>What is owed (rule-and-income 3, 4.2, 4.3). Append only.</summary>
-public enum DueKind : byte { Service, Aid, Relief, Wardship, MarriageFee, Subsidy, Tallage, Rent, Labour }
+public enum DueKind : byte { Service, Aid, Relief, Wardship, MarriageFee, Subsidy, Tallage, Rent, Labour,
+    /// <summary>Phase 7 (overview 8.1): shield money in place of service. Appended.</summary>
+    Scutage }
 
 /// <summary>Where a due stands: due, paid, in arrears, waived, or a grievance (the payer was left unpaid and it counts against the payee). Append only.</summary>
 public enum DueState : byte { Due, Paid, Arrears, Waived, Grievance }

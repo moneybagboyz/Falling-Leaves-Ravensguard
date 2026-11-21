@@ -138,6 +138,8 @@ public sealed class WorldState
     public bool MedicineSeedPending { get; set; }
     /// <summary>P6-B5: burning cells, scars, abstract building fires, smoke, upkeep marks and vented firedamp (fire and burning 3), in the optional "fire" section once anything has burnt (no format bump).</summary>
     public Ravensguard.Sim.Burning.FireBook? Fire { get; set; }
+    /// <summary>P7-LB1: the works' state (shut sluices) in the optional "works" section, only while something is set.</summary>
+    public WorksBook? Works { get; set; }
     /// <summary>P6-B6: the clearings of the hero's claims, the coppice cut, the mares in foal (holdings-and-works-v2 3.1, 3.7, 3.8), in the optional "holdings" section once any exists (no format bump).</summary>
     public Ravensguard.Sim.Holdings.HoldingsBook? Holdings { get; set; }
     /// <summary>P6-D4: the soil works of the fields and the improvements standing on them (holdings-and-works-v2 3.5); with the streets the lord laid (they live in <see cref="Growth"/>), the optional "landworks" section.</summary>
@@ -491,6 +493,7 @@ public static partial class WorldSave
             Wills = w.Wills is { IsEmpty: false } wlb ? WillsSave.Capture(wlb) : null,                                                // P5-H
             Standing = w.Standing is { IsEmpty: false } stb ? StandingSave.Capture(stb) : null,                                      // P6-A3
             Medicine = (w.Medicine ?? w.HomeRecords?.Sim.Get<Ravensguard.Sim.Medicine.PhysicianBook>()) is { IsBlank: false } mdb ? mdb.Capture() : null,   // P6-B1
+            Works = w.Works is { IsEmpty: false } wkb ? WorksSave.Capture(wkb) : null,                                               // P7-LB1
             Fire = w.Fire is { IsEmpty: false } frb ? FireSave.Capture(frb) : null,                                                   // P6-B5
             FireAdopted = w.Fire is { IsEmpty: false } fab ? FireAdoptedSave.Capture(fab) : null,                                     // S1
             Law = w.Law is { IsEmpty: false } lwb ? CrimeSave.Capture(lwb) : null,                                                    // P6-B2
@@ -681,6 +684,7 @@ public static partial class WorldSave
             Wills = file.Sections.ContainsKey(WillsSave.SectionName) ? Decode<WillsSave>(file, WillsSave.SectionName, compressed: true).Restore() : null,                       // P5-H
             Standing = file.Sections.ContainsKey(StandingSave.SectionName) ? Decode<StandingSave>(file, StandingSave.SectionName, compressed: true).Restore() : null,          // P6-A3
             Medicine = file.Sections.ContainsKey(Ravensguard.Sim.Medicine.MedicineSave.SectionName) ? Ravensguard.Sim.Medicine.PhysicianBook.Restore(Decode<Ravensguard.Sim.Medicine.MedicineSave>(file, Ravensguard.Sim.Medicine.MedicineSave.SectionName, compressed: true)) : null,   // P6-B1
+            Works = file.Sections.ContainsKey(WorksSave.SectionName) ? Decode<WorksSave>(file, WorksSave.SectionName, compressed: true).Restore() : null,   // P7-LB1
             Fire = RestoreFire(file),                                                                                                    // P6-B5 (+ S1: the adopted buildings)
             Law = file.Sections.ContainsKey(CrimeSave.SectionName) ? Decode<CrimeSave>(file, CrimeSave.SectionName, compressed: true).Restore() : null,                       // P6-B2
             Justice = file.Sections.ContainsKey(JusticeSave.SectionName) ? Decode<JusticeSave>(file, JusticeSave.SectionName, compressed: true).Restore() : null,              // P6-C1
@@ -719,6 +723,8 @@ public static partial class WorldSave
         // P6-A2 (overview 7): the first load of a save without the Phase 6 sections derives them from the seed and ids, as a new game does; the load report says so
         var seeded = Ravensguard.Sim.Worlds.Phase6Seeding.Run(restored, content, file.Sections.Keys.ToArray());
         if (seeded.Count > 0) restored.LoadNotes = [.. restored.LoadNotes, .. seeded];
+        var seeded7 = Ravensguard.Sim.Worlds.Phase7Seeding.Run(restored, content, file.Sections.Keys.ToArray());       // P7-0A: appended to the Phase 6 pass
+        if (seeded7.Count > 0) restored.LoadNotes = [.. restored.LoadNotes, .. seeded7];
         return restored;
     }
 
@@ -922,6 +928,7 @@ public sealed class LiveCapture
     internal StandingSave? Standing { get; init; }                                                                           // P6-A3
     internal Ravensguard.Sim.Medicine.MedicineSave? Medicine { get; init; }                                                  // P6-B1
     internal FireAdoptedSave? FireAdopted { get; init; }
+    internal WorksSave? Works { get; init; }                                                                                   // P7-LB1
     internal FireSave? Fire { get; init; }                                                                                   // P6-B5
     internal CrimeSave? Law { get; init; }                                                                                   // P6-B2
     internal JusticeSave? Justice { get; init; }                                                                             // P6-C1
@@ -1006,6 +1013,7 @@ public sealed class LiveCapture
         if (Wills != null) sections.Add(new(WillsSave.SectionName, SaveCodec.SerializeCompressed(Wills)));                   // P5-H (optional, no bump)
         if (Standing != null) sections.Add(new(StandingSave.SectionName, SaveCodec.SerializeCompressed(Standing)));         // P6-A3 (optional, no bump)
         if (Medicine != null) sections.Add(new(Ravensguard.Sim.Medicine.MedicineSave.SectionName, SaveCodec.SerializeCompressed(Medicine)));   // P6-B1 (optional, no bump)
+        if (Works != null) sections.Add(new(WorksSave.SectionName, SaveCodec.SerializeCompressed(Works)));                  // P7-LB1 (optional, no bump)
         if (Fire != null) sections.Add(new(FireSave.SectionName, SaveCodec.SerializeCompressed(Fire)));                      // P6-B5 (optional, no bump)
         if (FireAdopted != null) sections.Add(new(FireAdoptedSave.SectionName, SaveCodec.SerializeCompressed(FireAdopted)));  // S1 (optional: only a fire that adopted buildings)
         if (Law != null) sections.Add(new(CrimeSave.SectionName, SaveCodec.SerializeCompressed(Law)));                      // P6-B2 (optional, no bump)

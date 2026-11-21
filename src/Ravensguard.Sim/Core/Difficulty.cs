@@ -12,7 +12,11 @@ public sealed record Difficulty
     public static readonly int[] WoundChoices = [100, 85, 70, 130];
     public static readonly int[] BanditChoices = [100, 50, 150, 200];
     public static readonly int[] PaceChoices = [1, 2, 3, 4];
+    public static readonly int[] IndustryOutputChoices = [100, 200, 300, 400, 500];
+    /// <summary>The six values every save has held since Phase 4: the minimum an array must have to be read at all (a shorter one reads as the default).</summary>
     public const int ValueCount = 6;
+    /// <summary>P7-0A: with the seventh value (<see cref="IndustryOutputPct"/>).</summary>
+    public const int ValueCountP7 = 7;
 
     /// <summary>Bleed rate at a wound's creation and the infection chance per day, percent of the calibrated value.</summary>
     public int WoundLethalityPct { get; init; } = 100;
@@ -23,6 +27,8 @@ public sealed record Difficulty
     public bool Ironman { get; init; }
     /// <summary>1 (historical), 2, 3 or 4: the ageing clock only; per-year vital chances stay per game year.</summary>
     public int AgingPace { get; init; } = 1;
+    /// <summary>P7-0A (overview 8.1): industry output, 100 to 500 percent in steps of 100 (the shortfall of a hand-built works against the sheets). Read by the industry stage runtime (P7-IN1).</summary>
+    public int IndustryOutputPct { get; init; } = 100;
 
     public static readonly Difficulty Default = new();
     public bool IsDefault => this == Default;
@@ -38,8 +44,8 @@ public sealed record Difficulty
     /// <summary>Case fatality percent after the slider (Rare x0.5, Frequent x1.5), capped at 90.</summary>
     public int PlagueFatalityPct(int basePct) => Math.Min(90, basePct * (Plague == PlagueSeverity.Rare ? 50 : Plague == PlagueSeverity.Frequent ? 150 : 100) / 100);
 
-    /// <summary>The five visible values in a fixed order (wound index, bandit index, economy, plague, ironman, pace) for saves and the library.</summary>
-    public int[] ToArray() => [Array.IndexOf(WoundChoices, WoundLethalityPct), Array.IndexOf(BanditChoices, BanditPct), (int)Economy, (int)Plague, Ironman ? 1 : 0, AgingPace];
+    /// <summary>The visible values in a fixed order (wound index, bandit index, economy, plague, ironman, pace, then the industry output index only when it is not the default 100, so a world that never touched it keeps its bytes) for saves and the library.</summary>
+    public int[] ToArray() => [Array.IndexOf(WoundChoices, WoundLethalityPct), Array.IndexOf(BanditChoices, BanditPct), (int)Economy, (int)Plague, Ironman ? 1 : 0, AgingPace, .. IndustryOutputPct == 100 ? Array.Empty<int>() : new[] { Array.IndexOf(IndustryOutputChoices, IndustryOutputPct) }];
 
     public static Difficulty FromArray(int[]? v)
     {
@@ -48,6 +54,7 @@ public sealed record Difficulty
         {
             WoundLethalityPct = WoundChoices[Math.Clamp(v[0], 0, WoundChoices.Length - 1)], BanditPct = BanditChoices[Math.Clamp(v[1], 0, BanditChoices.Length - 1)],
             Economy = (EconomyHarshness)Math.Clamp(v[2], 0, 2), Plague = (PlagueSeverity)Math.Clamp(v[3], 0, 3), Ironman = v[4] != 0, AgingPace = Math.Clamp(v[5], 1, 4),
+            IndustryOutputPct = v.Length > ValueCount ? IndustryOutputChoices[Math.Clamp(v[6], 0, IndustryOutputChoices.Length - 1)] : 100,      // a six-value array (every save before Phase 7) reads as 100
         };
     }
 

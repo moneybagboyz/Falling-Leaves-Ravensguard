@@ -537,7 +537,7 @@ public class CraftingTests(ITestOutputHelper output)
     [Fact]
     public void SaveMigration_V2ToV3_TheHeroGainsTheSevenNewSkillsAtZero_AndTheEnumGrewAtTheEnd()
     {
-        Assert.Equal(41, Enum.GetValues<Sk>().Length);                                                                     // Phase 4 appended the six weapon families, P5-F Prospecting
+        Assert.Equal(43, Enum.GetValues<Sk>().Length);                                                                     // Phase 4 appended the six weapon families, P5-F Prospecting, P7-0A Seamanship and Engineering
         Assert.Equal(26, (int)Sk.Theology); Assert.Equal(27, (int)Sk.Tailoring); Assert.Equal(33, (int)Sk.Lockpicking);      // appended: stored bytes of older skills do not move
         var old = Enum.GetValues<Sk>().Where(x => x != Sk.None && x < Sk.Tailoring).Select(x => Ravensguard.Sim.Characters.HeroRecord.SkillId(x)).ToArray();
         var hero = new Ravensguard.Sim.Characters.HeroSave { Name = "Ada", Origin = "x", Attributes = [50, 50, 50, 50, 50], SkillIds = old, SkillLevels = old.Select((_, i) => i + 1).ToArray() };
@@ -545,8 +545,8 @@ public class CraftingTests(ITestOutputHelper output)
         var migrated = SaveMigrator.CreateDefault().Migrate(file);
         Assert.Equal(SaveFormat.CurrentVersion, migrated.Header.FormatVersion); Assert.True(SaveFormat.CurrentVersion >= 3); // v4 (Phase 3 cleanup) added the chunk palette on top
         var back = Ravensguard.Sim.Characters.HeroRecord.FromSave(SaveCodec.Deserialize<Ravensguard.Sim.Characters.HeroSave>(migrated.Sections["hero"]));
-        Assert.Equal(40, back.Skills.Count); Assert.Equal(0, back.Skill("lockpicking")); Assert.Equal(1, back.Skill("farming"));
-        Assert.Equal(40, SaveCodec.Deserialize<Ravensguard.Sim.Characters.HeroSave>(migrated.Sections["hero"]).SkillIds.Length);   // P5-F: + Prospecting
+        Assert.Equal(42, back.Skills.Count); Assert.Equal(0, back.Skill("lockpicking")); Assert.Equal(1, back.Skill("farming"));
+        Assert.Equal(40, SaveCodec.Deserialize<Ravensguard.Sim.Characters.HeroSave>(migrated.Sections["hero"]).SkillIds.Length);   // P5-F: + Prospecting (the two Phase 7 skills are not written while untrained, so the section keeps its bytes)
         Assert.Equal(back.Skill("melee") * 8 / 10, back.Skill("blades"));                                                       // v6: the families start at 80% of Melee
     }
 }

@@ -53,6 +53,15 @@ public enum TransferReason : byte
     Penance,
     /// <summary>P6-E2 (faith 4.4): a church pays for a relic. Appended.</summary>
     RelicSale,
+    // Phase 7 (overview 8.1, append only; saves pad the count as for Alms). Nothing writes them until its own part lands (P7-0B repoints AftermathCoin.Plunder).
+    /// <summary>P7 (coinage): a money changer's exchange of one coin for another.</summary>
+    Exchange,
+    /// <summary>P7 (army economy): a tally paid for grain taken by purveyance.</summary>
+    Purveyance,
+    /// <summary>P7 (army economy): shield money paid instead of service.</summary>
+    Scutage,
+    /// <summary>P7 (armies): coin robbed by an army or a warband (the Phase 4 alias maps it to <see cref="Fine"/> until P7-0B).</summary>
+    Plunder,
 }
 
 /// <summary>The only faucets: the one-off seed money of world creation, silver struck at a mint, and the coin a household brings across a region border (the other region's ledger holds the matching <see cref="SinkReason.Emigrate"/>).</summary>

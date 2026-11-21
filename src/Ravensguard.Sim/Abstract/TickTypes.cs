@@ -40,6 +40,9 @@ public static class SystemOrder
     public const int Environment = 0;
     // H1
     public const int Caravans = 1_000;
+    // Phase 7 slots (overview 8.4; registered by their own parts, constants here so the order never depends on registration)
+    // H1 after caravans: hosts, ships, sieges, then the host supply slot and the armies' daily step (both act only at hour 18)
+    public const int Armies = 1_100, Ships = 1_120, Sieges = 1_140, HostSupply = 1_150, ArmiesDaily = 1_160;
     // H2 work credit: businesses, then extraction, then farm tasks (overview section 4)
     public const int Production = 2_000, Extraction = 2_100, FarmTasks = 2_200;
     // H3
@@ -49,12 +52,16 @@ public static class SystemOrder
     // H5 hour 0: farming (weather, field events, the day's labour, harvest) first; then population; store spoilage, parish, labour market before the markets'
     // daily globals (structural demand sees today's staff and stock) and production's vacancy counters last (Phase 2 integration, decision I1)
     public const int DailyGlobalsFarming = 4_900, DailyGlobalsPopulation = 5_000, DailyGlobalsSpoilage = 5_020, DailyGlobalsParish = 5_030, DailyGlobalsLabour = 5_040,
-        DailyGlobalsMarkets = 5_100, DailyGlobalsProduction = 5_150, DailyGlobalsTaxes = 5_200;
+        DailyGlobalsMarkets = 5_100, DailyGlobalsProduction = 5_150, DailyGlobalsTaxes = 5_200,
+        // Phase 7 (overview 8.4), H5 after taxes: the mint's queue, the soldiers' day, the sieges' day
+        MintDaily = 5_210, SoldiersDaily = 5_230, SiegesDaily = 5_240;
     // H6 seasonal steps S1..S9 (overview section 4 table); several systems may share a step and then order by name
     public const int S1Farming = 6_100, S2Grazing = 6_200, S3Extraction = 6_300, S4Taxes = 6_400, S5Businesses = 6_450, S5MintPrices = 6_500, S6Population = 6_600, S6Growth = 6_650, S7Migration = 6_700,
         S8Caravans = 6_800, S9Summary = 6_900,
         /// <summary>P6-D2 (diplomacy-and-ai-lords 4.6): the realms' diplomacy and the lords' planning, after the continent's summary; a fief an hour of a season's first day.</summary>
-        S10Politics = 6_950;
+        S10Politics = 6_950,
+        /// <summary>P7 (overview 8.4): rulers' campaigns, musters and summons, the war score's season, winter quarters; after <see cref="S10Politics"/>.</summary>
+        S11War = 6_970;
     // H7
     public const int Outbox = 7_000;
 }

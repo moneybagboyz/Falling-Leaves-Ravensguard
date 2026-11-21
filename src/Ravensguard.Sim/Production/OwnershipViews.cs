@@ -11,7 +11,9 @@ namespace Ravensguard.Sim.Production;
 /// <summary>The Ledger's tabs (businesses spec 6), in screen order.</summary>
 public enum LedgerTab : byte { Property, Businesses, Sites, Fields, Stalls, Vehicles, Shares, Stewards,
     /// <summary>P6-C3 (rule-and-income 6): the lord's books: receipts by source, arrears, grievances, officials' records, dues and loans. Appended.</summary>
-    Fief }
+    Fief,
+    /// <summary>Phase 7 (overview 8.1): the industry tab (stages, tiers, output). Appended.</summary>
+    Industry }
 
 /// <summary>
 /// One row of a Ledger table (spec 6): its id (for the detail), the cells as the screen shows them (already formatted, column order of the tab), sort keys per column (numbers sort as numbers,

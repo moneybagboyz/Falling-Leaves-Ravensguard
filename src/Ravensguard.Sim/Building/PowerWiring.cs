@@ -38,7 +38,7 @@ public static class PowerWiring
         var cw = home.Sim.Get<ConstructionWorld>();
         if (cw == null) return null;
         var cat = PowerCatalog.Of(content);
-        var pw = new PowerWorld(cw, cat, state.Seed);
+        var pw = new PowerWorld(cw, cat, state.Seed, state.Works ??= new WorksBook());
         var region = state.Population?.Region;
         if (region != null) pw.Sites = new WaterSites(region, cat.Rules);
         pw.BuildingAt = (x, y) => cw.BuiltAt(x, y, 0) != null || cw.Standing?.Invoke(x, y, 0) == true;

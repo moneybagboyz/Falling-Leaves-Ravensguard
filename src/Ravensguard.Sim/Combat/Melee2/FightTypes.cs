@@ -6,7 +6,9 @@ namespace Ravensguard.Sim.Combat.Melee2;
 // (1024 = 1.0), stamina in hundredths, time in 20 Hz fight ticks (FightTick, overview 6.1). No floating point in this folder.
 
 /// <summary>What a fighter is doing (melee-and-ranged 3.3). Append only: saved in the <c>FightRecord</c>.</summary>
-public enum FAct : byte { Idle, Windup, Strike, Recover, Block, Dodge, Stagger, Down, Dead, Fled, Surrendered, Bracing, Reloading, Drawing, Aiming }
+public enum FAct : byte { Idle, Windup, Strike, Recover, Block, Dodge, Stagger, Down, Dead, Fled, Surrendered, Bracing, Reloading, Drawing, Aiming,
+    /// <summary>Phase 7 (overview 8.1, append only): a sleeper in a camp or a bunk.</summary>
+    Asleep }
 
 /// <summary>The swing's style (4.1): quick (released inside the wind-up), normal, heavy (held past it).</summary>
 public enum SwingStyle : byte { Normal, Quick, Heavy }
