@@ -4932,7 +4932,7 @@ ch_note_charter_extension_paid,The holder paid for one more year.
 ch_scale_licensed,{holder} was licensed to run a manufactory at {place} for {fee}.
 ch_scale_guild_fine,The guild fined {owner}'s shop at {place} {fine} for keeping {over} over its size rules.
 ch_note_manufactory_petition,The lord granted the petition for a fee.
-ch_note_guild_cap_exceeded,The guild's inspectors counted more journeymen, apprentices or stations than a member's shop may keep.
+ch_note_guild_cap_exceeded,"The guild's inspectors counted more journeymen, apprentices or stations than a member's shop may keep."
 sc_no_guild,That shop is not of a trade with a guild in its town.
 sc_already_licensed,That works already holds a manufactory licence.
 sc_no_lord,There is no lord's treasury to take the fee.
