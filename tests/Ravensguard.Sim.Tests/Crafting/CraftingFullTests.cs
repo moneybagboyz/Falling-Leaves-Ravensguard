@@ -93,7 +93,13 @@ public class CraftingFullTests(BuildingFixture fx, ITestOutputHelper output) : I
         var oldBook = RecipeBook.Build(old, cat);
         var view = RecipeBook.Build(EconFixture.Content, cat);                       // the derived view of the business craft recipes
         Assert.Equal(oldBook.Recipes.Count + 5, view.Recipes.Count);                  // P7-IN2 make_dry_cask and P7-ES2 forge_spearheads and forge_kettle_hats and P7-LB2 lay_rope and P7-CN1 refine_gold are the business recipes beyond Phase 2's 41
-        foreach (var o in oldBook.Recipes) SameRecipeIgnoringIndex(o, view.Recipes.Single(v => v.Id == o.Id));   // P7-IN2/ES2: the new recipes sort in among them, so the indices after it move; the rows match by id
+        // P7-EA3c (EA_F4): cupel_silver yields 0.15 kg of silver from the 600 kg of lead, not Phase 2's 3 kg; the fixture keeps Phase 2's row, so that one output is compared at the new grade
+        foreach (var o in oldBook.Recipes)
+        {
+            var v = view.Recipes.Single(x => x.Id == o.Id);
+            if (o.Id == "cupel_silver") { ushort ag = cat.IdOf("silver"); Assert.Equal(3000, o.Outputs.Single(x => x.Good == ag).Qty); Assert.Equal(150, v.Outputs.Single(x => x.Good == ag).Qty); continue; }
+            SameRecipeIgnoringIndex(o, v);
+        }   // P7-IN2/ES2: the new recipes sort in among them, so the indices after it move; the rows match by id
         // a mod's Phase 2 row converts into the one format and back to the same book row
         var round = RecipeBook.Build(old.Select(d => RecipeUnifier.ToBook(EconFixture.Content, RecipeUnifier.ToCraft(d))), cat);
         for (int i = 0; i < oldBook.Recipes.Count; i++) SameRecipe(oldBook.Recipes[i], round.Recipes[i]);
