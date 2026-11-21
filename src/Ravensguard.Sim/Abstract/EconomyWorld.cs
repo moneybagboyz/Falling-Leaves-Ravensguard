@@ -36,6 +36,8 @@ public sealed class EconomyWorld
     /// <summary>Background growth: cottages, assarted fields and new businesses built by the abstract world (plan 4A.2).</summary>
     public Ravensguard.Sim.Growth.GrowthSystem Growth { get; }
     public EconomyCounters Counters { get; } = new();
+    /// <summary>P7-EA1: the army economy's interface when a host has ever been registered (set by <c>HostSupply.Install</c>); null in every game that never had one. Not saved here (its state is the <c>warsupply</c> section).</summary>
+    public Ravensguard.Sim.WarSupply.HostSupply? War { get; set; }
     /// <summary>P5-F (businesses spec 4.3): the hiring hour in every settlement's square.</summary>
     public DayLabour DayLabour { get; }
     /// <summary>Farming writes its chronicle here; the farming system moves the new entries to the tick outbox after each daily step.</summary>
@@ -58,7 +60,7 @@ public sealed class EconomyWorld
         Taxes = new Ravensguard.Sim.Taxes.TaxSystem(world, this, farming, production, content.Tax);
         farming.BuyFromMarket = (hh, good, qty) => markets.BookForHousehold(hh).Buy(markets.HouseholdParty(hh), good, qty, 3000, (int)(world.State.HourDone / 24)).Qty;
         farming.CountIdleHands = true;
-        farming.IsEmployedElsewhere = Labour.IsAwayFromFarm;
+        farming.IsEmployedElsewhere = p => Labour.IsAwayFromFarm(p) || War?.IsOnCampaign(p) == true;      // P7-EA1: a levy on campaign has left his household's fields
         farming.ManorLordOf = Labour.ManorLordOf;
         Growth = new Ravensguard.Sim.Growth.GrowthSystem(this);
         DayLabour = new DayLabour(production, world.Population, world.Economy, content.Ownership, Labour);

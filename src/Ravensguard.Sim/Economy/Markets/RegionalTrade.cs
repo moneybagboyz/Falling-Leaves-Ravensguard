@@ -36,7 +36,7 @@ public sealed class RegionalTrade
         int day = (int)now.TotalDays; var led = _econ.Ledger; int n = _econ.Goods.Count;
         foreach (var b in _markets.AllBooks())
         {
-            if (b.Merchants.Count == 0) continue;
+            if (b.Merchants.Count == 0 || b.Blockaded) continue;
             var sibs = _byFief[Slot(b.SettlementIndex)]; if (sibs.Count < 2) continue;
             MarketParty? m = null; long best = -1;
             foreach (var x in b.Merchants) { long c = led.Balance(x.Purse).Mites; if (c > best) { best = c; m = x; } }
@@ -52,7 +52,7 @@ public sealed class RegionalTrade
                 MarketBook? src = null; long bestSurplus = 0;
                 foreach (var s in sibs)
                 {
-                    if (ReferenceEquals(s, b)) continue;
+                    if (ReferenceEquals(s, b) || s.Blockaded) continue;
                     var sg = s.Goods[g]; long sc = sg.Demand * sg.TargetCoverDays;
                     long surplus = sg.StockUnits - Math.Max(sc, 1);
                     if (surplus > bestSurplus) { bestSurplus = surplus; src = s; }
