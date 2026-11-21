@@ -63,19 +63,26 @@ public class P70BDebtsTests(ITestOutputHelper output)
     // ------------------------------------------------------------------ G1
 
     [Fact]
-    public void EA_G1_TheRuntimeAttachesTheHourlyLinksItself_InOneOrder_AndOnlyOnce()
+    public void EA_G1_TheRuntimeAttachesTheHourlyLinksItself_AtStart_InOneOrder_AndOnlyOnce()
     {
         using var r = new Ravensguard.Sim.Tests.Rule.RuleWorldRig();
-        var rt = r.Runtime; Assert.NotNull(rt.Phase6);                                              // fails before P7-0B: only the street view attached them
+        var rt = r.Runtime; Assert.Null(rt.Phase6);                                                   // a stepped (AdvanceTo) runtime stays bare until a harness attaches
+        rt.Start();
+        Assert.NotNull(rt.Phase6);                                                                    // fails before P7-0B: only the street view attached them
         Assert.Same(rt.Phase6, Phase6Links.AttachAll(rt, r.Content));
-        Assert.Same(rt.Phase6!.Talk, TalkLink.Attach(rt));                                           // a second Attach by hand is the same link: no hour runs twice
+        Assert.Same(rt.Phase6!.Talk, TalkLink.Attach(rt));                                            // a second Attach by hand is the same link: no hour runs twice
         Assert.Same(rt.Phase6.Family, Ravensguard.Sim.Family.FamilyLink.Attach(rt));
+    }
+
+    [Fact]
+    public void EA_G1_AHeadlessRunThroughAttachAll_SeesCourtsAndContracts_AndAHandAttachBeforeItIsTheSameLink()
+    {
+        using var r = new Ravensguard.Sim.Tests.Rule.RuleWorldRig();
+        var rt = r.Runtime; var law = LawLink.Attach(rt);
+        var set = Phase6Links.AttachAll(rt, r.Content); Assert.Same(law, LawLink.Attach(rt)); Assert.NotNull(set.Talk);
         rt.AdvanceTo(GameTime.FromGameHours(rt.HourDone + 1 + 24 * 40));
-        Assert.NotNull(r.State.Law);                                                                 // a headless run now sees the courts' book
+        Assert.NotNull(r.State.Law);                                                                  // the courts' book
         Assert.True(r.State.Chronicle.All.Any(e => e.TypeId is "crime_reported" or "crime_committed" or "work_posted"), "no crime or contract entry in forty days");
-        using var bare = new Ravensguard.Sim.Tests.Rule.RuleWorldRig(runtime: false);
-        using var rt2 = new WorldRuntime(bare.State, bare.Content, new Ravensguard.Sim.Worlds.MemoryRegionPager(), phase6Links: false);
-        Assert.Null(rt2.Phase6);
     }
 
     // ------------------------------------------------------------------ the Plunder reason
