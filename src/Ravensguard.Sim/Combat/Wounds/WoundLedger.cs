@@ -52,6 +52,9 @@ public sealed class WoundLedger
         {
             book.DayDone = Math.Max(book.DayDone, nowSec / GameSecPerDay);
             book.LethalityPct = LethalityPct;
+            // the book's rolls (infection, healing, surgery) are keyed by its seed and key; a book made elsewhere carries its own, but the save keeps only the ledger's seed and the dictionary key,
+            // so the book takes both on joining: a saved and loaded world rolls the same as the one that was not saved
+            book.Seed = Seed; book.Key = key;
             Books[key] = book;
         }
     }
