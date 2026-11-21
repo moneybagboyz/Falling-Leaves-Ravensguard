@@ -79,7 +79,7 @@ public sealed record BusinessView(EntityId Id, int Index, string Name, string Ki
     IReadOnlyList<StaffView> Staff, int Slots, IReadOnlyList<StationView> Stations, IReadOnlyList<(string Good, string Name, long Qty, bool Piece)> Stock, IReadOnlyList<RecipeView> Recipes,
     Directives Orders, int Steward, string StewardName, int StewardTrading, int StewardLeadership, int StewardLag, long StewardReserve, IReadOnlyList<SeasonRow> History,
     long SentToPurse, long SentToChest, long HeroPurse, long Chest, OwnerAlert Alerts, int OwnerPm, int HeroPm, IReadOnlyList<CandidateView> Hire, IReadOnlyList<CandidateView> Stewards,
-    long RoyaltyPaid, bool Unlicensed, long MineRemainingG, long MineInitialG, string MineState, long StallSubject, long DailyCost, string OrderedRecipe, IReadOnlyList<string>? Inputs = null);
+    long RoyaltyPaid, bool Unlicensed, long MineRemainingG, long MineInitialG, string MineState, long StallSubject, long DailyCost, string OrderedRecipe, IReadOnlyList<string>? Inputs = null, CrewView? Crew = null);
 
 /// <summary>A known resource at a tile, as the overlay and the survey panel show it.</summary>
 public sealed record KnownView(int Tile, int Resource, long EstG, int GradePm, int ConfidencePm, int Day, ProspectMethod Method);
@@ -151,7 +151,7 @@ public sealed partial class OwnershipWorld
         {
             int p = g.Key; int tr = Pop.People.SkillLevelOf(p, Skill.Trading), ld = Pop.People.SkillLevelOf(p, Skill.Leadership);
             var a = g.Aggregate(OwnerAlert.None, (x, h) => x | (h.StewardOwed > 0 ? OwnerAlert.WagesOwed : OwnerAlert.None));
-            rows.Add(new LedgerRow(LedgerTab.Stewards, Pop.People.IdOf(p), [Pop.People.FullName(p), $"{g.Count()}/{StewardBrain.Properties(ld, Rules)}", tr.ToString(), $"{StewardBrain.LagDays(tr, Rules)} d", M(g.First().StewardWage), Alerts(a)], [0, g.Count(), tr, StewardBrain.LagDays(tr, Rules), g.First().StewardWage, (long)a], a));
+            rows.Add(new LedgerRow(LedgerTab.Stewards, Pop.People.IdOf(p), [Pop.People.FullName(p), $"{StewardLoad(p)}/{StewardBrain.Properties(ld, Rules)}", tr.ToString(), $"{StewardBrain.LagDays(tr, Rules)} d", M(g.First().StewardWage), Alerts(a)], [0, StewardLoad(p), tr, StewardBrain.LagDays(tr, Rules), g.First().StewardWage, (long)a], a));
         }
         // sites (construction)
         if (cw != null)
@@ -242,7 +242,8 @@ public sealed partial class OwnershipWorld
             stew >= 0 ? StewardBrain.Reserve(daily, ld, Rules) : 0, h?.History.ToList() ?? [], h?.SentToPurse ?? 0, h?.SentToChest ?? 0, HeroCoin, ChestCoin, h?.Alerts ?? OwnerAlert.None,
             h?.OwnerPm ?? 1000, h?.Shares.Where(s => s.Holder == Hero).Sum(s => s.Pm) ?? 0, hire, stewards, h?.RoyaltyPaid ?? 0, h?.Unlicensed ?? false, mine?.RemainingG ?? 0, mine?.InitialG ?? 0,
             mine?.State.ToString() ?? "", StallOf(b)?.Subject ?? -1, daily, h != null && h.Orders.Recipe >= 0 && h.Orders.Recipe < Prod.Content.Recipes.Recipes.Count ? Prod.Content.Recipes.Recipes[h.Orders.Recipe].Id : "",
-            kind.Recipes.SelectMany(r => r.Inputs.Select(i => Econ.Goods.StringId(i.Good))).Distinct().OrderBy(x => x, StringComparer.Ordinal).ToList());
+            kind.Recipes.SelectMany(r => r.Inputs.Select(i => Econ.Goods.StringId(i.Good))).Distinct().OrderBy(x => x, StringComparer.Ordinal).ToList(),
+            kind.Trader || kind.Stations.Length == 0 ? null : CrewViews.Of(Prod, Prod.Scale, Content, b, day));
     }
 
     /// <summary>The prospecting view where the hero stands (the overlay reads <paramref name="radiusTiles"/> around him).</summary>

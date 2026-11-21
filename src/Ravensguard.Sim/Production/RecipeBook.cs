@@ -19,6 +19,8 @@ public sealed class Recipe
     public bool HasTool;
     public bool Quality;
     public WageClass Wage;
+    /// <summary>P7-ES1: the grades the worker-hours divide into (economies-of-scale 4.1); set from the scale content when the production content loads, <see cref="Grades.Plain"/> otherwise.</summary>
+    public Grades Grades = Grades.Plain;
     public long InputMassG(GoodCatalog c) { long s = 0; foreach (var (g, q) in Inputs) s += c.MassG(g, q); return s; }
     public long OutputMassG(GoodCatalog c) { long s = 0; foreach (var (g, q) in Outputs) s += c.MassG(g, q); return s; }
 }

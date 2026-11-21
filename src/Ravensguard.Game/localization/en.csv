@@ -3933,6 +3933,18 @@ bz_ui_stall_off,It sells at the market's lots. A stall of your own sells minded.
 bz_ui_stall_on,It sells from your stall (minded by its minder or by you).
 bz_ui_station_row,"{0}: {1} {2}%"
 bz_ui_stations,Stations
+bz_ui_crew,Crew
+bz_ui_crew_row,"{0} ({1}): {2} master, {3} journeyman, {4} hand; hours {5} / {6} / {7}, batch {8} h{9}"
+bz_ui_crowd_amber,", crowded (limit {0})"
+bz_ui_crowd_red,", over twice the limit {0}"
+bz_ui_span_row,"Span of control: {0} overseen, {1} at work, {2} over; speed {3}%"
+bz_ui_foreman_row,"{0}, Leadership {1}{2}"
+bz_ui_foreman_on,", foreman (+50 a day)"
+bz_ui_btn_appoint,Make foreman
+bz_ui_btn_unappoint,Dismiss foreman
+bz_ui_guild_row,"Guild {0}: {1} over its size rules, {2} fines{3}"
+bz_ui_licensed,", licensed"
+bz_ui_btn_licence,Ask a licence
 bz_ui_status,"Cash {0}, worth {1}, staff {2}/{3}, a season about {4}; {5}"
 bz_ui_steward,The steward
 bz_ui_steward_cand,"{0}: Trading {1}, Leadership {2}"
@@ -4917,6 +4929,26 @@ ch_note_loan_term_ended,The loan's term ran out.
 ch_note_loan_deed_forfeit,The mortgaged deed passed to the lender.
 ch_note_loan_unpaid,Two seasons passed without payment.
 ch_note_charter_extension_paid,The holder paid for one more year.
+ch_scale_licensed,{holder} was licensed to run a manufactory at {place} for {fee}.
+ch_scale_guild_fine,The guild fined {owner}'s shop at {place} {fine} for keeping {over} over its size rules.
+ch_note_manufactory_petition,The lord granted the petition for a fee.
+ch_note_guild_cap_exceeded,"The guild's inspectors counted more journeymen, apprentices or stations than a member's shop may keep."
+sc_no_guild,That shop is not of a trade with a guild in its town.
+sc_already_licensed,That works already holds a manufactory licence.
+sc_no_lord,There is no lord's treasury to take the fee.
+sc_licensed,The lord licensed the works for {0}; the rent is due each season.
+sc_not_staff,He does not work there.
+sc_already_foreman,He is already a foreman.
+sc_foreman_leadership,A foreman needs Leadership {0}.
+sc_foreman_is_master,A master of the trade oversees by his craft; appoint a journeyman or a hand.
+sc_foreman_appointed,{0} is now a foreman.
+sc_not_foreman,He is not a foreman.
+sc_foreman_dismissed,{0} is no longer a foreman.
+ld_licence_refused_opinion,The lord thinks too little of you to grant the licence.
+ld_licence_refused_standing,Your standing in the realm is too low for the licence.
+ld_licence_refused_guild_master,The guild master speaks against the licence.
+ld_licence_refused_licences,The guild says the town already has licensed works enough in the trade.
+ld_licence_refused_fee,The fee is too small to tip the lord.
 ch_note_charter_lapsed,The settlers did not come in time.
 ch_note_charter_arrears,Its dues were two seasons behind.
 ch_note_market_petition,"The settlement had the people and a square, and petitioned."
