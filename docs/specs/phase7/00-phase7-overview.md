@@ -736,6 +736,23 @@ Phase 6 left the normal tick at about 5.9 ms typical, 6.5 ms worst.
 
 The answers to section 10.1 will be recorded in a section 10a, "decided with the user", as in Phase 6. Where 10a and a spec's default disagree, 10a wins.
 
+## 10a. Decided with the user (Nov 2026)
+
+Asked on 21 Nov 2026; every answer took the recommended default.
+
+| # | Question | Decision |
+|---|---|---|
+| Q4 | Industry tiers: crews or machines | **Historical crews with machine-driven tier jumps**, adjusted to the user's sheets: crew bands always rise with the tier (no overlap, no shrink at L3), and the yard and packing stages get real crews from L2. `industries.md`'s tables are to be corrected to this before IN1 starts. |
+| Q2 | R1: raw goods priced from labour | **Yes.** Ore, logs, firewood and clay become 3-8x cheaper; raw output barely covers wages and the profit is in finishing (the sheets' rule), giving the 2-3 game-year payback. |
+| Q1 | Levies' unpaid days a year | **10 days**, then pay or release. |
+| Q3 | Purveyance | **Historical:** grain above 30 days of a household's need, at 3/4 of the price, by a tally due in 30 days. |
+| Q8 | How dark war gets | **As written:** a sack kills 1-5% and burns; captives where the law allows; cruel commanders may kill prisoners; the hero doing so is an atrocity. |
+| Q7 | Raiders in peace | **Yes:** raider cultures raid by sea and land in peace (about 300 per mille a season). |
+| Q9 | F1-F4 | **Formations 1-4**; Phase 4's squad shapes move to the order wheel; Shift+F1-F4 adds to the selection. |
+| Q16 | The cut order (section 3) | **As proposed.** |
+
+The other user questions (Q5 division of labour in every generated business, Q6 NPC founders and the slider on their works, Q10 mercenaries keep their own kit, Q11 copper as capped token coin, Q12 history keeps v1's war step, Q13 the mite stays the stored unit, Q14 the Industry tab in silver with one decimal, Q15 the user signs off accepted Medium audit findings) take their recommended defaults; the user may revisit any of them before its part starts.
+
 ## 11. The user's industry sheets against `industries.md`
 
 The sheets are in `docs/design/industry-sheets/`: the iron, clay and wood PDFs and their balance-sheet PNGs. Per the plan, their outputs and prices are rescaled on purpose to historical rates and the game's coin. **Their structure is the target:** the stages, tier jumps, crew ranges and stage ratios.
