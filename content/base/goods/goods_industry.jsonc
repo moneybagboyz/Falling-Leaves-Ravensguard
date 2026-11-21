@@ -1,0 +1,6 @@
+// Goods of the staged industries (docs/specs/phase7/industries.md 5.1, 7; P7-IN1): the rough ore a mine hews before dressing, the clay tempered for the moulders, and the green bricks that dry before the kiln. Base prices are placeholders at about the raw goods' labour (the audit reprices under R1).
+[
+  { "type": "good", "id": "iron_ore_rough", "name": "Rough iron ore", "class": "ore", "state": "solid", "bulk_litres_per_kg": 0.5, "base_price_mites_per_kg": 1.3, "spoil_class": "inert", "target_cover_days": 60, "tags": ["ore"] },
+  { "type": "good", "id": "tempered_clay", "name": "Tempered clay", "class": "mineral", "state": "solid", "bulk_litres_per_kg": 0.7, "base_price_mites_per_kg": 0.9, "spoil_class": "inert", "target_cover_days": 30, "tags": ["material"] },
+  { "type": "good", "id": "bricks_green", "name": "Green bricks", "class": "mineral", "state": "solid", "bulk_litres_per_kg": 0.8, "base_price_mites_per_kg": 3.5, "spoil_class": "inert", "target_cover_days": 30, "tags": ["material"] },
+]

@@ -4933,6 +4933,55 @@ ch_scale_licensed,{holder} was licensed to run a manufactory at {place} for {fee
 ch_scale_guild_fine,The guild fined {owner}'s shop at {place} {fine} for keeping {over} over its size rules.
 ch_note_manufactory_petition,The lord granted the petition for a fee.
 ch_note_guild_cap_exceeded,"The guild's inspectors counted more journeymen, apprentices or stations than a member's shop may keep."
+in_no_such_chain,There is no such chain of works.
+in_no_owner,There is no one to own the works.
+in_founded,"The {0} works is open, with {1} in its cash box."
+in_no_such_stage,That is not a stage of a works.
+in_no_such_works,That is not a works.
+in_no_such_link,The works has no such link.
+in_not_yours,That works is not yours.
+in_crew_set,The crew target is now {0}.
+in_wage_set,The wage on offer is now {0} per cent of the class wage.
+in_route_set,The stage's output is routed.
+in_route_later,That way of selling is not yet open to the works.
+in_link_set,The link between the stages is set.
+in_cash_in,{0} put into the works' cash box.
+in_cash_out,{0} taken out of the works' cash box.
+ch_ind_founded,{owner} opened a {chain} works at {place}.
+ch_ind_stopped,"The {stage} of {owner}'s works at {place} stood still for {days} days: {reason}."
+ch_note_works_founded,The works was built to make a living from the ground.
+ch_note_stage_stopped,The stage could not carry on its work.
+ind_chain_iron,iron
+ind_chain_clay,clay
+ind_chain_wood,wood
+ind_stage_stage_iron_mine,iron mine
+ind_stage_stage_iron_crusher,crusher and washer
+ind_stage_stage_iron_yard,ore yard
+ind_stage_stage_iron_smeltery,smeltery
+ind_stage_stage_iron_packing,packing
+ind_stage_stage_clay_pit,clay pit
+ind_stage_stage_clay_yard,clay yard
+ind_stage_stage_clay_moulding,moulding shop
+ind_stage_stage_clay_drying,drying sheds
+ind_stage_stage_clay_kiln,kiln
+ind_stage_stage_clay_packing,packing
+ind_stage_stage_wood_felling,felling
+ind_stage_stage_wood_hauling,hauling
+ind_stage_stage_wood_yard,timber yard
+ind_stage_stage_wood_sawmill,saw mill
+ind_stage_stage_wood_packing,packing
+ind_stage_stage_wood_shipping,shipping
+ind_stop_noinput,short of an input
+ind_stop_nofuel,short of fuel
+ind_stop_full,the next store is full
+ind_stop_undercrewed,too few hands
+ind_stop_nopower,no power
+ind_stop_broken,a machine broken
+ind_stop_flooded,flooded
+ind_stop_winter,winter frost
+ind_stop_unpaid,wages owed
+ind_stop_nolicence,no licence
+ind_stop_depleted,the ground is worked out
 sc_no_guild,That shop is not of a trade with a guild in its town.
 sc_already_licensed,That works already holds a manufactory licence.
 sc_no_lord,There is no lord's treasury to take the fee.

@@ -76,6 +76,7 @@ public sealed class LabourMarket
             // staff who died or left the region
             for (int i = b.Staff.Count - 1; i >= 0; i--)
                 if (people.Status[b.Staff[i]] != PersonStatus.Alive) { _sys.DropStaff(b, i, alive: false); StaffGone++; }
+            if (_sys.KindOf(b).Stage != null) continue;                                              // P7-IN1: a works' stages are never inherited; the industry world closes a works whose owner is gone
             if (!OwnerFit(b, day)) Succeed(b, day);
             else if (b.Owner >= 0 && people.Household[b.Owner] >= 0) b.OwnerHousehold = people.Household[b.Owner];
         }
@@ -174,6 +175,7 @@ public sealed class LabourMarket
     /// <summary>A kind's staff slots, plus one master of its trade when the owner inherited it from another trade and does not work it (P5-H, <see cref="ProductionSystem.NeedsMaster"/>).</summary>
     private (Occupation Occupation, int Count, WageClass Wage)[] SlotsOf(Business b, BusinessKind kind)
     {
+        if (kind.Stage != null && _sys.Stages is { } sh && sh.SlotsFor(b, out var stageSlots)) return stageSlots;                  // P7-IN1: the works' crew target
         if (!_sys.NeedsMaster(b)) return kind.Slots;
         var l = kind.Slots.ToList();
         int i = l.FindIndex(x => x.Occupation == kind.OwnerOccupation);

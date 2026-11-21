@@ -42,6 +42,8 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
     public DayLabourBook DayLabour { get; } = new();
     /// <summary>P7-ES1 (economies-of-scale 3): appointed foremen (their day wage and their place in the span of control), licences and fines; null in a world without the book.</summary>
     public ScaleBook? Scale { get; set; }
+    /// <summary>P7-IN1: the industry runtime's hooks (null without industries): stage businesses are run by <c>IndustryWorld</c>, not by the Phase 2 planner.</summary>
+    public Industry.IStageHost? Stages { get; set; }
     /// <summary>Weather at a settlement and time; null means always clear.</summary>
     public Func<int, GameTime, WeatherState>? WeatherAt { get; set; }
 
@@ -172,7 +174,7 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
         {
             if (b.State != BusinessState.Open) continue;
             var kind = KindOf(b);
-            if (kind.Trader) continue;
+            if (kind.Trader || kind.Stage != null) continue;
             if (b.Mine >= 0) { if (now.Hour == WorkdayStartHour) MineDay(b, now); continue; }
             if (kind.Extractions.Length > 0) { ExtractionHour(b, kind, now); continue; }
             WorkStations(b, kind, now);
@@ -438,7 +440,11 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
         int miners = b.Staff.Count(p => Pop.People.Occupation[p] == Occupation.Miner);
         int haulers = b.Staff.Count - miners;
         for (int i = 0; i < b.Staff.Count; i++) b.Owed[i] += WageOf(b, b.Staff[i], RecipeBook.WagePerHour(WageClass.Unskilled)) * WorkdayHours * (Pop.People.AgeYears(b.Staff[i], (int)now.TotalDays) < 16 ? 50 : 100) / 100;
-        long g = mine.Mine(mine.DayYieldG(k, miners, b.Staff.Count > 0 && haulers == 0 && miners > 0 ? -1 : haulers, 1000, (int)now.TotalDays));
+        // P7-IN1 (industries 5.12): a generated iron mine yields dressed ore at the composite rate of the first-tier chain (hewing, carrying and dressing: 109 kg a worker-day), not 500 kg of rough ore that skipped the dressing; the body gives up the rough ore behind it
+        var ind = Content.Industries; bool composite = ind.CompositeGPerWorkerDay > 0 && k.OutGood == ind.CompositeGood;
+        long g = mine.DayYieldG(k, miners, b.Staff.Count > 0 && haulers == 0 && miners > 0 ? -1 : haulers, 1000, (int)now.TotalDays, composite ? ind.CompositeGPerWorkerDay : -1);
+        if (composite) { long rough = mine.Mine(g * 1000 / ind.Settings.CompositeYieldPm); g = rough * ind.Settings.CompositeYieldPm / 1000; }
+        else g = mine.Mine(g);
         if (g > 0) { b.Store.Create(k.OutGood, g, CreateReason.Mined); ProducedUnits[k.OutGood] += g; if (Steered(b)) Steering!.Extracted(b, k.OutGood, g, now); }
     }
 
@@ -465,6 +471,7 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
         {
             if (b.State != BusinessState.Open || b.Index % 24 != hour) continue;
             var kind = KindOf(b);
+            if (kind.Stage != null) continue;                                                      // P7-IN1: a works' stage is run by the industry world
             if (kind.Salaried) { AccrueDayWages(b, kind, day); if (kind.Id == "manor") TopUpFromOwner(b); }
             if (Scale != null && Scale.Foremen.Count > 0) AccrueForemen(b);
             PayWages(b, now);
@@ -752,6 +759,7 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
         {
             if (b.State != BusinessState.Open) continue;
             var kind = KindOf(b);
+            if (kind.Stage != null) continue;                                                      // P7-IN1: the works sets its stages' crews and wage offers
             bool vacancy = b.Staff.Count < kind.StaffCapacity && kind.StaffCapacity > 0 && !kind.Trader && kind.Slots.Length > 0;
             if (!vacancy) { b.UnfilledDays = 0; continue; }
             b.UnfilledDays++;
@@ -774,6 +782,12 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
             b.WageBillPerDay = b.WagesSeason / TimeConst.DaysPerSeason; b.InputSpendPerDay = b.InputsSeason / TimeConst.DaysPerSeason;
             long net = cash + b.DividendsSeason - b.CashStart;
             var kind = KindOf(b);
+            if (kind.Stage != null)                                                                 // P7-IN1: no dividends or closing for losses; the works' one purse is counted once
+            {
+                if (Stages?.CountsCash(b) != false) Markets?.ExtraCoin.Add((b.Settlement, cash));
+                b.WagesSeason = 0; b.DividendsSeason = 0; b.CashStart = cash;
+                continue;
+            }
             if (kind.Trader)
             {
                 // a merchant pays out half of the cash it holds above twice its working capital each season (integration decision I41; was half of the season's gain
