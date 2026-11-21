@@ -85,10 +85,11 @@ public class WorkTests
         foreach (var st in b.Stations) Assert.True(k.Sys.TryStart(b, st, k.R("weave_cloth"), At(6)));
         k.Sys.WorkHour(At(6));
         Assert.Equal([2, 2, 1], b.Stations.Select(s => s.Crew.Count).ToArray());
-        // five worker-hours credited in this clock hour
+        // five worker-hours credited in this clock hour, except P7-ES1's division of labour: the owner is the master of loom 1 and visits loom 2 (reach 2 + Leadership / 30 = 2 stations),
+        // so loom 3's lone journeyman has no master near and does the weaving's M steps (100 of 1,000) at 1,500 permille: 1,050 / 1,000 of the work, re-pinned from 1 x ppm
         long ppm = Station.PerWorkerHour(10 * 1000, 1000);
-        Assert.Equal(2 * ppm, b.Stations[0].ProgressMicro); Assert.Equal(ppm, b.Stations[2].ProgressMicro);
-        Assert.Equal(5 * ppm, b.Stations.Sum(s => s.ProgressMicro));
+        Assert.Equal(2 * ppm, b.Stations[0].ProgressMicro); Assert.Equal(2 * ppm, b.Stations[1].ProgressMicro);
+        Assert.Equal((ppm * 1000 + 1049) / 1050, b.Stations[2].ProgressMicro);
     }
 
     [Fact]

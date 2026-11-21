@@ -83,20 +83,20 @@ public static class Crews
 
     /// <summary>
     /// The batch progress an hour adds (micro-ppm of <see cref="Station.Complete"/>) from the crew's capacities, each the sum of its members' one-worker-hour progress (already weighted by crowding and a master's share):
-    /// <c>min(c_M / m, (c_M + c_J) / (m + j), c_all / (m + j + a))</c> with the grades as fractions of the batch, rounded up so a batch completes in exactly its hours. With no master the journeymen take the M steps at
+    /// <c>min(c_M / m, (c_M + c_J) / (m + j), c_all / (m + j + a))</c> with the grades as fractions of the batch (a visiting master's <paramref name="visitM"/> serves the M steps only, never the total), rounded up so a batch completes in exactly its hours. With no master the journeymen take the M steps at
     /// <paramref name="unsupervisedPm"/>; with neither, the hands take the M and J steps at it. For an undivided recipe this is the plain sum, exactly Phase 2's rule.
     /// </summary>
-    public static long Rate(long cM, long cJ, long cA, Grades g, int unsupervisedPm = 1500)
+    public static long Rate(long cM, long cJ, long cA, Grades g, int unsupervisedPm = 1500, long visitM = 0)
     {
-        int m = g.M, j = g.J, a = g.A;
-        if (cM == 0 && m > 0)
+        int m = g.M, j = g.J, a = g.A; long mCap = cM + visitM;
+        if (mCap == 0 && m > 0)
         {
             if (cJ > 0) { j += (int)(((long)m * unsupervisedPm + 999) / 1000); m = 0; }
             else { a += (int)(((long)(m + j) * unsupervisedPm + 999) / 1000); m = j = 0; }
         }
         long best = CeilDiv((cM + cJ + cA) * 1000, m + j + a);
-        if (m > 0) best = Math.Min(best, CeilDiv(cM * 1000, m));
-        if (j > 0) best = Math.Min(best, CeilDiv((cM + cJ) * 1000, m + j));
+        if (m > 0) best = Math.Min(best, CeilDiv(mCap * 1000, m));
+        if (j > 0) best = Math.Min(best, CeilDiv((mCap + cJ) * 1000, m + j));
         return best;
     }
 

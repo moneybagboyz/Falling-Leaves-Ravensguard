@@ -234,7 +234,7 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
             {
                 long hm = (long)r.WorkerHours * st.ScalePermille * kind.LabourPm / 1000;          // P5-F: a water sawmill's wheel does most of the sawing (LabourPm 125); 1000 elsewhere
                 bool divided = r.Grades.Divided; int k = Content.CrewMax(st.Kind);
-                long cM = 0, cJ = 0, cA = 0; int pos = 0;
+                long cM = 0, cJ = 0, cA = 0, visitM = 0; int pos = 0;
                 foreach (int p in st.Crew)
                 {
                     int skill = r.Skill == Skill.None ? 40 : people.SkillLevelOf(p, r.Skill);
@@ -252,9 +252,9 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
                     foreach (int p in vs)        // a visiting master spreads his M-step time over the stations he serves; he is paid for the hour at his own station, so no wage here
                     {
                         int skill = r.Skill == Skill.None ? 40 : people.SkillLevelOf(p, r.Skill);
-                        cM += Station.PerWorkerHour(hm, 1300 - 6 * skill) / served![p];
+                        visitM += Station.PerWorkerHour(hm, 1300 - 6 * skill) / served![p];
                     }
-                long rate = divided ? Crews.Rate(cM, cJ, cA, r.Grades, sc.UnsupervisedPm) : cA;
+                long rate = divided ? Crews.Rate(cM, cJ, cA, r.Grades, sc.UnsupervisedPm, visitM) : cA;
                 st.ProgressMicro += speed == 1000 ? rate : rate * speed / 1000;
             }
             if (st.ProgressMicro >= Station.Complete && now.TotalHours >= st.BusyUntilHour) Finish(b, st, now);
