@@ -45,7 +45,10 @@ public sealed class WarSupplyBook
     public SortedDictionary<int, int> OnCampaign { get; } = [];
     /// <summary>Settlement index to the host besieging it.</summary>
     public SortedDictionary<int, int> Blockades { get; } = [];
-    public bool IsEmpty => NextHost == 1 && Hosts.Count == 0 && OnCampaign.Count == 0 && Blockades.Count == 0;
+    /// <summary>Settlement index to the men the muster of the latest year drew from it (P7-EA3d): the harvest's chronicle names the village and the men it sent. A new year's draw replaces an older year's.</summary>
+    public SortedDictionary<int, (int Year, int Men)> Levied { get; } = [];
+    public void AddLevied(int settlement, int year, int men) => Levied[settlement] = Levied.TryGetValue(settlement, out var l) && l.Year == year ? (year, l.Men + men) : (year, men);
+    public bool IsEmpty => NextHost == 1 && Hosts.Count == 0 && OnCampaign.Count == 0 && Blockades.Count == 0 && Levied.Count == 0;
 
     /// <summary>The <c>SupplyHash</c> of the overview's trail: every account, campaign flag and blockade in id order.</summary>
     public string Hash()
@@ -65,6 +68,7 @@ public sealed class WarSupplyBook
         }
         foreach (var (p, hid) in OnCampaign) { L(p); L(hid); }
         foreach (var (s, hid) in Blockades) { L(s); L(hid); }
+        foreach (var (s, l) in Levied) { L(s); L(l.Year); L(l.Men); }
         return Convert.ToHexString(h.GetHashAndReset())[..16];
     }
 }

@@ -123,6 +123,8 @@ public static class SupplyConfig
     public const int BuyMaxRatioPermille = 4000;
     /// <summary>The age a levy may be drawn at (overview 8.2: 16 to 45).</summary>
     public const int LevyMinAge = 16, LevyMaxAge = 45;
+    /// <summary>A settlement under this many households is a farmstead, not a village: the levy asks it after the villages (overview 10d).</summary>
+    public const int LevyVillageMinHouseholds = 5;
 
     /// <summary>Daily fodder in grams by animal row: hay and oats (species.jsonc: riding horse 8 kg and 2.5 kg, pack horse 8 and 0, draught horse 9 and 3, ox 10 and 0).</summary>
     public static (long HayG, long OatsG) Fodder(AnimalCounts a) => (a.Riding * 8000L + a.Pack * 8000L + a.Draught * 9000L + a.Oxen * 10000L, a.Riding * 2500L + a.Draught * 3000L);

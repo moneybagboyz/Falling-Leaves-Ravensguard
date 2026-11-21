@@ -268,6 +268,8 @@ public sealed partial class FarmingSystem
     /// Persons the farm labour planner must not count because another employer (a business) already has them; set by the integration layer. Null: nobody is employed.
     /// </summary>
     public Func<int, bool>? IsEmployedElsewhere { get; set; }
+    /// <summary>P7-EA3d: the men a levy drew from a settlement in a year (settlement, year); the year's close names the villages whose harvest rotted for want of them. Null or 0 when none.</summary>
+    public Func<int, int, int>? LevyMenFrom { get; set; }
 
     /// <summary>The household of the lord a person serves as a manor retainer, or -1; set by the integration layer.</summary>
     public Func<int, int>? ManorLordOf { get; set; }

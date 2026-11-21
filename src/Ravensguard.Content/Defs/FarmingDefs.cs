@@ -94,6 +94,8 @@ public sealed record FarmingSettingsDef : ContentDef
     /// <summary>P7-EA3c (overview 10c): a living child of this age (to 11) of a farming household gives <see cref="ChildHarvestPct"/> of a working day to the harvest (Reap, BindCart and hay) and to nothing else; 12 to 15 stay at half a day for every task.</summary>
     public int ChildHarvestMinAge { get; init; } = 7;
     public int ChildHarvestPct { get; init; } = 33;
+    /// <summary>P7-EA3d (overview 10d): a levy draws at most this per cent of a village's households (one man each, at least one man) before the next village is asked.</summary>
+    public int LevyVillageCapPct { get; init; } = 50;
     // livestock coupling (resources spec)
     [JsonPropertyName("oxen_per_100_arable_acres")] public int OxenPer100ArableAcres { get; init; } = 3;
     public int GrazingSheepPerFallowAcreX100 { get; init; } = 40;

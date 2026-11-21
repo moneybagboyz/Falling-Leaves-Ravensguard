@@ -51,8 +51,8 @@ public class AuditFindingTests(ITestOutputHelper output)
         output.WriteLine($"raised {a.Aid:N0} in aid and {a.Tallage:N0} in tallage = {(double)(a.Aid + a.Tallage) / 128_340_000:P1} of the region's coin; treasury now {a.Held:N0}");
     }
 
-    /// <summary>EA_F9 (W4 / WL-6, Medium), EA3c made the levy take field hands first (HostSupply.Muster) and counted children of 7 to 11 at the harvest (overview 10c); 1,040 levies out through the Y8 harvest still cost it only about 0.4% against the control (the spec asks 10 to 35%), so the test stays skipped. Needs the control and the war: a Soak test.</summary>
-    [Fact(Skip = "EA_F9 still open after P7-EA3c: the levy takes field hands first and children help (10c), but the Y8 harvest stays -0.4% against the control because reaping is not labour-bound (see docs/reviews/phase-7-audit.md, EA_F9); needs the user's call on harvest labour and the reaping deadline"), Trait("Category", "Soak")]
+    /// <summary>EA_F9 (W4 / WL-6, Medium), EA3c made the levy take field hands first and counted children of 7 to 11 at the harvest (overview 10c); EA3d drew the levy by village (10d); 1,040 levies out through the Y8 harvest still cost it only 0.2% against the control (the spec asks 10 to 35%), so the test stays skipped. Needs the control and the war: a Soak test.</summary>
+    [Fact(Skip = "EA_F9 accepted by the user (overview 10e, 21 Nov 2026): war costs no harvest here; the village levy stays and WL-6 is waived. The test prints the numbers when run by hand"), Trait("Category", "Soak")]
     public void EA_F9_LeviesOutThroughTheHarvest_CutTheHarvest10To35Percent()
     {
         using var war = AuditWorld.Create(); using var ctl = AuditWorld.Create();

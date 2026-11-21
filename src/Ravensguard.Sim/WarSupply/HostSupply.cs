@@ -371,44 +371,65 @@ public sealed class HostSupply
     public bool IsOnCampaign(int person) => Book.OnCampaign.ContainsKey(person);
 
     /// <summary>
-    /// Levies from a fief (army-economy 3.3; P7-EA3c, finding EA_F9): the households of the fief's settlements, one man each (a man aged 16 to 45, not on a staff, not already on campaign), **field hands first**: a household whose man works the land
-    /// (a farmer, ploughman, labourer or shepherd, or an unoccupied man of a peasant household) is asked before one whose man does not, each group in household order, so a summer levy takes the hands the harvest needs. In a household the man who is not the head
-    /// goes before the head, a field hand before another. A household that evades (<see cref="Evades"/>) gives none. The men are marked on campaign and counted as levies of the host.
+    /// Levies from a fief (army-economy 3.3; P7-EA3c, then P7-EA3d, overview 10d: the levy is drawn by village). The fief's quota is filled village by village, in the lord's order: the villages nearest the fief's seat first (they reach
+    /// the lord's banner soonest), the seat itself, the lord's own demesne village, last. A village sends one man a household (a man aged 16 to 45, not on a staff, not already on campaign), field hands first (a farmer, ploughman, labourer or
+    /// shepherd, or an unoccupied man of a peasant household), the man who is not the head before the head, in household order, up to a cap of <see cref="Ravensguard.Content.FarmingSettingsDef.LevyVillageCapPct"/> per cent of the village's
+    /// households (at least one man) before the next village is asked: so the drawn villages lose most of their reapers while the undrawn ones keep theirs. A household that evades (<see cref="Evades"/>) gives none.
+    /// The men are marked on campaign, counted as levies of the host, and recorded against their village and year (<see cref="WarSupplyBook.Levied"/>) for the harvest's chronicle.
     /// </summary>
     public MusterResult Muster(HostId h, int fief, int men)
     {
-        var a = Acc(h); int day = Day;
+        var a = Acc(h); int day = Day, year = day / TimeConst.DaysPerYear;
         var hh = _pop.Households; var pt = _pop.People; var region = _pop.Region; var picked = new List<int>(); int evaded = 0, asked = 0;
-        var hands = new List<(int Hh, int Man)>(); var others = new List<(int Hh, int Man)>();
+        int seat = fief >= 0 && fief < region.Fiefs.Count ? region.Fiefs[fief].SeatSettlement : -1;
+        int capPct = Math.Clamp(Economy.Farming.Settings.Def.LevyVillageCapPct, 1, 100);
+        var byVillage = new SortedDictionary<int, List<(int Round, bool Hand, int Hh, int Man)>>(); var households = new Dictionary<int, int>();
         for (int i = 0; i < hh.Count; i++)
         {
             int s = hh.Settlement[i]; if (s < 0 || s >= region.Settlements.Count || region.Settlements[s].FiefIndex != fief || hh.MemberCount[i] == 0) continue;
-            int pick = -1; bool pickHand = false;
+            households[s] = households.GetValueOrDefault(s) + 1;
+            var able = new List<(bool Hand, bool Head, int Man)>();
             foreach (int m in hh.Members(i))
             {
                 if (pt.Sex[m] != Sex.Male || pt.Status[m] != PersonStatus.Alive || Book.OnCampaign.ContainsKey(m) || Economy.Labour.IsStaff(m)) continue;
                 int age = pt.AgeYears(m, day); if (age < SupplyConfig.LevyMinAge || age > SupplyConfig.LevyMaxAge) continue;
                 var occ = pt.Occupation[m];
                 bool hand = occ is Occupation.Farmer or Occupation.Ploughman or Occupation.Labourer or Occupation.Shepherd || (occ == Occupation.None && hh.Class[i] == SocialClass.Peasant);
-                bool better = pick < 0 || (hand && !pickHand) || (hand == pickHand && pick == hh.Head[i] && m != hh.Head[i]);
-                if (better) { pick = m; pickHand = hand; }
+                able.Add((hand, m == hh.Head[i], m));
             }
-            if (pick < 0) continue;
-            (pickHand ? hands : others).Add((i, pick));
+            if (able.Count == 0) continue;
+            if (!byVillage.TryGetValue(s, out var list)) byVillage[s] = list = [];
+            int round = 0;                                                                                  // a household's first man is its field hand who is not the head; a second round takes the next
+            foreach (var (hand, _, man) in able.OrderByDescending(x => x.Hand).ThenBy(x => x.Head).ThenBy(x => x.Man)) list.Add((round++, hand, i, man));
         }
-        foreach (var group in new[] { hands, others })
-            foreach (var (i, pick) in group)
+        long Dist(int s)
+        {
+            if (seat < 0) return 0;
+            long dx = region.Settlements[s].CenterX - region.Settlements[seat].CenterX, dy = region.Settlements[s].CenterY - region.Settlements[seat].CenterY;
+            return dx * dx + dy * dy;
+        }
+        var order = byVillage.Keys.OrderBy(s => s == seat ? 2 : households[s] < SupplyConfig.LevyVillageMinHouseholds ? 1 : 0).ThenBy(Dist).ThenBy(s => s).ToList();
+        foreach (int s in order)
+        {
+            if (picked.Count >= men) break;
+            int cap = Math.Max(1, households[s] * capPct / 100), taken = 0;
+            foreach (var (_, _, i, pick) in byVillage[s].OrderBy(c => c.Round).ThenByDescending(c => c.Hand).ThenBy(c => c.Hh))      // one man a household first, field hands first, then the next men
             {
-                if (picked.Count >= men) break;
-                int s = hh.Settlement[i]; asked++;
+                if (picked.Count >= men || taken >= cap) break;
+                asked++;
                 if (Evades?.Invoke(s, i, day) == true) { evaded++; continue; }
-                picked.Add(pick);
+                picked.Add(pick); taken++;
                 if (a.HomeSettlement < 0) a.HomeSettlement = s;
             }
+            if (taken > 0) Book.AddLevied(s, year, taken);
+        }
         foreach (int p in picked) Book.OnCampaign[p] = a.Id;
         a.Men[(int)TroopRole.Levy] += picked.Count;
         return new MusterResult(picked, evaded, asked);
     }
+
+    /// <summary>Men drawn from the settlement by musters in the given year (the farming chronicle's question at the year's close).</summary>
+    public int LevyMenFrom(int settlement, int year) => Book.Levied.TryGetValue(settlement, out var l) && l.Year == year ? l.Men : 0;
 
     /// <summary>The persons the host has on campaign, ascending.</summary>
     public IReadOnlyList<int> Persons(HostId h) => [.. Book.OnCampaign.Where(kv => kv.Value == h.Value).Select(kv => kv.Key)];

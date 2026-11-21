@@ -5,7 +5,7 @@
     "reap_acres_per_worker_day": 2, "bind_acres_per_worker_day": 4, "thresh_acres_per_worker_day": 2, "hay_acres_per_worker_day": 2,
     "tithe_permille": 100, "rent_share_bp_default": 2500, 
     "hail_chance_permille_per_storm_day": 5, "hail_damage_permille": 500, "blight_permille_year": 30, "overdue_loss_permille_per_day": 40,
-    "oxen_per_100_arable_acres": 3, "grazing_sheep_per_fallow_acre_x100": 40, "wage_labourer_mites_per_day": 150, "harvest_wage_pct": 150, "child_harvest_min_age": 7, "child_harvest_pct": 33, "coin_lease_pct": 50, "rent_coin_mites_per_field_year": 640,
+    "oxen_per_100_arable_acres": 3, "grazing_sheep_per_fallow_acre_x100": 40, "wage_labourer_mites_per_day": 150, "harvest_wage_pct": 150, "child_harvest_min_age": 7, "child_harvest_pct": 33, "levy_village_cap_pct": 50, "coin_lease_pct": 50, "rent_coin_mites_per_field_year": 640,
     // herds as owned stock (resources spec 3.3-3.4; integration decision I3): cows, wool, cheese, calving, mortality; per game year (real yearly rates x 60/365)
     "cows_per_100_field_acres": 10, "cow_hay_kg_per_head_day_x10": 50, "wool_g_per_sheep_year": 164, "cheese_g_per_cow_year": 13100,
     "cow_calving_permille_year": 115, "cow_per_field_acre_cap_x100": 11, "oxen_mortality_permille_year": 20, "sheep_mortality_permille_year": 10, "cow_mortality_permille_year": 10,

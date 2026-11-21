@@ -61,6 +61,7 @@ public sealed class EconomyWorld
         farming.BuyFromMarket = (hh, good, qty) => markets.BookForHousehold(hh).Buy(markets.HouseholdParty(hh), good, qty, 3000, (int)(world.State.HourDone / 24)).Qty;
         farming.CountIdleHands = true;
         farming.IsEmployedElsewhere = p => Labour.IsAwayFromFarm(p) || War?.IsOnCampaign(p) == true;      // P7-EA1: a levy on campaign has left his household's fields
+        farming.LevyMenFrom = (st, year) => War?.LevyMenFrom(st, year) ?? 0;
         farming.ManorLordOf = Labour.ManorLordOf;
         Growth = new Ravensguard.Sim.Growth.GrowthSystem(this);
         DayLabour = new DayLabour(production, world.Population, world.Economy, content.Ownership, Labour);

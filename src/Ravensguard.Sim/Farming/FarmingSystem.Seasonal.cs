@@ -149,13 +149,24 @@ public sealed partial class FarmingSystem
 
     private void CloseYear(GameTime now)
     {
-        long unharv = 0;
+        long unharv = 0; var rotted = LevyMenFrom != null ? new long[Region.Settlements.Count] : null;
         for (int f = 0; f < F.Count; f++)
         {
             bool uncut = F.Stage[f] == FieldStage.Ripe || (F.Stage[f] == FieldStage.Cut && !F.Has(f, FieldFlags.Bound));
             if (!uncut) continue;
+            if (rotted != null) rotted[Region.Parcels[F.Parcel[f]].Settlement] += F.YieldG[f];
             unharv++; State.AddLoss(LossCause.Overdue, F.YieldG[f], 1); F.YieldG[f] = 0;
         }
+        if (rotted != null)
+            for (int s = 0; s < rotted.Length; s++)                                  // P7-EA3d: a village that sent men to the levy and left grain standing says so
+            {
+                int men = LevyMenFrom!(s, State.Year); long kg = rotted[s] / 1000;
+                if (men <= 0 || kg <= 0) continue;
+                var st = Region.Settlements[s].Id;
+                Chronicle.Add(new ChronicleEntry(NewEvent(), now, "harvest_lost_levy", [st], [Why.Of(CauseKind.War, "ch_why_levy_drew_reapers", ChronParam.Place("place", st), ChronParam.Count("men", men))],
+                    new Dictionary<string, string> { ["year"] = State.Year.ToString(), ["men"] = men.ToString(), ["lost_g"] = rotted[s].ToString() },
+                    "ch_h_harvest_lost_levy", [ChronParam.Place("place", st), ChronParam.Count("men", men), ChronParam.Count("kg", kg)]));
+            }
         State.UnharvestedAcres += unharv;
         var sum = new YearSummary(State.Year, State.HarvestG, State.SeedSownG, State.ThreshedG, State.TitheG, State.RentG, State.SownAcres, State.LostAcres.Sum(), State.UnharvestedAcres,
             State.Gross0G, (long[])State.LostG.Clone(), (int[])State.LostAcres.Clone());

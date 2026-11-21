@@ -35,6 +35,8 @@ public sealed class WarSupplySave
     [Key(2)] public int[] OnCampaign { get; set; } = [];
     /// <summary>Pairs: settlement index, besieging host id.</summary>
     [Key(3)] public int[] Blockades { get; set; } = [];
+    /// <summary>Triples: settlement index, year, men drawn by that year's muster (P7-EA3d; absent in older sections).</summary>
+    [Key(4)] public int[] Levied { get; set; } = [];
 
     public static WarSupplySave Capture(WarSupplyBook b) => new()
     {
@@ -50,6 +52,7 @@ public sealed class WarSupplySave
         })],
         OnCampaign = [.. b.OnCampaign.SelectMany(kv => new[] { kv.Key, kv.Value })],
         Blockades = [.. b.Blockades.SelectMany(kv => new[] { kv.Key, kv.Value })],
+        Levied = [.. b.Levied.SelectMany(kv => new[] { kv.Key, kv.Value.Year, kv.Value.Men })],
     };
 
     public WarSupplyBook Restore()
@@ -74,6 +77,7 @@ public sealed class WarSupplySave
         }
         for (int i = 0; i + 1 < OnCampaign.Length; i += 2) b.OnCampaign[OnCampaign[i]] = OnCampaign[i + 1];
         for (int i = 0; i + 1 < Blockades.Length; i += 2) b.Blockades[Blockades[i]] = Blockades[i + 1];
+        for (int i = 0; i + 2 < Levied.Length; i += 3) b.Levied[Levied[i]] = (Levied[i + 1], Levied[i + 2]);
         return b;
     }
 }

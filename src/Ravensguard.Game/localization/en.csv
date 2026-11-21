@@ -6044,6 +6044,7 @@ ch_h_abolition,"{ruler} abolishes slavery in the realm about {place}, as {faith}
 ch_h_slave_raid,Riders of {raider} carry off {count} people from {place}.
 ch_h_slaves_sold,{count} captives are sold in the market of {place}.
 ch_h_outlaw_dealt,{outlaw} is taken near {place} and meets {punishment}.
+ch_h_harvest_lost_levy,"{place} sent {men} of its men to the levy and {kg} kg of its grain rotted standing in the fields."
 ch_h_rel_old_gods,the Old Gods of the North
 ch_h_rel_church_of_the_vale,the Church of the Vale
 ch_h_rel_hill_saints,the Hill Saints
@@ -6202,6 +6203,7 @@ ch_why_loss_fire,Fields burned.
 ch_why_loss_frost,"A late frost, on day {day}."
 ch_why_loss_hail,Hail flattened the standing crop.
 ch_why_loss_overdue,The harvest ran overdue: too few hands.
+ch_why_levy_drew_reapers,"The lord's levy drew {men} of the reapers of {place} away to the war."
 ch_why_loss_trampling,Trampling by armies.
 ch_why_loss_waterlogged,A wet year: waterlogged fields.
 ch_why_loss_weeds,Poor weeding.
