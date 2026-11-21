@@ -10,6 +10,7 @@ using Ravensguard.Sim.Combat.Melee2;
 using Ravensguard.Sim.Core;
 using Ravensguard.Sim.Dialogue;
 using Ravensguard.Sim.Family;
+using Ravensguard.Sim.Building;
 using Ravensguard.Sim.Burning;
 using Ravensguard.Sim.Law;
 using Ravensguard.Sim.People;
@@ -111,13 +112,31 @@ public class Phase6SoakTests(ITestOutputHelper output)
         return 0;
     });
 
-    /// <summary>The bot lights the first dwelling of the home region with a torch: a hero's fire_started, and the fire's own chain after it.</summary>
+    private static int _houses;
+    /// <summary>The bot raises a thatched timber house in the fire world's room store (a headless world has scanned no chunks, so it holds no building of its own) and lights it with a torch: a hero's fire_started and the fire's own chain.</summary>
     private static void Burn(WorldRuntime rt, SeamWorld w) => At(rt, () =>
     {
         var fw = rt.State.HomeRecords?.Sim.Get<FireWorld>(); if (fw == null) return 0;
-        foreach (var p in fw.Profiles())
-            if (p.Dwelling && fw.IgniteBuilding(p.Structure, rt.HourDone + 1, FireCause.Person(rt.State.Party!.Hero, "torch"))) return 1;
-        return 0;
+        int x0 = 40_000 + 20 * _houses++, y0 = 40_000;
+        var e = new List<CellEdit>();
+        for (int y = 0; y < 6; y++)
+            for (int x = 0; x < 8; x++)
+            {
+                bool ring = x == 0 || y == 0 || x == 7 || y == 5;
+                e.Add(new(x0 + x, y0 + y, 0, CellLayer.Structure, ring ? (x == 3 && y == 5 ? "door_wood" : "wall_timber") : "floor_plank"));
+            }
+        e.Add(new(x0 + 1, y0 + 1, 0, CellLayer.Fixture, "hearth")); e.Add(new(x0 + 5, y0 + 1, 0, CellLayer.Fixture, "bed"));
+        fw.Rooms.Apply(e); fw.Rooms.RoofOver("roof_thatch");
+        int st = fw.Rooms.StructureAt(x0 + 2, y0 + 2, 0);
+        var prev = fw.Chronicle;                                             // outside the tick the fire world has no chronicle: write into the world's own, as the system's outbox does
+        fw.Chronicle = (when, type, key, ps, subjects, causes, data) =>
+        {
+            var id = rt.State.Ids.Allocate(IdKind.Event);
+            rt.State.Chronicle.Add(new ChronicleEntry(id, when, type, subjects, causes, data.ToDictionary(d => d.Key, d => d.Value), key, ps));
+            return id;
+        };
+        try { return st >= 0 && fw.IgniteBuilding(st, rt.HourDone + 1, FireCause.Person(rt.State.Party!.Hero, "torch")) ? 1 : 0; }
+        finally { fw.Chronicle = prev; }
     });
 
     private static FlavourFixture? _fx;
@@ -131,13 +150,13 @@ public class Phase6SoakTests(ITestOutputHelper output)
         {
             var fw = new FightWorld(fx.C, seed + (ulong)rt.HourDone, seed, 8 * 3600) { RecordEvents = true };
             for (int i = 0; i < 3; i++)
-                fw.Add(new FighterKit { Name = i == 0 ? "Aldric Vane" : $"Friend {i}", Team = 0, Person = heroId + (ulong)i * 0, Weapon = new WeaponInstance("mace", "iron"), Skill = 50, X = -1500, Y = i * 900, FaceX = 1024, Worn = [new("shirt", "linen")] });
+                fw.Add(new FighterKit { Name = i == 0 ? "Aldric Vane" : $"Friend {i}", Team = 0, Person = i == 0 ? heroId : 7_000_000UL + (ulong)i, Weapon = new WeaponInstance("mace", "iron"), Skill = 50, X = -1500, Y = i * 900, FaceX = 1024, Worn = [new("shirt", "linen")] });
             for (int i = 0; i < 3; i++)
                 fw.Add(new FighterKit { Name = $"Soldier {i}", Team = 1, Weapon = new WeaponInstance("axe", "iron"), Skill = 50, X = 1500, Y = i * 900, FaceX = -1024, Stance = "aggressive", Worn = [new("shirt", "linen")] });
             var r = FlavourRecorder.Attach(fw, null, fx.Book);
             while (!fw.IsOver && fw.Tick < 20 * 120) fw.StepWithAi();
             r.Finish();
-            log = r.Log;
+            if (FightChronicle.Write(r.Log, new Chronicle(), new IdAllocator(), fx.Book, fx.Text).Count > 0) log = r.Log;      // a fight with a named death, maiming or capture is one the chronicle keeps
         }
         if (log == null) return;
         At(rt, () => { FightChronicle.Write(log, rt.State.Chronicle, rt.State.Ids, fx.Book, fx.Text); return 0; });
@@ -267,7 +286,7 @@ public class Phase6SoakTests(ITestOutputHelper output)
         Assert.All(k.Rows, r =>
         {
             Assert.InRange(r.Alive, k.Alive0 * 90 / 100, k.Alive0 * 125 / 100);
-            Assert.InRange(r.Households, k.Households0 * 90 / 100, k.Households0 * 110 / 100);
+            Assert.InRange(r.Households, k.Households0 * 90 / 100, k.Households0 * 130 / 100);       // Phase 2's 10 percent held before Phase 4's growth built cottages: about 1.2 percent a year more households now (see the close-out notes)
             Assert.True(r.Idle < 800, $"{r.Idle} idle adults in year {r.Year}");
         });
         Assert.True(At(rt, () => rt.State.Economy!.Ledger.Audit().IsConserved));
@@ -301,7 +320,7 @@ public class Phase6SoakTests(ITestOutputHelper output)
         Assert.All(k.Rows, r =>
         {
             Assert.InRange(r.Alive, k.Alive0 * 90 / 100, k.Alive0 * 125 / 100);
-            Assert.InRange(r.Households, k.Households0 * 90 / 100, k.Households0 * 110 / 100);
+            Assert.InRange(r.Households, k.Households0 * 90 / 100, k.Households0 * 130 / 100);       // Phase 2's 10 percent held before Phase 4's growth built cottages: about 1.2 percent a year more households now (see the close-out notes)
         });
         var types = ChronicleTypes.From(k.W.Content);
         var rep = c.SpecificCoverage(types, older: k.W.History.Chronicle);
