@@ -3933,6 +3933,18 @@ bz_ui_stall_off,It sells at the market's lots. A stall of your own sells minded.
 bz_ui_stall_on,It sells from your stall (minded by its minder or by you).
 bz_ui_station_row,"{0}: {1} {2}%"
 bz_ui_stations,Stations
+bz_ui_crew,Crew
+bz_ui_crew_row,"{0} ({1}): {2} master, {3} journeyman, {4} hand; hours {5} / {6} / {7}, batch {8} h{9}"
+bz_ui_crowd_amber,", crowded (limit {0})"
+bz_ui_crowd_red,", over twice the limit {0}"
+bz_ui_span_row,"Span of control: {0} overseen, {1} at work, {2} over; speed {3}%"
+bz_ui_foreman_row,"{0}, Leadership {1}{2}"
+bz_ui_foreman_on,", foreman (+50 a day)"
+bz_ui_btn_appoint,Make foreman
+bz_ui_btn_unappoint,Dismiss foreman
+bz_ui_guild_row,"Guild {0}: {1} over its size rules, {2} fines{3}"
+bz_ui_licensed,", licensed"
+bz_ui_btn_licence,Ask a licence
 bz_ui_status,"Cash {0}, worth {1}, staff {2}/{3}, a season about {4}; {5}"
 bz_ui_steward,The steward
 bz_ui_steward_cand,"{0}: Trading {1}, Leadership {2}"

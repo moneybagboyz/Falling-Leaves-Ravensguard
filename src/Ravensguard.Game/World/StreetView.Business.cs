@@ -129,6 +129,9 @@ public partial class StreetView
         MindHour = subj => { long now = HeroNow(); IssueBiz(BusinessDesk.Mind(subj, now, now + 3600)); },
         Pump = b => IssueBiz(BusinessDesk.Pump(b, HeroNow())),
         SellShare = b => IssueBiz(BusinessDesk.SellShare(b, HeroNow())),
+        Foreman = (b, p) => IssueBiz(BusinessDesk.Foreman(b, p, HeroNow())),
+        Unforeman = (b, p) => IssueBiz(BusinessDesk.Unforeman(b, p, HeroNow())),
+        Manufactory = b => IssueBiz(BusinessDesk.Manufactory(b, HeroNow())),
     };
 
     /// <summary>What the hero carries that the business's recipes take (all of it goes in).</summary>

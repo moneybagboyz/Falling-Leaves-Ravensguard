@@ -218,8 +218,8 @@ public sealed partial class OwnershipWorld
         return OwnResult.Yes("bz_fired", Pop.People.FullName(person));
     }
 
-    /// <summary>The properties a steward already runs (businesses of the hero's he stewards).</summary>
-    public int StewardLoad(int person) => Book.Holdings.Values.Count(h => h.Steward == person);
+    /// <summary>The properties a steward already runs (businesses of the hero's he stewards); P7-ES1 (economies-of-scale 5.2): a works counts as <c>ceil(crew / 20)</c> properties, at least one.</summary>
+    public int StewardLoad(int person) => Book.Holdings.Values.Where(h => h.Steward == person).Sum(h => Prod.ById(h.Business) is { } b ? Math.Max(1, (b.Staff.Count + 19) / 20) : 1);
 
     /// <summary>
     /// Hires a steward for a business (spec 4.4): Trading 30 and Leadership 20 at least; 350 a day (skilled), from the cash box (else the hero's purse); he runs up to <c>3 + Leadership / 20</c>

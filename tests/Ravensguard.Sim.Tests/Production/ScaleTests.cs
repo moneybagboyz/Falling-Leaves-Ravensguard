@@ -292,6 +292,23 @@ public class ScaleTests
         Assert.True(t.Sw.Dismiss(big, p).Ok); Assert.False(t.Sw.Book.IsForeman(big.Id.Value, p));
     }
 
+    [Fact]
+    public void CrewView_ShowsTheStationsCrewByRole_AndTheSpan()
+    {
+        var k = new ProdKit(households: 2);
+        var b = k.Make("smithy", 100_000, 1, Occupation.Smith, Skill.Smithing, 10, ownerLevel: 70);
+        k.Give(b, "iron_bloom", 6_000); k.Give(b, "charcoal", 10_000);
+        var st = b.Stations.First(s => s.Kind == "forge");
+        Assert.True(k.Sys.TryStart(b, st, k.R("forge_bar"), At(6)));
+        k.Sys.WorkHour(At(6));
+        var v = CrewViews.Of(k.Sys, null, EconFixture.Content, b, 0);
+        var row = Assert.Single(v.Stations);
+        Assert.Equal((1, 0, 1), (row.Masters, row.Journeymen, row.Hands));
+        Assert.Equal(480 * 20 / 100, row.MinutesM);                                            // forge_bar: 8 h, 200 permille of it the master's steps
+        Assert.Equal(2, v.Workers); Assert.Equal(0, v.Excess); Assert.Equal(1000, v.SpeedPm); Assert.Equal(6, v.SpanSum);
+        Assert.Equal(0, row.Crowd);
+    }
+
     // ---------------------------------------------------------------- the save section
 
     [Fact]

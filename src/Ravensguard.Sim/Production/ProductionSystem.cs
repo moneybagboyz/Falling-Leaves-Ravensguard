@@ -262,7 +262,7 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
     }
 
     /// <summary>A person's role at a batch of the business: the owner at work is the master of his own house whatever his skill (an owner-operator supervises himself), else by skill and age (<see cref="Crews.RoleOf"/>).</summary>
-    private CrewRole RoleAt(Business b, int person, int skill, int day)
+    public CrewRole RoleAt(Business b, int person, int skill, int day)
         => person == b.Owner && b.OwnerWorks ? CrewRole.Master : Crews.RoleOf(Content.Scale, skill, Pop.People.AgeYears(person, day));
 
     /// <summary>Which masters serve more than one station (4.1's reach, ES-3): a master at one station of a divided recipe also visits the business's other credited divided stations that have no master, up to his reach.</summary>

@@ -24,6 +24,10 @@ public sealed class BusinessActions
     public Action<long>? MindHour;
     public Action<EntityId>? Pump;
     public Action<EntityId>? SellShare;
+    /// <summary>P7-ES1: appoint a staff member foreman, dismiss one, petition the town's lord for a manufactory licence.</summary>
+    public Action<EntityId, int>? Foreman;
+    public Action<EntityId, int>? Unforeman;
+    public Action<EntityId>? Manufactory;
 }
 
 /// <summary>
@@ -136,6 +140,22 @@ public partial class BusinessPanel : Control
             _body.AddChild(Line(L.F("bz_ui_order_hire", o.HireUpTo < 0 ? L.T("bz_ui_slots") : o.HireUpTo.ToString()), ("-", () => _act.Orders?.Invoke(id, $"hire={Math.Max(0, (o.HireUpTo < 0 ? v.Slots : o.HireUpTo) - 1)}"), true), ("+", () => _act.Orders?.Invoke(id, $"hire={(o.HireUpTo < 0 ? v.Slots : o.HireUpTo) + 1}"), true)));
             _body.AddChild(Line(L.F("bz_ui_order_close", L.T(o.CloseAfterTwoLosses ? "bz_ui_yes" : "bz_ui_no")), (L.T("bz_ui_btn_toggle"), () => _act.Orders?.Invoke(id, "close=" + (o.CloseAfterTwoLosses ? "0" : "1")), true)));
         }
+        // crew (P7-ES1, economies-of-scale 9): who stands at which station by role, the hours of the batch's grades, crowding, the span of control, foremen, the guild's verdict
+        if (v.Crew is { } cw && (cw.Stations.Count > 0 || cw.Foremen.Count > 0 || cw.Guild.Length > 0))
+        {
+            _body.AddChild(UiKit.Hint(L.T("bz_ui_crew")));
+            foreach (var cs in cw.Stations)
+                _body.AddChild(Row(L.F("bz_ui_crew_row", cs.Kind, cs.Recipe, cs.Masters, cs.Journeymen, cs.Hands, Hours(cs.MinutesM), Hours(cs.MinutesJ), Hours(cs.MinutesA), Hours(cs.ElapsedMinutes), cs.Crowd == 0 ? "" : L.F(cs.Crowd == 1 ? "bz_ui_crowd_amber" : "bz_ui_crowd_red", cs.CrewMax)), cs.Crowd == 2));
+            if (cw.Workers > 0) _body.AddChild(Row(L.F("bz_ui_span_row", cw.SpanSum, cw.Workers, cw.Excess, cw.SpeedPm / 10), cw.Excess > 0));
+            foreach (var fm in cw.Foremen)
+            {
+                var f = fm;
+                _body.AddChild(Line(L.F("bz_ui_foreman_row", f.Name, f.Leadership, f.Appointed ? L.T("bz_ui_foreman_on") : ""),
+                    f.Appointed ? (L.T("bz_ui_btn_unappoint"), v.Owned ? () => _act.Unforeman?.Invoke(id, f.Person) : null, v.Owned) : (L.T("bz_ui_btn_appoint"), v.Owned ? () => _act.Foreman?.Invoke(id, f.Person) : null, v.Owned)));
+            }
+            if (cw.Guild.Length > 0)
+                _body.AddChild(Line(L.F("bz_ui_guild_row", cw.Guild, cw.OverCaps, cw.Fines, cw.Licensed ? L.T("bz_ui_licensed") : ""), (L.T("bz_ui_btn_licence"), v.Owned && !cw.Licensed ? () => _act.Manufactory?.Invoke(id) : null, v.Owned && !cw.Licensed)));
+        }
         // stations, store, recipes
         _body.AddChild(UiKit.Hint(L.T("bz_ui_stations")));
         foreach (var s in v.Stations) _body.AddChild(Row(L.F("bz_ui_station_row", s.Kind, s.Recipe.Length > 0 ? s.Recipe : L.T("bz_ui_idle"), s.ProgressPm / 10), s.Recipe.Length == 0));
@@ -155,6 +175,8 @@ public partial class BusinessPanel : Control
         foreach (var h in v.History) _body.AddChild(Row(L.F("bz_ui_history_row", UiKit.SeasonName((Season)(h.Season % 4)), h.Season / 4 + 1, M(h.Revenue), M(h.Wages), M(h.Inputs), M(h.Profit), M(h.Paid)), h.Profit < 0));
         _body.AddChild(UiKit.Hint(L.F("bz_ui_projection", M(v.ProjectedSeasonProfit), M(350L * 15)), true));
     }
+
+    static string Hours(long minutes) => $"{minutes / 60}.{minutes % 60 * 10 / 60}";
 
     static string NextRecipe(BusinessView v, string cur)
     {
