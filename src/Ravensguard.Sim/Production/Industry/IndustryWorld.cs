@@ -68,6 +68,7 @@ public sealed partial class IndustryWorld : IStageHost
     private static void Share(Business b, PurseId purse)
     {
         b.Purse = purse;
+        if (b.Party != null) { b.Party.Purse = purse; return; }       // in place: the book's restored lots and orders hold this party object
         b.Party = new MarketParty(b.Id, purse, b.Store, Ravensguard.Sim.Economy.Markets.PartyKind.Business, b.Index);
     }
 
@@ -355,16 +356,16 @@ public sealed partial class IndustryWorld : IStageHost
         }
         // process: the main good, then every input, then the room
         long haveMain = b.Store.Qty(k.Main);
-        if (haveMain <= 0) { r.Stop = StageStop.NoInput; r.StopGood = k.Main; return; }
+        if (haveMain <= 0) { Starved(r, StageStop.NoInput, k.Main); return; }
         want = Math.Min(want, haveMain);
         foreach (var (g, pm, fuel) in k.Inputs)
         {
             long perM = (long)pm * t.InputPm / 1000; if (perM <= 0) continue;
             long have = b.Store.Qty(g);
-            if (have <= 0) { r.Stop = fuel ? StageStop.NoFuel : StageStop.NoInput; r.StopGood = g; return; }
+            if (have <= 0) { Starved(r, fuel ? StageStop.NoFuel : StageStop.NoInput, g); return; }
             want = Math.Min(want, have * 1000 / perM);
         }
-        if (want <= 0) { r.Stop = StageStop.NoInput; r.StopGood = k.Main; return; }
+        if (want <= 0) { Starved(r, StageStop.NoInput, k.Main); return; }
         int yieldPm = k.YieldLoPm > 0 ? DrawYield(b, s, day) : -1;
         long outMass = 0, inMass = 0;
         foreach (var (g, pm) in k.Outputs) outMass += want * (k.YieldLoPm > 0 && g == k.Outputs[0].Good ? yieldPm : pm) / 1000;
@@ -405,6 +406,16 @@ public sealed partial class IndustryWorld : IStageHost
         r.IdleMilli = IdleOf(r, want);
     }
 
+    /// <summary>
+    /// A process stage with nothing to work on stops, and its whole crew's day is idle (P7-IN5: without this a starved smeltery or saw mill lends no hours, the handling stage in front of it has no hands, and the chain waits on itself for ever, which the first
+    /// full-world run of a first-tier works showed).
+    /// </summary>
+    private void Starved(Run r, StageStop stop, ushort good)
+    {
+        r.Stop = stop; r.StopGood = good;
+        r.IdleMilli = (long)r.Crew.Count * Set.WorkdayHours * 1000;
+    }
+
     private int DrawYield(Business b, WorkStage s, int day)
     {
         if (ForceYieldPm != null) { s.Batch++; return ForceYieldPm(); }
@@ -422,6 +433,19 @@ public sealed partial class IndustryWorld : IStageHost
     }
 
     internal static ushort[] OutputsOf(StageKind k) => ForwardGoods(k);
+    /// <summary>
+    /// What a stage moves on (P7-IN5): a process or extraction stage its outputs; a handling stage its main good and every other good its store holds that is not its container (a saw mill's sawdust passes the packing stage on its way to the gate;
+    /// before, it stayed there until it filled the stage's store and stopped the planks behind it).
+    /// </summary>
+    private static ushort[] ForwardSet(StageKind k, Business b)
+    {
+        var basic = ForwardGoods(k); if (!k.IsHandling) return basic;
+        List<ushort>? extra = null;
+        foreach (var (g, q) in b.Store.Rows()) if (q > 0 && g != k.Container && Array.IndexOf(basic, g) < 0) (extra ??= []).Add(g);
+        if (extra == null) return basic;
+        extra.Sort(); return [.. basic, .. extra];
+    }
+
     private static ushort[] ForwardGoods(StageKind k) => k.IsHandling ? [k.Main, .. k.Outputs.Select(o => o.Good).Where(g => g != k.Main)] : [.. k.Outputs.Select(o => o.Good)];
 
     /// <summary>Moves a stage's goods on (4.3, 5.10): to the next stage, bounded by the link's hauling, the stage's own handling (a handling stage's crews, and the spare hours lent at the first tier) and the next store's room; or to the gate.</summary>
@@ -448,7 +472,7 @@ public sealed partial class IndustryWorld : IStageHost
             // spare hands: a first tier that takes no hands may run on the hours other stages could not use (never counted toward a minimum)
             if (k.Tier(1).CrewMin == 0 && pool > 0)
             {
-                long onHand = 0; foreach (var g in ForwardGoods(k)) onHand += b.Store.Qty(g);
+                long onHand = 0; foreach (var g in ForwardSet(k, b)) onHand += b.Store.Qty(g);
                 long short_ = Math.Max(0, onHand - limit);
                 if (short_ > 0)
                 {
@@ -464,7 +488,7 @@ public sealed partial class IndustryWorld : IStageHost
         if (s.Route is Routing.Gate or Routing.Contract)
         {
             if (Prod.Markets == null) return;
-            foreach (var g in ForwardGoods(k))
+            foreach (var g in ForwardSet(k, b))
             {
                 long hold = s.Route == Routing.Contract ? ContractHold(b.Id.Value, g) : 0;                                       // the contracts' deliveries stay in the store
                 long q = Math.Min(b.Store.Qty(g) - hold, limit - moved); if (q <= 0) continue;
@@ -478,7 +502,7 @@ public sealed partial class IndustryWorld : IStageHost
         var next = runs[idx + 1]; var link = w.Links.FirstOrDefault(l => l.From == idx && l.To == idx + 1);
         if (link != null) limit = Math.Min(limit, StageMath.LinkCapacityG(Set, link, s.Packed.Count > 0));
         long nextRoom = Math.Max(0, next.K.Tier(Math.Max(1, next.S.Tier)).StoreG - StoreMass(next.B));
-        foreach (var g in ForwardGoods(k))
+        foreach (var g in ForwardSet(k, b))
         {
             long q = Math.Min(Math.Min(b.Store.Qty(g), limit - moved), nextRoom - moved); if (q <= 0) continue;
             if (!Store.Move(b.Store, next.B.Store, g, q)) throw new InvalidOperationException("stage store lost goods");
@@ -486,7 +510,7 @@ public sealed partial class IndustryWorld : IStageHost
             moved += q;
         }
         r.MovedG = moved;
-        if (!k.IsHandling && moved == 0 && ForwardGoods(k).Any(g => b.Store.Qty(g) > 0) && nextRoom <= 0) { r.Stop = r.Stop == StageStop.None ? StageStop.Full : r.Stop; }
+        if (!k.IsHandling && moved == 0 && ForwardSet(k, b).Any(g => b.Store.Qty(g) > 0) && nextRoom <= 0) { r.Stop = r.Stop == StageStop.None ? StageStop.Full : r.Stop; }
     }
 
     /// <summary>A day's wage for each person on the books (the class wage by role, never above the stage's class; half for an apprentice), paid from the works' purse; a stage that could not pay what it owes does not work tomorrow.</summary>

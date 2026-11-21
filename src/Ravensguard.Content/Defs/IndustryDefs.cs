@@ -9,6 +9,42 @@ public sealed record ChainDef : ContentDef
     public required string Name { get; init; }
     /// <summary>The stage kind ids, upstream first.</summary>
     public required List<string> Stages { get; init; }
+    /// <summary>P7-IN5 (industries 5.12): the chain's first-tier buildings (a founder pays them; the tier plans of IN2 start at the second tier), the founders' reference sheet and where a works of the chain may be founded.</summary>
+    public ChainBuildDef Build { get; init; } = new();
+    public ChainSheetDef Sheet { get; init; } = new();
+    /// <summary>The ore good a mine of the settlement must make (iron: <c>iron_ore</c>), and the business kinds that mark a place of the chain's trade; a settlement qualifies by any one of them. Both empty: anywhere.</summary>
+    public string SiteMineral { get; init; } = "";
+    public List<string> SiteKinds { get; init; } = [];
+    /// <summary>The crew a founder sets at each stage (upstream first), the sheet's: a stage's target is clamped to its first tier's band.</summary>
+    public List<int> Crew { get; init; } = [];
+}
+
+/// <summary>P7-IN5: the first-tier buildings of a chain: worker-hours at the settings' labour rate, materials bought from the place's market and built in (the sheets' base-metal licence has no rule behind it yet).</summary>
+public sealed record ChainBuildDef
+{
+    public int LabourHours { get; init; }
+    public List<StageAmountDef> Materials { get; init; } = [];
+}
+
+/// <summary>P7-IN5: a good and a mass in kilograms (a day's flow on a reference sheet, a material of a bill).</summary>
+public sealed record StageAmountDef
+{
+    public required string Good { get; init; }
+    public required int Kg { get; init; }
+}
+
+/// <summary>
+/// P7-IN5 (industries 5.11): a founder's reference sheet of a well-run first-tier works, per working day: what it sells (at the gate's share of the book's mid) and buys (at the book's mid), the wages and other costs in mites, and the share of the year it works
+/// (<c>work_days</c> of 60; the others cost <c>off_day_mites</c>). The expected payback is the buildings' bill over the net a day of this sheet at the place's prices; it is the same sheet as the worked examples of 5.11.
+/// </summary>
+public sealed record ChainSheetDef
+{
+    public List<StageAmountDef> Sells { get; init; } = [];
+    public List<StageAmountDef> Buys { get; init; } = [];
+    public int WagesMites { get; init; }
+    public int OtherMites { get; init; }
+    public int WorkDays { get; init; } = 60;
+    public int OffDayMites { get; init; }
 }
 
 /// <summary>
@@ -152,4 +188,23 @@ public sealed record IndustrySettingsDef : ContentDef
     public int FloatPm { get; init; } = 1150;
     /// <summary>Days a stage's output is held back for a supply contract: the goods of this many deliveries stay in its store (the rest goes to the gate).</summary>
     public int ContractHoldDeliveries { get; init; } = 3;
+
+    // ---- P7-IN5 (industries 5.12): NPC founders
+    /// <summary>Whether households found works at all (the world rule behind the overview's Q6), the coin a household must hold to think of it, and the payback in game days it may expect at today's prices (3 years).</summary>
+    public bool NpcFounders { get; init; } = true;
+    public int NpcMinCapitalMites { get; init; } = 500_000;
+    public int NpcMaxPaybackDays { get; init; } = 1080;
+    /// <summary>Days between a household's looks at the trade (a working week), the most works the founders hold in the region, the days of the works' costs a founder puts into the purse as working capital, and the share of the owner's coin he keeps back, permille.</summary>
+    public int NpcCheckDays { get; init; } = 6;
+    public int NpcMaxWorks { get; init; } = 6;
+    public int NpcCapitalDays { get; init; } = 60;
+    public int NpcReservePm { get; init; } = 100;
+    /// <summary>The share of a good's mid a gate sale gets on the founders' sheet, permille (the gate's bid after the spread, 5.11), and the days a works may run at a loss over its ring before its owner closes it.</summary>
+    public int NpcGatePm { get; init; } = 920;
+    public int NpcLossDays { get; init; } = 180;
+    /// <summary>Game days between an NPC works' upgrades (one tier at most every 2 years) and the share of the owner's coin an upgrade may take, permille.</summary>
+    public int NpcUpgradeGapDays { get; init; } = 720;
+    public int NpcUpgradeMaxPm { get; init; } = 600;
+    /// <summary>The days of a works' costs its purse keeps before the owner draws the rest as a dividend (a multiple of <c>npc_capital_days</c>, permille).</summary>
+    public int NpcDividendPm { get; init; } = 1500;
 }

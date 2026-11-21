@@ -22,12 +22,21 @@ public sealed class IndustrySystem : AbstractSystem
 {
     public IndustrySystem() : base("industry", TickPhase.H4DailySlice, SystemOrder.ProductionDaily + 20) { }
 
+    /// <summary>The hour of the day the founders look at the trade (after the labour market's hour 1).</summary>
+    public const int FoundersHour = 7;
+
     public override void Step(TickContext ctx)
     {
-        var iw = ctx.World.Get<IndustryWorld>(); if (iw == null || iw.Book.Works.Count == 0) return;
+        var iw = ctx.World.Get<IndustryWorld>(); if (iw == null) return;
+        bool founders = ctx.HourOfDay == FoundersHour && iw.NpcEnabled;
+        if (iw.Book.Works.Count == 0 && !founders) return;
         var prev = iw.Chron;
         iw.Chron = RuleChron.Of(ctx.Outbox);
-        try { iw.Hour(ctx.Time); }
+        try
+        {
+            if (founders) iw.NpcPass((int)ctx.Time.TotalDays, ctx.Time);                // P7-IN5: the households' weekly look at the trade
+            if (iw.Book.Works.Count > 0) iw.Hour(ctx.Time);
+        }
         finally { iw.Chron = prev; }
     }
 }
@@ -40,6 +49,7 @@ public static class IndustryWiring
         var iw = Make(state, content, home.Economy.Production);
         Hook(iw, home.Sim.Get<ConstructionWorld>(), home.Sim.Get<PowerWorld>(), () => home.Sim.Get<WoundLedger>() ?? state.Wounds, state, content);
         iw.Trade = home.Economy.Trade;                                                   // P7-IN4: the continent's caravans, for the works' own
+        iw.IdleHands = (settlement, day) => home.Economy.Labour.IdleCount(settlement, day);   // P7-IN5: the founders look at the labour before they build
         home.Sim.Set(iw);
         return iw;
     }

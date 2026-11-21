@@ -8,7 +8,8 @@ namespace Ravensguard.Sim.Economy.Markets;
 public sealed class MarketParty(EntityId id, PurseId purse, Store store, PartyKind kind, int index)
 {
     public EntityId Id { get; } = id;
-    public PurseId Purse { get; } = purse;
+    /// <summary>Settable so a works' stages can be pointed at the works' one purse in place (<c>IndustryWorld.Rebind</c>): lots a load restored name this very party, so a replacement object would leave their proceeds in the stage's own purse.</summary>
+    public PurseId Purse { get; internal set; } = purse;
     public Store Store { get; } = store;
     public PartyKind Kind { get; } = kind;
     /// <summary>Household or business table index (the order orders are processed in).</summary>

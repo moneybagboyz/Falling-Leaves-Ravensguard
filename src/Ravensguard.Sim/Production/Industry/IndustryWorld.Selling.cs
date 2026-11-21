@@ -138,8 +138,11 @@ public sealed partial class IndustryWorld
             where = b.Settlement; cart = 0; toll = 0; carter = -1;                       // no carter, no coin for the road, or no gain in it: sold at home
         }
         var book = Prod.Markets.BookForSettlement(where);
+        long cash0 = Led.Balance(b.Purse).Mites;
         long sold = book.SellOrList(b.Party, good, qty, 900, day);
         if (sold <= 0) return 0;
+        long paid = Led.Balance(b.Purse).Mites - cash0;
+        if (paid > 0) s.Add(day, WorkStage.Income, paid);                                                  // P7-IN5: what the merchants paid inside the works' day is in the end balance already, so the between-days income never sees it
         if (cart + toll > 0 && sold < qty) { cart = cart * sold / qty; toll = toll * sold / qty; }
         if (cart > 0 && carter >= 0 && Led.Transfer(b.Purse, Prod.Econ.HouseholdPurse[carter], new Coin(cart), TransferReason.Wage)) s.Add(day, WorkStage.Upkeep, cart);
         var tp = TreasuryOf(where); if (tp.IsNone) tp = book.TollPurse;                                  // the town's treasury, else its market's toll purse

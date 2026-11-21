@@ -5007,6 +5007,8 @@ in_q_market_toll,Market toll
 in_q_master_share,The master's share
 in_q_risk,Risk of ambush
 ch_note_stage_stopped,The stage could not carry on its work.
+ch_ind_closed,"{owner} shut the {chain} works at {place}, which had earned nothing for half a year."
+ch_note_works_closed,The works ran at a loss and its owner gave it up.
 ind_chain_iron,iron
 ind_chain_clay,clay
 ind_chain_wood,wood

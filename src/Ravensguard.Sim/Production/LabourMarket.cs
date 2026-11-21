@@ -204,6 +204,14 @@ public sealed class LabourMarket
     /// <summary>P5-F (businesses spec 4.3): a day labourer of ten days a season is a candidate for a staff post before the others (null: none).</summary>
     public Func<int, int, bool>? Priority { get; set; }
 
+    /// <summary>P7-IN5: the idle adults of a settlement a hiring business could take on a day (the founders' look at the labour); the snapshot of the staff is rebuilt first, so the count does not depend on when the last hiring pass ran.</summary>
+    public int IdleCount(int settlement, int day)
+    {
+        if (settlement < 0 || settlement >= _idle.Length) return 0;
+        Rebuild(); BuildIdle(day);
+        return _idle[settlement].Count;
+    }
+
     private void BuildIdle(int day, bool rebuild = false)
     {
         var p = _pop.People; var hht = _pop.Households;
