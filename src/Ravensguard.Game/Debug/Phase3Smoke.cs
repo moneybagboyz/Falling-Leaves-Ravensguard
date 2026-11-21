@@ -190,6 +190,22 @@ public static class Phase3Smoke
             Key(Godot.Key.Escape); await Frames(tree, 4);
             if (router.Top != sv) throw new Exception("Esc did not close the Ledger's Fief tab");
             GD.Print("[smoke]   the Ledger's Fief tab: fits, Esc closes it");
+            // P7-IN3 (industries 6): the Ledger's Industry tab over a staged iron works fits 960x540 (flow, detail, balance sheet); its keys move the cursor and send commands without leaving the Ledger; Esc closes it
+            sv.DebugIndustry(); await Frames(tree, 150);
+            if (router.Top is not UI.LedgerScreen) throw new Exception("the Industry tab did not open (top " + router.Top?.GetType().Name + ")");
+            Fit(router.Top!, "the Ledger's Industry tab", view);
+            foreach (var k in new[] { Godot.Key.Down, Godot.Key.Right, Godot.Key.Left, Godot.Key.Up, Godot.Key.A, Godot.Key.S })
+            {
+                Key(k); await Frames(tree, 3);
+                Input.ParseInputEvent(new InputEventKey { Keycode = k, PhysicalKeycode = k, Pressed = false });
+                await Frames(tree, 1);
+            }
+            await Frames(tree, 150);
+            if (router.Top is not UI.LedgerScreen) throw new Exception("an Industry key left the Ledger");
+            Fit(router.Top!, "the Ledger's Industry tab after its keys", view);
+            Key(Godot.Key.Escape); await Frames(tree, 4);
+            if (router.Top != sv) throw new Exception("Esc did not close the Ledger's Industry tab");
+            GD.Print("[smoke]   the Ledger's Industry tab: fits, its keys stay in the Ledger, Esc closes it");
 
             // P6-D2 (diplomacy-and-ai-lords 6): F opens the Faction screen (its own context: the street keys are off under it); every tab fits 960x540, Tab turns the pages, Esc closes it
             Key(Godot.Key.F); await Frames(tree, 40);

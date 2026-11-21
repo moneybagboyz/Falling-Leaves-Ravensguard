@@ -5126,6 +5126,7 @@ ru_extend_refused,That charter cannot be extended.
 ru_due_paid,You paid {0}.
 ru_aid_called,{0} vassals were called for the aid.
 lg_tab_fief,Fief
+lg_tab_industry,Industry
 lg_empty_fief,"No fief books: a lord's receipts, arrears, officials, dues and loans show here."
 lg_col_who,With
 lg_col_amount,Amount
@@ -6280,6 +6281,68 @@ so_stripped,His {0} piece is taken off.
 so_nothing_there,He wears nothing there.
 so_role_set,He is now a {0}.
 so_discharged,"He is discharged; {0} pieces went back to the armoury."
+ui_ind_empty,"You run no works. Found one at a mill site or a surveyed deposit and its chain appears here."
+ui_ind_keys,"{0} stage, {1} crew, {2} upgrade plan, {3} route, {4} wage, {5} send caravan, {6} next tab, {7} close"
+ui_ind_keys_short,Industry
+ui_ind_bn_none,No stage is held back.
+ui_ind_bn_stopped,"Bottleneck: {0} is stopped: {1}, {2} days."
+ui_ind_bn_hauling,"Bottleneck: hauling from {0} to {1} moves {2} of the {3} a day (the link carries {4})."
+ui_ind_bn_slowest,"Bottleneck: {0} makes {1} of the {2} it could."
+ui_ind_works,"{0} works at {1} {2}"
+ui_ind_net,"net {0} a day, {1} a week"
+ui_ind_buildings,"buildings {0}, repaid {1}%"
+ui_ind_payback,"payback in {0} days"
+ui_ind_payback_none,no payback yet
+ui_ind_paid_back,paid back
+ui_ind_tier,L{0}
+ui_ind_tier_of,"tier {0} of {1}"
+ui_ind_crew_box,"crew {0} of {1}-{2}"
+ui_ind_made,"{0} a day"
+ui_ind_haul,"hauls {0} of {1}"
+ui_ind_no_stock,no stock
+ui_ind_working,working
+ui_ind_route,"output goes {0}"
+ui_ind_route_next,on to the next stage
+ui_ind_route_gate,to the gate
+ui_ind_route_store,to the store
+ui_ind_route_contract,to a contract
+ui_ind_route_caravan,by your caravan
+ui_ind_crew,"crew target {0} ({1}-{2}), {3} at work"
+ui_ind_wage,"wage {0}% = {1} a day"
+ui_ind_btn_wage,Wage
+ui_ind_btn_route,Route
+ui_ind_btn_send,Send
+ui_ind_btn_upgrade,"Plan L{0}"
+ui_ind_stopped,"Stopped: {0}, {1} days."
+ui_ind_input,"{0}: {1} in store, {2} a day, {3} days of cover, from {4}"
+ui_ind_src_chain,the chain
+ui_ind_src_market,the market
+ui_ind_upgrade,"Next tier L{0}: plan {1}; crew {2}-{3}"
+ui_ind_upgrade_hand,Upgrade plan is placed: build it to raise the tier.
+ui_ind_missing,"still to build: {0}"
+ui_ind_hire_more,"hire {0} more"
+ui_ind_extra,"{0} more a day"
+ui_ind_upgrade_payback,"repays in about {0} days at today's prices (+{1} a day, estimate)"
+ui_ind_upgrade_payback_none,no payback at today's prices
+ui_ind_top_tier,This stage is at its top tier.
+ui_ind_no_site,Set the stage's premises first: the plan goes beside them.
+ui_ind_gate,"Gate, {0}: {1} in store, {2} m a kg net at {3}; the books take {4} a day, {5} days to clear"
+ui_ind_caravan,"Caravan to {0}: {1} wagons, {2} guards, {3} days"
+ui_ind_caravan_no,"Caravan to {0}: {1}"
+ui_ind_quote,"Sales {0}, costs {1}, risk {2}: margin {3}; the gate would pay {4} for the same load"
+ui_ind_price_age,"prices {0} days old"
+ui_ind_tally,"Caravans home {0}, lost {1}, netted {2}"
+ui_ind_sheet,"Last works day {0}; a week is {1} working days"
+ui_ind_col_day,Day
+ui_ind_col_week,Week
+ui_ind_col_stage_day,Stage d
+ui_ind_col_stage_week,Stage w
+ui_ind_row_income,Income
+ui_ind_row_wages,Wages
+ui_ind_row_inputs,Inputs
+ui_ind_row_upkeep,Upkeep
+ui_ind_row_royalties,Royalties
+ui_ind_row_net,Net
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."
