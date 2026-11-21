@@ -372,10 +372,10 @@ public class IndustryTests
     {
         var t = new Kit("clay");
         t.Crew(0, 3); t.Crew(1, 3); t.Crew(2, 4); t.Crew(3, 2); t.Crew(4, 3); t.Give(4, "firewood", 20_000_000);
-        for (int d = 0; d < 8; d++) t.Day(d);
+        for (int d = 0; d < 24; d++) t.Day(d);
         long bricks = 0, green = 0; foreach (var s in t.W.Stages) { var b = t.K.Sys.ById(new EntityId(s.Business))!; bricks += b.Store.Qty(t.K.Cat.IdOf("bricks")); green += b.Store.Qty(t.K.Cat.IdOf("bricks_green")); }
         Assert.True(bricks > 0, string.Join(" | ", t.W.Stages.Select((s, i) => $"{i}: {t.World.Status(s.Business)}")));
         Assert.True(t.K.Econ.Ledger.Audit().IsConserved);
-        Assert.True(t.W.Stages.Sum(s => s.Sum(WorkStage.Wages, 7, 8)) > 0);
+        Assert.True(t.W.Stages.Sum(s => s.Sum(WorkStage.Wages, 23, 24)) > 0);
     }
 }

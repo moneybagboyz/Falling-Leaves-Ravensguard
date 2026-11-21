@@ -119,6 +119,6 @@ public static class BlueprintParser
             levels.Add(lv);
         }
         if (issues.Count > before) return null;
-        return new BuildingGrid(def.Id, width, height, rooms, levels);
+        return new BuildingGrid(def.Id, width, height, rooms, levels) { OpenAir = def.OpenAir };
     }
 }

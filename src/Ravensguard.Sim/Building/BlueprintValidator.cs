@@ -46,10 +46,10 @@ public static class BlueprintValidator
             Err("rooms", "room.mixed", $"room#{r.Index} z={r.Z} mixes purposes {string.Join(", ", r.DeclaredPurposes)}");
 
         // exterior door and reachability
-        if (!rooms.Any(r => r.HasExteriorDoor) && !HasExteriorDoor(grid, pieces, detector))
+        if (!def.OpenAir && !rooms.Any(r => r.HasExteriorDoor) && !HasExteriorDoor(grid, pieces, detector))
             Err("rows", "exterior.no_door", "no door leads outside");
         var reached = Reachable(grid, pieces, detector);
-        foreach (var r in rooms)
+        foreach (var r in rooms.Where(_ => !def.OpenAir))
             if (!r.Cells.Any(c => reached.Contains(new Cell3(c.X, c.Y, r.Z))))
                 Err("rows", "room.unreachable", $"room#{r.Index} z={r.Z} at ({r.Cells[0].X},{r.Cells[0].Y}) cannot be reached from an exterior door");
 

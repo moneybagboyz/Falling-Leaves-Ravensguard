@@ -117,8 +117,11 @@ public sealed class BuildingGrid
     }
 
     public BuildingGrid Clone() => new(Id, Width, Height, Rooms, Levels.Values.Select(l => l.Clone()));
-    public BuildingGrid Rotate90() => new(Id, Height, Width, Rooms, Levels.Values.Select(l => l.Rotate90()));
-    public BuildingGrid MirrorX() => new(Id, Width, Height, Rooms, Levels.Values.Select(l => l.MirrorX()));
+    /// <summary>P7-IN2: an open-air plan (no roof is laid over it; the industry tier plans).</summary>
+    public bool OpenAir { get; init; }
+
+    public BuildingGrid Rotate90() => new(Id, Height, Width, Rooms, Levels.Values.Select(l => l.Rotate90())) { OpenAir = OpenAir };
+    public BuildingGrid MirrorX() => new(Id, Width, Height, Rooms, Levels.Values.Select(l => l.MirrorX())) { OpenAir = OpenAir };
 
     /// <summary>Applies the mirror (if any) and then <paramref name="quarterTurns"/> clockwise rotations.</summary>
     public BuildingGrid Transform(int quarterTurns, bool mirror)

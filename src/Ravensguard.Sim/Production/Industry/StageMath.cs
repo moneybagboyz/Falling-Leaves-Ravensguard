@@ -57,8 +57,10 @@ public static class StageMath
         // the carriers and feeders are the stage's own hands only where the tier has them; a stage with no carriers' role counts every hand as primary (the crew is the sum)
         int n = have;
         int eff = n > t.CrewMax && n > 0 ? (int)((long)Crews.EffectivePm(n, t.CrewMax) * 1000 / (n * 1000L)) : 1000;
-        long crewG = sum * eff / 1000 * spanPm / 1000 * powerPm / 1000;
-        long cap = t.CapacityG > 0 ? t.CapacityG * powerPm / 1000 : long.MaxValue;
+        // a powered tier's machines lift the capacity above what hands alone do: stopped, the stage falls back to its unpowered capacity (IN-7); the crew's own rate never needs the power
+        bool powered = t.PowerW > 0 && t.CapacityG > 0;
+        long crewG = sum * eff / 1000 * spanPm / 1000 * (powered ? 1000 : powerPm) / 1000;
+        long cap = t.CapacityG > 0 ? (powered ? t.CapacityUnpoweredG + (t.CapacityG - t.CapacityUnpoweredG) * powerPm / 1000 : t.CapacityG * powerPm / 1000) : long.MaxValue;
         long pot = Math.Min(crewG, cap) * sliderPct / 100;
         return new StagePlan(recognised, wt, have, k.Tier(recognised).CrewMin, false, pot, crewG, eff, spanPm, powerPm);
     }
@@ -90,10 +92,12 @@ public static class StageMath
     /// What a link carries in a day, in grams (4.3): within <see cref="IndustrySettingsDef.PassWithinM"/> the crews' own hands pass the goods (no limit but the stages' own handling); beyond it carts, <c>trips x 500 kg</c> each (an ox wagon 1,000),
     /// so a link with no cart beyond reach carries nothing.
     /// </summary>
-    public static long LinkCapacityG(IndustrySettingsDef s, WorkLink l)
+    public static long LinkCapacityG(IndustrySettingsDef s, WorkLink l, bool goodsPacked = false)
     {
         if (l.DistanceM <= s.PassWithinM) return long.MaxValue;
-        long trips = Trips(s, l.DistanceM, l.Packed || l.Crane);
-        return trips * ((long)l.Carts * s.CartKg + (long)l.Wagons * s.WagonKg) * 1000;
+        bool packed = l.Packed || goodsPacked;
+        long trips = Trips(s, l.DistanceM, packed || l.Crane);
+        long cap = trips * ((long)l.Carts * s.CartKg + (long)l.Wagons * s.WagonKg) * 1000;
+        return packed ? cap * s.PackedDensityPm / 1000 : cap;
     }
 }

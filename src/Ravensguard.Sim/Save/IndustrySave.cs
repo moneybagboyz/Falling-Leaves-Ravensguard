@@ -24,6 +24,8 @@ public sealed class IndustrySave
     [Key(4)] public long[][] Links { get; set; } = [];
     /// <summary>Per works: how many stages it has.</summary>
     [Key(5)] public int[] StageCounts { get; set; } = [];
+    /// <summary>P7-IN2, per stage in the same order: the site rectangle (x0, y0, x1, y1), the upgrade tier and its construction site, then the drying batches (age, grams pairs) after a count, then the packed rows (good, container, grams, containers) after a count. Null while no stage uses any.</summary>
+    [Key(6)] public long[][]? Extras { get; set; }
 
     public static IndustrySave Capture(IndustryBook b)
     {
@@ -40,8 +42,20 @@ public sealed class IndustrySave
             }
             foreach (var l in w.Links) links.Add([i, l.From, l.To, l.DistanceM, l.Carts, l.Wagons, l.Crane ? 1 : 0, l.Packed ? 1 : 0]);
         }
+        var extras = new List<long[]>(); bool anyExtra = false;
+        foreach (var w in b.Works)
+            foreach (var s in w.Stages)
+            {
+                var e = new List<long> { s.SiteX0, s.SiteY0, s.SiteX1, s.SiteY1, s.UpgradeTo, s.UpgradeSite, s.Dwell.Count };
+                foreach (var (a, g) in s.Dwell) { e.Add(a); e.Add(g); }
+                e.Add(s.Packed.Count);
+                foreach (var p in s.Packed) { e.Add(p.Good); e.Add(p.Container); e.Add(p.Grams); e.Add(p.Containers); }
+                if (s.HasSite || s.UpgradeTo != 0 || s.Dwell.Count > 0 || s.Packed.Count > 0) anyExtra = true;
+                extras.Add([.. e]);
+            }
         return new IndustrySave
         {
+            Extras = anyExtra ? [.. extras] : null,
             Works = [.. b.Works.Select(w => new long[] { w.Owner, w.Settlement, w.BuildingsCostMites, w.CumulativeNetMites, w.StartedDay, w.PaidBackDay, w.Closed ? 1 : 0, w.EndBalance, w.Injected, w.InputsPaid })],
             Chains = [.. b.Works.Select(w => w.Chain)], StageCounts = [.. b.Works.Select(w => w.Stages.Count)],
             Stages = [.. stages], Rings = [.. rings], Links = [.. links],
@@ -67,6 +81,16 @@ public sealed class IndustrySave
                     StopDays = (int)s[8], Batch = s[9], LastDay = (int)s[10], InputsSeen = s[11],
                 };
                 Array.Copy(ring, ws.Ring, ws.Ring.Length); for (int d = 0; d < ws.RingStamp.Length; d++) ws.RingStamp[d] = (int)ring[ws.Ring.Length + d];
+                if (Extras != null)
+                {
+                    if (si >= Extras.Length || Extras[si].Length < 8) throw new SaveException("Corrupt stage extras in save.");
+                    var e = Extras[si]; int at = 0;
+                    ws.SiteX0 = (int)e[at++]; ws.SiteY0 = (int)e[at++]; ws.SiteX1 = (int)e[at++]; ws.SiteY1 = (int)e[at++]; ws.UpgradeTo = (int)e[at++]; ws.UpgradeSite = e[at++];
+                    long nd = e[at++]; if (nd < 0 || at + nd * 2 >= e.Length) throw new SaveException("Corrupt stage extras in save.");
+                    for (long q = 0; q < nd; q++) { ws.Dwell.Add((e[at], e[at + 1])); at += 2; }
+                    long np = e[at++]; if (np < 0 || at + np * 4 > e.Length) throw new SaveException("Corrupt stage extras in save.");
+                    for (long q = 0; q < np; q++) { ws.Packed.Add(new PackedRow { Good = (ushort)e[at], Container = (ushort)e[at + 1], Grams = e[at + 2], Containers = e[at + 3] }); at += 4; }
+                }
                 w.Stages.Add(ws);
             }
             b.Works.Add(w);

@@ -43,6 +43,9 @@ public sealed record StageKindDef : ContentDef
     public int YieldHiPm { get; init; }
     /// <summary>A haul stage's reference distance in metres (the rates are over this).</summary>
     public int RefDistanceM { get; init; }
+    /// <summary>A packing stage's container (5.9): the good, and the kilograms a container holds.</summary>
+    public string Container { get; init; } = "";
+    public int ContainerKg { get; init; } = 100;
     public required List<StageTierDef> Tiers { get; init; }
 }
 
@@ -73,7 +76,25 @@ public sealed record StageTierDef
     public bool AnyDistance { get; init; }
     /// <summary>The blueprint and the pieces that make the tier (IN2); named here so the tables are one place.</summary>
     public string Plan { get; init; } = "";
+    /// <summary>What must stand in the stage's premises for the tier (P7-IN2, 5.2): entries <c>piece</c>, <c>piece*N</c> (at least N) and <c>a|b</c> (either), all of which count (a tier also needs every lower tier's).</summary>
     public List<string> Recognise { get; init; } = [];
+    /// <summary>Kilograms a day the stage still does when its machines are stopped (no water, a frozen wheel); -1: what the tier below can do.</summary>
+    public int CapacityUnpowered { get; init; } = -1;
+    /// <summary>A worker-day's risk of an accident in millionths (stream 0x740, 5.7).</summary>
+    public int AccidentPpm { get; init; } = 200;
+    /// <summary>Flood and wet days stop the stage (a mine's or a pit's lower tiers, 5.6).</summary>
+    public bool Floods { get; init; }
+    /// <summary>The share of the day's work done in winter, in permille (felling 800; frozen ground helps a sledge, 1,500; 1,000 when absent).</summary>
+    public int WinterPm { get; init; } = 1000;
+    /// <summary>A drying stage: days a batch must lie (6), and the thousandths of a day it ages in winter (0 for open hacks, 500 for sheds, 1,000 for hot floors).</summary>
+    public int DryDays { get; init; }
+    public int DryWinterPm { get; init; } = 1000;
+    /// <summary>A kiln's losses a firing in permille of what it makes (stream 0x742, 5.1).</summary>
+    public int LossLoPm { get; init; }
+    public int LossHiPm { get; init; }
+    /// <summary>A smeltery's finery (5.1): the share of the bloom that becomes bar in permille, and the grams of bloom a day it works.</summary>
+    public int BarPm { get; init; }
+    public int FineryKg { get; init; }
 }
 
 /// <summary>P7-IN1 (industries 4.1, 4.3, 5.12): the runtime's numbers.</summary>
@@ -99,4 +120,13 @@ public sealed record IndustrySettingsDef : ContentDef
     public string CompositeGood { get; init; } = "iron_ore";
     public List<string> CompositeStages { get; init; } = [];
     public int CompositeYieldPm { get; init; } = 600;
+    /// <summary>Packed goods load this much denser on a cart (5.9), in permille; a container is worn out a trip with these chances in permille (crates, dry casks 100; barrels 50).</summary>
+    public int PackedDensityPm { get; init; } = 1100;
+    public int ContainerWornPm { get; init; } = 100;
+    /// <summary>The metres a stage's site may reach from its first corner (a stage's rectangle is at most this wide and tall).</summary>
+    public int SiteMaxM { get; init; } = 48;
+    /// <summary>The height of a fall an accident is worked out as (millimetres), by kind: rockfall, scalding, saw (5.7).</summary>
+    public int AccidentFallMm { get; init; } = 3000;
+    /// <summary>Mites a worker-hour of hand building is priced at when a tier plan's bill is added to the works' buildings cost (5.3a).</summary>
+    public int PlanLabourMites { get; init; } = 30;
 }

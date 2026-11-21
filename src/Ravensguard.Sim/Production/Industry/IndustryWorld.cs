@@ -10,7 +10,7 @@ using Ravensguard.Sim.Trade;
 namespace Ravensguard.Sim.Production.Industry;
 
 /// <summary>What a stage did on its last day, for the tab and the tests (derived each day, never saved).</summary>
-public sealed record StageStatus(int RecognisedTier, int WorkingTier, int Have, int Need, StageStop Stop, ushort StopGood, long MadeG, long PotentialG, long MovedG, long LentMilliHours)
+public sealed record StageStatus(int RecognisedTier, int WorkingTier, int Have, int Need, StageStop Stop, ushort StopGood, long MadeG, long PotentialG, long MovedG, long LentMilliHours, bool NoPower = false)
 {
     public bool ShortHanded => WorkingTier > 0 && WorkingTier < RecognisedTier;
 }
@@ -20,7 +20,7 @@ public sealed record StageStatus(int RecognisedTier, int WorkingTier, int Have, 
 /// lent to the yard, packing and shipping stages, wages from the works' purse), keeps each stage's balance ring and the payback counters, and answers the labour market (<see cref="IStageHost"/>). Every coin is one ledger transfer between real purses and every good a store move
 /// or a create or destroy with its reason, so the audits stay exact. The tier a stage works at is its recognised <see cref="WorkStage.Tier"/> (IN2 derives it from what is installed) limited by its crew.
 /// </summary>
-public sealed class IndustryWorld : IStageHost
+public sealed partial class IndustryWorld : IStageHost
 {
     public IndustryBook Book { get; }
     public ProductionSystem Prod { get; }
@@ -212,7 +212,9 @@ public sealed class IndustryWorld : IStageHost
         public StagePlan Plan;
         public long MadeG, MovedG, IdleMilli, LentMilli;
         public StageStop Stop; public ushort StopGood = ushort.MaxValue;
-        public bool Working;
+        public bool Working, NoPower;
+        /// <summary>The most a drying stage may let leave today (its ripe batches); unlimited otherwise.</summary>
+        public long CapG = long.MaxValue;
     }
 
     /// <summary>Runs the works that are due in this game hour (a works' slice is its index modulo 24, as a business's is), once a day.</summary>
@@ -229,6 +231,7 @@ public sealed class IndustryWorld : IStageHost
         if (w.Closed || w.Stages.Count == 0) return;
         var head = Prod.ById(new EntityId(w.Id)); if (head == null) return;
         if (People.Status[w.Owner] is not (PersonStatus.Alive or PersonStatus.Hero)) { CloseWorks(w); return; }
+        RecogniseAll(w, day, now);
         long bal0 = Led.Balance(head.Purse).Mites;
         var runs = new List<Run>(w.Stages.Count);
         long inputs = 0;
@@ -313,8 +316,10 @@ public sealed class IndustryWorld : IStageHost
 
     private int PowerOf(Works w, Run r)
     {
-        if (r.K.Tier(r.S.Tier).PowerW <= 0 || PowerPm == null) return 1000;
-        return Math.Clamp(PowerPm(w, r.S), 0, 1000);
+        if (r.K.Tier(r.S.Tier).PowerW <= 0) return 1000;
+        int p = PowerPm != null ? Math.Clamp(PowerPm(w, r.S), 0, 1000) : MachinePm(w, r.S);
+        if (p < 1000) r.NoPower = true;
+        return p;
     }
 
     private static long StoreMass(Business b) => b.Store.TotalMassG();
@@ -326,10 +331,11 @@ public sealed class IndustryWorld : IStageHost
         r.Plan = StageMath.Plan(k, s.Tier, System.Runtime.InteropServices.CollectionsMarshal.AsSpan(r.Crew), SpanPm(w, r, day), PowerOf(w, r), SliderPct());
         if (r.Stop == StageStop.Unpaid) return;
         if (r.Plan.UnderCrewed) { r.Stop = StageStop.UnderCrewed; return; }
+        if (SeasonStop(k, r.Plan.WorkingTier, day) is var ss && ss != StageStop.None) { r.Stop = ss; return; }
         if (ExternalStop?.Invoke(w, s) is { Stop: not StageStop.None } ext) { r.Stop = ext.Stop; r.StopGood = ext.Good; return; }
         var t = k.Tier(r.Plan.WorkingTier);
-        long want = r.Plan.PotentialG;
-        if (want <= 0) return;
+        long want = r.Plan.PotentialG * WinterPm(k, r.Plan.WorkingTier, day) / 1000;
+        if (want <= 0) { if (r.NoPower) r.Stop = StageStop.NoPower; return; }
         long mass = StoreMass(b), room = Math.Max(0, t.StoreG - mass);
         if (k.Role == StageRole.Extract)
         {
@@ -382,6 +388,12 @@ public sealed class IndustryWorld : IStageHost
             long q = want * (o == 0 && yieldPm >= 0 ? yieldPm : pm) / 1000; if (q <= 0) continue;
             b.Store.Create(g, q, CreateReason.Crafted); Prod.ProducedUnits[g] += q; made += q; if (o == 0) firstOut = q;
         }
+        if (t.LossHiPm > 0 && firstOut > 0)
+        {
+            long lost = firstOut * DrawLossPm(b, s, t) / 1000;
+            if (lost > 0 && b.Store.Destroy(k.Outputs[0].Good, lost, DestroyReason.Waste)) { made -= lost; Prod.ProducedUnits[k.Outputs[0].Good] -= lost; }
+        }
+        if (t.BarPm > 0) Finery(r, t);
         long waste = k.YieldLoPm > 0 ? Math.Max(0, want - firstOut) : want * k.WastePm / 1000;
         long consumed = want - waste;
         if (waste > 0 && !b.Store.Destroy(k.Main, waste, DestroyReason.Waste)) throw new InvalidOperationException("stage main good vanished");
@@ -407,10 +419,18 @@ public sealed class IndustryWorld : IStageHost
         return (long)r.Crew.Count * Set.WorkdayHours * 1000 * (pot - madeG) / pot;
     }
 
-    private static ushort[] ForwardGoods(StageKind k) => k.IsHandling ? [k.Main] : [.. k.Outputs.Select(o => o.Good)];
+    private static ushort[] ForwardGoods(StageKind k) => k.IsHandling ? [k.Main, .. k.Outputs.Select(o => o.Good).Where(g => g != k.Main)] : [.. k.Outputs.Select(o => o.Good)];
 
     /// <summary>Moves a stage's goods on (4.3, 5.10): to the next stage, bounded by the link's hauling, the stage's own handling (a handling stage's crews, and the spare hours lent at the first tier) and the next store's room; or to the gate.</summary>
     private void Forward(Works w, int idx, List<Run> runs, ref long pool, int day)
+    {
+        var r = runs[idx];
+        long before = r.K.IsHandling && r.K.Tier(Math.Max(1, r.S.Tier)).DryDays > 0 ? r.B.Store.Qty(r.K.Main) : -1;
+        ForwardCore(w, idx, runs, ref pool, day);
+        if (before >= 0) { long gone = before - r.B.Store.Qty(r.K.Main); if (gone > 0) DwellTake(r.S, gone); }
+    }
+
+    private void ForwardCore(Works w, int idx, List<Run> runs, ref long pool, int day)
     {
         var r = runs[idx]; var k = r.K; var b = r.B; var s = r.S;
         long limit = long.MaxValue;
@@ -420,7 +440,8 @@ public sealed class IndustryWorld : IStageHost
             if (r.Stop == StageStop.Unpaid) return;
             if (r.Plan.UnderCrewed) { r.Stop = StageStop.UnderCrewed; return; }
             if (ExternalStop?.Invoke(w, s) is { Stop: not StageStop.None } ext) { r.Stop = ext.Stop; r.StopGood = ext.Good; return; }
-            limit = r.Plan.PotentialG * StageMath.HaulScalePm(k, k.Tier(Math.Max(1, r.Plan.WorkingTier)), s.DistanceM) / 1000;
+            limit = r.Plan.PotentialG * StageMath.HaulScalePm(k, k.Tier(Math.Max(1, r.Plan.WorkingTier)), s.DistanceM) / 1000 * WinterPm(k, r.Plan.WorkingTier, day) / 1000;
+            if (k.Tier(Math.Max(1, s.Tier)).DryDays > 0) limit = Math.Min(limit, DryEligible(r, day));
             // spare hands: a first tier that takes no hands may run on the hours other stages could not use (never counted toward a minimum)
             if (k.Tier(1).CrewMin == 0 && pool > 0)
             {
@@ -434,6 +455,7 @@ public sealed class IndustryWorld : IStageHost
             }
         }
         if (s.Route == Routing.Store) return;
+        if (k.IsHandling) PackStage(r, limit);
         long moved = 0;
         if (s.Route == Routing.Gate)
         {
@@ -442,18 +464,21 @@ public sealed class IndustryWorld : IStageHost
             foreach (var g in ForwardGoods(k))
             {
                 long q = Math.Min(b.Store.Qty(g), limit - moved); if (q <= 0) continue;
-                moved += book.SellOrList(b.Party, g, q, 900, day);
+                long sold = book.SellOrList(b.Party, g, q, 900, day);
+                moved += sold;
+                if (sold > 0) Unpack(s, g, sold, b.Store);
             }
             r.MovedG = moved; return;
         }
         if (s.Route != Routing.Next || idx + 1 >= runs.Count || runs[idx + 1] == null) return;
         var next = runs[idx + 1]; var link = w.Links.FirstOrDefault(l => l.From == idx && l.To == idx + 1);
-        if (link != null) limit = Math.Min(limit, StageMath.LinkCapacityG(Set, link));
+        if (link != null) limit = Math.Min(limit, StageMath.LinkCapacityG(Set, link, s.Packed.Count > 0));
         long nextRoom = Math.Max(0, next.K.Tier(Math.Max(1, next.S.Tier)).StoreG - StoreMass(next.B));
         foreach (var g in ForwardGoods(k))
         {
             long q = Math.Min(Math.Min(b.Store.Qty(g), limit - moved), nextRoom - moved); if (q <= 0) continue;
             if (!Store.Move(b.Store, next.B.Store, g, q)) throw new InvalidOperationException("stage store lost goods");
+            MovePacked(r, next, g, q);
             moved += q;
         }
         r.MovedG = moved;
@@ -488,6 +513,7 @@ public sealed class IndustryWorld : IStageHost
     /// <summary>The market buys the stage's inputs for tomorrow: what the chain does not supply (charcoal, firewood, or ore for a smeltery with no mine behind it), up to two days of the stage's day, at up to three times the reference, from the works' purse.</summary>
     private void Buy(Works w, int idx, Run r, int day)
     {
+        if (Prod.Markets != null && r.K.Container != ushort.MaxValue && r.K.IsHandling) { BuyPacking(r); return; }
         if (Prod.Markets == null || r.K.Role != StageRole.Process) return;
         var book = Prod.Markets.BookForSettlement(r.B.Settlement);
         var t = r.K.Tier(r.S.Tier);
@@ -504,6 +530,13 @@ public sealed class IndustryWorld : IStageHost
         foreach (var (g, pm, _) in r.K.Inputs) Order(g, (long)pm * t.InputPm / 1000);
     }
 
+    /// <summary>The works' purchases for a packing stage: the containers its day will need (see <see cref="BuyContainers"/>).</summary>
+    private void BuyPacking(Run r)
+    {
+        long dayG = r.Plan.PotentialG > 0 ? r.Plan.PotentialG : r.K.Tier(Math.Max(1, r.S.Tier)).RateG * Math.Max(1, r.S.CrewTarget);
+        BuyContainers(r, Math.Min(dayG, r.K.Tier(Math.Max(1, r.S.Tier)).StoreG));
+    }
+
     private bool ProducedUpstream(Works w, int idx, ushort good)
     {
         for (int i = 0; i < idx; i++)
@@ -518,6 +551,7 @@ public sealed class IndustryWorld : IStageHost
     {
         var s = r.S; var k = r.K;
         s.LastDay = day;
+        Accidents(w, r, day, now);
         bool stopped = r.Stop != StageStop.None;
         if (stopped)
         {
@@ -526,7 +560,7 @@ public sealed class IndustryWorld : IStageHost
         }
         else { s.Stop = StageStop.None; s.StopGood = ushort.MaxValue; s.StopDays = 0; }
         var plan = r.Plan;
-        _last[s.Business] = new StageStatus(s.Tier, plan.WorkingTier, plan.Have == 0 ? r.Crew.Count : plan.Have, plan.Need, r.Stop, r.StopGood, r.MadeG, plan.PotentialG, r.MovedG, r.LentMilli);
+        _last[s.Business] = new StageStatus(s.Tier, plan.WorkingTier, plan.Have == 0 ? r.Crew.Count : plan.Have, plan.Need, r.Stop, r.StopGood, r.MadeG, plan.PotentialG, r.MovedG, r.LentMilli, r.NoPower);
     }
 
     private void WriteStopped(Works w, Run r, GameTime now)
