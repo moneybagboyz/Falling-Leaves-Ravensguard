@@ -192,6 +192,16 @@ public static class CatalogV2
         foreach (var sp in Minis.Species) { var s = sp; Mi($"mini.tree.{sp}.summer", 16, 20, () => m.Tree(s)); }
         Mi("mini.bush", 8, 8, () => m.Bush()); Mi("mini.rock", 8, 8, m.Rock);
         Mi("mini.block", 8, 8, () => m.Block(pal.R["wood"][2], pal.R["wood"][3]));
+        // P7-BB-E: battle minis per troop role and view, Command block icons, team shape markers, the lying body and the team ramp strip (TroopMinis.cs)
+        var tmn = new TroopMinis(pal);
+        foreach (var role in TroopMinis.Roles)
+        {
+            foreach (var view in TroopMinis.Views) { var r = role; var v = view; Mi($"mini.troop.{role}.{view}", 8, 16, () => tmn.Troop(r, v)); }
+            var rr = role; Mi($"mini.icon.{role}", 8, 8, () => tmn.Icon(rr));
+        }
+        for (int ti = 0; ti < Minis.Teams.Length; ti++) { int tt = ti; Mi($"mini.mark.{Minis.Teams[ti]}", 4, 4, () => tmn.Mark(tt)); }
+        Mi("mini.troop.fallen", 8, 8, tmn.Fallen);
+        Mi("mini.ramps", 4, Minis.Teams.Length, tmn.Ramps);
     }
 
     private static int StableHash(string s) { unchecked { int h = 17; foreach (char c in s) h = h * 31 + c; return h; } }

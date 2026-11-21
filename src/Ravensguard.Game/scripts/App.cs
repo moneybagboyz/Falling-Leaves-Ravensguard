@@ -57,6 +57,13 @@ public partial class App : Node
             AddChild(new World.Combat.FightDemo { Name = "FightDemo" });
             return;
         }
+        if (args.Contains("--crowd-bench"))
+        {
+            // P7-BB-E: the frame run of the battle crowd (2,000 soldiers through the zoom bands); needs a display
+            InputBootstrap.Init();
+            AddChild(new World.Combat.CrowdBench { Name = "CrowdBench" });
+            return;
+        }
         if (args.Contains("--crawl-demo"))
         {
             // P4-H: a crawl on its own (the abbey crypt, a barrow, a mine); --shot-out/--shot-what for screenshots

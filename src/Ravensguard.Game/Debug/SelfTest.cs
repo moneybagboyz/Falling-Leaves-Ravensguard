@@ -106,6 +106,7 @@ public static class SelfTest
         Check(!probeConsent.IsGranted, "report consent is on by default");
 
         Tools.BlueprintEditor.EditorSelfTest.Run(Check);
+        World.Combat.CrowdSelfTest.Run(Check); // P7-BB-E: BB-3 camera independence, BB-18 art coverage
 
         RoomChecks(); // P5-A3
 

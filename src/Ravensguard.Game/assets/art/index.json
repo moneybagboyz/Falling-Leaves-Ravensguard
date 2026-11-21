@@ -119,8 +119,8 @@
     },
     "mini_16": {
       "file": "mini_16.png",
-      "width": 416,
-      "height": 20,
+      "width": 1024,
+      "height": 40,
       "cell": [
         16,
         20
@@ -7869,6 +7869,342 @@
       "y": 0,
       "w": 8,
       "h": 8
+    },
+    "mini.troop.levy.front": {
+      "atlas": "mini_16",
+      "x": 416,
+      "y": 0,
+      "w": 8,
+      "h": 16
+    },
+    "mini.troop.levy.back": {
+      "atlas": "mini_16",
+      "x": 432,
+      "y": 0,
+      "w": 8,
+      "h": 16
+    },
+    "mini.troop.levy.side": {
+      "atlas": "mini_16",
+      "x": 448,
+      "y": 0,
+      "w": 8,
+      "h": 16
+    },
+    "mini.icon.levy": {
+      "atlas": "mini_16",
+      "x": 464,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "mini.troop.spearman.front": {
+      "atlas": "mini_16",
+      "x": 480,
+      "y": 0,
+      "w": 8,
+      "h": 16
+    },
+    "mini.troop.spearman.back": {
+      "atlas": "mini_16",
+      "x": 496,
+      "y": 0,
+      "w": 8,
+      "h": 16
+    },
+    "mini.troop.spearman.side": {
+      "atlas": "mini_16",
+      "x": 512,
+      "y": 0,
+      "w": 8,
+      "h": 16
+    },
+    "mini.icon.spearman": {
+      "atlas": "mini_16",
+      "x": 528,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "mini.troop.archer.front": {
+      "atlas": "mini_16",
+      "x": 544,
+      "y": 0,
+      "w": 8,
+      "h": 16
+    },
+    "mini.troop.archer.back": {
+      "atlas": "mini_16",
+      "x": 560,
+      "y": 0,
+      "w": 8,
+      "h": 16
+    },
+    "mini.troop.archer.side": {
+      "atlas": "mini_16",
+      "x": 576,
+      "y": 0,
+      "w": 8,
+      "h": 16
+    },
+    "mini.icon.archer": {
+      "atlas": "mini_16",
+      "x": 592,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "mini.troop.crossbowman.front": {
+      "atlas": "mini_16",
+      "x": 608,
+      "y": 0,
+      "w": 8,
+      "h": 16
+    },
+    "mini.troop.crossbowman.back": {
+      "atlas": "mini_16",
+      "x": 624,
+      "y": 0,
+      "w": 8,
+      "h": 16
+    },
+    "mini.troop.crossbowman.side": {
+      "atlas": "mini_16",
+      "x": 640,
+      "y": 0,
+      "w": 8,
+      "h": 16
+    },
+    "mini.icon.crossbowman": {
+      "atlas": "mini_16",
+      "x": 656,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "mini.troop.sergeant.front": {
+      "atlas": "mini_16",
+      "x": 672,
+      "y": 0,
+      "w": 8,
+      "h": 16
+    },
+    "mini.troop.sergeant.back": {
+      "atlas": "mini_16",
+      "x": 688,
+      "y": 0,
+      "w": 8,
+      "h": 16
+    },
+    "mini.troop.sergeant.side": {
+      "atlas": "mini_16",
+      "x": 704,
+      "y": 0,
+      "w": 8,
+      "h": 16
+    },
+    "mini.icon.sergeant": {
+      "atlas": "mini_16",
+      "x": 720,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "mini.troop.man_at_arms.front": {
+      "atlas": "mini_16",
+      "x": 736,
+      "y": 0,
+      "w": 8,
+      "h": 16
+    },
+    "mini.troop.man_at_arms.back": {
+      "atlas": "mini_16",
+      "x": 752,
+      "y": 0,
+      "w": 8,
+      "h": 16
+    },
+    "mini.troop.man_at_arms.side": {
+      "atlas": "mini_16",
+      "x": 768,
+      "y": 0,
+      "w": 8,
+      "h": 16
+    },
+    "mini.icon.man_at_arms": {
+      "atlas": "mini_16",
+      "x": 784,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "mini.troop.knight.front": {
+      "atlas": "mini_16",
+      "x": 800,
+      "y": 0,
+      "w": 8,
+      "h": 16
+    },
+    "mini.troop.knight.back": {
+      "atlas": "mini_16",
+      "x": 816,
+      "y": 0,
+      "w": 8,
+      "h": 16
+    },
+    "mini.troop.knight.side": {
+      "atlas": "mini_16",
+      "x": 832,
+      "y": 0,
+      "w": 8,
+      "h": 16
+    },
+    "mini.icon.knight": {
+      "atlas": "mini_16",
+      "x": 848,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "mini.troop.engineer.front": {
+      "atlas": "mini_16",
+      "x": 864,
+      "y": 0,
+      "w": 8,
+      "h": 16
+    },
+    "mini.troop.engineer.back": {
+      "atlas": "mini_16",
+      "x": 880,
+      "y": 0,
+      "w": 8,
+      "h": 16
+    },
+    "mini.troop.engineer.side": {
+      "atlas": "mini_16",
+      "x": 896,
+      "y": 0,
+      "w": 8,
+      "h": 16
+    },
+    "mini.icon.engineer": {
+      "atlas": "mini_16",
+      "x": 912,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "mini.troop.sailor.front": {
+      "atlas": "mini_16",
+      "x": 928,
+      "y": 0,
+      "w": 8,
+      "h": 16
+    },
+    "mini.troop.sailor.back": {
+      "atlas": "mini_16",
+      "x": 944,
+      "y": 0,
+      "w": 8,
+      "h": 16
+    },
+    "mini.troop.sailor.side": {
+      "atlas": "mini_16",
+      "x": 960,
+      "y": 0,
+      "w": 8,
+      "h": 16
+    },
+    "mini.icon.sailor": {
+      "atlas": "mini_16",
+      "x": 976,
+      "y": 0,
+      "w": 8,
+      "h": 8
+    },
+    "mini.troop.marine.front": {
+      "atlas": "mini_16",
+      "x": 992,
+      "y": 0,
+      "w": 8,
+      "h": 16
+    },
+    "mini.troop.marine.back": {
+      "atlas": "mini_16",
+      "x": 1008,
+      "y": 0,
+      "w": 8,
+      "h": 16
+    },
+    "mini.troop.marine.side": {
+      "atlas": "mini_16",
+      "x": 0,
+      "y": 20,
+      "w": 8,
+      "h": 16
+    },
+    "mini.icon.marine": {
+      "atlas": "mini_16",
+      "x": 16,
+      "y": 20,
+      "w": 8,
+      "h": 8
+    },
+    "mini.mark.neutral": {
+      "atlas": "mini_16",
+      "x": 32,
+      "y": 20,
+      "w": 4,
+      "h": 4
+    },
+    "mini.mark.red": {
+      "atlas": "mini_16",
+      "x": 48,
+      "y": 20,
+      "w": 4,
+      "h": 4
+    },
+    "mini.mark.blue": {
+      "atlas": "mini_16",
+      "x": 64,
+      "y": 20,
+      "w": 4,
+      "h": 4
+    },
+    "mini.mark.green": {
+      "atlas": "mini_16",
+      "x": 80,
+      "y": 20,
+      "w": 4,
+      "h": 4
+    },
+    "mini.mark.gold": {
+      "atlas": "mini_16",
+      "x": 96,
+      "y": 20,
+      "w": 4,
+      "h": 4
+    },
+    "mini.mark.iron": {
+      "atlas": "mini_16",
+      "x": 112,
+      "y": 20,
+      "w": 4,
+      "h": 4
+    },
+    "mini.troop.fallen": {
+      "atlas": "mini_16",
+      "x": 128,
+      "y": 20,
+      "w": 8,
+      "h": 8
+    },
+    "mini.ramps": {
+      "atlas": "mini_16",
+      "x": 144,
+      "y": 20,
+      "w": 4,
+      "h": 6
     }
   }
 }
