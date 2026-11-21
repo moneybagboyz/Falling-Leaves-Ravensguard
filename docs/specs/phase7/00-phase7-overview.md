@@ -854,3 +854,10 @@ OV-1 to OV-8 (section 4) come on top, in `tests/Ravensguard.Sim.Tests/Phase7Over
 - the code and bug check (plan §6) in `docs/reviews/phase-7.md`;
 - the fun check;
 - the testers' question.
+
+## 15. After the Q4 revision of `industries.md` (772b6c3)
+- `industries.md` §4.1/§5.1 now hold the crew bands (contiguous, rising with the tier; yard, packing and shipping crews from L2). Section 11's "spec crew bands" column, §8.5 item 6, §10.2 row T12 and "an L2 iron works, crew about 25" (now 19) are superseded by `industries.md` §14.
+- **For the economy audit (EA2/EA3):** at the gate price, L2 and L3 upgrades repay in 10 to 53 days (L1 keeps its 2-3 game-year payback). The spec leaves the market as the brake (an upgrade still repays in 2.5 years down to 62-89% of today's price); the audit's second run must confirm that real markets do bring prices down that far, or tune the upgrade bills.
+- **Also for the audit:** rope is priced at 2,000 mites a kg in today's content (four times bar iron); reprice under R1.
+- `large-buildings.md` 3.2's treadwheel crane "yard handling 20 t a worker-day" is read as the crane's daily lift limit.
+- Measured: skill 20 against skill 60 gives 1.18x output in the code, not the 2x the sheets' untrained:skilled ratio suggests; the skill curve is left as is (R1 prices are set at skill 50).
