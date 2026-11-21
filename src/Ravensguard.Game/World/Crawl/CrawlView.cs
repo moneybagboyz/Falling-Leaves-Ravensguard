@@ -1,3 +1,4 @@
+using Ravensguard.Game.UI.NewGame;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -122,7 +123,7 @@ public partial class CrawlView : Node2D
             CrawlEventKind.Entered => L.T("ex_ev_entered"),
             CrawlEventKind.LevelChanged => L.F("ex_ev_level", -(e.A + 1)),
             CrawlEventKind.DoorOpened => L.T("ex_ev_door"),
-            CrawlEventKind.Looted => e.B > 0 ? L.F("ex_ev_looted", Quotes.Money(e.B)) : L.T("ex_ev_looted_empty"),
+            CrawlEventKind.Looted => e.B > 0 ? L.F("ex_ev_looted", UiKit.Money(e.B)) : L.T("ex_ev_looted_empty"),
             CrawlEventKind.TabooRobbed => L.T("ex_ev_taboo"),
             CrawlEventKind.AirWarning => L.T(e.A >= 600 ? "ex_ev_air_gutter" : "ex_ev_air_bad"),
             CrawlEventKind.AirClear => L.T("ex_ev_air_clear"),

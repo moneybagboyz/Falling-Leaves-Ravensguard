@@ -1,3 +1,4 @@
+using Ravensguard.Game.UI.NewGame;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -97,7 +98,7 @@ public partial class StreetView
         }
         // Offer for this house (holdings 3.3): the holder takes the price times 1,100 less a tenth of his trust, over 1,000
         var deed = sv.HouseDeed; long floor = sv.OfferFloor;
-        v.Add(new(sv.HouseDeed != EntityId.None ? L.F("hw_q_offer_at", Ravensguard.Sim.Trade.Quotes.Money(floor)) : L.T("hw_q_offer"), () => IssueLand(LandDesk.Bid(deed, floor, HeroNow())),
+        v.Add(new(sv.HouseDeed != EntityId.None ? L.F("hw_q_offer_at", UiKit.Money(floor)) : L.T("hw_q_offer"), () => IssueLand(LandDesk.Bid(deed, floor, HeroNow())),
             sv.HouseDeed != EntityId.None ? null : sv.HouseWhy == "hw_q_no_house" ? L.T("hw_q_no_house") : L.T(sv.HouseWhy)));
     }
 }

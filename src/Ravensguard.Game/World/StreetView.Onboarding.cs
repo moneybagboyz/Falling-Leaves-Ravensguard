@@ -1,3 +1,4 @@
+using Ravensguard.Game.UI.NewGame;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -273,7 +274,7 @@ public partial class StreetView
         string trainerName = trainer && _yard.TrainerPerson >= 0 ? rt.State.Population.People.Given[_yard.TrainerPerson] : L.T("wm_trainer");
         int doy = _world.Clock.Now.DayOfYear;
         long purse = Ravensguard.Sim.Travel.FairCalendar.IsFairDay(doy) ? 100L * Ravensguard.Sim.Travel.FairBook.From(_source!.Content!).ContestPurse(rt.State.Seed, (ulong)(_yard.Settlement + 1), _world.Clock.Now.Seconds / 86400, doy, "tournament") : 0;
-        (string, Func<bool>)? tourney = purse > 0 ? (L.F("wm_tourney_button", Quotes.Money(purse)), () => StartTournamentBout(purse)) : null;
+        (string, Func<bool>)? tourney = purse > 0 ? (L.F("wm_tourney_button", UiKit.Money(purse)), () => StartTournamentBout(purse)) : null;
         _router.Push(new PracticeYardScreen(_router, Gain, Melee, Wait, trainer, FightContentOf() != null ? () => StartPracticeBout(trainerName) : null, tourney));
         return true;
     }

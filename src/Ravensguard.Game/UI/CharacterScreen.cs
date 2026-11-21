@@ -58,7 +58,7 @@ public partial class CharacterScreen : Control
         var root = new VBoxContainer(); root.AddThemeConstantOverride("separation", 6); margin.AddChild(root);
         root.AddChild(UiKit.Title(_hero.Name));
         string origin = _db.TryGet<OriginDef>(_hero.Origin, out var o) ? o.Name : UiKit.Pretty(_hero.Origin);
-        root.AddChild(UiKit.Hint($"{L.T(_hero.Female ? "QS_SEX_FEMALE" : "QS_SEX_MALE")}  -  {origin}" + (v != null ? $"  -  {L.F("CHAR_PURSE", Quotes.Money(v.CoinMites))}" : "")));
+        root.AddChild(UiKit.Hint($"{L.T(_hero.Female ? "QS_SEX_FEMALE" : "QS_SEX_MALE")}  -  {origin}" + (v != null ? $"  -  {L.F("CHAR_PURSE", UiKit.Money(v.CoinMites))}" : "")));
 
         var cols = new HBoxContainer { SizeFlagsVertical = SizeFlags.ExpandFill }; cols.AddThemeConstantOverride("separation", 8);
         root.AddChild(UiKit.Scroll(cols));      // the body scrolls; the Back bar below stays on screen

@@ -295,7 +295,7 @@ public partial class CraftingScreen : Control
             foreach (var q in quotes.Take(5))
             {
                 var row = new HBoxContainer(); row.AddThemeConstantOverride("separation", 8);
-                var info = new Label { Text = L.F("cf_ui_maker_line", q.Name, q.Trade, q.Skill, Ravensguard.Sim.Trade.Quotes.Money(q.PriceMites), q.Days), SizeFlagsHorizontal = SizeFlags.ExpandFill, AutowrapMode = TextServer.AutowrapMode.WordSmart };
+                var info = new Label { Text = L.F("cf_ui_maker_line", q.Name, q.Trade, q.Skill, UiKit.Money(q.PriceMites), q.Days), SizeFlagsHorizontal = SizeFlags.ExpandFill, AutowrapMode = TextServer.AutowrapMode.WordSmart };
                 info.AddThemeColorOverride("font_color", new Color(q.Knows ? "e8dcc0" : "7a6f66"));
                 var order = new Button { Text = L.T("cf_ui_order"), Disabled = !q.Knows || q.PriceMites / 2 > _s.Coin, CustomMinimumSize = new Vector2(70, 26) };
                 var qq = q; order.Pressed += () => { if (_s.Order(r, qq, _bringMats.ButtonPressed)) _router.ShowToast(L.F("cf_ui_ordered", r.Name, qq.Name)); Detail(); };
@@ -314,7 +314,7 @@ public partial class CraftingScreen : Control
             var row = new HBoxContainer(); row.AddThemeConstantOverride("separation", 8);
             long nowH = (_s.WorldNow?.Invoke() ?? _s.NowSec) / 3600;
             string when = c.State == CommissionState.Ready ? L.T("cf_ui_ready_now") : c.State is CommissionState.Queued or CommissionState.Working ? L.F("cf_ui_ready_in", Math.Max(1, (c.DueHour - nowH + 23) / 24)) : "";
-            var l = new Label { Text = L.F("cf_ui_commission_line", _s.Db[c.Recipe].Name, _s.MakerName(c.Maker), L.T("cf_cstate_" + c.State.ToString().ToLowerInvariant()), when, Ravensguard.Sim.Trade.Quotes.Money(c.PriceMites - c.Escrow)), SizeFlagsHorizontal = SizeFlags.ExpandFill, AutowrapMode = TextServer.AutowrapMode.WordSmart };
+            var l = new Label { Text = L.F("cf_ui_commission_line", _s.Db[c.Recipe].Name, _s.MakerName(c.Maker), L.T("cf_cstate_" + c.State.ToString().ToLowerInvariant()), when, UiKit.Money(c.PriceMites - c.Escrow)), SizeFlagsHorizontal = SizeFlags.ExpandFill, AutowrapMode = TextServer.AutowrapMode.WordSmart };
             if (c.State == CommissionState.Ready) { var b = new Button { Text = L.T("cf_ui_collect"), CustomMinimumSize = new Vector2(70, 26) }; var cc = c; b.Pressed += () => { _s.CollectCommission(cc); Detail(); }; row.AddChild(b); }
             if (c.State is CommissionState.Queued or CommissionState.Working) { var b = new Button { Text = L.T("cf_ui_cancel"), CustomMinimumSize = new Vector2(70, 26) }; var cc = c; b.Pressed += () => { _s.CancelCommission(cc); Detail(); }; row.AddChild(b); }
             row.AddChild(l);

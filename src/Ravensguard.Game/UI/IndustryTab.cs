@@ -61,6 +61,7 @@ public sealed class IndustryTab
     }
 
     static string StageName(StageView s) => L.T("ind_stage_" + s.KindId);
+    static string Si(long mites) => UiKit.Money(mites, Ravensguard.Sim.Core.MoneyStyle.OneUnit);
     static string Kg(long grams, bool piece) => piece ? grams.ToString("N0") : (grams / 1000).ToString("N0") + " kg";
     static string Reason(StageView s) => L.T("ind_stop_" + s.Stop.ToString().ToLowerInvariant()) + (s.StopGood.Length > 0 ? " (" + s.StopGood + ")" : "");
 
@@ -117,7 +118,7 @@ public sealed class IndustryTab
     {
         string payback = w.PaidPm >= 1000 || w.PaybackDays == 0 ? L.T("ui_ind_paid_back") : w.PaybackDays > 0 ? L.F("ui_ind_payback", w.PaybackDays) : L.T("ui_ind_payback_none");
         string place = L.F("ui_ind_works", L.T("ind_chain_" + w.Chain), w.Place, w.Warning ? "!" : "");
-        string line = place + "   " + L.F("ui_ind_net", IndustryViews.Silver(w.Day.Net), IndustryViews.Silver(w.Week.Net)) + "   " + L.F("ui_ind_buildings", IndustryViews.Silver(w.BuildingsCostMites), w.PaidPm / 10) + "   " + payback;
+        string line = place + "   " + L.F("ui_ind_net", Si(w.Day.Net), Si(w.Week.Net)) + "   " + L.F("ui_ind_buildings", Si(w.BuildingsCostMites), w.PaidPm / 10) + "   " + payback;
         return Small(line, w.Warning ? Amber : PixelTheme.Gold);
     }
 
@@ -159,7 +160,7 @@ public sealed class IndustryTab
         // the crew and the wage, with the buttons that move them
         var crew = new HBoxContainer(); crew.AddThemeConstantOverride("separation", 4);
         crew.AddChild(Btn("-", () => Crew(-1))); crew.AddChild(Btn("+", () => Crew(1)));
-        crew.AddChild(Small(L.F("ui_ind_crew", s.CrewTarget, s.CrewMin, s.CrewMax, s.Have) + "  " + L.F("ui_ind_wage", s.WageOfferPm / 10, IndustryViews.Silver(s.WagePerDayMites))));
+        crew.AddChild(Small(L.F("ui_ind_crew", s.CrewTarget, s.CrewMin, s.CrewMax, s.Have) + "  " + L.F("ui_ind_wage", s.WageOfferPm / 10, Si(s.WagePerDayMites))));
         crew.AddChild(Btn(L.T("ui_ind_btn_wage"), CycleWage)); crew.AddChild(Btn(L.T("ui_ind_btn_route"), CycleRoute));
         box.AddChild(crew);
         box.AddChild(Small(s.Stop is StageStop.None ? L.T("ui_ind_working") : L.F("ui_ind_stopped", Reason(s), s.StopDays), s.Stop is StageStop.None or StageStop.Full ? Dim : Red, true));
@@ -169,19 +170,19 @@ public sealed class IndustryTab
         {
             var up = new HBoxContainer(); up.AddThemeConstantOverride("separation", 4);
             up.AddChild(Btn(L.F("ui_ind_btn_upgrade", u.Tier), Upgrade));
-            up.AddChild(Small(u.InHand ? L.T("ui_ind_upgrade_hand") : L.F("ui_ind_upgrade", u.Tier, IndustryViews.Silver(u.BillMites), u.CrewMin, u.CrewMax), PixelTheme.Gold));
+            up.AddChild(Small(u.InHand ? L.T("ui_ind_upgrade_hand") : L.F("ui_ind_upgrade", u.Tier, Si(u.BillMites), u.CrewMin, u.CrewMax), PixelTheme.Gold));
             box.AddChild(up);
             var extra = new List<string>();
             if (u.Missing.Count > 0) extra.Add(L.F("ui_ind_missing", string.Join(", ", u.Missing)));
             if (u.HireMore > 0) extra.Add(L.F("ui_ind_hire_more", u.HireMore));
             if (u.ExtraGPerDay > 0) extra.Add(L.F("ui_ind_extra", Kg(u.ExtraGPerDay, s.Piece)));
-            extra.Add(u.PaybackDays > 0 ? L.F("ui_ind_upgrade_payback", u.PaybackDays, IndustryViews.Silver(u.ExtraNetPerDayMites)) : L.T("ui_ind_upgrade_payback_none"));
+            extra.Add(u.PaybackDays > 0 ? L.F("ui_ind_upgrade_payback", u.PaybackDays, Si(u.ExtraNetPerDayMites)) : L.T("ui_ind_upgrade_payback_none"));
             box.AddChild(Small(string.Join("; ", extra), null, true));
         }
         else box.AddChild(Small(L.T("ui_ind_top_tier"), Dim));
         // selling: the gate's price and what the books take, then the works' own caravan beside it
         foreach (var g in s.Sell)
-            box.AddChild(Small(L.F("ui_ind_gate", g.Good, Kg(g.StockG, false), (g.NetPerKgMilli / 1000.0).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture), g.GateTown, Kg(g.AbsorbPerDay, false), g.DaysToClear > 9999 ? "-" : g.DaysToClear.ToString()), g.Over ? Amber : null, true));
+            box.AddChild(Small(L.F("ui_ind_gate", g.Good, Kg(g.StockG, false), UiKit.PerUnit(g.NetPerKgMilli, false), g.GateTown, Kg(g.AbsorbPerDay, false), g.DaysToClear > 9999 ? "-" : g.DaysToClear.ToString()), g.Over ? Amber : null, true));
         if (s.Caravan is { } c)
         {
             var line = new HBoxContainer(); line.AddThemeConstantOverride("separation", 4);
@@ -190,12 +191,12 @@ public sealed class IndustryTab
             box.AddChild(line);
             if (c.Ok)
             {
-                box.AddChild(Small(L.F("ui_ind_quote", IndustryViews.Silver(c.GrossMites), IndustryViews.Silver(c.CostMites), IndustryViews.Silver(c.RiskMites), IndustryViews.Silver(c.MarginMites), IndustryViews.Silver(c.GateNetMites)), c.MarginMites > c.GateNetMites ? null : Amber, true));
-                box.AddChild(Small(string.Join(", ", c.Parts.Where(p => p.Mites != 0).Select(p => L.T(p.Key) + " " + IndustryViews.Silver(p.Mites))) + (c.PriceAgeDays > 0 ? "; " + L.F("ui_ind_price_age", c.PriceAgeDays) : ""), Dim, true));
+                box.AddChild(Small(L.F("ui_ind_quote", Si(c.GrossMites), Si(c.CostMites), Si(c.RiskMites), Si(c.MarginMites), Si(c.GateNetMites)), c.MarginMites > c.GateNetMites ? null : Amber, true));
+                box.AddChild(Small(string.Join(", ", c.Parts.Where(p => p.Mites != 0).Select(p => L.T(p.Key) + " " + Si(p.Mites))) + (c.PriceAgeDays > 0 ? "; " + L.F("ui_ind_price_age", c.PriceAgeDays) : ""), Dim, true));
             }
             if (c.Away) box.AddChild(Small(L.T("in_caravan_away"), Dim));
         }
-        if (w.CaravanTrips + w.CaravansLost > 0) box.AddChild(Small(L.F("ui_ind_tally", w.CaravanTrips, w.CaravansLost, IndustryViews.Silver(w.CaravanNetMites)), Dim));
+        if (w.CaravanTrips + w.CaravansLost > 0) box.AddChild(Small(L.F("ui_ind_tally", w.CaravanTrips, w.CaravansLost, Si(w.CaravanNetMites)), Dim));
         return box;
     }
 
@@ -205,7 +206,7 @@ public sealed class IndustryTab
         var sd = w.StageDay[index]; var sw = w.StageWeek[index];
         void Row(string key, Func<BalanceRow, long> f, Color? c = null)
         {
-            g.AddChild(Small(L.T(key), c)); foreach (var r in new[] { w.Day, w.Week, sd, sw }) { var l = Small(IndustryViews.Silver(f(r)), c); l.HorizontalAlignment = HorizontalAlignment.Right; g.AddChild(l); }
+            g.AddChild(Small(L.T(key), c)); foreach (var r in new[] { w.Day, w.Week, sd, sw }) { var l = Small(Si(f(r)), c); l.HorizontalAlignment = HorizontalAlignment.Right; g.AddChild(l); }
         }
         g.AddChild(Small(""));
         foreach (var k in new[] { "ui_ind_col_day", "ui_ind_col_week", "ui_ind_col_stage_day", "ui_ind_col_stage_week" }) { var l = Small(L.T(k), Dim); l.HorizontalAlignment = HorizontalAlignment.Right; g.AddChild(l); }

@@ -1,4 +1,5 @@
 using Godot;
+using Ravensguard.Sim.Core;
 
 namespace Ravensguard.Game;
 
@@ -6,5 +7,8 @@ namespace Ravensguard.Game;
 public static class L
 {
     public static string T(string key) => TranslationServer.Translate(key);
-    public static string F(string key, params object[] args) => string.Format(T(key), args);
+    /// <summary>P7-CN2: rows may hold <c>{n:money}</c>, <c>{n:money_exact}</c> and <c>{n:money_unit}</c> (an amount in mites; coinage 5.7).</summary>
+    static readonly MoneyFormat Fmt = new(T);
+    public static string Format(string template, params object[] args) => string.Format(Fmt, template, args);
+    public static string F(string key, params object[] args) => string.Format(Fmt, T(key), args);
 }

@@ -210,7 +210,6 @@ MENU_WORLDS,Worlds
 UI_CANCEL,Cancel
 UI_ON,on
 UI_OFF,off
-UI_PENCE,{0} crowns
 QS_TITLE,New game
 QS_NAME,Name
 QS_NAME_PLACEHOLDER,Your name
@@ -425,7 +424,6 @@ CHAR_NO_SKILLS,No trained skills yet.
 CHAR_UNTRAINED,{0} more skills untrained
 CHAR_KIT,Kit
 CHAR_NO_KIT,You carry nothing.
-CHAR_COIN,{0} crowns
 CHAR_AMBITION,Ambition
 CHAR_AMBITION_DONE,Every step is done.
 CHAR_NO_AMBITION,You have no ambition yet.
@@ -801,10 +799,8 @@ TRADE_PICK,Pick a line on either side.
 TRADE_BUYING,Buying
 TRADE_SELLING,Selling
 TRADE_MAX,Max
-TRADE_PER_KG,cr/kg
-TRADE_PER_PIECE,cr each
-TRADE_FIRST,First unit: {0} {1}
-TRADE_AVERAGE,Average over the amount: {0} {1}
+TRADE_FIRST,First unit: {0}
+TRADE_AVERAGE,Average over the amount: {0}
 TRADE_TOTAL,Total: {0}
 TRADE_TOLL,"Market toll (5%, the seller's): {0} - you receive {1}"
 TRADE_SPREAD,Bid {0} / ask {1}: {2}% each side of the mid
@@ -818,10 +814,10 @@ TRADE_NO_PRICE,No price for this here.
 TRADE_NO_STOCK,They do not have that much.
 TRADE_SETTLING,Settling accounts...
 TRADE_GOOD,Good
-TRADE_BARTER_VALUE,Worth {0} {1}: {2} in all
+TRADE_BARTER_VALUE,Worth {0}: {1} in all
 TRADE_BARTER_PAY,You offer {0} in coin for it.
 TRADE_BARTER_GET,They offer {0} in coin for it.
-TRADE_NOTEBOOK_HINT,"What you last heard of prices, asking price in crowns per kg (each for pieces), with how many days ago you heard it. The market you stand in is exact."
+TRADE_NOTEBOOK_HINT,"What you last heard of prices, asking price per kg (each for pieces), with how many days ago you heard it. The market you stand in is exact."
 TRADE_NOTEBOOK_LEGEND,"Gold: here and now. Plain: fresh (3 days or less). Amber: aged (4 to 15 days). Grey and ?: old. Talking at a market adds what its merchants heard elsewhere."
 INV_TITLE,Inventory
 INV_WEIGHT,Weight
@@ -1653,8 +1649,8 @@ AP_DAYS,Days
 AP_FOREVER,until you stop it
 AP_CAP,Spend at most
 AP_NO_CAP,no cap
-AP_CROWNS_DAY,{0} cr a day
-AP_CROWNS,{0} cr
+AP_CROWNS_DAY,{0:money} a day
+AP_CROWNS,{0:money}
 AP_RESERVE,Keep in the purse
 AP_RISK,Danger it may face
 AP_RISK_LOW,Low
@@ -1976,7 +1972,7 @@ ONB_LOAN_DUE,The animal you borrowed is due back today.
 ONB_LOAN_OVERDUE,You kept the animal past its day. {0} wants it back.
 ONB_LOAN_ANGRY,{0} is angry: the animal was kept too long.
 ONB_LOAN_LOST,"The animal is lost. You owe its price, {0}."
-ONB_DEBT,You owe {0} mites for the lost animal.
+ONB_DEBT,You owe {0:money} for the lost animal.
 ONB_NOSTART,No safe start of this kind in the region; choose another region.
 ONB_SAFE_DAYS,The first two days are quiet: no ambushes within 10 km.
 YARD_TITLE,Practice yard
@@ -3614,7 +3610,7 @@ vd_crew_joined,They join the work.
 vd_crew_left,They leave the work.
 vd_site_paused,Work stopped.
 vd_site_resumed,Work goes on.
-vd_commissioned,"Commissioned: {0} mites in all, the parts' half now."
+vd_commissioned,"Commissioned: {0:money} in all, the parts' half now."
 vd_collected,You take the {0} from the yard.
 vd_repaired,Mended ({0} h of work).
 vd_launched,Launched: {0} minutes to run her down the slipway.
@@ -3951,7 +3947,7 @@ bz_ui_btn_unappoint,Dismiss foreman
 bz_ui_guild_row,"Guild {0}: {1} over its size rules, {2} fines{3}"
 bz_ui_licensed,", licensed"
 bz_ui_costs,Costs
-bz_ui_cost_row,"{0}: {1} a kg to make, {2} a kg at today's output, {3} at the cap; the markets in reach take {4} a day{5}"
+bz_ui_cost_row,"{0}: {1} to make, {2} at today's output, {3} at the cap; the markets in reach take {4} a day{5}"
 bz_ui_cost_stops,", stopped: the price is under cost"
 bz_ui_machine_on,"{0}: machine at work, labour {1}%"
 bz_ui_machine_off,"{0}: machine idle ({1})"
@@ -4429,7 +4425,7 @@ fm_already_courting,You are already courting someone.
 fm_already_betrothed,You are betrothed already.
 fm_met_first,"You called on {0}; a first visit, politely made."
 fm_met,You called on {0} again.
-fm_gift_given,You gave {0} a gift worth {1} mites.
+fm_gift_given,You gave {0} a gift worth {1:money}.
 fm_cannot_afford,You cannot afford it.
 fm_not_courted,You have not been courting them yet.
 fm_asked_today,You have asked once today; wait for tomorrow.
@@ -4441,7 +4437,7 @@ fm_betrothed_waits,{0} said yes; the wedding waits until you have a roof with a 
 fm_broken_off,You broke off the courtship.
 fm_no_roof,You have no dwelling with a free bed.
 fm_cannot_afford_fee,You cannot pay the priest's fee.
-fm_wed,"You were married to {0}; the dowry was {1} mites."
+fm_wed,"You were married to {0}; the dowry was {1:money}."
 fm_not_your_child,That is not a child of your household.
 fm_grown,They are grown; there is nothing left to teach them as a child.
 fm_no_skill,Say which trade.
@@ -4461,7 +4457,7 @@ fam_spouse,Spouse
 fam_spouse_line,"{0}, {1}, at {2}. {3}"
 fam_no_spouse,You are not married.
 fam_member_dead,"{0}, who died at {1}."
-fam_courting,"Courting {0}: {1} visits, gifts worth {2} mites."
+fam_courting,"Courting {0}: {1} visits, gifts worth {2:money}."
 fam_betrothed,"Betrothed to {0}: the wedding is on day {1}, at the church on the holy day."
 fam_betrothed_waits,Betrothed to {0}; the wedding waits until you have a roof with a free bed.
 fam_no_roof,You hold no dwelling with a free bed yet.
@@ -4488,11 +4484,11 @@ fam_loyalty_why,"Loyalty {0}, with {1} grievances weighing on it."
 fam_talk_court,Court {0}
 fam_talk_betrothed,Speak of the wedding with {0}
 fam_talk_state_new,You have not courted {0} before.
-fam_talk_state,"You are courting {0}: {1} visits so far, gifts worth {2} mites."
+fam_talk_state,"You are courting {0}: {1} visits so far, gifts worth {2:money}."
 fam_talk_state_betrothed,"{0} is betrothed to you: the wedding is on day {1}."
 fam_talk_state_waits,"{0} is betrothed to you; the wedding waits for a roof."
 fam_talk_visit,Call on {0}
-fam_talk_gift,Give {0} a gift worth {1} mites
+fam_talk_gift,Give {0} a gift worth {1:money}
 fam_talk_ask,Ask for {0}'s hand
 fam_talk_break,Break it off
 st_deed_slave_held,Slaves kept against the faith
@@ -4557,13 +4553,13 @@ fa_btn_vow_site,"Vow to walk to {0} (the holy site)"
 fa_btn_vow,"Vow to walk to the shrine at {0}"
 fa_pilgrim_note,"Walk there and the road does the rest: piety, the church's good word, a badge. The sick feel better; nothing more."
 fa_btn_attend,Attend the service
-fa_btn_alms,Give alms (1 crown)
+fa_btn_alms,Give alms (1 sp)
 fa_not_in_town,There is no church within reach.
 fa_q_head,The church
 fa_q_panel,Faith and the church
 fa_q_attend,Attend the service
 fa_q_attend_with,Attend the service with {0}
-fa_q_alms,Give alms (1 crown)
+fa_q_alms,Give alms (1 sp)
 fa_q_pilgrimage,Pilgrimage
 fa_find_priest,You need to be beside a priest.
 fa_no_church,There is no church here.
@@ -5601,7 +5597,7 @@ dp_act_giftr,Give a gift to the ruler of {0}
 dp_act_renounce,Renounce your oath and found your own realm
 dp_act_yes,"He will say yes."
 dp_act_no,"He will say no: {0}"
-dp_act_hint,"Enter does it. A gift is 100 crowns."
+dp_act_hint,"Enter does it. A gift is 10 gp."
 dp_act_done,Done.
 dp_act_cannot,That cannot be done.
 dp_keys,"Up and Down move, Tab turns the page, Enter asks, Esc closes."
@@ -5927,7 +5923,7 @@ ch_note_services_refused,He had lost the church's trust.
 fa_head_politics,The faith's politics
 fa_fear,Fear of the dark things
 fa_fear_night,{0}: folk keep off the night roads and the barrow
-fa_btn_charm,Buy a charm ({0} mites)
+fa_btn_charm,Buy a charm ({0:money})
 fa_btn_head,Show a slain monster's head
 fa_heresy_here,Heresy here
 fa_heresy_line,{0} ({1} of {2} adults)
@@ -5991,7 +5987,7 @@ fm_not_your_member,That is not a member of your household.
 fm_match_open,A match is already arranged for them.
 fm_not_a_fit,"The houses would not think of it (the same sex, the same house, kin or too far apart in rank)."
 fm_kin_refuses,{0} has lost faith in you and will not hear of a match.
-fm_dowry_range,"The dowry must be between {0} and {1} mites, half the custom of the class either way."
+fm_dowry_range,"The dowry must be between {0:money} and {1:money}, half the custom of the class either way."
 fm_match_no,"{0}'s house will not have it (the answer was {1})."
 fm_overlord_refuses,The overlord will not sell his consent to the match.
 fm_match_waits_fee,"The match with {0} is agreed, but the overlord's fee is not yet paid."
@@ -6025,13 +6021,13 @@ ch_note_staff_unpaid,The staff had gone unpaid for fifteen days.
 fam_matches,Matches
 fam_match_fee,"{0} and {1} are promised, but the overlord's fee is not yet paid."
 fam_match_wed,{0} and {1} are married.
-fam_match_betrothed,"{0} and {1} are promised; the wedding is on day {2}, with a dowry of {3} mites."
-fam_match_alliance,"{0} and {1} are promised, joining two lords' houses; the wedding is on day {2}, with a dowry of {3} mites."
+fam_match_betrothed,"{0} and {1} are promised; the wedding is on day {2}, with a dowry of {3:money}."
+fam_match_alliance,"{0} and {1} are promised, joining two lords' houses; the wedding is on day {2}, with a dowry of {3:money}."
 fam_arrange_refuses,{0} has lost faith in you and will not hear of a match.
 fam_arrange_none,"No house would consider {0}, {1}, for now."
-fam_arrange_line,"{0}, {1}: the houses would consider {2} (answer {3}, dowry {4} mites)."
-fam_arrange_line_alliance,"{0}, {1}: an alliance with the house of {2} (answer {3}, dowry {4} mites)."
-fam_arrange_line_consent,"{0}, {1}: {2}, but a fief's heir needs the overlord's consent and fee (answer {3}, dowry {4} mites)."
+fam_arrange_line,"{0}, {1}: the houses would consider {2} (answer {3}, dowry {4:money})."
+fam_arrange_line_alliance,"{0}, {1}: an alliance with the house of {2} (answer {3}, dowry {4:money})."
+fam_arrange_line_consent,"{0}, {1}: {2}, but a fief's heir needs the overlord's consent and fee (answer {3}, dowry {4:money})."
 fam_btn_arrange,Arrange a match for {0}
 fam_arrange_low,"{0}, {1}: the best the houses would consider is {2}, but the answer ({3}) is under what a head asks (50): a gift to his house or a better name would help."
 ch_h_religion_founded,{place} is the holy site of {faith}.
@@ -6327,7 +6323,7 @@ ui_ind_upgrade_payback,"repays in about {0} days at today's prices (+{1} a day, 
 ui_ind_upgrade_payback_none,no payback at today's prices
 ui_ind_top_tier,This stage is at its top tier.
 ui_ind_no_site,Set the stage's premises first: the plan goes beside them.
-ui_ind_gate,"Gate, {0}: {1} in store, {2} m a kg net at {3}; the books take {4} a day, {5} days to clear"
+ui_ind_gate,"Gate, {0}: {1} in store, {2} net at {3}; the books take {4} a day, {5} days to clear"
 ui_ind_caravan,"Caravan to {0}: {1} wagons, {2} guards, {3} days"
 ui_ind_caravan_no,"Caravan to {0}: {1}"
 ui_ind_quote,"Sales {0}, costs {1}, risk {2}: margin {3}; the gate would pay {4} for the same load"
@@ -6355,14 +6351,14 @@ co_no_metal,There is no such metal in the world.
 co_not_enough_metal,You do not carry that much of it.
 co_use_copper_counter,Copper goes over the copper counter.
 co_copper_capped,"The mint will take no more copper: the realm holds all the copper coin it may."
-co_sold_metal,"The mint took {0} g and struck {1} pieces; you were paid {2}."
+co_sold_metal,"The mint took {0} g and struck {1} pieces; you were paid {2:money}."
 co_metal_queued,"The mint took {0} g; the moneyers will strike it in their turn."
 co_no_changer,There is no money changer in this town.
 co_no_gold,There is no gold to be had here today.
 co_cannot_afford,You cannot cover that.
 co_bad_amount,That is not an amount to change.
 co_too_small,That is too little to change into a gold piece.
-co_changed,"The changer gave you {0} gold pieces for a fee of {1}."
+co_changed,"The changer gave you {0} gold pieces for a fee of {1:money}."
 co_melted,"You melted {0} pieces into metal."
 co_cannot_melt,You have not got that many pieces to melt.
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."

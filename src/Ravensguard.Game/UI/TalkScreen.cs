@@ -185,10 +185,10 @@ public partial class TalkScreen : Control
     void HireMenu()
     {
         var p = _hw.View?.Person; if (p == null || p.Id != _person) { Add(Who(), Say("hire", l => l.Id == "hire.no")); return; }
-        _ctx.Params["price"] = Quotes.Money(p.FairOffer);
+        _ctx.Params["price"] = UiKit.Money(p.FairOffer);
         Add(Who(), Say("hire", l => l.Params.Contains("price") || l.Id.StartsWith("hire.stranger")));
         ClearMenu();
-        Choice(L.F("TALK_HIRE_OFFER", Quotes.Money(p.FairOffer)), () => Cmd(new HeroCommand { Kind = HeroCommandKind.Hire, Person = _person, Wage = p.FairOffer, Days = 7 }, "hire"), false);
+        Choice(L.F("TALK_HIRE_OFFER", UiKit.Money(p.FairOffer)), () => Cmd(new HeroCommand { Kind = HeroCommandKind.Hire, Person = _person, Wage = p.FairOffer, Days = 7 }, "hire"), false);
         Choice(L.T("TALK_BACK"), () => Menu(false), false);
     }
 
@@ -204,7 +204,7 @@ public partial class TalkScreen : Control
         if (p.RecruitCheck == RecruitAnswer.Accept && !p.InSquad)
         {
             ClearMenu();
-            Choice(L.F("TALK_RECRUIT_OFFER", Quotes.Money(p.FairOffer * 5)), () => Cmd(new HeroCommand { Kind = HeroCommandKind.Recruit, Person = _person, Wage = p.FairOffer }, "recruit"), false);
+            Choice(L.F("TALK_RECRUIT_OFFER", UiKit.Money(p.FairOffer * 5)), () => Cmd(new HeroCommand { Kind = HeroCommandKind.Recruit, Person = _person, Wage = p.FairOffer }, "recruit"), false);
             Choice(L.T("TALK_BACK"), () => Menu(false), false);
         }
     }

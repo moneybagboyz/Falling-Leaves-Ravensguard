@@ -1,3 +1,4 @@
+using Ravensguard.Game.UI.NewGame;
 using Ravensguard.Sim.Law;
 using Ravensguard.Sim.Trade;
 
@@ -14,7 +15,7 @@ public static class JusticeText
         string step = L.T(e.TextKey);
         return e.Kind switch
         {
-            "fine" or "kin_pays" or "confiscation" or "restitution" or "weregild" or "blood_price" or "penance" => L.F("jl_what_money", step, Quotes.Money(e.Mites)),
+            "fine" or "kin_pays" or "confiscation" or "restitution" or "weregild" or "blood_price" or "penance" => L.F("jl_what_money", step, UiKit.Money(e.Mites)),
             "flogging" => L.F("jl_what_lashes", step, e.Lashes),
             "stocks" or "gaol" or "bond_labour" or "exile" => L.F("jl_what_days", step, System.Math.Max(1, e.Days)),
             _ => step,

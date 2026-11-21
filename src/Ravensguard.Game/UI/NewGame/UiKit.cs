@@ -86,7 +86,13 @@ public static class UiKit
 
     public static string SeasonName(Season s) => L.T("SEASON_" + s.ToString().ToUpperInvariant());
 
-    public static string Money(int pence) => L.F("UI_PENCE", pence);
+    /// <summary>P7-CN2: every money string in the game goes through here (coinage 5.7): mites in, "1 gp 2 sp 3 cp" out, the unit words from the <c>mt_</c> rows.</summary>
+    public static string Money(long mites, MoneyStyle style = MoneyStyle.Amount) => MoneyText.Format(mites, style, MoneyWords);
+    /// <summary>A bulk price with its pack ("4.5 cp a kg", "2 sp 6 cp per 100 kg"), from the books' micro-mites per gram (a piece good: per piece).</summary>
+    public static string PerUnit(long micro, bool piece) => MoneyText.PerUnit(micro, piece, MoneyWords);
+    /// <summary>The pieces a purse holds, with their mass ("3 gold, 47 silver, 6 copper (26 g)").</summary>
+    public static string Pieces(long gold, long silver, long copper, long massGrams) => MoneyText.Pieces(gold, silver, copper, massGrams, MoneyWords);
+    static readonly Func<string, string> MoneyWords = MoneyText.Words(L.T);
 
     /// <summary>Texture from RGBA bytes (nearest filtering is set by the router theme).</summary>
     public static ImageTexture Tex(byte[] rgba, int w, int h) => ImageTexture.CreateFromImage(Image.CreateFromData(w, h, false, Image.Format.Rgba8, rgba));

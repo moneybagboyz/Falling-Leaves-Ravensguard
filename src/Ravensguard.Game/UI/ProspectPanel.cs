@@ -72,7 +72,7 @@ public partial class ProspectPanel : Control
     }
 
     static string Res(int code) => L.T(ResourceCode.Key(code));
-    static string M(long m) => Quotes.Money(m);
+    static string M(long m) => UiKit.Money(m);
 
     Label Row(string text, bool dim = false)
     {

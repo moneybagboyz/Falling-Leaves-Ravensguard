@@ -96,7 +96,7 @@ public partial class CourtScreen : Control
         var cur = _shown.Cases[_selected];
         void Line(string t, bool hint = false) { var l = hint ? UiKit.Hint(t, true) : UiKit.Body(t); l.AutowrapMode = TextServer.AutowrapMode.WordSmart; _detail.AddChild(l); }
         Line(L.F("jl_court_accused", cur.AccusedName, JusticeText.Crime(cur.Kind)));
-        if (cur.ValueMites > 0) Line(L.F("jl_court_value", Ravensguard.Sim.Trade.Quotes.Money(cur.ValueMites)));
+        if (cur.ValueMites > 0) Line(L.F("jl_court_value", UiKit.Money(cur.ValueMites)));
         Line(JusticeText.Proof(cur.Witnesses, cur.Attending, cur.InAct, cur.Confessed) + (cur.Proved ? "" : "  " + L.T("jl_court_no_proof")));
         Line(L.T("jl_court_law"), true);
         Line("  " + JusticeText.Line(cur.Kind, cur.Expected));

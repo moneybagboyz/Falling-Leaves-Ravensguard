@@ -1,3 +1,4 @@
+using Ravensguard.Game.UI.NewGame;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -88,7 +89,7 @@ public sealed class BuildCatalog
     {
         string mats = string.Join(", ", c.Materials.Take(maxGoods).Select(m => L.F("BUILD_MAT_KG", m.Name, Kg(m.Grams))));
         if (c.Materials.Count > maxGoods) mats += ", ...";
-        return L.F("BUILD_COST_LINE", c.Cells, Hours(c.MilliHours), mats.Length > 0 ? mats : L.T("BUILD_NO_MATERIALS"), Quotes.Money(c.Mites));
+        return L.F("BUILD_COST_LINE", c.Cells, Hours(c.MilliHours), mats.Length > 0 ? mats : L.T("BUILD_NO_MATERIALS"), UiKit.Money(c.Mites));
     }
 
     public static string Kg(long grams) => grams >= 10_000 ? (grams / 1000).ToString("N0") : (grams / 1000.0).ToString("0.#");

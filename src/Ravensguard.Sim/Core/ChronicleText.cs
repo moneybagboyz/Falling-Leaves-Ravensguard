@@ -49,12 +49,12 @@ public sealed class ChronicleTypes
         return t;
     }
 
-    public static readonly string[] ParamTypes = ["person", "place", "item", "good", "mites", "count", "days", "entry", "text_key"];
+    public static readonly string[] ParamTypes = ["person", "place", "item", "good", "mites", "money", "count", "days", "entry", "text_key"];
     public static readonly string[] SpecificRules = ["event", "note", "either"];
 
     public static ChronParamKind KindOf(string type) => type switch
     {
-        "person" => ChronParamKind.Person, "place" => ChronParamKind.Place, "item" => ChronParamKind.Item, "good" => ChronParamKind.Good, "mites" => ChronParamKind.Mites,
+        "person" => ChronParamKind.Person, "place" => ChronParamKind.Place, "item" => ChronParamKind.Item, "good" => ChronParamKind.Good, "mites" or "money" => ChronParamKind.Mites,
         "count" => ChronParamKind.Count, "days" => ChronParamKind.Days, "entry" => ChronParamKind.Entry, "text_key" => ChronParamKind.TextKey,
         _ => throw new ArgumentException("unknown chronicle parameter type " + type),
     };
@@ -119,7 +119,7 @@ public sealed class ChronicleTypes
             if (template.IndexOf(tag, StringComparison.Ordinal) < 0) continue;
             string v = p.Kind switch
             {
-                ChronParamKind.Mites => Crowns(p.Value),
+                ChronParamKind.Mites => MoneyText.Format(p.Value, MoneyStyle.Amount, MoneyText.Words(tr)),
                 ChronParamKind.Count or ChronParamKind.Days => p.Value.ToString(CultureInfo.InvariantCulture),
                 ChronParamKind.TextKey => depth < 3 ? Fill(tr(p.Key), ps, tr, nameOf, depth + 1) : tr(p.Key),
                 _ => nameOf(p.Kind, p.Value),
@@ -129,7 +129,6 @@ public sealed class ChronicleTypes
         return sb.ToString();
     }
 
-    private static string Crowns(long mites) => mites % 100 == 0 ? (mites / 100).ToString(CultureInfo.InvariantCulture) + " crowns" : mites.ToString(CultureInfo.InvariantCulture) + " mites";
 
     // ---------- save encoding (additive keys, chronicle-full 3) ----------
 

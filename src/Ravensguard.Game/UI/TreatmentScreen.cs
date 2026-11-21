@@ -172,12 +172,12 @@ public partial class TreatmentScreen : Control, IHandlesBack
             row.AddChild(Col(L.F("tr_time", vb.SimS), 54, color));
             row.AddChild(Col(UsesText(vb), 170, vb.HasItems || vb.Uses.Count == 0 ? color : PixelTheme.Warn));
             row.AddChild(Col(vb.ChancePct < 100 ? L.F("tr_chance", vb.ChancePct) : "", 76, color));
-            if (v.Quote != null || v.Physician != 0) row.AddChild(Col(vb.FeeMites > 0 ? Quotes.Money(vb.FeeMites) : "", 70, color));
+            if (v.Quote != null || v.Physician != 0) row.AddChild(Col(vb.FeeMites > 0 ? UiKit.Money(vb.FeeMites) : "", 70, color));
             row.GuiInput += e => { if (e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left } mb) { _verb = ii; if (mb.DoubleClick) DoVerb(); else Build(); } };
             row.TooltipText = $"{Verb(vb.Kind)}: {L.F("tr_time", vb.SimS)}, {UsesText(vb)}" + (vb.ChancePct < 100 ? ", " + L.F("tr_chance", vb.ChancePct) : "");
             _verbs.AddChild(row);
         }
-        if (v.Quote != null && verbs.Count > 0) _verbs.AddChild(UiKit.Hint(L.F("tr_quote_total", Quotes.Money(Total(verbs)), Quotes.Money(_link.Coin?.Invoke() ?? 0)), true));
+        if (v.Quote != null && verbs.Count > 0) _verbs.AddChild(UiKit.Hint(L.F("tr_quote_total", UiKit.Money(Total(verbs)), UiKit.Money(_link.Coin?.Invoke() ?? 0)), true));
         _queue.Text = v.Queue.Count == 0 ? L.T("tr_queue_empty") : L.F("tr_queue", string.Join("; ", v.Queue.Select(s => s.DressAll && !s.Planned ? L.T("tr_step_dress_all")
             : L.F("tr_step", Verb(s.Kind), PartName(v.Parts.FirstOrDefault(p => p.Part == s.Part)?.Id ?? "") is { Length: > 0 } pn ? pn : "?", Math.Max(0, (int)((s.FinishSec - v.NowSec + 19) / 20))))));
         if (v.Log.Count > 0 && v.Queue.Count == 0)

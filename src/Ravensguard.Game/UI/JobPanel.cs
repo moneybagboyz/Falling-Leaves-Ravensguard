@@ -62,7 +62,7 @@ public partial class JobPanel : Control
         GetTree().Quit();
     }
 
-    static string Pay(long mites) => mites >= 100 ? $"{mites / 100} cr {mites % 100} m" : $"{mites} mites";
+    static string Pay(long mites) => UiKit.Money(mites);
     static string Clock(long sec) { long s = sec % 86400; return $"{s / 3600:00}:{s % 3600 / 60:00}"; }
 
     static string Left(long sec) => sec <= 0 ? "now" : sec < 2 * 86400 ? $"{(sec + 3599) / 3600} h" : $"{sec / 86400} days";

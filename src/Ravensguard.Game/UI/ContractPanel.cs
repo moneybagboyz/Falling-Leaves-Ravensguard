@@ -67,7 +67,7 @@ public partial class ContractPanel : Control
         GetTree().Quit();
     }
 
-    static string Money(long mites) => Ravensguard.Sim.Trade.Quotes.Money(mites);
+    static string Money(long mites) => UiKit.Money(mites);
     static string Hours(long h10) => (h10 / 10.0).ToString("0.#");
 
     Label Row(string text) => new() { Text = text, SizeFlagsHorizontal = SizeFlags.ExpandFill, ClipText = true, TooltipText = text };

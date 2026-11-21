@@ -1,3 +1,4 @@
+using Ravensguard.Game.UI.NewGame;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
@@ -216,7 +217,7 @@ public partial class StreetView
         long now = _world.Clock.Now.Seconds;
         if (o.PayMites > 0 && _heroLink != null)
             _heroLink.Issue(new HeroCommand { Kind = HeroCommandKind.EncounterPay, IssuedSec = now, CoinGive = o.PayMites, Person = o.Payee, Tag = rf.Ev.Id, Origin = CommandOrigin.Human });
-        _router?.ShowToast(o.PayMites > 0 ? L.F(o.Text, Quotes.Money(o.PayMites)) : L.T(o.Text), 5f);
+        _router?.ShowToast(o.PayMites > 0 ? L.F(o.Text, UiKit.Money(o.PayMites)) : L.T(o.Text), 5f);
         FightEnded(f);                                             // P4-D: close the log, chronicle the named dead, open the report
         CloseRoadFight();
         if (t != null) { t.ScreenPending = false; FinishEncounter(o, now, false); }
@@ -349,7 +350,7 @@ public partial class StreetView
         {
             if (won && b.Purse > 0 && _heroLink != null)
                 _heroLink.Issue(new HeroCommand { Kind = HeroCommandKind.Watch, IssuedSec = now, Tag = WatchDesk.PrizeTag(b.Settlement, b.Purse), Origin = CommandOrigin.Human });
-            _router?.ShowToast(won ? L.F("wm_tourney_won", Quotes.Money(b.Purse)) : L.T("wm_tourney_lost"), 5f);
+            _router?.ShowToast(won ? L.F("wm_tourney_won", UiKit.Money(b.Purse)) : L.T("wm_tourney_lost"), 5f);
         }
         _fightView.FinishLog();
         CloseRoadFight();

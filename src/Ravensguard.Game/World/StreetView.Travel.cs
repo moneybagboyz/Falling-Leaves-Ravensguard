@@ -1,3 +1,4 @@
+using Ravensguard.Game.UI.NewGame;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -262,7 +263,7 @@ public partial class StreetView
             if (o.Counterpart != EntityId.None) { OpenTalk(o.Counterpart); screen = true; }
             else _router?.ShowToast(ev.Bark.Length > 0 ? "\"" + ev.Bark + "\"" : L.T("ENC_NOTHING_TO_SAY"), 3f);
         }
-        else if (o.Text.Length > 0) _router?.ShowToast(o.PayMites > 0 ? L.F(o.Text, Quotes.Money(o.PayMites)) : L.T(o.Text), 4f);
+        else if (o.Text.Length > 0) _router?.ShowToast(o.PayMites > 0 ? L.F(o.Text, UiKit.Money(o.PayMites)) : L.T(o.Text), 4f);
         FinishEncounter(o, now, screen);
     }
 
@@ -474,7 +475,7 @@ public partial class StreetView
             if (Enc is { } e2 && EncOpen)
             {
                 body = (e2.Bark.Length > 0 ? "\"" + e2.Bark + "\"\n" : "") + L.F("TRAVEL_ALERT_PEOPLE", e2.Cast.Length);
-                if (_encOptions.Count > 0) { body += "\n" + string.Join("\n", _encOptions.Select((o, i) => $"[{H("choice.pick_" + (i + 1))}] {L.T(o.TextKey)}" + (o.Mites > 0 ? $"  ({Quotes.Money(o.Mites)})" : "") + (o.OddsPm >= 0 ? "  " + L.F("wm_enc_odds", (o.OddsPm + 5) / 10, L.T(Ravensguard.Sim.Combat.Watch.RiskEstimate.Word(o.OddsPm))) : ""))); keys = L.F("ENC_KEYS", H("world.back")); }
+                if (_encOptions.Count > 0) { body += "\n" + string.Join("\n", _encOptions.Select((o, i) => $"[{H("choice.pick_" + (i + 1))}] {L.T(o.TextKey)}" + (o.Mites > 0 ? $"  ({UiKit.Money(o.Mites)})" : "") + (o.OddsPm >= 0 ? "  " + L.F("wm_enc_odds", (o.OddsPm + 5) / 10, L.T(Ravensguard.Sim.Combat.Watch.RiskEstimate.Word(o.OddsPm))) : ""))); keys = L.F("ENC_KEYS", H("world.back")); }
             }
             hud.Alert(L.F("TRAVEL_ALERT_" + p.Kind.ToString().ToUpperInvariant(), Enc is { } e3 ? EncounterName(e3.Id) : p.Text), body, keys, p.Kind is InterruptKind.Hostile or InterruptKind.Attacked);
         }

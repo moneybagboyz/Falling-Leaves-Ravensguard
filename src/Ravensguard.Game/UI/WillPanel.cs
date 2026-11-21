@@ -52,7 +52,7 @@ public partial class WillPanel : Control
         _estate = new VBoxContainer(); _estate.AddThemeConstantOverride("separation", 2);
         var rp = UiKit.Panel(UiKit.Scroll(_estate), 0, 0); rp.SizeFlagsHorizontal = SizeFlags.ExpandFill; cols.AddChild(rp);
         var buttons = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.End }; buttons.AddThemeConstantOverride("separation", 8);
-        _makeBtn = new Button { Text = L.F("in_wl_btn_make", Quotes.Money(WillBook.FeeMites)), CustomMinimumSize = new Vector2(240, 32) };
+        _makeBtn = new Button { Text = L.F("in_wl_btn_make", UiKit.Money(WillBook.FeeMites)), CustomMinimumSize = new Vector2(240, 32) };
         _makeBtn.Pressed += Confirm; buttons.AddChild(_makeBtn);
         var back = UiKit.Key(L.T("UI_BACK"), "menu.back", 160, 32); back.Pressed += _router.Pop; buttons.AddChild(back);
         root.AddChild(buttons);
@@ -70,7 +70,7 @@ public partial class WillPanel : Control
         GetTree().Quit();
     }
 
-    static string M(long mites) => Quotes.Money(mites);
+    static string M(long mites) => UiKit.Money(mites);
 
     /// <summary>What a person can be given: nothing, everything, a quarter or half of the coin, each deed and business.</summary>
     List<(string Text, Bequest? Line)> Options(WillView v, EntityId person)
@@ -153,7 +153,7 @@ public partial class WillPanel : Control
             };
             return L.F("in_wl_confirm_line", who, what);
         }));
-        _router.ShowModal(L.T("in_wl_confirm_title"), body + "\n\n" + L.F("in_wl_confirm_fee", Quotes.Money(v.FeeMites), _witness),
+        _router.ShowModal(L.T("in_wl_confirm_title"), body + "\n\n" + L.F("in_wl_confirm_fee", UiKit.Money(v.FeeMites), _witness),
             (L.T("in_wl_btn_sign"), () => { _make(lines); _router.Pop(); }), (L.T("UI_CANCEL"), null));
     }
 }

@@ -89,7 +89,7 @@ public partial class CaptivityDemo : Control
                 v.AddChild(UiKit.Title(L.T("INV_TITLE")));
                 foreach (var line in new[] { "Silver chalice  0.45 kg", "Reliquary  2.4 kg", "Arming sword (rusted, dirty)  1.1 kg", "Torch x1  0.5 kg" }) v.AddChild(UiKit.Body("  " + line));
                 var toast = new PanelContainer { Position = new Vector2(180, 440), CustomMinimumSize = new Vector2(600, 0) };
-                toast.AddChild(UiKit.Body(L.F("ex_ui_left_loot", 3, Ravensguard.Sim.Trade.Quotes.Money(1480))));
+                toast.AddChild(UiKit.Body(L.F("ex_ui_left_loot", 3, UiKit.Money(1480))));
                 var root = new Control(); root.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect); root.AddChild(box); root.AddChild(toast);
                 return root;
             }

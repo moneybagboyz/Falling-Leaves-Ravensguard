@@ -152,10 +152,10 @@ public partial class SitePanel : Control
         var crew = v!.Crew.Where(c => c.Site == _site).ToList();
         if (crew.Count == 0) _crew.AddChild(Small(UiKit.Body(L.T("BUILD_SITE_NO_HANDS"))));
         foreach (var c in crew)
-            _crew.AddChild(Small(new Label { Text = L.F("BUILD_SITE_CREW_ROW", c.Name.Length > 0 ? c.Name : "-", L.T("BUILD_CREW_" + c.Class.ToString().ToUpperInvariant()), c.WageMites > 0 ? Quotes.Money(c.WageMites) : "-",
+            _crew.AddChild(Small(new Label { Text = L.F("BUILD_SITE_CREW_ROW", c.Name.Length > 0 ? c.Name : "-", L.T("BUILD_CREW_" + c.Class.ToString().ToUpperInvariant()), c.WageMites > 0 ? UiKit.Money(c.WageMites) : "-",
                 (c.WorkedTodaySec / 360) / 10.0, L.T(c.Working ? "BUILD_CREW_AT_WORK" : "BUILD_CREW_IDLE")), ClipText = true }));
         long perDay = crew.Sum(c => c.WageMites);
-        _wages.Text = perDay > 0 ? L.F("BUILD_SITE_WAGES", Quotes.Money(s.EscrowMites), Quotes.Money(perDay), s.EscrowMites / Math.Max(1, perDay)) : L.F("BUILD_SITE_WAGES_NONE", Quotes.Money(s.EscrowMites));
+        _wages.Text = perDay > 0 ? L.F("BUILD_SITE_WAGES", UiKit.Money(s.EscrowMites), UiKit.Money(perDay), s.EscrowMites / Math.Max(1, perDay)) : L.F("BUILD_SITE_WAGES_NONE", UiKit.Money(s.EscrowMites));
 
         foreach (var c in _roomBox.GetChildren()) { _roomBox.RemoveChild(c); c.QueueFree(); }
         var rooms = _rooms(); _roomsShown = rooms != null;

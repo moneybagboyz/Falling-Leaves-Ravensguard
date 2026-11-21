@@ -1,3 +1,4 @@
+using Ravensguard.Game.UI.NewGame;
 using System;
 using System.Linq;
 using Godot;
@@ -193,7 +194,7 @@ public partial class StreetView
 
     void Settle(EncounterEvent ev, long now, string toastKey, long mites)
     {
-        _router?.ShowToast(L.F(toastKey, Quotes.Money(mites)), 5f);
+        _router?.ShowToast(L.F(toastKey, UiKit.Money(mites)), 5f);
         _aftermathEv = null;
         var t = _travel;
         if (t == null) return;

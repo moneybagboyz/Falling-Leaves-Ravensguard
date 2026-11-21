@@ -106,7 +106,7 @@ public partial class HeistScreen : Control
         if (v.Followers > 0) lines.Add(L.F("hj_followers", v.Followers));
         if (v.Livery) lines.Add(L.T("hj_livery_on"));
         if (v.Torch) lines.Add(L.T("hj_torch_on"));
-        if (v.Stolen > 0) lines.Add(L.F("hj_stolen", Ravensguard.Sim.Trade.Quotes.Money(v.Stolen)));
+        if (v.Stolen > 0) lines.Add(L.F("hj_stolen", UiKit.Money(v.Stolen)));
         if (v.OuterLocked) lines.Add(L.T("hj_outer_locked"));
         _info.Text = string.Join("\n", lines);
         _busy.Text = v.Busy > 0 ? L.F("hj_busy", L.T("hj_bk_" + v.BusyKind), v.Busy) : v.Outcome switch { RunOutcome.Caught => L.T("hj_outcome_caught"), RunOutcome.Left => L.T("hj_outcome_left"), _ => "" };

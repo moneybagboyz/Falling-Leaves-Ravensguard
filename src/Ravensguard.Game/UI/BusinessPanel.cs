@@ -74,9 +74,9 @@ public partial class BusinessPanel : Control
         GetTree().Quit();
     }
 
-    static string M(long m) => Quotes.Money(m);
+    static string M(long m) => UiKit.Money(m);
     /// <summary>Micro-mites a gram as mites a kilogram with one decimal.</summary>
-    static string Micro(long microPerGram) => $"{microPerGram / 1000}.{microPerGram % 1000 / 100}";
+    static string Micro(long microPerGram) => UiKit.PerUnit(microPerGram, false);
 
     Label Row(string text, bool dim = false)
     {

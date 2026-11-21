@@ -147,7 +147,7 @@ public partial class FactionScreen : Control, IHandlesBack
         _body.AddChild(Line(L.T("dp_treaties_head"), true));
         if (v.Treaties.Count == 0) _body.AddChild(Line(L.T("dp_treaties_none")));
         foreach (var t in v.Treaties.Take(8))
-            _body.AddChild(Line((t.ExpiryDay >= 0 ? L.F("dp_treaty_row", L.T(t.KindKey), t.A, t.B, t.ExpiryDay) : L.F("dp_treaty_open", L.T(t.KindKey), t.A, t.B)) + (t.Tribute > 0 ? "; " + L.F("dp_treaty_tribute", Ravensguard.Sim.Trade.Quotes.Money(t.Tribute)) : "")));
+            _body.AddChild(Line((t.ExpiryDay >= 0 ? L.F("dp_treaty_row", L.T(t.KindKey), t.A, t.B, t.ExpiryDay) : L.F("dp_treaty_open", L.T(t.KindKey), t.A, t.B)) + (t.Tribute > 0 ? "; " + L.F("dp_treaty_tribute", UiKit.Money(t.Tribute)) : "")));
         _body.AddChild(Line(L.T("dp_wars_head"), true));
         if (v.Wars.Count == 0) _body.AddChild(Line(L.T("dp_wars_none")));
         foreach (var w in v.Wars.Take(6)) _body.AddChild(Line(L.F("dp_war_row", w.A, w.B, L.T(w.CbKey), (w.Score > 0 ? "+" : "") + w.Score, w.Seasons, w.WearinessA, w.WearinessD)));

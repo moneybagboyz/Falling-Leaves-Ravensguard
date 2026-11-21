@@ -165,7 +165,7 @@ public partial class FaithScreen : Control
         }
         if (pv.Banned)
         {
-            _body.AddChild(Row(L.T("fa_ban_head"), L.F("fa_ban_line", Ravensguard.Sim.Trade.Quotes.Money(pv.PenanceMites)), new Color(0.9f, 0.45f, 0.4f)));
+            _body.AddChild(Row(L.T("fa_ban_head"), L.F("fa_ban_line", UiKit.Money(pv.PenanceMites)), new Color(0.9f, 0.45f, 0.4f)));
             if (pv.PilgrimageSince) _body.AddChild(Small(L.T("fa_btn_penance"), "penance", _link.Penance)); else _body.AddChild(Dim(L.T("fa_penance_needs")));
         }
         foreach (var (key, name, carried, fake, venerable) in pv.Held)

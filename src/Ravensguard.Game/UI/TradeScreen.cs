@@ -116,7 +116,6 @@ public partial class TradeScreen : Control
     bool Piece(ushort g) => _hw.Runtime.State.Economy is { } e && g < e.Goods.Count && e.Goods.IsPiece(g);
 
     static string Amount(long q, bool piece) => piece ? $"{q}" : Quotes.Weight(q);
-    static string Unit(bool piece) => piece ? L.T("TRADE_PER_PIECE") : L.T("TRADE_PER_KG");
 
     Line? Current()
     {
@@ -146,27 +145,27 @@ public partial class TradeScreen : Control
         _title.Text = _barter && v.Person != null ? L.F("TRADE_TITLE_PERSON", v.Person.Name) : L.F("TRADE_TITLE_MARKET", v.Market.Name);
         if (_notebook) { BuildNotebook(v); return; }
 
-        _left.AddChild(UiKit.Hint(L.F("TRADE_YOURS", Quotes.Money(v.CoinMites)), true));
+        _left.AddChild(UiKit.Hint(L.F("TRADE_YOURS", UiKit.Money(v.CoinMites)), true));
         var mine = Mine();
         for (int i = 0; i < mine.Count; i++)
         {
             var l = mine[i];
-            string bid = l.Book is { } b ? Quotes.PerUnit(b.BidMicro, l.Piece) : "-";
+            string bid = l.Book is { } b ? UiKit.PerUnit(b.BidMicro, l.Piece) : "-";
             _left.AddChild(Row($"{l.Name}", $"{Amount(l.Have, l.Piece)}", $"{L.T("TRADE_BID")} {bid}", _pane == 0 && i == _sel, () => { _pane = 0; _sel = mine.IndexOf(l); _qty = Math.Min(_qty, l.Have); Build(); }));
         }
         if (mine.Count == 0) _left.AddChild(UiKit.Body(L.T("TRADE_NOTHING")));
 
         if (_barter && v.Person is { } pv)
         {
-            _right.AddChild(UiKit.Hint(L.F("TRADE_THEIRS_PERSON", pv.Name, Quotes.Money(pv.CoinMites)), true));
+            _right.AddChild(UiKit.Hint(L.F("TRADE_THEIRS_PERSON", pv.Name, UiKit.Money(pv.CoinMites)), true));
             if (pv.Survive) _right.AddChild(UiKit.Hint(L.T("TRADE_THEY_NEED_FOOD"), true));
         }
-        else _right.AddChild(UiKit.Hint(L.F("TRADE_THEIRS", Quotes.Money(v.Market.MerchantCash), v.Market.Open ? L.T("TRADE_OPEN") : L.T("TRADE_SHUT")), true));
+        else _right.AddChild(UiKit.Hint(L.F("TRADE_THEIRS", UiKit.Money(v.Market.MerchantCash), v.Market.Open ? L.T("TRADE_OPEN") : L.T("TRADE_SHUT")), true));
         var theirs = Theirs();
         for (int i = 0; i < theirs.Count; i++)
         {
             var l = theirs[i];
-            string ask = l.Book is { } b ? Quotes.PerUnit(_barter ? b.MidMicro : b.AskMicro, l.Piece) : "-";
+            string ask = l.Book is { } b ? UiKit.PerUnit(_barter ? b.MidMicro : b.AskMicro, l.Piece) : "-";
             _right.AddChild(Row(l.Name, Amount(_barter ? l.Stock : l.LotUnits, l.Piece), $"{(_barter ? L.T("TRADE_WORTH") : L.T("TRADE_ASK"))} {ask}", _pane == 1 && i == _sel, () => { _pane = 1; _sel = theirs.IndexOf(l); Build(); }));
         }
         if (theirs.Count == 0) _right.AddChild(UiKit.Body(L.T("TRADE_NOTHING")));
@@ -205,8 +204,8 @@ public partial class TradeScreen : Control
         {
             long value = (long)((Int128)bb.MidMicro * _qty / PriceCurve.Micro);
             long coin = BarterCoin(value);
-            sb.Append(L.F("TRADE_BARTER_VALUE", Quotes.PerUnit(bb.MidMicro, l.Piece), Unit(l.Piece), Quotes.Money(value))).Append('\n');
-            sb.Append(Side == TradeSide.Buy ? L.F("TRADE_BARTER_PAY", Quotes.Money(coin)) : L.F("TRADE_BARTER_GET", Quotes.Money(coin))).Append('\n');
+            sb.Append(L.F("TRADE_BARTER_VALUE", UiKit.PerUnit(bb.MidMicro, l.Piece), UiKit.Money(value))).Append('\n');
+            sb.Append(Side == TradeSide.Buy ? L.F("TRADE_BARTER_PAY", UiKit.Money(coin)) : L.F("TRADE_BARTER_GET", UiKit.Money(coin))).Append('\n');
             _basket.AddChild(UiKit.Body(sb.ToString(), true));
             var deal = UiKit.Key(L.T("TRADE_DEAL"), "trade.confirm", 220); deal.Pressed += Confirm; deal.Disabled = _waitSeq > 0; _basket.AddChild(deal);
             return;
@@ -214,11 +213,11 @@ public partial class TradeScreen : Control
         if (l.Book is not { } book) { _basket.AddChild(UiKit.Body(L.T("TRADE_NO_PRICE"))); return; }
         var q = book.Quote(Side, _qty);
         if (q.Qty == 0) { _basket.AddChild(UiKit.Body(L.T("TRADE_NO_STOCK"))); return; }
-        sb.Append(L.F("TRADE_FIRST", Quotes.PerUnit(q.FirstUnitMicro, l.Piece), Unit(l.Piece))).Append('\n');
-        sb.Append(L.F("TRADE_AVERAGE", Quotes.PerUnit(q.AverageMicro, l.Piece), Unit(l.Piece))).Append('\n');
-        sb.Append(L.F("TRADE_TOTAL", Quotes.Money(q.TotalMites))).Append('\n');
-        if (Side == TradeSide.Sell) sb.Append(L.F("TRADE_TOLL", Quotes.Money(q.TollMites), Quotes.Money(q.NetMites))).Append('\n');
-        sb.Append(L.F("TRADE_SPREAD", Quotes.PerUnit(book.BidMicro, l.Piece), Quotes.PerUnit(book.AskMicro, l.Piece), book.HalfSpreadPm / 10)).Append('\n');
+        sb.Append(L.F("TRADE_FIRST", UiKit.PerUnit(q.FirstUnitMicro, l.Piece))).Append('\n');
+        sb.Append(L.F("TRADE_AVERAGE", UiKit.PerUnit(q.AverageMicro, l.Piece))).Append('\n');
+        sb.Append(L.F("TRADE_TOTAL", UiKit.Money(q.TotalMites))).Append('\n');
+        if (Side == TradeSide.Sell) sb.Append(L.F("TRADE_TOLL", UiKit.Money(q.TollMites), UiKit.Money(q.NetMites))).Append('\n');
+        sb.Append(L.F("TRADE_SPREAD", UiKit.PerUnit(book.BidMicro, l.Piece), UiKit.PerUnit(book.AskMicro, l.Piece), book.HalfSpreadPm / 10)).Append('\n');
         if (q.AverageMicro > q.FirstUnitMicro * 1005 / 1000 && Side == TradeSide.Buy) sb.Append(L.T("TRADE_MOVES_UP")).Append('\n');
         if (q.AverageMicro < q.FirstUnitMicro * 995 / 1000 && Side == TradeSide.Sell) sb.Append(L.T("TRADE_MOVES_DOWN")).Append('\n');
         // what was last heard elsewhere for this good (O4)
@@ -229,7 +228,7 @@ public partial class TradeScreen : Control
             sb.Append(L.F("TRADE_HEARD", v.BookNames.GetValueOrDefault(n.Book, "?"), LastHeard.Cell(n.AskMicro, l.Piece, age, LastHeard.AgeClass(age)))).Append('\n');
         }
         long after = Side == TradeSide.Buy ? v.CoinMites - q.TotalMites : v.CoinMites + q.NetMites;
-        sb.Append(L.F("TRADE_COIN_AFTER", Quotes.Money(v.CoinMites), Quotes.Money(after)));
+        sb.Append(L.F("TRADE_COIN_AFTER", UiKit.Money(v.CoinMites), UiKit.Money(after)));
         var body = UiKit.Body(sb.ToString(), true);
         if (Side == TradeSide.Buy && q.TotalMites > v.CoinMites) body.AddThemeColorOverride("font_color", PixelTheme.Warn);
         _basket.AddChild(body);

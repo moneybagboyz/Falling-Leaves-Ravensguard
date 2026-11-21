@@ -55,7 +55,7 @@ public partial class ContractsScreen : Control
     List<ContractRow> Rows => _view == null ? [] : _mine ? _view.Mine : _view.Board;
 
     static string Kind(string id) => L.T("ct_kind_" + id);
-    static string Money(long m) => Quotes.Money(m);
+    static string Money(long m) => UiKit.Money(m);
     static string DayName(int day) { var t = new GameTime((long)day * TimeConst.SecondsPerDay); return $"{L.T("SEASON_" + t.Season.ToString().ToUpperInvariant())} {t.DayOfSeason}"; }
 
     void Build()

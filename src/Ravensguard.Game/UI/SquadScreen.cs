@@ -53,7 +53,7 @@ public partial class SquadScreen : Control
         foreach (var c in _body.GetChildren()) { _body.RemoveChild(c); c.QueueFree(); }
         var v = _view; if (v == null) { _body.AddChild(UiKit.Body(L.T("TRADE_SETTLING"))); return; }
         var members = v.Squad.Where(m => m.Active).ToList();
-        _body.AddChild(UiKit.Hint(L.F("SQUAD_MEMBERS", members.Count, v.SquadCap, Quotes.Money(members.Sum(m => m.WageMitesPerDay)))));
+        _body.AddChild(UiKit.Hint(L.F("SQUAD_MEMBERS", members.Count, v.SquadCap, UiKit.Money(members.Sum(m => m.WageMitesPerDay)))));
         if (members.Count == 0) _body.AddChild(UiKit.Body(L.T("SQUAD_EMPTY"), true));
         foreach (var m in members)
         {
@@ -62,7 +62,7 @@ public partial class SquadScreen : Control
             row.AddChild(new Label { Text = L.T(m.Origin == FollowerOrigin.Recruited ? "SQUAD_RECRUITED" : "SQUAD_HIRED") + (m.Origin == FollowerOrigin.Hired && m.EndDay > 0 ? $" ({L.F("SQUAD_UNTIL", m.EndDay - v.Day)})" : ""), CustomMinimumSize = new Vector2(160, 0), ClipText = true });
             row.AddChild(new Label { Text = L.T("SQUAD_LOYALTY"), ThemeTypeVariation = "HintLabel" });
             row.AddChild(new ProgressBar { MaxValue = 1000, Value = m.Loyalty, ShowPercentage = false, CustomMinimumSize = new Vector2(70, 12), SizeFlagsVertical = SizeFlags.ShrinkCenter });
-            row.AddChild(new Label { Text = L.F("SQUAD_WAGE", Quotes.Money(m.WageMitesPerDay)) + (m.UnpaidDays > 0 ? "  " + L.F("SQUAD_UNPAID", m.UnpaidDays) : ""), CustomMinimumSize = new Vector2(120, 0), SizeFlagsHorizontal = SizeFlags.ExpandFill, ClipText = true });
+            row.AddChild(new Label { Text = L.F("SQUAD_WAGE", UiKit.Money(m.WageMitesPerDay)) + (m.UnpaidDays > 0 ? "  " + L.F("SQUAD_UNPAID", m.UnpaidDays) : ""), CustomMinimumSize = new Vector2(120, 0), SizeFlagsHorizontal = SizeFlags.ExpandFill, ClipText = true });
             row.AddChild(new Label { Text = L.T("ORDER_" + m.Order.ToString().ToUpperInvariant()), CustomMinimumSize = new Vector2(56, 0), ThemeTypeVariation = "HintLabel" });
             _body.AddChild(row);
             // the orders on a row of their own (the party row above is too wide for them at 960 px)
@@ -95,11 +95,11 @@ public partial class SquadScreen : Control
         {
             _body.AddChild(new Label { Text = $"{p.Name}, {p.Age}, {UiKit.Pretty(p.Trade.ToLowerInvariant())} ({L.F("SQUAD_SKILL", p.MaxSkill)})", ThemeTypeVariation = "GoldLabel" });
             _body.AddChild(UiKit.Body(L.F("SQUAD_KNOW", p.Familiarity, p.TrustPm / 10), true));
-            _body.AddChild(UiKit.Body(L.F("SQUAD_ASKS", Quotes.Money(p.ReservationWage), Quotes.Money(p.FairOffer)), true));
-            _body.AddChild(UiKit.Body(p.InSquad ? L.T("SQUAD_ALREADY") : p.RecruitCheck == RecruitAnswer.Accept ? L.F("SQUAD_WOULD_JOIN", Quotes.Money(p.FairOffer * 5)) : L.T("SQUAD_JOIN_" + p.RecruitCheck.ToString().ToUpperInvariant()), true));
+            _body.AddChild(UiKit.Body(L.F("SQUAD_ASKS", UiKit.Money(p.ReservationWage), UiKit.Money(p.FairOffer)), true));
+            _body.AddChild(UiKit.Body(p.InSquad ? L.T("SQUAD_ALREADY") : p.RecruitCheck == RecruitAnswer.Accept ? L.F("SQUAD_WOULD_JOIN", UiKit.Money(p.FairOffer * 5)) : L.T("SQUAD_JOIN_" + p.RecruitCheck.ToString().ToUpperInvariant()), true));
             var acts = new HBoxContainer(); acts.AddThemeConstantOverride("separation", 8);
             Btn(acts, L.T("SQUAD_TALK"), () => new HeroCommand { Kind = HeroCommandKind.Talk, Person = p.Id });
-            Btn(acts, L.F("SQUAD_HIRE", Quotes.Money(p.FairOffer)), () => new HeroCommand { Kind = HeroCommandKind.Hire, Person = p.Id, Wage = p.FairOffer, Days = 7 });
+            Btn(acts, L.F("SQUAD_HIRE", UiKit.Money(p.FairOffer)), () => new HeroCommand { Kind = HeroCommandKind.Hire, Person = p.Id, Wage = p.FairOffer, Days = 7 });
             Btn(acts, L.T("SQUAD_RECRUIT"), () => new HeroCommand { Kind = HeroCommandKind.Recruit, Person = p.Id, Wage = p.FairOffer });
             _body.AddChild(acts);
         }

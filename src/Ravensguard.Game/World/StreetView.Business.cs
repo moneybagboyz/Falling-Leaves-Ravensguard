@@ -1,3 +1,4 @@
+using Ravensguard.Game.UI.NewGame;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -235,7 +236,7 @@ public partial class StreetView
     {
         if (_router == null) return;
         long capital = 5000;
-        _router.ShowModal(L.T("bz_q_found_title"), L.F("bz_q_found_body", L.T("bz_kind_" + kind), stations, Quotes.Money(capital)),
+        _router.ShowModal(L.T("bz_q_found_title"), L.F("bz_q_found_body", L.T("bz_kind_" + kind), stations, UiKit.Money(capital)),
             (L.T("bz_q_btn_open"), () => IssueBiz(BusinessDesk.Found(kind, settlement, -1, structure, capital, HeroNow()))), (L.T("UI_CANCEL"), null));
     }
 
@@ -272,7 +273,7 @@ public partial class StreetView
         t.ContinueWith(r =>
         {
             if (!r.IsCompletedSuccessfully || r.Result is not { } s) { Callable.From(() => _router?.ShowToast(L.T("bz_q_no_business"))).CallDeferred(); return; }
-            Callable.From(() => _router?.ShowModal(L.T("bz_q_share_title"), L.F("bz_q_share_body", s.Item2, Quotes.Money(s.Item3)),
+            Callable.From(() => _router?.ShowModal(L.T("bz_q_share_title"), L.F("bz_q_share_body", s.Item2, UiKit.Money(s.Item3)),
                 (L.T("bz_q_btn_buy"), () => IssueBiz(BusinessDesk.BuyShare(s.Item1, 400, s.Item3 * 11 / 10, now))), (L.T("UI_CANCEL"), null))).CallDeferred();
         });
     }

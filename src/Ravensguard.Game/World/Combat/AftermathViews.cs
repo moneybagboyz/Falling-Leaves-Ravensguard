@@ -68,7 +68,7 @@ public abstract partial class AftermathPanel : Control
         Buttons.AddChild(b);
         return b;
     }
-    protected static string Money(long m) => Quotes.Money(m);
+    protected static string Money(long m) => UiKit.Money(m);
     protected static string Item(string shape) => shape.Replace('_', ' ');
 }
 
@@ -275,7 +275,7 @@ public partial class SuccessionView : AftermathPanel
         _dead = dead; _cause = cause; _heirs = heirs; _all = all; _ironman = ironman; _pick = pick; _load = load; _end = end; _estate = estate;
     }
 
-    static string M(long mites) => Quotes.Money(mites);
+    static string M(long mites) => UiKit.Money(mites);
 
     static string Rule(SuccessionCandidate c) => L.T("MC_RULE_" + c.Rule.ToString().ToUpperInvariant());
 

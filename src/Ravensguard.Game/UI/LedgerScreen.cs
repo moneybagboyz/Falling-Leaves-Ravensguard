@@ -87,7 +87,7 @@ public partial class LedgerScreen : Control, IHandlesBack
         GetTree().Quit();
     }
 
-    static string M(long mites) => Quotes.Money(mites);
+    static string M(long mites) => UiKit.Money(mites);
 
     void Build()
     {

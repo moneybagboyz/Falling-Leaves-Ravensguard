@@ -100,7 +100,7 @@ public partial class BondageScreen : Control
         GetTree().Quit();
     }
 
-    static string Money(long mites) => Quotes.Money(mites);
+    static string Money(long mites) => UiKit.Money(mites);
 
     Button Act(string text, Action act, bool enabled = true, int w = 150)
     {

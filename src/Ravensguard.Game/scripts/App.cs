@@ -88,7 +88,7 @@ public partial class App : Node
 
         Settings.Load();
         // the hero desk says its texts as keys (the sim makes no English); they are resolved here, through the translation server
-        Ravensguard.Sim.Trade.HeroText.Resolver = (key, a) => { var t = L.T(key); return t == key ? null : string.Format(t, a); };
+        Ravensguard.Sim.Trade.HeroText.Resolver = (key, a) => { var t = L.T(key); return t == key ? null : L.Format(t, a); };
         GameDiagnostics.Init(GetTree(), args);
         if (args.Contains("--crash-test"))
         {

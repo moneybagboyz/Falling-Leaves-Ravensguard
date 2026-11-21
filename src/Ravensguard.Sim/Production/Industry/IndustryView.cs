@@ -62,12 +62,8 @@ public sealed record IndustryView(int Day, IReadOnlyList<WorksView> Works)
 /// <summary>Builds <see cref="IndustryView"/> from the industry world (a read: nothing here changes the world, spends a stream or touches a store).</summary>
 public static class IndustryViews
 {
-    /// <summary>The Industry tab's one unit (Q14): silver with one decimal, 100 mites to the silver piece ("67.9 sp"). A local formatter the money sweep (CN2) may replace.</summary>
-    public static string Silver(long mites)
-    {
-        long a = Math.Abs(mites), tenths = (a + 5) / 10;
-        return (mites < 0 && tenths > 0 ? "-" : "") + (tenths / 10).ToString("N0", CultureInfo.InvariantCulture) + "." + (tenths % 10).ToString(CultureInfo.InvariantCulture) + " sp";
-    }
+    /// <summary>The Industry tab's one unit (Q14): silver with one decimal ("67.9 sp"), now <see cref="MoneyText"/>'s <see cref="MoneyStyle.OneUnit"/> (P7-CN2).</summary>
+    public static string Silver(long mites) => MoneyText.Format(mites, MoneyStyle.OneUnit);
 
     public static IndustryView Build(IndustryWorld iw, int owner, int day, PriceNotebook? notes = null)
     {

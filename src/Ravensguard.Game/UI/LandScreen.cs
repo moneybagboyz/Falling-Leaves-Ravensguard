@@ -68,7 +68,7 @@ public partial class LandScreen : Control
         GetTree().Quit();
     }
 
-    static string M(long mites) => Quotes.Money(mites);
+    static string M(long mites) => UiKit.Money(mites);
     static string Tenure(Tenure t) => L.T("ld_tenure_" + t.ToString().ToLowerInvariant());
     static string Day(int day) => L.F("ld_day", day % Ravensguard.Sim.Core.TimeConst.DaysPerSeason + 1, UiKit.SeasonName(GameTime.FromGameDays(day).Season), GameTime.FromGameDays(day).Year);
 

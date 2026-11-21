@@ -1,3 +1,4 @@
+using Ravensguard.Game.UI.NewGame;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -85,7 +86,7 @@ public partial class StreetView
         if (here.Fief < 0)
             _router.ShowModal(L.T("ld_stake_title"), L.F("ld_stake_wild", here.Tiles), (L.T("ld_btn_stake"), () => IssueLand(LandDesk.Stake(xm, ym, false, now))), (L.T("UI_CANCEL"), null));
         else
-            _router.ShowModal(L.T("ld_stake_title"), L.F("ld_stake_waste", here.FiefName, here.Tiles, Ravensguard.Sim.Trade.Quotes.Money(here.LicenceMites)),
+            _router.ShowModal(L.T("ld_stake_title"), L.F("ld_stake_waste", here.FiefName, here.Tiles, UiKit.Money(here.LicenceMites)),
                 (L.T("ld_btn_licence"), () => IssueLand(LandDesk.Stake(xm, ym, true, now))), (L.T("ld_btn_squat"), () => IssueLand(LandDesk.Stake(xm, ym, false, now))), (L.T("UI_CANCEL"), null));
     }
 

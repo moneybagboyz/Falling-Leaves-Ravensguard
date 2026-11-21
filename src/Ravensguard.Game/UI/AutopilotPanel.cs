@@ -96,7 +96,7 @@ public partial class AutopilotPanel : Control
 
     void BuildAll() { BuildQueue(); BuildMid(); BuildLimits(); BuildTable(); BuildStatus(); }
 
-    static string Money(long m) => m >= 100 ? (m % 100 == 0 ? $"{m / 100} cr" : $"{m / 100} cr {m % 100} m") : $"{m} m";
+    static string Money(long m) => UiKit.Money(m);
 
     // ---- the queue
 
@@ -189,8 +189,8 @@ public partial class AutopilotPanel : Control
     {
         Clear(_limitBox);
         var l = _draft.Limits;
-        _limitBox.AddChild(UiKit.Stepper(L.T("AP_CAP"), () => (int)(l.SpendCapMitesPerDay < 0 ? 0 : l.SpendCapMitesPerDay / 100), v => l.SpendCapMitesPerDay = v == 0 ? -1 : v * 100L, 0, 50, 1, v => v == 0 ? L.T("AP_NO_CAP") : L.F("AP_CROWNS_DAY", v)));
-        _limitBox.AddChild(UiKit.Stepper(L.T("AP_RESERVE"), () => (int)(l.PurseReserveMites / 100), v => l.PurseReserveMites = v * 100L, 0, 100, 1, v => L.F("AP_CROWNS", v)));
+        _limitBox.AddChild(UiKit.Stepper(L.T("AP_CAP"), () => (int)(l.SpendCapMitesPerDay < 0 ? 0 : l.SpendCapMitesPerDay / 100), v => l.SpendCapMitesPerDay = v == 0 ? -1 : v * 100L, 0, 50, 1, v => v == 0 ? L.T("AP_NO_CAP") : L.F("AP_CROWNS_DAY", v * 100L)));
+        _limitBox.AddChild(UiKit.Stepper(L.T("AP_RESERVE"), () => (int)(l.PurseReserveMites / 100), v => l.PurseReserveMites = v * 100L, 0, 100, 1, v => L.F("AP_CROWNS", v * 100L)));
         var risk = new HBoxContainer(); risk.AddThemeConstantOverride("separation", 4);
         risk.AddChild(new Label { Text = L.T("AP_RISK"), SizeFlagsHorizontal = SizeFlags.ExpandFill });
         var ro = new OptionButton(); ro.AddItem(L.T("AP_RISK_LOW")); ro.AddItem(L.T("AP_RISK_MED")); ro.AddItem(L.T("AP_RISK_HIGH"));

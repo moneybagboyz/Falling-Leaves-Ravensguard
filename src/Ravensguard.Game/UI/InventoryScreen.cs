@@ -79,7 +79,7 @@ public partial class InventoryScreen : Control
         var v = _view;
         if (v == null) { _body.AddChild(UiKit.Body(L.T("TRADE_SETTLING"))); return; }
         _body.AddChild(LoadBar(v));
-        _body.AddChild(new Label { Text = L.F("INV_PURSE", Quotes.Money(v.CoinMites), $"{Encumbrance.CoinMassG(v.CoinMites)} g"), ThemeTypeVariation = "GoldLabel" });
+        _body.AddChild(new Label { Text = L.F("INV_PURSE", UiKit.Money(v.CoinMites), $"{Encumbrance.CoinMassG(v.CoinMites)} g"), ThemeTypeVariation = "GoldLabel" });
         // worn and held
         _body.AddChild(UiKit.Hint(L.T("INV_WORN")));
         foreach (var it in v.Items.Where(i => i.Slot != EquipSlot.None).OrderBy(i => (int)i.Slot).ThenBy(i => i.Id)) ItemRow(v, it, 0);
@@ -127,7 +127,7 @@ public partial class InventoryScreen : Control
         if (nameLabel.TooltipText.Length > 0) nameLabel.MouseFilter = MouseFilterEnum.Stop;
         row.AddChild(nameLabel);
         row.AddChild(new Label { Text = $"{Kg(it.MassG)} kg", CustomMinimumSize = new Vector2(70, 0), HorizontalAlignment = HorizontalAlignment.Right });
-        row.AddChild(new Label { Text = Quotes.Money(it.ValueMites), CustomMinimumSize = new Vector2(90, 0), HorizontalAlignment = HorizontalAlignment.Right, ThemeTypeVariation = "HintLabel" });
+        row.AddChild(new Label { Text = UiKit.Money(it.ValueMites), CustomMinimumSize = new Vector2(90, 0), HorizontalAlignment = HorizontalAlignment.Right, ThemeTypeVariation = "HintLabel" });
         if (it.Slot != EquipSlot.None) Btn(row, L.T("INV_TAKE_OFF"), new HeroCommand { Kind = HeroCommandKind.Unequip, Item = it.Id });
         else Btn(row, L.T("INV_EQUIP"), new HeroCommand { Kind = HeroCommandKind.Equip, Item = it.Id });
         // put into the next container that is not itself (cycles through them)

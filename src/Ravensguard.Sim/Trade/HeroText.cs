@@ -31,11 +31,11 @@ public sealed record HeroText(string Key, IReadOnlyList<object> Args)
         if (Parts != null) return string.Join(" ", Parts.Select(p => p.Render()).Where(t => t.Length > 0).Distinct());
         if (Key.Length == 0) return "";
         var a = new object[Args.Count];
-        for (int i = 0; i < a.Length; i++) a[i] = Args[i] is HeroText h ? h.Render() : Convert.ToString(Args[i], CultureInfo.InvariantCulture) ?? "";
+        for (int i = 0; i < a.Length; i++) a[i] = Args[i] is HeroText h ? h.Render() : Args[i] is long or int ? Args[i] : Convert.ToString(Args[i], CultureInfo.InvariantCulture) ?? "";
         string? r = null;
-        try { r = Resolver != null ? Resolver(Key, a) : Csv.Value.TryGetValue(Key, out var t) ? string.Format(CultureInfo.InvariantCulture, t, a) : null; }
+        try { r = Resolver != null ? Resolver(Key, a) : Csv.Value.TryGetValue(Key, out var t) ? string.Format(Core.MoneyFormat.Default, t, a) : null; }
         catch (FormatException) { r = null; }
-        return r ?? (a.Length == 0 ? Key : Key + "(" + string.Join(", ", a) + ")");
+        return r ?? (a.Length == 0 ? Key : Key + "(" + string.Join(", ", a.Select(x => Convert.ToString(x, CultureInfo.InvariantCulture))) + ")");
     }
 
     public override string ToString() => Render();

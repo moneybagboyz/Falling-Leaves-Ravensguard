@@ -74,11 +74,11 @@ public static class Quotes
     public static long MaxTotal(long quoteMites, int slipPm) => quoteMites + (quoteMites * slipPm + 999) / 1000;
     public static long MinTotal(long quoteMites, int slipPm) => quoteMites - quoteMites * slipPm / 1000;
 
-    /// <summary>"3 cr 40 m" (whole crowns plus mites; 100 mites a crown).</summary>
-    public static string Money(long mites) => mites < 0 ? "-" + Money(-mites) : mites >= 100 ? (mites % 100 == 0 ? $"{mites / 100} cr" : $"{mites / 100} cr {mites % 100} m") : $"{mites} m";
+    /// <summary>A sum for people to read: gp, sp and cp (<see cref="Core.MoneyText"/>; the Game passes its own words through <c>UiKit.Money</c>).</summary>
+    public static string Money(long mites) => Core.MoneyText.Format(mites);
 
-    /// <summary>Crowns per kg (per piece) with two decimals, from micro-mites per unit.</summary>
-    public static string PerUnit(long micro, bool piece) => (micro * (piece ? 1.0 : 1000.0) / PriceCurve.Micro / 100.0).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+    /// <summary>A bulk price with its pack ("4.5 cp a kg", "2 sp 6 cp per 100 kg"), from micro-mites per unit (<see cref="Core.MoneyText.PerUnit"/>).</summary>
+    public static string PerUnit(long micro, bool piece) => Core.MoneyText.PerUnit(micro, piece);
 }
 
 /// <summary>Individual items (a sword, a saddle) are priced from their value (spec 4.1): ask = value x (1 + h); bid = value x (1 - h), and 70% of that until the buyer has inspected it.</summary>
