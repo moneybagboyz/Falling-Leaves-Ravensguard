@@ -767,6 +767,12 @@ The other user questions (Q5 division of labour in every generated business, Q6 
 ### 10b. The user's sign-off on the first audit run (21 Nov 2026)
 Recorded in full in `docs/reviews/phase-7-audit.md` ("The user's sign-off"): big L2/L3 works keep their output and must ship far (IN4's own caravans matter more; EA3 measures export payback); EA_F9 is fixed (war costs harvest); EA_F16 is investigated on five seeds first; the six Low findings are accepted.
 
+### 10c. Children at the harvest (the user, 21 Nov 2026)
+**Children help with the harvest.** Today the farm planner (`Farming/FarmingSystem.cs`, `RecomputeHours`) counts no one under 12 and a 12-15-year-old as half a day. Historically children from about 7 bound and stooked sheaves, gleaned, carried food and drink to the reapers and minded the animals, so a household whose men are levied still gets part of its harvest in.
+- **Rule:** in the harvest (the Reap and BindCart tasks, and haymaking), a living child of 7 to 11 of a farming household gives a third of a working day (`child_harvest_min_age` 7, `child_harvest_pct` 33 in the farming defs, both content). Those hours serve **only** reaping, binding and carting and hay, never ploughing or sowing; they work their own household's land first and are hireable to a neighbour's harvest like any hand, at the day wage pro rata. 12-15 stay at half a day for every task, as now.
+- **What it changes:** more harvest hours in every year, so the levy fix (EA_F9) is calibrated **with the children counted**: WL-6 (10-35% of the harvest lost to a summer levy) is measured on the world as it will be, not as it was. Owner: built with the EA_F9 fix (AE2/EA3b; the farming change is the EA3b part if AE2 has not started). Golden trails move (more harvest hours); re-pin with that reason.
+- **Test:** a household of one man and three children (8, 10, 13) with the man levied reaps more of its field than the same household without the children, and the children's hours never appear on a ploughing or sowing task.
+
 ## 11. The user's industry sheets against `industries.md`
 
 The sheets are in `docs/design/industry-sheets/`: the iron, clay and wood PDFs and their balance-sheet PNGs. Per the plan, their outputs and prices are rescaled on purpose to historical rates and the game's coin. **Their structure is the target:** the stages, tier jumps, crew ranges and stage ratios.
