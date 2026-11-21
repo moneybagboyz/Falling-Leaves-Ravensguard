@@ -763,6 +763,9 @@ Asked on 21 Nov 2026; every answer took the recommended default.
 
 The other user questions (Q5 division of labour in every generated business, Q6 NPC founders and the slider on their works, Q10 mercenaries keep their own kit, Q11 copper as capped token coin, Q12 history keeps v1's war step, Q13 the mite stays the stored unit, Q14 the Industry tab in silver with one decimal, Q15 the user signs off accepted Medium audit findings) take their recommended defaults; the user may revisit any of them before its part starts.
 
+### 10b. The user's sign-off on the first audit run (21 Nov 2026)
+Recorded in full in `docs/reviews/phase-7-audit.md` ("The user's sign-off"): big L2/L3 works keep their output and must ship far (IN4's own caravans matter more; EA3 measures export payback); EA_F9 is fixed (war costs harvest); EA_F16 is investigated on five seeds first; the six Low findings are accepted.
+
 ## 11. The user's industry sheets against `industries.md`
 
 The sheets are in `docs/design/industry-sheets/`: the iron, clay and wood PDFs and their balance-sheet PNGs. Per the plan, their outputs and prices are rescaled on purpose to historical rates and the game's coin. **Their structure is the target:** the stages, tier jumps, crew ranges and stage ratios.

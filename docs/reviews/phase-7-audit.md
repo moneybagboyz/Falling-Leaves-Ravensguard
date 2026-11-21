@@ -208,3 +208,10 @@ Measured over four game years (`AuditWorldProbeTests`):
 - **X8, X9, X10, X12, X13, G5, I1 to I3**: read (X8 to X10), or need parts not at the tag (X12, X13, G5, I1 to I3).
 - **The exploit bot** is one agent that finds the best trade by the books' curves and executes it; it does not drive `HeroDesk` verbs (the hero's own labour, crafting, building). X3 to X5 are measured from content, X11 by moves, so no hero command was needed for a finding; the hero-desk loops (craft, salvage, sell; build, demolish) are bounded by the shares above.
 - **Person-table growth** (phase-6 review, P7-0B left it): the 25-year soak will cost more each year (26,000 rows to 111,000 at year 100); for 25 years the cost is modest; EA3b measures it.
+
+## The user's sign-off (21 Nov 2026)
+- **L2/L3 works output (overview §15; the payback question):** **keep the big output; owners must ship far.** A Level 3 works may out-produce its region (an L3 iron works makes about twice the region's bar demand); its owner finds distant markets with their own caravans (IN4: selling at the gate vs your own caravan, expected margin, road risk) or watches local prices fall. Upgrade bills are not tuned down for this. The second audit run (EA3) measures an L3 works selling through export caravans against the gate's room, and reports the payback it actually gets.
+- **EA_F9 (levies cost 0.2% of the harvest against the 10-35% gate):** **fix it** — levied men are missing from the fields, so a summer war costs harvest. Owner: AE2 and EA3b.
+- **EA_F16 (money supply swings outside -5%..+8% in peace on seed 42):** **investigate on five seeds first** (EA3b); accept only if border trade causes it and the mints don't add to it; otherwise fix.
+- **Low findings EA_F5, F10, F12, F13, F14, F15:** **accepted** as known limits; later parts pick them up where they matter (F10 is a spec-wording fix; F12 to AE1/AE2; F13 to the siege parts).
+- Not accepted (to be fixed): High EA_F1 (R1 repricing, EA3a), EA_F2 (loot values, EA3a); Medium EA_F4 and EA_F8 (CN1 pins them), EA_F11 (carried to SC-A/AE3/EA3b).
