@@ -121,6 +121,8 @@ public sealed class BattleGrid
         long pad = r + Drift + 2;
         int cx0 = Cell(x - pad, _ox, _dimX), cx1 = Cell(x + pad, _ox, _dimX);
         int cy0 = Cell(y - pad, _oy, _dimY), cy1 = Cell(y + pad, _oy, _dimY);
+        // a box over a third of the grid gains nothing from the cells (and would sort most of the fighters): every id, ascending, is a superset too
+        if ((long)(cx1 - cx0 + 1) * (cy1 - cy0 + 1) * 3 >= (long)_dimX * _dimY) return Identity(N);
         var buf = _buf[depth];
         int k = 0;
         for (int cy = cy0; cy <= cy1; cy++)

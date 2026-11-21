@@ -210,7 +210,9 @@ public class BattleGridBudgetTests(FightFixture fx, ITestOutputHelper output) : 
     {
         // the Phase 4 skirmish at scale: two lines of perSide meeting, the hero (the level-of-detail centre) at one end, so only the fighters within 60 m of him think at 20 Hz
         var w = FightCalibration.Skirmish(fx.C, 5, perSide); w.RecordEvents = false; w.UseGrid = grid; w.LodCentre = (-7000, 0);
-        for (int i = 0; i < 40; i++) w.StepWithAi();                                  // warm up: JIT, the buffers' growth
+        var warm = FightCalibration.Skirmish(fx.C, 3, 30); warm.RecordEvents = false; warm.UseGrid = grid;       // warm up: JIT of the contact paths (a first blow costs milliseconds)
+        for (int i = 0; i < 700 && !warm.IsOver; i++) warm.StepWithAi();
+        for (int i = 0; i < 40; i++) w.StepWithAi();                                  // the buffers' growth
         double sum = 0, worst = 0, minuteWorst = 0; int minuteTicks = 0;
         var sw = new Stopwatch();
         int run = 0;
