@@ -130,7 +130,7 @@ public sealed class WarYearRow
     public long AidMites, TallageMites;
     /// <summary>Idle adults (16-59, no occupation, no land) at the year's end; wages paid a day over the year; coin in purses at the year's end (the money supply).</summary>
     public long Idle, WagesPerDay, MoneySupply;
-    /// <summary>The staple price (mites a kg, the mean of the grains and bread over the books) over the year: the towns within 8 km of the route and the whole region, mean and peak of the daily value, in thousandths of a mite.</summary>
+    /// <summary>The staple price (mites a kg, the mean of the grains and bread over the books) over the year: the towns within 8 km of the route and the whole region, mean and peak of the daily value, in mites a kg.</summary>
     public long RouteMeanMilli, RoutePeakMilli, RegionMeanMilli, RegionPeakMilli;
     /// <summary>Merchants holding at least the solvency floor (10 crowns), per cent, at the year's end.</summary>
     public int SolventPct;
@@ -257,7 +257,7 @@ public sealed class WarLoadSoak(WarLoadRun run, int years, bool control = false)
     {
         long sum = 0, n = 0;
         foreach (var b in books) { foreach (var g in _stapleIds) { sum += b.MidMicro(g); n++; } }
-        return n == 0 ? 0 : sum / n / 1000;       // micro-mites a kg -> thousandths of a mite
+        return n == 0 ? 0 : sum / n / 1000;       // micro-mites a gram / 1000 = mites a kg
     }
 
     private void Sample()

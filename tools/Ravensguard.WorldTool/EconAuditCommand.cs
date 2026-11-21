@@ -50,7 +50,7 @@ public static class EconAuditCommand
         if (withControl && !control)
         {
             using var c = WarLoadRun.Create(seed, BaseContent.Require(), attachLinks: links);
-            var cs = new WarLoadSoak(c, years, control: true); cs.Run(); ctlRows = cs.Rows;
+            var cs = new WarLoadSoak(c, years, control: true); Console.WriteLine("control rows:"); Console.WriteLine(WarLoadSoak.Header()); cs.Run(r => { if (!quiet) Console.WriteLine(WarLoadSoak.Format(r)); }); ctlRows = cs.Rows;
             Console.WriteLine($"control run (no load) done in {sw.Elapsed.TotalSeconds:0.0} s");
         }
         using var run = WarLoadRun.Create(seed, BaseContent.Require(), attachLinks: links);
