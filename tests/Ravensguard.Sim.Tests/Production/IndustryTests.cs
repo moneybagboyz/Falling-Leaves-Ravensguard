@@ -338,6 +338,24 @@ public class IndustryTests
     }
 
     [Fact]
+    public void WorldSave_CarriesTheIndustrySection_OnlyWhileAWorksExists_AndResavesIdentically()
+    {
+        var w = EconFixture.WorldWith(null);
+        Assert.False(WorldSave.Capture(w, EconFixture.ContentHash, "0.1.0").Sections.ContainsKey(IndustrySave.SectionName));
+        w.Industry = new IndustryBook();                                                                           // an empty book is still no section
+        Assert.False(WorldSave.Capture(w, EconFixture.ContentHash, "0.1.0").Sections.ContainsKey(IndustrySave.SectionName));
+        var works = new Works { Owner = 0, Chain = "iron", Settlement = 0, BuildingsCostMites = 140_000, StartedDay = 3 };
+        works.Stages.Add(new WorkStage { Business = 5, CrewTarget = 3, Route = Routing.Gate }); works.Stages[0].Add(7, WorkStage.Wages, 900);
+        works.Stages.Add(new WorkStage { Business = 6, Tier = 2 }); works.Links.Add(new WorkLink { From = 0, To = 1, DistanceM = 200, Carts = 2 });
+        w.Industry.Works.Add(works);
+        var file = WorldSave.Capture(w, EconFixture.ContentHash, "0.1.0");
+        Assert.True(file.Sections.ContainsKey(IndustrySave.SectionName));
+        var back = WorldSave.Restore(SaveCodec.Decode(SaveCodec.Encode(file)), EconFixture.Content, EconFixture.ContentHash);
+        Assert.Equal(w.Industry.Hash(), back.Industry!.Hash());
+        Assert.Equal(SaveCodec.Encode(file), SaveCodec.Encode(WorldSave.Capture(back, EconFixture.ContentHash, "0.1.0")));
+    }
+
+    [Fact]
     public void Determinism_TwoRuns_SameHash()
     {
         ulong Run()
