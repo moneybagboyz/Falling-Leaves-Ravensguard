@@ -84,6 +84,8 @@ public static class HashesCommand
         lines.Add($"seed {seed} vehicles {Ravensguard.Sim.Carts.VehicleHash.Of(seed)}");
         // Phase 6 A2 (phase-5 review S14): a short scripted Phase 5 trail (a new game, a floor built and knocked out, ten days of the whole runtime): land, sites, rooms, ownership, crafting and the chronicle
         lines.Add($"seed {seed} phase5_trail {Ravensguard.Sim.Diagnostics.Phase5Trail.Hash(db, continent, history, cs, hs, rs, pick.CellX, pick.CellY, pop)}");
+        // Phase 6 G1 (overview OV-8): the Phase 6 trail, sixty game days of the whole runtime with a court day, a fire, a riot, a slave sale, a plague, a council and a jailbreak: every section of the save in one hash
+        lines.Add($"seed {seed} phase6_trail {Ravensguard.Sim.Diagnostics.Phase6Trail.Run(db, continent, history, cs, hs, rs, pick.CellX, pick.CellY, pop).Hash}");
         // Phase 6 part F (history-recalibration 5, HR-10): history v1 is its own pinned line (the v0 'history' line above stays frozen for library worlds); two more seeds make three for the Windows/Linux compare
         lines.Add($"seed {seed} history_v1 {HistoryV1Hash(baseDir, db, seed, continent)}");
         if (seed == 1) foreach (ulong extra in new ulong[] { 7, 42 }) lines.Add($"seed {extra} history_v1 {HistoryV1Hash(baseDir, db, extra, null)}");

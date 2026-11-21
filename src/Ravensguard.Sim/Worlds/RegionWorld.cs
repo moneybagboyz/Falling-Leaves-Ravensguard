@@ -112,7 +112,9 @@ public sealed class RegionWorld : IDisposable
 
     public Population Population => Sim.Population;
     public long HourDone => Sim.State.HourDone;
-    public WorldTicker Ticker => _ticker ??= new WorldTicker(Sim, AbstractSystemRegistry.CreateDefault(), new TickerOptions { RecordTimings = false });
+    /// <summary>Tests and tools (the Phase 6 budgets, close-out G1): time every abstract system of the tickers made from now on (<see cref="TickerStats"/>). Off in the game.</summary>
+    public static bool RecordSystemTimings { get; set; }
+    public WorldTicker Ticker => _ticker ??= new WorldTicker(Sim, AbstractSystemRegistry.CreateDefault(), new TickerOptions { RecordTimings = RecordSystemTimings });
 
     // ------------------------------------------------------------------ creation
 

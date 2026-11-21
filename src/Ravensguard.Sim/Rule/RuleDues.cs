@@ -75,6 +75,29 @@ public static class RuleDues
         return n;
     }
 
+    /// <summary>
+    /// The hero dies and his heir takes up his id (Phase 6 G1, OV-7: "the son takes over, pays relief to the overlord"): every fief the hero held passes to the heir, who owes the overlord relief as any heir does
+    /// (4.2: a share of last year's receipts, due in the usual seasons) and, under the age of ward, puts the fief in wardship. The daily pass cannot see this change (the holder's id is the same one), so the succession
+    /// desk calls it. Returns the number of fiefs that passed.
+    /// </summary>
+    public static int HeroHeirTakesUp(RuleCtx c, long heroValue, int heirRow, int day)
+    {
+        int n = 0;
+        foreach (var f in c.B.Fiefs.Values.Where(x => x.Holder == heroValue && !x.Forfeited).OrderBy(x => x.Fief).ToList())
+        {
+            f.TookDay = day; n++;
+            var heirId = new EntityId((ulong)heroValue);
+            var entry = c.Chron.Chron(RuleCtx.At(day), "fief_inherited", "ch_rule_fief_inherited", [ChronParam.Person("heir", heirId), ChronParam.Place("place", c.SeatPlace(f.Fief))], [heirId, c.FiefKey(f.Fief)],
+                [new Cause(CauseKind.Family, null, NoteKey: "ch_note_lord_died")]);
+            var overlord = c.OverlordOf(f);
+            long relief = RuleMath.Relief(f.LastYearReceipts, c.S.ReliefPct);
+            if (!overlord.IsNone && relief > 0)
+                AddDue(c, DueKind.Relief, c.HouseholdOf(heroValue), overlord, relief, f.Fief, day + c.S.ReliefDueSeasons * TimeConst.DaysPerSeason, entry);
+            if (heirRow >= 0 && heirRow < c.People.Count && c.People.AgeYears(heirRow, day) < c.S.WardAgeYears) BeginWardship(c, f, heirRow, day, entry);
+        }
+        return n;
+    }
+
     /// <summary>An heir under 16: the overlord takes the fief's receipts until the heir comes of age, paying the guardian a fifth for the keep (RI-5).</summary>
     public static void BeginWardship(RuleCtx c, FiefRow f, int heirRow, int day, EntityId cause)
     {
