@@ -391,9 +391,10 @@ public class PoliticsTests(ITestOutputHelper output)
         {
             using var r = new PoliticsRig();
             long h0 = r.R.Runtime.HourDone + (24 - r.R.Runtime.HourDone % 24) % 24;
-            var audit0 = r.State.Economy!.Ledger.Audit();
+            var audit0 = r.State.Economy!.Ledger.Audit(); long mint0 = r.State.Economy.Ledger.Sourced(SourceReason.Mint).Mites;
             r.R.Runtime.AdvanceTo(GameTime.FromGameHours(h0 + 24 * 62));                              // past a season start or two
-            Assert.True(r.State.Economy!.Ledger.Audit().IsConserved); Assert.Equal(audit0.Minted, r.State.Economy.Ledger.Audit().Minted);
+            // politics mints nothing: whatever was minted is the realm's mint striking delivered metal (P7-CN1)
+            Assert.True(r.State.Economy!.Ledger.Audit().IsConserved); Assert.Equal(audit0.Minted.Mites + r.State.Economy.Ledger.Sourced(SourceReason.Mint).Mites - mint0, r.State.Economy.Ledger.Audit().Minted.Mites);
             Assert.NotNull(r.State.Politics); Assert.True(r.B.Imported); Assert.True(r.B.LastSeasonDay > 0);
             output.WriteLine($"wars {r.B.Wars.Count} pacts {r.B.Pacts.Count} cbs {r.B.Cbs.Count} mods {r.B.Mods.Count} log {r.B.Log.Count} known {r.B.Known.Count}");
             return r.B.Hash().ToString("X") + "/" + r.State.Chronicle.Hash();
