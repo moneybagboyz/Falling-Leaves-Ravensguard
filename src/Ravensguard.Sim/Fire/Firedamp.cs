@@ -76,7 +76,7 @@ public sealed partial class FireWorld
         foreach (var p in _people.OrderBy(p => p.Person))
         {
             if (Math.Abs(p.Z - z) > 1) continue;
-            int d = (int)Math.Sqrt((double)(p.X - x) * (p.X - x) + (double)(p.Y - y) * (p.Y - y));
+            int d = (int)IntMath.Isqrt((long)(p.X - x) * (p.X - x) + (long)(p.Y - y) * (p.Y - y));
             int inten = Firedamp.IntensityAt(d);
             if (inten == 0) continue;
             BurnAt(p, inten, blast, s, sec); burned++;

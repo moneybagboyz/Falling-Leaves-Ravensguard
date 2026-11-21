@@ -34,16 +34,18 @@ public sealed partial class FireWorld
     public Ravensguard.Sim.Construction.ITileSink? Tiles { get; set; }
     /// <summary>The pieces of generated buildings in a box of the chunk store, so the room world knows them: (x0, y0, x1, y1) inclusive, to cell edits. Null: none to adopt.</summary>
     public Func<int, int, int, int, IEnumerable<CellEdit>>? Adopt { get; set; }
+    /// <summary>Whether construction built the piece at a cell (structure or fixture layer), so the room world rebuilds it itself at load and the fire need not keep it. Null: none is.</summary>
+    public Func<int, int, int, bool, bool>? IsBuilt { get; set; }
     /// <summary>The people the fire can reach, appended to the list (the live tier's bubble and the hero).</summary>
     public Action<List<FirePerson>>? PeopleNear { get; set; }
     public Action<IncidentEnded>? Ended { get; set; }
 
-    private readonly HashSet<long> _adopted = [];
     private readonly Dictionary<string, int> _classOf = new(StringComparer.Ordinal);
 
     public FireWorld(FireBook book, RoomWorld rooms, FuelTable fuels, ulong seed)
     {
         Book = book; Rooms = rooms; Fuels = fuels; Seed = seed;
+        book.Flush = SnapshotAdopted;
     }
 
     public const int GroanFloorStoreys = 3;
@@ -141,7 +143,7 @@ public sealed partial class FireWorld
             for (int bx = Div(x - 16); bx <= Div(x + 16); bx++)
             {
                 long k = ((long)bx << 32) ^ (uint)by;
-                if (!_adopted.Add(k)) continue;
+                if (!Book.AdoptedBlocks.Add(k)) continue;
                 var edits = Adopt(bx * AdoptBlock, by * AdoptBlock, bx * AdoptBlock + AdoptBlock - 1, by * AdoptBlock + AdoptBlock - 1).ToList();
                 if (edits.Count == 0) continue;
                 var change = Rooms.Apply(edits);
@@ -151,6 +153,50 @@ public sealed partial class FireWorld
                 if (slated.Count > 0) Rooms.RoofOver("roof_slate", slated);
             }
     }
+
+    /// <summary>
+    /// The load path of adoption (S1): puts the adopted pieces the book kept back into the room world exactly as they were at the save (roofs that burnt stay burnt, structure ids as they were,
+    /// so building fires keyed by structure and the daily rolls over dwellings continue), then restores the structure partition and finds the rooms again. Call once, after construction's
+    /// room world is rebuilt and before the first step.
+    /// </summary>
+    public void RestoreAdopted()
+    {
+        if (Book.AdoptedBlocks.Count == 0 && Book.AdoptedCells.Count == 0) return;
+        var before = Rooms.StructureParts();
+        var edits = new List<CellEdit>(Book.AdoptedCells.Count * 2);
+        foreach (var (k, (s, f)) in Book.AdoptedCells)
+        {
+            var (x, y, z) = Unpack(k);
+            if (s != null) edits.Add(new CellEdit(x, y, z, CellLayer.Structure, s));
+            if (f != null) edits.Add(new CellEdit(x, y, z, CellLayer.Fixture, f));
+        }
+        if (edits.Count > 0) Rooms.Apply(edits);
+        var named = new HashSet<int>(Book.AdoptedParts.Select(p => p.Id));
+        var parts = new List<(int Id, long[] Cells)>(Book.AdoptedParts);
+        parts.AddRange(before.Where(p => !named.Contains(p.Id)));
+        Rooms.RestoreStructures(parts, Math.Max(Book.AdoptedNextId, Rooms.NextStructureId));
+        Rooms.RebuildAll();
+    }
+
+    /// <summary>Copies what the book keeps of the adopted blocks from the room world (run when the book is saved): the pieces construction did not build, and the structures that touch the blocks.</summary>
+    private void SnapshotAdopted()
+    {
+        Book.AdoptedCells.Clear(); Book.AdoptedParts = [];
+        if (Book.AdoptedBlocks.Count == 0) return;
+        foreach (var (k, st, fi) in Rooms.CellPieces())
+        {
+            var (x, y, z) = Unpack(k);
+            if (!Book.AdoptedBlocks.Contains(BlockKey(x, y))) continue;
+            var s = st != null && IsBuilt?.Invoke(x, y, z, false) == true ? null : st;
+            var f = fi != null && IsBuilt?.Invoke(x, y, z, true) == true ? null : fi;
+            if (s != null || f != null) Book.AdoptedCells[k] = (s, f);
+        }
+        foreach (var (id, cells) in Rooms.StructureParts())
+            if (cells.Any(k => { var (x, y, _) = Unpack(k); return Book.AdoptedBlocks.Contains(BlockKey(x, y)); })) Book.AdoptedParts.Add((id, cells));
+        Book.AdoptedNextId = Rooms.NextStructureId;
+    }
+
+    private static long BlockKey(int x, int y) => ((long)Div(x) << 32) ^ (uint)Div(y);
 
     private bool StoneWalled(int structure)
     {
@@ -245,7 +291,7 @@ public sealed partial class FireWorld
     {
         if (w.WindMmS < 2000) return 1000;
         int toX = -SinPm(w.WindFromDeg), toY = CosPm(w.WindFromDeg);
-        long nn = Math.Max(1, (long)Math.Sqrt((double)dx * dx + (double)dy * dy) * 1000);
+        long nn = Math.Max(1, IntMath.Isqrt((long)dx * dx + (long)dy * dy) * 1000);
         long cos = ((long)dx * toX + (long)dy * toY) * 1000 / nn;          // cosine of the angle between the push and the wind, permille
         if (cos >= 500) return 2000;
         if (cos <= -500) return spark ? 150 : 300;

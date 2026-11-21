@@ -57,6 +57,7 @@ public static class FireWiring
         var book = state.Fire ??= new FireBook();
         var fw = new FireWorld(book, rooms, fuels, state.Seed);
         Hook(fw, cw, state, content, weather, home);
+        fw.RestoreAdopted();                                  // S1: the generated buildings a live fire adopted before the save, as they were
         home.Sim.Set(fw);
         return fw;
     }
@@ -68,6 +69,7 @@ public static class FireWiring
             fw.Destroy = (x, y, z, fixture, burnt, sec, cause) => cw.FireDestroy(x, y, z, fixture, burnt, fw.Fuels.BurnableGoodClasses, sec, cause);
             fw.Tiles = cw.Tiles;
             fw.StoresAt = (x, y, z) => StoresOn(cw, x, y, z);
+            fw.IsBuilt = (x, y, z, fixture) => cw.BuiltAt(x, y, z, fixture ? GhostSlot.Fixture : GhostSlot.Structure) != null;
         }
         fw.Wounds = state.Wounds;
         fw.PlanOf = _ => Humans.GetValue(content, d => new CombatTables(d).V2.Plan("human"));

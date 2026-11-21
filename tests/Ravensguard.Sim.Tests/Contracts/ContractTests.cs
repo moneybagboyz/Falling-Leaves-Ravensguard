@@ -30,7 +30,7 @@ public class ContractTests(ITestOutputHelper output)
         public Dictionary<EntityId, PurseId> Owners = [];
         public Dictionary<(EntityId, ushort), long> Qty = [];
         public List<StockNeed> Needs = []; public List<CaravanLeaving> Cars = []; public List<BandSeen> Bands = []; public List<CaptiveHeld> Captives = []; public List<HandsShort> Hands = []; public List<BuildWanted> Builds = [];
-        public HashSet<ulong> Dead = [], Held = []; public Dictionary<ulong, (bool, ulong)> Free = [];
+        public HashSet<ulong> Dead = [], Held = []; public Dictionary<ulong, CaptiveEnding> Free = []; public Dictionary<ulong, int> HeldDay = [], DeadDay = [];
         public List<CompanyInfo> Companies = []; public int Risk = 20;
         public bool Merchant; public int FairIn = -1; public bool Charter = true;
         public Dictionary<(ulong, ulong), ulong> Records = [];
@@ -54,7 +54,7 @@ public class ContractTests(ITestOutputHelper output)
                 StockNeeds = () => Needs, MerchantHolds = (_, _, _) => Merchant,
                 Caravans = () => Cars, Bands = () => Bands, Captives = () => Captives, Hands = () => Hands, Builds = () => Builds,
                 StoreQty = (o, g) => Qty.GetValueOrDefault((o, g)),
-                IsDead = p => Dead.Contains(p.Value), IsHeld = p => Held.Contains(p.Value), CaptiveFree = p => Free.TryGetValue(p.Value, out var f) ? (f.Item1, new EntityId(f.Item2)) : (false, EntityId.None),
+                IsDead = p => Dead.Contains(p.Value), IsHeld = p => Held.Contains(p.Value), CaptiveFree = p => Free.GetValueOrDefault(p.Value), HeldSince = p => HeldDay.GetValueOrDefault(p.Value, int.MaxValue), DeadSince = p => DeadDay.GetValueOrDefault(p.Value, int.MaxValue),
                 Companies = () => Companies, RiskPct = (c, k) => Risk,
                 CharterTowns = () => Charter ? [0] : [], FairInDays = d => FairIn, Fighters = s => Fighters,
                 RatingOf = p => Rating.GetValueOrDefault(p.Value, 100),
@@ -164,6 +164,62 @@ public class ContractTests(ITestOutputHelper output)
         var b2 = ContractSystem.Post(rk.W, rk.B, "bounty_dead_or_alive", Fief, rk.Treasury, 0, 2_000, 8, need, k => k.Target = rk.Id(31))!;
         ContractSystem.Take(rk.W, rk.B, b2.Id, Hero, rk.HeroPurse, 8); rk.Dead.Add(rk.Id(31).Value); ContractSystem.Verify(rk.W, rk.B, 9); Assert.Equal(WorkState.Done, b2.State);
         Assert.True(rk.L.Audit().IsConserved);
+    }
+
+    // ------------------------------------------------------------------ S2
+
+    [Theory]
+    [InlineData("released")]
+    [InlineData("ransomed")]
+    [InlineData("escaped")]
+    [InlineData("dead")]
+    public void S2_ARescueContractPaysOnlyForARescueByTheTaker_AnyOtherEndingClosesItUnansweredAndTheEscrowGoesHome(string how)
+    {
+        var r = new Rig(); var captive = r.Id(30);
+        var need = ContractSystem.NeedEntry(r.W, "band_seen", 0, 0, []);
+        var c = ContractSystem.Post(r.W, r.B, "rescue_captive", Fief, r.Treasury, 0, 3_000, 10, need, k => k.Target = captive)!;
+        Assert.Equal(TakeResult.Taken, ContractSystem.Take(r.W, r.B, c.Id, Hero, r.HeroPurse, 5));
+        long hero0 = r.L.Balance(r.HeroPurse).Mites, treasury0 = r.L.Balance(r.Treasury).Mites;
+        r.Free[captive.Value] = new CaptiveEnding(true, true, "", -1, false);
+        ContractSystem.Verify(r.W, r.B, 6); Assert.Equal(WorkState.Taken, c.State);                 // still held: it stands
+        r.Free[captive.Value] = new CaptiveEnding(true, false, how, 6, false);                      // the band let him go, his family paid, he ran, he died
+        ContractSystem.Verify(r.W, r.B, 7);
+        Assert.NotEqual(WorkState.Done, c.State); Assert.True(c.Closed);
+        Assert.Equal(hero0, r.L.Balance(r.HeroPurse).Mites);                                         // no pay for doing nothing
+        Assert.Equal(treasury0 + c.PayMites, r.L.Balance(r.Treasury).Mites);                         // the escrow went home
+        Assert.True(r.L.Audit().IsConserved);
+    }
+
+    [Fact]
+    public void S2_ARescueByTheHeroAfterTheContractWasTaken_Pays_ButOneBeforeItDoesNot()
+    {
+        var r = new Rig(); var captive = r.Id(30);
+        var need = ContractSystem.NeedEntry(r.W, "band_seen", 0, 0, []);
+        var c = ContractSystem.Post(r.W, r.B, "rescue_captive", Fief, r.Treasury, 0, 3_000, 10, need, k => k.Target = captive)!;
+        Assert.Equal(TakeResult.Taken, ContractSystem.Take(r.W, r.B, c.Id, Hero, r.HeroPurse, 5));
+        long hero0 = r.L.Balance(r.HeroPurse).Mites;
+        r.Free[captive.Value] = new CaptiveEnding(true, false, "rescued", 4, true);                  // freed before it was taken: not his
+        Assert.Null(ContractSystem.Check(r.W, c, 6));
+        r.Free[captive.Value] = new CaptiveEnding(true, false, "rescued", 6, true);
+        ContractSystem.Verify(r.W, r.B, 6);
+        Assert.Equal(WorkState.Done, c.State); Assert.Equal(hero0 + c.PayMites, r.L.Balance(r.HeroPurse).Mites);
+        Assert.True(r.L.Audit().IsConserved);
+    }
+
+    [Fact]
+    public void S2_ABountyOnAManAlreadyInTheGaolOrBuriedWhenItWasTaken_PaysNothing()
+    {
+        var r = new Rig(); var culprit = r.Id(30); var dead = r.Id(31);
+        var need = ContractSystem.NeedEntry(r.W, "band_seen", 0, 0, []);
+        var b = ContractSystem.Post(r.W, r.B, "hunt_man", Fief, r.Treasury, 0, 3_000, 5, need, k => k.Target = culprit)!;
+        var b2 = ContractSystem.Post(r.W, r.B, "bounty_dead_or_alive", Fief, r.Treasury, 0, 2_000, 5, need, k => k.Target = dead)!;
+        r.Held.Add(culprit.Value); r.HeldDay[culprit.Value] = 3; r.Dead.Add(dead.Value); r.DeadDay[dead.Value] = 3;
+        ContractSystem.Take(r.W, r.B, b.Id, Hero, r.HeroPurse, 5); ContractSystem.Take(r.W, r.B, b2.Id, Hero, r.HeroPurse, 5);
+        long hero0 = r.L.Balance(r.HeroPurse).Mites;
+        ContractSystem.Verify(r.W, r.B, 6);
+        Assert.NotEqual(WorkState.Done, b.State); Assert.NotEqual(WorkState.Done, b2.State);
+        Assert.True(r.L.Balance(r.HeroPurse).Mites <= hero0);
+        Assert.True(r.L.Audit().IsConserved);
     }
 
     // ------------------------------------------------------------------ CR-5

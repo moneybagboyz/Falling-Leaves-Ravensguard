@@ -492,6 +492,7 @@ public static partial class WorldSave
             Standing = w.Standing is { IsEmpty: false } stb ? StandingSave.Capture(stb) : null,                                      // P6-A3
             Medicine = (w.Medicine ?? w.HomeRecords?.Sim.Get<Ravensguard.Sim.Medicine.PhysicianBook>()) is { IsBlank: false } mdb ? mdb.Capture() : null,   // P6-B1
             Fire = w.Fire is { IsEmpty: false } frb ? FireSave.Capture(frb) : null,                                                   // P6-B5
+            FireAdopted = w.Fire is { IsEmpty: false } fab ? FireAdoptedSave.Capture(fab) : null,                                     // S1
             Law = w.Law is { IsEmpty: false } lwb ? CrimeSave.Capture(lwb) : null,                                                    // P6-B2
             Justice = w.Justice is { IsEmpty: false } jub ? JusticeSave.Capture(jub) : null,                                           // P6-C1
             Contracts = w.Contracts is { IsEmpty: false } ctb ? ContractSave.Capture(ctb) : null,                                      // P6-C2
@@ -680,7 +681,7 @@ public static partial class WorldSave
             Wills = file.Sections.ContainsKey(WillsSave.SectionName) ? Decode<WillsSave>(file, WillsSave.SectionName, compressed: true).Restore() : null,                       // P5-H
             Standing = file.Sections.ContainsKey(StandingSave.SectionName) ? Decode<StandingSave>(file, StandingSave.SectionName, compressed: true).Restore() : null,          // P6-A3
             Medicine = file.Sections.ContainsKey(Ravensguard.Sim.Medicine.MedicineSave.SectionName) ? Ravensguard.Sim.Medicine.PhysicianBook.Restore(Decode<Ravensguard.Sim.Medicine.MedicineSave>(file, Ravensguard.Sim.Medicine.MedicineSave.SectionName, compressed: true)) : null,   // P6-B1
-            Fire = file.Sections.ContainsKey(FireSave.SectionName) ? Decode<FireSave>(file, FireSave.SectionName, compressed: true).Restore() : null,                            // P6-B5
+            Fire = RestoreFire(file),                                                                                                    // P6-B5 (+ S1: the adopted buildings)
             Law = file.Sections.ContainsKey(CrimeSave.SectionName) ? Decode<CrimeSave>(file, CrimeSave.SectionName, compressed: true).Restore() : null,                       // P6-B2
             Justice = file.Sections.ContainsKey(JusticeSave.SectionName) ? Decode<JusticeSave>(file, JusticeSave.SectionName, compressed: true).Restore() : null,              // P6-C1
             Contracts = file.Sections.ContainsKey(ContractSave.SectionName) ? Decode<ContractSave>(file, ContractSave.SectionName, compressed: true).Restore() : null,   // P6-C2
@@ -755,6 +756,14 @@ public static partial class WorldSave
         else { var goods = new Ravensguard.Sim.Goods.GoodCatalog(content); t = new Ravensguard.Sim.Travel.TravelState(content, seed, goods, new Ravensguard.Sim.Goods.MassLedger(goods.Count)); }
         m.Restore(t);
         return t;
+    }
+
+    private static Ravensguard.Sim.Burning.FireBook? RestoreFire(SaveFile file)
+    {
+        if (!file.Sections.ContainsKey(FireSave.SectionName)) return null;
+        var book = Decode<FireSave>(file, FireSave.SectionName, compressed: true).Restore();
+        if (file.Sections.ContainsKey(FireAdoptedSave.SectionName)) Decode<FireAdoptedSave>(file, FireAdoptedSave.SectionName, compressed: true).RestoreInto(book);      // S1
+        return book;
     }
 
     private static T Decode<T>(SaveFile f, string name, bool compressed)
@@ -912,6 +921,7 @@ public sealed class LiveCapture
     internal WillsSave? Wills { get; init; }                                                                                 // P5-H
     internal StandingSave? Standing { get; init; }                                                                           // P6-A3
     internal Ravensguard.Sim.Medicine.MedicineSave? Medicine { get; init; }                                                  // P6-B1
+    internal FireAdoptedSave? FireAdopted { get; init; }
     internal FireSave? Fire { get; init; }                                                                                   // P6-B5
     internal CrimeSave? Law { get; init; }                                                                                   // P6-B2
     internal JusticeSave? Justice { get; init; }                                                                             // P6-C1
@@ -997,6 +1007,7 @@ public sealed class LiveCapture
         if (Standing != null) sections.Add(new(StandingSave.SectionName, SaveCodec.SerializeCompressed(Standing)));         // P6-A3 (optional, no bump)
         if (Medicine != null) sections.Add(new(Ravensguard.Sim.Medicine.MedicineSave.SectionName, SaveCodec.SerializeCompressed(Medicine)));   // P6-B1 (optional, no bump)
         if (Fire != null) sections.Add(new(FireSave.SectionName, SaveCodec.SerializeCompressed(Fire)));                      // P6-B5 (optional, no bump)
+        if (FireAdopted != null) sections.Add(new(FireAdoptedSave.SectionName, SaveCodec.SerializeCompressed(FireAdopted)));  // S1 (optional: only a fire that adopted buildings)
         if (Law != null) sections.Add(new(CrimeSave.SectionName, SaveCodec.SerializeCompressed(Law)));                      // P6-B2 (optional, no bump)
         if (Justice != null) sections.Add(new(JusticeSave.SectionName, SaveCodec.SerializeCompressed(Justice)));             // P6-C1 (optional, no bump)
         if (Contracts != null) sections.Add(new(ContractSave.SectionName, SaveCodec.SerializeCompressed(Contracts)));        // P6-C2 (optional, no bump)

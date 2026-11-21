@@ -216,8 +216,9 @@ public sealed class RuleBook
     public Loan? LoanById(int serial) { foreach (var l in Loans) if (l.Serial == serial) return l; return null; }
     public DueRow? DueById(int serial) { foreach (var d in Dues) if (d.Serial == serial) return d; return null; }
 
-    public int Opinion(ulong who, ulong of) => Opinions.GetValueOrDefault((who, of));
-    public void AddOpinion(ulong who, ulong of, int delta) { if (who == 0 || of == 0 || delta == 0) return; int v = Math.Clamp(Opinion(who, of) + delta, -1000, 1000); if (v == 0) Opinions.Remove((who, of)); else Opinions[(who, of)] = v; }
+    /// <summary>Opinions are kept under <see cref="Ravensguard.Sim.Politics.Opinions.K"/>: the hero's zero id is stored under his reserved key (S6), so every reader and writer, C3's or D2's, meets the same row.</summary>
+    public int Opinion(ulong who, ulong of) => Opinions.GetValueOrDefault((Ravensguard.Sim.Politics.Opinions.K(who), Ravensguard.Sim.Politics.Opinions.K(of)));
+    public void AddOpinion(ulong who, ulong of, int delta) { if (delta == 0) return; who = Ravensguard.Sim.Politics.Opinions.K(who); of = Ravensguard.Sim.Politics.Opinions.K(of); int v = Math.Clamp(Opinion(who, of) + delta, -1000, 1000); if (v == 0) Opinions.Remove((who, of)); else Opinions[(who, of)] = v; }
 
     /// <summary>The customs rate (percent) a realm's ruler has set, or the default.</summary>
     public int CustomsPct(int realm) => Customs.TryGetValue(realm, out int v) ? v : Settings.CustomsDefaultPct;

@@ -429,6 +429,42 @@ public class RuleTests(ITestOutputHelper output)
         Assert.Equal("ru_loan_lender_short", RuleLoans.Lend(c, poor, ruler, 100_000, 4, LoanSecurity.None, 0, rig.Day).Refusal);
     }
 
+    // ---------------------------------------------------------------- Phase 6 review S6: the hero's zero id in the opinion store
+
+    [Fact]
+    public void S6_TheHerosOpinionsAreKeptUnderOneKey_WhoeverWritesOrReadsThem()
+    {
+        using var rig = RuleRig.Make(); var hero = EconomyState.HeroOwner; ulong lord = 12345;
+        Assert.Equal(0UL, hero.Value);
+        rig.B.AddOpinion(lord, hero.Value, 20);                                                  // C3 writes under his raw id ...
+        Assert.Equal(20, rig.B.Opinion(lord, hero.Value));
+        Assert.Equal(20, Ravensguard.Sim.Politics.Opinions.Value(rig.B, lord, hero.Value));      // ... D2 reads under HeroKey: the same row
+        Assert.Equal(20, rig.B.Opinion(lord, Ravensguard.Sim.Politics.Opinions.HeroKey));
+        rig.B.AddOpinion(hero.Value, lord, -30);
+        Assert.Equal(-30, Ravensguard.Sim.Politics.Opinions.Value(rig.B, hero.Value, lord));
+        Assert.DoesNotContain(rig.B.Opinions.Keys, k => k.Who == 0 || k.Of == 0);                // nothing is kept under 0
+    }
+
+    [Fact]
+    public void S6_AHeroWhoDefaultsOnALoan_LosesTheLendersOpinion_AndAHeroWhoseLordThinksHimBadlyIsRefusedACharter()
+    {
+        using var rig = RuleRig.Make(); var c = rig.C; var hero = EconomyState.HeroOwner; rig.Econ.SeedHero(200);
+        var lender = RichLender(rig, c, 100_000); var borrower = Party.OfPerson(hero);
+        var (loan, why) = RuleLoans.Lend(c, lender, borrower, 20_000, 4, LoanSecurity.None, 0, rig.Day);
+        Assert.True(loan != null, why); rig.Drain(c, borrower);
+        RuleLoans.Season(c, rig.Day + 15); RuleLoans.Season(c, rig.Day + 30);
+        Assert.Equal(LoanState.Default, loan!.State);
+        Assert.True(Ravensguard.Sim.Politics.Opinions.Value(rig.B, (ulong)lender.Id, hero.Value) < 0);   // old code: the write was dropped
+        Assert.True(Ravensguard.Sim.Politics.Opinions.Value(rig.B, hero.Value, (ulong)lender.Id) < 0);
+        // the charter judge reads the same row
+        var (f, x, y) = Site(rig); var fiefKey = rig.Region.Fiefs[f].Id;
+        rig.L.Book.Standing[LandBook.StandingKey(GrantorKind.Fief, f)] = 200;
+        Assert.True(RuleLand.Judge(c, hero, GrantorKind.Fief, f, 5_000, false).Granted);
+        rig.B.AddOpinion(fiefKey.Value, hero.Value, -100);
+        var (granted, key) = RuleLand.Judge(c, hero, GrantorKind.Fief, f, 5_000, false);
+        Assert.False(granted); Assert.Equal("ld_charter_refused_opinion", key);                  // old code: the judge read 0 and granted
+    }
+
     [Fact]
     public void RI14_AMortgagedDeedTwoSeasonsLate_PassesToTheLender_TheCreditClosesAndTheyThinkTheWorseOfEachOther()
     {

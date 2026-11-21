@@ -189,7 +189,7 @@ public sealed partial class FireWorld
     /// <summary>The reference value of a quantity of a good, mites (base price per kg or per piece).</summary>
     public static long ValueMites(GoodCatalog cat, ushort good, long qty)
     {
-        var d = cat.Def(good);
-        return cat.IsPiece(good) ? (long)Math.Round(d.BasePriceMitesPerKg * qty) : (long)Math.Round(d.BasePriceMitesPerKg * qty / 1000.0);
+        long milli = cat.BasePriceMilliMites(good);                                            // the base price in thousandths of a mite, made integer once (S16)
+        return cat.IsPiece(good) ? (milli * qty + 500) / 1000 : (milli * qty + 500_000) / 1_000_000;
     }
 }

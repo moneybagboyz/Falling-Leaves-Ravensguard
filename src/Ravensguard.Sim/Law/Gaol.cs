@@ -140,6 +140,7 @@ public static class Gaol
             if (rec.State is not (CrimeState.Reported or CrimeState.Fled) || !rec.Known || rec.Settlement < 0 || rec.Day >= day) continue;
             var who = new EntityId((ulong)rec.Perpetrator);
             if (w.IsHero(who) || jb.Gaol.ContainsKey(who.Value)) continue;
+            if (w.OnTheRun?.Invoke(who) == true) continue;                       // S5: a runaway on the run is the catchers' (BondDaily.Caught), never both
             int row = w.People.IndexOf(who); if (row < 0 || !w.People.IsAlive(row)) continue;
             if (taken.Contains(who)) continue;
             // a guard of the place awake at the hour (the watch of the culprit's town; the day shift by day, the night men by night)

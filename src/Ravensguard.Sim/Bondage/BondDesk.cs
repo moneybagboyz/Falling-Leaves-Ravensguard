@@ -62,8 +62,8 @@ public static class BondDesk
             {
                 case "buy": return Of(c, Slavery.Buy(bw, book, hero, c.Person, day, c.IssuedSec));
                 case "sell": return Of(c, Slavery.Sell(bw, book, hero, c.Person, c.Settlement, day, c.IssuedSec));
-                case "free": return Of(c, Slavery.Manumit(bw, book, hero, c.Person, day, c.IssuedSec));
-                case "ransom": return Of(c, Slavery.BuyFree(bw, book, hero, c.Person, day, c.IssuedSec));
+                case "free": return Of(c, Slavery.Manumit(bw, book, hero, c.Person, day, c.IssuedSec, st.Law));
+                case "ransom": return Of(c, Slavery.BuyFree(bw, book, hero, c.Person, day, c.IssuedSec, st.Law));
                 case "treat" when f.Length > 1 && int.TryParse(f[1], out int t) && t is >= 0 and <= 2: return Of(c, Slavery.SetTreatment(book, hero, c.Person, (Treatment)t));
                 case "chain" when f.Length > 1: return Of(c, Slavery.SetChain(book, hero, c.Person, f[1] == "1"));
                 case "work" when f.Length > 1 && int.TryParse(f[1], out int w) && Enum.IsDefined((BondWork)w): return Of(c, Slavery.SetWork(book, hero, c.Person, (BondWork)w));
@@ -77,8 +77,8 @@ public static class BondDesk
                     return ran ? R(c, HeroResultCode.Ok, "sl_party_ran") : R(c, HeroResultCode.Refused, "sl_not_in_party");
                 }
                 case "fought" when f.Length > 1: SlaveParty.AfterFight(book, ctx.Party.Squad, f[1] == "1"); return R(c, HeroResultCode.Ok, "sl_here");
-                case "here": return Here(bw, book, hero, c, day);
-                case "selfbuy": return Of(c, Slavery.SelfPurchase(bw, book, hero, day, c.IssuedSec));
+                case "here": return Here(bw, book, hero, c, day, st.Law);
+                case "selfbuy": return Of(c, Slavery.SelfPurchase(bw, book, hero, day, c.IssuedSec, st.Law));
                 case "run": return Run(bw, st, book, hero, c, day);
                 case "escape": return Escape(ctx, bw, st, book, hero, c, day);
                 default: return R(c, HeroResultCode.Invalid, "HERO_MAKES_NO_SENSE");
@@ -88,11 +88,11 @@ public static class BondDesk
     }
 
     /// <summary>He stands in a town: his slaves are there (the law looks at them), and a runaway of his own who has reached a town whose law is none is free.</summary>
-    private static HeroResult Here(BondWorld bw, BondBook book, EntityId hero, HeroCommand c, int day)
+    private static HeroResult Here(BondWorld bw, BondBook book, EntityId hero, HeroCommand c, int day, CrimeBook? crimes)
     {
         if (c.Settlement < 0) return R(c, HeroResultCode.Invalid, "HERO_MAKES_NO_SENSE");
         foreach (var b in book.Bonds.Values.Where(b => b.Owner == hero.Value && !b.InPen)) b.Place = c.Settlement;
-        if (book.Of(hero) is { OnRun: true } && BondDaily.Arrive(bw, book, hero, c.Settlement, day, c.IssuedSec)) return R(c, HeroResultCode.Ok, "sl_free_here");
+        if (book.Of(hero) is { OnRun: true } && BondDaily.Arrive(bw, book, hero, c.Settlement, day, c.IssuedSec, crimes)) return R(c, HeroResultCode.Ok, "sl_free_here");
         return R(c, HeroResultCode.Ok, "sl_here");
     }
 

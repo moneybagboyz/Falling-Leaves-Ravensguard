@@ -102,7 +102,7 @@ public class FaithPoliticsTests(ITestOutputHelper output)
         var (a, b, v, bFief, _, realm, _) = Lords(r);
         var p = FaithOps.Of(st)!; int day = 50;
         var see = Excommunication.SeeFor(p, b.Value, ri, null)!; var bishop = new EntityId((ulong)see.Bishop);
-        var x = Excommunication.Impose(st, r.Content, p, null, b, ri, bishop, EntityId.None, EntityId.None, day);   // by the bishop himself, on his own judgement
+        var x = Excommunication.Impose(st, r.Content, p, null, b, ri, bishop, null, EntityId.None, day);   // by the bishop himself, on his own judgement
         Assert.True(st.Standing!.Marks.IsExcommunicated(b, ri));
         var treasury = led.Open(PurseKind.Treasury, r.Region.Fiefs[bFief.Fief].Id); Fund(r, treasury, 100_000);
         long due = Excommunication.PenanceDue(st, p, b).Sum(d => d.Mites); Assert.True(due >= 10_000);
@@ -118,7 +118,7 @@ public class FaithPoliticsTests(ITestOutputHelper output)
         Assert.False(x.Active);
         // a new bishop's grace: the ban of a dead bishop lapses at a season's check (GracePct), sooner or later
         var p2 = FaithOps.Of(st)!;
-        var y = Excommunication.Impose(st, r.Content, p2, null, v, ri, bishop, EntityId.None, EntityId.None, 60);
+        var y = Excommunication.Impose(st, r.Content, p2, null, v, ri, bishop, null, EntityId.None, 60);
         see.Bishop = -1; var heir = p2.Book.Parishes.Values.First(pa => pa.Priest >= 0 && pa.Priest != (long)bishop.Value); see.Bishop = heir.Priest;
         r.People.Status[r.People.IndexOf(bishop)] = PersonStatus.Dead;
         for (int s = 1; s <= 60 && y.Active; s++) Excommunication.Season(st, r.Content, 60 + s * TimeConst.DaysPerSeason);
@@ -131,7 +131,7 @@ public class FaithPoliticsTests(ITestOutputHelper output)
         using var r = new FaithRig();
         var st = r.State; var hero = r.Hero; var (hs, ri) = r.HeroFaith(); var church = r.Church;
         var p = FaithOps.Of(st)!; var see = church.SeeOf(r.Religions.Get(ri)!.Id, ChurchSeeding.RealmOf(r.Region, hs)) ?? church.Sees.Values.First();
-        Excommunication.Impose(st, r.Content, p, null, hero, ri, new EntityId((ulong)see.Bishop), EntityId.None, EntityId.None, 20);
+        Excommunication.Impose(st, r.Content, p, null, hero, ri, new EntityId((ulong)see.Bishop), null, EntityId.None, 20);
         Assert.False(ChurchServices.Allows(st.Standing, hero, ri, ChurchServices.Service.Burial));
         Assert.True(FaithWiring.OnBurial(st, hero, hs, 21));                                                      // the chronicle says the church refused
         Assert.Contains(st.Chronicle.All, e => e.TypeId == "burial_refused");
@@ -397,6 +397,53 @@ public class FaithPoliticsTests(ITestOutputHelper output)
         Assert.Equal("pilgrimage_done", st.Chronicle.Get(cure.Causes[0].EventId!.Value)!.TypeId);                // the faith event came first
     }
 
+    // ------------------------------------------------------------------ the hero's zero id (Phase 6 review S7, S8)
+
+    [Fact]
+    public void S7_TheHeroHealedAfterAPilgrimage_IsNamedInTheCureEntry_AndGainsPiety()
+    {
+        using var r = new FaithRig();
+        var st = r.State; var hero = r.Hero; var (hs, ri) = r.HeroFaith(); var p = FaithOps.Of(st)!; var pol = p.Pol;
+        Assert.Equal(0UL, hero.Value);                                                                            // the premise: the hero's id is the zero id
+        var plan = Ravensguard.Sim.Medicine.MedicineWiring.PlanOf(r.Content, "human")!;
+        var wl = st.Wounds ??= new WoundLedger(st.Seed, SecOf(10)); var book = wl.For(hero.Value, plan, SecOf(10)); book.PainX100 = 0;
+        int before = Piety.Of(p.Book, r.People, hero), cures = 0;
+        for (int d = 0; d < 400 && cures == 0; d++)
+        {
+            pol.Cures.Add(new CureWatch { Person = hero.Value, Day = 1, Settlement = hs, Entry = 0 });
+            cures += Miracles.Daily(st, r.Content, 30 + d);
+        }
+        Assert.Equal(1, cures);
+        var cure = st.Chronicle.All.Single(e => e.TypeId == "miracle_cure");
+        Assert.Contains(cure.Params!, x => x.Name == "doer");                                                      // "{doer}" was missing
+        Assert.Contains(hero, cure.Subjects);
+        Assert.True(Piety.Of(p.Book, r.People, hero) > before);
+    }
+
+    [Fact]
+    public void S8_TheHerosOwnRequestForABan_IsAnAskedBan_AndABannedHeroDoesNotMakeARulerlessRealmHisOwn()
+    {
+        using var r = new FaithRig();
+        var st = r.State; var hero = r.Hero; var rb = st.Rule!; var (hs, ri) = r.HeroFaith(); var p = FaithOps.Of(st)!;
+        var (a, b, v, bFief, vFief, realm, other) = Lords(r);
+        var see = Excommunication.SeeFor(p, b.Value, ri, null)!; var bishop = new EntityId((ulong)see.Bishop);
+        // the hero asks: the entry is the asked kind, naming him
+        Fund(r, FaithOps.PurseOf(st, hero), 20_000); rb.AddOpinion(bishop.Value, hero.Value, 60);
+        rb.Rulers[realm] = (long)b.Value;
+        Assert.Equal("", Excommunication.Request(st, r.Content, hero, b, Cause(st, "oath_broken", b, 38), 40, out var row));
+        var asked = st.Chronicle.All.Last(e => e.TypeId.StartsWith("excommunicat"));
+        Assert.Equal("excommunication_asked", asked.TypeId);
+        Assert.Contains(asked.Params!, x => x.Name == "asker");
+        // the hero banned: a realm with no ruler is not "his realm"
+        rb.Rulers.Remove(other); var pc = PoliticsEngine.Context(r.Sim, st.Politics!, rb, RuleChron.Silent, 41);
+        var rulerless = pc.AliveRealms().Where(x => pc.RulerOf(x) == 0 && !pc.HeroRules(x)).ToList();
+        int cbs = st.Politics!.Cbs.Count;
+        Excommunication.Impose(st, r.Content, p, pc, hero, ri, bishop, null, EntityId.None, 42);
+        foreach (int x in rulerless) foreach (var f in rb.Fiefs.Values.Where(f => f.Realm == x && f.Holder > 0))
+            Assert.Equal(0, Opinions.Standing(st.Politics!, (ulong)f.Holder, 0, "excommunicated"));                // old code: every lord of a ruler-less realm
+        Assert.Equal(cbs, st.Politics!.Cbs.Count);                                                                // and no casus belli against it
+    }
+
     // ------------------------------------------------------------------ FC-14
 
     private static void Populate(FaithRig r)
@@ -408,7 +455,7 @@ public class FaithPoliticsTests(ITestOutputHelper output)
         foreach (int i in Enumerable.Range(0, pt.Count).Where(i => pt.IsAlive(i) && pt.HomeSettlement[i] == town).Take(12)) h.Adherents.Add(pt.IdOf(i).Value);
         var (_, b, _, _, _, _, _) = Lords(r);
         var see = church.SeeOf(r.Religions.Get(ri)!.Id, ChurchSeeding.RealmOf(r.Region, town)) ?? church.Sees.Values.First();
-        Excommunication.Impose(st, r.Content, p, null, b, ri, new EntityId((ulong)see.Bishop), EntityId.None, EntityId.None, 31);
+        Excommunication.Impose(st, r.Content, p, null, b, ri, new EntityId((ulong)see.Bishop), null, EntityId.None, 31);
         church.Pilgrim = new PilgrimRow { Religion = r.Religions.Get(ri)!.Id, Target = town, StartDay = 32, Entry = 5 };                         // a pilgrimage under way
         p.Pol.Relics[88] = new RelicRow { Key = 88, Name = "Bone of Saint Aldric", Religion = r.Religions.Get(ri)!.Id, Holder = 1, Person = r.Hero.Value, Fame = 1, SinceDay = 33 };
         Superstition.Add(p, town, 25);

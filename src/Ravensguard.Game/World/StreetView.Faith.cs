@@ -132,7 +132,7 @@ public partial class StreetView
                 pol.Relics[93] = new RelicRow { Key = 93, Name = "Tooth of Saint Orm", Religion = rid, Holder = 2, At = parish, Fake = true };
                 pol.Miracles.Add(new MiracleRow { Day = day, Settlement = parish, Kind = "fire_stopped", Natural = "ch_note_miracle_stone_wall", Disputed = true });
                 var see = book.SeeOf(religions.Get(ri)?.Id ?? "", ChurchSeeding.RealmOf(rt.State.Population.Region, parish));
-                if (see is { Bishop: >= 0 } && ri >= 0) Excommunication.Impose(rt.State, content, fp, null, party.Hero, ri, new EntityId((ulong)see.Bishop), EntityId.None, EntityId.None, day);
+                if (see is { Bishop: >= 0 } && ri >= 0) Excommunication.Impose(rt.State, content, fp, null, party.Hero, ri, new EntityId((ulong)see.Bishop), null, EntityId.None, day);
             }
             return 0;
         }).GetAwaiter().GetResult();

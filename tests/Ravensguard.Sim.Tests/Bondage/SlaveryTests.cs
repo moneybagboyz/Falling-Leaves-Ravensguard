@@ -212,6 +212,89 @@ public class SlaveryTests(ITestOutputHelper output)
         if (rig.Book.Has(s2)) Assert.Equal(Restraint.Chained, b2.Chain);
     }
 
+    // ------------------------------------------------------------------ S5
+
+    private static (BondRig Rig, EntityId Slave, Bond B) RunawayWithGuards()
+    {
+        var rig = BondRig.Make(arrestPct: 100); var slave = rig.Of(0, 15); var owner = rig.Of(0, 16);
+        rig.P.Occupation[1] = Occupation.Guard; rig.P.Occupation[2] = Occupation.Guard; rig.P.Occupation[3] = Occupation.Guard;
+        var b = Slavery.Make(rig.Bw, rig.Book, slave, rig.H.IdOf(rig.P.Household[rig.P.IndexOf(owner)]), BondKind.Chattel, BondOrigin.Sold, 1, 0, 9_000, 0, 0);
+        b.Chain = Restraint.None; BondDaily.Flee(rig.Bw, rig.Book, rig.Crimes, b, 2, BondRig.Sec(2));
+        Assert.True(b.OnRun); Assert.Single(rig.Crimes.Crimes.Values, c => c.Kind == "runaway");
+        return (rig, slave, b);
+    }
+
+    private static int DailyArrests(BondRig rig, int from, int to)
+    {
+        int n = 0;
+        for (int d = from; d <= to; d++) for (int h = 0; h < 24; h += 6) n += Gaol.Daily(rig.W, rig.Crimes, rig.Jb, d, BondRig.Sec(d, h)).Count;
+        return n;
+    }
+
+    [Fact]
+    public void S5_ARunawayWhoReachesAFreeTown_HasNoRunawayCrimeLeft_SoTheGuardsDoNotGaolHim()
+    {
+        var (rig, slave, b) = RunawayWithGuards();
+        Assert.True(BondDaily.Arrive(rig.Bw, rig.Book, slave, BondRig.None, 5, BondRig.Sec(5), rig.Crimes));
+        Assert.False(rig.Book.Has(slave));
+        Assert.All(rig.Crimes.Crimes.Values.Where(c => c.Kind == "runaway"), c => Assert.True(c.State is CrimeState.Pardoned or CrimeState.Served));
+        Assert.Equal(0, DailyArrests(rig, 6, 12)); Assert.DoesNotContain(slave.Value, rig.Jb.Gaol.Keys);
+    }
+
+    [Fact]
+    public void S5_ARunawayWhoseBondEndsOnTheRun_IsNotArrestedForRunningAway()
+    {
+        var (rig, slave, b) = RunawayWithGuards();
+        b.TermEndDay = 4;                                                                         // the term runs out while he is away (the will and a free town end it the same way)
+        BondDaily.Run(rig.Bw, rig.Book, rig.Crimes, 5);
+        Assert.False(rig.Book.Has(slave));
+        Assert.Equal(0, DailyArrests(rig, 6, 12)); Assert.DoesNotContain(slave.Value, rig.Jb.Gaol.Keys);
+    }
+
+    [Fact]
+    public void S5_ARunawayStillOnTheRunIsTheCatchersBusiness_TheGuardsDoNotGaolHimToo_AndCaughtWithNoBountyClosesTheCharge()
+    {
+        var (rig, slave, b) = RunawayWithGuards();
+        Assert.Equal(0, DailyArrests(rig, 3, 12)); Assert.Empty(rig.Jb.Gaol);                    // never both the gaol and the catchers
+        b.BountyJob = 0;                                                                         // an empty treasury posted no bounty
+        BondDaily.Caught(rig.Bw, rig.Book, rig.Crimes, b, 0, 13, BondRig.Sec(13));
+        Assert.All(rig.Crimes.Crimes.Values.Where(c => c.Kind == "runaway"), c => Assert.Equal(CrimeState.Served, c.State));
+        Assert.Equal(0, DailyArrests(rig, 14, 20));
+    }
+
+    private static void AssertRunawayChargeClosed(BondRig rig, EntityId slave)
+    {
+        Assert.False(rig.Book.Has(slave));
+        Assert.All(rig.Crimes.Crimes.Values.Where(c => c.Kind == "runaway"), c => Assert.Equal(CrimeState.Served, c.State));
+        Assert.Equal(0, DailyArrests(rig, 6, 12)); Assert.DoesNotContain(slave.Value, rig.Jb.Gaol.Keys);
+    }
+
+    [Fact]
+    public void S5b_ARunawayManumittedWhileOnTheRun_HasNoRunawayCrimeLeft()
+    {
+        var (rig, slave, b) = RunawayWithGuards();
+        Assert.True(Slavery.Manumit(rig.Bw, rig.Book, new EntityId(b.Owner), slave, 5, BondRig.Sec(5), rig.Crimes).Ok);
+        AssertRunawayChargeClosed(rig, slave);
+    }
+
+    [Fact]
+    public void S5b_ARunawayWhoBuysHimselfFree_HasNoRunawayCrimeLeft()
+    {
+        var (rig, slave, b) = RunawayWithGuards(); b.Treatment = Treatment.Fair; b.Place = BondRig.Debt;
+        rig.L.Mint(rig.Bw.PeculiumPurse(slave), new Coin(20_000), SourceReason.Seed);
+        Assert.True(Slavery.SelfPurchase(rig.Bw, rig.Book, slave, 5, BondRig.Sec(5), rig.Crimes).Ok);
+        AssertRunawayChargeClosed(rig, slave);
+    }
+
+    [Fact]
+    public void S5b_ARunawayBoughtFreeByAFriend_HasNoRunawayCrimeLeft()
+    {
+        var (rig, slave, b) = RunawayWithGuards(); var payer = rig.Hero;
+        rig.L.Mint(rig.HeroPurse, new Coin(50_000), SourceReason.Seed);
+        Assert.True(Slavery.BuyFree(rig.Bw, rig.Book, payer, slave, 5, BondRig.Sec(5), rig.Crimes).Ok);
+        AssertRunawayChargeClosed(rig, slave);
+    }
+
     // ------------------------------------------------------------------ SL-9
 
     [Fact]

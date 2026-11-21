@@ -29,7 +29,20 @@ public sealed class FireBook
     /// <summary>Structures lost to abstract fires, for the faith hook and the stone-town test (structure id).</summary>
     public List<FireStop> Stops { get; } = [];
 
-    public bool IsEmpty => Cells.Count == 0 && Scars.Count == 0 && Incidents.Count == 0 && Buildings.Count == 0 && Exposed.Count == 0 && Soaked.Count == 0 && Made.Count == 0 && Vented.Count == 0
+    /// <summary>
+    /// The 32 m blocks of generated buildings the live fire adopted into the room world (S1; saved in the optional "fire_adopted" section, which only a fire that adopted something writes), and
+    /// the adopted pieces as of the last <see cref="Sync"/>: a cell's structure and fixture where construction did not build them (key to piece ids), the structures that touch the blocks (id and
+    /// cells) and the room world's next structure id. A load puts them back as they were rather than adopting again from the chunks (a burnt roof must stay burnt).
+    /// </summary>
+    public SortedSet<long> AdoptedBlocks { get; } = [];
+    public SortedDictionary<long, (string? Structure, string? Fixture)> AdoptedCells { get; } = [];
+    public List<(int Id, long[] Cells)> AdoptedParts { get; set; } = [];
+    public int AdoptedNextId { get; set; }
+    internal Action? Flush;
+    /// <summary>Makes the adopted snapshot current (the world sets it to read its room world); a no-op for a book with no world.</summary>
+    public void Sync() => Flush?.Invoke();
+
+    public bool IsEmpty => AdoptedBlocks.Count == 0 && Cells.Count == 0 && Scars.Count == 0 && Incidents.Count == 0 && Buildings.Count == 0 && Exposed.Count == 0 && Soaked.Count == 0 && Made.Count == 0 && Vented.Count == 0
         && Stops.Count == 0 && SecDone < 0 && HourDone < 0;
 
     public bool Burning => Cells.Count > 0;

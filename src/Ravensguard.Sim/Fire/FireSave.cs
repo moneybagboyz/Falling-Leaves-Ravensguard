@@ -37,7 +37,9 @@ public sealed class FireSave
     [Key(13)] public long[][] Stops { get; set; } = [];
     [Key(14)] public string[] StopReasons { get; set; } = [];
 
-    public static FireSave Capture(FireBook b) => new()
+    public static FireSave Capture(FireBook b) { b.Sync(); return CaptureCore(b); }
+
+    private static FireSave CaptureCore(FireBook b) => new()
     {
         SecDone = b.SecDone, HourDone = b.HourDone, LastRainSec = b.LastRainSec, NextSerial = b.NextSerial,
         Cells = [.. b.Cells.Values.Select(c => new long[] { c.Key, (long)c.State, c.Intensity, c.StartS, c.FuelLeftS, (long)c.Fire, c.Class, c.Knock, c.Buckets })],
@@ -109,5 +111,52 @@ public sealed class IncidentRow
         foreach (var f in Fighters) i.Fighters.Add(f);
         foreach (var b in Burned) i.Burned.Add(b);
         return i;
+    }
+}
+
+/// <summary>
+/// The optional "fire_adopted" section (S1): the generated buildings a live fire adopted into the room world, written only by a world that has a "fire" section and adopted something (so a save
+/// with no fire, or an older one, keeps its bytes). The blocks, the pieces as they stood at the save (a table of piece ids, then per cell: key, structure, fixture), the structures that touch the
+/// blocks (id then cells) and the next structure id.
+/// </summary>
+[MessagePackObject]
+public sealed class FireAdoptedSave
+{
+    public const string SectionName = "fire_adopted";
+
+    [Key(0)] public long[] Blocks { get; set; } = [];
+    [Key(1)] public string[] Pieces { get; set; } = [];
+    /// <summary>Per cell: key, 1 + index of the structure piece (0 none), 1 + index of the fixture (0 none).</summary>
+    [Key(2)] public long[][] Cells { get; set; } = [];
+    /// <summary>Per structure: id, then its cells.</summary>
+    [Key(3)] public long[][] Parts { get; set; } = [];
+    [Key(4)] public int NextId { get; set; }
+
+    public static FireAdoptedSave? Capture(FireBook b)
+    {
+        b.Sync();
+        if (b.AdoptedBlocks.Count == 0) return null;
+        var table = new SortedSet<string>(StringComparer.Ordinal);
+        foreach (var (s, f) in b.AdoptedCells.Values) { if (s != null) table.Add(s); if (f != null) table.Add(f); }
+        var pieces = table.ToArray(); var index = new Dictionary<string, int>(StringComparer.Ordinal);
+        for (int i = 0; i < pieces.Length; i++) index[pieces[i]] = i + 1;
+        return new FireAdoptedSave
+        {
+            Blocks = [.. b.AdoptedBlocks], Pieces = pieces, NextId = b.AdoptedNextId,
+            Cells = [.. b.AdoptedCells.Select(kv => new long[] { kv.Key, kv.Value.Structure == null ? 0 : index[kv.Value.Structure], kv.Value.Fixture == null ? 0 : index[kv.Value.Fixture] })],
+            Parts = [.. b.AdoptedParts.Select(p => new long[] { p.Id }.Concat(p.Cells).ToArray())],
+        };
+    }
+
+    public void RestoreInto(FireBook b)
+    {
+        foreach (var k in Blocks) b.AdoptedBlocks.Add(k);
+        foreach (var r in Cells)
+        {
+            if (r.Length < 3 || r[1] < 0 || r[1] > Pieces.Length || r[2] < 0 || r[2] > Pieces.Length) throw new SaveException("Corrupt adopted cell in 'fire_adopted' section.");
+            b.AdoptedCells[r[0]] = (r[1] == 0 ? null : Pieces[r[1] - 1], r[2] == 0 ? null : Pieces[r[2] - 1]);
+        }
+        b.AdoptedParts = [.. Parts.Select(p => p.Length < 1 ? throw new SaveException("Corrupt adopted structure in 'fire_adopted' section.") : ((int)p[0], p[1..]))];
+        b.AdoptedNextId = NextId;
     }
 }

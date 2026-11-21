@@ -34,12 +34,12 @@ public static class BondDaily
             // ---- the owner is dead: the bond passes with the estate, or the will frees it (11)
             if (OwnerGone(bw, owner))
             {
-                if (bw.WillFrees(owner)) { Slavery.Free(bw, book, person, Slavery.Ending.Will, day, sec); ended++; continue; }
+                if (bw.WillFrees(owner)) { Slavery.Free(bw, book, person, Slavery.Ending.Will, day, sec, 0, crimes); ended++; continue; }
                 if (Inherit(bw, book, b, owner, sec)) inherited++;
                 owner = new EntityId(b.Owner);
             }
             // ---- a term that has run out (debt, sentence)
-            if (b.TermEndDay > 0 && day >= b.TermEndDay) { Slavery.Free(bw, book, person, Slavery.Ending.TermEnded, day, sec); ended++; continue; }
+            if (b.TermEndDay > 0 && day >= b.TermEndDay) { Slavery.Free(bw, book, person, Slavery.Ending.TermEnded, day, sec, 0, crimes); ended++; continue; }
             if (b.OnRun) { var r = RunawayDay(bw, book, crimes, b, day, sec); if (r == 1) caught++; else if (r == 2) voided++; continue; }
             // ---- the owner's place and the law of it (4.3)
             int here = bw.PlaceOfOwner(owner);
@@ -57,10 +57,10 @@ public static class BondDaily
             int tip = b.Treatment switch { Treatment.Kind => bw.D.KindTipMites, Treatment.Fair => bw.D.FairTipMites, _ => 0 };
             if (tip > 0 && b.Kind != BondKind.Convict && bw.PurseOf(owner) is { } op && bw.Ledger.Balance(op).Mites >= tip)
                 bw.Ledger.Transfer(op, bw.PeculiumPurse(person), new Coin(tip), TransferReason.Gift);
-            if (b.PriceMites > 0 && bw.Peculium(person) >= b.PriceMites && Slavery.SelfPurchase(bw, book, person, day, sec).Ok) { bought++; ended++; continue; }
+            if (b.PriceMites > 0 && bw.Peculium(person) >= b.PriceMites && Slavery.SelfPurchase(bw, book, person, day, sec, crimes).Ok) { bought++; ended++; continue; }
             // ---- trust: an owner who has come to trust him frees him after a year (4.4)
             if (b.Treatment != Treatment.Harsh && b.Kind != BondKind.Convict && day - b.Since >= bw.D.TrustFreeDays && owner.Kind != IdKind.Other && bw.W.OpinionPm(bw.OwnerPerson(owner), person) >= bw.D.TrustFreePm)
-            { Slavery.Free(bw, book, person, Slavery.Ending.Trust, day, sec); ended++; continue; }
+            { Slavery.Free(bw, book, person, Slavery.Ending.Trust, day, sec, 0, crimes); ended++; continue; }
             // ---- the unhappy who are not chained run (4.4, stream 0x632)
             if (b.Chain == Restraint.None && b.Morale < bw.D.FleeMorale && b.Kind != BondKind.Convict && b.Place >= 0)
             {
@@ -152,7 +152,7 @@ public static class BondDaily
         int priors = crimes.Crimes.Values.Count(c => c.Kind == "slaving" && c.Doer == doer.Value && c.Id != rec.Id);
         if (priors >= 1) bw.W.Marks()?.Outlaw(doer, bw.W.RealmOf(b.Place));
         _ = fief;
-        Slavery.Free(bw, book, person, Slavery.Ending.Law, day, sec, rec.Entry);
+        Slavery.Free(bw, book, person, Slavery.Ending.Law, day, sec, rec.Entry, crimes);
         return true;
     }
 
@@ -187,7 +187,7 @@ public static class BondDaily
         var person = new EntityId(b.Person); var owner = new EntityId(b.Owner);
         int home = bw.PlaceOfOwner(owner);
         if (out0 >= 6 && bw.NearestFreeTown(home) is var free and >= 0 && DetRng.Range(bw.Seed, day, b.Person, RngStreams.RunawayRoll, 2, 0, 1000) < bw.D.CatchPm)
-        { Arrive(bw, book, person, free, day, sec); return 2; }
+        { Arrive(bw, book, person, free, day, sec, crimes); return 2; }
         if (out0 >= bw.D.CatchAfterDays && DetRng.Range(bw.Seed, day, b.Person, RngStreams.RunawayRoll, 1, 0, 1000) < bw.D.CatchPm) { Caught(bw, book, crimes, b, home, day, sec); return 1; }
         return 0;
     }
@@ -204,8 +204,8 @@ public static class BondDaily
         {
             if (collector != Slavery.Nobody && bw.W.PurseOf(collector) is { } pay) paid = Bounties.Collect(bw.W, crimes, new EntityId(b.BountyJob), collector, pay, true, sec);
             else if (bw.W.JobEnv is { } env) bw.W.Jobs.Cancel(env, new EntityId(b.BountyJob), sec);
-            if (crimes.Get(b.RunawayCrime) is { } rec) rec.State = CrimeState.Served;
         }
+        if (crimes?.Get(b.RunawayCrime) is { } rec && rec.State is CrimeState.Reported or CrimeState.Fled or CrimeState.Seen) rec.State = CrimeState.Served;      // S5: caught with or without a bounty, the charge is closed
         b.BountyJob = 0; b.RunawayCrime = 0; b.RunawayDay = 0; b.Chain = Restraint.Chained; b.Place = home; b.Morale = bw.D.MoraleStart;
         if (b.Treatment == Treatment.Harsh) { b.FlogDay = day; bw.W.Marks()?.AddBrand(person, Brand.Runaway); }
         var ps = new List<ChronParam> { ChronParam.Person("person", person) };
@@ -219,11 +219,11 @@ public static class BondDaily
     /// A person stands in a settlement (the hero walked in, a runaway arrived): a runaway who reaches a settlement whose law is none is free there (4.4): the courts do not return slaves, the owner's bounty is
     /// cancelled and the bond is void. A person who is not a runaway is not touched here (the law looks at owners: <see cref="Observe"/>). Returns whether the bond was voided.
     /// </summary>
-    public static bool Arrive(BondWorld bw, BondBook book, EntityId person, int settlement, int day, long sec)
+    public static bool Arrive(BondWorld bw, BondBook book, EntityId person, int settlement, int day, long sec, CrimeBook? crimes = null)
     {
         if (book.Of(person) is not { OnRun: true } b || bw.LawAt(settlement) != SlaveLaw.None) return false;
         b.Place = settlement;
-        Slavery.Free(bw, book, person, Slavery.Ending.Voided, day, sec);
+        Slavery.Free(bw, book, person, Slavery.Ending.Voided, day, sec, 0, crimes);
         return true;
     }
 

@@ -481,6 +481,26 @@ public class FamilyTests(ITestOutputHelper output)
         Assert.True(r.St.Captivity.Captives.Values.Count(x => x.Held) <= r.St.Succession!.Kin.Count);
     }
 
+    [Fact]
+    public void S3_AKidnapBandIsStockedFromRealCoin_SoTheDailyFeedingKeepsTheCaptiveTheWholeHold()
+    {
+        var r = new Rig(band: _ => true); r.GiveRoof(); int day = r.D0 + 3;
+        r.Betroth(day); var c = r.St.Family!.Courtships.Values.Single();
+        for (int d = day; d <= c.WeddingDay; d++) FamilySystem.Daily(r.Fw, d);
+        r.St.Standing ??= new Ravensguard.Sim.Society.StandingBook();
+        r.St.Standing.Renowns[r.HeroId.Value] = new Ravensguard.Sim.Society.RenownRow { SharePm = 500, DecayPm = 1000 };
+        int season = -1;
+        for (int s = c.WeddingDay / 15 + 1; s < c.WeddingDay / 15 + 4000 && season < 0; s++) if (FamilySystem.KidnapDraw(r.Fw.S, r.Fw.Seed, r.HeroId.Value, s, 500)) season = s;
+        var led = r.St.Economy!.Ledger; var sourced = led.Audit().Sourced;
+        Assert.True(FamilySystem.TryKidnap(r.Fw, season * 15, r.Hero, season));
+        Assert.Equal(sourced, led.Audit().Sourced);                                               // the stash moved, it was not created
+        var cap = r.St.Captivity!.Captives.Values.Single(x => x.Held);
+        var law = Ravensguard.Sim.Law.LawWorld.From(r.St, r.W.Content); var cb = new Ravensguard.Sim.Law.CrimeBook(); var jb = new Ravensguard.Sim.Law.JusticeBook();
+        for (int d = 1; d <= 8; d++) Ravensguard.Sim.Law.Gaol.Feed(law, cb, jb, season * 15 + d, (season * 15 + d) * 86_400L);
+        Assert.True(cap.Held, "the kidnappers kept feeding him; nobody was let go 'unfed'");
+        Assert.True(led.Audit().IsConserved);
+    }
+
     private static Ravensguard.Sim.Combat.Aftermath.CaptorKind CaptorKindOf() => Ravensguard.Sim.Combat.Aftermath.CaptorKind.Bandits;
 
     // ---------------------------------------------------------------- the desk and FL-15

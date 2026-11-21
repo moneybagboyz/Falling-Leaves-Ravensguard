@@ -311,7 +311,17 @@ public static class FamilySystem
         var rank = pt.Class[victim] switch { SocialClass.Gentry => CaptiveRank.Knight, SocialClass.Burgher => CaptiveRank.ManAtArms, _ => CaptiveRank.Levy };
         long ransom = Ransom.ForRank(R, rank);
         var band = AftermathCoin.BandId(0x4B1D_0000UL + (ulong)season);
-        w.Ledger.Open(PurseKind.Household, band);
+        var bandPurse = w.Ledger.Open(PurseKind.Household, band);
+        // S3: the band feeds its captive for the whole hold (CJ-16 frees what its stash cannot feed): the keep is taken from the victim's own household, then the hero's purse, as a real transfer (never created coin)
+        long keep = (long)Law.LawContent.From(w.Content).S.RationMites * (R.D.BanditHoldDays + 1);
+        int vh = pt.Household[victim];
+        foreach (var src in new[] { vh >= 0 ? w.HouseholdPurse(vh) : PurseId.None, w.HeroPurse })
+        {
+            if (keep <= 0) break;
+            if (src.IsNone || src == bandPurse) continue;
+            long take = Math.Min(keep, w.Ledger.Balance(src).Mites);
+            if (take > 0 && w.Ledger.Transfer(src, bandPurse, Coin.FromMites(take), AftermathCoin.Plunder)) keep -= take;
+        }
         long sec = day * 86400L + 4 * 3600; int s = pt.HomeSettlement[victim]; var region = w.Pop.Region;
         long px = s >= 0 && s < region.Settlements.Count ? region.Settlements[s].CenterX * 1000L : 0, py = s >= 0 && s < region.Settlements.Count ? region.Settlements[s].CenterY * 1000L : 0;
         int Sk(Skill k) => pt.SkillLevelOf(victim, k);
