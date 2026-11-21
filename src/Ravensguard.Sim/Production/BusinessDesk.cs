@@ -3,6 +3,7 @@ using Ravensguard.Sim.Core;
 using Ravensguard.Sim.Economy;
 using Ravensguard.Sim.Land;
 using Ravensguard.Sim.Prospecting;
+using Ravensguard.Sim.Rule;
 using Ravensguard.Sim.Trade;
 using RegionData = Ravensguard.Sim.WorldGen.Region.Region;
 
@@ -46,6 +47,10 @@ public static class BusinessDesk
     public static HeroCommand At(int settlement, long sec) => Cmd(sec, B("at", settlement));
     public static HeroCommand Pump(EntityId biz, long sec) => Cmd(sec, B("pump", biz.Value));
     public static HeroCommand FromChest(long mites, long sec) => Cmd(sec, B("chest", mites));
+    // ---- economies of scale (P7-ES1): an appointed foreman (the 50-mite day wage, a place in the span of control) and a manufactory licence from the town's lord
+    public static HeroCommand Foreman(EntityId biz, int person, long sec) => Cmd(sec, B("foreman", biz.Value, person));
+    public static HeroCommand Unforeman(EntityId biz, int person, long sec) => Cmd(sec, B("unforeman", biz.Value, person));
+    public static HeroCommand Manufactory(EntityId biz, long sec) => Cmd(sec, B("manufactory", biz.Value));
     // ---- prospecting
     public static HeroCommand Walk(int tile, long sec) => Cmd(sec, P("walk", tile));
     public static HeroCommand Start(ProspectMethod m, int tile, long sec) => Cmd(sec, P("start", (int)m, tile));
@@ -120,6 +125,9 @@ public static class BusinessDesk
                 "at" when p.Length >= 2 && N(1) >= -2 => At(ow, I(1)),
                 "pump" when p.Length >= 2 => ow.Pump(Id(1)),
                 "chest" when p.Length >= 2 && N(1) > 0 => ow.FromChest(N(1)),
+                "foreman" when p.Length >= 3 => ScaleOf(ctx, ow, Id(1), (sw, b) => sw.Appoint(b, I(2))),
+                "unforeman" when p.Length >= 3 => ScaleOf(ctx, ow, Id(1), (sw, b) => sw.Dismiss(b, I(2))),
+                "manufactory" when p.Length >= 2 => ScaleOf(ctx, ow, Id(1), (sw, b) => { sw.Chron = RuleChron.Of(st.Chronicle, st.Ids); return sw.Petition(b, ctx.Party.Hero, ow.HeroPurse, day); }),
                 _ => null,
             };
         }
@@ -127,6 +135,13 @@ public static class BusinessDesk
         if (res.Key.Length == 0) return R(c, HeroResultCode.Ok, HeroText.Empty);
         var code = res.Ok ? HeroResultCode.Ok : res.PriceMoved ? HeroResultCode.PriceMoved : res.CannotAfford ? HeroResultCode.CannotAfford : HeroResultCode.Refused;
         return R(c, code, HeroText.Of(res.Key, res.Args), res.Mites);
+    }
+
+    /// <summary>A scale command on one of the hero's own businesses (P7-ES1).</summary>
+    private static OwnResult ScaleOf(HeroContext ctx, OwnershipWorld ow, EntityId biz, Func<ScaleWorld, Business, OwnResult> act)
+    {
+        if (ow.BusinessOf(biz) is not { } b || !ow.IsHeroOwner(b)) return OwnResult.No("bz_not_yours");
+        return act(ScaleWiring.For(ctx.State, ctx.Content), b);
     }
 
     private static OwnResult At(OwnershipWorld ow, int settlement) { ow.Book.HeroAt = settlement; return OwnResult.Yes(""); }

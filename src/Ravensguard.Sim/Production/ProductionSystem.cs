@@ -240,23 +240,19 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
                     int skill = r.Skill == Skill.None ? 40 : people.SkillLevelOf(p, r.Skill);
                     st.MinSkill = Math.Min(st.MinSkill, skill);
                     long per = Station.PerWorkerHour(hm, 1300 - 6 * skill);
-                    int share = served != null && served.TryGetValue(p, out int n) ? 1000 / n : 1000;
                     int slot = Crews.SlotPm(pos++, k);
-                    long c = share == 1000 && slot == 1000 ? per : per * share / 1000 * slot / 1000;
+                    long c = slot == 1000 ? per : per * slot / 1000;
                     var cls = r.Wage; var role = CrewRole.Hand;
-                    if (divided) { role = Crews.RoleOf(sc, skill, people.AgeYears(p, day)); cls = Crews.WageOf(role, r.Wage); }
+                    if (divided) { role = RoleAt(b, p, skill, day); cls = Crews.WageOf(role, r.Wage); }
                     if (role == CrewRole.Master) cM += c; else if (role == CrewRole.Journeyman) cJ += c; else cA += c;
                     int si = b.Staff.IndexOf(p);
-                    if (si >= 0) { long wage = WageOf(b, p, HourlyWage(p, cls, day)); b.Owed[si] += share == 1000 ? wage : wage * share / 1000; }
+                    if (si >= 0) b.Owed[si] += WageOf(b, p, HourlyWage(p, cls, day));
                 }
                 if (visitors != null && visitors.TryGetValue(si0, out var vs))
-                    foreach (int p in vs)
+                    foreach (int p in vs)        // a visiting master spreads his M-step time over the stations he serves; he is paid for the hour at his own station, so no wage here
                     {
                         int skill = r.Skill == Skill.None ? 40 : people.SkillLevelOf(p, r.Skill);
-                        int share = 1000 / served![p];
-                        cM += Station.PerWorkerHour(hm, 1300 - 6 * skill) * share / 1000;
-                        int si = b.Staff.IndexOf(p);
-                        if (si >= 0) b.Owed[si] += WageOf(b, p, HourlyWage(p, Crews.WageOf(CrewRole.Master, r.Wage), day)) * share / 1000;
+                        cM += Station.PerWorkerHour(hm, 1300 - 6 * skill) / served![p];
                     }
                 long rate = divided ? Crews.Rate(cM, cJ, cA, r.Grades, sc.UnsupervisedPm) : cA;
                 st.ProgressMicro += speed == 1000 ? rate : rate * speed / 1000;
@@ -265,13 +261,17 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
         }
     }
 
+    /// <summary>A person's role at a batch of the business: the owner at work is the master of his own house whatever his skill (an owner-operator supervises himself), else by skill and age (<see cref="Crews.RoleOf"/>).</summary>
+    private CrewRole RoleAt(Business b, int person, int skill, int day)
+        => person == b.Owner && b.OwnerWorks ? CrewRole.Master : Crews.RoleOf(Content.Scale, skill, Pop.People.AgeYears(person, day));
+
     /// <summary>Which masters serve more than one station (4.1's reach, ES-3): a master at one station of a divided recipe also visits the business's other credited divided stations that have no master, up to his reach.</summary>
     private void MastersReach(Business b, Span<bool> credited, int ns, int day, out Dictionary<int, int>? served, out Dictionary<int, List<int>>? visitors)
     {
         served = null; visitors = null;
         var people = Pop.People; var sc = Content.Scale;
         var hasMaster = new bool[ns];
-        bool IsMaster(int p, Recipe r) => Crews.RoleOf(sc, r.Skill == Skill.None ? 40 : people.SkillLevelOf(p, r.Skill), people.AgeYears(p, day)) == CrewRole.Master;
+        bool IsMaster(int p, Recipe r) => RoleAt(b, p, r.Skill == Skill.None ? 40 : people.SkillLevelOf(p, r.Skill), day) == CrewRole.Master;
         for (int s = 0; s < ns; s++)
         {
             if (!credited[s]) continue; var r = Content.Recipes.Recipes[b.Stations[s].Recipe];
@@ -310,7 +310,7 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
         {
             if (!credited[s]) continue; var r = Content.Recipes.Recipes[b.Stations[s].Recipe];
             if (!r.Grades.Divided) continue;
-            foreach (int p in b.Stations[s].Crew) if (Crews.RoleOf(sc, r.Skill == Skill.None ? 40 : people.SkillLevelOf(p, r.Skill), people.AgeYears(p, day)) == CrewRole.Master) Overseer(p);
+            foreach (int p in b.Stations[s].Crew) if (RoleAt(b, p, r.Skill == Skill.None ? 40 : people.SkillLevelOf(p, r.Skill), day) == CrewRole.Master) Overseer(p);
         }
         if (Scale != null && Scale.Foremen.TryGetValue(b.Id.Value, out var fm)) foreach (int p in fm) if (b.Staff.Contains(p)) Overseer(p);
         return Crews.SpeedPm(sc, crew, span);
