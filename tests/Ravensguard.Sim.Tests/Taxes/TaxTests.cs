@@ -246,6 +246,25 @@ public class TaxTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public void EA_S13_WithUnrestAttached_ThePhase2EvasionRollIsSkipped_AndTheHookAloneDecides()
+    {
+        (int Evaders, int Hooked) Run(bool hookEvadesAll)
+        {
+            using var w = SoakWorld.Create(withTicker: false); var tax = w.Economy.Taxes; tax.SetAllLevels(TaxLevel.Normal);
+            int called = 0;
+            tax.EvasionHook = (_, _, _) => { called++; return hookEvadesAll; };       // E1's rung-2 roll stands in: it says nobody evades (or everybody)
+            int s = BiggestSettlement(w.Sim); var hh = Prepare(w, s, 100_000);
+            foreach (int h in hh) w.Econ.Grievances[h] = Grievance.Tax;
+            w.Sim.State.Taxes.Rung[s] = 2;
+            tax.CollectSettlement(s, Now(w.Sim), new RegionOutbox(w.Sim.Ids));
+            return (w.Sim.State.Taxes.Arrears.Count(kv => kv.Value.ArrHearth == 200), called);
+        }
+        var none = Run(false); var all = Run(true);
+        Assert.Equal(0, none.Evaders);                                                // fails before P7-0B: Phase 2's own roll still evaded about 30 percent
+        Assert.True(none.Hooked > 0); Assert.Equal(all.Hooked, all.Evaders);          // every evader is the hook's
+    }
+
+    [Fact]
     public void G_T11_TheLevy_IsAtenthOfTheHouseholdsInPeace_AndAFifthAtWar()
     {
         using var w = SoakWorld.Create(withTicker: false); var tax = w.Economy.Taxes;

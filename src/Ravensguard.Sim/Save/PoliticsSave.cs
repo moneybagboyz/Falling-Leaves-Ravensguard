@@ -36,7 +36,7 @@ public sealed class PoliticsSave
     /// <summary>Per log line: day, fief, lord, entry.</summary>
     [Key(11)] public long[][] Log { get; set; } = [];
     [Key(12)] public string[] LogText { get; set; } = [];
-    /// <summary>Counters: last season day, last decay day, next pact, war, cb, manor, imported.</summary>
+    /// <summary>Counters: last season day, last decay day, next pact, war, cb, manor, imported; then (P7-0B) pairs of history ruler id and the day he died of age.</summary>
     [Key(13)] public long[] Counters { get; set; } = [];
 
     public static PoliticsSave Capture(PoliticsBook b)
@@ -57,7 +57,7 @@ public sealed class PoliticsSave
             Known = [.. b.Known.Values.Select(k => new long[] { k.Observer, k.About, k.Strength, k.TreasurySeasons, k.Day })],
             Log = [.. log.Select(l => new long[] { l.Day, l.Fief, (long)l.Lord, (long)l.Entry })],
             LogText = [.. log.Select(l => l.Action + "|" + l.Note)],
-            Counters = [b.LastSeasonDay, b.LastDecayDay, b.NextPact, b.NextWar, b.NextCb, b.NextManor, b.Imported ? 1 : 0],
+            Counters = [b.LastSeasonDay, b.LastDecayDay, b.NextPact, b.NextWar, b.NextCb, b.NextManor, b.Imported ? 1 : 0, .. b.RulerDeaths.SelectMany(kv => new long[] { (long)kv.Key, kv.Value })],   // P7-0B: old-age deaths of history's rulers ride in the tail, so a save without any keeps its bytes
         };
     }
 
@@ -65,6 +65,7 @@ public sealed class PoliticsSave
     {
         if (Counters.Length < 7 || Mods.Length != ModKinds.Length || Realms.Length != RealmNames.Length || Log.Length != LogText.Length) throw new SaveException("Corrupt 'diplomacy' section in save.");
         var b = new PoliticsBook { LastSeasonDay = (int)Counters[0], LastDecayDay = (int)Counters[1], NextPact = (int)Counters[2], NextWar = (int)Counters[3], NextCb = (int)Counters[4], NextManor = (int)Counters[5], Imported = Counters[6] != 0 };
+        for (int i = 7; i + 1 < Counters.Length; i += 2) b.RulerDeaths[(ulong)Counters[i]] = (int)Counters[i + 1];
         foreach (var v in Pacts)
         {
             if (v.Length < 11) throw new SaveException("Corrupt pact in save.");

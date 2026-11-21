@@ -188,10 +188,16 @@ public static class Gaol
         return fed;
     }
 
+    /// <summary>
+    /// S10 (P7-0B): a ration is bought, never burned. The baker's (or nearest baker's) purse is paid; with none in the region the seat's treasury is paid by transfer, and a treasury that is itself the payer
+    /// keeps its coin (it bought the bread from its own stores). <c>SinkReason.Burn</c> stays a test path.
+    /// </summary>
     private static bool Pay(LawWorld w, PurseId from, int settlement, long ration)
     {
-        if (w.RationPayee(settlement) is { } baker && baker != from) return w.Ledger!.Transfer(from, baker, Coin.FromMites(ration), TransferReason.Trade);
-        return w.Ledger!.Sink(from, Coin.FromMites(ration), SinkReason.Burn);
+        var coin = Coin.FromMites(ration);
+        if (w.RationPayee(settlement) is { } baker && baker != from) return w.Ledger!.Transfer(from, baker, coin, TransferReason.Trade);
+        if (w.TreasuryOf?.Invoke(settlement) is { } seat) return seat == from || w.Ledger!.Transfer(from, seat, coin, TransferReason.Trade);
+        return w.Ledger!.Balance(from).Mites >= ration;
     }
 
     /// <summary>

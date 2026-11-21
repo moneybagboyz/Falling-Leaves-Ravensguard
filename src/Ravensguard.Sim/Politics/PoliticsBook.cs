@@ -138,6 +138,8 @@ public sealed class PoliticsBook
     public readonly List<Petition> Petitions = [];
     public readonly SortedDictionary<(int Observer, int About), KnownFact> Known = [];
     public readonly List<LordLog> Log = [];
+    /// <summary>P7-0B: history rulers who died of old age in play (notable id to the day); history itself is not changed. Saved in the counters' tail.</summary>
+    public readonly SortedDictionary<ulong, int> RulerDeaths = [];
     /// <summary>The day of the last season step settled, and of the last opinion decay.</summary>
     public int LastSeasonDay = -1, LastDecayDay = -1;
     public int NextPact = 1, NextWar = 1, NextCb = 1, NextManor = 1;
@@ -147,7 +149,7 @@ public sealed class PoliticsBook
     public const int LogKeep = 64;
 
     public bool IsEmpty => Pacts.Count == 0 && Wars.Count == 0 && Cbs.Count == 0 && Mods.Count == 0 && Realms.Count == 0 && Oaths.Count == 0 && Manors.Count == 0 && Petitions.Count == 0 && Known.Count == 0
-        && Log.Count == 0 && LastSeasonDay < 0 && LastDecayDay < 0 && !Imported;
+        && Log.Count == 0 && RulerDeaths.Count == 0 && LastSeasonDay < 0 && LastDecayDay < 0 && !Imported;
 
     public RealmRow RealmOf(int realm) { if (!Realms.TryGetValue(realm, out var r)) Realms[realm] = r = new RealmRow { Realm = realm }; return r; }
     public RealmRow? RealmIfAny(int realm) => Realms.GetValueOrDefault(realm);
@@ -181,6 +183,7 @@ public sealed class PoliticsBook
         foreach (var p in Petitions) { M((long)p.Person); M(p.Fief); M(p.Day); }
         foreach (var ((a, b), k) in Known) { M(a); M(b); M(k.Strength); M(k.TreasurySeasons); M(k.Day); }
         foreach (var l in Log) { M(l.Day); M(l.Fief); M((long)l.Lord); S(l.Action); S(l.Note); M((long)l.Entry); }
+        foreach (var (k, d) in RulerDeaths) { M((long)k); M(d); }
         M(LastSeasonDay); M(LastDecayDay); M(NextPact); M(NextWar); M(NextCb); M(NextManor); M(Imported ? 1 : 0);
         return h;
     }

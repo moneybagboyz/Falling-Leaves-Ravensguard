@@ -51,6 +51,18 @@ public sealed class WorldRuntime : IDisposable
 
     /// <summary>Called on the tick worker right after each hour is stepped, before the barrier's snapshot is swapped in (the hero's command desk hangs here).</summary>
     public event Action<long>? AfterHour;
+
+    // ---- P7-0B (review finding G1): the hourly links of Phase 6 (talk, law, family, contracts) belong to the runtime, not to the Godot street view
+    private readonly Dictionary<Type, object> _links = [];
+    /// <summary>The Phase 6 links this runtime attached at construction (talk, law, family, contracts; null when the world has no hero or the runtime was made with <c>phase6Links: false</c>).</summary>
+    public Phase6LinkSet? Phase6 { get; internal set; }
+
+    /// <summary>Makes a link once per runtime: a second <c>Attach</c> of the same kind (a test that attaches by hand, then <see cref="Start"/>) gets the first one back, so an hour never runs twice.</summary>
+    internal T LinkOnce<T>(Func<T> make) where T : class
+    {
+        if (_links.TryGetValue(typeof(T), out var have)) return (T)have;
+        var made = make(); _links[typeof(T)] = made; return made;
+    }
     /// <summary>The worker's last failure (null while healthy). The runtime stops starting hours after it; the game reports it once.</summary>
     public Exception? Fault => Volatile.Read(ref _fault);
     public RuntimeSnapshot Snapshot => _snapshot;
@@ -73,10 +85,12 @@ public sealed class WorldRuntime : IDisposable
     /// save waiting in <paramref name="pager"/>) and the scheduler. <see cref="WorldState.HomeRecords"/> is used when present (a game just built), else the home
     /// records are made from the state's own economy sections (a loaded game).
     /// </summary>
-    public WorldRuntime(WorldState state, ContentDatabase content, IRegionPager? pager = null, bool trimTerrain = true, int dailyRing = 1, int maxParallel = 0, RegionManager? manager = null)
+    public WorldRuntime(WorldState state, ContentDatabase content, IRegionPager? pager = null, bool trimTerrain = true, int dailyRing = 1, int maxParallel = 0, RegionManager? manager = null, bool phase6Links = true)
     {
         try { Init(state, content, pager, trimTerrain, dailyRing, maxParallel, manager); }
         catch { (pager as IDisposable)?.Dispose(); throw; } // a failed construction must not leave the pager's temp folder behind
+        // G1 (P7-0B): the hourly links of Phase 6 are the runtime's, in the one order (talk, law, family, contracts), behind the hero; a world without one has no courts to run
+        if (phase6Links && state.Hero != null) Phase6Links.AttachAll(this, content);
     }
 
     [System.Diagnostics.CodeAnalysis.MemberNotNull(nameof(State), nameof(Services), nameof(Manager), nameof(Records), nameof(Scheduler), nameof(Hero), nameof(_snapshot))]

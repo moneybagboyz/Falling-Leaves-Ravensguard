@@ -162,13 +162,31 @@ public static class Diplomacy
         }
     }
 
-    /// <summary>One season's tribute: a real transfer between the realms' treasuries when both keep purses here, else a move of the abstract coin (nothing is made).</summary>
+    /// <summary>
+    /// S14 (P7-0B): the one holding purse of every abstract realm together (a treasury purse under a fixed faction id, opened on first use). A realm that keeps no purse in this region has its coin here, as one pool: tribute
+    /// between a real treasury and an abstract realm moves real coin to or from it, so the player's realm really pays and really receives, and nothing is made or lost. The per-realm <c>TreasuryDelta</c> still says
+    /// how much of the pool each abstract realm is owed.
+    /// </summary>
+    public static readonly EntityId AbstractHoldingKey = EntityId.Make(IdKind.Faction, (1UL << 41) | 1);
+
+    public static PurseId AbstractHolding(PoliticsCtx c) => c.R.Led.TryFind(PurseKind.Treasury, AbstractHoldingKey, out var p) ? p : c.R.Led.Open(PurseKind.Treasury, AbstractHoldingKey);
+
+    /// <summary>One season's tribute: a real transfer between the realms' treasuries when both keep purses here; real coin between the realm that has a purse and the abstract holding purse when only one does; else a move of the abstract delta (nothing is made).</summary>
     public static long PayTribute(PoliticsCtx c, Pact p)
     {
         int from = p.TributeFrom, to = p.A == from ? p.B : p.A;
         var a = Party.OfRealm(from); var b = Party.OfRealm(to);
+        var pa = c.R.PurseOf(a); var pb = c.R.PurseOf(b);
         long paid;
-        if (!c.R.PurseOf(a).IsNone && !c.R.PurseOf(b).IsNone) paid = c.R.PayUpTo(a, b, p.TributeMites, TransferReason.Tribute);
+        if (!pa.IsNone && !pb.IsNone) paid = c.R.PayUpTo(a, b, p.TributeMites, TransferReason.Tribute);
+        else if (!pa.IsNone || !pb.IsNone)
+        {
+            var holding = AbstractHolding(c); var led = c.R.Led;
+            var src = pa.IsNone ? holding : pa; var dst = pb.IsNone ? holding : pb;
+            paid = Math.Min(p.TributeMites, led.Balance(src).Mites);
+            if (paid > 0 && !led.Transfer(src, dst, new Coin(paid), TransferReason.Tribute)) paid = 0;
+            if (pa.IsNone) c.B.RealmOf(from).TreasuryDelta -= paid; else c.B.RealmOf(to).TreasuryDelta += paid;
+        }
         else
         {
             paid = p.TributeMites;
@@ -291,6 +309,7 @@ public static class Diplomacy
     {
         var b = c.B; if (b.LastSeasonDay == c.Day || c.H == null) return;
         Import(c);
+        RulerSuccession.Season(c);                                              // P7-0B: history's rulers grow old; before the realms weigh each other
         TreatyPass(c);
         foreach (var w in b.Wars.ToList()) if (w.Alive) StepWar(c, w);
         var realms = c.AliveRealms().ToList();
