@@ -49,7 +49,7 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
-      - name: Generate world hashes
+      - name: Generate world hashes   # includes phase5_trail and phase6_trail (the Phase 6 overview OV-8: a 60-day scripted run of the whole runtime), so the compare job below covers them
         shell: bash
         run: |
           dotnet build tools/Ravensguard.WorldTool -c Release
