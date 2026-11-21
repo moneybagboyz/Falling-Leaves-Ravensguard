@@ -335,6 +335,33 @@ public sealed class MarketBook
         return new TradeResult(soldTotal, proceedsTotal, tollTotal);
     }
 
+    /// <summary>
+    /// What <see cref="SellToMerchants"/> would do now, worked out without doing it (P7-IN4: a caravan's quote of what a town's merchants will take): the same walk over the merchants in order, each limited by its cash and the book's stock cap, the stock and the
+    /// merchants' holdings rising as each buys, so the per-unit repricing is in the figure. The proceeds are before the market toll; <c>TollMites</c> is what the seller would pay it.
+    /// </summary>
+    public TradeResult PlanSaleToMerchants(ushort good, long qty)
+    {
+        if (qty <= 0 || Merchants.Count == 0) return TradeResult.None;
+        if (Econ.Goods.SpoilPpm(good, StoreKind.Granary) >= PerishablePpmPerDay) return TradeResult.None;
+        var gb = Goods[good]; var curve = Curve(good);
+        long stock = gb.StockUnits, holds = 0, soldTotal = 0, proceedsTotal = 0, tollTotal = 0;
+        foreach (var l in gb.Lots) if (l.IsMerchant) holds += l.Qty;
+        long capUnits = gb.Demand * gb.TargetCoverDays * Money.MerchantStockCapPermilleOfCover / 1000;
+        foreach (var m in Merchants)
+        {
+            if (qty - soldTotal <= 0) break;
+            long room = Math.Max(0, capUnits - holds);
+            long cash = Econ.Ledger.Balance(m.Purse).Mites - (m.CashReserve?.Invoke() ?? 0);
+            if (cash <= 0) continue;
+            long q = curve.MaxSellable(stock, Math.Min(qty - soldTotal, room), cash, Money.SpreadHalfPermille);
+            if (q <= 0) continue;
+            long proceeds = Round(curve.SellMid(stock, q), 1000 - Money.SpreadHalfPermille);
+            stock += q; holds += q; soldTotal += q; proceedsTotal += proceeds;
+            tollTotal += (long)(((Int128)proceeds * Money.MarketTollPermille + 500) / 1000);
+        }
+        return new TradeResult(soldTotal, proceedsTotal, tollTotal);
+    }
+
     /// <summary>Sells to merchants first, lists the rest as the seller's own lot at the given floor (production spec 3.2, money spec 3.4). Returns the units that left the seller's store.</summary>
     public long SellOrList(MarketParty seller, ushort good, long qty, int floorPermille, int day)
     {

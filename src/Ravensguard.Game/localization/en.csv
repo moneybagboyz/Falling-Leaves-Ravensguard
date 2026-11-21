@@ -4979,6 +4979,37 @@ in_no_plan,There is no plan for that tier.
 in_upgrade_begun,The upgrade to tier {0} is begun.
 in_upgrade_placed,The plan for tier {0} is laid out ({1} pieces); build it yourself or commission a builder.
 ch_note_works_founded,The works was built to make a living from the ground.
+ch_ind_caravan,"{owner}'s caravan from {place} came home from {dest}, having sold goods for {sold} on a trip that cost {cost}."
+ch_ind_caravan_gate,"{owner}'s caravan from {place} came home from the border gate, having sold goods for {sold} on a trip that cost {cost}."
+ch_note_own_caravan,The works sent its own wagons to a market that pays better than the gate.
+in_route_no_contract,The stage is the seller of no supply contract.
+in_caravan_no_order,The stage has no caravan order.
+in_caravan_order_set,"The caravan order is set: {0} wagons and {1} guards."
+in_caravan_no_continent,There is no road out of the region to send a caravan on.
+in_caravan_bad_wagons,A caravan goes with carts or ox wagons.
+in_caravan_bad_town,That town cannot be reached from the works' town.
+in_caravan_no_market,The region keeps no market to sell at.
+in_caravan_no_road,No road joins the works to that place.
+in_caravan_no_gate,The region has no gate that leads that way.
+in_caravan_detailed,"That region is run in full detail; its coin is its own, and no caravan can sell into it from here."
+in_caravan_closed,The road to that region is closed or the region is empty.
+in_caravan_away,The stage's caravan is out on the road.
+in_caravan_nothing,The stage has nothing to send.
+in_caravan_no_master,"No free trader with Trading {0} or more could be hired to lead the caravan."
+in_caravan_no_wagons,The wainwrights could not be paid for the wagons.
+in_caravan_master_unfit,"That person is not a trader of Trading {0} or more."
+in_caravan_master_set,The caravan master is named.
+in_caravan_sent,"The caravan is loading: {0} wagons, a margin of {1} expected over {2} days."
+in_works_closed,The works is closed.
+in_q_sales,Sales
+in_q_wages,"Wages (master, drivers, guards)"
+in_q_fodder,Fodder
+in_q_tolls,Tolls
+in_q_customs,Customs
+in_q_wear,Wear of the wagons
+in_q_market_toll,Market toll
+in_q_master_share,The master's share
+in_q_risk,Risk of ambush
 ch_note_stage_stopped,The stage could not carry on its work.
 ind_chain_iron,iron
 ind_chain_clay,clay

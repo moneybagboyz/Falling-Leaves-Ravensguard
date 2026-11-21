@@ -39,6 +39,7 @@ public static class IndustryWiring
     {
         var iw = Make(state, content, home.Economy.Production);
         Hook(iw, home.Sim.Get<ConstructionWorld>(), home.Sim.Get<PowerWorld>(), () => home.Sim.Get<WoundLedger>() ?? state.Wounds, state, content);
+        iw.Trade = home.Economy.Trade;                                                   // P7-IN4: the continent's caravans, for the works' own
         home.Sim.Set(iw);
         return iw;
     }
@@ -51,6 +52,7 @@ public static class IndustryWiring
         {
             var w = Make(s, content, s.Production ?? throw new InvalidOperationException("industry needs the world's production"));
             Hook(w, s.HomeRecords?.Sim.Get<ConstructionWorld>(), s.HomeRecords?.Sim.Get<PowerWorld>(), () => s.Wounds, s, content);
+            if (s.HomeRecords?.Economy.Trade is { } tr) w.Trade = tr;
             return w;
         });
     }
@@ -75,7 +77,12 @@ public static class IndustryWiring
     private static IndustryWorld Make(WorldState state, ContentDatabase content, ProductionSystem prod)
     {
         var book = state.Industry ??= new IndustryBook();
-        return new IndustryWorld(book, prod, content, state.Seed) { SliderPct = () => state.Difficulty.IndustryOutputPct };
+        return new IndustryWorld(book, prod, content, state.Seed)
+        {
+            SliderPct = () => state.Difficulty.IndustryOutputPct,
+            ContractList = () => state.Scale?.Contracts ?? [],                                                            // P7-IN4: a stage routed to a supply contract holds back its deliveries
+            CarterOf = (settlement, day) => Ravensguard.Sim.Holdings.HoldingsDesk.CarterOf(state, settlement, day),     // and the gate's carting is paid to a carter of the place
+        };
     }
 }
 
@@ -96,6 +103,12 @@ public static class IndustryDesk
     public static HeroCommand Route(EntityId stage, string route, long sec) => Cmd(sec, Tag("route", stage.Value, route));
     public static HeroCommand Link(EntityId works, int to, int distanceM, int carts, int wagons, long sec) => Cmd(sec, Tag("link", works.Value, to, distanceM, carts, wagons));
     public static HeroCommand Cash(EntityId works, long mites, long sec) => Cmd(sec, Tag("cash", works.Value, mites));
+    /// <summary>P7-IN4: the stage's caravan order: <paramref name="dest"/> "town" (a settlement index) or "gate" (a neighbouring region's id), "cart" or "ox", the wagons, the guards, whether it stands.</summary>
+    public static HeroCommand Order(EntityId stage, string dest, int where, string vehicle, int wagons, int guards, bool standing, long sec) => Cmd(sec, Tag("order", stage.Value, dest, where, vehicle, wagons, guards, standing ? 1 : 0));
+    /// <summary>P7-IN4: sends the stage's caravan now (the "Send a caravan" button); the quote the hero's notebook gives is the one the result reports.</summary>
+    public static HeroCommand Send(EntityId stage, long sec) => Cmd(sec, Tag("send", stage.Value));
+    /// <summary>P7-IN4: names the person (an id) who leads the stage's caravans; 0 lets the works hire the best free trader.</summary>
+    public static HeroCommand Master(EntityId stage, ulong person, long sec) => Cmd(sec, Tag("master", stage.Value, person));
     /// <summary>P7-IN2: the stage's premises, the rectangle its tier is recognised from (inclusive region metres).</summary>
     public static HeroCommand Site(EntityId stage, int x0, int y0, int x1, int y1, long sec) => Cmd(sec, Tag("site", stage.Value, x0, y0, x1, y1));
     /// <summary>P7-IN2: the next tier's plan placed as ghosts beside the stage's premises, at (x, y) turned <paramref name="turns"/> quarter turns; commission a builder with the construction desk's <c>cn:commission</c> on the site the result names.</summary>
@@ -148,6 +161,10 @@ public static class IndustryDesk
             "link" when p.Length >= 6 => Mine((ulong)N(1)) ? iw.SetLink((ulong)N(1), I(2), I(3), I(4), I(5)) : OwnResult.No("in_not_yours"),
             "cash" when p.Length >= 3 && N(2) != 0 && N(2) != long.MinValue => Mine((ulong)N(1)) ? iw.Cash((ulong)N(1), purse, N(2)) : OwnResult.No("in_not_yours"),
             "site" when p.Length >= 6 => Mine((ulong)N(1)) ? iw.SetSite((ulong)N(1), I(2), I(3), I(4), I(5)) : OwnResult.No("in_not_yours"),
+            "order" when p.Length >= 8 && (S(2) is "town" or "gate") && (S(4) is "cart" or "ox") => Mine((ulong)N(1))
+                ? iw.SetCaravanOrder((ulong)N(1), S(2) == "town" ? DestKind.Town : DestKind.Neighbour, I(3), S(4) == "cart" ? (byte)1 : (byte)2, I(5), I(6), N(7) != 0) : OwnResult.No("in_not_yours"),
+            "send" when p.Length >= 2 => Mine((ulong)N(1)) ? iw.Caravans.Send((ulong)N(1), day, GameTime.FromGameSeconds(c.IssuedSec), ctx.Party.Notebook) : OwnResult.No("in_not_yours"),
+            "master" when p.Length >= 3 => Mine((ulong)N(1)) ? iw.SetCaravanMaster((ulong)N(1), N(2) <= 0 ? -1 : st.Population.People.IndexOf(new EntityId((ulong)N(2)))) : OwnResult.No("in_not_yours"),
             "upgrade" when p.Length >= 5 => Mine((ulong)N(1)) ? Upgrade(ctx, iw, (ulong)N(1), I(2), I(3), I(4), c.IssuedSec) : OwnResult.No("in_not_yours"),
             _ => null,
         };

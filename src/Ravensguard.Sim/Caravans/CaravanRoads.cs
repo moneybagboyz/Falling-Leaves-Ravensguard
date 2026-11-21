@@ -72,6 +72,20 @@ public static class CaravanRoads
         int from = region.Settlements[settlement].RoadNode;
         int outer = region.Settlements.Count + 2 * gate;
         if (from < 0 || outer >= region.RoadNodes.Count) return null;
+        return Build(region, from, outer, realmToll, true);
+    }
+
+    /// <summary>The path from one settlement's road node to another's over the region's real roads (P7-IN4: a works' caravan to a town of the region), with the bridge tolls on it and, when <paramref name="realmToll"/>, a realm toll at the far end. Null when the roads do not join them.</summary>
+    public static CaravanPath? BuildBetween(RegionData region, int from, int to, bool realmToll)
+    {
+        if ((uint)from >= (uint)region.Settlements.Count || (uint)to >= (uint)region.Settlements.Count || from == to) return null;
+        int a = region.Settlements[from].RoadNode, b = region.Settlements[to].RoadNode;
+        if (a < 0 || b < 0 || a >= region.RoadNodes.Count || b >= region.RoadNodes.Count) return null;
+        return Build(region, a, b, realmToll, false);
+    }
+
+    private static CaravanPath? Build(RegionData region, int from, int outer, bool realmToll, bool _)
+    {
         var route = RoadGraph.For(region).Route(from, outer); if (route == null) return null;
         var home = RegionCoord.OfCell(region.CellX, region.CellY);
         int ox = home.OriginXM, oy = home.OriginYM;

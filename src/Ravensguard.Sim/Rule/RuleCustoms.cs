@@ -32,6 +32,14 @@ public static class RuleCustoms
         return st.FiefIndex >= 0 && st.FiefIndex < region.Fiefs.Count && region.Fiefs[st.FiefIndex].Realm >= 0 ? region.Fiefs[st.FiefIndex].Realm : st.Realm;
     }
 
+    /// <summary>What <see cref="Charge"/> would take, without taking it (P7-IN4: a works' caravan quote shows the realm's duty before it leaves). 0 when the world keeps no rule book or the market is in no realm.</summary>
+    public static long Quote(SimWorld w, int settlement, string good, long valueMites, bool export)
+    {
+        var b = w.Get<RuleBook>(); if (b == null || valueMites <= 0) return 0;
+        int realm = RealmOf(w, settlement); if (realm < 0) return 0;
+        return RuleMath.Duty(valueMites, RatePct(b, realm, good, export));
+    }
+
     /// <summary>
     /// A caravan's declared goods cross the gate (the continent tick's gate trade): the duty on <paramref name="valueMites"/> of <paramref name="good"/> is paid from the caravan's <paramref name="account"/> to the realm's
     /// treasury, up to what the account holds, and handled by the realm's collector. Returns what was paid; 0 when the world keeps no rule book.

@@ -26,6 +26,8 @@ public sealed class IndustrySave
     [Key(5)] public int[] StageCounts { get; set; } = [];
     /// <summary>P7-IN2, per stage in the same order: the site rectangle (x0, y0, x1, y1), the upgrade tier and its construction site, then the drying batches (age, grams pairs) after a count, then the packed rows (good, container, grams, containers) after a count. Null while no stage uses any.</summary>
     [Key(6)] public long[][]? Extras { get; set; }
+    /// <summary>P7-IN4, selling, tagged rows: <c>1</c> a stage's caravan order (business, kind, destination, vehicle, wagons, guards, standing, fleet, master), <c>2</c> a trip in flight (caravan, stage, kind, destination, master, departure day, days, wagons, guards, float, sales, quoted margin, risk, value and gross, fodder a day, sold, then the manifest's count and its good and grams pairs), <c>3</c> a works' caravan tally (works index, trips, lost, sold, net). Null while no works has an order, a trip or a tally.</summary>
+    [Key(7)] public long[][]? Selling { get; set; }
 
     public static IndustrySave Capture(IndustryBook b)
     {
@@ -53,8 +55,20 @@ public sealed class IndustrySave
                 if (s.HasSite || s.UpgradeTo != 0 || s.Dwell.Count > 0 || s.Packed.Count > 0) anyExtra = true;
                 extras.Add([.. e]);
             }
+        var sell = new List<long[]>();
+        foreach (var w in b.Works)
+            foreach (var s in w.Stages)
+                if (s.Order is { } o) sell.Add([1, (long)s.Business, (long)o.Kind, o.Dest, o.Vehicle, o.Wagons, o.Guards, o.Standing ? 1 : 0, (long)o.Fleet, o.Master]);
+        foreach (var t in b.Trips)
+        {
+            var row = new List<long> { 2, (long)t.Caravan, (long)t.Stage, (long)t.Kind, t.Dest, t.Master, t.DepartDay, t.Days, t.Wagons, t.Guards, t.Float, t.Sales, t.QuotedMargin, t.QuotedRisk, t.QuotedValue, t.QuotedGross, t.FodderPerDay, t.Sold ? 1 : 0, t.Manifest.Count };
+            foreach (var (g, q) in t.Manifest) { row.Add(g); row.Add(q); }
+            sell.Add([.. row]);
+        }
+        for (int i = 0; i < b.Works.Count; i++) { var w = b.Works[i]; if (w.HasSellingTally) sell.Add([3, i, w.CaravanTrips, w.CaravansLost, w.CaravanSoldMites, w.CaravanNetMites]); }
         return new IndustrySave
         {
+            Selling = sell.Count > 0 ? [.. sell] : null,
             Extras = anyExtra ? [.. extras] : null,
             Works = [.. b.Works.Select(w => new long[] { w.Owner, w.Settlement, w.BuildingsCostMites, w.CumulativeNetMites, w.StartedDay, w.PaidBackDay, w.Closed ? 1 : 0, w.EndBalance, w.Injected, w.InputsPaid })],
             Chains = [.. b.Works.Select(w => w.Chain)], StageCounts = [.. b.Works.Select(w => w.Stages.Count)],
@@ -95,6 +109,37 @@ public sealed class IndustrySave
             }
             b.Works.Add(w);
         }
+        if (Selling != null)
+            foreach (var r in Selling)
+            {
+                if (r.Length < 1) throw new SaveException("Corrupt selling row in save.");
+                switch (r[0])
+                {
+                    case 1:
+                        {
+                            if (r.Length < 10) throw new SaveException("Corrupt caravan order in save.");
+                            var st = b.StageOf((ulong)r[1]) ?? throw new SaveException("A caravan order names no stage.");
+                            st.Works.Stages[st.Index].Order = new CaravanOrder { Kind = (DestKind)r[2], Dest = (int)r[3], Vehicle = (byte)r[4], Wagons = (int)r[5], Guards = (int)r[6], Standing = r[7] != 0, Fleet = (ulong)r[8], Master = (int)r[9] };
+                            break;
+                        }
+                    case 2:
+                        {
+                            if (r.Length < 19) throw new SaveException("Corrupt own trip in save.");
+                            var t = new OwnTrip { Caravan = (ulong)r[1], Stage = (ulong)r[2], Kind = (DestKind)r[3], Dest = (int)r[4], Master = (int)r[5], DepartDay = (int)r[6], Days = (int)r[7], Wagons = (int)r[8], Guards = (int)r[9], Float = r[10], Sales = r[11], QuotedMargin = r[12], QuotedRisk = r[13], QuotedValue = r[14], QuotedGross = r[15], FodderPerDay = r[16], Sold = r[17] != 0 };
+                            long n = r[18]; if (n < 0 || 19 + n * 2 > r.Length) throw new SaveException("Corrupt own trip manifest in save.");
+                            for (long q = 0; q < n; q++) t.Manifest.Add(((ushort)r[19 + q * 2], r[20 + q * 2]));
+                            b.Trips.Add(t);
+                            break;
+                        }
+                    case 3:
+                        {
+                            if (r.Length < 6 || r[1] < 0 || r[1] >= b.Works.Count) throw new SaveException("Corrupt works tally in save.");
+                            var w = b.Works[(int)r[1]]; w.CaravanTrips = (int)r[2]; w.CaravansLost = (int)r[3]; w.CaravanSoldMites = r[4]; w.CaravanNetMites = r[5];
+                            break;
+                        }
+                    default: throw new SaveException("Unknown selling row in save.");
+                }
+            }
         foreach (var l in Links)
         {
             if (l.Length < 8 || l[0] < 0 || l[0] >= b.Works.Count) throw new SaveException("Corrupt link in save.");

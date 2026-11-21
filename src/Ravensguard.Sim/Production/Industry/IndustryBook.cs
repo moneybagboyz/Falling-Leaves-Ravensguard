@@ -3,7 +3,10 @@ namespace Ravensguard.Sim.Production.Industry;
 /// <summary>Why a stage did not make what it could (industries 4.2). Shown on the tab in plain words with the good or the cause.</summary>
 public enum StageStop : byte { None, NoInput, NoFuel, Full, UnderCrewed, NoPower, Broken, Flooded, Winter, Unpaid, NoLicence, Depleted }
 
-/// <summary>Where a stage's output goes (industries 5.10): on to the next stage, to the gate (the market), or kept in the stage's store. Contract and Caravan are IN4's.</summary>
+/// <summary>
+/// Where a stage's output goes (industries 5.10): on to the next stage, to the gate (the nearest book the carting makes worth it), kept in the stage's store, held for a supply contract (the goods of a few deliveries stay, the rest goes to the gate), or
+/// carried by the works' own caravan to the destination of the stage's standing order (P7-IN4).
+/// </summary>
 public enum Routing : byte { Next, Gate, Store, Contract, Caravan }
 
 /// <summary>One stage of a works (industries 3.2): its business, its recognised tier, the crew target and wage offer the owner set, where its output goes, its stop and its balance ring.</summary>
@@ -20,6 +23,8 @@ public sealed class WorkStage
     /// <summary>The wage the labour market is offered, in permille of the class wage.</summary>
     public int WageOfferPm = 1000;
     public Routing Route = Routing.Next;
+    /// <summary>P7-IN4: the stage's caravan order (destination, wagons, guards, standing or one trip), null until the owner sets one.</summary>
+    public CaravanOrder? Order;
     /// <summary>A haul stage's distance in metres (the rates are over the kind's reference distance).</summary>
     public int DistanceM;
     public StageStop Stop;
@@ -66,6 +71,41 @@ public sealed class WorkStage
     public long Net(int today, int days = RingDays) => Sum(Income, today, days) - Sum(Wages, today, days) - Sum(Inputs, today, days) - Sum(Upkeep, today, days) - Sum(Royalties, today, days);
 }
 
+/// <summary>Where a works' own caravan goes: a town of the home region (another settlement's book) or a border gate that leads to a neighbouring region.</summary>
+public enum DestKind : byte { Town = 0, Neighbour = 1 }
+
+/// <summary>
+/// A stage's caravan order (industries 5.10): the destination, the wagons (a kind and how many), the guards hired for each trip, and whether the order stands (a caravan goes whenever the stage holds a load and the fleet is home) or sends one trip. <see cref="Fleet"/> is the caravan row
+/// (its id) that holds the wagons and drivers between trips, 0 until the first trip buys them. <see cref="Master"/> is a person row the owner named (-1: the best free trader is hired for each trip).
+/// </summary>
+public sealed class CaravanOrder
+{
+    public DestKind Kind;
+    /// <summary>The settlement index (a town) or the region id (a neighbour).</summary>
+    public int Dest;
+    public byte Vehicle = 2;                       // Ravensguard.Sim.Caravans.VehicleKind: 1 cart, 2 ox wagon
+    public int Wagons = 2, Guards = 2;
+    public bool Standing;
+    public ulong Fleet;
+    public int Master = -1;
+}
+
+/// <summary>
+/// A trip of a works' own caravan in flight (industries 7: "own caravans in flight: route, manifest, hired staff, expected margin at departure"). The caravan itself is an ordinary Phase 2 caravan row; this is what the works knows of it: where it
+/// went, who leads it, what it carried, what the quote promised at departure and what the sales have brought so far.
+/// </summary>
+public sealed class OwnTrip
+{
+    public ulong Caravan, Stage;
+    public DestKind Kind;
+    public int Dest, Master, DepartDay, Days, Wagons, Guards;
+    /// <summary>Mites the works put into the caravan's purse at departure (the float), the sales so far, the quote's margin, risk and value at departure.</summary>
+    public long Float, Sales, QuotedMargin, QuotedRisk, QuotedValue, QuotedGross, FodderPerDay;
+    public bool Sold;
+    /// <summary>The manifest: goods and grams the caravan left with.</summary>
+    public List<(ushort Good, long Grams)> Manifest { get; } = [];
+}
+
 /// <summary>Goods packed in containers in a stage's store (industries 5.9, <c>PackedStock</c>): the grams of <see cref="Good"/> sit in <see cref="Containers"/> of the <see cref="Container"/> good.</summary>
 public sealed class PackedRow
 {
@@ -98,6 +138,10 @@ public sealed class Works
     public bool Closed;
     /// <summary>The purse's balance at the end of the last works day, and the coin the owner put in or took out and the inputs paid since (for the income, which the market pays between works days).</summary>
     public long EndBalance, Injected, InputsPaid;
+    /// <summary>P7-IN4: trips the works' own caravans finished, trips lost, and the coin they sold for and netted (sales less what the trip cost), for the tab and the export payback (EA3).</summary>
+    public int CaravanTrips, CaravansLost;
+    public long CaravanSoldMites, CaravanNetMites;
+    public bool HasSellingTally => CaravanTrips != 0 || CaravansLost != 0 || CaravanSoldMites != 0 || CaravanNetMites != 0;
 }
 
 /// <summary>
@@ -107,7 +151,12 @@ public sealed class Works
 public sealed class IndustryBook
 {
     public List<Works> Works { get; } = [];
+    /// <summary>P7-IN4: the own caravans in flight, ascending caravan id.</summary>
+    public List<OwnTrip> Trips { get; } = [];
     public bool IsEmpty => Works.Count == 0;
+
+    public OwnTrip? TripOf(ulong caravan) { foreach (var t in Trips) if (t.Caravan == caravan) return t; return null; }
+    public void AddTrip(OwnTrip t) { int at = Trips.FindIndex(x => x.Caravan > t.Caravan); if (at < 0) Trips.Add(t); else Trips.Insert(at, t); }
 
     public Works? Of(ulong business)
     {
@@ -136,10 +185,17 @@ public sealed class IndustryBook
                 M(s.SiteX0); M(s.SiteY0); M(s.SiteX1); M(s.SiteY1); M(s.UpgradeTo); M(s.UpgradeSite);
                 foreach (var (a, g) in s.Dwell) { M(a); M(g); }
                 foreach (var p in s.Packed) { M(p.Good); M(p.Container); M(p.Grams); M(p.Containers); }
+                if (s.Order is { } o) { M(-3); M((int)o.Kind); M(o.Dest); M(o.Vehicle); M(o.Wagons); M(o.Guards); M(o.Standing ? 1 : 0); M((long)o.Fleet); M(o.Master); }
             }
+            if (w.HasSellingTally) { M(-4); M(w.CaravanTrips); M(w.CaravansLost); M(w.CaravanSoldMites); M(w.CaravanNetMites); }
             M(-1);
             foreach (var l in w.Links) { M(l.From); M(l.To); M(l.DistanceM); M(l.Carts); M(l.Wagons); M(l.Crane ? 1 : 0); M(l.Packed ? 1 : 0); }
             M(-2);
+        }
+        foreach (var t in Trips)
+        {
+            M(-5); M((long)t.Caravan); M((long)t.Stage); M((int)t.Kind); M(t.Dest); M(t.Master); M(t.DepartDay); M(t.Days); M(t.Wagons); M(t.Guards); M(t.Float); M(t.Sales); M(t.QuotedMargin); M(t.QuotedRisk); M(t.QuotedValue); M(t.QuotedGross); M(t.FodderPerDay); M(t.Sold ? 1 : 0);
+            foreach (var (g, q) in t.Manifest) { M(g); M(q); }
         }
         return h;
     }

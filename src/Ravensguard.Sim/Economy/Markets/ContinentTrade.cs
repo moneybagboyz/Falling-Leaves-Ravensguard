@@ -38,6 +38,12 @@ public sealed partial class ContinentTrade
     private readonly EconomyState _econ;
     private readonly bool[] _local, _made;
     private ContinentLink? _link;
+    /// <summary>P7-IN4: the works' own caravans, which settle with their works instead of a merchant (null: none).</summary>
+    public IOwnCaravans? Own { get; set; }
+    /// <summary>What the border desk may still pay in today, mites (the desk's room: the glut it can still carry off at its price).</summary>
+    public long DeskRoomMites => _deskRoom;
+    /// <summary>The region's simulated world (the rules a caravan's tolls and customs are worked out from).</summary>
+    public Ravensguard.Sim.Abstract.SimWorld SimWorld => _ew.World;
 
     public long ImportedMites, ExportedMites, TollsMites, WagesMites;
     public long[] ImportedUnits, ExportedUnits;
