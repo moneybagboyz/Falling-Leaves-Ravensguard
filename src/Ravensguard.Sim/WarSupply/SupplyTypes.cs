@@ -143,6 +143,23 @@ public static class SupplyConfig
     /// <summary>A purchase writes <c>army_bought</c> when it moved the staple's ask by at least this many per mille.</summary>
     public const int PriceNotePermille = 50;
 
+    // ---- P7-AE2: purveyance, scutage, forage, sutlers, finance (army-economy 4.2, 4.3, 4.4, 4.5, 4.7, 5)
+    /// <summary>Purveyance (4.3): settlements within this many metres of the host, grain above this many days of a household's own need, at this many per mille of the book's mid price (the king's price), by a tally due after this many days and defaulted this many seasons past due; a household hides grain with P = base + unrest / 20 per cent (stream 0x660) and gives half.</summary>
+    public const int PurveyanceRadiusM = 16000, KingPricePm = 750, TallyDueDays = 30, TallyDefaultSeasons = 4, HideBasePct = 20;
+    /// <summary>Purveyance fills the baggage to this many days of staple (not only the day's need: the officials' round is not repeated daily).</summary>
+    public const int PurveyStockDays = 10;
+    /// <summary>A settlement at or above this unrest (per mille) when purveyed has a riot triggered (4.3, the trigger kind <c>tallage</c>).</summary>
+    public const int PurveyRiotUnrest = 350;
+    /// <summary>Foraging (4.2): foragers are this many per mille of the men, each brings up to this many grams a day times a draw of 800 to 1,200 per mille (stream 0x750, key the host's tile and the day), from within <see cref="ForageRadiusM"/>; a robbed household's opinion of the host's realm falls by this much.</summary>
+    public const int ForageSharePm = 100, ForageGramsEach = 30_000, ForageRobbedOpinion = -40;
+    /// <summary>Service and scutage (4.4): a vassal's war service is this many days a man; scutage is this many mites a man-day.</summary>
+    public const int WarServiceDays = 40, ScutageMitesPerManDay = 300;
+    /// <summary>Sutlers (4.7): a host of at least this many men, merchants within <see cref="PurveyanceRadiusM"/> holding at least this much coin and this many grams of staple, joining with this per cent a day (stream 0x751), at most one per this many men, selling at this per mille of their book's ask.</summary>
+    public const int SutlerMinMen = 200, SutlerJoinPct = 10, SutlerPerMen = 100, SutlerMarkupPm = 1300, SutlerMinMargin = 20;
+    public const long SutlerMinMites = 5_000, SutlerMinStockG = 50_000;
+    /// <summary>Finance (4.5): a campaign starts at this many days funded; below the second number the realm seeks a loan, a subsidy or peace.</summary>
+    public const int CampaignStartDaysFunded = 30, CampaignSeekFundsDays = 10;
+
     /// <summary>Daily fodder in grams by animal row: hay and oats (species.jsonc: riding horse 8 kg and 2.5 kg, pack horse 8 and 0, draught horse 9 and 3, ox 10 and 0).</summary>
     public static (long HayG, long OatsG) Fodder(AnimalCounts a) => (a.Riding * 8000L + a.Pack * 8000L + a.Draught * 9000L + a.Oxen * 10000L, a.Riding * 2500L + a.Draught * 3000L);
 

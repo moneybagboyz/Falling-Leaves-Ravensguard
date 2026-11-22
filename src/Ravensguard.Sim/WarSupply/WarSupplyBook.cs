@@ -36,6 +36,28 @@ public sealed class HostAccount
     public Roster Roster => new(Men);
 }
 
+/// <summary>Where a purveyance tally stands (army-economy 4.3).</summary>
+public enum TallyState : byte { Owed, Paid, Defaulted }
+
+/// <summary>
+/// A tally for grain taken by purveyance (army-economy 4.3): the realm owes the household <see cref="Mites"/> (the grain at three quarters of the book's mid), due <see cref="DueDay"/>; paid by the realm's treasury at S5 when it holds more than
+/// a season of its payroll (<c>TransferReason.Purveyance</c>), defaulted four seasons past due. <see cref="Entry"/> is the chronicle entry of the taking.
+/// </summary>
+public sealed class PurveyanceTally
+{
+    public int Id, Realm, Settlement, Host, TakenDay, DueDay, PaidDay;
+    public ulong Household, Entry;
+    public long Mites, PaidMites, Grams;
+    public TallyState State;
+    public long Owing => Math.Max(0, Mites - PaidMites);
+}
+
+/// <summary>A merchant that follows a host (army-economy 4.7): the merchant party's id (found again among the books' merchants) and the day it joined.</summary>
+public sealed record SutlerRec(int Host, ulong Merchant, int JoinedDay);
+
+/// <summary>Scutage received by an overlord and not yet written to the chronicle: <c>scutage_paid</c> is one entry a season per overlord (army-economy 4.4).</summary>
+public sealed record ScutageNote(byte OverlordKind, long Overlord, int Payers, long Total);
+
 /// <summary>A convoy on the road (army-economy 4.1 step 3): the caravan of the host's carts sent to a depot beyond a day's reach. The caravan itself is the continent's record; this row says whose it is, where it goes and where its load and its float go home to.</summary>
 public sealed record ConvoyRec(ulong Caravan, int Host, int Depot, int Carts, ulong BaggageOwner, byte ChestKind, ulong ChestOwner, long FloatMites, int SentDay);
 
@@ -58,8 +80,17 @@ public sealed class WarSupplyBook
     /// <summary>Blockaded settlements whose <c>siege_starving</c> is written, and depots whose <c>depot_emptied</c> is written (once each, until the blockade lifts or the depot is refilled).</summary>
     public SortedSet<int> Starving { get; } = [];
     public SortedSet<int> Emptied { get; } = [];
+    /// <summary>P7-AE2: the purveyance tallies by id, the sutlers following hosts, the scutage not yet noted, the stats the soak reads, and the next tally id.</summary>
+    public SortedDictionary<int, PurveyanceTally> Tallies { get; } = [];
+    public List<SutlerRec> Sutlers { get; } = [];
+    public List<ScutageNote> ScutageNotes { get; } = [];
+    public int NextTally = 1;
+    public const int StatCount = 16;
+    /// <summary>Running totals: 0 grams purveyed, 1 mites tallied, 2 mites of tallies paid, 3 mites defaulted, 4 households taken from, 5 hidden grams, 6 grams foraged, 7 grams trampled, 8 acres stripped, 9 households robbed, 10 grams sold by sutlers, 11 mites paid to sutlers, 12 mites of scutage, 13 men's service called, 14 pay chests taken (mites), 15 loans raised (mites).</summary>
+    public long[] Stats = new long[StatCount];
     public void AddLevied(int settlement, int year, int men) => Levied[settlement] = Levied.TryGetValue(settlement, out var l) && l.Year == year ? (year, l.Men + men) : (year, men);
-    public bool IsEmpty => NextHost == 1 && Hosts.Count == 0 && OnCampaign.Count == 0 && Blockades.Count == 0 && Levied.Count == 0 && Convoys.Count == 0 && Starving.Count == 0 && Emptied.Count == 0;
+    public bool IsEmpty => NextHost == 1 && Hosts.Count == 0 && OnCampaign.Count == 0 && Blockades.Count == 0 && Levied.Count == 0 && Convoys.Count == 0 && Starving.Count == 0 && Emptied.Count == 0
+        && Tallies.Count == 0 && Sutlers.Count == 0 && ScutageNotes.Count == 0 && NextTally == 1 && Stats.All(x => x == 0);
 
     /// <summary>The <c>SupplyHash</c> of the overview's trail: every account, campaign flag and blockade in id order.</summary>
     public string Hash()
@@ -84,6 +115,14 @@ public sealed class WarSupplyBook
         foreach (var (id, c) in Convoys) { L((long)id); L(c.Host); L(c.Depot); L(c.Carts); L((long)c.BaggageOwner); L(c.ChestKind); L((long)c.ChestOwner); L(c.FloatMites); L(c.SentDay); }
         foreach (int s in Starving) L(-1 - s);
         foreach (int s in Emptied) L(-1_000_000 - s);
+        if (Tallies.Count > 0 || Sutlers.Count > 0 || ScutageNotes.Count > 0 || NextTally != 1 || Stats.Any(x => x != 0))
+        {
+            L(NextTally);
+            foreach (var (id, t) in Tallies) { L(id); L(t.Realm); L(t.Settlement); L(t.Host); L(t.TakenDay); L(t.DueDay); L(t.PaidDay); L((long)t.Household); L((long)t.Entry); L(t.Mites); L(t.PaidMites); L(t.Grams); L((long)t.State); }
+            foreach (var s in Sutlers) { L(s.Host); L((long)s.Merchant); L(s.JoinedDay); }
+            foreach (var n in ScutageNotes) { L(n.OverlordKind); L(n.Overlord); L(n.Payers); L(n.Total); }
+            foreach (long x in Stats) L(x);
+        }
         return Convert.ToHexString(h.GetHashAndReset())[..16];
     }
 }

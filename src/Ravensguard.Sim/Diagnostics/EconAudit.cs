@@ -40,7 +40,7 @@ public static class EconAudit
         new("W2", "war load", "Paid: levies unpaid the first 10 days of service, then 150; retinue and mercenaries; 400 men paid by the realm", "treasury days funded; arrears; desertions reported", "the war-load soak (WL-8): war-load --with-control"),
         new("W3", "war load", "Armed: 960 kits from the lords' armouries, the rest by wealth", "days to fill; first input to run dry", "AE3 (kit) then EA2 (WL-9)"),
         new("W4", "war load", "Levies out of the harvest (1 in 5 households in war)", "harvest shortfall vs the control (WL-6)", "the war-load soak (WL-6): war-load --with-control"),
-        new("W5", "war load", "Purveyance in two campaign years", "grievances, riots, tallies unpaid (WL-7)", "AE2 (purveyance) then EA2"),
+        new("W5", "war load", "Purveyance in two campaign years", "grievances, riots, tallies unpaid (WL-7)", "the war-load soak (WL-7): war-load --with-control"),
         new("W6", "war load", "A 60-day siege of the region's largest town", "days of food; deaths; prices inside; recovery (WL-5)", "the war-load soak (WL-5): war-load --with-control"),
         new("W7", "war load", "Baggage: 60 carts (30 t) for 15 days of grain", "carts and draught animals in the region; carts purveyed", "the war-load soak: war-load --with-control"),
         new("B1", "bottlenecks", "Iron", "days of cover per book; region output vs demand", "the war-load soak: war-load --with-control"),

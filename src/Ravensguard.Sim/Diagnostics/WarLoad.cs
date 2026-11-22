@@ -22,9 +22,9 @@ public sealed class WarTally
 {
     public long ManDaysFed, ManDaysHungry, ManDaysPaid, ManDaysUnpaid, Deserted, BoughtStapleG, BaggageStapleG, PaidMites, BoughtMites, ShortStapleG;
     /// <summary>Coin the realm sent to the pay chest at the muster, and the arrears the realm still owed when the host disbanded.</summary>
-    public long FundedMites, ArrearsMites, AidMites, TallageMites;
+    public long FundedMites, ArrearsMites, AidMites, TallageMites, LoanMites;
     public int Mustered, Days;
-    public void Reset() { ManDaysFed = ManDaysHungry = ManDaysPaid = ManDaysUnpaid = Deserted = BoughtStapleG = BaggageStapleG = PaidMites = BoughtMites = ShortStapleG = FundedMites = ArrearsMites = AidMites = TallageMites = 0; Mustered = Days = 0; }
+    public void Reset() { ManDaysFed = ManDaysHungry = ManDaysPaid = ManDaysUnpaid = Deserted = BoughtStapleG = BaggageStapleG = PaidMites = BoughtMites = ShortStapleG = FundedMites = ArrearsMites = AidMites = TallageMites = LoanMites = 0; Mustered = Days = 0; }
 }
 
 /// <summary>
@@ -55,6 +55,8 @@ public sealed class WarLoad
 
     /// <summary>The realm raises the coin of the campaign before the muster (aid from the fiefs, then a tallage: <see cref="WarFunding"/>, the audit's decision EA_F7). Off by default so a test that funds the chest itself stays as it was.</summary>
     public bool RealmRaises { get; set; }
+    /// <summary>The host's policy allows purveyance in its own realm (the scenario's second and third campaigns, army-economy 4.3).</summary>
+    public bool Purveyance { get; set; }
 
     public WarLoad(HostSupply hs, WarLoadSpec spec, ulong seed, int warId, WarTally? tally = null) { _hs = hs; _ew = hs.Economy; Spec = spec; _seed = seed; WarId = warId; Tally = tally ?? new WarTally(); }
 
@@ -101,8 +103,9 @@ public sealed class WarLoad
         var chest = led.Open(PurseKind.Chest, HostIds.Chest(WarId));
         var bag = econ.OpenStore(StoreKind.Sealed, HostIds.Baggage(WarId));
         var men = new Roster([(TroopRole.Spearman, Spec.Spearmen), (TroopRole.Archer, Spec.Archers), (TroopRole.ManAtArms, Spec.ManAtArms), (TroopRole.Knight, Spec.Knights), (TroopRole.Mercenary, Spec.Mercenaries)]);
-        var treasury = RealmTreasury();
-        Host = _hs.Register(new HostSpec(0, EntityId.None, chest, bag, men, Spec.Followers, new AnimalCounts(Spec.Horses, 0, 0, 0), Spec.Carts, new SupplyPolicy())
+        int realm = Math.Max(0, _hs.RealmOf(start));
+        var treasury = RealmTreasury(realm);
+        Host = _hs.Register(new HostSpec(realm, EntityId.None, chest, bag, men, Spec.Followers, new AnimalCounts(Spec.Horses, 0, 0, 0), Spec.Carts, new SupplyPolicy(Purveyance: Purveyance))
         { Treasury = treasury, OutsideMen = Spec.Mercenaries });
         // the levies: each fief gives up to its war quota (one man a household), in fief order, until the spec's count
         var region = _ew.World.Population.Region; var tax = _ew.Taxes;
@@ -121,7 +124,12 @@ public sealed class WarLoad
         {
             var a = _hs.Account(Host); var needs = _hs.Needs(Host, n);
             long fund = (needs.PayMites + needs.StapleG * 45 / 1000 + needs.FodderHayG * 12 / 1000 + needs.FodderOatsG * 30 / 1000) * fundDays;
-            if (RealmRaises) { var (aid, tallage) = WarFunding.Raise(_ew, treasury, fund); Tally.AidMites += aid; Tally.TallageMites += tallage; }
+            if (RealmRaises)
+            {
+                // the real rule when the world has one (P7-AE2: the treasury, the fiefs' aid, loans from the realm's lenders, tallage on its towns); the audit's first stand-in otherwise
+                if (_ew.World.Get<Ravensguard.Sim.Rule.RuleBook>() != null) { var (aid, loans, tallage) = _hs.Raise(realm, fund, n); Tally.AidMites += aid; Tally.LoanMites += loans; Tally.TallageMites += tallage; }
+                else { var (aid, tallage) = WarFunding.Raise(_ew, treasury, fund); Tally.AidMites += aid; Tally.TallageMites += tallage; }
+            }
             fund = Math.Min(fund, led.Balance(treasury).Mites);
             if (fund > 0 && led.Transfer(treasury, chest, new Coin(fund), TransferReason.Hoard)) Tally.FundedMites += fund;
             _ = a;
@@ -130,8 +138,9 @@ public sealed class WarLoad
         _hs.Update(Host, _hs.PlaceAt(start), HostMode.Camp);
     }
 
-    private PurseId RealmTreasury()
+    private PurseId RealmTreasury(int realm)
     {
+        foreach (var t in _ew.Taxes.Treasuries.All) if (t.Kind == TreasuryKind.Realm && t.Realm == realm) return t.Purse;
         foreach (var t in _ew.Taxes.Treasuries.All) if (t.Kind == TreasuryKind.Realm) return t.Purse;
         return PurseId.None;
     }

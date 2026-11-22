@@ -21,7 +21,7 @@ namespace Ravensguard.Sim.WarSupply;
 /// P7-AE2 and P7-AE3. The economy never moves soldiers; every coin and gram here moves through the ledger and the stores, so both audits stay exact.
 /// One writer: the host slot (<see cref="HostSupplySystem"/>, hour 18) or the harness at a barrier.
 /// </summary>
-public sealed class HostSupply
+public sealed partial class HostSupply
 {
     public WarSupplyBook Book { get; }
     public EconomyWorld Economy { get; }
@@ -199,6 +199,7 @@ public sealed class HostSupply
         var books = a.Abstract ? [] : BooksInReach(a);
         var led = _econ.Ledger;
         long coin0 = led.Balance(rt.Chest).Mites;
+        NewForageDay(a); UpdateSutlers(a, day);
         // staple first: the men's lives; then pay; then the animals, the fires and the relish with what the chest has left
         Fill(a, rt, res, SupplyNeed.Staple, need.StapleG, books, day);
         PayDay(a, rt, res, need);
@@ -303,6 +304,13 @@ public sealed class HostSupply
                 }
             }
         }
+        // 5. sutlers, 6. purveyance (own realm), 7. forage
+        if (n == SupplyNeed.Staple)
+        {
+            if (left > 0) left = Sutle(a, rt, res, goods, left, day);
+            if (left > 0) left = Purvey(a, rt, res, goods, left, want, day);
+        }
+        if (left > 0) left = Forage(a, rt, res, n, goods, left, day);
         res.ShortG[(int)n] = Math.Max(0, left);
     }
 
@@ -742,14 +750,6 @@ public sealed class HostSupply
 
     /// <summary>Men camped at or besieging a settlement.</summary>
     public int CampSize(int settlement) { int t = 0; foreach (var a in Book.Hosts.Values) if (a.PlaceSettlement == settlement && a.Mode is HostMode.Camp or HostMode.Siege) t += a.Total; return t; }
-
-    /// <summary>The pay chest over a day's pay for the realm's hosts, in thousandths of a day (army-economy 3.4, first cut: the hosts' chests only; the treasury and loan room join in P7-AE2).</summary>
-    public long DaysFundedMilli(int realm)
-    {
-        long coin = 0, pay = 0; int day = Day;
-        foreach (var a in Book.Hosts.Values) { if (a.Realm != realm) continue; coin += _econ.Ledger.Balance(Resolve(a).Chest).Mites; pay += NeedsOf(a, day).PayMites; }
-        return pay > 0 ? coin * 1000 / pay : 0;
-    }
 }
 
 /// <summary>The host slot (overview 8.4: <c>HostSupply</c> 1,150, H1, acts only at hour 18): the day's <see cref="HostSupply.RunDay"/>. A no-op without a service in the world's bag, so a game with no host pays nothing and draws nothing.</summary>
@@ -764,5 +764,20 @@ public sealed class HostSupplySystem : AbstractSystem
         if (hs == null || hs.Book.Hosts.Count == 0) return;
         hs.Chron = RuleChron.Of(ctx.Outbox);
         hs.RunDay((int)ctx.Day);
+    }
+}
+
+/// <summary>The army economy's season step (P7-AE2, S5: after the rule's dues and loans at hour 5 of a season's first day): purveyance tallies paid or defaulted, the season's scutage written. A no-op while there is nothing owed or noted.</summary>
+[AbstractSystem]
+public sealed class WarSupplySeasonSystem : AbstractSystem
+{
+    public WarSupplySeasonSystem() : base("war_supply_season", TickPhase.H6Seasonal, SystemOrder.S4Taxes + 25) { }
+    public override void Step(TickContext ctx)
+    {
+        if (ctx.HourOfDay != 5 || !ctx.IsSeasonStartDay) return;
+        var hs = ctx.World.Get<HostSupply>();
+        if (hs == null || (hs.Book.Tallies.Count == 0 && hs.Book.ScutageNotes.Count == 0)) return;
+        hs.Chron = RuleChron.Of(ctx.Outbox);
+        hs.SeasonStep((int)ctx.Day);
     }
 }

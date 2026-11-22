@@ -53,7 +53,16 @@ public static class WarGates
             Add("WL-6", AuditState.Info, $"WAIVED (overview 10e: war costs no harvest): Y8 harvest {w8.HarvestT} t against the control's {c8.HarvestT} t = {drop:P1} below");
         }
         else Add("WL-6", AuditState.Info, "WAIVED (overview 10e: war costs no harvest); the measure needs the control run (--with-control)");
-        Add("WL-7", AuditState.Pending, "purveyance, grievances and riots are P7-AE2's; not in the audited tag");
+        {
+            var L = n > 0 ? war[n - 1] : null;
+            if (L == null || L.PurveyedTowns == 0 && war.Sum(r => r.Mustered) == 0) Add("WL-7", AuditState.Info, "no campaign with purveyance in the run (a control)");
+            else if (L.PurveyedTowns == 0) Add("WL-7", AuditState.Fail, "the purveyance campaigns purveyed no settlement");
+            else
+            {
+                bool ok = L.PurveyGrieved == L.PurveyedTowns && L.PurveyRung2 >= 1 && L.RevoltsWon == 0 && L.RulersChanged == 0;
+                Add("WL-7", ok ? AuditState.Pass : AuditState.Fail, $"{L.PurveyedTowns} settlements purveyed ({war.Sum(r => r.PurveyedKg):N0} kg, tallies {war.Sum(r => r.TalliedMites):N0} mites, paid {war.Sum(r => r.TalliesPaidMites):N0}, defaulted {war.Sum(r => r.TalliesDefaultedMites):N0}); {L.PurveyGrieved} with a live grievance the next day (pass: all), {L.PurveyRung2} reached rung 2 within 30 days (pass: at least 1), {L.Riots} riots in the run, {L.RevoltsWon} revolts won, {L.RulersChanged} realms with a changed ruler (pass: 0)");
+            }
+        }
         // WL-8 treasury
         if (n >= 6)
         {
@@ -61,7 +70,7 @@ public static class WarGates
             bool ok = unpaid == 0 || arrears > 0 || deserted > 0;
             Add("WL-8", ok ? AuditState.Pass : AuditState.Fail, $"the realm raised {raised:N0} mites over the campaigns; {unpaid:N0} man-days went unpaid, arrears recorded {arrears:N0} mites, stand-in deserters {deserted:N0}");
         }
-        Add("WL-9", AuditState.Pending, "kits and armouries are P7-SC-A's and AE3's");
+        Add("WL-9", AuditState.Pending, "kit fill from armouries and arms imports is P7-AE3's (the army's end and consequence entries are measured in WL-12)");
         // WL-10 recovery G1-G3
         if (n >= 8)
         {
@@ -78,7 +87,16 @@ public static class WarGates
             int minAll = war.Skip(1).Min(r => r.SolventPct), minWar = war.Where(r => r.Year is 8 or 9).Select(r => r.SolventPct).DefaultIfEmpty(100).Min();
             Add("WL-11", minAll >= 60 && minWar >= 40 ? AuditState.Pass : AuditState.Fail, $"cash-solvent merchants at least {minAll}% every year (pass >= 60%), {minWar}% in Y8-Y9 (>= 40%)");
         }
-        Add("WL-12", AuditState.Pending, "the army's chronicle entries and price causes are P7-AE2's");
+        {
+            var L = n > 0 ? war[n - 1] : null;
+            if (L == null || L.WarEntries == 0 && L.PriceRises == 0) Add("WL-12", AuditState.Info, "no army entries in the run (a control)");
+            else
+            {
+                double cov = L.WarEntries == 0 ? 1.0 : (double)L.WarSpecific / L.WarEntries;
+                bool ok = cov >= 0.90 && L.ArmyBoughtEntries >= L.PriceRises;
+                Add("WL-12", ok ? AuditState.Pass : AuditState.Fail, $"{L.WarEntries} army and war-finance entries, {cov:P1} with a specific cause (pass >= 90%); {L.PriceRises} staple price rises of 5% or more from the host's buying, {L.ArmyBoughtEntries} army_bought entries naming the host's campaign (pass: one for each)");
+            }
+        }
         res.Add(wl13 ?? new GateResult("WL-13", AuditState.Info, "determinism and the mid-siege save round trip: `war-load --checks` (seed 1234); the EA-12 tests cover day 15 and day 8"));
         // WL-14 budget: the slowest hour step of the soak's host slot at most 150 ms; the mean game day at most the control's + 10%
         if (war.Count > 0 && war.Any(r => r.DayMsMean > 0))

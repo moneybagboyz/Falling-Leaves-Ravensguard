@@ -52,6 +52,12 @@ public sealed class WarSupplySave
     [Key(6)] public int[] Noted { get; set; } = [];
     [Key(7)] public int EmptiedFrom { get; set; }
 
+    /// <summary>P7-AE2 (optional, absent in older sections and while none exists): tallies as flat rows (id, realm, settlement, host, taken day, due day, paid day, household, entry, mites, paid, grams, state), sutlers (host, merchant, day), unnoted scutage (kind, overlord, payers, total), the next tally id and the running stats.</summary>
+    [Key(8)] public long[][] Tallies { get; set; } = [];
+    [Key(9)] public long[][] Sutlers { get; set; } = [];
+    [Key(10)] public long[][] ScutageNotes { get; set; } = [];
+    [Key(11)] public long[] Counters { get; set; } = [];
+
     public static WarSupplySave Capture(WarSupplyBook b) => new()
     {
         NextHost = b.NextHost,
@@ -71,6 +77,10 @@ public sealed class WarSupplySave
         Convoys = [.. b.Convoys.Values.Select(c => new ConvoySave { Fields = [(long)c.Caravan, c.Host, c.Depot, c.Carts, (long)c.BaggageOwner, c.ChestKind, (long)c.ChestOwner, c.FloatMites, c.SentDay] })],
         Noted = [.. b.Starving, .. b.Emptied],
         EmptiedFrom = b.Starving.Count,
+        Tallies = [.. b.Tallies.Values.Select(t => new long[] { t.Id, t.Realm, t.Settlement, t.Host, t.TakenDay, t.DueDay, t.PaidDay, (long)t.Household, (long)t.Entry, t.Mites, t.PaidMites, t.Grams, (long)t.State })],
+        Sutlers = [.. b.Sutlers.Select(x => new long[] { x.Host, (long)x.Merchant, x.JoinedDay })],
+        ScutageNotes = [.. b.ScutageNotes.Select(n => new long[] { n.OverlordKind, n.Overlord, n.Payers, n.Total })],
+        Counters = b.Tallies.Count == 0 && b.Sutlers.Count == 0 && b.ScutageNotes.Count == 0 && b.NextTally == 1 && b.Stats.All(x => x == 0) ? [] : [b.NextTally, .. b.Stats],
     };
 
     public WarSupplyBook Restore()
@@ -102,6 +112,14 @@ public sealed class WarSupplySave
             var f = c.Fields; if (f.Length != 9) throw new InvalidDataException("corrupt warsupply convoy row");
             b.Convoys[(ulong)f[0]] = new ConvoyRec((ulong)f[0], (int)f[1], (int)f[2], (int)f[3], (ulong)f[4], (byte)f[5], (ulong)f[6], f[7], (int)f[8]);
         }
+        foreach (var f in Tallies)
+        {
+            if (f.Length != 13) throw new InvalidDataException("corrupt warsupply tally row");
+            b.Tallies[(int)f[0]] = new PurveyanceTally { Id = (int)f[0], Realm = (int)f[1], Settlement = (int)f[2], Host = (int)f[3], TakenDay = (int)f[4], DueDay = (int)f[5], PaidDay = (int)f[6], Household = (ulong)f[7], Entry = (ulong)f[8], Mites = f[9], PaidMites = f[10], Grams = f[11], State = (TallyState)f[12] };
+        }
+        foreach (var f in Sutlers) { if (f.Length != 3) throw new InvalidDataException("corrupt warsupply sutler row"); b.Sutlers.Add(new SutlerRec((int)f[0], (ulong)f[1], (int)f[2])); }
+        foreach (var f in ScutageNotes) { if (f.Length != 4) throw new InvalidDataException("corrupt warsupply scutage row"); b.ScutageNotes.Add(new ScutageNote((byte)f[0], f[1], (int)f[2], f[3])); }
+        if (Counters.Length >= 1) { b.NextTally = (int)Counters[0]; Array.Copy(Counters, 1, b.Stats, 0, Math.Min(Counters.Length - 1, b.Stats.Length)); }
         for (int i = 0; i < Noted.Length; i++) (i < EmptiedFrom ? b.Starving : b.Emptied).Add(Noted[i]);
         return b;
     }

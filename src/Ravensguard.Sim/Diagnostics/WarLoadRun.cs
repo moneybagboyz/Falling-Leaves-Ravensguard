@@ -139,6 +139,13 @@ public sealed class WarYearRow
     public long FarmDemandH, FarmUnmetH;
     public bool CoinOk, MassOk;
     public string Hash = "";
+    // ---- P7-AE2: the purveyance, forage and finance columns (a year's, then the running totals the gates WL-7 and WL-12 read)
+    /// <summary>In the year: kg purveyed, mites of tallies written, paid and defaulted, mites lent to the realm, kg foraged and trampled, mites of scutage.</summary>
+    public long PurveyedKg, TalliedMites, TalliesPaidMites, TalliesDefaultedMites, LoanMites, ForagedKg, TrampledKg, ScutageMites;
+    /// <summary>Running: settlements purveyed, those whose taken households carried a live purveyance grievance the next day, those that reached rung 2 or more within 30 days, riots begun, revolts won, realms whose ruler changed.</summary>
+    public int PurveyedTowns, PurveyGrieved, PurveyRung2, Riots, RevoltsWon, RulersChanged;
+    /// <summary>Running: the war's chronicle entries, those with a specific cause, the staple price rises of 5 per cent or more the host's buying made, and the <c>army_bought</c> entries written.</summary>
+    public int WarEntries, WarSpecific, PriceRises, ArmyBoughtEntries;
     // ---- P7-EA3b: the second run's columns (money by source, industries, price level, timing)
     /// <summary>Coin that crossed the region border in the year (immigrants' purses in, emigrants' purses out), struck at the mints, melted, and left in hoards at the year's end; the harness's one-off seed (the L3 works' capital) already made, subtracted from <see cref="MoneySupply"/>.</summary>
     public long ImmigMites, EmigMites, MintMites, MeltMites, HoardMites, HarnessSeedMites;
@@ -172,6 +179,11 @@ public sealed class WarLoadSoak(WarLoadRun run, int years, bool control = false)
     public Action<int, int, WarLoadRun>? AtDayStart { get; set; }
     private long _routeSum, _routePeak, _regionSum, _regionPeak, _samples, _wage0, _demand0, _unmet0;
     private long _exp0, _imp0, _dexp0, _dimp0;
+    private long[] _stats0 = new long[WarSupplyBook.StatCount];
+    private readonly SortedDictionary<int, (int First, int Last, ulong[] Hh)> _purveyed = [];
+    private readonly SortedSet<int> _grieved = [], _rung2 = [];
+    private int _priceRises; private string _rulers0 = "";
+    public static readonly string[] WarTypes = ["army_bought", "purveyance_taken", "purveyance_unpaid", "army_foraged", "siege_starving", "depot_emptied", "campaign_funded", "scutage_paid", "sutlers_joined", "pay_chest_captured", "tallage_taken", "loan_made", "loan_default"];
     private long _immig0, _emig0, _mint0, _melt0, _charMade0, _barMade0, _dayMsSum, _hourMsMax; private int _founded0, _closed0;
     private readonly System.Diagnostics.Stopwatch _clock = new();
     private int[] _routeBooks = [];
@@ -191,6 +203,8 @@ public sealed class WarLoadSoak(WarLoadRun run, int years, bool control = false)
         home = largest; siegeTown = largest; gate = WarLoad.FarthestSettlement(region, home);
         long hunger0 = run.State.Abstract!.Vital.DeathsByCause[(int)DeathCause.Hunger];
         PrepareIndex(region, home, gate);
+        sup.OnPurveyed = (s, d, hh) => { _purveyed[s] = _purveyed.TryGetValue(s, out var p) ? (p.First, d, [.. p.Hh.Union(hh)]) : (d, d, [.. hh]); };
+        _rulers0 = RulersKey();
         var led0 = run.Econ.Ledger; _immig0 = led0.Sourced(SourceReason.Immigrate).Mites; _emig0 = led0.Sunk(SinkReason.Emigrate).Mites; _mint0 = led0.Sourced(SourceReason.Mint).Mites; _melt0 = led0.Sunk(SinkReason.Melt).Mites;
         _charMade0 = Made("charcoal"); _barMade0 = Made("iron_bar"); _founded0 = _closed0 = 0;
         _wage0 = run.Econ.Ledger.Flow(TransferReason.Wage).Mites; _demand0 = run.Economy.Farming.TotalDemandH; _unmet0 = run.Economy.Farming.TotalUnmetH;
@@ -201,6 +215,7 @@ public sealed class WarLoadSoak(WarLoadRun run, int years, bool control = false)
             {
                 int day = startYearDay + (y - 1) * TimeConst.DaysPerYear + d - 1;
                 AtDayStart?.Invoke(y, d, run);
+                WatchUnrest(day);
                 _clock.Restart();
                 if (L3 != null)
                 {
@@ -210,7 +225,7 @@ public sealed class WarLoadSoak(WarLoadRun run, int years, bool control = false)
                 if (!control && load == null)
                 {
                     foreach (var c in WarLoadScenario.Campaigns)
-                        if (c.Year == y && WarLoad.MusterDay(run.Seed, c.FromDay, c.Id, y * 4) == d) { camp = c; load = new WarLoad(sup, WarLoadSpec.Army2000, run.Seed, c.Id, tally) { RealmRaises = RealmRaises }; break; }
+                        if (c.Year == y && WarLoad.MusterDay(run.Seed, c.FromDay, c.Id, y * 4) == d) { camp = c; load = new WarLoad(sup, WarLoadSpec.Army2000, run.Seed, c.Id, tally) { RealmRaises = RealmRaises, Purveyance = c.Purveyance }; break; }
                     if (load != null) { run.BeforeSlot(day); load.Begin(home, gate); }
                 }
                 run.BeforeSlot(day);
@@ -233,6 +248,7 @@ public sealed class WarLoadSoak(WarLoadRun run, int years, bool control = false)
                 if (load != null)
                 {
                     load.After(day);
+                    if (sup.Last(load.Host) is { } lr && lr.Day == day) foreach (var pu in lr.Purchases.Values) if (pu.Ask0 > 0 && (pu.Ask1 - pu.Ask0) * 1000 >= pu.Ask0 * SupplyConfig.PriceNotePermille) _priceRises++;
                     if (!run.CoinConserved || !run.MassOk) Fail($"day {day}: coin {run.CoinConserved}, mass {run.MassOk}");
                     if (camp != null && y == camp.ToYear && d == camp.ToDay) { if (sup.IsBlockaded(siegeTown)) sup.SiegeBlockade(siegeTown, false, load.Host); load.End(); load = null; camp = null; }
                 }
@@ -262,14 +278,43 @@ public sealed class WarLoadSoak(WarLoadRun run, int years, bool control = false)
         };
         if (!row.CoinOk || !row.MassOk) Fail($"year {y} end: coin {row.CoinOk}, mass {row.MassOk}");
         row.Hash = sup.Book.Hash();
-        row.AidMites = t.AidMites; row.TallageMites = t.TallageMites;
+        row.AidMites = t.AidMites + t.LoanMites; row.TallageMites = t.TallageMites;
         row.MoneySupply = row.RegionCoin;                                  // MeasureEconomy subtracts the harness's one-off seed
         long wage = led.Flow(TransferReason.Wage).Mites; row.WagesPerDay = (wage - _wage0) / TimeConst.DaysPerYear; _wage0 = wage;
         row.RouteMeanMilli = _samples == 0 ? 0 : _routeSum / _samples; row.RoutePeakMilli = _routePeak; row.RegionMeanMilli = _samples == 0 ? 0 : _regionSum / _samples; row.RegionPeakMilli = _regionPeak;
         var fm = run.Economy.Farming; row.FarmDemandH = fm.TotalDemandH - _demand0; row.FarmUnmetH = fm.TotalUnmetH - _unmet0; _demand0 = fm.TotalDemandH; _unmet0 = fm.TotalUnmetH;
         MeasureWorld(row);
         MeasureEconomy(row);
+        MeasureWar(row);
         return row;
+    }
+
+    private string RulersKey() => run.State.Rule == null ? "" : string.Join(",", run.State.Rule.Rulers.Select(kv => kv.Key + ":" + kv.Value));
+
+    /// <summary>The day's look at the towns purveyed: the households taken from carry their grievance the day after, and the highest rung reached within 30 days of the taking.</summary>
+    private void WatchUnrest(int day)
+    {
+        var ub = run.State.Unrest; if (ub == null) return;
+        foreach (var (s, p) in _purveyed)
+        {
+            if (!_grieved.Contains(s) && day > p.First && p.Hh.Any(h => ub.Live(h, day).Any(r => r.Kind == "purveyance"))) _grieved.Add(s);
+            if (day >= p.First && day - p.Last <= 30 && ub.RungOf(s) >= 2) _rung2.Add(s);
+        }
+    }
+
+    /// <summary>P7-AE2 columns: the year's deltas of the supply book's stats, the running unrest and chronicle measures of the war.</summary>
+    private void MeasureWar(WarYearRow row)
+    {
+        var st = run.Supply.Book.Stats;
+        row.PurveyedKg = (st[0] - _stats0[0]) / 1000; row.TalliedMites = st[1] - _stats0[1]; row.TalliesPaidMites = st[2] - _stats0[2]; row.TalliesDefaultedMites = st[3] - _stats0[3];
+        row.ForagedKg = (st[6] - _stats0[6]) / 1000; row.TrampledKg = (st[7] - _stats0[7]) / 1000; row.ScutageMites = st[12] - _stats0[12]; row.LoanMites = st[15] - _stats0[15];
+        _stats0 = (long[])st.Clone();
+        row.PurveyedTowns = _purveyed.Count; row.PurveyGrieved = _grieved.Count; row.PurveyRung2 = _rung2.Count;
+        var ub = run.State.Unrest; if (ub != null) { row.Riots = ub.Riots.Count; row.RevoltsWon = ub.Revolts.Count(v => v.State == Ravensguard.Sim.Unrest.RevoltState.Won); }
+        row.RulersChanged = RulersKey() == _rulers0 ? 0 : 1;
+        var ch = run.State.Chronicle; var types = run.State.Content != null ? Ravensguard.Sim.Core.ChronicleTypes.From(run.State.Content) : null;
+        var cov = ch.SpecificCoverage(types, e => WarTypes.Contains(e.TypeId));
+        row.WarEntries = cov.Entries; row.WarSpecific = cov.Specific; row.PriceRises = _priceRises; row.ArmyBoughtEntries = ch.ByType("army_bought").Count();
     }
 
     /// <summary>The towns within 8 km of the host's route (the route's own stops included) and the staple goods the price index is taken over.</summary>

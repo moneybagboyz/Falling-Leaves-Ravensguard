@@ -360,8 +360,8 @@ public static class RngStreams
     public const uint BelievedMiracles = 0x655;
     /// <summary>P6-E2: faith: pardoners' fake relics and their exposure (key relic, season).</summary>
     public const uint FakeRelics = 0x656;
-    /// <summary>P6: rule: reserved for purveyance (Phase 7); asserted never drawn.</summary>
-    public const uint PurveyanceReserved = 0x660;
+    /// <summary>P6: rule: purveyance hiding (key household, day). Reserved by Phase 6, drawn since P7-AE2 by the army economy's purveyance (army-economy 4.3).</summary>
+    public const uint PurveyanceHiding = 0x660;
     /// <summary>P6: rule: skim seen and audits (key official, season).</summary>
     public const uint SkimSeenAndAudits = 0x661;
     /// <summary>P6: rule: council votes (key council, member).</summary>

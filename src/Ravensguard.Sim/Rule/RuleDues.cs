@@ -225,7 +225,7 @@ public static class RuleDues
     private static TransferReason TransferReasonOf(DueKind k) => k switch
     {
         DueKind.Aid => TransferReason.Aid, DueKind.Relief => TransferReason.Relief, DueKind.Subsidy => TransferReason.Subsidy, DueKind.Tallage => TransferReason.Tallage,
-        DueKind.MarriageFee => TransferReason.Fee, DueKind.Wardship => TransferReason.Fee, DueKind.Rent => TransferReason.Rent, _ => TransferReason.Rent,
+        DueKind.MarriageFee => TransferReason.Fee, DueKind.Wardship => TransferReason.Fee, DueKind.Rent => TransferReason.Rent, DueKind.Scutage => TransferReason.Scutage, _ => TransferReason.Rent,
     };
 
     /// <summary>Service is performed when the vassal's fief can spare the men (it has a holder and the households); a vassal without one has not reported: a grievance, his overlord's opinion of him -20.</summary>

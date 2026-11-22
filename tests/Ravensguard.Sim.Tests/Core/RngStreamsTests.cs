@@ -67,10 +67,10 @@ public class RngStreamsTests
             0x6D0, 0x6D1, 0x6D2, 0x6D3, 0x6D4, 0x6E0, 0x6E1];
         var inBlock = All().Where(x => x.Value is >= 0x600u and <= 0x6FFu).Select(x => x.Value).Order().ToArray();
         Assert.Equal(table.Order().ToArray(), inBlock);
-        Assert.Equal(0x600u, RngStreams.Physician); Assert.Equal(0x6A0u, RngStreams.ChronicleVariantsReserved); Assert.Equal(0x660u, RngStreams.PurveyanceReserved); Assert.Equal(0x6E0u, RngStreams.HoldingsReserved);
+        Assert.Equal(0x600u, RngStreams.Physician); Assert.Equal(0x6A0u, RngStreams.ChronicleVariantsReserved); Assert.Equal(0x660u, RngStreams.PurveyanceHiding); Assert.Equal(0x6E0u, RngStreams.HoldingsReserved);
     }
 
-    /// <summary>The Phase 5 reservations Phase 6 draws (0x500 now drawn by the NPC land market, 0x540, 0x561), and the Phase 6 reserved ones are never drawn (chronicle 5, rule 0x660, holdings 0x6E0).</summary>
+    /// <summary>The Phase 5 reservations Phase 6 draws (0x500 now drawn by the NPC land market, 0x540, 0x561), and the Phase 6 reserved ones are never drawn (chronicle 5, holdings 0x6E0; the rule's 0x660 is drawn by purveyance since P7-AE2: it is unused before a purveyance, checked in the AE tests).</summary>
     [Fact]
     public void ReservedStreams_AreNeverDrawnBySimCode()
     {
@@ -79,7 +79,7 @@ public class RngStreamsTests
         {
             if (Path.GetFileName(f) == "RngStreams.cs") continue;
             string src = File.ReadAllText(f);
-            foreach (var n in new[] { nameof(RngStreams.ChronicleVariantsReserved), nameof(RngStreams.PurveyanceReserved), nameof(RngStreams.HoldingsReserved), nameof(RngStreams.CoinageReserved) })
+            foreach (var n in new[] { nameof(RngStreams.ChronicleVariantsReserved), nameof(RngStreams.HoldingsReserved), nameof(RngStreams.CoinageReserved) })
                 Assert.DoesNotContain("RngStreams." + n, src, StringComparison.Ordinal);
         }
     }

@@ -6350,6 +6350,20 @@ ch_war_starving,"{place} is starving under the blockade: {days} days of food are
 ch_note_war_buying,the quartermaster bought for the host
 ch_note_war_depot_drawn,the host drew the depot down
 ch_note_war_blockade,the town was cut off from its markets
+ch_war_purveyance,"The officials took {kg} kg of grain from {households} households of {place} for the host, owed {amount} by tally."
+ch_war_tally_default,"The tallies for the grain taken from {households} households of {place} went unpaid; {amount} is still owed."
+ch_war_scutage,"{payers} vassals paid {amount} in shield money in place of service."
+ch_war_forage,"The host foraged {place}: {kg} kg taken from stores and fields, {acres} acres cut, {trampled} kg trampled."
+ch_war_sutlers,"Merchants of {place} followed the host with their carts."
+ch_war_chest_taken,"The host's pay chest was taken: {amount}."
+ch_war_funded,"The campaign was funded for {days} days: {treasury} from the treasury, {aid} in aid, {loans} in loans, {tallage} in tallage."
+ch_note_war_purveyance,the realm's officials purveyed for the host
+ch_note_war_tally_unpaid,the realm did not pay its tallies
+ch_note_war_scutage,the vassals paid scutage instead of service
+ch_note_war_forage,the host's foragers stripped the land
+ch_note_war_sutlers,the host's camp drew merchants
+ch_note_war_chest,the host's pay chest fell to the enemy
+ch_note_war_funded,the realm raised coin for the host
 ch_note_sg_undermined,the wall beneath it was struck down
 ch_note_sg_masons,the masons set the stones again
 ch_sg_engine_built,"The {engine} stood finished at {x}, {y} after {hours} worker-hours."
