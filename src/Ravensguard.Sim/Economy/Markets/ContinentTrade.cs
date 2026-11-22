@@ -40,6 +40,9 @@ public sealed partial class ContinentTrade
     private ContinentLink? _link;
     /// <summary>P7-IN4: the works' own caravans, which settle with their works instead of a merchant (null: none).</summary>
     public IOwnCaravans? Own { get; set; }
+    /// <summary>P7-AE1: the army economy's convoys (a host's carts sent to a depot), which settle with their host. A second hook beside <see cref="Own"/>; a caravan is owned by at most one of them.</summary>
+    public IOwnCaravans? OwnWar { get; set; }
+    private IOwnCaravans? OwnerOf(Caravan c) => Own?.Owns(c) == true ? Own : OwnWar?.Owns(c) == true ? OwnWar : null;
     /// <summary>What the border desk may still pay in today, mites (the desk's room: the glut it can still carry off at its price).</summary>
     public long DeskRoomMites => _deskRoom;
     /// <summary>The region's simulated world (the rules a caravan's tolls and customs are worked out from).</summary>

@@ -49,7 +49,8 @@ public sealed partial class IndustryWorld
             var econ = Prod.Econ; PurseId to = default; bool escheat = true, found = false;
             foreach (var h in laws) if (People.Status[h.Row] == PersonStatus.Alive && People.Household[h.Row] >= 0) { to = econ.HouseholdPurse[People.Household[h.Row]]; escheat = false; found = true; break; }
             if (!found && fief >= 0 && Led.TryFind(PurseKind.Treasury, region.Fiefs[fief].Id, out var tr)) { to = tr; found = true; }
-            if (found && Led.Transfer(econ.HouseholdPurse[buyerHh], to, new Coin(price), escheat ? TransferReason.Escheat : TransferReason.Trade))
+            // the buyer may be the first heir's own household (the works are bought by the kin who would have had the price): no coin moves then (a purse cannot pay itself)
+            if (found && (econ.HouseholdPurse[buyerHh] == to || Led.Transfer(econ.HouseholdPurse[buyerHh], to, new Coin(price), escheat ? TransferReason.Escheat : TransferReason.Trade)))
             {
                 int buyer = Prod.Pop.Households.Head[buyerHh];
                 Reown(w, buyer); PassedBySale++;

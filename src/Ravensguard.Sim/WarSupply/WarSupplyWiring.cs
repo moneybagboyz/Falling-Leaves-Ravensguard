@@ -9,7 +9,9 @@ public static class WarSupplyWiring
     public static HostSupply? Attach(RegionWorld home, WorldState state)
     {
         if (state.WarSupply == null) return null;
-        return HostSupply.Install(home.Economy, state.WarSupply);
+        var hs = HostSupply.Install(home.Economy, state.WarSupply);
+        hs.DiseaseSource = () => state.Disease;
+        return hs;
     }
 
     /// <summary>The service of the running home region, made (with the state's book) on first use.</summary>
@@ -17,6 +19,8 @@ public static class WarSupplyWiring
     {
         if (home.Sim.Get<HostSupply>() is { } hs) return hs;
         state.WarSupply ??= new WarSupplyBook();
-        return HostSupply.Install(home.Economy, state.WarSupply);
+        var made = HostSupply.Install(home.Economy, state.WarSupply);
+        made.DiseaseSource = () => state.Disease;
+        return made;
     }
 }

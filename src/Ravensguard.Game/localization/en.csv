@@ -6344,6 +6344,12 @@ ch_sg_fell,"The wall-walk fell where the wall was struck down at {x}, {y}: {cell
 ch_sg_repaired,"Masons mended {cells} cells of the wall at {x}, {y}."
 ch_note_sg_blow,the wall was battered down
 ch_note_sg_burnt,the fire burnt the wall out
+ch_war_bought,"The host bought {kg} kg of grain at {place}, and the price rose {pct}% under its buying."
+ch_war_depot_emptied,"The war emptied the granary depot at {place}."
+ch_war_starving,"{place} is starving under the blockade: {days} days of food are left."
+ch_note_war_buying,the quartermaster bought for the host
+ch_note_war_depot_drawn,the host drew the depot down
+ch_note_war_blockade,the town was cut off from its markets
 ch_note_sg_undermined,the wall beneath it was struck down
 ch_note_sg_masons,the masons set the stones again
 ch_sg_engine_built,"The {engine} stood finished at {x}, {y} after {hours} worker-hours."

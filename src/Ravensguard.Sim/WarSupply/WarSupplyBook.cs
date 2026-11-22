@@ -27,11 +27,17 @@ public sealed class HostAccount
     public int ServiceDays, HomeSettlement = -1;
     /// <summary>Cumulative grams delivered by need and source (pay: mites), then cumulative short by need.</summary>
     public long[] Totals = new long[DayResult.Needs * DayResult.Sources + DayResult.Needs];
+    /// <summary>The campaign's chronicle entry (0: none) and whether the host is in the abstract tier (outside every detailed region: it is fed and paid by <see cref="HostSupply"/>'s abstract rule, with the same counters).</summary>
+    public ulong Campaign;
+    public bool Abstract;
 
     public AnimalCounts Animals => new(Riding, Pack, Draught, Oxen);
     public int Total { get { int t = 0; foreach (int c in Men) t += c; return t; } }
     public Roster Roster => new(Men);
 }
+
+/// <summary>A convoy on the road (army-economy 4.1 step 3): the caravan of the host's carts sent to a depot beyond a day's reach. The caravan itself is the continent's record; this row says whose it is, where it goes and where its load and its float go home to.</summary>
+public sealed record ConvoyRec(ulong Caravan, int Host, int Depot, int Carts, ulong BaggageOwner, byte ChestKind, ulong ChestOwner, long FloatMites, int SentDay);
 
 /// <summary>
 /// The saved state of the army economy's interface (army-economy 6), in the optional <c>warsupply</c> section: the hosts' accounts, the persons on campaign (by host, so no key is added to the people
@@ -47,8 +53,13 @@ public sealed class WarSupplyBook
     public SortedDictionary<int, int> Blockades { get; } = [];
     /// <summary>Settlement index to the men the muster of the latest year drew from it (P7-EA3d): the harvest's chronicle names the village and the men it sent. A new year's draw replaces an older year's.</summary>
     public SortedDictionary<int, (int Year, int Men)> Levied { get; } = [];
+    /// <summary>Convoys on the road, by caravan id.</summary>
+    public SortedDictionary<ulong, ConvoyRec> Convoys { get; } = [];
+    /// <summary>Blockaded settlements whose <c>siege_starving</c> is written, and depots whose <c>depot_emptied</c> is written (once each, until the blockade lifts or the depot is refilled).</summary>
+    public SortedSet<int> Starving { get; } = [];
+    public SortedSet<int> Emptied { get; } = [];
     public void AddLevied(int settlement, int year, int men) => Levied[settlement] = Levied.TryGetValue(settlement, out var l) && l.Year == year ? (year, l.Men + men) : (year, men);
-    public bool IsEmpty => NextHost == 1 && Hosts.Count == 0 && OnCampaign.Count == 0 && Blockades.Count == 0 && Levied.Count == 0;
+    public bool IsEmpty => NextHost == 1 && Hosts.Count == 0 && OnCampaign.Count == 0 && Blockades.Count == 0 && Levied.Count == 0 && Convoys.Count == 0 && Starving.Count == 0 && Emptied.Count == 0;
 
     /// <summary>The <c>SupplyHash</c> of the overview's trail: every account, campaign flag and blockade in id order.</summary>
     public string Hash()
@@ -65,10 +76,14 @@ public sealed class WarSupplyBook
             L((long)a.Mode); L(a.PlaceSettlement); L(a.PlaceXM); L(a.PlaceYM); L(a.Pasture ? 1 : 0);
             foreach (long x in a.Arrears) L(x); foreach (int x in a.HungerDays) L(x); foreach (int x in a.UnpaidDays) L(x); L(a.ServiceDays); L(a.HomeSettlement);
             foreach (long x in a.Totals) L(x);
+            if (a.Campaign != 0 || a.Abstract) { L((long)a.Campaign); L(a.Abstract ? 1 : 0); }
         }
         foreach (var (p, hid) in OnCampaign) { L(p); L(hid); }
         foreach (var (s, hid) in Blockades) { L(s); L(hid); }
         foreach (var (s, l) in Levied) { L(s); L(l.Year); L(l.Men); }
+        foreach (var (id, c) in Convoys) { L((long)id); L(c.Host); L(c.Depot); L(c.Carts); L((long)c.BaggageOwner); L(c.ChestKind); L((long)c.ChestOwner); L(c.FloatMites); L(c.SentDay); }
+        foreach (int s in Starving) L(-1 - s);
+        foreach (int s in Emptied) L(-1_000_000 - s);
         return Convert.ToHexString(h.GetHashAndReset())[..16];
     }
 }

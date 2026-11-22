@@ -1,18 +1,24 @@
 using Ravensguard.Sim.Abstract;
+using Ravensguard.Sim.Caravans;
 using Ravensguard.Sim.Core;
+using Ravensguard.Sim.Disease;
 using Ravensguard.Sim.Economy;
 using Ravensguard.Sim.Economy.Markets;
+using Ravensguard.Sim.Farming;
 using Ravensguard.Sim.Goods;
 using Ravensguard.Sim.People;
+using Ravensguard.Sim.Rule;
+using PartyKind = Ravensguard.Sim.Economy.Markets.PartyKind;
 using Ravensguard.Sim.Weather;
 
 namespace Ravensguard.Sim.WarSupply;
 
 /// <summary>
-/// The interface the military calls (army-economy 3), first cut (P7-EA1): register, update and disband a host; <see cref="Needs"/> (pure) and <see cref="Supply"/> with the baggage and market steps of the ladder, pay and arrears
-/// and the hunger and unpaid days; <see cref="Muster"/>, <see cref="Release"/> and <see cref="Desert"/> for levies (a mustered man's household loses his labour: <see cref="IsOnCampaign"/> is the farming planner's hook);
-/// <see cref="SiegeBlockade"/>, <see cref="DaysOfFood"/>, <see cref="HarvestRisk"/> and <see cref="Camp"/>. The rest of the ladder (food rents, depots and convoys, sutlers, purveyance, forage), the pay chest's moves and
-/// capture, kit and loot are P7-AE1's second half, P7-AE2 and P7-AE3. The economy never moves soldiers; every coin and gram here moves through the ledger and the stores, so both audits stay exact.
+/// The interface the military calls (army-economy 3): register, update and disband a host; <see cref="Needs"/> (pure) and <see cref="Supply"/> with the ladder (baggage, the lord's food rents, depots within a day and convoys from
+/// the ones beyond it, the markets at their asks), pay and arrears and the hunger and unpaid days; <see cref="Muster"/>, <see cref="Release"/> and <see cref="Desert"/> for levies (a mustered man's household loses his labour:
+/// <see cref="IsOnCampaign"/> is the farming planner's hook); <see cref="SiegeBlockade"/>, <see cref="DaysOfFood"/> (and <c>siege_starving</c> at 5 days), <see cref="HarvestRisk"/> and <see cref="Camp"/> (which feeds the disease rule's
+/// army camp); the abstract tier (<see cref="ToAbstract"/>: the same needs, counters and pay, the food bought abroad at the continent's prices). Sutlers, purveyance and forage, the pay chest's moves and capture, kit and loot are
+/// P7-AE2 and P7-AE3. The economy never moves soldiers; every coin and gram here moves through the ledger and the stores, so both audits stay exact.
 /// One writer: the host slot (<see cref="HostSupplySystem"/>, hour 18) or the harness at a barrier.
 /// </summary>
 public sealed class HostSupply
@@ -28,6 +34,16 @@ public sealed class HostSupply
     private readonly ushort _hay, _oats, _firewood;
     /// <summary>The hook for a household that evades the levy (the unrest rule, stream 0x682): settlement, household, day. Null until the unrest wiring binds it (P7-AM-B).</summary>
     public Func<int, int, int, bool>? Evades { get; set; }
+    /// <summary>Where the host's own chronicle entries go (<c>army_bought</c>, <c>siege_starving</c>, <c>depot_emptied</c>): the host slot sets it to the tick's outbox each day; a harness may set it to the chronicle. Silent by default.</summary>
+    public RuleChron Chron { get; set; } = RuleChron.Silent;
+    /// <summary>The world's disease book when it has one (the wiring sets it): <see cref="Camp"/> and the daily step feed its <c>ArmyCampSize</c> hook from it, once.</summary>
+    public Func<DiseaseBook?>? DiseaseSource { get; set; }
+    private bool _diseaseBound;
+    /// <summary>The convoys of the hosts (the second caravan owner beside the works').</summary>
+    public HostConvoys Convoys { get; }
+    private ushort[] _loadGoods = [];
+    /// <summary>The goods a convoy loads from a depot: the staple grains and oats.</summary>
+    internal ushort[] LoadGoods => _loadGoods;
 
     /// <summary>The live objects of a host's records, found again by owner after a load.</summary>
     private sealed class Rt
@@ -44,6 +60,8 @@ public sealed class HostSupply
         _oats = c.TryIdOf("oats", out var o) ? o : ushort.MaxValue; _hay = c.TryIdOf("hay", out var h) ? h : ushort.MaxValue; _firewood = _econ.Food.Firewood;
         _stapleGoods = [.. _econ.Food.Staples.Where(g => g != _oats && !c.IsPiece(g) && c.Def(g).Class is "grain" or "flour")];
         _relishGoods = [.. _econ.Food.Relishes.Where(g => !c.IsPiece(g))];
+        _loadGoods = [.. _stapleGoods, .. (_oats == ushort.MaxValue ? [] : new[] { _oats })];
+        Convoys = new HostConvoys(this);
         foreach (var s in book.Blockades.Keys) { var bk = BookOf(s); if (bk != null) bk.Blockaded = true; }
     }
 
@@ -53,6 +71,7 @@ public sealed class HostSupply
         var hs = new HostSupply(economy, book);
         economy.World.Set(hs);
         economy.War = hs;
+        economy.Trade.OwnWar = hs.Convoys;
         return hs;
     }
 
@@ -70,6 +89,7 @@ public sealed class HostSupply
             Id = Book.NextHost++, Realm = spec.Realm, Lord = spec.Lord.Value,
             ChestKind = (byte)_econ.Ledger.KindOf(spec.PayChest), ChestOwner = _econ.Ledger.OwnerOf(spec.PayChest).Value, BaggageOwner = spec.Baggage.Owner.Value,
             Purveyance = spec.Policy.Purveyance, Plunder = spec.Policy.Plunder, Forage = spec.Policy.Forage, Depots = [.. spec.Policy.Depots ?? []], BuyRadiusM = spec.Policy.BuyRadiusM,
+            Campaign = spec.Campaign.Value,
             Followers = spec.Followers, Carts = spec.Carts, Outside = Math.Min(spec.OutsideMen, spec.Men.Total),
             Riding = spec.Animals.Riding, Pack = spec.Animals.Pack, Draught = spec.Animals.Draught, Oxen = spec.Animals.Oxen,
         };
@@ -161,6 +181,8 @@ public sealed class HostSupply
     {
         if (day == _lastDay) return;
         _lastDay = day;
+        BindDisease();
+        CheckLarders(day);
         foreach (var id in Book.Hosts.Keys.ToArray()) _last[id] = Supply(new HostId(id), day);
         foreach (var id in _last.Keys.Where(k => !Book.Hosts.ContainsKey(k)).ToArray()) _last.Remove(id);
     }
@@ -174,7 +196,7 @@ public sealed class HostSupply
         var a = Acc(h); var rt = Resolve(a);
         var need = NeedsOf(a, day);
         var res = new DayResult { Day = day, Host = h, Needed = need };
-        var books = BooksInReach(a);
+        var books = a.Abstract ? [] : BooksInReach(a);
         var led = _econ.Ledger;
         long coin0 = led.Balance(rt.Chest).Mites;
         // staple first: the men's lives; then pay; then the animals, the fires and the relish with what the chest has left
@@ -197,6 +219,8 @@ public sealed class HostSupply
         res.DaysOfFoodMilli = need.StapleG > 0 ? staples * 1000 / need.StapleG : 0;
         res.DaysFundedMilli = need.PayMites > 0 ? led.Balance(rt.Chest).Mites * 1000 / need.PayMites : 0;
         res.BoughtMites = Math.Max(0, coin0 - led.Balance(rt.Chest).Mites - res.PaidTotal);
+        if (!a.Abstract && a.Depots.Length > 0 && a.Carts > 0 && staples < need.StapleG * SupplyConfig.ConvoyBelowDays) TrySendConvoy(a, rt, need, day);
+        NotePrices(a, res, day);
         for (int n = 0; n < DayResult.Needs; n++)
         {
             for (int s = 0; s < DayResult.Sources; s++) a.Totals[n * DayResult.Sources + s] += res.Delivered[n, s];
@@ -233,17 +257,26 @@ public sealed class HostSupply
         var why = n == SupplyNeed.Firewood ? DestroyReason.Burned : DestroyReason.Eaten;
         long left = want;
         // 1. baggage
-        foreach (var g in goods)
+        left = Pull(rt, res, n, goods, why, left, SupplySource.Baggage, rt.Baggage, 0);
+        if (a.Abstract)
         {
-            if (left <= 0) break;
-            long have = rt.Baggage.Qty(g); if (have <= 0) continue;
-            long takeQty = Math.Min(have, QtyFor(n, g, left));
-            long eq = Math.Min(left, Measure(n, g, takeQty));
-            if (eq <= 0) continue;
-            // eat exactly what covers the measure (the last unit may over-cover by a rounding gram)
-            if (!rt.Baggage.Destroy(g, takeQty, why)) continue;
-            res.Delivered[(int)n, (int)SupplySource.Baggage] += eq; left -= eq;
+            // the abstract tier: no books here; the food is bought abroad at the continent's prices, paid from the chest
+            if (left > 0) left = AbroadBuy(rt, res, n, goods, why, left);
+            res.ShortG[(int)n] = Math.Max(0, left);
+            return;
         }
+        // 2. food rents: the lord's own barn within reach gives to his host (the lord's goods, so no coin), keeping his household's reserve of grain
+        if (left > 0 && n is SupplyNeed.Staple or SupplyNeed.Hay or SupplyNeed.Oats && LordBarn(a) is var (barn, reserveEq) && barn != null)
+            left = Pull(rt, res, n, goods, why, left, SupplySource.FoodRent, barn, n == SupplyNeed.Staple ? reserveEq : 0);
+        // 3. depots within a day's cart: delivered the same day (the beyond ones are the convoy's)
+        if (left > 0 && n is SupplyNeed.Staple or SupplyNeed.Oats)
+            foreach (int ds in DepotsByDistance(a, sameDayOnly: true))
+            {
+                if (left <= 0) break;
+                var depot = DepotStore(ds); if (depot == null) continue;
+                left = Pull(rt, res, n, goods, why, left, SupplySource.Depot, depot, 0);
+                NoteDepot(a, ds, depot, day);
+            }
         // 4. the market: books by distance, the cheapest good per measure first, at the books' asks
         if (left > 0 && goods.Length > 0)
         {
@@ -255,16 +288,202 @@ public sealed class HostSupply
                 {
                     if (left <= 0) break;
                     long units = QtyFor(n, g, left);
+                    long ask0 = bk.AskMicro(g);
                     var t = bk.Buy(rt.Party, g, units, SupplyConfig.BuyMaxRatioPermille, day);
                     if (t.Qty <= 0) continue;
                     long qty = Math.Min(t.Qty, units);
                     long eq = Math.Min(left, Measure(n, g, qty));
                     rt.Baggage.Destroy(g, qty, why);
                     res.Delivered[(int)n, (int)SupplySource.Market] += eq; left -= eq;
+                    if (n == SupplyNeed.Staple)
+                    {
+                        (long Ask0, long Ask1, long Grams, ushort Good) p = res.Purchases.TryGetValue(bk.SettlementIndex, out var q0) ? q0 : (ask0, ask0, 0L, g);
+                        res.Purchases[bk.SettlementIndex] = (p.Ask0, bk.AskMicro(g), p.Grams + qty, g);
+                    }
                 }
             }
         }
         res.ShortG[(int)n] = Math.Max(0, left);
+    }
+
+    /// <summary>Eats up to <paramref name="left"/> measures of the need's goods out of <paramref name="from"/> (the baggage itself, or a barn or depot whose goods are first moved into the baggage), keeping <paramref name="reserveEq"/> measures of staple in it; returns what is still wanted.</summary>
+    private long Pull(Rt rt, DayResult res, SupplyNeed n, ushort[] goods, DestroyReason why, long left, SupplySource src, Store from, long reserveEq)
+    {
+        bool bag = ReferenceEquals(from, rt.Baggage);
+        long avail = long.MaxValue;
+        if (reserveEq > 0) { long have = 0; foreach (var g in goods) have += Measure(n, g, from.Qty(g)); avail = Math.Max(0, have - reserveEq); }
+        foreach (var g in goods)
+        {
+            if (left <= 0 || avail <= 0) break;
+            long have = from.Qty(g); if (have <= 0) continue;
+            long want = Math.Min(left, avail);
+            long takeQty = Math.Min(have, QtyFor(n, g, want));
+            long eq = Math.Min(want, Measure(n, g, takeQty));
+            if (eq <= 0) continue;
+            // eat exactly what covers the measure (the last unit may over-cover by a rounding gram)
+            if (!bag && !Store.Move(from, rt.Baggage, g, takeQty)) continue;
+            if (!rt.Baggage.Destroy(g, takeQty, why)) continue;
+            res.Delivered[(int)n, (int)src] += eq; left -= eq; avail -= eq;
+        }
+        return left;
+    }
+
+    /// <summary>The lord's own barn when the host's lord is a person with a household that holds one within the buy radius, and the grain his household keeps in it (30 days of its people's staple).</summary>
+    private (Store? Barn, long ReserveEq) LordBarn(HostAccount a)
+    {
+        if (a.Lord == 0) return (null, 0);
+        var pt = _pop.People; int p = pt.IndexOf(new EntityId(a.Lord));
+        if (p < 0 || pt.Status[p] != PersonStatus.Alive) return (null, 0);
+        int hh = pt.Household[p]; if (hh < 0) return (null, 0);
+        if (!_econ.OtherStores.TryGetValue(FarmIds.Barn(hh), out var barn)) return (null, 0);
+        int s = _pop.Households.Settlement[hh]; var region = _pop.Region;
+        if (s < 0 || s >= region.Settlements.Count) return (null, 0);
+        long dx = region.Settlements[s].CenterX - a.PlaceXM, dy = region.Settlements[s].CenterY - a.PlaceYM;
+        if (dx * dx + dy * dy > (long)a.BuyRadiusM * a.BuyRadiusM) return (null, 0);
+        return (barn, (long)_pop.Households.MemberCount[hh] * 1100 * SupplyConfig.ReserveGrainDays);
+    }
+
+    // ------------------------------------------------------------------ depots and convoys
+
+    /// <summary>A settlement's war depot store, when one has been opened (<see cref="OpenDepot"/>).</summary>
+    public Store? DepotStore(int settlement) => _econ.OtherStores.TryGetValue(HostIds.Depot(settlement), out var s) ? s : null;
+
+    /// <summary>Opens (once) the war depot at a settlement: a granary of <paramref name="capacityKg"/> kilograms (0: unlimited) that the host's side keeps for its armies. The depot belongs to the host's lord or realm in the sense that the host's policy names it; its stocking is the steward's (grain moved in by <see cref="Store.Move"/>).</summary>
+    public Store OpenDepot(int settlement, long capacityKg = 0) => _econ.OpenStore(StoreKind.Granary, HostIds.Depot(settlement), capacityKg * 1000, 0, true);
+
+    /// <summary>The policy's depots, nearest first (ties by settlement), those within a day's cart of the host's place or only those beyond it.</summary>
+    private List<int> DepotsByDistance(HostAccount a, bool sameDayOnly)
+    {
+        var region = _pop.Region; var list = new List<(long D2, int S)>(); long day2 = (long)SupplyConfig.DepotSameDayM * SupplyConfig.DepotSameDayM;
+        foreach (int s in a.Depots.Distinct())
+        {
+            if (s < 0 || s >= region.Settlements.Count) continue;
+            long dx = region.Settlements[s].CenterX - a.PlaceXM, dy = region.Settlements[s].CenterY - a.PlaceYM, d2 = dx * dx + dy * dy;
+            if ((d2 <= day2) == sameDayOnly) list.Add((d2, s));
+        }
+        list.Sort((x, y) => x.D2 != y.D2 ? x.D2.CompareTo(y.D2) : x.S.CompareTo(y.S));
+        return [.. list.Select(x => x.S)];
+    }
+
+    /// <summary>Writes <c>depot_emptied</c> once when a war has taken the last grain out of a depot; a refilled depot may write it again.</summary>
+    private void NoteDepot(HostAccount a, int settlement, Store depot, int day)
+    {
+        long grain = 0; foreach (var g in _loadGoods) grain += depot.Qty(g);
+        if (grain > 0) { Book.Emptied.Remove(settlement); return; }
+        if (!Book.Emptied.Add(settlement)) return;
+        var sid = _pop.Region.Settlements[settlement].Id;
+        Chron.Chron(WriteTime(day), "depot_emptied", "ch_war_depot_emptied", [ChronParam.Place("place", sid)], [sid], [HostCause(a, CauseKind.Supply, "ch_note_war_depot_drawn")], ("host", a.Id.ToString()));
+    }
+
+    /// <summary>The quartermaster sends a convoy when the baggage is low: to the nearest depot beyond a day's reach that holds at least a day of the host's staple, for up to <see cref="SupplyConfig.ConvoyLoadDays"/> days of it. One at a time.</summary>
+    private void TrySendConvoy(HostAccount a, Rt rt, DayNeeds need, int day)
+    {
+        if (Convoys.Of(a.Id) != null || need.StapleG <= 0) return;
+        foreach (int ds in DepotsByDistance(a, sameDayOnly: false))
+        {
+            var depot = DepotStore(ds); if (depot == null) continue;
+            long grain = 0; foreach (var g in _loadGoods) grain += depot.Qty(g);
+            if (grain < need.StapleG) continue;
+            long want = Math.Min(grain, need.StapleG * SupplyConfig.ConvoyLoadDays);
+            if (Convoys.Send(a, rt.Chest, rt.Baggage, ds, want, day, GameTime.FromGameHours((long)day * 24 + 18))) return;
+        }
+    }
+
+    /// <summary>A cause naming the host's campaign entry when it has one, else a note key.</summary>
+    private static Cause HostCause(HostAccount a, CauseKind kind, string noteKey) => a.Campaign != 0 ? new Cause(kind, new EntityId(a.Campaign)) : new Cause(kind, null, NoteKey: noteKey);
+    private static GameTime WriteTime(int day) => GameTime.FromGameHours((long)day * 24 + 18);
+
+    /// <summary>The books whose staple ask the host's buying moved by 5 per cent or more today each get an <c>army_bought</c> entry caused by the host's campaign (army-economy 8: the price entry names the army, not market drift).</summary>
+    private void NotePrices(HostAccount a, DayResult res, int day)
+    {
+        foreach (var (s, p) in res.Purchases)
+        {
+            if (p.Ask0 <= 0 || (p.Ask1 - p.Ask0) * 1000 < p.Ask0 * SupplyConfig.PriceNotePermille) continue;
+            var sid = _pop.Region.Settlements[s].Id; long pct = (p.Ask1 - p.Ask0) * 100 / p.Ask0;
+            var subj = a.Lord != 0 ? new[] { sid, new EntityId(a.Lord) } : new[] { sid };
+            var e = Chron.Chron(WriteTime(day), "army_bought", "ch_war_bought", [ChronParam.Place("place", sid), ChronParam.Count("kg", (int)(p.Grams / 1000)), ChronParam.Count("pct", (int)pct)], subj,
+                [HostCause(a, CauseKind.Supply, "ch_note_war_buying")], ("host", a.Id.ToString()), ("good", _econ.Goods.StringId(p.Good)), ("ask_before", p.Ask0.ToString()), ("ask_after", p.Ask1.ToString()));
+            if (e.Value != 0) res.EventIds.Add(e);
+        }
+    }
+
+    /// <summary>The blockaded towns' larders: once a town's days of food fall under <see cref="SupplyConfig.StarvingDays"/> its <c>siege_starving</c> is written (once for the blockade).</summary>
+    private void CheckLarders(int day)
+    {
+        foreach (var (s, host) in Book.Blockades.ToArray())
+        {
+            if (Book.Starving.Contains(s)) continue;
+            int days = DaysOfFood(s); if (days >= SupplyConfig.StarvingDays) continue;
+            Book.Starving.Add(s);
+            var sid = _pop.Region.Settlements[s].Id;
+            var cause = Book.Hosts.TryGetValue(host, out var a) ? HostCause(a, CauseKind.Famine, "ch_note_war_blockade") : new Cause(CauseKind.Famine, null, NoteKey: "ch_note_war_blockade");
+            Chron.Chron(WriteTime(day), "siege_starving", "ch_war_starving", [ChronParam.Place("place", sid), ChronParam.Count("days", days)], [sid], [cause], ("host", host.ToString()), ("days", days.ToString()));
+        }
+    }
+
+    // ------------------------------------------------------------------ the abstract tier
+
+    /// <summary>
+    /// The host goes to the abstract tier (outside every detailed region): its needs, counters, arrears and pay are the same; its food is bought abroad at the continent's prices (the grain index of its region) from its chest, the coin leaving the region as
+    /// emigrants' coin so the continent's total holds. Its chest, baggage and soldiers' purse stay where they are.
+    /// </summary>
+    public void ToAbstract(HostId h) { Acc(h).Abstract = true; }
+
+    /// <summary>The host comes back to a detailed region at <paramref name="place"/>: the counters it carried are the same account's.</summary>
+    public void ToDetailed(HostId h, HostPlace place, HostMode mode) { var a = Acc(h); a.Abstract = false; Update(h, place, mode); }
+
+    /// <summary>The price of a good abroad in micro-mites a unit: the region's books' mean reference price, times the continent's index for wheat-like goods, at the ask side of the spread.</summary>
+    private long AbroadPriceMicro(ushort g)
+    {
+        long sum = 0; int n = 0;
+        foreach (var b in Economy.Markets.AllBooks()) { long r = b.Goods[g].RefMicro; if (r > 0) { sum += r; n++; } }
+        if (n == 0) return 0;
+        long price = sum / n; int idx = 1000;
+        var link = Economy.World.Get<ContinentLink>();
+        if (link != null && IsStapleLike(g) && (uint)link.Region < (uint)link.State.Summaries.Length && link.State.Summaries[link.Region].PriceIdx.Length > 0) idx = Math.Max(1, link.State.Summaries[link.Region].PriceIdx[0]);
+        return price * idx / 1000 * (1000 + _econ.Money.SpreadHalfPermille) / 1000;
+    }
+    private bool IsStapleLike(ushort g) => Array.IndexOf(_stapleGoods, g) >= 0;
+
+    private long AbroadBuy(Rt rt, DayResult res, SupplyNeed n, ushort[] goods, DestroyReason why, long left)
+    {
+        var link = Economy.World.Get<ContinentLink>(); if (link == null || goods.Length == 0) return left;
+        var led = _econ.Ledger;
+        foreach (var g in goods.OrderBy(g => AbroadPriceMicro(g) * SupplyConfig.GrainMeasurePpm / Math.Max(1, IsStapleLike(n) ? _econ.Goods.FoodMeasuresPpm(g) : SupplyConfig.GrainMeasurePpm)).ThenBy(g => g))
+        {
+            if (left <= 0) break;
+            long ppu = AbroadPriceMicro(g); if (ppu <= 0) continue;
+            long units = QtyFor(n, g, left), bal = led.Balance(rt.Chest).Mites;
+            long cost = (long)(((Int128)units * ppu + PriceCurve.Micro - 1) / PriceCurve.Micro);
+            if (cost > bal) { units = (long)((Int128)bal * PriceCurve.Micro / ppu); cost = (long)(((Int128)units * ppu + PriceCurve.Micro - 1) / PriceCurve.Micro); }
+            if (units <= 0 || cost <= 0 || cost > bal) continue;
+            if (!led.Sink(rt.Chest, new Coin(cost), SinkReason.Emigrate)) continue;
+            link.Mine.EmigrantCoin += cost;
+            rt.Baggage.Create(g, units, CreateReason.Import); rt.Baggage.Destroy(g, units, why);
+            long eq = Math.Min(left, Measure(n, g, units));
+            res.Delivered[(int)n, (int)SupplySource.Market] += eq; left -= eq;
+        }
+        return left;
+    }
+
+    // ------------------------------------------------------------------ the disease rule's army camp
+
+    /// <summary>The people of the army camp this person is in: his host's men and followers when the host is camped or besieging and he is on its muster or is its lord; 0 otherwise (the disease rule's <c>ArmyCampSize</c>).</summary>
+    public int ArmyCampSizeOf(ulong personId)
+    {
+        var pt = _pop.People; int p = pt.IndexOf(new EntityId(personId));
+        HostAccount? a = null;
+        if (p >= 0 && Book.OnCampaign.TryGetValue(p, out int host)) Book.Hosts.TryGetValue(host, out a);
+        if (a == null) foreach (var x in Book.Hosts.Values) if (x.Lord == personId) { a = x; break; }
+        return a != null && a.Mode is HostMode.Camp or HostMode.Siege ? a.Total + a.Followers : 0;
+    }
+
+    private void BindDisease()
+    {
+        if (_diseaseBound || DiseaseSource?.Invoke() is not { } b) return;
+        var prev = b.ArmyCampSize;
+        b.ArmyCampSize = id => Math.Max(ArmyCampSizeOf(id), prev?.Invoke(id) ?? 0);
+        _diseaseBound = true;
     }
 
     private List<MarketBook> BooksInReach(HostAccount a)
@@ -474,7 +693,7 @@ public sealed class HostSupply
     public void SiegeBlockade(int settlement, bool on, HostId besieger)
     {
         var bk = BookOf(settlement);
-        if (on) Book.Blockades[settlement] = besieger.Value; else Book.Blockades.Remove(settlement);
+        if (on) Book.Blockades[settlement] = besieger.Value; else { Book.Blockades.Remove(settlement); Book.Starving.Remove(settlement); }
         if (bk != null) bk.Blockaded = on;
     }
 
@@ -514,7 +733,12 @@ public sealed class HostSupply
     }
 
     /// <summary>A host pitches camp at a settlement: <see cref="CampSize"/> reads it (the disease rule's <c>ArmyCampSize</c> hook is bound by the military's wiring).</summary>
-    public void Camp(HostId h, int settlement) { var a = Acc(h); a.PlaceSettlement = settlement; a.Mode = HostMode.Camp; }
+    public void Camp(HostId h, int settlement)
+    {
+        var a = Acc(h); a.PlaceSettlement = settlement; a.Mode = HostMode.Camp;
+        if (settlement >= 0 && settlement < _pop.Region.Settlements.Count) { a.PlaceXM = _pop.Region.Settlements[settlement].CenterX; a.PlaceYM = _pop.Region.Settlements[settlement].CenterY; }
+        BindDisease();
+    }
 
     /// <summary>Men camped at or besieging a settlement.</summary>
     public int CampSize(int settlement) { int t = 0; foreach (var a in Book.Hosts.Values) if (a.PlaceSettlement == settlement && a.Mode is HostMode.Camp or HostMode.Siege) t += a.Total; return t; }
@@ -538,6 +762,7 @@ public sealed class HostSupplySystem : AbstractSystem
         if (ctx.HourOfDay != 18) return;
         var hs = ctx.World.Get<HostSupply>();
         if (hs == null || hs.Book.Hosts.Count == 0) return;
+        hs.Chron = RuleChron.Of(ctx.Outbox);
         hs.RunDay((int)ctx.Day);
     }
 }

@@ -28,10 +28,12 @@ public readonly record struct HostId(int Value) : IComparable<HostId>
     public override string ToString() => IsNone ? "Host#none" : $"Host#{Value}";
 }
 
-/// <summary>Ids of the records a host owns, in reserved serial spaces of <see cref="IdKind.Other"/> (so they never meet a table row's id): 4 is a host's soldiers' purse, 5 the load generator's pay chests, 6 its baggage stores.</summary>
+/// <summary>Ids of the records a host owns, in reserved serial spaces of <see cref="IdKind.Other"/> (so they never meet a table row's id): 4 is a host's soldiers' purse, 5 the load generator's pay chests, 6 its baggage stores, 7 a settlement's war depot (a granary the host's side keeps for its army, P7-AE1).</summary>
 public static class HostIds
 {
-    public const EntityId.ReservedSpace SoldiersSpace = (EntityId.ReservedSpace)4, ChestSpace = (EntityId.ReservedSpace)5, BaggageSpace = (EntityId.ReservedSpace)6;
+    public const EntityId.ReservedSpace SoldiersSpace = (EntityId.ReservedSpace)4, ChestSpace = (EntityId.ReservedSpace)5, BaggageSpace = (EntityId.ReservedSpace)6, DepotSpace = (EntityId.ReservedSpace)7;
+    /// <summary>The owner of the war depot's store at a settlement (<see cref="HostSupply.OpenDepot"/>).</summary>
+    public static EntityId Depot(int settlement) => EntityId.Reserved(IdKind.Other, 0, DepotSpace, (ulong)settlement);
     public static EntityId Soldiers(HostId h) => EntityId.Reserved(IdKind.Other, 0, SoldiersSpace, (ulong)h.Value);
     public static EntityId Chest(int n) => EntityId.Reserved(IdKind.Other, 0, ChestSpace, (ulong)n);
     public static EntityId Baggage(int n) => EntityId.Reserved(IdKind.Other, 0, BaggageSpace, (ulong)n);
@@ -68,6 +70,8 @@ public sealed record SupplyPolicy(bool Purveyance = false, ForagePolicy Forage =
 public sealed record HostSpec(int Realm, EntityId Lord, PurseId PayChest, Store Baggage, Roster Men, int Followers, AnimalCounts Animals, int Carts, SupplyPolicy Policy)
 {
     public PurseId Treasury { get; init; } = PurseId.None;
+    /// <summary>The chronicle entry of the campaign this host serves (the war's or the muster's): the cause of the host's own entries (army_bought, siege_starving, depot_emptied). None: those entries stand on their note keys.</summary>
+    public EntityId Campaign { get; init; } = EntityId.None;
     /// <summary>Men of the roster who come from outside the region (the realm's, a gate's): their pay leaves with them at <c>Disband</c> (the continent side takes it), the others' is spent at home.</summary>
     public int OutsideMen { get; init; }
 }
@@ -96,8 +100,11 @@ public sealed class DayResult
     /// <summary>Baggage staple over today's staple need, in thousandths of a day; the pay chest over today's pay, likewise.</summary>
     public long DaysOfFoodMilli { get; set; }
     public long DaysFundedMilli { get; set; }
-    /// <summary>The chronicle entry ids written today (none in the first cut: the chronicle types of the ladder come with purveyance, forage and the price causes in P7-AE1/AE2).</summary>
-    public IReadOnlyList<EntityId> Events { get; init; } = [];
+    /// <summary>The chronicle entry ids written today (army_bought where the host's buying moved a price; later parts add purveyance and forage).</summary>
+    public List<EntityId> EventIds { get; } = [];
+    public IReadOnlyList<EntityId> Events => EventIds;
+    /// <summary>The books the host bought staple from today: settlement to (the ask before its first buy, the ask after its last, grams bought, the good): what <c>army_bought</c> is written from.</summary>
+    internal SortedDictionary<int, (long Ask0, long Ask1, long Grams, ushort Good)> Purchases { get; } = [];
     /// <summary>Coin the market was paid today for the host's purchases.</summary>
     public long BoughtMites { get; set; }
     public long DeliveredOf(SupplyNeed n) { long t = 0; for (int s = 0; s < Sources; s++) t += Delivered[(int)n, s]; return t; }
@@ -125,6 +132,16 @@ public static class SupplyConfig
     public const int LevyMinAge = 16, LevyMaxAge = 45;
     /// <summary>A settlement under this many households is a farmstead, not a village: the levy asks it after the villages (overview 10d).</summary>
     public const int LevyVillageMinHouseholds = 5;
+    /// <summary>A depot within this many metres of the host delivers the same day (army-economy 4.1); beyond it the quartermaster sends a convoy.</summary>
+    public const int DepotSameDayM = 8000;
+    /// <summary>The lord's barn keeps this many days of its own household's grain when it gives to his host (army-economy 4.3's reserve, read for 4.1's food rents).</summary>
+    public const int ReserveGrainDays = 30;
+    /// <summary>A convoy is sent when the baggage holds fewer than this many days of staple; it loads up to this many days of the host's staple, on at most this many carts.</summary>
+    public const int ConvoyBelowDays = 3, ConvoyLoadDays = 10, ConvoyMaxCarts = 8;
+    /// <summary>A siege's larder under this many days of food writes <c>siege_starving</c> once (army-economy 4.8).</summary>
+    public const int StarvingDays = 5;
+    /// <summary>A purchase writes <c>army_bought</c> when it moved the staple's ask by at least this many per mille.</summary>
+    public const int PriceNotePermille = 50;
 
     /// <summary>Daily fodder in grams by animal row: hay and oats (species.jsonc: riding horse 8 kg and 2.5 kg, pack horse 8 and 0, draught horse 9 and 3, ox 10 and 0).</summary>
     public static (long HayG, long OatsG) Fodder(AnimalCounts a) => (a.Riding * 8000L + a.Pack * 8000L + a.Draught * 9000L + a.Oxen * 10000L, a.Riding * 2500L + a.Draught * 3000L);
