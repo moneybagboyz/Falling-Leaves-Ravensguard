@@ -218,6 +218,7 @@ public sealed partial class FightWorld
     {
         Tick++;
         _impacts.Clear();
+        if (Assault != null) Assault.Run();                         // [P7-SG-C] ladders, towers, murder holes and sallies hold and move their people before anyone moves
         if (Carriers != null) CarriersBefore();                     // [P7-SH-A] the ships move and carry their people (FightWorld.Carriers.cs)
         foreach (var f in Fighters) UpdateVitals(f);
         MoraleStep();                                   // P4-D hook: morale at 2 Hz, staggered by id (Morale/FightWorld.Morale.cs)
@@ -453,6 +454,7 @@ public sealed partial class FightWorld
         int pm = f.Act switch { FAct.Windup or FAct.Strike or FAct.Recover => K.AttackMovePm, FAct.Block or FAct.Aiming or FAct.Drawing => K.GuardMovePm, _ => 1000 };
         if (!sprint && Formations != null && f.FmRow >= 0) { int fp = Formations.PaceOf(f); if (fp > 0 && fp < speed) speed = fp; }      // [P7 BB-B] a formation member keeps the formation's step
         speed = (int)((long)speed * pm / 1000 * f.WalkPm / 1000);
+        if (Walls is ILevelWalls lwf) speed = speed * lwf.FootingPm(f.Id) / 1000;       // [P7-SG-C] rubble slows the feet
         if (f.Book.Weakened) speed = speed * 800 / 1000;
         speed = WeatherSpeed(speed);                                       // [P4 close-out] weather hook (FightWorld.Weather.cs)
         int perTick = speed / 20;
@@ -614,7 +616,8 @@ public sealed partial class FightWorld
         long dx = t.X - a.X, dy = t.Y - a.Y;
         long len = FightMath.Len(dx, dy);
         if (len > reach + K.ReachSlackMm) return false;
-        if (Walls != null && WallBetween(a.X, a.Y, t.X, t.Y)) return false;       // [heists] no blow through a wall
+        if (Walls is ILevelWalls lw && (!lw.CanStrike(a.Id, t.Id) || WallBetweenFor(a, t))) return false;         // [P7-SG-C] a blow reaches only the same floor, and no wall of that floor is between
+        else if (Walls != null && Walls is not ILevelWalls && WallBetween(a.X, a.Y, t.X, t.Y)) return false;       // [heists] no blow through a wall
         if (len == 0) return true;
         int dot = (int)((a.FX * dx + a.FY * dy) / len);
         return dot >= K.AttackConeQ10;
@@ -733,6 +736,7 @@ public sealed partial class FightWorld
         h = WeatherHash(h);                                         // [P4 close-out] the weather row, when set (FightWorld.Weather.cs)
         if (Formations != null) h = Formations.Hash(h);               // [P7 BB-B] the formation book joins the trail when there is one
         if (Carriers != null) h = Carriers.Hash(h);                 // [P7-SH-A] the ships, their riders and the swimmers join the trail
+        if (Assault != null) h = Assault.Hash(h);                   // [P7-SG-C] the ladders, towers, holes and sallies join the trail
         h = FightMath.Mix(h, _engageTick);              // P4-D hook: the walk-away clock
         return h;
     }

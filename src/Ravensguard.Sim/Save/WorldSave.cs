@@ -110,6 +110,9 @@ public sealed class WorldState
     /// <summary>P7 BB-C (battle-bubble-and-formations 7): the battle bubble of a fight that is a battle, in the optional "battle" section (no version bump; absent unless a bubble is open); <see cref="BattleSource"/>, when set by the game, is read at a save.</summary>
     public BattleRecord? Battle { get; set; }
     public Func<BattleRecord?>? BattleSource { get; set; }
+    /// <summary>P7-SG-C: the assault laid over a fight (ladders, towers, murder holes, sallies; sieges-and-engines 7), in the optional "sieges" section beside the engines (no version bump); <see cref="AssaultSource"/>, when set by the game, is read at a save.</summary>
+    public Ravensguard.Sim.Save.AssaultRecord? Assault { get; set; }
+    public Func<Ravensguard.Sim.Save.AssaultRecord?>? AssaultSource { get; set; }
     /// <summary>P4-D (feedback-flavour-log): the log of the fight in progress or the last one, in the optional "fightlog" section (no format bump); <see cref="FightLogSource"/>, when set by the game, is read at a save.</summary>
     public FightLogSave? FightLog { get; set; }
     public Func<FightLogSave?>? FightLogSource { get; set; }
@@ -530,7 +533,7 @@ public static partial class WorldSave
             Coinage = w.Coinage is { IsEmpty: false } coinb ? CoinageSave.Capture(coinb) : null,                                           // P7-CN1
             Industry = w.Industry is { IsEmpty: false } inb ? IndustrySave.Capture(inb) : null,                                        // P7-IN1
             Soldiers = w.Soldiers is { IsEmpty: false } sob ? SoldierSave.Capture(sob) : null,                                          // P7-SC-A
-            Sieges = w.Engines is { IsEmpty: false } eb ? SiegeSave.Capture(eb) : null,                                                // P7-SG-B
+            Sieges = SiegeSave.CaptureOrNull(w.Engines, w.AssaultSource != null ? w.AssaultSource() : w.Assault),                       // P7-SG-B, P7-SG-C
             Armies = w.Armies is { IsEmpty: false } arb ? ArmySave.Capture(arb) : null,                                                 // P7-AM-A
             Holdings = w.Holdings is { IsEmpty: false } hdb ? HoldingsSave.Capture(hdb) : null,                                        // P6-B6
             LandWorks = LandWorksOf(w),                                                                                              // P6-D4
@@ -744,8 +747,12 @@ public static partial class WorldSave
             Ids = IdAllocator.FromState(meta.IdState), Chunks = chunks, Chronicle = chronicle,
             IdTables = remap.Tables, LoadNotes = remap.Notes,
         };
-        if (file.Sections.ContainsKey(SiegeSave.SectionName) && restored.Mounts != null && content != null)
-            restored.Engines = Decode<SiegeSave>(file, SiegeSave.SectionName, compressed: true).Restore(content, restored.Mounts, cs.Seed);      // P7-SG-B
+        if (file.Sections.ContainsKey(SiegeSave.SectionName) && content != null)
+        {
+            var sieges = Decode<SiegeSave>(file, SiegeSave.SectionName, compressed: true);
+            if (restored.Mounts != null) restored.Engines = sieges.Restore(content, restored.Mounts, cs.Seed);      // P7-SG-B
+            restored.Assault = sieges.Assault;                                                                          // P7-SG-C: an assault in progress, laid over its fight by the bubble that restores it
+        }
         if (restored.Coinage != null && economy != null) economy.Ledger.Coinage = restored.Coinage.Stock;        // P7-CN1: the gold book is the ledger's hook again
         // P5-A4: a migrated v7 save's hero gets the person row now (the v8 step marks it pending); a v8 save holds it in the people diff already, and its status in the
         // abstract section's vital columns; a bare world without that section (tools, test fixtures) has only the hero section's index to say which row is the hero's

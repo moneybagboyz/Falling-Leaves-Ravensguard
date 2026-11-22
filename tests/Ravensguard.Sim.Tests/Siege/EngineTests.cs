@@ -286,11 +286,11 @@ public class EngineTests(ITestOutputHelper output)
         f.Book.Assign(e, Enumerable.Range(0, 10).Select(i => EntityId.Make(IdKind.Person, 700UL + (ulong)i)), Enumerable.Range(0, 6).Select(i => EntityId.Make(IdKind.Person, 720UL + (ulong)i)));
         Assert.Equal(AimResult.Ok, f.Book.Aim(e, 45_500, 40_500));
         Assert.Equal(AimResult.OutOfRange, f.Book.Aim(e, 45_500, 50_500));
-        // on the stone wall a swing does 5 hp (SG-A deviation 2): it takes 400 swings of 80 seconds to bring one 2,000 hp cell down: a ram is for gates
+        // on the stone wall a swing does 75 hp (the pace retune, overview 10g): 27 swings of 80 seconds bring one 2,000 hp cell down: a ram is for gates, the trebuchet for walls
         f.Book.Aim(e, 45_500, 40_500);
         int n = f.Book.Advance(e, 80 * 5, f.W);
         Assert.Equal(5, n);
-        Assert.Equal(5 * 5, f.Rig.W.HitsOf(new ChunkKey(1, 1, 0))!.Cells.Single().Lost);
+        Assert.Equal(5 * 75, f.Rig.W.HitsOf(new ChunkKey(1, 1, 0))!.Cells.Single().Lost);
     }
 
     [Fact]

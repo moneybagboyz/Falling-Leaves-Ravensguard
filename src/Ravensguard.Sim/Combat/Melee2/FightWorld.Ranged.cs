@@ -131,7 +131,9 @@ public sealed partial class FightWorld
         else { tx = f.X + f.FX * 30; ty = f.Y + f.FY * 30; tz = K.AimHeightMm; }
         int sigma = AimSigmaMdeg(f.ArcherySkill, early, aimed, f.LastMoveMm * 20 > K.MoveCancelMmps, f.OneEye);
         int power = l.MinStrength > 0 ? (int)Math.Min(l.PowerPm, (long)l.PowerPm * f.Kit.Strength * f.StrengthPm / 1000 / l.MinStrength) : l.PowerPm;
-        var p = Launch(f, tx, ty, tz, sigma, RngStreams.AimError, f.ShotSerial, l.V0Mps * 1000, l.RangeMaxM * 1000);
+        int lvRange = l.RangeMaxM * 1000;
+        if (Walls is ILevelWalls lw0) { int bs = lw0.BaseMm(f.Id), bt = t != null ? lw0.BaseMm(t.Id) : bs; tz += bt; if (bs >= bt + AssaultRules.LevelMm / 2) { sigma = sigma * AssaultRules.HeightSigmaPm / 1000; lvRange = lvRange * AssaultRules.HeightRangePm / 1000; } }   // [P7-SG-C] aim at his floor; a level up is range and a steadier aim
+        var p = Launch(f, tx, ty, tz, sigma, RngStreams.AimError, f.ShotSerial, l.V0Mps * 1000, lvRange);
         p.Ammo = f.AmmoDef.Id; p.V0Mmps = l.V0Mps * 1000; p.PowerPm = power; p.MassG = f.AmmoDef.MassG;
         p.AimPart = t != null ? f.Req.Part : -1;
         f.Loaded = false; f.ShotSerial++;
@@ -178,8 +180,8 @@ public sealed partial class FightWorld
         long d2 = Math.Max(1, FightMath.Len(ax - f.X, ay - f.Y));
         var p = new Projectile
         {
-            Serial = (uint)Projectiles.Count + 1, Shooter = f.Id, Team = f.Team, X0 = f.X, Y0 = f.Y, Z0 = K.ShooterHeightMm, DirX = dirX, DirY = dirY,
-            SlopePpm = (int)((tz + vert - K.ShooterHeightMm) * 1_000_000L / d2), StepMm = Math.Max(1, speedMmps / 20), RangeMm = rangeMm,
+            Serial = (uint)Projectiles.Count + 1, Shooter = f.Id, Team = f.Team, X0 = f.X, Y0 = f.Y, Z0 = K.ShooterHeightMm + BaseOf(f), DirX = dirX, DirY = dirY,
+            SlopePpm = (int)((tz + vert - K.ShooterHeightMm - BaseOf(f)) * 1_000_000L / d2), StepMm = Math.Max(1, speedMmps / 20), RangeMm = rangeMm,
             ApexMm = lob ? (int)(d * K.LobApexPm / 1000) : 0, PlanMm = lob ? (int)d : 0,
         };
         Projectiles.Add(p);
@@ -276,7 +278,7 @@ public sealed partial class FightWorld
                 if (e.Id == p.Shooter && t < 800) continue;
                 long lat = (rx * p.DirY - ry * p.DirX) / FightMath.One;
                 if (Math.Abs(lat) > K.CapsuleRadiusMm) continue;
-                int z = p.Z(Math.Max(0, t));
+                int z = p.Z(Math.Max(0, t)) - BaseOf(e);                    // [P7-SG-C] the height above his own floor
                 int height = e.Act == FAct.Down ? 400 : K.CapsuleHeightMm;
                 if (z < 0 || z > height) continue;
                 if (t < bestT) { bestT = t; hit = e; hitLat = lat; }
@@ -322,7 +324,7 @@ public sealed partial class FightWorld
     private void ProjectileHit(Projectile p, Fighter t, long lat)
     {
         var shooter = Fighters[p.Shooter];
-        int z = p.Z(p.Flown);
+        int z = p.Z(p.Flown) - BaseOf(t);                                          // [P7-SG-C] the height above his own floor
         // which side of the target the missile meets: the body's right is its facing turned a quarter clockwise (screen y down)
         var (hx, hy) = p.At(p.Flown);
         long ox = hx - t.X, oy = hy - t.Y;

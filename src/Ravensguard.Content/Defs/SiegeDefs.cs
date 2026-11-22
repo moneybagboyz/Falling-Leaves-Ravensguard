@@ -12,6 +12,8 @@ public sealed record WallStatDef : ContentDef
     public int Threshold { get; init; }
     /// <summary>The build piece (kind ground) the cell becomes at z = 0 when the piece is destroyed; empty: the cell is left empty.</summary>
     public string Rubble { get; init; } = "";
+    /// <summary>P7-SG-C (the user's siege pace, overview 10g): momentum over the threshold per hit point for this piece; 0 means the rules' <see cref="SiegeRulesDef.DamageDivisor"/>. A wall's hit points are Phase 5's (a built wall's and the collapse rules' too), so the pace lever is how much of a blow a wall piece takes: masonry and palisade take it hard, gates and the walk keep the spec's 60.</summary>
+    public int DamageDivisor { get; init; }
 }
 
 /// <summary>P7-SG-A (sieges-and-engines 3.1, 4.1): the numbers of the wall rules, in content.</summary>

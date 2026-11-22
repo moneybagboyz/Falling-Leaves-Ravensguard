@@ -67,6 +67,7 @@ public sealed partial class FightWorld
     /// <summary>How far along its flight a missile first meets a wall in [f0, f1], or -1.</summary>
     private long MissileWall(Projectile p, long f0, long f1)
     {
+        if (Walls is ILevelWalls lw) { for (long f = f0 + 100; f <= f1; f += 100) { var (x, y) = p.At(f); if (lw.MissileStopped(x, y, p.Z(f), p.Shooter, p.Serial)) return Math.Max(f0, f - 100); } return -1; }   // [P7-SG-C] a missile flies in three dimensions
         for (long f = f0 + 100; f <= f1; f += 100) { var (x, y) = p.At(f); if (Walls!.BlocksMissile(x, y)) return Math.Max(f0, f - 100); }
         return -1;
     }

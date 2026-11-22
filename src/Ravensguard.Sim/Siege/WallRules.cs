@@ -33,6 +33,9 @@ public sealed class WallTable
         foreach (var s in db.All<WallStatDef>().OrderBy(s => s.Id, StringComparer.Ordinal)) { _stats[s.Id] = s; if (s.Rubble.Length > 0) _rubble.Add(s.Rubble); }
     }
 
+    /// <summary>Momentum over the threshold per hit point for a piece: its own divisor, else the rules'.</summary>
+    public int DivisorOf(WallStatDef stat) => stat.DamageDivisor > 0 ? stat.DamageDivisor : Rules.DamageDivisor;
+
     public WallStatDef? Stat(string? piece) => piece != null && _stats.TryGetValue(piece, out var s) ? s : null;
     public IReadOnlyCollection<WallStatDef> All => _stats.Values;
     /// <summary>Whether the piece is what a wall leaves at ground level.</summary>

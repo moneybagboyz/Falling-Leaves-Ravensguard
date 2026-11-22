@@ -41,6 +41,12 @@ public sealed class SiegeSave
     public const string SectionName = "sieges";
 
     [Key(0)] public EngineRowSave[] Engines { get; set; } = [];
+    /// <summary>P7-SG-C: the assault in progress over a battle, if one is (additive: an older save has none).</summary>
+    [Key(1)] public AssaultRecord? Assault { get; set; }
+
+    /// <summary>The section a world writes: while the book holds an engine or an assault is open, else none (a world that never besieged keeps its bytes).</summary>
+    public static SiegeSave? CaptureOrNull(EngineBook? b, AssaultRecord? a)
+        => b is { IsEmpty: false } || a != null ? new SiegeSave { Engines = b is { IsEmpty: false } ? Capture(b).Engines : [], Assault = a } : null;
 
     public static SiegeSave Capture(EngineBook b) => new()
     {

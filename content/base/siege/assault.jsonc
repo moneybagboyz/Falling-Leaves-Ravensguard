@@ -1,0 +1,13 @@
+// P7-SG-C (sieges-and-engines 4.4, 4.5): the assault on several levels. Times are fight ticks (20 a second), lengths millimetres, chances permille. A level is level_mm high (the wall-walk at +1, a tower's top floor).
+// Ladders: two carriers raise one in 80 ticks (4 s), it holds 3 climbers who climb it in 80 ticks; a defender at the top pushes it off in 60 ticks (3 s), a try at 500 + 10 x (Athletics - 30) permille (700 at Athletics 50).
+// Height: a shooter a level up has range x 1.15 and an aim sigma x 0.8 (about five points more hits for a skill-50 archer at 30 m); a missile from below meets a crenellated parapet's merlon at 600 permille. A murder hole drops a 20 kg stone or pours
+// boiling water every 200 ticks (10 s). A beam behind a gate adds 300 to its impact threshold. Footing: rubble walks at half pace. Sallies: engines within 150 m, at night (20:00 to 05:00) when it can.
+[
+  { "type": "assault_rules", "id": "assault_rules", "level_mm": 3000,
+    "ladder_raise_ticks": 80, "ladder_climbers": 3, "ladder_climb_ticks": 80, "ladder_len_mm": 6000, "push_ticks": 60, "push_base_pm": 500, "push_per_skill_pm": 10, "push_skill_base": 30, "push_reach_mm": 1500,
+    "height_range_pm": 1150, "height_sigma_pm": 800, "merlon_pm": 600,
+    "hole_every_ticks": 200, "drop_kg": 20, "scald_intensity": 2, "hole_cell_mm": 1000,
+    "board_ticks": 120, "gate_beam_threshold": 300, "rubble_walk_pm": 500,
+    "held_walk_cells": 10, "held_breach_men": 20, "held_morale_x100": 1500,
+    "sally_range_mm": 150000, "sally_over_pm": 1000, "night_from_hour": 20, "night_to_hour": 5, "sally_reach_mm": 1500, "sally_torch_ticks": 40 }
+]

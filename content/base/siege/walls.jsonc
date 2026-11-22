@@ -3,11 +3,11 @@
 [
   { "type": "siege_rules", "id": "siege_rules", "damage_divisor": 60, "breach_min_width_m": 2, "max_thickness_m": 8 },
 
-  { "type": "wall_stat", "id": "wall_stone",       "threshold": 1500, "rubble": "rubble_stone" },
-  { "type": "wall_stat", "id": "wall_crenellated", "threshold": 1200, "rubble": "rubble_stone" },
-  { "type": "wall_stat", "id": "wall_brick",       "threshold": 1000, "rubble": "rubble_stone" },
-  { "type": "wall_stat", "id": "wall_timber",      "threshold": 300,  "rubble": "rubble_timber" },
-  { "type": "wall_stat", "id": "palisade",         "threshold": 250,  "rubble": "rubble_timber" },
+  { "type": "wall_stat", "id": "wall_stone", "damage_divisor": 4,       "threshold": 1500, "rubble": "rubble_stone" },
+  { "type": "wall_stat", "id": "wall_crenellated", "damage_divisor": 4, "threshold": 1200, "rubble": "rubble_stone" },
+  { "type": "wall_stat", "id": "wall_brick", "damage_divisor": 4,       "threshold": 1000, "rubble": "rubble_stone" },
+  { "type": "wall_stat", "id": "wall_timber", "damage_divisor": 4,      "threshold": 300,  "rubble": "rubble_timber" },
+  { "type": "wall_stat", "id": "palisade", "damage_divisor": 4,         "threshold": 250,  "rubble": "rubble_timber" },
   { "type": "wall_stat", "id": "gate_wood",        "threshold": 200,  "rubble": "rubble_timber" },
   { "type": "wall_stat", "id": "gate_iron",        "threshold": 400,  "rubble": "rubble_timber" },
   { "type": "wall_stat", "id": "floor_wall_walk",  "threshold": 300,  "rubble": "" }

@@ -92,14 +92,14 @@ public class WallTests(BuildingFixture fx, ITestOutputHelper output) : IClassFix
     // ------------------------------------------------------------------ SG-1
 
     [Fact]
-    public void SG1_TheDamageRule_AStoneOnStone50_ARamOnAGate26_ARamOnStoneNothing()
+    public void SG1_TheDamageRule_AStoneOnStone750_ARamOnAGate26_ARamOnStoneNothing()
     {
         var t = WallTable.Of(Db); var costs = PieceCosts.Of(Db);
-        int Dmg(long m, string piece) => WallDamage.Impact(m, t.Stat(piece)!.Threshold, t.Rules.DamageDivisor);
-        Assert.Equal(50, Dmg(4500, "wall_stone"));                      // a trebuchet stone: 100 kg x 45 m/s
+        int Dmg(long m, string piece) => WallDamage.Impact(m, t.Stat(piece)!.Threshold, t.DivisorOf(t.Stat(piece)!));   // the pace retune (overview 10g): masonry and palisade take a blow at a divisor of 4, gates and the walk at 60
+        Assert.Equal(750, Dmg(4500, "wall_stone"));                     // a trebuchet stone: 100 kg x 45 m/s, (4,500 - 1,500) / 4
         Assert.Equal(26, Dmg(1800, "gate_wood"));                       // a covered ram with an iron head
         Assert.Equal(0, Dmg(1500, "wall_stone"));                       // a plain ram does nothing to stone
-        Assert.Equal(5, Dmg(1800, "wall_stone"));                       // the iron-headed ram a little
+        Assert.Equal(75, Dmg(1800, "wall_stone"));                       // the iron-headed ram a little
         Assert.Equal(0, WallDamage.Impact(1500, 1500)); Assert.Equal(0, WallDamage.Impact(10, 1500)); Assert.Equal(1, WallDamage.Impact(1560, 1500)); Assert.Equal(0, WallDamage.Impact(1559, 1500));
         Assert.Equal(WallDamage.Impact(4500, 1500), WallDamage.ImpactMilli(4_500_999, 1500));
         // the table is the spec's (3.1): hit points from the pieces, thresholds from walls.jsonc
@@ -107,10 +107,10 @@ public class WallTests(BuildingFixture fx, ITestOutputHelper output) : IClassFix
         {
             Assert.Equal(hp, costs[id].Hp); Assert.Equal(thr, t.Stat(id)!.Threshold);
         }
-        // a cell of stone falls in 40 stones; a wooden gate in 12 swings of the iron-headed ram; no blow at all below the threshold
+        // a cell of stone falls in 3 stones; a wooden gate in 12 swings of the iron-headed ram; no blow at all below the threshold
         var r = Rig();
         Assert.Equal(2000, r.W.HpAt(45, 41, 0)!.Value.Hp);
-        Assert.Equal(40, r.Batter(45, 41));
+        Assert.Equal(3, r.Batter(45, 41));
         Assert.Equal(WallBlowKind.NoEffect, r.W.Strike(46, 41, 0, 1500, WallRig.Sec).Kind);
         Assert.Equal(2000, r.W.HpAt(46, 41, 0)!.Value.Hp);
         Assert.Equal(WallBlowKind.NotAWall, r.W.Strike(10, 10, 0, 9999, WallRig.Sec).Kind);                     // a place never visited is left alone
@@ -131,12 +131,12 @@ public class WallTests(BuildingFixture fx, ITestOutputHelper output) : IClassFix
         r.Standing.AddRange([(d1, 45, 41, 1), (d2, 46, 42, 1), (d3, 50, 41, 1)]);                              // two on the walk over the breach, one well away
         int blows = 0;
         foreach (int y in new[] { 40, 41, 42 }) blows += r.Batter(45, y);
-        Assert.Equal(120, blows);                                                                                // 120 stones on one 3-cell column
+        Assert.Equal(9, blows);                                                                                  // 9 stones on one 3-cell column (3 a cell)
         foreach (int y in new[] { 40, 41, 42 }) Assert.Equal("rubble_stone", r.Piece(45, y, 0));
         Assert.Empty(r.W.Breaches(30, 30, 60, 50));                                                              // one metre wide is a gap, not yet a breach
         Assert.NotNull(new LevelPathfinder(r.Grid(36, 36, 20, 10)).FindPath(new Cell3(9, 1, 0), new Cell3(9, 8, 0)));   // but feet cross it
         foreach (int y in new[] { 40, 41, 42 }) blows += r.Batter(46, y);
-        Assert.Equal(240, blows);
+        Assert.Equal(18, blows);
         var b = Assert.Single(r.W.Breaches(30, 30, 60, 50));
         Assert.Equal((2, 3, 'x'), (b.WidthM, b.ThicknessM, b.Along));                                           // the wall runs along x, the breach is 3 deep
         Assert.True(b.Contains(45, 40) && b.Contains(46, 42));
@@ -192,7 +192,7 @@ public class WallTests(BuildingFixture fx, ITestOutputHelper output) : IClassFix
     public void SG3_ADamagedAndBreachedWall_IsInTheChunkDeltas_ReloadShowsTheBreach_AndTheRoundTripIsExact()
     {
         var r = Rig();
-        r.W.Strike(50, 41, 0, 4500, WallRig.Sec); r.W.Strike(50, 41, 0, 4500, WallRig.Sec);                    // a damaged cell: 100 lost
+        r.W.Strike(50, 41, 0, 4500, WallRig.Sec); r.W.Strike(50, 41, 0, 4500, WallRig.Sec);                    // a damaged cell: 1,500 lost
         foreach (int x in new[] { 45, 46 }) foreach (int y in new[] { 40, 41, 42 }) r.Batter(x, y);
         var key0 = new ChunkKey(1, 1, 0);
         var oid = WallWorld.ObjectId(key0);
@@ -200,7 +200,7 @@ public class WallTests(BuildingFixture fx, ITestOutputHelper output) : IClassFix
         var rec = content.Objects[oid];                                                                          // the one siege_damage object of the chunk
         var hits = SaveCodec.Deserialize<WallHits>(rec.Props[WallWorld.Prop]);
         Assert.Equal(7, hits.Cells.Count);
-        Assert.Equal(100, hits.Cells.Single(h => !h.Down).Lost);
+        Assert.Equal(1500, hits.Cells.Single(h => !h.Down).Lost);
         Assert.Equal(6, hits.Cells.Count(h => h.Down && h.Piece == "wall_stone"));
         // the delta (not the snapshot) carries it: AddObject, SetProperty, and the rubble tiles
         Assert.Single(DeltaOps(r.Store, key0, ChunkOpKind.AddObject));
@@ -213,7 +213,7 @@ public class WallTests(BuildingFixture fx, ITestOutputHelper output) : IClassFix
         var back = r.Reload();
         var b = Assert.Single(back.W.Breaches(30, 30, 60, 50));
         Assert.Equal(2, b.WidthM);
-        Assert.Equal(1900, back.W.HpAt(50, 41, 0)!.Value.Hp);
+        Assert.Equal(500, back.W.HpAt(50, 41, 0)!.Value.Hp);
         Assert.Equal(r.Store.ToSection(), back.Store.ToSection());
         Assert.Equal(r.Store.ToSection(), ChunkStore.FromSection(back.Store.ToSection()).ToSection());           // save, load, save
         // save -> load -> continue equals the uninterrupted run
@@ -255,11 +255,11 @@ public class WallTests(BuildingFixture fx, ITestOutputHelper output) : IClassFix
         Assert.Equal(cell.Hp, max);
         var w = new WallWorld(store, db, 1234) { Construction = r.W };
         Assert.Equal(WallBlowKind.Damaged, w.Strike(600, 600, 0, 4500, t).Kind);
-        Assert.Equal(max - 50, r.W.BuiltAt(600, 600, 0)!.Hp);                                    // the hit points are the built cell's
-        Assert.Equal((("wall_stone"), max - 50, max), w.HpAt(600, 600, 0)!.Value);
+        Assert.Equal(max - 750, r.W.BuiltAt(600, 600, 0)!.Hp);                                    // the hit points are the built cell's
+        Assert.Equal((("wall_stone"), max - 750, max), w.HpAt(600, 600, 0)!.Value);
         // saved with the construction book: a round trip keeps the hit points
         var back = ConstructionSave.Capture(r.W.Book).Restore();
-        Assert.Equal(max - 50, back.Built.Values.Single(b => b.Piece == "wall_stone").Hp);
+        Assert.Equal(max - 750, back.Built.Values.Single(b => b.Piece == "wall_stone").Hp);
         int n = 1; while (w.Strike(600, 600, 0, 4500, t + n).Kind == WallBlowKind.Damaged) n++;
         Assert.Null(r.W.BuiltAt(600, 600, 0));                                                    // gone by the Phase 5 path
         Assert.Equal("rubble_stone", w.StructureAt(600, 600, 0));                                  // and rubble in the street's tiles
@@ -275,7 +275,7 @@ public class WallTests(BuildingFixture fx, ITestOutputHelper output) : IClassFix
         var r = Rig();
         var costs = PieceCosts.Of(Db);
         foreach (int x in new[] { 45, 46 }) foreach (int y in new[] { 40, 41, 42 }) r.Batter(x, y);
-        r.W.Strike(50, 41, 0, 4500, WallRig.Sec);                                                                // a cell with 50 lost
+        r.W.Strike(50, 41, 0, 4500, WallRig.Sec);                                                                // a cell with 750 lost
         Assert.NotEmpty(r.W.Breaches(30, 30, 60, 50));
         var need = r.W.RepairNeedAt(45, 41, 0)!;
         Assert.Equal(("wall_stone", 1000, true), (need.Piece, need.SharePm, need.Down));
@@ -283,8 +283,8 @@ public class WallTests(BuildingFixture fx, ITestOutputHelper output) : IClassFix
         Assert.Equal(costs["wall_stone"].Materials, need.Materials.ToArray());                                    // stone, quicklime, sand
         Assert.True(need.Materials.Single(m => m.Good == "stone_raw").Grams >= 2_000_000);
         var part = r.W.RepairNeedAt(50, 41, 0)!;
-        Assert.Equal((25, false), (part.SharePm, part.Down));                                                    // 50 of 2,000 hp: 25 permille of the piece
-        Assert.Equal(costs["wall_stone"].MilliHours * 25 / 1000, part.MilliHours);
+        Assert.Equal((375, false), (part.SharePm, part.Down));                                                  // 750 of 2,000 hp: 375 permille of the piece
+        Assert.Equal(costs["wall_stone"].MilliHours * 375 / 1000, part.MilliHours);
         // nothing is mended unless the caller pays
         Assert.Empty(r.W.Repair([(45, 41, 0)], WallRig.Sec + 100, _ => false));
         Assert.Equal("rubble_stone", r.Piece(45, 41, 0));

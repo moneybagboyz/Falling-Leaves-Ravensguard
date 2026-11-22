@@ -40,6 +40,10 @@ public sealed partial class WallWorld
     /// <summary>A person falls this many millimetres (the event id and game second for the wound draw): <see cref="FallWounds.Apply"/> in the game.</summary>
     public Action<EntityId, int, ulong, long>? Fall { get; set; }
     public SiegeChronicle? Chronicle { get; set; }
+    /// <summary>P7-SG-C: what a beam behind a gate adds to a cell's impact threshold (kg m/s); null: nothing is reinforced.</summary>
+    public Func<int, int, int, int>? Reinforce { get; set; }
+    /// <summary>Counts every write the walls made to the chunk store (a cell fell, was mended); a reader that caches what the cells are (the assault's walls) drops its cache when it changes.</summary>
+    public int Version { get; private set; }
 
     public WallWorld(ChunkStore store, PiecePalette palette, PieceCosts costs, WallTable walls, ulong seed)
     {
@@ -140,6 +144,12 @@ public sealed partial class WallWorld
 
     private void Commit(Work w)
     {
+        Version++;
+        CommitCore(w);
+    }
+
+    private void CommitCore(Work w)
+    {
         var keys = new SortedSet<ChunkKey>(w.Hits.Keys);
         foreach (var k in w.Tiles.Keys) keys.Add(k);
         foreach (var k in keys)
@@ -173,7 +183,7 @@ public sealed partial class WallWorld
         if (!Visited(x, y)) return WallBlow.Not;
         if (HpAt(x, y, z) is not { } at) return WallBlow.Not;
         var stat = Walls.Stat(at.Piece)!;
-        int dmg = WallDamage.Impact(momentumKgMs, stat.Threshold, Walls.Rules.DamageDivisor);
+        int dmg = WallDamage.Impact(momentumKgMs, stat.Threshold + (Reinforce?.Invoke(x, y, z) ?? 0), Walls.DivisorOf(stat));
         if (dmg == 0) return new WallBlow(WallBlowKind.NoEffect, 0, at.Hp, []);
         int left = Math.Max(0, at.Hp - dmg);
         var w = new Work();
