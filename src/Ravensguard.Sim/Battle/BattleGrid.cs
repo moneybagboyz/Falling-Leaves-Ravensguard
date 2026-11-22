@@ -136,6 +136,27 @@ public sealed class BattleGrid
         return span;
     }
 
+    /// <summary>
+    /// <see cref="Near"/> without the sort (P7 CV-A): the same superset in cell order, for a scan whose result does not depend on the order it visits the ids in (a count, an any, a minimum with an explicit tie
+    /// rule). Valid until the next query at that depth.
+    /// </summary>
+    public ReadOnlySpan<int> NearUnsorted(int depth, int x, int y, long r)
+    {
+        long pad = r + Drift + 2;
+        int cx0 = Cell(x - pad, _ox, _dimX), cx1 = Cell(x + pad, _ox, _dimX);
+        int cy0 = Cell(y - pad, _oy, _dimY), cy1 = Cell(y + pad, _oy, _dimY);
+        if ((long)(cx1 - cx0 + 1) * (cy1 - cy0 + 1) * 3 >= (long)_dimX * _dimY) return Identity(N);
+        var buf = _buf[depth];
+        int k = 0;
+        for (int cy = cy0; cy <= cy1; cy++)
+        {
+            int row = cy * _dimX;
+            int a = _cellStart[row + cx0], b = _cellStart[row + cx1 + 1];
+            if (b > a) { Array.Copy(_items, a, buf, k, b - a); k += b - a; }
+        }
+        return new ReadOnlySpan<int>(buf, 0, k);
+    }
+
     /// <summary>Every id 0 .. n-1 (what a query returns with the grid off: the old full scan, the oracle of BB-1).</summary>
     public ReadOnlySpan<int> Identity(int n)
     {

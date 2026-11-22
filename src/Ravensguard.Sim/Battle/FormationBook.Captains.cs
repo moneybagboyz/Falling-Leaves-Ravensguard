@@ -126,6 +126,7 @@ public sealed partial class FormationBook
         }
 
         // ---- movement
+        if (r.Kind == FormationKind.Cavalry) PlanCavalry(w, r, T);
         bool contactSide = false;
         foreach (var o in Rows) if (o.Side == r.Side && o.InContact) { contactSide = true; break; }
         if (Rules.CaptainMay("pull_back_archers", T) && missile && s.MinEnemyMm < R.PullBackArchersM * 1000L && r.Order.Kind != OrderKind.MoveTo)

@@ -181,6 +181,7 @@ public sealed partial class FightWorld
     internal void MountedAfterThink()
     {
         var L = Mounts!;
+        long t0 = System.Diagnostics.Stopwatch.GetTimestamp();
         L.Grow(Fighters.Count);
         foreach (var m in L.Pairs) Fighters[m.Horse].Cmd.ClearAll();
         foreach (var m in L.Pairs)
@@ -188,16 +189,19 @@ public sealed partial class FightWorld
             var r = Fighters[m.Rider];
             if (m.Mounted && !r.Player && r.Active) MountedBrain.Ride(this, m, r);
         }
+        MountedBrain.BraceScan(this);                               // [P7 CV-A] who wants to brace, found from the riders' side through the grid
         foreach (var f in Fighters)
         {
             if (f.Player || !f.Active || L.PairOf(f.Id) is { } p && (p.Horse == f.Id || p.Mounted)) continue;
             ref var ex = ref L.Extra[f.Id];
-            ex.BraceWanted = MountedBrain.WantsBrace(this, f, out var face);
+            ex.BraceWanted = L.BraceFace[f.Id] >= 0;
+            var face = ex.BraceWanted ? Fighters[L.BraceFace[f.Id]] : null;
             if (!ex.BraceWanted) continue;
             var c = f.Cmd;
             c.Start = null; c.Feint = false; c.Throw = null; c.MoveX = c.MoveY = 0; c.Sprint = false; c.Block = false; c.DodgeX = c.DodgeY = 0;
             if (face != null) { c.FaceX = face.X - f.X; c.FaceY = face.Y - f.Y; }
         }
+        L.PerfTicks += System.Diagnostics.Stopwatch.GetTimestamp() - t0;
     }
 
     // ------------------------------------------------------------------ hook: before the commands (after vitals and morale)
@@ -205,6 +209,7 @@ public sealed partial class FightWorld
     internal void MountedBeforeCommands()
     {
         var L = Mounts!; var D = L.D;
+        long t0 = System.Diagnostics.Stopwatch.GetTimestamp();
         L.Grow(Fighters.Count);
         if (L.Terrain.Thunderstorm && D.ThunderEveryTicks > 0 && Tick % D.ThunderEveryTicks == 0)
             foreach (var m in L.Pairs) if (m.Mounted) AddPanic(m, D.Panic.Thunder);
@@ -237,6 +242,7 @@ public sealed partial class FightWorld
             }
         }
         foreach (var f in Fighters) BraceState(f);
+        L.PerfTicks += System.Diagnostics.Stopwatch.GetTimestamp() - t0;
     }
 
     /// <summary>Panic from the horse's new wounds (4.2): a cut +80, torn muscle or a tendon +150, an artery or an organ +300, a broken leg +600, then temper and training.</summary>
@@ -323,7 +329,9 @@ public sealed partial class FightWorld
         if (m == null) return false;
         if (f.Id == m.Horse) { f.LastMoveMm = 0; return true; }
         if (!m.Mounted) return false;
+        long t0 = System.Diagnostics.Stopwatch.GetTimestamp();
         MoveMount(m, f, Fighters[m.Horse]);
+        Mounts.PerfTicks += System.Diagnostics.Stopwatch.GetTimestamp() - t0;
         return true;
     }
 
@@ -342,13 +350,8 @@ public sealed partial class FightWorld
         // footing, slope, wounds and load
         var kind = tr.At(r.X, r.Y);
         var rule = L.Tuning.Footing[(int)kind];
-        want = TerrainFooting.CapMmps(rule, kind, want, g.TrotMmps, D.GallopChargeMinMmps, tr.HeavyRain, D.RainFieldPm);
-        int slope = SlopeAlong(r.X, r.Y, m.HX, m.HY);
-        if (slope != 0) want = (int)((long)want * TerrainFooting.SlopePm(slope, D.UphillKPm, D.UphillMinPm, D.DownhillKPm, D.DownhillCapPm) / 1000);
-        want = (int)((long)want * Math.Clamp(h.WalkPm, 0, 1000) / 1000);
-        if (h.Book.Weakened) want = want * 800 / 1000;
-        int load = m.RiderKg + m.GearKg + m.BardingKg;
-        want = (int)((long)want * RideMath.LoadFactorPm(RideMath.LoadRatioPm(load, Math.Max(1, g.CarryKg - m.BardingKg))) / 1000);
+        want = HorseCapMmps(m, r, h, want, kind, rule);
+        if (Formations != null && r.FmRow >= 0 && Formations.CavalryCap(r, Tick) is > 0 and var fcap && want > fcap) want = fcap;      // [P7 CV-A] a cavalry rider keeps his slot: the formation's speed for him this tick
         // accelerate or brake
         int acc = D.AccelMmps2 / 20, brk = balking ? Math.Max(D.BrakeMmps2 / 20, m.RefuseBrake) : D.BrakeMmps2 / 20;
         m.Speed = m.Speed < want ? Math.Min(want, m.Speed + acc) : Math.Max(want, m.Speed - brk);
@@ -382,6 +385,28 @@ public sealed partial class FightWorld
         }
     }
 
+    /// <summary>What the footing, the slope, the horse's wounds and the load leave of a wanted speed (the arithmetic <see cref="MoveMount"/> moves a horse by).</summary>
+    private int HorseCapMmps(MountedFighter m, Fighter r, Fighter h, int want, Footing kind, FootingRule rule)
+    {
+        var L = Mounts!; var D = L.D; var g = m.Gaits; var tr = L.Terrain;
+        want = TerrainFooting.CapMmps(rule, kind, want, g.TrotMmps, D.GallopChargeMinMmps, tr.HeavyRain, D.RainFieldPm);
+        int slope = SlopeAlong(r.X, r.Y, m.HX, m.HY);
+        if (slope != 0) want = (int)((long)want * TerrainFooting.SlopePm(slope, D.UphillKPm, D.UphillMinPm, D.DownhillKPm, D.DownhillCapPm) / 1000);
+        want = (int)((long)want * Math.Clamp(h.WalkPm, 0, 1000) / 1000);
+        if (h.Book.Weakened) want = want * 800 / 1000;
+        int load = m.RiderKg + m.GearKg + m.BardingKg;
+        return (int)((long)want * RideMath.LoadFactorPm(RideMath.LoadRatioPm(load, Math.Max(1, g.CarryKg - m.BardingKg))) / 1000);
+    }
+
+    /// <summary>What this pair's horse can do at a gait (0 walk, 1 trot, 2 gallop) from where it stands now: the formation's anchor is braked by the front rank's (cavalry 4.1).</summary>
+    public int GaitMmps(MountedFighter m, int gait)
+    {
+        var L = Mounts!; var r = Fighters[m.Rider]; var h = Fighters[m.Horse];
+        var kind = L.Terrain.At(r.X, r.Y);
+        int want = gait >= 2 ? m.Gaits.GallopMmps : gait == 1 ? m.Gaits.TrotMmps : m.Gaits.WalkMmps;
+        return HorseCapMmps(m, r, h, want, kind, L.Tuning.Footing[(int)kind]);
+    }
+
     private readonly List<int> _slipped = [];
 
     // ------------------------------------------------------------------ hook: separation (Separate)
@@ -405,6 +430,7 @@ public sealed partial class FightWorld
     internal void MountedAfterMove()
     {
         var L = Mounts!; var D = L.D;
+        long t0 = System.Diagnostics.Stopwatch.GetTimestamp();
         foreach (var m in L.Pairs)
         {
             var h = Fighters[m.Horse];
@@ -418,9 +444,11 @@ public sealed partial class FightWorld
         foreach (var f in Fighters)
         {
             if (f.Act != FAct.Bracing) continue;
-            foreach (var m in L.Pairs)
+            MountedFighter? hit = null; int hitVc = 0;
+            foreach (int hid in Near(3, f, f.ReachMm))                                                     // [P7 CV-A] the grid: the horses within the bearer's reach; the first pair in rider order strikes
             {
-                if (!m.Mounted) continue;
+                var m = L.PairOf(hid);
+                if (m == null || m.Horse != hid || !m.Mounted || hit != null && m.Index > hit.Index) continue;
                 var r = Fighters[m.Rider]; var h = Fighters[m.Horse];
                 if (r.Team == f.Team || !h.Active) continue;
                 if (DistMm(f, h) > f.ReachMm) continue;
@@ -428,11 +456,12 @@ public sealed partial class FightWorld
                 if (FightMath.Dot(f.FX, f.FY, ux, uy) < K.FrontArcQ10) continue;
                 int vc = ClosingMmps(m, h, f);
                 if (vc < D.BraceMinMmps) continue;
-                BraceStrike(f, m, h, vc);
-                break;
+                hit = m; hitVc = vc;
             }
+            if (hit != null) BraceStrike(f, hit, Fighters[hit.Horse], hitVc);
         }
         foreach (var m in L.Pairs) if (m.Mounted && m.Speed >= D.TrampleMinMmps) Trample(m);
+        L.PerfTicks += System.Diagnostics.Stopwatch.GetTimestamp() - t0;
     }
 
     /// <summary>
@@ -445,8 +474,9 @@ public sealed partial class FightWorld
         var r = Fighters[m.Rider]; var h = Fighters[m.Horse];
         if (m.Speed < L.D.TrampleMinMmps || Tick < m.RefusedUntil) return;
         Fighter? near = null; long nd = long.MaxValue;
-        foreach (var b in Fighters)
+        foreach (int bid in Near(3, h, R.RollAtMm + 4000))                                                  // [P7 CV-A] the grid: only the bearers within the roll's range are looked at
         {
+            var b = Fighters[bid];
             if (b.Team == r.Team || b.Act != FAct.Bracing) continue;
             long d = DistMm(h, b);
             if (d > R.RollAtMm + 4000) continue;
@@ -472,8 +502,9 @@ public sealed partial class FightWorld
     public int BracedFacing(Fighter near, Fighter horse, int riderTeam, bool countReady = false)
     {
         int n = 0; var R = Mounts!.D.Refusal;
-        foreach (var b in Fighters)
+        foreach (int bid in Near(2, near, R.ArcMm))                                                          // [P7 CV-A] the grid (depth 2: the pick-target scan above it holds depth 3)
         {
+            var b = Fighters[bid];
             if (b.Team == riderTeam || !b.Active || !CanBrace(b)) continue;
             if (!(b.Act == FAct.Bracing || countReady && b.Act is FAct.Idle or FAct.Block)) continue;
             if (b != near && DistMm(b, near) > R.ArcMm) continue;
@@ -540,8 +571,9 @@ public sealed partial class FightWorld
     {
         var L = Mounts!; var D = L.D;
         var r = Fighters[m.Rider]; var h = Fighters[m.Horse];
-        foreach (var t in Fighters)
+        foreach (int tid in Near(3, h, D.TrampleRadiusMm))                                                 // [P7 CV-A] the grid: only the men within the horse's radius
         {
+            var t = Fighters[tid];
             if (t.Team == r.Team || t.Act is FAct.Dead or FAct.Fled or FAct.Surrendered || L.PairOf(t.Id) is { } p && (p.Horse == t.Id || p.Mounted)) continue;
             if (DistMm(h, t) > D.TrampleRadiusMm) continue;
             ref var ex = ref L.Extra[t.Id];

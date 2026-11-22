@@ -40,12 +40,12 @@ public sealed partial class FormationBook
     public FormationRow Form(FightWorld w, int side, byte id, FormationKind kind, IReadOnlyList<int> fighters, int ax, int ay, int faceX, int faceY, Formation shape = Formation.Line, int ranks = 0, int drill = 0,
         IReadOnlyCollection<int>? officers = null, IReadOnlyDictionary<int, int>? leadership = null, int banner = -1, int leader = -1, bool place = false)
     {
-        var def = Rules.Shape(shape);
+        var def = Rules.Shape(shape, kind);
         var (fx, fy) = FightMath.Norm(faceX, faceY);
         if (fx == 0 && fy == 0) fx = FightMath.One;
         int n = fighters.Count;
         var ids = new int[n]; for (int i = 0; i < n; i++) ids[i] = fighters[i];
-        Slots.Order(w.Fighters, ids, shape);
+        OrderMembers(w, kind, ids, shape);
         var r = new FormationRow
         {
             Index = Rows.Count, Id = id, Side = side, Kind = kind, Members = ids, Shape = shape, Ranks = ranks > 0 ? ranks : Math.Max(1, def.Ranks), LayoutN = n, AnchorX = ax, AnchorY = ay, FaceX = fx, FaceY = fy,
@@ -53,6 +53,7 @@ public sealed partial class FormationBook
             Slot = new int[n], Leadership = new int[n], Pace = new int[n], FlankBlow = new int[n], Occ = new int[n], VacSince = new int[n], Officer = new int[n],
             Lat = new int[n], Back = new int[n], ColLat = new int[n], ColBack = new int[n],
         };
+        InitCavalry(r, n);
         for (int i = 0; i < n; i++)
         {
             r.Slot[i] = i; r.Occ[i] = i; r.VacSince[i] = -1; r.FlankBlow[i] = -100_000;
@@ -64,6 +65,7 @@ public sealed partial class FormationBook
         Relayout(r);
         r.Captain = Elect(w, r);
         if (r.Captain >= 0) w.SetCaptain(r.Captain);
+        if (r.Kind == FormationKind.Cavalry && PlaceCaptainAtPoint(w, r)) Relayout(r);
         if (banner >= 0) w.SetBanner(banner);
         w.Grid.Dirty = true;
         r.BrakeMmps = ComputeBrake(w, r);
@@ -110,10 +112,10 @@ public sealed partial class FormationBook
         int n = r.Members.Length;
         if (r.Lat.Length < n) { r.Lat = new int[n]; r.Back = new int[n]; }
         if (r.ColLat.Length < n) { r.ColLat = new int[n]; r.ColBack = new int[n]; }
-        var def = Rules.Shape(r.Shape);
+        var def = Rules.Shape(r.Shape, r.Kind);
         Slots.Layout(def, r.LayoutN, r.Ranks, r.Lat, r.Back);
-        r.Files = def.Layout == "rank" ? Slots.Files(r.LayoutN, r.Ranks, def) : Math.Max(1, r.LayoutN);
-        if (r.DeployStart >= 0) Slots.Layout(Rules.Shape(Formation.Column), r.LayoutN, r.Ranks, r.ColLat, r.ColBack);
+        r.Files = def.Layout == "rank" ? Slots.Files(r.LayoutN, r.Ranks, def) : def.Layout == "wedge" ? Slots.WedgeWidth(r.LayoutN) : Math.Max(1, r.LayoutN);
+        if (r.DeployStart >= 0) Slots.Layout(Rules.Shape(Formation.Column, r.Kind), r.LayoutN, r.Ranks, r.ColLat, r.ColBack);
         int vac = 0; for (int s = 0; s < n; s++) if (r.VacSince[s] >= 0) vac++;
         r.VacCount = vac;
     }
@@ -137,7 +139,7 @@ public sealed partial class FormationBook
     public void SetShape(FightWorld w, FormationRow r, Formation shape, int tick)
     {
         if (shape == r.Shape) return;
-        var old = r.Shape; var oldDef = Rules.Shape(old); var def = Rules.Shape(shape);
+        var old = r.Shape; var oldDef = Rules.Shape(old, r.Kind); var def = Rules.Shape(shape, r.Kind);
         bool deploy = old == Formation.Column && r.DeployStart < 0 && def.Layout == "rank" && shape != Formation.Column && r.LayoutN > 0;
         r.Shape = shape;
         if (deploy)
@@ -166,7 +168,7 @@ public sealed partial class FormationBook
         for (int i = 0; i < r.Members.Length; i++) if (r.Slot[i] >= 0) m++;
         var ids = new int[m]; int k = 0;
         for (int i = 0; i < r.Members.Length; i++) if (r.Slot[i] >= 0) ids[k++] = r.Members[i];
-        Slots.Order(w.Fighters, ids, r.Shape);
+        OrderMembers(w, r.Kind, ids, r.Shape);
         Array.Fill(r.Occ, -1); Array.Fill(r.VacSince, -1);
         for (int s = 0; s < m; s++)
         {
@@ -175,11 +177,13 @@ public sealed partial class FormationBook
         }
         r.LayoutN = m; r.VacCount = 0;
         Relayout(r);
+        if (r.Kind == FormationKind.Cavalry && PlaceCaptainAtPoint(w, r)) Relayout(r);
     }
 
     /// <summary>The 20th-percentile pace of the rank-0 members (4.3), mm a second: the speed the anchor may not exceed (wounded and heavily laden men slow the line).</summary>
     private int ComputeBrake(FightWorld w, FormationRow r)
     {
+        if (r.Kind == FormationKind.Cavalry) return CavalryBrake(w, r);
         int n = 0;
         var buf = ScratchInts(r.Members.Length);
         for (int s = 0; s < Math.Min(r.Files, r.LayoutN); s++)
@@ -222,6 +226,7 @@ public sealed partial class FormationBook
         Arrivals(w, r, tick);
         if (r.Active > 0 && r.Captain >= 0) CaptainStep(w, r, tick);
         UpdateContact(w, r, tick);
+        if (r.Kind == FormationKind.Cavalry) CavalryStep(w, r, tick);
         Drive(w, r, tick);
         if (r.DeployStart >= 0 && tick >= r.DeployStart + r.DeployTicks) r.DeployStart = -1;
         if (r.VacCount > 0) CloseRanks(w, r, tick);
@@ -256,10 +261,12 @@ public sealed partial class FormationBook
             int since = r.VacSince[s];
             if (since < 0 || tick < since + wait) continue;
             int from = -1;
-            for (int t = s + r.Files; t < n; t += r.Files) if (r.Occ[t] >= 0) { from = t; break; }
+            bool wedge = r.Shape == Formation.Wedge;
+            if (wedge) from = WedgeBehind(r, s);
+            else for (int t = s + r.Files; t < n; t += r.Files) if (r.Occ[t] >= 0) { from = t; break; }
             if (from < 0)
             {
-                int first = s / r.Files * r.Files, last = Math.Min(first + r.Files, n) - 1;
+                Slots.RankBounds(wedge, s, r.Files, n, out int first, out int last);
                 int left = -1, right = -1;
                 for (int t = first; t < s; t++) if (r.Occ[t] >= 0) { left = t; break; }
                 for (int t = last; t > s; t--) if (r.Occ[t] >= 0) { right = t; break; }
@@ -283,6 +290,7 @@ public sealed partial class FormationBook
         for (int s = 0; s < r.LayoutN; s++)
         {
             int mi = r.Occ[s]; if (mi < 0) continue;
+            if (r.Kind == FormationKind.Cavalry && (r.CavFlags[mi] & CfMelee) != 0) continue;     // a rider who fights on alone is not what the formation is measured by
             tot++;
             var f = w.Fighters[r.Members[mi]];
             SlotWorld(r, s, tick, out int x, out int y);
@@ -316,6 +324,7 @@ public sealed partial class FormationBook
             h = FightMath.Mix(h, r.Captain); h = FightMath.Mix(h, (long)r.Order.Kind | (long)r.Order.TargetX << 8); h = FightMath.Mix(h, r.Order.TargetY);
             h = FightMath.Mix(h, (long)r.Cohesion | (long)r.QueueCount << 16 | (long)r.PendingCount << 20 | (r.Cascaded ? 1L << 24 : 0));
             for (int i = 0; i < r.Slot.Length; i++) h = FightMath.Mix(h, r.Slot[i]);
+            if (r.Kind == FormationKind.Cavalry) h = HashCavalry(h, r);
         }
         return h;
     }
@@ -325,7 +334,8 @@ public sealed partial class FormationBook
     /// <summary>Every integer of the book, in one fixed order (<see cref="Restore"/> reads it back): the hero, the entry points, the lost orders, then each row.</summary>
     public long[] Pack()
     {
-        var o = new List<long> { 1, Hero, HeroLeadership, _serial, Entry.Count };
+        bool cav = false; foreach (var r in Rows) if (r.Kind == FormationKind.Cavalry) { cav = true; break; }
+        var o = new List<long> { cav ? 2 : 1, Hero, HeroLeadership, _serial, Entry.Count };
         foreach (var (side, e) in Entry) { o.Add(side); o.Add(e.X); o.Add(e.Y); }
         o.Add(Lost.Count);
         foreach (var l in Lost) { o.Add(l.Tick); o.Add(l.Row); o.Add(l.Serial); o.Add(l.Runner); }
@@ -342,13 +352,14 @@ public sealed partial class FormationBook
             int n = r.Members.Length; o.Add(n);
             for (int i = 0; i < n; i++) { o.Add(r.Members[i]); o.Add(r.Slot[i]); o.Add(r.Leadership[i]); o.Add(r.Pace[i]); o.Add(r.FlankBlow[i]); o.Add(r.VacSince[i]); o.Add(r.Officer[i]); }
         }
+        if (cav) foreach (var r in Rows) if (r.Kind == FormationKind.Cavalry) PackCavalry(o, r);       // the cavalry tail: a book with no cavalry row is byte for byte what BB-B wrote
         return [.. o];
     }
 
     public static FormationBook Restore(FightWorld w, long[] v)
     {
         var rd = new Reader(v);
-        rd.L();     // format
+        long format = rd.L();
         var book = new FormationBook(FormationRules.For(w.Content.Db)) { Hero = rd.I(), HeroLeadership = rd.I(), _serial = rd.I() };
         int ne = rd.I(); for (int i = 0; i < ne; i++) { int side = rd.I(), x = rd.I(), y = rd.I(); book.Entry[side] = (x, y); }
         int nl = rd.I(); for (int i = 0; i < nl; i++) book.Lost.Add((rd.I(), rd.I(), rd.I(), rd.I()));
@@ -367,6 +378,7 @@ public sealed partial class FormationBook
             int n = rd.I();
             r.Members = new int[n]; r.Slot = new int[n]; r.Leadership = new int[n]; r.Pace = new int[n]; r.FlankBlow = new int[n]; r.VacSince = new int[n]; r.Officer = new int[n]; r.Occ = new int[n];
             r.Lat = new int[n]; r.Back = new int[n]; r.ColLat = new int[n]; r.ColBack = new int[n];
+            InitCavalry(r, n);
             Array.Fill(r.Occ, -1);
             for (int i = 0; i < n; i++)
             {
@@ -377,6 +389,7 @@ public sealed partial class FormationBook
             book.Rows.Add(r);
             book.Relayout(r);
         }
+        if (format >= 2) foreach (var r in book.Rows) if (r.Kind == FormationKind.Cavalry) UnpackCavalry(rd, r);
         w.Grid.Dirty = true;
         return book;
     }

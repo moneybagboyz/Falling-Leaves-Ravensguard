@@ -27,6 +27,7 @@ public static class MountedBrain
             if (!any || Nearest(w, r) > 25_000) w.RideOff(m);
             return;
         }
+        if (w.Formations != null && r.FmRow >= 0 && w.Formations.CavalryRide(w, m, r)) return;      // [P7 CV-A] a rider of a cavalry formation keeps his slot and strikes what is in reach
         var t = m.AiTarget >= 0 && m.AiTarget < w.Fighters.Count ? w.Fighters[m.AiTarget] : null;
         if (t != null && (!t.Active || w.IsHorse(t) || t.Team == r.Team)) t = null;
         switch (m.AiPhase)
@@ -41,24 +42,7 @@ public static class MountedBrain
                 bool aligned = FightMath.Dot(m.HX, m.HY, ux, uy) >= 928 || dist > 25_000;
                 Go(c, ux, uy, gallop: aligned);
                 c.FaceX = ux; c.FaceY = uy;
-                bool lance =FightWorld.IsLance(r) && r.Weapon.AttackIndex("couch") >= 0;
-                if (m.AiStruck < 0 && r.Act is FAct.Idle or FAct.Block && r.WeaponArm && r.Stamina > 0)
-                {
-                    int wind = lance ? Math.Max(1, D.CouchTicks) : w.WindupTicks(r, false);
-                    // strike so that the blow lands where the horse will be when the wind-up ends (its velocity over the wind-up), inside the reach
-                    long px = r.X + (long)m.VX * wind / 20, py = r.Y + (long)m.VY * wind / 20;
-                    long dAt = FightMath.Len(t.X - px, t.Y - py);
-                    int reach = w.ReachAgainst(r, t);
-                    if (dAt <= reach + w.K.ReachSlackMm - 300 && dist <= reach + w.K.ReachSlackMm + (long)m.Speed * (wind + 1) / 20)
-                    {
-                        int body = t.Plan.IndexOf(t.Plan.Id == "horse" ? "chest" : "upper_body");
-                        int part = lance && body >= 0 ? body : CombatBrain.PickPart(w, r, t, tick);      // a couched lance is aimed at the body
-                        int atk = lance ? r.Weapon.AttackIndex("couch") : CombatBrain.AutoAttack(w, r, t, part);
-                        c.Start = new AttackReq { Attack = atk, Target = t.Id, Part = part, Gap = -1, Auto = true };
-                        c.Block = false;
-                        m.AiStruck = tick;
-                    }
-                }
+                if (m.AiStruck < 0 && StrikeAt(w, m, r, t, tick, dist)) m.AiStruck = tick;
                 bool behind = FightMath.Dot(m.HX, m.HY, ux, uy) < 0 && dist < 8000;
                 bool done = m.AiStruck >= 0 && tick > m.AiStruck + 4 && r.Act is not (FAct.Windup or FAct.Strike);
                 if (done || behind || tick - m.AiSince > 30 * 20)
@@ -93,6 +77,32 @@ public static class MountedBrain
                 return;
             }
         }
+    }
+
+    /// <summary>
+    /// The rider's blow at <paramref name="t"/> (4.6): when his weapon is free, he starts a couched lance or a swing timed to land where the horse will be when the wind-up ends, inside the reach.
+    /// True when the blow was started. The cavalry brain and a cavalry formation's riders both strike through here.
+    /// </summary>
+    public static bool StrikeAt(FightWorld w, MountedFighter m, Fighter r, Fighter t, int tick, long dist)
+    {
+        var D = w.Mounts!.D; var c = r.Cmd;
+        if (!(r.Act is FAct.Idle or FAct.Block && r.WeaponArm && r.Stamina > 0)) return false;
+        bool lance = FightWorld.IsLance(r) && r.Weapon.AttackIndex("couch") >= 0;
+        int wind = lance ? Math.Max(1, D.CouchTicks) : w.WindupTicks(r, false);
+        // strike so that the blow lands where the horse will be when the wind-up ends (its velocity over the wind-up), inside the reach
+        long px = r.X + (long)m.VX * wind / 20, py = r.Y + (long)m.VY * wind / 20;
+        long dAt = FightMath.Len(t.X - px, t.Y - py);
+        int reach = w.ReachAgainst(r, t);
+        if (dAt <= reach + w.K.ReachSlackMm - 300 && dist <= reach + w.K.ReachSlackMm + (long)m.Speed * (wind + 1) / 20)
+        {
+            int body = t.Plan.IndexOf(t.Plan.Id == "horse" ? "chest" : "upper_body");
+            int part = lance && body >= 0 ? body : CombatBrain.PickPart(w, r, t, tick);      // a couched lance is aimed at the body
+            int atk = lance ? r.Weapon.AttackIndex("couch") : CombatBrain.AutoAttack(w, r, t, part);
+            c.Start = new AttackReq { Attack = atk, Target = t.Id, Part = part, Gap = -1, Auto = true };
+            c.Block = false;
+            return true;
+        }
+        return false;
     }
 
     private static void Go(FightCommand c, int x, int y, bool gallop) { c.MoveX = x; c.MoveY = y; c.Sprint = gallop; if (x != 0 || y != 0) { c.FaceX = x; c.FaceY = y; } }
@@ -143,20 +153,29 @@ public static class MountedBrain
     /// <summary>The nearest enemy not a horse whose way in is not barred (refusal estimate under 40%); foot before mounted, standing before down; ties to the lower id.</summary>
     public static Fighter? PickTarget(FightWorld w, MountedFighter m, Fighter r)
     {
-        Fighter? best = null; long bd = long.MaxValue;
-        foreach (var o in w.Fighters)
+        // [P7 CV-A] the grid: doubling boxes from 30 m; the penalties only add, so a pick no farther than the box is the pick of the whole field, ties to the lower id as before
+        long rad = 30_000;
+        while (true)
         {
-            if (o.Team == r.Team || !o.Active || w.IsHorse(o)) continue;
-            if (Avoid(w, m, r, o)) continue;
-            long d = w.DistMm(r, o) + (w.Riding(o) != null ? 5000 : 0) + (o.Act == FAct.Down ? 20_000 : 0);
-            // a man whose shield faces the horse will likely catch the point, and a braced point hurts the horse: both count further away
-            if (o.Shield != null && o.ShieldArm && w.FacingOf(o, r.X, r.Y) == Combat.Facing.Front) d += 4000;
-            if (FightWorld.CanBrace(o) && o.Act == FAct.Bracing) d += 6000;
-            // each rider picks his own man: a target another rider of the side is already charging counts 8 m further away
-            foreach (var p in w.Mounts!.Pairs) if (p != m && p.Mounted && p.AiPhase == MountedFighter.AiCharge && p.AiTarget == o.Id && w.Fighters[p.Rider].Team == r.Team) d += 8000;
-            if (d < bd || d == bd && best != null && o.Id < best.Id) { bd = d; best = o; }
+            bool all = !w.UseGrid || rad >= 1L << 33;
+            Fighter? best = null; long bd = long.MaxValue;
+            var ids = all ? w.Near(3, r.X, r.Y, 1L << 41) : w.Near(3, r.X, r.Y, rad);
+            foreach (int oid in ids)
+            {
+                var o = w.Fighters[oid];
+                if (o.Team == r.Team || !o.Active || w.IsHorse(o)) continue;
+                if (Avoid(w, m, r, o)) continue;
+                long d = w.DistMm(r, o) + (w.Riding(o) != null ? 5000 : 0) + (o.Act == FAct.Down ? 20_000 : 0);
+                // a man whose shield faces the horse will likely catch the point, and a braced point hurts the horse: both count further away
+                if (o.Shield != null && o.ShieldArm && w.FacingOf(o, r.X, r.Y) == Combat.Facing.Front) d += 4000;
+                if (FightWorld.CanBrace(o) && o.Act == FAct.Bracing) d += 6000;
+                // each rider picks his own man: a target another rider of the side is already charging counts 8 m further away
+                foreach (var p in w.Mounts!.Pairs) if (p != m && p.Mounted && p.AiPhase == MountedFighter.AiCharge && p.AiTarget == o.Id && w.Fighters[p.Rider].Team == r.Team) d += 8000;
+                if (d < bd || d == bd && best != null && o.Id < best.Id) { bd = d; best = o; }
+            }
+            if (all || best != null && bd <= rad || ids.Length >= w.Fighters.Count) return best;
+            rad *= 2;
         }
-        return best;
     }
 
     /// <summary>The refusal the horse would face charging <paramref name="t"/> from where it is (braced or brace-ready polearms near the target facing the horse), and whether it is too high.</summary>
@@ -178,9 +197,10 @@ public static class MountedBrain
         if (!FightWorld.CanBrace(f) || f.Routing) return false;
         var L = w.Mounts!; var D = L.D;
         long bd = long.MaxValue;
-        foreach (var m in L.Pairs)
+        foreach (int rid in w.Near(3, f, D.AiBraceWithinMm))                 // [P7 CV-A] the grid: the riders within 30 m, in rider order as the pairs were
         {
-            if (!m.Mounted) continue;
+            var m = L.Riding(rid);
+            if (m == null) continue;
             var r = w.Fighters[m.Rider];
             if (r.Team == f.Team || !r.Active) continue;
             long d = w.DistMm(f, r);
@@ -190,6 +210,35 @@ public static class MountedBrain
             if (d < bd) { bd = d; face = r; }
         }
         return face != null;
+    }
+
+    /// <summary>
+    /// <see cref="WantsBrace"/> for every foot fighter at once, from the riders' side (P7 CV-A): each mounted rider asks the grid for the fighters within 30 m (within 12 m when he is too slow to close at the brace speed) and
+    /// offers himself to each bearer he closes on; a bearer keeps the nearest, the first rider in pair order on a tie, exactly as the per-bearer scan chose. Fills <c>BraceFace</c> (the rider's fighter id, -1 none).
+    /// </summary>
+    public static void BraceScan(FightWorld w)
+    {
+        var L = w.Mounts!; var D = L.D; int n = w.Fighters.Count;
+        if (L.BraceD.Length < n) { L.BraceD = new long[Math.Max(n, L.BraceD.Length * 2)]; L.BraceFace = new int[L.BraceD.Length]; }
+        Array.Fill(L.BraceD, long.MaxValue, 0, n); Array.Fill(L.BraceFace, -1, 0, n);
+        foreach (var m in L.Pairs)
+        {
+            if (!m.Mounted) continue;
+            var r = w.Fighters[m.Rider];
+            if (!r.Active) continue;
+            long fast = Math.Max(m.Speed, FightMath.Len(m.VX, m.VY)) * 5 / 4;          // the closing speed cannot beat this (a downhill charge adds a tenth)
+            long reach = fast >= D.BraceMinMmps ? D.AiBraceWithinMm : Math.Min(12_000, D.AiBraceWithinMm);
+            foreach (int id in w.NearUnsorted(3, r, reach))           // the order does not matter: a bearer keeps the nearest rider, and ties go to the first rider in pair order, which is this outer loop
+            {
+                var f = w.Fighters[id];
+                if (f.Team == r.Team || !FightWorld.CanBrace(f) || f.Routing || !f.Active) continue;
+                long d = w.DistMm(f, r);
+                if (d > D.AiBraceWithinMm) continue;
+                int vc = w.ClosingMmps(m, r, f);
+                if (vc < D.BraceMinMmps && d > 12_000) continue;
+                if (d < L.BraceD[id]) { L.BraceD[id] = d; L.BraceFace[id] = r.Id; }
+            }
+        }
     }
 
     private static (int X, int Y, bool Any) EnemyCentre(FightWorld w, Fighter r)

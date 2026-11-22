@@ -1,6 +1,7 @@
 using Ravensguard.Content;
 using Ravensguard.Sim.Combat.Melee2;
 using Ravensguard.Sim.Combat.Watch;
+using Ravensguard.Sim.Core;
 
 namespace Ravensguard.Sim.Battle;
 
@@ -49,6 +50,7 @@ public static class Slots
     {
         if (def.Layout == "schiltron") { Schiltron(def, n, lat, back); return; }
         if (def.Layout == "fall_back") { Rings(def, n, lat, back); return; }
+        if (def.Layout == "wedge") { Wedge(def, n, lat, back); return; }
         int files = Files(n, ranks, def);
         for (int s = 0; s < n; s++)
         {
@@ -57,6 +59,31 @@ public static class Slots
             lat[s] = ((cnt - 1) - 2 * fi) * def.LateralMm / 2;
             back[s] = rank * def.RankMm;
         }
+    }
+
+    /// <summary>The wedge (cavalry-and-mounted-war 3.1): rank r (0 the point) holds 1 + 2r riders, each rank centred on the anchor; the last rank may be short. Slot s is in rank isqrt(s).</summary>
+    private static void Wedge(FormationShapeDef def, int n, int[] lat, int[] back)
+    {
+        for (int s = 0; s < n; s++)
+        {
+            int rank = WedgeRank(s), first = rank * rank;
+            int cnt = Math.Min(2 * rank + 1, n - first), fi = s - first;
+            lat[s] = ((cnt - 1) - 2 * fi) * def.LateralMm / 2;
+            back[s] = rank * def.RankMm;
+        }
+    }
+
+    /// <summary>The rank of a wedge slot (ranks 0..k-1 hold k x k riders).</summary>
+    public static int WedgeRank(int slot) => (int)IntMath.Isqrt(slot);
+
+    /// <summary>The widest rank of a wedge of <paramref name="n"/> riders.</summary>
+    public static int WedgeWidth(int n) => n <= 0 ? 1 : Math.Min(2 * WedgeRank(n - 1) + 1, n - WedgeRank(n - 1) * WedgeRank(n - 1));
+
+    /// <summary>The first and last slot of the rank a slot is in (a wedge's ranks are 1, 3, 5 ... wide; a rank layout's are <paramref name="files"/> wide).</summary>
+    public static void RankBounds(bool wedge, int slot, int files, int n, out int first, out int last)
+    {
+        if (wedge) { int r = WedgeRank(slot); first = r * r; last = Math.Min(first + 2 * r, n - 1); }
+        else { first = slot / files * files; last = Math.Min(first + files, n) - 1; }
     }
 
     /// <summary>The slot's world position.</summary>

@@ -22,6 +22,12 @@ public sealed class MountedLayer
     /// <summary>The horse's stance: it never routs or yields on its own (its fear is panic, 4.2).</summary>
     public CombatStanceDef HorseStance { get; } = new() { Id = "mounted.horse", FleeBloodLossPm = 0, FleeMoraleBelow = 0, UseRanged = false, CalledShots = false, TreatAllies = false };
 
+    /// <summary>Stopwatch ticks the mounted hooks have spent (a measurement for the budget tests; never hashed, saved or read by the rules).</summary>
+    public long PerfTicks;
+    /// <summary>The brace scan's scratch (the nearest closing rider's distance and id per foot fighter), rebuilt every think.</summary>
+    internal long[] BraceD = [];
+    internal int[] BraceFace = [];
+
     public MountedLayer(MountedTuning tuning) { Tuning = tuning; }
 
     public void Grow(int fighters)

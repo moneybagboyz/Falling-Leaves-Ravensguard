@@ -1,0 +1,9 @@
+// P7-CV-A (cavalry-and-mounted-war 3.2, 4.1, 4.2): the cavalry formation layer's constants. Distances in mm, speeds in mm a second, ticks 20 Hz, _pm permille, _x100 morale points x100.
+// The charge walks while the target is farther than walk_to_mm, trots from there (the spec's 120 m is inside the trot: the trot runs on to the gallop), gallops from gallop_from_mm and couches at couch_at_mm.
+[
+  { "type": "cavalry_rules", "id": "default",
+    "walk_to_mm": 200000, "gallop_from_mm": 60000, "couch_at_mm": 20000, "anchor_pm": 950, "anchor_accel_per_tick": 225, "charge_max_ticks": 3000,
+    "cohesion_shock_pm": 700, "shock_min_riders": 10, "shock_window_ticks": 40, "shock_x100": 1500, "shock_braced_x100": 500, "shock_braced_cohesion_pm": 600, "shock_radius_mm": 5000, "contact_mm": 3000,
+    "breakthrough_mmps": 4000, "ride_on_mm": 30000, "reform_mm": 80000, "reform_s": 15, "stuck_s": 4, "ride_on_max_ticks": 400,
+    "catch_accel_mmps2": 5000, "catch_max_mmps": 8000, "avoid_refusal_pm": 400, "lane_mm": 30000 }
+]

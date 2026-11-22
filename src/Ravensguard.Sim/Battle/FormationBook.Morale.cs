@@ -47,7 +47,7 @@ public sealed partial class FormationBook
         else if (r.Cascaded && share < R.RoutShare / 2) r.Cascaded = false;
     }
 
-    private int HalfWidth(FormationRow r) => (r.Files - 1) * Rules.Shape(r.Shape).LateralMm / 2;
+    private int HalfWidth(FormationRow r) => (r.Files - 1) * Rules.Shape(r.Shape, r.Kind).LateralMm / 2;
 
     private static void Penalise(FightWorld w, FormationRow r, int x100, int tick)
     {
@@ -146,7 +146,7 @@ public sealed partial class FormationBook
     /// <summary>How far a member in contact may stray from his slot (4.4): his shape's leash (2 m), 6 m in loose order or a charge, 1 m on a hold, none while braced.</summary>
     public int LeashMm(FightWorld w, FormationRow r, Fighter f)
     {
-        var def = Rules.Shape(r.Shape);
+        var def = Rules.Shape(r.Shape, r.Kind);
         int leash = def.LeashMm;
         if (r.Order.Kind == OrderKind.Charge || r.Shape == Formation.Loose) leash = Math.Max(leash, 6000);
         if (r.Order.Kind == OrderKind.Hold) leash = Math.Min(leash, 1000);

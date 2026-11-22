@@ -113,6 +113,7 @@ public sealed partial class FormationBook
             case OrderKind.ShieldWall: SetShape(w, r, Formation.ShieldWall, tick); return;
             case OrderKind.Loose: SetShape(w, r, Formation.Loose, tick); return;
             case OrderKind.Line: SetShape(w, r, Formation.Line, tick); return;
+            case OrderKind.Wedge: SetShape(w, r, Formation.Wedge, tick); return;
             case OrderKind.Column: SetShape(w, r, Formation.Column, tick); return;
             case OrderKind.SetAgainstCavalry:
                 {
@@ -168,7 +169,7 @@ public sealed partial class FormationBook
     /// <summary>A drawn frontage (RMB-drag in the overlay): the ranks that make about that width in files.</summary>
     private void Reface(FormationRow r, int frontageMm)
     {
-        var def = Rules.Shape(r.Shape);
+        var def = Rules.Shape(r.Shape, r.Kind);
         if (def.Layout != "rank" || def.Abreast > 0) return;
         int files = Math.Clamp(frontageMm / Math.Max(1, def.LateralMm), 1, Math.Max(1, r.LayoutN));
         r.Ranks = Math.Clamp((r.LayoutN + files - 1) / files, 1, 8);
@@ -192,7 +193,7 @@ public sealed partial class FormationBook
 
     private void Drive(FightWorld w, FormationRow r, int tick)
     {
-        var sh = Rules.Shape(r.Shape);
+        var sh = Rules.Shape(r.Shape, r.Kind);
         if (r.Shape == Formation.FallBack && r.Leader >= 0 && r.Leader < w.Fighters.Count && w.Fighters[r.Leader].Active)
         {
             var l = w.Fighters[r.Leader];
@@ -213,7 +214,9 @@ public sealed partial class FormationBook
                 }
                 tx = o.TargetX; ty = o.TargetY; moving = true; jog = true; break;
             case OrderKind.Advance: case OrderKind.Charge: case OrderKind.AttackFormation:
-                moving = EnemyPoint(w, r, o, out tx, out ty); jog = o.Kind == OrderKind.Charge; break;
+                if (r.Kind == FormationKind.Cavalry && o.Kind == OrderKind.Charge && r.CavPhase >= PhRideOn) { AfterContactPoint(r, out tx, out ty); moving = true; }
+                else moving = EnemyPoint(w, r, o, out tx, out ty);
+                jog = o.Kind == OrderKind.Charge; break;
             case OrderKind.FlankLeft: case OrderKind.FlankRight:
                 moving = FlankPoint(w, r, o, out tx, out ty); arrive = 25_000;
                 if (!moving) { r.Order.Kind = OrderKind.Advance; o = r.Order; moving = EnemyPoint(w, r, o, out tx, out ty); }
@@ -244,13 +247,18 @@ public sealed partial class FormationBook
             (ux, uy) = FightMath.Norm(tx - r.AnchorX, ty - r.AnchorY);
             wantX = ux; wantY = uy;
         }
-        if (o.Kind is OrderKind.Advance or OrderKind.AttackFormation && r.InContact || o.Kind == OrderKind.Charge && (r.InContact || tick - r.OrderGo >= Rules.R.ChargeMaxTicks))
-        { Complete(r, tick); r.PaceNow = 0; return; }
+        bool cav = r.Kind == FormationKind.Cavalry;
+        if (cav) CavalryGait(w, r, o, moving, dist, tick);
+        bool over = o.Kind is OrderKind.Advance or OrderKind.AttackFormation && r.InContact;
+        if (o.Kind == OrderKind.Charge) over = cav ? CavalryChargeOver(r, o, tick) : r.InContact || tick - r.OrderGo >= Rules.R.ChargeMaxTicks;
+        if (over) { Complete(r, tick); r.PaceNow = 0; return; }
         if (!moving && (r.WantFx != 0 || r.WantFy != 0)) { wantX = r.WantFx; wantY = r.WantFy; }
+        if (cav && o.Kind == OrderKind.Charge && r.CavPhase == PhReform) { wantX = -r.ContactFx; wantY = -r.ContactFy; }      // a re-forming charge wheels back toward the enemy as it rides
         if (wantX != 0 || wantY != 0) Turn(r, wantX, wantY, sh);
         else r.TurnAcc = 0;
         int speed = 0;
-        if (moving && r.DeployStart < 0 && r.Cohesion >= Rules.R.CohesionMinPm && FightMath.Dot(r.FaceX, r.FaceY, ux, uy) >= 724)
+        if (cav) speed = CavalryPace(r, moving, ux, uy, dist);
+        else if (moving && r.DeployStart < 0 && r.Cohesion >= Rules.R.CohesionMinPm && FightMath.Dot(r.FaceX, r.FaceY, ux, uy) >= 724)
         {
             int cap = jog ? sh.JogMmps : sh.WalkMmps;
             speed = Math.Min(cap, r.BrakeMmps);
@@ -285,7 +293,7 @@ public sealed partial class FormationBook
         if (row < 0 || row >= Rows.Count || Rows[row].Side == r.Side || Rows[row].ActiveNow == 0) row = NearestEnemyRow(r);
         if (row < 0) return false;
         var e = Rows[row]; r.TgtRow = row;
-        var def = Rules.Shape(e.Shape);
+        var def = Rules.Shape(e.Shape, e.Kind);
         int hw = (e.Files - 1) * def.LateralMm / 2 + Rules.R.FlankOffsetMm;
         Slots.ToWorld(e.AnchorX, e.AnchorY, e.FaceX, e.FaceY, hw, 5000, out int lx, out int ly);
         Slots.ToWorld(e.AnchorX, e.AnchorY, e.FaceX, e.FaceY, -hw, 5000, out int rx, out int ry);
@@ -306,8 +314,9 @@ public sealed partial class FormationBook
             if (r.WantFx != 0 || r.WantFy != 0) { if (FightMath.Dot(r.FaceX, r.FaceY, r.WantFx, r.WantFy) >= 1020) { r.WantFx = r.WantFy = 0; r.WheelSign = 0; } }
             r.TurnAcc = 0; return;
         }
-        if (sh.TurnDegPerS <= 0) return;
-        r.TurnAcc += sh.TurnDegPerS * 50;
+        if (TurnRate(r, sh) <= 0) return;
+        int rate = TurnRate(r, sh);
+        r.TurnAcc += rate * 50;
         int steps = r.TurnAcc / 5625;
         if (steps <= 0) return;
         r.TurnAcc -= steps * 5625;

@@ -49,6 +49,25 @@ public sealed class FormationRow
     public int Files = 1;
     public int ActiveNow, RoutingNow, TotalNow;
 
+    // ---- the cavalry layer (P7-CV-A, Cavalry.cs): saved with the row's tail when the book has a cavalry row ----
+    /// <summary>The anchor's gait now (0 walk, 1 trot, 2 gallop) and the charge stage (0 none, 1 walk, 2 trot, 3 gallop, 4 couch); <see cref="StageTick"/> is the tick each stage began (-1: not yet).</summary>
+    public int Gait, Stage;
+    public int[] StageTick = [-1, -1, -1, -1, -1];
+    /// <summary>The charge after contact: 0 approach, 1 ride on, 2 re-form (wheeling back), 3 done. <see cref="PhaseTick"/> is when it began.</summary>
+    public int CavPhase, PhaseTick;
+    /// <summary>The anchor and facing at first contact; the first contact's tick (-1 none) and the formation's cohesion then; the tick shock was struck (-1 none, -2 judged and ragged); the foot men it struck.</summary>
+    public int ContactAx, ContactAy, ContactFx, ContactFy, FirstContactTick = -1, CohAtContact, ShockTick = -1, ShockHit;
+    /// <summary>The tick the formation was whole again after its rally (-1 not yet) and the re-form point.</summary>
+    public int ReformedTick = -1, ReformX, ReformY;
+    /// <summary>The order the charge's bookkeeping belongs to (the order's start tick; a new order clears the bookkeeping).</summary>
+    public int ChargeGo = -1;
+    /// <summary>The direction the anchor last marched (a Q10 vector): the riders' feed-forward, since the facing turns while a re-forming charge rides.</summary>
+    public int MoveDx, MoveDy;
+    /// <summary>Per member: the tick of his contact (-1 none), his flags (<see cref="FormationBook.CfThrough"/>, <see cref="FormationBook.CfMelee"/>), the ticks he has been slow.</summary>
+    public int[] ContactTick = [], CavFlags = [], Stuck = [];
+    // transient: the speed cap a cavalry rider keeps this tick and the tick it was set
+    public int[] CavCap = [], CavCapTick = [];
+
     public int Active => ActiveNow;
 
     /// <summary>The slot a member index holds now (-1: none).</summary>

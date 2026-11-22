@@ -29,6 +29,14 @@ public sealed partial class FightWorld
 
     public ReadOnlySpan<int> Near(int depth, Fighter c, long r) => Near(depth, c.X, c.Y, r);
 
+    /// <summary><see cref="Near(int, int, int, long)"/> in no particular order, for a scan that does not depend on the order (P7 CV-A: the grid's sort was most of a cavalry scan's cost).</summary>
+    public ReadOnlySpan<int> NearUnsorted(int depth, Fighter c, long r)
+    {
+        if (!UseGrid) return Grid.Identity(Fighters.Count);
+        if (Grid.Stale(Fighters.Count)) Grid.Rebuild(Fighters);
+        return Grid.NearUnsorted(depth, c.X, c.Y, r);
+    }
+
     /// <summary>The grid rebuilt now (after movement, after separation: the cheap counting sort that keeps the drift, and so the query boxes, small).</summary>
     private void RebuildGrid() { if (UseGrid) Grid.Rebuild(Fighters); }
 

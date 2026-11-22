@@ -1,12 +1,15 @@
 // P7-BB-B (battle-bubble-and-formations 3.2, 4.3 to 4.7): formation shapes and the formation layer's constants. Spacing and leash in mm, speeds in mm a second, turn in degrees a second.
-// Wedge (cavalry spec) and wagon fort (sieges spec) lay out as a line until their parts land. The schiltron never moves or turns (pace 0); the fall back ring is about the commander.
+// The wedge is the cavalry spec's (P7-CV-A: rank r holds 1 + 2r riders; the cavalry_* rows are what a Cavalry formation's line, loose order and column use); the wagon fort (sieges spec) lays out as a line until its part lands. The schiltron never moves or turns (pace 0); the fall back ring is about the commander.
 [
   { "type": "formation_shape", "id": "line", "lateral_mm": 1000, "rank_mm": 1200, "ranks": 4, "turn_deg_per_s": 30, "walk_mmps": 1500, "jog_mmps": 3000, "leash_mm": 2000 },
   { "type": "formation_shape", "id": "shield_wall", "lateral_mm": 800, "rank_mm": 1000, "ranks": 3, "turn_deg_per_s": 15, "walk_mmps": 1000, "jog_mmps": 1000, "leash_mm": 2000 },
   { "type": "formation_shape", "id": "loose", "lateral_mm": 2500, "rank_mm": 2500, "ranks": 2, "turn_deg_per_s": 90, "walk_mmps": 1500, "jog_mmps": 3000, "leash_mm": 6000 },
   { "type": "formation_shape", "id": "column", "lateral_mm": 1500, "rank_mm": 1500, "ranks": 0, "abreast": 3, "turn_deg_per_s": 45, "walk_mmps": 1300, "jog_mmps": 1300, "leash_mm": 3000 },
   { "type": "formation_shape", "id": "schiltron", "lateral_mm": 900, "rank_mm": 900, "ranks": 2, "layout": "schiltron", "turn_deg_per_s": 0, "walk_mmps": 0, "jog_mmps": 0, "leash_mm": 2000 },
-  { "type": "formation_shape", "id": "wedge", "lateral_mm": 1000, "rank_mm": 1200, "ranks": 4, "turn_deg_per_s": 30, "walk_mmps": 1500, "jog_mmps": 3000, "leash_mm": 2000 },
+  { "type": "formation_shape", "id": "wedge", "lateral_mm": 1500, "rank_mm": 4000, "ranks": 4, "layout": "wedge", "turn_deg_per_s": 20, "turn_trot_deg_per_s": 45, "turn_walk_deg_per_s": 90, "walk_mmps": 1500, "jog_mmps": 3000, "leash_mm": 3000 },
+  { "type": "formation_shape", "id": "cavalry_line", "lateral_mm": 1500, "rank_mm": 4000, "ranks": 2, "turn_deg_per_s": 30, "turn_trot_deg_per_s": 60, "turn_walk_deg_per_s": 120, "walk_mmps": 1500, "jog_mmps": 3000, "leash_mm": 3000 },
+  { "type": "formation_shape", "id": "cavalry_loose", "lateral_mm": 4000, "rank_mm": 6000, "ranks": 2, "turn_deg_per_s": 60, "turn_trot_deg_per_s": 120, "turn_walk_deg_per_s": 240, "walk_mmps": 1500, "jog_mmps": 3000, "leash_mm": 8000 },
+  { "type": "formation_shape", "id": "cavalry_column", "lateral_mm": 4000, "rank_mm": 4000, "ranks": 0, "abreast": 2, "turn_deg_per_s": 45, "turn_trot_deg_per_s": 90, "turn_walk_deg_per_s": 180, "walk_mmps": 1300, "jog_mmps": 1300, "leash_mm": 4000 },
   { "type": "formation_shape", "id": "wagon_fort", "lateral_mm": 1000, "rank_mm": 1200, "ranks": 4, "turn_deg_per_s": 30, "walk_mmps": 1500, "jog_mmps": 3000, "leash_mm": 2000 },
   { "type": "formation_shape", "id": "fall_back", "lateral_mm": 1000, "rank_mm": 1000, "ranks": 1, "layout": "fall_back", "ring_mm": 3000, "turn_deg_per_s": 90, "walk_mmps": 3000, "jog_mmps": 3000, "leash_mm": 2000 },
   { "type": "battle_rules", "id": "default",
