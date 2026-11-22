@@ -27,7 +27,8 @@ public static class RuntimePeople
                 var gen = ChunkGenerator.For(rw.Population.Region, rw.Population, rt.Services.Content);
                 h.ByRegion[rw.Coord.Id] = facts = new LiveFacts(gen);
             }
-            res.Add(new PeopleRecords(rw.Coord.Id, rw.Coord.OriginXM, rw.Coord.OriginYM, rw.Population, rw.Sim.Seed, jobs, facts, h.Book));
+            var armies = rw.Sim.Get<Ravensguard.Sim.Armies.ArmyWorld>();
+            res.Add(new PeopleRecords(rw.Coord.Id, rw.Coord.OriginXM, rw.Coord.OriginYM, rw.Population, rw.Sim.Seed, jobs, facts, h.Book, armies == null ? null : armies.IsInColumn));
         }
         return res;
     }

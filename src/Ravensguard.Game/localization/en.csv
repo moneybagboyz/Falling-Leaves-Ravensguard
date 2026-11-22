@@ -6626,6 +6626,14 @@ ch_note_am_war_over,the war was over
 ch_note_am_no_men,no household could give a man
 ch_note_am_join_host,the lord was called to the host
 ch_note_am_host_released,the host was sent home
+ch_am_arrived,"A host of {men} men reached {place} after {days} days and {hours} hours on the road."
+ch_am_crossed,"A host of {men} men crossed the border at {place} after {days} days on the road."
+ch_am_camp_attacked,"{men} men of the camp by {place} were set upon in the night; the alarm ran through the tents and the last of them stirred {seconds} seconds after it was raised ({woken} woken)."
+ch_note_am_march,the host was sent along the road
+ch_note_am_march_own,the host marched on its own errand
+ch_note_am_crossed_out,the host marched out of the region
+ch_note_am_crossed_in,the host marched into the region
+ch_note_am_night_attack,an enemy came at the camp in the dark
 dp_op_visit,visited
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."

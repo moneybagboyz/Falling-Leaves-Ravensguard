@@ -15,10 +15,13 @@ public sealed class ArmySystem : AbstractSystem
 
     public override void Step(TickContext ctx)
     {
-        var aw = ctx.World.Get<ArmyWorld>(); if (aw == null || aw.Book.Warbands.Count == 0 && aw.Book.Errands.Count == 0) return;
+        var aw = ctx.World.Get<ArmyWorld>(); if (aw == null || aw.Book.Warbands.Count == 0 && aw.Book.Errands.Count == 0 && aw.Book.Marches.Count == 0) return;
         long t0 = System.Diagnostics.Stopwatch.GetTimestamp();
-        aw.Hour(new ArmyEnv(ctx.World, ctx.Outbox, ctx.Hour));
-        aw.HourCost.Add(System.Diagnostics.Stopwatch.GetTimestamp() - t0);
+        var env = new ArmyEnv(ctx.World, ctx.Outbox, ctx.Hour);
+        aw.Hour(env);
+        long t1 = System.Diagnostics.Stopwatch.GetTimestamp();
+        aw.HourCost.Add(t1 - t0);
+        if (aw.Book.Marches.Count > 0) { aw.MarchHour(env); aw.MarchCost.Add(System.Diagnostics.Stopwatch.GetTimestamp() - t1); }       // P7-AM-C: the hosts on the road
     }
 }
 

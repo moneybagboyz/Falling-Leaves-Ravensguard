@@ -136,6 +136,50 @@ public sealed class HostSave
     [Key(21)] public int[] JoinMen { get; set; } = [];
 }
 
+[MessagePackObject]
+public sealed class HostCampSave
+{
+    [Key(0)] public long XMm { get; set; }
+    [Key(1)] public long YMm { get; set; }
+    [Key(2)] public int Near { get; set; }
+    [Key(3)] public int HeadX { get; set; }
+    [Key(4)] public int HeadY { get; set; }
+    [Key(5)] public long SinceSec { get; set; }
+    [Key(6)] public int Serial { get; set; }
+    [Key(7)] public int Men { get; set; }
+    [Key(8)] public int Nights { get; set; }
+    [Key(9)] public int Watch { get; set; }
+    [Key(10)] public byte Flags { get; set; }
+    [Key(11)] public int Pieces { get; set; }
+    [Key(12)] public int Sentries { get; set; }
+}
+
+/// <summary>P7-AM-C: a host on the road (the keys are appended to the armies section; a section written by AM-A reads with none).</summary>
+[MessagePackObject]
+public sealed class HostMarchSave
+{
+    [Key(0)] public int Host { get; set; }
+    [Key(1)] public int[] Stops { get; set; } = [];
+    [Key(2)] public long DistMm { get; set; }
+    [Key(3)] public long RateHourMm { get; set; }
+    [Key(4)] public long HourSec { get; set; }
+    [Key(5)] public long PrevDistMm { get; set; }
+    [Key(6)] public long PrevRateHourMm { get; set; }
+    [Key(7)] public long PrevHourSec { get; set; }
+    [Key(8)] public byte State { get; set; }
+    [Key(9)] public HostCampSave? Camp { get; set; }
+    [Key(10)] public int CampsPitched { get; set; }
+    [Key(11)] public int StartDay { get; set; }
+    [Key(12)] public int Hours { get; set; }
+    [Key(13)] public int MarchHours { get; set; }
+    [Key(14)] public string Cause { get; set; } = "";
+    [Key(15)] public ulong[] OutsiderIds { get; set; } = [];
+    [Key(16)] public byte[] OutsiderRoles { get; set; } = [];
+    [Key(17)] public bool InRegion { get; set; }
+    [Key(18)] public ulong ChronEntry { get; set; }
+    [Key(19)] public bool Hold { get; set; }
+}
+
 /// <summary>
 /// The optional "armies" section (a name of <c>Phase7Seeding.SectionNames</c>), written only while the book is not empty, so a world that never raised a warband keeps its bytes. Later armies parts (hosts, camps, intel,
 /// war events) append keys: a section written by AM-A reads with them empty. Positions are plain integers over the road graph; the road paths are rebuilt from the region on load.
@@ -158,6 +202,8 @@ public sealed class ArmySave
     /// <summary>P7-AM-B (appended): the seasonal hosts with their levy companies and the warbands that joined, and the next id.</summary>
     [Key(10)] public HostSave[] Hosts { get; set; } = [];
     [Key(11)] public int NextHost { get; set; } = 1;
+    /// <summary>P7-AM-C: the hosts on the road (empty in a section written before it).</summary>
+    [Key(12)] public HostMarchSave[] Marches { get; set; } = [];
 
     public static ArmySave Capture(ArmyBook b) => new()
     {
@@ -190,6 +236,17 @@ public sealed class ArmySave
             JoinWarbands = [.. h.Warbands.Select(j => j.Warband)], JoinKinds = [.. h.Warbands.Select(j => (byte)j.Kind)], JoinMen = [.. h.Warbands.Select(j => j.Men)],
         })],
         NextHost = b.NextHost,
+        Marches = [.. b.Marches.Values.Select(m => new HostMarchSave
+        {
+            Host = m.Host, Stops = [.. m.Stops], DistMm = m.DistMm, RateHourMm = m.RateHourMm, HourSec = m.HourSec, PrevDistMm = m.PrevDistMm, PrevRateHourMm = m.PrevRateHourMm, PrevHourSec = m.PrevHourSec,
+            State = (byte)m.State, CampsPitched = m.CampsPitched, StartDay = m.StartDay, Hours = m.Hours, MarchHours = m.MarchHours, Cause = m.Cause, OutsiderIds = [.. m.Outsiders.Keys], OutsiderRoles = [.. m.Outsiders.Values],
+            InRegion = m.InRegion, ChronEntry = m.ChronEntry, Hold = m.Hold,
+            Camp = m.Camp is not { } c ? null : new HostCampSave
+            {
+                XMm = c.XMm, YMm = c.YMm, Near = c.Near, HeadX = c.HeadX, HeadY = c.HeadY, SinceSec = c.SinceSec, Serial = c.Serial, Men = c.Men, Nights = c.Nights, Watch = c.Watch,
+                Flags = (byte)((c.Palisade ? 1 : 0) | (c.Latrine ? 2 : 0) | (c.WaterCarried ? 4 : 0) | (c.BelowTown ? 8 : 0)), Pieces = c.Pieces, Sentries = c.Sentries,
+            },
+        })],
     };
 
     public ArmyBook Restore()
@@ -234,6 +291,23 @@ public sealed class ArmySave
             }
             for (int i = 0; i < s.JoinWarbands.Length && i < s.JoinKinds.Length && i < s.JoinMen.Length; i++) h.Warbands.Add(new WarbandJoin(s.JoinWarbands[i], (ContingentKind)s.JoinKinds[i], s.JoinMen[i]));
             b.Hosts[h.Id] = h;
+        }
+        foreach (var s in Marches)
+        {
+            var m = new HostMarch
+            {
+                Host = s.Host, DistMm = s.DistMm, RateHourMm = s.RateHourMm, HourSec = s.HourSec, PrevDistMm = s.PrevDistMm, PrevRateHourMm = s.PrevRateHourMm, PrevHourSec = s.PrevHourSec, State = (MarchState)s.State,
+                CampsPitched = s.CampsPitched, StartDay = s.StartDay, Hours = s.Hours, MarchHours = s.MarchHours, Cause = s.Cause, InRegion = s.InRegion, ChronEntry = s.ChronEntry, Hold = s.Hold,
+            };
+            m.Stops.AddRange(s.Stops);
+            for (int i = 0; i < s.OutsiderIds.Length && i < s.OutsiderRoles.Length; i++) m.Outsiders[s.OutsiderIds[i]] = s.OutsiderRoles[i];
+            if (s.Camp is { } c)
+                m.Camp = new CampRecord
+                {
+                    XMm = c.XMm, YMm = c.YMm, Near = c.Near, HeadX = c.HeadX, HeadY = c.HeadY, SinceSec = c.SinceSec, Serial = c.Serial, Men = c.Men, Nights = c.Nights, Watch = c.Watch, Pieces = c.Pieces, Sentries = c.Sentries,
+                    Palisade = (c.Flags & 1) != 0, Latrine = (c.Flags & 2) != 0, WaterCarried = (c.Flags & 4) != 0, BelowTown = (c.Flags & 8) != 0,
+                };
+            b.Marches[m.Host] = m;
         }
         return b;
     }

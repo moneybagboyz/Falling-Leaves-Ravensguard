@@ -8,7 +8,7 @@ using Ravensguard.Sim.WorldGen.Region;
 namespace Ravensguard.Sim.Live;
 
 /// <summary>What the bridge reads of one resident region: its people (<see cref="Population"/>), where its frame sits on the continent and the seed its schedule draws use.</summary>
-public sealed record PeopleRecords(int RegionId, long OriginXM, long OriginYM, Population Pop, ulong Seed, AbstractJobTable Jobs, LiveFacts? Facts = null, ScheduleBook? Book = null);
+public sealed record PeopleRecords(int RegionId, long OriginXM, long OriginYM, Population Pop, ulong Seed, AbstractJobTable Jobs, LiveFacts? Facts = null, ScheduleBook? Book = null, Func<int, bool>? Away = null);
 
 /// <summary>
 /// One live person's link to the record (abstract spec 2.1, plan 2.3): the person's id and row, the region and the bubble they are in. The components (position, plan,
@@ -183,6 +183,7 @@ public sealed partial class PeopleBridge
             for (int i = 0; i < p.Count; i++)
             {
                 if (p.Status[i] != PersonStatus.Alive) continue;
+                if (rec.Away?.Invoke(i) == true) continue;          // P7-AM-C: a man of a host on the road is in its column (ArmyBridge), not at his schedule's place
                 int hs = p.HomeSettlement[i], ws = p.WorkSettlement[i];
                 if (!((hs >= 0 && hs < near.Length && near[hs]) || (ws >= 0 && ws < near.Length && near[ws]))) continue;
                 var id = p.IdOf(i);

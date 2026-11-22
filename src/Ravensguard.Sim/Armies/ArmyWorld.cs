@@ -51,6 +51,9 @@ public sealed partial class ArmyWorld
     public TimingCell DayCost { get; } = new();
     public TimingCell SeasonCost { get; } = new();
 
+    /// <summary>A test's own road between two settlements (P7-AM-C: the march gate walks a measured 8 km); null answers fall back to the region's roads. Not part of the saved state.</summary>
+    public Func<int, int, CaravanPath?>? PathSource { get; set; }
+
     private readonly Dictionary<long, CaravanPath?> _paths = [];
     private readonly Dictionary<ulong, int> _lordFief = [];
 
@@ -92,7 +95,7 @@ public sealed partial class ArmyWorld
     {
         long key = ((long)from << 20) | (uint)to;
         if (_paths.TryGetValue(key, out var p)) return p;
-        p = from == to ? null : CaravanRoads.BuildBetween(Region, from, to, false);
+        p = from == to ? null : PathSource?.Invoke(from, to) ?? CaravanRoads.BuildBetween(Region, from, to, false);
         if (_paths.Count > 4096) _paths.Clear();
         return _paths[key] = p;
     }
@@ -204,11 +207,41 @@ public static class ArmyWiring
         };
         aw.SupplyProvider = () => WarSupplyWiring.Ensure(home, state);
         home.Sim.Set(aw);
+        var wx = home.Services.Weather; var at = home.Coord; int size = Ravensguard.Sim.WorldGen.Continent.Size;
+        int wcell = Math.Min(size - 1, at.CellY + 8) * size + Math.Min(size - 1, at.CellX + 8);
+        aw.Wetness = MarchWeather.Sampler(wx, wcell);
+        if (state.Disease is { } disease)                                                  // P7-AM-C: camps feed the disease rule's army-camp and unboiled-water terms (phase-6-open C4)
+        {
+            var prevCamp = disease.ArmyCampSize; var prevWater = disease.UnboiledWaterDays;
+            disease.ArmyCampSize = id => Math.Max(aw.CampSizeOf(id), prevCamp?.Invoke(id) ?? 0);
+            disease.UnboiledWaterDays = id => Math.Max(aw.UnboiledDaysOf(id), prevWater?.Invoke(id) ?? 0);
+        }
         if (home.Economy != null)
         {
             var prev = home.Economy.IsWarbandMan;
             home.Economy.IsWarbandMan = p => book.IsAway(home.Sim.People.IdOf(p).Value) || prev?.Invoke(p) == true;
         }
         return aw;
+    }
+}
+
+/// <summary>The ground the weather leaves (P7-AM-C): the rain of the last 24 hours, snow lying, frost and thaw, from the region's cell, memoised for the hour asked.</summary>
+public static class MarchWeather
+{
+    public static Func<long, long, long, Ravensguard.Sim.Carts.WetState> Sampler(Ravensguard.Sim.Weather.RegionWeather w, int cell)
+    {
+        long lastHour = long.MinValue; Ravensguard.Sim.Carts.WetState last = default;
+        return (hour, _, _) =>
+        {
+            if (hour == lastHour) return last;
+            long rain = 0;
+            for (int k = 0; k < 24; k++) { var s = w.AtLite(cell, hour - k); if (!s.PrecipIsSnow) rain += (long)s.PrecipMmH.Raw * 10 / Fixed.OneRaw; }
+            var now = w.AtLite(cell, hour);
+            int snow = (int)((long)now.SnowDepthCm.Raw / Fixed.OneRaw);
+            bool frozen = now.TempC.Raw <= 0;
+            last = new Ravensguard.Sim.Carts.WetState((int)Math.Min(rain, 10_000), snow, frozen, snow > 0 && !frozen);
+            lastHour = hour;
+            return last;
+        };
     }
 }

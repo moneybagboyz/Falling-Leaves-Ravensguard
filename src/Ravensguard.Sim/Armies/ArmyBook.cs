@@ -160,6 +160,8 @@ public sealed class ArmyBook
     public SortedDictionary<int, Warband> Warbands { get; } = [];
     public SortedDictionary<int, Errand> Errands { get; } = [];
     public SortedDictionary<int, BanditBand> Bands { get; } = [];
+    /// <summary>P7-AM-C: the hosts on the road, by the host's id in the supply book (a host with no march is standing where its account says).</summary>
+    public SortedDictionary<int, HostMarch> Marches { get; } = [];
     public List<News> Reports { get; } = [];
     public List<TaskLine> Log { get; } = [];
     public int NextWarband = 1, NextErrand = 1, NextBand = 1;
@@ -170,7 +172,7 @@ public sealed class ArmyBook
     public SortedDictionary<int, int> Barren { get; } = [];
     public const int LogKeep = 2000, ReportKeep = 64;
 
-    public bool IsEmpty => Warbands.Count == 0 && Errands.Count == 0 && Bands.Count == 0 && Reports.Count == 0 && Log.Count == 0 && Barren.Count == 0 && NextWarband == 1 && NextErrand == 1 && NextBand == 1 && Hosts.Count == 0 && NextHost == 1;
+    public bool IsEmpty => Warbands.Count == 0 && Errands.Count == 0 && Bands.Count == 0 && Reports.Count == 0 && Log.Count == 0 && Barren.Count == 0 && NextWarband == 1 && NextErrand == 1 && NextBand == 1 && Hosts.Count == 0 && Marches.Count == 0 && NextHost == 1;
 
     public Warband? WarbandOfFief(int fief) { foreach (var w in Warbands.Values) if (w.Fief == fief) return w; return null; }
     public Warband? WarbandOfLord(ulong lord) { foreach (var w in Warbands.Values) if (w.Lord == lord) return w; return null; }
@@ -254,6 +256,17 @@ public sealed class ArmyBook
                 M(x.Companies.Count);
                 foreach (var c in x.Companies) { M(c.Fief); M(c.Seat); M(c.Quota); M(c.Heard); M(c.Drawn); M(c.Arrives); M(c.HomeDay); M(c.Evaded); M(c.Asked); M(c.Walking ? 1 : 0); M((long)c.Captain); M((long)c.Kind); M(c.Men.Count); foreach (var p in c.Men) M((long)p); }
                 M(x.Warbands.Count); foreach (var j in x.Warbands) { M(j.Warband); M((long)j.Kind); M(j.Men); }
+            }
+        }
+        if (Marches.Count > 0)                                                            // P7-AM-C: absent while no host marches, so the trail of a world without one keeps its bytes
+        {
+            M(-7);
+            foreach (var (id, m) in Marches)
+            {
+                M(id); M((long)m.State); M(m.DistMm); M(m.RateHourMm); M(m.HourSec); M(m.PrevDistMm); M(m.PrevRateHourMm); M(m.PrevHourSec); M(m.CampsPitched); M(m.StartDay); M(m.Hours); M(m.MarchHours); S(m.Cause); M(m.InRegion ? 1 : 0); M(m.Hold ? 1 : 0); M((long)m.ChronEntry);
+                M(m.Stops.Count); foreach (int s in m.Stops) M(s);
+                M(m.Outsiders.Count); foreach (var (p, r) in m.Outsiders) { M((long)p); M(r); }
+                if (m.Camp is { } c) { M(1); M(c.XMm); M(c.YMm); M(c.Near); M(c.HeadX); M(c.HeadY); M(c.SinceSec); M(c.Serial); M(c.Men); M(c.Nights); M(c.Watch); M((c.Palisade ? 1 : 0) | (c.Latrine ? 2 : 0) | (c.WaterCarried ? 4 : 0) | (c.BelowTown ? 8 : 0)); M(c.Pieces); M(c.Sentries); } else M(0);
             }
         }
         return h;
