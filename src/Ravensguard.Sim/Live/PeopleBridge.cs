@@ -118,6 +118,9 @@ public sealed partial class PeopleBridge
 
     private static ExposureState StateOfBody(BodyState s) => s switch { BodyState.Normal => ExposureState.Normal, BodyState.Chilled => ExposureState.Chilled, BodyState.Moderate => ExposureState.Cold, BodyState.Severe or BodyState.Lethal => ExposureState.Severe, _ => ExposureState.Hot };
 
+    /// <summary>P7 BB-C (battle-bubble-and-formations 4.1): true for a continent point (millimetres) whose chunk is paused by an open battle bubble; null: nothing is paused. A live person there is not advanced.</summary>
+    public Func<long, long, bool>? PausedAt { get; set; }
+
     public int Promotions { get; private set; }
     public int Demotions { get; private set; }
     /// <summary>Most promotions made by one <see cref="Promote"/> call so far.</summary>
@@ -250,6 +253,7 @@ public sealed partial class PeopleBridge
         foreach (var (id, a) in _live)
         {
             a.PrevX = a.X; a.PrevY = a.Y;
+            if (PausedAt != null && !_followers.ContainsKey(id) && PausedAt(a.X, a.Y)) { a.OutsideSince = -1; continue; }          // P7 BB-C: a battle bubble is open next to this chunk: the person holds where they stand, keeping their job (the hour barrier still runs; nothing is folded back and no time is lost from the abstract clock)
             if (a.Body != null && _ambient != null) Expose(a, nowSec);
             if (_followers.TryGetValue(id, out var fs)) { StepFollower(a, fs); a.LastSec = nowSec; continue; }          // a party member walks the hero's trail, whatever their schedule says
             Advance(a, ground, nowSec);

@@ -39,6 +39,7 @@ public static class DevContext
         r.Register("camp", "camp - make camp here (or open the camp panel)", a => Travel?.Invoke("camp", a) ?? "no street running");
         r.Register("wood", "wood - 50 kg of firewood and 6 kg of bread into the camp stock", a => Travel?.Invoke("wood", a) ?? "no street running");
         r.Register("encounter", "encounter [id] - put a road encounter on the road ahead (bandit_ambush_small, merchant_cart, wolves, ...)", a => Travel?.Invoke("encounter", a) ?? "no street running");
+        r.Register("battle", "battle [men a side] [battle size] - two armies in formations meet beside the hero, led by him; the rest wait in reserve and come as waves (P7-BB-C)", a => Travel?.Invoke("battle", a) ?? "no street running");
         r.Register("kill", "kill [species] - a game animal killed here off the land's stock (red_deer, boar, roe_deer, hare, fox)", a => Travel?.Invoke("kill", a) ?? "no street running");
         r.Register("butcher", "butcher - butcher the oldest carcass into the hero's pack", a => Travel?.Invoke("butcher", a) ?? "no street running");
         r.Register("rooms", "rooms [off] - outline the rooms RoomDetector v2 recognises around the hero (P5-A3)", a => Rooms?.Invoke(a) ?? "no street running");

@@ -127,6 +127,8 @@ public static class InputDefs
         A(C, "formation_add_4", K(Key.F4, Mods.Shift));
         A(C, "tactical_overlay", K(Key.Key0));
         A(C, "battle_pause", K(Key.Space)); // P7-BB-D: with formations in the fight, Space pauses into the overlay; Space or 0 resumes
+        A(C, "zoom_in", K(Key.Equal), M(MouseButton.WheelUp)); // P7-BB-C: the battle view steps through the zoom bands (Command, Field, Street, Close) as the world view does
+        A(C, "zoom_out", K(Key.Minus), M(MouseButton.WheelDown));
         A(C, "combat_stance", K(Key.X));
         A(C, "throw", K(Key.G));
         A(C, "sprint", K(Key.Shift));

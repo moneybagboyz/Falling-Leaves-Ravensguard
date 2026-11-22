@@ -212,10 +212,23 @@ public sealed partial class FormationBook
     public void Step(FightWorld w)
     {
         int tick = w.Tick + 1;
-        // The counts a row reads of another (ActiveNow, RoutingNow, TotalNow) are derived, not saved: take them all from the fighters as they stand now, so a row stepped before another sees
-        // the same numbers whether the world ran on or was just loaded (a loaded book holds none until its first census).
-        for (int i = 0; i < Rows.Count; i++) Census(w, Rows[i]);
+        // P7 BB-C: every row's counts are this tick's before any row reads another's. They are derived and never saved, so a row that read the counts of the row after it (the previous tick's, or none after a load)
+        // would see something else in a loaded battle; a save, a load and a continue must equal the unbroken run
+        for (int i = 0; i < Rows.Count; i++) Count(w, Rows[i]);
         for (int i = 0; i < Rows.Count; i++) StepRow(w, Rows[i], tick);
+    }
+
+    /// <summary>What <see cref="Census"/> counts, without giving up any slot.</summary>
+    private static void Count(FightWorld w, FormationRow r)
+    {
+        int active = 0, routing = 0, total = 0;
+        for (int i = 0; i < r.Members.Length; i++)
+        {
+            var f = w.Fighters[r.Members[i]];
+            if (f.Active) { total++; if (f.Routing) routing++; }
+            if (r.Slot[i] >= 0 && f.Active && !f.Routing) active++;
+        }
+        r.ActiveNow = active; r.RoutingNow = routing; r.TotalNow = total;
     }
 
     private void StepRow(FightWorld w, FormationRow r, int tick)

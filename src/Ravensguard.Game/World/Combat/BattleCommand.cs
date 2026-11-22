@@ -38,6 +38,8 @@ public sealed class BattleCommand
     public FightWorld W => _v.W;
     public int Team => _v.HeroF?.Team ?? 0;
     public FormationBook? Book => W.Formations;
+    /// <summary>The battle bubble the view shows (counts of the reserve and the waves), or null in an ordinary fight.</summary>
+    public BattleBubble? Bubble => _v.Bubble;
 
     public static int Standing(FightWorld w, FormationRow r) { int n = 0; foreach (int id in r.Members) if (w.Fighters[id].Active) n++; return n; }
     public int Standing(FormationRow r) => Standing(W, r);

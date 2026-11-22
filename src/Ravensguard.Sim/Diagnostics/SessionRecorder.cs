@@ -127,6 +127,17 @@ public sealed class SessionRecorder
         World.AttachFight(fight, heroFighter);
     }
 
+    /// <summary>P7 BB-C: the starting record of every battle begun in this window (by fight id): the bubble beside its fight, so a replay rebuilds both (<see cref="LiveWorld.BattleFactory"/>).</summary>
+    public Dictionary<long, byte[]> BattleStarts { get; } = [];
+
+    /// <summary>A battle begins in the bubble: the fight is recorded as any fight is, and the bubble beside it; the live tier steps the bubble.</summary>
+    public void StartBattle(Ravensguard.Sim.Battle.BattleBubble battle, int heroFighter)
+    {
+        BattleStarts[(long)battle.W.FightId] = Ravensguard.Sim.Save.BattleRecord.Capture(battle)!.ToBytes();
+        StartFight(battle.W, heroFighter);
+        World.AttachBattle(battle, heroFighter);
+    }
+
     public void EndFight() { Commands.Append(ReplayCommand.FightEnd(World.Tick)); World.EndFight(); }
 
     /// <summary>Every combat input of the hero (move, face, block, attack, dodge, reload, throw, target, called shot) is recorded: a replay of a fight repeats it exactly.</summary>

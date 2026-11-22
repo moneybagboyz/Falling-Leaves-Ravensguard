@@ -5,6 +5,7 @@ using Godot;
 using Ravensguard.Content;
 using Ravensguard.Game.World.Combat;
 using Ravensguard.Sim.Bondage;
+using Ravensguard.Sim.Battle;
 using Ravensguard.Sim.Combat;
 using Ravensguard.Sim.Combat.Aftermath;
 using Ravensguard.Sim.Combat.Melee2;
@@ -172,7 +173,7 @@ public partial class StreetView
         return true;
     }
 
-    void OpenFightView(FightWorld fight, int hero)
+    void OpenFightView(FightWorld fight, int hero, BattleBubble? bubble = null)
     {
         var book = WatchBookOf();
         _fightLayer = new CanvasLayer { Layer = 6, Name = "FightLayer" };
@@ -180,7 +181,7 @@ public partial class StreetView
         _fightView = new FightView(fight, hero, i => _rec.FightInput(i), _rig)
         {
             SetPaused = p => _rec.SetSpeed(p ? SimSpeed.Paused : SimSpeed.X1), Name = "FightView", StanceChanged = KeepStance,
-            TakeBackOnInput = book.TakeBackOnInput, Bus = _travel?.Bus ?? new InterruptBus(),
+            TakeBackOnInput = book.TakeBackOnInput, Bus = _travel?.Bus ?? new InterruptBus(), Bubble = bubble,
         };
         if (Runtime?.State.Autopilot is { } ap && ap.States.TryGetValue(EconomyState.HeroOwner, out var row) && row.Enabled) { _fightView.Autopilot = row; _fightView.Router = ap.Router; }
         _fightLayer.AddChild(_fightView);
@@ -200,6 +201,7 @@ public partial class StreetView
     void RoadFightFrame()
     {
         if (!_fightResumeChecked) { _fightResumeChecked = true; ResumeFight(); }   // P4 close-out: a save made mid-fight
+        if (_battleOpen) { BattleFrame(); return; }                 // P7-BB-C: a battle in the bubble
         if (_boutFight != null) { BoutFrame(); return; }
         if (_fightView == null || _roadFight is not { } rf) return;
         var f = _world.Fight;
@@ -234,6 +236,7 @@ public partial class StreetView
     {
         if (Runtime is not { } rt || rt.State.Fight is not { } rec || _fightView != null || _world.Fight != null) return;
         rt.State.Fight = null;                                          // taken up: the next save captures the live fight, never this record again
+        if (rt.State.Battle != null && ResumeBattle(rt, rec)) return;   // P7-BB-C: a save made inside a battle
         var kind = FightSetup.KindOf(rec.Kind);
         if (kind == FightKind.SiteInhabitants || FightContentOf() is not { } fc) return;
         var ledger = rt.State.Wounds ?? _world.Wounds;

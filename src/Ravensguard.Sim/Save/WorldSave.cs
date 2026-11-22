@@ -107,6 +107,9 @@ public sealed class WorldState
     /// <summary>A fight in progress (P4-C, overview 8.3): saved in the "fight" section only mid-fight, so a load resumes it at the same FightTick. <see cref="FightSource"/>, when set by the game, is read at a save instead.</summary>
     public FightRecord? Fight { get; set; }
     public Func<FightRecord?>? FightSource { get; set; }
+    /// <summary>P7 BB-C (battle-bubble-and-formations 7): the battle bubble of a fight that is a battle, in the optional "battle" section (no version bump; absent unless a bubble is open); <see cref="BattleSource"/>, when set by the game, is read at a save.</summary>
+    public BattleRecord? Battle { get; set; }
+    public Func<BattleRecord?>? BattleSource { get; set; }
     /// <summary>P4-D (feedback-flavour-log): the log of the fight in progress or the last one, in the optional "fightlog" section (no format bump); <see cref="FightLogSource"/>, when set by the game, is read at a save.</summary>
     public FightLogSave? FightLog { get; set; }
     public Func<FightLogSave?>? FightLogSource { get; set; }
@@ -492,7 +495,7 @@ public static partial class WorldSave
             Autopilot = w.Autopilot is { IsEmpty: false } ap ? AutopilotSave.Capture(ap) : null,
             Talk = w.Talk is { IsEmpty: false } tk ? TalkSave.Capture(tk) : null,
             Onboarding = w.Onboarding is { IsEmpty: false } ob ? OnboardingSave.Capture(ob) : null,
-            Wounds = liveTier.Wounds, Fight = liveTier.Fight, FightLog = liveTier.FightLog,
+            Wounds = liveTier.Wounds, Fight = liveTier.Fight, FightLog = liveTier.FightLog, Battle = liveTier.Battle,
             Captivity = w.Captivity is { Captives.Count: > 0 } cb ? CaptivitySave.Capture(cb) : null,                          // P4-D
             Succession = w.Succession is { } sb && (sb.Estates.Count > 0 || sb.RunEnded || sb.Kin.Count > 0) ? SuccessionSave.Capture(sb) : null,     // P4-D
             Watch = w.Watch is { IsEmpty: false } wb ? WatchSave.Capture(wb) : null,                                                // P4-F
@@ -565,7 +568,7 @@ public static partial class WorldSave
     /// tick worker while the main thread goes on stepping, so they are read together under the sites book's lock and then the ledger's (the order the crawl's step takes them), which the
     /// live step holds (<see cref="Ravensguard.Sim.Combat.Melee2.FightWorld.StepShared"/>): the four sections show one and the same tick (review finding 1).
     /// </summary>
-    public static (WoundSave? Wounds, FightRecord? Fight, FightLogSave? FightLog, SiteSave? Sites) CaptureLiveTier(WorldState w)
+    public static (WoundSave? Wounds, FightRecord? Fight, FightLogSave? FightLog, SiteSave? Sites, BattleRecord? Battle) CaptureLiveTier(WorldState w)
     {
         object? siteLock = w.Sites?.Sync, woundLock = w.Wounds?.Sync;
         bool siteTaken = false, woundTaken = false;
@@ -577,7 +580,8 @@ public static partial class WorldSave
             var fight = w.FightSource != null ? w.FightSource() : w.Fight;
             var log = w.FightLogSource != null ? w.FightLogSource() : w.FightLog;
             var sites = w.SiteSource != null ? w.SiteSource() : w.Sites is { IsEmpty: false } sbk ? SiteSave.Capture(sbk) : null;
-            return (wounds, fight, log, sites);
+            var battle = w.BattleSource != null ? w.BattleSource() : w.Battle;
+            return (wounds, fight, log, sites, battle);
         }
         finally
         {
@@ -689,6 +693,7 @@ public static partial class WorldSave
             Wounds = file.Sections.ContainsKey(WoundSave.SectionName) ? Decode<WoundSave>(file, WoundSave.SectionName, compressed: true).Restore() : null,
             Fight = file.Sections.ContainsKey(FightRecord.SectionName) ? Decode<FightRecord>(file, FightRecord.SectionName, compressed: true) : null,
             FightLog = file.Sections.ContainsKey(FightLogSave.SectionName) ? Decode<FightLogSave>(file, FightLogSave.SectionName, compressed: true) : null,
+            Battle = file.Sections.ContainsKey(BattleRecord.SectionName) ? Decode<BattleRecord>(file, BattleRecord.SectionName, compressed: true) : null,                                  // P7 BB-C
             Captivity = file.Sections.ContainsKey(CaptivitySave.SectionName) ? Decode<CaptivitySave>(file, CaptivitySave.SectionName, compressed: true).Restore() : null,          // P4-D
             Succession = file.Sections.ContainsKey(SuccessionSave.SectionName) ? Decode<SuccessionSave>(file, SuccessionSave.SectionName, compressed: true).Restore() : null,    // P4-D
             Watch = file.Sections.ContainsKey(WatchSave.SectionName) ? Decode<WatchSave>(file, WatchSave.SectionName, compressed: true).Restore() : null,                      // P4-F
@@ -939,6 +944,7 @@ public sealed class LiveCapture
     internal WoundSave? Wounds { get; init; }
     internal FightRecord? Fight { get; init; }
     internal FightLogSave? FightLog { get; init; }
+    internal BattleRecord? Battle { get; init; }
     internal CaptivitySave? Captivity { get; init; }
     internal SuccessionSave? Succession { get; init; }
     internal WatchSave? Watch { get; init; }
@@ -1029,6 +1035,7 @@ public sealed class LiveCapture
         if (Wounds != null) sections.Add(new(WoundSave.SectionName, SaveCodec.SerializeCompressed(Wounds)));
         if (Fight != null) sections.Add(new(FightRecord.SectionName, SaveCodec.SerializeCompressed(Fight)));
         if (FightLog != null) sections.Add(new(FightLogSave.SectionName, SaveCodec.SerializeCompressed(FightLog)));
+        if (Battle != null) sections.Add(new(BattleRecord.SectionName, SaveCodec.SerializeCompressed(Battle)));                // P7 BB-C (optional, no bump)
         if (Captivity != null) sections.Add(new(CaptivitySave.SectionName, SaveCodec.SerializeCompressed(Captivity)));       // P4-D (v7)
         if (Succession != null) sections.Add(new(SuccessionSave.SectionName, SaveCodec.SerializeCompressed(Succession)));    // P4-D (v7)
         if (Watch != null) sections.Add(new(WatchSave.SectionName, SaveCodec.SerializeCompressed(Watch)));                   // P4-F (optional, no bump)

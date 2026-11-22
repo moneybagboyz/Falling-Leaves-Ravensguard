@@ -39,6 +39,16 @@ public partial class FightView : Node2D
     /// <summary>The ground the fight stands on: grass by default; a site's stone floor underground (P4-H).</summary>
     public Color Ground { get; set; } = new(0.24f, 0.3f, 0.19f);
 
+    // ---- P7-BB-C: a battle in the bubble (battle-bubble-and-formations 4.1, plan 2.7): the bubble steps the fight, and the crowd layer draws the soldiers from the published snapshot instead of the rig ----
+    /// <summary>The battle bubble this view shows, or null for an ordinary fight (the rig view, one figure at a time).</summary>
+    public BattleBubble? Bubble { get; init; }
+    CrowdLayer? _crowd;
+    StreetView.Band _band = StreetView.Band.Field;
+    float _alpha = 1f; int _pubTick = -1;
+    /// <summary>True while the crowd layer draws the soldiers (a battle bubble).</summary>
+    public bool CrowdOn => _crowd != null;
+    public StreetView.Band Band => _band;
+
     readonly RigAtlas _rig;
     Font _font = null!;
     double _acc;
@@ -132,6 +142,13 @@ public partial class FightView : Node2D
     {
         _font = GD.Load<Font>("res://assets/fonts/PixelifySans.ttf") ?? ThemeDB.FallbackFont;
         ActiveContexts.Enter(InputContext.CombatStance);
+        if (Bubble != null)
+        {
+            _crowd = new CrowdLayer(ArtAtlas.Shared) { Name = "CrowdLayer" };
+            AddChild(_crowd);
+            SetBand(_band);
+            PublishCrowd();
+        }
         _cam = Centre();
         var layer = new CanvasLayer { Layer = 8, Name = "LogLayer" };
         LogPanel = new FightLogPanel(() => Recorder.Log, Book);
@@ -247,26 +264,74 @@ public partial class FightView : Node2D
         {
             _acc += delta * Feedback.TimeScale;                       // slow motion and hit-stop change the steps per real second, never a step (FL-9)
             int guard = 0;
-            while (_acc >= 0.05 && guard++ < 6) { _acc -= 0.05; W.StepWithAi(); }
+            while (_acc >= 0.05 && guard++ < 6) { _acc -= 0.05; StepFight(); }
             if (guard >= 6) _acc = 0;
+            _alpha = (float)Math.Clamp(_acc / 0.05, 0, 1);
         }
+        else if (_crowd != null && W.Tick != _pubTick) { _pubTick = W.Tick; PublishCrowd(); _alpha = 1f; }   // the live tick steps the fight (a battle in the street view): a new picture each tick
         Consume();
         Feedback.Poll(); Feedback.Update(delta);
         CheckEnd();
         for (int i = _callouts.Count - 1; i >= 0; i--) { var c = _callouts[i]; c.Age += delta; if (c.Age > 1.4) _callouts.RemoveAt(i); else _callouts[i] = c; }
         _cam = _cam.Lerp(Centre(), (float)Math.Min(1, delta * 4));
+        PlaceCrowd();
         QueueRedraw();
     }
 
+    /// <summary>One 20 Hz tick of the fight: the bubble's (soldiers entering at the edge, waves, the close) when it is a battle, else the fight's own; the crowd layer is handed the new picture.</summary>
+    void StepFight()
+    {
+        if (Bubble != null) Bubble.StepShared(); else W.StepWithAi();
+        PublishCrowd();
+    }
+
     /// <summary>Steps the fight <paramref name="ticks"/> times without drawing (screenshots, tests of the scene).</summary>
-    public void Advance(int ticks) { for (int i = 0; i < ticks; i++) W.StepWithAi(); Consume(); Feedback.Poll(); _cam = Centre(); }
+    public void Advance(int ticks) { for (int i = 0; i < ticks; i++) StepFight(); Consume(); Feedback.Poll(); _cam = Centre(); PlaceCrowd(); }
+
+    // ------------------------------------------------------------------ the crowd (P7-BB-C: wiring the BB-E layer into the live battle view)
+
+    void PublishCrowd() => _crowd?.Publish(W);
+
+    /// <summary>The zoom band of a battle: the view's pixels a metre are the band's (Command 2, Field 8, Street 32, Close 64), so the crowd's art and the overlay's blocks agree on one scale.</summary>
+    public void SetBand(StreetView.Band b)
+    {
+        _band = b;
+        Zoom = CrowdLayer.Ppm(b) / (48f / 1.8f);
+        if (_crowd != null) _crowd.Band = b;
+    }
+
+    void StepBand(int dir)
+    {
+        var order = new[] { StreetView.Band.Command, StreetView.Band.Field, StreetView.Band.Street, StreetView.Band.Close };
+        int i = Array.IndexOf(order, _band);
+        SetBand(order[Math.Clamp(i + dir, 0, order.Length - 1)]);
+    }
+
+    /// <summary>Puts the crowd layer where the view's own mapping puts the ground (the layer works in 32 world units a metre; the view in <see cref="Ppm"/> pixels a metre), then lays the crowd out for this frame.</summary>
+    void PlaceCrowd()
+    {
+        if (_crowd == null) return;
+        var vp = GetViewportRect().Size;
+        float s = Ppm / CrowdLayer.WorldPerM;
+        _crowd.Scale = new Vector2(s, s);
+        _crowd.Position = vp * 0.5f - _cam * Ppm + Feedback.Shake;
+        _crowd.Refresh(_cam, vp, _alpha);
+    }
 
     /// <summary>When a fight the view steps itself is over for two seconds, the log is closed and the report offered (F3: opened for a wound on the hero or three casualties, else a banner).</summary>
     void CheckEnd()
     {
-        if (!OwnsStepping || _ended || !W.IsOver) return;
-        if (_endedTick < 0) { _endedTick = W.Tick; return; }
-        if (W.Tick - _endedTick < 40) return;
+        if (!OwnsStepping || _ended || !(Bubble != null ? Bubble.Closed : W.IsOver)) return;
+        if (Bubble != null)                                                   // a closed battle's ticks stop: its two seconds are the clock's, and the banner says how it ended
+        {
+            if (_endedTick < 0) { _endedTick = (int)(Time.GetTicksMsec() / 50); Banner = L.T(Bubble.Result?.OutcomeKey ?? "ch_bt_out_drawn"); return; }
+            if ((int)(Time.GetTicksMsec() / 50) - _endedTick < 40) return;
+        }
+        else
+        {
+            if (_endedTick < 0) { _endedTick = W.Tick; return; }
+            if (W.Tick - _endedTick < 40) return;
+        }
         FinishLog();
         var rep = AfterFightReport.Build(Log, Book, GameText.Instance);
         bool hurt = HeroF != null && HeroF.Book.Records.Count > 0;
@@ -324,6 +389,11 @@ public partial class FightView : Node2D
     public override void _Input(InputEvent e)
     {
         if (ModalOpen) return;                                                           // the report or the stance panel is up: it has the keys (and the mouse)
+        if (_crowd != null && !CmdModal && !_calling)                                      // P7-BB-C: the zoom bands of a battle
+        {
+            if (Actions.Pressed(e, "combatstance.zoom_in")) { StepBand(1); GetViewport().SetInputAsHandled(); return; }
+            if (Actions.Pressed(e, "combatstance.zoom_out")) { StepBand(-1); GetViewport().SetInputAsHandled(); return; }
+        }
         if (e is InputEventKey { Pressed: true, Echo: false })
         {
             if (Actions.Pressed(e, "combatstance.last_report")) { OpenReport(); GetViewport().SetInputAsHandled(); return; }
@@ -519,9 +589,10 @@ public partial class FightView : Node2D
         foreach (var g in W.Ground) DrawCircle(Screen(g.X, g.Y), 3, new Color(0.5f, 0.4f, 0.3f));
         Feedback.DrawDecals(this, Screen, Ppm);
         if (HeroF is { Active: true } hero) DrawArcs(hero);
-        foreach (var f in W.Fighters.OrderBy(f => (f.Act is FAct.Down or FAct.Dead ? -100000 : 0) + f.Y)) DrawFighter(f);
+        if (_crowd == null) foreach (var f in W.Fighters.OrderBy(f => (f.Act is FAct.Down or FAct.Dead ? -100000 : 0) + f.Y)) DrawFighter(f);
+        else DrawBattleMarks();                                                  // the crowd layer draws the soldiers; this draws the hero's ring and the selected formations' outlines
         foreach (var p in W.Projectiles) if (!p.Done) DrawProjectile(p);
-        foreach (var f in W.Fighters) if (f.Act is not (FAct.Dead or FAct.Fled)) DrawBars(f);
+        if (_crowd == null) foreach (var f in W.Fighters) if (f.Act is not (FAct.Dead or FAct.Fled)) DrawBars(f);
         foreach (var c in _callouts)
         {
             var p = Screen((int)c.Pos.X, (int)c.Pos.Y) + new Vector2(0, -64 * Zoom - (float)c.Age * 30);
@@ -536,6 +607,38 @@ public partial class FightView : Node2D
         {
             DrawRect(new Rect2(0, sz.Y * 0.42f, sz.X, 40), new Color(0, 0, 0, 0.6f));
             DrawString(_font, new Vector2(0, sz.Y * 0.42f + 27), Banner, HorizontalAlignment.Center, sz.X, 20, Colors.White);
+        }
+    }
+
+    /// <summary>A battle in the crowd layer: a gold ring at the hero's feet, a gold outline round each selected formation (from the snapshot's marks, the same picture the crowd shows). Pure drawing.</summary>
+    void DrawBattleMarks()
+    {
+        if (_crowd == null) return;
+        var snap = _crowd.Current;
+        var gold = new Color(1f, 0.85f, 0.35f);
+        if (HeroF is { Active: true } hero) DrawArc(Screen(hero.X, hero.Y), Math.Max(5f, 0.7f * Ppm), 0, Mathf.Tau, 20, gold, 2);
+        var book = W.Formations;
+        if (book == null) return;
+        foreach (byte id in Cmd.Selected)
+        {
+            var row = book.Find(Cmd.Team, id);
+            if (row == null) continue;
+            for (int k = 0; k < snap.FormCount; k++)
+            {
+                var m = snap.Forms[k];
+                if (m.Row != row.Index) continue;
+                long lx = -m.FaceY, ly = m.FaceX;                                          // lateral (Q10)
+                var pts = new Vector2[5];
+                for (int c = 0; c < 4; c++)
+                {
+                    int sl = c is 0 or 3 ? -1 : 1, sf = c is 0 or 1 ? 1 : -1;
+                    long x = m.CentreX + ((sl * lx * m.FrontMm / 2 + sf * m.FaceX * (long)m.DepthMm / 2) >> 10), y = m.CentreY + ((sl * ly * m.FrontMm / 2 + sf * m.FaceY * (long)m.DepthMm / 2) >> 10);
+                    pts[c] = Screen((int)x, (int)y);
+                }
+                pts[4] = pts[0];
+                DrawPolyline(pts, gold, 2);
+                break;
+            }
         }
     }
 

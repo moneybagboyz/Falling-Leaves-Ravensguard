@@ -129,8 +129,10 @@ public static class NewGameDebug
             // autosave: the timer writes the first rotating slot, then goes quiet
             sv.AutosaveSeconds = 0.05;
             string autosave = Ravensguard.Sim.Save.SaveWriter.AutosavePath(runsDir, 1, sv.Run.RunName);
-            if (!await Until(tree, () => System.IO.File.Exists(autosave) && !sv.Saving, 1500)) throw new Exception("no autosave was written");
+            // (the timer is 0.05 s here: on a slow frame the next autosave starts in the frame the last one ends, so "written and idle" may never be seen; wait for the file, quiet the timer, then for the write to end)
+            if (!await Until(tree, () => System.IO.File.Exists(autosave), 1500)) throw new Exception($"no autosave was written (saving {sv.Saving}, error {sv.LastSaveError ?? "none"})");
             sv.AutosaveSeconds = 900;
+            if (!await Until(tree, () => !sv.Saving, 1500)) throw new Exception("the autosave did not finish");
             if (sv.LastSaveError != null) throw new Exception("autosave failed: " + sv.LastSaveError);
             // testers: walk, write a bug report (as F8 does) and replay it headlessly: the replayed record hashes must equal the recorded ones (spec 4.5, TR-10)
             {

@@ -1,0 +1,9 @@
+// P7-BB-C (battle-bubble-and-formations 3.1, 4.1): the battle bubble's constants. Distances in mm, ticks 20 Hz, _pm permille.
+// The wave check runs once a second (20 ticks) so that a wave enters within 5 s of a side falling under 70%; a side sends at most one wave in 100 ticks (the spec's "every 5 s").
+[
+  { "type": "bubble_rules", "id": "default",
+    "box_margin_mm": 150000, "max_area_m2": 1000000, "max_side_m": 1400, "paused_margin_mm": 200000, "chunk_m": 32,
+    "cap_total_default": 1000, "cap_total_min": 200, "cap_total_max": 2000, "min_cap_div": 4, "promote_per_tick": 50,
+    "wave_check_ticks": 20, "wave_gap_ticks": 100, "wave_under_pm": 700, "wave_div": 4, "entry_jitter_mm": 20000, "entry_inset_mm": 6000,
+    "quiet_close_s": 60, "no_contact_close_s": 1200, "close_check_ticks": 20, "formation_gap_mm": 4000, "line_width_max_mm": 700000, "line_gap_mm": 14000 }
+]

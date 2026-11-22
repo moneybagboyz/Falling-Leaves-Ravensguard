@@ -21,6 +21,7 @@ public partial class FightDemo : Node2D
     FightView _view = null!;
     FightWorld _w = null!;
     bool _skirmish, _practice, _battle; ulong _seed = 7;
+    Ravensguard.Sim.Battle.BattleBubble? _bubble;
     string? _shotOut, _shotWhat;
 
     public static FightContent Content()
@@ -49,10 +50,17 @@ public partial class FightDemo : Node2D
         GD.Print($"FightDemo ready: {(_mounted ? "mounted" : _skirmish ? "skirmish" : "duel")} seed {_seed}");
     }
 
+    static string CmdArg(string n, string d) { var a = OS.GetCmdlineUserArgs(); int i = Array.IndexOf(a, n); return i >= 0 && i + 1 < a.Length ? a[i + 1] : d; }
+
     FightWorld Build()
     {
         var c = Content();
-        if (_battle) return BattleScenario.Make(240, 60, _seed, hero: true);
+        if (_battle)                                                                          // P7-BB-C: the battle runs in the bubble (--per-side N, --cap N, --band command|field|street|close)
+        {
+            int per = int.TryParse(CmdArg("--per-side", "240"), out var ps) ? Math.Clamp(ps, 20, 3000) : 240, cap = int.TryParse(CmdArg("--cap", "0"), out var cp) ? cp : 0;
+            _bubble = BubbleScenario.Make(per, per >= 600 ? 100 : 60, _seed, hero: true, cap: cap);
+            return _bubble.W;
+        }
         if (_mounted) return BuildMounted(c);
         if (_practice)
         {
@@ -87,8 +95,9 @@ public partial class FightDemo : Node2D
         int hero = _w.Fighters.FindIndex(f => f.Player);
         if (_view == null)
         {
-            _view = new FightView(_w, hero, i => _w.Input(hero, i)) { OwnsStepping = true, Name = "FightView" };
+            _view = new FightView(_w, hero, i => _w.Input(hero, i)) { OwnsStepping = true, Name = "FightView", Bubble = _bubble };
             AddChild(_view);
+            if (_bubble != null) _view.SetBand(CmdArg("--band", "field") switch { "command" => World.StreetView.Band.Command, "street" => World.StreetView.Band.Street, "close" => World.StreetView.Band.Close, _ => World.StreetView.Band.Field });
         }
         else _view.Replace(_w);
         if (!_skirmish && !_battle && hero >= 0) { _view.Log.Info(hero).Name = "Aldric"; _view.Log.Info(1 - hero).Name = "Bram"; }       // the log names people
@@ -172,9 +181,10 @@ public partial class FightDemo : Node2D
             {
                 // P7-BB-D: a battle of formations, 20 s in, with formation 1 and 3 selected; the tactical pause overlay with a move and a drawn frontage placed (and one order on its way), or the order wheel
                 hero.Player = true;
-                _view.Advance(20 * 12);
+                _view.Advance(20 * (_bubble != null ? 64 : 12));
                 _view.Cmd.Select(1, false, 0); _view.Cmd.Select(2, true, 1);
-                _view.Zoom = 0.6f;
+                if (_bubble != null) { _view.FocusOn(0, 0); _view.Advance(1); }          // P7-BB-C: a battle in the bubble keeps its band's scale (the crowd layer's art is made for it); the camera on the middle of the field
+                else _view.Zoom = 0.6f;
                 _view.ClearCallouts();
                 if (_shotWhat != "battle")
                 {

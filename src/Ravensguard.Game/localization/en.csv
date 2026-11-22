@@ -114,6 +114,8 @@ ACTION_COMBATSTANCE_FORMATION_ADD_3,Add formation 3 to the selection
 ACTION_COMBATSTANCE_FORMATION_ADD_4,Add formation 4 to the selection
 ACTION_COMBATSTANCE_TACTICAL_OVERLAY,Tactical pause overlay
 ACTION_COMBATSTANCE_BATTLE_PAUSE,Pause into the tactical overlay (resume)
+ACTION_COMBATSTANCE_ZOOM_IN,Zoom in (a battle: the next closer band)
+ACTION_COMBATSTANCE_ZOOM_OUT,Zoom out (a battle: the next band out)
 ACTION_COMBATSTANCE_COMBAT_STANCE,Combat stance
 ACTION_COMBATSTANCE_THROW,Throw
 ACTION_COMBATSTANCE_SPRINT,Sprint
@@ -6338,6 +6340,27 @@ ch_note_sg_blow,the wall was battered down
 ch_note_sg_burnt,the fire burnt the wall out
 ch_note_sg_undermined,the wall beneath it was struck down
 ch_note_sg_masons,the masons set the stones again
+bb_side_you,"You: {0} up, {1} down"
+bb_side_foe,"Foe: {0} up, {1} down"
+bb_reserve,"{0} held back, {1} waves"
+ch_bt_battle,"A battle was fought: {commander_a} led {men_a} men (lost {lost_a}, {waves_a} waves came up) against {commander_b} with {men_b} men (lost {lost_b}, {waves_b} waves). {outcome}."
+ch_bt_hero_led,"{formations} formations followed the hero; {lost} of his side were lost. {outcome}."
+ch_bt_captain_fell,"{person}, who led the {formation}, fell in the battle."
+ch_bt_banner_taken,"The banner of {lord} was taken by {taker}."
+ch_bt_out_won,The first side held the field
+ch_bt_out_lost,The second side held the field
+ch_bt_out_drawn,Neither side held the field
+ch_bt_out_truce,A truce was agreed
+ch_note_bt_field,the two hosts met in the field
+ch_bt_form_infantry,foot
+ch_bt_form_archers,archers
+ch_bt_form_crossbows,crossbowmen
+ch_bt_form_cavalry,horse
+ch_bt_form_retinue,retinue
+ch_bt_form_allied,allied contingent
+ch_bt_form_skirmishers,skirmishers
+ch_bt_form_engine,engine crews
+ch_bt_form_wagon,wagon fort
 ui_ind_empty,"You run no works. Found one at a mill site or a surveyed deposit and its chain appears here."
 ui_ind_keys,"{0} stage, {1} crew, {2} upgrade plan, {3} route, {4} wage, {5} send caravan, {6} next tab, {7} close"
 ui_ind_keys_short,Industry

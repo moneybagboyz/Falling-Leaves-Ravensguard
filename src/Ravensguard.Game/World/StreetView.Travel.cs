@@ -556,6 +556,7 @@ public partial class StreetView
             case "camp": ToggleCamp(); return t.Camp != null ? "camp made" : "could not make camp here";
             case "wood": { if (t.Camp == null) return "no camp"; t.StoreOf(t.Camp.Id).Create(t.Goods!.IdOf("firewood"), 50_000, CreateReason.Other); t.StoreOf(t.Camp.Id).Create(t.Goods.IdOf("bread"), 6_000, CreateReason.Other); return "50 kg firewood and 6 kg bread in the camp stock"; }
             case "encounter": return DevEncounter(a.Length > 0 ? a[0] : "bandit_ambush_small");
+            case "battle": return DevBattle(a);                                              // P7-BB-C: two armies in the bubble
             case "kill":
             {
                 var layer = Runtime?.State.Production?.Resources; var sp = t.Species(a.Length > 0 ? a[0] : "red_deer");

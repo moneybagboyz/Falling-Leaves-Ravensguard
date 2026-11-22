@@ -130,7 +130,7 @@ public sealed class FightRecord
     {
         var c = f.Cmd; var m = f.Brain; var q = f.Req;
         long b = (f.Heavy ? 1 : 0) | (f.Riposte ? 2 : 0) | (f.Loaded ? 4 : 0) | (f.WeaponArm ? 8 : 0) | (f.ShieldArm ? 16 : 0) | (f.CanStand ? 32 : 0) | (f.OneEye ? 64 : 0) | (f.Crawling ? 128 : 0)
-            | (f.Routing ? 256 : 0) | (f.Announced ? 512 : 0) | (q.Auto ? 1024 : 0) | (c.Sprint ? 2048 : 0) | (c.Block ? 4096 : 0) | (c.Hold ? 8192 : 0);
+            | (f.Routing ? 256 : 0) | (f.Announced ? 512 : 0) | (q.Auto ? 1024 : 0) | (c.Sprint ? 2048 : 0) | (c.Block ? 4096 : 0) | (c.Hold ? 8192 : 0) | (f.FmSteer ? 16384 : 0);   // P7 BB-C: the formation steering flag of the last think
         return
         [
             b, f.ShieldPm, f.ArmourG, f.OverKg, f.Ammo, f.ImprovisedPm, f.ImprovisedBlows, f.Skill, f.X, f.Y, f.FX, f.FY, f.BraceX, f.BraceY, f.BraceSince, f.UnbracedUntil, f.LastMoveMm,
@@ -167,6 +167,7 @@ public sealed class FightRecord
         var c = f.Cmd; c.ClearAll();
         c.MoveX = (int)s[i++]; c.MoveY = (int)s[i++]; c.FaceX = (int)s[i++]; c.FaceY = (int)s[i++]; f.Player = s[i++] != 0;
         c.Sprint = (b & 2048) != 0; c.Block = (b & 4096) != 0; c.Hold = (b & 8192) != 0;
+        f.FmSteer = (b & 16384) != 0;
     }
 
     // ---------------------------------------------------------------- restore

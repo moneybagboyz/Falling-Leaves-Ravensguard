@@ -210,8 +210,8 @@ public sealed partial class LiveWorld
         // bleeding, pain and consciousness at 20 Hz while anyone has an open wound, in or out of a fight (wounds 5), then the fight's step: both under the ledger's lock, so the tick
         // worker and a save made on it see the books and the fight of one whole tick (review finding 1)
         bool stepFight = Fight != null && Clock.Speed != SimSpeed.Paused;
-        if (Wounds is { } wl) lock (wl.Sync) { wl.AdvanceTo(Clock.Now.Seconds); if (stepFight) Fight!.StepShared(); }
-        else if (stepFight) Fight!.StepShared();
+        if (Wounds is { } wl) lock (wl.Sync) { wl.AdvanceTo(Clock.Now.Seconds); if (stepFight) StepTheFight(); }
+        else if (stepFight) StepTheFight();
         int mult = (int)Clock.Speed;
         _moving = false;
         if (_usePending) { _usePending = false; TryPortalHere(force: true); }
@@ -232,15 +232,30 @@ public sealed partial class LiveWorld
     /// <summary>Rebuilds a fight from its id when a replay reaches the tick it started (the session recorder keeps each fight's starting record).</summary>
     public Func<long, Ravensguard.Sim.Combat.Melee2.FightWorld?>? FightFactory { get; set; }
 
-    public void AttachFight(Ravensguard.Sim.Combat.Melee2.FightWorld fight, int heroFighter) { Fight = fight; FightHero = heroFighter; }
+    public void AttachFight(Ravensguard.Sim.Combat.Melee2.FightWorld fight, int heroFighter) { Fight = fight; FightHero = heroFighter; Battle = null; }
+
+    /// <summary>P7 BB-C: the battle bubble the fight belongs to, when it is a battle: stepped instead of the bare fight (its soldiers entering, its waves, its close); null in an ordinary fight.</summary>
+    public Ravensguard.Sim.Battle.BattleBubble? Battle { get; private set; }
+
+    /// <summary>Opens the live tier on a battle: its fight is the live fight (the hero's inputs drive <paramref name="heroFighter"/>, or -1), and the bubble steps it.</summary>
+    public void AttachBattle(Ravensguard.Sim.Battle.BattleBubble bubble, int heroFighter) { Fight = bubble.W; FightHero = heroFighter; Battle = bubble; }
+
+    private void StepTheFight() { if (Battle != null) Battle.StepShared(); else Fight!.StepShared(); }
     public void EndFight()
     {
         if (Fight != null && Ride != null) Ravensguard.Sim.Combat.Mounted.MountedRide.Settle(Fight, Ride);      // [mounted-combat] the horse's state goes back to the ride
-        Fight = null; FightHero = -1;
+        Fight = null; FightHero = -1; Battle = null;
     }
 
     /// <summary>A replayed fight start: the factory gives back the fight as it was when it began.</summary>
-    public void StartFightById(long id, int heroFighter) { if (FightFactory?.Invoke(id) is { } f) AttachFight(f, heroFighter); }
+    public void StartFightById(long id, int heroFighter)
+    {
+        if (FightFactory?.Invoke(id) is not { } f) return;
+        if (BattleFactory?.Invoke(id, f) is { } b) AttachBattle(b, heroFighter); else AttachFight(f, heroFighter);
+    }
+
+    /// <summary>P7 BB-C: rebuilds the bubble of a replayed fight that began as a battle (null for an ordinary fight).</summary>
+    public Func<long, Ravensguard.Sim.Combat.Melee2.FightWorld, Ravensguard.Sim.Battle.BattleBubble?>? BattleFactory { get; set; }
 
     /// <summary>One player combat input for the hero's fighter (it takes effect at the next step).</summary>
     public void FightInput(Ravensguard.Sim.Combat.Melee2.FightInput i) { if (Fight != null && FightHero >= 0) Fight.Input(FightHero, i); }

@@ -8,6 +8,7 @@ using Godot;
 using Ravensguard.Sim.Battle;
 using Ravensguard.Sim.Combat;
 using Ravensguard.Sim.Combat.Melee2;
+using Ravensguard.Sim.Combat.Morale;
 using Ravensguard.Sim.Combat.Watch;
 
 namespace Ravensguard.Game.World.Combat;
@@ -57,6 +58,51 @@ public static class BattleScenario
         w.LodCentre = (-10_000, 0);
         return w;
     }
+}
+
+/// <summary>The same two armies opened as a battle bubble (P7-BB-C): the sides' units in deploy order, the live set within the battle size and the rest in each side's reserve, to come in as waves.</summary>
+public static class BubbleScenario
+{
+    static readonly WeaponInstance Spear = new("spear", "steel"), Sword = new("arming_sword", "steel");
+
+    static FighterKit Kit(int team, int i, int skill)
+    {
+        int cls = i % 5 == 4 ? 3 : i % 3 == 0 ? 0 : i % 3 == 1 ? 1 : 2;
+        var k = cls switch
+        {
+            0 => new FighterKit { Name = $"s{i}", Team = team, Weapon = Sword, Shield = "heater", Worn = [new WornItem("tunic", "linen")], Skill = skill, ShieldSkill = skill },
+            1 => new FighterKit { Name = $"p{i}", Team = team, Weapon = Spear, Worn = [new WornItem("tunic", "linen")], Skill = skill },
+            2 => new FighterKit { Name = $"w{i}", Team = team, Weapon = Sword, Worn = [new WornItem("tunic", "linen")], Skill = skill },
+            _ => new FighterKit { Name = $"a{i}", Team = team, Launcher = "longbow", Ammo = "bodkin_arrow", AmmoCount = 12, Worn = [new WornItem("tunic", "linen")], Skill = skill, ArcherySkill = skill },
+        };
+        return k with { Tactics = i == 0 ? 30 : 0, Courage = 100 };
+    }
+
+    /// <summary>
+    /// The opening of a battle: <paramref name="perSide"/> men a side in units of <paramref name="unitSize"/>, the battle size <paramref name="cap"/> (0: everyone is live), the first side led by the player's hero
+    /// (the first man of its first unit, Leadership 50) when <paramref name="hero"/>.
+    /// </summary>
+    public static BattleOpening Opening(int perSide, int unitSize, ulong seed, bool hero, int cap = 0, int gapMm = 120_000)
+    {
+        var o = new BattleOpening { Id = 1, Seed = seed, GameSec = 8 * 3600, CapTotal = cap > 0 ? cap : Math.Clamp(2 * perSide, 200, 2000), GapMm = gapMm, CauseKind = Ravensguard.Sim.Core.CauseKind.War, Place = Ravensguard.Sim.Core.EntityId.None };
+        for (int team = 0; team < 2; team++)
+        {
+            var s = new BattleSideSpec { Team = team, Realm = team + 1, Commander = (ulong)(9000 + team), HostId = (ulong)(100 + team), Kind = SideKind.Army };
+            for (int left = perSide; left > 0;)
+            {
+                int n = Math.Min(unitSize, left); left -= n;
+                var u = new BattleUnit { Kind = FormationKind.Infantry, Shape = Formation.Line, Ranks = 4, Officers = [0] };
+                for (int i = 0; i < n; i++) u.Soldiers.Add(Kit(team, i, 30 + i * 7 % 40));
+                s.Units.Add(u);
+            }
+            if (hero && team == 0) { s.HeroUnit = 0; s.HeroIndex = 0; s.HeroLeadership = 50; }
+            o.Sides.Add(s);
+        }
+        return o;
+    }
+
+    public static BattleBubble Make(int perSide, int unitSize, ulong seed, bool hero, int cap = 0, int gapMm = 120_000)
+        => BattleBubble.Open(FightDemo.Content(), Opening(perSide, unitSize, seed, hero, cap, gapMm));
 }
 
 /// <summary>

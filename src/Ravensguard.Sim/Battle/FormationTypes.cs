@@ -74,6 +74,8 @@ public sealed class FormationRules
     public BattleRulesDef R { get; }
     /// <summary>The cavalry layer's constants (<c>battle/cavalry.jsonc</c>).</summary>
     public CavalryRulesDef Cav { get; }
+    /// <summary>The battle bubble's constants (<c>battle/bubble.jsonc</c>).</summary>
+    public BubbleRulesDef Bubble { get; }
     private readonly Dictionary<string, FormationShapeDef> _shapes = new(StringComparer.Ordinal);
     private readonly Dictionary<string, BattleOrderDef> _orders = new(StringComparer.Ordinal);
     private readonly List<CaptainRuleDef> _captain;
@@ -82,6 +84,7 @@ public sealed class FormationRules
     {
         R = db.All<BattleRulesDef>().OrderBy(x => x.Id, StringComparer.Ordinal).FirstOrDefault() ?? new BattleRulesDef { Id = "default" };
         Cav = db.All<CavalryRulesDef>().OrderBy(x => x.Id, StringComparer.Ordinal).FirstOrDefault() ?? new CavalryRulesDef { Id = "default" };
+        Bubble = db.All<BubbleRulesDef>().OrderBy(x => x.Id, StringComparer.Ordinal).FirstOrDefault() ?? new BubbleRulesDef { Id = "default" };
         foreach (var s in db.All<FormationShapeDef>()) _shapes[s.Id] = s;
         foreach (var o in db.All<BattleOrderDef>()) _orders[o.Id] = o;
         _captain = [.. db.All<CaptainRuleDef>().OrderBy(c => c.Tactics).ThenBy(c => c.Id, StringComparer.Ordinal)];

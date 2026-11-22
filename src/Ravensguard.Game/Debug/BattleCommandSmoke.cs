@@ -32,9 +32,10 @@ public static class BattleCommandSmoke
         try
         {
             root.AddChild(holder);
-            var w = BattleScenario.Make(120, 30, 51, hero: true);
+            var bubble = BubbleScenario.Make(200, 30, 51, hero: true, cap: 320);            // P7-BB-C: the battle runs in the bubble (160 live a side in five formations, 40 held back), drawn by the crowd layer
+            var w = bubble.W;
             int hero = w.Fighters.FindIndex(f => f.Player);
-            var view = new FightView(w, hero, i => w.Input(hero, i)) { OwnsStepping = true, Name = "FightView" };
+            var view = new FightView(w, hero, i => w.Input(hero, i)) { OwnsStepping = true, Name = "FightView", Bubble = bubble };
             holder.AddChild(view);
             await Frames(tree, 3);
             view.Advance(60);
@@ -52,6 +53,17 @@ public static class BattleCommandSmoke
             Need(view.BHud.Visible, "the battle HUD is not shown with formations in the fight");
             Phase3Smoke.Fit(view.BHud, "the battle HUD", vr);
             Key(Godot.Key.F1, pressed: false); Key(Godot.Key.F2, pressed: false); Key(Godot.Key.F3, pressed: false);
+
+            // P7-BB-C: the crowd layer draws the battle, the zoom keys step its bands, and the strip carries the reserve and the waves
+            Need(view.CrowdOn && bubble.Sides.All(s => s.Reserve.Count > 0), "the battle is not in the bubble with a reserve, drawn by the crowd layer");
+            Need(view.Band == World.StreetView.Band.Field, "a battle should open at the Field band");
+            Key(Godot.Key.Minus); await Frames(tree, 2); Key(Godot.Key.Minus, pressed: false);
+            Need(view.Band == World.StreetView.Band.Command, "the zoom-out key did not step to the Command band");
+            Key(Godot.Key.Equal); await Frames(tree, 2); Key(Godot.Key.Equal, pressed: false);
+            Key(Godot.Key.Equal); await Frames(tree, 2); Key(Godot.Key.Equal, pressed: false);
+            Need(view.Band == World.StreetView.Band.Street, "the zoom-in key did not step back to Street");
+            Phase3Smoke.Fit(view.BHud, "the battle HUD at the Street band", vr);
+            view.SetBand(World.StreetView.Band.Field); await Frames(tree, 2);
 
             // R: the wheel opens, fits, Tab turns the ring, the Shape ring issues to the selection
             Key(Godot.Key.R); await Frames(tree, 3);

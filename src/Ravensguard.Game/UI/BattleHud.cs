@@ -78,7 +78,14 @@ public partial class BattleHud : Control
                 int up = rows.Sum(r => cmd.Standing(r)), total = rows.Sum(r => r.StartCount), down = Math.Max(0, total - up);
                 int mor = h.MoralePct(rows);
                 float half = (Size.X - 16) / 2;
-                DrawString(f, new Vector2(x, 17), L.F(mine ? "bcmd_side_you" : "bcmd_side_foe", up, down), HorizontalAlignment.Left, half - 8, 13, mine ? PixelTheme.Body : new Color(0.95f, 0.7f, 0.6f));
+                // P7-BB-C: in a bubble the sides' own counts: those on their feet, those lost, and the reserve still to come with the waves sent (battle spec 9)
+                if (cmd.Bubble is { } bub && bub.SideOf(mine ? cmd.Team : bub.Sides.FirstOrDefault(s => s.Team != cmd.Team)?.Team ?? -1) is { } side)
+                {
+                    var c = bub.CountsOf(side);
+                    up = c.Live; down = c.Lost;
+                    DrawString(f, new Vector2(x + half - 8 - half * 0.45f, 17), L.F("bb_reserve", c.Reserve + c.Entering, c.Waves), HorizontalAlignment.Right, half * 0.45f, 11, PixelTheme.Dim);
+                }
+                DrawString(f, new Vector2(x, 17), L.F(mine ? (cmd.Bubble != null ? "bb_side_you" : "bcmd_side_you") : (cmd.Bubble != null ? "bb_side_foe" : "bcmd_side_foe"), up, down), HorizontalAlignment.Left, half * 0.55f, 13, mine ? PixelTheme.Body : new Color(0.95f, 0.7f, 0.6f));
                 DrawRect(new Rect2(x, 22, half - 70, 6), new Color(0.15f, 0.13f, 0.12f));
                 DrawRect(new Rect2(x, 22, (half - 70) * mor / 100f, 6), Bar(mor / 100f, true));
                 DrawString(f, new Vector2(x + half - 64, 29), L.F("bcmd_morale", mor), HorizontalAlignment.Left, 64, 11, PixelTheme.Dim);
