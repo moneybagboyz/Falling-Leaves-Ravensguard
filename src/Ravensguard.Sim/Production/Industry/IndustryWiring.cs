@@ -50,6 +50,8 @@ public static class IndustryWiring
         Hook(iw, home.Sim.Get<ConstructionWorld>(), home.Sim.Get<PowerWorld>(), () => home.Sim.Get<WoundLedger>() ?? state.Wounds, state, content);
         iw.Trade = home.Economy.Trade;                                                   // P7-IN4: the continent's caravans, for the works' own
         iw.IdleHands = (settlement, day) => home.Economy.Labour.IdleCount(settlement, day);   // P7-IN5: the founders look at the labour before they build
+        iw.WillHeir = (dead, works) => home.Economy.Labour.WillHeir?.Invoke(dead, works) ?? -1;         // P7-EA3e: a dead owner's works passes by his will, else the law's order of kin
+        iw.ChildrenOf = p => home.Economy.World.Children.Of(p);
         home.Sim.Set(iw);
         return iw;
     }

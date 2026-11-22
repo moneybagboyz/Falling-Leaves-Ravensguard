@@ -90,6 +90,19 @@ public class IndustryViewTests
     }
 
     [Fact]
+    public void EA3e_AStageThatStopsForCharcoal_NamesFuelAndTheGoodAsTheBottleneck()
+    {
+        var t = new Kit("iron");
+        t.Crew(0, 2, 1); t.Crew(1, 3); t.Crew(2, 1);
+        t.Crew(3, 2, 3); t.Give(3, "iron_ore", 200_000);                                            // ore in the smeltery, no charcoal at all
+        t.Day(0); t.Day(1);
+        var v = t.View();
+        Assert.Equal(BottleneckKind.Stopped, v.Bottleneck);
+        Assert.Equal(StageStop.NoFuel, v.Stages[3].Stop);
+        Assert.Contains("harcoal", v.Stages[3].StopGood);
+    }
+
+    [Fact]
     public void Bottleneck_ALinkThatCannotCarryTheDay_IsHauling()
     {
         var t = new Kit("iron");

@@ -354,6 +354,13 @@ public sealed class WarLoadSoak(WarLoadRun run, int years, bool control = false)
             return $"{g} ref {sm / books.Count / bp:P0} mid {mid / books.Count / bp:P0}";
         }));
         row.RefPricePermille = ratios.Count == 0 ? 0 : ratios[ratios.Count / 2];
+        if (cat.TryIdOf("charcoal", out var chId))        // P7-EA3e: the burners the growth opened, and where charcoal is dear (over 1.2 of its reference)
+        {
+            var prodSys = run.Economy.Production; int crews = 0, staffed = 0, dear = 0; var kinds = prodSys.Content.Kinds;
+            foreach (var b in prodSys.Businesses) if (b.State == Ravensguard.Sim.Production.BusinessState.Open && kinds[b.Kind].Id == "charcoal_crew") { crews++; staffed += b.Staff.Count; }
+            foreach (var b in books) if (b.MidRatioPermille(chId) > 1200) dear++;
+            row.Prices += $"; charcoal burners open {crews} with {staffed} hands, books with charcoal over 1.2 of its reference {dear}/{books.Count}";
+        }
         void Fuel(string good, out long kg, out int cover, out int price)
         {
             kg = 0; cover = 0; price = 0; if (!cat.TryIdOf(good, out var id)) return;

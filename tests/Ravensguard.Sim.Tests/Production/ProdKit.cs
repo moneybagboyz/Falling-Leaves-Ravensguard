@@ -27,7 +27,7 @@ public sealed class ProdKit
     public GoodCatalog Cat => Econ.Goods;
 
     /// <summary>A region with one village and <paramref name="households"/> households of one adult each; persons get skills as given.</summary>
-    public ProdKit(int households = 3, bool markets = false, ulong seed = 42, ResourceLayer? layer = null, ProductionContent? content = null)
+    public ProdKit(int households = 3, bool markets = false, ulong seed = 42, ResourceLayer? layer = null, ProductionContent? content = null, bool fief = false)
     {
         var region = new RegionData { Seed = seed };
         region.Settlements.Add(new RegionSettlement { Id = EntityId.Make(IdKind.Settlement, 1), Name = "Testby", Class = SettlementClass.Village, CenterX = 16000, CenterY = 16000, TargetPop = households });
@@ -38,13 +38,15 @@ public sealed class ProdKit
             int p = people.Add(); people.Household[p] = h; people.BirthDay[p] = -30 * TimeConst.DaysPerYear; people.HomeSettlement[p] = 0; hh.AddMember(h, p);
             hh.Head[h] = p;
         }
+        if (fief) { region.Fiefs.Add(new Fief { Id = EntityId.Make(IdKind.Faction, 1), Name = "Testshire" }); region.Settlements[0].FiefIndex = 0; }        // P7-EA3e: one fief whose lord is the last person (its household's head)
         Pop = new Population
         {
-            Region = region, People = people, Households = hh, NowDay = 0, LotHousehold = [[]], LotBeds = [[]], LotKeeper = [[]], FiefLord = [], FiefLordHousehold = [],
+            Region = region, People = people, Households = hh, NowDay = 0, LotHousehold = [[]], LotBeds = [[]], LotKeeper = [[]], FiefLord = fief ? [households - 1] : [], FiefLordHousehold = fief ? [households - 1] : [],
             ParcelHolder = [], PriestHousehold = [-1], SettlementPeople = [households],
         };
         Econ = EconomyState.FromContent(EconFixture.Content, hh.Count, people.Count);
         Econ.OpenHouseholds(hh);
+        if (fief) Econ.Ledger.Open(PurseKind.Treasury, region.Fiefs[0].Id);
         Markets = markets ? new MarketSystem(Econ, Pop, seed) : null;
         Used = content ?? Content;
         Sys = new ProductionSystem(Econ, Pop, Used, seed, Markets, layer);

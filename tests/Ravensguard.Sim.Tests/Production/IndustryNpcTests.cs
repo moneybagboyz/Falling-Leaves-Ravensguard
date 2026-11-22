@@ -57,6 +57,7 @@ public class IndustryNpcTests(ITestOutputHelper output)
             (W, State) = Game();
             Rt = new WorldRuntime(State, W.Content, new MemoryRegionPager());
             Iw = State.HomeRecords!.Sim.Get<IndustryWorld>()!; Iw.NpcDisabled = !npc;
+            State.HomeRecords.Economy.Growth.CharcoalCrews = false;      // P7-EA3e: the rig's faucet is the region's burners answering; the growth's own crews would also draw the town's idle hands and move the books the payback is read in
             if (settleDays > 0) Rt.AdvanceTo(GameTime.FromGameHours(Rt.HourDone + 24L * settleDays));
             Ctx = new HeroContext(State, State.Party!, W.Content);
             State.Economy!.Ledger.Mint(Ctx.Purse, new Coin(4_000_000), SourceReason.Seed);

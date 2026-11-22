@@ -89,6 +89,14 @@ public sealed record GrowthTuningDef : ContentDef
     /// <summary>Wages (mites) a new smithy or tavern's plot takes to clear and fence, paid to idle hands.</summary>
     public long PremisesMites { get; init; } = 2_500;
 
+    // ---------- charcoal burners (P7-EA3e, EA_F19) ----------
+    /// <summary>A settlement of a fief where charcoal is dear (a book of the fief over <c>UnmetPricePermille</c> for <c>UnmetSeasons</c> seasons) while its own logs are not, with at least this many idle hands and this many grams of woodland above the cutting floor in reach, takes a new crew of charcoal burners:
+    /// at most <c>CharcoalCrewsPerSeason</c> a season and <c>CharcoalCrewsMax</c> open in the region. The crew buys its logs from the books, so the woodcutters' crews cut the woodland for it.</summary>
+    public int CharcoalCrewsPerSeason { get; init; } = 1;
+    public int CharcoalCrewsMax { get; init; } = 24;
+    public int CharcoalMinHands { get; init; } = 6;
+    public long CharcoalMinWoodG { get; init; } = 400_000_000;
+
     // ---------- immigration (decision G9) ----------
     /// <summary>Free dwellings the region's own couples do not need draw settlers, a this-th of them a season, while idle adults are under this permille of the people; at most this permille of the people in a season.</summary>
     public int ImmigrationSurplusDivisor { get; init; } = 4;

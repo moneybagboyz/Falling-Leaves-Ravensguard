@@ -232,7 +232,7 @@ public sealed partial class IndustryWorld : IStageHost
     {
         if (w.Closed || w.Stages.Count == 0) return;
         var head = Prod.ById(new EntityId(w.Id)); if (head == null) return;
-        if (People.Status[w.Owner] is not (PersonStatus.Alive or PersonStatus.Hero)) { CloseWorks(w); return; }
+        if (People.Status[w.Owner] is not (PersonStatus.Alive or PersonStatus.Hero)) { PassWorks(w, day, now); if (w.Closed) return; }      // P7-EA3e (EA_F20): an owner who died or left: the works passes to his heir, a buyer or the lord
         RecogniseAll(w, day, now);
         long bal0 = Led.Balance(head.Purse).Mites;
         var runs = new List<Run>(w.Stages.Count);

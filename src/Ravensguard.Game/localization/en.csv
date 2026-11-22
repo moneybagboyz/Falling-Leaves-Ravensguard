@@ -5023,6 +5023,12 @@ in_q_risk,Risk of ambush
 ch_note_stage_stopped,The stage could not carry on its work.
 ch_ind_closed,"{owner} shut the {chain} works at {place}, which had earned nothing for half a year."
 ch_note_works_closed,The works ran at a loss and its owner gave it up.
+ch_ind_inherited,"{heir} took over the {chain} works at {place} from {owner}."
+ch_note_works_owner_died,The works' owner had died and it passed to his heir.
+ch_note_works_owner_left,The works' owner had left the region and it passed to his heir.
+ch_ind_sold,"{owner}'s {chain} works at {place} was sold to {heir} for {price}."
+ch_ind_escheated,"{owner}'s {chain} works at {place} passed to {heir}, the lord of the fief."
+ch_note_works_no_heir,No heir could run the works.
 ind_chain_iron,iron
 ind_chain_clay,clay
 ind_chain_wood,wood

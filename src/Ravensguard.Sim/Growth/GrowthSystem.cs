@@ -29,6 +29,8 @@ public sealed class GrowthSystem
     /// <summary>Where visited chunks hear of new buildings and fields; null in a world with no chunks (the headless soak).</summary>
     public IGrowthChunkSink? ChunkSink { get; set; }
     public bool Enabled { get; set; } = true;
+    /// <summary>P7-EA3e: new crews of charcoal burners when charcoal is dear (EA_F19). Tests whose rig keeps the books' charcoal up with its own faucet switch it off.</summary>
+    public bool CharcoalCrews { get; set; } = true;
     /// <summary>P5-A2: lots play holds or lets (a bought vacant house, a leased one): growth does not refit them. Set by the land wiring; null: none.</summary>
     public Func<int, int, bool>? LandHolds { get; set; }
     /// <summary>P5-D: growth made visible: a project on a plot the player has seen is a real building site (build-mode-and-construction 4.9). Set by the construction's wiring; null: Phase 3.</summary>
@@ -89,6 +91,7 @@ public sealed class GrowthSystem
     }
 
     private int[] _popBy = [];
+    private bool[] _coalDear = [];
 
     private int ClusterOf(int s) { int f = Region.Settlements[s].FiefIndex; return f >= 0 && f < Region.Fiefs.Count ? f : Region.Fiefs.Count; }
 
@@ -511,29 +514,44 @@ public sealed class GrowthSystem
     {
         var prod = _ew.Production; var pt = W.People; var hht = W.Households; int day = (int)now.TotalDays; var yr = State.Year(now.Year);
         var kinds = _ew.Content.Kinds; int opened = 0;
-        var wanted = new List<(int Seasons, int S, int K)>();
+        // P7-EA3e: where charcoal is dear is a town (it burns most and has no woods), where the burners can go is a village by the woods: so the signal is the fief's, the dearest book of the fief
+        var coalDear = new bool[Region.Fiefs.Count + 1]; var dearAt = new int[Region.Fiefs.Count + 1]; var dearBy = new int[Region.Fiefs.Count + 1];
+        if (CharcoalCrews && _cat.TryIdOf("charcoal", out var chId))
+            foreach (var bk in _ew.Markets.AllBooks())
+            {
+                int ratio = bk.MidRatioPermille(chId), cl = ClusterOf(bk.SettlementIndex);
+                if (bk.Goods[chId].Demand > 0 && ratio >= T.UnmetPricePermille && (!coalDear[cl] || ratio > dearBy[cl])) { coalDear[cl] = true; dearBy[cl] = ratio; dearAt[cl] = bk.SettlementIndex; }
+            }
+        _coalDear = coalDear;
+        var wanted = new List<(int Seasons, long Near, int S, int K)>();
         foreach (var book in _ew.Markets.AllBooks())
         {
             int s = book.SettlementIndex;
             foreach (var kind in kinds)
             {
-                if (kind.Trader || kind.FoundedOnly || kind.Stations.Length == 0 || kind.Extractions.Length > 0 || kind.Id is "mine" or "manor" or "charcoal_crew" or "mill" or "woodlot" or "fishery" || kind.Recipes.Length == 0) continue;
+                if (kind.Trader || kind.FoundedOnly || kind.Stations.Length == 0 || kind.Extractions.Length > 0 || kind.Id is "mine" or "manor" or "mill" or "woodlot" or "fishery" || kind.Recipes.Length == 0) continue;
                 long key = (long)s * 4096 + kind.Index; bool want = false;
-                foreach (var r in kind.Recipes)
+                if (kind.Id == "charcoal_crew") want = CharcoalCrews && CharcoalWanted(book, s, day);                // P7-EA3e: supply follows the price (EA_F19)
+                else foreach (var r in kind.Recipes)
                 {
                     var gb = book.Goods[r.Outputs[0].Good];
                     if (gb.Demand > 0 && book.MidRatioPermille(r.Outputs[0].Good) >= T.UnmetPricePermille && gb.StockUnits < gb.Demand) { want = true; break; }
                 }
                 if (!want) { State.Unmet.Remove(key); continue; }
                 int n = State.Unmet.GetValueOrDefault(key) + 1; State.Unmet[key] = n;
-                if (n >= T.UnmetSeasons) wanted.Add((n, s, kind.Index));
+                if (n < T.UnmetSeasons) continue;
+                long near = 0;                                                                         // a new crew goes to the woods nearest the dearest book of its fief: its charcoal has the shortest way to carry
+                if (kind.Id == "charcoal_crew") { var a = Region.Settlements[s]; var d = Region.Settlements[dearAt[ClusterOf(s)]]; long dx = a.CenterX - d.CenterX, dy = a.CenterY - d.CenterY; near = dx * dx + dy * dy; }
+                wanted.Add((n, near, s, kind.Index));
             }
         }
-        wanted.Sort((a, b) => a.Seasons != b.Seasons ? b.Seasons.CompareTo(a.Seasons) : a.S != b.S ? a.S.CompareTo(b.S) : a.K.CompareTo(b.K));
-        foreach (var (_, s, k) in wanted)
+        wanted.Sort((a, b) => a.Seasons != b.Seasons ? b.Seasons.CompareTo(a.Seasons) : a.Near != b.Near ? a.Near.CompareTo(b.Near) : a.S != b.S ? a.S.CompareTo(b.S) : a.K.CompareTo(b.K));
+        int coalOpened = 0, crews = 0;
+        foreach (var b in prod.Businesses) if (b.State == BusinessState.Open && kinds[b.Kind].Id == "charcoal_crew") crews++;
+        foreach (var (_, _, s, k) in wanted)
         {
-            if (opened >= T.BusinessMaxPerSeason) break;
-            var kind = kinds[k];
+            var kind = kinds[k]; bool coal = kind.Id == "charcoal_crew";
+            if (coal ? coalOpened >= T.CharcoalCrewsPerSeason || crews >= T.CharcoalCrewsMax : opened >= T.BusinessMaxPerSeason) continue;
             int open = 0; bool closedHere = false;
             foreach (var b in prod.Businesses) if (b.Kind == k && b.Settlement == s) { if (b.State == BusinessState.Open) open++; else closedHere = true; }
             if (closedHere || open >= Math.Max(1, _popBy[s] / Math.Max(1, T.PeoplePerBusiness))) continue;
@@ -564,9 +582,9 @@ public sealed class GrowthSystem
                 PayHands(ohh, hands, pay, now);
                 }
             }
-            else lot = hht.Lot[ohh];
+            else lot = coal ? -1 : hht.Lot[ohh];                                                   // a crew works the woods: no lot, as the generated crews
             var biz = prod.NewBusiness(kind, s, lot, owner);
-            prod.SetOwner(biz, owner); biz.OwnerWorks = true;
+            prod.SetOwner(biz, owner); biz.OwnerWorks = !coal;
             foreach (var (sk, count) in kind.Stations) for (int c = 0; c < count; c++) biz.Stations.Add(new Station { Kind = sk });
             var skill = OccupationInfo.Skills(kind.OwnerOccupation).A;
             _ew.Labour.EnsureSkill(owner, skill, LabourMarket.StartSkill);
@@ -582,12 +600,24 @@ public sealed class GrowthSystem
             biz.CashStart = e.Ledger.Balance(biz.Purse).Mites; biz.Capital = Math.Max(biz.CashStart, 1000);
             State.Unmet.Remove((long)s * 4096 + k);
             if (premises != null) Sites!.Started(premises, now);                                    // P5-D
-            yr.BusinessesOpened++; opened++;
+            yr.BusinessesOpened++; if (coal) { coalOpened++; crews++; ob.Count("charcoal_crews_opened"); } else opened++;
             ob.Count("businesses_opened");
             ob.Chronicle(now, "business_opened", [pt.IdOf(owner)], [Why.Of(CauseKind.MarketDrift, "ch_why_business_drift", ChronParam.Place("place", Region.Settlements[s].Id))],
                 ("settlement", Region.Settlements[s].Name), ("kind", kind.Id));
         }
-        if (opened > 0) _ew.Labour.Rebuild();
+        if (opened + coalOpened > 0) _ew.Labour.Rebuild();
+    }
+
+    /// <summary>
+    /// P7-EA3e (EA_F19): whether a settlement wants a new crew of charcoal burners: charcoal is dear in some book of its fief (the burners sit by the woods, the price is highest in the towns) and its own logs are not (the wood is there to buy), woodland lies in reach with at least <see cref="GrowthTuningDef.CharcoalMinWoodG"/> above the cutting floor,
+    /// and the settlement has idle hands to crew it. The crew then hires them through the labour market and buys its logs from the books: the woodcutters cut the woodland, which regrows by its season.
+    /// </summary>
+    private bool CharcoalWanted(MarketBook book, int s, int day)
+    {
+        var logs = _cat.IdOf("logs");
+        if (!_coalDear[ClusterOf(s)] || book.MidRatioPermille(logs) > 1000) return false;
+        if (_ew.Woodland.AvailableG(s) < T.CharcoalMinWoodG) return false;
+        return HandsOf(s, day).Count >= T.CharcoalMinHands;
     }
 
     private void PayHands(int payer, List<int> hands, long pay, GameTime now)

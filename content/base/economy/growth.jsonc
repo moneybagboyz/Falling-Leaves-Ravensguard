@@ -17,5 +17,6 @@
     "unmet_price_permille": 1150, "unmet_seasons": 3, "business_min_owner_mites": 6000, "business_treasury_advance_mites": 3000,
     "business_max_per_season": 3, "people_per_business": 250, "premises_mites": 2500,
     "immigration_surplus_divisor": 4, "immigration_max_idle_permille": 30, "immigration_max_permille_of_alive": 3,
-    "town_moves_per_town_season": 2 },
+    "town_moves_per_town_season": 2,
+    "charcoal_crews_per_season": 1, "charcoal_crews_max": 24, "charcoal_min_hands": 6, "charcoal_min_wood_g": 400000000 },
 ]
