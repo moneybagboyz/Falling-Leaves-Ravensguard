@@ -24,7 +24,23 @@ public sealed class FightTerrain
     public bool HeavyRain, Thunderstorm;
     public readonly List<(int X0, int Y0, int X1, int Y1, Footing Footing)> Zones = [];
 
+    /// <summary>[P7 CV-C] The ground per 4 m cell of the battle box (null: zones and base only, exactly as before).</summary>
+    public FootingCells? Cells;
+    /// <summary>[P7 CV-C] What the weather did to the ground; when set every class reads through <see cref="FootingCells.Weathered"/> (mud after rain, ice in frost, snow lying).</summary>
+    public FootingCells.Ground? Wet;
+    public int MudAfterHours = 3, IceBelowTenthsC = -20, SnowOverCm = 5;
+    /// <summary>[P7 CV-C] The weather row's cavalry speed (permille; snow 600) and how far anyone can see (mm; fog 15 m, night 60 m; 0 unlimited).</summary>
+    public int CavSpeedPm = 1000, VisionMm;
+
     public Footing At(int x, int y)
+    {
+        Footing f;
+        if (Cells != null && Cells.TryAt(x, y, out var cf)) f = cf;
+        else f = Zoned(x, y);
+        return Wet is { } g ? FootingCells.Weathered(f, g, MudAfterHours, IceBelowTenthsC, SnowOverCm) : f;
+    }
+
+    private Footing Zoned(int x, int y)
     {
         for (int i = Zones.Count - 1; i >= 0; i--)
         {
@@ -32,6 +48,24 @@ public sealed class FightTerrain
             if (x >= z.X0 && x < z.X1 && y >= z.Y0 && y < z.Y1) return z.Footing;
         }
         return Base;
+    }
+
+    /// <summary>[P7 CV-C] The rise per metre (permille, positive uphill) along a heading (a 1024-unit vector): from the cells' heights when the box has them, else the plane.</summary>
+    public int SlopeAlongPm(int x, int y, int hx, int hy)
+    {
+        if (Cells is { HasHeights: true }) return Cells.SlopeAlongPm(x, y, hx, hy);
+        if (SlopeXPm == 0 && SlopeYPm == 0) return 0;
+        return (int)(((long)SlopeXPm * hx + (long)SlopeYPm * hy) >> 10);
+    }
+
+    /// <summary>[P7 CV-C] The weather row's part: the rain and storm flags, the cavalry speed, the sight (night sight caps it).</summary>
+    public void ApplyRow(WeatherCombatDef row, int nightSightMm = 0)
+    {
+        if (row.State is "HeavyRain" or "Thunderstorm") HeavyRain = true;          // snow and fog read their own cavalry speed, not the rain's field factor
+        if (row.State == "Thunderstorm") Thunderstorm = true;
+        CavSpeedPm = row.CavalrySpeedPm;
+        VisionMm = row.VisionCapM > 0 ? row.VisionCapM * 1000 : 0;
+        if (nightSightMm > 0 && (VisionMm == 0 || nightSightMm < VisionMm)) VisionMm = nightSightMm;
     }
 
     /// <summary>Ground height in mm (the plane).</summary>
@@ -52,13 +86,14 @@ public sealed class FightTerrain
 /// <summary>Footing rules (4.5): the gallop speed factor, the charge rule, top speed, slips and stumbles, slopes and weather. Pure integer functions.</summary>
 public static class TerrainFooting
 {
-    public static readonly string[] Ids = ["road", "field", "rough", "mud", "snow", "ice", "woods", "ford", "deep_water", "portal"];
+    public static readonly string[] Ids = ["road", "field", "rough", "mud", "snow", "ice", "woods", "ford", "deep_water", "portal", "stakes", "ditch", "rubble"];
 
     /// <summary>The spec's table, used when content leaves a class out.</summary>
     public static readonly FootingRule[] Defaults =
     [
         new(1000, true, 0, 0, false), new(850, true, 0, 0, false), new(600, false, 8000, 20, false), new(500, false, 5000, 0, false), new(600, false, 8000, 0, false),
         new(400, false, 0, 80, false), new(500, false, 5200, 0, false), new(500, false, 5200, 0, false), new(80, false, 1000, 0, false), new(0, false, 0, 0, true),
+        new(600, false, 5000, 0, false), new(500, false, 5000, 0, false), new(600, false, 8000, 20, false),       // [P7 CV-C] stakes, ditch, rubble
     ];
 
     public static FootingRule[] From(MountedTuningDef d)

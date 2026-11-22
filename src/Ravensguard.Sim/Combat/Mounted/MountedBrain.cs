@@ -186,8 +186,9 @@ public static class MountedBrain
         var L = w.Mounts!; var R = L.D.Refusal;
         var h = w.Fighters[m.Horse];
         int n = w.BracedFacing(t, h, r.Team, countReady: true);
-        if (n == 0) return 0;
-        return ChargeMath.RefusalPm(n, m.TrainedPm, m.Riding, R.BasePm, R.PerBracedPolearmPm, R.TrainedK, R.TrainedRef, R.RidingK, R.MaxPm, L.Terrain.Thunderstorm ? L.D.StormRefusalPm : 1000);
+        int stakes = L.Terrain.Cells?.CountNear(Footing.Stakes, t.X, t.Y, R.ArcMm) ?? 0;                      // [P7 CV-C] stake rows in front of the target
+        if (n == 0 && stakes == 0) return 0;
+        return ChargeMath.RefusalPm(n, m.TrainedPm, m.Riding, R.BasePm, R.PerBracedPolearmPm, R.TrainedK, R.TrainedRef, R.RidingK, R.MaxPm, L.Terrain.Thunderstorm ? L.D.StormRefusalPm : 1000, stakes * L.D.StakeRefusalPm);
     }
 
     /// <summary>A foot spear or pike AI braces when an enemy horse within 30 m closes on it at a trot or faster (or is within 12 m), facing it.</summary>

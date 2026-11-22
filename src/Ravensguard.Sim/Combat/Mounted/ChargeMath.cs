@@ -35,10 +35,10 @@ public static class ChargeMath
         return (int)Math.Min(maxBp, bp);
     }
 
-    /// <summary>Refusal before braced polearms (4.4), permille: <c>clamp(base + per x n - tk x (trained - ref) - rk x Riding, 0, max)</c>, doubled in a thunderstorm before the clamp.</summary>
-    public static int RefusalPm(int bracedPolearms, int trainedPm, int riding, int basePm = 200, int perPm = 150, int trainedK = 2, int trainedRef = 700, int ridingK = 2, int maxPm = 950, int stormPm = 1000)
+    /// <summary>Refusal before braced polearms (4.4), permille: <c>clamp(base + per x n - tk x (trained - ref) - rk x Riding, 0, max)</c>, doubled in a thunderstorm before the clamp; <paramref name="extraPm"/> is [P7 CV-C] the stake rows in the arc (250 a cell), doubled with the rest.</summary>
+    public static int RefusalPm(int bracedPolearms, int trainedPm, int riding, int basePm = 200, int perPm = 150, int trainedK = 2, int trainedRef = 700, int ridingK = 2, int maxPm = 950, int stormPm = 1000, int extraPm = 0)
     {
-        long p = basePm + (long)perPm * bracedPolearms - (long)trainedK * (trainedPm - trainedRef) - (long)ridingK * riding;
+        long p = basePm + extraPm + (long)perPm * bracedPolearms - (long)trainedK * (trainedPm - trainedRef) - (long)ridingK * riding;
         p = p * stormPm / 1000;
         return (int)Math.Clamp(p, 0, maxPm);
     }

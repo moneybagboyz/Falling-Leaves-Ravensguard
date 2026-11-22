@@ -129,7 +129,8 @@ public sealed partial class FormationBook
         int gait = GaitWalk;
         if (moving && o.Kind == OrderKind.Charge && r.CavPhase == PhApproach)
         {
-            int st = dist > Cv.WalkToMm ? StWalk : dist > Cv.GallopFromMm ? StTrot : dist > Cv.CouchAtMm ? StGallop : StCouch;
+            int vis = w.Mounts?.Terrain.VisionMm ?? 0;                                         // [P7 CV-C] fog, rain, snow or night: a charge walks until its target is seen
+            int st = vis > 0 && dist > vis ? StWalk : dist > Cv.WalkToMm ? StWalk : dist > Cv.GallopFromMm ? StTrot : dist > Cv.CouchAtMm ? StGallop : StCouch;
             if (st > r.Stage) { r.Stage = st; r.StageTick[st] = tick; }
             gait = r.Stage switch { StWalk => GaitWalk, StTrot => GaitTrot, _ => GaitGallop };
         }
@@ -443,7 +444,7 @@ public sealed partial class FormationBook
             if (b.Team != e.Side || !b.Active || !FightWorld.CanBrace(b) || w.DistMm(b, near) > R.ArcMm) continue;
             if (b.Act == FAct.Bracing || b.Act is FAct.Idle or FAct.Block) n++;
         }
-        int p = ChargeMath.RefusalPm(n, trainedPm, riding, R.BasePm, R.PerBracedPolearmPm, R.TrainedK, R.TrainedRef, R.RidingK, R.MaxPm, 1000);
+        int p = ChargeMath.RefusalPm(n, trainedPm, riding, R.BasePm, R.PerBracedPolearmPm, R.TrainedK, R.TrainedRef, R.RidingK, R.MaxPm, 1000, w.Mounts.Terrain.Cells?.CountNear(Combat.Mounted.Footing.Stakes, near.X, near.Y, R.ArcMm) * w.Mounts.D.StakeRefusalPm ?? 0);
         if (e.Shape is Formation.ShieldWall or Formation.Schiltron && e.Cohesion >= Rules.R.CohesionMinPm) p += 300;
         return p;
     }

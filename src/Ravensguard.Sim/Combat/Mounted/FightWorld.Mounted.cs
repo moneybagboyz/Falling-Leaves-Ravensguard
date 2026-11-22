@@ -139,9 +139,7 @@ public sealed partial class FightWorld
     /// <summary>The rise per metre (permille) along a heading at a point.</summary>
     private int SlopeAlong(int x, int y, int hx, int hy)
     {
-        var tr = Mounts!.Terrain;
-        if (tr.SlopeXPm == 0 && tr.SlopeYPm == 0) return 0;
-        return (int)(((long)tr.SlopeXPm * hx + (long)tr.SlopeYPm * hy) >> 10);
+        return Mounts!.Terrain.SlopeAlongPm(x, y, hx, hy);                                              // [P7 CV-C] the cells' heights when the box has them, else the plane
     }
 
     /// <summary>What the charge would add to the rider's blow now, milli (the HUD's charge meter): the horse's speed along its heading with the weapon in hand.</summary>
@@ -377,12 +375,57 @@ public sealed partial class FightWorld
         int slot = Tick & 3;
         m.VX = (nx - m.HistX[slot]) * 5; m.VY = (ny - m.HistY[slot]) * 5;
         m.HistX[slot] = nx; m.HistY[slot] = ny;
+        GroundHazards(m, r, h, kind, tr.At(nx, ny));                                                // [P7 CV-C] stakes, ditches, branches, fire
         // a gallop over ice or rubble can go down, once a second
         if ((Tick + h.Id) % 20 == 0)
         {
-            int slip = TerrainFooting.SlipPm(rule, m.Speed > g.TrotMmps + 300, tr.HeavyRain, D.RainSlipPm);
+            bool fast = m.Speed > g.TrotMmps + 300 || kind == Footing.Ice && m.Speed > g.WalkMmps + 300;       // [P7 CV-C] ice holds a horse to the trot, so there a trot slips (the frost row's slip, read at last)
+            int slip = TerrainFooting.SlipPm(rule, fast, tr.HeavyRain, D.RainSlipPm);
             if (TerrainFooting.Slips(Seed, Tick, h.Id, slip)) { Emit(FightEventKind.HorseFell, h.Id, r.Id, -1, 1); _slipped.Add(m.Index); }
         }
+    }
+
+    /// <summary>
+    /// [P7 CV-C] What the ground does to a horse that has just moved (cavalry-and-mounted-war 4.4, 4.8): running onto a stake cell at the stake speed or more is struck as by a braced spear with the stake row's
+    /// <c>M0</c> and no wielder; a gallop entering a ditch falls with <c>ditch_fall_pm</c> (stream 0x473, sub-key 1); in woods a rider moving at speed is swept by a branch (50 pm a second, once per 20 s, 0x792); a horse near a
+    /// burning cell gains fire panic each second.
+    /// </summary>
+    private void GroundHazards(MountedFighter m, Fighter r, Fighter h, Footing from, Footing into)
+    {
+        var L = Mounts!; var D = L.D; var tr = L.Terrain;
+        if (into == Footing.Stakes && from != Footing.Stakes && m.Speed >= D.StakeMinMmps) StakeStrike(m, h);
+        else if (into == Footing.Ditch && from != Footing.Ditch && m.Speed > m.Gaits.TrotMmps + 300 && D.DitchFallPm > 0
+            && DetRng.Range(Seed, Tick, (ulong)(h.Id + 1), RngStreams.TerrainSlip, 1, 0, 1000) < D.DitchFallPm)
+        { Emit(FightEventKind.HorseFell, h.Id, r.Id, -1, 2); _slipped.Add(m.Index); }
+        if ((Tick + h.Id) % 20 != 0) return;
+        if (into == Footing.Woods && m.Speed >= D.BranchMinMmps && r.Active && (L.Extra[r.Id].BranchAt == 0 || Tick - L.Extra[r.Id].BranchAt >= D.BranchEveryTicks)
+            && DetRng.Range(Seed, Tick, (ulong)(r.Id + 1), RngStreams.CavalryBranches, 0, 0, 1000) < D.BranchPmPerS)
+        {
+            L.Extra[r.Id].BranchAt = Math.Max(1, Tick);
+            int head = r.Plan.IndexOf("head"), upper = r.Plan.IndexOf("upper_body");
+            int part = head >= 0 && (upper < 0 || DetRng.Range(Seed, Tick, (ulong)(r.Id + 1), RngStreams.CavalryBranches, 1, 0, 1000) < 500) ? head : upper;
+            if (part >= 0) { r.Serial++; FallBlow(r, D.BranchMilli, part, r.Serial, h); }
+        }
+        if (tr.Cells is { HasFire: true } cells && cells.FireNear(h.X, h.Y, D.FireRadiusMm)) AddPanic(m, D.Panic.FirePerS);
+    }
+
+    /// <summary>A horse onto a stake cell: one thrust at its chest (or the least barded fore part) with the stake row's momentum, through the resolver; the stake has no skill.</summary>
+    private void StakeStrike(MountedFighter m, Fighter h)
+    {
+        var L = Mounts!; var D = L.D;
+        int part = BraceTargetPart(h);
+        var facing = FacingOf(h, h.X + (int)((long)m.HX * 1000 >> 10), h.Y + (int)((long)m.HY * 1000 >> 10));
+        var s = new StrikeV2
+        {
+            Strength = 0, Skill = 0, SizeCm3 = 70000, SpeciesSizeCm3 = 70000, MomentumPm = 1000, Weapon = L.Tuning.Stake, Attack = 0, Style = AttackStyle.Normal,
+            Plan = h.Plan, DefenderSizeCm3 = h.Kit.SizeCm3, DefenderSkill = 0, Worn = h.Worn, WornCount = h.Worn.Length, MissingMask = h.MissingMask,
+            TargetPart = part, TargetGap = -1, Facing = facing, Missile = true, ExtraMomentumMilli = D.StakeM0Milli,
+            SituationPoints = D.BracePoints,
+        };
+        h.Serial++;
+        Resolver.Resolve(s, KeyOf(h, h.Serial), _r);
+        Emit(FightEventKind.BraceStrike, h.Id, h.Id, part, (int)(_r.InitialMilli / 1000), m.Speed);
+        if (_r.WoundCount > 0) Land(h, h, facing, _r);
     }
 
     /// <summary>What the footing, the slope, the horse's wounds and the load leave of a wanted speed (the arithmetic <see cref="MoveMount"/> moves a horse by).</summary>
@@ -390,6 +433,7 @@ public sealed partial class FightWorld
     {
         var L = Mounts!; var D = L.D; var g = m.Gaits; var tr = L.Terrain;
         want = TerrainFooting.CapMmps(rule, kind, want, g.TrotMmps, D.GallopChargeMinMmps, tr.HeavyRain, D.RainFieldPm);
+        if (tr.CavSpeedPm != 1000 && want > g.WalkMmps) want = Math.Max(g.WalkMmps, (int)((long)want * tr.CavSpeedPm / 1000));      // [P7 CV-C] snow and blizzard slow the horses (the weather row's cavalry speed)
         int slope = SlopeAlong(r.X, r.Y, m.HX, m.HY);
         if (slope != 0) want = (int)((long)want * TerrainFooting.SlopePm(slope, D.UphillKPm, D.UphillMinPm, D.DownhillKPm, D.DownhillCapPm) / 1000);
         want = (int)((long)want * Math.Clamp(h.WalkPm, 0, 1000) / 1000);
@@ -484,16 +528,23 @@ public sealed partial class FightWorld
             if (FightMath.Dot(m.HX, m.HY, ux, uy) < 887) continue;                                         // in its path: within 30 degrees of the heading
             if (d < nd) { nd = d; near = b; }
         }
-        if (near == null) { m.RefusalFor = -1; return; }
-        if (nd > R.RollAtMm || m.RefusalFor == near.Id) return;
-        int n = BracedFacing(near, h, r.Team);
-        int p = ChargeMath.RefusalPm(n, m.TrainedPm, m.Riding, R.BasePm, R.PerBracedPolearmPm, R.TrainedK, R.TrainedRef, R.RidingK, R.MaxPm, L.Terrain.Thunderstorm ? L.D.StormRefusalPm : 1000);
-        m.RefusalFor = near.Id;
+        // [P7 CV-C] a stake row ahead is an obstacle of its own: the nearest of the bearer and the first stake cell in the path; stake cells in the arc add to the refusal
+        int sx = 0, sy = 0; long sd = long.MaxValue;
+        if (L.Terrain.Cells != null && L.Terrain.Cells.FirstAlong(Footing.Stakes, h.X, h.Y, m.HX, m.HY, R.RollAtMm, out sx, out sy)) sd = FightMath.Len(sx - h.X, sy - h.Y);
+        bool byStake = sd < nd;
+        if (near == null && !byStake) { m.RefusalFor = -1; return; }
+        int rollFor = byStake ? -2 - ((sy - L.Terrain.Cells!.Oy) / FootingCells.CellMm * L.Terrain.Cells.W + (sx - L.Terrain.Cells.Ox) / FootingCells.CellMm) : near!.Id;
+        long rd = byStake ? sd : nd;
+        if (rd > R.RollAtMm || m.RefusalFor == rollFor) return;
+        int n = near != null && !byStake ? BracedFacing(near, h, r.Team) : 0;
+        int stakes = L.Terrain.Cells != null ? L.Terrain.Cells.CountNear(Footing.Stakes, byStake ? sx : near!.X, byStake ? sy : near!.Y, R.ArcMm) : 0;
+        int p = ChargeMath.RefusalPm(n, m.TrainedPm, m.Riding, R.BasePm, R.PerBracedPolearmPm, R.TrainedK, R.TrainedRef, R.RidingK, R.MaxPm, L.Terrain.Thunderstorm ? L.D.StormRefusalPm : 1000, stakes * L.D.StakeRefusalPm);
+        m.RefusalFor = rollFor;
         if (DetRng.Range(Seed, Tick, (ulong)(h.Id + 1), RngStreams.HorsePanic, 0, 0, 1000) >= p) return;
         m.RefusedUntil = Tick + R.BalkTicks;
-        long room = Math.Max(500, nd - R.StopAtMm);
+        long room = Math.Max(500, rd - R.StopAtMm);
         m.RefuseBrake = (int)Math.Min(m.Speed, (long)m.Speed * m.Speed / (2 * room) / 20 + 1);
-        Emit(FightEventKind.Balked, h.Id, near.Id, -1, p);
+        Emit(FightEventKind.Balked, h.Id, byStake ? h.Id : near!.Id, -1, p);
         if (m.Speed > m.Gaits.TrotMmps + 300 && DetRng.Range(Seed, Tick, (ulong)(h.Id + 1), RngStreams.HorsePanic, 2, 0, 1000) < L.D.Unhorse.RefusalThrowPm)
             L.PendingUnseat.Add((r.Id, -1));
     }
@@ -825,6 +876,7 @@ public sealed partial class FightWorld
             h = FightMath.Mix(h, (long)(uint)e.TrampledUntil | (long)e.BraceStruckAt << 32);
         }
         var tr = L.Terrain;
+        h = MixGround(h, tr);
         h = FightMath.Mix(h, (long)tr.Base | (long)tr.SlopeXPm << 8 | (long)tr.SlopeYPm << 32 | (tr.HeavyRain ? 1L << 56 : 0) | (tr.Thunderstorm ? 1L << 57 : 0));
         return h;
     }
@@ -835,6 +887,34 @@ public sealed partial class FightWorld
     /// The mounted layer's part of a fighter's saved state (the "fight" section's fighter row ends with it; a foot fight writes none): the layer's per-fighter state, the ground and
     /// weather on fighter 0, and the pair on its rider's row.
     /// </summary>
+    /// <summary>[P7 CV-C] The cells, the wet ground, the weather row's cavalry speed and sight, and the branches' cooldowns join the hash only when set, so a fight without them hashes as before.</summary>
+    private ulong MixGround(ulong h, FightTerrain tr)
+    {
+        if (tr.Cells != null) h = FightMath.Mix(h, (long)tr.Cells.Hash());
+        if (tr.Wet is { } g) h = FightMath.Mix(h, 0x5745_5400L | (long)(uint)g.WetHours << 40 ^ (long)(g.TempTenthsC + 5000) << 20 ^ (long)g.SnowCm << 8 ^ (g.Wet ? 1 : 0));
+        if (tr.CavSpeedPm != 1000 || tr.VisionMm != 0) h = FightMath.Mix(h, 0x5649_5300L | (long)tr.CavSpeedPm << 32 ^ (long)tr.VisionMm << 8);
+        var L = Mounts!;
+        for (int i = 0; i < L.Extra.Length; i++) if (L.Extra[i].BranchAt != 0) h = FightMath.Mix(h, (long)i << 32 | (uint)L.Extra[i].BranchAt);
+        return h;
+    }
+
+    /// <summary>[P7 CV-C] The terrain's weather flags packed into the two saved flag slots (bit 0 of each is the old 0 or 1; the rest is new and zero in an older save).</summary>
+    private static (long Rain, long Storm) PackWeather(FightTerrain tr)
+    {
+        long rain = tr.HeavyRain ? 1 : 0, storm = tr.Thunderstorm ? 1 : 0;
+        if (tr.Wet is { } g) rain |= 2 | (g.Wet ? 4L : 0) | (long)Math.Clamp(g.WetHours, 0, 1023) << 8 | (long)Math.Clamp(g.SnowCm, 0, 1023) << 18 | (long)Math.Clamp(g.TempTenthsC + 2000, 0, 32767) << 28;
+        storm |= (long)Math.Clamp(tr.VisionMm / 1000, 0, 65535) << 8 | (long)(tr.CavSpeedPm != 1000 ? Math.Clamp(tr.CavSpeedPm, 0, 4095) : 0) << 24;
+        return (rain, storm);
+    }
+
+    private static void UnpackWeather(FightTerrain tr, long rain, long storm)
+    {
+        tr.HeavyRain = (rain & 1) != 0; tr.Thunderstorm = (storm & 1) != 0;
+        if ((rain & 2) != 0) tr.Wet = new FootingCells.Ground((int)(rain >> 8 & 1023), (int)(rain >> 28 & 32767) - 2000, (int)(rain >> 18 & 1023), (rain & 4) != 0);
+        tr.VisionMm = (int)(storm >> 8 & 65535) * 1000;
+        int cav = (int)(storm >> 24 & 4095); tr.CavSpeedPm = cav == 0 ? 1000 : cav;
+    }
+
     public long[] MountedTail(Fighter f)
     {
         var L = Mounts;
@@ -842,10 +922,11 @@ public sealed partial class FightWorld
         L.Grow(Fighters.Count);
         var e = L.Extra[f.Id];
         var t = new List<long> { TailMagic, e.BraceWanted ? 1 : 0, e.BracedAt, e.HitsAtBrace, e.TrampledUntil, e.BraceStruckAt };
-        if (f.Id == 0) { var tr = L.Terrain; t.AddRange([1, (long)tr.Base, tr.SlopeXPm, tr.SlopeYPm, tr.HeavyRain ? 1 : 0, tr.Thunderstorm ? 1 : 0]); }
+        if (f.Id == 0) { var tr = L.Terrain; var (rain, storm) = PackWeather(tr); t.AddRange([1, (long)tr.Base, tr.SlopeXPm, tr.SlopeYPm, rain, storm]); }
         else t.Add(0);
         var pair = L.Pairs.FirstOrDefault(m => m.Rider == f.Id);
         if (pair != null) { t.Add(1); t.AddRange(pair.Pack()); } else t.Add(0);
+        if (e.BranchAt != 0) t.Add(e.BranchAt);                                    // [P7 CV-C] additive: only a rider a branch has struck carries it
         return [.. t];
     }
 
@@ -862,8 +943,9 @@ public sealed partial class FightWorld
             extra ??= new MountedExtra[Fighters.Count];
             int k = n + 1;
             extra[i] = new MountedExtra { BraceWanted = s[k++] != 0, BracedAt = (int)s[k++], HitsAtBrace = (int)s[k++], TrampledUntil = (int)s[k++], BraceStruckAt = (int)s[k++] };
-            if (s[k++] != 0) terrain = new FightTerrain { Base = (Footing)s[k++], SlopeXPm = (int)s[k++], SlopeYPm = (int)s[k++], HeavyRain = s[k++] != 0, Thunderstorm = s[k++] != 0 };
-            if (s[k++] != 0) pairs.Add(MountedFighter.Unpack(s.AsSpan(k, MountedFighter.PackLength), 0));
+            if (s[k++] != 0) { terrain = new FightTerrain { Base = (Footing)s[k++], SlopeXPm = (int)s[k++], SlopeYPm = (int)s[k++] }; long rain = s[k++], storm = s[k++]; UnpackWeather(terrain, rain, storm); }
+            if (s[k++] != 0) { pairs.Add(MountedFighter.Unpack(s.AsSpan(k, MountedFighter.PackLength), 0)); k += MountedFighter.PackLength; }
+            if (s.Length > k) extra[i].BranchAt = (int)s[k];
         }
         if (extra == null) return;
         var L = EnsureMounts();

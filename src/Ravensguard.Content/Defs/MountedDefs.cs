@@ -151,6 +151,24 @@ public sealed record MountedTuningDef : ContentDef
     public int RainFieldPm { get; init; } = 800;
     public int RainSlipPm { get; init; } = 1500;
     public int StormRefusalPm { get; init; } = 2000;
+    /// <summary>[P7 CV-C] Ground and weather (cavalry-and-mounted-war 4.4, 4.8): a stake cell adds this refusal (permille) in the arc; a horse running onto stakes at this speed or more is struck with this momentum (milli-units, an oak stake: no wielder).</summary>
+    public int StakeRefusalPm { get; init; } = 250;
+    public int StakeMinMmps { get; init; } = 4000;
+    public int StakeM0Milli { get; init; } = 120_000;
+    /// <summary>A horse at a gallop entering a ditch cell falls with this chance (permille).</summary>
+    public int DitchFallPm { get; init; } = 400;
+    /// <summary>Woods: a rider moving at this speed or more is knocked by a branch with this chance each second (permille), at most once per <see cref="BranchEveryTicks"/>, with this momentum (milli-units).</summary>
+    public int BranchMinMmps { get; init; } = 4000;
+    public int BranchPmPerS { get; init; } = 50;
+    public int BranchEveryTicks { get; init; } = 400;
+    public int BranchMilli { get; init; } = 40_000;
+    /// <summary>A horse within this distance of a burning cell gains <c>panic.fire_per_s</c> a second.</summary>
+    public int FireRadiusMm { get; init; } = 8000;
+    /// <summary>Wet ground: rain over this many tenths of a millimetre an hour (20 = 2 mm) for this many hours turns field to mud; frost at or below this many tenths of a degree on wet ground is ice; snow over this many cm is snow.</summary>
+    public int MudRainMmHTenths { get; init; } = 20;
+    public int MudAfterHours { get; init; } = 3;
+    public int IceBelowTenthsC { get; init; } = -20;
+    public int SnowOverCm { get; init; } = 5;
     /// <summary>A thunder clap every this many ticks in a storm.</summary>
     public int ThunderEveryTicks { get; init; } = 600;
     /// <summary>The cavalry AI: the clear lane it wants, how far it rides past, where it re-forms.</summary>

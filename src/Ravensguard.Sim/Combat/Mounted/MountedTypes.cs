@@ -106,6 +106,8 @@ public struct MountedExtra
     public int BracedAt, HitsAtBrace, TrampledUntil;
     /// <summary>The tick of its last braced strike: for a second after it the bearer still stands planted (a horse it struck does not trample it).</summary>
     public int BraceStruckAt;
+    /// <summary>[P7 CV-C] The tick a branch last swept this rider (woods: at most once per 20 s).</summary>
+    public int BranchAt;
 }
 
 /// <summary>Mounted combat's numbers as the step reads them (<see cref="MountedTuningDef"/> plus the footing table and the synthetic trample weapon), built once per content database.</summary>
@@ -115,6 +117,8 @@ public sealed class MountedTuning
     public FootingRule[] Footing { get; }
     public IReadOnlyDictionary<string, SpeciesDef> Breeds { get; }
     public WeaponV2 Trample { get; }
+    /// <summary>[P7 CV-C] A planted oak stake (the blow's momentum is the stake row's <c>M0</c>, no wielder).</summary>
+    public WeaponV2 Stake { get; }
 
     public MountedTuning(ContentDatabase db, CombatTablesV2 t)
     {
@@ -126,6 +130,11 @@ public sealed class MountedTuning
             Id = "mounted.trample", Name = "Trample", Family = "natural", ReachMm = 700, StrikeTicks = 1, HeadVolumeCm3 = 800,
             Attacks = [new AttackDef { Id = "trample", Name = "Trample", Verb = "tramples", Type = AttackType.Blunt, ContactArea = 80, PenetrationMm = 0, Velocity = 1.0 }],
         }, "bone");
+        Stake = t.Synthetic(new WeaponShapeDef
+        {
+            Id = "mounted.stake", Name = "Stake", Family = "natural", ReachMm = 700, StrikeTicks = 1, HeadVolumeCm3 = 600,
+            Attacks = [new AttackDef { Id = "stake", Name = "Stake", Verb = "impales", Type = AttackType.Point, ContactArea = 8, PenetrationMm = 250, Velocity = 1.0 }],
+        }, "oak");
     }
 
     public int WeaponPm(string key, int fallback) => D.ChargeWeaponPm.TryGetValue(key, out var v) ? v : fallback;
