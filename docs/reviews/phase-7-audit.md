@@ -375,3 +375,10 @@ Accepted as in the first run: EA_F5, F10 (now implemented in the gates), F12 to 
 ### 9. What changed in the harness (nothing in the sim's rules)
 
 `Diagnostics/WarLoadIndustry.cs` (the scripted L3 works), `WarLoadChecks.cs` (WL-13), `WarLoadRun.cs` (the new columns: coin by source and the border by trade and people, works founded and closed, the price level, charcoal and iron stock and output, the clock, the L3 and chain lines, an `AtDayStart` hook), `WarGates.cs` (WL-6 waived and printed as information, WL-10 read against the control at the same year, WL-4 prints the control's figures, WL-13 and WL-14 evaluated), `EconAudit.cs` (X2 prints as accepted), `EconAuditCommand.cs` (`war-load --l3 none|gate|caravan --l3-fuel --checks`, `econ-audit --days N` with a run world), the tests `WarLoadSecondRunTests` (new) and the WL-6 expectation in `WarLoadSoak_Years1To10_WithControl_Gates` (Fail to Info: the user's waiver), the comment of `MoneyGrowthTests`. No test was loosened; no golden moved.
+
+## The user's sign-off on the second run (22 Nov 2026)
+- **EA_F16 (money swing) and EA_F17 (WL-4 reading): accepted.** Harvest-driven border swings stay; WL-3 is judged net of the mints' steady strike, and WL-4 against the control at the same year. No sim change.
+- **EA_F20 (a works closes when its owner dies or leaves): fix.** The works passes to the heir by the existing succession rules, else it is sold or escheats to the lord; the chronicle records it. Owner: P7-EA3e.
+- **EA_F19 (charcoal cannot carry an L3 smeltery): fix.** Charcoal burners set up near woodland when charcoal is dear, so supply follows demand and the woodland is cut; the Industry tab names fuel as the bottleneck. The L3 payback and working capital (EA_F18) are re-measured after it. Owner: P7-EA3e.
+- **EA_F21 (no idle labour): accepted.** A new works hires by outbidding other trades and wages rise; the Industry tab shows the wage needed to fill the crew (Owner: P7-EA3e, view only).
+- EA_F22 to EA_F24 (Low) are accepted as known limits.
