@@ -6609,6 +6609,23 @@ ch_note_am_raid_near,a raid was reported near the seat
 ch_note_am_winter,the warband winters at its lord's seat
 ch_note_am_rest,there was nothing due
 ch_note_am_done,the task was done
+ch_am_muster,"{ruler} called the levy to {place}: {men} men were asked for."
+ch_am_levy,"{place} gave {men} men to the host; {evaded} households hid theirs."
+ch_am_host_formed,"The host of {ruler} formed at {place} with {men} men."
+ch_am_hold,"{ruler} kept {men} levies at {place} through the harvest; the grain they left standing ({kg} kg) would cost {shortfall}."
+ch_am_levy_released,"{ruler} sent {men} levies home from {place}."
+ch_note_am_muster_war,the realm was at war and the sowing was done
+ch_note_am_muster_called,the lord called his levy
+ch_note_am_levy_called,the ruler's summons reached the fief
+ch_note_am_host_gathered,four fifths of the men were at the muster or three days had passed
+ch_note_am_hold_worth,the campaign was worth more than the grain left standing
+ch_note_am_harvest,the harvest was worth more than the campaign
+ch_note_am_winter_release,winter closed the season of campaigning
+ch_note_am_service_over,the owed days of service were done and the lord would not pay the levy on
+ch_note_am_war_over,the war was over
+ch_note_am_no_men,no household could give a man
+ch_note_am_join_host,the lord was called to the host
+ch_note_am_host_released,the host was sent home
 dp_op_visit,visited
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."

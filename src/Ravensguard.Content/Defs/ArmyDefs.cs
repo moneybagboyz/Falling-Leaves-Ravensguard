@@ -94,4 +94,27 @@ public sealed record ArmyRulesDef : ContentDef
     public int BandRobPm { get; init; } = 250;
     public int BandRobReachM { get; init; } = 3000;
     public int BandRobKg { get; init; } = 20;
+
+    // ---- P7-AM-B: the muster (armies-on-the-map 4.2, 4.3)
+    /// <summary>A realm at war with its treasury able to pay calls its levy on the first day of summer (the day after the spring sowing) unless the ruler is the hero; 0 turns the AI's call off (a hero or a campaign brain calls by hand). The hour of the day the summons goes out.</summary>
+    public int MusterAuto { get; init; } = 1;
+    public int SummonsHour { get; init; } = 6;
+    /// <summary>The riders carry the summons at this many metres an hour (12 m/s in stages), at least one hour to any fief.</summary>
+    public int SummonsMPerHour { get; init; } = 40000;
+    /// <summary>Days after the summons is heard that a fief's levy is drawn and assembled at its seat (the daily step at hour 18: the day after).</summary>
+    public int GatherDays { get; init; } = 1;
+    /// <summary>The column's pace to the muster point: metres a marching hour and marching hours a day (1.3 m/s, 05:00 to 21:00: 3.7 km a day).</summary>
+    public int MarchMPerHour { get; init; } = 234;
+    public int MarchHoursPerDay { get; init; } = 16;
+    /// <summary>The host forms when this share (per cent) of the expected men has arrived or this many days after the first company did.</summary>
+    public int FormPct { get; init; } = 80;
+    public int FormWaitDays { get; init; } = 3;
+    /// <summary>The AI funds the pay chest for this many days (and will not call a muster its treasury cannot carry that long).</summary>
+    public int FundDays { get; init; } = 10;
+    /// <summary>The ruler's harvest decision falls on this day of the year (the reap window is the ten days after it); winter release on the second.</summary>
+    public int HarvestDecisionDoy { get; init; } = 25;
+    public int ReapWindowDays { get; init; } = 10;
+    public int WinterReleaseDoy { get; init; } = 46;
+    /// <summary>A levy kept on after his owed days needs at least this many days of his pay in the chest.</summary>
+    public int KeepPayDays { get; init; } = 5;
 }

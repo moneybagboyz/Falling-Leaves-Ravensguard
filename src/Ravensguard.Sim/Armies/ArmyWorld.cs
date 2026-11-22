@@ -8,6 +8,7 @@ using Ravensguard.Sim.People;
 using Ravensguard.Sim.Politics;
 using Ravensguard.Sim.Rule;
 using Ravensguard.Sim.Soldiers;
+using Ravensguard.Sim.WarSupply;
 using Ravensguard.Sim.WorldGen.Region;
 using RegionData = Ravensguard.Sim.WorldGen.Region.Region;
 
@@ -201,6 +202,7 @@ public static class ArmyWiring
         {
             IsHero = id => state.Party != null && state.Party.Hero.Value == id,
         };
+        aw.SupplyProvider = () => WarSupplyWiring.Ensure(home, state);
         home.Sim.Set(aw);
         if (home.Economy != null)
         {

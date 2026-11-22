@@ -132,6 +132,18 @@ public static class UnrestEngine
         return DetRng.Range(c.Seed, c.SeasonIndex, c.W.Households.IdOf(h).Value, RngStreams.RevoltAndEvasion, 1, 0, 100) < c.S.EvasionPct;
     }
 
+    /// <summary>
+    /// Whether a household hides the man the levy asked for (P7-AM-B, armies-on-the-map 4.2): the same rung-2 test as <see cref="Evades"/> (an aggrieved household of a settlement at the evasion rung), with its own draw (stream 0x682, draw 2,
+    /// key the household and the season) so the households that dodge the muster are not the very ones that dodge the hearth tax. The draw hides the man; it adds no grievance of its own.
+    /// </summary>
+    public static bool EvadesLevy(UnrestCtx c, int s, int h)
+    {
+        if (c.B.RungOf(s) < 2) return false;
+        var p = PlaceOf(c, s);
+        if (!UnrestRules.Aggrieved(c.S, PointsOf(c, p, h).Points)) return false;
+        return DetRng.Range(c.Seed, c.SeasonIndex, c.W.Households.IdOf(h).Value, RngStreams.RevoltAndEvasion, 2, 0, 100) < c.S.EvasionPct;
+    }
+
     // ------------------------------------------------------------------ the daily pass (H5 hour 0)
 
     /// <summary>The day's pass, once for a day number: grievances counted, unrest and rungs set, riots and revolts raised.</summary>

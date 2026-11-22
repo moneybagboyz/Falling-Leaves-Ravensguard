@@ -119,6 +119,7 @@ public sealed partial class ArmyWorld
     {
         int day = (int)e.Day; wb.ThoughtDay = day;
         int at = wb.Here; if (at < 0) return wb.Task;
+        if (wb.Task == WarbandTask.JoinHost && Book.HostOfWarband(wb.Id) != null) return wb.Task;                  // called to a host: he is the host's until it lets him go
         var opts = Options(e, wb, at);
         WarbandOption? best = null; ulong bestTie = 0; int i = 0;
         foreach (var o in opts)

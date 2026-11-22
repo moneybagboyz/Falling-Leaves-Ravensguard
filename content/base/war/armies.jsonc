@@ -22,5 +22,7 @@
     "wagon_season_day": 3, "wagon_wait_days": 1, "wagon_mm_per_gs": 125, "escort_max_m": 12000,
     "dismiss_arrears_days": 20, "morale_gain": 1, "morale_loss": 3,
     "fight_kit": "soldier", "guard_kit": "guard",
-    "deserter_home_m": 7400, "band_drift_home_pm": 20, "band_rob_pm": 250, "band_rob_reach_m": 3000, "band_rob_kg": 20 }
+    "deserter_home_m": 7400, "band_drift_home_pm": 20, "band_rob_pm": 250, "band_rob_reach_m": 3000, "band_rob_kg": 20,
+    "muster_auto": 1, "summons_hour": 6, "summons_m_per_hour": 40000, "gather_days": 1, "march_m_per_hour": 234, "march_hours_per_day": 16, "form_pct": 80, "form_wait_days": 3,
+    "fund_days": 10, "harvest_decision_doy": 25, "reap_window_days": 10, "winter_release_doy": 46, "keep_pay_days": 5 }
 ]

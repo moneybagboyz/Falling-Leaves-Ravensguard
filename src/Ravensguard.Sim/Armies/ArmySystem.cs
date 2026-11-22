@@ -35,7 +35,7 @@ public sealed class ArmyDailySystem : AbstractSystem
         var aw = ctx.World.Get<ArmyWorld>(); if (aw == null) return;
         var env = new ArmyEnv(ctx.World, ctx.Outbox, ctx.Hour);
         long t0 = System.Diagnostics.Stopwatch.GetTimestamp();
-        aw.PayDay(env); aw.BandsDay(env);
+        aw.PayDay(env); aw.BandsDay(env); aw.MusterDay(env);
         aw.DayCost.Add(System.Diagnostics.Stopwatch.GetTimestamp() - t0);
     }
 }
@@ -68,6 +68,7 @@ public sealed partial class ArmyWorld
         var rb = Rule; if (rb == null) return;
         int hod = e.HourOfDay;
         if (hod == 1) BandsSeason(e);
+        if (hod == Rules.SummonsHour && Rules.MusterAuto != 0 && e.Time.Season == Ravensguard.Sim.Core.Season.Summer) AutoMuster(e);        // the first day of summer, the day after the sowing: a realm at war calls its levy
         foreach (var f in rb.Fiefs.Values.ToList())
         {
             if (f.Fief % 24 != hod) continue;

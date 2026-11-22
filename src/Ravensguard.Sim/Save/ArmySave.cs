@@ -91,6 +91,51 @@ public sealed class TaskLineSave
     [Key(4)] public string Cause { get; set; } = "";
 }
 
+[MessagePackObject]
+public sealed class LevyCompanySave
+{
+    [Key(0)] public int Fief { get; set; }
+    [Key(1)] public int Seat { get; set; }
+    [Key(2)] public int Quota { get; set; }
+    [Key(3)] public int Heard { get; set; }
+    [Key(4)] public int Drawn { get; set; }
+    [Key(5)] public int Arrives { get; set; }
+    [Key(6)] public int HomeDay { get; set; }
+    [Key(7)] public int Evaded { get; set; }
+    [Key(8)] public int Asked { get; set; }
+    [Key(9)] public bool Walking { get; set; }
+    [Key(10)] public ulong Captain { get; set; }
+    [Key(11)] public byte Kind { get; set; }
+    [Key(12)] public ulong[] Men { get; set; } = [];
+}
+
+[MessagePackObject]
+public sealed class HostSave
+{
+    [Key(0)] public int Id { get; set; }
+    [Key(1)] public int Realm { get; set; }
+    [Key(2)] public int War { get; set; }
+    [Key(3)] public int Point { get; set; }
+    [Key(4)] public int Supply { get; set; }
+    [Key(5)] public int SummonsDay { get; set; }
+    [Key(6)] public int FormedDay { get; set; }
+    [Key(7)] public int FirstArrival { get; set; }
+    [Key(8)] public int ReleasedDay { get; set; }
+    [Key(9)] public int Expected { get; set; }
+    [Key(10)] public int DecidedYear { get; set; }
+    [Key(11)] public int FundDays { get; set; }
+    [Key(12)] public ulong Commander { get; set; }
+    [Key(13)] public ulong Entry { get; set; }
+    [Key(14)] public long Worth { get; set; }
+    [Key(15)] public bool Paying { get; set; }
+    [Key(16)] public bool Raises { get; set; }
+    [Key(17)] public byte State { get; set; }
+    [Key(18)] public LevyCompanySave[] Companies { get; set; } = [];
+    [Key(19)] public int[] JoinWarbands { get; set; } = [];
+    [Key(20)] public byte[] JoinKinds { get; set; } = [];
+    [Key(21)] public int[] JoinMen { get; set; } = [];
+}
+
 /// <summary>
 /// The optional "armies" section (a name of <c>Phase7Seeding.SectionNames</c>), written only while the book is not empty, so a world that never raised a warband keeps its bytes. Later armies parts (hosts, camps, intel,
 /// war events) append keys: a section written by AM-A reads with them empty. Positions are plain integers over the road graph; the road paths are rebuilt from the region on load.
@@ -110,6 +155,9 @@ public sealed class ArmySave
     [Key(7)] public int NextBand { get; set; } = 1;
     [Key(8)] public int[] BarrenFiefs { get; set; } = [];
     [Key(9)] public int[] BarrenSeasons { get; set; } = [];
+    /// <summary>P7-AM-B (appended): the seasonal hosts with their levy companies and the warbands that joined, and the next id.</summary>
+    [Key(10)] public HostSave[] Hosts { get; set; } = [];
+    [Key(11)] public int NextHost { get; set; } = 1;
 
     public static ArmySave Capture(ArmyBook b) => new()
     {
@@ -131,11 +179,22 @@ public sealed class ArmySave
         Log = [.. b.Log.Select(l => new TaskLineSave { Day = l.Day, Warband = l.Warband, Task = (byte)l.Task, Target = l.Target, Cause = l.Cause })],
         NextWarband = b.NextWarband, NextErrand = b.NextErrand, NextBand = b.NextBand,
         BarrenFiefs = [.. b.Barren.Keys], BarrenSeasons = [.. b.Barren.Values],
+        Hosts = [.. b.Hosts.Values.Select(h => new HostSave
+        {
+            Id = h.Id, Realm = h.Realm, War = h.War, Point = h.Point, Supply = h.Supply, SummonsDay = h.SummonsDay, FormedDay = h.FormedDay, FirstArrival = h.FirstArrival, ReleasedDay = h.ReleasedDay, Expected = h.Expected,
+            DecidedYear = h.DecidedYear, FundDays = h.FundDays, Commander = h.Commander, Entry = h.Entry, Worth = h.Worth, Paying = h.Paying, Raises = h.Raises, State = (byte)h.State,
+            Companies = [.. h.Companies.Select(c => new LevyCompanySave
+            {
+                Fief = c.Fief, Seat = c.Seat, Quota = c.Quota, Heard = c.Heard, Drawn = c.Drawn, Arrives = c.Arrives, HomeDay = c.HomeDay, Evaded = c.Evaded, Asked = c.Asked, Walking = c.Walking, Captain = c.Captain, Kind = (byte)c.Kind, Men = [.. c.Men],
+            })],
+            JoinWarbands = [.. h.Warbands.Select(j => j.Warband)], JoinKinds = [.. h.Warbands.Select(j => (byte)j.Kind)], JoinMen = [.. h.Warbands.Select(j => j.Men)],
+        })],
+        NextHost = b.NextHost,
     };
 
     public ArmyBook Restore()
     {
-        var b = new ArmyBook { NextWarband = NextWarband, NextErrand = NextErrand, NextBand = NextBand };
+        var b = new ArmyBook { NextWarband = NextWarband, NextErrand = NextErrand, NextBand = NextBand, NextHost = Math.Max(1, NextHost) };
         foreach (var s in Warbands)
         {
             var w = new Warband
@@ -161,6 +220,21 @@ public sealed class ArmySave
         foreach (var r in Reports) b.Reports.Add(new News { Day = r.Day, Place = r.Place, Band = r.Band, Realm = r.Realm, Strength = r.Strength });
         foreach (var l in Log) b.Log.Add(new TaskLine { Day = l.Day, Warband = l.Warband, Task = (WarbandTask)l.Task, Target = l.Target, Cause = l.Cause });
         for (int i = 0; i < BarrenFiefs.Length && i < BarrenSeasons.Length; i++) b.Barren[BarrenFiefs[i]] = BarrenSeasons[i];
+        foreach (var s in Hosts)
+        {
+            var h = new ArmyHost
+            {
+                Id = s.Id, Realm = s.Realm, War = s.War, Point = s.Point, Supply = s.Supply, SummonsDay = s.SummonsDay, FormedDay = s.FormedDay, FirstArrival = s.FirstArrival, ReleasedDay = s.ReleasedDay, Expected = s.Expected,
+                DecidedYear = s.DecidedYear, FundDays = s.FundDays, Commander = s.Commander, Entry = s.Entry, Worth = s.Worth, Paying = s.Paying, Raises = s.Raises, State = (HostState)s.State,
+            };
+            foreach (var c in s.Companies)
+            {
+                var lc = new LevyCompany { Fief = c.Fief, Seat = c.Seat, Quota = c.Quota, Heard = c.Heard, Drawn = c.Drawn, Arrives = c.Arrives, HomeDay = c.HomeDay, Evaded = c.Evaded, Asked = c.Asked, Walking = c.Walking, Captain = c.Captain, Kind = (ContingentKind)c.Kind };
+                lc.Men.AddRange(c.Men); h.Companies.Add(lc);
+            }
+            for (int i = 0; i < s.JoinWarbands.Length && i < s.JoinKinds.Length && i < s.JoinMen.Length; i++) h.Warbands.Add(new WarbandJoin(s.JoinWarbands[i], (ContingentKind)s.JoinKinds[i], s.JoinMen[i]));
+            b.Hosts[h.Id] = h;
+        }
         return b;
     }
 }

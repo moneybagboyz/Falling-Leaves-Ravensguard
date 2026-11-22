@@ -12,7 +12,7 @@ public sealed partial class ArmyWorld
 
     private bool Daylight(int hod) => hod >= Rules.DayStartHour && hod < Rules.DayEndHour;
 
-    private static bool Stationary(WarbandTask t) => t is WarbandTask.Idle or WarbandTask.Garrison;
+    private static bool Stationary(WarbandTask t) => t is WarbandTask.Idle or WarbandTask.Garrison or WarbandTask.JoinHost;
 
     // ------------------------------------------------------------------ the hour
 

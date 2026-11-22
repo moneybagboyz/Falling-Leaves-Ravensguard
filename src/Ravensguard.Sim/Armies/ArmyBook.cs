@@ -106,6 +106,51 @@ public sealed class TaskLine
     public string Cause = "";
 }
 
+/// <summary>What a host is doing (armies-on-the-map 3.2). Append only. AM-B uses <c>Summoned</c> (the call is out, nobody drawn yet), <c>Mustering</c> (the levies are drawn and walking to the muster point), <c>Camped</c> (formed
+/// at the point), <c>Besieging</c> (set by the siege; a host besieging stays through winter) and <c>Disbanding</c> (released: the men walk home); AM-C adds the march.</summary>
+public enum HostState : byte { Summoned, Mustering, Marching, Camped, Besieging, Engaged, Retreating, Disbanding, WinterQuarters }
+
+/// <summary>What a contingent of a host is (3.2). Append only. AM-B: <c>Levy</c> (a fief's drawn men), <c>Warband</c> (the ruler's own) and <c>Vassal</c> (a serving vassal's).</summary>
+public enum ContingentKind : byte { Warband, Levy, Vassal, Mercenary, Allied }
+
+/// <summary>
+/// A fief's levy company (3.3): the men one fief gave a host, real persons drawn from their households by <c>HostSupply.Muster</c> (the village draw of overview 10d). <see cref="Heard"/> is the day the summons reached the fief, <see cref="Drawn"/>
+/// the day the men were drawn and stood at the seat, <see cref="Arrives"/> the day the column reaches the muster point; <see cref="HomeDay"/> the day the released men are home (they are away from their fields until then).
+/// </summary>
+public sealed class LevyCompany
+{
+    public int Fief, Seat, Quota, Heard = -1, Drawn = -1, Arrives = -1, HomeDay = -1, Evaded, Asked;
+    /// <summary>Whether the men have been released and are walking home (their labour returns on <see cref="HomeDay"/>).</summary>
+    public bool Walking;
+    public ulong Captain;
+    public ContingentKind Kind = ContingentKind.Levy;
+    /// <summary>The men by person id ascending.</summary>
+    public List<ulong> Men { get; } = [];
+    public bool IsDrawn => Drawn >= 0;
+}
+
+/// <summary>A warband that joined a host (a ruler's own or a serving vassal's) and the men it brought.</summary>
+public sealed record WarbandJoin(int Warband, ContingentKind Kind, int Men);
+
+/// <summary>
+/// A seasonal host (3.2): the levy of a realm called to a muster point by its ruler, with the warbands that joined. <see cref="Supply"/> is its account in the army economy's <c>HostSupply</c> (0 until the first men are drawn).
+/// <see cref="Worth"/> is what the ruler thinks the rest of the campaign is worth in mites, which he weighs against the harvest the levies' households would lose and the pay of the days past the owed ones; a call with no campaign behind it
+/// is worth nothing, so the levy goes home for the harvest.
+/// </summary>
+public sealed class ArmyHost
+{
+    public int Id, Realm, War = -1, Point, Supply, SummonsDay, FormedDay = -1, FirstArrival = -1, ReleasedDay = -1, Expected, DecidedYear = -1, FundDays;
+    public ulong Commander, Entry;
+    public long Worth;
+    public bool Paying, Raises;
+    public HostState State;
+    public List<LevyCompany> Companies { get; } = [];
+    public List<WarbandJoin> Warbands { get; } = [];
+    /// <summary>Levies serving (drawn and not released) and released men still walking home.</summary>
+    public int Levies { get { int n = 0; foreach (var c in Companies) if (!c.Walking) n += c.Men.Count; return n; } }
+    public int Walkers { get { int n = 0; foreach (var c in Companies) if (c.Walking) n += c.Men.Count; return n; } }
+}
+
 /// <summary>
 /// The armies' state (armies-on-the-map 3), the optional <c>armies</c> section: the standing warbands, the errands they escort, the bandit bands, the news of robberies and raids, and the log of tasks taken. Hosts, levy
 /// companies, camps and intel join in later parts as appended keys. Empty (so absent from a save) while no warband, band or errand exists. Kept sorted by id: equal states give equal bytes and equal hashes.
@@ -118,15 +163,20 @@ public sealed class ArmyBook
     public List<News> Reports { get; } = [];
     public List<TaskLine> Log { get; } = [];
     public int NextWarband = 1, NextErrand = 1, NextBand = 1;
+    /// <summary>P7-AM-B: the seasonal hosts by id, and the next id.</summary>
+    public SortedDictionary<int, ArmyHost> Hosts { get; } = [];
+    public int NextHost = 1;
     /// <summary>Fiefs whose lord was found to have no man to hire in a season: not asked again until the next one (a season number).</summary>
     public SortedDictionary<int, int> Barren { get; } = [];
     public const int LogKeep = 2000, ReportKeep = 64;
 
-    public bool IsEmpty => Warbands.Count == 0 && Errands.Count == 0 && Bands.Count == 0 && Reports.Count == 0 && Log.Count == 0 && Barren.Count == 0 && NextWarband == 1 && NextErrand == 1 && NextBand == 1;
+    public bool IsEmpty => Warbands.Count == 0 && Errands.Count == 0 && Bands.Count == 0 && Reports.Count == 0 && Log.Count == 0 && Barren.Count == 0 && NextWarband == 1 && NextErrand == 1 && NextBand == 1 && Hosts.Count == 0 && NextHost == 1;
 
     public Warband? WarbandOfFief(int fief) { foreach (var w in Warbands.Values) if (w.Fief == fief) return w; return null; }
     public Warband? WarbandOfLord(ulong lord) { foreach (var w in Warbands.Values) if (w.Lord == lord) return w; return null; }
     public Warband? WarbandWith(ulong person) { foreach (var w in Warbands.Values) if (w.Members.Contains(person)) return w; return null; }
+    public ArmyHost? HostOfWarband(int warband) { foreach (var h in Hosts.Values) foreach (var j in h.Warbands) if (j.Warband == warband) return h; return null; }
+    public ArmyHost? HostOfRealm(int realm) { foreach (var h in Hosts.Values) if (h.Realm == realm && h.State != HostState.Disbanding) return h; return null; }
     public BanditBand? BandWith(ulong person) { foreach (var b in Bands.Values) if (b.Members.Contains(person)) return b; return null; }
 
     public void Note(int day, int warband, WarbandTask task, int target, string cause)
@@ -153,6 +203,7 @@ public sealed class ArmyBook
         if (_dirty)
         {
             _away.Clear(); foreach (var w in Warbands.Values) foreach (var m in w.Members) _away.Add(m); foreach (var b in Bands.Values) foreach (var m in b.Members) _away.Add(m);
+            foreach (var h in Hosts.Values) foreach (var c in h.Companies) if (c.Walking) foreach (var m in c.Men) _away.Add(m);        // a released levy is off his fields until he is home
             _dirty = false;
         }
         return _away.Contains(person);
@@ -193,6 +244,18 @@ public sealed class ArmyBook
         foreach (var l in Log) { M(l.Day); M(l.Warband); M((long)l.Task); M(l.Target); S(l.Cause); }
         M(-5);
         foreach (var (f, s) in Barren) { M(f); M(s); }
+        if (Hosts.Count > 0 || NextHost != 1)
+        {
+            M(-6); M(NextHost);
+            foreach (var (id, x) in Hosts)
+            {
+                M(id); M(x.Realm); M(x.War); M(x.Point); M(x.Supply); M(x.SummonsDay); M(x.FormedDay); M(x.FirstArrival); M(x.Expected); M(x.DecidedYear); M(x.FundDays); M((long)x.Commander); M((long)x.Entry); M(x.Worth);
+                M(x.Paying ? 1 : 0); M(x.Raises ? 1 : 0); M((long)x.State); M(x.ReleasedDay);
+                M(x.Companies.Count);
+                foreach (var c in x.Companies) { M(c.Fief); M(c.Seat); M(c.Quota); M(c.Heard); M(c.Drawn); M(c.Arrives); M(c.HomeDay); M(c.Evaded); M(c.Asked); M(c.Walking ? 1 : 0); M((long)c.Captain); M((long)c.Kind); M(c.Men.Count); foreach (var p in c.Men) M((long)p); }
+                M(x.Warbands.Count); foreach (var j in x.Warbands) { M(j.Warband); M((long)j.Kind); M(j.Men); }
+            }
+        }
         return h;
     }
 }

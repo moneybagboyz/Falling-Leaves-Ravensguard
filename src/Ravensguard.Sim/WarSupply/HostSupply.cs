@@ -601,7 +601,8 @@ public sealed partial class HostSupply
     /// Levies from a fief (army-economy 3.3; P7-EA3c, then P7-EA3d, overview 10d: the levy is drawn by village). The fief's quota is filled village by village, in the lord's order: the villages nearest the fief's seat first (they reach
     /// the lord's banner soonest), the seat itself, the lord's own demesne village, last. A village sends one man a household (a man aged 16 to 45, not on a staff, not already on campaign), field hands first (a farmer, ploughman, labourer or
     /// shepherd, or an unoccupied man of a peasant household), the man who is not the head before the head, in household order, up to a cap of <see cref="Ravensguard.Content.FarmingSettingsDef.LevyVillageCapPct"/> per cent of the village's
-    /// households (at least one man) before the next village is asked: so the drawn villages lose most of their reapers while the undrawn ones keep theirs. A household that evades (<see cref="Evades"/>) gives none.
+    /// households (at least one man) before the next village is asked: so the drawn villages lose most of their reapers while the undrawn ones keep theirs. A household that evades (<see cref="Evades"/>) gives none; a man who is his
+    /// household's only working adult is asked after the households that have another (P7-AM-B, overview 8.2).
     /// The men are marked on campaign, counted as levies of the host, and recorded against their village and year (<see cref="WarSupplyBook.Levied"/>) for the harvest's chronicle.
     /// </summary>
     public MusterResult Muster(HostId h, int fief, int men)
@@ -610,15 +611,17 @@ public sealed partial class HostSupply
         var hh = _pop.Households; var pt = _pop.People; var region = _pop.Region; var picked = new List<int>(); int evaded = 0, asked = 0;
         int seat = fief >= 0 && fief < region.Fiefs.Count ? region.Fiefs[fief].SeatSettlement : -1;
         int capPct = Math.Clamp(Economy.Farming.Settings.Def.LevyVillageCapPct, 1, 100);
-        var byVillage = new SortedDictionary<int, List<(int Round, bool Hand, int Hh, int Man)>>(); var households = new Dictionary<int, int>();
+        var byVillage = new SortedDictionary<int, List<(int Round, bool Sole, bool Hand, int Hh, int Man)>>(); var households = new Dictionary<int, int>();
         for (int i = 0; i < hh.Count; i++)
         {
             int s = hh.Settlement[i]; if (s < 0 || s >= region.Settlements.Count || region.Settlements[s].FiefIndex != fief || hh.MemberCount[i] == 0) continue;
             households[s] = households.GetValueOrDefault(s) + 1;
             var able = new List<(bool Hand, bool Head, int Man)>();
+            int workers = 0;                                                                                // P7-AM-B: the household's working adults (16 to 59, alive, men and women): a man who is the only one is asked last
+            foreach (int m in hh.Members(i)) { if (pt.Status[m] != PersonStatus.Alive) continue; int a0 = pt.AgeYears(m, day); if (a0 >= 16 && a0 < 60) workers++; }
             foreach (int m in hh.Members(i))
             {
-                if (pt.Sex[m] != Sex.Male || pt.Status[m] != PersonStatus.Alive || Book.OnCampaign.ContainsKey(m) || Economy.Labour.IsStaff(m)) continue;
+                if (pt.Sex[m] != Sex.Male || pt.Status[m] != PersonStatus.Alive || Book.OnCampaign.ContainsKey(m) || Economy.Labour.IsStaff(m) || Economy.IsWarbandMan?.Invoke(m) == true) continue;       // P7-AM-B: not a retainer of a warband or a band, nor a released levy still on the road home
                 int age = pt.AgeYears(m, day); if (age < SupplyConfig.LevyMinAge || age > SupplyConfig.LevyMaxAge) continue;
                 var occ = pt.Occupation[m];
                 bool hand = occ is Occupation.Farmer or Occupation.Ploughman or Occupation.Labourer or Occupation.Shepherd || (occ == Occupation.None && hh.Class[i] == SocialClass.Peasant);
@@ -627,7 +630,7 @@ public sealed partial class HostSupply
             if (able.Count == 0) continue;
             if (!byVillage.TryGetValue(s, out var list)) byVillage[s] = list = [];
             int round = 0;                                                                                  // a household's first man is its field hand who is not the head; a second round takes the next
-            foreach (var (hand, _, man) in able.OrderByDescending(x => x.Hand).ThenBy(x => x.Head).ThenBy(x => x.Man)) list.Add((round++, hand, i, man));
+            foreach (var (hand, _, man) in able.OrderByDescending(x => x.Hand).ThenBy(x => x.Head).ThenBy(x => x.Man)) list.Add((round++, workers <= 1, hand, i, man));
         }
         long Dist(int s)
         {
@@ -640,7 +643,7 @@ public sealed partial class HostSupply
         {
             if (picked.Count >= men) break;
             int cap = Math.Max(1, households[s] * capPct / 100), taken = 0;
-            foreach (var (_, _, i, pick) in byVillage[s].OrderBy(c => c.Round).ThenByDescending(c => c.Hand).ThenBy(c => c.Hh))      // one man a household first, field hands first, then the next men
+            foreach (var (_, _, _, i, pick) in byVillage[s].OrderBy(c => c.Round).ThenBy(c => c.Sole).ThenByDescending(c => c.Hand).ThenBy(c => c.Hh))      // one man a household first, a household's only worker last, field hands first, then the next men
             {
                 if (picked.Count >= men || taken >= cap) break;
                 asked++;
