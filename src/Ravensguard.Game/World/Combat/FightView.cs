@@ -7,6 +7,7 @@ using Ravensguard.Game.Inputs;
 using Ravensguard.Game.UI;
 using Ravensguard.Sim.Combat;
 using Ravensguard.Sim.Combat.Flavour;
+using Ravensguard.Sim.Battle;
 using Ravensguard.Sim.Combat.Melee2;
 using Ravensguard.Sim.Combat.Resolver2;
 using Ravensguard.Sim.Combat.Watch;
@@ -58,7 +59,21 @@ public partial class FightView : Node2D
     public AfterFightPanel? Report { get; private set; }
     public FightLog Log => Recorder.Log;
     /// <summary>A report, the stance panel or the danger prompt has the keyboard and the mouse: the combat inputs wait.</summary>
-    public bool ModalOpen => Report != null && IsInstanceValid(Report) || Hud != null && Hud.ModalOpen;
+    public bool ModalOpen => Report != null && IsInstanceValid(Report) || Hud != null && Hud.ModalOpen || CmdModal;
+
+    // ---- P7-BB-D the command layer (battle-bubble-and-formations 4.8, 9): F1-F4 select formations, R the order wheel, 0 the tactical pause overlay; every order leaves as a recorded input ----
+    public BattleCommand Cmd { get; }
+    public BattleHud BHud { get; private set; } = null!;
+    TacticalOverlay? _overlay; OrderWheel? _wheel;
+    CanvasLayer _cmdLayer = null!;
+    bool _tacPaused;
+    Vector2? _focus; double _focusLeft;
+    /// <summary>The order wheel or the overlay has the keys.</summary>
+    public bool CmdModal => Overlay != null || Wheel != null;
+    /// <summary>The battle is paused under the tactical overlay (or after Esc closed it): the fight does not step, and what was placed waits to be sent.</summary>
+    public bool TacticalPaused => _tacPaused;
+    public TacticalOverlay? Overlay => _overlay != null && IsInstanceValid(_overlay) && !_overlay.IsQueuedForDeletion() ? _overlay : null;
+    public OrderWheel? Wheel => _wheel != null && IsInstanceValid(_wheel) && !_wheel.IsQueuedForDeletion() ? _wheel : null;
 
     // ---- P4-F watch mode (watch-mode 4.1, 7): the HUD, the toggle and the stance go out as recorded inputs; the signals are routed here at the frame ----
     public WatchHud Hud { get; private set; } = null!;
@@ -79,6 +94,7 @@ public partial class FightView : Node2D
     public FightView(FightWorld w, int hero, Action<FightInput> send, RigAtlas? rig = null)
     {
         W = w; Hero = hero; Send = send; _rig = rig ?? RigAtlas.Shared;
+        Cmd = new BattleCommand(this);
         Book = null!; Recorder = null!; Feedback = null!;
         StartFlavour(null);
     }
@@ -124,7 +140,50 @@ public partial class FightView : Node2D
         var hudLayer = new CanvasLayer { Layer = 9, Name = "WatchLayer" };
         Hud = new WatchHud(this);
         hudLayer.AddChild(Hud); AddChild(hudLayer);
+        _cmdLayer = new CanvasLayer { Layer = 12, Name = "CommandLayer" };
+        BHud = new BattleHud(Cmd);
+        _cmdLayer.AddChild(BHud); AddChild(_cmdLayer);
     }
+
+    // ------------------------------------------------------------------ the command layer (P7-BB-D)
+
+    /// <summary>Key 0, or Space: pause the battle into the tactical overlay.</summary>
+    public void OpenOverlay()
+    {
+        if (CmdModal || _calling) return;
+        if (!Cmd.Active || Cmd.Mine().Count == 0) { Hud.Toast(L.T("bcmd_toast_none")); return; }
+        SetTacPause(true);
+        _overlay = new TacticalOverlay(Cmd, this);
+        _cmdLayer.AddChild(_overlay);
+    }
+
+    void SetTacPause(bool p)
+    {
+        if (_tacPaused == p) return;
+        _tacPaused = p; SetPaused?.Invoke(p);
+    }
+
+    /// <summary>The overlay was closed with Esc: the game stays paused and the placements stay drafted.</summary>
+    public void OverlayClosed(TacticalOverlay o) { if (_overlay == o) _overlay = null; }
+
+    /// <summary>Space or 0 in the overlay, Space after it: what was placed goes out at the tick the game was paused at, then the fight runs on (BB-11).</summary>
+    public void ResumeBattle()
+    {
+        _overlay = null;
+        Cmd.Commit();
+        SetTacPause(false);
+    }
+
+    /// <summary>R: the order wheel over the view; releasing R issues the picked order to the selection.</summary>
+    public void OpenWheel()
+    {
+        if (CmdModal || _calling || HeroF == null) return;
+        _wheel = new OrderWheel(Cmd, "combatstance.order_wheel", () => { });
+        _cmdLayer.AddChild(_wheel);
+    }
+
+    /// <summary>The camera looks at a point (mm) for a moment (an F-key pressed twice): it comes back to the hero after three seconds.</summary>
+    public void FocusOn(int xMm, int yMm) { _focus = new Vector2(xMm, yMm) / 1000f + new Vector2(0, -0.9f); _focusLeft = 3; }
 
     // ------------------------------------------------------------------ watch mode (P4-F)
 
@@ -183,7 +242,8 @@ public partial class FightView : Node2D
     {
         PollWatch();                                                    // P4-F
         PollHero();
-        if (OwnsStepping && !_calling && !_watchPaused)
+        if (_focusLeft > 0) { _focusLeft -= delta; if (_focusLeft <= 0) _focus = null; }
+        if (OwnsStepping && !_calling && !_watchPaused && !_tacPaused)
         {
             _acc += delta * Feedback.TimeScale;                       // slow motion and hit-stop change the steps per real second, never a step (FL-9)
             int guard = 0;
@@ -229,6 +289,7 @@ public partial class FightView : Node2D
     Vector2 Centre()
     {
         var up = new Vector2(0, -0.9f);
+        if (_focus is { } fp) return fp;
         if (HeroF is { } h && h.Act != FAct.Fled) return new Vector2(h.X, h.Y) / 1000f + up;
         var act = W.Fighters.Where(f => f.Act != FAct.Fled).ToList();
         if (act.Count == 0) return up;
@@ -243,7 +304,7 @@ public partial class FightView : Node2D
     void PollHero()
     {
         var h = HeroF;
-        if (h == null || _calling || !h.Player) return;
+        if (h == null || _calling || !h.Player || CmdModal) return;
         int dx = 0, dy = 0;
         if (Actions.HeldLoose("combatstance.move_up")) dy -= 1;
         if (Actions.HeldLoose("combatstance.move_down")) dy += 1;
@@ -269,10 +330,24 @@ public partial class FightView : Node2D
             if (Actions.Pressed(e, "combatstance.combat_log")) { LogPanel.Toggle(); GetViewport().SetInputAsHandled(); return; }
             if (Actions.Pressed(e, "combatstance.stance_next") && !_calling) { NextStance(); GetViewport().SetInputAsHandled(); return; }      // P4-F: Shift+F6 (checked before F6)
             if (Actions.Pressed(e, "combatstance.watch_toggle") && !_calling) { ToggleWatch(); GetViewport().SetInputAsHandled(); return; }   // P4-F: F6
-            for (int k = 1; k <= 4; k++)
-                if (Actions.Pressed(e, "combatstance.formation_" + k) && !_calling && HeroF != null) { Send(new FightInput(FightInputKind.Formation, (int)SquadTactics.OfKey(k))); GetViewport().SetInputAsHandled(); return; }   // P4-F: F1-F4, the side's formation (4.4)
+            for (int k = 1; k <= 4; k++)       // P7-BB-D (overview Q9): F1-F4 select formations, Shift+F1-F4 add; Phase 4's squad shapes are on the order wheel's Shape ring
+            {
+                bool add = Actions.Pressed(e, "combatstance.formation_add_" + k);
+                if ((add || Actions.Pressed(e, "combatstance.formation_" + k)) && !_calling && HeroF != null)
+                {
+                    if (Cmd.Select(k, add, Time.GetTicksMsec() / 1000.0) && Cmd.Targets().FirstOrDefault() is { } tr && Cmd.CentreOf(tr) is { } cc) FocusOn(cc.X, cc.Y);
+                    GetViewport().SetInputAsHandled(); return;
+                }
+            }
+            if (Actions.Pressed(e, "combatstance.order_wheel")) { OpenWheel(); GetViewport().SetInputAsHandled(); return; }
+            if (Actions.Pressed(e, "combatstance.tactical_overlay")) { OpenOverlay(); GetViewport().SetInputAsHandled(); return; }
+            if (Actions.Pressed(e, "combatstance.battle_pause") && !_calling && Cmd.Active)
+            {
+                if (_tacPaused) ResumeBattle(); else OpenOverlay();
+                GetViewport().SetInputAsHandled(); return;
+            }
         }
-        if (e is InputEventMouse mouse && (LogPanel.Covers(mouse.Position) || Hud.Covers(mouse.Position))) return;       // clicks on the open log panel or the watch HUD are theirs: no swings through them
+        if (e is InputEventMouse mouse && (LogPanel.Covers(mouse.Position) || Hud.Covers(mouse.Position) || BHud.Covers(mouse.Position))) return;       // clicks on the open log panel or the watch HUD are theirs: no swings through them
         var h = HeroF;
         if (h != null && Watching && TakeBackOnInput && IsCombatInput(e)) ToggleWatch(); // P4-F: any combat input takes control back; the input applies this same tick
         if (h == null || !h.Player) return;
@@ -677,6 +752,8 @@ public partial class FightView : Node2D
     void DrawHud(Vector2 sz)
     {
         var lines = new List<string> { L.T("FIGHT_HELP_1"), L.T("FIGHT_HELP_2") };
+        if (_tacPaused && !CmdModal) lines.Add(L.F("bcmd_paused", InputBootstrap.Hint("combatstance.battle_pause"), InputBootstrap.Hint("combatstance.tactical_overlay")));
+        if (Cmd.NewLost() > 0) Hud.Toast(L.T("bcmd_toast_lost"));
         if (HeroF is { } h)
         {
             string atk = _attack < 0 ? L.T("FIGHT_AUTO") : h.Weapon.Attacks[_attack].Def.Name;

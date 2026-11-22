@@ -93,6 +93,12 @@ public enum FightInputKind : byte
     Order = 24,
     /// <summary>P4-F (4.5): a danger pause was declined; no new one for 5 s.</summary>
     DeclineDanger = 25,
+    /// <summary>[P7 BB-D] The hero commands a formation of his side (battle 4.8): A = row id | <see cref="Ravensguard.Sim.Battle.OrderKind"/> &lt;&lt; 8 | queued &lt;&lt; 16 | wheel pivot right &lt;&lt; 17, B, C = the target point in mm (see <see cref="Ravensguard.Sim.Battle.FormationCommands"/>).</summary>
+    FormOrder = 26,
+    /// <summary>[P7 BB-D] Decorates the order just given to the row: A = row id, B = the facing as two Q10 shorts (x low, y high), C = the frontage drawn in mm (0: unchanged).</summary>
+    FormFace = 27,
+    /// <summary>[P7 BB-D] A = row id, B = 1 the captain always commands this formation, 0 he commands it only when the player has been silent for 30 s.</summary>
+    FormCaptain = 28,
 }
 
 public readonly record struct FightInput(FightInputKind Kind, int A = 0, int B = 0, int C = 0);

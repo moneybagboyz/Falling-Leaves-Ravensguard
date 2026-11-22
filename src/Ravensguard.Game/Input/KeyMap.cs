@@ -75,6 +75,10 @@ public sealed class KeyMap
         ("combatstance.watch_toggle", "combatstance.stance_next"), ("combatstance.combat_log", "combatstance.last_report"),
         // P5-C: build mode reads Ctrl+Z (undo) beside Z (rotate) and Ctrl+S (save as blueprint) beside S (pan down) exactly
         ("build.rotate_ccw", "build.undo"), ("build.pan_down", "build.save_blueprint"),
+        // P7-BB-D: Shift+F1-F4 add to the selection beside F1-F4 (matched exactly)
+        ("world.formation_1", "world.formation_add_1"), ("world.formation_2", "world.formation_add_2"), ("world.formation_3", "world.formation_add_3"), ("world.formation_4", "world.formation_add_4"),
+        ("combatstance.formation_1", "combatstance.formation_add_1"), ("combatstance.formation_2", "combatstance.formation_add_2"), ("combatstance.formation_3", "combatstance.formation_add_3"), ("combatstance.formation_4", "combatstance.formation_add_4"),
+        ("tactical.formation_1", "tactical.formation_add_1"), ("tactical.formation_2", "tactical.formation_add_2"), ("tactical.formation_3", "tactical.formation_add_3"), ("tactical.formation_4", "tactical.formation_add_4"),
     };
 
     readonly Dictionary<string, List<Binding>> _bindings = new();

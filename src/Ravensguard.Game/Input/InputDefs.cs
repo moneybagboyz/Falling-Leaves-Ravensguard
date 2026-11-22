@@ -19,7 +19,7 @@ public static class InputDefs
         const InputContext G = InputContext.Global, W = InputContext.World, C = InputContext.CombatStance,
             S = InputContext.CalledShot, B = InputContext.Build, U = InputContext.Menu, E = InputContext.BlueprintEditor, T = InputContext.Trade, R = InputContext.Mounted, H = InputContext.Choice,
             V = InputContext.VehicleDesigner,
-            Lg = InputContext.Ledger, Tr = InputContext.Treatment, Fc = InputContext.Faction;
+            Lg = InputContext.Ledger, Tr = InputContext.Treatment, Fc = InputContext.Faction, Ta = InputContext.Tactical, Ow = InputContext.OrderWheel;
 
         // Global
         A(G, "console", Binding.P(Key.Quoteleft)); // physical: the backtick key position on any layout
@@ -44,6 +44,12 @@ public static class InputDefs
         A(W, "formation_2", K(Key.F2));
         A(W, "formation_3", K(Key.F3));
         A(W, "formation_4", K(Key.F4));
+        // P7-BB-D (battle-bubble-and-formations 9, overview Q9): F1-F4 select formations 1-4, Shift+F1-F4 add to the selection, 0 opens the tactical pause overlay (Phase 4's squad shapes are on the order wheel)
+        A(W, "formation_add_1", K(Key.F1, Mods.Shift));
+        A(W, "formation_add_2", K(Key.F2, Mods.Shift));
+        A(W, "formation_add_3", K(Key.F3, Mods.Shift));
+        A(W, "formation_add_4", K(Key.F4, Mods.Shift));
+        A(W, "tactical_overlay", K(Key.Key0));
         A(W, "panel_character", K(Key.C));
         A(W, "panel_inventory", K(Key.I));
         A(W, "panel_squad", K(Key.P));
@@ -115,6 +121,12 @@ public static class InputDefs
         A(C, "formation_2", K(Key.F2));
         A(C, "formation_3", K(Key.F3));
         A(C, "formation_4", K(Key.F4));
+        A(C, "formation_add_1", K(Key.F1, Mods.Shift));
+        A(C, "formation_add_2", K(Key.F2, Mods.Shift));
+        A(C, "formation_add_3", K(Key.F3, Mods.Shift));
+        A(C, "formation_add_4", K(Key.F4, Mods.Shift));
+        A(C, "tactical_overlay", K(Key.Key0));
+        A(C, "battle_pause", K(Key.Space)); // P7-BB-D: with formations in the fight, Space pauses into the overlay; Space or 0 resumes
         A(C, "combat_stance", K(Key.X));
         A(C, "throw", K(Key.G));
         A(C, "sprint", K(Key.Shift));
@@ -242,6 +254,43 @@ public static class InputDefs
         A(Fc, "act", K(Key.Enter));
         A(Fc, "search", K(Key.Slash));
         A(Fc, "back", K(Key.Escape));
+
+        // The tactical pause overlay (P7-BB-D, battle-bubble-and-formations 9): modal, alone with Global; the game is paused under it and an order placed in it is sent when it resumes
+        A(Ta, "select", M(MouseButton.Left));          // select a block; drag it to place a move
+        A(Ta, "frontage", M(MouseButton.Right));       // drag: start to end sets the width and the facing, perpendicular to the line
+        A(Ta, "queue", K(Key.Shift));                  // held: the placement queues after the order in force
+        A(Ta, "formation_1", K(Key.F1));
+        A(Ta, "formation_2", K(Key.F2));
+        A(Ta, "formation_3", K(Key.F3));
+        A(Ta, "formation_4", K(Key.F4));
+        A(Ta, "formation_add_1", K(Key.F1, Mods.Shift));
+        A(Ta, "formation_add_2", K(Key.F2, Mods.Shift));
+        A(Ta, "formation_add_3", K(Key.F3, Mods.Shift));
+        A(Ta, "formation_add_4", K(Key.F4, Mods.Shift));
+        A(Ta, "next_formation", K(Key.Tab));
+        A(Ta, "order_wheel", K(Key.R));
+        A(Ta, "captain", K(Key.C));
+        A(Ta, "undo", K(Key.Z, Mods.Ctrl));
+        A(Ta, "clear_queue", K(Key.Delete));
+        A(Ta, "level_up", K(Key.Pageup));
+        A(Ta, "level_down", K(Key.Pagedown));
+        A(Ta, "pan_up", K(Key.Up));
+        A(Ta, "pan_down", K(Key.Down));
+        A(Ta, "pan_left", K(Key.Left));
+        A(Ta, "pan_right", K(Key.Right));
+        A(Ta, "zoom_in", K(Key.Equal), M(MouseButton.WheelUp));
+        A(Ta, "zoom_out", K(Key.Minus), M(MouseButton.WheelDown));
+        A(Ta, "resume", K(Key.Space), K(Key.Key0));
+        A(Ta, "close", K(Key.Escape));                 // closes the overlay and stays paused
+
+        // The order wheel (P7-BB-D): modal while R is held (or from the overlay); three rings (Orders, Shape, Missiles); release R or Enter issues to the selection, Esc cancels
+        A(Ow, "up", K(Key.Up));
+        A(Ow, "down", K(Key.Down));
+        A(Ow, "left", K(Key.Left));
+        A(Ow, "right", K(Key.Right));
+        A(Ow, "ring_next", K(Key.Tab));
+        A(Ow, "issue", K(Key.Enter), M(MouseButton.Left));
+        A(Ow, "cancel", K(Key.Escape));
 
         // Blueprint editor (dev tool, plan 2.11). A standalone context like Menu: only Global stays live beside it.
         A(E, "primary", M(MouseButton.Left), M(MouseButton.Left, Mods.Shift)); // Shift on rectangles = outline only

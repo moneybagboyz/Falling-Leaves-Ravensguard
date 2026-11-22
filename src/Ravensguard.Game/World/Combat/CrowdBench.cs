@@ -17,7 +17,8 @@ public static class BattleScenario
 {
     static readonly WeaponInstance Spear = new("spear", "steel"), Sword = new("arming_sword", "steel");
 
-    public static FightWorld Make(int perSide, int rowSize = 100, ulong seed = 50)
+    /// <summary>With <paramref name="hero"/> the first man of formation 1 of side 0 is the player's fighter and the book's hero (Leadership 50), and side 0's captains wait for his orders (P7-BB-D).</summary>
+    public static FightWorld Make(int perSide, int rowSize = 100, ulong seed = 50, bool hero = false)
     {
         var w = new FightWorld(FightDemo.Content(), seed, 1, 8 * 3600) { RecordEvents = false };
         var book = w.EnsureFormations();
@@ -44,6 +45,14 @@ public static class BattleScenario
                 var r = book.Form(w, team, (byte)(k + 1), FormationKind.Infantry, ids, ax, (k - rows / 2) * 34_000, team == 0 ? 1024 : -1024, 0, Formation.Line, 4, place: true);
                 r.CaptainAlways = true;
             }
+        }
+        if (hero)
+        {
+            var r1 = book.Find(0, 1)!;
+            int h = r1.Members[0];
+            w.Fighters[h].Player = true;
+            book.SetHero(w, h, 50);
+            foreach (var r in book.Rows) if (r.Side == 0) r.CaptainAlways = false;
         }
         w.LodCentre = (-10_000, 0);
         return w;

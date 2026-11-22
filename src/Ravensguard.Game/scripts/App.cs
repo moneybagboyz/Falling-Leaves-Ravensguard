@@ -187,6 +187,7 @@ public partial class App : Node
             // the combat stance (P4-C): a duel on the shipped fight draws and steps for a few frames
             var fight = new World.Combat.FightDemo { Name = "SmokeFight" }; AddChild(fight); await Frames(6);
             fight.QueueFree(); await Frames(1);
+            await Debug.BattleCommandSmoke.Run(GetTree());           // P7-BB-D: the command UI on a battle of formations
             var f8 = new InputEventKey { Keycode = Key.F8, PhysicalKeycode = Key.F8, Pressed = true };
             _Input(f8); await Frames(2); // F8 opens the report window; opening it twice does nothing
             if (!BugReportScreen.IsOpen) throw new Exception("F8 did not open the bug report window");

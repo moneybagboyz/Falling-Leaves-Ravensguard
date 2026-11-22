@@ -3,7 +3,11 @@ using Godot;
 
 namespace Ravensguard.Game.Inputs;
 
-public enum InputContext { Global, World, CombatStance, CalledShot, Build, Menu, BlueprintEditor, Trade, Mounted, Choice, VehicleDesigner, Ledger, Treatment, Faction }
+public enum InputContext { Global, World, CombatStance, CalledShot, Build, Menu, BlueprintEditor, Trade, Mounted, Choice, VehicleDesigner, Ledger, Treatment, Faction,
+    /// <summary>P7-BB-D: the tactical pause overlay (modal, alone with Global).</summary>
+    Tactical,
+    /// <summary>P7-BB-D: the order wheel (modal while R is held, alone with Global).</summary>
+    OrderWheel }
 
 /// <summary>Key = layout keycode (F-keys, digits, symbols); PhysicalKey = scancode position (letters and the console key, so AZERTY/QWERTZ keep WASD); Mouse = button.</summary>
 public enum BindingKind { Key, Mouse, PhysicalKey }

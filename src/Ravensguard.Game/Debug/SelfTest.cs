@@ -115,9 +115,55 @@ public static class SelfTest
         CrashBridgeChecks();
 
         OnboardingChecks();
+        CommandKeyChecks(); // P7-BB-D: BB-17
 
         GD.Print($"selftest: {(_fails == 0 ? "ok" : _fails + " failure(s)")}");
         return _fails == 0;
+    }
+
+    /// <summary>
+    /// P7-BB-D, BB-17 (battle-bubble-and-formations 9, overview Q9): F1 to F4 select formations in World and CombatStance, Shift+F1 to F4 add, 0 opens the tactical overlay; Tactical and OrderWheel are modal contexts alone with
+    /// Global; every action of them (and of the three keys' contexts) is rebindable, named in en.csv and clean of conflicts; the overlay pages list them.
+    /// </summary>
+    static void CommandKeyChecks()
+    {
+        var map = KeyMap.CreateDefault();
+        Check(map.FindConflicts().Count == 0, "BB-17: the default key map has conflicts with Tactical and OrderWheel");
+        foreach (var ctx in new[] { "world", "combatstance" })
+        {
+            for (int k = 1; k <= 4; k++)
+            {
+                var f = Key.F1 + (k - 1);
+                Check(map.Get($"{ctx}.formation_{k}").SequenceEqual([Binding.K(f)]), $"BB-17: {ctx}.formation_{k} is not F{k}");
+                Check(map.Get($"{ctx}.formation_add_{k}").SequenceEqual([Binding.K(f, Mods.Shift)]), $"BB-17: {ctx}.formation_add_{k} is not Shift+F{k}");
+            }
+            Check(map.Get($"{ctx}.tactical_overlay").SequenceEqual([Binding.K(Key.Key0)]), $"BB-17: {ctx}.tactical_overlay is not 0");
+            Check(map.Get($"{ctx}.order_wheel").SequenceEqual([Binding.K(Key.R)]), $"BB-17: {ctx}.order_wheel is not R");
+        }
+        Check(InputDefs.All.Count(a => a.Context == InputContext.Tactical) >= 25 && InputDefs.All.Count(a => a.Context == InputContext.OrderWheel) == 7, "BB-17: the Tactical or OrderWheel actions are missing");
+        foreach (var ctx in new[] { InputContext.Tactical, InputContext.OrderWheel })
+        {
+            Check(ContextRules.ActiveTogether(ctx, InputContext.Global), $"BB-17: {ctx} must live beside Global");
+            foreach (var o in new[] { InputContext.World, InputContext.CombatStance, InputContext.Menu, InputContext.Choice, InputContext.Build })
+                Check(!ContextRules.ActiveTogether(ctx, o), $"BB-17: {ctx} is modal but lives beside {o}");
+        }
+        Check(map.Get("tactical.resume").SequenceEqual([Binding.K(Key.Space), Binding.K(Key.Key0)]) && map.Get("tactical.close").SequenceEqual([Binding.K(Key.Escape)]), "BB-17: Space or 0 resumes and Esc closes the overlay");
+        // every action is named in the text table
+        var keys = ParseCsv(ReadRes("res://localization/en.csv")).Select(r => r[0]).ToHashSet();
+        foreach (var a in InputDefs.All.Where(a => a.Context is InputContext.Tactical or InputContext.OrderWheel or InputContext.World or InputContext.CombatStance))
+            Check(keys.Contains(a.LocKey), "BB-17: en.csv lacks " + a.LocKey);
+        foreach (var c in new[] { "CONTEXT_TACTICAL", "CONTEXT_ORDERWHEEL", "OVERLAY_TACTICAL", "OVERLAY_ORDERWHEEL" }) Check(keys.Contains(c), "BB-17: en.csv lacks " + c);
+        // rebinding: every Tactical and OrderWheel action can take another key, the clash with a live action of its context is refused, and a free key is clean
+        foreach (var a in InputDefs.All.Where(a => a.Context is InputContext.Tactical or InputContext.OrderWheel))
+        {
+            var m = KeyMap.CreateDefault();
+            m.Rebind(a.Id, Binding.K(Key.F11));
+            Check(m.FindConflicts().Count == 0, $"BB-17: rebinding {a.Id} to F11 made a conflict");
+        }
+        var clash = KeyMap.CreateDefault();
+        Check(clash.FindClashes(clash.Find("tactical.captain")!, Binding.K(Key.Tab)).Any(x => x.Id == "tactical.next_formation"), "BB-17: Tab for the captain toggle should clash with next_formation");
+        // the two shapes of the same F-key do not clash (F1 and Shift+F1 are matched exactly), but a third binding of Shift+F1 does
+        Check(clash.FindClashes(clash.Find("tactical.captain")!, Binding.K(Key.F1, Mods.Shift)).Any(x => x.Id == "tactical.formation_add_1"), "BB-17: Shift+F1 is taken");
     }
 
     /// <summary>P5-A3: RoomDetector v2 on the real content: the two-room cottage has the same rooms as v1, the hearth room is a yard until roofed, and it houses two beds once furnished.</summary>

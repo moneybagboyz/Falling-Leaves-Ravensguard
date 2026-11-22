@@ -51,10 +51,15 @@ ACTION_WORLD_SPEED_4,Speed 4
 ACTION_WORLD_SPEED_8,Speed 8
 ACTION_WORLD_CALLED_SHOT,Called shot
 ACTION_WORLD_ORDER_WHEEL,Order wheel
-ACTION_WORLD_FORMATION_1,Formation 1
-ACTION_WORLD_FORMATION_2,Formation 2
-ACTION_WORLD_FORMATION_3,Formation 3
-ACTION_WORLD_FORMATION_4,Formation 4
+ACTION_WORLD_FORMATION_1,Select formation 1
+ACTION_WORLD_FORMATION_2,Select formation 2
+ACTION_WORLD_FORMATION_3,Select formation 3
+ACTION_WORLD_FORMATION_4,Select formation 4
+ACTION_WORLD_FORMATION_ADD_1,Add formation 1 to the selection
+ACTION_WORLD_FORMATION_ADD_2,Add formation 2 to the selection
+ACTION_WORLD_FORMATION_ADD_3,Add formation 3 to the selection
+ACTION_WORLD_FORMATION_ADD_4,Add formation 4 to the selection
+ACTION_WORLD_TACTICAL_OVERLAY,Tactical pause overlay
 ACTION_WORLD_PANEL_CHARACTER,Panel character
 ACTION_WORLD_PANEL_INVENTORY,Panel inventory
 ACTION_WORLD_PANEL_SQUAD,Panel squad
@@ -99,10 +104,16 @@ ACTION_COMBATSTANCE_DODGE_RIGHT,Dodge right
 ACTION_COMBATSTANCE_CONTEXT_MENU,Context menu
 ACTION_COMBATSTANCE_CALLED_SHOT,Called shot
 ACTION_COMBATSTANCE_ORDER_WHEEL,Order wheel
-ACTION_COMBATSTANCE_FORMATION_1,Formation 1
-ACTION_COMBATSTANCE_FORMATION_2,Formation 2
-ACTION_COMBATSTANCE_FORMATION_3,Formation 3
-ACTION_COMBATSTANCE_FORMATION_4,Formation 4
+ACTION_COMBATSTANCE_FORMATION_1,Select formation 1
+ACTION_COMBATSTANCE_FORMATION_2,Select formation 2
+ACTION_COMBATSTANCE_FORMATION_3,Select formation 3
+ACTION_COMBATSTANCE_FORMATION_4,Select formation 4
+ACTION_COMBATSTANCE_FORMATION_ADD_1,Add formation 1 to the selection
+ACTION_COMBATSTANCE_FORMATION_ADD_2,Add formation 2 to the selection
+ACTION_COMBATSTANCE_FORMATION_ADD_3,Add formation 3 to the selection
+ACTION_COMBATSTANCE_FORMATION_ADD_4,Add formation 4 to the selection
+ACTION_COMBATSTANCE_TACTICAL_OVERLAY,Tactical pause overlay
+ACTION_COMBATSTANCE_BATTLE_PAUSE,Pause into the tactical overlay (resume)
 ACTION_COMBATSTANCE_COMBAT_STANCE,Combat stance
 ACTION_COMBATSTANCE_THROW,Throw
 ACTION_COMBATSTANCE_SPRINT,Sprint
@@ -5614,6 +5625,43 @@ ACTION_FACTION_ACT,Ask or act
 ACTION_FACTION_SEARCH,Search
 ACTION_FACTION_BACK,Close the Faction screen
 OVERLAY_FACTION,Faction
+ACTION_TACTICAL_SELECT,Select a block (drag it to place a move)
+ACTION_TACTICAL_FRONTAGE,Draw a frontage (start to end: width and facing)
+ACTION_TACTICAL_QUEUE,Hold to queue the placement
+ACTION_TACTICAL_FORMATION_1,Select formation 1
+ACTION_TACTICAL_FORMATION_2,Select formation 2
+ACTION_TACTICAL_FORMATION_3,Select formation 3
+ACTION_TACTICAL_FORMATION_4,Select formation 4
+ACTION_TACTICAL_FORMATION_ADD_1,Add formation 1 to the selection
+ACTION_TACTICAL_FORMATION_ADD_2,Add formation 2 to the selection
+ACTION_TACTICAL_FORMATION_ADD_3,Add formation 3 to the selection
+ACTION_TACTICAL_FORMATION_ADD_4,Add formation 4 to the selection
+ACTION_TACTICAL_NEXT_FORMATION,Next formation
+ACTION_TACTICAL_ORDER_WHEEL,Order wheel
+ACTION_TACTICAL_CAPTAIN,Captain commands (toggle)
+ACTION_TACTICAL_UNDO,Undo the last placement
+ACTION_TACTICAL_CLEAR_QUEUE,Clear the placements
+ACTION_TACTICAL_LEVEL_UP,Level up
+ACTION_TACTICAL_LEVEL_DOWN,Level down
+ACTION_TACTICAL_PAN_UP,Pan up
+ACTION_TACTICAL_PAN_DOWN,Pan down
+ACTION_TACTICAL_PAN_LEFT,Pan left
+ACTION_TACTICAL_PAN_RIGHT,Pan right
+ACTION_TACTICAL_ZOOM_IN,Zoom in
+ACTION_TACTICAL_ZOOM_OUT,Zoom out
+ACTION_TACTICAL_RESUME,Resume
+ACTION_TACTICAL_CLOSE,Close the overlay (stay paused)
+ACTION_ORDERWHEEL_UP,Sector up
+ACTION_ORDERWHEEL_DOWN,Sector down
+ACTION_ORDERWHEEL_LEFT,Sector left
+ACTION_ORDERWHEEL_RIGHT,Sector right
+ACTION_ORDERWHEEL_RING_NEXT,Next ring
+ACTION_ORDERWHEEL_ISSUE,Issue the order
+ACTION_ORDERWHEEL_CANCEL,Cancel
+CONTEXT_TACTICAL,The tactical pause overlay
+CONTEXT_ORDERWHEEL,The order wheel
+OVERLAY_TACTICAL,Tactical
+OVERLAY_ORDERWHEEL,Order wheel
 sl_bought,You buy the slave and have him chained to your side.
 sl_sold,You sell the slave to a buyer of the town.
 sl_freed,You free the slave.
@@ -6402,6 +6450,83 @@ mt_per_kg,a kg
 mt_per_pack,per {0} kg
 mt_each,each
 mt_pieces,"{0} gold, {1} silver, {2} copper ({3} g)"
+bcmd_side_you,"You: {0} standing, {1} down"
+bcmd_side_foe,"Foe: {0} standing, {1} down"
+bcmd_morale,morale {0}%
+bcmd_hint,{0} select | {1} orders | {2} tactical pause
+bcmd_hint_squad,{0} the squad | {1} orders
+bcmd_card_men,{0}/{1}
+bcmd_card_stats,coh {0}%  mor {1}%
+bcmd_more,{0} more (Tab in the overlay)
+bcmd_squad,Squad
+bcmd_idle,no order
+bcmd_shape_line,Line
+bcmd_shape_shield_wall,Shield wall
+bcmd_shape_loose,Loose
+bcmd_shape_column,Column
+bcmd_shape_schiltron,Schiltron
+bcmd_shape_wedge,Wedge
+bcmd_shape_wagon_fort,Wagon fort
+bcmd_shape_fall_back,Fall back
+bcmd_shape_auto,Auto
+bcmd_order_none,no order
+bcmd_order_move_to,Move
+bcmd_order_advance,Advance
+bcmd_order_charge,Charge
+bcmd_order_hold,Hold
+bcmd_order_follow_me,Follow me
+bcmd_order_flank_left,Flank left
+bcmd_order_flank_right,Flank right
+bcmd_order_shield_wall,Shield wall
+bcmd_order_loose,Loose
+bcmd_order_line,Line
+bcmd_order_column,Column
+bcmd_order_set_against_cavalry,Set against cavalry
+bcmd_order_fire_at_will,Fire at will
+bcmd_order_hold_fire,Hold fire
+bcmd_order_attack_formation,Attack
+bcmd_order_retreat,Retreat
+bcmd_order_rally,Rally
+bcmd_order_face,Face
+bcmd_order_wheel,Wheel
+bcmd_order_dismount,Dismount
+bcmd_order_mount,Mount
+bcmd_order_shoot_at,Shoot at...
+bcmd_ring_orders,Orders
+bcmd_ring_shape,Shape
+bcmd_ring_missiles,Missiles
+bcmd_signal_voice,voice
+bcmd_signal_horn,horn
+bcmd_signal_runner,runner
+bcmd_signal_captain,the captain
+bcmd_tip,"{0}: arrives in {1} s, by {2}"
+bcmd_tip_squad,{0}: the squad takes it at once
+bcmd_tip_off,{0}: not available here
+bcmd_wheel_target,To: {0}
+bcmd_wheel_none,nothing selected: formation 1
+bcmd_wheel_hint,Mouse or arrows pick | {0} next ring | release {1} or {2} issues | {3} cancels
+bcmd_ov_title,Tactical pause
+bcmd_ov_paused,"PAUSED - orders go out when you resume, and each one's delay runs from then"
+bcmd_ov_list,Formations
+bcmd_ov_captain,"Captain {0}, Tactics {1}"
+bcmd_ov_no_captain,No captain on his feet
+bcmd_ov_drill,Drill {0}
+bcmd_ov_men,Men {0} of {1}
+bcmd_ov_state,"Cohesion {0}%, morale {1}%"
+bcmd_ov_orders,Orders
+bcmd_ov_now,Now: {0}
+bcmd_ov_queued,Next: {0}
+bcmd_ov_pending,{0} in {1} s
+bcmd_ov_draft,"{0} (placed, goes out on resume)"
+bcmd_ov_lost,An order was lost: the runner fell
+bcmd_ov_captain_on,Captain commands: always ({0})
+bcmd_ov_captain_off,Captain commands: when you are silent ({0})
+bcmd_ov_ghost,seen {0} s ago
+bcmd_ov_nothing,No formations to command.
+bcmd_ov_keys,"{0} select, drag to move | {1} drag a frontage | {2} queue | {3} undo | {4} clear | {5} wheel | {6} resume | {7} close"
+bcmd_paused,"PAUSED - {0} resumes, {1} opens the overlay"
+bcmd_toast_none,No formation of yours to command.
+bcmd_toast_lost,An order was lost: the runner fell.
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."

@@ -18,11 +18,28 @@ public sealed partial class FormationBook
     public FormationOrder? Issue(FightWorld w, FormationRow r, FormationOrder o, int issuer = -1, int leadership = 0, bool queue = false)
     {
         if (r.PendingCount >= r.Pending.Length) return null;
+        int delay = DelayOf(w, r, ref o, issuer, leadership, out int runner);
+        o.Runner = runner; o.By = issuer; o.Queued = queue; o.Serial = ++_serial;
+        o.IssuedTick = w.Tick; o.ArriveTick = w.Tick + delay;
+        if (o.TargetFighter == 0 && o.Kind != OrderKind.FollowMe) o.TargetFighter = -1;
+        int k = r.PendingCount++;
+        while (k > 0 && (r.Pending[k - 1].ArriveTick > o.ArriveTick)) { r.Pending[k] = r.Pending[k - 1]; k--; }
+        r.Pending[k] = o;
+        r.Micro = w.Tick;
+        return o;
+    }
+
+    /// <summary>
+    /// The delay of an order in ticks and how it travels (4.5), and sets <paramref name="o"/>'s signal: what <see cref="Issue"/> uses, and the order wheel's tooltip ("arrives in 2.0 s, by horn") before the order is given.
+    /// Pure: it picks a runner (<paramref name="runner"/>) but changes nothing in the fight.
+    /// </summary>
+    public int DelayOf(FightWorld w, FormationRow r, ref FormationOrder o, int issuer, int leadership, out int runner)
+    {
         var R = Rules.R;
         int delay = Math.Max(R.DelayMinTicks, R.DelayBaseTicks - leadership * R.DelayLeadershipNum / Math.Max(1, R.DelayLeadershipDen));
         var cap = r.Captain >= 0 ? w.Fighters[r.Captain] : null;
         int cx = cap?.X ?? r.AnchorX, cy = cap?.Y ?? r.AnchorY;
-        long dist = 0; int runner = -1;
+        long dist = 0; runner = -1;
         Fighter? from = issuer >= 0 && issuer < w.Fighters.Count ? w.Fighters[issuer] : null;
         if (from != null) dist = FightMath.Len(cx - from.X, cy - from.Y);
         o.Signal = OrderSignal.Voice;
@@ -35,14 +52,7 @@ public sealed partial class FormationBook
                 runner = PickRunner(w, from!);
             }
         }
-        o.Runner = runner; o.By = issuer; o.Queued = queue; o.Serial = ++_serial;
-        o.IssuedTick = w.Tick; o.ArriveTick = w.Tick + delay;
-        if (o.TargetFighter == 0 && o.Kind != OrderKind.FollowMe) o.TargetFighter = -1;
-        int k = r.PendingCount++;
-        while (k > 0 && (r.Pending[k - 1].ArriveTick > o.ArriveTick)) { r.Pending[k] = r.Pending[k - 1]; k--; }
-        r.Pending[k] = o;
-        r.Micro = w.Tick;
-        return o;
+        return delay;
     }
 
     /// <summary>The ticks from now until the order reaches the formation's captain (the overlay's countdown).</summary>

@@ -20,7 +20,7 @@ public partial class FightDemo : Node2D
     static FightContent? _content;
     FightView _view = null!;
     FightWorld _w = null!;
-    bool _skirmish, _practice; ulong _seed = 7;
+    bool _skirmish, _practice, _battle; ulong _seed = 7;
     string? _shotOut, _shotWhat;
 
     public static FightContent Content()
@@ -39,7 +39,8 @@ public partial class FightDemo : Node2D
         int k = Array.IndexOf(args, "--fight-demo");
         _skirmish = k >= 0 && k + 1 < args.Length && args[k + 1] == "skirmish";
         _mounted = k >= 0 && k + 1 < args.Length && args[k + 1] == "mounted";             // [mounted-combat] FightDemo.Mounted.cs
-        _practice = k >= 0 && k + 1 < args.Length && args[k + 1] == "practice";           // P4-F: a yard bout on the real fight
+        _practice = k >= 0 && k + 1 < args.Length && args[k + 1] == "practice";
+        _battle = k >= 0 && k + 1 < args.Length && args[k + 1] == "battle";                // P7-BB-D: two armies in formations, the command layer (F1-F4, R, 0)           // P4-F: a yard bout on the real fight
         _seed = ulong.TryParse(Arg("--seed", "7"), out var s) ? s : 7;
         _shotOut = Arg("--shot-out", ""); if (_shotOut.Length == 0) _shotOut = null;
         _shotWhat = Arg("--shot-what", "windup");
@@ -51,6 +52,7 @@ public partial class FightDemo : Node2D
     FightWorld Build()
     {
         var c = Content();
+        if (_battle) return BattleScenario.Make(240, 60, _seed, hero: true);
         if (_mounted) return BuildMounted(c);
         if (_practice)
         {
@@ -89,7 +91,7 @@ public partial class FightDemo : Node2D
             AddChild(_view);
         }
         else _view.Replace(_w);
-        if (!_skirmish && hero >= 0) { _view.Log.Info(hero).Name = "Aldric"; _view.Log.Info(1 - hero).Name = "Bram"; }       // the log names people
+        if (!_skirmish && !_battle && hero >= 0) { _view.Log.Info(hero).Name = "Aldric"; _view.Log.Info(1 - hero).Name = "Bram"; }       // the log names people
         _view.Banner = _mounted ? L.T("mt_demo_mounted") : L.T(_skirmish ? "FIGHT_DEMO_SKIRMISH" : "FIGHT_DEMO_DUEL");
         GetTree().CreateTimer(3.0).Timeout += () => { if (IsInstanceValid(_view)) _view.Banner = ""; };
     }
@@ -166,6 +168,29 @@ public partial class FightDemo : Node2D
             case "charge" or "impact" or "brace" or "unhorsed":
                 StageMounted(_shotWhat!, hero);                     // [mounted-combat]
                 break;
+            case "overlay" or "wheel" or "battle":
+            {
+                // P7-BB-D: a battle of formations, 20 s in, with formation 1 and 3 selected; the tactical pause overlay with a move and a drawn frontage placed (and one order on its way), or the order wheel
+                hero.Player = true;
+                _view.Advance(20 * 12);
+                _view.Cmd.Select(1, false, 0); _view.Cmd.Select(2, true, 1);
+                _view.Zoom = 0.6f;
+                _view.ClearCallouts();
+                if (_shotWhat != "battle")
+                {
+                    _view.OpenOverlay();
+                    var c1 = _view.Cmd.CentreOf(_view.Cmd.Mine()[0]);
+                    if (c1 is { } cc)
+                    {
+                        _view.Cmd.MoveTo(1, cc.X + 40_000, cc.Y - 30_000, false);
+                        _view.Cmd.Draw(2, (cc.X + 30_000, cc.Y + 20_000), (cc.X + 40_000, cc.Y + 70_000), false);
+                    }
+                    _view.Cmd.Give(new WheelItem("bcmd_order_hold", Ravensguard.Sim.Battle.OrderKind.Hold), false);
+                    if (_shotWhat == "wheel") { _view.Overlay?.Resume(); _view.OpenWheel(); _view.Wheel?.Pick(0, 1); }
+                }
+                _view.SetProcess(true); await Frames(2); _view.SetProcess(false);
+                break;
+            }
             case "calledshot":
                 _view.Advance(30);
                 hero.Player = true;

@@ -37,6 +37,8 @@ public partial class ControlsOverlay : Control
         new("ledger", [.. Of(InputContext.Ledger)], [], InputContext.Ledger),                            // P5-F
         new("treatment", [.. Of(InputContext.Treatment)], [], InputContext.Treatment),                    // P6-B1
         new("faction", [.. Of(InputContext.Faction)], [], InputContext.Faction),                          // P6-D2
+        new("tactical", [.. Of(InputContext.Tactical)], [], InputContext.Tactical),                     // P7-BB-D
+        new("orderwheel", [.. Of(InputContext.OrderWheel)], [], InputContext.OrderWheel),               // P7-BB-D
     ];
 
     public static OverlayView View(string id) => Views().First(v => v.Id == id);

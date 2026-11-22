@@ -55,7 +55,7 @@ public static class Phase3Smoke
 
     static string Path(Node n) { var parts = new List<string>(); for (var p = n; p != null && parts.Count < 4; p = p.GetParent()) parts.Add(p.Name); return string.Join("<", parts); }
 
-    static void Fit(Control root, string what, Rect2 view)
+    public static void Fit(Control root, string what, Rect2 view)
     {
         var bad = Misfits(root, view);
         if (bad.Count > 0 && System.Environment.GetEnvironmentVariable("RG_SMOKE_DUMP") != null) Dump(root, 0);
