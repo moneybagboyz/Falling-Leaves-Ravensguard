@@ -501,6 +501,31 @@ public class CavalryTests(FightFixture fx, ITestOutputHelper output)
         Assert.Equal(FightRecord.Capture(full).ToBytes(), FightRecord.Capture(back).ToBytes());
     }
 
+    /// <summary>Save, load and continue at every 20th tick of the approach (walk, trot, gallop, couch) to well past contact: the fight hash and every fighter's position equal the uninterrupted run on every tick.</summary>
+    [Fact]
+    public void Save_SaveLoadContinue_EveryTwentyTicksOfTheApproach_MatchesTheUninterruptedRunEveryTick()
+    {
+        const int Gap = 300_000;
+        var probe = Battle(31, Gap); var prow = probe.Formations!.Rows[0];
+        while (prow.FirstContactTick < 0 && probe.Tick < 4000) probe.StepWithAi();
+        int contact = prow.FirstContactTick; Assert.True(contact > 0);
+        var full = Battle(31, Gap); var part = Battle(31, Gap);
+        for (int at = 20; at <= contact + 20; at += 20)
+        {
+            while (part.Tick < at) { full.StepWithAi(); part.StepWithAi(); }
+            var back = FightRecord.FromBytes(FightRecord.Capture(part).ToBytes()).Restore(fx.C);
+            var ghost = Battle(31, Gap); while (ghost.Tick < at) ghost.StepWithAi();              // the uninterrupted run's twin, advanced beside the loaded copy
+            for (int t = 0; t < 60; t++)
+            {
+                ghost.StepWithAi(); back.StepWithAi();
+                Assert.True(ghost.Hash() == back.Hash(), $"hash differs {t + 1} ticks after a load at tick {at}");
+                for (int i = 0; i < ghost.Fighters.Count; i++)
+                    Assert.True((ghost.Fighters[i].X, ghost.Fighters[i].Y) == (back.Fighters[i].X, back.Fighters[i].Y), $"fighter {i} differs {t + 1} ticks after a load at tick {at}");
+                Assert.True(ghost.Formations!.Rows[0].AnchorX == back.Formations!.Rows[0].AnchorX && ghost.Formations.Rows[0].AnchorY == back.Formations.Rows[0].AnchorY, $"anchor differs {t + 1} ticks after a load at tick {at}");
+            }
+        }
+    }
+
     [Fact]
     public void Save_ABookWithNoCavalryRowIsByteForByteBBB_AndAnOldSaveLoads()
     {

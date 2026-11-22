@@ -212,6 +212,9 @@ public sealed partial class FormationBook
     public void Step(FightWorld w)
     {
         int tick = w.Tick + 1;
+        // The counts a row reads of another (ActiveNow, RoutingNow, TotalNow) are derived, not saved: take them all from the fighters as they stand now, so a row stepped before another sees
+        // the same numbers whether the world ran on or was just loaded (a loaded book holds none until its first census).
+        for (int i = 0; i < Rows.Count; i++) Census(w, Rows[i]);
         for (int i = 0; i < Rows.Count; i++) StepRow(w, Rows[i], tick);
     }
 
