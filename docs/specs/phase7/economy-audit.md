@@ -156,11 +156,11 @@ The same scenario runs on seeds **1234, 1, 7, 42, 9001**. A second run of seed 1
 | WL-3 money supply | G4 |
 | WL-4 bread on the march route | staple price index of the towns within 8 km of the route peaks at <= 3,000 permille of Y3-Y5 (the clamp is 4,000) and is <= 1,300 by Y12; the region's mean peaks <= 2,000 |
 | WL-5 starvation | outside the besieged town, deaths from starvation in Y6-Y10 <= 3% of the Y5 population; inside it <= 40%; none in the control |
-| WL-6 harvest | Y8 (levies out through harvest) 10-35% below the control; Y11 within 10% |
+| WL-6 harvest | **waived by the user (overview 10e, 21 Nov 2026: war costs no harvest here)**; the Y8 and Y11 measures are printed as information (was: Y8 10-35% below the control, Y11 within 10%) |
 | WL-7 unrest | every settlement purveyed has grievances that season; at least one reaches rung 2; no realm ruler changes from unrest alone |
 | WL-8 treasury | the realm treasury pays or records arrears; the stand-in desertion fires when it cannot; no purse below zero (the ledger guarantees it) |
 | WL-9 kit | 960 kits filled within 30 days of the Y6 order from armouries, markets, commissions and arms imports, or the shortfall names its first dry input (B1-B6) |
-| WL-10 recovery | G1, G2, G3 |
+| WL-10 recovery | G1, G2, G3, with G2 read against the control at the same year (EA_F10, accepted 21 Nov 2026; EA3b): wages a day within 10% of the control's; the Y3-Y5 line is information |
 | WL-11 merchants | cash-solvent merchants >= 60% each year (Phase 2 gate), >= 40% in Y8-Y9 |
 | WL-12 chronicle | specific coverage >= 0.90; a staple price rise in a town the army bought from within 5 days names the army (not "market drift") |
 | WL-13 determinism and saves | two runs of seed 1234 give equal hashes at Y10 day 60; save, load, save byte-identical at Y6 day 20, Y8 day 40, Y9 day 10 (mid-siege) |

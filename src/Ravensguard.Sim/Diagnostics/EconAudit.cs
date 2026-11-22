@@ -119,7 +119,8 @@ public static class EconAudit
             case "X2" when db != null:
             {
                 var (target, glut, stapleGlut) = AuditMeasures.DeskOverAsk(econ.Money);
-                return (glut < 1 ? AuditState.Pass : AuditState.Fail, $"the desk's export bid after the toll is {target:P0} of the book's ask at target stock (no loop) but {glut:P0} ({stapleGlut:P0} for a staple) of it at the glut threshold, 2.8x cover, where the desk acts: it pays the book's reference, not the glut price (finding EA_F5)");
+                // EA_F5 is a Low finding the user accepted as a known limit (21 Nov 2026): it prints as information, not as a failed row
+                return (glut < 1 ? AuditState.Pass : AuditState.Info, $"{(glut < 1 ? "" : "ACCEPTED Low (EA_F5, the user 21 Nov 2026): ")}the desk's export bid after the toll is {target:P0} of the book's ask at target stock (no loop) but {glut:P0} ({stapleGlut:P0} for a staple) of it at the glut threshold, 2.8x cover, where the desk acts: it pays the book's reference, not the glut price (finding EA_F5)");
             }
             case "X3" when db != null:
             {

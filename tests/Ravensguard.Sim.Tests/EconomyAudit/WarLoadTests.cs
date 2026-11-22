@@ -162,7 +162,8 @@ public class WarLoadTests(ITestOutputHelper output)
         Assert.True(soak.Ok, soak.FirstFailure);
         var gates = WarGates.Evaluate(soak.Rows, ctl); output.WriteLine(WarGates.Format(gates));
         foreach (var id in new[] { "WL-1", "WL-2", "WL-3", "WL-4", "WL-5", "WL-8", "WL-11" }) Assert.Equal(AuditState.Pass, gates.Single(g => g.Id == id).State);
-        Assert.Equal(AuditState.Fail, gates.Single(g => g.Id == "WL-6").State);          // the finding EA_F9: the levies do not cut the harvest
+        Assert.Equal(AuditState.Info, gates.Single(g => g.Id == "WL-6").State);          // EA_F9 accepted by the user (overview 10e, 21 Nov 2026): war costs no harvest here, WL-6 is waived and its measure printed as information
+        Assert.Contains("WAIVED", gates.Single(g => g.Id == "WL-6").Text);
     }
 
     /// <summary>The nightly one: the whole 25-year scenario on seed 1234 (the five seeds and WL-1 to WL-15 are EA3's EA-15). About 5 minutes.</summary>

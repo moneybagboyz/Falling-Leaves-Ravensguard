@@ -179,6 +179,7 @@ public class AuditProbeTests(ITestOutputHelper output)
         ("Sim/Caravans/ContinentDesk.cs", 1, "Immigrate: the border desk pays for a glut it carries off, within PayBudgetMites"),
         ("Sim/People/Vital/Demography.cs", 1, "Immigrate: an immigrant household's stake"),
         ("Sim/Diagnostics/Phase6Trail.cs", 1, "Seed: the Phase 6 trail's fixture"),
+        ("Sim/Diagnostics/WarLoadIndustry.cs", 2, "Seed: the war-load harness's scripted L3 works, its founding bill and working capital (P7-EA3b, diagnostics only)"),
         ("Sim/Trade/AbroadDealing.cs", 2, "CoinIn: the hero's dealing abroad, the same coin leaves by CoinOut (Sink Emigrate) on the other call"),
         ("Sim/Hero/StartingEstate.cs", 1, "Seed: the hero's estate at the start"),
         ("Sim/Economy/Mints.cs", 2, "Mint: the mint strikes coin for the gold or silver delivered (into the seller's purse) and token copper at face (P7-CN1); the metal is destroyed as Materialised"),

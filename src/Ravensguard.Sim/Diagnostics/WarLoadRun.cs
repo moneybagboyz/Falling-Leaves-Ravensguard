@@ -1,6 +1,7 @@
 using System.Text;
 using Ravensguard.Content;
 using Ravensguard.Sim.Core;
+using Ravensguard.Sim.Production.Industry;
 using Ravensguard.Sim.Economy;
 using Ravensguard.Sim.People;
 using Ravensguard.Sim.People.Vital;
@@ -138,6 +139,25 @@ public sealed class WarYearRow
     public long FarmDemandH, FarmUnmetH;
     public bool CoinOk, MassOk;
     public string Hash = "";
+    // ---- P7-EA3b: the second run's columns (money by source, industries, price level, timing)
+    /// <summary>Coin that crossed the region border in the year (immigrants' purses in, emigrants' purses out), struck at the mints, melted, and left in hoards at the year's end; the harness's one-off seed (the L3 works' capital) already made, subtracted from <see cref="MoneySupply"/>.</summary>
+    public long ImmigMites, EmigMites, MintMites, MeltMites, HoardMites, HarnessSeedMites;
+    /// <summary>Works (open at the year's end, founded in the year, closed in the year) of the industries; NPC works are those the founders made.</summary>
+    public int WorksOpen, WorksFounded, WorksClosed;
+    /// <summary>The median over non-piece goods of the books' mean reference price as permille of the content's base price, and the same for the wage a day (the wage classes are fixed content): the price level against the wages.</summary>
+    public int RefPricePermille;
+    /// <summary>Charcoal and bar iron over the region's books at the year's end: stock (kg), days of cover (stock over the books' demand), the books' mean mid price as permille of base; and the kg made in the year (created from labour: the mass book's creations).</summary>
+    public long CharcoalKg, IronBarKg, CharcoalMadeKg, IronBarMadeKg; public int CharcoalCoverPm, IronBarCoverPm, CharcoalPricePm, IronBarPricePm;
+    /// <summary>Wall-clock milliseconds a game day took, the mean over the year, and the slowest single hour step the soak made (the hour of the host slot).</summary>
+    public long DayMsMean, HourMsMax;
+    /// <summary>What crossed the border in the year, by cause (the trade desk's and the caravans' exports paid by Immigrate and imports by Emigrate; the desk's share of each): the rest of <see cref="ImmigMites"/> is the immigrants' stakes and of <see cref="EmigMites"/> the emigrants' purses, tolls and soldiers away.</summary>
+    public long ExpMites, ImpMites, DeskExpMites, DeskImpMites;
+    /// <summary>The L3 works' line at the year's end (empty when there is none).</summary>
+    public string L3 = "";
+    /// <summary>Per chain: open works and the NPC works' mean net a day over the last 60 days.</summary>
+    public string Chains = "";
+    /// <summary>The books' mean reference price over the content's base price (percent) for the chain goods and the staples, and the 25th, 50th, 75th and 90th percentile over all non-piece goods (permille).</summary>
+    public string Prices = "";
 }
 
 /// <summary>The war-load soak on a <see cref="WarLoadRun"/>: runs the scenario and the control, one row a year. The gates that need the audit's own measures (WL-3 to WL-12, WL-14, WL-15) are EA2's; the first cut gates WL-1 and WL-2 (coin and mass exact every day) and prints the rest.</summary>
@@ -145,7 +165,15 @@ public sealed class WarLoadSoak(WarLoadRun run, int years, bool control = false)
 {
     /// <summary>The realm raises the coin of each campaign (<see cref="WarFunding"/>); false leaves the chest to whatever the treasury holds (the first cut's behaviour).</summary>
     public bool RealmRaises { get; set; } = true;
+    /// <summary>P7-EA3b: the scripted L3 iron works, founded on day 1 of <see cref="L3Year"/> at a town of the march route (null: none).</summary>
+    public L3IronWorks? L3 { get; set; }
+    public int L3Year { get; set; } = 2;
+    /// <summary>Called at the start of each game day (year, day of the year 1-60) before anything of that day runs: the checks of WL-13 hang here.</summary>
+    public Action<int, int, WarLoadRun>? AtDayStart { get; set; }
     private long _routeSum, _routePeak, _regionSum, _regionPeak, _samples, _wage0, _demand0, _unmet0;
+    private long _exp0, _imp0, _dexp0, _dimp0;
+    private long _immig0, _emig0, _mint0, _melt0, _charMade0, _barMade0, _dayMsSum, _hourMsMax; private int _founded0, _closed0;
+    private readonly System.Diagnostics.Stopwatch _clock = new();
     private int[] _routeBooks = [];
     private ushort[] _stapleIds = [];
 
@@ -163,13 +191,22 @@ public sealed class WarLoadSoak(WarLoadRun run, int years, bool control = false)
         home = largest; siegeTown = largest; gate = WarLoad.FarthestSettlement(region, home);
         long hunger0 = run.State.Abstract!.Vital.DeathsByCause[(int)DeathCause.Hunger];
         PrepareIndex(region, home, gate);
+        var led0 = run.Econ.Ledger; _immig0 = led0.Sourced(SourceReason.Immigrate).Mites; _emig0 = led0.Sunk(SinkReason.Emigrate).Mites; _mint0 = led0.Sourced(SourceReason.Mint).Mites; _melt0 = led0.Sunk(SinkReason.Melt).Mites;
+        _charMade0 = Made("charcoal"); _barMade0 = Made("iron_bar"); _founded0 = _closed0 = 0;
         _wage0 = run.Econ.Ledger.Flow(TransferReason.Wage).Mites; _demand0 = run.Economy.Farming.TotalDemandH; _unmet0 = run.Economy.Farming.TotalUnmetH;
         for (int y = 1; y <= years; y++)
         {
-            tally.Reset(); _routeSum = _routePeak = _regionSum = _regionPeak = _samples = 0;
+            tally.Reset(); _routeSum = _routePeak = _regionSum = _regionPeak = _samples = 0; _dayMsSum = _hourMsMax = 0;
             for (int d = 1; d <= TimeConst.DaysPerYear; d++)
             {
                 int day = startYearDay + (y - 1) * TimeConst.DaysPerYear + d - 1;
+                AtDayStart?.Invoke(y, d, run);
+                _clock.Restart();
+                if (L3 != null)
+                {
+                    if (L3.Works == null && y == L3Year && d == 1) { L3.Place(day, WarLoad.RouteFor(region, home, gate)); }
+                    else L3.Daily(day);
+                }
                 if (!control && load == null)
                 {
                     foreach (var c in WarLoadScenario.Campaigns)
@@ -192,7 +229,7 @@ public sealed class WarLoadSoak(WarLoadRun run, int years, bool control = false)
                         load.Before(marching: !load.Home);
                     }
                 }
-                run.AfterSlot(day);
+                long hourT = _clock.ElapsedMilliseconds; run.AfterSlot(day); _hourMsMax = Math.Max(_hourMsMax, _clock.ElapsedMilliseconds - hourT);
                 if (load != null)
                 {
                     load.After(day);
@@ -201,6 +238,7 @@ public sealed class WarLoadSoak(WarLoadRun run, int years, bool control = false)
                 }
                 Sample();
                 run.AdvanceToDayEnd(day);
+                _dayMsSum += _clock.ElapsedMilliseconds;
             }
             var row = Row(y, tally, hunger0, sup, siegeTown);
             hunger0 = run.State.Abstract!.Vital.DeathsByCause[(int)DeathCause.Hunger];
@@ -225,11 +263,12 @@ public sealed class WarLoadSoak(WarLoadRun run, int years, bool control = false)
         if (!row.CoinOk || !row.MassOk) Fail($"year {y} end: coin {row.CoinOk}, mass {row.MassOk}");
         row.Hash = sup.Book.Hash();
         row.AidMites = t.AidMites; row.TallageMites = t.TallageMites;
-        row.MoneySupply = row.RegionCoin;
+        row.MoneySupply = row.RegionCoin;                                  // MeasureEconomy subtracts the harness's one-off seed
         long wage = led.Flow(TransferReason.Wage).Mites; row.WagesPerDay = (wage - _wage0) / TimeConst.DaysPerYear; _wage0 = wage;
         row.RouteMeanMilli = _samples == 0 ? 0 : _routeSum / _samples; row.RoutePeakMilli = _routePeak; row.RegionMeanMilli = _samples == 0 ? 0 : _regionSum / _samples; row.RegionPeakMilli = _regionPeak;
         var fm = run.Economy.Farming; row.FarmDemandH = fm.TotalDemandH - _demand0; row.FarmUnmetH = fm.TotalUnmetH - _unmet0; _demand0 = fm.TotalDemandH; _unmet0 = fm.TotalUnmetH;
         MeasureWorld(row);
+        MeasureEconomy(row);
         return row;
     }
 
@@ -266,6 +305,74 @@ public sealed class WarLoadSoak(WarLoadRun run, int years, bool control = false)
         long route = MeanStaple(_routeBooks.Select(i => markets.Books[i]!)), region = MeanStaple(markets.AllBooks());
         _routeSum += route; _regionSum += region; _routePeak = Math.Max(_routePeak, route); _regionPeak = Math.Max(_regionPeak, region); _samples++;
     }
+
+    private long Made(string good) => run.Econ.Goods.TryIdOf(good, out var id) ? run.Econ.Mass.TotalCreated(id) / 1000 : 0;
+
+    /// <summary>P7-EA3b columns: coin by source, the works, the price level, charcoal and iron, the clock.</summary>
+    private void MeasureEconomy(WarYearRow row)
+    {
+        var led = run.Econ.Ledger; var cat = run.Econ.Goods; var markets = run.Economy.Markets;
+        long im = led.Sourced(SourceReason.Immigrate).Mites, em = led.Sunk(SinkReason.Emigrate).Mites, mi = led.Sourced(SourceReason.Mint).Mites, me = led.Sunk(SinkReason.Melt).Mites;
+        row.ImmigMites = im - _immig0; row.EmigMites = em - _emig0; row.MintMites = mi - _mint0; row.MeltMites = me - _melt0; _immig0 = im; _emig0 = em; _mint0 = mi; _melt0 = me;
+        row.HoardMites = led.Audit().InHoards.Mites;
+        var tr = run.Economy.Trade;
+        row.ExpMites = tr.ExportedMites - _exp0; row.ImpMites = tr.ImportedMites - _imp0; row.DeskExpMites = tr.DeskExportedMites - _dexp0; row.DeskImpMites = tr.DeskImportedMites - _dimp0;
+        _exp0 = tr.ExportedMites; _imp0 = tr.ImportedMites; _dexp0 = tr.DeskExportedMites; _dimp0 = tr.DeskImportedMites;
+        row.HarnessSeedMites = L3?.SeedMites ?? 0;
+        row.MoneySupply = row.RegionCoin - row.HarnessSeedMites;
+        var book = run.State.Industry; int day = (int)(run.HourDone / 24);
+        if (book != null)
+        {
+            int open = 0, founded = 0, closed = 0; int yearStart = day - TimeConst.DaysPerYear;
+            foreach (var w in book.Works) { if (!w.Closed) open++; if (w.StartedDay > yearStart && w.StartedDay <= day) founded++; }
+            // works closed this year: the total closed now less the total at the last row (the book keeps no close day)
+            int closedNow = book.Works.Count(w => w.Closed); closed = closedNow - _closed0; _closed0 = closedNow;
+            row.WorksOpen = open; row.WorksFounded = founded; row.WorksClosed = closed;
+            var chains = new SortedDictionary<string, (int Open, int Npc, long Net, int Aged)>(StringComparer.Ordinal); var iw = run.State.HomeRecords!.Sim.Get<IndustryWorld>()!;
+            foreach (var w in book.Works)
+            {
+                if (w.Closed) continue; var c = chains.GetValueOrDefault(w.Chain);
+                c.Open++;
+                if (iw.IsNpc(w) && w.StartedDay < 900_000 && day - w.StartedDay >= 60) { c.Npc++; c.Net += w.Stages.Sum(s => s.Net(day, WorkStage.RingDays)) / WorkStage.RingDays; }
+                chains[w.Chain] = c;
+            }
+            row.Chains = string.Join("; ", chains.Select(kv => $"{kv.Key} {kv.Value.Open} open" + (kv.Value.Npc > 0 ? $", {kv.Value.Npc} NPC aged 60+ d net {kv.Value.Net / kv.Value.Npc:N0}/d each" : "")));
+        }
+        // the price level: the median of goods' mean reference price over their base price
+        var ratios = new List<int>(); var books = markets.AllBooks().ToList();
+        for (int g = 0; g < cat.Count; g++)
+        {
+            ushort id = (ushort)g; if (cat.IsPiece(id)) continue; double bp = cat.Def(id).BasePriceMitesPerKg; if (bp < 0.05) continue;
+            double sum = 0; int n = 0; foreach (var b in books) { sum += b.Goods[id].RefMicro; n++; }
+            if (n == 0) continue; ratios.Add((int)(sum / n * 1000.0 / Ravensguard.Sim.Economy.Markets.PriceCurve.Micro / bp * 1000));
+        }
+        ratios.Sort();
+        if (ratios.Count > 0) row.Prices = $"all goods p25 {ratios[ratios.Count / 4]} p50 {ratios[ratios.Count / 2]} p75 {ratios[ratios.Count * 3 / 4]} p90 {ratios[ratios.Count * 9 / 10]} permille of base; " + string.Join(", ", new[] { "iron_ore", "iron_bar", "charcoal", "clay", "bricks", "logs", "planks", "firewood", "wheat", "bread" }.Where(g => cat.TryIdOf(g, out _)).Select(g =>
+        {
+            var id = cat.IdOf(g); double sm = 0, mid = 0; foreach (var b in books) { sm += b.Goods[id].RefMicro; mid += b.MidMicro(id); }
+            double bp = Math.Max(0.001, cat.Def(id).BasePriceMitesPerKg) * Ravensguard.Sim.Economy.Markets.PriceCurve.Micro / 1000.0;
+            return $"{g} ref {sm / books.Count / bp:P0} mid {mid / books.Count / bp:P0}";
+        }));
+        row.RefPricePermille = ratios.Count == 0 ? 0 : ratios[ratios.Count / 2];
+        void Fuel(string good, out long kg, out int cover, out int price)
+        {
+            kg = 0; cover = 0; price = 0; if (!cat.TryIdOf(good, out var id)) return;
+            long stock = 0, demand = 0; double ps = 0; foreach (var b in books) { stock += b.Goods[id].StockUnits; demand += b.Goods[id].Demand; ps += b.MidMitesPerKg(id); }
+            kg = stock / 1000; cover = (int)(demand <= 0 ? 0 : stock * 1000 / demand); price = (int)(ps / Math.Max(1, books.Count) * 1000 / Math.Max(0.001, cat.Def(id).BasePriceMitesPerKg));
+        }
+        Fuel("charcoal", out row.CharcoalKg, out row.CharcoalCoverPm, out row.CharcoalPricePm); Fuel("iron_bar", out row.IronBarKg, out row.IronBarCoverPm, out row.IronBarPricePm);
+        long cm = Made("charcoal"), bm = Made("iron_bar"); row.CharcoalMadeKg = cm - _charMade0; row.IronBarMadeKg = bm - _barMade0; _charMade0 = cm; _barMade0 = bm;
+        row.DayMsMean = _dayMsSum / TimeConst.DaysPerYear; row.HourMsMax = _hourMsMax;
+        if (L3?.Works != null) { row.L3 = L3.Status(day); L3.NextYear(); }
+    }
+
+    public static string HeaderBorder() => "year   export-mites   (desk)   import-mites   (desk)   immigrant-stakes   emigrants+tolls";
+    public static string FormatBorder(WarYearRow r) => $"{r.Year,4} {r.ExpMites,14:N0} {r.DeskExpMites,9:N0} {r.ImpMites,14:N0} {r.DeskImpMites,9:N0} {r.ImmigMites - r.ExpMites,18:N0} {r.EmigMites - r.ImpMites,17:N0}";
+
+    public static string HeaderEx() => "year   immig-mites    emig-mites     mint-mites     melt  hoards       works open/new/closed  refprice  charcoal-kg cover-d price  bar-kg cover-d price   charcoal-made  bar-made  day-ms  hour-ms-max";
+
+    public static string FormatEx(WarYearRow r) =>
+        $"{r.Year,4} {r.ImmigMites,13:N0} {r.EmigMites,13:N0} {r.MintMites,14:N0} {r.MeltMites,6:N0} {r.HoardMites,10:N0}   {r.WorksOpen,5}/{r.WorksFounded}/{r.WorksClosed}   {r.RefPricePermille,8} {r.CharcoalKg,12:N0} {r.CharcoalCoverPm / 1000.0,7:0.0} {r.CharcoalPricePm,5} {r.IronBarKg,8:N0} {r.IronBarCoverPm / 1000.0,6:0.0} {r.IronBarPricePm,5} {r.CharcoalMadeKg,15:N0} {r.IronBarMadeKg,9:N0} {r.DayMsMean,7} {r.HourMsMax,12}";
 
     private void MeasureWorld(WarYearRow row)
     {
