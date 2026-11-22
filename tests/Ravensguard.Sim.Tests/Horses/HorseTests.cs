@@ -49,7 +49,7 @@ public class HorseTests(ITestOutputHelper output)
     public void H13_TheTemplatesAreValid_AndTheDerivedStatsEqualThePhase2Vehicles()
     {
         var cat = new Rig().Book.Templates;
-        Assert.Empty(cat.Errors); Assert.Equal(15, cat.All.Count);                               // P5-G: the seven of Phase 3 and five more (vehicle-designer 3.2); P7-SH-A: the longship, the cog and the war cog
+        Assert.Empty(cat.Errors); Assert.Equal(20, cat.All.Count);                               // P5-G: the seven of Phase 3 and five more (vehicle-designer 3.2); P7-SH-A: the longship, the cog and the war cog; P7-SG-B: the mantlet, the covered ram, the siege tower, the trebuchet and the springald
         var cart = cat.Get("cart").Stats; var ox = cat.Get("ox_wagon").Stats; var hand = cat.Get("handcart").Stats;
         Assert.Equal((500, 1000, 165, 1), (cart.CargoKg, cart.CargoL, cart.MassKg, cart.HitchSlots));
         Assert.Equal((1000, 2000, 300, 2), (ox.CargoKg, ox.CargoL, ox.MassKg, ox.HitchSlots));

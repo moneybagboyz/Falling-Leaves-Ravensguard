@@ -6346,6 +6346,18 @@ ch_note_sg_blow,the wall was battered down
 ch_note_sg_burnt,the fire burnt the wall out
 ch_note_sg_undermined,the wall beneath it was struck down
 ch_note_sg_masons,the masons set the stones again
+ch_sg_engine_built,"The {engine} stood finished at {x}, {y} after {hours} worker-hours."
+ch_sg_engine_wrecked,"The {engine} at {x}, {y} was put out of use."
+ch_sg_kind_mantlet,mantlet
+ch_sg_kind_ram_covered,covered ram
+ch_sg_kind_siege_tower,siege tower
+ch_sg_kind_trebuchet,trebuchet
+ch_sg_kind_springald,springald
+ch_note_sg_carpenters,the camp's carpenters built it from hauled timber
+ch_note_sg_ram,the ram battered it down
+ch_note_sg_stone,a stone from a trebuchet battered it down
+ch_note_sg_bolt,a bolt from a springald struck it
+ch_note_sg_smashed,it was smashed by a blow
 bb_side_you,"You: {0} up, {1} down"
 bb_side_foe,"Foe: {0} up, {1} down"
 bb_reserve,"{0} held back, {1} waves"

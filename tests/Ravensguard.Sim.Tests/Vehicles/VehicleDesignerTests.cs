@@ -53,8 +53,8 @@ public class VehicleDesignerTests(ITestOutputHelper output)
     {
         var r = new Rig(); var cat = r.Cat;
         Assert.Empty(cat.Errors);
-        Assert.Equal(50, cat.PartList.Count);                                                   // "about 40": the 19 of Phase 3, 22 new, and the 9 sea parts of P7-SH-A
-        Assert.Equal(15, cat.All.Count);                                                          // + longship, cog, war cog (P7-SH-A)
+        Assert.Equal(66, cat.PartList.Count);                                                   // "about 40": the 19 of Phase 3, 22 new, the 9 sea parts of P7-SH-A and the 16 siege parts of P7-SG-B
+        Assert.Equal(20, cat.All.Count);                                                          // + longship, cog, war cog (P7-SH-A); mantlet, covered ram, siege tower, trebuchet, springald (P7-SG-B)
         var recipes = Ravensguard.Sim.Crafting.RecipeDb.Build(EconFixture.Content, r.Goods);
         foreach (var p in cat.PartList)
         {
@@ -86,7 +86,7 @@ public class VehicleDesignerTests(ITestOutputHelper output)
         string? dir = AppContext.BaseDirectory; while (dir != null && !File.Exists(Path.Combine(dir, "Ravensguard.slnx"))) dir = Path.GetDirectoryName(dir);
         using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(Path.Combine(dir!, "src", "Ravensguard.Game", "assets", "art", "index.json")));
         var sprites = doc.RootElement.GetProperty("sprites");
-        foreach (var p in new Rig().Cat.PartList.Where(x => !SeaPartIds.Contains(x.Id)))                // the sea parts' art is a later part (P7-SH-A left it out)
+        foreach (var p in new Rig().Cat.PartList.Where(x => !SeaPartIds.Contains(x.Id) && !x.Tags.Contains("siege")))                // the sea parts' and the siege parts' art is a later part (P7-SH-A and P7-SG-B left it out)
             foreach (var v in new[] { "e", "n", "w", "s", "ne", "se", "sw", "nw" })
             {
                 Assert.True(sprites.TryGetProperty($"vpart.{p.Id}.{v}", out var sp), $"vpart.{p.Id}.{v}");
@@ -121,7 +121,7 @@ public class VehicleDesignerTests(ITestOutputHelper output)
         Assert.Empty(errs); Assert.NotNull(bp);
         Assert.Equal((300, 1000, 2000, 1500, 80), (bp!.Stats.MassKg, bp.Stats.CargoKg, bp.Stats.CargoL, bp.Stats.AxleLimitKg, bp.Stats.TurningRadiusDm));
         Assert.Equal(text, VehicleDesigner.WriteText(def!));
-        Assert.Equal(16, r.Cat.All.Count);
+        Assert.Equal(21, r.Cat.All.Count);
     }
 
     [Fact]

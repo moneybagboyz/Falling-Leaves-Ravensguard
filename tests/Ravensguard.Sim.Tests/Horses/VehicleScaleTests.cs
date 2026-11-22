@@ -33,12 +33,19 @@ public class VehicleScaleTests(ITestOutputHelper output)
         new("longship",      (5, 5), (24, 24), (0, 0), (7500, 8500), (8500, 9500)),
         new("cog",           (7, 7), (22, 22), (0, 0), (95_000, 105_000), (38_000, 42_000)),
         new("war_cog",       (7, 7), (22, 22), (0, 0), (55_000, 65_000), (36_000, 46_000)),
+        // P7-SG-B (sieges-and-engines 3.3): the siege engines, pushed by people and carrying no freight: a 2 x 1 mantlet of about 120 kg, a covered ram 3 x 8 m of about 2.5 t, a siege tower 4 x 4 m of about 9 t, a trebuchet
+        // 6 x 10 m of about 12 t with its counterweight box, a 2 x 2 springald of about 400 kg
+        new("mantlet",       (2, 2), (1, 1), (0, 0), (0, 0), (100, 140)),
+        new("ram_covered",   (3, 3), (8, 8), (0, 0), (0, 0), (2300, 2700)),
+        new("siege_tower",   (4, 4), (4, 4), (0, 0), (0, 0), (8500, 9800)),
+        new("trebuchet",     (6, 6), (10, 10), (0, 0), (0, 0), (11_500, 13_000)),
+        new("springald",     (2, 2), (2, 2), (0, 0), (0, 0), (350, 450)),
     ];
 
     [Fact]
     public void EveryTemplate_IsTheSizeAndLoadOfARealVehicle_AtOneMetrePerCell()
     {
-        var cat = Book().Templates;
+        var cat = Book().Templates; var engines = Ravensguard.Sim.Siege.EngineTable.Of(EconFixture.Content);
         Assert.Empty(cat.Errors); Assert.Equal(Table.Length, cat.All.Count);
         foreach (var t in Table)
         {
@@ -51,7 +58,7 @@ public class VehicleScaleTests(ITestOutputHelper output)
             Assert.InRange(st.CargoKg, t.CargoKg.Min, t.CargoKg.Max);
             Assert.InRange(st.MassKg, t.MassKg.Min, t.MassKg.Max);
             Assert.True(st.CargoL >= st.CargoKg, $"{t.Id}: a litre of load weighs at most a kilogram");
-            Assert.True(st.Boat || st.WidthCells <= 2, $"{t.Id}: no land vehicle is wider than a 2 m track");
+            Assert.True(st.Boat || st.WidthCells <= 2 || engines.Stat(t.Id) != null, $"{t.Id}: no land vehicle but a siege engine is wider than a 2 m track");
             if (st.Wheels > 0 && st.AxleLimitKg > 0) Assert.True(st.AxleLimitKg >= st.MassKg + st.CargoKg * 8 / 10, $"{t.Id}: the axles carry at least 80 percent of a full load");
         }
     }
@@ -84,7 +91,7 @@ public class VehicleScaleTests(ITestOutputHelper output)
         Assert.NotNull(dir);
         using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(Path.Combine(dir, "src", "Ravensguard.Game", "assets", "art", "index.json")));
         var sprites = doc.RootElement.GetProperty("sprites");
-        foreach (var b in Book().Templates.All.Where(x => x.Id is not ("longship" or "cog" or "war_cog")))                  // the sea ships' sprites are a later part (P7-SH-A left the art out)
+        foreach (var b in Book().Templates.All.Where(x => x.Id is not ("longship" or "cog" or "war_cog" or "mantlet" or "ram_covered" or "siege_tower" or "trebuchet" or "springald")))                  // the sea ships' and the siege engines' sprites are a later part (P7-SH-A and P7-SG-B left the art out)
         {
             Assert.True(sprites.TryGetProperty(b.Def.Sprite, out var sp), $"{b.Id}: sprite '{b.Def.Sprite}' is not in the art atlas");
             int w = sp.GetProperty("w").GetInt32(), h = sp.GetProperty("h").GetInt32(), margin = 4;

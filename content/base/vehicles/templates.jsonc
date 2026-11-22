@@ -218,5 +218,24 @@
                 "_______",
                 "_______",
                 "_______" ] } ],
-    "sprite": "vehicle.war_cog" }
+    "sprite": "vehicle.war_cog" },
+  // ---- P7-SG-B (sieges-and-engines 3.3): the siege engines. Pushed by people (hitch kind "pushed": each pusher's newtons are the pull of the cart formula), built at a yard or the camp. What an engine does is siege/engines.jsonc.
+  // The ram is 3 x 8 (the beam swings in the middle, the penthouse and wet hides over every cell but the two end ones), the tower 4 x 4 on three decks of floors (ladders join them, the top floor at the wall-walk, a drawbridge on its front; its wheels stand bare at the corners), the trebuchet
+  // 6 x 10 (frame bays in two rails, the arm in ten lengths down the middle, the counterweight box on the short end, the sling on the long), the springald 2 x 2.
+  { "type": "vehicle_blueprint", "id": "mantlet", "name": "Mantlet", "base_speed_cmps": 100, "turning_radius_dm": 20, "hitch": { "slots": 0, "kind": "pushed" }, "driver": 1,
+    "legend": { "L": ["frame_plank", "axle_wood", "wheel_solid", "mantlet_board"], "R": ["frame_plank", "wheel_solid", "mantlet_board"] }, "rows": [ "LR" ] },
+  { "type": "vehicle_blueprint", "id": "ram_covered", "name": "Covered ram", "base_speed_cmps": 50, "hitch": { "slots": 0, "kind": "pushed" }, "driver": 1, "built_at": "yard",
+    "legend": { "p": ["siege_beam"], "c": ["siege_beam", "penthouse_roof", "hide_cover"], "L": ["siege_beam", "siege_axle", "siege_wheel", "penthouse_roof", "hide_cover"], "R": ["siege_beam", "siege_wheel", "penthouse_roof", "hide_cover"],
+                "m": ["siege_beam", "ram_beam", "ram_head_iron", "penthouse_roof", "hide_cover"] },
+    "rows": [ "p_p", "L_R", "c_c", "cmc", "c_c", "L_R", "c_c", "p_p" ] },
+  { "type": "vehicle_blueprint", "id": "siege_tower", "name": "Siege tower", "base_speed_cmps": 25, "hitch": { "slots": 0, "kind": "pushed" }, "driver": 1, "built_at": "yard",
+    "legend": { "b": ["siege_beam", "tower_floor"], "k": ["siege_beam", "tower_floor", "tower_ladder"], "L": ["siege_beam", "siege_axle", "siege_wheel"], "R": ["siege_beam", "siege_wheel"],
+                "a": ["tower_floor"], "h": ["tower_floor", "hide_cover"], "l": ["tower_floor", "tower_ladder"], "d": ["tower_floor", "tower_drawbridge"] },
+    "rows": [ "LbbR", "bkbb", "bbbb", "LbbR" ],
+    "levels": [ { "deck": 1, "rows": [ "hhhh", "hlah", "haah", "hhhh" ] }, { "deck": 2, "rows": [ "hhhh", "haah", "haah", "hdhh" ] } ] },
+  { "type": "vehicle_blueprint", "id": "trebuchet", "name": "Trebuchet", "base_speed_cmps": 5, "hitch": { "slots": 0, "kind": "pushed" }, "driver": 1, "built_at": "yard",
+    "legend": { "f": ["trebuchet_frame"], "a": ["trebuchet_arm"], "s": ["trebuchet_arm", "trebuchet_sling"], "w": ["trebuchet_arm", "counterweight_box"] },
+    "rows": [ "__s___", "__a___", "_fa_f_", "_fa_f_", "_fa_f_", "_fa_f_", "_fa_f_", "_fa_f_", "__a___", "__w___" ] },
+  { "type": "vehicle_blueprint", "id": "springald", "name": "Springald", "base_speed_cmps": 100, "turning_radius_dm": 20, "hitch": { "slots": 0, "kind": "pushed" }, "driver": 1,
+    "legend": { "b": ["siege_beam"], "s": ["siege_beam", "springald"] }, "rows": [ "bs", "bb" ] }
 ]

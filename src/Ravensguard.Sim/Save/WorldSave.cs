@@ -187,6 +187,8 @@ public sealed class WorldState
     public Ravensguard.Sim.Production.Industry.IndustryBook? Industry { get; set; }
     /// <summary>P7-SC-A: the soldiers' rows (role, lord, what each wears and was issued from an armoury) and the refit jobs waiting for an armourer (soldiers-and-companies 3.3), in the optional "soldiers" section once any exists (no format bump).</summary>
     public Ravensguard.Sim.Soldiers.SoldierBook? Soldiers { get; set; }
+    /// <summary>P7-SG-B: the siege engines (crew, aim, reload clock, what burns; sieges-and-engines 4.2, 7), in the optional "sieges" section once any exists (no format bump). Wall damage is in the chunks (SG-A), the engines' parts in the vehicle rows.</summary>
+    public Ravensguard.Sim.Siege.EngineBook? Engines { get; set; }
     /// <summary>The hero's side of the records (trade-inventory-character spec): worn slots and where each stack sits, the price notebook, the party, the people known (saved in the "party" section when present). The things themselves are item rows, the pack store and the purse in the <see cref="Economy"/>.</summary>
     public Ravensguard.Sim.Trade.HeroParty? Party { get; set; }
     /// <summary>
@@ -526,6 +528,7 @@ public static partial class WorldSave
             Coinage = w.Coinage is { IsEmpty: false } coinb ? CoinageSave.Capture(coinb) : null,                                           // P7-CN1
             Industry = w.Industry is { IsEmpty: false } inb ? IndustrySave.Capture(inb) : null,                                        // P7-IN1
             Soldiers = w.Soldiers is { IsEmpty: false } sob ? SoldierSave.Capture(sob) : null,                                          // P7-SC-A
+            Sieges = w.Engines is { IsEmpty: false } eb ? SiegeSave.Capture(eb) : null,                                                // P7-SG-B
             Holdings = w.Holdings is { IsEmpty: false } hdb ? HoldingsSave.Capture(hdb) : null,                                        // P6-B6
             LandWorks = LandWorksOf(w),                                                                                              // P6-D4
             Difficulty = w.Difficulty.IsDefault && w.DifficultyLog.Count == 0 ? null : DifficultySave.Capture(w),                    // P6-A4
@@ -737,6 +740,8 @@ public static partial class WorldSave
             Ids = IdAllocator.FromState(meta.IdState), Chunks = chunks, Chronicle = chronicle,
             IdTables = remap.Tables, LoadNotes = remap.Notes,
         };
+        if (file.Sections.ContainsKey(SiegeSave.SectionName) && restored.Mounts != null && content != null)
+            restored.Engines = Decode<SiegeSave>(file, SiegeSave.SectionName, compressed: true).Restore(content, restored.Mounts, cs.Seed);      // P7-SG-B
         if (restored.Coinage != null && economy != null) economy.Ledger.Coinage = restored.Coinage.Stock;        // P7-CN1: the gold book is the ledger's hook again
         // P5-A4: a migrated v7 save's hero gets the person row now (the v8 step marks it pending); a v8 save holds it in the people diff already, and its status in the
         // abstract section's vital columns; a bare world without that section (tools, test fixtures) has only the hero section's index to say which row is the hero's
@@ -974,6 +979,7 @@ public sealed class LiveCapture
     internal CoinageSave? Coinage { get; init; }                                                                             // P7-CN1
     internal IndustrySave? Industry { get; init; }                                                                           // P7-IN1
     internal SoldierSave? Soldiers { get; init; }                                                                            // P7-SC-A
+    internal SiegeSave? Sieges { get; init; }                                                                                // P7-SG-B
     internal HoldingsSave? Holdings { get; init; }                                                                           // P6-B6
     internal LandWorksSave? LandWorks { get; init; }                                                                         // P6-D4
     internal DifficultySave? Difficulty { get; init; }                                                                       // P6-A4
@@ -1066,6 +1072,7 @@ public sealed class LiveCapture
         if (Coinage != null) sections.Add(new(CoinageSave.SectionName, SaveCodec.SerializeCompressed(Coinage)));            // P7-CN1 (optional, no bump)
         if (Industry != null) sections.Add(new(IndustrySave.SectionName, SaveCodec.SerializeCompressed(Industry)));         // P7-IN1 (optional, no bump)
         if (Soldiers != null) sections.Add(new(SoldierSave.SectionName, SaveCodec.SerializeCompressed(Soldiers)));          // P7-SC-A (optional, no bump)
+        if (Sieges != null) sections.Add(new(SiegeSave.SectionName, SaveCodec.SerializeCompressed(Sieges)));                // P7-SG-B (optional, no bump)
         if (Holdings != null) sections.Add(new(HoldingsSave.SectionName, SaveCodec.SerializeCompressed(Holdings)));         // P6-B6 (optional, no bump)
         if (LandWorks != null) sections.Add(new(LandWorksSave.SectionName, SaveCodec.SerializeCompressed(LandWorks)));     // P6-D4 (optional, no bump)
         if (Difficulty != null) sections.Add(new(DifficultySave.SectionName, SaveCodec.SerializeCompressed(Difficulty)));   // P6-A4 (optional, no bump)

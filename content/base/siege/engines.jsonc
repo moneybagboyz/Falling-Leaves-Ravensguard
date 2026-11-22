@@ -1,0 +1,13 @@
+// P7-SG-B (sieges-and-engines 3.3, 4.2): what the engine templates (vehicles/templates.jsonc) do. The id is the template's. Times are game seconds (one live tick is one game second, so a trebuchet's shot each 120 real
+// seconds is 2,400 here and 1.5 an hour in the abstract tier: the same number). A shot is mass x speed: the trebuchet's 100 kg x 45 m/s is 4,500 kg m/s on the wall rule (siege/walls.jsonc); the ram's blow is its beam's mass
+// (the part's own) x swing_mmps, x1.2 with an iron head. Aim and range error are x (1 - Engineering / skill_divisor).
+[
+  { "type": "engine_rules", "id": "engine_rules", "skill_divisor": 150, "shoot_from_hour": 6, "shoot_to_hour": 18, "splash_mm": 1500, "iron_head_pm": 1200,
+    "part_threshold_kg_ms": 20, "part_hp_per_kg_ms": 5, "ignite_pm": 600, "wet_hides_pm": 100, "hides_dry_hours": 6, "burn_hp_per_min": 40, "fireproof": ["iron", "ballast"] },
+
+  { "type": "engine_stat", "id": "mantlet",     "kind": "mantlet",   "crew": 0,  "push": 2,  "base_cmps": 100, "cover_pm": 900 },
+  { "type": "engine_stat", "id": "ram_covered", "kind": "ram",       "crew": 10, "push": 6,  "base_cmps": 50,  "swing_mmps": 3000, "reload_s": 80, "min_range_m": 0, "max_range_m": 3, "cover_pm": 800 },
+  { "type": "engine_stat", "id": "siege_tower", "kind": "tower",     "crew": 0,  "push": 30, "base_cmps": 25,  "floors": 3, "top_z": 1, "bridge_mm": 1500, "archers": 20, "cover_pm": 700, "needs_firm": true, "max_slope_pm": 50 },
+  { "type": "engine_stat", "id": "trebuchet",   "kind": "trebuchet", "crew": 8,  "ammo": "stone_raw", "shot_g": 100000, "shot_mmps": 45000, "sigma_mdeg": 1500, "range_err_pm": 50, "min_range_m": 50, "max_range_m": 300, "reload_s": 2400 },
+  { "type": "engine_stat", "id": "springald",   "kind": "springald", "crew": 2,  "carry": 6, "base_cmps": 100, "shot_g": 1000, "shot_mmps": 60000, "sigma_mdeg": 1000, "range_err_pm": 30, "min_range_m": 10, "max_range_m": 250, "reload_s": 600 }
+]
