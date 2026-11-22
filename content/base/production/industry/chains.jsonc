@@ -9,7 +9,7 @@
    "sheet": {"sells": [{"good": "iron_bloom", "kg": 30}, {"good": "iron_ore", "kg": 100}], "buys": [{"good": "charcoal", "kg": 300}], "wages_mites": 2100, "other_mites": 238}},
   {"type": "chain", "id": "clay", "name": "Clay", "stages": ["stage_clay_pit", "stage_clay_yard", "stage_clay_moulding", "stage_clay_drying", "stage_clay_kiln", "stage_clay_packing"],
    "site_kinds": ["clay_pit", "brickworks"], "crew": [2, 2, 3, 1, 2, 1],
-   "build": {"labour_hours": 2000, "materials": [{"good": "timber_planks", "kg": 4000}, {"good": "bricks", "kg": 9000}]},
+   "build": {"labour_hours": 800, "materials": [{"good": "timber_planks", "kg": 4000}, {"good": "bricks", "kg": 9000}]},
    "sheet": {"sells": [{"good": "bricks", "kg": 2500}], "buys": [{"good": "firewood", "kg": 1250}, {"good": "straw", "kg": 20}], "wages_mites": 1700, "other_mites": 70, "work_days": 45, "off_day_mites": 640}},
   {"type": "chain", "id": "wood", "name": "Wood", "stages": ["stage_wood_felling", "stage_wood_hauling", "stage_wood_yard", "stage_wood_sawmill", "stage_wood_packing", "stage_wood_shipping"],
    "site_kinds": ["woodlot", "sawpit", "saw_mill"], "crew": [2, 1, 1, 8, 1, 1],

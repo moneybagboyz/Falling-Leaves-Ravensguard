@@ -6574,6 +6574,28 @@ bcmd_ov_keys,"{0} select, drag to move | {1} drag a frontage | {2} queue | {3} u
 bcmd_paused,"PAUSED - {0} resumes, {1} opens the overlay"
 bcmd_toast_none,No formation of yours to command.
 bcmd_toast_lost,An order was lost: the runner fell.
+ch_am_raised,"{lord} raised a retinue of {men} men at {place}."
+ch_am_dismissed,"{lord} sent his {men} men home from {place}."
+ch_am_raid,"{lord}'s riders raided {place} and carried off {kg} kg of grain from {households} households."
+ch_am_bandits,"{leader} and {men} men took to the roads near {place} as bandits."
+ch_note_am_retinue,the lord keeps a standing retinue of his own household and fief
+ch_note_am_unpaid,the lord could not pay them
+ch_note_am_none_left,none of the men were left
+ch_note_am_war_raid,the war between the realms gave leave to raid
+ch_note_am_deserters,they had left the host with no home near
+ch_note_am_chase,"A lord's warband rode out after the bandits ({band}) near {place}."
+ch_began_am_chase,"a warband rode out after bandits ({band}) near {place}"
+ch_side_am_warband,the lord's warband
+ch_note_am_patrol_due,the villages were due a ride through
+ch_note_am_robbery_news,news came of a robbery within a day's ride
+ch_note_am_wagon,the season's wagon waited at the seat for an escort
+ch_note_am_errand,an errand waited at the seat for an escort
+ch_note_am_friend,a friendly lord was owed a visit
+ch_note_am_raid_near,a raid was reported near the seat
+ch_note_am_winter,the warband winters at its lord's seat
+ch_note_am_rest,there was nothing due
+ch_note_am_done,the task was done
+dp_op_visit,visited
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."

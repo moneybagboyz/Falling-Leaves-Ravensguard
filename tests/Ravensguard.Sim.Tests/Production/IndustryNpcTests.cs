@@ -66,6 +66,7 @@ public class IndustryNpcTests(ITestOutputHelper output)
         private Rig(SeamWorld w, WorldRuntime rt, bool npcDisabled)
         {
             W = w; Rt = rt; State = rt.State; Iw = State.HomeRecords!.Sim.Get<IndustryWorld>()!; Iw.NpcDisabled = npcDisabled;
+            State.HomeRecords.Economy.Growth.CharcoalCrews = false;      // a runtime loaded from a save: the rig's switch is not saved, so the resumed run is switched the same way as the straight one
             Ctx = new HeroContext(State, State.Party!, W.Content); _owns = false;
         }
         /// <summary>A rig over a runtime that was loaded from a save (it does not own the runtime).</summary>

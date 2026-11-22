@@ -484,6 +484,8 @@ public static class RngStreams
     public const uint CampaignTargetTies = 0x7A5;
     /// <summary>P7: armies: camp pitch jitter (key host, camp).</summary>
     public const uint CampPitchJitter = 0x7A6;
+    /// <summary>P7: armies: a band of bandits robbing a village near its lair (key band, day).</summary>
+    public const uint BandRobbery = 0x7A7;
     /// <summary>P7: soldiers: company loyalty (key company, day).</summary>
     public const uint CompanyLoyalty = 0x7B0;
     /// <summary>P7: soldiers: company seeding (key region, index).</summary>

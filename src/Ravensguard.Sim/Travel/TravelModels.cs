@@ -34,6 +34,8 @@ public struct LegSample
     /// <summary>Game days since the last chronicle entry of a kind near here: famine, raid, war, battle.</summary>
     public int FamineDaysAgo, RaidDaysAgo, WarDaysAgo, BattleDaysAgo;
     public int SlopePm;
+    /// <summary>P7-AM-A: a lord's warband rides within a few hundred metres (the street view's feed sets it from the armies' snapshot).</summary>
+    public bool WarbandNear;
     /// <summary>A named ground id for the speed table: paved, road, track, field, woodland, marsh, sand, ford.</summary>
     public string Ground;
 }

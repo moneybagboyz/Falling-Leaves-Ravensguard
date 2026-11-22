@@ -64,10 +64,10 @@ public partial class StreetView
         {
             var home = crt.State.HomeRegion;
             _recordCast = new Ravensguard.Sim.Caravans.RecordCast(() => crt.Caravans, () => crt.State.Population, home.OriginXM * 1000L, home.OriginYM * 1000L);
-            _travel.CastSource = _recordCast;
+            _travel.CastSource = new Ravensguard.Sim.Armies.ArmyCast(_recordCast, () => crt.Armies);                  // P7-AM-A: bandits are the band's men, riders the warband's, when armies are on the map
         }
         if (_source!.Region is { } rg)
-            _tfeed = new TravelFeed(rg, _wfeed, _travel.Cfg, () => Runtime?.State.Production?.Resources, _travel.LatitudeTenths);
+            _tfeed = new TravelFeed(rg, _wfeed, _travel.Cfg, () => Runtime?.State.Production?.Resources, _travel.LatitudeTenths) { Armies = () => Runtime?.Armies };
         _thud = new TravelHud();
         GetNodeOrNull<Control>("Hud")?.AddChild(_thud);
         Debug.DevContext.Travel = DevTravelConsole;

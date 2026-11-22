@@ -95,6 +95,7 @@ public static class EncounterConditions
             case "weather_is": return string.Equals(s.Weather.ToString(), Str(c, "state"), StringComparison.OrdinalIgnoreCase);
             case "forage_stock_at_least": return s.ForageStockG >= Arg(c, "g", 0);
             case "hero_is_armed": return h.HeroArmed;
+            case "warband_near": return s.WarbandNear;
             case "season_is": return string.Equals(s.Season.ToString(), Str(c, "season"), StringComparison.OrdinalIgnoreCase);
             default: return false;       // a vocabulary id this table has no rule for never holds
         }

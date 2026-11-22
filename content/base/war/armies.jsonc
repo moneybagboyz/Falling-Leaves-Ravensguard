@@ -1,0 +1,26 @@
+// P7-AM-A (armies-on-the-map 3.1, 4.1): the standing warbands of the lords. A lord's holding is read from his fief's people (the rows, ascending); the warband is that many men, never more than his purse can pay
+// (the wage roll takes at most wage_roll_max_pct of what he takes in a season). The pace is the spec's: riders at the trot (5 m/s = 250 mm a game second), men on foot at the column's 1.3 m/s (65). A task is kept
+// until another scores switch_margin more. Money is mites (1 cp = 10 mites): the retainer wage is the levy's after-service 15 cp.
+[
+  { "type": "army_rules", "id": "army_rules",
+    "holdings": [
+      { "id": "manor",       "min_pop": 0,    "min": 3,   "max": 6 },
+      { "id": "knights_fee", "min_pop": 450,  "min": 6,   "max": 12 },
+      { "id": "baron",       "min_pop": 1200, "min": 20,  "max": 40 },
+      { "id": "count",       "min_pop": 4000, "min": 60,  "max": 120 },
+      { "id": "ruler",       "min_pop": 9000, "min": 150, "max": 300 }
+    ],
+    "growth_pop": 600, "wage_roll_max_pct": 50, "retainer_wage_mites_day": 150, "min_age": 16, "max_age": 45,
+    "ride_mm_per_gs": 250, "foot_mm_per_gs": 65, "day_start_hour": 5, "day_end_hour": 21,
+    "patrol_dwell_hours": 1, "visit_dwell_hours": 14, "search_hours": 4, "raid_dwell_hours": 2,
+    "patrol_due_days": 4, "patrol_farm_due_days": 10, "patrol_max_stops": 7,
+    "switch_margin": 200, "score_garrison": 900, "score_chase": 700, "score_escort": 650, "score_raid": 600, "score_visit": 400, "score_patrol": 300,
+    "visit_min_opinion": 20, "visit_gap_days": 30, "visit_opinion": 5,
+    "chase_max_age_days": 4, "chase_reach_m": 14400, "chase_max_ratio_pm": 1500, "search_radius_m": 4000,
+    "raid_reach_m": 28800, "raid_kg_per_household": 40, "raid_max_household_pct": 60,
+    "garrison_reach_m": 15000, "garrison_days": 3,
+    "wagon_season_day": 3, "wagon_wait_days": 1, "wagon_mm_per_gs": 125, "escort_max_m": 12000,
+    "dismiss_arrears_days": 20, "morale_gain": 1, "morale_loss": 3,
+    "fight_kit": "soldier", "guard_kit": "guard",
+    "deserter_home_m": 7400, "band_drift_home_pm": 20, "band_rob_pm": 250, "band_rob_reach_m": 3000, "band_rob_kg": 20 }
+]

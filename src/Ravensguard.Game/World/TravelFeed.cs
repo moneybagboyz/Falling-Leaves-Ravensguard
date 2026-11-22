@@ -20,6 +20,9 @@ public sealed class TravelFeed(RegionData region, WeatherFeed weather, TravelSet
     /// <summary>Vagrants per thousand residents, a stand-in until the records give it (spec 4.1).</summary>
     public int VagrantsPer1000 = 4;
     public bool RecentRaid, WarFront, FamineYear;
+    /// <summary>P7-AM-A: the armies as the last barrier left them (null when none are published): a lord's warband within a few hundred metres makes the <c>warband_near</c> encounter condition hold.</summary>
+    public Func<Ravensguard.Sim.Armies.ArmySnapshot?>? Armies;
+    public const int WarbandNearM = 600;
 
     public LegSample Sample(long sec, long xMm, long yMm)
     {
@@ -42,6 +45,7 @@ public sealed class TravelFeed(RegionData region, WeatherFeed weather, TravelSet
         s.Ground = road switch { RoadClass.Highway => "paved", RoadClass.Road => "road", RoadClass.Track or RoadClass.Lane => "track", _ => (fl & TerrainFlags.Marsh) != 0 ? "marsh" : (fl & TerrainFlags.Woodland) != 0 ? "woodland" : "field" };
         if ((fl & TerrainFlags.RiverCrossing) != 0 && s.Tier >= RoadTier.Track) s.Ground = "ford";
         s.SlopePm = region.SlopePermille[i];
+        s.WarbandNear = Armies?.Invoke()?.NearestWarband(xMm, yMm, WarbandNearM) != null;
         s.Season = t.Season;
         int m = t.Hour * 60 + t.Minute, sr = Daylight.SunriseMinute(latitudeTenths, t.DayOfYear), ss = Daylight.SunsetMinute(latitudeTenths, t.DayOfYear);
         s.Daytime = m >= sr && m < ss; s.Night = !s.Daytime; s.Evening = m >= ss - 120 && m < ss + 180;

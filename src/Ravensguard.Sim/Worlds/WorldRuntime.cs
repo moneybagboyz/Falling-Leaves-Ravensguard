@@ -45,6 +45,7 @@ public sealed class WorldRuntime : IDisposable
     private volatile RuntimeSnapshot _snapshot;
     private Exception? _fault;
     private volatile Ravensguard.Sim.Caravans.Caravan[] _caravans = [];
+    private volatile Ravensguard.Sim.Armies.ArmySnapshot _armies = Ravensguard.Sim.Armies.ArmySnapshot.Empty;
     private long _hoursStepped;
     private double _maxHourMs;
     private int _disposed;
@@ -69,6 +70,8 @@ public sealed class WorldRuntime : IDisposable
     public RuntimeSnapshot Snapshot => _snapshot;
     /// <summary>The caravans on the road as the last barrier left them (copies, safe to read from any thread): what the street view draws and the world map marks.</summary>
     public IReadOnlyList<Ravensguard.Sim.Caravans.Caravan> Caravans => _caravans;
+    /// <summary>P7-AM-A: the standing warbands and the bandit bands as the last barrier left them (an immutable copy, safe to read from any thread): what the encounter cast and the travel feed read.</summary>
+    public Ravensguard.Sim.Armies.ArmySnapshot Armies => _armies;
     /// <summary>Last hour whose barrier is applied.</summary>
     public long HourDone => Interlocked.Read(ref _hourDone);
     /// <summary>True while the worker is stepping an hour or running a job.</summary>
@@ -154,6 +157,7 @@ public sealed class WorldRuntime : IDisposable
         Ravensguard.Sim.Faith.FaithWiring.Attach(homeWorld, state, content);                                                                        // P6-B4 hook: the church (FaithSystem), the holy days' feasts
         Ravensguard.Sim.Rule.RuleWiring.Attach(homeWorld, state, content);                                                                         // P6-C3 hook: fief deeds, officials, dues, councils, loans, customs (RuleSystem), after land, faith and law
         Ravensguard.Sim.Politics.PoliticsWiring.Attach(homeWorld, state, content);                                                                  // P6-D2 hook: diplomacy and the AI lords (PoliticsSystem), after the rule book it reads and the war cause it feeds
+        Ravensguard.Sim.Armies.ArmyWiring.Attach(homeWorld, state, content);                                                                        // P7-AM-A hook: the lords' standing warbands, their errands and the bandit bands (ArmySystem), after the rule and politics books it reads
         Ravensguard.Sim.Unrest.UnrestWiring.Attach(homeWorld, state, content);                                                                     // P6-E1 hook: grievances, the ladder, riots and revolts (UnrestSystem), after the rule and politics books it reads
         homeWorld.Sim.Set(new Ravensguard.Sim.Combat.Abstract.AbstractBattleService(content));                                    // P4-G hook: fights nobody watches (abstract battles)
         state.Regions = Records;
@@ -167,6 +171,7 @@ public sealed class WorldRuntime : IDisposable
 
     private void PublishCaravans()
     {
+        if (State.HomeRecords?.Sim.Get<Ravensguard.Sim.Armies.ArmyWorld>() is { } aw) _armies = Ravensguard.Sim.Armies.ArmySnapshot.Of(aw);
         var st = State.ContinentState; if (st == null) return;
         _caravans = st.Caravans.All.Where(c => c.Active).Select(c => c.Clone()).ToArray();
     }

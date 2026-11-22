@@ -21,6 +21,8 @@
     "groups": [ { "archetype": "soldier", "count": [1, 1], "kit": "soldier_hurt" } ], "script": "ask_help", "outcomes": { "give_bandage": "war_news", "refuse": "none" }, "cooldown_game_hours": 72, "bark": "A bandage, friend, for pity." },
   { "type": "encounter", "id": "patrol", "name": "A patrol", "kind": "Check", "weight_pm": 70, "conditions": [ { "id": "lords_land" } ],
     "groups": [ { "archetype": "guard", "count": [2, 4], "kit": "guard" } ], "script": "approach_talk", "outcomes": { "state_business": "patrol.pass", "armed_bloody": "patrol.suspicious" }, "cooldown_game_hours": 24, "bark": "Halt. State your business." },
+  { "type": "encounter", "id": "war_warband", "name": "A lord's warband", "kind": "Check", "weight_pm": 400, "conditions": [ { "id": "warband_near" } ],
+    "groups": [ { "archetype": "warband", "count": [2, 4], "kit": "soldier" } ], "script": "approach_talk", "outcomes": { "state_business": "patrol.pass", "armed_bloody": "patrol.suspicious" }, "cooldown_game_hours": 12, "bark": "Ride with care: the lord's men are about." },
   { "type": "encounter", "id": "tinker", "name": "A tinker", "kind": "Trade", "weight_pm": 35, "conditions": [ { "id": "road_tier_at_most", "args": { "tier": "road" } } ],
     "groups": [ { "archetype": "tinker", "count": [1, 1], "kit": "tinker" } ], "script": "trade", "outcomes": { "repair": "job.repair_for_pay" }, "cooldown_game_hours": 48, "bark": "Pots, pans, blades mended!" },
   { "type": "encounter", "id": "drunk", "name": "A drunk", "kind": "Pass", "weight_pm": 25, "conditions": [ { "id": "near_tavern", "args": { "within_m": "2000" } }, { "id": "evening" } ],

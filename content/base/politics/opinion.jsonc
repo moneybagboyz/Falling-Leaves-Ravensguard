@@ -15,5 +15,6 @@
   {"type": "opinion_kind", "id": "freed_captive",  "amount": 25,  "decay_per_season": 0,  "text_key": "dp_op_freed_captive"},
   {"type": "opinion_kind", "id": "robbed",         "amount": -40, "decay_per_season": 5,  "text_key": "dp_op_robbed"},
   {"type": "opinion_kind", "id": "fealty",         "amount": 10,  "decay_per_season": 0,  "text_key": "dp_op_fealty"},
-  {"type": "opinion_kind", "id": "granted",        "amount": 20,  "decay_per_season": 5,  "text_key": "dp_op_granted"}
+  {"type": "opinion_kind", "id": "granted",        "amount": 20,  "decay_per_season": 5,  "text_key": "dp_op_granted"},
+  {"type": "opinion_kind", "id": "visit",          "amount": 5,   "decay_per_season": 5,  "text_key": "dp_op_visit"}
 ]

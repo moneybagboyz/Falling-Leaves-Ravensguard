@@ -38,6 +38,8 @@ public sealed class EconomyWorld
     public EconomyCounters Counters { get; } = new();
     /// <summary>P7-EA1: the army economy's interface when a host has ever been registered (set by <c>HostSupply.Install</c>); null in every game that never had one. Not saved here (its state is the <c>warsupply</c> section).</summary>
     public Ravensguard.Sim.WarSupply.HostSupply? War { get; set; }
+    /// <summary>P7-AM-A: this person is in a lord's warband or a band of bandits (a man of a retinue is not one of his household's reapers); the armies' wiring sets it.</summary>
+    public Func<int, bool>? IsWarbandMan { get; set; }
     /// <summary>P5-F (businesses spec 4.3): the hiring hour in every settlement's square.</summary>
     public DayLabour DayLabour { get; }
     /// <summary>Farming writes its chronicle here; the farming system moves the new entries to the tick outbox after each daily step.</summary>
@@ -60,7 +62,7 @@ public sealed class EconomyWorld
         Taxes = new Ravensguard.Sim.Taxes.TaxSystem(world, this, farming, production, content.Tax);
         farming.BuyFromMarket = (hh, good, qty) => markets.BookForHousehold(hh).Buy(markets.HouseholdParty(hh), good, qty, 3000, (int)(world.State.HourDone / 24)).Qty;
         farming.CountIdleHands = true;
-        farming.IsEmployedElsewhere = p => Labour.IsAwayFromFarm(p) || War?.IsOnCampaign(p) == true;      // P7-EA1: a levy on campaign has left his household's fields
+        farming.IsEmployedElsewhere = p => Labour.IsAwayFromFarm(p) || War?.IsOnCampaign(p) == true || IsWarbandMan?.Invoke(p) == true;      // P7-EA1: a levy on campaign has left his household's fields
         farming.LevyMenFrom = (st, year) => War?.LevyMenFrom(st, year) ?? 0;
         farming.ManorLordOf = Labour.ManorLordOf;
         Growth = new Ravensguard.Sim.Growth.GrowthSystem(this);

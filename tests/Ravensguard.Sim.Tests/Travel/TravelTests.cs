@@ -33,12 +33,12 @@ public class TravelTests
     // ------------------------------------------------------------------ data
 
     [Fact]
-    public void V1_TheEncounterTableHas24ValidRows_AndABadConditionIsRejectedWithTheFileAndId()
+    public void V1_TheEncounterTableHas25ValidRows_AndABadConditionIsRejectedWithTheFileAndId()
     {
         var t = NewState();
-        Assert.Equal(24, t.Table.Defs.Count);
+        Assert.Equal(25, t.Table.Defs.Count);                                          // 24 of Phase 3 and P7-AM-A's war_warband
         Assert.Empty(t.Table.Problems(BaseVocabulary.Create()));
-        Assert.Equal(24, t.Table.Defs.Select(d => d.Id).Distinct().Count());
+        Assert.Equal(25, t.Table.Defs.Select(d => d.Id).Distinct().Count());
         var bad = JsonNode.Parse("""{ "type": "encounter", "id": "x", "conditions": [ { "id": "no_such_condition" } ] }""")!;
         var report = new ContentReport();
         BaseVocabulary.Create().Validate(bad, new SourceLocation("travel/encounters.jsonc", 1, 1), "encounter 'x'", report);
