@@ -48,9 +48,9 @@ public sealed partial class WoundBook
         List<short>? roots = null;
         for (int i = 0; i < Records.Count; i++)
         {
-            var w = Records[i];
+            ref var w = ref System.Runtime.InteropServices.CollectionsMarshal.AsSpan(Records)[i];
             if (w.Dressing != Dressing.Tourniquet || w.Is(Aid.Resolved)) continue;
-            w.TourniquetOnS++; Records[i] = w;
+            w.TourniquetOnS++;
             if (roots == null || !roots.Contains(w.Root)) (roots ??= []).Add(w.Root);
         }
         if (roots == null) return;

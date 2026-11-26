@@ -49,6 +49,8 @@ public sealed class Soldier
     public int BlowAccPm, ShotAccPm;
     /// <summary>The opponent he keeps striking in the press (-1 none), and how many keep striking him.</summary>
     public int Target = -1, TargetedBy;
+    /// <summary>His place in the battle's target picker (valid while <c>PickStamp</c> is the picker's).</summary>
+    public int PickIdx, PickStamp;
     /// <summary>Who wounded him last, with what (the cause chain of a named casualty): soldier index or -1, and the class.</summary>
     public int LastHitBy = -1;
     public WeaponClass LastHitWith;

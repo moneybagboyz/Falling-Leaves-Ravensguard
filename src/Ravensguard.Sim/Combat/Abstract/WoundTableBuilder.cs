@@ -178,7 +178,7 @@ public static class WoundTableBuilder
         return [.. x.Select(v => t == 0 ? 0 : (int)(v * 1000 / t))];
     }
 
-    /// <summary>The generated content (3.2): <c>wound_tables.json</c> (the header and one row per weapon and armour class) and <c>wound_templates.json</c>, as text with a fixed layout.</summary>
+    /// <summary>The generated content (3.2): <c>wound_tables.json</c> (the header and one row per weapon and armour class) and <c>wound_library.json</c> (the hash-consed templates), as text with a fixed layout.</summary>
     public static (string Tables, string Templates) Write(IReadOnlyList<Cell> cells, string hash, int blows)
     {
         var t = new StringBuilder();
@@ -186,9 +186,7 @@ public static class WoundTableBuilder
         t.Append("// Each cell: band, shield, n, apm_x10, outcome x 7 (miss, nothing, light, serious, grave, severed, instant: permille), mean pain light and serious, mean bleed x10 light and\n");
         t.Append("// serious, limb mix x 6 (arm, leg, torso, head, neck, hand), fx mix x 4 (fracture, nerve, organ, artery). See WoundTableDef.\n[\n");
         t.Append($"  {{ \"type\": \"wound_table_meta\", \"id\": \"default\", \"content_hash\": \"{hash}\", \"blows_per_cell\": {blows}, \"version\": {WoundTables.BuilderVersion} }}");
-        var u = new StringBuilder();
-        u.Append("// Generated with wound_tables.json: recorded wounds by weapon class, armour class and outcome class; each [n, n x (part, tissue, structure, organ, kind, depth_pm, grade, count, residual, bleed_x10, flags), skull_milli].\n[\n");
-        bool firstU = true;
+        var sets = new List<(string Id, List<(string Class, List<List<long>> List)> By)>();
         foreach (var g in cells.GroupBy(c => (c.W, c.A)).OrderBy(g => (int)g.Key.W).ThenBy(g => (int)g.Key.A))
         {
             string wn = AbstractClasses.Name(g.Key.W), an = AbstractClasses.Name(g.Key.A);
@@ -216,18 +214,56 @@ public static class WoundTableBuilder
                 by[o] = [.. Enumerable.Range(0, k).Select(j => all[(int)((long)j * all.Count / k)])];
             }
             if (by.Count == 0) continue;
-            u.Append(firstU ? "" : ",\n"); firstU = false;
-            u.Append($"  {{ \"type\": \"wound_templates\", \"id\": \"{wn}.{gn}\", \"weapon\": \"{wn}\", \"armour\": \"{gn}\", \"by_class\": {{");
-            bool fo = true;
-            foreach (var (o, list) in by)
-            {
-                u.Append(fo ? "\n    " : ",\n    "); fo = false;
-                u.Append($"\"{AbstractClasses.Name((OutcomeClass)o)}\": [{string.Join(",", list.Select(l => "[" + string.Join(",", l) + "]"))}]");
-            }
-            u.Append(" } }");
+            sets.Add(($"{wn}.{gn}", [.. by.Select(kv => (AbstractClasses.Name((OutcomeClass)kv.Key), kv.Value))]));
         }
         t.Append("\n]\n");
-        u.Append("\n]\n");
-        return (t.ToString(), u.ToString());
+        return (t.ToString(), Library(sets));
+    }
+
+    /// <summary>
+    /// The template library as hash-consed text (P7-AW-B, AW-8): each distinct wound record once, each distinct template once (a wound index list and its skull momentum), and per
+    /// weapon class and armour group, per outcome class, the template indices in draw order. Indices are given in order of first use, so the text is a function of the sets alone.
+    /// </summary>
+    public static string Library(IReadOnlyList<(string Id, List<(string Class, List<List<long>> List)> By)> sets)
+    {
+        var wounds = new Dictionary<string, int>(); var woundList = new List<string>();
+        var templates = new Dictionary<string, int>(); var templateList = new List<string>();
+        var setText = new List<string>();
+        foreach (var (id, by) in sets)
+        {
+            var classes = new List<string>();
+            foreach (var (cls, list) in by)
+            {
+                var ids = new List<int>();
+                foreach (var l in list)
+                {
+                    int n = (int)l[0];
+                    var idx = new List<long>();
+                    for (int w = 0; w < n; w++)
+                    {
+                        string key = string.Join(",", l.Skip(1 + w * WoundTables.WoundFields).Take(WoundTables.WoundFields));
+                        if (!wounds.TryGetValue(key, out int wi)) { wi = woundList.Count; wounds[key] = wi; woundList.Add(key); }
+                        idx.Add(wi);
+                    }
+                    string tkey = string.Join(",", idx.Prepend(l[^1]));
+                    if (!templates.TryGetValue(tkey, out int ti)) { ti = templateList.Count; templates[tkey] = ti; templateList.Add(tkey); }
+                    ids.Add(ti);
+                }
+                classes.Add($"\"{cls}\": [{string.Join(",", ids)}]");
+            }
+            setText.Add($"      \"{id}\": {{ {string.Join(", ", classes)} }}");
+        }
+        var u = new StringBuilder();
+        u.Append("// Generated with wound_tables.json (tools/Ravensguard.Calibrate -- --abstract tables): the recorded wounds by weapon class, armour group and outcome class, hash-consed (WoundLibraryDef).\n");
+        u.Append("// wounds: each distinct record once, [part, tissue, structure, organ, kind, depth_pm, grade, count, residual, bleed_x10, flags]; templates: [skull_milli, wound index...] once each;\n");
+        u.Append("// sets: per \"weapon.armour group\" and outcome class, the template indices in draw order.\n");
+        u.Append("[\n  { \"type\": \"wound_library\", \"id\": \"default\",\n    \"wounds\": [\n");
+        u.Append(string.Join(",\n", woundList.Select(w => "  [" + w + "]")));
+        u.Append("\n    ],\n    \"templates\": [\n");
+        u.Append(string.Join(",\n", templateList.Select(w => "  [" + w + "]")));
+        u.Append("\n    ],\n    \"sets\": {\n");
+        u.Append(string.Join(",\n", setText));
+        u.Append("\n    } }\n]\n");
+        return u.ToString();
     }
 }

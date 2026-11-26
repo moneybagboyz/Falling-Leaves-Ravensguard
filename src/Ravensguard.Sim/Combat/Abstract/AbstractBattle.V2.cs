@@ -149,8 +149,7 @@ public sealed partial class AbstractBattle
         if (a.Target >= 0 && Soldiers[a.Target] is { } held && held.Side != a.Side && held.Active && !held.Routing && held.Flanked) return held;
         var set = _flankSet[e];
         var tgt = set[DetRng.Range(_seed, Step, (ulong)(a.Index + 1), RngStreams.BlockPlacement, 0, 0, set.Count)];
-        if (a.Target >= 0) Soldiers[a.Target].TargetedBy = Math.Max(0, Soldiers[a.Target].TargetedBy - 1);
-        a.Target = tgt.Index; tgt.TargetedBy++;
+        Retarget(a, tgt);
         return tgt;
     }
 
@@ -247,18 +246,23 @@ public sealed partial class AbstractBattle
     {
         var rep = Report;
         int holder = Winner >= 0 ? Team[Winner] : -1;
+        var wornIds = new Dictionary<IReadOnlyList<WornItem>, string[]>(ReferenceEqualityComparer.Instance);      // the men of one kit list wear the same pieces: named once
         foreach (var x in Soldiers)
         {
             if (x.Status == SoldierStatus.Captured && Winner >= 0 && x.Side != Winner) rep.Prisoners.Add(new BattlePrisoner(x.Person, x.Name, x.Side, RankOf(x), holder, x.Yielded));
             if (x.Status is SoldierStatus.Dead or SoldierStatus.Captured)
-                rep.Loot.Add(new BattleLoot(x.Person, x.Name, x.Side, x.Status, holder, x.Kit.Weapon?.ShapeId ?? "", x.Kit.Shield ?? "", [.. x.Kit.Worn.Select(w => w.ShapeId)]));
+                rep.Loot.Add(new BattleLoot(x.Person, x.Name, x.Side, x.Status, holder, x.Kit.Weapon?.ShapeId ?? "", x.Kit.Shield ?? "", wornIds.TryGetValue(x.Kit.Worn, out var ids) ? ids : wornIds[x.Kit.Worn] = [.. x.Kit.Worn.Select(w => w.ShapeId)]));
         }
         rep.Passes = Passes;
     }
 
+    private List<Soldier>? _byPerson;
+    /// <summary>The men with a person row, in person order (the commands' order), sorted once.</summary>
+    private List<Soldier> NamedByPerson() => _byPerson ??= [.. Soldiers.Where(x => x.Person != 0).OrderBy(x => x.Person)];
+
     private void V2Commands()
     {
-        foreach (var x in Soldiers.Where(x => x.Person != 0).OrderBy(x => x.Person))
+        foreach (var x in NamedByPerson())
         {
             if (x.Status == SoldierStatus.Captured && Winner >= 0 && x.Side != Winner && RankOf(x) >= RankClass.Veteran)
                 Commands.Add(new BattleCommand(x.Person, BattleCommandKind.Ransom, x.Status, null, Team[Winner], (int)RankOf(x)));

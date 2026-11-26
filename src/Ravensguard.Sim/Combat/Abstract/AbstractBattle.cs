@@ -117,11 +117,10 @@ public sealed partial class AbstractBattle
         foreach (var so in Soldiers) Refresh(so);
         for (int s = 0; s < 2; s++) _frontSlots[s] = Side[s].Count(x => x.Row == 0 && x.Active && !x.Mounted);
         // who sees a friend fall (morale 4.1 b: within 10 m): the share of the side within that radius of the average soldier where the setup placed them
-        long r2 = (long)M.FriendDownRadiusM * 1000 * M.FriendDownRadiusM * 1000;
         for (int s = 0; s < 2; s++)
         {
-            long near = 0; int n = Side[s].Count;
-            foreach (var x in Side[s]) foreach (var y in Side[s]) if (x != y) { long dx = x.Kit.X - y.Kit.X, dy = x.Kit.Y - y.Kit.Y; if (dx * dx + dy * dy <= r2) near++; }
+            int n = Side[s].Count;
+            long near = NearPairs([.. Side[s].Select(x => (long)x.Kit.X)], [.. Side[s].Select(x => (long)x.Kit.Y)], (long)M.FriendDownRadiusM * 1000);
             _seePm[s] = n <= 1 ? 1000 : (int)Math.Min(1000, near * 1000 / ((long)n * (n - 1)) * K.MoraleK / 10);
         }
         // the swings of a line are not in step: each soldier starts at his own phase of the blow rate (0x4A0)
@@ -182,11 +181,81 @@ public sealed partial class AbstractBattle
         }
     }
 
+    /// <summary>Ordered pairs of two different points (mm) within <paramref name="radius"/> of each other, counted exactly: a grid of quarter-radius cells, a cell wholly inside the
+    /// radius counted at once, one wholly outside skipped, the rest by their members; a layout too spread out for a dense grid falls back to a hashed one.</summary>
+    public static long NearPairs(long[] xs, long[] ys, long radius)
+    {
+        int n = xs.Length;
+        if (n < 2) return 0;
+        long r2 = radius * radius, h = Math.Max(1, radius / 4), minX = long.MaxValue, minY = long.MaxValue, maxX = long.MinValue, maxY = long.MinValue;
+        for (int i = 0; i < n; i++) { minX = Math.Min(minX, xs[i]); maxX = Math.Max(maxX, xs[i]); minY = Math.Min(minY, ys[i]); maxY = Math.Max(maxY, ys[i]); }
+        long gw = (maxX - minX) / h + 1, gh = (maxY - minY) / h + 1;
+        if (gw * gh > 1_000_000) return NearPairsHashed(xs, ys, r2, Math.Max(1, radius));
+        int W = (int)gw, H = (int)gh, reach = (int)(radius / h) + 1;
+        var start = new int[W * H + 1];
+        var cellOf = new int[n];
+        for (int i = 0; i < n; i++) { int c = (int)((ys[i] - minY) / h) * W + (int)((xs[i] - minX) / h); cellOf[i] = c; start[c + 1]++; }
+        for (int c = 0; c < W * H; c++) start[c + 1] += start[c];
+        var fill = new int[W * H]; var px = new long[n]; var py = new long[n];
+        for (int i = 0; i < n; i++) { int c = cellOf[i], at = start[c] + fill[c]++; px[at] = xs[i]; py[at] = ys[i]; }
+        long total = 0;
+        for (int i = 0; i < n; i++)
+        {
+            long x = xs[i], y = ys[i];
+            int cx = (int)((x - minX) / h), cy = (int)((y - minY) / h);
+            for (int gy = Math.Max(0, cy - reach); gy <= Math.Min(H - 1, cy + reach); gy++)
+            {
+                long top = minY + gy * h, bot = top + h - 1;
+                long ndy = Math.Max(0, Math.Max(top - y, y - bot)), fdy = Math.Max(y - top, bot - y);
+                for (int gx = Math.Max(0, cx - reach); gx <= Math.Min(W - 1, cx + reach); gx++)
+                {
+                    int c = gy * W + gx, a = start[c], b = start[c + 1];
+                    if (a == b) continue;
+                    long left = minX + gx * h, right = left + h - 1;
+                    long ndx = Math.Max(0, Math.Max(left - x, x - right)), fdx = Math.Max(x - left, right - x);
+                    if (ndx * ndx + ndy * ndy > r2) continue;
+                    if (fdx * fdx + fdy * fdy <= r2) { total += b - a; continue; }
+                    for (int j = a; j < b; j++) { long dx = x - px[j], dy = y - py[j]; if (dx * dx + dy * dy <= r2) total++; }
+                }
+            }
+        }
+        return total - n;                                                                                        // every point counted itself once
+    }
+
+    private static long NearPairsHashed(long[] xs, long[] ys, long r2, long cell)
+    {
+        long near = 0;
+        var grid = new Dictionary<(long, long), List<int>>();
+        for (int i = 0; i < xs.Length; i++)
+        {
+            var key = (Math.DivRem(xs[i], cell, out long rx) - (rx < 0 ? 1 : 0), Math.DivRem(ys[i], cell, out long ry) - (ry < 0 ? 1 : 0));
+            if (!grid.TryGetValue(key, out var gl)) grid[key] = gl = [];
+            gl.Add(i);
+        }
+        foreach (var (key, members) in grid)
+            foreach (int x in members)
+                for (long gx = key.Item1 - 1; gx <= key.Item1 + 1; gx++)
+                    for (long gy = key.Item2 - 1; gy <= key.Item2 + 1; gy++)
+                        if (grid.TryGetValue((gx, gy), out var near9))
+                            foreach (int y in near9) if (x != y) { long dx = xs[x] - xs[y], dy = ys[x] - ys[y]; if (dx * dx + dy * dy <= r2) near++; }
+        return near;
+    }
+
+    // a book with no records has no function wounds and no aids, so its body is the plan's alone: read once per plan, not once per man (the library of the unhurt)
+    private BodyPlanV2? _unhurtPlan; private BodyState? _unhurtBody;
+    private BodyState UnhurtBody(Soldier s)
+    {
+        if (_unhurtBody != null && ReferenceEquals(_unhurtPlan, s.Plan)) return _unhurtBody;
+        _unhurtPlan = s.Plan; return _unhurtBody = s.Book.Function(s.Plan);
+    }
+
     private void Refresh(Soldier s)
     {
         if (s.WoundsSeen == s.Book.Records.Count) return;
         s.WoundsSeen = s.Book.Records.Count;
-        var bs = s.Book.Function(s.Plan);
+        BodyState bs;
+        if (s.Book.Records.Count == 0) { bs = UnhurtBody(s); s.Book.SeedFunction(s.Plan, bs); }
+        else bs = s.Book.Function(s.Plan);
         s.WeaponArm = bs.WeaponHand[1] || bs.WeaponHand[0];
         s.ShieldArm = bs.Arm[0] >= 400;
         s.CanStand = bs.WalkSpeedPm > 0 || bs.Balance > 0;
@@ -273,7 +342,7 @@ public sealed partial class AbstractBattle
     private int Shoot(int side, bool contact)
     {
         int e = 1 - side, n = 0;
-        var targets = Fill(_targets, Side[e], x => x.Active && !x.Routing);
+        var targets = Fill(_targets, Side[e], x => x.Active && !x.Routing); _targetsVer++;
         if (targets.Count == 0) return 0;
         int range = contact ? 12_000 : GapMm;
         if (_woods) range = range * 1000 / Math.Max(1, K.WoodsRangePm);
@@ -312,7 +381,7 @@ public sealed partial class AbstractBattle
     {
         int e = 1 - side;
         var attackers = ByRow(Fill(_attackers, Side[side], x => x.InLine && x.WeaponArm && x.CanStand && !(x.Shooter != null && x.Ammo > 0) && (!IsV2 || !x.Reserve && Step >= x.ReformUntil)));
-        var targets = Fill(_targets, Side[e], x => x.Active && !x.Routing && !(AwayRiders(x) && x.ReformUntil > Step));
+        var targets = Fill(_targets, Side[e], x => x.Active && !x.Routing && !(AwayRiders(x) && x.ReformUntil > Step)); _targetsVer++;
         if (attackers.Count == 0 || targets.Count == 0) return 0;
         int home = 0;
         int eng = Input.Narrow ? K.EngagementNarrowPm : K.EngagementPm;
@@ -362,7 +431,7 @@ public sealed partial class AbstractBattle
     private int Pursue(int side)
     {
         int e = 1 - side;
-        var routers = Fill(_targets, Side[e], x => x.Active && x.Routing);
+        var routers = Fill(_targets, Side[e], x => x.Active && x.Routing); _targetsVer++;
         if (routers.Count == 0) return 0;
         var line = Side[e].Count(x => x.InLine);
         var free = ByRow(Fill(_attackers, Side[side], x => x.InLine && x.WeaponArm && x.CanStand && !(x.Shooter != null && x.Ammo > 0) && (!IsV2 || !x.Reserve && Step >= x.ReformUntil)));
@@ -399,16 +468,75 @@ public sealed partial class AbstractBattle
     {
         if (!shot && a.Target >= 0 && Soldiers[a.Target] is { } held && held.Side != a.Side && held.Active && held.Routing == (targets.Count > 0 && targets[0].Routing)) return held;
         uint d = (uint)(Step * 16 + Math.Min(15, k)) * 4u + (shot ? 0x8000_0000u : 0u);
+        if (!ReferenceEquals(targets, _targets)) return PickTargetSlow(a, targets, shot, d);
+        EnsurePicker(targets, shot);
+        long sum = Math.Min(int.MaxValue, Math.Max(1, _pickSum));
+        long roll = DetRng.Range(_seed, Step, (ulong)(a.Index + 1), RngStreams.WoundSample, d, 0, (int)sum);
+        int at = PickAt(roll);
+        var tgt = at >= targets.Count ? targets[^1] : targets[at];
+        if (!shot) { Retarget(a, tgt); }
+        return tgt;
+    }
+
+    // the picker: the row weights of the current target list as a Fenwick tree, so a pick is a descent (the sum and the first target the roll falls in, exactly as the walk over the list gave them)
+    private long[] _fen = new long[64]; private int[] _pw = new int[64]; private long _pickSum;
+    private int _targetsVer, _pickVer = -1, _pickStamp; private bool _pickShot, _pickLive;
+
+    private int PickWeight(Soldier t, bool shot) => Weight(t) * 1000 / (1000 + (shot ? 0 : K.BesetPm * t.TargetedBy));
+
+    private void EnsurePicker(List<Soldier> targets, bool shot)
+    {
+        if (_pickLive && _pickVer == _targetsVer && _pickShot == shot) return;
+        int n = targets.Count;
+        if (_fen.Length < n + 1) { _fen = new long[n + 1 + n / 2]; _pw = new int[n + 1 + n / 2]; }
+        _pickStamp++; _pickVer = _targetsVer; _pickShot = shot; _pickLive = true; _pickSum = 0;
+        for (int i = 1; i <= n; i++)
+        {
+            var t = targets[i - 1]; t.PickIdx = i; t.PickStamp = _pickStamp;
+            int w = PickWeight(t, shot); _pw[i] = w; _fen[i] = w; _pickSum += w;
+        }
+        for (int i = 1; i <= n; i++) { int j = i + (i & -i); if (j <= n) _fen[j] += _fen[i]; }
+    }
+
+    /// <summary>The 0-based index of the first target whose running weight passes <paramref name="roll"/> (the count when none does).</summary>
+    private int PickAt(long roll)
+    {
+        int n = _targets.Count, pos = 0;
+        for (int pw = 1 << (31 - System.Numerics.BitOperations.LeadingZeroCount((uint)Math.Max(1, n))); pw > 0; pw >>= 1)
+        {
+            int np = pos + pw;
+            if (np <= n && _fen[np] <= roll) { pos = np; roll -= _fen[np]; }
+        }
+        return pos;
+    }
+
+    /// <summary>The man's target changes: the old one is one attacker the lighter, the new one one the heavier (<c>TargetedBy</c>), and the picker's weights follow.</summary>
+    private void Retarget(Soldier a, Soldier tgt)
+    {
+        if (a.Target >= 0) Bump(Soldiers[a.Target], -1);
+        a.Target = tgt.Index; Bump(tgt, 1);
+    }
+
+    private void Bump(Soldier t, int delta)
+    {
+        t.TargetedBy = Math.Max(0, t.TargetedBy + delta);
+        if (_pickLive && !_pickShot && t.PickStamp == _pickStamp)
+        {
+            int w = PickWeight(t, false), i = t.PickIdx, d = w - _pw[i];
+            if (d == 0) return;
+            _pw[i] = w; _pickSum += d;
+            for (int n = _targets.Count; i <= n; i += i & -i) _fen[i] += d;
+        }
+    }
+
+    private Soldier PickTargetSlow(Soldier a, List<Soldier> targets, bool shot, uint d)
+    {
         long sum = 0;
         foreach (var t in targets) sum += Weight(t) * 1000 / (1000 + (shot ? 0 : K.BesetPm * t.TargetedBy));
         long roll = DetRng.Range(_seed, Step, (ulong)(a.Index + 1), RngStreams.WoundSample, d, 0, (int)Math.Min(int.MaxValue, Math.Max(1, sum)));
         var tgt = targets[^1];
         foreach (var t in targets) { roll -= Weight(t) * 1000 / (1000 + (shot ? 0 : K.BesetPm * t.TargetedBy)); if (roll < 0) { tgt = t; break; } }
-        if (!shot)
-        {
-            if (a.Target >= 0) Soldiers[a.Target].TargetedBy = Math.Max(0, Soldiers[a.Target].TargetedBy - 1);
-            a.Target = tgt.Index; tgt.TargetedBy++;
-        }
+        if (!shot) Retarget(a, tgt);
         return tgt;
     }
 
@@ -463,6 +591,8 @@ public sealed partial class AbstractBattle
     private void Vitals(Soldier s, long endSec)
     {
         if (s.Status is SoldierStatus.Dead or SoldierStatus.Fled or SoldierStatus.Surrendered or SoldierStatus.Captured) { if (s.Status != SoldierStatus.Dead) s.Book.AdvanceTo(endSec); return; }
+        // lazy books: a man with no wound and no pain or blood lost is not walked through the step (his clock is caught up when he is struck or at the end)
+        if (s.Status == SoldierStatus.Active && s.Book.Records.Count == 0 && s.CanStand && !s.Book.Active) return;
         s.Book.AdvanceTo(endSec);
         Refresh(s);
         if (s.Book.Dead) { Out(s, SoldierStatus.Dead); return; }
@@ -499,6 +629,7 @@ public sealed partial class AbstractBattle
         for (int side = 0; side < 2; side++)
         {
             int e = 1 - side;
+            _fh[e] = -1;                      // the enemy's free horse cannot change while this side's men are judged (only his own status moves): counted once
             int obsPm = _seePm[side];
             bool captain = _captain[side] >= 0 && Soldiers[_captain[side]].InLine;
             bool captainShoots = captain && IsShooter(Soldiers[_captain[side]]);
@@ -517,7 +648,11 @@ public sealed partial class AbstractBattle
             {
                 if (!s.Active) continue;
                 int seen = 0;
-                for (int j = 0; j < Math.Min(falls, 48); j++) if (R(RngStreams.RoutSample, Step, (ulong)(s.Index + 1), (uint)j, 1000) < obsPm) seen++;
+                if (falls > 0)
+                {
+                    ulong pre = DetRng.Prefix(_seed, Step, (ulong)(s.Index + 1));          // one prefix for the man's draws (the same bits as R())
+                    for (int j = 0, m = Math.Min(falls, 48); j < m; j++) if (DetRng.RangeWith(pre, RngStreams.RoutSample, (uint)j, 0, 1000) < obsPm) seen++;
+                }
                 s.PenaltyX100 = Math.Max(0, s.PenaltyX100 - R0.DecayX100PerS * dt);
                 s.PenaltyX100 += Math.Min(R0.FriendDownCapX100 * dt * MoraleRules.TicksPerS / MoraleRules.EveryTicks, seen * R0.FriendDownX100) + s.HitsThisStep * R0.HitTakenX100;
                 if (_leaderFell[side]) s.PenaltyX100 += R0.LeaderDownX100;
@@ -540,6 +675,7 @@ public sealed partial class AbstractBattle
         for (int side = 0; side < 2; side++)
         {
             int line = Side[side].Count(x => x.InLine);
+            _fh[1 - side] = -1;
             if (line == 0 || _start[side] == 0) continue;
             bool leaderless = _captain[side] >= 0 && !Soldiers[_captain[side]].InLine;
             if ((long)line * 1000 < (long)K.CollapseActivePm * _start[side] || leaderless && (long)line * 1000 < (long)K.LeaderlessCollapsePm * _start[side])
@@ -580,7 +716,8 @@ public sealed partial class AbstractBattle
     private bool AwayRiders(Soldier x) => IsV2 && K.AwayRidersPm > 0 && MassHorse(x.Side);
     private readonly int[] _horseStart = new int[2];
 
-    private int FreeHorse(int side) { int n = 0; foreach (var x in Side[side]) if (x.Mounted && x.InLine) n++; return n; }
+    private readonly int[] _fh = [-1, -1];
+    private int FreeHorse(int side) { if (_fh[side] >= 0) return _fh[side]; int n = 0; foreach (var x in Side[side]) if (x.Mounted && x.InLine) n++; return _fh[side] = n; }
 
     private bool TrySurrender(Soldier s, int enemySide, int corneredPm)
     {
@@ -712,7 +849,7 @@ public sealed partial class AbstractBattle
         if (IsV2) V2Aftermath();
         foreach (var x in Soldiers) x.Book.CacheFunction = false;          // the books leave the battle as they came: no cached reading
         // commands, in person order
-        foreach (var x in Soldiers.Where(x => x.Person != 0).OrderBy(x => x.Person))
+        foreach (var x in NamedByPerson())
         {
             if (x.Book.Records.Count > 0 || x.Book.Dead) Commands.Add(new BattleCommand(x.Person, BattleCommandKind.Wounds, x.Status, x.Book));
             if (x.Status != SoldierStatus.Active) Commands.Add(new BattleCommand(x.Person, BattleCommandKind.Status, x.Status, null, Winner >= 0 ? Team[Winner] : -1));

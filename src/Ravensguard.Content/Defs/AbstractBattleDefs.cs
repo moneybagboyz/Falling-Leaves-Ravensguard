@@ -167,6 +167,19 @@ public sealed record WoundTableDef : ContentDef
     public List<List<int>> Cells { get; init; } = [];
 }
 
+/// <summary>
+/// The wound template library, hash-consed (<c>abstract/wound_library.json</c>, P7-AW-B): every distinct wound record once in <see cref="Wounds"/> (<c>[part, tissue, structure, organ, kind,
+/// depth_pm, grade, count, residual, bleed_x10, flags]</c>), every distinct template once in <see cref="Templates"/> (<c>[skull_milli, wound index...]</c>), and per
+/// <c>"weapon.armour group"</c> and outcome class the template indices <see cref="Sets"/> hand out, in draw order. Reads as the same <see cref="WoundTemplatesDef"/> rows it replaced.
+/// </summary>
+[ContentType("wound_library")]
+public sealed record WoundLibraryDef : ContentDef
+{
+    public List<List<long>> Wounds { get; init; } = [];
+    public List<List<long>> Templates { get; init; } = [];
+    public Dictionary<string, Dictionary<string, List<int>>> Sets { get; init; } = [];
+}
+
 /// <summary>Recorded real wounds of one (weapon class, armour class) by outcome class (<c>abstract/wound_templates.json</c>): each template is one blow's wound records, each record
 /// <c>[part, tissue, structure, organ, kind, depth_pm, grade, count, residual, bleed_x10, flags]</c>, plus the momentum that reached the skull (milli) last.</summary>
 [ContentType("wound_templates")]

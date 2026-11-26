@@ -1,5 +1,5 @@
 // tools/calibrate --abstract (abstract-battles-v1 4.3): builds the wound tables from the live fight, runs the tactical scenarios and compares the abstract battle with them.
-//   dotnet run --project tools/Ravensguard.Calibrate -c Release -- --abstract tables [--blows 4000]     writes content/base/abstract/wound_tables.json and wound_templates.json
+//   dotnet run --project tools/Ravensguard.Calibrate -c Release -- --abstract tables [--blows 4000]     writes content/base/abstract/wound_tables.json and wound_library.json
 //   dotnet run --project tools/Ravensguard.Calibrate -c Release -- --abstract equiv [--seeds 200] [--seed0 10000] [--only A]   tactical against abstract, the 4.4 gate
 //   dotnet run --project tools/Ravensguard.Calibrate -c Release -- --abstract bench | cellbench | mt12
 using System.Diagnostics;
@@ -225,8 +225,8 @@ static class AbstractRun
             var dir = Path.Combine(repo, "content", "base", "abstract");
             Directory.CreateDirectory(dir);
             File.WriteAllText(Path.Combine(dir, "wound_tables.json"), t);
-            File.WriteAllText(Path.Combine(dir, "wound_templates.json"), u);
-            Console.WriteLine($"{cells.Count} cells x {blows} blows in {sw.Elapsed.TotalSeconds:0} s; hash {hash}; tables {t.Length / 1024} KB, templates {u.Length / 1024} KB");
+            File.WriteAllText(Path.Combine(dir, "wound_library.json"), u);
+            Console.WriteLine($"{cells.Count} cells x {blows} blows in {sw.Elapsed.TotalSeconds:0} s; hash {hash}; tables {t.Length / 1024} KB, library {u.Length / 1024} KB");
             return 0;
         }
         var tables = WoundTables.For(fc.Db);

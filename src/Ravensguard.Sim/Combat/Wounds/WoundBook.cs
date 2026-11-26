@@ -58,7 +58,7 @@ public sealed partial class WoundBook
     /// <summary>Blood lost, permille of the volume.</summary>
     public int LossPm => BloodMaxUl <= 0 ? 0 : (int)((BloodMaxUl - BloodUl) * 1000 / BloodMaxUl);
     /// <summary>A tourniquet is on a limb (its clock runs, medicine 4.3).</summary>
-    public bool HasTourniquet { get { foreach (var w in Records) if (w.Dressing == Dressing.Tourniquet && !w.Is(Aid.Resolved)) return true; return false; } }
+    public bool HasTourniquet { get { foreach (ref readonly var w in System.Runtime.InteropServices.CollectionsMarshal.AsSpan(Records)) if (w.Dressing == Dressing.Tourniquet && !w.Is(Aid.Resolved)) return true; return false; } }
     public bool Weakened => LossPm >= WeakPm;
     public bool Conscious => State is Consciousness.Awake or Consciousness.Dazed or Consciousness.Collapsed;
     public int OpenCount { get { int n = 0; foreach (var w in Records) if (w.Open) n++; return n; } }
@@ -209,7 +209,7 @@ public sealed partial class WoundBook
     private void EndSecond(long s)
     {
         int ongoing = 0;
-        foreach (var w in Records)
+        foreach (ref readonly var w in System.Runtime.InteropServices.CollectionsMarshal.AsSpan(Records))        // by reference: a record is a big struct, and this runs every second of every wounded man
         {
             if (w.Is(Aid.Numb) || w.State is WoundState.Scar or WoundState.Healing || w.Is(Aid.Resolved)) continue;
             int p = w.PainC / 100;
@@ -490,6 +490,15 @@ public sealed partial class WoundBook
     {
         get => _cacheFunction;
         set { _cacheFunction = value; if (!value) { _fnState = null; _fnKey = null; _fnPlan = null; } }
+    }
+    /// <summary>
+    /// P7-AW-B: a book with no wounds is handed the reading its plan gives every such book (read once by the battle), as if <see cref="Function"/> had just been called on it; the cache
+    /// then answers the first hit's two readings. Only for a book with no records, and only while <see cref="CacheFunction"/> is on.
+    /// </summary>
+    internal void SeedFunction(BodyPlanV2 plan, BodyState state)
+    {
+        if (!_cacheFunction || Records.Count != 0) return;
+        _fnState = state; _fnKey = []; _fnPlan = plan; _fnAids = default;
     }
     private bool _cacheFunction;
     private BodyState? _fnState;

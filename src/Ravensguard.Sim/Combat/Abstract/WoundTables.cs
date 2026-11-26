@@ -31,7 +31,7 @@ public sealed class WoundTables
 
     private static int Cell(int w, int a, int band, int shield) => ((w * A + a) * B + band) * 2 + shield;
 
-    public WoundTables(IEnumerable<WoundTableDef> rows, IEnumerable<WoundTemplatesDef> templates, string hash, int blows)
+    public WoundTables(IEnumerable<WoundTableDef> rows, IEnumerable<WoundTemplatesDef> templates, string hash, int blows, IEnumerable<WoundLibraryDef>? libraries = null)
     {
         ContentHashBuilt = hash; BlowsPerCell = blows;
         for (int i = 0; i < _built.Length; i++) _cum[i * O + O - 1] = 1000;
@@ -51,6 +51,7 @@ public sealed class WoundTables
                 _built[cell] = true;
             }
         }
+        if (libraries != null) foreach (var lib in libraries) LoadLibrary(lib);
         foreach (var t in templates)
         {
             int ag = Enumerable.Range(0, AbstractClasses.Groups).FirstOrDefault(g => AbstractClasses.GroupName(g) == t.Armour, -1);
@@ -59,6 +60,44 @@ public sealed class WoundTables
             {
                 if (!TryClass(name, out OutcomeClass oc)) continue;
                 var arr = list.Select(Decode).Where(x => x != null).Select(x => x!).ToArray();
+                _templates[((int)wc * AbstractClasses.Groups + ag) * O + (int)oc] = arr;
+                TemplateCount += arr.Length;
+            }
+        }
+    }
+
+    /// <summary>The hash-consed library: wounds and templates decoded once, each class's set a list of shared template objects.</summary>
+    private void LoadLibrary(WoundLibraryDef lib)
+    {
+        var pool = new WoundV2[lib.Wounds.Count];
+        for (int i = 0; i < pool.Length; i++)
+        {
+            var l = lib.Wounds[i];
+            pool[i] = new WoundV2
+            {
+                Part = (short)l[0], Tissue = (short)l[1], Structure = (short)l[2], Organ = (short)l[3], Kind = (WoundKind)l[4], DepthPm = (int)l[5], Grade = (byte)l[6],
+                Count = (byte)l[7], Residual = (byte)l[8], BleedX10 = (int)l[9], Flags = (WoundFlags)l[10],
+            };
+        }
+        var tpls = new WoundTemplate[lib.Templates.Count];
+        for (int i = 0; i < tpls.Length; i++)
+        {
+            var l = lib.Templates[i];
+            var w = new WoundV2[l.Count - 1];
+            for (int k = 0; k < w.Length; k++) w[k] = pool[(int)l[k + 1]];
+            tpls[i] = new WoundTemplate(w, l[0]);
+        }
+        foreach (var (key, byClass) in lib.Sets)
+        {
+            int dot = key.IndexOf('.');
+            if (dot < 0 || !TryClass(key[..dot], out WeaponClass wc)) continue;
+            int ag = Enumerable.Range(0, AbstractClasses.Groups).FirstOrDefault(g => AbstractClasses.GroupName(g) == key[(dot + 1)..], -1);
+            if (ag < 0) continue;
+            foreach (var (name, ids) in byClass)
+            {
+                if (!TryClass(name, out OutcomeClass oc)) continue;
+                var arr = new WoundTemplate[ids.Count];
+                for (int k = 0; k < arr.Length; k++) arr[k] = tpls[ids[k]];
                 _templates[((int)wc * AbstractClasses.Groups + ag) * O + (int)oc] = arr;
                 TemplateCount += arr.Length;
             }
@@ -187,7 +226,7 @@ public sealed class WoundTables
         return Cache.GetValue(db, d =>
         {
             var meta = d.All<WoundTableMetaDef>().OrderBy(m => m.Id, StringComparer.Ordinal).FirstOrDefault();
-            return new WoundTables(d.All<WoundTableDef>().OrderBy(r => r.Id, StringComparer.Ordinal), d.All<WoundTemplatesDef>().OrderBy(r => r.Id, StringComparer.Ordinal), meta?.ContentHash ?? "", meta?.BlowsPerCell ?? 0);
+            return new WoundTables(d.All<WoundTableDef>().OrderBy(r => r.Id, StringComparer.Ordinal), d.All<WoundTemplatesDef>().OrderBy(r => r.Id, StringComparer.Ordinal), meta?.ContentHash ?? "", meta?.BlowsPerCell ?? 0, d.All<WoundLibraryDef>().OrderBy(r => r.Id, StringComparer.Ordinal));
         });
     }
 

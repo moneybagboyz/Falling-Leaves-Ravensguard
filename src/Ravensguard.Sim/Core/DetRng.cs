@@ -31,6 +31,26 @@ public static class DetRng
         return h;
     }
 
+    /// <summary>The part of <see cref="Next"/> that depends on the seed, tick and entity only: a loop of draws for one entity takes it once (<see cref="NextWith"/>) and gets the same bits.</summary>
+    public static ulong Prefix(ulong seed, long tick, ulong entityId)
+    {
+        ulong h = Mix(seed ^ 0xA0761D6478BD642FUL);
+        h = Mix(h ^ (ulong)tick);
+        return Mix(h ^ entityId);
+    }
+
+    /// <summary><see cref="Next"/> from a <see cref="Prefix"/>: the same 64 bits.</summary>
+    public static ulong NextWith(ulong prefix, uint stream, uint draw) => Mix(prefix ^ (((ulong)stream << 32) | draw));
+
+    /// <summary><see cref="Range"/> from a <see cref="Prefix"/>: the same value.</summary>
+    public static int RangeWith(ulong prefix, uint stream, uint draw, int minInclusive, int maxExclusive)
+    {
+        if (maxExclusive <= minInclusive) return minInclusive;
+        ulong span = (ulong)((long)maxExclusive - minInclusive);
+        ulong r = (ulong)(uint)(NextWith(prefix, stream, draw) >> 32) * span >> 32;
+        return (int)(minInclusive + (long)r);
+    }
+
     public static uint NextUInt(ulong seed, long tick, ulong entityId, uint stream, uint draw)
         => (uint)(Next(seed, tick, entityId, stream, draw) >> 32);
 
