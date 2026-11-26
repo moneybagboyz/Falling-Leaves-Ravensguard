@@ -29,7 +29,7 @@ public sealed class AbstractBattles : IAbstractFights
     {
         var tables = WoundTables.For(content.Db);
         if (tables == null) return AbstractFightStub.Instance.Resolve(setup, content);
-        var b = new AbstractBattle(content, tables, InputOf(setup, BookOf, Place, PlaceKey, PlaceId));
+        var b = new AbstractBattle(content, tables, InputOf(setup, BookOf, Place, PlaceKey, PlaceId), AbstractBattle.V2Def(content.Db));
         var rep = b.Run();
         var outBy = new Dictionary<int, int>();
         foreach (var s in b.Soldiers) { int t = s.Kit.Team; outBy[t] = outBy.GetValueOrDefault(t) + (s.Status == SoldierStatus.Active && !s.Routing ? 0 : 1); }

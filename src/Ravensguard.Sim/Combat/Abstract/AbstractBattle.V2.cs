@@ -38,7 +38,7 @@ public sealed partial class AbstractBattle
     public PassTally Passes;
     private MountedTuningDef _mt = new() { Id = "default" };
     private int _ax, _ay;
-    private readonly int[] _flo = [int.MaxValue, int.MaxValue], _fhi = [int.MinValue, int.MinValue], _bracedPm = new int[2];
+    private readonly int[] _flo = [int.MaxValue, int.MaxValue], _fhi = [int.MinValue, int.MinValue], _bracedPm = new int[2], _bracedStartPm = [-1, -1];
     private readonly List<Soldier>[] _front = [[], []], _flankSet = [[], []];
 
     /// <summary>The v2 row of the content (the Phase 4 row stays the default).</summary>
@@ -97,7 +97,7 @@ public sealed partial class AbstractBattle
             foreach (var x in _front[side])
                 if (x.Lat < _flo[e] || x.Lat > _fhi[e]) { x.Wrap = true; if (x.Position == BattlePosition.Front) x.Position = BattlePosition.Flank; }
         }
-        for (int s = 0; s < 2; s++) Report.BlocksOf[s] = Blocks.Count(b => b.Side == s);
+        for (int s = 0; s < 2; s++) { Report.BlocksOf[s] = Blocks.Count(b => b.Side == s); _horseStart[s] = Side[s].Count(x => x.Mounted); }
     }
 
     /// <summary>Each step's block bookkeeping: cohesion, the reserves released, who the wrap has flanked, the braced share of each front.</summary>
@@ -114,6 +114,7 @@ public sealed partial class AbstractBattle
             int e = 1 - d, wl = 0, wr = 0, braced = 0, count = 0;
             foreach (var x in _front[d]) { x.Flanked = false; if (x.InLine) { count++; if (x.Braces) braced++; } }
             _bracedPm[d] = count == 0 ? 0 : braced * 1000 / count;
+            if (_bracedStartPm[d] < 0) _bracedStartPm[d] = _bracedPm[d];
             foreach (var w in _front[e]) if (w.Wrap && w.InLine) { if (w.Lat < _flo[d]) wl++; else if (w.Lat > _fhi[d]) wr++; }
             _flankSet[d].Clear();
             int cap = Math.Max(1, K.OutnumberCapPm);
@@ -170,7 +171,7 @@ public sealed partial class AbstractBattle
             Passes.Rolls++; Passes.ExpectedRefusalPm += p;
             if (Rd(a, 1, 1000) < p)
             {
-                Passes.Refusals++; a.Refused = true;
+                Passes.Refusals++; a.Refused = true; if (AwayRiders(a)) a.ReformUntil = Step + K.ReformS;
                 if (Rd(a, 2, 1000) < _mt.Unhorse.RefusalThrowPm) { Passes.Threw++; Unhorse(a, 3); }
                 return false;
             }
@@ -195,7 +196,7 @@ public sealed partial class AbstractBattle
 
     private void Unhorse(Soldier a, uint draw)
     {
-        Passes.Falls++; a.Unhorsed = true; a.Mounted = false;
+        Passes.Falls++; a.Unhorsed = true; a.Mounted = false; if (AwayRiders(a)) a.ReformUntil = Step + K.ReformS * 2;
         Wound(a, WeaponClass.Hafted, K.FallLightPm, K.FallSeriousPm, K.FallGravePm, null, draw, 15);
     }
 
@@ -217,7 +218,7 @@ public sealed partial class AbstractBattle
     {
         if (homeRiders < K.ShockMinRiders || _bracedPm[e] >= K.ShockBracedMaxPm) return;
         Passes.Shocks++;
-        foreach (var x in _front[e]) if (x.InLine) x.PenaltyX100 += K.ShockX100;
+        foreach (var x in MassHorse(1 - e) ? Side[e] : _front[e]) if (x.InLine) x.PenaltyX100 += K.ShockX100;
     }
 
     // ------------------------------------------------------------------ morale terms
@@ -225,7 +226,7 @@ public sealed partial class AbstractBattle
     private int V2FlankX100(Soldier s, bool pressTerm)
     {
         int term = pressTerm ? M.FlankedX100 * K.MeleeFlankedPm / 1000 : 0;
-        return term + (s.Flanked || _rearFlanked[s.Side] ? M.FlankedX100 : 0);
+        return term + (s.Flanked ? M.FlankedX100 * K.WrapFlankPm / 1000 : _rearFlanked[s.Side] ? M.FlankedX100 : 0);
     }
 
     private readonly bool[] _rearFlanked = new bool[2];

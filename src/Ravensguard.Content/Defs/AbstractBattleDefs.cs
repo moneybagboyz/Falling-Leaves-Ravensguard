@@ -119,6 +119,25 @@ public sealed record AbstractBattleDef : ContentDef
     /// <summary>Shock (cavalry 4.1): -15 on the front of the struck block when 10+ riders pass and under <see cref="ShockBracedMaxPm"/> of that front is braced.</summary>
     public int ShockX100 { get; init; } = 1500;
     public int ShockMinRiders { get; init; } = 10;
+    /// <summary>AW-C: a man of a line ridden down by this many free horse (<see cref="ShockMinRiders"/> or more) is cornered with at least this chance when he asks to yield (v2 only; 0 off).</summary>
+    /// <summary>AW-C: v2's blow at the pass (permille of a blow, before <see cref="ChargePm"/>); v1 gives every rider a whole one.</summary>
+    public int PassBlowPm { get; init; } = 1000;
+    /// <summary>AW-C: the chance a free rider rides down a router this step (v2; v1's riders always do, 1000).</summary>
+    public int RiderPursuePm { get; init; } = 1000;
+    /// <summary>AW-C: non-zero keeps a rider who rode through or was refused out of reach (not a target) while he re-forms (v2; 0 leaves him in the melee as v1 did).</summary>
+    public int AwayRidersPm { get; init; }
+    /// <summary>AW-C: the share (permille) of a braced line's routers the riders spare, times its braced share at the start.</summary>
+    public int BracedSparePm { get; init; }
+    /// <summary>AW-C: the share (permille) of the flank term a wrapped end man carries (v2; 1000 is the whole term, as v1's flanked men).</summary>
+    public int WrapFlankPm { get; init; } = 1000;
+    /// <summary>AW-C: a wrapper's rate of blows against the flank end men, permille of a front man's (v2; 1000 as the front rank).</summary>
+    public int WrapRatePm { get; init; } = 1000;
+    /// <summary>AW-C: riders on a side at the start for the mass rules (ride down routers by chance, out of reach re-forming, horse cornering yields); a dozen riders (D) keep v1's.</summary>
+    public int MassRiders { get; init; } = 30;
+    /// <summary>AW-C: a regiment's riders' blows a minute (x10) and the charge's extra blow, in place of v1's (a dozen riders keep those).</summary>
+    public int MassRiderBlowsPerMinX10 { get; init; } = 88;
+    public int MassChargePm { get; init; } = 700;
+    public int HorseCorneredPm { get; init; }
     public int ShockBracedMaxPm { get; init; } = 250;
     /// <summary>A taken man of this skill or better, or in mail or better, is a veteran; a captain is an officer.</summary>
     public int VeteranSkill { get; init; } = 55;

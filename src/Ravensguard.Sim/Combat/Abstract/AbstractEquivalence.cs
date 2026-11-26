@@ -19,9 +19,11 @@ public static class AbstractEquivalence
     public const int AftermathS = 120;
 
     /// <summary>The live fight of a scenario to its end (or 600 s), then two minutes of untreated bleeding.</summary>
-    public static Result Tactical(FightContent c, Scenario s, ulong seed)
+    public static Result Tactical(FightContent c, Scenario s, ulong seed) => TacticalOf(AbstractScenarios.Tactical(c, s, seed));
+
+    /// <summary>The live fight of any prepared world (the Phase 7 scenarios E to H use this) to its end, then the untreated aftermath.</summary>
+    public static Result TacticalOf(FightWorld w)
     {
-        var w = AbstractScenarios.Tactical(c, s, seed);
         var worst = new OutcomeClass[w.Fighters.Count];
         int contact = -1;
         w.OnBlow = (a, t, r, st) =>
@@ -68,9 +70,12 @@ public static class AbstractEquivalence
         return new BattleInput(kits, seed, seed, 8 * 3600, "scenario " + s) { Mounted = mounted, Terrain = terrain, Leaders = s != Scenario.ANoLeader, FirstAid = false };
     }
 
-    public static Result Abstract(FightContent c, WoundTables t, Scenario s, ulong seed, Content.AbstractBattleDef? k = null)
+    public static Result Abstract(FightContent c, WoundTables t, Scenario s, ulong seed, Content.AbstractBattleDef? k = null) => AbstractOf(c, t, InputOf(s, seed), k);
+
+    /// <summary>The abstract battle of any input (no aftermath rows: the aftermath's bleeding is compared untreated).</summary>
+    public static Result AbstractOf(FightContent c, WoundTables t, BattleInput input, Content.AbstractBattleDef? k = null)
     {
-        var b = new AbstractBattle(c, t, InputOf(s, seed) with { Aftermath = false }, k);
+        var b = new AbstractBattle(c, t, input with { Aftermath = false }, k);
         while (!b.Over) b.StepOnce();
         int[] firstPass = new int[2];
         int cs = b.ContactStep;
@@ -100,7 +105,7 @@ public static class AbstractEquivalence
     {
         public int N, Wins0, Wins1;
         public long Duration;
-        public readonly long[] Casualties = new long[2], Fled = new long[2], Start = new long[2], DiedAfter = new long[2], FirstPass = new long[2];
+        public readonly long[] Yielded = new long[2], Casualties = new long[2], Fled = new long[2], Start = new long[2], DiedAfter = new long[2], FirstPass = new long[2];
         public readonly long[][] Worst = [new long[7], new long[7]];
 
         public void Add(Result r)
@@ -109,7 +114,7 @@ public static class AbstractEquivalence
             Duration += r.DurationX10;
             for (int s = 0; s < 2; s++)
             {
-                Casualties[s] += r.Casualties[s]; Fled[s] += r.Fled[s]; Start[s] += r.Start[s]; DiedAfter[s] += r.DiedAfter[s]; FirstPass[s] += r.FirstPass[s];
+                Casualties[s] += r.Casualties[s]; Yielded[s] += r.Yielded[s]; Fled[s] += r.Fled[s]; Start[s] += r.Start[s]; DiedAfter[s] += r.DiedAfter[s]; FirstPass[s] += r.FirstPass[s];
                 for (int o = 0; o < 7; o++) Worst[s][o] += r.Worst[s][o];
             }
         }
@@ -134,6 +139,24 @@ public static class AbstractEquivalence
     {
         var res = new Result[n];
         Parallel.For(0, n, i => res[i] = Tactical(c, s, (ulong)(seed0 + i)));
+        var t = new Tally();
+        foreach (var r in res) t.Add(r);
+        return t;
+    }
+
+    public static Tally RunTacticalOf(Func<ulong, FightWorld> make, int seed0, int n)
+    {
+        var res = new Result[n];
+        Parallel.For(0, n, i => res[i] = TacticalOf(make((ulong)(seed0 + i))));
+        var t = new Tally();
+        foreach (var r in res) t.Add(r);
+        return t;
+    }
+
+    public static Tally RunAbstractOf(FightContent c, WoundTables tables, Func<ulong, BattleInput> make, int seed0, int n, Content.AbstractBattleDef? k = null)
+    {
+        var res = new Result[n];
+        Parallel.For(0, n, i => res[i] = AbstractOf(c, tables, make((ulong)(seed0 + i)), k));
         var t = new Tally();
         foreach (var r in res) t.Add(r);
         return t;

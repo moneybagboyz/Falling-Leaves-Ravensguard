@@ -312,7 +312,7 @@ public sealed partial class AbstractBattle
     {
         int e = 1 - side;
         var attackers = ByRow(Fill(_attackers, Side[side], x => x.InLine && x.WeaponArm && x.CanStand && !(x.Shooter != null && x.Ammo > 0) && (!IsV2 || !x.Reserve && Step >= x.ReformUntil)));
-        var targets = Fill(_targets, Side[e], x => x.Active && !x.Routing);
+        var targets = Fill(_targets, Side[e], x => x.Active && !x.Routing && !(AwayRiders(x) && x.ReformUntil > Step));
         if (attackers.Count == 0 || targets.Count == 0) return 0;
         int home = 0;
         int eng = Input.Narrow ? K.EngagementNarrowPm : K.EngagementPm;
@@ -340,13 +340,14 @@ public sealed partial class AbstractBattle
             bool shieldOk = a.Position == BattlePosition.Front;
             // the attack rate is the live fight's own for this matchup (the table's apm), scaled to the press; a rider strikes once a pass (hit and run, on any ground: on mud or in
             // woods he cannot gallop and has no charge); the charge is the first pass's own extra
-            int apm = a.Mounted ? (riding ? K.RiderBlowsPerMinX10 : K.RiderSlowBlowsPerMinX10) : Tables.ApmX10(wc, tgt.Armour, a.Skill - tgt.Skill, shieldOk && tgt.Shield) * K.PressRatePct / 100;
+            int apm = a.Mounted ? (riding ? (IsV2 && MassHorse(side) ? K.MassRiderBlowsPerMinX10 : K.RiderBlowsPerMinX10) : K.RiderSlowBlowsPerMinX10) : Tables.ApmX10(wc, tgt.Armour, a.Skill - tgt.Skill, shieldOk && tgt.Shield) * K.PressRatePct / 100;
             if (!a.Mounted && tgt.Mounted) apm = apm * (_mud || _woods ? K.VsRiderSlowRatePm : K.VsRiderRatePm) / 1000;
             if (!a.Mounted && a.TargetedBy > 1) apm = (int)((long)apm * 1000 / (1000 + K.BesetRatePm * (a.TargetedBy - 1)));        // a man beset by two or three defends more than he strikes
             int rate = apm * K.StepS * 100 / 60 * TerrainBlowsPm / 1000;      // permille of a blow per step
             if (a.Position == BattlePosition.Flank) rate = rate * (1000 + K.FlankBonusPm) / 1000;
+            if (IsV2 && a.Wrap) rate = rate * K.WrapRatePm / 1000;
             else if (a.Position == BattlePosition.Rear) rate = rate * (1000 + K.RearBonusPm) / 1000;
-            if (IsV2) { if (riding && !a.PassDone && (chargeStep || a.Released) && Pass(a)) { home++; if (!braced) rate += 1000 + K.ChargePm; } }
+            if (IsV2) { if (riding && !a.PassDone && (chargeStep || a.Released) && Pass(a)) { home++; if (!braced) rate += K.PassBlowPm + (MassHorse(side) ? K.MassChargePm : K.ChargePm); } }
             else if (chargeStep && riding && !braced) rate += 1000 + K.ChargePm;                       // the charge: a blow at contact for every rider, plus charge_pm more
             a.BlowAccPm += rate;
             int blows = Math.Min(15, a.BlowAccPm / 1000);
@@ -364,13 +365,13 @@ public sealed partial class AbstractBattle
         var routers = Fill(_targets, Side[e], x => x.Active && x.Routing);
         if (routers.Count == 0) return 0;
         var line = Side[e].Count(x => x.InLine);
-        var free = ByRow(Fill(_attackers, Side[side], x => x.InLine && x.WeaponArm && x.CanStand && !(x.Shooter != null && x.Ammo > 0) && (!IsV2 || !x.Reserve)));
+        var free = ByRow(Fill(_attackers, Side[side], x => x.InLine && x.WeaponArm && x.CanStand && !(x.Shooter != null && x.Ammo > 0) && (!IsV2 || !x.Reserve && Step >= x.ReformUntil)));
         int busy = (int)Math.Min(free.Count, (long)K.EngagementPm * line * K.OutnumberCapPm / 1_000_000);
         int n = 0, i = 0;
         foreach (var a in free)
         {
             if (i++ < busy && !a.Mounted) continue;
-            if (!a.Mounted && R(RngStreams.AbstractNoise, Step, (ulong)(a.Index + 1) << 8, 1, 1000) >= K.PursuePm) continue;
+            if ((!a.Mounted || IsV2 && K.RiderPursuePm < 1000 && MassHorse(side)) && R(RngStreams.AbstractNoise, Step, (ulong)(a.Index + 1) << 8, 1, 1000) >= (a.Mounted ? RiderPursuePm(e) : K.PursuePm)) continue;
             int rate = K.PursuitBlowsPerMinX10 * K.StepS * 100 / 60 * TerrainBlowsPm / 1000 * (1000 + K.RearBonusPm) / 1000;
             a.BlowAccPm += rate;
             int blows = Math.Min(15, a.BlowAccPm / 1000);
@@ -566,8 +567,20 @@ public sealed partial class AbstractBattle
             }
         }
         long r = _cornerRatio[side];
-        return (int)Math.Min(1000L, basePm * r / 1000 * r / 1000 * r / 1000);
+        int cubic = (int)Math.Min(1000L, basePm * r / 1000 * r / 1000 * r / 1000);
+        if (IsV2 && K.HorseCorneredPm > 0 && basePm > 0 && FreeHorse(1 - side) >= K.MassRiders) cubic = Math.Max(cubic, K.HorseCorneredPm);
+        return cubic;
     }
+
+    /// <summary>A rider's chance to ride a router down: v2's row, none against a schiltron's (a braced line's routers yield rather than die).</summary>
+    private int RiderPursuePm(int e) => IsV2 && _bracedStartPm[e] > 0 ? K.RiderPursuePm * (1000 - Math.Min(1000, _bracedStartPm[e] * K.BracedSparePm / 1000)) / 1000 : K.RiderPursuePm;
+
+    /// <summary>A mass of horse (<see cref="AbstractBattleDef.MassRiders"/> riders at the start): v2's fitted ride-down, away and ride-down yields are for a regiment, not a dozen riders (D keeps v1's).</summary>
+    private bool MassHorse(int side) => _horseStart[side] >= K.MassRiders;
+    private bool AwayRiders(Soldier x) => IsV2 && K.AwayRidersPm > 0 && MassHorse(x.Side);
+    private readonly int[] _horseStart = new int[2];
+
+    private int FreeHorse(int side) { int n = 0; foreach (var x in Side[side]) if (x.Mounted && x.InLine) n++; return n; }
 
     private bool TrySurrender(Soldier s, int enemySide, int corneredPm)
     {

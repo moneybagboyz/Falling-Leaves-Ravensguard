@@ -21,8 +21,28 @@ public static class AbstractWarScenarios
 
     public static BattleInput InputOf(Scenario s, ulong seed)
     {
+        var kits = Kits(s, seed, out var mounted);
+        return new BattleInput(kits, seed, seed, 8 * 3600, "scenario " + s) { Mounted = mounted, Leaders = true, FirstAid = false, SideKinds = new Dictionary<int, SideKind> { [0] = SideKind.Army, [1] = SideKind.Army } };
+    }
+
+    /// <summary>The live fight of the scenario (AW-C's reference): the same kits, riders on coursers, captains appointed, the aftermath's bleeding untreated.</summary>
+    public static FightWorld Tactical(FightContent c, Scenario s, ulong seed)
+    {
+        var kits = Kits(s, seed, out var mounted);
+        var w = new FightWorld(c, seed, seed, 8 * 3600) { RecordEvents = false };
+        for (int i = 0; i < kits.Count; i++)
+        {
+            if (mounted.Contains(i)) w.AddMounted(kits[i], AbstractScenarios.MountFor(kits[i]));
+            else w.Add(kits[i]);
+        }
+        w.AppointCaptains();
+        return w;
+    }
+
+    public static List<FighterKit> Kits(Scenario s, ulong seed, out HashSet<int> mounted)
+    {
         var kits = new List<FighterKit>();
-        var mounted = new HashSet<int>();
+        mounted = new HashSet<int>();
         var padded = FightCalibration.Padded.Worn.ToArray();
         switch (s)
         {
@@ -47,6 +67,6 @@ public static class AbstractWarScenarios
                         kits.Add(Man($"Pike {i + 1}", 1, i, FightCalibration.Spear, padded, null, Skill(seed, 1, i, 35), i / 15 * 700, (i % 15 - 7) * 700));
                 break;
         }
-        return new BattleInput(kits, seed, seed, 8 * 3600, "scenario " + s) { Mounted = mounted, Leaders = true, FirstAid = false, SideKinds = new Dictionary<int, SideKind> { [0] = SideKind.Army, [1] = SideKind.Army } };
+        return kits;
     }
 }

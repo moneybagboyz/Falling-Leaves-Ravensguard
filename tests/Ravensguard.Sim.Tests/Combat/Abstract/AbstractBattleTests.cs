@@ -113,8 +113,9 @@ public class AbstractBattleTests(FightFixture fx, ITestOutputHelper output)
         Assert.True(fails.Count <= KnownGaps, $"{fails.Count} gaps (known {KnownGaps}):\n" + string.Join("\n", fails));
     }
 
-    /// <summary>The number of 4.4 comparisons (of 5 scenarios x 9) the fit does not reach yet; a change that widens the gap fails AB-3.</summary>
-    private const int KnownGaps = 17;
+    /// <summary>The number of 4.4 comparisons (of 5 scenarios x 9) the fit does not reach yet; a change that widens the gap fails AB-3.
+    /// 18 since P7-AW-C (the user's decision, 26 Nov 2026): the live D and mud tallies were re-recorded after P7-CV-B's kicks and fallen horses, and mud's side-1 casualties (3.65 vs 3.03 live) fell outside; the v1 fit itself did not move.</summary>
+    private const int KnownGaps = 18;
 
     [Fact, Trait("Category", "Soak")]
     public void AB3_Soak_TheStoredLiveFightsAreTheLiveFightsOfToday()

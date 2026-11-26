@@ -319,6 +319,28 @@ static class AbstractRun
             }
             return 0;
         }
+        if (args.Contains("war"))
+        {
+            // AW-C: v2 against the live fight on E, F, G (AbstractWarScenarios): --abstract war [--seeds 200] [--seed0 10000] [--only E,F] [--reference] [--v1]
+            int seeds = Arg(args, "--seeds", 200), seed0 = Arg(args, "--seed0", 10_000);
+            string? only = Str(args, "--only");
+            var k = args.Contains("--v1") ? null : AbstractBattle.V2Def(fc.Db);
+            var sc = Enum.GetValues<AbstractWarScenarios.Scenario>().Where(s => only == null || only.Split(',').Contains(s.ToString())).ToList();
+            Console.WriteLine(AbstractEquivalence.Header);
+            var fails = new List<string>();
+            foreach (var s in sc)
+            {
+                var tac = AbstractEquivalence.RunTacticalOf(x => AbstractWarScenarios.Tactical(fc, s, x), seed0, seeds);
+                if (args.Contains("--reference")) { Console.WriteLine($"        [AbstractWarScenarios.Scenario.{s}] = {AbstractEquivalence.Code(tac)},"); continue; }
+                var abs = AbstractEquivalence.RunAbstractOf(fc, tables, x => AbstractWarScenarios.InputOf(s, x), seed0, seeds, k);
+                Console.WriteLine(AbstractEquivalence.Row($"{s} tactical", tac));
+                Console.WriteLine(AbstractEquivalence.Row($"{s} abstract", abs));
+                Console.WriteLine($"  yielded tactical {tac.Mean(tac.Yielded[0]) / 1000.0:0.0}/{tac.Mean(tac.Yielded[1]) / 1000.0:0.0} abstract {abs.Mean(abs.Yielded[0]) / 1000.0:0.0}/{abs.Mean(abs.Yielded[1]) / 1000.0:0.0}");
+                fails.AddRange(AbstractEquivalence.Compare(tac, abs, s.ToString()));
+            }
+            Console.WriteLine(fails.Count == 0 ? "equivalent" : string.Join("\n", fails));
+            return 0;
+        }
         if (args.Contains("equiv"))
         {
             int seeds = Arg(args, "--seeds", 200), seed0 = Arg(args, "--seed0", 10_000);
@@ -332,7 +354,7 @@ static class AbstractRun
                 var sw = Stopwatch.StartNew();
                 var tac = AbstractEquivalence.RunTactical(fc, s, seed0, seeds);
                 long tms = sw.ElapsedMilliseconds; sw.Restart();
-                var abs = AbstractEquivalence.RunAbstract(fc, tables, s, seed0, seeds);
+                var abs = AbstractEquivalence.RunAbstract(fc, tables, s, seed0, seeds, args.Contains("--v2") ? AbstractBattle.V2Def(fc.Db) : null);
                 long ams = sw.ElapsedMilliseconds;
                 Console.WriteLine(AbstractEquivalence.Row($"{s} tactical", tac));
                 Console.WriteLine(AbstractEquivalence.Row($"{s} abstract", abs));
