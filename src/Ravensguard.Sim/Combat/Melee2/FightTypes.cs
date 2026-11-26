@@ -24,6 +24,9 @@ public enum FightEventKind : byte
     Charge, Unhorsed, Fell, HorseFell, Balked, Reared, Bolted, Trampled, BraceStrike, Shattered,
     // watch-mode 4.3 (P4-F): A = the TreatKind, Target = the patient (the treater itself when it treats itself)
     Treated,
+    // [P7 CV-B] cavalry-and-mounted-war 4.3 to 4.6: Dismounted (actor the rider, target his horse), Remounted, Kicked and Bitten (actor the horse, target the foe, A the momentum in units, B 1 on a hit),
+    // Jumped (actor the horse, target the fallen horse it cleared), HorseLetGo (actor the holder, target the horse he let go)
+    Dismounted, Remounted, Kicked, Bitten, Jumped, HorseLetGo,
 }
 
 /// <summary>One thing that happened in the fight, for the log, the flavour text (feedback-flavour-log) and the statistics. Text is the presentation's.</summary>
@@ -99,6 +102,8 @@ public enum FightInputKind : byte
     FormFace = 27,
     /// <summary>[P7 BB-D] A = row id, B = 1 the captain always commands this formation, 0 he commands it only when the player has been silent for 30 s.</summary>
     FormCaptain = 28,
+    /// <summary>[P7 CV-B] E: the hero gets down from his horse, or, on foot beside it, mounts (cavalry-and-mounted-war 4.5).</summary>
+    MountToggle = 29,
 }
 
 public readonly record struct FightInput(FightInputKind Kind, int A = 0, int B = 0, int C = 0);

@@ -4,6 +4,8 @@
   { "type": "captain_rule", "id": "cavalry_charge", "tactics": 0, "rule": "cavalry_charge" },
   { "type": "captain_rule", "id": "cavalry_avoid_braced", "tactics": 30, "rule": "cavalry_avoid_braced" },
   { "type": "captain_rule", "id": "cavalry_flank_or_rear", "tactics": 50, "rule": "cavalry_flank_or_rear" },
+  { "type": "captain_rule", "id": "cavalry_dismount", "tactics": 50, "rule": "cavalry_dismount" },
+  { "type": "captain_rule", "id": "horse_archer_skirmish", "tactics": 30, "rule": "horse_archer_skirmish" },
   { "type": "captain_rule", "id": "archers_at_will", "tactics": 0, "rule": "archers_at_will" },
   { "type": "captain_rule", "id": "hold_outnumbered", "tactics": 0, "rule": "hold_if_outnumbered" },
   { "type": "captain_rule", "id": "wall_vs_missiles", "tactics": 30, "rule": "wall_against_missiles" },

@@ -331,7 +331,8 @@ public sealed partial class FormationBook
         int faceX = row.FaceX, faceY = row.FaceY;
         // the blow: the nearest foot foe in reach (every tick in a charge, twice a second otherwise)
         bool engaged = row.Stage >= StGallop || row.CavPhase > PhApproach || row.InContact;
-        if (engaged || (tick + r.Id) % 10 == 0)
+        if (r.Launcher != null && (r.Loaded || r.Ammo > 0)) MountedBrain.Shoot(w, m, r, tick);          // [P7 CV-B] a horse archer shoots from his slot (at a walk or a trot, never at a gallop)
+        else if (engaged || (tick + r.Id) % 10 == 0)
         {
             Fighter? t = null; long bd = long.MaxValue;
             foreach (int id in w.NearUnsorted(3, r, 12_000))
@@ -385,6 +386,7 @@ public sealed partial class FormationBook
     private void PlanCavalry(FightWorld w, FormationRow r, int T)
     {
         if (!Rules.CaptainMay("cavalry_charge", T) || r.InContact || r.Active == 0 || w.Mounts == null) return;
+        if (Rules.CaptainMay("horse_archer_skirmish", T) && IsHorseArcherRow(w, r)) return;            // [P7 CV-B] horse archers skirmish (SkirmishStep), they do not charge
         if (r.Order.Kind is OrderKind.Charge or OrderKind.FlankLeft or OrderKind.FlankRight && r.CavPhase != PhDone) return;
         var cap = w.Mounts.Riding(r.Captain);
         int trained = cap?.TrainedPm ?? 700, riding = cap?.Riding ?? 40;

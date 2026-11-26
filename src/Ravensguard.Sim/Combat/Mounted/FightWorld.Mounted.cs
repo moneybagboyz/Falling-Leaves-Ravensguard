@@ -185,6 +185,7 @@ public sealed partial class FightWorld
         foreach (var m in L.Pairs)
         {
             var r = Fighters[m.Rider];
+            if (m.Phase != MountedFighter.PhNone && r.Active) { PhaseCommands(m, r); continue; }      // [P7 CV-B] getting down or up, walking to the horse, a holder at his post
             if (m.Mounted && !r.Player && r.Active) MountedBrain.Ride(this, m, r);
         }
         MountedBrain.BraceScan(this);                               // [P7 CV-A] who wants to brace, found from the riders' side through the grid
@@ -211,12 +212,14 @@ public sealed partial class FightWorld
         L.Grow(Fighters.Count);
         if (L.Terrain.Thunderstorm && D.ThunderEveryTicks > 0 && Tick % D.ThunderEveryTicks == 0)
             foreach (var m in L.Pairs) if (m.Mounted) AddPanic(m, D.Panic.Thunder);
+        FindFallen();                                                                                 // [P7 CV-B] the horses lying down are obstacles this tick
         foreach (var m in L.Pairs)
         {
             var r = Fighters[m.Rider]; var h = Fighters[m.Horse];
             h.MoralePenalty = 0; h.Routing = false;
             if (h.Book.Records.Count != m.HorseWoundsSeen) WoundPanic(m, h);
             if (Tick % 10 == 0) Nerves(m, r, h);
+            if (m.Phase != MountedFighter.PhNone || m.Holding) PhaseStep(m, r, h);                    // [P7 CV-B] dismounting, fetching, mounting, a holder's duty
             if (!m.Mounted) continue;
             if (r.Act == FAct.Fled)
             {
@@ -361,6 +364,7 @@ public sealed partial class FightWorld
         long mx = (long)m.HX * step >> 10, my = (long)m.HY * step >> 10;
         if (m.SideTicks > 0) { mx += (long)m.SideX * (D.SideStepMmps / 20) >> 10; my += (long)m.SideY * (D.SideStepMmps / 20) >> 10; m.SideTicks--; }
         int nx = (int)(r.X + mx), ny = (int)(r.Y + my);
+        if (L.Fallen.Count > 0) FallenAhead(m, r, h, ref nx, ref ny, (int)mx, (int)my);               // [P7 CV-B] a horse lying down in the way: jump it, fall, or go round
         if (L.Tuning.Footing[(int)tr.At(nx, ny)].Forbidden) { nx = r.X; ny = r.Y; m.Speed = 0; }       // stairs and ladders: horses do not take portals
         int moved = (int)FightMath.Len(nx - r.X, ny - r.Y);
         r.X = nx; r.Y = ny; r.LastMoveMm = moved;
@@ -475,6 +479,7 @@ public sealed partial class FightWorld
     {
         var L = Mounts!; var D = L.D;
         long t0 = System.Diagnostics.Stopwatch.GetTimestamp();
+        LeadHorses();                                                                                  // [P7 CV-B] the horses a holder leads follow him
         foreach (var m in L.Pairs)
         {
             var h = Fighters[m.Horse];
@@ -505,6 +510,7 @@ public sealed partial class FightWorld
             if (hit != null) BraceStrike(f, hit, Fighters[hit.Horse], hitVc);
         }
         foreach (var m in L.Pairs) if (m.Mounted && m.Speed >= D.TrampleMinMmps) Trample(m);
+        foreach (var m in L.Pairs) HorseKicks(m);                                                      // [P7 CV-B] kicks and bites
         L.PerfTicks += System.Diagnostics.Stopwatch.GetTimestamp() - t0;
     }
 
@@ -802,6 +808,7 @@ public sealed partial class FightWorld
         var L = Mounts!; var U = L.D.Unhorse;
         int speed = m.Speed;
         m.Mounted = false; m.Couched = false; m.LeftAt = Tick; m.RunX = m.HX; m.RunY = m.HY;
+        m.Phase = MountedFighter.PhNone; m.Solo = false; m.Remount = false;                           // [P7 CV-B] thrown while getting down or up
         if (!IsLance(r)) r.ReachMm = Math.Max(500, r.ReachMm - L.D.MountedReachMm);
         bool pinned = false;
         if (fall && r.Act != FAct.Dead)
@@ -882,6 +889,7 @@ public sealed partial class FightWorld
     }
 
     private const long TailMagic = 0x4D4E5431;      // "MNT1"
+    private const long CvbMagic = 0x43564231;       // "CVB1"
 
     /// <summary>
     /// The mounted layer's part of a fighter's saved state (the "fight" section's fighter row ends with it; a foot fight writes none): the layer's per-fighter state, the ground and
@@ -927,6 +935,7 @@ public sealed partial class FightWorld
         var pair = L.Pairs.FirstOrDefault(m => m.Rider == f.Id);
         if (pair != null) { t.Add(1); t.AddRange(pair.Pack()); } else t.Add(0);
         if (e.BranchAt != 0) t.Add(e.BranchAt);                                    // [P7 CV-C] additive: only a rider a branch has struck carries it
+        if (pair != null && pair.HasCvb) { t.Add(CvbMagic); t.AddRange(pair.CvbPack()); }      // [P7 CV-B] additive: only a pair that has got down, led a horse, kicked or met a fallen horse carries it
         return [.. t];
     }
 
@@ -944,8 +953,10 @@ public sealed partial class FightWorld
             int k = n + 1;
             extra[i] = new MountedExtra { BraceWanted = s[k++] != 0, BracedAt = (int)s[k++], HitsAtBrace = (int)s[k++], TrampledUntil = (int)s[k++], BraceStruckAt = (int)s[k++] };
             if (s[k++] != 0) { terrain = new FightTerrain { Base = (Footing)s[k++], SlopeXPm = (int)s[k++], SlopeYPm = (int)s[k++] }; long rain = s[k++], storm = s[k++]; UnpackWeather(terrain, rain, storm); }
-            if (s[k++] != 0) { pairs.Add(MountedFighter.Unpack(s.AsSpan(k, MountedFighter.PackLength), 0)); k += MountedFighter.PackLength; }
-            if (s.Length > k) extra[i].BranchAt = (int)s[k];
+            MountedFighter? pair = null;
+            if (s[k++] != 0) { pair = MountedFighter.Unpack(s.AsSpan(k, MountedFighter.PackLength), 0); pairs.Add(pair); k += MountedFighter.PackLength; }
+            if (s.Length > k && s[k] != CvbMagic) extra[i].BranchAt = (int)s[k++];
+            if (pair != null && s.Length >= k + 1 + MountedFighter.CvbLength && s[k] == CvbMagic) pair.CvbUnpack(s.AsSpan(k + 1, MountedFighter.CvbLength));
         }
         if (extra == null) return;
         var L = EnsureMounts();

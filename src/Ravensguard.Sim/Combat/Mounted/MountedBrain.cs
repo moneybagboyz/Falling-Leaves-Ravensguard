@@ -28,6 +28,7 @@ public static class MountedBrain
             return;
         }
         if (w.Formations != null && r.FmRow >= 0 && w.Formations.CavalryRide(w, m, r)) return;      // [P7 CV-A] a rider of a cavalry formation keeps his slot and strikes what is in reach
+        if (r.Launcher != null && (r.Loaded || r.Ammo > 0)) { HorseArcher(w, m, r, tick); return; }  // [P7 CV-B] a bowman in the saddle keeps his distance and shoots
         var t = m.AiTarget >= 0 && m.AiTarget < w.Fighters.Count ? w.Fighters[m.AiTarget] : null;
         if (t != null && (!t.Active || w.IsHorse(t) || t.Team == r.Team)) t = null;
         switch (m.AiPhase)
@@ -103,6 +104,63 @@ public static class MountedBrain
             return true;
         }
         return false;
+    }
+
+    // ------------------------------------------------------------------ [P7 CV-B] the horse archer (cavalry-and-mounted-war 4.7)
+
+    /// <summary>
+    /// A horse archer on his own (not in a formation that keeps his place): he keeps 60 to 120 m from the nearest foe on foot, trots away shooting when one is closer than 60 m (the Parthian shot), gallops away
+    /// when one is inside 40 m (no shot at a gallop), trots in when none is within 120 m, and otherwise stands and shoots.
+    /// </summary>
+    public static void HorseArcher(FightWorld w, MountedFighter m, Fighter r, int tick)
+    {
+        var Cv = w.Mounts!.Cv; var c = r.Cmd;
+        var e = w.NearestNonHorseEnemy(r, 400_000);
+        if (e == null) { m.Walk = true; Shoot(w, m, r, tick); return; }
+        long d = w.DistMm(r, e);
+        var (ux, uy) = FightMath.Norm(e.X - r.X, e.Y - r.Y);
+        c.FaceX = ux; c.FaceY = uy;
+        m.Walk = false;
+        if (d < Cv.ArcherWheelMm) Go(c, -ux, -uy, gallop: true);
+        else if (d < Cv.ArcherMinMm) Go(c, -ux, -uy, gallop: false);
+        else if (d > Cv.ArcherMaxMm) Go(c, ux, uy, gallop: false);
+        else m.Walk = true;
+        Shoot(w, m, r, tick);
+    }
+
+    /// <summary>
+    /// The shot from the saddle: nock when empty-handed (a crossbowman gets down to span his bow), never loose at a gallop, never into his own men, at the nearest foe on foot within the launcher's
+    /// effective range. The shot is the fight's own (<c>StartDraw</c>, <c>Loose</c>, the projectile and the resolver); only the aim cone is the rider's (<see cref="FightWorld.MountedSigma"/>).
+    /// True when a shot was started.
+    /// </summary>
+    public static bool Shoot(FightWorld w, MountedFighter m, Fighter r, int tick)
+    {
+        var c = r.Cmd; var l = r.Launcher!;
+        if (m.Speed > m.Gaits.TrotMmps + 300 && r.Act is FAct.Drawing or FAct.Aiming) r.Act = FAct.Idle;      // never loosed at a gallop: the bow is lowered, the arrow stays nocked
+        if (!r.Loaded)
+        {
+            if (r.Ammo > 0 && r.Act is FAct.Idle or FAct.Block)
+            {
+                if (l.Holds) w.BeginDismount(m, solo: true);        // a crossbow is spanned with both hands and a foot in the stirrup: he gets down
+                else c.Reload = true;
+            }
+            return false;
+        }
+        if (w.FormationHoldsFire(r) || m.Speed > m.Gaits.TrotMmps + 300) return false;
+        var t = ArcherTarget(w, m, r, tick);
+        if (t == null || !(r.Act is FAct.Idle or FAct.Block) || !w.FormationSafeShot(r, t)) return false;
+        c.Start = new AttackReq { Attack = 0, Target = t.Id, Part = -1, Gap = -1, Auto = true };
+        c.Block = false;
+        return true;
+    }
+
+    private static Fighter? ArcherTarget(FightWorld w, MountedFighter m, Fighter r, int tick)
+    {
+        long range = r.Launcher!.RangeEffectiveM * 1000L;
+        var t = m.AiTarget >= 0 && m.AiTarget < w.Fighters.Count ? w.Fighters[m.AiTarget] : null;
+        if (t != null && (!t.Active || t.Team == r.Team || w.IsHorse(t) || w.DistMm(r, t) > range)) t = null;
+        if (t == null || (tick + r.Id) % w.Mounts!.Cv.ArcherAimEveryTicks == 0) { t = w.NearestNonHorseEnemy(r, range); m.AiTarget = t?.Id ?? -1; }
+        return t;
     }
 
     private static void Go(FightCommand c, int x, int y, bool gallop) { c.MoveX = x; c.MoveY = y; c.Sprint = gallop; if (x != 0 || y != 0) { c.FaceX = x; c.FaceY = y; } }

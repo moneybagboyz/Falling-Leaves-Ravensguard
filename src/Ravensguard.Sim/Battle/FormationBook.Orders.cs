@@ -134,7 +134,8 @@ public sealed partial class FormationBook
                     var (wx, wy) = FightMath.Norm(o.FaceX, o.FaceY);
                     r.WantFx = wx; r.WantFy = wy; r.WheelSign = o.Arg > 0 ? 1 : -1; return;
                 }
-            case OrderKind.Dismount: case OrderKind.Mount: return;      // the cavalry spec acts on these
+            case OrderKind.Dismount: BeginDismountOrder(w, r, tick); return;      // [P7 CV-B] cavalry-and-mounted-war 4.5
+            case OrderKind.Mount: BeginMountOrder(w, r, tick); return;
             case OrderKind.None: return;
         }
         if (o.Queued && r.Order.Kind is not (OrderKind.None or OrderKind.Hold))

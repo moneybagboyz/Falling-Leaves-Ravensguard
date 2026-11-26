@@ -187,6 +187,7 @@ public sealed partial class FightWorld
             case FightInputKind.Yield: Yield(f); break;       // P4-D hook: the Q-menu yield (4.2)
             case FightInputKind.CalledShot: c.Start = new AttackReq { Attack = i.A, Target = f.Brain.Target, Part = i.B, Gap = i.C, Auto = true }; break;
             case FightInputKind.Watch or FightInputKind.Stance or FightInputKind.Formation or FightInputKind.Order or FightInputKind.DeclineDanger: WatchInput(f, i); break;   // P4-F hook
+            case FightInputKind.MountToggle: if (Mounts != null) ToggleMount(f); break;                                                   // [P7 CV-B] E: down from the saddle, or up
             case FightInputKind.FormOrder or FightInputKind.FormFace or FightInputKind.FormCaptain: Ravensguard.Sim.Battle.FormationCommands.Apply(this, f, i); break;   // [P7 BB-D] the hero's orders to his formations
         }
     }

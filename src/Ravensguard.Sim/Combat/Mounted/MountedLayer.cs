@@ -15,6 +15,10 @@ public sealed class MountedLayer
     public List<MountedFighter> Pairs { get; } = [];
     public FightTerrain Terrain { get; set; } = new();
     public MountedExtra[] Extra = [];
+    /// <summary>[P7 CV-B] The cavalry rules' constants.</summary>
+    public CavalryRulesDef Cv => Tuning.Cv;
+    /// <summary>[P7 CV-B] The horses lying down this tick (fighter ids, pair order): each is a 2 m x 1 m obstacle to the mounts that come after.</summary>
+    internal readonly List<int> Fallen = [];
     /// <summary>Fighter id to pair index (rider or horse), -1 none.</summary>
     private int[] _pairOf = [];
     internal readonly List<(int Rider, int Attacker)> PendingUnseat = [];

@@ -136,4 +136,57 @@ public sealed record CavalryRulesDef : ContentDef
     // captains (4.2)
     public int AvoidRefusalPm { get; init; } = 400;
     public int LaneMm { get; init; } = 30_000;
+
+    // ---- [P7 CV-B] dismounting, mounting and the horse-holders (4.5)
+    /// <summary>Ticks to get down (2 s); ticks to mount (4 s), and at Riding <see cref="MountSkilledRiding"/> or more (2 s).</summary>
+    public int DismountTicks { get; init; } = 40;
+    public int MountTicks { get; init; } = 80;
+    public int MountSkilledTicks { get; init; } = 40;
+    public int MountSkilledRiding { get; init; } = 60;
+    /// <summary>One horse-holder for each this many dismounted riders; each leads this many horses (his own and the others'); where he stands (mm behind the formation's anchor); how near an enemy makes him let go (mm); the horses' spacing at his side (mm).</summary>
+    public int HoldersPerHorses { get; init; } = 4;
+    public int HolderBackMm { get; init; } = 60_000;
+    public int HolderReleaseMm { get; init; } = 10_000;
+    public int HorseSpacingMm { get; init; } = 1300;
+    /// <summary>A man on his way to his horse starts to mount when he is this near it (mm); a remount that has not finished in this many ticks leaves the stragglers on foot.</summary>
+    public int FetchWithinMm { get; init; } = 1500;
+    public int MountMaxTicks { get; init; } = 4800;
+    /// <summary>Shield and weapon cover of a man mounting, permille (a half).</summary>
+    public int MountingCoverPm { get; init; } = 500;
+    /// <summary>The captain's dismount rule (Tactics 50): the share of the formation's horses that are wounded (permille), the enemy within this many mm, and a remount once none is within <see cref="RemountClearMm"/>.</summary>
+    public int DismountWoundedPm { get; init; } = 300;
+    public int DismountEnemyMm { get; init; } = 80_000;
+    public int RemountClearMm { get; init; } = 100_000;
+    // ---- kicks and bites (4.6)
+    public int KickTrainedPm { get; init; } = 900;
+    public int KickPanicPm { get; init; } = 600;
+    public int KickAreaCm2 { get; init; } = 60;
+    public int KickMilliPerKg { get; init; } = 60;
+    public int KickReachMm { get; init; } = 1200;
+    /// <summary>The rear arc: the foe's direction from the horse against its heading is at most this Q10 dot (-724 is 45 degrees either side of straight behind: 90 degrees).</summary>
+    public int KickArcQ10 { get; init; } = -724;
+    public int KickEveryTicks { get; init; } = 60;
+    public int KickLowerPm { get; init; } = 600;
+    public int KickSkill { get; init; } = 50;
+    public int BiteAreaCm2 { get; init; } = 20;
+    public int BiteMilliPerKg { get; init; } = 8;
+    public int BiteEveryTicks { get; init; } = 100;
+    // ---- horse archers (4.7)
+    /// <summary>The standoff band, the distance at which the formation wheels away, and the point it rides to when it moves (all mm).</summary>
+    public int ArcherMinMm { get; init; } = 60_000;
+    public int ArcherMaxMm { get; init; } = 120_000;
+    public int ArcherWheelMm { get; init; } = 40_000;
+    public int ArcherStandoffMm { get; init; } = 90_000;
+    /// <summary>Each point of mounted aim penalty widens the aim cone by this much (permille of the sigma).</summary>
+    public int ArcherSigmaPerPointPm { get; init; } = 30;
+    /// <summary>A horse archer picks his target every this many ticks.</summary>
+    public int ArcherAimEveryTicks { get; init; } = 10;
+    // ---- fallen horses (4.3)
+    /// <summary>A fallen horse is a rectangle this many mm each way from its centre along and across its body, widened by the mount's own half width; a gallop onto it falls with this chance (permille) unless the horse is trained this far and its rider rides this well, when it jumps.</summary>
+    public int FallenHalfLenMm { get; init; } = 1000;
+    public int FallenHalfWidMm { get; init; } = 500;
+    public int FallenPadMm { get; init; } = 300;
+    public int FallenHitPm { get; init; } = 300;
+    public int JumpTrainedPm { get; init; } = 900;
+    public int JumpRiding { get; init; } = 40;
 }

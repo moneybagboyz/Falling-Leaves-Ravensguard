@@ -54,6 +54,7 @@ public sealed partial class FormationBook
 
     private void CaptainStep(FightWorld w, FormationRow r, int tick)
     {
+        if (r.Foot is FootDismounting or FootMounting) return;                    // [P7 CV-B] the men are getting down or up: no new orders
         var cap = w.Fighters[r.Captain];
         int T = Math.Max(0, cap.Kit.Tactics);
         if (!r.CaptainAlways && tick - r.Micro < Rules.R.CaptainTakeoverS * 20) return;
@@ -124,6 +125,10 @@ public sealed partial class FormationBook
             if (hold && r.Fire != FireMode.Hold) Cand(Ch.Fire, 50, FormationOrder.Of(OrderKind.HoldFire));
             else if (!hold && r.Fire != FireMode.AtWill && Rules.CaptainMay("archers_at_will", T)) Cand(Ch.Fire, 50, FormationOrder.Of(OrderKind.FireAtWill));
         }
+
+        // ---- [P7 CV-B] dismount and mount (cavalry-and-mounted-war 4.5): men-at-arms get down to hold a line against cavalry or in woods or when their horses are hurt, and up again when it is over
+        PlanDismount(w, r, T, s);
+        if (r.Kind == FormationKind.Cavalry && Rules.CaptainMay("horse_archer_skirmish", T) && IsHorseArcherRow(w, r)) return;        // their movement is SkirmishStep's
 
         // ---- movement
         if (r.Kind == FormationKind.Cavalry) PlanCavalry(w, r, T);

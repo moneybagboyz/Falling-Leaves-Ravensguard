@@ -241,8 +241,10 @@ public sealed partial class FormationBook
         }
         Arrivals(w, r, tick);
         if (r.Active > 0 && r.Captain >= 0) CaptainStep(w, r, tick);
+        if (r.Foot != FootNone) FootStep(w, r, tick);                                      // [P7 CV-B] getting down and up, the horse-holders
         UpdateContact(w, r, tick);
         if (r.Kind == FormationKind.Cavalry) CavalryStep(w, r, tick);
+        if (r.Kind == FormationKind.Cavalry && r.Active > 0 && r.Captain >= 0) SkirmishStep(w, r, tick);      // [P7 CV-B] horse archers keep their distance
         Drive(w, r, tick);
         if (r.DeployStart >= 0 && tick >= r.DeployStart + r.DeployTicks) r.DeployStart = -1;
         if (r.VacCount > 0) CloseRanks(w, r, tick);
@@ -341,6 +343,7 @@ public sealed partial class FormationBook
             h = FightMath.Mix(h, (long)r.Cohesion | (long)r.QueueCount << 16 | (long)r.PendingCount << 20 | (r.Cascaded ? 1L << 24 : 0));
             for (int i = 0; i < r.Slot.Length; i++) h = FightMath.Mix(h, r.Slot[i]);
             if (r.Kind == FormationKind.Cavalry) h = HashCavalry(h, r);
+            if (r.Foot != FootNone) h = FightMath.Mix(h, (long)r.Foot | (long)r.FootTick << 8);          // [P7 CV-B] only while dismounted or mounting: a book that never does hashes as before
         }
         return h;
     }
@@ -351,7 +354,8 @@ public sealed partial class FormationBook
     public long[] Pack()
     {
         bool cav = false; foreach (var r in Rows) if (r.Kind == FormationKind.Cavalry) { cav = true; break; }
-        var o = new List<long> { cav ? 2 : 1, Hero, HeroLeadership, _serial, Entry.Count };
+        bool foot = false; foreach (var r in Rows) if (r.Foot != FootNone) { foot = true; break; }
+        var o = new List<long> { foot ? 3 : cav ? 2 : 1, Hero, HeroLeadership, _serial, Entry.Count };
         foreach (var (side, e) in Entry) { o.Add(side); o.Add(e.X); o.Add(e.Y); }
         o.Add(Lost.Count);
         foreach (var l in Lost) { o.Add(l.Tick); o.Add(l.Row); o.Add(l.Serial); o.Add(l.Runner); }
@@ -369,6 +373,7 @@ public sealed partial class FormationBook
             for (int i = 0; i < n; i++) { o.Add(r.Members[i]); o.Add(r.Slot[i]); o.Add(r.Leadership[i]); o.Add(r.Pace[i]); o.Add(r.FlankBlow[i]); o.Add(r.VacSince[i]); o.Add(r.Officer[i]); }
         }
         if (cav) foreach (var r in Rows) if (r.Kind == FormationKind.Cavalry) PackCavalry(o, r);       // the cavalry tail: a book with no cavalry row is byte for byte what BB-B wrote
+        if (foot) PackFoot(o);                                                                            // [P7 CV-B] format 3: the rows that are dismounted or getting up or down
         return [.. o];
     }
 
@@ -406,6 +411,7 @@ public sealed partial class FormationBook
             book.Relayout(r);
         }
         if (format >= 2) foreach (var r in book.Rows) if (r.Kind == FormationKind.Cavalry) UnpackCavalry(rd, r);
+        if (format >= 3) book.UnpackFoot(rd);
         w.Grid.Dirty = true;
         return book;
     }

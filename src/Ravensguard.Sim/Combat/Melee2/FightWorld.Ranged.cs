@@ -130,6 +130,7 @@ public sealed partial class FightWorld
         if (t != null) { tx = t.X; ty = t.Y; tz = f.Req.Part >= 0 && f.Req.Part < t.Plan.Parts.Length ? PartHeightMm(t.Plan.Parts[f.Req.Part]) : K.AimHeightMm; }
         else { tx = f.X + f.FX * 30; ty = f.Y + f.FY * 30; tz = K.AimHeightMm; }
         int sigma = AimSigmaMdeg(f.ArcherySkill, early, aimed, f.LastMoveMm * 20 > K.MoveCancelMmps, f.OneEye);
+        if (Mounts != null) sigma = MountedSigma(f, sigma);                                  // [P7 CV-B] a rider's shot: the mounted aim penalty widens the cone
         int power = l.MinStrength > 0 ? (int)Math.Min(l.PowerPm, (long)l.PowerPm * f.Kit.Strength * f.StrengthPm / 1000 / l.MinStrength) : l.PowerPm;
         int lvRange = l.RangeMaxM * 1000;
         if (Walls is ILevelWalls lw0) { int bs = lw0.BaseMm(f.Id), bt = t != null ? lw0.BaseMm(t.Id) : bs; tz += bt; if (bs >= bt + AssaultRules.LevelMm / 2) { sigma = sigma * AssaultRules.HeightSigmaPm / 1000; lvRange = lvRange * AssaultRules.HeightRangePm / 1000; } }   // [P7-SG-C] aim at his floor; a level up is range and a steadier aim
@@ -276,6 +277,7 @@ public sealed partial class FightWorld
                 long t = (rx * p.DirX + ry * p.DirY) / FightMath.One;
                 if (t < f0 - K.CapsuleRadiusMm || t > f1 + K.CapsuleRadiusMm) continue;
                 if (e.Id == p.Shooter && t < 800) continue;
+                if (Mounts != null && t < 800 && Mounts.PairOf(e.Id) is { } pe && pe.Horse == e.Id && pe.Rider == p.Shooter) continue;       // [P7 CV-B] a rider's arrow leaves over his own horse
                 long lat = (rx * p.DirY - ry * p.DirX) / FightMath.One;
                 if (Math.Abs(lat) > K.CapsuleRadiusMm) continue;
                 int z = p.Z(Math.Max(0, t)) - BaseOf(e);                    // [P7-SG-C] the height above his own floor
@@ -356,7 +358,7 @@ public sealed partial class FightWorld
         var key = new BlowKey(Seed, Tick, (ulong)(shooter.Id + 1) | 0x8000_0000UL, p.Serial);
         // a raised shield catches a missile from the front
         if (t.Act == FAct.Block && t.Shield != null && t.ShieldArm && t.ShieldPm > 0 && facing == Facing.Front
-            && DefenceRoll(t, shooter.Id, p.Serial | 0x10000u, 3) < Math.Min(K.ShieldCoverCapPm, t.Shield.CoverPm + BracedNeighbours(t) * K.ShieldWallBonusPm))
+            && DefenceRoll(t, shooter.Id, p.Serial | 0x10000u, 3) < Math.Min(K.ShieldCoverCapPm, MountingCover(t, t.Shield.CoverPm + BracedNeighbours(t) * K.ShieldWallBonusPm)))
         {
             s.Block = new BlockInput { Kind = BlockKind.Shield, Shield = t.Shield, ShieldConditionPm = t.ShieldPm, BlockerSkill = t.ShieldSkill, BracedNeighbours = BracedNeighbours(t), ArmPart = ArmPart(t, 0) };
             Resolver.Resolve(s, key, _r);

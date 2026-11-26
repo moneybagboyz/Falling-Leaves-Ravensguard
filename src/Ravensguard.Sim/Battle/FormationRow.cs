@@ -68,6 +68,9 @@ public sealed class FormationRow
     // transient: the speed cap a cavalry rider keeps this tick and the tick it was set
     public int[] CavCap = [], CavCapTick = [];
 
+    // ---- [P7 CV-B] dismounting (HorseHolders.cs): 0 mounted, 1 getting down, 2 on foot (the row is Infantry), 3 getting up; the tick that state began ----
+    public int Foot, FootTick;
+
     public int Active => ActiveNow;
 
     /// <summary>The slot a member index holds now (-1: none).</summary>

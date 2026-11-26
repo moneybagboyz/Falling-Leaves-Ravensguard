@@ -75,6 +75,36 @@ public sealed class MountedFighter
 
     public const int PackLength = 62;
 
+    // ---- [P7 CV-B] dismounting, mounting, the horse-holders, kicks and fallen horses (saved in an optional trailer after the pair: see CvbPack) ----
+    /// <summary>The man's state on or off his horse: 0 none, 1 getting down, 2 on foot by choice, 3 walking to his horse, 4 mounting.</summary>
+    public const int PhNone = 0, PhDismounting = 1, PhFoot = 2, PhFetch = 3, PhMounting = 4;
+    public int Phase, PhaseAt;
+    /// <summary>The fighter (a horse-holder) leading this horse (-1 none) and its place at his side (0 his own).</summary>
+    public int HeldBy = -1, HeldSlot;
+    /// <summary>This rider is a horse-holder: he stands at (<see cref="PostX"/>, <see cref="PostY"/>) with the horses and does not fight; <see cref="Remount"/> says he is to mount once the horses he leads for others are gone.</summary>
+    public bool Holding, Remount;
+    public int PostX, PostY;
+    /// <summary>The tick of the horse's last kick and bite.</summary>
+    public int KickAt = NoTick, BiteAt = NoTick;
+    /// <summary>The fallen horse this mount last met (the draw is made once for it).</summary>
+    public int ObstacleId = -1;
+    /// <summary>He got down on his own (a crossbowman reloading), not by the formation's order: he mounts again when loaded.</summary>
+    public bool Solo;
+    public const int NoTick = int.MinValue / 2;
+
+    public bool HasCvb => Phase != 0 || HeldBy != -1 || HeldSlot != 0 || Holding || Remount || KickAt != NoTick || BiteAt != NoTick || ObstacleId != -1 || Solo;
+
+    /// <summary>The saved CV-B state: only written when some of it is set (a fight with none saves byte for byte as before).</summary>
+    public long[] CvbPack() => [Phase, PhaseAt, HeldBy, HeldSlot, (Holding ? 1 : 0) | (Remount ? 2 : 0) | (Solo ? 4 : 0), PostX, PostY, KickAt, BiteAt, ObstacleId];
+    public const int CvbLength = 10;
+
+    public void CvbUnpack(ReadOnlySpan<long> s)
+    {
+        Phase = (int)s[0]; PhaseAt = (int)s[1]; HeldBy = (int)s[2]; HeldSlot = (int)s[3];
+        Holding = (s[4] & 1) != 0; Remount = (s[4] & 2) != 0; Solo = (s[4] & 4) != 0;
+        PostX = (int)s[5]; PostY = (int)s[6]; KickAt = (int)s[7]; BiteAt = (int)s[8]; ObstacleId = (int)s[9];
+    }
+
     public static MountedFighter Unpack(ReadOnlySpan<long> s, int index)
     {
         int i = 0;
@@ -95,6 +125,7 @@ public sealed class MountedFighter
     public ulong Hash(ulong h)
     {
         foreach (var v in Pack()) h = Melee2.FightMath.Mix(h, v);
+        if (HasCvb) foreach (var v in CvbPack()) h = Melee2.FightMath.Mix(h, v);            // [P7 CV-B] only when set: a fight that never uses them hashes as before
         return h;
     }
 }
@@ -114,6 +145,11 @@ public struct MountedExtra
 public sealed class MountedTuning
 {
     public MountedTuningDef D { get; }
+    /// <summary>[P7 CV-B] The cavalry rules' constants (dismounting, holders, kicks, horse archers, fallen horses).</summary>
+    public CavalryRulesDef Cv { get; }
+    /// <summary>[P7 CV-B] The kick and the bite as weapons of no wielder (the blow's momentum is the horse's own: <c>60 x kg</c> and <c>8 x kg</c> milli).</summary>
+    public WeaponV2 Kick { get; }
+    public WeaponV2 Bite { get; }
     public FootingRule[] Footing { get; }
     public IReadOnlyDictionary<string, SpeciesDef> Breeds { get; }
     public WeaponV2 Trample { get; }
@@ -123,12 +159,23 @@ public sealed class MountedTuning
     public MountedTuning(ContentDatabase db, CombatTablesV2 t)
     {
         D = db.All<MountedTuningDef>().OrderBy(d => d.Id, StringComparer.Ordinal).FirstOrDefault() ?? new MountedTuningDef { Id = "default" };
+        Cv = db.All<CavalryRulesDef>().OrderBy(d => d.Id, StringComparer.Ordinal).FirstOrDefault() ?? new CavalryRulesDef { Id = "default" };
         Footing = TerrainFooting.From(D);
         Breeds = db.All<SpeciesDef>().ToDictionary(d => d.Id, StringComparer.Ordinal);
         Trample = t.Synthetic(new WeaponShapeDef
         {
             Id = "mounted.trample", Name = "Trample", Family = "natural", ReachMm = 700, StrikeTicks = 1, HeadVolumeCm3 = 800,
             Attacks = [new AttackDef { Id = "trample", Name = "Trample", Verb = "tramples", Type = AttackType.Blunt, ContactArea = 80, PenetrationMm = 0, Velocity = 1.0 }],
+        }, "bone");
+        Kick = t.Synthetic(new WeaponShapeDef
+        {
+            Id = "mounted.kick", Name = "Kick", Family = "natural", ReachMm = Cv.KickReachMm, StrikeTicks = 1, HeadVolumeCm3 = 800,
+            Attacks = [new AttackDef { Id = "kick", Name = "Kick", Verb = "kicks", Type = AttackType.Blunt, ContactArea = Cv.KickAreaCm2, PenetrationMm = 0, Velocity = 1.0 }],
+        }, "bone");
+        Bite = t.Synthetic(new WeaponShapeDef
+        {
+            Id = "mounted.bite", Name = "Bite", Family = "natural", ReachMm = Cv.KickReachMm, StrikeTicks = 1, HeadVolumeCm3 = 300,
+            Attacks = [new AttackDef { Id = "bite", Name = "Bite", Verb = "bites", Type = AttackType.Blunt, ContactArea = Cv.BiteAreaCm2, PenetrationMm = 0, Velocity = 1.0 }],
         }, "bone");
         Stake = t.Synthetic(new WeaponShapeDef
         {

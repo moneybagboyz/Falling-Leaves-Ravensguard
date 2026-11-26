@@ -177,6 +177,7 @@ public sealed partial class FightWorld
             int st = _snapStamina[t.Id];
             int loss = st <= 0 ? K.EmptyCoverLossPm : st < K.ExhaustedBelowX100 ? K.ExhaustedCoverLossPm : 0;
             shieldCover = Math.Max(0, shieldCover - loss); weaponCover = Math.Max(0, weaponCover - loss);
+            if (Mounts != null) { shieldCover = MountingCover(t, shieldCover); weaponCover = MountingCover(t, weaponCover); }          // [P7 CV-B] a man mounting guards at half cover
             if (!guard) { int pm = ts == FAct.Stagger ? K.StaggerCoverPm : K.RecoverCoverPm; shieldCover = shieldCover * pm / 1000; weaponCover = weaponCover * pm / 1000; }
             int combined = 1000 - (1000 - shieldCover) * (1000 - weaponCover) / 1000;
             int roll = DefenceRoll(t, a.Id, serial, 2);
