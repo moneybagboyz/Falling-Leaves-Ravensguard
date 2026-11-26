@@ -425,11 +425,12 @@ public sealed partial class ArmyWorld
     }
 
     /// <summary>A levy's own kit goes back to his household's things and the pieces issued from an armoury to it; his soldier's row is gone.</summary>
-    private void GiveKitBack(LevyCompany c)
+    private void GiveKitBack(LevyCompany c) { foreach (ulong m in c.Men) GiveKitBackOne(m); }
+
+    private void GiveKitBackOne(ulong m)
     {
         if (Soldiers == null) return;
         var items = W.Economy.Items;
-        foreach (ulong m in c.Men)
         {
             if (Soldiers.Book.Of(m) is { } row)
             {

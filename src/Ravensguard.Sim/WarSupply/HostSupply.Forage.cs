@@ -29,8 +29,8 @@ public sealed partial class HostSupply
         if (!_forageDay.TryGetValue(a.Id, out var fd))
         {
             int draw = ForageDrawOverride ?? DetRng.Range(Economy.World.Seed, day, (ulong)Math.Max(0, a.PlaceSettlement) + 1, RngStreams.ForageYield, 0, 800, 1201);
-            long foragers = (long)a.Total * SupplyConfig.ForageSharePm / 1000;
-            _forageDay[a.Id] = fd = new ForageDay { CapG = foragers * SupplyConfig.ForageGramsEach * draw / 1000 };
+            long foragers = (long)(a.Total + a.Retainers) * SupplyConfig.ForageSharePm / 1000;
+            _forageDay[a.Id] = fd = new ForageDay { CapG = foragers * SupplyConfig.ForageGramsEach * draw / 1000 * (1000 - a.ForageCutPm) / 1000 };       // the strip limit (P7-AM-D): the same ground for days on end gives a third
         }
         return fd.CapG;
     }
@@ -43,7 +43,7 @@ public sealed partial class HostSupply
     /// </summary>
     private long Forage(HostAccount a, Rt rt, DayResult res, SupplyNeed n, ushort[] goods, long left, int day)
     {
-        if (a.Forage == ForagePolicy.None || a.Abstract || left <= 0 || a.Total <= 0) return left;
+        if (a.Forage == ForagePolicy.None || a.Abstract || left <= 0 || a.Total + a.Retainers <= 0) return left;
         var season = GameTime.FromGameHours((long)day * 24).Season;
         if (n != SupplyNeed.Staple && n != SupplyNeed.Hay) return left;
         if (n == SupplyNeed.Hay && (season != SeasonKind.Summer || _hay == ushort.MaxValue)) return left;
@@ -141,6 +141,7 @@ public sealed partial class HostSupply
         {
             ulong realmKey = LandWorld.RealmTreasuryId(a.Realm).Value;
             foreach (int h in robbed) rb.AddOpinion(_pop.Households.IdOf(h).Value, realmKey, SupplyConfig.ForageRobbedOpinion);
+            if (UnrestBk is { } ub) foreach (int h in robbed) ub.Add(_pop.Households.IdOf(h).Value, "foraged", day, e.Value);       // P7-AM-D (AM-12): every robbed household bears the grievance
             Book.Stats[9] += robbed.Count;
         }
     }

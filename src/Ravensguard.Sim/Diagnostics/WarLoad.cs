@@ -20,18 +20,18 @@ public sealed record WarLoadSpec(int Levies, int Spearmen, int Archers, int ManA
 /// <summary>The war table's running numbers of the load generator.</summary>
 public sealed class WarTally
 {
-    public long ManDaysFed, ManDaysHungry, ManDaysPaid, ManDaysUnpaid, Deserted, BoughtStapleG, BaggageStapleG, PaidMites, BoughtMites, ShortStapleG;
+    public long ManDaysFed, ManDaysHungry, ManDaysPaid, ManDaysUnpaid, Deserted, DesertedPersons, BoughtStapleG, BaggageStapleG, PaidMites, BoughtMites, ShortStapleG;
     /// <summary>Coin the realm sent to the pay chest at the muster, and the arrears the realm still owed when the host disbanded.</summary>
     public long FundedMites, ArrearsMites, AidMites, TallageMites, LoanMites;
     public int Mustered, Days;
-    public void Reset() { ManDaysFed = ManDaysHungry = ManDaysPaid = ManDaysUnpaid = Deserted = BoughtStapleG = BaggageStapleG = PaidMites = BoughtMites = ShortStapleG = FundedMites = ArrearsMites = AidMites = TallageMites = LoanMites = 0; Mustered = Days = 0; }
+    public void Reset() { ManDaysFed = ManDaysHungry = ManDaysPaid = ManDaysUnpaid = Deserted = DesertedPersons = BoughtStapleG = BaggageStapleG = PaidMites = BoughtMites = ShortStapleG = FundedMites = ArrearsMites = AidMites = TallageMites = LoanMites = 0; Mustered = Days = 0; }
 }
 
 /// <summary>
 /// The scripted load generator of the war-load soak (economy-audit 5.1): a host with no soldiers and no battles that is a plain client of <see cref="HostSupply"/>. It registers a host with a pay chest (funded from the realm's
 /// treasury) and a baggage store, musters its levies from the region's households (real people: their households lose their labour while they serve; the day of the muster is jittered +-2 days on stream 0x700, key war and
 /// season), walks a fixed route at the column's pace, and each day <see cref="Before"/> the host slot updates the host's place and <see cref="After"/> it reads the day's <see cref="DayResult"/>: men fed or hungry, paid or in
-/// arrears, and the stand-in desertion (1 man per 100 man-days unpaid or unfed; the military's rule replaces it in P7-AM-D) that returns deserters to their households or, from outside, to the continent. A diagnostic harness: it
+/// arrears, and, since P7-AM-D, the military's own desertion rule (it runs in the armies' day for every host of the supply book): its deserters are read back into the tally. A diagnostic harness: it
 /// lives under Diagnostics, the only place the 0x700 stream may be named, and nothing in a game started from the menu constructs it.
 /// </summary>
 public sealed class WarLoad
@@ -43,7 +43,7 @@ public sealed class WarLoad
     public int WarId { get; }
     public HostId Host { get; private set; } = HostId.None;
     public bool Active => !Host.IsNone;
-    private long _carryManDays;
+    private long _deserSeen, _personsSeen;
     private int[] _route = [];
     private int _routeStep;
 
@@ -158,7 +158,7 @@ public sealed class WarLoad
     public bool AtGate => _routeStep >= _route.Length / 2;
     public bool Home => _routeStep >= _route.Length - 1;
 
-    /// <summary>After the host slot: tally the day's result, and apply the stand-in desertion (1 man per 100 man-days unpaid or unfed).</summary>
+    /// <summary>After the host slot: tally the day's result and what the military's desertion took.</summary>
     public void After(int day)
     {
         if (!Active) return;
@@ -176,21 +176,13 @@ public sealed class WarLoad
         }
         Tally.BoughtStapleG += res.Delivered[(int)SupplyNeed.Staple, (int)SupplySource.Market]; Tally.BaggageStapleG += res.Delivered[(int)SupplyNeed.Staple, (int)SupplySource.Baggage];
         Tally.ShortStapleG += res.ShortG[(int)SupplyNeed.Staple]; Tally.PaidMites += res.PaidTotal; Tally.BoughtMites += res.BoughtMites;
-        _carryManDays += short_;
-        int leave = (int)(_carryManDays / 100); _carryManDays %= 100;
-        if (leave > 0) Desert(a, leave);
-    }
-
-    /// <summary>The stand-in's deserters: levy persons first (they walk home, the labour returns), then the other roles in role order (counts); the economy settles each as <see cref="HostSupply.Desert"/> does.</summary>
-    private void Desert(HostAccount a, int n)
-    {
-        var persons = _hs.Persons(Host).Reverse().Take(Math.Min(n, a.Men[(int)TroopRole.Levy])).ToList();
-        if (persons.Count > 0) { _hs.Desert(Host, persons); n -= persons.Count; Tally.Deserted += persons.Count; }
-        for (int r = 0; r < Roster.Roles && n > 0; r++)
+        // P7-AM-D: the military's desertion rule ran in the same tick (ArmyWorld.RationsDay, at the armies' day after the host slot): the deserters are real people leaving by home or the roads, or counts of the roster; the tally reads what it did
+        if (_ew.World.Get<Ravensguard.Sim.Armies.ArmyWorld>() is { } aw && aw.Book.Rations.TryGetValue(Host.Value, out var rat))
         {
-            if ((TroopRole)r == TroopRole.Levy) continue;
-            int took = _hs.DesertCounts(Host, (TroopRole)r, n); n -= took; Tally.Deserted += took;
+            long now = rat.DesertedPersons + rat.DesertedCounts; Tally.Deserted += now - _deserSeen; _deserSeen = now;
+            Tally.DesertedPersons += rat.DesertedPersons - _personsSeen; _personsSeen = rat.DesertedPersons;
         }
+        _ = short_;
     }
 
     /// <summary>The campaign is over: the host is disbanded (arrears paid as far as the chest goes, the men home, the unspent coin back to the treasury).</summary>

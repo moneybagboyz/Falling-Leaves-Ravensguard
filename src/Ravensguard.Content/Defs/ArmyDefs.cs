@@ -117,4 +117,42 @@ public sealed record ArmyRulesDef : ContentDef
     public int WinterReleaseDoy { get; init; } = 46;
     /// <summary>A levy kept on after his owed days needs at least this many days of his pay in the chest.</summary>
     public int KeepPayDays { get; init; } = 5;
+
+    // ---- P7-AM-D: rations, hunger, desertion, the fold-back after a battle (armies-on-the-map 4.7 to 4.9, overview 8.2)
+    /// <summary>A host's morale at its first day, the day's change (hungry, fed with relish, unpaid) and the battle's (winner, loser); the share of the day's ration (permille) under which the host is hungry.</summary>
+    public int HostMoraleStart { get; init; } = 60;
+    public int MoraleHungry { get; init; } = -5;
+    public int MoraleFed { get; init; } = 5;
+    public int MoraleUnpaid { get; init; } = -3;
+    public int MoraleWin { get; init; } = 15;
+    public int MoraleLose { get; init; } = -25;
+    public int HungryBelowPm { get; init; } = 500;
+    /// <summary>The desertion rule (4.8), permille a man a day: 2 for each day of arrears after the third, 10 hungry, 30 for a levy in the reap window (days 26 to 35), 5 for each day a levy is kept past the owed days, 10 under a host morale of 30, 20 within 3 days of a defeat, 5 less for each 200 of drill (the man's best melee skill times <c>drill_per_skill</c>); at most <c>desert_max_pm</c>; a retinue (warband men, the roster's retinue roles) rolls half.</summary>
+    public int DesertArrearsFreeDays { get; init; } = 3;
+    public int DesertArrearsPm { get; init; } = 2;
+    public int DesertHungryPm { get; init; } = 10;
+    public int DesertHarvestPm { get; init; } = 30;
+    public int DesertHarvestFromDoy { get; init; } = 26;
+    public int DesertHarvestToDoy { get; init; } = 35;
+    public int DesertBeyondOwedPm { get; init; } = 5;
+    public int DesertLowMoralePm { get; init; } = 10;
+    public int MoraleLow { get; init; } = 30;
+    public int DesertDefeatPm { get; init; } = 20;
+    public int DefeatDays { get; init; } = 3;
+    public int DrillPerSkill { get; init; } = 10;
+    public int DesertMaxPm { get; init; } = 200;
+    /// <summary>A deserter walks home when home is within <c>deserter_home_m</c> and he has this much coin (mites, 50 cp) or two days of food there; with neither, this share (permille) of them take to the roads; from further off every one does. A lone man joins a band whose lair is within this reach (metres) or goes home.</summary>
+    public int DesertHomeCoinMites { get; init; } = 500;
+    public int DesertNothingBandPm { get; init; } = 500;
+    public int DesertJoinBandM { get; init; } = 15000;
+    /// <summary>The strip limit of foraging (4.6): after this many days on the same ground the yield is cut by this share (permille: 667 leaves a third).</summary>
+    public int ForageStripDays { get; init; } = 3;
+    public int ForageStripCutPm { get; init; } = 667;
+    /// <summary>After a battle (4.9): the wounded a cart carries, the days a carried man is not fit, the days a wounded man left behind is away from his fields, the days a captured man is (until a ransom or a release), the share of the men lost (per cent) over which the host retreats, and the share left (per cent) under which it disbands.</summary>
+    public int WoundedPerCart { get; init; } = 4;
+    public int WoundedCarryDays { get; init; } = 10;
+    public int WoundedAwayDays { get; init; } = 10;
+    public int CapturedAwayDays { get; init; } = 30;
+    public int RetreatLostPct { get; init; } = 50;
+    public int DisbandLeftPct { get; init; } = 25;
 }

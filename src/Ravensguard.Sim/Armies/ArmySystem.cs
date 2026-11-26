@@ -38,7 +38,7 @@ public sealed class ArmyDailySystem : AbstractSystem
         var aw = ctx.World.Get<ArmyWorld>(); if (aw == null) return;
         var env = new ArmyEnv(ctx.World, ctx.Outbox, ctx.Hour);
         long t0 = System.Diagnostics.Stopwatch.GetTimestamp();
-        aw.PayDay(env); aw.BandsDay(env); aw.MusterDay(env);
+        aw.PayDay(env); aw.BandsDay(env); aw.RationsDay(env); aw.MusterDay(env);
         aw.DayCost.Add(System.Diagnostics.Stopwatch.GetTimestamp() - t0);
     }
 }

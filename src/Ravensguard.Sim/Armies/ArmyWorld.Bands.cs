@@ -58,6 +58,19 @@ public sealed partial class ArmyWorld
         return band;
     }
 
+    /// <summary>Men who left a host take to the roads with a band already there (4.8: joins or forms): each is a person of the world, alive, in no band; his trade is kept to give back, his soldier row goes, any warband loses him.</summary>
+    public void JoinBand(BanditBand band, IEnumerable<ulong> persons)
+    {
+        foreach (ulong p in persons.Distinct().OrderBy(x => x))
+        {
+            int r = RowOf(p); if (r < 0 || !People.IsAlive(r) || IsHero(p) || Book.BandWith(p) != null) continue;
+            if (Book.WarbandWith(p) is { } wb) { wb.Members.Remove(p); wb.Prev.Remove(p); if (p == wb.Captain) SetCaptain(wb); }
+            Soldiers?.Fill.Discharge(Soldiers.Book, p);
+            band.Prev[p] = (byte)People.Occupation[r]; People.Occupation[r] = Occupation.Bandit; band.Members.Add(p);
+        }
+        band.Members.Sort(); Book.Touch();
+    }
+
     /// <summary>A man leaves his band (he yielded, or drifted home): his trade comes back and he is a man of his household again.</summary>
     public void ReleaseBandit(BanditBand band, ulong person)
     {

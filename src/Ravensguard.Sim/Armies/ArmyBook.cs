@@ -152,6 +152,17 @@ public sealed class ArmyHost
 }
 
 /// <summary>
+/// P7-AM-D: what the military keeps of a host's belly and heart, by the host's id in the supply book (so a supply-only host of the war-load soak has one too): the morale, the run of short days, the day of the last defeat, the
+/// ground the foragers have stripped and for how long, the wounded the wagons carry (person to the day he is fit) and what the desertion has cost, persons and counts. All integers, saved in the armies section's key 13.
+/// </summary>
+public sealed class HostRations
+{
+    public int Host, Morale = 60, HungryRun, FedPm = 1000, DefeatDay = -1000, StripPlace = -1, StripDays;
+    public long HungryDays, DesertedPersons, DesertedCounts, ShortDays;
+    public SortedDictionary<ulong, int> Wounded { get; } = [];
+}
+
+/// <summary>
 /// The armies' state (armies-on-the-map 3), the optional <c>armies</c> section: the standing warbands, the errands they escort, the bandit bands, the news of robberies and raids, and the log of tasks taken. Hosts, levy
 /// companies, camps and intel join in later parts as appended keys. Empty (so absent from a save) while no warband, band or errand exists. Kept sorted by id: equal states give equal bytes and equal hashes.
 /// </summary>
@@ -168,11 +179,13 @@ public sealed class ArmyBook
     /// <summary>P7-AM-B: the seasonal hosts by id, and the next id.</summary>
     public SortedDictionary<int, ArmyHost> Hosts { get; } = [];
     public int NextHost = 1;
+    /// <summary>P7-AM-D: the hosts' bellies and hearts, by the supply book's host id.</summary>
+    public SortedDictionary<int, HostRations> Rations { get; } = [];
     /// <summary>Fiefs whose lord was found to have no man to hire in a season: not asked again until the next one (a season number).</summary>
     public SortedDictionary<int, int> Barren { get; } = [];
     public const int LogKeep = 2000, ReportKeep = 64;
 
-    public bool IsEmpty => Warbands.Count == 0 && Errands.Count == 0 && Bands.Count == 0 && Reports.Count == 0 && Log.Count == 0 && Barren.Count == 0 && NextWarband == 1 && NextErrand == 1 && NextBand == 1 && Hosts.Count == 0 && Marches.Count == 0 && NextHost == 1;
+    public bool IsEmpty => Warbands.Count == 0 && Errands.Count == 0 && Bands.Count == 0 && Reports.Count == 0 && Log.Count == 0 && Barren.Count == 0 && NextWarband == 1 && NextErrand == 1 && NextBand == 1 && Hosts.Count == 0 && Marches.Count == 0 && NextHost == 1 && Rations.Count == 0;
 
     public Warband? WarbandOfFief(int fief) { foreach (var w in Warbands.Values) if (w.Fief == fief) return w; return null; }
     public Warband? WarbandOfLord(ulong lord) { foreach (var w in Warbands.Values) if (w.Lord == lord) return w; return null; }
@@ -267,6 +280,15 @@ public sealed class ArmyBook
                 M(m.Stops.Count); foreach (int s in m.Stops) M(s);
                 M(m.Outsiders.Count); foreach (var (p, r) in m.Outsiders) { M((long)p); M(r); }
                 if (m.Camp is { } c) { M(1); M(c.XMm); M(c.YMm); M(c.Near); M(c.HeadX); M(c.HeadY); M(c.SinceSec); M(c.Serial); M(c.Men); M(c.Nights); M(c.Watch); M((c.Palisade ? 1 : 0) | (c.Latrine ? 2 : 0) | (c.WaterCarried ? 4 : 0) | (c.BelowTown ? 8 : 0)); M(c.Pieces); M(c.Sentries); } else M(0);
+            }
+        }
+        if (Rations.Count > 0)                                                            // P7-AM-D: absent while no host has been fed and rolled
+        {
+            M(-8);
+            foreach (var (id, r) in Rations)
+            {
+                M(id); M(r.Morale); M(r.HungryRun); M(r.FedPm); M(r.DefeatDay); M(r.StripPlace); M(r.StripDays); M(r.HungryDays); M(r.DesertedPersons); M(r.DesertedCounts); M(r.ShortDays);
+                M(r.Wounded.Count); foreach (var (p, d) in r.Wounded) { M((long)p); M(d); }
             }
         }
         return h;

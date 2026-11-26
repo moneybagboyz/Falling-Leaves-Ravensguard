@@ -5866,6 +5866,8 @@ ch_note_ur_wages,{count} households were not paid
 ch_note_ur_eviction,{count} households saw a neighbour evicted
 ch_note_ur_slavery,{count} households lived beside bondage the law forbids
 ch_note_ur_purveyance,{count} households had their goods taken for the lord's table
+ch_note_ur_foraged,{count} households were stripped by foragers of a host
+ch_note_ur_levy_death,{count} households lost a man who died with the levy
 ch_note_ur_unknown,Unrest of no one cause
 ch_note_ur_trigger_eviction,an eviction set it off
 ch_note_ur_trigger_hanging,a hanging set it off
@@ -5912,6 +5914,8 @@ ur_g_unpaid_wages,Unpaid wages
 ur_g_eviction,A neighbour evicted
 ur_g_slavery,Bondage against the law
 ur_g_purveyance,Purveyance
+ur_g_foraged,Foraged by the host
+ur_g_levy_death,A son lost in the levy
 ur_rung_0,Quiet
 ur_rung_1,Grumbling
 ur_rung_2,Evasion
@@ -6641,6 +6645,14 @@ ch_note_am_march_own,the host marched on its own errand
 ch_note_am_crossed_out,the host marched out of the region
 ch_note_am_crossed_in,the host marched into the region
 ch_note_am_night_attack,an enemy came at the camp in the dark
+ch_am_desertion,"{men} men left the host of {ruler} at {place}."
+ch_note_am_desert_unpaid,their pay was months behind
+ch_note_am_desert_hungry,the host was hungry
+ch_note_am_desert_harvest,the grain stood ripe at home
+ch_note_am_desert_defeat,the host had been beaten
+ch_note_am_desert_service,they had served past their owed days
+ch_note_am_desert_morale,the host's heart was gone
+ch_note_am_defeat,the host was broken in the field
 dp_op_visit,visited
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."

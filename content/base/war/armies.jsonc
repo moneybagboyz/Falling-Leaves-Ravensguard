@@ -24,5 +24,10 @@
     "fight_kit": "soldier", "guard_kit": "guard",
     "deserter_home_m": 7400, "band_drift_home_pm": 20, "band_rob_pm": 250, "band_rob_reach_m": 3000, "band_rob_kg": 20,
     "muster_auto": 1, "summons_hour": 6, "summons_m_per_hour": 40000, "gather_days": 1, "march_m_per_hour": 234, "march_hours_per_day": 16, "form_pct": 80, "form_wait_days": 3,
+    "host_morale_start": 60, "morale_hungry": -5, "morale_fed": 5, "morale_unpaid": -3, "morale_win": 15, "morale_lose": -25, "hungry_below_pm": 500,
+    "desert_arrears_free_days": 3, "desert_arrears_pm": 2, "desert_hungry_pm": 10, "desert_harvest_pm": 30, "desert_harvest_from_doy": 26, "desert_harvest_to_doy": 35, "desert_beyond_owed_pm": 5,
+    "desert_low_morale_pm": 10, "morale_low": 30, "desert_defeat_pm": 20, "defeat_days": 3, "drill_per_skill": 10, "desert_max_pm": 200,
+    "desert_home_coin_mites": 500, "desert_nothing_band_pm": 500, "desert_join_band_m": 15000, "forage_strip_days": 3, "forage_strip_cut_pm": 667,
+    "wounded_per_cart": 4, "wounded_carry_days": 10, "wounded_away_days": 10, "captured_away_days": 30, "retreat_lost_pct": 50, "disband_left_pct": 25,
     "fund_days": 10, "harvest_decision_doy": 25, "reap_window_days": 10, "winter_release_doy": 46, "keep_pay_days": 5 }
 ]

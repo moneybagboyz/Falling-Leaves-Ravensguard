@@ -125,7 +125,7 @@ public sealed class WarYearRow
 {
     public int Year;
     public long Alive, HungerDeaths, HarvestT, RegionCoin;
-    public long ManDaysFed, ManDaysHungry, ManDaysUnpaid, BoughtKg, PaidMites, Deserted, Mustered, ArrearsMites, FundedMites;
+    public long ManDaysFed, ManDaysHungry, ManDaysUnpaid, BoughtKg, PaidMites, Deserted, DesertedPersons, Mustered, ArrearsMites, FundedMites;
     public int SiegeDaysOfFood = -1;
     /// <summary>What the realm raised for the campaign (aid from the fiefs, tallage on the households).</summary>
     public long AidMites, TallageMites;
@@ -271,7 +271,7 @@ public sealed class WarLoadSoak(WarLoadRun run, int years, bool control = false)
         {
             Year = y, Alive = s.Abstract!.Vital.Alive, HungerDeaths = s.Abstract.Vital.DeathsByCause[(int)DeathCause.Hunger] - hunger0,
             HarvestT = farming.Summaries.Count > 0 ? farming.Summaries[^1].HarvestG / 1_000_000 : 0, RegionCoin = led.Audit().InPurses.Mites,
-            ManDaysFed = t.ManDaysFed, ManDaysHungry = t.ManDaysHungry, ManDaysUnpaid = t.ManDaysUnpaid, BoughtKg = t.BoughtStapleG / 1000, PaidMites = t.PaidMites, Deserted = t.Deserted, Mustered = t.Mustered,
+            ManDaysFed = t.ManDaysFed, ManDaysHungry = t.ManDaysHungry, ManDaysUnpaid = t.ManDaysUnpaid, BoughtKg = t.BoughtStapleG / 1000, PaidMites = t.PaidMites, Deserted = t.Deserted, DesertedPersons = t.DesertedPersons, Mustered = t.Mustered,
             ArrearsMites = t.ArrearsMites + sup.Book.Hosts.Values.Sum(a => a.Arrears.Sum()), FundedMites = t.FundedMites,
             SiegeDaysOfFood = sup.IsBlockaded(town) ? sup.DaysOfFood(town) : -1,
             CoinOk = run.CoinConserved, MassOk = run.MassOk,

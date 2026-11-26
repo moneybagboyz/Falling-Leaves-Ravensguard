@@ -15,5 +15,7 @@
   {"type": "grievance_kind", "id": "unpaid_wages",  "points": 1, "days": 0,   "target": "manor", "text_key": "ur_g_unpaid_wages",  "note_key": "ch_note_ur_wages", "lord": true},
   {"type": "grievance_kind", "id": "eviction",      "points": 1, "days": 15,  "target": "manor", "text_key": "ur_g_eviction",      "note_key": "ch_note_ur_eviction", "lord": true},
   {"type": "grievance_kind", "id": "slavery",       "points": 1, "days": 0,   "target": "manor", "text_key": "ur_g_slavery",       "note_key": "ch_note_ur_slavery"},
-  {"type": "grievance_kind", "id": "purveyance",    "points": 2, "days": 30,  "target": "manor", "text_key": "ur_g_purveyance",    "note_key": "ch_note_ur_purveyance", "lord": true}
+  {"type": "grievance_kind", "id": "purveyance",    "points": 2, "days": 30,  "target": "manor", "text_key": "ur_g_purveyance",    "note_key": "ch_note_ur_purveyance", "lord": true},
+  {"type": "grievance_kind", "id": "foraged",       "points": 2, "days": 30,  "target": "manor", "text_key": "ur_g_foraged",       "note_key": "ch_note_ur_foraged", "lord": true},
+  {"type": "grievance_kind", "id": "levy_death",    "points": 2, "days": 60,  "target": "manor", "text_key": "ur_g_levy_death",    "note_key": "ch_note_ur_levy_death", "lord": true}
 ]

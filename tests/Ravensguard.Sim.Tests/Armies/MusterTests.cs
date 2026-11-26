@@ -218,7 +218,7 @@ public class MusterTests(ITestOutputHelper output)
     public void AM5_FiftyLeviesHeldThroughTheHarvest_TheirHouseholdsLoseTheirHands_TheHeldEntryNamesTheShortfall_TheyArePaidAfterTheirTenDays()
     {
         var (k, war, point) = Rig(year: 1); using var _k = k;
-        var aw = k.Aw; var hs = k.Supply(); var econ = k.State.Economy!; var pt = k.State.Population.People;
+        var aw = k.Aw; aw.NoDesertion = true; var hs = k.Supply(); var econ = k.State.Economy!; var pt = k.State.Population.People;
         var host = aw.CallMuster(k.Env(), new MusterCall(Mine, point, Worth: long.MaxValue / 4, MaxLevies: 50, FundDays: 40, FollowsWar: false))!;
         k.To(k.At(17, 19, 1));
         var hid = new HostId(host.Supply); Assert.Equal(50, host.Companies.Sum(c => c.Men.Count));
@@ -349,7 +349,7 @@ public class MusterTests(ITestOutputHelper output)
     public void AM18_Winter_OnDay46TheLeviesAreReleasedAndWalkHome_AHostBesiegingStays_TheWarbandsGarrison()
     {
         var (k, war, point) = Rig(); using var _k = k;
-        var aw = k.Aw; var hs = k.Supply();
+        var aw = k.Aw; aw.NoDesertion = true; var hs = k.Supply();
         int pointE = aw.MusterPointFor(Enemy, Mine);
         var hostA = aw.CallMuster(k.Env(), new MusterCall(Mine, point, Worth: long.MaxValue / 4, MaxLevies: 60, FundDays: 40, FollowsWar: false))!;
         var hostB = aw.CallMuster(k.Env(), new MusterCall(Enemy, pointE, Worth: long.MaxValue / 4, MaxLevies: 20, FundDays: 40, FollowsWar: false))!;

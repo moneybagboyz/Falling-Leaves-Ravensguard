@@ -66,9 +66,9 @@ public static class WarGates
         // WL-8 treasury
         if (n >= 6)
         {
-            long unpaid = war.Sum(r => r.ManDaysUnpaid), arrears = war.Sum(r => r.ArrearsMites), deserted = war.Sum(r => r.Deserted), raised = war.Sum(r => r.AidMites + r.TallageMites);
+            long unpaid = war.Sum(r => r.ManDaysUnpaid), arrears = war.Sum(r => r.ArrearsMites), deserted = war.Sum(r => r.Deserted), desertedPersons = war.Sum(r => r.DesertedPersons), raised = war.Sum(r => r.AidMites + r.TallageMites);
             bool ok = unpaid == 0 || arrears > 0 || deserted > 0;
-            Add("WL-8", ok ? AuditState.Pass : AuditState.Fail, $"the realm raised {raised:N0} mites over the campaigns; {unpaid:N0} man-days went unpaid, arrears recorded {arrears:N0} mites, stand-in deserters {deserted:N0}");
+            Add("WL-8", ok ? AuditState.Pass : AuditState.Fail, $"the realm raised {raised:N0} mites over the campaigns; {unpaid:N0} man-days went unpaid, arrears recorded {arrears:N0} mites, deserters by the military's rule {deserted:N0} ({desertedPersons:N0} of them real people who went home or took to the roads, the rest counts of the roster)");
         }
         Add("WL-9", AuditState.Pending, "kit fill from armouries and arms imports is P7-AE3's (the army's end and consequence entries are measured in WL-12)");
         // WL-10 recovery G1-G3

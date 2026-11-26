@@ -180,6 +180,19 @@ public sealed class HostMarchSave
     [Key(19)] public bool Hold { get; set; }
 }
 
+/// <summary>P7-AM-D: a host's rations record (the appended key 13 of the armies section).</summary>
+[MessagePackObject]
+public sealed class HostRationSave
+{
+    [Key(0)] public int Host { get; set; }
+    /// <summary>Morale, run of short days, last ration (permille), day of the last defeat, stripped place, days on it.</summary>
+    [Key(1)] public int[] Fields { get; set; } = [];
+    /// <summary>Hungry days, short days, persons deserted, counts deserted.</summary>
+    [Key(2)] public long[] Totals { get; set; } = [];
+    [Key(3)] public ulong[] WoundedPersons { get; set; } = [];
+    [Key(4)] public int[] WoundedUntil { get; set; } = [];
+}
+
 /// <summary>
 /// The optional "armies" section (a name of <c>Phase7Seeding.SectionNames</c>), written only while the book is not empty, so a world that never raised a warband keeps its bytes. Later armies parts (hosts, camps, intel,
 /// war events) append keys: a section written by AM-A reads with them empty. Positions are plain integers over the road graph; the road paths are rebuilt from the region on load.
@@ -204,9 +217,16 @@ public sealed class ArmySave
     [Key(11)] public int NextHost { get; set; } = 1;
     /// <summary>P7-AM-C: the hosts on the road (empty in a section written before it).</summary>
     [Key(12)] public HostMarchSave[] Marches { get; set; } = [];
+    /// <summary>P7-AM-D: the hosts' rations records (empty in a section written before it).</summary>
+    [Key(13)] public HostRationSave[] Rations { get; set; } = [];
 
     public static ArmySave Capture(ArmyBook b) => new()
     {
+        Rations = [.. b.Rations.Values.Select(r => new HostRationSave
+        {
+            Host = r.Host, Fields = [r.Morale, r.HungryRun, r.FedPm, r.DefeatDay, r.StripPlace, r.StripDays], Totals = [r.HungryDays, r.ShortDays, r.DesertedPersons, r.DesertedCounts],
+            WoundedPersons = [.. r.Wounded.Keys], WoundedUntil = [.. r.Wounded.Values],
+        })],
         Warbands = [.. b.Warbands.Values.Select(w => new WarbandSave
         {
             Id = w.Id, Lord = w.Lord, Fief = w.Fief, Realm = w.Realm, Seat = w.Seat, Members = [.. w.Members],
@@ -308,6 +328,14 @@ public sealed class ArmySave
                     Palisade = (c.Flags & 1) != 0, Latrine = (c.Flags & 2) != 0, WaterCarried = (c.Flags & 4) != 0, BelowTown = (c.Flags & 8) != 0,
                 };
             b.Marches[m.Host] = m;
+        }
+        foreach (var s in Rations)
+        {
+            var r = new HostRations { Host = s.Host };
+            if (s.Fields.Length >= 6) { r.Morale = s.Fields[0]; r.HungryRun = s.Fields[1]; r.FedPm = s.Fields[2]; r.DefeatDay = s.Fields[3]; r.StripPlace = s.Fields[4]; r.StripDays = s.Fields[5]; }
+            if (s.Totals.Length >= 4) { r.HungryDays = s.Totals[0]; r.ShortDays = s.Totals[1]; r.DesertedPersons = s.Totals[2]; r.DesertedCounts = s.Totals[3]; }
+            for (int i = 0; i < s.WoundedPersons.Length && i < s.WoundedUntil.Length; i++) r.Wounded[s.WoundedPersons[i]] = s.WoundedUntil[i];
+            b.Rations[r.Host] = r;
         }
         return b;
     }

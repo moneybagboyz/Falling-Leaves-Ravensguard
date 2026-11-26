@@ -39,7 +39,7 @@ public static class UnrestWiring
         b.Seed = seed; if (db == null) return b;
         b.Settings = db.All<UnrestSettingsDef>().OrderBy(x => x.Id, StringComparer.Ordinal).FirstOrDefault() ?? b.Settings;
         var kinds = db.All<GrievanceKindDef>().OrderBy(x => x.Id, StringComparer.Ordinal).ToList();
-        var order = new[] { "hunger", "tax_high", "tax_crushing", "levy", "crowding", "crime", "kin_punished", "wronged", "standing", "banned", "enclosure", "unpaid_wages", "eviction", "slavery", "purveyance" };
+        var order = new[] { "hunger", "tax_high", "tax_crushing", "levy", "crowding", "crime", "kin_punished", "wronged", "standing", "banned", "enclosure", "unpaid_wages", "eviction", "slavery", "purveyance", "foraged", "levy_death" };
         var sorted = kinds.OrderBy(k => { int i = Array.IndexOf(order, k.Id); return i < 0 ? order.Length : i; }).ThenBy(k => k.Id, StringComparer.Ordinal).ToList();
         b.KindList = sorted; b.Kinds = sorted.ToDictionary(k => k.Id, StringComparer.Ordinal);
         return b;

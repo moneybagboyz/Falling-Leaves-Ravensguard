@@ -69,7 +69,7 @@ public sealed class WarSupplySave
             Depots = [.. a.Depots], Men = [.. a.Men],
             Fields = [a.Followers, a.Carts, a.Outside, a.Riding, a.Pack, a.Draught, a.Oxen, (int)a.Mode, a.PlaceSettlement, a.PlaceXM, a.PlaceYM, a.Pasture ? 1 : 0, a.ServiceDays, a.HomeSettlement],
             Arrears = [.. a.Arrears], HungerDays = [.. a.HungerDays], UnpaidDays = [.. a.UnpaidDays], Totals = [.. a.Totals],
-            Extra = a.Campaign != 0 || a.Abstract ? [(long)a.Campaign, a.Abstract ? 1 : 0] : [],
+            Extra = a.Retainers != 0 || a.ForageCutPm != 0 ? [(long)a.Campaign, a.Abstract ? 1 : 0, a.Retainers, a.ForageCutPm] : a.Campaign != 0 || a.Abstract ? [(long)a.Campaign, a.Abstract ? 1 : 0] : [],
         })],
         OnCampaign = [.. b.OnCampaign.SelectMany(kv => new[] { kv.Key, kv.Value })],
         Blockades = [.. b.Blockades.SelectMany(kv => new[] { kv.Key, kv.Value })],
@@ -102,6 +102,7 @@ public sealed class WarSupplySave
             Array.Copy(s.HungerDays, a.HungerDays, Math.Min(s.HungerDays.Length, a.HungerDays.Length)); Array.Copy(s.UnpaidDays, a.UnpaidDays, Math.Min(s.UnpaidDays.Length, a.UnpaidDays.Length));
             Array.Copy(s.Totals, a.Totals, Math.Min(s.Totals.Length, a.Totals.Length));
             if (s.Extra.Length >= 2) { a.Campaign = (ulong)s.Extra[0]; a.Abstract = s.Extra[1] != 0; }
+            if (s.Extra.Length >= 4) { a.Retainers = (int)s.Extra[2]; a.ForageCutPm = (int)s.Extra[3]; }
             b.Hosts[a.Id] = a;
         }
         for (int i = 0; i + 1 < OnCampaign.Length; i += 2) b.OnCampaign[OnCampaign[i]] = OnCampaign[i + 1];

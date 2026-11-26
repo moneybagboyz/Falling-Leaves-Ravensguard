@@ -30,6 +30,8 @@ public sealed class HostAccount
     /// <summary>The campaign's chronicle entry (0: none) and whether the host is in the abstract tier (outside every detailed region: it is fed and paid by <see cref="HostSupply"/>'s abstract rule, with the same counters).</summary>
     public ulong Campaign;
     public bool Abstract;
+    /// <summary>P7-AM-D: men the host feeds and warms who are not in its roster (a joined warband's: the lord pays them), and the share (permille) the foragers' yield is cut by (the strip limit, set by the military from the days on the same ground).</summary>
+    public int Retainers, ForageCutPm;
 
     public AnimalCounts Animals => new(Riding, Pack, Draught, Oxen);
     public int Total { get { int t = 0; foreach (int c in Men) t += c; return t; } }
@@ -108,6 +110,7 @@ public sealed class WarSupplyBook
             foreach (long x in a.Arrears) L(x); foreach (int x in a.HungerDays) L(x); foreach (int x in a.UnpaidDays) L(x); L(a.ServiceDays); L(a.HomeSettlement);
             foreach (long x in a.Totals) L(x);
             if (a.Campaign != 0 || a.Abstract) { L((long)a.Campaign); L(a.Abstract ? 1 : 0); }
+            if (a.Retainers != 0 || a.ForageCutPm != 0) { L(-7); L(a.Retainers); L(a.ForageCutPm); }
         }
         foreach (var (p, hid) in OnCampaign) { L(p); L(hid); }
         foreach (var (s, hid) in Blockades) { L(s); L(hid); }

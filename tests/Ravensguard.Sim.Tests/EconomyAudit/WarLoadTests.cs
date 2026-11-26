@@ -27,6 +27,7 @@ public class WarLoadTests(ITestOutputHelper output)
         led.Mint(chest, Coin.FromCrowns(100_000), SourceReason.Seed);       // the realm's own chest is small: a faucet of the test so no day goes unpaid
         int levies = load.Mustered; Assert.InRange(levies, 1, 100);
         var hs = run.Supply;
+        run.Economy.World.Get<Ravensguard.Sim.Armies.ArmyWorld>()!.NoDesertion = true;                  // the supply side alone: the military's desertion (P7-AM-D) is its own gate
         var acc = hs.Account(load.Host); Assert.Equal(levies, acc.Men[(int)TroopRole.Levy]); Assert.Equal(spec.Men - spec.Levies + levies, acc.Total);
         int men = acc.Total;
 

@@ -108,6 +108,11 @@ public sealed partial class HostSupply
         if (men != null) Array.Copy(men.Counts, a.Men, Roster.Roles);
     }
 
+    /// <summary>P7-AM-D, the military's daily notes to the economy: the men of a joined warband the host feeds, the foraging policy of the ground it stands on, and the strip limit's cut of the foragers' yield (permille). All three are what the military last left, saved with the account.</summary>
+    public void SetRetainers(HostId h, int men) => Acc(h).Retainers = Math.Max(0, men);
+    public void SetForage(HostId h, ForagePolicy policy) => Acc(h).Forage = policy;
+    public void SetForageCut(HostId h, int permille) => Acc(h).ForageCutPm = Math.Clamp(permille, 0, 1000);
+
     /// <summary>A place at a settlement's centre.</summary>
     public HostPlace PlaceAt(int settlement, bool pasture = false)
     {
@@ -163,13 +168,13 @@ public sealed partial class HostSupply
     internal static DayNeeds NeedsOf(HostAccount a, int day)
     {
         var season = GameTime.FromGameHours((long)day * 24).Season;
-        int men = a.Total;
+        int men = a.Total, fed = men + a.Retainers;                     // P7-AM-D: a joined warband's men eat and burn wood on the host's account; their pay is their lord's
         var (hay, oats) = SupplyConfig.Fodder(a.Animals);
         if (a.Pasture && season is Season.Summer or Season.Autumn) hay /= 2;
-        long wood = (long)(men + a.Followers) * SupplyConfig.FirewoodG * (season == Season.Winter ? 2 : 1);
+        long wood = (long)(fed + a.Followers) * SupplyConfig.FirewoodG * (season == Season.Winter ? 2 : 1);
         long pay = 0;
         for (int r = 0; r < Roster.Roles; r++) pay += (long)a.Men[r] * WageToday(a, (TroopRole)r);
-        return new DayNeeds((long)men * SupplyConfig.RationG + (long)a.Followers * SupplyConfig.FollowerRationG, (long)men * SupplyConfig.RelishG, hay, oats, wood, pay);
+        return new DayNeeds((long)fed * SupplyConfig.RationG + (long)a.Followers * SupplyConfig.FollowerRationG, (long)fed * SupplyConfig.RelishG, hay, oats, wood, pay);
     }
 
     private static int WageToday(HostAccount a, TroopRole r) => r == TroopRole.Levy && a.ServiceDays < SupplyConfig.LevyFreeDays ? 0 : SupplyConfig.Wage(r);
