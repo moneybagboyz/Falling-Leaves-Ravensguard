@@ -7,5 +7,8 @@
     "wave_div": 250, "fetch_cap_km": 50, "beam_sea_sin_pm": 707, "storm_mps": 17, "storm_drift_pm": 40,
     "wreck_pm": 250, "wreck_min_cells": 2, "beach_mmps": 1000, "warp_mmps": 300,
     "porter_kg": 30, "porter_trip_sec": 90, "crane_kg": 500, "crane_lift_sec": 120, "customs_pct": 5,
-    "beach_slope_pm": 80, "beach_max_height_cm": 300 }
+    "beach_slope_pm": 80, "beach_max_height_cm": 300,
+    "raid_cultures": ["north"], "raid_in_peace_pm": 300, "raid_ships_max": 4, "raid_men_min": 30, "raid_men_max": 60, "guards_min": 6, "guards_max": 10,
+    "weak_guards": 12, "risk_mites_per_guard": 3000, "sail_km_per_day": 100, "land_hour_of_day": 5, "raid_hours": 4, "run_hours": 1, "bell_m": 3000, "ride_m_per_hour": 8000,
+    "loot_grain_kg": 60, "loot_household_pct": 60, "loot_coin_pct": 50, "captives_max": 6, "burn_max": 1, "grain_mites_per_kg": 12 }
 ]

@@ -52,4 +52,35 @@ public sealed record SeaRulesDef : ContentDef
     /// <summary>A beach is sand where the tile's slope is under this (permille) and its height under <see cref="BeachMaxHeightCm"/>; steeper shore is rock.</summary>
     public int BeachSlopePm { get; init; } = 80;
     public int BeachMaxHeightCm { get; init; } = 300;
+    // ---- P7-SH-C: sea edges and sea raids (ships-and-naval-war 3.3, 4.4, 4.5)
+    /// <summary>Culture ids whose realms raid by sea (<c>raids_by_sea</c>, kept here so no culture row changes).</summary>
+    public List<string> RaidCultures { get; init; } = [];
+    /// <summary>Permille a season a raider-culture realm raids in peace (overview 10a Q7).</summary>
+    public int RaidInPeacePm { get; init; } = 300;
+    /// <summary>A raid is 1 to this many longships of this many men each, a tenth to a sixth of them (<see cref="GuardsMin"/> to <see cref="GuardsMax"/>) staying as ship guards.</summary>
+    public int RaidShipsMax { get; init; } = 4;
+    public int RaidMenMin { get; init; } = 30;
+    public int RaidMenMax { get; init; } = 60;
+    public int GuardsMin { get; init; } = 6;
+    public int GuardsMax { get; init; } = 10;
+    /// <summary>A target is weakly guarded with at most this many known armed men; each man known costs the raid this many mites of its score; a day's sail is this many km.</summary>
+    public int WeakGuards { get; init; } = 12;
+    public int RiskMitesPerGuard { get; init; } = 3000;
+    public int SailKmPerDay { get; init; } = 100;
+    /// <summary>The raiders beach at this hour of the day (dawn).</summary>
+    public int LandHourOfDay { get; init; } = 5;
+    /// <summary>The raid's plan: game hours ashore before the withdrawal (less when the bell brings a warband), and the hours the run to the village and the run back take.</summary>
+    public int RaidHours { get; init; } = 4;
+    public int RunHours { get; init; } = 1;
+    /// <summary>The bell carries this far (m); a rider covers this many metres an hour.</summary>
+    public int BellM { get; init; } = 3000;
+    public int RideMPerHour { get; init; } = 8000;
+    /// <summary>What the raiders take: kilograms of grain from each robbed household, the share of the households robbed and of each one's coin (percent), at most this many captives (where the law allows), and barns burned.</summary>
+    public int LootGrainKg { get; init; } = 60;
+    public int LootHouseholdPct { get; init; } = 60;
+    public int LootCoinPct { get; init; } = 50;
+    public int CaptivesMax { get; init; } = 6;
+    public int BurnMax { get; init; } = 1;
+    /// <summary>The grain a mite buys, for scoring a village's stores (mites a kilogram).</summary>
+    public int GrainMitesPerKg { get; init; } = 12;
 }

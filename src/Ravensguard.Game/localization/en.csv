@@ -6714,6 +6714,10 @@ so_role_knight,knight
 so_role_engineer,engineer
 so_role_sailor,sailor
 so_role_marine,marine
+ch_sh_raid,"Sea-raiders under {leader} beached at {place} with {ships} ships, carried off {kg} kg of grain and {captives} captives, burned {burned} buildings, and lost {dead} men."
+ch_sh_caught,"The raiders at {place} were caught on the beach: {dead} fell and their {ships} ships were left on the sand."
+ch_note_sh_raid_culture,"their people live by the sea-raid"
+ch_note_sh_caught,"the raid was met on the beach"
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."
