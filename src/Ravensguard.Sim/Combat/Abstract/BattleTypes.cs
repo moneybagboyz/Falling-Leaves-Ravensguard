@@ -53,6 +53,10 @@ public sealed class Soldier
     public int LastHitBy = -1;
     public WeaponClass LastHitWith;
     public OutcomeClass LastHitClass;
+    /// <summary>v2: the block he stands in (index into <see cref="AbstractBattle.Blocks"/>), his lateral place, round-the-end attacker (wrap), carried by a flank term, held in reserve, pass bookkeeping.</summary>
+    public int Block = -1, Lat;
+    public bool Wrap, Flanked, Reserve, Released, PassDone, Refused, Unhorsed, Yielded;
+    public int ReformUntil = -1;
     public bool Active => Status == SoldierStatus.Active;
     public bool InLine => Status == SoldierStatus.Active && !Routing;
 }
@@ -126,6 +130,11 @@ public sealed class BattleReport
     public readonly List<BattleStepLine> Timeline = [];
     public bool Report => true;
     public ulong Hash;
+    /// <summary>v2: the blocks at the start (counts of each side's blocks), the loser's prisoners with their rank classes, the kit left on the field, the pass tallies.</summary>
+    public readonly int[] BlocksOf = new int[2];
+    public readonly List<BattlePrisoner> Prisoners = [];
+    public readonly List<BattleLoot> Loot = [];
+    public PassTally Passes;
 }
 
 /// <summary>What a battle changes, applied at the tick barrier in stable person order (3.3 <c>BattleCommands</c>).</summary>
@@ -133,4 +142,16 @@ public enum BattleCommandKind : byte { Wounds, Status, Loot, Ransom, Chronicle }
 
 /// <summary>One command: the person, the kind, the status (for <see cref="BattleCommandKind.Status"/>), the person's new wound book (for <see cref="BattleCommandKind.Wounds"/>), the
 /// side that took him or his things.</summary>
-public sealed record BattleCommand(ulong Person, BattleCommandKind Kind, SoldierStatus Status = SoldierStatus.Active, WoundBook? Book = null, int ByTeam = -1);
+public sealed record BattleCommand(ulong Person, BattleCommandKind Kind, SoldierStatus Status = SoldierStatus.Active, WoundBook? Book = null, int ByTeam = -1, int Rank = 0);
+
+/// <summary>A prisoner's rank class (abstract war 4.1): who is worth a ransom.</summary>
+public enum RankClass : byte { Common, Veteran, Officer }
+
+/// <summary>A man taken at the aftermath (v2): the person (0 for a harness fighter), his side, his rank class, who holds him (team, -1 none) and whether he yielded in the fight.</summary>
+public sealed record BattlePrisoner(ulong Person, string Name, int Side, RankClass Rank, int ByTeam, bool Yielded);
+
+/// <summary>Kit left on the field (v2): a dead or taken soldier's weapon, shield and worn pieces, with the team that holds the field (-1 when nobody does).</summary>
+public sealed record BattleLoot(ulong Person, string Name, int Side, SoldierStatus Fate, int ByTeam, string Weapon, string Shield, IReadOnlyList<string> Worn);
+
+/// <summary>v2 pass tallies (4.2): riders who charged home, refused, were unhorsed or had the horse brought down, the trampled and the shocked fronts.</summary>
+public struct PassTally { public int Passes, Refusals, Falls, BraceDowns, Tramples, TrampleHits, Shocks, Threw, Rolls; public long ExpectedRefusalPm; }

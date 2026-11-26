@@ -18,7 +18,7 @@ namespace Ravensguard.Sim.Combat.Abstract;
 /// <para>Integer only. Draws: 0x4A0 engagement jitter (battle, step), 0x4A1 targets, outcomes and templates (battle, attacker, step x 16 + k), 0x4A2 morale sight, rout and surrender
 /// (battle, step, soldier), 0x4A3 the leader's fate (battle). Every iteration is in soldier order (team, then setup order); hits are applied in time order.</para>
 /// </summary>
-public sealed class AbstractBattle
+public sealed partial class AbstractBattle
 {
     public const int TicksPerS = 20;
     public AbstractBattleDef K { get; }
@@ -68,6 +68,7 @@ public sealed class AbstractBattle
         Tables = tables; Input = input;
         K = k ?? c.Db.All<AbstractBattleDef>().OrderBy(d => d.Id, StringComparer.Ordinal).FirstOrDefault() ?? new AbstractBattleDef { Id = "default" };
         M = MoraleRules.For(c.Db).D;
+        if (K.Version >= 2) InitV2(c);
         _seed = DetRng.Mix(input.Seed ^ DetRng.Mix(input.BattleId + 0x4A0UL));
         var teams = input.Kits.Select(x => x.Team).Distinct().Order().ToList();
         Team[0] = teams.Count > 0 ? teams[0] : 0; Team[1] = teams.Count > 1 ? teams[1] : Team[0] + 1;
@@ -105,6 +106,7 @@ public sealed class AbstractBattle
         }
         for (int s = 0; s < 2; s++) _start[s] = Math.Max(1, Side[s].Count(x => x.Status == SoldierStatus.Active));
         Place();
+        if (IsV2) BuildBlocks();
         if (input.Leaders)
             for (int s = 0; s < 2; s++)
                 if (Side[s].Count >= 3)
@@ -145,6 +147,7 @@ public sealed class AbstractBattle
         long dcx = cx[1] - cx[0], dcy = cy[1] - cy[0];
         if (ax == 0 && ay == 0 || dcx * ax + dcy * ay <= 0) (ax, ay) = FightMath.Norm((int)Math.Clamp(dcx, -2_000_000_000, 2_000_000_000), (int)Math.Clamp(dcy, -2_000_000_000, 2_000_000_000));
         if (ax == 0 && ay == 0) ax = FightMath.One;
+        _ax = ax; _ay = ay;
         long Along(Soldier s) => ((long)s.Kit.X * ax + (long)s.Kit.Y * ay) / FightMath.One;           // towards side 1
         long Across(Soldier s) => ((long)s.Kit.Y * ax - (long)s.Kit.X * ay) / FightMath.One;
         // each side's main body: the fighters within 6 m (along the line between the sides) of its median; who stands beyond the enemy's ends or behind it is on a flank or the rear
@@ -172,6 +175,7 @@ public sealed class AbstractBattle
             long a = Along(s), c = Across(s);
             long depth = s.Side == 0 ? front[0] - a : a - front[1];
             s.Row = s.Shooter != null ? 2 : depth <= 1200 || !Main(s) ? 0 : depth <= 3000 ? 1 : 2;
+            s.Lat = (int)c;
             int e = 1 - s.Side;
             if (lo[e] != long.MaxValue && (c < lo[e] - 3000 || c > hi[e] + 3000)) s.Position = BattlePosition.Flank;
             if (back[e] != long.MaxValue && back[e] != long.MinValue && (s.Side == 0 ? a > back[e] + 1000 : a < back[e] - 1000)) s.Position = BattlePosition.Rear;
@@ -214,6 +218,7 @@ public sealed class AbstractBattle
         _leaderFell[0] = _leaderFell[1] = false;
         foreach (var s in Soldiers) { s.HitsThisStep = 0; s.TargetedBy = 0; }
         foreach (var s in Soldiers) if (s.InLine && s.Target >= 0 && Soldiers[s.Target].Active) Soldiers[s.Target].TargetedBy++; else if (!s.InLine) s.Target = -1;
+        if (IsV2) UpdateBlocks();
         int blows0 = 0, blows1 = 0;
         bool contact = GapMm <= K.ContactMm;
         bool chargeStep = false;
@@ -306,9 +311,10 @@ public sealed class AbstractBattle
     private int Melee(int side, bool chargeStep)
     {
         int e = 1 - side;
-        var attackers = ByRow(Fill(_attackers, Side[side], x => x.InLine && x.WeaponArm && x.CanStand && !(x.Shooter != null && x.Ammo > 0)));
+        var attackers = ByRow(Fill(_attackers, Side[side], x => x.InLine && x.WeaponArm && x.CanStand && !(x.Shooter != null && x.Ammo > 0) && (!IsV2 || !x.Reserve && Step >= x.ReformUntil)));
         var targets = Fill(_targets, Side[e], x => x.Active && !x.Routing);
         if (attackers.Count == 0 || targets.Count == 0) return 0;
+        int home = 0;
         int eng = Input.Narrow ? K.EngagementNarrowPm : K.EngagementPm;
         int cap = Input.Narrow ? K.OutnumberCapNarrowPm : K.OutnumberCapPm;
         long frontage = (long)eng * targets.Count * cap / 1_000_000;
@@ -330,7 +336,7 @@ public sealed class AbstractBattle
             }
             engagedSoFar++;
             var wc = a.Melee == WeaponClass.Lance && !riding ? WeaponClass.Polearm : a.Melee;
-            var tgt = PickTarget(a, targets, false, 0);
+            var tgt = IsV2 && a.Wrap && _flankSet[e].Count > 0 ? PickFlank(a, e) : PickTarget(a, targets, false, 0);
             bool shieldOk = a.Position == BattlePosition.Front;
             // the attack rate is the live fight's own for this matchup (the table's apm), scaled to the press; a rider strikes once a pass (hit and run, on any ground: on mud or in
             // woods he cannot gallop and has no charge); the charge is the first pass's own extra
@@ -340,12 +346,14 @@ public sealed class AbstractBattle
             int rate = apm * K.StepS * 100 / 60 * TerrainBlowsPm / 1000;      // permille of a blow per step
             if (a.Position == BattlePosition.Flank) rate = rate * (1000 + K.FlankBonusPm) / 1000;
             else if (a.Position == BattlePosition.Rear) rate = rate * (1000 + K.RearBonusPm) / 1000;
-            if (chargeStep && riding && !braced) rate += 1000 + K.ChargePm;                       // the charge: a blow at contact for every rider, plus charge_pm more
+            if (IsV2) { if (riding && !a.PassDone && (chargeStep || a.Released) && Pass(a)) { home++; if (!braced) rate += 1000 + K.ChargePm; } }
+            else if (chargeStep && riding && !braced) rate += 1000 + K.ChargePm;                       // the charge: a blow at contact for every rider, plus charge_pm more
             a.BlowAccPm += rate;
             int blows = Math.Min(15, a.BlowAccPm / 1000);
             a.BlowAccPm -= blows * 1000;
             for (int k = 0; k < blows; k++) { Strike(a, tgt, wc, 0, k, shot: false, shieldOk, K.PressHitPm); n++; }
         }
+        if (IsV2) Shock(home, e);
         return n;
     }
 
@@ -356,7 +364,7 @@ public sealed class AbstractBattle
         var routers = Fill(_targets, Side[e], x => x.Active && x.Routing);
         if (routers.Count == 0) return 0;
         var line = Side[e].Count(x => x.InLine);
-        var free = ByRow(Fill(_attackers, Side[side], x => x.InLine && x.WeaponArm && x.CanStand && !(x.Shooter != null && x.Ammo > 0)));
+        var free = ByRow(Fill(_attackers, Side[side], x => x.InLine && x.WeaponArm && x.CanStand && !(x.Shooter != null && x.Ammo > 0) && (!IsV2 || !x.Reserve)));
         int busy = (int)Math.Min(free.Count, (long)K.EngagementPm * line * K.OutnumberCapPm / 1_000_000);
         int n = 0, i = 0;
         foreach (var a in free)
@@ -484,7 +492,8 @@ public sealed class AbstractBattle
         int dt = K.StepS;
         int[] inLine = [Side[0].Count(x => x.InLine), Side[1].Count(x => x.InLine)];
         int[] routing = [Side[0].Count(x => x.Active && x.Routing), Side[1].Count(x => x.Active && x.Routing)];
-        bool[] flanked = [Side[1].Any(x => x.InLine && x.Position != BattlePosition.Front), Side[0].Any(x => x.InLine && x.Position != BattlePosition.Front)];
+        bool[] flanked = IsV2 ? [false, false] : [Side[1].Any(x => x.InLine && x.Position != BattlePosition.Front), Side[0].Any(x => x.InLine && x.Position != BattlePosition.Front)];
+        if (IsV2) { _rearFlanked[0] = Side[1].Any(x => x.InLine && x.Position == BattlePosition.Rear); _rearFlanked[1] = Side[0].Any(x => x.InLine && x.Position == BattlePosition.Rear); }
         int routBelow = R0.RoutBelowX100 + (Input.Night ? K.NightRoutPoints * 100 : 0);
         for (int side = 0; side < 2; side++)
         {
@@ -515,11 +524,12 @@ public sealed class AbstractBattle
                 else s.RoutAccX100 = Math.Max(0, s.RoutAccX100 - R0.DecayX100PerS * dt);
                 int pain = (int)Math.Min(100, s.Book.PainX100 * 100L / Math.Max(1, s.Book.KnockoutPainX100));
                 // beset in the press (the live flank check: enemies close on two sides) for the share of the line in contact, or round a flank by position
-                int flank = flanked[side] ? R0.FlankedX100 : _contact && s.Row < 2 ? R0.FlankedX100 * K.MeleeFlankedPm / 1000 : 0;
+                int flank = IsV2 ? V2FlankX100(s, _contact && s.Row < 2 && !s.Flanked && !_rearFlanked[side]) : flanked[side] ? R0.FlankedX100 : _contact && s.Row < 2 ? R0.FlankedX100 * K.MeleeFlankedPm / 1000 : 0;
                 long v = s.CourageX100 - s.PenaltyX100 - s.RoutAccX100 - flank
                     - Math.Clamp(pain, 0, 100) * R0.PainKPm / 10 - Math.Clamp(s.Book.LossPm, 0, 1000) * R0.BloodLossKPm / 100
                     + (captain && captainShoots == IsShooter(s) ? R0.CaptainX100 : 0) + (winning ? R0.WinningX100 : 0) - ((IsShooter(s) ? outnumbered : outMelee || outnumbered) ? R0.OutnumberedX100 : 0);
                 if (inLine[side] == 1 && inLine[e] > 0 && s.InLine) v -= Math.Min(R0.AloneCapX100, R0.AloneX100 + R0.AlonePerFoeX100 * Math.Max(0, Math.Min(inLine[e], 5) - 1));
+                if (IsV2) v += V2BlockX100(s);
                 s.MoraleX100 = (int)Math.Clamp(v, 0, 10_000);
                 if (s.InLine) { if (s.MoraleX100 < routBelow) Rout(s, e, _contact); }
                 else if (chased && _contact && s.MoraleX100 < K.RouterYieldBelow * 100 && Step > s.RoutStep) TrySurrender(s, e, CorneredPm(side, K.RouterCorneredPm));
@@ -565,6 +575,7 @@ public sealed class AbstractBattle
         int accept = Kind[enemySide] switch { SideKind.Army => M.AcceptArmyPm, SideKind.Bandits => M.AcceptBanditPm, SideKind.Beasts or SideKind.Draugr => 0, _ => M.AcceptFolkPm };
         if (R(RngStreams.RoutSample, Step, (ulong)(s.Index + 1), 101, 1000) >= accept) return false;
         if (s.Routing) RouterYields++; else LineYields++;
+        s.Yielded = true;
         s.Routing = false;
         Out(s, SoldierStatus.Surrendered);
         return true;
@@ -685,6 +696,7 @@ public sealed class AbstractBattle
             };
             rep.Notables.Add(new BattleNotable(x.Person, x.Name, x.Side, fate, x.LastHitClass, x.LastHitWith, x.Captain));
         }
+        if (IsV2) V2Aftermath();
         foreach (var x in Soldiers) x.Book.CacheFunction = false;          // the books leave the battle as they came: no cached reading
         // commands, in person order
         foreach (var x in Soldiers.Where(x => x.Person != 0).OrderBy(x => x.Person))
@@ -693,6 +705,7 @@ public sealed class AbstractBattle
             if (x.Status != SoldierStatus.Active) Commands.Add(new BattleCommand(x.Person, BattleCommandKind.Status, x.Status, null, Winner >= 0 ? Team[Winner] : -1));
             if (x.Status is SoldierStatus.Dead or SoldierStatus.Captured or SoldierStatus.Down && Winner >= 0 && x.Side != Winner) Commands.Add(new BattleCommand(x.Person, BattleCommandKind.Loot, x.Status, null, Team[Winner]));
         }
+        if (IsV2) V2Commands();
         rep.Hash = Hash();
     }
 
@@ -725,7 +738,10 @@ public sealed class AbstractBattle
     }
 
     /// <summary>The <c>BattleHash</c> (6): the report's numbers, every soldier's status and book, the commands' order.</summary>
-    public ulong Hash()
+    public ulong Hash() => IsV2 ? V2Hash(CoreHash()) : CoreHash();
+
+    /// <summary>The v1 reading of the battle (AW-1: v2 with its geometry terms idle hashes the same here).</summary>
+    public ulong CoreHash()
     {
         ulong h = 14695981039346656037UL;
         h = FightMath.Mix(h, (long)Input.BattleId); h = FightMath.Mix(h, Step); h = FightMath.Mix(h, Winner); h = FightMath.Mix(h, GapMm);

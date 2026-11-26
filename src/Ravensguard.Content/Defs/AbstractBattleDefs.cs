@@ -89,6 +89,39 @@ public sealed record AbstractBattleDef : ContentDef
     public int LeaderCarriedPm { get; init; } = 800;
     /// <summary>Engagement jitter +-, permille (stream 0x4A0).</summary>
     public int JitterPm { get; init; } = 50;
+
+    // ---- Phase 7 (abstract-war-and-calibration 4.1, 4.2): v2 geometry and passes. Version 1 is the Phase 4 resolver, untouched; the "v2" row (abstract/battle_v2.jsonc) is version 2. ----
+    /// <summary>1: Phase 4's press with no geometry. 2: blocks, fronts and the flank wrap, reserves, block morale, passes with trample and fall, prisoners and loot rows.</summary>
+    public int Version { get; init; } = 1;
+    /// <summary>A horse block this far (mm) behind its side's foot is a reserve until a foot block is under <see cref="ReservePm"/> of its start or the enemy wraps a flank.</summary>
+    public int ReserveDepthMm { get; init; } = 10_000;
+    public int ReservePm { get; init; } = 600;
+    /// <summary>A block under <see cref="BrokenPm"/> cohesion loses its shape bonus and its members carry <see cref="BrokenX100"/> morale points off; a shield wall (foot, <see cref="WallShieldPm"/> shielded, cohesive) adds <see cref="WallX100"/>.</summary>
+    public int BrokenPm { get; init; } = 600;
+    public int BrokenX100 { get; init; } = 500;
+    public int WallShieldPm { get; init; } = 700;
+    public int WallX100 { get; init; } = 500;
+    /// <summary>The pass (4.2): the men of the struck front within the refusal arc of the horse's path, the horse's training, the braced strike and the horse brought down, the trample (hit chance after the dodge, class mix), the fall's class mix.</summary>
+    public int PassArcMen { get; init; } = 5;
+    public int PassTrainedPm { get; init; } = 800;
+    public int BraceStrikePm { get; init; } = 600;
+    public int BraceDownPm { get; init; } = 450;
+    public int TramplePm { get; init; } = 450;
+    public int TrampleLightPm { get; init; } = 450;
+    public int TrampleSeriousPm { get; init; } = 300;
+    public int TrampleGravePm { get; init; } = 120;
+    public int FallLightPm { get; init; } = 450;
+    public int FallSeriousPm { get; init; } = 300;
+    public int FallGravePm { get; init; } = 100;
+    /// <summary>A rider who passes rides through (and re-forms in <see cref="ReformS"/>) or sticks in the melee with this chance.</summary>
+    public int StickPm { get; init; } = 300;
+    public int ReformS { get; init; } = 15;
+    /// <summary>Shock (cavalry 4.1): -15 on the front of the struck block when 10+ riders pass and under <see cref="ShockBracedMaxPm"/> of that front is braced.</summary>
+    public int ShockX100 { get; init; } = 1500;
+    public int ShockMinRiders { get; init; } = 10;
+    public int ShockBracedMaxPm { get; init; } = 250;
+    /// <summary>A taken man of this skill or better, or in mail or better, is a veteran; a captain is an officer.</summary>
+    public int VeteranSkill { get; init; } = 55;
 }
 
 /// <summary>The generated wound tables' header (<c>abstract/wound_tables.json</c>): the content hash they were built from, blows per cell, the builder's version.</summary>

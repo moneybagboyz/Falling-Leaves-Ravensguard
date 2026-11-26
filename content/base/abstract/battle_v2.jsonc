@@ -1,0 +1,9 @@
+// Abstract battle v2 (abstract-war-and-calibration 4.1, 4.2; row type abstract_battle, version 2). The v1 row ("default") is untouched, so every Phase 4 hash stands; a caller asks for v2
+// with AbstractBattle.V2(db). Everything here restates the AbstractBattleDef defaults; the trample and fall class mixes are the first rows (the calibrate tool's refit is AW-C).
+[
+  { "type": "abstract_battle", "id": "v2", "version": 2,
+    "reserve_depth_mm": 10000, "reserve_pm": 600, "broken_pm": 600, "broken_x100": 500, "wall_shield_pm": 700, "wall_x100": 500,
+    "pass_arc_men": 5, "pass_trained_pm": 800, "brace_strike_pm": 600, "brace_down_pm": 450, "trample_pm": 450,
+    "trample_light_pm": 450, "trample_serious_pm": 300, "trample_grave_pm": 120, "fall_light_pm": 450, "fall_serious_pm": 300, "fall_grave_pm": 100,
+    "stick_pm": 300, "reform_s": 15, "shock_x100": 1500, "shock_min_riders": 10, "shock_braced_max_pm": 250, "veteran_skill": 55 }
+]
