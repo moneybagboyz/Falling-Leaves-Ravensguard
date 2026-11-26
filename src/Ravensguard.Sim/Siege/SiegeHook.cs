@@ -65,7 +65,7 @@ public sealed class BuiltWalls(SiegeWorld sw, ConstructionWorld cw, WallWorld wa
         return new SiegeWalls
         {
             World = walls, Timber = timber * 2 > n, X0 = x0, Y0 = y0, X1 = x1, Y1 = y1,
-            LayXMm = (x0 + x1) * 500L + 500, LayYMm = y0 * 1000L - 40_000, AimXMm = (x0 + x1) * 500L + 500, AimYMm = (y0 + y1) * 500L + 500,
+            LayXMm = (x0 + x1) * 500L + 500, LayYMm = y0 * 1000L - 60_000, AimXMm = (x0 + x1) * 500L + 500, AimYMm = y0 * 1000L + 500,          // the camp stands 60 m off (a trebuchet's minimum range is 50) and the engines aim at the near wall, not the yard
         };
     }
 }

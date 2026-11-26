@@ -68,6 +68,9 @@ public sealed partial class SiegeWorld
 /// <summary>Installs the siege world on the home region (the P7-SG-D hook in <c>WorldRuntime</c>): the book is the world state's (made at the first siege, so a world that never besieged keeps its bytes). The walls', engines' and bubble ports are the game's to set.</summary>
 public static class SiegeWiring
 {
+    /// <summary>Tells the siege world where the hero stands (continent metres): the live assault opens only inside the hero's bubble.</summary>
+    public static void NoteHero(Save.WorldState state, long xM, long yM) => state.HomeRecords?.Sim.Get<SiegeWorld>()?.Assaults?.NoteHero(xM, yM);
+
     public static SiegeWorld? Attach(Worlds.RegionWorld home, Save.WorldState state, ContentDatabase content)
     {
         var aw = home.Sim.Get<ArmyWorld>(); if (aw == null) return null;
@@ -78,6 +81,8 @@ public static class SiegeWiring
             var walls = new WallWorld(state.Chunks, content, state.Seed) { Construction = cw, Chronicle = sw.Writer };
             sw.WallsOf = new BuiltWalls(sw, cw, walls).Of;                                                                     // the hero's built wall pieces; the generator places no civic walls
         }
+        sw.KitOf = new SiegeKits(state, content, sw).Of;                                                                         // the engine kit: baggage, camp store, yard; goods bought or carted, never made
+        sw.Assaults = new SiegeAssaults(sw); sw.OpenAssault = sw.Assaults.Open;                                                  // the live storm: a battle bubble with the assault layer when the siege is in the hero's bubble
         aw.Siege = new SiegeHook(sw);
         home.Sim.Set(sw);
         return sw;

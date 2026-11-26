@@ -33,8 +33,8 @@ public sealed class SiegeKit
 public static class SiegeConfig
 {
     public const int LinesDays = 2, StarveDays = 5, ReliefDays = 3, OutnumberedRatio = 4, TermsEveryDays = 5, AssaultCooldown = 4, LiveFallbackHours = 24;
-    public const int RansomPct = 25, SackPlunderCoinPct = 40, SackPlunderGoodsPct = 40, BurnOneIn = 5, BurnLossPct = 50, SackKillMinPermille = 10, SackKillSpanPermille = 40;
-    public const int WinterDesertPm = 10, ExposurePm = 4, BuildersPerEngine = 30, CrewPerEngine = 8, LiftShortDays = 12;
+    public const int TrainReachM = 30_000, RansomPct = 25, SackPlunderCoinPct = 40, SackPlunderGoodsPct = 40, BurnOneIn = 5, BurnLossPct = 50, SackKillMinPermille = 10, SackKillSpanPermille = 40;
+    public const int WinterDesertPm = 10, ExposurePm = 4, BuildersPerEngine = 80, CrewPerEngine = 8, LiftShortDays = 12;
     public static readonly string[] Engines = ["trebuchet", "trebuchet"];
     /// <summary>Besiegers' power per man and the defenders' per man behind an unbroken wall, behind a breach, in an unwalled place.</summary>
     public const int AttackPower = 100, DefenceWalled = 300, DefenceBreached = 150, DefenceOpen = 120;
@@ -57,6 +57,11 @@ public sealed partial class SiegeWorld
     public Func<int, SiegeWalls?>? WallsOf { get; set; }
     public Func<SiegeRow, SiegeKit?>? KitOf { get; set; }
     public Func<SiegeRow, bool>? OpenAssault { get; set; }
+    /// <summary>The live assaults the hero's bubble holds (the <see cref="OpenAssault"/> port's owner); null in a world with none.</summary>
+    public SiegeAssaults? Assaults { get; set; }
+    internal long LastHour => _lastHour;
+    internal List<ulong> MenOf(SiegeRow s) => Besiegers(s);
+    internal EntityId PlaceOf(int place) => PlaceId(place);
     /// <summary>The besieger's policy of starving a place out and never storming it (the campaign brain's choice, AM-E; a test's switch). Not saved.</summary>
     public bool NeverStorm { get; set; }
 

@@ -499,10 +499,12 @@ public sealed partial class HostSupply
         _diseaseBound = true;
     }
 
-    private List<MarketBook> BooksInReach(HostAccount a)
+    private List<MarketBook> BooksInReach(HostAccount a) => BooksWithin(a, a.BuyRadiusM);
+
+    private List<MarketBook> BooksWithin(HostAccount a, int radiusM)
     {
         var list = new List<(long D2, int S, MarketBook B)>();
-        var region = _pop.Region; long r2 = (long)a.BuyRadiusM * a.BuyRadiusM;
+        var region = _pop.Region; long r2 = (long)radiusM * radiusM;
         foreach (var b in Economy.Markets.AllBooks())
         {
             if (b.Blockaded) continue;

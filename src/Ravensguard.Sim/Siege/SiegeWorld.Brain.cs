@@ -8,6 +8,7 @@ using Ravensguard.Sim.Abstract;
 using Ravensguard.Sim.People.Vital;
 using Ravensguard.Sim.Carts;
 using Ravensguard.Sim.Crafting;
+using Ravensguard.Sim.Economy;
 
 namespace Ravensguard.Sim.Siege;
 
@@ -115,24 +116,32 @@ public sealed partial class SiegeWorld
         int day = (int)e.Day; var walls = WallsOf?.Invoke(s.Place);
         if (NeverStorm) return;
         bool cooled = s.AssaultDay < 0 || day - s.AssaultDay >= SiegeConfig.AssaultCooldown;
-        if (walls != null) { PlanEngines(e, s, host, walls); Refill(s, men); }               // the carpenters start with the lines; men who left the host are replaced at the benches
+        if (walls != null) { PlanEngines(e, s, host, walls); Refill(s, men); Provision(s, (int)e.Day); }               // the carpenters start with the lines; men who left the host are replaced at the benches
         if (!cooled || s.State == SiegeState.Investing) return;
         bool strong = men.Count >= Math.Max(1, garrison.Count) * 4;
         if (walls == null) { if (strong) Assault(e, s, host, men, garrison, breach: false, walled: false); return; }          // an unwalled place is stormed when the besieger is strong
         if (breach && s.RefusedDay >= s.TermsDay && men.Count >= garrison.Count) Assault(e, s, host, men, garrison, breach: true, walled: true);
     }
 
-    /// <summary>Lays the engines the besieger can pay for at the camp: the bill's goods are hauled from the host's baggage to the camp's store (moved, never made); an engine the baggage cannot cover is not laid (the besieger starves the place instead).</summary>
+    private static long NeedUnits(GoodCatalog goods, ushort id, long g) { long unit = Math.Max(1, goods.MassG(id, 1)); return ((g + unit - 1) / unit) * 5 / 4 + 2; }
+
+    /// <summary>
+    /// Lays the engines the besieger can pay for at the camp: the bill's goods are hauled from the host's baggage to the camp's store (moved, never made). What the baggage lacks the quartermaster buys at the books in reach of the camp (coin from the chest,
+    /// topped up from the realm's treasury; the goods from the books' stock) and the train carts it in: the goods wait in the camp's transit store and reach the baggage when the walk from the farthest book is done (<see cref="SiegeRow.TrainDue"/>). An engine the
+    /// baggage cannot cover is not laid (the besieger starves the place instead).
+    /// </summary>
     private void PlanEngines(ArmyEnv e, SiegeRow s, ArmyHost host, SiegeWalls walls)
     {
         var kit = KitOf?.Invoke(s); var hs = Hs; if (kit == null || hs == null) return;
-        var rides = kit.Yard.Rides; var bag = hs.BaggageOf(new HostId(s.Supply)); var goods = kit.Yard.Econ.Goods;
+        var rides = kit.Yard.Rides; var hid = new HostId(s.Supply); var bag = hs.BaggageOf(hid); var goods = kit.Yard.Econ.Goods;
+        Deliver(s, kit, bag, (int)e.Day);
         while (s.Engines.Count < SiegeConfig.Engines.Length)
         {
             string template = SiegeConfig.Engines[s.Engines.Count];
             var bill = EngineYard.Bill(rides.Templates.Get(template), rides.Templates, kit.Yard.Runner.Db, goods);
-            foreach (var (good, g) in bill.GoodsG) { ushort id = goods.IdOf(good); long unit = Math.Max(1, goods.MassG(id, 1)); long need = ((g + unit - 1) / unit) * 5 / 4 + 2; if (bag.Qty(id) < need) return; }
-            foreach (var (good, g) in bill.GoodsG) { ushort id = goods.IdOf(good); long unit = Math.Max(1, goods.MassG(id, 1)); long need = ((g + unit - 1) / unit) * 5 / 4 + 2; Store.Move(bag, kit.Camp, id, need); }
+            foreach (var made in new[] { "rope", "nails" }) if (bill.GoodsG.TryGetValue(made, out long madeG)) CampMake(s, kit, bag, made, NeedUnits(goods, goods.IdOf(made), madeG), (int)e.Day);
+            if (bill.GoodsG.Any(kv => { ushort id = goods.IdOf(kv.Key); return bag.Qty(id) < NeedUnits(goods, id, kv.Value); })) { Order(e, s, kit, hs, bill, goods); return; }
+            foreach (var (good, g) in bill.GoodsG) { ushort id = goods.IdOf(good); Store.MoveUpTo(bag, kit.Camp, id, NeedUnits(goods, id, g) * 11 / 10); }
             var men = Besiegers(s); var crew = new List<(EntityId, int)>();
             foreach (ulong m in men.Skip(s.Engines.Count * SiegeConfig.BuildersPerEngine).Take(SiegeConfig.BuildersPerEngine)) { int r = Armies.RowOf(m); crew.Add((new EntityId(m), Math.Max(40, r >= 0 ? Armies.People.SkillLevelOf(r, Skill.Carpentry) : 0))); }
             var (ans, v) = kit.Yard.Lay(template, new EntityId(host.Commander), walls.LayXMm, walls.LayYMm + s.Engines.Count * 8000, crew);
@@ -140,6 +149,89 @@ public sealed partial class SiegeWorld
             kit.Yard.Book = kit.Book; s.Engines.Add(v.Id.Value);
             rides.Works.Sites[v.Id].Paused = false;
         }
+    }
+
+    /// <summary>
+    /// The camp's workshops: the markets hold little rope (none) and few nails, so the host's men make them from what the train carried, by the ordinary recipes at their own pace: rope is wool spun to twine and twine braided; nails are iron bar forged with charcoal.
+    /// The hands are the host's men who know the recipe (the skill book), in id order; the materials are used up and the product made at the recipes' yields, into the baggage.
+    /// </summary>
+    private void CampMake(SiegeRow s, SiegeKit kit, Store bag, string product, long needG, int day)
+    {
+        var goods = kit.Yard.Econ.Goods; ushort prod = goods.IdOf(product); if (bag.Qty(prod) >= needG) return;
+        var runner = kit.Yard.Runner; var db = runner.Db; var men = Besiegers(s); if (men.Count == 0) return;
+        (string Recipe, string[] Inputs, long MinG)[] chain = product == "rope"
+            ? [("braid_rope", ["twine"], 500), ("spin_twine", ["wool_raw"], 120)]
+            : [("forge_nails_small", ["iron_bar", "charcoal"], 500)];
+        var hands = new Dictionary<string, List<EntityId>>();
+        foreach (var c in chain) { if (!db.TryGet(c.Recipe, out var r)) return; hands[c.Recipe] = men.Select(m => new EntityId(m)).Where(id => runner.State.Know.Knows(r, id, runner.State.Book)).Take(SiegeConfig.BuildersPerEngine).ToList(); }
+        long now = (long)day * 86400 + 8 * 3600; int n = 0;
+        while (bag.Qty(prod) < needG && n < 800)
+        {
+            var step = chain.FirstOrDefault(c => c.Inputs.All(g => bag.Qty(goods.IdOf(g)) >= c.MinG));
+            if (step.Recipe == null || hands[step.Recipe].Count == 0) break;
+            var who = new CraftActor(hands[step.Recipe][n % hands[step.Recipe].Count]);
+            var plan = runner.Plan(db[step.Recipe], who, kit.Yard.Site, bag); if (!plan.CanStart) break;
+            var job = runner.Start(plan, who, bag.Owner, bag, now); if (job == null) break;
+            while (job.State == CraftJobState.Active) { long before = job.TotalSeconds; runner.Advance(job, 3600, now); if (job.TotalSeconds <= before) break; }
+            if (job.State == CraftJobState.Done) runner.State.Remove(job.Id);
+            n++;
+        }
+    }
+
+    /// <summary>The goods that came in on the train (the transit store, once the walk is done) go into the baggage.</summary>
+    private void Deliver(SiegeRow s, SiegeKit kit, Store bag, int day)
+    {
+        if (s.TrainDue < 0 || day < s.TrainDue) return;
+        var transit = kit.Yard.Econ.OpenStore(StoreKind.Chest, SiegeKits.TransitOwner(s.Id), 0, 0, false);
+        foreach (var (g, q) in transit.Rows().ToList()) Store.Move(transit, bag, g, q);
+        s.TrainDue = -1;
+    }
+
+    /// <summary>The quartermaster's order for the engines still to lay: every good the baggage does not already cover, bought at the books within <see cref="SiegeConfig.TrainReachM"/> of the camp into the transit store.</summary>
+    private void Order(ArmyEnv e, SiegeRow s, SiegeKit kit, HostSupply hs, EngineBill first, GoodCatalog goods)
+    {
+        if (s.TrainDue >= 0) return;                                                                       // a train is on the road
+        var hid = new HostId(s.Supply); var bag = hs.BaggageOf(hid);
+        var transit = kit.Yard.Econ.OpenStore(StoreKind.Chest, SiegeKits.TransitOwner(s.Id), 0, 0, false);
+        var want = new SortedDictionary<ushort, long>();
+        for (int i = s.Engines.Count; i < SiegeConfig.Engines.Length; i++)
+        {
+            var bill = i == s.Engines.Count ? first : EngineYard.Bill(kit.Yard.Rides.Templates.Get(SiegeConfig.Engines[i]), kit.Yard.Rides.Templates, kit.Yard.Runner.Db, goods);
+            foreach (var (good, g) in bill.GoodsG)
+            {
+                if (good is "rope" or "nails" && bag.Qty(goods.IdOf(good)) >= NeedUnits(goods, goods.IdOf(good), g)) continue;
+                if (good == "nails") { foreach (var raw in new[] { "iron_bar", "charcoal" }) { ushort rid = goods.IdOf(raw); want[rid] = want.GetValueOrDefault(rid) + NeedUnits(goods, rid, g * 12 / 10); } continue; }          // no market holds the nails: the camp forges them from iron bar and charcoal
+                string gx = good == "rope" ? "wool_raw" : good; long gg = good == "rope" ? g * 14 / 10 : g; ushort id = goods.IdOf(gx); want[id] = want.GetValueOrDefault(id) + NeedUnits(goods, id, gg);          // nor the rope: spun from wool
+            }          // no market holds rope: the camp spins and braids it from wool
+        }
+        int due = -1;
+        foreach (var (id, need) in want)
+        {
+            long lack = need * 115 / 100 - bag.Qty(id) - transit.Qty(id); if (lack <= 0 || need <= bag.Qty(id)) continue;                  // what a train on the road already carries is not ordered again
+            var (got, far) = hs.BuyForSiege(hid, id, lack, (int)e.Day, SiegeConfig.TrainReachM);
+            if (got <= 0) continue;
+            Store.Move(bag, transit, id, got);
+            due = Math.Max(due, (int)e.Day + 1 + Armies.WalkDays(s.Place, far));
+        }
+        if (due >= 0) s.TrainDue = due;
+    }
+
+    /// <summary>Keeps the camp stocked with stone for the shot: what the camp lacks of <see cref="SiegeKits.ShotStockKg"/> is moved from the baggage's stone, and the stone is bought by a train when the baggage has none.</summary>
+    private void Provision(SiegeRow s, int day)
+    {
+        var kit = KitOf?.Invoke(s); var hs = Hs; if (kit == null || hs == null || s.Engines.Count == 0) return;
+        var goods = kit.Yard.Econ.Goods; ushort stone = goods.IdOf("stone_raw"); long unit = Math.Max(1, goods.MassG(stone, 1));
+        int unfinished = s.Engines.Count(id => !(kit.Yard.Rides.Vehicles.Find(new EntityId(id))?.Finished ?? true));          // an engine still building keeps the stone of its counterweight in the camp
+        long want = (SiegeKits.ShotStockKg + SiegeKits.CounterweightKg * unfinished) * 1000 / unit - kit.Camp.Qty(stone); if (want <= 0) return;
+        var hid = new HostId(s.Supply); var bag = hs.BaggageOf(hid);
+        Deliver(s, kit, bag, day);
+        var transit = kit.Yard.Econ.OpenStore(StoreKind.Chest, SiegeKits.TransitOwner(s.Id), 0, 0, false);
+        if (bag.Qty(stone) + transit.Qty(stone) < want)
+        {
+            var (got, far) = hs.BuyForSiege(hid, stone, want - bag.Qty(stone) - transit.Qty(stone), day, SiegeConfig.TrainReachM);
+            if (got > 0) { Store.Move(bag, transit, stone, got); s.TrainDue = Math.Max(s.TrainDue, day + 1 + Armies.WalkDays(s.Place, far)); }
+        }
+        Store.MoveUpTo(bag, kit.Camp, stone, Math.Min(want, bag.Qty(stone)));
     }
 
     /// <summary>The builders of an unfinished engine are the host's men who are still there: a man who left (desertion, hunger, the cold) is replaced by the next man of the roll, so the work does not stop with the people who began it.</summary>

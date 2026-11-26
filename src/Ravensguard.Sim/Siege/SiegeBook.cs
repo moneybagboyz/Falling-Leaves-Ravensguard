@@ -52,6 +52,8 @@ public sealed class SiegeRow
     /// <summary>The live bubble has the assault (the book waits for <see cref="SiegeWorld.EndAssault"/>) since this game hour (-1 none).</summary>
     [Key(29)] public long LiveSinceHour { get; set; } = -1;
     [Key(30)] public int RefusedDay { get; set; } = -1;
+    /// <summary>The day the siege train's goods bought at the far books reach the camp (they wait in the camp's transit store; -1 none). Additive key.</summary>
+    [Key(31)] public int TrainDue { get; set; } = -1;
 
     [IgnoreMember] public bool Open => State is SiegeState.Investing or SiegeState.Blockade or SiegeState.Bombardment or SiegeState.Assault;
 }
