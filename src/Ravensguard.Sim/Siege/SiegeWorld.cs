@@ -16,6 +16,8 @@ public sealed class SiegeWalls
     public required WallWorld World;
     public long LayXMm, LayYMm, AimXMm, AimYMm;
     public int X0, Y0, X1, Y1;
+    /// <summary>Mostly timber (a palisade): the campaign brain counts it as one.</summary>
+    public bool Timber;
 }
 
 /// <summary>What the besiegers build and shoot with: the engine book, the yard that builds at the camp, the shooting world and the camp's store of hauled materials.</summary>

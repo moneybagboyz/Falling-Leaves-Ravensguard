@@ -379,7 +379,7 @@ public sealed partial class ArmyWorld
         foreach (var h in Book.Hosts.Values.OrderBy(h => h.Id).ToList())
         {
             if (h.Supply == 0 || h.State == HostState.Disbanding || !Book.Campaigns.TryGetValue(h.Id, out var c) || !hs.Exists(new HostId(h.Supply))) continue;
-            if (c.Stage == 2 && h.State == HostState.Besieging && c.Kind != 2) { SiegeDay(e, h, c); continue; }
+            if (c.Stage == 2 && c.Kind != 2 && h.State is HostState.Besieging or HostState.Camped) { SiegeDay(e, h, c); continue; }
             if (IsHero(h.Commander)) continue;                                                    // the player orders his own host
             if (c.BattleHour > 0 || h.State == HostState.Engaged) continue;
             if (h.State == HostState.Camped && c.Stage == 0)

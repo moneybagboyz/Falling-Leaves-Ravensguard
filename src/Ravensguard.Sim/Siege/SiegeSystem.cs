@@ -45,7 +45,7 @@ public sealed partial class SiegeWorld
         var pb = Armies.Politics; var hs = Hs; if (pb == null || hs == null) return;
         foreach (var host in Armies.Book.Hosts.Values.ToList())
         {
-            if (host.Supply == 0 || host.State is not (HostState.Camped or HostState.Marching) || Hero(host.Commander) || host.War < 0 || Peek?.OfHost(host.Id) != null) continue;
+            if (host.Supply == 0 || host.State is not (HostState.Camped or HostState.Marching) || Hero(host.Commander) || host.War < 0 || Peek?.OfHost(host.Id) != null || (Armies.Book.Campaigns.TryGetValue(host.Id, out var camp) && camp.Objective >= 0)) continue;
             var hid = new HostId(host.Supply); if (!hs.Exists(hid)) continue;
             int target = -1, best = int.MaxValue;
             for (int p = 0; p < Armies.Region.Settlements.Count; p++)
@@ -72,6 +72,13 @@ public static class SiegeWiring
     {
         var aw = home.Sim.Get<ArmyWorld>(); if (aw == null) return null;
         var sw = new SiegeWorld(home.Sim, aw, () => state.Sieges, () => state.Sieges ??= new SiegeBook());
+        var cw = home.Sim.Get<Construction.ConstructionWorld>();
+        if (cw != null)
+        {
+            var walls = new WallWorld(state.Chunks, content, state.Seed) { Construction = cw, Chronicle = sw.Writer };
+            sw.WallsOf = new BuiltWalls(sw, cw, walls).Of;                                                                     // the hero's built wall pieces; the generator places no civic walls
+        }
+        aw.Siege = new SiegeHook(sw);
         home.Sim.Set(sw);
         return sw;
     }
