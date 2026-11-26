@@ -1,0 +1,11 @@
+// docs/specs/phase7/ships-and-naval-war.md 4.1 to 4.3 (P7-SH-B): sailing, sea state, lee shores and harbours. mm, mm/s, N, L, _pm permille.
+[
+  { "type": "sea_rules", "id": "default",
+    "brace_deg": 45, "hull_speed_pm": 1250, "leeway_pm": 150, "leeway_shallow_pm": 250, "slender_lb_x10": 40, "slender_drag_pm": 450, "shallow_draft_mm": 1000,
+    "rudder_deg_s": 3, "steering_oar_deg_s": 6, "spot_turn_deg_s": 10,
+    "easy_sec_per_point": 6, "hard_sec_per_point": 1, "rest_sec_per_point": 2, "power_floor_pm": 400,
+    "wave_div": 250, "fetch_cap_km": 50, "beam_sea_sin_pm": 707, "storm_mps": 17, "storm_drift_pm": 40,
+    "wreck_pm": 250, "wreck_min_cells": 2, "beach_mmps": 1000, "warp_mmps": 300,
+    "porter_kg": 30, "porter_trip_sec": 90, "crane_kg": 500, "crane_lift_sec": 120, "customs_pct": 5,
+    "beach_slope_pm": 80, "beach_max_height_cm": 300 }
+]
