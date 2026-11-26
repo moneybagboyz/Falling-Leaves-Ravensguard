@@ -1,5 +1,7 @@
 using Ravensguard.Sim.Contracts;
+using Ravensguard.Sim.Combat.Aftermath;
 using Ravensguard.Sim.Core;
+using Ravensguard.Sim.Goods;
 using Ravensguard.Sim.Economy;
 using Ravensguard.Sim.People;
 using Ravensguard.Sim.Rule;
@@ -85,10 +87,12 @@ public static class MercCompanies
     /// Hires a company for <paramref name="days"/> (15 to 60) as a <c>mercenary_service</c> contract: the advance, half of the first six days' wages, leaves the employer's purse into the contract's escrow at once and is
     /// the company's when the service is done; the wage a day runs through <see cref="Day"/>. The company's purse is opened on its first hire. Armoury gaps are filled when <paramref name="armoury"/> is given and the terms say so.
     /// </summary>
-    public static HireResult Hire(ContractWorld w, ContractBook book, SoldierWorld sw, long companyId, EntityId employer, long employerLord, PurseId employerPurse, int settlement, int days, bool fillGaps, int day, long armoury = -1)
+    public static HireResult Hire(ContractWorld w, ContractBook book, SoldierWorld sw, long companyId, EntityId employer, long employerLord, PurseId employerPurse, int settlement, int days, bool fillGaps, int day, long armoury = -1,
+        int plunderSharePm = 333, int ransomSharePm = 333)
     {
         if (!sw.Book.Companies.TryGetValue(companyId, out var c)) return HireResult.NoSuchCompany;
-        if (c.Hired) return HireResult.Busy;
+        if (c.Hired || book.Contracts.Values.Any(k => k.State == WorkState.Taken && k.ByCompany && k.Taker == IdOf(c))) return HireResult.Busy;          // a company on a guard job is not for hire
+        if (plunderSharePm < 0 || plunderSharePm > 1000 || ransomSharePm < 0 || ransomSharePm > 1000) return HireResult.BadTerms;
         if (days < MinDays || days > MaxDays || employerLord < 0 || employerPurse.IsNone) return HireResult.BadTerms;
         long advance = DailyMites(sw, c) * AdvanceDays / 2;
         if (advance <= 0 || w.Ledger.Balance(employerPurse).Mites < advance) return HireResult.CannotPay;
@@ -100,9 +104,47 @@ public static class MercCompanies
         if (k == null) return HireResult.Refused;
         if (ContractSystem.Take(w, book, k.Id, IdOf(c), new PurseId(c.Purse), day, byCompany: true) != TakeResult.Taken) { ContractSystem.Cancel(w, book, k.Id, day); return HireResult.Refused; }
         c.ContractId = k.Id; c.Employer = employerLord; c.EmployerPurse = employerPurse.Index; c.HiredDay = day; c.EndDay = day + days;
-        c.ArrearsDays = 0; c.OwedMites = 0; c.Morale = 0; c.FillGaps = fillGaps;
+        c.ArrearsDays = 0; c.OwedMites = 0; c.Morale = 0; c.FillGaps = fillGaps; c.PlunderSharePm = plunderSharePm; c.RansomSharePm = ransomSharePm;
         if (fillGaps && armoury >= 0) sw.FillFrom(armoury, sw.SoldiersOf(-1, r => c.Members.Contains(r.Person)), day, employerLord);
         return HireResult.Hired;
+    }
+
+    // ------------------------------------------------------------------ shares of the contract (P7-SC-D)
+
+    /// <summary>
+    /// A ransom the company's captive paid, shared by the contract: the payer's coin goes to the employer's purse (the company's own when it is between contracts), and the company's share (<see cref="MercCompany.RansomSharePm"/>)
+    /// moves on from there, never more than that purse holds. Returns what the payer paid; 0 when it could not (nothing moves).
+    /// </summary>
+    public static long ShareRansom(Ledger l, MercCompany c, PurseId payer, long askMites)
+    {
+        if (askMites <= 0 || c.Purse < 0 || payer.IsNone) return 0;
+        var co = new PurseId(c.Purse); var to = c.Hired && c.EmployerPurse >= 0 ? new PurseId(c.EmployerPurse) : co;
+        if (payer == to || l.Balance(payer).Mites < askMites || !l.Transfer(payer, to, new Coin(askMites), AftermathCoin.Ransom)) return 0;
+        if (to != co) l.Transfer(to, co, new Coin(Math.Min(l.Balance(to).Mites, askMites * c.RansomSharePm / 1000)), TransferReason.Plunder);
+        return askMites;
+    }
+
+    /// <summary>
+    /// Loot the company took, shared by the contract: its share of the coin (<see cref="MercCompany.PlunderSharePm"/>) from the purse that holds it, never more than the purse holds, and its share of the pieces (whole
+    /// pieces, the lowest ids first) from the owner that holds them, only pieces that exist and are that owner's. Returns the (mites, pieces) that moved.
+    /// </summary>
+    public static (long Mites, int Pieces) SharePlunder(Ledger l, ItemTable items, MercCompany c, PurseId lootPurse, long lootMites, EntityId lootOwner, IReadOnlyList<EntityId> lootItems)
+    {
+        if (c.Purse < 0) return (0, 0);
+        long coin = 0; var co = new PurseId(c.Purse);
+        if (lootMites > 0 && !lootPurse.IsNone && lootPurse != co)
+        {
+            long share = Math.Min(l.Balance(lootPurse).Mites, lootMites * c.PlunderSharePm / 1000);
+            if (share > 0 && l.Transfer(lootPurse, co, new Coin(share), TransferReason.Plunder)) coin = share;
+        }
+        int pieces = 0, want = (int)((long)lootItems.Count * c.PlunderSharePm / 1000);
+        foreach (var id in lootItems.OrderBy(i => i.Value))
+        {
+            if (pieces >= want) break;
+            int row = items.IndexOf(id); if (row < 0 || items.At(row).Owner != lootOwner) continue;
+            items.At(row).Owner = IdOf(c); pieces++;
+        }
+        return (coin, pieces);
     }
 
     // ------------------------------------------------------------------ the day
@@ -120,14 +162,34 @@ public static class MercCompanies
             if (c.ContractId >= 0 && (book.Get(c.ContractId) is not { } k || k.Closed))
             {
                 if (book.Get(c.ContractId)?.State == WorkState.Done) { c.Reputation = Math.Min(1000, c.Reputation + KeptRep); c.Kept++; }
-                Release(c); continue;
+                Release(sw, c); continue;
             }
-            if (c.ContractId < 0 && day >= c.EndDay) { Release(c); continue; }       // a service begun after a turn ends by its day
+            if (c.ContractId < 0 && day >= c.EndDay) { Release(sw, c); continue; }       // a service begun after a turn ends by its day
             PayCompany(w, sw, c);
             if ((day - c.HiredDay) % PayEveryDays == PayEveryDays - 1) PayMen(w, sw, c);
             Loyalty(w, book, sw, chron, c, day, hooks);
         }
     }
+
+    /// <summary>
+    /// A service ends (done, failed, unpaid or run out): the kit the employer's armoury issued goes back to it, with the wear it has (a piece lost on campaign is just gone), and the company is idle again. Returns the
+    /// pieces that went back.
+    /// </summary>
+    public static int ReturnKit(SoldierWorld sw, MercCompany c)
+    {
+        int back = 0;
+        foreach (var m in c.Members)
+        {
+            if (sw.Book.Of(m) is not { } row || row.Issued.Count == 0) continue;
+            foreach (var grp in row.Issued.GroupBy(i => i.Armoury).OrderBy(g => g.Key)) back += sw.Armouries.Return(grp.Key, [.. grp.OrderBy(i => i.Item).Select(i => new EntityId(i.Item))]);
+            var gone = row.Issued.Select(i => i.Item).ToHashSet();
+            foreach (var slot in row.Worn.Where(w => gone.Contains(w.Value)).Select(w => w.Key).ToList()) row.Worn.Remove(slot);
+            row.Issued.Clear();
+        }
+        return back;
+    }
+
+    private static void Release(SoldierWorld sw, MercCompany c) { ReturnKit(sw, c); Release(c); }
 
     private static void Release(MercCompany c) { c.Employer = -1; c.EmployerPurse = -1; c.ContractId = -1; c.ArrearsDays = 0; c.OwedMites = 0; c.Morale = 0; c.HiredDay = -1; c.EndDay = -1; c.FillGaps = false; }
 
@@ -190,7 +252,7 @@ public static class MercCompanies
         sw.Book.Standing[employer] = Math.Max(-1000, sw.Book.Standing.GetValueOrDefault(employer) + LeftStanding);
         Note(chron, day, plunder ? "company_plunders" : "company_leaves", plunder ? "ch_so_company_plunders" : "ch_so_company_leaves", c, employer, posted);
         if (plunder) hooks.Raid?.Invoke(c, c.Settlement, true);
-        Release(c);
+        Release(sw, c);
     }
 
     private static void Roam(ContractWorld w, SoldierWorld sw, RuleChron chron, MercCompany c, int day, CompanyHooks hooks)

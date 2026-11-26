@@ -72,7 +72,34 @@ public sealed class MercCompany
     public int Morale;
     public bool FillGaps;
     public int Kept;
+    /// <summary>P7-SC-D: the contract's shares in permille: of the loot the company takes, and of the ransoms of the prisoners it took (4.6: a third each).</summary>
+    public int PlunderSharePm = 333, RansomSharePm = 333;
     public bool Hired => Employer >= 0;
+}
+
+public enum PrisonerClass : byte { Common, Ransom }
+
+/// <summary>
+/// P7-SC-D (4.7): a prisoner in a pen. <see cref="Captor"/> is the lord (or -1) and <see cref="Company"/> the mercenary company (or -1) that took him; <see cref="Pen"/> a settlement's gaol or -1 for a camp pen;
+/// <see cref="ValueMites"/> his ransom by rank; <see cref="PayerPurse"/> the ledger index of the purse asked for it (-1 none) and <see cref="CaptorPurse"/> the purse the coin goes to. <see cref="ParoleUntil"/> (-1 none)
+/// is the day a sworn release ends; <see cref="Work"/> the job he is put to; <see cref="ExchangeWar"/> the war whose peace exchanges him (-1 none); <see cref="UnfedDays"/> the days in a row he went unfed.
+/// </summary>
+public sealed class PrisonerRow
+{
+    public ulong Person;
+    public long Captor = -1, Company = -1;
+    public int Pen = -1, Since;
+    public PrisonerClass Class;
+    public long ValueMites;
+    public int DueDay;
+    public int PayerPurse = -1, CaptorPurse = -1;
+    public bool PayerIsLord;
+    public int ParoleUntil = -1;
+    public string Work = "";
+    public int ExchangeWar = -1;
+    public int UnfedDays;
+    /// <summary>The chronicle entry of the capture (a ransom or a fate is caused by it).</summary>
+    public ulong Entry;
 }
 
 /// <summary>
@@ -93,8 +120,11 @@ public sealed class SoldierBook
     /// <summary>P7-SC-C: the mercenary companies by id, and the standing employers have with companies (a lord who broke faith: -200).</summary>
     public SortedDictionary<long, MercCompany> Companies { get; } = [];
     public SortedDictionary<long, int> Standing { get; } = [];
+    /// <summary>P7-SC-D: the prisoners in the pens by person, and whether the first companies were seeded on the running world's first day (a one-time step: the flag is saved).</summary>
+    public SortedDictionary<ulong, PrisonerRow> Prisoners { get; } = [];
+    public bool Seeded;
 
-    public bool IsEmpty => Companies.Count == 0 && Rows.Count == 0 && Refits.Count == 0 && Skills.Count == 0 && Units.Count == 0 && Offers.Count == 0;
+    public bool IsEmpty => !Seeded && Prisoners.Count == 0 && Companies.Count == 0 && Rows.Count == 0 && Refits.Count == 0 && Skills.Count == 0 && Units.Count == 0 && Offers.Count == 0;
     public SoldierRow? Of(ulong person) => Rows.GetValueOrDefault(person);
 
     /// <summary>The hash of the section, fixed order, integers only; zero while empty.</summary>
@@ -112,7 +142,7 @@ public sealed class SoldierBook
         }
         M(-1);
         foreach (var j in Refits.OrderBy(j => j.Item)) { M((long)j.Item); M((long)j.Person); M(j.Armoury); S(j.Slot); M(j.ToCm3); M(j.Day); }
-        if (Skills.Count == 0 && Units.Count == 0 && Offers.Count == 0 && !Rows.Values.Any(r => r.ArrearsMites != 0 || r.DrillHours.Count > 0)) return h;
+        if (Skills.Count == 0 && Units.Count == 0 && Offers.Count == 0 && Prisoners.Count == 0 && !Seeded && Companies.Count == 0 && Standing.Count == 0 && !Rows.Values.Any(r => r.ArrearsMites != 0 || r.DrillHours.Count > 0)) return h;
         M(-2);
         foreach (var (p, r) in Rows) { M((long)p); M(r.ArrearsMites); foreach (var (f, n) in r.DrillHours) { S(f); M(n); } M(-3); }
         foreach (var (p, sk, m) in Skills.MicroRows()) { M((long)p); M(sk); M(m); }
@@ -120,16 +150,22 @@ public sealed class SoldierBook
         foreach (var (u, d) in Units) { M(u); M(d.Value); M(d.LastDay); }
         M(-5);
         foreach (var (p, o) in Offers) { M((long)p); S(o.Role); M(o.Day); }
-        if (Companies.Count == 0 && Standing.Count == 0) return h;
+        if (Companies.Count == 0 && Standing.Count == 0 && Prisoners.Count == 0 && !Seeded) return h;
         M(-6);
         foreach (var (id, c) in Companies)
         {
             M(id); S(c.Name); M((long)c.Captain); M(c.Purse); M(c.Reputation); M(c.Settlement); M(c.ContractId); M(c.Employer); M(c.EmployerPurse); M(c.HiredDay); M(c.EndDay);
-            M(c.ArrearsDays); M(c.OwedMites); M(c.Turned ? 1 : 0); M(c.WageMultPm); M(c.Morale); M(c.FillGaps ? 1 : 0); M(c.Kept);
+            M(c.ArrearsDays); M(c.OwedMites); M(c.Turned ? 1 : 0); M(c.WageMultPm); M(c.Morale); M(c.FillGaps ? 1 : 0); M(c.Kept); M(c.PlunderSharePm); M(c.RansomSharePm);
             M(c.Members.Count); foreach (var m in c.Members) M((long)m);
         }
         M(-7);
         foreach (var (l, v) in Standing) { M(l); M(v); }
+        M(-8); M(Seeded ? 1 : 0);
+        foreach (var (p, r) in Prisoners)
+        {
+            M((long)p); M(r.Captor); M(r.Company); M(r.Pen); M(r.Since); M((long)r.Class); M(r.ValueMites); M(r.DueDay); M(r.PayerPurse); M(r.CaptorPurse); M(r.PayerIsLord ? 1 : 0);
+            M(r.ParoleUntil); S(r.Work); M(r.ExchangeWar); M(r.UnfedDays); M((long)r.Entry);
+        }
         return h;
     }
 }

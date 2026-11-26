@@ -21,9 +21,9 @@ public class CompanyTests
         public bool SetFit(ulong item, int cm3) => true;
     }
 
-    private static readonly EntityId Fief = EntityId.Make(IdKind.Faction, 900), Rival = EntityId.Make(IdKind.Faction, 901);
+    internal static readonly EntityId Fief = EntityId.Make(IdKind.Faction, 900), Rival = EntityId.Make(IdKind.Faction, 901);
 
-    private sealed class Rig
+    internal sealed class Rig
     {
         public Chronicle C; public ContractWorld W; public ContractBook B = new(); public Ledger L = new(); public SoldierWorld Sw; public IdAllocator Ids = new();
         public PurseId Employer, RivalPurse; public Dictionary<ulong, PurseId> Purses = [];

@@ -1,3 +1,4 @@
+using Ravensguard.Content;
 using Ravensguard.Sim.Contracts;
 using Ravensguard.Sim.Core;
 using Ravensguard.Sim.People;
@@ -16,10 +17,30 @@ public sealed class CompanySeedStep : IPhase7SeedStep
     public string Name => "companies";
     public string Section => SoldierSave.SectionName;
 
-    public bool Seed(Phase7SeedContext ctx)
+    public bool Seed(Phase7SeedContext ctx) => ctx.Content != null && Run(ctx.State, ctx.Content, ctx.Seed);
+
+    /// <summary>A rich land (the mean household purse at or above this, mites) and a warring one (active wars in the region) raise the count (P7-SC-D: one more for riches, one more for a war, two for three wars).</summary>
+    public const long RichHouseholdMites = 5_000;
+
+    /// <summary>The number of companies a world gets: 2 to 4 by a draw of 0x7B1, one more where the households are rich, one or two more where wars are active.</summary>
+    public static int CountFor(WorldState st, ulong seed)
     {
-        var st = ctx.State;
-        if (ctx.Content == null || st.Economy == null || st.Population.People.Count == 0 || st.Soldiers is { Companies.Count: > 0 }) return false;
+        int n = 2 + DetRng.Range(seed, 0, 0, RngStreams.CompanySeeding, 2_000_000, 0, 3);
+        var e = st.Economy;
+        if (e != null && e.HouseholdCount > 0)
+        {
+            long sum = 0; int k = Math.Min(e.HouseholdCount, e.HouseholdPurse.Length);
+            for (int h = 0; h < k; h++) if (!e.HouseholdPurse[h].IsNone) sum += e.Ledger.Balance(e.HouseholdPurse[h]).Mites;
+            if (k > 0 && sum / k >= RichHouseholdMites) n++;
+        }
+        int wars = st.Population.Region.ActiveWars.Count;
+        return n + (wars >= 3 ? 2 : wars >= 1 ? 1 : 0);
+    }
+
+    /// <summary>Makes the world's first companies (no flag is touched here); true when any was made.</summary>
+    public static bool Run(WorldState st, ContentDatabase content, ulong seed)
+    {
+        if (st.Economy == null || st.Population.People.Count == 0 || st.Soldiers is { Companies.Count: > 0 }) return false;
         var pt = st.Population.People; int day = (int)st.Clock.Now.TotalDays; var hero = st.Party?.Hero ?? EntityId.None;
         var men = new List<ulong>();
         for (int i = 0; i < pt.Count; i++)
@@ -29,13 +50,13 @@ public sealed class CompanySeedStep : IPhase7SeedStep
             men.Add(pt.IdOf(i).Value);
         }
         if (men.Count < MercCompanies.MinMen * 3) return false;
-        var sw = SoldierWiring.For(st, ctx.Content);
-        int n = 2 + DetRng.Range(ctx.Seed, 0, 0, RngStreams.CompanySeeding, 2_000_000, 0, 3);
+        var sw = SoldierWiring.For(st, content);
+        int n = CountFor(st, seed);
         int maxMen = Math.Max(MercCompanies.MinMen, men.Count / (n * 6));
         bool any = false;
         for (int k = 1; k <= n; k++)
         {
-            var c = MercCompanies.Seed(sw, ctx.Seed, k, 0, men, maxMen);
+            var c = MercCompanies.Seed(sw, seed, k, 0, men, maxMen);
             if (c == null) continue;
             int row = pt.IndexOf(new EntityId(c.Captain)); c.Settlement = row >= 0 ? Math.Max(0, pt.HomeSettlement[row]) : 0;
             any = true;
@@ -61,7 +82,13 @@ public static class SoldierTick
 
     public static void OnDay(Save.WorldState st, ContractWorld w, ContractBook book, int day)
     {
-        if (st.Soldiers is not { IsEmpty: false } || st.Content == null || st.Economy == null) return;
+        if (st.Content == null || st.Economy == null) return;
+        if (st.Soldiers is not { Seeded: true })          // P7-SC-D: the first companies, once, on the running world's first day (a flag in the soldiers section; the new world's layers are not touched)
+        {
+            CompanySeedStep.Run(st, st.Content, w.Seed);
+            (st.Soldiers ??= SoldierWiring.For(st, st.Content).Book).Seeded = true;
+        }
+        if (st.Soldiers is not { IsEmpty: false }) return;
         var sw = SoldierWiring.For(st, st.Content);
         var chron = RuleChron.Of(st.Chronicle, st.Ids);
         foreach (var r in sw.Book.Rows.Values.Where(r => r.Lord >= 0).ToList())          // drill: hours of the day, no coin
@@ -78,5 +105,6 @@ public static class SoldierTick
             }
         }
         MercCompanies.Day(w, book, sw, chron, day);
+        if (sw.Book.Prisoners.Count > 0) PrisonerPens.Day(sw, Combat.Aftermath.AftermathRules.For(st.Content), chron, w.Seed, day);
     }
 }

@@ -98,6 +98,30 @@ public sealed class CompanySave
     [Key(16)] public int Morale { get; set; }
     [Key(17)] public bool FillGaps { get; set; }
     [Key(18)] public int Kept { get; set; }
+    // P7-SC-D: appended
+    [Key(19)] public int PlunderSharePm { get; set; } = 333;
+    [Key(20)] public int RansomSharePm { get; set; } = 333;
+}
+
+[MessagePackObject]
+public sealed class PrisonerSave
+{
+    [Key(0)] public ulong Person { get; set; }
+    [Key(1)] public long Captor { get; set; } = -1;
+    [Key(2)] public long Company { get; set; } = -1;
+    [Key(3)] public int Pen { get; set; } = -1;
+    [Key(4)] public int Since { get; set; }
+    [Key(5)] public byte Class { get; set; }
+    [Key(6)] public long ValueMites { get; set; }
+    [Key(7)] public int DueDay { get; set; }
+    [Key(8)] public int PayerPurse { get; set; } = -1;
+    [Key(9)] public int CaptorPurse { get; set; } = -1;
+    [Key(10)] public bool PayerIsLord { get; set; }
+    [Key(11)] public int ParoleUntil { get; set; } = -1;
+    [Key(12)] public string Work { get; set; } = "";
+    [Key(13)] public int ExchangeWar { get; set; } = -1;
+    [Key(14)] public int UnfedDays { get; set; }
+    [Key(15)] public ulong Entry { get; set; }
 }
 
 [MessagePackObject]
@@ -122,6 +146,9 @@ public sealed class SoldierSave
     // P7-SC-C: appended keys (absent in an older save: empty)
     [Key(5)] public CompanySave[] Companies { get; set; } = [];
     [Key(6)] public CompanyStandingSave[] Standing { get; set; } = [];
+    // P7-SC-D: appended keys (absent in an older save: none, not seeded)
+    [Key(7)] public bool Seeded { get; set; }
+    [Key(8)] public PrisonerSave[] Prisoners { get; set; } = [];
 
     public static SoldierSave Capture(SoldierBook b) => new()
     {
@@ -140,9 +167,15 @@ public sealed class SoldierSave
         {
             Id = c.Id, Name = c.Name, Captain = c.Captain, Members = [.. c.Members], Purse = c.Purse, Reputation = c.Reputation, Settlement = c.Settlement, ContractId = c.ContractId, Employer = c.Employer,
             EmployerPurse = c.EmployerPurse, HiredDay = c.HiredDay, EndDay = c.EndDay, ArrearsDays = c.ArrearsDays, OwedMites = c.OwedMites, Turned = c.Turned, WageMultPm = c.WageMultPm,
-            Morale = c.Morale, FillGaps = c.FillGaps, Kept = c.Kept,
+            Morale = c.Morale, FillGaps = c.FillGaps, Kept = c.Kept, PlunderSharePm = c.PlunderSharePm, RansomSharePm = c.RansomSharePm,
         })],
         Standing = [.. b.Standing.Select(s => new CompanyStandingSave { Lord = s.Key, Value = s.Value })],
+        Seeded = b.Seeded,
+        Prisoners = [.. b.Prisoners.Values.Select(r => new PrisonerSave
+        {
+            Person = r.Person, Captor = r.Captor, Company = r.Company, Pen = r.Pen, Since = r.Since, Class = (byte)r.Class, ValueMites = r.ValueMites, DueDay = r.DueDay, PayerPurse = r.PayerPurse,
+            CaptorPurse = r.CaptorPurse, PayerIsLord = r.PayerIsLord, ParoleUntil = r.ParoleUntil, Work = r.Work, ExchangeWar = r.ExchangeWar, UnfedDays = r.UnfedDays, Entry = r.Entry,
+        })],
     };
 
     private static SkillMicroSave[] SkillRows(SoldierBook b)
@@ -174,11 +207,18 @@ public sealed class SoldierSave
             {
                 Id = c.Id, Name = c.Name, Captain = c.Captain, Purse = c.Purse, Reputation = c.Reputation, Settlement = c.Settlement, ContractId = c.ContractId, Employer = c.Employer,
                 EmployerPurse = c.EmployerPurse, HiredDay = c.HiredDay, EndDay = c.EndDay, ArrearsDays = c.ArrearsDays, OwedMites = c.OwedMites, Turned = c.Turned, WageMultPm = c.WageMultPm,
-                Morale = c.Morale, FillGaps = c.FillGaps, Kept = c.Kept,
+                Morale = c.Morale, FillGaps = c.FillGaps, Kept = c.Kept, PlunderSharePm = c.PlunderSharePm, RansomSharePm = c.RansomSharePm,
             };
             m.Members.AddRange(c.Members); b.Companies[m.Id] = m;
         }
         foreach (var s in Standing) b.Standing[s.Lord] = s.Value;
+        b.Seeded = Seeded;
+        foreach (var r in Prisoners)
+            b.Prisoners[r.Person] = new PrisonerRow
+            {
+                Person = r.Person, Captor = r.Captor, Company = r.Company, Pen = r.Pen, Since = r.Since, Class = (PrisonerClass)r.Class, ValueMites = r.ValueMites, DueDay = r.DueDay, PayerPurse = r.PayerPurse,
+                CaptorPurse = r.CaptorPurse, PayerIsLord = r.PayerIsLord, ParoleUntil = r.ParoleUntil, Work = r.Work, ExchangeWar = r.ExchangeWar, UnfedDays = r.UnfedDays, Entry = r.Entry,
+            };
         return b;
     }
 }

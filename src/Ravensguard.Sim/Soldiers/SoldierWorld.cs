@@ -66,6 +66,8 @@ public sealed class SoldierWorld
     public Func<ulong, PurseId?>? PurseHook { get; set; }
     /// <summary>P7-SC-C: what the world tells the companies' daily choices.</summary>
     public CompanyHooks CompanyHooks { get; } = new();
+    /// <summary>P7-SC-D: what the world tells the pens (feeding, sale where legal, a lord's cession, a killing, a broken parole).</summary>
+    public PenHooks PenHooks { get; } = new();
 
     public SoldierWorld(SoldierBook book, ContentDatabase db, EconomyState econ, WorksBook works, LargeBuildingRulesDef rules, IKitFit fit, Func<PersonTable?> people)
     {
