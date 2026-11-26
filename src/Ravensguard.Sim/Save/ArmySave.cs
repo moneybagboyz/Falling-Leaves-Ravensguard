@@ -193,6 +193,43 @@ public sealed class HostRationSave
     [Key(4)] public int[] WoundedUntil { get; set; } = [];
 }
 
+[MessagePackObject]
+public sealed class CampaignSave
+{
+    [Key(0)] public int Host { get; set; }
+    /// <summary>Objective, plan day, enemy host, siege day, days, kind, stage, win permille.</summary>
+    [Key(1)] public int[] Fields { get; set; } = [];
+    /// <summary>Value, cost, score, battle hour.</summary>
+    [Key(2)] public long[] Totals { get; set; } = [];
+}
+
+[MessagePackObject]
+public sealed class IntelSave
+{
+    [Key(0)] public int Observer { get; set; }
+    [Key(1)] public int Subject { get; set; }
+    [Key(2)] public int Day { get; set; }
+    [Key(3)] public int Strength { get; set; }
+    [Key(4)] public long XMm { get; set; }
+    [Key(5)] public long YMm { get; set; }
+    [Key(6)] public byte Source { get; set; }
+}
+
+[MessagePackObject]
+public sealed class WarEventSave
+{
+    [Key(0)] public int War { get; set; }
+    [Key(1)] public int Day { get; set; }
+    [Key(2)] public int Doer { get; set; }
+    [Key(3)] public int Points { get; set; }
+    [Key(4)] public int Lost { get; set; }
+    [Key(5)] public int Place { get; set; }
+    [Key(6)] public byte Kind { get; set; }
+    [Key(7)] public ulong Entry { get; set; }
+    [Key(8)] public bool Scored { get; set; }
+    [Key(9)] public int OwnLost { get; set; }
+}
+
 /// <summary>
 /// The optional "armies" section (a name of <c>Phase7Seeding.SectionNames</c>), written only while the book is not empty, so a world that never raised a warband keeps its bytes. Later armies parts (hosts, camps, intel,
 /// war events) append keys: a section written by AM-A reads with them empty. Positions are plain integers over the road graph; the road paths are rebuilt from the region on load.
@@ -219,9 +256,16 @@ public sealed class ArmySave
     [Key(12)] public HostMarchSave[] Marches { get; set; } = [];
     /// <summary>P7-AM-D: the hosts' rations records (empty in a section written before it).</summary>
     [Key(13)] public HostRationSave[] Rations { get; set; } = [];
+    /// <summary>P7-AM-E: the campaigns, the intel and the war events (appended keys 14 to 16; absent while empty).</summary>
+    [Key(14)] public CampaignSave[] Campaigns { get; set; } = [];
+    [Key(15)] public IntelSave[] Intel { get; set; } = [];
+    [Key(16)] public WarEventSave[] WarEvents { get; set; } = [];
 
     public static ArmySave Capture(ArmyBook b) => new()
     {
+        Campaigns = [.. b.Campaigns.Values.Select(c => new CampaignSave { Host = c.Host, Fields = [c.Objective, c.PlanDay, c.EnemyHost, c.SiegeDay, c.Days, c.Kind, c.Stage, c.PWinPm], Totals = [c.Value, c.Cost, c.Score, c.BattleHour] })],
+        Intel = [.. b.Intel.Values.Select(r => new IntelSave { Observer = r.Observer, Subject = r.Subject, Day = r.Day, Strength = r.Strength, XMm = r.XMm, YMm = r.YMm, Source = r.Source })],
+        WarEvents = [.. b.WarEvents.Select(w => new WarEventSave { War = w.War, Day = w.Day, Doer = w.Doer, Points = w.Points, Lost = w.Lost, OwnLost = w.OwnLost, Place = w.Place, Kind = (byte)w.Kind, Entry = w.Entry, Scored = w.Scored })],
         Rations = [.. b.Rations.Values.Select(r => new HostRationSave
         {
             Host = r.Host, Fields = [r.Morale, r.HungryRun, r.FedPm, r.DefeatDay, r.StripPlace, r.StripDays], Totals = [r.HungryDays, r.ShortDays, r.DesertedPersons, r.DesertedCounts],
@@ -329,6 +373,15 @@ public sealed class ArmySave
                 };
             b.Marches[m.Host] = m;
         }
+        foreach (var s in Campaigns)
+        {
+            var c = new HostCampaign { Host = s.Host };
+            if (s.Fields.Length >= 8) { c.Objective = s.Fields[0]; c.PlanDay = s.Fields[1]; c.EnemyHost = s.Fields[2]; c.SiegeDay = s.Fields[3]; c.Days = s.Fields[4]; c.Kind = (byte)s.Fields[5]; c.Stage = (byte)s.Fields[6]; c.PWinPm = s.Fields[7]; }
+            if (s.Totals.Length >= 4) { c.Value = s.Totals[0]; c.Cost = s.Totals[1]; c.Score = s.Totals[2]; c.BattleHour = s.Totals[3]; }
+            b.Campaigns[c.Host] = c;
+        }
+        foreach (var s in Intel) b.Intel[ArmyBook.IntelKey(s.Observer, s.Subject)] = new IntelRow { Observer = s.Observer, Subject = s.Subject, Day = s.Day, Strength = s.Strength, XMm = s.XMm, YMm = s.YMm, Source = s.Source };
+        foreach (var s in WarEvents) b.WarEvents.Add(new WarEvent { War = s.War, Day = s.Day, Doer = s.Doer, Points = s.Points, Lost = s.Lost, OwnLost = s.OwnLost, Place = s.Place, Kind = (WarEventKind)s.Kind, Entry = s.Entry, Scored = s.Scored });
         foreach (var s in Rations)
         {
             var r = new HostRations { Host = s.Host };

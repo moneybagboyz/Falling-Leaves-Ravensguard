@@ -22,6 +22,7 @@ public sealed class ArmySystem : AbstractSystem
         long t1 = System.Diagnostics.Stopwatch.GetTimestamp();
         aw.HourCost.Add(t1 - t0);
         if (aw.Book.Marches.Count > 0) { aw.MarchHour(env); aw.MarchCost.Add(System.Diagnostics.Stopwatch.GetTimestamp() - t1); }       // P7-AM-C: the hosts on the road
+        if (aw.Book.Hosts.Count > 0) { long t2 = System.Diagnostics.Stopwatch.GetTimestamp(); aw.CampaignHour(env); aw.CampaignCost.Add(System.Diagnostics.Stopwatch.GetTimestamp() - t2); }       // P7-AM-E: scouts, arrivals, contact, battles
     }
 }
 
@@ -38,7 +39,7 @@ public sealed class ArmyDailySystem : AbstractSystem
         var aw = ctx.World.Get<ArmyWorld>(); if (aw == null) return;
         var env = new ArmyEnv(ctx.World, ctx.Outbox, ctx.Hour);
         long t0 = System.Diagnostics.Stopwatch.GetTimestamp();
-        aw.PayDay(env); aw.BandsDay(env); aw.RationsDay(env); aw.MusterDay(env);
+        aw.PayDay(env); aw.BandsDay(env); aw.RationsDay(env); aw.MusterDay(env); aw.CampaignDay(env);
         aw.DayCost.Add(System.Diagnostics.Stopwatch.GetTimestamp() - t0);
     }
 }

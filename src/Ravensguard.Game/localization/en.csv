@@ -6675,6 +6675,24 @@ ch_note_am_desert_service,they had served past their owed days
 ch_note_am_desert_morale,the host's heart was gone
 ch_note_am_defeat,the host was broken in the field
 dp_op_visit,visited
+ch_am_campaign,"{ruler} marked {place} for the campaign: {men} men, worth {value}, {days} days."
+ch_am_marched,"The host of {commander} marched from {from} on {to} with {men} men."
+ch_am_avoided,"{ruler}'s host fell back from {place}: it was too weak by the count of the enemy ({ratio} to a thousand)."
+ch_am_taken,"The host of {ruler} took {place} with {men} men."
+ch_dp_war_scored,"The war of {a} and {b} stands at {score} after {events} deeds this season (a change of {delta})."
+ch_side_am_host,a host of the war
+ch_began_am_field,"two hosts met in the field near {place}"
+ch_note_am_plan_take,the seat of the fief was the best prize within reach
+ch_note_am_plan_sack,the place was worth the sack
+ch_note_am_plan_meet,the enemy host was the best prize heard of
+ch_note_am_march_campaign,the host marched on its campaign
+ch_note_am_ratio_low,the enemy was thought to be more than half as many again
+ch_note_am_field,the hosts met in the field
+ch_note_am_took_storm,the walls were taken
+ch_note_am_took_sack,the place had no walls to hold
+ch_note_am_plan_dropped,no campaign within reach was worth its cost
+ch_note_am_no_road,no road joined the host to its objective
+ch_note_am_siege_lifted,the host could not take the walls and gave the siege up
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."

@@ -32,6 +32,9 @@ public sealed class PoliticsCtx
     public WorldHistory? H { get; init; }
     public PoliticsLinks Links { get; init; } = new();
     public int Day { get; init; }
+    /// <summary>P7-AM-E: what the armies did in a war (null for a war the armies do not fight: Phase 6's resolver then scores it) and the call that marks it counted.</summary>
+    public Func<War, Armies.WarScoreReport?>? OnMap { get; init; }
+    public Action<War>? OnScored { get; init; }
 
     public RuleBook RB => R.B;
     public PoliticsSettingsDef S => B.Settings;

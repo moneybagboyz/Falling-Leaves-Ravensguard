@@ -215,11 +215,46 @@ public static class Diplomacy
         return w;
     }
 
-    /// <summary>One season of one war: strength decides the score (with a small draw), both hosts bleed, a decisive blow may take a lord, and a side weary enough sues (4.1, 4.5).</summary>
+    /// <summary>
+    /// P7-AM-E (armies-on-the-map 4.11): a war between realms that both hold fiefs in the region is scored from what their armies did, not from a strength ratio. The season reads the war's events since the last season: a field battle
+    /// won, a place taken, raids, a host destroyed; the dead are the men who really fell (as permille of the realm's levy); the weariness is Phase 6's formula plus 10 for each harvest a levy host was kept in the field. The
+    /// peace test and the terms are unchanged; with no score either way the realm more weary of it sues. Every entry names the war's declaration.
+    /// </summary>
+    public static void StepWarOnMap(PoliticsCtx c, War w, Armies.WarScoreReport rep)
+    {
+        int a = w.Attacker, d = w.Defender; var s = c.S;
+        int delta = 0, raidA = 0, raidD = 0, lostA = 0, lostD = 0, battles = 0;
+        foreach (var ev in rep.Events)
+        {
+            bool byA = ev.Doer == a; int pts = ev.Points;
+            if (ev.Kind == Armies.WarEventKind.Raid) { int r = byA ? raidA : raidD; pts = Math.Min(pts, Math.Max(0, Armies.CampaignConfig.RaidMax - r)); if (byA) raidA += pts; else raidD += pts; }
+            delta += byA ? pts : -pts;
+            if (byA) w.GainA += pts; else w.GainD += pts;
+            if (ev.Kind == Armies.WarEventKind.FieldBattle) { battles++; if (byA) { lostD += ev.Lost; lostA += ev.OwnLost; } else { lostA += ev.Lost; lostD += ev.OwnLost; } }
+        }
+        w.Score = Math.Clamp(w.Score + delta, -100, 100); w.Seasons++; w.Battles += battles;
+        int pmA = (int)(lostA * 1000L / Math.Max(1, c.Strength(a))), pmD = (int)(lostD * 1000L / Math.Max(1, c.Strength(d)));
+        c.B.RealmOf(a).LossPm = Math.Min(900, c.B.RealmOf(a).LossPm + pmA); c.B.RealmOf(d).LossPm = Math.Min(900, c.B.RealmOf(d).LossPm + pmD);
+        w.LossA += pmA; w.LossD += pmD;
+        if (rep.Events.Count > 0)
+        {
+            var ps = new List<ChronParam> { RulerParam(c, "a", a), RulerParam(c, "b", d), ChronParam.Count("score", Math.Abs(w.Score)), ChronParam.Count("delta", Math.Abs(delta)), ChronParam.Count("events", rep.Events.Count) };
+            var cause = w.DeclEntry != 0 ? new Cause(CauseKind.War, new EntityId(w.DeclEntry)) : new Cause(CauseKind.War, null, NoteKey: "ch_note_dp_cb_claim");
+            Write(c, "war_scored", "ch_dp_war_scored", ps, [RulerId(c, a), RulerId(c, d)], cause, ("a", c.NameOf(a)), ("b", c.NameOf(d)));
+        }
+        int wa = WarUtility.Weariness(s, w.Seasons, w.LossA / 10, c.TreasurySeasons(a)) + Armies.CampaignConfig.HarvestWeariness * rep.HeldAttacker;
+        int wd = WarUtility.Weariness(s, w.Seasons, w.LossD / 10, c.TreasurySeasons(d)) + Armies.CampaignConfig.HarvestWeariness * rep.HeldDefender;
+        int loser = w.Score > 0 ? d : w.Score < 0 ? a : (wa >= wd ? a : d);
+        c.OnScored?.Invoke(w);
+        if (WarUtility.Sues(s, loser == a ? wa : wd, loser == a ? w.GainA : w.GainD)) MakePeace(c, w, loser, loser == a ? wa : wd);
+    }
+
+    /// <summary>One season of one war: strength decides the score (with a small draw), both hosts bleed, a decisive blow may take a lord, and a side weary enough sues (4.1, 4.5). A war on the map (both realms hold fiefs here) is scored from its armies' events instead (<see cref="StepWarOnMap"/>).</summary>
     public static void StepWar(PoliticsCtx c, War w)
     {
         int a = w.Attacker, d = w.Defender;
         if (!c.Alive(a) || !c.Alive(d)) { w.EndDay = c.Day; return; }
+        if (c.OnMap?.Invoke(w) is { } onMap) { StepWarOnMap(c, w, onMap); return; }
         var s = c.S;
         long sa = c.Strength(a), sd = c.Strength(d);
         int lead = (int)((sa * 1000 / Math.Max(1, sd) - 1000) / 100);

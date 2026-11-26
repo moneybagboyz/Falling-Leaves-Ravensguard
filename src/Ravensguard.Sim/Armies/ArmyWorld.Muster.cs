@@ -188,7 +188,7 @@ public sealed partial class ArmyWorld
             if (asked <= 0) continue;
             var b = hs.Budget(realm, new Roster([(TroopRole.Levy, (int)Math.Min(asked, 100_000))]), Rules.FundDays);
             if (b.TreasuryMites < b.DailyCostMites * Rules.FundDays) continue;
-            CallMuster(e, new MusterCall(realm, point));
+            CallCampaign(e, realm, war.Attacker == realm ? war.Defender : war.Attacker, point, (int)Math.Min(asked, 100_000) + (Book.WarbandOfLord(cmd.Value)?.Members.Count ?? 0));
         }
     }
 
@@ -380,6 +380,8 @@ public sealed partial class ArmyWorld
         {
             host.DecidedYear = year; long kg = 0, mites = 0;
             foreach (var c in host.Companies) if (!c.Walking && c.Men.Count > 0) { var (k, m) = hs.HarvestRiskPriced(c.Fief, c.Men.Count, Rules.ReapWindowDays); kg += k; mites += m; }
+            if (host.Worth > mites)
+                NoteHarvestHeld(e, host);                                                          // P7-AM-E: the war's weariness counts the harvest a levy host was kept through
             if (host.Worth > mites)
                 Chron(e, "host_held_for_harvest", "ch_am_hold", [ChronParam.Person("ruler", new EntityId(host.Commander)), ChronParam.Place("place", PlaceId(host.Point)), ChronParam.Count("men", levies), ChronParam.Count("kg", kg), ChronParam.Mites("shortfall", mites)],
                     [new EntityId(host.Commander), PlaceId(host.Point)], new Cause(CauseKind.Campaign, new EntityId(host.Entry), "", "ch_note_am_hold_worth"));

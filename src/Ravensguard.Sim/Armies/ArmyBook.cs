@@ -181,11 +181,16 @@ public sealed class ArmyBook
     public int NextHost = 1;
     /// <summary>P7-AM-D: the hosts' bellies and hearts, by the supply book's host id.</summary>
     public SortedDictionary<int, HostRations> Rations { get; } = [];
+    /// <summary>P7-AM-E: each host's campaign (by ArmyHost.Id), what each realm last knew of the other side's hosts (key observer * 1,000,000 + subject host id), and the war's events (the appended keys 14 to 16).</summary>
+    public SortedDictionary<int, HostCampaign> Campaigns { get; } = [];
+    public SortedDictionary<long, IntelRow> Intel { get; } = [];
+    public List<WarEvent> WarEvents { get; } = [];
+    public static long IntelKey(int observer, int subject) => (long)observer * 1_000_000 + subject;
     /// <summary>Fiefs whose lord was found to have no man to hire in a season: not asked again until the next one (a season number).</summary>
     public SortedDictionary<int, int> Barren { get; } = [];
     public const int LogKeep = 2000, ReportKeep = 64;
 
-    public bool IsEmpty => Warbands.Count == 0 && Errands.Count == 0 && Bands.Count == 0 && Reports.Count == 0 && Log.Count == 0 && Barren.Count == 0 && NextWarband == 1 && NextErrand == 1 && NextBand == 1 && Hosts.Count == 0 && Marches.Count == 0 && NextHost == 1 && Rations.Count == 0;
+    public bool IsEmpty => Warbands.Count == 0 && Errands.Count == 0 && Bands.Count == 0 && Reports.Count == 0 && Log.Count == 0 && Barren.Count == 0 && NextWarband == 1 && NextErrand == 1 && NextBand == 1 && Hosts.Count == 0 && Marches.Count == 0 && NextHost == 1 && Rations.Count == 0 && Campaigns.Count == 0 && Intel.Count == 0 && WarEvents.Count == 0;
 
     public Warband? WarbandOfFief(int fief) { foreach (var w in Warbands.Values) if (w.Fief == fief) return w; return null; }
     public Warband? WarbandOfLord(ulong lord) { foreach (var w in Warbands.Values) if (w.Lord == lord) return w; return null; }
@@ -290,6 +295,15 @@ public sealed class ArmyBook
                 M(id); M(r.Morale); M(r.HungryRun); M(r.FedPm); M(r.DefeatDay); M(r.StripPlace); M(r.StripDays); M(r.HungryDays); M(r.DesertedPersons); M(r.DesertedCounts); M(r.ShortDays);
                 M(r.Wounded.Count); foreach (var (p, d) in r.Wounded) { M((long)p); M(d); }
             }
+        }
+        if (Campaigns.Count > 0 || Intel.Count > 0 || WarEvents.Count > 0)                // P7-AM-E: absent while no campaign has been planned
+        {
+            M(-9);
+            foreach (var (id, c) in Campaigns) { M(id); M(c.Host); M(c.Objective); M(c.PlanDay); M(c.EnemyHost); M(c.SiegeDay); M(c.Days); M(c.Kind); M(c.Stage); M(c.Value); M(c.Cost); M(c.Score); M(c.PWinPm); M(c.BattleHour); }
+            M(-10);
+            foreach (var (k, r) in Intel) { M(k); M(r.Day); M(r.Strength); M(r.XMm); M(r.YMm); M(r.Source); }
+            M(-11);
+            foreach (var w in WarEvents) { M(w.War); M(w.Day); M(w.Doer); M(w.Points); M(w.Lost); M(w.OwnLost); M(w.Place); M((long)w.Kind); M((long)w.Entry); M(w.Scored ? 1 : 0); }
         }
         return h;
     }

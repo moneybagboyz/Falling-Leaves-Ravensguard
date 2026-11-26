@@ -35,7 +35,8 @@ public static class PoliticsEngine
     {
         var links = w.Get<PoliticsLinks>() ?? new PoliticsLinks();
         var rc = RuleWiring.Context(w, rb, chron);
-        return new PoliticsCtx { B = pb, R = rc, H = links.History, Links = links, Day = day };
+        var aw = w.Get<Armies.ArmyWorld>();
+        return new PoliticsCtx { B = pb, R = rc, H = links.History, Links = links, Day = day, OnMap = aw == null ? null : aw.ScoreFor, OnScored = aw == null ? null : aw.ScoredWar };
     }
 
     /// <summary>The season's fading: each modifier moves toward zero by its kind; a war's grudge holds while its war lasts. Once for a day number.</summary>
