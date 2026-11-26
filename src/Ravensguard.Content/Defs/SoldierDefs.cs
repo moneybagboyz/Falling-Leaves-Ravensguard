@@ -77,4 +77,27 @@ public sealed record SoldierRulesDef : ContentDef
     public int WellOffMites { get; init; } = 100000;
     /// <summary>The template a lord's armoury fills a levy's gaps from by default (spears and shields only).</summary>
     public string LevyLordFill { get; init; } = "levy_lord_fill";
+
+    // ---- P7-SC-B (4.4, 4.5): growth by fighting and drill, promotions, retinue caps ----
+    /// <summary>A meaningful use in a fight: the skill gain's d (100 = the Phase 3 reference), and how many uses one fight counts at most (blows landed or blocked, parries, hits; spread over the fight's hours, twelve an hour).</summary>
+    public int FightDx100 { get; init; } = 100;
+    public int FightUsesPerFight { get; init; } = 18;
+    /// <summary>A drill hour: d and the level at which drill stops (40; shield bearers 35 in Shields), uses an hour, the most hours a day.</summary>
+    public int DrillDx100 { get; init; } = 40;
+    public int DrillCap { get; init; } = 40;
+    public int DrillShieldCap { get; init; } = 35;
+    public int DrillUsesPerHour { get; init; } = 8;
+    public int DrillHoursDay { get; init; } = 2;
+    /// <summary>Sparring with a better partner trains to the partner's skill less the margin, at most the ceiling; d and uses an hour.</summary>
+    public int SparDx100 { get; init; } = 100;
+    public int SparMargin { get; init; } = 5;
+    public int SparMaxLevel { get; init; } = 60;
+    public int SparUsesPerHour { get; init; } = 12;
+    /// <summary>Formation drill: gained an hour in formation and lost a day without (0..1000); closing ranks waits base less drill / div ticks (battle spec 4.3).</summary>
+    public int FormationHourGain { get; init; } = 20;
+    public int FormationDayLoss { get; init; } = 5;
+    public int CloseRanksBaseTicks { get; init; } = 40;
+    public int CloseRanksDrillDiv { get; init; } = 25;
+    /// <summary>The most soldiers a lord's retinue holds beyond his squad of companions, by holding id (manor, knights_fee, baron, count, ruler).</summary>
+    public Dictionary<string, int> RetinueCaps { get; init; } = [];
 }

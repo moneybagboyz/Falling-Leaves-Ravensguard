@@ -6693,6 +6693,27 @@ ch_note_am_took_sack,the place had no walls to hold
 ch_note_am_plan_dropped,no campaign within reach was worth its cost
 ch_note_am_no_road,no road joined the host to its objective
 ch_note_am_siege_lifted,the host could not take the walls and gave the siege up
+so_no_promotion,He has not earned a higher role.
+so_promoted,He is now a {0}.
+so_not_dubbable,"He is not a man-at-arms with the skills of a knight, or has no war horse."
+so_dubbed,He is dubbed a knight.
+so_discharged_offer,The offer is refused.
+so_retinue_full,"Your {0} keeps at most {1} soldiers beyond your companions; you cannot take another."
+so_paid,"Wages of {0} mites paid; {1} mites are still owed."
+ch_so_promoted,"{person} was made a {role} by {lord}."
+ch_so_dubbed,"{lord} dubbed {knight} a knight."
+ch_note_so_skill,his skill at arms from fighting and drill
+ch_note_so_dubbed,he met the knight's skills and had a war horse
+so_role_levy,levy
+so_role_spearman,spearman
+so_role_archer,archer
+so_role_crossbowman,crossbowman
+so_role_sergeant,sergeant of horse
+so_role_man_at_arms,man-at-arms
+so_role_knight,knight
+so_role_engineer,engineer
+so_role_sailor,sailor
+so_role_marine,marine
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."

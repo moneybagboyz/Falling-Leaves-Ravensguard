@@ -5,7 +5,11 @@
   { "type": "soldier_rules", "id": "soldier_rules",
     "quality_score": 100, "condition_div": 10, "material_score": 50, "misfit_penalty": 300, "worn_bonus": 20, "fit_tolerance_pm": 150, "merc_wage_mult_pm": 1500,
     "material_rank": { "wool": 0, "linen": 0, "silk": 0, "oak": 0, "ash": 0, "bone": 0, "leather": 1, "bronze": 1, "copper": 1, "iron": 2, "wrought_iron": 2, "steel": 3 },
-    "refit_shrink_only": ["plate"], "middling_mites": 20000, "well_off_mites": 100000, "levy_lord_fill": "levy_lord_fill" },
+    "refit_shrink_only": ["plate"], "middling_mites": 20000, "well_off_mites": 100000, "levy_lord_fill": "levy_lord_fill",
+    "fight_dx100": 100, "fight_uses_per_fight": 18, "drill_dx100": 40, "drill_cap": 40, "drill_shield_cap": 35, "drill_uses_per_hour": 8, "drill_hours_day": 2,
+    "spar_dx100": 100, "spar_margin": 5, "spar_max_level": 60, "spar_uses_per_hour": 12,
+    "formation_hour_gain": 20, "formation_day_loss": 5, "close_ranks_base_ticks": 40, "close_ranks_drill_div": 25,
+    "retinue_caps": { "manor": 6, "knights_fee": 12, "baron": 40, "count": 120, "ruler": 300 } },
 
   // ---- levies: what the household sends, by wealth (4.3), and what the lord's armoury adds by default ----
   { "type": "loadout_template", "id": "levy_poor", "name": "Levy, poor household",

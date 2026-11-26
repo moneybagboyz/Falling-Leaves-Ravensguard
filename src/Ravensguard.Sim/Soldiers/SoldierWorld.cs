@@ -53,10 +53,19 @@ public sealed class SoldierWorld
     public Func<PersonTable?> People { get; }
     /// <summary>How many armourers could take a refit job at an armoury (the works' count; 0 when the world has no works).</summary>
     public Func<long, int> ArmourersFree { get; set; } = _ => 0;
+    /// <summary>The economy (for the wage roll's purses).</summary>
+    public EconomyState Econ { get; }
+    /// <summary>Whether a man owns a war horse (SC-B dubbing; horses are not item rows, so the world supplies this; default: none).</summary>
+    public Func<ulong, bool> HasWarHorse { get; set; } = _ => false;
+    /// <summary>The holding id of a lord (manor, knights_fee, baron, count, ruler) for the retinue cap; empty: no holding known, no cap enforced.</summary>
+    public Func<long, string> HoldingOf { get; set; } = _ => "";
+    /// <summary>Who of a lord's people are his squad's companions (not counted against the retinue cap).</summary>
+    public Func<long, ISet<ulong>> CompanionsOf { get; set; } = _ => new HashSet<ulong>();
 
     public SoldierWorld(SoldierBook book, ContentDatabase db, EconomyState econ, WorksBook works, LargeBuildingRulesDef rules, IKitFit fit, Func<PersonTable?> people)
     {
-        Book = book; Fit = fit; People = people;
+        Book = book; Fit = fit; People = people; Econ = econ;
+        book.Skills.Base = (p, sk) => { var t = people(); int row = t?.IndexOf(p) ?? -1; return row >= 0 ? t!.SkillLevelOf(row, sk) : 0; };
         Roles = new TroopRoles(db);
         Armouries = new Armouries(works, econ.Items, econ.Goods, db, rules);
         Fill = new ArmouryFill(Roles, Armouries, econ.Items);
@@ -64,10 +73,15 @@ public sealed class SoldierWorld
     }
 
     /// <summary>A person's level in a skill (0 for one the table does not know).</summary>
-    public int SkillOf(ulong person, Skill s)
+    public int SkillOf(ulong person, Skill s) => Book.Skills.Level(new EntityId(person), s);
+
+    /// <summary>The purse of a soldier's household (none when he has no household).</summary>
+    public PurseId PurseOf(ulong person)
     {
         var p = People(); int row = p?.IndexOf(new EntityId(person)) ?? -1;
-        return row >= 0 ? p!.SkillLevelOf(row, s) : 0;
+        if (row < 0) return PurseId.None;
+        int hh = p!.Household[row];
+        return hh >= 0 && hh < Econ.HouseholdPurse.Length ? Econ.HouseholdPurse[hh] : PurseId.None;
     }
 
     /// <summary>The skill that orders a role's soldiers in a fill: his best skill among the role's weapon families (the role's own requirement), else Polearms for spearmen and Archery for bowmen.</summary>

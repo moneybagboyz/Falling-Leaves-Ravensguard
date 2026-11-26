@@ -26,6 +26,11 @@ public static class SoldierDesk
     public static HeroCommand Strip(ulong person, string slot, long sec) => Cmd(sec, Tag("strip", person, slot));
     public static HeroCommand SetRole(ulong person, string role, string template, long sec) => Cmd(sec, Tag("role", person, role, template));
     public static HeroCommand Discharge(ulong person, long sec) => Cmd(sec, Tag("discharge", person));
+    /// <summary>P7-SC-B: answer a promotion offer (accept or refuse), dub a man-at-arms, pay the wage roll for the day.</summary>
+    public static HeroCommand Promote(ulong person, long sec) => Cmd(sec, Tag("promote", person));
+    public static HeroCommand Refuse(ulong person, long sec) => Cmd(sec, Tag("refuse", person));
+    public static HeroCommand Dub(ulong person, long sec) => Cmd(sec, Tag("dub", person));
+    public static HeroCommand Pay(long sec) => Cmd(sec, Tag("pay"));
 
     private static HeroResult R(HeroCommand c, HeroResultCode code, HeroText text) => new(c.Seq, c.Kind, code, text, 0, 0, c.IssuedSec);
 
@@ -49,6 +54,8 @@ public static class SoldierDesk
                 var pt = sw.People(); int row = pt?.IndexOf(new EntityId(who)) ?? -1;
                 if (row < 0 || !pt!.IsAlive(row) || pt.AgeYears(row, day) < 16) { res = (false, "so_no_such_person", []); break; }
                 if (sw.Book.Rows.ContainsKey(who)) { res = (false, "so_already_soldier", []); break; }
+                var cap = Retinues.CanEnlist(sw, HeroLord, who);
+                if (!cap.Ok) { res = (false, "so_retinue_full", [cap.Holding, cap.Cap]); break; }
                 if (!sw.Roles.Meets(S(2), s => sw.SkillOf(who, s))) { res = (false, "so_not_qualified", [sw.Roles.Role(S(2))!.Name]); break; }
                 sw.Book.Rows[who] = new SoldierRow { Person = who, Role = S(2), Lord = HeroLord, PromotedDay = day };
                 res = (true, "so_enlisted", [sw.Roles.Role(S(2))!.Name]);
@@ -83,6 +90,30 @@ public static class SoldierDesk
                 if (Mine(U(1)) == null) { res = (false, "so_not_yours", []); break; }
                 int back = sw.Fill.Discharge(sw.Book, U(1));
                 res = (true, "so_discharged", [back]);
+                break;
+            }
+            case "promote" when p.Length >= 2:
+            {
+                if (Mine(U(1)) == null) { res = (false, "so_not_yours", []); break; }
+                var chron = Ravensguard.Sim.Rule.RuleChron.Of(ctx.State.Chronicle, ctx.State.Ids);
+                if (!Promotions.Accept(sw, U(1), day, chron, ctx.Party.Hero)) { res = (false, "so_no_promotion", []); break; }
+                res = (true, "so_promoted", [sw.Roles.Role(sw.Book.Of(U(1))!.Role)!.Name]);
+                break;
+            }
+            case "refuse" when p.Length >= 2:
+                res = Mine(U(1)) != null && Promotions.Refuse(sw, U(1)) ? (true, "so_discharged_offer", []) : (false, "so_no_promotion", []);
+                break;
+            case "dub" when p.Length >= 2:
+            {
+                if (Mine(U(1)) == null) { res = (false, "so_not_yours", []); break; }
+                var chron = Ravensguard.Sim.Rule.RuleChron.Of(ctx.State.Chronicle, ctx.State.Ids);
+                res = Promotions.Dub(sw, U(1), day, chron, ctx.Party.Hero) ? (true, "so_dubbed", []) : (false, "so_not_dubbable", []);
+                break;
+            }
+            case "pay":
+            {
+                long paid = WageRoll.PayDay(sw, HeroLord, ctx.Purse, ctx.Econ.Ledger);
+                res = (true, "so_paid", [paid, WageRoll.Rows(sw, HeroLord).Sum(l => l.ArrearsMites)]);
                 break;
             }
             default: return R(c, HeroResultCode.Invalid, HeroText.Of("HERO_MAKES_NO_SENSE"));

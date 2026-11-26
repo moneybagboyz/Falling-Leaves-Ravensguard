@@ -53,5 +53,6 @@
   {"type": "deed", "id": "excommunicated_asked", "entry": "excommunication_asked", "settlement_pm": -100, "religion_pm": -1000},
   {"type": "deed", "id": "church_penance_done", "entry": "church_penance_done", "religion_pm": 900},
   {"type": "deed", "id": "grace_granted",      "entry": "grace_granted",      "religion_pm": 900},
-  {"type": "deed", "id": "monster_head_shown", "entry": "monster_head_shown", "settlement_pm": 100, "religion_pm": 40}
+  {"type": "deed", "id": "monster_head_shown", "entry": "monster_head_shown", "settlement_pm": 100, "religion_pm": 40},
+  {"type": "deed", "id": "knight_dubbed", "entry": "knight_dubbed", "fief_pm": 100}
 ]
