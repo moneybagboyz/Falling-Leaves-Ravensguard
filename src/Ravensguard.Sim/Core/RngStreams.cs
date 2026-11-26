@@ -520,6 +520,8 @@ public static class RngStreams
     public const uint CrewFromOutside = 0x7D4;
     /// <summary>P7: ships: a grapple's catch (key ship pair, throw).</summary>
     public const uint GrappleCatch = 0x7D5;
+    /// <summary>P7: ships: a fire arrow's or pitch pot's ignition, and a burning part's spread (key ship, fire counter or 10-second step).</summary>
+    public const uint ShipIgnition = 0x7D6;
     /// <summary>P7: abstract war: v2 block placement and reserve ties (key battle, side).</summary>
     public const uint BlockPlacement = 0x7E0;
     /// <summary>P7: abstract war: trample and fall in a pass (key battle, rider, step).</summary>

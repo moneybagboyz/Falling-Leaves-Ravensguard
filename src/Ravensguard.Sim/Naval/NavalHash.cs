@@ -6,6 +6,14 @@ namespace Ravensguard.Sim.Naval;
 /// </summary>
 public static class NavalHash
 {
+    /// <summary>A saved frame's state mixed into a hash (the book's share).</summary>
+    internal static ulong Mix(ulong h, ShipFrameState f)
+    {
+        h = ShipFrame.Mix(h, (long)f.Id); h = ShipFrame.Mix(h, f.X); h = ShipFrame.Mix(h, f.Y); h = ShipFrame.Mix(h, f.Heading); h = ShipFrame.Mix(h, f.Speed); h = ShipFrame.Mix(h, f.TurnPerTick); h = ShipFrame.Mix(h, f.AccX); h = ShipFrame.Mix(h, f.AccY);
+        for (int i = 0; i < f.RiderIds.Length; i++) { h = ShipFrame.Mix(h, (long)f.RiderKinds[i] | (long)f.RiderDecks[i] << 8); h = ShipFrame.Mix(h, (long)f.RiderIds[i]); h = ShipFrame.Mix(h, f.RiderLx[i]); h = ShipFrame.Mix(h, f.RiderLy[i]); }
+        return h;
+    }
+
     public static ulong Of(IEnumerable<ShipFrame> frames, Swimmers? water = null)
     {
         ulong h = 14695981039346656037UL;

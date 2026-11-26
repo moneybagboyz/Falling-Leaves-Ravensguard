@@ -65,6 +65,8 @@ public sealed class ShipFrame
     /// <summary>The turn each 20 Hz tick, Q24 turns (a ship turning 3 degrees a second: <see cref="TurnOf"/>(3)).</summary>
     public int TurnPerTick { get; set; }
     public int HeadingQ10 => Heading >> 14;
+    /// <summary>The height of her side above the keel (mm; the design's hull depth): the climb from one ship to another is by the difference. Set by whoever builds the frame; not saved (derived from the design).</summary>
+    public int SideMm { get; set; }
     private long _accX, _accY;
     private long _cos, _sin; private bool _trig;
     private readonly List<Rider> _riders = [];
@@ -76,7 +78,10 @@ public sealed class ShipFrame
     public static ShipFrame Of(EntityId id, IReadOnlyList<PartRow> rows, VehicleCatalog cat, int width, int length, int xMm, int yMm, int headingQ24 = 0) => new(id, DeckMap.Build(rows, cat, width, length), xMm, yMm, headingQ24);
 
     /// <summary>A blueprint's frame, its parts as built.</summary>
-    public static ShipFrame Of(EntityId id, VehicleBlueprint bp, VehicleCatalog cat, int xMm, int yMm, int headingQ24 = 0) => Of(id, bp.Parts, cat, bp.Stats.WidthCells, bp.Stats.LengthCells, xMm, yMm, headingQ24);
+    public static ShipFrame Of(EntityId id, VehicleBlueprint bp, VehicleCatalog cat, int xMm, int yMm, int headingQ24 = 0)
+    {
+        var f = Of(id, bp.Parts, cat, bp.Stats.WidthCells, bp.Stats.LengthCells, xMm, yMm, headingQ24); f.SideMm = bp.Stats.HullDepthMm; return f;
+    }
 
     /// <summary>Q24 turns a tick for a turn of <paramref name="degPerS"/> degrees a second (a whole number of degrees; negative to port).</summary>
     public static int TurnOf(int degPerS) => (int)((long)degPerS * FrameMath.Turn / 360 / 20);

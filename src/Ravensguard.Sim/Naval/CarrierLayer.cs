@@ -17,7 +17,7 @@ public readonly record struct CarrierEvent(int Tick, CarrierEventKind Kind, int 
 /// is overboard: he leaves the fight and enters the water (<see cref="Swimmers"/>), swimming or sinking by his kit. A man who stood still keeps his local millimetres exactly through any number of turns, and his world point is always the transform of them
 /// (SH-13). A heavy blow that would throw a man at the rail over it puts him overboard too (<see cref="TryKnockOver"/>). Integer only; every walk is in ascending fighter id order; no draw but the swimmers' (0x7D2).
 /// </summary>
-public sealed class CarrierLayer : IFighterWalls
+public sealed class CarrierLayer : ILevelWalls
 {
     public FightWorld World { get; }
     public List<ShipFrame> Frames { get; } = [];
@@ -33,6 +33,13 @@ public sealed class CarrierLayer : IFighterWalls
     public long KnockMilli { get; set; } = 60_000;
     /// <summary>How far (mm) a thrown man travels.</summary>
     public int KnockMm { get; set; } = 2500;
+
+    /// <summary>P7-SH-D: the ship's own state that a fight touches (fire arrows landing, a prize); null in a fight that needs none.</summary>
+    public ShipCombat? Combat { get; set; }
+    /// <summary>P7-SH-D: the rules of the grapples' climb (a rope: 4 s up a side a metre higher or more, else 1 s over the rail).</summary>
+    public ShipFightRules Rules { get; set; } = ShipFightRules.Default;
+    /// <summary>The ammo id of an arrow with a burning head: where it lands on a ship it may light what it hits.</summary>
+    public const string FireArrowAmmo = "fire_arrow";
 
     private sealed class Seat { public ShipFrame Frame = null!; public RiderKind Kind; public ulong Id; public int Wx, Wy; }
     private Seat?[] _seats = [];
@@ -109,7 +116,8 @@ public sealed class CarrierLayer : IFighterWalls
     /// <summary>Before anyone moves: the ships move, and each rider is put where his local place is now, facing turned with the ship.</summary>
     public void Before()
     {
-        foreach (var fr in Frames) fr.Step();
+        foreach (var fr in Frames) if (!IsChild(fr)) fr.Step();
+        foreach (var j in _joins) Follow(j);
         var turned = new Dictionary<ShipFrame, (long Cos, long Sin)>();
         foreach (int i in _riders)
         {
@@ -131,6 +139,7 @@ public sealed class CarrierLayer : IFighterWalls
     /// <summary>After the fight has moved and separated everyone: a rider's local place follows where he walked; one past the rail is overboard.</summary>
     public void After()
     {
+        FinishClimbs();
         List<int>? over = null;
         foreach (int i in _riders)
         {
@@ -215,6 +224,110 @@ public sealed class CarrierLayer : IFighterWalls
         BoardAt(f, fr, bx, by, 0);
     }
 
+    // ------------------------------------------------------------------ bound ships and boarding (4.6 "Grapples and boarding")
+
+    private sealed class JoinRow { public ShipFrame Parent = null!, Child = null!; public int Lx, Ly, Dh; }
+    private readonly List<JoinRow> _joins = [];
+    private sealed class ClimbRow { public int Fighter; public ShipFrame From = null!, To = null!; public int Cx, Cy; public int ReadyTick; public int Rope; }
+    private readonly List<ClimbRow> _climbs = [];
+    private readonly HashSet<(ulong Pair, int Rope)> _ropesBusy = [];
+
+    private bool IsChild(ShipFrame f) { foreach (var j in _joins) if (ReferenceEquals(j.Child, f)) return true; return false; }
+
+    /// <summary>
+    /// The two ships' frames are joined (the lines are hauled taut): they move as one carrier. The second keeps the place and heading it has now against the first, and takes the first's speed and turn; riders of both go on being carried through
+    /// their own frame's transform. Returns false if they are joined already or one is a child of another join.
+    /// </summary>
+    public bool Join(ShipFrame parent, ShipFrame child)
+    {
+        if (ReferenceEquals(parent, child) || IsChild(child) || IsChild(parent)) return false;
+        Add(parent); Add(child);
+        var (lx, ly) = parent.ToLocal(child.XMm, child.YMm);
+        _joins.Add(new JoinRow { Parent = parent, Child = child, Lx = lx, Ly = ly, Dh = (child.Heading - parent.Heading) & FrameMath.Mask });
+        child.SpeedMmps = parent.SpeedMmps; child.TurnPerTick = parent.TurnPerTick;
+        return true;
+    }
+
+    public bool Joined(ShipFrame a, ShipFrame b) { foreach (var j in _joins) if ((ReferenceEquals(j.Parent, a) && ReferenceEquals(j.Child, b)) || (ReferenceEquals(j.Parent, b) && ReferenceEquals(j.Child, a))) return true; return false; }
+
+    private static void Follow(JoinRow j)
+    {
+        j.Child.SpeedMmps = j.Parent.SpeedMmps; j.Child.TurnPerTick = j.Parent.TurnPerTick;
+        (j.Child.XMm, j.Child.YMm) = j.Parent.ToWorld(j.Lx, j.Ly);
+        j.Child.SetHeading(j.Parent.Heading + j.Dh);
+    }
+
+    /// <summary>The ticks a man's crossing takes: 4 s (80 ticks) up a side a metre higher or more than where he stands, else 1 s over the rail.</summary>
+    public int ClimbTicks(ShipFrame from, ShipFrame to) => Math.Abs(to.SideMm - from.SideMm) >= Rules.ClimbOverMm ? Rules.ClimbTicks : Rules.StepOverTicks;
+
+    private static ulong PairKey(ShipFrame a, ShipFrame b) => Math.Min(a.Id.Value, b.Id.Value) ^ (Math.Max(a.Id.Value, b.Id.Value) << 20);
+
+    /// <summary>
+    /// A man of a ship bound to <paramref name="to"/> starts across by one of its ropes (rope 0 or 1, one man a rope at a time): he is held in the climb for its ticks (staggered, open to blows) and then stands on the cell (cx, cy) of the other
+    /// ship's deck 0. Returns false if the ships are not bound, the rope is busy, or the cell is not a floor.
+    /// </summary>
+    public bool BeginBoard(Fighter f, ShipFrame to, int cx, int cy, int rope)
+    {
+        var from = FrameOf(f.Id); if (from == null || !Joined(from, to) || !to.Deck.Walkable(cx, cy, 0)) return false;
+        if (_climbs.Exists(c => c.Fighter == f.Id) || !_ropesBusy.Add((PairKey(from, to), rope))) return false;
+        int ticks = ClimbTicks(from, to);
+        f.Act = FAct.Stagger; f.ActTicks = ticks + 1;
+        _climbs.Add(new ClimbRow { Fighter = f.Id, From = from, To = to, Cx = cx, Cy = cy, ReadyTick = World.Tick + ticks, Rope = rope });
+        _climbs.Sort((a, b) => a.Fighter.CompareTo(b.Fighter));
+        return true;
+    }
+
+    private void FinishClimbs()
+    {
+        if (_climbs.Count == 0) return;
+        foreach (var c in _climbs.ToList())
+        {
+            var f = World.Fighters[c.Fighter];
+            if (f.Act is FAct.Dead or FAct.Down or FAct.Fled) { Drop(c); continue; }       // knocked off the rope
+            if (World.Tick < c.ReadyTick) { f.ActTicks = Math.Max(f.ActTicks, 1); continue; }
+            Drop(c);
+            f.Act = FAct.Idle; f.ActTicks = 0;
+            BoardAt(f, c.To, c.Cx, c.Cy, 0);
+        }
+    }
+
+    private void Drop(ClimbRow c) { _climbs.Remove(c); _ropesBusy.Remove((PairKey(c.From, c.To), c.Rope)); }
+
+    private static bool Fit(Fighter f) => f.Act is not (FAct.Dead or FAct.Down or FAct.Fled or FAct.Surrendered);
+
+    /// <summary>How many of <paramref name="team"/>'s fighters aboard the frame can still fight (a man who is down, overboard, yielded or dead is not counted).</summary>
+    public int CrewFit(ShipFrame frame, int team)
+    {
+        int n = 0;
+        foreach (int i in _riders) if (ReferenceEquals(_seats[i]!.Frame, frame) && World.Fighters[i].Team == team && Fit(World.Fighters[i])) n++;
+        return n;
+    }
+
+    /// <summary>
+    /// The ending of a ship (4.6): her crew of <paramref name="crewTeam"/> are all down, overboard, yielded or dead, and an enemy still fit stands aboard: she is taken (true), and the enemy's team is returned in <paramref name="captorTeam"/>.
+    /// </summary>
+    public bool IsTaken(ShipFrame frame, int crewTeam, out int captorTeam)
+    {
+        captorTeam = -1;
+        if (CrewFit(frame, crewTeam) > 0) return false;
+        foreach (int i in _riders)
+            if (ReferenceEquals(_seats[i]!.Frame, frame) && World.Fighters[i].Team != crewTeam && Fit(World.Fighters[i])) { captorTeam = World.Fighters[i].Team; return true; }
+        return false;
+    }
+
+    /// <summary>A missile's landing: a fire arrow that falls on a ship may light what it fell on (the ship's <see cref="Combat"/> draws).</summary>
+    public void Landed(string ammo, int xMm, int yMm)
+    {
+        if (Combat == null || ammo != FireArrowAmmo) return;
+        foreach (var fr in Frames)
+        {
+            var (lx, ly) = fr.ToLocal(xMm, yMm);
+            if (!fr.Deck.Inside(lx, ly)) continue;
+            Combat.Ignite(fr.Id.Value, fr.Deck.CellX(lx), fr.Deck.CellY(ly), 0, IgniteKind.Arrow);
+            return;
+        }
+    }
+
     // ------------------------------------------------------------------ the walls
 
     public void Using(int fighterId) => _ctx = fighterId >= 0 && fighterId < _seats.Length ? _seats[fighterId] : null;
@@ -245,12 +358,47 @@ public sealed class CarrierLayer : IFighterWalls
         return Base?.BlocksMissile(xMm, yMm) ?? false;
     }
 
+    // ---- ILevelWalls: the decks are levels (4.6 "Missiles": a castle shoots down, +15% range and a steadier aim a level up; a parapet covers by the crenel rule)
+
+    private int LevelMm => World.AssaultRules.LevelMm;
+
+    /// <summary>The height of the floor he stands on: his deck times the level (a man on the quay or in the water stands at 0).</summary>
+    public int BaseMm(int fighter) => (RiderOf(fighter)?.Deck ?? 0) * LevelMm;
+
+    /// <summary>A blow reaches only the same deck (a man on a castle and a man under it are on different floors; his missiles are the way down).</summary>
+    public bool CanStrike(int attacker, int target) => Math.Abs(BaseMm(attacker) - BaseMm(target)) < LevelMm / 2;
+
+    public int FootingPm(int fighter) => 1000;
+
+    /// <summary>
+    /// A missile at (x, y) and height z is stopped by a solid (a cabin) of the deck it flies at, or by a castle's parapet unless the shooter stands on that deck or above (then it is no hindrance); from below the parapet stops it with the assault
+    /// rules' share (0x7C2, keyed on the shot and the cell; the crenel rule of sieges-and-engines 4.4). Off the ships the place's own walls decide.
+    /// </summary>
+    public bool MissileStopped(int xMm, int yMm, int zMm, int shooter, uint serial)
+    {
+        int level = zMm < 0 ? 0 : zMm / LevelMm;
+        foreach (var fr in Frames)
+        {
+            var (lx, ly) = fr.ToLocal(xMm, yMm);
+            if (!fr.Deck.Inside(lx, ly)) continue;
+            if (level >= fr.Deck.Decks) return false;
+            int cx = fr.Deck.CellX(lx), cy = fr.Deck.CellY(ly);
+            var k = fr.Deck.Kind(cx, cy, level);
+            if (k == DeckKind.Obstacle) return true;
+            if (k != DeckKind.Parapet || BaseMm(shooter) >= level * LevelMm) return false;
+            return DetRng.Range(World.Seed, serial, fr.Id.Value ^ ((ulong)(cy * fr.Deck.Width + cx) << 40), RngStreams.MissileMeetsMerlon, 0, 0, 1000) < World.AssaultRules.MerlonPm;
+        }
+        return Base is ILevelWalls bl ? bl.MissileStopped(xMm, yMm, zMm, shooter, serial) : Base?.BlocksMissile(xMm, yMm) ?? false;
+    }
+
     // ------------------------------------------------------------------ the hash
 
     /// <summary>The <c>NavalHash</c> of the fight's ships: every frame (placement, motion, riders), who rides what, and the water.</summary>
     public ulong Hash(ulong h)
     {
         foreach (var fr in Frames) h = fr.Hash(h);
+        foreach (var j in _joins) { h = ShipFrame.Mix(h, (long)j.Parent.Id.Value); h = ShipFrame.Mix(h, (long)j.Child.Id.Value); h = ShipFrame.Mix(h, j.Lx); h = ShipFrame.Mix(h, j.Ly); h = ShipFrame.Mix(h, j.Dh); }
+        foreach (var c in _climbs) { h = ShipFrame.Mix(h, c.Fighter); h = ShipFrame.Mix(h, c.ReadyTick); h = ShipFrame.Mix(h, c.Rope); }
         foreach (int i in _riders) { h = ShipFrame.Mix(h, i); h = ShipFrame.Mix(h, (long)_seats[i]!.Frame.Id.Value); }
         return Water.Hash(h);
     }

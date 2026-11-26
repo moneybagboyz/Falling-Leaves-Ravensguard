@@ -307,6 +307,7 @@ public sealed partial class FightWorld
 
     private void Spent(Projectile p, int x, int y, bool hit)
     {
+        Carriers?.Landed(p.Ammo, x, y);                                                  // [P7-SH-D] a fire arrow on a ship's deck
         if (p.Thrown) { Ground.Add(new GroundItem(p.Shape, p.Material, x, y, !p.Improvised && DetRng.Range(Seed, (long)FightId, p.Serial, RngStreams.AmmoBreak, 1, 0, 1000) < 250)); return; }
         if (!Content.Ammo.TryGetValue(p.Ammo, out var a)) return;
         int roll = DetRng.Range(Seed, (long)FightId, p.Serial, RngStreams.AmmoBreak, 0, 0, 1000);

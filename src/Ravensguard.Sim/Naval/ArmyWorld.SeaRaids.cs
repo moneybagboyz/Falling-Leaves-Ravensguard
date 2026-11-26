@@ -386,7 +386,9 @@ public sealed class SeaRaidHourSystem : AbstractSystem
     public override void Step(TickContext ctx)
     {
         var aw = ctx.World.Get<ArmyWorld>(); if (aw?.Sea == null) return;
-        aw.SeaRaidsHour(new ArmyEnv(ctx.World, ctx.Outbox, ctx.Hour));
+        var env = new ArmyEnv(ctx.World, ctx.Outbox, ctx.Hour);
+        aw.SeaRaidsHour(env);
+        aw.ShipsHour(env);                                                                  // [P7-SH-D] ships that burn, take water or are taken
     }
 }
 

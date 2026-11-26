@@ -41,7 +41,13 @@ public sealed class NavalBook
 {
     public SortedDictionary<int, SeaRaid> Raids { get; } = [];
     public int Next = 1;
-    public bool IsEmpty => Raids.Count == 0 && Next <= 1;
+    /// <summary>P7-SH-D: the ships' fight rows (a ship that burns, is holed, is taken or sunk), by vehicle id.</summary>
+    public SortedDictionary<ulong, ShipCombatRow> Ships { get; } = [];
+    /// <summary>P7-SH-D: ships bound by grapples, by (lower id, higher id).</summary>
+    public List<GrappleBind> Binds { get; } = [];
+    /// <summary>P7-SH-D: ships at sea and in harbour as frames (placement, motion, riders), by vehicle id.</summary>
+    public SortedDictionary<ulong, ShipFrameState> Frames { get; } = [];
+    public bool IsEmpty => Raids.Count == 0 && Next <= 1 && Ships.Count == 0 && Binds.Count == 0 && Frames.Count == 0;
     public int Touched;
     public void Touch() => Touched++;
 
@@ -58,6 +64,13 @@ public sealed class NavalBook
             M((long)r.Entry); M(r.Fought ? 1 : 0); M(r.Defender); M(r.FightHour);
             foreach (var l in new[] { r.Ships, r.Raiders, r.Guards, r.Captives }) { M(l.Count); foreach (var v in l) M((long)v); }
         }
+        if (Ships.Count + Binds.Count + Frames.Count == 0) return h;                // a world with no naval fights hashes as it did in SH-C
+        foreach (var x in Ships.Values)
+        {
+            M((long)x.Ship); M((long)x.State); M((long)x.Captor.Value); M((long)x.Entry); M(x.Serial); M(x.BurnCarry); M(x.SailDown ? 1 : 0); M(x.Bailers); M(x.Burning.Count); foreach (int i in x.Burning) M(i);
+        }
+        foreach (var b in Binds) { M((long)b.A); M((long)b.B); M(b.Lines); M(b.HaulMen); M(b.HaulS); M(b.Joined ? 1 : 0); M(b.OffLx); M(b.OffLy); M(b.OffHeading); M(b.Throws); }
+        foreach (var f in Frames.Values) { h = NavalHash.Mix(h, f); }
         return h;
     }
 }
