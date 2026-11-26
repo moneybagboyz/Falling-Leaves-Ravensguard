@@ -6389,6 +6389,27 @@ ch_sg_out_breach,the besiegers stormed through the breach
 ch_sg_out_repulsed,the assault was thrown back
 ch_note_sg_assault,"the besiegers went in by ladder, tower and breach"
 ch_note_sg_sally,the garrison went out by the gate at night
+ch_sg_begun,"{besieger} laid siege to {place} with {men} men against a garrison of {garrison}."
+ch_sg_terms,"Terms were offered to {place} (offer {offers}): the garrison to go out with its arms."
+ch_sg_surrendered,"{place} yielded ({terms}); {men} defenders marched out and the town paid {ransom}."
+ch_sg_stormed,"{place} was taken by storm: {lost_a} of the besiegers and {lost_b} of the garrison were lost."
+ch_sg_sacked,"{place} was sacked: {dead} died, {burned} houses burned, {taken} were taken, and {coin} was carried off."
+ch_sg_lifted,"The siege of {place} was raised after {days} days."
+ch_sg_terms_arms,the garrison leaving with its arms
+ch_note_sg_marched,the host marched on the place and made its camp
+ch_note_sg_terms,the besieger offered terms at the start of the siege
+ch_note_sg_terms_breach,the besieger offered terms again after the wall was breached
+ch_note_sg_starved,the town's food was almost gone and no relief was known
+ch_note_sg_breach,the wall was breached and the garrison was outnumbered
+ch_note_sg_town_rose,the townsfolk rose and opened the gate
+ch_note_sg_stormed,the besiegers carried the place after the terms were refused
+ch_note_sg_sacked,the besiegers took what the town had
+ch_note_sg_relief,a relief host stood near and stronger
+ch_note_sg_winter,frost and hunger drove the besiegers off
+ch_note_sg_supply,the besiegers' supply was gone
+ch_note_sg_cold,the cold of the camp killed the men who had no fire
+ur_g_sacked,Sacked
+ch_note_ur_sacked,their town was sacked
 bb_side_you,"You: {0} up, {1} down"
 bb_side_foe,"Foe: {0} up, {1} down"
 bb_reserve,"{0} held back, {1} waves"

@@ -44,9 +44,16 @@ public sealed class SiegeSave
     /// <summary>P7-SG-C: the assault in progress over a battle, if one is (additive: an older save has none).</summary>
     [Key(1)] public AssaultRecord? Assault { get; set; }
 
-    /// <summary>The section a world writes: while the book holds an engine or an assault is open, else none (a world that never besieged keeps its bytes).</summary>
-    public static SiegeSave? CaptureOrNull(EngineBook? b, AssaultRecord? a)
-        => b is { IsEmpty: false } || a != null ? new SiegeSave { Engines = b is { IsEmpty: false } ? Capture(b).Engines : [], Assault = a } : null;
+    /// <summary>P7-SG-D: the sieges (keys 2 and 3) and the next id; absent while none was ever laid.</summary>
+    [Key(2)] public SiegeRow[] Sieges { get; set; } = [];
+    [Key(3)] public int NextSiege { get; set; } = 1;
+
+    public SiegeBook RestoreSieges() { var b = new SiegeBook { Next = NextSiege }; foreach (var s in Sieges) b.Sieges[s.Id] = s; return b; }
+
+    /// <summary>The section a world writes: while the book holds an engine, an assault is open or a siege was laid, else none (a world that never besieged keeps its bytes).</summary>
+    public static SiegeSave? CaptureOrNull(EngineBook? b, AssaultRecord? a, SiegeBook? sb = null)
+        => b is { IsEmpty: false } || a != null || sb is { IsEmpty: false }
+            ? new SiegeSave { Engines = b is { IsEmpty: false } ? Capture(b).Engines : [], Assault = a, Sieges = sb is { IsEmpty: false } ? [.. sb.Sieges.Values] : [], NextSiege = sb?.Next ?? 1 } : null;
 
     public static SiegeSave Capture(EngineBook b) => new()
     {

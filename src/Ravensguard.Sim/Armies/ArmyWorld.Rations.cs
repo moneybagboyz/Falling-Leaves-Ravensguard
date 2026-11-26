@@ -25,6 +25,12 @@ public sealed partial class ArmyWorld
     /// <summary>Test hook, not saved: the desertion rule is off (a test of the supply side alone counts a host's men by hand).</summary>
     public bool NoDesertion { get; set; }
 
+    /// <summary>P7-SG-D: permille a man a day added to the desertion rule for a host (a winter siege's cold camp: +10); set by the siege world, not saved.</summary>
+    public Func<int, int>? ExtraDesertPm { get; set; }
+
+    /// <summary>P7-SG-D: the living men a host feeds (levies, the joined warbands' men, men from outside), in the rations' fixed order.</summary>
+    public List<ulong> MenIdsOf(HostSupply hs, HostId hid, ArmyHost? host) { var l = new List<ulong>(); foreach (var m in MenOf(hs, hid, host)) l.Add(m.Id); return l; }
+
     public ArmyHost? HostOfSupply(int supplyHost) { foreach (var h in Book.Hosts.Values) if (h.Supply == supplyHost && supplyHost != 0) return h; return null; }
 
     // ------------------------------------------------------------------ the rule (pure)
@@ -165,6 +171,7 @@ public sealed partial class ArmyWorld
         var warbandDays = new Dictionary<int, int>();
         var leavers = new List<(HostMan Man, int Pm)>(); long rUnpaid = 0, rHungry = 0, rHarvest = 0, rService = 0, rDefeat = 0, rMorale = 0;
         var persons = new int[Roster.Roles];
+        int extraPm = ExtraDesertPm?.Invoke(hid.Value) ?? 0;                // P7-SG-D: a winter siege's cold camp
         foreach (var m in men)
         {
             if (IsHero(m.Id) || (host != null && m.Id == host.Commander)) continue;
@@ -172,9 +179,11 @@ public sealed partial class ArmyWorld
             int arrears = m.Kind == 1 ? WarbandArrearsDays(m.Holder, warbandDays) : res.UnpaidDays[m.Role];
             bool levy = m.Kind == 0;
             int basePm = DesertionPm(Rules, arrears, hungry, levy && reap, levy ? beyond : 0, st.Morale, defeat, 0, m.Kind != 0 && !(m.Kind == 2 && m.Role == (int)TroopRole.Levy));
+            basePm += extraPm;
             if (basePm <= 0) continue;
             int drill = MeleeOf(m.Row) * Rules.DrillPerSkill;
             int pm = DesertionPm(Rules, arrears, hungry, levy && reap, levy ? beyond : 0, st.Morale, defeat, drill, m.Kind != 0 && !(m.Kind == 2 && m.Role == (int)TroopRole.Levy));
+            pm = Math.Min(Rules.DesertMaxPm, pm + extraPm);
             if (pm <= 0 || DetRng.Range(W.Seed, day, m.Id, RngStreams.Desertion, 0, 0, 1000) >= pm) continue;
             leavers.Add((m, pm));
             rUnpaid += Rules.DesertArrearsPm * Math.Max(0, arrears - Rules.DesertArrearsFreeDays); if (hungry) rHungry += Rules.DesertHungryPm; if (levy && reap) rHarvest += Rules.DesertHarvestPm;

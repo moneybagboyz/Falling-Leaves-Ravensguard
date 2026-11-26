@@ -194,6 +194,8 @@ public sealed class WorldState
     public Ravensguard.Sim.Siege.EngineBook? Engines { get; set; }
     /// <summary>P7-AM-A: the standing warbands of the lords, the errands they escort, the bandit bands, the news of robberies and raids and the log of tasks (armies-on-the-map 3), in the optional "armies" section once any exists (no format bump).</summary>
     public Ravensguard.Sim.Armies.ArmyBook? Armies { get; set; }
+    /// <summary>P7-SG-D: the sieges laid (sieges-and-engines 3.4), keys 2 and 3 of the optional "sieges" section.</summary>
+    public Ravensguard.Sim.Siege.SiegeBook? Sieges { get; set; }
     /// <summary>The hero's side of the records (trade-inventory-character spec): worn slots and where each stack sits, the price notebook, the party, the people known (saved in the "party" section when present). The things themselves are item rows, the pack store and the purse in the <see cref="Economy"/>.</summary>
     public Ravensguard.Sim.Trade.HeroParty? Party { get; set; }
     /// <summary>
@@ -533,7 +535,7 @@ public static partial class WorldSave
             Coinage = w.Coinage is { IsEmpty: false } coinb ? CoinageSave.Capture(coinb) : null,                                           // P7-CN1
             Industry = w.Industry is { IsEmpty: false } inb ? IndustrySave.Capture(inb) : null,                                        // P7-IN1
             Soldiers = w.Soldiers is { IsEmpty: false } sob ? SoldierSave.Capture(sob) : null,                                          // P7-SC-A
-            Sieges = SiegeSave.CaptureOrNull(w.Engines, w.AssaultSource != null ? w.AssaultSource() : w.Assault),                       // P7-SG-B, P7-SG-C
+            Sieges = SiegeSave.CaptureOrNull(w.Engines, w.AssaultSource != null ? w.AssaultSource() : w.Assault, w.Sieges),                       // P7-SG-B, P7-SG-C
             Armies = w.Armies is { IsEmpty: false } arb ? ArmySave.Capture(arb) : null,                                                 // P7-AM-A
             Holdings = w.Holdings is { IsEmpty: false } hdb ? HoldingsSave.Capture(hdb) : null,                                        // P6-B6
             LandWorks = LandWorksOf(w),                                                                                              // P6-D4
@@ -751,6 +753,7 @@ public static partial class WorldSave
         {
             var sieges = Decode<SiegeSave>(file, SiegeSave.SectionName, compressed: true);
             if (restored.Mounts != null) restored.Engines = sieges.Restore(content, restored.Mounts, cs.Seed);      // P7-SG-B
+            if (sieges.Sieges.Length > 0 || sieges.NextSiege > 1) restored.Sieges = sieges.RestoreSieges();             // P7-SG-D
             restored.Assault = sieges.Assault;                                                                          // P7-SG-C: an assault in progress, laid over its fight by the bubble that restores it
         }
         if (restored.Coinage != null && economy != null) economy.Ledger.Coinage = restored.Coinage.Stock;        // P7-CN1: the gold book is the ledger's hook again
