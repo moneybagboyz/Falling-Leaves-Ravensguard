@@ -62,6 +62,11 @@ public sealed class SoldierWorld
     /// <summary>Who of a lord's people are his squad's companions (not counted against the retinue cap).</summary>
     public Func<long, ISet<ulong>> CompanionsOf { get; set; } = _ => new HashSet<ulong>();
 
+    /// <summary>A world (or a test) that keeps its soldiers' purses elsewhere than the household table answers here first; null: the household's.</summary>
+    public Func<ulong, PurseId?>? PurseHook { get; set; }
+    /// <summary>P7-SC-C: what the world tells the companies' daily choices.</summary>
+    public CompanyHooks CompanyHooks { get; } = new();
+
     public SoldierWorld(SoldierBook book, ContentDatabase db, EconomyState econ, WorksBook works, LargeBuildingRulesDef rules, IKitFit fit, Func<PersonTable?> people)
     {
         Book = book; Fit = fit; People = people; Econ = econ;
@@ -78,6 +83,7 @@ public sealed class SoldierWorld
     /// <summary>The purse of a soldier's household (none when he has no household).</summary>
     public PurseId PurseOf(ulong person)
     {
+        if (PurseHook?.Invoke(person) is { } hooked) return hooked;
         var p = People(); int row = p?.IndexOf(new EntityId(person)) ?? -1;
         if (row < 0) return PurseId.None;
         int hh = p!.Household[row];

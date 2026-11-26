@@ -162,6 +162,8 @@ public static class ContractWiring
             int hh = pop.People.Household[g[0]]; if (hh < 0 || hh >= e.HouseholdCount) continue;
             yield return new CompanyInfo(EntityId.Make(IdKind.Faction, 0x4A00_0000UL + (ulong)s), pop.Region.Settlements[s].Name + " company", s, g.Count * 12, g.Count, e.HouseholdPurse[hh].Index, "mercenary");
         }
+        if (st.Soldiers is { Companies.Count: > 0 } sb)          // P7-SC-C: idle mercenary companies with a purse take guard contracts like any company
+            foreach (var mc in sb.Companies.Values) if (Ravensguard.Sim.Soldiers.MercCompanies.InfoOf(mc) is { } info) yield return info;
         // P6-D4: the people without a trade in a place (four or more) work as a crew of farmhands on the soil jobs the holders post (SoilWorld hands them the job after a week); they take no other contract
         var hands = new List<int>[pop.Region.Settlements.Count];
         var pt = pop.People; var hht = pop.Households; int day = (int)st.Clock.Now.TotalDays;
@@ -199,6 +201,7 @@ public static class ContractWiring
         {
             ContractSystem.Expiries(w, book, day);
             Companies_(w, book, day);
+            Ravensguard.Sim.Soldiers.SoldierTick.OnDay(st, w, book, day);          // P7-SC-C: wages, drill, season promotions, the mercenary companies' day
         }
         Tournaments.OnHour(w, book, hour);
         NeedScanner.Hour(w, book, hour);

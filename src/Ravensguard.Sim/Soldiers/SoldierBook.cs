@@ -45,6 +45,37 @@ public readonly record struct PromotionOffer(ulong Person, string Role, int Day)
 public sealed record RefitJob(ulong Item, ulong Person, long Armoury, string Slot, int ToCm3, int Day);
 
 /// <summary>
+/// P7-SC-C (4.6): a mercenary company, a group of real people (<see cref="Members"/>, sorted person ids; each also has a soldier row with no lord) with a captain, a purse (a ledger chest opened at the first hire, -1 before), a reputation
+/// (fidelity, -1000..1000), a lair and, while hired, an employer (his id, his purse), the days the pay has been short and the contract that stands for the hire.
+/// </summary>
+public sealed class MercCompany
+{
+    public long Id;
+    public string Name = "";
+    public ulong Captain;
+    public List<ulong> Members { get; } = [];
+    public int Purse = -1;
+    public int Reputation;
+    public int Settlement = -1;
+    /// <summary>The contract of the hire (-1 for none, also after a turn).</summary>
+    public int ContractId = -1;
+    /// <summary>The employer lord's id (-1 while between contracts) and his purse (a ledger index).</summary>
+    public long Employer = -1;
+    public int EmployerPurse = -1;
+    public int HiredDay = -1, EndDay = -1;
+    /// <summary>Days in a row the pay was short, and what the employer owes the company, mites.</summary>
+    public int ArrearsDays;
+    public long OwedMites;
+    /// <summary>The company changed sides once already; its wage is then x1.5 (<see cref="WageMultPm"/>).</summary>
+    public bool Turned;
+    public int WageMultPm = 1000;
+    public int Morale;
+    public bool FillGaps;
+    public int Kept;
+    public bool Hired => Employer >= 0;
+}
+
+/// <summary>
 /// P7-SC-A: the soldiers' state (3.3), the optional <c>soldiers</c> section: soldier rows by person and the refit jobs waiting for an armourer. Empty while no soldier row exists, so a world without soldiers keeps its
 /// bytes. Everything is kept sorted, so equal states give equal bytes and equal hashes (<c>SoldierHash</c>, overview 7).
 /// </summary>
@@ -59,7 +90,11 @@ public sealed class SoldierBook
     /// <summary>Promotions offered and not yet answered, by person.</summary>
     public SortedDictionary<ulong, PromotionOffer> Offers { get; } = [];
 
-    public bool IsEmpty => Rows.Count == 0 && Refits.Count == 0 && Skills.Count == 0 && Units.Count == 0 && Offers.Count == 0;
+    /// <summary>P7-SC-C: the mercenary companies by id, and the standing employers have with companies (a lord who broke faith: -200).</summary>
+    public SortedDictionary<long, MercCompany> Companies { get; } = [];
+    public SortedDictionary<long, int> Standing { get; } = [];
+
+    public bool IsEmpty => Companies.Count == 0 && Rows.Count == 0 && Refits.Count == 0 && Skills.Count == 0 && Units.Count == 0 && Offers.Count == 0;
     public SoldierRow? Of(ulong person) => Rows.GetValueOrDefault(person);
 
     /// <summary>The hash of the section, fixed order, integers only; zero while empty.</summary>
@@ -85,6 +120,16 @@ public sealed class SoldierBook
         foreach (var (u, d) in Units) { M(u); M(d.Value); M(d.LastDay); }
         M(-5);
         foreach (var (p, o) in Offers) { M((long)p); S(o.Role); M(o.Day); }
+        if (Companies.Count == 0 && Standing.Count == 0) return h;
+        M(-6);
+        foreach (var (id, c) in Companies)
+        {
+            M(id); S(c.Name); M((long)c.Captain); M(c.Purse); M(c.Reputation); M(c.Settlement); M(c.ContractId); M(c.Employer); M(c.EmployerPurse); M(c.HiredDay); M(c.EndDay);
+            M(c.ArrearsDays); M(c.OwedMites); M(c.Turned ? 1 : 0); M(c.WageMultPm); M(c.Morale); M(c.FillGaps ? 1 : 0); M(c.Kept);
+            M(c.Members.Count); foreach (var m in c.Members) M((long)m);
+        }
+        M(-7);
+        foreach (var (l, v) in Standing) { M(l); M(v); }
         return h;
     }
 }

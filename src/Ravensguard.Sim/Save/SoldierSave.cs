@@ -76,6 +76,37 @@ public sealed class RefitJobSave
     [Key(5)] public int Day { get; set; }
 }
 
+[MessagePackObject]
+public sealed class CompanySave
+{
+    [Key(0)] public long Id { get; set; }
+    [Key(1)] public string Name { get; set; } = "";
+    [Key(2)] public ulong Captain { get; set; }
+    [Key(3)] public ulong[] Members { get; set; } = [];
+    [Key(4)] public int Purse { get; set; } = -1;
+    [Key(5)] public int Reputation { get; set; }
+    [Key(6)] public int Settlement { get; set; } = -1;
+    [Key(7)] public int ContractId { get; set; } = -1;
+    [Key(8)] public long Employer { get; set; } = -1;
+    [Key(9)] public int EmployerPurse { get; set; } = -1;
+    [Key(10)] public int HiredDay { get; set; } = -1;
+    [Key(11)] public int EndDay { get; set; } = -1;
+    [Key(12)] public int ArrearsDays { get; set; }
+    [Key(13)] public long OwedMites { get; set; }
+    [Key(14)] public bool Turned { get; set; }
+    [Key(15)] public int WageMultPm { get; set; } = 1000;
+    [Key(16)] public int Morale { get; set; }
+    [Key(17)] public bool FillGaps { get; set; }
+    [Key(18)] public int Kept { get; set; }
+}
+
+[MessagePackObject]
+public sealed class CompanyStandingSave
+{
+    [Key(0)] public long Lord { get; set; }
+    [Key(1)] public int Value { get; set; }
+}
+
 /// <summary>The optional "soldiers" section (a name of <c>Phase7Seeding.SectionNames</c>), written only while the book is not empty, so a world with no soldier keeps its bytes. Later soldier parts append keys.</summary>
 [MessagePackObject]
 public sealed class SoldierSave
@@ -88,6 +119,9 @@ public sealed class SoldierSave
     [Key(2)] public SkillMicroSave[] Skills { get; set; } = [];
     [Key(3)] public UnitDrillSave[] Units { get; set; } = [];
     [Key(4)] public OfferSave[] Offers { get; set; } = [];
+    // P7-SC-C: appended keys (absent in an older save: empty)
+    [Key(5)] public CompanySave[] Companies { get; set; } = [];
+    [Key(6)] public CompanyStandingSave[] Standing { get; set; } = [];
 
     public static SoldierSave Capture(SoldierBook b) => new()
     {
@@ -102,6 +136,13 @@ public sealed class SoldierSave
         Skills = SkillRows(b),
         Units = [.. b.Units.Select(u => new UnitDrillSave { Unit = u.Key, Value = u.Value.Value, LastDay = u.Value.LastDay })],
         Offers = [.. b.Offers.Values.Select(o => new OfferSave { Person = o.Person, Role = o.Role, Day = o.Day })],
+        Companies = [.. b.Companies.Values.Select(c => new CompanySave
+        {
+            Id = c.Id, Name = c.Name, Captain = c.Captain, Members = [.. c.Members], Purse = c.Purse, Reputation = c.Reputation, Settlement = c.Settlement, ContractId = c.ContractId, Employer = c.Employer,
+            EmployerPurse = c.EmployerPurse, HiredDay = c.HiredDay, EndDay = c.EndDay, ArrearsDays = c.ArrearsDays, OwedMites = c.OwedMites, Turned = c.Turned, WageMultPm = c.WageMultPm,
+            Morale = c.Morale, FillGaps = c.FillGaps, Kept = c.Kept,
+        })],
+        Standing = [.. b.Standing.Select(s => new CompanyStandingSave { Lord = s.Key, Value = s.Value })],
     };
 
     private static SkillMicroSave[] SkillRows(SoldierBook b)
@@ -127,6 +168,17 @@ public sealed class SoldierSave
         foreach (var m in Skills) { b.Skills.RestoreMicro(m.Person, m.Skill, m.Micro); if (m.UseHour >= 0) b.Skills.RestoreUse(m.Person, m.Skill, m.UseHour, m.Uses); }
         foreach (var u in Units) b.Units[u.Unit] = new UnitDrill { Value = u.Value, LastDay = u.LastDay };
         foreach (var o in Offers) b.Offers[o.Person] = new PromotionOffer(o.Person, o.Role, o.Day);
+        foreach (var c in Companies)
+        {
+            var m = new MercCompany
+            {
+                Id = c.Id, Name = c.Name, Captain = c.Captain, Purse = c.Purse, Reputation = c.Reputation, Settlement = c.Settlement, ContractId = c.ContractId, Employer = c.Employer,
+                EmployerPurse = c.EmployerPurse, HiredDay = c.HiredDay, EndDay = c.EndDay, ArrearsDays = c.ArrearsDays, OwedMites = c.OwedMites, Turned = c.Turned, WageMultPm = c.WageMultPm,
+                Morale = c.Morale, FillGaps = c.FillGaps, Kept = c.Kept,
+            };
+            m.Members.AddRange(c.Members); b.Companies[m.Id] = m;
+        }
+        foreach (var s in Standing) b.Standing[s.Lord] = s.Value;
         return b;
     }
 }

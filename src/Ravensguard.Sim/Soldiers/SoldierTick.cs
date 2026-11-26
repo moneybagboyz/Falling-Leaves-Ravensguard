@@ -1,0 +1,82 @@
+using Ravensguard.Sim.Contracts;
+using Ravensguard.Sim.Core;
+using Ravensguard.Sim.People;
+using Ravensguard.Sim.Rule;
+using Ravensguard.Sim.Save;
+using Ravensguard.Sim.Worlds;
+
+namespace Ravensguard.Sim.Soldiers;
+
+/// <summary>
+/// P7-SC-C: the Phase 7 seeding step "companies" (overview 7, stream 0x7B1): two to four mercenary companies a region, each made of adult men of the region's people with no soldier row (they stay in their households;
+/// no purse is opened and no coin or item moves, so the economy's hash is unchanged until a company is first hired). Pure in the world seed and the people's ids.
+/// </summary>
+public sealed class CompanySeedStep : IPhase7SeedStep
+{
+    public string Name => "companies";
+    public string Section => SoldierSave.SectionName;
+
+    public bool Seed(Phase7SeedContext ctx)
+    {
+        var st = ctx.State;
+        if (ctx.Content == null || st.Economy == null || st.Population.People.Count == 0 || st.Soldiers is { Companies.Count: > 0 }) return false;
+        var pt = st.Population.People; int day = (int)st.Clock.Now.TotalDays; var hero = st.Party?.Hero ?? EntityId.None;
+        var men = new List<ulong>();
+        for (int i = 0; i < pt.Count; i++)
+        {
+            if (pt.Status[i] != PersonStatus.Alive || pt.Sex[i] != Sex.Male || pt.IdOf(i) == hero || pt.Household[i] < 0) continue;
+            int age = pt.AgeYears(i, day); if (age < 18 || age > 45) continue;
+            men.Add(pt.IdOf(i).Value);
+        }
+        if (men.Count < MercCompanies.MinMen * 3) return false;
+        var sw = SoldierWiring.For(st, ctx.Content);
+        int n = 2 + DetRng.Range(ctx.Seed, 0, 0, RngStreams.CompanySeeding, 2_000_000, 0, 3);
+        int maxMen = Math.Max(MercCompanies.MinMen, men.Count / (n * 6));
+        bool any = false;
+        for (int k = 1; k <= n; k++)
+        {
+            var c = MercCompanies.Seed(sw, ctx.Seed, k, 0, men, maxMen);
+            if (c == null) continue;
+            int row = pt.IndexOf(new EntityId(c.Captain)); c.Settlement = row >= 0 ? Math.Max(0, pt.HomeSettlement[row]) : 0;
+            any = true;
+        }
+        return any;
+    }
+}
+
+/// <summary>
+/// P7-SC-C: the soldiers' daily tick on the abstract clock (hour 0, after the contracts' expiries), wiring what P7-SC-B left as plain calls: every soldier with a lord is paid his wage by ledger transfer from the lord's
+/// purse (unpaid days are arrears), drills two hours with his role's weapon family, and at a season's start the lords other than the hero accept the promotions their wage budget allows; the mercenary companies take
+/// their day. A world with no soldier does nothing here.
+/// </summary>
+public static class SoldierTick
+{
+    private static Skill FamilyOf(string role) => role switch
+    {
+        "archer" or "crossbowman" => Skill.Archery,
+        "spearman" or "sergeant" => Skill.Polearms,
+        "man_at_arms" or "knight" => Skill.Blades,
+        _ => Skill.None,
+    };
+
+    public static void OnDay(Save.WorldState st, ContractWorld w, ContractBook book, int day)
+    {
+        if (st.Soldiers is not { IsEmpty: false } || st.Content == null || st.Economy == null) return;
+        var sw = SoldierWiring.For(st, st.Content);
+        var chron = RuleChron.Of(st.Chronicle, st.Ids);
+        foreach (var r in sw.Book.Rows.Values.Where(r => r.Lord >= 0).ToList())          // drill: hours of the day, no coin
+            if (FamilyOf(r.Role) is var f && f != Skill.None) Growth.Drill(sw, r.Person, f, sw.Roles.Rules.DrillHoursDay, day);
+        foreach (long lord in sw.Book.Rows.Values.Where(r => r.Lord >= 0).Select(r => r.Lord).Distinct().OrderBy(l => l).ToList())
+        {
+            var purse = sw.PurseOf((ulong)lord);
+            WageRoll.PayDay(sw, lord, purse, w.Ledger);
+            if (lord != 0 && Promotions.IsSeasonStart(day))
+            {
+                Promotions.Offer(sw, lord, day);
+                long budget = purse.IsNone ? 0 : w.Ledger.Balance(purse).Mites / 60;
+                Promotions.AcceptWithin(sw, lord, day, chron, new EntityId((ulong)lord), budget);
+            }
+        }
+        MercCompanies.Day(w, book, sw, chron, day);
+    }
+}

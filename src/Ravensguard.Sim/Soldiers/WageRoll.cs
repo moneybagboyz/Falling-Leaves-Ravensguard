@@ -30,6 +30,7 @@ public static class WageRoll
         {
             long wage = WageMites(sw, r.Role); if (wage <= 0) continue;
             var to = sw.PurseOf(r.Person);
+            if (!to.IsNone && to.Index == from.Index) continue;                       // a man of the lord's own household: his wage is his own purse
             if (!from.IsNone && !to.IsNone && led.Balance(from).Mites >= wage && led.Transfer(from, to, new Coin(wage), TransferReason.Wage)) paid += wage;
             else { r.ArrearsMites += wage; short_ = true; }
         }
@@ -38,6 +39,7 @@ public static class WageRoll
             {
                 long pay = Math.Min(Math.Min(WageMites(sw, r.Role), r.ArrearsMites), led.Balance(from).Mites); if (pay <= 0) break;
                 var to = sw.PurseOf(r.Person);
+                if (!to.IsNone && to.Index == from.Index) { r.ArrearsMites = 0; continue; }
                 if (!to.IsNone && led.Transfer(from, to, new Coin(pay), TransferReason.Wage)) { r.ArrearsMites -= pay; paid += pay; }
             }
         return paid;
