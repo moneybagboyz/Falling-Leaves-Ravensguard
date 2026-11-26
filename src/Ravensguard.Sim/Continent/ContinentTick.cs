@@ -49,6 +49,7 @@ public static class ContinentTick
         Ravensguard.Sim.Disease.ContinentPlagueStep.Run(st, id => isRes[id], now, season);        // P6-C4: the great plague's start and spread (S9)
         int news = News(st, res, isRes, now, season);
         Orders(st, res, isRes);
+        st.Armies?.Season(st, now);                                                                    // P7-AW-D: the count hosts' season
         st.LastSeason = season; st.TicksRun++;
         st.LastTickMs = sw.Elapsed.TotalMilliseconds;
         return new ContinentReport(season, st.LastTickMs, res.Length, st.Edges.Length, news, moved, grainFlow, coinFlow);

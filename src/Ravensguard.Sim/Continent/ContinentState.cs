@@ -11,6 +11,9 @@ namespace Ravensguard.Sim.Continental;
 /// on the road and, per detailed region, the <see cref="RegionLink"/> through which coin, goods and people cross between it and its neighbours. Mutated only at the
 /// seasonal barrier (<see cref="ContinentTick"/>), except for its links and caravans, which one region's worker writes between two ticks.
 /// </summary>
+/// <summary>The continent tick's hook for the count hosts (abstract-war 4.4): a season's days of marching, foraging, sieges and battles between the summaries.</summary>
+public interface IContinentArmies { void Season(ContinentState st, Ravensguard.Sim.Core.GameTime now); }
+
 public sealed class ContinentState
 {
     public const int Regions = RegionCoord.Count;
@@ -40,6 +43,9 @@ public sealed class ContinentState
     public string[] Names { get; set; } = Enumerable.Range(0, Regions).Select(i => $"region {i}").ToArray();
     /// <summary>The year's harvest of a region as permille of a normal one (the continent's weather); null: a plain noise draw.</summary>
     public Func<int, int, int>? HarvestPermille { get; set; }
+
+    /// <summary>P7-AW-D: the count hosts on the continent's edges (abstract-war 4.4), stepped by the seasonal tick; null while no home world has armies bound. Not saved here (the hosts live in the armies section).</summary>
+    public IContinentArmies? Armies { get; set; }
 
     public ContinentState(ulong seed, int home)
     {
@@ -157,7 +163,7 @@ public sealed class ContinentState
         SetEdges(list);
     }
 
-    private void SetEdges(List<ContinentEdge> list)
+    public void SetEdges(List<ContinentEdge> list)
     {
         for (int i = 0; i < list.Count; i++) list[i].Index = i;
         Edges = [.. list];

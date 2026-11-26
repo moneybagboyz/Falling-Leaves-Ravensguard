@@ -185,12 +185,14 @@ public sealed class ArmyBook
     public SortedDictionary<int, HostCampaign> Campaigns { get; } = [];
     public SortedDictionary<long, IntelRow> Intel { get; } = [];
     public List<WarEvent> WarEvents { get; } = [];
+    /// <summary>P7-AW-D: the count hosts on the continent (abstract-war 4.4) and their ledger (the appended keys 17 to 19; absent while empty).</summary>
+    public CountHostBook Count { get; } = new();
     public static long IntelKey(int observer, int subject) => (long)observer * 1_000_000 + subject;
     /// <summary>Fiefs whose lord was found to have no man to hire in a season: not asked again until the next one (a season number).</summary>
     public SortedDictionary<int, int> Barren { get; } = [];
     public const int LogKeep = 2000, ReportKeep = 64;
 
-    public bool IsEmpty => Warbands.Count == 0 && Errands.Count == 0 && Bands.Count == 0 && Reports.Count == 0 && Log.Count == 0 && Barren.Count == 0 && NextWarband == 1 && NextErrand == 1 && NextBand == 1 && Hosts.Count == 0 && Marches.Count == 0 && NextHost == 1 && Rations.Count == 0 && Campaigns.Count == 0 && Intel.Count == 0 && WarEvents.Count == 0;
+    public bool IsEmpty => Warbands.Count == 0 && Errands.Count == 0 && Bands.Count == 0 && Reports.Count == 0 && Log.Count == 0 && Barren.Count == 0 && NextWarband == 1 && NextErrand == 1 && NextBand == 1 && Hosts.Count == 0 && Marches.Count == 0 && NextHost == 1 && Rations.Count == 0 && Campaigns.Count == 0 && Intel.Count == 0 && WarEvents.Count == 0 && Count.IsEmpty;
 
     public Warband? WarbandOfFief(int fief) { foreach (var w in Warbands.Values) if (w.Fief == fief) return w; return null; }
     public Warband? WarbandOfLord(ulong lord) { foreach (var w in Warbands.Values) if (w.Lord == lord) return w; return null; }
@@ -304,6 +306,17 @@ public sealed class ArmyBook
             foreach (var (k, r) in Intel) { M(k); M(r.Day); M(r.Strength); M(r.XMm); M(r.YMm); M(r.Source); }
             M(-11);
             foreach (var w in WarEvents) { M(w.War); M(w.Day); M(w.Doer); M(w.Points); M(w.Lost); M(w.OwnLost); M(w.Place); M((long)w.Kind); M((long)w.Entry); M(w.Scored ? 1 : 0); }
+        }
+        if (!Count.IsEmpty)                                                               // P7-AW-D: absent while no count host has been raised
+        {
+            M(-12); M(Count.NextId);
+            foreach (var (id, c) in Count.Hosts)
+            {
+                M(id); M(c.Realm); M(c.Home); M(c.War); M(c.Foe); M(c.Region); M(c.Edge); M(c.FromRegion); M(c.WalkedM); M(c.Objective); M((long)c.State); M(c.MoralePm); M(c.GrainG); M(c.HungryDays); M(c.SiegeDays); M(c.Prisoners); M(c.FormedDay); M(c.Supply);
+                foreach (int x in c.Men) M(x);
+                foreach (int x in c.QualityPm) M(x);
+            }
+            foreach (long x in Count.Ledger.V) M(x);
         }
         return h;
     }

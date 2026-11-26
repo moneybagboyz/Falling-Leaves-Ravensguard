@@ -154,6 +154,17 @@ public sealed class HostCampSave
     [Key(12)] public int Sentries { get; set; }
 }
 
+/// <summary>P7-AW-D: a count host of the continent: its integer fields in a fixed order (see <c>ArmySave.Capture</c>), its grain, its men and their quality by class.</summary>
+[MessagePackObject]
+public sealed class CountHostSave
+{
+    [Key(0)] public int Id { get; set; }
+    [Key(1)] public int[] Ints { get; set; } = [];
+    [Key(2)] public long GrainG { get; set; }
+    [Key(3)] public int[] Men { get; set; } = [];
+    [Key(4)] public int[] QualityPm { get; set; } = [];
+}
+
 /// <summary>P7-AM-C: a host on the road (the keys are appended to the armies section; a section written by AM-A reads with none).</summary>
 [MessagePackObject]
 public sealed class HostMarchSave
@@ -260,6 +271,10 @@ public sealed class ArmySave
     [Key(14)] public CampaignSave[] Campaigns { get; set; } = [];
     [Key(15)] public IntelSave[] Intel { get; set; } = [];
     [Key(16)] public WarEventSave[] WarEvents { get; set; } = [];
+    /// <summary>P7-AW-D: the count hosts on the continent, the next id and the ledger (appended keys 17 to 19; empty in a section written before).</summary>
+    [Key(17)] public CountHostSave[] CountHosts { get; set; } = [];
+    [Key(18)] public int NextCountHost { get; set; } = 1;
+    [Key(19)] public long[] CountLedger { get; set; } = [];
 
     public static ArmySave Capture(ArmyBook b) => new()
     {
@@ -300,6 +315,13 @@ public sealed class ArmySave
             JoinWarbands = [.. h.Warbands.Select(j => j.Warband)], JoinKinds = [.. h.Warbands.Select(j => (byte)j.Kind)], JoinMen = [.. h.Warbands.Select(j => j.Men)],
         })],
         NextHost = b.NextHost,
+        CountHosts = [.. b.Count.Hosts.Values.Select(c => new CountHostSave
+        {
+            Id = c.Id, Ints = [c.Realm, c.Home, c.War, c.Foe, c.Region, c.Edge, c.FromRegion, c.WalkedM, c.Objective, (int)c.State, c.MoralePm, c.HungryDays, c.SiegeDays, c.Prisoners, c.FormedDay, c.Supply],
+            GrainG = c.GrainG, Men = [.. c.Men], QualityPm = [.. c.QualityPm],
+        })],
+        NextCountHost = b.Count.NextId,
+        CountLedger = b.Count.Ledger.IsEmpty ? [] : [.. b.Count.Ledger.V],
         Marches = [.. b.Marches.Values.Select(m => new HostMarchSave
         {
             Host = m.Host, Stops = [.. m.Stops], DistMm = m.DistMm, RateHourMm = m.RateHourMm, HourSec = m.HourSec, PrevDistMm = m.PrevDistMm, PrevRateHourMm = m.PrevRateHourMm, PrevHourSec = m.PrevHourSec,
@@ -316,6 +338,16 @@ public sealed class ArmySave
     public ArmyBook Restore()
     {
         var b = new ArmyBook { NextWarband = NextWarband, NextErrand = NextErrand, NextBand = NextBand, NextHost = Math.Max(1, NextHost) };
+        b.Count.NextId = Math.Max(1, NextCountHost);
+        for (int i = 0; i < CountLedger.Length && i < Ravensguard.Sim.Armies.CountLedger.N; i++) b.Count.Ledger.V[i] = CountLedger[i];
+        foreach (var s in CountHosts)
+        {
+            var c = new CountHost { Id = s.Id, GrainG = s.GrainG };
+            if (s.Ints.Length >= 16) { c.Realm = s.Ints[0]; c.Home = s.Ints[1]; c.War = s.Ints[2]; c.Foe = s.Ints[3]; c.Region = s.Ints[4]; c.Edge = s.Ints[5]; c.FromRegion = s.Ints[6]; c.WalkedM = s.Ints[7]; c.Objective = s.Ints[8]; c.State = (CountState)s.Ints[9]; c.MoralePm = s.Ints[10]; c.HungryDays = s.Ints[11]; c.SiegeDays = s.Ints[12]; c.Prisoners = s.Ints[13]; c.FormedDay = s.Ints[14]; c.Supply = s.Ints[15]; }
+            for (int k = 0; k < c.Men.Length && k < s.Men.Length; k++) c.Men[k] = s.Men[k];
+            for (int k = 0; k < c.QualityPm.Length && k < s.QualityPm.Length; k++) c.QualityPm[k] = s.QualityPm[k];
+            b.Count.Hosts[c.Id] = c;
+        }
         foreach (var s in Warbands)
         {
             var w = new Warband

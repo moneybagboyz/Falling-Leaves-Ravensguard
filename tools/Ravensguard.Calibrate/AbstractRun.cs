@@ -231,6 +231,7 @@ static class AbstractRun
         }
         var tables = WoundTables.For(fc.Db);
         if (tables == null) { Console.Error.WriteLine("no wound tables in content: run --abstract tables first"); return 1; }
+        if (args.Contains("count")) return CountRun.Run(fc, tables, args, repo);
         if (args.Contains("fit"))
         {
             // 4.3: fit the constants by minimising the mismatch with the tactical fights (coordinate descent over multipliers); seeds 1000 on (the fit set), equivalence on fresh ones

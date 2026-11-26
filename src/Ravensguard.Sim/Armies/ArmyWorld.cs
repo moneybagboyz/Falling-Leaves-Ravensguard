@@ -207,6 +207,7 @@ public static class ArmyWiring
         };
         aw.SupplyProvider = () => WarSupplyWiring.Ensure(home, state);
         home.Sim.Set(aw);
+        if (state.ContinentState is { } cont) cont.Armies = new ContinentArmies(book, content.All<CountBattleDef>().OrderBy(d => d.Id, StringComparer.Ordinal).FirstOrDefault());     // P7-AW-D: the count hosts' season in the continent tick
         var wx = home.Services.Weather; var at = home.Coord; int size = Ravensguard.Sim.WorldGen.Continent.Size;
         int wcell = Math.Min(size - 1, at.CellY + 8) * size + Math.Min(size - 1, at.CellX + 8);
         aw.Wetness = MarchWeather.Sampler(wx, wcell);

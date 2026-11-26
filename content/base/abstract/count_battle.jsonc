@@ -1,0 +1,11 @@
+// The count battle's tables (abstract-war 3, 4.4; row type count_battle), fitted from the v2 resolver by tools/Ravensguard.Calibrate -- --abstract count fit over the 40 scenarios of
+// AW-10 (CountScenarios.Gate: class mixes, 200 to 4,000 a side) on seeds 100 on, and gated on fresh seeds (5000 on) within +-10% casualties, +-10 points win rate, +-25% duration.
+// Classes in order: levy, foot, missile, horse, elite. beta is attacker x 5 + victim, in milli-men per engaged man-minute. k: see CountK (step_s, max_steps, rout_slope, rout_max_pm,
+// break_standing_pm, charge_pm, charge_steps, ammo_s, ammo_low_pm, flee_s, pursuit_pm, pursuit_horse_pm, capture_pm, luck_pm, ratio_pm, morale_scale_pm, flanked_pm).
+[
+  { "type": "count_battle", "id": "count",
+    "beta": [1748, 1020, 492, 1680, 207, 2811, 651, 441, 23, 933, 11816, 1699, 401, 3112, 2172, 2800, 5874, 240, 95, 3773, 5534, 1680, 12, 1, 10],
+    "share": [398, 220, 153, 249, 232], "expo": [964, 240, 1912, 1007, 470], "rout_thr": [189, 7, 129, 6, 2],
+    "dead_pm": [841, 883, 899, 936, 842], "crippled_pm": [158, 116, 100, 63, 157],
+    "k": [2, 150, 2977, 224, 677, 1529, 2, 5, 238, 0, 161, 215, 730, 0, 983, 234, 0] }
+]
