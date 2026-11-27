@@ -6349,6 +6349,8 @@ ch_sg_repaired,"Masons mended {cells} cells of the wall at {x}, {y}."
 ch_note_sg_blow,the wall was battered down
 ch_note_sg_burnt,the fire burnt the wall out
 ch_war_bought,"The host bought {kg} kg of grain at {place}, and the price rose {pct}% under its buying."
+ch_war_arms_ordered,"{lord} ordered arms for the armoury: {kits} pieces for {budget}."
+ch_note_war_arms,the lord's steward filled the armoury's gap
 ch_war_depot_emptied,"The war emptied the granary depot at {place}."
 ch_war_starving,"{place} is starving under the blockade: {days} days of food are left."
 ch_note_war_buying,the quartermaster bought for the host

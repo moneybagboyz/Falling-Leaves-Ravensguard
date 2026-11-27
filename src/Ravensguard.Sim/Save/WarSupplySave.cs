@@ -58,6 +58,9 @@ public sealed class WarSupplySave
     [Key(10)] public long[][] ScutageNotes { get; set; } = [];
     [Key(11)] public long[] Counters { get; set; } = [];
 
+    /// <summary>P7-AE3 (optional, key 12; null while the arms industry has nothing): orders, the refit queue, realm stocks and indices, bans, the caravan log and the stats, flattened.</summary>
+    [Key(12)] public ArmsSave? Arms { get; set; }
+
     public static WarSupplySave Capture(WarSupplyBook b) => new()
     {
         NextHost = b.NextHost,
@@ -80,6 +83,7 @@ public sealed class WarSupplySave
         Tallies = [.. b.Tallies.Values.Select(t => new long[] { t.Id, t.Realm, t.Settlement, t.Host, t.TakenDay, t.DueDay, t.PaidDay, (long)t.Household, (long)t.Entry, t.Mites, t.PaidMites, t.Grams, (long)t.State })],
         Sutlers = [.. b.Sutlers.Select(x => new long[] { x.Host, (long)x.Merchant, x.JoinedDay })],
         ScutageNotes = [.. b.ScutageNotes.Select(n => new long[] { n.OverlordKind, n.Overlord, n.Payers, n.Total })],
+        Arms = b.Arms.IsEmpty ? null : ArmsSave.Capture(b.Arms),
         Counters = b.Tallies.Count == 0 && b.Sutlers.Count == 0 && b.ScutageNotes.Count == 0 && b.NextTally == 1 && b.Stats.All(x => x == 0) ? [] : [b.NextTally, .. b.Stats],
     };
 
@@ -121,7 +125,49 @@ public sealed class WarSupplySave
         foreach (var f in Sutlers) { if (f.Length != 3) throw new InvalidDataException("corrupt warsupply sutler row"); b.Sutlers.Add(new SutlerRec((int)f[0], (ulong)f[1], (int)f[2])); }
         foreach (var f in ScutageNotes) { if (f.Length != 4) throw new InvalidDataException("corrupt warsupply scutage row"); b.ScutageNotes.Add(new ScutageNote((byte)f[0], f[1], (int)f[2], f[3])); }
         if (Counters.Length >= 1) { b.NextTally = (int)Counters[0]; Array.Copy(Counters, 1, b.Stats, 0, Math.Min(Counters.Length - 1, b.Stats.Length)); }
+        Arms?.Restore(b.Arms);
         for (int i = 0; i < Noted.Length; i++) (i < EmptiedFrom ? b.Starving : b.Emptied).Add(Noted[i]);
         return b;
+    }
+}
+
+/// <summary>The arms industry's part of the <c>warsupply</c> section (P7-AE3), flattened.</summary>
+[MessagePackObject]
+public sealed class ArmsSave
+{
+    [Key(0)] public string[] Shapes { get; set; } = [];
+    [Key(1)] public long[] Orders { get; set; } = [];
+    [Key(2)] public long[] Refit { get; set; } = [];
+    [Key(3)] public long[] Stock { get; set; } = [];
+    [Key(4)] public long[] Index { get; set; } = [];
+    [Key(5)] public long[] Bans { get; set; } = [];
+    [Key(6)] public long[] Log { get; set; } = [];
+    [Key(7)] public long[] Stats { get; set; } = [];
+
+    public static ArmsSave Capture(ArmsBook a)
+    {
+        var shapes = a.Orders.Select(o => o.Shape).Distinct(StringComparer.Ordinal).OrderBy(x => x, StringComparer.Ordinal).ToArray();
+        return new ArmsSave
+        {
+            Shapes = shapes,
+            Orders = [.. a.Orders.SelectMany(o => new long[] { (long)o.Lord, o.Day, o.Count, o.Mites, Array.IndexOf(shapes, o.Shape) })],
+            Refit = [.. a.Refit.SelectMany(kv => new long[] { (long)kv.Key, kv.Value })],
+            Stock = [.. a.Stock.SelectMany(kv => new long[] { kv.Key, kv.Value })],
+            Index = [.. a.Index.SelectMany(kv => new long[] { kv.Key, kv.Value })],
+            Bans = [.. a.Bans],
+            Log = [.. a.Log.SelectMany(s => new long[] { s.From, s.To, s.Grams, s.Mites, s.Day, s.Outcome })],
+            Stats = [.. a.Stats],
+        };
+    }
+
+    public void Restore(ArmsBook a)
+    {
+        for (int i = 0; i + 4 < Orders.Length; i += 5) a.Orders.Add(new ArmsOrderRow((ulong)Orders[i], (int)Orders[i + 1], Shapes[(int)Orders[i + 4]], (int)Orders[i + 2], Orders[i + 3]));
+        for (int i = 0; i + 1 < Refit.Length; i += 2) a.Refit[(ulong)Refit[i]] = Refit[i + 1];
+        for (int i = 0; i + 1 < Stock.Length; i += 2) a.Stock[(int)Stock[i]] = Stock[i + 1];
+        for (int i = 0; i + 1 < Index.Length; i += 2) a.Index[(int)Index[i]] = (int)Index[i + 1];
+        foreach (long k in Bans) a.Bans.Add(k);
+        for (int i = 0; i + 5 < Log.Length; i += 6) a.Log.Add(new ArmsShipRow((int)Log[i], (int)Log[i + 1], Log[i + 2], Log[i + 3], (int)Log[i + 4], (byte)Log[i + 5]));
+        Array.Copy(Stats, a.Stats, Math.Min(Stats.Length, a.Stats.Length));
     }
 }

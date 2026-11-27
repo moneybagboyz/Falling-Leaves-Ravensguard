@@ -169,7 +169,7 @@ WL-5   PASS    hunger deaths Y6-Y10 0 (control 0); the besieged town held 163 da
 WL-6   FAIL    Y8 harvest 2681 t against the control's 2676 t = -0.2 % below (pass 10-35%)       -> EA_F9
 WL-7   PENDING purveyance (AE2)
 WL-8   PASS    raised 76.6 million mites over five campaigns; 80,227 man-days unpaid, 30.5 million arrears, 802 deserters
-WL-9   PENDING kits (SC-A, AE3)
+WL-9   PENDING kits (SC-A, AE3: both built; the war-load harness still carries no armouries, so the soak cannot read it; see the P7-AE3 note in the overview)
 WL-10  FAIL    wages a day +15.8% from the Y3-Y5 mean; the control run +16.5%                     -> EA_F10
 WL-11  PASS    solvent merchants >= 92% every year, 96% in Y8-Y9
 WL-12  PENDING army chronicle causes (AE2)

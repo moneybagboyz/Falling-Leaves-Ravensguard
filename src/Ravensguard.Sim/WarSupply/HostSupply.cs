@@ -786,7 +786,9 @@ public sealed class WarSupplySeasonSystem : AbstractSystem
     {
         if (ctx.HourOfDay != 5 || !ctx.IsSeasonStartDay) return;
         var hs = ctx.World.Get<HostSupply>();
-        if (hs == null || (hs.Book.Tallies.Count == 0 && hs.Book.ScutageNotes.Count == 0)) return;
+        if (hs == null) return;
+        hs.ArmsSeason((int)ctx.Day);                                   // the arms trade of a continent at war (P7-AE3); nothing otherwise
+        if (hs.Book.Tallies.Count == 0 && hs.Book.ScutageNotes.Count == 0) return;
         hs.Chron = RuleChron.Of(ctx.Outbox);
         hs.SeasonStep((int)ctx.Day);
     }

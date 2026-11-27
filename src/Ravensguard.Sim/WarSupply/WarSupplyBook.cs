@@ -90,9 +90,11 @@ public sealed class WarSupplyBook
     public const int StatCount = 16;
     /// <summary>Running totals: 0 grams purveyed, 1 mites tallied, 2 mites of tallies paid, 3 mites defaulted, 4 households taken from, 5 hidden grams, 6 grams foraged, 7 grams trampled, 8 acres stripped, 9 households robbed, 10 grams sold by sutlers, 11 mites paid to sutlers, 12 mites of scutage, 13 men's service called, 14 pay chests taken (mites), 15 loans raised (mites).</summary>
     public long[] Stats = new long[StatCount];
+    /// <summary>P7-AE3: the arms industry's state (orders, refit queue, the arms trade); saved as key 12 while not empty.</summary>
+    public ArmsBook Arms { get; set; } = new();
     public void AddLevied(int settlement, int year, int men) => Levied[settlement] = Levied.TryGetValue(settlement, out var l) && l.Year == year ? (year, l.Men + men) : (year, men);
     public bool IsEmpty => NextHost == 1 && Hosts.Count == 0 && OnCampaign.Count == 0 && Blockades.Count == 0 && Levied.Count == 0 && Convoys.Count == 0 && Starving.Count == 0 && Emptied.Count == 0
-        && Tallies.Count == 0 && Sutlers.Count == 0 && ScutageNotes.Count == 0 && NextTally == 1 && Stats.All(x => x == 0);
+        && Tallies.Count == 0 && Sutlers.Count == 0 && ScutageNotes.Count == 0 && NextTally == 1 && Stats.All(x => x == 0) && Arms.IsEmpty;
 
     /// <summary>The <c>SupplyHash</c> of the overview's trail: every account, campaign flag and blockade in id order.</summary>
     public string Hash()
@@ -126,6 +128,7 @@ public sealed class WarSupplyBook
             foreach (var n in ScutageNotes) { L(n.OverlordKind); L(n.Overlord); L(n.Payers); L(n.Total); }
             foreach (long x in Stats) L(x);
         }
+        if (!Arms.IsEmpty) Arms.Fold(h);
         return Convert.ToHexString(h.GetHashAndReset())[..16];
     }
 }
