@@ -1437,7 +1437,7 @@ Estimates assume one developer working with an AI assistant. Every phase ends in
 
 **Total: about 6.5–9 years (80–109 months).** Industries (Phase 7) added about 1–2 months. The vehicle designer and ships (§3h) added about 4–7 months, autopilot (§3i) about 1 month, and the seamless continent (§1B) about 2–3 months.
 - The concept book's first hour becomes playable end to end at the end of Phase 5, about 4.5 years in.
-- **After 1.0, as free updates:** C# script mods, and anything cut by the overrun rule (§7).
+- **After 1.0, as free updates:** C# script mods, controller and Steam Deck support, and anything cut by the overrun rule (§7).
 
 ### Phase 0: Foundations, art toolchain, risk spikes (5–7 months)
 - **Infrastructure:**
@@ -1716,7 +1716,7 @@ Estimates assume one developer working with an AI assistant. Every phase ends in
   - Final audio and music.
   - The accessibility pass.
   - Localisation, including generated chronicle text.
-  - Controller and Steam Deck support.
+  - Controller and Steam Deck support: **moved to after 1.0** (keyboard and mouse only at 1.0, decided with the user 27 Nov 2026).
   - The balance pass.
 - **Modding for players:** documentation, an example mod, and the player-facing blueprint editor.
 - **Release:** Steam page; 1.0.
