@@ -114,8 +114,8 @@ public class AbstractBattleTests(FightFixture fx, ITestOutputHelper output)
     }
 
     /// <summary>The number of 4.4 comparisons (of 5 scenarios x 9) the fit does not reach yet; a change that widens the gap fails AB-3.
-    /// 18 since P7-AW-C (the user's decision, 26 Nov 2026): the live D and mud tallies were re-recorded after P7-CV-B's kicks and fallen horses, and mud's side-1 casualties (3.65 vs 3.03 live) fell outside; the v1 fit itself did not move.</summary>
-    private const int KnownGaps = 18;
+    /// 17 since P8-WT-3 (kicks everywhere, D2, with a ridden horse above a walk neither kicking nor biting: the v1 cavalry rows refitted with the fit mode, about 40 variants plateau at 17: B 4, C 6, D 3, DMud 4; tightened from 18, a named ratchet under D11; 18 before, since P7-AW-C; the user's decision, 26 Nov 2026): the live D and mud tallies were re-recorded after P7-CV-B's kicks and fallen horses, and mud's side-1 casualties (3.65 vs 3.03 live) fell outside; the v1 fit itself did not move.</summary>
+    private const int KnownGaps = 17;
 
     [Fact, Trait("Category", "Soak")]
     public void AB3_Soak_TheStoredLiveFightsAreTheLiveFightsOfToday()
@@ -210,7 +210,7 @@ public class AbstractBattleTests(FightFixture fx, ITestOutputHelper output)
     }
 
     // re-pinned in the Phase 4 close-out: the wound tables rebuilt for the weapon and armour changes, charge_pm 700 (MT-12 reconciled on them)
-    private const ulong PinnedHash = 0x521E696D38550233;
+    private const ulong PinnedHash = 0x834F005409D50A46;   // re-pinned P8-WT-3b (v1 cavalry rows refitted after the kick gate); was 0x521E696D38550233
 
     [Fact]
     public void AB8_ALiveFightDemotedMidBattle_LosesNobody_AndKeepsEveryWound()

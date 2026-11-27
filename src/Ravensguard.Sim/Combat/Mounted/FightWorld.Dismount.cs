@@ -192,15 +192,15 @@ public sealed partial class FightWorld
     // ------------------------------------------------------------------ kicks and bites (4.6)
 
     /// <summary>
-    /// Whether horses kick and bite: null (the default) is on in a fight with a formation book (a Phase 7 battle) and off in the Phase 4 fights without one, so the pinned hashes of those fights
-    /// (the fixed mounted skirmish) do not move; a test or a setup may force it either way.
+    /// Whether horses kick and bite: null (the default) is on in every fight (D2, P8-WT-3); a test or a setup may force it either way.
     /// </summary>
     public bool? Kicks;
-    private bool KicksOn => Kicks ?? Formations != null;
+    private bool KicksOn => Kicks ?? true;
 
     /// <summary>
     /// A war horse (trained 900 or more) or a panicked one (600 or more), under a rider or led, kicks a foe within 1.2 m in its rear 90 degrees every 3 s at most: a blunt blow of area 60 cm2 and
-    /// <c>60 x kg</c> milli through the resolver, at the lower body (60%) or the upper body (stream 0x791). A war horse also bites forward at a man pressing its rider, area 20 and <c>8 x kg</c> milli, each 5 s.
+    /// <c>60 x kg</c> milli through the resolver, at the lower body (60%) or the upper body (stream 0x791). Only a horse at a walk or less kicks or bites (a ridden one; a led one stands): on mud, which caps a gallop to
+    /// a 5 m/s trot, 99% of the kicks the ungated rule gave came at that trot, riders won 92% of fights against 25% without kicks. A war horse also bites forward at a man pressing its rider, area 20 and <c>8 x kg</c> milli, each 5 s.
     /// </summary>
     private void HorseKicks(MountedFighter m)
     {
@@ -211,6 +211,7 @@ public sealed partial class FightWorld
         bool war = m.TrainedPm >= Cv.KickTrainedPm;
         if (!war && m.PanicPm < Cv.KickPanicPm) return;
         if ((Tick + h.Id) % 4 != 0) return;
+        if (m.Mounted && m.Speed > m.Gaits.WalkMmps) return;                                       // P8-WT-3b: a horse above a walk has no hind foot planted to kick from nor a head to turn: in mud it is held at the 5 m/s cap and rides through the foot all fight
         bool kickReady = Tick - m.KickAt >= Cv.KickEveryTicks, biteReady = war && m.Mounted && Tick - m.BiteAt >= Cv.BiteEveryTicks;
         if (!kickReady && !biteReady) return;
         Fighter? back = null, front = null; long bd = long.MaxValue, fd = long.MaxValue;

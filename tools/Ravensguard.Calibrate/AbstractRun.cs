@@ -75,6 +75,35 @@ static class AbstractRun
                 }
             return 0;
         }
+        if (args.Contains("kickdiag"))
+        {
+            // blows by source in a live fight with horse kicks and bites on and off: dotnet run ... -- --abstract kickdiag --only DMud --seeds 40
+            var sc = Enum.Parse<AbstractScenarios.Scenario>(Str(args, "--only") ?? "DMud");
+            int seeds = Arg(args, "--seeds", 40);
+            foreach (bool kicks in args.Contains("--onlyon") ? new[] { true } : new[] { true, false })
+            {
+                long w0 = 0, ticks = 0, kicked = 0, bitten = 0; var hit = new long[5]; var wound = new long[5]; var spd = new long[10]; var blows = new long[5]; var outs = new long[12]; var pain = new long[5]; var bleed = new long[5]; var down = new long[2]; var gone = new long[2];
+                string[] src = ["rider", "kick", "bite", "foot", "horse other"];
+                for (int i = 0; i < seeds; i++)
+                {
+                    var w = AbstractScenarios.Tactical(fc, sc, (ulong)(20000 + i)); w.Kicks = kicks; var last = new int[w.Fighters.Count]; Array.Fill(last, 5);
+                    w.OnBlow = (a, t, r, s) => { int k = w.IsHorse(a) ? (s.Weapon.Shape.Id == "mounted.bite" ? 2 : s.Weapon.Shape.Id == "mounted.kick" ? 1 : 4) : a.Team == 0 ? 0 : 3; blows[k]++; if (r.WoundCount > 0) last[t.Id] = k; if (r.Hit) hit[k]++; if (r.WoundCount > 0) wound[k]++; foreach (var wd in r.WoundSpan) { pain[k] += (long)Ravensguard.Sim.Combat.Wounds.WoundBook.PainOf(t.Plan, wd, Ravensguard.Sim.Combat.Wounds.WoundBook.Categorise(t.Plan, wd)) * t.Plan.Parts[wd.Part].PainPm / 1000; bleed[k] += wd.BleedX10; } };
+                    w.OnEvent = e => { if (e.Kind == FightEventKind.Kicked) { kicked++; var pr = w.Mounts!.PairOf(e.Actor); if (pr != null) spd[Math.Min(9, pr.Speed / 1000)]++; }  else if (e.Kind == FightEventKind.Bitten) bitten++; };
+                    while (!w.IsOver && w.Tick < 600 * 20) w.StepWithAi();
+                    ticks += w.Tick;
+                    int riders = 0;
+                    foreach (var f in w.Fighters) if (!w.IsHorse(f)) { riders++; if (!f.Active) outs[f.Team * 6 + last[f.Id]]++; if (f.Act is FAct.Down or FAct.Dead) down[f.Team]++; if (f.Act is FAct.Fled or FAct.Surrendered) gone[f.Team]++; }
+                    bool s0 = w.Fighters.Any(f => f.Team == 0 && !w.IsHorse(f) && f.Active);
+                    bool s1 = w.Fighters.Any(f => f.Team == 1 && !w.IsHorse(f) && f.Active);
+                    if (w.DecidedWinner == 0) w0++;
+                }
+                Console.WriteLine($"kicks {(kicks ? "on" : "off")}: riders win {w0}/{seeds}, mean {ticks / 20.0 / seeds:0.0} s, kicks {kicked / (double)seeds:0.0} bites {bitten / (double)seeds:0.0} per fight, per horse-minute {kicked * 60.0 / (ticks / 20.0) / 12:0.00}; down r/f {down[0] / (double)seeds:0.0}/{down[1] / (double)seeds:0.0} fled r/f {gone[0] / (double)seeds:0.0}/{gone[1] / (double)seeds:0.0}");
+                Console.WriteLine($"   kick speed histogram m/s: {string.Join(" ", spd)}");
+                Console.WriteLine($"   outs by last wounding blow (rider,kick,bite,foot,horse other,none), riders side: {string.Join(" ", outs.Take(6).Select(x => (x / (double)seeds).ToString("0.0")))}; foot side: {string.Join(" ", outs.Skip(6).Select(x => (x / (double)seeds).ToString("0.0")))}");
+                for (int k = 0; k < 5; k++) Console.WriteLine($"   {src[k]}: blows {blows[k] / (double)seeds:0.0}, pain {pain[k] / (double)seeds:0.0}, bleed {bleed[k] / (double)seeds:0.0}, hits {hit[k] / (double)seeds:0.0}, wounding {wound[k] / (double)seeds:0.0}");
+            }
+            return 0;
+        }
         if (args.Contains("yielddiag"))
         {
             var sc = Enum.Parse<AbstractScenarios.Scenario>(Str(args, "--only") ?? "A");
@@ -264,6 +293,7 @@ static class AbstractRun
                     for (int i = 1; i < 4; i++) l += 0.3 * Math.Pow((ma[i] - mt[i]) / Math.Max(30.0, mt[i] / 10.0), 2);
                     if (s is AbstractScenarios.Scenario.D or AbstractScenarios.Scenario.DMud) { double tp = t.Mean(t.FirstPass[1]) / 1000.0, ap = a.Mean(a.FirstPass[1]) / 1000.0; l += Math.Pow((ap - tp) / Math.Max(0.5, tp) / 0.15, 2); }
                     if (s is AbstractScenarios.Scenario.AFlanked or AbstractScenarios.Scenario.ANoLeader) l *= 0.5;
+                    if (args.Contains("--gaps") && s != AbstractScenarios.Scenario.AFlanked && s != AbstractScenarios.Scenario.ANoLeader) l += 12.0 * AbstractEquivalence.Compare(t, a, s.ToString()).Count;   // the AB-3 gate's own count on the fit seeds
                     loss += l;
                     if (print) Console.WriteLine($"  {s}: {l:0.0}  cas {a.Mean(a.Casualties[0]) / 1000.0:0.00}/{a.Mean(a.Casualties[1]) / 1000.0:0.00} vs {t.Mean(t.Casualties[0]) / 1000.0:0.00}/{t.Mean(t.Casualties[1]) / 1000.0:0.00}, win {a.WinPm / 10}% vs {t.WinPm / 10}%, {a.MeanDurationX10 / 10.0:0.0} s vs {t.MeanDurationX10 / 10.0:0.0} s, fled {a.Mean(a.Fled[0]) / 1000.0:0.0}/{a.Mean(a.Fled[1]) / 1000.0:0.0} vs {t.Mean(t.Fled[0]) / 1000.0:0.0}/{t.Mean(t.Fled[1]) / 1000.0:0.0}");
                 }

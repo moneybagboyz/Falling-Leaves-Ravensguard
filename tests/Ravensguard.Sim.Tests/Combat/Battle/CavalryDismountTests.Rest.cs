@@ -92,7 +92,7 @@ public partial class CavalryDismountTests
         Assert.Equal(0, Kicks(900, 0, -1500, 0));                    // behind but beyond 1.2 m
         Assert.True(Kicks(900, 0, -800, 700) > 0);                   // within the 90 degree rear arc
         Assert.Equal(0, Kicks(900, 0, -1000, 0, force: false));      // switched off
-        Assert.Equal(0, Kicks(900, 0, -1000, 0, force: null));       // a Phase 4 fight (no formation book): off by default
+        Assert.True(Kicks(900, 0, -1000, 0, force: null) > 0);       // on by default in every fight (D2, P8-WT-3)
     }
 
     [Fact]
