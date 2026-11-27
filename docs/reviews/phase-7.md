@@ -1,6 +1,6 @@
 # Phase 7 code and bug check
 
-Reviewed at 24fd525: every Phase 7 build part merged (the economy audit gate M-E0, industries, coinage, economies of scale, large buildings, army economy, armies on the map, the battle bubble, cavalry, sieges, ships and naval war, soldiers and companies, abstract war v2 and its calibration, and the war soak). The review covered the code added or changed in `src` and `content` since 09338fc closed Phase 6: 382 files and about 32,300 lines. Tests were outside its scope.
+Reviewed at 24fd525: every Phase 7 build part merged except two found unbuilt at the close (AE3, arms industry and loot; SG-E, war wagons and chariots), which are being built and get their own review pass (the economy audit gate M-E0, industries, coinage, economies of scale, large buildings, army economy, armies on the map, the battle bubble, cavalry, sieges, ships and naval war, soldiers and companies, abstract war v2 and its calibration, and the war soak). The review covered the code added or changed in `src` and `content` since 09338fc closed Phase 6: 382 files and about 32,300 lines. Tests were outside its scope.
 
 The review was read-only. It started with mechanical greps over the whole diff, then read the high-risk paths closely. The economy was red-teamed separately before the armies were built: see `docs/reviews/phase-7-audit.md`, the step 0 audit, signed off by the user on 22 Nov 2026.
 
