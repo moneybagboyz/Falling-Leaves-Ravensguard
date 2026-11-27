@@ -1,4 +1,5 @@
 using Ravensguard.Sim.Core;
+using Ravensguard.Sim.Economy;
 using Ravensguard.Sim.Naval;
 
 namespace Ravensguard.Sim.Armies;
@@ -13,7 +14,19 @@ public sealed partial class ArmyWorld
     public ShipCombat? ShipsAt()
     {
         var sea = Sea; var rides = sea?.Rides(); var book = sea?.Peek();
-        return rides == null || book == null ? null : new ShipCombat(rides, book, W.Seed);
+        if (rides == null || book == null) return null;
+        var c = new ShipCombat(rides, book, W.Seed);
+        if (W.Economy is { } eco)
+        {
+            c.Led = eco.Ledger;
+            c.CaptorPurse = who =>
+            {
+                int r = RowOf(who.Value);                                                       // a captor with a household takes the plunder into its purse, any other into a purse of its own id
+                int hh = r >= 0 ? People.Household[r] : -1;
+                return hh >= 0 && hh < eco.HouseholdPurse.Length ? eco.HouseholdPurse[hh] : eco.Ledger.Open(PurseKind.Treasury, who);
+            };
+        }
+        return c;
     }
 
     /// <summary>The hour: what burns burns on, water comes into holed hulls, ships founder (no crew puts out a fire or bails in the hour: a fight does that live).</summary>

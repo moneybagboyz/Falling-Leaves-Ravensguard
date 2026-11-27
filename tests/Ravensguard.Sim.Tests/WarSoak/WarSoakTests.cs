@@ -56,6 +56,24 @@ public class WarSoakTests(FightFixture fx, ITestOutputHelper output)
         Assert.True(again.Demote()); Assert.Equal(c.BattleHash, again.Converted!.BattleHash);
     }
 
+    [Fact]
+    public void P7R2_MenKilledInTheAbstractHalf_AreDeadInTheLedger()
+    {
+        var ledger = new Ravensguard.Sim.Combat.Wounds.WoundLedger(77, 8 * 3600);
+        var b = BattleBubble.Open(fx.C, new BubbleScenario(fx) { Persons = true }.Opening(60, 60, 200, unitSize: 30, gap: 40_000, seed: 77, ledger: ledger));
+        for (int t = 0; t < 20 * 14 && !b.Closed; t++) b.StepShared();
+        Assert.True(b.Demote());
+        var c = b.Converted!;
+        Assert.True(c.DeadAtEnd > c.DeadAtEdge, "the abstract half must kill someone for this test to bite");
+        int checkedDead = 0;
+        foreach (var f in b.W.Fighters.Where(f => !b.W.IsHorse(f) && f.Act == FAct.Dead))
+        {
+            Assert.True(ledger.Books.TryGetValue(f.Kit.Person, out var bk) && bk.Dead, $"person {f.Kit.Person} is dead in the fight but not in the ledger");
+            checkedDead++;
+        }
+        Assert.Equal(c.DeadAtEnd, checkedDead);
+    }
+
     // ---------------------------------------------------------------- AW-15
 
     [Fact]

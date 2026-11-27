@@ -82,6 +82,8 @@ public class SiegeWiringTests(ITestOutputHelper output)
         sw.Assaults!.NoteHero(mx / 1000 + 20_000, my / 1000);                                           // the hero is far away: the abstract storm
         Assert.False(sw.OpenAssault!(row!)); Assert.Empty(sw.Assaults.Live);
         sw.Assaults.NoteHero(mx / 1000 + 500, my / 1000);                                               // the hero is at the walls
+        Assert.False(sw.Assaults.GameDrivesLiveAssaults); Assert.False(sw.OpenAssault!(row!)); Assert.Empty(sw.Assaults.Live);   // P7R-4: declines (abstract storm) while the game does not drive live assaults
+        sw.Assaults.GameDrivesLiveAssaults = true;
         Assert.True(sw.OpenAssault!(row!)); var live = Assert.Single(sw.Assaults.Live).Value;
         Assert.Same(live.Bubble.W, live.Layer.World); Assert.Same(live.Layer, live.Bubble.W.Assault);
         row!.State = SiegeState.Assault; row.LiveSinceHour = k.Now;                                      // what SiegeWorld does when the port answers true

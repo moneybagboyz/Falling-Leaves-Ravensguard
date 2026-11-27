@@ -32,6 +32,12 @@ public sealed class SiegeAssaults(SiegeWorld sw)
     private long _hx = long.MinValue, _hy = long.MinValue;
     public SortedDictionary<int, LiveAssault> Live { get; } = [];
 
+    /// <summary>
+    /// P7R-4: off until the game layer steps and closes <see cref="Live"/> assaults (Phase 8 wiring: nothing in Ravensguard.Game does yet). While off, <see cref="Open"/> declines, so every assault near the hero is fought by the abstract storm
+    /// instead of building a bubble of up to 300 fighters that nobody fights and that would sit in memory until <see cref="SiegeConfig.LiveFallbackHours"/>.
+    /// </summary>
+    public bool GameDrivesLiveAssaults { get; set; }
+
     /// <summary>Where the hero stands, continent metres (set by the runtime on the tick worker, from the position it was pumped with).</summary>
     public void NoteHero(long xM, long yM) { _hx = xM; _hy = yM; }
 
@@ -46,7 +52,7 @@ public sealed class SiegeAssaults(SiegeWorld sw)
     public bool Open(SiegeRow s)
     {
         foreach (int id in Live.Keys.ToList()) if (sw.Peek?.Sieges.TryGetValue(id, out var o) != true || o!.State != SiegeState.Assault) Live.Remove(id);
-        if (!InBubble(s.Place) || Live.ContainsKey(s.Id)) return false;
+        if (!GameDrivesLiveAssaults || !InBubble(s.Place) || Live.ContainsKey(s.Id)) return false;
         var walls = sw.WallsOf?.Invoke(s.Place); var ab = sw.W.Get<AbstractBattleService>();
         if (walls == null || ab is not { Ready: true }) return false;
         var aw = sw.Armies; var pt = aw.People; var fc = ab.Fight;

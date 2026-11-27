@@ -1,6 +1,7 @@
 using Ravensguard.Sim.Carts;
 using Ravensguard.Sim.Combat.Melee2;
 using Ravensguard.Sim.Core;
+using Ravensguard.Sim.Economy;
 using Ravensguard.Sim.Naval;
 using Ravensguard.Sim.Save;
 using Ravensguard.Sim.Siege;
@@ -250,7 +251,13 @@ public class NavalCombatTests(FightFixture fx, ITestOutputHelper output)
         Assert.True(layer.IsTaken(p.FLong, 1, out int team)); Assert.Equal(0, team);
         Assert.False(layer.IsTaken(p.FLong, 0, out _), "the boarder is fit: her crew are the ones who lost");
         var captor = k.State.Population.People.IdOf(5); var master = p.Long.Owner;
+        // P7R-7: coin in the hull's strongbox goes to the captor's purse with the prize
+        var led = k.State.Economy!.Ledger; var box = led.Open(PurseKind.Chest, p.Long.Id);
+        var rich = Enumerable.Range(0, k.State.Economy.HouseholdPurse.Length).First(h => led.Balance(k.State.Economy.HouseholdPurse[h]).Mites >= 100);
+        Assert.True(led.Transfer(k.State.Economy.HouseholdPurse[rich], box, new Coin(100), TransferReason.Plunder));
+        var captorPurse = k.State.Economy.HouseholdPurse[k.State.Population.People.Household[5]]; long cap0 = led.Balance(captorPurse).Mites;
         var end = c.Take(p.Long.Id.Value, captor, k.Now * 3600L)!;
+        Assert.Equal(0, led.Balance(box).Mites); Assert.Equal(cap0 + 100, led.Balance(captorPurse).Mites);
         Assert.Equal(ShipEndKind.Taken, end.Kind); Assert.Equal(master, end.Master); Assert.Equal(captor, p.Long.Owner);
         Assert.Null(c.Take(p.Long.Id.Value, captor, 0));                                       // taken once
         Assert.Equal(massBefore, p.Long.Cargo.TotalMassG());                                   // the hold went with her

@@ -5,6 +5,7 @@ using Ravensguard.Sim.Burning;
 using Ravensguard.Sim.Combat.Aftermath;
 using Ravensguard.Sim.Core;
 using Ravensguard.Sim.Economy;
+using Ravensguard.Sim.Goods;
 using Ravensguard.Sim.Naval;
 using Ravensguard.Sim.People;
 using Ravensguard.Sim.People.Vital;
@@ -217,8 +218,9 @@ public sealed partial class ArmyWorld
             int h = hhs[(start + k) % hhs.Count];
             long got = TakeGrain(h, holds[n % holds.Count].Cargo, d.LootGrainKg);
             long coin = eco.HouseholdCoin(h).Mites * d.LootCoinPct / 100;
-            if (coin > 0 && eco.Ledger.Transfer(eco.HouseholdPurse[h], box, new Coin(coin), TransferReason.Plunder)) { raid.TakenCoin += coin; got++; }
-            if (got > 0) { raid.TakenG += got; n++; }
+            bool tookCoin = false;                                                                // P7R-14: coin is not grams, so it is a flag of its own and never added to TakenG
+            if (coin > 0 && eco.Ledger.Transfer(eco.HouseholdPurse[h], box, new Coin(coin), TransferReason.Plunder)) { raid.TakenCoin += coin; tookCoin = true; }
+            if (got > 0 || tookCoin) { raid.TakenG += got; n++; }
         }
         raid.Households = n;
         TakeCaptives(e, raid);
@@ -258,7 +260,7 @@ public sealed partial class ArmyWorld
             int at = DetRng.Range(W.Seed, raid.Id, (ulong)raid.Settlement, RngStreams.SeaRaidTies, (uint)(30 + k), 0, pool.Count);
             int row = pool[at]; pool.RemoveAt(at);
             var who = pt.IdOf(row);
-            caps.Capture(caps.Rules, CaptorKind.Slavers, who, false, captor, new PurseRef(PurseKind.Household, captor), sec, CaptiveRank.Levy, 0, PayerKind.None, [], [], (0, 0, 0, 0, 0), 0);
+            caps.Capture(caps.Rules, CaptorKind.Slavers, who, false, captor, new PurseRef(PurseKind.Chest, captor), sec, CaptiveRank.Levy, 0, PayerKind.None, [], [], (0, 0, 0, 0, 0), 0);
             raid.Captives.Add(who.Value);
         }
     }
@@ -311,13 +313,14 @@ public sealed partial class ArmyWorld
         {
             raid.State = RaidState.Caught; raid.EndHour = e.Hour;
             foreach (ulong s in raid.Ships) if (rides.Vehicles.Find(new EntityId(s)) is { } v) v.Water = Ravensguard.Sim.Carts.WaterState.Aground;
+            SeizeBox(raid);                                                                    // P7R-7: the ships lie on the sand with their holds, and the strongbox goes to the captor
             WriteRaid(e, raid, caught: true);
         }
         else
         {
             // push off: the afloat ships go out to sea, the men with them (they are no longer in the region)
             var st = Region.Settlements[raid.Settlement];
-            long vx = raid.BeachXmm - st.CenterX * 1000L, vy = raid.BeachYmm - st.CenterY * 1000L, len = Math.Max(1, (long)Math.Sqrt((double)vx * vx + (double)vy * vy));
+            long vx = raid.BeachXmm - st.CenterX * 1000L, vy = raid.BeachYmm - st.CenterY * 1000L, len = Math.Max(1, IntMath.Isqrt(vx * vx + vy * vy));
             int k = 0;
             foreach (ulong s in raid.Ships)
             {
@@ -327,12 +330,70 @@ public sealed partial class ArmyWorld
             foreach (ulong m in raid.Raiders.Concat(raid.Guards).OrderBy(x => x))
             {
                 int r = RowOf(m); if (r < 0 || pt.Status[r] != PersonStatus.Alive) continue;
-                pt.Status[r] = PersonStatus.Departed; W.Vital.Alive--; W.Vital.Emigrants++;
+                DepartRow(e, r);                                                               // P7R-6: through Demography.Depart (year counter, outbox count, continent link, offices)
             }
+            ExportLoot(raid);                                                                  // P7R-6: the loot leaves the region's books with the men
             raid.State = RaidState.Gone; raid.EndHour = e.Hour;
             WriteRaid(e, raid, caught: false);
         }
         sea.Ensure().Touch();
+    }
+
+    /// <summary>The ship that holds the raid's strongbox (the first ship with a vehicle row, as <see cref="Loot"/> chose it).</summary>
+    private PurseId RaidBox(SeaRaid raid)
+    {
+        var rides = Sea?.Rides(); if (rides == null || W.Economy == null) return default;
+        foreach (ulong s in raid.Ships) if (rides.Vehicles.Find(new EntityId(s)) != null) return W.Economy.Ledger.Open(PurseKind.Chest, new EntityId(s));
+        return default;
+    }
+
+    /// <summary>
+    /// P7R-6: raiders who push off take the plunder out of the region: the strongbox's coin is sunk as emigrated coin (credited to the continent link, or moved to the continent's treasury when there is none), and the grain in the hulls
+    /// leaves as exports the way an emigrant household's goods do. The region's coin and mass audits stay whole, and the continent tick sees the arrival.
+    /// </summary>
+    private void ExportLoot(SeaRaid raid)
+    {
+        var eco = W.Economy; var rides = Sea?.Rides(); if (eco == null || rides == null) return;
+        var link = W.Get<Ravensguard.Sim.Economy.Markets.ContinentLink>();
+        var box = RaidBox(raid);
+        if (box != default)
+        {
+            var bal = eco.Ledger.Balance(box);
+            if (bal.Mites > 0)
+            {
+                if (link != null) { if (eco.Ledger.Sink(box, bal, SinkReason.Emigrate)) link.Mine.EmigrantCoin += bal.Mites; }
+                else eco.Ledger.Transfer(box, eco.Ledger.Open(PurseKind.Treasury, Demography.ContinentOwner), bal, TransferReason.Gift);
+            }
+        }
+        var chest = link == null ? eco.OpenStore(StoreKind.Chest, Demography.ContinentOwner, 0, 0, enforce: false) : null;
+        foreach (ulong sid in raid.Ships.OrderBy(x => x))
+        {
+            if (rides.Vehicles.Find(new EntityId(sid)) is not { } v) continue;
+            long grainG = 0;
+            foreach (var (g, q) in v.Cargo.Rows().ToList())
+            {
+                if (!eco.Food.IsGrain(g)) continue;
+                if (link != null)
+                {
+                    var rl = link.Mine; long m = eco.Goods.MassG(g, q); grainG += m;
+                    int tk = Array.IndexOf(Ravensguard.Sim.Continental.ContinentRules.TrackedGoods, eco.Goods.StringId(g)); if (tk >= 0) rl.EmigrantG[tk] += m;
+                    v.Cargo.Destroy(g, q, DestroyReason.Export);
+                }
+                else Store.Move(v.Cargo, chest!, g, q);
+            }
+            if (link != null) link.Mine.EmigrantMeasures += grainG * Ravensguard.Sim.Continental.ContinentRules.MeasuresPerKgX1000 / 1_000_000;
+        }
+    }
+
+    /// <summary>P7R-7: a caught raid's strongbox goes to the captor's purse (the treasury of the fief the beach lies in, else the continent's), as plunder.</summary>
+    private void SeizeBox(SeaRaid raid)
+    {
+        var eco = W.Economy; if (eco == null) return;
+        var box = RaidBox(raid); if (box == default) return;
+        var bal = eco.Ledger.Balance(box); if (bal.Mites <= 0) return;
+        int fi = Region.Settlements[raid.Settlement].FiefIndex;
+        var to = eco.Ledger.Open(PurseKind.Treasury, fi >= 0 && fi < Region.Fiefs.Count ? Region.Fiefs[fi].Id : Demography.ContinentOwner);
+        eco.Ledger.Transfer(box, to, bal, TransferReason.Plunder);
     }
 
     /// <summary>The warband against the raiders on the beach: a transient band of the raiders (the Phase 7 band fight, abstract); the raiders' dead are counted off the raid.</summary>

@@ -1,6 +1,7 @@
 using Ravensguard.Sim.Animals;
 using Ravensguard.Sim.Carts;
 using Ravensguard.Sim.Core;
+using Ravensguard.Sim.Economy;
 using Ravensguard.Sim.Siege;
 
 namespace Ravensguard.Sim.Naval;
@@ -341,11 +342,21 @@ public sealed class ShipCombat(RideBook rides, NavalBook book, ulong seed, ShipF
     /// A ship whose crew are all down, overboard, yielded or dead is taken (4.6 "Ending"): the captor's ship and cargo (the vehicle row and its store change hands; nothing is made or lost, the Phase 4 loot rule is only that goods move). Returns the end,
     /// or null if she is not afloat.
     /// </summary>
+    /// <summary>The ledger and the captor's purse (set by the army world); without them a prize changes owner but her strongbox stays where it is.</summary>
+    public Ledger? Led { get; set; }
+    public Func<EntityId, PurseId>? CaptorPurse { get; set; }
+
     public ShipEnd? Take(ulong ship, EntityId captor, long sec)
     {
         var v = Ship(ship); if (v == null) return null;
         var row = Row(ship); if (row.State != ShipState.Afloat || v.Water == WaterState.Sunk) return null;
         var master = v.Owner;
+        // P7R-7: the strongbox changes hands with the ship (a plunder transfer into the captor's purse), else its coin would stay on a hull that is no longer the master's
+        if (Led != null && CaptorPurse != null)
+        {
+            var box = Led.Open(PurseKind.Chest, v.Id); var bal = Led.Balance(box);
+            if (bal.Mites > 0) Led.Transfer(box, CaptorPurse(captor), bal, TransferReason.Plunder);
+        }
         v.Owner = captor; row.State = ShipState.Taken; row.Captor = captor; Book.Touch();
         return new ShipEnd(ShipEndKind.Taken, ship, master, captor, "boarded", sec);
     }

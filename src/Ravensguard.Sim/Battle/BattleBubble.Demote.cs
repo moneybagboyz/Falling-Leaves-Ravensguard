@@ -55,7 +55,7 @@ public sealed partial class BattleBubble
         for (int i = 0; i < fighters.Count; i++)
         {
             var f = fighters[i]; var s = ab.Soldiers[i];
-            f.Book = s.Book;
+            f.Book = s.Book; f.Ammo = s.Ammo;
             switch (s.Status)
             {
                 case SoldierStatus.Dead: f.Act = FAct.Dead; dead1++; break;
@@ -66,6 +66,15 @@ public sealed partial class BattleBubble
             }
             if (s.Status != SoldierStatus.Active) f.Routing = false;
         }
+        // P7R-2: the abstract battle fought on clones, so the ledger still holds the pre-demotion books: the new ones replace them (a book with nothing in it leaves the ledger)
+        if (W.Ledger is { } led)
+            lock (led.Sync)
+                foreach (var f in fighters)
+                {
+                    ulong key = f.Kit.Person;
+                    if (key == 0 || !f.LedgerBook) continue;
+                    if (f.Book.Empty) led.Books.Remove(key); else led.Adopt(key, f.Book, W.GameSec);
+                }
         _converted = true;
         Converted = new EdgeConversion(fighters.Count, stand0, down0, dead0, stand1, down1, dead1, fled1, yield1, ab.Step, ab.Hash());
         Finish(truce: false);

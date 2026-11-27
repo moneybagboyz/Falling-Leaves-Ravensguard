@@ -93,9 +93,16 @@ public sealed partial class ArmyWorld
         foreach (var id in m.Outsiders.Keys)
         {
             int r = RowOf(id); if (r < 0 || pt.Status[r] != PersonStatus.Alive) continue;
-            pt.Status[r] = PersonStatus.Departed; W.Vital.Alive--; W.Vital.Emigrants++; n++;
+            DepartRow(e, r); n++;
         }
         m.InRegion = false;
         return n;
+    }
+
+    /// <summary>P7R-6: a man who leaves the region leaves through <see cref="Ravensguard.Sim.People.Vital.Demography.Depart"/> (the year counter, the outbox count, the continent link's emigrants, his offices); only a world with no outbox falls back to the bare row change.</summary>
+    internal void DepartRow(ArmyEnv e, int r)
+    {
+        if (e.Ob != null) { Ravensguard.Sim.People.Vital.Demography.Depart(W, r, new GameTime(e.Hour * 3600), e.Ob); return; }
+        People.Status[r] = PersonStatus.Departed; W.Vital.Alive--; W.Vital.Emigrants++;
     }
 }

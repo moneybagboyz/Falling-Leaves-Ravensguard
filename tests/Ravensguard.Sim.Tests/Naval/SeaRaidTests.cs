@@ -206,11 +206,13 @@ public class SeaRaidTests(ITestOutputHelper output)
         Assert.True(raid.Defender >= 0 && raid.FightHour > raid.LootHour);
 
         // the withdrawal: they break off as the riders come, and are met on the beach
+        var link = k.R.Sim.Get<Ravensguard.Sim.Economy.Markets.ContinentLink>();
+        long emCoin0 = link?.Mine.EmigrantCoin ?? 0, emPers0 = link?.Mine.EmigrantPersons ?? 0, left0 = link?.Mine.TotalLeft ?? 0, sunk0 = ledger.Sunk(SinkReason.Emigrate).Mites, emig0 = k.Aw.W.Vital.Emigrants, coin0 = ledger.Audit().InPurses.Mites;
         for (long h = landHour + 2; h <= landHour + 12 && !raid.Over; h++) k.To(h);
         Assert.True(raid.Over, "the raid ends within the day");
         output.WriteLine($"end {raid.State} at +{raid.EndHour - landHour}h; fought {raid.Fought}; raiders left {raid.Raiders.Count}, dead {raid.Dead}");
         Assert.True(raid.Fought, "the warband reached the beach before the ships pushed off");
-        Assert.True(econ.MassAuditHolds()); Assert.Equal(raid.TakenCoin, ledger.Balance(box).Mites);
+        Assert.True(econ.MassAuditHolds()); Assert.Equal(0, ledger.Balance(box).Mites);                 // P7R-6/7: the strongbox is emptied either way
         var entry = k.Entries("sea_raid").Single();
         Assert.Contains(entry.Causes, c => c.Kind == CauseKind.War && c.EventId == decl);
         Assert.Equal(entry.Id.Value, raid.Entry);
@@ -219,9 +221,16 @@ public class SeaRaidTests(ITestOutputHelper output)
             var caught = k.Entries("raiders_caught").Single(); Assert.Contains(caught.Causes, c => c.EventId == entry.Id);
             Assert.All(raid.Ships, s => Assert.Equal(Ravensguard.Sim.Carts.WaterState.Aground, rides.Vehicles.Find(new EntityId(s))!.Water));
             Assert.Empty(raid.Raiders);
+            Assert.Equal(coin0, ledger.Audit().InPurses.Mites);                                      // P7R-7: the box went to the captor, nothing left the books
         }
         else
         {
+            // P7R-6: the loot and the men left through the emigration paths: coin sunk as emigrated, the grain exported, the people ledger counted
+            int gone = raid.Raiders.Count + raid.Guards.Count;
+            Assert.Equal(raid.TakenCoin, ledger.Sunk(SinkReason.Emigrate).Mites - sunk0); Assert.Equal(coin0 - raid.TakenCoin, ledger.Audit().InPurses.Mites);
+            Assert.Equal(0, raid.Ships.Sum(s => rides.Vehicles.Find(new EntityId(s))!.Cargo.Rows().Where(r => econ.Food.IsGrain(r.Item1)).Sum(r => econ.Goods.MassG(r.Item1, r.Item2))));   // no plundered grain left in the hulls
+            Assert.Equal(gone, k.Aw.W.Vital.Emigrants - emig0);
+            if (link != null) { Assert.Equal(raid.TakenCoin, link.Mine.EmigrantCoin - emCoin0); Assert.Equal(gone, link.Mine.EmigrantPersons - emPers0); Assert.Equal(gone, link.Mine.TotalLeft - left0); }
             Assert.Equal(RaidState.Gone, raid.State); Assert.Empty(k.Entries("raiders_caught"));
             Assert.All(raid.Ships, s => Assert.Equal(Ravensguard.Sim.Carts.WaterState.Afloat, rides.Vehicles.Find(new EntityId(s))!.Water));
             Assert.All(raid.Raiders.Concat(raid.Guards), m => Assert.Equal(PersonStatus.Departed, pt.Status[pt.IndexOf(new EntityId(m))]));
@@ -273,6 +282,10 @@ public class SeaRaidTests(ITestOutputHelper output)
         output.WriteLine($"{raid.State}: fought {raid.Fought}, raiders left {raid.Raiders.Count}, dead {raid.Dead}, guards {raid.Guards.Count}");
         Assert.True(raid.Fought);
         Assert.Equal(RaidState.Caught, raid.State); Assert.Empty(raid.Raiders);
+        // P7R-7: a caught raid's strongbox is the captor's, not the beached ship's
+        var led = k.State.Economy!.Ledger; Assert.True(led.TryFind(PurseKind.Chest, new EntityId(raid.Ships[0]), out var box));
+        Assert.Equal(0, led.Balance(box).Mites); Assert.True(raid.TakenCoin > 0);
+        Assert.True(led.Balance(led.Open(PurseKind.Treasury, region.Fiefs[region.Settlements[village].FiefIndex].Id)).Mites >= raid.TakenCoin);
         Assert.All(raid.Ships, s => Assert.Equal(Ravensguard.Sim.Carts.WaterState.Aground, rides.Vehicles.Find(new EntityId(s))!.Water));
         var entry = k.Entries("sea_raid").Single(); var caught = k.Entries("raiders_caught").Single();
         Assert.Contains(caught.Causes, c => c.Kind == CauseKind.Raid && c.EventId == entry.Id);
