@@ -18,6 +18,7 @@ public partial class StreetView
     /// <summary>Dev: stages a hero-owned iron works with a crew and a few days' books, then opens the Ledger on the Industry tab.</summary>
     public void DebugIndustry()
     {
+        if (!Godot.OS.IsDebugBuild()) return;          // P7R-17: a dev verb, debug builds only (there is no dev-only source reason; Seed is the nearest)
         if (Runtime is not { } rt || _heroLink == null) { _router?.ShowToast(L.T("MAP_NONE")); return; }
         int day = (int)(HeroNow() / 86400); int town = Math.Max(0, HeroSettlement());
         string note = rt.AtBarrier(() =>

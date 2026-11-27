@@ -19,12 +19,18 @@ public sealed partial class HostSupply
             for (int pass = 0; pass < 8 && got < qty; pass++)          // a book sells a share of its stock at a time (the price-ratio cap): the quartermaster asks again while it yields
             {
                 long want = qty - got, quote = bk.QuoteBuy(good, Math.Min(want, bk.Goods[good].StockUnits)), lack = quote - _econ.Ledger.Balance(rt.Chest).Mites;
-                if (lack > 0)          // the realm pays for its siege train: what the chest lacks comes from the realm's treasury (a transfer; nothing is minted)
+                var source = PurseId.None; long before = _econ.Ledger.Balance(rt.Chest).Mites, moved = 0;
+                if (lack > 0)          // the realm pays for its siege train: what the chest lacks comes from the realm's treasury as a subsidy (a transfer; nothing is minted)
                 {
-                    var purse = RealmPurse(a.Realm); if (purse.IsNone) purse = rt.Treasury;
-                    if (!purse.IsNone && purse != rt.Chest) { long move = Math.Min(lack, _econ.Ledger.Balance(purse).Mites); if (move > 0) _econ.Ledger.Transfer(purse, rt.Chest, new Coin(move), TransferReason.Hoard); }
+                    source = RealmPurse(a.Realm); if (source.IsNone) source = rt.Treasury;
+                    if (!source.IsNone && source != rt.Chest) { long move = Math.Min(lack, _econ.Ledger.Balance(source).Mites); if (move > 0 && _econ.Ledger.Transfer(source, rt.Chest, new Coin(move), TransferReason.Subsidy)) moved = move; }
                 }
                 var t = bk.Buy(rt.Party, good, want, SupplyConfig.BuyMaxRatioPermille, day);
+                if (moved > 0)          // P7R-9: the buy is capped by the books' price ratio and may cost less than the quote: what of the subsidy was not spent goes back to where it came from
+                {
+                    long spent = before + moved - _econ.Ledger.Balance(rt.Chest).Mites, back = moved - Math.Max(0, spent - before);
+                    if (back > 0) _econ.Ledger.Transfer(rt.Chest, source, new Coin(back), TransferReason.Subsidy);
+                }
                 if (t.Qty <= 0) break;
                 got += Math.Min(t.Qty, want);
                 var c = _pop.Region.Settlements[bk.SettlementIndex]; long dx = c.CenterX - a.PlaceXM, dy = c.CenterY - a.PlaceYM;

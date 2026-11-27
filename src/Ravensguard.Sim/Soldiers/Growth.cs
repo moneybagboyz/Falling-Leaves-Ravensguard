@@ -29,13 +29,17 @@ public static class Growth
     /// One game day's drill of a weapon family: at most the rules' hours a day (2), each hour the rules' uses at difficulty 40 and cap 40 (35 for the shield). The row's drill hours count whole hours drilled.
     /// Returns the hours that counted.
     /// </summary>
+    private static readonly Dictionary<Skill, (string Use, string Name)> DrillNames = Enum.GetValues<Skill>().ToDictionary(k => k, k => ("drill_" + k, k.ToString()));
+    private static (string Use, string Name) Names(Skill f) => DrillNames.TryGetValue(f, out var n) ? n : ("drill_" + f, f.ToString());
+
     public static int Drill(SoldierWorld sw, ulong person, Skill family, int hours, int day)
     {
         var r = sw.Roles.Rules; int h = Math.Clamp(hours, 0, r.DrillHoursDay);
-        var use = new SkillUse("drill_" + family, family, r.DrillDx100, family == Skill.Shields ? r.DrillShieldCap : r.DrillCap);
+        var (useName, famName) = Names(family);
+        var use = new SkillUse(useName, family, r.DrillDx100, family == Skill.Shields ? r.DrillShieldCap : r.DrillCap);
         for (int k = 0; k < h; k++)
             for (int u = 0; u < r.DrillUsesPerHour; u++) Progress.Use(sw.Book.Skills, Id(person), use, 40, (long)day * 86400 + (8 + k) * 3600);
-        if (h > 0 && sw.Book.Of(person) is { } row) { row.DrillHours.TryGetValue(family.ToString(), out int n); row.DrillHours[family.ToString()] = n + h; }
+        if (h > 0 && sw.Book.Of(person) is { } row) { row.DrillHours.TryGetValue(famName, out int n); row.DrillHours[famName] = n + h; }
         return h;
     }
 

@@ -1,3 +1,4 @@
+using Ravensguard.Sim.Armies;
 using Ravensguard.Content;
 using Ravensguard.Sim.Contracts;
 using Ravensguard.Sim.Core;
@@ -80,6 +81,14 @@ public static class SoldierTick
         _ => Skill.None,
     };
 
+    private static HashSet<ulong>? AwayMen(ArmyBook b)
+    {
+        var set = new HashSet<ulong>();
+        foreach (var wb in b.Warbands.Values) foreach (var m in wb.Members) set.Add(m);
+        foreach (var h in b.Hosts.Values) foreach (var c in h.Companies) foreach (var m in c.Men) set.Add(m);
+        return set.Count == 0 ? null : set;
+    }
+
     public static void OnDay(Save.WorldState st, ContractWorld w, ContractBook book, int day)
     {
         if (st.Content == null || st.Economy == null) return;
@@ -91,12 +100,20 @@ public static class SoldierTick
         if (st.Soldiers is not { IsEmpty: false }) return;
         var sw = SoldierWiring.For(st, st.Content);
         var chron = RuleChron.Of(st.Chronicle, st.Ids);
-        foreach (var r in sw.Book.Rows.Values.Where(r => r.Lord >= 0).ToList())          // drill: hours of the day, no coin
-            if (FamilyOf(r.Role) is var f && f != Skill.None) Growth.Drill(sw, r.Person, f, sw.Roles.Rules.DrillHoursDay, day);
-        foreach (long lord in sw.Book.Rows.Values.Where(r => r.Lord >= 0).Select(r => r.Lord).Distinct().OrderBy(l => l).ToList())
+        var byLord = new SortedDictionary<long, List<SoldierRow>>();          // P7R-13: the lords' men grouped once, in person order
+        foreach (var r in sw.Book.Rows.Values)
+        {
+            if (r.Lord < 0) continue;
+            if (FamilyOf(r.Role) is var f && f != Skill.None) Growth.Drill(sw, r.Person, f, sw.Roles.Rules.DrillHoursDay, day);          // drill: hours of the day, no coin
+            if (!byLord.TryGetValue(r.Lord, out var list)) byLord[r.Lord] = list = [];
+            list.Add(r);
+        }
+        var away = st.Armies is { } ab ? AwayMen(ab) : null;          // P7R-1: the men of a warband or a host are paid by the armies' own day (warbands, the host's chest)
+        Func<ulong, bool>? skip = away == null ? null : away.Contains;
+        foreach (var (lord, rows) in byLord)
         {
             var purse = sw.PurseOf((ulong)lord);
-            WageRoll.PayDay(sw, lord, purse, w.Ledger);
+            WageRoll.PayDay(sw, lord, purse, w.Ledger, skip, rows);
             if (lord != 0 && Promotions.IsSeasonStart(day))
             {
                 Promotions.Offer(sw, lord, day);

@@ -199,8 +199,7 @@ public static class ArmyWiring
     {
         if (state.Rule == null || state.Economy == null) return null;                       // no fiefs, no lords, no warbands
         var book = state.Armies ??= new ArmyBook();
-        SoldierWorld? sw = null;
-        try { sw = SoldierWiring.For(state, content); } catch (InvalidOperationException) { }
+        var sw = SoldierWiring.For(state, content);
         var aw = new ArmyWorld(home.Sim, book, content, sw)
         {
             IsHero = id => state.Party != null && state.Party.Hero.Value == id,

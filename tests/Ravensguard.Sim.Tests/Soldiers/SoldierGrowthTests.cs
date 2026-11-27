@@ -192,8 +192,9 @@ public class SoldierGrowthTests(ITestOutputHelper output)
         var econ = EconFixture.NewEconomy(); var led = econ.Ledger;
         var from = PurseId.None;
         var sw = new SoldierWorld(new SoldierBook(), Db, econ, new WorksBook(), Db.All<LargeBuildingRulesDef>().First(), new NoFit(), () => null);
-        // the soldiers have no household in this bare world, so each wage is arrears: nothing is minted
+        // the lord has no purse, so each wage is arrears: nothing is minted
         ulong a = P(1); sw.Book.Rows[a] = new SoldierRow { Person = a, Role = "spearman", Lord = 0 };
+        sw.PurseHook = p => p == a ? led.Open(PurseKind.Person, new EntityId(a)) : null;          // P7R-8: a man with no purse is owed nothing, so he has one here
         long before = led.Audit().IsConserved ? 1 : 0;
         Assert.Equal(0, WageRoll.PayDay(sw, 0, from, led));
         Assert.Equal(250, sw.Book.Of(a)!.ArrearsMites); Assert.Equal(1, before); Assert.True(led.Audit().IsConserved);

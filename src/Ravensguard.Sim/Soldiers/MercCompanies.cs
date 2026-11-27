@@ -233,7 +233,7 @@ public static class MercCompanies
     {
         var posted = c.ContractId >= 0 && book.Get(c.ContractId) is { } k ? new EntityId(k.PostedEntry) : (EntityId?)null;
         // an enemy's better offer: once, with reputation below 300 (stream 0x7B2, key company and day)
-        if (!c.Turned && c.Reputation < TurnReputationBelow && hooks.RivalOffer?.Invoke(c) is { } offer && offer.Lord >= 0 && offer.Lord != c.Employer
+        if (!c.Turned && c.Reputation < TurnReputationBelow && hooks.RivalOffer?.Invoke(c) is { } offer && offer.Lord >= 0 && offer.Purse >= 0 && offer.Lord != c.Employer
             && DetRng.Range(w.Seed, day, (ulong)c.Id, RngStreams.ChangingSides, 0, 0, 1000) < TurnPm)
         {
             long old = c.Employer; int oldContract = c.ContractId;

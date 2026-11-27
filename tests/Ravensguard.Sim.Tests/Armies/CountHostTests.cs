@@ -80,6 +80,21 @@ public class CountHostTests(FightFixture fx, ITestOutputHelper output)
     }
 
     [Fact]
+    public void P7R5_ATownAtPopZeroIsNotStormed_AndPeopleStayConserved()
+    {
+        var (st, ar, book) = Scenario(grainDays: 400);
+        for (int day = 0; day < 4 * TimeConst.DaysPerSeason; day++)
+        {
+            for (int i = 3; i < 6; i++) st.Summaries[i].Pop = 0;                   // the towns are empty every morning
+            var (before, _) = ar.Totals(st);
+            ar.Day(st, day);
+            Assert.Equal(before, ar.Totals(st).Item1);
+            for (int i = 3; i < 6; i++) Assert.True(st.Summaries[i].Pop >= 0);
+        }
+        Assert.Equal(0, book.Count.Ledger[CountLedger.Storms]);          // an empty town has no levy to storm
+    }
+
+    [Fact]
     public void AW11_TheSeasonIsDeterministic_AndTheBookSavesAndLoadsByteForByte()
     {
         ulong Run(out byte[] bytes)

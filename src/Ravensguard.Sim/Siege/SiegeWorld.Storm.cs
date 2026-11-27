@@ -51,7 +51,7 @@ public sealed partial class SiegeWorld
     private (bool Won, int LostA, int LostD) Resolve(ArmyEnv e, SiegeRow s, List<ulong> men, List<ulong> garrison, bool breach, bool walled)
     {
         long pa = (long)men.Count * SiegeConfig.AttackPower, pd = (long)garrison.Count * (!walled ? SiegeConfig.DefenceOpen : breach ? SiegeConfig.DefenceBreached : SiegeConfig.DefenceWalled);
-        bool won = pa > pd || garrison.Count == 0;
+        bool won = men.Count > 0 && (pa > pd || garrison.Count == 0);          // P7R-3: an emptied host storms nothing
         long share = pa + pd == 0 ? 0 : pd * 1000 / (pa + pd);
         int lostA = (int)Math.Min(men.Count / 4, men.Count * share / 4000 + (garrison.Count > 0 ? 1 : 0));
         int lostD = won ? (int)(garrison.Count * (1000 - share) / 2000) : garrison.Count / 10;
@@ -59,11 +59,17 @@ public sealed partial class SiegeWorld
         return (won, lostA, lostD);
     }
 
+    /// <summary>P7R-16: deaths go to the tick's outbox; a bare call (the live assault's end) drafts into its own and <see cref="Flush"/> writes it to the chronicle, so no death entry is dropped.</summary>
+    private RegionOutbox ObOf(ArmyEnv e) => e.Ob ?? new RegionOutbox(W.Ids);
+
+    private void Flush(ArmyEnv e, RegionOutbox ob) { if (e.Ob == null) ob.ApplyTo(W.Chronicle, null, new Dictionary<string, long>(StringComparer.Ordinal)); }
+
     private int Slay(ArmyEnv e, SiegeRow s, List<ulong> from, int n, ulong side)
     {
         if (n <= 0) return 0;
-        var pt = Armies.People; var ob = e.Ob ?? new RegionOutbox(W.Ids); var order = from.Where(m => !Hero(m)).OrderBy(m => DetRng.Next(W.Seed, e.Day, m, RngStreams.SiegeAiTies, (uint)(1000 + s.Id * 2 + (int)side))).ThenBy(m => m).Take(n).ToList(); int dead = 0;
+        var pt = Armies.People; var ob = ObOf(e); var order = from.Where(m => !Hero(m)).OrderBy(m => DetRng.Next(W.Seed, e.Day, m, RngStreams.SiegeAiTies, (uint)(1000 + s.Id * 2 + (int)side))).ThenBy(m => m).Take(n).ToList(); int dead = 0;
         foreach (ulong m in order) { int r = Armies.RowOf(m); if (r < 0 || pt.Status[r] != PersonStatus.Alive) continue; Demography.Kill(W, r, DeathCause.Violence, e.Time, ob, chain: OnSiege(s, "ch_note_sg_assault")); dead++; }
+        Flush(e, ob);
         return dead;
     }
 
@@ -94,7 +100,7 @@ public sealed partial class SiegeWorld
         var purse = hs.SoldiersPurse(hid); var bag = hs.BaggageOf(hid); var led = econ.Ledger; var cat = econ.Goods;
         int cruel = DetRng.Range(W.Seed, e.Day, host.Commander, RngStreams.SackRolls, (uint)s.Id * 4, 0, 5);                   // 0 to 4 points of cruelty above the 1% floor
         int pm = SiegeConfig.SackKillMinPermille + cruel * SiegeConfig.SackKillSpanPermille / 4;
-        var garrison = new HashSet<ulong>(Garrison(s.Place)); var ob = e.Ob ?? new RegionOutbox(W.Ids);
+        var garrison = new HashSet<ulong>(Garrison(s.Place)); var ob = ObOf(e);
         long coin = 0, grams = 0; int burned = 0; var households = new List<int>();
         for (int h = 0; h < ht.Count; h++) if (ht.MemberCount[h] > 0 && ht.Settlement[h] == s.Place) households.Add(h);
         var causeOf = OnSiege(s, "ch_note_sg_sacked"); causeOf = causeOf with { EventId = stormed };
@@ -117,6 +123,7 @@ public sealed partial class SiegeWorld
             if (DetRng.Range(W.Seed, e.Day, pt.IdOf(r).Value, RngStreams.SackRolls, (uint)s.Id * 4 + 2, 0, 1000) >= pm) continue;
             Demography.Kill(W, r, DeathCause.Violence, e.Time, ob, chain: causeOf); dead++;
         }
+        Flush(e, ob);
         s.SackDead = dead; s.Burned = burned; s.PlunderMites += coin; s.PlunderG += grams;
         var sacked = Chron(e, "town_sacked", "ch_sg_sacked", [ChronParam.Place("place", PlaceId(s.Place)), ChronParam.Count("dead", dead), ChronParam.Count("burned", burned), ChronParam.Count("taken", 0), ChronParam.Mites("coin", coin)], [PlaceId(s.Place)], causeOf);
         if (ub != null) foreach (int h in households) if (ht.MemberCount[h] > 0) ub.Add(ht.IdOf(h).Value, "sacked", (int)e.Day, sacked.Value);

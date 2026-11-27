@@ -168,6 +168,16 @@ public sealed class ContinentArmies : IContinentArmies
 
     // ------------------------------------------------------------------ the march
 
+    private ContinentState? _distFor; private readonly Dictionary<int, int[]> _dist = [];
+
+    /// <summary>P7R-13: the graph's edges do not change, so one breadth-first pass per objective serves every host marching to it.</summary>
+    private int[] DistancesCached(ContinentState st, int target)
+    {
+        if (!ReferenceEquals(_distFor, st)) { _dist.Clear(); _distFor = st; }
+        if (!_dist.TryGetValue(target, out var d)) _dist[target] = d = DistancesFrom(st, target);
+        return d;
+    }
+
     private static int[] DistancesFrom(ContinentState st, int target)
     {
         var dist = new int[st.Summaries.Length]; Array.Fill(dist, int.MaxValue);
@@ -192,7 +202,7 @@ public sealed class ContinentArmies : IContinentArmies
             return;
         }
         if (h.Region < 0 || h.Objective < 0 || h.Region == h.Objective || h.State == CountState.Besieging) return;
-        var dist = DistancesFrom(st, h.Objective);
+        var dist = DistancesCached(st, h.Objective);
         if (dist[h.Region] == int.MaxValue) return;
         int bestEdge = -1, bestRegion = -1;
         foreach (int ei in st.EdgesOf[h.Region])
@@ -254,7 +264,7 @@ public sealed class ContinentArmies : IContinentArmies
         r.StockG[0] -= eat; led[CountLedger.SiegeEaten] += eat;
         if (r.StockG[0] <= 0) { Fall(st, h, r, day); return; }
         int levy = (int)((long)r.Pop * CountRules.LevyPm / 1000);
-        if (h.SiegeDays >= CountRules.StormAfterDays && (long)h.Total * 10 >= (long)levy * CountRules.StormRatioX10) Storm(st, h, r, levy, day, seed);
+        if (levy > 0 && h.SiegeDays >= CountRules.StormAfterDays && (long)h.Total * 10 >= (long)levy * CountRules.StormRatioX10) Storm(st, h, r, levy, day, seed);
     }
 
     private void Storm(ContinentState st, CountHost h, RegionSummary r, int levy, int day, ulong seed)
@@ -268,7 +278,7 @@ public sealed class ContinentArmies : IContinentArmies
         st.Summaries[h.Home].Pop += crip + rec + fled + capt;                  // the hurt, the runaways and the men the town let go go home
         led[CountLedger.MenCaptured] += capt;
         int townDead = res.DeadOf(1);
-        r.Pop = Math.Max(0, r.Pop - townDead); led[CountLedger.MenDead] += townDead;      // the town's dead are men of its households; its hurt stay in it
+        int townLoss = Math.Min(townDead, r.Pop); r.Pop -= townLoss; led[CountLedger.MenDead] += townLoss;      // the town's dead are men of its households; its hurt stay in it
         led[CountLedger.Battles]++;
         int own = dead + crip + rec, theirs = townDead + res.CrippledOf(1) + res.Total(res.Recovering, 1);
         ScoreEvent(h, WarEventKind.FieldBattle, Math.Min(CountRules.BattleMaxPoints, theirs * 100 / Math.Max(1, levy) / 2), theirs, own, h.Region, day);

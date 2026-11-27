@@ -1,6 +1,7 @@
 using Ravensguard.Sim.Combat.Aftermath;
 using Ravensguard.Sim.Core;
 using Ravensguard.Sim.Economy;
+using Ravensguard.Sim.People;
 using Ravensguard.Sim.Rule;
 
 namespace Ravensguard.Sim.Soldiers;
@@ -147,6 +148,7 @@ public static class PrisonerPens
         var l = sw.Econ.Ledger;
         foreach (var row in sw.Book.Prisoners.Values.ToList())
         {
+            if (Gone(sw, row.Person)) { sw.Book.Prisoners.Remove(row.Person); continue; }          // P7R-10: a dead or departed man is nobody's ransom
             if (row.ParoleUntil >= 0)
             {
                 if (day < row.ParoleUntil - 1) continue;
@@ -177,9 +179,17 @@ public static class PrisonerPens
         }
     }
 
+    /// <summary>Whether the prisoner is known to be dead or gone (a table that does not know him says nothing).</summary>
+    private static bool Gone(SoldierWorld sw, ulong person)
+    {
+        var t = sw.People(); int i = t?.IndexOf(new EntityId(person)) ?? -1;
+        return i >= 0 && t!.Status[i] is PersonStatus.Dead or PersonStatus.Departed;
+    }
+
     private static bool PayRansom(SoldierWorld sw, PrisonerRow row, PurseId payer, long ask)
     {
         var l = sw.Econ.Ledger;
+        if (!(row.Company >= 0 && sw.Book.Companies.ContainsKey(row.Company)) && row.CaptorPurse >= 0 && row.CaptorPurse == row.PayerPurse) return true;          // P7R-10: the captor is the payer: the debt settles with no coin moved
         if (l.Balance(payer).Mites < ask) return false;
         if (row.Company >= 0 && sw.Book.Companies.TryGetValue(row.Company, out var c)) return MercCompanies.ShareRansom(l, c, payer, ask) > 0;
         return row.CaptorPurse >= 0 && new PurseId(row.CaptorPurse) != payer && l.Transfer(payer, new PurseId(row.CaptorPurse), new Coin(ask), AftermathCoin.Ransom);

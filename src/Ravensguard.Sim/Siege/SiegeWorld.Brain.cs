@@ -78,6 +78,7 @@ public sealed partial class SiegeWorld
         var hs = Hs; if (hs == null) return;
         int day = (int)e.Day; var hid = new HostId(s.Supply);
         if (!Armies.Book.Hosts.TryGetValue(s.Host, out var host) || host.State == HostState.Disbanding || !hs.Exists(hid)) { Lift(e, s, "ch_note_sg_supply"); return; }
+        if (s.State == SiegeState.Assault && Besiegers(s).Count == 0) { Lift(e, s, "ch_note_sg_supply"); return; }          // P7R-3: no men, no assault
         if (s.State == SiegeState.Assault) { TickLive(e, s); if (s.State == SiegeState.Assault) return; }
         var men = Besiegers(s);
         if (s.State == SiegeState.Investing && day - s.StartDay >= SiegeConfig.LinesDays) { s.State = SiegeState.Blockade; hs.SiegeBlockade(s.Place, true, hid); }
@@ -285,13 +286,14 @@ public sealed partial class SiegeWorld
     private void Winter(ArmyEnv e, SiegeRow s, List<ulong> men, HostSupply hs, HostId hid)
     {
         var res = hs.Last(hid); if (res == null || res.ShortG[(int)SupplyNeed.Firewood] <= 0) return;
-        var pt = Armies.People; var ob = e.Ob ?? new RegionOutbox(W.Ids); int dead = 0;
+        var pt = Armies.People; var ob = ObOf(e); int dead = 0;
         foreach (ulong m in men)
         {
             int r = Armies.RowOf(m); if (r < 0 || pt.Status[r] != PersonStatus.Alive || Hero(m)) continue;
             if (DetRng.Range(W.Seed, e.Day, m, RngStreams.SiegeAiTies, (uint)s.Id, 0, 1000) >= SiegeConfig.ExposurePm) continue;
             Demography.Kill(W, r, DeathCause.Cold, e.Time, ob, chain: OnSiege(s, "ch_note_sg_cold")); dead++;
         }
+        Flush(e, ob);
         s.LostAttackers += dead;
     }
 }
