@@ -366,6 +366,12 @@ public sealed partial class FightWorld
         int nx = (int)(r.X + mx), ny = (int)(r.Y + my);
         if (L.Fallen.Count > 0) FallenAhead(m, r, h, ref nx, ref ny, (int)mx, (int)my);               // [P7 CV-B] a horse lying down in the way: jump it, fall, or go round
         if (L.Tuning.Footing[(int)tr.At(nx, ny)].Forbidden) { nx = r.X; ny = r.Y; m.Speed = 0; }       // stairs and ladders: horses do not take portals
+        if (Fort != null && (nx != r.X || ny != r.Y))                                                 // [P8 LW-3] a fort's boards stop a horse as they stop a man
+        {
+            var (sx, sy) = WallSlide(r, nx - r.X, ny - r.Y);
+            if (sx == 0 && sy == 0) m.Speed = 0;
+            nx = r.X + sx; ny = r.Y + sy;
+        }
         int moved = (int)FightMath.Len(nx - r.X, ny - r.Y);
         r.X = nx; r.Y = ny; r.LastMoveMm = moved;
         h.X = nx; h.Y = ny; h.FX = m.HX; h.FY = m.HY; h.LastMoveMm = moved;
@@ -485,7 +491,9 @@ public sealed partial class FightWorld
             var h = Fighters[m.Horse];
             if (m.Mounted || h.Act != FAct.Fled || m.LeftAt < 0 || Tick - m.LeftAt > 60) continue;
             int step = m.Gaits.TrotMmps / 20;                                                                // a riderless horse runs off
-            h.X += (int)((long)m.RunX * step >> 10); h.Y += (int)((long)m.RunY * step >> 10);
+            int rx = (int)((long)m.RunX * step >> 10), ry = (int)((long)m.RunY * step >> 10);
+            if (Fort != null) (rx, ry) = WallSlide(h, rx, ry);                                                 // [P8 LW-3] a loose horse does not run through the boards either
+            h.X += rx; h.Y += ry;
         }
         foreach (int i in _slipped) { var m = L.Pairs[i]; if (m.Mounted) { var h = Fighters[m.Horse]; Unseat(m, Fighters[m.Rider], h, -1, fall: true, 3); if (h.Act is not (FAct.Dead or FAct.Down)) GoDown(h); } }
         _slipped.Clear();
@@ -537,20 +545,24 @@ public sealed partial class FightWorld
         // [P7 CV-C] a stake row ahead is an obstacle of its own: the nearest of the bearer and the first stake cell in the path; stake cells in the arc add to the refusal
         int sx = 0, sy = 0; long sd = long.MaxValue;
         if (L.Terrain.Cells != null && L.Terrain.Cells.FirstAlong(Footing.Stakes, h.X, h.Y, m.HX, m.HY, R.RollAtMm, out sx, out sy)) sd = FightMath.Len(sx - h.X, sy - h.Y);
-        bool byStake = sd < nd;
-        if (near == null && !byStake) { m.RefusalFor = -1; return; }
-        int rollFor = byStake ? -2 - ((sy - L.Terrain.Cells!.Oy) / FootingCells.CellMm * L.Terrain.Cells.W + (sx - L.Terrain.Cells.Ox) / FootingCells.CellMm) : near!.Id;
-        long rd = byStake ? sd : nd;
+        // [P8 LW-3] a fort's board or a cheval de frise ahead is the third thing a horse refuses: the standing boards in the arc count as braced polearms
+        long fd = long.MaxValue; int fx = 0, fy = 0, fn = 0;
+        if (Fort != null) { int fa = Fort.Ahead(r.Team, h.X, h.Y, m.HX, m.HY, R.RollAtMm, out fx, out fy, out fn); if (fa >= 0) fd = fa; }
+        bool byStake = sd < nd && sd <= fd;
+        bool byFort = !byStake && fd < nd;
+        if (near == null && !byStake && !byFort) { m.RefusalFor = -1; return; }
+        int rollFor = byFort ? -1_000_000 - ((fy >> 10) & 0x3FF) * 1024 - ((fx >> 10) & 0x3FF) : byStake ? -2 - ((sy - L.Terrain.Cells!.Oy) / FootingCells.CellMm * L.Terrain.Cells.W + (sx - L.Terrain.Cells.Ox) / FootingCells.CellMm) : near!.Id;
+        long rd = byFort ? fd : byStake ? sd : nd;
         if (rd > R.RollAtMm || m.RefusalFor == rollFor) return;
-        int n = near != null && !byStake ? BracedFacing(near, h, r.Team) : 0;
-        int stakes = L.Terrain.Cells != null ? L.Terrain.Cells.CountNear(Footing.Stakes, byStake ? sx : near!.X, byStake ? sy : near!.Y, R.ArcMm) : 0;
+        int n = byFort ? fn : near != null && !byStake ? BracedFacing(near, h, r.Team) : 0;
+        int stakes = byFort ? 0 : L.Terrain.Cells != null ? L.Terrain.Cells.CountNear(Footing.Stakes, byStake ? sx : near!.X, byStake ? sy : near!.Y, R.ArcMm) : 0;
         int p = ChargeMath.RefusalPm(n, m.TrainedPm, m.Riding, R.BasePm, R.PerBracedPolearmPm, R.TrainedK, R.TrainedRef, R.RidingK, R.MaxPm, L.Terrain.Thunderstorm ? L.D.StormRefusalPm : 1000, stakes * L.D.StakeRefusalPm);
         m.RefusalFor = rollFor;
         if (DetRng.Range(Seed, Tick, (ulong)(h.Id + 1), RngStreams.HorsePanic, 0, 0, 1000) >= p) return;
         m.RefusedUntil = Tick + R.BalkTicks;
         long room = Math.Max(500, rd - R.StopAtMm);
         m.RefuseBrake = (int)Math.Min(m.Speed, (long)m.Speed * m.Speed / (2 * room) / 20 + 1);
-        Emit(FightEventKind.Balked, h.Id, byStake ? h.Id : near!.Id, -1, p);
+        Emit(FightEventKind.Balked, h.Id, byStake || byFort ? h.Id : near!.Id, -1, p);
         if (m.Speed > m.Gaits.TrotMmps + 300 && DetRng.Range(Seed, Tick, (ulong)(h.Id + 1), RngStreams.HorsePanic, 2, 0, 1000) < L.D.Unhorse.RefusalThrowPm)
             L.PendingUnseat.Add((r.Id, -1));
     }

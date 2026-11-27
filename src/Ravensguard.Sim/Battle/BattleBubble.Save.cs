@@ -8,7 +8,7 @@ namespace Ravensguard.Sim.Battle;
 public sealed partial class BattleBubble
 {
     /// <summary>Rebuilds an open bubble over a restored fight (the <c>fight</c> section restored first: its fighters, wounds and formation book): the box, the sides with reserves and waves, the people entering, the bookkeeping.</summary>
-    public static BattleBubble Restore(FightWorld w, BattleRecord r)
+    public static BattleBubble Restore(FightWorld w, BattleRecord r, Ravensguard.Sim.Animals.RideBook? rides = null)
     {
         var rules = FormationRules.For(w.Content.Db);
         var b = new BattleBubble
@@ -30,6 +30,11 @@ public sealed partial class BattleBubble
         w.LodCentre = r.State[4] != 0 ? ((int)r.State[5], (int)r.State[6]) : null;
         if (r.State.Length > 7) b.WaveUnderPm = (int)r.State[7];
         b.NamedCaptains.AddRange(r.NamedCaptains);
+        if (rides != null)                                                   // P8-LW-3: the fort and the chariots of the fight, over the ride book's vehicles
+        {
+            if (r.Fort is { Length: > 0 } fp) FortLayer.Unpack(w, rides, fp);
+            if (r.Chariots is { Length: > 0 } cp) ChariotLayer.Unpack(w, rides, cp);
+        }
         b.RecomputePaused();
         return b;
     }

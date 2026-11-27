@@ -220,6 +220,8 @@ public sealed partial class FightWorld
     {
         Tick++;
         _impacts.Clear();
+        if (Fort != null) Fort.Run();                               // [P8-LW-3] the ring forms, the sortie gap closes, the AI decides
+        if (Chariots != null) Chariots.Before();                    // [P8-LW-3] the cars drive and carry their crews
         if (Assault != null) Assault.Run();                         // [P7-SG-C] ladders, towers, murder holes and sallies hold and move their people before anyone moves
         if (Carriers != null) CarriersBefore();                     // [P7-SH-A] the ships move and carry their people (FightWorld.Carriers.cs)
         foreach (var f in Fighters) UpdateVitals(f);
@@ -232,6 +234,7 @@ public sealed partial class FightWorld
         Separate();
         RebuildGrid();                                              // BB-A: after separation (bodies pushed, a bearer shoved)
         if (Carriers != null) CarriersAfter();                      // [P7-SH-A] riders re-seated in their ship's frame; a man past the rail is overboard
+        if (Chariots != null) Chariots.After();                     // [P8-LW-3] the crews re-seated in their cars; the car's thrust and hooves
         foreach (var f in Fighters) UpdateBrace(f);
         if (_impacts.Count > 0)
         {
@@ -457,6 +460,7 @@ public sealed partial class FightWorld
         if (!sprint && Formations != null && f.FmRow >= 0) { int fp = Formations.PaceOf(f); if (fp > 0 && fp < speed) speed = fp; }      // [P7 BB-B] a formation member keeps the formation's step
         speed = (int)((long)speed * pm / 1000 * f.WalkPm / 1000);
         if (Walls is ILevelWalls lwf) speed = speed * lwf.FootingPm(f.Id) / 1000;       // [P7-SG-C] rubble slows the feet
+        if (Fort != null) speed = speed * FortFootPm(f) / 1000;                         // [P8-LW-3] a third across a cheval de frise
         if (f.Book.Weakened) speed = speed * 800 / 1000;
         speed = WeatherSpeed(speed);                                       // [P4 close-out] weather hook (FightWorld.Weather.cs)
         int perTick = speed / 20;
@@ -739,6 +743,8 @@ public sealed partial class FightWorld
         if (Formations != null) h = Formations.Hash(h);               // [P7 BB-B] the formation book joins the trail when there is one
         if (Carriers != null) h = Carriers.Hash(h);                 // [P7-SH-A] the ships, their riders and the swimmers join the trail
         if (Assault != null) h = Assault.Hash(h);                   // [P7-SG-C] the ladders, towers, holes and sallies join the trail
+        if (Fort != null) h = Fort.Hash(h);                         // [P8-LW-3] the fort, its sortie and the chevaux join the trail
+        if (Chariots != null) h = Chariots.Hash(h);                 // [P8-LW-3] the cars join the trail
         h = FightMath.Mix(h, _engageTick);              // P4-D hook: the walk-away clock
         return h;
     }

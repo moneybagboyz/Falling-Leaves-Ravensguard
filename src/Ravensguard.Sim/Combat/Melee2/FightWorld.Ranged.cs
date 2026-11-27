@@ -130,6 +130,7 @@ public sealed partial class FightWorld
         if (t != null) { tx = t.X; ty = t.Y; tz = f.Req.Part >= 0 && f.Req.Part < t.Plan.Parts.Length ? PartHeightMm(t.Plan.Parts[f.Req.Part]) : K.AimHeightMm; }
         else { tx = f.X + f.FX * 30; ty = f.Y + f.FY * 30; tz = K.AimHeightMm; }
         int sigma = AimSigmaMdeg(f.ArcherySkill, early, aimed, f.LastMoveMm * 20 > K.MoveCancelMmps, f.OneEye);
+        if (Chariots != null) sigma = Chariots.ShotSigma(f, sigma);                          // [P8-LW-3] a chariot archer's spread doubles above 3 m/s
         if (Mounts != null) sigma = MountedSigma(f, sigma);                                  // [P7 CV-B] a rider's shot: the mounted aim penalty widens the cone
         int power = l.MinStrength > 0 ? (int)Math.Min(l.PowerPm, (long)l.PowerPm * f.Kit.Strength * f.StrengthPm / 1000 / l.MinStrength) : l.PowerPm;
         int lvRange = l.RangeMaxM * 1000;

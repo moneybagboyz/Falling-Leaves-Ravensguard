@@ -446,6 +446,7 @@ public sealed partial class FormationBook
             if (b.Team != e.Side || !b.Active || !FightWorld.CanBrace(b) || w.DistMm(b, near) > R.ArcMm) continue;
             if (b.Act == FAct.Bracing || b.Act is FAct.Idle or FAct.Block) n++;
         }
+        if (w.Fort is { } fl && fl.Team == e.Side) n += fl.BracedNear(near.X, near.Y);                      // [P8 LW-3] the fort's boards and chevaux in front of the formation
         int p = ChargeMath.RefusalPm(n, trainedPm, riding, R.BasePm, R.PerBracedPolearmPm, R.TrainedK, R.TrainedRef, R.RidingK, R.MaxPm, 1000, w.Mounts.Terrain.Cells?.CountNear(Combat.Mounted.Footing.Stakes, near.X, near.Y, R.ArcMm) * w.Mounts.D.StakeRefusalPm ?? 0);
         if (e.Shape is Formation.ShieldWall or Formation.Schiltron && e.Cohesion >= Rules.R.CohesionMinPm) p += 300;
         return p;

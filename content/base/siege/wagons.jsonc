@@ -2,9 +2,10 @@
 // A chariot is fast on dry open ground (road 10 m/s, field 8.5), forbidden in woods, 1 m/s in mud, x0.4 over ploughed or rough ground, and a car that meets a ditch or stakes at speed crashes.
 [
   { "type": "wagon_rules", "id": "wagon_rules", "template": "war_wagon", "gap_mm": 1000, "drive_mmps": 1500, "drive_base_pm": 800, "drive_per_riding_pm": 4, "unhitch_s": 30, "chain_s": 20, "chain_men": 2,
-    "cut_s": 30, "cut_men": 1, "slit_cover_pm": 800, "arc_mm": 6000, "max_braced": 6, "min_wagons": 4 },
+    "cut_s": 30, "cut_men": 1, "slit_cover_pm": 800, "arc_mm": 6000, "max_braced": 6, "min_wagons": 4,
+    "sortie_open_s": 20, "sortie_enemy_mm": 4000, "ai_wagons": 6, "ai_horse_pm": 300, "ai_horse_mm": 2000000, "cheval_kg": 40, "cheval_men": 2, "cheval_len_mm": 2000, "cheval_braced": 4, "cheval_foot_pm": 333 },
   { "type": "chariot_rules", "id": "chariot_rules", "template": "war_chariot", "charge_k": 10, "transfer_pm": 300, "horse_kg": 450, "crew_kg": 80, "trample_k": 8, "top_mmps": 10000, "accel_mmps": 2000, "brake_mmps": 4000,
-    "turn_from_mmps": 4000, "turn_deg_per_s": 45, "fall_height_mm": 1000, "crash_min_mmps": 3000, "trample_hit_pm": 500,
+    "turn_from_mmps": 4000, "turn_deg_per_s": 45, "fall_height_mm": 1000, "crash_min_mmps": 3000, "trample_hit_pm": 500, "archer_sigma_pm": 2000, "archer_moving_mmps": 3000, "ai_look_mm": 12000, "ai_reach_mm": 2000,
     "ground": {
       "road":  { "speed_pm": 1000 },
       "field": { "speed_pm": 850 },

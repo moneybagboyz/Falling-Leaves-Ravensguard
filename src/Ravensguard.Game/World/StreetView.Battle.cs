@@ -50,7 +50,7 @@ public partial class StreetView
         var ledger = rt.State.Wounds ?? _world.Wounds;
         if (ledger == null) { ledger = new Ravensguard.Sim.Combat.Wounds.WoundLedger(rt.State.Seed, _world.Clock.Now.Seconds); _world.AttachWounds(ledger); }
         var fight = rec.Restore(fc, ledger);
-        var bubble = BattleBubble.Restore(fight, br);
+        var bubble = BattleBubble.Restore(fight, br, rt.State.Mounts);
         ResumeAssault(rt, fight, bubble);                                       // P8-LW-1: a save made in a live assault takes its layer up again
         int hero = bubble.Hero;
         bubble.Chronicle = BattleChronicleToWorld();

@@ -60,6 +60,13 @@ public sealed partial class FightWorld
     {
         if (!t.Active) return 0;
         long milli = (long)massKg * AssaultMath.FallSpeedMmps(heightMm);          // kg x mm/s = milli kg m/s
+        return ImpactMilli(t, milli, key);
+    }
+
+    /// <summary>A blunt blow of <paramref name="milli"/> (milli kg m/s) through the one resolver on a head or shoulders drawn by weight: what a falling stone is, and what a car's thrust or hooves are (P8-LW-3). Returns the wounds made.</summary>
+    public int ImpactMilli(Fighter t, long milli, ulong key)
+    {
+        if (!t.Active) return 0;
         var w = Content.ImprovisedWeapon(Content.Improvised["rock"]);
         int attack = 0; var at = w.Attacks;
         for (int i = 0; i < at.Length; i++) if (at[i].Type == AttackType.Blunt) { attack = i; break; }

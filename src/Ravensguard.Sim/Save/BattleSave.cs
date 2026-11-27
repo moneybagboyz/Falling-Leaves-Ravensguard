@@ -48,6 +48,10 @@ public sealed class BattleRecord
     /// <summary>StartTick, ContactSeen, LastEngaged, Hero, then the AI level-of-detail centre (has, x, y).</summary>
     [Key(10)] public long[] State { get; set; } = [];
     [Key(11)] public int[] NamedCaptains { get; set; } = [];
+    /// <summary>P8-LW-3, optional (null while the fight has no fort): <see cref="FortLayer.Pack"/>. The wagons are the ride book's rows.</summary>
+    [Key(12)] public long[]? Fort { get; set; }
+    /// <summary>P8-LW-3, optional (null while the fight has no chariots): <see cref="ChariotLayer.Pack"/>.</summary>
+    [Key(13)] public long[]? Chariots { get; set; }
 
     public byte[] ToBytes() => SaveCodec.SerializeCompressed(this);
     public static BattleRecord FromBytes(byte[] b) => SaveCodec.DeserializeCompressed<BattleRecord>(b);
@@ -115,5 +119,6 @@ public sealed class BattleRecord
         })],
         State = [b.StartTick, b.ContactSeen ? 1 : 0, b.LastEngaged, b.Hero, b.W.LodCentre.HasValue ? 1 : 0, b.W.LodCentre?.X ?? 0, b.W.LodCentre?.Y ?? 0, .. (b.WaveUnderPm != 0 ? new long[] { b.WaveUnderPm } : [])],
         NamedCaptains = [.. b.NamedCaptains],
+        Fort = b.W.Fort?.Pack(), Chariots = b.W.Chariots?.Pack(),
     };
 }

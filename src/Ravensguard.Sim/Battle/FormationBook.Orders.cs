@@ -136,6 +136,7 @@ public sealed partial class FormationBook
                 }
             case OrderKind.Dismount: BeginDismountOrder(w, r, tick); return;      // [P7 CV-B] cavalry-and-mounted-war 4.5
             case OrderKind.Mount: BeginMountOrder(w, r, tick); return;
+            case OrderKind.Sortie: w.Fort?.Sortie(o.TargetX != 0 || o.TargetY != 0 ? o.TargetX : r.AnchorX, o.TargetX != 0 || o.TargetY != 0 ? o.TargetY : r.AnchorY); return;      // [P8 LW-3]
             case OrderKind.None: return;
         }
         if (o.Queued && r.Order.Kind is not (OrderKind.None or OrderKind.Hold))

@@ -22,5 +22,6 @@
   { "type": "battle_order", "id": "wheel", "momentary": true },
   { "type": "battle_order", "id": "dismount", "momentary": true },
   { "type": "battle_order", "id": "mount", "momentary": true },
-  { "type": "battle_order", "id": "wedge", "momentary": true }
+  { "type": "battle_order", "id": "wedge", "momentary": true },
+  { "type": "battle_order", "id": "sortie", "momentary": true }
 ]

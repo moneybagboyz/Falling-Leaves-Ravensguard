@@ -28,6 +28,20 @@ public sealed record WagonRulesDef : ContentDef
     public int MaxBraced { get; init; } = 6;
     /// <summary>A ring needs at least this many wagons.</summary>
     public int MinWagons { get; init; } = 4;
+    // ---- P8-LW-3 (live-war 3.3): the fort in a live battle ----
+    /// <summary>The sortie order opens one gap for this many game seconds, then closes it when no enemy stands within <see cref="SortieEnemyMm"/> of it.</summary>
+    public int SortieOpenS { get; init; } = 20;
+    public int SortieEnemyMm { get; init; } = 4000;
+    /// <summary>The AI forms a fort when its host has this many war wagons, the enemy's horse is this share (permille) of the enemy's strength and the nearest horseman is within <see cref="AiHorseMm"/>.</summary>
+    public int AiWagons { get; init; } = 6;
+    public int AiHorsePm { get; init; } = 300;
+    public int AiHorseMm { get; init; } = 2_000_000;
+    /// <summary>The cheval de frise: a timber defence of 40 kg, carried by 2 men, 2 m long. Horses refuse it as <see cref="ChevalBraced"/> braced polearms; a man crosses it at <see cref="ChevalFootPm"/> of his speed.</summary>
+    public int ChevalKg { get; init; } = 40;
+    public int ChevalMen { get; init; } = 2;
+    public int ChevalLenMm { get; init; } = 2000;
+    public int ChevalBraced { get; init; } = 4;
+    public int ChevalFootPm { get; init; } = 333;
 }
 
 /// <summary>One footing's say on a chariot (sieges-and-engines 4.9): the share of the wanted speed (permille), a cap in mm/s (0 none), whether it is forbidden, whether the car crashes on it at speed.</summary>
@@ -63,6 +77,13 @@ public sealed record ChariotRulesDef : ContentDef
     public int CrashMinMmps { get; init; } = 3000;
     /// <summary>Chance (permille) a trampling horse's hooves land on the man in its path.</summary>
     public int TrampleHitPm { get; init; } = 500;
+    // ---- P8-LW-3 (live-war 3.3): chariots in a live battle ----
+    /// <summary>A moving archer's spread is multiplied by this (permille) above <see cref="ArcherMovingMmps"/>.</summary>
+    public int ArcherSigmaPm { get; init; } = 2000;
+    public int ArcherMovingMmps { get; init; } = 3000;
+    /// <summary>The AI looks this far ahead (mm) for woods, ditch or stakes; a target this close is struck at the car's speed.</summary>
+    public int AiLookMm { get; init; } = 12_000;
+    public int AiReachMm { get; init; } = 2000;
     /// <summary>The ground by footing id (the cavalry spec's names); a footing not listed is open ground at full speed.</summary>
     public Dictionary<string, ChariotGroundDef> Ground { get; init; } = [];
 }

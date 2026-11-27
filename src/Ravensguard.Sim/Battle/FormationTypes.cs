@@ -15,6 +15,8 @@ public enum OrderKind : byte
     Dismount, Mount,
     /// <summary>P7-CV-A: a cavalry formation takes the wedge (a momentary shape order, like Line).</summary>
     Wedge,
+    /// <summary>P8-LW-3: a wagon fort's formation opens one gap for 20 s (live-war 3.3).</summary>
+    Sortie,
 }
 
 /// <summary>How an order reached its captain (4.5).</summary>

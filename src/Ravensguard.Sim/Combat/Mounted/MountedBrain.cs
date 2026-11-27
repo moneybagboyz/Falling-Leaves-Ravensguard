@@ -245,6 +245,7 @@ public static class MountedBrain
         var h = w.Fighters[m.Horse];
         int n = w.BracedFacing(t, h, r.Team, countReady: true);
         int stakes = L.Terrain.Cells?.CountNear(Footing.Stakes, t.X, t.Y, R.ArcMm) ?? 0;                      // [P7 CV-C] stake rows in front of the target
+        if (w.Fort is { } fl && fl.Team != r.Team) n += fl.BracedNear(t.X, t.Y);                              // [P8 LW-3] the fort's boards in front of the target count as braced polearms
         if (n == 0 && stakes == 0) return 0;
         return ChargeMath.RefusalPm(n, m.TrainedPm, m.Riding, R.BasePm, R.PerBracedPolearmPm, R.TrainedK, R.TrainedRef, R.RidingK, R.MaxPm, L.Terrain.Thunderstorm ? L.D.StormRefusalPm : 1000, stakes * L.D.StakeRefusalPm);
     }

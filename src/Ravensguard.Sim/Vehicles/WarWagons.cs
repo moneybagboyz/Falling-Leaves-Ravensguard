@@ -169,6 +169,13 @@ public sealed class WagonFort : IFightWalls
         c.State = ChainState.Unchaining; c.Left = Seconds(Rules.ChainS, Rules.ChainMen, men); return true;
     }
 
+    /// <summary>P8-LW-3: the live sortie order loosens a chain that stands at once (the fort's men have the pin in hand when the order arrives); the gap is open until <see cref="Close"/>. False when it is not up.</summary>
+    public bool OpenNow(int gap)
+    {
+        var c = Chains[gap]; if (c.State != ChainState.Chained) return false;
+        c.State = ChainState.Open; c.Left = 0; return true;
+    }
+
     /// <summary>Hangs the chain of a gap again after a sortie or a cut (20 seconds with two men); both hooks must still be on their wagons.</summary>
     public bool Close(int gap, int men = 2)
     {
