@@ -31,7 +31,7 @@ public sealed class HeroRecord
     public IReadOnlyList<HeroItem> Inventory { get; init; } = [];
     /// <summary>Crowns.</summary>
     public int Coin { get; set; }
-    public string AmbitionId { get; init; } = "";
+    public string AmbitionId { get; set; } = "";
     /// <summary>Index of the ambition step being worked on; equals the step count when the ambition is done.</summary>
     public int Milestone { get; set; }
     /// <summary>P5-A4: the hero's row in the home region's person table (<see cref="Ravensguard.Sim.Succession.HeroPerson"/>); -1 none, -2 a v7 save whose row the load inserts.</summary>
@@ -107,6 +107,32 @@ public sealed class HeroRecord
         return true;
     }
 
+    // ------------------------------------------------------------------ P8-AT-1: the ambition history
+
+    /// <summary>Ambitions finished, with the game day (done ambitions stay done).</summary>
+    public List<(string Id, int Day)> AmbitionsDone { get; } = [];
+    /// <summary>The offer made when the last ambition was done and not yet taken; it stays in the Journal.</summary>
+    public List<string> Offered { get; } = [];
+    /// <summary>Ambitions dropped for another (their steps are not kept; they may be offered again from step 0).</summary>
+    public List<string> Dropped { get; } = [];
+
+    public bool IsDone(string id) => AmbitionsDone.Exists(d => d.Id == id);
+
+    /// <summary>Records the current ambition as done on <paramref name="day"/> and keeps <paramref name="offer"/> as the open offer.</summary>
+    public void FinishAmbition(int day, IEnumerable<string> offer)
+    {
+        if (AmbitionId.Length > 0 && !IsDone(AmbitionId)) AmbitionsDone.Add((AmbitionId, day));
+        Offered.Clear(); Offered.AddRange(offer);
+    }
+
+    /// <summary>Takes an ambition (an offered one, or a switch): a current unfinished ambition is dropped, the steps start from 0 and the offer is cleared.</summary>
+    public void ChooseAmbition(string id)
+    {
+        if (AmbitionId.Length > 0 && AmbitionId != id && !IsDone(AmbitionId) && !Dropped.Contains(AmbitionId)) Dropped.Add(AmbitionId);
+        Dropped.Remove(id);
+        AmbitionId = id; Milestone = 0; Offered.Clear();
+    }
+
     // ------------------------------------------------------------------ saving
 
     /// <summary>
@@ -122,6 +148,8 @@ public sealed class HeroRecord
         SkillIds = SavedSkillIds().ToArray(), SkillLevels = SavedSkillIds().Select(Skill).ToArray(),
         ItemShapes = Inventory.Select(i => i.Shape).ToArray(), ItemMaterials = Inventory.Select(i => i.Material).ToArray(), ItemCounts = Inventory.Select(i => i.Count).ToArray(),
         Coin = Coin, AmbitionId = AmbitionId, Milestone = Milestone, PersonIndex = PersonIndex,
+        DoneIds = AmbitionsDone.Count == 0 ? null : AmbitionsDone.Select(d => d.Id).ToArray(), DoneDays = AmbitionsDone.Count == 0 ? null : AmbitionsDone.Select(d => d.Day).ToArray(),
+        OfferedIds = Offered.Count == 0 ? null : [.. Offered], DroppedIds = Dropped.Count == 0 ? null : [.. Dropped],
     };
 
     public static HeroRecord FromSave(HeroSave s)
@@ -133,11 +161,19 @@ public sealed class HeroRecord
         for (int i = 0; i < s.SkillIds.Length; i++) if (skills.ContainsKey(s.SkillIds[i])) skills[s.SkillIds[i]] = Math.Clamp(s.SkillLevels[i], 0, MaxLevel);
         var inv = new List<HeroItem>();
         for (int i = 0; i < s.ItemShapes.Length; i++) inv.Add(new HeroItem(s.ItemShapes[i], s.ItemMaterials[i], s.ItemCounts[i]));
-        return new HeroRecord
+        var h = new HeroRecord
         {
             Name = s.Name, Female = s.Female, Origin = s.Origin, Attributes = (int[])s.Attributes.Clone(), Skills = skills, Inventory = inv,
             Coin = s.Coin, AmbitionId = s.AmbitionId, Milestone = s.Milestone, PersonIndex = s.PersonIndex,
         };
+        if (s.DoneIds != null)
+        {
+            if (s.DoneDays == null || s.DoneDays.Length != s.DoneIds.Length) throw new Save.SaveException("Corrupt 'hero' ambition history in save.");
+            for (int i = 0; i < s.DoneIds.Length; i++) h.AmbitionsDone.Add((s.DoneIds[i], s.DoneDays[i]));
+        }
+        if (s.OfferedIds != null) h.Offered.AddRange(s.OfferedIds);
+        if (s.DroppedIds != null) h.Dropped.AddRange(s.DroppedIds);
+        return h;
     }
 }
 
@@ -159,6 +195,11 @@ public sealed class HeroSave
     [Key(11)] public int Milestone { get; set; }
     /// <summary>P5-A4 (save v8): the hero's person row; -1 none; a v7 save migrates to -2 (inserted at load).</summary>
     [Key(12)] public int PersonIndex { get; set; } = -1;
+    /// <summary>P8-AT-1 (optional keys, null while empty): the done ambitions' ids and days, the open offer and the dropped ambitions.</summary>
+    [Key(13)] public string[]? DoneIds { get; set; }
+    [Key(14)] public int[]? DoneDays { get; set; }
+    [Key(15)] public string[]? OfferedIds { get; set; }
+    [Key(16)] public string[]? DroppedIds { get; set; }
 }
 
 /// <summary>Save form of the Codex progress.</summary>

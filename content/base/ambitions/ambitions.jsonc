@@ -1,7 +1,7 @@
 // Starting ambitions, one per origin (plan §3.11). Each step is done when all its conditions hold; condition ids come from the base vocabulary
 // (src/Ravensguard.Content/BaseVocabulary.cs) and take string args.
 [
-  { "type": "ambition", "id": "regain_honour", "name": "Regain your honour",
+  { "type": "ambition", "id": "regain_honour", "tier": "start", "opens": ["earn_a_fief", "lead_a_warband", "win_a_battle", "win_a_name"], "name": "Regain your honour",
     "description": "Win back the name you lost, in front of the people who took it.",
     "steps": [
       { "id": "find_a_patron", "name": "Find a patron", "description": "Someone with a banner must vouch for you.",
@@ -12,7 +12,7 @@
       { "id": "be_knighted", "name": "Be knighted", "conditions": [ { "id": "has_rank", "args": { "rank": "knight" } } ] }
     ] },
 
-  { "type": "ambition", "id": "make_your_fortune", "name": "Make your fortune",
+  { "type": "ambition", "id": "make_your_fortune", "tier": "start", "opens": ["master_a_trade", "build_a_works", "grow_a_trade_route", "win_the_guild_office"], "name": "Make your fortune",
     "description": "Turn a pack into a shop, and a shop into a name on a guild roll.",
     "steps": [
       { "id": "double_your_stake", "name": "Double your stake", "conditions": [ { "id": "has_coin_at_least", "args": { "pence": "300" } } ] },
@@ -22,7 +22,7 @@
       { "id": "grow_rich", "name": "Hold a thousand pence", "conditions": [ { "id": "has_coin_at_least", "args": { "pence": "1000" } } ] }
     ] },
 
-  { "type": "ambition", "id": "be_free", "name": "Be free",
+  { "type": "ambition", "id": "be_free", "tier": "start", "opens": ["master_a_trade", "win_a_name", "hold_a_manor"], "name": "Be free",
     "description": "Stay out of your lord's reach for a year and a day, and then have something to show for it.",
     "steps": [
       { "id": "find_shelter", "name": "Find shelter", "conditions": [ { "id": "is_in_place_kind", "args": { "kind": "village" } } ] },
@@ -31,7 +31,7 @@
       { "id": "own_a_roof", "name": "Own a roof", "conditions": [ { "id": "owns_building", "args": { "kind": "dwelling" } } ] }
     ] },
 
-  { "type": "ambition", "id": "raise_a_company", "name": "Raise a company",
+  { "type": "ambition", "id": "raise_a_company", "tier": "start", "opens": ["lead_a_warband", "win_a_battle", "raise_a_banner"], "name": "Raise a company",
     "description": "Gather the men who still know how to stand in a line, and find someone who will pay them.",
     "steps": [
       { "id": "first_recruits", "name": "Gather three followers", "conditions": [ { "id": "has_followers_at_least", "args": { "count": "3" } } ] },
@@ -40,7 +40,7 @@
       { "id": "a_dozen_swords", "name": "Command twelve", "conditions": [ { "id": "has_followers_at_least", "args": { "count": "12" } }, { "id": "has_proficiency", "args": { "skill": "leadership", "level": "40" } } ] }
     ] },
 
-  { "type": "ambition", "id": "uncover_the_truth", "name": "Uncover the truth",
+  { "type": "ambition", "id": "uncover_the_truth", "tier": "start", "opens": ["serve_the_church", "keep_a_relic", "win_a_name"], "name": "Uncover the truth",
     "description": "Someone sent a child to the monastery with a sealed letter. Find out who, and why.",
     "steps": [
       { "id": "learn_the_old_hands", "name": "Read the old hands", "conditions": [ { "id": "has_proficiency", "args": { "skill": "literacy", "level": "50" } } ] },
@@ -49,7 +49,7 @@
       { "id": "confront_the_sender", "name": "Face the sender", "conditions": [ { "id": "knows_person", "args": { "kind": "sender", "min_trust": "0" } } ] }
     ] },
 
-  { "type": "ambition", "id": "claim_your_inheritance", "name": "Claim your inheritance",
+  { "type": "ambition", "id": "claim_your_inheritance", "tier": "start", "opens": ["earn_a_fief", "hold_a_manor", "found_a_house"], "name": "Claim your inheritance",
     "description": "Your brother holds the manor. The law, the neighbours and the coin all matter more than the sword.",
     "steps": [
       { "id": "study_the_charter", "name": "Study the charter", "conditions": [ { "id": "has_proficiency", "args": { "skill": "law", "level": "30" } } ] },
@@ -59,7 +59,7 @@
       { "id": "be_acknowledged", "name": "Be acknowledged heir", "conditions": [ { "id": "has_rank", "args": { "rank": "landholder" } } ] }
     ] },
 
-  { "type": "ambition", "id": "clear_your_name", "name": "Clear your name",
+  { "type": "ambition", "id": "clear_your_name", "tier": "start", "opens": ["win_a_name", "master_a_trade", "serve_the_church"], "name": "Clear your name",
     "description": "The charge was false, or mostly. The one who can prove it is not looking for you.",
     "steps": [
       { "id": "lie_low", "name": "Lie low", "conditions": [ { "id": "is_in_place_kind", "args": { "kind": "wilds" } } ] },
@@ -69,7 +69,7 @@
     ] },
 
   // P5-H: the tanner's widow's ambition (inheritance: she inherits a tannery and its debts on a lease; the first hour is about keeping it)
-  { "type": "ambition", "id": "keep_the_tannery", "name": "Keep the tannery",
+  { "type": "ambition", "id": "keep_the_tannery", "tier": "start", "opens": ["build_a_works", "win_the_guild_office", "master_a_trade"], "name": "Keep the tannery",
     "description": "The vats, the lease and the debts are yours. Pay what he owed, keep the pits working, and make the name on the door your own.",
     "steps": [
       { "id": "pay_his_debts", "name": "Pay his debts", "description": "The lord's rent is two seasons behind. Pay it before the reeve sends notice.",
@@ -82,11 +82,225 @@
     ] },
 
   // P5-H (inheritance 4.3): the ambition of an heir who is not kin (a companion who continues the line)
-  { "type": "ambition", "id": "find_your_place", "name": "Find your place",
+  { "type": "ambition", "id": "find_your_place", "tier": "middle", "opens": ["master_a_trade", "win_a_name", "hold_a_manor", "lead_a_warband"], "name": "Find your place",
     "description": "You were someone else's companion. Now the road, the name and whatever the will left are yours to make something of.",
     "steps": [
       { "id": "a_roof", "name": "A roof of your own", "conditions": [ { "id": "owns_building", "args": { "kind": "dwelling" } } ] },
       { "id": "a_trade", "name": "A trade", "conditions": [ { "id": "completed_contract_count", "args": { "count": "3" } } ] },
       { "id": "a_name", "name": "A name", "conditions": [ { "id": "has_reputation_at_least", "args": { "scope": "district", "value": "20" } } ] }
+    ] },
+
+  // ---- P8-AT-1: the middle tier (offered by what a finished ambition opens, or when its requires hold; at most four at a time) ----,
+
+  { "type": "ambition", "id": "master_a_trade", "tier": "middle", "name": "Master a trade",
+    "description": "Be good enough at one craft that people come to you for it.",
+    "opens": ["build_a_works", "win_the_guild_office", "become_wealthy"],
+    "requires": [ { "id": "has_proficiency", "args": { "skill": "trading", "level": "20" } } ],
+    "steps": [
+      { "id": "practise", "name": "Practise daily", "conditions": [ { "id": "has_proficiency", "args": { "skill": "trading", "level": "50" } } ] },
+      { "id": "take_work", "name": "Take paid work", "conditions": [ { "id": "completed_contract_count", "args": { "count": "5" } } ] },
+      { "id": "name_in_the_trade", "name": "A name in the trade", "conditions": [ { "id": "has_reputation_at_least", "args": { "scope": "district", "value": "30" } } ] }
+    ] },
+
+  { "type": "ambition", "id": "build_a_works", "tier": "middle", "name": "Build a works",
+    "description": "A bench is a living; a works with hired hands is a business.",
+    "opens": ["grow_a_trade_route", "become_wealthy"],
+    "requires": [ { "id": "has_coin_at_least", "args": { "pence": "200" } } ],
+    "steps": [
+      { "id": "raise_the_stake", "name": "Raise the stake", "conditions": [ { "id": "has_coin_at_least", "args": { "pence": "800" } } ] },
+      { "id": "own_the_works", "name": "Own a works", "conditions": [ { "id": "owns_works_tier", "args": { "tier": "1" } } ] },
+      { "id": "expand_the_works", "name": "Expand it", "conditions": [ { "id": "owns_works_tier", "args": { "tier": "2" } } ] }
+    ] },
+
+  { "type": "ambition", "id": "win_the_guild_office", "tier": "middle", "name": "Win a guild office",
+    "description": "A seat at the guild table, and a say in the price of things.",
+    "opens": ["grow_a_trade_route", "merchant_prince"],
+    "requires": [ { "id": "has_rank", "args": { "rank": "guild_member" } } ],
+    "steps": [
+      { "id": "earn_trust", "name": "Earn the masters trust", "conditions": [ { "id": "knows_person", "args": { "kind": "guild_master", "min_trust": "30" } } ] },
+      { "id": "pay_the_dues", "name": "Pay the dues", "conditions": [ { "id": "has_coin_at_least", "args": { "pence": "600" } } ] },
+      { "id": "take_the_chair", "name": "Take an office", "conditions": [ { "id": "holds_guild_office" } ] }
+    ] },
+
+  { "type": "ambition", "id": "grow_a_trade_route", "tier": "middle", "name": "Grow a trade route",
+    "description": "Carts that come back full are worth more than a shop that sits.",
+    "opens": ["become_wealthy", "merchant_prince"],
+    "requires": [ { "id": "has_proficiency", "args": { "skill": "trading", "level": "30" } } ],
+    "steps": [
+      { "id": "first_cargo", "name": "Haul a first cargo", "conditions": [ { "id": "completed_contract_count", "args": { "count": "8" } } ] },
+      { "id": "hire_drivers", "name": "Hire drivers", "conditions": [ { "id": "has_followers_at_least", "args": { "count": "4" } } ] },
+      { "id": "a_works_at_one_end", "name": "A works at one end", "conditions": [ { "id": "owns_works_tier", "args": { "tier": "1" } } ] }
+    ] },
+
+  { "type": "ambition", "id": "become_wealthy", "tier": "middle", "name": "Become wealthy",
+    "description": "Coin, stock and land, counted at what they would fetch.",
+    "opens": ["merchant_prince"],
+    "requires": [ { "id": "has_coin_at_least", "args": { "pence": "500" } } ],
+    "steps": [
+      { "id": "first_hundred_gold", "name": "A hundred gold", "conditions": [ { "id": "wealth_at_least", "args": { "mites": "100000" } } ] },
+      { "id": "a_thousand_gold", "name": "A thousand gold", "conditions": [ { "id": "wealth_at_least", "args": { "mites": "1000000" } } ] },
+      { "id": "ten_thousand_gold", "name": "Ten thousand gold", "conditions": [ { "id": "wealth_at_least", "args": { "mites": "10000000" } } ] }
+    ] },
+
+  { "type": "ambition", "id": "lead_a_warband", "tier": "middle", "name": "Lead a warband",
+    "description": "Men follow the one who gets them home.",
+    "opens": ["win_a_battle", "raise_a_banner", "earn_a_fief"],
+    "requires": [ { "id": "has_followers_at_least", "args": { "count": "3" } } ],
+    "steps": [
+      { "id": "twenty_men", "name": "Lead twenty", "conditions": [ { "id": "leads_men_at_least", "args": { "count": "20" } } ] },
+      { "id": "hold_their_loyalty", "name": "Hold their loyalty", "conditions": [ { "id": "has_proficiency", "args": { "skill": "leadership", "level": "50" } } ] },
+      { "id": "pay_them", "name": "Pay them for a season", "conditions": [ { "id": "has_coin_at_least", "args": { "pence": "400" } } ] }
+    ] },
+
+  { "type": "ambition", "id": "win_a_battle", "tier": "middle", "name": "Win a battle",
+    "description": "Stand in the line and be on the side that is left standing.",
+    "opens": ["earn_a_fief", "raise_a_banner"],
+    "requires": [ { "id": "leads_men_at_least", "args": { "count": "5" } } ],
+    "steps": [
+      { "id": "first_victory", "name": "Win a first battle", "conditions": [ { "id": "won_battles", "args": { "count": "1" } } ] },
+      { "id": "three_victories", "name": "Win three", "conditions": [ { "id": "won_battles", "args": { "count": "3" } } ] },
+      { "id": "be_named", "name": "Be named in the dispatches", "conditions": [ { "id": "has_reputation_at_least", "args": { "scope": "district", "value": "40" } } ] }
+    ] },
+
+  { "type": "ambition", "id": "earn_a_fief", "tier": "middle", "name": "Earn a fief",
+    "description": "A lord rewards the one who is useful, and remembers the one who is dangerous.",
+    "opens": ["hold_a_manor", "found_a_house", "take_a_crown"],
+    "requires": [ { "id": "has_reputation_at_least", "args": { "scope": "district", "value": "20" } } ],
+    "steps": [
+      { "id": "serve_a_lord", "name": "Serve a lord", "conditions": [ { "id": "knows_person", "args": { "kind": "lord", "min_trust": "40" } } ] },
+      { "id": "prove_worth", "name": "Prove your worth", "conditions": [ { "id": "won_battles", "args": { "count": "1" } } ] },
+      { "id": "hold_the_fief", "name": "Hold a fief", "conditions": [ { "id": "holds_fief_rank", "args": { "rank": "landholder" } } ] }
+    ] },
+
+  { "type": "ambition", "id": "hold_a_manor", "tier": "middle", "name": "Hold a manor",
+    "description": "Walls, a hall and tenants who pay what they owe.",
+    "opens": ["found_a_house"],
+    "requires": [ { "id": "has_coin_at_least", "args": { "pence": "200" } } ],
+    "steps": [
+      { "id": "save_for_land", "name": "Save for land", "conditions": [ { "id": "has_coin_at_least", "args": { "pence": "1500" } } ] },
+      { "id": "own_the_manor", "name": "Own a manor", "conditions": [ { "id": "owns_building", "args": { "kind": "manor" } } ] },
+      { "id": "keep_the_tenants", "name": "Keep the tenants", "conditions": [ { "id": "has_followers_at_least", "args": { "count": "6" } } ] }
+    ] },
+
+  { "type": "ambition", "id": "found_a_house", "tier": "middle", "name": "Found a house",
+    "description": "A name that outlives you needs land and children.",
+    "opens": ["found_a_dynasty"],
+    "requires": [ { "id": "holds_fief_rank", "args": { "rank": "landholder" } } ],
+    "steps": [
+      { "id": "a_seat", "name": "A seat of your own", "conditions": [ { "id": "owns_building", "args": { "kind": "manor" } } ] },
+      { "id": "a_household", "name": "A household", "conditions": [ { "id": "has_followers_at_least", "args": { "count": "8" } } ] },
+      { "id": "an_heir", "name": "An heir who lives", "conditions": [ { "id": "dynasty_generations", "args": { "count": "1" } } ] }
+    ] },
+
+  { "type": "ambition", "id": "raise_a_banner", "tier": "middle", "name": "Raise a banner",
+    "description": "Men who will fight under a name that is yours.",
+    "opens": ["found_a_realm", "take_a_crown"],
+    "requires": [ { "id": "leads_men_at_least", "args": { "count": "10" } } ],
+    "steps": [
+      { "id": "forty_men", "name": "Lead forty", "conditions": [ { "id": "leads_men_at_least", "args": { "count": "40" } } ] },
+      { "id": "a_cause", "name": "Found a faction", "conditions": [ { "id": "founded_faction", "args": { "recognised": "1" } } ] },
+      { "id": "win_for_it", "name": "Win a battle under it", "conditions": [ { "id": "won_battles", "args": { "count": "2" } } ] }
+    ] },
+
+  { "type": "ambition", "id": "serve_the_church", "tier": "middle", "name": "Serve the church",
+    "description": "A cell, a rule and a place among those who pray.",
+    "opens": ["keep_a_relic", "a_holy_life"],
+    "requires": [ { "id": "has_proficiency", "args": { "skill": "literacy", "level": "30" } } ],
+    "steps": [
+      { "id": "learn_the_offices", "name": "Learn the offices", "conditions": [ { "id": "has_proficiency", "args": { "skill": "literacy", "level": "50" } } ] },
+      { "id": "earn_a_place", "name": "Earn a place in a house", "conditions": [ { "id": "knows_person", "args": { "kind": "abbot", "min_trust": "30" } } ] },
+      { "id": "take_an_office", "name": "Take an office", "conditions": [ { "id": "holds_church_office", "args": { "kind": "any" } } ] }
+    ] },
+
+  { "type": "ambition", "id": "keep_a_relic", "tier": "middle", "name": "Keep a relic",
+    "description": "Something old that people cross a country to kneel before.",
+    "opens": ["a_holy_life"],
+    "requires": [ { "id": "holds_church_office", "args": { "kind": "any" } } ],
+    "steps": [
+      { "id": "hear_of_it", "name": "Hear where one lies", "conditions": [ { "id": "knows_person", "args": { "kind": "pilgrim", "min_trust": "20" } } ] },
+      { "id": "recover_it", "name": "Recover it", "conditions": [ { "id": "owns_relic" } ] },
+      { "id": "enshrine_it", "name": "Enshrine it", "conditions": [ { "id": "has_reputation_at_least", "args": { "scope": "district", "value": "50" } } ] }
+    ] },
+
+  { "type": "ambition", "id": "clear_a_lair", "tier": "middle", "name": "Clear a lair",
+    "description": "Something in the hills is eating the flocks.",
+    "opens": ["slay_a_legend"],
+    "requires": [ { "id": "has_proficiency", "args": { "skill": "melee", "level": "40" } } ],
+    "steps": [
+      { "id": "find_the_lair", "name": "Learn where it lies", "conditions": [ { "id": "knows_person", "args": { "kind": "hunter", "min_trust": "20" } } ] },
+      { "id": "arm_for_it", "name": "Arm and gather", "conditions": [ { "id": "has_followers_at_least", "args": { "count": "4" } }, { "id": "has_item", "args": { "item": "spear", "count": "4" } } ] },
+      { "id": "slay_it", "name": "Slay what lives there", "conditions": [ { "id": "slew_monster", "args": { "tier": "1" } } ] }
+    ] },
+
+  { "type": "ambition", "id": "win_a_name", "tier": "middle", "name": "Win a name",
+    "description": "Be spoken of in the next district and the one after.",
+    "opens": ["earn_a_fief", "clear_a_lair", "serve_the_church"],
+    "requires": [ { "id": "has_reputation_at_least", "args": { "scope": "district", "value": "10" } } ],
+    "steps": [
+      { "id": "district_name", "name": "A name in the district", "conditions": [ { "id": "has_reputation_at_least", "args": { "scope": "district", "value": "40" } } ] },
+      { "id": "a_deed", "name": "A deed worth telling", "conditions": [ { "id": "completed_contract_count", "args": { "count": "6" } } ] },
+      { "id": "region_name", "name": "A name in the region", "conditions": [ { "id": "has_reputation_at_least", "args": { "scope": "region", "value": "30" } } ] }
+    ] },
+
+  // ---- P8-AT-1: the six great ambitions, one per ending (endings spec 3.4, decision D1) ----,
+
+  { "type": "ambition", "id": "found_a_dynasty", "tier": "great", "name": "Found a dynasty",
+    "description": "Two successions of a titled fief in your blood.",
+    "requires": [ { "id": "holds_fief_rank", "args": { "rank": "landholder" } } ],
+    "ending": "dynasty",
+    "steps": [
+      { "id": "hold_a_title", "name": "Hold a titled fief", "conditions": [ { "id": "holds_fief_rank", "args": { "rank": "baron" } } ] },
+      { "id": "first_succession", "name": "Pass it to your heir", "conditions": [ { "id": "dynasty_generations", "args": { "count": "1" } } ] },
+      { "id": "second_succession", "name": "And to theirs", "conditions": [ { "id": "dynasty_generations", "args": { "count": "2" } } ] }
+    ] },
+
+  { "type": "ambition", "id": "take_a_crown", "tier": "great", "name": "Take a crown",
+    "description": "Rule a realm, however it is won.",
+    "requires": [ { "id": "holds_fief_rank", "args": { "rank": "landholder" } } ],
+    "ending": "crown",
+    "steps": [
+      { "id": "an_army", "name": "Lead an army", "conditions": [ { "id": "leads_men_at_least", "args": { "count": "60" } } ] },
+      { "id": "win_the_war", "name": "Win the battles", "conditions": [ { "id": "won_battles", "args": { "count": "5" } } ] },
+      { "id": "wear_the_crown", "name": "Rule a realm", "conditions": [ { "id": "rules_realm" } ] }
+    ] },
+
+  { "type": "ambition", "id": "found_a_realm", "tier": "great", "name": "Found a realm",
+    "description": "A faction of your own, and two realms that say it is real.",
+    "requires": [ { "id": "leads_men_at_least", "args": { "count": "10" } } ],
+    "ending": "realm",
+    "steps": [
+      { "id": "found_it", "name": "Found a faction", "conditions": [ { "id": "founded_faction", "args": { "recognised": "1" } } ] },
+      { "id": "hold_a_seat", "name": "Hold a seat for it", "conditions": [ { "id": "holds_fief_rank", "args": { "rank": "landholder" } } ] },
+      { "id": "be_recognised", "name": "Be recognised by two realms", "conditions": [ { "id": "founded_faction", "args": { "recognised": "2" } } ] }
+    ] },
+
+  { "type": "ambition", "id": "slay_a_legend", "tier": "great", "name": "Slay a legend",
+    "description": "Go into the deepest barrow and come out.",
+    "requires": [ { "id": "has_proficiency", "args": { "skill": "melee", "level": "50" } } ],
+    "ending": "legend",
+    "steps": [
+      { "id": "company", "name": "Gather a company", "conditions": [ { "id": "has_followers_at_least", "args": { "count": "6" } } ] },
+      { "id": "skill_at_arms", "name": "Master your weapon", "conditions": [ { "id": "has_proficiency", "args": { "skill": "melee", "level": "70" } } ] },
+      { "id": "slay_the_legend", "name": "Kill the monster in a deep lair", "conditions": [ { "id": "slew_monster", "args": { "tier": "3" } } ] }
+    ] },
+
+  { "type": "ambition", "id": "merchant_prince", "tier": "great", "name": "Merchant prince",
+    "description": "A great works, a guild office and ten thousand gold.",
+    "requires": [ { "id": "owns_works_tier", "args": { "tier": "1" } } ],
+    "ending": "merchant_prince",
+    "steps": [
+      { "id": "a_great_works", "name": "Own a great works", "conditions": [ { "id": "owns_works_tier", "args": { "tier": "3" } } ] },
+      { "id": "guild_seat", "name": "Hold a guild office", "conditions": [ { "id": "holds_guild_office" } ] },
+      { "id": "ten_thousand_gold", "name": "Be worth ten thousand gold", "conditions": [ { "id": "wealth_at_least", "args": { "mites": "10000000" } } ] }
+    ] },
+
+  { "type": "ambition", "id": "a_holy_life", "tier": "great", "name": "A holy life",
+    "description": "An abbots staff and a true relic kept under your roof.",
+    "requires": [ { "id": "has_proficiency", "args": { "skill": "literacy", "level": "30" } } ],
+    "ending": "holy_life",
+    "steps": [
+      { "id": "take_vows", "name": "Take an office", "conditions": [ { "id": "holds_church_office", "args": { "kind": "any" } } ] },
+      { "id": "lead_a_house", "name": "Lead a house", "conditions": [ { "id": "holds_church_office", "args": { "kind": "abbot" } } ] },
+      { "id": "keep_a_true_relic", "name": "Keep a true relic", "conditions": [ { "id": "owns_relic" } ] }
     ] }
 ]

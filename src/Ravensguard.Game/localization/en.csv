@@ -6701,7 +6701,7 @@ so_not_dubbable,"He is not a man-at-arms with the skills of a knight, or has no 
 so_dubbed,He is dubbed a knight.
 so_discharged_offer,The offer is refused.
 so_retinue_full,"Your {0} keeps at most {1} soldiers beyond your companions; you cannot take another."
-so_paid,"Wages of {0} mites paid; {1} mites are still owed."
+so_paid,"Wages of {0} paid; {1} still owed."
 ch_so_promoted,"{person} was made a {role} by {lord}."
 ch_so_dubbed,"{lord} dubbed {knight} a knight."
 ch_note_so_skill,his skill at arms from fighting and drill

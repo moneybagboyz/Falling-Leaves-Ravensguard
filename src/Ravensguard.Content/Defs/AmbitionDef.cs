@@ -23,4 +23,14 @@ public sealed record AmbitionDef : ContentDef
     public required string Name { get; init; }
     public required string Description { get; init; }
     public required List<AmbitionStepDef> Steps { get; init; }
+    /// <summary>P8-AT-1: <c>start</c> (an origin's), <c>middle</c> or <c>great</c>. An old or modded ambition with none is a start ambition.</summary>
+    public string Tier { get; init; } = "start";
+    /// <summary>P8-AT-1: the ambitions offered when this one is done (those whose <see cref="Requires"/> hold).</summary>
+    [ContentRef(typeof(AmbitionDef))] public List<string> Opens { get; init; } = [];
+    /// <summary>P8-AT-1: conditions that must hold for this ambition to be offered at all.</summary>
+    public List<ConditionRefDef> Requires { get; init; } = [];
+    /// <summary>P8-AT-1: a done ambition in this list keeps this one from being offered as a middle ambition.</summary>
+    [ContentRef(typeof(AmbitionDef))] public List<string> Excludes { get; init; } = [];
+    /// <summary>P8-AT-1: a great ambition names the ending it offers (endings spec 3.4: dynasty, crown, realm, legend, merchant_prince, holy_life).</summary>
+    public string Ending { get; init; } = "";
 }

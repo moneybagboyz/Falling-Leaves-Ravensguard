@@ -113,7 +113,7 @@ public static class SoldierDesk
             case "pay":
             {
                 long paid = WageRoll.PayDay(sw, HeroLord, ctx.Purse, ctx.Econ.Ledger);
-                res = (true, "so_paid", [paid, WageRoll.Rows(sw, HeroLord).Sum(l => l.ArrearsMites)]);
+                res = (true, "so_paid", [Ravensguard.Sim.Core.MoneyText.Format(paid), Ravensguard.Sim.Core.MoneyText.Format(WageRoll.Rows(sw, HeroLord).Sum(l => l.ArrearsMites))]);
                 break;
             }
             default: return R(c, HeroResultCode.Invalid, HeroText.Of("HERO_MAKES_NO_SENSE"));

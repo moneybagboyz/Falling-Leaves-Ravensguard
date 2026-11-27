@@ -15,6 +15,9 @@ public static class BaseVocabulary
         "speaker_job_is", "speaker_job_class", "mood_below", "mood_above", "relationship_at_least", "relationship_tier", "is_kin", "time_of_day_is", "knows_rumour_kind",
         "hero_is_bloody", "hero_wealth_visible", "speaker_has_need", "feast_today", "flag_set", "speaker_is_shopkeeper", "speaker_is_child", "speaker_sex",
         "market_dear", "unrest_high", "alarm_near", "in_combat", "hero_is_ragged", "rumour_hop_is", "rumour_via", "rumour_garbled",
+        // ambitions (docs/specs/phase8/01-ambitions-and-autopilot.md 3.4): the tree's own conditions, each with a progress rule in AmbitionRules
+        "holds_fief_rank", "rules_realm", "founded_faction", "dynasty_generations", "slew_monster", "owns_works_tier", "holds_guild_office", "holds_church_office",
+        "owns_relic", "wealth_at_least", "leads_men_at_least", "won_battles",
     ];
 
     public static readonly string[] Effects = ["start_contract", "give_item", "add_rumour", "set_flag", "add_trust", "end_dialogue"];
