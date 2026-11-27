@@ -46,7 +46,7 @@ public sealed partial class BattleBubble
                     case FAct.Down: down++; break;
                     case FAct.Fled: fled++; break;
                     case FAct.Surrendered: yielded++; break;
-                    default: if (InBox(f.X, f.Y)) on++; else fled++; break;
+                    default: if (_converted || InBox(f.X, f.Y)) on++; else fled++; break;
                 }
             }
             stand[i] = on;

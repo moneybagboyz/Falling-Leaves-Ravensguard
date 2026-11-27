@@ -240,7 +240,7 @@ public sealed partial class LiveWorld
     /// <summary>Opens the live tier on a battle: its fight is the live fight (the hero's inputs drive <paramref name="heroFighter"/>, or -1), and the bubble steps it.</summary>
     public void AttachBattle(Ravensguard.Sim.Battle.BattleBubble bubble, int heroFighter) { Fight = bubble.W; FightHero = heroFighter; Battle = bubble; }
 
-    private void StepTheFight() { if (Battle != null) Battle.StepShared(); else Fight!.StepShared(); }
+    private void StepTheFight() { if (Battle != null) { Battle.StepShared(); if (Battle.W.Ledger is { } l) lock (l.Sync) Battle.DemoteIfUnobserved(FightHero); else Battle.DemoteIfUnobserved(FightHero); } else Fight!.StepShared(); }   // P7-AW-E: the last formations out of the bubble: converted and finished abstractly
     public void EndFight()
     {
         if (Fight != null && Ride != null) Ravensguard.Sim.Combat.Mounted.MountedRide.Settle(Fight, Ride);      // [mounted-combat] the horse's state goes back to the ride
