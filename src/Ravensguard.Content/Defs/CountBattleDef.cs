@@ -78,8 +78,10 @@ public static class CountK
     public const int MoraleScalePm = 15, FlankedPm = 16;
     /// <summary>The morale cascade: each side has a panic level (permille) that a step's losses raise (gain: permille of panic per 10 permille of the start lost in a step, x10), that spreads among the men (a logistic growth: permille a step) and that fades (permille a step); it adds to the casualty share the classes break on.</summary>
     public const int PanicGain = 17, PanicSpread = 18, PanicDecay = 19;
-    public const int Count = 20;
-    public static readonly string[] Names = ["step_s", "max_steps", "rout_slope", "rout_max_pm", "break_standing_pm", "charge_pm", "charge_steps", "ammo_s", "ammo_low_pm", "flee_s", "pursuit_pm", "pursuit_horse_pm", "capture_pm", "luck_pm", "ratio_pm", "morale_scale_pm", "flanked_pm", "panic_gain", "panic_spread", "panic_decay"];
+    /// <summary>The per-pair cascade (WT-2): when a class routs, the shock falls on the classes engaged with the same enemy block (overlap of who hits them), not the whole side. Gain: permille added to a class's break share per permille of the side's start that routed in a step, times the pair's overlap; decay: permille of the shock lost a step.</summary>
+    public const int CascadeGain = 20, CascadeDecay = 21;
+    public const int Count = 22;
+    public static readonly string[] Names = ["step_s", "max_steps", "rout_slope", "rout_max_pm", "break_standing_pm", "charge_pm", "charge_steps", "ammo_s", "ammo_low_pm", "flee_s", "pursuit_pm", "pursuit_horse_pm", "capture_pm", "luck_pm", "ratio_pm", "morale_scale_pm", "flanked_pm", "panic_gain", "panic_spread", "panic_decay", "cascade_gain", "cascade_decay"];
 
-    public static int[] Defaults() => [3, 100, 600, 500, 300, 1500, 2, 120, 100, 16, 300, 500, 100, 100, 0, 1000, 0, 3000, 300, 20];
+    public static int[] Defaults() => [3, 100, 600, 500, 300, 1500, 2, 120, 100, 16, 300, 500, 100, 100, 0, 1000, 0, 3000, 300, 20, 0, 300];
 }

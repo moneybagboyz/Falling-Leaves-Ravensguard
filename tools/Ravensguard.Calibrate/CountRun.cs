@@ -67,17 +67,18 @@ static class CountRun
 
     static double Loss(CountBattleDef d, IReadOnlyList<CountSpec> specs, Stat[] v2, int seeds)
     {
-        double loss = 0;
-        for (int i = 0; i < specs.Count; i++)
+        var part = new double[specs.Count];
+        Parallel.For(0, specs.Count, i =>
         {
             var c = CountStat(d, specs[i], seeds);
             double e0 = CasErr(v2[i].Cas0, c.Cas0, specs[i].A.Sum()), e1 = CasErr(v2[i].Cas1, c.Cas1, specs[i].B.Sum()), ew = WinErr(v2[i].Win0, c.Win0), ed = DurErr(v2[i].Dur, c.Dur);
-            loss += Soft(e0) + Soft(e1) + Soft(ew) + Soft(ed);
-        }
+            part[i] = Soft(e0) + Soft(e1) + Soft(ew) + Soft(ed);
+        });
+        double loss = 0; foreach (double p in part) loss += p;
         return loss;
     }
 
-    static double Soft(double e) => e <= 1 ? e * e : 1 + 2 * (e - 1) + (e - 1) * (e - 1);
+    static double Soft(double e) => e <= 1 ? e * e * 0.5 : 0.5 + Math.Min(e - 1, 1.5);
 
     static BattleSummary Gate(CountBattleDef d, IReadOnlyList<CountSpec> specs, Stat[] v2, bool print)
     {
@@ -120,7 +121,7 @@ static class CountRun
             var v2 = V2All(fc, tables, k, specs, 100, fitSeeds);
             Console.WriteLine("v2 fit set done");
             if (!args.Contains("--resume")) cur = Initial(cur, v2);
-            else { cur = Mix(cur, v2); if (cur.K.Length < CountK.Count) cur = cur with { K = [.. cur.K, .. new int[] { 200, 100, 20 }[..(CountK.Count - cur.K.Length)]] }; }
+            else { cur = Mix(cur, v2); if (cur.K.Length < CountK.Count) cur = cur with { K = [.. cur.K, .. CountK.Defaults()[cur.K.Length..]] }; }
             var names = CountBattleDef.FlatNames();
             var best = cur.Flat(); double bl = Loss(cur, specs, v2, cseeds);
             Console.WriteLine($"start loss {bl:0.0}");

@@ -2,8 +2,8 @@
 // with AbstractBattle.V2(db). Everything here restates the AbstractBattleDef defaults; the trample and fall class mixes are the first rows (the calibrate tool's refit is AW-C).
 [
   { "type": "abstract_battle", "id": "v2", "version": 2,
-    "reserve_depth_mm": 10000, "reserve_pm": 600, "broken_pm": 600, "broken_x100": 0, "wall_shield_pm": 700, "wall_x100": 0,
-    "pass_arc_men": 5, "pass_trained_pm": 800, "brace_strike_pm": 600, "brace_down_pm": 30, "trample_pm": 150,
-    "trample_light_pm": 500, "trample_serious_pm": 50, "trample_grave_pm": 450, "fall_light_pm": 900, "fall_serious_pm": 20, "fall_grave_pm": 0,
-    "stick_pm": 300, "reform_s": 8, "shock_x100": 5000, "horse_cornered_pm": 350, "charge_pm": 700, "mass_charge_pm": 350, "mass_rider_blows_per_min_x10": 60, "mass_riders": 30, "wrap_rate_pm": 150, "wrap_flank_pm": 600, "flank_bonus_pm": 250, "collapse_active_pm": 0, "braced_spare_pm": 1000, "away_riders_pm": 1000, "rider_pursue_pm": 600, "pass_blow_pm": 800, "pursue_pm": 329, "rider_blows_per_min_x10": 88, "rider_slow_blows_per_min_x10": 80, "shock_min_riders": 10, "shock_braced_max_pm": 250, "veteran_skill": 55 }
+    "reserve_depth_mm": 10000, "reserve_pm": 600, "broken_pm": 901, "broken_x100": 95, "wall_shield_pm": 700, "wall_x100": 1,
+    "pass_arc_men": 2, "pass_trained_pm": 820, "brace_strike_pm": 438, "brace_down_pm": 51, "trample_pm": 96,
+    "trample_light_pm": 540, "trample_serious_pm": 32, "trample_grave_pm": 450, "fall_light_pm": 563, "fall_serious_pm": 20, "fall_grave_pm": 0,
+    "stick_pm": 300, "reform_s": 8, "shock_x100": 3192, "horse_cornered_pm": 350, "charge_pm": 750, "mass_charge_pm": 219, "mass_rider_blows_per_min_x10": 110, "mass_riders": 30, "wrap_rate_pm": 140, "wrap_flank_pm": 901, "flank_bonus_pm": 210, "collapse_active_pm": 0, "braced_spare_pm": 970, "away_riders_pm": 1000, "rider_pursue_pm": 550, "pass_blow_pm": 1252, "pursue_pm": 319, "rider_blows_per_min_x10": 70, "rider_slow_blows_per_min_x10": 40, "shock_min_riders": 13, "shock_braced_max_pm": 250, "veteran_skill": 55, "press_rate_pct": 118, "pursuit_blows_per_min_x10": 430, "outnumber_cap_pm": 1553, "press_hit_pm": 770, "morale_k": 66, "flee_s": 12, "cornered_pm": 1116, "router_cornered_pm": 94, "router_yield_below": 14, "melee_flanked_pm": 1158, "rider_mmps": 4500, "middle_pm": 800, "beset_rate_pm": 60, "beset_hit_pm": 40, "beset_pm": 1380, "jitter_pm": 20, "max_steps": 600, "rear_bonus_pm": 400, "vs_rider_rate_pm": 35, "vs_rider_slow_hit_pm": 1535, "advance_mmps": 2000, "charge_mmps": 3850, "contact_mm": 2501 }
 ]

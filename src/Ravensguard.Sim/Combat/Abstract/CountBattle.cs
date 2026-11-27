@@ -51,6 +51,8 @@ public static class CountBattle
         var wExpo = new long[2];
         long[] panic = new long[2];
         int[] casBefore = new int[2];
+        long[][] shock = [new long[C], new long[C]];
+        int[][] newRt = [new int[C], new int[C]];
         for (int step = 0; step < d.K[CountK.MaxSteps]; step++)
         {
             standing[0] = n[0].Sum(); standing[1] = n[1].Sum();
@@ -111,6 +113,7 @@ public static class CountBattle
                 panic[s] = Math.Clamp(panic[s] - panic[s] * Kv(d, CountK.PanicDecay) / 1000, 0, 1000);
                 int lpm = (int)((long)totalCas * 1000 / start[s]);
                 lpm += (int)panic[s];
+                for (int c = 0; c < C; c++) newRt[s][c] = 0;
                 int ratioAdd = 0;
                 if (d.K[CountK.RatioPm] != 0 && standing[s] > 0 && standing[1 - s] > 0) ratioAdd = (int)((long)d.K[CountK.RatioPm] * (cas[s].Sum() - cas[1 - s].Sum()) / Math.Max(1, start[s]) * 1000 / 1000);
                 bool flanked = d.K[CountK.FlankedPm] != 0 && n[1 - s].Sum() * 2 > n[s].Sum() * 3;
@@ -119,15 +122,16 @@ public static class CountBattle
                     if (n[s][c] == 0) continue;
                     long thr = (long)d.RoutThr[c] * mor[s] / 1000 * d.K[CountK.MoraleScalePm] / 1000;
                     if (flanked) thr = thr * (1000 - d.K[CountK.FlankedPm]) / 1000;
-                    long over = lpm + ratioAdd - thr;
+                    long over = lpm + ratioAdd + shock[s][c] - thr;
                     if (over <= 0) continue;
                     long hz = Math.Min(d.K[CountK.RoutMaxPm], over * d.K[CountK.RoutSlope] / 1000);
                     long m = n[s][c] * hz;
                     int whole = (int)(m / 1000), rem = (int)(m % 1000);
                     if (rem > 0 && DetRng.Range(seed, step, key + (ulong)(s * C + c), RngStreams.CountBattleRounding, 1, 0, 1000) < rem) whole++;
                     whole = Math.Min(whole, n[s][c]);
-                    n[s][c] -= whole; rt[s][c] += whole;
+                    n[s][c] -= whole; rt[s][c] += whole; newRt[s][c] = whole;
                 }
+                CascadeUpdate(d, n, shock[s], newRt[s], 1 - s, start[s]);
                 if ((long)n[s].Sum() * 1000 <= (long)start[s] * d.K[CountK.BreakStandingPm] && n[s].Sum() > 0 && n[1 - s].Sum() > 0 && d.K[CountK.BreakStandingPm] > 0)
                     for (int c = 0; c < C; c++) { rt[s][c] += n[s][c]; n[s][c] = 0; }
             }
@@ -174,6 +178,33 @@ public static class CountBattle
                 r.Fled[s][c] = fled[s][c]; r.Captured[s][c] = capt[s][c]; r.Standing[s][c] = n[s][c];
             }
         return r;
+    }
+
+    /// <summary>The per-pair cascade: this step's routers raise the shock on the classes engaged with the same enemy block, by how much the same enemy classes hit each (the overlap of their hit shares).</summary>
+    private static void CascadeUpdate(CountBattleDef d, int[][] n, long[] shock, int[] routed, int e, int start)
+    {
+        int gain = Kv(d, CountK.CascadeGain), decay = Kv(d, CountK.CascadeDecay);
+        if (gain == 0) return;
+        for (int c = 0; c < C; c++) shock[c] -= shock[c] * decay / 1000;
+        int total = 0; for (int c = 0; c < C; c++) total += routed[c];
+        if (total == 0 || start == 0) return;
+        long[][] p = new long[C][];                                   // p[c][k]: the share of c's hits that come from enemy class k, permille
+        for (int c = 0; c < C; c++)
+        {
+            p[c] = new long[C]; long sum = 0;
+            for (int k = 0; k < C; k++) { p[c][k] = (long)n[e][k] * d.Share[k] / 1000 * d.Beta[k * C + c]; sum += p[c][k]; }
+            if (sum > 0) for (int k = 0; k < C; k++) p[c][k] = p[c][k] * 1000 / sum;
+        }
+        for (int a = 0; a < C; a++)
+        {
+            if (routed[a] == 0) continue;
+            long fr = (long)routed[a] * 1000 / start;                 // permille of the side's start
+            for (int c = 0; c < C; c++)
+            {
+                long ov = 0; for (int k = 0; k < C; k++) ov += p[a][k] * p[c][k] / 1000;
+                shock[c] += fr * gain / 1000 * ov / 1000;
+            }
+        }
     }
 
     private static int Split(ulong seed, ulong key, int s, int c, uint draw, int of, int pm, int cap)

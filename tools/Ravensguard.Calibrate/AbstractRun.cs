@@ -320,6 +320,7 @@ static class AbstractRun
             }
             return 0;
         }
+        if (args.Contains("wartune")) return WarTune.Run(fc, tables, args, repo);
         if (args.Contains("war"))
         {
             // AW-C: v2 against the live fight on E, F, G (AbstractWarScenarios): --abstract war [--seeds 200] [--seed0 10000] [--only E,F] [--reference] [--v1]

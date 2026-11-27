@@ -51,7 +51,8 @@ public class AbstractScaleTests(FightFixture fx, ITestOutputHelper output) : ICl
         Assert.True(ra.Sides[0].Start == 2000 && ra.Sides[1].Start == 2000);
         Assert.True(ra.Winner >= 0 && ra.DurationS > 0 && ra.DurationS < def.MaxSteps * def.StepS);
         // measured on the resolver as it was before the P7-AW-B speed-ups: every draw and every order unchanged since (re-pin only when the battle changes on purpose)
-        Assert.Equal(0x598608D7D82B3D51UL, ra.Hash);
+        // re-pinned in P8-WT-2: the v2 row's constants were refitted for E and G (the v1 hash below did not move)
+        Assert.Equal(0xCFA9A6003646EFCAUL, ra.Hash);
         Assert.Equal(0x275D1E758DFDA8F1UL, new AbstractBattle(fx.C, T, AbstractBattleTests.Big(2000, 100)).Run().Hash);       // v1, the Phase 4 row
         output.WriteLine($"2000 v 2000 seed 100: hash {ra.Hash:X16}, winner {ra.Winner}, {ra.DurationS} s, casualties {ra.Sides[0].Casualties}/{ra.Sides[1].Casualties}");
     }

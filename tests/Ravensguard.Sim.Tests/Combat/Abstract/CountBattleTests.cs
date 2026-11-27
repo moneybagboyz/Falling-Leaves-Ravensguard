@@ -74,8 +74,8 @@ public class CountBattleTests(FightFixture fx, ITestOutputHelper output)
 
     /// <summary>
     /// AW-10, the named ratchet. The spec's gate is every one of the 40 scenarios within 10% casualties (each side), 10 points win rate and 25% duration of v2; the fitted tables (square-law
-    /// exchange, casualty-share rout, a morale cascade that two fits could not use) reach it in 1 of 40. Every metric that passes is asserted at its measured count (win rate 31, both sides'
-    /// casualties 6, duration 13, decided winners agreeing 33, all together 1); the tolerances are the spec's, unchanged, and a better fit raises these bounds.
+    /// exchange, casualty-share rout, and the per-pair cascade of P8-WT-2) reach it in 13 of 40 (against v2 as refitted in the same part; the old reference gave 31, 6, 13, 1). Every metric that passes is asserted at its measured count (win rate 32, both sides'
+    /// casualties 25, duration 25, decided winners agreeing 32 (33 against the old v2 row, whose decided set differs), all together 13); the tolerances are the spec's, unchanged, and a better fit raises these bounds.
     /// </summary>
     [Fact]
     public void AW10_TheGate_ByMetric_IsANamedRatchet()
@@ -89,11 +89,11 @@ public class CountBattleTests(FightFixture fx, ITestOutputHelper output)
             if (v.Win0 is >= 0.9 or <= 0.1 && (c.Win0 >= 0.5) == (v.Win0 >= 0.5)) dir++;
         }
         output.WriteLine($"inside the gate: win rate {win}/40, both sides' casualties {cas}/40, duration {dur}/40, all {all}/40; the decided scenarios' winner agrees in {dir}");
-        Assert.True(win >= 31, $"win rate {win}/40");
-        Assert.True(cas >= 6, $"casualties {cas}/40");
-        Assert.True(dur >= 13, $"duration {dur}/40");
-        Assert.True(dir >= 33, $"decided winners {dir}");
-        Assert.True(all >= 1, $"all {all}/40");
+        Assert.True(win >= 32, $"win rate {win}/40");
+        Assert.True(cas >= 25, $"casualties {cas}/40");
+        Assert.True(dur >= 25, $"duration {dur}/40");
+        Assert.True(dir >= 32, $"decided winners {dir}");
+        Assert.True(all >= 13, $"all {all}/40");
     }
 
     [Fact]
