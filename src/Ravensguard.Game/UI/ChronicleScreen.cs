@@ -163,7 +163,7 @@ public partial class ChronicleScreen : Control
         foreach (var (c, ce) in _b.Why(e))
         {
             bool drift = c.Kind == CauseKind.MarketDrift;
-            string note = ChronicleTypes.FormatNote(c, L.T, ChronicleReader.Names(v, x => x));
+            string note = ChronicleTypes.FormatNote(c, L.T, ChronicleReader.Names(v, x => x), null, ChronicleReader.GenderOf(v));
             if (note.Length == 0 && ce == null) note = c.Kind.ToString();
             sb.Append("- ").Append(Esc(drift ? L.F("ch_ui_drift", note) : note));
             if (ce != null) sb.Append($"{(note.Length > 0 ? "  " : "")}[color=#{dim}]<- {Esc(_b.Text(ce))} ({ce.When.Year})[/color]");

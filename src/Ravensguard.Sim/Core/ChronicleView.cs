@@ -46,6 +46,8 @@ public sealed class ChronicleView
     public required Chronicle History { get; init; }
     /// <summary>Names by id for every id the entries mention (people, places, businesses, households, history notables and realms).</summary>
     public required IReadOnlyDictionary<ulong, string> Names { get; init; }
+    /// <summary>The grammatical gender ('m' or 'f') of the living people the entries name, for the select forms of a template; absent for others (the select's other branch).</summary>
+    public IReadOnlyDictionary<ulong, char> Genders { get; init; } = new Dictionary<ulong, char>();
     /// <summary>The string ids of the goods the entries name, by catalogue index.</summary>
     public required IReadOnlyDictionary<int, string> Goods { get; init; }
     public required IReadOnlySet<ulong> Mine { get; init; }
@@ -82,7 +84,7 @@ public sealed class ChronicleView
     {
         var all = st.Chronicle.All.ToArray();
         var pop = st.Population; var pt = pop.People; var region = pop.Region; var hht = pop.Households;
-        var names = new Dictionary<ulong, string>(); var goods = new Dictionary<int, string>();
+        var genders = new Dictionary<ulong, char>(); var names = new Dictionary<ulong, string>(); var goods = new Dictionary<int, string>();
         var mine = MineOf(st);
         int heroIdx = st.Hero != null ? st.Hero.PersonIndex : -1;
         var heroId = heroIdx >= 0 ? pt.IdOf(heroIdx) : EntityId.None;
@@ -104,7 +106,7 @@ public sealed class ChronicleView
             var id = new EntityId(v); string n = "";
             switch (id.Kind)
             {
-                case IdKind.Person: { int i = pt.IndexOf(id); n = i >= 0 ? pt.FullName(i) : st.History.GetNotable(id)?.Full ?? ""; break; }
+                case IdKind.Person: { int i = pt.IndexOf(id); if (i >= 0) genders[v] = pt.Sex[i] == Sex.Female ? 'f' : 'm'; n = i >= 0 ? pt.FullName(i) : st.History.GetNotable(id)?.Full ?? ""; break; }
                 case IdKind.Household: { int i = hht.IndexOf(id); n = i >= 0 ? hht.Name[i] : ""; break; }
                 case IdKind.Settlement:
                     n = st.History.GetSettlement(id)?.Name ?? "";
@@ -142,7 +144,7 @@ public sealed class ChronicleView
         }
         return new ChronicleView
         {
-            Entries = all, History = st.History.Chronicle, Names = names, Goods = goods, Mine = mine, Here = here, Realm = realm, Hero = heroId,
+            Entries = all, History = st.History.Chronicle, Names = names, Genders = genders, Goods = goods, Mine = mine, Here = here, Realm = realm, Hero = heroId,
             HereName = hereName, RealmName = realmName, NowSec = st.Clock.Now.Seconds,
         };
     }

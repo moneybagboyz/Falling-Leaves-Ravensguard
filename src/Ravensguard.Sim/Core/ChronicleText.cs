@@ -92,9 +92,9 @@ public sealed class ChronicleTypes
     /// Formats an entry for the view (chronicle-full 4.1): a keyed entry through <paramref name="tr"/> with its parameters named by <paramref name="nameOf"/> (ids to current names); a
     /// legacy entry (a v8 save's, or a writer not yet moved) shows what it carried: its English <c>text</c> or <c>title</c> data, else its first cause's note, else its type id.
     /// </summary>
-    public static string Format(ChronicleEntry e, Func<string, string> tr, Func<ChronParamKind, long, string> nameOf)
+    public static string Format(ChronicleEntry e, Func<string, string> tr, Func<ChronParamKind, long, string> nameOf, ChronGrammar? grammar = null, Func<long, char>? genderOf = null)
     {
-        if (e.TextKey.Length > 0) return Fill(tr(e.TextKey), e.Params, tr, nameOf);
+        if (e.TextKey.Length > 0) return Fill(tr(e.TextKey), e.Params, tr, nameOf, grammar, genderOf);
         if (e.Data.TryGetValue("text", out var t) && t.Length > 0) return t;
         if (e.Data.TryGetValue("title", out var ti) && ti.Length > 0) return ti;
         foreach (var c in e.Causes) if (c.Note.Length > 0) return c.Note;
@@ -102,28 +102,42 @@ public sealed class ChronicleTypes
     }
 
     /// <summary>A cause's note for the view: its key with parameters, else the legacy English note ("" when it has neither).</summary>
-    public static string FormatNote(Cause c, Func<string, string> tr, Func<ChronParamKind, long, string> nameOf) =>
-        c.NoteKey.Length > 0 ? Fill(tr(c.NoteKey), c.NoteParams, tr, nameOf) : c.Note;
+    public static string FormatNote(Cause c, Func<string, string> tr, Func<ChronParamKind, long, string> nameOf, ChronGrammar? grammar = null, Func<long, char>? genderOf = null) =>
+        c.NoteKey.Length > 0 ? Fill(tr(c.NoteKey), c.NoteParams, tr, nameOf, grammar, genderOf) : c.Note;
 
     /// <summary>
     /// Fills the named holes of a sentence from the typed parameters. A text-key parameter is itself a sentence, filled from the same parameters (so "{how} at the fight {where}"
     /// can nest {weapon} and {place}), to a depth of three.
     /// </summary>
-    private static string Fill(string template, IReadOnlyList<ChronParam>? ps, Func<string, string> tr, Func<ChronParamKind, long, string> nameOf, int depth = 0)
+    public static string Fill(string template, IReadOnlyList<ChronParam>? ps, Func<string, string> tr, Func<ChronParamKind, long, string> nameOf, ChronGrammar? grammar = null, Func<long, char>? genderOf = null, int depth = 0)
     {
         if (ps == null || ps.Count == 0 || template.IndexOf('{') < 0) return template;
+        var g = grammar ?? ChronGrammar.English;
+        // selects first (their branches may hold tokens): a plural reads a count or days value, a gender reads the person's
+        template = ChronGrammar.Select(template, head =>
+        {
+            int dot = head.IndexOf('.'); if (dot < 0) return null;
+            string name = head[..dot], axis = head[(dot + 1)..];
+            foreach (var p in ps) if (p.Name == name)
+                return axis == "plural" ? (p.Kind is ChronParamKind.Count or ChronParamKind.Days ? g.Plural(p.Value) : null)
+                     : axis == "gender" ? (genderOf?.Invoke(p.Value) is { } c and not '\0' ? c.ToString() : null) : null;
+            return null;
+        });
+        if (template.IndexOf('{') < 0) return template;
         var sb = new System.Text.StringBuilder(template);
         foreach (var p in ps)
         {
-            string tag = "{" + p.Name + "}";
-            if (template.IndexOf(tag, StringComparison.Ordinal) < 0) continue;
+            string tag = "{" + p.Name + "}", genTag = "{" + p.Name + ".gen}";
+            bool plain = template.IndexOf(tag, StringComparison.Ordinal) >= 0, gen = template.IndexOf(genTag, StringComparison.Ordinal) >= 0;
+            if (!plain && !gen) continue;
             string v = p.Kind switch
             {
                 ChronParamKind.Mites => MoneyText.Format(p.Value, MoneyStyle.Amount, MoneyText.Words(tr)),
                 ChronParamKind.Count or ChronParamKind.Days => p.Value.ToString(CultureInfo.InvariantCulture),
-                ChronParamKind.TextKey => depth < 3 ? Fill(tr(p.Key), ps, tr, nameOf, depth + 1) : tr(p.Key),
+                ChronParamKind.TextKey => depth < 3 ? Fill(tr(p.Key), ps, tr, nameOf, grammar, genderOf, depth + 1) : tr(p.Key),
                 _ => nameOf(p.Kind, p.Value),
             };
+            if (gen) sb.Replace(genTag, p.Kind is ChronParamKind.Person or ChronParamKind.Place or ChronParamKind.Item or ChronParamKind.Good or ChronParamKind.Entry ? g.Form("gen", v, genderOf?.Invoke(p.Value) ?? '\0') : v);
             sb.Replace(tag, v);
         }
         return sb.ToString();

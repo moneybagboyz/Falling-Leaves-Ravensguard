@@ -14,11 +14,14 @@ public static class ChronicleReader
         _ => v.NameOf((ulong)value) is { Length: > 0 } n ? n : unknown,
     };
 
+    /// <summary>The gender of an id for a select form: 'm' or 'f' for a person the view knows, else the nul character (the select's other branch).</summary>
+    public static Func<long, char> GenderOf(ChronicleView v) => id => v.Genders.TryGetValue((ulong)id, out var c) ? c : '\0';
+
     /// <summary>The line an entry shows in the list and the detail pane.</summary>
-    public static string Line(ChronicleEntry e, ChronicleTypes types, ChronicleView v, Func<string, string> tr, Func<string, string> goodName)
+    public static string Line(ChronicleEntry e, ChronicleTypes types, ChronicleView v, Func<string, string> tr, Func<string, string> goodName, ChronGrammar? grammar = null)
     {
         var names = Names(v, goodName);
-        if (e.TextKey.Length > 0) return ChronicleTypes.Format(e, tr, names);
+        if (e.TextKey.Length > 0) return ChronicleTypes.Format(e, tr, names, grammar, GenderOf(v));
         if (e.Data.TryGetValue("text", out var t) && t.Length > 0) return t;
         if (e.Data.TryGetValue("title", out var ti) && ti.Length > 0) return ti;
         string heading = types.Get(e.TypeId) is { Def.Legacy: true } row && tr(row.TextKey) is { Length: > 0 } h && h != row.TextKey ? h : Pretty(e.TypeId);
@@ -28,9 +31,9 @@ public static class ChronicleReader
     }
 
     /// <summary>A cause's note (its key with parameters, else the legacy English), or its kind when it has none.</summary>
-    public static string Note(Cause c, ChronicleView v, Func<string, string> tr, Func<string, string> goodName)
+    public static string Note(Cause c, ChronicleView v, Func<string, string> tr, Func<string, string> goodName, ChronGrammar? grammar = null)
     {
-        string s = ChronicleTypes.FormatNote(c, tr, Names(v, goodName));
+        string s = ChronicleTypes.FormatNote(c, tr, Names(v, goodName), grammar, GenderOf(v));
         return s.Length > 0 ? s : c.Kind.ToString();
     }
 

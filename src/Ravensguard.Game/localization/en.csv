@@ -4687,9 +4687,9 @@ ch_justice_acquitted,{doer} was acquitted at {place}: no witness stood against t
 ch_justice_stocks,{doer} was set in the stocks at {place}.
 ch_justice_flogged,{doer} was flogged at {place}: {lashes} lashes.
 ch_justice_branded,{doer} was branded at {place}.
-ch_justice_hand,{doer}'s hand was struck off at {place}.
+ch_justice_hand,{doer.gen} hand was struck off at {place}.
 ch_justice_hanged,{doer} was hanged at {place}.
-ch_justice_displayed,{doer}'s body was left on show at {place} for {days} days.
+ch_justice_displayed,{doer.gen} body was left on show at {place} for {days} {days.plural|one:day|other:days}.
 ch_justice_outlawed,{doer} was declared an outlaw at {place}.
 ch_justice_exile,{doer} was ordered out of the realm within {days} days at {place}.
 ch_justice_fine,{doer} paid a fine of {amount} at {place}.
@@ -4862,8 +4862,8 @@ plague_name_pale_fever,The Pale Fever
 ch_ill_began,{person} fell ill of {illness}.
 ch_ill_hero_died,{hero} died of {illness}.
 ch_plague_begins,{plague} begins to spread along the trade roads.
-ch_plague_settlement,{plague} reaches {place}; it will rage there for about {days} days.
-ch_plague_quarantine,{place} closes its gates for {days} days against the sickness.
+ch_plague_settlement,{plague} reaches {place}; it will rage there for about {days} {days.plural|one:day|other:days}.
+ch_plague_quarantine,{place} closes its gates for {days} {days.plural|one:day|other:days} against the sickness.
 ch_plague_emptied,{plague} leaves {place} with {dead} dead; the few who live flee and the place stands empty.
 ch_plague_waned,{plague} burns itself out after {dead} deaths in {places} places.
 ch_note_ill_cold_wet,Out in the cold and wet.
