@@ -325,6 +325,13 @@ Only the questions that block a part. The recommendation is first.
 | D12 | **If Phase 8 runs late, is the cut order right?** (section 11) | **(a) As proposed.** (b) Change the order. | the overrun rule |
 | D13 | **Who does the soil work late in a long game?** (phase-6 G2: soil jobs have no crew after about year 60, and famines rise) | **(a) The holders' own households first, in idle hours, then the day-labour pool at the posted wage.** (b) The labour pool only, with a higher wage. (c) The lord's levy as labour service, a few days a season. | P8-BL-1 (by month 3.9) |
 
+### 10a. Decided by the user (27 Nov 2026)
+- **D1: six endings,** one per great ambition.
+- **D2: kicks and bites everywhere.** MT-13's hash is re-pinned with the reason in P8-WT-3.
+- **D11: a calibration gate that still misses ships as a named ratchet.** The gap is written in the review, and the ratchet can only tighten.
+- **D13: the holders' own households do the soil work first, in idle hours, then the day-labour pool at the posted wage.**
+- D3 to D10 and D12 are asked before the part they block.
+
 ## 11. Cut order (overrun rule)
 
 The rule triggers at 18 months. Each item below moves to the after-1.0 list; its spec section stays as the design. First cut first:
