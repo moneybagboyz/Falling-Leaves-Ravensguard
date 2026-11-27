@@ -123,6 +123,7 @@ public sealed class BeachFights(ArmyWorld aw)
             Seed = seed, Id = (ulong)raid.Id * 4096 + (ulong)(e.Hour & 4095), GameSec = e.Hour * 3600, Raid = raid.Id, HeroTeam = heroTeam, OriginMm = (bx, by),
             Raiders = Units(ashore, raiderKit, 0), Defenders = Units(riders, soldier, 1), RaiderRealm = raid.Realm, DefendRealm = raid.Victim, Place = aw.PlaceId(raid.Settlement),
             Ships = [.. raid.Ships.Select(s => rides.Vehicles.Find(new EntityId(s))).Where(v => v != null).Select(v => (v!.Id, rides.Vehicles.DesignOf(v!).Id))], Cat = rides.Templates,
+            Rides = rides, DefenderOwners = [new Ravensguard.Sim.Core.EntityId(wb.Lord == 0 ? hid : wb.Lord)],
         });
         Live[raid.Id] = la; raid.LiveSince = e.Hour; book!.Touch();
         return true;
@@ -134,6 +135,7 @@ public sealed class BeachFights(ArmyWorld aw)
         var op = new BattleOpening { Id = sp.Id, Seed = sp.Seed, GameSec = sp.GameSec, CapTotal = LiveCap, GapMm = GapMm, OriginMm = sp.OriginMm, CauseKind = CauseKind.Raid, Place = sp.Place, CauseNoteKey = "ch_note_sh_raid_culture" };
         var a = new BattleSideSpec { Team = 0, Realm = sp.RaiderRealm, Kind = SideKind.Army }; var d = new BattleSideSpec { Team = 1, Realm = sp.DefendRealm, Kind = SideKind.Army };
         a.Units.AddRange(sp.Raiders); d.Units.AddRange(sp.Defenders);
+        a.VehicleOwners.AddRange(sp.RaiderOwners); d.VehicleOwners.AddRange(sp.DefenderOwners); op.Rides = sp.Rides;
         if (sp.HeroTeam == 1 && d.Units.Count > 0) { d.HeroUnit = 0; d.HeroIndex = 0; }
         op.Sides.Add(a); op.Sides.Add(d);
         var bubble = BattleBubble.Open(fc, op);
@@ -199,4 +201,7 @@ public sealed class LiveBeachSpec
     public required List<BattleUnit> Raiders, Defenders;
     public required List<(EntityId Id, string Design)> Ships;
     public required Ravensguard.Sim.Carts.VehicleCatalog Cat;
+    /// <summary>P8-LW-3: the ride book and the owners (a warband's lord) whose war wagons and chariots come onto the sand with each side.</summary>
+    public Ravensguard.Sim.Animals.RideBook? Rides;
+    public List<Ravensguard.Sim.Core.EntityId> RaiderOwners = [], DefenderOwners = [];
 }

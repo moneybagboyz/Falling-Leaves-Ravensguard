@@ -6344,6 +6344,12 @@ so_cannot_equip,"That piece will not do for his {0}, or is not his or the armour
 so_stripped,His {0} piece is taken off.
 so_nothing_there,He wears nothing there.
 so_role_set,He is now a {0}.
+so_steward_hired,"A steward will order arms each season, up to {0}, for {1} kits."
+so_steward_dismissed,The steward is let go; his orders stand.
+so_no_steward,You have no steward.
+so_no_arms_purse,You have no purse to pay arms from.
+so_commissioned,"An armourer will fit {0} pieces, for {1}."
+so_commission_none,The armoury has no gaps the budget would fill.
 so_discharged,"He is discharged; {0} pieces went back to the armoury."
 ch_sg_breached,"The wall was breached at {x}, {y}: a gap {width} m wide."
 ch_sg_fell,"The wall-walk fell where the wall was struck down at {x}, {y}: {cells} cells came down and {people} people with them."
@@ -6812,7 +6818,9 @@ fw_state_defaulted,defaulted
 fw_state_unstaffed,no master in office
 ar_title,The Armoury
 ar_status,"{0} soldiers, {1} pieces in the armoury, {2} required slots empty"
-ar_keys,"{0} fill all, {1} fill gaps only, {2} next template, {3} fit this man, {4} next armoury, {5} close"
+ar_keys,"{0} fill all, {1} fill gaps only, {2} next template, {3} fit this man, {4} next armoury, {6} steward on or off, {7} commission arms, {5} close"
+ar_arms_steward,"Steward: up to {0} a season for {1} kits; {2} arms orders open."
+ar_arms_none,"No steward; {0} arms orders open."
 ar_none,"No armoury: raise one in a building of your own, then stock it."
 ar_no_soldiers,No soldiers of yours to kit. Enlist men at the squad screen.
 ar_col_soldier,Soldier
@@ -6841,6 +6849,8 @@ ACTION_ARMOURY_FILL_GAPS,Fill only the gaps
 ACTION_ARMOURY_TEMPLATE,Next template for this man
 ACTION_ARMOURY_REFIT,Fit this man by hand
 ACTION_ARMOURY_NEXT_ARMOURY,Next armoury
+ACTION_ARMOURY_STEWARD,Hire or dismiss the steward who orders arms
+ACTION_ARMOURY_COMMISSION,Commission an armourer to fit the gaps
 ACTION_ARMOURY_BACK,Close the Armoury
 CONTEXT_ARMOURY,The Armoury screen
 OVERLAY_ARMOURY,Armoury

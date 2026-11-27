@@ -39,11 +39,15 @@ public sealed class ArmsSupply
     private readonly Armouries _arm;
     private readonly ContractWorld _cw;
     private readonly ContractBook _cb;
-    private static readonly ArmouryCapacity Roomy = new(600, 600, 600, 60, 600, 6000, 2400, 6000, 3600, 2400);
+    public static readonly ArmouryCapacity Roomy = new(600, 600, 600, 60, 600, 6000, 2400, 6000, 3600, 2400);
 
     public ArmsSupply(EconomyState econ, ArmsWorld arms, Armouries armouries, ContractWorld cw, ContractBook cb) { _econ = econ; _arms = arms; _arm = armouries; _cw = cw; _cb = cb; }
 
     public ArmsBook Book => _arms.Book;
+    /// <summary>The levy kit, piece by piece, for <paramref name="kits"/> kits (what a steward or a commission is asked for by default).</summary>
+    public IReadOnlyDictionary<string, int> Template(int kits) => _arms.Template(kits);
+    /// <summary>The list price of <paramref name="kits"/> levy kits, in mites.</summary>
+    public long ListPrice(int kits) => _arms.Rules.LevyKit.Sum(p => p.PriceMites) * kits;
     private long[] Stats => Book.SupplyStats;
 
     /// <summary>The makers of arms, in any order (they are sorted by id here).</summary>

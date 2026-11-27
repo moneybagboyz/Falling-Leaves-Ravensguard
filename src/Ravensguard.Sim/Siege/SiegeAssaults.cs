@@ -20,6 +20,8 @@ public sealed class LiveStormSpec
     public ulong Seed, Id, AttackCommander, HostId; public long GameSec; public int Siege, HeroTeam = -1, AttackRealm, DefendRealm;
     public required SiegeWalls Walls; public required List<BattleUnit> Attackers, Defenders;
     public SiegeChronicle? Chronicle; public EntityId Cause, Place; public string CauseNoteKey = "ch_note_sg_assault"; public SiegeKit? Engines; public int LadderBudget = -1;
+    /// <summary>P8-LW-3: the ride book and the host's owners (its baggage and its commander) whose chariots come to the storm (an assault takes no wagon fort).</summary>
+    public Ravensguard.Sim.Animals.RideBook? Rides; public List<EntityId> AttackOwners = [];
 }
 
 public sealed class LiveAssault
@@ -97,6 +99,7 @@ public sealed class SiegeAssaults(SiegeWorld sw)
             AttackRealm = s.Realm, DefendRealm = sw.Armies.Supply?.RealmOf(s.Place) ?? -1, AttackCommander = host == null ? 0UL : (ulong)host.Commander, HostId = (ulong)s.Host,
             Chronicle = sw.Writer, Cause = new EntityId(s.Entry), Place = sw.PlaceOf(s.Place), CauseNoteKey = "ch_note_sg_assault",
             Engines = sw.KitOf?.Invoke(s) is { } kit && kit.Book.Engines.Values.Any(e => e.Kind is EngineKind.Tower or EngineKind.Ram) ? kit : null,
+            Rides = sw.KitOf?.Invoke(s)?.Yard.Rides, AttackOwners = host == null ? [] : [Ravensguard.Sim.WarSupply.HostIds.Baggage(host.Supply), new EntityId(host.Commander)],
         };
         spec.LadderBudget = Provision(s);
         Live[s.Id] = Assemble(fc, spec);
@@ -137,6 +140,7 @@ public sealed class SiegeAssaults(SiegeWorld sw)
         var a = new BattleSideSpec { Team = 0, Realm = sp.AttackRealm, Commander = sp.AttackCommander, HostId = sp.HostId, Kind = SideKind.Army };
         var d = new BattleSideSpec { Team = 1, Realm = sp.DefendRealm, Kind = SideKind.Army };
         a.Units.AddRange(sp.Attackers); d.Units.AddRange(sp.Defenders);
+        a.VehicleOwners.AddRange(sp.AttackOwners); op.Rides = sp.Rides; op.NoFort = true;
         d.Entry = (west ? 45_000 : -45_000, 0);         // the garrison's reinforcements come out of the town's streets, 45 m inside the curtain (the default entry is 150 m off, beyond the far wall)
         foreach (var (spec, team) in new[] { (a, 0), (d, 1) })
             if (sp.HeroTeam == team && spec.Units.Count > 0) { spec.HeroUnit = 0; spec.HeroIndex = 0; }

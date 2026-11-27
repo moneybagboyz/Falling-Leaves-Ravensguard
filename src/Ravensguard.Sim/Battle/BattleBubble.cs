@@ -51,6 +51,8 @@ public sealed class BattleSideSpec
     public (int X, int Y)? Entry;
     /// <summary>The player's fighter: formation <see cref="HeroUnit"/>'s soldier <see cref="HeroIndex"/> (-1: none), with this Leadership. The side then takes the player's orders; the other sides' captains run their formations always.</summary>
     public int HeroUnit = -1, HeroIndex = -1, HeroLeadership = 50;
+    /// <summary>P8-LW-3: the owners (a warband's lord, a host's baggage or commander) whose war wagons and chariots in <see cref="BattleOpening.Rides"/> come onto the field with this side.</summary>
+    public List<Ravensguard.Sim.Core.EntityId> VehicleOwners = [];
 }
 
 /// <summary>What opens a battle: the fight's identity, where its frame sits on the continent, the sides, the battle size, the cause and place for the chronicle.</summary>
@@ -65,6 +67,10 @@ public sealed class BattleOpening
     /// <summary>P8-LW-1: the wave threshold in permille of a side's share (0: the content's).</summary>
     public int WaveUnderPm;
     public List<BattleSideSpec> Sides = [];
+    /// <summary>P8-LW-3: the ride book the sides' <see cref="BattleSideSpec.VehicleOwners"/> keep their war wagons and chariots in; null: no vehicles come (<see cref="BattleVehicles"/>).</summary>
+    public Ravensguard.Sim.Animals.RideBook? Rides;
+    /// <summary>P8-LW-3: no wagon fort on this field (an assault's walls are its own); chariots still come.</summary>
+    public bool NoFort;
     /// <summary>The distance between the two front lines at the opening (the lines of three or four sides stand on the axes), mm.</summary>
     public int GapMm = 150_000;
     /// <summary>The chronicle entry that brought the sides together (a campaign, a raid, an ambush) and how; none: the battle entry is a root.</summary>
@@ -196,6 +202,7 @@ public sealed partial class BattleBubble
         w.LodCentre = (cx, cy); if (b.Hero >= 0) w.LodFighter = b.Hero;                            // the AI thinks at 20 Hz near the hero, else near the middle of the box, 5 Hz beyond (never by the camera)
         b.RecomputePaused();
         b.StartTick = w.Tick;
+        BattleVehicles.Attach(b, o);                                   // P8-LW-3: the owners' war wagons and chariots, when the opening names a ride book
         return b;
     }
 

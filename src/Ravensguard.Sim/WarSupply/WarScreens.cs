@@ -104,6 +104,11 @@ public static class WarScreens
         if (st.Economy == null || st.Soldiers == null) return null;
         var sw = SoldierWiring.For(st, content);
         var pt = st.Population.People;
-        return ArmouryView.Build(sw, armoury, sw.SoldiersOf(SoldierDesk.HeroLord), st.Economy.Items, p => { int r = pt.IndexOf(new EntityId(p)); return r >= 0 ? pt.FullName(r) : ""; });
+        var view = ArmouryView.Build(sw, armoury, sw.SoldiersOf(SoldierDesk.HeroLord), st.Economy.Items, p => { int r = pt.IndexOf(new EntityId(p)); return r >= 0 ? pt.FullName(r) : ""; });
+        var arms = st.WarSupply?.Arms; ulong hero = st.Party?.Hero.Value ?? 0;
+        if (arms == null) return view;
+        var steward = arms.Stewards.GetValueOrDefault(hero);
+        return view with { StewardBudgetMites = steward != null && steward.Armoury == armoury ? steward.BudgetMites : -1, StewardKits = steward != null && steward.Armoury == armoury ? steward.Kits : 0,
+            ArmsLive = arms.Jobs.Values.Count(j => j.Lord == hero && j.Armoury == armoury && (st.Contracts?.Get(j.Contract)?.Live ?? false)) };
     }
 }

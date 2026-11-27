@@ -34,6 +34,11 @@ public static class SoldierDesk
     public static HeroCommand Refuse(ulong person, long sec) => Cmd(sec, Tag("refuse", person));
     public static HeroCommand Dub(ulong person, long sec) => Cmd(sec, Tag("dub", person));
     public static HeroCommand Pay(long sec) => Cmd(sec, Tag("pay"));
+    /// <summary>P8-WS-2: hires (or re-sets) the steward who orders the armoury's arms every season for <paramref name="kits"/> levy kits within <paramref name="budgetMites"/> (0: the kits' list price), or lets him go.</summary>
+    public static HeroCommand Steward(long armoury, long budgetMites, int kits, long sec) => Cmd(sec, Tag("steward", armoury, budgetMites, kits));
+    public static HeroCommand DismissSteward(long sec) => Cmd(sec, Tag("nosteward"));
+    /// <summary>P8-WS-2: a commission, once: an armourer buys the armoury's missing parts for <paramref name="kits"/> levy kits (budget 0: their list price) and fits them.</summary>
+    public static HeroCommand Commission(long armoury, int kits, long budgetMites, long sec) => Cmd(sec, Tag("commission", armoury, kits, budgetMites));
 
     private static HeroResult R(HeroCommand c, HeroResultCode code, HeroText text) => new(c.Seq, c.Kind, code, text, 0, 0, c.IssuedSec);
 
@@ -133,6 +138,31 @@ public static class SoldierDesk
             {
                 long paid = WageRoll.PayDay(sw, HeroLord, ctx.Purse, ctx.Econ.Ledger);
                 res = (true, "so_paid", [Ravensguard.Sim.Core.MoneyText.Format(paid), Ravensguard.Sim.Core.MoneyText.Format(WageRoll.Rows(sw, HeroLord).Sum(l => l.ArrearsMites))]);
+                break;
+            }
+            case "steward" when p.Length >= 4 && N(1) != long.MinValue && N(3) > 0:
+            {
+                var arms = Ravensguard.Sim.WarSupply.ArmsPlay.Build(ctx.State, ctx.Content, create: true);
+                if (arms == null || Ravensguard.Sim.WarSupply.ArmsPlay.DepotFor(ctx.State, ctx.Party.Hero.Value, N(1)) == null) { res = (false, "so_no_arms_purse", []); break; }
+                int kits = (int)Math.Min(N(3), 5000); long budget = N(2) > 0 ? N(2) : arms.ListPrice(kits);
+                arms.HireSteward(ctx.Party.Hero.Value, N(1), budget, kits);
+                res = (true, "so_steward_hired", [MoneyText.Format(budget), kits]);
+                break;
+            }
+            case "nosteward":
+            {
+                bool had = ctx.State.WarSupply?.Arms.Stewards.Remove(ctx.Party.Hero.Value) == true;
+                res = had ? (true, "so_steward_dismissed", []) : (false, "so_no_steward", []);
+                break;
+            }
+            case "commission" when p.Length >= 4 && N(1) != long.MinValue && N(2) > 0:
+            {
+                var arms = Ravensguard.Sim.WarSupply.ArmsPlay.Build(ctx.State, ctx.Content, create: true);
+                var depot = arms == null ? null : Ravensguard.Sim.WarSupply.ArmsPlay.DepotFor(ctx.State, ctx.Party.Hero.Value, N(1));
+                if (arms == null || depot == null) { res = (false, "so_no_arms_purse", []); break; }
+                int kits = (int)Math.Min(N(2), 5000); long budget = N(3) > 0 ? N(3) : arms.ListPrice(kits);
+                var o = arms.Commission(depot, arms.Template(kits), budget, day);
+                res = o.Mites > 0 ? (true, "so_commissioned", [o.Ordered.Values.Sum(), MoneyText.Format(o.Mites)]) : (false, "so_commission_none", []);
                 break;
             }
             default: return R(c, HeroResultCode.Invalid, HeroText.Of("HERO_MAKES_NO_SENSE"));

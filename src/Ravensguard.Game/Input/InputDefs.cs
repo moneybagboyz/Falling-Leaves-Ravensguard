@@ -248,6 +248,8 @@ public static class InputDefs
         A(Ar, "template", K(Key.T));
         A(Ar, "refit", K(Key.Enter));
         A(Ar, "next_armoury", K(Key.Tab));
+        A(Ar, "steward", K(Key.S));
+        A(Ar, "commission", K(Key.C));
         A(Ar, "back", K(Key.Escape));
 
         // The treatment screen (P6-B1, medicine 4.1, overview 6): a modal screen alone with Global; the paper-doll's parts, the verbs of a part, the patients in reach.

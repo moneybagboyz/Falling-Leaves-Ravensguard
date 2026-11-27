@@ -48,6 +48,8 @@ public partial class StreetView
         FillAll = a => IssueBiz(SoldierDesk.Fill(a, HeroNow())),
         FillGaps = a => IssueBiz(SoldierDesk.FillGaps(a, HeroNow())),
         FillOne = (p, a) => IssueBiz(SoldierDesk.FillOne(p, a, HeroNow())),
+        Steward = (a, kits, has) => IssueBiz(has ? SoldierDesk.DismissSteward(HeroNow()) : SoldierDesk.Steward(a, 0, kits, HeroNow())),
+        Commission = (a, kits) => IssueBiz(SoldierDesk.Commission(a, kits, 0, HeroNow())),
         SetTemplate = (p, role, tpl) => IssueBiz(SoldierDesk.SetRole(p, role, tpl, HeroNow())),
         Templates = () => Runtime?.State.Content is { } c ? [.. c.All<LoadoutTemplateDef>().Select(t => t.Id).OrderBy(x => x, StringComparer.Ordinal)] : [],
     };

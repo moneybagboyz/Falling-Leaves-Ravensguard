@@ -15,6 +15,10 @@ public sealed record ArmourySoldierRow(ulong Person, string Name, string Role, s
 public sealed record ArmouryView(long Armoury, int Stock, IReadOnlyList<string> Columns, IReadOnlyList<ArmourySoldierRow> Rows)
 {
     public int GapCount => Rows.Sum(r => r.Cells.Count(c => c.Gap));
+    /// <summary>P8-WS-2: the hero's steward for this armoury (the budget a season, in mites, and the kits he orders; -1 and 0 when none) and the arms orders and commissions still live.</summary>
+    public long StewardBudgetMites { get; init; } = -1;
+    public int StewardKits { get; init; }
+    public int ArmsLive { get; init; }
 
     public static ArmouryView Build(SoldierWorld sw, long armoury, IReadOnlyList<FillSoldier> soldiers, ItemTable items, Func<ulong, string>? nameOf = null)
     {

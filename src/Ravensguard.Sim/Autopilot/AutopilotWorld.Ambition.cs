@@ -24,6 +24,8 @@ public sealed partial class AutopilotWorld
     public Func<EntityId, long?>? StallHook { get; set; }
     /// <summary>Carries out a one-shot means the autopilot has no desk for itself: a purchase (<c>buy</c>), a recruit, a theft. Returns whether it was done. Null: those means are not open. A purchase is booked against the spending cap here.</summary>
     public Func<EntityId, MeansDef, bool>? MeansHook { get; set; }
+    /// <summary>The game second the means being started was planned at (what a hook stamps its commands with).</summary>
+    public long MeansAt { get; private set; }
 
     /// <summary>The directive the person is acting on this window: the child of an active <c>PursueAmbition</c>, else the active one.</summary>
     private Directive? Eff(AutopilotState st) => st.Active is { Kind: DirectiveKind.PursueAmbition } && st.Child is { State: DirectiveState.Active } c ? c : st.Active;
@@ -342,6 +344,7 @@ public sealed partial class AutopilotWorld
                 if (MeansHook == null) return false;
                 int day = (int)(at / 86400);
                 if (m.SpendMites > 0 && LimitGuard.CheckSpend(st.Limits, st, day, coin, m.SpendMites) != LimitVerdict.Allowed) return false;
+                MeansAt = at;
                 if (MeansHook(st.Person, m))
                 {
                     if (m.SpendMites > 0) { LimitGuard.Commit(st, day, m.SpendMites); st.Today.Spent += m.SpendMites; }

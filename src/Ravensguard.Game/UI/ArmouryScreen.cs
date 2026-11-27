@@ -12,6 +12,9 @@ namespace Ravensguard.Game.UI;
 public sealed class ArmouryActions
 {
     public Action<long>? FillAll, FillGaps;
+    /// <summary>P8-WS-2: S hires the steward for the armoury (the key, the kits) or lets him go (when one is hired); C commissions an armourer once (the key, the kits). Each is one <c>so:</c> command.</summary>
+    public Action<long, int, bool>? Steward;
+    public Action<long, int>? Commission;
     public Action<ulong, long>? FillOne;
     public Action<ulong, string, string>? SetTemplate;
     /// <summary>The template ids a role's men may take (content), in id order.</summary>
@@ -25,7 +28,7 @@ public sealed class ArmouryActions
 /// </summary>
 public partial class ArmouryScreen : Control, IHandlesBack
 {
-    const int MaxRows = 14, SlotW = 66, NameW = 190;
+    const int MaxRows = 14, SlotW = 66, NameW = 190, ArmsKits = 10;
     readonly ScreenRouter _router;
     readonly Func<long, ArmouryView?> _data;
     readonly Func<IReadOnlyList<long>> _keys;
@@ -52,7 +55,7 @@ public partial class ArmouryScreen : Control, IHandlesBack
         _status = UiKit.Hint(""); root.AddChild(_status);
         _table = new VBoxContainer(); _table.AddThemeConstantOverride("separation", 1);
         var p = UiKit.Panel(_table, 0, 0); p.SizeFlagsVertical = SizeFlags.ExpandFill; root.AddChild(p);
-        _keysHint = UiKit.Hint(L.F("ar_keys", InputBootstrap.Hint("armoury.fill_all"), InputBootstrap.Hint("armoury.fill_gaps"), InputBootstrap.Hint("armoury.template"), InputBootstrap.Hint("armoury.refit"), InputBootstrap.Hint("armoury.next_armoury"), InputBootstrap.Hint("armoury.back")), true);
+        _keysHint = UiKit.Hint(L.F("ar_keys", InputBootstrap.Hint("armoury.fill_all"), InputBootstrap.Hint("armoury.fill_gaps"), InputBootstrap.Hint("armoury.template"), InputBootstrap.Hint("armoury.refit"), InputBootstrap.Hint("armoury.next_armoury"), InputBootstrap.Hint("armoury.back"), InputBootstrap.Hint("armoury.steward"), InputBootstrap.Hint("armoury.commission")), true);
         root.AddChild(_keysHint);
         Build();
     }
@@ -89,7 +92,7 @@ public partial class ArmouryScreen : Control, IHandlesBack
         if (v == null || Key() < 0) { _status.Text = L.T("ar_none"); return; }
         _row = Math.Clamp(_row, 0, Math.Max(0, v.Rows.Count - 1)); _col = Math.Clamp(_col, 0, Math.Max(0, v.Columns.Count - 1));
         if (_row < _first) _first = _row; if (_row >= _first + MaxRows) _first = _row - MaxRows + 1;
-        _status.Text = L.F("ar_status", v.Rows.Count, v.Stock, v.GapCount);
+        _status.Text = L.F("ar_status", v.Rows.Count, v.Stock, v.GapCount) + "  " + (v.StewardBudgetMites >= 0 ? L.F("ar_arms_steward", Ravensguard.Sim.Core.MoneyText.Format(v.StewardBudgetMites), v.StewardKits, v.ArmsLive) : L.F("ar_arms_none", v.ArmsLive));
         if (v.Rows.Count == 0) { _table.AddChild(UiKit.Hint(L.T("ar_no_soldiers"), true)); return; }
         var head = new HBoxContainer(); head.AddThemeConstantOverride("separation", 2);
         head.AddChild(Cell(L.T("ar_col_soldier"), NameW, PixelTheme.Dim));
@@ -139,6 +142,8 @@ public partial class ArmouryScreen : Control, IHandlesBack
         else if (Actions.Pressed(e, "armoury.fill_all")) { if (Key() >= 0) _act.FillAll?.Invoke(Key()); }
         else if (Actions.Pressed(e, "armoury.fill_gaps")) { if (Key() >= 0) _act.FillGaps?.Invoke(Key()); }
         else if (Actions.Pressed(e, "armoury.template")) NextTemplate();
+        else if (Actions.Pressed(e, "armoury.steward")) { if (Key() >= 0) _act.Steward?.Invoke(Key(), ArmsKits, _shown is { StewardBudgetMites: >= 0 }); }
+        else if (Actions.Pressed(e, "armoury.commission")) { if (Key() >= 0) _act.Commission?.Invoke(Key(), ArmsKits); }
         else if (Actions.Pressed(e, "armoury.refit")) { if (Current is { } r && Key() >= 0) _act.FillOne?.Invoke(r.Person, Key()); }
         else return;
         GetViewport().SetInputAsHandled();

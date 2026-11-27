@@ -48,6 +48,7 @@ public partial class StreetView
                 TravelOf = () => null,                                  // the main thread owns the journey; the autopilot walks the plain way here
                 PositionHook = id => { lock (_apPosLock) return id == HeroId ? _apPos : null; },
             };
+            ap.InstallAmbitionHooks();                                  // P8-AT-2: the desk means (talk, buy, craft, petition) and the trust, reputation, rank and fief facts
             return ap;
         });
     }
