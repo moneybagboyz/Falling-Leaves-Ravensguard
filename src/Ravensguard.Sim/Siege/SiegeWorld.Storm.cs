@@ -50,12 +50,19 @@ public sealed partial class SiegeWorld
     /// </summary>
     private (bool Won, int LostA, int LostD) Resolve(ArmyEnv e, SiegeRow s, List<ulong> men, List<ulong> garrison, bool breach, bool walled)
     {
-        long pa = (long)men.Count * SiegeConfig.AttackPower, pd = (long)garrison.Count * (!walled ? SiegeConfig.DefenceOpen : breach ? SiegeConfig.DefenceBreached : SiegeConfig.DefenceWalled);
-        bool won = men.Count > 0 && (pa > pd || garrison.Count == 0);          // P7R-3: an emptied host storms nothing
-        long share = pa + pd == 0 ? 0 : pd * 1000 / (pa + pd);
-        int lostA = (int)Math.Min(men.Count / 4, men.Count * share / 4000 + (garrison.Count > 0 ? 1 : 0));
-        int lostD = won ? (int)(garrison.Count * (1000 - share) / 2000) : garrison.Count / 10;
+        var (won, lostA, lostD) = AbstractStorm(men.Count, garrison.Count, breach, walled);
         lostA = Slay(e, s, men, lostA, 0); lostD = Slay(e, s, garrison, lostD, 1);
+        return (won, lostA, lostD);
+    }
+
+    /// <summary>The abstract storm's arithmetic (a pure function, so the live storm can be held to it, LW-1): who takes the place and what each side loses.</summary>
+    public static (bool Won, int LostA, int LostD) AbstractStorm(int men, int garrison, bool breach, bool walled)
+    {
+        long pa = (long)men * SiegeConfig.AttackPower, pd = (long)garrison * (!walled ? SiegeConfig.DefenceOpen : breach ? SiegeConfig.DefenceBreached : SiegeConfig.DefenceWalled);
+        bool won = men > 0 && (pa > pd || garrison == 0);          // P7R-3: an emptied host storms nothing
+        long share = pa + pd == 0 ? 0 : pd * 1000 / (pa + pd);
+        int lostA = (int)Math.Min(men / 4, men * share / SiegeConfig.StormLostAttackersDiv + (garrison > 0 ? 1 : 0));
+        int lostD = won ? (int)(garrison * (1000 - share) / SiegeConfig.StormLostDefendersDiv) : garrison / 10;
         return (won, lostA, lostD);
     }
 
@@ -63,6 +70,19 @@ public sealed partial class SiegeWorld
     private RegionOutbox ObOf(ArmyEnv e) => e.Ob ?? new RegionOutbox(W.Ids);
 
     private void Flush(ArmyEnv e, RegionOutbox ob) { if (e.Ob == null) ob.ApplyTo(W.Chronicle, null, new Dictionary<string, long>(StringComparer.Ordinal)); }
+
+    /// <summary>P8-LW-1: the men who fell in the live assault are killed as persons (the siege is the cause), the hero spared; returns how many were alive to die.</summary>
+    internal int SlayFallen(ArmyEnv e, SiegeRow s, IEnumerable<ulong> persons)
+    {
+        var pt = Armies.People; var ob = ObOf(e); int dead = 0;
+        foreach (ulong m in persons.OrderBy(m => m))
+        {
+            int r = Armies.RowOf(m); if (r < 0 || pt.Status[r] != PersonStatus.Alive || Hero(m)) continue;
+            Demography.Kill(W, r, DeathCause.Violence, e.Time, ob, chain: OnSiege(s, "ch_note_sg_assault")); dead++;
+        }
+        Flush(e, ob);
+        return dead;
+    }
 
     private int Slay(ArmyEnv e, SiegeRow s, List<ulong> from, int n, ulong side)
     {

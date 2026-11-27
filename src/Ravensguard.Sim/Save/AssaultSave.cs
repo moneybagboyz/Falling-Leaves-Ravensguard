@@ -12,6 +12,8 @@ public sealed class LadderRow
     [Key(8)] public int[] Carriers { get; set; } = []; [Key(9)] public int[] Queue { get; set; } = [];
     [Key(10)] public int[] Climbers { get; set; } = []; [Key(11)] public int[] Progress { get; set; } = [];
     [Key(12)] public int Pusher { get; set; } = -1; [Key(13)] public int PushTries { get; set; } [Key(14)] public long PushSince { get; set; } [Key(15)] public int Pushed { get; set; }
+    /// <summary>P8-LW-1 (optional keys): the second defender at the top and the ladder's hook.</summary>
+    [Key(16)] public int Pusher2 { get; set; } = -1; [Key(17)] public bool Hooked { get; set; }
 }
 
 [MessagePackObject]
@@ -72,6 +74,11 @@ public sealed class AssaultRecord
     /// <summary>The inside box (x0, y0, x1, y1) or empty.</summary>
     [Key(18)] public int[] Inside { get; set; } = [];
     [Key(19)] public OrderRow[] Orders { get; set; } = [];
+    /// <summary>P8-LW-1 (optional keys): the live flag, the teams the AI plays, the side the attack comes from, the next planning tick; the orders on their way (kind, team, due, x0, y0, x1, y1 to a row); the engines being pushed (vehicle, x, y).</summary>
+    [Key(20)] public bool Live { get; set; } [Key(21)] public int AiTeams { get; set; } [Key(22)] public bool FromWest { get; set; } = true; [Key(23)] public int PlanAt { get; set; }
+    [Key(26)] public int Siege { get; set; }
+    [Key(27)] public int LadderBudget { get; set; } = -1;
+    [Key(24)] public long[] Cmds { get; set; } = []; [Key(25)] public long[] Goals { get; set; } = [];
 
     public byte[] ToBytes() => SaveCodec.SerializeCompressed(this);
     public static AssaultRecord FromBytes(byte[] b) => SaveCodec.DeserializeCompressed<AssaultRecord>(b);

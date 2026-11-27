@@ -104,6 +104,8 @@ public enum FightInputKind : byte
     FormCaptain = 28,
     /// <summary>[P7 CV-B] E: the hero gets down from his horse, or, on foot beside it, mounts (cavalry-and-mounted-war 4.5).</summary>
     MountToggle = 29,
+    /// <summary>[P8 LW-1] The hero gives the assault an order from the wheel: A = the assault order, B = (x0, y0) and C = (x1, y1) of the wall stretch in cells, each two 16-bit halves (see AssaultCommands).</summary>
+    AssaultOrder = 30,
 }
 
 public readonly record struct FightInput(FightInputKind Kind, int A = 0, int B = 0, int C = 0);

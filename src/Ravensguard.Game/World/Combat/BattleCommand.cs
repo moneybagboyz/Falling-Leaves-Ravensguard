@@ -5,11 +5,12 @@ using Godot;
 using Ravensguard.Sim.Battle;
 using Ravensguard.Sim.Combat.Melee2;
 using Ravensguard.Sim.Combat.Watch;
+using Ravensguard.Sim.Siege;
 
 namespace Ravensguard.Game.World.Combat;
 
 /// <summary>One sector of the order wheel: its text key, the formation order it gives, and the Phase 4 squad input it stands for when the hero has no army (a squad is formation 1).</summary>
-public sealed record WheelItem(string Key, OrderKind Kind, Formation SquadShape = Formation.Auto, SquadOrderKind? SquadOrder = null, bool Off = false);
+public sealed record WheelItem(string Key, OrderKind Kind, Formation SquadShape = Formation.Auto, SquadOrderKind? SquadOrder = null, bool Off = false, AssaultOrder? Assault = null);
 
 /// <summary>
 /// The command layer of the battle view (P7-BB-D, battle-bubble-and-formations 4.8): which formations the player has selected (a view choice, not game state), the order wheel's rings, and how an order
@@ -124,6 +125,48 @@ public sealed class BattleCommand
     /// <summary>The sectors of ring 0 (Orders), 1 (Shape) or 2 (Missiles). Without an army the shapes are Phase 4's four and the orders a squad cannot take are shown but off.</summary>
     public List<WheelItem> Ring(int ring)
     {
+        var items = RingFormations(ring);
+        if (ring == 1) items.AddRange(AssaultItems());
+        return items;
+    }
+
+    /// <summary>P8-LW-1: in a live assault the Shape ring also holds the assault orders of the hero's side: ladders, tower, ram and hold the breach for the attackers; push ladders, man the breach and sally for the defenders.</summary>
+    public List<WheelItem> AssaultItems()
+    {
+        if (W.Assault is not { Live: true } a || _v.HeroF is not { } hero) return [];
+        return hero.Team == a.AttackTeam
+            ? [new("bcmd_assault_ladders", OrderKind.None, Assault: AssaultOrder.LaddersToWall), new("bcmd_assault_tower", OrderKind.None, Assault: AssaultOrder.TowerForward), new("bcmd_assault_ram", OrderKind.None, Assault: AssaultOrder.RamGate), new("bcmd_assault_hold", OrderKind.None, Assault: AssaultOrder.HoldBreach)]
+            : [new("bcmd_assault_push", OrderKind.None, Assault: AssaultOrder.PushLadders), new("bcmd_assault_man", OrderKind.None, Assault: AssaultOrder.ManBreach), new("bcmd_assault_sally", OrderKind.None, Assault: AssaultOrder.Sally)];
+    }
+
+    /// <summary>An assault order waiting for the stretch of wall the player draws (RMB-drag a line, or click a point) before it is sent.</summary>
+    public AssaultOrder? PendingAssault { get; private set; }
+
+    /// <summary>A wheel item of the assault: the orders that need no stretch go at once (to the middle of the wall), the others wait for the player to draw one.</summary>
+    public void GiveAssault(AssaultOrder k)
+    {
+        if (W.Assault is not { Live: true } a) return;
+        if (k is AssaultOrder.TowerForward or AssaultOrder.RamGate or AssaultOrder.Sally)
+        {
+            var b = a.Inside ?? (0, 0, 0, 0); int x = k == AssaultOrder.Sally || a.FromWest ? b.X0 : b.X1, y = (b.Y0 + b.Y1) / 2;
+            SendAssault(k, x, y, x, y); PendingAssault = null; return;
+        }
+        PendingAssault = k;
+    }
+
+    void SendAssault(AssaultOrder k, int x0, int y0, int x1, int y1) => Place(0, AssaultCommands.Order(k, x0, y0, x1, y1));
+
+    /// <summary>The drawn line (or point) of the player is the stretch of the pending assault order: it goes out and the order is no longer pending. False when none was pending.</summary>
+    bool TakePending((int X, int Y) a, (int X, int Y) b)
+    {
+        if (PendingAssault is not { } k || W.Assault is not { } la) return false;
+        var (x0, y0) = la.CellAt(a.X, a.Y); var (x1, y1) = la.CellAt(b.X, b.Y);
+        PendingAssault = null; SendAssault(k, x0, y0, x1, y1);
+        return true;
+    }
+
+    List<WheelItem> RingFormations(int ring)
+    {
         bool squad = Mine().Count == 0;
         switch (ring)
         {
@@ -145,6 +188,7 @@ public sealed class BattleCommand
     /// <summary>Gives a wheel item to the selection (or, with no army, the squad).</summary>
     public void Give(WheelItem it, bool queue = false)
     {
+        if (it.Assault is { } ao) { GiveAssault(ao); return; }
         if (it.Off) return;
         var rows = Targets();
         if (rows.Count == 0)
@@ -164,11 +208,12 @@ public sealed class BattleCommand
     public void Order(byte row, OrderKind kind, int enemyRowIndex, bool queue) => Place(row, FormationCommands.At(row, kind, enemyRowIndex, queue));
 
     /// <summary>LMB-drag a block to a point: a <see cref="OrderKind.MoveTo"/>.</summary>
-    public void MoveTo(byte row, int x, int y, bool queue) => Place(row, FormationCommands.Order(row, OrderKind.MoveTo, x, y, queue));
+    public void MoveTo(byte row, int x, int y, bool queue) { if (TakePending((x, y), (x, y))) return; Place(row, FormationCommands.Order(row, OrderKind.MoveTo, x, y, queue)); }
 
     /// <summary>RMB-drag a line: stand there, as wide as the line, facing across it toward where the formation faces now.</summary>
     public void Draw(byte row, (int X, int Y) a, (int X, int Y) b, bool queue)
     {
+        if (TakePending(a, b)) return;
         var r = Book?.Find(Team, row); if (r == null) return;
         long dx = b.X - a.X, dy = b.Y - a.Y;
         int len = (int)FightMath.Len(dx, dy);

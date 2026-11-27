@@ -23,7 +23,9 @@ public sealed class SiegeLadder
     /// <summary>Fighters waiting to climb, in order.</summary>
     public List<int> Queue = [];
     public List<Climb> Climbers = [];
-    public int Pusher = -1, PushTries;
+    public int Pusher = -1, Pusher2 = -1, PushTries;
+    /// <summary>P8-LW-1: a ladder with a hook holds against a push with 300 permille (0x850).</summary>
+    public bool Hooked;
     public long PushSince;
     public int Pushed;
 }
@@ -113,8 +115,9 @@ public sealed partial class AssaultLayer
             l.Queue.RemoveAt(i); i--;
         }
         foreach (int q in l.Queue) { var f = World.Fighters[q]; if (Free(f)) March(f, fx, fy, 1000); }            // those who wait stand at the foot
+        if (Live) { if (PushLive(l, t)) return; }
         // a defender at the top pushes it off: 3 s a try, each try a draw of 0x7C1 keyed by the ladder and the try
-        if (l.Pusher >= 0)
+        else if (l.Pusher >= 0)
         {
             var p = World.Fighters[l.Pusher];
             if (!p.Active) { Release(l.Pusher); l.Pusher = -1; }
@@ -159,7 +162,7 @@ public sealed partial class AssaultLayer
     private void Topple(SiegeLadder l, Fighter pusher)
     {
         l.Stage = LadderStage.Down; l.Pushed++;
-        Release(pusher.Id); l.Pusher = -1;
+        Release(pusher.Id); l.Pusher = -1; if (l.Pusher2 >= 0) { Release(l.Pusher2); l.Pusher2 = -1; }
         foreach (var c in l.Climbers.ToList())
         {
             var f = World.Fighters[c.Id];
@@ -178,6 +181,7 @@ public sealed partial class AssaultLayer
     {
         h = FightMath.Mix(h, l.Id | (long)l.Team << 8 | (long)l.Stage << 16); h = FightMath.Mix(h, l.FootX | (long)l.FootY << 24); h = FightMath.Mix(h, l.TopX | (long)l.TopY << 24);
         h = FightMath.Mix(h, l.StageSince | (long)l.Pusher << 40); h = FightMath.Mix(h, l.PushTries | (long)l.Pushed << 16); h = FightMath.Mix(h, l.PushSince);
+        if (l.Hooked || l.Pusher2 >= 0) h = FightMath.Mix(h, (l.Hooked ? 1L : 0) | (long)(l.Pusher2 + 1) << 8);
         foreach (int c in l.Carriers) h = FightMath.Mix(h, c);
         h = FightMath.Mix(h, -1); foreach (int c in l.Queue) h = FightMath.Mix(h, c);
         h = FightMath.Mix(h, -2); foreach (var c in l.Climbers) h = FightMath.Mix(h, c.Id | (long)c.Progress << 32);

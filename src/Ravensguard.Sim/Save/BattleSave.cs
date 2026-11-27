@@ -113,7 +113,7 @@ public sealed class BattleRecord
             State = [s.LiveCap, s.Strength, s.WavesSent, s.EntryX, s.EntryY, s.FaceX, s.FaceY, s.NextForm, s.LastWaveTick, s.Human ? 1 : 0],
             Reserve = [.. s.Reserve.Select(RowOf)], Pending = [.. s.Pending.Select(RowOf)],
         })],
-        State = [b.StartTick, b.ContactSeen ? 1 : 0, b.LastEngaged, b.Hero, b.W.LodCentre.HasValue ? 1 : 0, b.W.LodCentre?.X ?? 0, b.W.LodCentre?.Y ?? 0],
+        State = [b.StartTick, b.ContactSeen ? 1 : 0, b.LastEngaged, b.Hero, b.W.LodCentre.HasValue ? 1 : 0, b.W.LodCentre?.X ?? 0, b.W.LodCentre?.Y ?? 0, .. (b.WaveUnderPm != 0 ? new long[] { b.WaveUnderPm } : [])],
         NamedCaptains = [.. b.NamedCaptains],
     };
 }

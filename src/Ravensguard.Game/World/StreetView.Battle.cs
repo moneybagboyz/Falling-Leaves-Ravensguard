@@ -51,6 +51,7 @@ public partial class StreetView
         if (ledger == null) { ledger = new Ravensguard.Sim.Combat.Wounds.WoundLedger(rt.State.Seed, _world.Clock.Now.Seconds); _world.AttachWounds(ledger); }
         var fight = rec.Restore(fc, ledger);
         var bubble = BattleBubble.Restore(fight, br);
+        ResumeAssault(rt, fight, bubble);                                       // P8-LW-1: a save made in a live assault takes its layer up again
         int hero = bubble.Hero;
         bubble.Chronicle = BattleChronicleToWorld();
         _rec.StartBattle(bubble, hero);
@@ -82,6 +83,7 @@ public partial class StreetView
         CloseRoadFight();
         if (Runtime is { } rt) { rt.State.BattleSource = null; rt.State.Battle = null; }
         _lod.PausedAt = null;                                                   // the ambient chunks around the box resume
+        LiveAssaultClosed();                                                    // P8-LW-1: a live assault ends its siege at the next barrier
     }
 
     /// <summary>

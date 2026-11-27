@@ -62,6 +62,8 @@ public sealed class BattleOpening
     public (long X, long Y) OriginMm;
     /// <summary>The battle-size setting (200..2,000); 0: the content's default.</summary>
     public int CapTotal;
+    /// <summary>P8-LW-1: the wave threshold in permille of a side's share (0: the content's).</summary>
+    public int WaveUnderPm;
     public List<BattleSideSpec> Sides = [];
     /// <summary>The distance between the two front lines at the opening (the lines of three or four sides stand on the axes), mm.</summary>
     public int GapMm = 150_000;
@@ -131,6 +133,7 @@ public sealed partial class BattleBubble
         var R = rules.Bubble;
         var b = new BattleBubble { Id = o.Id, Rules = R, OriginMm = o.OriginMm, CauseKind = o.CauseKind, CauseEntry = o.CauseEntry, CauseNoteKey = o.CauseNoteKey, Place = o.Place };
         b.CapTotal = Math.Clamp(o.CapTotal > 0 ? o.CapTotal : R.CapTotalDefault, R.CapTotalMin, R.CapTotalMax);
+        b.WaveUnderPm = o.WaveUnderPm;
         var w = new FightWorld(content, o.Seed, o.Id, o.GameSec, o.Ledger) { RecordEvents = false, Rules = FightRules.For(FightKind.Raid), SetupKind = FightKind.Raid };
         b.W = w;
         if (o.Terrain != null) w.UseTerrain(o.Terrain);

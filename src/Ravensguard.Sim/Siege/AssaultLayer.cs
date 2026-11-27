@@ -193,7 +193,7 @@ public sealed partial class AssaultLayer : ILevelWalls
     {
         var h = _holds[id]; _holds.Remove(id);
         if (h.Kind == HoldKind.Climb && Ladder(h.Ref) is { } l) { l.Climbers.RemoveAll(c => c.Id == id); Fell(l, id, RiseOf(id) * R.LadderLenMm / Math.Max(1, R.LevelMm)); }
-        if (h.Kind == HoldKind.Push && Ladder(h.Ref) is { } p && p.Pusher == id) p.Pusher = -1;
+        if (h.Kind == HoldKind.Push && Ladder(h.Ref) is { } p) { if (p.Pusher == id) p.Pusher = -1; if (p.Pusher2 == id) p.Pusher2 = -1; }
         _rise[id] = 0;
     }
 
@@ -213,6 +213,7 @@ public sealed partial class AssaultLayer : ILevelWalls
         HolesStep(t);
         SalliesStep(t);
         OrdersStep();
+        if (Live) LiveStep(t);
         KeepHeld();
         if (t % 20 == 0) WallRules(t);
     }
@@ -268,6 +269,7 @@ public sealed partial class AssaultLayer : ILevelWalls
         foreach (var ho in _holes) h = HashHole(h, ho);
         foreach (var s in _sallies) h = HashSally(h, s);
         h = HashOrders(h);
+        if (Live) h = HashLive(h);
         foreach (long g in _openGates) h = FightMath.Mix(h, g);
         foreach (long b in _beams) h = FightMath.Mix(h, b ^ 0x4245);
         h = FightMath.Mix(h, (_held10 ? 1 : 0) | (_heldBreach ? 2 : 0));

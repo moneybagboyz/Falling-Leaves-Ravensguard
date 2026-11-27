@@ -32,6 +32,8 @@ public sealed class SiegeKit
 /// <summary>The siege rules' numbers (sieges-and-engines 4.3, 4.6, 4.7), in one place.</summary>
 public static class SiegeConfig
 {
+    /// <summary>P8-LW-1: the abstract storm's loss divisors, re-fitted to the live storm (the reference, as in AW-C): 1,200 men through a breach on 300 cost the host 1.9 and the garrison 13.3 dead on average over 50 seeds (the first fit was 4,000 and 2,000: 82 and 109). Garrisons yield in droves once the wall is held, so the dead are few.</summary>
+    public const int StormLostAttackersDiv = 190_000, StormLostDefendersDiv = 16_400;
     public const int LinesDays = 2, StarveDays = 5, ReliefDays = 3, OutnumberedRatio = 4, TermsEveryDays = 5, AssaultCooldown = 4, LiveFallbackHours = 24;
     public const int TrainReachM = 30_000, RansomPct = 25, SackPlunderCoinPct = 40, SackPlunderGoodsPct = 40, BurnOneIn = 5, BurnLossPct = 50, SackKillMinPermille = 10, SackKillSpanPermille = 40;
     public const int WinterDesertPm = 10, ExposurePm = 4, BuildersPerEngine = 80, CrewPerEngine = 8, LiftShortDays = 12;
@@ -59,6 +61,8 @@ public sealed partial class SiegeWorld
     public Func<SiegeRow, bool>? OpenAssault { get; set; }
     /// <summary>The live assaults the hero's bubble holds (the <see cref="OpenAssault"/> port's owner); null in a world with none.</summary>
     public SiegeAssaults? Assaults { get; set; }
+    /// <summary>P8-LW-1: fells timber for a siege camp within 2 km of the place (the grams wanted; returns the grams of logs now in the camp store). A port, not saved; null in a world with no chunks.</summary>
+    public Func<SiegeRow, long, long>? FellPort { get; set; }
     internal long LastHour => _lastHour;
     internal List<ulong> MenOf(SiegeRow s) => Besiegers(s);
     internal EntityId PlaceOf(int place) => PlaceId(place);
@@ -133,6 +137,7 @@ public sealed partial class SiegeWorld
     }
 
     private bool Hero(ulong person) => Armies.IsHero(person);
+    internal bool IsHero(ulong person) => Armies.IsHero(person);
 
     // ------------------------------------------------------------------ ends
 

@@ -85,6 +85,10 @@ public sealed partial class BattleBubble
     /// <summary>The men of a side the cap counts: everyone who has not died, fled or yielded. A man who is down may get up again, so he still holds his place.</summary>
     public int PresentOf(int team) { int n = 0; foreach (var f in W.Fighters) if (f.Team == team && f.Act is not (FAct.Dead or FAct.Fled or FAct.Surrendered)) n++; return n; }
 
+    /// <summary>P8-LW-1: the permille of its share a side must fall under before a wave comes; 0 is the content's (700), a live assault sets 600.</summary>
+    public int WaveUnderPm { get; set; }
+    private int WaveUnder => WaveUnderPm != 0 ? WaveUnderPm : Rules.WaveUnderPm;
+
     private void Waves(int tick)
     {
         foreach (var s in Sides)
@@ -95,10 +99,10 @@ public sealed partial class BattleBubble
             // the cap is the most the side has live at once: what is standing, what is walking in, and what the wave would add never pass it
             int room = s.LiveCap - PresentOf(s.Team) - entering;
             if (room <= 0) continue;
-            bool under = (long)active * 1000 < (long)Rules.WaveUnderPm * s.LiveCap;
+            bool under = (long)active * 1000 < (long)WaveUnder * s.LiveCap;
             if (!under)
                 foreach (var r in W.Formations!.Rows)
-                    if (r.Side == s.Team && r.StartCount > 0 && (long)ActiveIn(r) * 1000 < (long)Rules.WaveUnderPm * r.StartCount) { under = true; break; }
+                    if (r.Side == s.Team && r.StartCount > 0 && (long)ActiveIn(r) * 1000 < (long)WaveUnder * r.StartCount) { under = true; break; }
             if (!under) continue;
             int max = Math.Min(Math.Max(1, CapTotal / Math.Max(1, Rules.WaveDiv)), room);
             var units = TakeFromReserve(s, max);

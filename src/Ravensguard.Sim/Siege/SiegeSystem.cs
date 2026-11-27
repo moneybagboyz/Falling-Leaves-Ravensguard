@@ -83,6 +83,17 @@ public static class SiegeWiring
         }
         sw.KitOf = new SiegeKits(state, content, sw).Of;                                                                         // the engine kit: baggage, camp store, yard; goods bought or carted, never made
         sw.Assaults = new SiegeAssaults(sw); sw.OpenAssault = sw.Assaults.Open;                                                  // the live storm: a battle bubble with the assault layer when the siege is in the hero's bubble
+        if (home.Economy is { } hew && state.Population is { } popn)                                                              // P8-LW-1: timber felled within 2 km of the camp (real trees through the chunk delta, the logs from the tile's wood row)
+        {
+            var gen = Ravensguard.Sim.WorldGen.Chunks.ChunkGenerator.For(popn.Region, popn, content);
+            sw.FellPort = (s, wantG) =>
+            {
+                var kit = sw.KitOf!(s); if (kit == null || s.Place < 0 || s.Place >= popn.Region.Settlements.Count) return 0;
+                var set = popn.Region.Settlements[s.Place]; var goods = kit.Yard.Econ.Goods; ushort logs = goods.IdOf("logs");
+                SiegeTimber.Fell(state.Chunks, gen, hew.Resources, kit.Camp, logs, set.CenterX, set.CenterY, wantG, (int)(sw.LastHour / 24));
+                return kit.Camp.Qty(logs) * Math.Max(1, goods.MassG(logs, 1));
+            };
+        }
         aw.Siege = new SiegeHook(sw);
         home.Sim.Set(sw);
         return sw;

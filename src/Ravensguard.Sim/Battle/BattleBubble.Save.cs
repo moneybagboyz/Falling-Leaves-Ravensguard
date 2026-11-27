@@ -28,6 +28,7 @@ public sealed partial class BattleBubble
         }
         b.StartTick = (int)r.State[0]; b.ContactSeen = r.State[1] != 0; b.LastEngaged = (int)r.State[2]; b.Hero = (int)r.State[3];
         w.LodCentre = r.State[4] != 0 ? ((int)r.State[5], (int)r.State[6]) : null;
+        if (r.State.Length > 7) b.WaveUnderPm = (int)r.State[7];
         b.NamedCaptains.AddRange(r.NamedCaptains);
         b.RecomputePaused();
         return b;
