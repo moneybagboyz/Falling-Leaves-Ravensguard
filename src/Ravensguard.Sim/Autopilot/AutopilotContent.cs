@@ -14,6 +14,8 @@ public sealed class AutopilotContent
 {
     public AutopilotSettingsDef Settings { get; init; } = new() { Id = "default" };
     public ActivityCatalog Activities { get; init; } = new([]);
+    /// <summary>P8-AT-2: the means table, in content order.</summary>
+    public IReadOnlyList<MeansDef> Means { get; init; } = [];
 
     private static readonly Lazy<AutopilotContent> DefaultBook = new(LoadEmbedded);
     public static AutopilotContent Default => DefaultBook.Value;
@@ -26,6 +28,7 @@ public sealed class AutopilotContent
         {
             Settings = db.All<AutopilotSettingsDef>().FirstOrDefault() ?? d.Settings,
             Activities = acts.Count > 0 ? new ActivityCatalog(acts) : d.Activities,
+            Means = db.All<MeansDef>().ToList() is { Count: > 0 } ms ? ms : d.Means,
         };
     }
 
@@ -38,7 +41,7 @@ public sealed class AutopilotContent
     private static AutopilotContent LoadEmbedded()
     {
         var asm = typeof(AutopilotContent).Assembly;
-        AutopilotSettingsDef? settings = null; var acts = new List<ActivityDef>();
+        AutopilotSettingsDef? settings = null; var acts = new List<ActivityDef>(); var means = new List<MeansDef>();
         foreach (var name in asm.GetManifestResourceNames().Where(n => n.StartsWith("autopilot/", StringComparison.Ordinal)).OrderBy(n => n, StringComparer.Ordinal))
         {
             using var s = asm.GetManifestResourceStream(name)!;
@@ -48,9 +51,10 @@ public sealed class AutopilotContent
                 var o = n!.AsObject(); string type = o["type"]!.GetValue<string>(); o.Remove("type");
                 if (type == "autopilot_settings") settings = o.Deserialize<AutopilotSettingsDef>(Opts);
                 else if (type == "activity") acts.Add(o.Deserialize<ActivityDef>(Opts)!);
+                else if (type == "means") means.Add(o.Deserialize<MeansDef>(Opts)!);
             }
         }
-        return new AutopilotContent { Settings = settings ?? new() { Id = "default" }, Activities = new ActivityCatalog(acts) };
+        return new AutopilotContent { Settings = settings ?? new() { Id = "default" }, Activities = new ActivityCatalog(acts), Means = means };
     }
 }
 

@@ -30,6 +30,7 @@ public sealed partial class AutopilotWorld
             var d = st.Active; if (d == null) return null;
             if (d.State == DirectiveState.Pending) StartDirective(st, d, at, coin);
             if (d.State is DirectiveState.Done or DirectiveState.Failed or DirectiveState.Blocked) { st.ActiveIdx++; st.ReplanCount = 0; continue; }
+            if (d.Kind == DirectiveKind.PursueAmbition) { PursueTick(st, d, at, coin); if (d.State is DirectiveState.Done or DirectiveState.Failed or DirectiveState.Blocked) { st.ActiveIdx++; st.ReplanCount = 0; st.Child = null; st.ChildMeans = ""; continue; } return d; }
             if (UntilMet(st, d, at, coin)) { FinishDirective(st, d, at, "done"); continue; }
             return d;
         }
@@ -40,7 +41,7 @@ public sealed partial class AutopilotWorld
     {
         d.StartDay = (int)(at / 86400); d.StartCoin = coin; d.State = DirectiveState.Active; st.LastProgressSec = at;
         Book.Log.Add(at, st.Person, LogCode.Directive, $"Directive: {d.Name} ({d.Kind})");
-        if (d.Kind is DirectiveKind.PursueAmbition || (d.Kind == DirectiveKind.Tend && d.TargetKind != 5))   // P5-F: Tend runs at a property (a stall: TargetKind 5); without one, and Pursue ambition (Phase 6), it is skipped
+        if (d.Kind == DirectiveKind.Tend && d.TargetKind != 5)   // P5-F: Tend runs at a property (a stall: TargetKind 5); without one it is skipped (P8-AT-2: PursueAmbition runs, see AutopilotWorld.Ambition.cs)
         {
             d.State = DirectiveState.Blocked;
             Book.Log.Add(at, st.Person, LogCode.Directive, $"{d.Kind} is not ready yet (a later phase): skipped");
@@ -91,6 +92,7 @@ public sealed partial class AutopilotWorld
             case AiResponse.Bandage: st.Bleeding = false; st.CampUntil = Math.Max(st.CampUntil, at + 2 * 3600); break;
             case AiResponse.EatBuyOrForage: if (st.Person == HeroId) { if (!TryEat(st, at)) Provision(st, at, urgent: true); } break;
             case AiResponse.ReplanOnce: st.ReplanCount++; st.LastProgressSec = at; break;
+            case AiResponse.PickByScore: ChooseAmbitionByScore(st, at); break;
         }
     }
 
@@ -118,7 +120,7 @@ public sealed partial class AutopilotWorld
 
     private void CheckStuck(AutopilotState st, Directive? d, long at)
     {
-        if (d == null || d.Kind == DirectiveKind.Rest) { st.LastProgressSec = at; return; }
+        if (d == null || d.Kind is DirectiveKind.Rest or DirectiveKind.PursueAmbition) { st.LastProgressSec = at; return; }
         if (st.LastProgressSec == 0) st.LastProgressSec = at;
         if (at - st.LastProgressSec < Settings.StuckGameHours * 3600L) return;
         st.LastProgressSec = at;
@@ -245,7 +247,7 @@ public sealed partial class AutopilotWorld
         if (j == null) return;
         if (j.State == JobState.Done)
         {
-            st.Today.JobsDone++; st.Today.Earned += j.PaidMites;
+            st.Today.JobsDone++; st.JobsDoneTotal++; st.Today.Earned += j.PaidMites;
             Book.Log.Add(at, st.Person, LogCode.Job, $"Job done: {j.Title}, paid {Quotes.Money(j.PaidMites)}");
             if (j.PaidMites >= 1000) WriteChronicle(st.Person, "autopilot_job_paid", at, new Dictionary<string, string> { ["autopilot"] = "1", ["job"] = j.Title, ["pay"] = j.PaidMites.ToString() });
         }

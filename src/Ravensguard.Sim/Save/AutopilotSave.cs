@@ -37,6 +37,8 @@ namespace Ravensguard.Sim.Save;
     [Key(28)] public int NutritionDay { get; set; } [Key(29)] public long CoinAtDayStart { get; set; } [Key(30)] public int Replan { get; set; } [Key(31)] public List<DayRow> Summaries { get; set; } = []; [Key(32)] public DayRow Today { get; set; } = new();
     [Key(33)] public ulong CurrentJob { get; set; } [Key(34)] public long[] LastFired { get; set; } = []; [Key(35)] public uint EdgeBits { get; set; } [Key(36)] public int LastHunger { get; set; } [Key(37)] public long CampUntil { get; set; }
     [Key(38)] public long LastShop { get; set; } [Key(39)] public int LimitDay { get; set; }
+    /// <summary>P8-AT-2 (ambitions spec 4), optional keys, null while empty: the planner's running child directive and its means id, the learned rates (ids and pm, parallel) and the jobs done.</summary>
+    [Key(40)] public DirectiveRow? Child { get; set; } [Key(41)] public string? ChildMeans { get; set; } [Key(42)] public string[]? RateIds { get; set; } [Key(43)] public int[]? RateValues { get; set; } [Key(44)] public int? JobsDone { get; set; }
 }
 
 [MessagePackObject] public sealed class LogLineRow { [Key(0)] public long Sec { get; set; } [Key(1)] public ulong Person { get; set; } [Key(2)] public byte Code { get; set; } [Key(3)] public byte Arg { get; set; } [Key(4)] public string Text { get; set; } = ""; }
@@ -58,6 +60,9 @@ public sealed class AutopilotSave
     /// <summary>The spends booked against commands still waiting at the barrier (review finding 6); absent in older saves.</summary>
     [Key(12)] public long[] ReservedSeq { get; set; } = []; [Key(13)] public ulong[] ReservedPerson { get; set; } = []; [Key(14)] public int[] ReservedDay { get; set; } = []; [Key(15)] public long[] ReservedMites { get; set; } = [];
 
+    private static DirectiveRow Row(Directive d) => new() { Kind = (byte)d.Kind, TargetKind = d.TargetKind, Target = d.Target, Params = [.. d.Params], Until = (byte)d.Until, UntilValue = d.UntilValue, UntilValue2 = d.UntilValue2, StartDay = d.StartDay, State = (byte)d.State, StartCoin = d.StartCoin, Aux0 = d.Aux0, Aux1 = d.Aux1, Aux2 = d.Aux2, Cost = d.Cost, Revenue = d.Revenue, Name = d.Name, Aux3 = d.Aux3 };
+    private static Directive Of(DirectiveRow d) => new() { Kind = (DirectiveKind)d.Kind, TargetKind = d.TargetKind, Target = d.Target, Params = d.Params.Length == 4 ? d.Params : d.Params.Concat(new long[4]).Take(4).ToArray(), Until = (UntilKind)d.Until, UntilValue = d.UntilValue, UntilValue2 = d.UntilValue2, StartDay = d.StartDay, State = (DirectiveState)d.State, StartCoin = d.StartCoin, Aux0 = d.Aux0, Aux1 = d.Aux1, Aux2 = d.Aux2, Cost = d.Cost, Revenue = d.Revenue, Name = d.Name, Aux3 = d.Aux3 };
+
     private static DayRow Day(DaySummary d) => new() { Day = d.Day, Sec = [.. d.SecByAction], Earned = d.Earned, Spent = d.Spent, Jobs = d.JobsDone, Interrupts = d.Interrupts, Meals = d.Meals, Distance = d.DistanceM, SkillMilli = d.SkillGainMilli, Nutrition = d.NutritionCd };
     private static DaySummary Day(DayRow r) { var d = new DaySummary { Day = r.Day, Earned = r.Earned, Spent = r.Spent, JobsDone = r.Jobs, Interrupts = r.Interrupts, Meals = r.Meals, DistanceM = r.Distance, SkillGainMilli = r.SkillMilli, NutritionCd = r.Nutrition }; for (int i = 0; i < d.SecByAction.Length && i < r.Sec.Length; i++) d.SecByAction[i] = r.Sec[i]; return d; }
 
@@ -77,6 +82,8 @@ public sealed class AutopilotSave
                 Limits = new LimitRow { CapDay = l.SpendCapMitesPerDay, CapTotal = l.SpendCapTotalMites, Reserve = l.PurseReserveMites, NoCrimes = l.NoCrimes, MaxRisk = l.MaxRiskPm, Home = l.HomeByNightfall, HomeX = l.HomeX, HomeY = l.HomeY, NoLethal = l.NoLethalForce, Accept = l.AcceptContractKinds },
                 Queue = [.. s.Queue.Select(d => new DirectiveRow { Kind = (byte)d.Kind, TargetKind = d.TargetKind, Target = d.Target, Params = [.. d.Params], Until = (byte)d.Until, UntilValue = d.UntilValue, UntilValue2 = d.UntilValue2, StartDay = d.StartDay, State = (byte)d.State, StartCoin = d.StartCoin, Aux0 = d.Aux0, Aux1 = d.Aux1, Aux2 = d.Aux2, Cost = d.Cost, Revenue = d.Revenue, Name = d.Name, Aux3 = d.Aux3 })],
                 Summaries = [.. s.Summaries.Select(Day)], Today = Day(s.Today),
+                Child = s.Child == null ? null : Row(s.Child), ChildMeans = s.ChildMeans.Length == 0 ? null : s.ChildMeans,
+                RateIds = s.Rates.Count == 0 ? null : [.. s.Rates.Keys], RateValues = s.Rates.Count == 0 ? null : [.. s.Rates.Values], JobsDone = s.JobsDoneTotal == 0 ? null : s.JobsDoneTotal,
             });
         }
         o.Log = [.. b.Log.Lines.Select(x => new LogLineRow { Sec = x.Sec, Person = x.Person.Value, Code = (byte)x.Code, Arg = x.Arg, Text = x.Text })];
@@ -103,6 +110,9 @@ public sealed class AutopilotSave
             s.Limits = new LimitSet { SpendCapMitesPerDay = l.CapDay, SpendCapTotalMites = l.CapTotal, PurseReserveMites = l.Reserve, NoCrimes = l.NoCrimes, MaxRiskPm = l.MaxRisk, HomeByNightfall = l.Home, HomeX = l.HomeX, HomeY = l.HomeY, NoLethalForce = l.NoLethal, AcceptContractKinds = l.Accept };
             s.Queue = [.. r.Queue.Select(d => new Directive { Kind = (DirectiveKind)d.Kind, TargetKind = d.TargetKind, Target = d.Target, Params = d.Params.Length == 4 ? d.Params : d.Params.Concat(new long[4]).Take(4).ToArray(), Until = (UntilKind)d.Until, UntilValue = d.UntilValue, UntilValue2 = d.UntilValue2, StartDay = d.StartDay, State = (DirectiveState)d.State, StartCoin = d.StartCoin, Aux0 = d.Aux0, Aux1 = d.Aux1, Aux2 = d.Aux2, Cost = d.Cost, Revenue = d.Revenue, Name = d.Name, Aux3 = d.Aux3 })];
             s.Summaries = [.. r.Summaries.Select(Day)]; s.Today = Day(r.Today);
+            if (r.Child != null) s.Child = Of(r.Child);
+            s.ChildMeans = r.ChildMeans ?? ""; s.JobsDoneTotal = r.JobsDone ?? 0;
+            if (r.RateIds != null && r.RateValues != null) for (int i = 0; i < r.RateIds.Length && i < r.RateValues.Length; i++) s.Rates[r.RateIds[i]] = r.RateValues[i];
             b.States[s.Person] = s;
         }
         b.Log.Restore(Log.Select(x => new LogLine(x.Sec, new EntityId(x.Person), (LogCode)x.Code, x.Arg, x.Text)), Violations, PlanViolations, Crimes, Added);

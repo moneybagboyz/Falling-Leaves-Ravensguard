@@ -1,0 +1,38 @@
+// P8-AT-2 (docs/specs/phase8/01-ambitions-and-autopilot.md 3.3): the means table. For each ambition condition, the ways the autopilot can move it.
+// score = rate x weight_pm / 1000 - risk_pm x risk weight / 1000; "rate" is pm of the step a day (the prior until the means has run).
+// directive "none" is a condition the AI has no way to move yet: it scores nothing, so the ambition goes stuck and asks the player.
+[
+  // coin
+  { "type": "means", "id": "coin_work",   "condition": "has_coin_at_least", "directive": "work",        "prior_pm_day": 60,  "weight_pm": 1000, "risk_pm": 50 },
+  { "type": "means", "id": "coin_trade",  "condition": "has_coin_at_least", "directive": "trade_route", "prior_pm_day": 200, "weight_pm": 1000, "risk_pm": 150, "tags": ["far"], "needs_skill": "trading", "needs_level": 30 },
+  { "type": "means", "id": "coin_tend",   "condition": "has_coin_at_least", "directive": "tend",        "prior_pm_day": 90,  "weight_pm": 1000, "risk_pm": 20 },
+  { "type": "means", "id": "coin_steal",  "condition": "has_coin_at_least", "directive": "steal",       "prior_pm_day": 300, "weight_pm": 1000, "risk_pm": 400, "tags": ["crime"] },
+  { "type": "means", "id": "wealth_work",  "condition": "wealth_at_least", "directive": "work",        "prior_pm_day": 40,  "weight_pm": 1000, "risk_pm": 50 },
+  { "type": "means", "id": "wealth_trade", "condition": "wealth_at_least", "directive": "trade_route", "prior_pm_day": 150, "weight_pm": 1000, "risk_pm": 150, "tags": ["far"], "needs_skill": "trading", "needs_level": 30 },
+  { "type": "means", "id": "wealth_tend",  "condition": "wealth_at_least", "directive": "tend",        "prior_pm_day": 70,  "weight_pm": 1000, "risk_pm": 20 },
+  // skill
+  { "type": "means", "id": "skill_train", "condition": "has_proficiency", "directive": "train", "prior_pm_day": 150, "weight_pm": 1000, "risk_pm": 10 },
+  // property
+  { "type": "means", "id": "building_buy",  "condition": "owns_building", "directive": "buy", "prior_pm_day": 400, "weight_pm": 1000, "risk_pm": 30, "spend_mites": 20000 },
+  { "type": "means", "id": "building_work", "condition": "owns_building", "directive": "work", "prior_pm_day": 10, "weight_pm": 1000, "risk_pm": 50 },
+  { "type": "means", "id": "works_buy",     "condition": "owns_works_tier", "directive": "buy", "prior_pm_day": 300, "weight_pm": 1000, "risk_pm": 30, "spend_mites": 40000 },
+  // people and contracts
+  { "type": "means", "id": "followers_recruit", "condition": "has_followers_at_least", "directive": "recruit", "prior_pm_day": 250, "weight_pm": 1000, "risk_pm": 80 },
+  { "type": "means", "id": "contract_take",     "condition": "completed_contract_count", "directive": "contract", "prior_pm_day": 120, "weight_pm": 1000, "risk_pm": 120 },
+  // no way the AI can take yet: the player's choice (the ambition goes stuck and says so)
+  { "type": "means", "id": "item_none",       "condition": "has_item",                "directive": "none" },
+  { "type": "means", "id": "reputation_none", "condition": "has_reputation_at_least", "directive": "none" },
+  { "type": "means", "id": "rank_none",       "condition": "has_rank",                "directive": "none" },
+  { "type": "means", "id": "place_none",      "condition": "is_in_place_kind",        "directive": "none" },
+  { "type": "means", "id": "person_none",     "condition": "knows_person",            "directive": "none" },
+  { "type": "means", "id": "fief_none",       "condition": "holds_fief_rank",         "directive": "none" },
+  { "type": "means", "id": "realm_none",      "condition": "rules_realm",             "directive": "none" },
+  { "type": "means", "id": "faction_none",    "condition": "founded_faction",         "directive": "none" },
+  { "type": "means", "id": "dynasty_none",    "condition": "dynasty_generations",     "directive": "none" },
+  { "type": "means", "id": "monster_none",    "condition": "slew_monster",            "directive": "none" },
+  { "type": "means", "id": "guild_none",      "condition": "holds_guild_office",      "directive": "none" },
+  { "type": "means", "id": "church_none",     "condition": "holds_church_office",     "directive": "none" },
+  { "type": "means", "id": "relic_none",      "condition": "owns_relic",              "directive": "none" },
+  { "type": "means", "id": "men_none",        "condition": "leads_men_at_least",      "directive": "none" },
+  { "type": "means", "id": "battles_none",    "condition": "won_battles",             "directive": "none" }
+]

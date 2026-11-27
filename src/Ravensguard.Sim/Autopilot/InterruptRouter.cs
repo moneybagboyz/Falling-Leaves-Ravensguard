@@ -10,6 +10,8 @@ public enum AiResponse : byte
     NextDirective, AcceptIfAllowedElseDecline, DeclineAndRecord, Bandage, SwitchToWork, IdleHome, SwitchToEarning,
     /// <summary>Appended (watch-mode 3.2): the watch kinds set to Ai: keep watching under the stance (its flee triggers decide), treat and loot after the fight.</summary>
     KeepWatching, TreatAfterFight,
+    /// <summary>Appended (P8-AT-2, ambitions spec 3.1): an offered ambition's choice set to Ai: pick the one the planner scores best (none scoring leaves the offer open).</summary>
+    PickByScore,
 }
 
 /// <summary>What <see cref="InterruptRouter.Raise"/> did: the record the bus kept, the policy applied, what the AI answers, and whether the event was dropped as a duplicate.</summary>
@@ -58,10 +60,9 @@ public sealed class InterruptRouter(AutopilotLog log)
         InterruptKind.Stuck => AiResponse.ReplanOnce,
         InterruptKind.WatchDanger or InterruptKind.WatchLosing or InterruptKind.WatchAmmoOut => AiResponse.KeepWatching,
         InterruptKind.WatchOver => AiResponse.TreatAfterFight,
-        // P8-0A: the Phase 8 kinds set to Ai. The bell is answered like an attack (shelter, flee or fight); an ambition's choice is declined and recorded
-        // like a big choice; a stuck ambition moves to the next directive; an offered ending is declined (play carries on). P8-EN-1 makes EndingOffered always pause.
+        // P8-0A: the Phase 8 kinds set to Ai. The bell is answered like an attack (shelter, flee or fight); an ambition's choice is made by the planner's score (P8-AT-2, ambitions spec 3.1); a stuck ambition moves to the next directive; an offered ending is declined (play carries on). P8-EN-1 makes EndingOffered always pause.
         InterruptKind.BellRung => AiResponse.FleeShelterOrFight,
-        InterruptKind.AmbitionChoice => AiResponse.DeclineAndRecord,
+        InterruptKind.AmbitionChoice => AiResponse.PickByScore,
         InterruptKind.AmbitionStuck => AiResponse.NextDirective,
         InterruptKind.EndingOffered => AiResponse.DeclineAndRecord,
         _ => AiResponse.None,

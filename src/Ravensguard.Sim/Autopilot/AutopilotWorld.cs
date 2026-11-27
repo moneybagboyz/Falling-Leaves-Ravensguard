@@ -205,8 +205,9 @@ public sealed partial class AutopilotWorld
         TrackJob(st, at);
         var d = EnsureActive(st, at, coin);
         RaiseStateInterrupts(st, at, coin);
+        if (st.Person == HeroId && at % 3600 < WindowSec) CheckAmbition(st, at);          // P8-AT-2: the hero's current step, once an hour
         if (!st.Enabled || st.Paused || BusOf(st).Paused) return;
-        d = st.Active;
+        d = Eff(st);
 
         if (d is { Kind: DirectiveKind.Tend } && Tend(st, d, at)) { st.Today.SecByAction[(int)ActionKind.Work] += WindowSec; return; }   // P5-F
         var pol = BuildPolicy(st, d, at, coin, day);

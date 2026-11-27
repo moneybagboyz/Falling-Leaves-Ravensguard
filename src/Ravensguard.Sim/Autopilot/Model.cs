@@ -54,6 +54,8 @@ public sealed class Directive
     /// <summary>P5-F (businesses spec 4.4, BS-16): tend a property: mind the stall <paramref name="stallSubject"/> in the market hours (the hero is there), rest by schedule.</summary>
     public static Directive Tend(long stallSubject, int days = 0) => new() { Kind = DirectiveKind.Tend, TargetKind = 5, Target = stallSubject, Until = days > 0 ? UntilKind.Days : UntilKind.Forever, UntilValue = days, Name = "Tend the stall" };
     public static Directive Escort(EntityId target) => new() { Kind = DirectiveKind.Escort, TargetKind = 2, Target = (long)target.Value, Until = UntilKind.Forever, Name = "Escort" };
+    /// <summary>P8-AT-2: pursue the hero's ambition step; the planner picks a child directive each day (see <see cref="AmbitionPlanner"/>).</summary>
+    public static Directive Pursue(string name = "Pursue your ambition") => new() { Kind = DirectiveKind.PursueAmbition, Until = UntilKind.Forever, Name = name };
     public static Directive TradeRoute(int a, int b, ushort good, long gramsPerTrip, int minMarginPm) => new() { Kind = DirectiveKind.TradeRoute, TargetKind = 4, Target = a, Params = [b, good, gramsPerTrip, minMarginPm], Until = UntilKind.Forever, Name = "Trade route" };
 
     public Directive Clone() { var d = (Directive)MemberwiseClone(); d.Params = (long[])Params.Clone(); return d; }
@@ -137,6 +139,17 @@ public sealed class AutopilotState
     public long LastShopSec = long.MinValue;
     /// <summary>The day the LimitReached for "no job fits" was last raised (once a day).</summary>
     public int LimitDay = -1;
+
+    // ---- P8-AT-2: the ambition planner's own state (saved as optional keys)
+    /// <summary>The means the planner is running as a child of an active <c>PursueAmbition</c> (null: none), and its content id.</summary>
+    public Directive? Child;
+    public string ChildMeans = "";
+    /// <summary>Learned rate of each means in pm a day (ambitions spec 3.5), by means id.</summary>
+    public SortedDictionary<string, int> Rates = new(StringComparer.Ordinal);
+    /// <summary>Jobs this person has finished under autopilot (the <c>completed_contract_count</c> fact).</summary>
+    public int JobsDoneTotal;
+    /// <summary>The panel's one-line "why" for the active ambition directive (not saved; rebuilt at the next plan).</summary>
+    public string Why = "";
 
     public Directive? Active => ActiveIdx >= 0 && ActiveIdx < Queue.Count ? Queue[ActiveIdx] : null;
 

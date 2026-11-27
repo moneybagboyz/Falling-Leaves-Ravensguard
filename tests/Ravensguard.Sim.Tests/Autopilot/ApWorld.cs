@@ -25,8 +25,8 @@ public sealed class ApWorld : IDisposable
     public WorldState State { get; }
     public HeroContext Ctx { get; }
     public HeroDesk Desk { get; } = new();
-    public AutopilotWorld Ap { get; }
-    public AutopilotBook Book { get; }
+    public AutopilotWorld Ap { get; private set; }
+    public AutopilotBook Book { get; private set; }
     public JobTable Table { get; } = new();
     public JobEnv Env { get; }
     public EconomyState Econ => Headless.World.Economy;
@@ -35,10 +35,10 @@ public sealed class ApWorld : IDisposable
     public long Sec => (HourDone + 1) * 3600;
     public ContentDatabase Content { get; }
 
-    public ApWorld(HeadlessWorld hw, WorldTicker ticker, ContentDatabase content, int heroCrowns = 30, bool pack = true, ulong chronicleSeed = 0)
+    public ApWorld(HeadlessWorld hw, WorldTicker ticker, ContentDatabase content, int heroCrowns = 30, bool pack = true, ulong chronicleSeed = 0, int originIndex = 0)
     {
         Headless = hw; Ticker = ticker; Content = content;
-        var origin = content.All<OriginDef>().OrderBy(o => o.Order).First();
+        var origin = content.All<OriginDef>().OrderBy(o => o.Order).ElementAt(originIndex);
         var hero = HeroRecord.FromOrigin("Test Hero", false, origin);
         var econ = hw.World.Economy; econ.SeedHero(heroCrowns);
         State = new WorldState
@@ -58,10 +58,10 @@ public sealed class ApWorld : IDisposable
     }
 
     /// <summary>The soak world of seed 1234.</summary>
-    public static ApWorld Soak(int heroCrowns = 30)
+    public static ApWorld Soak(int heroCrowns = 30, int originIndex = 0)
     {
         var w = SoakWorld.Create();
-        var a = new ApWorld(w.Headless, w.Ticker, Ravensguard.Sim.Tests.Economy.EconFixture.Content, heroCrowns);
+        var a = new ApWorld(w.Headless, w.Ticker, Ravensguard.Sim.Tests.Economy.EconFixture.Content, heroCrowns, originIndex: originIndex);
         a._owner = w; return a;
     }
 
@@ -75,6 +75,13 @@ public sealed class ApWorld : IDisposable
     }
 
     private IDisposable? _owner;
+
+    /// <summary>Resumes the autopilot from a restored book, as a loaded save does: a new <see cref="AutopilotWorld"/> over the same world, the restored book in place of the old one.</summary>
+    public void ResumeWith(AutopilotBook book)
+    {
+        Book = book; State.Autopilot = book;
+        Ap = new AutopilotWorld(State, Ctx, Desk, book, AutopilotContent.From(Content)) { DrivesJobs = true };
+    }
 
     /// <summary>Puts <paramref name="days"/> of the cheapest food into the hero's pack (a kit the hero starts with), created at the seed (the soak's mass audit allows it: it is the hero's starting kit).</summary>
     public void Provision(int days)

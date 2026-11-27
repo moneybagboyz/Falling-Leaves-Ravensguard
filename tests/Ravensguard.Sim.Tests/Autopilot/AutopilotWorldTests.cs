@@ -256,13 +256,18 @@ public class AutopilotWorldTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public void TendAndPursueAmbition_AreStubs_TheyAreSkippedWithAMessage()
+    public void TendWithoutAProperty_IsSkippedWithAMessage_AndPursueWithoutAnAmbitionToo()
     {
         using var w = ApWorld.Soak();
         var st = w.Ap.Enable(w.Hero, w.Sec, new Directive { Kind = DirectiveKind.Tend, Name = "Tend the fields" }, Directive.Rest(1));
         w.Ap.Advance(w.Sec + 120);
         Assert.Equal(DirectiveState.Blocked, st.Queue[0].State); Assert.Equal(DirectiveKind.Rest, st.Active!.Kind);
         Assert.Contains(w.Book.Log.Lines, l => l.Text.Contains("not ready yet"));
+        // P8-AT-2: PursueAmbition runs now; a hero with no ambition has nothing to pursue and it is skipped the same way
+        w.State.Hero!.AmbitionId = ""; w.State.Hero.Offered.Clear(); w.State.Hero.Offered.Add("make_your_fortune"); // an offer, but this hero's policy is not "let the AI handle it"
+        var st2 = w.Ap.Enable(w.Hero, w.Sec, Directive.Pursue(), Directive.Rest(1)); st2.Policy[(int)InterruptKind.AmbitionChoice] = InterruptPolicy.Pause;
+        w.Ap.Advance(w.Sec + 240);
+        Assert.Equal(DirectiveState.Blocked, st2.Queue[0].State); Assert.Contains(w.Book.Log.Lines, l => l.Text.Contains("no ambition step to pursue"));
     }
 
     // ------------------------------------------------------------------ AP-9: taking control back
