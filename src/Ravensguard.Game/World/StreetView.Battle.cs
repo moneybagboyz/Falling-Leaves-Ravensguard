@@ -85,6 +85,7 @@ public partial class StreetView
         _lod.PausedAt = null;                                                   // the ambient chunks around the box resume
         LiveAssaultClosed();                                                    // P8-LW-1: a live assault ends its siege at the next barrier
         LiveBeachClosed();                                                      // P8-LW-2: a beach fight ends at the next barrier
+        LiveRoadClosed();                                                       // P8-LW-4: a road battle ends at the next barrier
     }
 
     /// <summary>

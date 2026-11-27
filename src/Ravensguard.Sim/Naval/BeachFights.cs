@@ -169,6 +169,9 @@ public sealed class BeachFights(ArmyWorld aw)
                 Demography.Kill(aw.W, r, DeathCause.Violence, e.Time, ob, chain: cause);
                 if (x.Team == 0) dead++;
             }
+            var yielded = res.Soldiers.Where(x => x.Team == 0 && x.Person != 0 && x.Act == FAct.Surrendered).Select(x => x.Person).ToList();
+            if (yielded.Count > 0 && aw.Book.Warbands.TryGetValue(raid!.Defender, out var holder))                        // P8-LW-4: the raiders who yielded are the riders' prisoners
+                aw.TakePrisoners(e, (ulong)raidId * 4096 + (ulong)(e.Hour & 4095), holder.Lord, raid.Settlement, holder.Members.Count, yielded);
             var off = res.Soldiers.Where(x => x.Team == 0 && x.Person != 0 && x.Act is FAct.Dead or FAct.Surrendered or FAct.Fled).Select(x => x.Person).ToHashSet();
             raid!.Raiders.RemoveAll(off.Contains);
         }

@@ -109,12 +109,15 @@ public sealed class NavalSave
     [Key(2)] public ShipRowSave[] Ships { get; set; } = [];
     [Key(3)] public BindSave[] Binds { get; set; } = [];
     [Key(4)] public FrameSave[] Frames { get; set; } = [];
+    /// <summary>P8-LW-4: the running sea as flat (kind, key, value) triples; absent or empty reads as none.</summary>
+    [Key(5)] public long[]? Trade { get; set; }
 
     public static NavalSave? CaptureOrNull(NavalBook? b) => b is { IsEmpty: false } ? Capture(b) : null;
 
     public static NavalSave Capture(NavalBook b) => new()
     {
         NextRaid = b.Next,
+        Trade = b.Trade.Count == 0 ? null : [.. b.Trade.SelectMany(kv => new long[] { kv.Key.Kind, kv.Key.Key, kv.Value })],
         Ships = [.. b.Ships.Values.Select(x => new ShipRowSave { Ship = x.Ship, State = (byte)x.State, Captor = x.Captor.Value, Entry = x.Entry, Serial = x.Serial, BurnCarry = x.BurnCarry, SailDown = x.SailDown, Bailers = x.Bailers, Burning = [.. x.Burning] })],
         Binds = [.. b.Binds.Select(x => new BindSave { A = x.A, B = x.B, Lines = x.Lines, HaulMen = x.HaulMen, HaulS = x.HaulS, Joined = x.Joined, OffLx = x.OffLx, OffLy = x.OffLy, OffHeading = x.OffHeading, Throws = x.Throws })],
         Frames = [.. b.Frames.Values.Select(f => new FrameSave { Id = f.Id, X = f.X, Y = f.Y, Heading = f.Heading, Speed = f.Speed, TurnPerTick = f.TurnPerTick, AccX = f.AccX, AccY = f.AccY, RiderKinds = f.RiderKinds, RiderIds = f.RiderIds, RiderLx = f.RiderLx, RiderLy = f.RiderLy, RiderDecks = f.RiderDecks })],
@@ -130,6 +133,7 @@ public sealed class NavalSave
     public NavalBook Restore()
     {
         var b = new NavalBook { Next = NextRaid };
+        if (Trade != null) for (int i = 0; i + 2 < Trade.Length; i += 3) b.Trade[((byte)Trade[i], (int)Trade[i + 1])] = Trade[i + 2];
         foreach (var r in Raids)
         {
             var x = new SeaRaid

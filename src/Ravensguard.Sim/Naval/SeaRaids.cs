@@ -49,7 +49,12 @@ public sealed class NavalBook
     public List<GrappleBind> Binds { get; } = [];
     /// <summary>P7-SH-D: ships at sea and in harbour as frames (placement, motion, riders), by vehicle id.</summary>
     public SortedDictionary<ulong, ShipFrameState> Frames { get; } = [];
-    public bool IsEmpty => Raids.Count == 0 && Next <= 1 && Ships.Count == 0 && Binds.Count == 0 && Frames.Count == 0;
+    /// <summary>
+    /// P8-LW-4: the running sea (fishing boats, ferries, barges and the season's catch), as (kind, key) to value: kind 0 a village's fishing boat (key the settlement, value the vehicle id), 1 a ford's ferry (key the crossing), 2 a waterway's barge,
+    /// 3 the grams a village's water has given this season, 4 the season the catch counts are of (key 0). Hashed and saved only while any is held.
+    /// </summary>
+    public SortedDictionary<(byte Kind, int Key), long> Trade { get; } = [];
+    public bool IsEmpty => Raids.Count == 0 && Next <= 1 && Ships.Count == 0 && Binds.Count == 0 && Frames.Count == 0 && Trade.Count == 0;
     public int Touched;
     public void Touch() => Touched++;
 
@@ -67,6 +72,7 @@ public sealed class NavalBook
             if (r.LiveSince >= 0) M(r.LiveSince);                  // P8-LW-2: only while a live fight is open, so every other raid hashes as before
             foreach (var l in new[] { r.Ships, r.Raiders, r.Guards, r.Captives }) { M(l.Count); foreach (var v in l) M((long)v); }
         }
+        if (Trade.Count > 0) { M(-5); foreach (var ((k, key), v) in Trade) { M(k); M(key); M(v); } }                 // P8-LW-4: only while the running sea holds anything
         if (Ships.Count + Binds.Count + Frames.Count == 0) return h;                // a world with no naval fights hashes as it did in SH-C
         foreach (var x in Ships.Values)
         {

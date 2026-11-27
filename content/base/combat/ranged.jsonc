@@ -10,5 +10,6 @@
   { "type": "ammo", "id": "bodkin_arrow",    "name": "Bodkin arrow",    "kind": "arrow", "attack": "point", "contact_area": 3,  "penetration_mm": 250, "mass_g": 45, "head_material": "iron" },
   { "type": "ammo", "id": "broadhead_arrow", "name": "Broadhead arrow", "kind": "arrow", "attack": "edge",  "contact_area": 12, "penetration_mm": 120, "mass_g": 40, "head_material": "iron" },
   { "type": "ammo", "id": "blunt_arrow",     "name": "Blunt arrow",     "kind": "arrow", "attack": "blunt", "contact_area": 20, "penetration_mm": 0,   "mass_g": 40, "head_material": "oak", "break_hit_pm": 100, "break_miss_pm": 50 },
+  { "type": "ammo", "id": "fire_arrow",     "name": "Fire arrow",      "kind": "arrow", "attack": "point", "contact_area": 6,  "penetration_mm": 60,  "mass_g": 42, "head_material": "iron", "break_hit_pm": 1000, "break_miss_pm": 1000 },
   { "type": "ammo", "id": "quarrel",         "name": "Quarrel",         "kind": "bolt",  "attack": "point", "contact_area": 3,  "penetration_mm": 200, "mass_g": 70, "head_material": "iron" }
 ]

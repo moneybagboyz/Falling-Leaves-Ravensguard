@@ -203,6 +203,7 @@ public partial class StreetView
         if (!_fightResumeChecked) { _fightResumeChecked = true; ResumeFight(); }   // P4 close-out: a save made mid-fight
         AssaultFrame();                                              // P8-LW-1: a live assault the sim has opened becomes a battle
         BeachFrame();                                                // P8-LW-2: the bell, and a live beach fight the sim has opened becomes a battle
+        RoadBattleFrame();                                           // P8-LW-4: a live road battle the sim has opened becomes a battle
         if (_battleOpen) { BattleFrame(); return; }                 // P7-BB-C: a battle in the bubble
         if (_boutFight != null) { BoutFrame(); return; }
         if (_fightView == null || _roadFight is not { } rf) return;

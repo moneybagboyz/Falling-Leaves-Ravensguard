@@ -26,6 +26,9 @@ public sealed partial class ArmyWorld
     public ISiegeHook Siege { get; set; } = new StubSiege();
     /// <summary>The player's bubble: given a field battle one of whose hosts the hero leads, plays it and returns what it left; null leaves it to the abstract resolver. Not saved (the game layer sets it).</summary>
     public Func<ArmyEnv, FieldEngagement, FieldVerdict?>? LiveBattle { get; set; }
+    private RoadBattles? _road;
+    /// <summary>P8-LW-4: the live road battles of this world (a field battle with the hero among the men opens a bubble); off until the game turns <see cref="RoadBattles.GameDrivesLive"/> on.</summary>
+    public RoadBattles RoadBattles => _road ??= new RoadBattles(this);
     public TimingCell CampaignCost { get; } = new();
 
     // ------------------------------------------------------------------ where a host is, and what its side knows
@@ -271,7 +274,7 @@ public sealed partial class ArmyWorld
 
     // ------------------------------------------------------------------ the battle
 
-    private List<HostMan> Fit(ArmyHost h)
+    internal List<HostMan> Fit(ArmyHost h)
     {
         var hs = Supply!; var hid = new HostId(h.Supply); var st = Book.Rations.TryGetValue(hid.Value, out var r) ? r : null;
         return MenOf(hs, hid, h).Where(m => st == null || !st.Wounded.ContainsKey(m.Id)).OrderBy(m => m.Id).ToList();
@@ -285,15 +288,34 @@ public sealed partial class ArmyWorld
     public (int Winner, FoldResult WinnerFold, FoldResult LoserFold)? FieldBattle(ArmyEnv e, ArmyHost a, ArmyHost b)
     {
         var hs = Supply; if (hs == null) return null;
-        long sec = e.Hour * 3600; var (px, py) = PositionOfHost(a, sec); int place = NearestTo(px, py).Settlement; int day = (int)e.Day;
+        long sec = e.Hour * 3600; var (px, py) = PositionOfHost(a, sec); int place = NearestTo(px, py).Settlement;
+        if (RoadBattles.Pending(a, b))
+        {
+            if (!RoadBattles.Expired(e, a, b)) return null;                                     // the live road battle is still being fought: the hosts stand
+            RoadBattles.Abort(a, b);                                                              // the abstract fight is the fallback
+        }
+        else if (RoadBattles.Open(e, a, b, place)) return null;                                   // P8-LW-4: the hero is there: the fight is live, and the barrier closes it
         FieldVerdict? live = null;
         if ((IsHero(a.Commander) || IsHero(b.Commander)) && LiveBattle != null) live = LiveBattle(e, new FieldEngagement(a, b, place));
         int winner; IReadOnlyList<BattleCommand> cmds; ulong report;
         if (live != null) { winner = live.WinnerHost; cmds = live.Commands; report = live.Entry; }
         else (winner, cmds, report) = Abstract(e, a, b, place);
+        return FinishField(e, a, b, place, winner, cmds, report);
+    }
+
+    /// <summary>
+    /// What follows a field battle however it was fought (the abstract resolver, the game's hook or the live road battle): both hosts fold back, the yielded and captured of the loser go into the winner's pen (<see cref="TakePrisoners"/>), the war gets its events
+    /// and both hosts' campaigns are reset.
+    /// </summary>
+    internal (int Winner, FoldResult WinnerFold, FoldResult LoserFold)? FinishField(ArmyEnv e, ArmyHost a, ArmyHost b, int place, int winner, IReadOnlyList<BattleCommand> cmds, ulong report)
+    {
+        var hs = Supply; if (hs == null) return null;
+        int day = (int)e.Day;
         var won = winner == a.Id ? a : b; var lost = won == a ? b : a;
+        var loserRoll = Yielded(cmds, MenIdsOf(hs, new HostId(lost.Supply), lost));
         var fw = FoldBack(e, won, cmds, true); var fl = FoldBack(e, lost, cmds, false);
         int lostPct = fl.Before > 0 ? (fl.Before - fl.Left) * 100 / fl.Before : 0; var war = Politics?.WarOf(a.Realm, b.Realm);
+        if (loserRoll.Count > 0) TakePrisoners(e, report, (ulong)won.Commander, place, fw.Left, loserRoll, war?.Serial ?? -1);
         if (war != null)
         {
             AddEvent(war.Serial, day, WarEventKind.FieldBattle, won.Realm, Math.Min(CampaignConfig.BattleMax, lostPct / 2), fl.Before - fl.Left, fw.Before - fw.Left, place, report);

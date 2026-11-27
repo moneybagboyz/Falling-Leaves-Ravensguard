@@ -13,7 +13,7 @@ public enum DesertDest : byte { Home, Band }
 public sealed partial class ArmyWorld
 {
     /// <summary>One man of a host: his id and row, where he comes from (0 a levy, 1 a joined warband's, 2 a man from outside the region), the roster role he counts as and which company or warband holds him.</summary>
-    private readonly record struct HostMan(ulong Id, int Row, byte Kind, int Role, int Holder);
+    internal readonly record struct HostMan(ulong Id, int Row, byte Kind, int Role, int Holder);
 
     /// <summary>The host's rations record, made at its first fed day with the content's starting morale.</summary>
     public HostRations RationsOf(int supplyHost)

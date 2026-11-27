@@ -4325,6 +4325,7 @@ ch_fire_fought,{who} fought the fire.
 ch_firedamp_blast,"Firedamp blasted in the dark at {x}, {y}."
 ch_note_fire_hearth,a hearth set the thatch alight
 ch_note_fire_torch,a torch was put to it
+ch_note_fire_arrow,a fire arrow came down on it
 ch_note_fire_arson,it was set alight on purpose
 ch_note_fire_lightning,lightning struck the roof
 ch_note_fire_riot,rioters threw torches

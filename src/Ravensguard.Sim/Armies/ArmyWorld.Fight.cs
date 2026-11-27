@@ -87,6 +87,7 @@ public sealed partial class ArmyWorld
             won = br.Winner == 1;
             BattleChronicle.Report(ob, e.Time, br, new EntityId(wb.Lord), PlaceId(newsPlace), "ch_side_bandits", "ch_side_am_warband", cause);
             foreach (ulong m in caughtMen.OrderBy(x => x)) { ReleaseBandit(band, m); caught++; }
+            if (caughtMen.Count > 0) TakePrisoners(e, battleId, wb.Lord, wb.Here, Math.Max(1, mine.Count - wdead), caughtMen);          // P8-LW-4: the caught are the warband's prisoners
         }
         else
         {

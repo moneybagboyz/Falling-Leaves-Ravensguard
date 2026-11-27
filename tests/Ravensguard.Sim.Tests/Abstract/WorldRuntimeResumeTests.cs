@@ -492,7 +492,7 @@ public class WorldRuntimeResumeTests(ITestOutputHelper output)
                 Assert.Equal(Ravensguard.Sim.Carts.VehicleCommissionState.Making, vc.State);
                 Assert.Contains(s.Crafting!.Commissions.Values, c => c.Client == vc.Vehicle && c.State == CommissionState.Collected);
                 Assert.False(wagon.Finished);
-                var y = s.Mounts.Works.Voyages.Values.Single();
+                var y = s.Mounts.Works.Voyages.Values.Single(v => s.Naval?.Trade.ContainsValue((long)v.Boat.Value) != true);                       // P8-LW-4: the running sea keeps barges of its own on shuttle voyages
                 Assert.Equal(0, y.ArrivedSec);
                 // P5-F's Ledger covers every property: the half-built wagon and the barge are on its Vehicles tab
                 var ow2 = s.HomeRecords!.Sim.Get<Ravensguard.Sim.Production.OwnershipWorld>()!; var lv = ow2.Ledger(ow2.Today, null, s.Mounts).Tab(Ravensguard.Sim.Production.LedgerTab.Vehicles).ToList();

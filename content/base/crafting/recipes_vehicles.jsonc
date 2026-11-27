@@ -262,5 +262,23 @@
   {"type": "craft_recipe", "id": "forge_chain_hook", "name": "Forge: Chain hook", "category": "smith", "skill": "Smithing", "difficulty": 30, "effort": "heavy", "workstation": "anvil",
    "tools": [{"quality": "hammering", "level": 2}],
    "components": [[{"good": "iron_bar", "kg": 7.0}]], "steps": [{"id": "build", "hours": 1.5}], "results": [{"vehicle_part": "chain_hook", "material": "wrought_iron", "kg": 6.0}],
-   "learn": {"auto_at": {"skill": "Smithing", "level": 30}, "master": true}}
+   "learn": {"auto_at": {"skill": "Smithing", "level": 30}, "master": true}},
+
+  // ---- P8-LW-4: the ship's anchor, ballast, bilge pump and oar port
+  {"type": "craft_recipe", "id": "forge_anchor", "name": "Forge: Anchor", "category": "smith", "skill": "Smithing", "difficulty": 35, "effort": "heavy", "workstation": "anvil",
+   "tools": [{"quality": "hammering", "level": 2}],
+   "components": [[{"good": "iron_bar", "kg": 50.0}]], "steps": [{"id": "build", "hours": 8}], "results": [{"vehicle_part": "anchor", "material": "wrought_iron", "kg": 45.0}],
+   "learn": {"auto_at": {"skill": "Smithing", "level": 35}, "master": true}},
+  {"type": "craft_recipe", "id": "stow_ballast", "name": "Make: Ballast stones", "category": "craft", "skill": "Carpentry", "difficulty": 10, "effort": "heavy", "workstation": "workbench",
+   "tools": [{"quality": "hammering", "level": 1}],
+   "components": [[{"good": "stone_raw", "kg": 80.0}]], "steps": [{"id": "stow", "hours": 1}], "results": [{"vehicle_part": "ballast", "material": "granite", "kg": 80.0}],
+   "learn": {"auto_at": {"skill": "Carpentry", "level": 10}, "master": true}},
+  {"type": "craft_recipe", "id": "make_bilge_pump", "name": "Make: Bilge pump", "category": "craft", "skill": "Carpentry", "difficulty": 30, "effort": "moderate", "workstation": "workbench",
+   "tools": [{"quality": "sawing", "level": 1}, {"quality": "chiselling", "level": 1}],
+   "components": [[{"good": "logs", "kg": 18.0}]], "steps": [{"id": "shape", "hours": 6}], "results": [{"vehicle_part": "bilge_pump", "material": "oak", "kg": 12.0}], "byproducts": [{"good": "shavings", "kg": 5.0}],
+   "learn": {"auto_at": {"skill": "Carpentry", "level": 30}, "master": true}},
+  {"type": "craft_recipe", "id": "make_oar_port", "name": "Make: Oar port", "category": "craft", "skill": "Carpentry", "difficulty": 20, "effort": "moderate", "workstation": "workbench",
+   "tools": [{"quality": "sawing", "level": 1}, {"quality": "chiselling", "level": 1}],
+   "components": [[{"good": "timber_planks", "kg": 5.0}]], "steps": [{"id": "fit", "hours": 1}], "results": [{"vehicle_part": "oar_port", "material": "oak", "kg": 4.0}], "byproducts": [{"good": "shavings", "kg": 0.8}],
+   "learn": {"auto_at": {"skill": "Carpentry", "level": 20}, "master": true}}
 ]

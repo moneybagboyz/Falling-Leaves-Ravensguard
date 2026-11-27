@@ -549,6 +549,8 @@ public static class RngStreams
     public const uint LairMonsterBehaviour = 0x831;
     /// <summary>P8: live war: ladder pushes.</summary>
     public const uint LadderPushes = 0x850;
+    /// <summary>P8: live war: a fire arrow's draw to light the thatch, a sail or dry timber it hit (key the shot's serial).</summary>
+    public const uint FireArrowIgnite = 0x851;
     /// <summary>P8: live war: captain approach.</summary>
     public const uint CaptainApproach = 0x858;
     /// <summary>P8: live war: boarding jumps.</summary>

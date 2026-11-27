@@ -37,7 +37,7 @@ public class Phase8PlumbingTests
     public void Phase8Streams_AreRegistered_AndTheReserveStaysEmpty()
     {
         var all = typeof(RngStreams).GetFields().Where(f => f.IsLiteral && f.FieldType == typeof(uint)).Select(f => (uint)f.GetRawConstantValue()!).ToArray();
-        uint[] table = [0x800, 0x810, 0x820, 0x828, 0x830, 0x831, 0x850, 0x858, 0x859, 0x880, 0x881];
+        uint[] table = [0x800, 0x810, 0x820, 0x828, 0x830, 0x831, 0x850, 0x851, 0x858, 0x859, 0x880, 0x881];
         Assert.Equal(table, all.Where(v => v is >= 0x800u and <= 0x8FFu).Order().ToArray());
         Assert.Equal(0x800u, RngStreams.AmbitionMeansTies); Assert.Equal(0x831u, RngStreams.LairMonsterBehaviour); Assert.Equal(0x881u, RngStreams.WarReturn);
     }

@@ -384,10 +384,10 @@ public sealed partial class ArmyWorld
             long grainG = 0;
             foreach (var (g, q) in v.Cargo.Rows().ToList())
             {
-                if (!eco.Food.IsGrain(g)) continue;
+                bool grain = eco.Food.IsGrain(g);                                          // P8-LW-4: the plunder that is not grain (cloth, tools, the rest) leaves as an export too
                 if (link != null)
                 {
-                    var rl = link.Mine; long m = eco.Goods.MassG(g, q); grainG += m;
+                    var rl = link.Mine; long m = eco.Goods.MassG(g, q); if (grain) grainG += m;
                     int tk = Array.IndexOf(Ravensguard.Sim.Continental.ContinentRules.TrackedGoods, eco.Goods.StringId(g)); if (tk >= 0) rl.EmigrantG[tk] += m;
                     v.Cargo.Destroy(g, q, DestroyReason.Export);
                 }
@@ -484,7 +484,7 @@ public sealed class SeaRaidSeasonSystem : AbstractSystem
 public static class SeaRaidWiring
 {
     /// <summary>The hero's place, told at the barrier before each hour (P8-LW-2: whether the bell is heard, whether the beach is in his bubble).</summary>
-    public static void NoteHero(Save.WorldState state, long xM, long yM) => state.HomeRecords?.Sim.Get<ArmyWorld>()?.BeachFights.NoteHero(xM, yM);
+    public static void NoteHero(Save.WorldState state, long xM, long yM) { var aw = state.HomeRecords?.Sim.Get<ArmyWorld>(); aw?.BeachFights.NoteHero(xM, yM); aw?.RoadBattles.NoteHero(xM, yM); }
 
     public static void Attach(Worlds.RegionWorld home, Save.WorldState state, ContentDatabase content)
     {

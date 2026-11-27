@@ -39,8 +39,26 @@ public static class Growth
         var use = new SkillUse(useName, family, r.DrillDx100, family == Skill.Shields ? r.DrillShieldCap : r.DrillCap);
         for (int k = 0; k < h; k++)
             for (int u = 0; u < r.DrillUsesPerHour; u++) Progress.Use(sw.Book.Skills, Id(person), use, 40, (long)day * 86400 + (8 + k) * 3600);
-        if (h > 0 && sw.Book.Of(person) is { } row) { row.DrillHours.TryGetValue(famName, out int n); row.DrillHours[famName] = n + h; }
+        if (h > 0 && sw.Book.Of(person) is { } row)
+        {
+            int before = row.DrillHours.Values.Sum(); row.DrillHours.TryGetValue(famName, out int n); row.DrillHours[famName] = n + h;
+            GrowAttribute(sw, person, before, before + h, r.DrillHoursDay);
+        }
         return h;
+    }
+
+    /// <summary>P8-LW-4: each 30 drill days (hours drilled over the rules' hours a day, all families) adds 1 Strength, then 1 Toughness, then Strength again, to the cap of the attribute table (100). Integer, no draw.</summary>
+    public const int DrillDaysPerPoint = 30, AttrCap = 100;
+    private static void GrowAttribute(SoldierWorld sw, ulong person, int hoursBefore, int hoursAfter, int hoursDay)
+    {
+        int per = Math.Max(1, DrillDaysPerPoint * Math.Max(1, hoursDay)), crossed = hoursAfter / per - hoursBefore / per;
+        if (crossed <= 0 || sw.People() is not { } pt) return;
+        int row = pt.IndexOf(new EntityId(person)); if (row < 0) return;
+        for (int k = hoursBefore / per + 1; k <= hoursAfter / per; k++)
+        {
+            int a = row * PersonTable.AttrCount + (k % 2 == 1 ? PersonTable.StrengthIdx : PersonTable.ToughnessIdx);
+            if (pt.Attr[a] < AttrCap) pt.Attr[a]++;
+        }
     }
 
     /// <summary>

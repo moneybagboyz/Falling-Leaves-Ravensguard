@@ -208,6 +208,7 @@ public class SeaRaidTests(ITestOutputHelper output)
         // the withdrawal: they break off as the riders come, and are met on the beach
         var link = k.R.Sim.Get<Ravensguard.Sim.Economy.Markets.ContinentLink>();
         long emCoin0 = link?.Mine.EmigrantCoin ?? 0, emPers0 = link?.Mine.EmigrantPersons ?? 0, left0 = link?.Mine.TotalLeft ?? 0, sunk0 = ledger.Sunk(SinkReason.Emigrate).Mites, emig0 = k.Aw.W.Vital.Emigrants, coin0 = ledger.Audit().InPurses.Mites;
+        ushort bar = econ.Goods.IdOf("iron_bar"); rides.Vehicles.Find(new EntityId(raid.Ships[0]))!.Cargo.CreateUpTo(bar, 5_000 / Math.Max(1, econ.Goods.MassG(bar, 1)), Ravensguard.Sim.Goods.CreateReason.Seed);       // P8-LW-4: a plunder that is not grain
         for (long h = landHour + 2; h <= landHour + 12 && !raid.Over; h++) k.To(h);
         Assert.True(raid.Over, "the raid ends within the day");
         output.WriteLine($"end {raid.State} at +{raid.EndHour - landHour}h; fought {raid.Fought}; raiders left {raid.Raiders.Count}, dead {raid.Dead}");
@@ -229,6 +230,7 @@ public class SeaRaidTests(ITestOutputHelper output)
             int gone = raid.Raiders.Count + raid.Guards.Count;
             Assert.Equal(raid.TakenCoin, ledger.Sunk(SinkReason.Emigrate).Mites - sunk0); Assert.Equal(coin0 - raid.TakenCoin, ledger.Audit().InPurses.Mites);
             Assert.Equal(0, raid.Ships.Sum(s => rides.Vehicles.Find(new EntityId(s))!.Cargo.Rows().Where(r => econ.Food.IsGrain(r.Item1)).Sum(r => econ.Goods.MassG(r.Item1, r.Item2))));   // no plundered grain left in the hulls
+            Assert.Equal(0, raid.Ships.Sum(s => rides.Vehicles.Find(new EntityId(s))!.Cargo.TotalMassG()));                                        // P8-LW-4: the non-grain cargo left as an export too
             Assert.Equal(gone, k.Aw.W.Vital.Emigrants - emig0);
             if (link != null) { Assert.Equal(raid.TakenCoin, link.Mine.EmigrantCoin - emCoin0); Assert.Equal(gone, link.Mine.EmigrantPersons - emPers0); Assert.Equal(gone, link.Mine.TotalLeft - left0); }
             Assert.Equal(RaidState.Gone, raid.State); Assert.Empty(k.Entries("raiders_caught"));
@@ -244,7 +246,7 @@ public class SeaRaidTests(ITestOutputHelper output)
     {
         using var k = new ArmyRig(); k.Raised();
         var plain = WorldSave.Capture(k.State, "h", "0.1");
-        Assert.DoesNotContain(NavalSave.SectionName, plain.Sections.Keys);
+        Assert.True(!plain.Sections.ContainsKey(NavalSave.SectionName) || k.State.Naval!.Raids.Count == 0);                       // P8-LW-4: the running sea (barges, boats) may keep the section; no raid is in it
         var aw = k.Aw; var region = k.State.Population.Region;
         int village = Enumerable.Range(0, region.Settlements.Count).First(s => region.Settlements[s].Class != SettlementClass.Town && region.Settlements[s].Realm >= 0);
         var st = region.Settlements[village];

@@ -306,8 +306,13 @@ public sealed partial class FightWorld
         }
     }
 
+    public const string FireArrowAmmo = "fire_arrow";
+    /// <summary>Told where a fire arrow came down (mm in the bubble, the shot's serial, the shooter's fighter index); the world lights what burns (<c>FireArrows.Strike</c>).</summary>
+    public Action<int, int, uint, int>? FireArrowLanded { get; set; }
+
     private void Spent(Projectile p, int x, int y, bool hit)
     {
+        if (p.Ammo == FireArrowAmmo) FireArrowLanded?.Invoke(x, y, p.Serial, p.Shooter);                  // P8-LW-4: a fire arrow on thatch, a sail or dry timber (the world sets the hook)
         Carriers?.Landed(p.Ammo, x, y);                                                  // [P7-SH-D] a fire arrow on a ship's deck
         if (p.Thrown) { Ground.Add(new GroundItem(p.Shape, p.Material, x, y, !p.Improvised && DetRng.Range(Seed, (long)FightId, p.Serial, RngStreams.AmmoBreak, 1, 0, 1000) < 250)); return; }
         if (!Content.Ammo.TryGetValue(p.Ammo, out var a)) return;

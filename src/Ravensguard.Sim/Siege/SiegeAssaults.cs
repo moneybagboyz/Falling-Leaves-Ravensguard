@@ -176,6 +176,11 @@ public sealed class SiegeAssaults(SiegeWorld sw)
             lostD = sw.SlayFallen(e, s!, dead.Where(x => x.Team == 1).Select(x => x.Person));
         }
         bool won = res?.WinnerTeam == 0;
+        if (won && res != null && sw.Armies.Book.Hosts.TryGetValue(s!.Host, out var holder))                                                                // P8-LW-4: the garrison who yielded are the host's prisoners
+        {
+            var yielded = res.Soldiers.Where(x => x.Team == 1 && x.Person != 0 && x.Act == FAct.Surrendered).Select(x => x.Person).ToList();
+            if (yielded.Count > 0) sw.Armies.TakePrisoners(e, res.Id, (ulong)holder.Commander, s.Place, sw.MenOf(s).Count, yielded);
+        }
         sw.EndAssault(e, s!, won, lostA, lostD);
         return true;
     }

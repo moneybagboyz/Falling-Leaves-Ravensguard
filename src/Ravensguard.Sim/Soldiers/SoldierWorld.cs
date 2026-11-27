@@ -132,6 +132,7 @@ public static class SoldierWiring
         var sw = new SoldierWorld(book, content, econ, works, rules, new StateKitFit(s, People), People);
         var ww = s.HomeRecords?.Sim.Get<WorksWorld>();
         if (ww != null) sw.ArmourersFree = ww.ArmourersOf;
+        PenWiring.Install(sw, s, content);                                                    // P8-LW-4: the pen's feeding, sale, cession and broken parole
         return sw;
     });
 }

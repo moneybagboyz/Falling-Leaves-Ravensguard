@@ -17,6 +17,8 @@ public sealed class PenHooks
     public Action<PrisonerRow, PurseId>? Sold { get; set; }
     /// <summary>A lord who cannot pay cedes a fief to the captor (Phase 6 DA-11): true when the cession was made and the lord is free.</summary>
     public Func<PrisonerRow, bool>? Cede { get; set; }
+    /// <summary>The game day of the call in progress (set by the pen's own entry points): the hooks that price or bond a man read it.</summary>
+    public int Today { get; set; }
     /// <summary>Told when a prisoner is killed.</summary>
     public Action<ulong>? Killed { get; set; }
     /// <summary>Told when a parole is broken: the person (the world puts standing -200 on him).</summary>
@@ -96,7 +98,7 @@ public static class PrisonerPens
     /// </summary>
     public static int Settle(SoldierWorld sw, RuleChron chron, ulong seed, int day, long lord, long company, Commander commander, bool saleLegal, int exchangeWar = -1)
     {
-        var fate = FateFor(commander, saleLegal); int n = 0; ulong entry = 0;
+        sw.PenHooks.Today = day; var fate = FateFor(commander, saleLegal); int n = 0; ulong entry = 0;
         foreach (var row in sw.Book.Prisoners.Values.Where(p => p.Class == PrisonerClass.Common && p.Captor == lord && p.Company == company && p.ParoleUntil < 0 && p.Work == "" && p.ExchangeWar < 0).ToList())
         {
             var f = fate;
@@ -112,6 +114,7 @@ public static class PrisonerPens
     /// <summary>The hero (or any captor) puts one prisoner to a fate. Selling needs a legal buyer who can pay from the hook; otherwise the man is put to work instead. Returns the fate he got.</summary>
     public static PrisonerFate Apply(SoldierWorld sw, PrisonerRow row, PrisonerFate fate, int day, int exchangeWar = -1)
     {
+        sw.PenHooks.Today = day;
         switch (fate)
         {
             case PrisonerFate.Parole: row.ParoleUntil = day + ParoleDays; row.Work = ""; row.UnfedDays = 0; return fate;
@@ -145,7 +148,7 @@ public static class PrisonerPens
     /// </summary>
     public static void Day(SoldierWorld sw, AftermathRules r, RuleChron chron, ulong seed, int day)
     {
-        var l = sw.Econ.Ledger;
+        var l = sw.Econ.Ledger; sw.PenHooks.Today = day;
         foreach (var row in sw.Book.Prisoners.Values.ToList())
         {
             if (Gone(sw, row.Person)) { sw.Book.Prisoners.Remove(row.Person); continue; }          // P7R-10: a dead or departed man is nobody's ransom
