@@ -32,6 +32,8 @@ public sealed class HostAccount
     public bool Abstract;
     /// <summary>P7-AM-D: men the host feeds and warms who are not in its roster (a joined warband's: the lord pays them), and the share (permille) the foragers' yield is cut by (the strip limit, set by the military from the days on the same ground).</summary>
     public int Retainers, ForageCutPm;
+    /// <summary>P8-WS-2 (P7R-9): the purses that put coin in the pay chest, in the order they did (purse kind, owner, mites): what is left at <c>Disband</c> goes back to them, the newest first, each up to what it put in.</summary>
+    public List<(byte Kind, ulong Owner, long Mites)> Funders = [];
 
     public AnimalCounts Animals => new(Riding, Pack, Draught, Oxen);
     public int Total { get { int t = 0; foreach (int c in Men) t += c; return t; } }
@@ -113,6 +115,7 @@ public sealed class WarSupplyBook
             foreach (long x in a.Totals) L(x);
             if (a.Campaign != 0 || a.Abstract) { L((long)a.Campaign); L(a.Abstract ? 1 : 0); }
             if (a.Retainers != 0 || a.ForageCutPm != 0) { L(-7); L(a.Retainers); L(a.ForageCutPm); }
+            if (a.Funders.Count > 0) { L(-9); foreach (var f in a.Funders) { L(f.Kind); L((long)f.Owner); L(f.Mites); } }
         }
         foreach (var (p, hid) in OnCampaign) { L(p); L(hid); }
         foreach (var (s, hid) in Blockades) { L(s); L(hid); }

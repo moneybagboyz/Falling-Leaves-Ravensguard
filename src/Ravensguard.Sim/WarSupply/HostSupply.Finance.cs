@@ -168,17 +168,17 @@ public sealed partial class HostSupply
     /// The realm funds a host's chest for <paramref name="days"/> days of its pay and food (army-economy 4.5): what the treasury holds, after <see cref="Raise"/> has tried the rule's other sources, moves to the pay chest (a ledger transfer;
     /// the chest is physical). <c>campaign_funded</c> is written with the days funded and the sources.
     /// </summary>
-    public FundResult Fund(HostId h, int days, int day)
+    public FundResult Fund(HostId h, int days, int day, PurseId? source = null)
     {
         var a = Acc(h); var rt = Resolve(a); var led = _econ.Ledger;
         var (pay, staple, fodder, carting) = DailyCost(a.Roster, a.Followers, a.Animals, days);
         long cost = (pay + staple + fodder + carting) * days, need = cost - led.Balance(rt.Chest).Mites;
-        var purse = RealmPurse(a.Realm); if (purse.IsNone) purse = rt.Treasury;
+        var purse = source ?? RealmPurse(a.Realm); if (purse.IsNone) purse = rt.Treasury;                                   // P8-WS-2: a lord funds his own host from his own purse
         if (need <= 0 || purse.IsNone) return new FundResult(0, 0, 0, 0, 0);
         long treasury = Math.Min(need, led.Balance(purse).Mites), aid = 0, loans = 0, tallage = 0;
-        if (treasury < need) (aid, loans, tallage) = Raise(a.Realm, need, day);
+        if (treasury < need && source == null) (aid, loans, tallage) = Raise(a.Realm, need, day);
         long move = Math.Min(need, led.Balance(purse).Mites);
-        if (move > 0 && purse != rt.Chest) led.Transfer(purse, rt.Chest, new Coin(move), TransferReason.Hoard);
+        if (move > 0 && purse != rt.Chest) Deposit(h, purse, move);
         var res = new FundResult(treasury, aid, loans, tallage, move);
         int funded = (int)((led.Balance(rt.Chest).Mites) * days / Math.Max(1, cost));
         Chron.Chron(WriteTime(day), "campaign_funded", "ch_war_funded", [ChronParam.Count("days", funded), ChronParam.Mites("treasury", treasury), ChronParam.Mites("aid", aid), ChronParam.Mites("loans", loans), ChronParam.Mites("tallage", tallage)],

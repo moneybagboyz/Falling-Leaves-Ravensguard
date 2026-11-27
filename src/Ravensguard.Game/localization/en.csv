@@ -5249,6 +5249,8 @@ ct_kind_kidnap,Kidnap
 ct_kind_slander_rival,Slander a rival
 ct_kind_take_a_fief,Take a fief
 ct_kind_carry_oath_or_treaty,Carry an oath or a treaty
+ct_kind_arms_supply,Supply arms to the armoury
+ct_kind_refit_commission,Refit the armoury by commission
 ct_kind_tournament_entry,Enter the tournament
 ct_taken,You took the work: {0}.
 ct_cannot_bond,You cannot put up the bond.
@@ -6351,6 +6353,12 @@ ch_note_sg_burnt,the fire burnt the wall out
 ch_war_bought,"The host bought {kg} kg of grain at {place}, and the price rose {pct}% under its buying."
 ch_war_arms_ordered,"{lord} ordered arms for the armoury: {kits} pieces for {budget}."
 ch_note_war_arms,the lord's steward filled the armoury's gap
+ch_war_arms_delivered,"{pieces} pieces of an arms order reached the armoury; the maker was paid {paid}."
+ch_note_war_arms_delivered,the maker's carts came in and the armourer counted the kit
+ch_war_arms_fitted,"An armourer fitted {pieces} pieces at the armoury and was paid {paid}."
+ch_note_war_arms_fitted,the lord's commission was filled from bought parts
+ch_war_arms_robbed,"A load of arms, {kg} kg, was taken on the road."
+ch_note_war_arms_robbed,robbers stopped the carts
 ch_war_depot_emptied,"The war emptied the granary depot at {place}."
 ch_war_starving,"{place} is starving under the blockade: {days} days of food are left."
 ch_note_war_buying,the quartermaster bought for the host

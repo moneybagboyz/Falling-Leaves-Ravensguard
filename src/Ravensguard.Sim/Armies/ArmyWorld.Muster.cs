@@ -334,7 +334,7 @@ public sealed partial class ArmyWorld
         long have = led.Balance(purse).Mites;
         if (have >= cost || RaiseAllowed(host)) { hs.Fund(hid, days, day); return; }
         long move = Math.Min(have, cost - led.Balance(hs.ChestOf(hid)).Mites);
-        if (move > 0) led.Transfer(purse, hs.ChestOf(hid), new Coin(move), TransferReason.Hoard);
+        if (move > 0) hs.Deposit(hid, purse, move);
     }
 
     private static bool RaiseAllowed(ArmyHost host) => host.Raises;

@@ -8,6 +8,10 @@ public sealed record ArmsKitPieceDef
     public int IronG { get; init; }
     public int OtherMinutes { get; init; }
     public int PriceMites { get; init; }
+    /// <summary>P8-WS-2: the part of the piece that is not iron, as a good and the material the item names it (the shaft, the board, the cloth), and its mass in grams: what a maker draws from its store to make one.</summary>
+    public string SoftGood { get; init; } = "";
+    public string SoftMaterial { get; init; } = "";
+    public int SoftG { get; init; }
 }
 
 /// <summary>P7-AE3 (army-economy 4.10; content <c>content/base/war/arms.jsonc</c>): the arms industry's numbers. One row, <c>arms_rules</c>.</summary>
@@ -42,6 +46,12 @@ public sealed record ArmsRulesDef : ContentDef
     public int IndexMinPm { get; init; } = 300;
     public int IndexMaxPm { get; init; } = 4000;
     public long PriceMitesPerKg { get; init; } = 600;
+    /// <summary>P8-WS-2 (spec 3.2): a delivery pays <c>price x max(LateFloorPm, 1000 - LateWeekPm x weeks late) / 1000</c>; an order is given up this many days past its due day; a cart goes this many metres a day, a ship this many.</summary>
+    public int LateWeekPm { get; init; } = 100;
+    public int LateFloorPm { get; init; } = 500;
+    public int LapseDays { get; init; } = 70;
+    public int CartMPerDay { get; init; } = 20_000;
+    public int ShipMPerDay { get; init; } = 60_000;
     /// <summary>The levy kit, in issue order.</summary>
     public List<ArmsKitPieceDef> LevyKit { get; init; } = [];
 }

@@ -282,6 +282,21 @@ public static class ContractSystem
         Refund(w, c); c.State = WorkState.Cancelled; c.ClosedDay = day; return true;
     }
 
+    /// <summary>The arms kinds (P8-WS-2): paid out piece by piece by <c>ArmsSupply</c>, closed by it.</summary>
+    public static bool IsArms(string kind) => kind is "arms_supply" or "refit_commission";
+
+    /// <summary>
+    /// Done, the escrow already paid out piece by piece by the verifier's own rule (P8-WS-2: arms deliveries and fittings): what is left of it goes back to the issuer, the bond (none) to the taker, and the close is written.
+    /// <paramref name="paid"/> is the coin the taker was paid.
+    /// </summary>
+    public static void CompleteSettled(ContractWorld w, WorkContract c, int day, long paid)
+    {
+        var k = w.Content.Kind(c.Kind);
+        Refund(w, c); ReturnBond(w, c);
+        c.State = WorkState.Done; c.ClosedDay = day;
+        CloseEntry(w, c, "work_done", "ch_work_done", day, paid, k?.SuccessPm ?? 10, true);
+    }
+
     private static void Refund(ContractWorld w, WorkContract c)
     {
         var escrow = new PurseId(c.Escrow); long left = w.Ledger.Balance(escrow).Mites;
@@ -305,6 +320,7 @@ public static class ContractSystem
         foreach (var c in book.Contracts.Values.ToList())
         {
             if (c.Kind == "tournament_entry") continue;
+            if (IsArms(c.Kind) && c.Live) continue;                                                                        // the arms service keeps its own deadlines (a late delivery pays less, it does not fail)
             if (c.State == WorkState.Open && day >= c.DeadlineDay) Expire(w, book, c, day);
             else if (c.State == WorkState.Taken && day >= c.DeadlineDay) { var r = Check(w, c, day); if (r == true) Complete(w, book, c, day); else if (r == null && Moot(w, c)) Void(w, c, day); else Fail(w, book, c, day, "deadline"); }
             else if (c.Closed && c.ClosedDay >= 0 && day - c.ClosedDay > ContractBook.KeepClosedDays) book.Contracts.Remove(c.Id);

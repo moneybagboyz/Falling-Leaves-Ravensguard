@@ -6,10 +6,11 @@
     "refit_cap_pm": { "Crude": 650, "Poor": 750, "Common": 850, "Fine": 900, "Masterwork": 1000 },
     "scrap_batch_g": 10000, "charcoal_batch_g": 6000, "bar_batch_g": 8000, "forge_hours": 8,
     "target_g": 20000000, "war_demand_pm": 3000, "caravan_pm": 600, "caravan_g": 4000000, "index_min_pm": 300, "index_max_pm": 4000, "price_mites_per_kg": 600,
+    "late_week_pm": 100, "late_floor_pm": 500, "lapse_days": 70, "cart_m_per_day": 20000, "ship_m_per_day": 60000,
     "levy_kit": [
-      { "shape": "spear", "recipe": "forge_spearheads", "iron_g": 400, "other_minutes": 0, "price_mites": 400 },
+      { "shape": "spear", "recipe": "forge_spearheads", "iron_g": 400, "other_minutes": 0, "price_mites": 400, "soft_good": "timber_planks", "soft_material": "ash", "soft_g": 1100 },
       { "shape": "kettle_hat", "recipe": "forge_kettle_hats", "iron_g": 1500, "other_minutes": 0, "price_mites": 1600 },
-      { "shape": "round_shield", "recipe": "", "iron_g": 300, "other_minutes": 180, "price_mites": 900 },
-      { "shape": "gambeson", "recipe": "", "iron_g": 0, "other_minutes": 744, "price_mites": 1500 }
+      { "shape": "round_shield", "recipe": "", "iron_g": 300, "other_minutes": 180, "price_mites": 900, "soft_good": "timber_planks", "soft_material": "oak", "soft_g": 2700 },
+      { "shape": "gambeson", "recipe": "", "iron_g": 0, "other_minutes": 744, "price_mites": 1500, "soft_good": "cloth_linen", "soft_material": "linen", "soft_g": 3200 }
     ] }
 ]

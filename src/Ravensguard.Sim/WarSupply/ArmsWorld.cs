@@ -25,6 +25,13 @@ public sealed record ArmsShipment(int From, int To, long Grams, long Mites);
 /// <summary>A season of the arms trade: the caravans that ran and the number stopped at the gate by a ban.</summary>
 public sealed record ArmsTradeResult(IReadOnlyList<ArmsShipment> Shipments, int Stopped);
 
+/// <summary>P8-WS-2: the physical side of a season's caravan (the arms trade moves real goods): how much the exporter's depot can send (never more than <c>want</c>), and the dispatch itself after the coin has moved.</summary>
+public interface IArmsShipper
+{
+    long Available(int exporter, int importer, long wantG);
+    void Dispatch(int exporter, int importer, long grams, int day);
+}
+
 /// <summary>
 /// P7-AE3 (army-economy 4.10): the arms industry. Kit costs by the munition patterns, the season's orders within the arms budget, the armoury's kit fill and gaps, loot sorted by condition (armoury, refit queue, salvage to
 /// <c>scrap_iron</c> and <c>rags</c>), <c>forge_scrap</c>, and the arms trade among realms (an index per realm, caravans drawn on stream 0x754, export bans). Integer arithmetic; items and goods move only through the item
@@ -62,6 +69,31 @@ public sealed class ArmsWorld
         }
         return new KitCost(iron, smith, other, mites);
     }
+
+    /// <summary>The kit piece of a shape, or null (P8-WS-2).</summary>
+    public ArmsKitPieceDef? Piece(string shape) => Rules.LevyKit.FirstOrDefault(p => p.Shape == shape);
+
+    /// <summary>The minutes of work (smith runs of the shape's pattern, with practice, plus the other work) of <paramref name="n"/> pieces of a shape (P8-WS-2).</summary>
+    public long PieceMinutes(ArmsKitPieceDef p, int n, bool practised = true)
+    {
+        long minutes = (long)p.OtherMinutes * n;
+        var pat = p.Recipe.Length > 0 ? Patterns.Of(_scale, p.Recipe) : null;
+        if (pat != null) for (int left = n; left > 0; left -= pat.RunMax) minutes += Patterns.RunMinutes(pat, Math.Min(left, pat.RunMax), practised, _scale.PracticePm);
+        return minutes;
+    }
+
+    /// <summary>The goods one piece is made of (bar iron, then its soft part), as good id and grams: what a maker draws from its store and what a commission buys.</summary>
+    public IEnumerable<(ushort Good, long Grams)> PieceGoods(ArmsKitPieceDef p)
+    {
+        if (p.IronG > 0) yield return (_cat.IdOf("iron_bar"), p.IronG);
+        if (p.SoftG > 0 && p.SoftGood.Length > 0) yield return (_cat.IdOf(p.SoftGood), p.SoftG);
+    }
+
+    /// <summary>What the goods of one piece cost at the books' base price, in mites (a commission buys them at that).</summary>
+    public long PartsMites(ArmsKitPieceDef p) { long m = 0; foreach (var (g, grams) in PieceGoods(p)) m += _cat.BasePriceMilliMites(g) * grams / 1_000_000; return m; }
+
+    /// <summary>The permille of a delivery's price paid when it comes <paramref name="daysLate"/> days past its due day (spec 3.2, WS-8): 1000 less <c>LateWeekPm</c> a whole week late, never under <c>LateFloorPm</c>.</summary>
+    public int LatePm(int daysLate) => daysLate <= 0 ? 1000 : Math.Max(Rules.LateFloorPm, 1000 - Rules.LateWeekPm * (daysLate / 7));
 
     /// <summary>The pieces of one kit, in issue order, as a shape-to-count template for <c>kits</c> kits.</summary>
     public IReadOnlyDictionary<string, int> Template(int kits) => Rules.LevyKit.ToDictionary(p => p.Shape, _ => kits, StringComparer.Ordinal);
@@ -203,7 +235,7 @@ public sealed class ArmsWorld
     /// importer, when it is stopped at the gate. A caravan runs only when <paramref name="pay"/> (the caller's ledger move, exporter, importer, mites) says the coin moved; the stocks move with it. One caravan a season to an importer.
     /// A realm sees stock only once it is named here, at its target.
     /// </summary>
-    public ArmsTradeResult Season(int day, IReadOnlyList<(int Realm, bool AtWar)> realms, Func<int, int, long, bool> pay)
+    public ArmsTradeResult Season(int day, IReadOnlyList<(int Realm, bool AtWar)> realms, Func<int, int, long, bool> pay, IArmsShipper? ship = null)
     {
         var list = realms.OrderBy(r => r.Realm).ToList(); var atWar = list.ToDictionary(r => r.Realm, r => r.AtWar);
         foreach (var (r, _) in list) if (!Book.Stock.ContainsKey(r)) Book.Stock[r] = Rules.TargetG;
@@ -216,9 +248,11 @@ public sealed class ArmsWorld
                 if (DetRng.Range(_seed, season, ((ulong)(uint)e << 32) | (uint)i, RngStreams.ArmsCaravans, 0, 0, 1000) >= Rules.CaravanPm) continue;
                 if (Book.Banned(e, i)) { stopped++; Book.Stats[2]++; Log(new ArmsShipRow(e, i, 0, 0, day, 1)); continue; }
                 long load = Math.Min(Rules.CaravanG, Book.Stock[e] - Rules.TargetG / 2); if (load <= 0) continue;
+                if (ship != null) { load = ship.Available(e, i, load); if (load <= 0) continue; }                         // P8-WS-2: the caravan carries real bar from the exporter's depot, so it can be no more than the depot holds
                 long price = load / 1000 * Rules.PriceMitesPerKg * (Book.Index[e] + Book.Index[i]) / 2 / 1000;
                 if (!pay(e, i, price)) continue;
                 Book.Stock[e] -= load; Book.Stock[i] += load; served.Add(i);
+                ship?.Dispatch(e, i, load, day);
                 Book.Stats[0] += load; Book.Stats[1] += price; ran.Add(new ArmsShipment(e, i, load, price)); Log(new ArmsShipRow(e, i, load, price, day, 0));
             }
         foreach (var (r, w) in list) Book.Index[r] = IndexOf(r, w);

@@ -132,9 +132,39 @@ public sealed partial class HostSupply
         foreach (int p in Book.OnCampaign.Where(kv => kv.Value == a.Id).Select(kv => kv.Key).ToList()) Book.OnCampaign.Remove(p);
         SettleSoldiers(a, rt);
         var led = _econ.Ledger; long left = led.Balance(rt.Chest).Mites;
+        left -= ReturnLeftovers(a, rt.Chest, left);                                                                        // P8-WS-2 (P7R-9): to the purses that funded the chest, newest first, each up to what it put in
         if (left > 0 && !rt.Treasury.IsNone && rt.Treasury != rt.Chest) led.Transfer(rt.Chest, rt.Treasury, new Coin(left), TransferReason.Hoard);
         foreach (int s in Book.Blockades.Where(kv => kv.Value == a.Id).Select(kv => kv.Key).ToList()) SiegeBlockade(s, false, h);
         Book.Hosts.Remove(a.Id); _rt.Remove(a.Id); _last.Remove(a.Id);
+    }
+
+    /// <summary>
+    /// P8-WS-2 (P7R-9): puts <paramref name="mites"/> from <paramref name="from"/> into the host's pay chest and remembers the purse, so the coin that is left at <see cref="Disband"/> goes back where it came from
+    /// (the lord's purse, the realm's, a loan's) and not to the realm treasury by default. A ledger transfer; false when it did not move.
+    /// </summary>
+    public bool Deposit(HostId h, PurseId from, long mites, TransferReason reason = TransferReason.Hoard)
+    {
+        var a = Acc(h); var rt = Resolve(a); var led = _econ.Ledger;
+        if (mites <= 0 || from == rt.Chest || !led.Transfer(from, rt.Chest, new Coin(mites), reason)) return false;
+        byte kind = (byte)led.KindOf(from); ulong owner = led.OwnerOf(from).Value;
+        if (a.Funders.Count > 0 && a.Funders[^1] is var l && l.Kind == kind && l.Owner == owner) a.Funders[^1] = (kind, owner, l.Mites + mites);
+        else a.Funders.Add((kind, owner, mites));
+        return true;
+    }
+
+    /// <summary>The leftover coin of a chest goes back to the purses that funded it, newest first, each up to what it put in (<c>TransferReason.Subsidy</c>); returns what went back. A purse that is gone is skipped.</summary>
+    private long ReturnLeftovers(HostAccount a, PurseId chest, long left)
+    {
+        var led = _econ.Ledger; long back = 0;
+        for (int i = a.Funders.Count - 1; i >= 0 && left > 0; i--)
+        {
+            var (kind, owner, put) = a.Funders[i];
+            if (!led.TryFind((PurseKind)kind, new EntityId(owner), out var to) || to == chest) continue;
+            long give = Math.Min(left, put);
+            if (give > 0 && led.Transfer(chest, to, new Coin(give), TransferReason.Subsidy)) { left -= give; back += give; }
+        }
+        a.Funders.Clear();
+        return back;
     }
 
     public bool Exists(HostId h) => Book.Hosts.ContainsKey(h.Value);

@@ -23,6 +23,8 @@ public sealed class HostAccountSave
     [Key(11)] public long[] Totals { get; set; } = [];
     /// <summary>The campaign's chronicle entry and the abstract flag (P7-AE1; absent in older sections).</summary>
     [Key(12)] public long[] Extra { get; set; } = [];
+    /// <summary>P8-WS-2 (optional; null while no purse funded the chest): triples of purse kind, owner and mites, oldest first.</summary>
+    [Key(13)] public long[]? Funders { get; set; }
 }
 
 /// <summary>A convoy on the road (P7-AE1), flattened: caravan, host, depot settlement, carts, baggage owner, chest kind, chest owner, float, day sent.</summary>
@@ -73,6 +75,7 @@ public sealed class WarSupplySave
             Fields = [a.Followers, a.Carts, a.Outside, a.Riding, a.Pack, a.Draught, a.Oxen, (int)a.Mode, a.PlaceSettlement, a.PlaceXM, a.PlaceYM, a.Pasture ? 1 : 0, a.ServiceDays, a.HomeSettlement],
             Arrears = [.. a.Arrears], HungerDays = [.. a.HungerDays], UnpaidDays = [.. a.UnpaidDays], Totals = [.. a.Totals],
             Extra = a.Retainers != 0 || a.ForageCutPm != 0 ? [(long)a.Campaign, a.Abstract ? 1 : 0, a.Retainers, a.ForageCutPm] : a.Campaign != 0 || a.Abstract ? [(long)a.Campaign, a.Abstract ? 1 : 0] : [],
+            Funders = a.Funders.Count == 0 ? null : [.. a.Funders.SelectMany(f => new long[] { f.Kind, (long)f.Owner, f.Mites })],
         })],
         OnCampaign = [.. b.OnCampaign.SelectMany(kv => new[] { kv.Key, kv.Value })],
         Blockades = [.. b.Blockades.SelectMany(kv => new[] { kv.Key, kv.Value })],
@@ -107,6 +110,11 @@ public sealed class WarSupplySave
             Array.Copy(s.Totals, a.Totals, Math.Min(s.Totals.Length, a.Totals.Length));
             if (s.Extra.Length >= 2) { a.Campaign = (ulong)s.Extra[0]; a.Abstract = s.Extra[1] != 0; }
             if (s.Extra.Length >= 4) { a.Retainers = (int)s.Extra[2]; a.ForageCutPm = (int)s.Extra[3]; }
+            if (s.Funders is { } fu)
+            {
+                if (fu.Length % 3 != 0) throw new InvalidDataException("corrupt warsupply host funders");
+                for (int i = 0; i < fu.Length; i += 3) a.Funders.Add(((byte)fu[i], (ulong)fu[i + 1], fu[i + 2]));
+            }
             b.Hosts[a.Id] = a;
         }
         for (int i = 0; i + 1 < OnCampaign.Length; i += 2) b.OnCampaign[OnCampaign[i]] = OnCampaign[i + 1];
@@ -143,10 +151,17 @@ public sealed class ArmsSave
     [Key(5)] public long[] Bans { get; set; } = [];
     [Key(6)] public long[] Log { get; set; } = [];
     [Key(7)] public long[] Stats { get; set; } = [];
+    /// <summary>P8-WS-2 (optional; null while nothing is ordered): the jobs (contract, kind, lord, purse, realm, settlement, armoury, maker, maker purse, phase, then per line six numbers: shape index, count, making, made, delivered, price), the shapes they name, the road (id, job, kind, mode, state, from, to, from realm, to realm, depart, arrive, grams, good, qty, then the item ids), the stewards (lord, armoury, budget, kits, last season) and the next transit id with the stats.</summary>
+    [Key(8)] public long[][]? Jobs { get; set; }
+    [Key(9)] public string[]? JobShapes { get; set; }
+    [Key(10)] public long[][]? Transit { get; set; }
+    [Key(11)] public long[][]? Stewards { get; set; }
+    [Key(12)] public long[]? SupplyExtra { get; set; }
 
     public static ArmsSave Capture(ArmsBook a)
     {
         var shapes = a.Orders.Select(o => o.Shape).Distinct(StringComparer.Ordinal).OrderBy(x => x, StringComparer.Ordinal).ToArray();
+        var jobShapes = a.Jobs.Values.SelectMany(j => j.Lines).Select(l => l.Shape).Distinct(StringComparer.Ordinal).OrderBy(x => x, StringComparer.Ordinal).ToArray();
         return new ArmsSave
         {
             Shapes = shapes,
@@ -157,6 +172,12 @@ public sealed class ArmsSave
             Bans = [.. a.Bans],
             Log = [.. a.Log.SelectMany(s => new long[] { s.From, s.To, s.Grams, s.Mites, s.Day, s.Outcome })],
             Stats = [.. a.Stats],
+            Jobs = a.Jobs.Count == 0 ? null : [.. a.Jobs.Values.Select(j => new long[] { j.Contract, j.Kind, (long)j.Lord, j.Purse, j.Realm, j.Settlement, j.Armoury, (long)j.Maker, j.MakerPurse, j.Phase }
+                .Concat(j.Lines.SelectMany(l => new long[] { Array.IndexOf(jobShapes, l.Shape), l.Count, l.Making, l.Made, l.Delivered, l.Price })).ToArray())],
+            JobShapes = jobShapes.Length == 0 ? null : jobShapes,
+            Transit = a.Transit.Count == 0 ? null : [.. a.Transit.Values.Select(t => new long[] { t.Id, t.Job, t.Kind, t.Mode, t.State, (long)t.From, (long)t.To, t.FromRealm, t.ToRealm, t.Depart, t.Arrive, t.Grams, t.Good, t.Qty }.Concat(t.Items.Select(i => (long)i)).ToArray())],
+            Stewards = a.Stewards.Count == 0 ? null : [.. a.Stewards.Values.Select(w => new long[] { (long)w.Lord, w.Armoury, w.BudgetMites, w.Kits, w.LastSeason })],
+            SupplyExtra = a.SupplyEmpty ? null : [a.NextTransit, .. a.SupplyStats],
         };
     }
 
@@ -171,5 +192,30 @@ public sealed class ArmsSave
         foreach (long k in Bans) a.Bans.Add(k);
         for (int i = 0; i + 5 < Log.Length; i += 6) a.Log.Add(new ArmsShipRow((int)Log[i], (int)Log[i + 1], Log[i + 2], Log[i + 3], (int)Log[i + 4], (byte)Log[i + 5]));
         Array.Copy(Stats, a.Stats, Math.Min(Stats.Length, a.Stats.Length));
+        var js = JobShapes ?? [];
+        foreach (var f in Jobs ?? [])
+        {
+            if (f.Length < 10 || (f.Length - 10) % 6 != 0) throw new InvalidDataException("corrupt warsupply arms job row");
+            var j = new ArmsJob { Contract = (int)f[0], Kind = (byte)f[1], Lord = (ulong)f[2], Purse = (int)f[3], Realm = (int)f[4], Settlement = (int)f[5], Armoury = f[6], Maker = (ulong)f[7], MakerPurse = (int)f[8], Phase = (byte)f[9] };
+            for (int i = 10; i < f.Length; i += 6)
+            {
+                if (f[i] < 0 || f[i] >= js.Length) throw new InvalidDataException("corrupt warsupply arms job shape");
+                j.Lines.Add(new ArmsLine { Shape = js[(int)f[i]], Count = (int)f[i + 1], Making = (int)f[i + 2], Made = (int)f[i + 3], Delivered = (int)f[i + 4], Price = f[i + 5] });
+            }
+            a.Jobs[j.Contract] = j;
+        }
+        foreach (var f in Transit ?? [])
+        {
+            if (f.Length < 14) throw new InvalidDataException("corrupt warsupply arms transit row");
+            var t = new ArmsTransit { Id = (int)f[0], Job = (int)f[1], Kind = (byte)f[2], Mode = (byte)f[3], State = (byte)f[4], From = (ulong)f[5], To = (ulong)f[6], FromRealm = (int)f[7], ToRealm = (int)f[8], Depart = (int)f[9], Arrive = (int)f[10], Grams = f[11], Good = (int)f[12], Qty = f[13] };
+            for (int i = 14; i < f.Length; i++) t.Items.Add((ulong)f[i]);
+            a.Transit[t.Id] = t;
+        }
+        foreach (var f in Stewards ?? [])
+        {
+            if (f.Length != 5) throw new InvalidDataException("corrupt warsupply arms steward row");
+            a.Stewards[(ulong)f[0]] = new ArmsSteward { Lord = (ulong)f[0], Armoury = f[1], BudgetMites = f[2], Kits = (int)f[3], LastSeason = (int)f[4] };
+        }
+        if (SupplyExtra is { Length: >= 1 }) { a.NextTransit = (int)SupplyExtra[0]; Array.Copy(SupplyExtra, 1, a.SupplyStats, 0, Math.Min(SupplyExtra.Length - 1, a.SupplyStats.Length)); }
     }
 }
