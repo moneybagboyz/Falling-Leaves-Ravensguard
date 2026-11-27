@@ -1,0 +1,22 @@
+// P7-SG-E (sieges-and-engines 4.8, 4.9): the wagon fort and the chariot. The wagon is a vehicle (vehicles/templates.jsonc war_wagon); a ring of 20 is about 100 m of boards, chained, 3 minutes from the column to the ring.
+// A chariot is fast on dry open ground (road 10 m/s, field 8.5), forbidden in woods, 1 m/s in mud, x0.4 over ploughed or rough ground, and a car that meets a ditch or stakes at speed crashes.
+[
+  { "type": "wagon_rules", "id": "wagon_rules", "template": "war_wagon", "gap_mm": 1000, "drive_mmps": 1500, "drive_base_pm": 800, "drive_per_riding_pm": 4, "unhitch_s": 30, "chain_s": 20, "chain_men": 2,
+    "cut_s": 30, "cut_men": 1, "slit_cover_pm": 800, "arc_mm": 6000, "max_braced": 6, "min_wagons": 4 },
+  { "type": "chariot_rules", "id": "chariot_rules", "template": "war_chariot", "charge_k": 10, "transfer_pm": 300, "horse_kg": 450, "crew_kg": 80, "trample_k": 8, "top_mmps": 10000, "accel_mmps": 2000, "brake_mmps": 4000,
+    "turn_from_mmps": 4000, "turn_deg_per_s": 45, "fall_height_mm": 1000, "crash_min_mmps": 3000, "trample_hit_pm": 500,
+    "ground": {
+      "road":  { "speed_pm": 1000 },
+      "field": { "speed_pm": 850 },
+      "rough": { "speed_pm": 400 },
+      "mud":   { "speed_pm": 1000, "max_mmps": 1000 },
+      "snow":  { "speed_pm": 500 },
+      "ice":   { "speed_pm": 400 },
+      "woods": { "forbidden": true },
+      "ford":  { "speed_pm": 300 },
+      "deep_water": { "forbidden": true },
+      "stakes": { "speed_pm": 500, "crash": true },
+      "ditch":  { "speed_pm": 500, "crash": true },
+      "rubble": { "speed_pm": 400, "crash": true }
+    } }
+]

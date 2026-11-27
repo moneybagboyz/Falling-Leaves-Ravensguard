@@ -40,6 +40,9 @@ public class VehicleScaleTests(ITestOutputHelper output)
         new("siege_tower",   (4, 4), (4, 4), (0, 0), (0, 0), (8500, 9800)),
         new("trebuchet",     (6, 6), (10, 10), (0, 0), (0, 0), (11_500, 13_000)),
         new("springald",     (2, 2), (2, 2), (0, 0), (0, 0), (350, 450)),
+        // P7-SG-E (sieges-and-engines 3.3, 4.8, 4.9): a 2 x 5 war wagon of about 1.5 t (armoured wheels and sides, pole and yoke) and a 2 x 3 war chariot of 300 kg
+        new("war_wagon",     (2, 2), (3, 5), (0, 2), (0, 0), (1400, 1700)),
+        new("war_chariot",   (2, 2), (2, 3), (1, 2), (0, 0), (295, 305)),
     ];
 
     [Fact]
@@ -91,7 +94,7 @@ public class VehicleScaleTests(ITestOutputHelper output)
         Assert.NotNull(dir);
         using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(Path.Combine(dir, "src", "Ravensguard.Game", "assets", "art", "index.json")));
         var sprites = doc.RootElement.GetProperty("sprites");
-        foreach (var b in Book().Templates.All.Where(x => x.Id is not ("longship" or "cog" or "war_cog" or "mantlet" or "ram_covered" or "siege_tower" or "trebuchet" or "springald")))                  // the sea ships' and the siege engines' sprites are a later part (P7-SH-A and P7-SG-B left the art out)
+        foreach (var b in Book().Templates.All.Where(x => x.Id is not ("longship" or "cog" or "war_cog" or "mantlet" or "ram_covered" or "siege_tower" or "trebuchet" or "springald" or "war_wagon" or "war_chariot")))                  // the sea ships, the siege engines and the war wagon and chariot (their art is a later part)' sprites are a later part (P7-SH-A and P7-SG-B left the art out)
         {
             Assert.True(sprites.TryGetProperty(b.Def.Sprite, out var sp), $"{b.Id}: sprite '{b.Def.Sprite}' is not in the art atlas");
             int w = sp.GetProperty("w").GetInt32(), h = sp.GetProperty("h").GetInt32(), margin = 4;

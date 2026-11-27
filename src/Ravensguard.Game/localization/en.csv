@@ -6743,6 +6743,11 @@ ch_so_fate_killed,"{count} prisoners were put to the sword."
 ch_so_ransom,"{captive} was ransomed for {amount}."
 ch_so_ransom_ceded,"{captive} went free; his lord, who could not pay, ceded land for him."
 ch_so_parole_broken,"{person} broke his parole."
+ch_sg_fort_formed,"{wagons} war wagons drew up in a ring at {x}, {y} and were chained."
+ch_sg_chariot_crash,"A chariot crashed at {x}, {y} running at {speed} metres a second."
+ch_note_sg_fort_drilled,"the wagons were driven to the ring, unhitched and chained at the hooks"
+ch_note_sg_wheel,a wheel or axle broke under it at speed
+ch_note_sg_ditch,it ran into a ditch or stakes at speed
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."

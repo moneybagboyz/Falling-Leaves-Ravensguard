@@ -532,6 +532,8 @@ public static class RngStreams
     public const uint CountHostRounding = 0x7E3;
     /// <summary>P7: abstract war: the war soak's world variation (key world, year); never drawn by a game started from the menu.</summary>
     public const uint WarSoakVariation = 0x7E4;
+    /// <summary>P7: chariots: a trampling horse's hooves on the man in its path (key chariot, second, horse).</summary>
+    public const uint ChariotTrample = 0x7E8;
 
     /// <summary>Stream ids that two named uses share on purpose, with why their draws never meet.</summary>
     public static readonly (string A, string B, string Why)[] SharedPairs =

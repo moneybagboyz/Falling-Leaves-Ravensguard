@@ -237,5 +237,14 @@
     "legend": { "f": ["trebuchet_frame"], "a": ["trebuchet_arm"], "s": ["trebuchet_arm", "trebuchet_sling"], "w": ["trebuchet_arm", "counterweight_box"] },
     "rows": [ "__s___", "__a___", "_fa_f_", "_fa_f_", "_fa_f_", "_fa_f_", "_fa_f_", "_fa_f_", "__a___", "__w___" ] },
   { "type": "vehicle_blueprint", "id": "springald", "name": "Springald", "base_speed_cmps": 100, "turning_radius_dm": 20, "hitch": { "slots": 0, "kind": "pushed" }, "driver": 1,
-    "legend": { "b": ["siege_beam"], "s": ["siege_beam", "springald"] }, "rows": [ "bs", "bb" ] }
+    "legend": { "b": ["siege_beam"], "s": ["siege_beam", "springald"] }, "rows": [ "bs", "bb" ] },
+  // ---- P7-SG-E (sieges-and-engines 3.3, 4.8, 4.9): the war wagon (2 x 5: a rear hook row, two axles of armoured wheels between a pavise and a slit board, the pole and yoke on the front hooks) and the war chariot (2 x 3: car, wheels, pole).
+  // What they do in a fight is siege/wagons.jsonc.
+  { "type": "vehicle_blueprint", "id": "war_wagon", "name": "War wagon", "base_speed_cmps": 180, "axle_limit_kg": 2000, "turning_radius_dm": 80, "hitch": { "slots": 2, "max_animals": 4, "kind": "pole_yoke" }, "driver": 2, "passengers": 8, "built_at": "yard",
+    "legend": { "H": ["frame_plank", "armour_board", "chain_hook"], "W": ["axle_iron_bound", "wheel_spoked", "iron_tyre", "frame_plank", "armour_board"], "w": ["wheel_spoked", "iron_tyre", "frame_plank", "armour_board"],
+                "P": ["frame_plank", "pavise_side", "seat_bench"], "S": ["frame_plank", "arrow_slit", "seat_bench"], "y": ["pole_beam", "pole_yoke", "iron_fitting", "chain_hook"] },
+    "rows": [ "HH", "Ww", "PS", "Ww", "yy" ] },
+  { "type": "vehicle_blueprint", "id": "war_chariot", "name": "War chariot", "base_speed_cmps": 700, "axle_limit_kg": 600, "turning_radius_dm": 60, "hitch": { "slots": 2, "max_animals": 2, "kind": "pole_yoke" }, "driver": 1, "passengers": 1,
+    "legend": { "c": ["chariot_car", "frame_plank", "seat_bench", "iron_fitting"], "L": ["axle_wood", "wheel_spoked", "iron_tyre", "chariot_car", "iron_fitting"], "R": ["wheel_spoked", "iron_tyre", "chariot_car"], "y": ["pole_beam", "pole_yoke"] },
+    "rows": [ "cc", "LR", "yy" ] }
 ]
