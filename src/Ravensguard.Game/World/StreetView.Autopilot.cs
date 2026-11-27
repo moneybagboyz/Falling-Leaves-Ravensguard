@@ -114,7 +114,7 @@ public partial class StreetView
         {
             _apTick = _world.Tick;
             var ap = _ap; bool run = !_apLocalPaused;
-            _apTask = rt.AtBarrier(() => { if (run) ap.Advance(now); return new ApResult(ap.View(HeroId, now)); });
+            _apTask = rt.AtBarrier(() => { if (run) ap.Advance(now); else ap.HourlyHero(now); return new ApResult(ap.View(HeroId, now)); });
         }
         // the hero walks where the AI wants (at most one new path every little while: a click plans one path, not one per frame)
         _apMoveCool -= delta;

@@ -40,7 +40,7 @@ public class AmbitionPlannerTests(ITestOutputHelper output)
         Assert.Equal(Cfg.Means.Count, Cfg.Means.Select(m => m.Id).Distinct().Count());
         foreach (var id in AmbitionRules.Ruled) Assert.Contains(Cfg.Means, m => m.Condition == id);          // AT-2's "means row"
         Assert.All(Cfg.Means, m => Assert.Contains(m.Condition, AmbitionRules.Ruled));
-        Assert.All(Cfg.Means, m => Assert.Contains(m.Directive, new[] { "work", "trade_route", "tend", "train", "contract", "buy", "recruit", "steal", "none" }));
+        Assert.All(Cfg.Means, m => Assert.Contains(m.Directive, new[] { "work", "trade_route", "tend", "train", "contract", "buy", "recruit", "steal", "talk", "craft", "petition", "travel", "none" }));
     }
 
     // ------------------------------------------------------------------ AT-7
@@ -335,5 +335,81 @@ public class AmbitionPlannerTests(ITestOutputHelper output)
             return w.Book.ComputeHash() + w.Ctx.Coin;
         }
         Assert.Equal(Straight(), Resumed());
+    }
+
+    // ------------------------------------------------------------------ the hourly check without autopilot; the means for the other condition kinds
+
+    [Fact]
+    public void AManualHero_WhoMeetsAStep_FinishesIt_GetsTheChronicleEntry_AndIsOfferedTheNext_WithPause()
+    {
+        using var w = ApWorld.Soak(heroCrowns: 50);
+        var first = Amb("test_manual", Cond("has_coin_at_least", ("pence", "10")), Cond("has_coin_at_least", ("pence", "20")));
+        var next = Amb("test_after", Cond("has_coin_at_least", ("pence", "100000")));
+        w.Ap.Tree = new AmbitionTree([first with { Opens = ["test_after"] }, next]);
+        w.State.Hero!.AmbitionId = "test_manual"; w.State.Hero.Milestone = 0;
+        Assert.Null(w.Book.Get(w.Hero));                                                   // no autopilot row at all
+        w.RunHours(3);
+        var h = w.State.Hero;
+        Assert.True(h.IsDone("test_manual"));
+        Assert.Equal(new[] { "test_after" }, h.Offered);
+        Assert.Contains(w.State.Chronicle.All, e => e.TypeId == "ambition_done" && !e.Data.ContainsKey("autopilot"));
+        var st = w.Book.Get(w.Hero)!; Assert.False(st.Enabled);
+        Assert.Contains(w.Book.Log.Lines, l => l.Code == LogCode.Interrupt && l.Arg == (byte)InterruptKind.AmbitionChoice && l.Text.Contains("[Pause"));
+        Assert.True(w.Ap.BusOf(st).Paused);
+        Assert.NotEqual("test_after", h.AmbitionId);                                       // the player picks
+        Assert.Equal(0, w.Book.Log.Violations);
+    }
+
+    public static IEnumerable<object[]> Kinds() => new[]
+    {
+        new object[] { "knows_person", "person_talk" }, new object[] { "has_item", "item_buy" }, new object[] { "has_item", "item_craft" }, new object[] { "has_reputation_at_least", "rep_contract" },
+        new object[] { "has_rank", "rank_petition" }, new object[] { "is_in_place_kind", "place_travel" }, new object[] { "holds_fief_rank", "fief_petition" },
+    };
+
+    [Theory]
+    [MemberData(nameof(Kinds))]
+    public void AT12_AStepIsDone_ForEveryKindThatGainedAMeans(string condition, string means)
+    {
+        using var w = ApWorld.Soak(heroCrowns: 200);
+        var cond = condition switch
+        {
+            "knows_person" => Cond(condition, ("kind", "scribe"), ("min_trust", "10")),
+            "has_item" => Cond(condition, ("item", "spear"), ("count", "2")),
+            "has_reputation_at_least" => Cond(condition, ("scope", "district"), ("value", "10")),
+            "has_rank" => Cond(condition, ("rank", "free_person")),
+            "is_in_place_kind" => Cond(condition, ("kind", "wilds")),
+            _ => Cond(condition, ("rank", "landholder")),
+        };
+        w.Ap.Tree = new AmbitionTree([Amb("test_kind", cond)]);
+        w.State.Hero!.AmbitionId = "test_kind"; w.State.Hero.Milestone = 0;
+        bool talked = false, bought = false, petitioned = false;
+        w.Ap.MeansHook = (_, m) => { if (m.Id != means) return false; talked |= m.Directive == "talk"; bought |= m.Directive is "buy" or "craft"; petitioned |= m.Directive == "petition"; return true; };
+        w.Ap.FactsHook = (_, f) =>
+        {
+            if (talked) f.Trust["scribe"] = 10;
+            if (bought) f.Items["spear"] = 2;
+            if (petitioned) { f.Ranks.Add("free_person"); f.FiefRank = 1; }
+            f.Reputation["district"] = f.Contracts * 10;
+        };
+        var st = w.Ap.Enable(w.Hero, w.Sec, Directive.Pursue());
+        st.Limits.SpendCapMitesPerDay = 100_000;
+        foreach (var other in Cfg.Means.Where(m => m.Condition == condition && m.Id != means)) st.Rates[other.Id] = 0;   // the means under test is the one tried
+        w.RunHours(24 * 20);
+        Assert.True(w.State.Hero.IsDone("test_kind"), $"{means}: step {w.State.Hero.Milestone}, why {st.Why}, child {st.ChildMeans}");
+        Assert.Contains(w.Book.Log.Lines, l => l.Text.Contains("means " + means));
+        Assert.Equal(0, w.Book.Log.Violations);
+    }
+
+    [Fact]
+    public void TheKindsWithNoActionStayStuck_AndSayWhy()
+    {
+        foreach (var c in new[] { Cond("rules_realm"), Cond("founded_faction", ("recognised", "1")) })
+        {
+            var cands = AmbitionPlanner.Candidates(Cfg.Means, c, Inp(new LimitSet()));
+            Assert.Null(AmbitionPlanner.Best(cands)); Assert.Contains("needs you", AmbitionPlanner.Reason(cands));
+        }
+        // a guild rank or a manor has no action behind its row: the row exists, the world does not open it
+        var guild = AmbitionPlanner.Candidates(Cfg.Means, Cond("has_rank", ("rank", "guild_member")), Inp(new LimitSet(), open: (m, c) => m.Directive != "petition"));
+        Assert.Null(AmbitionPlanner.Best(guild)); Assert.Contains("not open", AmbitionPlanner.Reason(guild));
     }
 }

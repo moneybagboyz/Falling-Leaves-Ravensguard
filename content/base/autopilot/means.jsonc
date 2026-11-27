@@ -19,13 +19,15 @@
   // people and contracts
   { "type": "means", "id": "followers_recruit", "condition": "has_followers_at_least", "directive": "recruit", "prior_pm_day": 250, "weight_pm": 1000, "risk_pm": 80 },
   { "type": "means", "id": "contract_take",     "condition": "completed_contract_count", "directive": "contract", "prior_pm_day": 120, "weight_pm": 1000, "risk_pm": 120 },
-  // no way the AI can take yet: the player's choice (the ambition goes stuck and says so)
-  { "type": "means", "id": "item_none",       "condition": "has_item",                "directive": "none" },
-  { "type": "means", "id": "reputation_none", "condition": "has_reputation_at_least", "directive": "none" },
-  { "type": "means", "id": "rank_none",       "condition": "has_rank",                "directive": "none" },
-  { "type": "means", "id": "place_none",      "condition": "is_in_place_kind",        "directive": "none" },
-  { "type": "means", "id": "person_none",     "condition": "knows_person",            "directive": "none" },
-  { "type": "means", "id": "fief_none",       "condition": "holds_fief_rank",         "directive": "none" },
+  // knowing people, goods, standing, rank, place, fief: a desk acts through the host's hook (MeansHook); travel and contracts are the autopilot's own
+  { "type": "means", "id": "person_talk",   "condition": "knows_person", "directive": "talk", "prior_pm_day": 120, "weight_pm": 1000, "risk_pm": 20 },                           // HeroCommandKind.Talk, at the places the kind is found
+  { "type": "means", "id": "item_buy",      "condition": "has_item", "directive": "buy", "prior_pm_day": 300, "weight_pm": 1000, "risk_pm": 30, "spend_mites": 5000 },          // BuyItem at the market
+  { "type": "means", "id": "item_craft",    "condition": "has_item", "directive": "craft", "prior_pm_day": 150, "weight_pm": 1000, "risk_pm": 30 },                               // the craft desk (cf:order)
+  { "type": "means", "id": "rep_contract",  "condition": "has_reputation_at_least", "directive": "contract", "prior_pm_day": 80, "weight_pm": 1000, "risk_pm": 100 },         // contracts done well raise standing in the district
+  { "type": "means", "id": "rank_petition", "condition": "has_rank", "directive": "petition", "prior_pm_day": 60, "weight_pm": 1000, "risk_pm": 60 },                            // free_person: sl:selfbuy; landholder: ld:petition; guild_member and knight have no action (not open)
+  { "type": "means", "id": "place_travel",  "condition": "is_in_place_kind", "directive": "travel", "prior_pm_day": 500, "weight_pm": 1000, "risk_pm": 80, "tags": ["far"] },   // town, village, farmstead, wilds; a manor has no place of its own (not open)
+  { "type": "means", "id": "fief_petition", "condition": "holds_fief_rank", "directive": "petition", "prior_pm_day": 50, "weight_pm": 1000, "risk_pm": 80 },                       // a landholder's founding charter (ld:petition); baron and above have no action (not open)
+  // no way the AI can take yet (a realm: no action crowns a hero; a faction: no desk founds one): the player's choice (the ambition goes stuck and says so)
   { "type": "means", "id": "realm_none",      "condition": "rules_realm",             "directive": "none" },
   { "type": "means", "id": "faction_none",    "condition": "founded_faction",         "directive": "none" },
   { "type": "means", "id": "dynasty_none",    "condition": "dynasty_generations",     "directive": "none" },

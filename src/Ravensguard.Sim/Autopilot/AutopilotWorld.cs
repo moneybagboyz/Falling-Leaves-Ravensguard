@@ -127,6 +127,7 @@ public sealed partial class AutopilotWorld
     public void Advance(long toSec)
     {
         long last = toSec / WindowSec;
+        HourlyHero(toSec);                                                  // P8-AT gaps: the hero's ambition step, on autopilot or not
         var states = Book.States.Values.Where(s => s.Enabled && !s.Paused).ToArray();
         if (states.Length == 0) return;
         foreach (var st in states) if (st.NextWindow == long.MinValue) st.NextWindow = last;
@@ -205,7 +206,6 @@ public sealed partial class AutopilotWorld
         TrackJob(st, at);
         var d = EnsureActive(st, at, coin);
         RaiseStateInterrupts(st, at, coin);
-        if (st.Person == HeroId && at % 3600 < WindowSec) CheckAmbition(st, at);          // P8-AT-2: the hero's current step, once an hour
         if (!st.Enabled || st.Paused || BusOf(st).Paused) return;
         d = Eff(st);
 

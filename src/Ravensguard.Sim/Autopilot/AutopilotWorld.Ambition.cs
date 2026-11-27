@@ -2,6 +2,7 @@ using Ravensguard.Content;
 using Ravensguard.Sim.Characters;
 using Ravensguard.Sim.Core;
 using Ravensguard.Sim.Economy;
+using Ravensguard.Sim.Live;
 using Ravensguard.Sim.People;
 using Ravensguard.Sim.Trade;
 using Ravensguard.Sim.Travel;
@@ -42,9 +43,21 @@ public sealed partial class AutopilotWorld
             f.Followers = Ctx.Party.Squad.Members.Count(m => m.State == HireState.Active);
             if (Ctx.Hero != null) foreach (var it in Ctx.Hero.Inventory) f.Items[it.Shape] = f.Items.GetValueOrDefault(it.Shape) + it.Count;
         }
+        PlaceKindsOf(person, st, f);
         FactsHook?.Invoke(person, f);
         return f;
     }
+
+    /// <summary>The place kinds the person stands in: the class of the settlement within <see cref="PlaceRadiusMm"/> (town, village, farmstead), else <c>wilds</c>. A person with no known position gets none.</summary>
+    private void PlaceKindsOf(EntityId person, AutopilotState? st, AmbitionFacts f)
+    {
+        var pos = PositionHook?.Invoke(person) ?? (st != null && (st.PosX != 0 || st.PosY != 0) ? (st.PosX, st.PosY) : ((long, long)?)null);
+        if (pos is not { } p) return;
+        var ss = State.Population.Region.Settlements; int best = -1; long bd = PlaceRadiusMm;
+        for (int i = 0; i < ss.Count; i++) { long d = PathPlan.Dist(p.Item1 - ss[i].CenterX * 1000L, p.Item2 - ss[i].CenterY * 1000L); if (d <= bd) { bd = d; best = i; } }
+        f.PlaceKinds.Add(best < 0 ? "wilds" : ss[best].Class.ToString().ToLowerInvariant());
+    }
+    private const long PlaceRadiusMm = 150_000;
 
     // ------------------------------------------------------------------ the hourly check of the hero's step
 
@@ -59,19 +72,37 @@ public sealed partial class AutopilotWorld
         return true;
     }
 
+    private long _ambHour = long.MinValue;
+
     /// <summary>
-    /// Checks the hero's current step (once an hour while the hero is on autopilot): a step whose conditions hold is done; the last step done finishes the ambition, writes <c>ambition_done</c> (<c>great_ambition_done</c> for a great one),
-    /// makes the offer and raises <c>AmbitionChoice</c>, which an AI-handled hero answers by picking the offered ambition its means score best. A hero with no ambition and an open offer picks again.
+    /// The hero's hourly ambition check, for a hero on autopilot or not (ambitions spec 3.2): once per game hour boundary crossed, so the same at 1x and 8x. The game calls it every barrier, also while the player has taken control;
+    /// <see cref="Advance"/> calls it too. Only the planning (choosing means) needs the autopilot.
     /// </summary>
-    public void CheckAmbition(AutopilotState st, long at)
+    public void HourlyHero(long toSec)
     {
-        var h = Ctx.Hero; if (h == null || st.Person != HeroId) return;
+        long hour = toSec / 3600;
+        if (_ambHour == long.MinValue) _ambHour = hour - 1;
+        if (hour <= _ambHour) return;
+        _ambHour = hour;
+        CheckAmbition(hour * 3600);
+    }
+
+    /// <summary>
+    /// Checks the hero's current step: a step whose conditions hold is done; the last step done finishes the ambition, writes <c>ambition_done</c> (<c>great_ambition_done</c> for a great one), makes the offer and raises
+    /// <c>AmbitionChoice</c> (Pause unless the hero is on autopilot with the kind set to Ai, which answers by picking the offered ambition its means score best). A hero with no ambition and an open offer picks again on autopilot.
+    /// A hero off autopilot has no row until something must be raised; one is made then with the default policies.
+    /// </summary>
+    public void CheckAmbition(long at)
+    {
+        var h = Ctx.Hero; if (h == null) return;
+        var st = Book.Get(HeroId);
+        AutopilotState St() => st ??= Book.GetOrAdd(HeroId, Cfg);
         int day = (int)(at / 86400);
         var amb = h.AmbitionId.Length > 0 ? Tree.Get(h.AmbitionId) : null;
         if (amb == null)
         {
             if (h.Offered.Count == 0) h.Offered.AddRange(Tree.OfferFor(h.AmbitionsDone.Select(d => d.Id).ToList(), FactsOf(HeroId)));
-            if (h.Offered.Count > 0 && InterruptRouter.PolicyOf(st, InterruptKind.AmbitionChoice) == InterruptPolicy.Ai) ChooseAmbitionByScore(st, at);
+            if (h.Offered.Count > 0 && st != null && InterruptRouter.PolicyOf(st, InterruptKind.AmbitionChoice) == InterruptPolicy.Ai) ChooseAmbitionByScore(st, at);
             return;
         }
         var facts = FactsOf(HeroId);
@@ -85,7 +116,7 @@ public sealed partial class AutopilotWorld
         h.FinishAmbition(day, offer);
         AmbitionEntry(amb.Tier == "great" ? "great_ambition_done" : "ambition_done", at, amb.Id);
         Book.Log.Add(at, HeroId, LogCode.Note, $"Ambition done: {amb.Name}");
-        if (offer.Count > 0) Raise(st, InterruptKind.AmbitionChoice, at, $"{amb.Name} is done: {offer.Count} to choose from");
+        if (offer.Count > 0) Raise(St(), InterruptKind.AmbitionChoice, at, $"{amb.Name} is done: {offer.Count} to choose from");
     }
 
     /// <summary>The AI's answer to <c>AmbitionChoice</c> (spec 3.1): the offered ambition whose first step the planner scores best under the limits; none scoring leaves the offer open ("none for now").</summary>
@@ -114,7 +145,8 @@ public sealed partial class AutopilotWorld
 
     private void AmbitionEntry(string type, long at, string ambition)
     {
-        var data = new Dictionary<string, string> { ["autopilot"] = "1", ["ambition"] = ambition };
+        var data = new Dictionary<string, string> { ["ambition"] = ambition };
+        if (Book.Get(HeroId) is { Enabled: true }) data["autopilot"] = "1";
         if (ChronicleHook != null) { ChronicleHook(HeroId, type, at, data); return; }
         State.Chronicle.Add(new ChronicleEntry(State.Ids.Allocate(IdKind.Event), new GameTime(at), type, [HeroId], [], data, type switch { "ambition_chosen" => "ch_p8_ambition_chosen", "great_ambition_done" => "ch_p8_great_ambition_done", _ => "ch_p8_ambition_done" }, [ChronParam.Person("person", HeroId)]));
     }
@@ -130,13 +162,47 @@ public sealed partial class AutopilotWorld
             "train" => c.Args.TryGetValue("skill", out var sk) && Enum.TryParse<Skill>(sk.Replace("_", ""), true, out var skill) && Cfg.Activities.Knows(skill),
             "tend" => StallHook?.Invoke(st.Person) != null,
             "trade_route" => route ??= BestRoute() != null,
-            "buy" or "recruit" or "steal" => MeansHook != null,
+            "buy" or "recruit" or "steal" or "talk" or "craft" => MeansHook != null,
+            "petition" => MeansHook != null && PetitionOpen(c),
+            "travel" => c.Args.TryGetValue("kind", out var pk) && TravelTarget(st, pk) != null,
             _ => false,
         };
         return new PlanInput
         {
             Limits = st.Limits, State = st, Day = (int)(at / 86400), Purse = CoinOf(st), SkillOf = s => facts.Skills.GetValueOrDefault(s), Rates = st.Rates, Available = Open, RiskWeightPm = Settings.AmbitionRiskWeightPm,
         };
+    }
+
+    /// <summary>The petitions an existing desk takes: a free person's rank is the bond's self-purchase (<c>sl:selfbuy</c>), a landholder's is a founding charter (<c>ld:petition</c>). Guild, knight, baron and above have no action.</summary>
+    private static bool PetitionOpen(ConditionRefDef c) => c.Id switch
+    {
+        "has_rank" => c.Args.GetValueOrDefault("rank") is "free_person" or "landholder",
+        "holds_fief_rank" => c.Args.GetValueOrDefault("rank") == "landholder",
+        _ => false,
+    };
+
+    /// <summary>Where to walk to stand in a kind of place (region millimetres): the nearest settlement of that class (town, village, farmstead), or a spot clear of every settlement for <c>wilds</c>; null when there is none (a manor has no place of its own).</summary>
+    private (long X, long Y)? TravelTarget(AutopilotState st, string kind)
+    {
+        var ss = State.Population.Region.Settlements; long px = st.PosX, py = st.PosY;
+        if (kind == "wilds")
+        {
+            int n = NearestSettlement(st, long.MaxValue); if (n < 0) return null;
+            for (int k = 0; k < 4; k++)                                   // 4 spots at 3 times the radius, east, north, west, south of the nearest place: the first clear of every settlement
+            {
+                long dx = k == 0 ? 3 : k == 2 ? -3 : 0, dy = k == 1 ? -3 : k == 3 ? 3 : 0, x = ss[n].CenterX * 1000L + dx * PlaceRadiusMm, y = ss[n].CenterY * 1000L + dy * PlaceRadiusMm;
+                bool clear = true; for (int i = 0; i < ss.Count && clear; i++) clear = PathPlan.Dist(x - ss[i].CenterX * 1000L, y - ss[i].CenterY * 1000L) > PlaceRadiusMm;
+                if (clear) return (x, y);
+            }
+            return null;
+        }
+        int best = -1; long bd = long.MaxValue;
+        for (int i = 0; i < ss.Count; i++)
+        {
+            if (!string.Equals(ss[i].Class.ToString(), kind, StringComparison.OrdinalIgnoreCase)) continue;
+            long d = PathPlan.Dist(px - ss[i].CenterX * 1000L, py - ss[i].CenterY * 1000L); if (d < bd) { bd = d; best = i; }
+        }
+        return best < 0 ? null : (ss[best].CenterX * 1000L, ss[best].CenterY * 1000L);
     }
 
     /// <summary>The best trade the hero's notebook shows: buy at A, sell at B, a margin of at least 10% (100 pm) after the toll; null when none. Ties go to the earlier note.</summary>
@@ -248,6 +314,10 @@ public sealed partial class AutopilotWorld
         "contract" => "taking contracts",
         "buy" => "saving up to buy",
         "recruit" => "looking for followers",
+        "talk" => "meeting people to talk with",
+        "craft" => "making one",
+        "petition" => "petitioning for it",
+        "travel" => "going there",
         _ => m.Id.Replace('_', ' '),
     };
 
@@ -265,7 +335,10 @@ public sealed partial class AutopilotWorld
                     d = Directive.Train(skill, lv);
                 break;
             case "trade_route": if (BestRoute() is { } r) { d = Directive.TradeRoute(r.A, r.B, r.Good, 20_000, 100); d.Name = "Trade route for the ambition"; } break;
-            case "buy" or "recruit" or "steal":
+            case "travel":
+                if (cond.Args.TryGetValue("kind", out var pk) && TravelTarget(st, pk) is { } tp) d = Directive.TravelTo(tp.X, tp.Y, "Travel for the ambition");
+                break;
+            case "buy" or "recruit" or "steal" or "talk" or "craft" or "petition":
                 if (MeansHook == null) return false;
                 int day = (int)(at / 86400);
                 if (m.SpendMites > 0 && LimitGuard.CheckSpend(st.Limits, st, day, coin, m.SpendMites) != LimitVerdict.Allowed) return false;
